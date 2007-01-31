@@ -260,7 +260,7 @@ default_formatize(GaimGtkConversation *c)
 
 	if (conv->features & GAIM_CONNECTION_HTML)
 	{
-		char *color;
+		char color[8];
 		GdkColor fg_color, bg_color;
 
 		if (gaim_prefs_get_bool("/gaim/gtk/conversations/send_bold") != GTK_IMHTML(c->entry)->edit.bold)
@@ -281,42 +281,35 @@ default_formatize(GaimGtkConversation *c)
 
 			/* 3 is the default. */
 			if (size != 3)
-			{
 				gtk_imhtml_font_set_size(GTK_IMHTML(c->entry), size);
-			}
 		}
 
 		if(strcmp(gaim_prefs_get_string("/gaim/gtk/conversations/fgcolor"), "") != 0)
 		{
 			gdk_color_parse(gaim_prefs_get_string("/gaim/gtk/conversations/fgcolor"),
 							&fg_color);
-			color = g_strdup_printf("#%02x%02x%02x",
+			g_snprintf(color, sizeof(color), "#%02x%02x%02x",
 									fg_color.red   / 256,
 									fg_color.green / 256,
 									fg_color.blue  / 256);
-		}
-		else
-			color = g_strdup("");
+		} else
+			strcpy(color, "");
 
 		gtk_imhtml_toggle_forecolor(GTK_IMHTML(c->entry), color);
-		g_free(color);
 
 		if(!(conv->features & GAIM_CONNECTION_NO_BGCOLOR) &&
 		   strcmp(gaim_prefs_get_string("/gaim/gtk/conversations/bgcolor"), "") != 0)
 		{
 			gdk_color_parse(gaim_prefs_get_string("/gaim/gtk/conversations/bgcolor"),
 							&bg_color);
-			color = g_strdup_printf("#%02x%02x%02x",
+			g_snprintf(color, sizeof(color), "#%02x%02x%02x",
 									bg_color.red   / 256,
 									bg_color.green / 256,
 									bg_color.blue  / 256);
-		}
-		else
-			color = g_strdup("");
+		} else
+			strcpy(color, "");
 
 		gtk_imhtml_toggle_background(GTK_IMHTML(c->entry), color);
-		g_free(color);
-
 
 		if (conv->features & GAIM_CONNECTION_FORMATTING_WBFO)
 			gtk_imhtml_set_whole_buffer_formatting_only(GTK_IMHTML(c->entry), TRUE);
@@ -374,7 +367,7 @@ debug_command_cb(GaimConversation *conv,
 	GaimCmdStatus status;
 
 	if (!g_ascii_strcasecmp(args[0], "version")) {
-		tmp = g_strdup_printf("me is using Gaim v%s.", VERSION);
+		tmp = g_strdup_printf("me is using " PIDGIN_NAME " v%s.", VERSION);
 		markup = g_markup_escape_text(tmp, -1);
 
 		status = gaim_cmd_do_command(conv, tmp, markup, error);
@@ -839,8 +832,8 @@ invite_cb(GtkWidget *widget, GaimGtkConversation *gtkconv)
 		GtkWidget *table;
 		GtkWidget *img;
 
-		img = gtk_image_new_from_stock(GAIM_STOCK_DIALOG_QUESTION,
-		                               GTK_ICON_SIZE_DIALOG);
+		img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
+		                               gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
 
 		info = g_new0(InviteBuddyInfo, 1);
 		info->conv = conv;
@@ -1142,8 +1135,8 @@ menu_find_cb(gpointer data, guint action, GtkWidget *widget)
 {
 	GaimGtkWindow *gtkwin = data;
 	GtkWidget *hbox;
-	GtkWidget *img = gtk_image_new_from_stock(GAIM_STOCK_DIALOG_QUESTION,
-											  GTK_ICON_SIZE_DIALOG);
+	GtkWidget *img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
+						  gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
 	GtkWidget *label;
 	struct _search *s;
 
@@ -2274,7 +2267,7 @@ gaim_gtkconv_get_tab_icon(GaimConversation *conv, gboolean small_icon)
 
 	/* If they don't have a buddy icon, then use the PRPL icon */
 	if (status == NULL)
-		status = gaim_gtk_create_prpl_icon(account, small_icon ? 0.5 : 1.0);
+		status = gaim_gtk_create_prpl_icon(account, small_icon ? PIDGIN_PRPL_ICON_SMALL : PIDGIN_PRPL_ICON_LARGE);
 
 	return status;
 }
@@ -7050,8 +7043,8 @@ build_warn_close_dialog(GaimGtkWindow *gtkwin)
 	gtk_box_set_spacing(GTK_BOX(vbox), 12);
 	gtk_container_set_border_width(GTK_CONTAINER(vbox), 6);
 
-	img = gtk_image_new_from_stock(GAIM_STOCK_DIALOG_WARNING,
-	                               GTK_ICON_SIZE_DIALOG);
+	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_WARNING,
+	                               gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
 	/* Setup the inner hbox and put the dialog's icon in it. */
 	hbox = gtk_hbox_new(FALSE, 12);
 	gtk_container_add(GTK_CONTAINER(vbox), hbox);

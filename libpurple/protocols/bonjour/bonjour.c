@@ -289,19 +289,6 @@ bonjour_convo_closed(GaimConnection *connection, const char *who)
 	bonjour_jabber_close_conversation(((BonjourData*)(connection->proto_data))->jabber_data, buddy);
 }
 
-static void
-bonjour_list_emblems(GaimBuddy *buddy,
-								 const char **se, const char **sw,
-								 const char **nw, const char **ne)
-{
-	GaimPresence *presence;
-
-	presence = gaim_buddy_get_presence(buddy);
-
-	if (gaim_presence_is_online(presence) && !gaim_presence_is_available(presence))
-		*se = "away";
-}
-
 static char *
 bonjour_status_text(GaimBuddy *buddy)
 {
@@ -359,7 +346,7 @@ static GaimPluginProtocolInfo prpl_info =
 	/* {"png", 0, 0, 96, 96, 0, GAIM_ICON_SCALE_DISPLAY}, */ /* icon_spec */
 	NO_BUDDY_ICONS, /* not yet */                            /* icon_spec */
 	bonjour_list_icon,                                       /* list_icon */
-	bonjour_list_emblems,                                    /* list_emblems */
+	NULL, 		                      			 /* list_emblem */
 	bonjour_status_text,                                     /* status_text */
 	bonjour_tooltip_text,                                    /* tooltip_text */
 	bonjour_status_types,                                    /* status_types */
@@ -478,7 +465,7 @@ initialize_default_account_values()
 		gchar *tmp;
 		tmp = g_locale_to_utf8(fullname, -1, NULL, NULL, NULL);
 		if ((tmp == NULL) || (*tmp == '\0'))
-			fullname = _("Gaim User");
+			fullname = _("Purple Person");
 	}
 
 #else
@@ -536,7 +523,7 @@ initialize_default_account_values()
 	}
 
 	if (!fullname)
-		fullname = g_strdup(_("Gaim User"));
+		fullname = g_strdup(_("Purple Person"));
 #endif
 
 	/* Split the real name into a first and last name */

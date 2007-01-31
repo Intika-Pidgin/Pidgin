@@ -1,4 +1,4 @@
-SUBDIRS = buddy_icons emotes status
+SUBDIRS = animations buddy_icons dialogs emblems emotes protocols status
 
 EXTRA_DIST = \
 		about_menu.png			\
@@ -10,12 +10,6 @@ EXTRA_DIST = \
 		edit.png			\
 		gaim.png			\
 		gaim.svg			\
-		gaim_auth.png			\
-		gaim_cool.png			\
-		gaim_error.png			\
-		gaim_info.png			\
-		gaim_question.png		\
-		gaim_warning.png		\
 		info.png 			\
 		insert-image.png		\
 		insert-image-small.png		\
@@ -53,11 +47,6 @@ EXTRA_DIST = \
 		typed.png			\
 		typing.png			\
 		Makefile.mingw			\
-		smileys/Makefile.mingw		\
-		smileys/default/Makefile.mingw	\
-		smileys/none/Makefile.mingw	\
-		status/default/Makefile.mingw	\
-		status/Makefile.mingw		\
 		gaim-install.ico		\
 		gaim.ico			\
 		gaim_16.ico			\
@@ -75,9 +64,6 @@ EXTRA_DIST = \
 
 gaimbuttonpixdir = $(datadir)/pixmaps/gaim/buttons
 gaimbuttonpix_DATA = about_menu.png accounts.png change-bgcolor-small.png change-fgcolor-small.png edit.png info.png insert-image-small.png insert-link-small.png insert-smiley-small.png pause.png text_bigger.png text_normal.png text_smaller.png send-im.png
-
-gaimdialogpixdir = $(datadir)/pixmaps/gaim/dialogs
-gaimdialogpix_DATA = gaim_error.png gaim_info.png gaim_question.png gaim_warning.png gaim_cool.png gaim_auth.png
 
 gaimiconpixdir = $(datadir)/pixmaps/gaim/icons
 gaimiconpix_DATA = away.png connect.png msgpend.png offline.png online.png msgunread.png stock_connect_16.png stock_disconnect_16.png

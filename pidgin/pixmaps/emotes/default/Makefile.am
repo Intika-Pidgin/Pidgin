@@ -1,5 +1,5 @@
-SUBDIRS=22 scalable
+SUBDIRS=22 
 
 EXTRA_DIST= \
-	22/Makefile.mingw \
-	scalable/Makefile.mingw
+	Makefile.mingw \
+	22/Makefile.mingw
