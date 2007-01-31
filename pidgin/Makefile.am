@@ -8,15 +8,15 @@ EXTRA_DIST = \
 		win32/IdleTracker/idletrack.h \
 		win32/MinimizeToTray.h \
 		win32/MinimizeToTray.c \
-		win32/gaimrc.rc.in \
+		win32/pidgin_dll_rc.rc.in \
+		win32/pidgin_exe_rc.rc.in \
 		win32/gtkdocklet-win32.c \
-		win32/gtkgaimrc.rc.in \
 		win32/gtkwin32dep.c \
 		win32/gtkwin32dep.h \
 		win32/resource.h \
 		win32/untar.c \
 		win32/untar.h \
-		win32/win_gaim.c \
+		win32/winpidgin.c \
 		win32/wspell.c \
 		win32/wspell.h \
 		win32/nsis/gaim-header.bmp \
@@ -59,9 +59,9 @@ if ENABLE_GTK
 
 SUBDIRS = pixmaps plugins sounds
 
-bin_PROGRAMS = gaim
+bin_PROGRAMS = pidgin
 
-gaim_SOURCES = \
+pidgin_SOURCES = \
 	eggtrayicon.c \
 	gaimcombobox.c \
 	gaimstock.c \
@@ -106,7 +106,7 @@ gaim_SOURCES = \
 	gtkutils.c \
 	gtkwhiteboard.c
 
-gaim_headers = \
+pidgin_headers = \
 	eggtrayicon.h \
 	gtkaccount.h \
 	gtkblist.h \
@@ -154,14 +154,14 @@ gaim_headers = \
 	gtkutils.h \
 	gtkwhiteboard.h
 
-gaimincludedir=$(includedir)/gaim
-gaiminclude_HEADERS = \
+pidginincludedir=$(includedir)/pidgin
+pidgininclude_HEADERS = \
 	$(gaim_headers)
 
 
-gaim_DEPENDENCIES = @LIBOBJS@
-gaim_LDFLAGS = -export-dynamic
-gaim_LDADD = \
+pidgin_DEPENDENCIES = @LIBOBJS@
+pidgin_LDFLAGS = -export-dynamic
+pidgin_LDADD = \
 	@LIBOBJS@ \
 	$(DBUS_LIBS) \
 	$(GSTREAMER_LIBS) \
@@ -172,7 +172,7 @@ gaim_LDADD = \
 	$(STARTUP_NOTIFICATION_LIBS) \
 	$(LIBXML_LIBS) \
 	$(GTK_LIBS) \
-	$(top_builddir)/libpurple/libgaim.la
+	$(top_builddir)/libpurple/libpurple.la
 
 if USE_INTERNAL_LIBGADU
 INTGG_CFLAGS = -DUSE_INTERNAL_LIBGADU
@@ -181,7 +181,7 @@ endif
 AM_CPPFLAGS = \
 	-DBR_PTHREADS=0 \
 	-DDATADIR=\"$(datadir)\" \
-	-DLIBDIR=\"$(libdir)/gaim/\" \
+	-DLIBDIR=\"$(libdir)/pidgin/\" \
 	-DLOCALEDIR=\"$(datadir)/locale\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-I$(top_srcdir)/libpurple/ \

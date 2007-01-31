@@ -41,6 +41,8 @@
 
 #define IRC_INITIAL_BUFSIZE 1024
 
+#define IRC_NAMES_FLAG "irc-namelist"
+
 
 enum { IRC_USEROPT_SERVER, IRC_USEROPT_PORT, IRC_USEROPT_CHARSET };
 enum irc_state { IRC_STATE_NEW, IRC_STATE_ESTABLISHED };
@@ -60,7 +62,6 @@ struct irc_conn {
 
 	GString *motd;
 	GString *names;
-	char *nameconv;
 	struct _whois {
 		char *nick;
 		char *away;
@@ -115,13 +116,14 @@ void irc_msg_banfull(struct irc_conn *irc, const char *name, const char *from, c
 void irc_msg_banned(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_chanmode(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_endwhois(struct irc_conn *irc, const char *name, const char *from, char **args);
-void irc_msg_endmotd(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_features(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_invite(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_inviteonly(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_ison(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_join(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_kick(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_list(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_luser(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_mode(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_motd(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_names(struct irc_conn *irc, const char *name, const char *from, char **args);
