@@ -33,7 +33,7 @@
 
 #include "gtkblist.h"
 #include "gtkexpander.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 #include "gtkimhtml.h"
 #include "gtkimhtmltoolbar.h"
 #include "gtksavedstatuses.h"
@@ -171,7 +171,7 @@ status_window_destroy_cb(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 	StatusWindow *dialog = user_data;
 
 	dialog->window = NULL;
-	gaim_gtk_status_window_hide();
+	pidgin_status_window_hide();
 
 	return FALSE;
 }
@@ -241,7 +241,7 @@ status_window_use_cb(GtkButton *button, StatusWindow *dialog)
 static void
 status_window_add_cb(GtkButton *button, gpointer user_data)
 {
-	gaim_gtk_status_editor_show(FALSE, NULL);
+	pidgin_status_editor_show(FALSE, NULL);
 }
 
 static void
@@ -254,7 +254,7 @@ status_window_modify_foreach(GtkTreeModel *model, GtkTreePath *path,
 	gtk_tree_model_get(model, iter, STATUS_WINDOW_COLUMN_TITLE, &title, -1);
 	saved_status = gaim_savedstatus_find(title);
 	g_free(title);
-	gaim_gtk_status_editor_show(TRUE, saved_status);
+	pidgin_status_editor_show(TRUE, saved_status);
 }
 
 static void
@@ -341,7 +341,7 @@ status_window_delete_cb(GtkButton *button, gpointer user_data)
 static void
 status_window_close_cb(GtkButton *button, gpointer user_data)
 {
-	gaim_gtk_status_window_hide();
+	pidgin_status_window_hide();
 }
 
 static void
@@ -529,7 +529,7 @@ configure_cb(GtkWidget *widget, GdkEventConfigure *event, StatusWindow *dialog)
 }
 
 void
-gaim_gtk_status_window_show(void)
+pidgin_status_window_show(void)
 {
 	StatusWindow *dialog;
 	GtkWidget *bbox;
@@ -576,8 +576,8 @@ gaim_gtk_status_window_show(void)
 	gtk_box_pack_end(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);
 
 	/* Use button */
-	button = gaim_pixbuf_button_from_stock(_("_Use"), GTK_STOCK_EXECUTE,
-										  GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("_Use"), GTK_STOCK_EXECUTE,
+										  PIDGIN_BUTTON_HORIZONTAL);
 	dialog->use_button = button;
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(button, FALSE);
@@ -593,7 +593,7 @@ gaim_gtk_status_window_show(void)
 					 G_CALLBACK(status_window_add_cb), dialog);
 
 	/* Modify button */
-	button = gtk_button_new_from_stock(GAIM_STOCK_MODIFY);
+	button = gtk_button_new_from_stock(PIDGIN_STOCK_MODIFY);
 	dialog->modify_button = button;
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(button, FALSE);
@@ -621,7 +621,7 @@ gaim_gtk_status_window_show(void)
 }
 
 void
-gaim_gtk_status_window_hide(void)
+pidgin_status_window_hide(void)
 {
 	if (status_window == NULL)
 		return;
@@ -969,7 +969,7 @@ status_editor_set_account(GtkListStore *store, GaimAccount *account,
 	GdkPixbuf *pixbuf;
 	const char *id = NULL, *name = NULL, *message = NULL;
 
-	pixbuf = gaim_gtk_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
+	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
 	if ((pixbuf != NULL) && !gaim_account_is_connected(account))
 	{
 		gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
@@ -1033,7 +1033,7 @@ status_editor_populate_list(StatusEditor *dialog, GaimSavedStatus *saved_status)
 }
 
 void
-gaim_gtk_status_editor_show(gboolean edit, GaimSavedStatus *saved_status)
+pidgin_status_editor_show(gboolean edit, GaimSavedStatus *saved_status)
 {
 	GtkTreeIter iter;
 	StatusEditor *dialog;
@@ -1143,7 +1143,7 @@ gaim_gtk_status_editor_show(gboolean edit, GaimSavedStatus *saved_status)
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_size_group_add_widget(sg, label);
 
-	frame = gaim_gtk_create_imhtml(TRUE, &text, &toolbar, NULL);
+	frame = pidgin_create_imhtml(TRUE, &text, &toolbar, NULL);
 	dialog->message = GTK_IMHTML(text);
 	gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
 	focus_chain = g_list_prepend(focus_chain, dialog->message);
@@ -1210,16 +1210,16 @@ gaim_gtk_status_editor_show(gboolean edit, GaimSavedStatus *saved_status)
 					 G_CALLBACK(status_editor_cancel_cb), dialog);
 
 	/* Use button */
-	button = gaim_pixbuf_button_from_stock(_("_Use"), GTK_STOCK_EXECUTE,
-										   GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("_Use"), GTK_STOCK_EXECUTE,
+										   PIDGIN_BUTTON_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 
 	g_signal_connect(G_OBJECT(button), "clicked",
 					 G_CALLBACK(status_editor_ok_cb), dialog);
 
 	/* Save & Use button */
-	button = gaim_pixbuf_button_from_stock(_("Sa_ve & Use"), GTK_STOCK_OK,
-										   GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("Sa_ve & Use"), GTK_STOCK_OK,
+										   PIDGIN_BUTTON_HORIZONTAL);
 	dialog->saveanduse_button = GTK_BUTTON(button);
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	if (dialog->original_title == NULL)
@@ -1479,7 +1479,7 @@ edit_substatus(StatusEditor *status_editor, GaimAccount *account)
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_size_group_add_widget(sg, label);
 
-	frame = gaim_gtk_create_imhtml(TRUE, &text, &toolbar, NULL);
+	frame = pidgin_create_imhtml(TRUE, &text, &toolbar, NULL);
 	dialog->message = GTK_IMHTML(text);
 	dialog->toolbar = GTK_IMHTMLTOOLBAR(toolbar);
 	gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
@@ -1538,7 +1538,7 @@ edit_substatus(StatusEditor *status_editor, GaimAccount *account)
 			continue;
 
 		id = gaim_status_type_get_id(status_type);
-		pixbuf = gaim_gtk_create_prpl_icon_with_status(account, status_type, PIDGIN_PRPL_ICON_MEDIUM);
+		pixbuf = pidgin_create_prpl_icon_with_status(account, status_type, PIDGIN_PRPL_ICON_MEDIUM);
 		name = gaim_status_type_get_name(status_type);
 
 		gtk_list_store_append(dialog->model, &iter);
@@ -1633,12 +1633,12 @@ saved_status_sort_alphabetically_func(gconstpointer a, gconstpointer b)
 				  gaim_savedstatus_get_title(saved_status_b));
 }
 
-static gboolean gaim_gtk_status_menu_add_primitive(GtkListStore *model, GaimStatusPrimitive primitive,
+static gboolean pidgin_status_menu_add_primitive(GtkListStore *model, GaimStatusPrimitive primitive,
 	GaimSavedStatus *current_status)
 {
 	GtkTreeIter iter;
 	gboolean currently_selected = FALSE;
-	GdkPixbuf *pixbuf = gaim_gtk_create_gaim_icon_with_status(primitive, 0.5);
+	GdkPixbuf *pixbuf = pidgin_create_gaim_icon_with_status(primitive, 0.5);
 
 	gtk_list_store_append(model, &iter);
 	gtk_list_store_set(model, &iter,
@@ -1656,7 +1656,7 @@ static gboolean gaim_gtk_status_menu_add_primitive(GtkListStore *model, GaimStat
 	return currently_selected;
 }
 
-GtkWidget *gaim_gtk_status_menu(GaimSavedStatus *current_status, GCallback callback)
+GtkWidget *pidgin_status_menu(GaimSavedStatus *current_status, GCallback callback)
 {
 	GtkWidget *combobox;
 	GtkListStore *model;
@@ -1672,19 +1672,19 @@ GtkWidget *gaim_gtk_status_menu(GaimSavedStatus *current_status, GCallback callb
 
 	combobox = gtk_combo_box_new();
 
-	if (gaim_gtk_status_menu_add_primitive(model, GAIM_STATUS_AVAILABLE, current_status))
+	if (pidgin_status_menu_add_primitive(model, GAIM_STATUS_AVAILABLE, current_status))
 		index = i;
 	i++;
 
-	if (gaim_gtk_status_menu_add_primitive(model, GAIM_STATUS_AWAY, current_status))
+	if (pidgin_status_menu_add_primitive(model, GAIM_STATUS_AWAY, current_status))
 		index = i;
 	i++;
 
-	if (gaim_gtk_status_menu_add_primitive(model, GAIM_STATUS_INVISIBLE, current_status))
+	if (pidgin_status_menu_add_primitive(model, GAIM_STATUS_INVISIBLE, current_status))
 		index = i;
 	i++;
 
-	if (gaim_gtk_status_menu_add_primitive(model, GAIM_STATUS_OFFLINE, current_status))
+	if (pidgin_status_menu_add_primitive(model, GAIM_STATUS_OFFLINE, current_status))
 		index = i;
 	i++;
 
@@ -1696,12 +1696,12 @@ GtkWidget *gaim_gtk_status_menu(GaimSavedStatus *current_status, GCallback callb
 		if (!gaim_savedstatus_is_transient(status))
 		{
 			/* Get an appropriate status icon */
-			pixbuf = gaim_gtk_create_gaim_icon_with_status(
+			pixbuf = pidgin_create_gaim_icon_with_status(
 					gaim_savedstatus_get_type(status), 0.5);
 
 			/* Overlay a disk in the bottom left corner */
 			emblem = gtk_widget_render_icon(GTK_WIDGET(combobox),
-						GTK_STOCK_SAVE, GTK_ICON_SIZE_MENU, "GtkGaimStatusMenu");
+						GTK_STOCK_SAVE, GTK_ICON_SIZE_MENU, "PidginStatusMenu");
 			if (emblem != NULL)
 			{
 				int width = gdk_pixbuf_get_width(pixbuf) / 2;
@@ -1749,7 +1749,7 @@ GtkWidget *gaim_gtk_status_menu(GaimSavedStatus *current_status, GCallback callb
 **************************************************************************/
 
 void *
-gaim_gtk_status_get_handle(void)
+pidgin_status_get_handle(void)
 {
 	static int handle;
 
@@ -1757,7 +1757,7 @@ gaim_gtk_status_get_handle(void)
 }
 
 void
-gaim_gtk_status_init(void)
+pidgin_status_init(void)
 {
 	gaim_prefs_add_none("/gaim/gtk/status");
 	gaim_prefs_add_none("/gaim/gtk/status/dialog");
@@ -1766,7 +1766,7 @@ gaim_gtk_status_init(void)
 }
 
 void
-gaim_gtk_status_uninit(void)
+pidgin_status_uninit(void)
 {
-	gaim_gtk_status_window_hide();
+	pidgin_status_window_hide();
 }
