@@ -1,9 +1,9 @@
 /**
- * @file gtkwhiteboard.h The GtkGaimWhiteboard frontend object
+ * @file gtkwhiteboard.h The PidginWhiteboard frontend object
  *
  * gaim
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -22,10 +22,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _GAIM_GTKWHITEBOARD_H_
-#define _GAIM_GTKWHITEBOARD_H_
+#ifndef _PIDGINWHITEBOARD_H_
+#define _PIDGINWHITEBOARD_H_
 
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "whiteboard.h"
 
@@ -41,9 +41,9 @@
 #define PALETTE_NUM_COLORS  7
 
 /**
- * A GaimGtkWhiteboard
+ * A PidginWhiteboard
  */
-typedef struct _GaimGtkWhiteboard
+typedef struct _PidginWhiteboard
 {
 	GaimWhiteboard *wb;      /**< backend data for this whiteboard */
 
@@ -56,14 +56,14 @@ typedef struct _GaimGtkWhiteboard
 	int  height;             /**< Canvas height */
 	int brush_color;         /**< Foreground color */
 	int brush_size;          /**< Brush size */
-} GaimGtkWhiteboard;
+} PidginWhiteboard;
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 /*****************************************************************************/
-/** @name GaimGtkWhiteboard API                                              */
+/** @name PidginWhiteboard API                                              */
 /*****************************************************************************/
 /*@{*/
 
@@ -72,7 +72,7 @@ extern "C" {
  *
  * @return The GtkWhiteboard UI Operations.
  */
-GaimWhiteboardUiOps *gaim_gtk_whiteboard_get_ui_ops( void );
+GaimWhiteboardUiOps *pidgin_whiteboard_get_ui_ops( void );
 
 /*@}*/
 
@@ -80,4 +80,4 @@ GaimWhiteboardUiOps *gaim_gtk_whiteboard_get_ui_ops( void );
 }
 #endif /* __cplusplus */
 
-#endif /* _GAIM_GTKWHITEBOARD_H_ */
+#endif /* _PIDGINWHITEBOARD_H_ */
