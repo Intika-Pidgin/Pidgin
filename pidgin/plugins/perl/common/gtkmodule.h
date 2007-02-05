@@ -1,4 +1,4 @@
-typedef struct group *Gaim__GtkUI__Group;
+typedef struct group *Pidgin__Group;
 
 #define group perl_group
 
@@ -41,36 +41,36 @@ typedef struct group *Gaim__GtkUI__Group;
 #include "gtkutils.h"
 
 /* gtkaccount.h */
-typedef GaimGtkAccountDialogType			Gaim__GtkUI__Account__Dialog__Type;
+typedef PidginAccountDialogType		Pidgin__Account__Dialog__Type;
 
 /* gtkblist.h */
-typedef GaimGtkBuddyList *				Gaim__GtkUI__BuddyList;
-typedef gaim_gtk_blist_sort_function			Gaim__GtkUI__BuddyList__SortFunction;
+typedef PidginBuddyList *		Pidgin__BuddyList;
+typedef pidgin_blist_sort_function	Pidgin__BuddyList__SortFunction;
 
 /* gtkconv.h */
-typedef GaimGtkConversation *				Gaim__GtkUI__Conversation;
-typedef GaimUnseenState					Gaim__UnseenState;
+typedef PidginConversation *		Pidgin__Conversation;
+typedef GaimUnseenState			Gaim__UnseenState;
 
 /* gtkconvwin.h */
-typedef GaimGtkWindow *					Gaim__GtkUI__Conversation__Window;
-typedef GaimConvPlacementFunc				Gaim__Conversation__PlacementFunc;
+typedef PidginWindow *			Pidgin__Conversation__Window;
+typedef GaimConvPlacementFunc		Gaim__Conversation__PlacementFunc;
 
 /* gtkft.h */
-typedef GaimGtkXferDialog *				Gaim__GtkUI__Xfer__Dialog;
+typedef PidginXferDialog *		Pidgin__Xfer__Dialog;
 
 /* gtkimhtml.h */
-typedef GtkIMHtml *					Gaim__GtkUI__IMHtml;
-typedef GtkIMHtmlButtons				Gaim__GtkUI__IMHtml__Buttons;
-typedef GtkIMHtmlFuncs *				Gaim__GtkUI__IMHtml__Funcs;
-typedef GtkIMHtmlScalable *				Gaim__GtkUI__IMHtml__Scalable;
-typedef GtkIMHtmlSmiley *				Gaim__GtkUI__IMHtml__Smiley;
-typedef GtkIMHtmlOptions				Gaim__GtkUI__IMHtml__Options;
+typedef GtkIMHtml *			Pidgin__IMHtml;
+typedef GtkIMHtmlButtons		Pidgin__IMHtml__Buttons;
+typedef GtkIMHtmlFuncs *		Pidgin__IMHtml__Funcs;
+typedef GtkIMHtmlScalable *		Pidgin__IMHtml__Scalable;
+typedef GtkIMHtmlSmiley *		Pidgin__IMHtml__Smiley;
+typedef GtkIMHtmlOptions		Pidgin__IMHtml__Options;
 
 /* gtkimhtmltoolbar.h */
-typedef GtkIMHtmlToolbar *				Gaim__GtkUI__IMHtmlToolbar;
+typedef GtkIMHtmlToolbar *		Pidgin__IMHtmlToolbar;
 
 /* gtkmenutray.h */
-typedef GaimGtkMenuTray *				Gaim__GtkUI__MenuTray;
+typedef PidginMenuTray *		Pidgin__MenuTray;
 
 /* gtkstatusbox.h */
-typedef GtkGaimStatusBox *				Gaim__GtkUI__StatusBox;
+typedef PidginStatusBox *		Pidgin__StatusBox;

@@ -20,7 +20,7 @@
  */
 #include "internal.h"
 #include "gtkblist.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 #include "gtkutils.h"
 
 #include "debug.h"
@@ -184,7 +184,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 	if (account == NULL)
 		return;
 
-	pixbuf = gaim_gtk_create_prpl_icon(account, 0.5);
+	pixbuf = pidgin_create_prpl_icon(account, 0.5);
 
 	for (l = list; l != NULL; l = l->next)
 	{
@@ -577,8 +577,8 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 	gtk_widget_show(bbox);
 
 	/* "New Person" button */
-	button = gaim_pixbuf_button_from_stock(_("New Person"), GTK_STOCK_NEW,
-										   GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("New Person"), GTK_STOCK_NEW,
+										   PIDGIN_BUTTON_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 
@@ -594,8 +594,8 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 					 G_CALLBACK(cancel_cb), dialog);
 
 	/* "Select Buddy" button */
-	button = gaim_pixbuf_button_from_stock(_("Select Buddy"), GTK_STOCK_APPLY,
-										   GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("Select Buddy"), GTK_STOCK_APPLY,
+										   PIDGIN_BUTTON_HORIZONTAL);
 	dialog->select_button = button;
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(button, FALSE);
@@ -616,7 +616,7 @@ gevo_add_buddy_dialog_add_person(GevoAddBuddyDialog *dialog,
 	GdkPixbuf *pixbuf;
 	GtkTreeIter iter;
 
-	pixbuf = gaim_gtk_create_prpl_icon(account, 0.5);
+	pixbuf = pidgin_create_prpl_icon(account, 0.5);
 
 	gtk_list_store_append(dialog->model, &iter);
 
