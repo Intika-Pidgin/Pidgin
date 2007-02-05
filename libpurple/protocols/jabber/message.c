@@ -27,6 +27,7 @@
 
 #include "buddy.h"
 #include "chat.h"
+#include "google.h"
 #include "message.h"
 #include "xmlnode.h"
 
@@ -98,6 +99,12 @@ static void handle_chat(JabberMessage *jm)
 			if(jbr->thread_id)
 				g_free(jbr->thread_id);
 			jbr->thread_id = g_strdup(jbr->thread_id);
+		}
+		
+		if (jm->js->googletalk && jm->xhtml == NULL) {
+			char *tmp = jm->body;
+			jm->body = jabber_google_format_to_html(jm->body);
+			g_free(tmp);
 		}
 		serv_got_im(jm->js->gc, from, jm->xhtml ? jm->xhtml : jm->body, 0,
 				jm->sent);
@@ -210,14 +217,12 @@ static void handle_groupchat_invite(JabberMessage *jm)
 	if(!jid)
 		return;
 
-	components = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	components = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
 
-	g_hash_table_replace(components, g_strdup("room"), g_strdup(jid->node));
-	g_hash_table_replace(components, g_strdup("server"), g_strdup(jid->domain));
-	g_hash_table_replace(components, g_strdup("handle"),
-			g_strdup(jm->js->user->node));
-	g_hash_table_replace(components, g_strdup("password"),
-			g_strdup(jm->password));
+	g_hash_table_replace(components, "room", g_strdup(jid->node));
+	g_hash_table_replace(components, "server", g_strdup(jid->domain));
+	g_hash_table_replace(components, "handle", g_strdup(jm->js->user->node));
+	g_hash_table_replace(components, "password", g_strdup(jm->password));
 
 	jabber_id_free(jid);
 	serv_got_chat_invite(jm->js->gc, jm->to, jm->from, jm->body, components);
@@ -255,7 +260,7 @@ void jabber_message_parse(JabberStream *js, xmlnode *packet)
 	if(type) {
 		if(!strcmp(type, "normal"))
 			jm->type = JABBER_MESSAGE_NORMAL;
-		else if(!strcmp(type, "chat"))
+	else if(!strcmp(type, "chat"))
 			jm->type = JABBER_MESSAGE_CHAT;
 		else if(!strcmp(type, "groupchat"))
 			jm->type = JABBER_MESSAGE_GROUPCHAT;

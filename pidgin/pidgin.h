@@ -1,10 +1,10 @@
 /**
- * @file gtkgaim.h UI definitions and includes
+ * @file pidgin.h UI definitions and includes
  * @ingroup gtkui
  *
  * gaim
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -22,9 +22,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/* #warning ***gtkgaim*** */
-#ifndef _GAIM_GTKGAIM_H_
-#define _GAIM_GTKGAIM_H_
+/* #warning ***pidgin*** */
+#ifndef _PIDGINGAIM_H_
+#define _PIDGINGAIM_H_
 
 #ifndef _WIN32
 # include <gdk/gdkx.h>
@@ -39,7 +39,7 @@
 /**
  * Our UI's identifier.
  */
-#define GAIM_GTK_UI "gtk-gaim"
+#define PIDGIN_UI "pidgin"
 
 #ifndef _WIN32
 # define GAIM_ALERT_TITLE ""
@@ -55,24 +55,24 @@
  */
 /** @cond */
 #if (!GTK_CHECK_VERSION(2,4,0))
-#define GTK_WRAP_WORD_CHAR GTK_WRAP_WORD
-#include "gtkexpander.h"
+# define GTK_WRAP_WORD_CHAR GTK_WRAP_WORD
+# include "gtkexpander.h"
 #endif
 /** @endcond */
 
 /*
  * We include the sources for GtkComboBox and GtkCellView because
- * they don't exist in older version of Gtk+, and we use them
+ * they don't exist in older versions of GTK+, and we use them
  * in a few places.
  */
 #if !GTK_CHECK_VERSION(2,6,0)
 #   include "gtkcellview.h"
 #   include "gtkcellviewmenuitem.h"
+#   include "gaimcombobox.h"
 #   if !GTK_CHECK_VERSION(2,4,0)
 #       include "gtkcelllayout.h"
-#       include "gaimcombobox.h"
-#   endif /* Gtk 2.4 */
-#endif /* Gtk 2.6 */
+#   endif /* Less than GTK+ 2.4 */
+#endif /* Less than GTK+ 2.6 */
 
 /*
  * Spacings between components, as defined by the
@@ -88,5 +88,5 @@
  */
 #define GAIM_INVISIBLE_CHAR (gunichar)0x2022
 
-#endif /* _GAIM_GTKGAIM_H_ */
+#endif /* _PIDGINGAIM_H_ */
 

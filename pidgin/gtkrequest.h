@@ -4,7 +4,7 @@
  *
  * gaim
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -22,8 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _GAIM_GTKREQUEST_H_
-#define _GAIM_GTKREQUEST_H_
+#ifndef _PIDGINREQUEST_H_
+#define _PIDGINREQUEST_H_
 
 #include "request.h"
 
@@ -32,6 +32,6 @@
  *
  * @return The GTK+ UI request operations structure.
  */
-GaimRequestUiOps *gaim_gtk_request_get_ui_ops(void);
+GaimRequestUiOps *pidgin_request_get_ui_ops(void);
 
-#endif /* _GAIM_GTKREQUEST_H_ */
+#endif /* _PIDGINREQUEST_H_ */
