@@ -1,0 +1,20 @@
+TYPEMAP
+Gaim::Conversation::PlacementFunc       T_GaimObj
+Gaim::UnseenState                       T_IV
+Gaim::ButtonOrientation                 T_IV
+
+Pidgin::Account::Dialog::Type      T_IV
+Pidgin::BuddyList                  T_GaimObj
+Pidgin::BuddyList::SortFunction    T_GaimObj
+Pidgin::Conversation               T_GaimObj
+Pidgin::Conversation::Window       T_GaimObj
+Pidgin::Xfer::Dialog               T_GaimObj
+Pidgin::IMHtml                     T_GaimObj
+Pidgin::IMHtml::Buttons            T_IV
+Pidgin::IMHtml::Funcs              T_GaimObj
+Pidgin::IMHtml::Scalable           T_GaimObj
+Pidgin::IMHtml::Smiley             T_GaimObj
+Pidgin::IMHtml::Options            T_IV
+Pidgin::IMHtmlToolbar              T_GaimObj
+Pidgin::MenuTray                   T_GaimObj
+Pidgin::StatusBox                  T_GaimObj
