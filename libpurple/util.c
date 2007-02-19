@@ -4133,6 +4133,7 @@ void gaim_restore_default_signal_handlers(void)
 	signal(SIGEMT,  SIG_DFL);	/* 7:  EMT instruction (Non-POSIX) */
 #endif /* SIGEMT */
 
+#endif
 	signal(SIGFPE,  SIG_DFL);	/* 8:  floating point exception */
 	signal(SIGBUS,  SIG_DFL);	/* 10: bus error */
 	signal(SIGSEGV, SIG_DFL);	/* 11: segmentation violation */
