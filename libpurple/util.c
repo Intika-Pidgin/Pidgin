@@ -4146,3 +4146,4 @@ void gaim_restore_default_signal_handlers(void)
 	signal(SIGXFSZ, SIG_DFL);	/* 25: exceeded file size limit */	
 #endif /* HAVE_SIGNAL_H */
 #endif /* !_WIN32 */
+}
