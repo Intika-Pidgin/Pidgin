@@ -33,6 +33,7 @@ struct _GntFileSel
 	GntWidget *cancel;   /* cancel button */
 
 	char *current; /* Full path of the current location */
+	char *suggest; /* Suggested filename */
 	/* XXX: someone should make these useful */
 	gboolean must_exist; /* Make sure the selected file (the name entered in 'location') exists */
 	gboolean dirsonly;   /* Show only directories */
@@ -73,6 +74,9 @@ GList *gnt_file_sel_get_selected_multi_files(GntFileSel *sel);
 
 void gnt_file_sel_set_multi_select(GntFileSel *sel, gboolean set);
 
+void gnt_file_sel_set_suggested_filename(GntFileSel *sel, const char *suggest);
+
 G_END_DECLS
 
 #endif /* GNT_FILE_SEL_H */
+
