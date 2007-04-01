@@ -223,6 +223,10 @@ update_row_text(GntTree *tree, GntTreeRow *row)
 	GList *iter;
 	int i;
 	gboolean notfirst = FALSE;
+	int lastvisible = tree->ncol;
+
+	while (lastvisible && tree->columns[lastvisible].invisible)
+		lastvisible--;
 
 	for (i = 0, iter = row->columns; i < tree->ncol && iter; i++, iter = iter->next)
 	{
@@ -231,9 +235,15 @@ update_row_text(GntTree *tree, GntTreeRow *row)
 		int len = gnt_util_onscreen_width(col->text, NULL);
 		int fl = 0;
 		gboolean cut = FALSE;
+		int width;
 
 		if (tree->columns[i].invisible)
 			continue;
+
+		if (i == lastvisible)
+			width = GNT_WIDGET(tree)->priv.width - gnt_util_onscreen_width(string->str, NULL);
+		else
+			width = tree->columns[i].width;
 
 		if (i == 0)
 		{
@@ -269,8 +279,8 @@ update_row_text(GntTree *tree, GntTreeRow *row)
 
 		notfirst = TRUE;
 
-		if (len > tree->columns[i].width) {
-			len = tree->columns[i].width - 1;
+		if (len > width) {
+			len = width - 1;
 			cut = TRUE;
 		}
 		text = gnt_util_onscreen_width_to_pointer(col->text, len - fl, NULL);
@@ -284,7 +294,7 @@ update_row_text(GntTree *tree, GntTreeRow *row)
 		}
 
 		if (len < tree->columns[i].width && iter->next)
-			g_string_append_printf(string, "%*s", tree->columns[i].width - len, "");
+			g_string_append_printf(string, "%*s", width - len, "");
 	}
 	return g_string_free(string, FALSE);
 }
@@ -553,6 +563,23 @@ action_down(GntBindable *bind, GList *null)
 		redraw_tree(tree);
 	if (old != tree->current)
 		tree_selection_changed(tree, old, tree->current);
+	return TRUE;
+}
+
+static gboolean
+action_move_parent(GntBindable *bind, GList *null)
+{
+	GntTree *tree = GNT_TREE(bind);
+	GntTreeRow *row = tree->current;
+	if (row->parent) {
+		int dist;
+		tree->current = row->parent;
+		if ((dist = get_distance(tree->current, tree->top)) > 0)
+			gnt_tree_scroll(tree, -dist);
+		else
+			redraw_tree(tree);
+		tree_selection_changed(tree, row, tree->current);
+	}
 	return TRUE;
 }
 
@@ -835,6 +862,8 @@ gnt_tree_class_init(GntTreeClass *klass)
 	gnt_bindable_class_register_action(bindable, "move-down", action_down,
 				GNT_KEY_DOWN, NULL);
 	gnt_bindable_register_binding(bindable, "move-down", GNT_KEY_CTRL_N, NULL);
+	gnt_bindable_class_register_action(bindable, "move-parent", action_move_parent,
+				GNT_KEY_BACKSPACE, NULL);
 	gnt_bindable_class_register_action(bindable, "page-up", action_page_up,
 				GNT_KEY_PGUP, NULL);
 	gnt_bindable_class_register_action(bindable, "page-down", action_page_down,
@@ -1496,10 +1525,13 @@ void gnt_tree_adjust_columns(GntTree *tree)
 			int w = gnt_util_onscreen_width(col->text, NULL);
 			if (i == 0 && row->choice)
 				w += 4;
+			if (i == 0) {
+				w += find_depth(row) * TAB_SIZE;
+			}
 			if (widths[i] < w)
 				widths[i] = w;
 		}
-		row = row->next;
+		row = get_next(row);
 	}
 
 	twidth = 1 + 2 * (!GNT_WIDGET_IS_FLAG_SET(GNT_WIDGET(tree), GNT_WIDGET_NO_BORDER));
