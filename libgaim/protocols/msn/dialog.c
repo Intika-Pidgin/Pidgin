@@ -98,6 +98,8 @@ msn_show_sync_issue(MsnSession *session, const char *passport,
 	GaimAccount *account;
 	MsnAddRemData *data;
 	char *msg, *reason;
+	GaimBuddy *buddy;
+	GaimGroup *group = NULL;
 
 	account = session->account;
 	gc = gaim_account_get_connection(account);
@@ -131,6 +133,17 @@ msn_show_sync_issue(MsnSession *session, const char *passport,
 						data, 2,
 						_("Yes"), G_CALLBACK(msn_add_cb),
 						_("No"), G_CALLBACK(msn_rem_cb));
+
+	if (group_name != NULL)
+		group = gaim_find_group(group_name);
+
+	if (group != NULL)
+		buddy = gaim_find_buddy_in_group(account, passport, group);
+	else
+		buddy = gaim_find_buddy(account, passport);
+
+	if (buddy != NULL)
+		gaim_blist_remove_buddy(buddy);
 
 	g_free(reason);
 	g_free(msg);

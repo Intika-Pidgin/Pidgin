@@ -40,10 +40,23 @@ typedef struct
 static void
 msn_accept_add_cb(MsnPermitAdd *pa)
 {
-	MsnSession *session = pa->gc->proto_data;
-	MsnUserList *userlist = session->userlist;
+	if (g_list_find(gaim_connections_get_all(), pa->gc) != NULL)
+	{
+		MsnSession *session = pa->gc->proto_data;
+		MsnUserList *userlist = session->userlist;
+		GaimBuddy *buddy;
 
-	msn_userlist_add_buddy(userlist, pa->who, MSN_LIST_AL, NULL);
+		msn_userlist_add_buddy(userlist, pa->who, MSN_LIST_AL, NULL);
+
+		buddy = gaim_find_buddy(pa->gc->account, pa->who);
+
+		if (buddy != NULL)
+			gaim_account_notify_added(pa->gc->account, pa->who,
+				NULL, pa->friendly, NULL);
+		else
+			gaim_account_request_add(pa->gc->account, pa->who,
+				NULL, pa->friendly, NULL);
+	}
 
 	g_free(pa->who);
 	g_free(pa->friendly);
@@ -53,10 +66,13 @@ msn_accept_add_cb(MsnPermitAdd *pa)
 static void
 msn_cancel_add_cb(MsnPermitAdd *pa)
 {
-	MsnSession *session = pa->gc->proto_data;
-	MsnUserList *userlist = session->userlist;
+	if (g_list_find(gaim_connections_get_all(), pa->gc) != NULL)
+	{
+		MsnSession *session = pa->gc->proto_data;
+		MsnUserList *userlist = session->userlist;
 
-	msn_userlist_add_buddy(userlist, pa->who, MSN_LIST_BL, NULL);
+		msn_userlist_add_buddy(userlist, pa->who, MSN_LIST_BL, NULL);
+	}
 
 	g_free(pa->who);
 	g_free(pa->friendly);
@@ -67,15 +83,35 @@ static void
 got_new_entry(GaimConnection *gc, const char *passport, const char *friendly)
 {
 	MsnPermitAdd *pa;
+	char *msg;
 
 	pa = g_new0(MsnPermitAdd, 1);
 	pa->who = g_strdup(passport);
 	pa->friendly = g_strdup(friendly);
 	pa->gc = gc;
-	
-	gaim_account_request_authorization(gaim_connection_get_account(gc), passport, NULL, friendly, NULL,
-					   gaim_find_buddy(gaim_connection_get_account(gc), passport) != NULL,
-					   G_CALLBACK(msn_accept_add_cb), G_CALLBACK(msn_cancel_add_cb), pa);
+
+	if (friendly != NULL)
+	{
+		msg = g_strdup_printf(
+				   _("The user %s (%s) wants to add %s to his or her "
+					 "buddy list."),
+				   passport, friendly,
+				   gaim_account_get_username(gc->account));
+	}
+	else
+	{
+		msg = g_strdup_printf(
+				   _("The user %s wants to add %s to his or "
+					 "her buddy list."),
+				   passport, gaim_account_get_username(gc->account));
+	}
+
+	gaim_request_action(gc, NULL, msg, NULL,
+						GAIM_DEFAULT_ACTION_NONE, pa, 2,
+						_("Authorize"), G_CALLBACK(msn_accept_add_cb),
+						_("Deny"), G_CALLBACK(msn_cancel_add_cb));
+
+	g_free(msg);
 }
 
 /**************************************************************************
@@ -83,22 +119,22 @@ got_new_entry(GaimConnection *gc, const char *passport, const char *friendly)
  **************************************************************************/
 
 static gboolean
-user_is_in_group(MsnUser *user, int group_id)
+user_is_in_group(MsnUser *user, const char * group_id)
 {
 	if (user == NULL)
 		return FALSE;
 
-	if (group_id < 0)
+	if (group_id == NULL)
 		return FALSE;
 
-	if (g_list_find(user->group_ids, GINT_TO_POINTER(group_id)))
+	if (g_list_find(user->group_ids, group_id))
 		return TRUE;
 
 	return FALSE;
 }
 
 static gboolean
-user_is_there(MsnUser *user, int list_id, int group_id)
+user_is_there(MsnUser *user, int list_id, const char * group_id)
 {
 	int list_op;
 
@@ -110,9 +146,8 @@ user_is_there(MsnUser *user, int list_id, int group_id)
 	if (!(user->list_op & list_op))
 		return FALSE;
 
-	if (list_id == MSN_LIST_FL)
-	{
-		if (group_id >= 0)
+	if (list_id == MSN_LIST_FL){
+		if (group_id != NULL)
 			return user_is_in_group(user, group_id);
 	}
 
@@ -151,21 +186,25 @@ static void
 msn_request_add_group(MsnUserList *userlist, const char *who,
 					  const char *old_group_name, const char *new_group_name)
 {
+	MsnSession *session;
 	MsnCmdProc *cmdproc;
 	MsnTransaction *trans;
 	MsnMoveBuddy *data;
 
-	cmdproc = userlist->session->notification->cmdproc;
+	session = userlist->session;
+	cmdproc = session->notification->cmdproc;
 	data = g_new0(MsnMoveBuddy, 1);
 
 	data->who = g_strdup(who);
 
-	if (old_group_name)
+	if (old_group_name){
 		data->old_group_name = g_strdup(old_group_name);
+		/*delete the old group via SOAP action*/
+		msn_del_group(session,old_group_name);
+	}
 
-	trans = msn_transaction_new(cmdproc, "ADG", "%s %d",
-								gaim_url_encode(new_group_name),
-								0);
+	/*add new group via SOAP action*/
+	msn_add_group(session, new_group_name);
 
 	msn_transaction_set_data(trans, data);
 
@@ -193,12 +232,13 @@ msn_get_list_id(const char *list)
 
 void
 msn_got_add_user(MsnSession *session, MsnUser *user,
-				 MsnListId list_id, int group_id)
+				 MsnListId list_id, const char * group_id)
 {
 	GaimAccount *account;
 	const char *passport;
 	const char *friendly;
 
+	gaim_debug_info("MaYuan","got add user...\n");
 	account = session->account;
 
 	passport = msn_user_get_passport(user);
@@ -212,7 +252,7 @@ msn_got_add_user(MsnSession *session, MsnUser *user,
 
 		serv_got_alias(gc, passport, friendly);
 
-		if (group_id >= 0)
+		if (group_id != NULL)
 		{
 			msn_user_add_group_id(user, group_id);
 		}
@@ -261,7 +301,7 @@ msn_got_add_user(MsnSession *session, MsnUser *user,
 			 *       looked at this.  Maybe we should use the store
 			 *       name instead? --KingAnt
 			 */
-			got_new_entry(gc, passport, friendly);
+//			got_new_entry(gc, passport, friendly);
 		}
 	}
 
@@ -271,7 +311,7 @@ msn_got_add_user(MsnSession *session, MsnUser *user,
 
 void
 msn_got_rem_user(MsnSession *session, MsnUser *user,
-				 MsnListId list_id, int group_id)
+				 MsnListId list_id, const char * group_id)
 {
 	GaimAccount *account;
 	const char *passport;
@@ -283,7 +323,7 @@ msn_got_rem_user(MsnSession *session, MsnUser *user,
 	if (list_id == MSN_LIST_FL)
 	{
 		/* TODO: When is the user totally removed? */
-		if (group_id >= 0)
+		if (group_id != NULL)
 		{
 			msn_user_remove_group_id(user, group_id);
 			return;
@@ -353,10 +393,9 @@ msn_got_lst_user(MsnSession *session, MsnUser *user,
 	if (list_op & MSN_LIST_FL_OP)
 	{
 		GSList *c;
-		for (c = group_ids; c != NULL; c = g_slist_next(c))
-		{
-			int group_id;
-			group_id = GPOINTER_TO_INT(c->data);
+		for (c = group_ids; c != NULL; c = g_slist_next(c))	{
+			char *group_id;
+			group_id = c->data;
 			msn_user_add_group_id(user, group_id);
 		}
 
@@ -391,11 +430,11 @@ msn_got_lst_user(MsnSession *session, MsnUser *user,
 
 		if (!(list_op & (MSN_LIST_AL_OP | MSN_LIST_BL_OP)))
 		{
-			got_new_entry(gc, passport, store);
+//			got_new_entry(gc, passport, store);
 		}
 	}
 
-	user->list_op = list_op;
+	user->list_op |= list_op;
 }
 
 /**************************************************************************
@@ -425,6 +464,7 @@ msn_userlist_destroy(MsnUserList *userlist)
 {
 	GList *l;
 
+	/*destroy userlist*/
 	for (l = userlist->users; l != NULL; l = l->next)
 	{
 		msn_user_destroy(l->data);
@@ -432,6 +472,7 @@ msn_userlist_destroy(MsnUserList *userlist)
 
 	g_list_free(userlist->users);
 
+	/*destroy group list*/
 	for (l = userlist->groups; l != NULL; l = l->next)
 	{
 		msn_group_destroy(l->data);
@@ -492,18 +533,18 @@ msn_userlist_remove_group(MsnUserList *userlist, MsnGroup *group)
 }
 
 MsnGroup *
-msn_userlist_find_group_with_id(MsnUserList *userlist, int id)
+msn_userlist_find_group_with_id(MsnUserList *userlist, const char * id)
 {
 	GList *l;
 
 	g_return_val_if_fail(userlist != NULL, NULL);
-	g_return_val_if_fail(id       >= 0,    NULL);
+	g_return_val_if_fail(id       != NULL, NULL);
 
 	for (l = userlist->groups; l != NULL; l = l->next)
 	{
 		MsnGroup *group = l->data;
 
-		if (group->id == id)
+		if (!g_strcasecmp(group->id, id))
 			return group;
 	}
 
@@ -522,14 +563,14 @@ msn_userlist_find_group_with_name(MsnUserList *userlist, const char *name)
 	{
 		MsnGroup *group = l->data;
 
-		if ((group->name != NULL) && !g_ascii_strcasecmp(name, group->name))
+		if ((group->name != NULL) && !g_strcasecmp(name, group->name))
 			return group;
 	}
 
 	return NULL;
 }
 
-int
+const char *
 msn_userlist_find_group_id(MsnUserList *userlist, const char *group_name)
 {
 	MsnGroup *group;
@@ -538,12 +579,15 @@ msn_userlist_find_group_id(MsnUserList *userlist, const char *group_name)
 
 	if (group != NULL)
 		return msn_group_get_id(group);
+	}
 	else
-		return -1;
+	{
+		return NULL;
+	}
 }
 
 const char *
-msn_userlist_find_group_name(MsnUserList *userlist, int group_id)
+msn_userlist_find_group_name(MsnUserList *userlist, const char * group_id)
 {
 	MsnGroup *group;
 
@@ -556,7 +600,7 @@ msn_userlist_find_group_name(MsnUserList *userlist, int group_id)
 }
 
 void
-msn_userlist_rename_group_id(MsnUserList *userlist, int group_id,
+msn_userlist_rename_group_id(MsnUserList *userlist, const char * group_id,
 							 const char *new_name)
 {
 	MsnGroup *group;
@@ -568,7 +612,7 @@ msn_userlist_rename_group_id(MsnUserList *userlist, int group_id,
 }
 
 void
-msn_userlist_remove_group_id(MsnUserList *userlist, int group_id)
+msn_userlist_remove_group_id(MsnUserList *userlist, const char * group_id)
 {
 	MsnGroup *group;
 
@@ -586,18 +630,23 @@ msn_userlist_rem_buddy(MsnUserList *userlist,
 					   const char *who, int list_id, const char *group_name)
 {
 	MsnUser *user;
-	int group_id;
+	const char *group_id;
 	const char *list;
 
 	user = msn_userlist_find_user(userlist, who);
 	group_id = -1;
 
-	if (group_name != NULL)
-	{
+	g_return_if_fail(user != NULL);
+
+	/*delete the contact from address book via soap action*/
+	msn_delete_contact(userlist->session->contact,user->uid);
+
+	group_id = NULL;
+
+	if (group_name != NULL){
 		group_id = msn_userlist_find_group_id(userlist, group_name);
 
-		if (group_id < 0)
-		{
+		if (group_id == NULL){
 			/* Whoa, there is no such group. */
 			gaim_debug_error("msn", "Group doesn't exist: %s\n", group_name);
 			return;
@@ -619,17 +668,19 @@ msn_userlist_rem_buddy(MsnUserList *userlist,
 	msn_notification_rem_buddy(userlist->session->notification, list, who, group_id);
 }
 
+/*add buddy*/
 void
 msn_userlist_add_buddy(MsnUserList *userlist,
 					   const char *who, int list_id,
 					   const char *group_name)
 {
 	MsnUser *user;
-	int group_id;
+	const char *group_id;
 	const char *list;
 	const char *store_name;
 
-	group_id = -1;
+	gaim_debug_info("MaYuan", "userlist add buddy,name:{%s},group:{%s}\n",who ,group_name);
+	group_id = NULL;
 
 	if (!gaim_email_is_valid(who))
 	{
@@ -674,6 +725,8 @@ msn_userlist_add_buddy(MsnUserList *userlist,
 	/* Then request the add to the server. */
 	list = lists[list_id];
 
+	gaim_debug_info("MaYuan", "add user:{%s} to group id {%s}\n",store_name ,group_id);
+	msn_add_contact(userlist->session->contact,who,group_id);
 	msn_notification_add_buddy(userlist->session->notification, list, who,
 							   store_name, group_id);
 }
@@ -682,11 +735,11 @@ void
 msn_userlist_move_buddy(MsnUserList *userlist, const char *who,
 						const char *old_group_name, const char *new_group_name)
 {
-	int new_group_id;
+	const char *new_group_id;
 
 	new_group_id = msn_userlist_find_group_id(userlist, new_group_name);
 
-	if (new_group_id < 0)
+	if (new_group_id == NULL)
 	{
 		msn_request_add_group(userlist, who, old_group_name, new_group_name);
 		return;
