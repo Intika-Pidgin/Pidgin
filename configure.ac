@@ -1893,7 +1893,6 @@ fi
 
 AC_OUTPUT([Makefile
 		   Doxyfile
-		   gaim.service
 		   doc/Makefile
 		   doc/pidgin.1
 		   doc/finch.1
