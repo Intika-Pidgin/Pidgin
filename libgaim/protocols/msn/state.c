@@ -38,6 +38,110 @@ static const char *away_text[] =
 	N_("Available")
 };
 
+/* Local Function Prototype*/
+char * msn_build_psm(char * psmstr,char *mediastr,char * guidstr);
+
+/*
+ * WLM media PSM info build prcedure
+ *
+ * Result can like:
+ *	<CurrentMedia>\0Music\01\0{0} - {1}\0 Song Title\0Song Artist\0Song Album\0\0</CurrentMedia>\
+ *	<CurrentMedia>\0Games\01\0Playing {0}\0Game Name\0</CurrentMedia>\
+ *	<CurrentMedia>\0Office\01\0Office Message\0Office App Name\0</CurrentMedia>"
+ */
+char *
+msn_build_psm(char * psmstr,char *mediastr,char * guidstr)
+{
+	xmlnode *dataNode,*psmNode,*mediaNode,*guidNode;
+	char *result;
+	int length;
+
+	dataNode = xmlnode_new("Data");
+
+	psmNode = xmlnode_new("PSM");
+	if(psmstr != NULL){
+		xmlnode_insert_data(psmNode,psmstr,strlen(psmstr));
+	}
+	xmlnode_insert_child(dataNode,psmNode);
+
+	mediaNode = xmlnode_new("CurrentMedia");
+	if(mediastr != NULL){
+		xmlnode_insert_data(psmNode,mediastr,strlen(mediastr));
+	}
+	xmlnode_insert_child(dataNode,mediaNode);
+
+	guidNode = xmlnode_new("MachineGuid");
+	if(guidstr != NULL){
+		xmlnode_insert_data(guidNode,guidstr,strlen(guidstr));
+	}
+	xmlnode_insert_child(dataNode,guidNode);
+
+	result = xmlnode_to_str(dataNode,&length);
+	return result;
+}
+
+/*get the PSM info from the XML string*/
+const char *
+msn_get_psm(char *xml_str,gsize len)
+{
+	xmlnode *payloadNode, *psmNode;
+	char *psm_str,*psm;
+	
+	gaim_debug_info("Ma Yuan","msn get PSM\n");
+	payloadNode = xmlnode_from_str(xml_str, len);
+	if (!payloadNode){
+		gaim_debug_error("MaYuan","PSM XML parse Error!\n");
+		return NULL;
+	}
+	psmNode = xmlnode_get_child(payloadNode, "PSM");
+	if (psmNode == NULL){
+		gaim_debug_info("Ma Yuan","No PSM status Node");
+		g_free(payloadNode);
+		return NULL;
+	}
+	psm_str = xmlnode_get_data(psmNode);
+	psm = g_strdup(psm_str);
+
+	g_free(psmNode);
+	g_free(payloadNode);
+
+	return psm;
+}
+
+/* set the MSN's PSM info,Currently Read from the status Line 
+ * Thanks for Cris Code
+ */
+void
+msn_set_psm(MsnSession *session)
+{
+	GaimAccount *account = session->account;
+	GaimPresence *presence;
+	GaimStatus *status;
+	MsnCmdProc *cmdproc;
+	MsnTransaction *trans;
+	char *payload,*statusline;
+
+	g_return_if_fail(session != NULL);
+	g_return_if_fail(session->notification != NULL);
+
+	cmdproc = session->notification->cmdproc;
+	/*prepare PSM info*/
+	if(session->psm){
+		g_free(session->psm);
+	}
+	/*Get the PSM string from Gaim's Status Line*/
+	presence = gaim_account_get_presence(account);
+	status = gaim_presence_get_active_status(presence);
+	statusline = gaim_status_get_attr_string(status, "message");
+	session ->psm = g_strdup(msn_build_psm(statusline,NULL,NULL));
+	payload = session->psm;
+
+	gaim_debug_info("MaYuan","UUX{%s}\n",payload);
+	trans = msn_transaction_new(cmdproc, "UUX","%d",strlen(payload));
+	msn_transaction_set_payload(trans, payload, strlen(payload));
+	msn_cmdproc_send_trans(cmdproc, trans);
+}
+
 void
 msn_change_status(MsnSession *session)
 {
@@ -63,13 +167,10 @@ msn_change_status(MsnSession *session)
 
 	msnobj = msn_user_get_object(user);
 
-	if (msnobj == NULL)
-	{
+	if (msnobj == NULL){
 		msn_cmdproc_send(cmdproc, "CHG", "%s %d", state_text,
 						 MSN_CLIENT_ID);
-	}
-	else
-	{
+	}else{
 		char *msnobj_str;
 
 		msnobj_str = msn_object_to_string(msnobj);
@@ -79,6 +180,7 @@ msn_change_status(MsnSession *session)
 
 		g_free(msnobj_str);
 	}
+	msn_set_psm(session);
 }
 
 const char *

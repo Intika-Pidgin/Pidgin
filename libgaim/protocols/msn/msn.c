@@ -67,8 +67,10 @@ typedef struct
 	MsnGetInfoData *info_data;
 	char *stripped;
 	char *url_buffer;
-	GaimNotifyUserInfo *user_info;
+	GString *s;
 	char *photo_url_text;
+	char *tooltip_text;
+	const char *title;
 
 } MsnGetInfoStepTwoData;
 
@@ -428,14 +430,12 @@ msn_new_xfer(GaimConnection *gc, const char *who)
 	session = gc->proto_data;
 
 	xfer = gaim_xfer_new(gc->account, GAIM_XFER_SEND, who);
-	if (xfer)
-	{
-		slplink = msn_session_get_slplink(session, who);
 
-		xfer->data = slplink;
+	slplink = msn_session_get_slplink(session, who);
 
-		gaim_xfer_set_init_fnc(xfer, t_msn_xfer_init);
-	}
+	xfer->data = slplink;
+
+	gaim_xfer_set_init_fnc(xfer, t_msn_xfer_init);
 
 	return xfer;
 }
@@ -507,6 +507,8 @@ msn_list_emblems(GaimBuddy *b, const char **se, const char **sw,
 	{
 		if (user->mobile)
 			emblems[i++] = "wireless";
+		if (!(user->list_op & (1 << MSN_LIST_RL)))
+			emblems[i++] = "nr";
 	}
 
 	*se = emblems[0];
@@ -515,25 +517,52 @@ msn_list_emblems(GaimBuddy *b, const char **se, const char **sw,
 	*ne = emblems[3];
 }
 
+/*
+ * Set the User status text
+ * Add the PSM String Using "Name - PSM String" format
+ */
 static char *
 msn_status_text(GaimBuddy *buddy)
 {
 	GaimPresence *presence;
 	GaimStatus *status;
+	char *msg, *psm_str, *tmp2, *text, *name;
 
 	presence = gaim_buddy_get_presence(buddy);
 	status = gaim_presence_get_active_status(presence);
 
-	if (!gaim_presence_is_available(presence) && !gaim_presence_is_idle(presence))
-	{
-		return g_strdup(gaim_status_get_name(status));
+	msg = gaim_status_get_attr_string(status, "message");
+	if (!gaim_presence_is_available(presence) && !gaim_presence_is_idle(presence)){
+		name = gaim_status_get_name(status);
+	}else{
+		name = NULL;
+	}
+
+	if (msg != NULL) {
+		tmp2 = gaim_markup_strip_html(msg);
+		if (name){
+			psm_str = g_strdup_printf("%s - %s", name, tmp2);
+			g_free(tmp2);
+		}else{
+			psm_str = tmp2;
+		}
+		text = g_markup_escape_text(psm_str, -1);
+		g_free(psm_str);
+		return text;
+	} else {
+		if (!gaim_presence_is_available(presence) && !gaim_presence_is_idle(presence)){
+			psm_str = g_strdup(gaim_status_get_name(status));
+			text = g_markup_escape_text(psm_str, -1);
+			g_free(psm_str);
+			return text;
+		}
 	}
 
 	return NULL;
 }
 
 static void
-msn_tooltip_text(GaimBuddy *buddy, GaimNotifyUserInfo *user_info, gboolean full)
+msn_tooltip_text(GaimBuddy *buddy, GString *str, gboolean full)
 {
 	MsnUser *user;
 	GaimPresence *presence = gaim_buddy_get_presence(buddy);
@@ -541,27 +570,33 @@ msn_tooltip_text(GaimBuddy *buddy, GaimNotifyUserInfo *user_info, gboolean full)
 
 	user = buddy->proto_data;
 
-	
 	if (gaim_presence_is_online(presence))
 	{
-		gaim_notify_user_info_add_pair(user_info, _("Status"),
-									   (gaim_presence_is_idle(presence) ? _("Idle") : gaim_status_get_name(status)));
+		char *psm;
+		psm = msn_status_text(buddy);
+		if (psm)
+			g_string_append_printf(str, _("\n<b>%s:</b> %s"), _("Psm"),psm);
+		g_free(psm);
+
+		g_string_append_printf(str, _("\n<b>%s:</b> %s"), _("Status"),
+							   gaim_presence_is_idle(presence) ?
+							   _("Idle") : gaim_status_get_name(status));
 	}
-	
+
 	if (full && user)
 	{
-		gaim_notify_user_info_add_pair(user_info, _("Has you"),
-									   ((user->list_op & (1 << MSN_LIST_RL)) ? _("Yes") : _("No")));
-	}
+		g_string_append_printf(str, _("\n<b>%s:</b> %s"), _("Has you"),
+							   (user->list_op & (1 << MSN_LIST_RL)) ?
+							   _("Yes") : _("No"));
 
 	/* XXX: This is being shown in non-full tooltips because the
 	 * XXX: blocked icon overlay isn't always accurate for MSN.
 	 * XXX: This can die as soon as gaim_privacy_check() knows that
 	 * XXX: this prpl always honors both the allow and deny lists. */
 	if (user)
-	{
-		gaim_notify_user_info_add_pair(user_info, _("Blocked"),
-									   ((user->list_op & (1 << MSN_LIST_BL)) ? _("Yes") : _("No")));
+		g_string_append_printf(str, _("\n<b>%s:</b> %s"), _("Blocked"),
+							   (user->list_op & (1 << MSN_LIST_BL)) ?
+							   _("Yes") : _("No"));
 	}
 }
 
@@ -571,28 +606,44 @@ msn_status_types(GaimAccount *account)
 	GaimStatusType *status;
 	GList *types = NULL;
 
+#if 0
 	status = gaim_status_type_new_full(GAIM_STATUS_AVAILABLE,
 			NULL, NULL, FALSE, TRUE, FALSE);
+#endif
+	status = gaim_status_type_new_with_attrs(
+				GAIM_STATUS_AVAILABLE, NULL, NULL, TRUE, TRUE, FALSE,
+				"message", _("Message"), gaim_value_new(GAIM_TYPE_STRING),
+				NULL);
 	types = g_list_append(types, status);
 
-	status = gaim_status_type_new_full(GAIM_STATUS_AWAY,
-			NULL, NULL, FALSE, TRUE, FALSE);
+	status = gaim_status_type_new_with_attrs(
+			GAIM_STATUS_AWAY, NULL, NULL, TRUE, TRUE, FALSE,
+			"message", _("Message"), gaim_value_new(GAIM_TYPE_STRING),
+			NULL);
 	types = g_list_append(types, status);
 
-	status = gaim_status_type_new_full(GAIM_STATUS_AWAY,
-			"brb", _("Be Right Back"), FALSE, TRUE, FALSE);
+	status = gaim_status_type_new_with_attrs(
+			GAIM_STATUS_AWAY, "brb", _("Be Right Back"), TRUE, TRUE, FALSE,
+			"message", _("Message"), gaim_value_new(GAIM_TYPE_STRING),
+			NULL);
 	types = g_list_append(types, status);
 
-	status = gaim_status_type_new_full(GAIM_STATUS_UNAVAILABLE,
-			"busy", _("Busy"), FALSE, TRUE, FALSE);
+	status = gaim_status_type_new_with_attrs(
+			GAIM_STATUS_AWAY, "busy", _("Busy"), TRUE, TRUE, FALSE,
+			"message", _("Message"), gaim_value_new(GAIM_TYPE_STRING),
+			NULL);
 	types = g_list_append(types, status);
 
-	status = gaim_status_type_new_full(GAIM_STATUS_UNAVAILABLE,
-			"phone", _("On the Phone"), FALSE, TRUE, FALSE);
+	status = gaim_status_type_new_with_attrs(
+			GAIM_STATUS_AWAY, "phone", _("On the Phone"), TRUE, TRUE, FALSE,
+			"message", _("Message"), gaim_value_new(GAIM_TYPE_STRING),
+			NULL);
 	types = g_list_append(types, status);
 
-	status = gaim_status_type_new_full(GAIM_STATUS_AWAY,
-			"lunch", _("Out to Lunch"), FALSE, TRUE, FALSE);
+	status = gaim_status_type_new_with_attrs(
+			GAIM_STATUS_AWAY, "lunch", _("Out to Lunch"), TRUE, TRUE, FALSE,
+			"message", _("Message"), gaim_value_new(GAIM_TYPE_STRING),
+			NULL);
 	types = g_list_append(types, status);
 
 	status = gaim_status_type_new_full(GAIM_STATUS_INVISIBLE,
@@ -729,7 +780,8 @@ msn_login(GaimAccount *account)
 		return;
 	}
 
-	http_method = gaim_account_get_bool(account, "http_method", FALSE);
+	if (gaim_account_get_bool(account, "http_method", FALSE))
+		http_method = TRUE;
 
 	host = gaim_account_get_string(account, "server", MSN_SERVER);
 	port = gaim_account_get_int(account, "port", MSN_PORT);
@@ -775,33 +827,86 @@ msn_send_im(GaimConnection *gc, const char *who, const char *message,
 	char *msgformat;
 	char *msgtext;
 
+	gaim_debug_info("MaYuan","send IM {%s} to %s\n",message,who);
 	account = gaim_connection_get_account(gc);
 
 	msn_import_html(message, &msgformat, &msgtext);
+	if(msn_user_is_online(account, who)||
+		msn_user_is_yahoo(account, who)){
+		/*User online,then send Online Instant Message*/
 
-	if (strlen(msgtext) + strlen(msgformat) + strlen(VERSION) > 1564)
-	{
+		if (strlen(msgtext) + strlen(msgformat) + strlen(VERSION) > 1564)
+		{
+			g_free(msgformat);
+			g_free(msgtext);
+
+			return -E2BIG;
+		}
+
+		msg = msn_message_new_plain(msgtext);
+		msg->remote_user = g_strdup(who);
+		msn_message_set_attr(msg, "X-MMS-IM-Format", msgformat);
+
 		g_free(msgformat);
 		g_free(msgtext);
 
-		return -E2BIG;
-	}
+		gaim_debug_info("MaYuan","prepare to send online Message\n");
+		if (g_ascii_strcasecmp(who, gaim_account_get_username(account)))
+		{
+			MsnSession *session;
+			MsnSwitchBoard *swboard;
 
-	msg = msn_message_new_plain(msgtext);
-	msn_message_set_attr(msg, "X-MMS-IM-Format", msgformat);
+			session = gc->proto_data;
+			if(msn_user_is_yahoo(account,who)){
+				/*we send the online and offline Message to Yahoo User via UBM*/
+				gaim_debug_info("MaYuan","send to Yahoo User\n");
+				uum_send_msg(session,msg);
+			}else{
+				gaim_debug_info("MaYuan","send via switchboard\n");
+				swboard = msn_session_get_swboard(session, who, MSN_SB_FLAG_IM);
+				msn_switchboard_send_msg(swboard, msg, TRUE);
+			}
+		}
+		else
+		{
+			char *body_str, *body_enc, *pre, *post;
+			const char *format;
+			/*
+			 * In MSN, you can't send messages to yourself, so
+			 * we'll fake like we received it ;)
+			 */
+			body_str = msn_message_to_string(msg);
+			body_enc = g_markup_escape_text(body_str, -1);
+			g_free(body_str);
 
-	g_free(msgformat);
-	g_free(msgtext);
+			format = msn_message_get_attr(msg, "X-MMS-IM-Format");
+			msn_parse_format(format, &pre, &post);
+			body_str = g_strdup_printf("%s%s%s", pre ? pre :  "",
+									   body_enc ? body_enc : "", post ? post : "");
+			g_free(body_enc);
+			g_free(pre);
+			g_free(post);
 
-	if (g_ascii_strcasecmp(who, gaim_account_get_username(account)))
-	{
+			serv_got_typing_stopped(gc, who);
+			serv_got_im(gc, who, body_str, flags, time(NULL));
+			g_free(body_str);
+		}
+
+		msn_message_destroy(msg);
+	}else	{
+		/*send Offline Instant Message,only to MSN Passport User*/
 		MsnSession *session;
-		MsnSwitchBoard *swboard;
-
+		MsnOim *oim;
+		char *friendname;
+		
+		gaim_debug_info("MaYuan","prepare to send offline Message\n");		
 		session = gc->proto_data;
-		swboard = msn_session_get_swboard(session, who, MSN_SB_FLAG_IM);
-
-		msn_switchboard_send_msg(swboard, msg, TRUE);
+		oim = session->oim;
+		friendname = msn_encode_mime(account->username);
+		msn_oim_prep_send_msg_info(oim,
+			gaim_account_get_username(account),friendname,who,
+			message);
+		msn_oim_send_msg(oim);
 	}
 	else
 	{
@@ -1114,12 +1219,9 @@ msn_set_permit_deny(GaimConnection *gc)
 	cmdproc = session->notification->cmdproc;
 
 	if (account->perm_deny == GAIM_PRIVACY_ALLOW_ALL ||
-		account->perm_deny == GAIM_PRIVACY_DENY_USERS)
-	{
+		account->perm_deny == GAIM_PRIVACY_DENY_USERS){
 		msn_cmdproc_send(cmdproc, "BLP", "%s", "AL");
-	}
-	else
-	{
+	}else{
 		msn_cmdproc_send(cmdproc, "BLP", "%s", "BL");
 	}
 }
@@ -1259,22 +1361,22 @@ msn_rename_group(GaimConnection *gc, const char *old_name,
 {
 	MsnSession *session;
 	MsnCmdProc *cmdproc;
-	int old_gid;
+	const char *old_gid;
 	const char *enc_new_group_name;
 
 	session = gc->proto_data;
 	cmdproc = session->notification->cmdproc;
 	enc_new_group_name = gaim_url_encode(group->name);
 
+	gaim_debug_info("MaYuan","rename group:old{%s},new{%s}",old_name,enc_new_group_name);
 	old_gid = msn_userlist_find_group_id(session->userlist, old_name);
 
-	if (old_gid >= 0)
-	{
+	if (old_gid != NULL){
+		/*find a Group*/
 		msn_cmdproc_send(cmdproc, "REG", "%d %s 0", old_gid,
 						 enc_new_group_name);
-	}
-	else
-	{
+	}else{
+		/*not found*/
 		msn_cmdproc_send(cmdproc, "ADG", "%s 0", enc_new_group_name);
 	}
 }
@@ -1330,55 +1432,61 @@ msn_remove_group(GaimConnection *gc, GaimGroup *group)
 {
 	MsnSession *session;
 	MsnCmdProc *cmdproc;
-	int group_id;
+	const char *group_id;
 
 	session = gc->proto_data;
 	cmdproc = session->notification->cmdproc;
 
-	if ((group_id = msn_userlist_find_group_id(session->userlist, group->name)) >= 0)
-	{
-		msn_cmdproc_send(cmdproc, "RMG", "%d", group_id);
+	/*we can't delete the default group*/
+	if(!strcmp(group->name,MSN_INDIVIDUALS_GROUP_NAME)||
+		!strcmp(group->name,MSN_NON_IM_GROUP_NAME)){
+		return ;
+	}
+	group_id = msn_userlist_find_group_id(session->userlist, group->name);
+	if (group_id != NULL){
+		msn_del_group(session,group_id);
 	}
 }
 
-/**
- * Extract info text from info_data and add it to user_info
- */
-static gboolean
-msn_tooltip_extract_info_text(GaimNotifyUserInfo *user_info, MsnGetInfoData *info_data)
+static char *
+msn_tooltip_info_text(MsnGetInfoData *info_data)
 {
+	GString *s;
 	GaimBuddy *b;
+
+	s = g_string_sized_new(80); /* wild guess */
 
 	b = gaim_find_buddy(gaim_connection_get_account(info_data->gc),
 						info_data->name);
 
-	if (b)
-	{
+	if (b){
+		GString *str = g_string_new("");
 		char *tmp;
 
-		if (b->alias && b->alias[0])
-		{
+		if (b->alias && b->alias[0]){
 			char *aliastext = g_markup_escape_text(b->alias, -1);
-			gaim_notify_user_info_add_pair(user_info, _("Alias"), aliastext);
+			g_string_append_printf(s, _("<b>Alias:</b> %s<br>"), aliastext);
 			g_free(aliastext);
 		}
 
-		if (b->server_alias)
-		{
+		if (b->server_alias){
 			char *nicktext = g_markup_escape_text(b->server_alias, -1);
-			tmp = g_strdup_printf("<font sml=\"msn\">%s</font><br>", nicktext);
-			gaim_notify_user_info_add_pair(user_info, _("Nickname"), tmp);
-			g_free(tmp);
+			g_string_append_printf(s, _("<b>%s:</b> "), _("Nickname"));
+			g_string_append_printf(s, "<font sml=\"msn\">%s</font><br>",
+					nicktext);
 			g_free(nicktext);
 		}
 
-		/* Add the tooltip information */
-		msn_tooltip_text(b, user_info, TRUE);
-
-		return TRUE;
+		msn_tooltip_text(b, str, TRUE);
+		tmp = gaim_strreplace((*str->str == '\n' ? str->str + 1 : str->str),
+							  "\n", "<br>");
+		g_string_free(str, TRUE);
+		g_string_append_printf(s, "%s<br>", tmp);
+//		gaim_debug_info("MaYuan","tooltip info string:{%s}\n",s);
+		g_free(tmp);
 	}
 
-	return FALSE;
+	return g_string_free(s, FALSE);
 }
 
 #if PHOTO_SUPPORT
@@ -1388,19 +1496,17 @@ msn_get_photo_url(const char *url_text)
 {
 	char *p, *q;
 
-	if ((p = strstr(url_text, " contactparams:photopreauthurl=\"")) != NULL)
-	{
-		p += strlen(" contactparams:photopreauthurl=\"");
+	if ((p = strstr(url_text, PHOTO_URL)) != NULL){
+		p += strlen(PHOTO_URL);
 	}
 
-	if (p && (strncmp(p, "http://", 8) == 0) && ((q = strchr(p, '"')) != NULL))
+	if (p && (strncmp(p, "http://",strlen("http://")) == 0) && ((q = strchr(p, '"')) != NULL))
 			return g_strndup(p, q - p);
 
 	return NULL;
 }
 
-static void msn_got_photo(GaimUtilFetchUrlData *url_data, gpointer data,
-		const gchar *url_text, size_t len, const gchar *error_message);
+static void msn_got_photo(void *data, const char *url_text, size_t len);
 
 #endif
 
@@ -1416,25 +1522,26 @@ static char *msn_info_date_reformat(const char *field, size_t len)
 #endif
 
 #define MSN_GOT_INFO_GET_FIELD(a, b) \
-	found = gaim_markup_extract_info_field(stripped, stripped_len, user_info, \
-			"\n" a ":", 0, "\n", 0, "Undisclosed", b, 0, NULL, NULL); \
+	found = gaim_markup_extract_info_field(stripped, stripped_len, s, \
+			"\n" a ":\t", 0, "\n", 0, "Undisclosed", b, 0, NULL, NULL); \
 	if (found) \
 		sect_info = TRUE;
 
 static void
-msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
-		const gchar *url_text, size_t len, const gchar *error_message)
+msn_got_info(void *data, const char *url_text, size_t len)
 {
 	MsnGetInfoData *info_data = (MsnGetInfoData *)data;
-	GaimNotifyUserInfo *user_info;
-	char *stripped, *p, *q, *tmp;
+	char *stripped, *p, *q;
+	char buf[1024];
+	char *tooltip_text;
 	char *user_url = NULL;
 	gboolean found;
-	gboolean has_tooltip_text = FALSE;
 	gboolean has_info = FALSE;
 	gboolean sect_info = FALSE;
-	gboolean has_contact_info = FALSE;
+	const char* title = NULL;
 	char *url_buffer;
+	char *personal = NULL;
+	char *business = NULL;
 	GString *s, *s2;
 	int stripped_len;
 #if PHOTO_SUPPORT
@@ -1442,7 +1549,7 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 	MsnGetInfoStepTwoData *info2_data = NULL;
 #endif
 
-	gaim_debug_info("msn", "In msn_got_info\n");
+	gaim_debug_info("msn", "In msn_got_info,url_text:{%s}\n",url_text);
 
 	/* Make sure the connection is still valid */
 	if (g_list_find(gaim_connections_get_all(), info_data->gc) == NULL)
@@ -1453,20 +1560,17 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 		return;
 	}
 
-	user_info = gaim_notify_user_info_new();
-	has_tooltip_text = msn_tooltip_extract_info_text(user_info, info_data);
+	tooltip_text = msn_tooltip_info_text(info_data);
+	title = _("MSN Profile");
 
-	if (error_message != NULL || url_text == NULL || strcmp(url_text, "") == 0)
+	if (url_text == NULL || strcmp(url_text, "") == 0)
 	{
-		tmp = g_strdup_printf("<b>%s</b>", _("Error retrieving profile"));
-		gaim_notify_user_info_add_pair(user_info, NULL, tmp);
-		g_free(tmp);
+		g_snprintf(buf, 1024, "<html><body>%s<b>%s</b></body></html>",
+				tooltip_text, _("Error retrieving profile"));
 
-		gaim_notify_userinfo(info_data->gc, info_data->name, user_info, NULL, NULL);
-		gaim_notify_user_info_destroy(user_info);
+		gaim_notify_userinfo(info_data->gc, info_data->name, buf, NULL, NULL);
 
-		g_free(info_data->name);
-		g_free(info_data);
+		g_free(tooltip_text);
 		return;
 	}
 
@@ -1524,16 +1628,10 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 	/* No we're not. */
 	s = g_string_sized_new(strlen(url_buffer));
 	s2 = g_string_sized_new(strlen(url_buffer));
-	
-	/* General section header */
-	if (has_tooltip_text)
-		gaim_notify_user_info_add_section_break(user_info);
-	
-	gaim_notify_user_info_add_section_header(user_info, _("General"));
-	
+
 	/* Extract their Name and put it in */
-	MSN_GOT_INFO_GET_FIELD("Name", _("Name"));
-	
+	MSN_GOT_INFO_GET_FIELD("Name", _("Name"))
+
 	/* General */
 	MSN_GOT_INFO_GET_FIELD("Nickname", _("Nickname"));
 	MSN_GOT_INFO_GET_FIELD("Age", _("Age"));
@@ -1542,7 +1640,7 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 	MSN_GOT_INFO_GET_FIELD("Location", _("Location"));
 
 	/* Extract their Interests and put it in */
-	found = gaim_markup_extract_info_field(stripped, stripped_len, user_info,
+	found = gaim_markup_extract_info_field(stripped, stripped_len, s,
 			"\nInterests\t", 0, " (/default.aspx?page=searchresults", 0,
 			"Undisclosed", _("Hobbies and Interests") /* _("Interests") */,
 			0, NULL, NULL);
@@ -1551,24 +1649,20 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 		sect_info = TRUE;
 
 	MSN_GOT_INFO_GET_FIELD("More about me", _("A Little About Me"));
-	
+
 	if (sect_info)
 	{
+		/* trim off the trailing "<br>\n" */
+		g_string_truncate(s, strlen(s->str) - 5);
+		g_string_append_printf(s2, _("%s<b>General</b><br>%s"),
+							   (*tooltip_text) ? "<hr>" : "", s->str);
+		s = g_string_truncate(s, 0);
 		has_info = TRUE;
 		sect_info = FALSE;
 	}
-    else 
-    {
-		/* Remove the section header */
-		gaim_notify_user_info_remove_last_item(user_info);
-		if (has_tooltip_text)
-			gaim_notify_user_info_remove_last_item(user_info);
-	}
-											   
+
+
 	/* Social */
-	gaim_notify_user_info_add_section_break(user_info);
-	gaim_notify_user_info_add_section_header(user_info, _("Social"));
-										   
 	MSN_GOT_INFO_GET_FIELD("Marital status", _("Marital Status"));
 	MSN_GOT_INFO_GET_FIELD("Interested in", _("Interests"));
 	MSN_GOT_INFO_GET_FIELD("Pets", _("Pets"));
@@ -1581,22 +1675,14 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 
 	if (sect_info)
 	{
+		g_string_append_printf(s2, _("%s<b>Social</b><br>%s"), has_info ? "<br><hr>" : "", s->str);
+		s = g_string_truncate(s, 0);
 		has_info = TRUE;
 		sect_info = FALSE;
-	}
-    else 
-    {
-		/* Remove the section header */
-		gaim_notify_user_info_remove_last_item(user_info);
-		gaim_notify_user_info_remove_last_item(user_info);
 	}
 
 	/* Contact Info */
 	/* Personal */
-	gaim_notify_user_info_add_section_break(user_info);
-	gaim_notify_user_info_add_section_header(user_info, _("Contact Info"));
-	gaim_notify_user_info_add_section_header(user_info, _("Personal"));
-
 	MSN_GOT_INFO_GET_FIELD("Name", _("Name"));
 	MSN_GOT_INFO_GET_FIELD("Significant other", _("Significant Other"));
 	MSN_GOT_INFO_GET_FIELD("Home phone", _("Home Phone"));
@@ -1612,18 +1698,12 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 
 	if (sect_info)
 	{
-		has_info = TRUE;
+		personal = g_strdup_printf(_("<br><b>Personal</b><br>%s"), s->str);
+		s = g_string_truncate(s, 0);
 		sect_info = FALSE;
-		has_contact_info = TRUE;
-	}
-    else 
-    {
-		/* Remove the section header */
-		gaim_notify_user_info_remove_last_item(user_info);
 	}
 
 	/* Business */
-	gaim_notify_user_info_add_section_header(user_info, _("Work"));
 	MSN_GOT_INFO_GET_FIELD("Name", _("Name"));
 	MSN_GOT_INFO_GET_FIELD("Job title", _("Job Title"));
 	MSN_GOT_INFO_GET_FIELD("Company", _("Company"));
@@ -1642,21 +1722,26 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 
 	if (sect_info)
 	{
-		has_info = TRUE;
+		business = g_strdup_printf(_("<br><b>Business</b><br>%s"), s->str);
+		s = g_string_truncate(s, 0);
 		sect_info = FALSE;
-		has_contact_info = TRUE;
-	}
-    else 
-    {
-		/* Remove the section header */
-		gaim_notify_user_info_remove_last_item(user_info);
 	}
 
-	if (!has_contact_info)
+	if ((personal != NULL) || (business != NULL))
 	{
-		/* Remove the Contact Info section header */
-		gaim_notify_user_info_remove_last_item(user_info);
+		/* trim off the trailing "<br>\n" */
+		g_string_truncate(s, strlen(s->str) - 5);
+
+		has_info = TRUE;
+		g_string_append_printf(s2, _("<hr><b>Contact Info</b>%s%s"),
+							   personal ? personal : "",
+							   business ? business : "");
 	}
+
+	g_free(personal);
+	g_free(business);
+	g_string_free(s, TRUE);
+	s = s2;
 
 #if 0 /* these probably don't show up any more */
 	/*
@@ -1782,9 +1867,12 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 	/* If we were able to fetch a homepage url earlier, stick it in there */
 	if (user_url != NULL)
 	{
-		tmp = g_strdup_printf("<a href=\"%s\">%s</a>", user_url, user_url);
-		gaim_notify_user_info_add_pair(user_info, _("Homepage"), tmp);
-		g_free(tmp);
+		g_snprintf(buf, sizeof(buf),
+				   "<b>%s:</b><br><a href=\"%s\">%s</a><br>\n",
+				   _("Homepage"), user_url, user_url);
+
+		g_string_append(s, buf);
+
 		g_free(user_url);
 
 		has_info = TRUE;
@@ -1803,71 +1891,77 @@ msn_got_info(GaimUtilFetchUrlData *url_data, gpointer data,
 		char *p = strstr(url_buffer, "form id=\"SpacesSearch\" name=\"SpacesSearch\"");
 		GaimBuddy *b = gaim_find_buddy
 				(gaim_connection_get_account(info_data->gc), info_data->name);
-		gaim_notify_user_info_add_pair(user_info, _("Error retrieving profile"),
-									   ((p && b) ? _("The user has not created a public profile.") :
-										(p ? _("MSN reported not being able to find the user's profile. "
-											   "This either means that the user does not exist, "
-											   "or that the user exists "
-											   "but has not created a public profile.") :
-										 _("Gaim could not find "	/* This should never happen */
-										   "any information in the user's profile. "
-										   "The user most likely does not exist."))));
+		g_string_append_printf(s, "<br><b>%s</b><br>%s<br><br>",
+				_("Error retrieving profile"),
+				((p && b)?
+					_("The user has not created a public profile."):
+				 p? _("MSN reported not being able to find the user's profile. "
+					  "This either means that the user does not exist, "
+					  "or that the user exists "
+					  "but has not created a public profile."):
+					_("Gaim could not find "	/* This should never happen */
+					  "any information in the user's profile. "
+					  "The user most likely does not exist.")));
 	}
-
 	/* put a link to the actual profile URL */
-	tmp = g_strdup_printf("<a href=\"%s%s\">%s%s</a>",
-					PROFILE_URL, info_data->name, PROFILE_URL, info_data->name);
-	gaim_notify_user_info_add_pair(user_info, _("Profile URL"), tmp);
-	g_free(tmp);									   
+	g_string_append_printf(s, _("<hr><b>%s:</b> "), _("Profile URL"));
+	g_string_append_printf(s, "<br><a href=\"%s%s\">%s%s</a><br>",
+			PROFILE_URL, info_data->name, PROFILE_URL, info_data->name);
+
+	/* Finish it off, and show it to them */
+	g_string_append(s, "</body></html>\n");
 
 #if PHOTO_SUPPORT
 	/* Find the URL to the photo; must be before the marshalling [Bug 994207] */
 	photo_url_text = msn_get_photo_url(url_text);
+	gaim_debug_info("Ma Yuan","photo url:{%s}\n",photo_url_text);
 
 	/* Marshall the existing state */
 	info2_data = g_malloc0(sizeof(MsnGetInfoStepTwoData));
 	info2_data->info_data = info_data;
 	info2_data->stripped = stripped;
 	info2_data->url_buffer = url_buffer;
-	info2_data->user_info = user_info;
+	info2_data->s = s;
 	info2_data->photo_url_text = photo_url_text;
+	info2_data->tooltip_text = tooltip_text;
+	info2_data->title = title;
 
 	/* Try to put the photo in there too, if there's one */
 	if (photo_url_text)
 	{
-		gaim_util_fetch_url(photo_url_text, FALSE, NULL, FALSE, msn_got_photo,
+		gaim_url_fetch(photo_url_text, FALSE, NULL, FALSE, msn_got_photo,
 					   info2_data);
 	}
 	else
 	{
 		/* Emulate a callback */
-		/* TODO: Huh? */
-		msn_got_photo(NULL, info2_data, NULL, 0, NULL);
+		msn_got_photo(info2_data, NULL, 0);
 	}
 }
 
 static void
-msn_got_photo(GaimUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *url_text, size_t len, const gchar *error_message)
+msn_got_photo(void *data, const char *url_text, size_t len)
 {
-	MsnGetInfoStepTwoData *info2_data = (MsnGetInfoStepTwoData *)user_data;
+	MsnGetInfoStepTwoData *info2_data = (MsnGetInfoStepTwoData *)data;
 	int id = -1;
 
 	/* Unmarshall the saved state */
 	MsnGetInfoData *info_data = info2_data->info_data;
 	char *stripped = info2_data->stripped;
 	char *url_buffer = info2_data->url_buffer;
-	GaimNotifyUserInfo *user_info = info2_data->user_info;
+	GString *s = info2_data->s;
 	char *photo_url_text = info2_data->photo_url_text;
+	char *tooltip_text = info2_data->tooltip_text;
 
 	/* Make sure the connection is still valid if we got here by fetching a photo url */
-	if (url_text && (error_message != NULL ||
-					 g_list_find(gaim_connections_get_all(), info_data->gc) == NULL))
+	if (url_text &&
+		g_list_find(gaim_connections_get_all(), info_data->gc) == NULL)
 	{
 		gaim_debug_warning("msn", "invalid connection. ignoring buddy photo info.\n");
 		g_free(stripped);
 		g_free(url_buffer);
-		g_free(user_info);
+		g_string_free(s, TRUE);
+		g_free(tooltip_text);
 		g_free(info_data->name);
 		g_free(info_data);
 		g_free(photo_url_text);
@@ -1877,7 +1971,7 @@ msn_got_photo(GaimUtilFetchUrlData *url_data, gpointer user_data,
 	}
 
 	/* Try to put the photo in there too, if there's one and is readable */
-	if (user_data && url_text && len != 0)
+	if (data && url_text && len != 0)
 	{
 		if (strstr(url_text, "400 Bad Request")
 			|| strstr(url_text, "403 Forbidden")
@@ -1893,17 +1987,20 @@ msn_got_photo(GaimUtilFetchUrlData *url_data, gpointer user_data,
 			gaim_debug_info("msn", "%s is %d bytes\n", photo_url_text, len);
 			id = gaim_imgstore_add(url_text, len, NULL);
 			g_snprintf(buf, sizeof(buf), "<img id=\"%d\"><br>", id);
-			gaim_notify_user_info_prepend_pair(user_info, NULL, buf);
+			g_string_prepend(s, buf);
 		}
 	}
 
 	/* We continue here from msn_got_info, as if nothing has happened */
 #endif
-	gaim_notify_userinfo(info_data->gc, info_data->name, user_info, NULL, NULL);
+
+	g_string_prepend(s, tooltip_text);
+	gaim_notify_userinfo(info_data->gc, info_data->name, s->str, NULL, NULL);
 
 	g_free(stripped);
 	g_free(url_buffer);
-	gaim_notify_user_info_destroy(user_info);
+	g_string_free(s, TRUE);
+	g_free(tooltip_text);
 	g_free(info_data->name);
 	g_free(info_data);
 #if PHOTO_SUPPORT
@@ -1926,7 +2023,7 @@ msn_get_info(GaimConnection *gc, const char *name)
 
 	url = g_strdup_printf("%s%s", PROFILE_URL, name);
 
-	gaim_util_fetch_url(url, FALSE,
+	gaim_url_fetch(url, FALSE,
 				   "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)",
 				   TRUE, msn_got_info, data);
 
@@ -1956,7 +2053,7 @@ static GaimPluginProtocolInfo prpl_info =
 	OPT_PROTO_MAIL_CHECK,
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
-	{"png", 0, 0, 96, 96, 0, GAIM_ICON_SCALE_SEND},	/* icon_spec */
+	{"png", 0, 0, 96, 96, GAIM_ICON_SCALE_SEND},	/* icon_spec */
 	msn_list_icon,			/* list_icon */
 	msn_list_emblems,		/* list_emblems */
 	msn_status_text,		/* status_text */
@@ -1982,7 +2079,7 @@ static GaimPluginProtocolInfo prpl_info =
 	msn_add_deny,			/* add_deny */
 	msn_rem_permit,			/* rem_permit */
 	msn_rem_deny,			/* rem_deny */
-	msn_set_permit_deny,		/* set_permit_deny */
+	msn_set_permit_deny,	/* set_permit_deny */
 	NULL,					/* join_chat */
 	NULL,					/* reject chat invite */
 	NULL,					/* get_chat_name */
@@ -2013,8 +2110,6 @@ static GaimPluginProtocolInfo prpl_info =
 	msn_new_xfer,			/* new_xfer */
 	NULL,					/* offline_message */
 	NULL,					/* whiteboard_prpl_ops */
-	NULL,					/* send_raw */
-	NULL,					/* roomlist_room_serialize */
 };
 
 static GaimPluginInfo info =
@@ -2054,11 +2149,11 @@ init_plugin(GaimPlugin *plugin)
 	GaimAccountOption *option;
 
 	option = gaim_account_option_string_new(_("Server"), "server",
-											MSN_SERVER);
+											WLM_SERVER);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 											   option);
 
-	option = gaim_account_option_int_new(_("Port"), "port", 1863);
+	option = gaim_account_option_int_new(_("Port"), "port", WLM_PORT);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 											   option);
 

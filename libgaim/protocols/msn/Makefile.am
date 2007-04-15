@@ -8,6 +8,8 @@ MSNSOURCES = \
 	cmdproc.h \
 	command.c \
 	command.h \
+	contact.c\
+	contact.h\
 	dialog.c \
 	dialog.h \
 	directconn.c \
@@ -30,6 +32,8 @@ MSNSOURCES = \
 	notification.h \
 	object.c \
 	object.h \
+	oim.c\
+	oim.h\
 	page.c \
 	page.h \
 	servconn.c \
@@ -46,6 +50,8 @@ MSNSOURCES = \
 	slpmsg.h \
 	slpsession.c \
 	slpsession.h \
+	soap.c\
+	soap.h\
 	state.c \
 	state.h \
 	switchboard.c \
