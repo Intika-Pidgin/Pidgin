@@ -1778,8 +1778,20 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 
 	if (have_status_message)
 	{
-		purple_prpl_got_user_status(account, info->sn, status_id,
-								  "message", message, NULL);
+		if ((status_id == OSCAR_STATUS_ID_AVAILABLE) && (info->itmsurl != NULL))
+		{
+			char *itmsurl;
+			itmsurl = oscar_encoding_to_utf8(info->itmsurl_encoding,
+					info->itmsurl, info->itmsurl_len);
+			purple_prpl_got_user_status(account, info->sn, status_id,
+					"message", message, "itmsurl", itmsurl, NULL);
+			g_free(itmsurl);
+		}
+		else
+		{
+			purple_prpl_got_user_status(account, info->sn, status_id,
+					"message", message, NULL);
+		}
 		g_free(message);
 	}
 	else
@@ -2886,6 +2898,18 @@ static int purple_parse_userinfo(OscarData *od, FlapConnection *conn, FlapFrame 
 		if (userinfo->status[0] != '\0')
 			tmp = oscar_encoding_to_utf8(userinfo->status_encoding,
 											 userinfo->status, userinfo->status_len);
+#if defined (_WIN32) || defined (__APPLE__)
+		if (userinfo->itmsurl[0] != '\0') {
+			gchar *itmsurl, *tmp2;
+			itmsurl = oscar_encoding_to_utf8(userinfo->itmsurl_encoding,
+					userinfo->itmsurl, userinfo->itmsurl_len);
+			tmp2 = g_strdup_printf("<a href=\"%s\">%s</a>",
+					itmsurl, tmp);
+			g_free(tmp);
+			tmp = tmp2;
+			g_free(itmsurl);
+		}
+#endif
 		oscar_user_info_add_pair(user_info, _("Available Message"), tmp);
 		g_free(tmp);
 	}
@@ -3397,10 +3421,9 @@ static int purple_parse_ratechange(OscarData *od, FlapConnection *conn, FlapFram
 
 	if (code == AIM_RATE_CODE_LIMIT)
 	{
-		purple_notify_error(od->gc, NULL, _("Rate limiting error."),
-						  _("The last action you attempted could not be "
-							"performed because you are over the rate limit. "
-							"Please wait 10 seconds and try again."));
+		purple_debug_warning("oscar",  _("The last action you attempted could not be "
+					 	 "performed because you are over the rate limit. "
+						 "Please wait 10 seconds and try again."));
 	}
 
 	return 1;
