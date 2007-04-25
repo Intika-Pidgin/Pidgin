@@ -46,11 +46,6 @@ static struct StockIcon
 	{ PIDGIN_STOCK_CHAT,            NULL,      GTK_STOCK_JUMP_TO          },
 	{ PIDGIN_STOCK_CLEAR,           NULL,      GTK_STOCK_CLEAR            },
 	{ PIDGIN_STOCK_CLOSE_TABS,      NULL,      GTK_STOCK_CLOSE            },
-#if GTK_CHECK_VERSION(2,6,0)
-	{ PIDGIN_STOCK_CONNECT,         NULL,      GTK_STOCK_CONNECT          },
-#else
-	{ PIDGIN_STOCK_CONNECT,         "icons",   "stock_connect_16.png"     },
-#endif
 	{ PIDGIN_STOCK_DEBUG,           NULL,      GTK_STOCK_PROPERTIES       },
 	{ PIDGIN_STOCK_DOWNLOAD,        NULL,      GTK_STOCK_GO_DOWN          },
 #if GTK_CHECK_VERSION(2,6,0)
@@ -157,6 +152,7 @@ static struct SizedStockIcon {
 	{ PIDGIN_STOCK_TOOLBAR_BLOCK, "emblems", "blocked.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TOOLBAR_FGCOLOR, "toolbar", "change-fgcolor.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TOOLBAR_SMILEY, "toolbar", "emote-select.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
+	{ PIDGIN_STOCK_TOOLBAR_FONT_FACE, "toolbar", "font-face.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TOOLBAR_TEXT_SMALLER, "toolbar", "font-size-down.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TOOLBAR_TEXT_LARGER, "toolbar", "font-size-up.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE, "toolbar", "insert-image.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
@@ -166,6 +162,7 @@ static struct SizedStockIcon {
 	{ PIDGIN_STOCK_TOOLBAR_PLUGINS, "toolbar", "plugins.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TOOLBAR_TYPING, "toolbar", "typing.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TOOLBAR_UNBLOCK, "toolbar", "unblock.png", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE },
+	{ PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR, "toolbar", "select-avatar.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE },
 
 	{ PIDGIN_STOCK_TRAY_AVAILABLE, "tray", "tray-online.png", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE },
 	{ PIDGIN_STOCK_TRAY_AWAY, "tray", "tray-away.png", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE },
