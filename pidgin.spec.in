@@ -227,8 +227,10 @@ make DESTDIR=$RPM_BUILD_ROOT install
 # Delete files that we don't want to put in any of the RPMs
 rm -f $RPM_BUILD_ROOT%{_libdir}/finch/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/pidgin/*.la
-rm -f $RPM_BUILD_ROOT%{_libdir}/libpurple/*.la
-rm -f $RPM_BUILD_ROOT%{_libdir}/libpurple/private/*.la
+rm -f $RPM_BUILD_ROOT%{_libdir}/purple/*.la
+rm -f $RPM_BUILD_ROOT%{_libdir}/purple/liboscar.so
+rm -f $RPM_BUILD_ROOT%{_libdir}/purple/libjabber.so
+rm -f $RPM_BUILD_ROOT%{_libdir}/purple/private/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
 rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
 find $RPM_BUILD_ROOT -type f -name .packlist -exec rm -f {} ';'
@@ -337,6 +339,7 @@ fi
 
 %{_bindir}/pidgin
 %{_datadir}/pixmaps/pidgin
+%{_datadir}/icons/hicolor/*/apps/pidgin.png
 %dir %{_datadir}/sounds/pidgin
 %{_datadir}/sounds/pidgin/*
 %{_datadir}/applications/*
@@ -347,7 +350,7 @@ fi
 %defattr(-, root, root)
 
 %{_libdir}/libpurple.so.*
-%dir %{_libdir}/libpurple
+%dir %{_libdir}/purple-2
 %attr(755, root, root) %{perl_vendorarch}/Purple.pm
 %dir %{perl_vendorarch}/auto/Purple
 %attr(755, root, root) %{perl_vendorarch}/auto/Purple/Purple.so
@@ -433,6 +436,9 @@ fi
 %endif
 
 %changelog
+* Wed Apr 25 2007 Stu Tomlinson <stu@nosnilmot.com>
+- Update libpurple to pick up plugins in %%{_libdir}/purple
+
 * Sun Apr 22 2007 Stu Tomlinson <stu@nosnilmot.com>
 - Remove Epoch because it's gone in Fedora now
 - Add virtual provides for gaim & gaim-devel
