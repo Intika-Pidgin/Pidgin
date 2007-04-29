@@ -6,7 +6,6 @@ EXTRA_DIST = \
 		HACKING \
 		Makefile.mingw \
 		PLUGIN_HOWTO \
-		PROGRAMMING_NOTES \
 		README.MTN \
 		README.mingw \
 		config.h.mingw \
@@ -18,7 +17,8 @@ EXTRA_DIST = \
 		pidgin.apspec.in \
 		pidgin.spec.in \
 		pidgin.desktop.in \
-		po/Makefile.mingw
+		po/Makefile.mingw \
+		valgrind-suppressions
 
 noinst_HEADERS = config.h
 
