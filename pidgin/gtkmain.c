@@ -350,7 +350,11 @@ static PurpleCoreUiOps core_ops =
 	pidgin_prefs_init,
 	debug_init,
 	pidgin_ui_init,
-	pidgin_quit
+	pidgin_quit,
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static PurpleCoreUiOps *
@@ -684,7 +688,7 @@ int main(int argc, char *argv[])
 		const char *text = _(
 			"%s encountered errors migrating your settings "
 			"from %s to %s. Please investigate and complete the "
-			"migration by hand.");
+			"migration by hand. Please report this error at http://developer.pidgin.im");
 		GtkWidget *dialog;
 
 		dialog = gtk_message_dialog_new(NULL,

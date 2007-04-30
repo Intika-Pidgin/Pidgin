@@ -208,9 +208,13 @@ value_equals(gpointer key, gpointer value, gpointer user_data)
 }
 
 static void
-image_deleting_cb(PurpleStoredImage *img, gpointer data)
+image_deleting_cb(const PurpleStoredImage *img, gpointer data)
 {
 	const char *filename = purple_imgstore_get_filename(img);
+
+	/* If there's no filename, it can't be one of our images. */
+	if (filename == NULL)
+		return;
 
 	if (img == g_hash_table_lookup(icon_data_cache, filename))
 	{
@@ -219,7 +223,7 @@ image_deleting_cb(PurpleStoredImage *img, gpointer data)
 
 		/* We could make this O(1) by using another hash table, but
 		 * this is probably good enough. */
-		g_hash_table_foreach_remove(pointer_icon_cache, value_equals, img);
+		g_hash_table_foreach_remove(pointer_icon_cache, value_equals, (gpointer)img);
 	}
 }
 
@@ -694,11 +698,13 @@ purple_buddy_icons_set_account_icon(PurpleAccount *account,
 	{
 		const char *filename = purple_imgstore_get_filename(img);
 		purple_account_set_string(account, "buddy_icon", filename);
+		purple_account_set_int(account, "buddy_icon_timestamp", time(NULL));
 		ref_filename(filename);
 	}
 	else
 	{
 		purple_account_set_string(account, "buddy_icon", NULL);
+		purple_account_set_int(account, "buddy_icon_timestamp", 0);
 	}
 	unref_filename(old_icon);
 
@@ -721,7 +727,7 @@ purple_buddy_icons_set_account_icon(PurpleAccount *account,
 
 	if (old_img)
 		purple_imgstore_unref(old_img);
-	else
+	else if (old_icon)
 	{
 		/* The old icon may not have been loaded into memory.  In that
 		 * case, we'll need to uncache the filename.  The filenames
@@ -731,6 +737,25 @@ purple_buddy_icons_set_account_icon(PurpleAccount *account,
 	g_free(old_icon);
 
 	return img;
+}
+
+time_t
+purple_buddy_icons_get_account_icon_timestamp(PurpleAccount *account)
+{
+	time_t ret;
+
+	g_return_val_if_fail(account != NULL, 0);
+
+	ret = purple_account_get_int(account, "buddy_icon_timestamp", 0);
+
+	/* This deals with migration cases. */
+	if (ret == 0 && purple_account_get_string(account, "buddy_icon", NULL) != NULL)
+	{
+		ret = time(NULL);
+		purple_account_set_int(account, "buddy_icon_timestamp", ret);
+	}
+
+	return ret;
 }
 
 PurpleStoredImage *
@@ -829,7 +854,7 @@ purple_buddy_icons_set_custom_icon(PurpleContact *contact,
 
 	if (old_img)
 		purple_imgstore_unref(old_img);
-	else
+	else if (old_icon)
 	{
 		/* The old icon may not have been loaded into memory.  In that
 		 * case, we'll need to uncache the filename.  The filenames
@@ -842,7 +867,7 @@ purple_buddy_icons_set_custom_icon(PurpleContact *contact,
 }
 
 void
-purple_buddy_icon_set_old_icons_dir(const char *dirname)
+_purple_buddy_icon_set_old_icons_dir(const char *dirname)
 {
 	old_icons_dir = g_strdup(dirname);
 }
@@ -887,9 +912,19 @@ migrate_buddy_icon(PurpleBlistNode *node, const char *setting_name,
 		FILE *file;
 		char *new_filename;
 
-		if (!read_icon_file(path, &icon_data, &icon_len) ||
-		    icon_data == NULL || icon_len > 0)
+		if (!read_icon_file(path, &icon_data, &icon_len))
 		{
+			g_free(path);
+			delete_buddy_icon_settings(node, setting_name);
+			return;
+		}
+
+		if (icon_data == NULL || icon_len <= 0)
+		{
+			/* This really applies to the icon_len check.
+			 * icon_data should never be NULL if
+			 * read_icon_file() returns TRUE. */
+			purple_debug_error("buddyicon", "Empty buddy icon file: %s\n", path);
 			delete_buddy_icon_settings(node, setting_name);
 			g_free(path);
 			return;
@@ -900,8 +935,11 @@ migrate_buddy_icon(PurpleBlistNode *node, const char *setting_name,
 		new_filename = purple_buddy_icon_data_calculate_filename(icon_data, icon_len);
 		if (new_filename == NULL)
 		{
+			purple_debug_error("buddyicon",
+				"New icon filename is NULL. This should never happen! "
+				"The old filename was: %s\n", path);
 			delete_buddy_icon_settings(node, setting_name);
-			return;
+			g_return_if_reached();
 		}
 
 		path = g_build_filename(dirname, new_filename, NULL);
@@ -967,14 +1005,14 @@ migrate_buddy_icon(PurpleBlistNode *node, const char *setting_name,
 	}
 	else
 	{
-		/* If the icon is gone, drop the setting... */
+		purple_debug_error("buddyicon", "Old icon file doesn't exist: %s\n", path);
 		delete_buddy_icon_settings(node, setting_name);
 		g_free(path);
 	}
 }
 
 void
-purple_buddy_icons_account_loaded_cb()
+_purple_buddy_icons_account_loaded_cb()
 {
 	const char *dirname = purple_buddy_icons_get_cache_dir();
 	GList *cur;
@@ -999,7 +1037,7 @@ purple_buddy_icons_account_loaded_cb()
 }
 
 void
-purple_buddy_icons_blist_loaded_cb()
+_purple_buddy_icons_blist_loaded_cb()
 {
 	PurpleBlistNode *node = purple_blist_get_root();
 	const char *dirname = purple_buddy_icons_get_cache_dir();
