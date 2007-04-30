@@ -59,7 +59,13 @@ static PurpleCoreUiOps core_ops =
 	finch_prefs_init,
 	debug_init,
 	gnt_ui_init,
-	gnt_ui_uninit
+	gnt_ui_uninit,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static PurpleCoreUiOps *
@@ -149,7 +155,13 @@ static PurpleEventLoopUiOps eventloop_ops =
 	g_source_remove,
 	gnt_input_add,
 	g_source_remove,
-	NULL /* input_get_error */
+	NULL, /* input_get_error */
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static PurpleEventLoopUiOps *
@@ -291,7 +303,7 @@ init_libpurple(int argc, char **argv)
 			char *text = g_strdup_printf(_(
 				"%s encountered errors migrating your settings "
 				"from %s to %s. Please investigate and complete the "
-				"migration by hand."), _("Finch"),
+				"migration by hand. Please report this error at http://developer.pidgin.im"), _("Finch"),
 				old, purple_user_dir());
 
 			g_free(old);

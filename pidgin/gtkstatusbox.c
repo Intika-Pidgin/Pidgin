@@ -1447,11 +1447,20 @@ buddy_icon_set_cb(const char *filename, PidginStatusBox *box)
 					size_t len = 0;
 					if (filename)
 						data = pidgin_convert_buddy_icon(plug, filename, &len);
-					img = purple_buddy_icons_set_account_icon(box->account, data, len);
-					purple_account_set_buddy_icon_path(box->account, filename);
-
-					purple_account_set_bool(box->account, "use-global-buddyicon", (filename != NULL));
+					img = purple_buddy_icons_set_account_icon(account, data, len);
+					purple_account_set_buddy_icon_path(account, filename);
 				}
+			}
+		}
+
+		/* Even if no accounts were processed, load the icon that was set. */
+		if (filename != NULL)
+		{
+			gchar *contents;
+			gsize size;
+			if (g_file_get_contents(filename, &contents, &size, NULL))
+			{
+				img = purple_imgstore_add(contents, size, filename);
 			}
 		}
 	}
@@ -2071,7 +2080,9 @@ void
 pidgin_status_box_set_buddy_icon(PidginStatusBox *status_box, PurpleStoredImage *img)
 {
 	purple_imgstore_unref(status_box->buddy_icon_img);
-	status_box->buddy_icon_img = purple_imgstore_ref(img);
+	status_box->buddy_icon_img = img;
+	if (status_box->buddy_icon_img != NULL)
+		purple_imgstore_ref(status_box->buddy_icon_img);
 
 	pidgin_status_box_redisplay_buddy_icon(status_box);
 }
@@ -2225,7 +2236,8 @@ activate_currently_selected_status(PidginStatusBox *status_box)
 							PurpleSavedStatusSub *sub = purple_savedstatus_get_substatus(ss, acct);
 							if (sub) {
 								const PurpleStatusType *sub_type = purple_savedstatus_substatus_get_type(sub);
-								if (!strcmp(purple_status_type_get_id(sub_type),
+								const char *subtype_status_id = purple_status_type_get_id(sub_type);
+								if (subtype_status_id && !strcmp(subtype_status_id,
 										purple_status_type_get_id(acct_status_type)))
 									found = TRUE;
 							}
