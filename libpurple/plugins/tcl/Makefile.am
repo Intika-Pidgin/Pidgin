@@ -1,4 +1,4 @@
-plugindir = $(libdir)/libpurple
+plugindir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
 tcl_la_LDFLAGS = -module -avoid-version
 

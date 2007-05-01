@@ -38,7 +38,6 @@
 #define PIDGIN_STOCK_CHAT            "pidgin-chat"
 #define PIDGIN_STOCK_CLEAR           "pidgin-clear"
 #define PIDGIN_STOCK_CLOSE_TABS      "pidgin-close-tab"
-#define PIDGIN_STOCK_CONNECT         "pidgin-connect"
 #define PIDGIN_STOCK_DEBUG           "pidgin-debug"
 #define PIDGIN_STOCK_DISCONNECT      "pidgin-disconnect"
 #define PIDGIN_STOCK_DOWNLOAD        "pidgin-download"
@@ -114,6 +113,7 @@
 #define PIDGIN_STOCK_TOOLBAR_BLOCK        "pidgin-block"
 #define PIDGIN_STOCK_TOOLBAR_FGCOLOR      "pidgin-fgcolor"
 #define PIDGIN_STOCK_TOOLBAR_SMILEY       "pidgin-smiley"
+#define PIDGIN_STOCK_TOOLBAR_FONT_FACE	  "pidgin-font-face"
 #define PIDGIN_STOCK_TOOLBAR_TEXT_SMALLER "pidgin-text-smaller"
 #define PIDGIN_STOCK_TOOLBAR_TEXT_LARGER  "pidgin-text-larger"
 #define PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE "pidgin-insert-image"
@@ -124,6 +124,7 @@
 #define PIDGIN_STOCK_TOOLBAR_TYPING       "pidgin-typing"
 #define PIDGIN_STOCK_TOOLBAR_USER_INFO    "pidgin-info"
 #define PIDGIN_STOCK_TOOLBAR_UNBLOCK      "pidgin-unblock"
+#define PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR "pidgin-select-avatar"
 
 /* Tray icons */
 #define PIDGIN_STOCK_TRAY_AVAILABLE       "pidgin-tray-available"

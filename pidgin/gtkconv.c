@@ -1012,7 +1012,9 @@ menu_save_as_cb(gpointer data, guint action, GtkWidget *widget)
 
 	purple_request_file(PIDGIN_CONVERSATION(conv), _("Save Conversation"),
 					  purple_escape_filename(buf),
-					  TRUE, G_CALLBACK(savelog_writefile_cb), NULL, conv);
+					  TRUE, G_CALLBACK(savelog_writefile_cb), NULL,
+					  NULL, NULL, conv,
+					  conv);
 
 	g_free(buf);
 }
@@ -1416,35 +1418,19 @@ chat_do_im(PidginConversation *gtkconv, const char *who)
 	g_free(real_who);
 }
 
+static void pidgin_conv_chat_update_user(PurpleConversation *conv, const char *user);
+
 static void
 ignore_cb(GtkWidget *w, PidginConversation *gtkconv)
 {
 	PurpleConversation *conv = gtkconv->active_conv;
-	PidginChatPane *gtkchat;
-	PurpleConvChatBuddy *cbuddy;
 	PurpleConvChat *chat;
-	PurpleConvChatBuddyFlags flags;
-	GtkTreeIter iter;
-	GtkTreeModel *model;
-	GtkTreeSelection *sel;
-	char *name;
-	char *alias;
+	const char *name;
 
-	chat    = PURPLE_CONV_CHAT(conv);
-	gtkchat = gtkconv->u.chat;
+	chat = PURPLE_CONV_CHAT(conv);
+	name = g_object_get_data(G_OBJECT(w), "user_data");
 
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gtkchat->list));
-	sel   = gtk_tree_view_get_selection(GTK_TREE_VIEW(gtkchat->list));
-
-	if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-		gtk_tree_model_get(GTK_TREE_MODEL(model), &iter,
-						   CHAT_USERS_NAME_COLUMN, &name,
-						   CHAT_USERS_ALIAS_COLUMN, &alias,
-						   CHAT_USERS_FLAGS_COLUMN, &flags,
-						   -1);
-		gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
-	}
-	else
+	if (name == NULL)
 		return;
 
 	if (purple_conv_chat_is_user_ignored(chat, name))
@@ -1452,11 +1438,7 @@ ignore_cb(GtkWidget *w, PidginConversation *gtkconv)
 	else
 		purple_conv_chat_ignore(chat, name);
 
-	cbuddy = purple_conv_chat_cb_new(name, alias, flags);
-
-	add_chat_buddy_common(conv, cbuddy, NULL);
-	g_free(name);
-	g_free(alias);
+	pidgin_conv_chat_update_user(conv, name);
 }
 
 static void
@@ -2022,6 +2004,8 @@ refocus_entry_cb(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		(event->keyval == GDK_F10) ||
 		(event->keyval == GDK_Shift_L) ||
 		(event->keyval == GDK_Shift_R) ||
+		(event->keyval == GDK_Control_L) ||
+		(event->keyval == GDK_Control_R) ||
 		(event->keyval == GDK_Escape) ||
 		(event->keyval == GDK_Up) ||
 		(event->keyval == GDK_Down) ||
@@ -2171,7 +2155,7 @@ insert_text_cb(GtkTextBuffer *textbuffer, GtkTextIter *position,
 
 	conv = gtkconv->active_conv;
 
-	if (!purple_prefs_get_bool("/core/conversations/im/send_typing"))
+	if (!purple_prefs_get_bool("/purple/conversations/im/send_typing"))
 		return;
 
 	got_typing_keypress(gtkconv, (gtk_text_iter_is_start(position) &&
@@ -2190,7 +2174,7 @@ delete_text_cb(GtkTextBuffer *textbuffer, GtkTextIter *start_pos,
 
 	conv = gtkconv->active_conv;
 
-	if (!purple_prefs_get_bool("/core/conversations/im/send_typing"))
+	if (!purple_prefs_get_bool("/purple/conversations/im/send_typing"))
 		return;
 
 	im = PURPLE_CONV_IM(conv);
@@ -2225,25 +2209,25 @@ static GList *get_prpl_icon_list(PurpleAccount *account)
 	if (l)
 		return l;
 	filename = g_strdup_printf("%s.png", prpl);
-	
+
 	path = g_build_filename(DATADIR, "pixmaps", "pidgin", "protocols", "16", filename, NULL);
 	pixbuf = gdk_pixbuf_new_from_file(path, NULL);
 	if (pixbuf)
 		l = g_list_append(l, pixbuf);
 	g_free(path);
-	
+
 	path = g_build_filename(DATADIR, "pixmaps", "pidgin", "protocols", "22", filename, NULL);
         pixbuf = gdk_pixbuf_new_from_file(path, NULL);
         if (pixbuf)
                 l = g_list_append(l, pixbuf);
         g_free(path);
-	
+
 	path = g_build_filename(DATADIR, "pixmaps", "pidgin", "protocols", "48", filename, NULL);
         pixbuf = gdk_pixbuf_new_from_file(path, NULL);
         if (pixbuf)
                 l = g_list_append(l, pixbuf);
         g_free(path);
-	
+
 	g_hash_table_insert(prpl_lists, g_strdup(prpl), l);
 	return l;
 }
@@ -2328,7 +2312,7 @@ update_tab_icon(PurpleConversation *conv)
 {
 	PidginConversation *gtkconv;
 	PidginWindow *win;
-	GList *l;	
+	GList *l;
 	GdkPixbuf *status = NULL;
 
 	g_return_if_fail(conv != NULL);
@@ -2386,8 +2370,13 @@ redraw_icon(gpointer data)
 
 	gtkconv = PIDGIN_CONVERSATION(conv);
 	account = purple_conversation_get_account(conv);
-	if(account && account->gc)
+
+	if(account && account->gc) {
 		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(account->gc->prpl);
+	} else {
+		gtkconv->u.im->icon_timer = 0;
+		return FALSE;
+	}
 
 	gtkconv->auto_resize = TRUE;
 	g_idle_add(reset_auto_resize_cb, gtkconv);
@@ -2500,23 +2489,6 @@ saveicon_writefile_cb(void *user_data, const char *filename)
 	fclose(fp);
 }
 
-static const char *
-custom_icon_pref_name(PidginConversation *gtkconv)
-{
-	PurpleConversation *conv;
-	PurpleAccount *account;
-	PurpleBuddy *buddy;
-
-	conv = gtkconv->active_conv;
-	account = purple_conversation_get_account(conv);
-	buddy = purple_find_buddy(account, purple_conversation_get_name(conv));
-	if (buddy) {
-		PurpleContact *contact = purple_buddy_get_contact(buddy);
-		return purple_blist_node_get_string((PurpleBlistNode*)contact, "custom_buddy_icon");
-	}
-	return NULL;
-}
-
 static void
 custom_icon_sel_cb(const char *filename, gpointer data)
 {
@@ -2556,14 +2528,14 @@ icon_menu_save_cb(GtkWidget *widget, PidginConversation *gtkconv)
 
 	g_return_if_fail(conv != NULL);
 
-	ext = purple_buddy_icon_get_type(purple_conv_im_get_icon(PURPLE_CONV_IM(conv)));
-	if (ext == NULL)
-		ext = "icon";
+	ext = purple_buddy_icon_get_extension(purple_conv_im_get_icon(PURPLE_CONV_IM(conv)));
 
 	buf = g_strdup_printf("%s.%s", purple_normalize(conv->account, conv->name), ext);
 
 	purple_request_file(gtkconv, _("Save Icon"), buf, TRUE,
-					 G_CALLBACK(saveicon_writefile_cb), NULL, gtkconv);
+					 G_CALLBACK(saveicon_writefile_cb), NULL,
+					conv->account, NULL, conv,
+					gtkconv);
 
 	g_free(buf);
 }
@@ -2594,7 +2566,8 @@ static gboolean
 icon_menu(GtkObject *obj, GdkEventButton *e, PidginConversation *gtkconv)
 {
 	static GtkWidget *menu = NULL;
-	const char *pref;
+	PurpleConversation *conv;
+	PurpleBuddy *buddy;
 
 	if (e->button != 3 || e->type != GDK_BUTTON_PRESS)
 		return FALSE;
@@ -2628,11 +2601,18 @@ icon_menu(GtkObject *obj, GdkEventButton *e, PidginConversation *gtkconv)
 							 0, 0, NULL);
 
 	/* Is there a custom icon for this person? */
-	pref = custom_icon_pref_name(gtkconv);
-	if (pref && *pref) {
-		pidgin_new_item_from_stock(menu, _("Remove Custom Icon"), NULL,
-							G_CALLBACK(remove_custom_icon_cb), gtkconv,
-							0, 0, NULL);
+	conv = gtkconv->active_conv;
+	buddy = purple_find_buddy(purple_conversation_get_account(conv),
+	                          purple_conversation_get_name(conv));
+	if (buddy)
+	{
+		PurpleContact *contact = purple_buddy_get_contact(buddy);
+		if (contact && purple_buddy_icons_has_custom_icon(contact))
+		{
+			pidgin_new_item_from_stock(menu, _("Remove Custom Icon"), NULL,
+			                           G_CALLBACK(remove_custom_icon_cb), gtkconv,
+			                           0, 0, NULL);
+		}
 	}
 
 	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, e->button, e->time);
@@ -3159,7 +3139,10 @@ update_typing_icon(PidginConversation *gtkconv)
 		gtk_widget_hide(gtkwin->menu.typing_icon);
 	}
 
-	if (!im || (purple_conv_im_get_typing_state(im) == PURPLE_NOT_TYPING)) {
+	if (im == NULL)
+		return;
+
+	if (purple_conv_im_get_typing_state(im) == PURPLE_NOT_TYPING) {
 		if (gtkconv->u.im->typing_timer != 0)
 			g_source_remove(gtkconv->u.im->typing_timer);
 		return;
@@ -3179,7 +3162,7 @@ update_typing_icon(PidginConversation *gtkconv)
 	}
 
 	if (gtkwin->menu.typing_icon == NULL)
-	{	
+	{
 		gtkwin->menu.typing_icon = gtk_image_new_from_stock(stock_id, GTK_ICON_SIZE_MENU);
 		pidgin_menu_tray_append(PIDGIN_MENU_TRAY(gtkwin->menu.tray),
 								  gtkwin->menu.typing_icon,
@@ -3485,7 +3468,7 @@ get_chat_buddy_status_icon(PurpleConvChat *chat, const char *name, PurpleConvCha
 
 	pixbuf = gtk_widget_render_icon (gtkconv->tab_cont, image, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL),
 				 	 "GtkTreeView");
-	
+
 	if (!pixbuf)
 		return NULL;
 
@@ -3493,6 +3476,7 @@ get_chat_buddy_status_icon(PurpleConvChat *chat, const char *name, PurpleConvCha
 	g_object_unref(pixbuf);
 
 	if (flags && purple_conv_chat_is_user_ignored(chat, name)) {
+/* TODO: the .../status/default directory isn't installed, should it be? */
 		filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "status", "default", "ignored.png", NULL);
 		pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
 		g_free(filename);
@@ -4772,6 +4756,9 @@ pidgin_conv_destroy(PurpleConversation *conv)
 
 		if (gtkconv->u.im->anim != NULL)
 			g_object_unref(G_OBJECT(gtkconv->u.im->anim));
+
+		if (gtkconv->u.im->typing_timer != 0)
+			g_source_remove(gtkconv->u.im->typing_timer);
 
 		g_free(gtkconv->u.im);
 	} else if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
@@ -6059,28 +6046,28 @@ pidgin_conv_update_fields(PurpleConversation *conv, PidginConvFields fields)
 		    purple_conv_im_get_typing_state(im) == PURPLE_TYPING)
 		{
 			atk_object_set_description(accessibility_obj, _("Typing"));
-			strncpy(style, "color=\"#47A046\"", sizeof(style));
+			strncpy(style, "color=\"#4e9a06\"", sizeof(style));
 		}
 		else if (im != NULL &&
 		         purple_conv_im_get_typing_state(im) == PURPLE_TYPED)
 		{
 			atk_object_set_description(accessibility_obj, _("Stopped Typing"));
-			strncpy(style, "color=\"#D1940C\"", sizeof(style));
+			strncpy(style, "color=\"#c4a000\"", sizeof(style));
 		}
 		else if (gtkconv->unseen_state == PIDGIN_UNSEEN_NICK)
 		{
 			atk_object_set_description(accessibility_obj, _("Nick Said"));
-			strncpy(style, "color=\"#0D4E91\" style=\"italic\" weight=\"bold\"", sizeof(style));
+			strncpy(style, "color=\"#204a87\" style=\"italic\" weight=\"bold\"", sizeof(style));
 		}
 		else if (gtkconv->unseen_state == PIDGIN_UNSEEN_TEXT)
 		{
 			atk_object_set_description(accessibility_obj, _("Unread Messages"));
-			strncpy(style, "color=\"#DF421E\" weight=\"bold\"", sizeof(style));
+			strncpy(style, "color=\"#cc0000\" weight=\"bold\"", sizeof(style));
 		}
 		else if (gtkconv->unseen_state == PIDGIN_UNSEEN_EVENT)
 		{
 			atk_object_set_description(accessibility_obj, _("New Event"));
-			strncpy(style, "color=\"#868272\" style=\"italic\"", sizeof(style));
+			strncpy(style, "color=\"#888a85\" style=\"italic\"", sizeof(style));
 		}
 
 		if (*style != '\0')
@@ -6174,6 +6161,10 @@ static PurpleConversationUiOps conversation_ui_ops =
 	pidgin_conv_custom_smiley_write,  /* custom_smiley_write  */
 	pidgin_conv_custom_smiley_close,  /* custom_smiley_close  */
 	pidgin_conv_send_confirm,         /* send_confirm         */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 PurpleConversationUiOps *
@@ -6191,12 +6182,14 @@ pidgin_conv_update_buddy_icon(PurpleConversation *conv)
 	PidginConversation *gtkconv;
 	PidginWindow *win;
 
+	PurpleBuddy *buddy;
+
 	GdkPixbufLoader *loader;
 	GdkPixbufAnimation *anim;
 	GError *err = NULL;
 
-	const char *custom = NULL;
-	const void *data = NULL;
+	PurpleStoredImage *custom_img = NULL;
+	gconstpointer data = NULL;
 	size_t len;
 
 	GdkPixbuf *buf;
@@ -6253,17 +6246,18 @@ pidgin_conv_update_buddy_icon(PurpleConversation *conv)
 	if (purple_conversation_get_gc(conv) == NULL)
 		return;
 
-	custom = custom_icon_pref_name(gtkconv);
-	if (custom) {
-		/* There is a custom icon for this user */
-		char *contents = NULL;
-		if (!g_file_get_contents(custom, &contents, &len, &err)) {
-			purple_debug_warning("custom icon", "could not load custom icon %s for %s\n",
-						custom, purple_conversation_get_name(conv));
-			g_error_free(err);
-			err = NULL;
-		} else
-			data = contents;
+	buddy = purple_find_buddy(account, purple_conversation_get_name(conv));
+	if (buddy)
+	{
+		PurpleContact *contact = purple_buddy_get_contact(buddy);
+		if (contact) {
+			custom_img = purple_buddy_icons_find_custom_icon(contact);
+			if (custom_img) {
+				/* There is a custom icon for this user */
+				data = purple_imgstore_get_data(custom_img);
+				len = purple_imgstore_get_size(custom_img);
+			}
+		}
 	}
 
 	if (data == NULL) {
@@ -6273,19 +6267,21 @@ pidgin_conv_update_buddy_icon(PurpleConversation *conv)
 			return;
 
 		data = purple_buddy_icon_get_data(icon, &len);
-		custom = NULL;
+
+		if (data == NULL)
+			return;
 	}
 
 	loader = gdk_pixbuf_loader_new();
 	gdk_pixbuf_loader_write(loader, data, len, NULL);
 	gdk_pixbuf_loader_close(loader, &err);
+
+	purple_imgstore_unref(custom_img);
+
 	anim = gdk_pixbuf_loader_get_animation(loader);
 	if (anim)
 		g_object_ref(G_OBJECT(anim));
 	g_object_unref(loader);
-
-	if (custom)
-		g_free((void*)data);
 
 	if (!anim)
 		return;
@@ -6296,9 +6292,6 @@ pidgin_conv_update_buddy_icon(PurpleConversation *conv)
 				   "Buddy icon error: %s\n", err->message);
 		g_error_free(err);
 	}
-
-	if (!gtkconv->u.im->anim)
-		return;
 
 	if (gdk_pixbuf_animation_is_static_image(gtkconv->u.im->anim)) {
 		gtkconv->u.im->iter = NULL;
@@ -7865,7 +7858,7 @@ pidgin_conv_windows_get_list()
 	return window_list;
 }
 
-static GList* 
+static GList*
 make_status_icon_list(const char *stock, GtkWidget *w)
 {
 	GList *l = NULL;
@@ -7880,8 +7873,8 @@ make_status_icon_list(const char *stock, GtkWidget *w)
 	return l;
 }
 
-static void 
-create_icon_lists(GtkWidget *w) 
+static void
+create_icon_lists(GtkWidget *w)
 {
 	available_list = make_status_icon_list(PIDGIN_STOCK_STATUS_AVAILABLE, w);
 	busy_list = make_status_icon_list(PIDGIN_STOCK_STATUS_BUSY, w);
