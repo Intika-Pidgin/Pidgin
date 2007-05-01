@@ -1,4 +1,4 @@
-plugindir = $(libdir)/libpurple
+plugindir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
 plugin_LTLIBRARIES = mono.la
 

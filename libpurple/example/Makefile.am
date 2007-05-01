@@ -1,4 +1,4 @@
-bin_PROGRAMS = nullclient
+noinst_PROGRAMS = nullclient
 
 nullclient_SOURCES = defines.h nullclient.c
 nullclient_DEPENDENCIES =
@@ -14,7 +14,7 @@ AM_CPPFLAGS = \
 	-DSTANDALONE \
 	-DBR_PTHREADS=0 \
 	-DDATADIR=\"$(datadir)\" \
-	-DLIBDIR=\"$(libdir)/libpurple/\" \
+	-DLIBDIR=\"$(libdir)/purple-$(PURPLE_MAJOR_VERSION)/\" \
 	-DLOCALEDIR=\"$(datadir)/locale\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-I$(top_srcdir)/libpurple/ \
