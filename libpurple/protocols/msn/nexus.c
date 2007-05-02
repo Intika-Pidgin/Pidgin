@@ -25,7 +25,6 @@
 #include "soap.h"
 #include "nexus.h"
 #include "notification.h"
-
 #undef NEXUS_LOGIN_TWN
 
 /*Local Function Prototype*/
@@ -355,13 +354,15 @@ nexus_connect_written_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	MsnNexus *nexus = data;
 	int len;
+
 	char *da_login;
 	char *base, *c;
 
 	if (nexus->input_handler == 0)
-		//TODO: Use purple_ssl_input_add()?
+		/* TODO: Use purple_ssl_input_add()? */
 		nexus->input_handler = purple_input_add(nexus->gsc->fd,
 			PURPLE_INPUT_READ, nexus_connect_written_cb, nexus);
+
 
 	/* Get the PassportURLs line. */
 	len = msn_ssl_read(nexus);
@@ -470,4 +471,3 @@ msn_nexus_connect(MsnNexus *nexus)
 	msn_soap_init(nexus->soapconn,MSN_TWN_SERVER,1,nexus_login_connect_cb,nexus_login_error_cb);
 	msn_soap_connect(nexus->soapconn);
 }
-
