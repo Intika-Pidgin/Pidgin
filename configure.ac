@@ -46,8 +46,8 @@ AC_PREREQ([2.50])
 m4_define([purple_lt_current], [0])
 m4_define([purple_major_version], [2])
 m4_define([purple_minor_version], [0])
-m4_define([purple_micro_version], [0])
-m4_define([purple_version_suffix], [beta7])
+m4_define([purple_micro_version], [1])
+m4_define([purple_version_suffix], [devel])
 m4_define([purple_version],
           [purple_major_version.purple_minor_version.purple_micro_version])
 m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suffix],[purple_version_suffix]))
@@ -55,8 +55,8 @@ m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suf
 m4_define([gnt_lt_current], [0])
 m4_define([gnt_major_version], [1])
 m4_define([gnt_minor_version], [0])
-m4_define([gnt_micro_version], [0])
-m4_define([gnt_version_suffix], [beta7])
+m4_define([gnt_micro_version], [1])
+m4_define([gnt_version_suffix], [devel])
 m4_define([gnt_version],
           [gnt_major_version.gnt_minor_version.gnt_micro_version])
 m4_define([gnt_display_version], gnt_version[]m4_ifdef([gnt_version_suffix],[gnt_version_suffix]))
@@ -1187,7 +1187,7 @@ if test "$enable_perl" = yes ; then
 	PERL_CFLAGS=`$perlpath -MExtUtils::Embed -e ccopts 2>/dev/null`
 	if test "_$PERL_CFLAGS" = _ ; then
 		AC_MSG_RESULT([not found, building without perl.])
-		enable_perl = no
+		enable_perl=no
 	else
 		PERL_LIBS=`$perlpath -MExtUtils::Embed -e ldopts 2>/dev/null |$sedpath 's/-lgdbm //'`
 		PERL_LIBS=`echo $PERL_LIBS |$sedpath 's/-ldb //'`
@@ -1922,6 +1922,7 @@ AC_CHECK_HEADERS(malloc.h paths.h sgtty.h stdarg.h sys/cdefs.h)
 AC_CHECK_HEADERS(sys/file.h sys/filio.h sys/ioctl.h sys/msgbuf.h)
 AC_CHECK_HEADERS(sys/select.h sys/uio.h sys/utsname.h sys/wait.h)
 AC_CHECK_HEADERS(termios.h)
+AC_CHECK_HEADERS(sys/sysctl.h sys/socket.h)
 AC_VAR_TIMEZONE_EXTERNALS
 
 AC_CACHE_CHECK(for tm_gmtoff in struct tm, ac_cv_struct_tm_gmtoff,

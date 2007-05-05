@@ -486,8 +486,8 @@ docklet_status_submenu()
 
 	pidgin_separator(submenu);
 
-	new_menu_item_with_status_icon(submenu, _("New..."), PURPLE_STATUS_AVAILABLE, G_CALLBACK(show_custom_status_editor_cb), NULL, 0, 0, NULL);
-	new_menu_item_with_status_icon(submenu, _("Saved..."), PURPLE_STATUS_AVAILABLE, G_CALLBACK(pidgin_status_window_show), NULL, 0, 0, NULL);
+	pidgin_new_item_from_stock(submenu, _("New..."), NULL, G_CALLBACK(show_custom_status_editor_cb), NULL, 0, 0, NULL);
+	pidgin_new_item_from_stock(submenu, _("Saved..."), NULL, G_CALLBACK(pidgin_status_window_show), NULL, 0, 0, NULL);
 
 	return menuitem;
 }
@@ -648,6 +648,7 @@ pidgin_docklet_init()
 	void *conn_handle = purple_connections_get_handle();
 	void *conv_handle = purple_conversations_get_handle();
 	void *accounts_handle = purple_accounts_get_handle();
+	void *status_handle = purple_savedstatuses_get_handle();
 	void *docklet_handle = pidgin_docklet_get_handle();
 
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/docklet");
@@ -664,7 +665,7 @@ pidgin_docklet_init()
 			    docklet_handle, PURPLE_CALLBACK(docklet_signed_on_cb), NULL);
 	purple_signal_connect(conn_handle, "signed-off",
 			    docklet_handle, PURPLE_CALLBACK(docklet_signed_off_cb), NULL);
-	purple_signal_connect(accounts_handle, "account-status-changed",
+	purple_signal_connect(accounts_handle, "account-connecting",
 			    docklet_handle, PURPLE_CALLBACK(docklet_update_status_cb), NULL);
 	purple_signal_connect(conv_handle, "received-im-msg",
 			    docklet_handle, PURPLE_CALLBACK(docklet_update_status_cb), NULL);
@@ -674,6 +675,8 @@ pidgin_docklet_init()
 			    docklet_handle, PURPLE_CALLBACK(docklet_update_status_cb), NULL);
 	purple_signal_connect(conv_handle, "conversation-updated",
 			    docklet_handle, PURPLE_CALLBACK(docklet_conv_updated_cb), NULL);
+	purple_signal_connect(status_handle, "savedstatus-changed",
+			    docklet_handle, PURPLE_CALLBACK(docklet_update_status_cb), NULL);
 #if 0
 	purple_signal_connect(purple_get_core(), "quitting",
 			    docklet_handle, PURPLE_CALLBACK(purple_quit_cb), NULL);
