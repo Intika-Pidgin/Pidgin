@@ -280,6 +280,8 @@ add_buddy_cb(void *data, PurpleRequestFields *allfields)
 		error = _("You must provide a group.");
 	else if (!account)
 		error = _("You must select an account.");
+	else if (!purple_account_is_connected(account))
+		error = _("The selected account is not online.");
 
 	if (error)
 	{
@@ -819,6 +821,13 @@ create_group_menu(GntMenu *menu, PurpleGroup *group)
 static void
 finch_blist_get_buddy_info_cb(PurpleBuddy *buddy, PurpleBlistNode *selected)
 {
+	/* Add a userinfo with a "Retrieving information", which will later be updated
+	 * when the server finally returns the information. */
+	PurpleNotifyUserInfo *info = purple_notify_user_info_new();
+	purple_notify_user_info_add_pair(info, _("Information"), _("Retrieving..."));
+	purple_notify_userinfo(buddy->account->gc, purple_buddy_get_name(buddy), info, NULL, NULL);
+	purple_notify_user_info_destroy(info);
+
 	serv_get_info(buddy->account->gc, purple_buddy_get_name(buddy));
 }
 
@@ -2168,7 +2177,7 @@ create_menu()
 	gnt_menu_add_item(GNT_MENU(sub), item);
 	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), send_im_select, NULL);
 
-	item = gnt_menuitem_check_new(_("Toggle offline buddies"));
+	item = gnt_menuitem_check_new(_("Show offline buddies"));
 	gnt_menuitem_check_set_checked(GNT_MENU_ITEM_CHECK(item),
 				purple_prefs_get_bool(PREF_ROOT "/showoffline"));
 	gnt_menu_add_item(GNT_MENU(sub), item);

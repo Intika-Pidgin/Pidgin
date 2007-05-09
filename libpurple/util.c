@@ -1739,6 +1739,7 @@ purple_markup_strip_html(const char *str)
 				else if (strncasecmp(str2 + i, "<p>", 3) == 0
 				 || strncasecmp(str2 + i, "<tr", 3) == 0
 				 || strncasecmp(str2 + i, "<br", 3) == 0
+				 || strncasecmp(str2 + i, "<hr", 3) == 0
 				 || strncasecmp(str2 + i, "<li", 3) == 0
 				 || strncasecmp(str2 + i, "<div", 4) == 0
 				 || strncasecmp(str2 + i, "</table>", 8) == 0)
@@ -2529,11 +2530,7 @@ purple_mkstemp(char **fpath, gboolean binary)
 
 	if((tmpdir = (gchar*)g_get_tmp_dir()) != NULL) {
 		if((*fpath = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", tmpdir, purple_mkstemp_templ)) != NULL) {
-#ifdef _WIN32
 			fd = g_mkstemp(*fpath);
-#else
-			fd = mkstemp(*fpath);
-#endif
 			if(fd == -1) {
 				purple_debug(PURPLE_DEBUG_ERROR, "purple_mkstemp",
 						   "Couldn't make \"%s\", error: %d\n",
