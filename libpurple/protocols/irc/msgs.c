@@ -109,7 +109,9 @@ void irc_msg_luser(struct irc_conn *irc, const char *name, const char *from, cha
 	if (!strcmp(name, "251")) {
 		/* 251 is required, so we pluck our nick from here */
 		purple_connection_set_display_name(gc, args[0]);
-	} else if (!strcmp(name, "255")) {
+		/* Some IRC servers seem to not send a 255 numeric, so
+		 * I guess we can't require it; 251 will do. */
+	/* } else if (!strcmp(name, "255")) { */
 		purple_connection_set_state(gc, PURPLE_CONNECTED);
 
 		/* If we're away then set our away message */
@@ -1077,7 +1079,7 @@ void irc_msg_regonly(struct irc_conn *irc, const char *name, const char *from, c
 	if (!args || !args[1] || !args[2] || !gc)
 		return;
 
-	msg = g_strdup_printf(_("Cannot join %s:"), args[1]);
+	msg = g_strdup_printf(_("Cannot join %s: Registration is required."), args[1]);
 	purple_notify_error(gc, _("Cannot join channel"), msg, args[2]);
 	g_free(msg);
 }

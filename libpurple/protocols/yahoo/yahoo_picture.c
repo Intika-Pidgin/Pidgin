@@ -115,9 +115,11 @@ void yahoo_process_picture(PurpleConnection *gc, struct yahoo_packet *pkt)
 		PurpleUtilFetchUrlData *url_data;
 		struct yahoo_fetch_picture_data *data;
 		PurpleBuddy *b = purple_find_buddy(gc->account, who);
+		const char *locksum = NULL;
 
 		/* FIXME: Cleanup this strtol() stuff if possible. */
-		if (b && (checksum == strtol(purple_buddy_icons_get_checksum_for_user(b), NULL, 10)))
+		if (b && (locksum = purple_buddy_icons_get_checksum_for_user(b)) != NULL && 
+				(checksum == strtol(locksum, NULL, 10)))
 			return;
 
 		data = g_new0(struct yahoo_fetch_picture_data, 1);
@@ -200,9 +202,11 @@ void yahoo_process_picture_checksum(PurpleConnection *gc, struct yahoo_packet *p
 
 	if (who) {
 		PurpleBuddy *b = purple_find_buddy(gc->account, who);
+		const char *locksum = NULL;
 
 		/* FIXME: Cleanup this strtol() stuff if possible. */
-		if (b && (checksum != strtol(purple_buddy_icons_get_checksum_for_user(b), NULL, 10)))
+		if (b && (locksum = purple_buddy_icons_get_checksum_for_user(b)) != NULL && 
+				(checksum != strtol(locksum, NULL, 10)))
 			yahoo_send_picture_request(gc, who);
 	}
 }
@@ -542,7 +546,9 @@ void yahoo_set_buddy_icon(PurpleConnection *gc, PurpleStoredImage *img)
 
 		/* TODO: At some point, it'd be nice to fix this for real, or
 		 * TODO: at least change it to be something like:
-		 * TODO: purple_imgstore_get_filename(img); */
+		 * TODO: purple_imgstore_get_filename(img);
+		 * TODO: But it would be great if we knew how to calculate the
+		 * TODO: Checksum correctly. */
 		yd->picture_checksum = g_string_hash(s);
 
 		if ((yd->picture_checksum == oldcksum) &&
@@ -555,10 +561,8 @@ void yahoo_set_buddy_icon(PurpleConnection *gc, PurpleStoredImage *img)
 			return;
 		}
 
-		/* TODO: FIXME: This is completely wrong.  The upload code needs to
-		 * TODO: be modified to work with a PurpleStoredImage. */
-		iconfile = g_build_filename(purple_buddy_icons_get_cache_dir(),
-		                            purple_imgstore_get_filename(img), NULL);
+		/* We use this solely for sending a filename to the server */
+		iconfile = g_strdup(purple_imgstore_get_filename(img));
 		d = g_new0(struct yahoo_buddy_icon_upload_data, 1);
 		d->gc = gc;
 		d->str = s;

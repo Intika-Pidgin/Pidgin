@@ -280,7 +280,8 @@ oscar_encoding_extract(const char *encoding)
 
 	/* Make sure encoding begins with charset= */
 	if (strncmp(encoding, "text/aolrtf; charset=", 21) &&
-		strncmp(encoding, "text/x-aolrtf; charset=", 23))
+		strncmp(encoding, "text/x-aolrtf; charset=", 23) &&
+		strncmp(encoding, "text/plain; charset=", 20))
 	{
 		return NULL;
 	}
@@ -1343,7 +1344,7 @@ purple_parse_auth_resp(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 			purple_connection_error(gc, _("The AOL Instant Messenger service is temporarily unavailable."));
 			break;
 		case 0x18:
-			/* connecting too frequently */
+			/* screen name connecting too frequently */
 			gc->wants_to_die = TRUE;
 			purple_connection_error(gc, _("You have been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
 			break;
@@ -1352,6 +1353,11 @@ purple_parse_auth_resp(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 			gc->wants_to_die = TRUE;
 			g_snprintf(buf, sizeof(buf), _("The client version you are using is too old. Please upgrade at %s"), PURPLE_WEBSITE);
 			purple_connection_error(gc, buf);
+			break;
+		case 0x1d:
+			/* IP address connecting too frequently */
+			gc->wants_to_die = TRUE;
+			purple_connection_error(gc, _("You have been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
 			break;
 		default:
 			purple_connection_error(gc, _("Authentication failed"));
@@ -1770,7 +1776,7 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 											 info->status, info->status_len);
 	}
 
-	if (info->flags & AIM_FLAG_WIRELESS || info->capabilities & OSCAR_CAPABILITY_HIPTOP)
+	if (info->flags & AIM_FLAG_WIRELESS)
 	{
 		purple_prpl_got_user_status(account, info->sn, OSCAR_STATUS_ID_MOBILE, NULL);
 	} else {
@@ -1941,9 +1947,9 @@ static int incomingim_chan1(OscarData *od, FlapConnection *conn, aim_userinfo_t 
 		purple_debug_info("oscar",
 				   "Sending buddy icon to %s (%d bytes)\n",
 				   userinfo->sn, len);
-		/* TODO: XXX: FIXME: Does this actually need the mtime of the file? */
 		aim_im_sendch2_icon(od, userinfo->sn, data, len,
-			time(NULL), aimutil_iconsum(data, len));
+			purple_buddy_icons_get_account_icon_timestamp(account),
+			aimutil_iconsum(data, len));
 	}
 	purple_imgstore_unref(img);
 
@@ -2871,7 +2877,7 @@ static int purple_parse_userinfo(OscarData *od, FlapConnection *conn, FlapFrame 
 			tmp = oscar_encoding_to_utf8(userinfo->status_encoding,
 											 userinfo->status, userinfo->status_len);
 #if defined (_WIN32) || defined (__APPLE__)
-		if (userinfo->itmsurl[0] != '\0') {
+		if (userinfo->itmsurl && (userinfo->itmsurl[0] != '\0')) {
 			gchar *itmsurl, *tmp2;
 			itmsurl = oscar_encoding_to_utf8(userinfo->itmsurl_encoding,
 					userinfo->itmsurl, userinfo->itmsurl_len);
@@ -4232,8 +4238,7 @@ oscar_send_im(PurpleConnection *gc, const char *name, const char *message, Purpl
 			gconstpointer data = purple_imgstore_get_data(img);
 			args.iconlen   = purple_imgstore_get_size(img);
 			args.iconsum   = aimutil_iconsum(data, args.iconlen);
-			/* TODO: XXX: FIXME: Deal with the timestamp issue. */
-			args.iconstamp = time(NULL);
+			args.iconstamp = purple_buddy_icons_get_account_icon_timestamp(account);
 
 			if ((args.iconlen != bi->ico_me_len) || (args.iconsum != bi->ico_me_csum) || (args.iconstamp != bi->ico_me_time)) {
 				bi->ico_informed = FALSE;
@@ -5093,7 +5098,6 @@ static int purple_ssi_authgiven(OscarData *od, FlapConnection *conn, FlapFrame *
 	purple_debug_info("oscar",
 			   "ssi: %s has given you permission to add him to your buddy list\n", sn);
 
-	/* XXX Should data->nick store the alias and nombre just have the sn? -evands */
 	buddy = purple_find_buddy(gc->account, sn);
 	if (buddy && (purple_buddy_get_alias_only(buddy)))
 		nombre = g_strdup_printf("%s (%s)", sn, purple_buddy_get_alias_only(buddy));
@@ -5101,10 +5105,12 @@ static int purple_ssi_authgiven(OscarData *od, FlapConnection *conn, FlapFrame *
 		nombre = g_strdup(sn);
 
 	dialog_msg = g_strdup_printf(_("The user %s has given you permission to add you to their buddy list.  Do you want to add them?"), nombre);
+	g_free(nombre);
+
 	data = g_new(struct name_data, 1);
 	data->gc = gc;
 	data->name = g_strdup(sn);
-	data->nick = NULL;
+	data->nick = (buddy ? g_strdup(purple_buddy_get_alias_only(buddy)) : NULL);
 
 	purple_request_yes_no(gc, NULL, _("Authorization Given"), dialog_msg,
 						PURPLE_DEFAULT_ACTION_NONE,
@@ -5112,9 +5118,7 @@ static int purple_ssi_authgiven(OscarData *od, FlapConnection *conn, FlapFrame *
 						data,
 						G_CALLBACK(purple_icq_buddyadd),
 						G_CALLBACK(oscar_free_name_data));
-
 	g_free(dialog_msg);
-	g_free(nombre);
 
 	return 1;
 }
@@ -5125,7 +5129,6 @@ static int purple_ssi_authrequest(OscarData *od, FlapConnection *conn, FlapFrame
 	char *sn;
 	char *msg;
 	PurpleAccount *account = purple_connection_get_account(gc);
-	gchar *nombre;
 	gchar *reason = NULL;
 	struct name_data *data;
 	PurpleBuddy *buddy;
@@ -5139,10 +5142,6 @@ static int purple_ssi_authrequest(OscarData *od, FlapConnection *conn, FlapFrame
 			   "ssi: received authorization request from %s\n", sn);
 
 	buddy = purple_find_buddy(account, sn);
-	if (buddy && (purple_buddy_get_alias_only(buddy)))
-		nombre = g_strdup_printf("%s (%s)", sn, purple_buddy_get_alias_only(buddy));
-	else
-		nombre = g_strdup(sn);
 
 	if (msg != NULL)
 		reason = purple_plugin_oscar_decode_im_part(account, sn, AIM_CHARSET_CUSTOM, 0x0000, msg, strlen(msg));
@@ -5150,12 +5149,12 @@ static int purple_ssi_authrequest(OscarData *od, FlapConnection *conn, FlapFrame
 	data = g_new(struct name_data, 1);
 	data->gc = gc;
 	data->name = g_strdup(sn);
-	data->nick = NULL;
+	data->nick = (buddy ? g_strdup(purple_buddy_get_alias_only(buddy)) : NULL);
 
-	purple_account_request_authorization(account, nombre, NULL, NULL,
+	purple_account_request_authorization(account, sn, NULL,
+			(buddy ? purple_buddy_get_alias_only(buddy) : NULL),
 			reason, buddy != NULL, G_CALLBACK(purple_auth_grant),
 			G_CALLBACK(purple_auth_dontgrant_msgprompt), data);
-	g_free(nombre);
 	g_free(reason);
 
 	return 1;
@@ -5429,8 +5428,8 @@ const char* oscar_list_emblem(PurpleBuddy *b)
 			return "admin";
 		if (userinfo->flags & AIM_FLAG_ACTIVEBUDDY)
 			return "bot";
-		if (userinfo->flags & AIM_FLAG_AOL)
-			return "aol-client";
+		if (userinfo->capabilities & OSCAR_CAPABILITY_HIPTOP)
+			return "hiptop";
 		if (userinfo->capabilities & OSCAR_CAPABILITY_SECUREIM)
 			return "secure";
 	}
@@ -5566,7 +5565,7 @@ static int oscar_icon_req(OscarData *od, FlapConnection *conn, FlapFrame *fr, ..
 			length = va_arg(ap, int);
 			md5 = va_arg(ap, guchar *);
 
-			if (flags == 0x41) {
+			if ((flags == 0x00) || (flags == 0x41)) {
 				if (!flap_connection_getbytype(od, SNAC_FAMILY_BART) && !od->iconconnecting) {
 					od->iconconnecting = TRUE;
 					od->set_icon = TRUE;
@@ -5786,8 +5785,8 @@ static void oscar_buddycb_edit_comment(PurpleBlistNode *node, gpointer ignore) {
 	comment_utf8 = comment ? oscar_utf8_try_convert(gc->account, comment) : NULL;
 
 	data->gc = gc;
-	data->name = g_strdup(buddy->name);
-	data->nick = NULL;
+	data->name = g_strdup(purple_buddy_get_name(buddy));
+	data->nick = g_strdup(purple_buddy_get_alias_only(buddy));
 
 	title = g_strdup_printf(_("Buddy Comment for %s"), data->name);
 	purple_request_input(gc, title, _("Buddy Comment:"), NULL,
@@ -6464,15 +6463,18 @@ oscar_normalize(const PurpleAccount *account, const char *str)
 gboolean
 oscar_offline_message(const PurpleBuddy *buddy)
 {
-	OscarData *od;
+	OscarData *od = NULL;
 	PurpleAccount *account;
-	PurpleConnection *gc;
+	PurpleConnection *gc = NULL;
 
 	account = purple_buddy_get_account(buddy);
-	gc = purple_account_get_connection(account);
-	od = (OscarData *)gc->proto_data;
+	if (account != NULL) {
+		gc = purple_account_get_connection(account);
+		if (gc != NULL)
+			od = (OscarData *)gc->proto_data;
+	}
 
-	return (od->icq && aim_sn_is_icq(purple_account_get_username(account)));
+	return (od != NULL && od->icq && aim_sn_is_icq(purple_account_get_username(account)));
 }
 
 /* TODO: Find somewhere to put this instead of including it in a bunch of places.

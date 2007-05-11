@@ -98,7 +98,7 @@ size_t purple_imgstore_get_size(PurpleStoredImage *img)
 	return img->size;
 }
 
-const char *purple_imgstore_get_filename(PurpleStoredImage *img)
+const char *purple_imgstore_get_filename(const PurpleStoredImage *img)
 {
 	g_return_val_if_fail(img != NULL, NULL);
 
@@ -160,6 +160,7 @@ purple_imgstore_unref(PurpleStoredImage *img)
 		g_free(img->data);
 		g_free(img->filename);
 		g_free(img);
+		img = NULL;
 	}
 
 	return img;
@@ -192,5 +193,5 @@ purple_imgstore_uninit()
 {
 	g_hash_table_destroy(imgstore);
 
-	purple_signals_unregister_by_instance(purple_blist_get_handle());
+	purple_signals_unregister_by_instance(purple_imgstore_get_handle());
 }
