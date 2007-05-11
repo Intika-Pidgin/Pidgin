@@ -39,12 +39,23 @@ void finch_prefs_init()
 
 	purple_prefs_add_none("/finch/plugins");
 	purple_prefs_add_path_list("/finch/plugins/loaded", NULL);
+	purple_prefs_add_path_list("/finch/plugins/seen", NULL);
 
 	purple_prefs_add_none("/finch/conversations");
 	purple_prefs_add_bool("/finch/conversations/timestamps", TRUE);
-	purple_prefs_add_bool("/finch/conversations/notify_typing", FALSE); /* XXX: Not functional yet */
+	purple_prefs_add_bool("/finch/conversations/notify_typing", FALSE);
+}
+
+void finch_prefs_update_old()
+{
+	const char *str = NULL;
+
 	purple_prefs_rename("/gaim/gnt", "/finch");
 	purple_prefs_rename("/purple/gnt", "/finch");
+
+	if ((str = purple_prefs_get_string("/purple/away/idle_reporting")) &&
+			strcmp(str, "gaim") == 0)
+		purple_prefs_set_string("/purple/away/idle_reporting", "purple");
 }
 
 typedef struct

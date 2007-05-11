@@ -208,9 +208,13 @@ value_equals(gpointer key, gpointer value, gpointer user_data)
 }
 
 static void
-image_deleting_cb(PurpleStoredImage *img, gpointer data)
+image_deleting_cb(const PurpleStoredImage *img, gpointer data)
 {
 	const char *filename = purple_imgstore_get_filename(img);
+
+	/* If there's no filename, it can't be one of our images. */
+	if (filename == NULL)
+		return;
 
 	if (img == g_hash_table_lookup(icon_data_cache, filename))
 	{
@@ -219,7 +223,7 @@ image_deleting_cb(PurpleStoredImage *img, gpointer data)
 
 		/* We could make this O(1) by using another hash table, but
 		 * this is probably good enough. */
-		g_hash_table_foreach_remove(pointer_icon_cache, value_equals, img);
+		g_hash_table_foreach_remove(pointer_icon_cache, value_equals, (gpointer)img);
 	}
 }
 
@@ -275,6 +279,7 @@ purple_buddy_icon_create(PurpleAccount *account, const char *username)
 	icon->account = account;
 	icon->username = g_strdup(username);
 	icon->checksum = NULL;
+	icon->ref_count = 1;
 
 	icon_cache = g_hash_table_lookup(account_cache, account);
 
@@ -309,9 +314,6 @@ purple_buddy_icon_new(PurpleAccount *account, const char *username,
 	/* purple_buddy_icon_create() sets account & username */
 	if (icon == NULL)
 		icon = purple_buddy_icon_create(account, username);
-
-	/* Take a reference for the caller of this function. */
-	icon->ref_count = 1;
 
 	/* purple_buddy_icon_set_data() sets img, but it
 	 * references img first, so we need to initialize it */
@@ -368,30 +370,30 @@ purple_buddy_icon_update(PurpleBuddyIcon *icon)
 	PurpleAccount *account;
 	const char *username;
 	PurpleBuddyIcon *icon_to_set;
-	GSList *sl, *list;
+	GSList *buddies;
 
 	g_return_if_fail(icon != NULL);
 
 	account  = purple_buddy_icon_get_account(icon);
 	username = purple_buddy_icon_get_username(icon);
 
-	/* If no data exists, then call the functions below with NULL to
-	 * unset the icon.  They will then unref the icon and it should be
-	 * destroyed.  The only way it wouldn't be destroyed is if someone
+	/* If no data exists (icon->img == NULL), then call the functions below
+	 * with NULL to unset the icon.  They will then unref the icon and it should
+	 * be destroyed.  The only way it wouldn't be destroyed is if someone
 	 * else is holding a reference to it, in which case they can kill
 	 * the icon when they realize it has no data. */
 	icon_to_set = icon->img ? icon : NULL;
 
-	for (list = sl = purple_find_buddies(account, username);
-	     sl != NULL;
-	     sl = sl->next)
+	/* Ensure that icon remains valid throughout */
+	if (icon) purple_buddy_icon_ref(icon);
+
+	buddies = purple_find_buddies(account, username);
+	while (buddies != NULL)
 	{
-		PurpleBuddy *buddy = (PurpleBuddy *)sl->data;
+		PurpleBuddy *buddy = (PurpleBuddy *)buddies->data;
 		char *old_icon;
 
 		purple_buddy_set_icon(buddy, icon_to_set);
-
-
 		old_icon = g_strdup(purple_blist_node_get_string((PurpleBlistNode *)buddy,
 		                                                 "buddy_icon"));
 		if (icon->img && purple_buddy_icons_is_caching())
@@ -414,21 +416,24 @@ purple_buddy_icon_update(PurpleBuddyIcon *icon)
 			}
 			ref_filename(filename);
 		}
-		else
+		else if (!icon->img)
 		{
 			purple_blist_node_remove_setting((PurpleBlistNode *)buddy, "buddy_icon");
 			purple_blist_node_remove_setting((PurpleBlistNode *)buddy, "icon_checksum");
 		}
 		unref_filename(old_icon);
 		g_free(old_icon);
-	}
 
-	g_slist_free(list);
+		buddies = g_slist_delete_link(buddies, buddies);
+	}
 
 	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, username, account);
 
 	if (conv != NULL)
 		purple_conv_im_set_icon(PURPLE_CONV_IM(conv), icon_to_set);
+	
+	/* icon's refcount was incremented above */
+	if (icon) purple_buddy_icon_unref(icon);
 }
 
 void
@@ -450,6 +455,7 @@ purple_buddy_icon_set_data(PurpleBuddyIcon *icon, guchar *data,
 			g_free(data);
 	}
 
+	g_free(icon->checksum);
 	icon->checksum = g_strdup(checksum);
 
 	purple_buddy_icon_update(icon);
@@ -511,19 +517,53 @@ purple_buddy_icons_set_for_user(PurpleAccount *account, const char *username,
                                 void *icon_data, size_t icon_len,
                                 const char *checksum)
 {
-	PurpleBuddyIcon *icon;
+	GHashTable *icon_cache;
+	PurpleBuddyIcon *icon = NULL;
 
 	g_return_if_fail(account  != NULL);
 	g_return_if_fail(username != NULL);
 
-	icon = purple_buddy_icons_find(account, username);
+	icon_cache = g_hash_table_lookup(account_cache, account);
+
+	if (icon_cache != NULL)
+		icon = g_hash_table_lookup(icon_cache, username);
 
 	if (icon != NULL)
 		purple_buddy_icon_set_data(icon, icon_data, icon_len, checksum);
-	else
+	else if (icon_data && icon_len > 0)
 	{
-		PurpleBuddyIcon *icon = purple_buddy_icon_new(account, username, icon_data, icon_len, checksum);
-		purple_buddy_icon_unref(icon);
+		if (icon_data != NULL && icon_len > 0)
+		{
+			PurpleBuddyIcon *icon = purple_buddy_icon_new(account, username, icon_data, icon_len, checksum);
+
+			/* purple_buddy_icon_new() calls
+			 * purple_buddy_icon_set_data(), which calls
+			 * purple_buddy_icon_update(), which has the buddy list
+			 * and conversations take references as appropriate.
+			 * This function doesn't return icon, so we can't
+			 * leave a reference dangling. */
+			purple_buddy_icon_unref(icon);
+		}
+		else
+		{
+			/* If the buddy list or a conversation was holding a
+			 * reference, we'd have found the icon in the cache.
+			 * Since we know we're deleting the icon, we only
+			 * need a subset of purple_buddy_icon_update(). */
+
+			GSList *buddies = purple_find_buddies(account, username);
+			while (buddies != NULL)
+			{
+				PurpleBuddy *buddy = (PurpleBuddy *)buddies->data;
+
+				unref_filename(purple_blist_node_get_string((PurpleBlistNode *)buddy, "buddy_icon"));
+				purple_blist_node_remove_setting((PurpleBlistNode *)buddy, "buddy_icon");
+				purple_blist_node_remove_setting((PurpleBlistNode *)buddy, "icon_checksum");
+
+				buddies = g_slist_delete_link(buddies, buddies);
+			}
+
+		}
 	}
 }
 
@@ -613,11 +653,9 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username)
 			{
 				const char *checksum;
 
-				if (icon == NULL)
-					icon = purple_buddy_icon_create(account, username);
-				icon->ref_count = 0;
+				icon = purple_buddy_icon_create(account, username);
 				icon->img = NULL;
-				checksum = g_strdup(purple_blist_node_get_string((PurpleBlistNode*)b, "icon_checksum"));
+				checksum = purple_blist_node_get_string((PurpleBlistNode*)b, "icon_checksum");
 				purple_buddy_icon_set_data(icon, data, len, checksum);
 			}
 			g_free(path);
@@ -626,7 +664,7 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username)
 		purple_buddy_icons_set_caching(caching);
 	}
 
-	return icon;
+	return purple_buddy_icon_ref(icon);
 }
 
 gboolean
@@ -694,11 +732,13 @@ purple_buddy_icons_set_account_icon(PurpleAccount *account,
 	{
 		const char *filename = purple_imgstore_get_filename(img);
 		purple_account_set_string(account, "buddy_icon", filename);
+		purple_account_set_int(account, "buddy_icon_timestamp", time(NULL));
 		ref_filename(filename);
 	}
 	else
 	{
 		purple_account_set_string(account, "buddy_icon", NULL);
+		purple_account_set_int(account, "buddy_icon_timestamp", 0);
 	}
 	unref_filename(old_icon);
 
@@ -721,7 +761,7 @@ purple_buddy_icons_set_account_icon(PurpleAccount *account,
 
 	if (old_img)
 		purple_imgstore_unref(old_img);
-	else
+	else if (old_icon)
 	{
 		/* The old icon may not have been loaded into memory.  In that
 		 * case, we'll need to uncache the filename.  The filenames
@@ -731,6 +771,25 @@ purple_buddy_icons_set_account_icon(PurpleAccount *account,
 	g_free(old_icon);
 
 	return img;
+}
+
+time_t
+purple_buddy_icons_get_account_icon_timestamp(PurpleAccount *account)
+{
+	time_t ret;
+
+	g_return_val_if_fail(account != NULL, 0);
+
+	ret = purple_account_get_int(account, "buddy_icon_timestamp", 0);
+
+	/* This deals with migration cases. */
+	if (ret == 0 && purple_account_get_string(account, "buddy_icon", NULL) != NULL)
+	{
+		ret = time(NULL);
+		purple_account_set_int(account, "buddy_icon_timestamp", ret);
+	}
+
+	return ret;
 }
 
 PurpleStoredImage *
@@ -829,7 +888,7 @@ purple_buddy_icons_set_custom_icon(PurpleContact *contact,
 
 	if (old_img)
 		purple_imgstore_unref(old_img);
-	else
+	else if (old_icon)
 	{
 		/* The old icon may not have been loaded into memory.  In that
 		 * case, we'll need to uncache the filename.  The filenames
@@ -842,9 +901,21 @@ purple_buddy_icons_set_custom_icon(PurpleContact *contact,
 }
 
 void
-purple_buddy_icon_set_old_icons_dir(const char *dirname)
+_purple_buddy_icon_set_old_icons_dir(const char *dirname)
 {
 	old_icons_dir = g_strdup(dirname);
+}
+
+static void
+delete_buddy_icon_settings(PurpleBlistNode *node, const char *setting_name)
+{
+	purple_blist_node_remove_setting(node, setting_name);
+
+	if (!strcmp(setting_name, "buddy_icon"))
+	{
+		purple_blist_node_remove_setting(node, "avatar_hash");
+		purple_blist_node_remove_setting(node, "icon_checksum");
+	}
 }
 
 static void
@@ -878,6 +949,18 @@ migrate_buddy_icon(PurpleBlistNode *node, const char *setting_name,
 		if (!read_icon_file(path, &icon_data, &icon_len))
 		{
 			g_free(path);
+			delete_buddy_icon_settings(node, setting_name);
+			return;
+		}
+
+		if (icon_data == NULL || icon_len <= 0)
+		{
+			/* This really applies to the icon_len check.
+			 * icon_data should never be NULL if
+			 * read_icon_file() returns TRUE. */
+			purple_debug_error("buddyicon", "Empty buddy icon file: %s\n", path);
+			delete_buddy_icon_settings(node, setting_name);
+			g_free(path);
 			return;
 		}
 
@@ -886,7 +969,11 @@ migrate_buddy_icon(PurpleBlistNode *node, const char *setting_name,
 		new_filename = purple_buddy_icon_data_calculate_filename(icon_data, icon_len);
 		if (new_filename == NULL)
 		{
-			return;
+			purple_debug_error("buddyicon",
+				"New icon filename is NULL. This should never happen! "
+				"The old filename was: %s\n", path);
+			delete_buddy_icon_settings(node, setting_name);
+			g_return_if_reached();
 		}
 
 		path = g_build_filename(dirname, new_filename, NULL);
@@ -908,6 +995,8 @@ migrate_buddy_icon(PurpleBlistNode *node, const char *setting_name,
 			                   path, strerror(errno));
 			g_free(new_filename);
 			g_free(path);
+
+			delete_buddy_icon_settings(node, setting_name);
 			return;
 		}
 		g_free(path);
@@ -931,36 +1020,33 @@ migrate_buddy_icon(PurpleBlistNode *node, const char *setting_name,
 			}
 			else
 			{
-				int checksum = purple_blist_node_get_int(node, "icon_checksum");
-				if (checksum != 0)
+				PurpleAccount *account = purple_buddy_get_account((PurpleBuddy *)node);
+				const char *prpl_id = purple_account_get_protocol_id(account);
+
+				if (!strcmp(prpl_id, "prpl-yahoo"))
 				{
-					char *checksum_str = g_strdup_printf("%i", checksum);
-					purple_blist_node_remove_setting(node, "icon_checksum");
-					purple_blist_node_set_string(node, "icon_checksum", checksum_str);
-					g_free(checksum_str);
+					int checksum = purple_blist_node_get_int(node, "icon_checksum");
+					if (checksum != 0)
+					{
+						char *checksum_str = g_strdup_printf("%i", checksum);
+						purple_blist_node_remove_setting(node, "icon_checksum");
+						purple_blist_node_set_string(node, "icon_checksum", checksum_str);
+						g_free(checksum_str);
+					}
 				}
 			}
 		}
 	}
 	else
 	{
-		/* If the icon is gone, drop the setting... */
-		purple_blist_node_remove_setting(node,
-		                                 setting_name);
-
-		if (!strcmp(setting_name, "buddy_icon"))
-		{
-			purple_blist_node_remove_setting(node,
-			                                 "avatar_hash");
-			purple_blist_node_remove_setting(node,
-			                                 "icon_checksum");
-		}
+		purple_debug_error("buddyicon", "Old icon file doesn't exist: %s\n", path);
+		delete_buddy_icon_settings(node, setting_name);
 		g_free(path);
 	}
 }
 
 void
-purple_buddy_icons_account_loaded_cb()
+_purple_buddy_icons_account_loaded_cb()
 {
 	const char *dirname = purple_buddy_icons_get_cache_dir();
 	GList *cur;
@@ -985,7 +1071,7 @@ purple_buddy_icons_account_loaded_cb()
 }
 
 void
-purple_buddy_icons_blist_loaded_cb()
+_purple_buddy_icons_blist_loaded_cb()
 {
 	PurpleBlistNode *node = purple_blist_get_root();
 	const char *dirname = purple_buddy_icons_get_cache_dir();
@@ -1006,7 +1092,7 @@ purple_buddy_icons_blist_loaded_cb()
 		}
 	}
 
-        while (node != NULL)
+	while (node != NULL)
 	{
 		if (PURPLE_BLIST_NODE_IS_BUDDY(node))
 		{
@@ -1048,7 +1134,7 @@ purple_buddy_icons_blist_loaded_cb()
 				{
 					migrate_buddy_icon(node,
 					                   "custom_buddy_icon",
-					                    dirname, filename);
+					                   dirname, filename);
 				}
 				else
 				{
@@ -1065,7 +1151,7 @@ purple_buddy_icons_blist_loaded_cb()
 			}
 		}
 		node = purple_blist_node_next(node, TRUE);
-        }
+	}
 }
 
 void
@@ -1110,7 +1196,8 @@ purple_buddy_icons_init()
 		g_direct_hash, g_direct_equal,
 		NULL, (GFreeFunc)g_hash_table_destroy);
 
-	icon_data_cache = g_hash_table_new(g_str_hash, g_str_equal);
+	icon_data_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
+	                                        g_free, NULL);
 	icon_file_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
 	                                        g_free, NULL);
 	pointer_icon_cache = g_hash_table_new(g_direct_hash, g_direct_equal);

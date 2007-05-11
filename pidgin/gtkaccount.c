@@ -194,11 +194,11 @@ add_pref_box(AccountPrefsDialog *dialog, GtkWidget *parent,
 }
 
 static void
-set_dialog_icon(AccountPrefsDialog *dialog, gpointer *data, size_t len, gchar *new_icon_path)
+set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *new_icon_path)
 {
 	GdkPixbuf *pixbuf = NULL;
 
-	purple_imgstore_unref(dialog->icon_img);
+	dialog->icon_img = purple_imgstore_unref(dialog->icon_img);
 	if (data != NULL)
 	{
 		if (len > 0)
@@ -385,11 +385,19 @@ static void
 add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 {
 	GtkWidget *frame;
+	GtkWidget *hbox;
 	GtkWidget *vbox;
 	GtkWidget *entry;
 	GList *user_splits;
 	GList *l, *l2;
 	char *username = NULL;
+
+	if (dialog->protocol_menu != NULL)
+	{
+		gtk_widget_ref(dialog->protocol_menu);
+		hbox = g_object_get_data(G_OBJECT(dialog->protocol_menu), "container");
+		gtk_container_remove(GTK_CONTAINER(hbox), dialog->protocol_menu);
+	}
 
 	if (dialog->login_frame != NULL)
 		gtk_widget_destroy(dialog->login_frame);
@@ -409,10 +417,17 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	gtk_widget_show(vbox);
 
 	/* Protocol */
-	dialog->protocol_menu = pidgin_protocol_option_menu_new(
-			dialog->protocol_id, G_CALLBACK(set_account_protocol_cb), dialog);
+	if (dialog->protocol_menu == NULL)
+	{
+		dialog->protocol_menu = pidgin_protocol_option_menu_new(
+				dialog->protocol_id, G_CALLBACK(set_account_protocol_cb), dialog);
+		gtk_widget_ref(dialog->protocol_menu);
+	}
 
-	add_pref_box(dialog, vbox, _("Protocol:"), dialog->protocol_menu);
+	hbox = add_pref_box(dialog, vbox, _("Protocol:"), dialog->protocol_menu);
+	g_object_set_data(G_OBJECT(dialog->protocol_menu), "container", hbox);
+
+	gtk_widget_unref(dialog->protocol_menu);
 
 	/* Screen name */
 	dialog->screenname_entry = gtk_entry_new();
@@ -1343,10 +1358,6 @@ ok_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 		proxy_info = NULL;
 	}
 
-
-	/* We no longer need the data from the dialog window */
-	account_win_destroy_cb(NULL, NULL, dialog);
-
 	/* If this is a new account, add it to our list */
 	if (new)
 		purple_accounts_add(account);
@@ -1363,6 +1374,9 @@ ok_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 			purple_account_set_enabled(account, PIDGIN_UI, TRUE);
 		}
 	}
+
+	/* We no longer need the data from the dialog window */
+	account_win_destroy_cb(NULL, NULL, dialog);
 
 	return account;
 }
@@ -2571,7 +2585,11 @@ static PurpleAccountUiOps ui_ops =
 	NULL,
 	pidgin_accounts_request_add,
 	pidgin_accounts_request_authorization,
-	pidgin_accounts_request_close
+	pidgin_accounts_request_close,
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 PurpleAccountUiOps *

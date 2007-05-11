@@ -1739,6 +1739,7 @@ purple_markup_strip_html(const char *str)
 				else if (strncasecmp(str2 + i, "<p>", 3) == 0
 				 || strncasecmp(str2 + i, "<tr", 3) == 0
 				 || strncasecmp(str2 + i, "<br", 3) == 0
+				 || strncasecmp(str2 + i, "<hr", 3) == 0
 				 || strncasecmp(str2 + i, "<li", 3) == 0
 				 || strncasecmp(str2 + i, "<div", 4) == 0
 				 || strncasecmp(str2 + i, "</table>", 8) == 0)
@@ -2522,29 +2523,15 @@ FILE *
 purple_mkstemp(char **fpath, gboolean binary)
 {
 	const gchar *tmpdir;
-#ifndef _WIN32
 	int fd;
-#endif
 	FILE *fp = NULL;
 
 	g_return_val_if_fail(fpath != NULL, NULL);
 
 	if((tmpdir = (gchar*)g_get_tmp_dir()) != NULL) {
 		if((*fpath = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", tmpdir, purple_mkstemp_templ)) != NULL) {
-#ifdef _WIN32
-			char* result = _mktemp( *fpath );
-			if( result == NULL )
-				purple_debug(PURPLE_DEBUG_ERROR, "purple_mkstemp",
-						   "Problem creating the template\n");
-			else
-			{
-				if( (fp = g_fopen( result, binary?"wb+":"w+")) == NULL ) {
-					purple_debug(PURPLE_DEBUG_ERROR, "purple_mkstemp",
-							   "Couldn't fopen() %s\n", result);
-				}
-			}
-#else
-			if((fd = mkstemp(*fpath)) == -1) {
+			fd = g_mkstemp(*fpath);
+			if(fd == -1) {
 				purple_debug(PURPLE_DEBUG_ERROR, "purple_mkstemp",
 						   "Couldn't make \"%s\", error: %d\n",
 						   *fpath, errno);
@@ -2555,7 +2542,7 @@ purple_mkstemp(char **fpath, gboolean binary)
 							   "Couldn't fdopen(), error: %d\n", errno);
 				}
 			}
-#endif
+
 			if(!fp) {
 				g_free(*fpath);
 				*fpath = NULL;
@@ -2696,6 +2683,7 @@ const char *
 purple_normalize(const PurpleAccount *account, const char *str)
 {
 	const char *ret = NULL;
+	static char buf[BUF_LEN];
 
 	if (account != NULL)
 	{
@@ -2712,7 +2700,6 @@ purple_normalize(const PurpleAccount *account, const char *str)
 
 	if (ret == NULL)
 	{
-		static char buf[BUF_LEN];
 		char *tmp;
 
 		tmp = g_utf8_normalize(str, -1, G_NORMALIZE_DEFAULT);

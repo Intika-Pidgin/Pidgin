@@ -86,7 +86,6 @@ static void handle_chat(JabberMessage *jm)
 			PurpleConversation *conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
 					from, jm->js->gc->account);
 			if (conv && jid->node && jid->domain) {
-#if 0  /* String freeze... make sure to mark the message for translation */
 				char buf[256];
 				PurpleBuddy *buddy;
 
@@ -100,7 +99,7 @@ static void handle_chat(JabberMessage *jm)
 					escaped = g_markup_escape_text(who, -1);
 
 					g_snprintf(buf, sizeof(buf),
-					           "%s has left the conversation.", escaped);
+					           _("%s has left the conversation."), escaped);
 
 					/* At some point when we restructure PurpleConversation,
 					 * this should be able to be implemented by removing the
@@ -108,7 +107,6 @@ static void handle_chat(JabberMessage *jm)
 					purple_conversation_write(conv, "", buf,
 					                        PURPLE_MESSAGE_SYSTEM, time(NULL));
 				}
-#endif
 			}
 			serv_got_typing_stopped(jm->js->gc, from);
 			
@@ -269,7 +267,7 @@ static void handle_error(JabberMessage *jm)
 	buf = g_strdup_printf(_("Message delivery to %s failed: %s"),
 			jm->from, jm->error ? jm->error : "");
 
-	purple_notify_formatted(jm->js->gc, _("Jabber Message Error"), _("Jabber Message Error"), buf,
+	purple_notify_formatted(jm->js->gc, _("XMPP Message Error"), _("XMPP Message Error"), buf,
 			jm->xhtml ? jm->xhtml : jm->body, NULL, NULL);
 
 	g_free(buf);

@@ -27,6 +27,8 @@
 #ifndef _GAIM_COMPAT_H_
 #define _GAIM_COMPAT_H_
 
+#include <glib.h>
+
 /* from account.h */
 #define GaimAccountUiOps PurpleAccountUiOps
 #define GaimAccount PurpleAccount
@@ -51,7 +53,6 @@
 #define gaim_account_set_password            purple_account_set_password
 #define gaim_account_set_alias               purple_account_set_alias
 #define gaim_account_set_user_info           purple_account_set_user_info
-#define gaim_account_set_buddy_icon          purple_account_set_buddy_icon
 #define gaim_account_set_buddy_icon_path     purple_account_set_buddy_icon_path
 #define gaim_account_set_protocol_id         purple_account_set_protocol_id
 #define gaim_account_set_connection          purple_account_set_connection
@@ -81,7 +82,6 @@
 #define gaim_account_get_password           purple_account_get_password
 #define gaim_account_get_alias              purple_account_get_alias
 #define gaim_account_get_user_info          purple_account_get_user_info
-#define gaim_account_get_buddy_icon         purple_account_get_buddy_icon
 #define gaim_account_get_buddy_icon_path    purple_account_get_buddy_icon_path
 #define gaim_account_get_protocol_id        purple_account_get_protocol_id
 #define gaim_account_get_protocol_name      purple_account_get_protocol_name
@@ -338,23 +338,22 @@
 
 #define GaimBuddyIcon  PurpleBuddyIcon
 
-#define gaim_buddy_icon_new      purple_buddy_icon_new
-#define gaim_buddy_icon_destroy  purple_buddy_icon_destroy
+#define gaim_buddy_icon_new(account, username, icon_data, icon_len)\
+        purple_buddy_icon_new(account, username, g_memdup(icon_data, icon_len), icon_len)
 #define gaim_buddy_icon_ref      purple_buddy_icon_ref
 #define gaim_buddy_icon_unref    purple_buddy_icon_unref
 #define gaim_buddy_icon_update   purple_buddy_icon_update
 
-#define gaim_buddy_icon_set_account   purple_buddy_icon_set_account
-#define gaim_buddy_icon_set_username  purple_buddy_icon_set_username
-#define gaim_buddy_icon_set_data      purple_buddy_icon_set_protocol_data
+#define gaim_buddy_icon_set_data(icon, data, len) \
+        purple_buddy_icon_set_data(icon, g_memdup(data, len), len, NULL);
 
 #define gaim_buddy_icon_get_account   purple_buddy_icon_get_account
 #define gaim_buddy_icon_get_username  purple_buddy_icon_get_username
 #define gaim_buddy_icon_get_data      purple_buddy_icon_get_data
 #define gaim_buddy_icon_get_type      purple_buddy_icon_get_extension
 
-#define gaim_buddy_icons_set_for_user   purple_buddy_icons_set_for_user
-#define gaim_buddy_icons_find           purple_buddy_icons_find
+#define gaim_buddy_icons_set_for_user(icon, data, len) \
+        purple_buddy_icons_set_for_user(icon, g_memdup(data, len), len, NULL)
 #define gaim_buddy_icons_set_caching    purple_buddy_icons_set_caching
 #define gaim_buddy_icons_is_caching     purple_buddy_icons_is_caching
 #define gaim_buddy_icons_set_cache_dir  purple_buddy_icons_set_cache_dir
@@ -944,7 +943,6 @@
 
 /* from gaim-client.h */
 
-/* XXX: should this be purple_init, or pidgin_init */
 #define gaim_init  purple_init
 
 /* from idle.h */
@@ -962,7 +960,8 @@
 
 #define GaimStoredImage  PurpleStoredImage
 
-#define gaim_imgstore_add           purple_imgstore_add_with_id
+#define gaim_imgstore_add(data, size, filename) \
+        purple_imgstore_add_with_id(g_memdup(data, size), size, filename)
 #define gaim_imgstore_get           purple_imgstore_find_by_id
 #define gaim_imgstore_get_data      purple_imgstore_get_data
 #define gaim_imgstore_get_size      purple_imgstore_get_size
@@ -1986,7 +1985,6 @@
 #define gaim_presence_new_for_conv       purple_presence_new_for_conv
 #define gaim_presence_new_for_buddy      purple_presence_new_for_buddy
 #define gaim_presence_destroy            purple_presence_destroy
-#define gaim_presence_remove_buddy       purple_presence_remove_buddy
 #define gaim_presence_add_status         purple_presence_add_status
 #define gaim_presence_add_list           purple_presence_add_list
 #define gaim_presence_set_status_active  purple_presence_set_status_active
@@ -1997,7 +1995,6 @@
 #define gaim_presence_get_account        purple_presence_get_account
 #define gaim_presence_get_conversation   purple_presence_get_conversation
 #define gaim_presence_get_chat_user      purple_presence_get_chat_user
-#define gaim_presence_get_buddies        purple_presence_get_buddies
 #define gaim_presence_get_statuses       purple_presence_get_statuses
 #define gaim_presence_get_status         purple_presence_get_status
 #define gaim_presence_get_active_status  purple_presence_get_active_status

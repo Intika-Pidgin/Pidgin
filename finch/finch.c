@@ -59,7 +59,13 @@ static PurpleCoreUiOps core_ops =
 	finch_prefs_init,
 	debug_init,
 	gnt_ui_init,
-	gnt_ui_uninit
+	gnt_ui_uninit,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static PurpleCoreUiOps *
@@ -149,7 +155,13 @@ static PurpleEventLoopUiOps eventloop_ops =
 	g_source_remove,
 	gnt_input_add,
 	g_source_remove,
-	NULL /* input_get_error */
+	NULL, /* input_get_error */
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static PurpleEventLoopUiOps *
@@ -201,6 +213,11 @@ init_libpurple(int argc, char **argv)
 		{"version",  no_argument,       NULL, 'v'},
 		{0, 0, 0, 0}
 	};
+
+#ifdef PURPLE_FATAL_ASSERTS
+	/* Make g_return_... functions fatal. */
+	g_log_set_always_fatal(G_LOG_LEVEL_CRITICAL);
+#endif
 
 #ifdef ENABLE_NLS
 	bindtextdomain(PACKAGE, LOCALEDIR);
@@ -257,7 +274,9 @@ init_libpurple(int argc, char **argv)
 	}
 	/* show version message */
 	if (opt_version) {
-		printf("Finch %s\n", VERSION);
+		/* Translators may want to transliterate the name.
+		 It is not to be translated. */
+		printf("%s %s\n", _("Finch"), VERSION);
 		return 0;
 	}
 
@@ -286,7 +305,7 @@ init_libpurple(int argc, char **argv)
 			char *text = g_strdup_printf(_(
 				"%s encountered errors migrating your settings "
 				"from %s to %s. Please investigate and complete the "
-				"migration by hand."), _("Finch"),
+				"migration by hand. Please report this error at http://developer.pidgin.im"), _("Finch"),
 				old, purple_user_dir());
 
 			g_free(old);
@@ -323,8 +342,7 @@ init_libpurple(int argc, char **argv)
 	/* TODO: Move prefs loading into purple_prefs_init() */
 	purple_prefs_load();
 	purple_prefs_update_old();
-	purple_prefs_rename("/gaim/gnt", "/finch");
-	purple_prefs_rename("/purple/gnt", "/finch");
+	finch_prefs_update_old();
 
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved("/finch/plugins/loaded");

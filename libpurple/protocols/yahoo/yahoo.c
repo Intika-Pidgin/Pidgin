@@ -76,7 +76,8 @@ yahoo_rem_permit(PurpleConnection *gc, const char *who)
 	purple_privacy_permit_remove(gc->account,who,TRUE);
 }
 
-gboolean yahoo_privacy_check(PurpleConnection *gc, const char *who)
+gboolean
+yahoo_privacy_check(PurpleConnection *gc, const char *who)
 {
 	/* returns TRUE if allowed through, FALSE otherwise */
 	gboolean permitted;
@@ -345,6 +346,7 @@ static void yahoo_process_status(PurpleConnection *gc, struct yahoo_packet *pkt)
 			/* FIXME: Please, if you know this protocol,
 			 * FIXME: fix up the strtol() stuff if possible. */
 			int cksum = strtol(pair->value, NULL, 10);
+			const char *locksum = NULL;
 			PurpleBuddy *b;
 
 			if (!name)
@@ -363,7 +365,8 @@ static void yahoo_process_status(PurpleConnection *gc, struct yahoo_packet *pkt)
 				break;
 
 			yahoo_friend_set_buddy_icon_need_request(f, FALSE);
-			if (b && cksum != strtol(purple_buddy_icons_get_checksum_for_user(b), NULL, 10))
+			if (b && (locksum = purple_buddy_icons_get_checksum_for_user(b)) != NULL &&
+					cksum != strtol(locksum, NULL, 10))
 				yahoo_send_picture_request(gc, name);
 
 			break;
@@ -903,7 +906,7 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 static void yahoo_process_sysmessage(PurpleConnection *gc, struct yahoo_packet *pkt)
 {
 	GSList *l = pkt->hash;
-	char *prim, *me = NULL, *msg = NULL, *escmsg = NULL;
+	char *prim, *me = NULL, *msg = NULL;
 
 	while (l) {
 		struct yahoo_pair *pair = l->data;
@@ -919,14 +922,10 @@ static void yahoo_process_sysmessage(PurpleConnection *gc, struct yahoo_packet *
 	if (!msg || !g_utf8_validate(msg, -1, NULL))
 		return;
 
-	/* TODO: Does this really need to be escaped?  It seems like it doesn't. */
-	escmsg = g_markup_escape_text(msg, -1);
-
 	prim = g_strdup_printf(_("Yahoo! system message for %s:"),
 	                       me?me:purple_connection_get_display_name(gc));
-	purple_notify_info(NULL, NULL, prim, escmsg);
+	purple_notify_info(NULL, NULL, prim, msg);
 	g_free(prim);
-	g_free(escmsg);
 }
 
 struct yahoo_add_request {
@@ -3945,7 +3944,13 @@ static PurpleWhiteboardPrplOps yahoo_whiteboard_prpl_ops =
 	yahoo_doodle_get_brush,
 	yahoo_doodle_set_brush,
 	yahoo_doodle_send_draw_list,
-	yahoo_doodle_clear
+	yahoo_doodle_clear,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static PurplePluginProtocolInfo prpl_info =
@@ -4012,6 +4017,12 @@ static PurplePluginProtocolInfo prpl_info =
 	&yahoo_whiteboard_prpl_ops,
 	NULL, /* send_raw */
 	NULL, /* roomlist_room_serialize */
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static PurplePluginInfo info =
@@ -4039,7 +4050,13 @@ static PurplePluginInfo info =
 	NULL,                                             /**< ui_info        */
 	&prpl_info,                                       /**< extra_info     */
 	NULL,
-	yahoo_actions
+	yahoo_actions,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static void
