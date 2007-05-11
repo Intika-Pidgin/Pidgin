@@ -15,6 +15,11 @@ version 2.0.1 (??/??/????):
 	* Fix for buddy icons disappearing
 	* Timestamps are always on in debug output (-d) and Debug Window now
 	* Don't escape html entities in Yahoo! system messages
+	* Fix for the choose buddy icon dialog resizing strangely as files are selected
+	* Receives notifications when XMPP buddies send "leaving chat"
+	  messages
+	* Fix the typing animation so it doesn't stop animating once a conversation
+	  has gone from typing -> not typing -> typing
 
 	Finch:
 	* Userlist in chat windows, which can be turned on or off using
@@ -22,6 +27,7 @@ version 2.0.1 (??/??/????):
 	* Menus in the conversation windows
 	* Improved tab completion support
 	* Ctrl+c prompts with a dialog before exiting
+	* Filter string in the debug window
 
 version 2.0.0 (5/3/2007):
 	* The project has new names - libpurple for the core, Pidgin for the
