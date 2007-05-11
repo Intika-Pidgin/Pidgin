@@ -905,22 +905,7 @@ AM_CONDITIONAL(EXTERNAL_LIBZEPHYR, test "x$zephyr" != "xno")
 AC_CHECK_HEADER(sys/utsname.h)
 AC_CHECK_FUNC(uname)
 
-AC_ARG_ENABLE(fortify, [AC_HELP_STRING([--disable-fortify], [compile without FORTIFY_SOURCE support])], enable_fortify="$enableval", enable_fortify=yes)
-
-AC_ARG_ENABLE(mcheck, [AC_HELP_STRING([--enable-mcheck], [compile with mcheck (malloc debugging) support])], enable_mcheck="$enableval", enable_mcheck="$enable_debug")
-if test "x$enable_mcheck" = "xyes" ; then
-	orig_LIBS="$LIBS"
-	LIBS="$LIBS -lmcheck"
-	AC_MSG_CHECKING(for mcheck support)
-	AC_TRY_COMPILE([], [
-		int main() {return 0;}
-	], [
-		AC_MSG_RESULT(yes)
-	], [
-		AC_MSG_RESULT(no)
-		LIBS="$orig_LIBS"
-	])
-fi
+AC_ARG_ENABLE(fortify, [AC_HELP_STRING([--disable-fortify], [compile without FORTIFY_SOURCE support])], , enable_fortify=yes)
 
 if test "x$GCC" = "xyes"; then
 	dnl We enable -Wall later.
@@ -2000,14 +1985,9 @@ AM_CONDITIONAL(HAVE_DOXYGEN, test "x$enable_doxygen" = "xyes")
 
 AC_ARG_ENABLE(debug, [AC_HELP_STRING([--enable-debug],
 	[compile with debugging support])], , enable_debug=no)
+
 if test "x$enable_debug" = "xyes" ; then
 	AC_DEFINE(DEBUG, 1, [Define if debugging is enabled.])
-fi
-
-AC_ARG_ENABLE(fatal-asserts, [AC_HELP_STRING([--enable-fatal-asserts],
-	[make assertions fatal (useful for debugging)])], , enable_fatal_asserts=no)
-if test "x$enable_fatal_asserts" = "xyes" ; then
-	AC_DEFINE(PURPLE_FATAL_ASSERTS, 1, [Define to make assertions fatal (useful for debugging).])
 fi
 
 AC_OUTPUT([Makefile
@@ -2158,7 +2138,6 @@ echo Build with Tcl support........ : $enable_tcl
 echo Build with Tk support......... : $enable_tk
 echo
 echo Print debugging messages...... : $enable_debug
-echo Assertions are fatal.......... : $enable_fatal_asserts
 echo
 eval eval echo Pidgin will be installed in $bindir.
 if test "x$pidginpath" != "x" ; then
