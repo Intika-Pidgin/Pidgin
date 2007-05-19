@@ -332,8 +332,7 @@ static void purple_dbus_owner_show_buddy_list(void)
 
 gboolean purple_core_ensure_single_instance()
 {
-	gboolean is_single_instance = TRUE;
-
+gboolean is_single_instance = TRUE;
 #ifdef HAVE_DBUS
 	/* in the future, other mechanisms might have already set this to FALSE */
 	if (is_single_instance) {
