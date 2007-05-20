@@ -28,9 +28,9 @@ Gaim v@VERSION@ \- Instant Messaging client
 
 .SH DESCRIPTION
 .PP
-\fBgaim\fR is a GTK2-based Instant Messaging (IM) application.  It supports
-multiple protocols via modules, including AIM, ICQ, Yahoo!, MSN, Jabber,
-IRC, Napster, Gadu-Gadu and Zephyr.  It has many common features found in
+\fBgaim\fR is a gtk2-based modular messaging client capable of using
+AIM, MSN, Yahoo!, Jabber, ICQ, IRC, SILC, Novell GroupWise, Lotus Sametime,
+Zephyr, Gadu-Gadu, and QQ all at once. It has many common features found in
 other clients, as well as many unique features.  Gaim is not endorsed by or
 affiliated with America Online, ICQ, Microsoft, or Yahoo.
 
@@ -48,9 +48,14 @@ Use \fIDIR\fR as the directory for config files instead of \fI~/.gaim\fR.
 .B \-h, \-\-help
 Print this help and exit.
 .TP
-.B \-n, \-\-loginwin
-Don't automatically login when \fBgaim\fR starts.  Show the \fBLogin\fR
-window instead.
+.B \-n, \-\-nologin
+Don't automatically login when \fBgaim\fR starts.  Sets all accounts to
+Offline.
+.TP
+.B \-l, \-\-login[=\fINAME\fR,\fINAME\fR,...]
+Sign in the comma-separated list of accounts provided, in addition to the
+accounts that would be logged in anyway.  If you do not specify such a
+comma-separated list, your first account will be signed in.
 .TP
 .B \-v, \-\-version
 Display the version information window.
@@ -537,8 +542,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 .br
  Ethan 'Paco-Paco' Blanton (developer)
 .br
- Herman Bloggs (win32 port) <\fIherman@bluedigits.com\fR>
-.br
  Mark 'KingAnt' Doliner (developer) <\fIthekingant@users.sourceforge.net\fR>
 .br
  Christian 'ChipX86' Hammond (developer & webmaster) <\fIchipx86@chipx86.com\fR>
@@ -549,7 +552,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 .br
  Christopher 'siege' O'Brien
 .br
- Etan Reisner
+ Etan 'deryni' Reisner
 .br
  Tim 'marv' Ringenbach <\fImarv_sf@users.sf.net\fR>
 .br
@@ -583,6 +586,8 @@ Kevin 'SimGuy' Stange
 
 The retired developers of \fBgaim\fR are:
 
+ Herman Bloggs (win32 port) <\fIherman@bluedigits.com\fR>
+.br
  Jim Duchek <\fIjim@linuxpimps.com\fR> (maintainer)
 .br
  Rob Flynn <\fIgaim@robflynn.com\fR> (maintainer)
