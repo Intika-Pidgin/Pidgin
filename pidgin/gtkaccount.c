@@ -2022,19 +2022,26 @@ set_account(GtkListStore *store, GtkTreeIter *iter, PurpleAccount *account, GdkP
 {
 	GdkPixbuf *pixbuf, *buddyicon = NULL;
 	PurpleStoredImage *img = NULL;
+	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info = NULL;
 
 	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
 	if ((pixbuf != NULL) && purple_account_is_disconnected(account))
 		gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
 
-	if (purple_account_get_bool(account, "use-global-buddyicon", TRUE)) {
-		if (global_buddyicon != NULL)
-			buddyicon = g_object_ref(G_OBJECT(global_buddyicon));
-		/* This is for when set_account() is called for a single account */
-		else
+	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	if (prpl_info != NULL && prpl_info->icon_spec.format != NULL) {
+		if (purple_account_get_bool(account, "use-global-buddyicon", TRUE)) {
+			if (global_buddyicon != NULL)
+				buddyicon = g_object_ref(G_OBJECT(global_buddyicon));
+			/* This is for when set_account() is called for a single account */
+			else
+				img = purple_buddy_icons_find_account_icon(account);
+		} else {
 			img = purple_buddy_icons_find_account_icon(account);
-	} else {
-		img = purple_buddy_icons_find_account_icon(account);
+		}
 	}
 
 	if (img != NULL) {
