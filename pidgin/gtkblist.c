@@ -327,7 +327,6 @@ static void gtk_blist_renderer_editing_started_cb(GtkCellRenderer *renderer,
 	GValue val;
 	PurpleBlistNode *node;
 	const char *text = NULL;
-	char *esc;
 
 	path = gtk_tree_path_new_from_string (path_str);
 	gtk_tree_model_get_iter (GTK_TREE_MODEL(gtkblist->treemodel), &iter, path);
@@ -350,12 +349,10 @@ static void gtk_blist_renderer_editing_started_cb(GtkCellRenderer *renderer,
 		g_return_if_reached();
 	}
 
-	esc = g_markup_escape_text(text, -1);
 	if (GTK_IS_ENTRY (editable)) {
 		GtkEntry *entry = GTK_ENTRY (editable);
-		gtk_entry_set_text(entry, esc);
+		gtk_entry_set_text(entry, text);
 	}
-	g_free(esc);
 }
 
 static void gtk_blist_renderer_edited_cb(GtkCellRendererText *text_rend, char *arg1,
@@ -489,11 +486,6 @@ static void gtk_blist_menu_showlog_cb(GtkWidget *w, PurpleBlistNode *node)
 static void gtk_blist_show_systemlog_cb()
 {
 	pidgin_syslog_show();
-}
-
-static void gtk_blist_show_onlinehelp_cb()
-{
-	purple_notify_uri(NULL, PURPLE_WEBSITE "documentation.php");
 }
 
 static void
@@ -785,7 +777,8 @@ pidgin_blist_joinchat_show(void)
 	gtk_widget_show_all(data->window);
 }
 
-static void gtk_blist_row_expanded_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTreePath *path, gpointer user_data) {
+static void gtk_blist_row_expanded_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTreePath *path, gpointer user_data)
+{
 	PurpleBlistNode *node;
 	GValue val;
 
@@ -809,7 +802,8 @@ static void gtk_blist_row_expanded_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTre
 	}
 }
 
-static void gtk_blist_row_collapsed_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTreePath *path, gpointer user_data) {
+static void gtk_blist_row_collapsed_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTreePath *path, gpointer user_data)
+{
 	PurpleBlistNode *node;
 	GValue val;
 
@@ -820,6 +814,8 @@ static void gtk_blist_row_collapsed_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTr
 
 	if (PURPLE_BLIST_NODE_IS_GROUP(node)) {
 		char *title;
+		struct _pidgin_blist_node *gtknode;
+		PurpleBlistNode *cnode;
 
 		title = pidgin_get_group_title(node, FALSE);
 
@@ -830,6 +826,17 @@ static void gtk_blist_row_collapsed_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTr
 		g_free(title);
 
 		purple_blist_node_set_bool(node, "collapsed", TRUE);
+
+		for(cnode = node->child; cnode; cnode = cnode->next) {
+			if (PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
+				gtknode = cnode->ui_data;
+				if (!gtknode->contact_expanded)
+					continue;
+				gtknode->contact_expanded = FALSE;
+				pidgin_blist_update_contact(NULL, cnode);
+			}
+		}
+
 	} else if(PURPLE_BLIST_NODE_IS_CONTACT(node)) {
 		pidgin_blist_collapse_contact_cb(NULL, node);
 	}
@@ -2714,6 +2721,7 @@ static gboolean pidgin_blist_drag_motion_cb(GtkWidget *tv, GdkDragContext *drag_
 {
 	GtkTreePath *path;
 	int delay;
+	GdkRectangle rect;
 
 	/*
 	 * When dragging a buddy into a contact, this is the delay before
@@ -2729,7 +2737,17 @@ static gboolean pidgin_blist_drag_motion_cb(GtkWidget *tv, GdkDragContext *drag_
 	}
 
 	gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(tv), x, y, &path, NULL, NULL, NULL);
-	gtk_tree_view_get_cell_area(GTK_TREE_VIEW(tv), path, NULL, &gtkblist->tip_rect);
+	gtk_tree_view_get_cell_area(GTK_TREE_VIEW(tv), path, NULL, &rect);
+
+	/* Only autoexpand when in the middle of the cell to avoid annoying un-intended expands */
+	if (y < rect.y + (rect.height / 3) ||
+	    y > rect.y + (2 * (rect.height /3)))
+		return FALSE;
+	
+	rect.height = rect.height / 3;
+	rect.y += rect.height;
+
+	gtkblist->tip_rect = rect;
 
 	if (path)
 		gtk_tree_path_free(path);
@@ -2833,6 +2851,7 @@ static GtkItemFactoryEntry blist_menu[] =
 	{ N_("/Buddies/Add C_hat..."), NULL, pidgin_blist_add_chat_cb, 0, "<StockItem>", GTK_STOCK_ADD },
 	{ N_("/Buddies/Add _Group..."), NULL, purple_blist_request_add_group, 0, "<StockItem>", GTK_STOCK_ADD },
 	{ "/Buddies/sep3", NULL, NULL, 0, "<Separator>", NULL },
+	{ N_("/Buddies/_About Pidgin"), NULL, pidgin_dialogs_about, 0,  "<Item>", NULL },
 	{ N_("/Buddies/_Quit"), "<CTL>Q", purple_core_quit, 0, "<StockItem>", GTK_STOCK_QUIT },
 
 	/* Accounts menu */
@@ -2849,14 +2868,9 @@ static GtkItemFactoryEntry blist_menu[] =
 	{ N_("/Tools/_File Transfers"), "<CTL>T", pidgin_xfer_dialog_show, 0, "<Item>", NULL },
 	{ N_("/Tools/R_oom List"), NULL, pidgin_roomlist_dialog_show, 0, "<Item>", NULL },
 	{ N_("/Tools/System _Log"), NULL, gtk_blist_show_systemlog_cb, 0, "<Item>", NULL },
+	{ N_("/Tools/_Debug Window"), NULL, toggle_debug, 0, "<Item>", NULL },
 	{ "/Tools/sep3", NULL, NULL, 0, "<Separator>", NULL },
 	{ N_("/Tools/Mute _Sounds"), "<CTL>S", pidgin_blist_mute_sounds_cb, 0, "<CheckItem>", NULL },
-
-	/* Help */
-	{ N_("/_Help"), NULL, NULL, 0, "<Branch>", NULL },
-	{ N_("/Help/Online _Help"), "F1", gtk_blist_show_onlinehelp_cb, 0, "<StockItem>", GTK_STOCK_HELP },
-	{ N_("/Help/_Debug Window"), NULL, toggle_debug, 0, "<Item>", NULL },
-	{ N_("/Help/_About"), NULL, pidgin_dialogs_about, 0,  "<Item>", NULL },
 };
 
 /*********************************************************
@@ -3232,6 +3246,9 @@ pidgin_blist_get_status_icon(PurpleBlistNode *node, PidginStatusIconSize size)
 		else if (purple_presence_is_idle(p) && size == PIDGIN_STATUS_ICON_SMALL)
 			ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_AVAILABLE_I,
 					icon_size, "GtkTreeView");
+		else if (purple_presence_is_status_primitive_active(p, PURPLE_STATUS_INVISIBLE))
+			ret = gtk_widget_render_icon(GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_INVISIBLE,
+					icon_size, "GtkTreeView");
 		else
 			ret = gtk_widget_render_icon(GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_AVAILABLE,
 					icon_size, "GtkTreeView");
@@ -3401,8 +3418,16 @@ static gchar *pidgin_blist_get_name_markup(PurpleBuddy *b, gboolean selected)
 				"<span color='%s' size='smaller'>%s</span>",
 				dim_grey(), esc, dim_grey(),
 				statustext != NULL ? statustext : "");
-	}
+	} else if (!PURPLE_BUDDY_IS_ONLINE(b)) {
+		if (!selected && !statustext) /* We handle selected text later */
+			text = g_strdup_printf("<span color='%s'>%s</span>", dim_grey(), esc);
+		else if (!selected && !text)
+			text = g_strdup_printf("<span color='%s'>%s</span>\n"
+				"<span color='%s' size='smaller'>%s</span>",
+				dim_grey(), esc, dim_grey(),
+				statustext != NULL ? statustext : "");
 
+	}
 	/* Not idle and not selected */
 	else if (!selected && !text)
 	{
@@ -3957,6 +3982,9 @@ connection_error_button_clicked_cb(GtkButton *widget, gpointer user_data)
 	g_free(primary);
 	gtk_widget_destroy(GTK_WIDGET(widget));
 	g_hash_table_remove(gtkblist->connection_errors, account);
+	if (gtk_container_get_children(GTK_CONTAINER(gtkblist->error_buttons)) == NULL) {
+		gtk_widget_hide(gtkblist->error_buttons);
+	}
 }
 
 /* Add some buttons that show connection errors */
@@ -3977,7 +4005,7 @@ create_connection_error_buttons(gpointer key, gpointer value,
 	                       escaped);
 	g_free(escaped);
 
-	hbox = gtk_hbox_new(FALSE, 0);
+	hbox = gtk_hbox_new(FALSE, 6);
 
 	/* Create the icon */
 	if ((status_type = purple_account_get_status_type_with_primitive(account,
@@ -3987,8 +4015,7 @@ create_connection_error_buttons(gpointer key, gpointer value,
 			image = gtk_image_new_from_pixbuf(pixbuf);
 			g_object_unref(pixbuf);
 
-			gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE,
-			                   PIDGIN_HIG_BOX_SPACE);
+			gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE, 0);
 		}
 	}
 
@@ -3999,8 +4026,7 @@ create_connection_error_buttons(gpointer key, gpointer value,
 #if GTK_CHECK_VERSION(2,6,0)
 	g_object_set(label, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
 #endif
-	gtk_box_pack_start(GTK_BOX(hbox), label, TRUE, TRUE,
-	                   PIDGIN_HIG_BOX_SPACE);
+	gtk_box_pack_start(GTK_BOX(hbox), label, TRUE, TRUE, 0);
 
 	/* Create the actual button and put the icon and text on it */
 	button = gtk_button_new();
@@ -4011,6 +4037,7 @@ create_connection_error_buttons(gpointer key, gpointer value,
 	gtk_widget_show_all(button);
 	gtk_box_pack_end(GTK_BOX(gtkblist->error_buttons), button,
 	                 FALSE, FALSE, 0);
+	gtk_widget_show_all(gtkblist->error_buttons);
 }
 
 void
@@ -4476,7 +4503,8 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	/* Create an empty vbox used for showing connection errors */
 	gtkblist->error_buttons = gtk_vbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(gtkblist->vbox), gtkblist->error_buttons, FALSE, FALSE, 0);
-
+        gtk_container_set_border_width(GTK_CONTAINER(gtkblist->error_buttons), 3);
+	
 	/* Add the statusbox */
 	gtkblist->statusbox = pidgin_status_box_new();
 	gtk_box_pack_start(GTK_BOX(gtkblist->vbox), gtkblist->statusbox, FALSE, TRUE, 0);
@@ -4573,6 +4601,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 						gtkblist);
 
 	gtk_widget_hide(gtkblist->headline_hbox);
+	gtk_widget_hide(gtkblist->error_buttons);
 
 	/* emit our created signal */
 	purple_signal_emit(handle, "gtkblist-created", list);
@@ -5765,6 +5794,8 @@ pidgin_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
 	gtk_box_pack_end(GTK_BOX(rowbox), data->alias_entry, TRUE, TRUE, 0);
 	gtk_entry_set_activates_default(GTK_ENTRY(data->alias_entry), TRUE);
 	pidgin_set_accessible_label (data->alias_entry, label);
+	if (name != NULL)
+		gtk_widget_grab_focus(data->alias_entry);
 
 	rowbox = gtk_hbox_new(FALSE, 5);
 	gtk_box_pack_start(GTK_BOX(vbox), rowbox, FALSE, FALSE, 0);

@@ -96,7 +96,7 @@ class Binding:
 
         if len(type) == 1:
             # simple types (int, gboolean, etc.) and enums
-            if (type[0] in simpletypes) or (type[0].startswith("Purple")):
+            if (type[0] in simpletypes) or ((type[0].startswith("Purple") and not type[0].endswith("Callback"))):
                 return self.inputsimple(type, name)
 
         # pointers ... 
@@ -118,7 +118,6 @@ class Binding:
             # unknown pointers are always replaced with NULL
             else:
                 return self.inputpointer(type, name)
-                return
 
         raise myexception
 
@@ -167,8 +166,11 @@ class ClientBinding (Binding):
         self.returncode = []
 
     def flush(self):
+	paramslist = ", ".join(self.paramshdr)
+	if (paramslist == "") :
+	    paramslist = "void"
         print "%s %s(%s)" % (self.functiontype, self.function.name,
-                             ", ".join(self.paramshdr)),
+                             paramslist),
 
         if self.headersonly:
             print ";"

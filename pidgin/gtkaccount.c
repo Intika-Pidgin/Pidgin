@@ -388,6 +388,8 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	GtkWidget *hbox;
 	GtkWidget *vbox;
 	GtkWidget *entry;
+	GtkWidget *menu;
+	GtkWidget *item;
 	GList *user_splits;
 	GList *l, *l2;
 	char *username = NULL;
@@ -431,6 +433,7 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 
 	/* Screen name */
 	dialog->screenname_entry = gtk_entry_new();
+	g_object_set(G_OBJECT(dialog->screenname_entry), "truncate-multiline", TRUE, NULL);
 
 	add_pref_box(dialog, vbox, _("Screen name:"), dialog->screenname_entry);
 
@@ -474,7 +477,7 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 
 		GtkWidget *entry = l->data;
 		PurpleAccountUserSplit *split = l2->data;
-		const char *value = NULL;
+		const char *value = NULL, *protocol = NULL;
 		char *c;
 
 		if (dialog->account != NULL) {
@@ -488,9 +491,16 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 				value = c;
 			}
 		}
-
 		if (value == NULL)
 			value = purple_account_user_split_get_default_value(split);
+
+		/* Google Talk default domain hackery! */
+		menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(dialog->protocol_menu));
+		item = gtk_menu_get_active(GTK_MENU(menu));
+		protocol = g_object_get_data(G_OBJECT(item), "protocol");
+		if (value == NULL && protocol != NULL && !strcmp(protocol, "prpl-fake") &&
+				!strcmp(purple_account_user_split_get_text(split), _("Domain")))
+			value = "gmail.com";
 
 		if (value != NULL)
 			gtk_entry_set_text(GTK_ENTRY(entry), value);
@@ -680,7 +690,7 @@ add_protocol_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 {
 	PurpleAccountOption *option;
 	PurpleAccount *account;
-	GtkWidget *frame, *vbox, *check, *entry, *combo;
+	GtkWidget *frame, *vbox, *check, *entry, *combo, *menu, *item;
 	const GList *list, *node;
 	gint i, idx, int_value;
 	GtkListStore *model;
@@ -690,7 +700,7 @@ add_protocol_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	GList *l;
 	char buf[1024];
 	char *title;
-	const char *str_value;
+	const char *str_value, *protocol;
 	gboolean bool_value;
 
 	if (dialog->protocol_frame != NULL) {
@@ -813,6 +823,14 @@ add_protocol_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 						gtk_entry_set_invisible_char(GTK_ENTRY(entry), PIDGIN_INVISIBLE_CHAR);
 				}
 
+				/* Google Talk default domain hackery! */
+				menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(dialog->protocol_menu));
+				item = gtk_menu_get_active(GTK_MENU(menu));
+				protocol = g_object_get_data(G_OBJECT(item), "protocol");
+				if (str_value == NULL && protocol != NULL && !strcmp(protocol, "prpl-fake") &&
+					!strcmp(_("Connect server"),  purple_account_option_get_text(option)))
+					str_value = "talk.google.com";
+		
 				if (str_value != NULL)
 					gtk_entry_set_text(GTK_ENTRY(entry), str_value);
 
@@ -2007,19 +2025,26 @@ set_account(GtkListStore *store, GtkTreeIter *iter, PurpleAccount *account, GdkP
 {
 	GdkPixbuf *pixbuf, *buddyicon = NULL;
 	PurpleStoredImage *img = NULL;
+	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info = NULL;
 
 	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
 	if ((pixbuf != NULL) && purple_account_is_disconnected(account))
 		gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
 
-	if (purple_account_get_bool(account, "use-global-buddyicon", TRUE)) {
-		if (global_buddyicon != NULL)
-			buddyicon = g_object_ref(G_OBJECT(global_buddyicon));
-		/* This is for when set_account() is called for a single account */
-		else
+	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	if (prpl_info != NULL && prpl_info->icon_spec.format != NULL) {
+		if (purple_account_get_bool(account, "use-global-buddyicon", TRUE)) {
+			if (global_buddyicon != NULL)
+				buddyicon = g_object_ref(G_OBJECT(global_buddyicon));
+			/* This is for when set_account() is called for a single account */
+			else
+				img = purple_buddy_icons_find_account_icon(account);
+		} else {
 			img = purple_buddy_icons_find_account_icon(account);
-	} else {
-		img = purple_buddy_icons_find_account_icon(account);
+		}
 	}
 
 	if (img != NULL) {
