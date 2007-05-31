@@ -227,7 +227,7 @@ static char *irc_send_convert(struct irc_conn *irc, const char *string)
 	enclist = purple_account_get_string(irc->account, "encoding", IRC_DEFAULT_CHARSET);
 	encodings = g_strsplit(enclist, ",", 2);
 
-	if (encodings[0] == NULL || !strcasecmp("UTF-8", encodings[0])) {
+	if (encodings[0] == NULL || !g_ascii_strcasecmp("UTF-8", encodings[0])) {
 		g_strfreev(encodings);
 		return g_strdup(string);
 	}
@@ -264,7 +264,7 @@ static char *irc_recv_convert(struct irc_conn *irc, const char *string)
 		while (*charset == ' ')
 			charset++;
 
-		if (!strcasecmp("UTF-8", charset)) {
+		if (!g_ascii_strcasecmp("UTF-8", charset)) {
 			if (g_utf8_validate(string, -1, NULL))
 				utf8 = g_strdup(string);
 		} else {
@@ -402,6 +402,22 @@ char *irc_mirc2txt (const char *string)
 		switch (result[i]) {
 		case '\002':
 		case '\003':
+			/* Foreground color */
+			if (isdigit(result[i + 1]))
+				i++;
+			if (isdigit(result[i + 1]))
+				i++;
+			/* Optional comma and background color */
+			if (result[i + 1] == ',') {
+				i++;
+				if (isdigit(result[i + 1]))
+					i++;
+				if (isdigit(result[i + 1]))
+					i++;
+			}
+			/* Note that i still points to the last character
+			 * of the color selection string. */
+			continue;
 		case '\007':
 		case '\017':
 		case '\026':

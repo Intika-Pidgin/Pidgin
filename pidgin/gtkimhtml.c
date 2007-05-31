@@ -932,24 +932,18 @@ static void gtk_imhtml_primary_clipboard_clear(GtkClipboard *clipboard, GtkIMHtm
 static void copy_clipboard_cb(GtkIMHtml *imhtml, gpointer unused)
 {
 	GtkTextIter start, end;
-	GtkTextMark *sel = gtk_text_buffer_get_selection_bound(imhtml->text_buffer);
-	GtkTextMark *ins = gtk_text_buffer_get_insert(imhtml->text_buffer);
+	if (gtk_text_buffer_get_selection_bounds(imhtml->text_buffer, &start, &end)) {
+		gtk_clipboard_set_with_owner(gtk_widget_get_clipboard(GTK_WIDGET(imhtml), GDK_SELECTION_CLIPBOARD),
+						 selection_targets, sizeof(selection_targets) / sizeof(GtkTargetEntry),
+						 (GtkClipboardGetFunc)gtk_imhtml_clipboard_get,
+						 (GtkClipboardClearFunc)NULL, G_OBJECT(imhtml));
 
-	gtk_text_buffer_get_iter_at_mark(imhtml->text_buffer, &start, sel);
-	gtk_text_buffer_get_iter_at_mark(imhtml->text_buffer, &end, ins);
-
-	gtk_clipboard_set_with_owner(gtk_widget_get_clipboard(GTK_WIDGET(imhtml), GDK_SELECTION_CLIPBOARD),
-				     selection_targets, sizeof(selection_targets) / sizeof(GtkTargetEntry),
-				     (GtkClipboardGetFunc)gtk_imhtml_clipboard_get,
-				     (GtkClipboardClearFunc)NULL, G_OBJECT(imhtml));
-
-	if (imhtml->clipboard_html_string) {
 		g_free(imhtml->clipboard_html_string);
 		g_free(imhtml->clipboard_text_string);
-	}
 
-	imhtml->clipboard_html_string = gtk_imhtml_get_markup_range(imhtml, &start, &end);
-	imhtml->clipboard_text_string = gtk_imhtml_get_text(imhtml, &start, &end);
+		imhtml->clipboard_html_string = gtk_imhtml_get_markup_range(imhtml, &start, &end);
+		imhtml->clipboard_text_string = gtk_imhtml_get_text(imhtml, &start, &end);
+	}
 
 	g_signal_stop_emission_by_name(imhtml, "copy-clipboard");
 }
@@ -957,27 +951,22 @@ static void copy_clipboard_cb(GtkIMHtml *imhtml, gpointer unused)
 static void cut_clipboard_cb(GtkIMHtml *imhtml, gpointer unused)
 {
 	GtkTextIter start, end;
-	GtkTextMark *sel = gtk_text_buffer_get_selection_bound(imhtml->text_buffer);
-	GtkTextMark *ins = gtk_text_buffer_get_insert(imhtml->text_buffer);
+	if (gtk_text_buffer_get_selection_bounds(imhtml->text_buffer, &start, &end)) {
+		gtk_clipboard_set_with_owner(gtk_widget_get_clipboard(GTK_WIDGET(imhtml), GDK_SELECTION_CLIPBOARD),
+						 selection_targets, sizeof(selection_targets) / sizeof(GtkTargetEntry),
+						 (GtkClipboardGetFunc)gtk_imhtml_clipboard_get,
+						 (GtkClipboardClearFunc)NULL, G_OBJECT(imhtml));
 
-	gtk_text_buffer_get_iter_at_mark(imhtml->text_buffer, &start, sel);
-	gtk_text_buffer_get_iter_at_mark(imhtml->text_buffer, &end, ins);
-
-	gtk_clipboard_set_with_owner(gtk_widget_get_clipboard(GTK_WIDGET(imhtml), GDK_SELECTION_CLIPBOARD),
-				     selection_targets, sizeof(selection_targets) / sizeof(GtkTargetEntry),
-				     (GtkClipboardGetFunc)gtk_imhtml_clipboard_get,
-				     (GtkClipboardClearFunc)NULL, G_OBJECT(imhtml));
-
-	if (imhtml->clipboard_html_string) {
 		g_free(imhtml->clipboard_html_string);
 		g_free(imhtml->clipboard_text_string);
+
+		imhtml->clipboard_html_string = gtk_imhtml_get_markup_range(imhtml, &start, &end);
+		imhtml->clipboard_text_string = gtk_imhtml_get_text(imhtml, &start, &end);
+
+		if (imhtml->editable)
+			gtk_text_buffer_delete_selection(imhtml->text_buffer, FALSE, FALSE);
 	}
 
-	imhtml->clipboard_html_string = gtk_imhtml_get_markup_range(imhtml, &start, &end);
-	imhtml->clipboard_text_string = gtk_imhtml_get_text(imhtml, &start, &end);
-
-	if (imhtml->editable)
-		gtk_text_buffer_delete_selection(imhtml->text_buffer, FALSE, FALSE);
 	g_signal_stop_emission_by_name(imhtml, "cut-clipboard");
 }
 
@@ -3388,7 +3377,7 @@ static gboolean gtk_imhtml_smiley_clicked(GtkWidget *w, GdkEvent *event, GtkIMHt
 		return FALSE;
 
 	pix = gdk_pixbuf_animation_get_static_image(anim);
-	image = gtk_imhtml_image_new(pix, NULL, 0);
+	image = gtk_imhtml_image_new(pix, smiley->smile, 0);
 	ret = gtk_imhtml_image_clicked(w, event, (GtkIMHtmlImage*)image);
 	g_object_set_data_full(G_OBJECT(w), "image-data", image, (GDestroyNotify)gtk_imhtml_image_free);
 	g_object_unref(G_OBJECT(pix));
@@ -4441,9 +4430,11 @@ void gtk_imhtml_insert_smiley_at_iter(GtkIMHtml *imhtml, const char *sml, char *
 		}
 	}
 
-	if (imhtml_smiley->flags & GTK_IMHTML_SMILEY_CUSTOM) {
+	if (imhtml_smiley && imhtml_smiley->flags & GTK_IMHTML_SMILEY_CUSTOM) {
 		ebox = gtk_event_box_new();
+#if GTK_CHECK_VERSION(2,4,0)
 		gtk_event_box_set_visible_window(GTK_EVENT_BOX(ebox), FALSE);
+#endif
 		gtk_widget_show(ebox);
 	}
 
