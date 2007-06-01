@@ -36,12 +36,81 @@
 GSList *smiley_themes = NULL;
 struct smiley_theme *current_smiley_theme;
 
+static void pidgin_themes_destroy_smiley_theme_smileys(struct smiley_theme *theme);
+
 gboolean pidgin_themes_smileys_disabled()
 {
 	if (!current_smiley_theme)
 		return 1;
 
 	return strcmp(current_smiley_theme->name, "none") == 0;
+}
+
+static void
+pidgin_themes_destroy_smiley_theme(struct smiley_theme *theme) {
+			pidgin_themes_destroy_smiley_theme_smileys(theme);
+
+			g_free(theme->name);
+			g_free(theme->desc);
+			g_free(theme->author);
+			g_free(theme->icon);
+			g_free(theme->path);
+			g_free(theme);
+}
+
+static void pidgin_themes_remove_theme_dir(const char *theme_dir_name)
+{
+	GString *str = NULL;
+	const char *file_name = NULL;
+	GDir *theme_dir = NULL;
+
+	if ((theme_dir = g_dir_open(theme_dir_name, 0, NULL)) != NULL) {
+		if ((str = g_string_new(theme_dir_name)) != NULL) {
+			while ((file_name = g_dir_read_name(theme_dir)) != NULL) {
+				g_string_printf(str, "%s%s%s", theme_dir_name, G_DIR_SEPARATOR_S, file_name);
+				g_unlink(str->str);
+			}
+			g_string_free(str, TRUE);
+		}
+		g_dir_close(theme_dir);
+		g_rmdir(theme_dir_name);
+	}
+}
+
+void pidgin_themes_remove_smiley_theme(const char *file)
+{
+	char *theme_dir = NULL, *last_slash = NULL;
+	g_return_if_fail(NULL != file);
+	
+	if (!g_file_test(file, G_FILE_TEST_EXISTS)) return;
+	if ((theme_dir = g_strdup(file)) == NULL) return ;
+
+	if ((last_slash = g_strrstr(theme_dir, G_DIR_SEPARATOR_S)) != NULL) {
+		GSList *iter = NULL;
+		struct smiley_theme *theme = NULL;
+
+		*last_slash = 0;
+
+		/* Delete files on disk */
+		pidgin_themes_remove_theme_dir(theme_dir);
+
+		/* Find theme in themes list and remove it */
+		for (iter = smiley_themes ; iter ; iter = iter->next) {
+			theme = ((struct smiley_theme *)(iter->data));
+			if (!strcmp(theme->path, file))
+				break ;
+		}
+		if (iter) {
+			if (theme == current_smiley_theme)
+				current_smiley_theme = ((struct smiley_theme *)(NULL == iter->next ? (smiley_themes == iter ? NULL : smiley_themes->data) : iter->next->data));
+			smiley_themes = g_slist_delete_link(smiley_themes, iter);
+
+			/* Destroy theme structure */
+			pidgin_themes_destroy_smiley_theme(theme);
+		}
+	}
+
+	g_free(theme_dir);
 }
 
 void pidgin_themes_smiley_themeize(GtkWidget *imhtml)
@@ -64,7 +133,7 @@ void pidgin_themes_smiley_themeize(GtkWidget *imhtml)
 }
 
 static void
-pidgin_themes_destroy_smiley_theme(struct smiley_theme *theme)
+pidgin_themes_destroy_smiley_theme_smileys(struct smiley_theme *theme)
 {
 	GHashTable *already_freed;
 	struct smiley_list *wer;
@@ -217,13 +286,6 @@ void pidgin_themes_load_smiley_theme(const char *file, gboolean load)
 
 		pidgin_themes_destroy_smiley_theme(theme);
 
-		g_free(theme->name);
-		g_free(theme->desc);
-		g_free(theme->author);
-		g_free(theme->icon);
-		g_free(theme->path);
-		g_free(theme);
-
 		return;
 	}
 
@@ -235,7 +297,7 @@ void pidgin_themes_load_smiley_theme(const char *file, gboolean load)
 		GList *cnv;
 
 		if (current_smiley_theme)
-			pidgin_themes_destroy_smiley_theme(current_smiley_theme);
+			pidgin_themes_destroy_smiley_theme_smileys(current_smiley_theme);
 		current_smiley_theme = theme;
 
 		for (cnv = purple_get_conversations(); cnv != NULL; cnv = cnv->next) {
