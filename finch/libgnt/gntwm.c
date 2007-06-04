@@ -10,7 +10,9 @@
 #include <string.h>
 #include <time.h>
 
+#include "gntbutton.h"
 #include "gntwm.h"
+#include "gntentry.h"
 #include "gntstyle.h"
 #include "gntmarshal.h"
 #include "gnt.h"
@@ -56,6 +58,17 @@ static gboolean write_already(gpointer data);
 static int write_timeout;
 static time_t last_active_time;
 static gboolean idle_update;
+
+static gboolean ignore_keys = FALSE;
+
+typedef struct {
+	char * keys; /* Keystrokes being bound to the action */
+	GntBindableClass * klass; /* Class of the object that's getting keys rebound */
+	char * name;  /* Name of the action ie:window-close, wm-quit, refresh-screen */
+	void * params; /* Parameters to pass to the callback */
+} RebindInfo;
+
+RebindInfo * rebind_info;
 
 static GList *
 g_list_bring_to_front(GList *list, gpointer data)
@@ -484,6 +497,133 @@ window_close(GntBindable *bindable, GList *null)
 }
 
 static gboolean
+free_rebind_info()
+{
+	g_free(rebind_info->keys);
+	g_free(rebind_info->name);
+	g_free(rebind_info->params);
+	g_free(rebind_info);
+	
+}
+
+static gboolean
+help_for_widget_cancel_button_activate(GntBindable *bindable, gpointer data)
+{
+	free_rebind_info();
+
+	gnt_widget_destroy(GNT_WIDGET(data));
+	return TRUE;
+}
+
+static gboolean
+help_for_widget_bind_button_activate(GntBindable *bindable, gpointer data)
+{
+
+	/* This will be where the rebinding happens */
+/*	if(rebind_info->keys){
+		gnt_bindable_class_register_action(rebind_info->klass,rebind_info->name,NULL,rebind_info->keys,rebind_info->params);
+	} */
+
+	free_rebind_info();
+	
+	gnt_widget_destroy(GNT_WIDGET(data));
+
+	return TRUE;
+}
+
+static gboolean
+help_for_widget_grab_key(GntBindable *bindable, const char *text, gpointer *data)
+{
+
+	GntLabel *label = GNT_LABEL(data);
+	char *newText;
+
+	if(text && *text){
+
+		if(!strcmp(text, GNT_KEY_CTRL_I) || !strcmp(text, GNT_KEY_ENTER)){
+			return FALSE;
+		}
+
+		newText = g_strdup_printf("KEY: \"%s\"",text);
+		gnt_label_set_text(label,newText); 
+
+		g_free(newText);
+
+		return TRUE;
+	}
+	return FALSE;
+} 
+static void
+help_for_widget_activate(GntBindable *bindable, gpointer widget)
+{
+				
+	GntTree * tree = GNT_TREE(bindable);
+
+	GntWidget *vbox = gnt_box_new(FALSE,TRUE);
+
+	GntWidget *label;
+	const char * widgetName = g_type_name(G_OBJECT_TYPE(widget));
+	
+	GntWidget *key_label;
+	
+	GntWidget *bind_button, *cancel_button;
+	GntWidget *button_box;
+	
+	GntWidget *win = gnt_window_new();
+	GList * currentRowData,*itr;
+	char * tmp;
+
+	rebind_info = g_new0(RebindInfo,1);
+	rebind_info->keys = NULL;
+	rebind_info->klass = GNT_BINDABLE_GET_CLASS(widget);
+	currentRowData = gnt_tree_get_selection_text_list(tree);
+	rebind_info->name = g_list_nth_data(currentRowData,1);
+	rebind_info->params = NULL;
+
+	itr = currentRowData;
+	while(itr){
+		g_free(itr->data);
+		itr = itr->next;
+	}
+	g_list_free(currentRowData);
+
+	gnt_box_set_alignment(GNT_BOX(vbox), GNT_ALIGN_MID);
+
+	gnt_box_set_title(GNT_BOX(win),"Key Capture");
+
+	tmp = g_strdup_printf("Type the new bindings for %s in a %s.",rebind_info->name,widgetName);
+	label = gnt_label_new(tmp);
+	g_free(tmp);
+	gnt_box_add_widget(GNT_BOX(vbox),label);
+
+	key_label = gnt_label_new("KEY:\"\""); 
+	gnt_widget_set_name(key_label,"keystroke");
+	gnt_box_add_widget(GNT_BOX(vbox),key_label);
+
+	g_signal_connect(G_OBJECT(win), "key_pressed", G_CALLBACK(help_for_widget_grab_key),key_label);
+
+	button_box = gnt_box_new(FALSE,FALSE);
+	
+	bind_button = gnt_button_new("BIND");
+	gnt_widget_set_name(bind_button,"bind");
+	gnt_box_add_widget(GNT_BOX(button_box), bind_button);
+	
+	cancel_button = gnt_button_new("Cancel");
+	gnt_widget_set_name(cancel_button,"cancel");
+	gnt_box_add_widget(GNT_BOX(button_box),cancel_button);
+	
+	g_signal_connect(G_OBJECT(bind_button), "activate", G_CALLBACK(help_for_widget_bind_button_activate),win);
+	g_signal_connect(G_OBJECT(cancel_button), "activate", G_CALLBACK(help_for_widget_cancel_button_activate),win);
+	
+
+	gnt_box_add_widget(GNT_BOX(vbox),button_box);
+
+	gnt_box_add_widget(GNT_BOX(win),vbox);
+	gnt_widget_show(win);
+
+}
+
+static gboolean
 help_for_widget(GntBindable *bindable, GList *null)
 {
 	GntWM *wm = GNT_WM(bindable);
@@ -499,6 +639,8 @@ help_for_widget(GntBindable *bindable, GList *null)
 	active = GNT_BOX(widget)->active;
 
 	tree = gnt_widget_bindings_view(active);
+	g_signal_connect(G_OBJECT(tree), "activate", G_CALLBACK(help_for_widget_activate), active);
+
 	win = gnt_window_new();
 	title = g_strdup_printf("Bindings for %s", g_type_name(G_OBJECT_TYPE(active)));
 	gnt_box_set_title(GNT_BOX(win), title);
@@ -1016,6 +1158,22 @@ toggle_clipboard(GntBindable *bindable, GList *n)
 	return TRUE;
 }
 
+static gboolean
+ignore_keys_start(GntBindable *bindable, GList *n){
+	GntWM *wm = GNT_WM(bindable);
+
+	if(!wm->menu && !wm->_list.window && wm->mode == GNT_KP_MODE_NORMAL){
+		ignore_keys = TRUE;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static gboolean
+ignore_keys_end(GntBindable *bindable, GList *n){
+	return ignore_keys ? !(ignore_keys = FALSE) : FALSE;
+}
+
 static void
 gnt_wm_class_init(GntWMClass *klass)
 {
@@ -1143,15 +1301,19 @@ gnt_wm_class_init(GntWMClass *klass)
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "refresh-screen", refresh_screen,
 				"\033" "l", NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "switch-window-n", switch_window_n,
-				NULL, NULL);
+				NULL,       NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "window-scroll-down", window_scroll_down,
 				"\033" GNT_KEY_CTRL_J, NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "window-scroll-up", window_scroll_up,
 				"\033" GNT_KEY_CTRL_K, NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "help-for-widget", help_for_widget,
 				"\033" "/", NULL);
-	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "toggle-clipboard",
-				toggle_clipboard, "\033" "C", NULL);
+	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "toggle-clipboard", toggle_clipboard, 
+				"\033" "C", NULL);
+	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "ignore-keys-start", ignore_keys_start, 
+				GNT_KEY_CTRL_G, NULL);
+	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "ignore-keys-end", ignore_keys_end, 
+				"\033" GNT_KEY_CTRL_G, NULL);
 
 	gnt_style_read_actions(G_OBJECT_CLASS_TYPE(klass), GNT_BINDABLE_CLASS(klass));
 
@@ -1375,6 +1537,15 @@ gboolean gnt_wm_process_input(GntWM *wm, const char *keys)
 	keys = gnt_bindable_remap_keys(GNT_BINDABLE(wm), keys);
 
 	idle_update = TRUE;
+
+	if(ignore_keys){
+		if(keys && !strcmp(keys, "\033" GNT_KEY_CTRL_G)){
+			if(gnt_bindable_perform_action_key(GNT_BINDABLE(wm), keys)){
+				return TRUE;
+			}
+		}
+		return wm->ordered ? gnt_widget_key_pressed(GNT_WIDGET(wm->ordered->data), keys) : FALSE;
+	}
 
 	if (gnt_bindable_perform_action_key(GNT_BINDABLE(wm), keys)) {
 		return TRUE;
