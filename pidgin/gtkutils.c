@@ -612,6 +612,7 @@ create_protocols_menu(const char *default_proto_id)
 				g_object_unref(pixbuf);
 
 			gtalk_name = NULL;
+			i++;
 		}
 
 		pixbuf = get_prpl_pixbuf(prpl_info);
@@ -3033,20 +3034,20 @@ gboolean pidgin_gdk_pixbuf_is_opaque(GdkPixbuf *pixbuf) {
 
         row = pixels;
         for (i = 3; i < rowstride; i+=4) {
-                if (row[i] != 0xff)
+                if (row[i] < 0xfe)
                         return FALSE;
         }
 
         for (i = 1; i < height - 1; i++) {
                 row = pixels + (i*rowstride);
-                if (row[3] != 0xff || row[rowstride-1] != 0xff) {
+                if (row[3] < 0xfe || row[rowstride-1] < 0xfe) {
                         return FALSE;
-                }
+            }
         }
 
         row = pixels + ((height-1) * rowstride);
         for (i = 3; i < rowstride; i+=4) {
-                if (row[i] != 0xff)
+                if (row[i] < 0xfe)
                         return FALSE;
         }
 
