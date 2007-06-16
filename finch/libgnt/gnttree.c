@@ -303,7 +303,7 @@ update_row_text(GntTree *tree, GntTreeRow *row)
 
 		notfirst = TRUE;
 
-		if (len > width) {
+		if (len > width - 2) {
 			len = width - 1;
 			cut = TRUE;
 		}
@@ -753,15 +753,16 @@ gnt_tree_key_pressed(GntWidget *widget, const char *text)
 			g_signal_emit(tree, signals[SIG_TOGGLED], 0, row->key);
 			redraw_tree(tree);
 		}
+	} else {
+		return FALSE;
 	}
 
 	if (old != tree->current)
 	{
 		tree_selection_changed(tree, old, tree->current);
-		return TRUE;
 	}
 
-	return FALSE;
+	return TRUE;
 }
 
 static void
