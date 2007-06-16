@@ -282,7 +282,11 @@ update_user_splits(AccountEditDialog *dialog)
 
 		if (dialog->account)
 		{
-			s = strrchr(username, purple_account_user_split_get_separator(split));
+			if(purple_account_user_split_get_reverse(split))
+				s = strrchr(username, purple_account_user_split_get_separator(split));
+			else
+				s = strchr(username, purple_account_user_split_get_separator(split));
+
 			if (s != NULL)
 			{
 				*s = '\0';
@@ -637,7 +641,7 @@ reset_accounts_win(GntWidget *widget, gpointer null)
 
 void finch_accounts_show_all()
 {
-	GList *iter;
+	const GList *iter;
 	GntWidget *box, *button;
 
 	if (accounts.window)
@@ -730,7 +734,7 @@ account_abled_cb(PurpleAccount *account, gpointer user_data)
 
 void finch_accounts_init()
 {
-	GList *iter;
+	const GList *iter;
 
 	purple_signal_connect(purple_accounts_get_handle(), "account-added",
 			finch_accounts_get_handle(), PURPLE_CALLBACK(account_added_callback),
@@ -827,7 +831,7 @@ add_user_cb(AddUserData *data)
 {
 	PurpleConnection *gc = purple_account_get_connection(data->account);
 
-	if (g_list_find(purple_connections_get_all(), gc))
+	if (g_list_find((GList *)purple_connections_get_all(), gc))
 	{
 		purple_blist_request_add_buddy(data->account, data->username,
 									 NULL, data->alias);
