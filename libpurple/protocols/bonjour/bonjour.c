@@ -94,14 +94,13 @@ static void
 bonjour_login(PurpleAccount *account)
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
-	PurpleGroup *bonjour_group = NULL;
-	BonjourData *bd = NULL;
+	PurpleGroup *bonjour_group;
+	BonjourData *bd;
 	PurpleStatus *status;
 	PurplePresence *presence;
 
 	gc->flags |= PURPLE_CONNECTION_HTML;
-	gc->proto_data = g_new0(BonjourData, 1);
-	bd = gc->proto_data;
+	gc->proto_data = bd = g_new0(BonjourData, 1);
 
 	/* Start waiting for jabber connections (iChat style) */
 	bd->jabber_data = g_new(BonjourJabber, 1);
@@ -111,10 +110,6 @@ bonjour_login(PurpleAccount *account)
 	if (bonjour_jabber_start(bd->jabber_data) == -1) {
 		/* Send a message about the connection error */
 		purple_connection_error(gc, _("Unable to listen for incoming IM connections\n"));
-
-		/* Free the data */
-		g_free(bd->jabber_data);
-		bd->jabber_data = NULL;
 		return;
 	}
 
@@ -155,7 +150,7 @@ static void
 bonjour_close(PurpleConnection *connection)
 {
 	PurpleGroup *bonjour_group;
-	BonjourData *bd = (BonjourData*)connection->proto_data;
+	BonjourData *bd = connection->proto_data;
 
 	/* Stop looking for buddies in the LAN */
 	if (bd->dns_sd_data != NULL)
@@ -272,6 +267,7 @@ static void
 bonjour_convo_closed(PurpleConnection *connection, const char *who)
 {
 	PurpleBuddy *buddy = purple_find_buddy(connection->account, who);
+	BonjourBuddy *bb;
 
 	if (buddy == NULL)
 	{
@@ -282,7 +278,9 @@ bonjour_convo_closed(PurpleConnection *connection, const char *who)
 		return;
 	}
 
-	bonjour_jabber_close_conversation(((BonjourData*)(connection->proto_data))->jabber_data, buddy);
+	bb = buddy->proto_data;
+	bonjour_jabber_close_conversation(bb->conversation);
+	bb->conversation = NULL;
 }
 
 static char *
@@ -325,6 +323,8 @@ bonjour_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboole
 static gboolean
 plugin_unload(PurplePlugin *plugin)
 {
+	/* These shouldn't happen here because they are allocated in _init() */
+
 	g_free(default_firstname);
 	g_free(default_lastname);
 	g_free(default_hostname);

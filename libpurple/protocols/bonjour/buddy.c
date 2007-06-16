@@ -162,6 +162,8 @@ void
 bonjour_buddy_delete(BonjourBuddy *buddy)
 {
 	g_free(buddy->name);
+	g_free(buddy->ip);
+
 	g_free(buddy->first);
 	g_free(buddy->phsh);
 	g_free(buddy->status);
@@ -170,14 +172,14 @@ bonjour_buddy_delete(BonjourBuddy *buddy)
 	g_free(buddy->jid);
 	g_free(buddy->AIM);
 	g_free(buddy->vc);
-	g_free(buddy->ip);
 	g_free(buddy->msg);
+	g_free(buddy->ext);
+	g_free(buddy->nick);
+	g_free(buddy->node);
+	g_free(buddy->ver);
 
-	if (buddy->conversation != NULL)
-	{
-		g_free(buddy->conversation->buddy_name);
-		g_free(buddy->conversation);
-	}
+	bonjour_jabber_close_conversation(buddy->conversation);
+	buddy->conversation = NULL;
 
 #ifdef USE_BONJOUR_APPLE
 	if (buddy->txt_query != NULL)
