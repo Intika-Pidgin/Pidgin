@@ -116,7 +116,9 @@ typedef enum
 	PURPLE_MESSAGE_RAW         = 0x0800, /**< "Raw" message - don't
 	                                        apply formatting         */
 	PURPLE_MESSAGE_IMAGES      = 0x1000, /**< Message contains images  */
-	PURPLE_MESSAGE_NOTIFY      = 0x2000  /**< Message is a notification */
+	PURPLE_MESSAGE_NOTIFY      = 0x2000, /**< Message is a notification */
+	PURPLE_MESSAGE_NO_LINKIFY  = 0x4000  /**< Message should not be auto-
+										   linkified */
 
 } PurpleMessageFlags;
 
@@ -502,21 +504,21 @@ gpointer purple_conversation_get_data(PurpleConversation *conv, const char *key)
  *
  * @return A GList of all conversations.
  */
-GList *purple_get_conversations(void);
+const GList *purple_get_conversations(void);
 
 /**
  * Returns a list of all IMs.
  *
  * @return A GList of all IMs.
  */
-GList *purple_get_ims(void);
+const GList *purple_get_ims(void);
 
 /**
  * Returns a list of all chats.
  *
  * @return A GList of all chats.
  */
-GList *purple_get_chats(void);
+const GList *purple_get_chats(void);
 
 /**
  * Finds a conversation with the specified type, name, and Purple account.
@@ -875,7 +877,7 @@ GList *purple_conv_chat_set_users(PurpleConvChat *chat, GList *users);
  *
  * @return The list of users.
  */
-GList *purple_conv_chat_get_users(const PurpleConvChat *chat);
+const GList *purple_conv_chat_get_users(const PurpleConvChat *chat);
 
 /**
  * Ignores a user in a chat room.
@@ -910,7 +912,7 @@ GList *purple_conv_chat_set_ignored(PurpleConvChat *chat, GList *ignored);
  *
  * @return The list of ignored users.
  */
-GList *purple_conv_chat_get_ignored(const PurpleConvChat *chat);
+const GList *purple_conv_chat_get_ignored(const PurpleConvChat *chat);
 
 /**
  * Returns the actual name of the specified ignored user, if it exists in

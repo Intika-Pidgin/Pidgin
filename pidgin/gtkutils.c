@@ -130,6 +130,22 @@ pidgin_setup_imhtml(GtkWidget *imhtml)
 }
 
 GtkWidget *
+pidgin_create_window(const char *title, guint border_width, const char *role, gboolean resizable)
+{
+	GtkWindow *wnd = NULL;
+
+	wnd = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
+	if (title)
+		gtk_window_set_title(wnd, title);
+	gtk_container_set_border_width(GTK_CONTAINER(wnd), border_width);
+	if (role)
+		gtk_window_set_role(wnd, role);
+	gtk_window_set_resizable(wnd, resizable);
+
+	return GTK_WIDGET(wnd);
+}
+
+GtkWidget *
 pidgin_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **toolbar_ret, GtkWidget **sw_ret)
 {
 	GtkWidget *frame;
@@ -671,8 +687,8 @@ create_account_menu(PurpleAccount *default_account,
 	AopMenu *aop_menu = NULL;
 	PurpleAccount *account;
 	GdkPixbuf *pixbuf = NULL;
-	GList *list;
-	GList *p;
+	const GList *list;
+	const GList *p;
 	GtkSizeGroup *sg;
 	int i;
 	char buf[256];
@@ -979,9 +995,9 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 		/* Check for a compatible account. */
 		if (ret_account != NULL)
 		{
-			GList *list;
+			const GList *list;
 			PurpleAccount *account = NULL;
-			GList *l;
+			const GList *l;
 			const char *protoname;
 
 			if (all_accounts)
@@ -3074,3 +3090,4 @@ gtk_tree_path_new_from_indices (gint first_index, ...)
 	return path;
 }
 #endif
+
