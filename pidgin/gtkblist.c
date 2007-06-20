@@ -311,6 +311,7 @@ static void gtk_blist_menu_join_cb(GtkWidget *w, PurpleChat *chat)
 	gtk_blist_join_chat(chat);
 }
 
+#if GTK_CHECK_VERSION(2,6,0)
 static void gtk_blist_renderer_editing_cancelled_cb(GtkCellRenderer *renderer, PurpleBuddyList *list)
 {
 	editing_blist = FALSE;
@@ -355,6 +356,7 @@ static void gtk_blist_renderer_editing_started_cb(GtkCellRenderer *renderer,
 	}
 	editing_blist = TRUE;
 }
+#endif
 
 static void gtk_blist_renderer_edited_cb(GtkCellRendererText *text_rend, char *arg1,
 					 char *arg2, PurpleBuddyList *list)
@@ -4463,8 +4465,10 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 #endif
 										"markup", NAME_COLUMN,
 										NULL);
+#if GTK_CHECK_VERSION(2,6,0)
 	g_signal_connect(G_OBJECT(rend), "editing-started", G_CALLBACK(gtk_blist_renderer_editing_started_cb), NULL);
 	g_signal_connect(G_OBJECT(rend), "editing-canceled", G_CALLBACK(gtk_blist_renderer_editing_cancelled_cb), list);
+#endif
 	g_signal_connect(G_OBJECT(rend), "edited", G_CALLBACK(gtk_blist_renderer_edited_cb), list);
 	g_object_set(rend, "ypad", 0, "yalign", 0.5, NULL);
 #if GTK_CHECK_VERSION(2,6,0)
