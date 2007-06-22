@@ -41,10 +41,11 @@
 
 #include <gdk/gdkkeysyms.h>
 
+#include "internal.h"
+
 #include "account.h"
 #include "buddyicon.h"
 #include "core.h"
-#include "internal.h"
 #include "imgstore.h"
 #include "network.h"
 #include "request.h"
@@ -1560,7 +1561,7 @@ tree_view_delete_current_selection(PidginStatusBox *status_box, GtkTreePath *pat
 
 	msg = g_strdup_printf(_("Are you sure you want to delete %s?"), purple_savedstatus_get_title(saved));
 
-	purple_request_action(pidgin_status_get_handle(), NULL, msg, NULL, 0,
+	purple_request_action(saved, NULL, msg, NULL, 0,
 		NULL, NULL, NULL,
 		data, 2,
 		_("Delete"), tree_view_delete_current_selection_cb,
@@ -1624,15 +1625,17 @@ treeview_key_press_event(GtkWidget *widget,
 			GtkTreePath *path;
 
 			if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
+				gboolean ret = TRUE;
 				path = gtk_tree_model_get_path(GTK_TREE_MODEL(box->dropdown_store), &iter);
 				if (event->keyval == GDK_Return) {
 					treeview_activate_current_selection(box, path);
 				} else if (event->keyval == GDK_Delete) {
 					tree_view_delete_current_selection(box, path);
-				}
+				} else
+					ret = FALSE;
 
 				gtk_tree_path_free (path);
-				return TRUE;
+				return ret;
 			}
 		} 
 	}
