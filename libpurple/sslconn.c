@@ -24,6 +24,7 @@
  */
 #include "internal.h"
 
+#include "certificate.h"
 #include "debug.h"
 #include "sslconn.h"
 
@@ -117,6 +118,10 @@ purple_ssl_connect(PurpleAccount *account, const char *host, int port,
 	gsc->connect_cb      = func;
 	gsc->error_cb        = error_func;
 
+	/* TODO: remove the following line, as the verifier should be
+	   specified Somewhere Else */
+	gsc->verifier = purple_certificate_find_verifier("x509","singleuse");
+
 	gsc->connect_data = purple_proxy_connect(NULL, account, host, port, purple_ssl_connect_cb, gsc);
 
 	if (gsc->connect_data == NULL)
@@ -154,7 +159,18 @@ purple_ssl_input_add(PurpleSslConnection *gsc, PurpleSslInputFunction func,
 PurpleSslConnection *
 purple_ssl_connect_fd(PurpleAccount *account, int fd,
 					PurpleSslInputFunction func,
-					PurpleSslErrorFunction error_func, void *data)
+					PurpleSslErrorFunction error_func,
+                    void *data)
+{
+    return purple_ssl_connect_with_host_fd(account, fd, func, error_func, NULL, data);
+}
+
+PurpleSslConnection *
+purple_ssl_connect_with_host_fd(PurpleAccount *account, int fd,
+                      PurpleSslInputFunction func,
+                      PurpleSslErrorFunction error_func,
+                      const char *host,
+                      void *data)
 {
 	PurpleSslConnection *gsc;
 	PurpleSslOps *ops;
@@ -175,6 +191,12 @@ purple_ssl_connect_fd(PurpleAccount *account, int fd,
 	gsc->connect_cb      = func;
 	gsc->error_cb        = error_func;
 	gsc->fd              = fd;
+    if(host)
+        gsc->host            = g_strdup(host);
+
+    	/* TODO: remove the following line, as the verifier should be
+	   specified Somewhere Else */
+	gsc->verifier = purple_certificate_find_verifier("x509","singleuse");
 
 	ops = purple_ssl_get_ops();
 	ops->connectfunc(gsc);
@@ -229,6 +251,17 @@ purple_ssl_write(PurpleSslConnection *gsc, const void *data, size_t len)
 
 	ops = purple_ssl_get_ops();
 	return (ops->write)(gsc, data, len);
+}
+
+GList *
+purple_ssl_get_peer_certificates(PurpleSslConnection *gsc)
+{
+	PurpleSslOps *ops;
+
+	g_return_val_if_fail(gsc != NULL, NULL);
+
+	ops = purple_ssl_get_ops();
+	return (ops->get_peer_certificates)(gsc);
 }
 
 void
