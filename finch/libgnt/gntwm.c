@@ -497,6 +497,35 @@ window_close(GntBindable *bindable, GList *null)
 	return TRUE;
 }
 
+static gboolean
+help_for_widget(GntBindable *bindable, GList *null)
+{
+	GntWM *wm = GNT_WM(bindable);
+	GntWidget *widget, *tree, *win, *active;
+	char *title;
+
+	if (!wm->cws->ordered)
+		return TRUE;
+
+	widget = wm->cws->ordered->data;
+	if (!GNT_IS_BOX(widget))
+		return TRUE;
+	active = GNT_BOX(widget)->active;
+
+	tree = gnt_widget_bindings_view(active);
+	win = gnt_window_new();
+	title = g_strdup_printf("Bindings for %s", g_type_name(G_OBJECT_TYPE(active)));
+	gnt_box_set_title(GNT_BOX(win), title);
+	if (tree)
+		gnt_box_add_widget(GNT_BOX(win), tree);
+	else
+		gnt_box_add_widget(GNT_BOX(win), gnt_label_new("This widget has no customizable bindings."));
+
+	gnt_widget_show(win);
+
+	return TRUE;
+}
+
 static void
 destroy__list(GntWidget *widget, GntWM *wm)
 {
@@ -603,7 +632,6 @@ static void
 list_of_windows(GntWM *wm, gboolean workspace)
 {
 	GntWidget *tree, *win;
-
 	setup__list(wm);
 	wm->windows = &wm->_list;
 
@@ -1321,7 +1349,7 @@ gnt_wm_class_init(GntWMClass *klass)
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "place-tagged", place_tagged,
 				"\033" "T", NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "workspace-list", workspace_list,
-				"\033" "s", NULL);	
+				"\033" "s", NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "toggle-clipboard",
 				toggle_clipboard, "\033" "C", NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "help-for-wm", help_for_wm,
@@ -1539,7 +1567,6 @@ g_hash_table_find(GHashTable * table, GHRFunc func, gpointer data)
 }
 #endif
 
-
 static GntWS *
 new_widget_find_workspace(GntWM *wm, GntWidget *widget)
 {
@@ -1735,7 +1762,6 @@ gboolean gnt_wm_process_input(GntWM *wm, const char *keys)
 	keys = gnt_bindable_remap_keys(GNT_BINDABLE(wm), keys);
 
 	idle_update = TRUE;
-
 	if(ignore_keys){
 		if(keys && !strcmp(keys, "\033" GNT_KEY_CTRL_G)){
 			if(gnt_bindable_perform_action_key(GNT_BINDABLE(wm), keys)){
