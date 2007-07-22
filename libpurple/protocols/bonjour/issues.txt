@@ -1,0 +1,7 @@
+==========================================
+============= Known issues ===============
+==========================================
+
+* Status changes don't work
+* File transfers
+* Typing notifications
