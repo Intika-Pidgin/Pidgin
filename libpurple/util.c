@@ -1740,7 +1740,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 		*xhtml_out = g_string_free(xhtml, FALSE);
 	if(plain_out)
 		*plain_out = g_string_free(plain, FALSE);
-	g_string_free(url, TRUE);
+	if(url)
+		g_string_free(url, TRUE);
 }
 
 /* The following are probably reasonable changes:
@@ -3993,6 +3994,10 @@ purple_email_is_valid(const char *address)
 		if (*c <= ' ' || *c >= 127) return FALSE;
 		if (strchr(rfc822_specials, *c)) return FALSE;
 	}
+
+	/* It's obviously not an email address if we didn't find an '@' above */
+	if (*c == '\0') return FALSE;
+
 	/* strictly we should return false if (*(c - 1) == '.') too, but I think
 	 * we should permit user.@domain type addresses - they do work :) */
 	if (c == address) return FALSE;
