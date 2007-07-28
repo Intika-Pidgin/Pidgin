@@ -83,9 +83,10 @@ typedef  enum
 }PidginConvFields;
 
 enum {
-	ICON_COLUMN,
-	TEXT_COLUMN,
-	NUM_COLUMNS
+	CONV_ICON_COLUMN,
+	CONV_TEXT_COLUMN,
+	CONV_EMBLEM_COLUMN,
+	CONV_NUM_COLUMNS
 } PidginInfopaneColumns;
 
 #define	PIDGIN_CONV_ALL	((1 << 7) - 1)
@@ -184,7 +185,6 @@ static gboolean color_is_visible(GdkColor foreground, GdkColor background, int c
 static void pidgin_conv_update_fields(PurpleConversation *conv, PidginConvFields fields);
 static void focus_out_from_menubar(GtkWidget *wid, PidginWindow *win);
 static void pidgin_conv_tab_pack(PidginWindow *win, PidginConversation *gtkconv);
-static gboolean infopane_release_cb(GtkWidget *widget, GdkEventButton *e, PidginConversation *conv);
 static gboolean infopane_press_cb(GtkWidget *widget, GdkEventButton *e, PidginConversation *conv);
 
 static GdkColor *get_nick_color(PidginConversation *gtkconv, const char *name) {
@@ -239,7 +239,6 @@ size_allocate_cb(GtkWidget *w, GtkAllocation *allocation, PidginConversation *gt
 
 	if (!PIDGIN_IS_PIDGIN_CONVERSATION(conv))
 		return FALSE;
-
 	if (gtkconv->auto_resize) {
 		return FALSE;
 	}
@@ -256,23 +255,14 @@ size_allocate_cb(GtkWidget *w, GtkAllocation *allocation, PidginConversation *gt
 	 * negate it anyway.  --luke */
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
 	{
-		if (w == gtkconv->imhtml) {
-			purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/default_width", allocation->width);
-			purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/default_height", allocation->height);
-		}
 		if (w == gtkconv->lower_hbox)
 			purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/entry_height", allocation->height);
 	}
 	else if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT)
 	{
-		if (w == gtkconv->imhtml) {
-			purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/chat/default_width", allocation->width);
-			purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/chat/default_height", allocation->height);
-		}
 		if (w == gtkconv->lower_hbox)
 			purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/chat/entry_height", allocation->height);
 	}
-
 	return FALSE;
 }
 
@@ -347,15 +337,28 @@ debug_command_cb(PurpleConversation *conv,
 	}
 }
 
-static PurpleCmdRet
-clear_command_cb(PurpleConversation *conv,
-                 const char *cmd, char **args, char **error, void *data)
+static void clear_conversation_scrollback(PurpleConversation *conv)
 {
 	PidginConversation *gtkconv = NULL;
 
 	gtkconv = PIDGIN_CONVERSATION(conv);
 
 	gtk_imhtml_clear(GTK_IMHTML(gtkconv->imhtml));
+}
+
+static PurpleCmdRet
+clear_command_cb(PurpleConversation *conv,
+                 const char *cmd, char **args, char **error, void *data)
+{
+	clear_conversation_scrollback(conv);
+	return PURPLE_CMD_STATUS_OK;
+}
+
+static PurpleCmdRet
+clearall_command_cb(PurpleConversation *conv,
+                 const char *cmd, char **args, char **error, void *data)
+{
+	purple_conversation_foreach(clear_conversation_scrollback);
 	return PURPLE_CMD_STATUS_OK;
 }
 
@@ -528,13 +531,6 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 
 	account = purple_conversation_get_account(conv);
 
-	if (!purple_account_is_connected(account))
-		return;
-
-	if ((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) &&
-		purple_conv_chat_has_left(PURPLE_CONV_CHAT(conv)))
-		return;
-
 	if (check_for_and_do_command(conv)) {
 		if (gtkconv->entry_growing) {
 			reset_default_size(gtkconv);
@@ -543,6 +539,13 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 		gtk_imhtml_clear(GTK_IMHTML(gtkconv->entry));
 		return;
 	}
+
+	if ((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) &&
+		purple_conv_chat_has_left(PURPLE_CONV_CHAT(conv)))
+		return;
+
+	if (!purple_account_is_connected(account))
+		return;
 
 	buf = gtk_imhtml_get_markup(GTK_IMHTML(gtkconv->entry));
 	clean = gtk_imhtml_get_text(GTK_IMHTML(gtkconv->entry), NULL, NULL);
@@ -1736,6 +1739,9 @@ right_click_chat_cb(GtkWidget *widget, GdkEventButton *event,
 
 	gtk_tree_selection_select_path(GTK_TREE_SELECTION(
 			gtk_tree_view_get_selection(GTK_TREE_VIEW(gtkchat->list))), path);
+	gtk_tree_view_set_cursor(GTK_TREE_VIEW(gtkchat->list),
+							 path, NULL, FALSE); 
+	gtk_widget_grab_focus(GTK_WIDGET(gtkchat->list));
 
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path);
 	gtk_tree_model_get(GTK_TREE_MODEL(model), &iter, CHAT_USERS_NAME_COLUMN, &who, -1);
@@ -2328,8 +2334,10 @@ update_tab_icon(PurpleConversation *conv)
 {
 	PidginConversation *gtkconv;
 	PidginWindow *win;
+	PurpleBuddy *b;
 	GList *l;
 	GdkPixbuf *status = NULL;
+	GdkPixbuf *emblem = NULL;
 
 	g_return_if_fail(conv != NULL);
 
@@ -2338,7 +2346,11 @@ update_tab_icon(PurpleConversation *conv)
 	if (conv != gtkconv->active_conv)
 		return;
 
+
 	status = pidgin_conv_get_tab_icon(conv, TRUE);
+	b = purple_find_buddy(conv->account, conv->name);
+	if (b)
+		emblem = pidgin_blist_get_emblem((PurpleBlistNode*)b);
 
 	g_return_if_fail(status != NULL);
 
@@ -2347,7 +2359,14 @@ update_tab_icon(PurpleConversation *conv)
 
 	gtk_list_store_set(GTK_LIST_STORE(gtkconv->infopane_model), 
 			&(gtkconv->infopane_iter),
-			ICON_COLUMN, status, -1);
+			CONV_ICON_COLUMN, status, -1);
+
+	gtk_list_store_set(GTK_LIST_STORE(gtkconv->infopane_model), 
+			&(gtkconv->infopane_iter),
+			CONV_EMBLEM_COLUMN, emblem, -1);
+
+	/* XXX seanegan Why do I have to do this? */
+	gtk_widget_queue_draw(gtkconv->infopane);
 
 	if (status != NULL)
 		g_object_unref(status);
@@ -2397,9 +2416,6 @@ redraw_icon(gpointer data)
 		gtkconv->u.im->icon_timer = 0;
 		return FALSE;
 	}
-
-	gtkconv->auto_resize = TRUE;
-	g_idle_add(reset_auto_resize_cb, gtkconv);
 
 	gdk_pixbuf_animation_iter_advance(gtkconv->u.im->iter, NULL);
 	buf = gdk_pixbuf_animation_iter_get_pixbuf(gtkconv->u.im->iter);
@@ -2897,21 +2913,18 @@ show_buddy_icons_pref_changed_cb(const char *name, PurplePrefType type,
 	}
 }
 
-static void
-regenerate_options_items(PidginWindow *win)
+/* Returns TRUE if some items were added to the menu, FALSE otherwise */
+static gboolean
+populate_menu_with_options(GtkWidget *menu, PidginConversation *gtkconv, gboolean all)
 {
-	GtkWidget *menu;
 	GList *list;
-	PidginConversation *gtkconv;
 	PurpleConversation *conv;
 	PurpleBlistNode *node = NULL;
 	PurpleChat *chat = NULL;
 	PurpleBuddy *buddy = NULL;
+	gboolean ret;
 
-	gtkconv = pidgin_conv_window_get_active_gtkconv(win);
 	conv = gtkconv->active_conv;
-
-	menu = gtk_item_factory_get_widget(win->menu.item_factory, N_("/Conversation/More"));
 
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
 		chat = purple_blist_find_chat(conv->account, conv->name);
@@ -2957,23 +2970,43 @@ regenerate_options_items(PidginWindow *win)
 	else if (buddy)
 		node = (PurpleBlistNode *)buddy;
 
-	/* Remove the previous entries */
-	for (list = gtk_container_get_children(GTK_CONTAINER(menu)); list; )
-	{
-		GtkWidget *w = list->data;
-		list = list->next;
-		gtk_widget_destroy(w);
-	}
-
 	/* Now add the stuff */
-	if (node)
-	{
+	if (all && buddy) {
+		pidgin_blist_make_buddy_menu(menu, buddy, TRUE);
+	} else if (node) {
 		if (purple_account_is_connected(conv->account))
 			pidgin_append_blist_node_proto_menu(menu, conv->account->gc, node);
 		pidgin_append_blist_node_extended_menu(menu, node);
 	}
 
-	if ((list = gtk_container_get_children(GTK_CONTAINER(menu))) == NULL)
+	if ((list = gtk_container_get_children(GTK_CONTAINER(menu))) == NULL) {
+		ret = FALSE;
+	} else {
+		g_list_free(list);
+		ret = TRUE;
+	}
+	return ret;
+}
+
+static void
+regenerate_options_items(PidginWindow *win)
+{
+	GtkWidget *menu;
+	PidginConversation *gtkconv;
+	GList *list;
+
+	gtkconv = pidgin_conv_window_get_active_gtkconv(win);
+	menu = gtk_item_factory_get_widget(win->menu.item_factory, N_("/Conversation/More"));
+
+	/* Remove the previous entries */
+	for (list = gtk_container_get_children(GTK_CONTAINER(menu)); list; )
+	{
+		GtkWidget *w = list->data;
+		list = g_list_delete_link(list, list);
+		gtk_widget_destroy(w);
+	}
+
+	if (!populate_menu_with_options(menu, gtkconv, FALSE))
 	{
 		GtkWidget *item = gtk_menu_item_new_with_label(_("No actions available"));
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
@@ -3354,12 +3387,11 @@ update_send_to_selection(PidginWindow *win)
 
 	gtk_widget_show(win->menu.send_to);
 
-	menu = gtk_menu_item_get_submenu(
-		GTK_MENU_ITEM(win->menu.send_to));
+	menu = gtk_menu_item_get_submenu(GTK_MENU_ITEM(win->menu.send_to));
 
 	for (child = gtk_container_get_children(GTK_CONTAINER(menu));
 		 child != NULL;
-		 child = child->next) {
+		 child = g_list_delete_link(child, child)) {
 
 		GtkWidget *item = child->data;
 		PurpleBuddy *item_buddy;
@@ -3671,7 +3703,7 @@ add_chat_buddy_common(PurpleConversation *conv, PurpleConvChatBuddy *cb, const c
 	if (!strcmp(chat->nick, purple_normalize(conv->account, old_name != NULL ? old_name : name)))
 		is_me = TRUE;
 
-	is_buddy = (purple_find_buddy(conv->account, name) != NULL);
+	is_buddy = cb->buddy;
 
 	tmp = g_utf8_casefold(alias, -1);
 	alias_key = g_utf8_collate_key(tmp, -1);
@@ -3879,7 +3911,7 @@ tab_complete(PurpleConversation *conv)
 						   CHAT_USERS_ALIAS_COLUMN, &alias,
 						   -1);
 
-				if (strcmp(name, alias))
+				if (name && alias && strcmp(name, alias))
 					tab_complete_process_item(&most_matched, entered, &partial, nick_partial,
 										  &matches, FALSE, alias);
 				g_free(name);
@@ -4244,12 +4276,12 @@ static void resize_imhtml_cb(PidginConversation *gtkconv)
         height = (oneline.height + pad_top + pad_bottom) * lines;
         height += (oneline.height + pad_inside) * (wrapped_lines - lines);
 
+	gtkconv->auto_resize = TRUE;
+        g_idle_add(reset_auto_resize_cb, gtkconv);
 	gtk_widget_size_request(gtkconv->lower_hbox, &sr);
 	if (sr.height < height + PIDGIN_HIG_BOX_SPACE) {
-		gtkconv->auto_resize = TRUE;
 		gtkconv->entry_growing = TRUE;
 	        gtk_widget_set_size_request(gtkconv->lower_hbox, -1, height + PIDGIN_HIG_BOX_SPACE);
-	        g_idle_add(reset_auto_resize_cb, gtkconv);
 	}
 }
 
@@ -4376,6 +4408,50 @@ setup_chat_userlist(PidginConversation *gtkconv, GtkWidget *hpaned)
 	gtk_container_add(GTK_CONTAINER(sw), list);
 }
 
+static int tooltip_timeout = 0;
+
+static gboolean
+pidgin_conv_tooltip_timeout(PidginConversation *gtkconv)
+{
+	PurpleBlistNode *node = NULL;
+	PurpleConversation *conv = gtkconv->active_conv;
+ 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
+                node = (PurpleBlistNode*)(purple_blist_find_chat(conv->account, conv->name));
+	} else {
+                node = (PurpleBlistNode*)(purple_find_buddy(conv->account, conv->name));
+	}
+
+	if (node) 
+		pidgin_blist_draw_tooltip(node, gtkconv->infopane);
+	return FALSE;
+}
+
+static void 
+pidgin_conv_leave_cb (GtkWidget *w, GdkEventCrossing *e, PidginConversation *gtkconv)
+{
+	pidgin_blist_tooltip_destroy();
+	if (tooltip_timeout) {
+		g_source_remove(tooltip_timeout);
+		tooltip_timeout = 0;
+	}
+}
+
+static gboolean 
+pidgin_conv_motion_cb (GtkWidget *infopane, GdkEventMotion *event, PidginConversation *gtkconv)
+{
+	int delay = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/blist/tooltip_delay");
+	
+	pidgin_blist_tooltip_destroy();
+	if (delay == 0)
+		return FALSE;
+
+	if (tooltip_timeout != 0) 
+		g_source_remove(tooltip_timeout);
+
+	tooltip_timeout = g_timeout_add(delay, (GSourceFunc)pidgin_conv_tooltip_timeout, gtkconv);
+	return FALSE;
+}
+
 static GtkWidget *
 setup_common_pane(PidginConversation *gtkconv)
 {
@@ -4396,21 +4472,27 @@ setup_common_pane(PidginConversation *gtkconv)
 
 	/* Setup the info pane */
 	event_box = gtk_event_box_new();
+#if GTK_CHECK_VERSION(2,4,0)
+	gtk_event_box_set_visible_window(GTK_EVENT_BOX(event_box), FALSE);
+#endif
 	gtk_widget_show(event_box);
 	gtkconv->infopane_hbox = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), event_box, FALSE, FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(event_box), gtkconv->infopane_hbox);
 	gtk_widget_show(gtkconv->infopane_hbox);
 	gtk_widget_add_events(event_box,
-	                      GDK_BUTTON1_MOTION_MASK | GDK_LEAVE_NOTIFY_MASK);
+	                      GDK_POINTER_MOTION_MASK | GDK_LEAVE_NOTIFY_MASK);
 	g_signal_connect(G_OBJECT(event_box), "button_press_event",
 	                 G_CALLBACK(infopane_press_cb), gtkconv);
-	g_signal_connect(G_OBJECT(event_box), "button_release_event",
-	                 G_CALLBACK(infopane_release_cb), gtkconv);
+
+        g_signal_connect(G_OBJECT(event_box), "motion-notify-event", 
+			 G_CALLBACK(pidgin_conv_motion_cb), gtkconv);
+        g_signal_connect(G_OBJECT(event_box), "leave-notify-event", 
+			 G_CALLBACK(pidgin_conv_leave_cb), gtkconv);
 
 
 	gtkconv->infopane = gtk_cell_view_new();
-	gtkconv->infopane_model = gtk_list_store_new(NUM_COLUMNS, GDK_TYPE_PIXBUF, G_TYPE_STRING);
+	gtkconv->infopane_model = gtk_list_store_new(CONV_NUM_COLUMNS, GDK_TYPE_PIXBUF, G_TYPE_STRING, GDK_TYPE_PIXBUF);
 	gtk_cell_view_set_model(GTK_CELL_VIEW(gtkconv->infopane), 
 				GTK_TREE_MODEL(gtkconv->infopane_model));
 	gtk_list_store_append(gtkconv->infopane_model, &(gtkconv->infopane_iter));
@@ -4423,17 +4505,22 @@ setup_common_pane(PidginConversation *gtkconv)
 
 	rend = gtk_cell_renderer_pixbuf_new();
 	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(gtkconv->infopane), rend, FALSE);
-	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(gtkconv->infopane), rend, "pixbuf", ICON_COLUMN, NULL);
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(gtkconv->infopane), rend, "pixbuf", CONV_ICON_COLUMN, NULL);
 	g_object_set(rend, "xalign", 0.0, "xpad", 6, "ypad", 0, NULL);
 
 	rend = gtk_cell_renderer_text_new();
 	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(gtkconv->infopane), rend, TRUE);
-	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(gtkconv->infopane), rend, "markup", TEXT_COLUMN, NULL);
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(gtkconv->infopane), rend, "markup", CONV_TEXT_COLUMN, NULL);
 	g_object_set(rend, "ypad", 0, "yalign", 0.5, NULL);
 
 #if GTK_CHECK_VERSION(2, 6, 0)
 	g_object_set(rend, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
 #endif
+
+	rend = gtk_cell_renderer_pixbuf_new();
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(gtkconv->infopane), rend, FALSE);
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(gtkconv->infopane), rend, "pixbuf", CONV_EMBLEM_COLUMN, NULL);
+	g_object_set(rend, "xalign", 0.0, "xpad", 6, "ypad", 0, NULL);
 
 	/* Setup the gtkimhtml widget */
 	frame = pidgin_create_imhtml(FALSE, &gtkconv->imhtml, NULL, &imhtml_sw);
@@ -4463,15 +4550,6 @@ setup_common_pane(PidginConversation *gtkconv)
 	                               &imhtml_sw_hscroll, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(imhtml_sw),
 	                               imhtml_sw_hscroll, GTK_POLICY_ALWAYS);
-
-	gtk_widget_set_size_request(gtkconv->imhtml,
-			chat ? purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/chat/default_width") :
-			purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/im/default_width"),
-			chat ? purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/chat/default_height") :
-			purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/im/default_height"));
-
-	g_signal_connect(G_OBJECT(gtkconv->imhtml), "size-allocate",
-	                 G_CALLBACK(size_allocate_cb), gtkconv);
 
 	g_signal_connect_after(G_OBJECT(gtkconv->imhtml), "button_press_event",
 	                       G_CALLBACK(entry_stop_rclick_cb), NULL);
@@ -4537,7 +4615,6 @@ setup_common_pane(PidginConversation *gtkconv)
 	default_formatize(gtkconv);
 	g_signal_connect_after(G_OBJECT(gtkconv->entry), "format_function_clear",
 	                       G_CALLBACK(clear_formatting_cb), gtkconv);
-
 	return paned;
 }
 
@@ -4794,6 +4871,11 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	else
 		gtk_widget_hide(gtkconv->toolbar);
 
+	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/im/show_buddy_icons"))
+		gtk_widget_show(gtkconv->infopane_hbox);
+	else
+		gtk_widget_hide(gtkconv->infopane_hbox);
+
 	gtk_imhtml_show_comments(GTK_IMHTML(gtkconv->imhtml),
 		purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/show_timestamps"));
 	gtk_imhtml_set_protocol_name(GTK_IMHTML(gtkconv->imhtml),
@@ -4861,8 +4943,14 @@ pidgin_conv_destroy(PurpleConversation *conv)
 
 	gtkconv->convs = g_list_remove(gtkconv->convs, conv);
 	/* Don't destroy ourselves until all our convos are gone */
-	if (gtkconv->convs)
+	if (gtkconv->convs) {
+		/* Make sure the destroyed conversation is not the active one */
+		if (gtkconv->active_conv == conv) {
+			gtkconv->active_conv = gtkconv->convs->data;
+			purple_conversation_update(gtkconv->active_conv, PURPLE_CONV_UPDATE_FEATURES);
+		}
 		return;
+	}
 
 	pidgin_conv_window_remove_gtkconv(gtkconv->win, gtkconv);
 
@@ -5563,7 +5651,7 @@ pidgin_conv_chat_rename_user(PurpleConversation *conv, const char *old_name,
 
 	g_return_if_fail(new_alias != NULL);
 
-	cbuddy = purple_conv_chat_cb_new(new_name, new_alias, flags);
+	cbuddy = purple_conv_chat_cb_find(chat, new_name);
 
 	add_chat_buddy_common(conv, cbuddy, old_name);
 }
@@ -6192,13 +6280,15 @@ pidgin_conv_update_fields(PurpleConversation *conv, PidginConvFields fields)
 				markup = title;
 		} else if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
 			PurpleConvChat *chat = PURPLE_CONV_CHAT(conv);
-			markup = g_strdup_printf("%s\n<span color='%s' size='smaller'>%s</span>",
+			const char *topic = purple_conv_chat_get_topic(chat);
+			markup = g_strdup_printf("%s%s<span color='%s' size='smaller'>%s</span>",
 						purple_conversation_get_title(conv),
+						topic ? "\n" : "",
 						pidgin_get_dim_grey_string(gtkconv->infopane),
-						purple_conv_chat_get_topic(chat));
+						topic ? topic : "");
 		}
 		gtk_list_store_set(gtkconv->infopane_model, &(gtkconv->infopane_iter),
-				TEXT_COLUMN, markup, -1);
+				CONV_TEXT_COLUMN, markup, -1);
 	
 		if (title != markup)
 			g_free(markup);
@@ -6499,7 +6589,6 @@ pidgin_conv_update_buddy_icon(PurpleConversation *conv)
 	gtk_widget_show(event);
 
 	gtkconv->u.im->icon = gtk_image_new_from_pixbuf(scale);
-	gtkconv->auto_resize = TRUE;
 	gtk_container_add(GTK_CONTAINER(event), gtkconv->u.im->icon);
 	gtk_widget_show(gtkconv->u.im->icon);
 
@@ -6765,9 +6854,14 @@ show_buddy_icons_pref_cb(const char *name, PurplePrefType type,
 
 	for (l = purple_get_conversations(); l != NULL; l = l->next) {
 		PurpleConversation *conv = l->data;
+		if (GPOINTER_TO_INT(value)) 
+			gtk_widget_show(PIDGIN_CONVERSATION(conv)->infopane_hbox);
+		else
+			gtk_widget_hide(PIDGIN_CONVERSATION(conv)->infopane_hbox);
 
-		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
+		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) {
 			pidgin_conv_update_buddy_icon(conv);
+		}
 	}
 }
 
@@ -7057,6 +7151,8 @@ pidgin_conversations_init(void)
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/conversations/tabs", TRUE);
 	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/conversations/tab_side", GTK_POS_TOP);
 	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/conversations/scrollback_lines", 4000);
+	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/conversations/x", 0);
+	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/conversations/y", 0);
 
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font", TRUE);
 	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/conversations/custom_font", "");
@@ -7202,6 +7298,9 @@ pidgin_conversations_init(void)
 	purple_cmd_register("clear", "", PURPLE_CMD_P_DEFAULT,
 	                  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM, NULL,
 	                  clear_command_cb, _("clear: Clears the conversation scrollback."), NULL);
+	purple_cmd_register("clearall", "", PURPLE_CMD_P_DEFAULT,
+	                  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM, NULL,
+	                  clearall_command_cb, _("clear: Clears all conversation scrollbacks."), NULL);
 	purple_cmd_register("help", "w", PURPLE_CMD_P_DEFAULT,
 	                  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, NULL,
 	                  help_command_cb, _("help &lt;command&gt;:  Help on a specific command."), NULL);
@@ -7610,41 +7709,40 @@ notebook_leave_cb(GtkWidget *widget, GdkEventCrossing *e, PidginWindow *win)
 static gboolean
 infopane_press_cb(GtkWidget *widget, GdkEventButton *e, PidginConversation *gtkconv)
 {
-	int nb_x, nb_y;
-
-	if (e->button != 1 || e->type != GDK_BUTTON_PRESS)
+	if (e->type != GDK_BUTTON_PRESS)
 		return FALSE;
 
-	if (gtkconv->win->in_drag) {
-		  purple_debug(PURPLE_DEBUG_WARNING, "gtkconv",
-                           "Already in the middle of a window drag at tab_press_cb\n");
-                return TRUE;
-        }
-	
-	gtkconv->win->in_predrag = TRUE;
-	gtkconv->win->drag_tab = gtk_notebook_page_num(GTK_NOTEBOOK(gtkconv->win->notebook), gtkconv->tab_cont);
+	if (e->button == 3) {
+		/* Right click was pressed. Popup the Send To menu. */
+		GtkWidget *menu = gtk_menu_new(), *sub;
+		sub = gtk_menu_item_get_submenu(GTK_MENU_ITEM(gtkconv->win->menu.send_to));
 
-        gdk_window_get_origin(gtkconv->infopane_hbox->window, &nb_x, &nb_y);
+		if (populate_menu_with_options(menu, gtkconv, TRUE))
+			pidgin_separator(menu);
+		else if (!sub ||
+				!GTK_WIDGET_IS_SENSITIVE(gtkconv->win->menu.send_to)) {
+			gtk_widget_destroy(menu);
+			return FALSE;
+		} else {
+			menu = sub;
+			sub = NULL;
+		}
 
-        gtkconv->win->drag_min_x = gtkconv->infopane_hbox->allocation.x      + nb_x;
-        gtkconv->win->drag_min_y = gtkconv->infopane_hbox->allocation.y      + nb_y;
-        gtkconv->win->drag_max_x = gtkconv->infopane_hbox->allocation.width  + gtkconv->win->drag_min_x;
-        gtkconv->win->drag_max_y = gtkconv->infopane_hbox->allocation.height + gtkconv->win->drag_min_y;
+		if (sub) {
+			GtkWidget *item = gtk_menu_item_new_with_mnemonic(_("_Send To"));
+			gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+			gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), sub);
+			gtk_widget_show(item);
+			gtk_widget_show_all(sub);
+		}
 
-
-	/* Connect the new motion signals. */
-	gtkconv->win->drag_motion_signal =
-		g_signal_connect(G_OBJECT(gtkconv->win->notebook), "motion_notify_event",
-		                 G_CALLBACK(notebook_motion_cb), gtkconv->win);
-
-	gtkconv->win->drag_leave_signal =
-		g_signal_connect(G_OBJECT(gtkconv->win->notebook), "leave_notify_event",
-		                 G_CALLBACK(notebook_leave_cb), gtkconv->win);
-
+		gtk_widget_show_all(menu);
+		gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, e->button, e->time);
+		return TRUE;
+	}
 	return FALSE;
-
 }
-
+ 
 static gboolean
 notebook_press_cb(GtkWidget *widget, GdkEventButton *e, PidginWindow *win)
 {
@@ -7730,12 +7828,6 @@ notebook_press_cb(GtkWidget *widget, GdkEventButton *e, PidginWindow *win)
 		g_signal_connect(G_OBJECT(widget), "leave_notify_event",
 		                 G_CALLBACK(notebook_leave_cb), win);
 
-	return FALSE;
-}
-
-static gboolean
-infopane_release_cb(GtkWidget *widget, GdkEventButton *e, PidginConversation *gtkconv)
-{
 	return FALSE;
 }
 
@@ -8203,6 +8295,76 @@ plugin_changed_cb(PurplePlugin *p, gpointer data)
 	regenerate_plugins_items(data);
 }
 
+static gboolean gtk_conv_configure_cb(GtkWidget *w, GdkEventConfigure *event, gpointer data) {
+	int x, y;
+	
+	if (GTK_WIDGET_VISIBLE(w))
+		gtk_window_get_position(GTK_WINDOW(w), &x, &y);
+	else
+		return FALSE; /* carry on normally */
+
+	/* Workaround for GTK+ bug # 169811 - "configure_event" is fired
+	* when the window is being maximized */
+	if (gdk_window_get_state(w->window) & GDK_WINDOW_STATE_MAXIMIZED)
+		return FALSE;
+	
+	/* don't save if nothing changed */
+	if (x == purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/x") &&
+	    y == purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/y") &&
+	    event->width  == purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/im/default_width") &&
+	    event->height == purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/im/default_height"))
+		return FALSE; /* carry on normally */
+		
+	/* don't save off-screen positioning */
+	if (x + event->width < 0 ||
+	    y + event->height < 0 ||
+	    x > gdk_screen_width() ||
+	    y > gdk_screen_height())
+		return FALSE; /* carry on normally */
+
+        /* store the position */
+        purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/x", x);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/y", y);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/width",  event->width);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/height", event->height);
+
+	/* continue to handle event normally */
+	return FALSE;
+						
+}
+
+static void
+pidgin_conv_restore_position(PidginWindow *win) {
+	int conv_x, conv_y, conv_width, conv_height;
+
+	conv_width = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/im/width");
+
+	 /* if the window exists, is hidden, we're saving positions, and the
+          * position is sane... */
+        if (win && win->window &&
+                !GTK_WIDGET_VISIBLE(win->window) && conv_width != 0) {
+
+                conv_x      = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/x");
+                conv_y      = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/y");
+                conv_height = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/im/height");
+
+	       /* ...check position is on screen... */
+                if (conv_x >= gdk_screen_width())
+                        conv_x = gdk_screen_width() - 100;
+                else if (conv_x + conv_width < 0)
+                        conv_x = 100;
+
+                if (conv_y >= gdk_screen_height())
+                        conv_y = gdk_screen_height() - 100;
+                else if (conv_y + conv_height < 0)
+                        conv_y = 100;
+
+                /* ...and move it back. */
+                gtk_window_move(GTK_WINDOW(win->window), conv_x, conv_y);
+                gtk_window_resize(GTK_WINDOW(win->window), conv_width, conv_height);
+        }
+}
+
 PidginWindow *
 pidgin_conv_window_new()
 {
@@ -8217,7 +8379,7 @@ pidgin_conv_window_new()
 
 	/* Create the window. */
 	win->window = pidgin_create_window(NULL, 0, "conversation", TRUE);
-	GTK_WINDOW(win->window)->allow_shrink = TRUE;
+	pidgin_conv_restore_position(win);
 
 	if (available_list == NULL) {
 		create_icon_lists(win->window);
@@ -8225,7 +8387,8 @@ pidgin_conv_window_new()
 
 	g_signal_connect(G_OBJECT(win->window), "delete_event",
 	                 G_CALLBACK(close_win_cb), win);
-
+	g_signal_connect(G_OBJECT(win->window), "configure_event", 
+			 G_CALLBACK(gtk_conv_configure_cb), NULL);
 	g_signal_connect(G_OBJECT(win->window), "focus_in_event",
 	                 G_CALLBACK(focus_win_cb), win);
 
@@ -8284,6 +8447,9 @@ pidgin_conv_window_new()
 #ifdef _WIN32
 	g_signal_connect(G_OBJECT(win->window), "show",
 	                 G_CALLBACK(winpidgin_ensure_onscreen), win->window);
+
+	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/win32/minimize_new_convs"))
+		gtk_window_iconify(GTK_WINDOW(win->window));
 #endif
 
 	return win;
@@ -8367,6 +8533,10 @@ pidgin_conv_window_add_gtkconv(PidginWindow *win, PidginConversation *gtkconv)
 	win->gtkconvs = g_list_append(win->gtkconvs, gtkconv);
 	gtkconv->win = win;
 
+	if (win->gtkconvs && win->gtkconvs->next && win->gtkconvs->next->next == NULL) 
+		pidgin_conv_tab_pack(win, ((PidginConversation*)win->gtkconvs->data));
+
+
 	/* Close button. */
 	gtkconv->close = gtk_button_new();
 	gtk_icon_size_lookup(GTK_ICON_SIZE_MENU, &close_button_width, &close_button_height);
@@ -8436,9 +8606,11 @@ pidgin_conv_window_add_gtkconv(PidginWindow *win, PidginConversation *gtkconv)
 		/* Er, bug in notebooks? Switch to the page manually. */
 		gtk_notebook_set_current_page(GTK_NOTEBOOK(win->notebook), 0);
 
-		gtk_notebook_set_show_tabs(GTK_NOTEBOOK(win->notebook), FALSE);
-	} else
+		gtk_notebook_set_show_tabs(GTK_NOTEBOOK(win->notebook), 
+					   purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/tabs"));
+	} else {
 		gtk_notebook_set_show_tabs(GTK_NOTEBOOK(win->notebook), TRUE);
+	}
 
 	focus_gtkconv = g_list_nth_data(pidgin_conv_window_get_gtkconvs(win),
 	                             gtk_notebook_get_current_page(GTK_NOTEBOOK(win->notebook)));
@@ -8464,11 +8636,14 @@ pidgin_conv_tab_pack(PidginWindow *win, PidginConversation *gtkconv)
 		angle = 270;
 
 #if GTK_CHECK_VERSION(2,6,0)
-	if (!angle)
+	if (!angle && pidgin_conv_window_get_gtkconv_count(win) > 1) {
 		g_object_set(G_OBJECT(gtkconv->tab_label), "ellipsize", PANGO_ELLIPSIZE_END,  NULL);
-	else
+		gtk_label_set_width_chars(GTK_LABEL(gtkconv->tab_label), 6);
+	} else {
 		g_object_set(G_OBJECT(gtkconv->tab_label), "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
-	gtk_label_set_width_chars(GTK_LABEL(gtkconv->tab_label), 6);
+		gtk_label_set_width_chars(GTK_LABEL(gtkconv->tab_label), -1);
+	}
+
 	if (tabs_side) {
 		gtk_label_set_width_chars(
 			GTK_LABEL(gtkconv->tab_label),
@@ -8527,10 +8702,12 @@ pidgin_conv_tab_pack(PidginWindow *win, PidginConversation *gtkconv)
 		gtk_notebook_set_tab_label(GTK_NOTEBOOK(win->notebook), gtkconv->tab_cont, ebox);
 	}
 
-	gtk_notebook_set_tab_label_packing(GTK_NOTEBOOK(win->notebook), gtkconv->tab_cont, !tabs_side && !angle, TRUE, GTK_PACK_START);
+	gtk_notebook_set_tab_label_packing(GTK_NOTEBOOK(win->notebook), gtkconv->tab_cont, 
+					   !tabs_side && !angle && pidgin_conv_window_get_gtkconv_count(win) > 1, 
+					   TRUE, GTK_PACK_START);
 
 	/* show the widgets */
-/* XXX	gtk_widget_show(gtkconv->icon); */
+	gtk_widget_show(gtkconv->icon);
 	gtk_widget_show(gtkconv->tab_label);
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/close_on_tabs"))
 		gtk_widget_show(gtkconv->close);
@@ -8554,13 +8731,14 @@ pidgin_conv_window_remove_gtkconv(PidginWindow *win, PidginConversation *gtkconv
 
 	/* go back to tabless */
 	if (pidgin_conv_window_get_gtkconv_count(win) <= 2) {
-		gtk_notebook_set_show_tabs(GTK_NOTEBOOK(win->notebook), FALSE);
+		gtk_notebook_set_show_tabs(GTK_NOTEBOOK(win->notebook), 
+  					   purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/tabs"));
 	}
 
 	win->gtkconvs = g_list_remove(win->gtkconvs, gtkconv);
 
-	if (!win->gtkconvs || !win->gtkconvs->next)
-		gtk_notebook_set_show_tabs(win->notebook, FALSE);
+	if (win->gtkconvs && win->gtkconvs->next == NULL)
+		pidgin_conv_tab_pack(win, win->gtkconvs->data);
 
 	if (!win->gtkconvs && win != hidden_convwin)
 		pidgin_conv_window_destroy(win);

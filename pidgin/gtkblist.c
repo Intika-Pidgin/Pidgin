@@ -136,8 +136,6 @@ static void redo_buddy_list(PurpleBuddyList *list, gboolean remove, gboolean rer
 static void pidgin_blist_collapse_contact_cb(GtkWidget *w, PurpleBlistNode *node);
 static char *pidgin_get_group_title(PurpleBlistNode *gnode, gboolean expanded);
 
-static void pidgin_blist_tooltip_destroy(void);
-
 struct _pidgin_blist_node {
 	GtkTreeRowReference *row;
 	gboolean contact_expanded;
@@ -174,6 +172,7 @@ static gboolean gtk_blist_visibility_cb(GtkWidget *w, GdkEventVisibility *event,
 
 static gboolean gtk_blist_window_state_cb(GtkWidget *w, GdkEventWindowState *event, gpointer data)
 {
+#if GTK_CHECK_VERSION(2,2,0)
 	if(event->changed_mask & GDK_WINDOW_STATE_WITHDRAWN) {
 		if(event->new_window_state & GDK_WINDOW_STATE_WITHDRAWN)
 			purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/blist/list_visible", FALSE);
@@ -195,6 +194,28 @@ static gboolean gtk_blist_window_state_cb(GtkWidget *w, GdkEventWindowState *eve
 		if (!(event->new_window_state & GDK_WINDOW_STATE_ICONIFIED))
 			pidgin_blist_refresh_timer(purple_get_blist());
 	}
+#else
+	/* At least gtk+ 2.0.6 does not properly set the change_mask when unsetting a
+	 * GdkWindowState flag. To work around, the window state will be explicitly
+	 * queried on these older versions of gtk+. See pidgin ticket #739.
+	 */
+	GdkWindowState new_window_state = gdk_window_get_state(G_OBJECT(gtkblist->window->window));
+
+	if(new_window_state & GDK_WINDOW_STATE_WITHDRAWN) {
+		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/blist/list_visible", FALSE);
+	} else {
+		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/blist/list_visible", TRUE);
+		pidgin_blist_refresh_timer(purple_get_blist());
+	}
+
+	if(new_window_state & GDK_WINDOW_STATE_MAXIMIZED)
+		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/blist/list_maximized", TRUE);
+	else
+		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/blist/list_maximized", FALSE);
+
+	if (!(new_window_state & GDK_WINDOW_STATE_ICONIFIED))
+		pidgin_blist_refresh_timer(purple_get_blist());
+#endif
 
 	return FALSE;
 }
@@ -606,8 +627,7 @@ rebuild_joinchat_entries(PidginJoinChatData *data)
 
 	gc = purple_account_get_connection(data->account);
 
-	while ((tmp = gtk_container_get_children(GTK_CONTAINER(data->entries_box))))
-		gtk_widget_destroy(tmp->data);
+	gtk_container_foreach(GTK_CONTAINER(data->entries_box), (GtkCallback)gtk_widget_destroy, NULL);
 
 	g_list_free(data->entries);
 	data->entries = NULL;
@@ -1128,7 +1148,8 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 	pidgin_new_item_from_stock(menu, _("Add Buddy _Pounce"), NULL,
 			G_CALLBACK(gtk_blist_menu_bp_cb), buddy, 0, 0, NULL);
 
-	if(((PurpleBlistNode*)buddy)->parent->child->next && !sub && !contact_expanded) {
+	if (((PurpleBlistNode*)buddy)->parent && ((PurpleBlistNode*)buddy)->parent->child->next && 
+	      !sub && !contact_expanded) {
 		pidgin_new_item_from_stock(menu, _("View _Log"), NULL,
 				G_CALLBACK(gtk_blist_menu_showlog_cb),
 				contact, 0, 0, NULL);
@@ -1142,7 +1163,8 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 										  (PurpleBlistNode *)buddy);
 	pidgin_append_blist_node_extended_menu(menu, (PurpleBlistNode *)buddy);
 
-	if (((PurpleBlistNode*)buddy)->parent->child->next && !sub && !contact_expanded) {
+	if (((PurpleBlistNode*)buddy)->parent && ((PurpleBlistNode*)buddy)->parent->child->next && 
+              !sub && !contact_expanded) {
 		pidgin_separator(menu);
 		pidgin_append_blist_node_privacy_menu(menu, (PurpleBlistNode *)buddy);
 		pidgin_new_item_from_stock(menu, _("_Alias..."), PIDGIN_STOCK_ALIAS,
@@ -1224,7 +1246,8 @@ create_group_menu (PurpleBlistNode *node, PurpleGroup *g)
 
 
 static GtkWidget *
-create_chat_menu(PurpleBlistNode *node, PurpleChat *c) {
+create_chat_menu(PurpleBlistNode *node, PurpleChat *c)
+{
 	GtkWidget *menu;
 	gboolean autojoin;
 
@@ -1282,7 +1305,8 @@ create_contact_menu (PurpleBlistNode *node)
 }
 
 static GtkWidget *
-create_buddy_menu(PurpleBlistNode *node, PurpleBuddy *b) {
+create_buddy_menu(PurpleBlistNode *node, PurpleBuddy *b)
+{
 	struct _pidgin_blist_node *gtknode = (struct _pidgin_blist_node *)node->ui_data;
 	GtkWidget *menu;
 	GtkWidget *menuitem;
@@ -2472,7 +2496,7 @@ static void pidgin_blist_paint_tip(GtkWidget *widget, GdkEventExpose *event, Pur
 }
 
 
-static void pidgin_blist_tooltip_destroy()
+void pidgin_blist_tooltip_destroy()
 {
 	while(gtkblist->tooltipdata) {
 		struct tooltip_data *td = gtkblist->tooltipdata->data;
@@ -2560,20 +2584,6 @@ static gboolean pidgin_blist_tooltip_timeout(GtkWidget *tv)
 	GtkTreeIter iter;
 	PurpleBlistNode *node;
 	GValue val;
-	int scr_w, scr_h, w, h, x, y;
-#if GTK_CHECK_VERSION(2,2,0)
-	int mon_num;
-	GdkScreen *screen = NULL;
-#endif
-	gboolean tooltip_top = FALSE;
-	struct _pidgin_blist_node *gtknode;
-	GdkRectangle mon_size;
-
-	/*
-	 * Attempt to free the previous tooltip.  I have a feeling
-	 * this is never needed... but just in case.
-	 */
-	pidgin_blist_tooltip_destroy();
 
 	if (!gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(tv), gtkblist->tip_rect.x, gtkblist->tip_rect.y, &path, NULL, NULL, NULL))
 		return FALSE;
@@ -2582,7 +2592,32 @@ static gboolean pidgin_blist_tooltip_timeout(GtkWidget *tv)
 	gtk_tree_model_get_value (GTK_TREE_MODEL(gtkblist->treemodel), &iter, NODE_COLUMN, &val);
 	node = g_value_get_pointer(&val);
 
+	pidgin_blist_draw_tooltip(node, gtkblist->window);
+
 	gtk_tree_path_free(path);
+	return FALSE;
+}
+
+void pidgin_blist_draw_tooltip(PurpleBlistNode *node, GtkWidget *widget)
+{
+	int scr_w, scr_h, w, h, x, y;
+#if GTK_CHECK_VERSION(2,2,0)
+	int mon_num;
+	GdkScreen *screen = NULL;
+#endif
+	gboolean tooltip_top = FALSE;
+	struct _pidgin_blist_node *gtknode;
+	GdkRectangle mon_size;
+	
+	if (node == NULL)
+		return;
+
+	/*
+	 * Attempt to free the previous tooltip.  I have a feeling
+	 * this is never needed... but just in case.
+	 */
+	pidgin_blist_tooltip_destroy();
+
 
 	gtkblist->tipwindow = gtk_window_new(GTK_WINDOW_POPUP);
 
@@ -2620,13 +2655,13 @@ static gboolean pidgin_blist_tooltip_timeout(GtkWidget *tv)
 	} else {
 		gtk_widget_destroy(gtkblist->tipwindow);
 		gtkblist->tipwindow = NULL;
-		return FALSE;
+		return;
 	}
 
 	if (gtkblist->tooltipdata == NULL) {
 		gtk_widget_destroy(gtkblist->tipwindow);
 		gtkblist->tipwindow = NULL;
-		return FALSE;
+		return;
 	}
 
 	gtknode = node->ui_data;
@@ -2662,9 +2697,6 @@ static gboolean pidgin_blist_tooltip_timeout(GtkWidget *tv)
 	  h = mon_size.height - 10;
 #endif
 
-	if (GTK_WIDGET_NO_WINDOW(gtkblist->window))
-		y+=gtkblist->window->allocation.y;
-
 	x -= ((w >> 1) + 4);
 
 	if ((y + h + 4) > scr_h || tooltip_top)
@@ -2690,7 +2722,7 @@ static gboolean pidgin_blist_tooltip_timeout(GtkWidget *tv)
 	gtk_window_move(GTK_WINDOW(gtkblist->tipwindow), x, y);
 	gtk_widget_show(gtkblist->tipwindow);
 
-	return FALSE;
+	return;
 }
 
 static gboolean pidgin_blist_drag_motion_cb(GtkWidget *tv, GdkDragContext *drag_context,
@@ -2850,7 +2882,11 @@ static GtkItemFactoryEntry blist_menu[] =
 	{ N_("/_Help"), NULL, NULL, 0, "<Branch>", NULL },
 	{ N_("/Help/Online _Help"), "F1", gtk_blist_show_onlinehelp_cb, 0, "<StockItem>", GTK_STOCK_HELP },
 	{ N_("/Help/_Debug Window"), NULL, toggle_debug, 0, "<Item>", NULL },
+#if GTK_CHECK_VERSION(2,6,0)	
+	{ N_("/Help/_About"), NULL, pidgin_dialogs_about, 0,  "<StockItem>", GTK_STOCK_ABOUT },
+#else
 	{ N_("/Help/_About"), NULL, pidgin_dialogs_about, 0,  "<Item>", NULL },
+#endif
 };
 
 /*********************************************************
@@ -2976,10 +3012,11 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 		signon = purple_presence_get_login_time(presence);
 		if (full && PURPLE_BUDDY_IS_ONLINE(b) && signon > 0)
 		{
-			if (time(NULL) - signon > 63072000 /* 2 years */) {
+			if (signon > time(NULL)) {
 				/*
-				 * Our local clock must be wrong, show the actual
-				 * date instead of "4 days", etc.
+				 * They signed on in the future?!  Our local clock
+				 * must be wrong, show the actual date instead of
+				 * "4 days", etc.
 				 */
 				tmp = g_strdup(purple_date_format_long(localtime(&signon)));
 			} else
@@ -3092,6 +3129,15 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 	} else if(PURPLE_BLIST_NODE_IS_BUDDY(node)) {
 		buddy = (PurpleBuddy*)node;
 		gtkbuddynode = node->ui_data;
+		p = purple_buddy_get_presence(buddy);
+		if (purple_presence_is_status_primitive_active(p, PURPLE_STATUS_MOBILE)) {
+			path = g_build_filename(DATADIR, "pixmaps", "pidgin", "emblems", 
+						"16", "mobile.png", NULL);
+			ret = gdk_pixbuf_new_from_file(path, NULL);
+			g_free(path);
+			return ret;
+		}
+
 		if (((struct _pidgin_blist_node*)(node->parent->ui_data))->contact_expanded)
 			return pidgin_create_prpl_icon(((PurpleBuddy*)node)->account, PIDGIN_PRPL_ICON_SMALL);
 	} else if(PURPLE_BLIST_NODE_IS_CHAT(node)) {
@@ -3380,13 +3426,16 @@ gchar *pidgin_blist_get_name_markup(PurpleBuddy *b, gboolean selected, gboolean 
 			time_t idle_secs = purple_presence_get_idle_time(presence);
 
 			if (idle_secs > 0) {
-				int ihrs, imin;
+				int iday, ihrs, imin;
 
 				time(&t);
-				ihrs = (t - idle_secs) / 3600;
+				iday = (t - idle_secs) / (24 * 60 * 60);
+				ihrs = ((t - idle_secs) / 60 / 60) % 24;
 				imin = ((t - idle_secs) / 60) % 60;
 
-				if (ihrs)
+                if (iday)
+					idletime = g_strdup_printf(_("Idle %dd %dh %02dm"), iday, ihrs, imin);
+				else if (ihrs)
 					idletime = g_strdup_printf(_("Idle %dh %02dm"), ihrs, imin);
 				else
 					idletime = g_strdup_printf(_("Idle %dm"), imin);
@@ -3960,6 +4009,7 @@ connection_error_button_clicked_cb(GtkButton *widget, gpointer user_data)
 	char *primary;
 	const char *text;
 	gboolean enabled;
+	GList *list;
 
 	account = user_data;
 	primary = g_strdup_printf(_("%s disconnected"),
@@ -3978,8 +4028,10 @@ connection_error_button_clicked_cb(GtkButton *widget, gpointer user_data)
 	g_free(primary);
 	gtk_widget_destroy(GTK_WIDGET(widget));
 	g_hash_table_remove(gtkblist->connection_errors, account);
-	if (gtk_container_get_children(GTK_CONTAINER(gtkblist->error_buttons)) == NULL) {
+	if ((list = gtk_container_get_children(GTK_CONTAINER(gtkblist->error_buttons))) == NULL) {
 		gtk_widget_hide(gtkblist->error_buttons);
+	} else {
+		g_list_free(list);
 	}
 }
 
@@ -4049,7 +4101,7 @@ pidgin_blist_update_account_error_state(PurpleAccount *account, const char *text
 	/* Remove the old error buttons */
 	for (l = gtk_container_get_children(GTK_CONTAINER(gtkblist->error_buttons));
 			l != NULL;
-			l = l->next)
+			l = g_list_delete_link(l, l))
 	{
 		gtk_widget_destroy(GTK_WIDGET(l->data));
 	}
@@ -4887,10 +4939,17 @@ static char *pidgin_get_group_title(PurpleBlistNode *gnode, gboolean expanded)
 	gboolean selected;
 	char group_count[12] = "";
 	char *mark, *esc;
+	PurpleBlistNode *selected_node = NULL;
+	GtkTreeIter iter;
 
 	group = (PurpleGroup*)gnode;
 	textcolor = gtkblist->treeview->style->fg[GTK_STATE_ACTIVE];
-	selected = gtkblist ? (gtkblist->selected_node == gnode) : FALSE;
+        
+	if (gtk_tree_selection_get_selected(gtk_tree_view_get_selection(GTK_TREE_VIEW(gtkblist->treeview)), NULL, &iter)) {
+		gtk_tree_model_get(GTK_TREE_MODEL(gtkblist->treemodel), &iter,
+				NODE_COLUMN, &selected_node, -1);
+	}
+	selected = (gnode == selected_node);
 
 	if (!expanded) {
 		g_snprintf(group_count, sizeof(group_count), " (%d/%d)",
@@ -5601,8 +5660,7 @@ rebuild_addchat_entries(PidginAddChatData *data)
 
 	gc = purple_account_get_connection(data->account);
 
-	while ((tmp = gtk_container_get_children(GTK_CONTAINER(data->entries_box))))
-		gtk_widget_destroy(tmp->data);
+	gtk_container_foreach(GTK_CONTAINER(data->entries_box), (GtkCallback)gtk_widget_destroy, NULL);
 
 	g_list_free(data->entries);
 
@@ -6479,7 +6537,7 @@ pidgin_blist_update_accounts_menu(void)
 		return;
 
 	/* Clear the old Accounts menu */
-	for (l = gtk_container_get_children(GTK_CONTAINER(accountmenu)); l; l = l->next) {
+	for (l = gtk_container_get_children(GTK_CONTAINER(accountmenu)); l; l = g_list_delete_link(l, l)) {
 		menuitem = l->data;
 
 		if (menuitem != gtk_item_factory_get_widget(gtkblist->ift, N_("/Accounts/Add\\/Edit")))
@@ -6690,7 +6748,7 @@ pidgin_blist_update_sort_methods(void)
 		return;
 
 	/* Clear the old menu */
-	for (l = gtk_container_get_children(GTK_CONTAINER(sortmenu)); l; l = l->next) {
+	for (l = gtk_container_get_children(GTK_CONTAINER(sortmenu)); l; l = g_list_delete_link(l, l)) {
 		menuitem = l->data;
 		gtk_widget_destroy(GTK_WIDGET(menuitem));
 	}
