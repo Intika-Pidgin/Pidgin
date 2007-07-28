@@ -581,9 +581,14 @@ pidgin_request_action(const char *title, const char *primary,
 	/* Create the dialog. */
 	data->dialog = dialog = gtk_dialog_new();
 
+#if GTK_CHECK_VERSION(2,10,0)
+	gtk_window_set_deletable(GTK_WINDOW(data->dialog), FALSE);
+#endif
+
 	if (title != NULL)
 		gtk_window_set_title(GTK_WINDOW(dialog), title);
 #ifdef _WIN32
+	else
 		gtk_window_set_title(GTK_WINDOW(dialog), PIDGIN_ALERT_TITLE);
 #endif
 
@@ -706,7 +711,7 @@ setup_entry_field(GtkWidget *entry, PurpleRequestField *field)
 					}
 				}
 			}
-			pidgin_setup_screenname_autocomplete(entry, optmenu, !strcmp(type_hint, "screenname-all"));
+			pidgin_setup_screenname_autocomplete_with_filter(entry, optmenu, pidgin_screenname_autocomplete_default_filter, GINT_TO_POINTER(!strcmp(type_hint, "screenname-all")));
 		}
 	}
 }
