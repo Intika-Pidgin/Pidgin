@@ -299,7 +299,7 @@ void *jabber_x_data_request_with_actions(JabberStream *js, xmlnode *packet, GLis
 					continue;
 
 				if(!(lbl = xmlnode_get_attrib(optnode, "label")))
-					label = value;
+					lbl = value;
 
 				data->values = g_slist_prepend(data->values, value);
 
