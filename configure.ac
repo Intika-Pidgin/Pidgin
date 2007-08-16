@@ -1089,7 +1089,7 @@ dnl # Check for D-Bus libraries
 dnl #######################################################################
 
 AC_ARG_ENABLE(dbus, [AC_HELP_STRING([--enable-dbus], [enable D-Bus support])], , enable_dbus=yes)
-AC_ARG_ENABLE(nm, [AC_HELP_STRING([--enable-nm], [enable NetworkManager support (buggy) (requires D-Bus)])], enable_libnm=yes, enable_libnm=no)
+AC_ARG_ENABLE(nm, [AC_HELP_STRING([--enable-nm], [enable NetworkManager support (buggy) (requires D-Bus)])], enable_libnm=$enableval, enable_libnm=no)
 
 if test "x$enable_dbus" = "xyes" ; then
 	AC_CHECK_PROG(enable_dbus, dbus-binding-tool, yes, no)
@@ -2113,8 +2113,8 @@ AC_OUTPUT([Makefile
 		   pidgin/pixmaps/emblems/16/scalable/Makefile
 		   pidgin/pixmaps/emotes/Makefile
 		   pidgin/pixmaps/emotes/default/Makefile
-		   pidgin/pixmaps/emotes/default/22/Makefile
-		   pidgin/pixmaps/emotes/default/22/scalable/Makefile
+		   pidgin/pixmaps/emotes/default/24/Makefile
+		   pidgin/pixmaps/emotes/default/24/scalable/Makefile
 		   pidgin/pixmaps/emotes/none/Makefile
 		   pidgin/pixmaps/icons/Makefile
 		   pidgin/pixmaps/icons/16/Makefile
