@@ -238,14 +238,18 @@ static void yahoo_process_status(PurpleConnection *gc, struct yahoo_packet *pkt)
 		case 8: /* how many online buddies we have */
 			break;
 		case 7: /* the current buddy */
-			if (name && f) /* update the previous buddy before changing the variables */
-				yahoo_update_status(gc, name, f);
-			name = pair->value;
-			if (name && g_utf8_validate(name, -1, NULL))
+			/* update the previous buddy before changing the variables */
+			if (f) {
+				if (message)
+					yahoo_friend_set_status_message(f, yahoo_string_decode(gc, message, unicode));
+				if (name)
+					yahoo_update_status(gc, name, f);
+			}
+			name = message = NULL;
+			f = NULL;
+			if (pair->value && g_utf8_validate(pair->value, -1, NULL)) {
+				name = pair->value;
 				f = yahoo_friend_find_or_new(gc, name);
-			else {
-				f = NULL;
-				name = NULL;
 			}
 			break;
 		case 10: /* state */
@@ -779,7 +783,7 @@ static void yahoo_process_notify(PurpleConnection *gc, struct yahoo_packet *pkt)
 		purple_conversation_write(conv, NULL, buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NOTIFY, time(NULL));
 		g_free(buf);
 	}
-    	
+
 }
 
 
@@ -895,6 +899,8 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 			PurpleConversation *c;
 			char *username, *str;
 
+			str = NULL;
+
 			account = purple_connection_get_account(gc);
 			c = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, im->from);
 
@@ -903,10 +909,13 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 			else
 				username = g_markup_escape_text(im->from, -1);
 
+#ifdef YAHOO_USE_ATTENTION_API
+			serv_got_attention(gc, username, YAHOO_BUZZ);
+#else
 			str = g_strdup_printf(_("%s just sent you a Buzz!"), username);
 
 			purple_conversation_write(c, NULL, str, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NOTIFY, im->time);
-
+#endif
 			g_free(username);
 			g_free(str);
 			g_free(m);
@@ -4008,17 +4017,24 @@ static void yahoo_rename_group(PurpleConnection *gc, const char *old_name,
 
 static PurpleCmdRet
 yahoopurple_cmd_buzz(PurpleConversation *c, const gchar *cmd, gchar **args, gchar **error, void *data) {
-
 	PurpleAccount *account = purple_conversation_get_account(c);
+#ifndef YAHOO_USE_ATTENTION_API
 	const char *username = purple_account_get_username(account);
+#endif
 
 	if (*args && args[0])
 		return PURPLE_CMD_RET_FAILED;
+
+#ifdef YAHOO_USE_ATTENTION_API
+	serv_send_attention(account->gc, c->name, YAHOO_BUZZ);
+#else
 
 	purple_debug(PURPLE_DEBUG_INFO, "yahoo",
 	           "Sending <ding> on account %s to buddy %s.\n", username, c->name);
 	purple_conv_im_send(PURPLE_CONV_IM(c), "<ding>");
 	purple_conversation_write(c, NULL, _("You have just sent a Buzz!"), PURPLE_MESSAGE_SYSTEM, time(NULL));
+#endif
+
 	return PURPLE_CMD_RET_OK;
 }
 
@@ -4067,6 +4083,42 @@ yahoopurple_cmd_chat_list(PurpleConversation *conv, const char *cmd,
 static gboolean yahoo_offline_message(const PurpleBuddy *buddy)
 {
 	return TRUE;
+}
+	
+gboolean yahoo_send_attention(PurpleConnection *gc, const char *username, guint type)
+{
+	PurpleConversation *c;
+
+	c = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, 
+			username, gc->account);
+
+	g_return_val_if_fail(c != NULL, FALSE);
+
+	purple_debug(PURPLE_DEBUG_INFO, "yahoo",
+	           "Sending <ding> on account %s to buddy %s.\n", username, c->name);
+	/* TODO: find out how to send a <ding> without showing up as a blank line on
+	 * the conversation window. */
+	purple_conv_im_send(PURPLE_CONV_IM(c), "<ding>");
+
+	return TRUE;
+}
+
+GList *yahoo_attention_types(PurpleAccount *account)
+{
+	PurpleAttentionType *attn;
+	static GList *list = NULL;
+
+	if (!list) {
+		/* Yahoo only supports one attention command: the 'buzz'. */
+		/* This is index number YAHOO_BUZZ. */
+		attn = g_new0(PurpleAttentionType, 1);
+		attn->name = _("buzz");
+		attn->incoming_description = _("buzzed");
+		attn->outgoing_description = _("Buzzing");
+		list = g_list_append(list, attn);
+	} 
+
+	return list;
 }
 
 /************************** Plugin Initialization ****************************/
@@ -4277,9 +4329,15 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL, /* send_raw */
 	NULL, /* roomlist_room_serialize */
 
+#ifdef YAHOO_USE_ATTENTION_API
+	yahoo_send_attention,
+	yahoo_attention_types,
+#else
+	NULL,
+	NULL,
+#endif
+
 	/* padding */
-	NULL,
-	NULL,
 	NULL,
 	NULL
 };
