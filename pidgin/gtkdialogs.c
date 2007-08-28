@@ -86,6 +86,7 @@ static struct developer developers[] = {
 	{"Luke 'LSchiere' Schierer",	N_("support"), "lschiere@users.sf.net"},
 	{"Megan 'Cae' Schneider",       N_("support/QA"), NULL},
 	{"Evan Schoenberg",		N_("developer"), NULL},
+	{"Kevin 'SimGuy' Stange",	N_("developer & webmaster"),	NULL},
 	{"Stu 'nosnilmot' Tomlinson",	N_("developer"), NULL},
 	{"Nathan 'faceprint' Walp",		N_("developer"), NULL},
 	{NULL, NULL, NULL}
@@ -95,7 +96,9 @@ static struct developer developers[] = {
 static struct developer patch_writers[] = {
 	{"John 'rekkanoryo' Bailey",	NULL,	NULL},
 	{"Peter 'Bleeter' Lawler",      NULL,   NULL},
-	{"Kevin 'SimGuy' Stange",		NULL,	NULL},
+        {"Dennis 'EvilDennisR' Ristuccia",	N_("Senior Contributor/QA"),	NULL},
+	{"Peter 'Fmoo' Ruibal",		NULL,	NULL},
+	{"Gabriel 'Nix' Schulhof", 	NULL, 	NULL},
 	{NULL, NULL, NULL}
 };
 
@@ -381,7 +384,7 @@ void pidgin_dialogs_about()
 		  "libpurple which is capable of connecting to "
 		  "AIM, MSN, Yahoo!, XMPP, ICQ, IRC, SILC, SIP/SIMPLE, "
 		  "Novell GroupWise, Lotus Sametime, Bonjour, Zephyr, "
-		  "Gadu-Gadu, and QQ all at once.  "
+		  "MySpaceIM, Gadu-Gadu, and QQ all at once.  "
 		  "It is written using GTK+.<BR><BR>"
 		  "You may modify and redistribute the program under "
 		  "the terms of the GPL (version 2 or later).  A copy of the GPL is "
