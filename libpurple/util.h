@@ -1133,7 +1133,7 @@ void purple_print_utf8_to_console(FILE *filestream, char *message);
  * @return TRUE if it starts with "/me ", and it has been removed, otherwise
  *         FALSE
  */
-gboolean purple_message_meify(char *message, size_t len);
+gboolean purple_message_meify(char *message, gssize len);
 
 /**
  * Removes the underscore characters from a string used identify the mnemonic
