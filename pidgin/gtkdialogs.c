@@ -99,6 +99,7 @@ static struct developer patch_writers[] = {
         {"Dennis 'EvilDennisR' Ristuccia",	N_("Senior Contributor/QA"),	NULL},
 	{"Peter 'Fmoo' Ruibal",		NULL,	NULL},
 	{"Gabriel 'Nix' Schulhof", 	NULL, 	NULL},
+	{"Will 'resiak' Thompson",	NULL,	NULL},
 	{NULL, NULL, NULL}
 };
 
@@ -768,6 +769,7 @@ pidgin_dialogs_im_with_user(PurpleAccount *account, const char *username)
 	if (conv == NULL)
 		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, username);
 
+	pidgin_conv_attach_to_conversation(conv);
 	purple_conversation_present(conv);
 }
 

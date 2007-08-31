@@ -30,6 +30,7 @@
 
 #include "internal.h"
 #include "certificate.h"
+#include "dbus-maybe.h"
 #include "debug.h"
 #include "request.h"
 #include "signals.h"
@@ -1124,6 +1125,18 @@ x509_tls_cached_user_auth_cb (x509_tls_cached_ua_ctx *c, gint id)
 	}
 }
 
+static void
+x509_tls_cached_user_auth_accept_cb(x509_tls_cached_ua_ctx *c, gint ignore)
+{
+	x509_tls_cached_user_auth_cb(c, 2);
+}
+
+static void
+x509_tls_cached_user_auth_reject_cb(x509_tls_cached_ua_ctx *c, gint ignore)
+{
+	x509_tls_cached_user_auth_cb(c, 1);
+}
+
 /** Validates a certificate by asking the user
  * @param reason    String to explain why the user needs to accept/refuse the
  *                  certificate.
@@ -1151,8 +1164,8 @@ x509_tls_cached_user_auth(PurpleCertificateVerificationRequest *vrq,
 		NULL,         /* No associated conversation */
 		x509_tls_cached_ua_ctx_new(vrq, reason),
 		3,            /* Number of actions */
-		_("Yes"), x509_tls_cached_user_auth_cb,
-		_("No"),  x509_tls_cached_user_auth_cb,
+		_("Accept"), x509_tls_cached_user_auth_accept_cb,
+		_("Reject"),  x509_tls_cached_user_auth_reject_cb,
 		_("_View Certificate..."), x509_tls_cached_show_cert);
 	
 	/* Cleanup */
@@ -1192,7 +1205,14 @@ x509_tls_cached_cert_in_cache(PurpleCertificateVerificationRequest *vrq)
 	/* Load up the cached certificate */
 	cached_crt = purple_certificate_pool_retrieve(
 		tls_peers, vrq->subject_name);
-	g_assert(cached_crt);
+	if ( !cached_crt ) {
+		purple_debug_error("certificate/x509/tls_cached",
+				   "Lookup failed on cached certificate!\n"
+				   "It was here just a second ago. Forwarding "
+				   "to cert_changed.\n");
+		/* vrq now becomes the problem of cert_changed */
+		x509_tls_cached_peer_cert_changed(vrq);
+	}
 
 	/* Now get SHA1 sums for both and compare them */
 	/* TODO: This is not an elegant way to compare certs */
@@ -1325,7 +1345,14 @@ x509_tls_cached_unknown_peer(PurpleCertificateVerificationRequest *vrq)
 
 	ca_crt = purple_certificate_pool_retrieve(ca, ca_id);
 	g_free(ca_id);
-	g_assert(ca_crt);
+	if (!ca_crt) {
+		purple_debug_error("certificate/x509/tls_cached",
+				   "Certificate authority disappeared out "
+				   "underneath me!\n");
+		purple_certificate_verify_complete(vrq,
+						   PURPLE_CERTIFICATE_INVALID);
+		return;
+	}
 	
 	/* Check the signature */
 	if ( !purple_certificate_signed_by(end_crt, ca_crt) ) {
@@ -1362,9 +1389,11 @@ x509_tls_cached_unknown_peer(PurpleCertificateVerificationRequest *vrq)
 						 "tls_peers");
 
 	if (tls_peers) {
-		g_assert(purple_certificate_pool_store(tls_peers,
-						       vrq->subject_name,
-						       peer_crt) );
+		if (!purple_certificate_pool_store(tls_peers,vrq->subject_name,
+						   peer_crt) ) {
+			purple_debug_error("certificate/x509/tls_cached",
+					   "FAILED to cache peer certificate\n");
+		}
 	} else {
 		purple_debug_error("certificate/x509/tls_cached",
 				   "Unable to locate tls_peers certificate "
@@ -1700,6 +1729,7 @@ purple_certificate_register_pool(PurpleCertificatePool *pool)
 
 		/* TODO: Emit a signal that the pool got registered */
 
+		PURPLE_DBUS_REGISTER_POINTER(pool, PurpleCertificatePool);
 		purple_signal_register(pool, /* Signals emitted from pool */
 				       "certificate-stored",
 				       purple_marshal_VOID__POINTER_POINTER,
@@ -1748,6 +1778,7 @@ purple_certificate_unregister_pool(PurpleCertificatePool *pool)
 	}
 
 	/* Uninit the pool if needed */
+	PURPLE_DBUS_UNREGISTER_POINTER(pool);
 	if (pool->uninit) {
 		pool->uninit();
 	}
@@ -1775,7 +1806,6 @@ purple_certificate_display_x509(PurpleCertificate *crt)
 	GByteArray *sha_bin;
 	gchar *cn;
 	time_t activation, expiration;
-	/* Length of these buffers is dictated by 'man ctime_r' */
 	gchar *activ_str, *expir_str;
 	gchar *secondary;
 
@@ -1792,7 +1822,11 @@ purple_certificate_display_x509(PurpleCertificate *crt)
 	/* Get the certificate times */
 	/* TODO: Check the times against localtime */
 	/* TODO: errorcheck? */
-	g_assert(purple_certificate_get_times(crt, &activation, &expiration));
+	if (!purple_certificate_get_times(crt, &activation, &expiration)) {
+		purple_debug_error("certificate",
+				   "Failed to get certificate times!\n");
+		activation = expiration = 0;
+	}
 	activ_str = g_strdup(ctime(&activation));
 	expir_str = g_strdup(ctime(&expiration));
 
@@ -1818,7 +1852,4 @@ purple_certificate_display_x509(PurpleCertificate *crt)
 	g_free(expir_str);
 	g_byte_array_free(sha_bin, TRUE);
 }
-
-
-
 
