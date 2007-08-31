@@ -125,7 +125,7 @@ static void sort_method_log(PurpleBlistNode *node, PurpleBuddyList *blist, GtkTr
 static PidginBuddyList *gtkblist = NULL;
 
 static gboolean pidgin_blist_refresh_timer(PurpleBuddyList *list);
-static void pidgin_blist_update_buddy(PurpleBuddyList *list, PurpleBlistNode *node, gboolean statusChange);
+static void pidgin_blist_update_buddy(PurpleBuddyList *list, PurpleBlistNode *node, gboolean status_change);
 static void pidgin_blist_selection_changed(GtkTreeSelection *selection, gpointer data);
 static void pidgin_blist_update(PurpleBuddyList *list, PurpleBlistNode *node);
 static void pidgin_blist_update_group(PurpleBuddyList *list, PurpleBlistNode *node);
@@ -332,8 +332,10 @@ static void gtk_blist_join_chat(PurpleChat *chat)
 	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, name,
 											   chat->account);
 
-	if (conv != NULL)
+	if (conv != NULL) {
+		pidgin_conv_attach_to_conversation(conv);
 		purple_conversation_present(conv);
+	}
 
 	serv_join_chat(chat->account->gc, chat->components);
 	g_free(chat_name);
@@ -612,6 +614,8 @@ joinchat_set_sensitive_if_input_cb(GtkWidget *entry, gpointer user_data)
 static void
 pidgin_blist_update_privacy_cb(PurpleBuddy *buddy)
 {
+	if (buddy->node.ui_data == NULL || ((struct _pidgin_blist_node*)buddy->node.ui_data)->row == NULL)
+		return;
 	pidgin_blist_update_buddy(purple_get_blist(), (PurpleBlistNode*)(buddy), TRUE);
 }
 
@@ -3205,6 +3209,7 @@ pidgin_blist_get_status_icon(PurpleBlistNode *node, PidginStatusIconSize size)
 {
 	GdkPixbuf *ret;
 	const char *protoname = NULL;
+	const char *icon = NULL;
 	struct _pidgin_blist_node *gtknode = node->ui_data;
 	struct _pidgin_blist_node *gtkbuddynode = NULL;
 	PurpleBuddy *buddy = NULL;
@@ -3253,62 +3258,54 @@ pidgin_blist_get_status_icon(PurpleBlistNode *node, PidginStatusIconSize size)
 									     purple_buddy_get_name(buddy),
 									     purple_buddy_get_account(buddy));
 		PurplePresence *p;
+		gboolean trans;
+
 		if(conv != NULL) {
 			PidginConversation *gtkconv = PIDGIN_CONVERSATION(conv);
-			if(gtkconv != NULL && pidgin_conv_is_hidden(gtkconv) && size == PIDGIN_STATUS_ICON_SMALL) {
+			if((gtkconv == NULL || pidgin_conv_is_hidden(gtkconv)) && size == PIDGIN_STATUS_ICON_SMALL) {
 				return gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_MESSAGE,
 							       icon_size, "GtkTreeView");
 			}
 		}
+
 		p = purple_buddy_get_presence(buddy);
+		trans = (purple_presence_is_idle(p) && size == PIDGIN_STATUS_ICON_SMALL);
 
 		if (PURPLE_BUDDY_IS_ONLINE(buddy) && gtkbuddynode && gtkbuddynode->recent_signonoff)
-			ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_LOGIN,
-					icon_size, "GtkTreeView");
+			icon = PIDGIN_STOCK_STATUS_LOGIN;
 		else if (gtkbuddynode && gtkbuddynode->recent_signonoff)
-			ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_LOGOUT,
-					icon_size, "GtkTreeView");
+			icon = PIDGIN_STOCK_STATUS_LOGOUT;
 		else if (purple_presence_is_status_primitive_active(p, PURPLE_STATUS_UNAVAILABLE))
-			if (purple_presence_is_idle(p) && size == PIDGIN_STATUS_ICON_SMALL)
-				ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_BUSY_I,
-						icon_size, "GtkTreeView");
+			if (trans)
+				icon = PIDGIN_STOCK_STATUS_BUSY_I;
 			else
-				ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_BUSY,
-						icon_size, "GtkTreeView");
+				icon = PIDGIN_STOCK_STATUS_BUSY;
 		else if (purple_presence_is_status_primitive_active(p, PURPLE_STATUS_AWAY))
-		        if (purple_presence_is_idle(p) && size == PIDGIN_STATUS_ICON_SMALL)
-		                ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_AWAY_I,
-		                                icon_size, "GtkTreeView");
+			if (trans)
+				icon = PIDGIN_STOCK_STATUS_AWAY_I;
 		 	else
-				ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_AWAY,
-						icon_size, "GtkTreeView");
+				icon = PIDGIN_STOCK_STATUS_AWAY;
 		else if (purple_presence_is_status_primitive_active(p, PURPLE_STATUS_EXTENDED_AWAY))
-			if (purple_presence_is_idle(p) && size == PIDGIN_STATUS_ICON_SMALL)
-		        	ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_XA_I,
-						icon_size, "GtkTreeView");
+			if (trans)
+				icon = PIDGIN_STOCK_STATUS_XA_I;
 			else
-				ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_XA,
-						icon_size, "GtkTreeView");
+				icon = PIDGIN_STOCK_STATUS_XA;
 		else if (purple_presence_is_status_primitive_active(p, PURPLE_STATUS_OFFLINE))
-			ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_OFFLINE,
-					icon_size, "GtkTreeView");
-		else if (purple_presence_is_idle(p) && size == PIDGIN_STATUS_ICON_SMALL)
-			ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_AVAILABLE_I,
-					icon_size, "GtkTreeView");
+			icon = PIDGIN_STOCK_STATUS_OFFLINE;
+		else if (trans)
+			icon = PIDGIN_STOCK_STATUS_AVAILABLE_I;
 		else if (purple_presence_is_status_primitive_active(p, PURPLE_STATUS_INVISIBLE))
-			ret = gtk_widget_render_icon(GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_INVISIBLE,
-					icon_size, "GtkTreeView");
+			icon = PIDGIN_STOCK_STATUS_INVISIBLE;
 		else
-			ret = gtk_widget_render_icon(GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_AVAILABLE,
-					icon_size, "GtkTreeView");
+			icon = PIDGIN_STOCK_STATUS_AVAILABLE;
 	} else if (chat) {
-		ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_CHAT,
-				icon_size, "GtkTreeView");
+		icon = PIDGIN_STOCK_STATUS_CHAT;
 	} else {
-		ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), PIDGIN_STOCK_STATUS_PERSON,
-				icon_size, "GtkTreeView");
+		icon = PIDGIN_STOCK_STATUS_PERSON;
 	}
 
+	ret = gtk_widget_render_icon (GTK_WIDGET(gtkblist->treeview), icon,
+			icon_size, "GtkTreeView");
 	return ret;
 }
 
@@ -3331,7 +3328,7 @@ gchar *pidgin_blist_get_name_markup(PurpleBuddy *b, gboolean selected, gboolean 
 
 	if(conv != NULL) {
 		gtkconv = PIDGIN_CONVERSATION(conv);
-		if(gtkconv != NULL && pidgin_conv_is_hidden(gtkconv)) {
+		if(gtkconv == NULL || pidgin_conv_is_hidden(gtkconv)) {
 			hidden_conv = TRUE;
 		}
 	}
@@ -5156,7 +5153,7 @@ static void pidgin_blist_update_contact(PurpleBuddyList *list, PurpleBlistNode *
 
 
 
-static void pidgin_blist_update_buddy(PurpleBuddyList *list, PurpleBlistNode *node, gboolean statusChange)
+static void pidgin_blist_update_buddy(PurpleBuddyList *list, PurpleBlistNode *node, gboolean status_change)
 {
 	PurpleBuddy *buddy;
 	struct _pidgin_blist_node *gtkparentnode;
