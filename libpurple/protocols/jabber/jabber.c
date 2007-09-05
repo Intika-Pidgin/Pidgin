@@ -510,21 +510,14 @@ jabber_ssl_connect_failure(PurpleSslConnection *gsc, PurpleSslErrorType error,
 	js = gc->proto_data;
 	js->gsc = NULL;
 
-	switch(error) {
-		case PURPLE_SSL_CONNECT_FAILED:
-			purple_connection_error(gc, _("Connection Failed"));
-			break;
-		case PURPLE_SSL_HANDSHAKE_FAILED:
-			purple_connection_error(gc, _("SSL Handshake Failed"));
-			break;
-	}
+	purple_connection_error(gc, purple_ssl_strerror(error));
 }
 
 static void tls_init(JabberStream *js)
 {
 	purple_input_remove(js->gc->inpa);
 	js->gc->inpa = 0;
-	js->gsc = purple_ssl_connect_fd_with_host(js->gc->account, js->fd,
+	js->gsc = purple_ssl_connect_with_host_fd(js->gc->account, js->fd,
 			jabber_login_callback_ssl, jabber_ssl_connect_failure, js->serverFQDN, js->gc);
 }
 
