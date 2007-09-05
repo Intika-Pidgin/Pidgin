@@ -143,6 +143,8 @@ struct _JabberStream
 	char *gmail_last_time;
 	char *gmail_last_tid;
 
+    char *serverFQDN;
+
 	/* OK, this stays at the end of the struct, so plugins can depend
 	 * on the rest of the stuff being in the right place
 	 */
@@ -157,7 +159,6 @@ struct _JabberStream
 	int sasl_state;
 	int sasl_maxbuf;
 	GString *sasl_mechs;
-	char *serverFQDN;
 	
 	gboolean unregistration;
 	PurpleAccountUnregistrationCb unregistration_cb;
