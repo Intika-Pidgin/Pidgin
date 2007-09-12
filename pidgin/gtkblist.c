@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -3101,7 +3101,8 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 			purple_notify_user_info_add_pair(user_info, _("Status"), _("Offline"));
 		}
 
-		if (prpl_info && prpl_info->tooltip_text)
+		if (purple_account_is_connected(b->account) &&
+				prpl_info && prpl_info->tooltip_text)
 		{
 			/* Additional text from the PRPL */
 			prpl_info->tooltip_text(b, user_info, full);

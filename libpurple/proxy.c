@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -420,7 +420,7 @@ socket_ready_cb(gpointer data, gint source, PurpleInputCondition cond)
 	if (ret == 0 && error == EINPROGRESS) {
 		/* No worries - we'll be called again later */
 		/* TODO: Does this ever happen? */
-		purple_debug_info("proxy", "(ret == 0 && error == EINPROGRESS)");
+		purple_debug_info("proxy", "(ret == 0 && error == EINPROGRESS)\n");
 		return;
 	}
 

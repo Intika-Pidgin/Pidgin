@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include <string.h>
 
@@ -613,6 +613,7 @@ finch_create_conversation(PurpleConversation *conv)
 		gnt_tree_set_col_width(GNT_TREE(tree), 0, 1);   /* The flag column */
 		gnt_tree_set_compare_func(GNT_TREE(tree), (GCompareFunc)g_utf8_collate);
 		gnt_tree_set_hash_fns(GNT_TREE(tree), g_str_hash, g_str_equal, g_free);
+		gnt_tree_set_search_column(GNT_TREE(tree), 1);
 		GNT_WIDGET_SET_FLAGS(tree, GNT_WIDGET_NO_BORDER);
 		gnt_box_add_widget(GNT_BOX(hbox), ggc->tv);
 		gnt_box_add_widget(GNT_BOX(hbox), tree);
