@@ -1527,9 +1527,8 @@ msim_we_are_logged_on(MsimSession *session, MsimMessage *msg)
 	 * address and not username. Will be freed in msim_session_destroy(). */
 	session->username = msim_msg_get_string(msg, "uniquenick");
 
-	/* If a local alias wasn't set, set it to user's username. */
-	if (!session->account->alias || !strlen(session->account->alias))
-		purple_account_set_alias(session->account, session->username);
+	/* Set display name to username (otherwise will show email address) */
+	purple_connection_set_display_name(session->gc, session->username);
 
 	/* The session is now set up, ready to be connected. This emits the
 	 * signedOn signal, so clients can now do anything with msimprpl, and
@@ -2924,21 +2923,16 @@ PurplePluginProtocolInfo prpl_info = {
 	NULL,              /* whiteboard_prpl_ops */
 	msim_send_really_raw,  /* send_raw */
 	NULL,                  /* roomlist_room_serialize */
-#ifdef MSIM_USE_ATTENTION_API
+	NULL,                  /* unregister_user */
 	msim_send_attention,   /* send_attention */
 	msim_attention_types,  /* attention_types */
-#else
-	NULL,               /* _purple_reserved1 */
-	NULL,               /* _purple_reserved2 */
-#endif
-	NULL,               /* _purple_reserved3 */
 	NULL                /* _purple_reserved4 */
 };
 
 
 
 /** Based on MSN's plugin info comments. */
-PurplePluginInfo info = {
+static PurplePluginInfo info = {
 	PURPLE_PLUGIN_MAGIC,                                
 	PURPLE_MAJOR_VERSION,
 	PURPLE_MINOR_VERSION,
@@ -3285,7 +3279,7 @@ init_plugin(PurplePlugin *plugin)
 #endif
 
 #ifdef MSIM_USER_WANTS_TO_DISABLE_EMOTICONS
-	option = purple_account_option_bool_new(_("Send emoticons"), "emoticons", FALSE);
+	option = purple_account_option_bool_new(_("Send emoticons"), "emoticons", TRUE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 #endif
 
