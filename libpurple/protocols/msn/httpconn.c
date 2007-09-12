@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
 #include "debug.h"
@@ -181,7 +181,7 @@ msn_httpconn_parse_data(MsnHttpConn *httpconn, const char *buf,
 		{
 			msn_session_set_error(httpconn->session,
 								  MSN_ERROR_HTTP_MALFORMED, NULL);
-			purple_debug_error("msn", "Malformed X-MSN-Messenger field.\n{%s}",
+			purple_debug_error("msn", "Malformed X-MSN-Messenger field.\n{%s}\n",
 							 buf);
 
 			g_free(body);

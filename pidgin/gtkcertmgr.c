@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -454,6 +454,9 @@ tls_peers_mgmt_build(void)
 			"text", TPM_HOSTNAME_COLUMN,
 			NULL);
 		gtk_tree_view_append_column(GTK_TREE_VIEW(listview), column);
+
+		gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store),
+				TPM_HOSTNAME_COLUMN, GTK_SORT_ASCENDING);
 	}
 	
 	/* Get the treeview selector into the struct */
