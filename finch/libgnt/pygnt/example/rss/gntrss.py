@@ -61,6 +61,9 @@ class FeedItem(gobject.GObject):
         self.parent = parent
         self.unread = True
 
+    def __del__(self):
+        pass
+
     def remove(self):
         self.emit('delete', self.parent)
         if self.unread:
@@ -125,6 +128,9 @@ class Feed(gobject.GObject):
         self.hash = {}
         self.pending = False
         self._refresh = {'time' : 30, 'id' : 0}
+
+    def __del__(self):
+        pass
 
     def do_set_property(self, property, value):
         if property.name == 'link':

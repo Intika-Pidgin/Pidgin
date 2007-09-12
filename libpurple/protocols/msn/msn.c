@@ -119,7 +119,6 @@ msn_send_attention(PurpleConnection *gc, const char *username, guint type)
 	return TRUE;
 }
 
-#ifdef MSN_USE_ATTENTION_API
 static GList *
 msn_attention_types(PurpleAccount *account)
 {
@@ -128,15 +127,14 @@ msn_attention_types(PurpleAccount *account)
 
 	if (!list) {
 		attn = g_new0(PurpleAttentionType, 1);
-		attn->name = _("nudge");
-		attn->incoming_description = _("nudged");
-		attn->outgoing_description = _("Nudging");
+		attn->name = _("Nudge");
+		attn->incoming_description = _("%s has nudged you!");
+		attn->outgoing_description = _("Nudging %s...");
 		list = g_list_append(list, attn);
 	}
 
 	return list;
 }
-#endif
 
 
 static PurpleCmdRet
@@ -148,14 +146,7 @@ msn_cmd_nudge(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **
 
 	username = purple_conversation_get_name(conv);
 
-#ifdef MSN_USE_ATTENTION_API
 	serv_send_attention(gc, username, MSN_NUDGE);
-#else
-	if (!msn_send_attention(gc, username, MSN_NUDGE))
-		return PURPLE_CMD_RET_FAILED;
-
-	purple_conversation_write(conv, NULL, _("You have just sent a Nudge!"), PURPLE_MESSAGE_SYSTEM, time(NULL));
-#endif
 
 	return PURPLE_CMD_RET_OK;
 }
@@ -2138,16 +2129,11 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* whiteboard_prpl_ops */
 	NULL,					/* send_raw */
 	NULL,					/* roomlist_room_serialize */
-
-#ifdef MSN_USE_ATTENTION_API
+	NULL,					/* unregister_user */
 	msn_send_attention,                     /* send_attention */
 	msn_attention_types,                    /* attention_types */
-#else
+
 	/* padding */
-	NULL,
-	NULL,
-#endif
-	NULL,
 	NULL
 };
 
