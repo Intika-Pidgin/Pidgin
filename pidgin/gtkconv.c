@@ -185,6 +185,25 @@ static GdkColor *get_nick_color(PidginConversation *gtkconv, const char *name) {
 	return &col;
 }
 
+static PurpleBlistNode *
+get_conversation_blist_node(PurpleConversation *conv)
+{
+	PurpleBlistNode *node = NULL;
+
+	switch (purple_conversation_get_type(conv)) {
+		case PURPLE_CONV_TYPE_IM:
+			node = (PurpleBlistNode*)purple_find_buddy(conv->account, conv->name);
+			node = node ? node->parent : NULL;
+			break;
+		case PURPLE_CONV_TYPE_CHAT:
+			node = (PurpleBlistNode*)purple_blist_find_chat(conv->account, conv->name);
+			break;
+		default:
+			break;
+	}
+	return node;
+}
+
 /**************************************************************************
  * Callbacks
  **************************************************************************/
@@ -727,7 +746,7 @@ do_invite(GtkWidget *w, int resp, InviteBuddyInfo *info)
 	gtkconv = PIDGIN_CONVERSATION(info->conv);
 
 	if (resp == GTK_RESPONSE_OK) {
-		buddy   = gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(info->entry)->entry));
+		buddy   = pidgin_text_combo_box_entry_get_text(info->entry);
 		message = gtk_entry_get_text(GTK_ENTRY(info->message));
 
 		if (!g_ascii_strcasecmp(buddy, ""))
@@ -774,7 +793,7 @@ invite_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 								"chat."), NULL);
 		}
 		else
-			gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(info->entry)->entry), buddy->name);
+			pidgin_text_combo_box_entry_set_text(info->entry, buddy->name);
 
 		gtk_drag_finish(dc, TRUE, (dc->action == GDK_ACTION_MOVE), t);
 	}
@@ -801,7 +820,7 @@ invite_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 			}
 			else
 			{
-				gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(info->entry)->entry), username);
+				pidgin_text_combo_box_entry_set_text(info->entry, username);
 			}
 		}
 
@@ -899,18 +918,9 @@ invite_cb(GtkWidget *widget, PidginConversation *gtkconv)
 		gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, 0, 1);
 
 		/* Now the Buddy drop-down entry field. */
-		info->entry = gtk_combo_new();
-		gtk_combo_set_case_sensitive(GTK_COMBO(info->entry), FALSE);
-		gtk_entry_set_activates_default(
-				GTK_ENTRY(GTK_COMBO(info->entry)->entry), TRUE);
-
+		info->entry = pidgin_text_combo_box_entry_new(NULL, generate_invite_user_names(gc));
 		gtk_table_attach_defaults(GTK_TABLE(table), info->entry, 1, 2, 0, 1);
 		gtk_label_set_mnemonic_widget(GTK_LABEL(label), info->entry);
-
-		/* Fill in the names. */
-		gtk_combo_set_popdown_strings(GTK_COMBO(info->entry),
-									  generate_invite_user_names(gc));
-
 
 		/* Now the label for "Message" */
 		label = gtk_label_new(NULL);
@@ -953,7 +963,7 @@ invite_cb(GtkWidget *widget, PidginConversation *gtkconv)
 	gtk_widget_show_all(invite_dialog);
 
 	if (info != NULL)
-		gtk_widget_grab_focus(GTK_COMBO(info->entry)->entry);
+		gtk_widget_grab_focus(GTK_BIN(info->entry)->child);
 }
 
 static void
@@ -1433,6 +1443,7 @@ menu_sounds_cb(gpointer data, guint action, GtkWidget *widget)
 	PidginWindow *win = data;
 	PurpleConversation *conv;
 	PidginConversation *gtkconv;
+	PurpleBlistNode *node;
 
 	conv = pidgin_conv_window_get_active_conversation(win);
 
@@ -1443,6 +1454,9 @@ menu_sounds_cb(gpointer data, guint action, GtkWidget *widget)
 
 	gtkconv->make_sound =
 		gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(widget));
+	node = get_conversation_blist_node(conv);
+	if (node)
+		purple_blist_node_set_bool(node, "gtk-mute-sound", !gtkconv->make_sound);
 }
 
 static void
@@ -3012,7 +3026,7 @@ sound_method_pref_changed_cb(const char *name, PurplePrefType type,
 
 		if (gtkconv != NULL)
 			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(win->menu.sounds),
-			                               TRUE);
+			                               gtkconv->make_sound);
 		gtk_widget_set_sensitive(win->menu.sounds, TRUE);
 
 	}
@@ -3694,8 +3708,7 @@ generate_invite_user_names(PurpleConnection *gc)
 	static GList *tmp = NULL;
 
 	g_list_free(tmp);
-
-	tmp = g_list_append(NULL, "");
+	tmp = NULL;
 
 	if (gc != NULL) {
 		for(gnode = purple_get_blist()->root; gnode; gnode = gnode->next) {
@@ -4991,6 +5004,7 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	PurpleConversationType conv_type = purple_conversation_get_type(conv);
 	GtkWidget *pane = NULL;
 	GtkWidget *tab_cont;
+	PurpleBlistNode *convnode;
 
 	if (hidden)
 		return;
@@ -5071,7 +5085,9 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	gtk_container_add(GTK_CONTAINER(tab_cont), pane);
 	gtk_widget_show(pane);
 
-	gtkconv->make_sound = TRUE;
+	convnode = get_conversation_blist_node(conv);
+	if (convnode == NULL || !purple_blist_node_get_bool(convnode, "gtk-mute-sound"))
+		gtkconv->make_sound = TRUE;
 
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/show_formatting_toolbar"))
 		gtk_widget_show(gtkconv->toolbar);
@@ -5119,8 +5135,9 @@ received_im_msg_cb(PurpleAccount *account, char *sender, char *message,
 				   PurpleConversation *conv, PurpleMessageFlags flags)
 {
 	PurpleConversationUiOps *ui_ops = pidgin_conversations_get_conv_ui_ops();
+	if (conv != NULL)
+		return;
 
-	/* XXX sadrul: set _ui_ops for the conversation to NULL, and get rid of the hidden convwindow */
 	/* create hidden conv if hide_new pref is always */
 	/* or if hide_new pref is away and account is away */
 	if ((strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/im/hide_new"), "always") == 0) ||
@@ -9735,3 +9752,4 @@ generate_nick_colors(guint *color_count, GdkColor background)
 
 	return colors;
 }
+

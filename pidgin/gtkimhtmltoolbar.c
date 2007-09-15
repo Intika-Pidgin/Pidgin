@@ -739,11 +739,11 @@ insert_smiley_cb(GtkWidget *smiley, GtkIMHtmlToolbar *toolbar)
 		while (it != NULL)
 		{
 			it_tmp = it;
-			gtk_box_pack_start(GTK_BOX(line), it->button, TRUE, TRUE, 0);
+			gtk_box_pack_start(GTK_BOX(line), it->button, FALSE, FALSE, 0);
 			gtk_widget_show(it->button);
 			line_width += it->width;
 			if (line_width >= max_line_width) {
-				gtk_box_pack_start(GTK_BOX(smiley_table), line, FALSE, TRUE, 0);
+				gtk_box_pack_start(GTK_BOX(smiley_table), line, FALSE, FALSE, 0);
 				line = gtk_hbox_new(FALSE, 0);
 				line_width = 0;
 				col = 0;
@@ -1297,6 +1297,10 @@ static void gtk_imhtmltoolbar_init (GtkIMHtmlToolbar *toolbar)
 	purple_prefs_connect_callback(toolbar, PIDGIN_PREFS_ROOT "/conversations/toolbar/wide",
 			imhtmltoolbar_view_pref_changed, toolbar);
 	purple_prefs_trigger_callback(PIDGIN_PREFS_ROOT "/conversations/toolbar/wide");
+
+#if GTK_CHECK_VERSION(2,4,0)
+	gtk_event_box_set_visible_window(GTK_EVENT_BOX(event), FALSE);
+#endif
 
 	gtk_widget_add_events(event, GDK_BUTTON_PRESS_MASK);
 	gtk_box_pack_start(GTK_BOX(hbox), event, TRUE, TRUE, 0);

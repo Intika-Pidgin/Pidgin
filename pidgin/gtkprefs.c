@@ -1095,7 +1095,7 @@ proxy_changed_cb(const char *name, PurplePrefType type,
 	const char *proxy = value;
 
 	if (strcmp(proxy, "none") && strcmp(proxy, "envvar"))
-	        gtk_widget_show_all(frame);
+		gtk_widget_show_all(frame);
 	else
 		gtk_widget_hide(frame);
 }
