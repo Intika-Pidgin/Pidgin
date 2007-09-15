@@ -124,6 +124,7 @@ static void sort_method_log(PurpleBlistNode *node, PurpleBuddyList *blist, GtkTr
 #endif
 static PidginBuddyList *gtkblist = NULL;
 
+static GList *groups_tree(void);
 static gboolean pidgin_blist_refresh_timer(PurpleBuddyList *list);
 static void pidgin_blist_update_buddy(PurpleBuddyList *list, PurpleBlistNode *node, gboolean status_change);
 static void pidgin_blist_selection_changed(GtkTreeSelection *selection, gpointer data);
@@ -136,6 +137,7 @@ static gboolean get_iter_from_node(PurpleBlistNode *node, GtkTreeIter *iter);
 static void redo_buddy_list(PurpleBuddyList *list, gboolean remove, gboolean rerender);
 static void pidgin_blist_collapse_contact_cb(GtkWidget *w, PurpleBlistNode *node);
 static char *pidgin_get_group_title(PurpleBlistNode *gnode, gboolean expanded);
+static void pidgin_blist_expand_contact_cb(GtkWidget *w, PurpleBlistNode *node);
 
 typedef enum {
 	PIDGIN_BLIST_NODE_HAS_PENDING_MESSAGE    =  1 << 0,  /* Whether there's pending message in a conversation */
@@ -419,6 +421,102 @@ static void gtk_blist_renderer_editing_started_cb(GtkCellRenderer *renderer,
 }
 #endif
 
+static void
+gtk_blist_do_personize(GList *merges)
+{
+	PurpleBlistNode *contact = NULL;
+	int max = 0;
+	GList *tmp;
+
+	/* First, we find the contact to merge the rest of the buddies into.
+ 	 * This will be the contact with the most buddies in it; ties are broken
+ 	 * by which contact is higher in the list
+ 	 */
+	for (tmp = merges; tmp; tmp = tmp->next) {
+		PurpleBlistNode *node = tmp->data;
+		PurpleBlistNode *b;
+		int i = 0;
+
+		if (node->type == PURPLE_BLIST_BUDDY_NODE)
+			node = node->parent;
+
+		if (node->type != PURPLE_BLIST_CONTACT_NODE)
+			continue;
+		
+
+		for (b = node->child; b; b = b->next)
+			i++;
+		if (i > max) {
+			contact = node;
+			max = i;
+		}
+	}
+
+	if (contact == NULL)
+		return;
+
+	/* Merge all those buddies into this contact */
+	for (tmp = merges; tmp; tmp = tmp->next) {
+		PurpleBlistNode *node = tmp->data;
+		if (node->type == PURPLE_BLIST_BUDDY_NODE)
+			node = node->parent;
+
+		if (node == contact)
+			continue;
+
+		purple_blist_merge_contact(node, contact);
+	}
+	
+	/* And show the expanded contact, so the people know what's going on */
+	pidgin_blist_expand_contact_cb(NULL, contact);
+	g_list_free(merges);
+}
+
+static void
+gtk_blist_auto_personize(PurpleBlistNode *group, const char *alias)
+{
+	PurpleBlistNode *contact;
+	PurpleBlistNode *buddy;
+	GList *merges = NULL;
+	int i = 0;
+	char *a = g_utf8_casefold(alias, -1);
+	char *msg;
+
+	for (contact = group->child; contact; contact = contact->next) {
+		char *node_alias;
+		if (contact->type != PURPLE_BLIST_CONTACT_NODE)
+			continue;
+		
+		node_alias = g_utf8_casefold(purple_contact_get_alias(contact), -1);
+		if (node_alias && !g_utf8_collate(node_alias, a)) {
+			merges = g_list_append(merges, contact);
+			i++;
+			g_free(node_alias);
+			continue;
+		}
+		g_free(node_alias);
+
+		for (buddy = contact->child; buddy; buddy = buddy->next) {
+			if (buddy->type != PURPLE_BLIST_BUDDY_NODE)
+				continue;
+	
+			node_alias = g_utf8_casefold(purple_buddy_get_alias(buddy), -1);
+			if (node_alias && !g_utf8_collate(node_alias, a)) {
+				merges = g_list_append(merges, buddy);
+				i++;
+			}
+			g_free(node_alias);
+		}
+	}
+	g_free(a);
+	
+	msg = g_strdup_printf(ngettext("You can't merge one contact. That doesn't make any sense. You should never see this message ever", "You currently have %d contacts named %s. Would you like to merge them?", i), i, alias);
+	if (i > 1)
+		purple_request_action(NULL, NULL, msg, _("Merging these contacts will cause them to share a single entry on the buddy list and use a single conversation window. "
+							 "You can separate them again by choosing 'Expand' from the contact's context menu"), 0, NULL, NULL, NULL,
+				      merges, 2, _("_Merge"), PURPLE_CALLBACK(gtk_blist_do_personize), _("_Cancel"), PURPLE_CALLBACK(g_list_free));
+}
+
 static void gtk_blist_renderer_edited_cb(GtkCellRendererText *text_rend, char *arg1,
 					 char *arg2, PurpleBuddyList *list)
 {
@@ -445,13 +543,14 @@ static void gtk_blist_renderer_edited_cb(GtkCellRendererText *text_rend, char *a
 				PurpleContact *contact = (PurpleContact *)node;
 				struct _pidgin_blist_node *gtknode = (struct _pidgin_blist_node *)node->ui_data;
 
-				if (contact->alias || gtknode->contact_expanded)
+				if (contact->alias || gtknode->contact_expanded) {
 					purple_blist_alias_contact(contact, arg2);
-				else
-				{
+					gtk_blist_auto_personize(node->parent, arg2);
+				} else {
 					PurpleBuddy *buddy = purple_contact_get_priority_buddy(contact);
 					purple_blist_alias_buddy(buddy, arg2);
 					serv_alias_buddy(buddy);
+					gtk_blist_auto_personize(node->parent, arg2);
 				}
 			}
 			break;
@@ -459,6 +558,7 @@ static void gtk_blist_renderer_edited_cb(GtkCellRendererText *text_rend, char *a
 		case PURPLE_BLIST_BUDDY_NODE:
 			purple_blist_alias_buddy((PurpleBuddy*)node, arg2);
 			serv_alias_buddy((PurpleBuddy *)node);
+			gtk_blist_auto_personize(node->parent->parent, arg2);
 			break;
 		case PURPLE_BLIST_GROUP_NODE:
 			dest = purple_find_group(arg2);
@@ -2292,18 +2392,19 @@ static GdkPixbuf *pidgin_blist_get_buddy_icon(PurpleBlistNode *node,
 		if (prpl_info && prpl_info->icon_spec.scale_rules & PURPLE_ICON_SCALE_DISPLAY)
 			purple_buddy_icon_get_scale_size(&prpl_info->icon_spec, &scale_width, &scale_height);
 
-		if (scaled) {
+		if (scaled || scale_height > 200 || scale_width > 200) {
+			float scale_size = scaled ? 32.0 : 200.0;
 			if(scale_height > scale_width) {
-				scale_width = 32.0 * (double)scale_width / (double)scale_height;
-				scale_height = 32;
+				scale_width = scale_size * (double)scale_width / (double)scale_height;
+				scale_height = scale_size;
 			} else {
-				scale_height = 32.0 * (double)scale_height / (double)scale_width;
-				scale_width = 32;
+				scale_height = scale_size * (double)scale_height / (double)scale_width;
+				scale_width = scale_size;
 			}
 
-			ret = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, 32, 32);
+			ret = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, scale_size, scale_size);
 			gdk_pixbuf_fill(ret, 0x00000000);
-			gdk_pixbuf_scale(buf, ret, (32-scale_width)/2, (32-scale_height)/2, scale_width, scale_height, (32-scale_width)/2, (32-scale_height)/2, (double)scale_width/(double)orig_width, (double)scale_height/(double)orig_height, GDK_INTERP_BILINEAR);
+			gdk_pixbuf_scale(buf, ret, (scale_size-scale_width)/2, (scale_size-scale_height)/2, scale_width, scale_height, (scale_size-scale_width)/2, (scale_size-scale_height)/2, (double)scale_width/(double)orig_width, (double)scale_height/(double)orig_height, GDK_INTERP_BILINEAR);
 			if (pidgin_gdk_pixbuf_is_opaque(ret))
 				pidgin_gdk_pixbuf_make_round(ret);
 		} else {
@@ -5471,15 +5572,17 @@ static void pidgin_blist_set_visible(PurpleBuddyList *list, gboolean show)
 static GList *
 groups_tree(void)
 {
-	GList *tmp = NULL;
+	static GList *list = NULL;
 	char *tmp2;
 	PurpleGroup *g;
 	PurpleBlistNode *gnode;
 
+	g_list_free(list);
+	list = NULL;
+
 	if (purple_get_blist()->root == NULL)
 	{
-		tmp2 = g_strdup(_("Buddies"));
-		tmp  = g_list_append(tmp, tmp2);
+		list  = g_list_append(list, (gpointer)_("Buddies"));
 	}
 	else
 	{
@@ -5491,12 +5594,12 @@ groups_tree(void)
 			{
 				g    = (PurpleGroup *)gnode;
 				tmp2 = g->name;
-				tmp  = g_list_append(tmp, tmp2);
+				list  = g_list_append(list, tmp2);
 			}
 		}
 	}
 
-	return tmp;
+	return list;
 }
 
 static void
@@ -5525,7 +5628,7 @@ add_buddy_cb(GtkWidget *w, int resp, PidginAddBuddyData *data)
 	if (resp == GTK_RESPONSE_OK)
 	{
 		who = gtk_entry_get_text(GTK_ENTRY(data->entry));
-		grp = gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(data->combo)->entry));
+		grp = pidgin_text_combo_box_entry_get_text(data->combo);
 		whoalias = gtk_entry_get_text(GTK_ENTRY(data->entry_for_alias));
 		if (*whoalias == '\0')
 			whoalias = NULL;
@@ -5691,19 +5794,15 @@ pidgin_blist_request_add_buddy(PurpleAccount *account, const char *username,
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
 	gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, 3, 4);
 
-	data->combo = gtk_combo_new();
-	gtk_combo_set_popdown_strings(GTK_COMBO(data->combo), groups_tree());
+	data->combo = pidgin_text_combo_box_entry_new(group, groups_tree());
 	gtk_table_attach_defaults(GTK_TABLE(table), data->combo, 1, 2, 3, 4);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), GTK_COMBO(data->combo)->entry);
+	gtk_label_set_mnemonic_widget(GTK_LABEL(label), GTK_BIN(data->combo)->child);
 	pidgin_set_accessible_label (data->combo, label);
 
 	g_signal_connect(G_OBJECT(data->window), "response",
 					 G_CALLBACK(add_buddy_cb), data);
 
 	gtk_widget_show_all(data->window);
-
-	if (group != NULL)
-		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(data->combo)->entry), group);
 }
 
 static void
@@ -5742,7 +5841,7 @@ add_chat_cb(GtkWidget *w, PidginAddChatData *data)
 							   gtk_entry_get_text(GTK_ENTRY(data->alias_entry)),
 							   components);
 
-	group_name = gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(data->group_combo)->entry));
+	group_name = pidgin_text_combo_box_entry_get_text(data->group_combo);
 
 	if ((group = purple_find_group(group_name)) == NULL)
 	{
@@ -6045,17 +6144,10 @@ pidgin_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
 	gtk_size_group_add_widget(data->sg, label);
 	gtk_box_pack_start(GTK_BOX(rowbox), label, FALSE, FALSE, 0);
 
-	data->group_combo = gtk_combo_new();
-	gtk_combo_set_popdown_strings(GTK_COMBO(data->group_combo), groups_tree());
-	gtk_box_pack_end(GTK_BOX(rowbox), data->group_combo, TRUE, TRUE, 0);
-
-	if (group)
-	{
-		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(data->group_combo)->entry),
-						   group->name);
-	}
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), GTK_COMBO(data->group_combo)->entry);
+	data->group_combo = pidgin_text_combo_box_entry_new(group ? group->name : NULL, groups_tree());
+	gtk_label_set_mnemonic_widget(GTK_LABEL(label), GTK_BIN(data->group_combo)->child);
 	pidgin_set_accessible_label (data->group_combo, label);
+	gtk_box_pack_end(GTK_BOX(rowbox), data->group_combo, TRUE, TRUE, 0);
 
 	g_signal_connect(G_OBJECT(data->window), "response",
 					 G_CALLBACK(add_chat_resp_cb), data);
