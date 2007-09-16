@@ -1,5 +1,19 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
+Version 2.2.1:
+	http://developer.pidgin.im/query?status=closed&milestone=2.2.1
+	
+	Pidgin:
+	* When aliasing someone to an alias that already exists in the
+	  same group, offer to merge the buddies into the same contact
+	* It's possible to keep a conversation (chat/IM) open even after closing
+	  the conversation window/tab.
+	* A music emblem is displayed in the buddy list for a buddy if we know she
+	  is listening to some soothing music.
+	* 'Move to' menu in buddy list context menu for moving buddies to
+  	   other groups
+	* Move "Smiley" to the top-level of the toolbar
+
 Version 2.2.0 (09/13/2007):
 	http://developer.pidgin.im/query?status=closed&milestone=2.2.0
 
