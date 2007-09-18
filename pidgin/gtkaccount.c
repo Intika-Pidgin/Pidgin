@@ -1,8 +1,9 @@
 /**
  * @file gtkaccount.c GTK+ Account Editor UI
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -268,6 +269,8 @@ set_account_protocol_cb(GtkWidget *item, const char *id,
 	add_login_options(dialog,    dialog->top_vbox);
 	add_user_options(dialog,     dialog->top_vbox);
 	add_protocol_options(dialog, dialog->bottom_vbox);
+
+	gtk_widget_grab_focus(dialog->protocol_menu);
 
 	if (!dialog->prpl_info || !dialog->prpl_info->register_user || 
 	    g_object_get_data(G_OBJECT(item), "fake")) {
