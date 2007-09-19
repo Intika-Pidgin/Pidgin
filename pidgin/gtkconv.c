@@ -376,10 +376,13 @@ debug_command_cb(PurpleConversation *conv,
 static void clear_conversation_scrollback(PurpleConversation *conv)
 {
 	PidginConversation *gtkconv = NULL;
+	GList *iter;
 
 	gtkconv = PIDGIN_CONVERSATION(conv);
 
 	gtk_imhtml_clear(GTK_IMHTML(gtkconv->imhtml));
+	for (iter = gtkconv->convs; iter; iter = iter->next)
+		purple_conversation_clear_message_history(iter->data);
 }
 
 static PurpleCmdRet
@@ -387,7 +390,6 @@ clear_command_cb(PurpleConversation *conv,
                  const char *cmd, char **args, char **error, void *data)
 {
 	clear_conversation_scrollback(conv);
-	purple_conversation_clear_message_history(conv);
 	return PURPLE_CMD_STATUS_OK;
 }
 
@@ -1099,12 +1101,9 @@ menu_clear_cb(gpointer data, guint action, GtkWidget *widget)
 {
 	PidginWindow *win = data;
 	PurpleConversation *conv;
-	PidginConversation *gtkconv;
 
 	conv = pidgin_conv_window_get_active_conversation(win);
-	gtkconv = PIDGIN_CONVERSATION(conv);
-
-	gtk_imhtml_clear(GTK_IMHTML(gtkconv->imhtml));
+	clear_conversation_scrollback(conv);
 }
 
 struct _search {
@@ -1913,6 +1912,7 @@ conv_keypress_common(PidginConversation *gtkconv, GdkEventKey *event)
 				gtk_notebook_reorder_child(GTK_NOTEBOOK(win->notebook),
 						gtk_notebook_get_nth_page(GTK_NOTEBOOK(win->notebook), curconv),
 						curconv - 1);
+				return TRUE;
 				break;
 
 			case GDK_period:
@@ -1923,6 +1923,7 @@ conv_keypress_common(PidginConversation *gtkconv, GdkEventKey *event)
 #else
 						(curconv + 1) % g_list_length(GTK_NOTEBOOK(win->notebook)->children));
 #endif
+				return TRUE;
 				break;
 
 		} /* End of switch */
@@ -4488,7 +4489,7 @@ setup_chat_userlist(PidginConversation *gtkconv, GtkWidget *hpaned)
 	g_signal_connect(G_OBJECT(list), "motion-notify-event",
 					 G_CALLBACK(pidgin_userlist_motion_cb), gtkconv);
 	g_signal_connect(G_OBJECT(list), "leave-notify-event",
-					 G_CALLBACK(pidgin_userlist_motion_cb), gtkconv);
+					 G_CALLBACK(pidgin_conv_leave_cb), gtkconv);
 	g_signal_connect(G_OBJECT(list), "popup-menu",
 			 G_CALLBACK(gtkconv_chat_popup_menu_cb), gtkconv);
 	g_signal_connect(G_OBJECT(lbox), "size-allocate", G_CALLBACK(lbox_size_allocate_cb), gtkconv);
@@ -4616,10 +4617,8 @@ pidgin_userlist_tooltip_timeout(PidginConversation *gtkconv)
 
 	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gtkchat->list));
 
-	gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(gtkchat->list),
-								  tooltip.userlistx, tooltip.userlisty, &path, &column, &x, &y);
-
-	if (path == NULL)
+	if (!gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(gtkchat->list),
+								  tooltip.userlistx, tooltip.userlisty, &path, &column, &x, &y))
 		return FALSE;
 
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path);
