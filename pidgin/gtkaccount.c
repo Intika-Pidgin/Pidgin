@@ -1,8 +1,9 @@
 /**
  * @file gtkaccount.c GTK+ Account Editor UI
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -248,9 +249,6 @@ set_account_protocol_cb(GtkWidget *item, const char *id,
 	PurplePlugin *new_plugin;
 
 	new_plugin = purple_find_prpl(id);
-
-	if (new_plugin == dialog->plugin)
-		return;
 
 	dialog->plugin = new_plugin;
 
