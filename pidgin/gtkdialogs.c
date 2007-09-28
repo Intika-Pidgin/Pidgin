@@ -1,8 +1,9 @@
 /*
  * @file gtkdialogs.c GTK+ Dialogs
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -200,8 +201,8 @@ static struct translator current_translators[] = {
 	{N_("Slovak"),              "sk", "loptosko", "loptosko@gmail.com"},
 	{N_("Slovenian"),           "sl", "Martin Srebotnjak", "miles@filmsi.net"},
 	{N_("Albanian"),            "sq", "Besnik Bleta", "besnik@programeshqip.org"},
-	{N_("Serbian"),             "sr", "Danilo Šegan", "dsegan@gmx.net"},
-	{N_("Serbian"),             "sr", "Aleksandar Urosevic", "urke@users.sourceforge.net"},
+	{N_("Serbian"),             "sr", "Miloš Popović", "gpopac@gmail.com"},
+	{N_("Serbian"),             "sr@Latn", "Miloš Popović", "gpopac@gmail.com"},
 	{N_("Swedish"),             "sv", "Peter Hjalmarsson", "xake@telia.com"},
 	{N_("Tamil"),               "ta", "Viveka Nathan K", "vivekanathan@users.sourceforge.net"},
 	{N_("Telugu"),              "te", "Mr. Subbaramaih", "info.gist@cdac.in"},
@@ -256,6 +257,8 @@ static struct translator past_translators[] = {
 	{N_("Slovak"),              "sk", "helix84", NULL},
 	{N_("Slovak"),              "sk", "Richard Golier", NULL},
 	{N_("Slovenian"),           "sl", "Matjaz Horvat", NULL},
+	{N_("Serbian"),             "sr", "Danilo Šegan", "dsegan@gmx.net"},
+	{N_("Serbian"),             "sr", "Aleksandar Urosevic", "urke@users.sourceforge.net"},
 	{N_("Swedish"),             "sv", "Tore Lundqvist", NULL},
 	{N_("Swedish"),             "sv", "Christian Rose", NULL},
 	{N_("Turkish"),             "tr", "Ahmet Alp BALKAN", NULL},
@@ -285,6 +288,7 @@ static void destroy_about()
 	about = NULL;
 }
 
+#if 0
 /* This function puts the version number onto the pixmap we use in the 'about' 
  * screen in Pidgin. */
 static void
@@ -322,6 +326,7 @@ pidgin_logo_versionize(GdkPixbuf **original, GtkWidget *widget) {
 											 width, height);
 	g_object_unref(G_OBJECT(pixmap));
 }
+#endif
 
 void pidgin_dialogs_about()
 {
@@ -383,6 +388,9 @@ void pidgin_dialogs_about()
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 
 	str = g_string_sized_new(4096);
+
+	g_string_append_printf(str,
+		"<CENTER><FONT SIZE=\"4\"><B>%s %s</B></FONT></CENTER><BR><BR>", PIDGIN_NAME, VERSION);
 
 	g_string_append_printf(str,
 		_("%s is a graphical modular messaging client based on "
