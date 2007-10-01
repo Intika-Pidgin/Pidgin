@@ -3077,7 +3077,7 @@ static GtkItemFactoryEntry blist_menu[] =
 	{ N_("/_Help"), NULL, NULL, 0, "<Branch>", NULL },
 	{ N_("/Help/Online _Help"), "F1", gtk_blist_show_onlinehelp_cb, 0, "<StockItem>", GTK_STOCK_HELP },
 	{ N_("/Help/_Debug Window"), NULL, toggle_debug, 0, "<Item>", NULL },
-#if GTK_CHECK_VERSION(2,6,0)	
+#if GTK_CHECK_VERSION(2,6,0)
 	{ N_("/Help/_About"), NULL, pidgin_dialogs_about, 0,  "<StockItem>", GTK_STOCK_ABOUT },
 #else
 	{ N_("/Help/_About"), NULL, pidgin_dialogs_about, 0,  "<Item>", NULL },
@@ -4792,7 +4792,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 							  "visible", EMBLEM_VISIBLE_COLUMN, NULL);
 
 	rend = gtk_cell_renderer_pixbuf_new();
-	gtk_tree_view_column_pack_start(column, rend, FALSE);	
+	gtk_tree_view_column_pack_start(column, rend, FALSE);
 	gtk_tree_view_column_set_attributes(column, rend,
 					   "pixbuf", PROTOCOL_ICON_COLUMN,
 					   "visible", PROTOCOL_ICON_VISIBLE_COLUMN,
@@ -5237,7 +5237,7 @@ static char *pidgin_get_group_title(PurpleBlistNode *gnode, gboolean expanded)
 
 	group = (PurpleGroup*)gnode;
 	textcolor = gtkblist->treeview->style->fg[GTK_STATE_ACTIVE];
-        
+
 	if (gtk_tree_selection_get_selected(gtk_tree_view_get_selection(GTK_TREE_VIEW(gtkblist->treeview)), NULL, &iter)) {
 		gtk_tree_model_get(GTK_TREE_MODEL(gtkblist->treemodel), &iter,
 				NODE_COLUMN, &selected_node, -1);
@@ -5682,7 +5682,8 @@ add_buddy_cb(GtkWidget *w, int resp, PidginAddBuddyData *data)
 		if (*whoalias == '\0')
 			whoalias = NULL;
 
-		if ((g = purple_find_group(grp)) == NULL)
+		g = NULL;
+		if ((grp != NULL) && (*grp != '\0') && ((g = purple_find_group(grp)) == NULL))
 		{
 			g = purple_group_new(grp);
 			purple_blist_add_group(g, NULL);
@@ -5892,7 +5893,8 @@ add_chat_cb(GtkWidget *w, PidginAddChatData *data)
 
 	group_name = pidgin_text_combo_box_entry_get_text(data->group_combo);
 
-	if ((group = purple_find_group(group_name)) == NULL)
+	group = NULL;
+	if ((group_name != NULL) && (*group_name != '\0') && ((group = purple_find_group(group_name)) == NULL))
 	{
 		group = purple_group_new(group_name);
 		purple_blist_add_group(group, NULL);
@@ -6289,9 +6291,13 @@ pidgin_blist_set_headline(const char *text, GdkPixbuf *pixbuf, GCallback callbac
 	gtkblist->headline_callback = callback;
 	gtkblist->headline_data = user_data;
 	gtkblist->headline_destroy = destroy;
-	if (!GTK_WIDGET_HAS_FOCUS(gtkblist->window))
-		pidgin_set_urgent(GTK_WINDOW(gtkblist->window), TRUE);
-	gtk_widget_show_all(gtkblist->headline_hbox);
+	if (text != NULL || pixbuf != NULL) {
+		if (!GTK_WIDGET_HAS_FOCUS(gtkblist->window))
+			pidgin_set_urgent(GTK_WINDOW(gtkblist->window), TRUE);
+		gtk_widget_show_all(gtkblist->headline_hbox);
+	} else {
+		gtk_widget_hide(gtkblist->headline_hbox);
+	}
 }
 
 static PurpleBlistUiOps blist_ui_ops =
