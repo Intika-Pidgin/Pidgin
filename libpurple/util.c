@@ -515,23 +515,6 @@ purple_mime_decode_field(const char *str)
  * Date/Time Functions
  **************************************************************************/
 
-#ifdef _WIN32
-static long win32_get_tz_offset() {
-	TIME_ZONE_INFORMATION tzi;
-	DWORD ret;
-	long off = -1;
-
-	if ((ret = GetTimeZoneInformation(&tzi)) != TIME_ZONE_ID_INVALID)
-	{
-		off = -(tzi.Bias * 60);
-		if (ret == TIME_ZONE_ID_DAYLIGHT)
-			off -= tzi.DaylightBias * 60;
-	}
-
-	return off;
-}
-#endif
-
 const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso)
 {
 	static char buf[7];
@@ -546,7 +529,7 @@ const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso)
 		g_return_val_if_reached("");
 
 #ifdef _WIN32
-	if ((off = win32_get_tz_offset()) == -1)
+	if ((off = wpurple_get_tz_offset()) == -1)
 		return "";
 #else
 # ifdef HAVE_TM_GMTOFF
@@ -854,7 +837,7 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 #endif
 
 #ifdef _WIN32
-				if ((sys_tzoff = win32_get_tz_offset()) == -1)
+				if ((sys_tzoff = wpurple_get_tz_offset()) == -1)
 					tzoff = PURPLE_NO_TZ_OFF;
 				else
 					tzoff += sys_tzoff;
@@ -1543,7 +1526,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					while(*p && *p != '>') {
 						if(!g_ascii_strncasecmp(p, "href=", strlen("href="))) {
 							const char *q = p + strlen("href=");
-							g_string_free(url, TRUE);
+							if (url)
+								g_string_free(url, TRUE);
 							url = g_string_new("");
 							cdata = g_string_new("");
 							if(*q == '\'' || *q == '\"')
@@ -3870,6 +3854,7 @@ purple_util_fetch_url_request(const char *url, gboolean full,
 	gfud->full = full;
 	gfud->request = g_strdup(request);
 	gfud->include_headers = include_headers;
+	gfud->fd = -1;
 
 	purple_url_parse(url, &gfud->website.address, &gfud->website.port,
 				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
