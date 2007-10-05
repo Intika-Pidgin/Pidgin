@@ -23,6 +23,7 @@
 #include "account.h"
 #include "debug.h"
 #include "cipher.h"
+#include "core.h"
 #include "conversation.h"
 #include "request.h"
 #include "sslconn.h"
@@ -67,10 +68,10 @@ static void finish_plaintext_authentication(JabberStream *js)
 
 		auth = xmlnode_new("auth");
 		xmlnode_set_namespace(auth, "urn:ietf:params:xml:ns:xmpp-sasl");
-		
+
 		xmlnode_set_attrib(auth, "xmlns:ga", "http://www.google.com/talk/protocol/auth");
 		xmlnode_set_attrib(auth, "ga:client-uses-full-bind-result", "true");
-		
+
 		response = g_string_new("");
 		response = g_string_append_len(response, "\0", 1);
 		response = g_string_append(response, js->user->node);
@@ -204,7 +205,7 @@ static gboolean auth_pass_generic(JabberStream *js, PurpleRequestFields *fields)
 
 	return TRUE;
 }
-	
+
 static void auth_pass_cb(PurpleConnection *conn, PurpleRequestFields *fields)
 {
 	JabberStream *js;
@@ -238,7 +239,7 @@ auth_old_pass_cb(PurpleConnection *conn, PurpleRequestFields *fields)
 
 	if (!auth_pass_generic(js, fields))
 		return;
-	
+
 	/* Restart our connection */
 	jabber_auth_start_old(js);
 }
@@ -255,8 +256,8 @@ auth_no_pass_cb(PurpleConnection *conn, PurpleRequestFields *fields)
 
 	js = conn->proto_data;
 
-	purple_connection_error_reason (conn, PURPLE_REASON_AUTHENTICATION_FAILED,
-		_("Password is required to sign on."));
+	/* Disable the account as the user has canceled connecting */
+	purple_account_set_enabled(conn->account, purple_core_get_ui(), FALSE);
 }
 
 static void jabber_auth_start_cyrus(JabberStream *js)
@@ -632,7 +633,7 @@ void jabber_auth_start_old(JabberStream *js)
 	 * to OPTIONAL for this protocol. So, we need to do our own
 	 * password prompting here
 	 */
-	
+
 	if (!purple_account_get_password(js->gc->account)) {
 		purple_account_request_password(js->gc->account, G_CALLBACK(auth_old_pass_cb), G_CALLBACK(auth_no_pass_cb), js->gc);
 		return;
