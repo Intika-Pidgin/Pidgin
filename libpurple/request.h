@@ -61,7 +61,8 @@ typedef enum
 	PURPLE_REQUEST_FIELD_LIST,
 	PURPLE_REQUEST_FIELD_LABEL,
 	PURPLE_REQUEST_FIELD_IMAGE,
-	PURPLE_REQUEST_FIELD_ACCOUNT
+	PURPLE_REQUEST_FIELD_ACCOUNT,
+	PURPLE_REQUEST_FIELD_BLIST,
 
 } PurpleRequestFieldType;
 
@@ -92,6 +93,17 @@ typedef struct
 	GList *fields;
 
 } PurpleRequestFieldGroup;
+
+/**
+ * Flags that can be used for Buddylist Fields.
+ */
+typedef enum
+{
+	PURPLE_REQUEST_BLIST_FLAG_BUDDY         = 0x01,  /**< Include buddies in the list. */
+	PURPLE_REQUEST_BLIST_FLAG_CHAT          = 0x02,  /**< Include chats in the list. */
+	PURPLE_REQUEST_BLIST_FLAG_GROUP         = 0x04,  /**< Include groups in the list. */
+	PURPLE_REQUEST_BLIST_FLAG_ALLOW_OFFLINE = 0x08,  /**< Include offline buddies in the list. */
+} PurpleRequestBlistFlags;
 
 /**
  * A request field.
@@ -172,6 +184,14 @@ typedef struct
 			gsize size;
 		} image;
 
+		struct
+		{
+			GList *default_nodes;
+			PurpleRequestBlistFlags flags;
+			GList *selecteds;
+			PurpleFilterBlistFunc filter;
+		} blist;
+
 	} u;
 
 	void *ui_data;
@@ -189,33 +209,33 @@ typedef struct
 						   const char *ok_text, GCallback ok_cb,
 						   const char *cancel_text, GCallback cancel_cb,
 						   PurpleAccount *account, const char *who, PurpleConversation *conv,
-						   void *user_data);
+						   const char *ui_hint, void *user_data);
 	void *(*request_choice)(const char *title, const char *primary,
 							const char *secondary, int default_value,
 							const char *ok_text, GCallback ok_cb,
 							const char *cancel_text, GCallback cancel_cb,
 							PurpleAccount *account, const char *who, PurpleConversation *conv,
-							void *user_data, va_list choices);
+							const char *ui_hint, void *user_data, va_list choices);
 	void *(*request_action)(const char *title, const char *primary,
 							const char *secondary, int default_action,
 							PurpleAccount *account, const char *who, PurpleConversation *conv,
-							void *user_data, size_t action_count,
+							const char *ui_hint, void *user_data, size_t action_count,
 							va_list actions);
 	void *(*request_fields)(const char *title, const char *primary,
 							const char *secondary, PurpleRequestFields *fields,
 							const char *ok_text, GCallback ok_cb,
 							const char *cancel_text, GCallback cancel_cb,
 							PurpleAccount *account, const char *who, PurpleConversation *conv,
-							void *user_data);
+							const char *ui_hint, void *user_data);
 	void *(*request_file)(const char *title, const char *filename,
 						  gboolean savedialog, GCallback ok_cb, GCallback cancel_cb,
 						  PurpleAccount *account, const char *who, PurpleConversation *conv,
-						  void *user_data);
+						  const char *ui_hint, void *user_data);
 	void (*close_request)(PurpleRequestType type, void *ui_handle);
 	void *(*request_folder)(const char *title, const char *dirname,
 							GCallback ok_cb, GCallback cancel_cb,
 							PurpleAccount *account, const char *who, PurpleConversation *conv,
-							void *user_data);
+							const char *ui_hint, void *user_data);
 
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
@@ -1151,6 +1171,98 @@ PurpleFilterAccountFunc purple_request_field_account_get_filter(
 /*@}*/
 
 /**************************************************************************/
+/** @name Buddylist Field API                                             */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Creates a buddylist field.
+ *
+ * @param id       The field ID.
+ * @param text     The label for the field.
+ * @param flag     Flags dictating what kind of blist nodes should be
+ *                 included in the request field.
+ * @param selected A list of PurpleBlistNode's to select by default, or @c NULL.
+ *
+ * @return  The new field.
+ *
+ * @since 2.3.0
+ */
+PurpleRequestField *purple_request_field_blist_nodes_new(const char *id, const char *text,
+		PurpleRequestBlistFlags flag, GList *selected);
+
+/**
+ * Set a filter for the request field.
+ *
+ * @param field   The request field.
+ * @param filter  The filter function.
+ *
+ * @return  The old filter function, or @c NULL if there was none.
+ *
+ * @since 2.3.0
+ */
+PurpleFilterBlistFunc purple_request_field_blist_set_filter(PurpleRequestField *field, PurpleFilterBlistFunc filter);
+
+/**
+ * Get the filter function for the request field.
+ *
+ * @param field  The request field.
+ *
+ * @return  The filter function, or @c NULL if there isn't any.
+ *
+ * @since 2.3.0
+ */
+PurpleFilterBlistFunc purple_request_field_blist_get_filter(const PurpleRequestField *field);
+
+/**
+ * Add a PurpleBlistNode to the selected list.
+ *
+ * @param field  The request field.
+ * @param node   The buddylist node to add to the list.
+ *
+ * @return  @c TRUE if the node is added to the list, @c FALSE if it was already in the list.
+ *
+ * @since 2.3.0
+ */
+gboolean purple_request_field_blist_add(PurpleRequestField *field, PurpleBlistNode *node);
+
+/**
+ * Remove a PurpleBlistNode from the selected list.
+ *
+ * @param field   The request field.
+ * @param node    The buddylist node to remove from the list.
+ *
+ * @return @c TRUE if the node is removed from the list, @c FALSE if the node is not in the list.
+ *
+ * @since 2.3.0
+ */
+gboolean purple_request_field_blist_remove(PurpleRequestField *field, PurpleBlistNode *node);
+
+/**
+ * Set the list of selected nodes in the request field.
+ *
+ * @param field      The request field.
+ * @param selecteds  The list of selected PurpleBlistNode's. Note that the request field
+ *                   becomes the owner of the list, and so the caller should not modify it.
+ *
+ * @since 2.3.0
+ */
+void purple_request_field_blist_set_selection_list(PurpleRequestField *field, GList *selecteds);
+
+/**
+ * Get a list of the selected buddylist nodes.
+ *
+ * @param field  The request field.
+ *
+ * @return A GList of PurpleBlistNode's.
+ *
+ * @since 2.3.0
+ */
+GList *purple_request_field_blist_get_selection_list(const PurpleRequestField *field);
+
+/*@}*/
+
+/**************************************************************************/
 /** @name Request API                                                     */
 /**************************************************************************/
 /*@{*/
@@ -1187,9 +1299,22 @@ PurpleFilterAccountFunc purple_request_field_account_get_filter(
  * @param account		The PurpleAccount associated with this request, or NULL if none is
  * @param who			The username of the buddy assocaited with this request, or NULL if none is
  * @param conv			The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint       UI hint
  * @param user_data     The data to pass to the callback.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_input_with_hint(void *handle, const char *title,
+						 const char *primary, const char *secondary,
+						 const char *default_value,
+						 gboolean multiline, gboolean masked, gchar *hint,
+						 const char *ok_text, GCallback ok_cb,
+						 const char *cancel_text, GCallback cancel_cb,
+						 PurpleAccount *account, const char *who, PurpleConversation *conv,
+						 const char *ui_hint, void *user_data);
+
+/**
+ * @deprecated Please use purple_request_input_with_hint() instead.
  */
 void *purple_request_input(void *handle, const char *title,
 						 const char *primary, const char *secondary,
@@ -1217,11 +1342,23 @@ void *purple_request_input(void *handle, const char *title,
  * @param account		The PurpleAccount associated with this request, or NULL if none is
  * @param who			The username of the buddy assocaited with this request, or NULL if none is
  * @param conv			The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint       UI hint
  * @param user_data     The data to pass to the callback.
  * @param ...           The choices.  This argument list should be
  *                      terminated with a NULL parameter.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_choice_with_hint(void *handle, const char *title,
+						  const char *primary, const char *secondary,
+						  int default_value,
+						  const char *ok_text, GCallback ok_cb,
+						  const char *cancel_text, GCallback cancel_cb,
+						  PurpleAccount *account, const char *who, PurpleConversation *conv,
+						  const char *ui_hint, void *user_data, ...) G_GNUC_NULL_TERMINATED;
+
+/**
+ * @deprecated Please use purple_request_choice_with_hint() instead.
  */
 void *purple_request_choice(void *handle, const char *title,
 						  const char *primary, const char *secondary,
@@ -1248,11 +1385,23 @@ void *purple_request_choice(void *handle, const char *title,
  * @param account		The PurpleAccount associated with this request, or NULL if none is
  * @param who			The username of the buddy assocaited with this request, or NULL if none is
  * @param conv			The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint       UI hint
  * @param user_data     The data to pass to the callback.
  * @param choices       The choices.  This argument list should be
  *                      terminated with a @c NULL parameter.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_choice_varg_with_hint(void *handle, const char *title,
+							   const char *primary, const char *secondary,
+							   int default_value,
+							   const char *ok_text, GCallback ok_cb,
+							   const char *cancel_text, GCallback cancel_cb,
+							   PurpleAccount *account, const char *who, PurpleConversation *conv,
+							   const char *ui_hint, void *user_data, va_list choices);
+
+/**
+ * @deprecated Please use purple_request_choice_varg_with_hint() instead.
  */
 void *purple_request_choice_varg(void *handle, const char *title,
 							   const char *primary, const char *secondary,
@@ -1277,6 +1426,7 @@ void *purple_request_choice_varg(void *handle, const char *title,
  * @param account		 The PurpleAccount associated with this request, or NULL if none is
  * @param who			 The username of the buddy assocaited with this request, or NULL if none is
  * @param conv			 The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint        UI hint
  * @param user_data      The data to pass to the callback.
  * @param action_count   The number of actions.
  * @param ...            A list of actions.  These are pairs of
@@ -1288,6 +1438,15 @@ void *purple_request_choice_varg(void *handle, const char *title,
  *                       function to use when the button is clicked.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_action_with_hint(void *handle, const char *title,
+						  const char *primary, const char *secondary,
+						  int default_action,
+						  PurpleAccount *account, const char *who, PurpleConversation *conv,
+						  const char *ui_hint, void *user_data, size_t action_count, ...);
+
+/**
+ * @deprecated Please use purple_request_action_with_hint() instead.
  */
 void *purple_request_action(void *handle, const char *title,
 						  const char *primary, const char *secondary,
@@ -1310,11 +1469,22 @@ void *purple_request_action(void *handle, const char *title,
  * @param account		 The PurpleAccount associated with this request, or NULL if none is
  * @param who			 The username of the buddy assocaited with this request, or NULL if none is
  * @param conv			 The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint        UI hint
  * @param user_data      The data to pass to the callback.
  * @param action_count   The number of actions.
  * @param actions        A list of actions and callbacks.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_action_varg_with_hint(void *handle, const char *title,
+							   const char *primary, const char *secondary,
+							   int default_action,
+							   PurpleAccount *account, const char *who, PurpleConversation *conv,
+							   const char *ui_hint, void *user_data, size_t action_count,
+							   va_list actions);
+
+/**
+ * @deprecated Please use purple_request_action_varg_with_hint() instead.
  */
 void *purple_request_action_varg(void *handle, const char *title,
 							   const char *primary, const char *secondary,
@@ -1340,9 +1510,21 @@ void *purple_request_action_varg(void *handle, const char *title,
  * @param account	  The PurpleAccount associated with this request, or NULL if none is
  * @param who		  The username of the buddy associated with this request, or NULL if none is
  * @param conv		  The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint     UI hint
  * @param user_data   The data to pass to the callback.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_fields_with_hint(void *handle, const char *title,
+						  const char *primary, const char *secondary,
+						  PurpleRequestFields *fields,
+						  const char *ok_text, GCallback ok_cb,
+						  const char *cancel_text, GCallback cancel_cb,
+						  PurpleAccount *account, const char *who, PurpleConversation *conv,
+						  const char *ui_hint, void *user_data);
+
+/**
+ * @deprecated Please use purple_request_fields_with_hint() instead.
  */
 void *purple_request_fields(void *handle, const char *title,
 						  const char *primary, const char *secondary,
@@ -1370,6 +1552,16 @@ void purple_request_close_with_handle(void *handle);
 /**
  * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
  */
+#define purple_request_yes_no_with_hint(handle, title, primary, secondary, \
+							default_action, account, who, conv, \
+							ui_hint, user_data, yes_cb, no_cb) \
+	purple_request_action_with_hint((handle), (title), (primary), (secondary), \
+						(default_action), account, who, conv, (ui_hint), (user_data), 2, \
+						_("_Yes"), (yes_cb), _("_No"), (no_cb))
+
+/**
+ * @deprecated Please use purple_request_yes_no_with_hint instead.
+ */
 #define purple_request_yes_no(handle, title, primary, secondary, \
 							default_action, account, who, conv, \
 							user_data, yes_cb, no_cb) \
@@ -1380,6 +1572,16 @@ void purple_request_close_with_handle(void *handle);
 /**
  * A wrapper for purple_request_action() that uses @c OK and @c Cancel buttons.
  */
+#define purple_request_ok_cancel_with_hint(handle, title, primary, secondary, \
+							default_action, account, who, conv, \
+						    ui_hint, user_data, ok_cb, cancel_cb) \
+	purple_request_action_with_hint((handle), (title), (primary), (secondary), \
+						(default_action), account, who, conv, (ui_hint), (user_data), 2, \
+						_("_OK"), (ok_cb), _("_Cancel"), (cancel_cb))
+
+/**
+ * @deprecated Please use purple_request_ok_cancel_with_hint instead.
+ */
 #define purple_request_ok_cancel(handle, title, primary, secondary, \
 							default_action, account, who, conv, \
 						    user_data, ok_cb, cancel_cb) \
@@ -1389,6 +1591,16 @@ void purple_request_close_with_handle(void *handle);
 
 /**
  * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
+ */
+#define purple_request_accept_cancel_with_hint(handle, title, primary, secondary, \
+								   default_action, account, who, conv, \
+								   ui_hint, user_data, accept_cb, cancel_cb) \
+	purple_request_action_with_hint((handle), (title), (primary), (secondary), \
+						(default_action), account, who, conv, (ui_hint), (user_data), 2, \
+						_("_Accept"), (accept_cb), _("_Cancel"), (cancel_cb))
+
+/**
+ * @deprecated Please use purple_request_accept_cancel_with_hint instead.
  */
 #define purple_request_accept_cancel(handle, title, primary, secondary, \
 								   default_action, account, who, conv, \
@@ -1413,9 +1625,19 @@ void purple_request_close_with_handle(void *handle);
  * @param account	  The PurpleAccount associated with this request, or NULL if none is
  * @param who		  The username of the buddy assocaited with this request, or NULL if none is
  * @param conv		  The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint     UI hint
  * @param user_data   The data to pass to the callback.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_file_with_hint(void *handle, const char *title, const char *filename,
+						gboolean savedialog,
+						GCallback ok_cb, GCallback cancel_cb,
+						PurpleAccount *account, const char *who, PurpleConversation *conv,
+						const char *ui_hint, void *user_data);
+
+/**
+ * @deprecated Please use purple_request_file_with_hint() instead.
  */
 void *purple_request_file(void *handle, const char *title, const char *filename,
 						gboolean savedialog,
@@ -1437,9 +1659,18 @@ void *purple_request_file(void *handle, const char *title, const char *filename,
  * @param account	  The PurpleAccount associated with this request, or NULL if none is
  * @param who		  The username of the buddy assocaited with this request, or NULL if none is
  * @param conv		  The PurpleConversation associated with this request, or NULL if none is
+ * @param ui_hint     UI hint
  * @param user_data   The data to pass to the callback.
  *
  * @return A UI-specific handle.
+ */
+void *purple_request_folder_with_hint(void *handle, const char *title, const char *dirname,
+						GCallback ok_cb, GCallback cancel_cb,
+						PurpleAccount *account, const char *who, PurpleConversation *conv,
+						const char *ui_hint, void *user_data);
+
+/**
+ * @deprecated Please use purple_request_folder_with_hint() instead.
  */
 void *purple_request_folder(void *handle, const char *title, const char *dirname,
 						GCallback ok_cb, GCallback cancel_cb,

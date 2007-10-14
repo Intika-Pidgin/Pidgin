@@ -280,11 +280,11 @@ static void plugin_toggled(GtkCellRendererToggle *cell, gchar *pth, gpointer dat
 			cb_data[1] = model;
 			cb_data[2] = iter;
 
-			purple_request_action(plugin_dialog, NULL,
+			purple_request_action_with_hint(plugin_dialog, NULL,
 			                    _("Multiple plugins will be unloaded."),
 			                    tmp->str, 0,
-								NULL, NULL, NULL,
-								cb_data, 2,
+			                    NULL, NULL, NULL,
+			                    "plugins", cb_data, 2,
 			                    _("Unload Plugins"), G_CALLBACK(plugin_unload_confirm_cb),
 			                    _("Cancel"), g_free);
 			g_string_free(tmp, TRUE);
@@ -303,7 +303,24 @@ static void plugin_toggled_stage_two(PurplePlugin *plug, GtkTreeModel *model, Gt
 	{
 		pidgin_set_cursor(plugin_dialog, GDK_WATCH);
 
-		purple_plugin_unload(plug);
+		if (!purple_plugin_unload(plug))
+		{
+			const char *primary = _("Could not unload plugin");
+			const char *reload = _("The plugin could not be unloaded now, but will be disabled at the next startup.");
+
+			if (!plug->error)
+			{
+				purple_notify_warning(NULL, NULL, primary, reload);
+			}
+			else
+			{
+				char *tmp = g_strdup_printf("%s\n\n%s", reload, plug->error);
+				purple_notify_warning(NULL, NULL, primary, tmp);
+				g_free(tmp);
+			}
+
+			purple_plugin_disable(plug);
+		}
 
 		pidgin_clear_cursor(plugin_dialog);
 	}
