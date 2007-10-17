@@ -1515,8 +1515,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							plain = g_string_append(plain, alt->str);
 						if(!src && xhtml)
 							xhtml = g_string_append(xhtml, alt->str);
+						g_string_free(alt, TRUE);
 					}
-					g_string_free(alt, TRUE);
 					g_string_free(src, TRUE);
 					continue;
 				}
@@ -2565,6 +2565,8 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	purple_debug_info("util", "Writing file %s\n",
 					filename_full);
 
+	g_return_val_if_fail((size >= -1), FALSE);
+
 	filename_temp = g_strdup_printf("%s.save", filename_full);
 
 	/* Remove an old temporary file, if one exists */
@@ -2590,7 +2592,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	}
 
 	/* Write to file */
-	real_size = (size == -1) ? strlen(data) : size;
+	real_size = (size == -1) ? strlen(data) : (size_t) size;
 	byteswritten = fwrite(data, 1, real_size, file);
 
 	/* Close file */
@@ -3491,7 +3493,7 @@ parse_redirect(const char *data, size_t data_len, gint sock,
 	gboolean full;
 	int len;
 
-	if ((s = g_strstr_len(data, data_len, "Location: ")) == NULL)
+	if ((s = g_strstr_len(data, data_len, "\nLocation: ")) == NULL)
 		/* We're not being redirected */
 		return FALSE;
 
