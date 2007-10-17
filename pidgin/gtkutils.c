@@ -850,16 +850,14 @@ pidgin_account_option_menu_new(PurpleAccount *default_account,
 gboolean
 pidgin_check_if_dir(const char *path, GtkFileSelection *filesel)
 {
-	char *dirname;
+	char *dirname = NULL;
 
 	if (g_file_test(path, G_FILE_TEST_IS_DIR)) {
 		/* append a / if needed */
 		if (path[strlen(path) - 1] != G_DIR_SEPARATOR) {
 			dirname = g_strconcat(path, G_DIR_SEPARATOR_S, NULL);
-		} else {
-			dirname = g_strdup(path);
 		}
-		gtk_file_selection_set_filename(filesel, dirname);
+		gtk_file_selection_set_filename(filesel, (dirname != NULL) ? dirname : path);
 		g_free(dirname);
 		return TRUE;
 	}
@@ -1178,14 +1176,15 @@ pidgin_set_accessible_relations (GtkWidget *w, GtkWidget *l)
 	label = gtk_widget_get_accessible (l);
 
 	/* Make sure mnemonics work */
-        gtk_label_set_mnemonic_widget(GTK_LABEL(l), w);
-	
+	gtk_label_set_mnemonic_widget(GTK_LABEL(l), w);
+
 	/* Create the labeled-by relation */
 	set = atk_object_ref_relation_set (acc);
 	rel_obj[0] = label;
 	relation = atk_relation_new (rel_obj, 1, ATK_RELATION_LABELLED_BY);
 	atk_relation_set_add (set, relation);
 	g_object_unref (relation);
+	g_object_unref(set);
 
 	/* Create the label-for relation */
 	set = atk_object_ref_relation_set (label);
@@ -1193,6 +1192,7 @@ pidgin_set_accessible_relations (GtkWidget *w, GtkWidget *l)
 	relation = atk_relation_new (rel_obj, 1, ATK_RELATION_LABEL_FOR);
 	atk_relation_set_add (set, relation);
 	g_object_unref (relation);
+	g_object_unref(set);
 }
 
 void
@@ -1526,6 +1526,8 @@ pidgin_dnd_file_manage(GtkSelectionData *sd, PurpleAccount *account, const char 
 
 			if (prpl_info && prpl_info->can_receive_file)
 				ft = prpl_info->can_receive_file(gc, who);
+			else if (prpl_info && prpl_info->send_file)
+				ft = TRUE;
 
 			if (im && ft)
 				purple_request_choice(NULL, NULL,
@@ -1559,6 +1561,7 @@ pidgin_dnd_file_manage(GtkSelectionData *sd, PurpleAccount *account, const char 
 						    _("Set as buddy icon"), DND_BUDDY_ICON,
 						    (ft ? _("Send image file") : _("Insert in message")), (ft ? DND_FILE_TRANSFER : DND_IM_IMAGE),
 							NULL);
+			gdk_pixbuf_unref(pb);
 			return;
 		}
 
