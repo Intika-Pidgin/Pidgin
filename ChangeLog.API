@@ -9,6 +9,7 @@ version 2.3.0 (??/??/????):
 		  details) (Stefan Ott)
 		* libpurple/purple.h, which includes #define's and #include's
 		  required to compile stand-alone plugins
+		* PURPLE_STATUS_TUNE as a new PurpleStatusPrimitive
 		* purple_plugin_disable(), which is intended to be called when
 		  a purple_plugin_unload()--which was called when a user tried
 		  to unload a plugin--fails.  This then prevents the plugin
@@ -96,6 +97,29 @@ version 2.3.0 (??/??/????):
 		* purple_request_input()
 		* purple_request_ok_cancel()
 		* purple_request_yes_no()
+
+		MSN:
+		* A new independant status type with PURPLE_STATUS_TUNE primitive, and
+		  PURPLE_TUNE_ARTIST, PURPLE_TUNE_ALBUM and PURPLE_TUNE_TITLE
+		  attributes.
+
+		XMPP:
+		* A new independant status type with PURPLE_STATUS_TUNE primitive, and
+		  PURPLE_TUNE_{ARTIST, TITLE, ALBUM, GENRE, COMMENT, TRACK, TIME,
+		  YEAR, URL} attributes.
+
+	Finch:
+		libgnt:
+		* Added gnt_color_pair, which will try to intelligenty set text
+		  attributes in place of colors if the terminal doesn't have color
+		  support. (Bug: #3560) All future code should use gnt_color_pair
+		  instead of COLOR_PAIR.
+		* Added gnt_menuitem_set_id and gnt_menuitem_get_id to set and get the
+		  string id of a menuitem respectively.
+		* Added gnt_window_get_accel_item, which returns a the id of a menuitem
+		  bound to a keystroke.
+		* Added gnt_menu_get_item to activate and return a menuitem of the
+		  given id from a menu.
 
 version 2.2.2 (??/??/????):
 	libpurple:
