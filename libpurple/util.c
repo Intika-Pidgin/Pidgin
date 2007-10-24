@@ -1515,8 +1515,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							plain = g_string_append(plain, alt->str);
 						if(!src && xhtml)
 							xhtml = g_string_append(xhtml, alt->str);
+						g_string_free(alt, TRUE);
 					}
-					g_string_free(alt, TRUE);
 					g_string_free(src, TRUE);
 					continue;
 				}
@@ -1549,7 +1549,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					pt->dest_tag = "a";
 					tags = g_list_prepend(tags, pt);
 					if(xhtml)
-						g_string_append_printf(xhtml, "<a href='%s'>", g_strstrip(url->str));
+						g_string_append_printf(xhtml, "<a href='%s'>", url ? g_strstrip(url->str) : "");
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<font", 5) && (*(c+5) == '>' || *(c+5) == ' ')) {
@@ -3493,7 +3493,7 @@ parse_redirect(const char *data, size_t data_len, gint sock,
 	gboolean full;
 	int len;
 
-	if ((s = g_strstr_len(data, data_len, "Location: ")) == NULL)
+	if ((s = g_strstr_len(data, data_len, "\nLocation: ")) == NULL)
 		/* We're not being redirected */
 		return FALSE;
 

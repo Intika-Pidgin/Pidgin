@@ -553,6 +553,7 @@ gtk_motion_event_notify(GtkWidget *imhtml, GdkEventMotion *event, gpointer data)
 
 	if (GTK_IMHTML(imhtml)->tip) {
 		if ((tip == GTK_IMHTML(imhtml)->tip)) {
+			g_slist_free(tags);
 			return FALSE;
 		}
 		/* We've left the cell.  Remove the timeout and create a new one below */
@@ -3131,9 +3132,10 @@ gtk_imhtml_delete(GtkIMHtml *imhtml, GtkTextIter *start, GtkTextIter *end) {
 		gtk_text_buffer_get_iter_at_mark(imhtml->text_buffer,
 			&i, sd->mark);
 		if (gtk_text_iter_in_range(&i, start, end)) {
-			GtkIMHtmlScalable *scale = sd->scalable;
+			GtkIMHtmlScalable *scale = GTK_IMHTML_SCALABLE(sd->scalable);
 			scale->free(scale);
-			imhtml->scalables = g_list_remove_link(imhtml->scalables, l);
+			g_free(sd);
+			imhtml->scalables = g_list_delete_link(imhtml->scalables, l);
 		}
 		l = next;
 	}
