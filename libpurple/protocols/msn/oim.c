@@ -115,7 +115,7 @@ msn_oim_free_send_req(MsnOimSendReq *req)
  * OIM send SOAP request
  * **************************************/
 /*encode the message to OIM Message Format*/
-static char *
+static gchar *
 msn_oim_msg_to_str(MsnOim *oim, const char *body)
 {
 	char *oim_body,*oim_base64;
@@ -125,6 +125,7 @@ msn_oim_msg_to_str(MsnOim *oim, const char *body)
 	purple_debug_info("MSN OIM","encoded base64 body:{%s}\n",oim_base64);	
 	oim_body = g_strdup_printf(MSN_OIM_MSG_TEMPLATE,
 				oim->run_id,oim->send_seq,oim_base64);
+	g_free(oim_base64);
 
 	return oim_body;
 }
