@@ -461,34 +461,40 @@ msn_parse_addressbook_contacts(MsnContact *contact, xmlnode *node)
 {
 	MsnSession *session = contact->session;
 	xmlnode *contactNode;
+	char *passport = NULL, *Name = NULL, *uid = NULL, *type = NULL;
 
 	for(contactNode = xmlnode_get_child(node, "Contact"); contactNode;
-				contactNode = xmlnode_get_next_twin(contactNode)){
-		xmlnode *contactId,*contactInfo,*contactType,*passportName,*displayName,*guid;
-		xmlnode *groupIds;
+				contactNode = xmlnode_get_next_twin(contactNode)) {
+		xmlnode *contactId, *contactInfo, *contactType, *passportName, *displayName, *guid, *groupIds;
 		MsnUser *user;
 		MsnUserType usertype;
-		char *passport = NULL, *Name = NULL, *uid = NULL, *type = NULL;
 
-		contactId= xmlnode_get_child(contactNode,"contactId");
+		if (!(contactId = xmlnode_get_child(contactNode,"contactId"))
+				|| !(contactInfo = xmlnode_get_child(contactNode, "contactInfo"))
+				|| !(contactType = xmlnode_get_child(contactInfo, "contactType")))
+			continue;
+
+		g_free(passport);
+		g_free(Name);
+		g_free(uid);
+		g_free(type);
+		passport = Name = uid = type = NULL;
+
 		uid = xmlnode_get_data(contactId);
-
-		contactInfo = xmlnode_get_child(contactNode,"contactInfo");
-		contactType = xmlnode_get_child(contactInfo,"contactType");
 		type = xmlnode_get_data(contactType);
 
 		/*setup the Display Name*/
-		if (!strcmp(type, "Me")){
-			char *friendly;
-			friendly = xmlnode_get_data(xmlnode_get_child(contactInfo, "displayName"));
-			purple_connection_set_display_name(session->account->gc, purple_url_decode(friendly));
+		if (type && !strcmp(type, "Me")){
+			char *friendly = NULL;
+			if ((displayName = xmlnode_get_child(contactInfo, "displayName")))
+				friendly = xmlnode_get_data(displayName);
+			purple_connection_set_display_name(session->account->gc, friendly ? purple_url_decode(friendly) : NULL);
 			g_free(friendly);
-			g_free(uid);
-			g_free(type);
 			continue; /* Not adding own account as buddy to buddylist */
 		}
+
 		usertype = msn_get_user_type(type);
-		passportName = xmlnode_get_child(contactInfo,"passportName");
+		passportName = xmlnode_get_child(contactInfo, "passportName");
 		if (passportName == NULL) {
 			xmlnode *emailsNode, *contactEmailNode, *emailNode;
 			xmlnode *messengerEnabledNode;
@@ -496,87 +502,79 @@ msn_parse_addressbook_contacts(MsnContact *contact, xmlnode *node)
 
 			/*TODO: add it to the none-instant Messenger group and recognize as email Membership*/
 			/*Yahoo User?*/
-			emailsNode = xmlnode_get_child(contactInfo,"emails");
+			emailsNode = xmlnode_get_child(contactInfo, "emails");
 			if (emailsNode == NULL) {
 				/*TODO:  need to support the Mobile type*/
-				g_free(uid);
-				g_free(type);
 				continue;
 			}
-			for(contactEmailNode = xmlnode_get_child(emailsNode,"ContactEmail");contactEmailNode;
+			for(contactEmailNode = xmlnode_get_child(emailsNode, "ContactEmail"); contactEmailNode;
 					contactEmailNode = xmlnode_get_next_twin(contactEmailNode) ){
-				messengerEnabledNode = xmlnode_get_child(contactEmailNode,"isMessengerEnabled");
-				if(messengerEnabledNode == NULL){
-					g_free(uid);
-					g_free(type);
+				if (!(messengerEnabledNode = xmlnode_get_child(contactEmailNode, "isMessengerEnabled"))) {
+					/* XXX: Should this be a continue instead of a break? It seems like it'd cause unpredictable results otherwise. */
 					break;
 				}
+
 				msnEnabled = xmlnode_get_data(messengerEnabledNode);
-				if(!strcmp(msnEnabled,"true")){
-					/*Messenger enabled, Get the Passport*/
-					emailNode = xmlnode_get_child(contactEmailNode,"email");
-					passport = xmlnode_get_data(emailNode);
-					purple_debug_info("MsnAB","Yahoo User %s\n",passport);
-					usertype = MSN_USER_TYPE_YAHOO;
-					g_free(uid);
-					g_free(type);
+
+				if ((emailNode = xmlnode_get_child(contactEmailNode, "email"))) {
 					g_free(passport);
+					passport = xmlnode_get_data(emailNode);
+				}
+
+				if(msnEnabled && !strcmp(msnEnabled, "true")) {
+					/*Messenger enabled, Get the Passport*/
+					purple_debug_info("MsnAB", "Yahoo User %s\n", passport ? passport : "(null)");
+					usertype = MSN_USER_TYPE_YAHOO;
 					g_free(msnEnabled);
 					break;
-				}else{
+				} else {
 					/*TODO maybe we can just ignore it in Purple?*/
-					emailNode = xmlnode_get_child(contactEmailNode,"email");
-					passport = xmlnode_get_data(emailNode);
-					purple_debug_info("MSNAB","Other type user\n");
+					purple_debug_info("MSNAB", "Other type user\n");
 				}
+
 				g_free(msnEnabled);
 			}
 		} else {
 			passport = xmlnode_get_data(passportName);
 		}
 
-		if (passport == NULL) {
-			g_free(uid);
-			g_free(type);
+		if (passport == NULL)
 			continue;
-		}
 
-		displayName = xmlnode_get_child(contactInfo,"displayName");
-		if (displayName == NULL) {
-			Name = g_strdup(passport);
-		} else {
+		if ((displayName = xmlnode_get_child(contactInfo, "displayName")))
 			Name = xmlnode_get_data(displayName);
-		}
+		else
+			Name = g_strdup(passport);
 
 		purple_debug_misc("MsnAB","passport:{%s} uid:{%s} display:{%s}\n",
-						passport,uid,Name);
+						passport, uid ? uid : "(null)", Name ? Name : "(null)");
 
-		user = msn_userlist_find_add_user(session->userlist, passport,Name);
-		msn_user_set_uid(user,uid);
+		user = msn_userlist_find_add_user(session->userlist, passport, Name);
+		msn_user_set_uid(user, uid);
 		msn_user_set_type(user, usertype);
-		g_free(Name);
-		g_free(passport);
-		g_free(uid);
-		g_free(type);
 
-		purple_debug_misc("MsnAB","parse guid...\n");
-		groupIds = xmlnode_get_child(contactInfo,"groupIds");
+		groupIds = xmlnode_get_child(contactInfo, "groupIds");
 		if (groupIds) {
-			for (guid = xmlnode_get_child(groupIds, "guid");guid;
+			for (guid = xmlnode_get_child(groupIds, "guid"); guid;
 							guid = xmlnode_get_next_twin(guid)){
-				char *group_id;
-				group_id = xmlnode_get_data(guid);
-				msn_user_add_group_id(user,group_id);
-				purple_debug_misc("MsnAB","guid:%s\n",group_id);
+				char *group_id = xmlnode_get_data(guid);
+				msn_user_add_group_id(user, group_id);
+				purple_debug_misc("MsnAB", "guid:%s\n", group_id ? group_id : "(null)");
 				g_free(group_id);
 			}
 		} else {
+			purple_debug_info("msn", "User not in any groups, adding to default group.\n");
 			/*not in any group,Then set default group*/
 			msn_user_add_group_id(user, MSN_INDIVIDUALS_GROUP_ID);
 		}
 
 		msn_got_lst_user(session, user, MSN_LIST_FL_OP, NULL);
 	}
+
+	g_free(passport);
+	g_free(Name);
+	g_free(uid);
+	g_free(type);
 }
 
 static gboolean
@@ -955,8 +953,6 @@ msn_delete_contact(MsnContact *contact, const char *contactId)
 {	
 	gchar *body = NULL;
 	gchar *contact_id_xml = NULL ;
-	MsnSoapReq *soap_request;
-	MsnCallbackState *state;
 
 	g_return_if_fail(contactId != NULL);
 	contact_id_xml = g_strdup_printf(MSN_CONTACT_ID_XML, contactId);
@@ -977,10 +973,6 @@ msn_delete_contact(MsnContact *contact, const char *contactId)
 					msn_contact_connect_init);
 
 	g_free(contact_id_xml);
-
-	/* POST the SOAP request */
-	msn_soap_post(contact->soapconn, soap_request);
-
 	g_free(body);
 }
 
