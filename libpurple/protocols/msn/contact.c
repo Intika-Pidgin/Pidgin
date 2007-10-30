@@ -186,7 +186,7 @@ msn_callback_state_set_action(MsnCallbackState *state, MsnCallbackAction action)
 
 /*get MSN member role utility*/
 static MsnListId
-msn_get_memberrole(char *role)
+msn_get_memberrole(const char *role)
 {
 	g_return_val_if_fail(role != NULL, 0);
 
@@ -373,6 +373,7 @@ msn_parse_contact_list(MsnContact *contact, xmlnode *node)
 			 service; service = xmlnode_get_next_twin(service)) {
 			msn_parse_each_service(contact->session, service);
 		}
+		g_free(typedata);
 	}
 }
 
@@ -910,7 +911,7 @@ msn_add_contact_to_group(MsnContact *contact, MsnCallbackState *state,
 		return; /* guess this never happened! */
 	}
 
-	if (user->uid != NULL) {
+	if (user != NULL && user->uid != NULL) {
 		contact_xml = g_strdup_printf(MSN_CONTACT_ID_XML, user->uid);
 	} else {
 		contact_xml = g_strdup_printf(MSN_CONTACT_XML, passport);
