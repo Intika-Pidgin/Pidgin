@@ -107,6 +107,18 @@ GntWidget * gnt_menu_new(GntMenuType type);
  */
 void gnt_menu_add_item(GntMenu *menu, GntMenuItem *item);
 
+/**
+ * Activate and return the GntMenuItem with the given ID.
+ *
+ * @param menu   The menu.
+ * @param id     The ID for an item.
+ *
+ * @return  The menuitem with the given ID, or @c NULL.
+ *
+ * @since 2.3.0
+ */
+GntMenuItem *gnt_menu_get_item(GntMenu *menu, const char *id);
+
 G_END_DECLS
 
 #endif /* GNT_MENU_H */

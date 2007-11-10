@@ -52,6 +52,7 @@ struct _GntWindow
 {
 	GntBox parent;
 	GntMenu *menu;
+	GntWindowPriv *priv;
 };
 
 struct _GntWindowClass
@@ -67,9 +68,7 @@ struct _GntWindowClass
 G_BEGIN_DECLS
 
 /**
- * 
- *
- * @return
+ * @return  GType for GntWindow.
  */
 GType gnt_window_get_gtype(void);
 
@@ -100,6 +99,18 @@ GntWidget * gnt_window_box_new(gboolean homo, gboolean vert);
  * @param menu    The menu for the window.
  */
 void gnt_window_set_menu(GntWindow *window, GntMenu *menu);
+
+/**
+ * Return the id of a menuitem specified to a keystroke.
+ *
+ * @param window    The window.
+ * @param key       The keystroke.
+ *
+ * @return The id of the menuitem bound to the keystroke, or @c NULL.
+ *
+ * @since 2.3.0
+ */
+const char * gnt_window_get_accel_item(GntWindow *window, const char *key);
 
 void gnt_window_workspace_hiding(GntWindow *);
 void gnt_window_workspace_showing(GntWindow *);
