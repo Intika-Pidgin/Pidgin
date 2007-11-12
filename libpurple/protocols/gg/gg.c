@@ -254,16 +254,14 @@ static void ggp_action_buddylist_delete(PurplePluginAction *action)
 /*
  */
 /* static void ggp_callback_buddylist_save_ok(PurpleConnection *gc, const char *file) {{{ */
-static void ggp_callback_buddylist_save_ok(PurpleConnection *gc, const char *file)
+static void ggp_callback_buddylist_save_ok(PurpleConnection *gc, const char *filename)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
 
-	FILE *fh;
 	char *buddylist = ggp_buddylist_dump(account);
-	gchar *msg;
 
 	purple_debug_info("gg", "Saving...\n");
-	purple_debug_info("gg", "file = %s\n", file);
+	purple_debug_info("gg", "file = %s\n", filename);
 
 	if (buddylist == NULL) {
 		purple_notify_info(account, _("Save Buddylist..."),
@@ -272,21 +270,19 @@ static void ggp_callback_buddylist_save_ok(PurpleConnection *gc, const char *fil
 		return;
 	}
 
-	if ((fh = g_fopen(file, "wb")) == NULL) {
-		msg = g_strconcat(_("Couldn't open file"), ": ", file, "\n", NULL);
-		purple_debug_error("gg", "Could not open file: %s\n", file);
-		purple_notify_error(account, _("Couldn't open file"), msg, NULL);
-		g_free(msg);
-		g_free(buddylist);
-		return;
+	if(purple_util_write_data_to_file_absolute(filename, buddylist, -1)) {
+		purple_notify_info(account, _("Save Buddylist..."),
+			 _("Buddylist saved successfully!"), NULL);
+	} else {
+		gchar *primary = g_strdup_printf(
+			_("Couldn't write buddy list for %s to %s"),
+			purple_account_get_username(account), filename);
+		purple_notify_error(account, _("Save Buddylist..."),
+			primary, NULL);
+		g_free(primary);
 	}
 
-	fwrite(buddylist, sizeof(char), g_utf8_strlen(buddylist, -1), fh);
-	fclose(fh);
 	g_free(buddylist);
-
-	purple_notify_info(account, _("Save Buddylist..."),
-			 _("Buddylist saved successfully!"), NULL);
 }
 /* }}} */
 
@@ -381,12 +377,16 @@ static void ggp_callback_register_account_ok(PurpleConnection *gc,
 
 	if (email == NULL || p1 == NULL || p2 == NULL || t == NULL ||
 	    *email == '\0' || *p1 == '\0' || *p2 == '\0' || *t == '\0') {
-		purple_connection_error(gc, _("Fill in the registration fields."));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+			_("Fill in the registration fields."));
 		goto exit_err;
 	}
 
 	if (g_utf8_collate(p1, p2) != 0) {
-		purple_connection_error(gc, _("Passwords do not match."));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+			_("Passwords do not match."));
 		goto exit_err;
 	}
 
@@ -394,7 +394,8 @@ static void ggp_callback_register_account_ok(PurpleConnection *gc,
 			token->id, t);
 	h = gg_register3(email, p1, token->id, t, 0);
 	if (h == NULL || !(s = h->data) || !s->success) {
-		purple_connection_error(gc,
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 			_("Unable to register new account. Error occurred.\n"));
 		goto exit_err;
 	}
@@ -1308,7 +1309,9 @@ static void ggp_callback_recv(gpointer _gc, gint fd, PurpleInputCondition cond)
 	if (!(ev = gg_watch_fd(info->session))) {
 		purple_debug_error("gg",
 			"ggp_callback_recv: gg_watch_fd failed -- CRITICAL!\n");
-		purple_connection_error(gc, _("Unable to read socket"));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Unable to read socket"));
 		return;
 	}
 
@@ -1461,7 +1464,9 @@ static void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition 
 
 	if (!(ev = gg_watch_fd(info->session))) {
 		purple_debug_error("gg", "login_handler: gg_watch_fd failed!\n");
-		purple_connection_error(gc, _("Unable to read socket"));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Unable to read socket"));
 		return;
 	}
 	purple_debug_info("gg", "login_handler: session->fd = %d\n", info->session->fd);
@@ -1507,7 +1512,9 @@ static void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition 
 		case GG_EVENT_CONN_FAILED:
 			purple_input_remove(gc->inpa);
 			gc->inpa = 0;
-			purple_connection_error(gc, _("Connection failed."));
+			purple_connection_error_reason (gc,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				_("Connection failed."));
 			break;
 		default:
 			purple_debug_error("gg", "strange event: %d\n", ev->type);
@@ -1713,7 +1720,9 @@ static void ggp_login(PurpleAccount *account)
 
 	info->session = gg_login(glp);
 	if (info->session == NULL) {
-		purple_connection_error(gc, _("Connection failed."));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Connection failed."));
 		g_free(glp);
 		return;
 	}
@@ -2005,7 +2014,9 @@ static void ggp_keepalive(PurpleConnection *gc)
 	if (gg_ping(info->session) < 0) {
 		purple_debug_info("gg", "Not connected to the server "
 				"or gg_session is not correct\n");
-		purple_connection_error(gc, _("Not connected to the server."));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Not connected to the server."));
 	}
 }
 /* }}} */
