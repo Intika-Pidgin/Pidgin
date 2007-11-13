@@ -41,6 +41,7 @@
 #include "mdns_common.h"
 #include "jabber.h"
 #include "buddy.h"
+#include "bonjour_ft.h"
 
 /*
  * TODO: Should implement an add_buddy callback that removes the buddy
@@ -102,8 +103,8 @@ bonjour_login(PurpleAccount *account)
 
 #ifdef _WIN32
 	if (!dns_sd_available()) {
-		gc->wants_to_die = TRUE;
-		purple_connection_error(gc,
+		purple_connection_error_reason(gc,
+			PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 			_("The Apple Bonjour For Windows toolkit wasn't found, see the FAQ at: "
 			  "http://developer.pidgin.im/wiki/Using%20Pidgin#CanIusePidginforBonjourLink-LocalMessaging"
 			  " for more information."));
@@ -121,7 +122,9 @@ bonjour_login(PurpleAccount *account)
 
 	if (bonjour_jabber_start(bd->jabber_data) == -1) {
 		/* Send a message about the connection error */
-		purple_connection_error(gc, _("Unable to listen for incoming IM connections\n"));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Unable to listen for incoming IM connections\n"));
 		return;
 	}
 
@@ -146,7 +149,9 @@ bonjour_login(PurpleAccount *account)
 	bd->dns_sd_data->account = account;
 	if (!bonjour_dns_sd_start(bd->dns_sd_data))
 	{
-		purple_connection_error(gc, _("Unable to establish connection with the local mDNS server.  Is it running?"));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Unable to establish connection with the local mDNS server.  Is it running?"));
 		return;
 	}
 
@@ -449,8 +454,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,                                                    /* roomlist_cancel */
 	NULL,                                                    /* roomlist_expand_category */
 	NULL,                                                    /* can_receive_file */
-	NULL,                                                    /* send_file */
-	NULL,                                                    /* new_xfer */
+	bonjour_send_file,                                       /* send_file */
+	bonjour_new_xfer,                                        /* new_xfer */
 	NULL,                                                    /* offline_message */
 	NULL,                                                    /* whiteboard_prpl_ops */
 	NULL,                                                    /* send_raw */

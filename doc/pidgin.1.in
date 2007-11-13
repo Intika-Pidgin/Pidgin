@@ -17,8 +17,8 @@
 .\"
 .\" You should have received a copy of the GNU General Public
 .\" License along with this manual; if not, write to the Free
-.\" Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139,
-.\" USA.
+.\" Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+.\" Boston, MA  02111-1301  USA.
 .TH pidgin 1
 .SH NAME
 Pidgin v@VERSION@ \- Instant Messaging client
@@ -58,22 +58,22 @@ Don't automatically login when Pidgin starts.  Sets the global status to
 .TP
 .B \-l, \-\-login[=\fINAME\fR,\fINAME\fR,...]
 Sign in the comma-separated list of accounts provided, in addition to the
-accounts that would be logged in anyway.  If you do not specify such a
-comma-separated list, your first account will be signed in.
+accounts that would be logged in anyway.  If the user does not specify such a
+comma-separated list, the first account in accounts.xml will be signed in.
 .TP
 .B \-v, \-\-version
 Print the current version and exit.
 
 .SH BUDDY LIST
 The \fBBuddy List\fR window is Pidgin's main interface window.  Using
-this window you can see which of your buddies is online, away, idle, etc.
-You can also add and remove buddies from your buddy list.
+this window a user can see which of his/her buddies is online, away, idle,
+etc.  The user can also add buddies to and remove buddies from the buddy list.
 
-The \fBBuddy List\fR window contains a list of your buddies who are online
-and have allowed you to be notified of their presence.  The icon to the
-left of each buddy indicates the buddy's current status.  Double clicking
-a buddy will open a new \fBConversation\fR window.  Right clicking will
-pop up a menu:
+The \fBBuddy List\fR window contains a list of the user's buddies who are
+online and have allowed the user to be notified of their presence.  The icon
+to the left of each buddy indicates the buddy's current status.  Double
+clicking a buddy will open a new \fBConversation\fR window.  Right clicking
+will pop up a menu:
 .TP
 .B Get Info
 Retrieves and displays information about the buddy.  This information is
@@ -112,18 +112,18 @@ The remainder of the menu will consist of protocol specific commands.
 These commands vary depending on the protocol.
 .TP
 .B Status Selector
-At the bottom of the \fBBuddy List\fR is a status selector which allows
-one to change his/her status.  This will be discussed further below.
-.T
+At the bottom of the \fBBuddy List\fR is a status selector which allows one to
+change his/her status.  This will be discussed further in the \fBSTATUS
+MESSAGES\fR section below.
 
 .SH ACCOUNT EDITOR
 The account editor consists of a list of accounts and information about
 them.  It can be accessed by selecting \fBManage\fR from the Tools menu.
 Clicking \fIDelete\fR will delete the currently selected account.
 Clicking \fIAdd\fR or \fIModify\fR will invoke a \fBModify Account\fR
-window.  Here, you can add or alter account information.  When creating a
-new account, you will submit your screen name and password.  You will also
-choose your protocol.
+window.  Here, the user  can add or alter account information.  When creating
+a new account, the user will submit a screen name and password.  The user will
+also choose the protocol for the account.
 
 If \fIRemember Password\fR is chosen, the password will be saved in
 Pidgin's \fI~/.purple/accounts.xml\fR configuration file.
@@ -143,7 +143,7 @@ All options take effect immediately.
 
 .TP
 .B Show system tray icon
-Specifies when to show a Pidgin icon in the notification area of your
+Specifies when to show a Pidgin icon in the notification area of the user's
 panel (commonly referred to as the System Tray).
 
 .TP
@@ -227,17 +227,28 @@ Lets the user choose when and what sounds are to be played.
 .SH Network
 
 .TP
-.B IP Address
-\fIAutodetect IP Address\fR: Pidgin will attempt to automatically determine
-your IP address for use in file transfers and Direct IMs.
-
-\fIPublic IP\fR: What IP address to use for file transfer and Direct IMs. This
-is mainly useful for users with multiple network interfaces or behind NAT.
+.B STUN server
+This allows specifying a server which uses the STUN protocol to determine
+a host's public IP address.  This can be particularly useful for some
+protocols.
 
 .TP
-.B Ports
-\fIManually specify range of ports to listen on\fR: Specify specific ports to
-listen on, overriding any defaults.
+.B Autodetect IP address
+When checked, causes Pidign to attempt to determine the public IP address
+of the host on which Pidgin is running and disables the \fBPublic IP\fR
+text field listed below.
+
+.TP
+.B Public IP
+If \fBAutodetect IP address\fR is disabled, this field allows manually
+specifying the public IP address for the host on which Pidgin is running.
+This is mainly useful for users with multiple network interfaces or behind
+NATs.
+
+.TP
+.B Manually specify range of ports to listen on
+Specify a range ports to listen on, overriding any defaults.  This is
+sometimes useful for file transfers and Direct IM.
 
 .TP
 .B Proxy Server
@@ -246,56 +257,82 @@ server.  Pidgin currently supports SOCKS 4/5 and HTTP proxies.
 
 .SH Browser
 
+.TP
+.B Browser
 Allows the user to select Pidgin's default web browser.  Firefox, Galeon,
 Konqueror, Mozilla, Netscape and Opera are supported natively.  The user
 can also manually enter a command to be executed when a link is clicked
 (\fI%s\fR expands to the URL).  For example, \fIxterm -e lynx "%s"\fR will
-open the link with lynx.  \fIOpen new window by default\fR makes the
-browser use a new window instead of using the current window (or spawning a
-new tab).
+open the link with lynx.
+
+.TP
+.B Open link in
+Allows the user to specify whether to use an existing window, a new tab, a
+new window, or to let the browser to decide what to do when calling the
+browser to open a link.  Which options are available will depend on which
+browser is selected.
 
 .SH Logging
 
-\fIMessage Logs\fR lets the user choose whether \fBConversations\fR and/or
-\fBBuddy Chats\fR will be logged as well as whether logs will be in HTML or
-plain text format.  \fISystem Logs\fR describes the types of events to be
-logged.
-
-.SH Away / Idle
-
-\fIQueue new messages when away\fR: Messages received since going Away will
-not be shown until away status is removed.
-
-\fISend auto-response\fR: If someone messages you while away, your
-auto-response will be sent.
-
-\fIOnly send auto-response when idle\fR: If someone messages you while
-away, your auto-response will only be sent if Pidgin decides that the
-connection is idle.
-
-\fIIdle time reporting\fR: If \fINone\fR is selected, account idle time
-will not be reported.  \fIPidgin usage\fR infers your idle time from your
-usage of Pidgin.  \fIX usage\fR infers your idle time from \fBX\fR
-(this option may not be universally available).
-
-\fIAuto-away\fR: Determines if and under what conditions Pidgin will
-automatically turn on the Away status.
+.TP
+.B Log format
+Specifies how to log.  Pidgin supports HTML and plain text, but plugins can
+provide other logging methods.
 
 .TP
-.B Away Messages
-Lets the user add/edit/remove available \fBAway Messages\fR.
+.B Log all instant messages
+When enabled, all IM conversations are logged.  This can be overridden on a
+per-conversation basis in the conversation window.
 
-.SH Plugins
+.TP
+.B Log all chats
+When enabled, all chat conversations are logged.  This can be overridden on a
+per-conversation basis in the conversation window.
 
-Allows the user to enable add-on plugins for Pidgin.  Several of these
-come with Pidgin, while others must be downloaded separately.  The
-\fIDescription\fR field gives the plugin author's description of the
-plugin, while the \fIDetails\fR field gives the plugin's authorship, URL,
-and file name/location information.
+.TP
+.B Log all status changes to system log
+When enabled, status changes are logged.
 
-Some plugins can be configured.  If you load such a plugin, its
-configuration preferences will appear as a submenu to \fBPlugins\fR, with
-the submenu title determined by the plugin's name.
+.SH Status / Idle
+
+.TP
+.B Report idle time
+Determines under which conditions to report idle time.  \fBBased on keyboard
+and mouse use\fR uses keyboard and mouse activity to determine idle time.
+\fBFrom last sent message\fR uses the time at which the user last sent a
+message in Pidgin to determine idle.  \fBNever\fR disables idle reporting.
+
+.TP
+.B Auto-reply
+Determines when to send an auto-reply on protocols which support it
+(currently only AIM).
+
+.TP
+.B Change status when idle
+When enabled, this uses the \fBMinutes before becoming idle\fR and \fBChange
+status to\fR preferences described below to set status on idle.
+
+.TP
+.B Minutes before becoming idle
+Specifies how many minutes of inactivity are required before considering the
+user to be idle.
+
+.TP
+.B Change status to
+Specifies which "primitive" or "saved" status to use when setting status on
+idle.
+
+.TP
+.B Use status from last exit at startup
+If this is checked, Pidgin will remember what status was active when the
+user closed Pidgin and restore it at the next run.  When disabled, Pidgin
+will always set the status selected in \fBStatus to apply at startup\fR
+at startup.
+
+.TP
+.B Status to apply at startup
+When \fBUse status from last exit at startup\fR is disabled, this specifies
+which "primitive" or "saved" status to use at startup.
 
 .SH CONVERSATIONS
 When starting a new conversation, the user is presented with the
@@ -321,8 +358,7 @@ the user a dialog with the available smileys for the current conversation.
 For protocols that allow it, \fBChats\fR can be entered through the
 \fIBuddies\fR menu.
 
-
-Additional commands available in chat, depending on the protocol are:
+Additional features available in chat, depending on the protocol are:
 .TP
 .B Whisper
 The text will appear in the chat conversation, but it will only be visible
@@ -337,6 +373,10 @@ Ignore anything said by the chosen person
 .B Set Topic
 Set the topic of the chat room.  This is usually a brief sentence
 describing the nature of the chat--an explanation of the chat room's name.
+.TP
+.B Private Message (IM)
+Send a message to a specific person in the chat.  Messages sent this way will
+not appear in the chat window, but instead open a new IM conversation.
 
 .SH STATUS MESSAGES
 Most protocols allow for status messages.  By using status messages, a user
@@ -344,8 +384,72 @@ can leave an informative message for others to see.  Status and status
 messages are configured via the status selector at the bottom of the Buddy
 List window.  By default the menu shown here is divided into sections for
 "primitive" status types, such as \fIAvailable\fR, \fIAway\fR, etc.; a few
-"popular" statuses which have been recently used, and a section which shows
-\fBNew...\fR and \fBSaved...\fR options for more advanced status manipulation.
+"popular" statuses (including "transient" statuses)  which have been
+recently used, and a section which shows \fBNew Status...\fR and \fBSaved
+Statuses...\fR options for more advanced status manipulation.
+
+.TP
+.B Primitive Statuses
+A primitive status is a basic status supported by the protocol.  Examples of
+primitive statuses would be Available, Away, Invisible, etc.  A primitive
+status can be used to create a \fBTransient Status\fB or a \fBSaved Status\fR,
+both explained below.  Essentially, primitive statuses are building blocks
+of more complicated statuses.
+
+.TP
+.B Transient Statuses
+When one of the statuses from the topmost section of the status selector's
+menu is selected, this creates a transient, or temporary, status.  The status
+will show in the "popular statuses" section in the menu until it has not been
+used for a sufficiently long time.  A transient status may also be created by
+selecting \fINew Status...\fR from the status selector's menu, then clicking
+\fIUse\fR once the user has entered the message.
+
+.TP
+.B Saved Statuses
+Saved statuses are permanent--once created, they will exist until deleted.
+Saved statuses are useful for statuses and status messages that will be used
+on a regular basis.  They are also useful for creating complex statuses in
+which some accounts should always have a different status from others.  For
+example, one might wish to create a status called "Sleeping" that has all
+accounts set to "Away", then create another status called "Working" that
+has three accounts set to "Away" and another account set to "Available."
+
+.TP
+.B New Status Window
+When the user selects \fINew Status...\fR from the status selector menu,
+Pidgin presents the user with a dialog asking for status-related information.
+That information is discussed below:
+
+\fITitle\fR - The name of the status that will appear in the status selctor's
+menu.  If the user clicks the \fISave\fR or \fISave & Use\fR button, this
+name will also be shown in the \fBSaved Status Window\fR.  The title should
+be a short description of the status.
+
+\fIStatus\fR - The type of status being created, such as Available, Away, etc.
+
+\fIMessage\fR - The content of the status message.  This is what is visible
+to other users.  Some protocols will allow formatting in some status messages;
+where formatting is not supported it will be stripped to the bare text entered.
+
+\fIUse a different status for some accounts\fR - This allows the creation of
+complex statuses in which some accounts' status differs from that of other
+accounts.  To use this, the user will click the expander to the left of the
+text, then select individual accounts which will have a different status
+and/or status message.  When the user selects an account, Pidgin will present
+another status dialog asking for a status and a message just for the selected
+account.
+
+.TP
+.B Saved Status Window
+When the user selects \fISaved Statuses...\fR from the status selector's menu,
+Pidgin presents a dialog that lists all saved statuses.  "Transient" statuses,
+discussed above, are \fB\fINOT\fR\fR shown here.  This window provides the
+ability to manage saved statuses by allowing the creation, modification, and
+deletion of saved statuses.  The \fIUse\fR, \fIModify\fR, and \fIDelete\fR
+buttons here allow operation on the status selected from the list; the \fAdd\fR
+button allows creation of a new saved status, and the \fIClose\fR button closes
+the window.
 
 .SH BUDDY POUNCE
 A Buddy Pounce is an automated trigger that occurs when a buddy returns to
@@ -356,43 +460,59 @@ can be activated by selecting the \fIBuddy Pounce\fR option from the
 button.  A pounce can be set to occur on any combination of the
 events listed, and any combination of actions can result.  If \fIPounce
 only when my status is not Available\fR is checked, the pounce will occur
-only if you are set to a non-available status, such as invisible, do not
+only if the user is set to a non-available status, such as invisible, do not
 disturb, away, etc.  If \fIRecurring\fR is checked, the pounce will remain
 until removed by the \fBDelete\fR button.
 
 .SH PLUGINS
 Pidgin allows for dynamic loading of plugins to add extra functionality
-to Pidgin.  Plugins can be enabled and configured from the
-\fBPreferences\fR window.  See \fIplugins/HOWTO\fR or
-\fIhttp://developer.pidgin.im/wiki/CHowTo\fR for more information on
-writing plugins.
+to Pidgin.  See \fIplugins/HOWTO\fR or
+\fIhttp://developer.pidgin.im/wiki/CHowTo\fR for information on writing
+plugins.
+
+The plugins dialog can be accessed by selecting Plugins from the Tools menu.
+Each plugin available appears in this dialog with its name, version, and a
+short summary of its functionality. Plugins can be enabled with the checkbox
+beside the name and short description.  More information on the currently
+selected plugin is available by clicking the expander beside the text
+\fIPlugin Details\fR.  If the selected plugin has preferences or configuration
+options, the \fIConfigure Plugin\fR button will present the plugin's
+preferences dialog.
 
 .SH PERL
-Pidgin allows for perl scripting.  See \fIPerl Scripting HOWTO\fR in
-the Pidgin documentation for more information about perl scripting.
+Pidgin allows for plugins to be written in the perl scripting language.  See
+\fIPerl Scripting HOWTO\fR in the Pidgin documentation for more information
+about perl scripting.
 
 .SH TCL
-Pidgin allows for Tcl scripting. See \fIplugins/tcl/TCL-HOWTO\fR for
-more information about Tcl scripting.
+Pidgin allows for plugins to be written in the Tcl scripting language. See
+\fIplugins/tcl/TCL-HOWTO\fR for more information about Tcl scripting.
+
+.SH D-Bus
+Pidgin allows for interaction via D-Bus.  Currently very little documentation
+about this interaction exists.
 
 .SH FILES
   \fI@prefix@/bin/pidgin\fR: Pidgin's location.
 .br
+  \fI~/.purple/blist.xml\fR: the buddy list.
+.br
+  \fI~/.purple/accounts.xml\fR: information about the user's accounts.
+.br
+  \fI~/.purple/pounces.xml\fR: stores the user's buddy pounces.
+.br
+  \fI~/.purple/prefs.xml\fR: Pidgin's configuration file.
+.br
+  \fI~/.purple/status.xml\fR: stores the user's away messages.
+.br
+  \fI~/.purple/logs/PROTOCOL/ACCOUNT/SCREENNAME/DATE.{html,txt}\fR: conversation logs.
+
+.SH DIRECTORIES
   \fI@prefix@/lib/pidgin/\fR: Pidgin's plugins directory.
 .br
   \fI@prefix@/lib/purple-2/\fR: libpurple's plugins directory.
 .br
-  \fI~/.purple/prefs.xml\fR: Pidgin's configuration file.
-.br
-  \fI~/.purple/accounts.xml\fR: information about your accounts.
-.br
-  \fI~/.purple/status.xml\fR: stores your away messages.
-.br
-  \fI~/.purple/pounces.xml\fR: stores your buddy pounces.
-.br
-  \fI~/.purple/logs/PROTOCOL/ACCOUNT/SCREENNAME/DATE.{html,txt}\fR: conversation logs.
-.br
-  \fI~/.purple/blist.xml\fR: the buddy list.
+  \fI~/.purple\fR: users' local settings
 .br
   \fI~/.purple/plugins/\fR: users' local plugins
 
@@ -530,4 +650,8 @@ Our retired crazy patch writers include:
 .br
 
 
-This manpage was originally written by Dennis Ristuccia <\fIdennis@dennisr.net\fR>.  It has been updated and largely rewritten by Sean Egan <\fIseanegan@gmail.com\fR> and Ben Tegarden <\fItegarden@uclink.berkeley.edu\fR>.
+This manpage was originally written by Dennis Ristuccia
+<\fIdennis@dennisr.net\fR>.  It has been updated and largely rewritten by
+Sean Egan <\fIseanegan@gmail.com\fR>,
+Ben Tegarden <\fItegarden@uclink.berkeley.edu\fR>,
+and John Bailey <\fIrekkanoryo@pidgin.im\fR>.

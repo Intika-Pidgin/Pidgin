@@ -12,8 +12,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: de\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-11-05 21:51+0100\n"
-"PO-Revision-Date: 2007-11-05 21:49+0100\n"
+"POT-Creation-Date: 2007-11-12 21:38+0100\n"
+"PO-Revision-Date: 2007-11-12 09:54+0100\n"
 "Last-Translator: Jochen Kemnade <jochenkemnade@web.de>\n"
 "Language-Team: Deutsch <de@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1948,11 +1948,8 @@ msgid "Unable to load your plugin."
 msgstr "Konnte Ihr Plugin nicht laden."
 
 #, c-format
-msgid "The dependent plugin %s failed to unload."
-msgstr "Das erforderliche Plugin %s konnte nicht entladen werden."
-
-msgid "There were errors unloading the plugin."
-msgstr "Beim Entladen des Plugins traten Fehler auf."
+msgid "%s requires %s, but it failed to unload."
+msgstr "%s hängt von %s ab, konnte aber nicht entladen werden."
 
 msgid "Autoaccept"
 msgstr "Auto-Akzeptieren"
@@ -2411,10 +2408,10 @@ msgid "Provides support for loading perl plugins."
 msgstr "Ermöglicht das Laden von Perl-Plugins."
 
 msgid "Psychic Mode"
-msgstr "Psycho-Modus"
+msgstr "Gesprächsvorhersage-Modus"
 
 msgid "Psychic mode for incoming conversation"
-msgstr "Psycho-Modus für eingehende Gespräche"
+msgstr "Vorhersage-Modus für eingehende Gespräche"
 
 msgid ""
 "Causes conversation windows to appear as other users begin to message you.  "
@@ -2436,7 +2433,7 @@ msgid "Display notification message in conversations"
 msgstr "Benachrichtigung in Gesprächen anzeigen"
 
 msgid "Raise psychic conversations"
-msgstr "Psycho-Unterhaltungen anheben"
+msgstr "Gesprächsvorhersage-Meldungen im Vordergrund"
 
 #. *< type
 #. *< ui_requirement
@@ -2596,7 +2593,6 @@ msgstr ""
 "Informationen besuchen Sie die FAQ unter: http://developer.pidgin.im/wiki/"
 "Using%20Pidgin#CanIusePidginforBonjourLink-LocalMessaging."
 
-#. Send a message about the connection error
 msgid "Unable to listen for incoming IM connections\n"
 msgstr "Kann nicht auf eingehende IM-Verbindungen hören\n"
 
@@ -2684,11 +2680,12 @@ msgstr "Buddy-Liste speichern..."
 msgid "Your buddylist is empty, nothing was written to the file."
 msgstr "Ihre Buddy-Liste ist leer, es wurde nichts in die Datei geschrieben."
 
-msgid "Couldn't open file"
-msgstr "Kann Datei nicht öffnen"
-
 msgid "Buddylist saved successfully!"
 msgstr "Buddy-Liste wurde erfolgreich gespeichert!"
+
+#, c-format
+msgid "Couldn't write buddy list for %s to %s"
+msgstr "Konnte Buddy-Liste für %s nicht nach %s schreiben"
 
 msgid "Couldn't load buddylist"
 msgstr "Konnte Buddy-Liste nicht laden"
@@ -2967,8 +2964,6 @@ msgstr "Verbindungsaufbau"
 msgid "SSL support unavailable"
 msgstr "SSL-Unterstützung nicht verfügbar"
 
-#. TODO: try other ports if in auto mode, then save
-#. * working port and try that first next time.
 msgid "Couldn't create socket"
 msgstr "Kann Socket nicht erstellen"
 
@@ -3405,7 +3400,6 @@ msgstr "Klartext-Authentifizierung"
 msgid "Server does not use any supported authentication method"
 msgstr "Der Server benutzt keine der unterstützten Authentifizierungsmethoden"
 
-#. This should never happen!
 msgid "Invalid response from server."
 msgstr "Ungültige Serverantwort."
 
@@ -3814,9 +3808,6 @@ msgstr "Wählen Sie einen Konferenz-Server zur Abfrage"
 msgid "Find Rooms"
 msgstr "Finde Räume"
 
-msgid "Error initializing session"
-msgstr "Fehler bei Initialisieren der Sitzung"
-
 msgid "You require encryption, but it is not available on this server."
 msgstr ""
 "Sie fordern Verschlüsselung, aber diese ist auf dem Server nicht verfügbar."
@@ -3959,8 +3950,14 @@ msgstr "Abonnement"
 msgid "Mood"
 msgstr "Stimmung"
 
+msgid "Current media"
+msgstr "Aktuelles Medium"
+
 msgid "Mood Text"
 msgstr "Stimmungstext"
+
+msgid "Allow Buzz"
+msgstr "Anklopfen erlauben"
 
 msgid "Tune Artist"
 msgstr "Künstler anpassen"
@@ -3988,9 +3985,6 @@ msgstr "Jahr anpassen"
 
 msgid "Tune URL"
 msgstr "URL anpassen"
-
-msgid "Allow Buzz"
-msgstr "Anklopfen erlauben"
 
 msgid "Password Changed"
 msgstr "Passwort geändert"
@@ -4674,9 +4668,6 @@ msgstr "Eine SMS senden."
 msgid "Page"
 msgstr "Nachricht"
 
-msgid "Current media"
-msgstr "Aktuelles Medium"
-
 msgid "Be Right Back"
 msgstr "Bin gleich zurück"
 
@@ -4688,6 +4679,12 @@ msgstr "Am Telefon"
 
 msgid "Out to Lunch"
 msgstr "Zur Mittagspause"
+
+msgid "Artist"
+msgstr "Interpret"
+
+msgid "Album"
+msgstr "Album"
 
 msgid "Set Friendly Name..."
 msgstr "Setze Spitzname..."
@@ -5128,6 +5125,22 @@ msgstr "Kann „%s“ nicht hinzufügen."
 msgid "The screen name specified is invalid."
 msgstr "Der angegebene Benutzername ist ungültig."
 
+msgid "Has you"
+msgstr "Hat Sie"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+#. *< name
+#. *< version
+#. *  summary
+#. *  description
+msgid "MSN Protocol Plugin"
+msgstr "MSN-Protokoll-Plugin"
+
 msgid "Missing Cipher"
 msgstr "Verschlüsselung fehlt"
 
@@ -5235,7 +5248,6 @@ msgstr "'blocklist'-Kommando gescheitert"
 msgid "Invalid input condition"
 msgstr "Ungültige Eingabebedingung"
 
-#. TODO: g_realloc like msn, yahoo, irc, jabber?
 msgid "Read buffer full"
 msgstr "Lesepuffer voll"
 
@@ -5661,9 +5673,6 @@ msgstr "Vollständiger Name"
 msgid "GroupWise Conference %d"
 msgstr "GroupWise-Konferenz %d"
 
-msgid "Unable to make SSL connection to server."
-msgstr "Kann keine SSL-Verbindung zum Server herstellen."
-
 msgid "Authenticating..."
 msgstr "Authentifizierung..."
 
@@ -5705,10 +5714,6 @@ msgstr ""
 "%s scheint offline zu sein und hat die Nachricht, die Sie gerade gesendet "
 "haben, nicht empfangen."
 
-#. TODO: Would be nice to prompt if not set!
-#. *  purple_request_fields(gc, _("Server Address"),...);
-#.
-#. ...but for now just error out with a nice message.
 msgid ""
 "Unable to connect to server. Please enter the address of the server you wish "
 "to connect to."
@@ -6043,12 +6048,14 @@ msgstr ""
 "sein oder mit einem Buchstaben beginnen und nur Buchstaben, Ziffern und "
 "Leerzeichen enthalten oder nur aus Ziffern bestehen."
 
+#. Unregistered screen name
 msgid "Invalid screen name."
 msgstr "Ungültiger Benutzername."
 
 msgid "Incorrect password."
 msgstr "Falsches Passwort."
 
+#. Suspended account
 msgid "Your account is currently suspended."
 msgstr "Ihr Benutzerkonto ist momentan gesperrt."
 
@@ -6056,6 +6063,8 @@ msgstr "Ihr Benutzerkonto ist momentan gesperrt."
 msgid "The AOL Instant Messenger service is temporarily unavailable."
 msgstr "Der AOL-Sofortnachrichtendienst ist zur Zeit nicht erreichbar."
 
+#. screen name connecting too frequently
+#. IP address connecting too frequently
 msgid ""
 "You have been connecting and disconnecting too frequently. Wait ten minutes "
 "and try again. If you continue to try, you will need to wait even longer."
@@ -6064,6 +6073,7 @@ msgstr ""
 "versuchen Sie es noch einmal. Wenn Sie es weiterversuchen, müssen Sie sogar "
 "noch länger warten."
 
+#. client too old
 #, c-format
 msgid "The client version you are using is too old. Please upgrade at %s"
 msgstr ""
@@ -6086,6 +6096,13 @@ msgstr "Geben Sie die 6-stellige Nummer vom Digital-Display ein."
 
 #. *
 #. * A wrapper for purple_request_action() that uses @c OK and @c Cancel buttons.
+#. *
+#. * @since 2.3.0
+#.
+#. *
+#. * A wrapper for purple_request_action() that uses @c OK and @c Cancel buttons.
+#. *
+#. * @deprecated Please use purple_request_ok_cancel_with_hint instead.
 #.
 msgid "_OK"
 msgstr "_OK"
@@ -7143,7 +7160,6 @@ msgstr "%d hat die Übertragung von %s abgebrochen"
 msgid "Connection lost"
 msgstr "Verbindung verloren"
 
-#. cancel login progress
 msgid "Login failed, no reply"
 msgstr "Anmeldung fehlgeschlagen, keine Antwort"
 
@@ -8639,7 +8655,6 @@ msgstr "Kann nicht auf das Verzeichnis ~/.silc zugreifen"
 msgid "Could not load SILC key pair: %s"
 msgstr "Konnte SILC-Schlüsselpaar nicht laden: %s"
 
-#. TODO: do we really want to disconnect on a failure to write?
 msgid "Could not write"
 msgstr "Konnte nicht schreiben"
 
@@ -9021,7 +9036,7 @@ msgstr "Anfangen zu malen"
 msgid "Activate which ID?"
 msgstr "Welche ID aktivieren?"
 
-msgid "Join whom in chat?"
+msgid "Join who in chat?"
 msgstr "Wen wollen Sie zum Chat einladen?"
 
 msgid "Activate ID..."
@@ -9100,7 +9115,6 @@ msgstr "Doodle-Anfrage senden."
 msgid "Unable to establish file descriptor."
 msgstr "Konnte Dateibeschreibung nicht erstellen."
 
-#. TODO: what to do here - do we really have to disconnect?
 msgid "Write Error"
 msgstr "Schreibfehler"
 
@@ -9406,6 +9420,13 @@ msgstr "Kann den Hostnamen nicht auflösen"
 
 #. *
 #. * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
+#. *
+#. * @since 2.3.0
+#.
+#. *
+#. * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
+#. *
+#. * @deprecated Please use purple_request_yes_no_with_hint instead.
 #.
 msgid "_Yes"
 msgstr "_Ja"
@@ -9415,6 +9436,13 @@ msgstr "_Nein"
 
 #. *
 #. * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
+#. *
+#. * @since 2.3.0
+#.
+#. *
+#. * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
+#. *
+#. * @deprecated Please use purple_request_accept_cancel_with_hint instead.
 #.
 msgid "_Accept"
 msgstr "_Akzeptieren"
@@ -9478,6 +9506,9 @@ msgstr "Abwesend (erweitert)"
 
 msgid "Mobile"
 msgstr "Mobil"
+
+msgid "Listening to music"
+msgstr "Musik hören"
 
 #, c-format
 msgid "%s changed status from %s to %s"
@@ -10038,8 +10069,28 @@ msgid "%s disconnected"
 msgstr "%s abgemeldet"
 
 #, c-format
-msgid "<span color=\"red\">%s disconnected: %s</span>"
-msgstr "<span color=\"red\">%s abgemeldet: %s</span>"
+msgid "%s disabled"
+msgstr "%s deaktiviert"
+
+msgid "Reconnect"
+msgstr "Wiederverbinden"
+
+msgid "Re-enable"
+msgstr "Reaktivieren"
+
+msgid "Ignore"
+msgstr "Ignorieren"
+
+#, c-format
+msgid "%d account was disabled because you signed on from another location."
+msgid_plural ""
+"%d accounts were disabled because you signed on from another location."
+msgstr[0] ""
+"%d Konto wurde deaktiviert, da Sie sich von einem anderen Ort angemeldet "
+"haben."
+msgstr[1] ""
+"%d Konten wurden deaktiviert, da Sie sich von einem anderen Ort angemeldet "
+"haben."
 
 msgid "<b>Username:</b>"
 msgstr "<b>Benutzername:</b>"
@@ -10160,18 +10211,6 @@ msgstr "/Buddys/Buddys sortieren"
 msgid "SSL Servers"
 msgstr "SSL-Server"
 
-#, c-format
-msgid ""
-"%s\n"
-"\n"
-"%s will not attempt to reconnect the account until you correct the error and "
-"re-enable the account."
-msgstr ""
-"%s\n"
-"\n"
-"%s wird nicht versuchen, das Konto wieder zu verbinden bis Sie den Fehler "
-"behoben und das Konto wieder aktiviert haben."
-
 msgid "Unknown command."
 msgstr "Unbekanntes Kommando."
 
@@ -10216,9 +10255,6 @@ msgstr "_Suche nach:"
 
 msgid "Un-Ignore"
 msgstr "Nicht Ignorieren"
-
-msgid "Ignore"
-msgstr "Ignorieren"
 
 msgid "Get Away Message"
 msgstr "Neue Abwesenheitsnachricht abholen"
@@ -10799,6 +10835,9 @@ msgstr "Debugging-Information"
 
 msgid "_Name"
 msgstr "_Name"
+
+msgid "Buddy"
+msgstr "Buddy"
 
 msgid "_Account"
 msgstr "_Konto"
@@ -11407,6 +11446,16 @@ msgstr "Mehrere Plugins werden entladen."
 msgid "Unload Plugins"
 msgstr "Plugins entladen"
 
+msgid "Could not unload plugin"
+msgstr "Konnte das Plugin nicht entladen"
+
+msgid ""
+"The plugin could not be unloaded now, but will be disabled at the next "
+"startup."
+msgstr ""
+"Das Plugin kann im Moment nicht entladen werden, wird aber beim nächsten "
+"Start deaktiviert."
+
 #, c-format
 msgid ""
 "%s%s<span weight=\"bold\">Written by:</span>\t%s\n"
@@ -11989,6 +12038,12 @@ msgstr "Status für %s"
 
 msgid "Waiting for network connection"
 msgstr "Warte auf Netzwerkverbindung"
+
+msgid "New status..."
+msgstr "Neuer Status..."
+
+msgid "Saved statuses..."
+msgstr "Gespeicherter Status..."
 
 msgid "Google Talk"
 msgstr "Google Talk"
@@ -13080,9 +13135,3 @@ msgstr "Sendet und empfängt RAW-XMPP-Blöcke."
 msgid "This plugin is useful for debbuging XMPP servers or clients."
 msgstr ""
 "Dieses Plugin ist nützlich zur Fehlersuche in XMPP-Servern oder -Clients."
-
-#~ msgid "Unable to connect to contact server"
-#~ msgstr "Verbindung zum Kontaktserver nicht möglich"
-
-#~ msgid "Unable to connect to OIM server"
-#~ msgstr "Verbindung zum OIM-Server nicht möglich"
