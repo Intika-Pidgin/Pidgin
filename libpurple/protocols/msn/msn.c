@@ -283,14 +283,14 @@ msn_show_set_friendly_name(PurplePluginAction *action)
 
 	gc = (PurpleConnection *) action->context;
 
-	purple_request_input(gc, NULL, _("Set your friendly name."),
+	purple_request_input_with_hint(gc, NULL, _("Set your friendly name."),
 					   _("This is the name that other MSN buddies will "
 						 "see you as."),
 					   purple_connection_get_display_name(gc), FALSE, FALSE, NULL,
 					   _("OK"), G_CALLBACK(msn_act_id),
 					   _("Cancel"), NULL,
 					   purple_connection_get_account(gc), NULL, NULL,
-					   gc);
+					   PURPLE_REQUEST_UI_HINT_ACCOUNT, gc);
 }
 
 static void
@@ -302,12 +302,12 @@ msn_show_set_home_phone(PurplePluginAction *action)
 	gc = (PurpleConnection *) action->context;
 	session = gc->proto_data;
 
-	purple_request_input(gc, NULL, _("Set your home phone number."), NULL,
+	purple_request_input_with_hint(gc, NULL, _("Set your home phone number."), NULL,
 					   msn_user_get_home_phone(session->user), FALSE, FALSE, NULL,
 					   _("OK"), G_CALLBACK(msn_set_home_phone_cb),
 					   _("Cancel"), NULL,
 					   purple_connection_get_account(gc), NULL, NULL,
-					   gc);
+					   PURPLE_REQUEST_UI_HINT_ACCOUNT, gc);
 }
 
 static void
@@ -319,12 +319,12 @@ msn_show_set_work_phone(PurplePluginAction *action)
 	gc = (PurpleConnection *) action->context;
 	session = gc->proto_data;
 
-	purple_request_input(gc, NULL, _("Set your work phone number."), NULL,
+	purple_request_input_with_hint(gc, NULL, _("Set your work phone number."), NULL,
 					   msn_user_get_work_phone(session->user), FALSE, FALSE, NULL,
 					   _("OK"), G_CALLBACK(msn_set_work_phone_cb),
 					   _("Cancel"), NULL,
 					   purple_connection_get_account(gc), NULL, NULL,
-					   gc);
+					   PURPLE_REQUEST_UI_HINT_ACCOUNT, gc);
 }
 
 static void
@@ -336,12 +336,12 @@ msn_show_set_mobile_phone(PurplePluginAction *action)
 	gc = (PurpleConnection *) action->context;
 	session = gc->proto_data;
 
-	purple_request_input(gc, NULL, _("Set your mobile phone number."), NULL,
+	purple_request_input_with_hint(gc, NULL, _("Set your mobile phone number."), NULL,
 					   msn_user_get_mobile_phone(session->user), FALSE, FALSE, NULL,
 					   _("OK"), G_CALLBACK(msn_set_mobile_phone_cb),
 					   _("Cancel"), NULL,
 					   purple_connection_get_account(gc), NULL, NULL,
-					   gc);
+					   PURPLE_REQUEST_UI_HINT_ACCOUNT, gc);
 }
 
 static void
@@ -351,13 +351,13 @@ msn_show_set_mobile_pages(PurplePluginAction *action)
 
 	gc = (PurpleConnection *) action->context;
 
-	purple_request_action(gc, NULL, _("Allow MSN Mobile pages?"),
+	purple_request_action_with_hint(gc, NULL, _("Allow MSN Mobile pages?"),
 						_("Do you want to allow or disallow people on "
 						  "your buddy list to send you MSN Mobile pages "
 						  "to your cell phone or other mobile device?"),
 						-1,
 						purple_connection_get_account(gc), NULL, NULL,
-						gc, 3,
+						PURPLE_REQUEST_UI_HINT_ACCOUNT, gc, 3,
 						_("Allow"), G_CALLBACK(enable_msn_pages_cb),
 						_("Disallow"), G_CALLBACK(disable_msn_pages_cb),
 						_("Cancel"), NULL);
@@ -401,12 +401,12 @@ show_send_to_mobile_cb(PurpleBlistNode *node, gpointer ignored)
 	data->gc = gc;
 	data->passport = buddy->name;
 
-	purple_request_input(gc, NULL, _("Send a mobile message."), NULL,
+	purple_request_input_with_hint(gc, NULL, _("Send a mobile message."), NULL,
 					   NULL, TRUE, FALSE, NULL,
 					   _("Page"), G_CALLBACK(send_to_mobile_cb),
 					   _("Close"), G_CALLBACK(close_mobile_page_cb),
 					   purple_connection_get_account(gc), purple_buddy_get_name(buddy), NULL,
-					   data);
+					   PURPLE_REQUEST_UI_HINT_ACCOUNT, data);
 }
 
 static gboolean
@@ -540,25 +540,36 @@ msn_list_icon(PurpleAccount *a, PurpleBuddy *b)
 
 /*
  * Set the User status text
- * Add the PSM String Using "Name - PSM String" format
  */
 static char *
 msn_status_text(PurpleBuddy *buddy)
 {
 	PurplePresence *presence;
 	PurpleStatus *status;
-	const char *msg, *cmedia;
+	const char *msg;
 
 	presence = purple_buddy_get_presence(buddy);
 	status = purple_presence_get_active_status(presence);
 
+	/* I think status message should take precedence over media */
 	msg = purple_status_get_attr_string(status, "message");
-	cmedia = purple_status_get_attr_string(status, PURPLE_TUNE_FULL);
-
-	if (cmedia)
-		return g_markup_escape_text(cmedia, -1);
-	else if (msg)
+	if (msg && *msg)
 		return g_markup_escape_text(msg, -1);
+
+	if (purple_presence_is_status_primitive_active(presence, PURPLE_STATUS_TUNE)) {
+		const char *title, *artist;
+		char *media, *esc;
+		status = purple_presence_get_status(presence, "tune");
+		title = purple_status_get_attr_string(status, PURPLE_TUNE_TITLE);
+		artist = purple_status_get_attr_string(status, PURPLE_TUNE_ARTIST);
+
+		media = g_strdup_printf("%s%s%s", title, artist ? " - " : "",
+				artist ? artist : "");
+		esc = g_markup_escape_text(media, -1);
+		g_free(media);
+		return esc;
+	}
+
 	return NULL;
 }
 
@@ -571,14 +582,21 @@ msn_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean f
 
 	user = buddy->proto_data;
 
-
 	if (purple_presence_is_online(presence))
 	{
-		const char *psm, *currentmedia, *name;
+		const char *psm, *name;
+		char *currentmedia = NULL;
 		char *tmp;
 
 		psm = purple_status_get_attr_string(status, "message");
-		currentmedia = purple_status_get_attr_string(status, PURPLE_TUNE_FULL);
+		if (purple_presence_is_status_primitive_active(presence, PURPLE_STATUS_TUNE)) {
+			PurpleStatus *tune = purple_presence_get_status(presence, "tune");
+			const char *title = purple_status_get_attr_string(tune, PURPLE_TUNE_TITLE);
+			const char *artist = purple_status_get_attr_string(tune, PURPLE_TUNE_ARTIST);
+			currentmedia = g_strdup_printf("%s%s%s", title, artist ? " - " : "",
+					artist ? artist : "");
+			/* We could probably just use user->media.title etc. here */
+		}
 
 		if (!purple_status_is_available(status)) {
 			name = purple_status_get_name(status);
@@ -628,6 +646,7 @@ msn_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean f
 			tmp = g_markup_escape_text(currentmedia, -1);
 			purple_notify_user_info_add_pair(user_info, _("Current media"), tmp);
 			g_free(tmp);
+			g_free(currentmedia);
 		}
 	}
 
@@ -656,40 +675,34 @@ msn_status_types(PurpleAccount *account)
 	status = purple_status_type_new_with_attrs(
 				PURPLE_STATUS_AVAILABLE, NULL, NULL, TRUE, TRUE, FALSE,
 				"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-				PURPLE_TUNE_FULL, _("Current media"), purple_value_new(PURPLE_TYPE_STRING),
 				NULL);
 	types = g_list_append(types, status);
 
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_AWAY, NULL, NULL, TRUE, TRUE, FALSE,
 			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_FULL, _("Current media"), purple_value_new(PURPLE_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_AWAY, "brb", _("Be Right Back"), TRUE, TRUE, FALSE,
 			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_FULL, _("Current media"), purple_value_new(PURPLE_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_UNAVAILABLE, "busy", _("Busy"), TRUE, TRUE, FALSE,
 			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_FULL, _("Current media"), purple_value_new(PURPLE_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_UNAVAILABLE, "phone", _("On the Phone"), TRUE, TRUE, FALSE,
 			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_FULL, _("Current media"), purple_value_new(PURPLE_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_AWAY, "lunch", _("Out to Lunch"), TRUE, TRUE, FALSE,
 			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_FULL, _("Current media"), purple_value_new(PURPLE_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 
@@ -703,6 +716,14 @@ msn_status_types(PurpleAccount *account)
 
 	status = purple_status_type_new_full(PURPLE_STATUS_MOBILE,
 			"mobile", NULL, FALSE, FALSE, TRUE);
+	types = g_list_append(types, status);
+
+	status = purple_status_type_new_with_attrs(PURPLE_STATUS_TUNE,
+			"tune", NULL, TRUE, TRUE, TRUE,
+			PURPLE_TUNE_ARTIST, _("Artist"), purple_value_new(PURPLE_TYPE_STRING),
+			PURPLE_TUNE_ALBUM, _("Album"), purple_value_new(PURPLE_TYPE_STRING),
+			PURPLE_TUNE_TITLE, _("Title"), purple_value_new(PURPLE_TYPE_STRING),
+			NULL);
 	types = g_list_append(types, status);
 
 	return types;
@@ -823,8 +844,8 @@ msn_login(PurpleAccount *account)
 
 	if (!purple_ssl_is_supported())
 	{
-		gc->wants_to_die = TRUE;
-		purple_connection_error(gc,
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
 			_("SSL support is needed for MSN. Please install a supported "
 			  "SSL library."));
 		return;
@@ -853,7 +874,9 @@ msn_login(PurpleAccount *account)
 		purple_account_set_username(account, username);
 
 	if (!msn_session_connect(session, host, port, http_method))
-		purple_connection_error(gc, _("Failed to connect to server."));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Failed to connect to server."));
 }
 
 static void
