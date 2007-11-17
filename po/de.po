@@ -7,14 +7,13 @@
 #
 # This file is distributed under the same license as the Pidgin package.
 #
-# Bjoern Voigt <bjoern@cs.tu-berlin.de>, 2007.
 msgid ""
 msgstr ""
 "Project-Id-Version: de\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-11-12 09:54+0100\n"
-"PO-Revision-Date: 2007-11-12 09:54+0100\n"
-"Last-Translator: Jochen Kemnade <jochenkemnade@web.de>\n"
+"POT-Creation-Date: 2007-11-17 16:16+0100\n"
+"PO-Revision-Date: 2007-11-17 16:14+0100\n"
+"Last-Translator: Bjoern Voigt <bjoern@cs.tu-berlin.de>\n"
 "Language-Team: Deutsch <de@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -719,7 +718,7 @@ msgid "You have mail!"
 msgstr "Sie haben Post!"
 
 msgid "Sender"
-msgstr "Abender"
+msgstr "Absender"
 
 msgid "Subject"
 msgstr "Betreff"
@@ -1842,28 +1841,28 @@ msgstr ""
 "verarbeiten, in einem Terminal ausgeführt werden soll."
 
 msgid "Whether the specified command should handle \"aim\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „aim“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „aim“-URLs verarbeiten soll"
 
 msgid "Whether the specified command should handle \"gg\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „gg“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „gg“-URLs verarbeiten soll"
 
 msgid "Whether the specified command should handle \"icq\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „icq“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „icq“-URLs verarbeiten soll"
 
 msgid "Whether the specified command should handle \"irc\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „irc“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „irc“-URLs verarbeiten soll"
 
 msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „msnim“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „msnim“-URLs verarbeiten soll"
 
 msgid "Whether the specified command should handle \"sip\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „sip“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „sip“-URLs verarbeiten soll"
 
 msgid "Whether the specified command should handle \"xmpp\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „xmpp“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „xmpp“-URLs verarbeiten soll"
 
 msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr "Legt fest, ob das angegebene Kommado „ymsrg“-URLs verarbeiten soll"
+msgstr "Legt fest, ob das angegebene Kommando „ymsrg“-URLs verarbeiten soll"
 
 msgid "<b><font color=\"red\">The logger has no read function</font></b>"
 msgstr "<b><font color=\"red\">Der Logger hat keine Lesefunktion</font></b>"
@@ -2408,10 +2407,10 @@ msgid "Provides support for loading perl plugins."
 msgstr "Ermöglicht das Laden von Perl-Plugins."
 
 msgid "Psychic Mode"
-msgstr "Psycho-Modus"
+msgstr "Gesprächsvorhersage-Modus"
 
 msgid "Psychic mode for incoming conversation"
-msgstr "Psycho-Modus für eingehende Gespräche"
+msgstr "Vorhersage-Modus für eingehende Gespräche"
 
 msgid ""
 "Causes conversation windows to appear as other users begin to message you.  "
@@ -2433,7 +2432,7 @@ msgid "Display notification message in conversations"
 msgstr "Benachrichtigung in Gesprächen anzeigen"
 
 msgid "Raise psychic conversations"
-msgstr "Psycho-Unterhaltungen anheben"
+msgstr "Gesprächsvorhersage-Meldungen im Vordergrund"
 
 #. *< type
 #. *< ui_requirement
@@ -3496,7 +3495,7 @@ msgid "Multi-User Chat"
 msgstr "Mehrbenutzer-Chat"
 
 msgid "Multi-User Chat Extended Presence Information"
-msgstr "Erweiterte Anwesenheitsinformation im Mehrbenutzer-Chat "
+msgstr "Erweiterte Anwesenheitsinformation im Mehrbenutzer-Chat"
 
 msgid "In-Band Bytestreams"
 msgstr "Bandinterner Bytestrom("
@@ -4262,7 +4261,7 @@ msgstr ""
 "einen anderen Benutzer."
 
 msgid "ping &lt;jid&gt;:\tPing a user/component/server."
-msgstr "ping &lt;jid&gt;:\tBenutzer/Kommponente/Server anpingen."
+msgstr "ping &lt;jid&gt;:\tBenutzer/Komponente/Server anpingen."
 
 msgid "buzz: Buzz a user to get their attention"
 msgstr "buzz: Einen Kontakt anrufen, um seine Aufmerksamkeit zu erhalten"
@@ -6096,13 +6095,6 @@ msgstr "Geben Sie die 6-stellige Nummer vom Digital-Display ein."
 
 #. *
 #. * A wrapper for purple_request_action() that uses @c OK and @c Cancel buttons.
-#. *
-#. * @since 2.3.0
-#.
-#. *
-#. * A wrapper for purple_request_action() that uses @c OK and @c Cancel buttons.
-#. *
-#. * @deprecated Please use purple_request_ok_cancel_with_hint instead.
 #.
 msgid "_OK"
 msgstr "_OK"
@@ -9036,7 +9028,7 @@ msgstr "Anfangen zu malen"
 msgid "Activate which ID?"
 msgstr "Welche ID aktivieren?"
 
-msgid "Join who in chat?"
+msgid "Join whom in chat?"
 msgstr "Wen wollen Sie zum Chat einladen?"
 
 msgid "Activate ID..."
@@ -9420,13 +9412,6 @@ msgstr "Kann den Hostnamen nicht auflösen"
 
 #. *
 #. * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
-#. *
-#. * @since 2.3.0
-#.
-#. *
-#. * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
-#. *
-#. * @deprecated Please use purple_request_yes_no_with_hint instead.
 #.
 msgid "_Yes"
 msgstr "_Ja"
@@ -9436,13 +9421,6 @@ msgstr "_Nein"
 
 #. *
 #. * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
-#. *
-#. * @since 2.3.0
-#.
-#. *
-#. * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
-#. *
-#. * @deprecated Please use purple_request_accept_cancel_with_hint instead.
 #.
 msgid "_Accept"
 msgstr "_Akzeptieren"
@@ -9508,7 +9486,7 @@ msgid "Mobile"
 msgstr "Mobil"
 
 msgid "Listening to music"
-msgstr ""
+msgstr "Musik hören"
 
 #, c-format
 msgid "%s changed status from %s to %s"
@@ -9778,8 +9756,8 @@ msgstr ""
 "Konto. Wenn Sie mehrere IM-Konten mit %s benutzen wollen, drücken Sie erneut "
 "auf <b>Hinzufügen</b> um sie einzurichten.\n"
 "\n"
-"Sie können später über <b>Konten->Hinzufügen/Bearbeiten</b> im "
-"Kontaktlistenfenster zu diesem Dialog zurückkehren und Konten hinzufügen, "
+"Sie können später über <b>Konten->Hinzufügen/Bearbeiten</b> im Buddy-"
+"Listenfenster zu diesem Dialog zurückkehren und Konten hinzufügen, "
 "bearbeiten oder löschen"
 
 #, c-format
@@ -9789,7 +9767,7 @@ msgid_plural ""
 msgstr[0] ""
 "Sie haben %d Kontakt als %s benannt. Möchten Sie diese zusammenführen?"
 msgstr[1] ""
-"Sie haben %d Kontakte als %s benannt. Möchten Sie diese zusammenführen"
+"Sie haben %d Kontakte als %s benannt. Möchten Sie diese zusammenführen?"
 
 msgid ""
 "Merging these contacts will cause them to share a single entry on the buddy "
@@ -10184,7 +10162,7 @@ msgid "Please enter the name of the group to be added."
 msgstr "Bitte geben Sie den Namen der Gruppe ein, die hinzugefügt werden soll."
 
 msgid "<PurpleMain>/Accounts/"
-msgstr "<PurpleMain>/Konten"
+msgstr "<PurpleMain>/Konten/"
 
 msgid "_Edit Account"
 msgstr "Konto _bearbeiten"
@@ -10655,7 +10633,7 @@ msgid "Galician"
 msgstr "Galizisch"
 
 msgid "Gujarati"
-msgstr "Gujaratisch"
+msgstr "Gujarati"
 
 msgid "Gujarati Language Team"
 msgstr "Gujaratisch-Team"
@@ -10717,6 +10695,9 @@ msgstr "Niederländisch, Flämisch"
 msgid "Norwegian Nynorsk"
 msgstr "Norwegisch (Nynorsk)"
 
+msgid "Punjabi"
+msgstr "Pandschabi"
+
 msgid "Polish"
 msgstr "Polnisch"
 
@@ -10751,7 +10732,7 @@ msgid "Swedish"
 msgstr "Schwedisch"
 
 msgid "Tamil"
-msgstr "Tamil"
+msgstr "Tamilisch"
 
 msgid "Telugu"
 msgstr "Telugu"
@@ -10761,6 +10742,9 @@ msgstr "Thailändisch"
 
 msgid "Turkish"
 msgstr "Türkisch"
+
+msgid "Urdu"
+msgstr "Urdu"
 
 msgid "Vietnamese"
 msgstr "Vietnamesisch"
@@ -10835,9 +10819,6 @@ msgstr "Debugging-Information"
 
 msgid "_Name"
 msgstr "_Name"
-
-msgid "Buddy"
-msgstr "Buddy"
 
 msgid "_Account"
 msgstr "_Konto"
@@ -13135,3 +13116,6 @@ msgstr "Sendet und empfängt RAW-XMPP-Blöcke."
 msgid "This plugin is useful for debbuging XMPP servers or clients."
 msgstr ""
 "Dieses Plugin ist nützlich zur Fehlersuche in XMPP-Servern oder -Clients."
+
+msgid "Buddy"
+msgstr "Buddy"
