@@ -388,9 +388,29 @@ void jabber_send(JabberStream *js, xmlnode *packet)
 	g_free(txt);
 }
 
+static void jabber_pong_cb(JabberStream *js, xmlnode *packet, gpointer timeout) 
+{
+	g_source_remove(GPOINTER_TO_INT(timeout));
+}
+
+static gboolean jabber_pong_timeout(PurpleConnection *gc)
+{
+	purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+					_("Ping timeout"));
+	return FALSE;
+}
+
 void jabber_keepalive(PurpleConnection *gc)
 {
-	jabber_send_raw(gc->proto_data, "\t", -1);
+	JabberIq *iq = jabber_iq_new(gc->proto_data, JABBER_IQ_GET);
+	guint timeout;
+
+        xmlnode *ping = xmlnode_new_child(iq->node, "ping");
+        xmlnode_set_namespace(ping, "urn:xmpp:ping");
+
+	timeout = purple_timeout_add_seconds(20, (GSourceFunc)(jabber_pong_timeout), gc);
+        jabber_iq_set_callback(iq, jabber_pong_cb, GINT_TO_POINTER(timeout));
+	jabber_iq_send(iq);
 }
 
 static void
@@ -536,12 +556,13 @@ static void tls_init(JabberStream *js)
 	purple_input_remove(js->gc->inpa);
 	js->gc->inpa = 0;
 	js->gsc = purple_ssl_connect_with_host_fd(js->gc->account, js->fd,
-			jabber_login_callback_ssl, jabber_ssl_connect_failure, js->serverFQDN, js->gc);
+			jabber_login_callback_ssl, jabber_ssl_connect_failure, js->host, js->gc);
 }
 
 static void jabber_login_connect(JabberStream *js, const char *fqdn, const char *host, int port)
 {
 	js->serverFQDN = g_strdup(fqdn);
+	js->host = g_strdup(host);
 
 	if (purple_proxy_connect(js->gc, js->gc->account, host,
 			port, jabber_login_callback, js->gc) == NULL)
@@ -1279,6 +1300,7 @@ void jabber_close(PurpleConnection *gc)
 		js->commands = g_list_delete_link(js->commands, js->commands);
 	}
 	g_free(js->server_name);
+	g_free(js->host);
 	g_free(js->gmail_last_time);
 	g_free(js->gmail_last_tid);
 	g_free(js->old_msg);
