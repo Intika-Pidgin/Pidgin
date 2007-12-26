@@ -29,6 +29,7 @@
 #include "xmlnode.h"
 #include "group.h"
 #include "soap2.h"
+#include "nexus.h"
 
 const char *MsnSoapPartnerScenarioText[] =
 {
@@ -230,7 +231,9 @@ msn_create_address_book(MsnContact * contact)
 	
 	purple_debug_info("msnab","Creating an Address Book.\n");
 
-	body = g_strdup_printf(MSN_ADD_ADDRESSBOOK_TEMPLATE, contact->session->user->passport);
+	body = g_strdup_printf(MSN_ADD_ADDRESSBOOK_TEMPLATE,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		contact->session->user->passport);
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_ADD_ADDRESSBOOK_SOAP_ACTION,
@@ -416,7 +419,9 @@ msn_get_contact_list(MsnContact * contact,
 		update_str = g_strdup_printf(MSN_GET_CONTACT_UPDATE_XML,update_time);
 	}
 
-	body = g_strdup_printf(MSN_GET_CONTACT_TEMPLATE, partner_scenario_str, update_str ? update_str : "");
+	body = g_strdup_printf(MSN_GET_CONTACT_TEMPLATE, partner_scenario_str,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		update_str ? update_str : "");
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_GET_CONTACT_SOAP_ACTION,
@@ -729,7 +734,10 @@ msn_get_address_book(MsnContact *contact,
 	else if (LastChanged != NULL)
 		update_str = g_strdup_printf(MSN_GET_ADDRESS_UPDATE_XML, LastChanged);
 
-	body = g_strdup_printf(MSN_GET_ADDRESS_TEMPLATE, MsnSoapPartnerScenarioText[partner_scenario], update_str ? update_str : "");
+	body = g_strdup_printf(MSN_GET_ADDRESS_TEMPLATE,
+		MsnSoapPartnerScenarioText[partner_scenario],
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		update_str ? update_str : "");
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_GET_ADDRESS_SOAP_ACTION,
@@ -794,7 +802,9 @@ msn_add_contact(MsnContact *contact, MsnCallbackState *state, const char *passpo
 	purple_debug_info("MSNCL","Adding contact %s to contact list\n", passport);
 
 	contact_xml = g_strdup_printf(MSN_CONTACT_XML, passport);
-	body = g_strdup_printf(MSN_ADD_CONTACT_TEMPLATE, contact_xml);
+	body = g_strdup_printf(MSN_ADD_CONTACT_TEMPLATE,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		contact_xml);
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_CONTACT_ADD_SOAP_ACTION,
@@ -902,7 +912,9 @@ msn_add_contact_to_group(MsnContact *contact, MsnCallbackState *state,
 		contact_xml = g_strdup_printf(MSN_CONTACT_XML, passport);
 	}
 
-	body = g_strdup_printf(MSN_ADD_CONTACT_GROUP_TEMPLATE, groupId, contact_xml);
+	body = g_strdup_printf(MSN_ADD_CONTACT_GROUP_TEMPLATE,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		groupId, contact_xml);
 
 	msn_soap_message_send(state->session,
 		msn_soap_message_new(MSN_ADD_CONTACT_GROUP_SOAP_ACTION,
@@ -950,7 +962,10 @@ msn_delete_contact(MsnContact *contact, const char *contactId)
 
 	/* build SOAP request */
 	purple_debug_info("MSNCL","Deleting contact with contactId: %s\n", contactId);
-	body = g_strdup_printf(MSN_DEL_CONTACT_TEMPLATE, contact_id_xml);
+	body = g_strdup_printf(MSN_DEL_CONTACT_TEMPLATE,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		contact_id_xml);
+
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_CONTACT_DEL_SOAP_ACTION,
 			xmlnode_from_str(body, -1)),
@@ -1022,7 +1037,9 @@ msn_del_contact_from_group(MsnContact *contact, const char *passport, const char
 	msn_callback_state_set_old_group_name(state, group_name);
 
 	contact_id_xml = g_strdup_printf(MSN_CONTACT_ID_XML, user->uid);
-	body = g_strdup_printf(MSN_CONTACT_DEL_GROUP_TEMPLATE, contact_id_xml, groupId);
+	body = g_strdup_printf(MSN_CONTACT_DEL_GROUP_TEMPLATE,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		contact_id_xml, groupId);
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_CONTACT_DEL_GROUP_SOAP_ACTION,
@@ -1055,7 +1072,9 @@ msn_update_contact(MsnContact *contact, const char* nickname)
 
 	escaped_nickname = g_markup_escape_text(nickname, -1);
 
-	body = g_strdup_printf(MSN_CONTACT_UPDATE_TEMPLATE, escaped_nickname);
+	body = g_strdup_printf(MSN_CONTACT_UPDATE_TEMPLATE,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		escaped_nickname);
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_CONTACT_UPDATE_SOAP_ACTION,
@@ -1133,9 +1152,9 @@ msn_del_contact_from_list(MsnContact *contact, MsnCallbackState *state,
 	}
 
 	body = g_strdup_printf( MSN_CONTACT_DELECT_FROM_LIST_TEMPLATE,
-			        MsnSoapPartnerScenarioText[partner_scenario],
-			        MsnMemberRole[list],
-			        member);
+		MsnSoapPartnerScenarioText[partner_scenario],
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		MsnMemberRole[list], member);
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_DELETE_MEMBER_FROM_LIST_SOAP_ACTION,
@@ -1205,9 +1224,9 @@ msn_add_contact_to_list(MsnContact *contact, MsnCallbackState *state,
 	member = g_strdup_printf(MSN_MEMBER_PASSPORT_XML, state->who);
 
 	body = g_strdup_printf(MSN_CONTACT_ADD_TO_LIST_TEMPLATE, 
-			       MsnSoapPartnerScenarioText[partner_scenario],
-			       MsnMemberRole[list], 
-			       member);
+		MsnSoapPartnerScenarioText[partner_scenario],
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS),
+		MsnMemberRole[list], member);
 
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_ADD_MEMBER_TO_LIST_SOAP_ACTION,
@@ -1234,13 +1253,19 @@ void
 msn_get_gleams(MsnContact *contact)
 {
 	MsnSoapReq *soap_request;
+	gchar *body = NULL;
 
 	purple_debug_info("MSNP14","msn get gleams info...\n");
+	
+	body = g_strdup_printf(MSN_GLEAMS_TEMPLATE,
+		msn_nexus_get_token_str(contact->session->nexus, MSN_AUTH_CONTACTS));
+
 	msn_soap_message_send(contact->session,
 		msn_soap_message_new(MSN_GET_GLEAMS_SOAP_ACTION,
-			xmlnode_from_str(MSN_GLEAMS_TEMPLATE, -1)),
+			xmlnode_from_str(body, -1)),
 		MSN_CONTACT_SERVER, MSN_ADDRESS_BOOK_POST_URL,
 		msn_gleams_read_cb, NULL);
+	g_free(body);
 }
 #endif
 
@@ -1323,6 +1348,7 @@ void
 msn_add_group(MsnSession *session, MsnCallbackState *state, const char* group_name)
 {
 	char *body = NULL;
+	char *escaped_group_name = NULL;
 
 	g_return_if_fail(session != NULL);
 	g_return_if_fail(group_name != NULL);
@@ -1339,7 +1365,10 @@ msn_add_group(MsnSession *session, MsnCallbackState *state, const char* group_na
 	/* escape group name's html special chars so it can safely be sent
 	* in a XML SOAP request
 	*/
-	body = g_markup_printf_escaped(MSN_GROUP_ADD_TEMPLATE, group_name);
+	escaped_group_name = g_markup_escape_text(group_name, -1);
+	body = g_strdup_printf(MSN_GROUP_ADD_TEMPLATE,
+		msn_nexus_get_token_str(session->nexus, MSN_AUTH_CONTACTS),
+		escaped_group_name);
 
 	msn_soap_message_send(session,
 		msn_soap_message_new(MSN_GROUP_ADD_SOAP_ACTION,
@@ -1347,6 +1376,7 @@ msn_add_group(MsnSession *session, MsnCallbackState *state, const char* group_na
 		MSN_CONTACT_SERVER, MSN_ADDRESS_BOOK_POST_URL,
 		msn_group_read_cb, state);
 
+	g_free(escaped_group_name);
 	g_free(body);
 }
 
@@ -1382,7 +1412,9 @@ msn_del_group(MsnSession *session, const gchar *group_name)
 	msn_callback_state_set_action(state, MSN_DEL_GROUP);
 	msn_callback_state_set_guid(state, guid);
 	
-	body = g_strdup_printf(MSN_GROUP_DEL_TEMPLATE, guid);
+	body = g_strdup_printf(MSN_GROUP_DEL_TEMPLATE,
+		msn_nexus_get_token_str(session->nexus, MSN_AUTH_CONTACTS),
+		guid);
 
 	msn_soap_message_send(session,
 		msn_soap_message_new(MSN_GROUP_DEL_SOAP_ACTION,
@@ -1400,6 +1432,7 @@ msn_contact_rename_group(MsnSession *session, const char *old_group_name, const 
 	gchar *body = NULL;
 	const gchar * guid;
 	MsnCallbackState *state;
+	char *escaped_group_name;
 	
 	g_return_if_fail(session != NULL);
 	g_return_if_fail(session->userlist != NULL);
@@ -1423,8 +1456,10 @@ msn_contact_rename_group(MsnSession *session, const char *old_group_name, const 
 
 	msn_callback_state_set_action(state, MSN_RENAME_GROUP);
 	
-	body = g_markup_printf_escaped(MSN_GROUP_RENAME_TEMPLATE,
-		guid, new_group_name);
+	escaped_group_name = g_markup_escape_text(new_group_name, -1);
+	body = g_strdup_printf(MSN_GROUP_RENAME_TEMPLATE,
+		msn_nexus_get_token_str(session->nexus, MSN_AUTH_CONTACTS),
+		guid, escaped_group_name);
 	
 	msn_soap_message_send(session,
 		msn_soap_message_new(MSN_GROUP_RENAME_SOAP_ACTION,
@@ -1432,5 +1467,6 @@ msn_contact_rename_group(MsnSession *session, const char *old_group_name, const 
 		MSN_CONTACT_SERVER, MSN_ADDRESS_BOOK_POST_URL,
 		msn_group_read_cb, state);
 
+	g_free(escaped_group_name);
 	g_free(body);
 }
