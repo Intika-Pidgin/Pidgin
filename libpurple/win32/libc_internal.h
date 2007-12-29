@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _LIBC_INTERNAL_
@@ -49,9 +49,10 @@ struct hostent* wpurple_gethostbyname(const char *name);
 char* wpurple_strerror( int errornum );
 
 /* fcntl.h */
-int wpurple_fcntl(int socket, int command, int val);
-#define F_SETFL 1
-#define O_NONBLOCK 1
+int wpurple_fcntl(int socket, int command, ...);
+#define F_GETFL 3
+#define F_SETFL 4
+#define O_NONBLOCK 04000
 
 /* sys/ioctl.h */
 #define SIOCGIFCONF 0x8912 /* get iface list */

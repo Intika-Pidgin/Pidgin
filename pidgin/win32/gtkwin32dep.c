@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #define _WIN32_IE 0x500
@@ -40,6 +40,7 @@
 
 #include "debug.h"
 #include "notify.h"
+#include "network.h"
 
 #include "resource.h"
 #include "idletrack.h"
@@ -51,6 +52,7 @@
 #include "gtkwin32dep.h"
 #include "win32dep.h"
 #include "gtkconv.h"
+#include "gtkconn.h"
 #include "util.h"
 #include "wspell.h"
 
@@ -64,6 +66,7 @@ static int gtkwin32_handle;
 
 typedef BOOL (CALLBACK* LPFNFLASHWINDOWEX)(PFLASHWINFO);
 static LPFNFLASHWINDOWEX MyFlashWindowEx = NULL;
+static gboolean pwm_handles_connections = TRUE;
 
 
 /*
@@ -202,6 +205,43 @@ void winpidgin_notify_uri(const char *uri) {
 #define PIDGIN_WM_FOCUS_REQUEST (WM_APP + 13)
 #define PIDGIN_WM_PROTOCOL_HANDLE (WM_APP + 14)
 
+static void*
+winpidgin_netconfig_changed_cb(void *data)
+{
+	pwm_handles_connections = FALSE;
+
+	return NULL;
+}
+
+static void*
+winpidgin_get_handle(void)
+{
+	static int handle;
+
+	return &handle;
+}
+
+static gboolean
+winpidgin_pwm_reconnect()
+{
+	purple_signal_disconnect(purple_network_get_handle(), "network-configuration-changed",
+		winpidgin_get_handle(), PURPLE_CALLBACK(winpidgin_netconfig_changed_cb));
+
+	if (pwm_handles_connections == TRUE) {
+		PurpleConnectionUiOps *ui_ops = pidgin_connections_get_ui_ops();
+
+		purple_debug_info("winpidgin", "Resumed from standby, reconnecting accounts.\n");
+
+		if (ui_ops != NULL && ui_ops->network_connected != NULL)
+			ui_ops->network_connected();
+	} else {
+		purple_debug_info("winpidgin", "Resumed from standby, gtkconn will handle reconnecting.\n");
+		pwm_handles_connections = TRUE;
+	}
+
+	return FALSE;
+}
+
 static LRESULT CALLBACK message_window_handler(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 	if (msg == PIDGIN_WM_FOCUS_REQUEST) {
@@ -213,6 +253,28 @@ static LRESULT CALLBACK message_window_handler(HWND hwnd, UINT msg, WPARAM wpara
 		purple_debug_info("winpidgin", "Got protocol handler request: %s\n", proto_msg ? proto_msg : "");
 		purple_got_protocol_handler_uri(proto_msg);
 		return TRUE;
+	} else if (msg == WM_POWERBROADCAST) {
+		if (wparam == PBT_APMQUERYSUSPEND) {
+			purple_debug_info("winpidgin", "Windows requesting permission to suspend.\n");
+			return TRUE;
+		} else if (wparam == PBT_APMSUSPEND) {
+			PurpleConnectionUiOps *ui_ops = pidgin_connections_get_ui_ops();
+
+			purple_debug_info("winpidgin", "Entering system standby, disconnecting accounts.\n");
+
+			if (ui_ops != NULL && ui_ops->network_disconnected != NULL)
+				ui_ops->network_disconnected();
+
+			purple_signal_connect(purple_network_get_handle(), "network-configuration-changed", winpidgin_get_handle(),
+				PURPLE_CALLBACK(winpidgin_netconfig_changed_cb), NULL);
+
+			return TRUE;
+		} else if (wparam == PBT_APMRESUMESUSPEND) {
+			purple_debug_info("winpidgin", "Resuming from system standby.\n");
+			/* TODO: It seems like it'd be wise to use the NLA message, if possible, instead of this. */
+			purple_timeout_add_seconds(1, winpidgin_pwm_reconnect, NULL);
+			return TRUE;
+		}
 	}
 
 	return DefWindowProc(hwnd, msg, wparam, lparam);
@@ -428,43 +490,81 @@ get_WorkingAreaRectForWindow(HWND hwnd, RECT *workingAreaRc) {
 }
 
 void winpidgin_ensure_onscreen(GtkWidget *win) {
-	RECT windowRect, workingAreaRect, intersectionRect;
+	RECT winR, wAR, intR;
 	HWND hwnd = GDK_WINDOW_HWND(win->window);
 
 	g_return_if_fail(hwnd != NULL);
-	GetWindowRect(hwnd, &windowRect);
+	GetWindowRect(hwnd, &winR);
 
 	purple_debug_info("win32placement",
 			"Window RECT: L:%ld R:%ld T:%ld B:%ld\n",
-			windowRect.left, windowRect.right,
-			windowRect.top, windowRect.bottom);
+			winR.left, winR.right,
+			winR.top, winR.bottom);
 
-	if(!get_WorkingAreaRectForWindow(hwnd, &workingAreaRect)) {
+	if(!get_WorkingAreaRectForWindow(hwnd, &wAR)) {
 		purple_debug_info("win32placement",
 				"Couldn't get multimonitor working area\n");
-		if(!SystemParametersInfo(SPI_GETWORKAREA, 0, &workingAreaRect, FALSE)) {
+		if(!SystemParametersInfo(SPI_GETWORKAREA, 0, &wAR, FALSE)) {
 			/* I don't think this will ever happen */
-			workingAreaRect.left = 0;
-			workingAreaRect.top = 0;
-			workingAreaRect.bottom = GetSystemMetrics(SM_CYSCREEN);
-			workingAreaRect.right = GetSystemMetrics(SM_CXSCREEN);
+			wAR.left = 0;
+			wAR.top = 0;
+			wAR.bottom = GetSystemMetrics(SM_CYSCREEN);
+			wAR.right = GetSystemMetrics(SM_CXSCREEN);
 		}
 	}
 
 	purple_debug_info("win32placement",
 			"Working Area RECT: L:%ld R:%ld T:%ld B:%ld\n",
-			workingAreaRect.left, workingAreaRect.right,
-			workingAreaRect.top, workingAreaRect.bottom);
+			wAR.left, wAR.right,
+			wAR.top, wAR.bottom);
 
-	/** If the conversation window doesn't intersect perfectly with the working area,
-	 *  move it to the top left corner of the working area */
-	if(!(IntersectRect(&intersectionRect, &windowRect, &workingAreaRect)
-				&& EqualRect(&intersectionRect, &windowRect))) {
+	/** If the conversation window doesn't intersect perfectly, move it to do so */
+	if(!(IntersectRect(&intR, &winR, &wAR)
+				&& EqualRect(&intR, &winR))) {
 		purple_debug_info("win32placement",
 				"conversation window out of working area, relocating\n");
-		MoveWindow(hwnd, workingAreaRect.left, workingAreaRect.top,
-				(windowRect.right - windowRect.left),
-				(windowRect.bottom - windowRect.top), TRUE);
+
+		/* Make sure the working area is big enough. */
+		if ((winR.right - winR.left) <= (wAR.right - wAR.left)
+				&& (winR.bottom - winR.top) <= (wAR.bottom - wAR.top)) {
+			/* Is it off the bottom? */
+			if (winR.bottom > wAR.bottom) {
+				winR.top = wAR.bottom - (winR.bottom - winR.top);
+				winR.bottom = wAR.bottom;
+			}
+			/* Is it off the top? */
+			else if (winR.top < wAR.top) {
+				winR.bottom = wAR.top + (winR.bottom - winR.top);
+				winR.top = wAR.top;
+			}
+
+			/* Is it off the left? */
+			if (winR.left < wAR.left) {
+				winR.right = wAR.left + (winR.right - winR.left);
+				winR.left = wAR.left;
+			}
+			/* Is it off the right? */
+			else  if (winR.right > wAR.right) {
+				winR.left = wAR.right - (winR.right - winR.left);
+				winR.right = wAR.right;
+			}
+
+		} else {
+ 			/* We couldn't salvage it; move it to the top left corner of the working area */
+ 			winR.right = wAR.left + (winR.right - winR.left);
+ 			winR.bottom = wAR.top + (winR.bottom - winR.top);
+ 			winR.left = wAR.left;
+ 			winR.top = wAR.top;
+		}
+
+		purple_debug_info("win32placement",
+			"Relocation RECT: L:%ld R:%ld T:%ld B:%ld\n",
+			winR.left, winR.right,
+			winR.top, winR.bottom);
+
+		MoveWindow(hwnd, winR.left, winR.top,
+				   (winR.right - winR.left),
+				   (winR.bottom - winR.top), TRUE);
 	}
 }
 

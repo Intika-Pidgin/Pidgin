@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 
 #ifndef _CAP_H_
@@ -99,7 +99,6 @@ static void buddy_signed_on(PurpleBuddy *buddy);
 /* buddy-signed-off */
 static void buddy_signed_off(PurpleBuddy *buddy);
 static void buddy_idle(PurpleBuddy *buddy, gboolean old_idle, gboolean idle);
-static void blist_node_extended_menu(PurpleBlistNode *node, GList **menu);
 /* drawing-tooltip */
 static void drawing_tooltip(PurpleBlistNode *node, GString *text, gboolean full);
 /* signed-on */

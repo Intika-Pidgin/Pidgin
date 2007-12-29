@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef GNT_CLIPBOARD_H
@@ -60,26 +60,27 @@ struct _GntClipboardClass
 G_BEGIN_DECLS
 
 /**
- * 
- *
- * @return
+ * @return GType for GntClipboard.
  */
 GType gnt_clipboard_get_gtype(void);
 
 /**
- * 
- * @param clip
+ * Get the current text from the clipboard.
  *
- * @return
+ * @param clip  The clipboard.
+ *
+ * @return  A copy of the string in the clipboard. The caller should free the
+ *          returned value.
  */
 gchar * gnt_clipboard_get_string(GntClipboard *clip);
 
 /**
- * 
- * @param clip
- * @param string
+ * Set the text in the clipboard.
+ *
+ * @param clip     The clipboard.
+ * @param string   New string for the clipboard.
  */
-void gnt_clipboard_set_string(GntClipboard *clip, gchar *string);
+void gnt_clipboard_set_string(GntClipboard *clip, const gchar *string);
 
 G_END_DECLS
 

@@ -42,8 +42,11 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##
 ##  SOURCES, OBJECTS
 ##
-C_SRC =			auth.c \
+C_SRC =	\
+			adhoccommands.c \
+			auth.c \
 			buddy.c \
+			caps.c \
 			chat.c \
 			disco.c \
 			google.c \
@@ -53,9 +56,14 @@ C_SRC =			auth.c \
 			message.c \
 			oob.c \
 			parser.c \
+			pep.c \
+			ping.c \
 			presence.c \
 			roster.c \
 			si.c \
+			usermood.c \
+			usernick.c \
+			usertune.c \
 			xdata.c \
 			win32/posix.uname.c
 
@@ -74,6 +82,29 @@ LIBS = \
 			-lintl \
 			-lpurple
 
+ifeq ($(CYRUS_SASL), 1)
+CYRUS_SASL_TOP := $(WIN32_DEV_TOP)/cyrus-sasl-2.1.22
+CFLAGS += -DHAVE_CYRUS_SASL
+INCLUDE_PATHS += -I$(CYRUS_SASL_TOP)/include
+LIB_PATHS += -L$(CYRUS_SASL_TOP)/lib
+LIBS += -llibsasl
+CYRUS_SASL_DLLS = \
+			$(CYRUS_SASL_TOP)/bin/comerr32.dll \
+			$(CYRUS_SASL_TOP)/bin/gssapi32.dll \
+			$(CYRUS_SASL_TOP)/bin/k5sprt32.dll \
+			$(CYRUS_SASL_TOP)/bin/krb5_32.dll \
+			$(CYRUS_SASL_TOP)/bin/libsasl.dll
+
+CYRUS_SASL_PLUGINS = \
+			$(CYRUS_SASL_TOP)/bin/sasl2/saslANONYMOUS.dll \
+			$(CYRUS_SASL_TOP)/bin/sasl2/saslCRAMMD5.dll \
+			$(CYRUS_SASL_TOP)/bin/sasl2/saslDIGESTMD5.dll \
+			$(CYRUS_SASL_TOP)/bin/sasl2/saslGSSAPI.dll \
+			$(CYRUS_SASL_TOP)/bin/sasl2/saslLOGIN.dll \
+			$(CYRUS_SASL_TOP)/bin/sasl2/saslPLAIN.dll
+
+endif
+
 include $(PIDGIN_COMMON_RULES)
 
 ##
@@ -86,6 +117,11 @@ all: $(TARGET).dll $(XMPP_TARGET).dll
 install: all $(DLL_INSTALL_DIR)
 	cp $(XMPP_TARGET).dll $(DLL_INSTALL_DIR)
 	cp $(TARGET).dll $(PURPLE_INSTALL_DIR)
+ifeq ($(CYRUS_SASL), 1)
+	mkdir -p $(PURPLE_INSTALL_DIR)/sasl2
+	cp $(CYRUS_SASL_DLLS) $(PURPLE_INSTALL_DIR)
+	cp $(CYRUS_SASL_PLUGINS) $(PURPLE_INSTALL_DIR)/sasl2
+endif
 
 $(OBJECTS): $(PURPLE_CONFIG_H)
 

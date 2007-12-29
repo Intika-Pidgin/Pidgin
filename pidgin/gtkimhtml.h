@@ -1,8 +1,10 @@
 /**
  * @file gtkimhtml.h GTK+ IM/HTML rendering component
  * @ingroup pidgin
- *
- * Pidgin is the legal property of its developers, whose names are too numerous
+ * @see @ref gtkimhtml-signals
+ */
+
+/* Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -18,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PIDGINIMHTML_H_
 #define _PIDGINIMHTML_H_
@@ -126,8 +128,15 @@ struct _GtkIMHtml {
 		GtkTextTag *link;
 	} edit;
 
+#ifndef PIDGIN_DISABLE_DEPRECATED
+	/** @deprecated */
 	char *clipboard_text_string;
+	/** @deprecated */
 	char *clipboard_html_string;
+#else
+	char *depr1;
+	char *depr2;
+#endif
 
 	GSList *im_images;
 	GtkIMHtmlFuncs *funcs;
@@ -216,7 +225,8 @@ typedef enum {
 	GTK_IMHTML_RETURN_LOG          = 1 << 7,
 	GTK_IMHTML_USE_POINTSIZE       = 1 << 8,
 	GTK_IMHTML_NO_FORMATTING       = 1 << 9,
-	GTK_IMHTML_USE_SMOOTHSCROLLING = 1 << 10
+	GTK_IMHTML_USE_SMOOTHSCROLLING = 1 << 10,
+	GTK_IMHTML_NO_SMILEY           = 1 << 11,
 } GtkIMHtmlOptions;
 
 enum {
@@ -439,6 +449,8 @@ GtkIMHtmlScalable *gtk_imhtml_image_new(GdkPixbuf *img, const gchar *filename, i
  * @param id       The id to associate with the image.
  *
  * @return A new IM/HTML Scalable object with an image.
+ *
+ * @since 2.1.0
  */
 /*
  * TODO: All this animation code could be combined much better with
@@ -835,6 +847,8 @@ char *gtk_imhtml_get_text(GtkIMHtml *imhtml, GtkTextIter *start, GtkTextIter *st
  *
  * @param imhtml  The GTK+ IM/HTML.
  * @param flags   The connection flag which describes the allowed types of formatting.
+ *
+ * @since 2.1.0
  */
 void gtk_imhtml_setup_entry(GtkIMHtml *imhtml, PurpleConnectionFlags flags);
 

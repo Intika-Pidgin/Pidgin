@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _YAHOO_PACKET_H_
@@ -99,9 +99,12 @@ enum yahoo_service { /* these are easier to see in hex */
 	YAHOO_SERVICE_VERIFY_ID_EXISTS = 0xc8,
 	YAHOO_SERVICE_AUDIBLE = 0xd0,
 	YAHOO_SERVICE_AUTH_REQ_15 = 0xd6,
+	YAHOO_SERVICE_Y7_FILETRANSFER = 0xdc,
+	YAHOO_SERVICE_Y7_FILETRANSFER_INFO = 0xdd,
+	YAHOO_SERVICE_Y7_FILETRANSFER_ACCEPT = 0xde,
 	YAHOO_SERVICE_CHGRP_15 = 0xe7,
 	YAHOO_SERVICE_STATUS_15 = 0xf0,
-	YAHOO_SERVICE_LIST_15 = 0Xf1,
+	YAHOO_SERVICE_LIST_15 = 0xf1,
 	YAHOO_SERVICE_WEBLOGIN = 0x0226,
 	YAHOO_SERVICE_SMS_MSG = 0x02ea
 };

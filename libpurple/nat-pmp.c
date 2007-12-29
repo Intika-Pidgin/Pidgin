@@ -1,8 +1,9 @@
 /**
  * @file nat-pmp.c NAT-PMP Implementation
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -175,20 +176,20 @@ default_gw()
 	/* Determine the buffer side needed to get the full routing table */
     if (sysctl(mib, 6, NULL, &needed, NULL, 0) < 0) 
 	{
-		purple_debug_warning("nat-pmp", "sysctl: net.route.0.0.dump estimate");
+		purple_debug_warning("nat-pmp", "sysctl: net.route.0.0.dump estimate\n");
 		return NULL;
     }
 
     if (!(buf = malloc(needed)))
 	{
-		purple_debug_warning("nat-pmp", "malloc");
+		purple_debug_warning("nat-pmp", "malloc\n");
 		return NULL;
     }
 
 	/* Read the routing table into buf */
     if (sysctl(mib, 6, buf, &needed, NULL, 0) < 0) 
 	{
-		purple_debug_warning("nat-pmp", "sysctl: net.route.0.0.dump");
+		purple_debug_warning("nat-pmp", "sysctl: net.route.0.0.dump\n");
 		return NULL;
     }
 
@@ -231,7 +232,7 @@ default_gw()
 						sin->sin_addr.s_addr = rti_sin->sin_addr.s_addr;
 						memcpy(sin, rti_info[RTAX_GATEWAY], sizeof(struct sockaddr_in));
 
-						purple_debug_info("nat-pmp", "found a default gateway");
+						purple_debug_info("nat-pmp", "found a default gateway\n");
 						found = TRUE;
 						break;
 					}
@@ -266,7 +267,7 @@ purple_pmp_get_public_ip()
 	if ((pmp_info.status == PURPLE_PMP_STATUS_DISCOVERED) && (pmp_info.publicip != NULL))
 	{
 #ifdef PMP_DEBUG
-		purple_debug_info("nat-pmp", "Returning cached publicip %s",pmp_info.publicip);
+		purple_debug_info("nat-pmp", "Returning cached publicip %s\n",pmp_info.publicip);
 #endif
 		return pmp_info.publicip;
 	}
@@ -311,7 +312,7 @@ purple_pmp_get_public_ip()
 	
 	if (sendto(sendfd, &req, sizeof(req), 0, (struct sockaddr *)(gateway), sizeof(struct sockaddr)) < 0)
 	{
-		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP public IP request! (%s)\n", strerror(errno));
+		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP public IP request! (%s)\n", g_strerror(errno));
 		g_free(gateway);
 		pmp_info.status = PURPLE_PMP_STATUS_UNABLE_TO_DISCOVER;
 		return NULL;
@@ -319,7 +320,7 @@ purple_pmp_get_public_ip()
 
 	if (setsockopt(sendfd, SOL_SOCKET, SO_RCVTIMEO, &req_timeout, sizeof(req_timeout)) < 0)
 	{
-		purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", strerror(errno));
+		purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", g_strerror(errno));
 		g_free(gateway);
 		pmp_info.status = PURPLE_PMP_STATUS_UNABLE_TO_DISCOVER;
 		return NULL;
@@ -331,7 +332,7 @@ purple_pmp_get_public_ip()
 	{
 		if (errno != EAGAIN)
 		{
-			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", strerror(errno));
+			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", g_strerror(errno));
 			g_free(gateway);
 			pmp_info.status = PURPLE_PMP_STATUS_UNABLE_TO_DISCOVER;
 			return NULL;
@@ -431,13 +432,13 @@ purple_pmp_create_map(PurplePmpType type, unsigned short privateport, unsigned s
 	/* TODO: Non-blocking! */
 	success = (sendto(sendfd, &req, sizeof(req), 0, (struct sockaddr *)(gateway), sizeof(struct sockaddr)) >= 0);
 	if (!success)
-		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP mapping request! (%s)\n", strerror(errno));
+		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP mapping request! (%s)\n", g_strerror(errno));
 
 	if (success)
 	{
 		success = (setsockopt(sendfd, SOL_SOCKET, SO_RCVTIMEO, &req_timeout, sizeof(req_timeout)) >= 0);
 		if (!success)
-			purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", strerror(errno));
+			purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", g_strerror(errno));
 	}
 
 	if (success)
@@ -447,7 +448,7 @@ purple_pmp_create_map(PurplePmpType type, unsigned short privateport, unsigned s
 		success = ((recvfrom(sendfd, resp, sizeof(PurplePmpMapResponse), 0, NULL, NULL) >= 0) ||
 				   (errno == EAGAIN));
 		if (!success)
-			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", strerror(errno));
+			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", g_strerror(errno));
 	}
 
 	if (success)

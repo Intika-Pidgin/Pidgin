@@ -1,8 +1,9 @@
 /**
  * @file pluginpref.h Plugin Preferences API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _PURPLE_PLUGINPREF_H_
@@ -34,16 +35,16 @@ typedef struct _PurplePluginPref			PurplePluginPref;
  */
 typedef enum
 {
-	PURPLE_STRING_FORMAT_TYPE_NONE      = 0,
-	PURPLE_STRING_FORMAT_TYPE_MULTILINE = 1 << 0,
-	PURPLE_STRING_FORMAT_TYPE_HTML      = 1 << 1
+	PURPLE_STRING_FORMAT_TYPE_NONE      = 0,          /**< The string is plain text. */
+	PURPLE_STRING_FORMAT_TYPE_MULTILINE = 1 << 0,     /**< The string can have newlines. */
+	PURPLE_STRING_FORMAT_TYPE_HTML      = 1 << 1      /**< The string can be in HTML. */
 } PurpleStringFormatType;
 
 typedef enum {
 	PURPLE_PLUGIN_PREF_NONE,
 	PURPLE_PLUGIN_PREF_CHOICE,
-	PURPLE_PLUGIN_PREF_INFO,   /**< no-value label */
-	PURPLE_PLUGIN_PREF_STRING_FORMAT
+	PURPLE_PLUGIN_PREF_INFO,              /**< no-value label */
+	PURPLE_PLUGIN_PREF_STRING_FORMAT      /**< The preference has a string value. */
 } PurplePluginPrefType;
 
 #include <glib.h>
@@ -84,7 +85,7 @@ void purple_plugin_pref_frame_add(PurplePluginPrefFrame *frame, PurplePluginPref
  * Get the plugin preferences from a plugin preference frame
  *
  * @param frame The plugin frame to get the plugin preferences from
- * @return a GList of plugin preferences
+ * @constreturn a GList of plugin preferences
  */
 GList *purple_plugin_pref_frame_get_prefs(PurplePluginPrefFrame *frame);
 
@@ -206,7 +207,7 @@ void purple_plugin_pref_add_choice(PurplePluginPref *pref, const char *label, gp
  * Get the choices for a choices plugin pref
  *
  * @param pref The plugin pref
- * @return GList of the choices 
+ * @constreturn GList of the choices
  */
 GList *purple_plugin_pref_get_choices(PurplePluginPref *pref);
 

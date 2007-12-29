@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -297,6 +297,7 @@ prefs_start_element_handler (GMarkupParseContext *context,
 						g_filename_from_utf8(pref_value, -1, NULL, NULL, NULL));
 			}
 		}
+		g_string_free(pref_name_full, TRUE);
 	} else {
 		char *decoded;
 
@@ -329,9 +330,13 @@ prefs_start_element_handler (GMarkupParseContext *context,
 				purple_prefs_set_string_list(pref_name_full->str, NULL);
 				break;
 			case PURPLE_PREF_PATH:
-				decoded = g_filename_from_utf8(pref_value, -1, NULL, NULL, NULL);
-				purple_prefs_set_path(pref_name_full->str, decoded);
-				g_free(decoded);
+				if (pref_value) {
+					decoded = g_filename_from_utf8(pref_value, -1, NULL, NULL, NULL);
+					purple_prefs_set_path(pref_name_full->str, decoded);
+					g_free(decoded);
+				} else {
+					purple_prefs_set_path(pref_name_full->str, NULL);
+				}
 				break;
 			case PURPLE_PREF_PATH_LIST:
 				purple_prefs_set_path_list(pref_name_full->str, NULL);
@@ -378,13 +383,20 @@ purple_prefs_load()
 	purple_debug_info("prefs", "Reading %s\n", filename);
 
 	if(!g_file_get_contents(filename, &contents, &length, &error)) {
-#ifndef _WIN32
+#ifdef _WIN32
+		gchar *common_appdata = wpurple_get_special_folder(CSIDL_COMMON_APPDATA);
+#endif
 		g_free(filename);
 		g_error_free(error);
 
 		error = NULL;
 
+#ifdef _WIN32
+		filename = g_build_filename(common_appdata ? common_appdata : "", "purple", "prefs.xml", NULL);
+		g_free(common_appdata);
+#else
 		filename = g_build_filename(SYSCONFDIR, "purple", "prefs.xml", NULL);
+#endif
 
 		purple_debug_info("prefs", "Reading %s\n", filename);
 
@@ -397,15 +409,6 @@ purple_prefs_load()
 
 			return FALSE;
 		}
-#else /* _WIN32 */
-		purple_debug_error("prefs", "Error reading prefs: %s\n",
-				error->message);
-		g_error_free(error);
-		g_free(filename);
-		prefs_loaded = TRUE;
-
-		return FALSE;
-#endif /* _WIN32 */
 	}
 
 	context = g_markup_parse_context_new(&prefs_parser, 0, NULL, NULL);
@@ -434,19 +437,6 @@ purple_prefs_load()
 	g_free(contents);
 	g_free(filename);
 	prefs_loaded = TRUE;
-
-	/* I introduced a bug in 2.0.0beta2.  This fixes the broken
-	 * scores on upgrade.  This can be removed sometime shortly
-	 * after 2.0.0 final is released. -- rlaager */
-	if (purple_prefs_get_int("/purple/status/scores/offline") == -500 &&
-	    purple_prefs_get_int("/purple/status/scores/available") == 100 &&
-	    purple_prefs_get_int("/purple/status/scores/invisible") == -50 &&
-	    purple_prefs_get_int("/purple/status/scores/away") == -100 &&
-	    purple_prefs_get_int("/purple/status/scores/extended_away") == -200 &&
-	    purple_prefs_get_int("/purple/status/scores/idle") == -400)
-	{
-		purple_prefs_set_int("/purple/status/scores/idle", -10);
-	}
 
 	return TRUE;
 }
@@ -911,7 +901,7 @@ purple_prefs_set_path(const char *name, const char *value)
 	if(pref) {
 		if(pref->type != PURPLE_PREF_PATH) {
 			purple_debug_error("prefs",
-					"purple_prefs_set_path: %s not a string pref\n", name);
+					"purple_prefs_set_path: %s not a path pref\n", name);
 			return;
 		}
 
@@ -1446,6 +1436,9 @@ purple_prefs_init(void)
 	purple_prefs_remove("/purple/contact/offline_score");
 	purple_prefs_remove("/purple/contact/away_score");
 	purple_prefs_remove("/purple/contact/idle_score");
+
+	purple_prefs_load();
+	purple_prefs_update_old();
 }
 
 void

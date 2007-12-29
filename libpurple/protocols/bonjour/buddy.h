@@ -11,7 +11,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
 #ifndef _BONJOUR_BUDDY
@@ -27,8 +27,7 @@ typedef struct _BonjourBuddy
 	PurpleAccount *account;
 
 	gchar *name;
-	/* TODO: Remove and just use the hostname */
-	gchar *ip;
+	GSList *ips;
 	gint port_p2pj;
 
 	gchar *first;
@@ -83,7 +82,7 @@ void clear_bonjour_buddy_values(BonjourBuddy *buddy);
 /**
  * Sets a value in the BonjourBuddy struct, destroying the old value
  */
-void set_bonjour_buddy_value(BonjourBuddy *buddy, const char *record_key, const char *value, uint32_t len);
+void set_bonjour_buddy_value(BonjourBuddy *buddy, const char *record_key, const char *value, guint32 len);
 
 /**
  * Check if all the compulsory buddy data is present.
@@ -92,8 +91,9 @@ gboolean bonjour_buddy_check(BonjourBuddy *buddy);
 
 /**
  * If the buddy doesn't previoulsy exists, it is created. Else, its data is changed (???)
+ * purple_buddy is optional; it saves an additional lookup if we already have it
  */
-void bonjour_buddy_add_to_purple(BonjourBuddy *buddy);
+void bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *purple_buddy);
 
 /**
  * We got the buddy icon data; deal with it

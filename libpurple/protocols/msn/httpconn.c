@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
 #include "debug.h"
@@ -169,7 +169,7 @@ msn_httpconn_parse_data(MsnHttpConn *httpconn, const char *buf,
 	/* Now we should be able to process the data. */
 	if ((s = purple_strcasestr(header, "X-MSN-Messenger: ")) != NULL)
 	{
-		char *full_session_id, *gw_ip, *session_action;
+		gchar *full_session_id = NULL, *gw_ip = NULL, *session_action = NULL;
 		char *t, *session_id;
 		char **elems, **cur, **tokens;
 
@@ -181,7 +181,7 @@ msn_httpconn_parse_data(MsnHttpConn *httpconn, const char *buf,
 		{
 			msn_session_set_error(httpconn->session,
 								  MSN_ERROR_HTTP_MALFORMED, NULL);
-			purple_debug_error("msn", "Malformed X-MSN-Messenger field.\n{%s}",
+			purple_debug_error("msn", "Malformed X-MSN-Messenger field.\n{%s}\n",
 							 buf);
 
 			g_free(body);
@@ -196,13 +196,16 @@ msn_httpconn_parse_data(MsnHttpConn *httpconn, const char *buf,
 		{
 			tokens = g_strsplit(*cur, "=", 2);
 
-			if (strcmp(tokens[0], "SessionID") == 0)
+			if (strcmp(tokens[0], "SessionID") == 0) {
+				g_free(full_session_id);
 				full_session_id = tokens[1];
-			else if (strcmp(tokens[0], "GW-IP") == 0)
+			} else if (strcmp(tokens[0], "GW-IP") == 0) {
+				g_free(gw_ip);
 				gw_ip = tokens[1];
-			else if (strcmp(tokens[0], "Session") == 0)
+			} else if (strcmp(tokens[0], "Session") == 0) {
+				g_free(session_action);
 				session_action = tokens[1];
-			else
+			} else
 				g_free(tokens[1]);
 
 			g_free(tokens[0]);
@@ -663,6 +666,8 @@ msn_httpconn_new(MsnServConn *servconn)
 	httpconn->tx_buf = purple_circ_buffer_new(MSN_BUF_LEN);
 	httpconn->tx_handler = 0;
 
+	httpconn->fd = -1;
+
 	return httpconn;
 }
 
@@ -681,6 +686,17 @@ msn_httpconn_destroy(MsnHttpConn *httpconn)
 	g_free(httpconn->session_id);
 
 	g_free(httpconn->host);
+
+	while (httpconn->queue != NULL) {
+		MsnHttpQueueData *queue_data;
+
+		queue_data = (MsnHttpQueueData *) httpconn->queue->data;
+
+		httpconn->queue = g_list_delete_link(httpconn->queue, httpconn->queue);
+
+		g_free(queue_data->body);
+		g_free(queue_data);
+	}
 
 	purple_circ_buffer_destroy(httpconn->tx_buf);
 	if (httpconn->tx_handler > 0)
@@ -725,7 +741,7 @@ msn_httpconn_connect(MsnHttpConn *httpconn, const char *host, int port)
 		msn_httpconn_disconnect(httpconn);
 
 	httpconn->connect_data = purple_proxy_connect(NULL, httpconn->session->account,
-		"gateway.messenger.hotmail.com", 80, connect_cb, httpconn);
+		host, 80, connect_cb, httpconn);
 
 	if (httpconn->connect_data != NULL)
 	{

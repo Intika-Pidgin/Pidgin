@@ -17,13 +17,20 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "gntbox.h"
 #include "gntutils.h"
 
 #include <string.h>
+
+enum
+{
+	PROP_0,
+	PROP_VERTICAL,
+	PROP_HOMO        /* ... */
+};
 
 enum
 {
@@ -80,12 +87,12 @@ gnt_box_draw(GntWidget *widget)
 		get_title_thingies(box, title, &pos, &right);
 
 		if (gnt_widget_has_focus(widget))
-			wbkgdset(widget->window, '\0' | COLOR_PAIR(GNT_COLOR_TITLE));
+			wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_TITLE));
 		else
-			wbkgdset(widget->window, '\0' | COLOR_PAIR(GNT_COLOR_TITLE_D));
-		mvwaddch(widget->window, 0, pos-1, ACS_RTEE | COLOR_PAIR(GNT_COLOR_NORMAL));
+			wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_TITLE_D));
+		mvwaddch(widget->window, 0, pos-1, ACS_RTEE | gnt_color_pair(GNT_COLOR_NORMAL));
 		mvwaddstr(widget->window, 0, pos, title);
-		mvwaddch(widget->window, 0, right, ACS_LTEE | COLOR_PAIR(GNT_COLOR_NORMAL));
+		mvwaddch(widget->window, 0, right, ACS_LTEE | gnt_color_pair(GNT_COLOR_NORMAL));
 		g_free(title);
 	}
 	
@@ -511,8 +518,44 @@ gnt_box_clicked(GntWidget *widget, GntMouseEvent event, int cx, int cy)
 }
 
 static void
+gnt_box_set_property(GObject *obj, guint prop_id, const GValue *value,
+		GParamSpec *spec)
+{
+	GntBox *box = GNT_BOX(obj);
+	switch (prop_id) {
+		case PROP_VERTICAL:
+			box->vertical = g_value_get_boolean(value);
+			break;
+		case PROP_HOMO:
+			box->homogeneous = g_value_get_boolean(value);
+			break;
+		default:
+			g_return_if_reached();
+			break;
+	}
+}
+
+static void
+gnt_box_get_property(GObject *obj, guint prop_id, GValue *value,
+		GParamSpec *spec)
+{
+	GntBox *box = GNT_BOX(obj);
+	switch (prop_id) {
+		case PROP_VERTICAL:
+			g_value_set_boolean(value, box->vertical);
+			break;
+		case PROP_HOMO:
+			g_value_set_boolean(value, box->homogeneous);
+			break;
+		default:
+			break;
+	}
+}
+
+static void
 gnt_box_class_init(GntBoxClass *klass)
 {
+	GObjectClass *gclass = G_OBJECT_CLASS(klass);
 	parent_class = GNT_WIDGET_CLASS(klass);
 	parent_class->destroy = gnt_box_destroy;
 	parent_class->draw = gnt_box_draw;
@@ -527,7 +570,24 @@ gnt_box_class_init(GntBoxClass *klass)
 	parent_class->confirm_size = gnt_box_confirm_size;
 	parent_class->size_changed = gnt_box_size_changed;
 
-	GNTDEBUG;
+	gclass->set_property = gnt_box_set_property;
+	gclass->get_property = gnt_box_get_property;
+	g_object_class_install_property(gclass,
+			PROP_VERTICAL,
+			g_param_spec_boolean("vertical", "Vertical",
+				"Whether the child widgets in the box should be stacked vertically.",
+				TRUE,
+				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+			)
+		);
+	g_object_class_install_property(gclass,
+			PROP_HOMO,
+			g_param_spec_boolean("homogeneous", "Homogeneous",
+				"Whether the child widgets in the box should have the same size.",
+				TRUE,
+				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+			)
+		);
 }
 
 static void
@@ -603,7 +663,7 @@ void gnt_box_set_title(GntBox *b, const char *title)
 		/* Erase the old title */
 		int pos, right;
 		get_title_thingies(b, prev, &pos, &right);
-		mvwhline(w->window, 0, pos - 1, ACS_HLINE | COLOR_PAIR(GNT_COLOR_NORMAL),
+		mvwhline(w->window, 0, pos - 1, ACS_HLINE | gnt_color_pair(GNT_COLOR_NORMAL),
 				right - pos + 2);
 		g_free(prev);
 	}
@@ -791,8 +851,14 @@ void gnt_box_move_focus(GntBox *box, int dir)
 
 void gnt_box_give_focus_to_child(GntBox *box, GntWidget *widget)
 {
-	GList *find = g_list_find(box->focus, widget);
-	gpointer now = box->active;
+	GList *find;
+	gpointer now;
+
+	while (GNT_WIDGET(box)->parent)
+		box = GNT_BOX(GNT_WIDGET(box)->parent);
+
+	find = g_list_find(box->focus, widget);
+	now = box->active;
 	if (find)
 		box->active = widget;
 	if (now && now != box->active)

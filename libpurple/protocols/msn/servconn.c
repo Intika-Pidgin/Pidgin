@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
 #include "servconn.h"
@@ -52,6 +52,8 @@ msn_servconn_new(MsnSession *session, MsnServConnType type)
 
 	servconn->tx_buf = purple_circ_buffer_new(MSN_BUF_LEN);
 	servconn->tx_handler = 0;
+
+	servconn->fd = -1;
 
 	return servconn;
 }
@@ -166,7 +168,7 @@ msn_servconn_got_error(MsnServConn *servconn, MsnServConnError error)
  **************************************************************************/
 
 static void
-connect_cb(gpointer data, gint source, const gchar *error_message)
+connect_cb(gpointer data, gint source, const char *error_message)
 {
 	MsnServConn *servconn;
 
@@ -223,7 +225,7 @@ msn_servconn_connect(MsnServConn *servconn, const char *host, int port)
 
 		if (!servconn->httpconn->connected)
 			if (!msn_httpconn_connect(servconn->httpconn, host, port))
-				return FALSE;;
+				return FALSE;
 
 		servconn->connected = TRUE;
 		servconn->httpconn->virgin = TRUE;
@@ -243,7 +245,9 @@ msn_servconn_connect(MsnServConn *servconn, const char *host, int port)
 		return TRUE;
 	}
 	else
+	{
 		return FALSE;
+	}
 }
 
 void
@@ -388,14 +392,21 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 	len = read(servconn->fd, buf, sizeof(buf) - 1);
 
-	if (len < 0 && errno == EAGAIN)
-		return;
-	else if (len <= 0)
-	{
-		purple_debug_error("msn", "servconn read error, len: %d error: %s\n", len, strerror(errno));
-		msn_servconn_got_error(servconn, MSN_SERVCONN_ERROR_READ);
+	if (len <= 0) {
+		switch (errno) {
 
-		return;
+			case 0:	
+
+			case EBADF:
+			case EAGAIN: return;
+	
+			default: purple_debug_error("msn", "servconn read error,"
+						"len: %d, errno: %d, error: %s\n",
+						len, errno, g_strerror(errno));
+				 msn_servconn_got_error(servconn, 
+						 MSN_SERVCONN_ERROR_READ);
+				 return;
+		}
 	}
 
 	buf[len] = '\0';
@@ -444,6 +455,7 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 		else
 		{
 			msn_cmdproc_process_cmd_text(servconn->cmdproc, cur);
+			servconn->payload_len = servconn->cmdproc->last_cmd->payload_len;
 		}
 	} while (servconn->connected && !servconn->wasted && servconn->rx_len > 0);
 
@@ -468,6 +480,7 @@ static int
 create_listener(int port)
 {
 	int fd;
+	int flags;
 	const int on = 1;
 
 #if 0
@@ -543,7 +556,8 @@ create_listener(int port)
 		return -1;
 	}
 
-	fcntl(fd, F_SETFL, O_NONBLOCK);
+	flags = fcntl(fd, F_GETFL);
+	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
 	return fd;
 }

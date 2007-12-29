@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -143,6 +143,7 @@ int serv_send_im(PurpleConnection *gc, const char *name, const char *message,
 	 */
 	auto_reply_pref = purple_prefs_get_string("/purple/away/auto_reply");
 	if ((gc->flags & PURPLE_CONNECTION_AUTO_RESP) &&
+			flags & PURPLE_MESSAGE_AUTO_RESP &&
 			!purple_presence_is_available(presence) &&
 			strcmp(auto_reply_pref, "never")) {
 
@@ -253,7 +254,7 @@ PurpleAttentionType *purple_get_attention_type_from_code(PurpleAccount *account,
 	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
 
 	/* Lookup the attention type in the protocol's attention_types list, if any. */
-	get_attention_types = PURPLE_PLUGIN_PROTOCOL_INFO(prpl)->attention_types;
+	get_attention_types = PURPLE_PLUGIN_PROTOCOL_INFO(prpl)->get_attention_types;
 	if (get_attention_types) {
 		GList *attention_types;
 
@@ -272,8 +273,10 @@ serv_send_attention(PurpleConnection *gc, const char *who, guint type_code)
 	PurpleAttentionType *attn;
 	PurpleMessageFlags flags;
 	PurplePlugin *prpl;
+	PurpleConversation *conv;
 	gboolean (*send_attention)(PurpleConnection *, const char *, guint);
-	
+	PurpleBuddy *buddy;
+	const char *alias;	
 	gchar *description;
 	time_t mtime;
 
@@ -288,10 +291,15 @@ serv_send_attention(PurpleConnection *gc, const char *who, guint type_code)
 
 	attn = purple_get_attention_type_from_code(gc->account, type_code);
 
+	if ((buddy = purple_find_buddy(purple_connection_get_account(gc), who)) != NULL)
+		alias = purple_buddy_get_contact_alias(buddy);
+	else
+		alias = who;
+
 	if (attn && attn->outgoing_description) {
-		description = g_strdup_printf(_("Attention! %s %s."), attn->outgoing_description, who);
+		description = g_strdup_printf(attn->outgoing_description, alias);
 	} else {
-		description = g_strdup(_("Attention!"));
+		description = g_strdup_printf(_("Requesting %s's attention..."), alias);
 	}
 	
 	flags = PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_NOTIFY | PURPLE_MESSAGE_SYSTEM;
@@ -302,8 +310,8 @@ serv_send_attention(PurpleConnection *gc, const char *who, guint type_code)
 	if (!send_attention(gc, who, type_code))
 		return;
 
-	/* TODO: icons, sound, shaking... same as serv_got_attention(). */
-	serv_got_im(gc, who, description, flags, mtime);
+	conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, gc->account, who);
+	purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, description, flags, mtime);
 
 	g_free(description);
 }
@@ -313,6 +321,8 @@ serv_got_attention(PurpleConnection *gc, const char *who, guint type_code)
 {
 	PurpleMessageFlags flags;
 	PurpleAttentionType *attn;
+	PurpleBuddy *buddy;
+	const char *alias;
 	gchar *description;
 	time_t mtime;
 
@@ -326,10 +336,15 @@ serv_got_attention(PurpleConnection *gc, const char *who, guint type_code)
 	/* TODO: if (attn->icon_name) is non-null, use it to lookup an emoticon and display
 	 * it next to the attention command. And if it is null, display a generic icon. */
 
+	if ((buddy = purple_find_buddy(purple_connection_get_account(gc), who)) != NULL)
+		alias = purple_buddy_get_contact_alias(buddy);
+	else
+		alias = who;
+
 	if (attn && attn->incoming_description) {
-		description = g_strdup_printf(_("Attention! You have been %s."), attn->incoming_description);
+		description = g_strdup_printf(attn->incoming_description, alias);
 	} else {
-		description = g_strdup(_("Attention!"));
+		description = g_strdup_printf(_("%s has requested your attention!"), alias);
 	}
 
 	purple_debug_info("server", "serv_got_attention: got '%s' from %s\n",
@@ -528,7 +543,7 @@ void serv_got_im(PurpleConnection *gc, const char *who, const char *msg,
 				 PurpleMessageFlags flags, time_t mtime)
 {
 	PurpleAccount *account;
-	PurpleConversation *cnv;
+	PurpleConversation *conv;
 	char *message, *name;
 	char *angel, *buffy;
 	int plugin_return;
@@ -547,22 +562,19 @@ void serv_got_im(PurpleConnection *gc, const char *who, const char *msg,
 	 * We should update the conversation window buttons and menu,
 	 * if it exists.
 	 */
-	cnv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, who, gc->account);
+	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, who, gc->account);
 
 	/*
-	 * Plugin stuff. we pass a char ** but we don't want to pass what's
-	 * been given us by the prpls. So we create temp holders and pass
-	 * those instead. It's basically just to avoid segfaults.
+	 * Make copies of the message and the sender in case plugins want
+	 * to free these strings and replace them with a modifed version.
 	 */
-	/* TODO: MAX(message, BUF_LONG) is pretty ugly. */
-	buffy = g_malloc(MAX(strlen(msg) + 1, BUF_LONG));
-	strcpy(buffy, msg);
+	buffy = g_strdup(msg);
 	angel = g_strdup(who);
 
 	plugin_return = GPOINTER_TO_INT(
 		purple_signal_emit_return_1(purple_conversations_get_handle(),
 								  "receiving-im-msg", gc->account,
-								  &angel, &buffy, cnv, &flags));
+								  &angel, &buffy, conv, &flags));
 
 	if (!buffy || !angel || plugin_return) {
 		g_free(buffy);
@@ -574,21 +586,21 @@ void serv_got_im(PurpleConnection *gc, const char *who, const char *msg,
 	message = buffy;
 
 	purple_signal_emit(purple_conversations_get_handle(), "received-im-msg", gc->account,
-					 name, message, cnv, flags);
+					 name, message, conv, flags);
 
 	/* search for conversation again in case it was created by received-im-msg handler */
-	if (cnv == NULL)
-		cnv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, gc->account);
+	if (conv == NULL)
+		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, gc->account);
 
 	/*
 	 * XXX: Should we be setting this here, or relying on prpls to set it?
 	 */
 	flags |= PURPLE_MESSAGE_RECV;
 
-	if (cnv == NULL)
-		cnv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, name);
+	if (conv == NULL)
+		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, name);
 
-	purple_conv_im_write(PURPLE_CONV_IM(cnv), NULL, message, flags, mtime);
+	purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, message, flags, mtime);
 	g_free(message);
 
 	/*
@@ -655,7 +667,7 @@ void serv_got_im(PurpleConnection *gc, const char *who, const char *msg,
 				{
 					serv_send_im(gc, name, away_msg, PURPLE_MESSAGE_AUTO_RESP);
 
-					purple_conv_im_write(PURPLE_CONV_IM(cnv), NULL, away_msg,
+					purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, away_msg,
 									   PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_AUTO_RESP,
 									   mtime);
 				}
@@ -877,15 +889,10 @@ void serv_got_chat_in(PurpleConnection *g, int id, const char *who,
 		return;
 
 	/*
-	 * Plugin stuff. We pass a char ** but we don't want to pass what's
-	 * been given us by the prpls. so we create temp holders and pass those
-	 * instead. It's basically just to avoid segfaults. Of course, if the
-	 * data is binary, plugins don't see it. Bitch all you want; i really
-	 * don't want you to be dealing with it.
+	 * Make copies of the message and the sender in case plugins want
+	 * to free these strings and replace them with a modifed version.
 	 */
-	/* TODO: MAX(message, BUF_LONG) is pretty ugly. */
-	buffy = g_malloc(MAX(strlen(message) + 1, BUF_LONG));
-	strcpy(buffy, message);
+	buffy = g_strdup(message);
 	angel = g_strdup(who);
 
 	plugin_return = GPOINTER_TO_INT(
@@ -898,6 +905,7 @@ void serv_got_chat_in(PurpleConnection *g, int id, const char *who,
 		g_free(angel);
 		return;
 	}
+
 	who = angel;
 	message = buffy;
 

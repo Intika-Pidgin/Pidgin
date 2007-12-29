@@ -1,8 +1,9 @@
 /**
  * @file prefs.h Prefs API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _PURPLE_PREFS_H_
@@ -44,9 +45,20 @@ typedef enum _PurplePrefType
 } PurplePrefType;
 
 /**
- * Pref change callback type
+ * The type of callbacks for preference changes.
+ *
+ * @param name the name of the preference which has changed.
+ * @param type the type of the preferenced named @a name
+ * @param val  the new value of the preferencs; should be cast to the correct
+ *             type.  For instance, to recover the value of a #PURPLE_PREF_INT
+ *             preference, use <tt>GPOINTER_TO_INT(val)</tt>.  Alternatively,
+ *             just call purple_prefs_get_int(), purple_prefs_get_string_list()
+ *             etc.
+ * @param data Arbitrary data specified when the callback was connected with
+ *             purple_prefs_connect_callback().
+ *
+ * @see purple_prefs_connect_callback()
  */
-
 typedef void (*PurplePrefCallback) (const char *name, PurplePrefType type,
 		gconstpointer val, gpointer data);
 
@@ -55,7 +67,9 @@ extern "C" {
 #endif
 
 /**************************************************************************/
-/** @name Prefs API                                                       */
+/** @name Prefs API                                                       
+    Preferences are named according to a directory-like structure.        
+    Example: "/plugins/core/potato/is_from_idaho" (probably a boolean)    */
 /**************************************************************************/
 /*@{*/
 
@@ -112,6 +126,9 @@ void purple_prefs_add_string(const char *name, const char *value);
  *
  * @param name  The name of the pref
  * @param value The initial value to set
+ * @note This function takes a copy of the strings in the value list. The list
+ *       itself and original copies of the strings are up to the caller to
+ *       free.
  */
 void purple_prefs_add_string_list(const char *name, GList *value);
 
@@ -128,6 +145,9 @@ void purple_prefs_add_path(const char *name, const char *value);
  *
  * @param name  The name of the pref
  * @param value The initial value to set
+ * @note This function takes a copy of the strings in the value list. The list
+ *       itself and original copies of the strings are up to the caller to
+ *       free.
  */
 void purple_prefs_add_path_list(const char *name, GList *value);
 
@@ -288,6 +308,8 @@ GList *purple_prefs_get_path_list(const char *name);
  * @return A list of newly allocated strings denoting the names of the children.
  *         Returns @c NULL if there are no children or if pref doesn't exist.
  *         The caller must free all the strings and the list.
+ *
+ * @since 2.1.0
  */
 GList *purple_prefs_get_children_names(const char *name);
 

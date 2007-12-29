@@ -1,8 +1,9 @@
 /**
  * @file pidginstock.h GTK+ Stock resources
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include <gtk/gtkstock.h>
 
@@ -45,6 +46,7 @@
 #define PIDGIN_STOCK_FILE_CANCELED   "pidgin-file-canceled"
 #define PIDGIN_STOCK_FILE_DONE       "pidgin-file-done"
 #define PIDGIN_STOCK_IGNORE          "pidgin-ignore"
+#define PIDGIN_STOCK_INFO            "pidgin-info"
 #define PIDGIN_STOCK_INVITE          "pidgin-invite"
 #define PIDGIN_STOCK_MODIFY          "pidgin-modify"
 #define PIDGIN_STOCK_OPEN_MAIL       "pidgin-stock-open-mail"

@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _PURPLE_GOOGLE_H_
@@ -36,6 +36,10 @@ void jabber_google_roster_outgoing(JabberStream *js, xmlnode *query, xmlnode *it
  * if this roster item should continue to be processed
  */
 gboolean jabber_google_roster_incoming(JabberStream *js, xmlnode *item);
+
+void jabber_google_presence_incoming(JabberStream *js, const char *who, JabberBuddyResource *jbr);
+char *jabber_google_presence_outgoing(PurpleStatus *tune);
+
 void jabber_google_roster_add_deny(PurpleConnection *gc, const char *who);
 void jabber_google_roster_rem_deny(PurpleConnection *gc, const char *who);
 

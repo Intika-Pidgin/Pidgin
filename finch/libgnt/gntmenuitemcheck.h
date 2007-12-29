@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef GNT_MENU_ITEM_CHECK_H
@@ -66,32 +66,33 @@ struct _GntMenuItemCheckClass
 G_BEGIN_DECLS
 
 /**
- * 
- *
- * @return
+ * @return GType for GntMenuItemCheck.
  */
 GType gnt_menuitem_check_get_gtype(void);
 
 /**
- * 
- * @param text
+ * Create a new menuitem.
  *
- * @return
+ * @param text  The text for the menuitem.
+ *
+ * @return  The newly created menuitem.
  */
 GntMenuItem * gnt_menuitem_check_new(const char *text);
 
 /**
- * 
- * @param item
+ * Check whether the menuitem is checked or not.
  *
- * @return
+ * @param item  The menuitem.
+ *
+ * @return @c TRUE if the item is checked, @c FALSE otherwise.
  */
 gboolean gnt_menuitem_check_get_checked(GntMenuItemCheck *item);
 
 /**
- * 
- * @param item
- * @param set
+ * Set whether the menuitem is checked or not.
+ *
+ * @param item  The menuitem.
+ * @param set   @c TRUE if the item should be checked, @c FALSE otherwise.
  */
 void gnt_menuitem_check_set_checked(GntMenuItemCheck *item, gboolean set);
 

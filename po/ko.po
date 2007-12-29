@@ -11,7 +11,7 @@ msgstr ""
 "Project-Id-Version: gaim 2.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2005-10-27 16:12-0400\n"
-"PO-Revision-Date: 2007-06-28 10:48+0900\n"
+"PO-Revision-Date: 2007-10-01 16:15+0900\n"
 "Last-Translator: sushizang <sushizang@empal.com>\n"
 "Language-Team: GTP Korean <gnome-kr-translation@gnome.or.kr>\n"
 "MIME-Version: 1.0\n"
@@ -22,7 +22,7 @@ msgstr ""
 "X-Poedit-Country: KOREA, REPUBLIC OF\n"
 
 #: ../gaim.desktop.in.h:1
-msgid "Gaim Internet Messenger"
+msgid "Pidgin Internet Messenger"
 msgstr "Pidgin 인터넷 메신저"
 
 #: ../gaim.desktop.in.h:2
@@ -1276,8 +1276,8 @@ msgstr "GntGf"
 
 #: ../console/plugins/gntgf.c:357
 #: ../console/plugins/gntgf.c:358
-msgid "Toaster plugin for Gaim-Text."
-msgstr "Pidgin (터미널 버전)의 Toaster 플러그인"
+msgid "Toaster plugin"
+msgstr "Toaster 플러그인"
 
 #: ../console/plugins/gnthistory.c:116
 #: ../gtk/plugins/history.c:120
@@ -1329,8 +1329,8 @@ msgstr "GntLastlog"
 
 #: ../console/plugins/lastlog.c:123
 #: ../console/plugins/lastlog.c:124
-msgid "Lastlog plugin for gaim-text."
-msgstr "Pidgin (터미널 버전)의 마지막 로그 플러그인입니다."
+msgid "Lastlog plugin"
+msgstr "Lastlog 플러그인입니다."
 
 #: ../gtk/eggtrayicon.c:129
 msgid "Orientation"
@@ -1390,11 +1390,11 @@ msgstr "로그인 설정"
 
 #: ../pidgin/gtkaccount.c:430
 msgid "Pro_tocol:"
-msgstr "프로토콜(_t):"
+msgstr "프로토콜(_T):"
 
 #: ../pidgin/gtkaccount.c:441
 msgid "Screen _name:"
-msgstr "아이디(_n):"
+msgstr "아이디(_N):"
 
 #: ../pidgin/gtkaccount.c:531
 msgid "_Local alias:"
@@ -1521,20 +1521,6 @@ msgstr "사용"
 #: ../gtk/gtkaccount.c:1961
 msgid "Protocol"
 msgstr "프로토콜"
-
-#: ../gtk/gtkaccount.c:2133
-msgid ""
-"<span size='larger' weight='bold'>Welcome to Gaim!</span>\n"
-"\n"
-"You have no IM accounts configured. To start connecting with Gaim press the <b>Add</b> button below and configure your first account. If you want Gaim to connect to multiple IM accounts, press <b>Add</b> again to configure them all.\n"
-"\n"
-"You can come back to this window to add, edit, or remove accounts from <b>Accounts->Add/Edit</b> in the Buddy List window"
-msgstr ""
-"<span size='larger' weight='bold'>Pidgin에 오신 것을 환영합니다!</span>\n"
-"\n"
-"아직 IM 계정을 설정하지 않았습니다. Pidgin을 사용하여 접속을 시작하는 경우에는 아래에 있는 <b>추가</b> 버튼을 누른 후, 계정 정보를 입력해 주십시오. Pidgin을 사용하여 복수의 IM 계정을 접속하는 경우에는, 각 계정마다 <b>추가</b> 버튼을 눌러 설정해 주십시오.\n"
-"\n"
-"친구 목록 창에 있는 <b>계정 -> 추가/편집</b> 메뉴에서도 이 창을 열 수 있습니다."
 
 #: ../gtk/gtkaccount.c:2483
 #, c-format
@@ -1943,17 +1929,6 @@ msgstr "로그인(_L)"
 msgid "/Accounts"
 msgstr "/계정"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
-#: ../gtk/gtkblist.c:4141
-msgid ""
-"<span weight='bold' size='larger'>Welcome to Gaim!</span>\n"
-"\n"
-"You have no accounts enabled. Enable your IM accounts from the <b>Accounts</b> window at <b>Accounts->Add/Edit</b>. Once you enable accounts, you'll be able to sign on, set your status, and talk to your friends."
-msgstr ""
-"<span weight='bold' size='larger'>Pidgin에 오신 것을 환영합니다!</span>\n"
-"\n"
-"아직 계정을 사용할 수 없습니다.<b>계정 -> 추가/편집</b> 메뉴에서 <b>계정</b> 창을 열어 IM 계정을 사용으로 선택해 주십시오. 계정을 사용으로 하면, 접속하여 상태를 설정한 후 친구와 대화할 수 있습니다."
-
 #. set the Show Offline Buddies option. must be done
 #. * after the treeview or faceprint gets mad. -Robot101
 #.
@@ -2049,11 +2024,22 @@ msgstr "/친구/친구 정렬"
 msgid ""
 "%s\n"
 "\n"
-"Gaim will not attempt to reconnect the account until you correct the error and re-enable the account."
+"%s will not attempt to reconnect the account until you correct the error and re-enable the account."
 msgstr ""
 "%s\n"
 "\n"
-"오류를 해결하고 계정을 다시 사용할 수 있을 때까지 Pidgin이 재접속하지 않습니다."
+"오류를 해결하고 계정을 다시 사용할 수 있을 때까지 %s이 재접속하지 않습니다."
+
+#: ../finch/gntconn.c:129
+#, c-format
+msgid ""
+"%s\n"
+"\n"
+"Finch will not attempt to reconnect the account until you correct the error and re-enable the account."
+msgstr ""
+"%s\n"
+"\n"
+"오류를 해결하고 계정을 다시 사용할 수 있을 때까지 방울새가 재접속하지 않습니다."
 
 #: ../gtk/gtkconv.c:766
 #: ../gtk/gtkconv.c:792
@@ -2830,20 +2816,21 @@ msgid "Amharic"
 msgstr "아무하라어"
 
 #: ../gtk/gtkdialogs.c:301
-msgid "About Gaim"
-msgstr "Pidgin 정보"
+msgid "About %s"
+msgstr "%s 정보"
 
-#: ../gtk/gtkdialogs.c:335
-msgid "Gaim is a modular messaging client capable of using AIM, MSN, Yahoo!, Jabber, ICQ, IRC, SILC, SIP/SIMPLE, Novell GroupWise, Lotus Sametime, Bonjour, Zephyr, Gadu-Gadu, and QQ all at once.  It is written using GTK+.<BR><BR>You may modify and redistribute the program under the terms of the GPL (version 2 or later).  A copy of the GPL is contained in the 'COPYING' file distributed with Gaim.  Gaim is copyrighted by its contributors.  See the 'COPYRIGHT' file for the complete list of contributors.  We provide no warranty for this program.<BR><BR>"
-msgstr "Pidgin은 AIM, MSN, Yahoo!, Jabber, ICQ, IRC, SILC, SIP/SIMPLE, Novell GroupWise, Lotus Sametime, Bonjour, Zephyr, Gadu-Gadu 그리고 QQ 프로토콜을 모두 이용할 수 있는 GTK+ 툴킷을 채용한 모듈형 메시지 클라이언트입니다.<BR><BR>GPL 라이센스(버전 2 이상)가 정하는 조항 하에 재배포 또는 변경이 가능합니다. GPL 복사가 본 Pidgin 패키지 내에 'COPYING' 라고 하는 파일명으로서 포함되어 있습니다. Pidgin의 저작권은 그 공헌자에게 귀속됩니다. 공헌자의 상세한 목록에 대해서는 'COPYRIGHT' 를 참조해 주십시오. 본 프로그램은 완전 무보증입니다.<BR><BR>"
+#: ../pidgin/gtkdialogs.c:400
+#, c-format
+msgid "%s is a graphical modular messaging client based on libpurple which is capable of connecting to AIM, MSN, Yahoo!, XMPP, ICQ, IRC, SILC, SIP/SIMPLE, Novell GroupWise, Lotus Sametime, Bonjour, Zephyr, MySpaceIM, Gadu-Gadu, and QQ all at once.  It is written using GTK+.<BR><BR>You may modify and redistribute the program under the terms of the GPL (version 2 or later).  A copy of the GPL is contained in the 'COPYING' file distributed with %s.  %s is copyrighted by its contributors.  See the 'COPYRIGHT' file for the complete list of contributors.  We provide no warranty for this program.<BR><BR>"
+msgstr "%s은 AIM, MSN, Yahoo!, Jabber, ICQ, IRC, SILC, SIP/SIMPLE, Novell GroupWise, Lotus Sametime, Bonjour, Zephyr, Gadu-Gadu 그리고 QQ 프로토콜을 모두 이용할 수 있는 GTK+ 툴킷을 채용한 모듈형 메시지 클라이언트입니다.<BR><BR>GPL 라이센스(버전 2 이상)가 정하는 조항 하에 재배포 또는 변경이 가능합니다. GPL 복사가 본 %s 패키지 내에 'COPYING' 라고 하는 파일명으로서 포함되어 있습니다. %s의 저작권은 그 공헌자에게 귀속됩니다. 공헌자의 상세한 목록에 대해서는 'COPYRIGHT' 를 참조해 주십시오. 본 프로그램은 어떠한 보증도 하지 않습니다.<BR><BR>"
 
 #: ../gtk/gtkdialogs.c:350
 msgid "<FONT SIZE=\"4\">IRC:</FONT> #wingaim on irc.freenode.net<BR><BR>"
 msgstr "<FONT SIZE=\"4\">IRC:</FONT> irc.freenode.net の #wingaim 채널<BR><BR>"
 
-#: ../gtk/gtkdialogs.c:353
-msgid "<FONT SIZE=\"4\">IRC:</FONT> #gaim on irc.freenode.net<BR><BR>"
-msgstr "<FONT SIZE=\"4\">IRC:</FONT> irc.freenode.net の #gaim 채널<BR><BR>"
+#: ../pidgin/gtkdialogs.c:418
+msgid "<FONT SIZE=\"4\">IRC:</FONT> #pidgin on irc.freenode.net<BR><BR>"
+msgstr "<FONT SIZE=\"4\">IRC:</FONT> irc.freenode.net의 #pidgin 채널<BR><BR>"
 
 #: ../gtk/gtkdialogs.c:359
 msgid "Current Developers"
@@ -3312,7 +3299,7 @@ msgstr "삽입할 링크의 URL을 입력해 주십시오."
 
 #: ../gtk/gtkimhtmltoolbar.c:414
 msgid "Insert Link"
-msgstr "링크 삽입"
+msgstr "링크를 삽입합니다."
 
 #: ../gtk/gtkimhtmltoolbar.c:418
 msgid "_Insert"
@@ -3326,7 +3313,7 @@ msgstr "이미지 저장에 실패했습니다: %s\n"
 #: ../gtk/gtkimhtmltoolbar.c:513
 #: ../gtk/gtkimhtmltoolbar.c:523
 msgid "Insert Image"
-msgstr "이미지 삽입"
+msgstr "이미지를 삽입합니다."
 
 #: ../gtk/gtkimhtmltoolbar.c:721
 msgid "This theme has no available smileys."
@@ -3352,41 +3339,127 @@ msgstr "기울림"
 msgid "Underline"
 msgstr "밑줄"
 
-#: ../gtk/gtkimhtmltoolbar.c:960
-msgid "Larger font size"
+#: ../pidgin/gtkimhtmltoolbar.c:1091
+msgid "Strikethrough"
+msgstr "취소줄"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1093
+msgid "Increase Font Size"
 msgstr "글자 크기 크게"
 
-#: ../gtk/gtkimhtmltoolbar.c:972
-msgid "Smaller font size"
+#: ../pidgin/gtkimhtmltoolbar.c:1094
+msgid "Decrease Font Size"
 msgstr "글자 크기 작게"
 
-#: ../gtk/gtkimhtmltoolbar.c:989
-msgid "Font face"
+#: ../pidgin/gtkimhtmltoolbar.c:1096
+msgid "Font Face"
 msgstr "글꼴 종류"
 
-#: ../gtk/gtkimhtmltoolbar.c:1001
-msgid "Foreground font color"
-msgstr "글꼴 색상"
+#: ../pidgin/gtkimhtmltoolbar.c:1098
+msgid "Foreground Color"
+msgstr "글자색"
 
-#: ../gtk/gtkimhtmltoolbar.c:1013
-msgid "Background color"
+#: ../pidgin/gtkimhtmltoolbar.c:1097
+msgid "Background Color"
 msgstr "배경색"
 
 #: ../gtk/gtkimhtmltoolbar.c:1029
-msgid "Reset formatting"
+msgid "Reset Formatting"
 msgstr "서식을 초기화 합니다."
+
+#: ../pidgin/gtkimhtmltoolbar.c:1103
+msgid "Insert IM Image"
+msgstr "IM 이미지를 삽입합니다."
 
 #: ../gtk/gtkimhtmltoolbar.c:1044
 msgid "Insert link"
-msgstr "링크를 삽입합니다."
+msgstr "링크 삽입"
 
 #: ../gtk/gtkimhtmltoolbar.c:1054
 msgid "Insert image"
-msgstr "이미지를 삽입합니다."
+msgstr "이미지 삽입"
 
 #: ../gtk/gtkimhtmltoolbar.c:1065
-msgid "Insert smiley"
+msgid "Insert Smiley"
 msgstr "이모티콘을 삽입합니다."
+
+#: ../pidgin/gtkimhtmltoolbar.c:1180
+msgid "<b>_Bold</b>"
+msgstr "<b>굵게(_B)</b>"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1181
+msgid "<i>_Italic</i>"
+msgstr "<i>기울림(_I)</i>"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1182
+msgid "<u>_Underline</u>"
+msgstr "<u>밑줄(_U)</u>"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1183
+msgid "<span strikethrough='true'>Strikethrough</span>"
+msgstr "<span strikethrough='true'>취소줄</span>"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1184
+msgid "<span size='larger'>_Larger</span>"
+msgstr "<span size='larger'>크게(_L)</span>"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1186
+msgid "_Normal"
+msgstr "표준(_N)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1188
+msgid "<span size='smaller'>_Smaller</span>"
+msgstr "<span size='smaller'>작게(_S)</span>"
+
+#. If we want to show the formatting for the following items, we would
+#. * need to update them when formatting changes. The above items don't need
+#. * no updating nor nothin'
+#: ../pidgin/gtkimhtmltoolbar.c:1192
+msgid "_Font face"
+msgstr "글꼴(_F)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1193
+msgid "Foreground _color"
+msgstr "글자색(_C)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1194
+msgid "Bac_kground color"
+msgstr "배경색(_K)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1271
+msgid "_Image"
+msgstr "이미지(_I)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1277
+msgid "_Link"
+msgstr "링크(_L)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1283
+msgid "_Horizontal rule"
+msgstr "수평 눈금(_H)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1305
+msgid "_Smile!"
+msgstr "이모티콘(_S)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:1305
+msgid "_Smiley"
+msgstr "이모티콘(_S)"
+
+#: ../pidgin/gtklog.c:293
+#, c-format
+msgid "Are you sure you want to permanently delete the log of the conversation with %s which started at %s?"
+msgstr "정말 %s 님과 %s 에 시작된 대화 기록을 영구적으로 삭제하시겠습니까?"
+
+#: ../pidgin/gtklog.c:304
+#, c-format
+msgid "Are you sure you want to permanently delete the log of the conversation in %s which started at %s?"
+msgstr "정말 %s 에서 %s 에 시작된 대화 기록을 영구적으로 삭제하시겠습니까?"
+
+#: ../pidgin/gtklog.c:309
+#, c-format
+msgid "Are you sure you want to permanently delete the system log which started at %s?"
+msgstr "정말 %s 시작된 시스템 기록을 영구적으로 삭제하시겠습니까?"
 
 #: ../gtk/gtklog.c:234
 #, c-format
@@ -3442,15 +3515,10 @@ msgstr "%s 님과의 대화"
 msgid "System Log"
 msgstr "시스템 로그"
 
-#: ../gtk/gtkmain.c:344
-#, c-format
-msgid "Gaim %s. Try `%s -h' for more information.\n"
-msgstr "Pidgin %s. 상세 정보는 `%s -h' 를 입력하십시오.\n"
-
 #: ../gtk/gtkmain.c:346
 #, c-format
 msgid ""
-"Gaim %s\n"
+"%s %s\n"
 "Usage: %s [OPTION]...\n"
 "\n"
 "  -c, --config=DIR    use DIR for config files\n"
@@ -3461,7 +3529,7 @@ msgid ""
 "                      account(s) to use, separated by commas)\n"
 "  -v, --version       display the current version and exit\n"
 msgstr ""
-"Pidgin %s\n"
+"%s %s\n"
 "사용법: %s [옵션]...\n"
 "\n"
 "  -c, --config=DIR    DIR에 있는 설정 파일 사용\n"
@@ -3475,43 +3543,43 @@ msgstr ""
 #: ../gtk/gtkmain.c:528
 #, c-format
 msgid ""
-"Gaim has segfaulted and attempted to dump a core file.\n"
+"%s %s has segfaulted and attempted to dump a core file.\n"
 "This is a bug in the software and has happened through\n"
 "no fault of your own.\n"
 "\n"
-"If you can reproduce the crash, please notify the gaim\n"
-"developers by reporting a bug at\n"
-"%sbug.php\n"
+"If you can reproduce the crash, please notify the developers\n"
+"by reporting a bug at:\n"
+"%ssimpleticket/\n"
 "\n"
 "Please make sure to specify what you were doing at the time\n"
 "and post the backtrace from the core file.  If you do not know\n"
 "how to get the backtrace, please read the instructions at\n"
-"%sgdb.php\n"
+"%swiki/GetABacktrace\n"
 "\n"
 "If you need further assistance, please IM either SeanEgn or \n"
 "LSchiere (via AIM).  Contact information for Sean and Luke \n"
 "on other protocols is at\n"
-"%scontactinfo.php\n"
+"%swiki/DeveloperPages\n"
 msgstr ""
-"세그먼트 오류가 발생하여 Pidgin이\n"
-"core 파일 출력을 시험했습니다. 이것은 소프트웨어의\n"
-"버그이며, 사용자 실수가 아닙니다.\n"
+"세그먼트 오류가 발생하여 %s %s이(가)\n"
+"core 파일 출력을 시험했습니다.\n"
+"이것은 소프트웨어의 버그이며, 사용자 실수가 아닙니다.\n"
 "\n"
 "이 문제가 재현 가능하면, 다음 사이트로부터\n"
-"Pidgin 개발자에게 버그로서 보고해 주십시오.\n"
-"%sbug.php\n"
+"개발자에게 버그로서 보고해 주십시오.\n"
+"%ssimpleticket/\n"
 "\n"
 "문제를 재현하기 위한 순서와 core 파일로부터의\n"
 "버그 추적 정보도 첨부해 주십시오.\n"
 "버그 추적 정보의 취득 방법을 알 수 없는 경우에는\n"
 "다음 사이트에 있는 설명을 참조해 주십시오.\n"
-"%sgdb.php\n"
+"%swiki/GetABacktrace\n"
 "\n"
 "도움말이 필요하면 IM 으로\n"
 "SeanEgn 씨 또는 LSchiere 씨 (모두 AIM 경우) 에게\n"
 "말을 걸어봐 주십시오 그 외의 프로토콜 경우에 대해서는\n"
 "다음 사이트를 참조해 주십시오.\n"
-"%scontactinfo.php\n"
+"%swiki/DeveloperPages\n"
 
 #: ../gtk/gtknotify.c:328
 msgid "Open All Messages"
@@ -3928,23 +3996,23 @@ msgstr "글꼴"
 
 #: ../pidgin/gtkprefs.c:945
 msgid "Use document font from _theme"
-msgstr "테마로부터 문서 글꼴 사용(_t)"
+msgstr "테마로부터 문서 글꼴 사용(_T)"
 
 #: ../pidgin/gtkprefs.c:947
 msgid "Use font from _theme"
-msgstr "테마로부터 글꼴 사용(_t)"
+msgstr "테마로부터 글꼴 사용(_T)"
 
 #: ../pidgin/gtkprefs.c:949
 msgid "Conversation _font:"
-msgstr "대화창 글꼴(_f):"
+msgstr "대화창 글꼴(_F):"
 
 #: ../gtk/gtkprefs.c:925
 msgid "Default Formatting"
 msgstr "기본 서식"
 
 #: ../gtk/gtkprefs.c:941
-msgid "This is how your outgoing message text will appear when you use protocols that support formatting. :)"
-msgstr "이것은 서식을 지원하는 프로토콜을 사용할 때, 보낸 메시지가 어떻게 표시되는지 나타냅니다. :)"
+msgid "This is how your outgoing message text will appear when you use protocols that support formatting."
+msgstr "서식을 지원하는 프로토콜을 사용할 때, 보낸 메시지가 어떻게 표시되는지 나타냅니다. :)"
 
 #: ../gtk/gtkprefs.c:1015
 #: ../libgaim/protocols/oscar/oscar.c:817
@@ -4567,8 +4635,8 @@ msgid "Cannot send folder %s."
 msgstr "폴더 %s 은(는) 전송할 수 없습니다."
 
 #: ../gtk/gtkutils.c:1412
-msgid "Gaim cannot transfer a folder. You will need to send the files within individually"
-msgstr "Pidgin에서는 폴더 자체를 전송할 수 없습니다. 파일을 개별적으로 전송해 주십시오."
+msgid "%s cannot transfer a folder. You will need to send the files within individually"
+msgstr "%s에서는 폴더 자체를 전송할 수 없습니다. 파일을 개별적으로 전송해 주십시오."
 
 #: ../gtk/gtkutils.c:1440
 #: ../gtk/gtkutils.c:1449
@@ -4884,7 +4952,7 @@ msgstr "대화 창마다에 대화 탭의 개수를 제한하여, 선택적으�
 #. *< priority
 #. *< id
 #: ../gtk/plugins/gaiminc.c:91
-msgid "Gaim Demonstration Plugin"
+msgid "Pidgin Demonstration Plugin"
 msgstr "Pidgin 데모 플러그인"
 
 #. *< name
@@ -4998,7 +5066,7 @@ msgid "Re-read gtkrc files"
 msgstr "이 \"gtkrc\" 파일을 읽어들임"
 
 #: ../gtk/plugins/gaimrc.c:616
-msgid "Gaim GTK+ Theme Control"
+msgid "Pidgin GTK+ Theme Control"
 msgstr "Pidgin GTK+ 테마 정의"
 
 #: ../gtk/plugins/gaimrc.c:618
@@ -5426,11 +5494,6 @@ msgstr "Raw 데이터를 문자 형식의 프로토콜로 전송할 수 있습�
 msgid "Lets you send raw input to text-based protocols (Jabber, MSN, IRC, TOC). Hit 'Enter' in the entry box to send. Watch the debug window."
 msgstr "입력한 Raw 데이터를 문자 형식 프로토콜 (Jabber, MSN, IRC, TOC) 에 전송할 수 있습니다. 전송할 때에는 입력 상자 안에서 [엔터] 키를 눌러 주십시오. 디버그 창에서 전송 내용을 감시해 주십시오."
 
-#: ../gtk/plugins/relnot.c:69
-#, c-format
-msgid "You are using Gaim version %s.  The current version is %s.<hr>"
-msgstr "사용 중인 버전은 %s 입니다. 최신 버전은 %s 입니다.<hr>"
-
 #: ../gtk/plugins/relnot.c:75
 #, c-format
 msgid ""
@@ -5439,11 +5502,6 @@ msgid ""
 msgstr ""
 "<b>변경 로그:</b>\n"
 "%s<br><br>"
-
-#: ../gtk/plugins/relnot.c:80
-#, c-format
-msgid "You can get version %s from:<br><a href=\"http://gaim.sourceforge.net/\">http://gaim.sourceforge.net</a>."
-msgstr "버전 %s 은(는) 다음 사이트로부터 받을 수 있습니다:<br><a href=\"http://pidgin.sourceforge.net/\">http://pidgin.sourceforge.net</a>"
 
 #: ../gtk/plugins/relnot.c:84
 #: ../gtk/plugins/relnot.c:85
@@ -5589,8 +5647,8 @@ msgid "Timestamp Format Options"
 msgstr "타임스탬프 서식 설정"
 
 #: ../gtk/plugins/timestamp_format.c:27
-msgid "_Force (traditional Gaim) 24-hour time format"
-msgstr "강제적으로 24시간제 적용(_F)"
+msgid "_Force 24-hour time format"
+msgstr "강제적으로 24-시간제 적용(_F)"
 
 #: ../gtk/plugins/timestamp_format.c:30
 msgid "Show dates in..."
@@ -5763,8 +5821,8 @@ msgid "Startup"
 msgstr "시작"
 
 #: ../gtk/plugins/win32/winprefs/winprefs.c:315
-msgid "_Start Gaim on Windows startup"
-msgstr "윈도우즈 시작 시 Pidgin 실행(_S)"
+msgid "_Start %s on Windows startup"
+msgstr "윈도우즈 시작 시 %s 실행(_S)"
 
 #: ../gtk/plugins/win32/winprefs/winprefs.c:328
 msgid "_Dockable Buddy List"
@@ -5783,18 +5841,6 @@ msgstr "결합했을 때만"
 #: ../gtk/plugins/win32/winprefs/winprefs.c:342
 msgid "_Flash window when chat messages are received"
 msgstr "대화에서 메시지를 받으면 창을 깜박거림(_F)"
-
-#: ../gtk/plugins/win32/winprefs/winprefs.c:366
-msgid "WinGaim Options"
-msgstr "WinPidgin 설정"
-
-#: ../gtk/plugins/win32/winprefs/winprefs.c:368
-msgid "Options specific to Windows Gaim."
-msgstr "윈도우즈 버전의 Pidgin 전용 옵션 기능을 제공합니다."
-
-#: ../gtk/plugins/win32/winprefs/winprefs.c:369
-msgid "Provides options specific to Windows Gaim, such as buddy list docking."
-msgstr "윈도우즈 버전의 Pidgin에 특화된 옵션 기능 (대화 창의 조합) 을 제공합니다."
 
 #: ../libgaim/account.c:769
 msgid "accounts"
@@ -6293,10 +6339,6 @@ msgstr "HTML 형식"
 msgid "Plain text"
 msgstr "일반 문자열"
 
-#: ../libgaim/log.c:584
-msgid "Old Gaim"
-msgstr "구버전 Pidgin"
-
 #: ../libgaim/log.c:691
 msgid "Logging of this conversation failed."
 msgstr "이 메시지의 로그를 기록하지 못했습니다."
@@ -6364,7 +6406,7 @@ msgid "The required plugin %s was not found. Please install this plugin and try 
 msgstr "요구하는 플러그인 %s 을(를) 찾을 수 없습니다. 이 플러그인을 설치한 후, 다시 시도해 보십시오."
 
 #: ../libgaim/plugin.c:538
-msgid "Gaim encountered errors loading the plugin."
+msgid "Error loading the plugin."
 msgstr "플러그인을 읽어 들이는 중 오류가 발생했습니다."
 
 #: ../libgaim/plugin.c:560
@@ -6373,7 +6415,7 @@ msgid "The required plugin %s was unable to load."
 msgstr "요구하는 플러그인 %s 을(를) 읽을 수 없었습니다."
 
 #: ../libgaim/plugin.c:564
-msgid "Gaim was unable to load your plugin."
+msgid "Unable to load your plugin."
 msgstr "플러그인을 읽을 수 없었습니다."
 
 #: ../libgaim/plugin.c:664
@@ -6382,7 +6424,7 @@ msgid "The dependent plugin %s failed to unload."
 msgstr "의존성이 있는 플러그인 %s 해제에 실패했습니다"
 
 #: ../libgaim/plugin.c:669
-msgid "Gaim encountered errors unloading the plugin."
+msgid "There were errors unloading the plugin."
 msgstr "플러그인을 해제하는 동안에 오류가 발생했습니다."
 
 #: ../libgaim/plugins/autoaccept.c:23
@@ -6609,7 +6651,7 @@ msgstr "암호화 시험"
 #. *  description
 #: ../libgaim/plugins/ciphertest.c:267
 #: ../libgaim/plugins/ciphertest.c:269
-msgid "Tests the ciphers that ship with gaim."
+msgid "Tests the ciphers that ship with libpurple."
 msgstr "암호화 기능이 함께 제공되어 있는지 확인합니다."
 
 #. *< type
@@ -6638,8 +6680,8 @@ msgstr "DBus 플러그인 예제"
 #. *< priority
 #. *< id
 #: ../libgaim/plugins/filectl.c:248
-msgid "Gaim File Control"
-msgstr "Pidgin 파일 제어"
+msgid "File Control"
+msgstr "파일 제어"
 
 #. *< name
 #. *< version
@@ -6647,8 +6689,8 @@ msgstr "Pidgin 파일 제어"
 #. *  description
 #: ../libgaim/plugins/filectl.c:251
 #: ../libgaim/plugins/filectl.c:253
-msgid "Allows you to control Gaim by entering commands in a file."
-msgstr "Pidgin 명령을 파일에 기술해 둠으로써 Pidgin 자신을 제어할 수 있습니다."
+msgid "Allows control by entering commands in a file."
+msgstr "명령을 파일에 기술하여 제어할 수 있습니다."
 
 #: ../libgaim/plugins/idle.c:158
 #: ../libgaim/plugins/idle.c:216
@@ -7183,13 +7225,6 @@ msgstr "로컬 mDNS 서버를 사용한 접속을 확립할 수 없었습니다.
 msgid "Bonjour Protocol Plugin"
 msgstr "Bonjour 프로토콜 플러그인"
 
-#: ../libgaim/protocols/bonjour/bonjour.c:474
-#: ../libgaim/protocols/bonjour/bonjour.c:482
-#: ../libgaim/protocols/bonjour/bonjour.c:540
-#: ../libgaim/protocols/silc/silc.c:300
-msgid "Gaim User"
-msgstr "Pidgin 사용자"
-
 #. Creating the user splits
 #: ../libgaim/protocols/bonjour/bonjour.c:578
 #: ../libgaim/protocols/silc/silc.c:931
@@ -7645,8 +7680,8 @@ msgstr "파일 전송이 실패했습니다."
 
 #: ../libgaim/protocols/irc/dcc_send.c:297
 #: ../libgaim/protocols/irc/dcc_send.c:338
-msgid "Gaim could not open a listening port."
-msgstr "Pidgin이 감시 포트를 열 수 없었습니다."
+msgid "Could not open a listening port."
+msgstr "감시 포트를 열 수 없었습니다."
 
 #: ../libgaim/protocols/irc/irc.c:80
 msgid "Error displaying MOTD"
@@ -7890,8 +7925,8 @@ msgid "Unknown message"
 msgstr "알 수 없는 메시지"
 
 #: ../libgaim/protocols/irc/msgs.c:362
-msgid "Gaim has sent a message the IRC server did not understand."
-msgstr "Pidgin이 전송한 메시지를 IRC 서버가 이해하지 못했습니다."
+msgid "The IRC server received a message it did not understand."
+msgstr "IRC 서버가 받은 메시지를 이해하지 못했습니다."
 
 #: ../libgaim/protocols/irc/msgs.c:385
 #, c-format
@@ -8397,15 +8432,24 @@ msgstr "Chatty"
 #: ../libgaim/protocols/jabber/buddy.c:1409
 #: ../libgaim/status.c:159
 msgid "Extended Away"
-msgstr "멀리 자리 비움"
+msgstr "장기 자리 비움"
 
-#: ../libgaim/protocols/jabber/buddy.c:1411
-#: ../libgaim/protocols/jabber/jabber.c:1265
-#: ../libgaim/protocols/oscar/oscar.c:706
-#: ../libgaim/protocols/oscar/oscar.c:5760
-#: ../libgaim/protocols/sametime/sametime.c:3319
+#: ../libpurple/status.c:159
+msgid "Extended away"
+msgstr "장기 자리 비움"
+
+#: ../libpurple/protocols/jabber/buddy.c:2044
+#: ../libpurple/protocols/jabber/jabber.c:1622
+#: ../libpurple/protocols/oscar/oscar.c:727
+#: ../libpurple/protocols/oscar/oscar.c:5810
+#: ../libpurple/protocols/sametime/sametime.c:3297
 msgid "Do Not Disturb"
-msgstr "방해하지 말아 주세요."
+msgstr "다른 용무 중"
+
+#: ../libpurple/status.c:156
+#: ../pidgin/gtkstatusbox.c:1059
+msgid "Do not disturb"
+msgstr "다른 용무 중"
 
 #: ../libgaim/protocols/jabber/buddy.c:1556
 msgid "JID"
@@ -9133,8 +9177,8 @@ msgid "Unable to parse message"
 msgstr "메시지를 해독할 수 없습니다."
 
 #: ../libgaim/protocols/msn/error.c:38
-msgid "Syntax Error (probably a Gaim bug)"
-msgstr "문법 오류 (아마도 Pidgin의 버그일 수 있습니다.)"
+msgid "Syntax Error (probably a client bug)"
+msgstr "문법 오류 (아마 클라이언트의 버그일 수 있습니다.)"
 
 #: ../libgaim/protocols/msn/error.c:42
 msgid "Invalid e-mail address"
@@ -9486,8 +9530,8 @@ msgid "Initiate _Chat"
 msgstr "대화 시작(_C)"
 
 #: ../libgaim/protocols/msn/msn.c:725
-msgid "SSL support is needed for MSN. Please install a supported SSL library. See http://gaim.sf.net/faq-ssl.php for more information."
-msgstr "MSN 에서는 SSL 지원이 필요합니다. 지원하는 SSL 라이브러리를 설치해 주십시오. 자세한 정보는 http://pidgin.sf.net/faq-ssl.php 를 참조해 주십시오."
+msgid "SSL support is needed for MSN. Please install a supported SSL library."
+msgstr "MSN 에서는 SSL 지원이 필요합니다. 지원하는 SSL 라이브러리를 설치해 주십시오."
 
 #: ../libgaim/protocols/msn/msn.c:752
 msgid "Failed to connect to server."
@@ -9713,8 +9757,8 @@ msgid "MSN reported not being able to find the user's profile. This either means
 msgstr "그 사용자의 프로파일을 찾을 수 없다고 MSN 이 보고했습니다. 이것은 그 사용자가 존재하지 않거나 혹은 공개하지 않았기 때문입니다."
 
 #: ../libgaim/protocols/msn/msn.c:1812
-msgid "Gaim could not find any information in the user's profile. The user most likely does not exist."
-msgstr "Pidgin이 사용자 프로파일로부터 정보를 가져오지 못했습니다. 그 사용자는 존재하지 않는 것으로 판단됩니다."
+msgid "Could not find any information in the user's profile. The user most likely does not exist."
+msgstr "사용자 프로파일로부터 정보를 가져오지 못했습니다. 그 사용자는 존재하지 않는 것 같습니다."
 
 #: ../libgaim/protocols/msn/msn.c:1820
 #: ../libgaim/protocols/yahoo/yahoo_profile.c:1216
@@ -10767,8 +10811,8 @@ msgstr "곧 접속이 끊깁니다. 이것이 수정되면 TOC 를 사용합니�
 
 #: ../libgaim/protocols/oscar/oscar.c:1472
 #: ../libgaim/protocols/oscar/oscar.c:1515
-msgid "Gaim was unable to get a valid AIM login hash."
-msgstr "Pidgin이 올바른 AIM 로그인 hash를 가져올 수 없습니다."
+msgid "Unable to get a valid AIM login hash."
+msgstr "올바른 AIM 로그인 hash를 가져올 수 없습니다."
 
 #: ../libgaim/protocols/oscar/oscar.c:1601
 #, c-format
@@ -10776,8 +10820,8 @@ msgid "You may be disconnected shortly.  Check %s for updates."
 msgstr "곧 접속이 끊깁니다. 갱신을 위해 %s 을(를) 선택하십시오."
 
 #: ../libgaim/protocols/oscar/oscar.c:1604
-msgid "Gaim was unable to get a valid login hash."
-msgstr "Pidgin이 올바른 로그인 hash를 가져올 수 없습니다."
+msgid "Unable to get a valid login hash."
+msgstr "올바른 로그인 hash를 가져올 수 없습니다."
 
 #: ../libgaim/protocols/oscar/oscar.c:1630
 msgid "Password sent"
@@ -11139,21 +11183,23 @@ msgstr "AIM 프로파일을 설정하지 못했습니다."
 msgid "You have probably requested to set your profile before the login procedure completed.  Your profile remains unset; try setting it again when you are fully connected."
 msgstr "로그인 수속이 완료되기 전에 사용자 프로파일을 설정하려고 하는 것 같습니다. 내 프로파일은 설정되지 않은 상태로 남아 있습니다. 접속이 완료되면 재시도해 주십시오."
 
-#: ../libgaim/protocols/oscar/oscar.c:4456
+#: ../libpurple/protocols/oscar/oscar.c:4504
 #, c-format
-msgid "The maximum profile length of %d byte has been exceeded.  Gaim has truncated it for you."
-msgid_plural "The maximum profile length of %d bytes has been exceeded.  Gaim has truncated it for you."
-msgstr[0] "프로파일 길이가 최대값 (%d 바이트) 에 도달하였기 때문에, Pidgin이 이를 종결했습니다."
+msgid "The maximum profile length of %d byte has been exceeded.  It has been truncated for you."
+msgid_plural "The maximum profile length of %d bytes has been exceeded.  It has been truncated for you."
+msgstr[0] "프로파일 길이가 최대값 %d 바이트를 초과하여 일부가 잘렸습니다."
+msgstr[1] "프로파일 길이가 최대값 %d 바이트를 초과하여 일부가 잘렸습니다."
 
 #: ../libgaim/protocols/oscar/oscar.c:4461
 msgid "Profile too long."
 msgstr "프로파일이 너무 깁니다."
 
-#: ../libgaim/protocols/oscar/oscar.c:4505
+#: ../libpurple/protocols/oscar/oscar.c:4554
 #, c-format
-msgid "The maximum away message length of %d byte has been exceeded.  Gaim has truncated it for you."
-msgid_plural "The maximum away message length of %d bytes has been exceeded.  Gaim has truncated it for you."
-msgstr[0] "자리 비움 메시지 길이가 최대값 (%d 바이트) 에 도달하였기 때문에, Pidgin이 이를 종결했습니다."
+msgid "The maximum away message length of %d byte has been exceeded.  It has been truncated for you."
+msgid_plural "The maximum away message length of %d bytes has been exceeded.  It has been truncated for you."
+msgstr[0] "자리 비움 메시지 길이가 최대값 %d 바이트를 초과하여 일부가 잘렸습니다."
+msgstr[1] "자리 비움 메시지 길이가 최대값 %d 바이트를 초과하여 일부가 잘렸습니다."
 
 #: ../libgaim/protocols/oscar/oscar.c:4510
 msgid "Away message too long."
@@ -11175,8 +11221,8 @@ msgid "Unable To Retrieve Buddy List"
 msgstr "친구 목록을 가져올 수 없습니다."
 
 #: ../libgaim/protocols/oscar/oscar.c:4686
-msgid "Gaim was temporarily unable to retrieve your buddy list from the AIM servers.  Your buddy list is not lost, and will probably become available in a few hours."
-msgstr "Pidgin이 일시적으로 AIM 서버로부터 친구 목록을 가져올 수 없었습니다. 친구 목록이 유실된 것은 아닙니다. 아마도 몇 시간 후에는 이용이 가능할 것으로 예상합니다."
+msgid "The AIM servers were temporarily unable to send your buddy list.  Your buddy list is not lost, and will probably become available in a few hours."
+msgstr "일시적으로 AIM 서버로부터 친구 목록을 가져올 수 없었습니다. 친구 목록이 유실된 것은 아닙니다. 아마도 몇 시간 후에는 이용이 가능할 것으로 예상합니다."
 
 #: ../libgaim/protocols/oscar/oscar.c:4890
 #: ../libgaim/protocols/oscar/oscar.c:4891
@@ -11602,8 +11648,8 @@ msgid "Your information has been updated"
 msgstr "정보를 변경했습니다."
 
 #: ../libgaim/protocols/qq/buddy_info.c:565
-msgid "You are attempting to set a custom face. Gaim currently only allows the standard faces. Please choose an image from "
-msgstr "사용자 이모티콘을 설정하려고 했습니다. Pidgin에서는 현재 표준 이모티콘만을 지원하고 있습니다. 다음으로부터 이미지를 선택해 주십시오:"
+msgid "Setting custom faces is not currently supported. Please choose an image from %s."
+msgstr "사용자 이모티콘을 설정은 현재 지원되지 않고 있습니다. 다음으로부터 이미지를 선택해 주십시오: %s."
 
 #: ../libgaim/protocols/qq/buddy_info.c:582
 #: ../libgaim/protocols/qq/buddy_info.c:595
@@ -13592,8 +13638,8 @@ msgstr "%s 의 채널 모드 설정에 실패"
 
 #: ../libgaim/protocols/silc/silc.c:1534
 #, c-format
-msgid "Unknown command: %s, (may be a Gaim bug)"
-msgstr "알 수 없는 명령: %s (아마도 Pidgin의 버그일 수 있습니다.)"
+msgid "Unknown command: %s, (may be a client bug)"
+msgstr "알 수 없는 명령: %s (아마 클라이언트의 버그일 수 있습니다.)"
 
 #: ../libgaim/protocols/silc/silc.c:1597
 msgid "part [channel]:  Leave the chat"
@@ -14143,8 +14189,8 @@ msgid "Could not write file header.  The file will not be transferred."
 msgstr "파일 헤더를 기록할 수 없습니다. 파일은 전송되지 않습니다."
 
 #: ../libgaim/protocols/toc/toc.c:2195
-msgid "Gaim - Save As..."
-msgstr "Pidgin - 다른 이름으로 저장..."
+msgid "Save As..."
+msgstr "다른 이름으로 저장..."
 
 #: ../libgaim/protocols/toc/toc.c:2229
 #, c-format
@@ -14975,4 +15021,226 @@ msgstr "%s (으)로 쓰는 중 오류: %s"
 #, c-format
 msgid "Unable to connect to %s: %s"
 msgstr "%s (으)로 접속할 수 없습니다: %s"
+
+#: ../pidgin/gtkblist.c:3073
+msgid "/Buddies/Show"
+msgstr "/친구/보기"
+
+#: ../pidgin/gtkblist.c:3074
+msgid "/Buddies/Show/_Offline Buddies"
+msgstr "/친구/보기/오프라인 친구(_O)"
+
+#: ../pidgin/gtkblist.c:3075
+msgid "/Buddies/Show/_Empty Groups"
+msgstr "/친구/보기/빈 그룹(_E)"
+
+#: ../pidgin/gtkblist.c:3076
+msgid "/Buddies/Show/Buddy _Details"
+msgstr "/친구/보기/친구 상세(_D)"
+
+#: ../pidgin/gtkblist.c:3077
+msgid "/Buddies/Show/Idle _Times"
+msgstr "/친구/보기/대기 시간(_T)"
+
+#: ../pidgin/gtkblist.c:3078
+msgid "/Buddies/Show/_Protocol Icons"
+msgstr "/친구/보기/프로토콜 아이콘(_P)"
+
+#: ../libpurple/protocols/msn/msn.c:2311
+msgid "HTTP Method Server"
+msgstr "HTTP 방식 서버"
+
+#: ../pidgin/gtkblist.c:3094
+msgid "/Tools/_Certificates"
+msgstr "/도구/인증(_C)"
+
+#: ../finch/gntui.c:85
+msgid "Certificates"
+msgstr "인증"
+
+#. Scheme name
+#: ../libpurple/plugins/ssl/ssl-gnutls.c:911
+#: ../libpurple/plugins/ssl/ssl-nss.c:725
+msgid "X.509 Certificates"
+msgstr "X.509 인증"
+
+#. vrq will be completed by user_auth
+#: ../libpurple/certificate.c:1360
+msgid "You have no database of root certificates, so this certificate cannot be validated."
+msgstr "루트 인증 데이터베이스가 없습니다.이 인증은 유효화 되지 못했습니다."
+
+#: ../finch/gntcertmgr.c:86
+#: ../pidgin/gtkcertmgr.c:188
+msgid "Certificate Import"
+msgstr "인증 가져오기"
+
+#: ../finch/gntcertmgr.c:88
+#: ../pidgin/gtkcertmgr.c:190
+msgid "Type the host name this certificate is for."
+msgstr "이 인증을 위한 호스트명을 입력하십시오."
+
+#: ../finch/gntcertmgr.c:99
+#: ../pidgin/gtkcertmgr.c:212
+msgid "Certificate Import Error"
+msgstr "인증 가져오기 오류"
+
+#: ../finch/gntcertmgr.c:100
+#: ../pidgin/gtkcertmgr.c:213
+msgid "X.509 certificate import failed"
+msgstr "X.509 인증 가져오기 실패"
+
+#: ../finch/gntcertmgr.c:110
+#: ../pidgin/gtkcertmgr.c:224
+msgid "Select a PEM certificate"
+msgstr "PEM 인증 선택"
+
+#: ../finch/gntcertmgr.c:127
+#: ../pidgin/gtkcertmgr.c:245
+#, c-format
+msgid ""
+"Export to file %s failed.\n"
+"Check that you have write permission to the target path\n"
+msgstr ""
+"%s 파일로 내보내기 실패함.\n"
+"목적 경로에 쓰기 권한이 있는지 확인하십시오.\n"
+
+#: ../finch/gntcertmgr.c:129
+#: ../pidgin/gtkcertmgr.c:247
+msgid "Certificate Export Error"
+msgstr "인증 내보내기 오류"
+
+#: ../finch/gntcertmgr.c:130
+#: ../pidgin/gtkcertmgr.c:248
+msgid "X.509 certificate export failed"
+msgstr "X.509 인증 내보내기 실패"
+
+#: ../finch/gntcertmgr.c:159
+#: ../pidgin/gtkcertmgr.c:299
+msgid "PEM X.509 Certificate Export"
+msgstr "PEM X.509 인증 내보내기"
+
+#: ../finch/gntcertmgr.c:188
+#, c-format
+msgid "Certificate for %s"
+msgstr "%s 인증"
+
+#: ../finch/gntcertmgr.c:198
+msgid "SSL Host Certificate"
+msgstr "SSL 호스트 인증"
+
+#: ../finch/gntcertmgr.c:233
+#: ../pidgin/gtkcertmgr.c:372
+#, c-format
+msgid "Really delete certificate for %s?"
+msgstr "정말 %s 인증을 삭제하시겠습니까?"
+
+#: ../finch/gntcertmgr.c:236
+#: ../pidgin/gtkcertmgr.c:374
+msgid "Confirm certificate delete"
+msgstr "인증 삭제 확인"
+
+#: ../finch/gntcertmgr.c:293
+#: ../pidgin/gtkcertmgr.c:602
+msgid "Certificate Manager"
+msgstr "인증 관리자"
+
+#: ../pidgin/gtkprefs.c:1000
+msgid "Show _detailed information"
+msgstr "상세 정보 보이기(_D)"
+
+#: ../pidgin/gtkprefs.c:1021
+msgid "Minimi_ze new conversation windows"
+msgstr "최소화로 새 대화창 열기(_Z)"
+
+#: ../pidgin/gtkimhtmltoolbar.c:846
+#: ../pidgin/gtkimhtmltoolbar.c:1220
+msgid "_Font"
+msgstr "글꼴(_F)"
+
+#: ../pidgin/gtkprefs.c:1959
+msgid "_Minutes before becoming idle:"
+msgstr "대기 시간 간격(분)(_M)"
+
+#: ../libpurple/plugins/joinpart.c:229
+msgid "Join/Part Hiding Configuration"
+msgstr "Join/Part Hiding 설정"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+#: ../libpurple/plugins/joinpart.c:270
+msgid "Join/Part Hiding"
+msgstr "Join/Part Hiding"
+
+#. *< name
+#. *< version
+#. *  summary
+#: ../libpurple/plugins/joinpart.c:273
+msgid "Hides extraneous join/part messages."
+msgstr "외부 참가/부분 메시지를 안 보입니다."
+
+#. *  description
+#: ../libpurple/plugins/joinpart.c:275
+msgid "This plugin hides join/part messages in large rooms, except for those users actively taking part in a conversation."
+msgstr "큰 대화방에서 활성적으로 대화에 참여하고 있는 사람들을 제외한 사람들의 참가/부분 메시지를 안 보이게 합니다."
+
+#: ../pidgin/plugins/win32/winprefs/winprefs.c:371
+msgid "Windows Pidgin Options"
+msgstr "Windows Pidgin 설정"
+
+#: ../pidgin/plugins/win32/winprefs/winprefs.c:373
+msgid "Options specific to Pidgin for Windows."
+msgstr "Windows를 위한 Pidgin 설정을 제공합니다."
+
+#: ../pidgin/plugins/win32/winprefs/winprefs.c:374
+msgid "Provides options specific to Pidgin for Windows , such as buddy list docking."
+msgstr "친구 목록 도킹과 같은 Windows에 대한 Pidgin 설정을 제공합니다."
+
+#. Widget creation function
+#: ../pidgin/gtkcertmgr.c:530
+msgid "SSL Servers"
+msgstr "SSL 서버"
+
+#: ../pidgin/gtkaccount.c:2201
+#, c-format
+msgid ""
+"<span size='larger' weight='bold'>Welcome to %s!</span>\n"
+"\n"
+"You have no IM accounts configured. To start connecting with %s press the <b>Add</b> button below and configure your first account. If you want %s to connect to multiple IM accounts, press <b>Add</b> again to configure them all.\n"
+"\n"
+"You can come back to this window to add, edit, or remove accounts from <b>Accounts->Add/Edit</b> in the Buddy List window"
+msgstr ""
+"<span size='larger' weight='bold'>%s에 오신 것을 환영합니다!</span>\n"
+"\n"
+"아직 계정이 설정되지 않았습니다. %s을 사용하여 접속을 시작하는 경우에는 아래에 있는 <b>추가</b> 버튼을 누른 후, 계정 정보를 입력하십시오. %s을 사용하여 복수의 계정으로 접속하는 경우에는, 각 계정마다 <b>추가</b> 버튼을 눌러 설정하십시오.\n"
+"\n"
+"친구 목록 창에 있는 <b>계정 -> 추가/편집</b> 메뉴에서도 이 창을 열 수 있습니다."
+
+#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#: ../pidgin/gtkblist.c:4616
+#, c-format
+msgid ""
+"<span weight='bold' size='larger'>Welcome to %s!</span>\n"
+"\n"
+"You have no accounts enabled. Enable your IM accounts from the <b>Accounts</b> window at <b>Accounts->Manage</b>. Once you enable accounts, you'll be able to sign on, set your status, and talk to your friends."
+msgstr ""
+"<span weight='bold' size='larger'>%s에 오신 것을 환영합니다!</span>\n"
+"\n"
+"아직 사용할 수 있는 계정이 없습니다.<b>계정 -> 추가/편집</b> 메뉴에서 <b>계정</b> 창을 열어 계정을 사용으로 선택하십시오. 계정 사용을 선택하면, 접속하여 상태를 설정한 후 친구와 대화할 수 있습니다."
+
+#: ../libpurple/protocols/msn/nexus.c:137
+msgid "Windows Live ID authentication:Unable to connect"
+msgstr "Windows Live ID 인증: 연결할 수 없음"
+
+#: ../libpurple/protocols/msn/nexus.c:275
+msgid "Windows Live ID authentication Failed"
+msgstr "Windows Live ID 인증 실패"
+
+#: ../pidgin/plugins/relnot.c:71
+#, c-format
+msgid "You are using %s version %s.  The current version is %s.  You can get it from <a href=\"%s\">%s</a><hr>"
+msgstr "사용 중인 %s 버전은 %s 입니다. 현재 버전은 %s 입니다. 다음 사이트에서 다운로드 받을 수 있습니다: <a href=\"%s\">%s</a><hr>"
 

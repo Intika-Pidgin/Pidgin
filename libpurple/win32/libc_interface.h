@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _LIBC_INTERFACE_H_
@@ -75,8 +75,8 @@ wpurple_send(socket, buf, buflen, flags)
 wpurple_ioctl( fd, command, val )
 
 /* fcntl.h */
-#define fcntl( fd, command, val ) \
-wpurple_fcntl( fd, command, val )
+#define fcntl( fd, command, ... ) \
+wpurple_fcntl( fd, command, ##__VA_ARGS__ )
 
 /* arpa/inet.h */
 #define inet_aton( name, addr ) \
@@ -120,6 +120,8 @@ wpurple_g_access( filename, mode )
 
 #define gethostname( name, size ) \
 wpurple_gethostname( name, size )
+
+#define fsync(fd) _commit(fd)
 
 /* sys/time.h */
 #define gettimeofday( timeval, timezone ) \

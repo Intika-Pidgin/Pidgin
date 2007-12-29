@@ -1,8 +1,9 @@
 /**
  * @file gntpounce.c GNT Buddy Pounce API
  * @ingroup finch
- *
- * finch
+ */
+
+/* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -164,6 +165,17 @@ static void
 signed_on_off_cb(PurpleConnection *gc, gpointer user_data)
 {
 	update_pounces();
+}
+
+static void
+setup_buddy_list_suggestion(GntEntry *entry, gboolean offline)
+{
+	PurpleBlistNode *node = purple_blist_get_root();
+	for (; node; node = purple_blist_node_next(node, offline)) {
+		if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+			continue;
+		gnt_entry_add_suggest(entry, purple_buddy_get_name((PurpleBuddy*)node));
+	}
 }
 
 static void
@@ -358,6 +370,8 @@ finch_pounce_editor_show(PurpleAccount *account, const char *name,
 
 	dialog->buddy_entry = gnt_entry_new(NULL);
 	gnt_box_add_widget(GNT_BOX(hbox), dialog->buddy_entry);
+
+	setup_buddy_list_suggestion(GNT_ENTRY(dialog->buddy_entry), TRUE);
 
 	gnt_box_add_widget(GNT_BOX(window), hbox);
 
@@ -963,10 +977,15 @@ finch_pounces_init(void)
 						PURPLE_CALLBACK(signed_on_off_cb), NULL);
 }
 
+static void
+dummy_pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
+{
+}
+
 /* XXX: There's no such thing in pidgin. Perhaps there should be? */
 void finch_pounces_uninit()
 {
-	purple_pounces_register_handler(FINCH_UI, NULL, NULL, NULL);
+	purple_pounces_register_handler(FINCH_UI, dummy_pounce_cb, NULL, NULL);
 
 	purple_signals_disconnect_by_handle(finch_pounces_get_handle());
 }

@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -92,7 +92,7 @@ static SnDisplay *sn_display = NULL;
  * Lists of signals we wish to catch and those we wish to ignore.
  * Each list terminated with -1
  */
-static int catch_sig_list[] = {
+static const int catch_sig_list[] = {
 	SIGSEGV,
 	SIGHUP,
 	SIGINT,
@@ -103,7 +103,7 @@ static int catch_sig_list[] = {
 	-1
 };
 
-static int ignore_sig_list[] = {
+static const int ignore_sig_list[] = {
 	SIGPIPE,
 	-1
 };
@@ -195,6 +195,18 @@ clean_pid()
 
 char *segfault_message;
 
+/*
+ * This signal handler shouldn't be touching this much stuff.
+ * It should just set a flag and return, and something else in
+ * Pidgin should monitor the flag to see if something needs to
+ * be done.  Because the signal handler interrupts the program,
+ * it could be called in the middle of adding a new connection
+ * to the list of connections, and then if we try to disconnect
+ * all connections it could lead to a crash because the linked
+ * list of connections could be in a weird state.  But, well,
+ * this signal handler probably isn't called very often, so it's
+ * not a big deal.
+ */
 static void
 sighandler(int sig)
 {
@@ -383,8 +395,9 @@ show_usage(const char *name, gboolean terse)
 	char *text;
 
 	if (terse) {
-		text = g_strdup_printf(_("%s %s. Try `%s -h' for more information.\n"), PIDGIN_NAME, VERSION, name);
+		text = g_strdup_printf(_("%s %s. Try `%s -h' for more information.\n"), PIDGIN_NAME, DISPLAY_VERSION, name);
 	} else {
+#ifndef WIN32
 		text = g_strdup_printf(_("%s %s\n"
 		       "Usage: %s [OPTION]...\n\n"
 		       "  -c, --config=DIR    use DIR for config files\n"
@@ -394,7 +407,20 @@ show_usage(const char *name, gboolean terse)
 		       "  -n, --nologin       don't automatically login\n"
 		       "  -l, --login[=NAME]  automatically login (optional argument NAME specifies\n"
 		       "                      account(s) to use, separated by commas)\n"
-		       "  -v, --version       display the current version and exit\n"), PIDGIN_NAME, VERSION, name);
+		       "  --display=DISPLAY   X display to use\n"
+		       "  -v, --version       display the current version and exit\n"), PIDGIN_NAME, DISPLAY_VERSION, name);
+#else
+		text = g_strdup_printf(_("%s %s\n"
+		       "Usage: %s [OPTION]...\n\n"
+		       "  -c, --config=DIR    use DIR for config files\n"
+		       "  -d, --debug         print debugging messages to stdout\n"
+		       "  -h, --help          display this help and exit\n"
+		       "  -m, --multiple      do not ensure single instance\n"
+		       "  -n, --nologin       don't automatically login\n"
+		       "  -l, --login[=NAME]  automatically login (optional argument NAME specifies\n"
+		       "                      account(s) to use, separated by commas)\n"
+		       "  -v, --version       display the current version and exit\n"), PIDGIN_NAME, DISPLAY_VERSION, name);
+#endif
 	}
 
 	purple_print_utf8_to_console(stdout, text);
@@ -481,6 +507,7 @@ int main(int argc, char *argv[])
 		{"nologin",  no_argument,       NULL, 'n'},
 		{"session",  required_argument, NULL, 's'},
 		{"version",  no_argument,       NULL, 'v'},
+		{"display",  required_argument, NULL, 'D'},
 		{0, 0, 0, 0}
 	};
 
@@ -509,7 +536,7 @@ int main(int argc, char *argv[])
 #ifndef DEBUG
 		/* We translate this here in case the crash breaks gettext. */
 		segfault_message_tmp = g_strdup_printf(_(
-			"%s has segfaulted and attempted to dump a core file.\n"
+			"%s %s has segfaulted and attempted to dump a core file.\n"
 			"This is a bug in the software and has happened through\n"
 			"no fault of your own.\n\n"
 			"If you can reproduce the crash, please notify the developers\n"
@@ -523,7 +550,7 @@ int main(int argc, char *argv[])
 			"LSchiere (via AIM).  Contact information for Sean and Luke \n"
 			"on other protocols is at\n"
 			"%swiki/DeveloperPages\n"),
-			PIDGIN_NAME, PURPLE_DEVEL_WEBSITE, PURPLE_DEVEL_WEBSITE, PURPLE_DEVEL_WEBSITE
+			PIDGIN_NAME, DISPLAY_VERSION, PURPLE_DEVEL_WEBSITE, PURPLE_DEVEL_WEBSITE, PURPLE_DEVEL_WEBSITE
 		);
 
 		/* we have to convert the message (UTF-8 to console
@@ -593,7 +620,7 @@ int main(int argc, char *argv[])
 #ifndef _WIN32
 				  "c:dhmnl::s:v",
 #else
-				  "c:dhnl::v",
+				  "c:dhmnl::v",
 #endif
 				  long_options, NULL)) != -1) {
 		switch (opt) {
@@ -626,6 +653,9 @@ int main(int argc, char *argv[])
 		case 'm':   /* do not ensure single instance. */
 			opt_si = FALSE;
 			break;
+		case 'D':   /* --display */
+			/* handled by gtk_init_check below */
+			break;
 		case '?':	/* show terse help */
 		default:
 			show_usage(argv[0], TRUE);
@@ -647,7 +677,7 @@ int main(int argc, char *argv[])
 	}
 	/* show version message */
 	if (opt_version) {
-		printf("%s %s\n", PIDGIN_NAME, VERSION);
+		printf("%s %s\n", PIDGIN_NAME, DISPLAY_VERSION);
 #ifdef HAVE_SIGNAL_H
 		g_free(segfault_message);
 #endif
@@ -684,7 +714,7 @@ int main(int argc, char *argv[])
 	if (!gui_check) {
 		char *display = gdk_get_display();
 
-		printf("%s %s\n", PIDGIN_NAME, VERSION);
+		printf("%s %s\n", PIDGIN_NAME, DISPLAY_VERSION);
 
 		g_warning("cannot open display: %s", display ? display : "unset");
 		g_free(display);
@@ -757,6 +787,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
+		purple_debug_info("main", "exiting because another libpurple client is already running\n");
 		purple_core_quit();
 #ifdef HAVE_SIGNAL_H
 		g_free(segfault_message);
@@ -768,36 +799,11 @@ int main(int argc, char *argv[])
 	purple_set_blist(purple_blist_new());
 	purple_blist_load();
 
-	/* TODO: Move prefs loading into purple_prefs_init() */
-	purple_prefs_load();
-	purple_prefs_update_old();
-	pidgin_prefs_update_old();
-
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved(PIDGIN_PREFS_ROOT "/plugins/loaded");
 
 	/* TODO: Move pounces loading into purple_pounces_init() */
 	purple_pounces_load();
-
-	/* Call this early on to try to auto-detect our IP address and
-	 * hopefully save some time later.
-	 * TODO: move this (back) into purple_core_init() when purple_prefs_load() is in purple_prefs_init() */
-	 purple_network_get_my_ip(-1);
-
-	/* HACK BY SEANEGAN:
-	 * We've renamed prpl-oscar to prpl-aim and prpl-icq, accordingly.
-	 * Let's do that change right here... after everything's loaded, but
-	 * before anything has happened
-	 */
-	for (accounts = purple_accounts_get_all(); accounts != NULL; accounts = accounts->next) {
-		PurpleAccount *account = accounts->data;
-		if (!strcmp(purple_account_get_protocol_id(account), "prpl-oscar")) {
-			if (isdigit(*purple_account_get_username(account)))
-				purple_account_set_protocol_id(account, "prpl-icq");
-			else
-				purple_account_set_protocol_id(account, "prpl-aim");
-		}
-	}
 
 	ui_main();
 
@@ -837,10 +843,7 @@ int main(int argc, char *argv[])
 			g_free(opt_login_arg);
 			opt_login_arg = NULL;
 		}
-	}
-
-	if (opt_nologin && !opt_login)
-	{
+	} else if (opt_nologin)	{
 		/* Set all accounts to "offline" */
 		PurpleSavedStatus *saved_status;
 
@@ -854,9 +857,7 @@ int main(int argc, char *argv[])
 
 		/* Set the status for each account */
 		purple_savedstatus_activate(saved_status);
-	}
-	else if (!opt_login)
-	{
+	} else {
 		/* Everything is good to go--sign on already */
 		if (!purple_prefs_get_bool("/purple/savedstatus/startup_current_status"))
 			purple_savedstatus_activate(purple_savedstatus_get_startup());

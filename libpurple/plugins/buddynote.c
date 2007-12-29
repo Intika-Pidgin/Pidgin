@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 #include "internal.h"
 
@@ -88,7 +88,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,						/**< priority		*/
 	"core-plugin_pack-buddynote",					/**< id				*/
 	N_("Buddy Notes"),								/**< name			*/
-	VERSION,										/**< version		*/
+	DISPLAY_VERSION,									/**< version		*/
 	N_("Store notes on particular buddies."),		/**< summary		*/
 	N_("Adds the option to store notes for buddies "
 	   "on your buddy list."),						/**< description	*/

@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "debug.h"
@@ -306,7 +306,8 @@ void qq_input_pending(gpointer data, gint source, PurpleInputCondition cond)
 	gc = (PurpleConnection *) data;
 
 	if(cond != PURPLE_INPUT_READ) {
-		purple_connection_error(gc, _("Socket error"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Socket error"));
 		return;
 	}
 
@@ -316,7 +317,8 @@ void qq_input_pending(gpointer data, gint source, PurpleInputCondition cond)
 	/* here we have UDP proxy suppport */
 	len = qq_proxy_read(qd, buf, MAX_PACKET_SIZE);
 	if (len <= 0) {
-		purple_connection_error(gc, _("Unable to read from socket"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Unable to read from socket"));
 		return;
 	} else {
 		_qq_packet_process(buf, len, gc);

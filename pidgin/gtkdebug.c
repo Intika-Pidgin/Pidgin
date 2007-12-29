@@ -1,8 +1,9 @@
 /**
  * @file gtkdebug.c GTK+ Debug API
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "pidgin.h"
@@ -67,7 +68,7 @@ typedef struct
 	GtkWidget *filterlevel;
 } DebugWindow;
 
-static char debug_fg_colors[][8] = {
+static const char debug_fg_colors[][8] = {
 	"#000000",    /**< All debug levels. */
 	"#666666",    /**< Misc.             */
 	"#000000",    /**< Information.      */
@@ -984,6 +985,9 @@ pidgin_debug_init(void)
 	REGISTER_G_LOG_HANDLER("GModule");
 	REGISTER_G_LOG_HANDLER("GLib-GObject");
 	REGISTER_G_LOG_HANDLER("GThread");
+#ifdef USE_GSTREAMER
+	REGISTER_G_LOG_HANDLER("GStreamer");
+#endif
 
 #ifdef _WIN32
 	if (!purple_debug_is_enabled())

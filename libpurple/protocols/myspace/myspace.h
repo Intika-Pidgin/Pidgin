@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _MYSPACE_MYSPACE_H
@@ -67,15 +67,15 @@
 /*#define MSIM_DEBUG_LOGIN_CHALLENGE*/
 /*#define MSIM_DEBUG_RXBUF            */
 
+/* Encode unknown HTML tags from IM clients in messages as [tag], instead of 
+ * ignoring. Useful for debugging */
+/*#define MSIM_MARKUP_SHOW_UNKNOWN_TAGS  */
+
 /* Define to cause init_plugin() to run some tests and print
  * the results to the Purple debug log, then exit. Useful to 
  * run with 'pidgin -d' to see the output. Don't define if
  * you want to actually use the plugin! */
 /*#define MSIM_SELF_TEST            */
-
-/* Use the attention API for zaps? */
-/* Can't have until >=2.2.0, since is a new API. */
-#define MSIM_USE_ATTENTION_API
 
 /* Constants */
 
@@ -91,12 +91,16 @@
 /* Build version of MySpaceIM to report to servers (1.0.xxx.0) */
 #define MSIM_CLIENT_VERSION         697
 
+/* Check for a newer official MySpaceIM client on startup?
+ * (Mostly useful for developers) */
+/*#define MSIM_CHECK_NEWER_VERSION*/
+
 /* Language codes from http://www.microsoft.com/globaldev/reference/oslocversion.mspx */
 #define MSIM_LANGUAGE_ID_ENGLISH    1033
 #define MSIM_LANGUAGE_NAME_ENGLISH  "ENGLISH"
 
 /* msimprpl version string of this plugin */
-#define MSIM_PRPL_VERSION_STRING    "0.16"
+#define MSIM_PRPL_VERSION_STRING    "0.18"
 
 /* Default server */
 #define MSIM_SERVER                 "im.myspace.akadns.net"
@@ -176,22 +180,7 @@
 #define MSIM_CONTACT_LIST_IMPORT_ALL_FRIENDS	1
 #define MSIM_CONTACT_LIST_IMPORT_TOP_FRIENDS	2
 
-#ifdef MSIM_USE_ATTENTION_API
 #define MsimAttentionType PurpleAttentionType
-#else
-/* Different kinds of attention alerts. Not yet in libpurple, so define 
- * our own structure here. */
-typedef struct _MsimAttentionType MsimAttentionType;
-
-/** A type of "attention" message (zap, nudge, buzz, etc. depending on the
- * protocol) that can be sent and received. */
-struct _MsimAttentionType {
-	PurpleStoredImage *icon;
-	const gchar *description;		/**< Shown before sending. */
-	const gchar *incoming_description;	/**< Shown when sent. */
-	const gchar *outgoing_description;	/**< Shown when received. */
-};
-#endif
 
 /* Functions */
 gboolean msim_load(PurplePlugin *plugin);

@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include <glib.h>
@@ -139,6 +139,8 @@ void gnt_util_parse_widgets(const char *string, int num, ...);
  * @param string   The XHTML string
  * @param tv       The GntTextView
  * @return  @c TRUE if the string was added to the textview properly, @c FALSE otherwise.
+ *
+ * @since 2.2.0
  */
 gboolean gnt_util_parse_xhtml_to_textview(const char *string, GntTextView *tv);
 
@@ -148,6 +150,8 @@ gboolean gnt_util_parse_xhtml_to_textview(const char *string, GntTextView *tv);
  * @param widget  The widget
  * @param key     The key to trigger the button
  * @param button  The button to trigger
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
-void gnt_util_set_trigger_widget(GntWidget *wid, const char *text, GntWidget *button);
+void gnt_util_set_trigger_widget(GntWidget *widget, const char *key, GntWidget *button);
 

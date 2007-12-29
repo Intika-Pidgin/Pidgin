@@ -1,8 +1,9 @@
 /**
  * @file savedstatuses.c Saved Status API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 
@@ -242,7 +243,9 @@ substatus_to_xmlnode(PurpleSavedStatusSub *substatus)
 
 	child = xmlnode_new_child(node, "account");
 	xmlnode_set_attrib(child, "protocol", purple_account_get_protocol_id(substatus->account));
-	xmlnode_insert_data(child, purple_account_get_username(substatus->account), -1);
+	xmlnode_insert_data(child,
+			purple_normalize(substatus->account,
+				purple_account_get_username(substatus->account)), -1);
 
 	child = xmlnode_new_child(node, "state");
 	xmlnode_insert_data(child, purple_status_type_get_id(substatus->type), -1);
@@ -760,10 +763,13 @@ purple_savedstatuses_get_popular(unsigned int how_many)
 {
 	GList *popular = NULL;
 	GList *cur;
-	int i;
+	unsigned int i;
 	PurpleSavedStatus *next;
 
-	/* Copy 'how_many' elements to a new list */
+	/* Copy 'how_many' elements to a new list. If 'how_many' is 0, then copy all of 'em. */
+	if (how_many == 0)
+		how_many = (unsigned int) -1;
+
 	i = 0;
 	cur = saved_statuses;
 	while ((i < how_many) && (cur != NULL))
@@ -772,7 +778,7 @@ purple_savedstatuses_get_popular(unsigned int how_many)
 		if ((!purple_savedstatus_is_transient(next)
 			|| purple_savedstatus_get_message(next) != NULL))
 		{
-			popular = g_list_prepend(popular, cur->data);
+			popular = g_list_prepend(popular, next);
 			i++;
 		}
 		cur = cur->next;

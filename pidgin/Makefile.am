@@ -29,6 +29,8 @@ EXTRA_DIST = \
 		win32/nsis/langmacros.nsh \
 		win32/nsis/translations/afrikaans.nsh \
 		win32/nsis/translations/albanian.nsh \
+		win32/nsis/translations/arabic.nsh \
+		win32/nsis/translations/basque.nsh \
 		win32/nsis/translations/bulgarian.nsh \
 		win32/nsis/translations/catalan.nsh \
 		win32/nsis/translations/czech.nsh \
@@ -81,6 +83,7 @@ pidgin_SOURCES = \
 	gtkcellrendererprogress.c \
 	gtkcellview.c \
 	gtkcellviewmenuitem.c \
+	gtkcertmgr.c \
 	gtkconn.c \
 	gtkconv.c \
 	gtkdebug.c \
@@ -116,7 +119,9 @@ pidgin_SOURCES = \
 	gtkstatusbox.c \
 	gtkthemes.c \
 	gtkutils.c \
-	gtkwhiteboard.c
+	gtkwhiteboard.c \
+	minidialog.c \
+	pidgintooltip.c
 
 pidgin_headers = \
 	eggtrayicon.h \
@@ -129,6 +134,7 @@ pidgin_headers = \
 	gtkcellviewmenuitem.h \
 	gtkcellview.h \
 	gtkcellviewmenuitem.h \
+	gtkcertmgr.h \
 	pidgincombobox.h \
 	gtkconn.h \
 	gtkconv.h \
@@ -168,6 +174,8 @@ pidgin_headers = \
 	gtkthemes.h \
 	gtkutils.h \
 	gtkwhiteboard.h \
+	minidialog.h \
+	pidgintooltip.h \
 	pidgin.h
 
 pidginincludedir=$(includedir)/pidgin
@@ -203,6 +211,8 @@ AM_CPPFLAGS = \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-I$(top_builddir)/libpurple \
 	-I$(top_srcdir)/libpurple/ \
+	-I$(top_builddir) \
+	-I$(top_srcdir) \
 	$(GLIB_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
 	$(DEBUG_CFLAGS) \

@@ -1,8 +1,9 @@
 /**
  * @file util.h Utility Functions
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  * @todo Rename the functions so that they live somewhere in the purple
  *       namespace.
@@ -83,6 +84,27 @@ PurpleMenuAction *purple_menu_action_new(const char *label, PurpleCallback callb
  * @param act The PurpleMenuAction to free.
  */
 void purple_menu_action_free(PurpleMenuAction *act);
+
+/**************************************************************************/
+/** @name Utility Subsystem                                               */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Initializes the utility subsystem.
+ *
+ * @since 2.3.0
+ */
+void purple_util_init(void);
+
+/**
+ * Uninitializes the util subsystem.
+ *
+ * @since 2.3.0
+ */
+void purple_util_uninit(void);
+
+/*@}*/
 
 /**************************************************************************/
 /** @name Base16 Functions                                                */
@@ -589,6 +611,26 @@ gboolean purple_util_write_data_to_file(const char *filename, const char *data,
 									  gssize size);
 
 /**
+ * Write data to a file using the absolute path.
+ *
+ * This exists for Glib backwards compatibility reasons.
+ *
+ * @param filename_full Filename to write to
+ * @param data          A null-terminated string of data to write.
+ * @param size          The size of the data to save.  If data is
+ *                      null-terminated you can pass in -1.
+ *
+ * @return TRUE if the file was written successfully.  FALSE otherwise.
+ *
+ * @todo Remove this function (use g_file_set_contents instead) when 3.0.0
+ *       rolls around.
+ * @see purple_util_write_data_to_file()
+ *
+ */
+gboolean
+purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size);
+
+/**
  * Read the contents of a given file and parse the results into an
  * xmlnode tree structure.  This is intended to be used to read
  * Purple's configuration xml files (prefs.xml, pounces.xml, etc.)
@@ -1066,6 +1108,18 @@ gchar *purple_utf8_try_convert(const char *str);
  * @return A valid UTF-8 string.
  */
 gchar *purple_utf8_salvage(const char *str);
+
+/**
+ * Return the UTF-8 version of gai_strerror().  It calls gai_strerror()
+ * then converts the result to UTF-8.  This function is analogous to
+ * g_strerror().
+ *
+ * @param errnum The error code.
+ *
+ * @return The UTF-8 error message.
+ * @since 2.4.0
+ */
+G_CONST_RETURN gchar *purple_gai_strerror(gint errnum);
 
 /**
  * Compares two UTF-8 strings case-insensitively.  This string is

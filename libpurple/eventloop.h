@@ -1,8 +1,9 @@
 /**
  * @file eventloop.h Purple Event Loop API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PURPLE_EVENTLOOP_H_
 #define _PURPLE_EVENTLOOP_H_
@@ -137,6 +138,8 @@ guint purple_timeout_add(guint interval, GSourceFunc function, gpointer data);
  * @param data		data to pass to @a function.
  * @return A handle to the timer which can be passed to 
  *         purple_timeout_remove to remove the timer.
+ *
+ * @since 2.1.0
  */
 guint purple_timeout_add_seconds(guint interval, GSourceFunc function, gpointer data);
 

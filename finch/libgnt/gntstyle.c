@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "gntstyle.h"
@@ -26,7 +26,6 @@
 
 #include <glib.h>
 #include <ctype.h>
-#include <glib/gprintf.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -55,6 +54,42 @@ char *gnt_style_get_from_name(const char *group, const char *key)
 	if (!group)
 		group = "general";
 	return g_key_file_get_value(gkfile, group, key, NULL);
+#else
+	return NULL;
+#endif
+}
+
+int
+gnt_style_get_color(char *group, char *key)
+{
+#if GLIB_CHECK_VERSION(2,6,0)
+	int fg = 0, bg = 0;
+	gsize n;
+	char **vals;
+	int ret = 0;
+	vals = gnt_style_get_string_list(group, key, &n);
+	if (vals && n == 2) {
+		fg = gnt_colors_get_color(vals[0]);
+		bg = gnt_colors_get_color(vals[1]);
+		ret = gnt_color_add_pair(fg, bg);
+	}
+	g_strfreev(vals);
+	return ret;
+#else
+	return 0;
+#endif
+}
+
+char **gnt_style_get_string_list(const char *group, const char *key, gsize *length)
+{
+#if GLIB_CHECK_VERSION(2,6,0)
+	const char *prg = g_get_prgname();
+	if ((group == NULL || *group == '\0') && prg &&
+			g_key_file_has_group(gkfile, prg))
+		group = prg;
+	if (!group)
+		group = "general";
+	return g_key_file_get_string_list(gkfile, group, key, length, NULL);
 #else
 	return NULL;
 #endif
@@ -228,6 +263,65 @@ void gnt_style_read_actions(GType type, GntBindableClass *klass)
 #endif
 }
 
+gboolean gnt_style_read_menu_accels(const char *name, GHashTable *table)
+{
+#if GLIB_CHECK_VERSION(2,6,0)
+	char *kname;
+	GError *error = NULL;
+	gboolean ret = FALSE;
+
+	kname = g_strdup_printf("%s::menu", name);
+
+	if (g_key_file_has_group(gkfile, kname))
+	{
+		gsize len = 0;
+		char **keys;
+		
+		keys = g_key_file_get_keys(gkfile, kname, &len, &error);
+		if (error)
+		{
+			g_printerr("GntStyle: %s\n", error->message);
+			g_error_free(error);
+			g_free(kname);
+			return ret;
+		}
+
+		while (len--)
+		{
+			char *key, *menuid;
+
+			key = g_strdup(keys[len]);
+			menuid = g_key_file_get_string(gkfile, kname, keys[len], &error);
+
+			if (error)
+			{
+				g_printerr("GntStyle: %s\n", error->message);
+				g_error_free(error);
+				error = NULL;
+			}
+			else
+			{
+				const char *keycode = parse_key(key);
+				if (keycode == NULL) {
+					g_printerr("GntStyle: Invalid key-binding %s\n", key);
+				} else {
+					ret = TRUE;
+					g_hash_table_replace(table, g_strdup(keycode), menuid);
+					menuid = NULL;
+				}
+			}
+			g_free(key);
+			g_free(menuid);
+		}
+		g_strfreev(keys);
+	}
+
+	g_free(kname);
+	return ret;
+#endif
+	return FALSE;
+}
+
 void gnt_styles_get_keyremaps(GType type, GHashTable *hash)
 {
 #if GLIB_CHECK_VERSION(2,6,0)
@@ -355,11 +449,14 @@ void gnt_init_styles()
 void gnt_uninit_styles()
 {
 	int i;
-	for (i = 0; i < GNT_STYLES; i++)
+	for (i = 0; i < GNT_STYLES; i++) {
 		g_free(str_styles[i]);
+		str_styles[i] = NULL;
+	}
 
 #if GLIB_CHECK_VERSION(2,6,0)
 	g_key_file_free(gkfile);
+	gkfile = NULL;
 #endif
 }
 

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 #include "internal.h"
 
@@ -31,6 +31,12 @@ static gboolean
 addnewline_msg_cb(PurpleAccount *account, char *sender, char **message,
 					 PurpleConversation *conv, int *flags, void *data)
 {
+	if (((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) &&
+		 !purple_prefs_get_bool("/plugins/core/newline/im")) ||
+		((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) &&
+		 !purple_prefs_get_bool("/plugins/core/newline/chat")))
+		return FALSE;
+
 	if (g_ascii_strncasecmp(*message, "/me ", strlen("/me "))) {
 		char *tmp = g_strdup_printf("<br/>%s", *message);
 		g_free(*message);
@@ -39,6 +45,25 @@ addnewline_msg_cb(PurpleAccount *account, char *sender, char **message,
 
 	return FALSE;
 }
+
+static PurplePluginPrefFrame *
+get_plugin_pref_frame(PurplePlugin *plugin) {
+	PurplePluginPrefFrame *frame;
+	PurplePluginPref *ppref;
+
+	frame = purple_plugin_pref_frame_new();
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+			"/plugins/core/newline/im", _("Add new line in IMs"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+			"/plugins/core/newline/chat", _("Add new line in Chats"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	return frame;
+}
+
 
 static gboolean
 plugin_load(PurplePlugin *plugin)
@@ -53,6 +78,17 @@ plugin_load(PurplePlugin *plugin)
 	return TRUE;
 }
 
+static PurplePluginUiInfo prefs_info = {
+	get_plugin_pref_frame,
+	0,   /* page_num (Reserved) */
+	NULL, /* frame (Reserved) */
+	/* Padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 static PurplePluginInfo info =
 {
 	PURPLE_PLUGIN_MAGIC,							/**< magic			*/
@@ -66,7 +102,7 @@ static PurplePluginInfo info =
 
 	"core-plugin_pack-newline",						/**< id				*/
 	N_("New Line"),									/**< name			*/
-	VERSION,										/**< version		*/
+	DISPLAY_VERSION,									/**< version		*/
 	N_("Prepends a newline to displayed message."),	/**< summary		*/
 	N_("Prepends a newline to messages so that the "
 	   "rest of the message appears below the "
@@ -80,7 +116,7 @@ static PurplePluginInfo info =
 
 	NULL,											/**< ui_info		*/
 	NULL,											/**< extra_info		*/
-	NULL,											/**< prefs_info		*/
+	&prefs_info,									/**< prefs_info		*/
 	NULL,											/**< actions		*/
 
 	/* padding */
@@ -92,6 +128,9 @@ static PurplePluginInfo info =
 
 static void
 init_plugin(PurplePlugin *plugin) {
+	purple_prefs_add_none("/plugins/core/newline");
+	purple_prefs_add_bool("/plugins/core/newline/im", TRUE);
+	purple_prefs_add_bool("/plugins/core/newline/chat", TRUE);
 }
 
 PURPLE_INIT_PLUGIN(lastseen, init_plugin, info)

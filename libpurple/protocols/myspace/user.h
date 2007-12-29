@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _MYSPACE_USER_H
@@ -38,6 +38,7 @@ typedef struct _MsimUser
 	gchar *band_name, *song_name;
 	gchar *image_url;
 	guint last_image_updated;
+	gboolean temporary_user;
 } MsimUser;
 
 /* Callback function pointer type for when a user's information is received, 

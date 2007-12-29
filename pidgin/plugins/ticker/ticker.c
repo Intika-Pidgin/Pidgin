@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02111-1301, USA.
  */
 
 /*
@@ -124,8 +124,10 @@ static void buddy_ticker_set_pixmap(PurpleContact *c) {
 static gboolean buddy_ticker_set_pixmap_cb(gpointer data) {
 	TickerData *td = data;
 
-	buddy_ticker_update_contact(td->contact);
-	td->timeout = 0;
+	if (g_list_find(tickerbuds, td) != NULL) {
+		buddy_ticker_update_contact(td->contact);
+		td->timeout = 0;
+	}
 
 	return FALSE;
 }
@@ -352,7 +354,7 @@ static PurplePluginInfo info =
 
 	TICKER_PLUGIN_ID,                                 /**< id             */
 	N_("Buddy Ticker"),                               /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("A horizontal scrolling version of the buddy list."),
 	                                                  /**  description    */

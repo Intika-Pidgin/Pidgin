@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _PURPLE_IRC_H
@@ -55,6 +55,8 @@ struct irc_conn {
 	int fd;
 	guint timer;
 	GHashTable *buddies;
+
+	gboolean ison_outstanding;
 
 	char *inbuf;
 	int inbuflen;
@@ -98,6 +100,8 @@ typedef int (*IRCCmdCallback) (struct irc_conn *irc, const char *cmd, const char
 
 int irc_send(struct irc_conn *irc, const char *buf);
 gboolean irc_blist_timeout(struct irc_conn *irc);
+
+char *irc_escape_privmsg(const char *text, gssize length);
 
 char *irc_mirc2html(const char *string);
 char *irc_mirc2txt(const char *string);

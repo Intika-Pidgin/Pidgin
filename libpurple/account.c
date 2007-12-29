@@ -1,8 +1,9 @@
 /**
  * @file account.c Account API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "account.h"
@@ -40,6 +41,14 @@
 #include "util.h"
 #include "xmlnode.h"
 
+typedef struct
+{
+	PurpleConnectionErrorInfo *current_error;
+} PurpleAccountPrivate;
+
+#define PURPLE_ACCOUNT_GET_PRIVATE(account) \
+	((PurpleAccountPrivate *) (account->priv))
+
 /* TODO: Should use PurpleValue instead of this?  What about "ui"? */
 typedef struct
 {
@@ -51,7 +60,7 @@ typedef struct
 	{
 		int integer;
 		char *string;
-		gboolean bool;
+		gboolean boolean;
 
 	} value;
 
@@ -62,7 +71,10 @@ typedef struct
 	PurpleAccountRequestType type;
 	PurpleAccount *account;
 	void *ui_handle;
-
+	char *user;
+	gpointer userdata;
+	PurpleAccountRequestAuthorizationCb auth_cb;
+	PurpleAccountRequestAuthorizationCb deny_cb;
 } PurpleAccountRequestInfo;
 
 static PurpleAccountUiOps *account_ui_ops = NULL;
@@ -72,6 +84,9 @@ static guint    save_timer = 0;
 static gboolean accounts_loaded = FALSE;
 
 static GList *handles = NULL;
+
+static void set_current_error(PurpleAccount *account,
+	PurpleConnectionErrorInfo *new_err);
 
 /*********************************************************************
  * Writing to disk                                                   *
@@ -103,7 +118,7 @@ setting_to_xmlnode(gpointer key, gpointer value, gpointer user_data)
 	}
 	else if (setting->type == PURPLE_PREF_BOOLEAN) {
 		xmlnode_set_attrib(child, "type", "bool");
-		snprintf(buf, sizeof(buf), "%d", setting->value.bool);
+		snprintf(buf, sizeof(buf), "%d", setting->value.boolean);
 		xmlnode_insert_data(child, buf, -1);
 	}
 }
@@ -306,8 +321,43 @@ proxy_settings_to_xmlnode(PurpleProxyInfo *proxy_info)
 }
 
 static xmlnode *
+current_error_to_xmlnode(PurpleConnectionErrorInfo *err)
+{
+	xmlnode *node, *child;
+	char type_str[3];
+
+	node = xmlnode_new("current_error");
+
+	if(err == NULL)
+		return node;
+
+	/* It doesn't make sense to have transient errors persist across a
+	 * restart.
+	 */
+	if(!purple_connection_error_is_fatal (err->type))
+		return node;
+
+	child = xmlnode_new_child(node, "type");
+	snprintf(type_str, sizeof(type_str), "%u", err->type);
+	xmlnode_insert_data(child, type_str, -1);
+
+	child = xmlnode_new_child(node, "description");
+	if(err->description) {
+		char *utf8ized = purple_utf8_try_convert(err->description);
+		if(utf8ized == NULL)
+			utf8ized = purple_utf8_salvage(err->description);
+		xmlnode_insert_data(child, utf8ized, -1);
+		g_free(utf8ized);
+	}
+
+	return node;
+}
+
+static xmlnode *
 account_to_xmlnode(PurpleAccount *account)
 {
+	PurpleAccountPrivate *priv = PURPLE_ACCOUNT_GET_PRIVATE(account);
+
 	xmlnode *node, *child;
 	const char *tmp;
 	PurplePresence *presence;
@@ -363,6 +413,9 @@ account_to_xmlnode(PurpleAccount *account)
 		child = proxy_settings_to_xmlnode(proxy_info);
 		xmlnode_insert_child(node, child);
 	}
+
+	child = current_error_to_xmlnode(priv->current_error);
+	xmlnode_insert_child(node, child);
 
 	return node;
 }
@@ -668,6 +721,42 @@ parse_proxy_info(xmlnode *node, PurpleAccount *account)
 	purple_account_set_proxy_info(account, proxy_info);
 }
 
+static void
+parse_current_error(xmlnode *node, PurpleAccount *account)
+{
+	guint type;
+	char *type_str = NULL, *description = NULL;
+	xmlnode *child;
+	PurpleConnectionErrorInfo *current_error = NULL;
+
+	child = xmlnode_get_child(node, "type");
+	if (child == NULL || (type_str = xmlnode_get_data(child)) == NULL)
+		return;
+	type = atoi(type_str);
+	g_free(type_str);
+
+	if (type > PURPLE_CONNECTION_ERROR_OTHER_ERROR)
+	{
+		purple_debug_error("account",
+			"Invalid PurpleConnectionError value %d found when "
+			"loading account information for %s\n",
+			type, purple_account_get_username(account));
+		type = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
+	}
+
+	child = xmlnode_get_child(node, "description");
+	if (child)
+		description = xmlnode_get_data(child);
+	if (description == NULL)
+		description = g_strdup("");
+
+	current_error = g_new0(PurpleConnectionErrorInfo, 1);
+	current_error->type = type;
+	current_error->description = g_strdup(description);
+
+	set_current_error(account, current_error);
+}
+
 static PurpleAccount *
 parse_account(xmlnode *node)
 {
@@ -777,6 +866,13 @@ parse_account(xmlnode *node)
 		parse_proxy_info(child, ret);
 	}
 
+	/* Read current error */
+	child = xmlnode_get_child(node, "current_error");
+	if (child != NULL)
+	{
+		parse_current_error(child, ret);
+	}
+
 	return ret;
 }
 
@@ -823,6 +919,7 @@ PurpleAccount *
 purple_account_new(const char *username, const char *protocol_id)
 {
 	PurpleAccount *account = NULL;
+	PurpleAccountPrivate *priv = NULL;
 	PurplePlugin *prpl = NULL;
 	PurplePluginProtocolInfo *prpl_info = NULL;
 	PurpleStatusType *status_type;
@@ -837,6 +934,8 @@ purple_account_new(const char *username, const char *protocol_id)
 
 	account = g_new0(PurpleAccount, 1);
 	PURPLE_DBUS_REGISTER_POINTER(account, PurpleAccount);
+	priv = g_new0(PurpleAccountPrivate, 1);
+	account->priv = priv;
 
 	purple_account_set_username(account, username);
 
@@ -877,6 +976,7 @@ purple_account_new(const char *username, const char *protocol_id)
 void
 purple_account_destroy(PurpleAccount *account)
 {
+	PurpleAccountPrivate *priv = NULL;
 	GList *l;
 
 	g_return_if_fail(account != NULL);
@@ -908,8 +1008,21 @@ purple_account_destroy(PurpleAccount *account)
 	if(account->system_log)
 		purple_log_free(account->system_log);
 
+	priv = PURPLE_ACCOUNT_GET_PRIVATE(account);
+	g_free(priv->current_error);
+	g_free(priv);
+
 	PURPLE_DBUS_UNREGISTER_POINTER(account);
 	g_free(account);
+}
+
+void
+purple_account_set_register_callback(PurpleAccount *account, PurpleAccountRegistrationCb cb, void *user_data)
+{
+	g_return_if_fail(account != NULL);
+
+	account->registration_cb = cb;
+	account->registration_cb_user_data = user_data;
 }
 
 void
@@ -921,6 +1034,17 @@ purple_account_register(PurpleAccount *account)
 					purple_account_get_username(account));
 
 	purple_connection_new(account, TRUE, purple_account_get_password(account));
+}
+
+void
+purple_account_unregister(PurpleAccount *account, PurpleAccountUnregistrationCb cb, void *user_data)
+{
+	g_return_if_fail(account != NULL);
+
+	purple_debug_info("account", "Unregistering account %s\n",
+					  purple_account_get_username(account));
+
+	purple_connection_new_unregister(account, purple_account_get_password(account), cb, user_data);
 }
 
 static void
@@ -939,12 +1063,20 @@ request_password_ok_cb(PurpleAccount *account, PurpleRequestFields *fields)
 	}
 
 	if(remember)
-	  purple_account_set_remember_password(account, TRUE);
+		purple_account_set_remember_password(account, TRUE);
 
 	purple_account_set_password(account, entry);
 
 	purple_connection_new(account, FALSE, entry);
 }
+
+static void
+request_password_cancel_cb(PurpleAccount *account, PurpleRequestFields *fields)
+{
+	/* Disable the account as the user has canceled connecting */
+	purple_account_set_enabled(account, purple_core_get_ui(), FALSE);
+}
+
 
 void
 purple_account_request_password(PurpleAccount *account, GCallback ok_cb,
@@ -1019,7 +1151,7 @@ purple_account_connect(PurpleAccount *account)
 	if ((password == NULL) &&
 		!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
 		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
-		purple_account_request_password(account, G_CALLBACK(request_password_ok_cb), NULL, account);
+		purple_account_request_password(account, G_CALLBACK(request_password_ok_cb), G_CALLBACK(request_password_cancel_cb), account);
 	else
 		purple_connection_new(account, FALSE, password);
 }
@@ -1090,18 +1222,18 @@ purple_account_request_close_info(PurpleAccountRequestInfo *info)
 	g_free(info);
 }
 
-void 
+void
 purple_account_request_close_with_account(PurpleAccount *account)
 {
 	GList *l, *l_next;
-	
+
 	g_return_if_fail(account != NULL);
-	
+
 	for (l = handles; l != NULL; l = l_next) {
 		PurpleAccountRequestInfo *info = l->data;
-		
+
 		l_next = l->next;
-		
+
 		if (info->account == account) {
 			handles = g_list_remove(handles, info);
 			purple_account_request_close_info(info);
@@ -1109,23 +1241,45 @@ purple_account_request_close_with_account(PurpleAccount *account)
 	}
 }
 
-void 
+void
 purple_account_request_close(void *ui_handle)
 {
 	GList *l, *l_next;
-	
+
 	g_return_if_fail(ui_handle != NULL);
-	
+
 	for (l = handles; l != NULL; l = l_next) {
 		PurpleAccountRequestInfo *info = l->data;
-		
+
 		l_next = l->next;
-		
+
 		if (info->ui_handle == ui_handle) {
 			handles = g_list_remove(handles, info);
 			purple_account_request_close_info(info);
 		}
 	}
+}
+
+static void
+request_auth_cb(void *data)
+{
+	PurpleAccountRequestInfo *info = data;
+	info->auth_cb(info->userdata);
+	purple_signal_emit(purple_accounts_get_handle(),
+			"account-authorization-granted", info->account, info->user);
+	g_free(info->user);
+	g_free(info);
+}
+
+static void
+request_deny_cb(void *data)
+{
+	PurpleAccountRequestInfo *info = data;
+	info->deny_cb(info->userdata);
+	purple_signal_emit(purple_accounts_get_handle(),
+			"account-authorization-denied", info->account, info->user);
+	g_free(info->user);
+	g_free(info);
 }
 
 void *
@@ -1135,23 +1289,40 @@ purple_account_request_authorization(PurpleAccount *account, const char *remote_
 {
 	PurpleAccountUiOps *ui_ops;
 	PurpleAccountRequestInfo *info;
+	int plugin_return;
 
 	g_return_val_if_fail(account     != NULL, NULL);
 	g_return_val_if_fail(remote_user != NULL, NULL);
 
 	ui_ops = purple_accounts_get_ui_ops();
 
+	plugin_return = GPOINTER_TO_INT(
+			purple_signal_emit_return_1(purple_accounts_get_handle(),
+				"account-authorization-requested", account, remote_user));
+
+	if (plugin_return > 0) {
+		auth_cb(user_data);
+		return NULL;
+	} else if (plugin_return < 0) {
+		deny_cb(user_data);
+		return NULL;
+	}
+
 	if (ui_ops != NULL && ui_ops->request_authorize != NULL) {
 		info            = g_new0(PurpleAccountRequestInfo, 1);
 		info->type      = PURPLE_ACCOUNT_REQUEST_AUTHORIZATION;
 		info->account   = account;
+		info->auth_cb   = auth_cb;
+		info->deny_cb   = deny_cb;
+		info->userdata  = user_data;
+		info->user      = g_strdup(remote_user);
 		info->ui_handle = ui_ops->request_authorize(account, remote_user, id, alias, message,
-							    on_list, auth_cb, deny_cb, user_data);
+							    on_list, request_auth_cb, request_deny_cb, info);
 
 		handles = g_list_append(handles, info);
 		return info->ui_handle;
 	}
-	
+
 	return NULL;
 }
 
@@ -1474,7 +1645,7 @@ purple_account_set_status_list(PurpleAccount *account, const char *status_id,
 	if (status == NULL)
 	{
 		purple_debug_error("account",
-				   "Invalid status ID %s for account %s (%s)\n",
+				   "Invalid status ID '%s' for account %s (%s)\n",
 				   status_id, purple_account_get_username(account),
 				   purple_account_get_protocol_id(account));
 		return;
@@ -1549,7 +1720,7 @@ purple_account_set_bool(PurpleAccount *account, const char *name, gboolean value
 	setting = g_new0(PurpleAccountSetting, 1);
 
 	setting->type       = PURPLE_PREF_BOOLEAN;
-	setting->value.bool = value;
+	setting->value.boolean = value;
 
 	g_hash_table_insert(account->settings, g_strdup(name), setting);
 
@@ -1635,7 +1806,7 @@ purple_account_set_ui_bool(PurpleAccount *account, const char *ui,
 
 	setting->type       = PURPLE_PREF_BOOLEAN;
 	setting->ui         = g_strdup(ui);
-	setting->value.bool = value;
+	setting->value.boolean = value;
 
 	table = get_ui_settings_table(account, ui);
 
@@ -1720,15 +1891,6 @@ const char *
 purple_account_get_protocol_id(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
-	/*
-	 * HACK by Seanegan
-	 */
-	if (!strcmp(account->protocol_id, "prpl-oscar")) {
-		if (isdigit(account->username[0]))
-			return "prpl-icq";
-		else
-			return "prpl-aim";
-	}
 	return account->protocol_id;
 }
 
@@ -1919,7 +2081,7 @@ purple_account_get_bool(const PurpleAccount *account, const char *name,
 
 	g_return_val_if_fail(setting->type == PURPLE_PREF_BOOLEAN, default_value);
 
-	return setting->value.bool;
+	return setting->value.boolean;
 }
 
 int
@@ -1985,7 +2147,7 @@ purple_account_get_ui_bool(const PurpleAccount *account, const char *ui,
 
 	g_return_val_if_fail(setting->type == PURPLE_PREF_BOOLEAN, default_value);
 
-	return setting->value.bool;
+	return setting->value.boolean;
 }
 
 PurpleLog *
@@ -2152,6 +2314,65 @@ gboolean purple_account_supports_offline_message(PurpleAccount *account, PurpleB
 	return prpl_info->offline_message(buddy);
 }
 
+static void
+signed_on_cb(PurpleConnection *gc,
+             gpointer unused)
+{
+	PurpleAccount *account = purple_connection_get_account(gc);
+	purple_account_clear_current_error(account);
+}
+
+static void
+set_current_error(PurpleAccount *account,
+                  PurpleConnectionErrorInfo *new_err)
+{
+	PurpleAccountPrivate *priv = PURPLE_ACCOUNT_GET_PRIVATE(account);
+	PurpleConnectionErrorInfo *old_err = priv->current_error;
+
+	if(new_err == old_err)
+		return;
+
+	priv->current_error = new_err;
+
+	purple_signal_emit(purple_accounts_get_handle(),
+	                   "account-error-changed",
+	                   account, old_err, new_err);
+	schedule_accounts_save();
+
+	if(old_err)
+		g_free(old_err->description);
+
+	g_free(old_err);
+}
+
+static void
+connection_error_cb(PurpleConnection *gc,
+                    PurpleConnectionError type,
+                    const gchar *description,
+                    gpointer unused)
+{
+	PurpleAccount *account = purple_connection_get_account(gc);
+	PurpleConnectionErrorInfo *err = g_new0(PurpleConnectionErrorInfo, 1);
+
+	err->type = type;
+	err->description = g_strdup(description);
+
+	set_current_error(account, err);
+}
+
+const PurpleConnectionErrorInfo *
+purple_account_get_current_error(PurpleAccount *account)
+{
+	PurpleAccountPrivate *priv = PURPLE_ACCOUNT_GET_PRIVATE(account);
+	return priv->current_error;
+}
+
+void
+purple_account_clear_current_error(PurpleAccount *account)
+{
+	set_current_error(account, NULL);
+}
+
 void
 purple_accounts_add(PurpleAccount *account)
 {
@@ -2176,6 +2397,11 @@ purple_accounts_remove(PurpleAccount *account)
 
 	schedule_accounts_save();
 
+	/* Clearing the error ensures that account-error-changed is emitted,
+	 * which is the end of the guarantee that the the error's pointer is
+	 * valid.
+	 */
+	purple_account_clear_current_error(account);
 	purple_signal_emit(purple_accounts_get_handle(), "account-removed", account);
 }
 
@@ -2314,21 +2540,18 @@ purple_accounts_find(const char *name, const char *protocol_id)
 
 	g_return_val_if_fail(name != NULL, NULL);
 
-	who = g_strdup(purple_normalize(NULL, name));
-
 	for (l = purple_accounts_get_all(); l != NULL; l = l->next) {
 		account = (PurpleAccount *)l->data;
 
-		if (!strcmp(purple_normalize(NULL, purple_account_get_username(account)), who) &&
+		who = g_strdup(purple_normalize(account, name));
+		if (!strcmp(purple_normalize(account, purple_account_get_username(account)), who) &&
 			(!protocol_id || !strcmp(account->protocol_id, protocol_id))) {
-
+			g_free(who);
 			break;
 		}
-
+		g_free(who);
 		account = NULL;
 	}
-
-	g_free(who);
 
 	return account;
 }
@@ -2381,6 +2604,7 @@ void
 purple_accounts_init(void)
 {
 	void *handle = purple_accounts_get_handle();
+	void *conn_handle = purple_connections_get_handle();
 
 	purple_signal_register(handle, "account-connecting",
 						 purple_marshal_VOID__POINTER, NULL, 1,
@@ -2431,7 +2655,39 @@ purple_accounts_init(void)
 						 purple_value_new(PURPLE_TYPE_SUBTYPE,
 							 			PURPLE_SUBTYPE_ACCOUNT),
 						 purple_value_new(PURPLE_TYPE_STRING));
-	
+
+	purple_signal_register(handle, "account-authorization-requested",
+						purple_marshal_INT__POINTER_POINTER,
+						purple_value_new(PURPLE_TYPE_INT), 2,
+						purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "account-authorization-denied",
+						purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "account-authorization-granted",
+						purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "account-error-changed",
+	                       purple_marshal_VOID__POINTER_POINTER_POINTER,
+	                       NULL, 3,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_ACCOUNT),
+	                       purple_value_new(PURPLE_TYPE_POINTER),
+	                       purple_value_new(PURPLE_TYPE_POINTER));
+
+	purple_signal_connect(conn_handle, "signed-on", handle,
+	                      PURPLE_CALLBACK(signed_on_cb), NULL);
+	purple_signal_connect(conn_handle, "connection-error", handle,
+	                      PURPLE_CALLBACK(connection_error_cb), NULL);
+
 	load_accounts();
 
 }
@@ -2439,6 +2695,7 @@ purple_accounts_init(void)
 void
 purple_accounts_uninit(void)
 {
+	gpointer handle = purple_accounts_get_handle();
 	if (save_timer != 0)
 	{
 		purple_timeout_remove(save_timer);
@@ -2446,5 +2703,6 @@ purple_accounts_uninit(void)
 		sync_accounts();
 	}
 
-	purple_signals_unregister_by_instance(purple_accounts_get_handle());
+	purple_signals_disconnect_by_handle(handle);
+	purple_signals_unregister_by_instance(handle);
 }

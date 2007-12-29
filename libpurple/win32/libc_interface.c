@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include <winsock2.h>
@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <glib.h>
+#include "config.h"
 #include "debug.h"
 #include "libc_internal.h"
 #if GLIB_CHECK_VERSION(2,6,0)
@@ -37,6 +38,26 @@
 #define g_rename rename
 #define g_stat stat
 #endif
+
+#ifdef ENABLE_NLS
+#  include <locale.h>
+#  include <libintl.h>
+#  define _(String) ((const char *)dgettext(PACKAGE, String))
+#  ifdef gettext_noop
+#    define N_(String) gettext_noop (String)
+#  else
+#    define N_(String) (String)
+#  endif
+#else
+#  include <locale.h>
+#  define N_(String) (String)
+#  ifndef _
+#    define _(String) ((const char *)String)
+#  endif
+#  define ngettext(Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
+#  define dngettext(Domain, Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
+#endif
+
 
 static char errbuf[1024];
 
@@ -138,11 +159,21 @@ int wpurple_sendto(int socket, const void *buf, size_t len, int flags, const str
 
 /* fcntl.h */
 /* This is not a full implementation of fcntl. Update as needed.. */
-int wpurple_fcntl(int socket, int command, int val) {
+int wpurple_fcntl(int socket, int command, ...) {
+
 	switch( command ) {
+	case F_GETFL:
+		return 0;
+
 	case F_SETFL:
 	{
+		va_list args;
+		int val;
 		int ret=0;
+
+		va_start(args, command);
+		val = va_arg(args, int);
+		va_end(args);
 
 		switch( val ) {
 		case O_NONBLOCK:
@@ -152,7 +183,7 @@ int wpurple_fcntl(int socket, int command, int val) {
 			break;
 		}
 		case 0:
-	        {
+		{
 			u_long imode=0;
 			ret = ioctlsocket(socket, FIONBIO, &imode);
 			break;
@@ -284,13 +315,25 @@ struct hostent* wpurple_gethostbyname(const char *name) {
 }
 
 /* string.h */
-char* wpurple_strerror( int errornum ) {
-	if( errornum > WSABASEERR ) {
-		sprintf( errbuf, "Windows socket error #%d", errornum );
-		return errbuf;
+char* wpurple_strerror(int errornum) {
+	if (errornum > WSABASEERR) {
+		switch(errornum) {
+			case WSAECONNABORTED: /* 10053 */
+				snprintf(errbuf, sizeof(errbuf), _("Connection interrupted by other software on your computer."));
+			case WSAECONNRESET: /* 10054 */
+				snprintf(errbuf, sizeof(errbuf), _("Remote host closed connection."));
+			case WSAETIMEDOUT: /* 10060 */
+				snprintf(errbuf, sizeof(errbuf), _("Connection timed out."));
+			case WSAECONNREFUSED: /*10061 */
+				snprintf(errbuf, sizeof(errbuf), _("Connection refused."));
+			default:
+				snprintf(errbuf, sizeof(errbuf), "Windows socket error #%d", errornum);
+		}
+	} else {
+		const char *tmp = g_strerror(errornum);
+		snprintf(errbuf, sizeof(errbuf), tmp);
 	}
-	else
-		return strerror( errornum );
+	return errbuf;
 }
 
 /* unistd.h */
@@ -397,7 +440,7 @@ int wpurple_gettimeofday(struct timeval *p, struct timezone *z) {
 
 	if (p != 0) {
 		_ftime(&timebuffer);
-	   	p->tv_sec = timebuffer.time;			/* seconds since 1-1-1970 */
+		p->tv_sec = timebuffer.time;			/* seconds since 1-1-1970 */
 		p->tv_usec = timebuffer.millitm*1000; 	/* microseconds */
 	}
 

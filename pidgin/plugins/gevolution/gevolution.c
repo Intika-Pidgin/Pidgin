@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 #include "internal.h"
 #include "pidgin.h"
@@ -525,7 +525,7 @@ static PurplePluginInfo info =
 
 	GEVOLUTION_PLUGIN_ID,                             /**< id             */
 	N_("Evolution Integration"),                      /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Provides integration with Evolution."),
 	                                                  /**  description    */

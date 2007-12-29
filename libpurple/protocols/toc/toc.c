@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -1795,7 +1795,7 @@ static void toc_send_file_callback(gpointer data, gint source, PurpleInputCondit
 			ft->file = g_fopen(ft->filename, "w");
 			if (!ft->file) {
 				buf = g_strdup_printf(_("Could not open %s for writing!"), ft->filename);
-				purple_notify_error(ft->gc, NULL, buf, strerror(errno));
+				purple_notify_error(ft->gc, NULL, buf, g_strerror(errno));
 				g_free(buf);
 				purple_input_remove(ft->inpa);
 				close(source);
@@ -1812,7 +1812,7 @@ static void toc_send_file_callback(gpointer data, gint source, PurpleInputCondit
 			if (!ft->file) {
 				buf = g_strdup_printf("Could not open %s/%s for writing!", ft->filename,
 						ft->hdr.name);
-				purple_notify_error(ft->gc, NULL, buf, strerror(errno));
+				purple_notify_error(ft->gc, NULL, buf, g_strerror(errno));
 				g_free(buf);
 				purple_input_remove(ft->inpa);
 				close(source);
@@ -2301,7 +2301,7 @@ static PurplePluginInfo info =
 
 	"prpl-toc",                                       /**< id             */
 	"TOC",                                            /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("TOC Protocol Plugin"),
 	                                                  /**  description    */

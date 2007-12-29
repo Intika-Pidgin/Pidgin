@@ -1,8 +1,9 @@
 /**
  * @file gtkprefs.c GTK+ Preferences
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -887,19 +888,19 @@ interface_page()
 
 	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
-	
+
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
 	vbox = pidgin_make_frame(ret, _("System Tray Icon"));
 	label = pidgin_prefs_dropdown(vbox, _("_Show system tray icon:"), PURPLE_PREF_STRING,
 					PIDGIN_PREFS_ROOT "/docklet/show",
 					_("Always"), "always",
-					_("Never"), "never",
 					_("On unread messages"), "pending",
+					_("Never"), "never",
 					NULL);
 	gtk_size_group_add_widget(sg, label);
         gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-	
+
 	vbox = pidgin_make_frame(ret, _("Conversation Window Hiding"));
 	label = pidgin_prefs_dropdown(vbox, _("_Hide new IM conversations:"),
 					PURPLE_PREF_STRING, PIDGIN_PREFS_ROOT "/conversations/im/hide_new",
@@ -909,11 +910,11 @@ interface_page()
 					NULL);
 	gtk_size_group_add_widget(sg, label);
         gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-			
+
 
 	/* All the tab options! */
 	vbox = pidgin_make_frame(ret, _("Tabs"));
-	
+
 	pidgin_prefs_checkbox(_("Show IMs and chats in _tabbed windows"),
 							PIDGIN_PREFS_ROOT "/conversations/tabs", vbox);
 
@@ -944,17 +945,18 @@ interface_page()
 					NULL);
 	gtk_size_group_add_widget(sg, label);
         gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-		
+
 	names = pidgin_conv_placement_get_options();
 	label = pidgin_prefs_dropdown_from_list(vbox2, _("N_ew conversations:"),
 				PURPLE_PREF_STRING, PIDGIN_PREFS_ROOT "/conversations/placement", names);
 	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-			
+
 	gtk_size_group_add_widget(sg, label);
 
 	g_list_free(names);
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 	return ret;
 }
 
@@ -1036,12 +1038,14 @@ conv_page()
 		gtk_widget_set_sensitive(hbox, FALSE);
 	g_signal_connect(G_OBJECT(fontpref), "clicked", G_CALLBACK(pidgin_toggle_sensitive), hbox);
 	g_signal_connect(G_OBJECT(font_button), "font-set", G_CALLBACK(pidgin_custom_font_set), NULL);
+	gtk_widget_show_all(hbox);
 #endif
 
 	vbox = pidgin_make_frame(ret, _("Default Formatting"));
 	gtk_box_set_child_packing(GTK_BOX(vbox->parent), vbox, TRUE, TRUE, 0, GTK_PACK_START);
 
 	frame = pidgin_create_imhtml(TRUE, &imhtml, &toolbar, NULL);
+	gtk_widget_show(frame);
 	gtk_widget_set_name(imhtml, "pidgin_prefs_font_imhtml");
 	gtk_widget_set_size_request(frame, 300, -1);
 	gtk_imhtml_set_whole_buffer_formatting_only(GTK_IMHTML(imhtml), TRUE);
@@ -1068,7 +1072,7 @@ conv_page()
 					 G_CALLBACK(formatting_clear_cb), NULL);
 
 
-	gtk_widget_show_all(ret);
+	gtk_widget_show(ret);
 
 	return ret;
 }
@@ -1091,7 +1095,7 @@ proxy_changed_cb(const char *name, PurplePrefType type,
 	const char *proxy = value;
 
 	if (strcmp(proxy, "none") && strcmp(proxy, "envvar"))
-	        gtk_widget_show_all(frame);
+		gtk_widget_show_all(frame);
 	else
 		gtk_widget_hide(frame);
 }
@@ -1108,12 +1112,38 @@ static void proxy_print_option(GtkEntry *entry, int entrynum)
 		purple_prefs_set_string("/purple/proxy/password", gtk_entry_get_text(entry));
 }
 
+static void
+proxy_button_clicked_cb(GtkWidget *button, gpointer null)
+{
+	GError *err = NULL;
+
+	if (g_spawn_command_line_async ("gnome-network-preferences", &err))
+		return;
+
+	purple_notify_error(NULL, NULL, _("Cannot start proxy configuration program."), err->message);
+	g_error_free(err);
+}
+
+static void
+browser_button_clicked_cb(GtkWidget *button, gpointer null)
+{
+	GError *err = NULL;
+
+	if (g_spawn_command_line_async ("gnome-default-applications-properties", &err))
+		return;
+
+	purple_notify_error(NULL, NULL, _("Cannot start browser configuration program."), err->message);
+	g_error_free(err);
+}
+
 static GtkWidget *
 network_page()
 {
 	GtkWidget *ret;
 	GtkWidget *vbox, *hbox, *entry;
 	GtkWidget *table, *label, *auto_ip_checkbox, *ports_checkbox, *spin_button;
+	GtkWidget *proxy_warning = NULL, *browser_warning = NULL;
+	GtkWidget *proxy_button = NULL, *browser_button = NULL;
 	GtkSizeGroup *sg;
 	PurpleProxyInfo *proxy_info = NULL;
 
@@ -1176,8 +1206,13 @@ network_page()
 	g_signal_connect(G_OBJECT(auto_ip_checkbox), "clicked",
 					 G_CALLBACK(pidgin_toggle_sensitive), table);
 
+	g_object_unref(sg);
+
 	vbox = pidgin_make_frame (ret, _("Ports"));
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+
+	pidgin_prefs_checkbox(_("_Enable automatic router port forwarding"),
+			"/purple/network/map_ports", vbox);
 
 	ports_checkbox = pidgin_prefs_checkbox(_("_Manually specify range of ports to listen on"),
 			"/purple/network/ports_range_use", vbox);
@@ -1196,9 +1231,49 @@ network_page()
 	g_signal_connect(G_OBJECT(ports_checkbox), "clicked",
 					 G_CALLBACK(pidgin_toggle_sensitive), spin_button);
 
-	if (!purple_running_gnome()) {
+	if (purple_running_gnome()) {
+		vbox = pidgin_make_frame(ret, _("Proxy Server &amp; Browser"));
+		prefs_proxy_frame = gtk_vbox_new(FALSE, 0);
+
+		proxy_warning = hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+
+		label = gtk_label_new(NULL);
+		gtk_label_set_markup(GTK_LABEL(label),
+		                     _("<b>Proxy configuration program was not found.</b>"));
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
+		browser_warning = hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+
+		label = gtk_label_new(NULL);
+		gtk_label_set_markup(GTK_LABEL(label),
+		                     _("<b>Browser configuration program was not found.</b>"));
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
+		hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+		label = gtk_label_new(_("Proxy & Browser preferences are configured\n"
+		                        "in GNOME Preferences"));
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+		gtk_widget_show(label);
+
+		hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+		proxy_button = gtk_button_new_with_mnemonic(_("Configure _Proxy"));
+		g_signal_connect(G_OBJECT(proxy_button), "clicked",
+		                 G_CALLBACK(proxy_button_clicked_cb), NULL);
+		gtk_box_pack_start(GTK_BOX(hbox), proxy_button, FALSE, FALSE, 0);
+		gtk_widget_show(proxy_button);
+		browser_button = gtk_button_new_with_mnemonic(_("Configure _Browser"));
+		g_signal_connect(G_OBJECT(browser_button), "clicked",
+		                 G_CALLBACK(browser_button_clicked_cb), NULL);
+		gtk_box_pack_start(GTK_BOX(hbox), browser_button, FALSE, FALSE, 0);
+		gtk_widget_show(browser_button);
+	} else {
 		vbox = pidgin_make_frame(ret, _("Proxy Server"));
 		prefs_proxy_frame = gtk_vbox_new(FALSE, 0);
+
 		pidgin_prefs_dropdown(vbox, _("Proxy _type:"), PURPLE_PREF_STRING,
 					"/purple/proxy/type",
 					_("No proxy"), "none",
@@ -1295,11 +1370,34 @@ network_page()
 	}
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 	/* Only hide table if not running gnome otherwise we hide the IP address table! */
 	if (!purple_running_gnome() && (proxy_info == NULL ||
 	    purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_NONE ||
-	    purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_USE_ENVVAR))
+	    purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_USE_ENVVAR)) {
 		gtk_widget_hide(table);
+	} else if (purple_running_gnome()) {
+		gchar *path;
+		path = g_find_program_in_path("gnome-network-preferences");
+		if (path != NULL) {
+			gtk_widget_set_sensitive(proxy_button, TRUE);
+			gtk_widget_hide(proxy_warning);
+			g_free(path);
+		} else {
+			gtk_widget_set_sensitive(proxy_button, FALSE);
+			gtk_widget_show(proxy_warning);
+		}
+		path = g_find_program_in_path("gnome-default-applications-properties");
+		if (path != NULL) {
+			gtk_widget_set_sensitive(browser_button, TRUE);
+			gtk_widget_hide(browser_warning);
+			g_free(path);
+		} else {
+			gtk_widget_set_sensitive(browser_button, FALSE);
+			gtk_widget_show(browser_warning);
+		}
+	}
+
 	return ret;
 }
 
@@ -1321,7 +1419,7 @@ static GList *get_available_browsers()
 	};
 
 	/* Sorted reverse alphabetically */
-	static struct browser possible_browsers[] = {
+	static const struct browser possible_browsers[] = {
 		{N_("Seamonkey"), "seamonkey"},
 		{N_("Opera"), "opera"},
 		{N_("Netscape"), "netscape"},
@@ -1446,6 +1544,7 @@ browser_page()
 	pidgin_set_accessible_label (entry, label);
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 	return ret;
 }
 #endif /*_WIN32*/
@@ -1508,6 +1607,7 @@ sound_changed2_cb(const char *name, PurplePrefType type,
 
 	gtk_widget_set_sensitive(vbox, strcmp(method, "none"));
 }
+#endif /* !_WIN32 */
 
 #ifdef USE_GSTREAMER
 static void
@@ -1522,7 +1622,6 @@ sound_changed3_cb(const char *name, PurplePrefType type,
 			!strcmp(method, "esd"));
 }
 #endif /* USE_GSTREAMER */
-#endif /* !_WIN32 */
 
 
 static void
@@ -1552,18 +1651,22 @@ static void
 test_sound(GtkWidget *button, gpointer i_am_NULL)
 {
 	char *pref;
-	gboolean temp_value;
+	gboolean temp_enabled;
+	gboolean temp_mute;
 
 	pref = g_strdup_printf(PIDGIN_PREFS_ROOT "/sound/enabled/%s",
 			pidgin_sound_get_event_option(sound_row_sel));
 
-	temp_value = purple_prefs_get_bool(pref);
+	temp_enabled = purple_prefs_get_bool(pref);
+	temp_mute = purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/sound/mute");
 
-	if (!temp_value) purple_prefs_set_bool(pref, TRUE);
+	if (!temp_enabled) purple_prefs_set_bool(pref, TRUE);
+	if (temp_mute) purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/sound/mute", FALSE);
 
 	purple_sound_play_event(sound_row_sel, NULL);
 
-	if (!temp_value) purple_prefs_set_bool(pref, FALSE);
+	if (!temp_enabled) purple_prefs_set_bool(pref, FALSE);
+	if (temp_mute) purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/sound/mute", TRUE);
 
 	g_free(pref);
 }
@@ -1620,7 +1723,7 @@ static void select_sound(GtkWidget *button, gpointer being_NULL_is_fun)
 		filename = NULL;
 
 	purple_request_file(prefs, _("Sound Selection"), filename, FALSE,
-					  G_CALLBACK(sound_chosen_cb), NULL, 
+					  G_CALLBACK(sound_chosen_cb), NULL,
 					  NULL, NULL, NULL,
 					  GINT_TO_POINTER(sound_row_sel));
 }
@@ -1691,9 +1794,11 @@ sound_page()
 	int j;
 	const char *file;
 	char *pref;
+#if !defined _WIN32 || defined USE_GSTREAMER
+	GtkWidget *label;
+#endif
 #ifndef _WIN32
 	GtkWidget *dd;
-	GtkWidget *label;
 	GtkWidget *entry;
 	const char *cmd;
 #endif
@@ -1881,6 +1986,7 @@ sound_page()
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 
 	return ret;
 }
@@ -2006,11 +2112,12 @@ away_page()
 	}
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 
 	return ret;
 }
 
-static int 
+static int
 prefs_notebook_add_page(const char *text,
   		        GtkWidget *page,
 			int ind) {
@@ -2043,7 +2150,6 @@ static void prefs_notebook_init() {
 void pidgin_prefs_show(void)
 {
 	GtkWidget *vbox;
-	GtkWidget *bbox;
 	GtkWidget *notebook;
 	GtkWidget *button;
 
@@ -2059,31 +2165,20 @@ void pidgin_prefs_show(void)
 	/* Back to instant-apply! I win!  BU-HAHAHA! */
 
 	/* Create the window */
-	prefs = pidgin_create_window(_("Preferences"), PIDGIN_HIG_BORDER, "preferences", FALSE);
+	prefs = pidgin_create_dialog(_("Preferences"), PIDGIN_HIG_BORDER, "preferences", FALSE);
 	g_signal_connect(G_OBJECT(prefs), "destroy",
 					 G_CALLBACK(delete_prefs), NULL);
 
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(prefs), vbox);
-	gtk_widget_show(vbox);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(prefs), FALSE, PIDGIN_HIG_BORDER);
 
 	/* The notebook */
 	prefsnotebook = notebook = gtk_notebook_new ();
 	gtk_box_pack_start (GTK_BOX (vbox), notebook, FALSE, FALSE, 0);
 	gtk_widget_show(prefsnotebook);
 
-	/* The buttons to press! */
-	bbox = gtk_hbutton_box_new();
-	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_pack_start(GTK_BOX(vbox), bbox, FALSE, FALSE, 0);
-	gtk_widget_show (bbox);
-
-	button = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
+	button = pidgin_dialog_add_button(GTK_DIALOG(prefs), GTK_STOCK_CLOSE, NULL, NULL);
 	g_signal_connect_swapped(G_OBJECT(button), "clicked",
 							 G_CALLBACK(gtk_widget_destroy), prefs);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-	gtk_widget_show(button);
 
 	prefs_notebook_init();
 
@@ -2164,6 +2259,8 @@ pidgin_prefs_init(void)
 	/* Smiley Callbacks */
 	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/smileys/theme",
 								smiley_theme_pref_cb, NULL);
+
+	pidgin_prefs_update_old();
 }
 
 void pidgin_prefs_update_old()
@@ -2198,6 +2295,7 @@ void pidgin_prefs_update_old()
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_group_count");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_warning_level");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/button_type");
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/close_immediately");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/ctrl_enter_sends");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/enter_sends");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/escape_closes");

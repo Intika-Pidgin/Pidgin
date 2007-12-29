@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -316,7 +316,7 @@ static PurplePluginInfo info =
 	/* This is a cultural reference.  Dy'er Mak'er is a song by Led Zeppelin.
 	   If that doesn't translate well into your language, drop the 's before translating. */
 	N_("I'dle Mak'er"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Allows you to hand-configure how long you've been idle"),
 	N_("Allows you to hand-configure how long you've been idle"),
 	"Eric Warmenhoven <eric@warmenhoven.org>",

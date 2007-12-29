@@ -1,8 +1,9 @@
 /*
  * @file gtksound.c GTK+ Sound
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -50,8 +51,6 @@ struct pidgin_sound_event {
 	char *def;
 };
 
-#define PLAY_SOUND_TIMEOUT 15000
-
 static guint mute_login_sounds_timeout = 0;
 static gboolean mute_login_sounds = FALSE;
 
@@ -59,7 +58,7 @@ static gboolean mute_login_sounds = FALSE;
 static gboolean gst_init_failed;
 #endif /* USE_GSTREAMER */
 
-static struct pidgin_sound_event sounds[PURPLE_NUM_SOUNDS] = {
+static const struct pidgin_sound_event sounds[PURPLE_NUM_SOUNDS] = {
 	{N_("Buddy logs in"), "login", "login.wav"},
 	{N_("Buddy logs out"), "logout", "logout.wav"},
 	{N_("Message received"), "im_recv", "receive.wav"},
@@ -114,15 +113,12 @@ static void
 play_conv_event(PurpleConversation *conv, PurpleSoundEventID event)
 {
 	/* If we should not play the sound for some reason, then exit early */
-	if (conv != NULL)
+	if (conv != NULL && PIDGIN_IS_PIDGIN_CONVERSATION(conv))
 	{
 		PidginConversation *gtkconv;
-		PidginWindow *win;
 		gboolean has_focus;
 
 		gtkconv = PIDGIN_CONVERSATION(conv);
-		win = gtkconv->win;
-
 		has_focus = purple_conversation_has_focus(conv);
 
 		if (!gtkconv->make_sound ||
@@ -446,6 +442,8 @@ pidgin_sound_play_file(const char *filename)
 		g_free(command);
 		return;
 	}
+#endif /* _WIN32 */
+
 #ifdef USE_GSTREAMER
 	if (gst_init_failed)  /* Perhaps do gdk_beep instead? */
 		return;
@@ -460,7 +458,9 @@ pidgin_sound_play_file(const char *filename)
 			purple_debug_error("sound", "Unable to create GStreamer audiosink.\n");
 			return;
 		}
-	} else if (!strcmp(method, "esd")) {
+	}
+#ifndef _WIN32
+	else if (!strcmp(method, "esd")) {
 		sink = gst_element_factory_make("esdsink", "sink");
 		if (!sink) {
 			purple_debug_error("sound", "Unable to create GStreamer audiosink.\n");
@@ -472,17 +472,19 @@ pidgin_sound_play_file(const char *filename)
 			purple_debug_error("sound", "Unable to create GStreamer audiosink.\n");
 			return;
 		}
-	} else {
+	}
+#endif
+	else {
 		purple_debug_error("sound", "Unknown sound method '%s'\n", method);
 		return;
 	}
 
 	play = gst_element_factory_make("playbin", "play");
-	
+
 	if (play == NULL) {
 		return;
 	}
-	
+
 	uri = g_strdup_printf("file://%s", filename);
 
 	g_object_set(G_OBJECT(play), "uri", uri,
@@ -498,9 +500,9 @@ pidgin_sound_play_file(const char *filename)
 	g_free(uri);
 
 #else /* USE_GSTREAMER */
+
+#ifndef _WIN32
 	gdk_beep();
-	return;
-#endif /* USE_GSTREAMER */
 #else /* _WIN32 */
 	purple_debug_info("sound", "Playing %s\n", filename);
 
@@ -518,6 +520,8 @@ pidgin_sound_play_file(const char *filename)
 		g_free(l_filename);
 	}
 #endif /* _WIN32 */
+
+#endif /* USE_GSTREAMER */
 }
 
 static void

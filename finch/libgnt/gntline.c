@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "gntline.h"
@@ -40,10 +40,10 @@ gnt_line_draw(GntWidget *widget)
 {
 	GntLine *line = GNT_LINE(widget);
 	if (line->vertical)
-		mvwvline(widget->window, 1, 0, ACS_VLINE | COLOR_PAIR(GNT_COLOR_NORMAL),
+		mvwvline(widget->window, 1, 0, ACS_VLINE | gnt_color_pair(GNT_COLOR_NORMAL),
 				widget->priv.height - 2);
 	else
-		mvwhline(widget->window, 0, 1, ACS_HLINE | COLOR_PAIR(GNT_COLOR_NORMAL),
+		mvwhline(widget->window, 0, 1, ACS_HLINE | gnt_color_pair(GNT_COLOR_NORMAL),
 				widget->priv.width - 2);
 }
 

@@ -1,8 +1,9 @@
 /**
  * @file gtksavedstatus.c GTK+ Saved Status Editor UI
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -62,7 +63,7 @@ enum
 };
 
 /**
- * These is used for the GtkTreeView containing the list of accounts
+ * These are used for the GtkTreeView containing the list of accounts
  * at the bottom of the window when you're editing a particular
  * saved status.
  */
@@ -593,7 +594,7 @@ pidgin_status_window_show(void)
 	width  = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/status/dialog/width");
 	height = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/status/dialog/height");
 
-	dialog->window = win = pidgin_create_window(_("Saved Statuses"), PIDGIN_HIG_BORDER, "statuses", TRUE);
+	dialog->window = win = pidgin_create_dialog(_("Saved Statuses"), PIDGIN_HIG_BORDER, "statuses", TRUE);
 	gtk_window_set_default_size(GTK_WINDOW(win), width, height);
 
 	g_signal_connect(G_OBJECT(win), "delete_event",
@@ -602,18 +603,14 @@ pidgin_status_window_show(void)
 					 G_CALLBACK(configure_cb), dialog);
 
 	/* Setup the vbox */
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(win), vbox);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, PIDGIN_HIG_BORDER);
 
 	/* List of saved status states */
 	list = create_saved_status_list(dialog);
 	gtk_box_pack_start(GTK_BOX(vbox), list, TRUE, TRUE, 0);
 
 	/* Button box. */
-	bbox = gtk_hbutton_box_new();
-	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_pack_end(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);
+	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(win));
 
 	/* Use button */
 	button = pidgin_pixbuf_button_from_stock(_("_Use"), GTK_STOCK_EXECUTE,
@@ -626,36 +623,23 @@ pidgin_status_window_show(void)
 					 G_CALLBACK(status_window_use_cb), dialog);
 
 	/* Add button */
-	button = gtk_button_new_from_stock(GTK_STOCK_ADD);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(status_window_add_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_ADD,
+			G_CALLBACK(status_window_add_cb), dialog);
 
 	/* Modify button */
-	button = gtk_button_new_from_stock(PIDGIN_STOCK_MODIFY);
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), PIDGIN_STOCK_MODIFY,
+			G_CALLBACK(status_window_modify_cb), dialog);
 	dialog->modify_button = button;
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-	gtk_widget_set_sensitive(button, FALSE);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(status_window_modify_cb), dialog);
 
 	/* Delete button */
-	button = gtk_button_new_from_stock(GTK_STOCK_DELETE);
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_DELETE,
+			G_CALLBACK(status_window_delete_cb), dialog);
 	dialog->delete_button = button;
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(button, FALSE);
 
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(status_window_delete_cb), dialog);
-
 	/* Close button */
-	button = gtk_button_new_from_stock(GTK_STOCK_CLOSE);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(status_window_close_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CLOSE,
+			G_CALLBACK(status_window_close_cb), dialog);
 
 	purple_signal_connect(purple_savedstatuses_get_handle(),
 			"savedstatus-changed", status_window,
@@ -897,6 +881,12 @@ create_status_type_menu(PurpleStatusPrimitive type)
 
 	for (i = PURPLE_STATUS_UNSET + 1; i < PURPLE_STATUS_NUM_PRIMITIVES; i++)
 	{
+		if (i == PURPLE_STATUS_MOBILE || i == PURPLE_STATUS_TUNE)
+			/*
+			 * Special-case these.  They're intended to be independent
+			 * status types, so don't show them in the list.
+			 */
+			continue;
 		item = gtk_menu_item_new_with_label(purple_primitive_get_name_from_type(i));
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 	}
@@ -1140,14 +1130,13 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	if (edit)
 		dialog->original_title = g_strdup(purple_savedstatus_get_title(saved_status));
 
-	dialog->window = win = pidgin_create_window(_("Status"), PIDGIN_HIG_BORDER, "status", TRUE);
+	dialog->window = win = pidgin_create_dialog(_("Status"), PIDGIN_HIG_BORDER, "status", TRUE);
 
 	g_signal_connect(G_OBJECT(win), "delete_event",
 					 G_CALLBACK(status_editor_destroy_cb), dialog);
 
 	/* Setup the vbox */
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(win), vbox);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, PIDGIN_HIG_BORDER);
 
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
@@ -1200,6 +1189,7 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
 	focus_chain = g_list_prepend(focus_chain, dialog->message);
 	gtk_container_set_focus_chain(GTK_CONTAINER(hbox), focus_chain);
+	g_list_free(focus_chain);
 
 	if ((saved_status != NULL) && (purple_savedstatus_get_message(saved_status) != NULL))
 		gtk_imhtml_append_text(GTK_IMHTML(text),
@@ -1249,23 +1239,18 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 		(saved_status != NULL) && purple_savedstatus_has_substatuses(saved_status));
 
 	/* Button box */
-	bbox = gtk_hbutton_box_new();
+	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(win));
 	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
 	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_pack_end(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);
 
 	/* Cancel button */
-	button = gtk_button_new_from_stock(GTK_STOCK_CANCEL);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(status_editor_cancel_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CANCEL,
+			G_CALLBACK(status_editor_cancel_cb), dialog);
 
 	/* Use button */
 	button = pidgin_pixbuf_button_from_stock(_("_Use"), GTK_STOCK_EXECUTE,
 										   PIDGIN_BUTTON_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-
 	g_signal_connect(G_OBJECT(button), "clicked",
 					 G_CALLBACK(status_editor_ok_cb), dialog);
 
@@ -1276,21 +1261,18 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	if (dialog->original_title == NULL)
 		gtk_widget_set_sensitive(button, FALSE);
-
 	g_signal_connect(G_OBJECT(button), "clicked",
 					 G_CALLBACK(status_editor_ok_cb), dialog);
 
 	/* Save button */
-	button = gtk_button_new_from_stock(GTK_STOCK_SAVE);
-	dialog->save_button = GTK_BUTTON(button);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_SAVE,
+			G_CALLBACK(status_editor_ok_cb), dialog);
 	if (dialog->original_title == NULL)
 		gtk_widget_set_sensitive(button, FALSE);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(status_editor_ok_cb), dialog);
+	dialog->save_button = GTK_BUTTON(button);
 
 	gtk_widget_show_all(win);
+	g_object_unref(sg);
 }
 
 
@@ -1410,7 +1392,7 @@ substatus_editor_ok_cb(GtkButton *button, gpointer user_data)
 					   -1);
 	type = purple_account_get_status_type(dialog->account, id);
 	if (purple_status_type_get_attr(type, "message") != NULL)
-		message = gtk_imhtml_get_text(GTK_IMHTML(dialog->message), NULL, NULL);
+		message = gtk_imhtml_get_markup(GTK_IMHTML(dialog->message));
 	name = purple_status_type_get_name(type);
 
 	status_editor = dialog->status_editor;
@@ -1438,8 +1420,6 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	char *tmp;
 	SubStatusEditor *dialog;
 	GtkSizeGroup *sg;
-	GtkWidget *bbox;
-	GtkWidget *button;
 	GtkWidget *combo;
 	GtkWidget *hbox;
 	GtkWidget *frame;
@@ -1477,15 +1457,14 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	dialog->account = account;
 
 	tmp = g_strdup_printf(_("Status for %s"), purple_account_get_username(account));
-	dialog->window = win = pidgin_create_window(tmp, PIDGIN_HIG_BORDER, "substatus", TRUE);
+	dialog->window = win = pidgin_create_dialog(tmp, PIDGIN_HIG_BORDER, "substatus", TRUE);
 	g_free(tmp);
 
 	g_signal_connect(G_OBJECT(win), "delete_event",
 					 G_CALLBACK(substatus_editor_destroy_cb), dialog);
 
 	/* Setup the vbox */
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(win), vbox);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, PIDGIN_HIG_BORDER);
 
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
@@ -1534,25 +1513,13 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	dialog->toolbar = GTK_IMHTMLTOOLBAR(toolbar);
 	gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
 
-	/* Button box */
-	bbox = gtk_hbutton_box_new();
-	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_pack_end(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);
-
 	/* Cancel button */
-	button = gtk_button_new_from_stock(GTK_STOCK_CANCEL);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(substatus_editor_cancel_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CANCEL,
+			G_CALLBACK(substatus_editor_cancel_cb), dialog);
 
 	/* OK button */
-	button = gtk_button_new_from_stock(GTK_STOCK_OK);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(substatus_editor_ok_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_OK,
+			G_CALLBACK(substatus_editor_ok_cb), dialog);
 
 	/* Seed the input widgets with the current values */
 
@@ -1587,8 +1554,12 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 
 		status_type = list->data;
 
-		/* Only allow users to select statuses that are flagged as "user settable" */
-		if (!purple_status_type_is_user_settable(status_type))
+		/*
+		 * Only allow users to select statuses that are flagged as
+		 * "user settable" and that aren't independent.
+		 */
+		if (!purple_status_type_is_user_settable(status_type) ||
+				purple_status_type_is_independent(status_type))
 			continue;
 
 		id = purple_status_type_get_id(status_type);
@@ -1620,6 +1591,7 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	}
 
 	gtk_widget_show_all(win);
+	g_object_unref(sg);
 }
 
 

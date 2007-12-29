@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "gntcolors.h"
@@ -84,21 +84,21 @@ gnt_slider_draw(GntWidget *widget)
 	else
 		position = 0;
 	if (slider->vertical) {
-		mvwvline(widget->window, size-position, 0, ACS_VLINE | COLOR_PAIR(GNT_COLOR_NORMAL) | A_BOLD,
+		mvwvline(widget->window, size-position, 0, ACS_VLINE | gnt_color_pair(GNT_COLOR_NORMAL) | A_BOLD,
 				position);
-		mvwvline(widget->window, 0, 0, ACS_VLINE | COLOR_PAIR(GNT_COLOR_NORMAL),
+		mvwvline(widget->window, 0, 0, ACS_VLINE | gnt_color_pair(GNT_COLOR_NORMAL),
 				size-position);
 	} else {
-		mvwhline(widget->window, 0, 0, ACS_HLINE | COLOR_PAIR(GNT_COLOR_NORMAL) | A_BOLD,
+		mvwhline(widget->window, 0, 0, ACS_HLINE | gnt_color_pair(GNT_COLOR_NORMAL) | A_BOLD,
 				position);
-		mvwhline(widget->window, 0, position, ACS_HLINE | COLOR_PAIR(GNT_COLOR_NORMAL),
+		mvwhline(widget->window, 0, position, ACS_HLINE | gnt_color_pair(GNT_COLOR_NORMAL),
 				size - position);
 	}
 
 	mvwaddch(widget->window,
 			slider->vertical ? (size - position - 1) : 0,
 			slider->vertical ? 0 : position,
-			ACS_CKBOARD | COLOR_PAIR(attr));
+			ACS_CKBOARD | gnt_color_pair(attr));
 }
 
 static void

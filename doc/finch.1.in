@@ -88,9 +88,8 @@ done, press \fBEnter\fR or \fBEscape\fR.
 Start resizing a window. Press the cursor keys to resize the window. When you
 are done, press \fBEnter\fR or \fBEscape\fR.
 .TP
-.B Alt \+ d
-Dump the contents of the screen in HTML format in a file named "dump.html" in
-working directory.
+.B Alt \+ D
+Dump the contents of the screen in HTML format.
 .TP
 .B Alt \+ .
 Move the position of the current window in the window list one place to the
@@ -107,8 +106,7 @@ Refresh the windows. This is useful after resizing the terminal window.
 Jump to the 1st, 2nd ... 10th window.
 .TP
 .B Ctrl \+ o
-Bring up the menu (if there is one) for a window. Note that currently only the
-buddylist has a menu.
+Bring up the menu (if there is one) for a window.
 .TP
 .B Alt \+ /
 Show a list of available key-bindings for the current widget in focus.
@@ -123,7 +121,7 @@ Switch to the previous workspace
 Tag (or untag) the current window
 .TP
 .B Alt \+ T
-Attached all the tag windows to the current workspace
+Attached all the tagged windows to the current workspace
 .TP
 .B Alt \+ s
 Show the workspace list
@@ -137,6 +135,29 @@ Create a new workspace and switch to it
 .TP
 A sample file looks like:
 .br
+[Finch]
+.br
+color-available = green; black
+.br
+color-away = blue; black
+.br
+color-idle = gray; black
+.br
+color-offline = red; black
+.br
+color-message-sent = cyan; default
+.br
+color-message-received = red; default
+.br
+color-message-highlight = black; green
+.br
+color-message-action = yellow; default
+.br
+color-timestamp = blue; default
+.br
+#See below for details on color
+.br
+
 [general]
 .br
 shadow = 0
@@ -351,6 +372,35 @@ or \fBctr-\fR or \fBctl-\fR to indicate a combination. For alt-keys, you can use
 one of \fBa-\fR, \fBalt-\fR, \fBm-\fR or \fBmeta-\fR. You can also use
 \fBhome\fR, \fBend\fR, \fBleft\fR, \fBright\fR etc. keys.
 
+.SH Menus
+You can also specify key-bindings to trigger specific menuitems in windows. For example, the following entry in \fI~/.gntrc\fR will bind \fBCtrl + t\fR to the 'Send IM...' item in the buddylist:
+
+[buddylist::menu]
+.br
+c-t = send-im
+
+The following is the list of IDs of the current menuitems in the buddylist:
+
+send-im
+.br
+join-chat
+.br
+show-empty-groups
+.br
+show-offline-buddies
+.br
+sort-status
+.br
+sort-alpha
+.br
+sort-log
+.br
+add-buddy
+.br
+add-chat
+.br
+add-group
+
 .SH Mouse Support
 There is experimental mouse support. You can focus windows, activate buttons,
 select rows in a list, scroll using the wheel-scroll etc. Selecting text in a
@@ -457,10 +507,15 @@ for the preferences window.
 .B status
 for the status window.
 
+.SH FAQ
+FAQ for \fBfinch\fR is located at
+.br
+\fIhttp://developer.pidgin.im/wiki/Using%20Finch\fR
+
 .SH BUGS
 Known bugs are listed at
 .br
-\fIhttp://sourceforge.net/tracker/?group_id=235&atid=100235\fR
+\fIhttp://developer.pidgin.im/query?status=new&status=assigned&status=reopened&component=finch+%28gnt%2Fncurses%29&order=priority\fR
 
 Before sending a bug report, please verify that you have the latest
 version of \fBfinch\fR and \fBlibpurple\fR.  Many bugs (major and minor) are
@@ -494,7 +549,7 @@ General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 
 .SH AUTHORS
 Sadrul Habib Chowdhury <\fIsadrul@users.sourceforge.net\fR>

@@ -1,19 +1,192 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-version 2.2.0:
+version 2.4.0 (??/??/????):
+	libpurple:
+	* Fixed various problems with loss of status messages when going
+	  or returning from idle on MySpaceIM.
+	* Eliminated unmaintained Howl backend implementation for the
+	  Bonjour protocol.  Avahi (or Apple's Bonjour runtime on win32) is
+	  now required to use Bonjour.
+
+	Pidgin:
+	* Added the ability to theme conversation name colors (red and blue)
+	  through your GTK+ theme, and exposed those theme settings to the 
+	  Pidgin GTK+ Theme Control plugin (Dustin Howett)
+
+	Finch:
+	* Color is used in the buddylist to indicate status, and the conversation
+	  window to indicate various message attributes. Look at the sample gntrc
+	  file in the man-page for details.
+	* The default keybinding for dump-screen is now M-D and uses a file
+	  request dialog. M-d will properly delete-forward-word, and M-f has been
+	  fixed to imitate readline's behavior.
+
+version 2.3.1 (12/7/2007):
+	http://developer.pidgin.im/query?status=closed&milestone=2.3.1
+		NOTE: Due to the way this release was made, it is possible that
+		      bugs marked as fixed in 2.3.1 will not be fixed until the
+		      next release.
+	
+	* Fixed a number of MSN bugs introduced in 2.3.0, resolving problems
+	  connecting to MSN and random local display name changes
+	* Going idle on MySpaceIM will no longer clear your status and message.
+	* Idle MySpaceIM buddies should now appear online at login.
+	* Fixed crashes in XMPP when discovering a client's capabilities
+	* Don't set the current tune title if it's NULL (XMPP/Google Talk)
+	* Don't allow buddies to be manually added to Bonjour
+	* Don't advertise IPv6 on Bonjour because we don't support it
+	* Compile fixes for FreeBSD and Solaris
+	* Update QQ client version so some accounts can connect again
+	* Do not allow ISON requests to stack in IRC, preventing flooding IRC
+	  servers when temporary network outages are restored
+	* Plug several leaks in the perl plugin loader
+	* Prevent autoaccept plugin overwriting existing files
+
+version 2.3.0 (11/24/2007):
+	http://developer.pidgin.im/query?status=closed&milestone=2.3.0
+		NOTE: Some bugs marked fixed in 2.2.1, 2.2.2 or 2.2.3 may not
+		      have been fixed until this release (2.3.0).
+
+	libpurple:
+	* Real usernames are now shown in the system log.
+	* We now honor a PURPLE_DISABLE_DEPRECATED define to allow plugins to
+	  catch deprecated functions earlier rather than later.
+	* Thanks to a patch from Intel, the Bonjour prpl now supports file
+	  transfers using XEP-0096 and XEP-0065.  This should enable file
+	  transfers between libpurple clients and Gajim clients, but will not
+	  work with iChat or Adium as they use a different file transfer
+	  implementation.
+	* XMPP password changes that return errors no longer cause the saved
+	  password to be changed.
+	* XMPP file transfer support has been enhanced to support sending
+	  files through a proxy when the server supports discovering a
+	  a bytestream proxy.  This should make file transfers much more
+	  reliable.  The next release will add support for manually specifying
+	  a proxy when the server doesn't advertise one.
+
+	Pidgin:
+	* If a plugin says it can't be unloaded, we now display an error and
+	  remove the plugin from the list of saved plugins so it won't load
+	  at the next startup.  Previously, we were ignoring this case, which
+	  could lead to crashes.
+	* Mark dialog windows as transient for appropriate parent windows to
+	  help window managers do the right thing  (Gabriel Schulhof)
+	* Connection errors are now reported in mini-dialogs inside the buddy
+	  list, rather than as buttons in the buddy list and with dialog
+	  boxes.  If several accounts are disabled when you sign on elsewhere,
+	  you can now re-enable them all with a single click.
+	* Added tooltips to the Room List window to show full topics
+	* Added buttons in preferences to access GNOME network and browser
+	  preferences configuration dialogs when running under GNOME
+	* If you alias a buddy to an alias that is already present within
+	  a particular group, we now offer to merge the buddies into the
+	  same contact.
+	* A music emblem is now displayed in the buddy list for a buddy if we
+	  know she is listening to some soothing music.
+	* Added a 'Move to' menu in buddy list context menu for moving buddies
+	  to other groups as an alternative to dragging.
+	* Group headings are now marked via an underline instead of a
+	  different color background.
+	* It is now possible to mark a chat on your buddy list as "Persistent"
+	  so you do not leave the chat when the window or tab is closed.
+	* The auto-join option for chats is now listed in the "Add Chat"
+	  dialog along with the new persistence option.
+	* Closing an IM no longer immediately closes your conversation.  It
+	  will now remain active for a short time so that if the conversation
+	  resumes, the history will be retained.  A preference has been added
+	  to toggle this behavior.
+	* The "Smiley" menu has been moved to the top-level of the toolbar.
+	* Pidgin's display is now saved with the command line for session
+	  restoration.  (David Mohr)
+	* ICQ Birthday notifications are shown as buddy list emblems.
+	* Plugin actions are now available from the docklet context menu
+	  in addition to the Tool menu of the buddy list.
+	* The manual page has been heavily rewritten to bring it in line
+	  with current functionality.
+
+	Finch:
+	* If a plugin says it can't be unloaded, we now display an error and
+	  remove the plugin from the list of saved plugins so it won't load
+	  at the next startup.  Previously, we were ignoring this case, which
+	  could lead to crashes.
+	* It's possible to bind key-strokes to specific menuitems in the windows.
+	  Read the 'Menus' section in the man-page for details.
+	* 'transpose-chars' operation for the entry boxes. The default key-binding
+	  is ctrl+t.
+	* 'yank' operation for the entry boxes. The default binding is ctrl+y.
+
+version 2.2.2 (10/23/2007):
+	http://developer.pidgin.im/query?status=closed&milestone=2.2.2
+		NOTE: Due to the way this release was made, it is possible that
+			  bugs marked as fixed in 2.2.1 or 2.2.2 will not be fixed
+			  until the next release.
+
+	* Various bug and memory leak fixes
+	* Look for a default prefs.xml in the CSIDL_COMMON_APPDATA directory
+	  (e.g. c:\Documents and Settings\All Users\
+	        Application Data\purple\prefs.xml) on Windows, similarly to
+	  how this is done on other platforms.
+
+version 2.2.1 (09/29/2007):
+	http://developer.pidgin.im/query?status=closed&milestone=2.2.1
+		NOTE: Due to the backporting that happened for the actual
+		      release, it is possible bugs marked as fixed in 2.2.1
+		      will not be fixed until 2.2.2.
+
+	libpurple:
+	* A few build issues on Solaris were fixed.
+	* Cancelling the password prompt for an account will no longer leave
+	  it in an ambiguous state.  (It will be disabled.)
+	* Fixed an erroneous size display for MSN file transfers. (galt)
+	* Fixed multiple memory leaks, particularly in XMPP and MySpace
+	  protocols
+	* Fixed remembering proxy preferences and status scores
+	* Gmail notifications are better tracked
+
+	Pidgin:
+	* Fixed keyboard tab reordering to move tabs one step instead of two.
+	* You should no longer lose proxy settings when Pidgin is restarted.
+	* Fixed detection of X11 when compiling
+
+	Finch:
+	* Pressing 'Insert' in the buddylist will bring up the 'Add Buddy'
+	  dialog.
+
+version 2.2.0 (09/13/2007):
+	http://developer.pidgin.im/query?status=closed&milestone=2.2.0
+
 	Libpurple:
 	* New protocol plugin: MySpaceIM (Jeff Connelly, Google Summer of
 	  Code)
+	* XMPP enhancements. See
+	  http://www.adiumx.com/blog/2007/07/soc-xmpp-update.php (Andreas 
+	  Monitzer, Google Summer of Code for Adium)
+	* Certificate management. Libpurple will validate certificates on
+	  SSL-encrypted protocols (William Ehlhardt, Google Summer of Code)
+	* Some adjustments were made to fix sending messages when using
+	  the MSN HTTP method. (Laszlo Pandy)
+	* Yahoo! Chat is fixed.
+	* Some AIM file transfer issues between Pidgin and other clients
+	  have been fixed. (Kyryll A Mirnenko)
+	* Properly restore idle status and time for AIM and ICQ accounts
+	  when they reconnect after being disconnected.
 
 	Pidgin:
-	* Insert Horizontal Rules and Strikethrough text from toolbar
+	* Insert Horizontal Rules and Strikethrough text from toolbar.
 	* Option to show protocol icons in the buddy list, from the
-	  Buddies > Show menu (Justin Heiner)
-	* Ability to build with native, non-X11 GTK+ on OSX (Anders
-   	  Hasselqvist)
+	  Buddies > Show menu. (Justin Heiner)
+	* Ability to build with native, non-X11 GTK+ on OSX. (Anders
+	  Hasselqvist)
+	* Remember the 'Enable Sounds' setting for a conversation.
+	* Right-clicking the empty space in the formatting toolbar
+	  allows you to toggle back to the old "ungrouped" version.
+	* Protocols supporting account registration via Pidgin now show
+	  a descriptive checkbox instead of a vague "Register" button.
+	* Fixed a bug where a tab would be shown on single conversations
+	  when tabs were disabled.
 
 	Finch:
-	* Per-conversation mute and logging options (accessible from the menu)
+	* Per-conversation mute and logging options (accessible from the menu).
 
 version 2.1.1 (08/20/2007):
 	Yahoo:
@@ -2220,6 +2393,6 @@ version 0.8.0  (04/31/1999):
 	* Add/Remove buddy from conversation window
 	* Scroll-Wheel Mice work in Conversation Window
 	* Fixed WindowMaker Appicon
-	* Version Number in About Box
+	* version Number in About Box
 	* Gaim Slogan in about box :)
 	* Created Changelog File :)

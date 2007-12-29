@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -173,7 +173,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	RAW_PLUGIN_ID,
 	N_("Raw"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Lets you send raw input to text-based protocols."),
 	N_("Lets you send raw input to text-based protocols (XMPP, MSN, IRC, "
 	   "TOC). Hit 'Enter' in the entry box to send. Watch the debug window."),

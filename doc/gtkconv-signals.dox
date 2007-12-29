@@ -8,7 +8,11 @@
   @signal displaying-chat-msg
   @signal displayed-chat-msg
   @signal conversation-switched
+  @signal conversation-hiding
+  @signal conversation-displayed
  @endsignals
+
+ @see gtkconv.h
 
  <hr>
 
@@ -24,12 +28,14 @@ void (*conversation_dragging)(PidginWindow *source, PidginWindow *destination);
 
  @signaldef conversation-timestamp
   @signalproto
-char *(*conversation_timestamp)(PurpleConversation *conv, time_t when);
+char *(*conversation_timestamp)(PurpleConversation *conv, time_t when,
+                                gboolean show_date);
   @endsignalproto
   @signaldesc
    Emitted to allow plugins to customize the timestamp on a message.
-  @param conv The conversation the message belongs to.
-  @param when The time to be converted to a string.
+  @param conv      The conversation the message belongs to.
+  @param when      The time to be converted to a string.
+  @param show_date Whether the date should be displayed.
   @return A textual representation of the time, or @c NULL to use a
           default format.
  @endsignaldef
@@ -116,5 +122,25 @@ void (*conversation_switched)(PurpleConversation *conv);
   @param new_conv The now active conversation.
  @endsignaldef
 
+ @signaldef conversation-hiding
+  @signalproto
+void (*conversation_hiding)(PidginConversation *gtkconv);
+  @endsignalproto
+  @signaldesc
+   Emitted immediately before an existing conversation is hidden.
+  @param gtkconv  The PidginConversation
+  @since 2.2.0
+ @endsignaldef
+
+ @signaldef conversation-displayed
+  @signalproto
+void (*conversation_displayed)(PidginConversation *gtkconv);
+  @endsignalproto
+  @signaldesc
+   Emitted right after the Pidgin UI is attached to a new or a hidden conversation.
+  @param gtkconv  The PidginConversation
+  @since 2.2.0
+ @endsignaldef
+
 */
-// vim: syntax=c tw=75 et
+// vim: syntax=c.doxygen tw=75 et

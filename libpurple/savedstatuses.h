@@ -1,8 +1,10 @@
 /**
  * @file savedstatuses.h Saved Status API
  * @ingroup core
- *
- * purple
+ * @see @ref savedstatus-signals
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,9 +22,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * @see @ref savedstatus-signals
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PURPLE_SAVEDSTATUSES_H_
 #define _PURPLE_SAVEDSTATUSES_H_
@@ -170,11 +170,8 @@ GList *purple_savedstatuses_get_all(void);
 /**
  * Returns the n most popular saved statuses.  "Popularity" is
  * determined by when the last time a saved_status was used and
- * how many times it has been used.  If the current status would
- * normally show up in this list, then it is omited and instead
- * the "how_many+1" saved status will appear in the list.  Also
- * transient statuses without messages are not included in the
- * list.
+ * how many times it has been used. Transient statuses without
+ * messages are not included in the list.
  *
  * @param how_many The maximum number of saved statuses
  *                 to return, or '0' to get all saved

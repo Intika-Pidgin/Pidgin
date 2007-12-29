@@ -1,8 +1,10 @@
 /**
  * @file gtkblist.h GTK+ Buddy List API
  * @ingroup pidgin
- *
- * pidgin
+ * @see @ref gtkblist-signals
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +22,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PIDGINBLIST_H_
 #define _PIDGINBLIST_H_
@@ -82,7 +84,14 @@ struct _PidginBuddyList {
 	GtkWidget *menutray;            /**< The menu tray widget. */
 	GtkWidget *menutrayicon;        /**< The menu tray icon. */
 
-	GHashTable *connection_errors;  /**< Caches connection error messages and accounts. */
+	/** Caches connection error messages; keys are #PurpleAccount and
+	 *  values are non-@c NULL <tt>const char *</tt>s containing localised
+	 *  error messages.  (If an account does not have an error, it will not
+	 *  appear in the table.)
+	 *  @deprecated in favour of purple_account_get_current_error(), which also
+	 *              gives you the #PurpleConnectionError value.
+	 */
+	GHashTable *connection_errors;
 
 	guint refresh_timer;            /**< The timer for refreshing every 30 seconds */
 
@@ -117,6 +126,8 @@ struct _PidginBuddyList {
 	GtkWidget *error_buttons;        /**< Box containing the connection error buttons */
 	GtkWidget *statusbox;            /**< The status selector dropdown */
 	GdkPixbuf *empty_avatar;         /**< A 32x32 transparent pixbuf */
+
+	gpointer priv;                   /**< Pointer to opaque private data */
 };
 
 #define PIDGIN_BLIST(list) ((PidginBuddyList *)(list)->ui_data)
@@ -337,13 +348,16 @@ void pidgin_append_blist_node_proto_menu (GtkWidget *menu, PurpleConnection *gc,
 void pidgin_append_blist_node_extended_menu(GtkWidget *menu, PurpleBlistNode *node);
 
 /**
- * Used by the connection API to tell the blist if an account
- * has a connection error or no longer has a connection error.
+ * Was used by the connection API to tell the blist if an account has a
+ * connection error or no longer has a connection error, but the blist now does
+ * this itself with the @ref account-error-changed signal.
  *
  * @param account The account that either has a connection error
  *        or no longer has a connection error.
  * @param message The connection error message, or NULL if this
  *        account is no longer in an error state.
+ * @deprecated There was no good reason for code other than gtkconn to call
+ *             this.
  */
 void pidgin_blist_update_account_error_state(PurpleAccount *account, const char *message);
 
@@ -369,6 +383,8 @@ void pidgin_blist_set_headline(const char *text, GdkPixbuf *pixbuf, GCallback ca
  * @param selected  Whether this buddy is selected. If TRUE, the markup will not change the color.
  * @param aliased  TRUE to return the appropriate alias of this buddy, FALSE to return its screenname and status information
  * @return The markup for this buddy
+ *
+ * @since 2.1.0
  */
 gchar *pidgin_blist_get_name_markup(PurpleBuddy *buddy, gboolean selected, gboolean aliased);
 
@@ -378,13 +394,17 @@ gchar *pidgin_blist_get_name_markup(PurpleBuddy *buddy, gboolean selected, gbool
  * This tooltip will be destroyed the next time this function is called, or when XXXX
  * is called
  *
- * @param buddy The buddy to show a tooltip for
+ * @param node The buddy list node to show a tooltip for
  * @param widget The widget to draw the tooltip on
+ *
+ * @since 2.1.0
  */
 void pidgin_blist_draw_tooltip(PurpleBlistNode *node, GtkWidget *widget);
 
 /**
  * Destroys the current (if any) Buddy List tooltip
+ *
+ * @since 2.1.0
  */
 void pidgin_blist_tooltip_destroy(void);
 

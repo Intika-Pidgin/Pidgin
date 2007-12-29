@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef GNT_ENTRY_H
@@ -48,6 +48,7 @@
 typedef struct _GntEntry			GntEntry;
 typedef struct _GntEntryPriv		GntEntryPriv;
 typedef struct _GntEntryClass	GntEntryClass;
+typedef struct _GntEntryKillRing    GntEntryKillRing;
 
 typedef enum
 {
@@ -71,9 +72,9 @@ struct _GntEntry
 	char *scroll;   /* Current scrolling position */
 	char *cursor;   /* Cursor location */
 	                /* 0 <= cursor - scroll < widget-width */
-	
+
 	size_t buffer;  /* Size of the buffer */
-	
+
 	int max;        /* 0 means infinite */
 	gboolean masked;
 
@@ -84,6 +85,7 @@ struct _GntEntry
 	gboolean word;      /* Are the suggestions for only a word, or for the whole thing? */
 	gboolean always;    /* Should the list of suggestions show at all times, or only on tab-press? */
 	GntWidget *ddown;   /* The dropdown with the suggested list */
+	GntEntryKillRing *killring; /**< @since 2.3.0 */
 };
 
 struct _GntEntryClass
@@ -100,95 +102,115 @@ struct _GntEntryClass
 G_BEGIN_DECLS
 
 /**
- * 
- *
- * @return
+ * @return GType for GntEntry.
  */
 GType gnt_entry_get_gtype(void);
 
 /**
- * 
- * @param text
+ * Create a new GntEntry.
  *
- * @return
+ * @param text   The text in the new entry box.
+ *
+ * @return  The newly created entry box.
  */
 GntWidget * gnt_entry_new(const char *text);
 
 /**
- * 
- * @param entry
- * @param max
+ * Set the maximum length of the text in the entry box.
+ *
+ * @param entry  The entry box.
+ * @param max    The maximum length for text. A value of 0 means infinite length.
  */
 void gnt_entry_set_max(GntEntry *entry, int max);
 
 /**
- * 
- * @param entry
- * @param text
+ * Set the text in an entry box.
+ *
+ * @param entry The entry box.
+ * @param text  The text to set in the box.
  */
 void gnt_entry_set_text(GntEntry *entry, const char *text);
 
 /**
- * 
- * @param entry
- * @param flag
+ * Set flags an entry box.
+ *
+ * @param entry  The entry box.
+ * @param flag   The flags to set for the entry box.
  */
 void gnt_entry_set_flag(GntEntry *entry, GntEntryFlag flag);
 
+/**
+ * Get the text in an entry box.
+ *
+ * @param entry  The entry box.
+ *
+ * @return   The current text in the entry box.
+ */
 const char *gnt_entry_get_text(GntEntry *entry);
 
 /**
- * 
- * @param entry
+ * Clear the text in the entry box.
+ *
+ * @param entry  The entry box.
  */
 void gnt_entry_clear(GntEntry *entry);
 
 /**
- * 
- * @param entry
- * @param set
+ * Set whether the text in the entry box should be masked for display.
+ *
+ * @param entry  The entry box.
+ * @param set    @c TRUE if the text should be masked, @c FALSE otherwise.
  */
 void gnt_entry_set_masked(GntEntry *entry, gboolean set);
 
 /**
- * 
- * @param entry
- * @param text
+ * Add a text to the history list for the text. The history length for the
+ * entry box needs to be set first by gnt_entry_set_history_length.
+ *
+ * @param entry  The entry box.
+ * @param text   A new entry for the history list.
  */
 void gnt_entry_add_to_history(GntEntry *entry, const char *text);
 
 /**
- * 
- * @param entry
- * @param num
+ * Set the length of history for the entry box.
+ *
+ * @param entry  The entry box.
+ * @param num    The maximum length of the history.
  */
 void gnt_entry_set_history_length(GntEntry *entry, int num);
 
 /**
- * 
- * @param entry
- * @param word
+ * Set whether the suggestions are for the entire entry box, or for each
+ * individual word in the entry box.
+ *
+ * @param entry   The entry box.
+ * @param word    @c TRUE if the suggestions are for individual words, @c FALSE otherwise.
  */
 void gnt_entry_set_word_suggest(GntEntry *entry, gboolean word);
 
 /**
- * 
- * @param entry
- * @param always
+ * Set whether to always display the suggestions list, or only when the
+ * tab-completion key is pressed (the TAB key, by default).
+ *
+ * @param entry    The entry box.
+ * @param always   @c TRUE if the suggestion list should always be displayed.
  */
 void gnt_entry_set_always_suggest(GntEntry *entry, gboolean always);
 
 /**
- * 
- * @param entry
- * @param text
+ * Add an item to the suggestion list.
+ *
+ * @param entry  The entry box.
+ * @param text   An item to add to the suggestion list.
  */
 void gnt_entry_add_suggest(GntEntry *entry, const char *text);
 
 /**
- * 
- * @param entry
- * @param text
+ * Remove an entry from the suggestion list.
+ *
+ * @param entry  The entry box.
+ * @param text   The item to remove from the suggestion list.
  */
 void gnt_entry_remove_suggest(GntEntry *entry, const char *text);
 

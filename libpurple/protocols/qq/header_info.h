@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _QQ_HEADER_INFO_H_
@@ -33,7 +33,7 @@
 #define QQ_PACKET_TAG           0x02	/* all QQ text packets starts with it */
 #define QQ_PACKET_TAIL          0x03	/* all QQ text packets end with it */
 
-#define QQ_CLIENT       0x0E1B
+#define QQ_CLIENT       0x0d55
 
 /* list of known QQ commands */
 enum {

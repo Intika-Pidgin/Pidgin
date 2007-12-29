@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
 #include "sync.h"
@@ -90,9 +90,9 @@ lsg_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 {
 	MsnSession *session = cmdproc->session;
 	const char *name;
-	int group_id;
+	const char *group_id;
 
-	group_id = atoi(cmd->params[0]);
+	group_id = cmd->params[0];
 	name = purple_url_decode(cmd->params[1]);
 
 	msn_group_new(session->userlist, group_id, name);
@@ -156,10 +156,10 @@ lst_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 
 		for (c = tokens; *c != NULL; c++)
 		{
-			int id;
+			char *id;
 
-			id = atoi(*c);
-			group_ids = g_slist_append(group_ids, GINT_TO_POINTER(id));
+			id = *c;
+			group_ids = g_slist_append(group_ids, g_strdup(id));
 		}
 
 		g_strfreev(tokens);

@@ -42,9 +42,13 @@ static void historize(PurpleConversation *c)
 	GtkIMHtmlOptions options = GTK_IMHTML_NO_COLOURS;
 	char *header;
 	char *protocol;
+	char *escaped_alias;
 
 	convtype = purple_conversation_get_type(c);
 	gtkconv = PIDGIN_CONVERSATION(c);
+	if (gtkconv == NULL)
+		return;
+
 	if (convtype == PURPLE_CONV_TYPE_IM && g_list_length(gtkconv->convs) < 2)
 	{
 		GSList *buddies;
@@ -117,10 +121,12 @@ static void historize(PurpleConversation *c)
 	if (gtk_text_buffer_get_char_count(gtk_text_view_get_buffer(GTK_TEXT_VIEW(gtkconv->imhtml))))
 		gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), "<BR>", options);
 
-	header = g_strdup_printf(_("<b>Conversation with %s on %s:</b><br>"), alias,
+	escaped_alias = g_markup_escape_text(alias, -1);
+	header = g_strdup_printf(_("<b>Conversation with %s on %s:</b><br>"), escaped_alias,
 							 purple_date_format_full(localtime(&((PurpleLog *)logs->data)->time)));
 	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), header, options);
 	g_free(header);
+	g_free(escaped_alias);
 
 	g_strchomp(history);
 	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), history, options);
@@ -163,6 +169,7 @@ plugin_load(PurplePlugin *plugin)
 	purple_signal_connect(purple_conversations_get_handle(),
 						"conversation-created",
 						plugin, PURPLE_CALLBACK(historize), NULL);
+	/* XXX: Do we want to listen to pidgin's "conversation-displayed" signal? */
 
 	purple_prefs_connect_callback(plugin, "/purple/logging/log_ims",
 								history_prefs_cb, plugin);
@@ -186,7 +193,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	HISTORY_PLUGIN_ID,
 	N_("History"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Shows recently logged conversations in new conversations."),
 	N_("When a new conversation is opened this plugin will insert "
 	   "the last conversation into the current conversation."),

@@ -1,23 +1,24 @@
 /*
- * purple - Transparency plugin
+ * Pidgin - Transparency plugin
  *
- * copyright (c) 1998-2002, rob flynn <rob@marko.net>
- * copyright (c) 2002-2003, Herman Bloggs <hermanator12002@yahoo.com>
- * copyright (c) 2005,      Daniel Atallah <daniel_atallah@yahoo.com>
+ * Copyright (C) 1998-2002, Rob Flynn <rob@marko.net>
+ * Copyright (C) 2002-2003, Herman Bloggs <hermanator12002@yahoo.com>
+ * Copyright (C) 2005,      Daniel Atallah <daniel_atallah@yahoo.com>
  *
- * this program is free software; you can redistribute it and/or modify
- * it under the terms of the gnu general public license as published by
- * the free software foundation; either version 2 of the license, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
  *
- * this program is distributed in the hope that it will be useful,
- * but without any warranty; without even the implied warranty of
- * merchantability or fitness for a particular purpose.  see the
- * gnu general public license for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
  *
- * you should have received a copy of the gnu general public license
- * along with this program; if not, write to the free software
- * foundation, inc., 59 temple place, suite 330, boston, ma  02111-1307  usa
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  *
  */
 #ifndef _WIN32_WINNT
@@ -228,7 +229,7 @@ static void
 conversation_delete_cb(PurpleConversation *conv) {
 	PidginWindow *win = pidgin_conv_get_window(PIDGIN_CONVERSATION(conv));
 	/* If it is the last conversation in the window, cleanup */
-	if (pidgin_conv_window_get_gtkconv_count(win) == 1)
+	if (win != NULL && pidgin_conv_window_get_gtkconv_count(win) == 1)
 		cleanup_conv_window(win);
 }
 
@@ -400,7 +401,7 @@ conv_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type) {
 
 		g_object_get(G_OBJECT(window), "has-toplevel-focus", &has_focus, NULL);
 
-		if (!has_focus)
+		if (!has_focus || !purple_prefs_get_bool(OPT_WINTRANS_IM_ONFOCUS))
 			set_conv_window_trans(NULL, win);
 
 		if (g_signal_handler_find(G_OBJECT(window), G_SIGNAL_MATCH_FUNC,
@@ -690,7 +691,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,		/**< priority       */
 	WINTRANS_PLUGIN_ID,		/**< id             */
 	N_("Transparency"),		/**< name           */
-	VERSION,			/**< version        */
+	DISPLAY_VERSION,		/**< version        */
 					/**  summary        */
 	N_("Variable Transparency for the buddy list and conversations."),
 					/**  description    */

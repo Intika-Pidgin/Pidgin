@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -64,7 +64,7 @@ static struct _irc_msg {
 	{ "318", "nt:", irc_msg_endwhois },	/* End of WHOIS			*/
 	{ "319", "nn:", irc_msg_whois },	/* Whois channels		*/
 	{ "320", "nn:", irc_msg_whois },	/* Whois (fn ident)		*/
-	{ "314", "nnvvv:", irc_msg_whois },	/* Whowas user			*/
+	{ "314", "nnnvv:", irc_msg_whois },	/* Whowas user			*/
 	{ "369", "nt:", irc_msg_endwhois },	/* End of WHOWAS		*/
 	{ "321", "*", irc_msg_list },		/* Start of list		*/
 	{ "322", "ncv:", irc_msg_list },	/* List.			*/
@@ -279,6 +279,61 @@ static char *irc_recv_convert(struct irc_conn *irc, const char *string)
 	g_strfreev(encodings);
 
 	return purple_utf8_salvage(string);
+}
+
+/* This function is shamelessly stolen from glib--it is an old version of the
+ * private function append_escaped_text, used by g_markup_escape_text, whose
+ * behavior changed in glib 2.12. */
+static void irc_append_escaped_text(GString *str, const char *text, gssize length)
+{
+	const char *p = text;
+	const char *end = text + length;
+	const char *next = NULL;
+
+	while(p != end) {
+		next = g_utf8_next_char(p);
+
+		switch(*p) {
+			case '&':
+				g_string_append(str, "&amp;");
+				break;
+			case '<':
+				g_string_append(str, "&lt;");
+				break;
+			case '>':
+				g_string_append(str, "&gt;");
+				break;
+			case '\'':
+				g_string_append(str, "&apos;");
+				break;
+			case '"':
+				g_string_append(str, "&quot;");
+				break;
+			default:
+				g_string_append_len(str, p, next - p);
+				break;
+		}
+
+		p = next;
+	}
+}
+
+/* This function is shamelessly stolen from glib--it is an old version of the
+ * function g_markup_escape_text, whose behavior changed in glib 2.12. */
+char *irc_escape_privmsg(const char *text, gssize length)
+{
+	GString *str;
+
+	g_return_val_if_fail(text != NULL, NULL);
+
+	if(length < 0)
+		length = strlen(text);
+
+	str = g_string_sized_new(length);
+
+	irc_append_escaped_text(str, text, length);
+
+	return g_string_free(str, FALSE);
 }
 
 /* XXX tag closings are not necessarily correctly nested here!  If we
@@ -557,6 +612,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	struct _irc_msg *msgent;
 	char *cur, *end, *tmp, *from, *msgname, *fmt, **args, *msg;
 	guint i;
+	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
 	irc->recv_time = time(NULL);
 
@@ -565,7 +621,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	 * TODO: It should be passed as an array of bytes and a length
 	 * instead of a null terminated string.
 	 */
-	purple_signal_emit(_irc_plugin, "irc-receiving-text", purple_account_get_connection(irc->account), &input);
+	purple_signal_emit(_irc_plugin, "irc-receiving-text", gc, &input);
 	
 	if (!strncmp(input, "PING ", 5)) {
 		msg = irc_format(irc, "vv", "PONG", input + 5);
@@ -575,10 +631,13 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	} else if (!strncmp(input, "ERROR ", 6)) {
 		if (g_utf8_validate(input, -1, NULL)) {
 			char *tmp = g_strdup_printf("%s\n%s", _("Disconnected."), input);
-			purple_connection_error(purple_account_get_connection(irc->account), tmp);
+			purple_connection_error_reason (gc,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 			g_free(tmp);
 		} else
-			purple_connection_error(purple_account_get_connection(irc->account), _("Disconnected."));
+			purple_connection_error_reason (gc,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				_("Disconnected."));
 		return;
 	}
 

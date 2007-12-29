@@ -1,8 +1,9 @@
 /**
  * @file status.c Status API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 
@@ -156,7 +157,8 @@ static struct PurpleStatusPrimitiveMap
 	{ PURPLE_STATUS_INVISIBLE,       "invisible",       N_("Invisible")       },
 	{ PURPLE_STATUS_AWAY,            "away",            N_("Away")            },
 	{ PURPLE_STATUS_EXTENDED_AWAY,   "extended_away",   N_("Extended away")   },
-	{ PURPLE_STATUS_MOBILE,          "mobile",          N_("Mobile")          }
+	{ PURPLE_STATUS_MOBILE,          "mobile",          N_("Mobile")          },
+	{ PURPLE_STATUS_TUNE,            "tune",            N_("Listening to music") }
 };
 
 const char *
@@ -600,14 +602,15 @@ notify_buddy_status_update(PurpleBuddy *buddy, PurplePresence *presence,
 	{
 		time_t current_time = time(NULL);
 		const char *buddy_alias = purple_buddy_get_alias(buddy);
-		char *tmp;
+		char *tmp, *logtmp;
 		PurpleLog *log;
 
 		if (old_status != NULL)
 		{
-			tmp = g_strdup_printf(_("%s changed status from %s to %s"), buddy_alias,
+			tmp = g_strdup_printf(_("%s (%s) changed status from %s to %s"), buddy_alias, buddy->name,
 			                      purple_status_get_name(old_status),
 			                      purple_status_get_name(new_status));
+			logtmp = g_markup_escape_text(tmp, -1);
 		}
 		else
 		{
@@ -615,13 +618,15 @@ notify_buddy_status_update(PurpleBuddy *buddy, PurplePresence *presence,
 
 			if (purple_status_is_active(new_status))
 			{
-				tmp = g_strdup_printf(_("%s is now %s"), buddy_alias,
+				tmp = g_strdup_printf(_("%s (%s) is now %s"), buddy_alias, buddy->name,
 				                      purple_status_get_name(new_status));
+				logtmp = g_markup_escape_text(tmp, -1);
 			}
 			else
 			{
-				tmp = g_strdup_printf(_("%s is no longer %s"), buddy_alias,
+				tmp = g_strdup_printf(_("%s (%s) is no longer %s"), buddy_alias, buddy->name,
 				                      purple_status_get_name(new_status));
+				logtmp = g_markup_escape_text(tmp, -1);
 			}
 		}
 
@@ -629,10 +634,11 @@ notify_buddy_status_update(PurpleBuddy *buddy, PurplePresence *presence,
 		if (log != NULL)
 		{
 			purple_log_write(log, PURPLE_MESSAGE_SYSTEM, buddy_alias,
-			               current_time, tmp);
+			               current_time, logtmp);
 		}
 
 		g_free(tmp);
+		g_free(logtmp);
 	}
 }
 
@@ -892,6 +898,8 @@ purple_status_set_attr_string(PurpleStatus *status, const char *id,
 	}
 	g_return_if_fail(purple_value_get_type(attr_value) == PURPLE_TYPE_STRING);
 
+	/* XXX: Check if the value has actually changed. If it has, and the status
+	 * is active, should this trigger 'status_has_changed'? */
 	purple_value_set_string(attr_value, value);
 }
 
@@ -1230,12 +1238,15 @@ update_buddy_idle(PurpleBuddy *buddy, PurplePresence *presence,
 
 			if (log != NULL)
 			{
-				char *tmp = g_strdup_printf(_("%s became idle"),
+				char *tmp, *tmp2;
+				tmp = g_strdup_printf(_("%s became idle"),
 				purple_buddy_get_alias(buddy));
+				tmp2 = g_markup_escape_text(tmp, -1);
+				g_free(tmp);
 
 				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
-				purple_buddy_get_alias(buddy), current_time, tmp);
-				g_free(tmp);
+				purple_buddy_get_alias(buddy), current_time, tmp2);
+				g_free(tmp2);
 			}
 		}
 	}
@@ -1247,12 +1258,15 @@ update_buddy_idle(PurpleBuddy *buddy, PurplePresence *presence,
 
 			if (log != NULL)
 			{
-				char *tmp = g_strdup_printf(_("%s became unidle"),
+				char *tmp, *tmp2;
+				tmp = g_strdup_printf(_("%s became unidle"),
 				purple_buddy_get_alias(buddy));
+				tmp2 = g_markup_escape_text(tmp, -1);
+				g_free(tmp);
 
 				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
-				purple_buddy_get_alias(buddy), current_time, tmp);
-				g_free(tmp);
+				purple_buddy_get_alias(buddy), current_time, tmp2);
+				g_free(tmp2);
 			}
 		}
 	}
@@ -1307,13 +1321,15 @@ purple_presence_set_idle(PurplePresence *presence, gboolean idle, time_t idle_ti
 
 			if (log != NULL)
 			{
-				char *msg;
+				char *msg, *tmp;
 
 				if (idle)
-					msg = g_strdup_printf(_("+++ %s became idle"), purple_account_get_username(account));
+					tmp = g_strdup_printf(_("+++ %s became idle"), purple_account_get_username(account));
 				else
-					msg = g_strdup_printf(_("+++ %s became unidle"), purple_account_get_username(account));
+					tmp = g_strdup_printf(_("+++ %s became unidle"), purple_account_get_username(account));
 
+				msg = g_markup_escape_text(tmp, -1);
+				g_free(tmp);
 				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
 				                 purple_account_get_username(account),
 				                 (idle ? idle_time : current_time), msg);
@@ -1668,6 +1684,14 @@ purple_status_init(void)
 	purple_prefs_connect_callback(handle, "/purple/status/scores/offline_msg",
 			score_pref_changed_cb,
 			GINT_TO_POINTER(SCORE_OFFLINE_MESSAGE));
+
+	purple_prefs_trigger_callback("/purple/status/scores/offline");
+	purple_prefs_trigger_callback("/purple/status/scores/available");
+	purple_prefs_trigger_callback("/purple/status/scores/invisible");
+	purple_prefs_trigger_callback("/purple/status/scores/away");
+	purple_prefs_trigger_callback("/purple/status/scores/extended_away");
+	purple_prefs_trigger_callback("/purple/status/scores/idle");
+	purple_prefs_trigger_callback("/purple/status/scores/offline_msg");
 }
 
 void

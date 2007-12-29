@@ -1,7 +1,8 @@
 /**
  * @file ft.c File Transfer API
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -66,6 +67,7 @@ purple_xfer_new(PurpleAccount *account, PurpleXferType type, const char *who)
 	xfer->ui_ops  = purple_xfers_get_ui_ops();
 	xfer->message = NULL;
 	xfer->current_buffer_size = FT_INITIAL_BUFFER_SIZE;
+	xfer->fd = -1;
 
 	ui_ops = purple_xfer_get_ui_ops(xfer);
 
@@ -205,15 +207,15 @@ static void purple_xfer_show_file_error(PurpleXfer *xfer, const char *filename)
 	switch(xfer_type) {
 		case PURPLE_XFER_SEND:
 			msg = g_strdup_printf(_("Error reading %s: \n%s.\n"),
-								  utf8, strerror(err));
+								  utf8, g_strerror(err));
 			break;
 		case PURPLE_XFER_RECEIVE:
 			msg = g_strdup_printf(_("Error writing %s: \n%s.\n"),
-								  utf8, strerror(err));
+								  utf8, g_strerror(err));
 			break;
 		default:
 			msg = g_strdup_printf(_("Error accessing %s: \n%s.\n"),
-								  utf8, strerror(err));
+								  utf8, g_strerror(err));
 			break;
 	}
 	g_free(utf8);
@@ -477,10 +479,11 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const char *filename)
 		/* Sending a file */
 		/* Check the filename. */
 #ifdef _WIN32
-		if (g_strrstr(filename, "../") || g_strrstr(filename, "..\\")) {
+		if (g_strrstr(filename, "../") || g_strrstr(filename, "..\\"))
 #else
-		if (g_strrstr(filename, "../")) {
+		if (g_strrstr(filename, "../"))
 #endif
+		{
 			char *utf8 = g_filename_to_utf8(filename, -1, NULL, NULL, NULL);
 
 			msg = g_strdup_printf(_("%s is not a valid filename.\n"), utf8);
@@ -996,6 +999,11 @@ connect_cb(gpointer data, gint source, const gchar *error_message)
 {
 	PurpleXfer *xfer = (PurpleXfer *)data;
 
+	if (source < 0) {
+		purple_xfer_cancel_local(xfer);
+		return;
+	}
+
 	xfer->fd = source;
 
 	begin_transfer(xfer, PURPLE_INPUT_READ);
@@ -1299,8 +1307,12 @@ purple_xfers_init(void) {
 }
 
 void
-purple_xfers_uninit(void) {
-	purple_signals_disconnect_by_handle(purple_xfers_get_handle());
+purple_xfers_uninit(void)
+{
+	void *handle = purple_xfers_get_handle();
+
+	purple_signals_disconnect_by_handle(handle);
+	purple_signals_unregister_by_instance(handle);
 }
 
 void

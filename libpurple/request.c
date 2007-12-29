@@ -1,8 +1,9 @@
 /**
  * @file request.c Request API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 
@@ -1207,6 +1208,7 @@ purple_request_choice_varg(void *handle, const char *title,
 
 	g_return_val_if_fail(ok_text != NULL,  NULL);
 	g_return_val_if_fail(ok_cb   != NULL,  NULL);
+	g_return_val_if_fail(cancel_text != NULL,  NULL);
 
 	ops = purple_request_get_ui_ops();
 
@@ -1295,6 +1297,7 @@ purple_request_fields(void *handle, const char *title, const char *primary,
 	g_return_val_if_fail(fields  != NULL, NULL);
 	g_return_val_if_fail(ok_text != NULL, NULL);
 	g_return_val_if_fail(ok_cb   != NULL, NULL);
+	g_return_val_if_fail(cancel_text != NULL, NULL);
 
 	ops = purple_request_get_ui_ops();
 

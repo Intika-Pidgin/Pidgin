@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
 #include "directconn.h"
@@ -76,11 +76,11 @@ msn_directconn_send_handshake(MsnDirectConn *directconn)
  * Connection Functions
  **************************************************************************/
 
-#if 0
 static int
 create_listener(int port)
 {
 	int fd;
+	int flags;
 	const int on = 1;
 
 #if 0
@@ -156,11 +156,11 @@ create_listener(int port)
 		return -1;
 	}
 
-	fcntl(fd, F_SETFL, O_NONBLOCK);
+	flags = fcntl(fd, F_GETFL);
+	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
 	return fd;
 }
-#endif
 
 static size_t
 msn_directconn_write(MsnDirectConn *directconn,
@@ -288,6 +288,11 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 		/* ERROR */
 		purple_debug_error("msn", "error reading\n");
 
+		if (directconn->inpa)
+			purple_input_remove(directconn->inpa);
+
+		close(directconn->fd);
+
 		msn_directconn_destroy(directconn);
 
 		return;
@@ -301,6 +306,11 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 	{
 		/* ERROR */
 		purple_debug_error("msn", "error reading\n");
+
+		if (directconn->inpa)
+			purple_input_remove(directconn->inpa);
+
+		close(directconn->fd);
 
 		msn_directconn_destroy(directconn);
 
@@ -348,17 +358,22 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 		/* ERROR */
 		purple_debug_error("msn", "error reading\n");
 
+		if (directconn->inpa)
+			purple_input_remove(directconn->inpa);
+
+		close(directconn->fd);
+
 		msn_directconn_destroy(directconn);
 	}
 }
 
 static void
-connect_cb(gpointer data, gint source, const gchar *error_message)
+connect_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	MsnDirectConn* directconn;
 	int fd;
 
-	purple_debug_misc("msn", "directconn: connect_cb: %d\n", source);
+	purple_debug_misc("msn", "directconn: connect_cb: %d, %d.\n", source, cond);
 
 	directconn = data;
 	directconn->connect_data = NULL;
@@ -405,6 +420,15 @@ connect_cb(gpointer data, gint source, const gchar *error_message)
 	}
 }
 
+static void
+directconn_connect_cb(gpointer data, gint source, const gchar *error_message)
+{
+	if (error_message)
+		purple_debug_error("msn", "Error making direct connection: %s\n", error_message);
+
+	connect_cb(data, source, PURPLE_INPUT_READ);
+}
+
 gboolean
 msn_directconn_connect(MsnDirectConn *directconn, const char *host, int port)
 {
@@ -424,17 +448,11 @@ msn_directconn_connect(MsnDirectConn *directconn, const char *host, int port)
 #endif
 
 	directconn->connect_data = purple_proxy_connect(NULL, session->account,
-			host, port, connect_cb, directconn);
+			host, port, directconn_connect_cb, directconn);
 
-	if (directconn->connect_data != NULL)
-	{
-		return TRUE;
-	}
-	else
-		return FALSE;
+	return (directconn->connect_data != NULL);
 }
 
-#if 0
 void
 msn_directconn_listen(MsnDirectConn *directconn)
 {
@@ -454,7 +472,6 @@ msn_directconn_listen(MsnDirectConn *directconn)
 	directconn->port = port;
 	directconn->c = 0;
 }
-#endif
 
 MsnDirectConn*
 msn_directconn_new(MsnSlpLink *slplink)

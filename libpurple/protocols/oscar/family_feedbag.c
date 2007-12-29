@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -115,14 +115,10 @@ static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, con
 	gboolean exists;
 	struct aim_ssi_item *cur, *new;
 
-	new = (struct aim_ssi_item *)g_malloc(sizeof(struct aim_ssi_item));
+	new = g_new(struct aim_ssi_item, 1);
 
 	/* Set the name */
-	if (name) {
-		new->name = (char *)g_malloc((strlen(name)+1)*sizeof(char));
-		strcpy(new->name, name);
-	} else
-		new->name = NULL;
+	new->name = g_strdup(name);
 
 	/* Set the group ID# and buddy ID# */
 	new->gid = gid;
@@ -345,13 +341,9 @@ struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *list, const 
  */
 struct aim_ssi_item *aim_ssi_itemlist_exists(struct aim_ssi_item *list, const char *sn)
 {
-	struct aim_ssi_item *cur;
-	if (!list || !sn)
+	if (!sn)
 		return NULL;
-	for (cur=list; cur; cur=cur->next)
-		if ((cur->type == AIM_SSI_TYPE_BUDDY) && (cur->name) && (!aim_sncmp(cur->name, sn)))
-			return cur;
-	return NULL;
+	return aim_ssi_itemlist_finditem(list, NULL, sn, AIM_SSI_TYPE_BUDDY);
 }
 
 /**
@@ -505,13 +497,13 @@ static int aim_ssi_sync(OscarData *od)
 	 * buddy ID#s, which makes things more efficient.  I think.
 	 */
 
-	/* Additions */
+	/* Deletions */
 	if (!od->ssi.pending) {
-		for (cur1=od->ssi.local; cur1 && (n < 15); cur1=cur1->next) {
-			if (!aim_ssi_itemlist_find(od->ssi.official, cur1->gid, cur1->bid)) {
+		for (cur1=od->ssi.official; cur1 && (n < 15); cur1=cur1->next) {
+			if (!aim_ssi_itemlist_find(od->ssi.local, cur1->gid, cur1->bid)) {
 				n++;
-				new = (struct aim_ssi_tmp *)g_malloc(sizeof(struct aim_ssi_tmp));
-				new->action = SNAC_SUBTYPE_FEEDBAG_ADD;
+				new = g_new(struct aim_ssi_tmp, 1);
+				new->action = SNAC_SUBTYPE_FEEDBAG_DEL;
 				new->ack = 0xffff;
 				new->name = NULL;
 				new->item = cur1;
@@ -525,13 +517,13 @@ static int aim_ssi_sync(OscarData *od)
 		}
 	}
 
-	/* Deletions */
+	/* Additions */
 	if (!od->ssi.pending) {
-		for (cur1=od->ssi.official; cur1 && (n < 15); cur1=cur1->next) {
-			if (!aim_ssi_itemlist_find(od->ssi.local, cur1->gid, cur1->bid)) {
+		for (cur1=od->ssi.local; cur1 && (n < 15); cur1=cur1->next) {
+			if (!aim_ssi_itemlist_find(od->ssi.official, cur1->gid, cur1->bid)) {
 				n++;
-				new = (struct aim_ssi_tmp *)g_malloc(sizeof(struct aim_ssi_tmp));
-				new->action = SNAC_SUBTYPE_FEEDBAG_DEL;
+				new = g_new(struct aim_ssi_tmp, 1);
+				new->action = SNAC_SUBTYPE_FEEDBAG_ADD;
 				new->ack = 0xffff;
 				new->name = NULL;
 				new->item = cur1;
@@ -551,7 +543,7 @@ static int aim_ssi_sync(OscarData *od)
 			cur2 = aim_ssi_itemlist_find(od->ssi.official, cur1->gid, cur1->bid);
 			if (cur2 && (aim_ssi_itemlist_cmp(cur1, cur2))) {
 				n++;
-				new = (struct aim_ssi_tmp *)g_malloc(sizeof(struct aim_ssi_tmp));
+				new = g_new(struct aim_ssi_tmp, 1);
 				new->action = SNAC_SUBTYPE_FEEDBAG_MOD;
 				new->ack = 0xffff;
 				new->name = NULL;
@@ -1028,8 +1020,7 @@ int aim_ssi_rename_group(OscarData *od, const char *oldgn, const char *newgn)
 		return -EINVAL;
 
 	g_free(group->name);
-	group->name = (char *)g_malloc((strlen(newgn)+1)*sizeof(char));
-	strcpy(group->name, newgn);
+	group->name = g_strdup(newgn);
 
 	/* Sync our local list with the server list */
 	return aim_ssi_sync(od);
@@ -1424,7 +1415,7 @@ static int parseadd(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 		aim_tlvlist_free(data);
 
 		if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
-			ret = userfunc(od, conn, frame, type, name);
+			ret = userfunc(od, conn, frame, snac->subtype, type, name);
 
 		g_free(name);
 	}
@@ -1434,8 +1425,6 @@ static int parseadd(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 
 /*
  * Subtype 0x0009 - Incoming SSI mod.
- *
- * XXX - It would probably be good for the client to actually do something when it gets this.
  */
 static int parsemod(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
@@ -1463,11 +1452,7 @@ static int parsemod(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 		if ((item = aim_ssi_itemlist_find(od->ssi.local, gid, bid))) {
 			item->type = type;
 			g_free(item->name);
-			if (name) {
-				item->name = (char *)g_malloc((strlen(name)+1)*sizeof(char));
-				strcpy(item->name, name);
-			} else
-				item->name = NULL;
+			item->name = g_strdup(name);
 			aim_tlvlist_free(item->data);
 			item->data = aim_tlvlist_copy(data);
 		}
@@ -1475,17 +1460,13 @@ static int parsemod(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 		if ((item = aim_ssi_itemlist_find(od->ssi.official, gid, bid))) {
 			item->type = type;
 			g_free(item->name);
-			if (name) {
-				item->name = (char *)g_malloc((strlen(name)+1)*sizeof(char));
-				strcpy(item->name, name);
-			} else
-				item->name = NULL;
+			item->name = g_strdup(name);
 			aim_tlvlist_free(item->data);
 			item->data = aim_tlvlist_copy(data);
 		}
 
 		if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
-			ret = userfunc(od, conn, frame);
+			ret = userfunc(od, conn, frame, snac->subtype, type, name);
 
 		g_free(name);
 		aim_tlvlist_free(data);
@@ -1557,10 +1538,7 @@ static int parseack(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 				/* Remove the item from the local list */
 				/* Make sure cur->item is still valid memory */
 				if (aim_ssi_itemlist_valid(od->ssi.local, cur->item)) {
-					if (cur->item->name) {
-						cur->name = (char *)g_malloc((strlen(cur->item->name)+1)*sizeof(char));
-						strcpy(cur->name, cur->item->name);
-					}
+					cur->name = g_strdup(cur->item->name);
 					aim_ssi_itemlist_del(&od->ssi.local, cur->item);
 				}
 				cur->item = NULL;
@@ -1571,11 +1549,7 @@ static int parseack(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 					struct aim_ssi_item *cur1;
 					if ((cur1 = aim_ssi_itemlist_find(od->ssi.official, cur->item->gid, cur->item->bid))) {
 						g_free(cur->item->name);
-						if (cur1->name) {
-							cur->item->name = (char *)g_malloc((strlen(cur1->name)+1)*sizeof(char));
-							strcpy(cur->item->name, cur1->name);
-						} else
-							cur->item->name = NULL;
+						cur->item->name = g_strdup(cur1->name);
 						aim_tlvlist_free(cur->item->data);
 						cur->item->data = aim_tlvlist_copy(cur1->data);
 					}
@@ -1605,11 +1579,7 @@ static int parseack(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 					struct aim_ssi_item *cur1;
 					if ((cur1 = aim_ssi_itemlist_find(od->ssi.official, cur->item->gid, cur->item->bid))) {
 						g_free(cur1->name);
-						if (cur->item->name) {
-							cur1->name = (char *)g_malloc((strlen(cur->item->name)+1)*sizeof(char));
-							strcpy(cur1->name, cur->item->name);
-						} else
-							cur1->name = NULL;
+						cur1->name = g_strdup(cur->item->name);
 						aim_tlvlist_free(cur1->data);
 						cur1->data = aim_tlvlist_copy(cur->item->data);
 					}

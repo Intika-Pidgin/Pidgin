@@ -3,6 +3,8 @@
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
+ * Some code copyright (C) 2007, ComBOTS Product GmbH (htfv) <foss@combots.com>
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -15,7 +17,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -92,11 +94,8 @@ extern "C" {
  * for WinAIM clients (up through the latest (4.0.1957)) to
  * send any more than 1kb.  Amaze all your windows friends
  * with utterly oversized instant messages!
- *
- * TODO: the real limit is the total SNAC size at 8192. Fix this.
- *
  */
-#define MAXMSGLEN 7987
+#define MAXMSGLEN 2544
 
 /*
  * Maximum size of a Buddy Icon.
@@ -270,6 +269,15 @@ struct _ClientInfo
 	"us", "en", \
 }
 
+#define CLIENTINFO_ICQBASIC_14_34_3000 { \
+	"ICQBasic", \
+	0x010a, \
+	0x0014, 0x0034, \
+	0x0000, 0x0bb8, \
+	0x0000043d, \
+	"us", "en", \
+}
+
 #define CLIENTINFO_NETSCAPE_7_0_1 { \
 	"Netscape 2000 an approved user of AOL Instant Messenger (SM)", \
 	0x1d0d, \
@@ -280,15 +288,25 @@ struct _ClientInfo
 }
 
 /*
- * TODO: Use PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, and
- *       PURPLE_MICRO_VERSION?  Or did that break things?
+ * We need to use the major-minor-micro versions from the official
+ * AIM and ICQ programs here or AOL won't let us use certain features.
  */
-#define CLIENTINFO_PURPLE { \
+
+#define CLIENTINFO_PURPLE_AIM { \
 	"Purple/" VERSION, \
 	0x0109, \
 	0x0005, 0x0001, \
 	0x0000, 0x0bdc, \
 	0x000000d2, \
+	"us", "en", \
+}
+
+#define CLIENTINFO_PURPLE_ICQ { \
+	"Purple/" VERSION, \
+	0x010a, \
+	0x0014, 0x0034, \
+	0x0000, 0x0bb8, \
+	0x0000043d, \
 	"us", "en", \
 }
 
@@ -1320,6 +1338,7 @@ int aim_icq_changepasswd(OscarData *od, const char *passwd);
 int aim_icq_getsimpleinfo(OscarData *od, const char *uin);
 int aim_icq_getalias(OscarData *od, const char *uin);
 int aim_icq_getallinfo(OscarData *od, const char *uin);
+int aim_icq_sendsms(OscarData *od, const char *name, const char *msg, const char *alias);
 
 
 
@@ -1458,8 +1477,8 @@ int aimutil_itemcnt(char *toSearch, char dl);
 char *aimutil_itemindex(char *toSearch, int theindex, char dl);
 
 gboolean aim_snvalid(const char *sn);
-gboolean aim_sn_is_icq(const char *sn);
-gboolean aim_sn_is_sms(const char *sn);
+gboolean aim_snvalid_icq(const char *sn);
+gboolean aim_snvalid_sms(const char *sn);
 int aim_snlen(const char *sn);
 int aim_sncmp(const char *sn1, const char *sn2);
 

@@ -1,8 +1,10 @@
 /**
  * @file account.h Account API
  * @ingroup core
- *
- * purple
+ * @see @ref account-signals
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,9 +22,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * @see @ref account-signals
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PURPLE_ACCOUNT_H_
 #define _PURPLE_ACCOUNT_H_
@@ -36,6 +36,8 @@ typedef struct _PurpleAccount      PurpleAccount;
 
 typedef gboolean (*PurpleFilterAccountFunc)(PurpleAccount *account);
 typedef void (*PurpleAccountRequestAuthorizationCb)(void *);
+typedef void (*PurpleAccountRegistrationCb)(PurpleAccount *account, gboolean succeeded, void *user_data);
+typedef void (*PurpleAccountUnregistrationCb)(PurpleAccount *account, gboolean succeeded, void *user_data);
 
 #include "connection.h"
 #include "log.h"
@@ -136,6 +138,10 @@ struct _PurpleAccount
 	PurpleLog *system_log;        /**< The system log                         */
 
 	void *ui_data;              /**< The UI can put data here.              */
+	PurpleAccountRegistrationCb registration_cb;
+	void *registration_cb_user_data;
+
+	gpointer priv;              /**< Pointer to opaque private data. */
 };
 
 #ifdef __cplusplus
@@ -172,11 +178,29 @@ void purple_account_destroy(PurpleAccount *account);
 void purple_account_connect(PurpleAccount *account);
 
 /**
+ * Sets the callback for successful registration.
+ *
+ * @param account	The account for which this callback should be used
+ * @param cb	The callback
+ * @param user_data	The user data passed to the callback
+ */
+void purple_account_set_register_callback(PurpleAccount *account, PurpleAccountRegistrationCb cb, void *user_data);
+
+/**
  * Registers an account.
  *
  * @param account The account to register.
  */
 void purple_account_register(PurpleAccount *account);
+
+/**
+ * Unregisters an account (deleting it from the server).
+ *
+ * @param account The account to unregister.
+ * @param cb Optional callback to be called when unregistration is complete
+ * @param user_data user data to pass to the callback
+ */
+void purple_account_unregister(PurpleAccount *account, PurpleAccountUnregistrationCb cb, void *user_data);
 
 /**
  * Disconnects from an account.
@@ -232,7 +256,7 @@ void purple_account_request_add(PurpleAccount *account, const char *remote_user,
  * @param remote_user  The name of the user that added this account.
  * @param id           The optional ID of the local account. Rarely used.
  * @param alias        The optional alias of the remote user.
- * @param message      The optional message sent from the uer requesting you
+ * @param message      The optional message sent by the user wanting to add you.
  * @param on_list      Is the remote user already on the buddy list?
  * @param auth_cb      The callback called when the local user accepts
  * @param deny_cb      The callback called when the local user rejects
@@ -870,6 +894,25 @@ void purple_account_change_password(PurpleAccount *account, const char *orig_pw,
  * @param buddy   The buddy
  */
 gboolean purple_account_supports_offline_message(PurpleAccount *account, PurpleBuddy *buddy);
+
+/**
+ * Get the error that caused the account to be disconnected, or @c NULL if the
+ * account is happily connected or disconnected without an error.
+ *
+ * @param account The account whose error should be retrieved.
+ * @constreturn   The type of error and a human-readable description of the
+ *                current error, or @c NULL if there is no current error.  This
+ *                pointer is guaranteed to remain valid until the @ref
+ *                account-error-changed signal is emitted for @a account.
+ */
+const PurpleConnectionErrorInfo *purple_account_get_current_error(PurpleAccount *account);
+
+/**
+ * Clear an account's current error state, resetting it to @c NULL.
+ *
+ * @param account The account whose error state should be cleared.
+ */
+void purple_account_clear_current_error(PurpleAccount *account);
 
 /*@}*/
 

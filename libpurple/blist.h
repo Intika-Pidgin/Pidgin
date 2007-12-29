@@ -1,8 +1,10 @@
 /**
  * @file blist.h Buddy List API
  * @ingroup core
- *
- * purple
+ * @see @ref blist-signals
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,9 +22,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * @see @ref blist-signals
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PURPLE_BLIST_H_
 #define _PURPLE_BLIST_H_
@@ -64,11 +64,11 @@ typedef enum
 
 typedef enum
 {
-	PURPLE_BLIST_NODE_FLAG_NO_SAVE = 1 /**< node should not be saved with the buddy list */
+	PURPLE_BLIST_NODE_FLAG_NO_SAVE      = 1 << 0, /**< node should not be saved with the buddy list */
 
 } PurpleBlistNodeFlags;
 
-#define PURPLE_BLIST_NODE_HAS_FLAG(b, f) ((b)->flags & (f))
+#define PURPLE_BLIST_NODE_HAS_FLAG(b, f) (((PurpleBlistNode*)(b))->flags & (f))
 #define PURPLE_BLIST_NODE_SHOULD_SAVE(b) (! PURPLE_BLIST_NODE_HAS_FLAG(b, PURPLE_BLIST_NODE_FLAG_NO_SAVE))
 
 #define PURPLE_BLIST_NODE_NAME(n) ((n)->type == PURPLE_BLIST_CHAT_NODE  ? purple_chat_get_name((PurpleChat*)n) :        \
@@ -482,13 +482,17 @@ void purple_blist_merge_contact(PurpleContact *source, PurpleBlistNode *node);
  */
 PurpleBuddy *purple_contact_get_priority_buddy(PurpleContact *contact);
 
+#ifndef PURPLE_DISABLE_DEPRECATED
 /**
  * Sets the alias for a contact.
  *
  * @param contact  The contact
  * @param alias    The alias to set, or NULL to unset
+ *
+ * @deprecated Use purple_blist_alias_contact() instead.
  */
 void purple_contact_set_alias(PurpleContact *contact, const char *alias);
+#endif
 
 /**
  * Gets the alias for a contact.
@@ -515,8 +519,11 @@ gboolean purple_contact_on_account(PurpleContact *contact, PurpleAccount *accoun
  * @param contact  The contact
  */
 void purple_contact_invalidate_priority_buddy(PurpleContact *contact);
+
 /**
  * Removes a buddy from the buddy list and frees the memory allocated to it.
+ * This doesn't actually try to remove the buddy from the server list, nor does
+ * it clean up the prpl_data.
  *
  * @param buddy   The buddy to be removed
  */
@@ -673,7 +680,8 @@ PurpleGroup *purple_buddy_get_group(PurpleBuddy *buddy);
  *
  * @param g The group
  *
- * @return A list of purple_accounts
+ * @return A GSList of accounts (which must be freed), or NULL if the group
+ *         has no accounts.
  */
 GSList *purple_group_get_accounts(PurpleGroup *g);
 

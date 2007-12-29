@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef GNT_COLORS_H
@@ -29,6 +29,9 @@
 
 #include <glib.h>
 
+/**
+ * Different classes of colors.
+ */
 typedef enum
 {
 	GNT_COLOR_NORMAL = 1,
@@ -58,30 +61,65 @@ enum
 	GNT_TOTAL_COLORS
 };
 
-/* populate some default colors */
 /**
- * 
+ * Initialize the colors.
  */
 void gnt_init_colors(void);
 
 /**
- * 
+ * Uninitialize the colors.
  */
 void gnt_uninit_colors(void);
 
 #if GLIB_CHECK_VERSION(2,6,0)
 /**
- * 
- * @param kfile
+ * Parse color information from a file.
+ *
+ * @param kfile  The file containing color information.
  */
 void gnt_colors_parse(GKeyFile *kfile);
 
 /**
- * 
- * @param kfile
+ * Parse color-pair information from a file.
+ *
+ * @param kfile The file containing the color-pair information.
  */
 void gnt_color_pairs_parse(GKeyFile *kfile);
 
+/**
+ * Parse a string color
+ *
+ * @param kfile The string value
+ *
+ * @return A color
+ *
+ * @since 2.4.0
+ */
+int gnt_colors_get_color(char *key);
 #endif
 
+/**
+ * Return the appropriate character attribute for a specified color.
+ * If the terminal doesn't have color support, this returns A_STANDOUT
+ * when deemed appropriate.
+ *
+ * @param color   The color code.
+ *
+ * @return  A character attribute.
+ *
+ * @since 2.3.0
+ */
+int gnt_color_pair(int color);
+
+/**
+ * Adds a color definition
+ *
+ * @param fg   Foreground
+ * @param bg   Background
+ *
+ * @return  A color pair
+ *
+ * @since 2.4.0
+ */
+int gnt_color_add_pair(int fg, int bg);
 #endif

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "myspace.h"
@@ -41,16 +41,53 @@ msim_attention_types(PurpleAccount *acct)
 		types = g_list_append(types, attn);
 
 		/* TODO: icons for each zap */
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("zap"), _("zapped"), _("Zapping"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("whack"), _("whacked"), _("Whacking"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("torch"), _("torched"), _("Torching"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("smooch"), _("smooched"), _("Smooching"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("hug"), _("hugged"), _("Hugging"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("bslap"), _("bslapped"), _("Bslapping"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("goose"), _("goosed"), _("Goosing"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("hi-five"), _("hi-fived"), _("Hi-fiving"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("punk"), _("punk'd"), _("Punking"));
-		_MSIM_ADD_NEW_ATTENTION(NULL, _("raspberry"), _("raspberried"), _("Raspberry'ing"));
+
+		/* Lots of comments for translators: */
+
+		/* Zap means "to strike suddenly and forcefully as if with a
+		 * projectile or weapon."  This term often has an electrical
+		 * connotation, for example, "he was zapped by electricity when
+		 * he put a fork in the toaster." */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Zap"), _("%s has zapped you!"), _("Zapping %s..."));
+
+		/* Whack means "to hit or strike someone with a sharp blow" */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Whack"), _("%s has whacked you!"), _("Whacking %s..."));
+
+		/* Torch means "to set on fire."  Don't worry, this doesn't
+		 * make a whole lot of sense in English, either.  Feel free
+		 * to translate it literally. */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Torch"), _("%s has torched you!"), _("Torching %s..."));
+
+		/* Smooch means "to kiss someone, often enthusiastically" */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Smooch"), _("%s has smooched you!"), _("Smooching %s..."));
+
+		/* A hug is a display of affection; wrapping your arms around someone */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Hug"), _("%s has hugged you!"), _("Hugging %s..."));
+
+		/* Slap means "to hit someone with an open/flat hand" */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Slap"), _("%s has slapped you!"), _("Slapping %s..."));
+
+		/* Goose means "to pinch someone on their butt" */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Goose"), _("%s has goosed you!"), _("Goosing %s..."));
+
+		/* A high-five is when two people's hands slap each other
+		 * in the air above their heads.  It is done to celebrate
+		 * something, often a victory, or to congratulate someone. */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("High-five"), _("%s has high-fived you!"), _("High-fiving %s..."));
+
+		/* We're not entirely sure what the MySpace people mean by
+		 * this... but we think it's the equivalent of "prank."  Or, for
+		 * someone to perform a mischievous trick or practical joke. */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Punk"), _("%s has punk'd you!"), _("Punking %s..."));
+
+		/* Raspberry is a slang term for the vibrating sound made
+		 * when you stick your tongue out of your mouth with your
+		 * lips closed and blow.  It is typically done when
+		 * gloating or bragging.  Nowadays it's a pretty silly
+		 * gesture, so it does not carry a harsh negative
+		 * connotation.  It is generally used in a playful tone
+		 * with friends. */
+		_MSIM_ADD_NEW_ATTENTION(NULL, _("Raspberry"), _("%s has raspberried you!"), _("Raspberrying %s..."));
 	}
 
 	return types;
@@ -92,41 +129,15 @@ msim_send_zap(MsimSession *session, const gchar *username, guint code)
 {
 	gchar *zap_string;
 	gboolean rc;
-#ifndef MSIM_USE_ATTENTION_API
-	GList *types;
-	MsimAttentionType *attn;
-	gchar *zap_description;
-#endif
 
 	g_return_val_if_fail(session != NULL, FALSE);
 	g_return_val_if_fail(username != NULL, FALSE);
-
-
-#ifdef MSIM_USE_ATTENTION_API
-	/* serv_send_attention(session->gc, username, code); */
-#else
-	types = msim_attention_types(session->account);
-
-	attn = g_list_nth_data(types, code);
-	if (!attn) {
-		return FALSE;
-	}
-
-
-	zap_description = g_strdup_printf("*** Attention: %s %s ***", attn->outgoing_description,
-			username);
-
-	serv_got_im(session->gc, username, zap_description,
-			PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM, time(NULL));
-
-	g_free(zap_description);
-#endif
 
 	/* Construct and send the actual zap command. */
 	zap_string = g_strdup_printf("!!!ZAP_SEND!!!=RTE_BTN_ZAPS_%d", code);
 
 	if (!msim_send_bm(session, username, zap_string, MSIM_BM_ACTION)) {
-		purple_debug_info("msim_send_zap_from_menu", "msim_send_bm failed: zapping %s with %s",
+		purple_debug_info("msim_send_zap_from_menu", "msim_send_bm failed: zapping %s with %s\n",
 				username, zap_string);
 		rc = FALSE;
 	} else {
@@ -165,11 +176,7 @@ msim_send_zap_from_menu(PurpleBlistNode *node, gpointer zap_num_ptr)
 
 	zap = GPOINTER_TO_INT(zap_num_ptr);
 
-#ifdef MSIM_USE_ATTENTION_API
 	serv_send_attention(session->gc, buddy->name, zap);
-#else
-	g_return_if_fail(msim_send_zap(session, buddy->name, zap));
-#endif
 }
 
 /** Return menu, if any, for a buddy list node. */
@@ -179,8 +186,6 @@ msim_blist_node_menu(PurpleBlistNode *node)
 	GList *menu, *zap_menu;
 	GList *types;
 	PurpleMenuAction *act;
-	/* Warning: hardcoded to match that in msim_attention_types. */
-	const gchar *zap_names[10];
 	guint i;
 
 	if (!PURPLE_BLIST_NODE_IS_BUDDY(node)) {
@@ -188,7 +193,9 @@ msim_blist_node_menu(PurpleBlistNode *node)
 		return NULL;
 	}
 
-	/* Names from official client. */
+	zap_menu = NULL;
+
+	/* TODO: get rid of once is accessible directly in GUI */
 	types = msim_attention_types(NULL);
 	i = 0;
 	do
@@ -196,21 +203,16 @@ msim_blist_node_menu(PurpleBlistNode *node)
 		MsimAttentionType *attn;
 
 		attn = (MsimAttentionType *)types->data;
-		zap_names[i] = attn->name;
+
+		act = purple_menu_action_new(attn->name, PURPLE_CALLBACK(msim_send_zap_from_menu),
+				GUINT_TO_POINTER(i), NULL);
+		zap_menu = g_list_append(zap_menu, act);
+
 		++i;
 	} while ((types = g_list_next(types)));
 
-	menu = zap_menu = NULL;
-
-	/* TODO: get rid of once is accessible directly in GUI */
-	for (i = 0; i < sizeof(zap_names) / sizeof(zap_names[0]); ++i) {
-		act = purple_menu_action_new(zap_names[i], PURPLE_CALLBACK(msim_send_zap_from_menu),
-				GUINT_TO_POINTER(i), NULL);
-		zap_menu = g_list_append(zap_menu, act);
-	}
-
 	act = purple_menu_action_new(_("Zap"), NULL, NULL, zap_menu);
-	menu = g_list_append(menu, act);
+	menu = g_list_append(NULL, act);
 
 	return menu;
 }
@@ -221,21 +223,6 @@ msim_incoming_zap(MsimSession *session, MsimMessage *msg)
 {
 	gchar *msg_text, *username;
 	gint zap;
-#ifndef MSIM_USE_ATTENTION_API
-	const gchar *zap_past_tense[10];
-	gchar *zap_text;
-
-	zap_past_tense[0] = _("zapped");
-	zap_past_tense[1] = _("whacked");
-	zap_past_tense[2] = _("torched");
-	zap_past_tense[3] = _("smooched");
-	zap_past_tense[4] = _("hugged");
-	zap_past_tense[5] = _("bslapped");
-	zap_past_tense[6] = _("goosed");
-	zap_past_tense[7] = _("hi-fived");
-	zap_past_tense[8] = _("punk'd");
-	zap_past_tense[9] = _("raspberried");
-#endif
 
 	msg_text = msim_msg_get_string(msg, "msg");
 	username = msim_msg_get_string(msg, "_username");
@@ -247,14 +234,7 @@ msim_incoming_zap(MsimSession *session, MsimMessage *msg)
 
 	zap = CLAMP(zap, 0, 9);
 
-#ifdef MSIM_USE_ATTENTION_API
 	serv_got_attention(session->gc, username, zap);
-#else
-	zap_text = g_strdup_printf(_("*** You have been %s! ***"), zap_past_tense[zap]);
-	serv_got_im(session->gc, username, zap_text, 
-			PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_SYSTEM, time(NULL));
-	g_free(zap_text);
-#endif
 
 	g_free(msg_text);
 	g_free(username);
