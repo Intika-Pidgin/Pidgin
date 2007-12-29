@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _MSN_SESSION_H_
 #define _MSN_SESSION_H_
@@ -38,6 +38,8 @@ typedef struct _MsnSession MsnSession;
 #include "cmdproc.h"
 #include "nexus.h"
 #include "httpconn.h"
+#include "contact.h"
+#include "oim.h"
 
 #include "userlist.h"
 #include "sync.h"
@@ -94,6 +96,8 @@ struct _MsnSession
 
 	MsnNotification *notification;
 	MsnNexus *nexus;
+	MsnContact *contact;
+	MsnOim		*oim;
 	MsnSync *sync;
 
 	MsnUserList *userlist;
@@ -105,8 +109,15 @@ struct _MsnSession
 
 	int conv_seq; /**< The current conversation sequence number. */
 
+	/*psm info*/
+	char *psm;
+
 	struct
 	{
+		/*t and p, get via USR TWN*/
+		char *t;
+		char *p;
+
 		char *kv;
 		char *sid;
 		char *mspauth;
@@ -114,8 +125,10 @@ struct _MsnSession
 		char *file;
 		char *client_ip;
 		int client_port;
-
 	} passport_info;
+
+	GHashTable *soap_table;
+	int soap_cleanup_handle;
 };
 
 /**
@@ -223,5 +236,9 @@ void msn_session_set_login_step(MsnSession *session, MsnLoginStep step);
  * @param session The MSN session.
  */
 void msn_session_finish_login(MsnSession *session);
+
+/*post message to User*/
+void msn_session_report_user(MsnSession *session,const char *passport,
+							char *msg,PurpleMessageFlags flags);
 
 #endif /* _MSN_SESSION_H_ */

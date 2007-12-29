@@ -1,8 +1,9 @@
 /**
  * @file signals.c Signal API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 
@@ -648,6 +649,16 @@ void purple_marshal_VOID__POINTER_INT_INT(PurpleCallback cb, va_list args,
 	((void (*)(void *, gint, gint, void *))cb)(arg1, arg2, arg3, data);
 }
 
+void purple_marshal_VOID__POINTER_INT_POINTER(PurpleCallback cb, va_list args,
+                                              void *data, void **return_val)
+{
+	void *arg1 = va_arg(args, void *);
+	gint arg2 = va_arg(args, gint);
+	void *arg3 = va_arg(args, void *);
+
+	((void (*)(void *, gint, void *, void *))cb)(arg1, arg2, arg3, data);
+}
+
 void
 purple_marshal_VOID__POINTER_POINTER(PurpleCallback cb, va_list args,
 								   void *data, void **return_val)
@@ -793,6 +804,19 @@ purple_marshal_INT__INT_INT(PurpleCallback cb, va_list args, void *data,
 		*return_val = GINT_TO_POINTER(ret_val);
 }
 
+void
+purple_marshal_INT__POINTER_POINTER(PurpleCallback cb, va_list args, void *data,
+                                      void **return_val)
+{
+	gint ret_val;
+	void *arg1 = va_arg(args, void *);
+	void *arg2 = va_arg(args, void *);
+
+	ret_val = ((gint (*)(void *, void *, void *))cb)(arg1, arg2, data);
+
+	if (return_val != NULL)
+		*return_val = GINT_TO_POINTER(ret_val);
+}
 
 void
 purple_marshal_INT__POINTER_POINTER_POINTER_POINTER_POINTER(

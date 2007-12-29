@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include <glib.h>
 #ifndef _WIN32
@@ -26,6 +26,7 @@
 #define UNICODE
 #include <windows.h>
 #include <lm.h>
+#include "dns_sd_proxy.h"
 #endif
 
 #include "internal.h"
@@ -40,14 +41,7 @@
 #include "mdns_common.h"
 #include "jabber.h"
 #include "buddy.h"
-
-/*
- * TODO: Should implement an add_buddy callback that removes the buddy
- *       from the local list.  Bonjour manages buddies for you, and
- *       adding someone locally by hand is stupid.  Or, maybe even better,
- *       if a PRPL does not have an add_buddy callback then do not allow
- *       users to add buddies.
- */
+#include "bonjour_ft.h"
 
 static char *default_firstname;
 static char *default_lastname;
@@ -84,6 +78,7 @@ bonjour_removeallfromlocal(PurpleConnection *gc)
 				if (buddy->account != account)
 					continue;
 				purple_prpl_got_user_status(account, buddy->name, "offline", NULL);
+				purple_account_remove_buddy(account, buddy, NULL);
 				purple_blist_remove_buddy(buddy);
 			}
 		}
@@ -99,17 +94,30 @@ bonjour_login(PurpleAccount *account)
 	PurpleStatus *status;
 	PurplePresence *presence;
 
+#ifdef _WIN32
+	if (!dns_sd_available()) {
+		purple_connection_error_reason(gc,
+			PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+			_("The Apple Bonjour For Windows toolkit wasn't found, see the FAQ at: "
+			  "http://developer.pidgin.im/wiki/Using%20Pidgin#CanIusePidginforBonjourLink-LocalMessaging"
+			  " for more information."));
+		return;
+	}
+#endif
+
 	gc->flags |= PURPLE_CONNECTION_HTML;
 	gc->proto_data = bd = g_new0(BonjourData, 1);
 
 	/* Start waiting for jabber connections (iChat style) */
-	bd->jabber_data = g_new(BonjourJabber, 1);
+	bd->jabber_data = g_new0(BonjourJabber, 1);
 	bd->jabber_data->port = BONJOUR_DEFAULT_PORT_INT;
 	bd->jabber_data->account = account;
 
 	if (bonjour_jabber_start(bd->jabber_data) == -1) {
 		/* Send a message about the connection error */
-		purple_connection_error(gc, _("Unable to listen for incoming IM connections\n"));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Unable to listen for incoming IM connections\n"));
 		return;
 	}
 
@@ -134,7 +142,9 @@ bonjour_login(PurpleAccount *account)
 	bd->dns_sd_data->account = account;
 	if (!bonjour_dns_sd_start(bd->dns_sd_data))
 	{
-		purple_connection_error(gc, _("Unable to establish connection with the local mDNS server.  Is it running?"));
+		purple_connection_error_reason (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Unable to establish connection with the local mDNS server.  Is it running?"));
 		return;
 	}
 
@@ -154,28 +164,35 @@ bonjour_close(PurpleConnection *connection)
 	PurpleGroup *bonjour_group;
 	BonjourData *bd = connection->proto_data;
 
+	/* Remove all the bonjour buddies */
+	bonjour_removeallfromlocal(connection);
+
 	/* Stop looking for buddies in the LAN */
-	if (bd->dns_sd_data != NULL)
+	if (bd != NULL && bd->dns_sd_data != NULL)
 	{
 		bonjour_dns_sd_stop(bd->dns_sd_data);
 		bonjour_dns_sd_free(bd->dns_sd_data);
 	}
 
-	if (bd->jabber_data != NULL)
+	if (bd != NULL && bd->jabber_data != NULL)
 	{
 		/* Stop waiting for conversations */
 		bonjour_jabber_stop(bd->jabber_data);
 		g_free(bd->jabber_data);
 	}
 
-	/* Remove all the bonjour buddies */
-	bonjour_removeallfromlocal(connection);
-
 	/* Delete the bonjour group */
 	bonjour_group = purple_find_group(BONJOUR_GROUP_NAME);
 	if (bonjour_group != NULL)
 		purple_blist_remove_group(bonjour_group);
 
+	/* Cancel any file transfers */
+	while (bd != NULL && bd->xfer_lists) {
+		purple_xfer_cancel_local(bd->xfer_lists->data);
+	}
+
+	g_free(bd);
+	connection->proto_data = NULL;
 }
 
 static const char *
@@ -235,6 +252,32 @@ bonjour_set_status(PurpleAccount *account, PurpleStatus *status)
 	g_free(stripped);
 }
 
+/*
+ * The add_buddy callback removes the buddy from the local list.
+ * Bonjour manages buddies for you, and adding someone locally by
+ * hand is stupid.  Perhaps we should change libpurple not to allow adding
+ * if there is no add_buddy callback.
+ */
+static void
+bonjour_fake_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group) {
+	purple_debug_error("bonjour", "Buddy '%s' manually added; removing.  "
+				      "Bonjour buddies must be discovered and not manually added.\n",
+			   purple_buddy_get_name(buddy));
+
+	/* I suppose we could alert the user here, but it seems unnecessary. */
+
+	/* If this causes problems, it can be moved to an idle callback */
+	purple_blist_remove_buddy(buddy);
+}
+
+
+static void bonjour_remove_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group) {
+	if (buddy->proto_data) {
+		bonjour_buddy_delete(buddy->proto_data);
+		buddy->proto_data = NULL;
+	}
+}
+
 static GList *
 bonjour_status_types(PurpleAccount *account)
 {
@@ -271,7 +314,7 @@ bonjour_convo_closed(PurpleConnection *connection, const char *who)
 	PurpleBuddy *buddy = purple_find_buddy(connection->account, who);
 	BonjourBuddy *bb;
 
-	if (buddy == NULL)
+	if (buddy == NULL || buddy->proto_data == NULL)
 	{
 		/*
 		 * This buddy is not in our buddy list, and therefore does not really
@@ -338,6 +381,11 @@ bonjour_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboole
 	if (message != NULL)
 		purple_notify_user_info_add_pair(user_info, _("Message"), message);
 
+	if (bb == NULL) {
+		purple_debug_error("bonjour", "Got tooltip request for a buddy without protocol data.\n");
+		return;
+	}
+
 	/* Only show first/last name if there is a nickname set (to avoid duplication) */
 	if (bb->nick != NULL) {
 		if (bb->first != NULL)
@@ -393,9 +441,9 @@ static PurplePluginProtocolInfo prpl_info =
 	bonjour_set_status,                                      /* set_status */
 	NULL,                                                    /* set_idle */
 	NULL,                                                    /* change_passwd */
-	NULL,                                                    /* add_buddy */
+	bonjour_fake_add_buddy,                                  /* add_buddy */
 	NULL,                                                    /* add_buddies */
-	NULL,                                                    /* remove_buddy */
+	bonjour_remove_buddy,                                    /* remove_buddy */
 	NULL,                                                    /* remove_buddies */
 	NULL,                                                    /* add_permit */
 	NULL,                                                    /* add_deny */
@@ -428,8 +476,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,                                                    /* roomlist_cancel */
 	NULL,                                                    /* roomlist_expand_category */
 	NULL,                                                    /* can_receive_file */
-	NULL,                                                    /* send_file */
-	NULL,                                                    /* new_xfer */
+	bonjour_send_file,                                       /* send_file */
+	bonjour_new_xfer,                                        /* new_xfer */
 	NULL,                                                    /* offline_message */
 	NULL,                                                    /* whiteboard_prpl_ops */
 	NULL,                                                    /* send_raw */
@@ -455,7 +503,7 @@ static PurplePluginInfo info =
 
 	"prpl-bonjour",                                   /**< id             */
 	"Bonjour",                                        /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Bonjour Protocol Plugin"),
 	                                                  /**  description    */
@@ -479,45 +527,50 @@ static PurplePluginInfo info =
 	NULL
 };
 
-static void
-initialize_default_account_values()
-{
-#ifdef _WIN32
-	char *fullname = NULL;
-#else
-	struct passwd *info;
-	const char *fullname = NULL;
-#endif
-	char *splitpoint = NULL;
-	char *tmp;
-	char hostname[255];
+#ifdef WIN32
+static gboolean _set_default_name_cb(gpointer data) {
+	gchar *fullname = data;
+	const char *splitpoint;
+	GList *tmp = prpl_info.protocol_options;
+	PurpleAccountOption *option;
 
-#ifndef _WIN32
-	/* Try to figure out the user's real name */
-	info = getpwuid(getuid());
-	if ((info != NULL) && (info->pw_gecos != NULL) && (info->pw_gecos[0] != '\0'))
-		fullname = info->pw_gecos;
-	else if ((info != NULL) && (info->pw_name != NULL) && (info->pw_name[0] != '\0'))
-		fullname = info->pw_name;
-	else if (((fullname = getlogin()) != NULL) && (fullname[0] != '\0'))
-		;
-	else
-		fullname = _("Purple Person");
-	/* Make sure fullname is valid UTF-8.  If not, try to convert it. */
-	if (!g_utf8_validate(fullname, -1, NULL))
-	{
-		gchar *tmp;
-		tmp = g_locale_to_utf8(fullname, -1, NULL, NULL, NULL);
-		if ((tmp == NULL) || (*tmp == '\0'))
-			fullname = _("Purple Person");
+	if (!fullname) {
+		purple_debug_info("bonjour", "Unable to look up First and Last name or Username from system; using defaults.\n");
+		return FALSE;
 	}
 
-#else
+	g_free(default_firstname);
+	g_free(default_lastname);
+
+	/* Split the real name into a first and last name */
+	splitpoint = strchr(fullname, ' ');
+	if (splitpoint != NULL) {
+		default_firstname = g_strndup(fullname, splitpoint - fullname);
+		default_lastname = g_strdup(&splitpoint[1]);
+	} else {
+		default_firstname = g_strdup(fullname);
+		default_lastname = g_strdup("");
+	}
+	g_free(fullname);
+
+
+	for(; tmp != NULL; tmp = tmp->next) {
+		option = tmp->data;
+		if (strcmp("first", purple_account_option_get_setting(option)) == 0)
+			purple_account_option_set_default_string(option, default_firstname);
+		else if (strcmp("last", purple_account_option_get_setting(option)) == 0)
+			purple_account_option_set_default_string(option, default_lastname);
+	}
+
+	return FALSE;
+}
+
+static gpointer _win32_name_lookup_thread(gpointer data) {
+	gchar *fullname = NULL;
 	wchar_t username[UNLEN + 1];
 	DWORD dwLenUsername = UNLEN + 1;
 
-	if (!GetUserNameW((LPWSTR) &username, &dwLenUsername))
-		purple_debug_warning("bonjour", "Unable to look up username\n");
+	GetUserNameW((LPWSTR) &username, &dwLenUsername);
 
 	if (username != NULL && *username != '\0') {
 		LPBYTE servername = NULL;
@@ -525,7 +578,7 @@ initialize_default_account_values()
 
 		NetGetDCName(NULL, NULL, &servername);
 
-		purple_debug_info("bonjour", "Looking up the full name from the %s.\n", (servername ? "domain controller" : "local machine"));
+		/* purple_debug_info("bonjour", "Looking up the full name from the %s.\n", (servername ? "domain controller" : "local machine")); */
 
 		if (NetUserGetInfo((LPCWSTR) servername, username, 10, &info) == NERR_Success
 				&& info != NULL && ((LPUSER_INFO_10) info)->usri10_full_name != NULL
@@ -536,7 +589,7 @@ initialize_default_account_values()
 		}
 		/* Fall back to the local machine if we didn't get the full name from the domain controller */
 		else if (servername != NULL) {
-			purple_debug_info("bonjour", "Looking up the full name from the local machine");
+			/* purple_debug_info("bonjour", "Looking up the full name from the local machine"); */
 
 			if (info != NULL) NetApiBufferFree(info);
 			info = NULL;
@@ -552,20 +605,54 @@ initialize_default_account_values()
 
 		if (info != NULL) NetApiBufferFree(info);
 		if (servername != NULL) NetApiBufferFree(servername);
+
+		if (!fullname)
+			fullname = g_utf16_to_utf8(username, -1, NULL, NULL, NULL);
 	}
 
-	if (!fullname) {
-		if (username != NULL && *username != '\0')
-			fullname = g_utf16_to_utf8(username, -1, NULL, NULL, NULL);
-		else
-			fullname = g_strdup(_("Purple Person"));
-	}
+	purple_timeout_add(0, _set_default_name_cb, fullname);
+
+	return NULL;
+}
 #endif
+
+static void
+initialize_default_account_values()
+{
+#ifndef _WIN32
+	struct passwd *info;
+#endif
+	const char *fullname = NULL, *splitpoint, *tmp;
+	char hostname[255];
+	gchar *conv = NULL;
+
+#ifndef _WIN32
+	/* Try to figure out the user's real name */
+	info = getpwuid(getuid());
+	if ((info != NULL) && (info->pw_gecos != NULL) && (info->pw_gecos[0] != '\0'))
+		fullname = info->pw_gecos;
+	else if ((info != NULL) && (info->pw_name != NULL) && (info->pw_name[0] != '\0'))
+		fullname = info->pw_name;
+	else if (((fullname = getlogin()) != NULL) && (fullname[0] == '\0'))
+		fullname = NULL;
+#else
+	/* The Win32 username lookup functions are synchronous so we do it in a thread */
+	g_thread_create(_win32_name_lookup_thread, NULL, FALSE, NULL);
+#endif
+
+	/* Make sure fullname is valid UTF-8.  If not, try to convert it. */
+	if (fullname != NULL && !g_utf8_validate(fullname, -1, NULL)) {
+		fullname = conv = g_locale_to_utf8(fullname, -1, NULL, NULL, NULL);
+		if (conv == NULL || *conv == '\0')
+			fullname = NULL;
+	}
+
+	if (fullname == NULL)
+		fullname = _("Purple Person");
 
 	/* Split the real name into a first and last name */
 	splitpoint = strchr(fullname, ' ');
-	if (splitpoint != NULL)
-	{
+	if (splitpoint != NULL) {
 		default_firstname = g_strndup(fullname, splitpoint - fullname);
 		tmp = &splitpoint[1];
 
@@ -577,22 +664,18 @@ initialize_default_account_values()
 			default_lastname = g_strndup(tmp, splitpoint - tmp);
 		else
 			default_lastname = g_strdup(tmp);
-	}
-	else
-	{
+	} else {
 		default_firstname = g_strdup(fullname);
 		default_lastname = g_strdup("");
 	}
 
-#ifdef _WIN32
-	g_free(fullname);
-#endif
+	g_free(conv);
 
 	/* Try to figure out a good host name to use */
 	/* TODO: Avoid 'localhost,' if possible */
 	if (gethostname(hostname, 255) != 0) {
 		purple_debug_warning("bonjour", "Error when getting host name: %s.  Using \"localhost.\"\n",
-				strerror(errno));
+				g_strerror(errno));
 		strcpy(hostname, "localhost");
 	}
 	default_hostname = g_strdup(hostname);

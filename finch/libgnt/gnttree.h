@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef GNT_TREE_H
@@ -325,6 +325,16 @@ gboolean gnt_tree_get_choice(GntTree *tree, void *key);
 void gnt_tree_set_row_flags(GntTree *tree, void *key, GntTextFormatFlags flags);
 
 /**
+ * Set color for the text in a row in the tree.
+ *
+ * @param tree   The tree
+ * @param key    The key for the row
+ * @param color  The color
+ * @since 2.4.0
+ */
+void gnt_tree_set_row_color(GntTree *, void *, int);
+
+/**
  * Select a row.
  *
  * @param tree  The tree
@@ -383,6 +393,8 @@ void gnt_tree_set_col_width(GntTree *tree, int col, int width);
  *
  * @see gnt_tree_set_column_titles
  * @see gnt_tree_set_show_title
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 void gnt_tree_set_column_title(GntTree *tree, int index, const char *title);
 
@@ -486,6 +498,8 @@ void gnt_tree_set_column_visible(GntTree *tree, int col, gboolean vis);
  *
  * @see gnt_tree_set_col_width
  * @see gnt_tree_set_column_width_ratio
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 void gnt_tree_set_column_resizable(GntTree *tree, int col, gboolean res);
 
@@ -505,6 +519,8 @@ void gnt_tree_set_column_is_binary(GntTree *tree, int col, gboolean bin);
  * @param tree  The tree
  * @param col   The index of the column
  * @param right @c TRUE if the text in the column should be right aligned
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 void gnt_tree_set_column_is_right_aligned(GntTree *tree, int col, gboolean right);
 
@@ -519,6 +535,8 @@ void gnt_tree_set_column_is_right_aligned(GntTree *tree, int col, gboolean right
  *
  * @see gnt_tree_set_col_width
  * @see gnt_tree_set_column_resizable
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 void gnt_tree_set_column_width_ratio(GntTree *tree, int cols[]);
 
@@ -527,6 +545,8 @@ void gnt_tree_set_column_width_ratio(GntTree *tree, int cols[]);
  *
  * @param tree   The tree
  * @param col    The index of the column
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 void gnt_tree_set_search_column(GntTree *tree, int col);
 
@@ -535,6 +555,8 @@ void gnt_tree_set_search_column(GntTree *tree, int col);
  *
  * @param tree   The tree
  * @return  @c TRUE if the user is searching, @c FALSE otherwise.
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 gboolean gnt_tree_is_searching(GntTree *tree);
 
@@ -547,6 +569,8 @@ gboolean gnt_tree_is_searching(GntTree *tree);
  *              string and the content of row in the search column.
  *              If the function returns @c TRUE, the row is dislayed,
  *              otherwise it's not.
+ *
+ * @since 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 void gnt_tree_set_search_function(GntTree *tree,
 		gboolean (*func)(GntTree *tree, gpointer key, const char *search, const char *current));

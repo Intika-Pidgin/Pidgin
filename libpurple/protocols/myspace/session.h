@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _MYSPACE_SESSION_H
@@ -45,6 +45,7 @@ typedef struct _MsimSession
 	guint next_rid;                     /**< Next request/response ID */
 	time_t last_comm;                   /**< Time received last communication */
 	guint inbox_status;                 /**< Bit field of inbox notifications */
+	guint inbox_handle;                 /**< The handle for the mail check timer */
 } MsimSession;
 
 /* Check if an MsimSession is valid */

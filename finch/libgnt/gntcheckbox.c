@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "gntcheckbox.h"
@@ -43,13 +43,13 @@ gnt_check_box_draw(GntWidget *widget)
 	else
 		type = GNT_COLOR_NORMAL;
 	
-	wbkgdset(widget->window, '\0' | COLOR_PAIR(type));
+	wbkgdset(widget->window, '\0' | gnt_color_pair(type));
 
 	text = g_strdup_printf("[%c]", cb->checked ? 'X' : ' ');
 	mvwaddstr(widget->window, 0, 0, text);
 	g_free(text);
 
-	wbkgdset(widget->window, '\0' | COLOR_PAIR(GNT_COLOR_NORMAL));
+	wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_NORMAL));
 	mvwaddstr(widget->window, 0, 4, GNT_BUTTON(cb)->priv->text);
 	
 	GNTDEBUG;

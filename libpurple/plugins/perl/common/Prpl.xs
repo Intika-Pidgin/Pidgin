@@ -21,13 +21,15 @@ purple_prpl_get_statuses(account, presence)
 	Purple::Account account
 	Purple::Presence presence
 PREINIT:
-	GList *l;
+	GList *l, *ll;
 PPCODE:
-	for (l = purple_prpl_get_statuses(account,presence); l != NULL; l = l->next) {
-		/* XXX Someone please test and make sure this is the right
-		 * type for these things. */
+	ll = purple_prpl_get_statuses(account,presence);
+	for (l = ll; l != NULL; l = l->next) {
 		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::Status")));
 	}
+	/* We can free the list here but the script needs to free the
+	 * Purple::Status 'objects' itself. */
+	g_list_free(ll);
 
 void
 purple_prpl_got_account_idle(account, idle, idle_time)
@@ -52,3 +54,20 @@ purple_prpl_got_user_login_time(account, name, login_time)
 	Purple::Account account
 	const char *name
 	time_t login_time
+
+int
+purple_prpl_send_raw(gc, str)
+	Purple::Connection gc
+	const char *str
+PREINIT:
+	PurplePluginProtocolInfo *prpl_info;
+CODE:
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (prpl_info && prpl_info->send_raw != NULL) {
+		RETVAL = prpl_info->send_raw(gc, str, strlen(str));
+	} else {
+		RETVAL = 0;
+	}
+OUTPUT:
+	RETVAL
+

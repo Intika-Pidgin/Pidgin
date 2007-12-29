@@ -1,8 +1,9 @@
 /*
  * @file gtksession.c X Windows session management API
  * @ingroup pidgin
- *
- * Pidgin is the legal property of its developers, whose names are too numerous
+ */
+
+/* Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -18,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -35,6 +36,7 @@
 #include <gdk/gdkx.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <gdk/gdk.h>
 
 #define ERROR_LENGTH 512
 
@@ -80,7 +82,7 @@ static void ice_connection_watch(IceConn connection, IcePointer client_data,
 
 	if (opening) {
 		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
-				   "Handling new ICE connection... ");
+				   "Handling new ICE connection... \n");
 
 		/* ensure ICE connection is not passed to child processes */
 		fcntl(IceConnectionNumber(connection), F_SETFD, FD_CLOEXEC);
@@ -94,7 +96,7 @@ static void ice_connection_watch(IceConn connection, IcePointer client_data,
 		*watch_data = conninfo;
 	} else {
 		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
-				   "Handling closed ICE connection... ");
+				   "Handling closed ICE connection... \n");
 
 		/* get the input ID back and stop watching it */
 		conninfo = (struct ice_connection_info*) *watch_data;
@@ -140,7 +142,7 @@ static void ice_init() {
 /* my magic utility function */
 
 static gchar **session_make_command(gchar *client_id, gchar *config_dir) {
-	gint i = 2;
+	gint i = 4;
 	gint j = 0;
 	gchar **ret;
 
@@ -159,6 +161,9 @@ static gchar **session_make_command(gchar *client_id, gchar *config_dir) {
 		ret[j++] = g_strdup("--config");
 		ret[j++] = g_strdup(config_dir);
 	}
+
+	ret[j++] = g_strdup("--display");
+	ret[j++] = g_strdup((gchar *)gdk_display_get_name(gdk_display_get_default()));
 
 	ret[j++] = NULL;
 

@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PURPLE_STATUS_H_
 #define _PURPLE_STATUS_H_
@@ -94,6 +94,10 @@ typedef enum
 /**
  * A primitive defining the basic structure of a status type.
  */
+/*
+ * If you add a value to this enum, make sure you update
+ * the status_primitive_map array in status.c.
+ */
 typedef enum
 {
 	PURPLE_STATUS_UNSET = 0,
@@ -104,6 +108,7 @@ typedef enum
 	PURPLE_STATUS_AWAY,
 	PURPLE_STATUS_EXTENDED_AWAY,
 	PURPLE_STATUS_MOBILE,
+	PURPLE_STATUS_TUNE,
 	PURPLE_STATUS_NUM_PRIMITIVES
 
 } PurpleStatusPrimitive;
@@ -112,6 +117,17 @@ typedef enum
 #include "blist.h"
 #include "conversation.h"
 #include "value.h"
+
+#define PURPLE_TUNE_ARTIST	"tune_artist"
+#define PURPLE_TUNE_TITLE	"tune_title"
+#define PURPLE_TUNE_ALBUM	"tune_album"
+#define PURPLE_TUNE_GENRE	"tune_genre"
+#define PURPLE_TUNE_COMMENT	"tune_comment"
+#define PURPLE_TUNE_TRACK	"tune_track"
+#define PURPLE_TUNE_TIME	"tune_time"
+#define PURPLE_TUNE_YEAR	"tune_year"
+#define PURPLE_TUNE_URL		"tune_url"
+#define PURPLE_TUNE_FULL	"tune_full"
 
 #ifdef __cplusplus
 extern "C" {

@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef GNT_LINE_H
@@ -67,9 +67,7 @@ struct _GntLineClass
 G_BEGIN_DECLS
 
 /**
- * 
- *
- * @return
+ * @return GType for GntLine.
  */
 GType gnt_line_get_gtype(void);
 
@@ -77,10 +75,11 @@ GType gnt_line_get_gtype(void);
 #define gnt_vline_new() gnt_line_new(TRUE)
 
 /**
- * 
- * @param vertical
+ * Create new line
  *
- * @return
+ * @param vertical  @c TRUE if the line should be vertical, @c FALSE for a horizontal line.
+ *
+ * @return  The newly created line.
  */
 GntWidget * gnt_line_new(gboolean vertical);
 

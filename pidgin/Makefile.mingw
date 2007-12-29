@@ -20,6 +20,8 @@ WINAPP := -mwindows
 
 LDFLAGS := $(WINAPP)
 
+#CFLAGS += -DWINPIDGIN_USE_GLIB_IO_CHANNEL=1
+
 ##
 ## INCLUDE PATHS
 ##
@@ -56,10 +58,11 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 PIDGIN_C_SRC =	\
 			gtkaccount.c \
 			gtkblist.c \
-			gtkconn.c \
-			gtkconv.c \
+			gtkcertmgr.c \
 			gtkcellrendererexpander.c \
 			gtkcellrendererprogress.c \
+			gtkconn.c \
+			gtkconv.c \
 			gtkdebug.c \
 			gtkdialogs.c \
 			gtkdnd-hints.c \
@@ -90,7 +93,9 @@ PIDGIN_C_SRC =	\
 			gtkthemes.c \
 			gtkutils.c \
 			gtkwhiteboard.c \
+			minidialog.c \
 			pidginstock.c \
+			pidgintooltip.c \
 			win32/MinimizeToTray.c \
 			win32/gtkdocklet-win32.c \
 			win32/gtkwin32dep.c \

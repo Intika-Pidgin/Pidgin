@@ -19,33 +19,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
+#include "msnutils.h"
 #include "slpcall.h"
 #include "slpsession.h"
 
 #include "slp.h"
 
 /* #define MSN_DEBUG_SLPCALL */
-
-/**************************************************************************
- * Util
- **************************************************************************/
-
-static char *
-rand_guid()
-{
-	return g_strdup_printf("%4X%4X-%4X-%4X-%4X-%4X%4X%4X",
-			rand() % 0xAAFF + 0x1111,
-			rand() % 0xAAFF + 0x1111,
-			rand() % 0xAAFF + 0x1111,
-			rand() % 0xAAFF + 0x1111,
-			rand() % 0xAAFF + 0x1111,
-			rand() % 0xAAFF + 0x1111,
-			rand() % 0xAAFF + 0x1111,
-			rand() % 0xAAFF + 0x1111);
-}
 
 /**************************************************************************
  * Main

@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _MSN_DIRECTCONN_H_
 #define _MSN_DIRECTCONN_H_
@@ -52,9 +52,7 @@ struct _MsnDirectConn
 MsnDirectConn *msn_directconn_new(MsnSlpLink *slplink);
 gboolean msn_directconn_connect(MsnDirectConn *directconn,
 								const char *host, int port);
-#if 0
 void msn_directconn_listen(MsnDirectConn *directconn);
-#endif
 void msn_directconn_send_msg(MsnDirectConn *directconn, MsnMessage *msg);
 void msn_directconn_parse_nonce(MsnDirectConn *directconn, const char *nonce);
 void msn_directconn_destroy(MsnDirectConn *directconn);

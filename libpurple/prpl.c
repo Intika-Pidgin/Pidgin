@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -199,8 +199,10 @@ void purple_prpl_got_user_status_deactive(PurpleAccount *account, const char *na
 		if(NULL == status)
 			continue;
 
-		purple_status_set_active(status, FALSE);
-		purple_blist_update_buddy_status(buddy, status);
+		if (purple_status_is_active(status)) {
+			purple_status_set_active(status, FALSE);
+			purple_blist_update_buddy_status(buddy, status);
+		}
 	}
 
 	g_slist_free(list);
@@ -224,6 +226,9 @@ do_prpl_change_account_status(PurpleAccount *account,
 	{
 		if (!purple_account_is_disconnected(account))
 			purple_account_disconnect(account);
+		/* Clear out the unsaved password if we're already disconnected and we switch to offline status */
+		else if (!purple_account_get_remember_password(account))
+			purple_account_set_password(account, NULL);
 		return;
 	}
 
@@ -253,8 +258,8 @@ purple_prpl_change_account_status(PurpleAccount *account,
 								PurpleStatus *old_status, PurpleStatus *new_status)
 {
 	g_return_if_fail(account    != NULL);
-	g_return_if_fail(old_status != NULL);
 	g_return_if_fail(new_status != NULL);
+	g_return_if_fail(!purple_status_is_exclusive(new_status) || old_status != NULL);
 
 	do_prpl_change_account_status(account, old_status, new_status);
 

@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "finch.h"
 
@@ -203,7 +203,7 @@ show_usage(const char *name, gboolean terse)
 	char *text;
 
 	if (terse) {
-		text = g_strdup_printf(_("%s. Try `%s -h' for more information.\n"), VERSION, name);
+		text = g_strdup_printf(_("%s. Try `%s -h' for more information.\n"), DISPLAY_VERSION, name);
 	} else {
 		text = g_strdup_printf(_("%s\n"
 		       "Usage: %s [OPTION]...\n\n"
@@ -211,7 +211,7 @@ show_usage(const char *name, gboolean terse)
 		       "  -d, --debug         print debugging messages to stdout\n"
 		       "  -h, --help          display this help and exit\n"
 		       "  -n, --nologin       don't automatically login\n"
-		       "  -v, --version       display the current version and exit\n"), VERSION, name);
+		       "  -v, --version       display the current version and exit\n"), DISPLAY_VERSION, name);
 	}
 
 	purple_print_utf8_to_console(stdout, text);
@@ -297,7 +297,7 @@ init_libpurple(int argc, char **argv)
 	if (opt_version) {
 		/* Translators may want to transliterate the name.
 		 It is not to be translated. */
-		printf("%s %s\n", _("Finch"), VERSION);
+		printf("%s %s\n", _("Finch"), DISPLAY_VERSION);
 		return 0;
 	}
 
@@ -360,9 +360,7 @@ init_libpurple(int argc, char **argv)
 	purple_set_blist(purple_blist_new());
 	purple_blist_load();
 
-	/* TODO: Move prefs loading into purple_prefs_init() */
-	purple_prefs_load();
-	purple_prefs_update_old();
+	/* TODO: should this be moved into finch_prefs_init() ? */
 	finch_prefs_update_old();
 
 	/* load plugins we had when we quit */
@@ -412,20 +410,20 @@ int main(int argc, char *argv[])
 {
 	signal(SIGPIPE, SIG_IGN);
 
+	g_thread_init(NULL);
+
 	g_set_prgname("Finch");
 #if GLIB_CHECK_VERSION(2,2,0)
 	g_set_application_name(_("Finch"));
 #endif
 
-	gnt_init();
-
-	gnt_start(&argc, &argv);
-
-	gnt_main();
+	if (gnt_start(&argc, &argv)) {
+		gnt_main();
 
 #ifdef STANDALONE
-	purple_core_quit();
+		purple_core_quit();
 #endif
+	}
 
 	return 0;
 }

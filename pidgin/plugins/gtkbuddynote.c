@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 #include "internal.h"
 
@@ -31,8 +31,11 @@ append_to_tooltip(PurpleBlistNode *node, GString *text, gboolean full)
 		const gchar *note = purple_blist_node_get_string(node, "notes");
 
 		if ((note != NULL) && (*note != '\0')) {
+			char *tmp;
+			purple_markup_html_to_xhtml(note, NULL, &tmp);
 			g_string_append_printf(text, _("\n<b>Buddy Note</b>: %s"),
-			                       note);
+			                       tmp);
+			g_free(tmp);
 		}
 	}
 }
@@ -69,7 +72,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,                        /**< priority */
 	"gtkbuddynote",                                 /**< id */
 	N_("Buddy Notes"),                              /**< name */
-	VERSION,                                        /**< version */
+	DISPLAY_VERSION,                                /**< version */
 	N_("Store notes on particular buddies."),       /**< summary */
 	N_("Adds the option to store notes for buddies "
 	   "on your buddy list."),                      /**< description */

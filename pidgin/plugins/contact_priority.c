@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
 #include "internal.h"
@@ -157,6 +157,7 @@ get_config_frame(PurplePlugin *plugin)
 	gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 0);
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 
 	return ret;
 }
@@ -185,7 +186,7 @@ static PurplePluginInfo info =
 
 	CONTACT_PRIORITY_PLUGIN_ID,                       /**< id             */
 	N_("Contact Priority"),                           /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
                                                     /**< summary        */
 	N_("Allows for controlling the values associated with different buddy states."),
                                                     /**< description    */

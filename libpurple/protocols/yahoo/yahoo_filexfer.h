@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _YAHOO_FILEXFER_H_
 #define _YAHOO_FILEXFER_H_
@@ -28,6 +28,16 @@
  * Process ymsg events, particular IMViroments like Doodle
  */
 void yahoo_process_p2pfilexfer( PurpleConnection *gc, struct yahoo_packet *pkt );
+
+/**
+ * Process ymsg version 7 file receive invites.
+ */
+void yahoo_process_y7_filetransfer(PurpleConnection *gc, struct yahoo_packet *pkt);
+
+/**
+ * Process ymsg version 7 file receive connection setups.
+ */
+void yahoo_process_y7_filetransfer_info(PurpleConnection *gc, struct yahoo_packet *pkt);
 
 /**
  * Process ymsg file receive invites.

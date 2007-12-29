@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _MSN_MSG_H_
 #define _MSN_MSG_H_
@@ -33,6 +33,12 @@ typedef struct _MsnMessage MsnMessage;
 #include "transaction.h"
 
 typedef void (*MsnMsgCb)(MsnMessage *, void *data);
+
+#define MSG_BODY_DEM	"\r\n\r\n"
+#define MSG_LINE_DEM	"\r\n"
+
+#define MSG_OIM_BODY_DEM	"\n\n"
+#define MSG_OIM_LINE_DEM	"\n"
 
 /*
 typedef enum
@@ -180,7 +186,8 @@ MsnMessage *msn_message_new_from_cmd(MsnSession *session, MsnCommand *cmd);
  * @param payload_len The length of the payload.
  */
 void msn_message_parse_payload(MsnMessage *msg, const char *payload,
-							   size_t payload_len);
+							   size_t payload_len,
+						  const char *line_dem,const char *body_dem);
 
 /**
  * Destroys a message.

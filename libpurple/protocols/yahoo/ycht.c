@@ -22,7 +22,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include <string.h>
@@ -285,7 +285,8 @@ static void ycht_packet_send_write_cb(gpointer data, gint source, PurpleInputCon
 	else if (ret <= 0) {
 		/* TODO: error handling */
 /*
-		purple_connection_error(purple_account_get_connection(irc->account),
+		purple_connection_error_reason(purple_account_get_connection(irc->account),
+			      PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			      _("Server has disconnected"));
 */
 		return;
@@ -473,7 +474,7 @@ static void ycht_pending(gpointer data, gint source, PurpleInputCondition cond)
 			return;
 
 		tmp = g_strdup_printf(_("Lost connection with server\n%s"),
-				strerror(errno));
+				g_strerror(errno));
 		ycht_connection_error(ycht, tmp);
 		g_free(tmp);
 		return;

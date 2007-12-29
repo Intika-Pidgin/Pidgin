@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "object.h"
 #include "debug.h"
@@ -154,10 +154,8 @@ msn_object_set_creator(MsnObject *obj, const char *creator)
 {
 	g_return_if_fail(obj != NULL);
 
-	if (obj->creator != NULL)
-		g_free(obj->creator);
-
-	obj->creator = (creator == NULL ? NULL : g_strdup(creator));
+	g_free(obj->creator);
+	obj->creator = g_strdup(creator);
 }
 
 void
@@ -181,10 +179,8 @@ msn_object_set_location(MsnObject *obj, const char *location)
 {
 	g_return_if_fail(obj != NULL);
 
-	if (obj->location != NULL)
-		g_free(obj->location);
-
-	obj->location = (location == NULL ? NULL : g_strdup(location));
+	g_free(obj->location);
+	obj->location = g_strdup(location);
 }
 
 void
@@ -192,10 +188,8 @@ msn_object_set_friendly(MsnObject *obj, const char *friendly)
 {
 	g_return_if_fail(obj != NULL);
 
-	if (obj->friendly != NULL)
-		g_free(obj->friendly);
-
-	obj->friendly = (friendly == NULL ? NULL : g_strdup(friendly));
+	g_free(obj->friendly);
+	obj->friendly = g_strdup(friendly);
 }
 
 void
@@ -203,10 +197,8 @@ msn_object_set_sha1d(MsnObject *obj, const char *sha1d)
 {
 	g_return_if_fail(obj != NULL);
 
-	if (obj->sha1d != NULL)
-		g_free(obj->sha1d);
-
-	obj->sha1d = (sha1d == NULL ? NULL : g_strdup(sha1d));
+	g_free(obj->sha1d);
+	obj->sha1d = g_strdup(sha1d);
 }
 
 void
@@ -214,10 +206,8 @@ msn_object_set_sha1c(MsnObject *obj, const char *sha1c)
 {
 	g_return_if_fail(obj != NULL);
 
-	if (obj->sha1c != NULL)
-		g_free(obj->sha1c);
-
-	obj->sha1c = (sha1c == NULL ? NULL : g_strdup(sha1c));
+	g_free(obj->sha1c);
+	obj->sha1c = g_strdup(sha1c);
 }
 
 const char *

@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
 #include "page.h"
@@ -74,9 +74,7 @@ msn_page_set_body(MsnPage *page, const char *body)
 	g_return_if_fail(page != NULL);
 	g_return_if_fail(body != NULL);
 
-	if (page->body != NULL)
-		g_free(page->body);
-
+	g_free(page->body);
 	page->body = g_strdup(body);
 }
 

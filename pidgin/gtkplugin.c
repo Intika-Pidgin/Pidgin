@@ -1,8 +1,9 @@
 /**
  * @file gtkplugin.c GTK+ Plugins support
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "pidgin.h"
@@ -30,6 +31,7 @@
 #include "debug.h"
 #include "prefs.h"
 #include "request.h"
+#include "pidgintooltip.h"
 
 #include <string.h>
 
@@ -302,7 +304,24 @@ static void plugin_toggled_stage_two(PurplePlugin *plug, GtkTreeModel *model, Gt
 	{
 		pidgin_set_cursor(plugin_dialog, GDK_WATCH);
 
-		purple_plugin_unload(plug);
+		if (!purple_plugin_unload(plug))
+		{
+			const char *primary = _("Could not unload plugin");
+			const char *reload = _("The plugin could not be unloaded now, but will be disabled at the next startup.");
+
+			if (!plug->error)
+			{
+				purple_notify_warning(NULL, NULL, primary, reload);
+			}
+			else
+			{
+				char *tmp = g_strdup_printf("%s\n\n%s", reload, plug->error);
+				purple_notify_warning(NULL, NULL, primary, tmp);
+				g_free(tmp);
+			}
+
+			purple_plugin_disable(plug);
+		}
 
 		pidgin_clear_cursor(plugin_dialog);
 	}
@@ -513,6 +532,58 @@ show_plugin_prefs_cb(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *co
 	plugin_dialog_response_cb(dialog, PIDGIN_RESPONSE_CONFIGURE, sel);
 }
 
+static gboolean
+pidgin_plugins_paint_tooltip(GtkWidget *tipwindow, gpointer data)
+{
+	PangoLayout *layout = g_object_get_data(G_OBJECT(tipwindow), "tooltip-plugin");
+	gtk_paint_layout(tipwindow->style, tipwindow->window, GTK_STATE_NORMAL, FALSE,
+			NULL, tipwindow, "tooltip",
+			6, 6, layout);
+	return TRUE;
+}
+
+static gboolean
+pidgin_plugins_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
+		gpointer data, int *w, int *h)
+{
+	GtkTreeIter iter;
+	GtkTreeView *treeview = GTK_TREE_VIEW(data);
+	PurplePlugin *plugin = NULL;
+	GtkTreeModel *model = gtk_tree_view_get_model(treeview);
+	PangoLayout *layout;
+	int width, height;
+	char *markup, *name, *desc, *author;
+
+	if (!gtk_tree_model_get_iter(model, &iter, path))
+		return FALSE;
+
+	gtk_tree_model_get(model, &iter, 2, &plugin, -1);
+
+	markup = g_strdup_printf("<span size='x-large' weight='bold'>%s</span>\n<b>Description:</b> %s\n<b>Author:</b> %s",
+			name = g_markup_escape_text(purple_plugin_get_name(plugin), -1),
+			desc = g_markup_escape_text(purple_plugin_get_description(plugin), -1),
+			author = g_markup_escape_text(purple_plugin_get_author(plugin), -1));
+
+	layout = gtk_widget_create_pango_layout(tipwindow, NULL);
+	pango_layout_set_markup(layout, markup, -1);
+	pango_layout_set_wrap(layout, PANGO_WRAP_WORD);
+	pango_layout_set_width(layout, 600000);
+	pango_layout_get_size(layout, &width, &height);
+	g_object_set_data_full(G_OBJECT(tipwindow), "tooltip-plugin", layout, g_object_unref);
+
+	if (w)
+		*w = PANGO_PIXELS(width) + 12;
+	if (h)
+		*h = PANGO_PIXELS(height) + 12;
+
+	g_free(markup);
+	g_free(name);
+	g_free(desc);
+	g_free(author);
+
+	return TRUE;
+}
+
 void pidgin_plugin_dialog_show()
 {
 	GtkWidget *sw;
@@ -594,6 +665,10 @@ void pidgin_plugin_dialog_show()
 	gtk_tree_view_set_search_column(GTK_TREE_VIEW(event_view), 1);
 	gtk_tree_view_set_search_equal_func(GTK_TREE_VIEW(event_view),
 				pidgin_tree_view_search_equal_func, NULL, NULL);
+
+	pidgin_tooltip_setup_for_treeview(event_view, event_view,
+			pidgin_plugins_create_tooltip,
+			pidgin_plugins_paint_tooltip);
 
 	expander = gtk_expander_new(_("<b>Plugin Details</b>"));
 	gtk_expander_set_use_markup(GTK_EXPANDER(expander), TRUE);

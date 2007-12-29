@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -120,7 +120,8 @@ gboolean qq_sendqueue_timeout_callback(gpointer data)
 			case QQ_CMD_KEEP_ALIVE:
 				if (qd->logged_in) {
 					purple_debug(PURPLE_DEBUG_ERROR, "QQ", "Connection lost!\n");
-					purple_connection_error(gc, _("Connection lost"));
+					purple_connection_error_reason(gc,
+						PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _("Connection lost"));
 					qd->logged_in = FALSE;
 				}
 				p->resend_times = -1;
@@ -128,7 +129,8 @@ gboolean qq_sendqueue_timeout_callback(gpointer data)
 			case QQ_CMD_LOGIN:
 			case QQ_CMD_REQUEST_LOGIN_TOKEN:
 				if (!qd->logged_in)	/* cancel login progress */
-					purple_connection_error(gc, _("Login failed, no reply"));
+					purple_connection_error_reason(gc,
+						PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _("Login failed, no reply"));
 				p->resend_times = -1;
 				break;
 			default:{

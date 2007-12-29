@@ -1,16 +1,205 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-Version 2.2.0 (??/??/????):
+version 2.4.0 (??/??/????):
+	libpurple:
+		Added:
+		* purple_certificate_add_ca_search_path. (Florian Quèze)
+		* purple_gai_strerror.
+		* purple_major_version, purple_minor_version,
+		  purple_micro_version variables are exported by version.h,
+		  giving the version of libpurple in use at runtime.
+
+	Pidgin:
+		Added:
+		* pidgin_create_dialog to create a window that closes on escape. Also
+		  added utility functions pidgin_dialog_get_vbox_with_properties,
+		  pidgin_dialog_get_vbox, pidgin_dialog_get_action_area to access the
+		  contents in the created dialog. (Peter 'fmoo' Ruibal)
+		* pidgin_dialog_add_button to add buttons to a dialog created by
+		  pidgin_create_dialog.
+		* GTK_IMHTML_NO_SMILEY for GtkIMHtmlOptions means not to look for
+		  smileys in the text. (Florian 'goutnet' Delizy)
+		* pidgin_auto_parent_window to make a window transient for a suitable
+		  parent window.
+		* pidgin_tooltip_setup_for_treeview, pidgin_tooltip_destroy,
+		  pidgin_tooltip_show and pidgin_tooltip_setup_for_widget to simplify
+		  the process of drawing tooltips.
+
+	Finch:
+		libgnt:
+		* Added gnt_tree_set_row_color to set the color for a row in a tree.
+		* Added gnt_style_get_string_list
+		* Added gnt_color_add_pair to define a new color.
+		* Added gnt_colors_get_color to get an ncurses color value from a
+		  string.
+		* Added gnt_style_get_color to get a color pair from an entry in
+		  ~/.gntrc
+
+version 2.3.0 (11/24/2007):
+	libpurple:
+		Added:
+		* a PurpleConversation field and an alias field in PurpleConvMessage
+		* account-authorization signals (see account-signals.dox for
+		  details) (Stefan Ott)
+		* libpurple/purple.h, which includes #define's and #include's
+		  required to compile stand-alone plugins
+		* PURPLE_STATUS_TUNE as a new PurpleStatusPrimitive
+		* purple_plugin_disable(), which is intended to be called when
+		  a purple_plugin_unload()--which was called when a user tried
+		  to unload a plugin--fails.  This then prevents the plugin
+		  from being saved in the saved plugins list, so it'll won't
+		  be loaded at the next startup.
+		* PurpleDisconnectReason enumeration of machine-readable
+		  types of connection error.
+		* purple_connection_error_reason(), to be used by prpls
+		  (instead of purple_connection_error() and setting
+		  gc->wants_to_die) to report errors along with a
+		  PurpleDisconnectReason.
+		* PurpleConnectionUiOps.report_disconnect_reason, to be
+		  implemented by UIs (rather than .report_disconnect) if
+		  they want to use the reported PurpleDisconnectReason
+		  to give a more specific error.
+		* A connection-error signal, fired just after the UiOp is
+		  called with the same information.
+		* purple_connection_reason_is_fatal(), acting as a hint
+		  to whether automatic reconnection should be attempted
+		  after a connection error (rather than checking
+		  gc->wants_to_die).
+		* PurpleConnectionErrorInfo, a struct to hold a
+		  PurpleConnectionError and a const char *description.
+		* purple_account_get_current_error() to get the most recent
+		  PurpleConnectionError and description (or NULL if the
+		  account is happy with life), to allow bits of the UI to know
+		  the last error without caching it themselves (as
+		  PidginBuddyList does).
+		* purple_account_clear_current_error() to reset an account's
+		  error state to NULL.
+		* An account-error-changed signal, firing when
+		  purple_account_get_current_error()'s return value changes.
+
+		* PidginMiniDialog, a Gtk widget-ified version of
+		  pidgin_make_mini_dialog().
+
+		* purple_util_init()
+		* purple_util_uninit()
+
+		* purple_network_listen_map_external() to temporarily disable
+		  mapping ports externally via NAT-PMP or UPnP.
+
+		Changed:
+		* purple_plugin_unload() now honors the return value of a
+		  plugin's unload function and can actually return FALSE now.
+		* purple_plugin_unload() no longer does its own notifications
+		  when a dependent plugin fails to unload.  The UI should do
+		  something appropriate.
+
+		* pidgin_make_mini_dialog() now declares its return type to be
+		  GtkWidget * rather than void *.  This should not break any
+		  existing code since any code using it must already rely on
+		  the return type actually being GtkWidget * all along.
+
+		Deprecated:
+		* pidgin_dialogs_about()
+		* pidgin_log_show_contact()
+		* pidgin_log_show()
+		* pidgin_plugin_dialog_show()
+		* pidgin_pounce_editor_show()
+		* pidgin_pounces_manager_show()
+		* pidgin_syslog_show()
+
+		* purple_connection_error()
+		* pidgin_blist_update_account_error_state()
+		* PidginBuddyList.connection_errors
+
+		MSN:
+		* A new independant status type with PURPLE_STATUS_TUNE primitive, and
+		  PURPLE_TUNE_ARTIST, PURPLE_TUNE_ALBUM and PURPLE_TUNE_TITLE
+		  attributes.
+
+		XMPP:
+		* A new independant status type with PURPLE_STATUS_TUNE primitive, and
+		  PURPLE_TUNE_{ARTIST, TITLE, ALBUM, GENRE, COMMENT, TRACK, TIME,
+		  YEAR, URL} attributes.
+
+	Finch:
+		libgnt:
+		* Added gnt_color_pair, which will try to intelligenty set text
+		  attributes in place of colors if the terminal doesn't have color
+		  support. (Bug: #3560) All future code should use gnt_color_pair
+		  instead of COLOR_PAIR.
+		* Added gnt_menuitem_set_id and gnt_menuitem_get_id to set and get the
+		  string id of a menuitem respectively.
+		* Added gnt_window_get_accel_item, which returns a the id of a menuitem
+		  bound to a keystroke.
+		* Added gnt_menu_get_item to get a menuitem of the given id from a
+		  menu.
+		* Added gnt_menuitem_activate, which triggers the 'activate' signal on
+		  the menuitem and calls the callback function, if available.
+		* Added GntEntryKillRing in GntEntry.
+		* Added gnt_window_set_maximize and gnt_window_get_maximize, and
+		  GntWindowFlags enum.
+
+version 2.2.2 (??/??/????):
+	libpurple:
+		Changed:
+		* The size parameter of purple_util_write_data_to_file_absolute
+		  has been changed to gssize instead of a size_t to correctly
+		  indicate that -1 can be used for a nul-delimited string.
+		* The documentation for purple_savedstatuses_get_popular used to
+		  incorrectly claim that the active status is excluded from the
+		  returned list. The documentation has been corrected. Also, the
+		  function now returns a correct list when called with a value of 0.
+
+version 2.2.0 (09/13/2007):
+	libpurple:
+		Added:
+		* PURPLE_MESSAGE_INVISIBLE flag, which can be used by
+		  purple_conv_im_send_with_flags to send a message, but not display it
+		  in the conversation
+		* serv_send_attention(), serv_got_attention(), as well as send_attention 
+		  and attention_types in PurplePluginProtocolInfo. This new API is used
+		  for zapping in MySpaceIM, buzzing in Yahoo, and nudging in MSN.
+		* PurpleConvMessage structure to represent a message in a
+		  conversation. purple_conversation_message_get_sender,
+		  purple_conversation_message_get_message,
+		  purple_conversation_message_get_flags and
+		  purple_conversation_message_get_timestamp to get information about a
+		  PurpleConvMessage.
+		* purple_conversation_get_message_history() to retrieve a list of
+		  PurpleConvMessage's in a conversation, and
+		  purple_conversation_clear_message_history to clear the history.
+		* purple_certificate_* functions in libpurple/certificate.h - "A public-key certificate API"
+		* purple_ssl_get_peer_certificates() and associated field in PurpleSslOps to retrieve a server's presented SSL certificate chain.
+		* PurpleSslConnection::verifier to provide a "how to verify the peer's certificates" callback to the SSL handlers. See certificate.h for more on this.
+		* purple_ssl_connect_with_host_fd() to create an SSL connection from a file descriptor and provide a hostname with it to authenticate the peer against.
+
+		Changed:
+		* purple_prefs_load is now called within purple_prefs_init.
+		  The UI no longer needs to call it.
+		* writing-im-msg now receives the conversation name as the who
+		  argument if the caller of purple_conversation_write didn't
+		  provide a value for who.
+
 	Pidgin:
 		Added:
 		* pidgin_set_accessible_relations, sets up label-for and labelled-by
 		  ATK relations (broken out from pidgin_set_accessible_label)
+		* pidgin_conv_attach_to_conversation, to reattach the Pidgin UI to a
+		  conversation
+		* conversation-hiding and conversation-displayed signals.
+		* pidgin_text_combo_box_entry_new, pidgin_text_combo_box_entry_get_text
+		  and pidgin_text_combo_box_entry_set_text
+
+		Changed:
+		* pidgin_conversations_fill_menu now also adds a separator and a 'Show
+		  All' item if there are more than one conversations in the list.
 
 	Finch:
 		Added:
 		* finch_sound_is_enabled
 		* The reserved field in the FinchConv is now used to store information
 		  about the conversation (using FinchConversationFlag)
+		* finch_account_dialog_show
 
 		libgnt:
 		* gnt_slider_set_small_step, gnt_slider_set_large_step to allow more
@@ -18,7 +207,7 @@ Version 2.2.0 (??/??/????):
 		* gnt_util_parse_xhtml_to_textview to parse XHTML strings in a
 		  GntTextView (this works only if libxml2 is available)
 
-Version 2.1.1 (08/20/2007):
+version 2.1.1 (08/20/2007):
 	libpurple:
 		Changed:
 		* PurpleAccountUiOps.request_authorize's authorize_cb and
@@ -47,9 +236,6 @@ version 2.1.0 (7/28/2007):
 		* purple_core_ensure_single_instance
 		    This is for UIs to use to ensure only one copy is running.
 		* purple_dbus_is_owner
-		* purple_timeout_add_seconds
-		    Callers should prefer this to purple_timeout_add for timers
-		    longer than 1 second away.  Be aware of the rounding, though.
 		* purple_timeout_add_seconds
 		    Callers should prefer this to purple_timeout_add for timers
 		    longer than 1 second away.  Be aware of the rounding, though.

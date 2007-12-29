@@ -1,8 +1,9 @@
 /**
  * @file gtknotify.c GTK+ Notification API
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "pidgin.h"
@@ -165,16 +166,18 @@ reset_mail_dialog(GtkDialog *dialog)
 	mail_dialog = NULL;
 }
 
-static void
+static gboolean
 formatted_close_cb(GtkWidget *win, GdkEvent *event, void *user_data)
 {
 	purple_notify_close(PURPLE_NOTIFY_FORMATTED, win);
+	return FALSE;
 }
 
-static void
+static gboolean
 searchresults_close_cb(PidginNotifySearchResultsData *data, GdkEvent *event, gpointer user_data)
 {
 	purple_notify_close(PURPLE_NOTIFY_SEARCHRESULTS, data);
+	return FALSE;
 }
 
 static void
@@ -269,8 +272,9 @@ pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
 	primary_esc = g_markup_escape_text(primary, -1);
 	secondary_esc = (secondary != NULL) ? g_markup_escape_text(secondary, -1) : NULL;
 	g_snprintf(label_text, sizeof(label_text),
-			   "<span weight=\"bold\" size=\"larger\">%s</span>\n\n%s",
-			   primary_esc, (secondary ? secondary_esc : ""));
+			   "<span weight=\"bold\" size=\"larger\">%s</span>%s%s",
+			   primary_esc, (secondary ? "\n\n" : ""),
+			   (secondary ? secondary_esc : ""));
 	g_free(primary_esc);
 	g_free(secondary_esc);
 
@@ -281,6 +285,8 @@ pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
 	gtk_label_set_selectable(GTK_LABEL(label), TRUE);
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
+	pidgin_auto_parent_window(dialog);
 
 	gtk_widget_show_all(dialog);
 
@@ -412,31 +418,49 @@ pidgin_get_mail_dialog()
  * count > 0 mean non-detailed.
  */
 static void *
-pidgin_notify_add_mail(GtkTreeStore *treemodel, PurpleAccount *account, char *notification, const char *url, int count)
+pidgin_notify_add_mail(GtkTreeStore *treemodel, PurpleAccount *account, char *notification, const char *url, int count, gboolean clear)
 {
 	PidginNotifyMailData *data = NULL;
 	GtkTreeIter iter;
 	GdkPixbuf *icon;
 	gboolean new_n = TRUE;
 
-	icon = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
-
-	if (count > 0) {
+	if (count > 0 || clear) {
 		/* Allow only one non-detailed email notification for each account */
 		if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(treemodel), &iter)) {
+			gboolean advanced;
 			do {
+				advanced = FALSE;
 				gtk_tree_model_get(GTK_TREE_MODEL(treemodel), &iter,
 						PIDGIN_MAIL_DATA, &data, -1);
-				if (data->account == account && data->count > 0) {
-					new_n = FALSE;
-					g_free(data->url);
-					data->url = NULL;
-					mail_dialog->total_count -= data->count;
-					break;
+				if (data->account == account) {
+					if (clear) {
+#if GTK_CHECK_VERSION(2,2,0)
+						advanced = gtk_tree_store_remove(treemodel, &iter);
+#else
+						gtk_tree_store_remove(treemodel, &iter);
+						advanced = (iter.stamp == 0) ? FALSE : TRUE;
+#endif
+						purple_notify_close(PURPLE_NOTIFY_EMAILS, data);
+						/* We're completely done if we've processed all entries */
+						if (!advanced)
+							return NULL;
+					} else if (data->count > 0) {
+						new_n = FALSE;
+						g_free(data->url);
+						data->url = NULL;
+						mail_dialog->total_count -= data->count;
+						break;
+					}
 				}
-			} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(treemodel), &iter));
+			} while (advanced || gtk_tree_model_iter_next(GTK_TREE_MODEL(treemodel), &iter));
 		}
 	}
+
+	if (clear)
+		return NULL;
+
+	icon = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
 
 	if (new_n) {
 		data = g_new0(PidginNotifyMailData, 1);
@@ -471,9 +495,13 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 	PurpleAccount *account;
 	PidginNotifyMailData *data = NULL;
 
+	/* Don't bother updating if there aren't new emails and we don't have any displayed currently */
+	if (count == 0 && mail_dialog == NULL)
+		return NULL;
+
 	account = purple_connection_get_account(gc);
 	dialog = pidgin_get_mail_dialog();  /* This creates mail_dialog if necessary */
- 
+
 	mail_dialog->total_count += count;
 	if (detailed) {
 		while (count--) {
@@ -511,31 +539,45 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 			g_free(from_text);
 			g_free(subject_text);
 
-			data = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, 0);
+			data = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, 0, FALSE);
 			g_free(notification);
 
 			if (urls != NULL)
 				urls++;
 		}
 	} else {
-		notification = g_strdup_printf(ngettext("%s has %d new message.",
-						   "%s has %d new messages.",
-						   (int)count),
-						   *tos, (int)count);
-		data = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count);
-		g_free(notification);
+		if (count > 0) {
+			notification = g_strdup_printf(ngettext("%s has %d new message.",
+							   "%s has %d new messages.",
+							   (int)count),
+							   *tos, (int)count);
+			data = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count, FALSE);
+			g_free(notification);
+		} else {
+			GtkTreeIter iter;
+
+			/* Clear out all mails for the account */
+			pidgin_notify_add_mail(mail_dialog->treemodel, account, NULL, NULL, 0, TRUE);
+
+			if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(mail_dialog->treemodel), &iter)) {
+				/* There is no API to clear the headline specifically */
+				/* This will trigger reset_mail_dialog() */
+				pidgin_blist_set_headline(NULL, NULL, NULL, NULL, NULL);
+				return NULL;
+			}
+		}
 	}
 
 	if (!GTK_WIDGET_VISIBLE(dialog)) {
 		GdkPixbuf *pixbuf = gtk_widget_render_icon(dialog, PIDGIN_STOCK_DIALOG_MAIL,
 							   gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL), NULL);
-		char *label_text = g_strdup_printf(ngettext("<b>You have %d new e-mail.</b>",
-							    "<b>You have %d new e-mails.</b>",
+		char *label_text = g_strdup_printf(ngettext("<b>%d new e-mail.</b>",
+							    "<b>%d new e-mails.</b>",
 							    mail_dialog->total_count), mail_dialog->total_count);
 		mail_dialog->in_use = TRUE;     /* So that _set_headline doesn't accidentally
 										   remove the notifications when replacing an
 										   old notification. */
-		pidgin_blist_set_headline(label_text, 
+		pidgin_blist_set_headline(label_text,
 					    pixbuf, G_CALLBACK(gtk_widget_show_all), dialog,
 					    (GDestroyNotify)reset_mail_dialog);
 		mail_dialog->in_use = FALSE;
@@ -646,6 +688,8 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	g_object_set_data(G_OBJECT(window), "info-widget", imhtml);
 
 	/* Show the window */
+	pidgin_auto_parent_window(window);
+
 	gtk_widget_show(window);
 
 	return window;
@@ -660,30 +704,30 @@ pidgin_notify_searchresults_new_rows(PurpleConnection *gc, PurpleNotifySearchRes
 	GtkTreeIter iter;
 	GdkPixbuf *pixbuf;
 	guint col_num;
-	guint i;
-	guint j;
+	GList *row, *column;
+	guint n;
 
 	gtk_list_store_clear(data->model);
 
 	pixbuf = pidgin_create_prpl_icon(purple_connection_get_account(gc), 0.5);
 
 	/* +1 is for the automagically created Status column. */
-	col_num = purple_notify_searchresults_get_columns_count(results) + 1;
+	col_num = g_list_length(results->columns) + 1;
 
-	for (i = 0; i < purple_notify_searchresults_get_rows_count(results); i++) {
-		GList *row = purple_notify_searchresults_row_get(results, i);
+	for (row = results->rows; row != NULL; row = row->next) {
 
 		gtk_list_store_append(model, &iter);
 		gtk_list_store_set(model, &iter, 0, pixbuf, -1);
 
-		for (j = 1; j < col_num; j++) {
+		n = 1;
+		for (column = row->data; column != NULL; column = column->next) {
 			GValue v;
-			char *data = g_list_nth_data(row, j - 1);
 
 			v.g_type = 0;
 			g_value_init(&v, G_TYPE_STRING);
-			g_value_set_string(&v, data);
-			gtk_list_store_set_value(model, &iter, j, &v);
+			g_value_set_string(&v, column->data);
+			gtk_list_store_set_value(model, &iter, n, &v);
+			n++;
 		}
 	}
 
@@ -703,6 +747,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	GtkListStore *model;
 	GtkCellRenderer *renderer;
 	guint col_num;
+	GList *columniter;
 	guint i;
 
 	GtkWidget *vbox;
@@ -750,7 +795,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	g_free(label_text);
 
 	/* +1 is for the automagically created Status column. */
-	col_num = purple_notify_searchresults_get_columns_count(results) + 1;
+	col_num = g_list_length(results->columns) + 1;
 
 	/* Setup the list model */
 	col_types = g_new0(GType, col_num);
@@ -785,12 +830,14 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(treeview),
 					-1, "", renderer, "pixbuf", 0, NULL);
 
-	for (i = 1; i < col_num; i++) {
+	i = 1;
+	for (columniter = results->columns; columniter != NULL; columniter = columniter->next) {
+		PurpleNotifySearchColumn *column = columniter->data;
 		renderer = gtk_cell_renderer_text_new();
 
 		gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(treeview), -1,
-				purple_notify_searchresults_column_get_title(results, i-1),
-				renderer, "text", i, NULL);
+				column->title, renderer, "text", i, NULL);
+		i++;
 	}
 
 	for (i = 0; i < g_list_length(results->buttons); i++) {
@@ -801,7 +848,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 				if(b->label) {
 					button = gtk_button_new_with_label(b->label);
 				} else {
-					purple_debug_warning("gtknotify", "Missing button label");
+					purple_debug_warning("gtknotify", "Missing button label\n");
 				}
 				break;
 			case PURPLE_NOTIFY_BUTTON_CONTINUE:
@@ -853,6 +900,8 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	pidgin_notify_searchresults_new_rows(gc, results, data);
 
 	/* Show the window */
+	pidgin_auto_parent_window(window);
+
 	gtk_widget_show(window);
 	return data;
 }

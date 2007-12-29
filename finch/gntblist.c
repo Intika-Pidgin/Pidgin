@@ -1,8 +1,9 @@
 /**
  * @file gntblist.c GNT BuddyList API
  * @ingroup finch
- *
- * finch
+ */
+
+/* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "finch.h"
 
@@ -36,6 +37,7 @@
 #include "debug.h"
 
 #include "gntbox.h"
+#include "gntcolors.h"
 #include "gntcombobox.h"
 #include "gntentry.h"
 #include "gntft.h"
@@ -45,6 +47,7 @@
 #include "gntmenuitem.h"
 #include "gntmenuitemcheck.h"
 #include "gntpounce.h"
+#include "gntstyle.h"
 #include "gnttree.h"
 #include "gntutils.h"
 #include "gntwindow.h"
@@ -122,6 +125,37 @@ static int blist_node_compare_position(PurpleBlistNode *n1, PurpleBlistNode *n2)
 static int blist_node_compare_text(PurpleBlistNode *n1, PurpleBlistNode *n2);
 static int blist_node_compare_status(PurpleBlistNode *n1, PurpleBlistNode *n2);
 static int blist_node_compare_log(PurpleBlistNode *n1, PurpleBlistNode *n2);
+
+static int color_available;
+static int color_away;
+static int color_offline;
+static int color_idle;
+
+static int
+get_display_color(PurpleBlistNode  *node)
+{
+	PurpleBuddy *buddy;
+	int color = 0;
+
+	if (PURPLE_BLIST_NODE_IS_CONTACT(node))
+		node = (PurpleBlistNode*)purple_contact_get_priority_buddy((PurpleContact*)node);
+	if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+		return 0;
+
+	buddy = (PurpleBuddy*)node;
+	if (purple_presence_is_idle(purple_buddy_get_presence(buddy))) {
+		color = color_idle;
+	} else if (purple_presence_is_available(purple_buddy_get_presence(buddy))) {
+		color = color_available;
+	} else if (purple_presence_is_online(purple_buddy_get_presence(buddy)) &&
+			!purple_presence_is_available(purple_buddy_get_presence(buddy))) {
+		color = color_away;
+	} else if (!purple_presence_is_online(purple_buddy_get_presence(buddy))) {
+		color = color_offline;
+	}
+
+	return color;
+}
 
 static gboolean
 is_contact_online(PurpleContact *contact)
@@ -227,6 +261,7 @@ node_update(PurpleBuddyList *list, PurpleBlistNode *node)
 		gnt_tree_change_text(GNT_TREE(ggblist->tree), node,
 				0, get_display_name(node));
 		gnt_tree_sort_row(GNT_TREE(ggblist->tree), node);
+		gnt_tree_set_row_color(GNT_TREE(ggblist->tree), node, get_display_color(node));
 	}
 
 	if (PURPLE_BLIST_NODE_IS_BUDDY(node)) {
@@ -580,11 +615,11 @@ add_contact(PurpleContact *contact, FinchBlist *ggblist)
 
 	if (node->ui_data)
 		return;
-	
+
 	name = get_display_name(node);
 	if (name == NULL)
 		return;
-	
+
 	group = (PurpleGroup*)node->parent;
 	add_node((PurpleBlistNode*)group, ggblist);
 
@@ -600,6 +635,7 @@ add_buddy(PurpleBuddy *buddy, FinchBlist *ggblist)
 {
 	PurpleContact *contact;
 	PurpleBlistNode *node = (PurpleBlistNode *)buddy;
+	int color = 0;
 	if (node->ui_data)
 		return;
 
@@ -614,13 +650,11 @@ add_buddy(PurpleBuddy *buddy, FinchBlist *ggblist)
 	node->ui_data = gnt_tree_add_row_after(GNT_TREE(ggblist->tree), buddy,
 				gnt_tree_create_row(GNT_TREE(ggblist->tree), get_display_name(node)),
 				contact, NULL);
-	if (purple_presence_is_idle(purple_buddy_get_presence(buddy))) {
-		gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), buddy, GNT_TEXT_FLAG_DIM);
-		gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), contact, GNT_TEXT_FLAG_DIM);
-	} else {
-		gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), buddy, 0);
-		gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), contact, 0);
-	}
+
+	color = get_display_color((PurpleBlistNode*)buddy);
+	gnt_tree_set_row_color(GNT_TREE(ggblist->tree), buddy, color);
+	if (buddy == purple_contact_get_priority_buddy(contact))
+		gnt_tree_set_row_color(GNT_TREE(ggblist->tree), contact, color);
 }
 
 #if 0
@@ -1505,10 +1539,14 @@ key_pressed(GntWidget *widget, const char *text, FinchBlist *ggblist)
 {
 	if (text[0] == 27 && text[1] == 0) {
 		/* Escape was pressed */
+		if (gnt_tree_is_searching(GNT_TREE(ggblist->tree)))
+			gnt_bindable_perform_action_named(GNT_BINDABLE(ggblist->tree), "end-search", NULL);
 		remove_peripherals(ggblist);
 	} else if (strcmp(text, GNT_KEY_CTRL_O) == 0) {
 		purple_prefs_set_bool(PREF_ROOT "/showoffline",
 				!purple_prefs_get_bool(PREF_ROOT "/showoffline"));
+	} else if (strcmp(text, GNT_KEY_INS) == 0) {
+		purple_blist_request_add_buddy(NULL, NULL, NULL, NULL);
 	} else if (!gnt_tree_is_searching(GNT_TREE(ggblist->tree))) {
 		if (strcmp(text, "t") == 0) {
 			finch_blist_toggle_tag_buddy(gnt_tree_get_selection_data(GNT_TREE(ggblist->tree)));
@@ -1537,7 +1575,8 @@ update_buddy_display(PurpleBuddy *buddy, FinchBlist *ggblist)
 {
 	PurpleContact *contact;
 	GntTextFormatFlags bflag = 0, cflag = 0;
-	
+	int color = 0;
+
 	contact = purple_buddy_get_contact(buddy);
 
 	gnt_tree_change_text(GNT_TREE(ggblist->tree), buddy, 0, get_display_name((PurpleBlistNode*)buddy));
@@ -1551,19 +1590,17 @@ update_buddy_display(PurpleBuddy *buddy, FinchBlist *ggblist)
 	if (ggblist->tnode == (PurpleBlistNode*)buddy)
 		draw_tooltip(ggblist);
 
-	if (purple_presence_is_idle(purple_buddy_get_presence(buddy))) {
-		gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), buddy, bflag | GNT_TEXT_FLAG_DIM);
-		if (buddy == purple_contact_get_priority_buddy(contact))
-			gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), contact, cflag | GNT_TEXT_FLAG_DIM);
-		else
+	color = get_display_color((PurpleBlistNode*)buddy);
+	gnt_tree_set_row_color(GNT_TREE(ggblist->tree), buddy, color);
+	if (buddy == purple_contact_get_priority_buddy(contact))
+		gnt_tree_set_row_color(GNT_TREE(ggblist->tree), contact, color);
+
+	gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), buddy, bflag);
+	if (buddy == purple_contact_get_priority_buddy(contact))
+		gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), contact, cflag);
+
+	if (buddy != purple_contact_get_priority_buddy(contact))
 			update_buddy_display(purple_contact_get_priority_buddy(contact), ggblist);
-	} else {
-		gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), buddy, bflag);
-		if (buddy == purple_contact_get_priority_buddy(contact))
-			gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), contact, cflag);
-		else
-			update_buddy_display(purple_contact_get_priority_buddy(contact), ggblist);
-	}
 }
 
 static void
@@ -1733,6 +1770,19 @@ redraw_blist(const char *name, PurplePrefType type, gconstpointer val, gpointer 
 
 void finch_blist_init()
 {
+	color_available = gnt_style_get_color(NULL, "color-available");
+	if (!color_available)
+		color_available = gnt_color_add_pair(COLOR_GREEN, -1);
+	color_away = gnt_style_get_color(NULL, "color-away");
+	if (!color_away)
+		color_away = gnt_color_add_pair(COLOR_BLUE, -1);
+	color_idle = gnt_style_get_color(NULL, "color-idle");
+	if (!color_idle)
+		color_idle = gnt_color_add_pair(COLOR_CYAN, -1);
+	color_offline = gnt_style_get_color(NULL, "color-offline");
+	if (!color_offline)
+		color_offline = gnt_color_add_pair(COLOR_RED, -1);
+
 	purple_prefs_add_none(PREF_ROOT);
 	purple_prefs_add_none(PREF_ROOT "/size");
 	purple_prefs_add_int(PREF_ROOT "/size/width", 20);
@@ -2199,12 +2249,12 @@ send_im_select(GntMenuItem *item, gpointer n)
 	group = purple_request_field_group_new(NULL);
 	purple_request_fields_add_group(fields, group);
 
-	field = purple_request_field_string_new("screenname", _("_Name"), NULL, FALSE);
+	field = purple_request_field_string_new("screenname", _("Name"), NULL, FALSE);
 	purple_request_field_set_type_hint(field, "screenname");
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	field = purple_request_field_account_new("account", _("_Account"), NULL);
+	field = purple_request_field_account_new("account", _("Account"), NULL);
 	purple_request_field_set_type_hint(field, "account");
 	purple_request_field_set_visible(field,
 		(purple_connections_get_all() != NULL &&
@@ -2224,9 +2274,90 @@ send_im_select(GntMenuItem *item, gpointer n)
 }
 
 static void
+join_chat_select_cb(gpointer data, PurpleRequestFields *fields)
+{
+	PurpleAccount *account;
+	const char *name;
+	PurpleConnection *gc;
+	PurpleChat *chat;
+	GHashTable *hash = NULL;
+
+	account = purple_request_fields_get_account(fields, "account");
+	name = purple_request_fields_get_string(fields,  "chat");
+
+	if (!purple_account_is_connected(account))
+		return;
+
+	gc = purple_account_get_connection(account);	
+	purple_conversation_new(PURPLE_CONV_TYPE_CHAT, account, name);
+	chat = purple_blist_find_chat(account, name);
+	if (chat == NULL) {
+		if (PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl)->chat_info_defaults != NULL)
+			hash = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl)->chat_info_defaults(gc, name);
+	} else {
+		hash = chat->components;
+	}
+	serv_join_chat(gc, hash);
+	if (chat == NULL && hash != NULL)
+		g_hash_table_destroy(hash);
+}
+
+static void
+join_chat_select(GntMenuItem *item, gpointer n)
+{
+	PurpleRequestFields *fields;
+	PurpleRequestFieldGroup *group;
+	PurpleRequestField *field;
+
+	fields = purple_request_fields_new();
+
+	group = purple_request_field_group_new(NULL);
+	purple_request_fields_add_group(fields, group);
+
+	field = purple_request_field_string_new("chat", _("Channel"), NULL, FALSE);
+	purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
+
+	field = purple_request_field_account_new("account", _("Account"), NULL);
+	purple_request_field_set_type_hint(field, "account");
+	purple_request_field_set_visible(field,
+		(purple_connections_get_all() != NULL &&
+		 purple_connections_get_all()->next != NULL));
+	purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
+
+	purple_request_fields(purple_get_blist(), _("Join a Chat"),
+						NULL,
+						_("Please enter the name of the chat you want to join."),
+						fields,
+						_("Join"), G_CALLBACK(join_chat_select_cb),
+						_("Cancel"), NULL,
+						NULL, NULL, NULL,
+						NULL);
+}
+
+static void
+menu_add_buddy_cb(GntMenuItem *item, gpointer null)
+{
+	purple_blist_request_add_buddy(NULL, NULL, NULL, NULL);
+}
+
+static void
+menu_add_chat_cb(GntMenuItem *item, gpointer null)
+{
+	purple_blist_request_add_chat(NULL, NULL, NULL, NULL);
+}
+
+static void
+menu_add_group_cb(GntMenuItem *item, gpointer null)
+{
+	purple_blist_request_add_group();
+}
+
+static void
 create_menu()
 {
-	GntWidget *menu, *sub;
+	GntWidget *menu, *sub, *subsub;
 	GntMenuItem *item;
 	GntWindow *window;
 
@@ -2244,32 +2375,74 @@ create_menu()
 	gnt_menuitem_set_submenu(item, GNT_MENU(sub));
 
 	item = gnt_menuitem_new(_("Send IM..."));
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "send-im");
 	gnt_menu_add_item(GNT_MENU(sub), item);
 	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), send_im_select, NULL);
 
-	item = gnt_menuitem_check_new(_("Show empty groups"));
+	item = gnt_menuitem_new(_("Join Chat..."));
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "join-chat");
+	gnt_menu_add_item(GNT_MENU(sub), item);
+	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), join_chat_select, NULL);
+
+	item = gnt_menuitem_new(_("Show"));
+	gnt_menu_add_item(GNT_MENU(sub), item);
+	subsub = gnt_menu_new(GNT_MENU_POPUP);
+	gnt_menuitem_set_submenu(item, GNT_MENU(subsub));
+
+	item = gnt_menuitem_check_new(_("Empty groups"));
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "show-empty-groups");
 	gnt_menuitem_check_set_checked(GNT_MENU_ITEM_CHECK(item),
 				purple_prefs_get_bool(PREF_ROOT "/emptygroups"));
-	gnt_menu_add_item(GNT_MENU(sub), item);
+	gnt_menu_add_item(GNT_MENU(subsub), item);
 	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), toggle_pref_cb, PREF_ROOT "/emptygroups");
 	
-	item = gnt_menuitem_check_new(_("Show offline buddies"));
+	item = gnt_menuitem_check_new(_("Offline buddies"));
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "show-offline-buddies");
 	gnt_menuitem_check_set_checked(GNT_MENU_ITEM_CHECK(item),
 				purple_prefs_get_bool(PREF_ROOT "/showoffline"));
-	gnt_menu_add_item(GNT_MENU(sub), item);
+	gnt_menu_add_item(GNT_MENU(subsub), item);
 	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), toggle_pref_cb, PREF_ROOT "/showoffline");
 
-	item = gnt_menuitem_new(_("Sort by status"));
+	item = gnt_menuitem_new(_("Sort"));
 	gnt_menu_add_item(GNT_MENU(sub), item);
+	subsub = gnt_menu_new(GNT_MENU_POPUP);
+	gnt_menuitem_set_submenu(item, GNT_MENU(subsub));
+
+	item = gnt_menuitem_new(_("By Status"));
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "sort-status");
+	gnt_menu_add_item(GNT_MENU(subsub), item);
 	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), sort_blist_change_cb, "status");
 
-	item = gnt_menuitem_new(_("Sort alphabetically"));
-	gnt_menu_add_item(GNT_MENU(sub), item);
+	item = gnt_menuitem_new(_("Alphabetically"));
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "sort-alpha");
+	gnt_menu_add_item(GNT_MENU(subsub), item);
 	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), sort_blist_change_cb, "text");
 
-	item = gnt_menuitem_new(_("Sort by log size"));
-	gnt_menu_add_item(GNT_MENU(sub), item);
+	item = gnt_menuitem_new(_("By Log Size"));
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "sort-log");
+	gnt_menu_add_item(GNT_MENU(subsub), item);
 	gnt_menuitem_set_callback(GNT_MENU_ITEM(item), sort_blist_change_cb, "log");
+
+	item = gnt_menuitem_new(_("Add"));
+	gnt_menu_add_item(GNT_MENU(sub), item);
+
+	subsub = gnt_menu_new(GNT_MENU_POPUP);
+	gnt_menuitem_set_submenu(item, GNT_MENU(subsub));
+
+	item = gnt_menuitem_new("Buddy");
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "add-buddy");
+	gnt_menu_add_item(GNT_MENU(subsub), item);
+	gnt_menuitem_set_callback(item, menu_add_buddy_cb, NULL);
+
+	item = gnt_menuitem_new("Chat");
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "add-chat");
+	gnt_menu_add_item(GNT_MENU(subsub), item);
+	gnt_menuitem_set_callback(item, menu_add_chat_cb, NULL);
+
+	item = gnt_menuitem_new("Group");
+	gnt_menuitem_set_id(GNT_MENU_ITEM(item), "add-group");
+	gnt_menu_add_item(GNT_MENU(subsub), item);
+	gnt_menuitem_set_callback(item, menu_add_group_cb, NULL);
 
 	reconstruct_accounts_menu();
 	gnt_menu_add_item(GNT_MENU(menu), ggblist->accounts);
@@ -2422,4 +2595,3 @@ void finch_blist_set_size(int width, int height)
 {
 	gnt_widget_set_size(ggblist->window, width, height);
 }
-

@@ -1,8 +1,9 @@
 /**
  * @file core.c Purple Core API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,10 +21,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "cipher.h"
+#include "certificate.h"
 #include "connection.h"
 #include "conversation.h"
 #include "core.h"
@@ -92,6 +94,8 @@ purple_core_init(const char *ui)
 	/* The signals subsystem is important and should be first. */
 	purple_signals_init();
 
+	purple_util_init();
+
 	purple_signal_register(core, "uri-handler",
 		purple_marshal_BOOLEAN__POINTER_POINTER_POINTER,
 		purple_value_new(PURPLE_TYPE_BOOLEAN), 3,
@@ -134,14 +138,17 @@ purple_core_init(const char *ui)
 	/* The buddy icon code uses the imgstore, so init it early. */
 	purple_imgstore_init();
 
-	/* Accounts use status and buddy icons, so initialize these before accounts */
+	/* Accounts use status, buddy icons and connection signals, so
+	 * initialize these before accounts
+	 */
 	purple_status_init();
 	purple_buddy_icons_init();
+	purple_connections_init();
 
 	purple_accounts_init();
 	purple_savedstatuses_init();
 	purple_notify_init();
-	purple_connections_init();
+	purple_certificate_init();
 	purple_conversations_init();
 	purple_blist_init();
 	purple_log_init();
@@ -159,9 +166,8 @@ purple_core_init(const char *ui)
 	/*
 	 * Call this early on to try to auto-detect our IP address and
 	 * hopefully save some time later.
-	 * TODO: do this here after purple_prefs_load() has been moved into purple_prefs_init()
 	 */
-	/*purple_network_get_my_ip(-1);*/
+	purple_network_get_my_ip(-1);
 
 	if (ops != NULL && ops->ui_init != NULL)
 		ops->ui_init();
@@ -192,6 +198,7 @@ purple_core_quit(void)
 	purple_notify_uninit();
 	purple_conversations_uninit();
 	purple_connections_uninit();
+	purple_certificate_uninit();
 	purple_buddy_icons_uninit();
 	purple_accounts_uninit();
 	purple_savedstatuses_uninit();
@@ -226,6 +233,9 @@ purple_core_quit(void)
 #ifdef HAVE_DBUS
 	purple_dbus_uninit();
 #endif
+
+	purple_util_uninit();
+
 	purple_signals_uninit();
 
 	g_free(core->ui);
@@ -375,7 +385,7 @@ move_and_symlink_dir(const char *path, const char *basename, const char *old_bas
 	if (g_rename(path, new_name))
 	{
 		purple_debug_error("core", "Error renaming %s to %s: %s. Please report this at http://developer.pidgin.im\n",
-		                   path, new_name, strerror(errno));
+		                   path, new_name, g_strerror(errno));
 		g_free(new_name);
 		return FALSE;
 	}
@@ -388,7 +398,7 @@ move_and_symlink_dir(const char *path, const char *basename, const char *old_bas
 	if (symlink(new_name, old_name))
 	{
 		purple_debug_warning("core", "Error symlinking %s to %s: %s. Please report this at http://developer.pidgin.im\n",
-		                     old_name, new_name, strerror(errno));
+		                     old_name, new_name, g_strerror(errno));
 	}
 	g_free(old_name);
 	g_free(new_name);
@@ -444,7 +454,7 @@ purple_core_migrate(void)
 		if (g_mkdir(user_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 		{
 			purple_debug_error("core", "Error creating directory %s: %s. Please report this at http://developer.pidgin.im\n",
-			                   user_dir, strerror(errno));
+			                   user_dir, g_strerror(errno));
 			g_free(status_file);
 			g_free(old_user_dir);
 			return FALSE;
@@ -456,7 +466,7 @@ purple_core_migrate(void)
 	if (!(fp = g_fopen(status_file, "w")))
 	{
 		purple_debug_error("core", "Error opening file %s for writing: %s. Please report this at http://developer.pidgin.im\n",
-		                   status_file, strerror(errno));
+		                   status_file, g_strerror(errno));
 		g_free(status_file);
 		g_free(old_user_dir);
 		return FALSE;
@@ -514,7 +524,7 @@ purple_core_migrate(void)
 				{
 					char *name_utf8 = g_filename_to_utf8(name, -1, NULL, NULL, NULL);
 					purple_debug_error("core", "Error reading symlink %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   name_utf8, strerror(errno));
+					                   name_utf8, g_strerror(errno));
 					g_free(name_utf8);
 					g_free(name);
 					g_dir_close(dir);
@@ -552,7 +562,7 @@ purple_core_migrate(void)
 				if (symlink(link, logs_dir))
 				{
 					purple_debug_error("core", "Error symlinking %s to %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   logs_dir, link, strerror(errno));
+					                   logs_dir, link, g_strerror(errno));
 					g_free(link);
 					g_free(name);
 					g_free(logs_dir);
@@ -609,7 +619,7 @@ purple_core_migrate(void)
 					if (g_mkdir(new_icons_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 					{
 						purple_debug_error("core", "Error creating directory %s: %s. Please report this at http://developer.pidgin.im\n",
-						                   new_icons_dir, strerror(errno));
+						                   new_icons_dir, g_strerror(errno));
 						g_free(new_icons_dir);
 						g_dir_close(icons_dir);
 						g_free(name);
@@ -672,7 +682,7 @@ purple_core_migrate(void)
 			if (!(fp = g_fopen(name, "rb")))
 			{
 				purple_debug_error("core", "Error opening file %s for reading: %s. Please report this at http://developer.pidgin.im\n",
-				                   name, strerror(errno));
+				                   name, g_strerror(errno));
 				g_free(name);
 				g_dir_close(dir);
 				g_free(status_file);
@@ -684,7 +694,7 @@ purple_core_migrate(void)
 			if (!(new_file = g_fopen(new_name, "wb")))
 			{
 				purple_debug_error("core", "Error opening file %s for writing: %s. Please report this at http://developer.pidgin.im\n",
-				                   new_name, strerror(errno));
+				                   new_name, g_strerror(errno));
 				fclose(fp);
 				g_free(new_name);
 				g_free(name);
@@ -703,7 +713,7 @@ purple_core_migrate(void)
 				if (size != sizeof(buf) && !feof(fp))
 				{
 					purple_debug_error("core", "Error reading %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   name, strerror(errno));
+					                   name, g_strerror(errno));
 					fclose(new_file);
 					fclose(fp);
 					g_free(new_name);
@@ -717,7 +727,7 @@ purple_core_migrate(void)
 				if (!fwrite(buf, size, 1, new_file) && ferror(new_file) != 0)
 				{
 					purple_debug_error("core", "Error writing %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   new_name, strerror(errno));
+					                   new_name, g_strerror(errno));
 					fclose(new_file);
 					fclose(fp);
 					g_free(new_name);
@@ -732,12 +742,12 @@ purple_core_migrate(void)
 			if (fclose(new_file))
 			{
 				purple_debug_error("core", "Error writing: %s: %s. Please report this at http://developer.pidgin.im\n",
-				                   new_name, strerror(errno));
+				                   new_name, g_strerror(errno));
 			}
 			if (fclose(fp))
 			{
 				purple_debug_warning("core", "Error closing %s: %s\n",
-				                     name, strerror(errno));
+				                     name, g_strerror(errno));
 			}
 			g_free(new_name);
 		}
@@ -751,7 +761,7 @@ purple_core_migrate(void)
 	if (g_unlink(status_file))
 	{
 		purple_debug_error("core", "Error unlinking file %s: %s. Please report this at http://developer.pidgin.im\n",
-		                   status_file, strerror(errno));
+		                   status_file, g_strerror(errno));
 		g_free(status_file);
 		return FALSE;
 	}

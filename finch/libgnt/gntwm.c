@@ -17,18 +17,23 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-
-#define _GNU_SOURCE
-#if defined(__APPLE__) || defined(__unix__)
-#define _XOPEN_SOURCE_EXTENDED
-#endif
 
 #include "config.h"
 
+#ifdef USE_PYTHON
+#include <Python.h>
+#else
+#define _GNU_SOURCE
+#if (defined(__APPLE__) || defined(__unix__)) && !defined(__FreeBSD__)
+#define _XOPEN_SOURCE_EXTENDED
+#endif
+#endif
+
+#include <glib.h>
+#include <glib/gstdio.h>
 #include <ctype.h>
-#include <glib/gprintf.h>
 #include <gmodule.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +46,7 @@
 #include "gntbox.h"
 #include "gntbutton.h"
 #include "gntentry.h"
+#include "gntfilesel.h"
 #include "gntlabel.h"
 #include "gntmenu.h"
 #include "gnttextview.h"
@@ -81,6 +87,7 @@ static gboolean workspace_prev(GntBindable *wm, GList *n);
 static int widestringwidth(wchar_t *wide);
 #endif
 
+static void ensure_normal_mode(GntWM *wm);
 static gboolean write_already(gpointer data);
 static int write_timeout;
 static time_t last_active_time;
@@ -109,12 +116,10 @@ void
 gnt_wm_copy_win(GntWidget *widget, GntNode *node)
 {
 	WINDOW *src, *dst;
-	int shadow;
 	if (!node)
 		return;
 	src = widget->window;
 	dst = node->window;
-	shadow = gnt_widget_has_shadow(widget) ? 1 : 0;
 	copywin(src, dst, node->scroll, 0, 0, 0, getmaxy(dst) - 1, getmaxx(dst) - 1, 0);
 }
 
@@ -226,17 +231,22 @@ update_screen(GntWM *wm)
 }
 
 static gboolean
-sanitize_position(GntWidget *widget, int *x, int *y)
+sanitize_position(GntWidget *widget, int *x, int *y, gboolean m)
 {
 	int X_MAX = getmaxx(stdscr);
 	int Y_MAX = getmaxy(stdscr) - 1;
 	int w, h;
 	int nx, ny;
 	gboolean changed = FALSE;
+	GntWindowFlags flags = GNT_IS_WINDOW(widget) ?
+			gnt_window_get_maximize(GNT_WINDOW(widget)) : 0;
 
 	gnt_widget_get_size(widget, &w, &h);
 	if (x) {
-		if (*x + w > X_MAX) {
+		if (m && (flags & GNT_WINDOW_MAXIMIZE_X) && *x != 0) {
+			*x = 0;
+			changed = TRUE;
+		} else if (*x + w > X_MAX) {
 			nx = MAX(0, X_MAX - w);
 			if (nx != *x) {
 				*x = nx;
@@ -245,7 +255,10 @@ sanitize_position(GntWidget *widget, int *x, int *y)
 		}
 	}
 	if (y) {
-		if (*y + h > Y_MAX) {
+		if (m && (flags & GNT_WINDOW_MAXIMIZE_Y) && *y != 0) {
+			*y = 0;
+			changed = TRUE;
+		} else if (*y + h > Y_MAX) {
 			ny = MAX(0, Y_MAX - h);
 			if (ny != *y) {
 				*y = ny;
@@ -257,7 +270,7 @@ sanitize_position(GntWidget *widget, int *x, int *y)
 }
 
 static void
-refresh_node(GntWidget *widget, GntNode *node, gpointer null)
+refresh_node(GntWidget *widget, GntNode *node, gpointer m)
 {
 	int x, y, w, h;
 	int nw, nh;
@@ -265,14 +278,28 @@ refresh_node(GntWidget *widget, GntNode *node, gpointer null)
 	int X_MAX = getmaxx(stdscr);
 	int Y_MAX = getmaxy(stdscr) - 1;
 
+	GntWindowFlags flags = 0;
+
+	if (m && GNT_IS_WINDOW(widget)) {
+		flags = gnt_window_get_maximize(GNT_WINDOW(widget));
+	}
+
 	gnt_widget_get_position(widget, &x, &y);
 	gnt_widget_get_size(widget, &w, &h);
 
-	if (sanitize_position(widget, &x, &y))
+	if (sanitize_position(widget, &x, &y, !!m))
 		gnt_screen_move_widget(widget, x, y);
 
-	nw = MIN(w, X_MAX);
-	nh = MIN(h, Y_MAX);
+	if (flags & GNT_WINDOW_MAXIMIZE_X)
+		nw = X_MAX;
+	else
+		nw = MIN(w, X_MAX);
+
+	if (flags & GNT_WINDOW_MAXIMIZE_Y)
+		nh = Y_MAX;
+	else
+		nh = MIN(h, Y_MAX);
+
 	if (nw != w || nh != h)
 		gnt_screen_resize_widget(widget, nw, nh);
 }
@@ -371,6 +398,10 @@ switch_window(GntWM *wm, int direction)
 
 	if (!wm->cws->ordered || !wm->cws->ordered->next)
 		return;
+
+	if (wm->mode != GNT_KP_MODE_NORMAL) {
+		ensure_normal_mode(wm);
+	}
 
 	w = wm->cws->ordered->data;
 	pos = g_list_index(wm->cws->list, w);
@@ -483,6 +514,7 @@ window_close(GntBindable *bindable, GList *null)
 
 	if (wm->cws->ordered) {
 		gnt_widget_destroy(wm->cws->ordered->data);
+		ensure_normal_mode(wm);
 	}
 
 	return TRUE;
@@ -502,6 +534,7 @@ static void
 setup__list(GntWM *wm)
 {
 	GntWidget *tree, *win;
+	ensure_normal_mode(wm);
 	win = wm->_list.window = gnt_box_new(FALSE, FALSE);
 	gnt_box_set_toplevel(GNT_BOX(win), TRUE);
 	gnt_box_set_pad(GNT_BOX(win), 0);
@@ -636,12 +669,12 @@ window_list(GntBindable *bindable, GList *null)
 	return TRUE;
 }
 
-static gboolean
-dump_screen(GntBindable *bindable, GList *null)
+static void
+dump_file_save(GntFileSel *fs, const char *path, const char *f, gpointer n)
 {
+	FILE *file;
 	int x, y;
 	chtype old = 0, now = 0;
-	FILE *file = fopen("dump.html", "w");
 	struct {
 		char ascii;
 		char *unicode;
@@ -662,6 +695,12 @@ dump_screen(GntBindable *bindable, GList *null)
 		{'v', "&#x2534;"},
 		{'\0', NULL}
 	};
+
+	gnt_widget_destroy(GNT_WIDGET(fs));
+
+	if ((file = g_fopen(path, "w+")) == NULL) {
+		return;
+	}
 
 	fprintf(file, "<head>\n  <meta http-equiv='Content-Type' content='text/html; charset=utf-8' />\n</head>\n<body>\n");
 	fprintf(file, "<pre>");
@@ -769,6 +808,28 @@ dump_screen(GntBindable *bindable, GList *null)
 	}
 	fprintf(file, "</pre>\n</body>");
 	fclose(file);
+}
+
+static void
+dump_file_cancel(GntWidget *w, GntFileSel *fs)
+{
+	gnt_widget_destroy(GNT_WIDGET(fs));
+}
+
+static gboolean
+dump_screen(GntBindable *b, GList *null)
+{
+	GntWidget *window = gnt_file_sel_new();
+	GntFileSel *sel = GNT_FILE_SEL(window);
+
+	g_object_set(G_OBJECT(window), "vertical", TRUE, NULL);
+	gnt_box_add_widget(GNT_BOX(window), gnt_label_new("Please enter the filename to save the screenshot."));
+	gnt_box_set_title(GNT_BOX(window), "Save Screenshot...");
+
+	gnt_file_sel_set_suggested_filename(sel, "dump.html");
+	g_signal_connect(G_OBJECT(sel), "file_selected", G_CALLBACK(dump_file_save), NULL);
+	g_signal_connect(G_OBJECT(sel->cancel), "activate", G_CALLBACK(dump_file_cancel), sel);
+	gnt_widget_show(window);
 	return TRUE;
 }
 
@@ -952,6 +1013,16 @@ window_reverse(GntWidget *win, gboolean set, GntWM *wm)
 	update_screen(wm);
 }
 
+static void
+ensure_normal_mode(GntWM *wm)
+{
+	if (wm->mode != GNT_KP_MODE_NORMAL) {
+		if (wm->cws->ordered)
+			window_reverse(wm->cws->ordered->data, FALSE, wm);
+		wm->mode = GNT_KP_MODE_NORMAL;
+	}
+}
+
 static gboolean
 start_move(GntBindable *bindable, GList *null)
 {
@@ -1004,9 +1075,9 @@ refresh_screen(GntBindable *bindable, GList *null)
 	GntWM *wm = GNT_WM(bindable);
 
 	endwin();
-
-	g_hash_table_foreach(wm->nodes, (GHFunc)refresh_node, NULL);
 	refresh();
+
+	g_hash_table_foreach(wm->nodes, (GHFunc)refresh_node, GINT_TO_POINTER(TRUE));
 	g_signal_emit(wm, signals[SIG_TERMINAL_REFRESH], 0);
 	update_screen(wm);
 	gnt_ws_draw_taskbar(wm->cws, TRUE);
@@ -1046,7 +1117,7 @@ static void remove_tag(gpointer wid, gpointer wim)
 	GntWM *wm = GNT_WM(wim);
 	GntWidget *w = GNT_WIDGET(wid);
 	wm->tagged = g_list_remove(wm->tagged, w);
-	mvwhline(w->window, 0, 1, ACS_HLINE | COLOR_PAIR(GNT_COLOR_NORMAL), 3);
+	mvwhline(w->window, 0, 1, ACS_HLINE | gnt_color_pair(GNT_COLOR_NORMAL), 3);
 	gnt_widget_draw(w);
 }
 
@@ -1066,7 +1137,7 @@ tag_widget(GntBindable *b, GList *params)
 	}
 
 	wm->tagged = g_list_prepend(wm->tagged, widget);
-	wbkgdset(widget->window, ' ' | COLOR_PAIR(GNT_COLOR_HIGHLIGHT));
+	wbkgdset(widget->window, ' ' | gnt_color_pair(GNT_COLOR_HIGHLIGHT));
 	mvwprintw(widget->window, 0, 1, "[T]");
 	gnt_widget_draw(widget);
 	return TRUE;
@@ -1131,12 +1202,50 @@ ignore_keys_end(GntBindable *bindable, GList *n)
 	return ignore_keys ? !(ignore_keys = FALSE) : FALSE;
 }
 
+#ifdef USE_PYTHON
+static void
+python_script_selected(GntFileSel *fs, const char *path, const char *f, gpointer n)
+{
+	char *dir = g_path_get_dirname(path);
+	FILE *file = fopen(path, "r");
+	PyObject *pp = PySys_GetObject("path"), *dirobj = PyString_FromString(dir);
+
+	PyList_Insert(pp, 0, dirobj);
+	Py_DECREF(dirobj);
+	PyRun_SimpleFile(file, path);
+	fclose(file);
+
+	if (PyErr_Occurred()) {
+		PyErr_Print();
+	}
+	g_free(dir);
+
+	gnt_widget_destroy(GNT_WIDGET(fs));
+}
+
+static gboolean
+run_python(GntBindable *bindable, GList *n)
+{
+	GntWidget *window = gnt_file_sel_new();
+	GntFileSel *sel = GNT_FILE_SEL(window);
+
+	g_object_set(G_OBJECT(window), "vertical", TRUE, NULL);
+	gnt_box_add_widget(GNT_BOX(window), gnt_label_new("Please select the python script you want to run."));
+	gnt_box_set_title(GNT_BOX(window), "Select Python Script...");
+
+	g_signal_connect(G_OBJECT(sel), "file_selected", G_CALLBACK(python_script_selected), NULL);
+	g_signal_connect_swapped(G_OBJECT(sel->cancel), "activate", G_CALLBACK(gnt_widget_destroy), sel);
+	gnt_widget_show(window);
+	return TRUE;
+}
+#endif  /* USE_PYTHON */
+
 static gboolean
 help_for_bindable(GntWM *wm, GntBindable *bindable)
 {
 	gboolean ret = TRUE;
 	GntBindableClass *klass = GNT_BINDABLE_GET_CLASS(bindable);
- 
+
 	if (klass->help_window) {
 		gnt_wm_raise_window(wm, GNT_WIDGET(klass->help_window));
 	} else {
@@ -1204,6 +1313,9 @@ gnt_wm_destroy(GObject *obj)
 		g_object_unref(wm->workspaces->data);
 		wm->workspaces = g_list_delete_link(wm->workspaces, wm->workspaces);
 	}
+#ifdef USE_PYTHON
+	Py_Finalize();
+#endif
 }
 
 static void
@@ -1329,7 +1441,7 @@ gnt_wm_class_init(GntWMClass *klass)
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "window-list", window_list,
 				"\033" "w", NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "dump-screen", dump_screen,
-				"\033" "d", NULL);
+				"\033" "D", NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "shift-left", shift_left,
 				"\033" ",", NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "shift-right", shift_right,
@@ -1374,6 +1486,12 @@ gnt_wm_class_init(GntWMClass *klass)
 				GNT_KEY_CTRL_G, NULL);
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "ignore-keys-end", ignore_keys_end, 
 				"\033" GNT_KEY_CTRL_G, NULL);
+#ifdef USE_PYTHON
+	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "run-python", run_python,
+				GNT_KEY_F3, NULL);
+	Py_SetProgramName("gnt");
+	Py_Initialize();
+#endif
 
 	gnt_style_read_actions(G_OBJECT_CLASS_TYPE(klass), GNT_BINDABLE_CLASS(klass));
 
@@ -1433,6 +1551,7 @@ gnt_wm_switch_workspace(GntWM *wm, gint n)
 	if (wm->_list.window) {
 		gnt_widget_destroy(wm->_list.window);
 	}
+	ensure_normal_mode(wm);
 	gnt_ws_hide(wm->cws, wm->nodes);
 	wm->cws = s;
 	gnt_ws_show(wm->cws, wm->nodes);
@@ -1609,7 +1728,7 @@ gnt_wm_new_window_real(GntWM *wm, GntWidget *widget)
 
 	g_hash_table_replace(wm->nodes, widget, node);
 
-	refresh_node(widget, node, NULL);
+	refresh_node(widget, node, GINT_TO_POINTER(TRUE));
 
 	transient = !!GNT_WIDGET_IS_FLAG_SET(node->me, GNT_WIDGET_TRANSIENT);
 
@@ -1622,13 +1741,11 @@ gnt_wm_new_window_real(GntWM *wm, GntWidget *widget)
 			shadow = FALSE;
 		x = widget->priv.x;
 		y = widget->priv.y;
-		w = widget->priv.width;
-		h = widget->priv.height;
+		w = widget->priv.width + shadow;
+		h = widget->priv.height + shadow;
 
-		getmaxyx(stdscr, maxy, maxx);
-		maxy -= 1;              /* room for the taskbar */
-		maxy -= shadow;
-		maxx -= shadow;
+		maxx = getmaxx(stdscr);
+		maxy = getmaxy(stdscr) - 1;              /* room for the taskbar */
 
 		x = MAX(0, x);
 		y = MAX(0, y);
@@ -1639,7 +1756,7 @@ gnt_wm_new_window_real(GntWM *wm, GntWidget *widget)
 
 		w = MIN(w, maxx);
 		h = MIN(h, maxy);
-		node->window = newwin(h + shadow, w + shadow, y, x);
+		node->window = newwin(h, w, y, x);
 		gnt_wm_copy_win(widget, node);
 	}
 #endif
@@ -1675,7 +1792,7 @@ void gnt_wm_new_window(GntWM *wm, GntWidget *widget)
 {
 	while (widget->parent)
 		widget = widget->parent;
-	
+
 	if (GNT_WIDGET_IS_FLAG_SET(widget, GNT_WIDGET_INVISIBLE) ||
 			g_hash_table_lookup(wm->nodes, widget)) {
 		update_screen(wm);
@@ -1686,7 +1803,7 @@ void gnt_wm_new_window(GntWM *wm, GntWidget *widget)
 		const char *title = GNT_BOX(widget)->title;
 		GntPosition *p = NULL;
 		if (title && (p = g_hash_table_lookup(wm->positions, title)) != NULL) {
-			sanitize_position(widget, &p->x, &p->y);
+			sanitize_position(widget, &p->x, &p->y, TRUE);
 			gnt_widget_set_position(widget, p->x, p->y);
 			mvwin(widget->window, p->y, p->x);
 		}
@@ -1717,12 +1834,11 @@ void gnt_wm_window_decorate(GntWM *wm, GntWidget *widget)
 void gnt_wm_window_close(GntWM *wm, GntWidget *widget)
 {
 	GntWS *s;
-	GntNode *node;
 	int pos;
 
 	s = gnt_wm_widget_find_workspace(wm, widget);
 
-	if ((node = g_hash_table_lookup(wm->nodes, widget)) == NULL)
+	if (g_hash_table_lookup(wm->nodes, widget) == NULL)
 		return;
 
 	g_signal_emit(wm, signals[SIG_CLOSE_WIN], 0, widget);
@@ -1853,8 +1969,22 @@ gboolean gnt_wm_process_input(GntWM *wm, const char *keys)
 		ret = gnt_widget_key_pressed(GNT_WIDGET(wm->menu), keys);
 	else if (wm->_list.window)
 		ret = gnt_widget_key_pressed(wm->_list.window, keys);
-	else if (wm->cws->ordered)
-		ret = gnt_widget_key_pressed(GNT_WIDGET(wm->cws->ordered->data), keys);
+	else if (wm->cws->ordered) {
+		GntWidget *win = wm->cws->ordered->data;
+		if (GNT_IS_WINDOW(win)) {
+			GntMenu *menu = GNT_WINDOW(win)->menu;
+			if (menu) {
+				const char *id = gnt_window_get_accel_item(GNT_WINDOW(win), keys);
+				if (id) {
+					GntMenuItem *item = gnt_menu_get_item(menu, id);
+					if (item)
+						ret = gnt_menuitem_activate(item);
+				}
+			}
+		}
+		if (!ret)
+			ret = gnt_widget_key_pressed(win, keys);
+	}
 	return ret;
 }
 
@@ -1874,9 +2004,8 @@ void gnt_wm_resize_window(GntWM *wm, GntWidget *widget, int width, int height)
 {
 	gboolean ret = TRUE;
 	GntNode *node;
-	int shadow;
 	int maxx, maxy;
-	
+
 	while (widget->parent)
 		widget = widget->parent;
 	node = g_hash_table_lookup(wm->nodes, widget);
@@ -1890,9 +2019,8 @@ void gnt_wm_resize_window(GntWM *wm, GntWidget *widget, int width, int height)
 	gnt_widget_set_size(widget, width, height);
 	gnt_widget_draw(widget);
 
-	shadow = gnt_widget_has_shadow(widget) ? 1 : 0;
-	maxx = getmaxx(stdscr) - shadow;
-	maxy = getmaxy(stdscr) - 1 - shadow;
+	maxx = getmaxx(stdscr);
+	maxy = getmaxy(stdscr) - 1;
 	height = MIN(height, maxy);
 	width = MIN(width, maxx);
 	wresize(node->window, height, width);

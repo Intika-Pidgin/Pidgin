@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PURPLE_BONJOUR_PARSER_H_
 #define _PURPLE_BONJOUR_PARSER_H_
@@ -28,6 +28,6 @@
 #include "jabber.h"
 
 void bonjour_parser_setup(BonjourJabberConversation *bconv);
-void bonjour_parser_process(PurpleBuddy *pb, const char *buf, int len);
+void bonjour_parser_process(BonjourJabberConversation *bconv, const char *buf, int len);
 
 #endif /* _PURPLE_BONJOUR_PARSER_H_ */

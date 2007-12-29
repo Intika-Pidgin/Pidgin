@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -445,14 +445,17 @@ static void winpidgin_set_locale() {
 #define PIDGIN_WM_FOCUS_REQUEST (WM_APP + 13)
 #define PIDGIN_WM_PROTOCOL_HANDLE (WM_APP + 14)
 
-static BOOL winpidgin_set_running() {
+static BOOL winpidgin_set_running(BOOL fail_if_running) {
 	HANDLE h;
 
 	if ((h = CreateMutex(NULL, FALSE, "pidgin_is_running"))) {
-		if (GetLastError() == ERROR_ALREADY_EXISTS) {
+		DWORD err = GetLastError();
+		if (err == ERROR_ALREADY_EXISTS && fail_if_running) {
 			HWND msg_win;
 
-			if((msg_win = FindWindow(TEXT("WinpidginMsgWinCls"), NULL)))
+			printf("An instance of Pidgin is already running.\n");
+
+			if((msg_win = FindWindowEx(HWND_MESSAGE, NULL, TEXT("WinpidginMsgWinCls"), NULL)))
 				if(SendMessage(msg_win, PIDGIN_WM_FOCUS_REQUEST, (WPARAM) NULL, (LPARAM) NULL))
 					return FALSE;
 
@@ -463,7 +466,8 @@ static BOOL winpidgin_set_running() {
 				NULL, MB_OK | MB_TOPMOST);
 
 			return FALSE;
-		}
+		} else
+			printf("Error (%u) accessing \"pidgin_is_running\" mutex.\n", (UINT) err);
 	}
 	return TRUE;
 }
@@ -492,7 +496,7 @@ static void handle_protocol(char *cmd) {
 		return;
 	}
 
-	if (!(msg_win = FindWindow(TEXT("WinpidginMsgWinCls"), NULL))) {
+	if (!(msg_win = FindWindowEx(HWND_MESSAGE, NULL, TEXT("WinpidginMsgWinCls"), NULL))) {
 		printf("Unable to find an instance of Pidgin to handle protocol message.\n");
 		return;
 	}
@@ -545,7 +549,7 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 	if (strstr(lpszCmdLine, "-d") || strstr(lpszCmdLine, "-h") || strstr(lpszCmdLine, "-v")) {
 		/* If stdout hasn't been redirected to a file, alloc a console
 		 *  (_istty() doesn't work for stuff using the GUI subsystem) */
-		if (_fileno(stdout) == -1) {
+		if (_fileno(stdout) == -1 || _fileno(stdout) == -2) {
 			LPFNATTACHCONSOLE MyAttachConsole = NULL;
 			if ((hmod = GetModuleHandle("kernel32.dll"))) {
 				MyAttachConsole =
@@ -626,8 +630,8 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 
 	winpidgin_set_locale();
 	/* If help, version or multiple flag used, do not check Mutex */
-	if (!strstr(lpszCmdLine, "-h") && !strstr(lpszCmdLine, "-v") && !strstr(lpszCmdLine, "-m"))
-		if (!getenv("PIDGIN_MULTI_INST") && !winpidgin_set_running())
+	if (!strstr(lpszCmdLine, "-h") && !strstr(lpszCmdLine, "-v"))
+		if (!winpidgin_set_running(getenv("PIDGIN_MULTI_INST") == NULL && strstr(lpszCmdLine, "-m") == NULL))
 			return 0;
 
 	/* Now we are ready for Pidgin .. */

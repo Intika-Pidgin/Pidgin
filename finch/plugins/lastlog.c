@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 
@@ -96,6 +96,7 @@ plugin_load(PurplePlugin *plugin)
 {
 	cmd = purple_cmd_register("lastlog", "s", PURPLE_CMD_P_DEFAULT,
 			PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM, NULL,
+			/* Translator Note: The "backlog" is the conversation buffer/history. */
 			lastlog_cb, _("lastlog: Searches for a substring in the backlog."), NULL);
 	return TRUE;
 }
@@ -119,7 +120,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	"gntlastlog",
 	N_("GntLastlog"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Lastlog plugin."),
 	N_("Lastlog plugin."),
 	"Sadrul H Chowdhury <sadrul@users.sourceforge.net>",

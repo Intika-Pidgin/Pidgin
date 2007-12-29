@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _PURPLE_GG_UTILS_H
@@ -91,6 +91,15 @@ ggp_get_uin(PurpleAccount *account);
  */
 char *
 ggp_buddy_get_name(PurpleConnection *gc, const uin_t uin);
+
+/**
+ * Manages the display of account's status in the buddylist.
+ *
+ * @param account Current account.
+ */
+void
+ggp_status_fake_to_self(PurpleAccount *account);
+
 
 #endif /* _PURPLE_GG_UTILS_H */
 

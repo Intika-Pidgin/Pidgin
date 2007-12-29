@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -2341,6 +2341,8 @@ get_config_frame(PurplePlugin *plugin)
 #endif
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
+	g_object_unref(sg2);
 	return ret;
 }
 
@@ -2368,7 +2370,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	SPELLCHECK_PLUGIN_ID,
 	N_("Text replacement"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Replaces text in outgoing messages according to user-defined rules."),
 	N_("Replaces text in outgoing messages according to user-defined rules."),
 	"Eric Warmenhoven <eric@warmenhoven.org>",

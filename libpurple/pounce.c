@@ -1,8 +1,9 @@
 /**
  * @file pounce.c Buddy Pounce API
  * @ingroup core
- *
- * purple
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "conversation.h"
@@ -180,7 +181,8 @@ pounce_to_xmlnode(PurplePounce *pounce)
 
 	child = xmlnode_new_child(node, "account");
 	xmlnode_set_attrib(child, "protocol", pouncer->protocol_id);
-	xmlnode_insert_data(child, purple_account_get_username(pouncer), -1);
+	xmlnode_insert_data(child,
+			purple_normalize(pouncer, purple_account_get_username(pouncer)), -1);
 
 	child = xmlnode_new_child(node, "pouncee");
 	xmlnode_insert_data(child, purple_pounce_get_pouncee(pounce), -1);

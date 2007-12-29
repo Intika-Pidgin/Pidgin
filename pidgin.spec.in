@@ -14,6 +14,9 @@
 %define pidginver @VERSION@
 %endif
 
+# define the minimum API version required, so we can use it for plugin deps
+%define apiver %(echo "@VERSION@"|awk -F. '{print $1"."$2}')
+
 Summary:    A GTK+ based multiprotocol instant messaging client
 Name:       @PACKAGE@
 Version:    %pidginver
@@ -29,7 +32,7 @@ BuildRequires: libtool, pkgconfig, intltool, gettext, libxml2-devel
 BuildRequires: gtk2-devel
 
 %{!?_without_startupnotification:BuildRequires: startup-notification-devel}
-%{?_with_avahi:BuildRequires: avahi-compat-howl-devel}
+%{?_with_avahi:BuildRequires: avahi-glib-devel}
 %{!?_without_gtkspell:BuildRequires: gtkspell-devel}
 %{?_with_howl:BuildRequires: howl-devel}
 %{?_with_meanwhile:BuildRequires: meanwhile-devel}
@@ -44,9 +47,15 @@ BuildRequires: gtk2-devel
 BuildRequires: gnutls-devel
 %{?_with_dbus:BuildRequires: dbus-1-devel >= 0.35}
 %{!?_without_gstreamer:BuildRequires: gstreamer010-devel >= 0.10}
+Requires(pre): gconf2
+Requires(post): gconf2
+Requires(preun): gconf2
 %else
 %{?_with_dbus:BuildRequires: dbus-devel >= 0.35}
 %{!?_without_gstreamer:BuildRequires: gstreamer-devel >= 0.10}
+Requires(pre): GConf2
+Requires(post): GConf2
+Requires(preun): GConf2
 %endif
 
 # Mandrake 10.1 and lower || Mandrake 10.2 (and higher?)
@@ -72,9 +81,7 @@ BuildRequires: mozilla-nss-devel
 # For some reason perl isn't always automatically detected as a requirement :(
 Requires: perl
 
-Requires(pre): GConf2
-Requires(post): GConf2
-Requires(preun): GConf2
+Requires: libpurple = %{version}
 
 Obsoletes: gaim
 Provides: gaim
@@ -114,21 +121,21 @@ Requires:   pkgconfig
 %package -n libpurple-bonjour
 Summary:    Bonjour plugin for Pidgin
 Group:      Applications/Internet
-Requires:   libpurple = %{version}
+Requires:   libpurple >= %{apiver}
 %endif
 
 %if 0%{?_with_meanwhile:1}
 %package -n libpurple-meanwhile
 Summary:    Lotus Sametime plugin for Pidgin using the Meanwhile library
 Group:      Applications/Internet
-Requires:   libpurple = %{version}
+Requires:   libpurple >= %{apiver}
 %endif
 
 %if 0%{?_with_mono:1}
 %package -n libpurple-mono
 Summary:    Mono .NET plugin support for Pidgin
 Group:      Applications/Internet
-Requires:   libpurple = %{version}
+Requires:   libpurple >= %{apiver}
 %endif
 
 %if 0%{!?_without_text:1}
@@ -363,8 +370,6 @@ touch --no-create %{_datadir}/icons/hicolor || :
 %{_bindir}/pidgin
 %{_datadir}/pixmaps/pidgin
 %{_datadir}/icons/hicolor/*/apps/pidgin.*
-%dir %{_datadir}/sounds/pidgin
-%{_datadir}/sounds/pidgin/*
 %{_datadir}/applications/*
 %{_sysconfdir}/gconf/schemas/purple.schemas
 
@@ -374,6 +379,8 @@ touch --no-create %{_datadir}/icons/hicolor || :
 
 %{_libdir}/libpurple.so.*
 %dir %{_libdir}/purple-2
+%{_datadir}/purple
+%{_datadir}/sounds/purple
 %attr(755, root, root) %{perl_vendorarch}/Purple.pm
 %attr(755, root, root) %{perl_vendorarch}/auto/Purple
 
@@ -427,7 +434,7 @@ touch --no-create %{_datadir}/icons/hicolor || :
 %endif
 
 %if 0%{?_with_mono:1}
-%files libpurple-mono
+%files -n libpurple-mono
 %defattr(-, root, root)
 
 %{_libdir}/purple-2/mono.so
@@ -451,12 +458,29 @@ touch --no-create %{_datadir}/icons/hicolor || :
 # libgnt
 %dir %{_includedir}/gnt
 %{_includedir}/gnt/*.h
+%{_libdir}/pkgconfig/finch.pc
 %{_libdir}/pkgconfig/gnt.pc
 %{_libdir}/libgnt.so
 
 %endif
 
 %changelog
+* Wed Dec  5 2007 Stu Tomlinson <stu@nosnilmot.com>
+- When building with avahi, use native avahi instead of howl compatability
+  headers
+- Make the split out plugins depend only on the minimum necessary API
+  version of libpurple
+
+* Tue Oct 23 2007 Stu Tomlinson <stu@nosnilmot.com>
+- Add finch.pc to finch-devel
+
+* Mon Sep 17 2007 Stu Tomlinson <stu@nosnilmot.com>
+- Add version dependency on libpurple for pidgin
+- Support for OpenSuse lowercase package name for GConf2
+
+* Fri Sep 14 2007 Stu Tomlinson <stu@nosnilmot.com>
+- Fix spec file for moved sounds & new CA certificates
+
 * Thu Jul 12 2007 Stu Tomlinson <stu@nosnilmot.com>
 - Don't hardcode silc header locations, rely on pkg-config for those,
   because I think I broke non-pkg-config detection of older silc

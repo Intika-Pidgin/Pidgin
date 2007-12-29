@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02111-1301, USA.
  */
 
 /*
@@ -2980,7 +2980,7 @@ gtk_combo_box_cell_layout_reorder (GtkCellLayout   *layout,
 
   g_return_if_fail (link != NULL);
 
-  combo_box->priv->cells = g_slist_remove_link (combo_box->priv->cells, link);
+  combo_box->priv->cells = g_slist_delete_link (combo_box->priv->cells, link);
   combo_box->priv->cells = g_slist_insert (combo_box->priv->cells, info,
                                            position);
 

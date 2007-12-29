@@ -1,8 +1,9 @@
 /*
  * @file gtkscrollbook  GTK+ Scrolling notebook Widget
  * @ingroup pidgin
- *
- * pidgin
+ */
+
+/* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,17 +21,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef __PIDGIN_SCROLL_BOOK_H__
 #define __PIDGIN_SCROLL_BOOK_H__
 
 #include <gtk/gtk.h>
-
-#if !GTK_CHECK_VERSION(2,4,0)
-#include "pidgincombobox.h"
-#endif
 
 G_BEGIN_DECLS
 
@@ -53,9 +50,9 @@ struct _PidginScrollBook
 	GtkWidget *label;
 	GtkWidget *left_arrow;
 	GtkWidget *right_arrow;
+	GList *children;
 	
 	/* Padding for future expansion */
-	void (*_gtk_reserved0) (void);
 	void (*_gtk_reserved1) (void);
 	void (*_gtk_reserved2) (void);
 	void (*_gtk_reserved3) (void);
@@ -65,7 +62,7 @@ struct _PidginScrollBook
 
 struct _PidginScrollBookClass
 {
-	GtkComboBoxClass parent_class;
+	GtkContainerClass parent_class;
 
 	/* Padding for future expansion */
 	void (*_gtk_reserved0) (void);

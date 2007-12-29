@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _MSN_STATE_H_
 #define _MSN_STATE_H_
@@ -58,6 +58,17 @@ void msn_change_status(MsnSession *session);
 const char *msn_away_get_text(MsnAwayType type);
 
 const char *msn_state_get_text(MsnAwayType state);
+
+void msn_set_psm(MsnSession *session);
+
+/* Parse CurrentMedia string */
+gboolean msn_parse_currentmedia(const char *cmedia, CurrentMedia *media);
+
+/* Get the CurrentMedia info from the XML string */
+char * msn_get_currentmedia(char *xml_str,gsize len);
+
+/*get the PSM info from the XML string*/
+char * msn_get_psm(char *xml_str,gsize len);
 
 MsnAwayType msn_state_from_account(PurpleAccount *account);
 

@@ -1,7 +1,11 @@
 EXTRA_DIST = \
 		getopt.c \
 		getopt.h \
-		getopt1.c
+		getopt1.c \
+		finch.pc.in
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = finch.pc
 
 SUBDIRS = libgnt plugins
 
@@ -14,6 +18,7 @@ endif
 finch_SOURCES = \
 	gntaccount.c \
 	gntblist.c \
+	gntcertmgr.c \
 	gntconn.c \
 	gntconv.c \
 	gntdebug.c \
@@ -32,6 +37,7 @@ finch_SOURCES = \
 finch_headers = \
 	gntaccount.h \
 	gntblist.h \
+	gntcertmgr.h \
 	gntconn.h \
 	gntconv.h \
 	gntdebug.h \

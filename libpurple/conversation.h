@@ -1,8 +1,10 @@
 /**
  * @file conversation.h Conversation API
  * @ingroup core
- *
- * purple
+ * @see @ref conversation-signals
+ */
+
+/* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -20,9 +22,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * @see @ref conversation-signals
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _PURPLE_CONVERSATION_H_
 #define _PURPLE_CONVERSATION_H_
@@ -37,6 +37,7 @@ typedef struct _PurpleConversation      PurpleConversation;
 typedef struct _PurpleConvIm            PurpleConvIm;
 typedef struct _PurpleConvChat          PurpleConvChat;
 typedef struct _PurpleConvChatBuddy     PurpleConvChatBuddy;
+typedef struct _PurpleConvMessage       PurpleConvMessage;
 
 /**
  * A type of conversation.
@@ -117,9 +118,9 @@ typedef enum
 	                                        apply formatting         */
 	PURPLE_MESSAGE_IMAGES      = 0x1000, /**< Message contains images  */
 	PURPLE_MESSAGE_NOTIFY      = 0x2000, /**< Message is a notification */
-	PURPLE_MESSAGE_NO_LINKIFY  = 0x4000  /**< Message should not be auto-
+	PURPLE_MESSAGE_NO_LINKIFY  = 0x4000, /**< Message should not be auto-
 										   linkified */
-
+	PURPLE_MESSAGE_INVISIBLE   = 0x8000, /**< Message should not be displayed */
 } PurpleMessageFlags;
 
 /**
@@ -170,9 +171,12 @@ struct _PurpleConversationUiOps
 	void (*write_im)(PurpleConversation *conv, const char *who,
 	                 const char *message, PurpleMessageFlags flags,
 	                 time_t mtime);
-	/** Write a message to a conversation.  This is used rather than
-	 *  the chat- or im-specific ops for generic messages, such as system
-	 *  messages like "x is now know as y".
+	/** Write a message to a conversation.  This is used rather than the
+	 *  chat- or im-specific ops for errors, system messages (such as "x is
+	 *  now know as y"), and as the fallback if #write_im and #write_chat
+	 *  are not implemented.  It should be implemented, or the UI will miss
+	 *  conversation error messages and your users will hate you.
+	 *
 	 *  @see purple_conversation_write()
 	 */
 	void (*write_conv)(PurpleConversation *conv,
@@ -183,7 +187,7 @@ struct _PurpleConversationUiOps
 	                   time_t mtime);
 
 	/** Add @a cbuddies to a chat.
-	 *  @param cbuddies      A @C GList of #PurpleConvChatBuddy structs.
+	 *  @param cbuddies      A @c GList of #PurpleConvChatBuddy structs.
 	 *  @param new_arrivals  Whether join notices should be shown.
 	 *                       (Join notices are actually written to the
 	 *                       conversation by #purple_conv_chat_add_users().)
@@ -199,7 +203,7 @@ struct _PurpleConversationUiOps
 	void (*chat_rename_user)(PurpleConversation *conv, const char *old_name,
 	                         const char *new_name, const char *new_alias);
 	/** Remove @a users from a chat.
-	 *  @param users    A @C GList of <tt>const char *</tt>s.
+	 *  @param users    A @c GList of <tt>const char *</tt>s.
 	 *  @see purple_conv_chat_rename_user()
 	 */
 	void (*chat_remove_users)(PurpleConversation *conv, GList *users);
@@ -283,6 +287,21 @@ struct _PurpleConvChatBuddy
 };
 
 /**
+ * Description of a conversation message
+ *
+ * @since 2.2.0
+ */
+struct _PurpleConvMessage
+{
+	char *who;
+	char *what;
+	PurpleMessageFlags flags;
+	time_t when;
+	PurpleConversation *conv;  /**< @since 2.3.0 */
+	char *alias;               /**< @since 2.3.0 */
+};
+
+/**
  * A core representation of a conversation between two or more people.
  *
  * The conversation can be an IM or a chat.
@@ -315,7 +334,7 @@ struct _PurpleConversation
 	GHashTable *data;                        /**< Plugin-specific data.   */
 
 	PurpleConnectionFlags features; /**< The supported features */
-
+	GList *message_history;         /**< Message history, as a GList of PurpleConvMessage's */
 };
 
 #ifdef __cplusplus
@@ -650,6 +669,72 @@ void purple_conversation_update(PurpleConversation *conv, PurpleConvUpdateType t
  */
 void purple_conversation_foreach(void (*func)(PurpleConversation *conv));
 
+/**
+ * Retrieve the message history of a conversation.
+ *
+ * @param conv   The conversation
+ *
+ * @return  A GList of PurpleConvMessage's. The must not modify the list or the data within.
+ *          The list contains the newest message at the beginning, and the oldest message at
+ *          the end.
+ *
+ * @since 2.2.0
+ */
+GList *purple_conversation_get_message_history(PurpleConversation *conv);
+
+/**
+ * Clear the message history of a conversation.
+ *
+ * @param conv  The conversation
+ *
+ * @since 2.2.0
+ */
+void purple_conversation_clear_message_history(PurpleConversation *conv);
+
+/**
+ * Get the sender from a PurpleConvMessage
+ *
+ * @param msg   A PurpleConvMessage
+ *
+ * @return   The name of the sender of the message
+ *
+ * @since 2.2.0
+ */
+const char *purple_conversation_message_get_sender(PurpleConvMessage *msg);
+
+/**
+ * Get the message from a PurpleConvMessage
+ *
+ * @param msg   A PurpleConvMessage
+ *
+ * @return   The name of the sender of the message
+ *
+ * @since 2.2.0
+ */
+const char *purple_conversation_message_get_message(PurpleConvMessage *msg);
+
+/**
+ * Get the message-flags of a PurpleConvMessage
+ *
+ * @param msg   A PurpleConvMessage
+ *
+ * @return   The name of the sender of the message
+ *
+ * @since 2.2.0
+ */
+PurpleMessageFlags purple_conversation_message_get_flags(PurpleConvMessage *msg);
+
+/**
+ * Get the timestamp of a PurpleConvMessage
+ *
+ * @param msg   A PurpleConvMessage
+ *
+ * @return   The name of the sender of the message
+ *
+ * @since 2.2.0
+ */
+time_t purple_conversation_message_get_timestamp(PurpleConvMessage *msg);
+
 /*@}*/
 
 
@@ -962,7 +1047,7 @@ GList *purple_conv_chat_set_ignored(PurpleConvChat *chat, GList *ignored);
  *
  * @param chat The chat.
  *
- * @return The list of ignored users.
+ * @constreturn The list of ignored users.
  */
 GList *purple_conv_chat_get_ignored(const PurpleConvChat *chat);
 
@@ -1252,6 +1337,8 @@ void purple_conv_chat_cb_destroy(PurpleConvChatBuddy *cb);
  * @return  A list of PurpleMenuAction items, harvested by the
  *          chat-extended-menu signal. The list and the menuaction
  *          items should be freed by the caller.
+ *
+ * @since 2.1.0
  */
 GList * purple_conversation_get_extended_menu(PurpleConversation *conv);
 
@@ -1265,6 +1352,8 @@ GList * purple_conversation_get_extended_menu(PurpleConversation *conv);
  *                message, if not @c NULL. It must be freed by the caller with g_free().
  *
  * @return  @c TRUE if the command was executed successfully, @c FALSE otherwise.
+ *
+ * @since 2.1.0
  */
 gboolean purple_conversation_do_command(PurpleConversation *conv, const gchar *cmdline, const gchar *markup, gchar **error);
 

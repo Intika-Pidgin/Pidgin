@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "gntclipboard.h"
@@ -48,7 +48,7 @@ gnt_clipboard_class_init(GntClipboardClass *klass)
  *****************************************************************************/
 
 void
-gnt_clipboard_set_string(GntClipboard *clipboard, gchar *string)
+gnt_clipboard_set_string(GntClipboard *clipboard, const gchar *string)
 {
 	g_free(clipboard->string);
 	clipboard->string = g_strdup(string);

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 
@@ -63,6 +63,7 @@ msim_session_new(PurpleAccount *acct)
 	session->next_rid = 1;
 	session->last_comm = time(NULL);
 	session->inbox_status = 0;
+	session->inbox_handle = 0;
 	
 	return session;
 }
@@ -90,6 +91,11 @@ msim_session_destroy(MsimSession *session)
 		msim_msg_free(session->server_info);
 	}
 	
+	/* Stop checking the inbox at the end of the session. */
+	if (session->inbox_handle) {
+		purple_timeout_remove(session->inbox_handle);
+	}
+
 	g_free(session);
 }
 

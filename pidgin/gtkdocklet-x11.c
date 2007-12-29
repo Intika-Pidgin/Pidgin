@@ -18,8 +18,8 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 
 #include "internal.h"
@@ -79,13 +79,14 @@ docklet_x11_destroyed_cb(GtkWidget *widget, void *data)
 	g_idle_add(docklet_x11_recreate_cb, NULL);
 }
 
-static void
+static gboolean
 docklet_x11_clicked_cb(GtkWidget *button, GdkEventButton *event, void *data)
 {
 	if (event->type != GDK_BUTTON_RELEASE)
-		return;
+		return FALSE;
 
 	pidgin_docklet_clicked(event->button);
+	return TRUE;
 }
 
 static void

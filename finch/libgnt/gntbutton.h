@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef GNT_BUTTON_H
@@ -73,17 +73,16 @@ struct _GntButtonClass
 G_BEGIN_DECLS
 
 /**
- * 
- *
- * @return
+ * @return  GType for Gntbutton
  */
 GType gnt_button_get_gtype(void);
 
 /**
- * 
- * @param text
+ * Create a new button.
  *
- * @return
+ * @param text   The text for the button.
+ *
+ * @return  The newly created button.
  */
 GntWidget * gnt_button_new(const char *text);
 

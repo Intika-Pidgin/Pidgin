@@ -167,6 +167,8 @@ ReserveFile "${NSISDIR}\Plugins\System.dll"
 
   !insertmacro MUI_LANGUAGE "Afrikaans"
   !insertmacro MUI_LANGUAGE "Albanian"
+  !insertmacro MUI_LANGUAGE "Arabic"
+  !insertmacro MUI_LANGUAGE "Basque"
   !insertmacro MUI_LANGUAGE "Bulgarian"
   !insertmacro MUI_LANGUAGE "Catalan"
   !insertmacro MUI_LANGUAGE "Czech"
@@ -206,6 +208,8 @@ ReserveFile "${NSISDIR}\Plugins\System.dll"
 
   !insertmacro PIDGIN_MACRO_INCLUDE_LANGFILE "AFRIKAANS"	"${PIDGIN_NSIS_INCLUDE_PATH}\translations\afrikaans.nsh"
   !insertmacro PIDGIN_MACRO_INCLUDE_LANGFILE "ALBANIAN"		"${PIDGIN_NSIS_INCLUDE_PATH}\translations\albanian.nsh"
+  !insertmacro PIDGIN_MACRO_INCLUDE_LANGFILE "ARABIC"		"${PIDGIN_NSIS_INCLUDE_PATH}\translations\arabic.nsh"
+  !insertmacro PIDGIN_MACRO_INCLUDE_LANGFILE "BASQUE"		"${PIDGIN_NSIS_INCLUDE_PATH}\translations\basque.nsh"
   !insertmacro PIDGIN_MACRO_INCLUDE_LANGFILE "BULGARIAN"	"${PIDGIN_NSIS_INCLUDE_PATH}\translations\bulgarian.nsh"
   !insertmacro PIDGIN_MACRO_INCLUDE_LANGFILE "CATALAN"		"${PIDGIN_NSIS_INCLUDE_PATH}\translations\catalan.nsh"
   !insertmacro PIDGIN_MACRO_INCLUDE_LANGFILE "CZECH"		"${PIDGIN_NSIS_INCLUDE_PATH}\translations\czech.nsh"
@@ -503,8 +507,8 @@ Section $(PIDGIN_SECTION_TITLE) SecPidgin
     ${If} ${IsNT}
     ${AndIf} ${IsWinNT4}
       Delete "$INSTDIR\plugins\libsilc.dll"
-      Delete "$INSTDIR\silcclient.dll"
-      Delete "$INSTDIR\silc.dll"
+      Delete "$INSTDIR\libsilcclient-1-1-2.dll"
+      Delete "$INSTDIR\libsilc-1-1-2.dll"
     ${EndIf}
 
     SetOutPath "$INSTDIR"
@@ -692,6 +696,14 @@ Section Uninstall
     DeleteRegValue HKLM "${STARTUP_RUN_KEY}" "Pidgin"
     ; Remove Language preference info (TODO: check if NSIS removes this)
 
+    Delete "$INSTDIR\ca-certs\Equifax_Secure_CA.pem"
+    Delete "$INSTDIR\ca-certs\GTE_CyberTrust_Global_Root.pem"
+    Delete "$INSTDIR\ca-certs\Microsoft_Secure_Server_Authority.pem"
+    Delete "$INSTDIR\ca-certs\StartCom_Free_SSL_CA.pem"
+    Delete "$INSTDIR\ca-certs\Verisign_Class3_Extended_Validation_CA.pem"
+    Delete "$INSTDIR\ca-certs\Verisign_Class3_Primary_CA.pem"
+    Delete "$INSTDIR\ca-certs\Verisign_RSA_Secure_Server_CA.pem"
+    RMDir "$INSTDIR\ca-certs"
     RMDir /r "$INSTDIR\locale"
     RMDir /r "$INSTDIR\pixmaps"
     RMDir /r "$INSTDIR\perlmod"
@@ -699,7 +711,7 @@ Section Uninstall
     Delete "$INSTDIR\plugins\buddynote.dll"
     Delete "$INSTDIR\plugins\convcolors.dll"
     Delete "$INSTDIR\plugins\extplacement.dll"
-    Delete "$INSTDIR\plugins\pidginrc.dll"
+    Delete "$INSTDIR\plugins\gtkbuddynote.dll"
     Delete "$INSTDIR\plugins\history.dll"
     Delete "$INSTDIR\plugins\iconaway.dll"
     Delete "$INSTDIR\plugins\idle.dll"
@@ -726,6 +738,7 @@ Section Uninstall
     Delete "$INSTDIR\plugins\notify.dll"
     Delete "$INSTDIR\plugins\offlinemsg.dll"
     Delete "$INSTDIR\plugins\perl.dll"
+    Delete "$INSTDIR\plugins\pidginrc.dll"
     Delete "$INSTDIR\plugins\psychic.dll"
     Delete "$INSTDIR\plugins\relnot.dll"
     Delete "$INSTDIR\plugins\spellchk.dll"
@@ -739,30 +752,37 @@ Section Uninstall
     Delete "$INSTDIR\plugins\win2ktrans.dll"
     Delete "$INSTDIR\plugins\winprefs.dll"
     RMDir "$INSTDIR\plugins"
-    Delete "$INSTDIR\sounds\pidgin\alert.wav"
-    Delete "$INSTDIR\sounds\pidgin\login.wav"
-    Delete "$INSTDIR\sounds\pidgin\logout.wav"
-    Delete "$INSTDIR\sounds\pidgin\receive.wav"
-    Delete "$INSTDIR\sounds\pidgin\send.wav"
-    RMDir "$INSTDIR\sounds\pidgin"
+    RMDir /r "$INSTDIR\sasl2"
+    Delete "$INSTDIR\sounds\purple\alert.wav"
+    Delete "$INSTDIR\sounds\purple\login.wav"
+    Delete "$INSTDIR\sounds\purple\logout.wav"
+    Delete "$INSTDIR\sounds\purple\receive.wav"
+    Delete "$INSTDIR\sounds\purple\send.wav"
+    RMDir "$INSTDIR\sounds\purple"
     RMDir "$INSTDIR\sounds"
+    Delete "$INSTDIR\comerr32.dll"
     Delete "$INSTDIR\freebl3.dll"
+    Delete "$INSTDIR\gssapi32.dll"
     Delete "$INSTDIR\idletrack.dll"
+    Delete "$INSTDIR\k5sprt32.dll"
+    Delete "$INSTDIR\krb5_32.dll"
     Delete "$INSTDIR\libgtkspell.dll"
     Delete "$INSTDIR\libjabber.dll"
+    Delete "$INSTDIR\libmeanwhile-1.dll"
     Delete "$INSTDIR\liboscar.dll"
     Delete "$INSTDIR\libpurple.dll"
-    Delete "$INSTDIR\libmeanwhile-1.dll"
+    Delete "$INSTDIR\libsasl.dll"
+    Delete "$INSTDIR\libsilc-1-1-2.dll"
+    Delete "$INSTDIR\libsilcclient-1-1-2.dll"
     Delete "$INSTDIR\libxml2.dll"
     Delete "$INSTDIR\nspr4.dll"
     Delete "$INSTDIR\nss3.dll"
     Delete "$INSTDIR\nssckbi.dll"
-    Delete "$INSTDIR\pidgin.exe"
     Delete "$INSTDIR\pidgin.dll"
+    Delete "$INSTDIR\pidgin.exe"
     Delete "$INSTDIR\plc4.dll"
     Delete "$INSTDIR\plds4.dll"
-    Delete "$INSTDIR\silc.dll"
-    Delete "$INSTDIR\silcclient.dll"
+    Delete "$INSTDIR\smime3.dll"
     Delete "$INSTDIR\softokn3.dll"
     Delete "$INSTDIR\ssl3.dll"
     Delete "$INSTDIR\${PIDGIN_UNINST_EXE}"
@@ -1084,7 +1104,7 @@ Function DoWeNeedGtk
 
   have_gtk:
     ; GTK+ is already installed; check version.
-	; Change this to not even run the GTK installer if this version is already installed.
+    ; Change this to not even run the GTK installer if this version is already installed.
     ${VersionCompare} ${GTK_INSTALL_VERSION} $0 $3
     IntCmp $3 1 +1 good_version good_version
     ${VersionCompare} ${GTK_MIN_VERSION} $0 $3
@@ -1135,11 +1155,21 @@ FunctionEnd
 !macro RunCheckMacro UN
 Function ${UN}RunCheck
   Push $R0
-  System::Call 'kernel32::OpenMutex(i 2031617, b 0, t "pidgin_is_running") i .R0'
-  IntCmp $R0 0 done
-    MessageBox MB_OK|MB_ICONEXCLAMATION $(PIDGIN_IS_RUNNING) /SD IDOK
+  Push $R1
+
+  IntOp $R1 0 + 0
+  retry_runcheck:
+  ; Close the Handle (needed if we're retrying)
+  IntCmp $R1 0 +2
+    System::Call 'kernel32::CloseHandle(i $R1) i .R1'
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "pidgin_is_running") i .R1 ?e'
+  Pop $R0
+  IntCmp $R0 0 +3 ;This could check for ERROR_ALREADY_EXISTS(183), but lets just assume
+    MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION $(PIDGIN_IS_RUNNING) /SD IDCANCEL IDRETRY retry_runcheck
     Abort
+
   done:
+  Pop $R1
   Pop $R0
 FunctionEnd
 !macroend
@@ -1148,10 +1178,18 @@ FunctionEnd
 
 Function .onInit
   Push $R0
-  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "pidgin_installer_running") i .r1 ?e'
+  Push $R1
+  Push $R2
+
+  IntOp $R1 0 + 0
+  retry_runcheck:
+  ; Close the Handle (needed if we're retrying)
+  IntCmp $R1 0 +2
+    System::Call 'kernel32::CloseHandle(i $R1) i .R1'
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "pidgin_installer_running") i .R1 ?e'
   Pop $R0
-  StrCmp $R0 0 +3
-    MessageBox MB_OK|MB_ICONEXCLAMATION $(INSTALLER_IS_RUNNING) /SD IDOK
+  IntCmp $R0 0 +3 ;This could check for ERROR_ALREADY_EXISTS(183), but lets just assume
+    MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION $(INSTALLER_IS_RUNNING) /SD IDCANCEL IDRETRY retry_runcheck
     Abort
   Call RunCheck
   StrCpy $name "Pidgin ${PIDGIN_VERSION}"
@@ -1214,15 +1252,37 @@ Function .onInit
 
   ${GetParameters} $R0
   ClearErrors
-  ${GetOptions} $R0 "/L=" $R0
+  ${GetOptions} "$R0" "/L=" $R1
   IfErrors +3
-  StrCpy $LANGUAGE $R0
+  StrCpy $LANGUAGE $R1
   Goto skip_lang
 
   ; Select Language
     ; Display Language selection dialog
     !insertmacro MUI_LANGDLL_DISPLAY
     skip_lang:
+
+  ClearErrors
+  ${GetOptions} "$R0" "/DS=" $R1
+  IfErrors +7
+  SectionGetFlags ${SecDesktopShortcut} $R2
+  StrCmp "1" $R1 0 +2
+  IntOp $R2 $R2 | ${SF_SELECTED}
+  StrCmp "0" $R1 0 +3
+  IntOp $R1 ${SF_SELECTED} ~
+  IntOp $R2 $R2 & $R1
+  SectionSetFlags ${SecDesktopShortcut} $R2
+
+  ClearErrors
+  ${GetOptions} "$R0" "/SMS=" $R1
+  IfErrors +7
+  SectionGetFlags ${SecStartMenuShortcut} $R2
+  StrCmp "1" $R1 0 +2
+  IntOp $R2 $R2 | ${SF_SELECTED}
+  StrCmp "0" $R1 0 +3
+  IntOp $R1 ${SF_SELECTED} ~
+  IntOp $R2 $R2 & $R1
+  SectionSetFlags ${SecStartMenuShortcut} $R2
 
   ; If install path was set on the command, use it.
   StrCmp $INSTDIR "" 0 instdir_done
@@ -1251,6 +1311,8 @@ Function .onInit
 
   instdir_done:
 ;LogSet on
+  Pop $R2
+  Pop $R1
   Pop $R0
 FunctionEnd
 

@@ -118,7 +118,7 @@ plugin_load(PurplePlugin *plugin)
 	void *conn_handle = purple_connections_get_handle();
 
 	if (!check_timeout(NULL)) {
-		purple_debug_warning("mailchk", "Could not read $MAIL or /var/spool/mail/$USER");
+		purple_debug_warning("mailchk", "Could not read $MAIL or /var/spool/mail/$USER\n");
 		return FALSE;
 	}
 
@@ -158,7 +158,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	MAILCHK_PLUGIN_ID,
 	N_("Mail Checker"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Checks for new local mail."),
 	N_("Adds a small box to the buddy list that"
 	   " shows if you have new mail."),
