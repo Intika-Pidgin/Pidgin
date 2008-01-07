@@ -49,6 +49,8 @@ static GHashTable *account_cache = NULL;
 static GHashTable *icon_data_cache = NULL;
 static GHashTable *icon_file_cache = NULL;
 
+static void delete_buddy_icon_settings(PurpleBlistNode *node, const char *setting_name);
+
 /* This one is used for both custom buddy icons
  * on PurpleContacts and account icons. */
 static GHashTable *pointer_icon_cache = NULL;
@@ -613,6 +615,10 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username)
 				icon->img = NULL;
 				checksum = purple_blist_node_get_string((PurpleBlistNode*)b, "icon_checksum");
 				purple_buddy_icon_set_data(icon, data, len, checksum);
+			}
+			else
+			{
+				delete_buddy_icon_settings((PurpleBlistNode*)b, "buddy_icon");
 			}
 			g_free(path);
 		}
