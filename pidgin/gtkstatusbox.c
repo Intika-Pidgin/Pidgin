@@ -515,16 +515,10 @@ pidgin_status_box_finalize(GObject *obj)
 	purple_signals_disconnect_by_handle(statusbox);
 	purple_prefs_disconnect_by_handle(statusbox);
 
-	gdk_cursor_unref(statusbox->hand_cursor);
-	gdk_cursor_unref(statusbox->arrow_cursor);
+	destroy_icon_box(statusbox);
 
-	purple_imgstore_unref(statusbox->buddy_icon_img);
-	g_object_unref(G_OBJECT(statusbox->buddy_icon));
-	g_object_unref(G_OBJECT(statusbox->buddy_icon_hover));
-
-	if (statusbox->buddy_icon_sel)
-		gtk_widget_destroy(statusbox->buddy_icon_sel);
-
+	g_object_unref(G_OBJECT(statusbox->store));
+	g_object_unref(G_OBJECT(statusbox->dropdown_store));
 	G_OBJECT_CLASS(parent_class)->finalize(obj);
 }
 

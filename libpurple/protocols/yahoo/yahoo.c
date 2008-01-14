@@ -392,6 +392,10 @@ static void yahoo_process_status(PurpleConnection *gc, struct yahoo_packet *pkt)
 		case 97: /* Unicode status message */
 			unicode = !strcmp(pair->value, "1");
 			break;
+		case 244: /* client version number. Yahoo Client Detection */
+			if(f && strtol(pair->value, NULL, 10))
+				f->version_id = strtol(pair->value, NULL, 10);
+			break;
 
 		default:
 			purple_debug(PURPLE_DEBUG_ERROR, "yahoo",
@@ -493,16 +497,16 @@ static char *_getcookie(char *rawcookie)
 static void yahoo_process_cookie(struct yahoo_data *yd, char *c)
 {
 	if (c[0] == 'Y') {
-		g_free(yd->cookie_y);
+		if (yd->cookie_y)
+			g_free(yd->cookie_y);
 		yd->cookie_y = _getcookie(c);
 	} else if (c[0] == 'T') {
-		g_free(yd->cookie_t);
+		if (yd->cookie_t)
+			g_free(yd->cookie_t);
 		yd->cookie_t = _getcookie(c);
-	} else if (c[0] == 'C') {
-		g_free(yd->cookie_c);
-		yd->cookie_c = _getcookie(c);
 	} else
-		purple_debug_info("yahoo", "Ignoring unrecognized cookie '%c'\n", c[0]);
+		purple_debug_info("yahoo", "Unrecognized cookie '%c'\n", c[0]);
+	yd->cookies = g_slist_prepend(yd->cookies, g_strdup(c));
 }
 
 static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt)
@@ -510,6 +514,7 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 	GSList *l = pkt->hash;
 
 	PurpleAccount *account = purple_connection_get_account(gc);
+	struct yahoo_data *yd = gc->proto_data;
 	GHashTable *ht;
 	char *grp = NULL;
 	char *norm_bud = NULL;
@@ -574,6 +579,9 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 				f->protocol = strtol(pair->value, NULL, 10);
 				purple_debug_info("yahoo", "Setting protocol to %d\n", f->protocol);
 			}
+			break;
+		case 59: /* somebody told cookies come here too, but im not sure */
+			yahoo_process_cookie(yd, pair->value);
 			break;
 		case 317: /* Stealth Setting */
 			if (f && (strtol(pair->value, NULL, 10) == 2)) {
@@ -1507,7 +1515,13 @@ static void yahoo_process_auth_old(PurpleConnection *gc, const char *seed)
 	to_y64(result96, digest, 16);
 
 	pack = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP,	YAHOO_STATUS_AVAILABLE, 0);
-	yahoo_packet_hash(pack, "ssss", 0, name, 6, result6, 96, result96, 1, name);
+	yahoo_packet_hash(pack, "ssssss",
+					  0, name,
+					  6, result6,
+					  96, result96,
+					  1, name,
+					  244, YAHOO_CLIENT_VERSION_ID,
+					  135, YAHOO_CLIENT_VERSION);
 	yahoo_packet_send_and_free(pack, yd);
 
 	g_free(hash_string_p);
@@ -1526,11 +1540,11 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	char *enc_pass;
 	struct yahoo_data *yd = gc->proto_data;
 
-	PurpleCipher			*md5_cipher;
+	PurpleCipher		*md5_cipher;
 	PurpleCipherContext	*md5_ctx;
 	guchar				md5_digest[16];
 
-	PurpleCipher			*sha1_cipher;
+	PurpleCipher		*sha1_cipher;
 	PurpleCipherContext	*sha1_ctx1;
 	PurpleCipherContext	*sha1_ctx2;
 
@@ -1542,7 +1556,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	char				*delimit_lookup		= ",;";
 
 	char				*password_hash		= (char *)g_malloc(25);
-	char				*crypt_hash		= (char *)g_malloc(25);
+	char				*crypt_hash			= (char *)g_malloc(25);
 	char				*crypt_result		= NULL;
 
 	unsigned char		pass_hash_xor1[64];
@@ -1596,7 +1610,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 
 	magic_ptr = seed;
 
-	while (*magic_ptr != (int)NULL) {
+	while (*magic_ptr != '\0') {
 		char   *loc;
 
 		/* Ignore parentheses. */
@@ -1649,7 +1663,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	 * dust on the values.
 	 */
 
-	for (magic_cnt = magic_len-2; magic_cnt >= 0; magic_cnt--) {
+	for (magic_cnt = magic_len - 2; magic_cnt >= 0; magic_cnt--) {
 		unsigned char	byte1;
 		unsigned char	byte2;
 
@@ -1665,7 +1679,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 		byte1 ^= byte2;
 
 		magic[magic_cnt+1] = byte1;
-			}
+	}
 
 	/*
 	 * Magic: Phase 3.  This computes 20 bytes.  The first 4 bytes are used as our magic
@@ -1680,8 +1694,8 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	x = 0;
 
 	do {
-		unsigned int	bl = 0;
-		unsigned int	cl = magic[magic_cnt++];
+		unsigned int bl = 0;
+		unsigned int cl = magic[magic_cnt++];
 
 		if (magic_cnt >= magic_len)
 			break;
@@ -1706,17 +1720,18 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 
 	/* First four bytes are magic key. */
 	memcpy(&magic_key_char[0], comparison_src, 4);
-	magic_4 = magic_key_char[0] | (magic_key_char[1]<<8) | (magic_key_char[2]<<16) | (magic_key_char[3]<<24);
+	magic_4 = magic_key_char[0] | (magic_key_char[1] << 8) |
+			(magic_key_char[2] << 16) | (magic_key_char[3] << 24);
 
 	/*
 	 * Magic: Phase 4.  Determine what function to use later by getting outside/inside
 	 * loop values until we match our previous buffer.
 	 */
 	for (x = 0; x < 65535; x++) {
-		int			leave = 0;
+		int leave = 0;
 
 		for (y = 0; y < 5; y++) {
-			unsigned char	test[3];
+			unsigned char test[3];
 
 			/* Calculate buffer. */
 			test[0] = x;
@@ -1952,8 +1967,13 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	}
 	purple_debug_info("yahoo", "yahoo status: %d\n", yd->current_status);
 	pack = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP,	yd->current_status, 0);
-	yahoo_packet_hash(pack, "sssss", 0, name, 6, resp_6, 96, resp_96, 1,
-	                  name, 135, "6,0,0,1710");
+	yahoo_packet_hash(pack, "ssssss",
+					  0, name,
+					  6, resp_6,
+					  96, resp_96,
+					  1, name,
+					  244, YAHOO_CLIENT_VERSION_ID,
+					  135, YAHOO_CLIENT_VERSION);
 	if (yd->picture_checksum)
 		yahoo_packet_hash_int(pack, 192, yd->picture_checksum);
 
@@ -2443,12 +2463,16 @@ static void yahoo_packet_process(PurpleConnection *gc, struct yahoo_packet *pkt)
 	case YAHOO_SERVICE_AUDIBLE:
 		yahoo_process_audible(gc, pkt);
 		break;
-	case YAHOO_SERVICE_Y7_FILETRANSFER:
-		yahoo_process_y7_filetransfer(gc, pkt);
+	case YAHOO_SERVICE_FILETRANS_15:
+		yahoo_process_filetrans_15(gc, pkt);
 		break;
-	case YAHOO_SERVICE_Y7_FILETRANSFER_INFO:
-		yahoo_process_y7_filetransfer_info(gc, pkt);
+	case YAHOO_SERVICE_FILETRANS_INFO_15:
+		yahoo_process_filetrans_info_15(gc, pkt);
 		break;
+	case YAHOO_SERVICE_FILETRANS_ACC_15:
+		yahoo_process_filetrans_acc_15(gc, pkt);
+		break;
+
 	default:
 		purple_debug(PURPLE_DEBUG_ERROR, "yahoo",
 				   "Unhandled service 0x%02x\n", pkt->service);
@@ -2670,11 +2694,15 @@ static void yahoo_web_pending(gpointer data, gint source, PurpleInputCondition c
 	s = g_string_sized_new(len);
 
 	while ((i = strstr(i, "Set-Cookie: "))) {
+
 		i += strlen("Set-Cookie: ");
 		for (;*i != ';' && *i != '\0'; i++)
 			g_string_append_c(s, *i);
-
+        
 		g_string_append(s, "; ");
+		/* Should these cookies be included too when trying for xfer?
+		 * It seems to work without these
+		 */
 	}
 
 	yd->auth = g_string_free(s, FALSE);
@@ -2964,6 +2992,7 @@ static void yahoo_login(PurpleAccount *account) {
 	yd->txbuf = purple_circ_buffer_new(0);
 	yd->friends = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, yahoo_friend_free);
 	yd->imvironments = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	yd->xfer_peer_idstring_map = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 	yd->confs = NULL;
 	yd->conf_id = 2;
 
@@ -3018,17 +3047,23 @@ static void yahoo_close(PurpleConnection *gc) {
 	}
 	g_slist_free(yd->confs);
 
+	for (l = yd->cookies; l; l = l->next) {
+		g_free(l->data);
+		l->data=NULL;
+	}
+	g_slist_free(yd->cookies);
+
 	yd->chat_online = 0;
 	if (yd->in_chat)
 		yahoo_c_leave(gc, 1); /* 1 = YAHOO_CHAT_ID */
 
 	g_hash_table_destroy(yd->friends);
 	g_hash_table_destroy(yd->imvironments);
+	g_hash_table_destroy(yd->xfer_peer_idstring_map);
 	g_free(yd->chat_name);
 
 	g_free(yd->cookie_y);
 	g_free(yd->cookie_t);
-	g_free(yd->cookie_c);
 
 	if (yd->txhandler)
 		purple_input_remove(yd->txhandler);
@@ -4130,17 +4165,13 @@ gboolean yahoo_send_attention(PurpleConnection *gc, const char *username, guint 
 
 GList *yahoo_attention_types(PurpleAccount *account)
 {
-	PurpleAttentionType *attn;
 	static GList *list = NULL;
 
 	if (!list) {
 		/* Yahoo only supports one attention command: the 'buzz'. */
 		/* This is index number YAHOO_BUZZ. */
-		attn = g_new0(PurpleAttentionType, 1);
-		attn->name = _("Buzz");
-		attn->incoming_description = _("%s has buzzed you!");
-		attn->outgoing_description = _("Buzzing %s...");
-		list = g_list_append(list, attn);
+		list = g_list_append(list, purple_attention_type_new("Buzz", _("Buzz"),
+				_("%s has buzzed you!"), _("Buzzing %s...")));
 	}
 
 	return list;

@@ -4629,6 +4629,15 @@ void purple_restore_default_signal_handlers(void)
 #endif /* !_WIN32 */
 }
 
+static void
+set_status_with_attrs(PurpleStatus *status, ...)
+{
+	va_list args;
+	va_start(args, status);
+	purple_status_set_active_with_attrs(status, TRUE, args);
+	va_end(args);
+}
+
 void purple_util_set_current_song(const char *title, const char *artist, const char *album)
 {
 	GList *list = purple_accounts_get_all();
@@ -4644,10 +4653,11 @@ void purple_util_set_current_song(const char *title, const char *artist, const c
 		if (!tune)
 			continue;
 		if (title) {
-			purple_status_set_active(tune, TRUE);
-			purple_status_set_attr_string(tune, PURPLE_TUNE_TITLE, title);
-			purple_status_set_attr_string(tune, PURPLE_TUNE_ARTIST, artist);
-			purple_status_set_attr_string(tune, PURPLE_TUNE_ALBUM, album);
+			set_status_with_attrs(tune,
+					PURPLE_TUNE_TITLE, title,
+					PURPLE_TUNE_ARTIST, artist,
+					PURPLE_TUNE_ALBUM, album,
+					NULL);
 		} else {
 			purple_status_set_active(tune, FALSE);
 		}
@@ -4659,7 +4669,7 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	GString *string;
 	char *esc;
 
-	if (!title)
+	if (!title || !*title)
 		return NULL;
 
 	esc = g_markup_escape_text(title, -1);
@@ -4667,13 +4677,13 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	g_string_append_printf(string, "%s", esc);
 	g_free(esc);
 
-	if (artist) {
+	if (artist && *artist) {
 		esc = g_markup_escape_text(artist, -1);
 		g_string_append_printf(string, _(" - %s"), esc);
 		g_free(esc);
 	}
 
-	if (album) {
+	if (album && *album) {
 		esc = g_markup_escape_text(album, -1);
 		g_string_append_printf(string, _(" (%s)"), esc);
 		g_free(esc);
