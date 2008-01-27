@@ -30,6 +30,19 @@ version 2.4.0 (??/??/????):
 			* purple_attention_type_get_outgoing_desc
 			* purple_attention_type_get_icon_name
 			* purple_attention_type_get_unlocalized_name
+		* Add some PurpleBuddyListNode accessor functions:
+			* purple_blist_node_get_parent
+			* purple_blist_node_get_first_child
+			* purple_blist_node_get_sibling_next
+			* purple_blist_node_get_sibling_prev
+		* Added last_received to PurpleConnection, the time_t of the
+		  last received packet.
+		* Added some more accessor functions:
+			* purple_chat_get_account
+			* purple_chat_get_components
+			* purple_connection_get_prpl
+			* purple_xfer_get_start_time
+			* purple_xfer_get_end_time
 
 	Pidgin:
 		Added:
@@ -56,6 +69,12 @@ version 2.4.0 (??/??/????):
 		* finch_roomlist_get_ui_ops and finch_roomlist_show_all
 		* finch_request_field_get_widget to get the widget for a request
 		  field.
+		* finch_blist_get_tree to get the GntTree widget representing the
+		  buddy list.
+		* FinchBlistManager structure to manage the buddylist view, and some
+		  util functions finch_blist_install_manager,
+		  finch_blist_uninstall_manager, finch_blist_manager_find and
+		  finch_blist_manager_add_node.
 
 		libgnt:
 		* Added gnt_tree_set_row_color to set the color for a row in a tree.
@@ -65,6 +84,7 @@ version 2.4.0 (??/??/????):
 		  string.
 		* Added gnt_style_get_color to get a color pair from an entry in
 		  ~/.gntrc
+		* Added gnt_tree_get_parent_key to get the key for the parent row.
 
 version 2.3.0 (11/24/2007):
 	libpurple:

@@ -52,8 +52,19 @@ send_keepalive(gpointer data)
 	PurpleConnection *gc = data;
 	PurplePluginProtocolInfo *prpl_info = NULL;
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (gc == NULL)
+		return TRUE;
+
+	/* Only send keep-alives if we haven't heard from the
+	 * server in a while.
+	 */
+	if ((time(NULL) - gc->last_received) < KEEPALIVE_INTERVAL)
+		return TRUE;
+
+	if (gc->prpl == NULL)
+		return TRUE;
+
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
 
 	if (prpl_info && prpl_info->keepalive)
 		prpl_info->keepalive(gc);
@@ -411,6 +422,14 @@ purple_connection_get_account(const PurpleConnection *gc)
 	g_return_val_if_fail(gc != NULL, NULL);
 
 	return gc->account;
+}
+
+PurplePlugin *
+purple_connection_get_prpl(const PurpleConnection *gc)
+{
+	g_return_val_if_fail(gc != NULL, NULL);
+
+	return gc->prpl;
 }
 
 const char *

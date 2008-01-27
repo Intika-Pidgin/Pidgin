@@ -640,10 +640,10 @@ purple_contact_compute_priority_buddy(PurpleContact *contact)
 
 		if (purple_account_is_connected(buddy->account))
 		{
-			int cmp;
-
-			cmp = purple_presence_compare(purple_buddy_get_presence(new_priority),
-			                            purple_buddy_get_presence(buddy));
+			int cmp = 1;
+			if (purple_account_is_connected(new_priority->account))
+				cmp = purple_presence_compare(purple_buddy_get_presence(new_priority),
+						purple_buddy_get_presence(buddy));
 
 			if (cmp > 0 || (cmp == 0 &&
 			                purple_prefs_get_bool("/purple/contact/last_match")))
@@ -751,6 +751,26 @@ PurpleBlistNode *purple_blist_node_next(PurpleBlistNode *node, gboolean offline)
 			!purple_account_is_connected(purple_buddy_get_account((PurpleBuddy *)ret)));
 
 	return ret;
+}
+
+PurpleBlistNode *purple_blist_node_get_parent(PurpleBlistNode *node)
+{
+	return node ? node->parent : NULL;
+}
+
+PurpleBlistNode *purple_blist_node_get_first_child(PurpleBlistNode *node)
+{
+	return node ? node->child : NULL;
+}
+
+PurpleBlistNode *purple_blist_node_get_sibling_next(PurpleBlistNode *node)
+{
+	return node? node->next : NULL;
+}
+
+PurpleBlistNode *purple_blist_node_get_sibling_prev(PurpleBlistNode *node)
+{
+	return node? node->prev : NULL;
 }
 
 void
@@ -2230,6 +2250,22 @@ purple_chat_get_group(PurpleChat *chat)
 	g_return_val_if_fail(chat != NULL, NULL);
 
 	return (PurpleGroup *)(((PurpleBlistNode *)chat)->parent);
+}
+
+PurpleAccount *
+purple_chat_get_account(PurpleChat *chat)
+{
+	g_return_val_if_fail(chat != NULL, NULL);
+
+	return chat->account;
+}
+
+GHashTable *
+purple_chat_get_components(PurpleChat *chat)
+{
+	g_return_val_if_fail(chat != NULL, NULL);
+
+	return chat->components;
 }
 
 PurpleContact *purple_buddy_get_contact(PurpleBuddy *buddy)

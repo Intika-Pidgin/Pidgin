@@ -24,7 +24,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include"internal.h"
+#include "finch.h"
 
 #include "gntrequest.h"
 #include "gntroomlist.h"
@@ -116,7 +116,7 @@ static void fl_add_chat(GntWidget *button, gpointer null)
 	if (gc == NULL || room == NULL)
 		return;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 
 	if(prpl_info != NULL && prpl_info->roomlist_room_serialize)
 		name = prpl_info->roomlist_room_serialize(room);
@@ -238,7 +238,7 @@ reset_account_list(PurpleAccount *account)
 		PurplePluginProtocolInfo *prpl_info = NULL;
 		PurpleConnection *gc = list->data;
 
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 		if (prpl_info->roomlist_get_list != NULL) {
 			PurpleAccount *account = purple_connection_get_account(gc);
 			char *text = g_strdup_printf("%s (%s)",
@@ -341,7 +341,7 @@ fl_show_with_account(PurpleAccount *account)
 static void
 fl_create(PurpleRoomlist *list)
 {
-	list->ui_data = &froomlist;
+	FINCH_SET_DATA(list, &froomlist);
 	setup_roomlist(NULL);
 	update_roomlist(list);
 }
