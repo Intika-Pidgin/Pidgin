@@ -23,13 +23,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#include "finch.h"
+
 #include <gnt.h>
 #include <gntbox.h>
 #include <gntbutton.h>
 #include <gntcheckbox.h>
 #include <gntlabel.h>
 #include <gnttree.h>
-#include "internal.h"
 
 #include "debug.h"
 #include "notify.h"
@@ -41,7 +42,7 @@
 #include "prefs.h"
 
 #define FINCHXFER(xfer) \
-	(PurpleGntXferUiData *)(xfer)->ui_data
+	(PurpleGntXferUiData *)FINCH_GET_DATA(xfer)
 
 typedef struct
 {
@@ -168,9 +169,15 @@ static void
 stop_button_cb(GntButton *button)
 {
 	PurpleXfer *selected_xfer = gnt_tree_get_selection_data(GNT_TREE(xfer_dialog->tree));
-	if (selected_xfer && selected_xfer->status != PURPLE_XFER_STATUS_CANCEL_LOCAL &&
-			selected_xfer->status != PURPLE_XFER_STATUS_CANCEL_REMOTE &&
-			selected_xfer->status != PURPLE_XFER_STATUS_DONE)
+	PurpleXferStatusType status;
+
+	if (!selected_xfer)
+		return;
+
+	status = purple_xfer_get_status(selected_xfer);
+	if (status != PURPLE_XFER_STATUS_CANCEL_LOCAL &&
+			status != PURPLE_XFER_STATUS_CANCEL_REMOTE &&
+			status != PURPLE_XFER_STATUS_DONE)
 		purple_xfer_cancel_local(selected_xfer);
 }
 
@@ -397,14 +404,12 @@ finch_xfer_dialog_update_xfer(PurpleXfer *xfer)
 	time_t elapsed, now;
 	char *kbsec;
 
-	if (xfer->end_time != 0)
-		now = xfer->end_time;
-	else
+	if ((now = purple_xfer_get_end_time(xfer)) == 0)
 		now = time(NULL);
 
 	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1024.0;
 	kb_rem  = purple_xfer_get_bytes_remaining(xfer) / 1024.0;
-	elapsed = (xfer->start_time > 0 ? now - xfer->start_time : 0);
+	elapsed = (purple_xfer_get_start_time(xfer) > 0 ? now - purple_xfer_get_start_time(xfer) : 0);
 	kbps    = (elapsed > 0 ? (kb_sent / elapsed) : 0);
 
 	g_return_if_fail(xfer_dialog != NULL);
@@ -463,7 +468,7 @@ finch_xfer_new_xfer(PurpleXfer *xfer)
 
 	/* This is where we're setting xfer->ui_data for the first time. */
 	data = g_new0(PurpleGntXferUiData, 1);
-	xfer->ui_data = data;
+	FINCH_SET_DATA(xfer, data);
 }
 
 static void
@@ -475,7 +480,7 @@ finch_xfer_destroy(PurpleXfer *xfer)
 	if (data) {
 		g_free(data->name);
 		g_free(data);
-		xfer->ui_data = NULL;
+		FINCH_SET_DATA(xfer, NULL);
 	}
 }
 
