@@ -558,3 +558,4 @@ PurplePlugin *purple_find_prpl(const char *id);
 #endif
 
 #endif /* _PRPL_H_ */
+
