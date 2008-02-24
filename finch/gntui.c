@@ -19,7 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#include "internal.h"
+#include "finch.h"
 
 #include "gntui.h"
 
@@ -30,6 +30,7 @@
 #include "gntconv.h"
 #include "gntdebug.h"
 #include "gntft.h"
+#include "gntlog.h"
 #include "gntnotify.h"
 #include "gntplugin.h"
 #include "gntpounce.h"
@@ -79,11 +80,15 @@ void gnt_ui_init()
 	/* Pounce */
 	finch_pounces_init();
 
+	/* Log */
+	finch_log_init();
+
 	/* File transfer */
 	finch_xfers_init();
 	purple_xfers_set_ui_ops(finch_xfers_get_ui_ops());
 
 	/* Roomlist */
+	finch_roomlist_init();
 	purple_roomlist_set_ui_ops(finch_roomlist_get_ui_ops());
 
 	gnt_register_action(_("Accounts"), finch_accounts_show_all);
@@ -123,8 +128,13 @@ void gnt_ui_uninit()
 
 	finch_pounces_uninit();
 
+	finch_log_uninit();
+
 	finch_xfers_uninit();
 	purple_xfers_set_ui_ops(NULL);
+
+	finch_roomlist_uninit();
+	purple_roomlist_set_ui_ops(NULL);
 
 	gnt_quit();
 #endif

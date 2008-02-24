@@ -241,7 +241,7 @@ set_account_protocol_cb(GtkWidget *item, const char *id,
 
 	gtk_widget_grab_focus(dialog->protocol_menu);
 
-	if (!dialog->prpl_info || !dialog->prpl_info->register_user || 
+	if (!dialog->prpl_info || !dialog->prpl_info->register_user ||
 	    g_object_get_data(G_OBJECT(item), "fake")) {
 		gtk_widget_hide(dialog->register_button);
 	} else {
@@ -1833,7 +1833,8 @@ ask_delete_account_sel(GtkTreeModel *model, GtkTreePath *path,
 							  purple_account_get_username(account));
 
 		purple_request_close_with_handle(account);
-		purple_request_action(account, NULL, buf, NULL, 0,
+		purple_request_action(account, NULL, buf, NULL,
+							PURPLE_DEFAULT_ACTION_NONE,
 							account, NULL, NULL,
 							account, 2,
 							_("Delete"), delete_account_cb,
@@ -2091,8 +2092,10 @@ account_treeview_double_click_cb(GtkTreeView *treeview, GdkEventButton *event, g
 	/* Figure out which node was clicked */
 	if (!gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(dialog->treeview), event->x, event->y, &path, &column, NULL, NULL))
 		return FALSE;
-	if (column == gtk_tree_view_get_column(treeview, 0))
+	if (column == gtk_tree_view_get_column(treeview, 0)) {
+		gtk_tree_path_free(path);
 		return FALSE;
+	}
 
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(dialog->model), &iter, path);
 	gtk_tree_path_free(path);
@@ -2177,6 +2180,7 @@ create_accounts_list(AccountsWindow *dialog)
 	treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(dialog->model));
 	dialog->treeview = treeview;
 	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(treeview), TRUE);
+	g_object_unref(G_OBJECT(dialog->model));
 
 	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
 	gtk_tree_selection_set_mode(sel, GTK_SELECTION_MULTIPLE);
@@ -2478,6 +2482,7 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 						  _("Authorize"), authorize_and_add_cb,
 						  _("Deny"), deny_no_add_cb,
 						  NULL);
+		g_object_set_data(G_OBJECT(alert), "auth_and_add", aa);
 	} else {
 		alert = pidgin_make_mini_dialog(gc, PIDGIN_STOCK_DIALOG_QUESTION,
 						  _("Authorize buddy?"), buffer, user_data,
@@ -2489,13 +2494,20 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 
 	g_free(buffer);
 
-	return NULL;
+	return alert;
 }
 
 static void
 pidgin_accounts_request_close(void *ui_handle)
 {
-
+	/* This is super ugly, but without API changes, this is how it works */
+	struct auth_and_add *aa = g_object_get_data(G_OBJECT(ui_handle), "auth_and_add");
+	if (aa != NULL) {
+		g_free(aa->username);
+		g_free(aa->alias);
+		g_free(aa);
+	}
+	gtk_widget_destroy(GTK_WIDGET(ui_handle));
 }
 
 static PurpleAccountUiOps ui_ops =

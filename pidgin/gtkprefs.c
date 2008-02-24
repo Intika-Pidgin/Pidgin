@@ -478,12 +478,20 @@ theme_got_url(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 {
 	FILE *f;
 	gchar *path;
+	size_t wc;
 
 	if ((error_message != NULL) || (len == 0))
 		return;
 
 	f = purple_mkstemp(&path, TRUE);
-	fwrite(themedata, len, 1, f);
+	wc = fwrite(themedata, len, 1, f);
+	if (wc != 1) {
+		purple_debug_warning("theme_got_url", "Unable to write theme data.\n");
+		fclose(f);
+		g_unlink(path);
+		g_free(path);
+		return;
+	}
 	fclose(f);
 
 	theme_install_theme(path, user_data);
@@ -935,6 +943,8 @@ conv_page(void)
 
 	pidgin_prefs_checkbox(_("Show _formatting on incoming messages"),
 				PIDGIN_PREFS_ROOT "/conversations/show_incoming_formatting", vbox);
+	pidgin_prefs_checkbox(_("Close IMs immediately when the tab is closed"),
+				PIDGIN_PREFS_ROOT "/conversations/im/close_immediately", vbox);
 
 	iconpref1 = pidgin_prefs_checkbox(_("Show _detailed information"),
 			PIDGIN_PREFS_ROOT "/conversations/im/show_buddy_icons", vbox);
@@ -969,6 +979,7 @@ conv_page(void)
 
 	font_name = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font");
 	font_button = gtk_font_button_new_with_font(font_name ? font_name : NULL);
+
 	gtk_font_button_set_show_style(GTK_FONT_BUTTON(font_button), TRUE);
 	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Conversation _font:"), NULL, font_button, FALSE, NULL);
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font"))
@@ -1361,6 +1372,7 @@ static GList *get_available_browsers(void)
 		{N_("Netscape"), "netscape"},
 		{N_("Mozilla"), "mozilla"},
 		{N_("Konqueror"), "kfmclient"},
+		{N_("Desktop Default"), "xdg-open"},
 		{N_("GNOME Default"), "gnome-open"},
 		{N_("Galeon"), "galeon"},
 		{N_("Firefox"), "firefox"},
@@ -1383,6 +1395,14 @@ static GList *get_available_browsers(void)
 			browsers = g_list_prepend(browsers, (gpointer)_(possible_browsers[i].name));
 			if(browser_setting && !strcmp(possible_browsers[i].command, browser_setting))
 				browser_setting = NULL;
+			/* If xdg-open is valid, prefer it over gnome-open and skip forward */
+			if(!strcmp(possible_browsers[i].command, "xdg-open")) {
+				if (browser_setting && !strcmp("gnome-open", browser_setting)) {
+					purple_prefs_set_string(PIDGIN_PREFS_ROOT "/browsers/browser", possible_browsers[i].command);
+					browser_setting = NULL;
+				}
+				i++;
+			}
 		}
 	}
 
@@ -1457,15 +1477,15 @@ browser_page(void)
 	}
 
 	entry = gtk_entry_new();
-	if (strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/browser"), "custom"))
-		gtk_widget_set_sensitive(hbox, FALSE);
-	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/browsers/browser",
-								browser_changed2_cb, hbox);
 	gtk_entry_set_text(GTK_ENTRY(entry),
 					   purple_prefs_get_path(PIDGIN_PREFS_ROOT "/browsers/command"));
 	g_signal_connect(G_OBJECT(entry), "focus-out-event",
 					 G_CALLBACK(manual_browser_set), NULL);
-	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Manual:\n(%s for URL)"), sg, entry, TRUE, NULL);
+	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Manual:\n(%s for URL)"), sg, entry, TRUE, NULL);
+	if (strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/browser"), "custom"))
+		gtk_widget_set_sensitive(hbox, FALSE);
+	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/browsers/browser",
+			browser_changed2_cb, hbox);
 
 	gtk_widget_show_all(ret);
 	g_object_unref(sg);
@@ -1718,9 +1738,6 @@ sound_page(void)
 	int j;
 	const char *file;
 	char *pref;
-#if !defined _WIN32 || defined USE_GSTREAMER
-	GtkWidget *label;
-#endif
 #ifndef _WIN32
 	GtkWidget *dd;
 	GtkWidget *entry;
@@ -2180,7 +2197,6 @@ void pidgin_prefs_update_old()
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_group_count");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_warning_level");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/button_type");
-	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/close_immediately");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/ctrl_enter_sends");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/enter_sends");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/escape_closes");

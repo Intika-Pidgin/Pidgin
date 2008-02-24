@@ -1445,7 +1445,6 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 				ALLOW_TAG("pre");
 				ALLOW_TAG("q");
 				ALLOW_TAG("span");
-				ALLOW_TAG("strong");
 				ALLOW_TAG("ul");
 
 
@@ -1465,9 +1464,14 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						plain = g_string_append_c(plain, '\n');
 					continue;
 				}
-				if(!g_ascii_strncasecmp(c, "<b>", 3) || !g_ascii_strncasecmp(c, "<bold>", strlen("<bold>"))) {
+				if(!g_ascii_strncasecmp(c, "<b>", 3) || !g_ascii_strncasecmp(c, "<bold>", strlen("<bold>")) || !g_ascii_strncasecmp(c, "<strong>", strlen("<strong>"))) {
 					struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
-					pt->src_tag = *(c+2) == '>' ? "b" : "bold";
+					if (*(c+2) == '>')
+						pt->src_tag = "b";
+					else if (*(c+2) == 'o')
+						pt->src_tag = "bold";
+					else
+						pt->src_tag = "strong";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
 					c = strchr(c, '>') + 1;
@@ -4629,6 +4633,15 @@ void purple_restore_default_signal_handlers(void)
 #endif /* !_WIN32 */
 }
 
+static void
+set_status_with_attrs(PurpleStatus *status, ...)
+{
+	va_list args;
+	va_start(args, status);
+	purple_status_set_active_with_attrs(status, TRUE, args);
+	va_end(args);
+}
+
 void purple_util_set_current_song(const char *title, const char *artist, const char *album)
 {
 	GList *list = purple_accounts_get_all();
@@ -4644,10 +4657,11 @@ void purple_util_set_current_song(const char *title, const char *artist, const c
 		if (!tune)
 			continue;
 		if (title) {
-			purple_status_set_active(tune, TRUE);
-			purple_status_set_attr_string(tune, PURPLE_TUNE_TITLE, title);
-			purple_status_set_attr_string(tune, PURPLE_TUNE_ARTIST, artist);
-			purple_status_set_attr_string(tune, PURPLE_TUNE_ALBUM, album);
+			set_status_with_attrs(tune,
+					PURPLE_TUNE_TITLE, title,
+					PURPLE_TUNE_ARTIST, artist,
+					PURPLE_TUNE_ALBUM, album,
+					NULL);
 		} else {
 			purple_status_set_active(tune, FALSE);
 		}
@@ -4659,7 +4673,7 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	GString *string;
 	char *esc;
 
-	if (!title)
+	if (!title || !*title)
 		return NULL;
 
 	esc = g_markup_escape_text(title, -1);
@@ -4667,13 +4681,13 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	g_string_append_printf(string, "%s", esc);
 	g_free(esc);
 
-	if (artist) {
+	if (artist && *artist) {
 		esc = g_markup_escape_text(artist, -1);
 		g_string_append_printf(string, _(" - %s"), esc);
 		g_free(esc);
 	}
 
-	if (album) {
+	if (album && *album) {
 		esc = g_markup_escape_text(album, -1);
 		g_string_append_printf(string, _(" (%s)"), esc);
 		g_free(esc);
