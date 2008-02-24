@@ -25,14 +25,13 @@
  *
  */
 
-#include "internal.h"
+#include "finch.h"
 
 #include "certificate.h"
 #include "debug.h"
 #include "notify.h"
 #include "request.h"
 
-#include "finch.h"
 #include "gntcertmgr.h"
 
 #include "gntbutton.h"
@@ -235,7 +234,7 @@ delete_cert_cb(GntWidget *button, gpointer null)
 	purple_request_close_with_handle((void *)key);
 	purple_request_yes_no((void *)key, _("Confirm certificate delete"),
 			primary, NULL,
-			2,
+			0,
 			NULL, NULL, NULL,
 			g_strdup(key),
 			tls_peers_mgmt_delete_confirm_cb,

@@ -1695,7 +1695,9 @@ static int read_recv(struct mwSession *session, int sock) {
   int len;
 
   len = read(sock, buf, BUF_LEN);
-  if(len > 0) mwSession_recv(session, buf, len);
+  if(len > 0) {
+    mwSession_recv(session, buf, len);
+  }
 
   return len;
 }
@@ -2286,6 +2288,7 @@ static void mw_ft_recv(struct mwFileTransfer *ft,
 
   PurpleXfer *xfer;
   FILE *fp;
+  size_t wc;
 
   xfer = mwFileTransfer_getClientData(ft);
   g_return_if_fail(xfer != NULL);
@@ -2294,7 +2297,12 @@ static void mw_ft_recv(struct mwFileTransfer *ft,
   g_return_if_fail(fp != NULL);
 
   /* we must collect and save our precious data */
-  fwrite(data->data, 1, data->len, fp);
+  wc = fwrite(data->data, 1, data->len, fp);
+  if (wc != data->len) {
+    DEBUG_ERROR("failed to write data\n");
+    purple_xfer_cancel_local(xfer);
+    return;
+  }
 
   /* update the progress */
   xfer->bytes_sent += data->len;
