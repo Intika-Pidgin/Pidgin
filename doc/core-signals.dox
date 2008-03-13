@@ -1,0 +1,20 @@
+/** @page core-signals Core Signals
+
+ @signals
+  @signal quitting
+ @endsignals
+
+ @see core.h
+
+ <hr>
+
+ @signaldef quitting
+  @signalproto
+void (*quitting)();
+  @endsignalproto
+  @signaldesc
+   Emitted when libpurple is quitting.
+ @endsignaldef
+
+ */
+// vim: syntax=c.doxygen tw=75 et
