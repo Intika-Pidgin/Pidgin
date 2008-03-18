@@ -99,7 +99,9 @@ static const int catch_sig_list[] = {
 	SIGTERM,
 	SIGQUIT,
 	SIGCHLD,
+#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
 	SIGALRM,
+#endif
 	-1
 };
 
@@ -140,38 +142,11 @@ dologin_named(const char *name)
 #ifdef HAVE_SIGNAL_H
 static void sighandler(int sig);
 
-/**
- * Reap all our dead children.  Sometimes libpurple forks off a separate
- * process to do some stuff.  When that process exits we are
- * informed about it so that we can call waitpid() and let it
- * stop being a zombie.
- *
- * We used to do this immediately when our signal handler was
- * called, but because of GStreamer we now wait one second before
- * reaping anything.  Why?  For some reason GStreamer fork()s
- * during their initialization process.  I don't understand why...
- * but they do it, and there's nothing we can do about it.
- *
- * Anyway, so then GStreamer waits for its child to die and then
- * it continues with the initialization process.  This means that
- * we have a race condition where GStreamer is waitpid()ing for its
- * child to die and we're catching the SIGCHLD signal.  If GStreamer
- * is awarded the zombied process then everything is ok.  But if libpurple
- * reaps the zombie process then the GStreamer initialization sequence
- * fails.
- *
- * So the ugly solution is to wait a second to give GStreamer time to
- * reap that bad boy.
- *
- * GStreamer 0.10.10 and newer have a gst_register_fork_set_enabled()
- * function that can be called by applications to disable forking
- * during initialization.  But it's not in 0.10.0, so we shouldn't
- * use it.
- *
- * All of this child process reaping stuff is currently only used for
- * processes that were forked to play sounds.  It's not needed for
- * forked DNS child, which have their own waitpid() call.  It might
- * be wise to move this code into gtksound.c.
+/*
+ * This child process reaping stuff is currently only used for processes that
+ * were forked to play sounds.  It's not needed for forked DNS child, which
+ * have their own waitpid() call.  It might be wise to move this code into
+ * gtksound.c.
  */
 static void
 clean_pid(void)
@@ -188,9 +163,6 @@ clean_pid(void)
 		snprintf(errmsg, BUFSIZ, "Warning: waitpid() returned %d", pid);
 		perror(errmsg);
 	}
-
-	/* Restore signal catching */
-	signal(SIGALRM, sighandler);
 }
 
 char *segfault_message;
@@ -219,13 +191,27 @@ sighandler(int sig)
 		fprintf(stderr, "%s", segfault_message);
 		abort();
 		break;
+#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
+/* By default, gstreamer forks when you initialize it, and waitpids for the
+ * child.  But if libpurple reaps the child rather than leaving it to
+ * gstreamer, gstreamer's initialization fails.  So, we wait a second before
+ * reaping child processes, to give gst a chance to reap it if it wants to.
+ *
+ * This is not needed in later gstreamers, which let us disable the forking.
+ * And, it breaks the world on some Real Unices.
+ */
 	case SIGCHLD:
 		/* Restore signal catching */
 		signal(SIGCHLD, sighandler);
 		alarm(1);
 		break;
 	case SIGALRM:
+#else
+	case SIGCHLD:
+#endif
 		clean_pid();
+		/* Restore signal catching */
+		signal(SIGCHLD, sighandler);
 		break;
 	default:
 		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
@@ -275,7 +261,7 @@ ui_main(void)
 			icons = g_list_append(icons,icon);
 		} else {
 			purple_debug_error("ui_main",
-					"Failed to load the default window icon (%spx version)!\n", icon_sizes[i]);
+					"Failed to load the default window icon (%spx version)!\n", icon_sizes[i].dir);
 		}
 	}
 	if(NULL == icons) {
