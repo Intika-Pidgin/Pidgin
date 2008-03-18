@@ -245,7 +245,7 @@ oscar_charset_check(const char *utf8)
 	}
 
 	/*
-	 * Must we send this message as UNICODE (in the UCS-2BE encoding)?
+	 * Must we send this message as UNICODE (in the UTF-16BE encoding)?
 	 */
 	while (utf8[i])
 	{
@@ -314,14 +314,14 @@ oscar_encoding_to_utf8(PurpleAccount *account, const char *encoding, const char 
 	} else if (!g_ascii_strcasecmp(encoding, "unicode-2-0")) {
 		/* Some official ICQ clients are apparently total crack,
 		 * and have been known to save a UTF-8 string converted
-		 * from the locale character set to UCS-2 (not from UTF-8
-		 * to UCS-2!) in the away message.  This hack should find
+		 * from the locale character set to UTF-16 (not from UTF-8
+		 * to UTF-16!) in the away message.  This hack should find
 		 * and do something (un)reasonable with that, and not
 		 * mess up too much else. */
 		const gchar *charset = purple_account_get_string(account, "encoding", NULL);
 		if (charset) {
 			gsize len;
-			utf8 = g_convert(text, textlen, charset, "UCS-2BE", &len, NULL, NULL);
+			utf8 = g_convert(text, textlen, charset, "UTF-16BE", &len, NULL, NULL);
 			if (!utf8 || len != textlen || !g_utf8_validate(utf8, -1, NULL)) {
 				g_free(utf8);
 				utf8 = NULL;
@@ -330,7 +330,7 @@ oscar_encoding_to_utf8(PurpleAccount *account, const char *encoding, const char 
 			}
 		}
 		if (!utf8)
-			utf8 = g_convert(text, textlen, "UTF-8", "UCS-2BE", NULL, NULL, NULL);
+			utf8 = g_convert(text, textlen, "UTF-8", "UTF-16BE", NULL, NULL, NULL);
 	} else if (g_ascii_strcasecmp(encoding, "utf-8")) {
 		purple_debug_warning("oscar", "Unrecognized character encoding \"%s\", "
 						   "attempting to convert to UTF-8 anyway\n", encoding);
@@ -417,13 +417,13 @@ purple_plugin_oscar_decode_im_part(PurpleAccount *account, const char *sourcesn,
 	gchar *ret = NULL;
 	const gchar *charsetstr1, *charsetstr2;
 
-	purple_debug_info("oscar", "Parsing IM part, charset=0x%04hx, charsubset=0x%04hx, datalen=%hd\n", charset, charsubset, datalen);
+	purple_debug_info("oscar", "Parsing IM part, charset=0x%04hx, charsubset=0x%04hx, datalen=%" G_GSIZE_FORMAT "\n", charset, charsubset, datalen);
 
 	if ((datalen == 0) || (data == NULL))
 		return NULL;
 
 	if (charset == AIM_CHARSET_UNICODE) {
-		charsetstr1 = "UCS-2BE";
+		charsetstr1 = "UTF-16BE";
 		charsetstr2 = "UTF-8";
 	} else if (charset == AIM_CHARSET_CUSTOM) {
 		if ((sourcesn != NULL) && aim_snvalid_icq(sourcesn))
@@ -495,7 +495,7 @@ purple_plugin_oscar_convert_to_best_encoding(PurpleConnection *gc,
 	 * If we're sending to an ICQ user, and they are in our
 	 * buddy list, and they are advertising the Unicode
 	 * capability, and they are online, then attempt to send
-	 * as UCS-2BE.
+	 * as UTF-16BE.
 	 */
 	if ((destsn != NULL) && aim_snvalid_icq(destsn))
 		userinfo = aim_locate_finduserinfo(od, destsn);
@@ -506,7 +506,7 @@ purple_plugin_oscar_convert_to_best_encoding(PurpleConnection *gc,
 		b = purple_find_buddy(account, destsn);
 		if ((b != NULL) && (PURPLE_BUDDY_IS_ONLINE(b)))
 		{
-			*msg = g_convert(from, -1, "UCS-2BE", "UTF-8", NULL, &msglen, NULL);
+			*msg = g_convert(from, -1, "UTF-16BE", "UTF-8", NULL, &msglen, NULL);
 			if (*msg != NULL)
 			{
 				*charset = AIM_CHARSET_UNICODE;
@@ -538,9 +538,9 @@ purple_plugin_oscar_convert_to_best_encoding(PurpleConnection *gc,
 	}
 
 	/*
-	 * Nothing else worked, so send as UCS-2BE.
+	 * Nothing else worked, so send as UTF-16BE.
 	 */
-	*msg = g_convert(from, -1, "UCS-2BE", "UTF-8", NULL, &msglen, &err);
+	*msg = g_convert(from, -1, "UTF-16BE", "UTF-8", NULL, &msglen, &err);
 	if (*msg != NULL) {
 		*charset = AIM_CHARSET_UNICODE;
 		*charsubset = 0x0000;
@@ -2014,8 +2014,8 @@ static int incomingim_chan1(OscarData *od, FlapConnection *conn, aim_userinfo_t 
 		gconstpointer data = purple_imgstore_get_data(img);
 		size_t len = purple_imgstore_get_size(img);
 		purple_debug_info("oscar",
-				   "Sending buddy icon to %s (%d bytes)\n",
-				   userinfo->sn, len);
+				"Sending buddy icon to %s (%" G_GSIZE_FORMAT " bytes)\n",
+				userinfo->sn, len);
 		aim_im_sendch2_icon(od, userinfo->sn, data, len,
 			purple_buddy_icons_get_account_icon_timestamp(account),
 			aimutil_iconsum(data, len));
@@ -4436,7 +4436,7 @@ gchar *purple_prpl_oscar_convert_to_infotext(const gchar *str, gsize *ret_len, c
 
 	charset = oscar_charset_check(str);
 	if (charset == AIM_CHARSET_UNICODE) {
-		encoded = g_convert(str, -1, "UCS-2BE", "UTF-8", NULL, ret_len, NULL);
+		encoded = g_convert(str, -1, "UTF-16BE", "UTF-8", NULL, ret_len, NULL);
 		*encoding = "unicode-2-0";
 	} else if (charset == AIM_CHARSET_CUSTOM) {
 		encoded = g_convert(str, -1, "ISO-8859-1", "UTF-8", NULL, ret_len, NULL);
@@ -4980,11 +4980,18 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 		switch (curitem->type) {
 			case 0x0000: { /* Buddy */
 				if (curitem->name) {
-					struct aim_ssi_item *groupitem = aim_ssi_itemlist_find(od->ssi.local, curitem->gid, 0x0000);
-					char *gname = groupitem ? groupitem->name : NULL;
-					char *gname_utf8 = gname ? oscar_utf8_try_convert(gc->account, gname) : NULL;
-					char *alias = aim_ssi_getalias(od->ssi.local, gname, curitem->name);
-					char *alias_utf8;
+					struct aim_ssi_item *groupitem;
+					char *gname, *gname_utf8, *alias, *alias_utf8;
+
+					groupitem = aim_ssi_itemlist_find(od->ssi.local, curitem->gid, 0x0000);
+					gname = groupitem ? groupitem->name : NULL;
+					if (gname != NULL) {
+						if (g_utf8_validate(gname, -1, NULL))
+							gname_utf8 = g_strdup(gname);
+						else
+							gname_utf8 = oscar_utf8_try_convert(gc->account, gname);
+					} else
+						gname_utf8 = NULL;
 
 					g = purple_find_group(gname_utf8 ? gname_utf8 : _("Orphans"));
 					if (g == NULL) {
@@ -4992,15 +4999,14 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 						purple_blist_add_group(g, NULL);
 					}
 
-					if (alias != NULL)
-					{
+					alias = aim_ssi_getalias(od->ssi.local, gname, curitem->name);
+					if (alias != NULL) {
 						if (g_utf8_validate(alias, -1, NULL))
 							alias_utf8 = g_strdup(alias);
 						else
 							alias_utf8 = oscar_utf8_try_convert(account, alias);
 						g_free(alias);
-					}
-					else
+					} else
 						alias_utf8 = NULL;
 
 					b = purple_find_buddy_in_group(gc->account, curitem->name, g);
@@ -5039,8 +5045,18 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 			} break;
 
 			case 0x0001: { /* Group */
-				char *gname = curitem->name;
-				char *gname_utf8 = gname ? oscar_utf8_try_convert(gc->account, gname) : NULL;
+				char *gname;
+				char *gname_utf8;
+
+				gname = curitem->name;
+				if (gname != NULL) {
+					if (g_utf8_validate(gname, -1, NULL))
+						gname_utf8 = g_strdup(gname);
+					else
+						gname_utf8 = oscar_utf8_try_convert(gc->account, gname);
+				} else
+					gname_utf8 = NULL;
+
 				if (gname_utf8 != NULL && purple_find_group(gname_utf8) == NULL) {
 					g = purple_group_new(gname_utf8);
 					purple_blist_add_group(g, NULL);
@@ -6214,6 +6230,7 @@ static void oscar_format_screenname(PurpleConnection *gc, const char *nick) {
 	if (!aim_sncmp(purple_account_get_username(purple_connection_get_account(gc)), nick)) {
 		if (!flap_connection_getbytype(od, SNAC_FAMILY_ADMIN)) {
 			od->setnick = TRUE;
+			g_free(od->newsn);
 			od->newsn = g_strdup(nick);
 			aim_srv_requestnew(od, SNAC_FAMILY_ADMIN);
 		} else {
@@ -6504,7 +6521,7 @@ oscar_actions(PurplePlugin *plugin, gpointer context)
 
 	if (od->icq)
 	{
-		act = purple_plugin_action_new(_("Set User Info (URL)..."),
+		act = purple_plugin_action_new(_("Set User Info (web)..."),
 				oscar_show_set_info_icqurl);
 		menu = g_list_prepend(menu, act);
 	}
@@ -6515,11 +6532,11 @@ oscar_actions(PurplePlugin *plugin, gpointer context)
 
 	if (od->authinfo->chpassurl != NULL)
 	{
-		act = purple_plugin_action_new(_("Change Password (URL)"),
+		act = purple_plugin_action_new(_("Change Password (web)"),
 				oscar_show_chpassurl);
 		menu = g_list_prepend(menu, act);
 
-		act = purple_plugin_action_new(_("Configure IM Forwarding (URL)"),
+		act = purple_plugin_action_new(_("Configure IM Forwarding (web)"),
 				oscar_show_imforwardingurl);
 		menu = g_list_prepend(menu, act);
 	}

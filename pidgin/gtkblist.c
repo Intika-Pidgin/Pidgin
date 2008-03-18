@@ -549,7 +549,7 @@ gtk_blist_auto_personize(PurpleBlistNode *group, const char *alias)
 		char *msg = g_strdup_printf(ngettext("You have %d contact named %s. Would you like to merge them?", "You currently have %d contacts named %s. Would you like to merge them?", i), i, alias);
 		purple_request_action(NULL, NULL, msg, _("Merging these contacts will cause them to share a single entry on the buddy list and use a single conversation window. "
 							 "You can separate them again by choosing 'Expand' from the contact's context menu"), 0, NULL, NULL, NULL,
-				      merges, 2, _("_Merge"), PURPLE_CALLBACK(gtk_blist_do_personize), _("_Cancel"), PURPLE_CALLBACK(g_list_free));
+				      merges, 2, _("_Yes"), PURPLE_CALLBACK(gtk_blist_do_personize), _("_No"), PURPLE_CALLBACK(g_list_free));
 		g_free(msg);
 	} else
 		g_list_free(merges);
@@ -704,6 +704,17 @@ static void gtk_blist_menu_showoffline_cb(GtkWidget *w, PurpleBlistNode *node)
 		purple_blist_node_set_bool(node, "show_offline", setting);
 		for (bnode = node->child; bnode != NULL; bnode = bnode->next) {
 			purple_blist_node_set_bool(bnode, "show_offline", setting);
+		}
+	} else if (PURPLE_BLIST_NODE_IS_GROUP(node)) {
+		PurpleBlistNode *cnode, *bnode;
+		gboolean setting = !purple_blist_node_get_bool(node, "show_offline");
+
+		purple_blist_node_set_bool(node, "show_offline", setting);
+		for (cnode = node->child; cnode != NULL; cnode = cnode->next) {
+			purple_blist_node_set_bool(cnode, "show_offline", setting);
+			for (bnode = cnode->child; bnode != NULL; bnode = bnode->next) {
+				purple_blist_node_set_bool(bnode, "show_offline", setting);
+			}
 		}
 	}
 	pidgin_blist_update(purple_get_blist(), node);
@@ -1459,6 +1470,11 @@ create_group_menu (PurpleBlistNode *node, PurpleGroup *g)
 				 G_CALLBACK(pidgin_blist_remove_cb), node, 0, 0, NULL);
 	pidgin_new_item_from_stock(menu, _("_Rename"), NULL,
 				 G_CALLBACK(gtk_blist_menu_alias_cb), node, 0, 0, NULL);
+	if (!(purple_blist_node_get_flags(node) & PURPLE_BLIST_NODE_FLAG_NO_SAVE)) {
+		gboolean show_offline = purple_blist_node_get_bool(node, "show_offline");
+		pidgin_new_item_from_stock(menu, show_offline ? _("Hide when offline") : _("Show when offline"),
+				NULL, G_CALLBACK(gtk_blist_menu_showoffline_cb), node, 0, 0, NULL);
+	}
 
 	pidgin_append_blist_node_extended_menu(menu, node);
 
@@ -2482,6 +2498,7 @@ static GdkPixbuf *pidgin_blist_get_buddy_icon(PurpleBlistNode *node,
 			purple_buddy_icon_get_scale_size(&prpl_info->icon_spec, &scale_width, &scale_height);
 
 		if (scaled || scale_height > 200 || scale_width > 200) {
+			GdkPixbuf *tmpbuf;
 			float scale_size = scaled ? 32.0 : 200.0;
 			if(scale_height > scale_width) {
 				scale_width = scale_size * (double)scale_width / (double)scale_height;
@@ -2490,12 +2507,17 @@ static GdkPixbuf *pidgin_blist_get_buddy_icon(PurpleBlistNode *node,
 				scale_height = scale_size * (double)scale_height / (double)scale_width;
 				scale_width = scale_size;
 			}
-
+			/* scale & round before making square, so rectangular (but non-square)
+			 * images get rounded corners too */
+			tmpbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, scale_width, scale_height);
+			gdk_pixbuf_fill(tmpbuf, 0x00000000);
+			gdk_pixbuf_scale(buf, tmpbuf, 0, 0, scale_width, scale_height, 0, 0, (double)scale_width/(double)orig_width, (double)scale_height/(double)orig_height, GDK_INTERP_BILINEAR);
+			if (pidgin_gdk_pixbuf_is_opaque(tmpbuf))
+				pidgin_gdk_pixbuf_make_round(tmpbuf);
 			ret = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, scale_size, scale_size);
 			gdk_pixbuf_fill(ret, 0x00000000);
-			gdk_pixbuf_scale(buf, ret, (scale_size-scale_width)/2, (scale_size-scale_height)/2, scale_width, scale_height, (scale_size-scale_width)/2, (scale_size-scale_height)/2, (double)scale_width/(double)orig_width, (double)scale_height/(double)orig_height, GDK_INTERP_BILINEAR);
-			if (pidgin_gdk_pixbuf_is_opaque(ret))
-				pidgin_gdk_pixbuf_make_round(ret);
+			gdk_pixbuf_copy_area(tmpbuf, 0, 0, scale_width, scale_height, ret, (scale_size-scale_width)/2, (scale_size-scale_height)/2);
+			g_object_unref(G_OBJECT(tmpbuf));
 		} else {
 			ret = gdk_pixbuf_scale_simple(buf,scale_width,scale_height, GDK_INTERP_BILINEAR);
 		}
@@ -3116,6 +3138,7 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 		GList *cur;
 		struct proto_chat_entry *pce;
 		char *name, *value;
+		PurpleConversation *conv;
 		PidginBlistNode *bnode = node->ui_data;
 
 		chat = (PurpleChat *)node;
@@ -3129,11 +3152,24 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 			g_free(tmp);
 		}
 
-		if (bnode && bnode->conv.conv &&
-				prpl_info && (prpl_info->options & OPT_PROTO_CHAT_TOPIC) &&
-				!purple_conv_chat_has_left(PURPLE_CONV_CHAT(bnode->conv.conv))) {
-			const char *topic = purple_conv_chat_get_topic(PURPLE_CONV_CHAT(bnode->conv.conv));
+		if (bnode && bnode->conv.conv) {
+			conv = bnode->conv.conv;
+		} else {
+			char *chat_name;
+			if (prpl_info && prpl_info->get_chat_name)
+				chat_name = prpl_info->get_chat_name(chat->components);
+			else
+				chat_name = g_strdup(purple_chat_get_name(chat));
+
+			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, chat_name,
+					chat->account);
+			g_free(chat_name);
+		}
+		if (conv && prpl_info && (prpl_info->options & OPT_PROTO_CHAT_TOPIC) &&
+				!purple_conv_chat_has_left(PURPLE_CONV_CHAT(conv))) {
+			char *topic = g_markup_escape_text(purple_conv_chat_get_topic(PURPLE_CONV_CHAT(conv)), -1);
 			g_string_append_printf(str, _("\n<b>Topic:</b> %s"), topic ? topic : _("(no topic set)"));
+			g_free(topic);
 		}
 
 		if (prpl_info->chat_info != NULL)
