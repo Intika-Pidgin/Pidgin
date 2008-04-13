@@ -4375,12 +4375,11 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL, /* send_raw */
 	NULL, /* roomlist_room_serialize */
 	NULL, /* unregister_user */
-
 	yahoo_send_attention,
 	yahoo_attention_types,
-
-	/* padding */
-	NULL
+	sizeof(PurplePluginProtocolInfo),
+	NULL,					/* initiate_media */
+	NULL                    /* can_do_media */
 };
 
 static PurplePluginInfo info =
