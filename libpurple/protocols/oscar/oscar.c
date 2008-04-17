@@ -2274,19 +2274,6 @@ purple_auth_request(struct name_data *data, char *msg)
 }
 
 static void
-purple_auth_dontrequest(struct name_data *data)
-{
-	PurpleConnection *gc = data->gc;
-	PurpleBuddy *b = purple_find_buddy(purple_connection_get_account(gc), data->name);
-
-	/* Remove from local list */
-	purple_blist_remove_buddy(b);
-
-	oscar_free_name_data(data);
-}
-
-
-static void
 purple_auth_sendrequest(PurpleConnection *gc, const char *name)
 {
 	struct name_data *data;
@@ -2298,11 +2285,10 @@ purple_auth_sendrequest(PurpleConnection *gc, const char *name)
 	purple_request_input(data->gc, NULL, _("Authorization Request Message:"),
 					   NULL, _("Please authorize me!"), TRUE, FALSE, NULL,
 					   _("_OK"), G_CALLBACK(purple_auth_request),
-					   _("_Cancel"), G_CALLBACK(purple_auth_dontrequest),
+					   _("_Cancel"), G_CALLBACK(oscar_free_name_data),
 					   purple_connection_get_account(gc), name, NULL,
 					   data);
 }
-
 
 static void
 purple_auth_sendrequest_menu(PurpleBlistNode *node, gpointer ignored)
@@ -4803,12 +4789,6 @@ static int purple_ssi_parseerr(OscarData *od, FlapConnection *conn, FlapFrame *f
 	}
 
 	oscar_set_extendedstatus(gc);
-
-	/* Activate SSI */
-	/* Sending the enable causes other people to be able to see you, and you to see them */
-	/* Make sure your privacy setting/invisibility is set how you want it before this! */
-	purple_debug_info("oscar", "ssi: activating server-stored buddy list\n");
-	aim_ssi_enable(od);
 
 	return 1;
 }
