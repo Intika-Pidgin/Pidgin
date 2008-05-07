@@ -401,7 +401,7 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	g_object_set(G_OBJECT(dialog->screenname_entry), "truncate-multiline", TRUE, NULL);
 #endif
 
-	add_pref_box(dialog, vbox, _("Screen _name:"), dialog->screenname_entry);
+	add_pref_box(dialog, vbox, _("_Username:"), dialog->screenname_entry);
 
 	g_signal_connect(G_OBJECT(dialog->screenname_entry), "changed",
 					 G_CALLBACK(screenname_changed_cb), dialog);
@@ -489,10 +489,6 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	dialog->password_box = add_pref_box(dialog, vbox, _("_Password:"),
 										  dialog->password_entry);
 
-	/* Alias */
-	dialog->alias_entry = gtk_entry_new();
-	add_pref_box(dialog, vbox, _("_Local alias:"), dialog->alias_entry);
-
 	/* Remember Password */
 	dialog->remember_pass_check =
 		gtk_check_button_new_with_mnemonic(_("Remember pass_word"));
@@ -507,10 +503,6 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		if (purple_account_get_password(dialog->account))
 			gtk_entry_set_text(GTK_ENTRY(dialog->password_entry),
 							   purple_account_get_password(dialog->account));
-
-		if (purple_account_get_alias(dialog->account))
-			gtk_entry_set_text(GTK_ENTRY(dialog->alias_entry),
-							   purple_account_get_alias(dialog->account));
 
 		gtk_toggle_button_set_active(
 				GTK_TOGGLE_BUTTON(dialog->remember_pass_check),
@@ -563,6 +555,10 @@ add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 	gtk_widget_show(vbox);
+
+	/* Alias */
+	dialog->alias_entry = gtk_entry_new();
+	add_pref_box(dialog, vbox, _("_Local alias:"), dialog->alias_entry);
 
 	/* New mail notifications */
 	dialog->new_mail_check =
@@ -628,6 +624,10 @@ add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		gpointer data = NULL;
 		size_t len = 0;
 
+		if (purple_account_get_alias(dialog->account))
+			gtk_entry_set_text(GTK_ENTRY(dialog->alias_entry),
+							   purple_account_get_alias(dialog->account));
+
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dialog->new_mail_check),
 					     purple_account_get_check_mail(dialog->account));
 
@@ -647,6 +647,7 @@ add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		set_dialog_icon(dialog, NULL, 0, NULL);
 	}
 
+#if 0
 	if (!dialog->prpl_info ||
 			(!(dialog->prpl_info->options & OPT_PROTO_MAIL_CHECK) &&
 			 (dialog->prpl_info->icon_spec.format ==  NULL))) {
@@ -654,6 +655,7 @@ add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		/* Nothing to see :( aww. */
 		gtk_widget_hide(dialog->user_frame);
 	}
+#endif
 }
 
 static void
@@ -1904,7 +1906,7 @@ add_columns(GtkWidget *treeview, AccountsWindow *dialog)
 
 	/* Screen Name column */
 	column = gtk_tree_view_column_new();
-	gtk_tree_view_column_set_title(column, _("Screen Name"));
+	gtk_tree_view_column_set_title(column, _("Username"));
 	gtk_tree_view_insert_column(GTK_TREE_VIEW(treeview), column, -1);
 	gtk_tree_view_column_set_resizable(column, TRUE);
 
