@@ -948,9 +948,8 @@ AM_CONDITIONAL(USE_INTERNAL_LIBGADU, test "x$gadu_libs" != "xyes")
 AC_SUBST(GADU_LIBS)
 AC_SUBST(GADU_CFLAGS)
 
-# uncomment the next line to make MSNP14 the available
-# AC_ARG_ENABLE(msnp14,[AC_HELP_STRING([--enable-msnp14], [Disable the newer MSNP14 protocol])],,enable_msnp14=no)
-enable_msnp14=no
+# change the next line to make MSNP14 the default (s/enable/disable/; s/no/yes/;)
+AC_ARG_ENABLE(msnp14,[AC_HELP_STRING([--enable-msnp14], [Enable the newer MSNP14 protocol (unsupported)])],,enable_msnp14=no)
 
 AC_ARG_ENABLE(distrib,,,enable_distrib=no)
 AM_CONDITIONAL(DISTRIB, test "x$enable_distrib" = "xyes")
@@ -1202,7 +1201,7 @@ dnl # Check for D-Bus libraries
 dnl #######################################################################
 
 AC_ARG_ENABLE(dbus, [AC_HELP_STRING([--enable-dbus], [enable D-Bus support])], , enable_dbus=yes)
-AC_ARG_ENABLE(nm, [AC_HELP_STRING([--enable-nm], [enable NetworkManager support (buggy) (requires D-Bus)])], enable_libnm=$enableval, enable_libnm=no)
+AC_ARG_ENABLE(nm, [AC_HELP_STRING([--enable-nm], [enable NetworkManager support (requires D-Bus)])], enable_nm=$enableval, enable_nm=yes)
 
 if test "x$enable_dbus" = "xyes" ; then
 	AC_CHECK_PROG(enable_dbus, dbus-binding-tool, yes, no)
@@ -1219,26 +1218,20 @@ D-Bus development headers not found.
 Use --disable-dbus if you do not need D-Bus support.
 ])])
 
-dnl Check for libnm_glib; if we don't have it, oh well
-	if test "x$enable_libnm" = "xyes" ; then
-		LIBNM_CFLAGS=""
-		LIBNM_LIBS=""
-		PKG_CHECK_MODULES(LIBNM, libnm_glib,
-		[
-			AC_DEFINE(HAVE_LIBNM, 1, [Define if you have NetworkManager])
-			enable_libnm=yes
-		],
-		[
-			AC_MSG_RESULT(no)
+dnl Check for NetworkManager.h; if we don't have it, oh well
+	if test "x$enable_nm" = "xyes" ; then
+		PKG_CHECK_MODULES(NETWORKMANAGER, [NetworkManager], [
+			AC_SUBST(NETWORKMANAGER_CFLAGS)
+			AC_SUBST(NETWORKMANAGER_LIBS)
+			AC_DEFINE(HAVE_NETWORKMANAGER, 1, [Define if we have NetworkManager.])
+		], [
 			AC_MSG_ERROR([
 NetworkManager development headers not found.
 Use --disable-nm if you do not need NetworkManager support.
 ])])
-		AC_SUBST(LIBNM_CFLAGS)
-		AC_SUBST(LIBNM_LIBS)
 	fi
 else
-	enable_libnm=no
+	enable_nm=no
 fi
 
 dnl #######################################################################
@@ -2411,7 +2404,7 @@ echo Build with D-Bus support...... : $enable_dbus
 if test "x$enable_dbus" = "xyes" ; then
 	eval eval echo D-Bus services directory...... : $DBUS_SERVICES_DIR
 fi
-echo Build with NetworkManager..... : $enable_libnm
+echo Build with NetworkManager..... : $enable_nm
 echo SSL Library/Libraries......... : $msg_ssl
 echo Build with Cyrus SASL support. : $enable_cyrus_sasl
 echo Use kerberos 4 with zephyr.... : $kerberos
