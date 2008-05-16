@@ -176,14 +176,7 @@ set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *ne
 	}
 
 	if (dialog->icon_img != NULL) {
-		GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
-		gdk_pixbuf_loader_write(loader, purple_imgstore_get_data(dialog->icon_img),
-		                        purple_imgstore_get_size(dialog->icon_img), NULL);
-		gdk_pixbuf_loader_close(loader, NULL);
-		pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
-		if (pixbuf)
-			g_object_ref(pixbuf);
-		g_object_unref(loader);
+		pixbuf = pidgin_pixbuf_from_imgstore(dialog->icon_img);
 	}
 
 	if (pixbuf && dialog->prpl_info &&
@@ -1816,39 +1809,6 @@ accedit_win_destroy_cb(GtkWidget *w, GdkEvent *event, AccountsWindow *dialog)
 	return FALSE;
 }
 
-static gboolean
-configure_cb(GtkWidget *w, GdkEventConfigure *event, AccountsWindow *dialog)
-{
-	if (GTK_WIDGET_VISIBLE(w)) {
-		int old_width = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/accounts/dialog/width");
-		int col_width;
-		int difference;
-
-		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/accounts/dialog/width",  event->width);
-		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/accounts/dialog/height", event->height);
-
-		col_width = gtk_tree_view_column_get_width(dialog->screenname_col);
-
-		if (col_width == 0)
-			return FALSE;
-
-		difference = (MAX(old_width, event->width) -
-					  MIN(old_width, event->width));
-
-		if (difference == 0)
-			return FALSE;
-
-		if (old_width < event->width)
-			gtk_tree_view_column_set_min_width(dialog->screenname_col,
-					col_width + difference);
-		else
-			gtk_tree_view_column_set_max_width(dialog->screenname_col,
-					col_width - difference);
-	}
-
-	return FALSE;
-}
-
 static void
 add_account_cb(GtkWidget *w, AccountsWindow *dialog)
 {
@@ -1971,14 +1931,14 @@ add_columns(GtkWidget *treeview, AccountsWindow *dialog)
 	column = gtk_tree_view_column_new_with_attributes(_("Enabled"),
 			 renderer, "active", COLUMN_ENABLED, NULL);
 
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(treeview), column, -1);
-	gtk_tree_view_column_set_resizable(column, TRUE);
+	gtk_tree_view_column_set_resizable(column, FALSE);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), column);
 
 	/* Screen Name column */
 	column = gtk_tree_view_column_new();
 	gtk_tree_view_column_set_title(column, _("Username"));
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(treeview), column, -1);
 	gtk_tree_view_column_set_resizable(column, TRUE);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), column);
 
 	/* Buddy Icon */
 	renderer = gtk_cell_renderer_pixbuf_new();
@@ -1997,8 +1957,8 @@ add_columns(GtkWidget *treeview, AccountsWindow *dialog)
 	/* Protocol name */
 	column = gtk_tree_view_column_new();
 	gtk_tree_view_column_set_title(column, _("Protocol"));
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(treeview), column, -1);
-	gtk_tree_view_column_set_resizable(column, TRUE);
+	gtk_tree_view_column_set_resizable(column, FALSE);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), column);
 
 	/* Icon */
 	renderer = gtk_cell_renderer_pixbuf_new();
@@ -2040,21 +2000,14 @@ set_account(GtkListStore *store, GtkTreeIter *iter, PurpleAccount *account, GdkP
 	}
 
 	if (img != NULL) {
-		GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
 		GdkPixbuf *buddyicon_pixbuf;
-
-		gdk_pixbuf_loader_write(loader, purple_imgstore_get_data(img),
-		                        purple_imgstore_get_size(img), NULL);
-		gdk_pixbuf_loader_close(loader, NULL);
-		buddyicon_pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
-
+		buddyicon_pixbuf = pidgin_pixbuf_from_imgstore(img);
 		purple_imgstore_unref(img);
 
 		if (buddyicon_pixbuf != NULL) {
 			buddyicon = gdk_pixbuf_scale_simple(buddyicon_pixbuf, 22, 22, GDK_INTERP_HYPER);
+			g_object_unref(G_OBJECT(buddyicon_pixbuf));
 		}
-
-		g_object_unref(loader);
 	}
 
 	gtk_list_store_set(store, iter,
@@ -2259,6 +2212,7 @@ create_accounts_list(AccountsWindow *dialog)
 	gtk_container_add(GTK_CONTAINER(sw), treeview);
 
 	add_columns(treeview, dialog);
+	gtk_tree_view_columns_autosize(GTK_TREE_VIEW(treeview));
 
 	if (populate_accounts_list(dialog))
 		gtk_notebook_set_current_page(GTK_NOTEBOOK(accounts_window->notebook), 1);
@@ -2328,8 +2282,6 @@ pidgin_accounts_window_show(void)
 
 	g_signal_connect(G_OBJECT(win), "delete_event",
 					 G_CALLBACK(accedit_win_destroy_cb), accounts_window);
-	g_signal_connect(G_OBJECT(win), "configure_event",
-					 G_CALLBACK(configure_cb), accounts_window);
 
 	/* Setup the vbox */
 	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, PIDGIN_HIG_BORDER);
