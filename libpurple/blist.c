@@ -2082,9 +2082,7 @@ const char *purple_buddy_get_local_alias(PurpleBuddy *buddy)
 
 const char *purple_chat_get_name(PurpleChat *chat)
 {
-	struct proto_chat_entry *pce;
-	GList *parts;
-	char *ret;
+	char *ret = NULL;
 	PurplePlugin *prpl;
 	PurplePluginProtocolInfo *prpl_info = NULL;
 
@@ -2096,11 +2094,14 @@ const char *purple_chat_get_name(PurpleChat *chat)
 	prpl = purple_find_prpl(purple_account_get_protocol_id(chat->account));
 	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
-	parts = prpl_info->chat_info(purple_account_get_connection(chat->account));
-	pce = parts->data;
-	ret = g_hash_table_lookup(chat->components, pce->identifier);
-	g_list_foreach(parts, (GFunc)g_free, NULL);
-	g_list_free(parts);
+	if (prpl_info->chat_info) {
+		struct proto_chat_entry *pce;
+		GList *parts = prpl_info->chat_info(purple_account_get_connection(chat->account));
+		pce = parts->data;
+		ret = g_hash_table_lookup(chat->components, pce->identifier);
+		g_list_foreach(parts, (GFunc)g_free, NULL);
+		g_list_free(parts);
+	}
 
 	return ret;
 }
@@ -2202,7 +2203,7 @@ PurpleGroup *purple_find_group(const char *name)
 	g_return_val_if_fail((name != NULL) && (*name != '\0'), NULL);
 
 	for (node = purplebuddylist->root; node != NULL; node = node->next) {
-		if (!strcmp(((PurpleGroup *)node)->name, name))
+		if (!purple_utf8_strcasecmp(((PurpleGroup *)node)->name, name))
 			return (PurpleGroup *)node;
 	}
 
