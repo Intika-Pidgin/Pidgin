@@ -9,7 +9,9 @@ version 2.5.0:
 	* Group and Chat buddy list entries can now be given custom buddy
 	  icons.
 
-version 2.x.x:
+version 2.4.3 (??/??/2008):
+
+version 2.4.2 (05/17/2008):
 	libpurple:
 	* In MySpaceIM, messages from spambots are discarded (Justin Williams)
 	* Strip mIRC formatting codes from quit and part messages.
@@ -24,6 +26,13 @@ version 2.x.x:
 	  libnm-glib.  Hopefully it's stable now.  It will now compile by
 	  default if you have D-Bus support and NetworkManager.h. (Elliott
 	  Sales de Andrade)
+	* MSN buddy list synchronization is now more forgiving, only asking
+	  about buddies who have disappeared completely from the server list
+	  and not those that have simply moved groups.
+	* IRC will now try to append 1-9 to your nick if it is in use, instead
+	  of substituting the last character with 1-9 where possible.
+	* Bonjour buddies will be saved persistently if they're moved out of
+	  the "Bonjour" group. (Eion Robb)
 
 	Pidgin:
 	* The typing notification in the conversation history can be disabled or
@@ -48,6 +57,7 @@ version 2.x.x:
 	  lines.
 	* Moved the "Local alias" field in the Modify Account dialog to be below
 	  the "User Options" heading on the "Basic" tab.
+	* Number of room occupants is now shown in chat tooltips where possible
 
 	General:
 	* The configure script now dies on more absent dependencies.  The
