@@ -1762,6 +1762,8 @@ pidgin_blist_show_context_menu(PurpleBlistNode *node,
 	}
 
 #ifdef _WIN32
+	pidgin_blist_tooltip_destroy();
+
 	/* Unhook the tooltip-timeout since we don't want a tooltip
 	 * to appear and obscure the context menu we are about to show
 	   This is a workaround for GTK+ bug 107320. */
@@ -2727,6 +2729,7 @@ struct tooltip_data {
 	int name_width;
 	int width;
 	int height;
+	int padding;
 };
 
 static PangoLayout * create_pango_layout(const char *markup, int *width, int *height)
@@ -2755,6 +2758,7 @@ static struct tooltip_data * create_tip_for_account(PurpleAccount *account)
 	if (purple_account_is_disconnected(account))
 		gdk_pixbuf_saturate_and_pixelate(td->status_icon, td->status_icon, 0.0, FALSE);
 	td->layout = create_pango_layout(purple_account_get_username(account), &td->width, &td->height);
+	td->padding = SMALL_SPACE;
 	return td;
 }
 
@@ -2770,6 +2774,7 @@ static struct tooltip_data * create_tip_for_node(PurpleBlistNode *node, gboolean
 		account = ((PurpleChat*)(node))->account;
 	}
 
+	td->padding = TOOLTIP_BORDER;
 	td->status_icon = pidgin_blist_get_status_icon(node, PIDGIN_STATUS_ICON_LARGE);
 	td->avatar = pidgin_blist_get_buddy_icon(node, !full, FALSE);
 	if (account != NULL) {
@@ -2792,7 +2797,8 @@ static struct tooltip_data * create_tip_for_node(PurpleBlistNode *node, gboolean
 		 * above node types first. */
 		tmp = g_strdup(_("Unknown node type"));
 	}
-	node_name = g_strdup_printf("<span size='x-large' weight='bold'>%s</span>", tmp);
+	node_name = g_strdup_printf("<span size='x-large' weight='bold'>%s</span>",
+								tmp ? tmp : "");
 	g_free(tmp);
 
 	td->name_layout = create_pango_layout(node_name, &td->name_width, &td->name_height);
@@ -2934,7 +2940,7 @@ pidgin_blist_paint_tip(GtkWidget *widget, gpointer null)
 			}
 		}
 
-		current_height += MAX(td->name_height + td->height, td->avatar_height) + TOOLTIP_BORDER;
+		current_height += MAX(td->name_height + td->height, td->avatar_height) + td->padding;
 	}
 	return FALSE;
 }
@@ -3025,8 +3031,7 @@ pidgin_blist_create_tooltip_for_node(GtkWidget *widget, gpointer data, int *w, i
 		struct tooltip_data *td = list->data;
 		max_text_width = MAX(max_text_width, MAX(td->width, td->name_width));
 		max_avatar_width = MAX(max_avatar_width, td->avatar_width);
-		height += MAX(TOOLTIP_BORDER + MAX(STATUS_SIZE, td->avatar_height),
-				TOOLTIP_BORDER + td->height + td->name_height);
+		height += MAX(MAX(STATUS_SIZE, td->avatar_height), td->height + td->name_height) + td->padding;
 		if (td->status_icon)
 			status_size = MAX(status_size, STATUS_SIZE);
 	}
