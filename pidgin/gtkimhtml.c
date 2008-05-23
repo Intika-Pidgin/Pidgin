@@ -32,10 +32,14 @@
 #include "internal.h"
 #include "pidgin.h"
 #include "pidginstock.h"
+#include "gtkutils.h"
+#include "smiley.h"
+#include "imgstore.h"
 
 #include "debug.h"
 #include "util.h"
 #include "gtkimhtml.h"
+#include "gtksmiley.h"
 #include "gtksourceiter.h"
 #include "gtksourceundomanager.h"
 #include "gtksourceview-marshal.h"
@@ -1570,9 +1574,11 @@ static void gtk_imhtml_init (GtkIMHtml *imhtml)
 	gtk_text_buffer_create_tag(imhtml->text_buffer, "SUP", "rise", 5000, NULL);
 	gtk_text_buffer_create_tag(imhtml->text_buffer, "PRE", "family", "Monospace", NULL);
 	gtk_text_buffer_create_tag(imhtml->text_buffer, "search", "background", "#22ff00", "weight", "bold", NULL);
+	gtk_text_buffer_create_tag(imhtml->text_buffer, "comment", "weight", PANGO_WEIGHT_NORMAL,
 #if FALSE && GTK_CHECK_VERSION(2,10,10)
-	gtk_text_buffer_create_tag(imhtml->text_buffer, "comment", "invisible", FALSE, NULL);
+			"invisible", FALSE,
 #endif
+			NULL);
 
 	gtk_text_buffer_create_tag(imhtml->text_buffer, "send-name", "weight", PANGO_WEIGHT_BOLD, NULL);
 	gtk_text_buffer_create_tag(imhtml->text_buffer, "receive-name", "weight", PANGO_WEIGHT_BOLD, NULL);
@@ -3120,7 +3126,7 @@ void gtk_imhtml_insert_html_at_iter(GtkIMHtml        *imhtml,
 #else
 					if (imhtml->show_comments && !(options & GTK_IMHTML_NO_COMMENTS)) {
 						wpos = g_snprintf (ws, len, "%s", tag);
-						gtk_text_buffer_insert(imhtml->text_buffer, iter, ws, wpos);
+						gtk_text_buffer_insert_with_tags_by_name(imhtml->text_buffer, iter, ws, wpos, "comment", NULL);
 					}
 #endif
 					ws[0] = '\0'; wpos = 0;
@@ -3687,6 +3693,15 @@ gtk_imhtml_image_save(GtkWidget *w, GtkIMHtmlImage *image)
 	gtk_widget_show(image->filesel);
 }
 
+static void
+gtk_imhtml_custom_smiley_save(GtkWidget *w, GtkIMHtmlImage *image)
+{
+	/* Create an add dialog */
+	PidginSmiley *editor = pidgin_smiley_edit(NULL, NULL);
+	pidgin_smiley_editor_set_shortcut(editor, image->filename);
+	pidgin_smiley_editor_set_image(editor, image->pixbuf);
+}
+
 /*
  * So, um, AIM Direct IM lets you send any file, not just images.  You can
  * just insert a sound or a file or whatever in a conversation.  It's
@@ -3711,6 +3726,19 @@ static gboolean gtk_imhtml_image_clicked(GtkWidget *w, GdkEvent *event, GtkIMHtm
 			g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(gtk_imhtml_image_save), image);
 			gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 
+			/* Add menu item for adding custom smiley to local smileys */
+			/* we only add the menu if the image is of "custom smiley size"
+			  <= 96x96 pixels */
+			if (image->width <= 96 && image->height <= 96) {
+				text = g_strdup_printf(_("_Add Custom Smiley..."));
+				img = gtk_image_new_from_stock(GTK_STOCK_ADD, GTK_ICON_SIZE_MENU);
+				item = gtk_image_menu_item_new_with_mnemonic(text);
+				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+				g_signal_connect(G_OBJECT(item), "activate",
+								 G_CALLBACK(gtk_imhtml_custom_smiley_save), image);
+				gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+			}
+
 			gtk_widget_show_all(menu);
 			gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 							event_button->button, event_button->time);
@@ -3732,7 +3760,7 @@ static gboolean gtk_imhtml_smiley_clicked(GtkWidget *w, GdkEvent *event, GtkIMHt
 	GdkPixbufAnimation *anim = NULL;
 	GtkIMHtmlScalable *image = NULL;
 	gboolean ret;
-	
+
 	if (event->type != GDK_BUTTON_RELEASE || ((GdkEventButton*)event)->button != 3)
 		return FALSE;
 
@@ -4968,7 +4996,67 @@ static const gchar *tag_to_html_start(GtkTextTag *tag)
 		g_snprintf(buf, sizeof(buf), "<font size=\"%s\">", &name[10]);
 		return buf;
 	} else {
-		return "";
+		char *str = buf;
+		gboolean isset;
+		int ivalue = 0;
+		GdkColor *color = NULL;
+		GObject *obj = G_OBJECT(tag);
+		gboolean empty = TRUE;
+
+		str += g_snprintf(str, sizeof(buf) - (str - buf), "<span style='");
+
+		/* Weight */
+		g_object_get(obj, "weight-set", &isset, "weight", &ivalue, NULL);
+		if (isset) {
+			const char *weight = "";
+			if (ivalue >= PANGO_WEIGHT_ULTRABOLD)
+				weight = "bolder";
+			else if (ivalue >= PANGO_WEIGHT_BOLD)
+				weight = "bold";
+			else if (ivalue >= PANGO_WEIGHT_NORMAL)
+				weight = "normal";
+			else
+				weight = "lighter";
+
+			str += g_snprintf(str, sizeof(buf) - (str - buf), "font-weight: %s;", weight);
+			empty = FALSE;
+		}
+
+		/* Foreground color */
+		g_object_get(obj, "foreground-set", &isset, "foreground-gdk", &color, NULL);
+		if (isset && color) {
+			str += g_snprintf(str, sizeof(buf) - (str - buf),
+					"color: #%02x%02x%02x;",
+					color->red >> 8, color->green >> 8, color->blue >> 8);
+			gdk_color_free(color);
+			empty = FALSE;
+		}
+
+		/* Background color */
+		g_object_get(obj, "background-set", &isset, "background-gdk", &color, NULL);
+		if (isset && color) {
+			str += g_snprintf(str, sizeof(buf) - (str - buf),
+					"background: #%02x%02x%02x;",
+					color->red >> 8, color->green >> 8, color->blue >> 8);
+			gdk_color_free(color);
+			empty = FALSE;
+		}
+
+		/* Underline */
+		g_object_get(obj, "underline-set", &isset, "underline", &ivalue, NULL);
+		if (isset) {
+			switch (ivalue) {
+				case PANGO_UNDERLINE_NONE:
+				case PANGO_UNDERLINE_ERROR:
+					break;
+				default:
+					str += g_snprintf(str, sizeof(buf) - (str - buf), "text-decoration: underline;");
+			}
+		}
+
+		g_snprintf(str, sizeof(buf) - (str - buf), "'>");
+
+		return (empty ? "" : buf);
 	}
 }
 
@@ -5000,6 +5088,16 @@ static const gchar *tag_to_html_end(GtkTextTag *tag)
 	} else if (strncmp(name, "FONT SIZE ", 10) == 0) {
 		return "</font>";
 	} else {
+		const char *props[] = {"weight-set", "foreground-set", "background-set",
+			"size-set", "underline-set", NULL};
+		int i;
+		for (i = 0; props[i]; i++) {
+			gboolean set = FALSE;
+			g_object_get(G_OBJECT(tag), props[i], &set, NULL);
+			if (set)
+				return "</span>";
+		}
+
 		return "";
 	}
 }
@@ -5329,7 +5427,150 @@ void gtk_imhtml_setup_entry(GtkIMHtml *imhtml, PurpleConnectionFlags flags)
 	if (flags & PURPLE_CONNECTION_NO_IMAGES)
 		buttons &= ~GTK_IMHTML_IMAGE;
 
+	if (flags & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY)
+		buttons |= GTK_IMHTML_CUSTOM_SMILEY;
+	else
+		buttons &= ~GTK_IMHTML_CUSTOM_SMILEY;
+
 	gtk_imhtml_set_format_functions(imhtml, buttons);
 }
 
+/*******
+ * GtkIMHtmlSmiley functions
+ *******/
+static void gtk_custom_smiley_allocated(GdkPixbufLoader *loader, gpointer user_data)
+{
+	GtkIMHtmlSmiley *smiley;
+
+	smiley = (GtkIMHtmlSmiley *)user_data;
+	smiley->icon = gdk_pixbuf_loader_get_animation(loader);
+
+	if (smiley->icon)
+		g_object_ref(G_OBJECT(smiley->icon));
+#ifdef DEBUG_CUSTOM_SMILEY
+	purple_debug_info("custom-smiley", "gtk_custom_smiley_allocated(): got GdkPixbufAnimation %p for smiley '%s'\n", smiley->icon, smiley->smile);
+#endif
+}
+
+static void gtk_custom_smiley_closed(GdkPixbufLoader *loader, gpointer user_data)
+{
+	GtkIMHtmlSmiley *smiley;
+	GtkWidget *icon = NULL;
+	GtkTextChildAnchor *anchor = NULL;
+	GSList *current = NULL;
+
+	smiley = (GtkIMHtmlSmiley *)user_data;
+	if (!smiley->imhtml) {
+#ifdef DEBUG_CUSTOM_SMILEY
+		purple_debug_error("custom-smiley", "gtk_custom_smiley_closed(): orphan smiley found: %p\n", smiley);
+#endif
+		g_object_unref(G_OBJECT(loader));
+		smiley->loader = NULL;
+		return;
+	}
+
+	for (current = smiley->anchors; current; current = g_slist_next(current)) {
+
+		icon = gtk_image_new_from_animation(smiley->icon);
+
+#ifdef DEBUG_CUSTOM_SMILEY
+		purple_debug_info("custom-smiley", "gtk_custom_smiley_closed(): got GtkImage %p from GtkPixbufAnimation %p for smiley '%s'\n",
+				icon, smiley->icon, smiley->smile);
+#endif
+		if (icon) {
+			GList *wids;
+			gtk_widget_show(icon);
+
+			anchor = GTK_TEXT_CHILD_ANCHOR(current->data);
+			wids = gtk_text_child_anchor_get_widgets(anchor);
+
+			g_object_set_data_full(G_OBJECT(anchor), "gtkimhtml_plaintext", purple_unescape_html(smiley->smile), g_free);
+			g_object_set_data_full(G_OBJECT(anchor), "gtkimhtml_htmltext", g_strdup(smiley->smile), g_free);
+
+			if (smiley->imhtml) {
+				if (wids) {
+					GList *children = gtk_container_get_children(GTK_CONTAINER(wids->data));
+					g_list_foreach(children, (GFunc)gtk_widget_destroy, NULL);
+					g_list_free(children);
+					gtk_container_add(GTK_CONTAINER(wids->data), icon);
+				} else
+					gtk_text_view_add_child_at_anchor(GTK_TEXT_VIEW(smiley->imhtml), icon, anchor);
+			}
+			g_list_free(wids);
+		}
+
+	}
+
+	g_slist_free(smiley->anchors);
+	smiley->anchors = NULL;
+
+	g_object_unref(G_OBJECT(loader));
+	smiley->loader = NULL;
+}
+
+static void
+gtk_custom_smiley_size_prepared(GdkPixbufLoader *loader, gint width, gint height, gpointer data)
+{
+#define CUSTOM_SMILEY_SIZE 96	/* XXX: Should this be a theme setting? */
+	if (width <= CUSTOM_SMILEY_SIZE && height <= CUSTOM_SMILEY_SIZE)
+		return;
+
+	if (width >= height) {
+		height = height * CUSTOM_SMILEY_SIZE / width;
+		width = CUSTOM_SMILEY_SIZE;
+	} else {
+		width = width * CUSTOM_SMILEY_SIZE / height;
+		height = CUSTOM_SMILEY_SIZE;
+	}
+
+	gdk_pixbuf_loader_set_size(loader, width, height);
+}
+
+void
+gtk_imhtml_smiley_reload(GtkIMHtmlSmiley *smiley)
+{
+	if (smiley->icon)
+		g_object_unref(smiley->icon);
+	if (smiley->loader)
+		g_object_unref(smiley->loader);  /* XXX: does this crash? */
+
+	smiley->icon = NULL;
+	smiley->loader = NULL;
+
+	if (smiley->file) {
+		/* We do not use the pixbuf loader for a smiley that can be loaded
+		 * from a file. (e.g., local custom smileys)
+		 */
+		return;
+	}
+
+	smiley->loader = gdk_pixbuf_loader_new();
+
+	g_signal_connect(smiley->loader, "area_prepared", G_CALLBACK(gtk_custom_smiley_allocated), smiley);
+	g_signal_connect(smiley->loader, "closed", G_CALLBACK(gtk_custom_smiley_closed), smiley);
+	g_signal_connect(smiley->loader, "size_prepared", G_CALLBACK(gtk_custom_smiley_size_prepared), smiley);
+}
+
+GtkIMHtmlSmiley *gtk_imhtml_smiley_create(const char *file, const char *shortcut, gboolean hide,
+		GtkIMHtmlSmileyFlags flags)
+{
+	GtkIMHtmlSmiley *smiley = g_new0(GtkIMHtmlSmiley, 1);
+	smiley->file = g_strdup(file);
+	smiley->smile = g_strdup(shortcut);
+	smiley->hidden = hide;
+	smiley->flags = flags;
+	gtk_imhtml_smiley_reload(smiley);
+	return smiley;
+}
+
+void gtk_imhtml_smiley_destroy(GtkIMHtmlSmiley *smiley)
+{
+	g_free(smiley->smile);
+	g_free(smiley->file);
+	if (smiley->icon)
+		g_object_unref(smiley->icon);
+	if (smiley->loader)
+		g_object_unref(smiley->loader);
+	g_free(smiley);
+}
 
