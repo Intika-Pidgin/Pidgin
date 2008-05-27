@@ -317,11 +317,22 @@ void purple_blist_set_visible(gboolean show);
 void purple_blist_update_buddy_status(PurpleBuddy *buddy, PurpleStatus *old_status);
 
 /**
+ * Updates a node's custom icon.
+ *
+ * @param node  The PurpleBlistNode whose custom icon has changed.
+ * @since 2.5.0
+ */
+void purple_blist_update_node_icon(PurpleBlistNode *node);
+
+#ifndef PURPLE_DISABLE_DEPRECATED
+/**
  * Updates a buddy's icon.
  *
  * @param buddy  The buddy whose buddy icon has changed
+ * @deprecated Use purple_blist_update_node_icon() instead.
  */
 void purple_blist_update_buddy_icon(PurpleBuddy *buddy);
+#endif
 
 /**
  * Renames a buddy in the buddy list.
@@ -475,7 +486,8 @@ PurplePresence *purple_buddy_get_presence(const PurpleBuddy *buddy);
  * @param buddy   The new buddy who gets added
  * @param contact The optional contact to place the buddy in.
  * @param group   The group to add the new buddy to.
- * @param node    The insertion point
+ * @param node    The insertion point.  Pass in NULL to add the node as
+ *                the last child in the given group.
  */
 void purple_blist_add_buddy(PurpleBuddy *buddy, PurpleContact *contact, PurpleGroup *group, PurpleBlistNode *node);
 
@@ -956,6 +968,7 @@ PurpleBlistNodeFlags purple_blist_node_get_flags(PurpleBlistNode *node);
  * @param node The node.
  *
  * @return The type of the node.
+ * @since 2.1.0
  */
 PurpleBlistNodeType purple_blist_node_get_type(PurpleBlistNode *node);
 

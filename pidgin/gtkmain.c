@@ -27,6 +27,7 @@
 #include "account.h"
 #include "conversation.h"
 #include "core.h"
+#include "dbus-maybe.h"
 #include "debug.h"
 #include "eventloop.h"
 #include "ft.h"
@@ -61,6 +62,7 @@
 #include "gtkroomlist.h"
 #include "gtksavedstatuses.h"
 #include "gtksession.h"
+#include "gtksmiley.h"
 #include "gtksound.h"
 #include "gtkthemes.h"
 #include "gtkutils.h"
@@ -185,7 +187,6 @@ sighandler(int sig)
 	switch (sig) {
 	case SIGHUP:
 		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_connections_disconnect_all();
 		break;
 	case SIGSEGV:
 		fprintf(stderr, "%s", segfault_message);
@@ -215,13 +216,7 @@ sighandler(int sig)
 		break;
 	default:
 		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_connections_disconnect_all();
-
-		purple_plugins_unload_all();
-
-		if (gtk_main_level())
-			gtk_main_quit();
-		exit(0);
+		purple_core_quit();
 	}
 }
 #endif
@@ -314,6 +309,7 @@ pidgin_ui_init(void)
 	pidgin_roomlist_init();
 	pidgin_log_init();
 	pidgin_docklet_init();
+	pidgin_smileys_init();
 }
 
 static GHashTable *ui_info = NULL;
@@ -330,6 +326,7 @@ pidgin_quit(void)
 	pidgin_plugins_save();
 
 	/* Uninit */
+	pidgin_smileys_uninit();
 	pidgin_conversations_uninit();
 	pidgin_status_uninit();
 	pidgin_docklet_uninit();
@@ -783,6 +780,15 @@ int main(int argc, char *argv[])
 	}
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
+#ifdef HAVE_DBUS
+		DBusConnection *conn = purple_dbus_get_connection();
+		DBusMessage *message = dbus_message_new_method_call(DBUS_SERVICE_PURPLE, DBUS_PATH_PURPLE,
+				DBUS_INTERFACE_PURPLE, "PurpleBlistSetVisible");
+		gboolean tr = TRUE;
+		dbus_message_append_args(message, DBUS_TYPE_UINT32, &tr, DBUS_TYPE_INVALID);
+		dbus_connection_send_with_reply_and_block(conn, message, -1, NULL);
+		dbus_message_unref(message);
+#endif
 		purple_debug_info("main", "exiting because another libpurple client is already running\n");
 		purple_core_quit();
 #ifdef HAVE_SIGNAL_H

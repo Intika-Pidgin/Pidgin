@@ -49,13 +49,21 @@
 PACKAGE="Pidgin"
 ARGS_FILE="autogen.args"
 
+libtoolize="libtoolize"
+case $(uname -s) in
+	Darwin*)
+		libtoolize="glibtoolize"
+		;;
+	*)
+esac
+
 ###############################################################################
 # Some helper functions
 ###############################################################################
 check () {
 	CMD=$1
 
-	echo -n "checking for ${CMD}... "
+	printf "%s" "checking for ${CMD}... "
 	BIN=`which ${CMD} 2> /dev/null`
 
 	if [ x"${BIN}" = x"" ] ; then
@@ -71,17 +79,21 @@ run_or_die () { # beotch
 	CMD=$1
 	shift
 
-	echo -n "running ${CMD} ${@}... "
-	OUTPUT=`${CMD} ${@} 2>&1`
+	OUTPUT=`mktemp autogen-XXXXXX`
+
+	printf "%s" "running ${CMD} ${@}... "
+	${CMD} ${@} >${OUTPUT} 2>&1
+
 	if [ $? != 0 ] ; then
 		echo "failed."
-		echo ${OUTPUT}
+		cat ${OUTPUT}
+		rm -f ${OUTPUT}
 		exit 1
 	else
 		echo "done."
-		if [ x"${OUTPUT}" != x"" ] ; then
-			echo ${OUTPUT}
-		fi
+		cat ${OUTPUT}
+
+		rm -f ${OUTPUT}
 	fi
 }
 
@@ -99,11 +111,11 @@ fi
 ###############################################################################
 # Look for our args file
 ###############################################################################
-echo -n "checking for ${ARGS_FILE}: "
+printf "%s" "checking for ${ARGS_FILE}: "
 if [ -f ${ARGS_FILE} ] ; then
 	echo "found."
-	echo -n "sourcing ${ARGS_FILE}: "
-	. autogen.args
+	printf "%s" "sourcing ${ARGS_FILE}: "
+	. ${ARGS_FILE}
 	echo "done."
 else
 	echo "not found."
@@ -112,7 +124,7 @@ fi
 ###############################################################################
 # Check for our required helpers
 ###############################################################################
-check "libtoolize";		LIBTOOLIZE=${BIN};
+check "$libtoolize";		LIBTOOLIZE=${BIN};
 check "glib-gettextize"; GLIB_GETTEXTIZE=${BIN};
 check "intltoolize";	INTLTOOLIZE=${BIN};
 check "aclocal";		ACLOCAL=${BIN};

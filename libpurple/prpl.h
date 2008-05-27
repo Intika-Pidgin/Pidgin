@@ -72,16 +72,22 @@ typedef struct _PurpleBuddyIconSpec PurpleBuddyIconSpec;
 #include "status.h"
 #include "whiteboard.h"
 
+/** @copydoc PurpleBuddyIconSpec */
+
 struct _PurpleBuddyIconSpec {
-	char *format;                       /**< This is a comma-delimited list of image formats or NULL if icons are not supported.
-					     * Neither the core nor the prpl will actually check to see if the data it's given matches this; it's
-					     * entirely up to the UI to do what it wants */
-	int min_width;                          /**< The minimum width of this icon  */
-	int min_height;                         /**< The minimum height of this icon */
-	int max_width;                          /**< The maximum width of this icon  */
-	int max_height;                         /**< The maximum height of this icon */
-	size_t max_filesize;                     /**< The maximum number of bytes    */
-	PurpleIconScaleRules scale_rules;		/**< How to stretch this icon */
+	/** This is a comma-delimited list of image formats or @c NULL if icons
+	 *  are not supported.  Neither the core nor the prpl will actually
+	 *  check to see if the data it's given matches this; it's entirely up
+	 *  to the UI to do what it wants
+	 */
+	char *format;
+
+	int min_width;                     /**< Minimum width of this icon  */
+	int min_height;                    /**< Minimum height of this icon */
+	int max_width;                     /**< Maximum width of this icon  */
+	int max_height;                    /**< Maximum height of this icon */
+	size_t max_filesize;               /**< Maximum size in bytes */
+	PurpleIconScaleRules scale_rules;  /**< How to stretch this icon */
 };
 
 struct proto_chat_entry {
@@ -178,6 +184,7 @@ typedef enum
 	/**
 	 * Indicates that slash commands are native to this protocol.
 	 * Used as a hint that unknown commands should not be sent as messages.
+	 * @since 2.1.0
 	 */
 	OPT_PROTO_SLASH_COMMANDS_NATIVE = 0x00000400,
 
@@ -187,7 +194,7 @@ typedef enum
  * A protocol plugin information structure.
  *
  * Every protocol plugin initializes this structure. It is the gateway
- * between purple and the protocol plugin.  Many of this callbacks can be
+ * between purple and the protocol plugin.  Many of these callbacks can be
  * NULL.  If a callback must be implemented, it has a comment indicating so.
  */
 struct _PurplePluginProtocolInfo
@@ -399,13 +406,42 @@ struct _PurplePluginProtocolInfo
 	gboolean (*send_attention)(PurpleConnection *gc, const char *username, guint type);
 	GList *(*get_attention_types)(PurpleAccount *acct);
 
-	/* Make sure you do not try to dereference anything past struct_size! */
-	int struct_size;
+	/**
+	 * The size of the PurplePluginProtocolInfo. This should always be sizeof(PurplePluginProtocolInfo).
+	 * This allows adding more functions to this struct without requiring a major version bump.
+	 */
+	unsigned long struct_size;
+
+	/* NOTE:
+	 * If more functions are added, they should accessed using the following syntax:
+	 *
+	 *		if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl, new_function))
+	 *			prpl->new_function(...);
+	 *
+	 * instead of
+	 *
+	 *		if (prpl->new_function != NULL)
+	 *			prpl->new_function(...);
+	 *
+	 * The PURPLE_PROTOCOL_PLUGIN_HAS_FUNC macro can be used for the older member
+	 * functions (e.g. login, send_im etc.) too.
+	 */
+
+	/** This allows protocols to specify additional strings to be used for
+	 * various purposes.  The idea is to stuff a bunch of strings in this hash
+	 * table instead of expanding the struct for every addition.  This hash
+	 * table is allocated every call and MUST be unrefed by the caller.
+	 *
+	 * @param account The account to specify.  This can be NULL.
+	 * @return The protocol's string hash table. The hash table should be
+	 *         destroyed by the caller when it's no longer needed.
+	 */
+	GHashTable *(*get_account_text_table)(PurpleAccount *account);
 
 #ifdef USE_FARSIGHT
-	/* Initiate media with the given buddy */
+	/** Initiate media with the given buddy */
 	PurpleMedia  *(*initiate_media)(PurpleConnection *conn, const char *who, PurpleMediaStreamType type);
-	
+
 	gboolean (*can_do_media)(PurpleConnection *conn, const char *who, PurpleMediaStreamType type);
     
     /*
@@ -422,8 +458,10 @@ struct _PurplePluginProtocolInfo
 };
 
 #define PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl, member) \
-	((G_STRUCT_OFFSET(PurplePluginProtocolInfo, member) < prpl->struct_size) && \
+	(((G_STRUCT_OFFSET(PurplePluginProtocolInfo, member) < G_STRUCT_OFFSET(PurplePluginProtocolInfo, struct_size)) \
+	  || (G_STRUCT_OFFSET(PurplePluginProtocolInfo, member) < prpl->struct_size)) && \
 	 prpl->member != NULL)
+
 
 #define PURPLE_IS_PROTOCOL_PLUGIN(plugin) \
 	((plugin)->info->type == PURPLE_PLUGIN_PROTOCOL)

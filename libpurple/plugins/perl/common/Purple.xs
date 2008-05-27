@@ -30,6 +30,7 @@ PURPLE_PERL_BOOT_PROTO(SSL);
 PURPLE_PERL_BOOT_PROTO(SavedStatus);
 PURPLE_PERL_BOOT_PROTO(Serv);
 PURPLE_PERL_BOOT_PROTO(Signal);
+PURPLE_PERL_BOOT_PROTO(Smiley);
 PURPLE_PERL_BOOT_PROTO(Sound);
 PURPLE_PERL_BOOT_PROTO(Status);
 PURPLE_PERL_BOOT_PROTO(Stringref);
@@ -68,20 +69,31 @@ BOOT:
 	PURPLE_PERL_BOOT(SavedStatus);
 	PURPLE_PERL_BOOT(Serv);
 	PURPLE_PERL_BOOT(Signal);
+	PURPLE_PERL_BOOT(Smiley);
 	PURPLE_PERL_BOOT(Sound);
 	PURPLE_PERL_BOOT(Status);
 	PURPLE_PERL_BOOT(Stringref);
 	PURPLE_PERL_BOOT(Util);
 	PURPLE_PERL_BOOT(XMLNode);
 
-void
+guint
 timeout_add(plugin, seconds, callback, data = 0)
 	Purple::Plugin plugin
 	int seconds
 	SV *callback
 	SV *data
 CODE:
-	purple_perl_timeout_add(plugin, seconds, callback, data);
+	RETVAL = purple_perl_timeout_add(plugin, seconds, callback, data);
+OUTPUT:
+	RETVAL
+
+gboolean
+timeout_remove(handle)
+	guint handle
+CODE:
+	RETVAL = purple_perl_timeout_remove(handle);
+OUTPUT:
+	RETVAL
 
 void
 deinit()
