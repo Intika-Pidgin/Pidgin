@@ -182,6 +182,7 @@ libpurple/proxy.c
 libpurple/request.h
 libpurple/savedstatuses.c
 libpurple/server.c
+libpurple/smiley.c
 libpurple/sslconn.c
 libpurple/status.c
 libpurple/util.c
@@ -211,6 +212,7 @@ pidgin/gtkprivacy.c
 pidgin/gtkrequest.c
 pidgin/gtkroomlist.c
 pidgin/gtksavedstatuses.c
+pidgin/gtksmiley.c
 pidgin/gtksound.c
 pidgin/gtkstatusbox.c
 pidgin/gtkutils.c
@@ -244,6 +246,7 @@ pidgin/plugins/pidgininc.c
 pidgin/plugins/pidginrc.c
 pidgin/plugins/raw.c
 pidgin/plugins/relnot.c
+pidgin/plugins/sendbutton.c
 pidgin/plugins/spellchk.c
 pidgin/plugins/ticker/ticker.c
 pidgin/plugins/timestamp.c

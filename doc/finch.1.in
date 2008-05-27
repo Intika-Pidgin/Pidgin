@@ -111,8 +111,11 @@ Jump to the next URGENT (highlighted) window.
 .B Alt \+ Shift \+ Tab
 Jump to the previous URGENT (highlighted) window.
 .TP
-.B Ctrl \+ o
+.B Ctrl \+ o \fR or \fB F10
 Bring up the menu (if there is one) for a window.
+.TP
+.B F11
+Popup the context menu (if there is one) for the selected widget.
 .TP
 .B Alt \+ /
 Show a list of available key-bindings for the current widget in focus.
@@ -377,6 +380,12 @@ The \fBc-\fR corresponds to the \fBControl\fR key. You can also use \fBctrl-\fR
 or \fBctr-\fR or \fBctl-\fR to indicate a combination. For alt-keys, you can use
 one of \fBa-\fR, \fBalt-\fR, \fBm-\fR or \fBmeta-\fR. You can also use
 \fBhome\fR, \fBend\fR, \fBleft\fR, \fBright\fR etc. keys.
+
+To unbind a key which has a default binding, you simply bind it to the empty string.  For example, to unbind \fBAlt + q\fR from the Quit function, you would use:
+
+[GntWM::binding]
+.br
+a-q =
 
 .SH Menus
 You can also specify key-bindings to trigger specific menuitems in windows. For example, the following entry in \fI~/.gntrc\fR will bind \fBCtrl + t\fR to the 'Send IM...' item in the buddylist:

@@ -54,6 +54,11 @@ jabber_process_starttls(JabberStream *js, xmlnode *packet)
 				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
 				_("Server requires TLS/SSL for login.  No TLS/SSL support found."));
 			return TRUE;
+		} else if(purple_account_get_bool(js->gc->account, "require_tls", FALSE)) {
+			purple_connection_error_reason (js->gc,
+				 PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
+				_("You require encryption, but no TLS/SSL support found."));
+			return TRUE;
 		}
 	}
 
@@ -377,6 +382,10 @@ static void jabber_auth_start_cyrus(JabberStream *js)
 					if ((pos = strstr(js->sasl_mechs->str, js->current_mech))) {
 						g_string_erase(js->sasl_mechs, pos-js->sasl_mechs->str, strlen(js->current_mech));
 					}
+					/* Remove space which separated this mech from the next */
+					if (strlen(js->sasl_mechs->str) > 0 && ((js->sasl_mechs->str)[0] == ' ')) {
+						g_string_erase(js->sasl_mechs, 0, 1);	
+					}
 					again = TRUE;
 				}
 
@@ -490,9 +499,12 @@ jabber_auth_start(JabberStream *js, xmlnode *packet)
 	{
 		char *mech_name = xmlnode_get_data(mechnode);
 #ifdef HAVE_CYRUS_SASL
-		/* Skip the GSSAPI mechanism unless it's enabled for this account */
-		if (mech_name && !strcmp(mech_name, "GSSAPI") &&
-			!purple_account_get_bool(js->gc->account, "auth_gssapi", TRUE)) {
+		/* Don't include Google Talk's X-GOOGLE-TOKEN mechanism, as we will not
+		 * support it and including it gives a false fall-back to other mechs offerred,
+		 * leading to incorrect error handling.
+		 */
+		if (mech_name && !strcmp(mech_name, "X-GOOGLE-TOKEN")) {
+			g_free(mech_name);
 			continue;
 		}
 
@@ -723,13 +735,16 @@ static void auth_old_cb(JabberStream *js, xmlnode *packet, gpointer data)
 		} else if(xmlnode_get_child(query, "password")) {
 			if(js->gsc == NULL && !purple_account_get_bool(js->gc->account,
 						"auth_plain_in_clear", FALSE)) {
+				char *msg = g_strdup_printf(_("%s requires plaintext authentication over an unencrypted connection.  Allow this and continue authentication?"),
+											js->gc->account->username);
 				purple_request_yes_no(js->gc, _("Plaintext Authentication"),
 						_("Plaintext Authentication"),
-						_("This server requires plaintext authentication over an unencrypted connection.  Allow this and continue authentication?"),
+						msg,
 						1,
 						purple_connection_get_account(js->gc), NULL, NULL,
 						purple_connection_get_account(js->gc), allow_plaintext_auth,
 						disallow_plaintext_auth);
+				g_free(msg);
 				return;
 			}
 			finish_plaintext_authentication(js);
@@ -930,6 +945,7 @@ jabber_auth_handle_challenge(JabberStream *js, xmlnode *packet)
 					_("Invalid challenge from server"));
 			}
 			g_free(js->expected_rspauth);
+			js->expected_rspauth = NULL;
 		} else {
 			/* assemble a response, and send it */
 			/* see RFC 2831 */
@@ -1110,12 +1126,18 @@ void jabber_auth_handle_failure(JabberStream *js, xmlnode *packet)
 			if ((pos = strstr(js->sasl_mechs->str, js->current_mech))) {
 				g_string_erase(js->sasl_mechs, pos-js->sasl_mechs->str, strlen(js->current_mech));
 			}
+			/* Remove space which separated this mech from the next */
+			if (strlen(js->sasl_mechs->str) > 0 && ((js->sasl_mechs->str)[0] == ' ')) {
+				g_string_erase(js->sasl_mechs, 0, 1);	
+			}			
 		}
-
-		sasl_dispose(&js->sasl);
-
-		jabber_auth_start_cyrus(js);
-		return;
+		if (strlen(js->sasl_mechs->str)) {
+			/* If we have remaining mechs to try, do so */
+			sasl_dispose(&js->sasl);
+			
+			jabber_auth_start_cyrus(js);
+			return;
+		}
 	}
 #endif
 	msg = jabber_parse_error(js, packet, &reason);
