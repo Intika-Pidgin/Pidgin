@@ -76,7 +76,9 @@ typedef enum {
 	GTK_IMHTML_SMILEY =     1 << 11,
 	GTK_IMHTML_LINKDESC =   1 << 12,
 	GTK_IMHTML_STRIKE =     1 << 13,
-	GTK_IMHTML_CALL =       1 << 14,
+	/** Show custom smileys when appropriate. @since 2.5.0 */
+	GTK_IMHTML_CUSTOM_SMILEY = 1 << 14,
+	GTK_IMHTML_CALL =       1 << 15,
 	GTK_IMHTML_ALL =       -1
 } GtkIMHtmlButtons;
 
@@ -853,6 +855,12 @@ char *gtk_imhtml_get_text(GtkIMHtml *imhtml, GtkTextIter *start, GtkTextIter *st
  */
 void gtk_imhtml_setup_entry(GtkIMHtml *imhtml, PurpleConnectionFlags flags);
 
+GtkIMHtmlSmiley *gtk_imhtml_smiley_create(const char *file, const char *shortcut, gboolean hide,
+		GtkIMHtmlSmileyFlags flags);
+
+void gtk_imhtml_smiley_reload(GtkIMHtmlSmiley *smiley);
+
+void gtk_imhtml_smiley_destroy(GtkIMHtmlSmiley *smiley);
 /*@}*/
 
 #ifdef __cplusplus

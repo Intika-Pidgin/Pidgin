@@ -1494,7 +1494,7 @@ _map_property_tag(const char *tag)
 	else if (strcmp(tag, "mailstop") == 0)
 		return _("Mailstop");
 	else if (strcmp(tag, "Internet EMail Address") == 0)
-		return _("E-Mail Address");
+		return _("Email Address");
 	else
 		return tag;
 }
@@ -2506,7 +2506,7 @@ novell_chat_send(PurpleConnection * gc, int id, const char *text, PurpleMessageF
 						}
 					}
 
-					serv_got_chat_in(gc, id, name, 0, text, time(NULL));
+					serv_got_chat_in(gc, id, name, flags, text, time(NULL));
 					return 0;
 				} else
 					return -1;
@@ -3515,9 +3515,10 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,						/* unregister_user */
 	NULL,						/* send_attention */
 	NULL,						/* get_attention_types */
-	sizeof(PurplePluginProtocolInfo), /* struct_size */
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	NULL,						/* get_account_text_table */
 	NULL,						/* initiate_media */
-	NULL                        /* can_do_media */
+	NULL						/* can_do_media */
 };
 
 static PurplePluginInfo info = {
@@ -3572,3 +3573,4 @@ init_plugin(PurplePlugin * plugin)
 }
 
 PURPLE_INIT_PLUGIN(novell, init_plugin, info);
+

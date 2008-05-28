@@ -39,7 +39,9 @@
 #endif
 
 #include <glib.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 
 #include "network.h"
@@ -114,6 +116,28 @@ _font_size_ichat_to_purple(int size)
 	return "1";
 }
 
+static gchar *
+get_xmlnode_contents(xmlnode *node)
+{
+	gchar *contents;
+
+	contents = xmlnode_to_str(node, NULL);
+
+	/* we just want the stuff inside <font></font>
+	 * There isn't stuff exposed in xmlnode.c to do this more cleanly. */
+
+	if (contents) {
+		char *bodystart = strchr(contents, '>');
+		char *bodyend = strrchr(bodystart, '<');
+		if (bodystart && bodyend && (bodystart + 1) != bodyend) {
+			*bodyend = '\0';
+			memmove(contents, bodystart + 1, (bodyend - bodystart));
+		}
+	}
+
+	return contents;
+}
+
 static void
 _jabber_parse_and_write_message_to_ui(xmlnode *message_node, PurpleBuddy *pb)
 {
@@ -167,7 +191,7 @@ _jabber_parse_and_write_message_to_ui(xmlnode *message_node, PurpleBuddy *pb)
 				if (font_size != NULL)
 					font_size = _font_size_ichat_to_purple(atoi(font_size));
 				font_color = xmlnode_get_attrib(html_body_font_node, "color");
-				html_body = xmlnode_get_data(html_body_font_node);
+				html_body = get_xmlnode_contents(html_body_font_node);
 
 				if (html_body == NULL)
 					/* This is the kind of formated messages that Purple creates */
@@ -361,7 +385,7 @@ _client_socket_handler(gpointer data, gint socket, PurpleInputCondition conditio
 			purple_debug_warning("bonjour", "receive error: %s\n", err ? err : "(null)");
 
 			bonjour_jabber_close_conversation(bconv);
-			if (bconv->pb != NULL) {
+			if (bconv->pb != NULL && bconv->pb->proto_data != NULL) {
 				BonjourBuddy *bb = bconv->pb->proto_data;
 				bb->conversation = NULL;
 			}
@@ -933,7 +957,7 @@ bonjour_jabber_send_message(BonjourJabber *jdata, const gchar *to, const gchar *
 	int ret;
 
 	pb = _find_or_start_conversation(jdata, to);
-	if (pb == NULL) {
+	if (pb == NULL || pb->proto_data == NULL) {
 		purple_debug_info("bonjour", "Can't send a message to an offline buddy (%s).\n", to);
 		/* You can not send a message to an offline buddy */
 		return -10000;
@@ -1079,8 +1103,10 @@ bonjour_jabber_stop(BonjourJabber *jdata)
 		buddies = purple_find_buddies(jdata->account, NULL);
 		for (l = buddies; l; l = l->next) {
 			BonjourBuddy *bb = ((PurpleBuddy*) l->data)->proto_data;
-			bonjour_jabber_close_conversation(bb->conversation);
-			bb->conversation = NULL;
+			if (bb != NULL) {
+				bonjour_jabber_close_conversation(bb->conversation);
+				bb->conversation = NULL;
+			}
 		}
 
 		g_slist_free(buddies);

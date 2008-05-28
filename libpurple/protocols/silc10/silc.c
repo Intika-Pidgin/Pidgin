@@ -684,7 +684,7 @@ silcpurple_attrs(PurplePluginAction *action)
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_bool_new("contact_chat", _("Chat"), cchat);
 	purple_request_field_group_add_field(g, f);
-	f = purple_request_field_bool_new("contact_email", _("E-mail"), cemail);
+	f = purple_request_field_bool_new("contact_email", _("Email"), cemail);
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_bool_new("contact_call", _("Phone"), ccall);
 	purple_request_field_group_add_field(g, f);
@@ -925,7 +925,7 @@ silcpurple_create_keypair(PurplePluginAction *action)
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_string_new("rn", _("Real name"), realname ? realname : "", FALSE);
 	purple_request_field_group_add_field(g, f);
-	f = purple_request_field_string_new("e", _("E-mail"), tmp, FALSE);
+	f = purple_request_field_string_new("e", _("Email"), tmp, FALSE);
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_string_new("o", _("Organization"), "", FALSE);
 	purple_request_field_group_add_field(g, f);
@@ -962,11 +962,11 @@ silcpurple_change_pass(PurplePluginAction *action)
 static void
 silcpurple_change_passwd(PurpleConnection *gc, const char *old, const char *new)
 {
-        char prd[256];
+	char prd[256];
 	g_snprintf(prd, sizeof(prd), "%s" G_DIR_SEPARATOR_S "private_key.pub", silcpurple_silcdir());
 	silc_change_private_key_passphrase(purple_account_get_string(gc->account,
 								   "private-key",
-								   prd), old, new);
+								   prd), old ? old : "", new ? new : "");
 }
 
 static void
@@ -1799,12 +1799,13 @@ static PurplePluginProtocolInfo prpl_info =
 	&silcpurple_wb_ops,			/* whiteboard_prpl_ops */
 	NULL,                       /* send_raw */
 	NULL,                       /* roomlist_room_serialize */
-	NULL,                   /* unregister_user */
-	NULL,                   /* send_attention */
-	NULL,                   /* get_attention_types */
-	sizeof(PurplePluginProtocolInfo), /* struct_size */
-	NULL,                    /* initiate_media */
-	NULL                    /* can_do_media */
+	NULL,                       /* unregister_user */
+	NULL,                       /* send_attention */
+	NULL,                       /* get_attention_types */
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	NULL,                       /* get_account_text_table */
+	NULL,                       /* initiate_media */
+	NULL                       /* can_do_media */
 };
 
 static PurplePluginInfo info =

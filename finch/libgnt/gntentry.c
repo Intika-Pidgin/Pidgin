@@ -238,8 +238,15 @@ show_suggest_dropdown(GntEntry *entry)
 		destroy_suggest(entry);
 		return FALSE;
 	} else if (count == 1) {
+		char *store = g_strndup(entry->start, entry->end - entry->start);
+		gboolean ret;
+
 		destroy_suggest(entry);
-		return complete_suggest(entry, sgst);
+		complete_suggest(entry, sgst);
+
+		ret = (strncmp(store, entry->start, entry->end - entry->start) != 0);
+		g_free(store);
+		return ret;
 	} else {
 		if (max > 0) {
 			GntWidget *ddown = entry->ddown;
@@ -544,10 +551,10 @@ del_to_end(GntBindable *bind, GList *null)
 	return TRUE;
 }
 
-#define SAME(a,b)    ((g_unichar_isalpha(a) && g_unichar_isalpha(b)) || \
-				(g_unichar_isdigit(a) && g_unichar_isdigit(b)) || \
+#define SAME(a,b)    ((g_unichar_isalnum(a) && g_unichar_isalnum(b)) || \
 				(g_unichar_isspace(a) && g_unichar_isspace(b)) || \
-				(g_unichar_iswide(a) && g_unichar_iswide(b)))
+				(g_unichar_iswide(a) && g_unichar_iswide(b)) || \
+				(g_unichar_ispunct(a) && g_unichar_ispunct(b)))
 
 static const char *
 begin_word(const char *text, const char *begin)
@@ -832,6 +839,17 @@ gnt_entry_lost_focus(GntWidget *widget)
 	entry_redraw(widget);
 }
 
+static gboolean
+gnt_entry_clicked(GntWidget *widget, GntMouseEvent event, int x, int y)
+{
+	if (event == GNT_MIDDLE_MOUSE_DOWN) {
+		clipboard_paste(GNT_BINDABLE(widget), NULL);
+		return TRUE;
+	}
+	return FALSE;
+
+}
+
 static void
 gnt_entry_class_init(GntEntryClass *klass)
 {
@@ -839,6 +857,7 @@ gnt_entry_class_init(GntEntryClass *klass)
 	char s[2] = {erasechar(), 0};
 
 	parent_class = GNT_WIDGET_CLASS(klass);
+	parent_class->clicked = gnt_entry_clicked;
 	parent_class->destroy = gnt_entry_destroy;
 	parent_class->draw = gnt_entry_draw;
 	parent_class->map = gnt_entry_map;

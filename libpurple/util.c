@@ -831,9 +831,6 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 				tzoff = tzhrs*60*60 + tzmins*60;
 				if (offset_positive)
 					tzoff *= -1;
-				/* We don't want the C library doing DST calculations
-				 * if we know the UTC offset already. */
-				t.tm_isdst = 0;
 			}
 			else if (utc)
 			{
@@ -895,14 +892,11 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		}
 	}
 
-	if (tm != NULL)
-	{
-		*tm = t;
-		tm->tm_isdst = -1;
-		mktime(tm);
-	}
-
 	retval = mktime(&t);
+
+	if (tm != NULL)
+		*tm = t;
+
 	if (tzoff != PURPLE_NO_TZ_OFF)
 		retval += tzoff;
 
@@ -945,7 +939,8 @@ purple_markup_unescape_entity(const char *text, int *length)
 	else if(IS_ENTITY("&apos;"))
 		pln = "\'";
 	else if(*(text+1) == '#' &&
-			(sscanf(text, "&#%u%1[;]", &pound, temp) == 2 || sscanf(text, "&#x%x%1[;]", &pound, temp) == 2) &&
+			(sscanf(text, "&#%u%1[;]", &pound, temp) == 2 ||
+			 sscanf(text, "&#x%x%1[;]", &pound, temp) == 2) &&
 			pound != 0) {
 		static char buf[7];
 		int buflen = g_unichar_to_utf8((gunichar)pound, buf);
@@ -1525,6 +1520,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					while(*p && *p != '>') {
 						if(!g_ascii_strncasecmp(p, "src=", strlen("src="))) {
 							const char *q = p + strlen("src=");
+							if (src)
+								g_string_free(src, TRUE);
 							src = g_string_new("");
 							if(*q == '\'' || *q == '\"')
 								q++;
@@ -1535,6 +1532,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							p = q;
 						} else if(!g_ascii_strncasecmp(p, "alt=", strlen("alt="))) {
 							const char *q = p + strlen("alt=");
+							if (alt)
+								g_string_free(alt, TRUE);
 							alt = g_string_new("");
 							if(*q == '\'' || *q == '\"')
 								q++;
@@ -1572,6 +1571,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							if (url)
 								g_string_free(url, TRUE);
 							url = g_string_new("");
+							if (cdata)
+								g_string_free(cdata, TRUE);
 							cdata = g_string_new("");
 							if(*q == '\'' || *q == '\"')
 								q++;
@@ -2889,7 +2890,7 @@ purple_util_get_image_extension(gconstpointer data, size_t len)
 }
 
 char *
-purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
+purple_util_get_image_checksum(gconstpointer image_data, size_t image_len)
 {
 	PurpleCipherContext *context;
 	gchar digest[41];
@@ -2910,9 +2911,18 @@ purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
 	}
 	purple_cipher_context_destroy(context);
 
+	return g_strdup(digest);
+}
+
+char *
+purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
+{
 	/* Return the filename */
-	return g_strdup_printf("%s.%s", digest,
+	char *checksum = purple_util_get_image_checksum(image_data, image_len);
+	char *filename = g_strdup_printf("%s.%s", checksum,
 	                       purple_util_get_image_extension(image_data, image_len));
+	g_free(checksum);
+	return filename;
 }
 
 gboolean
@@ -4209,8 +4219,7 @@ purple_uri_list_extract_filenames(const gchar *uri_list)
 			/* not sure if this fallback is useful at all */
 			if (!node->data) node->data = g_strdup (s+5);
 		} else {
-			result = g_list_remove_link(result, node);
-			g_list_free_1 (node);
+			result = g_list_delete_link(result, node);
 		}
 		g_free (s);
 	}

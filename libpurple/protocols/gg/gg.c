@@ -475,7 +475,7 @@ static void ggp_register_user_dialog(PurpleConnection *gc)
 	purple_request_fields_add_group(fields, group);
 
 	field = purple_request_field_string_new("email",
-			_("E-mail"), "", FALSE);
+			_("Email"), "", FALSE);
 	purple_request_field_string_set_masked(field, FALSE);
 	purple_request_field_group_add_field(group, field);
 
@@ -718,7 +718,7 @@ static void ggp_callback_change_passwd_ok(PurpleConnection *gc, PurpleRequestFie
 
 	purple_debug_info("gg", "Changing password\n");
 
-	/* XXX: this e-mail should be a pref... */
+	/* XXX: this email should be a pref... */
 	h = gg_change_passwd4(ggp_get_uin(account),
 			      "user@example.net", purple_account_get_password(account),
 			      p1, info->token->id, t, 0);
@@ -1998,7 +1998,7 @@ static int ggp_chat_send(PurpleConnection *gc, int id, const char *message, Purp
 
 	serv_got_chat_in(gc, id,
 			 purple_account_get_username(purple_connection_get_account(gc)),
-			 0, message, time(NULL));
+			 flags, message, time(NULL));
 
 	return 0;
 }
@@ -2150,9 +2150,10 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,				/* unregister_user */
 	NULL,				/* send_attention */
 	NULL,				/* get_attention_types */
-	sizeof(PurplePluginProtocolInfo), /* struct_size */
-	NULL,				/* initiate_media */
-	NULL                /* can_do_media */
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	NULL,                           /* get_account_text_table */
+	NULL,                           /* initiate_media */
+	NULL                            /* can_do_media */
 };
 /* }}} */
 
@@ -2239,3 +2240,4 @@ static void init_plugin(PurplePlugin *plugin)
 PURPLE_INIT_PLUGIN(gg, init_plugin, info);
 
 /* vim: set ts=8 sts=0 sw=8 noet: */
+

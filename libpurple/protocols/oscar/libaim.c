@@ -92,12 +92,13 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* whiteboard_prpl_ops */
 	NULL,					/* send_raw */
 	NULL,					/* roomlist_room_serialize */
-	NULL,                   /* unregister_user */
-	NULL,                   /* send_attention */
-	NULL,                   /* get_attention_types */
-	sizeof(PurplePluginProtocolInfo),    /* struct_size */
-	NULL,                    /* initiate_media */
-	NULL                    /* can_do_media */
+	NULL,					/* unregister_user */
+	NULL,					/* send_attention */
+	NULL,					/* get_attention_types */
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	NULL,					/* get_account_text_table */
+	NULL,					/* initiate_media */
+	NULL					/* can_do_media */
 };
 
 static PurplePluginInfo info =

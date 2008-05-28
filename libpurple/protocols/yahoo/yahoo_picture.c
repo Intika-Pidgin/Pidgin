@@ -137,9 +137,6 @@ void yahoo_process_picture(PurpleConnection *gc, struct yahoo_packet *pkt)
 		if (url_data != NULL) {
 			yd = gc->proto_data;
 			yd->url_datas = g_slist_prepend(yd->url_datas, url_data);
-		} else {
-			g_free(data->who);
-			g_free(data);
 		}
 	} else if (who && send_icon_info) {
 		yahoo_send_picture_info(gc, who);
@@ -413,7 +410,7 @@ static void yahoo_buddy_icon_upload_pending(gpointer data, gint source, PurpleIn
 {
 	struct yahoo_buddy_icon_upload_data *d = data;
 	PurpleConnection *gc = d->gc;
-	ssize_t wrote;
+	gssize wrote;
 
 	if (!PURPLE_CONNECTION_IS_VALID(gc)) {
 		yahoo_buddy_icon_upload_data_free(d);
