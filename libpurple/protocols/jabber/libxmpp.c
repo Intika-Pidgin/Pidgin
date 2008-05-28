@@ -116,6 +116,7 @@ static PurplePluginProtocolInfo prpl_info =
 	jabber_send_attention,			/* send_attention */
 	jabber_attention_types,			/* attention_types */
 	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	NULL, /* get_account_text_table */
 #ifdef USE_VV
 	jabber_initiate_media,          /* initiate_media */
 	jabber_can_do_media             /* can_do_media */
@@ -228,14 +229,6 @@ init_plugin(PurplePlugin *plugin)
 						"auth_plain_in_clear", FALSE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 						   option);
-
-#ifdef HAVE_CYRUS_SASL
-	option = purple_account_option_bool_new(
-											_("Use GSSAPI (Kerberos v5) for authentication"),
-											"auth_gssapi", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
-											   option);	
-#endif
 	
 	option = purple_account_option_int_new(_("Connect port"), "port", 5222);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,

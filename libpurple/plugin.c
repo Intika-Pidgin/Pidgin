@@ -359,7 +359,7 @@ purple_plugin_probe(const char *filename)
 	{
 		plugin->error = g_strdup_printf(_("You are using %s, but this plugin requires %s."),
 					purple_core_get_ui(), plugin->info->ui_requirement);
-		purple_debug_error("plugins", "%s is not loadable: The UI requirement is not met.\n", plugin->path);
+		purple_debug_error("plugins", "%s is not loadable: The UI requirement is not met. (%s)\n", plugin->path, plugin->error);
 		plugin->unloadable = TRUE;
 		return plugin;
 	}
@@ -474,9 +474,9 @@ purple_plugin_probe(const char *filename)
 		    (PURPLE_PLUGIN_PROTOCOL_INFO(plugin)->login == NULL) ||
 		    (PURPLE_PLUGIN_PROTOCOL_INFO(plugin)->close == NULL))
 		{
-			plugin->error = g_strdup(_("Plugin does not implement all required functions"));
-			purple_debug_error("plugins", "%s is not loadable: Plugin does not implement all required functions\n",
-					 plugin->path);
+			plugin->error = g_strdup(_("Plugin does not implement all required functions (list_icon, login and close)"));
+			purple_debug_error("plugins", "%s is not loadable: %s\n",
+					 plugin->path, plugin->error);
 			plugin->unloadable = TRUE;
 			return plugin;
 		}
@@ -1212,7 +1212,7 @@ purple_plugins_add_search_path(const char *path)
 	if (g_list_find_custom(search_paths, path, (GCompareFunc)strcmp))
 		return;
 
-	search_paths = g_list_append(search_paths, strdup(path));
+	search_paths = g_list_append(search_paths, g_strdup(path));
 }
 
 void
@@ -1294,7 +1294,7 @@ purple_plugins_load_saved(const char *key)
 
 		/* Strip the extension */
 		if (basename)
-			basename = purple_plugin_get_basename(filename);
+			basename = purple_plugin_get_basename(basename);
 
 		if (((plugin = purple_plugins_find_with_filename(filename)) != NULL) ||
 				(basename && (plugin = purple_plugins_find_with_basename(basename)) != NULL) ||
