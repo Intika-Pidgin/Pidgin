@@ -1254,16 +1254,8 @@ void jabber_close(PurpleConnection *gc)
 	JabberStream *js = gc->proto_data;
 
 #ifdef USE_VV
-	/* Close all of the open media sessions on this stream */
-	GList *values = g_hash_table_get_values(js->sessions);
-	GList *iter = values;
-
-	for (; iter; iter = iter->next) {
-		JingleSession *session = (JingleSession *)iter->data;
-		purple_media_hangup(session->media);
-	}
-
-	g_list_free(values);
+	/* Close all of the open Jingle sessions on this stream */
+	jabber_jingle_session_terminate_sessions(js);
 #endif
 
 	/* Don't perform any actions on the ssl connection
@@ -1889,19 +1881,12 @@ void jabber_convo_closed(PurpleConnection *gc, const char *who)
 	JabberID *jid;
 	JabberBuddy *jb;
 	JabberBuddyResource *jbr;
-#ifdef USE_VV
-	JingleSession *session;
-#endif
+
 	if(!(jid = jabber_id_new(who)))
 		return;
 
 #ifdef USE_VV
-	session = jabber_jingle_session_find_by_jid(js, who);
-
-	if (session) {
-		purple_media_hangup(session->media);
-	}
-
+	jabber_jingle_session_terminate_session_media(js, who);
 #endif
 	if((jb = jabber_buddy_find(js, who, TRUE)) &&
 			(jbr = jabber_buddy_find_resource(jb, jid->resource))) {
@@ -2386,7 +2371,7 @@ PurpleMedia *
 jabber_initiate_media(PurpleConnection *gc, const char *who, 
 		      PurpleMediaStreamType type)
 {
-	return jabber_jingle_session_initiate_media(gc, who, type);
+	return jabber_jingle_session_initiate_media(gc->proto_data, who, type);
 }
 
 gboolean jabber_can_do_media(PurpleConnection *gc, const char *who, 
@@ -2406,7 +2391,6 @@ gboolean jabber_can_do_media(PurpleConnection *gc, const char *who,
 		purple_debug_error("jabber", "Could not find buddy\n");
 		return FALSE;
 	}
-#if 0	/* These can be added once we support video */
 	/* XMPP will only support two-way media, AFAIK... */
 	if (type == (PURPLE_MEDIA_AUDIO | PURPLE_MEDIA_VIDEO)) {
 		purple_debug_info("jabber", 
@@ -2414,21 +2398,17 @@ gboolean jabber_can_do_media(PurpleConnection *gc, const char *who,
 		return (jabber_buddy_has_capability(jb, XEP_0167_CAP) ||
 				jabber_buddy_has_capability(jb, GTALK_CAP)) && 
 				jabber_buddy_has_capability(jb, XEP_0180_CAP);
-	} else 
-#endif
-	if (type == (PURPLE_MEDIA_AUDIO)) {
+	} else if (type == (PURPLE_MEDIA_AUDIO)) {
 		purple_debug_info("jabber", 
 				  "Checking audio XEP support for %s\n", who);
 		return jabber_buddy_has_capability(jb, XEP_0167_CAP) ||
 				jabber_buddy_has_capability(jb, GTALK_CAP);
-	}
-#if 0
-	 else if (type == (PURPLE_MEDIA_VIDEO)) {
+	} else if (type == (PURPLE_MEDIA_VIDEO)) {
 		purple_debug_info("jabber", 
 				  "Checking video XEP support for %s\n", who);
 		return jabber_buddy_has_capability(jb, XEP_0180_CAP);
 	}
-#endif
+
 	return FALSE;
 }
 
