@@ -3259,7 +3259,7 @@ static GtkItemFactoryEntry blist_menu[] =
 
 	/* Accounts menu */
 	{ N_("/_Accounts"), NULL, NULL, 0, "<Branch>", NULL },
-	{ N_("/Accounts/Manage"), "<CTL>A", pidgin_accounts_window_show, 0, "<Item>", NULL },
+	{ N_("/Accounts/Manage Accounts"), "<CTL>A", pidgin_accounts_window_show, 0, "<Item>", NULL },
 
 	/* Tools */
 	{ N_("/_Tools"), NULL, NULL, 0, "<Branch>", NULL },
@@ -5305,7 +5305,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	tmp = g_strdup_printf(_("<span weight='bold' size='larger'>Welcome to %s!</span>\n\n"
 
 					       "You have no accounts enabled. Enable your IM accounts from the "
-					       "<b>Accounts</b> window at <b>Accounts->Manage</b>. Once you "
+					       "<b>Accounts</b> window at <b>Accounts->Manage Accounts</b>. Once you "
 					       "enable accounts, you'll be able to sign on, set your status, "
 					       "and talk to your friends."), PIDGIN_NAME);
 	pretty = pidgin_make_pretty_arrows(tmp);
@@ -6474,6 +6474,10 @@ add_buddy_cb(GtkWidget *w, int resp, PidginAddBuddyData *data)
 		purple_blist_add_buddy(b, NULL, g, NULL);
 		purple_account_add_buddy(data->account, b);
 
+		/* Offer to merge people with the same alias. */
+		if (whoalias != NULL)
+			gtk_blist_auto_personize(g, whoalias);
+
 		/*
 		 * XXX
 		 * It really seems like it would be better if the call to
@@ -7609,7 +7613,7 @@ pidgin_blist_update_accounts_menu(void)
 	for (l = gtk_container_get_children(GTK_CONTAINER(accountmenu)); l; l = g_list_delete_link(l, l)) {
 		menuitem = l->data;
 
-		if (menuitem != gtk_item_factory_get_widget(gtkblist->ift, N_("/Accounts/Manage")))
+		if (menuitem != gtk_item_factory_get_widget(gtkblist->ift, N_("/Accounts/Manage Accounts")))
 			gtk_widget_destroy(menuitem);
 	}
 
