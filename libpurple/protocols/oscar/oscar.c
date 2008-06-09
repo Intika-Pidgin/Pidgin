@@ -707,6 +707,9 @@ static gchar *oscar_caps_to_string(OscarCapability caps)
 			case OSCAR_CAPABILITY_CAMERA:
 				tmp = _("Camera");
 				break;
+			case OSCAR_CAPABILITY_ICHAT_SCREENSHARE:
+				tmp = _("Screen Sharing");
+				break;
 			default:
 				tmp = NULL;
 				break;
@@ -868,8 +871,8 @@ static void oscar_user_info_append_status(PurpleConnection *gc, PurpleNotifyUser
 
 	if (b) {
 		if (purple_presence_is_online(presence)) {
-			if (aim_snvalid_icq(b->name) || !message || !(*message)) {
-				/* Append the status name for online ICQ statuses and for all buddies with no message.
+			if (aim_snvalid_icq(b->name) || is_away || !message || !(*message)) {
+				/* Append the status name for online ICQ statuses, away AIM statuses, and for all buddies with no message.
 				 * If the status name and the message are the same, only show one. */
 				const char *status_name = purple_status_get_name(status);
 				if (status_name && message && !strcmp(status_name, message))
@@ -1811,7 +1814,8 @@ purple_parse_login(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 
 	aim_send_login(od, conn, purple_account_get_username(account),
 			purple_connection_get_password(gc), truncate_pass,
-			od->icq ? &icqinfo : &aiminfo, key);
+			od->icq ? &icqinfo : &aiminfo, key,
+			/* allow multple logins? */ purple_account_get_bool(account, "allow_multiple_logins", OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS));
 
 	purple_connection_update_progress(gc, _("Password sent"), 2, OSCAR_CONNECT_STEPS);
 	ck[2] = 0x6c;
@@ -6768,6 +6772,10 @@ void oscar_init(PurplePluginProtocolInfo *prpl_info)
 		OSCAR_DEFAULT_ALWAYS_USE_RV_PROXY);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
+	option = purple_account_option_bool_new(_("Allow multiple simultaneous logins"), "allow_multiple_logins",
+											OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
 	if (init)
 		return;
 	init = TRUE;
