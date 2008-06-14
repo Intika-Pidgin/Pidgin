@@ -3265,10 +3265,10 @@ static GtkItemFactoryEntry blist_menu[] =
 	{ N_("/_Tools"), NULL, NULL, 0, "<Branch>", NULL },
 	{ N_("/Tools/Buddy _Pounces"), NULL, pidgin_pounces_manager_show, 1, "<Item>", NULL },
 	{ N_("/Tools/_Certificates"), NULL, pidgin_certmgr_show, 0, "<Item>", NULL },
-	{ N_("/Tools/Smile_y"), "<CTL>Y", pidgin_smiley_manager_show, 0, "<StockItem>", PIDGIN_STOCK_TOOLBAR_SMILEY },
 	{ N_("/Tools/Plu_gins"), "<CTL>U", pidgin_plugin_dialog_show, 2, "<StockItem>", PIDGIN_STOCK_TOOLBAR_PLUGINS },
 	{ N_("/Tools/Pr_eferences"), "<CTL>P", pidgin_prefs_show, 0, "<StockItem>", GTK_STOCK_PREFERENCES },
 	{ N_("/Tools/Pr_ivacy"), NULL, pidgin_privacy_dialog_show, 0, "<Item>", NULL },
+	{ N_("/Tools/Smile_y"), "<CTL>Y", pidgin_smiley_manager_show, 0, "<StockItem>", PIDGIN_STOCK_TOOLBAR_SMILEY },
 	{ "/Tools/sep2", NULL, NULL, 0, "<Separator>", NULL },
 	{ N_("/Tools/_File Transfers"), "<CTL>T", pidgin_xfer_dialog_show, 0, "<StockItem>", PIDGIN_STOCK_TOOLBAR_TRANSFER },
 	{ N_("/Tools/R_oom List"), NULL, pidgin_roomlist_dialog_show, 0, "<Item>", NULL },
@@ -5305,7 +5305,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	tmp = g_strdup_printf(_("<span weight='bold' size='larger'>Welcome to %s!</span>\n\n"
 
 					       "You have no accounts enabled. Enable your IM accounts from the "
-					       "<b>Accounts</b> window at <b>Accounts->Manage</b>. Once you "
+					       "<b>Accounts</b> window at <b>Accounts->Manage Accounts</b>. Once you "
 					       "enable accounts, you'll be able to sign on, set your status, "
 					       "and talk to your friends."), PIDGIN_NAME);
 	pretty = pidgin_make_pretty_arrows(tmp);
@@ -6474,6 +6474,10 @@ add_buddy_cb(GtkWidget *w, int resp, PidginAddBuddyData *data)
 		purple_blist_add_buddy(b, NULL, g, NULL);
 		purple_account_add_buddy(data->account, b);
 
+		/* Offer to merge people with the same alias. */
+		if (whoalias != NULL)
+			gtk_blist_auto_personize((PurpleBlistNode *)g, whoalias);
+
 		/*
 		 * XXX
 		 * It really seems like it would be better if the call to
@@ -7609,9 +7613,55 @@ pidgin_blist_update_accounts_menu(void)
 	for (l = gtk_container_get_children(GTK_CONTAINER(accountmenu)); l; l = g_list_delete_link(l, l)) {
 		menuitem = l->data;
 
-		if (menuitem != gtk_item_factory_get_widget(gtkblist->ift, N_("/Accounts/Manage")))
+		if (menuitem != gtk_item_factory_get_widget(gtkblist->ift, N_("/Accounts/Manage Accounts")))
 			gtk_widget_destroy(menuitem);
 	}
+
+	for (accounts = purple_accounts_get_all(); accounts; accounts = accounts->next) {
+		char *buf = NULL;
+		GtkWidget *image = NULL;
+		PurpleAccount *account = NULL;
+		GdkPixbuf *pixbuf = NULL;
+
+		account = accounts->data;
+
+		if(!purple_account_get_enabled(account, PIDGIN_UI)) {
+			if (!disabled_accounts) {
+				menuitem = gtk_menu_item_new_with_label(_("Enable Account"));
+				gtk_menu_shell_append(GTK_MENU_SHELL(accountmenu), menuitem);
+				gtk_widget_show(menuitem);
+
+				submenu = gtk_menu_new();
+				gtk_menu_set_accel_group(GTK_MENU(submenu), accel_group);
+				gtk_menu_set_accel_path(GTK_MENU(submenu), N_("<PurpleMain>/Accounts/Enable Account"));
+				gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
+				gtk_widget_show(submenu);
+
+				disabled_accounts = TRUE;
+			}
+
+			buf = g_strconcat(purple_account_get_username(account), " (",
+				purple_account_get_protocol_name(account), ")", NULL);
+			menuitem = gtk_image_menu_item_new_with_label(buf);
+			g_free(buf);
+			pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+			if (pixbuf != NULL)
+			{
+				if (!purple_account_is_connected(account))
+					gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
+				image = gtk_image_new_from_pixbuf(pixbuf);
+				g_object_unref(G_OBJECT(pixbuf));
+				gtk_widget_show(image);
+				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menuitem), image);
+			}
+			g_signal_connect(G_OBJECT(menuitem), "activate",
+				G_CALLBACK(enable_account_cb), account);
+			gtk_menu_shell_append(GTK_MENU_SHELL(submenu), menuitem);
+			gtk_widget_show(menuitem);
+		}
+	}
+
+	pidgin_separator(accountmenu);
 
 	for (accounts = purple_accounts_get_all(); accounts; accounts = accounts->next) {
 		char *buf = NULL;
@@ -7684,51 +7734,6 @@ pidgin_blist_update_accounts_menu(void)
 		}
 	}
 
-	if(disabled_accounts) {
-		pidgin_separator(accountmenu);
-		menuitem = gtk_menu_item_new_with_label(_("Enable Account"));
-		gtk_menu_shell_append(GTK_MENU_SHELL(accountmenu), menuitem);
-		gtk_widget_show(menuitem);
-
-		submenu = gtk_menu_new();
-		gtk_menu_set_accel_group(GTK_MENU(submenu), accel_group);
-		gtk_menu_set_accel_path(GTK_MENU(submenu), N_("<PurpleMain>/Accounts/Enable Account"));
-		gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
-		gtk_widget_show(submenu);
-
-		for (accounts = purple_accounts_get_all(); accounts; accounts = accounts->next) {
-			char *buf = NULL;
-			GtkWidget *image = NULL;
-			PurpleAccount *account = NULL;
-			GdkPixbuf *pixbuf = NULL;
-
-			account = accounts->data;
-
-			if(!purple_account_get_enabled(account, PIDGIN_UI)) {
-
-				disabled_accounts = TRUE;
-
-				buf = g_strconcat(purple_account_get_username(account), " (",
-						purple_account_get_protocol_name(account), ")", NULL);
-				menuitem = gtk_image_menu_item_new_with_label(buf);
-				g_free(buf);
-				pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
-				if (pixbuf != NULL)
-				{
-					if (!purple_account_is_connected(account))
-						gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
-					image = gtk_image_new_from_pixbuf(pixbuf);
-					g_object_unref(G_OBJECT(pixbuf));
-					gtk_widget_show(image);
-					gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menuitem), image);
-				}
-				g_signal_connect(G_OBJECT(menuitem), "activate",
-						G_CALLBACK(enable_account_cb), account);
-				gtk_menu_shell_append(GTK_MENU_SHELL(submenu), menuitem);
-				gtk_widget_show(menuitem);
-			}
-		}
-	}
 }
 
 static GList *plugin_submenus = NULL;

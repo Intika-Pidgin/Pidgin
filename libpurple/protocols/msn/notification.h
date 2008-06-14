@@ -46,6 +46,11 @@ typedef struct _MsnNotification MsnNotification;
 struct _MsnNotification
 {
 	MsnSession *session;
+
+	/**
+	 * This is a convenience pointer that always points to
+	 * servconn->cmdproc
+	 */
 	MsnCmdProc *cmdproc;
 	MsnServConn *servconn;
 
