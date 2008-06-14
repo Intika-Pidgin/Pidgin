@@ -7,12 +7,18 @@ version 2.5.0 (??/??/2008):
 	  Marcus Lundblad, Jorge Villaseñor and other contributors)
 	* Yahoo! Japan now uses UTF-8, matching the behavior of official clients
 	  and restoring compatibility with the web messenger (Yusuke Odate)
+	* Add a configure option, --with-system-ssl-certs to allow packagers
+	  to specify a system-wide SSL CA certificates directory.  When set,
+	  we don't install our SSL CA certs, so it's important that the
+	  libpurple package depend on the CA certificates.
 
 	Pidgin:
-	* Custom buddy icons can now be added and removed to buddy list
+	* Custom buddy icons can now be added to and removed from buddy list
 	  entries via the buddy list entry right-click menu.
 	* Resize large incoming custom smileys to a maximum of 96px on either
 	  side.
+	* Offer to add new buddies into the same contact as existing buddies
+          in the same group if the alias given is the same.
 
 	General:
 	* Group and Chat buddy list entries can now be given custom buddy

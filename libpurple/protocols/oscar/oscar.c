@@ -131,8 +131,8 @@ static const char * const msgerrreason[] = {
 	N_("Busted SNAC payload"),
 	N_("Insufficient rights"),
 	N_("In local permit/deny"),
-	N_("Too evil (sender)"),
-	N_("Too evil (receiver)"),
+	N_("Warning level too high (sender)"),
+	N_("Warning level too high (receiver)"),
 	N_("User temporarily unavailable"),
 	N_("No match"),
 	N_("List overflow"),
@@ -707,6 +707,9 @@ static gchar *oscar_caps_to_string(OscarCapability caps)
 			case OSCAR_CAPABILITY_CAMERA:
 				tmp = _("Camera");
 				break;
+			case OSCAR_CAPABILITY_ICHAT_SCREENSHARE:
+				tmp = _("Screen Sharing");
+				break;
 			default:
 				tmp = NULL;
 				break;
@@ -841,7 +844,7 @@ static void oscar_user_info_append_status(PurpleConnection *gc, PurpleNotifyUser
 		/* Away messges are HTML, but available messages were originally plain text.
 		 * We therefore need to strip away messages but not available messages if we're asked to remove HTML tags.
 		 */
-		if (is_away) {
+		if (is_away && message) {
 			gchar *tmp2;
 			tmp = purple_markup_strip_html(message);
 			g_free(message);
@@ -851,16 +854,16 @@ static void oscar_user_info_append_status(PurpleConnection *gc, PurpleNotifyUser
 		}
 
 	} else {
-	if (itmsurl) {
-		tmp = g_strdup_printf("<a href=\"%s\">%s</a>",
-							  itmsurl, message);
-		g_free(itmsurl);
-		g_free(message);
-		message = tmp;
-	}
+		if (itmsurl) {
+			tmp = g_strdup_printf("<a href=\"%s\">%s</a>",
+								  itmsurl, message);
+			g_free(itmsurl);
+			g_free(message);
+			message = tmp;
+		}
 	}
 
-	if (is_away) {
+	if (is_away && message) {
 		tmp = purple_str_sub_away_formatters(message, purple_account_get_username(account));
 		g_free(message);
 		message = tmp;
@@ -868,8 +871,8 @@ static void oscar_user_info_append_status(PurpleConnection *gc, PurpleNotifyUser
 
 	if (b) {
 		if (purple_presence_is_online(presence)) {
-			if (aim_snvalid_icq(b->name) || !message || !(*message)) {
-				/* Append the status name for online ICQ statuses and for all buddies with no message.
+			if (aim_snvalid_icq(b->name) || is_away || !message || !(*message)) {
+				/* Append the status name for online ICQ statuses, away AIM statuses, and for all buddies with no message.
 				 * If the status name and the message are the same, only show one. */
 				const char *status_name = purple_status_get_name(status);
 				if (status_name && message && !strcmp(status_name, message))
@@ -1811,7 +1814,8 @@ purple_parse_login(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 
 	aim_send_login(od, conn, purple_account_get_username(account),
 			purple_connection_get_password(gc), truncate_pass,
-			od->icq ? &icqinfo : &aiminfo, key);
+			od->icq ? &icqinfo : &aiminfo, key,
+			/* allow multple logins? */ purple_account_get_bool(account, "allow_multiple_logins", OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS));
 
 	purple_connection_update_progress(gc, _("Password sent"), 2, OSCAR_CONNECT_STEPS);
 	ck[2] = 0x6c;
@@ -1959,7 +1963,11 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 			itmsurl = oscar_encoding_to_utf8(account, info->itmsurl_encoding,
 					info->itmsurl, info->itmsurl_len);
 
-		tmp = g_markup_escape_text(message, -1);
+		tmp = (message ? g_markup_escape_text(message, -1) : NULL);
+
+		if (message == NULL && itmsurl != NULL)
+			message = "";
+
 		purple_prpl_got_user_status(account, info->sn, status_id,
 				"message", tmp, "itmsurl", itmsurl, NULL);
 		g_free(tmp);
@@ -2785,8 +2793,8 @@ static int purple_parse_misses(OscarData *od, FlapConnection *conn, FlapFrame *f
 		case 3: /* Evil Sender */
 			buf = g_strdup_printf(
 				   dngettext(PACKAGE,
-				   "You missed %hu message from %s because he/she was too evil.",
-				   "You missed %hu messages from %s because he/she was too evil.",
+				   "You missed %hu message from %s because his/her warning level is too high.",
+				   "You missed %hu messages from %s because his/her warning level is too high.",
 				   nummissed),
 				   nummissed,
 				   userinfo->sn);
@@ -2794,8 +2802,8 @@ static int purple_parse_misses(OscarData *od, FlapConnection *conn, FlapFrame *f
 		case 4: /* Evil Receiver */
 			buf = g_strdup_printf(
 				   dngettext(PACKAGE,
-				   "You missed %hu message from %s because you are too evil.",
-				   "You missed %hu messages from %s because you are too evil.",
+				   "You missed %hu message from %s because your warning level is too high.",
+				   "You missed %hu messages from %s because your warning level is too high.",
 				   nummissed),
 				   nummissed,
 				   userinfo->sn);
@@ -6768,6 +6776,10 @@ void oscar_init(PurplePluginProtocolInfo *prpl_info)
 		OSCAR_DEFAULT_ALWAYS_USE_RV_PROXY);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
+	option = purple_account_option_bool_new(_("Allow multiple simultaneous logins"), "allow_multiple_logins",
+											OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
 	if (init)
 		return;
 	init = TRUE;
