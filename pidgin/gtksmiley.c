@@ -96,6 +96,18 @@ shortcut_changed_cb(PurpleSmiley *smiley, gpointer dontcare, GtkIMHtmlSmiley *gt
 	gtksmiley->smile = g_strdup(purple_smiley_get_shortcut(smiley));
 }
 
+static void
+image_changed_cb(PurpleSmiley *smiley, gpointer dontcare, GtkIMHtmlSmiley *gtksmiley)
+{
+	const char *file;
+
+	g_free(gtksmiley->file);
+
+	file = purple_imgstore_get_filename(purple_smiley_get_stored_image(smiley));
+	gtksmiley->file = g_build_filename(purple_smileys_get_storing_dir(), file, NULL);
+	gtk_imhtml_smiley_reload(gtksmiley);
+}
+
 static GtkIMHtmlSmiley *smiley_purple_to_gtkimhtml(PurpleSmiley *smiley)
 {
 	GtkIMHtmlSmiley *gtksmiley;
@@ -113,6 +125,10 @@ static GtkIMHtmlSmiley *smiley_purple_to_gtkimhtml(PurpleSmiley *smiley)
 	/* Make sure the shortcut for the GtkIMHtmlSmiley is updated with the PurpleSmiley */
 	g_signal_connect(G_OBJECT(smiley), "notify::shortcut",
 			G_CALLBACK(shortcut_changed_cb), gtksmiley);
+
+	/* And update the pixbuf too when the image is changed */
+	g_signal_connect(G_OBJECT(smiley), "notify::image",
+			G_CALLBACK(image_changed_cb), gtksmiley);
 
 	return gtksmiley;
 }
@@ -229,7 +245,7 @@ static void do_add(GtkWidget *widget, PidginSmiley *s)
 
 				return;
 			}
-			purple_smiley_set_data(s->smiley, (guchar*)data, len, FALSE);
+			purple_smiley_set_data(s->smiley, (guchar*)data, len);
 		}
 		purple_smiley_set_shortcut(s->smiley, entry);
 	} else {
@@ -329,8 +345,8 @@ pidgin_smiley_edit(GtkWidget *widget, PurpleSmiley *smiley)
 	window = gtk_dialog_new_with_buttons(smiley ? _("Edit Smiley") : _("Add Smiley"),
 			widget ? GTK_WINDOW(widget) : NULL,
 			GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_NO_SEPARATOR,
+			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,							 
 			smiley ? GTK_STOCK_SAVE : GTK_STOCK_ADD, GTK_RESPONSE_ACCEPT,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 			NULL);
 	s->parent = window;
 

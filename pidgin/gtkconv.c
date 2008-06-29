@@ -1481,7 +1481,7 @@ chat_do_im(PidginConversation *gtkconv, const char *who)
 	PurpleAccount *account;
 	PurpleConnection *gc;
 	PurplePluginProtocolInfo *prpl_info = NULL;
-	char *real_who;
+	gchar *real_who = NULL;
 
 	account = purple_conversation_get_account(conv);
 	g_return_if_fail(account != NULL);
@@ -1494,13 +1494,11 @@ chat_do_im(PidginConversation *gtkconv, const char *who)
 	if (prpl_info && prpl_info->get_cb_real_name)
 		real_who = prpl_info->get_cb_real_name(gc,
 				purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv)), who);
-	else
-		real_who = g_strdup(who);
 
-	if(!real_who)
+	if(!who && !real_who)
 		return;
 
-	pidgin_dialogs_im_with_user(account, real_who);
+	pidgin_dialogs_im_with_user(account, real_who ? real_who : who);
 
 	g_free(real_who);
 }
@@ -1539,11 +1537,22 @@ menu_chat_im_cb(GtkWidget *w, PidginConversation *gtkconv)
 static void
 menu_chat_send_file_cb(GtkWidget *w, PidginConversation *gtkconv)
 {
+	PurplePluginProtocolInfo *prpl_info;
 	PurpleConversation *conv = gtkconv->active_conv;
 	const char *who = g_object_get_data(G_OBJECT(w), "user_data");
 	PurpleConnection *gc  = purple_conversation_get_gc(conv);
+	gchar *real_who = NULL;
 
-	serv_send_file(gc, who, NULL);
+	g_return_if_fail(gc != NULL);
+
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+
+	if (prpl_info && prpl_info->get_cb_real_name)
+		real_who = prpl_info->get_cb_real_name(gc,
+				purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv)), who);
+
+	serv_send_file(gc, real_who ? real_who : who, NULL);
+	g_free(real_who);
 }
 
 static void
@@ -1659,23 +1668,34 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 
 		if (gc == NULL)
 			gtk_widget_set_sensitive(button, FALSE);
-
-		g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
+		else
+			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 
 
 		if (prpl_info && prpl_info->send_file)
 		{
+			gboolean can_receive_file = TRUE;
+
 			button = pidgin_new_item_from_stock(menu, _("Send File"),
 				PIDGIN_STOCK_TOOLBAR_SEND_FILE, G_CALLBACK(menu_chat_send_file_cb),
 				PIDGIN_CONVERSATION(conv), 0, 0, NULL);
 
-			if (gc == NULL || prpl_info == NULL ||
-			    !(!prpl_info->can_receive_file || prpl_info->can_receive_file(gc, who)))
-			{
-				gtk_widget_set_sensitive(button, FALSE);
+			if (gc == NULL || prpl_info == NULL)
+				can_receive_file = FALSE;
+			else {
+				gchar *real_who = NULL;
+				if (prpl_info->get_cb_real_name)
+					real_who = prpl_info->get_cb_real_name(gc,
+						purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv)), who);
+				if (!(!prpl_info->can_receive_file || prpl_info->can_receive_file(gc, real_who ? real_who : who)))
+					can_receive_file = FALSE;
+				g_free(real_who);
 			}
 
-			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
+			if (!can_receive_file)
+				gtk_widget_set_sensitive(button, FALSE);
+			else
+				g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 		}
 
 
@@ -1688,8 +1708,8 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 
 		if (gc == NULL)
 			gtk_widget_set_sensitive(button, FALSE);
-
-		g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
+		else
+			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 	}
 
 	if (prpl_info && (prpl_info->get_info || prpl_info->get_cb_info)) {
@@ -1698,8 +1718,8 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 
 		if (gc == NULL)
 			gtk_widget_set_sensitive(button, FALSE);
-
-		g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
+		else
+			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 	}
 
 	if (prpl_info && prpl_info->get_cb_away) {
@@ -1708,8 +1728,8 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 
 		if (gc == NULL)
 			gtk_widget_set_sensitive(button, FALSE);
-
-		g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
+		else
+			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 	}
 
 	if (!is_me && prpl_info && !(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
@@ -1722,8 +1742,8 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 
 		if (gc == NULL)
 			gtk_widget_set_sensitive(button, FALSE);
-
-		g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
+		else
+			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 	}
 
 	button = pidgin_new_item_from_stock(menu, _("Last said"), GTK_STOCK_INDEX,
@@ -3153,10 +3173,19 @@ populate_menu_with_options(GtkWidget *menu, PidginConversation *gtkconv, gboolea
 
 		if ((chat == NULL) && (gtkconv->imhtml != NULL)) {
 			GHashTable *components;
-			components = g_hash_table_new_full(g_str_hash, g_str_equal,
-					g_free, g_free);
-			g_hash_table_replace(components, g_strdup("channel"),
-					g_strdup(conv->name));
+			PurpleAccount *account = purple_conversation_get_account(conv);
+			PurplePlugin *prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+			PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+			if (purple_account_get_connection(account) != NULL &&
+					PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, chat_info_defaults)) {
+				components = prpl_info->chat_info_defaults(purple_account_get_connection(account),
+						purple_conversation_get_name(conv));
+			} else {
+				components = g_hash_table_new_full(g_str_hash, g_str_equal,
+						g_free, g_free);
+				g_hash_table_replace(components, g_strdup("channel"),
+						g_strdup(purple_conversation_get_name(conv)));
+			}
 			chat = purple_chat_new(conv->account, NULL, components);
 			purple_blist_node_set_flags((PurpleBlistNode *)chat,
 					PURPLE_BLIST_NODE_FLAG_NO_SAVE);
@@ -5183,11 +5212,8 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		nick_colors = generate_nick_colors(&nbr_nick_colors, gtk_widget_get_style(gtkconv->imhtml)->base[GTK_STATE_NORMAL]);
 	}
 
-	/* We don't want to see the custom smileys if our buddy send us the
-	 * defined shortcut. */
-	pidgin_themes_smiley_themeize(gtkconv->imhtml);
-	/* We want to see our smileys in the entry */
-	pidgin_themes_smiley_themeize_custom(gtkconv->entry);
+	if (conv->features & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY)
+		pidgin_themes_smiley_themeize_custom(gtkconv->entry);
 }
 
 static void
@@ -5653,7 +5679,7 @@ pidgin_conv_write_conv(PurpleConversation *conv, const char *name, const char *a
 		gtk_font_options |= GTK_IMHTML_USE_POINTSIZE;
 	}
 
-	if (!(flags & PURPLE_MESSAGE_RECV))
+	if (!(flags & PURPLE_MESSAGE_RECV) && (conv->features & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY))
 	{
 		/* We want to see our own smileys. Need to revert it after send*/
 		pidgin_themes_smiley_themeize_custom(gtkconv->imhtml);
@@ -5838,7 +5864,7 @@ pidgin_conv_write_conv(PurpleConversation *conv, const char *name, const char *a
 		gtkconv_set_unseen(gtkconv, unseen);
 	}
 
-	if (!(flags & PURPLE_MESSAGE_RECV))
+	if (!(flags & PURPLE_MESSAGE_RECV) && (conv->features & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY))
 	{
 		/* Restore the smiley-data */
 		pidgin_themes_smiley_themeize(gtkconv->imhtml);

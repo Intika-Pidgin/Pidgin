@@ -1328,7 +1328,10 @@ msim_check_alive(gpointer data)
 	delta = time(NULL) - session->last_comm;
 	/* purple_debug_info("msim", "msim_check_alive: delta=%d\n", delta); */
 	if (delta >= MSIM_KEEPALIVE_INTERVAL) {
-		errmsg = g_strdup_printf(_("Connection to server lost (no data received within %d seconds)"), (int)delta);
+	        errmsg = g_strdup_printf(ngettext("Connection to server lost (no data received within %d second)",
+						  "Connection to server lost (no data received within %d seconds)",
+						  (int)delta),
+					 (int)delta);
 
 		purple_debug_info("msim", "msim_check_alive: %s > interval of %d, presumed dead\n",
 				errmsg, MSIM_KEEPALIVE_INTERVAL);
@@ -2404,7 +2407,7 @@ const char *msim_normalize(const PurpleAccount *account, const char *str) {
 		const char *username;
 
 		/* If the account does not exist, we can't look up the user. */
-		if (!account)
+		if (!account || !account->gc)
 			return str;
 
 		id = atol(str);
@@ -2456,7 +2459,7 @@ msim_get_account_text_table(PurpleAccount *unused)
 
 	table = g_hash_table_new(g_str_hash, g_str_equal);
 
-	g_hash_table_insert(table, "login_label", (gpointer)_("E-mail Address..."));
+	g_hash_table_insert(table, "login_label", (gpointer)_("Email Address..."));
 
 	return table;
 }
@@ -2946,7 +2949,10 @@ msim_got_contact_list(MsimSession *session, MsimMessage *reply, gpointer user_da
 
 	switch (GPOINTER_TO_UINT(user_data)) {
 		case MSIM_CONTACT_LIST_IMPORT_ALL_FRIENDS:
-			msg = g_strdup_printf(_("%d buddies were added or updated from the server (including buddies already on the server-side list)"), buddy_count);
+		        msg = g_strdup_printf(ngettext("%d buddy was added or updated from the server (including buddies already on the server-side list)",
+						       "%d buddies were added or updated from the server (including buddies already on the server-side list)",
+						       buddy_count),
+					      buddy_count);
 			purple_notify_info(session->account, _("Add contacts from server"), msg, NULL);
 			g_free(msg);
 			break;

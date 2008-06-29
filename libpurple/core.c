@@ -131,13 +131,14 @@ purple_core_init(const char *ui)
 
 	purple_ciphers_init();
 
-	/* Initialize all static protocols. */
-	static_proto_init();
-
 	/* Since plugins get probed so early we should probably initialize their
 	 * subsystem right away too.
 	 */
 	purple_plugins_init();
+	
+	/* Initialize all static protocols. */
+	static_proto_init();
+
 	purple_plugins_probe(G_MODULE_SUFFIX);
 
 	/* The buddy icon code uses the imgstore, so init it early. */
@@ -211,6 +212,7 @@ purple_core_quit(void)
 	purple_savedstatuses_uninit();
 	purple_status_uninit();
 	purple_prefs_uninit();
+	purple_sound_uninit();
 	purple_xfers_uninit();
 	purple_proxy_uninit();
 	purple_dnsquery_uninit();
@@ -222,19 +224,6 @@ purple_core_quit(void)
 	ops = purple_core_get_ui_ops();
 	if (ops != NULL && ops->quit != NULL)
 		ops->quit();
-
-	/*
-	 * purple_sound_uninit() should be called as close to
-	 * shutdown as possible.  This is because the call
-	 * to ao_shutdown() can sometimes leave our
-	 * environment variables in an unusable state, which
-	 * can cause a crash when getenv is called (by gettext
-	 * for example).  See the complete bug report at
-	 * http://trac.xiph.org/cgi-bin/trac.cgi/ticket/701
-	 *
-	 * TODO: Eventually move this call higher up with the others.
-	 */
-	purple_sound_uninit();
 
 	purple_plugins_uninit();
 #ifdef HAVE_DBUS

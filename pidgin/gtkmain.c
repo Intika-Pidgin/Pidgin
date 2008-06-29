@@ -187,7 +187,6 @@ sighandler(int sig)
 	switch (sig) {
 	case SIGHUP:
 		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_connections_disconnect_all();
 		break;
 	case SIGSEGV:
 		fprintf(stderr, "%s", segfault_message);
@@ -217,13 +216,7 @@ sighandler(int sig)
 		break;
 	default:
 		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_connections_disconnect_all();
-
-		purple_plugins_unload_all();
-
-		if (gtk_main_level())
-			gtk_main_quit();
-		exit(0);
+		purple_core_quit();
 	}
 }
 #endif
