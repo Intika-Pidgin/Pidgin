@@ -103,7 +103,7 @@ pidgin_setup_imhtml(GtkWidget *imhtml)
 	g_signal_connect(G_OBJECT(imhtml), "url_clicked",
 					 G_CALLBACK(url_clicked_cb), NULL);
 
-	pidgin_themes_smiley_themeize_custom(imhtml);
+	pidgin_themes_smiley_themeize(imhtml);
 
 	gtk_imhtml_set_funcs(GTK_IMHTML(imhtml), &gtkimhtml_cbs);
 
@@ -1001,13 +1001,14 @@ void pidgin_retrieve_user_info_in_chat(PurpleConnection *conn, const char *name,
 	}
 
 	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(conn->prpl);
+	if (prpl_info != NULL && prpl_info->get_cb_real_name)
+		who = prpl_info->get_cb_real_name(conn, chat, name);
 	if (prpl_info == NULL || prpl_info->get_cb_info == NULL) {
-		pidgin_retrieve_user_info(conn, name);
+		pidgin_retrieve_user_info(conn, who ? who : name);
+		g_free(who);
 		return;
 	}
 
-	if (prpl_info->get_cb_real_name)
-		who = prpl_info->get_cb_real_name(conn, chat, name);
 	show_retrieveing_info(conn, who ? who : name);
 	prpl_info->get_cb_info(conn, chat, name);
 	g_free(who);

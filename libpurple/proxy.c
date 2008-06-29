@@ -265,6 +265,7 @@ purple_gnome_proxy_get_info(void)
 				"'manual' but no proxy server is specified.  Using "
 				"Pidgin's proxy settings instead.\n");
 		g_free(info.host);
+		info.host = NULL;
 		return purple_global_proxy_get_info();
 	}
 
@@ -272,6 +273,7 @@ purple_gnome_proxy_get_info(void)
 			&info.username, NULL, NULL, NULL))
 	{
 		g_free(info.host);
+		info.host = NULL;
 		return purple_global_proxy_get_info();
 	}
 	g_strchomp(info.username);
@@ -280,7 +282,9 @@ purple_gnome_proxy_get_info(void)
 			&info.password, NULL, NULL, NULL))
 	{
 		g_free(info.host);
+		info.host = NULL;
 		g_free(info.username);
+		info.username = NULL;
 		return purple_global_proxy_get_info();
 	}
 	g_strchomp(info.password);
@@ -289,8 +293,11 @@ purple_gnome_proxy_get_info(void)
 			&tmp, NULL, NULL, NULL))
 	{
 		g_free(info.host);
+		info.host = NULL;
 		g_free(info.username);
+		info.username = NULL;
 		g_free(info.password);
+		info.password = NULL;
 		return purple_global_proxy_get_info();
 	}
 	info.port = atoi(tmp);
@@ -1726,6 +1733,10 @@ proxy_connect_socks5(PurpleProxyConnectData *connect_data, struct sockaddr *addr
  * resolved, and each time a connection attempt fails (assuming there
  * is another IP address to try).
  */
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 46
+#endif
+
 static void try_connect(PurpleProxyConnectData *connect_data)
 {
 	size_t addrlen;
@@ -1736,9 +1747,13 @@ static void try_connect(PurpleProxyConnectData *connect_data)
 	connect_data->hosts = g_slist_remove(connect_data->hosts, connect_data->hosts->data);
 	addr = connect_data->hosts->data;
 	connect_data->hosts = g_slist_remove(connect_data->hosts, connect_data->hosts->data);
-
+#ifdef HAVE_INET_NTOP
 	inet_ntop(addr->sa_family, &((struct sockaddr_in *)addr)->sin_addr,
 			ipaddr, sizeof(ipaddr));
+#else
+	memcpy(ipaddr,inet_ntoa(((struct sockaddr_in *)addr)->sin_addr),
+			sizeof(ipaddr));
+#endif
 	purple_debug_info("proxy", "Attempting connection to %s\n", ipaddr);
 
 	switch (purple_proxy_info_get_type(connect_data->gpi)) {

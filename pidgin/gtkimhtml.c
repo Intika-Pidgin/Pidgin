@@ -514,6 +514,7 @@ gtk_imhtml_tip (gpointer data)
 			tmp);
 		g_free(tmp);
 
+		g_object_unref(layout);
 		return FALSE;
 	}
 
@@ -551,6 +552,7 @@ gtk_imhtml_tip (gpointer data)
 	gtk_widget_show (imhtml->tip_window);
 
 	pango_font_metrics_unref(font_metrics);
+	g_object_unref(font);
 	g_object_unref(layout);
 
 	return FALSE;
@@ -766,7 +768,7 @@ gtk_imhtml_expose_event (GtkWidget      *widget,
 	gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(widget), &end,
 	                                   buf_x + event->area.width, buf_y + event->area.height);
 
-
+	gtk_text_iter_order(&start, &end);
 
 	cur = start;
 
@@ -1001,19 +1003,14 @@ static void gtk_imhtml_clipboard_get(GtkClipboard *clipboard, GtkSelectionData *
 		char *selection;
 #ifndef _WIN32
 		gsize len;
-		GString *str = g_string_new(NULL);
 		if (primary) {
 			text = gtk_imhtml_get_markup_range(imhtml, &start, &end);
 		} else
 			text = html_clipboard;
 
 		/* Mozilla asks that we start our text/html with the Unicode byte order mark */
-		str = g_string_append_unichar(str, 0xfeff);
-		str = g_string_append(str, text);
-		str = g_string_append_unichar(str, 0x0000);
-		selection = g_convert(str->str, str->len, "UTF-16", "UTF-8", NULL, &len, NULL);
+		selection = g_convert(text, -1, "UTF-16", "UTF-8", NULL, &len, NULL);
 		gtk_selection_data_set(selection_data, gdk_atom_intern("text/html", FALSE), 16, (const guchar *)selection, len);
-		g_string_free(str, TRUE);
 #else
 		selection = clipboard_html_to_win32(html_clipboard);
 		gtk_selection_data_set(selection_data, gdk_atom_intern("HTML Format", FALSE), 8, (const guchar *)selection, strlen(selection));
@@ -1753,11 +1750,11 @@ static gboolean tag_event(GtkTextTag *tag, GObject *imhtml, GdkEvent *event, Gtk
 
 			if (!strncmp(tempdata->url, "mailto:", 7))
 			{
-				/* Copy E-Mail Address */
+				/* Copy Email Address */
 				img = gtk_image_new_from_stock(GTK_STOCK_COPY,
 											   GTK_ICON_SIZE_MENU);
 				item = gtk_image_menu_item_new_with_mnemonic(
-					_("_Copy E-Mail Address"));
+					_("_Copy Email Address"));
 				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
 				g_signal_connect(G_OBJECT(item), "activate",
 								 G_CALLBACK(url_copy), tempdata->url + 7);
@@ -4869,7 +4866,7 @@ void gtk_imhtml_insert_smiley_at_iter(GtkIMHtml *imhtml, const char *sml, char *
 		gtk_text_view_add_child_at_anchor(GTK_TEXT_VIEW(imhtml), ebox ? ebox : icon, anchor);
 	} else if (imhtml_smiley != NULL && (imhtml->format_functions & GTK_IMHTML_SMILEY)) {
 		anchor = gtk_text_buffer_create_child_anchor(imhtml->text_buffer, iter);
-		imhtml_smiley->anchors = g_slist_append(imhtml_smiley->anchors, anchor);
+		imhtml_smiley->anchors = g_slist_append(imhtml_smiley->anchors, g_object_ref(anchor));
 		if (ebox) {
 			GtkWidget *img = gtk_image_new_from_stock(GTK_STOCK_MISSING_IMAGE, GTK_ICON_SIZE_MENU);
 			char *text = g_strdup(unescaped);
@@ -5028,9 +5025,9 @@ static const gchar *tag_to_html_start(GtkTextTag *tag)
 			str += g_snprintf(str, sizeof(buf) - (str - buf),
 					"color: #%02x%02x%02x;",
 					color->red >> 8, color->green >> 8, color->blue >> 8);
-			gdk_color_free(color);
 			empty = FALSE;
 		}
+		gdk_color_free(color);
 
 		/* Background color */
 		g_object_get(obj, "background-set", &isset, "background-gdk", &color, NULL);
@@ -5038,9 +5035,9 @@ static const gchar *tag_to_html_start(GtkTextTag *tag)
 			str += g_snprintf(str, sizeof(buf) - (str - buf),
 					"background: #%02x%02x%02x;",
 					color->red >> 8, color->green >> 8, color->blue >> 8);
-			gdk_color_free(color);
 			empty = FALSE;
 		}
+		gdk_color_free(color);
 
 		/* Underline */
 		g_object_get(obj, "underline-set", &isset, "underline", &ivalue, NULL);
@@ -5051,6 +5048,7 @@ static const gchar *tag_to_html_start(GtkTextTag *tag)
 					break;
 				default:
 					str += g_snprintf(str, sizeof(buf) - (str - buf), "text-decoration: underline;");
+					empty = FALSE;
 			}
 		}
 
@@ -5102,6 +5100,38 @@ static const gchar *tag_to_html_end(GtkTextTag *tag)
 	}
 }
 
+typedef struct {
+	GtkTextTag *tag;
+	char *end;
+	char *start;
+} PidginTextTagData;
+
+static PidginTextTagData *text_tag_data_new(GtkTextTag *tag)
+{
+	const char *start, *end;
+	PidginTextTagData *ret = NULL;
+
+	start = tag_to_html_start(tag);
+	if (!start || !*start)
+		return NULL;
+	end = tag_to_html_end(tag);
+	if (!end || !*end)
+		return NULL;
+
+	ret = g_new0(PidginTextTagData, 1);
+	ret->start = g_strdup(start);
+	ret->end = g_strdup(end);
+	ret->tag = tag;
+	return ret;
+}
+
+static void text_tag_data_destroy(PidginTextTagData *data)
+{
+	g_free(data->start);
+	g_free(data->end);
+	g_free(data);
+}
+
 static gboolean tag_ends_here(GtkTextTag *tag, GtkTextIter *iter, GtkTextIter *niter)
 {
 	return ((gtk_text_iter_has_tag(iter, GTK_TEXT_TAG(tag)) &&
@@ -5122,12 +5152,11 @@ char *gtk_imhtml_get_markup_range(GtkIMHtml *imhtml, GtkTextIter *start, GtkText
 	gboolean is_rtl_message = FALSE;
 	GString *str = g_string_new("");
 	GSList *tags, *sl;
-	GQueue *q, *r;
+	GQueue *q;
 	GtkTextTag *tag;
+	PidginTextTagData *tagdata;
 
 	q = g_queue_new();
-	r = g_queue_new();
-
 
 	gtk_text_iter_order(start, end);
 	non_neutral_iter = next_iter = iter = *start;
@@ -5150,9 +5179,11 @@ char *gtk_imhtml_get_markup_range(GtkIMHtml *imhtml, GtkTextIter *start, GtkText
 	for (sl = tags; sl; sl = sl->next) {
 		tag = sl->data;
 		if (!gtk_text_iter_toggles_tag(start, GTK_TEXT_TAG(tag))) {
-			if (strlen(tag_to_html_end(tag)) > 0)
-				g_string_append(str, tag_to_html_start(tag));
-			g_queue_push_tail(q, tag);
+			PidginTextTagData *data = text_tag_data_new(tag);
+			if (data) {
+				g_string_append(str, data->start);
+				g_queue_push_tail(q, data);
+			}
 		}
 	}
 	g_slist_free(tags);
@@ -5164,12 +5195,13 @@ char *gtk_imhtml_get_markup_range(GtkIMHtml *imhtml, GtkTextIter *start, GtkText
 		for (sl = tags; sl; sl = sl->next) {
 			tag = sl->data;
 			if (gtk_text_iter_begins_tag(&iter, GTK_TEXT_TAG(tag))) {
-				if (strlen(tag_to_html_end(tag)) > 0)
-					g_string_append(str, tag_to_html_start(tag));
-				g_queue_push_tail(q, tag);
+				PidginTextTagData *data = text_tag_data_new(tag);
+				if (data) {
+					g_string_append(str, data->start);
+					g_queue_push_tail(q, data);
+				}
 			}
 		}
-
 
 		if (c == 0xFFFC) {
 			GtkTextChildAnchor* anchor = gtk_text_iter_get_child_anchor(&iter);
@@ -5196,28 +5228,33 @@ char *gtk_imhtml_get_markup_range(GtkIMHtml *imhtml, GtkTextIter *start, GtkText
 		for (sl = tags; sl; sl = sl->next) {
 			tag = sl->data;
 			/** don't worry about non-printing tags ending */
-			if (tag_ends_here(tag, &iter, &next_iter) && strlen(tag_to_html_end(tag)) > 0) {
+			if (tag_ends_here(tag, &iter, &next_iter) &&
+					strlen(tag_to_html_end(tag)) > 0 &&
+					strlen(tag_to_html_start(tag)) > 0) {
 
-				GtkTextTag *tmp;
+				PidginTextTagData *tmp;
+				GQueue *r = g_queue_new();
 
-				while ((tmp = g_queue_pop_tail(q)) != tag) {
-					if (tmp == NULL)
-						break;
-
-					if (!tag_ends_here(tmp, &iter, &next_iter) && strlen(tag_to_html_end(tmp)) > 0)
+				while ((tmp = g_queue_pop_tail(q)) && tmp->tag != tag) {
+					g_string_append(str, tmp->end);
+					if (!tag_ends_here(tmp->tag, &iter, &next_iter))
 						g_queue_push_tail(r, tmp);
-					g_string_append(str, tag_to_html_end(GTK_TEXT_TAG(tmp)));
+					else
+						text_tag_data_destroy(tmp);
 				}
 
 				if (tmp == NULL)
 					purple_debug_warning("gtkimhtml", "empty queue, more closing tags than open tags!\n");
-				else
-					g_string_append(str, tag_to_html_end(GTK_TEXT_TAG(tag)));
+				else {
+					g_string_append(str, tmp->end);
+					text_tag_data_destroy(tmp);
+				}
 
 				while ((tmp = g_queue_pop_head(r))) {
-					g_string_append(str, tag_to_html_start(GTK_TEXT_TAG(tmp)));
+					g_string_append(str, tmp->start);
 					g_queue_push_tail(q, tmp);
 				}
+				g_queue_free(r);
 			}
 		}
 
@@ -5226,15 +5263,16 @@ char *gtk_imhtml_get_markup_range(GtkIMHtml *imhtml, GtkTextIter *start, GtkText
 		gtk_text_iter_forward_char(&next_iter);
 	}
 
-	while ((tag = g_queue_pop_tail(q)))
-		g_string_append(str, tag_to_html_end(GTK_TEXT_TAG(tag)));
+	while ((tagdata = g_queue_pop_tail(q))) {
+		g_string_append(str, tagdata->end);
+		text_tag_data_destroy(tagdata);
+	}
 
 	/* Bi-directional text support - close tags */
 	if (is_rtl_message)
 		g_string_append(str, "</SPAN>");
 
 	g_queue_free(q);
-	g_queue_free(r);
 	return g_string_free(str, FALSE);
 }
 
@@ -5470,8 +5508,11 @@ static void gtk_custom_smiley_closed(GdkPixbufLoader *loader, gpointer user_data
 	}
 
 	for (current = smiley->anchors; current; current = g_slist_next(current)) {
-
-		icon = gtk_image_new_from_animation(smiley->icon);
+		anchor = GTK_TEXT_CHILD_ANCHOR(current->data);
+		if (gtk_text_child_anchor_get_deleted(anchor))
+			icon = NULL;
+		else
+			icon = gtk_image_new_from_animation(smiley->icon);
 
 #ifdef DEBUG_CUSTOM_SMILEY
 		purple_debug_info("custom-smiley", "gtk_custom_smiley_closed(): got GtkImage %p from GtkPixbufAnimation %p for smiley '%s'\n",
@@ -5481,7 +5522,6 @@ static void gtk_custom_smiley_closed(GdkPixbufLoader *loader, gpointer user_data
 			GList *wids;
 			gtk_widget_show(icon);
 
-			anchor = GTK_TEXT_CHILD_ANCHOR(current->data);
 			wids = gtk_text_child_anchor_get_widgets(anchor);
 
 			g_object_set_data_full(G_OBJECT(anchor), "gtkimhtml_plaintext", purple_unescape_html(smiley->smile), g_free);
@@ -5498,7 +5538,7 @@ static void gtk_custom_smiley_closed(GdkPixbufLoader *loader, gpointer user_data
 			}
 			g_list_free(wids);
 		}
-
+		g_object_unref(anchor);
 	}
 
 	g_slist_free(smiley->anchors);
