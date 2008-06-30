@@ -1207,8 +1207,8 @@ dnl #######################################################################
 dnl # Check for D-Bus libraries
 dnl #######################################################################
 
-AC_ARG_ENABLE(dbus, [AC_HELP_STRING([--enable-dbus], [enable D-Bus support])], , enable_dbus=yes)
-AC_ARG_ENABLE(nm, [AC_HELP_STRING([--enable-nm], [enable NetworkManager support (requires D-Bus)])], enable_nm=$enableval, enable_nm=yes)
+AC_ARG_ENABLE(dbus, [AC_HELP_STRING([--disable-dbus], [disable D-Bus support])], , enable_dbus=yes)
+AC_ARG_ENABLE(nm, [AC_HELP_STRING([--disable-nm], [disable NetworkManager support (requires D-Bus)])], enable_nm=$enableval, enable_nm=yes)
 
 if test "x$enable_dbus" = "xyes" ; then
 	AC_CHECK_PROG(enable_dbus, dbus-binding-tool, yes, no)
@@ -1560,6 +1560,18 @@ dnl # SSL support
 dnl #
 dnl # Thanks go to Evolution for the checks.
 dnl #######################################################################
+
+AC_ARG_WITH(with-system-ssl-certs, [AC_HELP_STRING([--with-system-ssl-certs=<dir>], [directory containing system-wide SSL CA certificates])])
+
+SSL_CERTIFICATES_DIR=""
+if ! test -z "$with_system_ssl_certs" ; then
+	if ! test -d "$with_system_ssl_certs" ; then
+		AC_MSG_ERROR([$with_system_ssl_certs does not exist, if this is the correct location please make sure that it exists.])
+	fi
+	SSL_CERTIFICATES_DIR="$with_system_ssl_certs"
+fi
+AC_SUBST(SSL_CERTIFICATES_DIR)
+AM_CONDITIONAL(INSTALL_SSL_CERTIFICATES, test "x$SSL_CERTIFICATES_DIR" = "x")
 
 dnl These two are inverses of each other <-- stolen from evolution!
 
@@ -2211,9 +2223,11 @@ AC_CHECK_HEADERS(sys/select.h sys/uio.h sys/utsname.h sys/wait.h)
 AC_CHECK_HEADERS(termios.h)
 
 # sys/sysctl.h on OpenBSD 4.2 requires sys/param.h
+# sys/sysctl.h on FreeBSD requires sys/types.h
 AC_CHECK_HEADERS(sys/param.h)
 AC_CHECK_HEADERS(sys/sysctl.h, [], [],
 	[[
+		#include <sys/types.h>
 		#ifdef HAVE_PARAM_H
 		# include <sys/param.h>
 		#endif
@@ -2409,6 +2423,9 @@ if test "x$enable_dbus" = "xyes" ; then
 fi
 echo Build with NetworkManager..... : $enable_nm
 echo SSL Library/Libraries......... : $msg_ssl
+if test "x$SSL_CERTIFICATES_DIR" != "x" ; then
+	eval eval echo SSL CA certificates directory. : $SSL_CERTIFICATES_DIR
+fi
 echo Build with Cyrus SASL support. : $enable_cyrus_sasl
 echo Use kerberos 4 with zephyr.... : $kerberos
 echo Use external libzephyr........ : $zephyr

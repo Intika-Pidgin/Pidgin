@@ -824,10 +824,14 @@ static void jabber_buddy_info_show_if_ready(JabberBuddyInfo *jbi)
 		}		
 		if(jbr) {
 			char *purdy = NULL;
+			const char *status_name = jabber_buddy_state_get_name(jbr->state);
 			if(jbr->status)
 				purdy = purple_strdup_withhtml(jbr->status);
-			tmp = g_strdup_printf("%s%s%s", jabber_buddy_state_get_name(jbr->state),
-							(purdy ? ": " : ""),
+			if(status_name && purdy && !strcmp(status_name, purdy))
+				status_name = NULL;
+
+			tmp = g_strdup_printf("%s%s%s", (status_name ? status_name : ""),
+							((status_name && purdy) ? ": " : ""),
 							(purdy ? purdy : ""));
 			purple_notify_user_info_prepend_pair(user_info, _("Status"), tmp);
 			g_free(tmp);
@@ -964,6 +968,8 @@ static void jabber_buddy_info_show_if_ready(JabberBuddyInfo *jbi)
 
 		for(resources = jbi->jb->resources; resources; resources = resources->next) {
 			char *purdy = NULL;
+			const char *status_name = NULL;
+
 			jbr = resources->data;
 
 			if(jbr->client.name) {
@@ -987,10 +993,14 @@ static void jabber_buddy_info_show_if_ready(JabberBuddyInfo *jbi)
 				}
 			}
 
+			status_name = jabber_buddy_state_get_name(jbr->state);
 			if(jbr->status)
 				purdy = purple_strdup_withhtml(jbr->status);
-			tmp = g_strdup_printf("%s%s%s", jabber_buddy_state_get_name(jbr->state),
-								  (purdy ? ": " : ""),
+			if(status_name && purdy && !strcmp(status_name, purdy))
+				status_name = NULL;
+			
+			tmp = g_strdup_printf("%s%s%s", (status_name ? status_name : ""),
+								  ((status_name && purdy) ? ": " : ""),
 								  (purdy ? purdy : ""));
 			purple_notify_user_info_prepend_pair(user_info, _("Status"), tmp);
 			g_free(tmp);
@@ -1782,22 +1792,6 @@ void jabber_buddy_get_info(PurpleConnection *gc, const char *who)
 		g_free(bare_jid);
 	}
 }
-
-void jabber_buddy_get_info_chat(PurpleConnection *gc, int id,
-		const char *resource)
-{
-	JabberStream *js = gc->proto_data;
-	JabberChat *chat = jabber_chat_find_by_id(js, id);
-	char *full_jid;
-
-	if(!chat)
-		return;
-
-	full_jid = g_strdup_printf("%s@%s/%s", chat->room, chat->server, resource);
-	jabber_buddy_get_info_for_jid(js, full_jid);
-	g_free(full_jid);
-}
-
 
 static void jabber_buddy_set_invisibility(JabberStream *js, const char *who,
 		gboolean invisible)
