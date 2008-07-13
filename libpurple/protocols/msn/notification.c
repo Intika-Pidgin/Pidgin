@@ -1476,6 +1476,8 @@ static void
 gcf_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload,
 			 size_t len)
 {
+/* QuLogic: Disabled until confirmed correct. */
+#if 0
 	xmlnode *root;
 	xmlnode *policy;
 
@@ -1514,6 +1516,7 @@ gcf_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload,
 	}
 
 	xmlnode_free(root);
+#endif
 }
 
 static void
