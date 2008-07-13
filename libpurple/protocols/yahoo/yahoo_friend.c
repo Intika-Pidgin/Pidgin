@@ -264,3 +264,13 @@ void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 		yahoo_packet_send_and_free(pkt, yd);
 	}
 }
+
+void yahoo_friend_set_p2p_status(YahooFriend *f, YahooP2PStatus p2p_status)
+{
+	f->p2p_status = p2p_status;
+}
+
+YahooP2PStatus yahoo_friend_get_p2p_status(YahooFriend *f)
+{
+	return f->p2p_status;
+}
