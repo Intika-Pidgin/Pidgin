@@ -47,7 +47,7 @@ m4_define([purple_lt_current], [5])
 m4_define([purple_major_version], [2])
 m4_define([purple_minor_version], [5])
 m4_define([purple_micro_version], [0])
-m4_define([purple_version_suffix], [])
+m4_define([purple_version_suffix], [devel])
 m4_define([purple_version],
           [purple_major_version.purple_minor_version.purple_micro_version])
 m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suffix],[purple_version_suffix]))
@@ -56,7 +56,7 @@ m4_define([gnt_lt_current], [5])
 m4_define([gnt_major_version], [2])
 m4_define([gnt_minor_version], [5])
 m4_define([gnt_micro_version], [0])
-m4_define([gnt_version_suffix], [])
+m4_define([gnt_version_suffix], [devel])
 m4_define([gnt_version],
           [gnt_major_version.gnt_minor_version.gnt_micro_version])
 m4_define([gnt_display_version], gnt_version[]m4_ifdef([gnt_version_suffix],[gnt_version_suffix]))
@@ -977,8 +977,8 @@ AM_CONDITIONAL(USE_INTERNAL_LIBGADU, test "x$gadu_libs" != "xyes")
 AC_SUBST(GADU_LIBS)
 AC_SUBST(GADU_CFLAGS)
 
-# change the next line to make MSNP14 the default (s/enable/disable/; s/no/yes/;)
-AC_ARG_ENABLE(msnp14,[AC_HELP_STRING([--enable-msnp14], [Enable the newer MSNP14 protocol (unsupported)])],,enable_msnp14=no)
+# change the next line to not make MSNP15 the default (s/disable/enable/; s/yes/no/;)
+AC_ARG_ENABLE(msnp15,[AC_HELP_STRING([--disable-msnp15], [Disable the newer MSNP15 protocol])],enable_msnp15=$enableval,enable_msnp15=yes)
 
 AC_ARG_ENABLE(distrib,,,enable_distrib=no)
 AM_CONDITIONAL(DISTRIB, test "x$enable_distrib" = "xyes")
@@ -997,7 +997,7 @@ fi
 if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/bonjour//'`
 fi
-if test "x$enable_msnp14" != "xyes" ; then
+if test "x$enable_msnp15" != "xyes" ; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/msn/msnp9/'`
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
@@ -1084,7 +1084,7 @@ fi
 if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/bonjour//'`
 fi
-if test "x$enable_msnp14" != "xyes" ; then
+if test "x$enable_msnp15" != "xyes" ; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/msn/msnp9/'`
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
