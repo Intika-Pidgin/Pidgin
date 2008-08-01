@@ -251,7 +251,7 @@ probe_perl_plugin(PurplePlugin *plugin)
 
 	char *args[] = {"", plugin->path };
 	char **argv = args;
-	int argc = 2;
+	int argc = 2, ret;
 	PerlInterpreter *prober;
 	gboolean status = TRUE;
 	HV *plugin_info;
@@ -285,9 +285,29 @@ probe_perl_plugin(PurplePlugin *plugin)
 }
 #endif
 
-	perl_parse(prober, xs_init, argc, argv, NULL);
+	ret = perl_parse(prober, xs_init, argc, argv, NULL);
 
-	perl_run(prober);
+	if (ret != 0) {
+		STRLEN len;
+		const char * errmsg = "Unknown error";
+		if (SvTRUE(ERRSV))
+			errmsg = SvPV(ERRSV, len);
+		purple_debug_error("perl", "Unable to parse plugin %s (%d:%s)\n",
+						   plugin->path, ret, errmsg);
+		goto cleanup;
+	}
+
+	ret = perl_run(prober);
+
+	if (ret != 0) {
+		STRLEN len;
+		const char * errmsg = "Unknown error";
+		if (SvTRUE(ERRSV))
+			errmsg = SvPV(ERRSV, len);
+		purple_debug_error("perl", "Unable to run perl interpreter on plugin %s (%d:%s)\n",
+						   plugin->path, ret, errmsg);
+		goto cleanup;
+	}
 
 	plugin_info = perl_get_hv("PLUGIN_INFO", FALSE);
 
@@ -435,6 +455,7 @@ probe_perl_plugin(PurplePlugin *plugin)
 		}
 	}
 
+	cleanup:
 	PL_perl_destruct_level = 1;
 	PERL_SET_CONTEXT(prober);
 	perl_destruct(prober);
@@ -557,6 +578,7 @@ unload_perl_plugin(PurplePlugin *plugin)
 	purple_perl_cmd_clear_for_plugin(plugin);
 	purple_perl_signal_clear_for_plugin(plugin);
 	purple_perl_timeout_clear_for_plugin(plugin);
+	purple_perl_pref_cb_clear_for_plugin(plugin);
 
 	destroy_package(gps->package);
 
