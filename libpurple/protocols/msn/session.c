@@ -45,8 +45,6 @@ msn_session_new(PurpleAccount *account)
 								 purple_account_get_username(account), NULL);
 	session->oim = msn_oim_new(session);
 
-	/*if you want to chat with Yahoo Messenger*/
-	//session->protocol_ver = WLM_YAHOO_PROT_VER;
 	session->protocol_ver = WLM_PROT_VER;
 
 	return session;
@@ -74,18 +72,15 @@ msn_session_destroy(MsnSession *session)
 	msn_userlist_destroy(session->userlist);
 
 	g_free(session->psm);
-	g_free(session->passport_info.t);
-	g_free(session->passport_info.p);
+
+	g_free(session->blocked_text);
+
 	g_free(session->passport_info.kv);
 	g_free(session->passport_info.sid);
 	g_free(session->passport_info.mspauth);
 	g_free(session->passport_info.client_ip);
 
-	if (session->passport_info.file != NULL)
-	{
-		g_unlink(session->passport_info.file);
-		g_free(session->passport_info.file);
-	}
+	g_free(session->passport_info.mail_url);
 
 	if (session->sync != NULL)
 		msn_sync_destroy(session->sync);
@@ -93,15 +88,13 @@ msn_session_destroy(MsnSession *session)
 	if (session->nexus != NULL)
 		msn_nexus_destroy(session->nexus);
 
-	if (session->contact != NULL)
-		msn_contact_destroy(session->contact);
 	if (session->oim != NULL)
 		msn_oim_destroy(session->oim);
 
 	if (session->user != NULL)
 		msn_user_destroy(session->user);
 
-	if (session->soap_table)
+	if (session->soap_table != NULL)
 		g_hash_table_destroy(session->soap_table);
 
 	if (session->soap_cleanup_handle)
@@ -195,7 +188,7 @@ msn_session_get_conv(MsnSession *session,const char *passport)
  * 	passport - the one want to talk to you
  */
 void
-msn_session_report_user(MsnSession *session,const char *passport,char *msg,PurpleMessageFlags flags)
+msn_session_report_user(MsnSession *session,const char *passport,const char *msg,PurpleMessageFlags flags)
 {
 	PurpleConversation * conv;
 
@@ -274,6 +267,7 @@ msn_session_sync_users(MsnSession *session)
 {
 	PurpleBlistNode *gnode, *cnode, *bnode;
 	PurpleConnection *gc = purple_account_get_connection(session->account);
+	GList *to_remove = NULL;
 
 	g_return_if_fail(gc != NULL);
 
@@ -316,15 +310,28 @@ msn_session_sync_users(MsnSession *session)
 						}
 					}
 
+					/* We don't care if they're in a different group, as long as they're on the
+					 * list somewhere. If we check for the group, we cause pain, agony and
+					 * suffering for people who decide to re-arrange their buddy list elsewhere.
+					 */
 					if (!found)
 					{
-						/* The user was not on the server list or not in that group
-						 * on the server list */
-						msn_show_sync_issue(session, purple_buddy_get_name(b), group_name);
+						if ((remote_user == NULL) || !(remote_user->list_op & MSN_LIST_FL_OP)) {
+							/* The user is not on the server list */
+							msn_show_sync_issue(session, purple_buddy_get_name(b), group_name);
+						} else {
+							/* The user is not in that group on the server list */
+							to_remove = g_list_prepend(to_remove, b);
+						}
 					}
 				}
 			}
 		}
+	}
+
+	if (to_remove != NULL) {
+		g_list_foreach(to_remove, (GFunc)purple_blist_remove_buddy, NULL);
+		g_list_free(to_remove);
 	}
 }
 
@@ -443,7 +450,6 @@ msn_session_finish_login(MsnSession *session)
 	PurpleAccount *account;
 	PurpleConnection *gc;
 	PurpleStoredImage *img;
-	const char *passport;
 
 	if (session->logged_in)
 		return;
@@ -463,17 +469,5 @@ msn_session_finish_login(MsnSession *session)
 
 	/* Sync users */
 	msn_session_sync_users(session);
-	/* It seems that some accounts that haven't accessed hotmail for a while
-	 * and @msn.com accounts don't automatically get the initial email
-	 * notification so we always request it on login
-	 */
-
-	passport = purple_normalize(account, purple_account_get_username(account));
-
-	if ((strstr(passport, "@hotmail.") != NULL) ||
-		(strstr(passport, "@msn.com") != NULL))
-	{
-		msn_cmdproc_send(session->notification->cmdproc, "URL", "%s", "INBOX");
-	}
 }
 
