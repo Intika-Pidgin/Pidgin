@@ -39,7 +39,9 @@
 #endif
 
 #include <glib.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 
 #include "network.h"
@@ -383,7 +385,7 @@ _client_socket_handler(gpointer data, gint socket, PurpleInputCondition conditio
 			purple_debug_warning("bonjour", "receive error: %s\n", err ? err : "(null)");
 
 			bonjour_jabber_close_conversation(bconv);
-			if (bconv->pb != NULL) {
+			if (bconv->pb != NULL && bconv->pb->proto_data != NULL) {
 				BonjourBuddy *bb = bconv->pb->proto_data;
 				bb->conversation = NULL;
 			}
@@ -670,7 +672,6 @@ gint
 bonjour_jabber_start(BonjourJabber *jdata)
 {
 	struct sockaddr_in my_addr;
-	int yes = 1;
 	int i;
 	gboolean bind_successful;
 
@@ -681,16 +682,6 @@ bonjour_jabber_start(BonjourJabber *jdata)
 		purple_connection_error_reason (jdata->account->gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Cannot open socket"));
-		return -1;
-	}
-
-	/* Make the socket reusable */
-	if (setsockopt(jdata->socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) != 0)
-	{
-		purple_debug_error("bonjour", "Error setting socket options: %s\n", g_strerror(errno));
-		purple_connection_error_reason (jdata->account->gc,
-			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-			_("Error setting socket options"));
 		return -1;
 	}
 
@@ -707,6 +698,8 @@ bonjour_jabber_start(BonjourJabber *jdata)
 			bind_successful = TRUE;
 			break;
 		}
+
+		purple_debug_info("bonjour", "Unable to bind to port %u.(%s)\n", jdata->port, g_strerror(errno));
 		jdata->port++;
 	}
 
@@ -955,7 +948,7 @@ bonjour_jabber_send_message(BonjourJabber *jdata, const gchar *to, const gchar *
 	int ret;
 
 	pb = _find_or_start_conversation(jdata, to);
-	if (pb == NULL) {
+	if (pb == NULL || pb->proto_data == NULL) {
 		purple_debug_info("bonjour", "Can't send a message to an offline buddy (%s).\n", to);
 		/* You can not send a message to an offline buddy */
 		return -10000;
@@ -1101,8 +1094,10 @@ bonjour_jabber_stop(BonjourJabber *jdata)
 		buddies = purple_find_buddies(jdata->account, NULL);
 		for (l = buddies; l; l = l->next) {
 			BonjourBuddy *bb = ((PurpleBuddy*) l->data)->proto_data;
-			bonjour_jabber_close_conversation(bb->conversation);
-			bb->conversation = NULL;
+			if (bb != NULL) {
+				bonjour_jabber_close_conversation(bb->conversation);
+				bb->conversation = NULL;
+			}
 		}
 
 		g_slist_free(buddies);

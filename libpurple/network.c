@@ -27,9 +27,9 @@
 #include "internal.h"
 
 #ifndef _WIN32
+#include <arpa/nameser.h>
 #include <resolv.h>
 #include <netinet/in.h>
-#include <arpa/nameser.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #else
@@ -663,6 +663,7 @@ nm_get_network_state(void)
 
 	if (!dbus_g_proxy_call(nm_proxy, "state", &err, G_TYPE_INVALID, G_TYPE_UINT, &state, G_TYPE_INVALID)) {
 		/* XXX: Print an error? */
+		g_error_free(err);
 		return NM_STATE_UNKNOWN;
 	}
 

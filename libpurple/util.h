@@ -229,7 +229,7 @@ guchar *purple_base64_decode(const char *str, gsize *ret_len);
  * Converts a quoted printable string back to its readable equivalent.
  * What is a quoted printable string, you ask?  It's an encoding used
  * to transmit binary data as ASCII.  It's intended purpose is to send
- * e-mails containing non-ASCII characters.  Wikipedia has a pretty good
+ * emails containing non-ASCII characters.  Wikipedia has a pretty good
  * explanation.  Also see RFC 2045.
  *
  * @param str     The quoted printable ASCII string to convert to raw data.
@@ -704,6 +704,11 @@ FILE *purple_mkstemp(char **path, gboolean binary);
  */
 const char *
 purple_util_get_image_extension(gconstpointer data, size_t len);
+
+/**
+ * Returns a SHA-1 hash string of the data passed in.
+ */
+char *purple_util_get_image_checksum(gconstpointer image_data, size_t image_len);
 
 /**
  * @return A hex encoded version of the SHA-1 hash of the data passed
@@ -1265,6 +1270,14 @@ const char *_purple_oscar_convert(const char *act, const char *protocol);
  * inherit the handlers of the parent.
  */
 void purple_restore_default_signal_handlers(void);
+
+/**
+ * Gets the host name of the machine. If it not possible to determine the
+ * host name, "localhost" is returned
+ *
+ * @constreturn The hostname
+ */
+const gchar *purple_get_host_name(void);
 
 #ifdef __cplusplus
 }
