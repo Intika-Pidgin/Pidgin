@@ -31,7 +31,6 @@
 
 #include <string.h>
 
-
 void jabber_roster_request(JabberStream *js)
 {
 	JabberIq *iq;
@@ -169,6 +168,8 @@ void jabber_roster_parse(JabberStream *js, xmlnode *packet)
 	if(!query)
 		return;
 
+	js->currently_parsing_roster_push = TRUE;
+
 	for(item = xmlnode_get_child(query, "item"); item; item = xmlnode_get_next_twin(item))
 	{
 		const char *jid, *name, *subscription, *ask;
@@ -251,6 +252,8 @@ void jabber_roster_parse(JabberStream *js, xmlnode *packet)
 		}
 	}
 
+	js->currently_parsing_roster_push = FALSE;
+
 	/* if we're just now parsing the roster for the first time,
 	 * then now would be the time to send our initial presence */
 	if(!js->roster_parsed) {
@@ -268,6 +271,9 @@ static void jabber_roster_update(JabberStream *js, const char *name,
 	GSList *groups = NULL, *l;
 	JabberIq *iq;
 	xmlnode *query, *item, *group;
+
+	if (js->currently_parsing_roster_push)
+		return;
 
 	if(!(b = purple_find_buddy(js->gc->account, name)))
 		return;

@@ -200,6 +200,7 @@ init_plugin(PurplePlugin *plugin)
 {
 #ifdef HAVE_CYRUS_SASL
 #ifdef _WIN32
+	UINT old_error_mode;
 	gchar *sasldir;
 #endif
 	int ret;
@@ -242,7 +243,7 @@ init_plugin(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("File transfer proxies"),
 						  "ft_proxies",
 						/* TODO: Is this an acceptable default? */
-						  "proxy.jabber.org:7777");
+						  "proxy.jabber.org");
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 						  option);
 
@@ -256,10 +257,16 @@ init_plugin(PurplePlugin *plugin)
 	sasldir = g_build_filename(wpurple_install_dir(), "sasl2", NULL);
 	sasl_set_path(SASL_PATH_TYPE_PLUGIN, sasldir);
 	g_free(sasldir);
+	/* Suppress error popups for failing to load sasl plugins */
+	old_error_mode = SetErrorMode(SEM_FAILCRITICALERRORS);
 #endif
 	if ((ret = sasl_client_init(NULL)) != SASL_OK) {
 		purple_debug_error("xmpp", "Error (%d) initializing SASL.\n", ret);
 	}
+#ifdef _WIN32
+	/* Restore the original error mode */
+	SetErrorMode(old_error_mode);
+#endif
 #endif
 	jabber_register_commands();
 	

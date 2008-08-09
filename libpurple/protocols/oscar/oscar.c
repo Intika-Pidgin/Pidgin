@@ -66,7 +66,9 @@
 
 #define OSCAR_CONNECT_STEPS 6
 
-static OscarCapability purple_caps = OSCAR_CAPABILITY_CHAT | OSCAR_CAPABILITY_BUDDYICON | OSCAR_CAPABILITY_DIRECTIM | OSCAR_CAPABILITY_SENDFILE | OSCAR_CAPABILITY_UNICODE | OSCAR_CAPABILITY_INTEROPERATE | OSCAR_CAPABILITY_ICHAT;
+static OscarCapability purple_caps = (OSCAR_CAPABILITY_CHAT | OSCAR_CAPABILITY_BUDDYICON | OSCAR_CAPABILITY_DIRECTIM |
+									  OSCAR_CAPABILITY_SENDFILE | OSCAR_CAPABILITY_UNICODE | OSCAR_CAPABILITY_INTEROPERATE |
+									  OSCAR_CAPABILITY_SHORTCAPS);
 
 static guint8 features_aim[] = {0x01, 0x01, 0x01, 0x02};
 static guint8 features_icq[] = {0x01, 0x06};
@@ -1510,6 +1512,7 @@ purple_parse_auth_resp(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 			/* Suspended account */
 			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, _("Your account is currently suspended."));
 			break;
+		case 0x02:
 		case 0x14:
 			/* service temporarily unavailable */
 			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _("The AOL Instant Messenger service is temporarily unavailable."));
@@ -1893,6 +1896,38 @@ purple_handle_redirect(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 	return 1;
 }
 
+static gboolean purple_requesticqstatusnote(gpointer data)
+{
+	PurpleConnection *gc = data;
+	OscarData *od = gc->proto_data;
+
+	while (od->statusnotes_queue != NULL)
+	{
+		char *sn;
+		struct aim_ssi_item *ssi_item;
+		aim_tlv_t *note_hash;
+
+		sn = od->statusnotes_queue->data;
+
+		ssi_item = aim_ssi_itemlist_finditem(od->ssi.local,
+											 NULL, sn, AIM_SSI_TYPE_BUDDY);
+		if (ssi_item != NULL)
+		{
+			note_hash = aim_tlv_gettlv(ssi_item->data, 0x015c, 1);
+			if (note_hash != NULL) {
+				aim_icq_getstatusnote(od, sn, note_hash->value, note_hash->length);
+			}
+		}
+
+		od->statusnotes_queue = g_slist_remove(od->statusnotes_queue, sn);
+		g_free(sn);
+	}
+
+	od->statusnotes_queue_timer = 0;
+	return FALSE;
+}
+
+
 static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 {
 	PurpleConnection *gc;
@@ -2074,8 +2109,28 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 		if (ssi_item != NULL)
 		{
 			note_hash = aim_tlv_gettlv(ssi_item->data, 0x015c, 1);
-			if (note_hash != NULL)
-				aim_icq_getstatusnote(od, info->sn, note_hash->value, note_hash->length);
+			if (note_hash != NULL) {
+				/* We do automatic rate limiting at the FLAP level, so
+				 * a flood of requests won't disconnect us.  However,
+				 * it WOULD mean that we would have to wait a
+				 * potentially long time to be able to message in real
+				 * time again.  Also, since we're requesting with every
+				 * purple_parse_oncoming() call, which often come in
+				 * groups, we should coalesce to do only one lookup per
+				 * buddy.
+				 */
+				if (od->statusnotes_queue == NULL ||
+					g_slist_find_custom(od->statusnotes_queue, info->sn, (GCompareFunc)strcmp) == NULL)
+				{
+					od->statusnotes_queue = g_slist_prepend(od->statusnotes_queue,
+							g_strdup(info->sn));
+
+					if (od->statusnotes_queue_timer > 0)
+						purple_timeout_remove(od->statusnotes_queue_timer);
+					od->statusnotes_queue_timer = purple_timeout_add_seconds(3,
+							purple_requesticqstatusnote, gc);
+				}
+			}
 		}
 	}
 
@@ -3082,7 +3137,7 @@ static int purple_parse_userinfo(OscarData *od, FlapConnection *conn, FlapFrame 
 
 	oscar_user_info_append_status(gc, user_info, /* PurpleBuddy */ NULL, userinfo, /* strip_html_tags */ FALSE);
 
-	if (userinfo->present & AIM_USERINFO_PRESENT_IDLE) {
+	if ((userinfo->present & AIM_USERINFO_PRESENT_IDLE) && userinfo->idletime != 0) {
 		tmp = purple_str_seconds_to_string(userinfo->idletime*60);
 		oscar_user_info_add_pair(user_info, _("Idle"), tmp);
 		g_free(tmp);
