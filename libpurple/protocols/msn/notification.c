@@ -613,11 +613,14 @@ msn_notification_dump_contact(MsnSession *session)
 	xmlnode_set_attrib(adl_node, "l", "1");
 
 	/*get the userlist*/
-	for (l = session->userlist->users; l != NULL; l = l->next){
+	for (l = session->userlist->users; l != NULL; l = l->next) {
 		user = l->data;
 
 		/* skip RL & PL during initial dump */
 		if (!(user->list_op & MSN_LIST_OP_MASK))
+			continue;
+
+		if (!strcmp(user->passport, "messenger@microsoft.com"))
 			continue;
 
 		msn_add_contact_xml(session, adl_node, user->passport,
@@ -947,10 +950,11 @@ iln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	PurpleAccount *account;
 	PurpleConnection *gc;
 	MsnUser *user;
-	MsnObject *msnobj;
+	MsnObject *msnobj = NULL;
 	unsigned long clientid;
-	int networkid;
-	const char *state, *passport, *friendly;
+	int networkid = 0;
+	const char *state, *passport;
+	char *friendly;
 
 	session = cmdproc->session;
 	account = session->account;
@@ -958,23 +962,47 @@ iln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 
 	state    = cmd->params[1];
 	passport = cmd->params[2];
-	/*if a contact is actually on the WLM part or the yahoo part*/
-	networkid = atoi(cmd->params[3]);
-	friendly = purple_url_decode(cmd->params[4]);
 
 	user = msn_userlist_find_user(session->userlist, passport);
+	if (user == NULL)
+		/* Where'd this come from? */
+		return;
 
-	serv_got_alias(gc, passport, friendly);
-
-	msn_user_set_friendly_name(user, friendly);
-
-	if (cmd->param_count == 7)
-	{
+	if (cmd->param_count == 7) {
+		/* MSNP14+ with Display Picture object */
+		networkid = atoi(cmd->params[3]);
+		friendly = g_strdup(purple_url_decode(cmd->params[4]));
+		clientid = strtoul(cmd->params[5], NULL, 10);
 		msnobj = msn_object_new_from_string(purple_url_decode(cmd->params[6]));
-		msn_user_set_object(user, msnobj);
+	} else if (cmd->param_count == 6) {
+		/* Yes, this is 5. The friendly name could start with a number,
+		   but the display picture object can't... */
+		if (isdigit(cmd->params[5][0])) {
+			/* MSNP14 without Display Picture object */
+			networkid = atoi(cmd->params[3]);
+			friendly = g_strdup(purple_url_decode(cmd->params[4]));
+			clientid = strtoul(cmd->params[5], NULL, 10);
+		} else {
+			/* MSNP8+ with Display Picture object */
+			friendly = g_strdup(purple_url_decode(cmd->params[3]));
+			clientid = strtoul(cmd->params[4], NULL, 10);
+			msnobj = msn_object_new_from_string(purple_url_decode(cmd->params[5]));
+		}
+	} else if (cmd->param_count == 5) {
+		/* MSNP8+ without Display Picture object */
+		friendly = g_strdup(purple_url_decode(cmd->params[3]));
+		clientid = strtoul(cmd->params[4], NULL, 10);
+	} else {
+		purple_debug_warning("msn", "Received ILN with unknown number of parameters.\n");
+		return;
 	}
 
-	clientid = strtoul(cmd->params[5], NULL, 10);
+	serv_got_alias(gc, passport, friendly);
+	msn_user_set_friendly_name(user, friendly);
+	g_free(friendly);
+
+	msn_user_set_object(user, msnobj);
+
 	user->mobile = (clientid & MSN_CLIENT_CAP_MSNMOBILE) || (user->phone.mobile && user->phone.mobile[0] == '+');
 	msn_user_set_clientid(user, clientid);
 	msn_user_set_network(user, networkid);
@@ -1173,7 +1201,7 @@ not_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload, size_t len)
 static void
 not_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 {
-	cmdproc->servconn->payload_len = atoi(cmd->params[0]);
+	cmd->payload_len = atoi(cmd->params[0]);
 	cmdproc->last_cmd->payload_cb = not_cmd_post;
 }
 
@@ -1288,7 +1316,7 @@ url_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	const char *rru;
 	const char *url;
 	PurpleCipherContext *cipher;
-	gchar digest[33];
+	gchar creds[33];
 	char *buf;
 
 	gulong tmp_timestamp;
@@ -1304,26 +1332,26 @@ url_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	tmp_timestamp = session->passport_info.mail_timestamp - session->passport_info.sl;
 
 	buf = g_strdup_printf("%s%lu%s",
-			   session->passport_info.mspauth ? session->passport_info.mspauth : "BOGUS",
-			   tmp_timestamp,
-			   purple_connection_get_password(gc));
+	                      session->passport_info.mspauth ? session->passport_info.mspauth : "BOGUS",
+	                      tmp_timestamp,
+	                      purple_connection_get_password(gc));
 
 	cipher = purple_cipher_context_new_by_name("md5", NULL);
 	purple_cipher_context_append(cipher, (const guchar *)buf, strlen(buf));
-	purple_cipher_context_digest_to_str(cipher, sizeof(digest), digest, NULL);
+	purple_cipher_context_digest_to_str(cipher, sizeof(creds), creds, NULL);
 	purple_cipher_context_destroy(cipher);
-
 	g_free(buf);
 
 	g_free(session->passport_info.mail_url);
-	session->passport_info.mail_url = g_strdup_printf("%s&auth=%s&creds=%s&sl=%ld&username=%s&mode=ttl&sid=%s&id=2&rru=%ssvc_mail&js=yes",
-                                                        url,
-                                                        session->passport_info.mspauth ? session->passport_info.mspauth : "BOGUS",
-                                                        buf,
-                                                        tmp_timestamp,
-                                                        msn_user_get_passport(session->user),
-                                                        session->passport_info.sid,
-                                                        rru);
+	session->passport_info.mail_url =
+		g_strdup_printf("%s&auth=%s&creds=%s&sl=%ld&username=%s&mode=ttl&sid=%s&id=2&rru=%s&svc=mail&js=yes",
+		                url,
+		                session->passport_info.mspauth ? purple_url_encode(session->passport_info.mspauth) : "BOGUS",
+		                creds,
+		                tmp_timestamp,
+		                msn_user_get_passport(session->user),
+		                session->passport_info.sid,
+		                rru);
 
 	/* The user wants to check his or her email */
 	if (cmd->trans && cmd->trans->data)
