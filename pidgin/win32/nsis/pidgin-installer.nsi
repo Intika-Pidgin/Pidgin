@@ -777,12 +777,8 @@ Section Uninstall
     Delete "$INSTDIR\sounds\purple\send.wav"
     RMDir "$INSTDIR\sounds\purple"
     RMDir "$INSTDIR\sounds"
-    Delete "$INSTDIR\comerr32.dll"
     Delete "$INSTDIR\freebl3.dll"
-    Delete "$INSTDIR\gssapi32.dll"
     Delete "$INSTDIR\idletrack.dll"
-    Delete "$INSTDIR\k5sprt32.dll"
-    Delete "$INSTDIR\krb5_32.dll"
     Delete "$INSTDIR\libgtkspell.dll"
     Delete "$INSTDIR\libjabber.dll"
     Delete "$INSTDIR\libmeanwhile-1.dll"
@@ -1420,13 +1416,17 @@ Function preWelcomePage
   Push $R1
   Push $R2
 
-  ; Make the GTK+ Section RO if it is required.
   Call DoWeNeedGtk
   Pop $R0
   Pop $R2
-  IntCmp $R0 1 gtk_not_mandatory gtk_not_mandatory
+  IntCmp $R0 1 gtk_selection_done gtk_not_mandatory
+    ; Make the GTK+ Section RO if it is required.
     !insertmacro SetSectionFlag ${SecGtk} ${SF_RO}
+    Goto gtk_selection_done
   gtk_not_mandatory:
+    ; Don't select the GTK+ section if we already have this version or newer installed
+    !insertmacro UnselectSection ${SecGtk}
+  gtk_selection_done:
 
   ; If on Win95/98/ME warn them that the GTK+ version wont work
   ${Unless} ${IsNT}
