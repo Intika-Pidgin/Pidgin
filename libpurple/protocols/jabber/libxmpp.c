@@ -281,6 +281,10 @@ init_plugin(PurplePlugin *plugin)
 	
 	jabber_data_init();
 	
+	
+	jabber_ibb_init();
+	jabber_si_init();
+
 	jabber_add_feature("avatarmeta", AVATARNAMESPACEMETA, jabber_pep_namespace_only_when_pep_enabled_cb);
 	jabber_add_feature("avatardata", AVATARNAMESPACEDATA, jabber_pep_namespace_only_when_pep_enabled_cb);
 	jabber_add_feature("buzz", "http://www.xmpp.org/extensions/xep-0224.html#ns",
