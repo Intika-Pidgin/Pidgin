@@ -34,6 +34,9 @@ version-check:
 # We don't want to release development versions.
 	test x`echo $(PACKAGE_VERSION) | grep dev` = x
 
+# Make sure there is a NEWS entry for this version
+	head NEWS | grep "^$(PACKAGE_VERSION) (`date +%m/%d/%Y`):$$" > /dev/null
+
 # Ensure NEWS has no spaces at the start of a line.
 # Using spaces instead of tabs there is a common mistake.
 	test x`grep "^ " NEWS` = x
@@ -52,9 +55,9 @@ version-check:
 # ... and have no changes in the working copy.
 	test x`mtn diff | grep -v '^#'` = x
 
-release: distcheck packages
+release: version-check distcheck packages
 
-packages: version-check
+packages:
 	gpg -ab pidgin-$(PACKAGE_VERSION).tar.gz
 	gpg -ab pidgin-$(PACKAGE_VERSION).tar.bz2
 	gpg --verify pidgin-$(PACKAGE_VERSION).tar.gz.asc pidgin-$(PACKAGE_VERSION).tar.gz
