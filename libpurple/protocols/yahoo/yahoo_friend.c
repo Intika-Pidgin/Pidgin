@@ -236,12 +236,21 @@ void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 		if (f->presence == YAHOO_PRESENCE_PERM_OFFLINE) {
 			pkt = yahoo_packet_new(YAHOO_SERVICE_PRESENCE_PERM,
 					YAHOO_STATUS_AVAILABLE, yd->session_id);
-			yahoo_packet_hash(pkt, "ssssssss",
+			if(f->protocol)
+				yahoo_packet_hash(pkt, "ssssssiss",
+					1, purple_connection_get_display_name(gc),
+					31, "2", 13, "2",
+					302, "319", 300, "319",
+					7, name, 241, f->protocol,
+					301, "319", 303, "319");
+			else
+				yahoo_packet_hash(pkt, "ssssssss",
 					1, purple_connection_get_display_name(gc),
 					31, "2", 13, "2",
 					302, "319", 300, "319",
 					7, name,
 					301, "319", 303, "319");
+
 			yahoo_packet_send_and_free(pkt, yd);
 		}
 
@@ -254,7 +263,15 @@ void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 		pkt = yahoo_packet_new(service,
 				YAHOO_STATUS_AVAILABLE, yd->session_id);
 
-		yahoo_packet_hash(pkt, "ssssssss",
+		if(f->protocol)
+			yahoo_packet_hash(pkt, "ssssssiss",
+				1, purple_connection_get_display_name(gc),
+				31, thirtyone, 13, thirteen,
+				302, "319", 300, "319",
+				7, name, 241, f->protocol,
+				301, "319", 303, "319");
+		else
+			yahoo_packet_hash(pkt, "ssssssss",
 				1, purple_connection_get_display_name(gc),
 				31, thirtyone, 13, thirteen,
 				302, "319", 300, "319",
@@ -263,4 +280,14 @@ void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 
 		yahoo_packet_send_and_free(pkt, yd);
 	}
+}
+
+void yahoo_friend_set_p2p_status(YahooFriend *f, YahooP2PStatus p2p_status)
+{
+	f->p2p_status = p2p_status;
+}
+
+YahooP2PStatus yahoo_friend_get_p2p_status(YahooFriend *f)
+{
+	return f->p2p_status;
 }
