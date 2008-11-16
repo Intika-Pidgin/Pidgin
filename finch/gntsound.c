@@ -23,7 +23,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#include "internal.h"
 #include "finch.h"
 
 #ifdef _WIN32
@@ -104,7 +103,7 @@ static FinchSoundEvent sounds[PURPLE_NUM_SOUNDS] = {
 	{PURPLE_SOUND_CHAT_YOU_SAY, N_("You talk in chat"), "send_chat_msg", "send.wav", NULL},
 	{PURPLE_SOUND_CHAT_SAY,     N_("Others talk in chat"), "chat_msg_recv", "receive.wav", NULL},
 	{PURPLE_SOUND_POUNCE_DEFAULT, NULL, "pounce_default", "alert.wav", NULL},
-	{PURPLE_SOUND_CHAT_NICK,    N_("Someone says your screen name in chat"), "nick_said", "alert.wav", NULL}
+	{PURPLE_SOUND_CHAT_NICK,    N_("Someone says your username in chat"), "nick_said", "alert.wav", NULL}
 };
 
 const char *
@@ -142,13 +141,15 @@ chat_nick_matches_name(PurpleConversation *conv, const char *aname)
 	char *nick = NULL;
 	char *name = NULL;
 	gboolean ret = FALSE;
-	chat = purple_conversation_get_chat_data(conv);
+	PurpleAccount *account;
 
+	chat = purple_conversation_get_chat_data(conv);
 	if (chat == NULL)
 		return ret;
 
-	nick = g_strdup(purple_normalize(conv->account, chat->nick));
-	name = g_strdup(purple_normalize(conv->account, aname));
+	account = purple_conversation_get_account(conv);
+	nick = g_strdup(purple_normalize(account, chat->nick));
+	name = g_strdup(purple_normalize(account, aname));
 
 	if (g_utf8_collate(nick, name) == 0)
 		ret = TRUE;
@@ -286,7 +287,7 @@ account_signon_cb(PurpleConnection *gc, gpointer data)
 }
 
 static void *
-finch_sound_get_handle()
+finch_sound_get_handle(void)
 {
 	static int handle;
 
@@ -357,6 +358,11 @@ finch_sound_init(void)
 	
 #ifdef USE_GSTREAMER
 	purple_debug_info("sound", "Initializing sound output drivers.\n");
+#if (GST_VERSION_MAJOR > 0 || \
+	(GST_VERSION_MAJOR == 0 && GST_VERSION_MINOR > 10) || \
+	 (GST_VERSION_MAJOR == 0 && GST_VERSION_MINOR == 10 && GST_VERSION_MICRO >= 10))
+	gst_registry_fork_set_enabled(FALSE);
+#endif
 	if ((gst_init_failed = !gst_init_check(NULL, NULL, &error))) {
 		purple_notify_error(NULL, _("GStreamer Failure"),
 					_("GStreamer failed to initialize."),
@@ -1022,13 +1028,13 @@ finch_sounds_show_all(void)
 
 	for (i = 0; i < PURPLE_NUM_SOUNDS; i++) {
 		FinchSoundEvent * event = &sounds[i];
-		
+
 		if (event->label == NULL) {
 			continue;
 		}
 
 		gnt_tree_add_choice(GNT_TREE(tree), GINT_TO_POINTER(i),
-			gnt_tree_create_row(GNT_TREE(tree), "", ""),
+			gnt_tree_create_row(GNT_TREE(tree), event->label, event->def),
 			NULL, NULL);
 	}
 

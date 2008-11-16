@@ -64,7 +64,7 @@ static struct _irc_msg {
 	{ "318", "nt:", irc_msg_endwhois },	/* End of WHOIS			*/
 	{ "319", "nn:", irc_msg_whois },	/* Whois channels		*/
 	{ "320", "nn:", irc_msg_whois },	/* Whois (fn ident)		*/
-	{ "314", "nnvvv:", irc_msg_whois },	/* Whowas user			*/
+	{ "314", "nnnvv:", irc_msg_whois },	/* Whowas user			*/
 	{ "369", "nt:", irc_msg_endwhois },	/* End of WHOWAS		*/
 	{ "321", "*", irc_msg_list },		/* Start of list		*/
 	{ "322", "ncv:", irc_msg_list },	/* List.			*/
@@ -75,6 +75,8 @@ static struct _irc_msg {
 	{ "333", "*", irc_msg_ignore },		/* Topic setter stuff		*/
 	{ "353", "nvc:", irc_msg_names },	/* Names list			*/
 	{ "366", "nc:", irc_msg_names },	/* End of names			*/
+	{ "367", "ncnnv", irc_msg_ban },	/* Ban list			*/
+	{ "368", "nc:", irc_msg_ban },		/* End of ban list		*/
 	{ "372", "n:", irc_msg_motd },		/* MOTD				*/
 	{ "375", "n:", irc_msg_motd },		/* Start MOTD			*/
 	{ "376", "n:", irc_msg_motd },		/* End of MOTD			*/
@@ -121,6 +123,7 @@ static struct _irc_user_cmd {
 } _irc_cmds[] = {
 	{ "action", ":", irc_cmd_ctcp_action, N_("action &lt;action to perform&gt;:  Perform an action.") },
 	{ "away", ":", irc_cmd_away, N_("away [message]:  Set an away message, or use no message to return from being away.") },
+	{ "ctcp", "t:", irc_cmd_ctcp, N_("ctcp <nick> <msg>: sends ctcp msg to nick.") },
 	{ "chanserv", ":", irc_cmd_service, N_("chanserv: Send a command to chanserv") },
 	{ "deop", ":", irc_cmd_op, N_("deop &lt;nick1&gt; [nick2] ...:  Remove channel operator status from someone. You must be a channel operator to do this.") },
 	{ "devoice", ":", irc_cmd_op, N_("devoice &lt;nick1&gt; [nick2] ...:  Remove channel voice status from someone, preventing them from speaking if the channel is moderated (+m). You must be a channel operator to do this.") },
@@ -136,6 +139,7 @@ static struct _irc_user_cmd {
 	{ "names", "c", irc_cmd_names, N_("names [channel]:  List the users currently in a channel.") },
 	{ "nick", "n", irc_cmd_nick, N_("nick &lt;new nickname&gt;:  Change your nickname.") },
 	{ "nickserv", ":", irc_cmd_service, N_("nickserv: Send a command to nickserv") },
+	{ "notice", "t:", irc_cmd_privmsg, N_("notice &lt;target&lt;:  Send a notice to a user or channel.") },
 	{ "op", ":", irc_cmd_op, N_("op &lt;nick1&gt; [nick2] ...:  Grant channel operator status to someone. You must be a channel operator to do this.") },
 	{ "operwall", ":", irc_cmd_wallops, N_("operwall &lt;message&gt;:  If you don't know what this is, you probably can't use it.") },
 	{ "operserv", ":", irc_cmd_service, N_("operserv: Send a command to operserv") },
@@ -229,7 +233,7 @@ static char *irc_send_convert(struct irc_conn *irc, const char *string)
 
 	if (encodings[0] == NULL || !g_ascii_strcasecmp("UTF-8", encodings[0])) {
 		g_strfreev(encodings);
-		return g_strdup(string);
+		return NULL;
 	}
 
 	utf8 = g_convert(string, strlen(string), encodings[0], "UTF-8", NULL, NULL, &err);
@@ -249,6 +253,7 @@ static char *irc_recv_convert(struct irc_conn *irc, const char *string)
 	char *utf8 = NULL;
 	const gchar *charset, *enclist;
 	gchar **encodings;
+	gboolean autodetect;
 	int i;
 
 	enclist = purple_account_get_string(irc->account, "encoding", IRC_DEFAULT_CHARSET);
@@ -257,6 +262,12 @@ static char *irc_recv_convert(struct irc_conn *irc, const char *string)
 	if (encodings[0] == NULL) {
 		g_strfreev(encodings);
 		return purple_utf8_salvage(string);
+	}
+
+	autodetect = purple_account_get_bool(irc->account, "autodetect_utf8", IRC_DEFAULT_AUTODETECT);
+
+	if (autodetect && g_utf8_validate(string, -1, NULL)) {
+		return g_strdup(string);
 	}
 
 	for (i = 0; encodings[i] != NULL; i++) {
@@ -486,6 +497,19 @@ char *irc_mirc2txt (const char *string)
         return result;
 }
 
+const char *irc_nick_skip_mode(struct irc_conn *irc, const char *nick)
+{
+	static const char *default_modes = "@+%&";
+	const char *mode_chars;
+
+	mode_chars = irc->mode_chars ? irc->mode_chars : default_modes;
+
+	while (strchr(mode_chars, *nick) != NULL)
+		nick++;
+
+	return nick;
+}
+
 gboolean irc_ischannel(const char *string)
 {
 	return (string[0] == '#' || string[0] == '&');
@@ -594,7 +618,7 @@ char *irc_format(struct irc_conn *irc, const char *format, ...)
 		case 'n':
 		case 'c':
 			tmp = irc_send_convert(irc, tok);
-			g_string_append(string, tmp);
+			g_string_append(string, tmp ? tmp : tok);
 			g_free(tmp);
 			break;
 		default:
@@ -612,6 +636,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	struct _irc_msg *msgent;
 	char *cur, *end, *tmp, *from, *msgname, *fmt, **args, *msg;
 	guint i;
+	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
 	irc->recv_time = time(NULL);
 
@@ -620,7 +645,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	 * TODO: It should be passed as an array of bytes and a length
 	 * instead of a null terminated string.
 	 */
-	purple_signal_emit(_irc_plugin, "irc-receiving-text", purple_account_get_connection(irc->account), &input);
+	purple_signal_emit(_irc_plugin, "irc-receiving-text", gc, &input);
 	
 	if (!strncmp(input, "PING ", 5)) {
 		msg = irc_format(irc, "vv", "PONG", input + 5);
@@ -630,10 +655,13 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	} else if (!strncmp(input, "ERROR ", 6)) {
 		if (g_utf8_validate(input, -1, NULL)) {
 			char *tmp = g_strdup_printf("%s\n%s", _("Disconnected."), input);
-			purple_connection_error(purple_account_get_connection(irc->account), tmp);
+			purple_connection_error_reason (gc,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 			g_free(tmp);
 		} else
-			purple_connection_error(purple_account_get_connection(irc->account), _("Disconnected."));
+			purple_connection_error_reason (gc,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				_("Disconnected."));
 		return;
 	}
 
@@ -703,5 +731,10 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 
 static void irc_parse_error_cb(struct irc_conn *irc, char *input)
 {
-	purple_debug(PURPLE_DEBUG_WARNING, "irc", "Unrecognized string: %s\n", input);
+	char *clean;
+        /* This really should be escaped somehow that you can tell what
+         * the junk was -- but as it is, it can crash glib. */
+        clean = purple_utf8_salvage(input);
+	purple_debug(PURPLE_DEBUG_WARNING, "irc", "Unrecognized string: %s\n", clean);
+        g_free(clean);
 }

@@ -80,8 +80,6 @@ send_typed_cb(gpointer data)
 		purple_conv_im_set_type_again(PURPLE_CONV_IM(conv), 1);
 
 		serv_send_typing(gc, name, PURPLE_TYPED);
-		purple_signal_emit(purple_conversations_get_handle(),
-						 "buddy-typed", conv->account, conv->name);
 
 		purple_debug(PURPLE_DEBUG_MISC, "conversation", "typed...\n");
 	}
@@ -98,7 +96,7 @@ common_send(PurpleConversation *conv, const char *message, PurpleMessageFlags ms
 	char *displayed = NULL, *sent = NULL;
 	int err = 0;
 
-	if (strlen(message) == 0)
+	if (*message == '\0')
 		return;
 
 	account = purple_conversation_get_account(conv);
@@ -205,26 +203,31 @@ open_log(PurpleConversation *conv)
 /* Functions that deal with PurpleConvMessage */
 
 static void
-add_message_to_history(PurpleConversation *conv, const char *who, const char *message,
-		PurpleMessageFlags flags, time_t when)
+add_message_to_history(PurpleConversation *conv, const char *who, const char *alias,
+		const char *message, PurpleMessageFlags flags, time_t when)
 {
 	PurpleConvMessage *msg;
+	PurpleConnection *gc;
+
+	gc = purple_account_get_connection(conv->account);
 
 	if (flags & PURPLE_MESSAGE_SEND) {
 		const char *me = NULL;
-		if (conv->account->gc)
-			me = conv->account->gc->display_name;
+		if (gc)
+			me = purple_connection_get_display_name(gc);
 		if (!me)
 			me = conv->account->username;
 		who = me;
 	}
-	
+
 	msg = g_new0(PurpleConvMessage, 1);
 	PURPLE_DBUS_REGISTER_POINTER(msg, PurpleConvMessage);
 	msg->who = g_strdup(who);
+	msg->alias = g_strdup(alias);
 	msg->flags = flags;
 	msg->what = g_strdup(message);
 	msg->when = when;
+	msg->conv = conv;
 
 	conv->message_history = g_list_prepend(conv->message_history, msg);
 }
@@ -233,6 +236,7 @@ static void
 free_conv_message(PurpleConvMessage *msg)
 {
 	g_free(msg->who);
+	g_free(msg->alias);
 	g_free(msg->what);
 	PURPLE_DBUS_UNREGISTER_POINTER(msg);
 	g_free(msg);
@@ -293,7 +297,7 @@ purple_conversation_new(PurpleConversationType type, PurpleAccount *account,
 	if ((conv = purple_find_conversation_with_account(type, name, account)) != NULL)
 	{
 		if (purple_conversation_get_type(conv) != PURPLE_CONV_TYPE_CHAT ||
-		    purple_conv_chat_has_left(PURPLE_CONV_CHAT(conv)))
+				purple_conv_chat_has_left(PURPLE_CONV_CHAT(conv)))
 		{
 			if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT)
 				purple_conversation_chat_cleanup_for_rejoin(conv);
@@ -399,7 +403,7 @@ purple_conversation_destroy(PurpleConversation *conv)
 	if (gc != NULL)
 	{
 		/* Still connected */
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 
 		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
 		{
@@ -807,14 +811,27 @@ purple_find_conversation_with_account(PurpleConversationType type,
 
 	g_return_val_if_fail(name != NULL, NULL);
 
+	switch (type) {
+		case PURPLE_CONV_TYPE_IM:
+			cnv = purple_get_ims();
+			break;
+		case PURPLE_CONV_TYPE_CHAT:
+			cnv = purple_get_chats();
+			break;
+		case PURPLE_CONV_TYPE_ANY:
+			cnv = purple_get_conversations();
+			break;
+		default:
+			g_return_val_if_reached(NULL);
+	}
+
 	name1 = g_strdup(purple_normalize(account, name));
 
-	for (cnv = purple_get_conversations(); cnv != NULL; cnv = cnv->next) {
+	for (; cnv != NULL; cnv = cnv->next) {
 		c = (PurpleConversation *)cnv->data;
 		name2 = purple_normalize(account, purple_conversation_get_name(c));
 
-		if (((type == PURPLE_CONV_TYPE_ANY) || (type == purple_conversation_get_type(c))) &&
-				(account == purple_conversation_get_account(c)) &&
+		if ((account == purple_conversation_get_account(c)) &&
 				!purple_utf8_strcasecmp(name1, name2)) {
 
 			break;
@@ -856,7 +873,7 @@ purple_conversation_write(PurpleConversation *conv, const char *who,
 		gc = purple_account_get_connection(account);
 
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
-		(gc == NULL || !g_slist_find(gc->buddy_chats, conv)))
+		(gc != NULL && !g_slist_find(gc->buddy_chats, conv)))
 		return;
 
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM &&
@@ -933,7 +950,8 @@ purple_conversation_write(PurpleConversation *conv, const char *who,
 
 	if (ops && ops->write_conv)
 		ops->write_conv(conv, who, alias, displayed, flags, mtime);
-	add_message_to_history(conv, who, message, flags, mtime);
+
+	add_message_to_history(conv, who, alias, message, flags, mtime);
 
 	purple_signal_emit(purple_conversations_get_handle(),
 		(type == PURPLE_CONV_TYPE_IM ? "wrote-im-msg" : "wrote-chat-msg"),
@@ -1451,7 +1469,7 @@ purple_conv_chat_write(PurpleConvChat *chat, const char *who, const char *messag
 	conv      = purple_conv_chat_get_conversation(chat);
 	gc        = purple_conversation_get_gc(conv);
 	account   = purple_connection_get_account(gc);
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 
 	/* Don't display this if the person who wrote it is ignored. */
 	if (purple_conv_chat_is_user_ignored(chat, who))
@@ -1570,7 +1588,7 @@ purple_conv_chat_add_users(PurpleConvChat *chat, GList *users, GList *extra_msgs
 
 	gc = purple_conversation_get_gc(conv);
 	g_return_if_fail(gc != NULL);
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 	g_return_if_fail(prpl_info != NULL);
 
 	ul = users;
@@ -1601,7 +1619,7 @@ purple_conv_chat_add_users(PurpleConvChat *chat, GList *users, GList *extra_msgs
 		}
 
 		quiet = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_conversations_get_handle(),
-						 "chat-buddy-joining", conv, user, flag)) |
+						 "chat-buddy-joining", conv, user, flag)) ||
 				purple_conv_chat_is_user_ignored(chat, user);
 
 		cbuddy = purple_conv_chat_cb_new(user, alias, flag);
@@ -1613,18 +1631,18 @@ purple_conv_chat_add_users(PurpleConvChat *chat, GList *users, GList *extra_msgs
 		cbuddies = g_list_prepend(cbuddies, cbuddy);
 
 		if (!quiet && new_arrivals) {
-			char *escaped = g_markup_escape_text(alias, -1);
+			char *alias_esc = g_markup_escape_text(alias, -1);
 			char *tmp;
 
 			if (extra_msg == NULL)
-				tmp = g_strdup_printf(_("%s entered the room."), escaped);
+				tmp = g_strdup_printf(_("%s entered the room."), alias_esc);
 			else {
-				char *escaped2 = g_markup_escape_text(extra_msg, -1);
+				char *extra_msg_esc = g_markup_escape_text(extra_msg, -1);
 				tmp = g_strdup_printf(_("%s [<I>%s</I>] entered the room."),
-									  escaped, escaped2);
-				g_free(escaped2);
+				                      alias_esc, extra_msg_esc);
+				g_free(extra_msg_esc);
 			}
-			g_free(escaped);
+			g_free(alias_esc);
 
 			purple_conversation_write(conv, NULL, tmp,
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LINKIFY,
@@ -1671,7 +1689,7 @@ purple_conv_chat_rename_user(PurpleConvChat *chat, const char *old_user,
 
 	gc = purple_conversation_get_gc(conv);
 	g_return_if_fail(gc != NULL);
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 	g_return_if_fail(prpl_info != NULL);
 
 	if (!strcmp(chat->nick, purple_normalize(conv->account, old_user))) {
@@ -1789,7 +1807,7 @@ purple_conv_chat_remove_users(PurpleConvChat *chat, GList *users, const char *re
 
 	gc = purple_conversation_get_gc(conv);
 	g_return_if_fail(gc != NULL);
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 	g_return_if_fail(prpl_info != NULL);
 
 	ops  = purple_conversation_get_ui_ops(conv);
@@ -1812,7 +1830,7 @@ purple_conv_chat_remove_users(PurpleConvChat *chat, GList *users, const char *re
 
 		if (!quiet) {
 			const char *alias = user;
-			char *escaped;
+			char *alias_esc;
 			char *tmp;
 
 			if (!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
@@ -1822,17 +1840,17 @@ purple_conv_chat_remove_users(PurpleConvChat *chat, GList *users, const char *re
 					alias = purple_buddy_get_contact_alias(buddy);
 			}
 
-			escaped = g_markup_escape_text(alias, -1);
+			alias_esc = g_markup_escape_text(alias, -1);
 
 			if (reason == NULL || !*reason)
-				tmp = g_strdup_printf(_("%s left the room."), escaped);
+				tmp = g_strdup_printf(_("%s left the room."), alias_esc);
 			else {
-				char *escaped2 = g_markup_escape_text(reason, -1);
+				char *reason_esc = g_markup_escape_text(reason, -1);
 				tmp = g_strdup_printf(_("%s left the room (%s)."),
-									  escaped, escaped2);
-				g_free(escaped2);
+				                      alias_esc, reason_esc);
+				g_free(reason_esc);
 			}
-			g_free(escaped);
+			g_free(alias_esc);
 
 			purple_conversation_write(conv, NULL, tmp,
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LINKIFY,
@@ -2201,6 +2219,16 @@ purple_conversations_init(void)
 										PURPLE_SUBTYPE_CONVERSATION),
 						 purple_value_new(PURPLE_TYPE_UINT));
 
+	purple_signal_register(handle, "blocked-im-msg",
+						 purple_marshal_VOID__POINTER_POINTER_POINTER_UINT_UINT,
+						 NULL, 5,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+							 PURPLE_SUBTYPE_ACCOUNT),
+						 purple_value_new(PURPLE_TYPE_STRING),
+						 purple_value_new(PURPLE_TYPE_STRING),
+						 purple_value_new(PURPLE_TYPE_UINT),
+						 purple_value_new(PURPLE_TYPE_UINT));
+
 	purple_signal_register(handle, "writing-chat-msg",
 						 purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_UINT,
 						 purple_value_new(PURPLE_TYPE_BOOLEAN), 5,
@@ -2356,10 +2384,26 @@ purple_conversations_init(void)
 						 purple_value_new(PURPLE_TYPE_STRING),
 						 purple_value_new(PURPLE_TYPE_POINTER));
 
+	purple_signal_register(handle, "chat-invite-blocked",
+						 purple_marshal_VOID__POINTER_POINTER_POINTER_POINTER_POINTER,
+						 NULL, 5,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+							 PURPLE_SUBTYPE_ACCOUNT),
+						 purple_value_new(PURPLE_TYPE_STRING),
+						 purple_value_new(PURPLE_TYPE_STRING),
+						 purple_value_new(PURPLE_TYPE_STRING),
+						 purple_value_new(PURPLE_TYPE_BOXED, "GHashTable *"));
+
 	purple_signal_register(handle, "chat-joined",
 						 purple_marshal_VOID__POINTER, NULL, 1,
 						 purple_value_new(PURPLE_TYPE_SUBTYPE,
 										PURPLE_SUBTYPE_CONVERSATION));
+
+	purple_signal_register(handle, "chat-join-failed",
+						   purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						   purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_CONNECTION),
+						   purple_value_new(PURPLE_TYPE_POINTER));
 
 	purple_signal_register(handle, "chat-left",
 						 purple_marshal_VOID__POINTER, NULL, 1,

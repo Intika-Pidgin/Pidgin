@@ -1,3 +1,4 @@
+#undef PURPLE_DISABLE_DEPRECATED
 #include "module.h"
 #include "../perl-handlers.h"
 
@@ -44,11 +45,13 @@ purple_find_buddies(account, name)
 	Purple::Account account
 	const char * name
 PREINIT:
-	GSList *l;
+	GSList *l, *ll;
 PPCODE:
-	for (l = purple_find_buddies(account, name); l != NULL; l = l->next) {
+	ll = purple_find_buddies(account, name);
+	for (l = ll; l != NULL; l = l->next) {
 		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::BuddyList::Buddy")));
 	}
+	g_slist_free(ll);
 
 Purple::BuddyList::Group
 purple_find_group(name)
@@ -101,11 +104,13 @@ void
 purple_group_get_accounts(group)
 	Purple::BuddyList::Group  group
 PREINIT:
-	GSList *l;
+	GSList *l, *ll;
 PPCODE:
-	for (l = purple_group_get_accounts(group); l != NULL; l = l->next) {
+	ll = purple_group_get_accounts(group);
+	for (l = ll; l != NULL; l = l->next) {
 		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::Account")));
 	}
+	g_slist_free(ll);
 
 gboolean
 purple_group_on_account(group, account)
@@ -242,24 +247,11 @@ purple_blist_schedule_save()
 void
 purple_blist_request_add_group()
 
-void
-purple_blist_set_ui_ops(ops)
-	Purple::BuddyList::UiOps ops
-
-Purple::BuddyList::UiOps
-purple_blist_get_ui_ops()
-
 Purple::Handle
 purple_blist_get_handle()
 
 Purple::BuddyList::Node
 purple_blist_get_root()
-
-void
-purple_blist_init()
-
-void
-purple_blist_uninit()
 
 MODULE = Purple::BuddyList  PACKAGE = Purple::BuddyList::Node  PREFIX = purple_blist_node_
 PROTOTYPES: ENABLE
@@ -268,11 +260,15 @@ void
 purple_blist_node_get_extended_menu(node)
 	Purple::BuddyList::Node node
 PREINIT:
-	GList *l;
+	GList *l, *ll;
 PPCODE:
-	for (l = purple_blist_node_get_extended_menu(node); l != NULL; l = g_list_delete_link(l, l)) {
+	ll = purple_blist_node_get_extended_menu(node);
+	for (l = ll; l != NULL; l = l->next) {
 		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::Menu::Action")));
 	}
+	/* We can free the list here but the script needs to free the
+	 * Purple::Menu::Action 'objects' itself. */
+	g_list_free(ll);
 
 void
 purple_blist_node_set_bool(node, key, value)
@@ -354,7 +350,7 @@ CODE:
 	for (t_HE = hv_iternext(t_HV); t_HE != NULL; t_HE = hv_iternext(t_HV) ) {
 		t_key = hv_iterkey(t_HE, &len);
 		t_SV = *hv_fetch(t_HV, t_key, len, 0);
-		t_value = SvPV(t_SV, PL_na);
+		t_value = SvPVutf8_nolen(t_SV);
 
 		g_hash_table_insert(t_GHash, t_key, t_value);
 	}

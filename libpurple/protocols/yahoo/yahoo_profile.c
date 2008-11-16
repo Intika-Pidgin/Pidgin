@@ -745,6 +745,7 @@ static char *yahoo_get_photo_url(const char *url_text, const char *name) {
 				p += 1; /* skip only the ' ' */
 				q = strchr(p, ' ');
 				if (q) {
+					g_free(it);
 					it = g_strndup(p, q - p);
 				}
 			}
@@ -932,19 +933,17 @@ static void yahoo_got_info(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 	/* Try to put the photo in there too, if there's one */
 	if (photo_url_text) {
 		PurpleUtilFetchUrlData *url_data;
+		/* use whole URL if using HTTP Proxy */
+		gboolean use_whole_url = yahoo_account_use_http_proxy(info_data->gc);
+
 		/* User-uploaded photos use a different server that requires the Host
 		 * header, but Yahoo Japan will use the "chunked" content encoding if
 		 * we specify HTTP 1.1. So we have to specify 1.0 & fix purple_util_fetch_url
 		 */
-		url_data = purple_util_fetch_url(photo_url_text, FALSE, NULL,
+		url_data = purple_util_fetch_url(photo_url_text, use_whole_url, NULL,
 				FALSE, yahoo_got_photo, info2_data);
 		if (url_data != NULL)
 			yd->url_datas = g_slist_prepend(yd->url_datas, url_data);
-		else {
-			g_free(info2_data->info_data->name);
-			g_free(info2_data->info_data);
-			g_free(info2_data);
-		}
 	} else {
 		/* Emulate a callback */
 		yahoo_got_photo(NULL, info2_data, NULL, 0, NULL);
@@ -997,7 +996,7 @@ yahoo_got_photo(PurpleUtilFetchUrlData *url_data, gpointer data,
 	purple_debug_misc("yahoo", "url_buffer = %p\n", url_buffer);
 
 	/* convert to utf8 */
-	if (strings && strings->charset != XX) {
+	if (strings && strings->charset) {
 		p = g_convert(stripped, -1, "utf-8", strings->charset,
 				NULL, NULL, NULL);
 		if (!p) {
@@ -1017,7 +1016,7 @@ yahoo_got_photo(PurpleUtilFetchUrlData *url_data, gpointer data,
 	p = NULL;
 
 	/* "Last updated" should also be converted to utf8 and with &nbsp; killed */
-	if (strings && strings->charset != XX) {
+	if (strings && strings->charset) {
 		last_updated_utf8_string = g_convert(last_updated_string, -1, "utf-8",
 				strings->charset, NULL, NULL, NULL);
 		yahoo_remove_nonbreaking_spaces(last_updated_utf8_string);
@@ -1045,7 +1044,8 @@ yahoo_got_photo(PurpleUtilFetchUrlData *url_data, gpointer data,
 			purple_debug_info("yahoo", "Error getting %s: %s\n",
 					photo_url_text, url_text);
 		} else {
-			purple_debug_info("yahoo", "%s is %d bytes\n", photo_url_text, len);
+			purple_debug_info("yahoo", "%s is %" G_GSIZE_FORMAT
+					" bytes\n", photo_url_text, len);
 			id = purple_imgstore_add_with_id(g_memdup(url_text, len), len, NULL);
 			
 			tmp = g_strdup_printf("<img id=\"%d\"><br>", id);
@@ -1058,7 +1058,7 @@ yahoo_got_photo(PurpleUtilFetchUrlData *url_data, gpointer data,
 	/* extract their Email address and put it in */
 	found |= purple_markup_extract_info_field(stripped, stripped_len, user_info,
 			strings->my_email_string, (yd->jp ? 4 : 1), " ", 0,
-			strings->private_string, _("E-Mail"), 0, NULL, NULL);
+			strings->private_string, _("Email"), 0, NULL, NULL);
 
 	/* extract the Nickname if it exists */
 	found |= purple_markup_extract_info_field(stripped, stripped_len, user_info,

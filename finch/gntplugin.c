@@ -29,6 +29,7 @@
 #include <gntlabel.h>
 #include <gntline.h>
 #include <gnttree.h>
+#include <gntutils.h>
 
 #include "finch.h"
 
@@ -50,6 +51,13 @@ static struct
 static GHashTable *confwins;
 
 static GntWidget *process_pref_frame(PurplePluginPrefFrame *frame);
+
+static void
+free_stringlist(GList *list)
+{
+	g_list_foreach(list, (GFunc)g_free, NULL);
+	g_list_free(list);
+}
 
 static void
 decide_conf_button(PurplePlugin *plugin)
@@ -83,6 +91,7 @@ plugin_toggled_cb(GntWidget *tree, PurplePlugin *plugin, gpointer null)
 
 		if (!purple_plugin_unload(plugin)) {
 			purple_notify_error(NULL, _("ERROR"), _("unloading plugin failed"), NULL);
+			purple_plugin_disable(plugin);
 			gnt_tree_set_choice(GNT_TREE(tree), plugin, TRUE);
 		}
 
@@ -162,7 +171,7 @@ plugin_compare(PurplePlugin *p1, PurplePlugin *p2)
 }
 
 static void
-confwin_init()
+confwin_init(void)
 {
 	confwins = g_hash_table_new(g_direct_hash, g_direct_equal);
 }
@@ -398,6 +407,7 @@ void finch_plugins_show_all()
 
 	button = gnt_button_new(_("Install Plugin..."));
 	gnt_box_add_widget(GNT_BOX(box), button);
+	gnt_util_set_trigger_widget(GNT_WIDGET(tree), GNT_KEY_INS, button);
 	g_signal_connect(G_OBJECT(button), "activate", G_CALLBACK(install_plugin_cb), NULL);
 
 	button = gnt_button_new(_("Close"));
@@ -423,11 +433,14 @@ process_pref_frame(PurplePluginPrefFrame *frame)
 	PurpleRequestFields *fields;
 	PurpleRequestFieldGroup *group = NULL;
 	GList *prefs;
-	
+	GList *stringlist = NULL;
+	GntWidget *ret = NULL;
+
 	fields = purple_request_fields_new();
 
 	for (prefs = purple_plugin_pref_frame_get_prefs(frame); prefs; prefs = prefs->next) {
 		PurplePluginPref *pref = prefs->data;
+		PurplePrefType type;
 		const char *name = purple_plugin_pref_get_name(pref);
 		const char *label = purple_plugin_pref_get_label(pref);
 		if(name == NULL) {
@@ -445,20 +458,67 @@ process_pref_frame(PurplePluginPrefFrame *frame)
 		}
 
 		field = NULL;
-		switch(purple_prefs_get_type(name)) {
-			case PURPLE_PREF_BOOLEAN:
-				field = purple_request_field_bool_new(name, label, purple_prefs_get_bool(name));
-				break;
-			case PURPLE_PREF_INT:
-				field = purple_request_field_int_new(name, label, purple_prefs_get_int(name));
-				break;
-			case PURPLE_PREF_STRING:
-				field = purple_request_field_string_new(name, label, purple_prefs_get_string(name),
-						purple_plugin_pref_get_format_type(pref) & PURPLE_STRING_FORMAT_TYPE_MULTILINE);
-				break;
-			default:
-				break;
+		type = purple_prefs_get_type(name);
+		if(purple_plugin_pref_get_type(pref) == PURPLE_PLUGIN_PREF_CHOICE) {
+			GList *list = purple_plugin_pref_get_choices(pref);
+			gpointer current_value = NULL;
+
+			switch(type) {
+				case PURPLE_PREF_BOOLEAN:
+					current_value = g_strdup_printf("%d", (int)purple_prefs_get_bool(name));
+					break;
+				case PURPLE_PREF_INT:
+					current_value = g_strdup_printf("%d", (int)purple_prefs_get_int(name));
+					break;
+				case PURPLE_PREF_STRING:
+					current_value = g_strdup(purple_prefs_get_string(name));
+					break;
+				default:
+					continue;
+			}
+
+			field = purple_request_field_list_new(name, label);
+			purple_request_field_list_set_multi_select(field, FALSE);
+			while (list && list->next) {
+				const char *label = list->data;
+				char *value = NULL;
+				switch(type) {
+					case PURPLE_PREF_BOOLEAN:
+						value = g_strdup_printf("%d", (int)list->next->data);
+						break;
+					case PURPLE_PREF_INT:
+						value = g_strdup_printf("%d", (int)list->next->data);
+						break;
+					case PURPLE_PREF_STRING:
+						value = g_strdup(list->next->data);
+						break;
+					default:
+						break;
+				}
+				stringlist = g_list_prepend(stringlist, value);
+				purple_request_field_list_add(field, label, value);
+				if (strcmp(value, current_value) == 0)
+					purple_request_field_list_add_selected(field, label);
+				list = list->next->next;
+			}
+			g_free(current_value);
+		} else {
+			switch(type) {
+				case PURPLE_PREF_BOOLEAN:
+					field = purple_request_field_bool_new(name, label, purple_prefs_get_bool(name));
+					break;
+				case PURPLE_PREF_INT:
+					field = purple_request_field_int_new(name, label, purple_prefs_get_int(name));
+					break;
+				case PURPLE_PREF_STRING:
+					field = purple_request_field_string_new(name, label, purple_prefs_get_string(name),
+							purple_plugin_pref_get_format_type(pref) & PURPLE_STRING_FORMAT_TYPE_MULTILINE);
+					break;
+				default:
+					break;
+			}
 		}
+
 		if (field) {
 			if (group == NULL) {
 				group = purple_request_field_group_new(_("Preferences"));
@@ -468,9 +528,11 @@ process_pref_frame(PurplePluginPrefFrame *frame)
 		}
 	}
 
-	return purple_request_fields(NULL, _("Preferences"), NULL, NULL, fields,
+	ret = purple_request_fields(NULL, _("Preferences"), NULL, NULL, fields,
 			_("Save"), G_CALLBACK(finch_request_save_in_prefs), _("Cancel"), NULL,
 			NULL, NULL, NULL,
 			NULL);
+	g_signal_connect_swapped(G_OBJECT(ret), "destroy", G_CALLBACK(free_stringlist), stringlist);
+	return ret;
 }
 

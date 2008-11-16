@@ -190,7 +190,7 @@ saved_statuses_sort_func(gconstpointer a, gconstpointer b)
  * does the expiration.
  */
 static void
-remove_old_transient_statuses()
+remove_old_transient_statuses(void)
 {
 	GList *l, *next;
 	PurpleSavedStatus *saved_status, *current_status;
@@ -243,7 +243,9 @@ substatus_to_xmlnode(PurpleSavedStatusSub *substatus)
 
 	child = xmlnode_new_child(node, "account");
 	xmlnode_set_attrib(child, "protocol", purple_account_get_protocol_id(substatus->account));
-	xmlnode_insert_data(child, purple_account_get_username(substatus->account), -1);
+	xmlnode_insert_data(child,
+			purple_normalize(substatus->account,
+				purple_account_get_username(substatus->account)), -1);
 
 	child = xmlnode_new_child(node, "state");
 	xmlnode_insert_data(child, purple_status_type_get_id(substatus->type), -1);
@@ -1126,10 +1128,12 @@ purple_savedstatus_activate(PurpleSavedStatus *saved_status)
 
 	g_list_free(accounts);
 
-	purple_savedstatus_set_idleaway(FALSE);
-
-	purple_signal_emit(purple_savedstatuses_get_handle(), "savedstatus-changed",
-					 saved_status, old);
+	if (purple_savedstatus_is_idleaway()) {
+		purple_savedstatus_set_idleaway(FALSE);
+	} else {
+		purple_signal_emit(purple_savedstatuses_get_handle(), "savedstatus-changed",
+					 	   saved_status, old);
+	}
 }
 
 void
@@ -1248,6 +1252,7 @@ purple_savedstatuses_uninit(void)
 	}
 
 	g_hash_table_destroy(creation_times);
+	creation_times = NULL;
 
 	purple_signals_unregister_by_instance(purple_savedstatuses_get_handle());
 }

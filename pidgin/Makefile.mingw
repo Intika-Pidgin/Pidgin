@@ -84,6 +84,7 @@ PIDGIN_C_SRC =	\
 			gtkroomlist.c \
 			gtksavedstatuses.c \
 			gtkscrollbook.c \
+			gtksmiley.c \
 			gtksound.c \
 			gtksourceiter.c \
 			gtksourceundomanager.c \
@@ -91,7 +92,9 @@ PIDGIN_C_SRC =	\
 			gtkthemes.c \
 			gtkutils.c \
 			gtkwhiteboard.c \
+			minidialog.c \
 			pidginstock.c \
+			pidgintooltip.c \
 			win32/MinimizeToTray.c \
 			win32/gtkdocklet-win32.c \
 			win32/gtkwin32dep.c \

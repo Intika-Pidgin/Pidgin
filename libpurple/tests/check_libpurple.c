@@ -1,11 +1,12 @@
 #include <glib.h>
 #include <stdlib.h>
 
+#include "tests.h"
+
 #include "../core.h"
 #include "../eventloop.h"
 #include "../util.h"
 
-#include "tests.h"
 
 /******************************************************************************
  * libpurple goodies
@@ -37,6 +38,8 @@ static PurpleEventLoopUiOps eventloop_ui_ops = {
 static void
 purple_check_init(void) {
 	gchar *home_dir;
+
+	g_type_init();
 
 	purple_eventloop_set_ui_ops(&eventloop_ui_ops);
 

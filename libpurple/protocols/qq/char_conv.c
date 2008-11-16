@@ -37,10 +37,7 @@
 #define QQ_CHARSET_ENG        "ISO-8859-1"
 
 #define QQ_NULL_MSG           "(NULL)"	/* return this if conversion fails */
-#define QQ_NULL_SMILEY        "(SM)"	/* return this if smiley conversion fails */
-
-/* a debug function */
-void _qq_show_packet(const gchar *desc, const guint8 *buf, gint len);
+#define QQ_NULL_SMILEY        "<IMG ID=\"0\">"	/* return this if smiley conversion fails */
 
 const gchar qq_smiley_map[QQ_SMILEY_AMOUNT] = {
 	0x41, 0x43, 0x42, 0x44, 0x45, 0x46, 0x47, 0x48,
@@ -101,7 +98,7 @@ static gboolean _check_underline(gchar font_attr)
 }
 
 /* convert a string from from_charset to to_charset, using g_convert */
-static gchar *_my_convert(const gchar *str, gssize len, const gchar *to_charset, const gchar *from_charset) 
+static gchar *do_convert(const gchar *str, gssize len, const gchar *to_charset, const gchar *from_charset)
 {
 	GError *error = NULL;
 	gchar *ret;
@@ -111,53 +108,81 @@ static gchar *_my_convert(const gchar *str, gssize len, const gchar *to_charset,
 
 	ret = g_convert(str, len, to_charset, from_charset, &byte_read, &byte_write, &error);
 
-	if (error == NULL)
+	if (error == NULL) {
 		return ret;	/* conversion is OK */
-	else {			/* conversion error */
-		gchar *failed = hex_dump_to_str((guint8 *) str, (len == -1) ? strlen(str) : len);
-		purple_debug(PURPLE_DEBUG_ERROR, "QQ", "%s\n", error->message);
-		purple_debug(PURPLE_DEBUG_WARNING, "QQ", "Dump failed text\n%s", failed);
-		g_free(failed);
-		g_error_free(error);
-		return g_strdup(QQ_NULL_MSG);
 	}
+
+	/* conversion error */
+	purple_debug_error("QQ_CONVERT", "%s\n", error->message);
+
+	qq_hex_dump(PURPLE_DEBUG_WARNING, "QQ_CONVERT",
+		(guint8 *) str, (len == -1) ? strlen(str) : len,
+		"Dump failed text");
+
+	g_error_free(error);
+	return g_strdup(QQ_NULL_MSG);
 }
 
-/* take the input as a pascal string and return a converted c-string in UTF-8
+/*
+ * take the input as a pascal string and return a converted c-string in UTF-8
  * returns the number of bytes read, return -1 if fatal error
- * the converted UTF-8 will be saved in ret */
-gint convert_as_pascal_string(guint8 *data, gchar **ret, const gchar *from_charset) 
+ * the converted UTF-8 will be saved in ret
+ */
+gint qq_get_vstr(gchar **ret, const gchar *from_charset, guint8 *data)
 {
 	guint8 len;
 
 	g_return_val_if_fail(data != NULL && from_charset != NULL, -1);
 
 	len = data[0];
-	*ret = _my_convert((gchar *) (data + 1), (gssize) len, UTF8, from_charset);
+	if (len == 0) {
+		*ret = g_strdup("");
+		return 1;
+	}
+	*ret = do_convert((gchar *) (data + 1), (gssize) len, UTF8, from_charset);
 
 	return len + 1;
 }
 
+gint qq_put_vstr(guint8 *buf, const gchar *str_utf8, const gchar *to_charset)
+{
+	gchar *str;
+	guint8 len;
+
+	if (str_utf8 == NULL || (len = strlen(str_utf8)) == 0) {
+		buf[0] = 0;
+		return 1;
+	}
+	str = do_convert(str_utf8, -1, to_charset, UTF8);
+	len = strlen(str_utf8);
+	buf[0] = len;
+	if (len > 0) {
+		memcpy(buf + 1, str, len);
+	}
+	return 1 + len;
+}
+
 /* convert QQ formatted msg to Purple formatted msg (and UTF-8) */
-gchar *qq_encode_to_purple(guint8 *data, gint len, const gchar *msg)
+gchar *qq_encode_to_purple(guint8 *data, gint len, const gchar *msg, const gint client_version)
 {
 	GString *encoded;
-	guint8 font_attr, font_size, color[3], bar, *cursor;
+	guint8 font_attr, font_size, color[3], bar;
 	gboolean is_bold, is_italic, is_underline;
 	guint16 charset_code;
 	gchar *font_name, *color_code, *msg_utf8, *tmp, *ret;
+	gint bytes = 0;
 
-	cursor = data;
-	_qq_show_packet("QQ_MESG recv for font style", data, len);
+	/* checked qq_show_packet OK */
+	/* qq_show_packet("QQ_MESG recv for font style", data, len); */
 
-	read_packet_b(data, &cursor, len, &font_attr);
-	read_packet_data(data, &cursor, len, color, 3);	/* red,green,blue */
+	bytes += qq_get8(&font_attr, data + bytes);
+	bytes += qq_getdata(color, 3, data + bytes);	/* red,green,blue */
 	color_code = g_strdup_printf("#%02x%02x%02x", color[0], color[1], color[2]);
 
-	read_packet_b(data, &cursor, len, &bar);	/* skip, not sure of its use */
-	read_packet_w(data, &cursor, len, &charset_code);
+	bytes += qq_get8(&bar, data + bytes);	/* skip, not sure of its use */
+	bytes += qq_get16(&charset_code, data + bytes);
 
-	tmp = g_strndup((gchar *) cursor, data + len - cursor);
+	tmp = g_strndup((gchar *)(data + bytes), len - bytes);
 	font_name = qq_to_utf8(tmp, QQ_CHARSET_DEFAULT);
 	g_free(tmp);
 
@@ -177,11 +202,11 @@ gchar *qq_encode_to_purple(guint8 *data, gint len, const gchar *msg)
 	/* Henry: The range QQ sends rounds from 8 to 22, where a font size
 	 * of 10 is equal to 3 in html font tag */
 	g_string_append_printf(encoded,
-			       "<font color=\"%s\"><font face=\"%s\"><font size=\"%d\">",
-			       color_code, font_name, font_size / 3);
-	purple_debug(PURPLE_DEBUG_INFO, "QQ_MESG",
-		   "recv <font color=\"%s\"><font face=\"%s\"><font size=\"%d\">\n",
-		   color_code, font_name, font_size / 3);
+			"<font color=\"%s\"><font face=\"%s\"><font size=\"%d\">",
+			color_code, font_name, font_size / 3);
+	purple_debug_info("QQ_MESG",
+			"recv <font color=\"%s\"><font face=\"%s\"><font size=\"%d\">\n",
+			color_code, font_name, font_size / 3);
 	g_string_append(encoded, msg_utf8);
 
 	if (is_bold) {
@@ -208,18 +233,18 @@ gchar *qq_encode_to_purple(guint8 *data, gint len, const gchar *msg)
 	return ret;
 }
 
-/* two convenience methods, using _my_convert */
+/* two convenience methods, using do_convert */
 gchar *utf8_to_qq(const gchar *str, const gchar *to_charset)
 {
-	return _my_convert(str, -1, to_charset, UTF8);
+	return do_convert(str, -1, to_charset, UTF8);
 }
 
 gchar *qq_to_utf8(const gchar *str, const gchar *from_charset)
 {
-	return _my_convert(str, -1, UTF8, from_charset);
+	return do_convert(str, -1, UTF8, from_charset);
 }
 
-/* QQ uses binary code for smiley, while purple uses strings. 
+/* QQ uses binary code for smiley, while purple uses strings.
  * There is a mapping relation between these two. */
 gchar *qq_smiley_to_purple(gchar *text)
 {
@@ -228,9 +253,11 @@ gchar *qq_smiley_to_purple(gchar *text)
 	GString *converted;
 
 	converted = g_string_new("");
-	segments = split_data((guint8 *) text, strlen(text), "\x14", 0);
-	g_string_append(converted, segments[0]);
+	segments = split_data((guint8 *) text, strlen(text), "\x14\x15", 0);
+	if(segments == NULL)
+		return NULL;
 
+	g_string_append(converted, segments[0]);
 	while ((*(++segments)) != NULL) {
 		cur_seg = *segments;
 		qq_smiley = cur_seg[0];
@@ -274,4 +301,17 @@ gchar *purple_smiley_to_qq(gchar *text)
 	ret = converted->str;
 	g_string_free(converted, FALSE);
 	return ret;
+}
+
+void qq_filter_str(gchar *str) {
+	gchar *temp;
+	if (str == NULL) {
+		return;
+	}
+
+	for (temp = str; *temp != 0; temp++) {
+		/*if (*temp == '\r' || *temp == '\n')  *temp = ' ';*/
+		if (*temp > 0 && *temp < 0x20)  *temp = ' ';
+	}
+	g_strstrip(str);
 }

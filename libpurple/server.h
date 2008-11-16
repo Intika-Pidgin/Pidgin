@@ -63,6 +63,8 @@ PurpleAttentionType *purple_get_attention_type_from_code(PurpleAccount *account,
 
 /** Send an attention request message.
  *
+ * @deprecated Use purple_prpl_send_attention() instead.
+ *
  * @param gc The connection to send the message on.
  * @param who Whose attention to request.
  * @param type_code An index into the prpl's attention_types list determining the type
@@ -75,6 +77,8 @@ PurpleAttentionType *purple_get_attention_type_from_code(PurpleAccount *account,
 void serv_send_attention(PurpleConnection *gc, const char *who, guint type_code);
 
 /** Process an incoming attention message. 
+ *
+ * @deprecated Use purple_prpl_got_attention() instead.
  *
  * @param gc The connection that received the attention message.
  * @param who Who requested your attention.
@@ -97,6 +101,17 @@ void serv_chat_whisper(PurpleConnection *, int, const char *, const char *);
 int  serv_chat_send(PurpleConnection *, int, const char *, PurpleMessageFlags flags);
 void serv_alias_buddy(PurpleBuddy *);
 void serv_got_alias(PurpleConnection *gc, const char *who, const char *alias);
+
+/**
+ * A protocol plugin should call this when it retrieves a private alias from
+ * the server.  Private aliases are the aliases the user sets, while public
+ * aliases are the aliases or display names that buddies set for themselves.
+ *
+ * @param gc The connection on which the alias was received.
+ * @param who The screen name of the buddy whose alias was received.
+ * @param alias The alias that was received.
+ */
+void purple_serv_got_private_alias(PurpleConnection *gc, const char *who, const char *alias);
 
 
 /**
@@ -155,6 +170,17 @@ void serv_got_chat_invite(PurpleConnection *gc, const char *name,
 
 PurpleConversation *serv_got_joined_chat(PurpleConnection *gc,
 									   int id, const char *name);
+/**
+ * Called by a prpl when an attempt to join a chat via serv_join_chat()
+ * fails.
+ *
+ * @param gc      The connection on which chat joining failed
+ * @param data    The components passed to serv_join_chat() originally.
+ *                The hash function should be g_str_hash() and the equal
+ *                function should be g_str_equal().
+ */
+void purple_serv_got_join_chat_failed(PurpleConnection *gc, GHashTable *data);
+	
 void serv_got_chat_left(PurpleConnection *g, int id);
 void serv_got_chat_in(PurpleConnection *g, int id, const char *who,
 					  PurpleMessageFlags flags, const char *message, time_t mtime);

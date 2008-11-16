@@ -378,7 +378,7 @@ static void write_cb(gpointer data, gint source, PurpleInputCondition cond) {
 static int mw_session_io_write(struct mwSession *session,
 			       const guchar *buf, gsize len) {
   struct mwPurplePluginData *pd;
-  int ret = 0;
+  gssize ret = 0;
   int err = 0;
 
   pd = mwSession_getClientData(session);
@@ -413,8 +413,11 @@ static int mw_session_io_write(struct mwSession *session,
     pd->outpa = purple_input_add(pd->socket, PURPLE_INPUT_WRITE, write_cb, pd);
 
   } else if(len > 0) {
-    DEBUG_ERROR("write returned %i, %i bytes left unwritten\n", ret, len);
-    purple_connection_error(pd->gc, _("Connection closed (writing)"));
+    DEBUG_ERROR("write returned %" G_GSSIZE_FORMAT ", %" G_GSIZE_FORMAT
+			" bytes left unwritten\n", ret, len);
+    purple_connection_error_reason(pd->gc,
+                                   PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   _("Connection closed (writing)"));
 
 #if 0
     close(pd->socket);
@@ -1230,6 +1233,7 @@ static void fetch_blist_cb(struct mwServiceStorage *srvc,
   }
 
   mwSametimeList_free(stlist);
+  mwGetBuffer_free(b);
 }
 
 
@@ -1552,7 +1556,38 @@ static void mw_session_stateChange(struct mwSession *session,
 
     if(GPOINTER_TO_UINT(info) & ERR_FAILURE) {
       char *err = mwError(GPOINTER_TO_UINT(info));
-      purple_connection_error(gc, err);
+      PurpleConnectionError reason;
+      switch (GPOINTER_TO_UINT(info)) {
+      case VERSION_MISMATCH:
+        reason = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
+        break;
+
+      case USER_RESTRICTED:
+      case INCORRECT_LOGIN:
+      case USER_UNREGISTERED:
+      case GUEST_IN_USE:
+        reason = PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED;
+        break;
+
+      case ENCRYPT_MISMATCH:
+      case ERR_ENCRYPT_NO_SUPPORT:
+      case ERR_NO_COMMON_ENCRYPT:
+        reason = PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR;
+        break;
+
+      case VERIFICATION_DOWN:
+        reason = PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE;
+        break;
+
+      case MULTI_SERVER_LOGIN:
+      case MULTI_SERVER_LOGIN2:
+        reason = PURPLE_CONNECTION_ERROR_NAME_IN_USE;
+        break;
+
+      default:
+        reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+      }
+      purple_connection_error_reason(gc, reason, err);
       g_free(err);
     }
     break;
@@ -1662,7 +1697,9 @@ static int read_recv(struct mwSession *session, int sock) {
   int len;
 
   len = read(sock, buf, BUF_LEN);
-  if(len > 0) mwSession_recv(session, buf, len);
+  if(len > 0) {
+    mwSession_recv(session, buf, len);
+  }
 
   return len;
 }
@@ -1698,16 +1735,22 @@ static void read_cb(gpointer data, gint source, PurpleInputCondition cond) {
   }
 
   if(! ret) {
+    const char *msg = _("Connection reset");
     DEBUG_INFO("connection reset\n");
-    purple_connection_error(pd->gc, _("Connection reset"));
+    purple_connection_error_reason(pd->gc,
+                                   PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   msg);
 
   } else if(ret < 0) {
-    char *msg = strerror(err);
+    const gchar *err_str = g_strerror(err);
+    char *msg = NULL;
 
-    DEBUG_INFO("error in read callback: %s\n", msg);
+    DEBUG_INFO("error in read callback: %s\n", err_str);
 
-    msg = g_strdup_printf(_("Error reading from socket: %s"), msg);
-    purple_connection_error(pd->gc, msg);
+    msg = g_strdup_printf(_("Error reading from socket: %s"), err_str);
+    purple_connection_error_reason(pd->gc,
+                                   PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   msg);
     g_free(msg);
   }
 }
@@ -1729,7 +1772,10 @@ static void connect_cb(gpointer data, gint source, const gchar *error_message) {
 
     } else {
       /* this is a regular connect, error out */
-      purple_connection_error(pd->gc, _("Unable to connect to host"));
+      const char *msg = _("Unable to connect to host");
+      purple_connection_error_reason(pd->gc,
+                                     PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                     msg);
     }
 
     return;
@@ -1770,7 +1816,7 @@ static void mw_session_announce(struct mwSession *s,
   who = g_strdup_printf(_("Announcement from %s"), who);
   msg = purple_markup_linkify(text);
 
-  purple_conversation_write(conv, who, msg, PURPLE_MESSAGE_RECV, time(NULL));
+  purple_conversation_write(conv, who, msg ? msg : "", PURPLE_MESSAGE_RECV, time(NULL));
   g_free(who);
   g_free(msg);
 }
@@ -2167,7 +2213,7 @@ static void ft_send(struct mwFileTransfer *ft, FILE *fp) {
   } else {
     int err = errno;
     DEBUG_WARN("problem reading from file %s: %s\n",
-	       NSTR(mwFileTransfer_getFileName(ft)), strerror(err));
+	       NSTR(mwFileTransfer_getFileName(ft)), g_strerror(err));
 
     mwFileTransfer_cancel(ft);
   }
@@ -2244,6 +2290,7 @@ static void mw_ft_recv(struct mwFileTransfer *ft,
 
   PurpleXfer *xfer;
   FILE *fp;
+  size_t wc;
 
   xfer = mwFileTransfer_getClientData(ft);
   g_return_if_fail(xfer != NULL);
@@ -2252,7 +2299,12 @@ static void mw_ft_recv(struct mwFileTransfer *ft,
   g_return_if_fail(fp != NULL);
 
   /* we must collect and save our precious data */
-  fwrite(data->data, 1, data->len, fp);
+  wc = fwrite(data->data, 1, data->len, fp);
+  if (wc != data->len) {
+    DEBUG_ERROR("failed to write data\n");
+    purple_xfer_cancel_local(xfer);
+    return;
+  }
 
   /* update the progress */
   xfer->bytes_sent += data->len;
@@ -3611,7 +3663,10 @@ static void mw_prpl_login(PurpleAccount *acct);
 
 
 static void prompt_host_cancel_cb(PurpleConnection *gc) {
-  purple_connection_error(gc, _("No Sametime Community Server specified"));
+  const char *msg = _("No Sametime Community Server specified");
+  purple_connection_error_reason(gc,
+                                 PURPLE_CONNECTION_ERROR_INVALID_SETTINGS,
+                                 msg);
 }
 
 
@@ -3704,7 +3759,7 @@ static void mw_prpl_login(PurpleAccount *account) {
 
     client = purple_account_get_int(account, MW_KEY_CLIENT, mwLogin_BINARY);
     major = purple_account_get_int(account, MW_KEY_MAJOR, 0x001e);
-    minor = purple_account_get_int(account, MW_KEY_MINOR, 0x001d);
+    minor = purple_account_get_int(account, MW_KEY_MINOR, 0x196f);
 
     DEBUG_INFO("client id: 0x%04x\n", client);
     DEBUG_INFO("client major: 0x%04x\n", major);
@@ -3723,7 +3778,8 @@ static void mw_prpl_login(PurpleAccount *account) {
   purple_connection_update_progress(gc, _("Connecting"), 1, MW_CONNECT_STEPS);
 
   if (purple_proxy_connect(gc, account, host, port, connect_cb, pd) == NULL) {
-    purple_connection_error(gc, _("Unable to connect to host"));
+    purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   _("Unable to connect to host"));
   }
 }
 
@@ -3760,7 +3816,7 @@ static void mw_prpl_close(PurpleConnection *gc) {
 }
 
 
-static int mw_rand() {
+static int mw_rand(void) {
   static int seed = 0;
 
   /* for diversity, not security. don't touch */
@@ -3772,7 +3828,7 @@ static int mw_rand() {
 
 
 /** generates a random-ish content id string */
-static char *im_mime_content_id() {
+static char *im_mime_content_id(void) {
   return g_strdup_printf("%03x@%05xmeanwhile",
 			 mw_rand() & 0xfff, mw_rand() & 0xfffff);
 }
@@ -3780,7 +3836,7 @@ static char *im_mime_content_id() {
 
 /** generates a multipart/related content type with a random-ish
     boundary value */
-static char *im_mime_content_type() {
+static char *im_mime_content_type(void) {
   return g_strdup_printf("multipart/related; boundary=related_MW%03x_%04x",
                          mw_rand() & 0xfff, mw_rand() & 0xffff);
 }
@@ -4434,26 +4490,24 @@ static void mw_prpl_add_buddy(PurpleConnection *gc,
 			      PurpleBuddy *buddy,
 			      PurpleGroup *group) {
 
-  struct mwPurplePluginData *pd;
+  struct mwPurplePluginData *pd = gc->proto_data;
   struct mwServiceResolve *srvc;
   GList *query;
   enum mwResolveFlag flags;
   guint32 req;
-
   BuddyAddData *data;
-
-  data = g_new0(BuddyAddData, 1);
-  data->buddy = buddy;
-  data->group = group;
-
-  pd = gc->proto_data;
-  srvc = pd->srvc_resolve;
 
   /* catch external buddies. They won't be in the resolve service */
   if(buddy_is_external(buddy)) {
     buddy_add(pd, buddy);
     return;
   }
+
+  data = g_new0(BuddyAddData, 1);
+  data->buddy = buddy;
+  data->group = group;
+
+  srvc = pd->srvc_resolve;
 
   query = g_list_prepend(NULL, buddy->name);
   flags = mwResolveFlag_FIRST | mwResolveFlag_USERS;
@@ -5009,7 +5063,7 @@ static void ft_outgoing_init(PurpleXfer *xfer) {
   fp = g_fopen(filename, "rb");
   if(! fp) {
     char *msg = g_strdup_printf(_("Error reading file %s: \n%s\n"),
-				filename, strerror(errno));
+				filename, g_strerror(errno));
     purple_xfer_error(purple_xfer_get_type(xfer), acct, xfer->who, msg);
     g_free(msg);
     return;
@@ -5667,7 +5721,7 @@ static PurplePluginInfo mw_plugin_info =
 
 	PLUGIN_ID,                                        /**< id             */
 	PLUGIN_NAME,                                      /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	PLUGIN_SUMMARY,                                   /**< summary        */
 	PLUGIN_DESC,                                      /**<  description    */
 	PLUGIN_AUTHOR,                                    /**< author         */

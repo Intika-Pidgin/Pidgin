@@ -79,7 +79,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 
 	pw = getpwuid(getuid());
 	if (!pw) {
-		purple_debug_error("silc", "silc: %s\n", strerror(errno));
+		purple_debug_error("silc", "silc: %s\n", g_strerror(errno));
 		return FALSE;
 	}
 
@@ -108,7 +108,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 				return FALSE;
 			}
 		} else {
-			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n", filename, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n", filename, g_strerror(errno));
 			return FALSE;
 		}
 	} else {
@@ -140,7 +140,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 			}
 		} else {
 			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
-							 servfilename, strerror(errno));
+							 servfilename, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -163,7 +163,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 			}
 		} else {
 			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
-							 clientfilename, strerror(errno));
+							 clientfilename, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -186,7 +186,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 			}
 		} else {
 			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
-							 friendsfilename, strerror(errno));
+							 friendsfilename, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -212,18 +212,19 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 						  (gc->password == NULL)
 						  ? "" : gc->password,
 						  NULL, NULL, FALSE)) {
-				purple_connection_error(gc, _("Cannot create SILC key pair\n"));
+				purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				                             _("Cannot create SILC key pair\n"));
 				return FALSE;
 			}
 
 			if ((g_stat(file_public_key, &st)) == -1) {
 				purple_debug_error("silc", "Couldn't stat '%s' public key, error: %s\n",
-						   file_public_key, strerror(errno));
+						   file_public_key, g_strerror(errno));
 				return FALSE;
 			}
 		} else {
 			purple_debug_error("silc", "Couldn't stat '%s' public key, error: %s\n",
-					   file_public_key, strerror(errno));
+					   file_public_key, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -239,7 +240,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 	if ((fd = g_open(file_private_key, O_RDONLY, 0)) != -1) {
 		if ((fstat(fd, &st)) == -1) {
 			purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-					   file_private_key, strerror(errno));
+					   file_private_key, g_strerror(errno));
 			close(fd);
 			return FALSE;
 		}
@@ -254,14 +255,15 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 						  (gc->password == NULL)
 						  ? "" : gc->password,
 						  NULL, NULL, FALSE)) {
-				purple_connection_error(gc, _("Cannot create SILC key pair\n"));
+				purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				                             _("Cannot create SILC key pair\n"));
 				return FALSE;
 			}
 
 			if ((fd = g_open(file_private_key, O_RDONLY, 0)) != -1) {
 				if ((fstat(fd, &st)) == -1) {
 					purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-							   file_private_key, strerror(errno));
+							   file_private_key, g_strerror(errno));
 					close(fd);
 					return FALSE;
 				}
@@ -270,12 +272,12 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 			 * will set the permissions */
 			else if ((g_stat(file_private_key, &st)) == -1) {
 				purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-						   file_private_key, strerror(errno));
+						   file_private_key, g_strerror(errno));
 				return FALSE;
 			}
 		} else {
 			purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-					   file_private_key, strerror(errno));
+					   file_private_key, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -336,7 +338,6 @@ void silcpurple_show_public_key(SilcPurple sg,
 	unsigned char *pk;
 	SilcUInt32 pk_len, key_len = 0;
 	GString *s;
-	char *buf;
 
 	/* We support showing only SILC public keys for now */
 	if (silc_pkcs_get_type(public_key) != SILC_PKCS_SILC)
@@ -347,8 +348,12 @@ void silcpurple_show_public_key(SilcPurple sg,
 	key_len = silc_pkcs_public_key_get_len(public_key);
 
 	pk = silc_pkcs_public_key_encode(public_key, &pk_len);
+	if (!pk)
+	  return;
 	fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
 	babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
+	if (!fingerprint || !babbleprint)
+	  return;
 
 	s = g_string_new("");
 	if (ident->realname)
@@ -359,7 +364,7 @@ void silcpurple_show_public_key(SilcPurple sg,
 	if (ident->username)
 		g_string_append_printf(s, _("User Name: \t%s\n"), ident->username);
 	if (ident->email)
-		g_string_append_printf(s, _("E-Mail: \t\t%s\n"), ident->email);
+		g_string_append_printf(s, _("Email: \t\t%s\n"), ident->email);
 	if (ident->host)
 		g_string_append_printf(s, _("Host Name: \t%s\n"), ident->host);
 	if (ident->org)
@@ -374,14 +379,12 @@ void silcpurple_show_public_key(SilcPurple sg,
 	g_string_append_printf(s, _("Public Key Fingerprint:\n%s\n\n"), fingerprint);
 	g_string_append_printf(s, _("Public Key Babbleprint:\n%s"), babbleprint);
 
-	buf = g_string_free(s, FALSE);
-
 	purple_request_action(sg->gc, _("Public Key Information"),
 			      _("Public Key Information"),
-			      buf, 0, purple_connection_get_account(sg->gc),
+			      s->str, 0, purple_connection_get_account(sg->gc),
 			      NULL, NULL, context, 1, _("Close"), callback);
 
-	g_free(buf);
+	g_string_free(s, TRUE);
 	silc_free(fingerprint);
 	silc_free(babbleprint);
 	silc_free(pk);
@@ -436,6 +439,7 @@ void silcpurple_get_umode_string(SilcUInt32 mode, char *buf,
 		strcat(buf, "[rejects watching] ");
 	if (mode & SILC_UMODE_BLOCK_INVITE)
 		strcat(buf, "[blocks invites] ");
+	g_strchomp(buf);
 }
 
 void silcpurple_get_chmode_string(SilcUInt32 mode, char *buf,
@@ -464,6 +468,7 @@ void silcpurple_get_chmode_string(SilcUInt32 mode, char *buf,
 		strcat(buf, "[users silenced] ");
 	if (mode & SILC_CHANNEL_MODE_SILENCE_OPERS)
 		strcat(buf, "[operators silenced] ");
+	g_strchomp(buf);
 }
 
 void silcpurple_get_chumode_string(SilcUInt32 mode, char *buf,
@@ -482,6 +487,7 @@ void silcpurple_get_chumode_string(SilcUInt32 mode, char *buf,
 		strcat(buf, "[blocks robot messages] ");
 	if (mode & SILC_CHANNEL_UMODE_QUIET)
 		strcat(buf, "[quieted] ");
+	g_strchomp(buf);
 }
 
 void
@@ -536,8 +542,8 @@ silcpurple_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 			g_string_append_printf(s, "[%s] ", _("Anxious"));
 	}
 	if (strlen(s->str)) {
-		*moodstr = s->str;
-		g_string_free(s, FALSE);
+		*moodstr = g_string_free(s, FALSE);
+		g_strchomp(*moodstr);
 	} else
 		g_string_free(s, TRUE);
 
@@ -552,7 +558,7 @@ silcpurple_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 		if (contact & SILC_ATTRIBUTE_CONTACT_CHAT)
 			g_string_append_printf(s, "[%s] ", _("Chat"));
 		if (contact & SILC_ATTRIBUTE_CONTACT_EMAIL)
-			g_string_append_printf(s, "[%s] ", _("E-Mail"));
+			g_string_append_printf(s, "[%s] ", _("Email"));
 		if (contact & SILC_ATTRIBUTE_CONTACT_CALL)
 			g_string_append_printf(s, "[%s] ", _("Phone"));
 		if (contact & SILC_ATTRIBUTE_CONTACT_PAGE)
@@ -565,8 +571,8 @@ silcpurple_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 			g_string_append_printf(s, "[%s] ", _("Video Conferencing"));
 	}
 	if (strlen(s->str)) {
-		*contactstr = s->str;
-		g_string_free(s, FALSE);
+		*contactstr = g_string_free(s, FALSE);
+		g_strchomp(*contactstr);
 	} else
 		g_string_free(s, TRUE);
 
@@ -593,10 +599,9 @@ silcpurple_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 				device.model ? device.model : "",
 				device.language ? device.language : "");
 	}
-	if (strlen(s->str)) {
-		*devicestr = s->str;
-		g_string_free(s, FALSE);
-	} else
+	if (strlen(s->str))
+		*devicestr = g_string_free(s, FALSE);
+	else
 		g_string_free(s, TRUE);
 
 	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_TIMEZONE);
@@ -624,15 +629,15 @@ char *silcpurple_file2mime(const char *filename)
 	if (!ct)
 		return NULL;
 	else if (!g_ascii_strcasecmp(".png", ct))
-		return strdup("image/png");
+		return g_strdup("image/png");
 	else if (!g_ascii_strcasecmp(".jpg", ct))
-		return strdup("image/jpeg");
+		return g_strdup("image/jpeg");
 	else if (!g_ascii_strcasecmp(".jpeg", ct))
-		return strdup("image/jpeg");
+		return g_strdup("image/jpeg");
 	else if (!g_ascii_strcasecmp(".gif", ct))
-		return strdup("image/gif");
+		return g_strdup("image/gif");
 	else if (!g_ascii_strcasecmp(".tiff", ct))
-		return strdup("image/tiff");
+		return g_strdup("image/tiff");
 
 	return NULL;
 }
@@ -694,7 +699,7 @@ SilcDList silcpurple_image_message(const char *msg, SilcUInt32 *mflags)
 				continue;
 			}
 			silc_mime_add_field(p, "Content-Type", type);
-			silc_free(type);
+			g_free(type);
 
 			/* Add content transfer encoding */
 			silc_mime_add_field(p, "Content-Transfer-Encoding", "binary");

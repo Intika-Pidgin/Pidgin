@@ -43,20 +43,20 @@ AC_PREREQ([2.50])
 #
 # Make sure to update finch/libgnt/configure.ac with libgnt version changes.
 #
-m4_define([purple_lt_current], [2])
+m4_define([purple_lt_current], [5])
 m4_define([purple_major_version], [2])
-m4_define([purple_minor_version], [2])
+m4_define([purple_minor_version], [5])
 m4_define([purple_micro_version], [3])
-m4_define([purple_version_suffix], [])
+m4_define([purple_version_suffix], [devel])
 m4_define([purple_version],
           [purple_major_version.purple_minor_version.purple_micro_version])
 m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suffix],[purple_version_suffix]))
 
-m4_define([gnt_lt_current], [2])
+m4_define([gnt_lt_current], [5])
 m4_define([gnt_major_version], [2])
-m4_define([gnt_minor_version], [2])
+m4_define([gnt_minor_version], [5])
 m4_define([gnt_micro_version], [3])
-m4_define([gnt_version_suffix], [])
+m4_define([gnt_version_suffix], [devel])
 m4_define([gnt_version],
           [gnt_major_version.gnt_minor_version.gnt_micro_version])
 m4_define([gnt_display_version], gnt_version[]m4_ifdef([gnt_version_suffix],[gnt_version_suffix]))
@@ -64,10 +64,17 @@ m4_define([gnt_display_version], gnt_version[]m4_ifdef([gnt_version_suffix],[gnt
 
 AC_INIT([pidgin], [purple_display_version], [devel@pidgin.im])
 
+if test `pwd | wc -w` -ne 1; then
+	AC_MSG_ERROR([
+You are attempting to build in a path that contains spaces.  This
+will fail.  Relocate this source tree to a path that does not contain
+spaces and run configure again.
+])
+fi
+
 AC_CANONICAL_SYSTEM
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
-#AM_INIT_AUTOMAKE([foreign dist-bzip2])
+AM_INIT_AUTOMAKE([1.9 -Wno-portability dist-bzip2])
 
 PURPLE_MAJOR_VERSION=purple_major_version
 PURPLE_MINOR_VERSION=purple_minor_version
@@ -100,13 +107,14 @@ AC_DEFINE_UNQUOTED(CONFIG_ARGS, "$ac_configure_args", [configure arguments])
 
 dnl Checks for programs.
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_DISABLE_STATIC
-AM_PROG_LIBTOOL
+AC_PROG_LIBTOOL
 LIBTOOL="$LIBTOOL --silent"
 AC_PROG_INSTALL
 AC_PROG_INTLTOOL
 PKG_PROG_PKG_CONFIG
-
+AC_FUNC_ALLOCA
 GETTEXT_PACKAGE=pidgin
 AC_SUBST(GETTEXT_PACKAGE)
 
@@ -136,13 +144,13 @@ darwin*)
 	;;
 esac
 
-ALL_LINGUAS="af am ar az be@latin bg bn bs ca ca@valencia cs da de dz el en_AU en_CA en_GB eo es et eu fa fi fr gl gu he hi hu id it ja ka kn ko ku lo lt mk my_MM nb ne nl nn pa pl pt_BR pt ps ro ru sk sl sq sr sr@latin sv ta te th tr uk vi xh zh_CN zh_HK zh_TW"
+ALL_LINGUAS="af am ar az be@latin bg bn bs ca ca@valencia cs da de dz el en_AU en_CA en_GB eo es et eu fa fi fr ga gl gu he hi hu id it ja ka kn ko ku lo lt mk mn my_MM nb ne nl nn oc pa pl pt_BR pt ps ro ru si sk sl sq sr sr@latin sv ta te th tr uk ur vi xh zh_CN zh_HK zh_TW"
 AM_GLIB_GNU_GETTEXT
 
 dnl If we don't have msgfmt, then po/ is going to fail -- ensure that
 dnl AM_GLIB_GNU_GETTEXT found it.
 
-if test x$MSGFMT = xno -o x$MSGFMT$GMSGFMT = x
+if test x$MSGFMT = xno -o x$MSGFMT$GMSGFMT$INTLTOOL_MSGFMT = x
 then
 	AC_ERROR([
 
@@ -202,7 +210,7 @@ AC_CHECK_FUNC(getaddrinfo,
 		[Define to 1 if you have the getaddrinfo function.])],
 	[AC_CHECK_LIB(socket, getaddrinfo,
 		[AC_DEFINE([HAVE_GETADDRINFO]) LIBS="-lsocket -lsnl $LIBS"], , , -lnsl)])
-
+AC_CHECK_FUNCS(inet_ntop)
 dnl Check for socklen_t (in Unix98)
 AC_MSG_CHECKING(for socklen_t)
 AC_TRY_COMPILE([
@@ -226,12 +234,42 @@ AC_TRY_COMPILE([
 	])
 ])
 
+dnl Some systems do not have sa_len field for struct sockaddr.
+AC_CHECK_MEMBER([struct sockaddr.sa_len],
+	[AC_DEFINE([HAVE_STRUCT_SOCKADDR_SA_LEN],[1],
+	[Define if struct sockaddr has an sa_len member])],[:],
+	[#include <sys/socket.h>])
+
 dnl to prevent the g_stat()/g_unlink() crash,
 dnl (09:50:07) Robot101: LSchiere2: it's easy. +LC_SYS_LARGEFILE somewhere in configure.ac
 AC_SYS_LARGEFILE
 
 dnl FreeBSD doesn't have libdl, dlopen is provided by libc
 AC_CHECK_FUNC(dlopen, LIBDL="", [AC_CHECK_LIB(dl, dlopen, LIBDL="-ldl")])
+
+AC_MSG_CHECKING(for fileno())
+AC_TRY_RUN([
+#include <stdio.h>
+
+int main(int argc, char *argv[])
+{
+	int fd;
+
+	fd = fileno(stdout);
+
+	return !(fd > 0);
+}
+], [
+	AC_MSG_RESULT(yes)
+	AC_DEFINE([HAVE_FILENO], [1],
+	          [Define to 1 if your stdio has int fileno(FILE *).])
+], [
+	AC_MSG_RESULT(no)
+], [
+	# Fallback for Cross Compiling...
+	# This will enable the compatibility code.
+	AC_MSG_RESULT(no)
+])
 
 AC_MSG_CHECKING(for the %z format string in strftime())
 AC_TRY_RUN([
@@ -279,9 +317,27 @@ PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.0.0 gobject-2.0 gmodule-2.0 gthread-2.0],
 	AC_MSG_ERROR([
 
 You must have the GLib 2.0 development headers installed to build.
+
+If you have these installed already you may need to install pkg-config so
+I can find them.
 ])])
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
+
+AC_ARG_WITH([extraversion],
+			AC_HELP_STRING([--with-extraversion=STRING],
+						   [extra version number to be displayed in Help->About and --help (for packagers)]),
+						   EXTRA_VERSION=$withval)
+
+if test x"$EXTRA_VERSION" != "x" ; then
+	AC_DEFINE_UNQUOTED(DISPLAY_VERSION, "$VERSION-$EXTRA_VERSION", [display version info])
+else
+	AC_DEFINE_UNQUOTED(DISPLAY_VERSION, "$VERSION", [display version info])
+fi
+
+AC_ARG_ENABLE(missing-dependencies, [AC_HELP_STRING([--disable-missing-dependencies],
+		[skip missing dependencies instead of aborting configure])],
+	force_deps="$enableval", force_deps="yes")
 
 AC_ARG_WITH(x, [],
 	with_x="$withval", with_x="yes")
@@ -290,7 +346,7 @@ AC_ARG_ENABLE(gtkui, [AC_HELP_STRING([--disable-gtkui],
 	enable_gtkui="$enableval", enable_gtkui="yes")
 AC_ARG_ENABLE(consoleui, [AC_HELP_STRING([--disable-consoleui],
 		[compile without console user interface])],
-	enable_consoleui=$enableval, enable_consoleui=yes)
+	[enable_consoleui=$enableval force_finch=$enableval], [enable_consoleui=yes force_finch=no])
 
 dnl #######################################################################
 dnl # Check for GTK+ 2.0 and other things used by the GTK UI
@@ -312,13 +368,13 @@ AC_ARG_ENABLE(gtkspell,
 		[compile without GtkSpell automatic spell checking])],
 	enable_gtkspell="$enableval", enable_gtkspell="yes")
 AC_ARG_ENABLE(gevolution,
-	[AC_HELP_STRING([--disable-gevolution],
-		[compile without the Evolution plugin])],
-	enable_gevolution="$enableval", enable_gevolution="yes")
+	[AC_HELP_STRING([--enable-gevolution],
+		[compile with the Evolution plugin])],
+	enable_gevolution="$enableval", enable_gevolution="no")
 AC_ARG_ENABLE(cap,
-	[AC_HELP_STRING([--disable-cap],
-		[compile without Contact Availability Prediction plugin])],
-	enable_cap="$enableval", enable_cap="yes")
+	[AC_HELP_STRING([--enable-cap],
+		[compile with Contact Availability Prediction plugin])],
+	enable_cap="$enableval", enable_cap="no")
 AC_ARG_ENABLE(gestures,
 	[AC_HELP_STRING([--disable-gestures],
 		[compile without the gestures plugin])],
@@ -345,14 +401,14 @@ if test "x$enable_gtkui" = "xyes" ; then
 		AC_MSG_ERROR([
 
 You must have the GTK+ 2.0 development headers installed to compile Pidgin.
-If you only want to build Finch then specify --disable-gtkui when running configure.
+If you want to build only Finch then specify --disable-gtkui when running configure.
 ])])
 
 	AC_SUBST(GTK_CFLAGS)
 	AC_SUBST(GTK_LIBS)
 
 	dnl We only really need Pango >= 1.4 for decent RTL support
-	PKG_CHECK_MODULES(pango, [pango >= 1.4.0],
+	PKG_CHECK_MODULES(PANGO, [pango >= 1.4.0],
 			AC_DEFINE(HAVE_PANGO14, 1, [Define if we have Pango 1.4 or newer.]),:)
 
 	dnl #######################################################################
@@ -366,11 +422,20 @@ If you only want to build Finch then specify --disable-gtkui when running config
 					X11_LIBS="$x_libpath_add"
 					X11_CFLAGS="$x_incpath_add"
 				else
-					with_x=no
+					if test "x$force_deps" = "xyes" ; then
+						AC_MSG_ERROR([
+X11 development headers not found.
+Use --without-x if you do not need X11 support.
+])
+					fi
 				fi
 			])
 		AC_SUBST(X11_LIBS)
 		AC_SUBST(X11_CFLAGS)
+	else
+		enable_screensaver=no
+		enable_sm=no
+		enable_gestures=no
 	fi
 
 	dnl #######################################################################
@@ -400,9 +465,17 @@ If you only want to build Finch then specify --disable-gtkui when running config
 			if test "x$enable_screensaver" = "xyes" ; then
 				AC_DEFINE(USE_SCREENSAVER, 1, [Define if we're using XScreenSaver.])
 				AC_SUBST(XSS_LIBS)
+			else
+				if test "x$force_deps" = "xyes" ; then
+					AC_MSG_ERROR([
+XScreenSaver extension development headers not found.
+Use --disable-screensaver if you do not need XScreenSaver extension support,
+this is required for detecting idle time by mouse and keyboard usage.
+])
+				fi
 			fi
 		else
-			enable_screensaver=no
+			AC_MSG_ERROR([X support is required to build with XScreenSaver extensions])
 		fi
 	fi
 
@@ -423,9 +496,16 @@ If you only want to build Finch then specify --disable-gtkui when running config
 			if test "x$enable_sm" = "xyes"; then
 				AC_DEFINE(USE_SM, 1, [Define if we're using X Session Management.])
 				AC_SUBST(SM_LIBS)
+			else
+				if test "x$force_deps" = "xyes" ; then
+					AC_MSG_ERROR([
+X session management development headers not found.
+Use --disable-sm if you do not need session management support.
+])
+				fi
 			fi
 		else
-			enable_sm=no
+			AC_MSG_ERROR([X support is required to build with X session management support])
 		fi
 	fi
 
@@ -444,8 +524,12 @@ If you only want to build Finch then specify --disable-gtkui when running config
 	if test "x$enable_startup_notification" = "xyes"; then
 		PKG_CHECK_MODULES(STARTUP_NOTIFICATION, [libstartup-notification-1.0 >= 0.5], , [
 			AC_MSG_RESULT(no)
-			enable_startup_notification=no
-		])
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_ERROR([
+Startup notification development headers not found.
+Use --disable-startup-notification if you do not need it.
+])
+			fi])
 
 		if test "x$enable_startup_notification" = "xyes"; then
 			AC_DEFINE(HAVE_STARTUP_NOTIFICATION, 1, [Define if we're using libstartup-notification.])
@@ -460,8 +544,12 @@ If you only want to build Finch then specify --disable-gtkui when running config
 	if test "x$enable_gtkspell" = "xyes" ; then
 		PKG_CHECK_MODULES(GTKSPELL, gtkspell-2.0 >= 2.0.2, , [
 			AC_MSG_RESULT(no)
-			enable_gtkspell=no
-		])
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_ERROR([
+GtkSpell development headers not found.
+Use --disable-gtkspell if you do not need it.
+])
+			fi])
 		if test "x$enable_gtkspell" = "xyes" ; then
 			AC_DEFINE(USE_GTKSPELL, 1, [Define if we're using GtkSpell])
 			AC_SUBST(GTKSPELL_CFLAGS)
@@ -490,6 +578,13 @@ If you only want to build Finch then specify --disable-gtkui when running config
 			AC_DEFINE(HAVE_EVOLUTION_ADDRESSBOOK, 1, [Define if we're using evolution addressbook.])
 			AC_SUBST(EVOLUTION_ADDRESSBOOK_CFLAGS)
 			AC_SUBST(EVOLUTION_ADDRESSBOOK_LIBS)
+		else
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_ERROR([
+Evolution development headers not found.
+Use --disable-gevolution if you do not need it.
+])
+			fi
 		fi
 	fi
 
@@ -499,8 +594,12 @@ If you only want to build Finch then specify --disable-gtkui when running config
 	if test "x$enable_cap" = "xyes"; then
 		PKG_CHECK_MODULES(SQLITE3, sqlite3 >= 3.3,,[
 			AC_MSG_RESULT(no)
-			enable_cap="no"
-			])
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_ERROR([
+sqlite3 development headers not found.
+Use --disable-cap if you do not need the Contact Availability Prediction plugin.
+])
+			fi])
 	fi
         
 
@@ -584,6 +683,14 @@ if test "x$enable_consoleui" = "xyes"; then
 	fi
 fi
 
+if test "x$force_finch" = "xyes" -a "x$enable_consoleui" != "xyes"; then
+	AC_MSG_ERROR([
+
+Finch will not be built. You need to install ncursesw (or ncurses) and its development headers.
+
+])
+fi
+
 AC_SUBST(GNT_LIBS)
 AC_SUBST(GNT_CFLAGS)
 AM_CONDITIONAL(ENABLE_GNT, test "x$enable_consoleui" = "xyes")
@@ -612,6 +719,9 @@ AM_GCONF_SOURCE_2
 dnl #######################################################################
 dnl # Check for GStreamer
 dnl #######################################################################
+dnl
+dnl TODO: Depend on gstreamer >= 0.10.10, and remove the conditional use of
+dnl       gst_registry_fork_set_enabled.
 AC_ARG_ENABLE(gstreamer,
 	[AC_HELP_STRING([--disable-gstreamer], [compile without GStreamer audio support])],
 	enable_gst="$enableval", enable_gst="yes")
@@ -620,27 +730,49 @@ if test "x$enable_gst" != "xno"; then
 		AC_DEFINE(USE_GSTREAMER, 1, [Use GStreamer for playing sounds])
 		AC_SUBST(GSTREAMER_CFLAGS)
 		AC_SUBST(GSTREAMER_LIBS)
+		AC_CHECK_LIB(gstreamer-0.10, gst_registry_fork_set_enabled,
+			[ AC_DEFINE(GST_CAN_DISABLE_FORKING, [],
+			  [Define if gst_registry_fork_set_enabled exists])],
+			[], [$GSTREAMER_LIBS])
 	], [
 		AC_MSG_RESULT(no)
-		enable_gst="no"
-	])
+		if test "x$force_deps" = "xyes" ; then
+			AC_MSG_ERROR([
+GStreamer development headers not found.
+Use --disable-gstreamer if you do not need GStreamer (sound) support.
+])
+		fi])
 fi
 
 dnl #######################################################################
 dnl # Check for Meanwhile headers (for Sametime)
 dnl #######################################################################
-PKG_CHECK_MODULES(MEANWHILE, [meanwhile >= 1.0.0 meanwhile < 2.0.0], [
-	have_meanwhile="yes"
-], [
-	AC_MSG_RESULT(no)
-	have_meanwhile="no"
+AC_ARG_ENABLE(meanwhile,
+	[AC_HELP_STRING([--disable-meanwhile],
+		[compile without meanwhile (required for Sametime support)])],
+	enable_meanwhile="$enableval", enable_meanwhile="yes")
+if test "x$enable_meanwhile" = "xyes"; then
+	PKG_CHECK_MODULES(MEANWHILE, [meanwhile >= 1.0.0 meanwhile < 2.0.0], [
+		have_meanwhile="yes"
+	], [
+		have_meanwhile="no"
+		if test "x$force_deps" = "xyes" ; then
+			AC_MSG_ERROR([
+Meanwhile development headers not found.
+Use --disable-meanwhile if you do not need meanwhile (Sametime) support.
 ])
+		fi])
+fi
 AC_SUBST(MEANWHILE_CFLAGS)
 AC_SUBST(MEANWHILE_LIBS)
 
 dnl #######################################################################
 dnl # Check for Native Avahi headers (for Bonjour)
 dnl #######################################################################
+AC_ARG_ENABLE(avahi,
+	[AC_HELP_STRING([--disable-avahi],
+		[compile without avahi (required for Bonjour support)])],
+	enable_avahi="$enableval", enable_avahi="yes")
 AC_ARG_WITH(avahi-client-includes, [AC_HELP_STRING([--with-avahi-client-includes=DIR], [compile the Bonjour plugin against the Avahi Client includes in DIR])], [ac_avahi_client_includes="$withval"], [ac_avahi_client_includes="no"])
 AC_ARG_WITH(avahi-client-libs, [AC_HELP_STRING([--with-avahi-client-libs=DIR], [compile the Bonjour plugin against the Avahi Client libs in DIR])], [ac_avahi_client_libs="$withval"], [ac_avahi_client_libs="no"])
 AVAHI_CFLAGS=""
@@ -651,7 +783,6 @@ PKG_CHECK_MODULES(AVAHI, [avahi-client avahi-glib], [
 	avahiincludes="yes"
 	avahilibs="yes"
 ], [
-	AC_MSG_RESULT(no)
 	avahiincludes="no"
 	avahilibs="no"
 ])
@@ -673,61 +804,14 @@ if test "$ac_avahi_client_libs" != "no"; then
 fi
 AC_CHECK_LIB(avahi-client, avahi_client_new, [avahilibs=yes], [avahilibs=no], $AVAHI_LIBS)
 
+if test "x$enable_avahi" = "xyes" -a "x$force_deps" = "xyes" -a \( "x$avahiincludes" = "xno" -o "x$avahilibs" = "xno" \); then
+	AC_MSG_ERROR([
+avahi development headers not found.
+Use --disable-avahi if you do not need avahi (Bonjour) support.
+])
+fi
 AC_SUBST(AVAHI_CFLAGS)
 AC_SUBST(AVAHI_LIBS)
-
-AM_CONDITIONAL(MDNS_AVAHI, test "x$avahiincludes" = "xyes" -a "x$avahilibs" = "xyes")
-
-dnl #######################################################################
-dnl # Check for Howl headers (for Bonjour)
-dnl #######################################################################
-AC_ARG_WITH(howl-includes, [AC_HELP_STRING([--with-howl-includes=DIR], [compile the Bonjour plugin against the Howl includes in DIR])], [ac_howl_includes="$withval"], [ac_howl_includes="no"])
-AC_ARG_WITH(howl-libs, [AC_HELP_STRING([--with-howl-libs=DIR], [compile the Bonjour plugin against the Howl libs in DIR])], [ac_howl_libs="$withval"], [ac_howl_libs="no"])
-HOWL_CFLAGS=""
-HOWL_LIBS=""
-
-dnl Attempt to autodetect avahi-compat-howl
-dnl TODO: (This should be removed when the native avahi stuff is stable)
-PKG_CHECK_MODULES(HOWL, avahi-compat-howl, [
-	howlincludes="yes"
-	howllibs="yes"
-], [
-	AC_MSG_RESULT(no)
-	howlincludes="no"
-	howllibs="no"
-])
-
-dnl Attempt to autodetect Howl
-if test "x$howlincludes" = "xno"; then
-	PKG_CHECK_MODULES(HOWL, howl, [
-		howlincludes="yes"
-		howllibs="yes"
-	], [
-		AC_MSG_RESULT(no)
-		howlincludes="no"
-		howllibs="no"
-	])
-fi
-
-dnl Override HOWL_CFLAGS if the user specified an include dir
-if test "$ac_howl_includes" != "no"; then
-	HOWL_CFLAGS="-I$ac_howl_includes"
-fi
-CPPFLAGS_save="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $HOWL_CFLAGS"
-AC_CHECK_HEADER(howl.h, [howlincludes=yes], [howlincludes=no])
-CPPFLAGS="$CPPFLAGS_save"
-
-dnl Override HOWL_LIBS if the user specified a libs dir
-if test "$ac_howl_libs" != "no"; then
-	HOWL_LIBS="-L$ac_howl_libs -lhowl"
-fi
-AC_CHECK_LIB(howl, sw_discovery_init, [howllibs=yes], [howllibs=no], $HOWL_LIBS)
-
-AC_SUBST(HOWL_CFLAGS)
-AC_SUBST(HOWL_LIBS)
-
-AM_CONDITIONAL(MDNS_HOWL, test "x$howlincludes" = "xyes" -a "x$howllibs" = "xyes")
 
 
 dnl #######################################################################
@@ -749,7 +833,6 @@ if test "x$silc_manual_check" = "xno"; then
 		silcincludes="yes"
 		silcclient="yes"
 	], [
-		AC_MSG_RESULT(no)
 		have_silc="no"
 	])
 	if test "x$have_silc" = "xno"; then
@@ -758,7 +841,6 @@ if test "x$silc_manual_check" = "xno"; then
 			silc10includes="yes"
 			silc10client="yes"
 		], [
-			AC_MSG_RESULT(no)
 			have_silc="no"
 		])
 		dnl If silcclient.pc wasn't found, check for just silc.pc
@@ -768,7 +850,6 @@ if test "x$silc_manual_check" = "xno"; then
 				silc10includes="yes"
 				silc10client="yes"
 			], [
-				AC_MSG_RESULT(no)
 				have_silc="no"
 			])
 		fi
@@ -865,7 +946,7 @@ if test "x$gadu_libs" = "xyes"; then
 	CPPFLAGS_save="$CPPFLAGS"
 	CPPFLAGS="$CPPFLAGS $GADU_CFLAGS"
 	AC_TRY_COMPILE([#include <libgadu.h>], [
-#ifdef __GG_LIBGADU_HAVE_OPENSSL
+#if defined(__GG_LIBGADU_HAVE_OPENSSL) || defined(GG_CONFIG_HAVE_OPENSSL)
 #error "libgadu is not compatible with the GPL when compiled with OpenSSL support."
 #endif
 	], [
@@ -877,10 +958,11 @@ if test "x$gadu_libs" = "xyes"; then
 		echo
 		echo
 		echo "libgadu is not compatible with the GPL when compiled with OpenSSL support."
-		echo "Please recompile libgadu using:"
+		echo "To compile against system libgadu, please recompile libgadu using:"
 		echo "./autogen.sh --disable-libgadu-openssl --disable-static --enable-shared"
 		echo "Then rerun this ./configure"
 		echo
+		echo "Falling back to using our own copy of libgadu"
 		echo
 		GADU_LIBS=""
 		GADU_CFLAGS=""
@@ -894,6 +976,8 @@ AM_CONDITIONAL(USE_INTERNAL_LIBGADU, test "x$gadu_libs" != "xyes")
 AC_SUBST(GADU_LIBS)
 AC_SUBST(GADU_CFLAGS)
 
+# change the next line to not make MSNP15 the default (s/disable/enable/; s/yes/no/;)
+AC_ARG_ENABLE(msnp15,[AC_HELP_STRING([--disable-msnp15], [Disable the newer MSNP15 protocol])],enable_msnp15=$enableval,enable_msnp15=yes)
 
 AC_ARG_ENABLE(distrib,,,enable_distrib=no)
 AM_CONDITIONAL(DISTRIB, test "x$enable_distrib" = "xyes")
@@ -910,9 +994,10 @@ if test "x$have_meanwhile" != "xyes" ; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/sametime//'`
 fi
 if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
-	if test "x$howlincludes" != "xyes" -o "x$howllibs" != "xyes"; then
-		STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/bonjour//'`
-	fi
+	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/bonjour//'`
+fi
+if test "x$enable_msnp15" != "xyes" ; then
+	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/msn/msnp9/'`
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/silc/silc10/'`
@@ -925,21 +1010,23 @@ STATIC_LINK_LIBS=
 extern_init=
 load_proto=
 for i in $STATIC_PRPLS ; do
-	dnl Ugly special case for "libsilcpurple.a":
+	dnl Ugly special case for "libsilcpurple.la":
 	dnl ... and Ugly special case for multi-protocol oscar
 	if test \( "x$i" = "xoscar" -o "x$i" = "xaim" -o "x$i" = "xicq" \) -a "x$static_oscar" != "xyes"; then
-		STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/oscar/liboscar.a"
+		STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/oscar/liboscar.la"
 		extern_init="$extern_init extern gboolean purple_init_aim_plugin();"
 		extern_init="$extern_init extern gboolean purple_init_icq_plugin();"
 		load_proto="$load_proto purple_init_aim_plugin();"
 		load_proto="$load_proto purple_init_icq_plugin();"
 	else
 		if test "x$i" = "xsilc"; then
-			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib${i}purple.a"
+			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib${i}purple.la"
 		elif test "x$i" = "xsilc10"; then
-			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/libsilcpurple.a"
+			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/libsilcpurple.la"
+		elif test "x$i" = "xmsnp9"; then
+			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/libmsn.la"
 		else
-			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib$i.a"
+			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib$i.la"
 		fi
 		extern_init="$extern_init extern gboolean purple_init_${i}_plugin();"
 		load_proto="$load_proto purple_init_${i}_plugin();"
@@ -950,6 +1037,7 @@ for i in $STATIC_PRPLS ; do
 		irc)		static_irc=yes ;;
 		jabber)		static_jabber=yes ;;
 		msn)		static_msn=yes ;;
+		msnp9)		static_msn=yes ;;
 		myspace)	static_myspace=yes ;;
 		novell)		static_novell=yes ;;
 		oscar)		static_oscar=yes ;;
@@ -982,7 +1070,7 @@ AM_CONDITIONAL(STATIC_TOC, test "x$static_toc" = "xyes")
 AM_CONDITIONAL(STATIC_YAHOO, test "x$static_yahoo" = "xyes")
 AM_CONDITIONAL(STATIC_ZEPHYR, test "x$static_zephyr" = "xyes")
 AC_SUBST(STATIC_LINK_LIBS)
-AC_DEFINE_UNQUOTED(STATIC_PROTO_INIT, $extern_init static void static_proto_init() { $load_proto },
+AC_DEFINE_UNQUOTED(STATIC_PROTO_INIT, $extern_init static void static_proto_init(void) { $load_proto },
 	[Loads static protocol plugin module initialization functions.])
 
 AC_ARG_WITH(dynamic_prpls, [AC_HELP_STRING([--with-dynamic-prpls], [specify which protocols to build dynamically])], [DYNAMIC_PRPLS=`echo $withval | $sedpath 's/,/ /g'`])
@@ -993,9 +1081,10 @@ if test "x$have_meanwhile" != "xyes"; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/sametime//'`
 fi
 if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
-	if test "x$howlincludes" != "xyes" -o "x$howllibs" != "xyes"; then
-		DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/bonjour//'`
-	fi
+	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/bonjour//'`
+fi
+if test "x$enable_msnp15" != "xyes" ; then
+	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/msn/msnp9/'`
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/silc/silc10/'`
@@ -1011,6 +1100,7 @@ for i in $DYNAMIC_PRPLS ; do
 		irc)		dynamic_irc=yes ;;
 		jabber)		dynamic_jabber=yes ;;
 		msn)		dynamic_msn=yes ;;
+		msnp9)		dynamic_msn=yes ;;
 		myspace)	dynamic_myspace=yes ;;
 		novell)		dynamic_novell=yes ;;
 		oscar)		dynamic_oscar=yes ;;
@@ -1027,7 +1117,7 @@ for i in $DYNAMIC_PRPLS ; do
 		*)			echo "Invalid dynamic protocol $i!!" ; exit ;;
 	esac
 done
-AM_CONDITIONAL(DYNAMIC_BONJOUR, test "x$dynamic_bonjour" = "xyes"  -a [ [ "x$avahiincludes" = "xyes" -a "x$avahilibs " = "xyes" ] -o [ "x$howlincludes" = "xyes" -a "x$howllibs" = "xyes" ] ] )
+AM_CONDITIONAL(DYNAMIC_BONJOUR, test "x$dynamic_bonjour" = "xyes"  -a [ "x$avahiincludes" = "xyes" -a "x$avahilibs " = "xyes" ] )
 AM_CONDITIONAL(DYNAMIC_GG, test "x$dynamic_gg" = "xyes")
 AM_CONDITIONAL(DYNAMIC_IRC, test "x$dynamic_irc" = "xyes")
 AM_CONDITIONAL(DYNAMIC_JABBER, test "x$dynamic_jabber" = "xyes")
@@ -1048,11 +1138,12 @@ AC_ARG_WITH(krb4, [AC_HELP_STRING([--with-krb4=PREFIX], [compile Zephyr plugin w
 AC_ARG_WITH(zephyr, [AC_HELP_STRING([--with-zephyr=PREFIX], [compile Zephyr plugin against external libzephyr])], zephyr="$withval", zephyr="no")
 AM_CONDITIONAL(EXTERNAL_LIBZEPHYR, test "x$zephyr" != "xno")
 
-AC_CHECK_HEADER(sys/utsname.h)
+AC_CHECK_HEADERS(sys/utsname.h)
 AC_CHECK_FUNC(uname)
 
 AC_ARG_ENABLE(fortify, [AC_HELP_STRING([--disable-fortify], [compile without FORTIFY_SOURCE support])], , enable_fortify=yes)
 
+DEBUG_CFLAGS="$DEBUG_CFLAGS -DPURPLE_DISABLE_DEPRECATED -DPIDGIN_DISABLE_DEPRECATED -DFINCH_DISABLE_DEPRECATED -DGNT_DISABLE_DEPRECATED"
 if test "x$GCC" = "xyes"; then
 	dnl We enable -Wall later.
 	dnl If it's set after the warning CFLAGS in the compiler invocation, it counteracts the -Wno... flags.
@@ -1086,7 +1177,6 @@ if test "x$GCC" = "xyes"; then
 			"-Wmissing-declarations" \
 			"-Wmissing-noreturn" \
 			"-Wmissing-prototypes" \
-			"-Wnested-externs" \
 			"-Wpointer-arith" \
 			"-Wundef" \
 	; do
@@ -1138,41 +1228,46 @@ dnl #######################################################################
 dnl # Check for D-Bus libraries
 dnl #######################################################################
 
-AC_ARG_ENABLE(dbus, [AC_HELP_STRING([--enable-dbus], [enable D-Bus support])], , enable_dbus=yes)
-AC_ARG_ENABLE(nm, [AC_HELP_STRING([--enable-nm], [enable NetworkManager support (buggy) (requires D-Bus)])], enable_libnm=$enableval, enable_libnm=no)
+AC_ARG_ENABLE(dbus, [AC_HELP_STRING([--disable-dbus], [disable D-Bus support])], , enable_dbus=yes)
+AC_ARG_ENABLE(nm, [AC_HELP_STRING([--disable-nm], [disable NetworkManager support (requires D-Bus)])], enable_nm=$enableval, enable_nm=yes)
 
 if test "x$enable_dbus" = "xyes" ; then
 	AC_CHECK_PROG(enable_dbus, dbus-binding-tool, yes, no)
 fi
 
 if test "x$enable_dbus" = "xyes" ; then
-	PKG_CHECK_MODULES(DBUS, [dbus-1 >= 0.35 dbus-glib-1 >= 0.35], [
+	PKG_CHECK_MODULES(DBUS, [dbus-1 >= 0.60 dbus-glib-1 >= 0.60], [
 		AC_SUBST(DBUS_CFLAGS)
 		AC_SUBST(DBUS_LIBS)
 		enable_dbus=yes
 	], [
-		AC_MSG_RESULT(no)
-		enable_dbus=no
-	])
+	enable_dbus=no
+	if test "x$force_deps" = "xyes" ; then
+		AC_MSG_ERROR([
+D-Bus development headers not found.
+Use --disable-dbus if you do not need D-Bus support.
+])
+	fi])
+fi
 
-dnl Check for libnm_glib; if we don't have it, oh well
-	if test "x$enable_libnm" = "xyes" ; then
-		LIBNM_CFLAGS=""
-		LIBNM_LIBS=""
-		PKG_CHECK_MODULES(LIBNM, libnm_glib,
-		[
-			AC_DEFINE(HAVE_LIBNM, 1, [Define if you have NetworkManager])
-			enable_libnm=yes
-		],
-		[
-			AC_MSG_RESULT(no)
-			enable_libnm=no
-		])
-		AC_SUBST(LIBNM_CFLAGS)
-		AC_SUBST(LIBNM_LIBS)
+dnl Check for NetworkManager.h; if we don't have it, oh well
+if test "x$enable_dbus" = "xyes" ; then
+	if test "x$enable_nm" = "xyes" ; then
+		PKG_CHECK_MODULES(NETWORKMANAGER, [NetworkManager >= 0.5.0], [
+			AC_SUBST(NETWORKMANAGER_CFLAGS)
+			AC_SUBST(NETWORKMANAGER_LIBS)
+			AC_DEFINE(HAVE_NETWORKMANAGER, 1, [Define if we have NetworkManager.])
+		], [
+			enable_nm=no
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_ERROR([
+NetworkManager development headers not found.
+Use --disable-nm if you do not need NetworkManager support.
+])
+			fi])
 	fi
 else
-	enable_libnm=no
+	enable_nm=no
 fi
 
 dnl #######################################################################
@@ -1276,6 +1371,34 @@ fi
 
 AM_CONDITIONAL(ENABLE_DBUS, test "x$enable_dbus" = "xyes")
 
+dnl Check for Python headers (currently useful only for libgnt)
+dnl (Thanks to XChat)
+AC_PATH_PROG(pythonpath, python)
+if test "_$pythonpath" != _ ; then
+	AC_MSG_CHECKING(for Python compile flags)
+	PY_PREFIX=`$pythonpath -c 'import sys ; print sys.prefix'`
+	PY_EXEC_PREFIX=`$pythonpath -c 'import sys ; print sys.exec_prefix'`
+	changequote(<<, >>)dnl
+	PY_VERSION=`$pythonpath -c 'import sys ; print sys.version[0:3]'`
+	PY_MAJOR=`$pythonpath -c 'import sys ; print sys.version[0:2]'`
+	changequote([, ])dnl
+	if test -f $PY_PREFIX/include/python$PY_VERSION/Python.h -a "$PY_MAJOR" = "2."; then
+		AC_CHECK_LIB(pthread, pthread_create, )
+		AC_CHECK_LIB(util, openpty, )
+		AC_CHECK_LIB(db, dbopen, )
+		PY_LIBS="-lpython$PY_VERSION -L$PY_EXEC_PREFIX/lib/python$PY_VERSION/config"
+		PY_CFLAGS="-I$PY_PREFIX/include/python$PY_VERSION"
+		AC_DEFINE(USE_PYTHON, [1], [Define if python headers are available.])
+		AC_MSG_RESULT(ok)
+	else
+		AC_MSG_RESULT([Can't find Python.h])
+		PY_LIBS=""
+		PY_CFLAGS=""
+	fi
+fi
+AC_SUBST(PY_CFLAGS)
+AC_SUBST(PY_LIBS)
+
 dnl #######################################################################
 dnl # Check for Mono support
 dnl #######################################################################
@@ -1287,7 +1410,10 @@ if test x"$enable_mono" = x"yes" ; then
 		enable_mono=yes
 	], [
 		AC_MSG_RESULT(no)
-		enable_mono=no
+		AC_MSG_ERROR([
+Mono development headers not found.
+Use --disable-mono if you do not need Mono support.
+])
 	])
 	if test x"$enable_mono" = x"yes"; then
 		oldLIBS="$LIBS"
@@ -1322,8 +1448,9 @@ AC_ARG_ENABLE(perl, [AC_HELP_STRING([--disable-perl], [compile without perl scri
 if test "$enable_plugins" = no ; then
 	enable_perl=no
 fi
-
+looked_for_perl="no"
 if test "$enable_perl" = yes ; then
+	looked_for_perl="yes"
 	AC_PATH_PROG(perlpath, perl)
 	AC_MSG_CHECKING(for Perl compile flags)
 	PERL_CFLAGS=`$perlpath -MExtUtils::Embed -e ccopts 2>/dev/null`
@@ -1450,16 +1577,35 @@ else
 	AM_CONDITIONAL(USE_PERL, false)
 fi
 
+if test "x$looked_for_perl" = "xyes" -a "x$enable_perl" = "xno" -a "x$force_deps" = "xyes"; then
+	AC_MSG_ERROR([
+Perl development headers not found.
+Use --disable-perl if you do not need Perl scripting support.
+])
+fi
+
 dnl #######################################################################
 dnl # SSL support
 dnl #
 dnl # Thanks go to Evolution for the checks.
 dnl #######################################################################
 
+AC_ARG_WITH(with-system-ssl-certs, [AC_HELP_STRING([--with-system-ssl-certs=<dir>], [directory containing system-wide SSL CA certificates])])
+
+SSL_CERTIFICATES_DIR=""
+if ! test -z "$with_system_ssl_certs" ; then
+	if ! test -d "$with_system_ssl_certs" ; then
+		AC_MSG_ERROR([$with_system_ssl_certs does not exist, if this is the correct location please make sure that it exists.])
+	fi
+	SSL_CERTIFICATES_DIR="$with_system_ssl_certs"
+fi
+AC_SUBST(SSL_CERTIFICATES_DIR)
+AM_CONDITIONAL(INSTALL_SSL_CERTIFICATES, test "x$SSL_CERTIFICATES_DIR" = "x")
+
 dnl These two are inverses of each other <-- stolen from evolution!
 
 AC_ARG_ENABLE(gnutls,
-	[  --enable-gnutls=[yes,no]  attempt to use GnuTLS for SSL support (preferred) [default=yes]],
+	[  --enable-gnutls=[yes,no]  attempt to use GnuTLS for SSL support [default=yes]],
 	[enable_gnutls="$enableval"],
 	[enable_gnutls="yes"])
 
@@ -1469,13 +1615,14 @@ AC_ARG_ENABLE(nss,
 	[enable_nss="yes"])
 
 msg_ssl="None. MSN, Novell Groupwise and Google Talk will not work without GnuTLS or NSS. OpenSSL is NOT usable!"
-
+looked_for_gnutls="no"
 dnl #
 dnl # Check for GnuTLS if it's specified.
 dnl #
 if test "x$enable_gnutls" != "xno"; then
 	enable_gnutls="no"
 	prefix=`eval echo $prefix`
+	looked_for_gnutls="yes"
 
 	AC_ARG_WITH(gnutls-includes,
 		[  --with-gnutls-includes=PREFIX   location of GnuTLS includes.],
@@ -1523,14 +1670,14 @@ if test "x$enable_gnutls" != "xno"; then
 			*) with_gnutls_libs="-L$with_gnutls_libs" ;;
 		esac
 
-		AC_CACHE_CHECK([for GnuTLS libraries], gnutls_libs,
+		AC_CACHE_CHECK([for GnuTLS libraries], ac_cv_gnutls_libs,
 		[
 			LIBS="$LIBS $with_gnutls_libs -lgnutls -lgcrypt"
-			AC_TRY_LINK_FUNC(gnutls_init, gnutls_libs="yes", gnutls_libs="no")
+			AC_TRY_LINK_FUNC(gnutls_init, ac_cv_gnutls_libs="yes", ac_cv_gnutls_libs="no")
 			LIBS="$LIBS_save"
 		])
 
-		if test "x$gnutls_libs" != "xno"; then
+		if test "x$ac_cv_gnutls_libs" != "xno"; then
 			AC_DEFINE(HAVE_GNUTLS, 1, [Define if you have GnuTLS])
 			AC_DEFINE(HAVE_SSL)
 			msg_gnutls="GnuTLS"
@@ -1559,7 +1706,9 @@ AM_CONDITIONAL(USE_GNUTLS, test "x$enable_gnutls" = "xyes")
 dnl #
 dnl # Check for NSS if it's specified, or if GnuTLS checks failed.
 dnl #
+looked_for_nss="no"
 if test "x$enable_nss" != "xno"; then
+	looked_for_nss="yes"
 
 	AC_ARG_WITH(nspr-includes,
 		[AC_HELP_STRING([--with-nspr-includes=PREFIX], [specify location of Mozilla nspr4 includes.])],
@@ -1599,16 +1748,24 @@ if test "x$enable_nss" != "xno"; then
 			])
 			mozilla_nspr="mozilla-nspr"
 			mozilla_nss="mozilla-nss"
-		else
-			if `$PKG_CONFIG --exists nss`; then
-				PKG_CHECK_MODULES(NSS, nss, [
-					have_nss="yes"
-				], [
-					AC_MSG_RESULT(no)
-				])
-				mozilla_nspr="nspr"
-				mozilla_nss="nss"
-			fi
+		elif `$PKG_CONFIG --exists nss`; then
+			PKG_CHECK_MODULES(NSS, nss, [
+				have_nss="yes"
+			], [
+				AC_MSG_RESULT(no)
+				have_nss="no"
+			])
+			mozilla_nspr="nspr"
+			mozilla_nss="nss"
+		elif `$PKG_CONFIG --exists microb-engine-nss`; then
+			PKG_CHECK_MODULES(NSS, microb-engine-nss, [
+				have_nss="yes"
+			], [
+				AC_MSG_RESULT(no)
+				have_nss="no"
+			])
+			mozilla_nspr="mozilla-nspr"
+			mozilla_nss="microb-engine-nss"
 		fi
 
 		if test "x$have_nss" = "xyes"; then
@@ -1673,7 +1830,7 @@ if test "x$enable_nss" != "xno"; then
 				nsprlibs="$LIBDL -lplc4 -lplds4 -lnspr4 $PTHREAD_LIB"
 			fi
 
-			AC_CACHE_CHECK([for Mozilla nspr libraries], moz_nspr_libs,
+			AC_CACHE_CHECK([for Mozilla nspr libraries], ac_cv_moz_nspr_libs,
 			[
 				LIBS_save=$LIBS
 				CFLAGS="$CFLAGS $NSPR_CFLAGS"
@@ -1687,15 +1844,15 @@ if test "x$enable_nss" != "xno"; then
 				fi
 
 				AC_TRY_LINK_FUNC(PR_Init,
-					[moz_nspr_libs="yes"],
-					[moz_nspr_libs="no"])
+					[ac_cv_moz_nspr_libs="yes"],
+					[ac_cv_moz_nspr_libs="no"])
 
 				CFLAGS=$CFLAGS_save
 				LDFLAGS=$LDFLAGS_save
 				LIBS=$LIBS_save
 			])
 
-			if test "x$moz_nspr_libs" != "xno"; then
+			if test "x$ac_cv_moz_nspr_libs" != "xno"; then
 				have_nspr_libs="yes"
 				NSPR_LIBS="-L$with_nspr_libs $nsprlibs"
 			else
@@ -1768,30 +1925,30 @@ if test "x$enable_nss" != "xno"; then
 				nsslibs="-lssl3 -lsmime3 -lnss3 -lsoftokn3"
 			fi
 
-			AC_CACHE_CHECK([for Mozilla nss libraries], moz_nss_libs,
+			AC_CACHE_CHECK([for Mozilla nss libraries], ac_cv_moz_nss_libs,
 			[
 				LIBS_save=$LIBS
 				LDFLAGS="$LDFLAGS -L$with_nspr_libs -L$with_nss_libs"
 				LIBS="$nsslibs $nsprlibs"
 
 				AC_TRY_LINK_FUNC(NSS_Init,
-					[moz_nss_libs="yes"],
-					[moz_nss_libs="no"])
+					[ac_cv_moz_nss_libs="yes"],
+					[ac_cv_moz_nss_libs="no"])
 
-				if test "x$moz_nss_libs" = "xno"; then
+				if test "x$ac_cv_moz_nss_libs" = "xno"; then
 					nsslibs="-lssl3 -lsmime3 -lnss3 -lsoftokn3"
 					LDFLAGS="$LDFLAGS -L$with_nspr_libs -L$with_nss_libs" 
 					LIBS="$LIBS $nsslibs"
 					AC_TRY_LINK_FUNC(NSS_Init,
-						[moz_nss_libs="yes"],
-						[moz_nss_libs="no"])
+						[ac_cv_moz_nss_libs="yes"],
+						[ac_cv_moz_nss_libs="no"])
 				fi
 
 				LDFLAGS=$LDFLAGS_save
 				LIBS=$LIBS_save
 			])
 
-			if test "x$moz_nss_libs" != "xno"; then
+			if test "x$ac_cv_moz_nss_libs" != "xno"; then
 				AC_DEFINE(HAVE_NSS)
 				AC_DEFINE(HAVE_SSL)
 
@@ -1831,6 +1988,24 @@ elif test "x$msg_nss" != "x"; then
 	msg_ssl=$msg_nss
 elif test "x$msg_gnutls" != "x"; then
 	msg_ssl=$msg_gnutls
+elif test "x$looked_for_gnutls" = "xyes" -a "x$looked_for_nss" = "xyes" -a "x$force_deps" = "xyes" ; then
+	AC_MSG_ERROR([
+Neither GnuTLS or NSS SSL development headers found.
+Use --disable-nss --disable-gnutls if you do not need SSL support.
+MSN, Novell Groupwise and Google Talk will not work without GnuTLS or NSS. OpenSSL is NOT usable!
+])
+elif test "x$looked_for_gnutls" = "xyes" -a "x$force_deps" = "xyes" ; then
+	AC_MSG_ERROR([
+GnuTLS SSL development headers not found.
+Use --disable-gnutls if you do not need SSL support.
+MSN, Novell Groupwise and Google Talk will not work without SSL support.
+])
+elif test "x$looked_for_nss" = "xyes" -a "x$force_deps" = "xyes" ; then
+	AC_MSG_ERROR([
+NSS SSL development headers not found.
+Use --disable-nss if you do not need SSL support.
+MSN, Novell Groupwise and Google Talk will not work without SSL support.
+])
 fi
 
 dnl #######################################################################
@@ -1850,9 +2025,12 @@ if test "$enable_tcl" = yes; then
 	TCLCONFIG=no
 	TCLCONFIGDIRS="/usr/lib \
 			/usr/lib64 \
+			/usr/lib/tcl8.5 \
 			/usr/lib/tcl8.4 \
 			/usr/lib/tcl8.3 \
 			/usr/lib/tcl8.2 \
+			/usr/lib64/tcl8.5 \
+			/usr/lib64/tcl8.4 \
 			/System/Library/Tcl/8.3 \
 			/usr/local/lib"
 	for dir in $with_tclconfig $TCLCONFIGDIRS; do
@@ -1864,6 +2042,12 @@ if test "$enable_tcl" = yes; then
 	if test "$TCLCONFIG" = "no"; then
 		AC_MSG_RESULT([no])
 		enable_tcl=no
+		if test "x$force_deps" = "xyes" ; then
+			AC_MSG_ERROR([
+Tcl development headers not found.
+Use --disable-tcl if you do not need Tcl scripting support.
+])
+		fi
 	else
 		. $TCLCONFIG
 		AC_MSG_CHECKING([Tcl version compatability])
@@ -1928,6 +2112,12 @@ if test "$enable_tcl" = yes -a "$enable_tk" = yes; then
 	if test "$TKCONFIG" = "no"; then
 		AC_MSG_RESULT([no])
 		enable_tk=no
+		if test "x$force_deps" = "xyes" ; then
+			AC_MSG_ERROR([
+Tk development headers not found.
+Use --disable-tk if you do not need Tk scripting support.
+])
+		fi
 	else
 		. $TKCONFIG
 		eval "TK_LIB_SPEC=\"$TK_LIB_SPEC\""
@@ -1968,9 +2158,12 @@ AC_SUBST(LIBS)
 if test "x$enable_plugins" = "xyes" ; then
 	AC_DEFINE(PURPLE_PLUGINS, 1, [Define if plugins are enabled.])
 	AM_CONDITIONAL(PLUGINS, true)
+	PLUGINS_DEFINE="#define PURPLE_PLUGINS 1"
 else
 	AM_CONDITIONAL(PLUGINS, false)
+	PLUGINS_DEFINE="#undef PURPLE_PLUGINS"
 fi
+AC_SUBST(PLUGINS_DEFINE)
 
 dnl #######################################################################
 dnl # Check for Cyrus-SASL (for Jabber)
@@ -2064,7 +2257,19 @@ AC_CHECK_HEADERS(malloc.h paths.h sgtty.h stdarg.h sys/cdefs.h)
 AC_CHECK_HEADERS(sys/file.h sys/filio.h sys/ioctl.h sys/msgbuf.h)
 AC_CHECK_HEADERS(sys/select.h sys/uio.h sys/utsname.h sys/wait.h)
 AC_CHECK_HEADERS(termios.h)
-AC_CHECK_HEADERS(sys/sysctl.h sys/socket.h)
+
+# sys/sysctl.h on OpenBSD 4.2 requires sys/param.h
+# sys/sysctl.h on FreeBSD requires sys/types.h
+AC_CHECK_HEADERS(sys/param.h)
+AC_CHECK_HEADERS(sys/sysctl.h, [], [],
+	[[
+		#include <sys/types.h>
+		#ifdef HAVE_PARAM_H
+		# include <sys/param.h>
+		#endif
+	]])
+
+AC_CHECK_HEADERS(sys/socket.h)
 AC_VAR_TIMEZONE_EXTERNALS
 
 AC_CACHE_CHECK(for tm_gmtoff in struct tm, ac_cv_struct_tm_gmtoff,
@@ -2081,14 +2286,24 @@ fi
 dnl #######################################################################
 dnl # Check for check
 dnl #######################################################################
-PKG_CHECK_MODULES(CHECK,[check >= 0.9.4],:,[
-					ifdef([AM_PATH_CHECK],
-					[AM_PATH_CHECK(0.8.2,:,:)],
-					[AC_MSG_RESULT([no, testing is disabled])])
-				  ])
+PKG_CHECK_MODULES(CHECK, [check >= 0.9.4], , [AC_MSG_RESULT([no, testing is disabled])])
 AM_CONDITIONAL(HAVE_CHECK, [test "x$CHECK_LIBS" != "x"])
 AC_SUBST(CHECK_CFLAGS)
 AC_SUBST(CHECK_LIBS)
+
+dnl #######################################################################
+dnl # Disable pixmap installation
+dnl #######################################################################
+AC_ARG_ENABLE(pixmaps-install, AC_HELP_STRING([--disable-pixmaps-install], [disable installation of pixmap files - Pidgin still needs them!]), enable_pixmaps="$enableval", enable_pixmaps=yes)
+
+AM_CONDITIONAL(INSTALL_PIXMAPS, test "x$enable_pixmaps" = "xyes")
+
+dnl #######################################################################
+dnl # Disable installation of translation files
+dnl #######################################################################
+AC_ARG_ENABLE(nls, AC_HELP_STRING([--disable-nls], [disable installation of translation files]), enable_i18n="$enableval", enable_i18n=yes)
+
+AM_CONDITIONAL(INSTALL_I18N, test "x$enable_i18n" = "xyes")
 
 dnl #######################################################################
 dnl # Check for Doxygen and dot (part of GraphViz)
@@ -2167,68 +2382,8 @@ AC_OUTPUT([Makefile
 		   pidgin/pidgin.pc
 		   pidgin/pidgin-uninstalled.pc
 		   pidgin/pixmaps/Makefile
-		   pidgin/pixmaps/animations/Makefile
-		   pidgin/pixmaps/animations/16/Makefile
-		   pidgin/pixmaps/buddy_icons/Makefile
-		   pidgin/pixmaps/buddy_icons/qq/Makefile
-		   pidgin/pixmaps/dialogs/Makefile
-		   pidgin/pixmaps/dialogs/16/Makefile
-		   pidgin/pixmaps/dialogs/16/scalable/Makefile
-		   pidgin/pixmaps/dialogs/64/Makefile
-		   pidgin/pixmaps/dialogs/64/scalable/Makefile
-		   pidgin/pixmaps/emblems/Makefile
-		   pidgin/pixmaps/emblems/16/Makefile
-		   pidgin/pixmaps/emblems/16/scalable/Makefile
-		   pidgin/pixmaps/emotes/Makefile
-		   pidgin/pixmaps/emotes/default/Makefile
 		   pidgin/pixmaps/emotes/default/24/Makefile
-		   pidgin/pixmaps/emotes/default/24/scalable/Makefile
 		   pidgin/pixmaps/emotes/none/Makefile
-		   pidgin/pixmaps/icons/Makefile
-		   pidgin/pixmaps/icons/16/Makefile
-		   pidgin/pixmaps/icons/16/scalable/Makefile
-		   pidgin/pixmaps/icons/22/Makefile
-		   pidgin/pixmaps/icons/22/scalable/Makefile
-		   pidgin/pixmaps/icons/24/Makefile
-		   pidgin/pixmaps/icons/24/scalable/Makefile
-		   pidgin/pixmaps/icons/32/Makefile
-		   pidgin/pixmaps/icons/32/scalable/Makefile
-		   pidgin/pixmaps/icons/48/Makefile
-		   pidgin/pixmaps/icons/48/scalable/Makefile
-		   pidgin/pixmaps/protocols/Makefile
-		   pidgin/pixmaps/protocols/16/Makefile
-		   pidgin/pixmaps/protocols/16/scalable/Makefile
-		   pidgin/pixmaps/protocols/22/Makefile
-		   pidgin/pixmaps/protocols/22/scalable/Makefile
-		   pidgin/pixmaps/protocols/48/Makefile
-		   pidgin/pixmaps/protocols/48/scalable/Makefile
-		   pidgin/pixmaps/status/Makefile
-		   pidgin/pixmaps/status/11/Makefile
-		   pidgin/pixmaps/status/11/scalable/Makefile
-		   pidgin/pixmaps/status/11/rtl/Makefile
-		   pidgin/pixmaps/status/16/Makefile
-		   pidgin/pixmaps/status/16/rtl/Makefile
-		   pidgin/pixmaps/status/16/scalable/Makefile
-		   pidgin/pixmaps/status/22/Makefile
-		   pidgin/pixmaps/status/22/rtl/Makefile
-		   pidgin/pixmaps/status/22/scalable/Makefile
-		   pidgin/pixmaps/status/32/Makefile
-		   pidgin/pixmaps/status/32/rtl/Makefile
-		   pidgin/pixmaps/status/32/scalable/Makefile
-		   pidgin/pixmaps/status/48/Makefile
-		   pidgin/pixmaps/status/48/rtl/Makefile
-		   pidgin/pixmaps/toolbar/Makefile
-		   pidgin/pixmaps/toolbar/16/Makefile
-		   pidgin/pixmaps/toolbar/16/scalable/Makefile
-		   pidgin/pixmaps/toolbar/22/Makefile
-		   pidgin/pixmaps/toolbar/22/scalable/Makefile
-		   pidgin/pixmaps/tray/Makefile
-		   pidgin/pixmaps/tray/16/Makefile
-		   pidgin/pixmaps/tray/16/scalable/Makefile
-		   pidgin/pixmaps/tray/22/Makefile
-		   pidgin/pixmaps/tray/22/scalable/Makefile
-		   pidgin/pixmaps/tray/32/Makefile
-		   pidgin/pixmaps/tray/48/Makefile
 		   pidgin/plugins/Makefile
 		   pidgin/plugins/cap/Makefile
 		   pidgin/plugins/gestures/Makefile
@@ -2256,6 +2411,7 @@ AC_OUTPUT([Makefile
 		   libpurple/protocols/irc/Makefile
 		   libpurple/protocols/jabber/Makefile
 		   libpurple/protocols/msn/Makefile
+		   libpurple/protocols/msnp9/Makefile
 		   libpurple/protocols/myspace/Makefile
 		   libpurple/protocols/novell/Makefile
 		   libpurple/protocols/null/Makefile
@@ -2269,8 +2425,8 @@ AC_OUTPUT([Makefile
 		   libpurple/protocols/yahoo/Makefile
 		   libpurple/protocols/zephyr/Makefile
 		   libpurple/tests/Makefile
+		   libpurple/purple.h
 		   libpurple/version.h
-		   share/Makefile
 		   share/sounds/Makefile
 		   share/ca-certs/Makefile
 		   finch/finch.pc
@@ -2300,11 +2456,16 @@ echo Build with D-Bus support...... : $enable_dbus
 if test "x$enable_dbus" = "xyes" ; then
 	eval eval echo D-Bus services directory...... : $DBUS_SERVICES_DIR
 fi
-echo Build with NetworkManager..... : $enable_libnm
+echo Build with NetworkManager..... : $enable_nm
 echo SSL Library/Libraries......... : $msg_ssl
+if test "x$SSL_CERTIFICATES_DIR" != "x" ; then
+	eval eval echo SSL CA certificates directory. : $SSL_CERTIFICATES_DIR
+fi
 echo Build with Cyrus SASL support. : $enable_cyrus_sasl
 echo Use kerberos 4 with zephyr.... : $kerberos
 echo Use external libzephyr........ : $zephyr
+echo Install pixmaps............... : $enable_pixmaps
+echo Install translations.......... : $enable_i18n
 echo Has you....................... : yes
 echo
 echo Use XScreenSaver Extension.... : $enable_screensaver
@@ -2324,6 +2485,12 @@ eval eval echo Pidgin will be installed in $bindir.
 if test "x$pidginpath" != "x" ; then
 	echo Warning: You have an old copy of Pidgin at $pidginpath.
 fi
+if test "x$enable_pixmaps" = "xno" ; then
+	echo
+	echo Warning: You have disabled the installation of pixmap data, but Pidgin
+	echo still requires installed pixmaps.  Be sure you know what you\'re doing.
+fi
 echo
 echo configure complete, now type \'make\'
 echo
+

@@ -96,8 +96,6 @@ void jabber_buddy_resource_free(JabberBuddyResource *jbr);
 void jabber_buddy_remove_resource(JabberBuddy *jb, const char *resource);
 const char *jabber_buddy_get_status_msg(JabberBuddy *jb);
 void jabber_buddy_get_info(PurpleConnection *gc, const char *who);
-void jabber_buddy_get_info_chat(PurpleConnection *gc, int id,
-		const char *resource);
 
 GList *jabber_blist_node_menu(PurpleBlistNode *node);
 
@@ -118,5 +116,9 @@ void jabber_user_search_begin(PurplePluginAction *);
 void jabber_buddy_remove_all_pending_buddy_info_requests(JabberStream *js);
 
 void jabber_vcard_fetch_mine(JabberStream *js);
+
+gboolean jabber_resource_has_capability(const JabberBuddyResource *jbr,
+										const gchar *cap);
+gboolean jabber_buddy_has_capability(const JabberBuddy *jb, const gchar *cap);
 
 #endif /* _PURPLE_JABBER_BUDDY_H_ */

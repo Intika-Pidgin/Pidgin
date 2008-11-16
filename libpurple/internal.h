@@ -102,7 +102,7 @@
 #include <gmodule.h>
 
 #ifdef PURPLE_PLUGINS
-# ifndef _WIN32
+# ifdef HAVE_DLFCN_H 
 #  include <dlfcn.h>
 # endif
 #endif
@@ -138,6 +138,14 @@
 #include <glib.h>
 #if !GLIB_CHECK_VERSION(2,4,0)
 #	define G_MAXUINT32 ((guint32) 0xffffffff)
+#endif
+
+#ifndef G_MAXSIZE
+#	if GLIB_SIZEOF_LONG == 8
+#		define G_MAXSIZE ((gsize) 0xffffffffffffffff)
+#	else
+#		define G_MAXSIZE ((gsize) 0xffffffff)
+#	endif
 #endif
 
 #if GLIB_CHECK_VERSION(2,6,0)
@@ -182,11 +190,27 @@
 #	endif
 #endif
 
+#ifndef G_GSIZE_MODIFIER
+#	if GLIB_SIZEOF_LONG == 8
+#		define G_GSIZE_MODIFIER "l"
+#	else
+#		define G_GSIZE_MODIFIER ""
+#	endif
+#endif
+
 #ifndef G_GSIZE_FORMAT
 #	if GLIB_SIZEOF_LONG == 8
 #		define G_GSIZE_FORMAT "lu"
 #	else
 #		define G_GSIZE_FORMAT "u"
+#	endif
+#endif
+
+#ifndef G_GSSIZE_FORMAT
+#	if GLIB_SIZEOF_LONG == 8
+#		define G_GSSIZE_FORMAT "li"
+#	else
+#		define G_GSSIZE_FORMAT "i"
 #	endif
 #endif
 
@@ -207,6 +231,12 @@
 #define PURPLE_WEBSITE "http://pidgin.im/"
 #define PURPLE_DEVEL_WEBSITE "http://developer.pidgin.im/"
 
+
+/* INTERNAL FUNCTIONS */
+
+#include "account.h"
+#include "connection.h"
+
 /* This is for the accounts code to notify the buddy icon code that
  * it's done loading.  We may want to replace this with a signal. */
 void
@@ -222,5 +252,49 @@ _purple_buddy_icons_blist_loaded_cb(void);
  * migrate any icons in use. */
 void
 _purple_buddy_icon_set_old_icons_dir(const char *dirname);
+
+/**
+ * Creates a connection to the specified account and either connects
+ * or attempts to register a new account.  If you are logging in,
+ * the connection uses the current active status for this account.
+ * So if you want to sign on as "away," for example, you need to
+ * have called purple_account_set_status(account, "away").
+ * (And this will call purple_account_connect() automatically).
+ *
+ * @note This function should only be called by purple_account_connect()
+ *       in account.c.  If you're trying to sign on an account, use that
+ *       function instead.
+ *
+ * @param account  The account the connection should be connecting to.
+ * @param regist   Whether we are registering a new account or just
+ *                 trying to do a normal signon.
+ * @param password The password to use.
+ */
+void _purple_connection_new(PurpleAccount *account, gboolean regist,
+                            const char *password);
+/**
+ * Tries to unregister the account on the server. If the account is not
+ * connected, also creates a new connection.
+ *
+ * @note This function should only be called by purple_account_unregister()
+ *       in account.c.
+ *
+ * @param account  The account to unregister
+ * @param password The password to use.
+ * @param cb Optional callback to be called when unregistration is complete
+ * @param user_data user data to pass to the callback
+ */
+void _purple_connection_new_unregister(PurpleAccount *account, const char *password,
+                                       PurpleAccountUnregistrationCb cb, void *user_data);
+/**
+ * Disconnects and destroys a PurpleConnection.
+ *
+ * @note This function should only be called by purple_account_disconnect()
+ *        in account.c.  If you're trying to sign off an account, use that
+ *        function instead.
+ *
+ * @param gc The purple connection to destroy.
+ */
+void _purple_connection_destroy(PurpleConnection *gc);
 
 #endif /* _PURPLE_INTERNAL_H_ */

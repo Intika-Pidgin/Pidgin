@@ -89,9 +89,8 @@ static BOOL read_reg_string(HKEY key, char* sub_key, char* val_name, LPBYTE data
 			const char *err_msg = get_win32_error_message(retv);
 
 			printf("Could not read reg key '%s' subkey '%s' value: '%s'.\nMessage: (%ld) %s\n",
-					((key == HKEY_LOCAL_MACHINE) ? "HKLM" :
-					 (key == HKEY_CURRENT_USER) ? "HKCU" :
-					 "???"),
+					(key == HKEY_LOCAL_MACHINE) ? "HKLM"
+					 : ((key == HKEY_CURRENT_USER) ? "HKCU" : "???"),
 					sub_key, val_name, retv, err_msg);
 		}
 		RegCloseKey(hkey);
@@ -213,16 +212,19 @@ static void portable_mode_dll_prep(const char *pidgin_dir) {
 		return;
 	}
 
+	/* Set $HOME so that the GTK+ settings get stored in the right place */
+	_snprintf(path2, sizeof(path2), "HOME=%s", path);
+	_putenv(path2);
 
 	/* Set up the settings dir base to be \\path\to
 	 * The actual settings dir will be \\path\to\.purple */
-	snprintf(path2, sizeof(path2), "PURPLEHOME=%s", path);
+	_snprintf(path2, sizeof(path2), "PURPLEHOME=%s", path);
 	printf("Setting settings dir: %s\n", path2);
-	putenv(path2);
+	_putenv(path2);
 
-	snprintf(path2, sizeof(path2), "PIDGIN_ASPELL_DIR=%s\\Aspell\\bin", path);
+	_snprintf(path2, sizeof(path2), "PIDGIN_ASPELL_DIR=%s\\Aspell\\bin", path);
 	printf("%s\n", path2);
-	putenv(path2);
+	_putenv(path2);
 
 	/* set the GTK+ path to be \\path\to\GTK\bin */
 	strcat(path, "\\GTK\\bin");
@@ -437,35 +439,112 @@ static void winpidgin_set_locale() {
 
 	locale = winpidgin_get_locale();
 
-	snprintf(envstr, 25, "LANG=%s", locale);
+	_snprintf(envstr, 25, "LANG=%s", locale);
 	printf("Setting locale: %s\n", envstr);
-	putenv(envstr);
+	_putenv(envstr);
+}
+
+
+static void winpidgin_add_stuff_to_path() {
+	char perl_path[MAX_PATH + 1];
+	char *ppath = NULL;
+	char mit_kerberos_path[MAX_PATH + 1];
+	char *mpath = NULL;
+	DWORD plen;
+
+	printf("%s", "Looking for Perl... ");
+
+	plen = sizeof(perl_path);
+	if (read_reg_string(HKEY_LOCAL_MACHINE, "SOFTWARE\\Perl", "",
+			    (LPBYTE) &perl_path, &plen)) {
+		/* We *could* check for perl510.dll, but it seems unnecessary. */
+		printf("found in '%s'.\n", perl_path);
+
+		if (perl_path[strlen(perl_path) - 1] != '\\')
+			strcat(perl_path, "\\");
+		strcat(perl_path, "bin");
+
+		ppath = perl_path;
+	} else
+		printf("%s", "not found.\n");
+
+	printf("%s", "Looking for MIT Kerberos... ");
+
+	plen = sizeof(mit_kerberos_path);
+	if (read_reg_string(HKEY_LOCAL_MACHINE, "SOFTWARE\\MIT\\Kerberos", "InstallDir",
+			    (LPBYTE) &mit_kerberos_path, &plen)) {
+		/* We *could* check for gssapi32.dll */
+		printf("found in '%s'.\n", mit_kerberos_path);
+
+		if (mit_kerberos_path[strlen(mit_kerberos_path) - 1] != '\\')
+			strcat(mit_kerberos_path, "\\");
+		strcat(mit_kerberos_path, "bin");
+
+		mpath = mit_kerberos_path;
+	} else
+		printf("%s", "not found.\n");
+
+	if (ppath != NULL || mpath != NULL) {
+		const char *path = getenv("PATH");
+		BOOL add_ppath = ppath != NULL && (path == NULL || !strstr(path, ppath));
+		BOOL add_mpath = mpath != NULL && (path == NULL || !strstr(path, mpath));
+		char *newpath;
+		int newlen;
+
+		if (add_ppath || add_mpath) {
+			/* Enough to add "PATH=" + path + ";"  + ppath + ";" + mpath + \0 */
+			newlen = 6 + (path ? strlen(path) + 1 : 0);
+			if (add_ppath)
+				newlen += strlen(ppath) + 1;
+			if (add_mpath)
+				newlen += strlen(mpath) + 1;
+			newpath = malloc(newlen);
+			*newpath = '\0';
+
+			_snprintf(newpath, newlen, "PATH=%s%s%s%s%s%s",
+				  path ? path : "",
+				  path ? ";" : "",
+				  add_ppath ? ppath : "",
+				  add_ppath ? ";" : "",
+				  add_mpath ? mpath : "",
+				  add_mpath ? ";" : "");
+
+			printf("New PATH: %s\n", newpath);
+
+			_putenv(newpath);
+			free(newpath);
+		}
+	}
 }
 
 #define PIDGIN_WM_FOCUS_REQUEST (WM_APP + 13)
 #define PIDGIN_WM_PROTOCOL_HANDLE (WM_APP + 14)
 
-static BOOL winpidgin_set_running() {
+static BOOL winpidgin_set_running(BOOL fail_if_running) {
 	HANDLE h;
 
 	if ((h = CreateMutex(NULL, FALSE, "pidgin_is_running"))) {
-		if (GetLastError() == ERROR_ALREADY_EXISTS) {
-			HWND msg_win;
+		DWORD err = GetLastError();
+		if (err == ERROR_ALREADY_EXISTS) {
+			if (fail_if_running) {
+				HWND msg_win;
 
-			printf("An instance of Pidgin is already running.\n");
+				printf("An instance of Pidgin is already running.\n");
 
-			if((msg_win = FindWindow(TEXT("WinpidginMsgWinCls"), NULL)))
-				if(SendMessage(msg_win, PIDGIN_WM_FOCUS_REQUEST, (WPARAM) NULL, (LPARAM) NULL))
-					return FALSE;
+				if((msg_win = FindWindowEx(NULL, NULL, TEXT("WinpidginMsgWinCls"), NULL)))
+					if(SendMessage(msg_win, PIDGIN_WM_FOCUS_REQUEST, (WPARAM) NULL, (LPARAM) NULL))
+						return FALSE;
 
-			/* If we get here, the focus request wasn't successful */
+				/* If we get here, the focus request wasn't successful */
 
-			MessageBox(NULL,
-				"An instance of Pidgin is already running",
-				NULL, MB_OK | MB_TOPMOST);
+				MessageBox(NULL,
+					"An instance of Pidgin is already running",
+					NULL, MB_OK | MB_TOPMOST);
 
-			return FALSE;
-		}
+				return FALSE;
+			}
+		} else if (err != ERROR_SUCCESS)
+			printf("Error (%u) accessing \"pidgin_is_running\" mutex.\n", (UINT) err);
 	}
 	return TRUE;
 }
@@ -494,7 +573,7 @@ static void handle_protocol(char *cmd) {
 		return;
 	}
 
-	if (!(msg_win = FindWindow(TEXT("WinpidginMsgWinCls"), NULL))) {
+	if (!(msg_win = FindWindowEx(NULL, NULL, TEXT("WinpidginMsgWinCls"), NULL))) {
 		printf("Unable to find an instance of Pidgin to handle protocol message.\n");
 		return;
 	}
@@ -594,10 +673,10 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 	} else {
 		DWORD dw = GetLastError();
 		const char *err_msg = get_win32_error_message(dw);
-		snprintf(errbuf, 512,
+		_snprintf(errbuf, 512,
 			"Error getting module filename.\nError: (%u) %s",
 			(UINT) dw, err_msg);
-		printf("%s", errbuf);
+		printf("%s\n", errbuf);
 		MessageBox(NULL, errbuf, NULL, MB_OK | MB_TOPMOST);
 		pidgin_dir[0] = '\0';
 	}
@@ -627,9 +706,12 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		dll_prep();
 
 	winpidgin_set_locale();
+
+	winpidgin_add_stuff_to_path();
+
 	/* If help, version or multiple flag used, do not check Mutex */
-	if (!strstr(lpszCmdLine, "-h") && !strstr(lpszCmdLine, "-v") && !strstr(lpszCmdLine, "-m"))
-		if (!getenv("PIDGIN_MULTI_INST") && !winpidgin_set_running())
+	if (!strstr(lpszCmdLine, "-h") && !strstr(lpszCmdLine, "-v"))
+		if (!winpidgin_set_running(getenv("PIDGIN_MULTI_INST") == NULL && strstr(lpszCmdLine, "-m") == NULL))
 			return 0;
 
 	/* Now we are ready for Pidgin .. */
@@ -641,11 +723,11 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		BOOL mod_not_found = (dw == ERROR_MOD_NOT_FOUND || dw == ERROR_DLL_NOT_FOUND);
 		const char *err_msg = get_win32_error_message(dw);
 
-		snprintf(errbuf, 512, "Error loading pidgin.dll.\nError: (%u) %s%s%s",
+		_snprintf(errbuf, 512, "Error loading pidgin.dll.\nError: (%u) %s%s%s",
 			(UINT) dw, err_msg,
 			mod_not_found ? "\n" : "",
 			mod_not_found ? "This probably means that GTK+ can't be found." : "");
-		printf("%s", errbuf);
+		printf("%s\n", errbuf);
 		MessageBox(NULL, errbuf, TEXT("Error"), MB_OK | MB_TOPMOST);
 
 		return 0;

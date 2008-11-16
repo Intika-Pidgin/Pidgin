@@ -29,6 +29,49 @@
 
 #include "oscar.h"
 
+static int
+error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
+{
+	int ret = 0;
+	aim_snac_t *snac2;
+	guint16 error, chatnav_error;
+	GSList *tlvlist;
+
+	if (!(snac2 = aim_remsnac(od, snac->id))) {
+		purple_debug_warning("oscar", "chatnav error: received response to unknown request (%08x)\n", snac->id);
+		return 0;
+	}
+
+	if (snac2->family != SNAC_FAMILY_CHATNAV) {
+		purple_debug_warning("oscar", "chatnav error: received response that maps to corrupt request (fam=%04x)\n", snac2->family);
+		return 0;
+	}
+
+	/*
+	 * We now know what the original SNAC subtype was.
+	 */
+	if (snac2->type == 0x0008) /* create room */
+	{
+		error = byte_stream_get16(bs);
+		tlvlist = aim_tlvlist_read(bs);
+		chatnav_error = aim_tlv_get16(tlvlist, 0x0008, 1);
+
+		purple_debug_warning("oscar",
+				"Could not join room, error=0x%04hx, chatnav_error=0x%04hx\n",
+				error, chatnav_error);
+		purple_notify_error(od->gc, NULL, _("Could not join chat room"),
+				chatnav_error == 0x0033 ? _("Invalid chat room name") : _("Unknown error"));
+
+		ret = 1;
+	}
+
+	if (snac2)
+		g_free(snac2->data);
+	g_free(snac2);
+
+	return ret;
+}
+
 /*
  * Subtype 0x0002
  *
@@ -37,7 +80,7 @@
  */
 void aim_chatnav_reqrights(OscarData *od, FlapConnection *conn)
 {
-	aim_genericreq_n_snacid(od, conn, 0x000d, 0x0002);
+	aim_genericreq_n_snacid(od, conn, SNAC_FAMILY_CHATNAV, 0x0002);
 }
 
 /*
@@ -48,17 +91,16 @@ int aim_chatnav_createroom(OscarData *od, FlapConnection *conn, const char *name
 	static const char ck[] = {"create"};
 	static const char lang[] = {"en"};
 	static const char charset[] = {"us-ascii"};
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 
-	frame = flap_frame_new(od, 0x02, 1152);
+	byte_stream_new(&bs, 1142);
 
-	snacid = aim_cachesnac(od, 0x000d, 0x0008, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x000d, 0x0008, 0x0000, snacid);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_CHATNAV, 0x0008, 0x0000, NULL, 0);
 
 	/* exchange */
-	byte_stream_put16(&frame->data, exchange);
+	byte_stream_put16(&bs, exchange);
 
 	/*
 	 * This looks to be a big hack.  You'll note that this entire
@@ -71,8 +113,8 @@ int aim_chatnav_createroom(OscarData *od, FlapConnection *conn, const char *name
 	 * AOL style, I'm going to guess that it is the latter, and that
 	 * the value of the room name in create requests is ignored.
 	 */
-	byte_stream_put8(&frame->data, strlen(ck));
-	byte_stream_putstr(&frame->data, ck);
+	byte_stream_put8(&bs, strlen(ck));
+	byte_stream_putstr(&bs, ck);
 
 	/*
 	 * instance
@@ -80,22 +122,24 @@ int aim_chatnav_createroom(OscarData *od, FlapConnection *conn, const char *name
 	 * Setting this to 0xffff apparently assigns the last instance.
 	 *
 	 */
-	byte_stream_put16(&frame->data, 0xffff);
+	byte_stream_put16(&bs, 0xffff);
 
 	/* detail level */
-	byte_stream_put8(&frame->data, 0x01);
+	byte_stream_put8(&bs, 0x01);
 
 	aim_tlvlist_add_str(&tlvlist, 0x00d3, name);
 	aim_tlvlist_add_str(&tlvlist, 0x00d6, charset);
 	aim_tlvlist_add_str(&tlvlist, 0x00d7, lang);
 
 	/* tlvcount */
-	byte_stream_put16(&frame->data, aim_tlvlist_count(tlvlist));
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	byte_stream_put16(&bs, aim_tlvlist_count(tlvlist));
+	aim_tlvlist_write(&bs, &tlvlist);
 
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_CHATNAV, 0x0008, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -412,11 +456,11 @@ parseinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 	int ret = 0;
 
 	if (!(snac2 = aim_remsnac(od, snac->id))) {
-		purple_debug_misc("oscar", "faim: chatnav_parse_info: received response to unknown request! (%08lx)\n", snac->id);
+		purple_debug_misc("oscar", "faim: chatnav_parse_info: received response to unknown request! (%08x)\n", snac->id);
 		return 0;
 	}
 
-	if (snac2->family != 0x000d) {
+	if (snac2->family != SNAC_FAMILY_CHATNAV) {
 		purple_debug_misc("oscar", "faim: chatnav_parse_info: received response that maps to corrupt request! (fam=%04x)\n", snac2->family);
 		return 0;
 	}
@@ -451,7 +495,9 @@ parseinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 static int
 snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
-	if (snac->subtype == 0x0009)
+	if (snac->subtype == 0x0001)
+		return error(od, conn, mod, frame, snac, bs);
+	else if (snac->subtype == 0x0009)
 		return parseinfo(od, conn, mod, frame, snac, bs);
 
 	return 0;
@@ -460,7 +506,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 chatnav_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x000d;
+	mod->family = SNAC_FAMILY_CHATNAV;
 	mod->version = 0x0001;
 	mod->toolid = 0x0010;
 	mod->toolversion = 0x0629;

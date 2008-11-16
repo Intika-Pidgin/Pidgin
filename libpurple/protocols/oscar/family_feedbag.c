@@ -115,14 +115,10 @@ static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, con
 	gboolean exists;
 	struct aim_ssi_item *cur, *new;
 
-	new = (struct aim_ssi_item *)g_malloc(sizeof(struct aim_ssi_item));
+	new = g_new(struct aim_ssi_item, 1);
 
 	/* Set the name */
-	if (name) {
-		new->name = (char *)g_malloc((strlen(name)+1)*sizeof(char));
-		strcpy(new->name, name);
-	} else
-		new->name = NULL;
+	new->name = g_strdup(name);
 
 	/* Set the group ID# and buddy ID# */
 	new->gid = gid;
@@ -345,13 +341,9 @@ struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *list, const 
  */
 struct aim_ssi_item *aim_ssi_itemlist_exists(struct aim_ssi_item *list, const char *sn)
 {
-	struct aim_ssi_item *cur;
-	if (!list || !sn)
+	if (!sn)
 		return NULL;
-	for (cur=list; cur; cur=cur->next)
-		if ((cur->type == AIM_SSI_TYPE_BUDDY) && (cur->name) && (!aim_sncmp(cur->name, sn)))
-			return cur;
-	return NULL;
+	return aim_ssi_itemlist_finditem(list, NULL, sn, AIM_SSI_TYPE_BUDDY);
 }
 
 /**
@@ -510,7 +502,7 @@ static int aim_ssi_sync(OscarData *od)
 		for (cur1=od->ssi.official; cur1 && (n < 15); cur1=cur1->next) {
 			if (!aim_ssi_itemlist_find(od->ssi.local, cur1->gid, cur1->bid)) {
 				n++;
-				new = (struct aim_ssi_tmp *)g_malloc(sizeof(struct aim_ssi_tmp));
+				new = g_new(struct aim_ssi_tmp, 1);
 				new->action = SNAC_SUBTYPE_FEEDBAG_DEL;
 				new->ack = 0xffff;
 				new->name = NULL;
@@ -530,7 +522,7 @@ static int aim_ssi_sync(OscarData *od)
 		for (cur1=od->ssi.local; cur1 && (n < 15); cur1=cur1->next) {
 			if (!aim_ssi_itemlist_find(od->ssi.official, cur1->gid, cur1->bid)) {
 				n++;
-				new = (struct aim_ssi_tmp *)g_malloc(sizeof(struct aim_ssi_tmp));
+				new = g_new(struct aim_ssi_tmp, 1);
 				new->action = SNAC_SUBTYPE_FEEDBAG_ADD;
 				new->ack = 0xffff;
 				new->name = NULL;
@@ -551,7 +543,7 @@ static int aim_ssi_sync(OscarData *od)
 			cur2 = aim_ssi_itemlist_find(od->ssi.official, cur1->gid, cur1->bid);
 			if (cur2 && (aim_ssi_itemlist_cmp(cur1, cur2))) {
 				n++;
-				new = (struct aim_ssi_tmp *)g_malloc(sizeof(struct aim_ssi_tmp));
+				new = g_new(struct aim_ssi_tmp, 1);
 				new->action = SNAC_SUBTYPE_FEEDBAG_MOD;
 				new->ack = 0xffff;
 				new->name = NULL;
@@ -1028,8 +1020,7 @@ int aim_ssi_rename_group(OscarData *od, const char *oldgn, const char *newgn)
 		return -EINVAL;
 
 	g_free(group->name);
-	group->name = (char *)g_malloc((strlen(newgn)+1)*sizeof(char));
-	strcpy(group->name, newgn);
+	group->name = g_strdup(newgn);
 
 	/* Sync our local list with the server list */
 	return aim_ssi_sync(od);
@@ -1250,21 +1241,21 @@ int aim_ssi_reqdata(OscarData *od)
 int aim_ssi_reqifchanged(OscarData *od, time_t timestamp, guint16 numitems)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_FEEDBAG)))
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+4+2);
+	byte_stream_new(&bs, 4+2);
+
+	byte_stream_put32(&bs, timestamp);
+	byte_stream_put16(&bs, numitems);
 
 	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_REQIFCHANGED, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_REQIFCHANGED, 0x0000, snacid, &bs);
 
-	aim_putsnac(&frame->data, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_REQIFCHANGED, 0x0000, snacid);
-	byte_stream_put32(&frame->data, timestamp);
-	byte_stream_put16(&frame->data, numitems);
-
-	flap_connection_send(conn, frame);
+	byte_stream_destroy(&bs);
 
 	/* Free any current data, just in case */
 	aim_ssi_freelist(od);
@@ -1352,42 +1343,42 @@ int aim_ssi_enable(OscarData *od)
 static int aim_ssi_addmoddel(OscarData *od)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
-	int snaclen;
+	int bslen;
 	struct aim_ssi_tmp *cur;
 
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_FEEDBAG)) || !od->ssi.pending || !od->ssi.pending->item)
 		return -EINVAL;
 
 	/* Calculate total SNAC size */
-	snaclen = 10; /* For family, subtype, flags, and SNAC ID */
+	bslen = 0;
 	for (cur=od->ssi.pending; cur; cur=cur->next) {
-		snaclen += 10; /* For length, GID, BID, type, and length */
+		bslen += 10; /* For length, GID, BID, type, and length */
 		if (cur->item->name)
-			snaclen += strlen(cur->item->name);
+			bslen += strlen(cur->item->name);
 		if (cur->item->data)
-			snaclen += aim_tlvlist_size(cur->item->data);
+			bslen += aim_tlvlist_size(cur->item->data);
 	}
 
-	frame = flap_frame_new(od, 0x02, snaclen);
+	byte_stream_new(&bs, bslen);
+
+	for (cur=od->ssi.pending; cur; cur=cur->next) {
+		byte_stream_put16(&bs, cur->item->name ? strlen(cur->item->name) : 0);
+		if (cur->item->name)
+			byte_stream_putstr(&bs, cur->item->name);
+		byte_stream_put16(&bs, cur->item->gid);
+		byte_stream_put16(&bs, cur->item->bid);
+		byte_stream_put16(&bs, cur->item->type);
+		byte_stream_put16(&bs, cur->item->data ? aim_tlvlist_size(cur->item->data) : 0);
+		if (cur->item->data)
+			aim_tlvlist_write(&bs, &cur->item->data);
+	}
 
 	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, od->ssi.pending->action, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, SNAC_FAMILY_FEEDBAG, od->ssi.pending->action, 0x0000, snacid);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_FEEDBAG, od->ssi.pending->action, 0x0000, snacid, &bs);
 
-	for (cur=od->ssi.pending; cur; cur=cur->next) {
-		byte_stream_put16(&frame->data, cur->item->name ? strlen(cur->item->name) : 0);
-		if (cur->item->name)
-			byte_stream_putstr(&frame->data, cur->item->name);
-		byte_stream_put16(&frame->data, cur->item->gid);
-		byte_stream_put16(&frame->data, cur->item->bid);
-		byte_stream_put16(&frame->data, cur->item->type);
-		byte_stream_put16(&frame->data, cur->item->data ? aim_tlvlist_size(cur->item->data) : 0);
-		if (cur->item->data)
-			aim_tlvlist_write(&frame->data, &cur->item->data);
-	}
-
-	flap_connection_send(conn, frame);
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1461,11 +1452,7 @@ static int parsemod(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 		if ((item = aim_ssi_itemlist_find(od->ssi.local, gid, bid))) {
 			item->type = type;
 			g_free(item->name);
-			if (name) {
-				item->name = (char *)g_malloc((strlen(name)+1)*sizeof(char));
-				strcpy(item->name, name);
-			} else
-				item->name = NULL;
+			item->name = g_strdup(name);
 			aim_tlvlist_free(item->data);
 			item->data = aim_tlvlist_copy(data);
 		}
@@ -1473,11 +1460,7 @@ static int parsemod(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 		if ((item = aim_ssi_itemlist_find(od->ssi.official, gid, bid))) {
 			item->type = type;
 			g_free(item->name);
-			if (name) {
-				item->name = (char *)g_malloc((strlen(name)+1)*sizeof(char));
-				strcpy(item->name, name);
-			} else
-				item->name = NULL;
+			item->name = g_strdup(name);
 			aim_tlvlist_free(item->data);
 			item->data = aim_tlvlist_copy(data);
 		}
@@ -1555,10 +1538,7 @@ static int parseack(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 				/* Remove the item from the local list */
 				/* Make sure cur->item is still valid memory */
 				if (aim_ssi_itemlist_valid(od->ssi.local, cur->item)) {
-					if (cur->item->name) {
-						cur->name = (char *)g_malloc((strlen(cur->item->name)+1)*sizeof(char));
-						strcpy(cur->name, cur->item->name);
-					}
+					cur->name = g_strdup(cur->item->name);
 					aim_ssi_itemlist_del(&od->ssi.local, cur->item);
 				}
 				cur->item = NULL;
@@ -1569,11 +1549,7 @@ static int parseack(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 					struct aim_ssi_item *cur1;
 					if ((cur1 = aim_ssi_itemlist_find(od->ssi.official, cur->item->gid, cur->item->bid))) {
 						g_free(cur->item->name);
-						if (cur1->name) {
-							cur->item->name = (char *)g_malloc((strlen(cur1->name)+1)*sizeof(char));
-							strcpy(cur->item->name, cur1->name);
-						} else
-							cur->item->name = NULL;
+						cur->item->name = g_strdup(cur1->name);
 						aim_tlvlist_free(cur->item->data);
 						cur->item->data = aim_tlvlist_copy(cur1->data);
 					}
@@ -1603,11 +1579,7 @@ static int parseack(OscarData *od, FlapConnection *conn, aim_module_t *mod, Flap
 					struct aim_ssi_item *cur1;
 					if ((cur1 = aim_ssi_itemlist_find(od->ssi.official, cur->item->gid, cur->item->bid))) {
 						g_free(cur1->name);
-						if (cur->item->name) {
-							cur1->name = (char *)g_malloc((strlen(cur->item->name)+1)*sizeof(char));
-							strcpy(cur1->name, cur->item->name);
-						} else
-							cur1->name = NULL;
+						cur1->name = g_strdup(cur->item->name);
 						aim_tlvlist_free(cur1->data);
 						cur1->data = aim_tlvlist_copy(cur->item->data);
 					}
@@ -1712,32 +1684,32 @@ int aim_ssi_modend(OscarData *od)
 int aim_ssi_sendauth(OscarData *od, char *sn, char *msg)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_FEEDBAG)) || !sn)
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+1+strlen(sn)+2+(msg ? strlen(msg)+1 : 0)+2);
-
-	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTH, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTH, 0x0000, snacid);
+	byte_stream_new(&bs, 1+strlen(sn) + 2+(msg ? strlen(msg)+1 : 0) + 2);
 
 	/* Screen name */
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
 	/* Message (null terminated) */
-	byte_stream_put16(&frame->data, msg ? strlen(msg) : 0);
+	byte_stream_put16(&bs, msg ? strlen(msg) : 0);
 	if (msg) {
-		byte_stream_putstr(&frame->data, msg);
-		byte_stream_put8(&frame->data, 0x00);
+		byte_stream_putstr(&bs, msg);
+		byte_stream_put8(&bs, 0x00);
 	}
 
 	/* Unknown */
-	byte_stream_put16(&frame->data, 0x0000);
+	byte_stream_put16(&bs, 0x0000);
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTH, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTH, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1786,32 +1758,32 @@ static int receiveauthgrant(OscarData *od, FlapConnection *conn, aim_module_t *m
 int aim_ssi_sendauthrequest(OscarData *od, char *sn, const char *msg)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_FEEDBAG)) || !sn)
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+1+strlen(sn)+2+(msg ? strlen(msg)+1 : 0)+2);
-
-	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREQ, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREQ, 0x0000, snacid);
+	byte_stream_new(&bs, 1+strlen(sn) + 2+(msg ? strlen(msg)+1 : 0) + 2);
 
 	/* Screen name */
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
 	/* Message (null terminated) */
-	byte_stream_put16(&frame->data, msg ? strlen(msg) : 0);
+	byte_stream_put16(&bs, msg ? strlen(msg) : 0);
 	if (msg) {
-		byte_stream_putstr(&frame->data, msg);
-		byte_stream_put8(&frame->data, 0x00);
+		byte_stream_putstr(&bs, msg);
+		byte_stream_put8(&bs, 0x00);
 	}
 
 	/* Unknown */
-	byte_stream_put16(&frame->data, 0x0000);
+	byte_stream_put16(&bs, 0x0000);
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREQ, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREQ, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1863,35 +1835,35 @@ static int receiveauthrequest(OscarData *od, FlapConnection *conn, aim_module_t 
 int aim_ssi_sendauthreply(OscarData *od, char *sn, guint8 reply, const char *msg)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_FEEDBAG)) || !sn)
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10 + 1+strlen(sn) + 1 + 2+(msg ? strlen(msg)+1 : 0) + 2);
-
-	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREP, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREP, 0x0000, snacid);
+	byte_stream_new(&bs, 1+strlen(sn) + 1 + 2+(msg ? (strlen(msg)+1) : 0) + 2);
 
 	/* Screen name */
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
 	/* Grant or deny */
-	byte_stream_put8(&frame->data, reply);
+	byte_stream_put8(&bs, reply);
 
 	/* Message (null terminated) */
-	byte_stream_put16(&frame->data, msg ? (strlen(msg)+1) : 0);
+	byte_stream_put16(&bs, msg ? (strlen(msg)+1) : 0);
 	if (msg) {
-		byte_stream_putstr(&frame->data, msg);
-		byte_stream_put8(&frame->data, 0x00);
+		byte_stream_putstr(&bs, msg);
+		byte_stream_put8(&bs, 0x00);
 	}
 
 	/* Unknown */
-	byte_stream_put16(&frame->data, 0x0000);
+	byte_stream_put16(&bs, 0x0000);
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREP, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_SENDAUTHREP, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }

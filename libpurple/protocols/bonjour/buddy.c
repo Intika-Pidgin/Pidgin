@@ -127,7 +127,7 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 {
 	PurpleGroup *group;
 	PurpleAccount *account = bonjour_buddy->account;
-	const char *status_id, *old_hash, *new_hash;
+	const char *status_id, *old_hash, *new_hash, *name;
 
 	/* Translate between the Bonjour status and the Purple status */
 	if (bonjour_buddy->status != NULL && g_ascii_strcasecmp("dnd", bonjour_buddy->status) == 0)
@@ -153,14 +153,16 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 
 	if (buddy == NULL) {
 		buddy = purple_buddy_new(account, bonjour_buddy->name, NULL);
-		buddy->proto_data = bonjour_buddy;
 		purple_blist_node_set_flags((PurpleBlistNode *)buddy, PURPLE_BLIST_NODE_FLAG_NO_SAVE);
 		purple_blist_add_buddy(buddy, NULL, group, NULL);
 	}
 
+	buddy->proto_data = bonjour_buddy;
+	name = purple_buddy_get_name(buddy);
+
 	/* Create the alias for the buddy using the first and the last name */
 	if (bonjour_buddy->nick)
-		serv_got_alias(purple_account_get_connection(account), buddy->name, bonjour_buddy->nick);
+		serv_got_alias(purple_account_get_connection(account), name, bonjour_buddy->nick);
 	else {
 		gchar *alias = NULL;
 		const char *first, *last;
@@ -171,18 +173,18 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 						(first && *first ? first : ""),
 						(first && *first && last && *last ? " " : ""),
 						(last && *last ? last : ""));
-		serv_got_alias(purple_account_get_connection(account), buddy->name, alias);
+		serv_got_alias(purple_account_get_connection(account), name, alias);
 		g_free(alias);
 	}
 
 	/* Set the user's status */
 	if (bonjour_buddy->msg != NULL)
-		purple_prpl_got_user_status(account, buddy->name, status_id,
+		purple_prpl_got_user_status(account, name, status_id,
 					    "message", bonjour_buddy->msg, NULL);
 	else
-		purple_prpl_got_user_status(account, buddy->name, status_id, NULL);
+		purple_prpl_got_user_status(account, name, status_id, NULL);
 
-	purple_prpl_got_user_idle(account, buddy->name, FALSE, 0);
+	purple_prpl_got_user_idle(account, name, FALSE, 0);
 
 	/* TODO: Because we don't save Bonjour buddies in blist.xml,
 	 * we will always have to look up the buddy icon at login time.
@@ -197,7 +199,23 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 		 * as what we looked up. */
 		bonjour_dns_sd_retrieve_buddy_icon(bonjour_buddy);
 	} else if (!new_hash)
-		purple_buddy_icons_set_for_user(account, buddy->name, NULL, 0, NULL);
+		purple_buddy_icons_set_for_user(account, name, NULL, 0, NULL);
+}
+
+/**
+ * The buddy has signed off Bonjour.
+ * If the buddy is being saved, mark as offline, otherwise delete
+ */
+void bonjour_buddy_signed_off(PurpleBuddy *pb) {
+	if (PURPLE_BLIST_NODE_SHOULD_SAVE(pb)) {
+		purple_prpl_got_user_status(purple_buddy_get_account(pb),
+					    purple_buddy_get_name(pb), "offline", NULL);
+		bonjour_buddy_delete(pb->proto_data);
+		pb->proto_data = NULL;
+	} else {
+		purple_account_remove_buddy(purple_buddy_get_account(pb), pb, NULL);
+		purple_blist_remove_buddy(pb);
+	}
 }
 
 /**
@@ -237,7 +255,10 @@ void
 bonjour_buddy_delete(BonjourBuddy *buddy)
 {
 	g_free(buddy->name);
-	g_free(buddy->ip);
+	while (buddy->ips != NULL) {
+		g_free(buddy->ips->data);
+		buddy->ips = g_slist_delete_link(buddy->ips, buddy->ips);
+	}
 	g_free(buddy->first);
 	g_free(buddy->phsh);
 	g_free(buddy->status);

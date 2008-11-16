@@ -68,9 +68,9 @@ typedef enum
  */
 struct _MsnSwitchBoard
 {
-	MsnSession *session;
-	MsnServConn *servconn;
-	MsnCmdProc *cmdproc;
+	MsnSession *session;   /**< Our parent session. */
+	MsnServConn *servconn; /**< The physical connection for this switchboard. */
+	MsnCmdProc *cmdproc;   /**< Convenience variable for servconn->cmdproc. */
 	char *im_user;
 
 	MsnSBFlag flag;
@@ -104,6 +104,7 @@ struct _MsnSwitchBoard
 	MsnSBErrorType error; /**< The error that occurred in this switchboard
 							(if applicable). */
 	GList *slplinks; /**< The list of slplinks that are using this switchboard. */
+	guint reconn_timeout_h;
 };
 
 /**
@@ -167,6 +168,13 @@ void msn_switchboard_set_session_id(MsnSwitchBoard *swboard, const char *id);
 const char *msn_switchboard_get_session_id(MsnSwitchBoard *swboard);
 
 /**
+ * Returns the next chat ID for use by a switchboard.
+ *
+ * @return The chat ID.
+ */
+int msn_switchboard_get_chat_id(void);
+
+/**
  * Sets whether or not we were invited to this switchboard.
  *
  * @param swboard The switchboard.
@@ -216,10 +224,8 @@ void msn_switchboard_close(MsnSwitchBoard *swboard);
  *
  * @param swboard The switchboard to release.
  * @param flag The flag that states the function.
- *
- * @return @c TRUE if the switchboard was closed, @c FALSE otherwise.
  */
-gboolean msn_switchboard_release(MsnSwitchBoard *swboard, MsnSBFlag flag);
+void msn_switchboard_release(MsnSwitchBoard *swboard, MsnSBFlag flag);
 
 /**
  * Returns whether or not we currently can send a message through this

@@ -89,22 +89,11 @@ GtkWidget *
 pidgin_prefs_labeled_spin_button(GtkWidget *box, const gchar *title,
 		const char *key, int min, int max, GtkSizeGroup *sg)
 {
-	GtkWidget *hbox;
-	GtkWidget *label;
 	GtkWidget *spin;
 	GtkObject *adjust;
 	int val;
 
 	val = purple_prefs_get_int(key);
-
-	hbox = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 5);
-	gtk_widget_show(hbox);
-
-	label = gtk_label_new_with_mnemonic(title);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	gtk_widget_show(label);
 
 	adjust = gtk_adjustment_new(val, min, max, 1, 1, 1);
 	spin = gtk_spin_button_new(GTK_ADJUSTMENT(adjust), 1, 0);
@@ -113,21 +102,11 @@ pidgin_prefs_labeled_spin_button(GtkWidget *box, const gchar *title,
 		gtk_widget_set_size_request(spin, 50, -1);
 	else
 		gtk_widget_set_size_request(spin, 60, -1);
-	gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 0);
 	g_signal_connect(G_OBJECT(adjust), "value-changed",
 					 G_CALLBACK(update_spin_value), GTK_WIDGET(spin));
 	gtk_widget_show(spin);
 
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), spin);
-
-	if (sg) {
-		gtk_size_group_add_widget(sg, label);
-		gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-	}
-
-	pidgin_set_accessible_label (spin, label);
-
-	return hbox;
+	return pidgin_add_widget_to_vbox(GTK_BOX(box), title, sg, spin, FALSE, NULL);
 }
 
 static void
@@ -141,37 +120,18 @@ GtkWidget *
 pidgin_prefs_labeled_entry(GtkWidget *page, const gchar *title,
 							 const char *key, GtkSizeGroup *sg)
 {
-	GtkWidget *hbox, *label, *entry;
+	GtkWidget *entry;
 	const gchar *value;
 
 	value = purple_prefs_get_string(key);
 
-	hbox = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_start(GTK_BOX(page), hbox, FALSE, FALSE, 0);
-	gtk_widget_show(hbox);
-
-	label = gtk_label_new_with_mnemonic(title);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	gtk_widget_show(label);
-
 	entry = gtk_entry_new();
 	gtk_entry_set_text(GTK_ENTRY(entry), value);
-	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 0);
 	g_signal_connect(G_OBJECT(entry), "changed",
 					 G_CALLBACK(entry_set), (char*)key);
 	gtk_widget_show(entry);
 
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-
-	if(sg) {
-		gtk_size_group_add_widget(sg, label);
-		gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-	}
-
-	pidgin_set_accessible_label(entry, label);
-
-	return hbox;
+	return pidgin_add_widget_to_vbox(GTK_BOX(page), title, sg, entry, TRUE, NULL);
 }
 
 static void
@@ -205,7 +165,6 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 {
 	GtkWidget  *dropdown, *opt, *menu;
 	GtkWidget  *label = NULL;
-	GtkWidget  *hbox;
 	gchar      *text;
 	const char *stored_str = NULL;
 	int         stored_int = 0;
@@ -214,19 +173,6 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 	int         o = 0;
 
 	g_return_val_if_fail(menuitems != NULL, NULL);
-
-	if (title != NULL) {
-		hbox = gtk_hbox_new(FALSE, 5);
-		/*gtk_container_add (GTK_CONTAINER (box), hbox);*/
-		gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-		gtk_widget_show(hbox);
-
-		label = gtk_label_new_with_mnemonic(title);
-		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-		gtk_widget_show(label);
-	} else {
-		hbox = box;
-	}
 
 #if 0 /* GTK_CHECK_VERSION(2,4,0) */
 	if(type == PURPLE_PREF_INT)
@@ -238,11 +184,6 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 	dropdown = gtk_option_menu_new();
 	menu = gtk_menu_new();
 #endif
-
-	if (label != NULL) {
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), dropdown);
-		pidgin_set_accessible_relations (dropdown, label);
-	}
 
 	if (type == PURPLE_PREF_INT)
 		stored_int = purple_prefs_get_int(key);
@@ -293,8 +234,8 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 	}
 
 	gtk_option_menu_set_menu(GTK_OPTION_MENU(dropdown), menu);
-	gtk_box_pack_start(GTK_BOX(hbox), dropdown, FALSE, FALSE, 0);
-	gtk_widget_show(dropdown);
+
+	pidgin_add_widget_to_vbox(GTK_BOX(box), title, NULL, dropdown, FALSE, &label);
 
 	return label;
 }
@@ -412,7 +353,7 @@ static void smiley_sel(GtkTreeSelection *sel, GtkTreeModel *model) {
 	gtk_tree_path_free(path);
 }
 
-static GtkTreeRowReference *theme_refresh_theme_list()
+static GtkTreeRowReference *theme_refresh_theme_list(void)
 {
 	GdkPixbuf *pixbuf;
 	GSList *themes;
@@ -537,12 +478,20 @@ theme_got_url(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 {
 	FILE *f;
 	gchar *path;
+	size_t wc;
 
 	if ((error_message != NULL) || (len == 0))
 		return;
 
 	f = purple_mkstemp(&path, TRUE);
-	fwrite(themedata, len, 1, f);
+	wc = fwrite(themedata, len, 1, f);
+	if (wc != 1) {
+		purple_debug_warning("theme_got_url", "Unable to write theme data.\n");
+		fclose(f);
+		g_unlink(path);
+		g_free(path);
+		return;
+	}
 	fclose(f);
 
 	theme_install_theme(path, user_data);
@@ -676,7 +625,7 @@ remove_theme_button_clicked_cb(GtkWidget *button, GtkTreeView *tv)
 }
 
 static GtkWidget *
-theme_page()
+theme_page(void)
 {
 	GtkWidget *add_button, *remove_button;
 	GtkWidget *hbox_buttons;
@@ -876,8 +825,105 @@ conversation_usetabs_cb(const char *name, PurplePrefType type,
 		gtk_widget_set_sensitive(GTK_WIDGET(data), FALSE);
 }
 
+
+#define CONVERSATION_CLOSE_ACCEL_PATH "<main>/Conversation/Close"
+
+/* Filled in in keyboard_shortcuts(). */
+static GtkAccelKey ctrl_w = { 0, 0, 0 };
+static GtkAccelKey escape = { 0, 0, 0 };
+
+static guint escape_closes_conversation_cb_id = 0;
+
+static gboolean
+accel_is_escape(GtkAccelKey *k)
+{
+	return (k->accel_key == escape.accel_key
+		&& k->accel_mods == escape.accel_mods);
+}
+
+/* Update the tickybox in Preferences when the keybinding for Conversation ->
+ * Close is changed via Gtk.
+ */
+static void
+conversation_close_accel_changed_cb (GtkAccelMap    *object,
+                                     gchar          *accel_path,
+                                     guint           accel_key,
+                                     GdkModifierType accel_mods,
+                                     gpointer        checkbox_)
+{
+	GtkToggleButton *checkbox = GTK_TOGGLE_BUTTON(checkbox_);
+	GtkAccelKey new = { accel_key, accel_mods, 0 };
+
+	g_signal_handler_block(checkbox, escape_closes_conversation_cb_id);
+	gtk_toggle_button_set_active(checkbox, accel_is_escape(&new));
+	g_signal_handler_unblock(checkbox, escape_closes_conversation_cb_id);
+}
+
+
+static void
+escape_closes_conversation_cb(GtkWidget *w,
+                              gpointer unused)
+{
+	gboolean active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w));
+	gboolean changed;
+	GtkAccelKey *new_key = active ? &escape : &ctrl_w;
+
+	changed = gtk_accel_map_change_entry(CONVERSATION_CLOSE_ACCEL_PATH,
+		new_key->accel_key, new_key->accel_mods, TRUE);
+
+	/* If another path is already bound to the new accelerator,
+	 * _change_entry tries to delete that binding (because it was passed
+	 * replace=TRUE).  If that other path is locked, then _change_entry
+	 * will fail.  We don't ever lock any accelerator paths, so this case
+	 * should never arise.
+	 */
+	if(!changed)
+		purple_debug_warning("gtkprefs", "Escape accel failed to change\n");
+}
+
+
+/* Creates preferences for keyboard shortcuts that it's hard to change with the
+ * standard Gtk accelerator-changing mechanism.
+ */
+static void
+keyboard_shortcuts(GtkWidget *page)
+{
+	GtkWidget *vbox = pidgin_make_frame(page, _("Keyboard Shortcuts"));
+	GtkWidget *checkbox;
+	GtkAccelKey current = { 0, 0, 0 };
+	GtkAccelMap *map = gtk_accel_map_get();
+
+	/* Maybe it would be better just to hardcode the values?
+	 * -- resiak, 2007-04-30
+	 */
+	if (ctrl_w.accel_key == 0)
+	{
+		gtk_accelerator_parse ("<Control>w", &(ctrl_w.accel_key),
+			&(ctrl_w.accel_mods));
+		g_assert(ctrl_w.accel_key != 0);
+
+		gtk_accelerator_parse ("Escape", &(escape.accel_key),
+			&(escape.accel_mods));
+		g_assert(escape.accel_key != 0);
+	}
+
+	checkbox = gtk_check_button_new_with_mnemonic(
+		_("Cl_ose conversations with the Escape key"));
+	gtk_accel_map_lookup_entry(CONVERSATION_CLOSE_ACCEL_PATH, &current);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbox),
+		accel_is_escape(&current));
+
+	escape_closes_conversation_cb_id = g_signal_connect(checkbox,
+		"clicked", G_CALLBACK(escape_closes_conversation_cb), NULL);
+
+	g_signal_connect_object(map, "changed::" CONVERSATION_CLOSE_ACCEL_PATH,
+		G_CALLBACK(conversation_close_accel_changed_cb), checkbox, (GConnectFlags)0);
+
+	gtk_box_pack_start(GTK_BOX(vbox), checkbox, FALSE, FALSE, 0);
+}
+
 static GtkWidget *
-interface_page()
+interface_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
@@ -895,8 +941,8 @@ interface_page()
 	label = pidgin_prefs_dropdown(vbox, _("_Show system tray icon:"), PURPLE_PREF_STRING,
 					PIDGIN_PREFS_ROOT "/docklet/show",
 					_("Always"), "always",
-					_("Never"), "never",
 					_("On unread messages"), "pending",
+					_("Never"), "never",
 					NULL);
 	gtk_size_group_add_widget(sg, label);
         gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
@@ -955,7 +1001,12 @@ interface_page()
 
 	g_list_free(names);
 
+
+	keyboard_shortcuts(ret);
+
+
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 	return ret;
 }
 
@@ -969,7 +1020,7 @@ pidgin_custom_font_set(GtkFontButton *font_button, gpointer nul)
 #endif
 
 static GtkWidget *
-conv_page()
+conv_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
@@ -982,7 +1033,6 @@ conv_page()
 
 #if GTK_CHECK_VERSION(2,4,0)
 	GtkWidget *hbox;
-	GtkWidget *label;
 	GtkWidget *font_button;
 	const char *font_name;
 #endif
@@ -1021,25 +1071,28 @@ conv_page()
 	pidgin_prefs_checkbox(_("Minimi_ze new conversation windows"), PIDGIN_PREFS_ROOT "/win32/minimize_new_convs", vbox);
 #endif
 
+	pidgin_prefs_labeled_spin_button(vbox,
+		_("Minimum input area height in lines:"),
+		PIDGIN_PREFS_ROOT "/conversations/minimum_entry_lines",
+		1, 8, NULL);
+
+
 #if GTK_CHECK_VERSION(2,4,0)
 	vbox = pidgin_make_frame(ret, _("Font"));
 	if (purple_running_gnome())
 		fontpref = pidgin_prefs_checkbox(_("Use document font from _theme"), PIDGIN_PREFS_ROOT "/conversations/use_theme_font", vbox);
 	else
 		fontpref = pidgin_prefs_checkbox(_("Use font from _theme"), PIDGIN_PREFS_ROOT "/conversations/use_theme_font", vbox);
-	hbox = gtk_hbox_new(FALSE, 3);
-	label = gtk_label_new_with_mnemonic(_("Conversation _font:"));
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
 	font_name = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font");
 	font_button = gtk_font_button_new_with_font(font_name ? font_name : NULL);
+
 	gtk_font_button_set_show_style(GTK_FONT_BUTTON(font_button), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), font_button, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Conversation _font:"), NULL, font_button, FALSE, NULL);
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font"))
 		gtk_widget_set_sensitive(hbox, FALSE);
 	g_signal_connect(G_OBJECT(fontpref), "clicked", G_CALLBACK(pidgin_toggle_sensitive), hbox);
 	g_signal_connect(G_OBJECT(font_button), "font-set", G_CALLBACK(pidgin_custom_font_set), NULL);
-	gtk_widget_show_all(hbox);
 #endif
 
 	vbox = pidgin_make_frame(ret, _("Default Formatting"));
@@ -1113,12 +1166,38 @@ static void proxy_print_option(GtkEntry *entry, int entrynum)
 		purple_prefs_set_string("/purple/proxy/password", gtk_entry_get_text(entry));
 }
 
+static void
+proxy_button_clicked_cb(GtkWidget *button, gpointer null)
+{
+	GError *err = NULL;
+
+	if (g_spawn_command_line_async ("gnome-network-preferences", &err))
+		return;
+
+	purple_notify_error(NULL, NULL, _("Cannot start proxy configuration program."), err->message);
+	g_error_free(err);
+}
+
+static void
+browser_button_clicked_cb(GtkWidget *button, gpointer null)
+{
+	GError *err = NULL;
+
+	if (g_spawn_command_line_async ("gnome-default-applications-properties", &err))
+		return;
+
+	purple_notify_error(NULL, NULL, _("Cannot start browser configuration program."), err->message);
+	g_error_free(err);
+}
+
 static GtkWidget *
-network_page()
+network_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox, *hbox, *entry;
 	GtkWidget *table, *label, *auto_ip_checkbox, *ports_checkbox, *spin_button;
+	GtkWidget *proxy_warning = NULL, *browser_warning = NULL;
+	GtkWidget *proxy_button = NULL, *browser_button = NULL;
 	GtkSizeGroup *sg;
 	PurpleProxyInfo *proxy_info = NULL;
 
@@ -1181,8 +1260,13 @@ network_page()
 	g_signal_connect(G_OBJECT(auto_ip_checkbox), "clicked",
 					 G_CALLBACK(pidgin_toggle_sensitive), table);
 
+	g_object_unref(sg);
+
 	vbox = pidgin_make_frame (ret, _("Ports"));
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+
+	pidgin_prefs_checkbox(_("_Enable automatic router port forwarding"),
+			"/purple/network/map_ports", vbox);
 
 	ports_checkbox = pidgin_prefs_checkbox(_("_Manually specify range of ports to listen on"),
 			"/purple/network/ports_range_use", vbox);
@@ -1201,9 +1285,49 @@ network_page()
 	g_signal_connect(G_OBJECT(ports_checkbox), "clicked",
 					 G_CALLBACK(pidgin_toggle_sensitive), spin_button);
 
-	if (!purple_running_gnome()) {
+	if (purple_running_gnome()) {
+		vbox = pidgin_make_frame(ret, _("Proxy Server &amp; Browser"));
+		prefs_proxy_frame = gtk_vbox_new(FALSE, 0);
+
+		proxy_warning = hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+
+		label = gtk_label_new(NULL);
+		gtk_label_set_markup(GTK_LABEL(label),
+		                     _("<b>Proxy configuration program was not found.</b>"));
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
+		browser_warning = hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+
+		label = gtk_label_new(NULL);
+		gtk_label_set_markup(GTK_LABEL(label),
+		                     _("<b>Browser configuration program was not found.</b>"));
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
+		hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+		label = gtk_label_new(_("Proxy & Browser preferences are configured\n"
+		                        "in GNOME Preferences"));
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+		gtk_widget_show(label);
+
+		hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+		proxy_button = gtk_button_new_with_mnemonic(_("Configure _Proxy"));
+		g_signal_connect(G_OBJECT(proxy_button), "clicked",
+		                 G_CALLBACK(proxy_button_clicked_cb), NULL);
+		gtk_box_pack_start(GTK_BOX(hbox), proxy_button, FALSE, FALSE, 0);
+		gtk_widget_show(proxy_button);
+		browser_button = gtk_button_new_with_mnemonic(_("Configure _Browser"));
+		g_signal_connect(G_OBJECT(browser_button), "clicked",
+		                 G_CALLBACK(browser_button_clicked_cb), NULL);
+		gtk_box_pack_start(GTK_BOX(hbox), browser_button, FALSE, FALSE, 0);
+		gtk_widget_show(browser_button);
+	} else {
 		vbox = pidgin_make_frame(ret, _("Proxy Server"));
 		prefs_proxy_frame = gtk_vbox_new(FALSE, 0);
+
 		pidgin_prefs_dropdown(vbox, _("Proxy _type:"), PURPLE_PREF_STRING,
 					"/purple/proxy/type",
 					_("No proxy"), "none",
@@ -1300,11 +1424,34 @@ network_page()
 	}
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 	/* Only hide table if not running gnome otherwise we hide the IP address table! */
 	if (!purple_running_gnome() && (proxy_info == NULL ||
 	    purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_NONE ||
-	    purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_USE_ENVVAR))
+	    purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_USE_ENVVAR)) {
 		gtk_widget_hide(table);
+	} else if (purple_running_gnome()) {
+		gchar *path;
+		path = g_find_program_in_path("gnome-network-preferences");
+		if (path != NULL) {
+			gtk_widget_set_sensitive(proxy_button, TRUE);
+			gtk_widget_hide(proxy_warning);
+			g_free(path);
+		} else {
+			gtk_widget_set_sensitive(proxy_button, FALSE);
+			gtk_widget_show(proxy_warning);
+		}
+		path = g_find_program_in_path("gnome-default-applications-properties");
+		if (path != NULL) {
+			gtk_widget_set_sensitive(browser_button, TRUE);
+			gtk_widget_hide(browser_warning);
+			g_free(path);
+		} else {
+			gtk_widget_set_sensitive(browser_button, FALSE);
+			gtk_widget_show(browser_warning);
+		}
+	}
+
 	return ret;
 }
 
@@ -1318,7 +1465,7 @@ static gboolean manual_browser_set(GtkWidget *entry, GdkEventFocus *event, gpoin
 	return FALSE;
 }
 
-static GList *get_available_browsers()
+static GList *get_available_browsers(void)
 {
 	struct browser {
 		char *name;
@@ -1326,12 +1473,13 @@ static GList *get_available_browsers()
 	};
 
 	/* Sorted reverse alphabetically */
-	static struct browser possible_browsers[] = {
+	static const struct browser possible_browsers[] = {
 		{N_("Seamonkey"), "seamonkey"},
 		{N_("Opera"), "opera"},
 		{N_("Netscape"), "netscape"},
 		{N_("Mozilla"), "mozilla"},
 		{N_("Konqueror"), "kfmclient"},
+		{N_("Desktop Default"), "xdg-open"},
 		{N_("GNOME Default"), "gnome-open"},
 		{N_("Galeon"), "galeon"},
 		{N_("Firefox"), "firefox"},
@@ -1354,6 +1502,14 @@ static GList *get_available_browsers()
 			browsers = g_list_prepend(browsers, (gpointer)_(possible_browsers[i].name));
 			if(browser_setting && !strcmp(possible_browsers[i].command, browser_setting))
 				browser_setting = NULL;
+			/* If xdg-open is valid, prefer it over gnome-open and skip forward */
+			if(!strcmp(possible_browsers[i].command, "xdg-open")) {
+				if (browser_setting && !strcmp("gnome-open", browser_setting)) {
+					purple_prefs_set_string(PIDGIN_PREFS_ROOT "/browsers/browser", possible_browsers[i].command);
+					browser_setting = NULL;
+				}
+				i++;
+			}
 		}
 	}
 
@@ -1384,7 +1540,7 @@ browser_changed2_cb(const char *name, PurplePrefType type,
 }
 
 static GtkWidget *
-browser_page()
+browser_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
@@ -1427,36 +1583,25 @@ browser_page()
 									browser_changed1_cb, hbox);
 	}
 
-	hbox = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	label = gtk_label_new_with_mnemonic(_("_Manual:\n(%s for URL)"));
-	gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 0);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
-	gtk_size_group_add_widget(sg, label);
-
 	entry = gtk_entry_new();
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-
-	if (strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/browser"), "custom"))
-		gtk_widget_set_sensitive(hbox, FALSE);
-	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/browsers/browser",
-								browser_changed2_cb, hbox);
-
-	gtk_box_pack_start (GTK_BOX (hbox), entry, FALSE, FALSE, 0);
-
 	gtk_entry_set_text(GTK_ENTRY(entry),
 					   purple_prefs_get_path(PIDGIN_PREFS_ROOT "/browsers/command"));
 	g_signal_connect(G_OBJECT(entry), "focus-out-event",
 					 G_CALLBACK(manual_browser_set), NULL);
-	pidgin_set_accessible_label (entry, label);
+	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Manual:\n(%s for URL)"), sg, entry, TRUE, NULL);
+	if (strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/browser"), "custom"))
+		gtk_widget_set_sensitive(hbox, FALSE);
+	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/browsers/browser",
+			browser_changed2_cb, hbox);
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 	return ret;
 }
 #endif /*_WIN32*/
 
 static GtkWidget *
-logging_page()
+logging_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
@@ -1557,18 +1702,22 @@ static void
 test_sound(GtkWidget *button, gpointer i_am_NULL)
 {
 	char *pref;
-	gboolean temp_value;
+	gboolean temp_enabled;
+	gboolean temp_mute;
 
 	pref = g_strdup_printf(PIDGIN_PREFS_ROOT "/sound/enabled/%s",
 			pidgin_sound_get_event_option(sound_row_sel));
 
-	temp_value = purple_prefs_get_bool(pref);
+	temp_enabled = purple_prefs_get_bool(pref);
+	temp_mute = purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/sound/mute");
 
-	if (!temp_value) purple_prefs_set_bool(pref, TRUE);
+	if (!temp_enabled) purple_prefs_set_bool(pref, TRUE);
+	if (temp_mute) purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/sound/mute", FALSE);
 
 	purple_sound_play_event(sound_row_sel, NULL);
 
-	if (!temp_value) purple_prefs_set_bool(pref, FALSE);
+	if (!temp_enabled) purple_prefs_set_bool(pref, FALSE);
+	if (temp_mute) purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/sound/mute", TRUE);
 
 	g_free(pref);
 }
@@ -1679,8 +1828,27 @@ static void prefs_sound_sel(GtkTreeSelection *sel, GtkTreeModel *model) {
 	g_value_unset (&val);
 }
 
+
+static void
+mute_changed_cb(const char *pref_name,
+                PurplePrefType pref_type,
+                gconstpointer val,
+                gpointer data)
+{
+	GtkToggleButton *button = data;
+	gboolean muted = GPOINTER_TO_INT(val);
+
+	g_return_if_fail(!strcmp (pref_name, PIDGIN_PREFS_ROOT "/sound/mute"));
+
+	/* Block the handler that re-sets the preference. */
+	g_signal_handlers_block_matched(button, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, (gpointer)pref_name);
+	gtk_toggle_button_set_active (button, muted);
+	g_signal_handlers_unblock_matched(button, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, (gpointer)pref_name);
+}
+
+
 static GtkWidget *
-sound_page()
+sound_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox, *sw, *button;
@@ -1696,9 +1864,6 @@ sound_page()
 	int j;
 	const char *file;
 	char *pref;
-#if !defined _WIN32 || defined USE_GSTREAMER
-	GtkWidget *label;
-#endif
 #ifndef _WIN32
 	GtkWidget *dd;
 	GtkWidget *entry;
@@ -1726,39 +1891,30 @@ sound_page()
 	gtk_size_group_add_widget(sg, dd);
 	gtk_misc_set_alignment(GTK_MISC(dd), 0, 0.5);
 
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new_with_mnemonic(_("Sound c_ommand:\n(%s for filename)"));
-	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
 	entry = gtk_entry_new();
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-
 	gtk_editable_set_editable(GTK_EDITABLE(entry), TRUE);
 	cmd = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/sound/command");
 	if(cmd)
 		gtk_entry_set_text(GTK_ENTRY(entry), cmd);
-
-	gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT(entry), "changed",
 					 G_CALLBACK(sound_cmd_yeah), NULL);
 
+	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Sound c_ommand:\n(%s for filename)"), sg, entry, TRUE, NULL);
 	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/method",
 								sound_changed1_cb, hbox);
 	gtk_widget_set_sensitive(hbox,
 			!strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"),
 					"custom"));
-
-	pidgin_set_accessible_label (entry, label);
 #endif /* _WIN32 */
 
 	vbox = pidgin_make_frame (ret, _("Sound Options"));
+
+	button = pidgin_prefs_checkbox(_("M_ute sounds"), PIDGIN_PREFS_ROOT "/sound/mute", vbox);
+	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/mute", mute_changed_cb, button);
+
 	pidgin_prefs_checkbox(_("Sounds when conversation has _focus"),
 				   PIDGIN_PREFS_ROOT "/sound/conv_focus", vbox);
-	pidgin_prefs_dropdown(vbox, _("Enable sounds:"),
+	pidgin_prefs_dropdown(vbox, _("_Enable sounds:"),
 				 PURPLE_PREF_INT, "/purple/sound/while_status",
 				_("Only when available"), 1,
 				_("Only when not available"), 2,
@@ -1766,13 +1922,6 @@ sound_page()
 				NULL);
 
 #ifdef USE_GSTREAMER
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new_with_mnemonic(_("Volume:"));
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
 	sw = gtk_hscale_new_with_range(0.0, 100.0, 5.0);
 	gtk_range_set_increments(GTK_RANGE(sw), 5.0, 25.0);
 	gtk_range_set_value(GTK_RANGE(sw), purple_prefs_get_int(PIDGIN_PREFS_ROOT "/sound/volume"));
@@ -1782,7 +1931,7 @@ sound_page()
 	g_signal_connect (G_OBJECT (sw), "value-changed",
 			  G_CALLBACK (prefs_sound_volume_changed),
 			  NULL);
-	gtk_box_pack_start(GTK_BOX(hbox), sw, TRUE, TRUE, 0);
+	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("V_olume:"), NULL, sw, TRUE, NULL);
 
 	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/method",
 								sound_changed3_cb, hbox);
@@ -1875,19 +2024,20 @@ sound_page()
 	gtk_editable_set_editable(GTK_EDITABLE(sound_entry), FALSE);
 	gtk_box_pack_start(GTK_BOX(hbox), sound_entry, FALSE, FALSE, PIDGIN_HIG_BOX_SPACE);
 
-	button = gtk_button_new_with_label(_("Test"));
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(test_sound), NULL);
-	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
-
-	button = gtk_button_new_with_label(_("Reset"));
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(reset_sound), NULL);
-	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
-
-	button = gtk_button_new_with_label(_("Choose..."));
+	button = gtk_button_new_with_mnemonic(_("_Browse..."));
 	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(select_sound), NULL);
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
 
+	button = gtk_button_new_with_mnemonic(_("Pre_view"));
+	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(test_sound), NULL);
+	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
+
+	button = gtk_button_new_with_mnemonic(_("_Reset"));
+	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(reset_sound), NULL);
+	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
+
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 
 	return ret;
 }
@@ -1906,11 +2056,10 @@ set_startupstatus(PurpleSavedStatus *status)
 }
 
 static GtkWidget *
-away_page()
+away_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
-	GtkWidget *hbox;
 	GtkWidget *dd;
 	GtkWidget *label;
 	GtkWidget *button;
@@ -1961,22 +2110,13 @@ away_page()
 	g_signal_connect(G_OBJECT(button), "clicked",
 					 G_CALLBACK(pidgin_toggle_sensitive), select);
 
-	hbox = gtk_hbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(vbox), hbox);
-
-	label = gtk_label_new_with_mnemonic(_("Change _status to:"));
-	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
 	/* TODO: Show something useful if we don't have any saved statuses. */
 	menu = pidgin_status_menu(purple_savedstatus_get_idleaway(), G_CALLBACK(set_idle_away));
-	gtk_box_pack_start(GTK_BOX(hbox), menu, FALSE, FALSE, 0);
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Change _status to:"), sg, menu, TRUE, &label);
 	g_signal_connect(G_OBJECT(button), "clicked",
 			 G_CALLBACK(pidgin_toggle_sensitive), menu);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), menu);
+	g_signal_connect(G_OBJECT(button), "clicked",
+					 G_CALLBACK(pidgin_toggle_sensitive), label);
 
 	if (!purple_prefs_get_bool("/purple/away/away_when_idle")) {
 		gtk_widget_set_sensitive(GTK_WIDGET(menu), FALSE);
@@ -1990,22 +2130,13 @@ away_page()
 	button = pidgin_prefs_checkbox(_("Use status from last _exit at startup"),
 		"/purple/savedstatus/startup_current_status", vbox);
 
-	hbox = gtk_hbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(vbox), hbox);
-
-	label = gtk_label_new_with_mnemonic(_("Status to a_pply at startup:"));
-	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
 	/* TODO: Show something useful if we don't have any saved statuses. */
 	menu = pidgin_status_menu(purple_savedstatus_get_startup(), G_CALLBACK(set_startupstatus));
-	gtk_box_pack_start(GTK_BOX(hbox), menu, FALSE, FALSE, 0);
 	g_signal_connect(G_OBJECT(button), "clicked",
 			 G_CALLBACK(pidgin_toggle_sensitive), menu);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), menu);
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Status to a_pply at startup:"), sg, menu, TRUE, &label);
+	g_signal_connect(G_OBJECT(button), "clicked",
+					 G_CALLBACK(pidgin_toggle_sensitive), label);
 
 	if (purple_prefs_get_bool("/purple/savedstatus/startup_current_status")) {
 		gtk_widget_set_sensitive(GTK_WIDGET(menu), FALSE);
@@ -2013,6 +2144,7 @@ away_page()
 	}
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
 
 	return ret;
 }
@@ -2030,7 +2162,7 @@ prefs_notebook_add_page(const char *text,
 #endif
 }
 
-static void prefs_notebook_init() {
+static void prefs_notebook_init(void) {
 	prefs_notebook_add_page(_("Interface"), interface_page(), notebook_page++);
 	prefs_notebook_add_page(_("Conversations"), conv_page(), notebook_page++);
 	prefs_notebook_add_page(_("Smiley Themes"), theme_page(), notebook_page++);
@@ -2050,7 +2182,6 @@ static void prefs_notebook_init() {
 void pidgin_prefs_show(void)
 {
 	GtkWidget *vbox;
-	GtkWidget *bbox;
 	GtkWidget *notebook;
 	GtkWidget *button;
 
@@ -2066,31 +2197,20 @@ void pidgin_prefs_show(void)
 	/* Back to instant-apply! I win!  BU-HAHAHA! */
 
 	/* Create the window */
-	prefs = pidgin_create_window(_("Preferences"), PIDGIN_HIG_BORDER, "preferences", FALSE);
+	prefs = pidgin_create_dialog(_("Preferences"), PIDGIN_HIG_BORDER, "preferences", FALSE);
 	g_signal_connect(G_OBJECT(prefs), "destroy",
 					 G_CALLBACK(delete_prefs), NULL);
 
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(prefs), vbox);
-	gtk_widget_show(vbox);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(prefs), FALSE, PIDGIN_HIG_BORDER);
 
 	/* The notebook */
 	prefsnotebook = notebook = gtk_notebook_new ();
 	gtk_box_pack_start (GTK_BOX (vbox), notebook, FALSE, FALSE, 0);
 	gtk_widget_show(prefsnotebook);
 
-	/* The buttons to press! */
-	bbox = gtk_hbutton_box_new();
-	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_pack_start(GTK_BOX(vbox), bbox, FALSE, FALSE, 0);
-	gtk_widget_show (bbox);
-
-	button = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
+	button = pidgin_dialog_add_button(GTK_DIALOG(prefs), GTK_STOCK_CLOSE, NULL, NULL);
 	g_signal_connect_swapped(G_OBJECT(button), "clicked",
 							 G_CALLBACK(gtk_widget_destroy), prefs);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-	gtk_widget_show(button);
 
 	prefs_notebook_init();
 

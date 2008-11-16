@@ -25,8 +25,15 @@
 #include <glib.h>
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+/* helper for purple_utf8_strftime() by way of purple_internal_strftime() in src/util.c */
+const char *wpurple_get_timezone_abbreviation(const struct tm *tm);
+
 /* sys/socket.h */
-int wpurple_socket(int namespace, int style, int protocol);
+int wpurple_socket(int domain, int style, int protocol);
 int wpurple_connect(int socket, struct sockaddr *addr, u_long length);
 int wpurple_getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlenptr);
 int wpurple_setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen);
@@ -136,5 +143,9 @@ int wpurple_g_access(const gchar *filename, int mode);
 
 /* stdio.h */
 int wpurple_rename(const char *oldname, const char *newname);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _LIBC_INTERNAL_ */

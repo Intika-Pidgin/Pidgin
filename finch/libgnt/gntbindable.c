@@ -45,7 +45,7 @@ static struct
 } rebind_info;
 
 static void 
-gnt_bindable_free_rebind_info()
+gnt_bindable_free_rebind_info(void)
 {
 	g_free(rebind_info.name);
 	g_free(rebind_info.keys);
@@ -337,6 +337,13 @@ gnt_bindable_perform_action_key(GntBindable *bindable, const char *keys)
 			return param->action->u.action_noparam(bindable);
 	}
 	return FALSE;
+}
+
+gboolean
+gnt_bindable_check_key(GntBindable *bindable, const char *keys) {
+	GntBindableClass *klass = GNT_BINDABLE_CLASS(GNT_BINDABLE_GET_CLASS(bindable));
+	GntBindableActionParam *param = g_hash_table_lookup(klass->bindings, keys);
+	return (param && param->action);
 }
 
 static void

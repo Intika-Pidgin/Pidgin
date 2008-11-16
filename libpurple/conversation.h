@@ -32,11 +32,17 @@
 /**************************************************************************/
 
 
+/** @copydoc _PurpleConversationUiOps */
 typedef struct _PurpleConversationUiOps PurpleConversationUiOps;
+/** @copydoc _PurpleConversation */
 typedef struct _PurpleConversation      PurpleConversation;
+/** @copydoc _PurpleConvIm */
 typedef struct _PurpleConvIm            PurpleConvIm;
+/** @copydoc _PurpleConvChat */
 typedef struct _PurpleConvChat          PurpleConvChat;
+/** @copydoc _PurpleConvChatBuddy */
 typedef struct _PurpleConvChatBuddy     PurpleConvChatBuddy;
+/** @copydoc _PurpleConvMessage */
 typedef struct _PurpleConvMessage       PurpleConvMessage;
 
 /**
@@ -108,7 +114,7 @@ typedef enum
 	                                        which are only open for
 	                                        internal UI purposes
 	                                        (e.g. for contact-aware
-	                                         conversions).           */
+	                                         conversations).           */
 	PURPLE_MESSAGE_NICK        = 0x0020, /**< Contains your nick.      */
 	PURPLE_MESSAGE_NO_LOG      = 0x0040, /**< Do not log.              */
 	PURPLE_MESSAGE_WHISPER     = 0x0080, /**< Whispered message.       */
@@ -119,7 +125,7 @@ typedef enum
 	PURPLE_MESSAGE_IMAGES      = 0x1000, /**< Message contains images  */
 	PURPLE_MESSAGE_NOTIFY      = 0x2000, /**< Message is a notification */
 	PURPLE_MESSAGE_NO_LINKIFY  = 0x4000, /**< Message should not be auto-
-										   linkified */
+										   linkified @since 2.1.0 */
 	PURPLE_MESSAGE_INVISIBLE   = 0x8000, /**< Message should not be displayed */
 } PurpleMessageFlags;
 
@@ -171,9 +177,12 @@ struct _PurpleConversationUiOps
 	void (*write_im)(PurpleConversation *conv, const char *who,
 	                 const char *message, PurpleMessageFlags flags,
 	                 time_t mtime);
-	/** Write a message to a conversation.  This is used rather than
-	 *  the chat- or im-specific ops for generic messages, such as system
-	 *  messages like "x is now know as y".
+	/** Write a message to a conversation.  This is used rather than the
+	 *  chat- or im-specific ops for errors, system messages (such as "x is
+	 *  now know as y"), and as the fallback if #write_im and #write_chat
+	 *  are not implemented.  It should be implemented, or the UI will miss
+	 *  conversation error messages and your users will hate you.
+	 *
 	 *  @see purple_conversation_write()
 	 */
 	void (*write_conv)(PurpleConversation *conv,
@@ -276,11 +285,21 @@ struct _PurpleConvChat
  */
 struct _PurpleConvChatBuddy
 {
-	char *name;                      /**< The name                      */
-	char *alias;					 /**< The alias 					*/
-	char *alias_key;				 /**< The alias key					*/
-	gboolean buddy;					 /**< ChatBuddy is on the blist		*/
-	PurpleConvChatBuddyFlags flags;    /**< Flags (ops, voice etc.)       */
+	char *name;                      /**< The chat participant's name in the chat. */
+	char *alias;                     /**< The chat participant's alias, if known;
+	                                  *   @a NULL otherwise.
+	                                  */
+	char *alias_key;                 /**< A string by which this buddy will be sorted,
+	                                  *   or @c NULL if the buddy should be sorted by
+	                                  *   its @c name.  (This is currently always @c
+	                                  *   NULL.)
+	                                  */
+	gboolean buddy;                  /**< @a TRUE if this chat participant is on the
+	                                  *   buddy list; @a FALSE otherwise.
+	                                  */
+	PurpleConvChatBuddyFlags flags;  /**< A bitwise OR of flags for this participant,
+	                                  *   such as whether they are a channel operator.
+	                                  */
 };
 
 /**
@@ -294,6 +313,8 @@ struct _PurpleConvMessage
 	char *what;
 	PurpleMessageFlags flags;
 	time_t when;
+	PurpleConversation *conv;  /**< @since 2.3.0 */
+	char *alias;               /**< @since 2.3.0 */
 };
 
 /**
@@ -485,7 +506,8 @@ void purple_conversation_set_name(PurpleConversation *conv, const char *name);
  *
  * @param conv The conversation.
  *
- * @return The conversation's name.
+ * @return The conversation's name. If the conversation is an IM with a PurpleBuddy,
+ *         then it's the name of the PurpleBuddy.
  */
 const char *purple_conversation_get_name(const PurpleConversation *conv);
 
@@ -713,7 +735,7 @@ const char *purple_conversation_message_get_message(PurpleConvMessage *msg);
  *
  * @param msg   A PurpleConvMessage
  *
- * @return   The name of the sender of the message
+ * @return   The message flags
  *
  * @since 2.2.0
  */
@@ -724,7 +746,7 @@ PurpleMessageFlags purple_conversation_message_get_flags(PurpleConvMessage *msg)
  *
  * @param msg   A PurpleConvMessage
  *
- * @return   The name of the sender of the message
+ * @return   The timestamp of the message
  *
  * @since 2.2.0
  */

@@ -34,6 +34,8 @@
 #define YAHOO_MAIL_URL "https://login.yahoo.com/config/login?.src=ym"
 #define YAHOO_XFER_HOST "filetransfer.msg.yahoo.com"
 #define YAHOO_XFER_PORT 80
+#define YAHOO_XFER_RELAY_HOST "relay.msg.yahoo.com"
+#define YAHOO_XFER_RELAY_PORT 80
 #define YAHOO_ROOMLIST_URL "http://insider.msg.yahoo.com/ycontent/"
 #define YAHOO_ROOMLIST_LOCALE "us"
 /* really we should get the list of servers from
@@ -43,6 +45,11 @@
 #define YAHOOJP_MAIL_URL "http://mail.yahoo.co.jp/"
 #define YAHOOJP_XFER_HOST "filetransfer.msg.yahoo.co.jp"
 #define YAHOOJP_WEBCAM_HOST "wc.yahoo.co.jp"
+/*not sure, must test:*/
+#define YAHOOJP_XFER_RELAY_HOST "relay.msg.yahoo.co.jp" 
+#define YAHOOJP_XFER_RELAY_PORT 80
+#define YAHOOJP_ROOMLIST_URL "http://insider.msg.yahoo.co.jp/ycontent/"
+#define YAHOOJP_ROOMLIST_LOCALE "ja"
 
 #define YAHOO_AUDIBLE_URL "http://us.dl1.yimg.com/download.yahoo.com/dl/aud"
 
@@ -67,6 +74,13 @@
 #define YAHOO_STATUS_TYPE_INVISIBLE "invisible"
 #define YAHOO_STATUS_TYPE_MOBILE "mobile"
 
+#define YAHOO_CLIENT_VERSION_ID "2097087"
+#define YAHOO_CLIENT_VERSION "8.1.0.421"
+
+#define YAHOOJP_CLIENT_VERSION_ID "524223"
+#define YAHOOJP_CLIENT_VERSION "7,0,1,1"
+
+
 /* Index into attention types list. */
 #define YAHOO_BUZZ 0
 
@@ -86,7 +100,8 @@ enum yahoo_status {
 	YAHOO_STATUS_IDLE = 999,
 	YAHOO_STATUS_WEBLOGIN = 0x5a55aa55,
 	YAHOO_STATUS_OFFLINE = 0x5a55aa56, /* don't ask */
-	YAHOO_STATUS_TYPING = 0x16
+	YAHOO_STATUS_TYPING = 0x16,
+	YAHOO_STATUS_DISCONNECTED = 0xffffffff /* in ymsg 15. doesnt mean the normal sense of 'disconnected' */
 };
 
 struct yahoo_buddy_icon_upload_data {
@@ -153,9 +168,34 @@ struct yahoo_data {
 	 * for when we lookup people profile or photo information.
 	 */
 	GSList *url_datas;
+	GHashTable *xfer_peer_idstring_map;/*Hey, i dont know, but putting this HashTable next to friends gives a run time fault...*/
+	GSList *cookies;/*contains all cookies, including _y and _t*/
+	
+	/**
+	 * We may receive a list15 in multiple packets with no prior warning as to how many we'll be getting;
+	 * the server expects us to keep track of the group for which it is sending us contact names.
+	 */
+	char *current_list15_grp;
+	time_t last_ping;
+	time_t last_keepalive;
 };
 
 #define YAHOO_MAX_STATUS_MESSAGE_LENGTH (255)
+
+/*
+ * Current Maximum Length for Instant Messages
+ *
+ * This was found by experiment.
+ *
+ * The YMSG protocol allows a message of up to 948 bytes, but the official client
+ * limits to 800 characters.  According to experiments I conducted, it seems that
+ * the discrepancy is to allow some leeway for messages with mixed single- and
+ * multi-byte characters, as I was able to send messages of 840 and 932 bytes
+ * by using some multibyte characters (some random Chinese or Japanese characters,
+ * to be precise). - rekkanoryo
+ */
+#define YAHOO_MAX_MESSAGE_LENGTH_BYTES 948
+#define YAHOO_MAX_MESSAGE_LENGTH_CHARS 800
 
 /* sometimes i wish prpls could #include things from other prpls. then i could just
  * use the routines from libfaim and not have to admit to knowing how they work. */
@@ -181,6 +221,9 @@ void yahoo_dest_colorht(void);
 char *yahoo_codes_to_html(const char *x);
 char *yahoo_html_to_codes(const char *src);
 
+gboolean
+yahoo_account_use_http_proxy(PurpleConnection *conn);
+
 /**
  * Encode some text to send to the yahoo server.
  *
@@ -205,20 +248,19 @@ char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8)
  */
 char *yahoo_string_decode(PurpleConnection *gc, const char *str, gboolean utf8);
 
+char *yahoo_convert_to_numeric(const char *str);
+
 /* previously-static functions, now needed for yahoo_profile.c */
 void yahoo_tooltip_text(PurpleBuddy *b, PurpleNotifyUserInfo *user_info, gboolean full);
 
 /* yahoo_profile.c */
 void yahoo_get_info(PurpleConnection *gc, const char *name);
 
-/**
- * Check to see whether the sender is permitted to send
- *
- * @param gc The gc handle.
- * @param who The sender of the packet to check
+/* needed for xfer, thought theyd be useful for other enhancements later on
+   Returns list of cookies stored in yahoo_data formatted as a single null terminated string
+   returned value must be g_freed
 */
-gboolean yahoo_privacy_check
-	(PurpleConnection *gc, const char *who);
+gchar* yahoo_get_cookies(PurpleConnection *gc);
 
 gboolean yahoo_send_attention(PurpleConnection *gc, const char *username, guint type);
 GList *yahoo_attention_types(PurpleAccount *account);

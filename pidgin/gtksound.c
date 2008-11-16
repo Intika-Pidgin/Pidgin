@@ -51,8 +51,6 @@ struct pidgin_sound_event {
 	char *def;
 };
 
-#define PLAY_SOUND_TIMEOUT 15000
-
 static guint mute_login_sounds_timeout = 0;
 static gboolean mute_login_sounds = FALSE;
 
@@ -60,7 +58,7 @@ static gboolean mute_login_sounds = FALSE;
 static gboolean gst_init_failed;
 #endif /* USE_GSTREAMER */
 
-static struct pidgin_sound_event sounds[PURPLE_NUM_SOUNDS] = {
+static const struct pidgin_sound_event sounds[PURPLE_NUM_SOUNDS] = {
 	{N_("Buddy logs in"), "login", "login.wav"},
 	{N_("Buddy logs out"), "logout", "logout.wav"},
 	{N_("Message received"), "im_recv", "receive.wav"},
@@ -72,7 +70,7 @@ static struct pidgin_sound_event sounds[PURPLE_NUM_SOUNDS] = {
 	{N_("Others talk in chat"), "chat_msg_recv", "receive.wav"},
 	/* this isn't a terminator, it's the buddy pounce default sound event ;-) */
 	{NULL, "pounce_default", "alert.wav"},
-	{N_("Someone says your screen name in chat"), "nick_said", "alert.wav"}
+	{N_("Someone says your username in chat"), "nick_said", "alert.wav"}
 };
 
 static gboolean
@@ -304,6 +302,9 @@ pidgin_sound_init(void)
 
 #ifdef USE_GSTREAMER
 	purple_debug_info("sound", "Initializing sound output drivers.\n");
+#ifdef GST_CAN_DISABLE_FORKING
+	gst_registry_fork_set_enabled (FALSE);
+#endif
 	if ((gst_init_failed = !gst_init_check(NULL, NULL, &error))) {
 		purple_notify_error(NULL, _("GStreamer Failure"),
 					_("GStreamer failed to initialize."),
@@ -383,6 +384,26 @@ bus_call (GstBus     *bus,
 }
 #endif
 
+#ifndef _WIN32
+static gboolean
+expire_old_child(gpointer data)
+{
+	pid_t pid = GPOINTER_TO_INT(data);
+
+	if (waitpid(pid, NULL, WNOHANG | WUNTRACED) < 0) {
+		if (errno == ECHILD)
+			return FALSE;
+		else
+			purple_debug_warning("gtksound", "Child is ill, pid: %d (%s)\n", pid, strerror(errno));
+	}
+
+	if (kill(pid, SIGKILL) < 0)
+		purple_debug_error("gtksound", "Killing process %d failed (%s)\n", pid, strerror(errno));
+
+	return FALSE;
+}
+#endif
+
 static void
 pidgin_sound_play_file(const char *filename)
 {
@@ -417,14 +438,16 @@ pidgin_sound_play_file(const char *filename)
 		const char *sound_cmd;
 		char *command;
 		char *esc_filename;
+		char **argv = NULL;
 		GError *error = NULL;
+		GPid pid;
 
 		sound_cmd = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/sound/command");
 
 		if (!sound_cmd || *sound_cmd == '\0') {
 			purple_debug_error("gtksound",
 					 "'Command' sound method has been chosen, "
-					 "but no command has been set.");
+					 "but no command has been set.\n");
 			return;
 		}
 
@@ -435,11 +458,25 @@ pidgin_sound_play_file(const char *filename)
 		else
 			command = g_strdup_printf("%s %s", sound_cmd, esc_filename);
 
-		if(!g_spawn_command_line_async(command, &error)) {
-			purple_debug_error("gtksound", "sound command could not be launched: %s\n", error->message);
+		if (!g_shell_parse_argv(command, NULL, &argv, &error)) {
+			purple_debug_error("gtksound", "error parsing command %s (%s)\n",
+							   command, error->message);
 			g_error_free(error);
+			g_free(esc_filename);
+			g_free(command);
+			return;
 		}
 
+		if (!g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD,
+						  NULL, NULL, &pid, &error)) {
+			purple_debug_error("gtksound", "sound command could not be launched: %s\n",
+							   error->message);
+			g_error_free(error);
+		} else {
+			purple_timeout_add_seconds(15, expire_old_child, GINT_TO_POINTER(pid));
+		}
+
+		g_strfreev(argv);
 		g_free(esc_filename);
 		g_free(command);
 		return;
@@ -451,29 +488,13 @@ pidgin_sound_play_file(const char *filename)
 		return;
 	volume = (float)(CLAMP(purple_prefs_get_int(PIDGIN_PREFS_ROOT "/sound/volume"),0,100)) / 50;
 	if (!strcmp(method, "automatic")) {
-		if (purple_running_gnome()) {
-			sink = gst_element_factory_make("gconfaudiosink", "sink");
-		}
-		if (!sink)
-			sink = gst_element_factory_make("autoaudiosink", "sink");
-		if (!sink) {
-			purple_debug_error("sound", "Unable to create GStreamer audiosink.\n");
-			return;
-		}
+		sink = gst_element_factory_make("gconfaudiosink", "sink");
 	}
 #ifndef _WIN32
 	else if (!strcmp(method, "esd")) {
 		sink = gst_element_factory_make("esdsink", "sink");
-		if (!sink) {
-			purple_debug_error("sound", "Unable to create GStreamer audiosink.\n");
-			return;
-		}
 	} else if (!strcmp(method, "alsa")) {
 		sink = gst_element_factory_make("alsasink", "sink");
-		if (!sink) {
-			purple_debug_error("sound", "Unable to create GStreamer audiosink.\n");
-			return;
-		}
 	}
 #endif
 	else {
@@ -481,12 +502,17 @@ pidgin_sound_play_file(const char *filename)
 		return;
 	}
 
+	if (strcmp(method, "automatic") != 0 && !sink) {
+		purple_debug_error("sound", "Unable to create GStreamer audiosink.\n");
+		return;
+	}
+
 	play = gst_element_factory_make("playbin", "play");
-	
+
 	if (play == NULL) {
 		return;
 	}
-	
+
 	uri = g_strdup_printf("file://%s", filename);
 
 	g_object_set(G_OBJECT(play), "uri", uri,
@@ -501,7 +527,7 @@ pidgin_sound_play_file(const char *filename)
 	gst_object_unref(bus);
 	g_free(uri);
 
-#else /* USE_GSTREAMER */
+#else /* #ifdef USE_GSTREAMER */
 
 #ifndef _WIN32
 	gdk_beep();

@@ -32,7 +32,7 @@
 void
 aim_bos_reqrights(OscarData *od, FlapConnection *conn)
 {
-	aim_genericreq_n_snacid(od, conn, 0x0009, 0x0002);
+	aim_genericreq_n_snacid(od, conn, SNAC_FAMILY_BOS, 0x0002);
 }
 
 /* Subtype 0x0003 - BOS Rights. */
@@ -81,7 +81,7 @@ static int rights(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFr
 void
 aim_bos_setgroupperm(OscarData *od, FlapConnection *conn, guint32 mask)
 {
-	aim_genericreq_l(od, conn, 0x0009, 0x0004, &mask);
+	aim_genericreq_l(od, conn, SNAC_FAMILY_BOS, 0x0004, &mask);
 }
 
 /*
@@ -114,7 +114,7 @@ aim_bos_setgroupperm(OscarData *od, FlapConnection *conn, guint32 mask)
  */
 int aim_bos_changevisibility(OscarData *od, FlapConnection *conn, int changetype, const char *denylist)
 {
-	FlapFrame *frame;
+	ByteStream bs;
 	int packlen = 0;
 	guint16 subtype;
 	char *localcpy = NULL, *tmpptr = NULL;
@@ -139,24 +139,24 @@ int aim_bos_changevisibility(OscarData *od, FlapConnection *conn, int changetype
 	localcpy = g_strdup(denylist);
 
 	listcount = aimutil_itemcnt(localcpy, '&');
-	packlen = aimutil_tokslen(localcpy, 99, '&') + listcount + 9;
+	packlen = aimutil_tokslen(localcpy, 99, '&') + listcount-1;
 
-	frame = flap_frame_new(od, 0x02, packlen);
-
-	snacid = aim_cachesnac(od, 0x0009, subtype, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x0009, subtype, 0x00, snacid);
+	byte_stream_new(&bs, packlen);
 
 	for (i = 0; (i < (listcount - 1)) && (i < 99); i++) {
 		tmpptr = aimutil_itemindex(localcpy, i, '&');
 
-		byte_stream_put8(&frame->data, strlen(tmpptr));
-		byte_stream_putstr(&frame->data, tmpptr);
+		byte_stream_put8(&bs, strlen(tmpptr));
+		byte_stream_putstr(&bs, tmpptr);
 
 		g_free(tmpptr);
 	}
 	g_free(localcpy);
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_BOS, subtype, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_BOS, subtype, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -173,7 +173,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 bos_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x0009;
+	mod->family = SNAC_FAMILY_BOS;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
 	mod->toolversion = 0x0629;

@@ -13,7 +13,8 @@ widget_hide(gpointer data, gpointer nodes)
 	GntNode *node = g_hash_table_lookup(nodes, widget);
 	if (GNT_IS_WINDOW(widget))
 		gnt_window_workspace_hiding(GNT_WINDOW(widget));
-	hide_panel(node->panel);
+	if (node)
+		hide_panel(node->panel);
 }
 
 static void
@@ -45,7 +46,7 @@ gnt_ws_draw_taskbar(GntWS *ws, gboolean reposition)
 		mvwin(taskbar, Y_MAX, 0);
 	}
 
-	wbkgdset(taskbar, '\0' | COLOR_PAIR(GNT_COLOR_NORMAL));
+	wbkgdset(taskbar, '\0' | gnt_color_pair(GNT_COLOR_NORMAL));
 	werase(taskbar);
 
 	n = g_list_length(ws->list);
@@ -66,15 +67,15 @@ gnt_ws_draw_taskbar(GntWS *ws, gboolean reposition)
 		} else {
 			color = GNT_COLOR_NORMAL;
 		}
-		wbkgdset(taskbar, '\0' | COLOR_PAIR(color));
+		wbkgdset(taskbar, '\0' | gnt_color_pair(color));
 		if (iter->next)
-			mvwhline(taskbar, 0, width * i, ' ' | COLOR_PAIR(color), width);
+			mvwhline(taskbar, 0, width * i, ' ' | gnt_color_pair(color), width);
 		else
-			mvwhline(taskbar, 0, width * i, ' ' | COLOR_PAIR(color), getmaxx(stdscr) - width * i);
+			mvwhline(taskbar, 0, width * i, ' ' | gnt_color_pair(color), getmaxx(stdscr) - width * i);
 		title = GNT_BOX(w)->title;
 		mvwprintw(taskbar, 0, width * i, "%s", title ? title : "<gnt>");
 		if (i)
-			mvwaddch(taskbar, 0, width *i - 1, ACS_VLINE | A_STANDOUT | COLOR_PAIR(GNT_COLOR_NORMAL));
+			mvwaddch(taskbar, 0, width *i - 1, ACS_VLINE | A_STANDOUT | gnt_color_pair(GNT_COLOR_NORMAL));
 	}
 	wrefresh(taskbar);
 }

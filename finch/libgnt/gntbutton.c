@@ -47,7 +47,7 @@ gnt_button_draw(GntWidget *widget)
 	else
 		type = GNT_COLOR_NORMAL;
 
-	wbkgdset(widget->window, '\0' | COLOR_PAIR(type));
+	wbkgdset(widget->window, '\0' | gnt_color_pair(type));
 	mvwaddstr(widget->window, (small_button) ? 0 : 1, 2, button->priv->text);
 	if (small_button) {
 		type = GNT_COLOR_HIGHLIGHT;
@@ -77,17 +77,6 @@ gnt_button_map(GntWidget *widget)
 }
 
 static gboolean
-gnt_button_key_pressed(GntWidget *widget, const char *key)
-{
-	if (strcmp(key, GNT_KEY_ENTER) == 0)
-	{
-		gnt_widget_activate(widget);
-		return TRUE;
-	}
-	return FALSE;
-}
-
-static gboolean
 gnt_button_clicked(GntWidget *widget, GntMouseEvent event, int x, int y)
 {
 	if (event == GNT_LEFT_MOUSE_DOWN) {
@@ -98,21 +87,40 @@ gnt_button_clicked(GntWidget *widget, GntMouseEvent event, int x, int y)
 }
 
 static void
+gnt_button_destroy(GntWidget *widget)
+{
+	GntButton *button = GNT_BUTTON(widget);
+	g_free(button->priv->text);
+	g_free(button->priv);
+}
+
+static gboolean
+button_activate(GntBindable *bind, GList *null)
+{
+	gnt_widget_activate(GNT_WIDGET(bind));
+	return TRUE;
+}
+
+static void
 gnt_button_class_init(GntWidgetClass *klass)
 {
 	char *style;
+	GntBindableClass *bindable = GNT_BINDABLE_CLASS(klass);
 
 	parent_class = GNT_WIDGET_CLASS(klass);
 	parent_class->draw = gnt_button_draw;
 	parent_class->map = gnt_button_map;
 	parent_class->size_request = gnt_button_size_request;
-	parent_class->key_pressed = gnt_button_key_pressed;
 	parent_class->clicked = gnt_button_clicked;
+	parent_class->destroy = gnt_button_destroy;
 
 	style = gnt_style_get_from_name(NULL, "small-button");
 	small_button = gnt_style_parse_bool(style);
 	g_free(style);
-	GNTDEBUG;
+
+	gnt_bindable_class_register_action(bindable, "activate", button_activate,
+				GNT_KEY_ENTER, NULL);
+	gnt_style_read_actions(G_OBJECT_CLASS_TYPE(klass), GNT_BINDABLE_CLASS(klass));
 }
 
 static void
@@ -126,6 +134,7 @@ gnt_button_init(GTypeInstance *instance, gpointer class)
 	widget->priv.minh = small_button ? 1 : 3;
 	if (small_button)
 		GNT_WIDGET_SET_FLAGS(widget, GNT_WIDGET_NO_BORDER | GNT_WIDGET_NO_SHADOW);
+	GNT_WIDGET_UNSET_FLAGS(widget, GNT_WIDGET_GROW_X | GNT_WIDGET_GROW_Y);
 	GNTDEBUG;
 }
 

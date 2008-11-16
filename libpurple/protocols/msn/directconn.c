@@ -158,17 +158,20 @@ create_listener(int port)
 
 	flags = fcntl(fd, F_GETFL);
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#ifndef _WIN32
+	fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
 
 	return fd;
 }
 
-static size_t
+static gssize
 msn_directconn_write(MsnDirectConn *directconn,
 					 const char *data, size_t len)
 {
 	char *buffer, *tmp;
 	size_t buf_size;
-	size_t ret;
+	gssize ret;
 	guint32 sent_len;
 
 	g_return_val_if_fail(directconn != NULL, 0);
@@ -274,7 +277,8 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	MsnDirectConn* directconn;
 	char *body;
-	size_t len, body_len;
+	size_t body_len;
+	gssize len;
 
 	purple_debug_info("msn", "read_cb: %d, %d\n", source, cond);
 
@@ -300,7 +304,7 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 	body_len = GUINT32_FROM_LE(body_len);
 
-	purple_debug_info("msn", "body_len=%d\n", body_len);
+	purple_debug_info("msn", "body_len=%" G_GSIZE_FORMAT "\n", body_len);
 
 	if (body_len <= 0)
 	{
@@ -324,7 +328,7 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 		/* Let's read the data. */
 		len = read(directconn->fd, body, body_len);
 
-		purple_debug_info("msn", "len=%d\n", len);
+		purple_debug_info("msn", "len=%" G_GSIZE_FORMAT "\n", len);
 	}
 	else
 	{

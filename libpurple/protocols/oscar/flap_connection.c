@@ -107,20 +107,21 @@ rateclass_get_new_current(FlapConnection *conn, struct rateclass *rateclass, str
 	return MIN(((rateclass->current * (rateclass->windowsize - 1)) + timediff) / rateclass->windowsize, rateclass->max);
 }
 
-static gboolean flap_connection_send_queued(gpointer data)
+/*
+ * Attempt to send the contents of a given queue
+ *
+ * @return TRUE if the queue was completely emptied or was initially
+ *         empty; FALSE if rate limiting prevented it from being
+ *         emptied.
+ */
+static gboolean flap_connection_send_snac_queue(FlapConnection *conn, struct timeval now, GQueue *queue)
 {
-	FlapConnection *conn;
-	struct timeval now;
-
-	conn = data;
-	gettimeofday(&now, NULL);
-
-	while (!g_queue_is_empty(conn->queued_snacs))
+	while (!g_queue_is_empty(queue))
 	{
 		QueuedSnac *queued_snac;
 		struct rateclass *rateclass;
 
-		queued_snac = g_queue_peek_head(conn->queued_snacs);
+		queued_snac = g_queue_peek_head(queue);
 
 		rateclass = flap_connection_get_rateclass(conn, queued_snac->family, queued_snac->subtype);
 		if (rateclass != NULL)
@@ -132,7 +133,7 @@ static gboolean flap_connection_send_queued(gpointer data)
 			/* (Add 100ms padding to account for inaccuracies in the calculation) */
 			if (new_current < rateclass->alert + 100)
 				/* Not ready to send this SNAC yet--keep waiting. */
-				return TRUE;
+				return FALSE;
 
 			rateclass->current = new_current;
 			rateclass->last.tv_sec = now.tv_sec;
@@ -141,11 +142,35 @@ static gboolean flap_connection_send_queued(gpointer data)
 
 		flap_connection_send(conn, queued_snac->frame);
 		g_free(queued_snac);
-		g_queue_pop_head(conn->queued_snacs);
+		g_queue_pop_head(queue);
 	}
 
-	conn->queued_timeout = 0;
-	return FALSE;
+	/* We emptied the queue */
+	return TRUE;
+}
+
+static gboolean flap_connection_send_queued(gpointer data)
+{
+	FlapConnection *conn;
+	struct timeval now;
+
+	conn = data;
+	gettimeofday(&now, NULL);
+
+	purple_debug_info("oscar", "Attempting to send %u queued SNACs and %u queued low-priority SNACs for %p\n",
+					  (conn->queued_snacs ? conn->queued_snacs->length : 0),
+					  (conn->queued_lowpriority_snacs ? conn->queued_lowpriority_snacs->length : 0),
+					  conn);
+	if (!conn->queued_snacs || flap_connection_send_snac_queue(conn, now, conn->queued_snacs)) {
+		if (!conn->queued_lowpriority_snacs || flap_connection_send_snac_queue(conn, now, conn->queued_lowpriority_snacs)) {
+			/* Both queues emptied. */
+			conn->queued_timeout = 0;
+			return FALSE;
+		}
+	}
+
+	/* We couldn't send all our SNACs. Keep trying */
+	return TRUE;
 }
 
 /**
@@ -156,9 +181,12 @@ static gboolean flap_connection_send_queued(gpointer data)
  *
  * @param data The optional bytestream that makes up the data portion
  *        of this SNAC.  For empty SNACs this should be NULL.
+ * @param high_priority If TRUE, the SNAC will be queued normally if
+ *        needed. If FALSE, it wil be queued separately, to be sent
+ *        only if all high priority SNACs have been sent.
  */
 void
-flap_connection_send_snac(OscarData *od, FlapConnection *conn, guint16 family, guint16 subtype, guint16 flags, aim_snacid_t snacid, ByteStream *data)
+flap_connection_send_snac_with_priority(OscarData *od, FlapConnection *conn, guint16 family, const guint16 subtype, guint16 flags, aim_snacid_t snacid, ByteStream *data, gboolean high_priority)
 {
 	FlapFrame *frame;
 	guint32 length;
@@ -189,6 +217,8 @@ flap_connection_send_snac(OscarData *od, FlapConnection *conn, guint16 family, g
 		/* (Add 100ms padding to account for inaccuracies in the calculation) */
 		if (new_current < rateclass->alert + 100)
 		{
+			purple_debug_info("oscar", "Current rate for conn %p would be %u, but we alert at %u; enqueueing\n", conn, new_current, (rateclass->alert + 100));
+
 			enqueue = TRUE;
 		}
 		else
@@ -197,6 +227,14 @@ flap_connection_send_snac(OscarData *od, FlapConnection *conn, guint16 family, g
 			rateclass->last.tv_sec = now.tv_sec;
 			rateclass->last.tv_usec = now.tv_usec;
 		}
+	} else {
+		/*
+		 * It's normal for SNACs 0x0001/0x0006 and 0x0001/0x0017 to be
+		 * sent before we receive rate info from the server, so don't
+		 * bother warning about them.
+		 */
+		if (family != 0x0001 || (subtype != 0x0006 && subtype != 0x0017))
+			purple_debug_warning("oscar", "No rate class found for family 0x%04hx subtype 0x%04hx\n", family, subtype);
 	}
 
 	if (enqueue)
@@ -208,7 +246,16 @@ flap_connection_send_snac(OscarData *od, FlapConnection *conn, guint16 family, g
 		queued_snac->family = family;
 		queued_snac->subtype = subtype;
 		queued_snac->frame = frame;
-		g_queue_push_tail(conn->queued_snacs, queued_snac);
+
+		if (high_priority) {
+			if (!conn->queued_snacs)
+				conn->queued_snacs = g_queue_new();
+			g_queue_push_tail(conn->queued_snacs, queued_snac);
+		} else {
+			if (!conn->queued_lowpriority_snacs)
+				conn->queued_lowpriority_snacs = g_queue_new();
+			g_queue_push_tail(conn->queued_lowpriority_snacs, queued_snac);
+		}
 
 		if (conn->queued_timeout == 0)
 			conn->queued_timeout = purple_timeout_add(500, flap_connection_send_queued, conn);
@@ -217,6 +264,12 @@ flap_connection_send_snac(OscarData *od, FlapConnection *conn, guint16 family, g
 	}
 
 	flap_connection_send(conn, frame);
+}
+
+void
+flap_connection_send_snac(OscarData *od, FlapConnection *conn, guint16 family, const guint16 subtype, guint16 flags, aim_snacid_t snacid, ByteStream *data)
+{
+	flap_connection_send_snac_with_priority(od, conn, family, subtype, flags, snacid, data, TRUE);
 }
 
 /**
@@ -270,7 +323,6 @@ flap_connection_new(OscarData *od, int type)
 	conn->fd = -1;
 	conn->subtype = -1;
 	conn->type = type;
-	conn->queued_snacs = g_queue_new();
 
 	od->oscar_connections = g_slist_prepend(od->oscar_connections, conn);
 
@@ -294,12 +346,12 @@ flap_connection_close(OscarData *od, FlapConnection *conn)
 		conn->connect_data = NULL;
 	}
 
-	if (conn->connect_data != NULL)
+	if (conn->new_conn_data != NULL)
 	{
 		if (conn->type == SNAC_FAMILY_CHAT)
 		{
 			oscar_chat_destroy(conn->new_conn_data);
-			conn->connect_data = NULL;
+			conn->new_conn_data = NULL;
 		}
 	}
 
@@ -360,7 +412,7 @@ flap_connection_destroy_cb(gpointer data)
 
 	conn = data;
 	od = conn->od;
-	account = (PURPLE_CONNECTION_IS_VALID(od->gc) ? purple_connection_get_account(od->gc) : NULL);
+	account = purple_connection_get_account(od->gc);
 
 	purple_debug_info("oscar", "Destroying oscar connection of "
 			"type 0x%04hx.  Disconnect reason is %d\n",
@@ -375,16 +427,18 @@ flap_connection_destroy_cb(gpointer data)
 	 * TODO: If we don't have a SNAC_FAMILY_LOCATE connection then
 	 * we should try to request one instead of disconnecting.
 	 */
-	if (account && !account->disconnecting &&
-		((od->oscar_connections == NULL) || (!flap_connection_getbytype(od, SNAC_FAMILY_LOCATE))))
+	if (!account->disconnecting && ((od->oscar_connections == NULL)
+			|| (!flap_connection_getbytype(od, SNAC_FAMILY_LOCATE))))
 	{
 		/* No more FLAP connections!  Sign off this PurpleConnection! */
 		gchar *tmp;
+		PurpleConnectionError reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+
 		if (conn->disconnect_code == 0x0001) {
+			reason = PURPLE_CONNECTION_ERROR_NAME_IN_USE;
 			tmp = g_strdup(_("You have signed on from another location."));
 			if (!purple_account_get_remember_password(account))
 				purple_account_set_password(account, NULL);
-			od->gc->wants_to_die = TRUE;
 		} else if (conn->disconnect_reason == OSCAR_DISCONNECT_REMOTE_CLOSED)
 			tmp = g_strdup(_("Server closed the connection."));
 		else if (conn->disconnect_reason == OSCAR_DISCONNECT_LOST_CONNECTION)
@@ -404,7 +458,7 @@ flap_connection_destroy_cb(gpointer data)
 
 		if (tmp != NULL)
 		{
-			purple_connection_error(od->gc, tmp);
+			purple_connection_error_reason(od->gc, reason, tmp);
 			g_free(tmp);
 		}
 	}
@@ -427,14 +481,28 @@ flap_connection_destroy_cb(gpointer data)
 		conn->rateclasses = g_slist_delete_link(conn->rateclasses, conn->rateclasses);
 	}
 
-	while (!g_queue_is_empty(conn->queued_snacs))
-	{
-		QueuedSnac *queued_snac;
-		queued_snac = g_queue_pop_head(conn->queued_snacs);
-		flap_frame_destroy(queued_snac->frame);
-		g_free(queued_snac);
+	if (conn->queued_snacs) {
+		while (!g_queue_is_empty(conn->queued_snacs))
+		{
+			QueuedSnac *queued_snac;
+			queued_snac = g_queue_pop_head(conn->queued_snacs);
+			flap_frame_destroy(queued_snac->frame);
+			g_free(queued_snac);
+		}
+		g_queue_free(conn->queued_snacs);
 	}
-	g_queue_free(conn->queued_snacs);
+
+	if (conn->queued_lowpriority_snacs) {
+		while (!g_queue_is_empty(conn->queued_lowpriority_snacs))
+		{
+			QueuedSnac *queued_snac;
+			queued_snac = g_queue_pop_head(conn->queued_lowpriority_snacs);
+			flap_frame_destroy(queued_snac->frame);
+			g_free(queued_snac);
+		}
+		g_queue_free(conn->queued_lowpriority_snacs);
+	}
+
 	if (conn->queued_timeout > 0)
 		purple_timeout_remove(conn->queued_timeout);
 
@@ -468,7 +536,7 @@ flap_connection_destroy(FlapConnection *conn, OscarDisconnectReason reason, cons
  * @param error_message A brief error message that gives more detail
  *        regarding the reason for the disconnecting.  This should
  *        be NULL for everything except OSCAR_DISCONNECT_LOST_CONNECTION,
- *        in which case it should contain the value of strerror(errno),
+ *        in which case it should contain the value of g_strerror(errno),
  *        and OSCAR_DISCONNECT_COULD_NOT_CONNECT, in which case it
  *        should contain the error_message passed back from the call
  *        to purple_proxy_connect().
@@ -751,7 +819,7 @@ parse_flap(OscarData *od, FlapConnection *conn, FlapFrame *frame)
 		{
 				/* Error! */
 				purple_debug_warning("oscar", "Expecting FLAP version "
-					"0x00000001 but received FLAP version %08lx.  Closing connection.\n",
+					"0x00000001 but received FLAP version %08x.  Closing connection.\n",
 					flap_version);
 				flap_connection_schedule_destroy(conn,
 						OSCAR_DISCONNECT_INVALID_DATA, NULL);
@@ -781,7 +849,7 @@ void
 flap_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	FlapConnection *conn;
-	ssize_t read;
+	gssize read;
 
 	conn = data;
 
@@ -812,9 +880,10 @@ flap_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 				/* Error! */
 				flap_connection_schedule_destroy(conn,
-						OSCAR_DISCONNECT_LOST_CONNECTION, strerror(errno));
+						OSCAR_DISCONNECT_LOST_CONNECTION, g_strerror(errno));
 				break;
 			}
+			conn->od->gc->last_received = time(NULL);
 
 			/* If we don't even have a complete FLAP header then do nothing */
 			conn->header_received += read;
@@ -873,7 +942,7 @@ flap_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 				/* Error! */
 				flap_connection_schedule_destroy(conn,
-						OSCAR_DISCONNECT_LOST_CONNECTION, strerror(errno));
+						OSCAR_DISCONNECT_LOST_CONNECTION, g_strerror(errno));
 				break;
 			}
 
@@ -924,7 +993,7 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		close(conn->fd);
 		conn->fd = -1;
 		flap_connection_schedule_destroy(conn,
-				OSCAR_DISCONNECT_LOST_CONNECTION, strerror(errno));
+				OSCAR_DISCONNECT_LOST_CONNECTION, g_strerror(errno));
 		return;
 	}
 
@@ -980,7 +1049,7 @@ sendframe_flap(FlapConnection *conn, FlapFrame *frame)
 	byte_stream_rewind(&bs);
 	flap_connection_send_byte_stream(&bs, conn, bslen);
 
-	g_free(bs.data); /* XXX byte_stream_free */
+	byte_stream_destroy(&bs);
 }
 
 void
@@ -990,4 +1059,3 @@ flap_connection_send(FlapConnection *conn, FlapFrame *frame)
 	sendframe_flap(conn, frame);
 	flap_frame_destroy(frame);
 }
-

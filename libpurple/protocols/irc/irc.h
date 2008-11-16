@@ -35,6 +35,7 @@
 #define IRC_DEFAULT_SSL_PORT 994
 
 #define IRC_DEFAULT_CHARSET "UTF-8"
+#define IRC_DEFAULT_AUTODETECT FALSE
 #define IRC_DEFAULT_ALIAS "purple"
 
 #define IRC_DEFAULT_QUIT "Leaving."
@@ -55,6 +56,8 @@ struct irc_conn {
 	int fd;
 	guint timer;
 	GHashTable *buddies;
+
+	gboolean ison_outstanding;
 
 	char *inbuf;
 	int inbuflen;
@@ -86,6 +89,8 @@ struct irc_conn {
 	time_t recv_time;
 
 	char *mode_chars;
+	char *reqnick;
+	gboolean nickused;
 };
 
 struct irc_buddy {
@@ -104,6 +109,8 @@ char *irc_escape_privmsg(const char *text, gssize length);
 char *irc_mirc2html(const char *string);
 char *irc_mirc2txt(const char *string);
 
+const char *irc_nick_skip_mode(struct irc_conn *irc, const char *string);
+
 gboolean irc_ischannel(const char *string);
 
 void irc_register_commands(void);
@@ -116,6 +123,7 @@ void irc_msg_default(struct irc_conn *irc, const char *name, const char *from, c
 void irc_msg_away(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_badmode(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_badnick(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_ban(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_banfull(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_banned(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_chanmode(struct irc_conn *irc, const char *name, const char *from, char **args);
@@ -159,6 +167,7 @@ void irc_cmd_table_build(struct irc_conn *irc);
 
 int irc_cmd_default(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_away(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
+int irc_cmd_ctcp(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_ctcp_version(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_invite(struct irc_conn *irc, const char *cmd, const char *target, const char **args);

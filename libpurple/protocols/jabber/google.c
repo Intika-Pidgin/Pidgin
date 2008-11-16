@@ -314,11 +314,6 @@ void jabber_google_roster_add_deny(PurpleConnection *gc, const char *who)
 		buddies = buddies->next;
 	}
 
-	iq = jabber_iq_new_query(js, JABBER_IQ_SET, "jabber:iq:roster");
-
-	query = xmlnode_get_child(iq->node, "query");
-	item = xmlnode_new_child(query, "item");
-
 	xmlnode_set_attrib(item, "jid", who);
 	xmlnode_set_attrib(item, "name", b->alias ? b->alias : "");
 	xmlnode_set_attrib(item, "gr:t", "B");
@@ -384,11 +379,6 @@ void jabber_google_roster_rem_deny(PurpleConnection *gc, const char *who)
 
 		buddies = buddies->next;
 	}
-
-	iq = jabber_iq_new_query(js, JABBER_IQ_SET, "jabber:iq:roster");
-
-	query = xmlnode_get_child(iq->node, "query");
-	item = xmlnode_new_child(query, "item");
 
 	xmlnode_set_attrib(item, "jid", who);
 	xmlnode_set_attrib(item, "name", b->alias ? b->alias : "");
@@ -515,4 +505,23 @@ char *jabber_google_format_to_html(const char *text)
 		}
 	}
 	return g_string_free(str, FALSE);
+}
+
+void jabber_google_presence_incoming(JabberStream *js, const char *user, JabberBuddyResource *jbr)
+{
+	if (!js->googletalk)
+		return;
+	if (jbr->status && !strncmp(jbr->status, "♫ ", strlen("♫ "))) {
+		purple_prpl_got_user_status(js->gc->account, user, "tune",
+					    PURPLE_TUNE_TITLE, jbr->status + strlen("♫ "), NULL);
+		jbr->status = NULL;
+	} else {
+		purple_prpl_got_user_status_deactive(js->gc->account, user, "tune");
+	}
+}
+
+char *jabber_google_presence_outgoing(PurpleStatus *tune)
+{
+	const char *attr = purple_status_get_attr_string(tune, PURPLE_TUNE_TITLE);
+	return attr ? g_strdup_printf("♫ %s", attr) : g_strdup("");
 }

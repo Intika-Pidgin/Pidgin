@@ -527,7 +527,7 @@ static char *show_error_message()
 			g_snprintf(buf, sizeof(buf), _("Dir service temporarily unavailable."));
 			break;
 		case 974:
-			g_snprintf(buf, sizeof(buf), _("E-mail lookup restricted."));
+			g_snprintf(buf, sizeof(buf), _("Email lookup restricted."));
 			break;
 		case 975:
 			g_snprintf(buf, sizeof(buf), _("Keyword ignored."));
@@ -546,7 +546,7 @@ static char *show_error_message()
 			g_snprintf(buf, sizeof(buf), _("Failure unknown: %s."), w);
 			break;
 		case 980:
-			g_snprintf(buf, sizeof(buf), _("Incorrect screen name or password."));
+			g_snprintf(buf, sizeof(buf), _("Incorrect username or password."));
 			break;
 		case 981:
 			g_snprintf(buf, sizeof(buf), _("The service is temporarily unavailable."));
@@ -1795,7 +1795,7 @@ static void toc_send_file_callback(gpointer data, gint source, PurpleInputCondit
 			ft->file = g_fopen(ft->filename, "w");
 			if (!ft->file) {
 				buf = g_strdup_printf(_("Could not open %s for writing!"), ft->filename);
-				purple_notify_error(ft->gc, NULL, buf, strerror(errno));
+				purple_notify_error(ft->gc, NULL, buf, g_strerror(errno));
 				g_free(buf);
 				purple_input_remove(ft->inpa);
 				close(source);
@@ -1812,7 +1812,7 @@ static void toc_send_file_callback(gpointer data, gint source, PurpleInputCondit
 			if (!ft->file) {
 				buf = g_strdup_printf("Could not open %s/%s for writing!", ft->filename,
 						ft->hdr.name);
-				purple_notify_error(ft->gc, NULL, buf, strerror(errno));
+				purple_notify_error(ft->gc, NULL, buf, g_strerror(errno));
 				g_free(buf);
 				purple_input_remove(ft->inpa);
 				close(source);
@@ -2301,7 +2301,7 @@ static PurplePluginInfo info =
 
 	"prpl-toc",                                       /**< id             */
 	"TOC",                                            /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("TOC Protocol Plugin"),
 	                                                  /**  description    */

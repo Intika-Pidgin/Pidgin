@@ -107,6 +107,18 @@ const char *purple_network_get_local_system_ip(int fd);
 const char *purple_network_get_my_ip(int fd);
 
 /**
+ * Should calls to purple_network_listen() and purple_network_listen_range()
+ * map the port externally using NAT-PMP or UPnP?
+ * The default value is TRUE
+ *
+ * @param map_external Should the open port be mapped externally?
+ * @deprecated In 3.0.0 a boolean will be added to the above functions to
+ *             perform the same function.
+ * @since 2.3.0
+ */
+void purple_network_listen_map_external(gboolean map_external);
+
+/**
  * Attempts to open a listening port ONLY on the specified port number.
  * You probably want to use purple_network_listen_range() instead of this.
  * This function is useful, for example, if you wanted to write a telnet
@@ -189,11 +201,9 @@ void purple_network_listen_cancel(PurpleNetworkListenData *listen_data);
 unsigned short purple_network_get_port_from_fd(int fd);
 
 /**
- * Detects if there is an available Internet connection. Note that this call
- * could block for the amount of time specified in inet_detect_timeout, so
- * using it in a UI thread may cause uncomfortableness
+ * Detects if there is an available network connection.
  *
- * @return TRUE if the Internet is available
+ * @return TRUE if the network is available
  */
 gboolean purple_network_is_available(void);
 

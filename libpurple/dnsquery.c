@@ -32,6 +32,9 @@
 #include "prefs.h"
 #include "util.h"
 
+#if (defined(__APPLE__) || defined (__unix__)) && !defined(__osf__)
+#define PURPLE_DNSQUERY_USE_FORK
+#endif
 /**************************************************************************
  * DNS query API
  **************************************************************************/
@@ -47,16 +50,16 @@ struct _PurpleDnsQueryData {
 	gpointer data;
 	guint timeout;
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(PURPLE_DNSQUERY_USE_FORK)
 	PurpleDnsQueryResolverProcess *resolver;
-#elif defined _WIN32 /* end __unix__ || __APPLE__ */
+#elif defined _WIN32 /* end PURPLE_DNSQUERY_USE_FORK  */
 	GThread *resolver;
 	GSList *hosts;
 	gchar *error_message;
 #endif
 };
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(PURPLE_DNSQUERY_USE_FORK)
 
 #define MAX_DNS_CHILDREN 4
 
@@ -82,7 +85,7 @@ typedef struct {
 	char hostname[512];
 	int port;
 } dns_params_t;
-#endif
+#endif /* end PURPLE_DNSQUERY_USE_FORK */
 
 static void
 purple_dnsquery_resolved(PurpleDnsQueryData *query_data, GSList *hosts)
@@ -105,6 +108,15 @@ purple_dnsquery_resolved(PurpleDnsQueryData *query_data, GSList *hosts)
 		}
 	}
 
+#ifdef PURPLE_DNSQUERY_USE_FORK
+	/*
+	 * Add the resolver to the list of available resolvers, and set it
+	 * to NULL so that it doesn't get destroyed along with the query_data
+	 */
+	free_dns_children = g_slist_prepend(free_dns_children, query_data->resolver);
+	query_data->resolver = NULL;
+#endif /* PURPLE_DNSQUERY_USE_FORK */
+
 	purple_dnsquery_destroy(query_data);
 }
 
@@ -123,15 +135,12 @@ purple_dnsquery_ui_resolve(PurpleDnsQueryData *query_data)
 	PurpleDnsQueryUiOps *ops = purple_dnsquery_get_ui_ops();
 
 	if (ops && ops->resolve_host)
-	{
-		if (ops->resolve_host(query_data, purple_dnsquery_resolved, purple_dnsquery_failed))
-			return TRUE;
-	}
+		return ops->resolve_host(query_data, purple_dnsquery_resolved, purple_dnsquery_failed);
 
 	return FALSE;
 }
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(PURPLE_DNSQUERY_USE_FORK)
 
 /*
  * Unix!
@@ -142,7 +151,7 @@ purple_dnsquery_ui_resolve(PurpleDnsQueryData *query_data)
  */
 #ifdef HAVE_SIGNAL_H
 G_GNUC_NORETURN static void
-trap_gdb_bug()
+trap_gdb_bug(int sig)
 {
 	const char *message =
 		"Purple's DNS child got a SIGTRAP signal.\n"
@@ -158,6 +167,24 @@ trap_gdb_bug()
 	_exit(1);
 }
 #endif
+
+static void
+write_to_parent(int fd, const void *buf, size_t count)
+{
+	ssize_t written;
+
+	written = write(fd, buf, count);
+	if (written != count) {
+		if (written < 0)
+			fprintf(stderr, "dns[%d]: Error writing data to "
+					"parent: %s\n", getpid(), strerror(errno));
+		else
+			fprintf(stderr, "dns[%d]: Error: Tried to write %"
+					G_GSIZE_FORMAT " bytes to parent but instead "
+					"wrote %" G_GSIZE_FORMAT " bytes\n",
+					getpid(), count, written);
+	}
+}
 
 G_GNUC_NORETURN static void
 purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
@@ -188,9 +215,8 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 	 * the result back to our parent, when finished.
 	 */
 	while (1) {
-		const char ch = 'Y';
 		fd_set fds;
-		struct timeval tv = { .tv_sec = 40 , .tv_usec = 0 };
+		struct timeval tv = { .tv_sec = 20, .tv_usec = 0 };
 		FD_ZERO(&fds);
 		FD_SET(child_in, &fds);
 		rc = select(child_in + 1, &fds, NULL, NULL, &tv);
@@ -201,7 +227,8 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 		}
 		rc = read(child_in, &dns_params, sizeof(dns_params_t));
 		if (rc < 0) {
-			perror("read()");
+			fprintf(stderr, "dns[%d]: Error: Could not read dns_params: "
+					"%s\n", getpid(), strerror(errno));
 			break;
 		}
 		if (rc == 0) {
@@ -210,11 +237,11 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 			_exit(0);
 		}
 		if (dns_params.hostname[0] == '\0') {
-			printf("dns[%d]: hostname = \"\" (port = %d)!!!\n", getpid(), dns_params.port);
+			fprintf(stderr, "dns[%d]: Error: Parent requested resolution "
+					"of an empty hostname (port = %d)!!!\n", getpid(),
+					dns_params.port);
 			_exit(1);
 		}
-		/* Tell our parent that we read the data successfully */
-		write(child_out, &ch, sizeof(ch));
 
 		/* We have the hostname and port, now resolve the IP */
 
@@ -230,7 +257,7 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 		 */
 		hints.ai_socktype = SOCK_STREAM;
 		rc = getaddrinfo(dns_params.hostname, servname, &hints, &res);
-		write(child_out, &rc, sizeof(rc));
+		write_to_parent(child_out, &rc, sizeof(rc));
 		if (rc != 0) {
 			close(child_out);
 			if (show_debug)
@@ -242,17 +269,17 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 		tmp = res;
 		while (res) {
 			size_t ai_addrlen = res->ai_addrlen;
-			write(child_out, &ai_addrlen, sizeof(ai_addrlen));
-			write(child_out, res->ai_addr, res->ai_addrlen);
+			write_to_parent(child_out, &ai_addrlen, sizeof(ai_addrlen));
+			write_to_parent(child_out, res->ai_addr, res->ai_addrlen);
 			res = res->ai_next;
 		}
 		freeaddrinfo(tmp);
-		write(child_out, &zero, sizeof(zero));
+		write_to_parent(child_out, &zero, sizeof(zero));
 #else
 		if (!inet_aton(dns_params.hostname, &sin.sin_addr)) {
 			struct hostent *hp;
 			if (!(hp = gethostbyname(dns_params.hostname))) {
-				write(child_out, &h_errno, sizeof(int));
+				write_to_parent(child_out, &h_errno, sizeof(int));
 				close(child_out);
 				if (show_debug)
 					printf("DNS Error: %d\n", h_errno);
@@ -265,10 +292,10 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 			sin.sin_family = AF_INET;
 
 		sin.sin_port = htons(dns_params.port);
-		write(child_out, &zero, sizeof(zero));
-		write(child_out, &addrlen, sizeof(addrlen));
-		write(child_out, &sin, addrlen);
-		write(child_out, &zero, sizeof(zero));
+		write_to_parent(child_out, &zero, sizeof(zero));
+		write_to_parent(child_out, &addrlen, sizeof(addrlen));
+		write_to_parent(child_out, &sin, addrlen);
+		write_to_parent(child_out, &zero, sizeof(zero));
 #endif
 		dns_params.hostname[0] = '\0';
 	}
@@ -286,7 +313,7 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
  * Begin the functions for dealing with the DNS child processes.
  */
 static void
-cope_with_gdb_brokenness()
+cope_with_gdb_brokenness(void)
 {
 #ifdef __linux__
 	static gboolean already_done = FALSE;
@@ -346,7 +373,7 @@ purple_dnsquery_resolver_new(gboolean show_debug)
 	/* Create pipes for communicating with the child process */
 	if (pipe(child_out) || pipe(child_in)) {
 		purple_debug_error("dns",
-				   "Could not create pipes: %s\n", strerror(errno));
+				   "Could not create pipes: %s\n", g_strerror(errno));
 		return NULL;
 	}
 
@@ -374,7 +401,7 @@ purple_dnsquery_resolver_new(gboolean show_debug)
 	if (resolver->dns_pid == -1) {
 		purple_debug_error("dns",
 				   "Could not create child process for DNS: %s\n",
-				   strerror(errno));
+				   g_strerror(errno));
 		purple_dnsquery_resolver_destroy(resolver);
 		return NULL;
 	}
@@ -391,9 +418,9 @@ purple_dnsquery_resolver_new(gboolean show_debug)
 
 /**
  * @return TRUE if the request was sent succesfully.  FALSE
- * 		if the request could not be sent.  This isn't
- * 		necessarily an error.  If the child has expired,
- * 		for example, we won't be able to send the message.
+ *         if the request could not be sent.  This isn't
+ *         necessarily an error.  If the child has expired,
+ *         for example, we won't be able to send the message.
  */
 static gboolean
 send_dns_request_to_child(PurpleDnsQueryData *query_data,
@@ -401,8 +428,7 @@ send_dns_request_to_child(PurpleDnsQueryData *query_data,
 {
 	pid_t pid;
 	dns_params_t dns_params;
-	int rc;
-	char ch;
+	ssize_t rc;
 
 	/* This waitpid might return the child's PID if it has recently
 	 * exited, or it might return an error if it exited "long
@@ -416,7 +442,7 @@ send_dns_request_to_child(PurpleDnsQueryData *query_data,
 		return FALSE;
 	} else if (pid < 0) {
 		purple_debug_warning("dns", "Wait for DNS child %d failed: %s\n",
-				resolver->dns_pid, strerror(errno));
+				resolver->dns_pid, g_strerror(errno));
 		purple_dnsquery_resolver_destroy(resolver);
 		return FALSE;
 	}
@@ -429,21 +455,15 @@ send_dns_request_to_child(PurpleDnsQueryData *query_data,
 	/* Send the data structure to the child */
 	rc = write(resolver->fd_in, &dns_params, sizeof(dns_params));
 	if (rc < 0) {
-		purple_debug_error("dns", "Unable to write to DNS child %d: %d\n",
-				resolver->dns_pid, strerror(errno));
+		purple_debug_error("dns", "Unable to write to DNS child %d: %s\n",
+				resolver->dns_pid, g_strerror(errno));
 		purple_dnsquery_resolver_destroy(resolver);
 		return FALSE;
 	}
-
-	g_return_val_if_fail(rc == sizeof(dns_params), -1);
-
-	/* Did you hear me? (This avoids some race conditions) */
-	rc = read(resolver->fd_out, &ch, sizeof(ch));
-	if (rc != 1 || ch != 'Y')
-	{
-		purple_debug_warning("dns",
-				"DNS child %d not responding. Killing it!\n",
-				resolver->dns_pid);
+	if (rc < sizeof(dns_params)) {
+		purple_debug_error("dns", "Tried to write %" G_GSSIZE_FORMAT
+				" bytes to child but only wrote %" G_GSSIZE_FORMAT "\n",
+				sizeof(dns_params), rc);
 		purple_dnsquery_resolver_destroy(resolver);
 		return FALSE;
 	}
@@ -460,7 +480,7 @@ send_dns_request_to_child(PurpleDnsQueryData *query_data,
 static void host_resolved(gpointer data, gint source, PurpleInputCondition cond);
 
 static void
-handle_next_queued_request()
+handle_next_queued_request(void)
 {
 	PurpleDnsQueryData *query_data;
 	PurpleDnsQueryResolverProcess *resolver;
@@ -471,13 +491,6 @@ handle_next_queued_request()
 
 	query_data = queued_requests->data;
 	queued_requests = g_slist_delete_link(queued_requests, queued_requests);
-
-	if (purple_dnsquery_ui_resolve(query_data))
-	{
-		/* The UI is handling the resolve; we're done */
-		handle_next_queued_request();
-		return;
-	}
 
 	/*
 	 * If we have any children, attempt to have them perform the DNS
@@ -547,7 +560,7 @@ host_resolved(gpointer data, gint source, PurpleInputCondition cond)
 	{
 #ifdef HAVE_GETADDRINFO
 		g_snprintf(message, sizeof(message), _("Error resolving %s:\n%s"),
-				query_data->hostname, gai_strerror(err));
+				query_data->hostname, purple_gai_strerror(err));
 #else
 		g_snprintf(message, sizeof(message), _("Error resolving %s: %d"),
 				query_data->hostname, err);
@@ -571,11 +584,11 @@ host_resolved(gpointer data, gint source, PurpleInputCondition cond)
 		purple_dnsquery_resolved(query_data, hosts);
 
 	} else if (rc == -1) {
-		g_snprintf(message, sizeof(message), _("Error reading from resolver process:\n%s"), strerror(errno));
+		g_snprintf(message, sizeof(message), _("Error reading from resolver process:\n%s"), g_strerror(errno));
 		purple_dnsquery_failed(query_data, message);
 
 	} else if (rc == 0) {
-		g_snprintf(message, sizeof(message), _("EOF while reading from resolver process"));
+		g_snprintf(message, sizeof(message), _("Resolver process exited without answering our request"));
 		purple_dnsquery_failed(query_data, message);
 	}
 
@@ -589,6 +602,12 @@ resolve_host(gpointer data)
 
 	query_data = data;
 	query_data->timeout = 0;
+
+	if (purple_dnsquery_ui_resolve(query_data))
+	{
+		/* The UI is handling the resolve; we're done */
+		return FALSE;
+	}
 
 	handle_next_queued_request();
 
@@ -613,7 +632,7 @@ purple_dnsquery_a(const char *hostname, int port,
 	query_data->data = data;
 	query_data->resolver = NULL;
 
-	if (strlen(query_data->hostname) == 0)
+	if (*query_data->hostname == '\0')
 	{
 		purple_dnsquery_destroy(query_data);
 		g_return_val_if_reached(NULL);
@@ -628,7 +647,7 @@ purple_dnsquery_a(const char *hostname, int port,
 	return query_data;
 }
 
-#elif defined _WIN32 /* end __unix__ || __APPLE__ */
+#elif defined _WIN32 /* end PURPLE_DNSQUERY_USE_FORK  */
 
 /*
  * Windows!
@@ -695,7 +714,7 @@ dns_thread(gpointer data)
 		}
 		freeaddrinfo(tmp);
 	} else {
-		query_data->error_message = g_strdup_printf(_("Error resolving %s:\n%s"), query_data->hostname, gai_strerror(rc));
+		query_data->error_message = g_strdup_printf(_("Error resolving %s:\n%s"), query_data->hostname, purple_gai_strerror(rc));
 	}
 #else
 	if ((hp = gethostbyname(query_data->hostname))) {
@@ -800,7 +819,7 @@ purple_dnsquery_a(const char *hostname, int port,
 	return query_data;
 }
 
-#else /* not __unix__ or __APPLE__ or _WIN32 */
+#else /* not PURPLE_DNSQUERY_USE_FORK or _WIN32 */
 
 /*
  * We weren't able to do anything fancier above, so use the
@@ -876,7 +895,7 @@ purple_dnsquery_a(const char *hostname, int port,
 	return query_data;
 }
 
-#endif /* not __unix__ or __APPLE__ or _WIN32 */
+#endif /* not PURPLE_DNSQUERY_USE_FORK or _WIN32 */
 
 void
 purple_dnsquery_destroy(PurpleDnsQueryData *query_data)
@@ -886,18 +905,21 @@ purple_dnsquery_destroy(PurpleDnsQueryData *query_data)
 	if (ops && ops->destroy)
 		ops->destroy(query_data);
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(PURPLE_DNSQUERY_USE_FORK)
 	queued_requests = g_slist_remove(queued_requests, query_data);
 
 	if (query_data->resolver != NULL)
 		/*
-		 * Ideally we would tell our resolver child to stop resolving
-		 * shit and then we would add it back to the free_dns_children
-		 * linked list.  However, it's hard to tell children stuff,
-		 * they just don't listen.
+		 * This is only non-NULL when we're cancelling an in-progress
+		 * query.  Ideally we would tell our resolver child to stop
+		 * resolving shit and then we would add it back to the
+		 * free_dns_children linked list.  However, it's hard to tell
+		 * children stuff, they just don't listen.  So we'll just
+		 * kill the process and allow a new child to be started if we
+		 * have more stuff to resolve.
 		 */
 		purple_dnsquery_resolver_destroy(query_data->resolver);
-#elif defined _WIN32 /* end __unix__ || __APPLE__ */
+#elif defined _WIN32 /* end PURPLE_DNSQUERY_USE_FORK */
 	if (query_data->resolver != NULL)
 	{
 		/*
@@ -918,7 +940,7 @@ purple_dnsquery_destroy(PurpleDnsQueryData *query_data)
 		query_data->hosts = g_slist_remove(query_data->hosts, query_data->hosts->data);
 	}
 	g_free(query_data->error_message);
-#endif
+#endif /* end _WIN32 */
 
 	if (query_data->timeout > 0)
 		purple_timeout_remove(query_data->timeout);
@@ -966,11 +988,11 @@ purple_dnsquery_init(void)
 void
 purple_dnsquery_uninit(void)
 {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(PURPLE_DNSQUERY_USE_FORK)
 	while (free_dns_children != NULL)
 	{
 		purple_dnsquery_resolver_destroy(free_dns_children->data);
 		free_dns_children = g_slist_remove(free_dns_children, free_dns_children->data);
 	}
-#endif
+#endif /* end PURPLE_DNSQUERY_USE_FORK */
 }

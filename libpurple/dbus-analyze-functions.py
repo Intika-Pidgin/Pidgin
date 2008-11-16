@@ -75,7 +75,11 @@ constlists = [
 ]
 
 pointer = "#pointer#"
-myexception = "My Exception"
+
+class MyException(Exception):
+    pass
+
+myexception = MyException()
 
 def ctopascal(name):
     newname = ""
@@ -368,13 +372,13 @@ class ServerBinding (Binding):
 
     def inputsimple(self, type, name, us):
         if us:
-            self.cdecls.append("\tdbus_int32_t %s;" % name)
-            self.cparams.append(("INT32", name))
-            self.addintype("i", name)
-        else:
             self.cdecls.append("\tdbus_uint32_t %s;" % name)
             self.cparams.append(("UINT32", name))
             self.addintype("u", name)
+        else:
+            self.cdecls.append("\tdbus_int32_t %s;" % name)
+            self.cparams.append(("INT32", name))
+            self.addintype("i", name)
 
     def inputstring(self, type, name, us):
         if us:
@@ -479,6 +483,7 @@ class BindingSet:
         self.inputiter = iter(inputfile)
         self.functionregexp = \
              re.compile("^%s(\w[^()]*)\(([^()]*)\)\s*;\s*$" % fprefix)    
+        self.typeregexp = re.compile("^\w+\s*\*?\s*$")
 
 
                 
@@ -497,7 +502,7 @@ class BindingSet:
             # accumulate lines until the parentheses are balance or an
             # empty line has been encountered
             myline = line.strip()
-            while myline.count("(") > myline.count(")"):
+            while (myline.count("(") > myline.count(")")) or self.typeregexp.match(myline):
                 newline = self.inputiter.next().strip()
                 if len(newline) == 0:
                     break
@@ -520,10 +525,11 @@ class BindingSet:
 
             try:
                 self.processfunction(functiontext, paramtexts)
-            except myexception:
-                sys.stderr.write(myline + "\n")
+            except MyException:
+#                sys.stderr.write(myline + "\n")
+                 pass
             except:
-                sys.stderr.write(myline + "\n")
+#                sys.stderr.write(myline + "\n")
                 raise
 
         self.flush()
@@ -582,7 +588,7 @@ if "export-only" in options:
 else:
     fprefix = ""
 
-sys.stderr.write("%s: Functions not exported:\n" % sys.argv[0])
+#sys.stderr.write("%s: Functions not exported:\n" % sys.argv[0])
 
 if "client" in options:
     bindings = ClientBindingSet(sys.stdin, fprefix,

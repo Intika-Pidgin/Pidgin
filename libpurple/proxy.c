@@ -70,7 +70,7 @@ struct _PurpleProxyConnectData {
 	gsize read_len;
 };
 
-static const char *socks5errors[] = {
+static const char * const socks5errors[] = {
 	"succeeded\n",
 	"general SOCKS server failure\n",
 	"connection not allowed by ruleset\n",
@@ -211,68 +211,287 @@ static PurpleProxyInfo *
 purple_gnome_proxy_get_info(void)
 {
 	static PurpleProxyInfo info = {0, NULL, 0, NULL, NULL};
-	gchar *path;
-	if ((path = g_find_program_in_path("gconftool-2"))) {
-		gchar *tmp;
+	gboolean use_same_proxy = FALSE;
+	gchar *tmp, *err = NULL;
 
-		g_free(path);
+	tmp = g_find_program_in_path("gconftool-2");
+	if (tmp == NULL)
+		return purple_global_proxy_get_info();
 
-		/* See whether to use a proxy. */
-		if (!g_spawn_command_line_sync("gconftool-2 -g /system/proxy/mode", &tmp,
-					       NULL, NULL, NULL))
-			return purple_global_proxy_get_info();
-		if (!strcmp(tmp, "none\n")) {
-			info.type = PURPLE_PROXY_NONE;
-			g_free(tmp);
-			return &info;
-		} else if (strcmp(tmp, "manual\n")) {
-			g_free(tmp);
-			return purple_global_proxy_get_info();
-		}
+	g_free(tmp);
+	tmp = NULL;
 
+	/* Check whether to use a proxy. */
+	if (!g_spawn_command_line_sync("gconftool-2 -g /system/proxy/mode",
+			&tmp, &err, NULL, NULL))
+		return purple_global_proxy_get_info();
+	g_free(err);
+	err = NULL;
+
+	if (!strcmp(tmp, "none\n")) {
+		info.type = PURPLE_PROXY_NONE;
 		g_free(tmp);
-		info.type = PURPLE_PROXY_HTTP;
-
-		/* Free the old fields */
-		if (info.host) {
-			g_free(info.host);
-			info.host = NULL;
-		}
-		if (info.username) {
-			g_free(info.username);
-			info.username = NULL;
-		}
-		if (info.password) {
-			g_free(info.password);
-			info.password = NULL;
-		}
-
-		/* Get the new ones */
-		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/host", &info.host,
-					       NULL, NULL, NULL))
-			return purple_global_proxy_get_info();
-		g_strchomp(info.host);
-
-		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/authentication_user", &info.username,
-					       NULL, NULL, NULL))
-			return purple_global_proxy_get_info();
-		g_strchomp(info.username);
-
-		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/authentication_password", &info.password,
-					       NULL, NULL, NULL))
-			return purple_global_proxy_get_info();
-		g_strchomp(info.password);
-
-		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/port", &tmp,
-					       NULL, NULL, NULL))
-			return purple_global_proxy_get_info();
-		info.port = atoi(tmp);
-		g_free(tmp);
-
 		return &info;
 	}
-	return purple_global_proxy_get_info();
+
+	if (strcmp(tmp, "manual\n")) {
+		/* Unknown setting.  Fallback to using our global proxy settings. */
+		g_free(tmp);
+		return purple_global_proxy_get_info();
+	}
+
+	g_free(tmp);
+	tmp = NULL;
+
+	/* Free the old fields */
+	if (info.host) {
+		g_free(info.host);
+		info.host = NULL;
+	}
+	if (info.username) {
+		g_free(info.username);
+		info.username = NULL;
+	}
+	if (info.password) {
+		g_free(info.password);
+		info.password = NULL;
+	}
+
+	if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/use_same_proxy",
+			&tmp, &err, NULL, NULL))
+		return purple_global_proxy_get_info();
+	g_free(err);
+	err = NULL;
+
+	if (!strcmp(tmp, "true\n"))
+		use_same_proxy = TRUE;
+	g_free(tmp);
+	tmp = NULL;
+
+	if (!use_same_proxy) {
+		if (!g_spawn_command_line_sync("gconftool-2 -g /system/proxy/socks_host",
+			&info.host, &err, NULL, NULL))
+			return purple_global_proxy_get_info();
+		g_free(err);
+		err = NULL;
+	}
+
+	if(info.host != NULL)
+		g_strchomp(info.host);
+
+	if (!use_same_proxy && (info.host != NULL) && (*info.host != '\0')) {
+		info.type = PURPLE_PROXY_SOCKS5;
+		if (!g_spawn_command_line_sync("gconftool-2 -g /system/proxy/socks_port",
+				&tmp, &err, NULL, NULL))
+		{
+			g_free(info.host);
+			info.host = NULL;
+			return purple_global_proxy_get_info();
+		}
+		g_free(err);
+		info.port = atoi(tmp);
+		g_free(tmp);
+	} else {
+		g_free(info.host);
+		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/host",
+					&info.host, &err, NULL, NULL))
+			return purple_global_proxy_get_info();
+		g_free(err);
+		err = NULL;
+
+		/* If we get this far then we know we're using an HTTP proxy */
+		info.type = PURPLE_PROXY_HTTP;
+
+		g_strchomp(info.host);
+		if (*info.host == '\0')
+		{
+			purple_debug_info("proxy", "Gnome proxy settings are set to "
+					"'manual' but no suitable proxy server is specified.  Using "
+					"Pidgin's proxy settings instead.\n");
+			g_free(info.host);
+			info.host = NULL;
+			return purple_global_proxy_get_info();
+		}
+
+		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/authentication_user",
+					&info.username, &err, NULL, NULL))
+		{
+			g_free(info.host);
+			info.host = NULL;
+			return purple_global_proxy_get_info();
+		}
+		g_free(err);
+		err = NULL;
+		g_strchomp(info.username);
+
+		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/authentication_password",
+					&info.password, &err, NULL, NULL))
+		{
+			g_free(info.host);
+			info.host = NULL;
+			g_free(info.username);
+			info.username = NULL;
+			return purple_global_proxy_get_info();
+		}
+		g_free(err);
+		err = NULL;
+		g_strchomp(info.password);
+
+		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/port",
+					&tmp, &err, NULL, NULL))
+		{
+			g_free(info.host);
+			info.host = NULL;
+			g_free(info.username);
+			info.username = NULL;
+			g_free(info.password);
+			info.password = NULL;
+			return purple_global_proxy_get_info();
+		}
+		g_free(err);
+		info.port = atoi(tmp);
+		g_free(tmp);
+	}
+
+	return &info;
 }
+
+#ifdef _WIN32
+
+typedef BOOL (CALLBACK* LPFNWINHTTPGETIEPROXYCONFIG)(/*IN OUT*/ WINHTTP_CURRENT_USER_IE_PROXY_CONFIG* pProxyConfig);
+
+/* This modifies "host" in-place evilly */
+static void
+_proxy_fill_hostinfo(PurpleProxyInfo *info, char *host, int default_port)
+{
+	int port = default_port;
+	char *d;
+
+	d = g_strrstr(host, ":");
+	if (d)
+		*d = '\0';
+	d++;
+	if (*d)
+		sscanf(d, "%d", &port);
+
+	purple_proxy_info_set_host(info, host);
+	purple_proxy_info_set_port(info, port);
+}
+
+static PurpleProxyInfo *
+purple_win32_proxy_get_info(void)
+{
+	static LPFNWINHTTPGETIEPROXYCONFIG MyWinHttpGetIEProxyConfig = NULL;
+	static gboolean loaded = FALSE;
+	static PurpleProxyInfo info = {0, NULL, 0, NULL, NULL};
+
+	WINHTTP_CURRENT_USER_IE_PROXY_CONFIG ie_proxy_config;
+
+	if (!loaded) {
+		loaded = TRUE;
+		MyWinHttpGetIEProxyConfig = (LPFNWINHTTPGETIEPROXYCONFIG)
+			wpurple_find_and_loadproc("winhttp.dll", "WinHttpGetIEProxyConfigForCurrentUser");
+		if (!MyWinHttpGetIEProxyConfig)
+			purple_debug_info("proxy", "Unable to read Windows Proxy Settings.\n");
+	}
+
+	if (!MyWinHttpGetIEProxyConfig)
+		return NULL;
+
+	ZeroMemory(&ie_proxy_config, sizeof(ie_proxy_config));
+	if (!MyWinHttpGetIEProxyConfig(&ie_proxy_config)) {
+		purple_debug_error("proxy", "Error reading Windows Proxy Settings(%lu).\n", GetLastError());
+		return NULL;
+	}
+
+	/* We can't do much if it is autodetect*/
+	if (ie_proxy_config.fAutoDetect) {
+		purple_debug_error("proxy", "Windows Proxy Settings set to autodetect (not supported).\n");
+
+		/* TODO: For 3.0.0 we'll revisit this (maybe)*/
+
+		return NULL;
+
+	} else if (ie_proxy_config.lpszProxy) {
+		gchar *proxy_list = g_utf16_to_utf8(ie_proxy_config.lpszProxy, -1,
+									 NULL, NULL, NULL);
+
+		/* We can't do anything about the bypass list, as we don't have the url */
+		/* TODO: For 3.0.0 we'll revisit this*/
+
+		/* There are proxy settings for several protocols */
+		if (proxy_list && *proxy_list) {
+			char *specific = NULL, *tmp;
+
+			/* If there is only a global proxy, which  means "HTTP" */
+			if (!strchr(proxy_list, ';') || (specific = g_strstr_len(proxy_list, -1, "http=")) != NULL) {
+
+				if (specific) {
+					specific += strlen("http=");
+					tmp = strchr(specific, ';');
+					if (tmp)
+						*tmp = '\0';
+					/* specific now points the proxy server (and port) */
+				} else
+					specific = proxy_list;
+
+				purple_proxy_info_set_type(&info, PURPLE_PROXY_HTTP);
+				_proxy_fill_hostinfo(&info, specific, 80);
+				/* TODO: is there a way to set the username/password? */
+				purple_proxy_info_set_username(&info, NULL);
+				purple_proxy_info_set_password(&info, NULL);
+
+				purple_debug_info("proxy", "Windows Proxy Settings: HTTP proxy: '%s:%d'.\n",
+								  purple_proxy_info_get_host(&info),
+								  purple_proxy_info_get_port(&info));
+
+			} else if ((specific = g_strstr_len(proxy_list, -1, "socks=")) != NULL) {
+
+				specific += strlen("socks=");
+				tmp = strchr(specific, ';');
+				if (tmp)
+					*tmp = '\0';
+				/* specific now points the proxy server (and port) */
+
+				purple_proxy_info_set_type(&info, PURPLE_PROXY_SOCKS5);
+				_proxy_fill_hostinfo(&info, specific, 1080);
+				/* TODO: is there a way to set the username/password? */
+				purple_proxy_info_set_username(&info, NULL);
+				purple_proxy_info_set_password(&info, NULL);
+
+				purple_debug_info("proxy", "Windows Proxy Settings: SOCKS5 proxy: '%s:%d'.\n",
+								  purple_proxy_info_get_host(&info),
+								  purple_proxy_info_get_port(&info));
+
+			} else {
+
+				purple_debug_info("proxy", "Windows Proxy Settings: No supported proxy specified.\n");
+
+				purple_proxy_info_set_type(&info, PURPLE_PROXY_NONE);
+
+			}
+		}
+
+		/* TODO: Fix API to be able look at proxy bypass settings */
+
+		g_free(proxy_list);
+	} else {
+		purple_debug_info("proxy", "No Windows proxy set.\n");
+		purple_proxy_info_set_type(&info, PURPLE_PROXY_NONE);
+	}
+
+	if (ie_proxy_config.lpszAutoConfigUrl)
+		GlobalFree(ie_proxy_config.lpszAutoConfigUrl);
+	if (ie_proxy_config.lpszProxy)
+		GlobalFree(ie_proxy_config.lpszProxy);
+	if (ie_proxy_config.lpszProxyBypass)
+		GlobalFree(ie_proxy_config.lpszProxyBypass);
+
+	return &info;
+}
+#endif
+
+
 /**************************************************************************
  * Proxy API
  **************************************************************************/
@@ -429,9 +648,9 @@ socket_ready_cb(gpointer data, gint source, PurpleInputCondition cond)
 		if (ret != 0)
 			error = errno;
 		purple_debug_info("proxy", "Error connecting to %s:%d (%s).\n",
-						connect_data->host, connect_data->port, strerror(error));
+						connect_data->host, connect_data->port, g_strerror(error));
 
-		purple_proxy_connect_data_disconnect(connect_data, strerror(error));
+		purple_proxy_connect_data_disconnect(connect_data, g_strerror(error));
 		return;
 	}
 
@@ -458,7 +677,7 @@ proxy_connect_none(PurpleProxyConnectData *connect_data, struct sockaddr *addr, 
 	if (connect_data->fd < 0)
 	{
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Unable to create socket:\n%s"), strerror(errno));
+				_("Unable to create socket:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -478,7 +697,7 @@ proxy_connect_none(PurpleProxyConnectData *connect_data, struct sockaddr *addr, 
 		}
 		else
 		{
-			purple_proxy_connect_data_disconnect(connect_data, strerror(errno));
+			purple_proxy_connect_data_disconnect(connect_data, g_strerror(errno));
 		}
 	}
 	else
@@ -496,7 +715,7 @@ proxy_connect_none(PurpleProxyConnectData *connect_data, struct sockaddr *addr, 
 		{
 			if (ret != 0)
 				error = errno;
-			purple_proxy_connect_data_disconnect(connect_data, strerror(error));
+			purple_proxy_connect_data_disconnect(connect_data, g_strerror(error));
 			return;
 		}
 
@@ -534,7 +753,7 @@ proxy_do_write(gpointer data, gint source, PurpleInputCondition cond)
 			return;
 
 		/* Error! */
-		purple_proxy_connect_data_disconnect(connect_data, strerror(errno));
+		purple_proxy_connect_data_disconnect(connect_data, g_strerror(errno));
 		return;
 	}
 	if (ret < request_len) {
@@ -566,8 +785,7 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 	char *p;
 	gsize max_read;
 
-	if (connect_data->read_buffer == NULL)
-	{
+	if (connect_data->read_buffer == NULL) {
 		connect_data->read_buf_len = 8192;
 		connect_data->read_buffer = g_malloc(connect_data->read_buf_len);
 		connect_data->read_len = 0;
@@ -578,22 +796,20 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 
 	len = read(connect_data->fd, p, max_read);
 
-	if (len == 0)
-	{
+	if (len == 0) {
 		purple_proxy_connect_data_disconnect(connect_data,
 				_("Server closed the connection."));
 		return;
 	}
 
-	if (len < 0)
-	{
+	if (len < 0) {
 		if (errno == EAGAIN)
 			/* No worries */
 			return;
 
 		/* Error! */
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Lost connection with server:\n%s"), strerror(errno));
+				_("Lost connection with server:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -611,8 +827,7 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 
 	error = strncmp((const char *)connect_data->read_buffer, "HTTP/", 5) != 0;
-	if (!error)
-	{
+	if (!error) {
 		int major;
 		p = (char *)connect_data->read_buffer + 5;
 		major = strtol(p, &p, 10);
@@ -632,8 +847,7 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 
 	/* Read the contents */
 	p = g_strrstr((const gchar *)connect_data->read_buffer, "Content-Length: ");
-	if (p != NULL)
-	{
+	if (p != NULL) {
 		gchar *tmp;
 		int len = 0;
 		char tmpc;
@@ -656,139 +870,123 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 		}
 	}
 
-	if (error)
-	{
+	if (error) {
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
 				_("Unable to parse response from HTTP proxy: %s\n"),
 				connect_data->read_buffer);
 		return;
 	}
-	else if (status != 200)
-	{
+	else if (status != 200) {
 		purple_debug_error("proxy",
 				"Proxy server replied with:\n%s\n",
 				connect_data->read_buffer);
 
-		if (status == 407 /* Proxy Auth */)
-		{
-			gchar *ntlm;
-			char hostname[256];
-			int ret;
+		if (status == 407 /* Proxy Auth */) {
+			const char *header;
+			gchar *request;
 
-			ret = gethostname(hostname, sizeof(hostname));
-			hostname[sizeof(hostname) - 1] = '\0';
-			if (ret < 0 || hostname[0] == '\0') {
-				purple_debug_warning("proxy", "gethostname() failed -- is your hostname set?");
-				strcpy(hostname, "localhost");
-			}
-
-			ntlm = g_strrstr((const gchar *)connect_data->read_buffer,
-					"Proxy-Authenticate: NTLM ");
-			if (ntlm != NULL)
-			{
-				/* Check for Type-2 */
-				gchar *tmp = ntlm;
-				guint8 *nonce;
-				gchar *domain = (gchar*)purple_proxy_info_get_username(connect_data->gpi);
-				gchar *username = NULL;
-				gchar *request;
+			header = g_strrstr((const gchar *)connect_data->read_buffer,
+					"Proxy-Authenticate: NTLM");
+			if (header != NULL) {
+				const char *header_end = header + strlen("Proxy-Authenticate: NTLM");
+				const char *domain = purple_proxy_info_get_username(connect_data->gpi);
+				char *username = NULL, hostname[256];
 				gchar *response;
+				int ret;
+
+				ret = gethostname(hostname, sizeof(hostname));
+				hostname[sizeof(hostname) - 1] = '\0';
+				if (ret < 0 || hostname[0] == '\0') {
+					purple_debug_warning("proxy", "gethostname() failed -- is your hostname set?");
+					strcpy(hostname, "localhost");
+				}
 
 				if (domain != NULL)
-					username = strchr(domain, '\\');
-				if (username == NULL)
-				{
+					username = (char*) strchr(domain, '\\');
+				if (username == NULL) {
 					purple_proxy_connect_data_disconnect_formatted(connect_data,
 							_("HTTP proxy connection error %d"), status);
 					return;
 				}
 				*username = '\0';
-				username++;
-				ntlm += strlen("Proxy-Authenticate: NTLM ");
-				while(*tmp != '\r' && *tmp != '\0') tmp++;
-				*tmp = '\0';
-				nonce = purple_ntlm_parse_type2(ntlm, NULL);
-				response = purple_ntlm_gen_type3(username,
-					(gchar*) purple_proxy_info_get_password(connect_data->gpi),
-					hostname,
-					domain, nonce, NULL);
-				username--;
+
+				/* Is there a message? */
+				if (*header_end == ' ') {
+					/* Check for Type-2 */
+					char *tmp = (char*) header;
+					guint8 *nonce;
+
+					header_end++;
+					username++;
+					while(*tmp != '\r' && *tmp != '\0') tmp++;
+					*tmp = '\0';
+					nonce = purple_ntlm_parse_type2(header_end, NULL);
+					response = purple_ntlm_gen_type3(username,
+						(gchar*) purple_proxy_info_get_password(connect_data->gpi),
+						hostname,
+						domain, nonce, NULL);
+					username--;
+				} else /* Empty message */
+					response = purple_ntlm_gen_type1(hostname, domain);
+
 				*username = '\\';
+
 				request = g_strdup_printf(
 					"CONNECT %s:%d HTTP/1.1\r\n"
 					"Host: %s:%d\r\n"
 					"Proxy-Authorization: NTLM %s\r\n"
 					"Proxy-Connection: Keep-Alive\r\n\r\n",
-					connect_data->host, connect_data->port, connect_data->host,
-					connect_data->port, response);
+					connect_data->host, connect_data->port,
+					connect_data->host, connect_data->port,
+					response);
+
 				g_free(response);
 
-				g_free(connect_data->read_buffer);
-				connect_data->read_buffer = NULL;
+			} else if((header = g_strrstr((const char *)connect_data->read_buffer, "Proxy-Authenticate: Basic"))) {
+				gchar *t1, *t2;
 
-				connect_data->write_buffer = (guchar *)request;
-				connect_data->write_buf_len = strlen(request);
-				connect_data->written_len = 0;
-				connect_data->read_cb = http_canread;
+				t1 = g_strdup_printf("%s:%s",
+					purple_proxy_info_get_username(connect_data->gpi),
+					purple_proxy_info_get_password(connect_data->gpi) ?
+					purple_proxy_info_get_password(connect_data->gpi) : "");
+				t2 = purple_base64_encode((const guchar *)t1, strlen(t1));
+				g_free(t1);
 
-				purple_input_remove(connect_data->inpa);
-				connect_data->inpa = purple_input_add(connect_data->fd,
-					PURPLE_INPUT_WRITE, proxy_do_write, connect_data);
-				proxy_do_write(connect_data, connect_data->fd, cond);
-				return;
-			} else if((ntlm = g_strrstr((const char *)connect_data->read_buffer, "Proxy-Authenticate: NTLM"))) { /* Empty message */
-				gchar request[2048];
-				gchar *domain = (gchar*) purple_proxy_info_get_username(connect_data->gpi);
-				gchar *username = NULL;
-				int request_len;
+				request = g_strdup_printf(
+					"CONNECT %s:%d HTTP/1.1\r\n"
+					"Host: %s:%d\r\n"
+					"Proxy-Authorization: Basic %s\r\n",
+					connect_data->host, connect_data->port,
+					connect_data->host, connect_data->port,
+					t2);
 
-				if (domain != NULL)
-					username = strchr(domain, '\\');
-				if (username == NULL)
-				{
-					purple_proxy_connect_data_disconnect_formatted(connect_data,
-							_("HTTP proxy connection error %d"), status);
-					return;
-				}
-				*username = '\0';
+				g_free(t2);
 
-				request_len = g_snprintf(request, sizeof(request),
-						"CONNECT %s:%d HTTP/1.1\r\n"
-						"Host: %s:%d\r\n",
-						connect_data->host, connect_data->port,
-						connect_data->host, connect_data->port);
-
-				g_return_if_fail(request_len < sizeof(request));
-				request_len += g_snprintf(request + request_len,
-					sizeof(request) - request_len,
-					"Proxy-Authorization: NTLM %s\r\n"
-					"Proxy-Connection: Keep-Alive\r\n\r\n",
-					purple_ntlm_gen_type1(hostname, domain));
-				*username = '\\';
-
-				purple_input_remove(connect_data->inpa);
-				g_free(connect_data->read_buffer);
-				connect_data->read_buffer = NULL;
-
-				connect_data->write_buffer = g_memdup(request, request_len);
-				connect_data->write_buf_len = request_len;
-				connect_data->written_len = 0;
-
-				connect_data->read_cb = http_canread;
-
-				connect_data->inpa = purple_input_add(connect_data->fd,
-					PURPLE_INPUT_WRITE, proxy_do_write, connect_data);
-
-				proxy_do_write(connect_data, connect_data->fd, cond);
-				return;
 			} else {
 				purple_proxy_connect_data_disconnect_formatted(connect_data,
 						_("HTTP proxy connection error %d"), status);
 				return;
 			}
+
+			purple_input_remove(connect_data->inpa);
+			g_free(connect_data->read_buffer);
+			connect_data->read_buffer = NULL;
+
+			connect_data->write_buffer = (guchar *)request;
+			connect_data->write_buf_len = strlen(request);
+			connect_data->written_len = 0;
+
+			connect_data->read_cb = http_canread;
+
+			connect_data->inpa = purple_input_add(connect_data->fd,
+				PURPLE_INPUT_WRITE, proxy_do_write, connect_data);
+
+			proxy_do_write(connect_data, connect_data->fd, cond);
+
+			return;
 		}
-		if (status == 403)
-		{
+
+		if (status == 403) {
 			/* Forbidden */
 			purple_proxy_connect_data_disconnect_formatted(connect_data,
 					_("Access denied: HTTP proxy server forbids port %d tunneling."),
@@ -809,32 +1007,9 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 }
 
 static void
-http_canwrite(gpointer data, gint source, PurpleInputCondition cond)
-{
+http_start_connect_tunneling(PurpleProxyConnectData *connect_data) {
 	GString *request;
-	PurpleProxyConnectData *connect_data;
-	int error = ETIMEDOUT;
 	int ret;
-
-	connect_data = data;
-
-	purple_debug_info("proxy", "Connected to %s:%d.\n",
-		connect_data->host, connect_data->port);
-
-	if (connect_data->inpa > 0)
-	{
-		purple_input_remove(connect_data->inpa);
-		connect_data->inpa = 0;
-	}
-
-	ret = purple_input_get_error(connect_data->fd, &error);
-	if ((ret != 0) || (error != 0))
-	{
-		if (ret != 0)
-			error = errno;
-		purple_proxy_connect_data_disconnect(connect_data, strerror(error));
-		return;
-	}
 
 	purple_debug_info("proxy", "Using CONNECT tunneling for %s:%d\n",
 		connect_data->host, connect_data->port);
@@ -847,7 +1022,7 @@ http_canwrite(gpointer data, gint source, PurpleInputCondition cond)
 
 	if (purple_proxy_info_get_username(connect_data->gpi) != NULL)
 	{
-		char *t1, *t2;
+		char *t1, *t2, *ntlm_type1;
 		char hostname[256];
 
 		ret = gethostname(hostname, sizeof(hostname));
@@ -864,11 +1039,14 @@ http_canwrite(gpointer data, gint source, PurpleInputCondition cond)
 		t2 = purple_base64_encode((const guchar *)t1, strlen(t1));
 		g_free(t1);
 
+		ntlm_type1 = purple_ntlm_gen_type1(hostname, "");
+
 		g_string_append_printf(request,
 			"Proxy-Authorization: Basic %s\r\n"
 			"Proxy-Authorization: NTLM %s\r\n"
 			"Proxy-Connection: Keep-Alive\r\n",
-			t2, purple_ntlm_gen_type1(hostname, ""));
+			t2, ntlm_type1);
+		g_free(ntlm_type1);
 		g_free(t2);
 	}
 
@@ -881,7 +1059,45 @@ http_canwrite(gpointer data, gint source, PurpleInputCondition cond)
 
 	connect_data->inpa = purple_input_add(connect_data->fd,
 			PURPLE_INPUT_WRITE, proxy_do_write, connect_data);
-	proxy_do_write(connect_data, connect_data->fd, cond);
+	proxy_do_write(connect_data, connect_data->fd, PURPLE_INPUT_WRITE);
+}
+
+static void
+http_canwrite(gpointer data, gint source, PurpleInputCondition cond) {
+	PurpleProxyConnectData *connect_data = data;
+	int ret, error = ETIMEDOUT;
+
+	purple_debug_info("proxy", "Connected to %s:%d.\n",
+		connect_data->host, connect_data->port);
+
+	if (connect_data->inpa > 0)	{
+		purple_input_remove(connect_data->inpa);
+		connect_data->inpa = 0;
+	}
+
+	ret = purple_input_get_error(connect_data->fd, &error);
+	if (ret != 0 || error != 0) {
+		if (ret != 0)
+			error = errno;
+		purple_proxy_connect_data_disconnect(connect_data, g_strerror(error));
+		return;
+	}
+
+	if (connect_data->port == 80) {
+		/*
+		 * If we're trying to connect to something running on
+		 * port 80 then we assume the traffic using this
+		 * connection is going to be HTTP traffic.  If it's
+		 * not then this will fail (uglily).  But it's good
+		 * to avoid using the CONNECT method because it's
+		 * not always allowed.
+		 */
+		purple_debug_info("proxy", "HTTP proxy connection established\n");
+		purple_proxy_connect_data_connected(connect_data);
+	} else {
+		http_start_connect_tunneling(connect_data);
+	}
+
 }
 
 static void
@@ -899,7 +1115,7 @@ proxy_connect_http(PurpleProxyConnectData *connect_data, struct sockaddr *addr, 
 	if (connect_data->fd < 0)
 	{
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Unable to create socket:\n%s"), strerror(errno));
+				_("Unable to create socket:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -909,39 +1125,15 @@ proxy_connect_http(PurpleProxyConnectData *connect_data, struct sockaddr *addr, 
 	fcntl(connect_data->fd, F_SETFD, FD_CLOEXEC);
 #endif
 
-	if (connect(connect_data->fd, addr, addrlen) != 0)
-	{
-		if ((errno == EINPROGRESS) || (errno == EINTR))
-		{
+	if (connect(connect_data->fd, addr, addrlen) != 0) {
+		if (errno == EINPROGRESS || errno == EINTR) {
 			purple_debug_info("proxy", "Connection in progress\n");
 
-			if (connect_data->port != 80)
-			{
-				/* we need to do CONNECT first */
-				connect_data->inpa = purple_input_add(connect_data->fd,
-						PURPLE_INPUT_WRITE, http_canwrite, connect_data);
-			}
-			else
-			{
-				/*
-				 * If we're trying to connect to something running on
-				 * port 80 then we assume the traffic using this
-				 * connection is going to be HTTP traffic.  If it's
-				 * not then this will fail (uglily).  But it's good
-				 * to avoid using the CONNECT method because it's
-				 * not always allowed.
-				 */
-				purple_debug_info("proxy", "HTTP proxy connection established\n");
-				purple_proxy_connect_data_connected(connect_data);
-			}
-		}
-		else
-		{
-			purple_proxy_connect_data_disconnect(connect_data, strerror(errno));
-		}
-	}
-	else
-	{
+			connect_data->inpa = purple_input_add(connect_data->fd,
+					PURPLE_INPUT_WRITE, http_canwrite, connect_data);
+		} else
+			purple_proxy_connect_data_disconnect(connect_data, g_strerror(errno));
+	} else {
 		purple_debug_info("proxy", "Connected immediately.\n");
 
 		http_canwrite(connect_data, connect_data->fd, PURPLE_INPUT_WRITE);
@@ -978,7 +1170,7 @@ s4_canread(gpointer data, gint source, PurpleInputCondition cond)
 		}
 	}
 
-	purple_proxy_connect_data_disconnect(connect_data, strerror(errno));
+	purple_proxy_connect_data_disconnect(connect_data, g_strerror(errno));
 }
 
 static void
@@ -1003,7 +1195,7 @@ s4_canwrite(gpointer data, gint source, PurpleInputCondition cond)
 	{
 		if (ret != 0)
 			error = errno;
-		purple_proxy_connect_data_disconnect(connect_data, strerror(error));
+		purple_proxy_connect_data_disconnect(connect_data, g_strerror(error));
 		return;
 	}
 
@@ -1058,7 +1250,7 @@ proxy_connect_socks4(PurpleProxyConnectData *connect_data, struct sockaddr *addr
 	if (connect_data->fd < 0)
 	{
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Unable to create socket:\n%s"), strerror(errno));
+				_("Unable to create socket:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -1078,7 +1270,7 @@ proxy_connect_socks4(PurpleProxyConnectData *connect_data, struct sockaddr *addr
 		}
 		else
 		{
-			purple_proxy_connect_data_disconnect(connect_data, strerror(errno));
+			purple_proxy_connect_data_disconnect(connect_data, g_strerror(errno));
 		}
 	}
 	else
@@ -1095,7 +1287,8 @@ s5_ensure_buffer_length(PurpleProxyConnectData *connect_data, int len)
 	if(connect_data->read_len < len) {
 		if(connect_data->read_buf_len < len) {
 			/* it's not just that we haven't read enough, it's that we haven't tried to read enough yet */
-			purple_debug_info("s5", "reallocing from %d to %d\n", connect_data->read_buf_len, len);
+			purple_debug_info("s5", "reallocing from %" G_GSIZE_FORMAT
+					" to %d\n", connect_data->read_buf_len, len);
 			connect_data->read_buf_len = len;
 			connect_data->read_buffer = g_realloc(connect_data->read_buffer, connect_data->read_buf_len);
 		}
@@ -1113,7 +1306,7 @@ s5_canread_again(gpointer data, gint source, PurpleInputCondition cond)
 	int len;
 
 	if (connect_data->read_buffer == NULL) {
-		connect_data->read_buf_len = 4;
+		connect_data->read_buf_len = 5;
 		connect_data->read_buffer = g_malloc(connect_data->read_buf_len);
 		connect_data->read_len = 0;
 	}
@@ -1138,7 +1331,7 @@ s5_canread_again(gpointer data, gint source, PurpleInputCondition cond)
 
 		/* Error! */
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Lost connection with server:\n%s"), strerror(errno));
+				_("Lost connection with server:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -1182,6 +1375,11 @@ s5_canread_again(gpointer data, gint source, PurpleInputCondition cond)
 				return;
 			buf += 4 + 16;
 			break;
+		default:
+			purple_debug_error("socks5 proxy", "Invalid ATYP received (0x%X)\n", buf[3]);
+			purple_proxy_connect_data_disconnect(connect_data,
+					_("Received invalid data on connection with server."));
+			return;
 	}
 
 	/* Skip past BND.PORT */
@@ -1247,7 +1445,7 @@ s5_readauth(gpointer data, gint source, PurpleInputCondition cond)
 
 		/* Error! */
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Lost connection with server:\n%s"), strerror(errno));
+				_("Lost connection with server:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -1315,66 +1513,62 @@ hmacmd5_chap(const unsigned char * challenge, int challen, const char * passwd, 
 }
 
 static void
-s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
+s5_readchap(gpointer data, gint source, PurpleInputCondition cond);
+
+/*
+ * Return how many bytes we processed
+ * -1 means we've shouldn't keep reading from the buffer
+ */
+static gssize
+s5_parse_chap_msg(PurpleProxyConnectData *connect_data)
 {
-	guchar *cmdbuf, *buf;
-	PurpleProxyConnectData *connect_data = data;
+	guchar *buf, *cmdbuf = connect_data->read_buffer;
 	int len, navas, currentav;
 
-	purple_debug(PURPLE_DEBUG_INFO, "socks5 proxy", "Got CHAP response.\n");
-
-	if (connect_data->read_buffer == NULL) {
-		connect_data->read_buf_len = 20;
-		connect_data->read_buffer = g_malloc(connect_data->read_buf_len);
-		connect_data->read_len = 0;
-	}
-
-	len = read(connect_data->fd, connect_data->read_buffer + connect_data->read_len,
-		connect_data->read_buf_len - connect_data->read_len);
-
-	if (len == 0)
-	{
-		purple_proxy_connect_data_disconnect(connect_data,
-				_("Server closed the connection."));
-		return;
-	}
-
-	if (len < 0)
-	{
-		if (errno == EAGAIN)
-			/* No worries */
-			return;
-
-		/* Error! */
-		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Lost connection with server:\n%s"), strerror(errno));
-		return;
-	}
-
-	connect_data->read_len += len;
-	if (connect_data->read_len < 2)
-		return;
-
-	cmdbuf = connect_data->read_buffer;
+	purple_debug_misc("socks5 proxy", "Reading CHAP message: %x\n", *cmdbuf);
 
 	if (*cmdbuf != 0x01) {
 		purple_proxy_connect_data_disconnect(connect_data,
 				_("Received invalid data on connection with server."));
-		return;
+		return -1;
 	}
 	cmdbuf++;
 
 	navas = *cmdbuf;
+
+	purple_debug_misc("socks5 proxy", "Expecting %d attribute(s).\n", navas);
+
 	cmdbuf++;
 
 	for (currentav = 0; currentav < navas; currentav++) {
-		if (connect_data->read_len - (cmdbuf - connect_data->read_buffer) < 2)
-			return;
-		if (connect_data->read_len - (cmdbuf - connect_data->read_buffer) < cmdbuf[1])
-			return;
+
+		len = connect_data->read_len - (cmdbuf - connect_data->read_buffer);
+		/* We don't have enough data to even know how long the next attribute is,
+		 * or we don't have the full length of the next attribute. */
+		if (len < 2 || len < (cmdbuf[1] + 2)) {
+			/* Clear out the attributes that have been read - decrease the attribute count */
+			connect_data->read_buffer[1] = navas - currentav;
+			/* Move the unprocessed data into the first attribute position */
+			memmove((connect_data->read_buffer + 2), cmdbuf, len);
+			/* Decrease the read count accordingly */
+			connect_data->read_len = len + 2;
+
+			purple_debug_info("socks5 proxy", "Need more data to retrieve attribute %d.\n", currentav);
+
+			return -1;
+		}
+
 		buf = cmdbuf + 2;
+
+		if (cmdbuf[1] == 0) {
+			purple_debug_error("socks5 proxy", "Attribute %x Value length of 0; ignoring.\n", cmdbuf[0]);
+			cmdbuf = buf;
+			continue;
+		}
+
 		switch (cmdbuf[0]) {
 			case 0x00:
+				purple_debug_info("socks5 proxy", "Received STATUS of %x\n", buf[0]);
 				/* Did auth work? */
 				if (buf[0] == 0x00) {
 					purple_input_remove(connect_data->inpa);
@@ -1383,7 +1577,6 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 					connect_data->read_buffer = NULL;
 					/* Success */
 					s5_sendconnect(connect_data, connect_data->fd);
-					return;
 				} else {
 					/* Failure */
 					purple_debug_warning("proxy",
@@ -1391,10 +1584,14 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 						"failed.  Disconnecting...");
 					purple_proxy_connect_data_disconnect(connect_data,
 							_("Authentication failed"));
-					return;
 				}
+				return -1;
+			case 0x01:
+				/* We've already validated that cmdbuf[1] is sane. */
+				purple_debug_info("socks5 proxy", "Received TEXT-MESSAGE of '%.*s'\n", (int) cmdbuf[1], buf);
 				break;
 			case 0x03:
+				purple_debug_info("socks5 proxy", "Received CHALLENGE\n");
 				/* Server wants our credentials */
 
 				connect_data->write_buf_len = 16 + 4;
@@ -1404,6 +1601,7 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 				hmacmd5_chap(buf, cmdbuf[1],
 					purple_proxy_info_get_password(connect_data->gpi),
 					connect_data->write_buffer + 4);
+				/* TODO: What about USER-IDENTITY? */
 				connect_data->write_buffer[0] = 0x01;
 				connect_data->write_buffer[1] = 0x01;
 				connect_data->write_buffer[2] = 0x04;
@@ -1419,8 +1617,9 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 					PURPLE_INPUT_WRITE, proxy_do_write, connect_data);
 
 				proxy_do_write(connect_data, connect_data->fd, PURPLE_INPUT_WRITE);
-				break;
+				return -1;
 			case 0x11:
+				purple_debug_info("socks5 proxy", "Received ALGORIGTHMS of %x\n", buf[0]);
 				/* Server wants to select an algorithm */
 				if (buf[0] != 0x85) {
 					/* Only currently support HMAC-MD5 */
@@ -1432,15 +1631,97 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 						"Disconnecting...");
 					purple_proxy_connect_data_disconnect(connect_data,
 							_("Received invalid data on connection with server."));
-					return;
+					return -1;
 				}
 				break;
+			default:
+				purple_debug_info("socks5 proxy", "Received unused command %x, length=%d\n", cmdbuf[0], cmdbuf[1]);
 		}
 		cmdbuf = buf + cmdbuf[1];
 	}
+
+	return (cmdbuf - connect_data->read_buffer);
+}
+
+static void
+s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
+{
+	gssize msg_ret;
+	PurpleProxyConnectData *connect_data = data;
+	int len;
+
+	purple_debug(PURPLE_DEBUG_INFO, "socks5 proxy", "Got CHAP response.\n");
+
+	if (connect_data->read_buffer == NULL) {
+		/* A big enough butfer to read the message header (2 bytes) and at least one complete attribute and value (1 + 1 + 255). */
+		connect_data->read_buf_len = 259;
+		connect_data->read_buffer = g_malloc(connect_data->read_buf_len);
+		connect_data->read_len = 0;
+	}
+
+	if (connect_data->read_buf_len - connect_data->read_len == 0) {
+		/*If the stuff below is right, this shouldn't be possible. */
+		purple_debug_error("socks5 proxy", "This is about to suck because the read buffer is full (shouldn't happen).\n");
+	}
+
+	len = read(connect_data->fd, connect_data->read_buffer + connect_data->read_len,
+		connect_data->read_buf_len - connect_data->read_len);
+
+	if (len == 0) {
+		purple_proxy_connect_data_disconnect(connect_data,
+				_("Server closed the connection."));
+		return;
+	}
+
+	if (len < 0) {
+		if (errno == EAGAIN)
+			/* No worries */
+			return;
+
+		/* Error! */
+		purple_proxy_connect_data_disconnect_formatted(connect_data,
+				_("Lost connection with server:\n%s"), g_strerror(errno));
+		return;
+	}
+
+	connect_data->read_len += len;
+
+	/* We may have read more than one message into the buffer, we need to make sure to process them all */
+	while (1) {
+
+		/* We need more to be able to read this message */
+		if (connect_data->read_len < 2)
+			return;
+
+		msg_ret = s5_parse_chap_msg(connect_data);
+	
+		if (msg_ret < 0)
+			return;
+
+		/* See if we have another message already in the buffer */
+		if ((len = connect_data->read_len - msg_ret) > 0) {
+
+			/* Move on to the next message */
+			memmove(connect_data->read_buffer, connect_data->read_buffer + msg_ret, len);
+			/* Decrease the read count accordingly */
+			connect_data->read_len = len;
+
+			/* Try to read the message that connect_data->read_buffer now points to */
+			continue;
+		}
+
+		break;
+	}
+
 	/* Fell through.  We ran out of CHAP events to process, but haven't
 	 * succeeded or failed authentication - there may be more to come.
 	 * If this is the case, come straight back here. */
+
+	purple_debug_info("socks5 proxy", "Waiting for another message from which to read CHAP info.\n");
+
+	/* We've processed all the available attributes, so get ready for a whole new message */
+ 	g_free(connect_data->read_buffer);
+	connect_data->read_buffer = NULL;
 }
 
 static void
@@ -1475,7 +1756,7 @@ s5_canread(gpointer data, gint source, PurpleInputCondition cond)
 
 		/* Error! */
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Lost connection with server:\n%s"), strerror(errno));
+				_("Lost connection with server:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -1584,7 +1865,7 @@ s5_canwrite(gpointer data, gint source, PurpleInputCondition cond)
 	{
 		if (ret != 0)
 			error = errno;
-		purple_proxy_connect_data_disconnect(connect_data, strerror(error));
+		purple_proxy_connect_data_disconnect(connect_data, g_strerror(error));
 		return;
 	}
 
@@ -1629,7 +1910,7 @@ proxy_connect_socks5(PurpleProxyConnectData *connect_data, struct sockaddr *addr
 	if (connect_data->fd < 0)
 	{
 		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Unable to create socket:\n%s"), strerror(errno));
+				_("Unable to create socket:\n%s"), g_strerror(errno));
 		return;
 	}
 
@@ -1649,7 +1930,7 @@ proxy_connect_socks5(PurpleProxyConnectData *connect_data, struct sockaddr *addr
 		}
 		else
 		{
-			purple_proxy_connect_data_disconnect(connect_data, strerror(errno));
+			purple_proxy_connect_data_disconnect(connect_data, g_strerror(errno));
 		}
 	}
 	else
@@ -1667,6 +1948,10 @@ proxy_connect_socks5(PurpleProxyConnectData *connect_data, struct sockaddr *addr
  * resolved, and each time a connection attempt fails (assuming there
  * is another IP address to try).
  */
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 46
+#endif
+
 static void try_connect(PurpleProxyConnectData *connect_data)
 {
 	size_t addrlen;
@@ -1677,9 +1962,13 @@ static void try_connect(PurpleProxyConnectData *connect_data)
 	connect_data->hosts = g_slist_remove(connect_data->hosts, connect_data->hosts->data);
 	addr = connect_data->hosts->data;
 	connect_data->hosts = g_slist_remove(connect_data->hosts, connect_data->hosts->data);
-
+#ifdef HAVE_INET_NTOP
 	inet_ntop(addr->sa_family, &((struct sockaddr_in *)addr)->sin_addr,
 			ipaddr, sizeof(ipaddr));
+#else
+	memcpy(ipaddr,inet_ntoa(((struct sockaddr_in *)addr)->sin_addr),
+			sizeof(ipaddr));
+#endif
 	purple_debug_info("proxy", "Attempting connection to %s\n", ipaddr);
 
 	switch (purple_proxy_info_get_type(connect_data->gpi)) {
@@ -1762,9 +2051,6 @@ purple_proxy_get_setup(PurpleAccount *account)
 	}
 
 	if (purple_proxy_info_get_type(gpi) == PURPLE_PROXY_USE_ENVVAR) {
-#ifdef _WIN32
-		wpurple_check_for_proxy_changes();
-#endif
 		if ((tmp = g_getenv("HTTP_PROXY")) != NULL ||
 			(tmp = g_getenv("http_proxy")) != NULL ||
 			(tmp = g_getenv("HTTPPROXY")) != NULL) {
@@ -1806,6 +2092,11 @@ purple_proxy_get_setup(PurpleAccount *account)
 
 			}
 		} else {
+#ifdef _WIN32
+			PurpleProxyInfo *wgpi;
+			if ((wgpi = purple_win32_proxy_get_info()) != NULL)
+				return wgpi;
+#endif
 			/* no proxy environment variable found, don't use a proxy */
 			purple_debug_info("proxy", "No environment settings found, not using a proxy\n");
 			gpi = tmp_none_proxy_info;
@@ -1861,6 +2152,8 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 			break;
 
 		default:
+			purple_debug_error("proxy", "Invalid Proxy type (%d) specified.\n",
+							   purple_proxy_info_get_type(connect_data->gpi));
 			purple_proxy_connect_data_destroy(connect_data);
 			return NULL;
 	}
@@ -1869,6 +2162,7 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 			connectport, connection_host_resolved, connect_data);
 	if (connect_data->query_data == NULL)
 	{
+		purple_debug_error("proxy", "dns query failed unexpectedly.\n");
 		purple_proxy_connect_data_destroy(connect_data);
 		return NULL;
 	}

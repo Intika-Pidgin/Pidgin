@@ -174,8 +174,7 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 		}
 
 		if (accept) {
-			/* TODO: strstr() should not be used here because data isn't NULL terminated */
-			delimiter = (const guchar *)strstr((char *)&data[pos], "\xc0\x80");
+			delimiter = (const guchar *)g_strstr_len((const char *)&data[pos], len - pos, "\xc0\x80");
 			if (delimiter == NULL)
 			{
 				/* Malformed packet! (It doesn't end in 0xc0 0x80) */
@@ -220,13 +219,13 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 
 void yahoo_packet_write(struct yahoo_packet *pkt, guchar *data)
 {
-	GSList *l = pkt->hash;
+	GSList *l;
 	int pos = 0;
 
 	/* This is only called from one place, and the list is
 	 * always backwards */
 
-	l = g_slist_reverse(l);
+	l = pkt->hash = g_slist_reverse(pkt->hash);
 
 	while (l) {
 		struct yahoo_pair *pair = l->data;
@@ -304,7 +303,8 @@ yahoo_packet_send_can_write(gpointer data, gint source, PurpleInputCondition con
 		return;
 	else if (ret < 0) {
 		/* TODO: what to do here - do we really have to disconnect? */
-		purple_connection_error(yd->gc, _("Write Error"));
+		purple_connection_error_reason(yd->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		                               _("Write Error"));
 		return;
 	}
 
@@ -346,7 +346,7 @@ size_t yahoo_packet_build(struct yahoo_packet *pkt, int pad, gboolean wm,
 int yahoo_packet_send(struct yahoo_packet *pkt, struct yahoo_data *yd)
 {
 	size_t len;
-	int ret;
+	gssize ret;
 	guchar *data;
 
 	if (yd->fd < 0)
@@ -365,7 +365,8 @@ int yahoo_packet_send(struct yahoo_packet *pkt, struct yahoo_data *yd)
 	if (ret < 0 && errno == EAGAIN)
 		ret = 0;
 	else if (ret <= 0) {
-		purple_debug_warning("yahoo", "Only wrote %d of %d bytes!\n", ret, len);
+		purple_debug_warning("yahoo", "Only wrote %" G_GSSIZE_FORMAT
+				" of %" G_GSIZE_FORMAT " bytes!\n", ret, len);
 		g_free(data);
 		return ret;
 	}

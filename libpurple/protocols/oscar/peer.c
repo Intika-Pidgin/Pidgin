@@ -291,7 +291,7 @@ void
 peer_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	PeerConnection *conn;
-	ssize_t read;
+	gssize read;
 
 	conn = data;
 
@@ -317,7 +317,7 @@ peer_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 				return;
 
 			peer_connection_destroy(conn,
-					OSCAR_DISCONNECT_LOST_CONNECTION, strerror(errno));
+					OSCAR_DISCONNECT_LOST_CONNECTION, g_strerror(errno));
 			return;
 		}
 
@@ -367,7 +367,7 @@ peer_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 			return;
 
 		peer_connection_destroy(conn,
-				OSCAR_DISCONNECT_LOST_CONNECTION, strerror(errno));
+				OSCAR_DISCONNECT_LOST_CONNECTION, g_strerror(errno));
 		return;
 	}
 
@@ -407,7 +407,7 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	PeerConnection *conn;
 	gsize writelen;
-	ssize_t wrotelen;
+	gssize wrotelen;
 
 	conn = data;
 	writelen = purple_circ_buffer_get_max_read(conn->buffer_outgoing);
@@ -636,6 +636,10 @@ peer_connection_listen_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 	flags = fcntl(conn->fd, F_GETFL);
 	fcntl(conn->fd, F_SETFL, flags | O_NONBLOCK);
+#ifndef _WIN32
+	fcntl(conn->fd, F_SETFD, FD_CLOEXEC);
+#endif
+
 	purple_input_remove(conn->watcher_incoming);
 
 	peer_connection_finalize_connection(conn);
@@ -1041,7 +1045,7 @@ peer_connection_got_proposition(OscarData *od, const gchar *sn, const gchar *mes
 						  "Images.  Because your IP address will be "
 						  "revealed, this may be considered a privacy "
 						  "risk."),
-						PURPLE_DEFAULT_ACTION_NONE,
+						0, /* Default action is "connect" */
 						account, sn, NULL,
 						conn, 2,
 						_("C_onnect"), G_CALLBACK(peer_connection_got_proposition_yes_cb),

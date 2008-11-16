@@ -6,6 +6,7 @@ EXTRA_DIST = \
 		purple-send \
 		purple-send-async \
 		purple-url-handler \
+		purple.h.in \
 		purple.pc.in \
 		purple-uninstalled.pc.in \
 		version.h.in \
@@ -67,6 +68,7 @@ purple_coresources = \
 	savedstatuses.c \
 	server.c \
 	signals.c \
+	smiley.c \
 	dnsquery.c \
 	dnssrv.c\
 	status.c \
@@ -119,6 +121,7 @@ purple_coreheaders = \
 	savedstatuses.h \
 	server.h \
 	signals.h \
+	smiley.h \
 	dnsquery.h \
 	dnssrv.h \
 	status.h \
@@ -129,11 +132,10 @@ purple_coreheaders = \
 	upnp.h \
 	util.h \
 	value.h \
-	version.h \
 	xmlnode.h \
 	whiteboard.h
 
-BUILT_SOURCES = version.h
+purple_builtheaders = purple.h version.h
 
 if ENABLE_DBUS
 
@@ -154,9 +156,10 @@ dbus_headers  = dbus-bindings.h dbus-purple.h dbus-server.h dbus-useful.h dbus-d
 
 dbus_exported = dbus-useful.h dbus-define-api.h account.h blist.h buddyicon.h \
                 connection.h conversation.h core.h ft.h log.h notify.h prefs.h roomlist.h \
-                savedstatuses.h status.h server.h util.h xmlnode.h
+                savedstatuses.h smiley.h status.h server.h util.h xmlnode.h prpl.h
 
-purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders))
+purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders)) \
+		$(purple_builtheaders)
 dbus_build_exported = $(addprefix $(srcdir)/, $(dbus_exported))
 
 dbus-types.c: dbus-analyze-types.py $(purple_build_coreheaders)
@@ -183,7 +186,7 @@ libpurple_client_la_LIBADD = $(DBUS_LIBS)
 purple-client-bindings.c: dbus-analyze-functions.py $(dbus_exported)
 	cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client > $@
 
-purple-client-bindings.h: dbus-analyze-types.py dbus-analyze-functions.py $(purple_coreheaders) $(dbus_exported)
+purple-client-bindings.h: dbus-analyze-types.py dbus-analyze-functions.py $(purple_coreheaders) $(purple_builtheaders) $(dbus_exported)
 	cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --keyword=enum --verbatim > $@
 	cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client --headers >> $@
 
@@ -208,6 +211,17 @@ purple-client-example.$(OBJEXT): purple-client-bindings.h
 
 bin_SCRIPTS = purple-remote purple-send purple-send-async purple-url-handler
 
+BUILT_SOURCES = $(purple_builtheaders) \
+	dbus-types.c \
+	dbus-types.h \
+	dbus-bindings.c \
+	purple-client-bindings.c \
+	purple-client-bindings.h
+
+else
+
+BUILT_SOURCES = $(purple_builtheaders)
+
 endif
 
 lib_LTLIBRARIES = libpurple.la $(libpurple_client_lib)
@@ -222,6 +236,7 @@ noinst_HEADERS= \
 libpurpleincludedir=$(includedir)/libpurple
 libpurpleinclude_HEADERS = \
 	$(purple_coreheaders) \
+	$(purple_builtheaders) \
 	$(dbus_headers)
 
 libpurple_la_DEPENDENCIES = $(STATIC_LINK_LIBS)
@@ -231,7 +246,7 @@ libpurple_la_LIBADD = \
 	$(DBUS_LIBS) \
 	$(GLIB_LIBS) \
 	$(LIBXML_LIBS) \
-	$(LIBNM_LIBS) \
+	$(NETWORKMANAGER_LIBS) \
 	$(INTLLIBS) \
 	-lm
 
@@ -245,4 +260,10 @@ AM_CPPFLAGS = \
 	$(DEBUG_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \
-	$(LIBNM_CFLAGS)
+	$(NETWORKMANAGER_CFLAGS)
+
+# INSTALL_SSL_CERTIFICATES is true when SSL_CERTIFICATES_DIR is empty.
+# We want to use SSL_CERTIFICATES_DIR when it's not empty.
+if ! INSTALL_SSL_CERTIFICATES
+AM_CPPFLAGS += -DSSL_CERTIFICATES_DIR=\"$(SSL_CERTIFICATES_DIR)\"
+endif

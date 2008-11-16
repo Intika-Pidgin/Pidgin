@@ -35,6 +35,10 @@
 #include "signals.h"
 #include "network.h"
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 #ifdef HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>
 #endif
@@ -125,7 +129,16 @@ get_rtaddrs(int bitmask, struct sockaddr *sa, struct sockaddr *addrs[])
 		if (bitmask & (1 << i)) 
 		{
 			addrs[i] = sa;
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
 			sa = (struct sockaddr *)(ROUNDUP(sa->sa_len) + (char *)sa);
+#else
+			if (sa->sa_family == AF_INET)
+				sa = (struct sockaddr*)(sizeof(struct sockaddr_in) + (char *)sa);
+#ifdef AF_INET6
+			else if (sa->sa_family == AF_INET6)
+				sa = (struct sockaddr*)(sizeof(struct sockaddr_in6) + (char *)sa);
+#endif
+#endif
 		} 
 		else
 		{
@@ -146,7 +159,12 @@ is_default_route(struct sockaddr *sa, struct sockaddr *mask)
     if ((sin->sin_addr.s_addr == INADDR_ANY) &&
 		mask &&
 		(ntohl(((struct sockaddr_in *)mask)->sin_addr.s_addr) == 0L ||
-		 mask->sa_len == 0))
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+		 mask->sa_len == 0
+#else
+		0
+#endif
+		))
 		return 1;
     else
 		return 0;
@@ -182,7 +200,7 @@ default_gw()
 
     if (!(buf = malloc(needed)))
 	{
-		purple_debug_warning("nat-pmp", "malloc\n");
+		purple_debug_warning("nat-pmp", "Failed to malloc %i\n", needed);
 		return NULL;
     }
 
@@ -232,7 +250,7 @@ default_gw()
 						sin->sin_addr.s_addr = rti_sin->sin_addr.s_addr;
 						memcpy(sin, rti_info[RTAX_GATEWAY], sizeof(struct sockaddr_in));
 
-						purple_debug_info("nat-pmp", "found a default gateway\n");
+						purple_debug_info("nat-pmp", "Found a default gateway\n");
 						found = TRUE;
 						break;
 					}
@@ -312,7 +330,7 @@ purple_pmp_get_public_ip()
 	
 	if (sendto(sendfd, &req, sizeof(req), 0, (struct sockaddr *)(gateway), sizeof(struct sockaddr)) < 0)
 	{
-		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP public IP request! (%s)\n", strerror(errno));
+		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP public IP request! (%s)\n", g_strerror(errno));
 		g_free(gateway);
 		pmp_info.status = PURPLE_PMP_STATUS_UNABLE_TO_DISCOVER;
 		return NULL;
@@ -320,7 +338,7 @@ purple_pmp_get_public_ip()
 
 	if (setsockopt(sendfd, SOL_SOCKET, SO_RCVTIMEO, &req_timeout, sizeof(req_timeout)) < 0)
 	{
-		purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", strerror(errno));
+		purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", g_strerror(errno));
 		g_free(gateway);
 		pmp_info.status = PURPLE_PMP_STATUS_UNABLE_TO_DISCOVER;
 		return NULL;
@@ -332,7 +350,7 @@ purple_pmp_get_public_ip()
 	{
 		if (errno != EAGAIN)
 		{
-			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", strerror(errno));
+			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", g_strerror(errno));
 			g_free(gateway);
 			pmp_info.status = PURPLE_PMP_STATUS_UNABLE_TO_DISCOVER;
 			return NULL;
@@ -432,13 +450,13 @@ purple_pmp_create_map(PurplePmpType type, unsigned short privateport, unsigned s
 	/* TODO: Non-blocking! */
 	success = (sendto(sendfd, &req, sizeof(req), 0, (struct sockaddr *)(gateway), sizeof(struct sockaddr)) >= 0);
 	if (!success)
-		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP mapping request! (%s)\n", strerror(errno));
+		purple_debug_info("nat-pmp", "There was an error sending the NAT-PMP mapping request! (%s)\n", g_strerror(errno));
 
 	if (success)
 	{
 		success = (setsockopt(sendfd, SOL_SOCKET, SO_RCVTIMEO, &req_timeout, sizeof(req_timeout)) >= 0);
 		if (!success)
-			purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", strerror(errno));
+			purple_debug_info("nat-pmp", "There was an error setting the socket's options! (%s)\n", g_strerror(errno));
 	}
 
 	if (success)
@@ -448,14 +466,15 @@ purple_pmp_create_map(PurplePmpType type, unsigned short privateport, unsigned s
 		success = ((recvfrom(sendfd, resp, sizeof(PurplePmpMapResponse), 0, NULL, NULL) >= 0) ||
 				   (errno == EAGAIN));
 		if (!success)
-			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", strerror(errno));
+			purple_debug_info("nat-pmp", "There was an error receiving the response from the NAT-PMP device! (%s)\n", g_strerror(errno));
 	}
 
 	if (success)
 	{
 		success = (resp->opcode == (req.opcode + 128));
 		if (!success)
-			purple_debug_info("nat-pmp", "The opcode for the response from the NAT device does not match the request opcode!\n");
+			purple_debug_info("nat-pmp", "The opcode for the response from the NAT device (%i) does not match the request opcode (%i + 128 = %i)!\n",
+							  resp->opcode, req.opcode, req.opcode + 128);
 	}
 
 #ifdef PMP_DEBUG
@@ -492,7 +511,8 @@ purple_pmp_destroy_map(PurplePmpType type, unsigned short privateport)
 	success = purple_pmp_create_map(((type == PURPLE_PMP_TYPE_UDP) ? PMP_MAP_OPCODE_UDP : PMP_MAP_OPCODE_TCP),
 							privateport, 0, 0);
 	if (!success)
-		purple_debug_warning("nat-pmp", "Failed to properly destroy mapping for %d!\n", privateport);
+		purple_debug_warning("nat-pmp", "Failed to properly destroy mapping for %s port %d!\n",
+							 ((type == PURPLE_PMP_TYPE_UDP) ? "UDP" : "TCP"), privateport);
 
 	return success;
 }

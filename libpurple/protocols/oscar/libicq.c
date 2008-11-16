@@ -27,6 +27,15 @@
 
 #include "oscarcommon.h"
 
+static GHashTable *
+icq_get_account_text_table(PurpleAccount *account)
+{
+	GHashTable *table;
+	table = g_hash_table_new(g_str_hash, g_str_equal);
+	g_hash_table_insert(table, "login_label", (gpointer)_("ICQ UIN..."));
+	return table;
+}
+
 static PurplePluginProtocolInfo prpl_info =
 {
 	OPT_PROTO_MAIL_CHECK | OPT_PROTO_IM_IMAGE,
@@ -92,12 +101,12 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* whiteboard_prpl_ops */
 	NULL,					/* send_raw */
 	NULL,					/* roomlist_room_serialize */
+	NULL,					/* unregister_user */
+	NULL,					/* send_attention */
+	NULL,					/* get_attention_types */
 
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	icq_get_account_text_table, /* get_account_text_table */
 };
 
 static PurplePluginInfo info =
@@ -113,7 +122,7 @@ static PurplePluginInfo info =
 
 	"prpl-icq",                                     /**< id             */
 	"ICQ",                                        /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("ICQ Protocol Plugin"),
 	                                                  /**  description    */

@@ -159,7 +159,7 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 	
 		purple_request_action(handle, _("Offline Message"), ask,
 					_("You can edit/delete the pounce from the `Buddy Pounces' dialog"),
-					1,
+					0,
 					offline->account, offline->who, offline->conv,
 					offline, 2,
 					_("Yes"), record_pounce,
@@ -225,7 +225,7 @@ static PurplePluginInfo info =
 
 	PLUGIN_ID,				/* plugin id			*/
 	PLUGIN_NAME,				/* name					*/
-	VERSION,				/* version				*/
+	DISPLAY_VERSION,			/* version				*/
 	PLUGIN_SUMMARY,				/* summary				*/
 	PLUGIN_DESCRIPTION,			/* description			*/
 	PLUGIN_AUTHOR,				/* author				*/

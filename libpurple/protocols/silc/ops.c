@@ -48,17 +48,32 @@ silc_ask_passphrase(SilcClient client, SilcClientConnection conn,
 void silc_say(SilcClient client, SilcClientConnection conn,
 	      SilcClientMessageType type, char *msg, ...)
 {
-	if (type == SILC_CLIENT_MESSAGE_ERROR) {
-		char tmp[256];
-		va_list va;
+	char tmp[256];
+	va_list va;
+	PurpleConnection *gc = NULL;
+	PurpleConnectionError reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
 
-		va_start(va, msg);
-		silc_vsnprintf(tmp, sizeof(tmp), msg, va);
-		purple_notify_error(NULL, _("Error"), _("Error occurred"), tmp);
+	va_start(va, msg);
+	silc_vsnprintf(tmp, sizeof(tmp), msg, va);
+	va_end(va);
 
-		va_end(va);
+	if (type != SILC_CLIENT_MESSAGE_ERROR) {
+		purple_debug_misc("silc", "silc_say (%d) %s\n", type, tmp);
 		return;
 	}
+
+	purple_debug_error("silc", "silc_say error: %s\n", tmp);
+
+	if (!strcmp(tmp, "Authentication failed"))
+		reason = PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED;
+
+	if (client != NULL)
+		gc = client->application;
+
+	if (gc != NULL)
+		purple_connection_error_reason (gc, reason, tmp);
+	else
+		purple_notify_error(NULL, _("Error"), _("Error occurred"), tmp);
 }
 
 /* Processes incoming MIME message.  Can be private message or channel
@@ -447,7 +462,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 			client_entry = va_arg(va, SilcClientEntry);
 
 			components = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-			g_hash_table_insert(components, strdup("channel"), strdup(name));
+			g_hash_table_insert(components, g_strdup("channel"), g_strdup(name));
 			serv_got_chat_invite(gc, name, client_entry->nickname, NULL, components);
 		}
 		break;
@@ -469,7 +484,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		g_snprintf(buf, sizeof(buf), "%s@%s",
 			   client_entry->username, client_entry->hostname);
 		purple_conv_chat_add_user(PURPLE_CONV_CHAT(convo),
-					  g_strdup(client_entry->nickname), buf, PURPLE_CBFLAGS_NONE, TRUE);
+					  client_entry->nickname, buf, PURPLE_CBFLAGS_NONE, TRUE);
 
 		break;
 
@@ -959,7 +974,6 @@ silcpurple_whois_more(SilcClientEntry client_entry, gint id)
 {
 	SilcAttributePayload attr;
 	SilcAttribute attribute;
-	char *buf;
 	GString *s;
 	SilcVCardStruct vcard;
 	int i;
@@ -1038,7 +1052,7 @@ silcpurple_whois_more(SilcClientEntry client_entry, gint id)
 			for (i = 0; i < vcard.num_emails; i++) {
 				if (vcard.emails[i].address)
 					g_string_append_printf(s, "%s:\t\t%s\n",
-							       _("E-Mail"),
+							       _("Email"),
 							       vcard.emails[i].address);
 			}
 			if (vcard.note)
@@ -1049,10 +1063,9 @@ silcpurple_whois_more(SilcClientEntry client_entry, gint id)
 		}
 	}
 
-	buf = g_string_free(s, FALSE);
 	purple_notify_info(NULL, _("User Information"), _("User Information"),
-			 buf);
-	g_free(buf);
+			 s->str);
+	g_string_free(s, TRUE);
 }
 #endif
 
@@ -1118,7 +1131,7 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			    f |= PURPLE_CBFLAGS_FOUNDER;
 			  if (chu->mode & SILC_CHANNEL_UMODE_CHANOP)
 			    f |= PURPLE_CBFLAGS_OP;
-			  users = g_list_append(users, g_strdup(chu->client->nickname));
+			  users = g_list_append(users, chu->client->nickname);
 			  flags = g_list_append(flags, GINT_TO_POINTER(f));
 
 			  if (chu->mode & SILC_CHANNEL_UMODE_CHANFO) {
@@ -1274,13 +1287,15 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				unsigned char *pk;
 				SilcUInt32 pk_len;
 				pk = silc_pkcs_public_key_encode(client_entry->public_key, &pk_len);
-				fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
-				babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
-				purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
-				purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
-				silc_free(fingerprint);
-				silc_free(babbleprint);
-				silc_free(pk);
+				if (pk) {
+					fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
+					babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
+					purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
+					purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
+					silc_free(fingerprint);
+					silc_free(babbleprint);
+					silc_free(pk);
+				}
 			}
 
 #if 0 /* XXX for now, let's not show attrs here */
@@ -1346,13 +1361,15 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				unsigned char *pk;
 				SilcUInt32 pk_len;
 				pk = silc_pkcs_public_key_encode(client_entry->public_key, &pk_len);
-				fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
-				babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
-				purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
-				purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
-				silc_free(fingerprint);
-				silc_free(babbleprint);
-				silc_free(pk);
+				if (pk) {
+					fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
+					babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
+					purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
+					purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
+					silc_free(fingerprint);
+					silc_free(babbleprint);
+					silc_free(pk);
+				}
 			}
 
 			purple_notify_userinfo(gc, nickname, user_info, NULL, NULL);

@@ -29,8 +29,6 @@
 
 #define SSL_GNUTLS_PLUGIN_ID "ssl-gnutls"
 
-#ifdef HAVE_GNUTLS
-
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
 
@@ -54,8 +52,8 @@ ssl_gnutls_init_gnutls(void)
 	   If there are strange bugs, perhaps look here (yes, I am a
 	   hypocrite) */
 	gnutls_global_set_mem_functions(
-		(gnutls_alloc_function)   g_malloc0, /* malloc */
-		(gnutls_alloc_function)   g_malloc0, /* secure malloc */
+		(gnutls_alloc_function)   g_malloc, /* malloc */
+		(gnutls_alloc_function)   g_malloc, /* secure malloc */
 		NULL,      /* mem_is_secure */
 		(gnutls_realloc_function) g_realloc, /* realloc */
 		(gnutls_free_function)    g_free     /* free */
@@ -512,9 +510,8 @@ x509_import_from_file(const gchar * filename)
 	dt.data = (unsigned char *) buf;
 	dt.size = buf_sz;
 
-	/* Perform the conversion */
-	crt = x509_import_from_datum(dt,
-				     GNUTLS_X509_FMT_PEM); // files should be in PEM format
+	/* Perform the conversion; files should be in PEM format */
+	crt = x509_import_from_datum(dt, GNUTLS_X509_FMT_PEM);
 
 	/* Cleanup */
 	g_free(buf);
@@ -944,12 +941,9 @@ static PurpleSslOps ssl_ops =
 	NULL
 };
 
-#endif /* HAVE_GNUTLS */
-
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-#ifdef HAVE_GNUTLS
 	if(!purple_ssl_get_ops()) {
 		purple_ssl_set_ops(&ssl_ops);
 	}
@@ -961,21 +955,16 @@ plugin_load(PurplePlugin *plugin)
 	purple_certificate_register_scheme( &x509_gnutls );
 
 	return TRUE;
-#else
-	return FALSE;
-#endif
 }
 
 static gboolean
 plugin_unload(PurplePlugin *plugin)
 {
-#ifdef HAVE_GNUTLS
 	if(purple_ssl_get_ops() == &ssl_ops) {
 		purple_ssl_set_ops(NULL);
 	}
 
 	purple_certificate_unregister_scheme( &x509_gnutls );
-#endif
 
 	return TRUE;
 }
@@ -993,7 +982,7 @@ static PurplePluginInfo info =
 
 	SSL_GNUTLS_PLUGIN_ID,                             /**< id             */
 	N_("GNUTLS"),                                     /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Provides SSL support through GNUTLS."),
 	                                                  /**  description    */

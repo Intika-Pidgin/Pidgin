@@ -62,7 +62,7 @@ static gboolean visibility_manager = FALSE;
  * docklet status and utility functions
  **************************************************************************/
 static gboolean
-docklet_blink_icon()
+docklet_blink_icon(gpointer data)
 {
 	static gboolean blinked = FALSE;
 	gboolean ret = FALSE; /* by default, don't keep blinking */
@@ -108,7 +108,7 @@ get_pending_list(guint max)
 }
 
 static gboolean
-docklet_update_status()
+docklet_update_status(void)
 {
 	GList *convs, *l;
 	int count;
@@ -219,7 +219,7 @@ docklet_update_status()
 }
 
 static gboolean
-online_account_supports_chat()
+online_account_supports_chat(void)
 {
 	GList *c = NULL;
 	c = purple_connections_get_all();
@@ -523,14 +523,14 @@ add_account_statuses(GtkWidget *menu, PurpleAccount *account)
 }
 
 static GtkWidget *
-docklet_status_submenu()
+docklet_status_submenu(void)
 {
 	GtkWidget *submenu, *menuitem;
 	GList *popular_statuses, *cur;
 	PidginStatusBox *statusbox = NULL;
 
 	submenu = gtk_menu_new();
-	menuitem = gtk_menu_item_new_with_label(_("Change Status"));
+	menuitem = gtk_menu_item_new_with_mnemonic(_("_Change Status"));
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
 
 	if(pidgin_blist_get_default_gtk_blist() != NULL) {
@@ -667,7 +667,8 @@ docklet_plugin_actions(GtkWidget *menu)
 }
 
 static void
-docklet_menu() {
+docklet_menu(void)
+{
 	static GtkWidget *menu = NULL;
 	GtkWidget *menuitem;
 
@@ -677,12 +678,12 @@ docklet_menu() {
 
 	menu = gtk_menu_new();
 
-	menuitem = gtk_check_menu_item_new_with_label(_("Show Buddy List"));
+	menuitem = gtk_check_menu_item_new_with_mnemonic(_("Show Buddy _List"));
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitem), purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/list_visible"));
 	g_signal_connect(G_OBJECT(menuitem), "toggled", G_CALLBACK(docklet_toggle_blist), NULL);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 
-	menuitem = gtk_menu_item_new_with_label(_("Unread Messages"));
+	menuitem = gtk_menu_item_new_with_mnemonic(_("_Unread Messages"));
 
 	if (pending) {
 		GtkWidget *submenu = gtk_menu_new();
@@ -703,7 +704,12 @@ docklet_menu() {
 
 	pidgin_separator(menu);
 
-	menuitem = pidgin_new_item_from_stock(menu, _("New Message..."), PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW, G_CALLBACK(pidgin_dialogs_im), NULL, 0, 0, NULL);
+	menuitem = pidgin_new_item_from_stock(menu, _("New _Message..."), PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW, G_CALLBACK(pidgin_dialogs_im), NULL, 0, 0, NULL);
+	if (status == PURPLE_STATUS_OFFLINE)
+		gtk_widget_set_sensitive(menuitem, FALSE);
+
+	menuitem = pidgin_new_item_from_stock(menu, _("Join Chat..."), PIDGIN_STOCK_CHAT,
+			G_CALLBACK(pidgin_blist_joinchat_show), NULL, 0, 0, NULL);
 	if (status == PURPLE_STATUS_OFFLINE)
 		gtk_widget_set_sensitive(menuitem, FALSE);
 
@@ -712,20 +718,20 @@ docklet_menu() {
 
 	pidgin_separator(menu);
 
-	pidgin_new_item_from_stock(menu, _("Accounts"), NULL, G_CALLBACK(pidgin_accounts_window_show), NULL, 0, 0, NULL);
-	pidgin_new_item_from_stock(menu, _("Plugins"), PIDGIN_STOCK_TOOLBAR_PLUGINS, G_CALLBACK(pidgin_plugin_dialog_show), NULL, 0, 0, NULL);
-	pidgin_new_item_from_stock(menu, _("Preferences"), GTK_STOCK_PREFERENCES, G_CALLBACK(pidgin_prefs_show), NULL, 0, 0, NULL);
+	pidgin_new_item_from_stock(menu, _("_Accounts"), NULL, G_CALLBACK(pidgin_accounts_window_show), NULL, 0, 0, NULL);
+	pidgin_new_item_from_stock(menu, _("Plu_gins"), PIDGIN_STOCK_TOOLBAR_PLUGINS, G_CALLBACK(pidgin_plugin_dialog_show), NULL, 0, 0, NULL);
+	pidgin_new_item_from_stock(menu, _("Pr_eferences"), GTK_STOCK_PREFERENCES, G_CALLBACK(pidgin_prefs_show), NULL, 0, 0, NULL);
 
 	pidgin_separator(menu);
 
-	menuitem = gtk_check_menu_item_new_with_label(_("Mute Sounds"));
+	menuitem = gtk_check_menu_item_new_with_mnemonic(_("Mute _Sounds"));
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitem), purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/sound/mute"));
 	if (!strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"), "none"))
 		gtk_widget_set_sensitive(GTK_WIDGET(menuitem), FALSE);
 	g_signal_connect(G_OBJECT(menuitem), "toggled", G_CALLBACK(docklet_toggle_mute), NULL);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 
-	menuitem = gtk_check_menu_item_new_with_label(_("Blink on New Message"));
+	menuitem = gtk_check_menu_item_new_with_mnemonic(_("_Blink on New Message"));
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitem), purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/blink"));
 	g_signal_connect(G_OBJECT(menuitem), "toggled", G_CALLBACK(docklet_toggle_blink), NULL);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
@@ -735,7 +741,7 @@ docklet_menu() {
 	/* add plugin actions */
 	docklet_plugin_actions(menu);
 
-	pidgin_new_item_from_stock(menu, _("Quit"), GTK_STOCK_QUIT, G_CALLBACK(purple_core_quit), NULL, 0, 0, NULL);
+	pidgin_new_item_from_stock(menu, _("_Quit"), GTK_STOCK_QUIT, G_CALLBACK(purple_core_quit), NULL, 0, 0, NULL);
 
 #ifdef _WIN32
 	g_signal_connect(menu, "leave-notify-event", G_CALLBACK(docklet_menu_leave_enter), NULL);

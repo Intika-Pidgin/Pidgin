@@ -107,10 +107,14 @@ struct _PurpleStatus
 	PurpleStatusType *type;
 	PurplePresence *presence;
 
-	const char *title;
-
 	gboolean active;
 
+	/*
+	 * The current values of the attributes for this status.  The
+	 * key is a string containing the name of the attribute.  It is
+	 * a borrowed reference from the list of attrs in the
+	 * PurpleStatusType.  The value is a PurpleValue.
+	 */
 	GHashTable *attr_values;
 };
 
@@ -130,14 +134,15 @@ static int primitive_scores[] =
 	-100,   /* away                     */
 	-200,   /* extended away            */
 	-400,   /* mobile                   */
+	0,      /* tune                     */
 	-10,    /* idle, special case.      */
 	-5,     /* idle time, special case. */
 	10      /* Offline messageable      */
 };
 
-#define SCORE_IDLE      8
-#define SCORE_IDLE_TIME 9
-#define SCORE_OFFLINE_MESSAGE 10
+#define SCORE_IDLE      9
+#define SCORE_IDLE_TIME 10
+#define SCORE_OFFLINE_MESSAGE 11
 
 /**************************************************************************
  * PurpleStatusPrimitive API
@@ -157,7 +162,8 @@ static struct PurpleStatusPrimitiveMap
 	{ PURPLE_STATUS_INVISIBLE,       "invisible",       N_("Invisible")       },
 	{ PURPLE_STATUS_AWAY,            "away",            N_("Away")            },
 	{ PURPLE_STATUS_EXTENDED_AWAY,   "extended_away",   N_("Extended away")   },
-	{ PURPLE_STATUS_MOBILE,          "mobile",          N_("Mobile")          }
+	{ PURPLE_STATUS_MOBILE,          "mobile",          N_("Mobile")          },
+	{ PURPLE_STATUS_TUNE,            "tune",            N_("Listening to music") }
 };
 
 const char *
@@ -561,7 +567,7 @@ purple_status_new(PurpleStatusType *status_type, PurplePresence *presence)
 	status->presence = presence;
 
 	status->attr_values =
-		g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+		g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
 		(GDestroyNotify)purple_value_destroy);
 
 	for (l = purple_status_type_get_attrs(status_type); l != NULL; l = l->next)
@@ -571,7 +577,7 @@ purple_status_new(PurpleStatusType *status_type, PurplePresence *presence)
 		PurpleValue *new_value = purple_value_dup(value);
 
 		g_hash_table_insert(status->attr_values,
-							g_strdup(purple_status_attr_get_id(attr)),
+							(char *)purple_status_attr_get_id(attr),
 							new_value);
 	}
 
@@ -606,13 +612,10 @@ notify_buddy_status_update(PurpleBuddy *buddy, PurplePresence *presence,
 
 		if (old_status != NULL)
 		{
-			tmp = g_strdup_printf(_("%s changed status from %s to %s"), buddy_alias,
+			tmp = g_strdup_printf(_("%s (%s) changed status from %s to %s"), buddy_alias, buddy->name,
 			                      purple_status_get_name(old_status),
 			                      purple_status_get_name(new_status));
-			logtmp = g_strdup_printf(_("%s (%s) changed status from %s to %s"), buddy_alias, buddy->name,
-			                      purple_status_get_name(old_status),
-			                      purple_status_get_name(new_status));
-
+			logtmp = g_markup_escape_text(tmp, -1);
 		}
 		else
 		{
@@ -620,18 +623,15 @@ notify_buddy_status_update(PurpleBuddy *buddy, PurplePresence *presence,
 
 			if (purple_status_is_active(new_status))
 			{
-				tmp = g_strdup_printf(_("%s is now %s"), buddy_alias,
+				tmp = g_strdup_printf(_("%s (%s) is now %s"), buddy_alias, buddy->name,
 				                      purple_status_get_name(new_status));
-				logtmp = g_strdup_printf(_("%s (%s) is now %s"), buddy_alias, buddy->name,
-				                      purple_status_get_name(new_status));
-
+				logtmp = g_markup_escape_text(tmp, -1);
 			}
 			else
 			{
-				tmp = g_strdup_printf(_("%s is no longer %s"), buddy_alias,
+				tmp = g_strdup_printf(_("%s (%s) is no longer %s"), buddy_alias, buddy->name,
 				                      purple_status_get_name(new_status));
-				logtmp = g_strdup_printf(_("%s (%s) is no longer %s"), buddy_alias, buddy->name,
-				                      purple_status_get_name(new_status));
+				logtmp = g_markup_escape_text(tmp, -1);
 			}
 		}
 
@@ -903,6 +903,8 @@ purple_status_set_attr_string(PurpleStatus *status, const char *id,
 	}
 	g_return_if_fail(purple_value_get_type(attr_value) == PURPLE_TYPE_STRING);
 
+	/* XXX: Check if the value has actually changed. If it has, and the status
+	 * is active, should this trigger 'status_has_changed'? */
 	purple_value_set_string(attr_value, value);
 }
 
@@ -1241,12 +1243,15 @@ update_buddy_idle(PurpleBuddy *buddy, PurplePresence *presence,
 
 			if (log != NULL)
 			{
-				char *tmp = g_strdup_printf(_("%s became idle"),
+				char *tmp, *tmp2;
+				tmp = g_strdup_printf(_("%s became idle"),
 				purple_buddy_get_alias(buddy));
+				tmp2 = g_markup_escape_text(tmp, -1);
+				g_free(tmp);
 
 				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
-				purple_buddy_get_alias(buddy), current_time, tmp);
-				g_free(tmp);
+				purple_buddy_get_alias(buddy), current_time, tmp2);
+				g_free(tmp2);
 			}
 		}
 	}
@@ -1258,12 +1263,15 @@ update_buddy_idle(PurpleBuddy *buddy, PurplePresence *presence,
 
 			if (log != NULL)
 			{
-				char *tmp = g_strdup_printf(_("%s became unidle"),
+				char *tmp, *tmp2;
+				tmp = g_strdup_printf(_("%s became unidle"),
 				purple_buddy_get_alias(buddy));
+				tmp2 = g_markup_escape_text(tmp, -1);
+				g_free(tmp);
 
 				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
-				purple_buddy_get_alias(buddy), current_time, tmp);
-				g_free(tmp);
+				purple_buddy_get_alias(buddy), current_time, tmp2);
+				g_free(tmp2);
 			}
 		}
 	}
@@ -1307,7 +1315,8 @@ purple_presence_set_idle(PurplePresence *presence, gboolean idle, time_t idle_ti
 	else if (purple_presence_get_context(presence) == PURPLE_PRESENCE_CONTEXT_ACCOUNT)
 	{
 		PurpleAccount *account;
-		PurpleConnection *gc;
+		PurpleConnection *gc = NULL;
+		PurplePlugin *prpl = NULL;
 		PurplePluginProtocolInfo *prpl_info = NULL;
 
 		account = purple_presence_get_account(presence);
@@ -1318,13 +1327,15 @@ purple_presence_set_idle(PurplePresence *presence, gboolean idle, time_t idle_ti
 
 			if (log != NULL)
 			{
-				char *msg;
+				char *msg, *tmp;
 
 				if (idle)
-					msg = g_strdup_printf(_("+++ %s became idle"), purple_account_get_username(account));
+					tmp = g_strdup_printf(_("+++ %s became idle"), purple_account_get_username(account));
 				else
-					msg = g_strdup_printf(_("+++ %s became unidle"), purple_account_get_username(account));
+					tmp = g_strdup_printf(_("+++ %s became unidle"), purple_account_get_username(account));
 
+				msg = g_markup_escape_text(tmp, -1);
+				g_free(tmp);
 				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
 				                 purple_account_get_username(account),
 				                 (idle ? idle_time : current_time), msg);
@@ -1334,9 +1345,11 @@ purple_presence_set_idle(PurplePresence *presence, gboolean idle, time_t idle_ti
 
 		gc = purple_account_get_connection(account);
 
-		if (gc != NULL && PURPLE_CONNECTION_IS_CONNECTED(gc) &&
-				gc->prpl != NULL)
-			prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+		if(gc)
+			prpl = purple_connection_get_prpl(gc);
+
+		if(PURPLE_CONNECTION_IS_CONNECTED(gc) && prpl != NULL)
+			prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 		if (prpl_info && prpl_info->set_idle)
 			prpl_info->set_idle(gc, (idle ? (current_time - idle_time) : 0));
@@ -1539,14 +1552,37 @@ purple_presence_get_login_time(const PurplePresence *presence)
 	return purple_presence_is_online(presence) ? presence->login_time : 0;
 }
 
+static int
+purple_presence_compute_score(const PurplePresence *presence)
+{
+	GList *l;
+	int score = 0;
+
+	for (l = purple_presence_get_statuses(presence); l != NULL; l = l->next) {
+		PurpleStatus *status = (PurpleStatus *)l->data;
+		PurpleStatusType *type = purple_status_get_type(status);
+
+		if (purple_status_is_active(status)) {
+			score += primitive_scores[purple_status_type_get_primitive(type)];
+			if (!purple_status_is_online(status)) {
+				PurpleBuddy *b = purple_presence_get_buddy(presence);
+				if (b && purple_account_supports_offline_message(purple_buddy_get_account(b), b))
+					score += primitive_scores[SCORE_OFFLINE_MESSAGE];
+			}
+		}
+	}
+	score += purple_account_get_int(purple_presence_get_account(presence), "score", 0);
+	if (purple_presence_is_idle(presence))
+		score += primitive_scores[SCORE_IDLE];
+	return score;
+}
+
 gint
 purple_presence_compare(const PurplePresence *presence1,
 		const PurplePresence *presence2)
 {
-	gboolean idle1, idle2;
 	time_t idle_time_1, idle_time_2;
 	int score1 = 0, score2 = 0;
-	GList *l;
 
 	if (presence1 == presence2)
 		return 0;
@@ -1555,49 +1591,18 @@ purple_presence_compare(const PurplePresence *presence1,
 	else if (presence2 == NULL)
 		return -1;
 
-	/* Compute the score of the first set of statuses. */
-	for (l = purple_presence_get_statuses(presence1); l != NULL; l = l->next)
-	{
-		PurpleStatus *status = (PurpleStatus *)l->data;
-		PurpleStatusType *type = purple_status_get_type(status);
+	if (purple_presence_is_online(presence1) &&
+			!purple_presence_is_online(presence2))
+		return -1;
+	else if (purple_presence_is_online(presence2) &&
+			!purple_presence_is_online(presence1))
+		return 1;
 
-		if (purple_status_is_active(status)) {
-			score1 += primitive_scores[purple_status_type_get_primitive(type)];
-			if (!purple_status_is_online(status)) {
-				PurpleBuddy *b = purple_presence_get_buddy(presence1);
-				if (b && purple_account_supports_offline_message(purple_buddy_get_account(b),b))
-					score1 += primitive_scores[SCORE_OFFLINE_MESSAGE];
-			}
-		}
-	}
-	score1 += purple_account_get_int(purple_presence_get_account(presence1), "score", 0);
+	/* Compute the score of the first set of statuses. */
+	score1 = purple_presence_compute_score(presence1);
 
 	/* Compute the score of the second set of statuses. */
-	for (l = purple_presence_get_statuses(presence2); l != NULL; l = l->next)
-	{
-		PurpleStatus *status = (PurpleStatus *)l->data;
-		PurpleStatusType *type = purple_status_get_type(status);
-
-		if (purple_status_is_active(status)) {
-			score2 += primitive_scores[purple_status_type_get_primitive(type)];
-			if (!purple_status_is_online(status)) {
-				PurpleBuddy *b = purple_presence_get_buddy(presence2);
-				if (b && purple_account_supports_offline_message(purple_buddy_get_account(b),b))
-					score2 += primitive_scores[SCORE_OFFLINE_MESSAGE];
-			}
-
-		}
-	}
-	score2 += purple_account_get_int(purple_presence_get_account(presence2), "score", 0);
-
-	idle1 = purple_presence_is_idle(presence1);
-	idle2 = purple_presence_is_idle(presence2);
-
-	if (idle1)
-		score1 += primitive_scores[SCORE_IDLE];
-
-	if (idle2)
-		score2 += primitive_scores[SCORE_IDLE];
+	score2 = purple_presence_compute_score(presence2);
 
 	idle_time_1 = time(NULL) - purple_presence_get_idle_time(presence1);
 	idle_time_2 = time(NULL) - purple_presence_get_idle_time(presence2);

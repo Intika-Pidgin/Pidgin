@@ -5,6 +5,7 @@ EXTRA_DIST = \
 		Makefile.mingw \
 		pidgin.pc.in \
 		pidgin-uninstalled.pc.in \
+		pidginstock-artwork.c \
 		win32/IdleTracker/Makefile.mingw \
 		win32/IdleTracker/idletrack.c \
 		win32/IdleTracker/idletrack.h \
@@ -111,6 +112,7 @@ pidgin_SOURCES = \
 	gtksavedstatuses.c \
 	gtkscrollbook.c \
 	gtksession.c \
+	gtksmiley.c \
 	gtksound.c \
 	gtksourceiter.c \
 	gtksourceundomanager.c \
@@ -118,7 +120,9 @@ pidgin_SOURCES = \
 	gtkstatusbox.c \
 	gtkthemes.c \
 	gtkutils.c \
-	gtkwhiteboard.c
+	gtkwhiteboard.c \
+	minidialog.c \
+	pidgintooltip.c
 
 pidgin_headers = \
 	eggtrayicon.h \
@@ -161,6 +165,7 @@ pidgin_headers = \
 	gtksavedstatuses.h \
 	gtkscrollbook.h \
 	gtksession.h \
+	gtksmiley.h \
 	gtksound.h \
 	gtksourceiter.h \
 	gtksourceundomanager.h \
@@ -170,6 +175,8 @@ pidgin_headers = \
 	gtkthemes.h \
 	gtkutils.h \
 	gtkwhiteboard.h \
+	minidialog.h \
+	pidgintooltip.h \
 	pidgin.h
 
 pidginincludedir=$(includedir)/pidgin
@@ -181,6 +188,7 @@ pidgin_DEPENDENCIES = @LIBOBJS@
 pidgin_LDFLAGS = -export-dynamic
 pidgin_LDADD = \
 	@LIBOBJS@ \
+	$(GLIB_LIBS) \
 	$(DBUS_LIBS) \
 	$(GSTREAMER_LIBS) \
 	$(XSS_LIBS) \
@@ -204,6 +212,8 @@ AM_CPPFLAGS = \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-I$(top_builddir)/libpurple \
 	-I$(top_srcdir)/libpurple/ \
+	-I$(top_builddir) \
+	-I$(top_srcdir) \
 	$(GLIB_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
 	$(DEBUG_CFLAGS) \

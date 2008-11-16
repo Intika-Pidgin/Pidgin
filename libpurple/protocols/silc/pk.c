@@ -56,9 +56,9 @@ static void silcpurple_verify_cb(PublicKeyVerify verify, gint id)
 					  SILC_PKCS_FILE_BASE64);
 	}
 
-	silc_free(verify->filename);
-	silc_free(verify->entity);
-	silc_free(verify->entity_name);
+	g_free(verify->filename);
+	g_free(verify->entity);
+	g_free(verify->entity_name);
 	silc_free(verify->fingerprint);
 	silc_free(verify->babbleprint);
 	silc_pkcs_public_key_free(verify->public_key);
@@ -158,6 +158,11 @@ void silcpurple_verify_public_key(SilcClient client, SilcClientConnection conn,
 				    NULL, &hostname, &ip, &port);
 
 	pk = silc_pkcs_public_key_encode(public_key, &pk_len);
+	if (!pk) {
+		if (completion)
+			completion(FALSE, context);
+		return;
+	}
 
 	if (conn_type == SILC_CONN_SERVER ||
 	    conn_type == SILC_CONN_ROUTER) {
@@ -206,10 +211,10 @@ void silcpurple_verify_public_key(SilcClient client, SilcClientConnection conn,
 		return;
 	verify->client = client;
 	verify->conn = conn;
-	verify->filename = strdup(ipf);
-	verify->entity = strdup(entity);
+	verify->filename = g_strdup(ipf);
+	verify->entity = g_strdup(entity);
 	verify->entity_name = (conn_type != SILC_CONN_CLIENT ?
-			       (name ? strdup(name) : strdup(hostname))
+			       (name ? g_strdup(name) : g_strdup(hostname))
 			       : NULL);
 	verify->public_key = silc_pkcs_public_key_copy(public_key);
 	verify->completion = completion;
@@ -257,9 +262,9 @@ void silcpurple_verify_public_key(SilcClient client, SilcClientConnection conn,
 		/* Local copy matched */
 		if (completion)
 			completion(TRUE, context);
-		silc_free(verify->filename);
-		silc_free(verify->entity);
-		silc_free(verify->entity_name);
+		g_free(verify->filename);
+		g_free(verify->entity);
+		g_free(verify->entity_name);
 		silc_free(verify->fingerprint);
 		silc_free(verify->babbleprint);
 		silc_pkcs_public_key_free(verify->public_key);

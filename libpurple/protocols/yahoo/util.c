@@ -32,6 +32,78 @@
 
 #include <string.h>
 
+gboolean
+yahoo_account_use_http_proxy(PurpleConnection *conn)
+{
+	PurpleProxyInfo *ppi = purple_proxy_get_setup(conn->account);
+	return (ppi->type == PURPLE_PROXY_HTTP || ppi->type == PURPLE_PROXY_USE_ENVVAR);
+}
+
+/*
+ * Returns cookies formatted as a null terminated string for the given connection.
+ * Must g_free return value.
+ * 
+ * TODO:will work, but must test for strict correctness
+ */
+gchar* yahoo_get_cookies(PurpleConnection *gc)
+{
+	gchar *ans = NULL;
+	gchar *cur;
+	char firstflag = 1;
+	gchar *t1,*t2,*t3;
+	GSList *tmp;
+	GSList *cookies;
+	cookies = ((struct yahoo_data*)(gc->proto_data))->cookies;
+	tmp = cookies;
+	while(tmp)
+	{
+		cur = tmp->data;
+		t1 = ans;
+		t2 = g_strrstr(cur, ";expires=");
+		if(t2 == NULL)
+			t2 = g_strrstr(cur, "; expires=");
+		if(t2 == NULL)
+		{
+			if(firstflag)
+				ans = g_strdup_printf("%c=%s", cur[0], cur+2);
+			else
+				ans = g_strdup_printf("%s; %c=%s", t1, cur[0], cur+2);
+		}
+		else
+		{
+			t3 = strstr(t2+1, ";");
+			if(t3 != NULL)
+			{
+				t2[0] = '\0';
+
+				if(firstflag)
+					ans = g_strdup_printf("%c=%s%s", cur[0], cur+2, t3);
+				else
+					ans = g_strdup_printf("%s; %c=%s%s", t1, cur[0], cur+2, t3);
+
+				t2[0] = ';';
+			}
+			else
+			{
+				t2[0] = '\0';
+
+				if(firstflag)
+					ans = g_strdup_printf("%c=%s", cur[0], cur+2);
+				else
+					ans = g_strdup_printf("%s; %c=%s", t1, cur[0], cur+2);
+
+				t2[0] = ';';
+			}
+		}
+		if(firstflag)
+			firstflag = 0;
+		else
+			g_free(t1);
+		tmp = g_slist_next(tmp);
+	}
+	return ans;
+}
+
 /**
  * Encode some text to send to the yahoo server.
  *
@@ -50,18 +122,15 @@ char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8)
 	char *ret;
 	const char *to_codeset;
 
-	if (yd->jp && utf8 && *utf8)
-		*utf8 = FALSE;
+	if (yd->jp)
+		return g_strdup(str);
 
 	if (utf8 && *utf8) /* FIXME: maybe don't use utf8 if it'll fit in latin1 */
 		return g_strdup(str);
 
-	if (yd->jp)
-		to_codeset = "SHIFT_JIS";
-	else
-		to_codeset = purple_account_get_string(purple_connection_get_account(gc), "local_charset",  "ISO-8859-1");
-
+	to_codeset = purple_account_get_string(purple_connection_get_account(gc), "local_charset",  "ISO-8859-1");
 	ret = g_convert_with_fallback(str, -1, to_codeset, "UTF-8", "?", NULL, NULL, NULL);
+
 	if (ret)
 		return ret;
 	else
@@ -98,6 +167,25 @@ char *yahoo_string_decode(PurpleConnection *gc, const char *str, gboolean utf8)
 		return ret;
 	else
 		return g_strdup("");
+}
+
+char *yahoo_convert_to_numeric(const char *str)
+{
+	GString *gstr = NULL;
+	char *retstr;
+	const unsigned char *p;
+
+	gstr = g_string_sized_new(strlen(str) * 6 + 1);
+
+	for (p = (unsigned char *)str; *p; p++) {
+		g_string_append_printf(gstr, "&#%u;", *p);
+	}
+
+	retstr = gstr->str;
+
+	g_string_free(gstr, FALSE);
+
+	return retstr;
 }
 
 /*
@@ -715,11 +803,14 @@ char *yahoo_html_to_codes(const char *src)
 			} else if (((len - i) >= 4) && !strncmp(&src[i], "&gt;", 4)) {
 				g_string_append_c(dest, '>');
 				i += 3;
-			} else if (((len - i) >= 5) && !strncmp(&src[i], "&amp;", 4)) {
+			} else if (((len - i) >= 5) && !strncmp(&src[i], "&amp;", 5)) {
 				g_string_append_c(dest, '&');
 				i += 4;
-			} else if (((len - i) >= 6) && !strncmp(&src[i], "&quot;", 4)) {
+			} else if (((len - i) >= 6) && !strncmp(&src[i], "&quot;", 6)) {
 				g_string_append_c(dest, '"');
+				i += 5;
+			} else if (((len - i) >= 6) && !strncmp(&src[i], "&apos;", 6)) {
+				g_string_append_c(dest, '\'');
 				i += 5;
 			} else {
 				g_string_append_c(dest, src[i]);

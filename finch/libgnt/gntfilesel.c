@@ -342,7 +342,7 @@ location_changed(GntFileSel *sel, GError **err)
 static gboolean
 dir_key_pressed(GntTree *tree, const char *key, GntFileSel *sel)
 {
-	if (strcmp(key, "\r") == 0) {
+	if (strcmp(key, "\r") == 0 || strcmp(key, "\n") == 0) {
 		char *str = g_strdup(gnt_tree_get_selection_data(tree));
 		char *path, *dir;
 
@@ -376,7 +376,7 @@ location_key_pressed(GntTree *tree, const char *key, GntFileSel *sel)
 	struct stat st;
 	int glob_ret;
 #endif
-	if (strcmp(key, "\r"))
+	if (strcmp(key, "\r") && strcmp(key, "\n"))
 		return FALSE;
 
 	str = (char*)gnt_entry_get_text(GNT_ENTRY(sel->location));
@@ -635,6 +635,7 @@ gnt_file_sel_init(GTypeInstance *instance, gpointer class)
 	sel->cancel = gnt_button_new("Cancel");
 	sel->select = gnt_button_new("Select");
 
+	g_signal_connect_swapped(G_OBJECT(sel->files), "activate", G_CALLBACK(gnt_widget_activate), sel->select);
 	g_signal_connect(G_OBJECT(sel->select), "activate", G_CALLBACK(select_activated_cb), sel);
 }
 
@@ -719,6 +720,7 @@ gboolean gnt_file_sel_get_dirs_only(GntFileSel *sel)
 
 void gnt_file_sel_set_suggested_filename(GntFileSel *sel, const char *suggest)
 {
+	g_free(sel->suggest);
 	sel->suggest = g_strdup(suggest);
 }
 
