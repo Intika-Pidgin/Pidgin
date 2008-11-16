@@ -1,6 +1,9 @@
 if HAVE_CHECK
 TESTS=check_libpurple
 
+clean-local:
+	-rm -rf libpurple..
+
 check_PROGRAMS=check_libpurple
 
 check_libpurple_SOURCES=\
@@ -16,6 +19,7 @@ check_libpurple_CFLAGS=\
 		$(GLIB_CFLAGS) \
 		$(DEBUG_CFLAGS) \
 		-I.. \
+		-I$(top_srcdir)/libpurple \
 		-DBUILDDIR=\"$(top_builddir)\"
 
 check_libpurple_LDADD=\

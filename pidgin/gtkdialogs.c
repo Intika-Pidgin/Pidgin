@@ -23,6 +23,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#define _PIDGIN_GTKDIALOGS_C_
+
 #include "internal.h"
 #include "pidgin.h"
 
@@ -67,59 +69,64 @@ struct artist {
 	char *email;
 };
 
-/* Order: Lead Developer, then Alphabetical by Last Name */
-static struct developer developers[] = {
-	{"Sean Egan",					N_("lead developer"), "sean.egan@gmail.com"},
-	{"Daniel 'datallah' Atallah",	N_("developer"), NULL},
-	{"Ethan 'Paco-Paco' Blanton",	N_("developer"), NULL},
-	{"Thomas Butter",				N_("developer"), NULL},
-	{"Ka-Hing Cheung",				N_("developer"), NULL},
-	{"Sadrul Habib Chowdhury",		N_("developer"), NULL},
-	{"Mark 'KingAnt' Doliner",		N_("developer"), NULL},
-	{"Casey Harkins",               N_("developer"),   NULL},
-	{"Gary 'grim' Kramlich",		N_("developer"), NULL},
-	{"Richard 'rlaager' Laager",	N_("developer"), NULL},
-	{"Richard 'wabz' Nelson",		N_("developer"), NULL},
-	{"Christopher 'siege' O'Brien", N_("developer"), "taliesein@users.sf.net"},
-	{"Bartosz Oler",		N_("developer"), NULL},
-	{"Etan 'deryni' Reisner",       N_("developer"), NULL},
-	{"Tim 'marv' Ringenbach",		N_("developer"), NULL},
+/* Order: Alphabetical by Last Name */
+static const struct developer developers[] = {
+	{"Daniel 'datallah' Atallah",	NULL, NULL},
+	{"John 'rekkanoryo' Bailey",	N_("bug master"), "rekkanoryo@pidgin.im"},
+	{"Ethan 'Paco-Paco' Blanton",	NULL, NULL},
+	{"Hylke Bons",			N_("artist"), "h.bons@student.rug.nl"},
+	{"Thomas Butter",				NULL, NULL},
+	/* feel free to not translate this */
+	{N_("Ka-Hing Cheung"),			NULL, NULL},
+	{"Sadrul Habib Chowdhury",		NULL, NULL},
+	{"Mark 'KingAnt' Doliner",		NULL, "mark@kingant.net"},
+	{"Sean Egan",					NULL, "sean.egan@gmail.com"},
+	{"Casey Harkins",               NULL,   NULL},
+	{"Gary 'grim' Kramlich",		NULL, "grim@pidgin.im"},
+	{"Richard 'rlaager' Laager",	NULL, "rlaager@pidgin.im"},
+	{"Richard 'wabz' Nelson",		NULL, NULL},
+	{"Christopher 'siege' O'Brien", NULL, "taliesein@users.sf.net"},
+	{"Bartosz Oler",		NULL, NULL},
+	{"Etan 'deryni' Reisner",       NULL, NULL},
+	{"Tim 'marv' Ringenbach",		NULL, NULL},
+	{"Elliott 'QuLogic' Sales de Andrade",	NULL,	NULL},
 	{"Luke 'LSchiere' Schierer",	N_("support"), "lschiere@users.sf.net"},
-	{"Megan 'Cae' Schneider",       N_("support/QA"), NULL},
-	{"Evan Schoenberg",		N_("developer"), NULL},
-	{"Kevin 'SimGuy' Stange",	N_("developer & webmaster"),	NULL},
-	{"Stu 'nosnilmot' Tomlinson",	N_("developer"), NULL},
-	{"Nathan 'faceprint' Walp",		N_("developer"), NULL},
+	{"Evan Schoenberg",		NULL, NULL},
+	{"Kevin 'SimGuy' Stange",	N_("webmaster"),	NULL},
+	{"Will 'resiak' Thompson",	NULL,	NULL},
+	{"Stu 'nosnilmot' Tomlinson",	NULL, NULL},
 	{NULL, NULL, NULL}
 };
 
 /* Order: Alphabetical by Last Name */
-static struct developer patch_writers[] = {
-	{"John 'rekkanoryo' Bailey",	NULL,	NULL},
+static const struct developer patch_writers[] = {
+	{"Marcus 'malu' Lundblad", NULL, NULL},
 	{"Dennis 'EvilDennisR' Ristuccia",	N_("Senior Contributor/QA"),	NULL},
 	{"Peter 'Fmoo' Ruibal",		NULL,	NULL},
 	{"Gabriel 'Nix' Schulhof", 	NULL, 	NULL},
-	{"Will 'resiak' Thompson",	NULL,	NULL},
+	{"Jorge 'Masca' Villaseñor", 	NULL, 	NULL},
 	{NULL, NULL, NULL}
 };
 
 /* Order: Alphabetical by Last Name */
-static struct developer retired_developers[] = {
+static const struct developer retired_developers[] = {
 	{"Herman Bloggs",		N_("win32 port"), "herman@bluedigits.com"},
 	{"Jim Duchek",			N_("maintainer"), "jim@linuxpimps.com"},
 	{"Rob Flynn",			N_("maintainer"), NULL},
 	{"Adam Fritzler",		N_("libfaim maintainer"), NULL},
-	{"Christian 'ChipX86' Hammond",	N_("developer & webmaster"), NULL},
+	{"Christian 'ChipX86' Hammond",	N_("webmaster"), NULL},
 	/* If "lazy bum" translates literally into a serious insult, use something else or omit it. */
 	{"Syd Logan",			N_("hacker and designated driver [lazy bum]"), NULL},
-	{"Jim Seymour",			N_("XMPP developer"), NULL},
+	{"Megan 'Cae' Schneider",       N_("support/QA"), NULL},
+	{"Jim Seymour",			N_("XMPP"), NULL},
 	{"Mark Spencer",		N_("original author"), "markster@marko.net"},
+	{"Nathan 'faceprint' Walp",		NULL, NULL},
 	{"Eric Warmenhoven",	N_("lead developer"), "warmenhoven@yahoo.com"},
 	{NULL, NULL, NULL}
 };
 
 /* Order: Alphabetical by Last Name */
-static struct developer retired_patch_writers[] = {
+static const struct developer retired_patch_writers[] = {
 	{"Felipe 'shx' Contreras",		NULL,	NULL},
 	{"Decklin Foster",				NULL,	NULL},
 	{"Peter 'Bleeter' Lawler",      NULL,   NULL},
@@ -129,7 +136,8 @@ static struct developer retired_patch_writers[] = {
 };
 
 /* Order: Code, then Alphabetical by Last Name */
-static struct translator current_translators[] = {
+static const struct translator translators[] = {
+	{N_("Afrikaans"),           "af", "Samuel Murray", "afrikaans@gmail.com"},
 	{N_("Afrikaans"),           "af", "Friedel Wolff", "friedel@translate.org.za"},
 	{N_("Arabic"),              "ar", "Khaled Hosny", "khaledhosny@eglug.org"},
 	{N_("Belarusian Latin"),    "be@latin", "Ihar Hrachyshka", "ihar.hrachyshka@gmail.com"},
@@ -143,11 +151,11 @@ static struct translator current_translators[] = {
 	{N_("Catalan"),             "ca", "Josep Puigdemont", "josep.puigdemont@gmail.com"},
 	{N_("Valencian-Catalan"),   "ca@valencia", "Toni Hermoso", "toniher@softcatala.org"},
 	{N_("Valencian-Catalan"),   "ca@valencia", "Josep Puigdemont", "tradgnome@softcatala.org"},
-	{N_("Czech"),               "cs", "Miloslav Trmac", "mitr@volny.cz"},
+	{N_("Czech"),               "cs", "David Vachulka", "david@konstrukce-cad.com"},
 	{N_("Danish"),              "da", "Morten Brix Pedersen", "morten@wtf.dk"},
 	{N_("Danish"),              "da", "Peter Bach", "bach.peter@gmail.com"},
 	{N_("German"),              "de", "Björn Voigt", "bjoern@cs.tu-berlin.de"},
-	{N_("German"),              "de", "Jochen Kemnade", "kemnade@gmail.com"},
+	{N_("German"),              "de", "Jochen Kemnade", "jochenkemnade@web.de"},
 	{N_("Dzongkha"),            "dz", "Norbu", "nor_den@hotmail.com"},
 	{N_("Dzongkha"),            "dz", "Jurmey Rabgay", "jur_gay@yahoo.com"},
 	{N_("Dzongkha"),            "dz", "Wangmo Sherpa", "rinwanshe@yahoo.com"},
@@ -166,6 +174,7 @@ static struct translator current_translators[] = {
 	{N_("Persian"),             "fa", "Roozbeh Pournader ", "roozbeh@farsiweb.info"},
 	{N_("Finnish"),             "fi", "Timo Jyrinki", "timo.jyrinki@iki.fi"},
 	{N_("French"),              "fr", "Éric Boumaour", "zongo_fr@users.sourceforge.net"},
+	{N_("Irish"),               "ga", "Aaron Kearns", "ajkearns6@gmail.com"},
 	{N_("Galician"),            "gl", "Mar Castro", "mariamarcp@gmail.com"},
 	{N_("Galician"),            "gl", "Frco. Javier Rial", "fjrial@cesga.es"},
 	{N_("Gujarati"),            "gu", "Ankit Patel", "ankit_patel@users.sf.net"},
@@ -187,15 +196,18 @@ static struct translator current_translators[] = {
 	{N_("Macedonian"),          "mk", "Arangel Angov ", "arangel@linux.net.mk"},
 	{N_("Macedonian"),          "mk", "Ivana Kirkovska", "ivana.kirkovska@gmail.com"},
 	{N_("Macedonian"),          "mk", "Jovan Naumovski", "jovan@lugola.net"},
+	{"Mongolian",               "mn", "gooyo", NULL},
 	{N_("Bokmål Norwegian"),    "nb", "Espen Stefansen", "espenas@gmail.com"},
 	{N_("Nepali"),              "ne", "Shyam Krishna Bal", "shyamkrishna_bal@yahoo.com"},
 	{N_("Dutch, Flemish"),      "nl", "Vincent van Adrighem", "V.vanAdrighem@dirck.mine.nu"},
 	{N_("Norwegian Nynorsk"),   "nn", "Yngve Spjeld Landro", "nynorsk@strilen.net"},
+	{N_("Occitan"),             "oc", "Yannig Marchegay", "yannig@marchegay.org"},
+	{N_("Punjabi"),             "pa", "Amanpreet Singh Alam", "aalam@users.sf.net"},
 	{N_("Polish"),              "pl", "Emil Nowak", "emil5@go2.pl"},
 	{N_("Polish"),              "pl", "Paweł Godlewski", "pawel@bajk.pl"},
 	{N_("Polish"),              "pl", "Krzysztof Foltman", "krzysztof@foltman.com"},
 	{N_("Portuguese"),          "pt", "Duarte Henriques", "duarte_henriques@myrealbox.com"},
-	{N_("Portuguese-Brazil"),   "pt_BR", "Maurício de Lemos Rodrigues Collares Neto", "mauricioc@gmail.com"},
+	{N_("Portuguese-Brazil"),   "pt_BR", "Rodrigo Luiz Marques Flores", "rodrigomarquesflores@gmail.com"},
 	{N_("Pashto"),              "ps", "Kashif Masood", "masudmails@yahoo.com"},
 	{N_("Romanian"),            "ro", "Mişu Moldovan", "dumol@gnome.ro"},
 	{N_("Russian"),             "ru", "Dmitry Beloglazov", "dmaa@users.sf.net"},
@@ -205,11 +217,14 @@ static struct translator current_translators[] = {
 	{N_("Albanian"),            "sq", "Besnik Bleta", "besnik@programeshqip.org"},
 	{N_("Serbian"),             "sr", "Miloš Popović", "gpopac@gmail.com"},
 	{N_("Serbian"),             "sr@Latn", "Miloš Popović", "gpopac@gmail.com"},
+	{N_("Sinhala"),             "si", "Danishka Navin", "snavin@redhat.com"},
+	{N_("Sinhala"),             "si", "Yajith Ajantha Dayarathna", "yajith@gmail.com"},
 	{N_("Swedish"),             "sv", "Peter Hjalmarsson", "xake@telia.com"},
 	{N_("Tamil"),               "ta", "Viveka Nathan K", "vivekanathan@users.sourceforge.net"},
 	{N_("Telugu"),              "te", "Mr. Subbaramaih", "info.gist@cdac.in"},
 	{N_("Thai"),                "th", "Isriya Paireepairit", "markpeak@gmail.com"},
 	{N_("Turkish"),             "tr", "Serdar Soytetir", "tulliana@gmail.com"},
+	{N_("Urdu"),                "ur", "RKVS Raman", "rkvsraman@gmail.com"},
 	{N_("Vietnamese"),          "vi", N_("T.M.Thanh and the Gnome-Vi Team"), "gnomevi-list@lists.sf.net"},
 	{N_("Simplified Chinese"),  "zh_CN", "Funda Wang", "fundawang@linux.net.cn"},
 	{N_("Hong Kong Chinese"),   "zh_HK", "Abel Cheung", "abelindsay@gmail.com"},
@@ -221,13 +236,14 @@ static struct translator current_translators[] = {
 };
 
 
-static struct translator past_translators[] = {
+static const struct translator past_translators[] = {
 	{N_("Amharic"),             "am", "Daniel Yacob", NULL},
 	{N_("Arabic"),              "ar", "Mohamed Magdy", "alnokta@yahoo.com"},
 	{N_("Bulgarian"),           "bg", "Hristo Todorov", NULL},
 	{N_("Catalan"),             "ca", "JM Pérez Cáncer", NULL},
 	{N_("Catalan"),             "ca", "Robert Millan", NULL},
 	{N_("Czech"),               "cs", "Honza Král", NULL},
+	{N_("Czech"),               "cs", "Miloslav Trmac", "mitr@volny.cz"},
 	{N_("German"),              "de", "Daniel Seifert, Karsten Weiss", NULL},
 	{N_("Spanish"),             "es", "JM Pérez Cáncer", NULL},
 	{N_("Spanish"),             "es", "Nicolás Lichtmaier", NULL},
@@ -255,6 +271,7 @@ static struct translator past_translators[] = {
 	{N_("Bokmål Norwegian"),    "nb", "Hallvard Glad", "hallvard.glad@gmail.com"},
 	{N_("Bokmål Norwegian"),    "nb", "Petter Johan Olsen", NULL},
 	{N_("Polish"),              "pl", "Przemysław Sułek", NULL},
+	{N_("Portuguese-Brazil"),   "pt_BR", "Maurício de Lemos Rodrigues Collares Neto", "mauricioc@gmail.com"},
 	{N_("Russian"),             "ru", "Alexandre Prokoudine", NULL},
 	{N_("Russian"),             "ru", "Sergey Volozhanin", NULL},
 	{N_("Slovak"),              "sk", "Daniel Režný", NULL},
@@ -271,10 +288,44 @@ static struct translator past_translators[] = {
 	{NULL, NULL, NULL, NULL}
 };
 
-static struct artist artists[] = {
-	{"Hylke Bons",	"h.bons@student.rug.nl"},
-	{NULL, NULL}
-};
+static void
+add_developers(GString *str, const struct developer *list)
+{
+	for (; list->name != NULL; list++) {
+		if (list->email != NULL) {
+			g_string_append_printf(str, "  <a href=\"mailto:%s\">%s</a>%s%s%s<br/>",
+			                       list->email, _(list->name),
+			                       list->role ? " (" : "",
+			                       list->role ? _(list->role) : "",
+			                       list->role ? ")" : "");
+		} else {
+			g_string_append_printf(str, "  %s%s%s%s<br/>",
+			                       _(list->name),
+			                       list->role ? " (" : "",
+			                       list->role ? _(list->role) : "",
+			                       list->role ? ")" : "");
+		}
+	}
+}
+
+static void
+add_translators(GString *str, const struct translator *list)
+{
+	for (; list->language != NULL; list++) {
+		if (list->email != NULL) {
+			g_string_append_printf(str, "  <b>%s (%s)</b> - <a href=\"mailto:%s\">%s</a><br/>",
+			                       _(list->language),
+			                       list->abbr,
+			                       list->email,
+			                       _(list->name));
+		} else {
+			g_string_append_printf(str, "  <b>%s (%s)</b> - %s<br/>",
+			                       _(list->language),
+			                       list->abbr,
+			                       _(list->name));
+		}
+	}
+}
 
 void
 pidgin_dialogs_destroy_all()
@@ -285,7 +336,7 @@ pidgin_dialogs_destroy_all()
 	}
 }
 
-static void destroy_about()
+static void destroy_about(void)
 {
 	if (about != NULL)
 		gtk_widget_destroy(about);
@@ -315,7 +366,7 @@ pidgin_logo_versionize(GdkPixbuf **original, GtkWidget *widget) {
 	context = gtk_widget_get_pango_context(widget);
 	layout = pango_layout_new(context);
 
-	markup = g_strdup_printf("<span foreground=\"#000000\">%s</span>", VERSION);
+	markup = g_strdup_printf("<span foreground=\"#000000\">%s</span>", DISPLAY_VERSION);
 	pango_layout_set_font_description(layout, style->font_desc);
 	pango_layout_set_markup(layout, markup, strlen(markup));
 	g_free(markup);
@@ -334,39 +385,29 @@ pidgin_logo_versionize(GdkPixbuf **original, GtkWidget *widget) {
 
 void pidgin_dialogs_about()
 {
-	GtkWidget *hbox;
 	GtkWidget *vbox;
 	GtkWidget *logo;
 	GtkWidget *frame;
 	GtkWidget *text;
-	GtkWidget *bbox;
 	GtkWidget *button;
 	GtkTextIter iter;
 	GString *str;
-	int i;
 	AtkObject *obj;
 	char* filename, *tmp;
 	GdkPixbuf *pixbuf;
+	PidginBuddyList *buddylist;
 
 	if (about != NULL) {
 		gtk_window_present(GTK_WINDOW(about));
 		return;
 	}
 
-	PIDGIN_DIALOG(about);
 	tmp = g_strdup_printf(_("About %s"), PIDGIN_NAME);
-	gtk_window_set_title(GTK_WINDOW(about), tmp);
+	about = pidgin_create_dialog(tmp, PIDGIN_HIG_BORDER, "about", TRUE);
 	g_free(tmp);
-	gtk_window_set_role(GTK_WINDOW(about), "about");
-	gtk_window_set_resizable(GTK_WINDOW(about), TRUE);
 	gtk_window_set_default_size(GTK_WINDOW(about), 340, 450);
 
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_set_border_width(GTK_CONTAINER(hbox), PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(about), hbox);
-
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(hbox), vbox);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(about), FALSE, PIDGIN_HIG_BORDER);
 
 	/* Generate a logo with a version number */
 	logo = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -382,7 +423,7 @@ void pidgin_dialogs_about()
 	gdk_pixbuf_unref(pixbuf);
 	/* Insert the logo */
 	obj = gtk_widget_get_accessible(logo);
-	tmp = g_strconcat(PIDGIN_NAME, " " VERSION, NULL);
+	tmp = g_strconcat(PIDGIN_NAME, " " DISPLAY_VERSION, NULL);
 	atk_object_set_description(obj, tmp);
 	g_free(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), logo, FALSE, FALSE, 0);
@@ -394,7 +435,7 @@ void pidgin_dialogs_about()
 	str = g_string_sized_new(4096);
 
 	g_string_append_printf(str,
-		"<CENTER><FONT SIZE=\"4\"><B>%s %s</B></FONT></CENTER><BR><BR>", PIDGIN_NAME, VERSION);
+		"<CENTER><FONT SIZE=\"4\"><B>%s %s</B></FONT></CENTER><BR><BR>", PIDGIN_NAME, DISPLAY_VERSION);
 
 	g_string_append_printf(str,
 		_("%s is a graphical modular messaging client based on "
@@ -421,116 +462,37 @@ void pidgin_dialogs_about()
 	/* Current Developers */
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
 						   _("Current Developers"));
-	for (i = 0; developers[i].name != NULL; i++) {
-		if (developers[i].email != NULL) {
-			g_string_append_printf(str, "  %s (%s) &lt;<a href=\"mailto:%s\">%s</a>&gt;<br/>",
-					developers[i].name, _(developers[i].role),
-					developers[i].email, developers[i].email);
-		} else {
-			g_string_append_printf(str, "  %s (%s)<br/>",
-					developers[i].name, _(developers[i].role));
-		}
-	}
+	add_developers(str, developers);
 	g_string_append(str, "<BR/>");
 
 	/* Crazy Patch Writers */
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
 						   _("Crazy Patch Writers"));
-	for (i = 0; patch_writers[i].name != NULL; i++) {
-		if (patch_writers[i].email != NULL) {
-			g_string_append_printf(str, "  %s &lt;<a href=\"mailto:%s\">%s</a>&gt;<br/>",
-					patch_writers[i].name,
-					patch_writers[i].email, patch_writers[i].email);
-		} else {
-			g_string_append_printf(str, "  %s<br/>",
-					patch_writers[i].name);
-		}
-	}
+	add_developers(str, patch_writers);
 	g_string_append(str, "<BR/>");
 
 	/* Retired Developers */
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
 						   _("Retired Developers"));
-	for (i = 0; retired_developers[i].name != NULL; i++) {
-		if (retired_developers[i].email != NULL) {
-			g_string_append_printf(str, "  %s (%s) &lt;<a href=\"mailto:%s\">%s</a>&gt;<br/>",
-					retired_developers[i].name, _(retired_developers[i].role),
-					retired_developers[i].email, retired_developers[i].email);
-		} else {
-			g_string_append_printf(str, "  %s (%s)<br/>",
-					retired_developers[i].name, _(retired_developers[i].role));
-		}
-	}
+	add_developers(str, retired_developers);
 	g_string_append(str, "<BR/>");
 
 	/* Retired Crazy Patch Writers */
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
 						   _("Retired Crazy Patch Writers"));
-	for (i = 0; retired_patch_writers[i].name != NULL; i++) {
-		if (retired_patch_writers[i].email != NULL) {
-			g_string_append_printf(str, "  %s &lt;<a href=\"mailto:%s\">%s</a>&gt;<br/>",
-					retired_patch_writers[i].name,
-					retired_patch_writers[i].email, retired_patch_writers[i].email);
-		} else {
-			g_string_append_printf(str, "  %s<br/>",
-					retired_patch_writers[i].name);
-		}
-	}
-	g_string_append(str, "<BR/>");
-
-	/* Artists */
-        g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
-                                                   _("Artists"));
-        for (i = 0; artists[i].name != NULL; i++) {
-        	if (artists[i].email != NULL) {
-			g_string_append_printf(str, "  %s &lt;<a href=\"mailto:%s\">%s</a>&gt;<br/>",
-			                           artists[i].name,
-			                           artists[i].email, artists[i].email);
-	        } else {
-	                g_string_append_printf(str, "  %s<br/>",
-	                                      artists[i].name);
-	        }
-	}
+	add_developers(str, retired_patch_writers);
 	g_string_append(str, "<BR/>");
 			
 	/* Current Translators */
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
 						   _("Current Translators"));
-	for (i = 0; current_translators[i].language != NULL; i++) {
-		if (current_translators[i].email != NULL) {
-			g_string_append_printf(str, "  <b>%s (%s)</b> - %s &lt;<a href=\"mailto:%s\">%s</a>&gt;<br/>",
-							_(current_translators[i].language),
-							current_translators[i].abbr,
-							_(current_translators[i].name),
-							current_translators[i].email,
-							current_translators[i].email);
-		} else {
-			g_string_append_printf(str, "  <b>%s (%s)</b> - %s<br/>",
-							_(current_translators[i].language),
-							current_translators[i].abbr,
-							_(current_translators[i].name));
-		}
-	}
+	add_translators(str, translators);
 	g_string_append(str, "<BR/>");
 
 	/* Past Translators */
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
 						   _("Past Translators"));
-	for (i = 0; past_translators[i].language != NULL; i++) {
-		if (past_translators[i].email != NULL) {
-			g_string_append_printf(str, "  <b>%s (%s)</b> - %s &lt;<a href=\"mailto:%s\">%s</a>&gt;<br/>",
-							_(past_translators[i].language),
-							past_translators[i].abbr,
-							_(past_translators[i].name),
-							past_translators[i].email,
-							past_translators[i].email);
-		} else {
-			g_string_append_printf(str, "  <b>%s (%s)</b> - %s<br/>",
-							_(past_translators[i].language),
-							past_translators[i].abbr,
-							_(past_translators[i].name));
-		}
-	}
+	add_translators(str, past_translators);
 	g_string_append(str, "<BR/>");
 
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s</FONT><br/>", _("Debugging Information"));
@@ -632,7 +594,7 @@ g_string_append(str, "<br/>  <b>Library Support</b><br/>");
 #endif
 
 #ifndef _WIN32
-#ifdef HAVE_LIBNM
+#ifdef HAVE_NETWORKMANAGER
 	g_string_append(str, "    <b>NetworkManager:</b> Enabled<br/>");
 #else
 	g_string_append(str, "    <b>NetworkManager:</b> Disabled<br/>");
@@ -686,7 +648,7 @@ if (purple_plugins_find_with_id("core-tcl") != NULL) {
 #ifdef LIBZEPHYR_EXT
 	g_string_append(str, "    <b>Zephyr library (libzephyr):</b> External<br/>");
 #else
-	g_string_append(str, "    <b>Zephyr library (libzephyr):</b> Not External<br/>");
+	g_string_append(str, "    <b>Zephyr library (libzephyr):</b> Internal<br/>");
 #endif
 
 #ifdef ZEPHYR_USES_KERBEROS
@@ -705,15 +667,9 @@ if (purple_plugins_find_with_id("core-tcl") != NULL) {
 	gtk_text_buffer_place_cursor(gtk_text_view_get_buffer(GTK_TEXT_VIEW(text)), &iter);
 
 	/* Close Button */
-	bbox = gtk_hbutton_box_new();
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_pack_start(GTK_BOX(vbox), bbox, FALSE, FALSE, 0);
+	button = pidgin_dialog_add_button(GTK_DIALOG(about), GTK_STOCK_CLOSE,
+	                G_CALLBACK(destroy_about), about);
 
-	button = gtk_button_new_from_stock(GTK_STOCK_CLOSE);
-	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
-
-	g_signal_connect_swapped(G_OBJECT(button), "clicked",
-							 G_CALLBACK(destroy_about), G_OBJECT(about));
 	g_signal_connect(G_OBJECT(about), "destroy",
 					 G_CALLBACK(destroy_about), G_OBJECT(about));
 
@@ -722,6 +678,11 @@ if (purple_plugins_find_with_id("core-tcl") != NULL) {
 	gtk_widget_grab_default(button);
 
 	/* Let's give'em something to talk about -- woah woah woah */
+	buddylist = pidgin_blist_get_default_gtk_blist();
+	if (buddylist)
+		gtk_window_set_transient_for(GTK_WINDOW(about),
+				GTK_WINDOW(buddylist->window));
+
 	gtk_widget_show_all(about);
 	gtk_window_present(GTK_WINDOW(about));
 }
@@ -765,7 +726,7 @@ pidgin_dialogs_im(void)
 
 	purple_request_fields(purple_get_blist(), _("New Instant Message"),
 						NULL,
-						_("Please enter the screen name or alias of the person "
+						_("Please enter the username or alias of the person "
 						  "you would like to IM."),
 						fields,
 						_("OK"), G_CALLBACK(pidgin_dialogs_im_cb),
@@ -904,7 +865,7 @@ pidgin_dialogs_info(void)
 
 	purple_request_fields(purple_get_blist(), _("Get User Info"),
 						NULL,
-						_("Please enter the screen name or alias of the person "
+						_("Please enter the username or alias of the person "
 						  "whose info you would like to view."),
 						fields,
 						_("OK"), G_CALLBACK(pidgin_dialogs_info_cb),
@@ -996,7 +957,7 @@ pidgin_dialogs_log(void)
 
 	purple_request_fields(purple_get_blist(), _("View User Log"),
 						NULL,
-						_("Please enter the screen name or alias of the person "
+						_("Please enter the username or alias of the person "
 						  "whose log you would like to view."),
 						fields,
 						_("OK"), G_CALLBACK(pidgin_dialogs_log_cb),
@@ -1008,7 +969,7 @@ pidgin_dialogs_log(void)
 static void
 pidgin_dialogs_alias_contact_cb(PurpleContact *contact, const char *new_alias)
 {
-	purple_contact_set_alias(contact, new_alias);
+	purple_blist_alias_contact(contact, new_alias);
 }
 
 void

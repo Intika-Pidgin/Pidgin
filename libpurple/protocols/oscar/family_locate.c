@@ -53,10 +53,9 @@ static const struct {
 	 * These are in ascending numerical order.
 	 */
 
-	/*
-	 * Perhaps better called OSCAR_CAPABILITY_SHORTCAPS
-	 */
-	{OSCAR_CAPABILITY_ICHAT,
+	/* Client understands short caps, a UUID of the form
+	 * 0946XXYY-4C7F-11D1-8222-444553540000 where XXYY is the short cap. */
+	{OSCAR_CAPABILITY_SHORTCAPS,
 	 {0x09, 0x46, 0x00, 0x00, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
@@ -64,11 +63,16 @@ static const struct {
 	 {0x09, 0x46, 0x00, 0x01, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
+	/* OSCAR_CAPABILITY_XHTML_IM */
+	{OSCAR_CAPABILITY_GENERICUNKNOWN,
+	 {0x09, 0x46, 0x00, 0x02, 0x4c, 0x7f, 0x11, 0xd1,
+	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+
 	{OSCAR_CAPABILITY_VIDEO,
 	 {0x09, 0x46, 0x01, 0x00, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
-	/* "Live Video" support in Windows AIM 5.5.3501 and newer */
+	/* "Live Video" (SIP/RTC Video) support in Windows AIM 5.5.3501 and newer */
 	{OSCAR_CAPABILITY_LIVEVIDEO,
 	 {0x09, 0x46, 0x01, 0x01, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
@@ -78,9 +82,16 @@ static const struct {
 	 {0x09, 0x46, 0x01, 0x02, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
-	/* In Windows AIM 5.5.3501 and newer */
+	/* "Microphone" support in Windows AIM 5.5.3501 and newer */
+	/* OSCAR_CAPABILITY_MICROPHONE */
 	{OSCAR_CAPABILITY_GENERICUNKNOWN,
 	 {0x09, 0x46, 0x01, 0x03, 0x4c, 0x7f, 0x11, 0xd1,
+	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+
+	/* Supports RTC Audio */
+	/* OSCAR_CAPABILITY_RTCAUDIO */
+	{OSCAR_CAPABILITY_GENERICUNKNOWN,
+	 {0x09, 0x46, 0x01, 0x04, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
 	/* In iChatAV (version numbers...?) */
@@ -88,12 +99,21 @@ static const struct {
 	 {0x09, 0x46, 0x01, 0x05, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x45, 0x53, 0x54, 0x00}},
 
-	/*
-	 * Not really sure about this one.  In an email from
-	 * 26 Sep 2003, Matthew Sachs suggested that, "this
-	 * is probably the capability for the SMS features."
-	 */
-	{OSCAR_CAPABILITY_SMS,
+	/* Supports "new status message features" (Who advertises this one?) */
+	/* OSCAR_CAPABILITY_HOST_STATUS_TEXT_AWARE */ 
+	{OSCAR_CAPABILITY_GENERICUNKNOWN,
+	 {0x09, 0x46, 0x01, 0x0a, 0x4c, 0x7f, 0x11, 0xd1,
+	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+
+	/* Supports "see as I type" (Who advertises this one?) */
+	/* OSCAR_CAPABILITY_SEE_AS_I_TYPE */
+	{OSCAR_CAPABILITY_GENERICUNKNOWN,
+	 {0x09, 0x46, 0x01, 0x0b, 0x4c, 0x7f, 0x11, 0xd1,
+	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+
+	/* Client only asserts caps for services in which it is participating */
+	/* OSCAR_CAPABILITY_SMARTCAPS */ 
+	{OSCAR_CAPABILITY_GENERICUNKNOWN,
 	 {0x09, 0x46, 0x01, 0xff, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
@@ -171,7 +191,7 @@ static const struct {
 	 {0x09, 0x46, 0xf0, 0x03, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
-	{OSCAR_CAPABILITY_GENERICUNKNOWN,
+	{OSCAR_CAPABILITY_ICHAT_SCREENSHARE,
 	 {0x09, 0x46, 0xf0, 0x04, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
@@ -320,10 +340,10 @@ aim_locate_adduserinfo(OscarData *od, aim_userinfo_t *userinfo)
 		cur->away_encoding = g_strdup(userinfo->away_encoding);
 		cur->away_len = userinfo->away_len;
 
-	} else if (!(userinfo->flags & AIM_FLAG_AWAY)) {
+	} else {
 		/*
-		 * We don't have an away message specified in this user_info block.
-		 * If the user is not away, clear any cached away message now.
+		 * We don't have an away message specified in this user_info
+		 * block, so clear any cached away message now.
 		 */
 		if (cur->away) {
 			g_free(cur->away);
@@ -345,41 +365,6 @@ aim_locate_adduserinfo(OscarData *od, aim_userinfo_t *userinfo)
 	conn = flap_connection_findbygroup(od, SNAC_FAMILY_LOCATE);
 	if ((userfunc = aim_callhandler(od, SNAC_FAMILY_LOCATE, SNAC_SUBTYPE_LOCATE_GOTINFOBLOCK)))
 		userfunc(od, conn, NULL, cur);
-}
-
-void
-aim_locate_dorequest(OscarData *od)
-{
-	struct userinfo_node *cur = od->locate.torequest;
-
-	if (od->locate.waiting_for_response == TRUE)
-		return;
-
-	od->locate.waiting_for_response = TRUE;
-	aim_locate_getinfoshort(od, cur->sn, 0x00000003);
-
-	/* Move this node to the "requested" queue */
-	od->locate.torequest = cur->next;
-	cur->next = od->locate.requested;
-	od->locate.requested = cur;
-}
-
-static gboolean
-purple_reqinfo_timeout_cb(void *data)
-{
-	OscarData *od;
-
-	od = data;
-
-	if (od->locate.torequest == NULL)
-	{
-		od->getinfotimer = 0;
-		return FALSE;
-	}
-
-	aim_locate_dorequest(od);
-
-	return TRUE;
 }
 
 /**
@@ -417,43 +402,26 @@ aim_locate_gotuserinfo(OscarData *od, FlapConnection *conn, const char *sn)
 			cur = cur->next;
 	}
 
-	if (!was_explicit) {
-		od->locate.waiting_for_response = FALSE;
-
-		/*
-		 * Wait a little while then call aim_locate_dorequest(od).
-		 * This keeps us from hitting the rate limit due to
-		 * requesting away messages and info too quickly.
-		 */
-		if (od->getinfotimer == 0)
-			od->getinfotimer = purple_timeout_add(500,
-					purple_reqinfo_timeout_cb, od);
-	}
-
 	return was_explicit;
 }
 
 void
-aim_locate_requestuserinfo(OscarData *od, const char *sn)
+aim_locate_autofetch_away_message(OscarData *od, const char *sn)
 {
 	struct userinfo_node *cur;
 
-	/* Make sure we aren't already requesting info for this buddy */
-	cur = od->locate.torequest;
-	while (cur != NULL) {
+	/* Make sure we haven't already made an info request for this buddy */
+	for (cur = od->locate.requested; cur != NULL; cur = cur->next)
 		if (aim_sncmp(sn, cur->sn) == 0)
 			return;
-		cur = cur->next;
-	}
 
 	/* Add a new node to our request queue */
 	cur = (struct userinfo_node *)g_malloc(sizeof(struct userinfo_node));
 	cur->sn = g_strdup(sn);
-	cur->next = od->locate.torequest;
-	od->locate.torequest = cur;
+	cur->next = od->locate.requested;
+	od->locate.requested = cur;
 
-	/* Actually request some info up in this piece */
-	aim_locate_dorequest(od);
+	aim_locate_getinfoshort(od, cur->sn, 0x00000002);
 }
 
 aim_userinfo_t *aim_locate_finduserinfo(OscarData *od, const char *sn) {
@@ -995,7 +963,7 @@ error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 		return 0;
 	}
 
-	if ((snac2->family != 0x0002) && (snac2->type != 0x0015)) {
+	if ((snac2->family != SNAC_FAMILY_LOCATE) && (snac2->type != 0x0015)) {
 		purple_debug_misc("oscar", "faim: locate.c, error(): received response from invalid request! %d\n", snac2->family);
 		return 0;
 	}
@@ -1083,7 +1051,7 @@ rights(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame,
  * restricted to a few choices.  I am currently aware of:
  *
  * us-ascii		Just that
- * unicode-2-0		UCS2-BE
+ * unicode-2-0		UTF-16BE
  *
  * profile_len and awaymsg_len MUST be set similarly, and they MUST
  * be the length of their respective strings in bytes.
@@ -1099,7 +1067,7 @@ aim_locate_setprofile(OscarData *od,
 				  const char *awaymsg_encoding, const gchar *awaymsg, const int awaymsg_len)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 	char *encoding;
@@ -1144,15 +1112,16 @@ aim_locate_setprofile(OscarData *od,
 			aim_tlvlist_add_noval(&tlvlist, 0x0004);
 	}
 
-	frame = flap_frame_new(od, 0x02, 10 + aim_tlvlist_size(tlvlist));
+	byte_stream_new(&bs, aim_tlvlist_size(tlvlist));
 
-	snacid = aim_cachesnac(od, 0x0002, 0x0004, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x0002, 0x004, 0x0000, snacid);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_LOCATE, 0x0004, 0x0000, NULL, 0);
 
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_LOCATE, 0x0004, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1164,7 +1133,7 @@ int
 aim_locate_setcaps(OscarData *od, guint32 caps)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 
@@ -1173,15 +1142,16 @@ aim_locate_setcaps(OscarData *od, guint32 caps)
 
 	aim_tlvlist_add_caps(&tlvlist, 0x0005, caps);
 
-	frame = flap_frame_new(od, 0x02, 10 + aim_tlvlist_size(tlvlist));
+	byte_stream_new(&bs, aim_tlvlist_size(tlvlist));
 
-	snacid = aim_cachesnac(od, 0x0002, 0x0004, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x0002, 0x004, 0x0000, snacid);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_LOCATE, 0x0004, 0x0000, NULL, 0);
 
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_LOCATE, 0x0004, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1199,22 +1169,23 @@ int
 aim_locate_getinfo(OscarData *od, const char *sn, guint16 infotype)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_LOCATE)) || !sn)
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 12+1+strlen(sn));
+	byte_stream_new(&bs, 2+1+strlen(sn));
 
-	snacid = aim_cachesnac(od, 0x0002, 0x0005, 0x0000, NULL, 0);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_LOCATE, 0x0005, 0x0000, NULL, 0);
 
-	aim_putsnac(&frame->data, 0x0002, 0x0005, 0x0000, snacid);
-	byte_stream_put16(&frame->data, infotype);
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
+	byte_stream_put16(&bs, infotype);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_LOCATE, 0x0005, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1290,7 +1261,7 @@ userinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fram
 int aim_locate_setdirinfo(OscarData *od, const char *first, const char *middle, const char *last, const char *maiden, const char *nickname, const char *street, const char *city, const char *state, const char *zip, int country, guint16 privacy)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 
@@ -1321,15 +1292,16 @@ int aim_locate_setdirinfo(OscarData *od, const char *first, const char *middle, 
 	if (street)
 		aim_tlvlist_add_str(&tlvlist, 0x0021, street);
 
-	frame = flap_frame_new(od, 0x02, 10+aim_tlvlist_size(tlvlist));
+	byte_stream_new(&bs, aim_tlvlist_size(tlvlist));
 
-	snacid = aim_cachesnac(od, 0x0002, 0x0009, 0x0000, NULL, 0);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_LOCATE, 0x0009, 0x0000, NULL, 0);
 
-	aim_putsnac(&frame->data, 0x0002, 0x0009, 0x0000, snacid);
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_LOCATE, 0x0009, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1340,7 +1312,7 @@ int aim_locate_setdirinfo(OscarData *od, const char *first, const char *middle, 
 int aim_locate_000b(OscarData *od, const char *sn)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 		return -EINVAL;
@@ -1348,15 +1320,16 @@ int aim_locate_000b(OscarData *od, const char *sn)
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_LOCATE)) || !sn)
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+1+strlen(sn));
+	byte_stream_new(&bs, 1+strlen(sn));
 
-	snacid = aim_cachesnac(od, 0x0002, 0x000b, 0x0000, NULL, 0);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_LOCATE, 0x000b, 0x0000, NULL, 0);
 
-	aim_putsnac(&frame->data, 0x0002, 0x000b, 0x0000, snacid);
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_LOCATE, 0x000b, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -1371,7 +1344,7 @@ int
 aim_locate_setinterests(OscarData *od, const char *interest1, const char *interest2, const char *interest3, const char *interest4, const char *interest5, guint16 privacy)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 
@@ -1392,21 +1365,21 @@ aim_locate_setinterests(OscarData *od, const char *interest1, const char *intere
 	if (interest5)
 		aim_tlvlist_add_str(&tlvlist, 0x0000b, interest5);
 
-	frame = flap_frame_new(od, 0x02, 10+aim_tlvlist_size(tlvlist));
+	byte_stream_new(&bs, aim_tlvlist_size(tlvlist));
 
-	snacid = aim_cachesnac(od, 0x0002, 0x000f, 0x0000, NULL, 0);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_LOCATE, 0x000f, 0x0000, NULL, 0);
 
-	aim_putsnac(&frame->data, 0x0002, 0x000f, 0x0000, 0);
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_LOCATE, 0x000f, 0x0000, snacid, &bs);
 
+	byte_stream_destroy(&bs);
 	return 0;
 }
 
 /*
- * Subtype 0x0015 - Request the info a user using the short method.  This is
+ * Subtype 0x0015 - Request the info of a user using the short method.  This is
  * what iChat uses.  It normally is VERY leniently rate limited.
  *
  * @param sn The screen name whose info you wish to request.
@@ -1421,21 +1394,21 @@ int
 aim_locate_getinfoshort(OscarData *od, const char *sn, guint32 flags)
 {
 	FlapConnection *conn;
-	ByteStream data;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_LOCATE)) || !sn)
 		return -EINVAL;
 
-	byte_stream_new(&data, 4 + 1 + strlen(sn));
-	byte_stream_put32(&data, flags);
-	byte_stream_put8(&data, strlen(sn));
-	byte_stream_putstr(&data, sn);
+	byte_stream_new(&bs, 4 + 1 + strlen(sn));
+	byte_stream_put32(&bs, flags);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
-	snacid = aim_cachesnac(od, 0x0002, 0x0015, 0x0000, sn, strlen(sn)+1);
-	flap_connection_send_snac(od, conn, 0x0002, 0x0015, 0x0000, snacid, &data);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_LOCATE, 0x0015, 0x0000, sn, strlen(sn)+1);
+	flap_connection_send_snac_with_priority(od, conn, SNAC_FAMILY_LOCATE, 0x0015, 0x0000, snacid, &bs, FALSE);
 
-	g_free(data.data);
+	byte_stream_destroy(&bs);
 
 	return 0;
 }

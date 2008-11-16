@@ -43,6 +43,7 @@
 #include <notify.h>
 #include <plugin.h>
 #include <request.h>
+#include <savedstatuses.h>
 
 #include "gntaccount.h"
 #include "gntblist.h"
@@ -67,7 +68,7 @@ typedef struct
 	GntWidget *screenname;
 	GntWidget *password;
 	GntWidget *alias;
-	
+
 	GntWidget *splits;
 	GList *split_entries;
 
@@ -76,6 +77,7 @@ typedef struct
 
 	GntWidget *newmail;
 	GntWidget *remember;
+	GntWidget *regserver;
 } AccountEditDialog;
 
 /* This is necessary to close an edit-dialog when an account is deleted */
@@ -122,10 +124,10 @@ save_account_cb(AccountEditDialog *dialog)
 	if (value == NULL || *value == '\0')
 	{
 		purple_notify_error(NULL, _("Error"), _("Account was not added"),
-				_("Screenname of an account must be non-empty."));
+				_("Username of an account must be non-empty."));
 		return;
 	}
-	
+
 	username = g_string_new(value);
 
 	if (prplinfo != NULL)
@@ -183,7 +185,7 @@ save_account_cb(AccountEditDialog *dialog)
 	if (prplinfo)
 	{
 		GList *iter, *entries;
-		
+
 		for (iter = prplinfo->protocol_options, entries = dialog->prpl_entries;
 				iter && entries; iter = iter->next, entries = entries->next)
 		{
@@ -226,6 +228,20 @@ save_account_cb(AccountEditDialog *dialog)
 	if (accounts.window && accounts.tree) {
 		gnt_tree_set_selected(GNT_TREE(accounts.tree), account);
 		gnt_box_give_focus_to_child(GNT_BOX(accounts.window), accounts.tree);
+	}
+
+	if (prplinfo && prplinfo->register_user &&
+			gnt_check_box_get_checked(GNT_CHECK_BOX(dialog->regserver))) {
+		purple_account_register(account);
+	} else if (dialog->account == NULL) {
+		/* This is a new account. Set it to the current status. */
+		/* Xerox from gtkaccount.c :D */
+		const PurpleSavedStatus *saved_status;
+		saved_status = purple_savedstatus_get_current();
+		if (saved_status != NULL) {
+			purple_savedstatus_activate_for_account(saved_status, account);
+			purple_account_set_enabled(account, FINCH_UI, TRUE);
+		}
 	}
 
 	gnt_widget_destroy(dialog->window);
@@ -419,6 +435,11 @@ add_protocol_options(AccountEditDialog *dialog)
 			}
 		}
 	}
+
+	/* Show the registration checkbox only in a new account dialog,
+	 * and when the selected prpl has the support for it. */
+	gnt_widget_set_visible(dialog->regserver, account == NULL &&
+			prplinfo->register_user != NULL);
 }
 
 static void
@@ -482,7 +503,7 @@ edit_account(PurpleAccount *account)
 	list = purple_plugins_get_protocols();
 	if (list == NULL) {
 		purple_notify_error(NULL, _("Error"),
-				_("There's no protocol plugins installed."),
+				_("There are no protocol plugins installed."),
 				_("(You probably forgot to 'make install'.)"));
 		return;
 	}
@@ -526,7 +547,7 @@ edit_account(PurpleAccount *account)
 	gnt_box_add_widget(GNT_BOX(window), hbox);
 
 	dialog->screenname = entry = gnt_entry_new(NULL);
-	gnt_box_add_widget(GNT_BOX(hbox), gnt_label_new(_("Screen name:")));
+	gnt_box_add_widget(GNT_BOX(hbox), gnt_label_new(_("Username:")));
 	gnt_box_add_widget(GNT_BOX(hbox), entry);
 
 	/* User splits */
@@ -558,6 +579,10 @@ edit_account(PurpleAccount *account)
 	update_user_options(dialog);
 	gnt_box_add_widget(GNT_BOX(window), dialog->remember);
 	gnt_box_add_widget(GNT_BOX(window), dialog->newmail);
+
+	/* Register checkbox */
+	dialog->regserver = gnt_check_box_new(_("Create this account on the server"));
+	gnt_box_add_widget(GNT_BOX(window), dialog->regserver);
 
 	gnt_box_add_widget(GNT_BOX(window), gnt_line_new(FALSE));
 
@@ -632,7 +657,8 @@ delete_account_cb(GntWidget *widget, GntTree *tree)
 	prompt = g_strdup_printf(_("Are you sure you want to delete %s?"),
 			purple_account_get_username(account));
 
-	purple_request_action(account, _("Delete Account"), prompt, NULL, 0,
+	purple_request_action(account, _("Delete Account"), prompt, NULL,
+						  PURPLE_DEFAULT_ACTION_NONE,
 						  account, NULL, NULL, account, 2,
 						  _("Delete"), really_delete_account,
 						  _("Cancel"), NULL);
@@ -645,6 +671,45 @@ account_toggled(GntWidget *widget, void *key, gpointer null)
 	PurpleAccount *account = key;
 
 	purple_account_set_enabled(account, FINCH_UI, gnt_tree_get_choice(GNT_TREE(widget), key));
+}
+
+static gboolean
+account_list_key_pressed_cb(GntWidget *widget, const char *text, gpointer null)
+{
+	GntTree *tree = GNT_TREE(widget);
+	PurpleAccount *account = gnt_tree_get_selection_data(tree);
+	int move, pos, count;
+	GList *accounts;
+
+	if (!account)
+		return FALSE;
+
+	switch (text[0]) {
+		case '-':
+			move = -1;
+			break;
+		case '=':
+			move = 2;  /* XXX: This seems to be a bug in libpurple */
+			break;
+		default:
+			return FALSE;
+	}
+
+	accounts = purple_accounts_get_all();
+	count = g_list_length(accounts);
+	pos = g_list_index(accounts, account);
+	pos = (move + pos + count + 1) % (count + 1);
+	purple_accounts_reorder(account, pos);
+
+	/* I don't like this, but recreating the entire list seems to be
+	 * the easiest way of doing it */
+	gnt_tree_remove_all(tree);
+	accounts = purple_accounts_get_all();
+	for (; accounts; accounts = accounts->next)
+		account_add(accounts->data);
+	gnt_tree_set_selected(tree, account);
+
+	return TRUE;
 }
 
 static void
@@ -686,7 +751,8 @@ void finch_accounts_show_all()
 	}
 
 	g_signal_connect(G_OBJECT(accounts.tree), "toggled", G_CALLBACK(account_toggled), NULL);
-	
+	g_signal_connect(G_OBJECT(accounts.tree), "key_pressed", G_CALLBACK(account_list_key_pressed_cb), NULL);
+
 	gnt_tree_set_col_width(GNT_TREE(accounts.tree), 0, 40);
 	gnt_tree_set_col_width(GNT_TREE(accounts.tree), 1, 10);
 	gnt_box_add_widget(GNT_BOX(accounts.window), accounts.tree);
@@ -708,11 +774,11 @@ void finch_accounts_show_all()
 	gnt_box_add_widget(GNT_BOX(box), button);
 	gnt_util_set_trigger_widget(GNT_WIDGET(accounts.tree), GNT_KEY_DEL, button);
 	g_signal_connect(G_OBJECT(button), "activate", G_CALLBACK(delete_account_cb), accounts.tree);
-	
+
 	gnt_box_add_widget(GNT_BOX(accounts.window), box);
 
 	g_signal_connect(G_OBJECT(accounts.window), "destroy", G_CALLBACK(reset_accounts_win), NULL);
-	
+
 	gnt_widget_show(accounts.window);
 }
 
@@ -722,7 +788,7 @@ void finch_account_dialog_show(PurpleAccount *account)
 }
 
 static gpointer
-finch_accounts_get_handle()
+finch_accounts_get_handle(void)
 {
 	static int handle;
 
@@ -981,7 +1047,7 @@ finch_request_authorize(PurpleAccount *account,
 
 		gnt_box_add_widget(GNT_BOX(uihandle), gnt_hline_new());
 
-		widget = finch_retrieve_user_info(account->gc, remote_user);
+		widget = finch_retrieve_user_info(purple_account_get_connection(account), remote_user);
 		for (iter = GNT_BOX(widget)->list; iter; iter = iter->next) {
 			if (GNT_IS_BUTTON(iter->data)) {
 				gnt_widget_destroy(iter->data);

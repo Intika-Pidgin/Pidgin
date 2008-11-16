@@ -64,6 +64,7 @@ static struct StockIcon
 	{ PIDGIN_STOCK_IGNORE,          NULL,      GTK_STOCK_DIALOG_ERROR     },
 	{ PIDGIN_STOCK_INVITE,          NULL,      GTK_STOCK_JUMP_TO          },
 	{ PIDGIN_STOCK_MODIFY,          NULL,      GTK_STOCK_PREFERENCES      },
+	{ PIDGIN_STOCK_ADD,             NULL,	   GTK_STOCK_ADD			  },
 #if GTK_CHECK_VERSION(2,6,0)
 	{ PIDGIN_STOCK_PAUSE,           NULL,      GTK_STOCK_MEDIA_PAUSE      },
 #else
@@ -90,9 +91,11 @@ static const GtkStockItem stock_items[] =
 	{ PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW, N_("I_M"),         0, 0, NULL },
 	{ PIDGIN_STOCK_TOOLBAR_USER_INFO,   N_("_Get Info"),   0, 0, NULL },
 	{ PIDGIN_STOCK_INVITE,              N_("_Invite"),     0, 0, NULL },
-	{ PIDGIN_STOCK_MODIFY,              N_("_Modify"),     0, 0, NULL },
+	{ PIDGIN_STOCK_MODIFY,              N_("_Modify..."),  0, 0, NULL },
+	{ PIDGIN_STOCK_ADD,                 N_("_Add..."),     0, 0, NULL },
 	{ PIDGIN_STOCK_OPEN_MAIL,           N_("_Open Mail"),  0, 0, NULL },
 	{ PIDGIN_STOCK_PAUSE,               N_("_Pause"),      0, 0, NULL },
+	{ PIDGIN_STOCK_EDIT,                N_("_Edit"),       0, 0, NULL }
 };
 
 static struct SizedStockIcon {
@@ -134,15 +137,37 @@ static struct SizedStockIcon {
 	{ PIDGIN_STOCK_DIALOG_QUESTION,	"dialogs", "question.png",	FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, NULL  },
 	{ PIDGIN_STOCK_DIALOG_WARNING,	"dialogs", "warning.png",	FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, NULL  },
 
-	{ PIDGIN_STOCK_ANIMATION_CONNECT0, "animations", "connect0.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT1, "animations", "connect1.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT2, "animations", "connect2.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT3, "animations", "connect3.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT4, "animations", "connect4.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT5, "animations", "connect5.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT6, "animations", "connect6.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT7, "animations", "connect7.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_ANIMATION_CONNECT8, "animations", "connect8.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT0, "animations", "process-working0.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT1, "animations", "process-working1.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT2, "animations", "process-working2.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT3, "animations", "process-working3.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT4, "animations", "process-working4.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT5, "animations", "process-working5.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT6, "animations", "process-working6.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT7, "animations", "process-working7.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT8, "animations", "process-working8.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT9, "animations", "process-working9.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT10, "animations", "process-working10.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT11, "animations", "process-working11.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT12, "animations", "process-working12.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT13, "animations", "process-working13.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT14, "animations", "process-working14.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT15, "animations", "process-working15.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT16, "animations", "process-working16.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT17, "animations", "process-working17.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT18, "animations", "process-working18.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT19, "animations", "process-working19.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT20, "animations", "process-working20.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT21, "animations", "process-working21.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT22, "animations", "process-working22.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT23, "animations", "process-working23.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT24, "animations", "process-working24.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT25, "animations", "process-working25.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT26, "animations", "process-working26.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT27, "animations", "process-working27.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT28, "animations", "process-working28.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT29, "animations", "process-working29.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_ANIMATION_CONNECT30, "animations", "process-working30.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_ANIMATION_TYPING0,  "animations", "typing0.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_ANIMATION_TYPING1,  "animations", "typing1.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_ANIMATION_TYPING2,  "animations", "typing2.png",FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
@@ -162,12 +187,13 @@ static struct SizedStockIcon {
 	{ PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE, "toolbar", "insert-image.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_INSERT_LINK, "toolbar", "insert-link.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW, "toolbar", "message-new.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_TOOLBAR_PENDING, "toolbar", "message-new.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_TOOLBAR_PENDING, "tray", "tray-new-im.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_PLUGINS, "toolbar", "plugins.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_TYPING, "toolbar", "typing.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_UNBLOCK, "toolbar", "unblock.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR, "toolbar", "select-avatar.png", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_SEND_FILE, "toolbar", "send-file.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_TOOLBAR_TRANSFER, "toolbar", "transfer.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 
 	{ PIDGIN_STOCK_TRAY_AVAILABLE, "tray", "tray-online.png", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TRAY_INVISIBLE, "tray", "tray-invisible.png", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, NULL  },
@@ -347,7 +373,7 @@ pidgin_stock_init(void)
 	size_t i;
 	GtkWidget *win;
 	GtkIconSize microscopic, extra_small, small, medium, large, huge;
-	
+
 	if (stock_initted)
 		return;
 
@@ -372,7 +398,7 @@ pidgin_stock_init(void)
 		{
 			/* GTK+ Stock icon */
 			iconset = gtk_style_lookup_icon_set(gtk_widget_get_style(win),
-												stock_icons[i].filename);
+					stock_icons[i].filename);
 		}
 		else
 		{
@@ -386,11 +412,11 @@ pidgin_stock_init(void)
 			gtk_icon_source_set_direction_wildcarded(source, TRUE);
 			gtk_icon_source_set_size_wildcarded(source, TRUE);
 			gtk_icon_source_set_state_wildcarded(source, TRUE);
-			
+
 
 			iconset = gtk_icon_set_new();
 			gtk_icon_set_add_source(iconset, source);
-			
+
 			gtk_icon_source_free(source);
 			g_free(filename);
 		}
@@ -401,7 +427,7 @@ pidgin_stock_init(void)
 	}
 
 	/* register custom icon sizes */
-	
+
 	microscopic =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_MICROSCOPIC, 11, 11);
 	extra_small =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL, 16, 16);
 	small =        gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_SMALL, 22, 22);
@@ -414,61 +440,41 @@ pidgin_stock_init(void)
 		GtkIconSet *iconset;
 
 		iconset = gtk_icon_set_new();
-		if (sized_stock_icons[i].microscopic)
-			add_sized_icon(iconset, microscopic,
-					sized_stock_icons[i].dir, sized_stock_icons[i].rtl,
-					"11", sized_stock_icons[i].filename);
-		if (sized_stock_icons[i].extra_small)
-			add_sized_icon(iconset, extra_small,
-				       sized_stock_icons[i].dir, sized_stock_icons[i].rtl,
-				       "16", sized_stock_icons[i].filename);
-               if (sized_stock_icons[i].small)
-                        add_sized_icon(iconset, small,
-				       sized_stock_icons[i].dir,  sized_stock_icons[i].rtl,
-                                       "22", sized_stock_icons[i].filename);
-               if (sized_stock_icons[i].medium)
-                        add_sized_icon(iconset, medium,
-			               sized_stock_icons[i].dir,  sized_stock_icons[i].rtl,
-                                       "32", sized_stock_icons[i].filename);
-	       if (sized_stock_icons[i].large)
-		       add_sized_icon(iconset, large,
-                                      sized_stock_icons[i].dir, sized_stock_icons[i].rtl,
-                                      "48", sized_stock_icons[i].filename);
-               if (sized_stock_icons[i].huge)
-                        add_sized_icon(iconset, huge,
-	                               sized_stock_icons[i].dir,  sized_stock_icons[i].rtl,
-                                       "64", sized_stock_icons[i].filename);
+
+#define ADD_SIZED_ICON(name, size) do { \
+		if (sized_stock_icons[i].name)  \
+			add_sized_icon(iconset, name,  \
+					sized_stock_icons[i].dir, sized_stock_icons[i].rtl, \
+					size, sized_stock_icons[i].filename); \
+		} while (0)
+		ADD_SIZED_ICON(microscopic, "11");
+		ADD_SIZED_ICON(extra_small, "16");
+		ADD_SIZED_ICON(small, "22");
+		ADD_SIZED_ICON(medium, "32");
+		ADD_SIZED_ICON(large, "48");
+		ADD_SIZED_ICON(huge, "64");
+#undef ADD_SIZED_ICON
 
 		gtk_icon_factory_add(icon_factory, sized_stock_icons[i].name, iconset);
 		gtk_icon_set_unref(iconset);
 
 		if (sized_stock_icons[i].translucent_name) {
 			iconset = gtk_icon_set_new();
-			if (sized_stock_icons[i].microscopic)
-				add_translucent_sized_icon(iconset, microscopic,
-						sized_stock_icons[i].dir, sized_stock_icons[i].rtl,
-						"11", sized_stock_icons[i].filename);
-			if (sized_stock_icons[i].extra_small)
-				add_translucent_sized_icon(iconset, extra_small,
-					       sized_stock_icons[i].dir, sized_stock_icons[i].rtl,
-					       "16", sized_stock_icons[i].filename);
-	               if (sized_stock_icons[i].small)
-        	                add_translucent_sized_icon(iconset, small,
-					       sized_stock_icons[i].dir,  sized_stock_icons[i].rtl,
-	                                       "22", sized_stock_icons[i].filename);
-	               if (sized_stock_icons[i].medium)
-	                        add_translucent_sized_icon(iconset, medium,
-				               sized_stock_icons[i].dir,  sized_stock_icons[i].rtl,
-	                                       "32", sized_stock_icons[i].filename);
-		       if (sized_stock_icons[i].large)
-			       add_translucent_sized_icon(iconset, large,
-	                                      sized_stock_icons[i].dir, sized_stock_icons[i].rtl,
-	                                      "48", sized_stock_icons[i].filename);
-	               if (sized_stock_icons[i].huge)
-	                        add_translucent_sized_icon(iconset, huge,
-		                               sized_stock_icons[i].dir,  sized_stock_icons[i].rtl,
-	                                       "64", sized_stock_icons[i].filename);
-	
+
+#define ADD_TRANS_ICON(name, size) do { \
+			if (sized_stock_icons[i].name) \
+				add_translucent_sized_icon(iconset, name, \
+						sized_stock_icons[i].dir, sized_stock_icons[i].rtl, \
+						size, sized_stock_icons[i].filename); \
+			} while (0)
+			ADD_TRANS_ICON(microscopic, "11");
+			ADD_TRANS_ICON(extra_small, "16");
+			ADD_TRANS_ICON(small, "22");
+			ADD_TRANS_ICON(medium, "32");
+			ADD_TRANS_ICON(large, "48");
+			ADD_TRANS_ICON(huge, "64");
+#undef ADD_TRANS_ICON
+
 			gtk_icon_factory_add(icon_factory, sized_stock_icons[i].translucent_name, iconset);
 			gtk_icon_set_unref(iconset);
 		}

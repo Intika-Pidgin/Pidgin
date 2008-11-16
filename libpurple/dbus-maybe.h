@@ -8,6 +8,10 @@
 
 #ifdef HAVE_DBUS
 
+#ifndef DBUS_API_SUBJECT_TO_CHANGE
+#define DBUS_API_SUBJECT_TO_CHANGE
+#endif
+
 #include "dbus-server.h"
 
 /* this provides a type check */
@@ -19,7 +23,10 @@
 
 #else  /* !HAVE_DBUS */
 
-#define PURPLE_DBUS_REGISTER_POINTER(ptr, type) 
+#define PURPLE_DBUS_REGISTER_POINTER(ptr, type) { \
+    if (ptr) {} \
+}
+
 #define PURPLE_DBUS_UNREGISTER_POINTER(ptr)
 #define DBUS_EXPORT
 

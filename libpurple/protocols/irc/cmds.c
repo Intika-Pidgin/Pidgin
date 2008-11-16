@@ -68,6 +68,31 @@ int irc_cmd_away(struct irc_conn *irc, const char *cmd, const char *target, cons
 	return 0;
 }
 
+int irc_cmd_ctcp(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
+{
+	/* we have defined args as args[0] is target and args[1] is ctcp command */
+        char *buf;
+	GString *string;
+	
+	/* check if we have args */
+	if (!args || !args[0] || !args[1])
+		return 0;
+
+	/* TODO:strip newlines or send each line as separate ctcp or something
+	 * actually, this shouldn't be done here but somewhere else since irc should support escaping newlines */
+
+	string = g_string_new(args[1]);
+	g_string_prepend_c (string,'\001');
+	g_string_append_c (string,'\001');
+	buf = irc_format(irc, "vn:", "PRIVMSG", args[0], string->str);
+	g_string_free(string,TRUE);
+
+	irc_send(irc, buf);
+	g_free(buf);
+	
+	return 1;
+}
+
 int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
@@ -256,6 +281,9 @@ int irc_cmd_nick(struct irc_conn *irc, const char *cmd, const char *target, cons
 		return 0;
 
 	buf = irc_format(irc, "v:", "NICK", args[0]);
+	g_free(irc->reqnick);
+	irc->reqnick = g_strdup(args[0]);
+	irc->nickused = FALSE;
 	irc_send(irc, buf);
 	g_free(buf);
 
@@ -294,14 +322,15 @@ int irc_cmd_op(struct irc_conn *irc, const char *cmd, const char *target, const 
 	ops = g_new0(char *, i * 2 + 1);
 
 	for (i = 0; nicks[i]; i++) {
-		if (!*nicks[i])
-			continue;
-		ops[used++] = mode;
-		ops[used++] = nicks[i];
+		if (*nicks[i]) {
+			ops[used++] = mode;
+			ops[used++] = nicks[i];
+		}
 	}
 
 	irc_do_mode(irc, target, sign, ops);
 	g_free(ops);
+	g_strfreev(nicks);
 
 	return 0;
 }
@@ -364,7 +393,12 @@ int irc_cmd_privmsg(struct irc_conn *irc, const char *cmd, const char *target, c
 		if (!end)
 			end = cur + strlen(cur);
 		msg = g_strndup(cur, end - cur);
-		buf = irc_format(irc, "vt:", "PRIVMSG", args[0], msg);
+
+		if(!strcmp(cmd, "notice"))
+			buf = irc_format(irc, "vt:", "NOTICE", args[0], msg);
+		else
+			buf = irc_format(irc, "vt:", "PRIVMSG", args[0], msg);
+
 		irc_send(irc, buf);
 		g_free(msg);
 		g_free(buf);

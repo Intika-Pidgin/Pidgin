@@ -26,6 +26,7 @@
 #include "internal.h"
 #include "cipher.h"
 #include "certificate.h"
+#include "cmds.h"
 #include "connection.h"
 #include "conversation.h"
 #include "core.h"
@@ -43,6 +44,7 @@
 #include "proxy.h"
 #include "savedstatuses.h"
 #include "signals.h"
+#include "smiley.h"
 #include "sound.h"
 #include "sslconn.h"
 #include "status.h"
@@ -50,7 +52,9 @@
 #include "util.h"
 
 #ifdef HAVE_DBUS
-#  define DBUS_API_SUBJECT_TO_CHANGE
+#  ifndef DBUS_API_SUBJECT_TO_CHANGE
+#    define DBUS_API_SUBJECT_TO_CHANGE
+#  endif
 #  include <dbus/dbus.h>
 #  include "dbus-purple.h"
 #  include "dbus-server.h"
@@ -85,6 +89,8 @@ purple_core_init(const char *ui)
 	wpurple_init();
 #endif
 
+	g_type_init();
+
 	_core = core = g_new0(PurpleCore, 1);
 	core->ui = g_strdup(ui);
 	core->reserved = NULL;
@@ -93,6 +99,8 @@ purple_core_init(const char *ui)
 
 	/* The signals subsystem is important and should be first. */
 	purple_signals_init();
+
+	purple_util_init();
 
 	purple_signal_register(core, "uri-handler",
 		purple_marshal_BOOLEAN__POINTER_POINTER_POINTER,
@@ -123,28 +131,32 @@ purple_core_init(const char *ui)
 #endif
 
 	purple_ciphers_init();
-
-	/* Initialize all static protocols. */
-	static_proto_init();
+	purple_cmds_init();
 
 	/* Since plugins get probed so early we should probably initialize their
 	 * subsystem right away too.
 	 */
 	purple_plugins_init();
+	
+	/* Initialize all static protocols. */
+	static_proto_init();
+
 	purple_plugins_probe(G_MODULE_SUFFIX);
 
 	/* The buddy icon code uses the imgstore, so init it early. */
 	purple_imgstore_init();
 
-	/* Accounts use status and buddy icons, so initialize these before accounts */
+	/* Accounts use status, buddy icons and connection signals, so
+	 * initialize these before accounts
+	 */
 	purple_status_init();
 	purple_buddy_icons_init();
+	purple_connections_init();
 
 	purple_accounts_init();
 	purple_savedstatuses_init();
 	purple_notify_init();
 	purple_certificate_init();
-	purple_connections_init();
 	purple_conversations_init();
 	purple_blist_init();
 	purple_log_init();
@@ -158,6 +170,7 @@ purple_core_init(const char *ui)
 	purple_stun_init();
 	purple_xfers_init();
 	purple_idle_init();
+	purple_smileys_init();
 
 	/*
 	 * Call this early on to try to auto-detect our IP address and
@@ -186,6 +199,7 @@ purple_core_quit(void)
 	purple_connections_disconnect_all();
 
 	/* Save .xml files, remove signals, etc. */
+	purple_smileys_uninit();
 	purple_idle_uninit();
 	purple_ssl_uninit();
 	purple_pounces_uninit();
@@ -200,6 +214,7 @@ purple_core_quit(void)
 	purple_savedstatuses_uninit();
 	purple_status_uninit();
 	purple_prefs_uninit();
+	purple_sound_uninit();
 	purple_xfers_uninit();
 	purple_proxy_uninit();
 	purple_dnsquery_uninit();
@@ -212,23 +227,14 @@ purple_core_quit(void)
 	if (ops != NULL && ops->quit != NULL)
 		ops->quit();
 
-	/*
-	 * purple_sound_uninit() should be called as close to
-	 * shutdown as possible.  This is because the call
-	 * to ao_shutdown() can sometimes leave our
-	 * environment variables in an unusable state, which
-	 * can cause a crash when getenv is called (by gettext
-	 * for example).  See the complete bug report at
-	 * http://trac.xiph.org/cgi-bin/trac.cgi/ticket/701
-	 *
-	 * TODO: Eventually move this call higher up with the others.
-	 */
-	purple_sound_uninit();
-
 	purple_plugins_uninit();
 #ifdef HAVE_DBUS
 	purple_dbus_uninit();
 #endif
+
+	purple_cmds_uninit();
+	purple_util_uninit();
+
 	purple_signals_uninit();
 
 	g_free(core->ui);
@@ -314,25 +320,6 @@ static char *purple_dbus_owner_user_dir(void)
 	return remote_user_dir;
 }
 
-static void purple_dbus_owner_show_buddy_list(void)
-{
-	DBusError dbus_error;
-	DBusMessage *msg = NULL, *reply = NULL;
-	DBusConnection *dbus_connection = NULL;
-
-	if ((dbus_connection = purple_dbus_get_connection()) == NULL)
-		return;
-
-	if ((msg = dbus_message_new_method_call(DBUS_SERVICE_PURPLE, DBUS_PATH_PURPLE, DBUS_INTERFACE_PURPLE, "PurpleBlistShow")) == NULL)
-		return;
-
-	dbus_error_init(&dbus_error);
-	if ((reply = dbus_connection_send_with_reply_and_block(dbus_connection, msg, 5000, &dbus_error)) != NULL)
-	{
-		dbus_message_unref(msg);
-	}
-	dbus_error_free(&dbus_error);
-}
 #endif /* HAVE_DBUS */
 
 gboolean
@@ -357,9 +344,6 @@ purple_core_ensure_single_instance()
 			else
 				is_single_instance = strcmp(dbus_owner_user_dir, user_dir);
 
-			if (!is_single_instance)
-				purple_dbus_owner_show_buddy_list();
-
 			g_free(dbus_owner_user_dir);
 		}
 	}
@@ -377,8 +361,8 @@ move_and_symlink_dir(const char *path, const char *basename, const char *old_bas
 #endif
 	if (g_rename(path, new_name))
 	{
-		purple_debug_error("core", "Error renaming %s to %s: %s. Please report this at http://developer.pidgin.im\n",
-		                   path, new_name, strerror(errno));
+		purple_debug_error("core", "Error renaming %s to %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+		                   path, new_name, g_strerror(errno));
 		g_free(new_name);
 		return FALSE;
 	}
@@ -390,8 +374,8 @@ move_and_symlink_dir(const char *path, const char *basename, const char *old_bas
 	old_name = g_build_filename(old_base, basename, NULL);
 	if (symlink(new_name, old_name))
 	{
-		purple_debug_warning("core", "Error symlinking %s to %s: %s. Please report this at http://developer.pidgin.im\n",
-		                     old_name, new_name, strerror(errno));
+		purple_debug_warning("core", "Error symlinking %s to %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+		                     old_name, new_name, g_strerror(errno));
 	}
 	g_free(old_name);
 	g_free(new_name);
@@ -446,8 +430,8 @@ purple_core_migrate(void)
 	{
 		if (g_mkdir(user_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 		{
-			purple_debug_error("core", "Error creating directory %s: %s. Please report this at http://developer.pidgin.im\n",
-			                   user_dir, strerror(errno));
+			purple_debug_error("core", "Error creating directory %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+			                   user_dir, g_strerror(errno));
 			g_free(status_file);
 			g_free(old_user_dir);
 			return FALSE;
@@ -458,8 +442,8 @@ purple_core_migrate(void)
 	 * incomplete migrations and properly retry. */
 	if (!(fp = g_fopen(status_file, "w")))
 	{
-		purple_debug_error("core", "Error opening file %s for writing: %s. Please report this at http://developer.pidgin.im\n",
-		                   status_file, strerror(errno));
+		purple_debug_error("core", "Error opening file %s for writing: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+		                   status_file, g_strerror(errno));
 		g_free(status_file);
 		g_free(old_user_dir);
 		return FALSE;
@@ -470,7 +454,7 @@ purple_core_migrate(void)
 	err = NULL;
 	if (!(dir = g_dir_open(old_user_dir, 0, &err)))
 	{
-		purple_debug_error("core", "Error opening directory %s: %s. Please report this at http://developer.pidgin.im\n",
+		purple_debug_error("core", "Error opening directory %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
 		                   status_file,
 		                   (err ? err->message : "Unknown error"));
 		if (err)
@@ -499,7 +483,7 @@ purple_core_migrate(void)
 				if ((link = g_file_read_link(name, &err)) == NULL)
 				{
 					char *name_utf8 = g_filename_to_utf8(name, -1, NULL, NULL, NULL);
-					purple_debug_error("core", "Error reading symlink %s: %s. Please report this at http://developer.pidgin.im\n",
+					purple_debug_error("core", "Error reading symlink %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
 					                   name_utf8 ? name_utf8 : name, err->message);
 					g_free(name_utf8);
 					g_error_free(err);
@@ -516,8 +500,8 @@ purple_core_migrate(void)
 				if ((linklen = readlink(name, buf, sizeof(buf) - 1) == -1))
 				{
 					char *name_utf8 = g_filename_to_utf8(name, -1, NULL, NULL, NULL);
-					purple_debug_error("core", "Error reading symlink %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   name_utf8, strerror(errno));
+					purple_debug_error("core", "Error reading symlink %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+					                   name_utf8, g_strerror(errno));
 					g_free(name_utf8);
 					g_free(name);
 					g_dir_close(dir);
@@ -554,8 +538,8 @@ purple_core_migrate(void)
 				 * guaranteed.  Oh well. */
 				if (symlink(link, logs_dir))
 				{
-					purple_debug_error("core", "Error symlinking %s to %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   logs_dir, link, strerror(errno));
+					purple_debug_error("core", "Error symlinking %s to %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+					                   logs_dir, link, g_strerror(errno));
 					g_free(link);
 					g_free(name);
 					g_free(logs_dir);
@@ -593,7 +577,7 @@ purple_core_migrate(void)
 				err = NULL;
 				if (!(icons_dir = g_dir_open(name, 0, &err)))
 				{
-					purple_debug_error("core", "Error opening directory %s: %s. Please report this at http://developer.pidgin.im\n",
+					purple_debug_error("core", "Error opening directory %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
 					                   name,
 					                   (err ? err->message : "Unknown error"));
 					if (err)
@@ -611,8 +595,8 @@ purple_core_migrate(void)
 				{
 					if (g_mkdir(new_icons_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 					{
-						purple_debug_error("core", "Error creating directory %s: %s. Please report this at http://developer.pidgin.im\n",
-						                   new_icons_dir, strerror(errno));
+						purple_debug_error("core", "Error creating directory %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+						                   new_icons_dir, g_strerror(errno));
 						g_free(new_icons_dir);
 						g_dir_close(icons_dir);
 						g_free(name);
@@ -674,8 +658,8 @@ purple_core_migrate(void)
 
 			if (!(fp = g_fopen(name, "rb")))
 			{
-				purple_debug_error("core", "Error opening file %s for reading: %s. Please report this at http://developer.pidgin.im\n",
-				                   name, strerror(errno));
+				purple_debug_error("core", "Error opening file %s for reading: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+				                   name, g_strerror(errno));
 				g_free(name);
 				g_dir_close(dir);
 				g_free(status_file);
@@ -686,8 +670,8 @@ purple_core_migrate(void)
 			new_name = g_build_filename(user_dir, entry, NULL);
 			if (!(new_file = g_fopen(new_name, "wb")))
 			{
-				purple_debug_error("core", "Error opening file %s for writing: %s. Please report this at http://developer.pidgin.im\n",
-				                   new_name, strerror(errno));
+				purple_debug_error("core", "Error opening file %s for writing: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+				                   new_name, g_strerror(errno));
 				fclose(fp);
 				g_free(new_name);
 				g_free(name);
@@ -705,8 +689,8 @@ purple_core_migrate(void)
 				size = fread(buf, 1, sizeof(buf), fp);
 				if (size != sizeof(buf) && !feof(fp))
 				{
-					purple_debug_error("core", "Error reading %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   name, strerror(errno));
+					purple_debug_error("core", "Error reading %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+					                   name, g_strerror(errno));
 					fclose(new_file);
 					fclose(fp);
 					g_free(new_name);
@@ -719,8 +703,8 @@ purple_core_migrate(void)
 
 				if (!fwrite(buf, size, 1, new_file) && ferror(new_file) != 0)
 				{
-					purple_debug_error("core", "Error writing %s: %s. Please report this at http://developer.pidgin.im\n",
-					                   new_name, strerror(errno));
+					purple_debug_error("core", "Error writing %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+					                   new_name, g_strerror(errno));
 					fclose(new_file);
 					fclose(fp);
 					g_free(new_name);
@@ -734,13 +718,13 @@ purple_core_migrate(void)
 
 			if (fclose(new_file))
 			{
-				purple_debug_error("core", "Error writing: %s: %s. Please report this at http://developer.pidgin.im\n",
-				                   new_name, strerror(errno));
+				purple_debug_error("core", "Error writing: %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+				                   new_name, g_strerror(errno));
 			}
 			if (fclose(fp))
 			{
 				purple_debug_warning("core", "Error closing %s: %s\n",
-				                     name, strerror(errno));
+				                     name, g_strerror(errno));
 			}
 			g_free(new_name);
 		}
@@ -753,8 +737,8 @@ purple_core_migrate(void)
 	/* The migration was successful, so delete the status file. */
 	if (g_unlink(status_file))
 	{
-		purple_debug_error("core", "Error unlinking file %s: %s. Please report this at http://developer.pidgin.im\n",
-		                   status_file, strerror(errno));
+		purple_debug_error("core", "Error unlinking file %s: %s. Please report this at " PURPLE_DEVEL_WEBSITE "\n",
+		                   status_file, g_strerror(errno));
 		g_free(status_file);
 		return FALSE;
 	}

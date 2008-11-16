@@ -59,10 +59,12 @@ msim_session_new(PurpleAccount *acct)
 	session->server_info = NULL;
 
 	session->rxoff = 0;
-	session->rxbuf = g_new0(gchar, MSIM_READ_BUF_SIZE);
+	session->rxsize = MSIM_READ_BUF_SIZE;
+	session->rxbuf = g_new0(gchar, session->rxsize);
 	session->next_rid = 1;
 	session->last_comm = time(NULL);
 	session->inbox_status = 0;
+	session->inbox_handle = 0;
 	
 	return session;
 }
@@ -90,6 +92,11 @@ msim_session_destroy(MsimSession *session)
 		msim_msg_free(session->server_info);
 	}
 	
+	/* Stop checking the inbox at the end of the session. */
+	if (session->inbox_handle) {
+		purple_timeout_remove(session->inbox_handle);
+	}
+
 	g_free(session);
 }
 

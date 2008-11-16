@@ -109,10 +109,12 @@ update_buddies_from_contact(EContact *contact)
 
 	name = e_contact_get_const(contact, E_CONTACT_FULL_NAME);
 
+	update_ims_from_contact(contact, name, "prpl-aim",    E_CONTACT_IM_AIM);
 	update_ims_from_contact(contact, name, "prpl-oscar",  E_CONTACT_IM_AIM);
 	update_ims_from_contact(contact, name, "prpl-jabber", E_CONTACT_IM_JABBER);
 	update_ims_from_contact(contact, name, "prpl-yahoo",  E_CONTACT_IM_YAHOO);
 	update_ims_from_contact(contact, name, "prpl-msn",    E_CONTACT_IM_MSN);
+	update_ims_from_contact(contact, name, "prpl-icq",    E_CONTACT_IM_ICQ);
 	update_ims_from_contact(contact, name, "prpl-oscar",  E_CONTACT_IM_ICQ);
 	update_ims_from_contact(contact, name, "prpl-novell", E_CONTACT_IM_GROUPWISE);
 }
@@ -237,14 +239,14 @@ menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
 		}
 		else
 		{
-			purple_notify_error(NULL, NULL, _("Unable to send e-mail"),
+			purple_notify_error(NULL, NULL, _("Unable to send email"),
 							  _("The evolution executable was not found in the PATH."));
 		}
 	}
 	else
 	{
-		purple_notify_error(NULL, NULL, _("Unable to send e-mail"),
-						  _("An e-mail address was not found for this buddy."));
+		purple_notify_error(NULL, NULL, _("Unable to send email"),
+						  _("An email address was not found for this buddy."));
 	}
 }
 
@@ -282,7 +284,7 @@ blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
 
 	if (mail != NULL)
 	{
-		act = purple_menu_action_new(_("Send E-Mail"),
+		act = purple_menu_action_new(_("Send Email"),
 			PURPLE_CALLBACK(menu_item_send_mail_activate_cb), NULL, NULL);
 		*menu = g_list_append(*menu, act);
 		g_free(mail);
@@ -525,7 +527,7 @@ static PurplePluginInfo info =
 
 	GEVOLUTION_PLUGIN_ID,                             /**< id             */
 	N_("Evolution Integration"),                      /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Provides integration with Evolution."),
 	                                                  /**  description    */

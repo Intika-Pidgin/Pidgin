@@ -40,7 +40,7 @@ static int error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 
 	/* XXX the modules interface should have already retrieved this for us */
 	if (!(snac2 = aim_remsnac(od, snac->id))) {
-		purple_debug_misc("oscar", "search error: couldn't get a snac for 0x%08lx\n", snac->id);
+		purple_debug_misc("oscar", "search error: couldn't get a snac for 0x%08x\n", snac->id);
 		return 0;
 	}
 
@@ -62,7 +62,7 @@ static int error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 int aim_search_address(OscarData *od, const char *address)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	conn = flap_connection_findbygroup(od, SNAC_FAMILY_USERLOOKUP);
@@ -70,14 +70,14 @@ int aim_search_address(OscarData *od, const char *address)
 	if (!conn || !address)
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+strlen(address));
+	byte_stream_new(&bs, strlen(address));
 
-	snacid = aim_cachesnac(od, 0x000a, 0x0002, 0x0000, address, strlen(address)+1);
-	aim_putsnac(&frame->data, 0x000a, 0x0002, 0x0000, snacid);
+	byte_stream_putstr(&bs, address);
 
-	byte_stream_putstr(&frame->data, address);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_USERLOOKUP, 0x0002, 0x0000, address, strlen(address)+1);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_USERLOOKUP, 0x0002, 0x0000, snacid, &bs);
 
-	flap_connection_send(conn, frame);
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -145,7 +145,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 search_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x000a;
+	mod->family = SNAC_FAMILY_USERLOOKUP;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
 	mod->toolversion = 0x0629;

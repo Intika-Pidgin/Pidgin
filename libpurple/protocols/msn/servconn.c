@@ -174,15 +174,6 @@ connect_cb(gpointer data, gint source, const char *error_message)
 
 	servconn = data;
 	servconn->connect_data = NULL;
-	servconn->processing = FALSE;
-
-	if (servconn->wasted)
-	{
-		if (source >= 0)
-			close(source);
-		msn_servconn_destroy(servconn);
-		return;
-	}
 
 	servconn->fd = source;
 
@@ -203,7 +194,7 @@ connect_cb(gpointer data, gint source, const char *error_message)
 }
 
 gboolean
-msn_servconn_connect(MsnServConn *servconn, const char *host, int port)
+msn_servconn_connect(MsnServConn *servconn, const char *host, int port, gboolean force)
 {
 	MsnSession *session;
 
@@ -223,7 +214,7 @@ msn_servconn_connect(MsnServConn *servconn, const char *host, int port)
 	{
 		/* HTTP Connection. */
 
-		if (!servconn->httpconn->connected)
+		if (!servconn->httpconn->connected || force)
 			if (!msn_httpconn_connect(servconn->httpconn, host, port))
 				return FALSE;
 
@@ -239,21 +230,19 @@ msn_servconn_connect(MsnServConn *servconn, const char *host, int port)
 	servconn->connect_data = purple_proxy_connect(NULL, session->account,
 			host, port, connect_cb, servconn);
 
-	if (servconn->connect_data != NULL)
-	{
-		servconn->processing = TRUE;
-		return TRUE;
-	}
-	else
-	{
-		return FALSE;
-	}
+	return (servconn->connect_data != NULL);
 }
 
 void
 msn_servconn_disconnect(MsnServConn *servconn)
 {
 	g_return_if_fail(servconn != NULL);
+
+	if (servconn->connect_data != NULL)
+	{
+		purple_proxy_connect_cancel(servconn->connect_data);
+		servconn->connect_data = NULL;
+	}
 
 	if (!servconn->connected)
 	{
@@ -271,12 +260,6 @@ msn_servconn_disconnect(MsnServConn *servconn)
 			servconn->disconnect_cb(servconn);
 
 		return;
-	}
-
-	if (servconn->connect_data != NULL)
-	{
-		purple_proxy_connect_cancel(servconn->connect_data);
-		servconn->connect_data = NULL;
 	}
 
 	if (servconn->inpa > 0)
@@ -301,7 +284,8 @@ static void
 servconn_write_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	MsnServConn *servconn = data;
-	int ret, writelen;
+	gssize ret;
+	int writelen;
 
 	writelen = purple_circ_buffer_get_max_read(servconn->tx_buf);
 
@@ -323,10 +307,10 @@ servconn_write_cb(gpointer data, gint source, PurpleInputCondition cond)
 	purple_circ_buffer_mark_read(servconn->tx_buf, ret);
 }
 
-ssize_t
+gssize
 msn_servconn_write(MsnServConn *servconn, const char *buf, size_t len)
 {
-	ssize_t ret = 0;
+	gssize ret = 0;
 
 	g_return_val_if_fail(servconn != NULL, 0);
 
@@ -382,31 +366,24 @@ static void
 read_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	MsnServConn *servconn;
-	MsnSession *session;
 	char buf[MSN_BUF_LEN];
-	char *cur, *end, *old_rx_buf;
-	int len, cur_len;
+	gssize len;
 
 	servconn = data;
-	session = servconn->session;
+
+	if (servconn->type == MSN_SERVCONN_NS)
+		servconn->session->account->gc->last_received = time(NULL);
 
 	len = read(servconn->fd, buf, sizeof(buf) - 1);
-
+	if (len < 0 && errno == EAGAIN)
+		return;
 	if (len <= 0) {
-		switch (errno) {
+		purple_debug_error("msn", "servconn %03d read error, "
+			"len: %" G_GSSIZE_FORMAT ", errno: %d, error: %s\n",
+			servconn->num, len, errno, g_strerror(errno));
+		msn_servconn_got_error(servconn, MSN_SERVCONN_ERROR_READ);
 
-			case 0:	
-
-			case EBADF:
-			case EAGAIN: return;
-	
-			default: purple_debug_error("msn", "servconn read error,"
-						"len: %d, errno: %d, error: %s\n",
-						len, errno, strerror(errno));
-				 msn_servconn_got_error(servconn, 
-						 MSN_SERVCONN_ERROR_READ);
-				 return;
-		}
+		return;
 	}
 
 	buf[len] = '\0';
@@ -414,6 +391,14 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 	servconn->rx_buf = g_realloc(servconn->rx_buf, len + servconn->rx_len + 1);
 	memcpy(servconn->rx_buf + servconn->rx_len, buf, len + 1);
 	servconn->rx_len += len;
+
+	msn_servconn_process_data(servconn);
+}
+
+void msn_servconn_process_data(MsnServConn *servconn)
+{
+	char *cur, *end, *old_rx_buf;
+	int cur_len;
 
 	end = old_rx_buf = servconn->rx_buf;
 
@@ -558,6 +543,9 @@ create_listener(int port)
 
 	flags = fcntl(fd, F_GETFL);
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#ifndef _WIN32
+	fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
 
 	return fd;
 }

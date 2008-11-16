@@ -30,6 +30,7 @@
 #include "irc.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 static char *irc_mask_nick(const char *mask);
 static char *irc_mask_userhost(const char *mask);
@@ -61,9 +62,11 @@ static char *irc_mask_userhost(const char *mask)
 
 static void irc_chat_remove_buddy(PurpleConversation *convo, char *data[2])
 {
-	char *message;
+	char *message, *stripped;
 
-	message = g_strdup_printf("quit: %s", data[1]);
+	stripped = data[1] ? irc_mirc2txt(data[1]) : NULL;
+	message = g_strdup_printf("quit: %s", stripped);
+	g_free(stripped);
 
 	if (purple_conv_chat_find_user(PURPLE_CONV_CHAT(convo), data[0]))
 		purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo), data[0], message);
@@ -119,7 +122,11 @@ static void irc_connected(struct irc_conn *irc, const char *nick)
 
 void irc_msg_default(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
-	purple_debug(PURPLE_DEBUG_INFO, "irc", "Unrecognized message: %s\n", args[0]);
+	char *clean;
+        /* This, too, should be escaped somehow (smarter) */
+        clean = purple_utf8_salvage(args[0]);
+	purple_debug(PURPLE_DEBUG_INFO, "irc", "Unrecognized message: %s\n", clean);
+        g_free(clean);
 }
 
 void irc_msg_features(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -138,6 +145,8 @@ void irc_msg_features(struct irc_conn *irc, const char *name, const char *from, 
 				irc->mode_chars = g_strdup(val + 1);
 		}
 	}
+
+	g_strfreev(features);
 }
 
 void irc_msg_luser(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -185,6 +194,51 @@ void irc_msg_badmode(struct irc_conn *irc, const char *name, const char *from, c
 		return;
 
 	purple_notify_error(gc, NULL, _("Bad mode"), args[1]);
+}
+
+void irc_msg_ban(struct irc_conn *irc, const char *name, const char *from, char **args)
+{
+	PurpleConversation *convo;
+
+	if (!args || !args[0] || !args[1])
+		return;
+
+	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+						      args[1], irc->account);
+
+	if (!strcmp(name, "367")) {
+		char *msg = NULL;
+		/* Ban list entry */
+		if (!args[2])
+			return;
+		if (args[3] && args[4]) {
+			/* This is an extended syntax, not in RFC 1459 */
+			int t1 = atoi(args[4]);
+			time_t t2 = time(NULL);
+			char *time = purple_str_seconds_to_string(t2 - t1);
+			msg = g_strdup_printf(_("Ban on %s by %s, set %s ago"),
+			                      args[2], args[3], time);
+			g_free(time);
+		} else {
+			msg = g_strdup_printf(_("Ban on %s"), args[2]);
+		}
+		if (convo) {
+			purple_conv_chat_write(PURPLE_CONV_CHAT(convo), "", msg,
+			                       PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG,
+			                       time(NULL));
+		} else {
+			purple_debug_info("irc", "%s\n", msg);
+		}
+		g_free(msg);
+	} else if (!strcmp(name, "368")) {
+		if (!convo)
+			return;
+		/* End of ban list */
+		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), "",
+		                       _("End of ban list"),
+		                       PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG,
+		                       time(NULL));
+	}
 }
 
 void irc_msg_banned(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -374,6 +428,11 @@ void irc_msg_list(struct irc_conn *irc, const char *name, const char *from, char
 		if (!args[0] || !args[1] || !args[2] || !args[3])
 			return;
 
+		if (!purple_roomlist_get_in_progress(irc->roomlist)) {
+			purple_debug_warning("irc", "Buggy server didn't send RPL_LISTSTART.\n");
+			purple_roomlist_set_in_progress(irc->roomlist, TRUE);
+		}
+
 		room = purple_roomlist_room_new(PURPLE_ROOMLIST_ROOMTYPE_ROOM, args[1], NULL);
 		purple_roomlist_room_add_field(irc->roomlist, room, args[1]);
 		purple_roomlist_room_add_field(irc->roomlist, room, GINT_TO_POINTER(strtol(args[2], NULL, 10)));
@@ -493,6 +552,8 @@ void irc_msg_names(struct irc_conn *irc, const char *name, const char *from, cha
 					cur++;
 				} else if(irc->mode_chars
 					  && strchr(irc->mode_chars, *cur)) {
+					if (*cur == '~')
+						f = PURPLE_CBFLAGS_FOUNDER;
 					cur++;
 				}
 				tmp = g_strndup(cur, end - cur);
@@ -656,16 +717,16 @@ void irc_msg_notop(struct irc_conn *irc, const char *name, const char *from, cha
 void irc_msg_invite(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
-	GHashTable *components = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-	char *nick = irc_mask_nick(from);
+	GHashTable *components;
+	gchar *nick;
 
-	if (!args || !args[1] || !gc) {
-		g_free(nick);
-		g_hash_table_destroy(components);
+	if (!args || !args[1] || !gc)
 		return;
-	}
 
-	g_hash_table_insert(components, strdup("channel"), strdup(args[1]));
+	components = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	nick = irc_mask_nick(from);
+
+	g_hash_table_insert(components, g_strdup("channel"), g_strdup(args[1]));
 
 	serv_got_chat_invite(gc, args[1], nick, NULL, components);
 	g_free(nick);
@@ -705,6 +766,7 @@ void irc_msg_ison(struct irc_conn *irc, const char *name, const char *from, char
 	g_strfreev(nicks);
 
 	g_hash_table_foreach(irc->buddies, (GHFunc)irc_buddy_status, (gpointer)irc);
+	irc->ison_outstanding = FALSE;
 }
 
 static void irc_buddy_status(char *name, struct irc_buddy *ib, struct irc_conn *irc)
@@ -851,6 +913,9 @@ void irc_msg_mode(struct irc_conn *irc, const char *name, const char *from, char
 					newflag = PURPLE_CBFLAGS_HALFOP;
 				else if (*mcur == 'v')
 					newflag = PURPLE_CBFLAGS_VOICE;
+				else if(irc->mode_chars
+					  && strchr(irc->mode_chars, '~') && (*mcur == 'q'))
+					newflag = PURPLE_CBFLAGS_FOUNDER;
 				if (newflag) {
 					if (add)
 						flags |= newflag;
@@ -877,6 +942,8 @@ void irc_msg_nick(struct irc_conn *irc, const char *name, const char *from, char
 	PurpleConversation *conv;
 	GSList *chats;
 	char *nick = irc_mask_nick(from);
+
+	irc->nickused = FALSE;
 
 	if (!gc) {
 		g_free(nick);
@@ -913,9 +980,9 @@ void irc_msg_badnick(struct irc_conn *irc, const char *name, const char *from, c
 				  _("Your selected nickname was rejected by the server.  It probably contains invalid characters."));
 
 	} else {
-		gc->wants_to_die = TRUE;
-		purple_connection_error(purple_account_get_connection(irc->account),
-				      _("Your selected account name was rejected by the server.  It probably contains invalid characters."));
+		purple_connection_error_reason (gc,
+				  PURPLE_CONNECTION_ERROR_INVALID_SETTINGS,
+				  _("Your selected account name was rejected by the server.  It probably contains invalid characters."));
 	}
 }
 
@@ -926,17 +993,26 @@ void irc_msg_nickused(struct irc_conn *irc, const char *name, const char *from, 
 	if (!args || !args[1])
 		return;
 
-	newnick = strdup(args[1]);
+	if (strlen(args[1]) < strlen(irc->reqnick) || irc->nickused)
+		newnick = g_strdup(args[1]);
+	else
+		newnick = g_strdup_printf("%s0", args[1]);
 	end = newnick + strlen(newnick) - 1;
 	/* try fallbacks */
 	if((*end < '9') && (*end >= '1')) {
 			*end = *end + 1;
 	} else *end = '1';
 
+	g_free(irc->reqnick);
+	irc->reqnick = newnick;
+	irc->nickused = TRUE;
+
+	purple_connection_set_display_name(
+		purple_account_get_connection(irc->account), newnick);
+
 	buf = irc_format(irc, "vn", "NICK", newnick);
 	irc_send(irc, buf);
 	g_free(buf);
-	g_free(newnick);
 }
 
 void irc_msg_notice(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -961,14 +1037,18 @@ void irc_msg_part(struct irc_conn *irc, const char *name, const char *from, char
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	PurpleConversation *convo;
-	char *nick, *msg;
+	char *nick, *msg, *channel;
 
 	if (!args || !args[0] || !gc)
 		return;
 
-	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[0], irc->account);
+	/* Undernet likes to :-quote the channel name, for no good reason
+         * that I can see.  This catches that. */
+	channel = (args[0][0] == ':') ? &args[0][1] : args[0];
+
+	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, channel, irc->account);
 	if (!convo) {
-		purple_debug(PURPLE_DEBUG_INFO, "irc", "Got a PART on %s, which doesn't exist -- probably closed\n", args[0]);
+		purple_debug(PURPLE_DEBUG_INFO, "irc", "Got a PART on %s, which doesn't exist -- probably closed\n", channel);
 		return;
 	}
 
@@ -979,11 +1059,13 @@ void irc_msg_part(struct irc_conn *irc, const char *name, const char *from, char
                                       (args[1] && *args[1]) ? ": " : "",
 									  (escaped && *escaped) ? escaped : "");
 		g_free(escaped);
-		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), args[0], msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
+		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), channel, msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
 		g_free(msg);
 		serv_got_chat_left(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)));
 	} else {
-		purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo), nick, args[1]);
+		msg = args[1] ? irc_mirc2txt(args[1]) : NULL;
+		purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo), nick, msg);
+		g_free(msg);
 	}
 	g_free(nick);
 }

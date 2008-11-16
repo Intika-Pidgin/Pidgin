@@ -1,5 +1,148 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
+Our development blog is available at: http://planet.pidgin.im
+
+2.5.2 (10/19/2008):
+	Ethan: After a bit of a struggle with our services, which put
+	this release off for an unfortunate length of time, we're
+	ready for another bugfix release for your bug-free(er?)
+	messaging pleasure.
+
+	Sadrul: Despite our best efforts, this release got delayed by a
+	couple of weeks. But here it is! It is mostly a bug fix release, with
+	a couple of important fixes, e.g. fix for the Yahoo! disconnect
+	problem. Also, welcome our newest Crazy Patch Writer, Marcus Lundblad,
+	who, among various other fixes, has implemented custom smileys for the
+	XMPP protocol, included in this release. Enjoy!
+
+	Stu: I guess this is the time of year for server migrations, and
+	I've just about had enough of them. Fortunately Pidgin is still fun,
+	and this release should be superb.
+
+	John: Although our services were down for quite some time, we didn't
+	lose any data, except perhaps some mail that would have failed to make
+	it to us.  Overall, the only major effect it had was to delay this
+	release far longer than we expected.  Hopefully the bugfixes make you
+	happy!
+
+	Elliott: This release took a while, but that was due to an unfortunate
+	server snafu. I didn't have much to do with it, but hopefully the new
+	servers will help us out a bit. Anyway, mostly bug-fixes this time.
+	Nothing spectacular, unless you happen to suffer from one of those bugs.
+	Oh, and don't forget, the "Has you" tooltip is back!
+
+2.5.1 (08/30/2008):
+	Kevin: This release is mainly a bug-fix release.  It solves a few
+	known crashes and updates some of our artwork.  Google's Summer of
+	code recently finished up.  Some of our students are still working
+	on their branches and none have been merged into released code yet.
+	Look for some of those results to show up in Pidgin releases over the
+	coming months.
+
+	Elliott: I'm just commenting so Kevin wouldn't be the only one in NEWS
+	and no-one else seems to want to. Anyway, there's a couple MSN login
+	fixes, so try it out. The contact list problems might still be around,
+	but you can probably find a workaround in trac. And there's a tooltip
+	fix for our AIM friends, not that I had anything to do with it (except
+	closing many many duplicate tickets).
+
+2.5.0 (08/17/2008):
+	Daniel: Lots of good stuff in this release.  Lots of people have worked
+	very hard on the updated MSN protocol, and it's finally time to bring
+	it to the world!  There are myriad bugfixes, including some important
+	ones so you should be sure to update.
+
+	Hylke: Finally MSNP15 support. To celebrate this I refreshed a lot of
+	the smilies used in the protocol and added the long awaited indispensable
+	bunny icon. I think this is one of those releases that will make a lot
+	of users happy, especially MSN users.
+
+	Elliott: Oh look, my first NEWS! Well anyway, with that new MSNP15
+	support, this release is set up to be a huge success and a total flop
+	all at the same time. Here's hoping it's the "huge success" one for you.
+	Those icon changes that Hylke made, while minor, really make things look
+	a little cleaner, I think. Oh yea, did I mention that MSNP15 stuff?
+
+	Mark: Speaking of MSNP15, we'd like to welcome Elliott Sales de Andrade
+	as a full fledged developer!  He took the last few strides mushing the
+	new MSN code into shape.  Then he decided that wasn't enough and started
+	doing other great stuff.
+
+	Ka-Hing: "Reject"ing a certificate after your account is signed off is
+	not recommended. Deleting the file after you start sending it is also
+	discouraged.
+
+2.4.3 (07/01/2008):
+	Richard: This release includes important bug fixes.  I'm just cutting
+	the release.  Thank you to the real heroes who did the fixing!
+
+2.4.2 (5/17/2008):
+	Sadrul: We added some usability changes in this release, including the
+	typing notification, buddyicon and input area size in the conversation
+	windows, escape to close conversation windows etc. These changes should
+	make pidgin more usable and more fun for Everyone! *wink*
+
+	Stu: I fixed some memory leaks, but nothing like as many as Daniel did.
+	MSN buddy list synchronization should be significantly less painful now,
+	and opening MSN inboxes might work better too. SILC passphrase changes
+	and support for passphrase-less keys has been improved also.
+
+2.4.1 (3/31/2008):
+	Stu: We fixed some bugs, this release should be 110% better than 2.4.0
+
+	John: Well, I didn't really do much this release except muck about with
+	the configure script.  Blame me if it worked in 2.4.0 but doesn't now.
+
+	Will: We seem to be falling into a nice pattern of releasing on the last
+	day of a month.  Hypothetical AIX users might be pleased to learn that
+	Pidgin might actually run for them now!
+
+2.4.0 (2/29/2008):
+	John: While this release took what seems like forever to get out the
+	door, I think it's well worth the wait, especially for Yahoo! users.
+	This release serves up some fixes for long standing bugs and adds
+	file transfer for transfers with newer Yahoo! clients (finally!). As
+	is standard with code I committed, where it works great thank the
+	patch writer, and where it's broken, feel free to yell at me. Enjoy!
+
+	Sadrul: Finch is more colourful and blinky in this release! There's
+	now a log viewer, which is very useful, and also the ability to
+	block/unblock buddies. It's now also possible to find chat rooms on
+	many services, e.g. XMPP, IRC, Yahoo! etc. Happy Leap Day!
+
+	Ka-Hing: I think all I've done for this release is committing some
+	patches written by other people.
+
+	Stu: Finally, 2.4.0 lands. I didn't do all that much except complain
+	about things I didn't like or just revert Sean's changes. I'm quite
+	pleased with how well it's turned out in the end.
+	Happy Birthday Fred, you must be nearly 10 now ;-)
+
+2.3.1 (12/7/2007):
+	Stu: I'm sorry for the MSN problems and the plugin crashes in 2.3.0.
+	Hopefully this will redeem us. This fixes a number of bugs. I'm a
+	bit late but I'd like to welcome John to the team. Enjoy!
+
+	Luke: I've done absolutely nothing in the last 2 weeks, except watch
+	others commit bug and, more, leak fixes.  People should be noticing
+	remarkably fewer memory leaks now than 2 or more releases ago.
+
+	Kevin: I'm not quite sure what happened to our MySpaceIM Summer of
+	Code student, but I fixed a few MySpace bugs with idle and status.
+	I will try to fix some of the other more significant bugs, after I
+	figure out the protocol, especially including grouping issues.
+
+2.3.0 (11/20/2007):
+	Luke: While this does not have the new MSN code, rest assured that
+	we are working on it and that it is nearing release.  This contains
+	a significant number of fixes, including some that were marked as
+	fixed for earlier releases.  Happy Thanksgiving!
+
+	John: This is my first NEWS entry!  So, this time around we have an
+	updated man page (the old one hadn't been really updated since
+	before the GTK+ 2.0 migration!), lots of bug fixes, and some new
+	features for you all.  Enjoy!
+
 2.2.2 (10/23/2007):
 	Luke: Because the main branch of pidgin development is still not
 	ready for public consumption, I have taken some time to try to

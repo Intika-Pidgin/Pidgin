@@ -108,6 +108,37 @@ struct _JabberStream
 	GHashTable *buddies;
 	gboolean roster_parsed;
 
+	/*
+	 * This boolean was added to eliminate a heinous bug where we would
+	 * get into a loop with the server and move a buddy back and forth
+	 * from one group to another.
+	 *
+	 * The sequence goes something like this:
+	 * 1. Our resource and another resource both approve an authorization
+	 *    request at the exact same time.  We put the buddy in group A and
+	 *    the other resource put the buddy in group B.
+	 * 2. The server receives the roster add for group B and sends us a
+	 *    roster push.
+	 * 3. We receive this roster push and modify our local blist.  This
+	 *    triggers us to send a roster add for group B.
+	 * 4. The server recieves our earlier roster add for group A and sends
+	 *    us a roster push.
+	 * 5. We receive this roster push and modify our local blist.  This
+	 *    triggers us to send a roster add for group A.
+	 * 6. The server receives our earlier roster add for group B and sends
+	 *    us a roster push.
+	 * (repeat steps 3 through 6 ad infinitum)
+	 *
+	 * This boolean is used to short-circuit the sending of a roster add
+	 * when we receive a roster push.
+	 *
+	 * See these bug reports:
+	 * http://trac.adiumx.com/ticket/8834
+	 * http://developer.pidgin.im/ticket/5484
+	 * http://developer.pidgin.im/ticket/6188
+	 */
+	gboolean currently_parsing_roster_push;
+
 	GHashTable *chats;
 	GList *chat_servers;
 	PurpleRoomlist *roomlist;
@@ -117,7 +148,7 @@ struct _JabberStream
 	GHashTable *disco_callbacks;
 	int next_id;
 
-
+	GList *bs_proxies;
 	GList *oob_file_transfers;
 	GList *file_transfers;
 
@@ -146,7 +177,7 @@ struct _JabberStream
 	char *gmail_last_time;
 	char *gmail_last_tid;
 
-    char *serverFQDN;
+	char *serverFQDN;
 
 	/* OK, this stays at the end of the struct, so plugins can depend
 	 * on the rest of the stuff being in the right place
@@ -157,6 +188,11 @@ struct _JabberStream
 #else /* keep the struct the same size */
 	void *sasl;
 	void *sasl_cb;
+#endif
+	/* did someone say something about the end of the struct? */
+#ifdef HAVE_CYRUS_SASL
+	const char *current_mech;
+	int auth_fail_count;
 #endif
 
 	int sasl_state;
@@ -191,6 +227,20 @@ struct _JabberStream
 	char *old_uri;
 	int old_length;
 	char *old_track;
+	
+	char *certificate_CN;
+	
+	/* A purple timeout tag for the keepalive */
+	int keepalive_timeout;
+
+	PurpleSrvResponse *srv_rec;
+	guint srv_rec_idx;
+	guint max_srv_rec_idx;
+	/**
+	 * This linked list contains PurpleUtilFetchUrlData structs
+	 * for when we lookup buddy icons from a url
+	 */
+	GSList *url_datas;
 };
 
 typedef gboolean (JabberFeatureEnabled)(JabberStream *js, const gchar *shortname, const gchar *namespace);
@@ -201,6 +251,13 @@ typedef struct _JabberFeature
 	gchar *namespace;
 	JabberFeatureEnabled *is_enabled;
 } JabberFeature;
+
+typedef struct _JabberBytestreamsStreamhost {
+	char *jid;
+	char *host;
+	int port;
+	char *zeroconf;
+} JabberBytestreamsStreamhost;
 
 /* what kind of additional features as returned from disco#info are supported? */
 extern GList *jabber_features;
@@ -216,7 +273,14 @@ void jabber_register_start(JabberStream *js);
 
 char *jabber_get_next_id(JabberStream *js);
 
-char *jabber_parse_error(JabberStream *js, xmlnode *packet);
+/** Parse an error into a human-readable string and optionally a disconnect
+ *  reason.
+ *  @param js     the stream on which the error occurred.
+ *  @param packet the error packet
+ *  @param reason where to store the disconnection reason, or @c NULL if you
+ *                don't care or you don't intend to close the connection.
+ */
+char *jabber_parse_error(JabberStream *js, xmlnode *packet, PurpleConnectionError *reason);
 
 void jabber_add_feature(const gchar *shortname, const gchar *namespace, JabberFeatureEnabled cb); /* cb may be NULL */
 void jabber_remove_feature(const gchar *shortname);

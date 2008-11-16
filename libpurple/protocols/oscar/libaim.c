@@ -92,11 +92,11 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* whiteboard_prpl_ops */
 	NULL,					/* send_raw */
 	NULL,					/* roomlist_room_serialize */
+	NULL,					/* unregister_user */
+	NULL,					/* send_attention */
+	NULL,					/* get_attention_types */
 
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	NULL
 };
 
@@ -113,7 +113,7 @@ static PurplePluginInfo info =
 
 	"prpl-aim",                                       /**< id             */
 	"AIM",                                            /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("AIM Protocol Plugin"),
 	                                                  /**  description    */

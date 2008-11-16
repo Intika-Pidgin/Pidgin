@@ -112,7 +112,7 @@ static GdkAtom _PurpleUnseenCount = GDK_NONE;
 
 /* notification set/unset */
 static int notify(PurpleConversation *conv, gboolean increment);
-static void notify_win(PidginWindow *purplewin);
+static void notify_win(PidginWindow *purplewin, PurpleConversation *conv);
 static void unnotify(PurpleConversation *conv, gboolean reset);
 static int unnotify_cb(GtkWidget *widget, gpointer data,
                        PurpleConversation *conv);
@@ -140,6 +140,9 @@ static void handle_urgent(PidginWindow *purplewin, gboolean set);
 
 /* raise function */
 static void handle_raise(PidginWindow *purplewin);
+
+/* present function */
+static void handle_present(PurpleConversation *conv);
 
 /****************************************/
 /* Begin doing stuff below this line... */
@@ -193,14 +196,14 @@ notify(PurpleConversation *conv, gboolean increment)
 			purple_conversation_set_data(conv, "notify-message-count", GINT_TO_POINTER(count));
 		}
 
-		notify_win(purplewin);
+		notify_win(purplewin, conv);
 	}
 
 	return 0;
 }
 
 static void
-notify_win(PidginWindow *purplewin)
+notify_win(PidginWindow *purplewin, PurpleConversation *conv)
 {
 	if (count_messages(purplewin) <= 0)
 		return;
@@ -215,6 +218,8 @@ notify_win(PidginWindow *purplewin)
 		handle_urgent(purplewin, TRUE);
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/method_raise"))
 		handle_raise(purplewin);
+	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/method_present"))
+		handle_present(conv);
 }
 
 static void
@@ -552,15 +557,19 @@ handle_count_xprop(PidginWindow *purplewin)
 static void
 handle_urgent(PidginWindow *win, gboolean set)
 {
-#ifndef _WIN32
 	pidgin_set_urgent(GTK_WINDOW(win->window), set);
-#endif
 }
 
 static void
 handle_raise(PidginWindow *purplewin)
 {
 	pidgin_conv_window_raise(purplewin);
+}
+
+static void
+handle_present(PurpleConversation *conv)
+{
+	purple_conversation_present(conv);
 }
 
 static void
@@ -694,7 +703,7 @@ get_config_frame(PurplePlugin *plugin)
 	                 G_CALLBACK(type_toggle_cb), "type_chat");
 
 	ref = toggle;
-	toggle = gtk_check_button_new_with_mnemonic(_("\t_Only when someone says your screen name"));
+	toggle = gtk_check_button_new_with_mnemonic(_("\t_Only when someone says your username"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
 	                            purple_prefs_get_bool("/plugins/gtk/X11/notify/type_chat_nick"));
@@ -756,12 +765,14 @@ get_config_frame(PurplePlugin *plugin)
 
 	/* Urgent method button */
 	toggle = gtk_check_button_new_with_mnemonic(_("Set window manager \"_URGENT\" hint"));
+#else
+	toggle = gtk_check_button_new_with_mnemonic(_("_Flash window"));
+#endif
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
 	                             purple_prefs_get_bool("/plugins/gtk/X11/notify/method_urgent"));
 	g_signal_connect(G_OBJECT(toggle), "toggled",
 	                 G_CALLBACK(method_toggle_cb), "method_urgent");
-#endif
 
 	/* Raise window method button */
 	toggle = gtk_check_button_new_with_mnemonic(_("R_aise conversation window"));
@@ -770,6 +781,14 @@ get_config_frame(PurplePlugin *plugin)
 	                             purple_prefs_get_bool("/plugins/gtk/X11/notify/method_raise"));
 	g_signal_connect(G_OBJECT(toggle), "toggled",
 	                 G_CALLBACK(method_toggle_cb), "method_raise");
+
+	/* Present conversation method button */
+	toggle = gtk_check_button_new_with_mnemonic(_("_Present conversation window"));
+	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
+	                             purple_prefs_get_bool("/plugins/gtk/X11/notify/method_present"));
+	g_signal_connect(G_OBJECT(toggle), "toggled",
+	                 G_CALLBACK(method_toggle_cb), "method_present");
 
 	/*---------- "Notification Removals" ----------*/
 	frame = pidgin_make_frame(ret, _("Notification Removal"));
@@ -842,8 +861,6 @@ plugin_load(PurplePlugin *plugin)
 	                    PURPLE_CALLBACK(chat_sent_im), NULL);
 	purple_signal_connect(conv_handle, "conversation-created", plugin,
 	                    PURPLE_CALLBACK(conv_created), NULL);
-	purple_signal_connect(conv_handle, "chat-joined", plugin,
-	                    PURPLE_CALLBACK(conv_created), NULL);
 	purple_signal_connect(conv_handle, "deleting-conversation", plugin,
 	                    PURPLE_CALLBACK(deleting_conv), NULL);
 #if 0
@@ -905,13 +922,13 @@ static PurplePluginInfo info =
 
 	NOTIFY_PLUGIN_ID,                                 /**< id             */
 	N_("Message Notification"),                       /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Provides a variety of ways of notifying you of unread messages."),
 	                                                  /**  description    */
 	N_("Provides a variety of ways of notifying you of unread messages."),
 	                                                  /**< author         */
-	"Etan Reisner <deryni@eden.rutgers.edu>\n\t\t\tBrian Tarricone <bjt23@cornell.edu>",
+	"Etan Reisner <deryni@eden.rutgers.edu>,\nBrian Tarricone <bjt23@cornell.edu>",
 	PURPLE_WEBSITE,                                     /**< homepage       */
 
 	plugin_load,                                      /**< load           */
@@ -947,6 +964,7 @@ init_plugin(PurplePlugin *plugin)
 	purple_prefs_add_bool("/plugins/gtk/X11/notify/method_count", FALSE);
 	purple_prefs_add_bool("/plugins/gtk/X11/notify/method_count_xprop", FALSE);
 	purple_prefs_add_bool("/plugins/gtk/X11/notify/method_raise", FALSE);
+	purple_prefs_add_bool("/plugins/gtk/X11/notify/method_present", FALSE);
 	purple_prefs_add_bool("/plugins/gtk/X11/notify/notify_focus", TRUE);
 	purple_prefs_add_bool("/plugins/gtk/X11/notify/notify_click", FALSE);
 	purple_prefs_add_bool("/plugins/gtk/X11/notify/notify_type", TRUE);

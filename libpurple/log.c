@@ -348,7 +348,6 @@ PurpleLogLogger *purple_log_logger_new(const char *id, const char *name, int fun
 				void(*get_log_sets)(PurpleLogSetCallback cb, GHashTable *sets),
 				gboolean(*remove)(PurpleLog *log),
 				gboolean(*is_deletable)(PurpleLog *log))
-{
 #endif
 	PurpleLogLogger *logger;
 	va_list args;
@@ -668,6 +667,18 @@ void
 purple_log_uninit(void)
 {
 	purple_signals_unregister_by_instance(purple_log_get_handle());
+
+	purple_log_logger_remove(html_logger);
+	purple_log_logger_free(html_logger);
+	html_logger = NULL;
+
+	purple_log_logger_remove(txt_logger);
+	purple_log_logger_free(txt_logger);
+	txt_logger = NULL;
+
+	purple_log_logger_remove(old_logger);
+	purple_log_logger_free(old_logger);
+	old_logger = NULL;
 }
 
 /****************************************************************************
@@ -756,7 +767,7 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 					if (!fwrite(image_data, image_byte_count, 1, image_file))
 					{
 						purple_debug_error("log", "Error writing %s: %s\n",
-						                   path, strerror(errno));
+						                   path, g_strerror(errno));
 						fclose(image_file);
 
 						/* Attempt to not leave half-written files around. */
@@ -771,7 +782,7 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 				else
 				{
 					purple_debug_error("log", "Unable to create file %s: %s\n",
-					                   path, strerror(errno));
+					                   path, g_strerror(errno));
 				}
 			}
 
@@ -876,9 +887,8 @@ GList *purple_log_common_lister(PurpleLogType type, const char *name, PurpleAcco
 			struct tm tm;
 #if defined (HAVE_TM_GMTOFF) && defined (HAVE_STRUCT_TM_TM_ZONE)
 			long tz_off;
-			const char *rest;
+			const char *rest, *end;
 			time_t stamp = purple_str_to_time(purple_unescape_filename(filename), FALSE, &tm, &tz_off, &rest);
-			char *end;
 
 			/* As zero is a valid offset, PURPLE_NO_TZ_OFF means no offset was
 			 * provided. See util.h. Yes, it's kinda ugly. */
@@ -1056,7 +1066,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 				set->normalized_name = g_strdup(purple_normalize(account, name));
 
 				/* Chat for .chat or .system at the end of the name to determine the type. */
-				if (len > 7) {
+				if (len >= 7) {
 					gchar *tmp = &name[len - 7];
 					if (!strcmp(tmp, ".system")) {
 						set->type = PURPLE_LOG_SYSTEM;
@@ -1072,7 +1082,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 				}
 
 				/* Determine if this (account, name) combination exists as a buddy. */
-				if (account != NULL)
+				if (account != NULL && name != NULL && *name != '\0')
 					set->buddy = (purple_find_buddy(account, name) != NULL);
 				else
 					set->buddy = FALSE;
@@ -1108,7 +1118,7 @@ gboolean purple_log_common_deleter(PurpleLog *log)
 		return TRUE;
 	else if (ret == -1)
 	{
-		purple_debug_error("log", "Failed to delete: %s - %s\n", data->path, strerror(errno));
+		purple_debug_error("log", "Failed to delete: %s - %s\n", data->path, g_strerror(errno));
 	}
 	else
 	{
@@ -1143,7 +1153,7 @@ gboolean purple_log_common_is_deletable(PurpleLog *log)
 		g_free(dirname);
 		return TRUE;
 	}
-	purple_debug_info("log", "access(%s) failed: %s\n", dirname, strerror(errno));
+	purple_debug_info("log", "access(%s) failed: %s\n", dirname, g_strerror(errno));
 	g_free(dirname);
 #else
 	/* Unless and until someone writes equivalent win32 code,
@@ -1638,7 +1648,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 			if (!(index = g_fopen(pathstr, "rb")))
 			{
 				purple_debug_error("log", "Failed to open index file \"%s\" for reading: %s\n",
-				                 pathstr, strerror(errno));
+				                 pathstr, g_strerror(errno));
 
 				/* Fall through so that we'll parse the log file. */
 			}
@@ -1667,6 +1677,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 					}
 				}
 				fclose(index);
+				purple_stringref_unref(pathref);
 
 				return list;
 			}
@@ -1675,7 +1686,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 
 	if (!(file = g_fopen(purple_stringref_value(pathref), "rb"))) {
 		purple_debug_error("log", "Failed to open log file \"%s\" for reading: %s\n",
-		                   purple_stringref_value(pathref), strerror(errno));
+		                   purple_stringref_value(pathref), g_strerror(errno));
 		purple_stringref_unref(pathref);
 		g_free(pathstr);
 		return NULL;
@@ -1684,7 +1695,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	index_tmp = g_strdup_printf("%s.XXXXXX", pathstr);
 	if ((index_fd = g_mkstemp(index_tmp)) == -1) {
 		purple_debug_error("log", "Failed to open index temp file: %s\n",
-		                 strerror(errno));
+		                 g_strerror(errno));
 		g_free(pathstr);
 		g_free(index_tmp);
 		index = NULL;
@@ -1692,7 +1703,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 		if ((index = fdopen(index_fd, "wb")) == NULL)
 		{
 			purple_debug_error("log", "Failed to fdopen() index temp file: %s\n",
-			                 strerror(errno));
+			                 g_strerror(errno));
 			close(index_fd);
 			if (index_tmp != NULL)
 			{
@@ -1758,6 +1769,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 			lastoff = offset;
 
 			g_snprintf(convostart, length, "%s", temp);
+			memset(&tm, 0, sizeof(tm));
 			sscanf(convostart, "%*s %s %d %d:%d:%d %d",
 			       month, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &tm.tm_year);
 			/* Ugly hack, in case current locale is not English */
@@ -1828,13 +1840,13 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 		if (g_rename(index_tmp, pathstr))
 		{
 			purple_debug_warning("log", "Failed to rename index temp file \"%s\" to \"%s\": %s\n",
-			                   index_tmp, pathstr, strerror(errno));
+			                   index_tmp, pathstr, g_strerror(errno));
 			g_unlink(index_tmp);
-			g_free(index_tmp);
 		}
 		else
 			purple_debug_info("log", "Built index: %s\n", pathstr);
 
+		g_free(index_tmp);
 		g_free(pathstr);
 	}
 	return list;
@@ -1860,11 +1872,15 @@ static int old_logger_total_size(PurpleLogType type, const char *name, PurpleAcc
 
 static char * old_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 {
+	size_t result;
 	struct old_logger_data *data = log->logger_data;
-	FILE *file = g_fopen(purple_stringref_value(data->pathref), "rb");
+	const char *path = purple_stringref_value(data->pathref);
+	FILE *file = g_fopen(path, "rb");
 	char *read = g_malloc(data->length + 1);
 	fseek(file, data->offset, SEEK_SET);
-	fread(read, data->length, 1, file);
+	result = fread(read, data->length, 1, file);
+	if (result != 1)
+		purple_debug_error("log", "Unable to read from log file: %s\n", path);
 	fclose(file);
 	read[data->length] = '\0';
 	*flags = 0;

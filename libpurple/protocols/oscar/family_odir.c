@@ -41,11 +41,11 @@
 int aim_odir_email(OscarData *od, const char *region, const char *email)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 
-	if (!od || !(conn = flap_connection_findbygroup(od, 0x000f)) || !region || !email)
+	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_ODIR)) || !region || !email)
 		return -EINVAL;
 
 	/* Create a TLV chain, write it to the outgoing frame, then free the chain */
@@ -53,14 +53,15 @@ int aim_odir_email(OscarData *od, const char *region, const char *email)
 	aim_tlvlist_add_16(&tlvlist, 0x000a, 0x0001); /* Type of search */
 	aim_tlvlist_add_str(&tlvlist, 0x0005, email);
 
-	frame = flap_frame_new(od, 0x02, 10+aim_tlvlist_size(tlvlist));
-	snacid = aim_cachesnac(od, 0x000f, 0x0002, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x000f, 0x0002, 0x0000, snacid);
+	byte_stream_new(&bs, aim_tlvlist_size(tlvlist));
 
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_ODIR, 0x0002, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_ODIR, 0x0002, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -89,11 +90,11 @@ int aim_odir_email(OscarData *od, const char *region, const char *email)
 int aim_odir_name(OscarData *od, const char *region, const char *first, const char *middle, const char *last, const char *maiden, const char *nick, const char *city, const char *state, const char *country, const char *zip, const char *address)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 
-	if (!od || !(conn = flap_connection_findbygroup(od, 0x000f)) || !region)
+	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_ODIR)) || !region)
 		return -EINVAL;
 
 	/* Create a TLV chain, write it to the outgoing frame, then free the chain */
@@ -120,14 +121,15 @@ int aim_odir_name(OscarData *od, const char *region, const char *first, const ch
 	if (address)
 		aim_tlvlist_add_str(&tlvlist, 0x0021, address);
 
-	frame = flap_frame_new(od, 0x02, 10+aim_tlvlist_size(tlvlist));
-	snacid = aim_cachesnac(od, 0x000f, 0x0002, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x000f, 0x0002, 0x0000, snacid);
+	byte_stream_new(&bs, aim_tlvlist_size(tlvlist));
 
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_ODIR, 0x0002, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_ODIR, 0x0002, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -143,11 +145,11 @@ int aim_odir_name(OscarData *od, const char *region, const char *first, const ch
 int aim_odir_interest(OscarData *od, const char *region, const char *interest)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	GSList *tlvlist = NULL;
 
-	if (!od || !(conn = flap_connection_findbygroup(od, 0x000f)) || !region)
+	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_ODIR)) || !region)
 		return -EINVAL;
 
 	/* Create a TLV chain, write it to the outgoing frame, then free the chain */
@@ -156,14 +158,15 @@ int aim_odir_interest(OscarData *od, const char *region, const char *interest)
 	if (interest)
 		aim_tlvlist_add_str(&tlvlist, 0x0001, interest);
 
-	frame = flap_frame_new(od, 0x02, 10+aim_tlvlist_size(tlvlist));
-	snacid = aim_cachesnac(od, 0x000f, 0x0002, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x000f, 0x0002, 0x0000, snacid);
+	byte_stream_new(&bs, aim_tlvlist_size(tlvlist));
 
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_ODIR, 0x0002, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_ODIR, 0x0002, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -249,7 +252,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 odir_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x000f;
+	mod->family = SNAC_FAMILY_ODIR;
 	mod->version = 0x0001;
 	mod->toolid = 0x0010;
 	mod->toolversion = 0x0629;

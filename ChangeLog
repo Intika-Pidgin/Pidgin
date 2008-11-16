@@ -1,14 +1,387 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-version 2.2.3:
-	http://developer.pidgin.im/query?status=closed&milestone=2.2.3
-		NOTE: Some bugs marked fixed in 2.2.1 may not have been fixed
-		      until this release (2.2.3).
+version 2.5.3 (??/??/????):
+	libpurple:
+	* Fix an error with MSN offline messages by shipping the *new*
+	  "Microsoft Secure Server Authority" and the
+	  "Microsoft Internet Authority" certificates.  People that use
+	  --with-system-ssl-certs and GnuTLS need to include these in the
+	  system certs directory.
+	* Corrected maximum message lengths for Yahoo!
+
+	Pidgin:
+	* On GTK+ 2.14 and higher, we're using the gtk-tooltip-delay setting
+	  instead of our own (hidden) tooltip_delay pref.  If you had
+	  previously changed that pref, add a line like this to
+	  ~/.purple/gtkrc-2.0 (where 500 is the timeout (in ms) you want):
+	      gtk-tooltip-timeout = 500
+	  To completely disable tooltips (e.g. if you had an old tooltip_delay
+	  of zero), add this to ~/.purple/gtkrc-2.0:
+	      gtk-enable-tooltips = 0
+
+	Finch:
+	* Allow binding meta+arrow keys for actions.
+
+
+version 2.5.2 (10/19/2008):
+	libpurple:
+	* Fixed a crash on removing a custom buddy icon on a buddy.
+	* Fixed a crash caused by certain self-signed SSL certificates.
+	* Enable a number of strong ciphers which were previously disabled
+	  when using NSS.  (Thanks to Marcus Trautwig.)
+
+	Pidgin:
+	* The status selector now saves your message when changing status.
+	* Fix a case where a conversation window could close unexpectedly.
+	* A mute sounds option has been added to the preferences window to
+	  help with discoverability.  CTRL+S is no longer bound to mute.
+	* Added ability to change the color of visited links (using the theme
+	  control plugin, or setting the color in ~/.gtkrc-2.0)
+	* Fix a crash occuring when a custom smiley is deleted and re-added and
+	  used in an open conversation after being re-added.
+
+	Finch:
+	* A new 'Nested Grouping' option in the 'Grouping' plugin. Group
+	  hierarchies are defined by the '/' character in the group names.
+	* A bug was fixed where some key-bindings wouldn't work with some TERMs
+	  (e.g. xterm-color, screen-linux etc.)
+
+	MSN:
+	* Operations (such as moving to a new group) on contacts that were added
+	  in the same session should now complete correctly, and not cause
+	  synchronization errors at next login.
+	* Minor fixes to login process during a server transfer.
+	* Restored the "Has You" feature to the MSN protocol tooltips.
+	* ADL 205/214/etc errors should no longer prevent login.
+
+	XMPP:
+	* Sending and receiving custom smileys using the specification in
+	  XEP-0231 (bits of binary) and XHTML-IM
+
+	Yahoo:
+	* Only send a Ping once every hour.  This prevents the account from
+	  being disconnected from the server periodically.
+
+version 2.5.1 (08/30/2008):
+	libpurple:
+	* In the Join/Part plugin, add the ability to apply the rules to
+	  buddies.  By default, joins and parts for buddies are still shown.
+	* Support SOCKS proxies specified in GNOME or Windows proxy settings.
+	* Fix some possible crashes in MSNP15.
+	* Enable a default SSL trust relationship for MSN servers.
+	* Avoid disconnecting from XMPP servers on parse errors that are
+	  non-fatal.
+	* Include some perl files that were mistakenly omitted in 2.5.0.
+
+	Pidgin:
+	* Prevent use of custom smilies without "shortcuts."
+	* Fix a crash that could appear with AIM buddy tooltips.
+
+	Artwork:
+	* General refresh of many icons in the interface.
+	* Many cleanups to artwork source are now included in the distribution.
+	* A new "throbber" animation has been added to indicate when accounts
+	  are connecting.
+
+version 2.5.0 (08/18/2008):
+	libpurple:
+	* Ability to create custom smileys (currently only the MSN protocol
+	  utilizes the feature). (Thanks to Mauro Sérgio Ferreira Brasil,
+	  Marcus Lundblad, Jorge Villaseñor and other contributors)
+	* Add a configure option, --with-system-ssl-certs to allow packagers
+	  to specify a system-wide SSL CA certificates directory.  When set,
+	  we don't install our SSL CA certs, so it's important that the
+	  libpurple package depend on the CA certificates.
+	* Add SSL Certificates support to the NSS SSL plugin. (Thanks to Lou
+	  Cipher)
+
+	XMPP:
+	* Fix a bug that caused the UI to not refresh and caused the client
+	  to use 99% CPU when an XMPP account lost its connection to the
+	  server.
+	* Possibly fix a bug where some clients could get into a state
+	  where they moved a buddy back and forth between two groups in
+	  an endless loop.
+
+	IRC:
+	* /ctcp command (Vladislav Guberinić)
+	* Allow for auto-detection of incoming UTF-8 formatted text on
+	  accounts which are configured to use some other encoding.
+
+	MSN:
+	* Update MSN support to protocol 15 (Elliott Sales de Andrade, Jorge
+	  Villaseñor, Mike Ruprecht, Carlos Silva, Ma Yuan, Daniel Ljungborg
+	  and others)
+	* Personal messages are now supported. They are treated as status
+	  messages.
+	* Offline IM is now supported.
+	* Aliasing is now supported server-side.
+	* Buddies are now emblemed. Bots and web clients should now be
+	  distinguished.
+	* Update smiley set for non-faces.
+	* Failing to update a buddy icon when the buddy has gone offline no
+	  longer crashes.
+	* Custom smileys received in a chat no longer go to a new window.
+	* Processing is no longer completely frozen after the servers block a
+	  message because it contains (what they consider) inappropriate text.
+
+	Pidgin:
+	* Custom buddy icons can now be added to and removed from buddy list
+	  entries via the buddy list entry right-click menu.
+	* Resize large incoming custom smileys to a maximum of 96px on either
+	  side.
+	* Offer to add new buddies into the same contact as existing buddies
+	  in the same group if the alias given is the same.
+	* Minor smiley style update.
+
+	General:
+	* Group and Chat buddy list entries can now be given custom buddy
+	  icons.
+
+	Finch:
+	* Added "Invite..." menu to chats.
+	* Added "View All Logs" menu in the buddylist to display a list of all IM
+	  logs.
+	* Added '/msgcolor' command to change colors of different classes of
+	  messages in a conversation. See '/help msgcolor' for details.
+	* Added tab-completion for commands in conversation windows.
+
+version 2.4.3 (07/01/2008):
+	libpurple:
+	* Yahoo! Japan now uses UTF-8, matching the behavior of official clients
+	  and restoring compatibility with the web messenger (Yusuke Odate)
+	* Setting your buddy icon once again works for Yahoo! accounts.
+	* Fixes in the Yahoo! protocol to prevent a double free, crashes on
+	  aliases, and alias functionality
+	* Fix crashes in the bonjour protocol
+	* Always use UTF-8 for Yahoo! (#5973)
+	* Fix a crash when the given jabber id is invalid.
+	* Make the IRC "unknown message" debugging messages UTF-8 safe.
+	* Fix connecting to ICQ
+	* Fix a memleak when handling jabber xforms.
+
+	Pidgin:
+	* Include the send button plugin in the win32 build
+	* Various memory leak fixes
+
+version 2.4.2 (05/17/2008):
+	http://developer.pidgin.im/query?status=closed&milestone=2.4.2
+	libpurple:
+	* In MySpaceIM, messages from spambots are discarded (Justin Williams)
+	* Strip mIRC formatting codes from quit and part messages.
+	* IRC now displays ban lists in-channel for joined channels.
+	* Fixed a bug where the list of loaded plugins would get removed when
+	  switching between different operating systems.
+	* Fix reception of IRC PART without a part message on Undernet
+	  (fixes a problem with litter in the channel user list).
+	* IRC no longer crashes on /list on servers which erroneously omit
+	  RPL_LISTSTART.
+	* Update the NetworkManager support to use D-Bus directly, instead of
+	  libnm-glib.  Hopefully it's stable now.  It will now compile by
+	  default if you have D-Bus support and NetworkManager.h. (Elliott
+	  Sales de Andrade)
+	* MSN buddy list synchronization is now more forgiving, only asking
+	  about buddies who have disappeared completely from the server list
+	  and not those that have simply moved groups.
+	* IRC will now try to append 1-9 to your nick if it is in use, instead
+	  of substituting the last character with 1-9 where possible.
+	* Bonjour buddies will be saved persistently if they're moved out of
+	  the "Bonjour" group. (Eion Robb)
+
+	Pidgin:
+	* The typing notification in the conversation history can be disabled or
+	  customized (font, color etc.) in .gtkrc-2.0.
+	* Added a plugin (not installed by default) which adds a Send button
+	  back to the conversation window. People without physical keyboards
+	  have a hard time with the lack of the button.
+	* Clicking on the buddyicon in the conversation window toggles the
+	  size of the icon between small and large.
+	* The settings of a chat (e.g. Handle in an XMPP chat, or Exchange in
+	  an AIM chat) can be edited from its context menu in the buddy list.
+	* Add a "Present conversation window" preference to the Message
+	  Notification plugin; the "Raise conversation window" option does not
+	  unminimize windows or draw attention to them when they are on other
+	  workspaces--the "Present" option should.
+	* Add a preference to set Escape as the keyboard shortcut for closing
+	  the conversation window.
+	* Add an option in the context menu to disable smileys in the selected
+	  text in the conversation history/log viewer. This should help people
+	  who regularly paste code in conversations.
+	* Add a preference to choose the minimum size of the text input area in
+	  lines.
+	* Moved the "Local alias" field in the Modify Account dialog to be below
+	  the "User Options" heading on the "Basic" tab.
+	* Number of room occupants is now shown in chat tooltips where possible
+
+	General:
+	* The configure script now dies on more absent dependencies.  The
+	  --disable-xxx arguments to configure can be used to bypass unneeded
+	  dependencies.  This will also cause the configure script to die if an
+	  --enable-xxx option is used and the dependencies it requires are
+	  missing.
+	* The Evolution integration plugin must now be explicitly enabled.  Use
+	  the --enable-gevolution argument to configure to enable it.
+	* The Contact Availability Prediction plugin must now be explicitly
+	  enabled.  Use the --enable-cap argument to configure to enable it.
+
+	Finch:
+	* New default binding ctrl+x to open context menus.
+	* Menu triggers and other bindings will no longer conflict.
+	* Middle click pastes the internal clipboard (when mouse support is
+	  enabled).
+
+version 2.4.1 (03/31/2008):
+	http://developer.pidgin.im/query?status=closed&milestone=2.4.1
+
+	libpurple:
+	* Treat AIM Unicode messages as UTF-16 rather than UCS-2; this
+	  should have no functional effect, other than continued support
+	  on systems which have dropped UCS-2 conversions.
+	* Add support for setting buddy icons on Gadu-Gadu (Tomasz Salacinski)
+	* Fix a crash when clearing the buddy icon for an account on XMPP
+	* Fix a crash during login for some ICQ accounts
+	* Prefer more available resources on XMPP when priorities are equal
+	* Fix incorrectly marking some Yahoo! contacts as blocked
+	* Improved handling of UTF-8 group names on ICQ (beret)
+	* Fix a crash when starting if you have a Zephyr account
+	* Increase XMPP ping timeout to 120 seconds, to prevent poor network
+	  connections from timing out unnecessarily.
+	* Don't crash on XMPP forms with empty default values.
+	* Fix issues with CHAP authentication for SOCKS5 proxies.
+
+	Pidgin:
+	* Remove a workaround for older versions gstreamer that was causing
+	  crashes on some non-Linux systems such as HPUX
+	* Fix some cases of the conversation input entry area being 1 pixel high
+	* Fix for displaying channel & buddy names in conversation window when
+	  they have '&' in them
+	* Some memory leak fixes, especially in the Text Replacement plugin
+	* Rectangular but non-square buddy icons have rounded corners in the buddy
+	  list
+
+	Finch:
+	* Fix compiling with Glib older than 2.6
+	* Ensure existing conversations selected from the 'Send IM' dialog are
+	  given focus
+	* Move the tooltip on the left of the buddylist if there's not enough room
+	  on the right to show it.
+
+version 2.4.0 (02/29/2008):
+	http://developer.pidgin.im/query?status=closed&milestone=2.4.0
+
+	libpurple:
+	* Added support for offline messages for AIM accounts (thanks to
+	  Matthew Goldstein)
+	* Fixed various problems with loss of status messages when going
+	  or returning from idle on MySpaceIM.
+	* Eliminated unmaintained Howl backend implementation for the
+	  Bonjour protocol.  Avahi (or Apple's Bonjour runtime on win32) is
+	  now required to use Bonjour.
+	* Partial support for viewing ICQ status notes (Collin from
+	  ComBOTS GmbH).
+	* Support for /notice on IRC.
+	* Support for Yahoo! Messenger 7.0+ file transfer method (Thanumalayan S.)
+	* Support for retrieving full names and addresses from the address book
+	  on Yahoo! Japan (Yusuke Odate)
+	* The AIM/ICQ server-side preference for "allow others to see me
+	  as idle" is no longer unconditionally set to "yes" even when
+	  your libpurple preference is "no."
+	* Fix SSL certificate checks for renewed certificates
+	* Fix the ability to set vCard buddy icons on Google Talk/XMPP
+	* D-Bus fixes on 64bit
+	* Fixed retrieval of buddy icons and setting of server-side aliases on
+	  Yahoo! and Yahoo! Japan when using an HTTP proxy server (Gideon N.
+	  Guillen)
+	* Fixed an MSN bug that would leave you appearing offline when transferred
+	  to different server
+
+	Pidgin:
+	* Added the ability to theme conversation name colors (red and blue)
+	  through your GTK+ theme, and exposed those theme settings to the
+	  Pidgin GTK+ Theme Control plugin (Dustin Howett)
+	* Fixed having multiple alias edit areas in the infopane (Elliott Sales
+	  de Andrade)
+	* Save the conversation "Enable Logging" option per-contact (Moos
+	  Heintzen)
+	* Typing notifications are now shown in the conversation area
+
+	Finch:
+	* Color is used in the buddylist to indicate status, and the conversation
+	  window to indicate various message attributes. Look at the sample gntrc
+	  file in the man page for details.
+	* The default keybinding for dump-screen is now M-D and uses a file
+	  request dialog. M-d will properly delete-forward-word, and M-f has been
+	  fixed to imitate readline's behavior.
+	* New bindings alt+tab and alt+shift+tab to help navigating between the
+	  higlighted windows (details on the man page).
+	* Recently signed on (or off) buddies blink in the buddy list.
+	* New action 'Room List' in the action list can be used to get the list of
+	  available chat rooms for an online account.
+	* The 'Grouping' plugin can be used for alternate grouping in the
+	  buddylist. The current options are 'Group Online/Offline' and 'No
+	  Group'.
+	* Added a log viewer
+	* Added the ability to block/unblock buddies - see the buddy context menu
+	  and the menu for the buddy list.
+	* Fixed a bug preventing finch working on x86_64
+
+version 2.3.1 (12/7/2007):
+	http://developer.pidgin.im/query?status=closed&milestone=2.3.1
+		NOTE: Due to the way this release was made, it is possible that
+		      bugs marked as fixed in 2.3.1 will not be fixed until the
+		      next release.
+
+	* Fixed a number of MSN bugs introduced in 2.3.0, resolving problems
+	  connecting to MSN and random local display name changes
+	* Going idle on MySpaceIM will no longer clear your status and message.
+	* Idle MySpaceIM buddies should now appear online at login.
+	* Fixed crashes in XMPP when discovering a client's capabilities
+	* Don't set the current tune title if it's NULL (XMPP/Google Talk)
+	* Don't allow buddies to be manually added to Bonjour
+	* Don't advertise IPv6 on Bonjour because we don't support it
+	* Compile fixes for FreeBSD and Solaris
+	* Update QQ client version so some accounts can connect again
+	* Do not allow ISON requests to stack in IRC, preventing flooding IRC
+	  servers when temporary network outages are restored
+	* Plug several leaks in the perl plugin loader
+	* Prevent autoaccept plugin overwriting existing files
+
+version 2.3.0 (11/24/2007):
+	http://developer.pidgin.im/query?status=closed&milestone=2.3.0
+		NOTE: Some bugs marked fixed in 2.2.1, 2.2.2 or 2.2.3 may not
+		      have been fixed until this release (2.3.0).
 
 	libpurple:
 	* Real usernames are now shown in the system log.
+	* We now honor a PURPLE_DISABLE_DEPRECATED define to allow plugins to
+	  catch deprecated functions earlier rather than later.
+	* Thanks to a patch from Intel, the Bonjour prpl now supports file
+	  transfers using XEP-0096 and XEP-0065.  This should enable file
+	  transfers between libpurple clients and Gajim clients, but will not
+	  work with iChat or Adium as they use a different file transfer
+	  implementation.
+	* XMPP password changes that return errors no longer cause the saved
+	  password to be changed.
+	* XMPP file transfer support has been enhanced to support sending
+	  files through a proxy when the server supports discovering a
+	  a bytestream proxy.  This should make file transfers much more
+	  reliable.  The next release will add support for manually specifying
+	  a proxy when the server doesn't advertise one.
 
 	Pidgin:
+	* If a plugin says it can't be unloaded, we now display an error and
+	  remove the plugin from the list of saved plugins so it won't load
+	  at the next startup.  Previously, we were ignoring this case, which
+	  could lead to crashes.
+	* Mark dialog windows as transient for appropriate parent windows to
+	  help window managers do the right thing  (Gabriel Schulhof)
+	* Connection errors are now reported in mini-dialogs inside the buddy
+	  list, rather than as buttons in the buddy list and with dialog
+	  boxes.  If several accounts are disabled when you sign on elsewhere,
+	  you can now re-enable them all with a single click.
+	* Added tooltips to the Room List window to show full topics
+	* Added buttons in preferences to access GNOME network and browser
+	  preferences configuration dialogs when running under GNOME
 	* If you alias a buddy to an alias that is already present within
 	  a particular group, we now offer to merge the buddies into the
 	  same contact.
@@ -32,6 +405,19 @@ version 2.2.3:
 	* ICQ Birthday notifications are shown as buddy list emblems.
 	* Plugin actions are now available from the docklet context menu
 	  in addition to the Tool menu of the buddy list.
+	* The manual page has been heavily rewritten to bring it in line
+	  with current functionality.
+
+	Finch:
+	* If a plugin says it can't be unloaded, we now display an error and
+	  remove the plugin from the list of saved plugins so it won't load
+	  at the next startup.  Previously, we were ignoring this case, which
+	  could lead to crashes.
+	* It's possible to bind key-strokes to specific menuitems in the windows.
+	  Read the 'Menus' section in the man-page for details.
+	* 'transpose-chars' operation for the entry boxes. The default key-binding
+	  is ctrl+t.
+	* 'yank' operation for the entry boxes. The default binding is ctrl+y.
 
 version 2.2.2 (10/23/2007):
 	http://developer.pidgin.im/query?status=closed&milestone=2.2.2

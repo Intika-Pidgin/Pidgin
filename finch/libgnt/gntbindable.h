@@ -149,6 +149,16 @@ void gnt_bindable_register_binding(GntBindableClass *klass, const char *name, co
 gboolean gnt_bindable_perform_action_key(GntBindable *bindable, const char *keys);
 
 /**
+ * Discover if a key is bound.
+ *
+ * @param bindable  The bindable object.
+ * @param keys      The key to check for.
+ *
+ * @return  @c TRUE if the the key has an action associated with it.
+ */
+gboolean gnt_bindable_check_key(GntBindable *bindable, const char *keys);
+
+/**
  * Perform an action on a bindable object.
  *
  * @param bindable  The bindable object.
@@ -160,8 +170,8 @@ gboolean gnt_bindable_perform_action_named(GntBindable *bindable, const char *na
 
 /**
  * Returns a GntTree populated with "key" -> "binding" for the widget.
- * 
- * @param widget  The object to list the bindings for.
+ *
+ * @param bind  The object to list the bindings for.
  *
  * @return   The GntTree.
  */
@@ -170,9 +180,9 @@ GntBindable * gnt_bindable_bindings_view(GntBindable *bind);
 /**
  * Builds a window that list the key bindings for a GntBindable object.
  * From this window a user can select a listing to rebind a new key for the given action.
- * 
+ *
  * @param bindable   The object to list the bindings for.
- *	
+ *
  * @return  @c TRUE
  */
 

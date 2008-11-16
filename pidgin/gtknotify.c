@@ -50,8 +50,8 @@ typedef struct
 	PurpleAccount *account;
 	char *url;
 	GtkWidget *label;
-	GtkTreeIter iter;
 	int count;
+	gboolean purple_has_handle;
 } PidginNotifyMailData;
 
 typedef struct
@@ -100,6 +100,8 @@ static void *pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean d
 									const char **froms, const char **tos,
 									const char **urls);
 
+static void pidgin_close_notify(PurpleNotifyType type, void *ui_handle);
+
 static void
 message_response_cb(GtkDialog *dialog, gint id, GtkWidget *widget)
 {
@@ -125,7 +127,10 @@ email_response_cb(GtkDialog *dlg, gint id, PidginMailDialog *dialog)
 			purple_notify_uri(NULL, data->url);
 
 			gtk_tree_store_remove(dialog->treemodel, &iter);
-			purple_notify_close(PURPLE_NOTIFY_EMAILS, data);
+			if (data->purple_has_handle)
+				purple_notify_close(PURPLE_NOTIFY_EMAILS, data);
+			else
+				pidgin_close_notify(PURPLE_NOTIFY_EMAILS, data);
 
 			if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(mail_dialog->treemodel), &iter))
 				return;
@@ -144,7 +149,10 @@ email_response_cb(GtkDialog *dlg, gint id, PidginMailDialog *dialog)
 				purple_notify_uri(NULL, data->url);
 
 			gtk_tree_store_remove(dialog->treemodel, &iter);
-			purple_notify_close(PURPLE_NOTIFY_EMAILS, data);
+			if (data->purple_has_handle)
+				purple_notify_close(PURPLE_NOTIFY_EMAILS, data);
+			else
+				pidgin_close_notify(PURPLE_NOTIFY_EMAILS, data);
 		}
 	}
 	gtk_widget_destroy(dialog->dialog);
@@ -166,16 +174,18 @@ reset_mail_dialog(GtkDialog *dialog)
 	mail_dialog = NULL;
 }
 
-static void
+static gboolean
 formatted_close_cb(GtkWidget *win, GdkEvent *event, void *user_data)
 {
 	purple_notify_close(PURPLE_NOTIFY_FORMATTED, win);
+	return FALSE;
 }
 
-static void
+static gboolean
 searchresults_close_cb(PidginNotifySearchResultsData *data, GdkEvent *event, gpointer user_data)
 {
 	purple_notify_close(PURPLE_NOTIFY_SEARCHRESULTS, data);
+	return FALSE;
 }
 
 static void
@@ -270,8 +280,9 @@ pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
 	primary_esc = g_markup_escape_text(primary, -1);
 	secondary_esc = (secondary != NULL) ? g_markup_escape_text(secondary, -1) : NULL;
 	g_snprintf(label_text, sizeof(label_text),
-			   "<span weight=\"bold\" size=\"larger\">%s</span>\n\n%s",
-			   primary_esc, (secondary ? secondary_esc : ""));
+			   "<span weight=\"bold\" size=\"larger\">%s</span>%s%s",
+			   primary_esc, (secondary ? "\n\n" : ""),
+			   (secondary ? secondary_esc : ""));
 	g_free(primary_esc);
 	g_free(secondary_esc);
 
@@ -282,6 +293,8 @@ pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
 	gtk_label_set_selectable(GTK_LABEL(label), TRUE);
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
+	pidgin_auto_parent_window(dialog);
 
 	gtk_widget_show_all(dialog);
 
@@ -327,7 +340,7 @@ mail_window_focus_cb(GtkWidget *widget, GdkEventFocus *focus, gpointer null)
 }
 
 static GtkWidget *
-pidgin_get_mail_dialog()
+pidgin_get_mail_dialog(void)
 {
 	if (mail_dialog == NULL) {
 		GtkWidget *dialog = NULL;
@@ -350,6 +363,10 @@ pidgin_get_mail_dialog()
 
 		button = gtk_dialog_add_button(GTK_DIALOG(dialog),
 						 PIDGIN_STOCK_OPEN_MAIL, GTK_RESPONSE_YES);
+
+		/* make "Open All Messages" the default response */
+		gtk_dialog_set_default_response(GTK_DIALOG(dialog),
+						GTK_RESPONSE_ACCEPT);
 
 		/* Setup the dialog */
 		gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BOX_SPACE);
@@ -374,6 +391,7 @@ pidgin_get_mail_dialog()
 		mail_dialog->treemodel = gtk_tree_store_new(COLUMNS_PIDGIN_MAIL,
 						GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_POINTER);
 		mail_dialog->treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(mail_dialog->treemodel));
+		g_object_unref(G_OBJECT(mail_dialog->treemodel));
 		gtk_tree_view_set_search_column(GTK_TREE_VIEW(mail_dialog->treeview), PIDGIN_MAIL_TEXT);
 		gtk_tree_view_set_search_equal_func(GTK_TREE_VIEW(mail_dialog->treeview),
 			             pidgin_tree_view_search_equal_func, NULL, NULL);
@@ -413,7 +431,7 @@ pidgin_get_mail_dialog()
  * count > 0 mean non-detailed.
  */
 static void *
-pidgin_notify_add_mail(GtkTreeStore *treemodel, PurpleAccount *account, char *notification, const char *url, int count, gboolean clear)
+pidgin_notify_add_mail(GtkTreeStore *treemodel, PurpleAccount *account, char *notification, const char *url, int count, gboolean clear, gboolean *new_data)
 {
 	PidginNotifyMailData *data = NULL;
 	GtkTreeIter iter;
@@ -459,6 +477,7 @@ pidgin_notify_add_mail(GtkTreeStore *treemodel, PurpleAccount *account, char *no
 
 	if (new_n) {
 		data = g_new0(PidginNotifyMailData, 1);
+		data->purple_has_handle = TRUE;
 		gtk_tree_store_append(treemodel, &iter, NULL);
 	}
 
@@ -470,13 +489,14 @@ pidgin_notify_add_mail(GtkTreeStore *treemodel, PurpleAccount *account, char *no
 								PIDGIN_MAIL_TEXT, notification,
 								PIDGIN_MAIL_DATA, data,
 								-1);
-	data->iter = iter;              /* XXX: Do we use this for something? */
 	data->account = account;
 	data->count = count;
-	gtk_tree_model_get(GTK_TREE_MODEL(treemodel), &iter,
-						PIDGIN_MAIL_DATA, &data, -1);
+
 	if (icon)
 		g_object_unref(icon);
+
+	if (new_data)
+		*new_data = new_n;
 	return data;
 }
 
@@ -488,7 +508,8 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 	GtkWidget *dialog = NULL;
 	char *notification;
 	PurpleAccount *account;
-	PidginNotifyMailData *data = NULL;
+	PidginNotifyMailData *data = NULL, *data2;
+	gboolean new_data;
 
 	/* Don't bother updating if there aren't new emails and we don't have any displayed currently */
 	if (count == 0 && mail_dialog == NULL)
@@ -534,7 +555,13 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 			g_free(from_text);
 			g_free(subject_text);
 
-			data = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, 0, FALSE);
+			/* If we don't keep track of this, will leak "data" for each of the notifications except the last */
+			data2 = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, 0, FALSE, &new_data);
+			if (new_data) {
+				if (data)
+					data->purple_has_handle = FALSE;
+				data = data2;
+			}
 			g_free(notification);
 
 			if (urls != NULL)
@@ -546,13 +573,18 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 							   "%s has %d new messages.",
 							   (int)count),
 							   *tos, (int)count);
-			data = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count, FALSE);
+			data2 = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count, FALSE, &new_data);
+			if (new_data) {
+				if (data)
+					data->purple_has_handle = FALSE;
+				data = data2;
+			}
 			g_free(notification);
 		} else {
 			GtkTreeIter iter;
 
 			/* Clear out all mails for the account */
-			pidgin_notify_add_mail(mail_dialog->treemodel, account, NULL, NULL, 0, TRUE);
+			pidgin_notify_add_mail(mail_dialog->treemodel, account, NULL, NULL, 0, TRUE, NULL);
 
 			if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(mail_dialog->treemodel), &iter)) {
 				/* There is no API to clear the headline specifically */
@@ -566,8 +598,8 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 	if (!GTK_WIDGET_VISIBLE(dialog)) {
 		GdkPixbuf *pixbuf = gtk_widget_render_icon(dialog, PIDGIN_STOCK_DIALOG_MAIL,
 							   gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL), NULL);
-		char *label_text = g_strdup_printf(ngettext("<b>%d new e-mail.</b>",
-							    "<b>%d new e-mails.</b>",
+		char *label_text = g_strdup_printf(ngettext("<b>%d new email.</b>",
+							    "<b>%d new emails.</b>",
 							    mail_dialog->total_count), mail_dialog->total_count);
 		mail_dialog->in_use = TRUE;     /* So that _set_headline doesn't accidentally
 										   remove the notifications when replacing an
@@ -582,7 +614,7 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 	} else if (!GTK_WIDGET_HAS_FOCUS(dialog))
 		pidgin_set_urgent(GTK_WINDOW(dialog), TRUE);
 
-	return NULL;
+	return data;
 }
 
 static gboolean
@@ -599,7 +631,7 @@ formatted_input_cb(GtkWidget *win, GdkEventKey *event, gpointer data)
 }
 
 static GtkIMHtmlOptions
-notify_imhtml_options()
+notify_imhtml_options(void)
 {
 	GtkIMHtmlOptions options = 0;
 
@@ -671,7 +703,7 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	gtk_widget_grab_focus(button);
 
 	g_signal_connect_swapped(G_OBJECT(button), "clicked",
-							 G_CALLBACK(gtk_widget_destroy), window);
+							 G_CALLBACK(formatted_close_cb), window);
 	g_signal_connect(G_OBJECT(window), "key_press_event",
 					 G_CALLBACK(formatted_input_cb), NULL);
 
@@ -683,6 +715,8 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	g_object_set_data(G_OBJECT(window), "info-widget", imhtml);
 
 	/* Show the window */
+	pidgin_auto_parent_window(window);
+
 	gtk_widget_show(window);
 
 	return window;
@@ -799,6 +833,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 		col_types[i] = G_TYPE_STRING;
 	}
 	model = gtk_list_store_newv(col_num, col_types);
+	g_free(col_types);
 
 	/* Setup the scrolled window containing the treeview */
 	sw = gtk_scrolled_window_new(NULL, NULL);
@@ -811,6 +846,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 
 	/* Setup the treeview */
 	treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
+	g_object_unref(G_OBJECT(model));
 	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(treeview), TRUE);
 	gtk_widget_set_size_request(treeview, 500, 400);
 	gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview)),
@@ -893,6 +929,8 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	pidgin_notify_searchresults_new_rows(gc, results, data);
 
 	/* Show the window */
+	pidgin_auto_parent_window(window);
+
 	gtk_widget_show(window);
 	return data;
 }
@@ -1047,7 +1085,12 @@ pidgin_notify_uri(const char *uri)
 	/* if they are running gnome, use the gnome web browser */
 	if (purple_running_gnome() == TRUE)
 	{
-		command = g_strdup_printf("gnome-open %s", escaped);
+		char *tmp = g_find_program_in_path("xdg-open");
+		if (tmp == NULL)
+			command = g_strdup_printf("gnome-open %s", escaped);
+		else
+			command = g_strdup_printf("xdg-open %s", escaped);
+		g_free(tmp);
 	}
 	else if (purple_running_osx() == TRUE)
 	{
@@ -1062,6 +1105,10 @@ pidgin_notify_uri(const char *uri)
 			command = g_strdup_printf("%s -n %s", web_browser, escaped);
 		else
 			command = g_strdup_printf("%s %s", web_browser, escaped);
+	}
+	else if (!strcmp(web_browser, "xdg-open"))
+	{
+		command = g_strdup_printf("xdg-open %s", escaped);
 	}
 	else if (!strcmp(web_browser, "gnome-open"))
 	{

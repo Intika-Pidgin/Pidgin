@@ -55,63 +55,17 @@
 
 /* #define TRY_WEBMESSENGER_LOGIN 0 */
 
+/* One hour */
+#define PING_TIMEOUT 3600
+
+/* One minute */
+#define KEEPALIVE_TIMEOUT 60
+
 static void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *, PurpleGroup *);
 #ifdef TRY_WEBMESSENGER_LOGIN
 static void yahoo_login_page_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data, const gchar *url_text, size_t len, const gchar *error_message);
 #endif
 static void yahoo_set_status(PurpleAccount *account, PurpleStatus *status);
-
-static void
-yahoo_add_permit(PurpleConnection *gc, const char *who)
-{
-	purple_debug_info("yahoo",
-			"Permitting ID %s local contact rights for account %s\n", who, gc->account);
-	purple_privacy_permit_add(gc->account,who,TRUE);
-}
-
-static void
-yahoo_rem_permit(PurpleConnection *gc, const char *who)
-{
-	purple_debug_info("yahoo",
-			"Denying ID %s local contact rights for account %s\n", who, gc->account);
-	purple_privacy_permit_remove(gc->account,who,TRUE);
-}
-
-gboolean
-yahoo_privacy_check(PurpleConnection *gc, const char *who)
-{
-	/* returns TRUE if allowed through, FALSE otherwise */
-	gboolean permitted;
-
-	permitted = purple_privacy_check(gc->account, who);
-
-	/* print some debug info */
-	if (!permitted) {
-		char *deb = NULL;
-		switch (gc->account->perm_deny)
-		{
-			case PURPLE_PRIVACY_DENY_ALL:
-				deb = "PURPLE_PRIVACY_DENY_ALL";
-			break;
-			case PURPLE_PRIVACY_DENY_USERS:
-				deb = "PURPLE_PRIVACY_DENY_USERS";
-			break;
-			case PURPLE_PRIVACY_ALLOW_BUDDYLIST:
-				deb = "PURPLE_PRIVACY_ALLOW_BUDDYLIST";
-			break;
-		}
-		if(deb)
-			purple_debug_info("yahoo",
-				"%s blocked data received from %s (%s)\n",
-				gc->account->username,who, deb);
-	} else if (gc->account->perm_deny == PURPLE_PRIVACY_ALLOW_USERS) {
-		purple_debug_info("yahoo",
-			"%s allowed data received from %s (PURPLE_PRIVACY_ALLOW_USERS)\n",
-			gc->account->username,who);
-	}
-
-	return permitted;
-}
 
 static void yahoo_update_status(PurpleConnection *gc, const char *name, YahooFriend *f)
 {
@@ -201,10 +155,10 @@ static void yahoo_process_status(PurpleConnection *gc, struct yahoo_packet *pkt)
 	char *message = NULL;
 
 	if (pkt->service == YAHOO_SERVICE_LOGOFF && pkt->status == -1) {
-		gc->wants_to_die = TRUE;
 		if (!purple_account_get_remember_password(account))
 			purple_account_set_password(account, NULL);
-		purple_connection_error(gc, _("You have signed on from another location."));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NAME_IN_USE,
+			_("You have signed on from another location."));
 		return;
 	}
 
@@ -392,9 +346,13 @@ static void yahoo_process_status(PurpleConnection *gc, struct yahoo_packet *pkt)
 		case 97: /* Unicode status message */
 			unicode = !strcmp(pair->value, "1");
 			break;
+		case 244: /* client version number. Yahoo Client Detection */
+			if(f && strtol(pair->value, NULL, 10))
+				f->version_id = strtol(pair->value, NULL, 10);
+			break;
 
 		default:
-			purple_debug(PURPLE_DEBUG_ERROR, "yahoo",
+			purple_debug_warning("yahoo",
 					   "Unknown status key %d\n", pair->key);
 			break;
 		}
@@ -501,7 +459,8 @@ static void yahoo_process_cookie(struct yahoo_data *yd, char *c)
 			g_free(yd->cookie_t);
 		yd->cookie_t = _getcookie(c);
 	} else
-		purple_debug_info("yahoo", "Ignoring unrecognized cookie '%c'\n", c[0]);
+		purple_debug_info("yahoo", "Unrecognized cookie '%c'\n", c[0]);
+	yd->cookies = g_slist_prepend(yd->cookies, g_strdup(c));
 }
 
 static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt)
@@ -509,8 +468,8 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 	GSList *l = pkt->hash;
 
 	PurpleAccount *account = purple_connection_get_account(gc);
+	struct yahoo_data *yd = gc->proto_data;
 	GHashTable *ht;
-	char *grp = NULL;
 	char *norm_bud = NULL;
 	YahooFriend *f = NULL; /* It's your friends. They're going to want you to share your StarBursts. */
 	                       /* But what if you had no friends? */
@@ -533,8 +492,8 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 			 */
 			if (pair->value && !strcmp(pair->value, "320")) {
 				/* No longer in any group; this indicates the start of the ignore list. */
-				g_free(grp);
-				grp = NULL;
+				g_free(yd->current_list15_grp);
+				yd->current_list15_grp = NULL;
 			}
 
 			break;
@@ -543,28 +502,30 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 		case 300: /* This is 318 before a group, 319 before any s/n in a group, and 320 before any ignored s/n. */
 			break;
 		case 65: /* This is the group */
-			g_free(grp);
-			grp = yahoo_string_decode(gc, pair->value, FALSE);
+			g_free(yd->current_list15_grp);
+			yd->current_list15_grp = yahoo_string_decode(gc, pair->value, FALSE);
 			break;
 		case 7: /* buddy's s/n */
 			g_free(norm_bud);
 			norm_bud = g_strdup(purple_normalize(account, pair->value));
 
-			if (grp) {
+			if (yd->current_list15_grp) {
 				/* This buddy is in a group */
 				f = yahoo_friend_find_or_new(gc, norm_bud);
 				if (!(b = purple_find_buddy(account, norm_bud))) {
-					if (!(g = purple_find_group(grp))) {
-						g = purple_group_new(grp);
+					if (!(g = purple_find_group(yd->current_list15_grp))) {
+						g = purple_group_new(yd->current_list15_grp);
 						purple_blist_add_group(g, NULL);
 					}
 					b = purple_buddy_new(account, norm_bud, NULL);
 					purple_blist_add_buddy(b, NULL, g, NULL);
 				}
-				yahoo_do_group_check(account, ht, norm_bud, grp);
+				yahoo_do_group_check(account, ht, norm_bud, yd->current_list15_grp);
 
 			} else {
 				/* This buddy is on the ignore list (and therefore in no group) */
+				purple_debug_info("yahoo", "%s adding %s to the deny list because of the ignore list / no group was found\n",
+								  account->username, norm_bud);
 				purple_privacy_deny_add(account, norm_bud, 1);
 			}
 			break;
@@ -573,6 +534,9 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 				f->protocol = strtol(pair->value, NULL, 10);
 				purple_debug_info("yahoo", "Setting protocol to %d\n", f->protocol);
 			}
+			break;
+		case 59: /* somebody told cookies come here too, but im not sure */
+			yahoo_process_cookie(yd, pair->value);
 			break;
 		case 317: /* Stealth Setting */
 			if (f && (strtol(pair->value, NULL, 10) == 2)) {
@@ -586,7 +550,6 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 
 	g_hash_table_foreach(ht, yahoo_do_group_cleanup, NULL);
 	g_hash_table_destroy(ht);
-	g_free(grp);
 	g_free(norm_bud);
 }
 
@@ -691,7 +654,7 @@ static void yahoo_process_list(PurpleConnection *gc, struct yahoo_packet *pkt)
 		for (bud = buddies; bud && *bud; bud++) {
 			/* The server is already ignoring the user */
 			got_serv_list = TRUE;
-			purple_privacy_deny_add(gc->account, *bud, 1);
+			purple_privacy_deny_add(account, *bud, 1);
 		}
 		g_strfreev(buddies);
 
@@ -700,13 +663,13 @@ static void yahoo_process_list(PurpleConnection *gc, struct yahoo_packet *pkt)
 	}
 
 	if (got_serv_list &&
-		((gc->account->perm_deny != PURPLE_PRIVACY_ALLOW_BUDDYLIST) &&
-		(gc->account->perm_deny != PURPLE_PRIVACY_DENY_ALL) &&
-		(gc->account->perm_deny != PURPLE_PRIVACY_ALLOW_USERS)))
+		((account->perm_deny != PURPLE_PRIVACY_ALLOW_BUDDYLIST) &&
+		(account->perm_deny != PURPLE_PRIVACY_DENY_ALL) &&
+		(account->perm_deny != PURPLE_PRIVACY_ALLOW_USERS)))
 	{
-		gc->account->perm_deny = PURPLE_PRIVACY_DENY_USERS;
+		account->perm_deny = PURPLE_PRIVACY_DENY_USERS;
 		purple_debug_info("yahoo", "%s privacy defaulting to PURPLE_PRIVACY_DENY_USERS.\n",
-		      gc->account->username);
+				account->username);
 	}
 
 	if (yd->tmp_serv_plist) {
@@ -715,7 +678,7 @@ static void yahoo_process_list(PurpleConnection *gc, struct yahoo_packet *pkt)
 			f = yahoo_friend_find(gc, *bud);
 			if (f) {
 				purple_debug_info("yahoo", "%s setting presence for %s to PERM_OFFLINE\n",
-								 gc->account->username, *bud);
+						account->username, *bud);
 				f->presence = YAHOO_PRESENCE_PERM_OFFLINE;
 			}
 		}
@@ -730,12 +693,15 @@ static void yahoo_process_list(PurpleConnection *gc, struct yahoo_packet *pkt)
 
 static void yahoo_process_notify(PurpleConnection *gc, struct yahoo_packet *pkt)
 {
+	PurpleAccount *account;
 	char *msg = NULL;
 	char *from = NULL;
 	char *stat = NULL;
 	char *game = NULL;
 	YahooFriend *f = NULL;
 	GSList *l = pkt->hash;
+
+	account = purple_connection_get_account(gc);
 
 	while (l) {
 		struct yahoo_pair *pair = l->data;
@@ -754,13 +720,14 @@ static void yahoo_process_notify(PurpleConnection *gc, struct yahoo_packet *pkt)
 		return;
 
 	if (!g_ascii_strncasecmp(msg, "TYPING", strlen("TYPING"))
-		&& (yahoo_privacy_check(gc, from)))  {
+		&& (purple_privacy_check(account, from)))
+	{
 		if (*stat == '1')
 			serv_got_typing(gc, from, 0, PURPLE_TYPING);
 		else
 			serv_got_typing_stopped(gc, from);
 	} else if (!g_ascii_strncasecmp(msg, "GAME", strlen("GAME"))) {
-		PurpleBuddy *bud = purple_find_buddy(gc->account, from);
+		PurpleBuddy *bud = purple_find_buddy(account, from);
 
 		if (!bud) {
 			purple_debug(PURPLE_DEBUG_WARNING, "yahoo",
@@ -780,7 +747,7 @@ static void yahoo_process_notify(PurpleConnection *gc, struct yahoo_packet *pkt)
 				yahoo_update_status(gc, from, f);
 		}
 	} else if (!g_ascii_strncasecmp(msg, "WEBCAMINVITE", strlen("WEBCAMINVITE"))) {
-                PurpleConversation *conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, from, gc->account);
+		PurpleConversation *conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, from, account);
 		char *buf = g_strdup_printf(_("%s has sent you a webcam invite, which is not yet supported."), from);
 		purple_conversation_write(conv, NULL, buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NOTIFY, time(NULL));
 		g_free(buf);
@@ -799,12 +766,14 @@ struct _yahoo_im {
 
 static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt)
 {
+	PurpleAccount *account;
 	struct yahoo_data *yd = gc->proto_data;
 	GSList *l = pkt->hash;
 	GSList *list = NULL;
 	struct _yahoo_im *im = NULL;
-
 	const char *imv = NULL;
+
+	account = purple_connection_get_account(gc);
 
 	if (pkt->status <= 1 || pkt->status == 5) {
 		while (l != NULL) {
@@ -814,6 +783,7 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 				list = g_slist_append(list, im);
 				im->from = pair->value;
 				im->time = time(NULL);
+				im->utf8 = TRUE;
 			}
 			if (pair->key == 97)
 				if (im)
@@ -850,20 +820,20 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 		{
 			PurpleWhiteboard *wb;
 
-			if (!yahoo_privacy_check(gc, im->from)) {
+			if (!purple_privacy_check(account, im->from)) {
 				purple_debug_info("yahoo", "Doodle request from %s dropped.\n", im->from);
 				return;
 			}
 
 			/* I'm not sure the following ever happens -DAA */
 
-			wb = purple_whiteboard_get_session(gc->account, im->from);
+			wb = purple_whiteboard_get_session(account, im->from);
 
 			/* If a Doodle session doesn't exist between this user */
 			if(wb == NULL)
 			{
 				doodle_session *ds;
-				wb = purple_whiteboard_create(gc->account, im->from, DOODLE_STATE_REQUESTED);
+				wb = purple_whiteboard_create(account, im->from, DOODLE_STATE_REQUESTED);
 				ds = wb->proto_data;
 				ds->imv_key = g_strdup(imv);
 
@@ -883,7 +853,7 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 			continue;
 		}
 
-		if (!yahoo_privacy_check(gc, im->from)) {
+		if (!purple_privacy_check(account, im->from)) {
 			purple_debug_info("yahoo", "Message from %s dropped.\n", im->from);
 			return;
 		}
@@ -899,25 +869,16 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 		purple_util_chrreplace(m, '\r', '\n');
 
 		if (!strcmp(m, "<ding>")) {
-			PurpleBuddy *buddy;
-			PurpleAccount *account;
 			PurpleConversation *c;
-			char *username, *str;
+			char *username;
 
-			str = NULL;
+			c = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, im->from, account);
+			if (c == NULL)
+				c = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, im->from);
 
-			account = purple_connection_get_account(gc);
-			c = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, im->from);
-
-			if ((buddy = purple_find_buddy(account, im->from)) != NULL)
-				username = g_markup_escape_text(purple_buddy_get_alias(buddy), -1);
-			else
-				username = g_markup_escape_text(im->from, -1);
-
-			serv_got_attention(gc, username, YAHOO_BUZZ);
-
+			username = g_markup_escape_text(im->from, -1);
+			purple_prpl_got_attention(gc, username, YAHOO_BUZZ);
 			g_free(username);
-			g_free(str);
 			g_free(m);
 			g_free(im);
 			continue;
@@ -973,15 +934,19 @@ struct yahoo_add_request {
 };
 
 static void
-yahoo_buddy_add_authorize_cb(gpointer data) {
+yahoo_buddy_add_authorize_cb(gpointer data)
+{
 	struct yahoo_add_request *add_req = data;
-
 	struct yahoo_packet *pkt;
 	struct yahoo_data *yd = add_req->gc->proto_data;
 
 	pkt = yahoo_packet_new(YAHOO_SERVICE_AUTH_REQ_15, YAHOO_STATUS_AVAILABLE, 0);
-	yahoo_packet_hash(pkt, "ssiii", 1, add_req->id, 5, add_req->who, 241, add_req->protocol,
-	                  13, 1, 334, 0);
+	yahoo_packet_hash(pkt, "ssiii",
+					  1, add_req->id,
+					  5, add_req->who,
+					  241, add_req->protocol,
+					  13, 1,
+					  334, 0);
 	yahoo_packet_send_and_free(pkt, yd);
 
 	g_free(add_req->id);
@@ -990,10 +955,11 @@ yahoo_buddy_add_authorize_cb(gpointer data) {
 }
 
 static void
-yahoo_buddy_add_deny_cb(struct yahoo_add_request *add_req, const char *msg) {
+yahoo_buddy_add_deny_cb(struct yahoo_add_request *add_req, const char *msg)
+{
+	struct yahoo_data *yd = add_req->gc->proto_data;
 	struct yahoo_packet *pkt;
 	char *encoded_msg = NULL;
-	struct yahoo_data *yd = add_req->gc->proto_data;
 	PurpleAccount *account = purple_connection_get_account(add_req->gc);
 
 	if (msg && *msg)
@@ -1060,8 +1026,11 @@ static void yahoo_buddy_denied_our_add(PurpleConnection *gc, const char *who, co
 }
 
 static void yahoo_buddy_auth_req_15(PurpleConnection *gc, struct yahoo_packet *pkt) {
+	PurpleAccount *account;
 	GSList *l = pkt->hash;
 	const char *msg = NULL;
+
+	account = purple_connection_get_account(gc);
 
 	/* Buddy authorized/declined our addition */
 	if (pkt->status == 1) {
@@ -1132,7 +1101,8 @@ static void yahoo_buddy_auth_req_15(PurpleConnection *gc, struct yahoo_packet *p
 		if (add_req->id && add_req->who) {
 			char *alias = NULL, *dec_msg = NULL;
 
-			if (!yahoo_privacy_check(gc, add_req->who)) {
+			if (!purple_privacy_check(account, add_req->who))
+			{
 				purple_debug_misc("yahoo", "Auth. request from %s dropped and automatically denied due to privacy settings!\n",
 						  add_req->who);
 				yahoo_buddy_add_deny_cb(add_req, NULL);
@@ -1152,11 +1122,12 @@ static void yahoo_buddy_auth_req_15(PurpleConnection *gc, struct yahoo_packet *p
 			/* DONE! this is almost exactly the same as what MSN does,
 			 * this should probably be moved to the core.
 			 */
-			 purple_account_request_authorization(purple_connection_get_account(gc), add_req->who, add_req->id,
-						    alias, dec_msg, purple_find_buddy(purple_connection_get_account(gc), add_req->who) != NULL,
-						    yahoo_buddy_add_authorize_cb,
-						    yahoo_buddy_add_deny_reason_cb,
-						    add_req);
+			 purple_account_request_authorization(account, add_req->who, add_req->id,
+					alias, dec_msg,
+					purple_find_buddy(account, add_req->who) != NULL,
+					yahoo_buddy_add_authorize_cb,
+					yahoo_buddy_add_deny_reason_cb,
+					add_req);
 			g_free(alias);
 			g_free(dec_msg);
 		} else {
@@ -1171,9 +1142,12 @@ static void yahoo_buddy_auth_req_15(PurpleConnection *gc, struct yahoo_packet *p
 
 /* I don't think this happens anymore in Version 15 */
 static void yahoo_buddy_added_us(PurpleConnection *gc, struct yahoo_packet *pkt) {
+	PurpleAccount *account;
 	struct yahoo_add_request *add_req;
 	char *msg = NULL;
 	GSList *l = pkt->hash;
+
+	account = purple_connection_get_account(gc);
 
 	add_req = g_new0(struct yahoo_add_request, 1);
 	add_req->gc = gc;
@@ -1200,7 +1174,7 @@ static void yahoo_buddy_added_us(PurpleConnection *gc, struct yahoo_packet *pkt)
 	if (add_req->id && add_req->who) {
 		char *dec_msg = NULL;
 
-		if (!yahoo_privacy_check(gc, add_req->who)) {
+		if (!purple_privacy_check(account, add_req->who)) {
 			purple_debug_misc("yahoo", "Auth. request from %s dropped and automatically denied due to privacy settings!\n",
 					  add_req->who);
 			yahoo_buddy_add_deny_cb(add_req, NULL);
@@ -1213,11 +1187,11 @@ static void yahoo_buddy_added_us(PurpleConnection *gc, struct yahoo_packet *pkt)
 		/* DONE! this is almost exactly the same as what MSN does,
 		 * this should probably be moved to the core.
 		 */
-		 purple_account_request_authorization(purple_connection_get_account(gc), add_req->who, add_req->id,
-                                                    NULL, dec_msg, purple_find_buddy(purple_connection_get_account(gc),add_req->who) != NULL,
-						    yahoo_buddy_add_authorize_cb,
-						    yahoo_buddy_add_deny_reason_cb,
-                                                    add_req);
+		 purple_account_request_authorization(account, add_req->who, add_req->id,
+				NULL, dec_msg,
+				purple_find_buddy(account,add_req->who) != NULL,
+						yahoo_buddy_add_authorize_cb,
+						yahoo_buddy_add_deny_reason_cb, add_req);
 		g_free(dec_msg);
 	} else {
 		g_free(add_req->id);
@@ -1504,7 +1478,24 @@ static void yahoo_process_auth_old(PurpleConnection *gc, const char *seed)
 	to_y64(result96, digest, 16);
 
 	pack = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP,	YAHOO_STATUS_AVAILABLE, 0);
-	yahoo_packet_hash(pack, "ssss", 0, name, 6, result6, 96, result96, 1, name);
+
+	if(yd->jp) {
+		yahoo_packet_hash(pack, "sssss",
+						  0, name,
+						  6, result6,
+						  96, result96,
+						  1, name,
+						  135, YAHOOJP_CLIENT_VERSION);
+	} else {
+		yahoo_packet_hash(pack, "ssssss",
+						  0, name,
+						  6, result6,
+						  96, result96,
+						  1, name,
+						  244, YAHOO_CLIENT_VERSION_ID,
+						  135, YAHOO_CLIENT_VERSION);
+	}
+
 	yahoo_packet_send_and_free(pack, yd);
 
 	g_free(hash_string_p);
@@ -1523,11 +1514,11 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	char *enc_pass;
 	struct yahoo_data *yd = gc->proto_data;
 
-	PurpleCipher			*md5_cipher;
+	PurpleCipher		*md5_cipher;
 	PurpleCipherContext	*md5_ctx;
 	guchar				md5_digest[16];
 
-	PurpleCipher			*sha1_cipher;
+	PurpleCipher		*sha1_cipher;
 	PurpleCipherContext	*sha1_ctx1;
 	PurpleCipherContext	*sha1_ctx2;
 
@@ -1539,7 +1530,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	char				*delimit_lookup		= ",;";
 
 	char				*password_hash		= (char *)g_malloc(25);
-	char				*crypt_hash		= (char *)g_malloc(25);
+	char				*crypt_hash			= (char *)g_malloc(25);
 	char				*crypt_result		= NULL;
 
 	unsigned char		pass_hash_xor1[64];
@@ -1593,7 +1584,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 
 	magic_ptr = seed;
 
-	while (*magic_ptr != (int)NULL) {
+	while (*magic_ptr != '\0') {
 		char   *loc;
 
 		/* Ignore parentheses. */
@@ -1646,7 +1637,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	 * dust on the values.
 	 */
 
-	for (magic_cnt = magic_len-2; magic_cnt >= 0; magic_cnt--) {
+	for (magic_cnt = magic_len - 2; magic_cnt >= 0; magic_cnt--) {
 		unsigned char	byte1;
 		unsigned char	byte2;
 
@@ -1662,7 +1653,7 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 		byte1 ^= byte2;
 
 		magic[magic_cnt+1] = byte1;
-			}
+	}
 
 	/*
 	 * Magic: Phase 3.  This computes 20 bytes.  The first 4 bytes are used as our magic
@@ -1677,8 +1668,8 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	x = 0;
 
 	do {
-		unsigned int	bl = 0;
-		unsigned int	cl = magic[magic_cnt++];
+		unsigned int bl = 0;
+		unsigned int cl = magic[magic_cnt++];
 
 		if (magic_cnt >= magic_len)
 			break;
@@ -1703,17 +1694,18 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 
 	/* First four bytes are magic key. */
 	memcpy(&magic_key_char[0], comparison_src, 4);
-	magic_4 = magic_key_char[0] | (magic_key_char[1]<<8) | (magic_key_char[2]<<16) | (magic_key_char[3]<<24);
+	magic_4 = magic_key_char[0] | (magic_key_char[1] << 8) |
+			(magic_key_char[2] << 16) | (magic_key_char[3] << 24);
 
 	/*
 	 * Magic: Phase 4.  Determine what function to use later by getting outside/inside
 	 * loop values until we match our previous buffer.
 	 */
 	for (x = 0; x < 65535; x++) {
-		int			leave = 0;
+		int leave = 0;
 
 		for (y = 0; y < 5; y++) {
-			unsigned char	test[3];
+			unsigned char test[3];
 
 			/* Calculate buffer. */
 			test[0] = x;
@@ -1949,8 +1941,24 @@ static void yahoo_process_auth_new(PurpleConnection *gc, const char *seed)
 	}
 	purple_debug_info("yahoo", "yahoo status: %d\n", yd->current_status);
 	pack = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP,	yd->current_status, 0);
-	yahoo_packet_hash(pack, "sssss", 0, name, 6, resp_6, 96, resp_96, 1,
-	                  name, 135, "6,0,0,1710");
+
+	if(yd->jp) {
+		yahoo_packet_hash(pack, "sssss",
+						  0, name,
+						  6, resp_6,
+						  96, resp_96,
+						  1, name,
+						  135, YAHOOJP_CLIENT_VERSION);
+	} else {
+		yahoo_packet_hash(pack, "ssssss",
+						  0, name,
+						  6, resp_6,
+						  96, resp_96,
+						  1, name,
+						  244, YAHOO_CLIENT_VERSION_ID,
+						  135, YAHOO_CLIENT_VERSION);
+	}
+
 	if (yd->picture_checksum)
 		yahoo_packet_hash_int(pack, 192, yd->picture_checksum);
 
@@ -1993,13 +2001,19 @@ static void yahoo_process_auth(PurpleConnection *gc, struct yahoo_packet *pkt)
 			yahoo_process_auth_new(gc, seed);
 			break;
 		default:
-			buf = g_strdup_printf(_("The Yahoo server has requested the use of an unrecognized "
-						"authentication method.  You will probably not be able "
-						"to successfully sign on to Yahoo.  Check %s for updates."), PURPLE_WEBSITE);
-			purple_notify_error(gc, "", _("Failed Yahoo! Authentication"),
-					  buf);
-			g_free(buf);
-			yahoo_process_auth_new(gc, seed); /* Can't hurt to try it anyway. */
+			{
+				GHashTable *ui_info = purple_core_get_ui_info();
+
+				buf = g_strdup_printf(_("The Yahoo server has requested the use of an unrecognized "
+							"authentication method.  You will probably not be able "
+							"to successfully sign on to Yahoo.  Check %s for updates."),
+							((ui_info && g_hash_table_lookup(ui_info, "website")) ? (char *)g_hash_table_lookup(ui_info, "website") : PURPLE_WEBSITE));
+				purple_notify_error(gc, "", _("Failed Yahoo! Authentication"),
+							buf);
+				g_free(buf);
+				yahoo_process_auth_new(gc, seed); /* Can't hurt to try it anyway. */
+				break;
+			}
 		}
 	}
 }
@@ -2034,9 +2048,9 @@ static void yahoo_process_ignore(PurpleConnection *gc, struct yahoo_packet *pkt)
 	PurpleBuddy *b;
 	GSList *l;
 	gchar *who = NULL;
-	gchar *sn = NULL;
+	gchar *me = NULL;
 	gchar buf[BUF_LONG];
-	gint ignore = 0;
+	gboolean ignore = TRUE;
 	gint status = 0;
 
 	for (l = pkt->hash; l; l = l->next) {
@@ -2046,10 +2060,11 @@ static void yahoo_process_ignore(PurpleConnection *gc, struct yahoo_packet *pkt)
 			who = pair->value;
 			break;
 		case 1:
-			sn = pair->value;
+			me = pair->value;
 			break;
 		case 13:
-			ignore = strtol(pair->value, NULL, 10);
+			/* 1 == ignore, 2 == unignore */
+			ignore = (strtol(pair->value, NULL, 10) == 1);
 			break;
 		case 66:
 			status = strtol(pair->value, NULL, 10);
@@ -2059,23 +2074,40 @@ static void yahoo_process_ignore(PurpleConnection *gc, struct yahoo_packet *pkt)
 		}
 	}
 
+	/*
+	 * status
+	 * 0  - ok
+	 * 2  - already in ignore list, could not add
+	 * 3  - not in ignore list, could not delete
+	 * 12 - is a buddy, could not add (and possibly also a not-in-ignore list condition?)
+	 */
 	switch (status) {
-	case 12:
-		b = purple_find_buddy(gc->account, who);
-		g_snprintf(buf, sizeof(buf), _("You have tried to ignore %s, but the "
-					"user is on your buddy list.  Clicking \"Yes\" "
-					"will remove and ignore the buddy."), who);
-		purple_request_yes_no(gc, NULL, _("Ignore buddy?"), buf, 0,
-						gc->account, who, NULL,
-						b,
-						G_CALLBACK(ignore_buddy),
-						G_CALLBACK(keep_buddy));
-		break;
-	case 2:
-	case 3:
-	case 0:
-	default:
-		break;
+		case 12:
+			purple_debug_info("yahoo", "Server reported \"is a buddy\" for %s while %s",
+							  who, (ignore ? "ignoring" : "unignoring"));
+
+			if (ignore) {
+				b = purple_find_buddy(gc->account, who);
+				g_snprintf(buf, sizeof(buf), _("You have tried to ignore %s, but the "
+											   "user is on your buddy list.  Clicking \"Yes\" "
+											   "will remove and ignore the buddy."), who);
+				purple_request_yes_no(gc, NULL, _("Ignore buddy?"), buf, 0,
+									  gc->account, who, NULL,
+									  b,
+									  G_CALLBACK(ignore_buddy),
+									  G_CALLBACK(keep_buddy));
+				break;
+			}
+		case 2:
+			purple_debug_info("yahoo", "Server reported that %s is already in the ignore list.",
+							  who);
+			break;
+		case 3:
+			purple_debug_info("yahoo", "Server reported that %s is not in the ignore list; could not delete",
+							  who);
+		case 0:
+		default:
+			break;
 	}
 }
 
@@ -2090,13 +2122,14 @@ static void yahoo_process_authresp(PurpleConnection *gc, struct yahoo_packet *pk
 	char *url = NULL;
 	char *fullmsg;
 	PurpleAccount *account = gc->account;
+	PurpleConnectionError reason = PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED;
 
 	while (l) {
 		struct yahoo_pair *pair = l->data;
 
 		if (pair->key == 66)
 			err = strtol(pair->value, NULL, 10);
-		if (pair->key == 20)
+		else if (pair->key == 20)
 			url = pair->value;
 
 		l = l->next;
@@ -2104,7 +2137,8 @@ static void yahoo_process_authresp(PurpleConnection *gc, struct yahoo_packet *pk
 
 	switch (err) {
 	case 3:
-		msg = g_strdup(_("Invalid screen name."));
+		msg = g_strdup(_("Invalid username."));
+		reason = PURPLE_CONNECTION_ERROR_INVALID_USERNAME;
 		break;
 	case 13:
 #ifdef TRY_WEBMESSENGER_LOGIN
@@ -2139,8 +2173,7 @@ static void yahoo_process_authresp(PurpleConnection *gc, struct yahoo_packet *pk
 	else
 		fullmsg = g_strdup(msg);
 
-	gc->wants_to_die = TRUE;
-	purple_connection_error(gc, fullmsg);
+	purple_connection_error_reason(gc, reason, fullmsg);
 	g_free(msg);
 	g_free(fullmsg);
 }
@@ -2261,8 +2294,11 @@ static void yahoo_process_p2p(PurpleConnection *gc, struct yahoo_packet *pkt)
 
 static void yahoo_process_audible(PurpleConnection *gc, struct yahoo_packet *pkt)
 {
+	PurpleAccount *account;
 	char *who = NULL, *msg = NULL, *id = NULL;
 	GSList *l = pkt->hash;
+
+	account = purple_connection_get_account(gc);
 
 	while (l) {
 		struct yahoo_pair *pair = l->data;
@@ -2299,9 +2335,9 @@ static void yahoo_process_audible(PurpleConnection *gc, struct yahoo_packet *pkt
 		purple_debug_misc("yahoo", "Warning, nonutf8 audible, ignoring!\n");
 		return;
 	}
-	if (!yahoo_privacy_check(gc, who)) {
+	if (!purple_privacy_check(account, who)) {
 		purple_debug_misc("yahoo", "Audible message from %s for %s dropped!\n",
-		      gc->account->username, who);
+				purple_account_get_username(account), who);
 		return;
 	}
 	if (id) {
@@ -2439,6 +2475,16 @@ static void yahoo_packet_process(PurpleConnection *gc, struct yahoo_packet *pkt)
 	case YAHOO_SERVICE_AUDIBLE:
 		yahoo_process_audible(gc, pkt);
 		break;
+	case YAHOO_SERVICE_FILETRANS_15:
+		yahoo_process_filetrans_15(gc, pkt);
+		break;
+	case YAHOO_SERVICE_FILETRANS_INFO_15:
+		yahoo_process_filetrans_info_15(gc, pkt);
+		break;
+	case YAHOO_SERVICE_FILETRANS_ACC_15:
+		yahoo_process_filetrans_acc_15(gc, pkt);
+		break;
+
 	default:
 		purple_debug(PURPLE_DEBUG_ERROR, "yahoo",
 				   "Unhandled service 0x%02x\n", pkt->service);
@@ -2463,15 +2509,16 @@ static void yahoo_pending(gpointer data, gint source, PurpleInputCondition cond)
 			return;
 
 		tmp = g_strdup_printf(_("Lost connection with server:\n%s"),
-				strerror(errno));
-		purple_connection_error(gc, tmp);
+				g_strerror(errno));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	} else if (len == 0) {
-		purple_connection_error(gc, _("Server closed the connection."));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				_("Server closed the connection."));
 		return;
 	}
-
+	gc->last_received = time(NULL);
 	yd->rxqueue = g_realloc(yd->rxqueue, len + yd->rxlen);
 	memcpy(yd->rxqueue + yd->rxlen, buf, len);
 	yd->rxlen += len;
@@ -2559,7 +2606,7 @@ static void yahoo_got_connected(gpointer data, gint source, const gchar *error_m
 		gchar *tmp;
 		tmp = g_strdup_printf(_("Could not establish a connection with the server:\n%s"),
 				error_message);
-		purple_connection_error(gc, tmp);
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	}
@@ -2591,7 +2638,7 @@ static void yahoo_got_web_connected(gpointer data, gint source, const gchar *err
 		gchar *tmp;
 		tmp = g_strdup_printf(_("Could not establish a connection with the server:\n%s"),
 				error_message);
-		purple_connection_error(gc, tmp);
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	}
@@ -2630,12 +2677,13 @@ static void yahoo_web_pending(gpointer data, gint source, PurpleInputCondition c
 			return;
 
 		tmp = g_strdup_printf(_("Lost connection with server:\n%s"),
-				strerror(errno));
-		purple_connection_error(gc, tmp);
+				g_strerror(errno));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	} else if (len == 0) {
-		purple_connection_error(gc, _("Server closed the connection."));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Server closed the connection."));
 		return;
 	}
 
@@ -2650,18 +2698,23 @@ static void yahoo_web_pending(gpointer data, gint source, PurpleInputCondition c
 
 	if ((strncmp(buf, "HTTP/1.0 302", strlen("HTTP/1.0 302")) &&
 			  strncmp(buf, "HTTP/1.1 302", strlen("HTTP/1.1 302")))) {
-		purple_connection_error(gc, _("Received unexpected HTTP response from server."));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Received unexpected HTTP response from server."));
 		return;
 	}
 
 	s = g_string_sized_new(len);
 
 	while ((i = strstr(i, "Set-Cookie: "))) {
+
 		i += strlen("Set-Cookie: ");
 		for (;*i != ';' && *i != '\0'; i++)
 			g_string_append_c(s, *i);
-
+        
 		g_string_append(s, "; ");
+		/* Should these cookies be included too when trying for xfer?
+		 * It seems to work without these
+		 */
 	}
 
 	yd->auth = g_string_free(s, FALSE);
@@ -2672,9 +2725,10 @@ static void yahoo_web_pending(gpointer data, gint source, PurpleInputCondition c
 	yd->rxlen = 0;
 	/* Now we have our cookies to login with.  I'll go get the milk. */
 	if (purple_proxy_connect(gc, account, "wcs2.msg.dcn.yahoo.com",
-			       purple_account_get_int(account, "port", YAHOO_PAGER_PORT),
-			       yahoo_got_web_connected, gc) == NULL) {
-		purple_connection_error(gc, _("Connection problem"));
+	                         purple_account_get_int(account, "port", YAHOO_PAGER_PORT),
+	                         yahoo_got_web_connected, gc) == NULL) {
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		                               _("Connection problem"));
 		return;
 	}
 }
@@ -2701,8 +2755,8 @@ static void yahoo_got_cookies_send_cb(gpointer data, gint source, PurpleInputCon
 			purple_input_remove(gc->inpa);
 		gc->inpa = 0;
 		tmp = g_strdup_printf(_("Lost connection with %s:\n%s"),
-				"login.yahoo.com:80", strerror(errno));
-		purple_connection_error(gc, tmp);
+				"login.yahoo.com:80", g_strerror(errno));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	}
@@ -2727,7 +2781,7 @@ static void yahoo_got_cookies(gpointer data, gint source, const gchar *error_mes
 		gchar *tmp;
 		tmp = g_strdup_printf(_("Could not establish a connection with %s:\n%s"),
 				"login.yahoo.com:80", error_message);
-		purple_connection_error(gc, tmp);
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	}
@@ -2811,7 +2865,8 @@ yahoo_login_page_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 
 	if (error_message != NULL)
 	{
-		purple_connection_error(gc, error_message);
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		                               error_message);
 		return;
 	}
 
@@ -2860,7 +2915,8 @@ yahoo_login_page_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 	g_hash_table_destroy(hash);
 	yd->auth = g_string_free(url, FALSE);
 	if (purple_proxy_connect(gc, account, "login.yahoo.com", 80, yahoo_got_cookies, gc) == NULL) {
-		purple_connection_error(gc, _("Connection problem"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		                               _("Connection problem"));
 		return;
 	}
 
@@ -2948,8 +3004,10 @@ static void yahoo_login(PurpleAccount *account) {
 	yd->txbuf = purple_circ_buffer_new(0);
 	yd->friends = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, yahoo_friend_free);
 	yd->imvironments = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	yd->xfer_peer_idstring_map = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 	yd->confs = NULL;
 	yd->conf_id = 2;
+	yd->last_keepalive = yd->last_ping = time(NULL);
 
 	yd->current_status = get_yahoo_status_from_purple_status(status);
 
@@ -2963,7 +3021,8 @@ static void yahoo_login(PurpleAccount *account) {
 		                       purple_account_get_int(account, "port", YAHOO_PAGER_PORT),
 		                       yahoo_got_connected, gc) == NULL)
 		{
-			purple_connection_error(gc, _("Connection problem"));
+			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			                               _("Connection problem"));
 			return;
 		}
 	} else {
@@ -2973,7 +3032,8 @@ static void yahoo_login(PurpleAccount *account) {
 		                       purple_account_get_int(account, "port", YAHOO_PAGER_PORT),
 		                       yahoo_got_connected, gc) == NULL)
 		{
-			purple_connection_error(gc, _("Connection problem"));
+			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			                               _("Connection problem"));
 			return;
 		}
 	}
@@ -3000,12 +3060,19 @@ static void yahoo_close(PurpleConnection *gc) {
 	}
 	g_slist_free(yd->confs);
 
-	yd->chat_online = 0;
+	for (l = yd->cookies; l; l = l->next) {
+		g_free(l->data);
+		l->data=NULL;
+	}
+	g_slist_free(yd->cookies);
+
+	yd->chat_online = FALSE;
 	if (yd->in_chat)
 		yahoo_c_leave(gc, 1); /* 1 = YAHOO_CHAT_ID */
 
 	g_hash_table_destroy(yd->friends);
 	g_hash_table_destroy(yd->imvironments);
+	g_hash_table_destroy(yd->xfer_peer_idstring_map);
 	g_free(yd->chat_name);
 
 	g_free(yd->cookie_y);
@@ -3034,6 +3101,8 @@ static void yahoo_close(PurpleConnection *gc) {
 	g_free(yd->pending_chat_id);
 	g_free(yd->pending_chat_topic);
 	g_free(yd->pending_chat_goto);
+
+	g_free(yd->current_list15_grp);
 
 	g_free(yd);
 	gc->proto_data = NULL;
@@ -3428,9 +3497,12 @@ yahoo_get_inbox_token_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 {
 	PurpleConnection *gc = user_data;
 	gboolean set_cookie = FALSE;
-	char *url;
+	gchar *url;
+	struct yahoo_data *yd = gc->proto_data;
 
 	g_return_if_fail(PURPLE_CONNECTION_IS_VALID(gc));
+	
+	yd->url_datas = g_slist_remove(yd->url_datas, url_data);
 
 	if (error_message != NULL)
 		purple_debug_error("yahoo", "Requesting mail login token failed: %s\n", error_message);
@@ -3445,7 +3517,6 @@ yahoo_get_inbox_token_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 	}
 
 	if (!set_cookie) {
-		struct yahoo_data *yd = gc->proto_data;
 		purple_debug_error("yahoo", "No mail login token; forwarding to login screen.\n");
 		url = g_strdup(yd->jp ? YAHOOJP_MAIL_URL : YAHOO_MAIL_URL);
 	}
@@ -3467,21 +3538,26 @@ static void yahoo_show_inbox(PurplePluginAction *action)
 
 	PurpleUtilFetchUrlData *url_data;
 	const char* base_url = "http://login.yahoo.com";
-	char *request = g_strdup_printf(
-		"POST /config/cookie_token HTTP/1.0\r\n"
+	/* use whole URL if using HTTP Proxy */
+	gboolean use_whole_url = yahoo_account_use_http_proxy(gc);
+	gchar *request = g_strdup_printf(
+		"POST %s/config/cookie_token HTTP/1.0\r\n"
 		"Cookie: T=%s; path=/; domain=.yahoo.com; Y=%s;\r\n"
 		"User-Agent: Mozilla/4.0 (compatible; MSIE 5.5)\r\n"
 		"Host: login.yahoo.com\r\n"
 		"Content-Length: 0\r\n\r\n",
+		use_whole_url ? base_url : "",
 		yd->cookie_t, yd->cookie_y);
 
-	url_data = purple_util_fetch_url_request(base_url, FALSE,
+	url_data = purple_util_fetch_url_request(base_url, use_whole_url,
 			"Mozilla/4.0 (compatible; MSIE 5.5)", TRUE, request, FALSE,
 			yahoo_get_inbox_token_cb, gc);
 
 	g_free(request);
 
-	if (url_data == NULL) {
+	if (url_data != NULL)
+		yd->url_datas = g_slist_prepend(yd->url_datas, url_data);
+	else {
 		const char *yahoo_mail_url = (yd->jp ? YAHOOJP_MAIL_URL : YAHOO_MAIL_URL);
 		purple_debug_error("yahoo",
 				   "Unable to request mail login token; forwarding to login screen.");
@@ -3543,8 +3619,26 @@ static int yahoo_send_im(PurpleConnection *gc, const char *who, const char *what
 	PurpleWhiteboard *wb;
 	int ret = 1;
 	YahooFriend *f = NULL;
+	gsize lenb = 0;
+	glong lenc = 0;
 
 	msg2 = yahoo_string_encode(gc, msg, &utf8);
+	
+	if(msg2) {
+		lenb = strlen(msg2);
+		lenc = g_utf8_strlen(msg2, -1);
+
+		if(lenb > YAHOO_MAX_MESSAGE_LENGTH_BYTES || lenc > YAHOO_MAX_MESSAGE_LENGTH_CHARS) {
+			purple_debug_info("yahoo", "Message too big.  Length is %" G_GSIZE_FORMAT
+					" bytes, %ld characters.  Max is %d bytes, %d chars."
+					"  Message is '%s'.\n", lenb, lenc, YAHOO_MAX_MESSAGE_LENGTH_BYTES,
+					YAHOO_MAX_MESSAGE_LENGTH_CHARS, msg2);
+			yahoo_packet_free(pkt);
+			g_free(msg);
+			g_free(msg2);
+			return -E2BIG;
+		}
+	}
 
 	yahoo_packet_hash(pkt, "ss", 1, purple_connection_get_display_name(gc), 5, who);
 	if ((f = yahoo_friend_find(gc, who)) && f->protocol)
@@ -3802,29 +3896,42 @@ static GList *yahoo_status_types(PurpleAccount *account)
 
 static void yahoo_keepalive(PurpleConnection *gc)
 {
+	struct yahoo_packet *pkt;
 	struct yahoo_data *yd = gc->proto_data;
-	struct yahoo_packet *pkt = yahoo_packet_new(YAHOO_SERVICE_PING, YAHOO_STATUS_AVAILABLE, 0);
-	yahoo_packet_send_and_free(pkt, yd);
+	time_t now = time(NULL);
 
-	if (!yd->chat_online)
-		return;
+	/* We're only allowed to send a ping once an hour or the servers will boot us */
+	if ((now - yd->last_ping) >= PING_TIMEOUT) {
+		yd->last_ping = now;
 
-	if (yd->wm) {
-		ycht_chat_send_keepalive(yd->ycht);
-		return;
+		/* The native client will only send PING or CHATPING */
+		if (yd->chat_online) {
+			if (yd->wm) {
+				ycht_chat_send_keepalive(yd->ycht);
+			} else {
+				pkt = yahoo_packet_new(YAHOO_SERVICE_CHATPING, YAHOO_STATUS_AVAILABLE, 0);
+				yahoo_packet_hash_str(pkt, 109, purple_connection_get_display_name(gc));
+				yahoo_packet_send_and_free(pkt, yd);
+			}
+		} else {
+			pkt = yahoo_packet_new(YAHOO_SERVICE_PING, YAHOO_STATUS_AVAILABLE, 0);
+			yahoo_packet_send_and_free(pkt, yd);
+		}
 	}
 
-	pkt = yahoo_packet_new(YAHOO_SERVICE_CHATPING, YAHOO_STATUS_AVAILABLE, 0);
-	yahoo_packet_hash_str(pkt, 109, purple_connection_get_display_name(gc));
-	yahoo_packet_send_and_free(pkt, yd);
+	if ((now - yd->last_keepalive) >= KEEPALIVE_TIMEOUT) {
+		yd->last_keepalive = now;
+		pkt = yahoo_packet_new(YAHOO_SERVICE_KEEPALIVE, YAHOO_STATUS_AVAILABLE, 0);
+		yahoo_packet_hash_str(pkt, 0, purple_connection_get_display_name(gc));
+		yahoo_packet_send_and_free(pkt, yd);
+	}
+
 }
 
-/* XXX - What's the deal with PurpleGroup *foo? */
-static void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *foo)
+static void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *g)
 {
 	struct yahoo_data *yd = (struct yahoo_data *)gc->proto_data;
 	struct yahoo_packet *pkt;
-	PurpleGroup *g;
 	const char *group = NULL;
 	char *group2;
 	YahooFriend *f;
@@ -3832,20 +3939,17 @@ static void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGrou
 	if (!yd->logged_in)
 		return;
 
-	if (!yahoo_privacy_check(gc, purple_buddy_get_name(buddy)))
+	if (!purple_privacy_check(purple_connection_get_account(gc),
+			purple_buddy_get_name(buddy)))
 		return;
 
 	f = yahoo_friend_find(gc, purple_buddy_get_name(buddy));
 
-	if (foo)
-		group = foo->name;
-	if (!group) {
-		g = purple_buddy_get_group(buddy);
-		if (g)
-			group = g->name;
-		else
-			group = "Buddies";
-	}
+	g = purple_buddy_get_group(buddy);
+	if (g)
+		group = g->name;
+	else
+		group = "Buddies";
 
 	group2 = yahoo_string_encode(gc, group, NULL);
 	pkt = yahoo_packet_new(YAHOO_SERVICE_ADDBUDDY, YAHOO_STATUS_AVAILABLE, 0);
@@ -3907,10 +4011,6 @@ static void yahoo_add_deny(PurpleConnection *gc, const char *who) {
 
 	if (!yd->logged_in)
 		return;
-	/* It seems to work better without this */
-
-	/* if (gc->account->perm_deny != 4)
-		return; */
 
 	if (!who || who[0] == '\0')
 		return;
@@ -3936,33 +4036,26 @@ static void yahoo_rem_deny(PurpleConnection *gc, const char *who) {
 	yahoo_packet_send_and_free(pkt, yd);
 }
 
-static void yahoo_set_permit_deny(PurpleConnection *gc) {
-	PurpleAccount *acct;
+static void yahoo_set_permit_deny(PurpleConnection *gc)
+{
+	PurpleAccount *account;
 	GSList *deny;
 
-	acct = gc->account;
+	account = purple_connection_get_account(gc);
 
-	switch (acct->perm_deny) {
-		/* privacy 1 */
+	switch (account->perm_deny)
+	{
 		case PURPLE_PRIVACY_ALLOW_ALL:
-			for (deny = acct->deny;deny;deny = deny->next)
+			for (deny = account->deny; deny; deny = deny->next)
 				yahoo_rem_deny(gc, deny->data);
 			break;
-		/* privacy 3 */
-		case PURPLE_PRIVACY_ALLOW_USERS:
-			for (deny = acct->deny;deny;deny = deny->next)
-				yahoo_rem_deny(gc, deny->data);
-			break;
-		/* privacy 5 */
+
 		case PURPLE_PRIVACY_ALLOW_BUDDYLIST:
-		/* privacy 4 */
+		case PURPLE_PRIVACY_ALLOW_USERS:
 		case PURPLE_PRIVACY_DENY_USERS:
-			for (deny = acct->deny;deny;deny = deny->next)
-				yahoo_add_deny(gc, deny->data);
-			break;
-		/* privacy 2 */
 		case PURPLE_PRIVACY_DENY_ALL:
-		default:
+			for (deny = account->deny; deny; deny = deny->next)
+				yahoo_add_deny(gc, deny->data);
 			break;
 	}
 }
@@ -4041,7 +4134,7 @@ yahoopurple_cmd_buzz(PurpleConversation *c, const gchar *cmd, gchar **args, gcha
 	if (*args && args[0])
 		return PURPLE_CMD_RET_FAILED;
 
-	serv_send_attention(account->gc, c->name, YAHOO_BUZZ);
+	purple_prpl_send_attention(account->gc, c->name, YAHOO_BUZZ);
 
 	return PURPLE_CMD_RET_OK;
 }
@@ -4111,17 +4204,13 @@ gboolean yahoo_send_attention(PurpleConnection *gc, const char *username, guint 
 
 GList *yahoo_attention_types(PurpleAccount *account)
 {
-	PurpleAttentionType *attn;
 	static GList *list = NULL;
 
 	if (!list) {
 		/* Yahoo only supports one attention command: the 'buzz'. */
 		/* This is index number YAHOO_BUZZ. */
-		attn = g_new0(PurpleAttentionType, 1);
-		attn->name = _("Buzz");
-		attn->incoming_description = _("%s has buzzed you!");
-		attn->outgoing_description = _("Buzzing %s...");
-		list = g_list_append(list, attn);
+		list = g_list_append(list, purple_attention_type_new("Buzz", _("Buzz"),
+				_("%s has buzzed you!"), _("Buzzing %s...")));
 	}
 
 	return list;
@@ -4252,6 +4341,15 @@ static gboolean yahoo_uri_handler(const char *proto, const char *cmd, GHashTable
 	return FALSE;
 }
 
+static GHashTable *
+yahoo_get_account_text_table(PurpleAccount *account)
+{
+	GHashTable *table;
+	table = g_hash_table_new(g_str_hash, g_str_equal);
+	g_hash_table_insert(table, "login_label", (gpointer)_("Yahoo ID..."));
+	return table;
+}
+
 static PurpleWhiteboardPrplOps yahoo_whiteboard_prpl_ops =
 {
 	yahoo_doodle_start,
@@ -4297,9 +4395,9 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL, /* add_buddies */
 	yahoo_remove_buddy,
 	NULL, /*remove_buddies */
-	yahoo_add_permit,
+	NULL, /* add_permit */
 	yahoo_add_deny,
-	yahoo_rem_permit,
+	NULL, /* rem_permit */
 	yahoo_rem_deny,
 	yahoo_set_permit_deny,
 	yahoo_c_join,
@@ -4339,8 +4437,8 @@ static PurplePluginProtocolInfo prpl_info =
 	yahoo_send_attention,
 	yahoo_attention_types,
 
-	/* padding */
-	NULL
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	yahoo_get_account_text_table,    /* get_account_text_table */
 };
 
 static PurplePluginInfo info =
@@ -4355,7 +4453,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 	"prpl-yahoo",                                     /**< id             */
 	"Yahoo",	                                      /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Yahoo Protocol Plugin"),
 	                                                  /**  description    */

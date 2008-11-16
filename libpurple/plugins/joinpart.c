@@ -41,6 +41,10 @@
 #define THRESHOLD_PREF "/plugins/core/joinpart/threshold"
 #define THRESHOLD_DEFAULT 20
 
+/* Hide buddies */
+#define HIDE_BUDDIES_PREF "/plugins/core/joinpart/hide_buddies"
+#define HIDE_BUDDIES_DEFAULT FALSE
+
 struct joinpart_key
 {
 	PurpleConversation *conv;
@@ -77,7 +81,7 @@ static gboolean should_hide_notice(PurpleConversation *conv, const char *name,
 {
 	PurpleConvChat *chat;
 	int threshold;
-	struct joinpart_key *key;
+	struct joinpart_key key;
 	time_t *last_said;
 
 	g_return_val_if_fail(conv != NULL, FALSE);
@@ -89,15 +93,14 @@ static gboolean should_hide_notice(PurpleConversation *conv, const char *name,
 	if (g_list_length(purple_conv_chat_get_users(chat)) < threshold)
 		return FALSE;
 
-	/* We always care about our buddies! */
-	if (purple_find_buddy(purple_conversation_get_account(conv), name))
+	if (!purple_prefs_get_bool(HIDE_BUDDIES_PREF) &&
+	    purple_find_buddy(purple_conversation_get_account(conv), name))
 		return FALSE;
 
 	/* Only show the notice if the user has spoken recently. */
-	key = g_new(struct joinpart_key, 1);
-	key->conv = conv;
-	key->user = g_strdup(name);
-	last_said = g_hash_table_lookup(users, key);
+	key.conv = conv;
+	key.user = (gchar *)name;
+	last_said = g_hash_table_lookup(users, &key);
 	if (last_said != NULL)
 	{
 		int delay = purple_prefs_get_int(DELAY_PREF);
@@ -234,10 +237,13 @@ get_plugin_pref_frame(PurplePlugin *plugin)
 	purple_plugin_pref_set_bounds(ppref, 0, 1000);
 	purple_plugin_pref_frame_add(frame, ppref);
 
-
 	ppref = purple_plugin_pref_new_with_name_and_label(DELAY_PREF,
 	                                                 _("User Inactivity Timeout (in minutes)"));
 	purple_plugin_pref_set_bounds(ppref, 0, 8 * 60); /* 8 Hours */
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(HIDE_BUDDIES_PREF,
+	                                                 _("Apply hiding rules to buddies"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	return frame;
@@ -268,7 +274,7 @@ static PurplePluginInfo info =
 
 	JOINPART_PLUGIN_ID,                               /**< id             */
 	N_("Join/Part Hiding"),                           /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Hides extraneous join/part messages."),
 	                                                  /**  description    */
@@ -301,6 +307,7 @@ init_plugin(PurplePlugin *plugin)
 
 	purple_prefs_add_int(DELAY_PREF, DELAY_DEFAULT);
 	purple_prefs_add_int(THRESHOLD_PREF, THRESHOLD_DEFAULT);
+	purple_prefs_add_bool(HIDE_BUDDIES_PREF, HIDE_BUDDIES_DEFAULT);
 }
 
 PURPLE_INIT_PLUGIN(joinpart, init_plugin, info)

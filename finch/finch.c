@@ -49,20 +49,22 @@
 #include "config.h"
 
 static void
-debug_init()
+debug_init(void)
 {
 	finch_debug_init();
 	purple_debug_set_ui_ops(finch_debug_get_ui_ops());
 }
 
 static GHashTable *ui_info = NULL;
-static GHashTable *finch_ui_get_info()
+static GHashTable *finch_ui_get_info(void)
 {
 	if (ui_info == NULL) {
 		ui_info = g_hash_table_new(g_str_hash, g_str_equal);
 
 		g_hash_table_insert(ui_info, "name", (char*)_("Finch"));
 		g_hash_table_insert(ui_info, "version", VERSION);
+		g_hash_table_insert(ui_info, "website", "http://pidgin.im");
+		g_hash_table_insert(ui_info, "dev_website", "http://developer.pidgin.im");
 	}
 
 	return ui_info;
@@ -91,7 +93,7 @@ static PurpleCoreUiOps core_ops =
 };
 
 static PurpleCoreUiOps *
-gnt_core_get_ui_ops()
+gnt_core_get_ui_ops(void)
 {
 	return &core_ops;
 }
@@ -203,7 +205,7 @@ show_usage(const char *name, gboolean terse)
 	char *text;
 
 	if (terse) {
-		text = g_strdup_printf(_("%s. Try `%s -h' for more information.\n"), VERSION, name);
+		text = g_strdup_printf(_("%s. Try `%s -h' for more information.\n"), DISPLAY_VERSION, name);
 	} else {
 		text = g_strdup_printf(_("%s\n"
 		       "Usage: %s [OPTION]...\n\n"
@@ -211,7 +213,7 @@ show_usage(const char *name, gboolean terse)
 		       "  -d, --debug         print debugging messages to stdout\n"
 		       "  -h, --help          display this help and exit\n"
 		       "  -n, --nologin       don't automatically login\n"
-		       "  -v, --version       display the current version and exit\n"), VERSION, name);
+		       "  -v, --version       display the current version and exit\n"), DISPLAY_VERSION, name);
 	}
 
 	purple_print_utf8_to_console(stdout, text);
@@ -297,8 +299,7 @@ init_libpurple(int argc, char **argv)
 	if (opt_version) {
 		/* Translators may want to transliterate the name.
 		 It is not to be translated. */
-		gnt_quit();
-		printf("%s %s\n", _("Finch"), VERSION);
+		printf("%s %s\n", _("Finch"), DISPLAY_VERSION);
 		return 0;
 	}
 
@@ -417,8 +418,6 @@ int main(int argc, char *argv[])
 #if GLIB_CHECK_VERSION(2,2,0)
 	g_set_application_name(_("Finch"));
 #endif
-
-	gnt_init();
 
 	if (gnt_start(&argc, &argv)) {
 		gnt_main();

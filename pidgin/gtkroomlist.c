@@ -28,6 +28,8 @@
 #include "pidgin.h"
 #include "gtkutils.h"
 #include "pidginstock.h"
+#include "pidgintooltip.h"
+
 #include "debug.h"
 #include "account.h"
 #include "connection.h"
@@ -51,7 +53,6 @@ typedef struct _PidginRoomlistDialog {
 	PurpleRoomlist *roomlist;
 
 	gboolean pg_needs_pulse;
-	gboolean pg_to_active;
 	guint pg_update_to;
 } PidginRoomlistDialog;
 
@@ -61,6 +62,15 @@ typedef struct _PidginRoomlist {
 	GtkWidget *tree;
 	GHashTable *cats; /**< Meow. */
 	gint num_rooms, total_rooms;
+	GtkWidget *tipwindow;
+	GdkRectangle tip_rect;
+	guint timeout;
+	PangoLayout *tip_layout;
+	PangoLayout *tip_name_layout;
+	int tip_height;
+	int tip_width;
+	int tip_name_height;
+	int tip_name_width;
 } PidginRoomlist;
 
 enum {
@@ -73,32 +83,34 @@ static GList *roomlists = NULL;
 
 static gint delete_win_cb(GtkWidget *w, GdkEventAny *e, gpointer d)
 {
-	PidginRoomlistDialog *dialog;
-
-	dialog = (PidginRoomlistDialog *) d;
+	PidginRoomlistDialog *dialog = d;
 
 	if (dialog->roomlist && purple_roomlist_get_in_progress(dialog->roomlist))
 		purple_roomlist_cancel_get_list(dialog->roomlist);
 
+	if (dialog->pg_update_to > 0)
+		purple_timeout_remove(dialog->pg_update_to);
+
 	if (dialog->roomlist) {
-		if (dialog->pg_to_active) {
-			purple_timeout_remove(dialog->pg_update_to);
-			dialog->pg_to_active = FALSE;
+		PidginRoomlist *rl = dialog->roomlist->ui_data;
+
+		if (dialog->pg_update_to > 0)
 			/* yes, that's right, unref it twice. */
 			purple_roomlist_unref(dialog->roomlist);
-		}
+
+		if (rl)
+			rl->dialog = NULL;
+		purple_roomlist_unref(dialog->roomlist);
 	}
 
-	/* free stuff here */
-	if (dialog->roomlist)
-		purple_roomlist_unref(dialog->roomlist);
+	dialog->progress = NULL;
 	g_free(dialog);
 
 	return FALSE;
 }
 
 static void dialog_select_account_cb(GObject *w, PurpleAccount *account,
-                                     PidginRoomlistDialog *dialog)
+				     PidginRoomlistDialog *dialog)
 {
 	dialog->account = account;
 }
@@ -175,9 +187,7 @@ selection_changed_cb(GtkTreeSelection *selection, PidginRoomlist *grl) {
 	GValue val;
 	PurpleRoomlistRoom *room;
 	static struct _menu_cb_info *info;
-	PidginRoomlistDialog *dialog;
-
-	dialog = grl->dialog;
+	PidginRoomlistDialog *dialog = grl->dialog;
 
 	if (gtk_tree_selection_get_selected(selection, NULL, &iter)) {
 		val.g_type = 0;
@@ -228,9 +238,7 @@ static void add_room_to_blist_cb(GtkButton *button, PidginRoomlistDialog *dialog
 {
 	PurpleRoomlist *rl = dialog->roomlist;
 	PidginRoomlist *grl = rl->ui_data;
-	struct _menu_cb_info *info;
-
-	info = (struct _menu_cb_info*)g_object_get_data(G_OBJECT(button), "room-info");
+	struct _menu_cb_info *info = g_object_get_data(G_OBJECT(button), "room-info");
 
 	if(info != NULL)
 		do_add_room_cb(grl->tree, info);
@@ -245,9 +253,7 @@ static void join_button_cb(GtkButton *button, PidginRoomlistDialog *dialog)
 {
 	PurpleRoomlist *rl = dialog->roomlist;
 	PidginRoomlist *grl = rl->ui_data;
-	struct _menu_cb_info *info;
-
-	info = (struct _menu_cb_info*)g_object_get_data(G_OBJECT(button), "room-info");
+	struct _menu_cb_info *info = g_object_get_data(G_OBJECT(button), "room-info");
 
 	if(info != NULL)
 		do_join_cb(grl->tree, info);
@@ -331,14 +337,161 @@ static void row_expanded_cb(GtkTreeView *treeview, GtkTreeIter *arg1, GtkTreePat
 	}
 }
 
+#define SMALL_SPACE 6
+#define TOOLTIP_BORDER 12
+
+static gboolean
+pidgin_roomlist_paint_tooltip(GtkWidget *widget, gpointer user_data)
+{
+	PurpleRoomlist *list = user_data;
+	PidginRoomlist *grl = list->ui_data;
+	GtkStyle *style;
+	int current_height, max_width;
+	int max_text_width;
+	GtkTextDirection dir = gtk_widget_get_direction(GTK_WIDGET(grl->tree));
+
+	style = grl->tipwindow->style;
+
+	max_text_width = 0;
+
+	max_text_width = MAX(grl->tip_width, grl->tip_name_width);
+	max_width = TOOLTIP_BORDER + SMALL_SPACE + max_text_width + TOOLTIP_BORDER;
+
+	current_height = 12;
+
+	if (dir == GTK_TEXT_DIR_RTL) {
+		gtk_paint_layout(style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
+				NULL, grl->tipwindow, "tooltip",
+				max_width - (TOOLTIP_BORDER + SMALL_SPACE) - PANGO_PIXELS(600000),
+				current_height, grl->tip_name_layout);
+	} else {
+		gtk_paint_layout (style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
+				NULL, grl->tipwindow, "tooltip",
+				TOOLTIP_BORDER + SMALL_SPACE, current_height, grl->tip_name_layout);
+	}
+	if (dir != GTK_TEXT_DIR_RTL) {
+		gtk_paint_layout (style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
+				NULL, grl->tipwindow, "tooltip",
+				TOOLTIP_BORDER + SMALL_SPACE, current_height + grl->tip_name_height, grl->tip_layout);
+	} else {
+		gtk_paint_layout(style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
+				NULL, grl->tipwindow, "tooltip",
+				max_width - (TOOLTIP_BORDER + SMALL_SPACE) - PANGO_PIXELS(600000),
+				current_height + grl->tip_name_height,
+				grl->tip_layout);
+	}
+	return FALSE;
+}
+
+static gboolean pidgin_roomlist_create_tip(PurpleRoomlist *list, GtkTreePath *path)
+{
+	PidginRoomlist *grl = list->ui_data;
+	PurpleRoomlistRoom *room;
+	GtkTreeIter iter;
+	GValue val;
+	gchar *name, *tmp, *node_name;
+	GString *tooltip_text = NULL;
+	GList *l, *k;
+	gint j;
+	gboolean first = TRUE;
+
+#if 0
+	if (!gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(tv), grl->tip_rect.x, grl->tip_rect.y + (grl->tip_rect.height/2),
+		&path, NULL, NULL, NULL))
+		return FALSE;
+#endif
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(grl->model), &iter, path);
+
+	val.g_type = 0;
+	gtk_tree_model_get_value(GTK_TREE_MODEL(grl->model), &iter, ROOM_COLUMN, &val);
+	room = g_value_get_pointer(&val);
+
+	if (!room || !(room->type & PURPLE_ROOMLIST_ROOMTYPE_ROOM))
+		return FALSE;
+
+	tooltip_text = g_string_new("");
+	gtk_tree_model_get(GTK_TREE_MODEL(grl->model), &iter, NAME_COLUMN, &name, -1);
+
+	for (j = NUM_OF_COLUMNS, l = room->fields, k = list->fields; l && k; j++, l = l->next, k = k->next) {
+		PurpleRoomlistField *f = k->data;
+		gchar *label;
+		if (f->hidden)
+			continue;
+		label = g_markup_escape_text(f->label, -1);
+		switch (f->type) {
+			case PURPLE_ROOMLIST_FIELD_BOOL:
+				g_string_append_printf(tooltip_text, "%s<b>%s:</b> %s", first ? "" : "\n", label, l->data ? "True" : "False");
+				break;
+			case PURPLE_ROOMLIST_FIELD_INT:
+				g_string_append_printf(tooltip_text, "%s<b>%s:</b> %d", first ? "" : "\n", label, GPOINTER_TO_INT(l->data));
+				break;
+			case PURPLE_ROOMLIST_FIELD_STRING:
+				tmp = g_markup_escape_text((char *)l->data, -1);
+				g_string_append_printf(tooltip_text, "%s<b>%s:</b> %s", first ? "" : "\n", label, tmp);
+				g_free(tmp);
+				break;
+		}
+		first = FALSE;
+		g_free(label);
+	}
+
+	grl->tip_layout = gtk_widget_create_pango_layout(grl->tipwindow, NULL);
+	grl->tip_name_layout = gtk_widget_create_pango_layout(grl->tipwindow, NULL);
+
+	tmp = g_markup_escape_text(name, -1);
+	g_free(name);
+	node_name = g_strdup_printf("<span size='x-large' weight='bold'>%s</span>", tmp);
+	g_free(tmp);
+
+	pango_layout_set_markup(grl->tip_layout, tooltip_text->str, -1);
+	pango_layout_set_wrap(grl->tip_layout, PANGO_WRAP_WORD);
+	pango_layout_set_width(grl->tip_layout, 600000);
+
+	pango_layout_get_size (grl->tip_layout, &grl->tip_width, &grl->tip_height);
+	grl->tip_width = PANGO_PIXELS(grl->tip_width);
+	grl->tip_height = PANGO_PIXELS(grl->tip_height);
+
+	pango_layout_set_markup(grl->tip_name_layout, node_name, -1);
+	pango_layout_set_wrap(grl->tip_name_layout, PANGO_WRAP_WORD);
+	pango_layout_set_width(grl->tip_name_layout, 600000);
+
+	pango_layout_get_size (grl->tip_name_layout, &grl->tip_name_width, &grl->tip_name_height);
+	grl->tip_name_width = PANGO_PIXELS(grl->tip_name_width) + SMALL_SPACE;
+	grl->tip_name_height = MAX(PANGO_PIXELS(grl->tip_name_height), SMALL_SPACE);
+
+	g_free(node_name);
+	g_string_free(tooltip_text, TRUE);
+
+	return TRUE;
+}
+
+static gboolean
+pidgin_roomlist_create_tooltip(GtkWidget *widget, GtkTreePath *path,
+		gpointer data, int *w, int *h)
+{
+	PurpleRoomlist *list = data;
+	PidginRoomlist *grl = list->ui_data;
+	grl->tipwindow = widget;
+	if (!pidgin_roomlist_create_tip(data, path))
+		return FALSE;
+	if (w)
+		*w = TOOLTIP_BORDER + SMALL_SPACE +
+			MAX(grl->tip_width, grl->tip_name_width) + TOOLTIP_BORDER;
+	if (h)
+		*h = TOOLTIP_BORDER + grl->tip_height + grl->tip_name_height
+			+ TOOLTIP_BORDER;
+	return TRUE;
+}
+
 static gboolean account_filter_func(PurpleAccount *account)
 {
-	PurpleConnection *gc = purple_account_get_connection(account);
+	PurpleConnection *conn = purple_account_get_connection(account);
 	PurplePluginProtocolInfo *prpl_info = NULL;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (conn)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(conn->prpl);
 
-	return (prpl_info->roomlist_get_list != NULL);
+	return (prpl_info && prpl_info->roomlist_get_list != NULL);
 }
 
 gboolean
@@ -361,51 +514,30 @@ static PidginRoomlistDialog *
 pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 {
 	PidginRoomlistDialog *dialog;
-	GtkWidget *window;
-	GtkWidget *vbox;
-	GtkWidget *vbox2;
-	GtkWidget *account_hbox;
-	GtkWidget *bbox;
-	GtkWidget *label;
+	GtkWidget *window, *vbox, *vbox2, *bbox;
 
 	dialog = g_new0(PidginRoomlistDialog, 1);
 	dialog->account = account;
 
 	/* Create the window. */
-	dialog->window = window = pidgin_create_window(_("Room List"), PIDGIN_HIG_BORDER, "room list", TRUE);
+	dialog->window = window = pidgin_create_dialog(_("Room List"), PIDGIN_HIG_BORDER, "room list", TRUE);
 
 	g_signal_connect(G_OBJECT(window), "delete_event",
 					 G_CALLBACK(delete_win_cb), dialog);
 
 	/* Create the parent vbox for everything. */
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(window), vbox);
-	gtk_widget_show(vbox);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(window), FALSE, PIDGIN_HIG_BORDER);
 
 	vbox2 = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(vbox), vbox2);
 	gtk_widget_show(vbox2);
 
 	/* accounts dropdown list */
-	account_hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox2), account_hbox, FALSE, FALSE, 0);
-	gtk_widget_show(account_hbox);
-
-	label = gtk_label_new(NULL);
-	gtk_box_pack_start(GTK_BOX(account_hbox), label, FALSE, FALSE, 0);
-	gtk_label_set_markup_with_mnemonic(GTK_LABEL(label), _("_Account:"));
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	gtk_widget_show(label);
-
 	dialog->account_widget = pidgin_account_option_menu_new(dialog->account, FALSE,
 	                         G_CALLBACK(dialog_select_account_cb), account_filter_func, dialog);
-
 	if (!dialog->account) /* this is normally null, and we normally don't care what the first selected item is */
 		dialog->account = pidgin_account_option_menu_get_selected(dialog->account_widget);
-
-	gtk_box_pack_start(GTK_BOX(account_hbox), dialog->account_widget, TRUE, TRUE, 0);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), GTK_WIDGET(dialog->account_widget));
-	gtk_widget_show(dialog->account_widget);
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
 
 	/* scrolled window */
 	dialog->sw = gtk_scrolled_window_new(NULL, NULL);
@@ -425,19 +557,14 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 	gtk_widget_show(dialog->progress);
 
 	/* button box */
-	bbox = gtk_hbutton_box_new();
+	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(window));
 	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
 	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_pack_start(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);
-	gtk_widget_show(bbox);
 
 	/* stop button */
-	dialog->stop_button = gtk_button_new_from_stock(GTK_STOCK_STOP);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->stop_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->stop_button), "clicked",
+	dialog->stop_button = pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_STOP,
 	                 G_CALLBACK(stop_button_cb), dialog);
 	gtk_widget_set_sensitive(dialog->stop_button, FALSE);
-	gtk_widget_show(dialog->stop_button);
 
 	/* list button */
 	dialog->list_button = pidgin_pixbuf_button_from_stock(_("_Get List"), GTK_STOCK_REFRESH,
@@ -466,11 +593,8 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 	gtk_widget_show(dialog->join_button);
 
 	/* close button */
-	dialog->close_button = gtk_button_new_from_stock(GTK_STOCK_CLOSE);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->close_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->close_button), "clicked",
+	dialog->close_button = pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_CLOSE,
 					 G_CALLBACK(close_button_cb), dialog);
-	gtk_widget_show(dialog->close_button);
 
 	/* show the dialog window and return the dialog */
 	gtk_widget_show(dialog->window);
@@ -480,9 +604,8 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 
 void pidgin_roomlist_dialog_show_with_account(PurpleAccount *account)
 {
-	PidginRoomlistDialog *dialog;
+	PidginRoomlistDialog *dialog = pidgin_roomlist_dialog_new_with_account(account);
 
-	dialog = pidgin_roomlist_dialog_new_with_account(account);
 	if (!dialog)
 		return;
 
@@ -496,9 +619,7 @@ void pidgin_roomlist_dialog_show(void)
 
 static void pidgin_roomlist_new(PurpleRoomlist *list)
 {
-	PidginRoomlist *rl;
-
-	rl = g_new0(PidginRoomlist, 1);
+	PidginRoomlist *rl = g_new0(PidginRoomlist, 1);
 
 	list->ui_data = rl;
 
@@ -650,6 +771,13 @@ static void pidgin_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
 	g_signal_connect(G_OBJECT(tree), "button-press-event", G_CALLBACK(room_click_cb), list);
 	g_signal_connect(G_OBJECT(tree), "row-expanded", G_CALLBACK(row_expanded_cb), list);
 	g_signal_connect(G_OBJECT(tree), "row-activated", G_CALLBACK(row_activated_cb), list);
+#if 0 /* uncomment this when the tooltips are slightly less annoying and more well behaved */
+	g_signal_connect(G_OBJECT(tree), "motion-notify-event", G_CALLBACK(row_motion_cb), list);
+	g_signal_connect(G_OBJECT(tree), "leave-notify-event", G_CALLBACK(row_leave_cb), list);
+#endif
+	pidgin_tooltip_setup_for_treeview(tree, list,
+		pidgin_roomlist_create_tooltip,
+		pidgin_roomlist_paint_tooltip);
 
 	/* Enable CTRL+F searching */
 	gtk_tree_view_set_search_column(GTK_TREE_VIEW(tree), NAME_COLUMN);
@@ -664,7 +792,7 @@ static gboolean pidgin_progress_bar_pulse(gpointer data)
 
 	if (!rl || !rl->dialog || !rl->dialog->pg_needs_pulse) {
 		if (rl && rl->dialog)
-			rl->dialog->pg_to_active = FALSE;
+			rl->dialog->pg_update_to = 0;
 		purple_roomlist_unref(list);
 		return FALSE;
 	}
@@ -689,15 +817,14 @@ static void pidgin_roomlist_add_room(PurpleRoomlist *list, PurpleRoomlistRoom *r
 		rl->num_rooms++;
 
 	if (rl->dialog) {
-		if (!rl->dialog->pg_to_active) {
-			rl->dialog->pg_to_active = TRUE;
+		if (rl->dialog->pg_update_to == 0) {
 			purple_roomlist_ref(list);
 			rl->dialog->pg_update_to = g_timeout_add(100, pidgin_progress_bar_pulse, list);
 			gtk_progress_bar_pulse(GTK_PROGRESS_BAR(rl->dialog->progress));
-		} else {
+		} else
 			rl->dialog->pg_needs_pulse = TRUE;
-		}
 	}
+
 	if (room->parent) {
 		parentrr = g_hash_table_lookup(rl->cats, room->parent);
 		path = gtk_tree_row_reference_get_path(parentrr);
@@ -743,14 +870,14 @@ static void pidgin_roomlist_add_room(PurpleRoomlist *list, PurpleRoomlistRoom *r
 	}
 }
 
-static void pidgin_roomlist_in_progress(PurpleRoomlist *list, gboolean flag)
+static void pidgin_roomlist_in_progress(PurpleRoomlist *list, gboolean in_progress)
 {
 	PidginRoomlist *rl = list->ui_data;
 
 	if (!rl || !rl->dialog)
 		return;
 
-	if (flag) {
+	if (in_progress) {
 		if (rl->dialog->account_widget)
 			gtk_widget_set_sensitive(rl->dialog->account_widget, FALSE);
 		gtk_widget_set_sensitive(rl->dialog->stop_button, TRUE);
@@ -767,11 +894,9 @@ static void pidgin_roomlist_in_progress(PurpleRoomlist *list, gboolean flag)
 
 static void pidgin_roomlist_destroy(PurpleRoomlist *list)
 {
-	PidginRoomlist *rl;
+	PidginRoomlist *rl = list->ui_data;
 
 	roomlists = g_list_remove(roomlists, list);
-
-	rl = list->ui_data;
 
 	g_return_if_fail(rl != NULL);
 

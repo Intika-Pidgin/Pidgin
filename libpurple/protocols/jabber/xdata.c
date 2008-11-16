@@ -201,7 +201,7 @@ void *jabber_x_data_request_with_actions(JabberStream *js, xmlnode *packet, GLis
 	xmlnode *fn, *x;
 	PurpleRequestFields *fields;
 	PurpleRequestFieldGroup *group;
-	PurpleRequestField *field;
+	PurpleRequestField *field = NULL;
 
 	char *title = NULL;
 	char *instructions = NULL;
@@ -231,10 +231,6 @@ void *jabber_x_data_request_with_actions(JabberStream *js, xmlnode *packet, GLis
 			continue;
 		if(!label)
 			label = var;
-
-		if((valuenode = xmlnode_get_child(fn, "value")))
-			value = xmlnode_get_data(valuenode);
-
 
 		if(!strcmp(type, "text-private")) {
 			if((valuenode = xmlnode_get_child(fn, "value")))
@@ -285,7 +281,10 @@ void *jabber_x_data_request_with_actions(JabberStream *js, xmlnode *packet, GLis
 
 			for(valuenode = xmlnode_get_child(fn, "value"); valuenode;
 					valuenode = xmlnode_get_next_twin(valuenode)) {
-				selected = g_list_prepend(selected, xmlnode_get_data(valuenode));
+				char *data = xmlnode_get_data(valuenode);
+				if (data != NULL) {
+					selected = g_list_prepend(selected, data);
+				}
 			}
 
 			for(optnode = xmlnode_get_child(fn, "option"); optnode;
@@ -330,14 +329,16 @@ void *jabber_x_data_request_with_actions(JabberStream *js, xmlnode *packet, GLis
 			g_hash_table_replace(data->fields, g_strdup(var), GINT_TO_POINTER(JABBER_X_DATA_BOOLEAN));
 
 			g_free(value);
-		} else if(!strcmp(type, "fixed") && value) {
+		} else if(!strcmp(type, "fixed")) {
 			if((valuenode = xmlnode_get_child(fn, "value")))
 				value = xmlnode_get_data(valuenode);
 
-			field = purple_request_field_label_new("", value);
-			purple_request_field_group_add_field(group, field);
+			if(value != NULL) {
+				field = purple_request_field_label_new("", value);
+				purple_request_field_group_add_field(group, field);
 
-			g_free(value);
+				g_free(value);
+			}
 		} else if(!strcmp(type, "hidden")) {
 			if((valuenode = xmlnode_get_child(fn, "value")))
 				value = xmlnode_get_data(valuenode);

@@ -15,13 +15,18 @@
 static void
 write_status(PurpleBuddy *buddy, const char *message)
 {
+	PurpleAccount *account = NULL;
 	PurpleConversation *conv;
 	const char *who;
 	char buf[256];
 	char *escaped;
+	const gchar *buddy_name = NULL;
+
+	account = purple_buddy_get_account(buddy);
+	buddy_name = purple_buddy_get_name(buddy);
 
 	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-											   buddy->name, buddy->account);
+												 buddy_name, account);
 
 	if (conv == NULL)
 		return;
@@ -41,6 +46,10 @@ buddy_status_changed_cb(PurpleBuddy *buddy, PurpleStatus *old_status,
                         PurpleStatus *status, void *data)
 {
 	gboolean available, old_available;
+
+	if (!purple_status_is_exclusive(status) ||
+			!purple_status_is_exclusive(old_status))
+		return;
 
 	available = purple_status_is_available(status);
 	old_available = purple_status_is_available(old_status);
@@ -146,7 +155,7 @@ static PurplePluginInfo info =
 
 	STATENOTIFY_PLUGIN_ID,                            /**< id             */
 	N_("Buddy State Notification"),                   /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Notifies in a conversation window when a buddy goes or returns from "
 	   "away or idle."),

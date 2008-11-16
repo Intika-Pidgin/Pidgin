@@ -257,6 +257,7 @@ gnt_widget_class_init(GntWidgetClass *klass)
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "context-menu", context_menu,
 				GNT_KEY_POPUP, NULL);
 	gnt_bindable_register_binding(GNT_BINDABLE_CLASS(klass), "context-menu", GNT_KEY_F11, NULL);
+	gnt_bindable_register_binding(GNT_BINDABLE_CLASS(klass), "context-menu", GNT_KEY_CTRL_X, NULL);
 
 	gnt_style_read_actions(G_OBJECT_CLASS_TYPE(klass), GNT_BINDABLE_CLASS(klass));
 	GNTDEBUG;
@@ -407,6 +408,8 @@ gnt_widget_clicked(GntWidget *widget, GntMouseEvent event, int x, int y)
 {
 	gboolean ret;
 	g_signal_emit(widget, signals[SIG_CLICKED], 0, event, x, y, &ret);
+	if (!ret && event == GNT_RIGHT_MOUSE_DOWN)
+		ret = gnt_bindable_perform_action_named(GNT_BINDABLE(widget), "context-menu", NULL);
 	return ret;
 }
 
@@ -420,7 +423,7 @@ void
 gnt_widget_hide(GntWidget *widget)
 {
 	g_signal_emit(widget, signals[SIG_HIDE], 0);
-	wbkgdset(widget->window, '\0' | COLOR_PAIR(GNT_COLOR_NORMAL));
+	wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_NORMAL));
 #if 0
 	/* XXX: I have no clue why, but this seemed to be necessary. */
 	if (gnt_widget_has_shadow(widget))
@@ -466,7 +469,6 @@ gnt_widget_get_size(GntWidget *wid, int *width, int *height)
 		*width = wid->priv.width + shadow;
 	if (height)
 		*height = wid->priv.height + shadow;
-	
 }
 
 static void
@@ -477,31 +479,31 @@ init_widget(GntWidget *widget)
 	if (!gnt_widget_has_shadow(widget))
 		shadow = FALSE;
 
-	wbkgd(widget->window, COLOR_PAIR(GNT_COLOR_NORMAL));
+	wbkgd(widget->window, gnt_color_pair(GNT_COLOR_NORMAL));
 	werase(widget->window);
 
 	if (!(GNT_WIDGET_FLAGS(widget) & GNT_WIDGET_NO_BORDER))
 	{
 		/* - This is ugly. */
 		/* - What's your point? */
-		mvwvline(widget->window, 0, 0, ACS_VLINE | COLOR_PAIR(GNT_COLOR_NORMAL), widget->priv.height);
+		mvwvline(widget->window, 0, 0, ACS_VLINE | gnt_color_pair(GNT_COLOR_NORMAL), widget->priv.height);
 		mvwvline(widget->window, 0, widget->priv.width - 1,
-				ACS_VLINE | COLOR_PAIR(GNT_COLOR_NORMAL), widget->priv.height);
+				ACS_VLINE | gnt_color_pair(GNT_COLOR_NORMAL), widget->priv.height);
 		mvwhline(widget->window, widget->priv.height - 1, 0,
-				ACS_HLINE | COLOR_PAIR(GNT_COLOR_NORMAL), widget->priv.width);
-		mvwhline(widget->window, 0, 0, ACS_HLINE | COLOR_PAIR(GNT_COLOR_NORMAL), widget->priv.width);
-		mvwaddch(widget->window, 0, 0, ACS_ULCORNER | COLOR_PAIR(GNT_COLOR_NORMAL));
+				ACS_HLINE | gnt_color_pair(GNT_COLOR_NORMAL), widget->priv.width);
+		mvwhline(widget->window, 0, 0, ACS_HLINE | gnt_color_pair(GNT_COLOR_NORMAL), widget->priv.width);
+		mvwaddch(widget->window, 0, 0, ACS_ULCORNER | gnt_color_pair(GNT_COLOR_NORMAL));
 		mvwaddch(widget->window, 0, widget->priv.width - 1,
-				ACS_URCORNER | COLOR_PAIR(GNT_COLOR_NORMAL));
+				ACS_URCORNER | gnt_color_pair(GNT_COLOR_NORMAL));
 		mvwaddch(widget->window, widget->priv.height - 1, 0,
-				ACS_LLCORNER | COLOR_PAIR(GNT_COLOR_NORMAL));
+				ACS_LLCORNER | gnt_color_pair(GNT_COLOR_NORMAL));
 		mvwaddch(widget->window, widget->priv.height - 1, widget->priv.width - 1,
-				ACS_LRCORNER | COLOR_PAIR(GNT_COLOR_NORMAL));
+				ACS_LRCORNER | gnt_color_pair(GNT_COLOR_NORMAL));
 	}
 
 	if (shadow)
 	{
-		wbkgdset(widget->window, '\0' | COLOR_PAIR(GNT_COLOR_SHADOW));
+		wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_SHADOW));
 		mvwvline(widget->window, 1, widget->priv.width, ' ', widget->priv.height);
 		mvwhline(widget->window, widget->priv.height, 1, ' ', widget->priv.width);
 	}
@@ -617,7 +619,7 @@ void gnt_widget_queue_update(GntWidget *widget)
 		return;
 	while (widget->parent)
 		widget = widget->parent;
-	
+
 	if (!g_object_get_data(G_OBJECT(widget), "gnt:queue_update"))
 	{
 		int id = g_timeout_add(0, update_queue_callback, widget);

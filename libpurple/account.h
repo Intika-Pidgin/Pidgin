@@ -31,7 +31,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/** @copydoc _PurpleAccountUiOps */
 typedef struct _PurpleAccountUiOps PurpleAccountUiOps;
+/** @copydoc _PurpleAccount */
 typedef struct _PurpleAccount      PurpleAccount;
 
 typedef gboolean (*PurpleFilterAccountFunc)(PurpleAccount *account);
@@ -105,6 +107,8 @@ struct _PurpleAccountUiOps
 	void (*_purple_reserved4)(void);
 };
 
+/** Structure representing an account.
+ */
 struct _PurpleAccount
 {
 	char *username;             /**< The username.                          */
@@ -140,6 +144,8 @@ struct _PurpleAccount
 	void *ui_data;              /**< The UI can put data here.              */
 	PurpleAccountRegistrationCb registration_cb;
 	void *registration_cb_user_data;
+
+	gpointer priv;              /**< Pointer to opaque private data. */
 };
 
 #ifdef __cplusplus
@@ -254,7 +260,7 @@ void purple_account_request_add(PurpleAccount *account, const char *remote_user,
  * @param remote_user  The name of the user that added this account.
  * @param id           The optional ID of the local account. Rarely used.
  * @param alias        The optional alias of the remote user.
- * @param message      The optional message sent from the uer requesting you
+ * @param message      The optional message sent by the user wanting to add you.
  * @param on_list      Is the remote user already on the buddy list?
  * @param auth_cb      The callback called when the local user accepts
  * @param deny_cb      The callback called when the local user rejects
@@ -408,37 +414,34 @@ void purple_account_set_proxy_info(PurpleAccount *account, PurpleProxyInfo *info
 void purple_account_set_status_types(PurpleAccount *account, GList *status_types);
 
 /**
- * Activates or deactivates a status.  All changes to the statuses of
- * an account go through this function or purple_account_set_status_list.
+ * Variadic version of purple_account_set_status_list(); the variadic list
+ * replaces @a attrs, and should be <tt>NULL</tt>-terminated.
  *
- * Only independent statuses can be deactivated with this. To deactivate
- * an exclusive status, activate a different (and exclusive?) status.
- *
- * @param account   The account.
- * @param status_id The ID of the status.
- * @param active    The active state.
- * @param ...       Pairs of attributes for the new status passed in
- *                  as a NULL-terminated list of id/value pairs.
+ * @copydoc purple_account_set_status_list()
  */
 void purple_account_set_status(PurpleAccount *account, const char *status_id,
-							 gboolean active, ...) G_GNUC_NULL_TERMINATED;
+	gboolean active, ...) G_GNUC_NULL_TERMINATED;
 
 
 /**
  * Activates or deactivates a status.  All changes to the statuses of
- * an account go through this function or purple_account_set_status.
+ * an account go through this function or purple_account_set_status().
  *
- * Only independent statuses can be deactivated with this. To deactivate
- * an exclusive status, activate a different (and exclusive?) status.
+ * You can only deactivate an exclusive status by activating another exclusive
+ * status.  So, if @a status_id is an exclusive status and @a active is @c
+ * FALSE, this function does nothing.
  *
  * @param account   The account.
  * @param status_id The ID of the status.
- * @param active    The active state.
- * @param attrs		A list of attributes in key/value pairs
+ * @param active    Whether @a status_id is to be activated (<tt>TRUE</tt>) or
+ *                  deactivated (<tt>FALSE</tt>).
+ * @param attrs     A list of <tt>const char *</tt> attribute names followed by
+ *                  <tt>const char *</tt> attribute values for the status.
+ *                  (For example, one pair might be <tt>"message"</tt> followed
+ *                  by <tt>"hello, talk to me!"</tt>.)
  */
 void purple_account_set_status_list(PurpleAccount *account,
-								  const char *status_id,
-								  gboolean active, GList *attrs);
+	const char *status_id, gboolean active, GList *attrs);
 
 /**
  * Clears all protocol-specific settings on an account.
@@ -892,6 +895,25 @@ void purple_account_change_password(PurpleAccount *account, const char *orig_pw,
  * @param buddy   The buddy
  */
 gboolean purple_account_supports_offline_message(PurpleAccount *account, PurpleBuddy *buddy);
+
+/**
+ * Get the error that caused the account to be disconnected, or @c NULL if the
+ * account is happily connected or disconnected without an error.
+ *
+ * @param account The account whose error should be retrieved.
+ * @constreturn   The type of error and a human-readable description of the
+ *                current error, or @c NULL if there is no current error.  This
+ *                pointer is guaranteed to remain valid until the @ref
+ *                account-error-changed signal is emitted for @a account.
+ */
+const PurpleConnectionErrorInfo *purple_account_get_current_error(PurpleAccount *account);
+
+/**
+ * Clear an account's current error state, resetting it to @c NULL.
+ *
+ * @param account The account whose error state should be cleared.
+ */
+void purple_account_clear_current_error(PurpleAccount *account);
 
 /*@}*/
 

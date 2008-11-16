@@ -1,5 +1,5 @@
 /**
- * @file imgstore.h IM Image Store API
+ * @file imgstore.c IM Image Store API
  * @ingroup core
  */
 
@@ -34,11 +34,9 @@
 #include "util.h"
 
 static GHashTable *imgstore;
-static int nextid = 0;
+static unsigned int nextid = 0;
 
-/**
- * Stored image
- *
+/*
  * NOTE: purple_imgstore_add() creates these without zeroing the memory, so
  * NOTE: make sure to update that function when adding members.
  */
@@ -70,12 +68,35 @@ purple_imgstore_add(gpointer data, size_t size, const char *filename)
 	return img;
 }
 
+PurpleStoredImage *
+purple_imgstore_new_from_file(const char *path)
+{
+	gchar *data = NULL;
+	size_t len;
+	GError *err = NULL;
+
+	if (!g_file_get_contents(path, &data, &len, &err)) {
+		purple_debug_error("imgstore", "Error reading %s: %s\n",
+				path, err->message);
+		g_error_free(err);
+		return NULL;
+	}
+	return purple_imgstore_add(data, len, path);
+}
+
 int
 purple_imgstore_add_with_id(gpointer data, size_t size, const char *filename)
 {
 	PurpleStoredImage *img = purple_imgstore_add(data, size, filename);
 	if (img) {
-		img->id = ++nextid;
+		/*
+		 * Use the next unused id number.  We do it in a loop on the
+		 * off chance that nextid wraps back around to 0 and the hash
+		 * table still contains entries from the first time around.
+		 */
+		do {
+			img->id = ++nextid;
+		} while (img->id == 0 || g_hash_table_lookup(imgstore, &(img->id)) != NULL);
 
 		g_hash_table_insert(imgstore, &(img->id), img);
 	}

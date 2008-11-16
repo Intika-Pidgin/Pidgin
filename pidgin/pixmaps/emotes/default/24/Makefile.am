@@ -1,5 +1,3 @@
-SUBDIRS = scalable
-
 SMILEYS = 	act-up.png \
     airplane.png \
     alien.png \
@@ -18,6 +16,7 @@ SMILEYS = 	act-up.png \
     boy.png \
     brb.png \
     bulgy-eyes.png \
+    bunny.png \
     bye.png \
     cake.png \
     call-me.png \
@@ -26,6 +25,7 @@ SMILEYS = 	act-up.png \
     car.png \
     cat.png \
     chicken.png \
+    cigarette.png \
     clap.png \
     clock.png \
     cloudy.png \
@@ -47,7 +47,7 @@ SMILEYS = 	act-up.png \
     dazed.png \
     desire.png \
     devil.png \
-    disapointed.png \
+    disappointed.png \
     disdain.png \
     doctor.png \
     dog.png \
@@ -148,7 +148,6 @@ SMILEYS = 	act-up.png \
     shut-mouth.png \
     sick.png \
     sidefrown.png \
-    sigarette.png \
     silly.png \
     sinister.png \
     skeleton.png \
@@ -192,8 +191,10 @@ SMILEYS = 	act-up.png \
     yin-yang.png
 
 
-pidginsmileypixdir = $(datadir)/pixmaps/pidgin/emotes/default
 pidginsmileypix_in_files = default.theme.in
+
+if INSTALL_PIXMAPS
+pidginsmileypixdir = $(datadir)/pixmaps/pidgin/emotes/default
 pidginsmileypix_DATA = \
         $(SMILEYS) \
         theme
@@ -203,5 +204,6 @@ theme: default.theme.in
 	    -e 's/^_Description=/Description=/' \
 	    -e 's/^_Author=/Author=/' \
 	$< > $@
+endif
 
-EXTRA_DIST = $(pidginsmileypix_DATA) $(pidginsmileypix_in_files)
+EXTRA_DIST = $(SMILEYS) $(pidginsmileypix_in_files) theme

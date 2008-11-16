@@ -1,7 +1,7 @@
 EXTRA_DIST = \
-		directconn.c \
-		directconn.h \
-		Makefile.mingw
+	directconn.c \
+	directconn.h \
+	Makefile.mingw
 
 pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
@@ -48,12 +48,8 @@ MSNSOURCES = \
 	slplink.h \
 	slpmsg.c \
 	slpmsg.h \
-	slpsession.c \
-	slpsession.h \
-	soap.c\
-	soap.h\
-	soap2.c \
-	soap2.h \
+	soap.c \
+	soap.h \
 	state.c \
 	state.h \
 	switchboard.c \
@@ -78,9 +74,9 @@ libmsn_la_LDFLAGS = -module -avoid-version
 if STATIC_MSN
 
 st = -DPURPLE_STATIC_PRPL
-noinst_LIBRARIES = libmsn.a
-libmsn_a_SOURCES = $(MSNSOURCES)
-libmsn_a_CFLAGS  = $(AM_CFLAGS)
+noinst_LTLIBRARIES = libmsn.la
+libmsn_la_SOURCES  = $(MSNSOURCES)
+libmsn_la_CFLAGS   = $(AM_CFLAGS)
 
 else
 

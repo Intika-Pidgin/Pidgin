@@ -8,20 +8,14 @@ We've got an IRC room now too, #pidgin on irc.freenode.net. Come check us out.
 Current Developers:
 ------------------
 
-Sean Egan <seanegan@gmail.com> - Lead Developer
-	AIM: SeanEgn
-	ICQ: 96642211
-	Yahoo:	SeanEgn
-	MSN:  seanegn@hotmail.com
-	XMPP:  seanegn@jabber.org
-	Gadu-Gadu:  1511497
-
 Daniel 'datallah' Atallah - Developer
+John 'rekkanoryo' Bailey - Developer
 Ethan 'Paco-Paco' Blanton - Developer
 Thomas Butter - Developer
 Ka-Hing Cheung - Developer
 Sadrul Habib Chowdhury - Developer
 Mark 'KingAnt' Doliner - Developer
+Sean Egan - Developer
 Casey Harkins - Developer
 Gary 'grim' Kramlich - Developer
 Richard 'rlaager' Laager - Developer
@@ -30,17 +24,23 @@ Christopher 'siege' O'Brien - Developer
 Bartosz Oler - Developer
 Etan 'deryni' Reisner - Developer
 Tim 'marv' Ringenbach - Developer
+Elliott 'QuLogic' Sales de Andrade - Developer
 Luke 'LSchiere' Schierer - Support
 Megan 'Cae' Schneider - support/QA
 Evan Schoenberg - Developer
 Kevin 'SimGuy' Stange - Developer & Webmaster
+Will 'resiak' Thompson - Developer
 Stu 'nosnilmot' Tomlinson - Developer
 Nathan 'faceprint' Walp - Developer
 
 Crazy Patch Writers:
 -------------------
-John 'rekkanoryo' Bailey
-Peter 'Bleeter' Lawler
+Felipe 'shx' Contreras
+Marcus 'malu' Lundblad
+Dennis 'EvilDennisR' Ristuccia
+Peter 'Fmoo' Ruibal
+Gabriel 'Nix' Schulhof
+Jorge 'Masca' Villaseñor
 
 Retired Developers:
 ------------------
@@ -56,8 +56,8 @@ Eric Warmenhoven <eric@warmenhoven.org> - lead developer
 
 Retired Crazy Patch Writers:
 ---------------------------
-Felipe 'shx' Contreras
 Decklin Foster
+Peter 'Bleeter' Lawler
 Robert 'Robot101' McQueen
 Benjamin Miller
 
@@ -71,9 +71,9 @@ Much thanks to Evan Martin <martine@cs.washington.edu> for writing
 GtkSpell <http://gtkspell.sourceforge.net> responsible for the 
 "Highlight misspelled words" feature and for gtk-nativewin
 <http://bunny.darktech.org/cvs/gtk-nativewin/> the default GTK+-2.0
-engine used in our win32 port.
+engine originally used in our win32 port.
 
-** LOGO DESIGNED BY: Naru Sundar **
+** ORIGINAL LOGO DESIGNED BY: Naru Sundar **
 
 Peter Teichiman <peter@helixcode.com>
 Larry Ewing 

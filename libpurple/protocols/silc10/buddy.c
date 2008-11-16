@@ -939,8 +939,11 @@ silcpurple_add_buddy_save(bool success, void *context)
 		/* Create dir if it doesn't exist */
 		if ((g_stat(filename, &st)) == -1) {
 			if (errno == ENOENT) {
-				if (pw->pw_uid == geteuid())
-					g_mkdir(filename, 0755);
+				if (pw->pw_uid == geteuid()) {
+					int ret = g_mkdir(filename, 0755);
+					if (ret < 0)
+						return;
+				}
 			}
 		}
 
@@ -1431,12 +1434,24 @@ void silcpurple_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
 void silcpurple_idle_set(PurpleConnection *gc, int idle)
 
 {
-	SilcPurple sg = gc->proto_data;
-	SilcClient client = sg->client;
-	SilcClientConnection conn = sg->conn;
+	SilcPurple sg;
+	SilcClient client;
+	SilcClientConnection conn;
 	SilcAttributeObjService service;
 	const char *server;
 	int port;
+
+	sg = gc->proto_data;
+	if (sg == NULL)
+		return;
+
+	client = sg->client;
+	if (client == NULL)
+		return;
+
+	conn = sg->conn;
+	if (conn == NULL)
+		return;
 
 	server = purple_account_get_string(sg->account, "server",
 					 "silc.silcnet.org");

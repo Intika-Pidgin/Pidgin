@@ -84,18 +84,31 @@ pidgin_menu_tray_get_property(GObject *obj, guint param_id, GValue *value,
 }
 
 static void
-pidgin_menu_tray_finalize(GObject *obj) {
+pidgin_menu_tray_map(GtkWidget *widget)
+{
+	GTK_WIDGET_CLASS(parent_class)->map(widget);
+	gtk_container_add(GTK_CONTAINER(widget),
+			PIDGIN_MENU_TRAY(widget)->tray);
+}
+
+static void
+pidgin_menu_tray_finalize(GObject *obj)
+{
+	PidginMenuTray *tray = PIDGIN_MENU_TRAY(obj);
 #if 0
 	/* This _might_ be leaking, but I have a sneaking suspicion that the widget is
 	 * getting destroyed in GtkContainer's finalize function.  But if were are
 	 * leaking here, be sure to figure out why this causes a crash.
 	 *	-- Gary
 	 */
-	PidginMenuTray *tray = PIDGIN_MENU_TRAY(obj);
 
 	if(GTK_IS_WIDGET(tray->tray))
 		gtk_widget_destroy(GTK_WIDGET(tray->tray));
 #endif
+
+	if (tray->tooltips) {
+		gtk_object_sink(GTK_OBJECT(tray->tooltips));
+	}
 
 	G_OBJECT_CLASS(parent_class)->finalize(obj);
 }
@@ -104,6 +117,7 @@ static void
 pidgin_menu_tray_class_init(PidginMenuTrayClass *klass) {
 	GObjectClass *object_class = G_OBJECT_CLASS(klass);
 	GtkItemClass *item_class = GTK_ITEM_CLASS(klass);
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 	GParamSpec *pspec;
 
 	parent_class = g_type_class_peek_parent(klass);
@@ -113,6 +127,8 @@ pidgin_menu_tray_class_init(PidginMenuTrayClass *klass) {
 
 	item_class->select = pidgin_menu_tray_select;
 	item_class->deselect = pidgin_menu_tray_deselect;
+
+	widget_class->map = pidgin_menu_tray_map;
 
 	pspec = g_param_spec_object("box", "The box",
 								"The box",
@@ -134,8 +150,6 @@ pidgin_menu_tray_init(PidginMenuTray *menu_tray) {
 	if(!GTK_IS_WIDGET(menu_tray->tray))
 		menu_tray->tray = gtk_hbox_new(FALSE, 0);
 
-	menu_tray->tooltips = gtk_tooltips_new();
-
 #if GTK_CHECK_VERSION(2,2,0)
 	settings =
 		gtk_settings_get_for_screen(gtk_widget_get_screen(widget));
@@ -148,8 +162,6 @@ pidgin_menu_tray_init(PidginMenuTray *menu_tray) {
 	{
 		gtk_widget_set_size_request(widget, -1, height);
 	}
-
-	gtk_container_add(GTK_CONTAINER(menu_tray), menu_tray->tray);
 
 	gtk_widget_show(menu_tray->tray);
 }
@@ -235,7 +247,7 @@ void
 pidgin_menu_tray_set_tooltip(PidginMenuTray *menu_tray, GtkWidget *widget, const char *tooltip)
 {
 	if (!menu_tray->tooltips)
-		return;
+		menu_tray->tooltips = gtk_tooltips_new();
 
 	/* Should we check whether widget is a child of menu_tray? */
 

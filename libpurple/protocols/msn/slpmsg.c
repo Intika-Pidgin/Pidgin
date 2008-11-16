@@ -95,6 +95,7 @@ msn_slpmsg_destroy(MsnSlpMessage *slpmsg)
 		msg->nak_cb = NULL;
 		msg->ack_data = NULL;
 	}
+	g_list_free(slpmsg->msgs);
 
 	slplink->slp_msgs = g_list_remove(slplink->slp_msgs, slpmsg);
 
@@ -129,22 +130,6 @@ msn_slpmsg_set_image(MsnSlpMessage *slpmsg, PurpleStoredImage *img)
 	slpmsg->img = purple_imgstore_ref(img);
 	slpmsg->buffer = (guchar *)purple_imgstore_get_data(img);
 	slpmsg->size = purple_imgstore_get_size(img);
-}
-
-void
-msn_slpmsg_open_file(MsnSlpMessage *slpmsg, const char *file_name)
-{
-	struct stat st;
-
-	/* We can only have one data source at a time. */
-	g_return_if_fail(slpmsg->buffer == NULL);
-	g_return_if_fail(slpmsg->img == NULL);
-	g_return_if_fail(slpmsg->fp == NULL);
-
-	slpmsg->fp = g_fopen(file_name, "rb");
-
-	if (g_stat(file_name, &st) == 0)
-		slpmsg->size = st.st_size;
 }
 
 #ifdef MSN_DEBUG_SLP
@@ -184,6 +169,7 @@ msn_slpmsg_sip_new(MsnSlpCall *slpcall, int cseq,
 				   const char *content_type, const char *content)
 {
 	MsnSlpLink *slplink;
+	PurpleAccount *account;
 	MsnSlpMessage *slpmsg;
 	char *body;
 	gsize body_len;
@@ -193,6 +179,7 @@ msn_slpmsg_sip_new(MsnSlpCall *slpcall, int cseq,
 	g_return_val_if_fail(header  != NULL, NULL);
 
 	slplink = slpcall->slplink;
+	account = slplink->session->account;
 
 	/* Let's remember that "content" should end with a 0x00 */
 
@@ -211,7 +198,7 @@ msn_slpmsg_sip_new(MsnSlpCall *slpcall, int cseq,
 		"\r\n",
 		header,
 		slplink->remote_user,
-		slplink->local_user,
+		purple_account_get_username(account),
 		branch,
 		cseq,
 		slpcall->id,

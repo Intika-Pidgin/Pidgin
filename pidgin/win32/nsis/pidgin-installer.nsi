@@ -49,6 +49,7 @@ SetDateSave on
 !include "WordFunc.nsh"
 !insertmacro VersionCompare
 !insertmacro WordFind
+!insertmacro un.WordFind
 
 ;--------------------------------
 ;Defines
@@ -71,7 +72,7 @@ SetDateSave on
 !define GTK_MIN_VERSION				"2.6.10"
 !define GTK_REG_KEY				"SOFTWARE\GTK\2.0"
 !define PERL_REG_KEY				"SOFTWARE\Perl"
-!define PERL_DLL				"perl58.dll"
+!define PERL_DLL				"perl510.dll"
 !define GTK_DEFAULT_INSTALL_PATH		"$COMMONFILES\GTK\2.0"
 !define GTK_RUNTIME_INSTALLER			"..\..\..\..\gtk_installer\gtk-runtime*.exe"
 
@@ -375,7 +376,7 @@ Section $(GTK_SECTION_TITLE) SecGtk
     StrCmp $R0 "2" +2 ; Upgrade isn't optional
     MessageBox MB_YESNO $(GTK_UPGRADE_PROMPT) /SD IDYES IDNO done
     ClearErrors
-    ExecWait '"$TEMP\gtk-runtime.exe" /L=$LANGUAGE /S /D=$GTK_FOLDER'
+    ExecWait '"$TEMP\gtk-runtime.exe" /L=$LANGUAGE $ISSILENT /D=$GTK_FOLDER'
     IfErrors gtk_install_error done
 
     gtk_install_error:
@@ -504,11 +505,16 @@ Section $(PIDGIN_SECTION_TITLE) SecPidgin
     ; If this is under NT4, delete the SILC support stuff
     ; there is a bug that will prevent any account from connecting
     ; See https://lists.silcnet.org/pipermail/silc-devel/2005-January/001588.html
+    ; Also, remove the GSSAPI SASL plugin and associated files as they aren't
+    ; compatible with NT4.
     ${If} ${IsNT}
     ${AndIf} ${IsWinNT4}
+      ;SILC
       Delete "$INSTDIR\plugins\libsilc.dll"
       Delete "$INSTDIR\libsilcclient-1-1-2.dll"
       Delete "$INSTDIR\libsilc-1-1-2.dll"
+      ;GSSAPI
+      Delete "$INSTDIR\sasl2\saslGSSAPI.dll"
     ${EndIf}
 
     SetOutPath "$INSTDIR"
@@ -549,23 +555,18 @@ SectionGroupEnd
 
 ;--------------------------------
 ;URI Handling
+
+!macro URI_SECTION proto
+  Section /o "${proto}:" SecURI_${proto}
+    Push "${proto}"
+    Call RegisterURIHandler
+  SectionEnd
+!macroend
 SectionGroup /e $(URI_HANDLERS_SECTION_TITLE) SecURIHandlers
-  Section /o "aim:" SecURI_AIM
-    Push "aim"
-    Call RegisterURIHandler
-  SectionEnd
-  Section /o "msnim:" SecURI_MSNIM
-    Push "msnim"
-    Call RegisterURIHandler
-  SectionEnd
-  Section /o "myim:" SecURI_MYIM
-    Push "myim"
-    Call RegisterURIHandler
-  SectionEnd
-  Section /o "ymsgr:" SecURI_YMSGR
-    Push "ymsgr"
-    Call RegisterURIHandler
-  SectionEnd
+  !insertmacro URI_SECTION "aim"
+  !insertmacro URI_SECTION "msnim"
+  !insertmacro URI_SECTION "myim"
+  !insertmacro URI_SECTION "ymsgr"
 SectionGroupEnd
 
 ;--------------------------------
@@ -694,12 +695,28 @@ Section Uninstall
     ; The WinPrefs plugin may have left this behind..
     DeleteRegValue HKCU "${STARTUP_RUN_KEY}" "Pidgin"
     DeleteRegValue HKLM "${STARTUP_RUN_KEY}" "Pidgin"
-    ; Remove Language preference info (TODO: check if NSIS removes this)
+    ; Remove Language preference info
+    DeleteRegValue HKCU "${PIDGIN_REG_KEY}" "Installer Language"
 
+    ; Remove any URI handlers
+    ; I can't think of an easy way to maintain a list in a single place
+    Push "aim"
+    Call un.UnregisterURIHandler
+    Push "msnim"
+    Call un.UnregisterURIHandler
+    Push "myim"
+    Call un.UnregisterURIHandler
+    Push "ymsgr"
+    Call un.UnregisterURIHandler
+
+    Delete "$INSTDIR\ca-certs\CAcert_Class3.pem"
+    Delete "$INSTDIR\ca-certs\CAcert_Root.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_CA.pem"
     Delete "$INSTDIR\ca-certs\GTE_CyberTrust_Global_Root.pem"
-    Delete "$INSTDIR\ca-certs\Verisign_Class3_Extended_Validation_CA.pem"
+    Delete "$INSTDIR\ca-certs\Microsoft_Secure_Server_Authority.pem"
+    Delete "$INSTDIR\ca-certs\StartCom_Free_SSL_CA.pem"
     Delete "$INSTDIR\ca-certs\Verisign_Class3_Primary_CA.pem"
+    Delete "$INSTDIR\ca-certs\VeriSign_Class_3_Public_Primary_Certification_Authority_-_G5.pem"
     Delete "$INSTDIR\ca-certs\Verisign_RSA_Secure_Server_CA.pem"
     RMDir "$INSTDIR\ca-certs"
     RMDir /r "$INSTDIR\locale"
@@ -739,6 +756,7 @@ Section Uninstall
     Delete "$INSTDIR\plugins\pidginrc.dll"
     Delete "$INSTDIR\plugins\psychic.dll"
     Delete "$INSTDIR\plugins\relnot.dll"
+    Delete "$INSTDIR\plugins\sendbutton.dll"
     Delete "$INSTDIR\plugins\spellchk.dll"
     Delete "$INSTDIR\plugins\ssl-nss.dll"
     Delete "$INSTDIR\plugins\ssl.dll"
@@ -749,7 +767,9 @@ Section Uninstall
     Delete "$INSTDIR\plugins\timestamp_format.dll"
     Delete "$INSTDIR\plugins\win2ktrans.dll"
     Delete "$INSTDIR\plugins\winprefs.dll"
+    Delete "$INSTDIR\plugins\xmppconsole.dll"
     RMDir "$INSTDIR\plugins"
+    RMDir /r "$INSTDIR\sasl2"
     Delete "$INSTDIR\sounds\purple\alert.wav"
     Delete "$INSTDIR\sounds\purple\login.wav"
     Delete "$INSTDIR\sounds\purple\logout.wav"
@@ -761,19 +781,20 @@ Section Uninstall
     Delete "$INSTDIR\idletrack.dll"
     Delete "$INSTDIR\libgtkspell.dll"
     Delete "$INSTDIR\libjabber.dll"
+    Delete "$INSTDIR\libmeanwhile-1.dll"
     Delete "$INSTDIR\liboscar.dll"
     Delete "$INSTDIR\libpurple.dll"
-    Delete "$INSTDIR\libmeanwhile-1.dll"
+    Delete "$INSTDIR\libsasl.dll"
+    Delete "$INSTDIR\libsilc-1-1-2.dll"
+    Delete "$INSTDIR\libsilcclient-1-1-2.dll"
     Delete "$INSTDIR\libxml2.dll"
     Delete "$INSTDIR\nspr4.dll"
     Delete "$INSTDIR\nss3.dll"
     Delete "$INSTDIR\nssckbi.dll"
-    Delete "$INSTDIR\pidgin.exe"
     Delete "$INSTDIR\pidgin.dll"
+    Delete "$INSTDIR\pidgin.exe"
     Delete "$INSTDIR\plc4.dll"
     Delete "$INSTDIR\plds4.dll"
-    Delete "$INSTDIR\libsilc-1-1-2.dll"
-    Delete "$INSTDIR\libsilcclient-1-1-2.dll"
     Delete "$INSTDIR\smime3.dll"
     Delete "$INSTDIR\softokn3.dll"
     Delete "$INSTDIR\ssl3.dll"
@@ -896,12 +917,12 @@ Function SelectURIHandlerSelections
   ReadRegStr $R3 HKCR "$R2" ""
   IfErrors default_on ;there is no current handler
 
-  ; Check if Pidgin is the current handler
-  ClearErrors
-  ReadRegStr $R3 HKCR "$R2\shell\Open\command" ""
-  IfErrors end_loop
-  ${WordFind} "$R3" "pidgin.exe" "E+1{" $R3
-  IfErrors end_loop default_on
+  Push $R2
+  Call CheckIfPidginIsCurrentURIHandler
+  Pop $R3
+
+  ; If Pidgin isn't the current handler, we don't steal it automatically
+  IntCmp $R3 0 end_loop
 
   ;We default the URI handler checkbox on
   default_on:
@@ -919,9 +940,58 @@ Function SelectURIHandlerSelections
   Pop $R0
 FunctionEnd ;SelectURIHandlerSections
 
+; Check if Pidgin is the current handler
+; Returns a boolean on the stack
+!macro CheckIfPidginIsCurrentURIHandlerMacro UN
+Function ${UN}CheckIfPidginIsCurrentURIHandler
+  Exch $R0
+  ClearErrors
+
+  ReadRegStr $R0 HKCR "$R0\shell\Open\command" ""
+  IfErrors 0 +3
+    IntOp $R0 0 + 0
+    Goto done
+
+  !ifdef __UNINSTALL__
+  ${un.WordFind} "$R0" "pidgin.exe" "E+1{" $R0
+  !else
+  ${WordFind} "$R0" "pidgin.exe" "E+1{" $R0
+  !endif
+  IntOp $R0 0 + 1
+  IfErrors 0 +2
+    IntOp $R0 0 + 0
+
+  done:
+  Exch $R0
+FunctionEnd
+!macroend
+!insertmacro CheckIfPidginIsCurrentURIHandlerMacro ""
+!insertmacro CheckIfPidginIsCurrentURIHandlerMacro "un."
+
+; If Pidgin is the current URI handler for the specified protocol, remove it.
+Function un.UnregisterURIHandler
+  Exch $R0
+  Push $R1
+
+  Push $R0
+  Call un.CheckIfPidginIsCurrentURIHandler
+  Pop $R1
+
+  ; If Pidgin isn't the current handler, leave it as-is
+  IntCmp $R1 0 done
+
+  ;Unregister the URI handler
+  DetailPrint "Unregistering $R0 URI Handler"
+  DeleteRegKey HKCR "$R0"
+
+  done:
+  Pop $R1
+  Pop $R0
+FunctionEnd
 
 Function RegisterURIHandler
   Exch $R0
+  DetailPrint "Registering $R0 URI Handler"
   DeleteRegKey HKCR "$R0"
   WriteRegStr HKCR "$R0" "" "URL:$R0"
   WriteRegStr HKCR "$R0" "URL Protocol" ""
@@ -1096,7 +1166,7 @@ Function DoWeNeedGtk
 
   have_gtk:
     ; GTK+ is already installed; check version.
-	; Change this to not even run the GTK installer if this version is already installed.
+    ; Change this to not even run the GTK installer if this version is already installed.
     ${VersionCompare} ${GTK_INSTALL_VERSION} $0 $3
     IntCmp $3 1 +1 good_version good_version
     ${VersionCompare} ${GTK_MIN_VERSION} $0 $3
@@ -1147,11 +1217,24 @@ FunctionEnd
 !macro RunCheckMacro UN
 Function ${UN}RunCheck
   Push $R0
-  System::Call 'kernel32::OpenMutex(i 2031617, b 0, t "pidgin_is_running") i .R0'
-  IntCmp $R0 0 done
-    MessageBox MB_OK|MB_ICONEXCLAMATION $(PIDGIN_IS_RUNNING) /SD IDOK
+  Push $R1
+
+  IntOp $R1 0 + 0
+  retry_runcheck:
+  ; Close the Handle (needed if we're retrying)
+  IntCmp $R1 0 +2
+    System::Call 'kernel32::CloseHandle(i $R1) i .R1'
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "pidgin_is_running") i .R1 ?e'
+  Pop $R0
+  IntCmp $R0 0 +3 ;This could check for ERROR_ALREADY_EXISTS(183), but lets just assume
+    MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION $(PIDGIN_IS_RUNNING) /SD IDCANCEL IDRETRY retry_runcheck
     Abort
-  done:
+
+  ; Close the Handle (If we don't do this, the uninstaller called from within will fail)
+  ; This is not optimal because there is a (small) window of time when a new process could start
+  System::Call 'kernel32::CloseHandle(i $R1) i .R1'
+
+  Pop $R1
   Pop $R0
 FunctionEnd
 !macroend
@@ -1160,22 +1243,32 @@ FunctionEnd
 
 Function .onInit
   Push $R0
-  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "pidgin_installer_running") i .r1 ?e'
+  Push $R1
+  Push $R2
+
+  IntOp $R1 0 + 0
+  retry_runcheck:
+  ; Close the Handle (needed if we're retrying)
+  IntCmp $R1 0 +2
+    System::Call 'kernel32::CloseHandle(i $R1) i .R1'
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "pidgin_installer_running") i .R1 ?e'
   Pop $R0
-  StrCmp $R0 0 +3
-    MessageBox MB_OK|MB_ICONEXCLAMATION $(INSTALLER_IS_RUNNING) /SD IDOK
+  IntCmp $R0 0 +3 ;This could check for ERROR_ALREADY_EXISTS(183), but lets just assume
+    MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION $(INSTALLER_IS_RUNNING) /SD IDCANCEL IDRETRY retry_runcheck
     Abort
   Call RunCheck
   StrCpy $name "Pidgin ${PIDGIN_VERSION}"
   StrCpy $SPELLCHECK_SEL ""
 
   ;Try to copy the old Gaim installer Lang Reg. key
+  ;(remove it after we're done to prevent this being done more than once)
   ClearErrors
   ReadRegStr $R0 HKCU "${PIDGIN_REG_KEY}" "Installer Language"
   IfErrors 0 +5
   ClearErrors
-  ReadRegStr $R0 HKCU "SOFTWARE\gaim" "Installer Language"
-  IfErrors +2
+  ReadRegStr $R0 HKCU "${OLD_GAIM_REG_KEY}" "Installer Language"
+  IfErrors +3
+  DeleteRegValue HKCU "${OLD_GAIM_REG_KEY}" "Installer Language"
   WriteRegStr HKCU "${PIDGIN_REG_KEY}" "Installer Language" "$R0"
 
   !insertmacro SetSectionFlag ${SecSpellCheck} ${SF_RO}
@@ -1216,25 +1309,47 @@ Function .onInit
   ;Reset ShellVarContext because we may have changed it
   SetShellVarContext "current"
 
-  StrCpy $ISSILENT "/NOUI"
+  StrCpy $ISSILENT "/S"
 
   ; GTK installer has two silent states.. one with Message boxes, one without
   ; If pidgin installer was run silently, we want to supress gtk installer msg boxes.
   IfSilent 0 set_gtk_normal
-      StrCpy $ISSILENT "/S"
+      StrCpy $ISSILENT "/NOUI"
   set_gtk_normal:
 
   ${GetParameters} $R0
   ClearErrors
-  ${GetOptions} $R0 "/L=" $R0
+  ${GetOptions} "$R0" "/L=" $R1
   IfErrors +3
-  StrCpy $LANGUAGE $R0
+  StrCpy $LANGUAGE $R1
   Goto skip_lang
 
   ; Select Language
     ; Display Language selection dialog
     !insertmacro MUI_LANGDLL_DISPLAY
     skip_lang:
+
+  ClearErrors
+  ${GetOptions} "$R0" "/DS=" $R1
+  IfErrors +8
+  SectionGetFlags ${SecDesktopShortcut} $R2
+  StrCmp "1" $R1 0 +2
+  IntOp $R2 $R2 | ${SF_SELECTED}
+  StrCmp "0" $R1 0 +3
+  IntOp $R1 ${SF_SELECTED} ~
+  IntOp $R2 $R2 & $R1
+  SectionSetFlags ${SecDesktopShortcut} $R2
+
+  ClearErrors
+  ${GetOptions} "$R0" "/SMS=" $R1
+  IfErrors +8
+  SectionGetFlags ${SecStartMenuShortcut} $R2
+  StrCmp "1" $R1 0 +2
+  IntOp $R2 $R2 | ${SF_SELECTED}
+  StrCmp "0" $R1 0 +3
+  IntOp $R1 ${SF_SELECTED} ~
+  IntOp $R2 $R2 & $R1
+  SectionSetFlags ${SecStartMenuShortcut} $R2
 
   ; If install path was set on the command, use it.
   StrCmp $INSTDIR "" 0 instdir_done
@@ -1263,77 +1378,19 @@ Function .onInit
 
   instdir_done:
 ;LogSet on
+  Pop $R2
+  Pop $R1
   Pop $R0
 FunctionEnd
 
 Function un.onInit
   Call un.RunCheck
   StrCpy $name "Pidgin ${PIDGIN_VERSION}"
+;LogSet on
 
   ; Get stored language preference
   !insertmacro MUI_UNGETLANGUAGE
 
-FunctionEnd
-
-; This is a modified StartRadioButtons (from Sections.nsh)
-; The only difference is that it allows for nothing in the group to be selected
-; In that case, the default variable should be set to ""
-!macro StartRadioButtonsUnselectable var
-
-  !define StartRadioButtons_Var "${var}"
-
-  Push $R0
-  Push $R1
-
-   ;If we have no selection, don't try to unselect it
-   StrCmp "${StartRadioButtons_Var}" "" +4
-   SectionGetFlags "${StartRadioButtons_Var}" $R0
-   IntOp $R1 $R0 & ${SF_SELECTED}
-   IntOp $R0 $R0 & ${SECTION_OFF}
-   SectionSetFlags "${StartRadioButtons_Var}" $R0
-
-   ; If the previous value isn't currently selected,
-   ; we don't want to select it at the end
-   IntCmp $R1 ${SF_SELECTED} +2
-   StrCpy "${StartRadioButtons_Var}" ""
-
-   StrCpy $R1 "${StartRadioButtons_Var}"
-
-!macroend
-
-Function .onSelChange
-  Push $0
-  Push $1
-  Push $2
-
-  ; Check that at most one of the non-readonly spelling dictionaries are selected
-  ; We can't use $R0 or $R1 in this block since they're used in the macros
-  !insertmacro StartRadioButtonsUnselectable $SPELLCHECK_SEL
-    ; Start with the first language dictionary
-    IntOp $2 ${SecSpellCheck} + 1
-
-    start_spellcheck_radio:
-    SectionGetFlags $2 $0
-
-    IntOp $1 $0 & ${SF_SECGRPEND}
-    ; If it is the end of the section group, stop
-    IntCmp $1 ${SF_SECGRPEND} end_spellcheck_radio
-
-    IntOp $0 $0 & ${SF_RO}
-    IntCmp $0 ${SF_RO} after_button_insert
-    ; If !readonly, then it is part of the radiobutton group
-    !insertmacro RadioButton $2
-    after_button_insert:
-
-    IntOp $2 $2 + 1 ;Advance to the next section
-    Goto start_spellcheck_radio
-
-    end_spellcheck_radio:
-  !insertmacro EndRadioButtons
-
-  Pop $2
-  Pop $1
-  Pop $0
 FunctionEnd
 
 ; Page enter and exit functions..
@@ -1359,13 +1416,17 @@ Function preWelcomePage
   Push $R1
   Push $R2
 
-  ; Make the GTK+ Section RO if it is required.
   Call DoWeNeedGtk
   Pop $R0
   Pop $R2
-  IntCmp $R0 1 gtk_not_mandatory gtk_not_mandatory
+  IntCmp $R0 1 gtk_selection_done gtk_not_mandatory
+    ; Make the GTK+ Section RO if it is required.
     !insertmacro SetSectionFlag ${SecGtk} ${SF_RO}
+    Goto gtk_selection_done
   gtk_not_mandatory:
+    ; Don't select the GTK+ section if we already have this version or newer installed
+    !insertmacro UnselectSection ${SecGtk}
+  gtk_selection_done:
 
   ; If on Win95/98/ME warn them that the GTK+ version wont work
   ${Unless} ${IsNT}

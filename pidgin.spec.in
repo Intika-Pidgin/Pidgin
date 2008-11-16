@@ -14,6 +14,9 @@
 %define pidginver @VERSION@
 %endif
 
+# define the minimum API version required, so we can use it for plugin deps
+%define apiver %(echo "@VERSION@"|awk -F. '{print $1"."$2}')
+
 Summary:    A GTK+ based multiprotocol instant messaging client
 Name:       @PACKAGE@
 Version:    %pidginver
@@ -29,15 +32,16 @@ BuildRequires: libtool, pkgconfig, intltool, gettext, libxml2-devel
 BuildRequires: gtk2-devel
 
 %{!?_without_startupnotification:BuildRequires: startup-notification-devel}
-%{?_with_avahi:BuildRequires: avahi-compat-howl-devel}
+%{?_with_avahi:BuildRequires: avahi-glib-devel}
 %{!?_without_gtkspell:BuildRequires: gtkspell-devel}
-%{?_with_howl:BuildRequires: howl-devel}
 %{?_with_meanwhile:BuildRequires: meanwhile-devel}
 %{?_with_mono:BuildRequires: mono-devel}
 %{?_with_sasl:BuildRequires: cyrus-sasl-devel >= 2}
 %{!?_without_silc:BuildRequires: /usr/include/silc/silcclient.h}
 %{!?_without_tcl:BuildRequires: tcl, tk, /usr/include/tcl.h}
 %{!?_without_text:BuildRequires: ncurses-devel}
+%{!?_without_nm:BuildRequires: NetworkManager-devel}
+%{!?_without_gevolution:BuildRequires: evolution-data-server-devel}
 
 %if "%{_vendor}" == "suse"
 # For SuSE:
@@ -114,25 +118,25 @@ Requires:   pkgconfig
 %{?_with_dbus:Requires: dbus-devel >= 0.35}
 %endif
 
-%if 0%{?_with_howl:1} || 0%{?_with_avahi:1}
+%if 0%{?_with_avahi:1}
 %package -n libpurple-bonjour
 Summary:    Bonjour plugin for Pidgin
 Group:      Applications/Internet
-Requires:   libpurple = %{version}
+Requires:   libpurple >= %{apiver}
 %endif
 
 %if 0%{?_with_meanwhile:1}
 %package -n libpurple-meanwhile
 Summary:    Lotus Sametime plugin for Pidgin using the Meanwhile library
 Group:      Applications/Internet
-Requires:   libpurple = %{version}
+Requires:   libpurple >= %{apiver}
 %endif
 
 %if 0%{?_with_mono:1}
 %package -n libpurple-mono
 Summary:    Mono .NET plugin support for Pidgin
 Group:      Applications/Internet
-Requires:   libpurple = %{version}
+Requires:   libpurple >= %{apiver}
 %endif
 
 %if 0%{!?_without_text:1}
@@ -181,7 +185,7 @@ The libpurple-devel package contains the header files, developer
 documentation, and libraries required for development of libpurple based
 instant messaging clients or plugins for any libpurple based client.
 
-%if 0%{?_with_howl:1} || 0%{?_with_avahi:1}
+%if 0%{?_with_avahi:1}
 %description -n libpurple-bonjour
 Bonjour plugin for Pidgin.
 %endif
@@ -223,8 +227,12 @@ CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix} \
                                     --sysconfdir=%{_sysconfdir} \
                                     --disable-schemas-install \
                                     %{!?_with_dbus:--disable-dbus} \
+                                    %{!?_with_avahi:--disable-avahi} \
+                                    %{!?_with_meanwhile:--disable-meanwhile} \
                                     %{?_without_gstreamer:--disable-gstreamer} \
                                     %{?_without_gtkspell:--disable-gtkspell} \
+                                    %{?_without_nm:--disable-nm} \
+                                    %{!?_without_gevolution:--enable-gevolution} \
                                     %{?_with_mono:--enable-mono} \
                                     %{?_with_perlmakehack:--with-perl-lib=%{buildroot}%{_prefix}} \
                                     %{!?_with_perlmakehack:--with-perl-lib=%{_prefix}} \
@@ -232,7 +240,7 @@ CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix} \
                                     %{?_without_tcl:--disable-tcl} \
                                     %{?_without_text:--disable-consoleui}
 
-make %{?_smp_mflags}
+make %{?_smp_mflags} LIBTOOL=/usr/bin/libtool
 
 %install
 rm -rf %{buildroot}
@@ -243,7 +251,7 @@ make prefix=%{buildroot}%{_prefix} bindir=%{buildroot}%{_bindir} \
      sysconfdir=%{buildroot}%{_sysconfdir} \
      install
 %else
-make DESTDIR=$RPM_BUILD_ROOT install
+make DESTDIR=$RPM_BUILD_ROOT LIBTOOL=/usr/bin/libtool install
 %endif
 
 # Delete files that we don't want to put in any of the RPMs
@@ -255,10 +263,11 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/purple-2/liboscar.so
 rm -f $RPM_BUILD_ROOT%{_libdir}/purple-2/libjabber.so
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
 rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
+find $RPM_BUILD_ROOT -type f -name '*.a' -exec rm -f {} ';'
 find $RPM_BUILD_ROOT -type f -name .packlist -exec rm -f {} ';'
 find $RPM_BUILD_ROOT -type f -name '*.bs' -empty -exec rm -f {} ';'
 
-%if 0%{!?_with_howl:1} && 0%{!?_with_avahi:1}
+%if 0%{!?_with_avahi:1}
 rm -f $RPM_BUILD_ROOT%{_libdir}/purple-2/libbonjour.so
 %endif
 
@@ -324,7 +333,9 @@ if [ -n "`which gconftool-2 2>/dev/null`" ]; then
     killall -HUP gconfd-2 &> /dev/null || :
 fi
 touch --no-create %{_datadir}/icons/hicolor || :
-%{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor &> /dev/null || :
+if [ -x %{_bindir}/gtk-update-icon-cache ]; then
+	%{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor &> /dev/null || :
+fi
 
 %post -n libpurple -p /sbin/ldconfig
 
@@ -340,7 +351,9 @@ fi
 
 %postun
 touch --no-create %{_datadir}/icons/hicolor || :
-%{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor &> /dev/null || :
+if [ -x %{_bindir}/gtk-update-icon-cache ]; then
+	%{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor &> /dev/null || :
+fi
 
 %postun -n libpurple -p /sbin/ldconfig
 
@@ -381,8 +394,6 @@ touch --no-create %{_datadir}/icons/hicolor || :
 %attr(755, root, root) %{perl_vendorarch}/Purple.pm
 %attr(755, root, root) %{perl_vendorarch}/auto/Purple
 
-%{_datadir}/pixmaps/purple
-
 %if 0%{?_with_dbus:1}
 %{_bindir}/purple-client-example
 %{_bindir}/purple-remote
@@ -416,7 +427,7 @@ touch --no-create %{_datadir}/icons/hicolor || :
 %endif
 
 
-%if 0%{?_with_howl:1} || 0%{?_with_avahi:1}
+%if 0%{?_with_avahi:1}
 %files -n libpurple-bonjour
 %defattr(-, root, root)
 
@@ -462,6 +473,21 @@ touch --no-create %{_datadir}/icons/hicolor || :
 %endif
 
 %changelog
+* Mon May 19 2008 Stu Tomlinson <stu@nosnilmot.com>
+- Fix building without meanwhile support
+
+* Fri May 16 2008 Stu Tomlinson <stu@nosnilmot.com>
+- Add "--without nm" support to build without NetworkManager
+
+* Thu Feb 28 2008 Stu Tomlinson <stu@nosnilmot.com>
+- Remove --with-howl options as we no longer support using howl for bonjour
+
+* Wed Dec  5 2007 Stu Tomlinson <stu@nosnilmot.com>
+- When building with avahi, use native avahi instead of howl compatability
+  headers
+- Make the split out plugins depend only on the minimum necessary API
+  version of libpurple
+
 * Tue Oct 23 2007 Stu Tomlinson <stu@nosnilmot.com>
 - Add finch.pc to finch-devel
 

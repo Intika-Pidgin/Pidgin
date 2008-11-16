@@ -44,6 +44,46 @@ struct _jabber_disco_info_cb_data {
 	xmlnode_set_attrib(feature, "var", x); \
 }
 
+static void
+jabber_disco_bytestream_server_cb(JabberStream *js, xmlnode *packet, gpointer data) {
+	JabberBytestreamsStreamhost *sh = data;
+	const char *from = xmlnode_get_attrib(packet, "from");
+	xmlnode *query = xmlnode_get_child_with_namespace(packet, "query",
+		"http://jabber.org/protocol/bytestreams");
+
+	if (from && !strcmp(from, sh->jid) && query != NULL) {
+		xmlnode *sh_node = xmlnode_get_child(query, "streamhost");
+		if (sh_node) {
+			const char *jid = xmlnode_get_attrib(sh_node, "jid");
+			const char *port = xmlnode_get_attrib(sh_node, "port");
+
+
+			if (jid == NULL || strcmp(jid, from) != 0)
+				purple_debug_error("jabber", "Invalid jid(%s) for bytestream.\n",
+						   jid ? jid : "(null)");
+
+			sh->host = g_strdup(xmlnode_get_attrib(sh_node, "host"));
+			sh->zeroconf = g_strdup(xmlnode_get_attrib(sh_node, "zeroconf"));
+			if (port != NULL)
+				sh->port = atoi(port);
+		}
+	}
+
+	purple_debug_info("jabber", "Discovered bytestream proxy server: "
+			  "jid='%s' host='%s' port='%d' zeroconf='%s'\n",
+			   from ? from : "", sh->host ? sh->host : "",
+			   sh->port, sh->zeroconf ? sh->zeroconf : "");
+
+	/* TODO: When we support zeroconf proxies, fix this to handle them */
+	if (!(sh->jid && sh->host && sh->port > 0)) {
+		g_free(sh->jid);
+		g_free(sh->host);
+		g_free(sh->zeroconf);
+		g_free(sh);
+		js->bs_proxies = g_list_remove(js->bs_proxies, sh);
+	}
+}
+
 
 void jabber_disco_info_parse(JabberStream *js, xmlnode *packet) {
 	const char *from = xmlnode_get_attrib(packet, "from");
@@ -191,10 +231,26 @@ void jabber_disco_info_parse(JabberStream *js, xmlnode *packet) {
 				if(!strcmp(category, "conference") && !strcmp(type, "text")) {
 					/* we found a groupchat or MUC server, add it to the list */
 					/* XXX: actually check for protocol/muc or gc-1.0 support */
-					js->chat_servers = g_list_append(js->chat_servers, g_strdup(from));
+					js->chat_servers = g_list_prepend(js->chat_servers, g_strdup(from));
 				} else if(!strcmp(category, "directory") && !strcmp(type, "user")) {
 					/* we found a JUD */
-					js->user_directories = g_list_append(js->user_directories, g_strdup(from));
+					js->user_directories = g_list_prepend(js->user_directories, g_strdup(from));
+				} else if(!strcmp(category, "proxy") && !strcmp(type, "bytestreams")) {
+					/* This is a bytestream proxy */
+					JabberIq *iq;
+					JabberBytestreamsStreamhost *sh;
+
+					purple_debug_info("jabber", "Found bytestream proxy server: %s\n", from);
+
+					sh = g_new0(JabberBytestreamsStreamhost, 1);
+					sh->jid = g_strdup(from);
+					js->bs_proxies = g_list_prepend(js->bs_proxies, sh);
+
+					iq = jabber_iq_new_query(js, JABBER_IQ_GET,
+								 "http://jabber.org/protocol/bytestreams");
+					xmlnode_set_attrib(iq->node, "to", sh->jid);
+					jabber_iq_set_callback(iq, jabber_disco_bytestream_server_cb, sh);
+					jabber_iq_send(iq);
 				}
 
 			} else if(!strcmp(child->name, "feature")) {
@@ -282,6 +338,7 @@ void jabber_disco_items_parse(JabberStream *js, xmlnode *packet) {
 static void
 jabber_disco_finish_server_info_result_cb(JabberStream *js)
 {
+	const char *ft_proxies;
 
 	jabber_vcard_fetch_mine(js);
 
@@ -292,11 +349,44 @@ jabber_disco_finish_server_info_result_cb(JabberStream *js)
 
 	/* Send initial presence; this will trigger receipt of presence for contacts on the roster */
 	jabber_presence_send(js->gc->account, NULL);
-	
+
 	if (js->server_caps & JABBER_CAP_ADHOC) {
 		/* The server supports ad-hoc commands, so let's request the list */
 		jabber_adhoc_server_get_list(js);
 	}
+
+	/* If there are manually specified bytestream proxies, query them */
+	ft_proxies = purple_account_get_string(js->gc->account, "ft_proxies", NULL);
+	if (ft_proxies) {
+		JabberIq *iq;
+		JabberBytestreamsStreamhost *sh;
+		int i;
+		char *tmp;
+		gchar **ft_proxy_list = g_strsplit(ft_proxies, ",", 0);
+
+		for(i = 0; ft_proxy_list[i]; i++) {
+			g_strstrip(ft_proxy_list[i]);
+			if(!(*ft_proxy_list[i]))
+				continue;
+
+			/* We used to allow specifying a port directly here; get rid of it */
+			if((tmp = strchr(ft_proxy_list[i], ':')))
+				*tmp = '\0';
+
+			sh = g_new0(JabberBytestreamsStreamhost, 1);
+			sh->jid = g_strdup(ft_proxy_list[i]);
+			js->bs_proxies = g_list_prepend(js->bs_proxies, sh);
+
+			iq = jabber_iq_new_query(js, JABBER_IQ_GET,
+						 "http://jabber.org/protocol/bytestreams");
+			xmlnode_set_attrib(iq->node, "to", sh->jid);
+			jabber_iq_set_callback(iq, jabber_disco_bytestream_server_cb, sh);
+			jabber_iq_send(iq);
+		}
+
+		g_strfreev(ft_proxy_list);
+	}
+
 }
 
 static void
@@ -344,8 +434,8 @@ jabber_disco_server_info_result_cb(JabberStream *js, xmlnode *packet, gpointer d
 		g_free(js->server_name);
 		js->server_name = g_strdup(name);
 		if (!strcmp(name, "Google Talk")) {
-		  purple_debug_info("jabber", "Google Talk!\n");
-		  js->googletalk = TRUE;
+			purple_debug_info("jabber", "Google Talk!\n");
+			js->googletalk = TRUE;
 		}
 	}
 
@@ -422,8 +512,7 @@ void jabber_disco_items_server(JabberStream *js)
 	jabber_iq_set_callback(iq, jabber_disco_server_items_result_cb, NULL);
 	jabber_iq_send(iq);
 
-	iq = jabber_iq_new_query(js, JABBER_IQ_GET,
-		                 "http://jabber.org/protocol/disco#info");
+	iq = jabber_iq_new_query(js, JABBER_IQ_GET, "http://jabber.org/protocol/disco#info");
 	xmlnode_set_attrib(iq->node, "to", js->user->domain);
 	jabber_iq_set_callback(iq, jabber_disco_server_info_result_cb, NULL);
 	jabber_iq_send(iq);

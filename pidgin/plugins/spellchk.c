@@ -64,7 +64,7 @@ struct _spellchk {
 	GtkTextMark *mark_insert_start;
 	GtkTextMark *mark_insert_end;
 
-	const gchar *word;
+	gchar *word;
 	gboolean inserting;
 	gboolean ignore_correction;
 	gboolean ignore_correction_on_send;
@@ -265,6 +265,7 @@ substitute_word(gchar *word)
 				g_value_unset(&val1);
 				g_value_unset(&val2);
 
+				g_free(lowerword);
 				g_free(foldedword);
 				return outword;
 			}
@@ -274,6 +275,7 @@ substitute_word(gchar *word)
 
 		} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(model), &iter));
 	}
+	g_free(lowerword);
 	g_free(foldedword);
 
 	return NULL;
@@ -292,6 +294,7 @@ spellchk_free(spellchk *spell)
 			G_SIGNAL_MATCH_DATA,
 			0, 0, NULL, NULL,
 			spell);
+	g_free(spell->word);
 	g_free(spell);
 }
 
@@ -440,6 +443,7 @@ check_range(spellchk *spell, GtkTextBuffer *buffer,
 	/* Move backwards to the beginning of the word. */
 	spellchk_backward_word_start(&start);
 
+	g_free(spell->word);
 	spell->word = gtk_text_iter_get_text(&start, &end);
 
 	/* Hack because otherwise typing things like U.S. gets difficult
@@ -484,6 +488,7 @@ check_range(spellchk *spell, GtkTextBuffer *buffer,
 	}
 	g_free(tmp);
 
+	g_free(spell->word);
 	spell->word = NULL;
 
 	return replaced;
@@ -504,6 +509,7 @@ insert_text_before(GtkTextBuffer *buffer, GtkTextIter *iter,
 
 	spell->inserting = TRUE;
 
+	g_free(spell->word);
 	spell->word = NULL;
 
 	gtk_text_buffer_move_mark(buffer, spell->mark_insert_start, iter);
@@ -561,6 +567,7 @@ delete_range_after(GtkTextBuffer *buffer,
 	place = gtk_text_iter_get_offset(&pos);
 
 	if ((place + 1) != spell->pos) {
+		g_free(spell->word);
 		spell->word = NULL;
 		return;
 	}
@@ -574,6 +581,7 @@ delete_range_after(GtkTextBuffer *buffer,
 	spell->ignore_correction_on_send = TRUE;
 
 	spell->inserting = FALSE;
+	g_free(spell->word);
 	spell->word = NULL;
 }
 
@@ -695,7 +703,7 @@ static int buf_get_line(char *ibuf, char **buf, int *position, gsize len)
 	return 1;
 }
 
-static void load_conf()
+static void load_conf(void)
 {
 	/* Corrections to change "...", "(c)", "(r)", and "(tm)" to their
 	 * Unicode character equivalents were not added here even though
@@ -1732,6 +1740,7 @@ static void load_conf()
 			"BAD wroking\nGOOD working\n"
 			"BAD wtih\nGOOD with\n"
 			"BAD wuould\nGOOD would\n"
+			"BAD wud\nGOOD would\n"
 			"BAD wut\nGOOD what\n"
 			"BAD wya\nGOOD way\n"
 			"BAD y\nGOOD why\n"
@@ -1912,7 +1921,7 @@ static void case_sensitive_toggled(GtkCellRendererToggle *cellrenderertoggle,
 	save_list();
 }
 
-static void list_add_new()
+static void list_add_new(void)
 {
 	GtkTreeIter iter;
 	const char *word = gtk_entry_get_text(GTK_ENTRY(bad_entry));
@@ -2015,7 +2024,7 @@ static void remove_row(void *data1, gpointer data2)
 	gtk_tree_row_reference_free(row_reference);
 }
 
-static void list_delete()
+static void list_delete(void)
 {
 	GtkTreeSelection *sel;
 	GSList *list = NULL;
@@ -2161,14 +2170,13 @@ static GtkWidget *
 get_config_frame(PurplePlugin *plugin)
 {
 	GtkWidget *ret, *vbox, *win;
-	GtkWidget *hbox, *label;
+	GtkWidget *hbox;
 	GtkWidget *button;
 	GtkSizeGroup *sg;
 	GtkSizeGroup *sg2;
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
 	GtkWidget *vbox2;
-	GtkWidget *hbox2;
 	GtkWidget *vbox3;
 
 	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
@@ -2275,37 +2283,15 @@ get_config_frame(PurplePlugin *plugin)
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 	sg2 = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
-	hbox2 = gtk_hbox_new(FALSE, 2);
-	gtk_box_pack_start(GTK_BOX(vbox2), hbox2, FALSE, FALSE, 0);
-	gtk_widget_show(hbox2);
-
-	label = gtk_label_new_with_mnemonic(_("You _type:"));
-	gtk_box_pack_start(GTK_BOX(hbox2), label, FALSE, FALSE, 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
-
 	bad_entry = gtk_entry_new();
 	/* Set a minimum size. Since they're in a size group, the other entry will match up. */
 	gtk_widget_set_size_request(bad_entry, 350, -1);
-	gtk_box_pack_start(GTK_BOX(hbox2), bad_entry, TRUE, TRUE, 0);
 	gtk_size_group_add_widget(sg2, bad_entry);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), bad_entry);
-	gtk_widget_show(bad_entry);
-
-	hbox2 = gtk_hbox_new(FALSE, 2);
-	gtk_box_pack_start(GTK_BOX(vbox2), hbox2, FALSE, FALSE, 0);
-	gtk_widget_show(hbox2);
-
-	label = gtk_label_new_with_mnemonic(_("You _send:"));
-	gtk_box_pack_start(GTK_BOX(hbox2), label, FALSE, FALSE, 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("You _type:"), sg, bad_entry, FALSE, NULL);
 
 	good_entry = gtk_entry_new();
-	gtk_box_pack_start(GTK_BOX(hbox2), good_entry, TRUE, TRUE, 0);
 	gtk_size_group_add_widget(sg2, good_entry);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), good_entry);
-	gtk_widget_show(good_entry);
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("You _send:"), sg, good_entry, FALSE, NULL);
 
 	/* Created here so it can be passed to whole_words_button_toggled. */
 	case_toggle = gtk_check_button_new_with_mnemonic(_("_Exact case match (uncheck for automatic case handling)"));
@@ -2341,6 +2327,8 @@ get_config_frame(PurplePlugin *plugin)
 #endif
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
+	g_object_unref(sg2);
 	return ret;
 }
 
@@ -2368,7 +2356,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	SPELLCHECK_PLUGIN_ID,
 	N_("Text replacement"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Replaces text in outgoing messages according to user-defined rules."),
 	N_("Replaces text in outgoing messages according to user-defined rules."),
 	"Eric Warmenhoven <eric@warmenhoven.org>",

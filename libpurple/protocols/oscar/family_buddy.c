@@ -97,21 +97,21 @@ rights(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame,
 int
 aim_buddylist_addbuddy(OscarData *od, FlapConnection *conn, const char *sn)
 {
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!sn || !strlen(sn))
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+1+strlen(sn));
+	byte_stream_new(&bs, 1+strlen(sn));
 
-	snacid = aim_cachesnac(od, 0x0003, 0x0004, 0x0000, sn, strlen(sn)+1);
-	aim_putsnac(&frame->data, 0x0003, 0x0004, 0x0000, snacid);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_BUDDY, 0x0004, 0x0000, sn, strlen(sn)+1);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_BUDDY, 0x0004, 0x0000, snacid, &bs);
 
-	flap_connection_send(conn, frame);
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -129,7 +129,7 @@ aim_buddylist_addbuddy(OscarData *od, FlapConnection *conn, const char *sn)
 int
 aim_buddylist_set(OscarData *od, FlapConnection *conn, const char *buddy_list)
 {
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 	int len = 0;
 	char *localcpy = NULL;
@@ -139,28 +139,30 @@ aim_buddylist_set(OscarData *od, FlapConnection *conn, const char *buddy_list)
 		return -EINVAL;
 
 	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
-		purple_debug_misc("oscar", "---adding: %s (%d)\n", tmpptr, strlen(tmpptr));
+		purple_debug_misc("oscar", "---adding: %s (%" G_GSIZE_FORMAT
+				")\n", tmpptr, strlen(tmpptr));
 		len += 1 + strlen(tmpptr);
 		tmpptr = strtok(NULL, "&");
 	}
 
-	frame = flap_frame_new(od, 0x02, 10+len);
-
-	snacid = aim_cachesnac(od, 0x0003, 0x0004, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x0003, 0x0004, 0x0000, snacid);
+	byte_stream_new(&bs, len);
 
 	strncpy(localcpy, buddy_list, strlen(buddy_list) + 1);
 
 	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
 
-		purple_debug_misc("oscar", "---adding: %s (%d)\n", tmpptr, strlen(tmpptr));
+		purple_debug_misc("oscar", "---adding: %s (%" G_GSIZE_FORMAT
+				")\n", tmpptr, strlen(tmpptr));
 
-		byte_stream_put8(&frame->data, strlen(tmpptr));
-		byte_stream_putstr(&frame->data, tmpptr);
+		byte_stream_put8(&bs, strlen(tmpptr));
+		byte_stream_putstr(&bs, tmpptr);
 		tmpptr = strtok(NULL, "&");
 	}
 
-	flap_connection_send(conn, frame);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_BUDDY, 0x0004, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_BUDDY, 0x0004, 0x0000, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	g_free(localcpy);
 
@@ -177,21 +179,21 @@ aim_buddylist_set(OscarData *od, FlapConnection *conn, const char *buddy_list)
 int
 aim_buddylist_removebuddy(OscarData *od, FlapConnection *conn, const char *sn)
 {
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!sn || !strlen(sn))
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+1+strlen(sn));
+	byte_stream_new(&bs, 1 + strlen(sn));
 
-	snacid = aim_cachesnac(od, 0x0003, 0x0005, 0x0000, sn, strlen(sn)+1);
-	aim_putsnac(&frame->data, 0x0003, 0x0005, 0x0000, snacid);
+	byte_stream_put8(&bs, strlen(sn));
+	byte_stream_putstr(&bs, sn);
 
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_BUDDY, 0x0005, 0x0000, sn, strlen(sn)+1);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_BUDDY, 0x0005, 0x0000, snacid, &bs);
 
-	flap_connection_send(conn, frame);
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -219,8 +221,9 @@ buddychange(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
 		ret = userfunc(od, conn, frame, &userinfo);
 
-	if (snac->subtype == SNAC_SUBTYPE_BUDDY_ONCOMING)
-		aim_locate_requestuserinfo(od, userinfo.sn);
+	if (snac->subtype == SNAC_SUBTYPE_BUDDY_ONCOMING && userinfo.flags & AIM_FLAG_AWAY)
+		aim_locate_autofetch_away_message(od, userinfo.sn);
+
 	aim_info_free(&userinfo);
 
 	return ret;
@@ -240,7 +243,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 buddylist_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x0003;
+	mod->family = SNAC_FAMILY_BUDDY;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
 	mod->toolversion = 0x0629;

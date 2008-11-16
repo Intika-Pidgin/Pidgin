@@ -21,11 +21,17 @@
  *
  */
 
+#ifndef DBUS_API_SUBJECT_TO_CHANGE
 #define DBUS_API_SUBJECT_TO_CHANGE
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* Allow the code below to see deprecated functions, so we can continue to
+ * export them via DBus. */
+#undef PURPLE_DISABLE_DEPRECATED
 
 #include "account.h"
 #include "blist.h"
@@ -38,6 +44,7 @@
 #include "core.h"
 #include "internal.h"
 #include "savedstatuses.h"
+#include "smiley.h"
 #include "util.h"
 #include "value.h"
 #include "xmlnode.h"
@@ -689,6 +696,7 @@ purple_dbus_message_append_purple_values(DBusMessageIter *iter,
 		switch (purple_values[i]->type)
 		{
 		case PURPLE_TYPE_INT:
+		case PURPLE_TYPE_ENUM:
 			xint = my_arg(gint);
 			dbus_message_iter_append_basic(iter, DBUS_TYPE_INT32, &xint);
 			break;
@@ -729,7 +737,7 @@ purple_dbus_message_append_purple_values(DBusMessageIter *iter,
 			if (id == 0 && val != NULL)
 				error = TRUE;      /* Some error happened. */
 			dbus_message_iter_append_basic(iter,
-					(sizeof(void *) == 4) ? DBUS_TYPE_UINT32 : DBUS_TYPE_UINT64, &id);
+					(sizeof(id) == sizeof(dbus_int32_t)) ? DBUS_TYPE_INT32 : DBUS_TYPE_INT64, &id);
 			break;
 		default: /* no conversion implemented */
 			g_return_val_if_reached(TRUE);

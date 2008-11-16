@@ -190,30 +190,54 @@ attach_to_pidgin_window(PidginWindow *win, gpointer null)
 }
 
 static void
-detach_from_all_windows()
+detach_from_all_windows(void)
 {
 	g_list_foreach(pidgin_conv_windows_get_list(), (GFunc)detach_from_pidgin_window, NULL);
 }
 
 static void
-attach_to_all_windows()
+attach_to_all_windows(void)
 {
 	g_list_foreach(pidgin_conv_windows_get_list(), (GFunc)attach_to_pidgin_window, NULL);
 }
 
 static void
-conv_created(PurpleConversation *conv, gpointer null)
+conv_created(PidginConversation *gtkconv, gpointer null)
+{
+	PidginWindow *win;
+
+	win = pidgin_conv_get_window(gtkconv);
+	if (!win)
+		return;
+
+	detach_from_pidgin_window(win, NULL);
+	attach_to_pidgin_window(win, NULL);
+}
+
+static void
+jump_to_markerline(PurpleConversation *conv, gpointer null)
 {
 	PidginConversation *gtkconv = PIDGIN_CONVERSATION(conv);
-	PidginWindow *win;
+	int offset;
+	GtkTextIter iter;
 
 	if (!gtkconv)
 		return;
 
-	win = pidgin_conv_get_window(gtkconv);
+	offset = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(gtkconv->imhtml), "markerline"));
+	gtk_text_buffer_get_iter_at_offset(GTK_IMHTML(gtkconv->imhtml)->text_buffer, &iter, offset);
+	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(gtkconv->imhtml), &iter, 0, TRUE, 0, 0);
+}
 
-	detach_from_pidgin_window(win, NULL);
-	attach_to_pidgin_window(win, NULL);
+static void
+conv_menu_cb(PurpleConversation *conv, GList **list)
+{
+	PurpleConversationType type = purple_conversation_get_type(conv);
+	gboolean enabled = ((type == PURPLE_CONV_TYPE_IM && purple_prefs_get_bool(PREF_IMS)) ||
+		(type == PURPLE_CONV_TYPE_CHAT && purple_prefs_get_bool(PREF_CHATS)));
+	PurpleMenuAction *action = purple_menu_action_new(_("Jump to markerline"),
+			enabled ? PURPLE_CALLBACK(jump_to_markerline) : NULL, NULL, NULL);
+	*list = g_list_append(*list, action);
 }
 
 static gboolean
@@ -221,9 +245,11 @@ plugin_load(PurplePlugin *plugin)
 {
 	attach_to_all_windows();
 
-	purple_signal_connect(purple_conversations_get_handle(), "conversation-created",
+	purple_signal_connect(pidgin_conversations_get_handle(), "conversation-displayed",
 						plugin, PURPLE_CALLBACK(conv_created), NULL);
 
+	purple_signal_connect(purple_conversations_get_handle(), "conversation-extended-menu",
+						plugin, PURPLE_CALLBACK(conv_menu_cb), NULL);
 	return TRUE;
 }
 
@@ -281,7 +307,7 @@ static PurplePluginInfo info = {
 
 	PLUGIN_ID,					/* plugin id			*/
 	PLUGIN_NAME,			/* name					*/
-	VERSION,					/* version				*/
+	DISPLAY_VERSION,				/* version				*/
 	PLUGIN_SUMMARY,			/* summary				*/
 	PLUGIN_DESCRIPTION,		/* description			*/
 	PLUGIN_AUTHOR,				/* author				*/

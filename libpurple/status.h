@@ -94,6 +94,11 @@ typedef enum
 /**
  * A primitive defining the basic structure of a status type.
  */
+/*
+ * If you add a value to this enum, make sure you update
+ * the status_primitive_map array in status.c and the special-cases for idle
+ * and offline-messagable just below it.
+ */
 typedef enum
 {
 	PURPLE_STATUS_UNSET = 0,
@@ -104,8 +109,8 @@ typedef enum
 	PURPLE_STATUS_AWAY,
 	PURPLE_STATUS_EXTENDED_AWAY,
 	PURPLE_STATUS_MOBILE,
+	PURPLE_STATUS_TUNE,
 	PURPLE_STATUS_NUM_PRIMITIVES
-
 } PurpleStatusPrimitive;
 
 #include "account.h"

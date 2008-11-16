@@ -76,6 +76,28 @@ account_alias_changed(PurpleAccount *account, const char *old, gpointer data)
 					old, purple_account_get_alias(account));
 }
 
+static int
+account_authorization_requested_cb(PurpleAccount *account, const char *user, gpointer data)
+{
+	purple_debug_misc("signals test", "account-authorization-requested (%s, %s)\n",
+			purple_account_get_username(account), user);
+	return 0;
+}
+
+static void
+account_authorization_granted_cb(PurpleAccount *account, const char *user, gpointer data)
+{
+	purple_debug_misc("signals test", "account-authorization-granted (%s, %s)\n",
+			purple_account_get_username(account), user);
+}
+
+static void
+account_authorization_denied_cb(PurpleAccount *account, const char *user, gpointer data)
+{
+	purple_debug_misc("signals test", "account-authorization-denied (%s, %s)\n",
+			purple_account_get_username(account), user);
+}
+
 /**************************************************************************
  * Buddy Icons signal callbacks
  **************************************************************************/
@@ -94,8 +116,9 @@ buddy_status_changed_cb(PurpleBuddy *buddy, PurpleStatus *old_status,
                         PurpleStatus *status, void *data)
 {
 	purple_debug_misc("signals test", "buddy-status-changed (%s %s to %s)\n",
-	                buddy->name, purple_status_get_id(old_status),
-	                purple_status_get_id(status));
+	                  purple_buddy_get_name(buddy),
+	                  purple_status_get_id(old_status),
+	                  purple_status_get_id(status));
 }
 
 static void
@@ -103,25 +126,29 @@ buddy_idle_changed_cb(PurpleBuddy *buddy, gboolean old_idle, gboolean idle,
                       void *data)
 {
 	purple_debug_misc("signals test", "buddy-idle-changed (%s %s)\n",
-	                buddy->name, old_idle ? "unidled" : "idled");
+	                  purple_buddy_get_name(buddy),
+	                  old_idle ? "unidled" : "idled");
 }
 
 static void
 buddy_signed_on_cb(PurpleBuddy *buddy, void *data)
 {
-	purple_debug_misc("signals test", "buddy-signed-on (%s)\n", buddy->name);
+	purple_debug_misc("signals test", "buddy-signed-on (%s)\n",
+	                  purple_buddy_get_name(buddy));
 }
 
 static void
 buddy_signed_off_cb(PurpleBuddy *buddy, void *data)
 {
-	purple_debug_misc("signals test", "buddy-signed-off (%s)\n", buddy->name);
+	purple_debug_misc("signals test", "buddy-signed-off (%s)\n",
+	                  purple_buddy_get_name(buddy));
 }
 
 static void
 buddy_added_cb(PurpleBuddy *buddy, void *data)
 {
-	purple_debug_misc("signals test", "buddy_added_cb (%s)\n", purple_buddy_get_name(buddy));
+	purple_debug_misc("signals test", "buddy_added_cb (%s)\n",
+	                  purple_buddy_get_name(buddy));
 }
 
 static void
@@ -138,17 +165,27 @@ blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 	PurpleChat *c = (PurpleChat *)node;
 	PurpleGroup *g = (PurpleGroup *)node;
 
-	if (PURPLE_BLIST_NODE_IS_CONTACT(node))
-		purple_debug_misc("signals test", "blist-node-aliased (Contact: %s, %s)\n", p->alias, old_alias);
-	else if (PURPLE_BLIST_NODE_IS_BUDDY(node))
-		purple_debug_misc("signals test", "blist-node-aliased (Buddy: %s, %s)\n", b->name, old_alias);
-	else if (PURPLE_BLIST_NODE_IS_CHAT(node))
-		purple_debug_misc("signals test", "blist-node-aliased (Chat: %s, %s)\n", c->alias, old_alias);
-	else if (PURPLE_BLIST_NODE_IS_GROUP(node))
-		purple_debug_misc("signals test", "blist-node-aliased (Group: %s, %s)\n", g->name, old_alias);
-	else
-		purple_debug_misc("signals test", "blist-node-aliased (UNKNOWN: %d, %s)\n", node->type, old_alias);
-
+	if (PURPLE_BLIST_NODE_IS_CONTACT(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-aliased (Contact: %s, %s)\n",
+		                  purple_contact_get_alias(p), old_alias);
+	} else if (PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-aliased (Buddy: %s, %s)\n",
+		                  purple_buddy_get_name(b), old_alias);
+	} else if (PURPLE_BLIST_NODE_IS_CHAT(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-aliased (Chat: %s, %s)\n",
+		                  purple_chat_get_name(c), old_alias);
+	} else if (PURPLE_BLIST_NODE_IS_GROUP(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-aliased (Group: %s, %s)\n",
+		                  purple_group_get_name(g), old_alias);
+	} else {
+		purple_debug_misc("signals test",
+		                  "blist-node-aliased (UNKNOWN: %d, %s)\n",
+		                  purple_blist_node_get_type(node), old_alias);
+	}
 }
 
 static void
@@ -159,17 +196,27 @@ blist_node_extended_menu_cb(PurpleBlistNode *node, void *data)
 	PurpleChat *c = (PurpleChat *)node;
 	PurpleGroup *g = (PurpleGroup *)node;
 
-	if (PURPLE_BLIST_NODE_IS_CONTACT(node))
-		purple_debug_misc("signals test", "blist-node-extended-menu (Contact: %s)\n", p->alias);
-	else if (PURPLE_BLIST_NODE_IS_BUDDY(node))
-		purple_debug_misc("signals test", "blist-node-extended-menu (Buddy: %s)\n", b->name);
-	else if (PURPLE_BLIST_NODE_IS_CHAT(node))
-		purple_debug_misc("signals test", "blist-node-extended-menu (Chat: %s)\n", c->alias);
-	else if (PURPLE_BLIST_NODE_IS_GROUP(node))
-		purple_debug_misc("signals test", "blist-node-extended-menu (Group: %s)\n", g->name);
-	else
-		purple_debug_misc("signals test", "blist-node-extended-menu (UNKNOWN: %d)\n", node->type);
-
+	if (PURPLE_BLIST_NODE_IS_CONTACT(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-extended-menu (Contact: %s)\n",
+		                  purple_contact_get_alias(p));
+	} else if (PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-extended-menu (Buddy: %s)\n",
+		                  purple_buddy_get_name(b));
+	} else if (PURPLE_BLIST_NODE_IS_CHAT(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-extended-menu (Chat: %s)\n",
+		                  purple_chat_get_name(c));
+	} else if (PURPLE_BLIST_NODE_IS_GROUP(node)) {
+		purple_debug_misc("signals test",
+		                  "blist-node-extended-menu (Group: %s)\n",
+		                  purple_group_get_name(g));
+	} else {
+		purple_debug_misc("signals test",
+		                  "blist-node-extended-menu (UNKNOWN: %d)\n",
+		                  purple_blist_node_get_type(node));
+	}
 }
 
 
@@ -202,6 +249,18 @@ signed_off_cb(PurpleConnection *gc, void *data)
 {
 	purple_debug_misc("signals test", "signed-off (%s)\n",
 					purple_account_get_username(purple_connection_get_account(gc)));
+}
+
+static void
+connection_error_cb(PurpleConnection *gc,
+                    PurpleConnectionError err,
+                    const gchar *desc,
+                    void *data)
+{
+	const gchar *username =
+		purple_account_get_username(purple_connection_get_account(gc));
+	purple_debug_misc("signals test", "connection-error (%s, %u, %s)\n",
+		username, err, desc);
 }
 
 /**************************************************************************
@@ -568,6 +627,12 @@ plugin_load(PurplePlugin *plugin)
 						plugin, PURPLE_CALLBACK(account_status_changed), NULL);
 	purple_signal_connect(accounts_handle, "account-alias-changed",
 						plugin, PURPLE_CALLBACK(account_alias_changed), NULL);
+	purple_signal_connect(accounts_handle, "account-authorization-requested",
+						plugin, PURPLE_CALLBACK(account_authorization_requested_cb), NULL);
+	purple_signal_connect(accounts_handle, "account-authorization-denied",
+						plugin, PURPLE_CALLBACK(account_authorization_denied_cb), NULL);
+	purple_signal_connect(accounts_handle, "account-authorization-granted",
+						plugin, PURPLE_CALLBACK(account_authorization_granted_cb), NULL);
 
 	/* Buddy List subsystem signals */
 	purple_signal_connect(blist_handle, "buddy-status-changed",
@@ -598,6 +663,8 @@ plugin_load(PurplePlugin *plugin)
 						plugin, PURPLE_CALLBACK(signing_off_cb), NULL);
 	purple_signal_connect(conn_handle, "signed-off",
 						plugin, PURPLE_CALLBACK(signed_off_cb), NULL);
+	purple_signal_connect(conn_handle, "connection-error",
+						plugin, PURPLE_CALLBACK(connection_error_cb), NULL);
 
 	/* Conversations subsystem signals */
 	purple_signal_connect(conv_handle, "writing-im-msg",
@@ -709,7 +776,7 @@ static PurplePluginInfo info =
 
 	SIGNAL_TEST_PLUGIN_ID,                            /**< id             */
 	N_("Signals Test"),                               /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Test to see that all signals are working properly."),
 	                                                  /**  description    */

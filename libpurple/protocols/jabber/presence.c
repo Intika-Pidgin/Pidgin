@@ -33,6 +33,7 @@
 
 #include "buddy.h"
 #include "chat.h"
+#include "google.h"
 #include "presence.h"
 #include "iq.h"
 #include "jutil.h"
@@ -48,7 +49,7 @@ static void chats_send_presence_foreach(gpointer key, gpointer val,
 	xmlnode *presence = user_data;
 	char *chat_full_jid;
 
-	if(!chat->conv)
+	if(!chat->conv || chat->left)
 		return;
 
 	chat_full_jid = g_strdup_printf("%s@%s/%s", chat->room, chat->server,
@@ -98,30 +99,33 @@ void jabber_presence_send(PurpleAccount *account, PurpleStatus *status)
 {
 	PurpleConnection *gc = NULL;
 	JabberStream *js = NULL;
-	gboolean disconnected;
-	int primitive;
 	xmlnode *presence, *x, *photo;
 	char *stripped = NULL;
 	JabberBuddyState state;
 	int priority;
-	const char *artist, *title, *source, *uri, *track;
-	int length;
+	const char *artist = NULL, *title = NULL, *source = NULL, *uri = NULL, *track = NULL;
+	int length = -1;
 	gboolean allowBuzz;
+	PurplePresence *p;
+	PurpleStatus *tune;
 
-	if(NULL == status) {
-		PurplePresence *gpresence = purple_account_get_presence(account);
-		status = purple_presence_get_active_status(gpresence);
+	if (purple_account_is_disconnected(account))
+		return;
+
+	p = purple_account_get_presence(account);
+	if (NULL == status) {
+		status = purple_presence_get_active_status(p);
 	}
 
-	if(!purple_status_is_active(status))
-		return;
-
-	disconnected = purple_account_is_disconnected(account);
-
-	if(disconnected)
-		return;
-
-	primitive = purple_status_type_get_primitive(purple_status_get_type(status));
+	if (purple_status_is_exclusive(status)) {
+		/* An exclusive status can't be deactivated. You should just
+		 * activate some other exclusive status. */
+		if (!purple_status_is_active(status))
+			return;
+	} else {
+		/* Work with the exclusive status. */
+		status = purple_presence_get_active_status(p);
+	}
 
 	gc = purple_account_get_connection(account);
 	js = gc->proto_data;
@@ -137,6 +141,11 @@ void jabber_presence_send(PurpleAccount *account, PurpleStatus *status)
 	/* check for buzz support */
 	allowBuzz = purple_status_get_attr_boolean(status,"buzz");
 	/* changing the buzz state has to trigger a re-broadcasting of the presence for caps */
+
+	if (js->googletalk && stripped == NULL && purple_presence_is_status_primitive_active(p, PURPLE_STATUS_TUNE)) {
+		tune = purple_presence_get_status(p, "tune");
+		stripped = jabber_google_presence_outgoing(tune);
+	}
 	
 #define CHANGED(a,b) ((!a && b) || (a && a[0] == '\0' && b && b[0] != '\0') || \
 					  (a && !b) || (a && a[0] != '\0' && b && b[0] == '\0') || (a && b && strcmp(a,b)))
@@ -144,6 +153,7 @@ void jabber_presence_send(PurpleAccount *account, PurpleStatus *status)
 	if (allowBuzz != js->allowBuzz || js->old_state != state || CHANGED(js->old_msg, stripped) ||
 		js->old_priority != priority || CHANGED(js->old_avatarhash, js->avatar_hash)) {
 		js->allowBuzz = allowBuzz;
+
 		presence = jabber_presence_create_js(js, state, stripped, priority);
 
 		if(js->avatar_hash) {
@@ -168,16 +178,20 @@ void jabber_presence_send(PurpleAccount *account, PurpleStatus *status)
 		js->old_avatarhash = g_strdup(js->avatar_hash);
 		js->old_state = state;
 		js->old_priority = priority;
-		g_free(stripped);
 	}
-					  	
+	g_free(stripped);
+
 	/* next, check if there are any changes to the tune values */
-	artist = purple_status_get_attr_string(status, PURPLE_TUNE_ARTIST);
-	title = purple_status_get_attr_string(status, PURPLE_TUNE_TITLE);
-	source = purple_status_get_attr_string(status, PURPLE_TUNE_ALBUM);
-	uri = purple_status_get_attr_string(status, PURPLE_TUNE_URL);
-	track = purple_status_get_attr_string(status, PURPLE_TUNE_TRACK);
-	length = (!purple_status_get_attr_value(status, PURPLE_TUNE_TIME))?-1:purple_status_get_attr_int(status, PURPLE_TUNE_TIME);
+	tune = purple_presence_get_status(p, "tune");
+	if (tune && purple_status_is_active(tune)) {
+		artist = purple_status_get_attr_string(tune, PURPLE_TUNE_ARTIST);
+		title = purple_status_get_attr_string(tune, PURPLE_TUNE_TITLE);
+		source = purple_status_get_attr_string(tune, PURPLE_TUNE_ALBUM);
+		uri = purple_status_get_attr_string(tune, PURPLE_TUNE_URL);
+		track = purple_status_get_attr_string(tune, PURPLE_TUNE_TRACK);
+		length = (!purple_status_get_attr_value(tune, PURPLE_TUNE_TIME)) ? -1 :
+				purple_status_get_attr_int(tune, PURPLE_TUNE_TIME);
+	}
 	
 	if(CHANGED(artist, js->old_artist) || CHANGED(title, js->old_title) || CHANGED(source, js->old_source) ||
 	   CHANGED(uri, js->old_uri) || CHANGED(track, js->old_track) || (length != js->old_length)) {
@@ -296,8 +310,9 @@ struct _jabber_add_permit {
 static void authorize_add_cb(gpointer data)
 {
 	struct _jabber_add_permit *jap = data;
-	jabber_presence_subscription_set(jap->gc->proto_data, jap->who,
-			"subscribed");
+	if(PURPLE_CONNECTION_IS_VALID(jap->gc))
+		jabber_presence_subscription_set(jap->gc->proto_data,
+			jap->who, "subscribed");
 	g_free(jap->who);
 	g_free(jap);
 }
@@ -305,9 +320,9 @@ static void authorize_add_cb(gpointer data)
 static void deny_add_cb(gpointer data)
 {
 	struct _jabber_add_permit *jap = data;
-	jabber_presence_subscription_set(jap->gc->proto_data, jap->who,
-			"unsubscribed");
-
+	if(PURPLE_CONNECTION_IS_VALID(jap->gc))
+		jabber_presence_subscription_set(jap->gc->proto_data,
+			jap->who, "unsubscribed");
 	g_free(jap->who);
 	g_free(jap);
 }
@@ -354,30 +369,45 @@ static void jabber_vcard_parse_avatar(JabberStream *js, xmlnode *packet, gpointe
 
 typedef struct _JabberPresenceCapabilities {
 	JabberStream *js;
-	JabberBuddyResource *jbr;
+	JabberBuddy *jb;
 	char *from;
 } JabberPresenceCapabilities;
 
 static void jabber_presence_set_capabilities(JabberCapsClientInfo *info, gpointer user_data) {
 	JabberPresenceCapabilities *userdata = user_data;
+	JabberID *jid;
+	JabberBuddyResource *jbr;
 	GList *iter;
-	
-	if(userdata->jbr->caps)
-		jabber_caps_free_clientinfo(userdata->jbr->caps);
-	userdata->jbr->caps = info;
-	
-	for(iter = info->features; iter; iter = g_list_next(iter)) {
-		if(!strcmp((const char*)iter->data, "http://jabber.org/protocol/commands")) {
-			JabberIq *iq = jabber_iq_new_query(userdata->js, JABBER_IQ_GET, "http://jabber.org/protocol/disco#items");
-			xmlnode *query = xmlnode_get_child_with_namespace(iq->node,"query","http://jabber.org/protocol/disco#items");
-			xmlnode_set_attrib(iq->node, "to", userdata->from);
-			xmlnode_set_attrib(query, "node", "http://jabber.org/protocol/commands");
-			
-			jabber_iq_set_callback(iq, jabber_adhoc_disco_result_cb, NULL);
-			jabber_iq_send(iq);
-			break;
+
+	jid = jabber_id_new(userdata->from);
+	jbr = jabber_buddy_find_resource(userdata->jb, jid->resource);
+	jabber_id_free(jid);
+
+	if(!jbr) {
+		g_free(userdata->from);
+		g_free(userdata);
+		return;
+	}
+
+	if(jbr->caps)
+		jabber_caps_free_clientinfo(jbr->caps);
+	jbr->caps = info;
+
+	if (info) {
+		for(iter = info->features; iter; iter = g_list_next(iter)) {
+			if(!strcmp((const char*)iter->data, "http://jabber.org/protocol/commands")) {
+				JabberIq *iq = jabber_iq_new_query(userdata->js, JABBER_IQ_GET, "http://jabber.org/protocol/disco#items");
+				xmlnode *query = xmlnode_get_child_with_namespace(iq->node,"query","http://jabber.org/protocol/disco#items");
+				xmlnode_set_attrib(iq->node, "to", userdata->from);
+				xmlnode_set_attrib(query, "node", "http://jabber.org/protocol/commands");
+
+				jabber_iq_set_callback(iq, jabber_adhoc_disco_result_cb, NULL);
+				jabber_iq_send(iq);
+				break;
+			}
 		}
 	}
+
 	g_free(userdata->from);
 	g_free(userdata);
 }
@@ -417,7 +447,7 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 	}
 
 	if(type && !strcmp(type, "error")) {
-		char *msg = jabber_parse_error(js, packet);
+		char *msg = jabber_parse_error(js, packet, NULL);
 
 		state = JABBER_BUDDY_STATE_ERROR;
 		jb->error_msg = msg ? msg : g_strdup(_("Unknown Error in presence"));
@@ -549,14 +579,15 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 		char *room_jid = g_strdup_printf("%s@%s", jid->node, jid->domain);
 
 		if(state == JABBER_BUDDY_STATE_ERROR) {
-			char *title, *msg = jabber_parse_error(js, packet);
+			char *title, *msg = jabber_parse_error(js, packet, NULL);
 
-			if(chat->conv) {
+			if (!chat->conv) {
+				title = g_strdup_printf(_("Error joining chat %s"), from);
+				purple_serv_got_join_chat_failed(js->gc, chat->components);
+			} else {
 				title = g_strdup_printf(_("Error in chat %s"), from);
 				if (g_hash_table_size(chat->members) == 0)
 					serv_got_chat_left(js->gc, chat->id);
-			} else {
-				title = g_strdup_printf(_("Error joining chat %s"), from);
 			}
 			purple_notify_error(js->gc, title, title, msg);
 			g_free(title);
@@ -578,8 +609,9 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 
 			/* If we haven't joined the chat yet, we don't care that someone
 			 * left, or it was us leaving after we closed the chat */
-			if(!chat->conv) {
-				if(jid->resource && chat->handle && !strcmp(jid->resource, chat->handle))
+			if (!chat->conv || chat->left) {
+				if (chat->left &&
+						jid->resource && chat->handle && !strcmp(jid->resource, chat->handle))
 					jabber_chat_destroy(chat);
 				jabber_id_free(jid);
 				g_free(status);
@@ -665,7 +697,7 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 									 jid->node ? "@" : "", jid->domain);
 		if((b = purple_find_buddy(js->gc->account, buddy_name)) == NULL) {
 			if(!jid->node || strcmp(jid->node,js->user->node) || strcmp(jid->domain,js->user->domain)) {
-				purple_debug_warning("jabber", "Got presence for unknown buddy %s on account %s (%x)\n",
+				purple_debug_warning("jabber", "Got presence for unknown buddy %s on account %s (%p)\n",
 									 buddy_name, purple_account_get_username(js->gc->account), js->gc->account);
 				jabber_id_free(jid);
 				g_free(avatar_hash);
@@ -723,7 +755,7 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 				if(node && ver) {
 					JabberPresenceCapabilities *userdata = g_new0(JabberPresenceCapabilities, 1);
 					userdata->js = js;
-					userdata->jbr = jbr;
+					userdata->jb = jb;
 					userdata->from = g_strdup(from);
 					jabber_caps_get_info(js, from, node, ver, ext, jabber_presence_set_capabilities, userdata);
 				}
@@ -731,7 +763,8 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 		}
 
 		if((found_jbr = jabber_buddy_find_resource(jb, NULL))) {
-			purple_prpl_got_user_status(js->gc->account, buddy_name, jabber_buddy_state_get_status_id(found_jbr->state), "priority", found_jbr->priority, found_jbr->status ? "message" : NULL, found_jbr->status, NULL);
+			jabber_google_presence_incoming(js, buddy_name, found_jbr);
+			purple_prpl_got_user_status(js->gc->account, buddy_name, jabber_buddy_state_get_status_id(found_jbr->state), "priority", found_jbr->priority, "message", found_jbr->status, NULL);
 		} else {
 			purple_prpl_got_user_status(js->gc->account, buddy_name, "offline", status ? "message" : NULL, status, NULL);
 		}

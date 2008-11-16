@@ -19,6 +19,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#define _PURPLE_PLUGIN_C_
+
 #include "internal.h"
 
 #include "accountopt.h"
@@ -58,13 +60,9 @@ static GList *protocol_plugins = NULL;
 #ifdef PURPLE_PLUGINS
 static GList *load_queue       = NULL;
 static GList *plugin_loaders   = NULL;
+static GList *plugins_to_disable = NULL;
 #endif
 
-/*
- * TODO: I think the intention was to allow multiple load and unload
- *       callback functions.  Perhaps using a GList instead of a
- *       pointer to a single function.
- */
 static void (*probe_cb)(void *) = NULL;
 static void *probe_cb_data = NULL;
 static void (*load_cb)(PurplePlugin *, void *) = NULL;
@@ -254,7 +252,6 @@ purple_plugin_probe(const char *filename)
 		 * plugins being added to the global name space.
 		 *
 		 * G_MODULE_BIND_LOCAL was added in glib 2.3.3.
-		 * TODO: I guess there's nothing we can do about that?
 		 */
 #if GLIB_CHECK_VERSION(2,3,3)
 		plugin->handle = g_module_open(filename, G_MODULE_BIND_LOCAL);
@@ -364,7 +361,7 @@ purple_plugin_probe(const char *filename)
 	{
 		plugin->error = g_strdup_printf(_("You are using %s, but this plugin requires %s."),
 					purple_core_get_ui(), plugin->info->ui_requirement);
-		purple_debug_error("plugins", "%s is not loadable: The UI requirement is not met.\n", plugin->path);
+		purple_debug_error("plugins", "%s is not loadable: The UI requirement is not met. (%s)\n", plugin->path, plugin->error);
 		plugin->unloadable = TRUE;
 		return plugin;
 	}
@@ -479,9 +476,9 @@ purple_plugin_probe(const char *filename)
 		    (PURPLE_PLUGIN_PROTOCOL_INFO(plugin)->login == NULL) ||
 		    (PURPLE_PLUGIN_PROTOCOL_INFO(plugin)->close == NULL))
 		{
-			plugin->error = g_strdup(_("Plugin does not implement all required functions"));
-			purple_debug_error("plugins", "%s is not loadable: Plugin does not implement all required functions\n",
-					 plugin->path);
+			plugin->error = g_strdup(_("Plugin does not implement all required functions (list_icon, login and close)"));
+			purple_debug_error("plugins", "%s is not loadable: %s\n",
+					 plugin->path, plugin->error);
 			plugin->unloadable = TRUE;
 			return plugin;
 		}
@@ -625,7 +622,6 @@ purple_plugin_load(PurplePlugin *plugin)
 
 	plugin->loaded = TRUE;
 
-	/* TODO */
 	if (load_cb != NULL)
 		load_cb(plugin, load_cb_data);
 
@@ -643,28 +639,21 @@ purple_plugin_unload(PurplePlugin *plugin)
 {
 #ifdef PURPLE_PLUGINS
 	GList *l;
+	GList *ll;
 
 	g_return_val_if_fail(plugin != NULL, FALSE);
-
-	loaded_plugins = g_list_remove(loaded_plugins, plugin);
-	if ((plugin->info != NULL) && PURPLE_IS_PROTOCOL_PLUGIN(plugin))
-		protocol_plugins = g_list_remove(protocol_plugins, plugin);
-
 	g_return_val_if_fail(purple_plugin_is_loaded(plugin), FALSE);
 
 	purple_debug_info("plugins", "Unloading plugin %s\n", plugin->info->name);
 
-	/* cancel any pending dialogs the plugin has */
-	purple_request_close_with_handle(plugin);
-	purple_notify_close_with_handle(plugin);
-
-	plugin->loaded = FALSE;
-
 	/* Unload all plugins that depend on this plugin. */
-	while ((l = plugin->dependent_plugins) != NULL)
-	{
+	for (l = plugin->dependent_plugins; l != NULL; l = ll) {
 		const char * dep_name = (const char *)l->data;
 		PurplePlugin *dep_plugin;
+
+		/* Store a pointer to the next element in the list.
+		 * This is because we'll be modifying this list in the loop. */
+		ll = l->next;
 
 		dep_plugin = purple_plugins_find_with_id(dep_name);
 
@@ -672,14 +661,18 @@ purple_plugin_unload(PurplePlugin *plugin)
 		{
 			if (!purple_plugin_unload(dep_plugin))
 			{
-				char *tmp;
-
-				tmp = g_strdup_printf(_("The dependent plugin %s failed to unload."),
-				                      _(dep_plugin->info->name));
-
-				purple_notify_error(NULL, NULL,
-				                  _("There were errors unloading the plugin."), tmp);
-				g_free(tmp);
+				g_free(plugin->error);
+				plugin->error = g_strdup_printf(_("%s requires %s, but it failed to unload."),
+				                                _(plugin->info->name),
+				                                _(dep_plugin->info->name));
+				return FALSE;
+			}
+			else
+			{
+#if 0
+				/* This isn't necessary. This has already been done when unloading dep_plugin. */
+				plugin->dependent_plugins = g_list_delete_link(plugin->dependent_plugins, l);
+#endif
 			}
 		}
 	}
@@ -699,8 +692,8 @@ purple_plugin_unload(PurplePlugin *plugin)
 	}
 
 	if (plugin->native_plugin) {
-		if (plugin->info->unload != NULL)
-			plugin->info->unload(plugin);
+		if (plugin->info->unload && !plugin->info->unload(plugin))
+			return FALSE;
 
 		if (plugin->info->type == PURPLE_PLUGIN_PROTOCOL) {
 			PurplePluginProtocolInfo *prpl_info;
@@ -724,8 +717,7 @@ purple_plugin_unload(PurplePlugin *plugin)
 				prpl_info->protocol_options = NULL;
 			}
 		}
-	}
-	else {
+	} else {
 		PurplePlugin *loader;
 		PurplePluginLoaderInfo *loader_info;
 
@@ -736,14 +728,30 @@ purple_plugin_unload(PurplePlugin *plugin)
 
 		loader_info = PURPLE_PLUGIN_LOADER_INFO(loader);
 
-		if (loader_info->unload != NULL)
-			loader_info->unload(plugin);
+		if (loader_info->unload && !loader_info->unload(plugin))
+			return FALSE;
 	}
+
+	/* cancel any pending dialogs the plugin has */
+	purple_request_close_with_handle(plugin);
+	purple_notify_close_with_handle(plugin);
 
 	purple_signals_disconnect_by_handle(plugin);
 	purple_plugin_ipc_unregister_all(plugin);
 
-	/* TODO */
+	loaded_plugins = g_list_remove(loaded_plugins, plugin);
+	if ((plugin->info != NULL) && PURPLE_IS_PROTOCOL_PLUGIN(plugin))
+		protocol_plugins = g_list_remove(protocol_plugins, plugin);
+	plugins_to_disable = g_list_remove(plugins_to_disable, plugin);
+	plugin->loaded = FALSE;
+
+	/* We wouldn't be anywhere near here if the plugin wasn't loaded, so
+	 * if plugin->error is set at all, it had to be from a previous
+	 * unload failure.  It's obviously okay now.
+	 */
+	g_free(plugin->error);
+	plugin->error = NULL;
+
 	if (unload_cb != NULL)
 		unload_cb(plugin, unload_cb_data);
 
@@ -755,6 +763,17 @@ purple_plugin_unload(PurplePlugin *plugin)
 #else
 	return TRUE;
 #endif /* PURPLE_PLUGINS */
+}
+
+void
+purple_plugin_disable(PurplePlugin *plugin)
+{
+#ifdef PURPLE_PLUGINS
+	g_return_if_fail(plugin != NULL);
+
+	if (!g_list_find(plugins_to_disable, plugin))
+		plugins_to_disable = g_list_prepend(plugins_to_disable, plugin);
+#endif
 }
 
 gboolean
@@ -907,7 +926,7 @@ purple_plugin_get_name(const PurplePlugin *plugin) {
 	g_return_val_if_fail(plugin, NULL);
 	g_return_val_if_fail(plugin->info, NULL);
 
-	return plugin->info->name;
+	return _(plugin->info->name);
 }
 
 const gchar *
@@ -923,7 +942,7 @@ purple_plugin_get_summary(const PurplePlugin *plugin) {
 	g_return_val_if_fail(plugin, NULL);
 	g_return_val_if_fail(plugin->info, NULL);
 
-	return plugin->info->summary;
+	return _(plugin->info->summary);
 }
 
 const gchar *
@@ -931,7 +950,7 @@ purple_plugin_get_description(const PurplePlugin *plugin) {
 	g_return_val_if_fail(plugin, NULL);
 	g_return_val_if_fail(plugin->info, NULL);
 
-	return plugin->info->description;
+	return _(plugin->info->description);
 }
 
 const gchar *
@@ -939,7 +958,7 @@ purple_plugin_get_author(const PurplePlugin *plugin) {
 	g_return_val_if_fail(plugin, NULL);
 	g_return_val_if_fail(plugin->info, NULL);
 
-	return plugin->info->author;
+	return _(plugin->info->author);
 }
 
 const gchar *
@@ -1161,7 +1180,7 @@ void
 purple_plugins_init(void) {
 	void *handle = purple_plugins_get_handle();
 
-        purple_plugins_add_search_path(LIBDIR);
+	purple_plugins_add_search_path(LIBDIR);
 
 	purple_signal_register(handle, "plugin-load",
 						 purple_marshal_VOID__POINTER,
@@ -1176,8 +1195,12 @@ purple_plugins_init(void) {
 }
 
 void
-purple_plugins_uninit(void) {
-	purple_signals_disconnect_by_handle(purple_plugins_get_handle());
+purple_plugins_uninit(void)
+{
+	void *handle = purple_plugins_get_handle();
+
+	purple_signals_disconnect_by_handle(handle);
+	purple_signals_unregister_by_instance(handle);
 }
 
 /**************************************************************************
@@ -1191,7 +1214,7 @@ purple_plugins_add_search_path(const char *path)
 	if (g_list_find_custom(search_paths, path, (GCompareFunc)strcmp))
 		return;
 
-	search_paths = g_list_append(search_paths, strdup(path));
+	search_paths = g_list_append(search_paths, g_strdup(path));
 }
 
 void
@@ -1222,14 +1245,14 @@ purple_plugins_save_loaded(const char *key)
 #ifdef PURPLE_PLUGINS
 	GList *pl;
 	GList *files = NULL;
-	PurplePlugin *p;
 
 	for (pl = purple_plugins_get_loaded(); pl != NULL; pl = pl->next) {
-		p = pl->data;
+		PurplePlugin *plugin = pl->data;
 
-		if (p->info->type != PURPLE_PLUGIN_PROTOCOL &&
-			p->info->type != PURPLE_PLUGIN_LOADER) {
-				files = g_list_append(files, p->path);
+		if (plugin->info->type != PURPLE_PLUGIN_PROTOCOL &&
+		    plugin->info->type != PURPLE_PLUGIN_LOADER &&
+		    !g_list_find(plugins_to_disable, plugin)) {
+			files = g_list_append(files, plugin->path);
 		}
 	}
 
@@ -1273,7 +1296,7 @@ purple_plugins_load_saved(const char *key)
 
 		/* Strip the extension */
 		if (basename)
-			basename = purple_plugin_get_basename(filename);
+			basename = purple_plugin_get_basename(basename);
 
 		if (((plugin = purple_plugins_find_with_filename(filename)) != NULL) ||
 				(basename && (plugin = purple_plugins_find_with_basename(basename)) != NULL) ||
@@ -1391,6 +1414,7 @@ purple_plugins_probe(const char *ext)
 
 	if (probe_cb != NULL)
 		probe_cb(probe_cb_data);
+
 #endif /* PURPLE_PLUGINS */
 }
 
@@ -1464,7 +1488,6 @@ purple_plugins_enabled(void)
 void
 purple_plugins_register_probe_notify_cb(void (*func)(void *), void *data)
 {
-	/* TODO */
 	probe_cb = func;
 	probe_cb_data = data;
 }
@@ -1472,7 +1495,6 @@ purple_plugins_register_probe_notify_cb(void (*func)(void *), void *data)
 void
 purple_plugins_unregister_probe_notify_cb(void (*func)(void *))
 {
-	/* TODO */
 	probe_cb = NULL;
 	probe_cb_data = NULL;
 }
@@ -1481,7 +1503,6 @@ void
 purple_plugins_register_load_notify_cb(void (*func)(PurplePlugin *, void *),
 									 void *data)
 {
-	/* TODO */
 	load_cb = func;
 	load_cb_data = data;
 }
@@ -1489,7 +1510,6 @@ purple_plugins_register_load_notify_cb(void (*func)(PurplePlugin *, void *),
 void
 purple_plugins_unregister_load_notify_cb(void (*func)(PurplePlugin *, void *))
 {
-	/* TODO */
 	load_cb = NULL;
 	load_cb_data = NULL;
 }
@@ -1498,7 +1518,6 @@ void
 purple_plugins_register_unload_notify_cb(void (*func)(PurplePlugin *, void *),
 									   void *data)
 {
-	/* TODO */
 	unload_cb = func;
 	unload_cb_data = data;
 }
@@ -1506,7 +1525,6 @@ purple_plugins_register_unload_notify_cb(void (*func)(PurplePlugin *, void *),
 void
 purple_plugins_unregister_unload_notify_cb(void (*func)(PurplePlugin *, void *))
 {
-	/* TODO */
 	unload_cb = NULL;
 	unload_cb_data = NULL;
 }

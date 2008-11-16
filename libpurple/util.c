@@ -65,10 +65,12 @@ struct _PurpleUtilFetchUrlData
 	char *webdata;
 	unsigned long len;
 	unsigned long data_len;
+	gssize max_len;
 };
 
 static char *custom_user_dir = NULL;
 static char *user_dir = NULL;
+
 
 PurpleMenuAction *
 purple_menu_action_new(const char *label, PurpleCallback callback, gpointer data,
@@ -89,6 +91,25 @@ purple_menu_action_free(PurpleMenuAction *act)
 
 	g_free(act->label);
 	g_free(act);
+}
+
+void
+purple_util_init(void)
+{
+	/* This does nothing right now.  It exists for symmetry with 
+	 * purple_util_uninit() and forwards compatibility. */
+}
+
+void
+purple_util_uninit(void)
+{
+	/* Free these so we don't have leaks at shutdown. */
+
+	g_free(custom_user_dir);
+	custom_user_dir = NULL;
+
+	g_free(user_dir);
+	user_dir = NULL;
 }
 
 /**************************************************************************
@@ -698,6 +719,12 @@ purple_date_format_short(const struct tm *tm)
 const char *
 purple_date_format_long(const struct tm *tm)
 {
+	/*
+	 * This string determines how some dates are displayed.  The default
+	 * string "%x %X" shows the date then the time.  Translators can
+	 * change this to "%X %x" if they want the time to be shown first,
+	 * followed by the date.
+	 */
 	return purple_utf8_strftime(_("%x %X"), tm);
 }
 
@@ -733,13 +760,16 @@ purple_str_to_time(const char *timestamp, gboolean utc,
                  struct tm *tm, long *tz_off, const char **rest)
 {
 	time_t retval = 0;
-	struct tm *t;
+	static struct tm t;
 	const char *c = timestamp;
 	int year = 0;
 	long tzoff = PURPLE_NO_TZ_OFF;
 
 	time(&retval);
-	t = localtime(&retval);
+	localtime_r(&retval, &t);
+
+	if (rest != NULL)
+		*rest = NULL;
 
 	/* 4 digit year */
 	if (sscanf(c, "%04d", &year) && year > 1900)
@@ -747,11 +777,11 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		c += 4;
 		if (*c == '-')
 			c++;
-		t->tm_year = year - 1900;
+		t.tm_year = year - 1900;
 	}
 
 	/* 2 digit month */
-	if (!sscanf(c, "%02d", &t->tm_mon))
+	if (!sscanf(c, "%02d", &t.tm_mon))
 	{
 		if (rest != NULL && *c != '\0')
 			*rest = c;
@@ -760,10 +790,10 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 	c += 2;
 	if (*c == '-' || *c == '/')
 		c++;
-	t->tm_mon -= 1;
+	t.tm_mon -= 1;
 
 	/* 2 digit day */
-	if (!sscanf(c, "%02d", &t->tm_mday))
+	if (!sscanf(c, "%02d", &t.tm_mday))
 	{
 		if (rest != NULL && *c != '\0')
 			*rest = c;
@@ -774,13 +804,13 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 	{
 		c++;
 
-		if (!sscanf(c, "%04d", &t->tm_year))
+		if (!sscanf(c, "%04d", &t.tm_year))
 		{
 			if (rest != NULL && *c != '\0')
 				*rest = c;
 			return 0;
 		}
-		t->tm_year -= 1900;
+		t.tm_year -= 1900;
 	}
 	else if (*c == 'T' || *c == '.')
 	{
@@ -788,17 +818,20 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		/* we have more than a date, keep going */
 
 		/* 2 digit hour */
-		if ((sscanf(c, "%02d:%02d:%02d", &t->tm_hour, &t->tm_min, &t->tm_sec) == 3 && (c = c + 8)) ||
-		    (sscanf(c, "%02d%02d%02d", &t->tm_hour, &t->tm_min, &t->tm_sec) == 3 && (c = c + 6)))
+		if ((sscanf(c, "%02d:%02d:%02d", &t.tm_hour, &t.tm_min, &t.tm_sec) == 3 && (c = c + 8)) ||
+		    (sscanf(c, "%02d%02d%02d", &t.tm_hour, &t.tm_min, &t.tm_sec) == 3 && (c = c + 6)))
 		{
 			gboolean offset_positive = FALSE;
 			int tzhrs;
 			int tzmins;
 
-			t->tm_isdst = -1;
+			t.tm_isdst = -1;
 
-			if (*c == '.' && *(c+1) >= '0' && *(c+1) <= '9') /* dealing with precision we don't care about */
-				c += 4;
+			if (*c == '.') {
+				do {
+					c++;
+				} while (*c >= '0' && *c <= '9'); /* dealing with precision we don't care about */
+			}
 			if (*c == '+')
 				offset_positive = TRUE;
 			if (((*c == '+' || *c == '-') && (c = c + 1)) &&
@@ -808,13 +841,27 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 				tzoff = tzhrs*60*60 + tzmins*60;
 				if (offset_positive)
 					tzoff *= -1;
-				/* We don't want the C library doing DST calculations
-				 * if we know the UTC offset already. */
-				t->tm_isdst = 0;
+			}
+			else if ((*c == 'Z') && (c = c + 1))
+			{
+				/* 'Z' = Zulu = UTC */
+				tzoff = 0;
 			}
 			else if (utc)
 			{
-				t->tm_isdst = -1;
+				static struct tm tmptm;
+				time_t tmp;
+				tmp = mktime(&t);
+				/* we care about whether it *was* dst, and the offset, here on this
+				 * date, not whether we are currently observing dst locally *now*.
+				 * This isn't perfect, because we would need to know in advance the
+				 * offset we are trying to work out in advance to be sure this
+				 * works for times around dst transitions but it'll have to do. */
+				localtime_r(&tmp, &tmptm);
+				t.tm_isdst = tmptm.tm_isdst;
+#ifdef HAVE_TM_GMTOFF
+				t.tm_gmtoff = tmptm.tm_gmtoff;
+#endif
 			}
 
 			if (rest != NULL && *c != '\0')
@@ -843,7 +890,7 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 					tzoff += sys_tzoff;
 #else
 #ifdef HAVE_TM_GMTOFF
-				tzoff += t->tm_gmtoff;
+				tzoff += t.tm_gmtoff;
 #else
 #	ifdef HAVE_TIMEZONE
 				tzset();    /* making sure */
@@ -860,14 +907,11 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		}
 	}
 
-	if (tm != NULL)
-	{
-		*tm = *t;
-		tm->tm_isdst = -1;
-		mktime(tm);
-	}
+	retval = mktime(&t);
 
-	retval = mktime(t);
+	if (tm != NULL)
+		*tm = t;
+
 	if (tzoff != PURPLE_NO_TZ_OFF)
 		retval += tzoff;
 
@@ -886,6 +930,7 @@ purple_markup_unescape_entity(const char *text, int *length)
 {
 	const char *pln;
 	int len, pound;
+	char temp[2];
 
 	if (!text || *text != '&')
 		return NULL;
@@ -908,8 +953,10 @@ purple_markup_unescape_entity(const char *text, int *length)
 		pln = "\302\256";      /* or use g_unichar_to_utf8(0xae); */
 	else if(IS_ENTITY("&apos;"))
 		pln = "\'";
-	else if(*(text+1) == '#' && (sscanf(text, "&#%u;", &pound) == 1) &&
-			pound != 0 && *(text+3+(gint)log10(pound)) == ';') {
+	else if(*(text+1) == '#' &&
+			(sscanf(text, "&#%u%1[;]", &pound, temp) == 2 ||
+			 sscanf(text, "&#x%x%1[;]", &pound, temp) == 2) &&
+			pound != 0) {
 		static char buf[7];
 		int buflen = g_unichar_to_utf8((gunichar)pound, buf);
 		buf[buflen] = '\0';
@@ -936,6 +983,8 @@ purple_markup_get_css_property(const gchar *style,
 	const gchar *css_value_end;
 	gchar *tmp;
 	gchar *ret;
+
+	g_return_val_if_fail(opt != NULL, NULL);
 
 	if (!css_str)
 		return NULL;
@@ -1325,6 +1374,14 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 	GString *cdata = NULL;
 	GList *tags = NULL, *tag;
 	const char *c = html;
+	char quote = '\0';
+
+#define CHECK_QUOTE(ptr) if (*(ptr) == '\'' || *(ptr) == '\"') \
+			quote = *(ptr++); \
+		else \
+			quote = '\0';
+
+#define VALID_CHAR(ptr) (*(ptr) && *(ptr) != quote && (quote || (*(ptr) != ' ' && *(ptr) != '>')))
 
 	g_return_if_fail(xhtml_out != NULL || plain_out != NULL);
 
@@ -1352,7 +1409,9 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							g_string_append_printf(xhtml, "</%s>", pt->dest_tag);
 						if(plain && !strcmp(pt->src_tag, "a")) {
 							/* if this is a link, we have to add the url to the plaintext, too */
-							if (cdata && url && !g_string_equal(cdata, url))
+							if (cdata && url &&
+									(!g_string_equal(cdata, url) && (g_ascii_strncasecmp(url->str, "mailto:", 7) != 0 ||
+									                                 g_utf8_collate(url->str + 7, cdata->str) != 0)))
 								g_string_append_printf(plain, " <%s>", g_strstrip(url->str));
 							if (cdata) {
 								g_string_free(cdata, TRUE);
@@ -1406,7 +1465,6 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 				ALLOW_TAG("pre");
 				ALLOW_TAG("q");
 				ALLOW_TAG("span");
-				ALLOW_TAG("strong");
 				ALLOW_TAG("ul");
 
 
@@ -1426,9 +1484,14 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						plain = g_string_append_c(plain, '\n');
 					continue;
 				}
-				if(!g_ascii_strncasecmp(c, "<b>", 3) || !g_ascii_strncasecmp(c, "<bold>", strlen("<bold>"))) {
+				if(!g_ascii_strncasecmp(c, "<b>", 3) || !g_ascii_strncasecmp(c, "<bold>", strlen("<bold>")) || !g_ascii_strncasecmp(c, "<strong>", strlen("<strong>"))) {
 					struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
-					pt->src_tag = *(c+2) == '>' ? "b" : "bold";
+					if (*(c+2) == '>')
+						pt->src_tag = "b";
+					else if (*(c+2) == 'o')
+						pt->src_tag = "bold";
+					else
+						pt->src_tag = "strong";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
 					c = strchr(c, '>') + 1;
@@ -1476,34 +1539,37 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						xhtml = g_string_append(xhtml, "<span style='vertical-align:super;'>");
 					continue;
 				}
-				if(!g_ascii_strncasecmp(c, "<img", 4) && (*(c+4) == '>' || *(c+4) == ' ')) {
-					const char *p = c;
+				if (!g_ascii_strncasecmp(c, "<img", 4) && (*(c+4) == '>' || *(c+4) == ' ')) {
+					const char *p = c + 4;
 					GString *src = NULL, *alt = NULL;
-					while(*p && *p != '>') {
-						if(!g_ascii_strncasecmp(p, "src=", strlen("src="))) {
-							const char *q = p + strlen("src=");
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "src=", 4)) {
+							const char *q = p + 4;
+							if (src)
+								g_string_free(src, TRUE);
 							src = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								src = g_string_append_c(src, *q);
 								q++;
 							}
 							p = q;
-						} else if(!g_ascii_strncasecmp(p, "alt=", strlen("alt="))) {
-							const char *q = p + strlen("alt=");
+						} else if (!g_ascii_strncasecmp(p, "alt=", 4)) {
+							const char *q = p + 4;
+							if (alt)
+								g_string_free(alt, TRUE);
 							alt = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								alt = g_string_append_c(alt, *q);
 								q++;
 							}
 							p = q;
+						} else {
+							p++;
 						}
-						p++;
 					}
-					if ((c = strchr(c, '>')) != NULL)
+					if ((c = strchr(p, '>')) != NULL)
 						c++;
 					else
 						c = p;
@@ -1520,27 +1586,33 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					g_string_free(src, TRUE);
 					continue;
 				}
-				if(!g_ascii_strncasecmp(c, "<a", 2) && (*(c+2) == '>' || *(c+2) == ' ')) {
-					const char *p = c;
+				if (!g_ascii_strncasecmp(c, "<a", 2) && (*(c+2) == '>' || *(c+2) == ' ')) {
+					const char *p = c + 2;
 					struct purple_parse_tag *pt;
-					while(*p && *p != '>') {
-						if(!g_ascii_strncasecmp(p, "href=", strlen("href="))) {
-							const char *q = p + strlen("href=");
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "href=", 5)) {
+							const char *q = p + 5;
 							if (url)
 								g_string_free(url, TRUE);
 							url = g_string_new("");
+							if (cdata)
+								g_string_free(cdata, TRUE);
 							cdata = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
-								url = g_string_append_c(url, *q);
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
+								int len;
+								if ((*q == '&') && (purple_markup_unescape_entity(q, &len) == NULL))
+									url = g_string_append(url, "&amp;");
+								else
+									url = g_string_append_c(url, *q);
 								q++;
 							}
 							p = q;
+						} else {
+							p++;
 						}
-						p++;
 					}
-					if ((c = strchr(c, '>')) != NULL)
+					if ((c = strchr(p, '>')) != NULL)
 						c++;
 					else
 						c = p;
@@ -1553,55 +1625,48 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<font", 5) && (*(c+5) == '>' || *(c+5) == ' ')) {
-					const char *p = c;
+					const char *p = c + 5;
 					GString *style = g_string_new("");
 					struct purple_parse_tag *pt;
-					while(*p && *p != '>') {
-						if(!g_ascii_strncasecmp(p, "back=", strlen("back="))) {
-							const char *q = p + strlen("back=");
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "back=", 5)) {
+							const char *q = p + 5;
 							GString *color = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								color = g_string_append_c(color, *q);
 								q++;
 							}
 							g_string_append_printf(style, "background: %s; ", color->str);
 							g_string_free(color, TRUE);
 							p = q;
-						} else if(!g_ascii_strncasecmp(p, "color=", strlen("color="))) {
-							const char *q = p + strlen("color=");
+						} else if (!g_ascii_strncasecmp(p, "color=", 6)) {
+							const char *q = p + 6;
 							GString *color = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								color = g_string_append_c(color, *q);
 								q++;
 							}
 							g_string_append_printf(style, "color: %s; ", color->str);
 							g_string_free(color, TRUE);
 							p = q;
-						} else if(!g_ascii_strncasecmp(p, "face=", strlen("face="))) {
-							const char *q = p + strlen("face=");
-							gboolean space_allowed = FALSE;
+						} else if (!g_ascii_strncasecmp(p, "face=", 5)) {
+							const char *q = p + 5;
 							GString *face = g_string_new("");
-							if(*q == '\'' || *q == '\"') {
-								space_allowed = TRUE;
-								q++;
-							}
-							while(*q && *q != '\"' && *q != '\'' && (space_allowed || *q != ' ')) {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								face = g_string_append_c(face, *q);
 								q++;
 							}
 							g_string_append_printf(style, "font-family: %s; ", g_strstrip(face->str));
 							g_string_free(face, TRUE);
 							p = q;
-						} else if(!g_ascii_strncasecmp(p, "size=", strlen("size="))) {
-							const char *q = p + strlen("size=");
+						} else if (!g_ascii_strncasecmp(p, "size=", 5)) {
+							const char *q = p + 5;
 							int sz;
 							const char *size = "medium";
-							if(*q == '\'' || *q == '\"')
-								q++;
+							CHECK_QUOTE(q);
 							sz = atoi(q);
 							switch (sz)
 							{
@@ -1631,10 +1696,11 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							}
 							g_string_append_printf(style, "font-size: %s; ", size);
 							p = q;
+						} else {
+							p++;
 						}
-						p++;
 					}
-					if ((c = strchr(c, '>')) != NULL)
+					if ((c = strchr(p, '>')) != NULL)
 						c++;
 					else
 						c = p;
@@ -1642,31 +1708,30 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					pt->src_tag = "font";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
-					if(style->len)
+					if(style->len && xhtml)
 						g_string_append_printf(xhtml, "<span style='%s'>", g_strstrip(style->str));
 					else
 						pt->ignore = TRUE;
 					g_string_free(style, TRUE);
 					continue;
 				}
-				if(!g_ascii_strncasecmp(c, "<body ", 6)) {
-					const char *p = c;
+				if (!g_ascii_strncasecmp(c, "<body ", 6)) {
+					const char *p = c + 6;
 					gboolean did_something = FALSE;
-					while(*p && *p != '>') {
-						if(!g_ascii_strncasecmp(p, "bgcolor=", strlen("bgcolor="))) {
-							const char *q = p + strlen("bgcolor=");
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "bgcolor=", 8)) {
+							const char *q = p + 8;
 							struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
 							GString *color = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								color = g_string_append_c(color, *q);
 								q++;
 							}
-							if(xhtml)
+							if (xhtml)
 								g_string_append_printf(xhtml, "<span style='background: %s;'>", g_strstrip(color->str));
 							g_string_free(color, TRUE);
-							if ((c = strchr(c, '>')) != NULL)
+							if ((c = strchr(p, '>')) != NULL)
 								c++;
 							else
 								c = p;
@@ -1678,7 +1743,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						}
 						p++;
 					}
-					if(did_something) continue;
+					if (did_something) continue;
 				}
 				/* this has to come after the special case for bgcolor */
 				ALLOW_TAG("body");
@@ -1712,6 +1777,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 				xhtml = g_string_append_len(xhtml, c, len);
 			if(plain)
 				plain = g_string_append(plain, pln);
+			if(cdata)
+				cdata = g_string_append_len(cdata, c, len);
 			c += len;
 		} else {
 			if(xhtml)
@@ -1737,6 +1804,10 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 		*plain_out = g_string_free(plain, FALSE);
 	if(url)
 		g_string_free(url, TRUE);
+	if (cdata)
+		g_string_free(cdata, TRUE);
+#undef CHECK_QUOTE
+#undef VALID_CHAR
 }
 
 /* The following are probably reasonable changes:
@@ -1972,8 +2043,12 @@ purple_markup_linkify(const char *text)
 	gunichar g;
 	gboolean inside_html = FALSE;
 	int inside_paren = 0;
-	GString *ret = g_string_new("");
-	/* Assumes you have a buffer able to carry at least BUF_LEN * 2 bytes */
+	GString *ret;
+
+	if (text == NULL)
+		return NULL;
+
+	ret = g_string_new("");
 
 	c = text;
 	while (*c) {
@@ -2317,6 +2392,7 @@ purple_markup_slice(const char *str, guint x, guint y)
 	gunichar c;
 	char *tag;
 
+	g_return_val_if_fail(str != NULL, NULL);
 	g_return_val_if_fail(x <= y, NULL);
 
 	if (x == y)
@@ -2505,7 +2581,7 @@ int purple_build_dir (const char *path, int mode)
 		}
 
 		if (g_mkdir(dir, mode) < 0) {
-			purple_debug_warning("build_dir", "mkdir: %s\n", strerror(errno));
+			purple_debug_warning("build_dir", "mkdir: %s\n", g_strerror(errno));
 			g_strfreev(components);
 			g_free(dir);
 			return -1;
@@ -2541,7 +2617,7 @@ purple_util_write_data_to_file(const char *filename, const char *data, gssize si
 		if (g_mkdir(user_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 		{
 			purple_debug_error("util", "Error creating directory %s: %s\n",
-							 user_dir, strerror(errno));
+							 user_dir, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -2561,6 +2637,9 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	FILE *file;
 	size_t real_size, byteswritten;
 	struct stat st;
+#ifndef HAVE_FILENO
+	int fd;
+#endif
 
 	purple_debug_info("util", "Writing file %s\n",
 					filename_full);
@@ -2576,7 +2655,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 		{
 			purple_debug_error("util", "Error removing old file "
 					   "%s: %s\n",
-					   filename_temp, strerror(errno));
+					   filename_temp, g_strerror(errno));
 		}
 	}
 
@@ -2586,7 +2665,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	{
 		purple_debug_error("util", "Error opening file %s for "
 				   "writing: %s\n",
-				   filename_temp, strerror(errno));
+				   filename_temp, g_strerror(errno));
 		g_free(filename_temp);
 		return FALSE;
 	}
@@ -2595,14 +2674,58 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	real_size = (size == -1) ? strlen(data) : (size_t) size;
 	byteswritten = fwrite(data, 1, real_size, file);
 
+#ifdef HAVE_FILENO
+	/* Apparently XFS (and possibly other filesystems) do not
+	 * guarantee that file data is flushed before file metadata,
+	 * so this procedure is insufficient without some flushage. */
+	if (fflush(file) < 0) {
+		purple_debug_error("util", "Error flushing %s: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		fclose(file);
+		return FALSE;
+	}
+	if (fsync(fileno(file)) < 0) {
+		purple_debug_error("util", "Error syncing file contents for %s: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		fclose(file);
+		return FALSE;
+	}
+#endif
+    
 	/* Close file */
 	if (fclose(file) != 0)
 	{
 		purple_debug_error("util", "Error closing file %s: %s\n",
-				   filename_temp, strerror(errno));
+				   filename_temp, g_strerror(errno));
 		g_free(filename_temp);
 		return FALSE;
 	}
+
+#ifndef HAVE_FILENO
+	/* This is the same effect (we hope) as the HAVE_FILENO block
+	 * above, but for systems without fileno(). */
+	if ((fd = open(filename_temp, O_RDWR)) < 0) {
+		purple_debug_error("util", "Error opening file %s for flush: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		return FALSE;
+	}
+	if (fsync(fd) < 0) {
+		purple_debug_error("util", "Error syncing %s: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		close(fd);
+		return FALSE;
+	}
+	if (close(fd) < 0) {
+		purple_debug_error("util", "Error closing %s after sync: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		return FALSE;
+	}
+#endif
 
 	/* Ensure the file is the correct size */
 	if (byteswritten != real_size)
@@ -2631,7 +2754,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	if (chmod(filename_temp, S_IRUSR | S_IWUSR) == -1)
 	{
 		purple_debug_error("util", "Error setting permissions of file %s: %s\n",
-						 filename_temp, strerror(errno));
+						 filename_temp, g_strerror(errno));
 	}
 #endif
 
@@ -2640,7 +2763,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	{
 		purple_debug_error("util", "Error renaming %s to %s: %s\n",
 				   filename_temp, filename_full,
-				   strerror(errno));
+				   g_strerror(errno));
 	}
 
 	g_free(filename_temp);
@@ -2791,7 +2914,7 @@ purple_util_get_image_extension(gconstpointer data, size_t len)
 }
 
 char *
-purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
+purple_util_get_image_checksum(gconstpointer image_data, size_t image_len)
 {
 	PurpleCipherContext *context;
 	gchar digest[41];
@@ -2812,9 +2935,18 @@ purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
 	}
 	purple_cipher_context_destroy(context);
 
+	return g_strdup(digest);
+}
+
+char *
+purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
+{
 	/* Return the filename */
-	return g_strdup_printf("%s.%s", digest,
+	char *checksum = purple_util_get_image_checksum(image_data, image_len);
+	char *filename = g_strdup_printf("%s.%s", checksum,
 	                       purple_util_get_image_extension(image_data, image_len));
+	g_free(checksum);
+	return filename;
 }
 
 gboolean
@@ -2860,7 +2992,9 @@ purple_running_gnome(void)
 		return FALSE;
 	g_free(tmp);
 
-	return (g_getenv("GNOME_DESKTOP_SESSION_ID") != NULL);
+	tmp = (gchar *)g_getenv("GNOME_DESKTOP_SESSION_ID");
+
+	return ((tmp != NULL) && (*tmp != '\0'));
 #else
 	return FALSE;
 #endif
@@ -3067,9 +3201,6 @@ purple_str_add_cr(const char *text)
 		ret[j++] = text[i];
 	}
 
-	purple_debug_misc("purple_str_add_cr", "got: %s, leaving with %s\n",
-					text, ret);
-
 	return ret;
 }
 
@@ -3199,7 +3330,7 @@ purple_strcasestr(const char *haystack, const char *needle)
 char *
 purple_str_size_to_units(size_t size)
 {
-	static const char *size_str[4] = { "bytes", "KiB", "MiB", "GiB" };
+	static const char * const size_str[] = { "bytes", "KiB", "MiB", "GiB" };
 	float size_mag;
 	int size_index = 0;
 
@@ -3312,6 +3443,9 @@ void purple_got_protocol_handler_uri(const char *uri)
 	char *cmd;
 	GHashTable *params = NULL;
 	int len;
+
+	g_return_if_fail(uri != NULL);
+
 	if (!(tmp = strchr(uri, ':')) || tmp == uri) {
 		purple_debug_error("util", "Malformed protocol handler message - missing protocol.\n");
 		return;
@@ -3392,11 +3526,11 @@ purple_url_parse(const char *url, char **ret_host, int *ret_port,
 	char host[256], path[256], user[256], passwd[256];
 	int port = 0;
 	/* hyphen at end includes it in control set */
-	static char addr_ctrl[] = "A-Za-z0-9.-";
-	static char port_ctrl[] = "0-9";
-	static char page_ctrl[] = "A-Za-z0-9.~_/:*!@&%%?=+^-";
-	static char user_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
-	static char passwd_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
+	static const char addr_ctrl[] = "A-Za-z0-9.-";
+	static const char port_ctrl[] = "0-9";
+	static const char page_ctrl[] = "A-Za-z0-9.~_/:*!@&%%?=+^-";
+	static const char user_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
+	static const char passwd_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
 
 	g_return_val_if_fail(url != NULL, FALSE);
 
@@ -3450,7 +3584,10 @@ purple_url_parse(const char *url, char **ret_host, int *ret_port,
 		g_snprintf(port_str, sizeof(port_str), "80");
 	}
 
-	if (f == 1)
+	if (f == 0)
+		*host = '\0';
+
+	if (f <= 1)
 		*path = '\0';
 
 	sscanf(port_str, "%d", &port);
@@ -3461,7 +3598,7 @@ purple_url_parse(const char *url, char **ret_host, int *ret_port,
 	if (ret_user != NULL) *ret_user = g_strdup(user);
 	if (ret_passwd != NULL) *ret_passwd = g_strdup(passwd);
 
-	return TRUE;
+	return ((*host != '\0') ? TRUE : FALSE);
 }
 
 /**
@@ -3485,7 +3622,7 @@ purple_util_fetch_url_error(PurpleUtilFetchUrlData *gfud, const char *format, ..
 static void url_fetch_connect_cb(gpointer url_data, gint source, const gchar *error_message);
 
 static gboolean
-parse_redirect(const char *data, size_t data_len, gint sock,
+parse_redirect(const char *data, size_t data_len,
 			   PurpleUtilFetchUrlData *gfud)
 {
 	gchar *s;
@@ -3613,7 +3750,7 @@ parse_content_len(const char *data, size_t data_len)
 	 */
 	if (p && g_strstr_len(p, data_len - (p - data), "\n")) {
 		sscanf(p, "%" G_GSIZE_FORMAT, &content_len);
-		purple_debug_misc("util", "parsed %u\n", content_len);
+		purple_debug_misc("util", "parsed %" G_GSIZE_FORMAT "\n", content_len);
 	}
 
 	return content_len;
@@ -3630,6 +3767,13 @@ url_fetch_recv_cb(gpointer url_data, gint source, PurpleInputCondition cond)
 	gboolean got_eof = FALSE;
 
 	while((len = read(source, buf, sizeof(buf))) > 0) {
+
+		if(gfud->max_len != -1 && (gfud->len + len) > gfud->max_len) {
+			purple_util_fetch_url_error(gfud, _("Error reading from %s: response too long (%d bytes limit)"),
+						    gfud->website.address, gfud->max_len);
+			return;
+		}
+
 		/* If we've filled up our buffer, make it bigger */
 		if((gfud->len + len) >= gfud->data_len) {
 			while((gfud->len + len) >= gfud->data_len)
@@ -3659,7 +3803,7 @@ url_fetch_recv_cb(gpointer url_data, gint source, PurpleInputCondition cond)
 					header_len, gfud->webdata);
 
 				/* See if we can find a redirect. */
-				if(parse_redirect(gfud->webdata, header_len, source, gfud))
+				if(parse_redirect(gfud->webdata, header_len, gfud))
 					return;
 
 				gfud->got_headers = TRUE;
@@ -3690,8 +3834,8 @@ url_fetch_recv_cb(gpointer url_data, gint source, PurpleInputCondition cond)
 					new_data = g_try_malloc(content_len);
 					if(new_data == NULL) {
 						purple_debug_error("util",
-								"Failed to allocate %u bytes: %s\n",
-								content_len, strerror(errno));
+								"Failed to allocate %" G_GSIZE_FORMAT " bytes: %s\n",
+								content_len, g_strerror(errno));
 						purple_util_fetch_url_error(gfud,
 								_("Unable to allocate enough memory to hold "
 								  "the contents from %s.  The web server may "
@@ -3729,7 +3873,7 @@ url_fetch_recv_cb(gpointer url_data, gint source, PurpleInputCondition cond)
 			return;
 		} else {
 			purple_util_fetch_url_error(gfud, _("Error reading from %s: %s"),
-					gfud->website.address, strerror(errno));
+					gfud->website.address, g_strerror(errno));
 			return;
 		}
 	}
@@ -3760,7 +3904,7 @@ url_fetch_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	else if (len < 0) {
 		purple_util_fetch_url_error(gfud, _("Error writing to %s: %s"),
-				gfud->website.address, strerror(errno));
+				gfud->website.address, g_strerror(errno));
 		return;
 	}
 	gfud->request_written += len;
@@ -3791,8 +3935,7 @@ url_fetch_connect_cb(gpointer url_data, gint source, const gchar *error_message)
 
 	gfud->fd = source;
 
-	if (!gfud->request)
-	{
+	if (!gfud->request) {
 		if (gfud->user_agent) {
 			/* Host header is not forbidden in HTTP/1.0 requests, and HTTP/1.1
 			 * clients must know how to handle the "chunked" transfer encoding.
@@ -3836,6 +3979,25 @@ purple_util_fetch_url_request(const char *url, gboolean full,
 		const char *request, gboolean include_headers,
 		PurpleUtilFetchUrlCallback callback, void *user_data)
 {
+	return purple_util_fetch_url_request_len(url, full,
+					     user_agent, http11,
+					     request, include_headers, -1,
+					     callback, user_data);
+}
+
+static gboolean
+url_fetch_connect_failed(gpointer data)
+{
+	url_fetch_connect_cb(data, -1, "");
+	return FALSE;
+}
+
+PurpleUtilFetchUrlData *
+purple_util_fetch_url_request_len(const char *url, gboolean full,
+		const char *user_agent, gboolean http11,
+		const char *request, gboolean include_headers, gssize max_len,
+		PurpleUtilFetchUrlCallback callback, void *user_data)
+{
 	PurpleUtilFetchUrlData *gfud;
 
 	g_return_val_if_fail(url      != NULL, NULL);
@@ -3856,6 +4018,7 @@ purple_util_fetch_url_request(const char *url, gboolean full,
 	gfud->request = g_strdup(request);
 	gfud->include_headers = include_headers;
 	gfud->fd = -1;
+	gfud->max_len = max_len;
 
 	purple_url_parse(url, &gfud->website.address, &gfud->website.port,
 				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
@@ -3866,9 +4029,8 @@ purple_util_fetch_url_request(const char *url, gboolean full,
 
 	if (gfud->connect_data == NULL)
 	{
-		purple_util_fetch_url_error(gfud, _("Unable to connect to %s"),
-				gfud->website.address);
-		return NULL;
+		/* Trigger the connect_cb asynchronously. */
+		purple_timeout_add(10, url_fetch_connect_failed, gfud);
 	}
 
 	return gfud;
@@ -3989,6 +4151,8 @@ purple_email_is_valid(const char *address)
 	const char *c, *domain;
 	static char *rfc822_specials = "()<>@,;:\\\"[]";
 
+	g_return_val_if_fail(address != NULL, FALSE);
+
 	/* first we validate the name portion (name@domain) (rfc822)*/
 	for (c = address;  *c;  c++) {
 		if (*c == '\"' && (c == address || *(c - 1) == '.' || *(c - 1) == '\"')) {
@@ -4030,6 +4194,20 @@ purple_email_is_valid(const char *address)
 	if (*(c - 1) == '-') return FALSE;
 
 	return ((c - domain) > 3 ? TRUE : FALSE);
+}
+
+gboolean
+purple_ip_address_is_valid(const char *ip)
+{
+	int c, o1, o2, o3, o4;
+	char end;
+
+	g_return_val_if_fail(ip != NULL, FALSE);
+
+	c = sscanf(ip, "%d.%d.%d.%d%c", &o1, &o2, &o3, &o4, &end);
+	if (c != 4 || o1 < 0 || o1 > 255 || o2 < 0 || o2 > 255 || o3 < 0 || o3 > 255 || o4 < 0 || o4 > 255)
+		return FALSE;
+	return TRUE;
 }
 
 /* Stolen from gnome_uri_list_extract_uris */
@@ -4101,8 +4279,7 @@ purple_uri_list_extract_filenames(const gchar *uri_list)
 			/* not sure if this fallback is useful at all */
 			if (!node->data) node->data = g_strdup (s+5);
 		} else {
-			result = g_list_remove_link(result, node);
-			g_list_free_1 (node);
+			result = g_list_delete_link(result, node);
 		}
 		g_free (s);
 	}
@@ -4164,6 +4341,53 @@ purple_utf8_salvage(const char *str)
 	return g_string_free(workstr, FALSE);
 }
 
+/*
+ * This function is copied from g_strerror() but changed to use
+ * gai_strerror().
+ */
+G_CONST_RETURN gchar *
+purple_gai_strerror(gint errnum)
+{
+	static GStaticPrivate msg_private = G_STATIC_PRIVATE_INIT;
+	char *msg;
+	int saved_errno = errno;
+
+	const char *msg_locale;
+
+	msg_locale = gai_strerror(errnum);
+	if (g_get_charset(NULL))
+	{
+		/* This string is already UTF-8--great! */
+		errno = saved_errno;
+		return msg_locale;
+	}
+	else
+	{
+		gchar *msg_utf8 = g_locale_to_utf8(msg_locale, -1, NULL, NULL, NULL);
+		if (msg_utf8)
+		{
+			/* Stick in the quark table so that we can return a static result */
+			GQuark msg_quark = g_quark_from_string(msg_utf8);
+			g_free(msg_utf8);
+
+			msg_utf8 = (gchar *)g_quark_to_string(msg_quark);
+			errno = saved_errno;
+			return msg_utf8;
+		}
+	}
+
+	msg = g_static_private_get(&msg_private);
+	if (!msg)
+	{
+		msg = g_new(gchar, 64);
+		g_static_private_set(&msg_private, msg, g_free);
+	}
+
+	sprintf(msg, "unknown error (%d)", errnum);
+
+	errno = saved_errno;
+	return msg;
+}
 
 char *
 purple_utf8_ncr_encode(const char *str)
@@ -4487,4 +4711,86 @@ void purple_restore_default_signal_handlers(void)
 	signal(SIGXFSZ, SIG_DFL);	/* 25: exceeded file size limit */
 #endif /* HAVE_SIGNAL_H */
 #endif /* !_WIN32 */
+}
+
+static void
+set_status_with_attrs(PurpleStatus *status, ...)
+{
+	va_list args;
+	va_start(args, status);
+	purple_status_set_active_with_attrs(status, TRUE, args);
+	va_end(args);
+}
+
+void purple_util_set_current_song(const char *title, const char *artist, const char *album)
+{
+	GList *list = purple_accounts_get_all();
+	for (; list; list = list->next) {
+		PurplePresence *presence;
+		PurpleStatus *tune;
+		PurpleAccount *account = list->data;
+		if (!purple_account_get_enabled(account, purple_core_get_ui()))
+			continue;
+
+		presence = purple_account_get_presence(account);
+		tune = purple_presence_get_status(presence, "tune");
+		if (!tune)
+			continue;
+		if (title) {
+			set_status_with_attrs(tune,
+					PURPLE_TUNE_TITLE, title,
+					PURPLE_TUNE_ARTIST, artist,
+					PURPLE_TUNE_ALBUM, album,
+					NULL);
+		} else {
+			purple_status_set_active(tune, FALSE);
+		}
+	}
+}
+
+char * purple_util_format_song_info(const char *title, const char *artist, const char *album, gpointer unused)
+{
+	GString *string;
+	char *esc;
+
+	if (!title || !*title)
+		return NULL;
+
+	esc = g_markup_escape_text(title, -1);
+	string = g_string_new("");
+	g_string_append_printf(string, "%s", esc);
+	g_free(esc);
+
+	if (artist && *artist) {
+		esc = g_markup_escape_text(artist, -1);
+		g_string_append_printf(string, _(" - %s"), esc);
+		g_free(esc);
+	}
+
+	if (album && *album) {
+		esc = g_markup_escape_text(album, -1);
+		g_string_append_printf(string, _(" (%s)"), esc);
+		g_free(esc);
+	}
+
+	return g_string_free(string, FALSE);
+}
+
+const gchar *
+purple_get_host_name(void)
+{
+#if GLIB_CHECK_VERSION(2,8,0)
+	return g_get_host_name();
+#else
+	static char hostname[256];
+	int ret = gethostname(hostname, sizeof(hostname));
+	hostname[sizeof(hostname) - 1] = '\0';
+
+	if (ret == -1 || hostname[0] == '\0') {
+		purple_debug_info("purple_get_host_name: ", "could not find host name");
+		return "localhost";
+	} else {
+		return hostname;
+	}
+#endif
 }

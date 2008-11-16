@@ -71,13 +71,33 @@ END_TEST
 START_TEST(test_util_email_is_valid)
 {
 	fail_unless(purple_email_is_valid("purple-devel@lists.sf.net"));
+	fail_if(purple_email_is_valid("purple-devel@@lists.sf.net"));
+	fail_if(purple_email_is_valid("purple@devel@lists.sf.net"));
+	fail_if(purple_email_is_valid("purple-devel@list..sf.net"));
+	fail_if(purple_email_is_valid("purple-devel"));
+	fail_if(purple_email_is_valid("purple-devel@"));
+	fail_if(purple_email_is_valid("@lists.sf.net"));
+	fail_if(purple_email_is_valid(""));
+	fail_if(purple_email_is_valid("totally bogus"));
 }
 END_TEST
 
 START_TEST(test_util_str_to_time)
 {
-	fail_unless(377185800 == purple_str_to_time("19811214T12:50:00", TRUE, NULL, NULL, NULL));
+	fail_unless(377182200 == purple_str_to_time("19811214T12:50:00", TRUE, NULL, NULL, NULL));
 	fail_unless(1175919261 == purple_str_to_time("20070407T04:14:21", TRUE, NULL, NULL, NULL));
+}
+END_TEST
+
+START_TEST(test_markup_html_to_xhtml)
+{
+	gchar *xhtml = NULL;
+	gchar *plaintext = NULL;
+	purple_markup_html_to_xhtml("<a>", &xhtml, &plaintext);
+	fail_unless(strcmp("<a href=''></a>", xhtml) == 0, NULL);
+	g_free(xhtml);
+	fail_unless(strcmp("", plaintext) == 0, NULL);
+	g_free(plaintext);
 }
 END_TEST
 
@@ -111,6 +131,10 @@ util_suite(void)
 
 	tc = tcase_create("Time");
 	tcase_add_test(tc, test_util_str_to_time);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("Markup");
+	tcase_add_test(tc, test_markup_html_to_xhtml);
 	suite_add_tcase(s, tc);
 
 	return s;

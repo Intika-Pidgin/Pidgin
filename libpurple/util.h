@@ -85,6 +85,52 @@ PurpleMenuAction *purple_menu_action_new(const char *label, PurpleCallback callb
  */
 void purple_menu_action_free(PurpleMenuAction *act);
 
+/**
+ * Set the appropriate presence values for the currently playing song.
+ *
+ * @param title     The title of the song, @c NULL to unset the value.
+ * @param artist    The artist of the song, can be @c NULL.
+ * @param album     The album of the song, can be @c NULL.
+ * @since 2.4.0
+ */
+void purple_util_set_current_song(const char *title, const char *artist,
+		const char *album);
+
+/**
+ * Format song information.
+ *
+ * @param title     The title of the song, @c NULL to unset the value.
+ * @param artist    The artist of the song, can be @c NULL.
+ * @param album     The album of the song, can be @c NULL.
+ * @param unused    Currently unused, must be @c NULL.
+ *
+ * @return   The formatted string. The caller must #g_free the returned string.
+ * @since 2.4.0
+ */
+char * purple_util_format_song_info(const char *title, const char *artist,
+		const char *album, gpointer unused);
+
+/**************************************************************************/
+/** @name Utility Subsystem                                               */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Initializes the utility subsystem.
+ *
+ * @since 2.3.0
+ */
+void purple_util_init(void);
+
+/**
+ * Uninitializes the util subsystem.
+ *
+ * @since 2.3.0
+ */
+void purple_util_uninit(void);
+
+/*@}*/
+
 /**************************************************************************/
 /** @name Base16 Functions                                                */
 /**************************************************************************/
@@ -183,7 +229,7 @@ guchar *purple_base64_decode(const char *str, gsize *ret_len);
  * Converts a quoted printable string back to its readable equivalent.
  * What is a quoted printable string, you ask?  It's an encoding used
  * to transmit binary data as ASCII.  It's intended purpose is to send
- * e-mails containing non-ASCII characters.  Wikipedia has a pretty good
+ * emails containing non-ASCII characters.  Wikipedia has a pretty good
  * explanation.  Also see RFC 2045.
  *
  * @param str     The quoted printable ASCII string to convert to raw data.
@@ -430,7 +476,8 @@ void purple_markup_html_to_xhtml(const char *html, char **dest_xhtml,
  *
  * @param str The string to strip HTML from.
  *
- * @return The new string without HTML. This must be freed.
+ * @return The new string without HTML.  You must g_free this string
+ *         when finished with it.
  */
 char *purple_markup_strip_html(const char *str);
 
@@ -439,7 +486,9 @@ char *purple_markup_strip_html(const char *str);
  *
  * @param str The string to linkify.
  *
- * @return The linkified text.
+ * @return The new string with all URIs surrounded in standard
+ *         HTML <a href="whatever"></a> tags.  You must g_free this
+ *         string when finished with it.
  */
 char *purple_markup_linkify(const char *str);
 
@@ -451,7 +500,8 @@ char *purple_markup_linkify(const char *str);
  *
  * @param html The string in which to unescape any HTML entities
  *
- * @return the text with HTML entities literalized
+ * @return The text with HTML entities literalized.  You must g_free
+ *         this string when finished with it.
  */
 char *purple_unescape_html(const char *html);
 
@@ -656,8 +706,16 @@ const char *
 purple_util_get_image_extension(gconstpointer data, size_t len);
 
 /**
- * Returns a SHA-1 hash string of the data passed in with the correct file
- * extention appended.
+ * Returns a SHA-1 hash string of the data passed in.
+ */
+char *purple_util_get_image_checksum(gconstpointer image_data, size_t image_len);
+
+/**
+ * @return A hex encoded version of the SHA-1 hash of the data passed
+ *         in with the correct file extention appended.  The file
+ *         extension is determined by calling
+ *         purple_util_get_image_extension().  This return value must
+ *         be g_freed by the caller.
  */
 char *purple_util_get_image_filename(gconstpointer image_data, size_t image_len);
 
@@ -983,6 +1041,23 @@ typedef void (*PurpleUtilFetchUrlCallback)(PurpleUtilFetchUrlData *url_data, gpo
  *                   partial URL.
  * @param user_agent The user agent field to use, or NULL.
  * @param http11     TRUE if HTTP/1.1 should be used to download the file.
+ * @param max_len    The maximum number of bytes to retrieve (-1 for unlimited)
+ * @param cb         The callback function.
+ * @param data       The user data to pass to the callback function.
+ * @deprecated       In 3.0.0, we'll rename this to "purple_util_fetch_url" and get rid of the old one
+ */
+#define purple_util_fetch_url_len(url, full, user_agent, http11, max_len, cb, data) \
+	purple_util_fetch_url_request_len(url, full, user_agent, http11, NULL, \
+		FALSE, max_len, cb, data);
+
+/**
+ * Fetches the data from a URL, and passes it to a callback function.
+ *
+ * @param url        The URL.
+ * @param full       TRUE if this is the full URL, or FALSE if it's a
+ *                   partial URL.
+ * @param user_agent The user agent field to use, or NULL.
+ * @param http11     TRUE if HTTP/1.1 should be used to download the file.
  * @param request    A HTTP request to send to the server instead of the
  *                   standard GET
  * @param include_headers
@@ -993,6 +1068,28 @@ typedef void (*PurpleUtilFetchUrlCallback)(PurpleUtilFetchUrlData *url_data, gpo
 PurpleUtilFetchUrlData *purple_util_fetch_url_request(const gchar *url,
 		gboolean full, const gchar *user_agent, gboolean http11,
 		const gchar *request, gboolean include_headers,
+		PurpleUtilFetchUrlCallback callback, gpointer data);
+
+/**
+ * Fetches the data from a URL, and passes it to a callback function.
+ *
+ * @param url        The URL.
+ * @param full       TRUE if this is the full URL, or FALSE if it's a
+ *                   partial URL.
+ * @param user_agent The user agent field to use, or NULL.
+ * @param http11     TRUE if HTTP/1.1 should be used to download the file.
+ * @param request    A HTTP request to send to the server instead of the
+ *                   standard GET
+ * @param include_headers
+ *                   If TRUE, include the HTTP headers in the response.
+ * @param max_len    The maximum number of bytes to retrieve (-1 for unlimited)
+ * @param callback   The callback function.
+ * @param data       The user data to pass to the callback function.
+ * @deprecated       In 3.0.0, we'll rename this to "purple_util_fetch_url_request" and get rid of the old one
+ */
+PurpleUtilFetchUrlData *purple_util_fetch_url_request_len(const gchar *url,
+		gboolean full, const gchar *user_agent, gboolean http11,
+		const gchar *request, gboolean include_headers, gssize max_len,
 		PurpleUtilFetchUrlCallback callback, gpointer data);
 
 /**
@@ -1033,6 +1130,15 @@ const char *purple_url_encode(const char *str);
  * @return True if the email address is syntactically correct.
  */
 gboolean purple_email_is_valid(const char *address);
+
+/**
+ * Checks if the given IP address is a syntactically valid IPv4 address.
+ *
+ * @param ip The IP address to validate.
+ *
+ * @return True if the IP address is syntactically correct.
+ */
+gboolean purple_ip_address_is_valid(const char *ip);
 
 /**
  * This function extracts a list of URIs from the a "text/uri-list"
@@ -1087,6 +1193,18 @@ gchar *purple_utf8_try_convert(const char *str);
  * @return A valid UTF-8 string.
  */
 gchar *purple_utf8_salvage(const char *str);
+
+/**
+ * Return the UTF-8 version of gai_strerror().  It calls gai_strerror()
+ * then converts the result to UTF-8.  This function is analogous to
+ * g_strerror().
+ *
+ * @param errnum The error code.
+ *
+ * @return The UTF-8 error message.
+ * @since 2.4.0
+ */
+G_CONST_RETURN gchar *purple_gai_strerror(gint errnum);
 
 /**
  * Compares two UTF-8 strings case-insensitively.  This string is
@@ -1191,6 +1309,14 @@ const char *_purple_oscar_convert(const char *act, const char *protocol);
  * inherit the handlers of the parent.
  */
 void purple_restore_default_signal_handlers(void);
+
+/**
+ * Gets the host name of the machine. If it not possible to determine the
+ * host name, "localhost" is returned
+ *
+ * @constreturn The hostname
+ */
+const gchar *purple_get_host_name(void);
 
 #ifdef __cplusplus
 }

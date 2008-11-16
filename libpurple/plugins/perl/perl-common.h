@@ -5,9 +5,9 @@
 #ifdef _WIN32
 #undef pipe
 #endif
-#include <XSUB.h>
 #include <EXTERN.h>
 #include <perl.h>
+#include <XSUB.h>
 
 /* XXX: perl defines it's own _ but I think it's safe to undef it */
 #undef _
@@ -67,5 +67,5 @@ SV *purple_perl_sv_from_value(const PurpleValue *value);
 void *purple_perl_data_from_sv(PurpleValue *value, SV *sv);
 SV *purple_perl_sv_from_vargs(const PurpleValue *value, va_list *args,
                             void ***copy_arg);
-
+SV *purple_perl_sv_from_fun(PurplePlugin *plugin, SV *callback);
 #endif /* _PURPLE_PERL_COMMON_H_ */

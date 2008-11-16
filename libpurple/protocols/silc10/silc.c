@@ -22,6 +22,7 @@
 #include "silcpurple.h"
 #include "version.h"
 #include "wb.h"
+#include "core.h"
 
 extern SilcClientOperations ops;
 static PurplePlugin *silc_plugin = NULL;
@@ -158,7 +159,9 @@ silcpurple_login_connected(gpointer data, gint source, const gchar *error_messag
 	sg = gc->proto_data;
 
 	if (source < 0) {
-		purple_connection_error(gc, _("Connection failed"));
+		purple_connection_error_reason(gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Connection failed"));
 		return;
 	}
 
@@ -179,7 +182,8 @@ silcpurple_login_connected(gpointer data, gint source, const gchar *error_messag
 							  "silc.silcnet.org"),
 			  purple_account_get_int(account, "port", 706), sg);
 	if (!conn) {
-		purple_connection_error(gc, _("Cannot initialize SILC Client connection"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Cannot initialize SILC Client connection"));
 		gc->proto_data = NULL;
 		return;
 	}
@@ -264,7 +268,8 @@ silcpurple_login(PurpleAccount *account)
 	/* Allocate SILC client */
 	client = silc_client_alloc(&ops, &params, gc, NULL);
 	if (!client) {
-		purple_connection_error(gc, _("Out of memory"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+		                             _("Out of memory"));
 		return;
 	}
 
@@ -309,15 +314,15 @@ silcpurple_login(PurpleAccount *account)
 
 	/* Init SILC client */
 	if (!silc_client_init(client)) {
-		gc->wants_to_die = TRUE;
-		purple_connection_error(gc, _("Cannot initialize SILC protocol"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+		                             _("Cannot initialize SILC protocol"));
 		return;
 	}
 
 	/* Check the ~/.silc dir and create it, and new key pair if necessary. */
 	if (!silcpurple_check_silc_dir(gc)) {
-		gc->wants_to_die = TRUE;
-		purple_connection_error(gc, _("Cannot find/access ~/.silc directory"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+		                             _("Error loading SILC key pair"));
 		return;
 	}
 
@@ -331,8 +336,9 @@ silcpurple_login(PurpleAccount *account)
 							(char *)purple_account_get_string(account, "private-key", prd),
 				(gc->password == NULL) ? "" : gc->password, &client->pkcs,
 				&client->public_key, &client->private_key)) {
-		g_snprintf(pkd, sizeof(pkd), _("Could not load SILC key pair: %s"), strerror(errno));
-		purple_connection_error(gc, pkd);
+		g_snprintf(pkd, sizeof(pkd), _("Could not load SILC key pair: %s"), g_strerror(errno));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+		                             _("Could not load SILC key pair"));
 		return;
 	}
 
@@ -352,7 +358,8 @@ silcpurple_login(PurpleAccount *account)
 			       purple_account_get_int(account, "port", 706),
 			       silcpurple_login_connected, gc) == NULL)
 	{
-		purple_connection_error(gc, _("Unable to create connection"));
+		purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		                             _("Unable to create connection"));
 		return;
 	}
 
@@ -378,12 +385,30 @@ static void
 silcpurple_close(PurpleConnection *gc)
 {
 	SilcPurple sg = gc->proto_data;
-
+	GHashTable *ui_info;
+	const char *ui_name = NULL, *ui_website = NULL;
+	char *quit_msg;
+	
 	g_return_if_fail(sg != NULL);
+
+	ui_info = purple_core_get_ui_info();
+
+	if(ui_info) {
+		ui_name = g_hash_table_lookup(ui_info, "name");
+		ui_website = g_hash_table_lookup(ui_info, "website");
+	}
+
+	if(!ui_name || !ui_website) {
+		ui_name = "Pidgin";
+		ui_website = PURPLE_WEBSITE;
+	}
+	quit_msg = g_strdup_printf(_("Download %s: %s"),
+							   ui_name, ui_website);
 
 	/* Send QUIT */
 	silc_client_command_call(sg->client, sg->conn, NULL,
-				 "QUIT", "Download this: " PURPLE_WEBSITE, NULL);
+				 "QUIT", quit_msg, NULL);
+	g_free(quit_msg);
 
 	if (sg->conn)
 		silc_client_close_connection(sg->client, sg->conn);
@@ -678,7 +703,7 @@ silcpurple_attrs(PurplePluginAction *action)
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_bool_new("contact_chat", _("Chat"), cchat);
 	purple_request_field_group_add_field(g, f);
-	f = purple_request_field_bool_new("contact_email", _("E-mail"), cemail);
+	f = purple_request_field_bool_new("contact_email", _("Email"), cemail);
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_bool_new("contact_call", _("Phone"), ccall);
 	purple_request_field_group_add_field(g, f);
@@ -919,7 +944,7 @@ silcpurple_create_keypair(PurplePluginAction *action)
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_string_new("rn", _("Real name"), realname ? realname : "", FALSE);
 	purple_request_field_group_add_field(g, f);
-	f = purple_request_field_string_new("e", _("E-mail"), tmp, FALSE);
+	f = purple_request_field_string_new("e", _("Email"), tmp, FALSE);
 	purple_request_field_group_add_field(g, f);
 	f = purple_request_field_string_new("o", _("Organization"), "", FALSE);
 	purple_request_field_group_add_field(g, f);
@@ -956,11 +981,11 @@ silcpurple_change_pass(PurplePluginAction *action)
 static void
 silcpurple_change_passwd(PurpleConnection *gc, const char *old, const char *new)
 {
-        char prd[256];
+	char prd[256];
 	g_snprintf(prd, sizeof(prd), "%s" G_DIR_SEPARATOR_S "private_key.pub", silcpurple_silcdir());
 	silc_change_private_key_passphrase(purple_account_get_string(gc->account,
 								   "private-key",
-								   prd), old, new);
+								   prd), old ? old : "", new ? new : "");
 }
 
 static void
@@ -1529,7 +1554,10 @@ static PurpleCmdRet silcpurple_cmd_quit(PurpleConversation *conv,
 {
 	PurpleConnection *gc;
 	SilcPurple sg;
-
+	GHashTable *ui_info;
+	const char *ui_name = NULL, *ui_website = NULL;
+	char *quit_msg;
+	
 	gc = purple_conversation_get_gc(conv);
 
 	if (gc == NULL)
@@ -1540,8 +1568,23 @@ static PurpleCmdRet silcpurple_cmd_quit(PurpleConversation *conv,
 	if (sg == NULL)
 		return PURPLE_CMD_RET_FAILED;
 
+	ui_info = purple_core_get_ui_info();
+
+	if(ui_info) {
+		ui_name = g_hash_table_lookup(ui_info, "name");
+		ui_website = g_hash_table_lookup(ui_info, "website");
+	}
+
+	if(!ui_name || !ui_website) {
+		ui_name = "Pidgin";
+		ui_website = PURPLE_WEBSITE;
+	}
+	quit_msg = g_strdup_printf(_("Download %s: %s"),
+							   ui_name, ui_website);
+
 	silc_client_command_call(sg->client, sg->conn, NULL,
-				 "QUIT", (args && args[0]) ? args[0] : "Download this: " PURPLE_WEBSITE, NULL);
+				 "QUIT", (args && args[0]) ? args[0] : quit_msg, NULL);
+	g_free(quit_msg);
 
 	return PURPLE_CMD_RET_OK;
 }
@@ -1794,10 +1837,10 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,                       /* send_raw */
 	NULL,                       /* roomlist_room_serialize */
 
-	/* padding */
 	NULL,
 	NULL,
 	NULL,
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	NULL
 };
 

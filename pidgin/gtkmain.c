@@ -27,6 +27,7 @@
 #include "account.h"
 #include "conversation.h"
 #include "core.h"
+#include "dbus-maybe.h"
 #include "debug.h"
 #include "eventloop.h"
 #include "ft.h"
@@ -61,6 +62,7 @@
 #include "gtkroomlist.h"
 #include "gtksavedstatuses.h"
 #include "gtksession.h"
+#include "gtksmiley.h"
 #include "gtksound.h"
 #include "gtkthemes.h"
 #include "gtkutils.h"
@@ -92,18 +94,20 @@ static SnDisplay *sn_display = NULL;
  * Lists of signals we wish to catch and those we wish to ignore.
  * Each list terminated with -1
  */
-static int catch_sig_list[] = {
+static const int catch_sig_list[] = {
 	SIGSEGV,
 	SIGHUP,
 	SIGINT,
 	SIGTERM,
 	SIGQUIT,
 	SIGCHLD,
+#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
 	SIGALRM,
+#endif
 	-1
 };
 
-static int ignore_sig_list[] = {
+static const int ignore_sig_list[] = {
 	SIGPIPE,
 	-1
 };
@@ -140,41 +144,14 @@ dologin_named(const char *name)
 #ifdef HAVE_SIGNAL_H
 static void sighandler(int sig);
 
-/**
- * Reap all our dead children.  Sometimes libpurple forks off a separate
- * process to do some stuff.  When that process exits we are
- * informed about it so that we can call waitpid() and let it
- * stop being a zombie.
- *
- * We used to do this immediately when our signal handler was
- * called, but because of GStreamer we now wait one second before
- * reaping anything.  Why?  For some reason GStreamer fork()s
- * during their initialization process.  I don't understand why...
- * but they do it, and there's nothing we can do about it.
- *
- * Anyway, so then GStreamer waits for its child to die and then
- * it continues with the initialization process.  This means that
- * we have a race condition where GStreamer is waitpid()ing for its
- * child to die and we're catching the SIGCHLD signal.  If GStreamer
- * is awarded the zombied process then everything is ok.  But if libpurple
- * reaps the zombie process then the GStreamer initialization sequence
- * fails.
- *
- * So the ugly solution is to wait a second to give GStreamer time to
- * reap that bad boy.
- *
- * GStreamer 0.10.10 and newer have a gst_register_fork_set_enabled()
- * function that can be called by applications to disable forking
- * during initialization.  But it's not in 0.10.0, so we shouldn't
- * use it.
- *
- * All of this child process reaping stuff is currently only used for
- * processes that were forked to play sounds.  It's not needed for
- * forked DNS child, which have their own waitpid() call.  It might
- * be wise to move this code into gtksound.c.
+/*
+ * This child process reaping stuff is currently only used for processes that
+ * were forked to play sounds.  It's not needed for forked DNS child, which
+ * have their own waitpid() call.  It might be wise to move this code into
+ * gtksound.c.
  */
 static void
-clean_pid()
+clean_pid(void)
 {
 	int status;
 	pid_t pid;
@@ -188,48 +165,64 @@ clean_pid()
 		snprintf(errmsg, BUFSIZ, "Warning: waitpid() returned %d", pid);
 		perror(errmsg);
 	}
-
-	/* Restore signal catching */
-	signal(SIGALRM, sighandler);
 }
 
 char *segfault_message;
 
+/*
+ * This signal handler shouldn't be touching this much stuff.
+ * It should just set a flag and return, and something else in
+ * Pidgin should monitor the flag to see if something needs to
+ * be done.  Because the signal handler interrupts the program,
+ * it could be called in the middle of adding a new connection
+ * to the list of connections, and then if we try to disconnect
+ * all connections it could lead to a crash because the linked
+ * list of connections could be in a weird state.  But, well,
+ * this signal handler probably isn't called very often, so it's
+ * not a big deal.
+ */
 static void
 sighandler(int sig)
 {
 	switch (sig) {
 	case SIGHUP:
 		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_connections_disconnect_all();
 		break;
 	case SIGSEGV:
 		fprintf(stderr, "%s", segfault_message);
 		abort();
 		break;
+#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
+/* By default, gstreamer forks when you initialize it, and waitpids for the
+ * child.  But if libpurple reaps the child rather than leaving it to
+ * gstreamer, gstreamer's initialization fails.  So, we wait a second before
+ * reaping child processes, to give gst a chance to reap it if it wants to.
+ *
+ * This is not needed in later gstreamers, which let us disable the forking.
+ * And, it breaks the world on some Real Unices.
+ */
 	case SIGCHLD:
 		/* Restore signal catching */
 		signal(SIGCHLD, sighandler);
 		alarm(1);
 		break;
 	case SIGALRM:
+#else
+	case SIGCHLD:
+#endif
 		clean_pid();
+		/* Restore signal catching */
+		signal(SIGCHLD, sighandler);
 		break;
 	default:
 		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_connections_disconnect_all();
-
-		purple_plugins_unload_all();
-
-		if (gtk_main_level())
-			gtk_main_quit();
-		exit(0);
+		purple_core_quit();
 	}
 }
 #endif
 
 static int
-ui_main()
+ui_main(void)
 {
 #ifndef _WIN32
 	GList *icons = NULL;
@@ -263,7 +256,7 @@ ui_main()
 			icons = g_list_append(icons,icon);
 		} else {
 			purple_debug_error("ui_main",
-					"Failed to load the default window icon (%spx version)!\n", icon_sizes[i]);
+					"Failed to load the default window icon (%spx version)!\n", icon_sizes[i].dir);
 		}
 	}
 	if(NULL == icons) {
@@ -289,6 +282,8 @@ debug_init(void)
 static void
 pidgin_ui_init(void)
 {
+	pidgin_stock_init();
+
 	/* Set the UI operation structures. */
 	purple_accounts_set_ui_ops(pidgin_accounts_get_ui_ops());
 	purple_xfers_set_ui_ops(pidgin_xfers_get_ui_ops());
@@ -299,11 +294,10 @@ pidgin_ui_init(void)
 	purple_sound_set_ui_ops(pidgin_sound_get_ui_ops());
 	purple_connections_set_ui_ops(pidgin_connections_get_ui_ops());
 	purple_whiteboard_set_ui_ops(pidgin_whiteboard_get_ui_ops());
-#ifdef USE_SCREENSAVER
+#if defined(USE_SCREENSAVER) || defined(HAVE_IOKIT)
 	purple_idle_set_ui_ops(pidgin_idle_get_ui_ops());
 #endif
 
-	pidgin_stock_init();
 	pidgin_account_init();
 	pidgin_connection_init();
 	pidgin_blist_init();
@@ -315,6 +309,7 @@ pidgin_ui_init(void)
 	pidgin_roomlist_init();
 	pidgin_log_init();
 	pidgin_docklet_init();
+	pidgin_smileys_init();
 }
 
 static GHashTable *ui_info = NULL;
@@ -331,6 +326,7 @@ pidgin_quit(void)
 	pidgin_plugins_save();
 
 	/* Uninit */
+	pidgin_smileys_uninit();
 	pidgin_conversations_uninit();
 	pidgin_status_uninit();
 	pidgin_docklet_uninit();
@@ -347,13 +343,15 @@ pidgin_quit(void)
 	gtk_main_quit();
 }
 
-static GHashTable *pidgin_ui_get_info()
+static GHashTable *pidgin_ui_get_info(void)
 {
 	if(NULL == ui_info) {
 		ui_info = g_hash_table_new(g_str_hash, g_str_equal);
 
 		g_hash_table_insert(ui_info, "name", (char*)PIDGIN_NAME);
 		g_hash_table_insert(ui_info, "version", VERSION);
+		g_hash_table_insert(ui_info, "website", "http://pidgin.im");
+		g_hash_table_insert(ui_info, "dev_website", "http://developer.pidgin.im");
 	}
 
 	return ui_info;
@@ -383,8 +381,9 @@ show_usage(const char *name, gboolean terse)
 	char *text;
 
 	if (terse) {
-		text = g_strdup_printf(_("%s %s. Try `%s -h' for more information.\n"), PIDGIN_NAME, VERSION, name);
+		text = g_strdup_printf(_("%s %s. Try `%s -h' for more information.\n"), PIDGIN_NAME, DISPLAY_VERSION, name);
 	} else {
+#ifndef WIN32
 		text = g_strdup_printf(_("%s %s\n"
 		       "Usage: %s [OPTION]...\n\n"
 		       "  -c, --config=DIR    use DIR for config files\n"
@@ -392,12 +391,24 @@ show_usage(const char *name, gboolean terse)
 		       "  -h, --help          display this help and exit\n"
 		       "  -m, --multiple      do not ensure single instance\n"
 		       "  -n, --nologin       don't automatically login\n"
-		       "  -l, --login[=NAME]  automatically login (optional argument NAME specifies\n"
-		       "                      account(s) to use, separated by commas)\n"
-#ifndef WIN32
+		       "  -l, --login[=NAME]  enable specified account(s) (optional argument NAME\n"
+		       "                      specifies account(s) to use, separated by commas.\n"
+		       "                      Without this only the first account will be enabled).\n"
 		       "  --display=DISPLAY   X display to use\n"
+		       "  -v, --version       display the current version and exit\n"), PIDGIN_NAME, DISPLAY_VERSION, name);
+#else
+		text = g_strdup_printf(_("%s %s\n"
+		       "Usage: %s [OPTION]...\n\n"
+		       "  -c, --config=DIR    use DIR for config files\n"
+		       "  -d, --debug         print debugging messages to stdout\n"
+		       "  -h, --help          display this help and exit\n"
+		       "  -m, --multiple      do not ensure single instance\n"
+		       "  -n, --nologin       don't automatically login\n"
+		       "  -l, --login[=NAME]  enable specified account(s) (optional argument NAME\n"
+		       "                      specifies account(s) to use, separated by commas.\n"
+		       "                      Without this only the first account will be enabled).\n"
+		       "  -v, --version       display the current version and exit\n"), PIDGIN_NAME, DISPLAY_VERSION, name);
 #endif
-		       "  -v, --version       display the current version and exit\n"), PIDGIN_NAME, VERSION, name);
 	}
 
 	purple_print_utf8_to_console(stdout, text);
@@ -452,6 +463,7 @@ int main(int argc, char *argv[])
 	gboolean opt_help = FALSE;
 	gboolean opt_login = FALSE;
 	gboolean opt_nologin = FALSE;
+	gboolean opt_nocrash = FALSE;
 	gboolean opt_version = FALSE;
 	gboolean opt_si = TRUE;     /* Check for single instance? */
 	char *opt_config_dir_arg = NULL;
@@ -482,9 +494,11 @@ int main(int argc, char *argv[])
 		{"login",    optional_argument, NULL, 'l'},
 		{"multiple", no_argument,       NULL, 'm'},
 		{"nologin",  no_argument,       NULL, 'n'},
+		{"nocrash",  no_argument,       NULL, 'x'},
 		{"session",  required_argument, NULL, 's'},
 		{"version",  no_argument,       NULL, 'v'},
 		{"display",  required_argument, NULL, 'D'},
+		{"sync",     no_argument,       NULL, 'S'},
 		{0, 0, 0, 0}
 	};
 
@@ -494,7 +508,7 @@ int main(int argc, char *argv[])
 	debug_enabled = FALSE;
 #endif
 
-	/* This is the first Glib function call. Make sure to initialize GThread bfeore then */
+	/* Initialize GThread before calling any Glib or GTK+ functions. */
 	g_thread_init(NULL);
 
 #ifdef ENABLE_NLS
@@ -522,12 +536,8 @@ int main(int argc, char *argv[])
 			"Please make sure to specify what you were doing at the time\n"
 			"and post the backtrace from the core file.  If you do not know\n"
 			"how to get the backtrace, please read the instructions at\n"
-			"%swiki/GetABacktrace\n\n"
-			"If you need further assistance, please IM either SeanEgn or \n"
-			"LSchiere (via AIM).  Contact information for Sean and Luke \n"
-			"on other protocols is at\n"
-			"%swiki/DeveloperPages\n"),
-			PIDGIN_NAME, VERSION, PURPLE_DEVEL_WEBSITE, PURPLE_DEVEL_WEBSITE, PURPLE_DEVEL_WEBSITE
+			"%swiki/GetABacktrace\n"),
+			PIDGIN_NAME, DISPLAY_VERSION, PURPLE_DEVEL_WEBSITE, PURPLE_DEVEL_WEBSITE
 		);
 
 		/* we have to convert the message (UTF-8 to console
@@ -597,7 +607,7 @@ int main(int argc, char *argv[])
 #ifndef _WIN32
 				  "c:dhmnl::s:v",
 #else
-				  "c:dhnl::v",
+				  "c:dhmnl::v",
 #endif
 				  long_options, NULL)) != -1) {
 		switch (opt) {
@@ -630,7 +640,11 @@ int main(int argc, char *argv[])
 		case 'm':   /* do not ensure single instance. */
 			opt_si = FALSE;
 			break;
+		case 'x':   /* --nocrash */
+			opt_nocrash = TRUE;
+			break;
 		case 'D':   /* --display */
+		case 'S':   /* --sync */
 			/* handled by gtk_init_check below */
 			break;
 		case '?':	/* show terse help */
@@ -654,7 +668,7 @@ int main(int argc, char *argv[])
 	}
 	/* show version message */
 	if (opt_version) {
-		printf("%s %s\n", PIDGIN_NAME, VERSION);
+		printf("%s %s\n", PIDGIN_NAME, DISPLAY_VERSION);
 #ifdef HAVE_SIGNAL_H
 		g_free(segfault_message);
 #endif
@@ -691,7 +705,7 @@ int main(int argc, char *argv[])
 	if (!gui_check) {
 		char *display = gdk_get_display();
 
-		printf("%s %s\n", PIDGIN_NAME, VERSION);
+		printf("%s %s\n", PIDGIN_NAME, DISPLAY_VERSION);
 
 		g_warning("cannot open display: %s", display ? display : "unset");
 		g_free(display);
@@ -764,6 +778,16 @@ int main(int argc, char *argv[])
 	}
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
+#ifdef HAVE_DBUS
+		DBusConnection *conn = purple_dbus_get_connection();
+		DBusMessage *message = dbus_message_new_method_call(DBUS_SERVICE_PURPLE, DBUS_PATH_PURPLE,
+				DBUS_INTERFACE_PURPLE, "PurpleBlistSetVisible");
+		gboolean tr = TRUE;
+		dbus_message_append_args(message, DBUS_TYPE_UINT32, &tr, DBUS_TYPE_INVALID);
+		dbus_connection_send_with_reply_and_block(conn, message, -1, NULL);
+		dbus_message_unref(message);
+#endif
+		purple_debug_info("main", "exiting because another libpurple client is already running\n");
 		purple_core_quit();
 #ifdef HAVE_SIGNAL_H
 		g_free(segfault_message);

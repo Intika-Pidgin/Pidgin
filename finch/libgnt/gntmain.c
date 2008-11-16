@@ -21,7 +21,7 @@
  */
 
 #define _GNU_SOURCE
-#if defined(__APPLE__) || defined(__unix__)
+#if (defined(__APPLE__) || defined(__unix__)) && !defined(__FreeBSD__)
 #define _XOPEN_SOURCE_EXTENDED
 #endif
 
@@ -72,7 +72,7 @@ static gboolean mouse_enabled;
 
 static void setup_io(void);
 
-static gboolean refresh_screen();
+static gboolean refresh_screen(void);
 
 static GntWM *wm;
 static GntClipboard *clipboard;
@@ -221,7 +221,7 @@ static gboolean
 io_invoke(GIOChannel *source, GIOCondition cond, gpointer null)
 {
 	char keys[256];
-	int rd;
+	gssize rd;
 	char *k;
 	char *cvrt = NULL;
 
@@ -245,8 +245,11 @@ io_invoke(GIOChannel *source, GIOCondition cond, gpointer null)
 	}
 
 	rd += HOLDING_ESCAPE;
-	if (HOLDING_ESCAPE)
+	if (HOLDING_ESCAPE) {
 		keys[0] = '\033';
+		g_source_remove(escape_stuff.timer);
+		escape_stuff.timer = 0;
+	}
 	keys[rd] = 0;
 	gnt_wm_set_event_stack(wm, TRUE);
 
@@ -271,12 +274,6 @@ io_invoke(GIOChannel *source, GIOCondition cond, gpointer null)
 		int p;
 
 		if (k[0] == '\033' && rd == 1) {
-			if (escape_stuff.timer) {
-				gnt_wm_process_input(wm, "\033\033");
-				g_source_remove(escape_stuff.timer);
-				escape_stuff.timer = 0;
-				break;
-			}
 			escape_stuff.timer = g_timeout_add(250, escape_timeout, NULL);
 			break;
 		}
@@ -291,7 +288,8 @@ io_invoke(GIOChannel *source, GIOCondition cond, gpointer null)
 		k += p;
 	}
 end:
-	gnt_wm_set_event_stack(wm, FALSE);
+	if (wm)
+		gnt_wm_set_event_stack(wm, FALSE);
 	g_free(cvrt);
 	return TRUE;
 }
@@ -325,7 +323,7 @@ setup_io()
 }
 
 static gboolean
-refresh_screen()
+refresh_screen(void)
 {
 	gnt_bindable_perform_action_named(GNT_BINDABLE(wm), "refresh-screen", NULL);
 	return FALSE;
@@ -362,7 +360,7 @@ exit_win_close(GntWidget *w, GntWidget **win)
 }
 
 static void
-ask_before_exit()
+ask_before_exit(void)
 {
 	static GntWidget *win = NULL;
 	GntWidget *bbox, *button;
@@ -411,7 +409,7 @@ sighandler(int sig)
 #ifdef SIGWINCH
 	case SIGWINCH:
 		erase();
-		g_idle_add(refresh_screen, NULL);
+		g_idle_add((GSourceFunc)refresh_screen, NULL);
 		if (org_winch_handler)
 			org_winch_handler(sig);
 		signal(SIGWINCH, sighandler);
@@ -429,7 +427,7 @@ sighandler(int sig)
 }
 
 static void
-init_wm()
+init_wm(void)
 {
 	const char *name = gnt_style_get(GNT_STYLE_WM);
 	gpointer handle;
@@ -482,7 +480,7 @@ void gnt_init()
 
 	gnt_init_colors();
 
-	wbkgdset(stdscr, '\0' | COLOR_PAIR(GNT_COLOR_NORMAL));
+	wbkgdset(stdscr, '\0' | gnt_color_pair(GNT_COLOR_NORMAL));
 	refresh();
 
 #ifdef ALL_MOUSE_EVENTS
@@ -490,7 +488,7 @@ void gnt_init()
 		mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 #endif
 
-	wbkgdset(stdscr, '\0' | COLOR_PAIR(GNT_COLOR_NORMAL));
+	wbkgdset(stdscr, '\0' | gnt_color_pair(GNT_COLOR_NORMAL));
 	werase(stdscr);
 	wrefresh(stdscr);
 
@@ -613,7 +611,7 @@ void gnt_screen_rename_widget(GntWidget *widget, const char *text)
 	gnt_wm_update_window(wm, widget);
 }
 
-void gnt_register_action(const char *label, void (*callback)())
+void gnt_register_action(const char *label, void (*callback)(void))
 {
 	GntAction *action = g_new0(GntAction, 1);
 	action->label = g_strdup(label);
@@ -646,7 +644,7 @@ gboolean gnt_screen_menu_show(gpointer newmenu)
 	return TRUE;
 }
 
-void gnt_set_clipboard_string(gchar *string)
+void gnt_set_clipboard_string(const gchar *string)
 {
 	gnt_clipboard_set_string(clipboard, string);
 }
@@ -678,8 +676,9 @@ reap_child(GPid pid, gint status, gpointer data)
 	g_free(cp);
 	clean_pid();
 	wm->mode = GNT_KP_MODE_NORMAL;
-	clear();
+	endwin();
 	setup_io();
+	refresh();
 	refresh_screen();
 }
 #endif

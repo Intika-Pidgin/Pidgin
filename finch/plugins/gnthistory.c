@@ -25,13 +25,14 @@
 #include "conversation.h"
 #include "debug.h"
 #include "log.h"
-#include "notify.h"
+#include "request.h"
 #include "prefs.h"
 #include "signals.h"
 #include "util.h"
 #include "version.h"
 
 #include "gntplugin.h"
+#include "gntrequest.h"
 
 #define HISTORY_PLUGIN_ID "gnt-history"
 
@@ -50,8 +51,7 @@ static void historize(PurpleConversation *c)
 	PurpleMessageFlags mflag;
 
 	convtype = purple_conversation_get_type(c);
-	if (convtype == PURPLE_CONV_TYPE_IM)
-	{
+	if (convtype == PURPLE_CONV_TYPE_IM) {
 		GSList *buddies;
 		GSList *cur;
 
@@ -61,17 +61,17 @@ static void historize(PurpleConversation *c)
 			return;
 
 		/* Find buddies for this conversation. */
-	        buddies = purple_find_buddies(account, name);
+		buddies = purple_find_buddies(account, name);
 
 		/* If we found at least one buddy, save the first buddy's alias. */
 		if (buddies != NULL)
 			alias = purple_buddy_get_contact_alias((PurpleBuddy *)buddies->data);
 
-	        for (cur = buddies; cur != NULL; cur = cur->next)
-	        {
-	                PurpleBlistNode *node = cur->data;
-	                if ((node != NULL) && ((node->prev != NULL) || (node->next != NULL)))
-	                {
+		for (cur = buddies; cur != NULL; cur = cur->next) {
+			PurpleBlistNode *node = cur->data;
+			if ((node != NULL) &&
+					((purple_blist_node_get_sibling_prev(node) != NULL) ||
+						(purple_blist_node_get_sibling_next(node) != NULL))) {
 				PurpleBlistNode *node2;
 
 				alias = purple_buddy_get_contact_alias((PurpleBuddy *)node);
@@ -79,26 +79,24 @@ static void historize(PurpleConversation *c)
 				/* We've found a buddy that matches this conversation.  It's part of a
 				 * PurpleContact with more than one PurpleBuddy.  Loop through the PurpleBuddies
 				 * in the contact and get all the logs. */
-				for (node2 = node->parent->child ; node2 != NULL ; node2 = node2->next)
-				{
+				for (node2 = purple_blist_node_get_first_child(purple_blist_node_get_parent(node));
+						node2 != NULL ; node2 = purple_blist_node_get_sibling_next(node2)) {
 					logs = g_list_concat(
-						purple_log_get_logs(PURPLE_LOG_IM,
-							purple_buddy_get_name((PurpleBuddy *)node2),
-							purple_buddy_get_account((PurpleBuddy *)node2)),
-						logs);
+							purple_log_get_logs(PURPLE_LOG_IM,
+								purple_buddy_get_name((PurpleBuddy *)node2),
+								purple_buddy_get_account((PurpleBuddy *)node2)),
+							logs);
 				}
 				break;
-	                }
-	        }
-	        g_slist_free(buddies);
+			}
+		}
+		g_slist_free(buddies);
 
 		if (logs == NULL)
 			logs = purple_log_get_logs(PURPLE_LOG_IM, name, account);
 		else
 			logs = g_list_sort(logs, purple_log_compare);
-	}
-	else if (convtype == PURPLE_CONV_TYPE_CHAT)
-	{
+	} else if (convtype == PURPLE_CONV_TYPE_CHAT) {
 		/* If we're not logging, don't show anything.
 		 * Otherwise, we might show a very old log. */
 		if (!purple_prefs_get_bool("/purple/logging/log_chats"))
@@ -114,7 +112,7 @@ static void historize(PurpleConversation *c)
 	history = purple_log_read((PurpleLog*)logs->data, &flags);
 
 	header = g_strdup_printf(_("<b>Conversation with %s on %s:</b><br>"), alias,
-							 purple_date_format_full(localtime(&((PurpleLog *)logs->data)->time)));
+			purple_date_format_full(localtime(&((PurpleLog *)logs->data)->time)));
 	purple_conversation_write(c, "", header, mflag, time(NULL));
 	g_free(header);
 
@@ -135,10 +133,50 @@ history_prefs_check(PurplePlugin *plugin)
 	if (!purple_prefs_get_bool("/purple/logging/log_ims") &&
 	    !purple_prefs_get_bool("/purple/logging/log_chats"))
 	{
-		purple_notify_warning(plugin, NULL, _("History Plugin Requires Logging"),
-							_("Logging can be enabled from Tools -> Preferences -> Logging.\n\n"
-							  "Enabling logs for instant messages and/or chats will activate "
-							  "history for the same conversation type(s)."));
+		PurpleRequestFields *fields = purple_request_fields_new();
+		PurpleRequestFieldGroup *group;
+		PurpleRequestField *field;
+		struct {
+			const char *pref;
+			const char *label;
+		} prefs[] = {
+			{"/purple/logging/log_ims", N_("Log IMs")},
+			{"/purple/logging/log_chats", N_("Log chats")},
+			{NULL, NULL}
+		};
+		int iter;
+		GList *list = purple_log_logger_get_options();
+		const char *system = purple_prefs_get_string("/purple/logging/format");
+
+		group = purple_request_field_group_new(_("Logging"));
+
+		field = purple_request_field_list_new("/purple/logging/format", _("Log format"));
+		while (list) {
+			const char *label = _(list->data);
+			list = g_list_delete_link(list, list);
+			purple_request_field_list_add(field, label, list->data);
+			if (system && strcmp(system, list->data) == 0)
+				purple_request_field_list_add_selected(field, label);
+			list = g_list_delete_link(list, list);
+		}
+		purple_request_field_group_add_field(group, field);
+
+		for (iter = 0; prefs[iter].pref; iter++) {
+			field = purple_request_field_bool_new(prefs[iter].pref, _(prefs[iter].label),
+						purple_prefs_get_bool(prefs[iter].pref));
+			purple_request_field_group_add_field(group, field);
+		}
+
+		purple_request_fields_add_group(fields, group);
+
+		purple_request_fields(plugin, NULL, _("History Plugin Requires Logging"),
+				      _("Logging can be enabled from Tools -> Preferences -> Logging.\n\n"
+				      "Enabling logs for instant messages and/or chats will activate "
+				      "history for the same conversation type(s)."),
+				      fields,
+				      _("OK"), G_CALLBACK(finch_request_save_in_prefs),
+				      _("Cancel"), NULL,
+				      NULL, NULL, NULL, plugin);
 	}
 }
 
@@ -177,7 +215,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	HISTORY_PLUGIN_ID,
 	N_("GntHistory"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Shows recently logged conversations in new conversations."),
 	N_("When a new conversation is opened this plugin will insert "
 	   "the last conversation into the current conversation."),

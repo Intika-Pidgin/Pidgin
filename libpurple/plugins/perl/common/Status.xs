@@ -86,10 +86,10 @@ PPCODE:
 	t_len = av_len((AV *)SvRV(source_list));
 
 	for (i = 0; i < t_len; i++) {
-		STRLEN t_sl;
-		t_GL = g_list_append(t_GL, SvPV(*av_fetch((AV *)SvRV(source_list), i, 0), t_sl));
+		t_GL = g_list_append(t_GL, SvPVutf8_nolen(*av_fetch((AV *)SvRV(source_list), i, 0)));
 	}
 	purple_presence_add_list(presence, t_GL);
+	g_list_free(t_GL);
 
 void
 purple_presence_add_status(presence, status)
@@ -341,12 +341,6 @@ purple_status_set_attr_string(status, id, value)
 	const char *id
 	const char *value
 
-void
-purple_status_init()
-
-void
-purple_status_uninit()
-
 MODULE = Purple::Status  PACKAGE = Purple::StatusType  PREFIX = purple_status_type_
 PROTOTYPES: ENABLE
 
@@ -360,28 +354,6 @@ purple_status_type_add_attr(status_type, id, name, value)
 void
 purple_status_type_destroy(status_type)
 	Purple::StatusType status_type
-
-Purple::StatusType
-purple_status_type_find_with_id(status_types, id)
-	SV *status_types
-	const char *id
-PREINIT:
-/* XXX Check that this function actually works, I think it might need a */
-/* status_type as it's first argument to work as $status_type->find_with_id */
-/* properly. */
-	GList *t_GL;
-	int i, t_len;
-CODE:
-	t_GL = NULL;
-	t_len = av_len((AV *)SvRV(status_types));
-
-	for (i = 0; i < t_len; i++) {
-		STRLEN t_sl;
-		t_GL = g_list_append(t_GL, SvPV(*av_fetch((AV *)SvRV(status_types), i, 0), t_sl));
-	}
-	RETVAL = (PurpleStatusType *)purple_status_type_find_with_id(t_GL, id);
-OUTPUT:
-	RETVAL
 
 Purple::StatusAttr
 purple_status_type_get_attr(status_type, id)
@@ -397,6 +369,25 @@ PPCODE:
 	for (l = purple_status_type_get_attrs(status_type); l != NULL; l = l->next) {
 		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::StatusAttr")));
 	}
+
+Purple::StatusType
+purple_status_type_find_with_id(status_types, id)
+	SV *status_types
+	const char *id
+PREINIT:
+	GList *t_GL;
+	int i, t_len;
+CODE:
+	t_GL = NULL;
+	t_len = av_len((AV *)SvRV(status_types));
+
+	for (i = 0; i < t_len; i++) {
+		t_GL = g_list_append(t_GL, SvPVutf8_nolen(*av_fetch((AV *)SvRV(status_types), i, 0)));
+	}
+	RETVAL = (PurpleStatusType *)purple_status_type_find_with_id(t_GL, id);
+	g_list_free(t_GL);
+OUTPUT:
+	RETVAL
 
 const char *
 purple_status_type_get_id(status_type)

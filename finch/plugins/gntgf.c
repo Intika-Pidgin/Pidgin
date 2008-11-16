@@ -122,7 +122,7 @@ error_handler(Display *dpy, XErrorEvent *error)
 }
 
 static void
-urgent()
+urgent(void)
 {
 	/* This is from deryni/tuomov's urgent_test.c */
 	Display *dpy;
@@ -322,7 +322,7 @@ toggle_option(GntCheckBox *check, gpointer str)
 }
 
 static GntWidget *
-config_frame()
+config_frame(void)
 {
 	GntWidget *window, *tree, *check;
 	int i;
@@ -375,7 +375,7 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,
 	"gntgf",
 	N_("GntGf"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Toaster plugin"),
 	N_("Toaster plugin"),
 	"Sadrul H Chowdhury <sadrul@users.sourceforge.net>",
