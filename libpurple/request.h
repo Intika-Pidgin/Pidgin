@@ -147,6 +147,7 @@ typedef struct
 		{
 			GList *items;
 			GHashTable *item_data;
+			GList *icons;
 			GList *selected;
 			GHashTable *selected_table;
 
@@ -918,6 +919,17 @@ void purple_request_field_list_add(PurpleRequestField *field,
 								 const char *item, void *data);
 
 /**
+ * Adds an item with icon to a list field.
+ *
+ * @param field The list field.
+ * @param item  The list item.
+ * @param icon_path The path to icon file.
+ * @param data  The associated data.
+ */
+void purple_request_field_list_add_icon(PurpleRequestField *field,
+								 const char *item, const char* icon_path, void* data);
+
+/**
  * Adds a selected item to the list field.
  *
  * @param field The field.
@@ -974,6 +986,15 @@ GList *purple_request_field_list_get_selected(
  * @constreturn The list of items.
  */
 GList *purple_request_field_list_get_items(const PurpleRequestField *field);
+
+/**
+ * Returns a list of icons in a list field.
+ *
+ * @param field The field.
+ *
+ * @constreturn The list of icons.
+ */
+GList *purple_request_field_list_get_icons(const PurpleRequestField *field);
 
 /*@}*/
 
