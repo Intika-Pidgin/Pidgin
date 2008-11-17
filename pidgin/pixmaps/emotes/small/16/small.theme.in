@@ -7,12 +7,13 @@ Author=Hylke Bons
 # Default smileys
 [default]
 smile.png           :)      :-)
-smile-big.png       :-D     :-d     :D      :d
+excited.png         :-D     :-d     :D      :d
 sad.png             :-(     :(
 wink.png            ;-)     ;)
 tongue.png          :P      :-P     :-p     :p
 shock.png           =-O     =-o
 kiss.png            :-*
+embarrassed.png     :-[
 crying.png          :'(
 thinking.png        :-/     :-\\
 angel.png           O:-)    o:-)
@@ -26,7 +27,8 @@ sad.png             :-(     :(
 tongue.png          :-P     :P      :-p    :p
 shock.png           =-O
 kiss.png            :-*
-smile-big.png       :-D     :D
+excited.png         :-D     :D
+embarrassed.png     :-[
 angel.png           O:-)
 thinking.png        :-\\    :-/
 crying.png          :'(
@@ -35,18 +37,19 @@ crying.png          :'(
 # Following Windows Live Messenger 8.1
 [MSN]
 smile.png           :)      :-)
-smile-big.png       :D      :d :-D :-d
+excited.png         :D      :d :-D :-d
 wink.png            ;)      ;-)
 shock.png           :-O     :-o :O :o
 tongue.png          :P      :p :-P :-p
 angry.png           :@      :-@
+embarrassed.png     :$      :-$
 confused.png        :S      :s :-S :-s
 sad.png             :(      :-(
 crying.png          :'(
 neutral.png         :|      :-|
 devil.png           (6)
 angel.png           (A)     (a)
-love.png            (L)     (l)
+in_love.png         (L)     (l)
 musical-note.png    (8)
 kiss.png            (K)     (k)
 camera.png          (P)     (p)
@@ -55,12 +58,14 @@ phone.png           (T)     (t)
 hug-left.png        ({)
 hug-right.png       (})
 beer.png            (B)     (b)
+sarcastic.png       ^o)
 sick.png            +o(
 plate.png           (pl)
+mobile.png          (mp)
 dont-know.png       :^)
 thinking.png        *-)
 party.png           <:o)
-yawn.png            |-) 
+sleepy.png          |-) 
 
 # Hidden MSN emotes
 cigarette.png      	(ci)    (CI)
@@ -72,19 +77,21 @@ console.png			(xx)    (XX)
 shock.png           /:O      /jy       /surprised
 party.png           /8-)     /dy       /revel
 crying.png          /:<      /ll       /cry
-sleepy.png          /:Z      /shui     /sleep
-smile-big.png       /:D      /cy       /toothy_smile
+sleeping.png        /:Z      /shui     /sleep
+embarrassed.png     /:-|     /gg       /embarassed
+excited.png         /:D      /cy       /toothy_smile
 smile.png           /:)      /wx       /small_smile
 sad.png             /:(      /ng       /sad
 sick.png            /:T      /tu       /vomit
-yawn.png            /|-)     /kun      /sleepy
+sleepy.png          /|-)     /kun      /sleepy
 question.png        /?       /yiw      /question
+amorous.png         /love    /aiq      /love
 search.png          /find    /zhao     /search
 hug-left.png        /hug     /yb       /hug
 musical-note.png    /music   /yy       /music
 coffee.png          /coffee  /kf       /coffee
 kiss.png            /kiss    /wen      /kiss
-love.png            /heart   /xin      /heart
+in_love.png         /heart   /xin      /heart
 meeting.png         /meeting /hy       /meeting
 phone.png           /phone   /dh       /phone
 tv.png              /TV      /ds       /TV
@@ -99,15 +106,17 @@ sad.png             :-(     :(
 shock.png           =-O
 wink.png            ;-)     ;)
 tongue.png          :-P     :P      :-p     :p
-sleepy.png          *TIRED*
+sleeping.png        *TIRED*
 crying.png          :'(    :'-(
 sick.png            :-!
 kiss.png            :-{} :-*
+embarrassed.png     :-[
 devil.png           ]:->
 angel.png           O:-)
 thinking.png        :-\\    :-/
 beer.png            *DRINK*
-smile-big.png       :-D     :D
+excited.png         :-D     :D
+amorous.png         *IN\ LOVE*
 
 
 # Following Yahoo! Messenger 8.1
@@ -118,18 +127,22 @@ shock.png           :-O     :O      :-o     :o
 devil.png           >:)
 angel.png           O:-)    o:-)    0:-)
 sick.png            :-&
-yawn.png            (:|
+sleepy.png          (:|
 sad.png             :(      :-(
+amorous.png         :x      :-x     :X      :-X
 angry.png           X-(     x-(     X(      x(
 crying.png          :((
 wink.png            ;)      ;-)
+embarrassed.png     :">
+mean.png            :->     :>
 thinking.png        :-?
-smile-big.png       :D      :-D     :d      :-d
+excited.png         :D      :-D     :d      :-d
 tongue.png          :-P     :P      :-p     :p
 neutral.png         :|      :-|
-sleepy.png          I-)     i-)     |-)
+sleeping.png        I-)     i-)     |-)
 kiss.png            :-*     :*
 confused.png        :-S     :-s
+sarcastic.png       /:)
 hug-left.png        >:D<    >:d<
 party.png           <:-P    <:-p
 
@@ -144,10 +157,11 @@ musical-note.png    :-"
 
 # Following MySpaceIM Beta 1.0.697.0
 [MySpaceIM]
-smile-big.png	    :D      :-D
+excited.png  	    :D      :-D
 devil.png	    }:)
 confused.png	    :Z
 smile.png	    :)      :-)
+amorous.png	    :X
 shock.png	    :O
 neutral.png	    :|
 tongue.png	    :P      :p
