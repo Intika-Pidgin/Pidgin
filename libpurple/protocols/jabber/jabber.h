@@ -208,6 +208,7 @@ struct _JabberStream
 	guint max_srv_rec_idx;
 
 	/* BOSH stuff*/
+    gboolean use_bosh;
     PurpleBOSHConnection bosh;
 };
 

@@ -146,7 +146,7 @@ static void jabber_bind_result_cb(JabberStream *js, xmlnode *packet,
 	jabber_session_init(js);
 }
 
-static void jabber_stream_features_parse(JabberStream *js, xmlnode *packet)
+void jabber_stream_features_parse(JabberStream *js, xmlnode *packet)
 {
 	if(xmlnode_get_child(packet, "starttls")) {
 		if(jabber_process_starttls(js, packet))
@@ -355,7 +355,19 @@ void jabber_send_raw(JabberStream *js, const char *data, int len)
 	}
 #endif
 
-	do_jabber_send_raw(js, data, len);
+	if (len == -1)
+		len = strlen(data);
+
+	if (js->use_bosh) {
+		xmlnode *xnode = xmlnode_from_str(data, len);
+		if (xnode) jabber_bosh_connection_send(&(js->bosh), xnode);
+		else {
+			purple_connection_error_reason(js->gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+							_("Someone tried to send non-XML in a Jabber world."));
+		}
+	} else {
+		do_jabber_send_raw(js, data, len);
+	}
 }
 
 int jabber_prpl_send_raw(PurpleConnection *gc, const char *buf, int len)
@@ -518,6 +530,12 @@ jabber_login_callback_ssl(gpointer data, PurpleSslConnection *gsc,
 	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING_ENCRYPTION);
 }
 
+static void
+jabber_bosh_login_callback(PurpleBOSHConnection *conn) 
+{
+	purple_debug_info("jabber","YAY...BOSH connection established.\n");
+}
+
 static void 
 txt_resolved_cb(PurpleTxtResponse *resp, int results, gpointer data)
 {
@@ -530,7 +548,8 @@ txt_resolved_cb(PurpleTxtResponse *resp, int results, gpointer data)
 		tmp = g_strdup_printf(_("Could not find alternative XMPP connection methods after failing to connect directly.\n"));
 		purple_connection_error_reason (gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
-		g_free(tmp);	
+		g_free(tmp);
+		return;	
 	}
 	
 	for (n = 0; n < results; n++) {
@@ -538,11 +557,17 @@ txt_resolved_cb(PurpleTxtResponse *resp, int results, gpointer data)
 		token = g_strsplit(resp[n].content, "=", 2);
 		if (!strcmp(token[0], "_xmpp-client-xbosh")) {
 			purple_debug_info("jabber","Found alternative connection method using %s at %s.\n", token[0], token[1]);
-			js->bosh.url = g_strdup(token[1]);
+			jabber_bosh_connection_init(&(js->bosh), gc->account, js, token[1]);
 			g_strfreev(token);
 			break;
 		}
 		g_strfreev(token);
+	}
+	if (js->bosh.host) {
+		js->bosh.userdata = gc;
+		jabber_bosh_connection_connect(&(js->bosh));
+	} else {
+		purple_debug_info("jabber","Didn't find an alternative connection method.\n");
 	}
 }
 
