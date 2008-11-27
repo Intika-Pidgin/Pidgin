@@ -5,7 +5,6 @@ EXTRA_DIST = \
 		Makefile.mingw \
 		pidgin.pc.in \
 		pidgin-uninstalled.pc.in \
-		pidginstock-artwork.c \
 		win32/IdleTracker/Makefile.mingw \
 		win32/IdleTracker/idletrack.c \
 		win32/IdleTracker/idletrack.h \
@@ -79,6 +78,8 @@ pidgin_SOURCES = \
 	pidginstock.c \
 	gtkaccount.c \
 	gtkblist.c \
+	gtkblist-theme-loader.c \
+	gtkblist-theme.c \
 	gtkcelllayout.c \
 	gtkcellrendererexpander.c \
 	gtkcellrendererprogress.c \
@@ -95,6 +96,8 @@ pidgin_SOURCES = \
 	gtkeventloop.c \
 	gtkexpander.c \
 	gtkft.c \
+	gtkicon-theme.c \
+	gtkicon-theme-loader.c \
 	gtkidle.c \
 	gtkimhtml.c \
 	gtkimhtmltoolbar.c \
@@ -117,6 +120,7 @@ pidgin_SOURCES = \
 	gtksourceiter.c \
 	gtksourceundomanager.c \
 	gtksourceview-marshal.c \
+	gtkstatus-icon-theme.c \
 	gtkstatusbox.c \
 	gtkthemes.c \
 	gtkutils.c \
@@ -128,6 +132,8 @@ pidgin_headers = \
 	eggtrayicon.h \
 	gtkaccount.h \
 	gtkblist.h \
+	gtkblist-theme-loader.h \
+	gtkblist-theme.h \
 	gtkcelllayout.h \
 	gtkcellrendererexpander.h \
 	gtkcellrendererprogress.h \
@@ -147,6 +153,8 @@ pidgin_headers = \
 	gtkeventloop.h \
 	gtkexpander.h \
 	gtkft.h \
+	gtkicon-theme.h \
+	gtkicon-theme-loader.h \
 	gtkidle.h \
 	gtkgaim-compat.h \
 	gtkimhtml.h \
@@ -170,6 +178,7 @@ pidgin_headers = \
 	gtksourceiter.h \
 	gtksourceundomanager.h \
 	gtksourceview-marshal.h \
+	gtkstatus-icon-theme.h \
 	gtkstatusbox.h \
 	pidginstock.h \
 	gtkthemes.h \
