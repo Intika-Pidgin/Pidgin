@@ -10,7 +10,7 @@ happy.png           :)      :-)
 excited.png         :-D     :-d     :D      :d
 sad.png             :-(     :(
 wink.png            ;-)     ;)
-tongue.png          :P      :-P     :-p     :p
+tongue.png          :P      :p      :-P     :-p
 shocked.png         =-O     =-o
 kiss.png            :-*
 embarrassed.png     :-[
@@ -20,26 +20,30 @@ angel.png           O:-)    o:-)
 
 
 [XMPP]
-# Following XEP-0038 + our default set, in default set order
-happy.png           :)      :-)
-excited.png         :-D     :-d     :D      :d
+# Following XEP-0038 + GTalk + our default set, in default set order
+# The GTalk strings come from ticket #3307.
+happy.png           :)      :-)     =)
+excited.png         :-D     :-d     :D      :d      =D      =d
 sad.png             :-(     :(
-wink.png            ;-)     ;)
-tongue.png          :P      :-P     :-p     :p
-shocked.png         =-O     =-o
+wink.png            ;-)     ;)      ;^)
+tongue.png          :P      :p      :-P     :-p
+shocked.png         =-O     =-o     :-O     :-o
 kiss.png            :kiss:  :-*
 embarrassed.png     :-[
 crying.png          :'-(    :'(
 thinking.png        :-/     :-\\
 angel.png           O:-)    o:-)
 
-# Following XEP-0038
-angry.png           >:-(    >:(
+# Following XEP-0038 + GTalk
+angry.png           >:-(    >:(     X-(    x-(
 phone.png           :telephone:
-in_love.png         :heart: :love:
+in_love.png         :heart: :love:  <3
 musical-note.png    :music:
 beer.png            :beer:
 coffee.png          :coffee:
+
+# Others
+neutral.png         :|      :-|
 
 # Hidden icons from the default set.
 
@@ -49,7 +53,7 @@ coffee.png          :coffee:
 happy.png           :-)     :)
 wink.png            ;-)     ;)
 sad.png             :-(     :(
-tongue.png          :-P     :P      :-p    :p
+tongue.png          :P      :p      :-P     :-p
 shocked.png         =-O
 kiss.png            :-*
 excited.png         :-D     :D
@@ -62,13 +66,13 @@ crying.png          :'(
 # Following Windows Live Messenger 8.1
 [MSN]
 happy.png           :)      :-)
-excited.png         :D      :d :-D :-d
+excited.png         :D      :d      :-D     :-d
 wink.png            ;)      ;-)
-shocked.png         :-O     :-o :O :o
-tongue.png          :P      :p :-P :-p
+shocked.png         :-O     :-o     :O      :o
+tongue.png          :-P     :P      :-p     :p
 angry.png           :@      :-@
 embarrassed.png     :$      :-$
-confused.png        :S      :s :-S :-s
+confused.png        :S      :s      :-S     :-s
 sad.png             :(      :-(
 crying.png          :'(
 neutral.png         :|      :-|
@@ -134,6 +138,7 @@ sad.png             :-(     :(
 shocked.png         =-O
 wink.png            ;-)     ;)
 tongue.png          :-P     :P      :-p     :p
+music.png           [:-}
 sleeping.png        *TIRED*
 crying.png          :'(    :'-(
 sick.png            :-!
@@ -190,9 +195,8 @@ musical-note.png    :-"
 excited.png  	    :D      :-D
 devil.png	    }:)
 confused.png	    :Z
-smile.png	    :)      :-)
 amorous.png	    :X
-shock.png	    :O
+shocked.png	    :O
 neutral.png	    :|
 tongue.png	    :P      :p
 wink.png	    ;-)     ;)
