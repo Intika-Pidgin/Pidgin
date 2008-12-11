@@ -1443,21 +1443,18 @@ msn_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 		purple_debug_info("msn", "msn_add_buddy: %s\n", who);
 #endif
 
-#if 0
-	/* Which is the max? */
-	if (session->fl_users_count >= 150)
-	{
-		purple_debug_info("msn", "Too many buddies\n");
-		/* Buddy list full */
-		/* TODO: purple should be notified of this */
-		return;
-	}
-#endif
-
 	/* XXX - Would group ever be NULL here?  I don't think so...
 	 * shx: Yes it should; MSN handles non-grouped buddies, and this is only
 	 * internal. */
-	msn_userlist_add_buddy(userlist, who, group ? group->name : NULL);
+	if (msn_userlist_find_user(userlist, who) != NULL) {
+		/* We already know this buddy. This function takes care of users
+		   already in the list and stuff... */
+		msn_userlist_add_buddy(userlist, who, group ? group->name : NULL);
+	} else {
+		/* We need to check the network for this buddy first */
+		msn_userlist_save_pending_buddy(userlist, who, group ? group->name : NULL);
+		msn_notification_send_fqy(session, who);
+	}
 }
 
 static void
@@ -1840,7 +1837,7 @@ msn_tooltip_extract_info_text(PurpleNotifyUserInfo *user_info, MsnGetInfoData *i
 		if (b->server_alias)
 		{
 			char *nicktext = g_markup_escape_text(b->server_alias, -1);
-			tmp = g_strdup_printf("<font sml=\"msn\">%s</font><br>", nicktext);
+			tmp = g_strdup_printf("<font sml=\"msn\">%s</font>", nicktext);
 			purple_notify_user_info_add_pair(user_info, _("Nickname"), tmp);
 			g_free(tmp);
 			g_free(nicktext);
@@ -1946,9 +1943,8 @@ msn_got_info(PurpleUtilFetchUrlData *url_data, gpointer data,
 
 	if (error_message != NULL || url_text == NULL || strcmp(url_text, "") == 0)
 	{
-		tmp = g_strdup_printf("<b>%s</b>", _("Error retrieving profile"));
-		purple_notify_user_info_add_pair(user_info, NULL, tmp);
-		g_free(tmp);
+		purple_notify_user_info_add_pair(user_info,
+				_("Error retrieving profile"), NULL);
 
 		purple_notify_userinfo(info_data->gc, info_data->name, user_info, NULL, NULL);
 		purple_notify_user_info_destroy(user_info);
@@ -2289,21 +2285,24 @@ msn_got_info(PurpleUtilFetchUrlData *url_data, gpointer data,
 		char *p = strstr(url_buffer, "<form id=\"profile_form\" name=\"profile_form\" action=\"http&#58;&#47;&#47;spaces.live.com&#47;profile.aspx&#63;cid&#61;0\"");
 		PurpleBuddy *b = purple_find_buddy
 				(purple_connection_get_account(info_data->gc), info_data->name);
-		purple_notify_user_info_add_pair(user_info, _("Error retrieving profile"),
-									   ((p && b) ? _("The user has not created a public profile.") :
-										(p ? _("MSN reported not being able to find the user's profile. "
-											   "This either means that the user does not exist, "
-											   "or that the user exists "
-											   "but has not created a public profile.") :
-										 _("Could not find "	/* This should never happen */
-										   "any information in the user's profile. "
-										   "The user most likely does not exist."))));
+		purple_notify_user_info_add_pair(user_info,
+				_("Error retrieving profile"), NULL);
+		purple_notify_user_info_add_pair(user_info, NULL,
+				((p && b) ? _("The user has not created a public profile.") :
+					(p ? _("MSN reported not being able to find the user's profile. "
+							"This either means that the user does not exist, "
+							"or that the user exists "
+							"but has not created a public profile.") :
+						_("Could not find "	/* This should never happen */
+							"any information in the user's profile. "
+							"The user most likely does not exist."))));
 	}
 
 	/* put a link to the actual profile URL */
-	tmp = g_strdup_printf("<a href=\"%s%s\">%s%s</a>",
-					PROFILE_URL, info_data->name, PROFILE_URL, info_data->name);
-	purple_notify_user_info_add_pair(user_info, _("Profile URL"), tmp);
+	purple_notify_user_info_add_section_break(user_info);
+	tmp = g_strdup_printf("<a href=\"%s%s\">%s</a>",
+			PROFILE_URL, info_data->name, _("View web profile"));
+	purple_notify_user_info_add_pair(user_info, NULL, tmp);
 	g_free(tmp);
 
 #if PHOTO_SUPPORT
