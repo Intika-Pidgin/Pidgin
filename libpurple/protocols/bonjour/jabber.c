@@ -77,7 +77,7 @@ enum sent_stream_start_types {
 };
 
 static void
-xep_iq_parse(xmlnode *packet, PurpleConnection *connection, PurpleBuddy *pb);
+xep_iq_parse(xmlnode *packet, PurpleBuddy *pb);
 
 static BonjourJabberConversation *
 bonjour_jabber_conv_new(PurpleBuddy *pb, PurpleAccount *account, const char *ip) {
@@ -128,7 +128,7 @@ get_xmlnode_contents(xmlnode *node)
 
 	if (contents) {
 		char *bodystart = strchr(contents, '>');
-		char *bodyend = strrchr(bodystart, '<');
+		char *bodyend = bodystart ? strrchr(bodystart, '<') : NULL;
 		if (bodystart && bodyend && (bodystart + 1) != bodyend) {
 			*bodyend = '\0';
 			memmove(contents, bodystart + 1, (bodyend - bodystart));
@@ -335,8 +335,8 @@ _send_data(PurpleBuddy *pb, char *message)
 	if (ret == -1 && errno == EAGAIN)
 		ret = 0;
 	else if (ret <= 0) {
-		PurpleConversation *conv = NULL;
-		PurpleAccount *account = NULL;
+		PurpleConversation *conv;
+		PurpleAccount *account;
 		const char *error = g_strerror(errno);
 
 		purple_debug_error("bonjour", "Error sending message to buddy %s error: %s\n",
@@ -374,7 +374,7 @@ void bonjour_jabber_process_packet(PurpleBuddy *pb, xmlnode *packet) {
 	if (!strcmp(packet->name, "message"))
 		_jabber_parse_and_write_message_to_ui(packet, pb);
 	else if(!strcmp(packet->name, "iq"))
-		xep_iq_parse(packet, NULL, pb);
+		xep_iq_parse(packet, pb);
 	else
 		purple_debug_warning("bonjour", "Unknown packet: %s\n", packet->name ? packet->name : "(null)");
 }
@@ -427,38 +427,23 @@ _client_socket_handler(gpointer data, gint socket, PurpleInputCondition conditio
 	bonjour_parser_process(bconv, message, message_length);
 }
 
-void bonjour_jabber_stream_ended(BonjourJabberConversation *bconv) {
+static void bonjour_jabber_stream_ended(BonjourJabberConversation *bconv) {
 	const gchar *name = NULL;
-	
-	if(bconv->pb != NULL)
+	BonjourBuddy *bb = NULL;
+
+	if(bconv->pb != NULL) {
 		name = purple_buddy_get_name(bconv->pb);
+		bb = purple_buddy_get_protocol_data(bconv->pb);
+	}
 
 	purple_debug_info("bonjour", "Recieved conversation close notification from %s.\n", name ? name : "(unknown)");
 
-	/* Inform the user that the conversation has been closed */
-	if (bconv != NULL) {
-		BonjourBuddy *bb = NULL;
+	/* Close the socket, clear the watcher and free memory */
+	bonjour_jabber_close_conversation(bconv);
 
-		if(bconv->pb != NULL)
-			bb = purple_buddy_get_protocol_data(bconv->pb);
-#if 0
-		if(bconv->pb != NULL) {
-			PurpleConversation *conv;
-			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, bconv->pb->name, bconv->pb->account);
-			if (conv != NULL) {
-				char *tmp = g_strdup_printf(_("%s has closed the conversation."), bconv->pb->name);
-				purple_conversation_write(conv, NULL, tmp, PURPLE_MESSAGE_SYSTEM, time(NULL));
-				g_free(tmp);
-			}
-		}
-#endif
-		/* Close the socket, clear the watcher and free memory */
-		bonjour_jabber_close_conversation(bconv);
-		if(bb)
-			bb->conversation = NULL;
-	}
+	if(bb)
+		bb->conversation = NULL;
 }
-
 
 struct _stream_start_data {
 	char *msg;
@@ -1181,8 +1166,8 @@ static gboolean
 check_if_blocked(PurpleBuddy *pb)
 {
 	gboolean blocked = FALSE;
-	GSList *l = NULL;
-	PurpleAccount *acc = NULL;
+	GSList *l;
+	PurpleAccount *acc;
 
 	if(pb == NULL)
 		return FALSE;
@@ -1203,27 +1188,22 @@ check_if_blocked(PurpleBuddy *pb)
 }
 
 static void
-xep_iq_parse(xmlnode *packet, PurpleConnection *connection, PurpleBuddy *pb)
+xep_iq_parse(xmlnode *packet, PurpleBuddy *pb)
 {
-	xmlnode *child = NULL;
-
-	if(packet == NULL || pb == NULL)
-		return;
-
-	if(connection == NULL) {
-		PurpleAccount *account = purple_buddy_get_account(pb);
-
-		if(account != NULL)
-			connection = purple_account_get_connection(account);
-	}
+	xmlnode *child;
+	PurpleAccount *account;
+	PurpleConnection *gc;
 
 	if(check_if_blocked(pb))
 		return;
 
+		account = purple_buddy_get_account(pb);
+		gc = purple_account_get_connection(account);
+
 	if ((child = xmlnode_get_child(packet, "si")) || (child = xmlnode_get_child(packet, "error")))
-		xep_si_parse(connection, packet, pb);
+		xep_si_parse(gc, packet, pb);
 	else
-		xep_bytestreams_parse(connection, packet, pb);
+		xep_bytestreams_parse(gc, packet, pb);
 }
 
 int
