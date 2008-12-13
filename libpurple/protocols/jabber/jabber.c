@@ -1746,7 +1746,7 @@ GList *jabber_status_types(PurpleAccount *account)
 	types = g_list_append(types, type);
 
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_TUNE,
-			"tune", NULL, TRUE, TRUE, TRUE,
+			"tune", NULL, FALSE, TRUE, TRUE,
 			PURPLE_TUNE_ARTIST, _("Tune Artist"), purple_value_new(PURPLE_TYPE_STRING),
 			PURPLE_TUNE_TITLE, _("Tune Title"), purple_value_new(PURPLE_TYPE_STRING),
 			PURPLE_TUNE_ALBUM, _("Tune Album"), purple_value_new(PURPLE_TYPE_STRING),
@@ -2431,6 +2431,15 @@ gboolean jabber_can_do_media(PurpleConnection *gc, const char *who,
 		purple_debug_error("jabber", "Could not find buddy\n");
 		return FALSE;
 	}
+
+	if (!jabber_buddy_has_capability(jb, JINGLE_TRANSPORT_ICEUDP) &&
+			!jabber_buddy_has_capability(jb,
+			JINGLE_TRANSPORT_RAWUDP)) {
+		purple_debug_error("jingle-rtp", "Buddy doesn't support "
+				"the same transport types\n");
+		return FALSE;
+	}
+
 	/* XMPP will only support two-way media, AFAIK... */
 	if (type == (PURPLE_MEDIA_AUDIO | PURPLE_MEDIA_VIDEO)) {
 		purple_debug_info("jabber", 
