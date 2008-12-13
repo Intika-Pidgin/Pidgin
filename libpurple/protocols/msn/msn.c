@@ -1456,10 +1456,10 @@ msn_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 	if (msn_userlist_find_user(userlist, who) != NULL) {
 		/* We already know this buddy. This function takes care of users
 		   already in the list and stuff... */
-		msn_userlist_add_buddy(userlist, who, group ? group->name : NULL);
+		msn_userlist_add_buddy(userlist, who, gname);
 	} else {
 		/* We need to check the network for this buddy first */
-		msn_userlist_save_pending_buddy(userlist, who, group ? group->name : NULL);
+		msn_userlist_save_pending_buddy(userlist, who, gname);
 		msn_notification_send_fqy(session, who);
 	}
 }
@@ -1850,7 +1850,7 @@ msn_tooltip_extract_info_text(PurpleNotifyUserInfo *user_info, MsnGetInfoData *i
 		if ((alias = purple_buddy_get_server_alias(b)) != NULL)
 		{
 			char *nicktext = g_markup_escape_text(alias, -1);
-			tmp = g_strdup_printf("<font sml=\"msn\">%s</font><br>", nicktext);
+			tmp = g_strdup_printf("<font sml=\"msn\">%s</font>", nicktext);
 			purple_notify_user_info_add_pair(user_info, _("Nickname"), tmp);
 			g_free(tmp);
 			g_free(nicktext);
