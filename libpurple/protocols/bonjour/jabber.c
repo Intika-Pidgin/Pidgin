@@ -335,8 +335,8 @@ _send_data(PurpleBuddy *pb, char *message)
 	if (ret == -1 && errno == EAGAIN)
 		ret = 0;
 	else if (ret <= 0) {
-		PurpleConversation *conv = NULL;
-		PurpleAccount *account = NULL;
+		PurpleConversation *conv;
+		PurpleAccount *account;
 		const char *error = g_strerror(errno);
 
 		purple_debug_error("bonjour", "Error sending message to buddy %s error: %s\n",
@@ -387,7 +387,7 @@ static void bonjour_jabber_stream_ended(BonjourJabberConversation *bconv) {
 	purple_debug_info("bonjour", "Recieved conversation close notification from %s.\n", bconv->pb ? bconv->pb->name : "(unknown)");
 
 	if(bconv->pb != NULL)
-		bb = bconv->pb->proto_data;
+		bb = purple_buddy_get_protocol_data(bconv->pb);
 #if 0
 	if(bconv->pb != NULL) {
 		PurpleConversation *conv;
@@ -1198,16 +1198,19 @@ static void
 xep_iq_parse(xmlnode *packet, PurpleBuddy *pb)
 {
 	xmlnode *child;
+	PurpleAccount *account;
+	PurpleConnection *gc;
 
 	if(check_if_blocked(pb))
 		return;
 
+		account = purple_buddy_get_account(pb);
+		gc = purple_account_get_connection(account);
+
 	if ((child = xmlnode_get_child(packet, "si")) || (child = xmlnode_get_child(packet, "error")))
-		xep_si_parse(purple_account_get_connection(pb->account),
-			packet, pb);
+		xep_si_parse(gc, packet, pb);
 	else
-		xep_bytestreams_parse(purple_account_get_connection(pb->account),
-			packet, pb);
+		xep_bytestreams_parse(gc, packet, pb);
 }
 
 int
