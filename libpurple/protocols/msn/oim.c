@@ -616,7 +616,7 @@ msn_oim_report_to_user(MsnOimRecvData *rdata, const char *msg_str)
 
 		/* Match number to user's mobile number, FROM is a phone number
 		   if the other side pages you using your phone number */
-		if (!strncmp(passport, "tel:+", 5)) {
+		if (!strncmp(from, "tel:+", 5)) {
 			MsnUser *user =	msn_userlist_find_user_with_mobile_phone(
 					rdata->oim->session->userlist, from + 4);
 
@@ -630,13 +630,16 @@ msn_oim_report_to_user(MsnOimRecvData *rdata, const char *msg_str)
 		                           msn_message_get_attr(message, "boundary"));
 		tokens = g_strsplit(message->body, boundary, 0);
 
-		for (part = tokens; *part != NULL; part++) {
+		/* tokens+1 to skip the "This is a multipart message..." text */
+		for (part = tokens+1; *part != NULL; part++) {
 			MsnMessage *multipart;
+			const char *type;
 			multipart = msn_message_new(MSN_MSG_UNKNOWN);
 			msn_message_parse_payload(multipart, *part, strlen(*part),
 			                          MSG_OIM_LINE_DEM, MSG_OIM_BODY_DEM);
 
-			if (!strcmp(msn_message_get_content_type(multipart), "text/plain")) {
+			type = msn_message_get_content_type(multipart);
+			if (type && !strcmp(type, "text/plain")) {
 				decode_msg = (char *)purple_base64_decode(multipart->body, &body_len);
 				msn_message_destroy(multipart);
 				break;
