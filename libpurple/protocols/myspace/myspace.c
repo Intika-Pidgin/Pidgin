@@ -36,6 +36,8 @@
 
 #include "myspace.h"
 
+#include "privacy.h"
+
 static void msim_set_status(PurpleAccount *account, PurpleStatus *status);
 static void msim_set_idle(PurpleConnection *gc, int time);
 
@@ -110,7 +112,7 @@ msim_do_postprocessing(MsimMessage *msg, const gchar *uid_before,
  *  _uid_before: string, name of field before field to insert, or NULL for end
  */
 static void
-msim_postprocess_outgoing_cb(MsimSession *session, MsimMessage *userinfo,
+msim_postprocess_outgoing_cb(MsimSession *session, const MsimMessage *userinfo,
 		gpointer data)
 {
 	gchar *uid_field_name, *uid_before, *username;
@@ -834,7 +836,7 @@ msim_check_alive(gpointer data)
  * Handle mail reply checks.
  */
 static void
-msim_check_inbox_cb(MsimSession *session, MsimMessage *reply, gpointer data)
+msim_check_inbox_cb(MsimSession *session, const MsimMessage *reply, gpointer data)
 {
 	MsimMessage *body;
 	guint old_inbox_status;
@@ -963,14 +965,14 @@ msim_check_inbox(gpointer data)
  * @param data An MsimMessage * of the contact information. Will be freed.
  */
 static void
-msim_add_contact_from_server_cb(MsimSession *session, MsimMessage *user_lookup_info, gpointer data)
+msim_add_contact_from_server_cb(MsimSession *session, const MsimMessage *user_lookup_info, gpointer data)
 {
 	MsimMessage *contact_info, *user_lookup_info_body;
 	PurpleGroup *group;
 	PurpleBuddy *buddy;
 	MsimUser *user;
-	gchar *username, *group_name;
-	guint uid;
+	gchar *username, *group_name, *display_name;
+	guint uid, visibility;
 
 	contact_info = (MsimMessage *)data;
 	purple_debug_info("msim_add_contact_from_server_cb", "contact_info addr=%p\n", contact_info);
@@ -978,10 +980,12 @@ msim_add_contact_from_server_cb(MsimSession *session, MsimMessage *user_lookup_i
 
 	if (!user_lookup_info) {
 		username = g_strdup(msim_uid2username_from_blist(session->account, uid));
+		display_name = NULL;
 		g_return_if_fail(username != NULL);
 	} else {
 		user_lookup_info_body = msim_msg_get_dictionary(user_lookup_info, "body");
 		username = msim_msg_get_string(user_lookup_info_body, "UserName");
+		display_name = msim_msg_get_string(user_lookup_info_body, "DisplayName");
 		msim_msg_free(user_lookup_info_body);
 		g_return_if_fail(username != NULL);
 	}
@@ -1005,6 +1009,16 @@ msim_add_contact_from_server_cb(MsimSession *session, MsimMessage *user_lookup_i
 	}
 	g_free(group_name);
 
+	visibility = msim_msg_get_integer(contact_info, "Visibility");
+	if (visibility == 2) {
+		/* This buddy is blocked (and therefore not on our buddy list */
+		purple_privacy_deny_add(session->account, username, TRUE);
+		msim_msg_free(contact_info);
+		g_free(username);
+		g_free(display_name);
+		return;
+	}
+
 	/* 2. Get or create buddy */
 	buddy = purple_find_buddy(session->account, username);
 	if (!buddy) {
@@ -1015,6 +1029,22 @@ msim_add_contact_from_server_cb(MsimSession *session, MsimMessage *user_lookup_i
 
 	/* TODO: use 'Position' in contact_info to take into account where buddy is */
 	purple_blist_add_buddy(buddy, NULL, group, NULL /* insertion point */);
+
+	if (strtol(username, NULL, 10) == uid) {
+		/*
+		 * This user has not set their username!  Set their server
+		 * alias to their display name so that we don't see a bunch
+		 * of numbers in the buddy list.
+		 */
+		if (display_name != NULL) {
+			purple_blist_node_set_string(PURPLE_BLIST_NODE(buddy), "DisplayName", display_name);
+			serv_got_alias(session->gc, username, display_name);
+		} else {
+			serv_got_alias(session->gc, username,
+					purple_blist_node_get_string(PURPLE_BLIST_NODE(buddy), "DisplayName"));
+		}
+	}
+	g_free(display_name);
 
 	/* 3. Update buddy information */
 	user = msim_get_user_from_buddy(buddy);
@@ -1071,7 +1101,7 @@ msim_add_contact_from_server(MsimSession *session, MsimMessage *contact_info)
  * Called when contact list is received from server.
  */
 static void
-msim_got_contact_list(MsimSession *session, MsimMessage *reply, gpointer user_data)
+msim_got_contact_list(MsimSession *session, const MsimMessage *reply, gpointer user_data)
 {
 	MsimMessage *body, *body_node;
 	gchar *msg;
@@ -1405,10 +1435,10 @@ msim_incoming_status(MsimSession *session, MsimMessage *msg)
 
 	if (status_code == MSIM_STATUS_CODE_IDLE) {
 		purple_debug_info("msim", "msim_status: got idle: %s\n", username);
-		purple_prpl_got_user_idle(session->account, username, TRUE, time(NULL));
+		purple_prpl_got_user_idle(session->account, username, TRUE, 0);
 	} else {
 		/* All other statuses indicate going back to non-idle. */
-		purple_prpl_got_user_idle(session->account, username, FALSE, time(NULL));
+		purple_prpl_got_user_idle(session->account, username, FALSE, 0);
 	}
 
 #ifdef MSIM_SEND_CLIENT_VERSION
@@ -1744,7 +1774,7 @@ msim_process_reply(MsimSession *session, MsimMessage *msg)
 	if (cb) {
 		purple_debug_info("msim", "msim_process_reply: calling callback now\n");
 		/* Clone message, so that the callback 'cb' can use it (needs to free it also). */
-		cb(session, msim_msg_clone(msg), data);
+		cb(session, msg, data);
 		g_hash_table_remove(session->user_lookup_cb, GUINT_TO_POINTER(rid));
 		g_hash_table_remove(session->user_lookup_cb_data, GUINT_TO_POINTER(rid));
 	} else {
@@ -1875,7 +1905,7 @@ msim_process(MsimSession *session, MsimMessage *msg)
  * @param data MsimMessage *, the message to attach information to.
  */
 static void
-msim_incoming_resolved(MsimSession *session, MsimMessage *userinfo,
+msim_incoming_resolved(MsimSession *session, const MsimMessage *userinfo,
 		gpointer data)
 {
 	gchar *username;
@@ -2159,6 +2189,14 @@ msim_login(PurpleAccount *acct)
 	gc->proto_data = msim_session_new(acct);
 	gc->flags |= PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_NO_URLDESC;
 
+	/*
+	 * Lets wipe out our local list of blocked buddies.  We'll get a
+	 * list of all blocked buddies from the server, and we shouldn't
+	 * have stuff in the local list that isn't on the server list.
+	 */
+	while (acct->deny != NULL)
+		purple_privacy_deny_remove(acct, acct->deny->data, TRUE);
+
 	/* 1. connect to server */
 	purple_connection_update_progress(gc, _("Connecting"),
 								  0,   /* which connection step this is */
@@ -2209,6 +2247,10 @@ msim_close(PurpleConnection *gc)
 
 	if (session->gc->inpa) {
 		purple_input_remove(session->gc->inpa);
+	}
+	if (session->fd >= 0) {
+		close(session->fd);
+		session->fd = -1;
 	}
 
 	msim_session_destroy(session);
@@ -2309,7 +2351,7 @@ msim_send_typing(PurpleConnection *gc, const gchar *name,
  * Callback for msim_get_info(), for when user info is received.
  */
 static void
-msim_get_info_cb(MsimSession *session, MsimMessage *user_info_msg,
+msim_get_info_cb(MsimSession *session, const MsimMessage *user_info_msg,
 		gpointer data)
 {
 	MsimMessage *msg;
@@ -2547,6 +2589,43 @@ msim_set_idle(PurpleConnection *gc, int time)
 }
 
 /**
+ * @return TRUE if everything was ok, FALSE if something went awry.
+ */
+static gboolean
+msim_update_blocklist_for_buddy(MsimSession *session, const char *name, gboolean allow, gboolean block)
+{
+	MsimMessage *msg;
+	GList *list;
+
+	list = NULL;
+	list = g_list_prepend(list, allow ? "a+" : "a-");
+	list = g_list_prepend(list, "<uid>");
+	list = g_list_prepend(list, block ? "b+" : "b-");
+	list = g_list_prepend(list, "<uid>");
+	list = g_list_reverse(list);
+
+	msg = msim_msg_new(
+			"blocklist", MSIM_TYPE_BOOLEAN, TRUE,
+			"sesskey", MSIM_TYPE_INTEGER, session->sesskey,
+			/* TODO: MsimMessage lists. Currently <uid> isn't replaced in lists. */
+			/* "idlist", MSIM_TYPE_STRING, g_strdup("a-|<uid>|b-|<uid>"), */
+			"idlist", MSIM_TYPE_LIST, list,
+			NULL);
+
+	if (!msim_postprocess_outgoing(session, msg, name, "idlist", NULL)) {
+		purple_debug_error("myspace",
+				"blocklist command failed for %s, allow=%d, block=%d\n",
+				name, allow, block);
+		msim_msg_free(msg);
+		return FALSE;
+	}
+
+	msim_msg_free(msg);
+
+	return TRUE;
+}
+
+/**
  * Add a buddy to user's buddy list.
  */
 static void
@@ -2557,7 +2636,6 @@ msim_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 	MsimMessage *msg_persist;
 	MsimMessage *body;
 	const char *name, *gname;
-	GList *blocklist_updates;
 
 	session = (MsimSession *)gc->proto_data;
 	name = purple_buddy_get_name(buddy);
@@ -2614,26 +2692,8 @@ msim_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 	}
 	msim_msg_free(msg_persist);
 
-	/* Remove the buddy from our block list and add them to our accept list, I think */
-	blocklist_updates = NULL;
-	blocklist_updates = g_list_prepend(blocklist_updates, "a+");
-	blocklist_updates = g_list_prepend(blocklist_updates, "<uid>");
-	blocklist_updates = g_list_prepend(blocklist_updates, "b-");
-	blocklist_updates = g_list_prepend(blocklist_updates, "<uid>");
-	blocklist_updates = g_list_reverse(blocklist_updates);
-
-	msg = msim_msg_new(
-			"blocklist", MSIM_TYPE_BOOLEAN, TRUE,
-			"sesskey", MSIM_TYPE_INTEGER, session->sesskey,
-			/* TODO: MsimMessage lists. Currently <uid> isn't replaced in lists. */
-			/* "idlist", MSIM_TYPE_STRING, g_strdup("a-|<uid>|b-|<uid>"), */
-			"idlist", MSIM_TYPE_LIST, blocklist_updates,
-			NULL);
-
-	if (!msim_postprocess_outgoing(session, msg, buddy->name, "idlist", NULL))
-		purple_debug_error("myspace", "blocklist command failed\n");
-
-	msim_msg_free(msg);
+	/* Add to allow list, remove from block list */
+	msim_update_blocklist_for_buddy(session, name, TRUE, FALSE);
 }
 
 /**
@@ -2645,9 +2705,7 @@ msim_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 	MsimSession *session;
 	MsimMessage *delbuddy_msg;
 	MsimMessage *persist_msg;
-	MsimMessage *blocklist_msg;
 	const char *name;
-	GList *blocklist_updates;
 
 	session = (MsimSession *)gc->proto_data;
 	name = purple_buddy_get_name(buddy);
@@ -2684,28 +2742,102 @@ msim_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 	}
 	msim_msg_free(persist_msg);
 
-	/* Remove the buddy from our block list(huh?) and our accept list */
-	blocklist_updates = NULL;
-	blocklist_updates = g_list_prepend(blocklist_updates, "a-");
-	blocklist_updates = g_list_prepend(blocklist_updates, "<uid>");
-	blocklist_updates = g_list_prepend(blocklist_updates, "b-");
-	blocklist_updates = g_list_prepend(blocklist_updates, "<uid>");
-	blocklist_updates = g_list_reverse(blocklist_updates);
+	/*
+	 * Remove from our approve list and from our block list (this
+	 * doesn't seem like it would be necessary, but the official client
+	 * does it)
+	 */
+	if (!msim_update_blocklist_for_buddy(session, name, FALSE, FALSE))
+		purple_notify_error(NULL, NULL,
+				_("Failed to remove buddy"), _("blocklist command failed"));
+}
 
-	blocklist_msg = msim_msg_new(
-			"blocklist", MSIM_TYPE_BOOLEAN, TRUE,
+/**
+ * Remove a buddy from the user's buddy list and add them to the block list.
+ */
+static void
+msim_add_deny(PurpleConnection *gc, const char *name)
+{
+	MsimSession *session;
+	MsimMessage *msg, *body;
+
+	session = (MsimSession *)gc->proto_data;
+
+	/* Remove from buddy list */
+	msg = msim_msg_new(
+			"delbuddy", MSIM_TYPE_BOOLEAN, TRUE,
 			"sesskey", MSIM_TYPE_INTEGER, session->sesskey,
-			/* TODO: MsimMessage lists. Currently <uid> isn't replaced in lists. */
-			/* "idlist", MSIM_TYPE_STRING, g_strdup("a-|<uid>|b-|<uid>"), */
-			"idlist", MSIM_TYPE_LIST, blocklist_updates,
+			/* 'delprofileid' with uid will be inserted here. */
 			NULL);
 
-	if (!msim_postprocess_outgoing(session, blocklist_msg, name, "idlist", NULL)) {
-		purple_notify_error(NULL, NULL, _("Failed to remove buddy"), _("blocklist command failed"));
-		msim_msg_free(blocklist_msg);
-		return;
-	}
-	msim_msg_free(blocklist_msg);
+	if (!msim_postprocess_outgoing(session, msg, name, "delprofileid", NULL))
+		purple_debug_error("myspace", "delbuddy command failed\n");
+	msim_msg_free(msg);
+
+	/* Remove from our approve list and add to our block list */
+	msim_update_blocklist_for_buddy(session, name, FALSE, TRUE);
+
+	/*
+	 * Add the buddy to our list of blocked contacts, so we know they
+	 * are blocked if we log in with another client
+	 */
+	body = msim_msg_new(
+			"ContactID", MSIM_TYPE_STRING, g_strdup("<uid>"),
+			"Visibility", MSIM_TYPE_INTEGER, 2,
+			NULL);
+	msg = msim_msg_new(
+			"persist", MSIM_TYPE_INTEGER, 1,
+			"sesskey", MSIM_TYPE_INTEGER, session->sesskey,
+			"cmd", MSIM_TYPE_INTEGER, MSIM_CMD_BIT_ACTION | MSIM_CMD_PUT,
+			"dsn", MSIM_TYPE_INTEGER, MC_CONTACT_INFO_DSN,
+			"lid", MSIM_TYPE_INTEGER, MC_CONTACT_INFO_LID,
+			"rid", MSIM_TYPE_INTEGER, session->next_rid++,
+			"body", MSIM_TYPE_DICTIONARY, body,
+			NULL);
+	if (!msim_postprocess_outgoing(session, msg, name, "body", NULL))
+		purple_debug_error("myspace", "add to block list command failed\n");
+	msim_msg_free(msg);
+
+	/*
+	 * TODO: MySpace doesn't allow blocked buddies on our buddy list,
+	 *       do they?  If not then we need to remove the buddy from
+	 *       libpurple's buddy list.
+	 */
+}
+
+/**
+ * Remove a buddy from the user's block list.
+ */
+static void
+msim_rem_deny(PurpleConnection *gc, const char *name)
+{
+	MsimSession *session;
+	MsimMessage *msg, *body;
+
+	session = (MsimSession *)gc->proto_data;
+
+	/*
+	 * Remove from our list of blocked contacts, so we know they
+	 * are no longer blocked if we log in with another client
+	 */
+	body = msim_msg_new(
+			"ContactID", MSIM_TYPE_STRING, g_strdup("<uid>"),
+			NULL);
+	msg = msim_msg_new(
+			"persist", MSIM_TYPE_INTEGER, 1,
+			"sesskey", MSIM_TYPE_INTEGER, session->sesskey,
+			"cmd", MSIM_TYPE_INTEGER, MSIM_CMD_BIT_ACTION | MSIM_CMD_DELETE,
+			"dsn", MSIM_TYPE_INTEGER, MC_DELETE_CONTACT_INFO_DSN,
+			"lid", MSIM_TYPE_INTEGER, MC_DELETE_CONTACT_INFO_LID,
+			"rid", MSIM_TYPE_INTEGER, session->next_rid++,
+			"body", MSIM_TYPE_DICTIONARY, body,
+			NULL);
+	if (!msim_postprocess_outgoing(session, msg, name, "body", NULL))
+		purple_debug_error("myspace", "remove from block list command failed\n");
+	msim_msg_free(msg);
+
+	/* Remove from our approve list and our block list */
+	msim_update_blocklist_for_buddy(session, name, FALSE, FALSE);
 }
 
 /**
@@ -2906,9 +3038,9 @@ static PurplePluginProtocolInfo prpl_info = {
 	msim_remove_buddy, /* remove_buddy */
 	NULL,              /* remove_buddies */
 	NULL,              /* add_permit */
-	NULL,              /* add_deny */
+	msim_add_deny,     /* add_deny */
 	NULL,              /* rem_permit */
-	NULL,              /* rem_deny */
+	msim_rem_deny,     /* rem_deny */
 	NULL,              /* set_permit_deny */
 	NULL,              /* join_chat */
 	NULL,              /* reject chat invite */
@@ -2973,7 +3105,7 @@ msim_load(PurplePlugin *plugin)
  * Called when friends have been imported to buddy list on server.
  */
 static void
-msim_import_friends_cb(MsimSession *session, MsimMessage *reply, gpointer user_data)
+msim_import_friends_cb(MsimSession *session, const MsimMessage *reply, gpointer user_data)
 {
 	MsimMessage *body;
 	gchar *completed;

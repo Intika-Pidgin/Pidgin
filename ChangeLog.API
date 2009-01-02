@@ -34,6 +34,12 @@ version 2.6.0 (??/??/????):
 		  objects from GtkIMHtml protocol callbacks.
 		* pidgin_utils_init, pidgin_utils_uninit
 
+version 2.5.3:
+	libpurple
+		Changed:
+		* purple_util_fetch_url and purple_util_fetch_url_request can
+		  now fetch https URLs
+
 version 2.5.0 (08/18/2008):
 	libpurple:
 		Added:
