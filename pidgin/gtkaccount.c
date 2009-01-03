@@ -288,24 +288,26 @@ static gboolean
 screenname_nofocus_cb(GtkWidget *widget, GdkEventFocus *event, AccountPrefsDialog *dialog)
 {
 	GdkColor color = {0, 34952, 35466, 34181};
-	GHashTable *table;
-	const char *label;
+	GHashTable *table = NULL;
+	const char *label = NULL;
 
-	table = dialog->prpl_info->get_account_text_table(NULL);
-	label = g_hash_table_lookup(table, "login_label");
+	if(PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(dialog->prpl_info, get_account_text_table)) {
+		table = dialog->prpl_info->get_account_text_table(NULL);
+		label = g_hash_table_lookup(table, "login_label");
 
-	if (*gtk_entry_get_text(GTK_ENTRY(widget)) == '\0') {
-		/* We have to avoid hitting the screenname_changed_cb function 
-		 * because it enables buttons we don't want enabled yet ;)
-		 */
-		g_signal_handlers_block_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
-		gtk_entry_set_text(GTK_ENTRY(widget), label);
-		/* Make sure we can hit it again */
-		g_signal_handlers_unblock_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
-		gtk_widget_modify_text(widget, GTK_STATE_NORMAL, &color);
+		if (*gtk_entry_get_text(GTK_ENTRY(widget)) == '\0') {
+			/* We have to avoid hitting the screenname_changed_cb function 
+			 * because it enables buttons we don't want enabled yet ;)
+			 */
+			g_signal_handlers_block_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
+			gtk_entry_set_text(GTK_ENTRY(widget), label);
+			/* Make sure we can hit it again */
+			g_signal_handlers_unblock_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
+			gtk_widget_modify_text(widget, GTK_STATE_NORMAL, &color);
+		}
+
+		g_hash_table_destroy(table);
 	}
-
-	g_hash_table_destroy(table);
 
 	return FALSE;
 }
@@ -453,7 +455,8 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	if (dialog->account != NULL)
 		username = g_strdup(purple_account_get_username(dialog->account));
 
-	if (!username && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(dialog->prpl_info, get_account_text_table)) {
+	if (!username && dialog->prpl_info
+			&& PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(dialog->prpl_info, get_account_text_table)) {
 		GdkColor color = {0, 34952, 35466, 34181};
 		GHashTable *table;
 		const char *label;
@@ -473,7 +476,7 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 					 G_CALLBACK(screenname_changed_cb), dialog);
 
 	/* Do the user split thang */
-	if (dialog->plugin == NULL) /* Yeah right. */
+	if (dialog->prpl_info == NULL)
 		user_splits = NULL;
 	else
 		user_splits = dialog->prpl_info->user_splits;
@@ -563,9 +566,10 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 
 	/* Set the fields. */
 	if (dialog->account != NULL) {
-		if (purple_account_get_password(dialog->account) != NULL)
-			gtk_entry_set_text(GTK_ENTRY(dialog->password_entry), 
-				purple_account_get_password(dialog->account));
+		if (purple_account_get_password(dialog->account) &&
+		    purple_account_get_remember_password(dialog->account))
+			gtk_entry_set_text(GTK_ENTRY(dialog->password_entry),
+							   purple_account_get_password(dialog->account));
 
 		gtk_toggle_button_set_active(
 				GTK_TOGGLE_BUTTON(dialog->remember_pass_check),
@@ -726,7 +730,7 @@ add_protocol_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 {
 	PurpleAccountOption *option;
 	PurpleAccount *account;
-	GtkWidget *frame, *vbox, *check, *entry, *combo, *menu, *item;
+	GtkWidget *frame, *vbox, *check, *entry, *combo;
 	GList *list, *node;
 	gint i, idx, int_value;
 	GtkListStore *model;
@@ -859,13 +863,6 @@ add_protocol_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 					if (gtk_entry_get_invisible_char(GTK_ENTRY(entry)) == '*')
 						gtk_entry_set_invisible_char(GTK_ENTRY(entry), PIDGIN_INVISIBLE_CHAR);
 				}
-
-				/* Google Talk default domain hackery! */
-				menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(dialog->protocol_menu));
-				item = gtk_menu_get_active(GTK_MENU(menu));
-				if (str_value == NULL && g_object_get_data(G_OBJECT(item), "fake") &&
-					!strcmp(_("Connect server"),  purple_account_option_get_text(option)))
-					str_value = "talk.google.com";
 
 				if (str_value != NULL)
 					gtk_entry_set_text(GTK_ENTRY(entry), str_value);
@@ -2175,9 +2172,9 @@ create_accounts_list(AccountsWindow *dialog)
 						 "<span size='larger' weight='bold'>Welcome to %s!</span>\n\n"
 
 						 "You have no IM accounts configured. To start connecting with %s "
-						 "press the <b>Add</b> button below and configure your first "
+						 "press the <b>Add...</b> button below and configure your first "
 						 "account. If you want %s to connect to multiple IM accounts, "
-						 "press <b>Add</b> again to configure them all.\n\n"
+						 "press <b>Add...</b> again to configure them all.\n\n"
 
 						 "You can come back to this window to add, edit, or remove "
 						 "accounts from <b>Accounts->Manage Accounts</b> in the Buddy "
@@ -2311,7 +2308,7 @@ pidgin_accounts_window_show(void)
 	gtk_widget_show(sw);
 
 	/* Add button */
-	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_ADD, G_CALLBACK(add_account_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), PIDGIN_STOCK_ADD, G_CALLBACK(add_account_cb), dialog);
 
 	/* Modify button */
 	button = pidgin_dialog_add_button(GTK_DIALOG(win), PIDGIN_STOCK_MODIFY, G_CALLBACK(modify_account_cb), dialog);
@@ -2451,25 +2448,25 @@ struct auth_and_add {
 };
 
 static void
-authorize_and_add_cb(struct auth_and_add *aa)
+free_auth_and_add(struct auth_and_add *aa)
 {
-	aa->auth_cb(aa->data);
-	purple_blist_request_add_buddy(aa->account, aa->username,
-	 	                    NULL, aa->alias);
-
 	g_free(aa->username);
 	g_free(aa->alias);
 	g_free(aa);
 }
 
 static void
+authorize_and_add_cb(struct auth_and_add *aa)
+{
+	aa->auth_cb(aa->data);
+	purple_blist_request_add_buddy(aa->account, aa->username,
+	 	                    NULL, aa->alias);
+}
+
+static void
 deny_no_add_cb(struct auth_and_add *aa)
 {
 	aa->deny_cb(aa->data);
-
-	g_free(aa->username);
-	g_free(aa->alias);
-	g_free(aa);
 }
 
 static void *
@@ -2518,7 +2515,7 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 						  _("Authorize"), authorize_and_add_cb,
 						  _("Deny"), deny_no_add_cb,
 						  NULL);
-		g_object_set_data(G_OBJECT(alert), "auth_and_add", aa);
+		g_signal_connect_swapped(G_OBJECT(alert), "destroy", G_CALLBACK(free_auth_and_add), aa);
 	} else {
 		alert = pidgin_make_mini_dialog(gc, PIDGIN_STOCK_DIALOG_QUESTION,
 						  _("Authorize buddy?"), buffer, user_data,
@@ -2527,6 +2524,8 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 						  NULL);
 	}
 	pidgin_blist_add_alert(alert);
+	g_signal_connect(G_OBJECT(alert), "destroy",
+		G_CALLBACK(purple_account_request_close), NULL);
 
 	g_free(buffer);
 
@@ -2536,13 +2535,6 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 static void
 pidgin_accounts_request_close(void *ui_handle)
 {
-	/* This is super ugly, but without API changes, this is how it works */
-	struct auth_and_add *aa = g_object_get_data(G_OBJECT(ui_handle), "auth_and_add");
-	if (aa != NULL) {
-		g_free(aa->username);
-		g_free(aa->alias);
-		g_free(aa);
-	}
 	gtk_widget_destroy(GTK_WIDGET(ui_handle));
 }
 

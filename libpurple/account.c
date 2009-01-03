@@ -77,6 +77,7 @@ typedef struct
 	gpointer userdata;
 	PurpleAccountRequestAuthorizationCb auth_cb;
 	PurpleAccountRequestAuthorizationCb deny_cb;
+	guint ref;
 } PurpleAccountRequestInfo;
 
 typedef struct
@@ -1275,7 +1276,7 @@ purple_account_connect_got_password_cb(PurpleAccount * account,
 		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
 		purple_account_request_password(account, G_CALLBACK(request_password_ok_cb), G_CALLBACK(request_password_cancel_cb), account);
 	else
-		purple_connection_new(account, FALSE, password);
+		_purple_connection_new(account, FALSE, password);
 }
 
 void
@@ -1329,6 +1330,18 @@ purple_account_request_add(PurpleAccount *account, const char *remote_user,
 		ui_ops->request_add(account, remote_user, id, alias, message);
 }
 
+static PurpleAccountRequestInfo *
+purple_account_request_info_unref(PurpleAccountRequestInfo *info)
+{
+	if (--info->ref)
+		return info;
+
+	/* TODO: This will leak info->user_data, but there is no callback to just clean that up */
+	g_free(info->user);
+	g_free(info);
+	return NULL;
+}
+
 static void
 purple_account_request_close_info(PurpleAccountRequestInfo *info)
 {
@@ -1339,11 +1352,7 @@ purple_account_request_close_info(PurpleAccountRequestInfo *info)
 	if (ops != NULL && ops->close_account_request != NULL)
 		ops->close_account_request(info->ui_handle);
 
-	/* TODO: This will leak info->user_data, but there is no callback to just clean that up */
-
-	g_free(info->user);
-	g_free(info);
-
+	purple_account_request_info_unref(info);
 }
 
 void
@@ -1396,8 +1405,7 @@ request_auth_cb(void *data)
 	purple_signal_emit(purple_accounts_get_handle(),
 			"account-authorization-granted", info->account, info->user);
 
-	g_free(info->user);
-	g_free(info);
+	purple_account_request_info_unref(info);
 }
 
 static void
@@ -1412,8 +1420,7 @@ request_deny_cb(void *data)
 	purple_signal_emit(purple_accounts_get_handle(),
 			"account-authorization-denied", info->account, info->user);
 
-	g_free(info->user);
-	g_free(info);
+	purple_account_request_info_unref(info);
 }
 
 void *
@@ -1450,11 +1457,18 @@ purple_account_request_authorization(PurpleAccount *account, const char *remote_
 		info->deny_cb   = deny_cb;
 		info->userdata  = user_data;
 		info->user      = g_strdup(remote_user);
+		info->ref       = 2;  /* We hold an extra ref to make sure info remains valid
+		                         if any of the callbacks are called synchronously. We
+		                         unref it after the function call */
+
 		info->ui_handle = ui_ops->request_authorize(account, remote_user, id, alias, message,
 							    on_list, request_auth_cb, request_deny_cb, info);
 
-		handles = g_list_append(handles, info);
-		return info->ui_handle;
+		info = purple_account_request_info_unref(info);
+		if (info) {
+			handles = g_list_append(handles, info);
+			return info->ui_handle;
+		}
 	}
 
 	return NULL;
@@ -2732,7 +2746,7 @@ purple_accounts_delete(PurpleAccount *account)
 	purple_accounts_remove(account);
 
 	/* Remove this account's buddies */
-	for (gnode = purple_get_blist()->root; gnode != NULL; gnode = gnode->next) {
+	for (gnode = purple_blist_get_root(); gnode != NULL; gnode = gnode->next) {
 		if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
 			continue;
 
@@ -2858,18 +2872,18 @@ purple_accounts_find(const char *name, const char *protocol_id)
 
 	for (l = purple_accounts_get_all(); l != NULL; l = l->next) {
 		account = (PurpleAccount *)l->data;
+		if (protocol_id && strcmp(account->protocol_id, protocol_id))
+		  continue;
 
 		who = g_strdup(purple_normalize(account, name));
-		if (!strcmp(purple_normalize(account, purple_account_get_username(account)), who) &&
-			(!protocol_id || !strcmp(account->protocol_id, protocol_id))) {
+		if (!strcmp(purple_normalize(account, purple_account_get_username(account)), who)) {
 			g_free(who);
-			break;
+			return account;
 		}
 		g_free(who);
-		account = NULL;
 	}
 
-	return account;
+	return NULL;
 }
 
 void

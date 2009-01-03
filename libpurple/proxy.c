@@ -212,19 +212,21 @@ purple_gnome_proxy_get_info(void)
 {
 	static PurpleProxyInfo info = {0, NULL, 0, NULL, NULL};
 	gboolean use_same_proxy = FALSE;
-	gchar *tmp, *err;
+	gchar *tmp, *err = NULL;
 
 	tmp = g_find_program_in_path("gconftool-2");
 	if (tmp == NULL)
 		return purple_global_proxy_get_info();
 
 	g_free(tmp);
+	tmp = NULL;
 
 	/* Check whether to use a proxy. */
 	if (!g_spawn_command_line_sync("gconftool-2 -g /system/proxy/mode",
 			&tmp, &err, NULL, NULL))
 		return purple_global_proxy_get_info();
 	g_free(err);
+	err = NULL;
 
 	if (!strcmp(tmp, "none\n")) {
 		info.type = PURPLE_PROXY_NONE;
@@ -239,6 +241,7 @@ purple_gnome_proxy_get_info(void)
 	}
 
 	g_free(tmp);
+	tmp = NULL;
 
 	/* Free the old fields */
 	if (info.host) {
@@ -258,28 +261,31 @@ purple_gnome_proxy_get_info(void)
 			&tmp, &err, NULL, NULL))
 		return purple_global_proxy_get_info();
 	g_free(err);
+	err = NULL;
 
 	if (!strcmp(tmp, "true\n"))
 		use_same_proxy = TRUE;
 	g_free(tmp);
+	tmp = NULL;
 
-	if (!use_same_proxy && !g_spawn_command_line_sync("gconftool-2 -g /system/proxy/socks_host",
+	if (!use_same_proxy) {
+		if (!g_spawn_command_line_sync("gconftool-2 -g /system/proxy/socks_host",
 			&info.host, &err, NULL, NULL))
-		return purple_global_proxy_get_info();
-	g_free(err);
-	g_strchomp(info.host);
+			return purple_global_proxy_get_info();
+		g_free(err);
+		err = NULL;
+	}
 
-	if (!use_same_proxy && *info.host != '\0') {
+	if(info.host != NULL)
+		g_strchomp(info.host);
+
+	if (!use_same_proxy && (info.host != NULL) && (*info.host != '\0')) {
 		info.type = PURPLE_PROXY_SOCKS5;
 		if (!g_spawn_command_line_sync("gconftool-2 -g /system/proxy/socks_port",
 				&tmp, &err, NULL, NULL))
 		{
 			g_free(info.host);
 			info.host = NULL;
-			g_free(info.username);
-			info.username = NULL;
-			g_free(info.password);
-			info.password = NULL;
 			return purple_global_proxy_get_info();
 		}
 		g_free(err);
@@ -291,6 +297,8 @@ purple_gnome_proxy_get_info(void)
 					&info.host, &err, NULL, NULL))
 			return purple_global_proxy_get_info();
 		g_free(err);
+		err = NULL;
+
 		/* If we get this far then we know we're using an HTTP proxy */
 		info.type = PURPLE_PROXY_HTTP;
 
@@ -310,11 +318,10 @@ purple_gnome_proxy_get_info(void)
 		{
 			g_free(info.host);
 			info.host = NULL;
-			g_free(info.username);
-			info.username = NULL;
 			return purple_global_proxy_get_info();
 		}
 		g_free(err);
+		err = NULL;
 		g_strchomp(info.username);
 
 		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/authentication_password",
@@ -327,6 +334,7 @@ purple_gnome_proxy_get_info(void)
 			return purple_global_proxy_get_info();
 		}
 		g_free(err);
+		err = NULL;
 		g_strchomp(info.password);
 
 		if (!g_spawn_command_line_sync("gconftool-2 -g /system/http_proxy/port",
@@ -613,7 +621,7 @@ socket_ready_cb(gpointer data, gint source, PurpleInputCondition cond)
 	if (!PURPLE_PROXY_CONNECT_DATA_IS_VALID(connect_data))
 		return;
 
-	purple_debug_info("proxy", "Connected to %s:%d.\n",
+	purple_debug_info("proxy", "Connecting to %s:%d.\n",
 					connect_data->host, connect_data->port);
 
 	/*
@@ -936,12 +944,15 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 
 			} else if((header = g_strrstr((const char *)connect_data->read_buffer, "Proxy-Authenticate: Basic"))) {
 				gchar *t1, *t2;
+				const char *username, *password;
+
+				username = purple_proxy_info_get_username(connect_data->gpi);
+				password = purple_proxy_info_get_password(connect_data->gpi);
 
 				t1 = g_strdup_printf("%s:%s",
-					purple_proxy_info_get_username(connect_data->gpi),
-					purple_proxy_info_get_password(connect_data->gpi) ?
-					purple_proxy_info_get_password(connect_data->gpi) : "");
-				t2 = purple_base64_encode((const guchar *)t1, strlen(t1));
+									 username ? username : "",
+									 password ? password : "");
+				t2 = purple_base64_encode((guchar *)t1, strlen(t1));
 				g_free(t1);
 
 				request = g_strdup_printf(
@@ -1334,7 +1345,7 @@ s5_canread_again(gpointer data, gint source, PurpleInputCondition cond)
 
 	if ((buf[0] != 0x05) || (buf[1] != 0x00)) {
 		if ((buf[0] == 0x05) && (buf[1] < 0x09)) {
-			purple_debug_error("socks5 proxy", socks5errors[buf[1]]);
+			purple_debug_error("socks5 proxy", "%s", socks5errors[buf[1]]);
 			purple_proxy_connect_data_disconnect(connect_data,
 					socks5errors[buf[1]]);
 		} else {
@@ -1505,62 +1516,31 @@ hmacmd5_chap(const unsigned char * challenge, int challen, const char * passwd, 
 }
 
 static void
-s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
+s5_readchap(gpointer data, gint source, PurpleInputCondition cond);
+
+/*
+ * Return how many bytes we processed
+ * -1 means we've shouldn't keep reading from the buffer
+ */
+static gssize
+s5_parse_chap_msg(PurpleProxyConnectData *connect_data)
 {
-	guchar *cmdbuf, *buf;
-	PurpleProxyConnectData *connect_data = data;
+	guchar *buf, *cmdbuf = connect_data->read_buffer;
 	int len, navas, currentav;
 
-	purple_debug(PURPLE_DEBUG_INFO, "socks5 proxy", "Got CHAP response.\n");
-
-	if (connect_data->read_buffer == NULL) {
-		/* A big enough butfer to read the message header (2 bytes) and at least one complete attribute and value (1 + 1 + 255). */
-		connect_data->read_buf_len = 259;
-		connect_data->read_buffer = g_malloc(connect_data->read_buf_len);
-		connect_data->read_len = 0;
-	}
-
-	if (connect_data->read_buf_len - connect_data->read_len == 0) {
-		/*If the stuff below is right, this shouldn't be possible. */
-		purple_debug_error("socks5 proxy", "This is about to suck because the read buffer is full (shouldn't happen).\n");
-	}
-
-	len = read(connect_data->fd, connect_data->read_buffer + connect_data->read_len,
-		connect_data->read_buf_len - connect_data->read_len);
-
-	if (len == 0)
-	{
-		purple_proxy_connect_data_disconnect(connect_data,
-				_("Server closed the connection."));
-		return;
-	}
-
-	if (len < 0)
-	{
-		if (errno == EAGAIN)
-			/* No worries */
-			return;
-
-		/* Error! */
-		purple_proxy_connect_data_disconnect_formatted(connect_data,
-				_("Lost connection with server:\n%s"), g_strerror(errno));
-		return;
-	}
-
-	connect_data->read_len += len;
-	if (connect_data->read_len < 2)
-		return;
-
-	cmdbuf = connect_data->read_buffer;
+	purple_debug_misc("socks5 proxy", "Reading CHAP message: %x\n", *cmdbuf);
 
 	if (*cmdbuf != 0x01) {
 		purple_proxy_connect_data_disconnect(connect_data,
 				_("Received invalid data on connection with server."));
-		return;
+		return -1;
 	}
 	cmdbuf++;
 
 	navas = *cmdbuf;
+
+	purple_debug_misc("socks5 proxy", "Expecting %d attribute(s).\n", navas);
+
 	cmdbuf++;
 
 	for (currentav = 0; currentav < navas; currentav++) {
@@ -1575,7 +1555,10 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 			memmove((connect_data->read_buffer + 2), cmdbuf, len);
 			/* Decrease the read count accordingly */
 			connect_data->read_len = len + 2;
-			return;
+
+			purple_debug_info("socks5 proxy", "Need more data to retrieve attribute %d.\n", currentav);
+
+			return -1;
 		}
 
 		buf = cmdbuf + 2;
@@ -1605,7 +1588,11 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 					purple_proxy_connect_data_disconnect(connect_data,
 							_("Authentication failed"));
 				}
-				return;
+				return -1;
+			case 0x01:
+				/* We've already validated that cmdbuf[1] is sane. */
+				purple_debug_info("socks5 proxy", "Received TEXT-MESSAGE of '%.*s'\n", (int) cmdbuf[1], buf);
+				break;
 			case 0x03:
 				purple_debug_info("socks5 proxy", "Received CHALLENGE\n");
 				/* Server wants our credentials */
@@ -1617,6 +1604,7 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 				hmacmd5_chap(buf, cmdbuf[1],
 					purple_proxy_info_get_password(connect_data->gpi),
 					connect_data->write_buffer + 4);
+				/* TODO: What about USER-IDENTITY? */
 				connect_data->write_buffer[0] = 0x01;
 				connect_data->write_buffer[1] = 0x01;
 				connect_data->write_buffer[2] = 0x04;
@@ -1632,7 +1620,7 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 					PURPLE_INPUT_WRITE, proxy_do_write, connect_data);
 
 				proxy_do_write(connect_data, connect_data->fd, PURPLE_INPUT_WRITE);
-				return;
+				return -1;
 			case 0x11:
 				purple_debug_info("socks5 proxy", "Received ALGORIGTHMS of %x\n", buf[0]);
 				/* Server wants to select an algorithm */
@@ -1646,7 +1634,7 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 						"Disconnecting...");
 					purple_proxy_connect_data_disconnect(connect_data,
 							_("Received invalid data on connection with server."));
-					return;
+					return -1;
 				}
 				break;
 			default:
@@ -1655,9 +1643,84 @@ s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
 		cmdbuf = buf + cmdbuf[1];
 	}
 
+	return (cmdbuf - connect_data->read_buffer);
+}
+
+static void
+s5_readchap(gpointer data, gint source, PurpleInputCondition cond)
+{
+	gssize msg_ret;
+	PurpleProxyConnectData *connect_data = data;
+	int len;
+
+	purple_debug(PURPLE_DEBUG_INFO, "socks5 proxy", "Got CHAP response.\n");
+
+	if (connect_data->read_buffer == NULL) {
+		/* A big enough butfer to read the message header (2 bytes) and at least one complete attribute and value (1 + 1 + 255). */
+		connect_data->read_buf_len = 259;
+		connect_data->read_buffer = g_malloc(connect_data->read_buf_len);
+		connect_data->read_len = 0;
+	}
+
+	if (connect_data->read_buf_len - connect_data->read_len == 0) {
+		/*If the stuff below is right, this shouldn't be possible. */
+		purple_debug_error("socks5 proxy", "This is about to suck because the read buffer is full (shouldn't happen).\n");
+	}
+
+	len = read(connect_data->fd, connect_data->read_buffer + connect_data->read_len,
+		connect_data->read_buf_len - connect_data->read_len);
+
+	if (len == 0) {
+		purple_proxy_connect_data_disconnect(connect_data,
+				_("Server closed the connection."));
+		return;
+	}
+
+	if (len < 0) {
+		if (errno == EAGAIN)
+			/* No worries */
+			return;
+
+		/* Error! */
+		purple_proxy_connect_data_disconnect_formatted(connect_data,
+				_("Lost connection with server:\n%s"), g_strerror(errno));
+		return;
+	}
+
+	connect_data->read_len += len;
+
+	/* We may have read more than one message into the buffer, we need to make sure to process them all */
+	while (1) {
+
+		/* We need more to be able to read this message */
+		if (connect_data->read_len < 2)
+			return;
+
+		msg_ret = s5_parse_chap_msg(connect_data);
+	
+		if (msg_ret < 0)
+			return;
+
+		/* See if we have another message already in the buffer */
+		if ((len = connect_data->read_len - msg_ret) > 0) {
+
+			/* Move on to the next message */
+			memmove(connect_data->read_buffer, connect_data->read_buffer + msg_ret, len);
+			/* Decrease the read count accordingly */
+			connect_data->read_len = len;
+
+			/* Try to read the message that connect_data->read_buffer now points to */
+			continue;
+		}
+
+		break;
+	}
+
 	/* Fell through.  We ran out of CHAP events to process, but haven't
 	 * succeeded or failed authentication - there may be more to come.
 	 * If this is the case, come straight back here. */
+
+	purple_debug_info("socks5 proxy", "Waiting for another message from which to read CHAP info.\n");
 
 	/* We've processed all the available attributes, so get ready for a whole new message */
  	g_free(connect_data->read_buffer);
@@ -2092,6 +2155,8 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 			break;
 
 		default:
+			purple_debug_error("proxy", "Invalid Proxy type (%d) specified.\n",
+							   purple_proxy_info_get_type(connect_data->gpi));
 			purple_proxy_connect_data_destroy(connect_data);
 			return NULL;
 	}
@@ -2100,6 +2165,7 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 			connectport, connection_host_resolved, connect_data);
 	if (connect_data->query_data == NULL)
 	{
+		purple_debug_error("proxy", "dns query failed unexpectedly.\n");
 		purple_proxy_connect_data_destroy(connect_data);
 		return NULL;
 	}

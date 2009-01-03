@@ -184,10 +184,6 @@ msn_got_add_user(MsnSession *session, MsnUser *user,
 		{
 			msn_user_add_group_id(user, group_id);
 		}
-		else
-		{
-			/* session->sync->fl_users_count++; */
-		}
 	}
 	else if (list_id == MSN_LIST_AL)
 	{
@@ -252,10 +248,6 @@ msn_got_rem_user(MsnSession *session, MsnUser *user,
 		{
 			msn_user_remove_group_id(user, group_id);
 			return;
-		}
-		else
-		{
-			/* session->sync->fl_users_count--; */
 		}
 	}
 	else if (list_id == MSN_LIST_AL)
@@ -610,6 +602,22 @@ msn_userlist_remove_group_id(MsnUserList *userlist, const char * group_id)
 	}
 }
 
+typedef struct {
+	MsnSession *session;
+	char *uid;
+} MsnUserlistABData;
+
+static void
+userlist_ab_delete_cb(void *data, int choice)
+{
+	MsnUserlistABData *ab = (MsnUserlistABData *)data;
+
+	/* msn_delete_contact(ab->session, ab->uid, (gboolean)choice); */
+
+	g_free(ab->uid);
+	g_free(ab);
+}
+
 void
 msn_userlist_rem_buddy(MsnUserList *userlist, const char *who)
 {
@@ -625,7 +633,18 @@ msn_userlist_rem_buddy(MsnUserList *userlist, const char *who)
 
 	/* delete the contact from address book via soap action */
 	if (user != NULL) {
-		msn_delete_contact(userlist->session, user->uid);
+		if (0 /*not ready yet*/ && userlist->session->passport_info.email_enabled) {
+			MsnUserlistABData *ab = g_new0(MsnUserlistABData, 1);
+			ab->session = userlist->session;
+			ab->uid = g_strdup(user->uid); /* Not necessary? */
+			purple_request_yes_no(userlist->session->account,
+				_("Delete Buddy from Address Book?"),
+				_("Do you want to delete this buddy from your address book as well?"),
+				user->passport, 0, userlist->session->account, user->passport,
+				NULL, ab,
+				G_CALLBACK(userlist_ab_delete_cb), G_CALLBACK(userlist_ab_delete_cb));
+		} else
+			msn_delete_contact(userlist->session, user);
 	}
 }
 
@@ -649,7 +668,7 @@ msn_userlist_rem_buddy_from_list(MsnUserList *userlist, const char *who,
 
 	msn_user_unset_op(user, list_op);
 
-	msn_notification_rem_buddy_from_list(userlist->session->notification, list_id, who);
+	msn_notification_rem_buddy_from_list(userlist->session->notification, list_id, user);
 }
 
 /*add buddy*/
@@ -729,6 +748,68 @@ msn_userlist_add_buddy(MsnUserList *userlist, const char *who, const char *group
 	msn_add_contact_to_group(userlist->session, state, who, group_id);
 }
 
+/*
+ * Save a buddy address/group until we get back response from FQY
+ */
+void
+msn_userlist_save_pending_buddy(MsnUserList *userlist,
+                               const char *who,
+                               const char *group_name)
+{
+	MsnUser *user;
+
+	g_return_if_fail(userlist != NULL);
+
+	user = msn_user_new(userlist, who, NULL);
+	msn_user_set_pending_group(user, group_name);
+	msn_user_set_network(user, MSN_NETWORK_UNKNOWN);
+	userlist->pending = g_list_prepend(userlist->pending, user);
+}
+
+/*
+ * Actually adds a buddy once we have the response from FQY
+ */
+void
+msn_userlist_add_pending_buddy(MsnUserList *userlist,
+                               const char *who,
+                               /*MsnNetwork*/ int network)
+{
+	MsnUser *user = NULL;
+	MsnUser *user2;
+	GList *l;
+	char *group;
+
+	for (l = userlist->pending; l != NULL; l = l->next)
+	{
+		user = (MsnUser *)l->data;
+
+		if (!g_strcasecmp(who, user->passport)) {
+			userlist->pending = g_list_delete_link(userlist->pending, l);
+			break;
+		}
+	}
+
+	if (user == NULL) {
+		purple_debug_error("msn", "Attempting to add a pending user that does not exist.\n");
+		return;
+	}
+
+	group = msn_user_remove_pending_group(user);
+
+	user2 = msn_userlist_find_user(userlist, who);
+	if (user2 != NULL) {
+		/* User already in userlist, so just update it. */
+		msn_user_destroy(user);
+		user = user2;
+	} else {
+		msn_userlist_add_user(userlist, user);
+	}
+
+	msn_user_set_network(user, network);
+	msn_userlist_add_buddy(userlist, who, group);
+	g_free(group);
+}
+
 void
 msn_userlist_add_buddy_to_list(MsnUserList *userlist, const char *who,
 							MsnListId list_id)
@@ -754,7 +835,7 @@ msn_userlist_add_buddy_to_list(MsnUserList *userlist, const char *who,
 
 	msn_user_set_op(user, list_op);
 
-	msn_notification_add_buddy_to_list(userlist->session->notification, list_id, who);
+	msn_notification_add_buddy_to_list(userlist->session->notification, list_id, user);
 }
 
 gboolean
