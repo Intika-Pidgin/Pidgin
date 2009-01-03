@@ -43,6 +43,7 @@
 #include "pep.h"
 #include "usertune.h"
 #include "caps.h"
+#include "data.h"
 
 static PurplePluginProtocolInfo prpl_info =
 {
@@ -76,9 +77,9 @@ static PurplePluginProtocolInfo prpl_info =
 	jabber_roster_remove_buddy,		/* remove_buddy */
 	NULL,							/* remove_buddies */
 	NULL,							/* add_permit */
-	jabber_google_roster_add_deny,				/* add_deny */
+	jabber_add_deny,				/* add_deny */
 	NULL,							/* rem_permit */
-	jabber_google_roster_rem_deny,				/* rem_deny */
+	jabber_rem_deny,				/* rem_deny */
 	NULL,							/* set_permit_deny */
 	jabber_chat_join,				/* join_chat */
 	NULL,							/* reject_chat */
@@ -136,8 +137,7 @@ static gboolean load_plugin(PurplePlugin *plugin)
 			     purple_marshal_VOID__POINTER_POINTER, NULL, 2,
 			     purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
 			     purple_value_new_outgoing(PURPLE_TYPE_STRING));
-			   
-
+	
 	return TRUE;
 }
 
@@ -148,6 +148,8 @@ static gboolean unload_plugin(PurplePlugin *plugin)
 	purple_signal_unregister(plugin, "jabber-sending-xmlnode");
 	
 	purple_signal_unregister(plugin, "jabber-sending-text");
+	
+	jabber_data_uninit();
 	
 	return TRUE;
 }
@@ -207,7 +209,7 @@ init_plugin(PurplePlugin *plugin)
 	purple_account_user_split_set_reverse(split, FALSE);
 	prpl_info.user_splits = g_list_append(prpl_info.user_splits, split);
 	
-	split = purple_account_user_split_new(_("Resource"), "Home", '/');
+	split = purple_account_user_split_new(_("Resource"), NULL, '/');
 	purple_account_user_split_set_reverse(split, FALSE);
 	prpl_info.user_splits = g_list_append(prpl_info.user_splits, split);
 	
@@ -241,6 +243,13 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 						  option);
 
+	/* this should probably be part of global smiley theme settings later on,
+	  shared with MSN */
+	option = purple_account_option_bool_new(_("Show Custom Smileys"),
+		"custom_smileys", TRUE);
+	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+		option);
+
 	jabber_init_plugin(plugin);
 
 	purple_prefs_remove("/plugins/prpl/jabber");
@@ -269,11 +278,16 @@ init_plugin(PurplePlugin *plugin)
 	
 	jabber_tune_init();
 	jabber_caps_init();
-
+	
+	jabber_data_init();
+	
 	jabber_add_feature("avatarmeta", AVATARNAMESPACEMETA, jabber_pep_namespace_only_when_pep_enabled_cb);
 	jabber_add_feature("avatardata", AVATARNAMESPACEDATA, jabber_pep_namespace_only_when_pep_enabled_cb);
-	jabber_add_feature("buzz", "http://www.xmpp.org/extensions/xep-0224.html#ns", jabber_buzz_isenabled);
-	
+	jabber_add_feature("buzz", "http://www.xmpp.org/extensions/xep-0224.html#ns",
+					   jabber_buzz_isenabled);
+	jabber_add_feature("bob", XEP_0231_NAMESPACE,
+					   jabber_custom_smileys_isenabled);
+
 	jabber_pep_register_handler("avatar", AVATARNAMESPACEMETA, jabber_buddy_avatar_update_metadata);
 }
 

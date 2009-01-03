@@ -369,7 +369,7 @@ void yahoo_process_chat_online(PurpleConnection *gc, struct yahoo_packet *pkt)
 	struct yahoo_data *yd = (struct yahoo_data *) gc->proto_data;
 
 	if (pkt->status == 1) {
-		yd->chat_online = 1;
+		yd->chat_online = TRUE;
 
 		/* We need to goto a user in chat */
 		if (yd->pending_chat_goto) {
@@ -411,7 +411,7 @@ void yahoo_process_chat_logout(PurpleConnection *gc, struct yahoo_packet *pkt)
 	}
 
 	if (pkt->status == 1) {
-		yd->chat_online = 0;
+		yd->chat_online = FALSE;
 		g_free(yd->pending_chat_room);
 		yd->pending_chat_room = NULL;
 		g_free(yd->pending_chat_id);
@@ -513,12 +513,12 @@ void yahoo_process_chat_join(PurpleConnection *gc, struct yahoo_packet *pkt)
 
 	c = purple_find_chat(gc, YAHOO_CHAT_ID);
 
-	if (room && (!c || purple_conv_chat_has_left(PURPLE_CONV_CHAT(c))) && members &&
-	   ((g_list_length(members) > 1) ||
+	if (room && (!c || purple_conv_chat_has_left(PURPLE_CONV_CHAT(c))) &&
+	    members && (members->next ||
 	     !g_ascii_strcasecmp(members->data, purple_connection_get_display_name(gc)))) {
-		int i;
+		GList *l;
 		GList *flags = NULL;
-		for (i = 0; i < g_list_length(members); i++)
+		for (l = members; l; l = l->next)
 			flags = g_list_append(flags, GINT_TO_POINTER(PURPLE_CBFLAGS_NONE));
 		if (c && purple_conv_chat_has_left(PURPLE_CONV_CHAT(c))) {
 			/* this might be a hack, but oh well, it should nicely */
@@ -881,7 +881,7 @@ static void yahoo_chat_leave(PurpleConnection *gc, const char *room, const char 
 	yahoo_packet_hash_str(pkt, 1, dn);
 	yahoo_packet_send_and_free(pkt, yd);
 
-	yd->chat_online = 0;
+	yd->chat_online = FALSE;
 	g_free(yd->pending_chat_room);
 	yd->pending_chat_room = NULL;
 	g_free(yd->pending_chat_id);
@@ -1180,7 +1180,7 @@ static void yahoo_roomlist_destroy(struct yahoo_roomlist *yrl)
 
 enum yahoo_room_type {
 	yrt_yahoo,
-	yrt_user,
+	yrt_user
 };
 
 struct yahoo_chatxml_state {
