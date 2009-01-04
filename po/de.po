@@ -7,13 +7,12 @@
 #
 # This file is distributed under the same license as the Pidgin package.
 #
-# Jochen Kemnade <jochenkemnade@web.de>, 2008.
 msgid ""
 msgstr ""
 "Project-Id-Version: de\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2008-12-16 15:52+0100\n"
-"PO-Revision-Date: 2008-12-16 15:52+0100\n"
+"POT-Creation-Date: 2009-01-04 12:29+0100\n"
+"PO-Revision-Date: 2009-01-04 12:29+0100\n"
 "Last-Translator: Jochen Kemnade <jochenkemnade@web.de>\n"
 "Language-Team: German <de@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2613,8 +2612,7 @@ msgid ""
 "a pounce and automatically send them when \"%s\" logs back in?"
 msgstr ""
 "„%s“ ist im Moment offline. Möchten Sie die restlichen Nachrichten in einem "
-"Alarm sichern? Diese Nachrichten würden dann automatisch gesendet, wenn sich "
-"„%s“ wieder anmeldet."
+"Alarm sichern und sie dann senden, wenn „%s“ sich wieder anmeldet?"
 
 msgid "Offline Message"
 msgstr "Offline-Nachrichten"
@@ -7214,7 +7212,7 @@ msgid "City/Area"
 msgstr "Stadt/Gegend"
 
 msgid "Publish Mobile"
-msgstr "Mobil veröffentlichen"
+msgstr "Handy veröffentlichen"
 
 msgid "Publish Contact"
 msgstr "Kontakt veröffentlichen"
@@ -7433,7 +7431,7 @@ msgstr "Setup"
 
 #, c-format
 msgid "%u requested to join Qun %u for %s"
-msgstr "%u möchte dem Qun %u aus folgendem Grund beitreten: %s"
+msgstr "%u möchte dem Qun %u wegen %s beitreten"
 
 #, c-format
 msgid "%u request to join Qun %u"
@@ -7446,7 +7444,7 @@ msgstr "Dem Qun %u, moderiert von admin %u, konnte nicht beigetreten werden"
 #, c-format
 msgid "<b>Joining Qun %u is approved by admin %u for %s</b>"
 msgstr ""
-"<b>Das Beitreten zum Qun %u wurde vom Admin %u aus folgendem Grund erlaubt: %"
+"<b>Das Betreten des Qun %u wurde vom Admin bestätigt wegen by admin %u for %"
 "s</b>"
 
 #, c-format
@@ -7512,7 +7510,7 @@ msgstr "<b>Server</b>: %s<br>\n"
 
 #, c-format
 msgid "<b>Client Tag</b>: %s<br>\n"
-msgstr "<b>Client-Tag</b>: %s<br>\n"
+msgstr "<b>Marke des Clients</b>: %s<br>\n"
 
 #, c-format
 msgid "<b>Connection Mode</b>: %s<br>\n"
@@ -9265,6 +9263,9 @@ msgstr "Konnte den Hostnamen nicht auflösen"
 msgid "SIP usernames may not contain whitespaces or @ symbols"
 msgstr "SIP-Benutzernamen dürfen keine Leerzeichen oder @-Symbole enthalten"
 
+msgid "SIP connect server not specified"
+msgstr "SIP-Verbindungsserver nicht angegeben"
+
 #. *< type
 #. *< ui_requirement
 #. *< flags
@@ -9755,8 +9756,8 @@ msgstr "Letzte Aktualisierung"
 msgid ""
 "This profile is in a language or format that is not supported at this time."
 msgstr ""
-"Die Sprache oder das Format dieses Profils werden im Moment nicht "
-"unterstützt."
+"Entschuldigung, das Profil enthält eine Sprache oder ein Format, das zur "
+"Zeit nicht unterstützt wird."
 
 msgid ""
 "Could not retrieve the user's profile. This most likely is a temporary "
