@@ -55,16 +55,32 @@ msim_get_user_from_buddy(PurpleBuddy *buddy)
 	if (!buddy->proto_data) {
 		/* No MsimUser for this buddy; make one. */
 
-		/* TODO: where is this freed? */
 		user = g_new0(MsimUser, 1);
 		user->buddy = buddy;
-		user->id = purple_blist_node_get_int(&buddy->node, "UserID");
+		user->id = purple_blist_node_get_int((PurpleBlistNode*)buddy, "UserID");
 		buddy->proto_data = (gpointer)user;
 	}
 
 	user = (MsimUser *)(buddy->proto_data);
 
 	return user;
+}
+
+void msim_user_free(MsimUser *user)
+{
+	if (!user)
+		return;
+
+	g_free(user->client_info);
+	g_free(user->gender);
+	g_free(user->location);
+	g_free(user->headline);
+	g_free(user->display_name);
+	g_free(user->username);
+	g_free(user->band_name);
+	g_free(user->song_name);
+	g_free(user->image_url);
+	g_free(user);
 }
 
 /**
@@ -286,6 +302,7 @@ msim_store_user_info_each(const gchar *key_str, gchar *value_str, MsimUser *user
 	if (g_str_equal(key_str, "UserID") || g_str_equal(key_str, "ContactID")) {
 		/* Save to buddy list, if it exists, for quick cached uid lookup with msim_uid2username_from_blist(). */
 		user->id = atol(value_str);
+		g_free(value_str);
 		if (user->buddy)
 		{
 			purple_debug_info("msim", "associating uid %s with username %s\n", key_str, user->buddy->name);
@@ -303,13 +320,16 @@ msim_store_user_info_each(const gchar *key_str, gchar *value_str, MsimUser *user
 		user->location = value_str;
 	} else if (g_str_equal(key_str, "TotalFriends")) {
 		user->total_friends = atol(value_str);
+		g_free(value_str);
 	} else if (g_str_equal(key_str, "DisplayName")) {
 		g_free(user->display_name);
 		user->display_name = value_str;
 	} else if (g_str_equal(key_str, "BandName")) {
 		msim_set_artist_or_title(user, value_str, NULL);
+		g_free(value_str);
 	} else if (g_str_equal(key_str, "SongName")) {
 		msim_set_artist_or_title(user, NULL, value_str);
+		g_free(value_str);
 	} else if (g_str_equal(key_str, "UserName") || g_str_equal(key_str, "IMName") || g_str_equal(key_str, "NickName")) {
 		/* Ignore because PurpleBuddy knows this already */
 		g_free(value_str);
@@ -388,7 +408,7 @@ msim_store_user_info_each(const gchar *key_str, gchar *value_str, MsimUser *user
  * is a no-op (and returns FALSE).
  */
 gboolean
-msim_store_user_info(MsimSession *session, MsimMessage *msg, MsimUser *user)
+msim_store_user_info(MsimSession *session, const MsimMessage *msg, MsimUser *user)
 {
 	gchar *username;
 	MsimMessage *body, *body_node;
@@ -399,6 +419,40 @@ msim_store_user_info(MsimSession *session, MsimMessage *msg, MsimUser *user)
 	body = msim_msg_get_dictionary(msg, "body");
 	if (!body) {
 		return FALSE;
+	}
+
+	if (msim_msg_get_integer(msg, "dsn") == MG_OWN_IM_INFO_DSN &&
+		msim_msg_get_integer(msg, "lid") == MG_OWN_IM_INFO_LID)
+	{
+		/*
+		 * Some of this info will be available on the buddy list if the
+		 * user has themselves as their own buddy.
+		 *
+		 * Much of the info is already available in MsimSession,
+		 * stored in msim_we_are_logged_on().
+		 */
+		gchar *tmpstr;
+
+		tmpstr = msim_msg_get_string(body, "ShowOnlyToList");
+		if (tmpstr != NULL) {
+			session->show_only_to_list = g_str_equal(tmpstr, "True");
+			g_free(tmpstr);
+		}
+
+		session->privacy_mode = msim_msg_get_integer(body, "PrivacyMode");
+		session->offline_message_mode = msim_msg_get_integer(body, "OfflineMessageMode");
+
+		msim_send(session,
+				"blocklist", MSIM_TYPE_BOOLEAN, TRUE,
+				"sesskey", MSIM_TYPE_INTEGER, session->sesskey,
+				"idlist", MSIM_TYPE_STRING,
+						g_strdup_printf("w%d|c%d",
+								session->show_only_to_list ? 1 : 0,
+								session->privacy_mode & 1),
+				NULL);
+	} else if (msim_msg_get_integer(msg, "dsn") == MG_OWN_MYSPACE_INFO_DSN &&
+			msim_msg_get_integer(msg, "lid") == MG_OWN_MYSPACE_INFO_LID) {
+		/* TODO: same as above, but for MySpace info. */
 	}
 
 	username = msim_msg_get_string(body, "UserName");
@@ -435,19 +489,6 @@ msim_store_user_info(MsimSession *session, MsimMessage *msg, MsimUser *user)
 
 		value_str = msim_msg_get_string_from_element(elem);
 		msim_store_user_info_each(key_str, value_str, user);
-	}
-
-	if (msim_msg_get_integer(msg, "dsn") == MG_OWN_IM_INFO_DSN &&
-		msim_msg_get_integer(msg, "lid") == MG_OWN_IM_INFO_LID) {
-		/* TODO: do something with our own IM info, if we need it for some
-		 * specific purpose. Otherwise it is available on the buddy list,
-		 * if the user has themselves as their own buddy.
-		 *
-		 * However, much of the info is already available in MsimSession,
-		 * stored in msim_we_are_logged_on(). */
-	} else if (msim_msg_get_integer(msg, "dsn") == MG_OWN_MYSPACE_INFO_DSN &&
-			msim_msg_get_integer(msg, "lid") == MG_OWN_MYSPACE_INFO_LID) {
-		/* TODO: same as above, but for MySpace info. */
 	}
 
 	msim_msg_free(body);
@@ -532,8 +573,6 @@ msim_lookup_user(MsimSession *session, const gchar *user, MSIM_USER_LOOKUP_CB cb
 	purple_debug_info("msim", "msim_lookup_userid: "
 			"asynchronously looking up <%s>\n", user);
 
-	msim_msg_dump("msim_lookup_user: data=%s\n", (MsimMessage *)data);
-
 	/* Setup callback. Response will be associated with request using 'rid'. */
 	rid = msim_new_reply_callback(session, cb, data);
 
@@ -574,9 +613,10 @@ msim_lookup_user(MsimSession *session, const gchar *user, MSIM_USER_LOOKUP_CB cb
 /**
  * Called after username is set.
  */
-static void msim_username_is_set_cb(MsimSession *session, MsimMessage *userinfo, gpointer data)
+static void msim_username_is_set_cb(MsimSession *session, const MsimMessage *userinfo, gpointer data)
 {
-	gchar *username, *errmsg;
+	gchar *username;
+	const gchar *errmsg;
 	MsimMessage *body;
 
 	guint rid;
@@ -587,13 +627,13 @@ static void msim_username_is_set_cb(MsimSession *session, MsimMessage *userinfo,
 
 	g_return_if_fail(MSIM_SESSION_VALID(session));
 
-	msim_msg_dump("username_is_set message is: %s\n", userinfo);
 	cmd = msim_msg_get_integer(userinfo, "cmd");
 	dsn = msim_msg_get_integer(userinfo, "dsn");
 	uid = msim_msg_get_integer(userinfo, "uid");
 	lid = msim_msg_get_integer(userinfo, "lid");
 	body = msim_msg_get_dictionary(userinfo, "body");
-	errmsg = g_strdup("An error occurred while trying to set the username.\n"
+	/* XXX: Mark for translation */
+	errmsg = ("An error occurred while trying to set the username.\n"
 			"Please try again, or visit http://editprofile.myspace.com/index.cfm?"
 			"fuseaction=profile.username to set your username.");
 
@@ -650,7 +690,6 @@ static void msim_username_is_set_cb(MsimSession *session, MsimMessage *userinfo,
 		purple_debug_info("msim","username_is_set Error: Invalid cmd/dsn/lid combination");
 		purple_connection_error_reason(session->gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, errmsg);
 	}
-	g_free(errmsg);
 }
 
 /**
@@ -674,8 +713,6 @@ msim_set_username(MsimSession *session, const gchar *username,
 
 	purple_debug_info("msim", "msim_set_username: "
 			"Setting username %s\n", username);
-
-	msim_msg_dump("msim_set_username: data=%s\n", (MsimMessage *)data);
 
 	/* Setup callback. Response will be associated with request using 'rid'. */
 	rid = msim_new_reply_callback(session, cb, data);
@@ -736,7 +773,7 @@ static void msim_set_username_confirmed_cb(PurpleConnection *gc)
  * Now we have some real data to tell us the state of their requested username
  * \persistr\\cmd\257\dsn\5\uid\204084363\lid\7\rid\367\body\UserName=TheAlbinoRhino1\final\
  */
-static void msim_username_is_available_cb(MsimSession *session, MsimMessage *userinfo, gpointer data)
+static void msim_username_is_available_cb(MsimSession *session, const MsimMessage *userinfo, gpointer data)
 {
 	MsimMessage *msg;
 	gchar *username;
