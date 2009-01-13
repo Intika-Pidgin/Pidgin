@@ -47,8 +47,6 @@
 struct _FinchMediaPrivate
 {
 	PurpleMedia *media;
-	GstElement *send_level;
-	GstElement *recv_level;
 
 	GntWidget *accept;
 	GntWidget *reject;
@@ -77,8 +75,6 @@ static guint finch_media_signals[LAST_SIGNAL] = {0};
 enum {
 	PROP_0,
 	PROP_MEDIA,
-	PROP_SEND_LEVEL,
-	PROP_RECV_LEVEL
 };
 
 GType
@@ -121,18 +117,6 @@ finch_media_class_init (FinchMediaClass *klass)
 			"The PurpleMedia associated with this media.",
 			PURPLE_TYPE_MEDIA,
 			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
-	g_object_class_install_property(gobject_class, PROP_SEND_LEVEL,
-			g_param_spec_object("send-level",
-			"Send level",
-			"The GstElement of this media's send 'level'",
-			GST_TYPE_ELEMENT,
-			G_PARAM_READWRITE));
-	g_object_class_install_property(gobject_class, PROP_RECV_LEVEL,
-			g_param_spec_object("recv-level",
-			"Receive level",
-			"The GstElement of this media's recv 'level'",
-			GST_TYPE_ELEMENT,
-			G_PARAM_READWRITE));
 
 	finch_media_signals[MESSAGE] = g_signal_new("message", G_TYPE_FROM_CLASS(klass),
 					G_SIGNAL_RUN_LAST, 0, NULL, NULL,
@@ -187,16 +171,13 @@ finch_media_ready_cb(PurpleMedia *media, FinchMedia *gntmedia)
 		purple_media_set_src(media, sessions->data, sendbin);
 	}
 	g_list_free(sessions);
-
-	g_object_set(gntmedia, "send-level", sendlevel,
-		     NULL);
 }
 
 static void
 finch_media_accept_cb(PurpleMedia *media, FinchMedia *gntmedia)
 {
 	GntWidget *parent;
-	GstElement *sendbin = NULL, *recvbin = NULL;
+	GstElement *sendbin = NULL;
 
 	finch_media_emit_message(gntmedia, _("Call in progress."));
 
@@ -220,9 +201,8 @@ finch_media_accept_cb(PurpleMedia *media, FinchMedia *gntmedia)
 	gnt_box_readjust(GNT_BOX(parent));
 	gnt_widget_draw(parent);
 
-	purple_media_get_elements(media, &sendbin, &recvbin, NULL, NULL);
+	purple_media_get_elements(media, &sendbin, NULL, NULL, NULL);
 	gst_element_set_state(GST_ELEMENT(sendbin), GST_STATE_PLAYING);
-	gst_element_set_state(GST_ELEMENT(recvbin), GST_STATE_PLAYING);
 }
 
 static void
@@ -246,33 +226,34 @@ finch_media_wait_cb(PurpleMedia *media, FinchMedia *gntmedia)
 }
 
 static void
-finch_media_hangup_cb(PurpleMedia *media, FinchMedia *gntmedia)
+finch_media_state_changed_cb(PurpleMedia *media,
+		PurpleMediaStateChangedType type,
+		gchar *sid, gchar *name, FinchMedia *gntmedia)
 {
-	finch_media_emit_message(gntmedia, _("You have ended the call."));
-	finch_conversation_set_info_widget(gntmedia->priv->conv, NULL);
-	gnt_widget_destroy(GNT_WIDGET(gntmedia));
-	/* XXX: This shouldn't have to be here to free the FinchMedia widget */
-	g_object_unref(gntmedia);
-}
-
-static void
-finch_media_got_hangup_cb(PurpleMedia *media, FinchMedia *gntmedia)
-{
-	finch_media_emit_message(gntmedia, _("The call has been terminated."));
-	finch_conversation_set_info_widget(gntmedia->priv->conv, NULL);
-	gnt_widget_destroy(GNT_WIDGET(gntmedia));
-	/* XXX: This shouldn't have to be here to free the FinchMedia widget */
-	g_object_unref(gntmedia);
-}
-
-static void
-finch_media_reject_cb(PurpleMedia *media, FinchMedia *gntmedia)
-{
-	finch_media_emit_message(gntmedia, _("You have rejected the call."));
-	finch_conversation_set_info_widget(gntmedia->priv->conv, NULL);
-	gnt_widget_destroy(GNT_WIDGET(gntmedia));
-	/* XXX: This shouldn't have to be here to free the FinchMedia widget */
-	g_object_unref(gntmedia);
+	purple_debug_info("gntmedia", "type: %d sid: %s name: %s\n",
+			type, sid, name);
+	if (sid == NULL && name == NULL) {
+		if (type == PURPLE_MEDIA_STATE_CHANGED_END) {
+			finch_media_emit_message(gntmedia,
+					_("The call has been terminated."));
+			finch_conversation_set_info_widget(
+					gntmedia->priv->conv, NULL);
+			gnt_widget_destroy(GNT_WIDGET(gntmedia));
+			/*
+			 * XXX: This shouldn't have to be here
+			 * to free the FinchMedia widget.
+			 */
+			g_object_unref(gntmedia);
+		} else if (type == PURPLE_MEDIA_STATE_CHANGED_REJECTED) {
+			finch_media_emit_message(gntmedia,
+					_("You have rejected the call."));
+		}
+	} else if (type == PURPLE_MEDIA_STATE_CHANGED_NEW
+			&& sid != NULL && name != NULL) {
+		finch_media_ready_cb(media, gntmedia);
+	} else if (type == PURPLE_MEDIA_STATE_CHANGED_CONNECTED) {
+		finch_media_accept_cb(media, gntmedia);
+	}
 }
 
 static void
@@ -284,6 +265,8 @@ finch_media_set_property (GObject *object, guint prop_id, const GValue *value, G
 	media = FINCH_MEDIA(object);
 	switch (prop_id) {
 		case PROP_MEDIA:
+		{
+			gboolean is_initiator;
 			if (media->priv->media)
 				g_object_unref(media->priv->media);
 			media->priv->media = g_value_get_object(value);
@@ -295,33 +278,15 @@ finch_media_set_property (GObject *object, guint prop_id, const GValue *value, G
 			g_signal_connect_swapped(G_OBJECT(media->priv->hangup), "activate",
 				 G_CALLBACK(purple_media_hangup), media->priv->media);
 
-			g_signal_connect(G_OBJECT(media->priv->media), "accepted",
-				G_CALLBACK(finch_media_accept_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media) ,"ready",
-				G_CALLBACK(finch_media_ready_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "wait",
-				G_CALLBACK(finch_media_wait_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "hangup",
-				G_CALLBACK(finch_media_hangup_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "reject",
-				G_CALLBACK(finch_media_reject_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "got-hangup",
-				G_CALLBACK(finch_media_got_hangup_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "got-accept",
-				G_CALLBACK(finch_media_accept_cb), media);
+			g_object_get(G_OBJECT(media->priv->media), "initiator",
+					&is_initiator, NULL);
+			if (is_initiator == TRUE) {
+				finch_media_wait_cb(media->priv->media, media);
+			}
+			g_signal_connect(G_OBJECT(media->priv->media), "state-changed",
+				G_CALLBACK(finch_media_state_changed_cb), media);
 			break;
-		case PROP_SEND_LEVEL:
-			if (media->priv->send_level)
-				gst_object_unref(media->priv->send_level);
-			media->priv->send_level = g_value_get_object(value);
-			g_object_ref(media->priv->send_level);
-			break;
-		case PROP_RECV_LEVEL:
-			if (media->priv->recv_level)
-				gst_object_unref(media->priv->recv_level);
-			media->priv->recv_level = g_value_get_object(value);
-			g_object_ref(media->priv->recv_level);
-			break;
+		}
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
@@ -339,12 +304,6 @@ finch_media_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 	switch (prop_id) {
 		case PROP_MEDIA:
 			g_value_set_object(value, media->priv->media);
-			break;
-		case PROP_SEND_LEVEL:
-			g_value_set_object(value, media->priv->send_level);
-			break;
-		case PROP_RECV_LEVEL:
-			g_value_set_object(value, media->priv->recv_level);
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);	
@@ -400,7 +359,6 @@ call_cmd_cb(PurpleConversation *conv, const char *cmd, char **args,
 	if (!media)
 		return PURPLE_CMD_STATUS_FAILED;
 
-	purple_media_wait(media);
 	return PURPLE_CMD_STATUS_OK;
 }
 
