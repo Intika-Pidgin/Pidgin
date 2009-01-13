@@ -67,6 +67,8 @@ struct _PidginMediaPrivate
 	PidginMediaState state;
 
 	GtkWidget *display;
+	GtkWidget *send_widget;
+	GtkWidget *recv_widget;
 	GtkWidget *local_video;
 	GtkWidget *remote_video;
 };
@@ -389,7 +391,7 @@ socket_realize_cb(GtkWidget *widget, gpointer data)
 }
 
 static void
-pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia)
+pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *sid)
 {
 	GstElement *pipeline = purple_media_get_pipeline(media);
 	GtkWidget *send_widget = NULL, *recv_widget = NULL;
@@ -398,44 +400,45 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia)
 	gboolean audiorecvbool = FALSE;
 	gboolean videorecvbool = FALSE;
 	GstBus *bus;
+	gboolean is_initiator;
 
-	GList *sessions = purple_media_get_session_names(media);
-
-	for (; sessions; sessions = g_list_delete_link(sessions, sessions)) {
-		PurpleMediaSessionType type = purple_media_get_session_type(media, sessions->data);
-		if (type & PURPLE_MEDIA_AUDIO) {
-			if (!audiosendbin && (type & PURPLE_MEDIA_SEND_AUDIO)) {
-				purple_media_audio_init_src(&audiosendbin, &audiosendlevel);
-				purple_media_set_src(media, sessions->data, audiosendbin);
-				gst_element_set_state(audiosendbin, GST_STATE_PLAYING);
-			}
-			if (!audiorecvbool && (type & PURPLE_MEDIA_RECV_AUDIO)) {
-				audiorecvbool = TRUE;
-			}
-		} else if (type & PURPLE_MEDIA_VIDEO) {
-			if (!videosendbin && (type & PURPLE_MEDIA_SEND_VIDEO)) {
-				purple_media_video_init_src(&videosendbin);
-				gst_element_set_locked_state(videosendbin, TRUE);
-				purple_media_set_src(media, sessions->data, videosendbin);
-			}
-			if (!videorecvbool && (type & PURPLE_MEDIA_RECV_VIDEO)) {
-				videorecvbool = TRUE;
-			}
+	PurpleMediaSessionType type = purple_media_get_session_type(media, sid);
+	if (type & PURPLE_MEDIA_AUDIO) {
+		if (!audiosendbin && (type & PURPLE_MEDIA_SEND_AUDIO)) {
+			purple_media_audio_init_src(&audiosendbin, &audiosendlevel);
+			purple_media_set_src(media, sid, audiosendbin);
+			gst_element_set_state(audiosendbin, GST_STATE_PLAYING);
+		}
+		if (!audiorecvbool && (type & PURPLE_MEDIA_RECV_AUDIO)) {
+			audiorecvbool = TRUE;
+		}
+	} else if (type & PURPLE_MEDIA_VIDEO) {
+		if (!videosendbin && (type & PURPLE_MEDIA_SEND_VIDEO)) {
+			purple_media_video_init_src(&videosendbin);
+			gst_element_set_locked_state(videosendbin, TRUE);
+			purple_media_set_src(media, sid, videosendbin);
+		}
+		if (!videorecvbool && (type & PURPLE_MEDIA_RECV_VIDEO)) {
+			videorecvbool = TRUE;
 		}
 	}
 
-	if (videorecvbool || audiorecvbool) {
-		recv_widget = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	if (gtkmedia->priv->recv_widget == NULL
+			&& (videorecvbool || audiorecvbool)) {
+		recv_widget = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);	
 		gtk_box_pack_start(GTK_BOX(gtkmedia->priv->display),
 				recv_widget, TRUE, TRUE, 0);
 		gtk_widget_show(recv_widget);
-	}
-	if (videosendbin || audiosendbin) {
+	} else
+		recv_widget = gtkmedia->priv->recv_widget;
+	if (gtkmedia->priv->send_widget == NULL
+			&& (videosendbin || audiosendbin)) {
 		send_widget = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 		gtk_box_pack_start(GTK_BOX(gtkmedia->priv->display),
 				send_widget, TRUE, TRUE, 0);
 		gtk_widget_show(send_widget);
-	}
+	} else
+		send_widget = gtkmedia->priv->send_widget;
 
 	if (videorecvbool) {
 		GtkWidget *aspect;
@@ -535,76 +538,64 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia)
 				G_CALLBACK(level_message_cb), gtkmedia);
 
 	gst_object_unref(bus);
-}
 
-static void
-pidgin_media_wait_cb(PurpleMedia *media, PidginMedia *gtkmedia)
-{
-	pidgin_media_set_state(gtkmedia, PIDGIN_MEDIA_WAITING);
-}
+	if (send_widget != NULL)
+		gtkmedia->priv->send_widget = send_widget;
+	if (recv_widget != NULL)
+		gtkmedia->priv->recv_widget = recv_widget;
 
-/* maybe we should have different callbacks for when we received the accept
-    and we accepted ourselves */
-static void
-pidgin_media_accept_cb(PurpleMedia *media, PidginMedia *gtkmedia)
-{
-	GstElement *audiosendbin = NULL;
-	GstElement *audiorecvbin = NULL;
-	GstElement *videosendbin = NULL;
-	GstElement *videorecvbin = NULL;
+	g_object_get(G_OBJECT(media), "initiator", &is_initiator, NULL);
 
-	pidgin_media_emit_message(gtkmedia, _("Call in progress."));
-	pidgin_media_set_state(gtkmedia, PIDGIN_MEDIA_ACCEPTED);
-
-	purple_media_get_elements(media, &audiosendbin, &audiorecvbin,
-				  &videosendbin, &videorecvbin);
-
-	if (audiorecvbin || audiosendbin || videorecvbin || videosendbin)
-		gtk_widget_show(gtkmedia->priv->display);
-}
-
-static void
-pidgin_media_hangup_cb(PurpleMedia *media, PidginMedia *gtkmedia)
-{
-	pidgin_media_emit_message(gtkmedia, _("You have ended the call."));
-	gtk_widget_destroy(GTK_WIDGET(gtkmedia));
-}
-
-static void
-pidgin_media_got_request_cb(PurpleMedia *media, PidginMedia *gtkmedia)
-{
-	PurpleMediaSessionType type = purple_media_get_overall_type(media);
-	gchar *message;
-
-	if (type & PURPLE_MEDIA_AUDIO && type & PURPLE_MEDIA_VIDEO) {
-		message = g_strdup_printf(_("%s wishes to start an audio/video session with you."),
-					  gtkmedia->priv->screenname);
-	} else if (type & PURPLE_MEDIA_AUDIO) {
-		message = g_strdup_printf(_("%s wishes to start an audio session with you."),
-					  gtkmedia->priv->screenname);
-	} else if (type & PURPLE_MEDIA_VIDEO) {
-		message = g_strdup_printf(_("%s wishes to start a video session with you."),
-					  gtkmedia->priv->screenname);
-	} else {
-		return;
+	if (is_initiator == FALSE) {
+		gchar *message;
+		if (type & PURPLE_MEDIA_AUDIO && type & PURPLE_MEDIA_VIDEO) {
+			message = g_strdup_printf(_("%s wishes to start an audio/video session with you."),
+						  gtkmedia->priv->screenname);
+		} else if (type & PURPLE_MEDIA_AUDIO) {
+			message = g_strdup_printf(_("%s wishes to start an audio session with you."),
+						  gtkmedia->priv->screenname);
+		} else if (type & PURPLE_MEDIA_VIDEO) {
+			message = g_strdup_printf(_("%s wishes to start a video session with you."),
+						  gtkmedia->priv->screenname);
+		}
+		pidgin_media_emit_message(gtkmedia, message);
+		g_free(message);
 	}
-
-	pidgin_media_emit_message(gtkmedia, message);
-	g_free(message);
 }
 
 static void
-pidgin_media_got_hangup_cb(PurpleMedia *media, PidginMedia *gtkmedia)
+pidgin_media_state_changed_cb(PurpleMedia *media,
+		PurpleMediaStateChangedType type,
+		gchar *sid, gchar *name, PidginMedia *gtkmedia)
 {
-	pidgin_media_emit_message(gtkmedia, _("The call has been terminated."));
-	gtk_widget_destroy(GTK_WIDGET(gtkmedia));
-}
+	purple_debug_info("gtkmedia", "type: %d sid: %s name: %s\n",
+			type, sid, name);
+	if (sid == NULL && name == NULL) {
+		if (type == PURPLE_MEDIA_STATE_CHANGED_END) {
+			pidgin_media_emit_message(gtkmedia,
+					_("The call has been terminated."));
+			gtk_widget_destroy(GTK_WIDGET(gtkmedia));
+			
+		} else if (type == PURPLE_MEDIA_STATE_CHANGED_REJECTED) {
+			pidgin_media_emit_message(gtkmedia,
+					_("You have rejected the call."));
+		}
+	} else if (type == PURPLE_MEDIA_STATE_CHANGED_NEW &&
+			sid != NULL && name != NULL) {
+		pidgin_media_ready_cb(media, gtkmedia, sid);
+	} else if (type == PURPLE_MEDIA_STATE_CHANGED_CONNECTED) {
+		GstElement *audiosendbin = NULL, *audiorecvbin = NULL;
+		GstElement *videosendbin = NULL, *videorecvbin = NULL;
 
-static void
-pidgin_media_reject_cb(PurpleMedia *media, PidginMedia *gtkmedia)
-{
-	pidgin_media_emit_message(gtkmedia, _("You have rejected the call."));
-	gtk_widget_destroy(GTK_WIDGET(gtkmedia));
+		pidgin_media_emit_message(gtkmedia, _("Call in progress."));
+		pidgin_media_set_state(gtkmedia, PIDGIN_MEDIA_ACCEPTED);
+
+		purple_media_get_elements(media, &audiosendbin, &audiorecvbin,
+					  &videosendbin, &videorecvbin);
+
+		if (audiorecvbin || audiosendbin || videorecvbin || videosendbin)
+			gtk_widget_show(gtkmedia->priv->display);
+	}
 }
 
 static void
@@ -616,10 +607,20 @@ pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 	media = PIDGIN_MEDIA(object);
 	switch (prop_id) {
 		case PROP_MEDIA:
+		{
+			gboolean initiator;
 			if (media->priv->media)
 				g_object_unref(media->priv->media);
 			media->priv->media = g_value_get_object(value);
 			g_object_ref(media->priv->media);
+
+			g_object_get(G_OBJECT(media->priv->media),
+					"initiator", &initiator, NULL);
+			if (initiator == TRUE)
+				pidgin_media_set_state(media, PIDGIN_MEDIA_WAITING);
+			else
+				pidgin_media_set_state(media, PIDGIN_MEDIA_REQUESTED);
+
 			g_signal_connect_swapped(G_OBJECT(media->priv->accept), "clicked", 
 				 G_CALLBACK(purple_media_accept), media->priv->media);
 			g_signal_connect_swapped(G_OBJECT(media->priv->reject), "clicked",
@@ -629,23 +630,10 @@ pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 
 			g_signal_connect(G_OBJECT(media->priv->media), "error",
 				G_CALLBACK(pidgin_media_error_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "accepted",
-				G_CALLBACK(pidgin_media_accept_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media) ,"ready",
-				G_CALLBACK(pidgin_media_ready_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media) ,"wait",
-				G_CALLBACK(pidgin_media_wait_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "hangup",
-				G_CALLBACK(pidgin_media_hangup_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "reject",
-				G_CALLBACK(pidgin_media_reject_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "got-request",
-				G_CALLBACK(pidgin_media_got_request_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "got-hangup",
-				G_CALLBACK(pidgin_media_got_hangup_cb), media);
-			g_signal_connect(G_OBJECT(media->priv->media), "got-accept",
-				G_CALLBACK(pidgin_media_accept_cb), media);
+			g_signal_connect(G_OBJECT(media->priv->media), "state-changed",
+				G_CALLBACK(pidgin_media_state_changed_cb), media);
 			break;
+		}
 		case PROP_SCREENNAME:
 			if (media->priv->screenname)
 				g_free(media->priv->screenname);
