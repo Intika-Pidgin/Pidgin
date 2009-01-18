@@ -286,24 +286,26 @@ static gboolean
 screenname_nofocus_cb(GtkWidget *widget, GdkEventFocus *event, AccountPrefsDialog *dialog)
 {
 	GdkColor color = {0, 34952, 35466, 34181};
-	GHashTable *table;
-	const char *label;
+	GHashTable *table = NULL;
+	const char *label = NULL;
 
-	table = dialog->prpl_info->get_account_text_table(NULL);
-	label = g_hash_table_lookup(table, "login_label");
+	if(PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(dialog->prpl_info, get_account_text_table)) {
+		table = dialog->prpl_info->get_account_text_table(NULL);
+		label = g_hash_table_lookup(table, "login_label");
 
-	if (*gtk_entry_get_text(GTK_ENTRY(widget)) == '\0') {
-		/* We have to avoid hitting the screenname_changed_cb function 
-		 * because it enables buttons we don't want enabled yet ;)
-		 */
-		g_signal_handlers_block_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
-		gtk_entry_set_text(GTK_ENTRY(widget), label);
-		/* Make sure we can hit it again */
-		g_signal_handlers_unblock_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
-		gtk_widget_modify_text(widget, GTK_STATE_NORMAL, &color);
+		if (*gtk_entry_get_text(GTK_ENTRY(widget)) == '\0') {
+			/* We have to avoid hitting the screenname_changed_cb function 
+			 * because it enables buttons we don't want enabled yet ;)
+			 */
+			g_signal_handlers_block_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
+			gtk_entry_set_text(GTK_ENTRY(widget), label);
+			/* Make sure we can hit it again */
+			g_signal_handlers_unblock_by_func(widget, G_CALLBACK(screenname_changed_cb), dialog);
+			gtk_widget_modify_text(widget, GTK_STATE_NORMAL, &color);
+		}
+
+		g_hash_table_destroy(table);
 	}
-
-	g_hash_table_destroy(table);
 
 	return FALSE;
 }
@@ -1543,7 +1545,10 @@ pidgin_account_dialog_show(PidginAccountDialogType type,
 	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CANCEL, G_CALLBACK(cancel_account_prefs_cb), dialog);
 
 	/* Save button */
-	button = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_SAVE, G_CALLBACK(ok_account_prefs_cb), dialog);
+	button = pidgin_dialog_add_button(GTK_DIALOG(win),
+	                                  (type == PIDGIN_ADD_ACCOUNT_DIALOG) ? GTK_STOCK_ADD : GTK_STOCK_SAVE,
+	                                  G_CALLBACK(ok_account_prefs_cb),
+	                                  dialog);
 	if (dialog->account == NULL)
 		gtk_widget_set_sensitive(button, FALSE);
 	dialog->ok_button = button;
@@ -2425,25 +2430,25 @@ struct auth_and_add {
 };
 
 static void
-authorize_and_add_cb(struct auth_and_add *aa)
+free_auth_and_add(struct auth_and_add *aa)
 {
-	aa->auth_cb(aa->data);
-	purple_blist_request_add_buddy(aa->account, aa->username,
-	 	                    NULL, aa->alias);
-
 	g_free(aa->username);
 	g_free(aa->alias);
 	g_free(aa);
 }
 
 static void
+authorize_and_add_cb(struct auth_and_add *aa)
+{
+	aa->auth_cb(aa->data);
+	purple_blist_request_add_buddy(aa->account, aa->username,
+	 	                    NULL, aa->alias);
+}
+
+static void
 deny_no_add_cb(struct auth_and_add *aa)
 {
 	aa->deny_cb(aa->data);
-
-	g_free(aa->username);
-	g_free(aa->alias);
-	g_free(aa);
 }
 
 static void *
@@ -2492,7 +2497,7 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 						  _("Authorize"), authorize_and_add_cb,
 						  _("Deny"), deny_no_add_cb,
 						  NULL);
-		g_object_set_data(G_OBJECT(alert), "auth_and_add", aa);
+		g_signal_connect_swapped(G_OBJECT(alert), "destroy", G_CALLBACK(free_auth_and_add), aa);
 	} else {
 		alert = pidgin_make_mini_dialog(gc, PIDGIN_STOCK_DIALOG_QUESTION,
 						  _("Authorize buddy?"), buffer, user_data,
@@ -2501,6 +2506,8 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 						  NULL);
 	}
 	pidgin_blist_add_alert(alert);
+	g_signal_connect(G_OBJECT(alert), "destroy",
+		G_CALLBACK(purple_account_request_close), NULL);
 
 	g_free(buffer);
 
@@ -2510,13 +2517,6 @@ pidgin_accounts_request_authorization(PurpleAccount *account,
 static void
 pidgin_accounts_request_close(void *ui_handle)
 {
-	/* This is super ugly, but without API changes, this is how it works */
-	struct auth_and_add *aa = g_object_get_data(G_OBJECT(ui_handle), "auth_and_add");
-	if (aa != NULL) {
-		g_free(aa->username);
-		g_free(aa->alias);
-		g_free(aa);
-	}
 	gtk_widget_destroy(GTK_WIDGET(ui_handle));
 }
 
