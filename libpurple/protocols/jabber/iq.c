@@ -142,23 +142,19 @@ void jabber_iq_free(JabberIq *iq)
 	g_free(iq);
 }
 
-static void jabber_iq_last_parse(JabberStream *js, xmlnode *packet)
+static void jabber_iq_last_parse(JabberStream *js, const char *from,
+                                 JabberIqType type, const char *id,
+                                 xmlnode *packet)
 {
 	JabberIq *iq;
-	const char *type;
-	const char *from;
-	const char *id;
 	xmlnode *query;
 	char *idle_time;
 
-	type = xmlnode_get_attrib(packet, "type");
-	from = xmlnode_get_attrib(packet, "from");
-	id = xmlnode_get_attrib(packet, "id");
-
-	if(type && !strcmp(type, "get")) {
+	if(type == JABBER_IQ_GET) {
 		iq = jabber_iq_new_query(js, JABBER_IQ_RESULT, "jabber:iq:last");
 		jabber_iq_set_id(iq, id);
-		xmlnode_set_attrib(iq->node, "to", from);
+		if (from)
+			xmlnode_set_attrib(iq->node, "to", from);
 
 		query = xmlnode_get_child(iq->node, "query");
 
@@ -170,39 +166,31 @@ static void jabber_iq_last_parse(JabberStream *js, xmlnode *packet)
 	}
 }
 
-static void jabber_iq_time_parse(JabberStream *js, xmlnode *packet)
+static void jabber_iq_time_parse(JabberStream *js, const char *from,
+                                 JabberIqType type, const char *id,
+                                 xmlnode *child)
 {
-	const char *type, *from, *id, *xmlns;
+	const char *xmlns;
 	JabberIq *iq;
-	xmlnode *child;
 	time_t now_t;
 	struct tm *now;
 
 	time(&now_t);
 	now = localtime(&now_t);
 
-	type = xmlnode_get_attrib(packet, "type");
-	from = xmlnode_get_attrib(packet, "from");
-	id = xmlnode_get_attrib(packet, "id");
+	xmlns = xmlnode_get_namespace(child);
 
-	if ((child = xmlnode_get_child(packet, "query"))) {
-		xmlns = "jabber:iq:time";
-	} else if ((child = xmlnode_get_child(packet, "time"))) {
-		xmlns = "urn:xmpp:time";
-	} else {
-		purple_debug_warning("jabber", "Malformed IQ time packet\n");
-		return;
-	}
-
-	if(type && !strcmp(type, "get")) {
+	if(type == JABBER_IQ_GET) {
 		xmlnode *utc;
 		const char *date, *tz, *display;
 
 		iq = jabber_iq_new(js, JABBER_IQ_RESULT);
 		jabber_iq_set_id(iq, id);
-		xmlnode_set_attrib(iq->node, "to", from);
+		if (from)
+			xmlnode_set_attrib(iq->node, "to", from);
 
 		child = xmlnode_new_child(iq->node, child->name);
+		xmlnode_set_namespace(child, xmlns);
 		utc = xmlnode_new_child(child, "utc");
 
 		if(!strcmp("urn:xmpp:time", xmlns)) {
@@ -226,15 +214,14 @@ static void jabber_iq_time_parse(JabberStream *js, xmlnode *packet)
 	}
 }
 
-static void jabber_iq_version_parse(JabberStream *js, xmlnode *packet)
+static void jabber_iq_version_parse(JabberStream *js, const char *from,
+                                    JabberIqType type, const char *id,
+                                    xmlnode *packet)
 {
 	JabberIq *iq;
-	const char *type, *from, *id;
 	xmlnode *query;
 
-	type = xmlnode_get_attrib(packet, "type");
-
-	if(type && !strcmp(type, "get")) {
+	if(type == JABBER_IQ_GET) {
 		GHashTable *ui_info;
 		const char *ui_name = NULL, *ui_version = NULL;
 #if 0
@@ -247,11 +234,10 @@ static void jabber_iq_version_parse(JabberStream *js, xmlnode *packet)
 					osinfo.machine);
 		}
 #endif
-		from = xmlnode_get_attrib(packet, "from");
-		id = xmlnode_get_attrib(packet, "id");
 
 		iq = jabber_iq_new_query(js, JABBER_IQ_RESULT, "jabber:iq:version");
-		xmlnode_set_attrib(iq->node, "to", from);
+		if (from)
+			xmlnode_set_attrib(iq->node, "to", from);
 		jabber_iq_set_id(iq, id);
 
 		query = xmlnode_get_child(iq->node, "query");
@@ -294,7 +280,8 @@ void jabber_iq_parse(JabberStream *js, xmlnode *packet)
 	JabberCallbackData *jcd;
 	xmlnode *child, *error, *x;
 	const char *xmlns;
-	const char *type, *id, *from;
+	const char *iq_type, *id, *from;
+	JabberIqType type = JABBER_IQ_NONE;
 
 	/*
 	 * child will be either the first tag child or NULL if there is no child.
@@ -307,27 +294,40 @@ void jabber_iq_parse(JabberStream *js, xmlnode *packet)
 			break;
 	}
 
-	type = xmlnode_get_attrib(packet, "type");
+	iq_type = xmlnode_get_attrib(packet, "type");
 	from = xmlnode_get_attrib(packet, "from");
 	id = xmlnode_get_attrib(packet, "id");
 
-	if(type == NULL || !(!strcmp(type, "get") || !strcmp(type, "set")
-			|| !strcmp(type, "result") || !strcmp(type, "error"))) {
+	if (iq_type) {
+		if (!strcmp(iq_type, "get"))
+			type = JABBER_IQ_GET;
+		else if (!strcmp(iq_type, "set"))
+			type = JABBER_IQ_SET;
+		else if (!strcmp(iq_type, "result"))
+			type = JABBER_IQ_RESULT;
+		else if (!strcmp(iq_type, "error"))
+			type = JABBER_IQ_ERROR;
+	}
+
+	if (type == JABBER_IQ_NONE) {
 		purple_debug_error("jabber", "IQ with invalid type ('%s') - ignoring.\n",
-						   type ? type : "(null)");
+						   iq_type ? iq_type : "(null)");
 		return;
 	}
 
 	/* All IQs must have an ID, so send an error for a set/get that doesn't */
 	if(!id || !*id) {
 
-		if(!strcmp(type, "set") || !strcmp(type, "get")) {
+		if(type == JABBER_IQ_SET || type == JABBER_IQ_GET) {
 			JabberIq *iq = jabber_iq_new(js, JABBER_IQ_ERROR);
 
 			xmlnode_free(iq->node);
 			iq->node = xmlnode_copy(packet);
-			xmlnode_set_attrib(iq->node, "to", from);
-			xmlnode_remove_attrib(iq->node, "from");
+			if (from) {
+				xmlnode_set_attrib(iq->node, "to", from);
+				xmlnode_remove_attrib(iq->node, "from");
+			}
+
 			xmlnode_set_attrib(iq->node, "type", "error");
 			/* This id is clearly not useful, but we must put something there for a valid stanza */
 			iq->id = jabber_get_next_id(js);
@@ -339,13 +339,14 @@ void jabber_iq_parse(JabberStream *js, xmlnode *packet)
 
 			jabber_iq_send(iq);
 		} else
-			purple_debug_error("jabber", "IQ of type '%s' missing id - ignoring.\n", type);
+			purple_debug_error("jabber", "IQ of type '%s' missing id - ignoring.\n",
+			                   iq_type);
 
 		return;
 	}
 
 	/* First, lets see if a special callback got registered */
-	if(!strcmp(type, "result") || !strcmp(type, "error")) {
+	if(type == JABBER_IQ_RESULT || type == JABBER_IQ_ERROR) {
 		if(id && *id && (jcd = g_hash_table_lookup(js->iq_callbacks, id))) {
 			jcd->callback(js, packet, jcd->data);
 			jabber_iq_remove_callback_by_id(js, id);
@@ -360,7 +361,7 @@ void jabber_iq_parse(JabberStream *js, xmlnode *packet)
 		g_free(key);
 
 		if(jih) {
-			jih(js, packet);
+			jih(js, from, type, id, child);
 			return;
 		}
 	}
@@ -368,13 +369,16 @@ void jabber_iq_parse(JabberStream *js, xmlnode *packet)
 	purple_debug_info("jabber", "jabber_iq_parse\n");
 
 	/* If we get here, send the default error reply mandated by XMPP-CORE */
-	if(!strcmp(type, "set") || !strcmp(type, "get")) {
+	if(type == JABBER_IQ_SET || type == JABBER_IQ_GET) {
 		JabberIq *iq = jabber_iq_new(js, JABBER_IQ_ERROR);
 
 		xmlnode_free(iq->node);
 		iq->node = xmlnode_copy(packet);
-		xmlnode_set_attrib(iq->node, "to", from);
-		xmlnode_remove_attrib(iq->node, "from");
+		if (from) {
+			xmlnode_set_attrib(iq->node, "to", from);
+			xmlnode_remove_attrib(iq->node, "from");
+		}
+
 		xmlnode_set_attrib(iq->node, "type", "error");
 		error = xmlnode_new_child(iq->node, "error");
 		xmlnode_set_attrib(error, "type", "cancel");
