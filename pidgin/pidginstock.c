@@ -197,7 +197,8 @@ const SizedStockIcon sized_stock_icons [] = {
 	{ PIDGIN_STOCK_TOOLBAR_UNBLOCK,		"toolbar", "unblock.png",	 FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR,	"toolbar", "select-avatar.png",	 FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, NULL  },
 	{ PIDGIN_STOCK_TOOLBAR_SEND_FILE,	"toolbar", "send-file.png",	 FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
-	{ PIDGIN_STOCK_TOOLBAR_TRANSFER,	"toolbar", "transfer.png",	 FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  }
+	{ PIDGIN_STOCK_TOOLBAR_TRANSFER,	"toolbar", "transfer.png",	 FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  },
+	{ PIDGIN_STOCK_TOOLBAR_SEND_ATTENTION, "toolbar", "get-attention.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  }
 };
 
 const SizedStockIcon sized_status_icons [] = {
@@ -276,7 +277,6 @@ find_file(const char *dir, const char *base)
 	g_free(filename);
 	return ret;
 }
-
 
 /* Altered from do_colorshift in gnome-panel */
 static void
