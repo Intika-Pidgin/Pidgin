@@ -44,7 +44,8 @@ G_BEGIN_DECLS
 #define PURPLE_IS_MEDIA_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_MEDIA))
 #define PURPLE_MEDIA_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_MEDIA, PurpleMediaClass))
 
-#define PURPLE_MEDIA_TYPE_STATE_CHANGED	(purple_media_state_changed_get_type())
+#define PURPLE_MEDIA_TYPE_STATE      (purple_media_state_changed_get_type())
+#define PURPLE_MEDIA_TYPE_INFO_TYPE	(purple_media_info_type_get_type())
 
 /** @copydoc _PurpleMedia */
 typedef struct _PurpleMedia PurpleMedia;
@@ -90,12 +91,18 @@ typedef enum {
 
 /** Media state-changed types */
 typedef enum {
-	PURPLE_MEDIA_STATE_CHANGED_NEW = 0,
-	PURPLE_MEDIA_STATE_CHANGED_CONNECTED,
-	PURPLE_MEDIA_STATE_CHANGED_REJECTED,	/** Local user rejected the stream. */
-	PURPLE_MEDIA_STATE_CHANGED_HANGUP,	/** Local user hung up the stream */
-	PURPLE_MEDIA_STATE_CHANGED_END,
-} PurpleMediaStateChangedType;
+	PURPLE_MEDIA_STATE_NEW = 0,
+	PURPLE_MEDIA_STATE_CONNECTED,
+	PURPLE_MEDIA_STATE_END,
+} PurpleMediaState;
+
+/** Media info types */
+typedef enum {
+	PURPLE_MEDIA_INFO_HANGUP = 0,
+	PURPLE_MEDIA_INFO_REJECT,
+	PURPLE_MEDIA_INFO_MUTE,
+	PURPLE_MEDIA_INFO_HOLD,
+} PurpleMediaInfoType;
 
 typedef enum {
 	PURPLE_MEDIA_CANDIDATE_TYPE_HOST,
@@ -180,6 +187,13 @@ GType purple_media_get_type(void);
  * @return The state-changed enum's GType
  */
 GType purple_media_state_changed_get_type(void);
+
+/**
+ * Gets the type of the info type enum
+ *
+ * @return The info type enum's GType
+ */
+GType purple_media_info_type_get_type(void);
 
 /**
  * Gets the type of the media candidate structure.
@@ -300,15 +314,6 @@ GList *purple_media_codec_list_copy(GList *codecs);
 void purple_media_codec_list_free(GList *codecs);
 
 /**
- * Combines all the separate session types into a single PurpleMediaSessionType.
- *
- * @param media The media session to retrieve session types from.
- *
- * @return Combined type.
- */
-PurpleMediaSessionType purple_media_get_overall_type(PurpleMedia *media);
-
-/**
  * Gets a list of session names.
  *
  * @param media The media session to retrieve session names from.
@@ -316,41 +321,6 @@ PurpleMediaSessionType purple_media_get_overall_type(PurpleMedia *media);
  * @return GList of session names.
  */
 GList *purple_media_get_session_names(PurpleMedia *media);
-
-/**
- * Gets an audio and video source and sink from the media session.
- *
- * Retrieves the first of each element in the media session.
- *
- * @param media The media session to retreive the sources and sinks from.
- * @param audio_src Set to the audio source.
- * @param audio_sink Set to the audio sink.
- * @param video_src Set to the video source.
- * @param video_sink Set to the video sink.
- */
-void purple_media_get_elements(PurpleMedia *media,
-			       GstElement **audio_src, GstElement **audio_sink,
-			       GstElement **video_src, GstElement **video_sink);
-
-/**
- * Sets the source on a session.
- *
- * @param media The media object the session is in.
- * @param sess_id The session id of the session to set the source on.
- * @param src The source to set the session source to.
- */
-void purple_media_set_src(PurpleMedia *media, const gchar *sess_id, GstElement *src);
-
-/**
- * Sets the sink on a stream.
- *
- * @param media The media object the session is in.
- * @param sess_id The session id the stream belongs to.
- * @param sess_id The participant the stream is associated with.
- * @param sink The source to set the session sink to.
- */
-void purple_media_set_sink(PurpleMedia *media, const gchar *sess_id,
-		const gchar *participant, GstElement *sink);
 
 /**
  * Gets the source from a session
@@ -361,17 +331,6 @@ void purple_media_set_sink(PurpleMedia *media, const gchar *sess_id,
  * @return The source retrieved.
  */
 GstElement *purple_media_get_src(PurpleMedia *media, const gchar *sess_id);
-
-/**
- * Gets the sink from a stream
- *
- * @param media The media object the session is in.
- * @param sess_id The session id the stream belongs to.
- * @param participant The participant the stream is associated with.
- *
- * @return The sink retrieved.
- */
-GstElement *purple_media_get_sink(PurpleMedia *media, const gchar *sess_id, const gchar *participant);
 
 /**
  * Gets the pipeline from the media session.
@@ -447,55 +406,6 @@ void purple_media_hangup(PurpleMedia *media);
  */
 void purple_media_end(PurpleMedia *media, const gchar *session_id,
 		const gchar *participant);
-
-/**
- * Enumerates a list of devices.
- *
- * @param plugin The name of the GStreamer plugin from which to enumerate devices.
- *
- * @return The list of enumerated devices.
- */
-GList *purple_media_get_devices(const gchar *plugin);
-
-/**
- * Gets the device the plugin is currently set to.
- *
- * @param element The plugin to retrieve the device from.
- *
- * @return The device retrieved.
- */
-gchar *purple_media_element_get_device(GstElement *element);
-
-/**
- * Creates a default audio source.
- *
- * @param sendbin Set to the newly created audio source.
- * @param sendlevel Set to the newly created level within the audio source.
- */
-void purple_media_audio_init_src(GstElement **sendbin,
-                                 GstElement **sendlevel);
-
-/**
- * Creates a default video source.
- *
- * @param sendbin Set to the newly created video source.
- */
-void purple_media_video_init_src(GstElement **sendbin);
-
-/**
- * Creates a default audio sink.
- *
- * @param recvbin Set to the newly created audio sink.
- * @param recvlevel Set to the newly created level within the audio sink.
- */
-void purple_media_audio_init_recv(GstElement **recvbin, GstElement **recvlevel);
-
-/**
- * Creates a default video sink.
- *
- * @param sendbin Set to the newly created video sink.
- */
-void purple_media_video_init_recv(GstElement **sendbin);
 
 /**
  * Adds a stream to a session.
@@ -679,12 +589,36 @@ void purple_media_set_input_volume(PurpleMedia *media, const gchar *session_id, 
 void purple_media_set_output_volume(PurpleMedia *media, const gchar *session_id,
 		const gchar *participant, double level);
 
+/**
+ * Sets a video output window for the given session/stream.
+ *
+ * @param media The media instance to set the output window on.
+ * @param session_id The session to set the output window on.
+ * @param participant Optionally, the participant to set the output window on.
+ * @param window_id The window id use for embedding the video in.
+ *
+ * @return An id to reference the output window.
+ */
 gulong purple_media_set_output_window(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant,
 		gulong window_id);
 
+/**
+ * Removes all output windows from a given media session.
+ *
+ * @param media The instance to remove all output windows from.
+ */
 void purple_media_remove_output_windows(PurpleMedia *media);
 
+/**
+ * Gets the tee from a given session/stream.
+ *
+ * @param media The instance to get the tee from.
+ * @param session_id The id of the session to get the tee from.
+ * @param participant Optionally, the participant of the stream to get the tee from.
+ *
+ * @return The GstTee element from the chosen session/stream.
+ */
 GstElement *purple_media_get_tee(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant);
 

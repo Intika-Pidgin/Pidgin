@@ -324,7 +324,7 @@ level_message_cb(GstBus *bus, GstMessage *message, PidginMedia *gtkmedia)
 	if (message->type != GST_MESSAGE_ELEMENT)
 		return TRUE;
 
-	if (gst_structure_has_name(
+	if (!gst_structure_has_name(
 			gst_message_get_structure(message), "level"))
 		return TRUE;
 
@@ -612,6 +612,10 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 		gtk_widget_show(gtkmedia->priv->recv_progress);
 	}
 	if (type & PURPLE_MEDIA_SEND_AUDIO) {
+		GstElement *media_src = purple_media_get_src(media, sid);
+		gtkmedia->priv->send_level = gst_bin_get_by_name(
+				GST_BIN(media_src), "sendlevel");
+
 		gtkmedia->priv->send_progress = gtk_progress_bar_new();
 		gtk_widget_set_size_request(gtkmedia->priv->send_progress, 320, 10);
 		gtk_box_pack_end(GTK_BOX(send_widget),
@@ -656,25 +660,49 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 }
 
 static void
-pidgin_media_state_changed_cb(PurpleMedia *media,
-		PurpleMediaStateChangedType type,
+pidgin_media_state_changed_cb(PurpleMedia *media, PurpleMediaState state,
 		gchar *sid, gchar *name, PidginMedia *gtkmedia)
 {
-	purple_debug_info("gtkmedia", "type: %d sid: %s name: %s\n",
-			type, sid, name);
+	purple_debug_info("gtkmedia", "state: %d sid: %s name: %s\n",
+			state, sid, name);
 	if (sid == NULL && name == NULL) {
-		if (type == PURPLE_MEDIA_STATE_CHANGED_END) {
+		if (state == PURPLE_MEDIA_STATE_END) {
 			pidgin_media_emit_message(gtkmedia,
 					_("The call has been terminated."));
 			gtk_widget_destroy(GTK_WIDGET(gtkmedia));
-			
-		} else if (type == PURPLE_MEDIA_STATE_CHANGED_REJECTED) {
-			pidgin_media_emit_message(gtkmedia,
-					_("You have rejected the call."));
 		}
-	} else if (type == PURPLE_MEDIA_STATE_CHANGED_NEW &&
+	} else if (state == PURPLE_MEDIA_STATE_NEW &&
 			sid != NULL && name != NULL) {
 		pidgin_media_ready_cb(media, gtkmedia, sid);
+	} else if (state == PURPLE_MEDIA_STATE_CONNECTED &&
+			purple_media_get_session_type(media, sid) &
+			PURPLE_MEDIA_RECV_AUDIO) {
+		GstElement *tee = purple_media_get_tee(media, sid, name);
+		GstIterator *iter = gst_element_iterate_src_pads(tee);
+		GstPad *sinkpad;
+		if (gst_iterator_next(iter, (gpointer)&sinkpad)
+				 == GST_ITERATOR_OK) {
+			GstPad *peer = gst_pad_get_peer(sinkpad);
+			if (peer != NULL) {
+				gtkmedia->priv->recv_level =
+						gst_bin_get_by_name(
+						GST_BIN(GST_OBJECT_PARENT(
+						peer)), "recvlevel");
+				gst_object_unref(peer);
+			}
+			gst_object_unref(sinkpad);
+		}
+		gst_iterator_free(iter);
+	}
+}
+
+static void
+pidgin_media_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
+		gchar *sid, gchar *name, PidginMedia *gtkmedia)
+{
+	if (type == PURPLE_MEDIA_INFO_REJECT) {
+		pidgin_media_emit_message(gtkmedia,
+				_("You have rejected the call."));
 	}
 }
 
@@ -707,6 +735,8 @@ pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 				G_CALLBACK(pidgin_media_accepted_cb), media);
 			g_signal_connect(G_OBJECT(media->priv->media), "state-changed",
 				G_CALLBACK(pidgin_media_state_changed_cb), media);
+			g_signal_connect(G_OBJECT(media->priv->media), "stream-info",
+				G_CALLBACK(pidgin_media_stream_info_cb), media);
 			break;
 		}
 		case PROP_SCREENNAME:
@@ -806,33 +836,105 @@ pidgin_media_new_cb(PurpleMediaManager *manager, PurpleMedia *media,
 static GstElement *
 create_default_video_src(void)
 {
-	GstElement *ret = NULL;
-	purple_media_video_init_src(&ret);
-	return ret;
+	GstElement *sendbin, *src, *videoscale, *capsfilter;
+	GstPad *pad;
+	GstPad *ghost;
+	GstCaps *caps;
+	const gchar *video_plugin = purple_prefs_get_string(
+			"/purple/media/video/plugin");
+	const gchar *video_device = purple_prefs_get_string(
+			"/purple/media/video/device");
+
+	sendbin = gst_bin_new("purplesendvideobin");
+	src = gst_element_factory_make(video_plugin, "purplevideosource");
+	videoscale = gst_element_factory_make("videoscale", NULL);
+	capsfilter = gst_element_factory_make("capsfilter", NULL);
+
+	/* It was recommended to set the size < 352x288 and framerate < 20 */
+	caps = gst_caps_from_string("video/x-raw-yuv , width=[250,350] , "
+			"height=[200,275] , framerate=[10/1,20/1]");
+	g_object_set(G_OBJECT(capsfilter), "caps", caps, NULL);
+
+	gst_bin_add_many(GST_BIN(sendbin), src,
+			videoscale, capsfilter, NULL);
+	gst_element_link_many(src, videoscale, capsfilter, NULL);
+
+	if (!strcmp(video_plugin, "videotestsrc")) {
+		/* Set is-live to true to throttle videotestsrc */
+		g_object_set (G_OBJECT(src), "is-live", TRUE, NULL);
+	}
+
+	pad = gst_element_get_static_pad(capsfilter, "src");
+	ghost = gst_ghost_pad_new("ghostsrc", pad);
+	gst_object_unref(pad);
+	gst_element_add_pad(sendbin, ghost);
+
+	if (video_device != NULL && strcmp(video_device, ""))
+		g_object_set(G_OBJECT(src), "device", video_device, NULL);
+
+	return sendbin;
 }
 
 static GstElement *
 create_default_video_sink(void)
 {
-	GstElement *ret = NULL;
-	purple_media_video_init_recv(&ret);
-	return ret;
+	return gst_element_factory_make("autovideosink", NULL);
 }
 
 static GstElement *
 create_default_audio_src(void)
 {
-	GstElement *ret = NULL, *level = NULL;
-	purple_media_audio_init_src(&ret, &level);
-	return ret;
+	GstElement *bin, *src, *volume, *level;
+	GstPad *pad, *ghost;
+	const gchar *audio_device = purple_prefs_get_string(
+			"/purple/media/audio/device");
+	double input_volume = purple_prefs_get_int(
+			"/purple/media/audio/volume/input")/10.0;
+
+	bin = gst_bin_new("purplesendaudiobin");
+	src = gst_element_factory_make("alsasrc", "asrc");
+	volume = gst_element_factory_make("volume", "purpleaudioinputvolume");
+	g_object_set(volume, "volume", input_volume, NULL);
+	level = gst_element_factory_make("level", "sendlevel");
+	gst_bin_add_many(GST_BIN(bin), src, volume, level, NULL);
+	gst_element_link(src, volume);
+	gst_element_link(volume, level);
+	pad = gst_element_get_pad(level, "src");
+	ghost = gst_ghost_pad_new("ghostsrc", pad);
+	gst_element_add_pad(bin, ghost);
+	g_object_set(G_OBJECT(level), "message", TRUE, NULL);
+
+	if (audio_device != NULL && strcmp(audio_device, ""))
+		g_object_set(G_OBJECT(src), "device", audio_device, NULL);
+
+	return bin;
 }
 
 static GstElement *
 create_default_audio_sink(void)
 {
-	GstElement *ret = NULL, *level = NULL;
-	purple_media_audio_init_recv(&ret, &level);
-	return ret;
+	GstElement *bin, *sink, *volume, *level, *queue;
+	GstPad *pad, *ghost;
+	double output_volume = purple_prefs_get_int(
+			"/purple/media/audio/volume/output")/10.0;
+
+	bin = gst_bin_new("pidginrecvaudiobin");
+	sink = gst_element_factory_make("alsasink", "asink");
+	g_object_set(G_OBJECT(sink), "async", FALSE, "sync", FALSE, NULL);
+	volume = gst_element_factory_make("volume", "purpleaudiooutputvolume");
+	g_object_set(volume, "volume", output_volume, NULL);
+	level = gst_element_factory_make("level", "recvlevel");
+	queue = gst_element_factory_make("queue", NULL);
+	gst_bin_add_many(GST_BIN(bin), sink, volume, level, queue, NULL);
+	gst_element_link(level, sink);
+	gst_element_link(volume, level);
+	gst_element_link(queue, volume);
+	pad = gst_element_get_pad(queue, "sink");
+	ghost = gst_ghost_pad_new("ghostsink", pad);
+	gst_element_add_pad(bin, ghost);
+	g_object_set(G_OBJECT(level), "message", TRUE, NULL);
+
+	return bin;
 }
 
 static PurpleMediaElementInfo default_video_src =
