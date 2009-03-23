@@ -159,25 +159,9 @@ finch_media_emit_message(FinchMedia *gntmedia, const char *msg)
 }
 
 static void
-finch_media_ready_cb(PurpleMedia *media, FinchMedia *gntmedia)
-{
-	GstElement *sendbin, *sendlevel;
-
-	GList *sessions = purple_media_get_session_names(media);
-
-	purple_media_audio_init_src(&sendbin, &sendlevel);
-
-	for (; sessions; sessions = sessions->next) {
-		purple_media_set_src(media, sessions->data, sendbin);
-	}
-	g_list_free(sessions);
-}
-
-static void
 finch_media_accept_cb(PurpleMedia *media, FinchMedia *gntmedia)
 {
 	GntWidget *parent;
-	GstElement *sendbin = NULL;
 
 	finch_media_emit_message(gntmedia, _("Call in progress."));
 
@@ -200,9 +184,6 @@ finch_media_accept_cb(PurpleMedia *media, FinchMedia *gntmedia)
 		parent = parent->parent;
 	gnt_box_readjust(GNT_BOX(parent));
 	gnt_widget_draw(parent);
-
-	purple_media_get_elements(media, &sendbin, NULL, NULL, NULL);
-	gst_element_set_state(GST_ELEMENT(sendbin), GST_STATE_PLAYING);
 }
 
 static void
@@ -226,14 +207,13 @@ finch_media_wait_cb(PurpleMedia *media, FinchMedia *gntmedia)
 }
 
 static void
-finch_media_state_changed_cb(PurpleMedia *media,
-		PurpleMediaStateChangedType type,
+finch_media_state_changed_cb(PurpleMedia *media, PurpleMediaState state,
 		gchar *sid, gchar *name, FinchMedia *gntmedia)
 {
-	purple_debug_info("gntmedia", "type: %d sid: %s name: %s\n",
-			type, sid, name);
+	purple_debug_info("gntmedia", "state: %d sid: %s name: %s\n",
+			state, sid, name);
 	if (sid == NULL && name == NULL) {
-		if (type == PURPLE_MEDIA_STATE_CHANGED_END) {
+		if (state == PURPLE_MEDIA_STATE_END) {
 			finch_media_emit_message(gntmedia,
 					_("The call has been terminated."));
 			finch_conversation_set_info_widget(
@@ -244,15 +224,19 @@ finch_media_state_changed_cb(PurpleMedia *media,
 			 * to free the FinchMedia widget.
 			 */
 			g_object_unref(gntmedia);
-		} else if (type == PURPLE_MEDIA_STATE_CHANGED_REJECTED) {
-			finch_media_emit_message(gntmedia,
-					_("You have rejected the call."));
 		}
-	} else if (type == PURPLE_MEDIA_STATE_CHANGED_NEW
-			&& sid != NULL && name != NULL) {
-		finch_media_ready_cb(media, gntmedia);
-	} else if (type == PURPLE_MEDIA_STATE_CHANGED_CONNECTED) {
+	} else if (state == PURPLE_MEDIA_STATE_CONNECTED) {
 		finch_media_accept_cb(media, gntmedia);
+	}
+}
+
+static void
+finch_media_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
+		gchar *sid, gchar *name, FinchMedia *gntmedia)
+{
+	if (type == PURPLE_MEDIA_INFO_REJECT) {
+		finch_media_emit_message(gntmedia,
+				_("You have rejected the call."));
 	}
 }
 
@@ -285,6 +269,8 @@ finch_media_set_property (GObject *object, guint prop_id, const GValue *value, G
 			}
 			g_signal_connect(G_OBJECT(media->priv->media), "state-changed",
 				G_CALLBACK(finch_media_state_changed_cb), media);
+			g_signal_connect(G_OBJECT(media->priv->media), "stream-info",
+				G_CALLBACK(finch_media_stream_info_cb), media);
 			break;
 		}
 		default:
@@ -362,6 +348,75 @@ call_cmd_cb(PurpleConversation *conv, const char *cmd, char **args,
 	return PURPLE_CMD_STATUS_OK;
 }
 
+static GstElement *
+create_default_audio_src(void)
+{
+	GstElement *bin, *src, *volume;
+	GstPad *pad, *ghost;
+	const gchar *audio_device = purple_prefs_get_string(
+			"/purple/media/audio/device");
+	double input_volume = purple_prefs_get_int(
+			"/purple/media/audio/volume/input")/10.0;
+
+	bin = gst_bin_new("purplesendaudiobin");
+	src = gst_element_factory_make("alsasrc", "asrc");
+	volume = gst_element_factory_make("volume", "purpleaudioinputvolume");
+	g_object_set(volume, "volume", input_volume, NULL);
+	gst_bin_add_many(GST_BIN(bin), src, volume, NULL);
+	gst_element_link(src, volume);
+	pad = gst_element_get_pad(volume, "src");
+	ghost = gst_ghost_pad_new("ghostsrc", pad);
+	gst_element_add_pad(bin, ghost);
+
+	if (audio_device != NULL && strcmp(audio_device, ""))
+		g_object_set(G_OBJECT(src), "device", audio_device, NULL);
+
+	return bin;
+}
+
+static GstElement *
+create_default_audio_sink(void)
+{
+	GstElement *bin, *sink, *volume, *queue;
+	GstPad *pad, *ghost;
+	double output_volume = purple_prefs_get_int(
+			"/purple/media/audio/volume/output")/10.0;
+
+	bin = gst_bin_new("pidginrecvaudiobin");
+	sink = gst_element_factory_make("alsasink", "asink");
+	g_object_set(G_OBJECT(sink), "async", FALSE, "sync", FALSE, NULL);
+	volume = gst_element_factory_make("volume", "purpleaudiooutputvolume");
+	g_object_set(volume, "volume", output_volume, NULL);
+	queue = gst_element_factory_make("queue", NULL);
+	gst_bin_add_many(GST_BIN(bin), sink, volume, queue, NULL);
+	gst_element_link(volume, sink);
+	gst_element_link(queue, volume);
+	pad = gst_element_get_pad(queue, "sink");
+	ghost = gst_ghost_pad_new("ghostsink", pad);
+	gst_element_add_pad(bin, ghost);
+
+	return bin;
+}
+
+static PurpleMediaElementInfo default_audio_src =
+{
+	"finchdefaultaudiosrc",		/* id */
+	PURPLE_MEDIA_ELEMENT_AUDIO	/* type */
+			| PURPLE_MEDIA_ELEMENT_SRC
+			| PURPLE_MEDIA_ELEMENT_ONE_SRC
+			| PURPLE_MEDIA_ELEMENT_UNIQUE,
+	create_default_audio_src,	/* create */
+};
+
+static PurpleMediaElementInfo default_audio_sink =
+{
+	"finchdefaultaudiosink",	/* id */
+	PURPLE_MEDIA_ELEMENT_AUDIO	/* type */
+			| PURPLE_MEDIA_ELEMENT_SINK
+			| PURPLE_MEDIA_ELEMENT_ONE_SINK,
+	create_default_audio_sink,	/* create */
+};
+
 void finch_media_manager_init(void)
 {
 	PurpleMediaManager *manager = purple_media_manager_get();
@@ -369,6 +424,10 @@ void finch_media_manager_init(void)
 	purple_cmd_register("call", "", PURPLE_CMD_P_DEFAULT,
 			PURPLE_CMD_FLAG_IM, NULL,
 			call_cmd_cb, _("call: Make an audio call."), NULL);
+
+	purple_debug_info("gntmedia", "Registering media element types\n");
+	purple_media_manager_set_active_element(manager, &default_audio_src);
+	purple_media_manager_set_active_element(manager, &default_audio_sink);
 }
 
 void finch_media_manager_uninit(void)
