@@ -77,6 +77,7 @@ struct _GtkIMHtmlToolbar {
 	char *sml;
 	GtkWidget *strikethrough;
 	GtkWidget *insert_hr;
+	GtkWidget *call;
 	
 	PurpleConversation *active_conv;
 };
