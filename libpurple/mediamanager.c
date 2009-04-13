@@ -26,12 +26,15 @@
 
 #include "internal.h"
 
-#include "connection.h"
+#include "account.h"
 #include "debug.h"
-#include "marshallers.h"
 #include "media.h"
-#include "media-gst.h"
 #include "mediamanager.h"
+
+#ifdef USE_GSTREAMER
+#include "marshallers.h"
+#include "media-gst.h"
+#endif
 
 #ifdef USE_VV
 
@@ -218,6 +221,7 @@ pipeline_bus_call(GstBus *bus, GstMessage *msg, PurpleMediaManager *manager)
 }
 #endif
 
+#ifdef USE_GSTREAMER
 GstElement *
 purple_media_manager_get_pipeline(PurpleMediaManager *manager)
 {
@@ -246,10 +250,11 @@ purple_media_manager_get_pipeline(PurpleMediaManager *manager)
 	return NULL;
 #endif
 }
+#endif /* USE_GSTREAMER */
 
 PurpleMedia *
 purple_media_manager_create_media(PurpleMediaManager *manager,
-				  PurpleConnection *gc,
+				  PurpleAccount *account,
 				  const char *conference_type,
 				  const char *remote_user,
 				  gboolean initiator)
@@ -261,8 +266,7 @@ purple_media_manager_create_media(PurpleMediaManager *manager,
 	gboolean signal_ret;
 
 	if (conference == NULL) {
-		purple_conv_present_error(remote_user,
-					  purple_connection_get_account(gc),
+		purple_conv_present_error(remote_user, account,
 					  _("Error creating conference."));
 		purple_debug_error("media", "Conference == NULL\n");
 		return NULL;
@@ -270,7 +274,7 @@ purple_media_manager_create_media(PurpleMediaManager *manager,
 
 	media = PURPLE_MEDIA(g_object_new(purple_media_get_type(),
 			     "manager", manager,
-			     "connection", gc,
+			     "account", account,
 			     "conference", conference,
 			     "initiator", initiator,
 			     NULL));
@@ -278,8 +282,7 @@ purple_media_manager_create_media(PurpleMediaManager *manager,
 	ret = gst_element_set_state(GST_ELEMENT(conference), GST_STATE_PLAYING);
 
 	if (ret == GST_STATE_CHANGE_FAILURE) {
-		purple_conv_present_error(remote_user,
-					  purple_connection_get_account(gc),
+		purple_conv_present_error(remote_user, account,
 					  _("Error creating conference."));
 		purple_debug_error("media", "Failed to start conference.\n");
 		g_object_unref(media);
@@ -287,7 +290,7 @@ purple_media_manager_create_media(PurpleMediaManager *manager,
 	}
 
 	g_signal_emit(manager, purple_media_manager_signals[INIT_MEDIA], 0,
-			media, gc, remote_user, &signal_ret);
+			media, account, remote_user, &signal_ret);
 
 	if (signal_ret == FALSE) {
 		g_object_unref(media);
@@ -312,8 +315,8 @@ purple_media_manager_get_media(PurpleMediaManager *manager)
 }
 
 GList *
-purple_media_manager_get_media_by_connection(PurpleMediaManager *manager,
-		PurpleConnection *pc)
+purple_media_manager_get_media_by_account(PurpleMediaManager *manager,
+		PurpleAccount *account)
 {
 #ifdef USE_VV
 	GList *media = NULL;
@@ -323,7 +326,7 @@ purple_media_manager_get_media_by_connection(PurpleMediaManager *manager,
 
 	iter = manager->priv->medias;
 	for (; iter; iter = g_list_next(iter)) {
-		if (purple_media_get_connection(iter->data) == pc) {
+		if (purple_media_get_account(iter->data) == account) {
 			media = g_list_prepend(media, iter->data);
 		}
 	}
@@ -368,6 +371,7 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 }
 #endif
 
+#ifdef USE_GSTREAMER
 GstElement *
 purple_media_manager_get_element(PurpleMediaManager *manager,
 		PurpleMediaSessionType type, PurpleMedia *media,
@@ -497,7 +501,6 @@ purple_media_manager_register_element(PurpleMediaManager *manager,
 		g_object_unref(info2);
 		return FALSE;
 	}
-	g_object_unref(info2);
 
 	manager->priv->elements =
 			g_list_prepend(manager->priv->elements, info);
@@ -560,7 +563,8 @@ purple_media_manager_set_active_element(PurpleMediaManager *manager,
 
 	if (info2 == NULL)
 		purple_media_manager_register_element(manager, info);
-	g_object_unref(info2);
+	else
+		g_object_unref(info2);
 
 	type = purple_media_element_info_get_element_type(info);
 
@@ -613,6 +617,7 @@ purple_media_manager_get_active_element(PurpleMediaManager *manager,
 
 	return NULL;
 }
+#endif /* USE_GSTREAMER */
 
 #ifdef USE_VV
 static void
@@ -846,6 +851,7 @@ purple_media_manager_get_ui_caps(PurpleMediaManager *manager)
 #endif
 }
 
+#ifdef USE_GSTREAMER
 
 /*
  * PurpleMediaElementType
@@ -1116,4 +1122,6 @@ purple_media_element_info_call_create(PurpleMediaElementInfo *info,
 #endif
 	return NULL;
 }
+
+#endif /* USE_GSTREAMER */
 

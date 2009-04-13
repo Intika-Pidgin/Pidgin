@@ -960,7 +960,7 @@ static parse_tree *find_node(parse_tree* ptree,gchar* key)
 	tc = tree_child(ptree,0)->contents;
 
 	/* g_strcasecmp() is deprecated.  What is the encoding here??? */
-	if (ptree->num_children > 0  &&	tc && !g_strcasecmp(tc, key)) {
+	if (ptree->num_children > 0  &&	tc && !g_ascii_strcasecmp(tc, key)) {
 		return ptree;
 	} else {
 		parse_tree *result = &null_parse_tree;
@@ -1880,7 +1880,7 @@ static void zephyr_login(PurpleAccount * account)
 	} else if (use_tzc(zephyr)) {
 		zephyr->nottimer = purple_timeout_add(100, check_notify_tzc, gc);
 	} 
-	zephyr->loctimer = purple_timeout_add(20000, check_loc, gc); 
+	zephyr->loctimer = purple_timeout_add_seconds(20, check_loc, gc); 
 
 }
 
