@@ -29,16 +29,19 @@
 #include "internal.h"
 
 #include "account.h"
-#include "marshallers.h"
 #include "media.h"
 #include "mediamanager.h"
 #include "network.h"
 
 #include "debug.h"
 
+#ifdef USE_GSTREAMER
+#include "marshallers.h"
+#include "media-gst.h"
+#endif
+
 #ifdef USE_VV
 
-#include "media-gst.h"
 #include <gst/farsight/fs-conference-iface.h>
 
 /** @copydoc _PurpleMediaSession */
