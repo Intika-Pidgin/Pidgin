@@ -28,14 +28,17 @@
 
 #include "internal.h"
 
-#include "connection.h"
-#include "marshallers.h"
+#include "account.h"
 #include "media.h"
-#include "media-gst.h"
 #include "mediamanager.h"
 #include "network.h"
 
 #include "debug.h"
+
+#ifdef USE_GSTREAMER
+#include "marshallers.h"
+#include "media-gst.h"
+#endif
 
 #ifdef USE_VV
 
@@ -109,7 +112,7 @@ struct _PurpleMediaPrivate
 {
 #ifdef USE_VV
 	PurpleMediaManager *manager;
-	PurpleConnection *pc;
+	PurpleAccount *account;
 	FsConference *conference;
 	gboolean initiator;
 	gpointer prpl_data;
@@ -166,7 +169,7 @@ static guint purple_media_signals[LAST_SIGNAL] = {0};
 enum {
 	PROP_0,
 	PROP_MANAGER,
-	PROP_CONNECTION,
+	PROP_ACCOUNT,
 	PROP_CONFERENCE,
 	PROP_INITIATOR,
 	PROP_PRPL_DATA,
@@ -298,10 +301,10 @@ purple_media_class_init (PurpleMediaClass *klass)
 			PURPLE_TYPE_MEDIA_MANAGER,
 			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
 
-	g_object_class_install_property(gobject_class, PROP_CONNECTION,
-			g_param_spec_pointer("connection",
-			"PurpleConnection",
-			"The connection this media session is on.",
+	g_object_class_install_property(gobject_class, PROP_ACCOUNT,
+			g_param_spec_pointer("account",
+			"PurpleAccount",
+			"The account this media session is on.",
 			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
 
 	g_object_class_install_property(gobject_class, PROP_CONFERENCE,
@@ -528,8 +531,8 @@ purple_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 
 			purple_media_setup_pipeline(media);
 			break;
-		case PROP_CONNECTION:
-			media->priv->pc = g_value_get_pointer(value);
+		case PROP_ACCOUNT:
+			media->priv->account = g_value_get_pointer(value);
 			break;
 		case PROP_CONFERENCE: {
 			if (media->priv->conference)
@@ -564,8 +567,8 @@ purple_media_get_property (GObject *object, guint prop_id, GValue *value, GParam
 		case PROP_MANAGER:
 			g_value_set_object(value, media->priv->manager);
 			break;
-		case PROP_CONNECTION:
-			g_value_set_pointer(value, media->priv->pc);
+		case PROP_ACCOUNT:
+			g_value_set_pointer(value, media->priv->account);
 			break;
 		case PROP_CONFERENCE:
 			g_value_set_object(value, media->priv->conference);
@@ -1908,6 +1911,7 @@ purple_media_set_src(PurpleMedia *media, const gchar *sess_id, GstElement *src)
 }
 #endif
 
+#ifdef USE_GSTREAMER
 GstElement *
 purple_media_get_src(PurpleMedia *media, const gchar *sess_id)
 {
@@ -1920,6 +1924,7 @@ purple_media_get_src(PurpleMedia *media, const gchar *sess_id)
 	return NULL;
 #endif
 }
+#endif /* USE_GSTREAMER */
 
 #ifdef USE_VV
 static PurpleMediaSession *
@@ -2055,14 +2060,14 @@ media_bus_call(GstBus *bus, GstMessage *msg, PurpleMedia *media)
 }
 #endif
 
-PurpleConnection *
-purple_media_get_connection(PurpleMedia *media)
+PurpleAccount *
+purple_media_get_account(PurpleMedia *media)
 {
 #ifdef USE_VV
-	PurpleConnection *pc;
+	PurpleAccount *account;
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), NULL);
-	g_object_get(G_OBJECT(media), "connection", &pc, NULL);
-	return pc;
+	g_object_get(G_OBJECT(media), "account", &account, NULL);
+	return account;
 #else
 	return NULL;
 #endif
@@ -3034,6 +3039,7 @@ purple_media_remove_output_windows(PurpleMedia *media)
 #endif
 }
 
+#ifdef USE_GSTREAMER
 GstElement *
 purple_media_get_tee(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
@@ -3056,4 +3062,5 @@ purple_media_get_tee(PurpleMedia *media,
 	return NULL;
 #endif
 }
+#endif /* USE_GSTREAMER */
 
