@@ -709,8 +709,6 @@ jabber_login(PurpleAccount *account)
 	js->fd = -1;
 	js->iq_callbacks = g_hash_table_new_full(g_str_hash, g_str_equal,
 			g_free, g_free);
-	js->disco_callbacks = g_hash_table_new_full(g_str_hash, g_str_equal,
-			g_free, g_free);
 	js->buddies = g_hash_table_new_full(g_str_hash, g_str_equal,
 			g_free, (GDestroyNotify)jabber_buddy_free);
 	js->chats = g_hash_table_new_full(g_str_hash, g_str_equal,
@@ -1059,22 +1057,24 @@ void jabber_register_parse(JabberStream *js, const char *from, JabberIqType type
 	group = purple_request_field_group_new(NULL);
 	purple_request_fields_add_group(fields, group);
 
-	if(js->registration)
-		field = purple_request_field_string_new("username", _("Username"), js->user->node, FALSE);
-	else
-		field = purple_request_field_string_new("username", _("Username"), NULL, FALSE);
+	if(xmlnode_get_child(query, "username")) {
+		if(js->registration)
+			field = purple_request_field_string_new("username", _("Username"), js->user->node, FALSE);
+		else
+			field = purple_request_field_string_new("username", _("Username"), NULL, FALSE);
 
-	purple_request_field_group_add_field(group, field);
+		purple_request_field_group_add_field(group, field);
+	}
+	if(xmlnode_get_child(query, "password")) {
+		if(js->registration)
+			field = purple_request_field_string_new("password", _("Password"),
+										purple_connection_get_password(js->gc), FALSE);
+		else
+			field = purple_request_field_string_new("password", _("Password"), NULL, FALSE);
 
-	if(js->registration)
-		field = purple_request_field_string_new("password", _("Password"),
-									purple_connection_get_password(js->gc), FALSE);
-	else
-		field = purple_request_field_string_new("password", _("Password"), NULL, FALSE);
-
-	purple_request_field_string_set_masked(field, TRUE);
-	purple_request_field_group_add_field(group, field);
-
+		purple_request_field_string_set_masked(field, TRUE);
+		purple_request_field_group_add_field(group, field);
+	}
 	if(xmlnode_get_child(query, "name")) {
 		if(js->registration)
 			field = purple_request_field_string_new("name", _("Name"),
@@ -1198,8 +1198,6 @@ void jabber_register_account(PurpleAccount *account)
 	js->gc = gc;
 	js->registration = TRUE;
 	js->iq_callbacks = g_hash_table_new_full(g_str_hash, g_str_equal,
-			g_free, g_free);
-	js->disco_callbacks = g_hash_table_new_full(g_str_hash, g_str_equal,
 			g_free, g_free);
 	js->user = jabber_id_new(purple_account_get_username(account));
 	js->next_id = g_random_int();
@@ -1355,8 +1353,6 @@ void jabber_close(PurpleConnection *gc)
 
 	if(js->iq_callbacks)
 		g_hash_table_destroy(js->iq_callbacks);
-	if(js->disco_callbacks)
-		g_hash_table_destroy(js->disco_callbacks);
 	if(js->buddies)
 		g_hash_table_destroy(js->buddies);
 	if(js->chats)
@@ -1422,6 +1418,7 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->old_uri);
 	g_free(js->old_track);
 	g_free(js->expected_rspauth);
+	g_free(js->last_disco_server);
 
 	if (js->keepalive_timeout != -1)
 		purple_timeout_remove(js->keepalive_timeout);
