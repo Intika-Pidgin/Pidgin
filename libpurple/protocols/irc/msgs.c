@@ -128,7 +128,7 @@ static void irc_connected(struct irc_conn *irc, const char *nick)
 
 	irc_blist_timeout(irc);
 	if (!irc->timer)
-		irc->timer = purple_timeout_add(45000, (GSourceFunc)irc_blist_timeout, (gpointer)irc);
+		irc->timer = purple_timeout_add_seconds(45, (GSourceFunc)irc_blist_timeout, (gpointer)irc);
 }
 
 void irc_msg_default(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -1004,9 +1004,22 @@ void irc_msg_badnick(struct irc_conn *irc, const char *name, const char *from, c
 void irc_msg_nickused(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
 	char *newnick, *buf, *end;
+	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
 	if (!args || !args[1])
 		return;
+
+	if (gc && purple_connection_get_state(gc) == PURPLE_CONNECTED) {
+		/* We only want to do the following dance if the connection
+		   has not been successfully completed.  If it has, just
+		   notify the user that their /nick command didn't go. */
+		buf = g_strdup_printf(_("The nickname \"%s\" is already being used."),
+				      irc->reqnick);
+		purple_notify_error(gc, _("Nickname in use"),
+				    _("Nickname in use"), buf);
+		g_free(buf);
+		g_free(irc->reqnick);
+	}
 
 	if (strlen(args[1]) < strlen(irc->reqnick) || irc->nickused)
 		newnick = g_strdup(args[1]);

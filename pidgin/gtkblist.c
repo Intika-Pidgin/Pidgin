@@ -338,6 +338,30 @@ static void gtk_blist_menu_im_cb(GtkWidget *w, PurpleBuddy *b)
 	                            purple_buddy_get_name(b));
 }
 
+#ifdef USE_VV
+static void gtk_blist_menu_audio_call_cb(GtkWidget *w, PurpleBuddy *b)
+{
+	purple_prpl_initiate_media(purple_buddy_get_account(b),
+		purple_buddy_get_name(b), PURPLE_MEDIA_AUDIO);
+}
+
+static void gtk_blist_menu_video_call_cb(GtkWidget *w, PurpleBuddy *b)
+{
+	/* if the buddy supports both audio and video, start a combined call,
+	 otherwise start a pure video session */
+	if (purple_prpl_get_media_caps(purple_buddy_get_account(b),
+			purple_buddy_get_name(b)) &
+			PURPLE_MEDIA_CAPS_AUDIO_VIDEO) {
+		purple_prpl_initiate_media(purple_buddy_get_account(b),
+			purple_buddy_get_name(b), PURPLE_MEDIA_AUDIO | PURPLE_MEDIA_VIDEO);
+	} else {
+		purple_prpl_initiate_media(purple_buddy_get_account(b),
+			purple_buddy_get_name(b), PURPLE_MEDIA_VIDEO);
+	}
+}
+
+#endif
+
 static void gtk_blist_menu_send_file_cb(GtkWidget *w, PurpleBuddy *b)
 {
 	PurpleAccount *account = purple_buddy_get_account(b);
@@ -1476,6 +1500,30 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 	}
 	pidgin_new_item_from_stock(menu, _("I_M"), PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW,
 			G_CALLBACK(gtk_blist_menu_im_cb), buddy, 0, 0, NULL);
+	
+#ifdef USE_VV
+	if (prpl_info && prpl_info->get_media_caps) {
+		PurpleAccount *account = purple_buddy_get_account(buddy);
+		const gchar *who = purple_buddy_get_name(buddy);
+		PurpleMediaCaps caps = purple_prpl_get_media_caps(account, who);
+		if (caps & PURPLE_MEDIA_CAPS_AUDIO) {
+			pidgin_new_item_from_stock(menu, _("_Audio Call"),
+				PIDGIN_STOCK_TOOLBAR_AUDIO_CALL,
+				G_CALLBACK(gtk_blist_menu_audio_call_cb), buddy, 0, 0, NULL);
+		}
+		if (caps & PURPLE_MEDIA_CAPS_AUDIO_VIDEO) {
+			pidgin_new_item_from_stock(menu, _("Audio/_Video Call"),
+				PIDGIN_STOCK_TOOLBAR_VIDEO_CALL,
+				G_CALLBACK(gtk_blist_menu_video_call_cb), buddy, 0, 0, NULL);
+		} else if (caps & PURPLE_MEDIA_CAPS_VIDEO) {
+			pidgin_new_item_from_stock(menu, _("_Video Call"),
+				PIDGIN_STOCK_TOOLBAR_VIDEO_CALL,
+				G_CALLBACK(gtk_blist_menu_video_call_cb), buddy, 0, 0, NULL);
+		}
+	}
+	
+#endif
+	
 	if (prpl_info && prpl_info->send_file) {
 		if (!prpl_info->can_receive_file ||
 			prpl_info->can_receive_file(buddy->account->gc, buddy->name))
@@ -5457,6 +5505,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	GtkWidget *sep;
 	GtkWidget *label;
 	char *pretty, *tmp;
+	const char *theme_name;
 	GtkAccelGroup *accel_group;
 	GtkTreeSelection *selection;
 	GtkTargetEntry dte[] = {{"PURPLE_BLIST_NODE", GTK_TARGET_SAME_APP, DRAG_ROW},
@@ -5475,7 +5524,11 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	gtkblist = PIDGIN_BLIST(list);
 	priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
 
-	priv->current_theme = PIDGIN_BLIST_THEME(purple_theme_manager_find_theme(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/blist/theme"), "blist"));
+	theme_name = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/blist/theme");
+	if (theme_name && *theme_name)
+		priv->current_theme = PIDGIN_BLIST_THEME(purple_theme_manager_find_theme(theme_name, "blist"));
+	else
+		priv->current_theme = NULL;
 
 	gtkblist->empty_avatar = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, 32, 32);
 	gdk_pixbuf_fill(gtkblist->empty_avatar, 0x00000000);
@@ -5742,7 +5795,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	purple_blist_set_visible(purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/list_visible"));
 
 	/* start the refresh timer */
-	gtkblist->refresh_timer = g_timeout_add(30000, (GSourceFunc)pidgin_blist_refresh_timer, list);
+	gtkblist->refresh_timer = purple_timeout_add_seconds(30, (GSourceFunc)pidgin_blist_refresh_timer, list);
 
 	handle = pidgin_blist_get_handle();
 
@@ -5863,7 +5916,7 @@ pidgin_blist_update_refresh_timeout()
 	blist = purple_get_blist();
 	gtkblist = PIDGIN_BLIST(purple_get_blist());
 
-	gtkblist->refresh_timer = g_timeout_add(30000,(GSourceFunc)pidgin_blist_refresh_timer, blist);
+	gtkblist->refresh_timer = purple_timeout_add_seconds(30,(GSourceFunc)pidgin_blist_refresh_timer, blist);
 }
 
 static gboolean get_iter_from_node(PurpleBlistNode *node, GtkTreeIter *iter) {
@@ -6144,7 +6197,7 @@ static char *pidgin_get_group_title(PurpleBlistNode *gnode, gboolean expanded)
 	PurpleBlistNode *selected_node = NULL;
 	GtkTreeIter iter;
 	FontColorPair *pair;
-	gchar *text_color, *text_font;
+	gchar const *text_color, *text_font;
 	PidginBlistTheme *theme;
 
 	group = (PurpleGroup*)gnode;
@@ -6577,14 +6630,14 @@ static void pidgin_blist_destroy(PurpleBuddyList *list)
 	purple_signals_disconnect_by_handle(gtkblist);
 
 	if (gtkblist->headline_close)
-		gdk_pixbuf_unref(gtkblist->headline_close);
+		g_object_unref(G_OBJECT(gtkblist->headline_close));
 
 	gtk_widget_destroy(gtkblist->window);
 
 	pidgin_blist_tooltip_destroy();
 
 	if (gtkblist->refresh_timer)
-		g_source_remove(gtkblist->refresh_timer);
+		purple_timeout_remove(gtkblist->refresh_timer);
 	if (gtkblist->timeout)
 		g_source_remove(gtkblist->timeout);
 	if (gtkblist->drag_timeout)
@@ -7399,7 +7452,7 @@ static void buddy_signonoff_cb(PurpleBuddy *buddy)
 
 	if(gtknode->recent_signonoff_timer > 0)
 		purple_timeout_remove(gtknode->recent_signonoff_timer);
-	gtknode->recent_signonoff_timer = purple_timeout_add(10000,
+	gtknode->recent_signonoff_timer = purple_timeout_add_seconds(10,
 			(GSourceFunc)buddy_signonoff_timeout_cb, buddy);
 }
 

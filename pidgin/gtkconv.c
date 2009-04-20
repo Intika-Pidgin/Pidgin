@@ -1201,6 +1201,23 @@ menu_find_cb(gpointer data, guint action, GtkWidget *widget)
 	gtk_widget_grab_focus(s->entry);
 }
 
+#ifdef USE_VV
+static void 
+menu_initiate_media_call_cb(gpointer data, guint action, GtkWidget *widget)
+{
+	PidginWindow *win = (PidginWindow *)data;
+	PurpleConversation *conv = pidgin_conv_window_get_active_conversation(win);
+	PurpleAccount *account = purple_conversation_get_account(conv);
+
+	purple_prpl_initiate_media(account,
+			purple_conversation_get_name(conv),
+			action == 0 ? PURPLE_MEDIA_AUDIO :
+			action == 1 ? PURPLE_MEDIA_VIDEO :
+			action == 2 ? PURPLE_MEDIA_AUDIO |
+			PURPLE_MEDIA_VIDEO : PURPLE_MEDIA_NONE);
+}
+#endif
+
 static void
 menu_send_file_cb(gpointer data, guint action, GtkWidget *widget)
 {
@@ -3114,6 +3131,17 @@ static GtkItemFactoryEntry menu_items[] =
 
 	{ "/Conversation/sep1", NULL, NULL, 0, "<Separator>", NULL },
 
+#ifdef USE_VV
+	{ N_("/Conversation/M_edia"), NULL, NULL, 0, "<Branch>", NULL },
+
+	{ N_("/Conversation/Media/_Audio Call"), NULL, menu_initiate_media_call_cb, 0,
+		"<StockItem>", PIDGIN_STOCK_TOOLBAR_AUDIO_CALL },
+	{ N_("/Conversation/Media/_Video Call"), NULL, menu_initiate_media_call_cb, 1,
+		"<StockItem>", PIDGIN_STOCK_TOOLBAR_VIDEO_CALL },
+	{ N_("/Conversation/Media/Audio\\/Video _Call"), NULL, menu_initiate_media_call_cb, 2,
+		"<StockItem>", PIDGIN_STOCK_TOOLBAR_VIDEO_CALL },
+#endif
+
 	{ N_("/Conversation/Se_nd File..."), NULL, menu_send_file_cb, 0, "<StockItem>", PIDGIN_STOCK_TOOLBAR_SEND_FILE },
 	{ N_("/Conversation/Add Buddy _Pounce..."), NULL, menu_add_pounce_cb,
 			0, "<Item>", NULL },
@@ -3424,6 +3452,18 @@ setup_menubar(PidginWindow *win)
 		gtk_item_factory_get_widget(win->menu.item_factory,
 		                            N_("/Conversation/View Log"));
 
+#ifdef USE_VV
+	win->audio_call =
+		gtk_item_factory_get_widget(win->menu.item_factory,
+					    N_("/Conversation/Media/Audio Call"));
+	win->video_call =
+		gtk_item_factory_get_widget(win->menu.item_factory,
+					    N_("/Conversation/Media/Video Call"));
+	win->audio_video_call =
+		gtk_item_factory_get_widget(win->menu.item_factory,
+					    N_("/Conversation/Media/Audio\\/Video Call"));
+#endif
+	
 	/* --- */
 
 	win->menu.send_file =
@@ -4941,11 +4981,17 @@ conv_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 	PurpleConversation *conv = gtkconv->active_conv;
 	PidginWindow *win = gtkconv->win;
 	PurpleConversation *c;
+	PurpleAccount *convaccount = purple_conversation_get_account(conv);
+	PurpleConnection *gc = purple_account_get_connection(convaccount);
+	PurplePluginProtocolInfo *prpl_info = gc ? PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl) : NULL;
+
 	if (sd->target == gdk_atom_intern("PURPLE_BLIST_NODE", FALSE))
 	{
 		PurpleBlistNode *n = NULL;
 		PurpleBuddy *b;
 		PidginConversation *gtkconv = NULL;
+		PurpleAccount *buddyaccount;
+		const char *buddyname;
 
 		n = *(PurpleBlistNode **)sd->data;
 
@@ -4956,32 +5002,44 @@ conv_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 		else
 			return;
 
+		buddyaccount = purple_buddy_get_account(b);
+		buddyname = purple_buddy_get_name(b);
 		/*
-		 * If we already have an open conversation with this buddy, then
-		 * just move the conv to this window.  Otherwise, create a new
-		 * conv and add it to this window.
+		 * If a buddy is dragged to a chat window of the same protocol,
+		 * invite him to the chat.
 		 */
-		c = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, b->name, b->account);
-		if (c != NULL) {
-			PidginWindow *oldwin;
-			gtkconv = PIDGIN_CONVERSATION(c);
-			oldwin = gtkconv->win;
-			if (oldwin != win) {
-				pidgin_conv_window_remove_gtkconv(oldwin, gtkconv);
-				pidgin_conv_window_add_gtkconv(win, gtkconv);
-			}
+		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
+				prpl_info && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, chat_invite) &&
+				strcmp(purple_account_get_protocol_id(convaccount),
+					purple_account_get_protocol_id(buddyaccount)) == 0) {
+		    purple_conv_chat_invite_user(PURPLE_CONV_CHAT(conv), buddyname, NULL, TRUE);
 		} else {
-			c = purple_conversation_new(PURPLE_CONV_TYPE_IM, b->account, b->name);
-			gtkconv = PIDGIN_CONVERSATION(c);
-			if (gtkconv->win != win)
-			{
-				pidgin_conv_window_remove_gtkconv(gtkconv->win, gtkconv);
-				pidgin_conv_window_add_gtkconv(win, gtkconv);
+			/*
+			 * If we already have an open conversation with this buddy, then
+			 * just move the conv to this window.  Otherwise, create a new
+			 * conv and add it to this window.
+			 */
+			c = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddyname, buddyaccount);
+			if (c != NULL) {
+				PidginWindow *oldwin;
+				gtkconv = PIDGIN_CONVERSATION(c);
+				oldwin = gtkconv->win;
+				if (oldwin != win) {
+					pidgin_conv_window_remove_gtkconv(oldwin, gtkconv);
+					pidgin_conv_window_add_gtkconv(win, gtkconv);
+				}
+			} else {
+				c = purple_conversation_new(PURPLE_CONV_TYPE_IM, buddyaccount, buddyname);
+				gtkconv = PIDGIN_CONVERSATION(c);
+				if (gtkconv->win != win) {
+					pidgin_conv_window_remove_gtkconv(gtkconv->win, gtkconv);
+					pidgin_conv_window_add_gtkconv(win, gtkconv);
+				}
 			}
-		}
 
-		/* Make this conversation the active conversation */
-		pidgin_conv_window_switch_gtkconv(win, gtkconv);
+			/* Make this conversation the active conversation */
+			pidgin_conv_window_switch_gtkconv(win, gtkconv);
+		}
 
 		gtk_drag_finish(dc, TRUE, (dc->action == GDK_ACTION_MOVE), t);
 	}
@@ -5000,15 +5058,22 @@ conv_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 				purple_notify_error(win, NULL,
 					_("You are not currently signed on with an account that "
 					  "can add that buddy."), NULL);
-			}
-			else
-			{
-				c = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, username);
-				gtkconv = PIDGIN_CONVERSATION(c);
-				if (gtkconv->win != win)
-				{
-					pidgin_conv_window_remove_gtkconv(gtkconv->win, gtkconv);
-					pidgin_conv_window_add_gtkconv(win, gtkconv);
+			} else {
+				/*
+				 * If a buddy is dragged to a chat window of the same protocol,
+				 * invite him to the chat.
+				 */
+				if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
+						prpl_info && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, chat_invite) &&
+						strcmp(purple_account_get_protocol_id(convaccount), protocol) == 0) {
+					purple_conv_chat_invite_user(PURPLE_CONV_CHAT(conv), username, NULL, TRUE);
+				} else {
+					c = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, username);
+					gtkconv = PIDGIN_CONVERSATION(c);
+					if (gtkconv->win != win) {
+						pidgin_conv_window_remove_gtkconv(gtkconv->win, gtkconv);
+						pidgin_conv_window_add_gtkconv(win, gtkconv);
+					}
 				}
 			}
 		}
@@ -5020,7 +5085,7 @@ conv_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 	}
 	else if (sd->target == gdk_atom_intern("text/uri-list", FALSE)) {
 		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
-			pidgin_dnd_file_manage(sd, purple_conversation_get_account(conv), purple_conversation_get_name(conv));
+			pidgin_dnd_file_manage(sd, convaccount, purple_conversation_get_name(conv));
 		gtk_drag_finish(dc, TRUE, (dc->action == GDK_ACTION_MOVE), t);
 	}
 	else
@@ -6407,6 +6472,36 @@ gray_stuff_out(PidginConversation *gtkconv)
 		else
 			buttons &= ~GTK_IMHTML_CUSTOM_SMILEY;
 
+#ifdef USE_VV
+		/* check if account support voice calls, and if the current buddy
+			supports it */
+		if (account != NULL && purple_conversation_get_type(conv)
+					== PURPLE_CONV_TYPE_IM) {
+			PurpleMediaCaps caps =
+					purple_prpl_get_media_caps(account,
+					purple_conversation_get_name(conv));
+
+			gtk_widget_set_sensitive(win->audio_call,
+					caps & PURPLE_MEDIA_CAPS_AUDIO
+					? TRUE : FALSE);
+			gtk_widget_set_sensitive(win->video_call,
+					caps & PURPLE_MEDIA_CAPS_VIDEO
+					? TRUE : FALSE);
+			gtk_widget_set_sensitive(win->audio_video_call, 
+					caps & PURPLE_MEDIA_CAPS_AUDIO_VIDEO
+					? TRUE : FALSE);
+		} else if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
+			/* for now, don't care about chats... */
+			gtk_widget_set_sensitive(win->audio_call, FALSE);
+			gtk_widget_set_sensitive(win->video_call, FALSE);
+			gtk_widget_set_sensitive(win->audio_video_call, FALSE);
+		} else {
+			gtk_widget_set_sensitive(win->audio_call, FALSE);
+			gtk_widget_set_sensitive(win->video_call, FALSE);
+			gtk_widget_set_sensitive(win->audio_video_call, FALSE);
+		}							
+#endif
+		
 		gtk_imhtml_set_format_functions(GTK_IMHTML(gtkconv->entry), buttons);
 		if (account != NULL)
 			gtk_imhtmltoolbar_associate_smileys(GTK_IMHTMLTOOLBAR(gtkconv->toolbar), purple_account_get_protocol_id(account));
@@ -6731,7 +6826,8 @@ static void
 wrote_msg_update_unseen_cb(PurpleAccount *account, const char *who, const char *message,
 		PurpleConversation *conv, PurpleMessageFlags flags, gpointer null)
 {
-	if (conv == NULL || PIDGIN_IS_PIDGIN_CONVERSATION(conv))
+	PidginConversation *gtkconv = conv ? PIDGIN_CONVERSATION(conv) : NULL;
+	if (conv == NULL || (gtkconv && gtkconv->win != hidden_convwin))
 		return;
 	if (flags & (PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_RECV)) {
 		PidginUnseenState unseen = PIDGIN_UNSEEN_NONE;
@@ -7444,7 +7540,7 @@ update_buddy_status_changed(PurpleBuddy *buddy, PurpleStatus *old, PurpleStatus 
 	}
 
 	/* In case a conversation is started after the buddy has signed-on/off */
-	g_timeout_add(11000, (GSourceFunc)update_buddy_status_timeout, buddy);
+	purple_timeout_add_seconds(11, (GSourceFunc)update_buddy_status_timeout, buddy);
 }
 
 static void

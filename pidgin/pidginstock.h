@@ -23,7 +23,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#include <gtk/gtkstock.h>
+#include <gtk/gtk.h>
 #include "gtkstatus-icon-theme.h"
 
 #ifndef _PIDGIN_STOCK_H_
@@ -154,6 +154,11 @@
 #define PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR "pidgin-select-avatar"
 #define PIDGIN_STOCK_TOOLBAR_SEND_FILE    "pidgin-send-file"
 #define PIDGIN_STOCK_TOOLBAR_TRANSFER     "pidgin-transfer"
+#ifdef USE_VV
+#define PIDGIN_STOCK_TOOLBAR_AUDIO_CALL   "pidgin-audio-call"
+#define PIDGIN_STOCK_TOOLBAR_VIDEO_CALL   "pidgin-video-call"
+#define PIDGIN_STOCK_TOOLBAR_AUDIO_VIDEO_CALL "pidgin-audio-video-call"
+#endif
 
 /* Tray icons */
 #define PIDGIN_STOCK_TRAY_AVAILABLE       "pidgin-tray-available"
