@@ -427,7 +427,7 @@ void pidgin_dialogs_about()
 #endif
 	gtk_widget_destroy(logo);
 	logo = gtk_image_new_from_pixbuf(pixbuf);
-	gdk_pixbuf_unref(pixbuf);
+	g_object_unref(G_OBJECT(pixbuf));
 	/* Insert the logo */
 	obj = gtk_widget_get_accessible(logo);
 	tmp = g_strconcat(PIDGIN_NAME, " " DISPLAY_VERSION, NULL);
@@ -643,6 +643,12 @@ if (purple_plugins_find_with_id("core-tcl") != NULL) {
 	g_string_append(str, "    <b>Tcl:</b> Disabled<br/>");
 	g_string_append(str, "    <b>Tk:</b> Disabled<br/>");
 }
+
+#ifdef USE_VV
+	g_string_append(str, "    <b>Voice and Video:</b> Enabled<br/>");
+#else
+	g_string_append(str, "    <b>Voice and Video:</b> Disabled<br/>");
+#endif
 
 #ifndef _WIN32
 #ifdef USE_SM

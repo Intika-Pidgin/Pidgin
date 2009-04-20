@@ -1245,7 +1245,7 @@ gboolean msim_we_are_logged_on(MsimSession *session)
 
 	/* Disable due to problems with timeouts. TODO: fix. */
 #ifdef MSIM_USE_KEEPALIVE
-	purple_timeout_add(MSIM_KEEPALIVE_INTERVAL_CHECK,
+	purple_timeout_add_seconds(MSIM_KEEPALIVE_INTERVAL_CHECK,
 			(GSourceFunc)msim_check_alive, session);
 #endif
 
@@ -3088,9 +3088,10 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,                  /* unregister_user */
 	msim_send_attention,   /* send_attention */
 	msim_attention_types,  /* attention_types */
-
-	sizeof(PurplePluginProtocolInfo),  /* struct_size */
+	sizeof(PurplePluginProtocolInfo), /* struct_size */
 	msim_get_account_text_table,              /* get_account_text_table */
+	NULL,                   /* initiate_media */
+	NULL                    /* can_do_media */
 };
 
 /**
