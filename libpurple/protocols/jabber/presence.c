@@ -340,7 +340,7 @@ jabber_vcard_parse_avatar(JabberStream *js, const char *from,
                           xmlnode *packet, gpointer blah)
 {
 	JabberBuddy *jb = NULL;
-	xmlnode *vcard, *photo, *binval;
+	xmlnode *vcard, *photo, *binval, *fn, *nick;
 	char *text;
 
 	if(!from)
@@ -352,6 +352,29 @@ jabber_vcard_parse_avatar(JabberStream *js, const char *from,
 
 	if((vcard = xmlnode_get_child(packet, "vCard")) ||
 			(vcard = xmlnode_get_child_with_namespace(packet, "query", "vcard-temp"))) {
+		/* The logic here regarding the nickname and full name is copied from
+		 * buddy.c:jabber_vcard_parse. */
+		gchar *nickname = NULL;
+		if ((fn = xmlnode_get_child(vcard, "FN")))
+			nickname = xmlnode_get_data(fn);
+
+		if ((nick = xmlnode_get_child(vcard, "NICKNAME"))) {
+			char *tmp = xmlnode_get_data(nick);
+			char *bare_jid = jabber_get_bare_jid(from);
+			if (strstr(bare_jid, tmp) == NULL) {
+				g_free(nickname);
+				nickname = tmp;
+			} else
+				g_free(tmp);
+
+			g_free(bare_jid);
+		}
+
+		if (nickname) {
+			serv_got_alias(js->gc, from, nickname);
+			g_free(nickname);
+		}
+
 		if((photo = xmlnode_get_child(vcard, "PHOTO")) &&
 				(( (binval = xmlnode_get_child(photo, "BINVAL")) &&
 				(text = xmlnode_get_data(binval))) ||
@@ -643,9 +666,11 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 		if(type && !strcmp(type, "unavailable")) {
 			gboolean nick_change = FALSE;
 
-			/* If we haven't joined the chat yet, we don't care that someone
-			 * left, or it was us leaving after we closed the chat */
-			if (!chat->conv || chat->left) {
+			/* If the chat nick is invalid, we haven't yet joined, or we've
+			 * already left (it was probably us leaving after we closed the
+			 * chat), we don't care.
+			 */
+			if (!jid->resource || !chat->conv || chat->left) {
 				if (chat->left &&
 						jid->resource && chat->handle && !strcmp(jid->resource, chat->handle))
 					jabber_chat_destroy(chat);
@@ -706,6 +731,19 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 				}
 			}
 		} else {
+			/*
+			 * XEP-0045 mandates the presence to include a resource (which is
+			 * treated as the chat nick). Some non-compliant servers allow
+			 * joining without a nick.
+			 */
+			if (!jid->resource) {
+				jabber_id_free(jid);
+				g_free(avatar_hash);
+				g_free(nickname);
+				g_free(status);
+				return;
+			}
+
 			if(!chat->conv) {
 				char *room_jid = g_strdup_printf("%s@%s", jid->node, jid->domain);
 				chat->id = i++;
