@@ -38,6 +38,9 @@ version 2.6.0 (??/??/2009):
 	  contains formatting.
 	* Show when the user was last logged in when doing "Get Info" on an offline
 	  buddy, provided the server supports it.
+	* Support custom smileys in MUCs (only when all participants supports the
+	  "Bits of Binary" extension, and a maximum of 10 participants are in the
+	  chat (to avoid getting too many fetch requests).
 
 	Yahoo:
 	* P2P file transfers. (Sulabh Mahajan)
@@ -65,6 +68,8 @@ version 2.6.0 (??/??/2009):
 	* The nicks of the persons who leave the chatroom are italicized in the
 	  chat's conversation history. The nicks are un-italicized when they
 	  rejoin.
+	* Always set unseen-count and unseen-state on conversations.
+	  (Joshua Stein)
 
 	Finch:
 	* The hardware cursor is updated correctly. This will be useful
