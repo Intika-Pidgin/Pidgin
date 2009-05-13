@@ -3356,7 +3356,7 @@ jabber_init_plugin(PurplePlugin *plugin)
 	jabber_add_feature(XEP_0224_NAMESPACE, jabber_buzz_isenabled);
 
 	/* Bits Of Binary */
-	jabber_add_feature(XEP_0231_NAMESPACE, jabber_custom_smileys_isenabled);
+	jabber_add_feature(XEP_0231_NAMESPACE, 0);
 
 	/* Jingle features! */
 	jabber_add_feature(JINGLE, 0);
@@ -3377,6 +3377,7 @@ jabber_init_plugin(PurplePlugin *plugin)
 							 purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT),
 							 purple_value_new(PURPLE_TYPE_STRING),
 							 purple_value_new(PURPLE_TYPE_STRING));
+
 	purple_plugin_ipc_register(plugin, "add_feature", PURPLE_CALLBACK(jabber_ipc_add_feature),
 							 purple_marshal_VOID__POINTER,
 							 NULL, 1,
@@ -3386,6 +3387,8 @@ jabber_init_plugin(PurplePlugin *plugin)
 void
 jabber_uninit_plugin(void)
 {
+	purple_plugin_ipc_unregister_all(jabber_plugin);
+
 	jabber_features_destroy();
 	jabber_identities_destroy();
 }
