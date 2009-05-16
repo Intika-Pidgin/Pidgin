@@ -493,7 +493,7 @@ msn_slplink_process_msg(MsnSlpLink *slplink, MsnMessage *msg)
 {
 	MsnSlpMessage *slpmsg;
 	const char *data;
-	gsize offset;
+	guint64 offset;
 	gsize len;
 
 #ifdef MSN_DEBUG_SLP
@@ -565,6 +565,7 @@ msn_slplink_process_msg(MsnSlpLink *slplink, MsnMessage *msg)
 			if (slpmsg->buffer == NULL)
 			{
 				purple_debug_error("msn", "Failed to allocate buffer for slpmsg\n");
+				msn_slpmsg_destroy(slpmsg);
 				return;
 			}
 		}
@@ -682,9 +683,9 @@ gen_context(const char *file_name, const char *file_path)
 		size = st.st_size;
 
 	if(!file_name) {
-		base = g_path_get_basename(file_path);
-		u8 = purple_utf8_try_convert(base);
-		g_free(base);
+		gchar *basename = g_path_get_basename(file_path);
+		u8 = purple_utf8_try_convert(basename);
+		g_free(basename);
 		file_name = u8;
 	}
 
