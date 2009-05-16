@@ -421,9 +421,11 @@ google_session_handle_initiate(JabberStream *js, GoogleSession *session, xmlnode
 		id = xmlnode_get_attrib(codec_element, "id");
 		clock_rate = xmlnode_get_attrib(codec_element, "clockrate");
 
-		codec = purple_media_codec_new(atoi(id), encoding_name, PURPLE_MEDIA_AUDIO,
-				     clock_rate ? atoi(clock_rate) : 0);
-		codecs = g_list_append(codecs, codec);
+		if (id) {
+			codec = purple_media_codec_new(atoi(id), encoding_name, PURPLE_MEDIA_AUDIO,
+					     clock_rate ? atoi(clock_rate) : 0);
+			codecs = g_list_append(codecs, codec);
+		}
 	}
 
 	purple_media_set_remote_codecs(session->media, "google-voice", session->remote_jid, codecs);
@@ -459,24 +461,36 @@ google_session_handle_candidates(JabberStream  *js, GoogleSession *session, xmln
 		
 	for (cand = xmlnode_get_child(sess, "candidate"); cand; cand = xmlnode_get_next_twin(cand)) {
 		PurpleMediaCandidate *info;
-		g_snprintf(n, sizeof(n), "S%d", name++);
-		info = purple_media_candidate_new(n, PURPLE_MEDIA_COMPONENT_RTP,
-				!strcmp(xmlnode_get_attrib(cand, "type"), "local") ?
-					PURPLE_MEDIA_CANDIDATE_TYPE_HOST :
-			     		!strcmp(xmlnode_get_attrib(cand, "type"), "stun") ?
-						PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX :
-			     			!strcmp(xmlnode_get_attrib(cand, "type"), "relay") ?
-							PURPLE_MEDIA_CANDIDATE_TYPE_RELAY :
-							PURPLE_MEDIA_CANDIDATE_TYPE_HOST,
-						!strcmp(xmlnode_get_attrib(cand, "protocol"),"udp") ?
+		const gchar *type = xmlnode_get_attrib(cand, "type");
+		const gchar *protocol = xmlnode_get_attrib(cand, "protocol");
+		const gchar *address = xmlnode_get_attrib(cand, "address");
+		const gchar *port = xmlnode_get_attrib(cand, "port");
+
+		if (type && address && port) {
+			PurpleMediaCandidateType candidate_type;
+
+			g_snprintf(n, sizeof(n), "S%d", name++);
+
+			if (g_str_equal(type, "local"))
+				candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_HOST;
+			else if (g_str_equal(type, "stun"))
+				candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX;
+			else if (g_str_equal(type, "relay"))
+				candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_RELAY;
+			else
+				candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_HOST;
+
+			info = purple_media_candidate_new(n, PURPLE_MEDIA_COMPONENT_RTP,
+					candidate_type,
+					purple_strequal(protocol, "udp") ?
 							PURPLE_MEDIA_NETWORK_PROTOCOL_UDP :
 							PURPLE_MEDIA_NETWORK_PROTOCOL_TCP,
-					xmlnode_get_attrib(cand, "address"),
-					atoi(xmlnode_get_attrib(cand, "port")));
-		g_object_set(info, "username", xmlnode_get_attrib(cand, "username"),
-				"password", xmlnode_get_attrib(cand, "password"), NULL);
-
-		list = g_list_append(list, info);
+					address,
+					atoi(port));
+			g_object_set(info, "username", xmlnode_get_attrib(cand, "username"),
+					"password", xmlnode_get_attrib(cand, "password"), NULL);
+			list = g_list_append(list, info);
+		}
 	}
 
 	purple_media_add_remote_candidates(session->media, "google-voice", session->remote_jid, list);
@@ -504,10 +518,12 @@ google_session_handle_accept(JabberStream *js, GoogleSession *session, xmlnode *
 		const gchar *clock_rate =
 				xmlnode_get_attrib(codec_element, "clockrate");
 
-		PurpleMediaCodec *codec = purple_media_codec_new(atoi(id),
-				encoding_name, PURPLE_MEDIA_AUDIO,
-				clock_rate ? atoi(clock_rate) : 0);
-		codecs = g_list_append(codecs, codec);
+		if (id && encoding_name) {
+			PurpleMediaCodec *codec = purple_media_codec_new(atoi(id),
+					encoding_name, PURPLE_MEDIA_AUDIO,
+					clock_rate ? atoi(clock_rate) : 0);
+			codecs = g_list_append(codecs, codec);
+		}
 	}
 
 	purple_media_set_remote_codecs(session->media, "google-voice",
@@ -622,7 +638,6 @@ jabber_gmail_parse(JabberStream *js, const char *from,
 	const char *to, *url;
 	const char *in_str;
 	char *to_name;
-	char *default_tos[1];
 
 	int i, count = 1, returned_count;
 
@@ -642,14 +657,20 @@ jabber_gmail_parse(JabberStream *js, const char *from,
 
 	/* If Gmail doesn't tell us who the mail is to, let's use our JID */
 	to = xmlnode_get_attrib(packet, "to");
-	default_tos[0] = jabber_get_bare_jid(to);
 
 	message = xmlnode_get_child(child, "mail-thread-info");
 
 	if (count == 0 || !message) {
-		if (count > 0)
-			purple_notify_emails(js->gc, count, FALSE, NULL, NULL, (const char**) default_tos, NULL, NULL, NULL);
-		g_free(default_tos[0]);
+		if (count > 0) {
+			char *bare_jid = jabber_get_bare_jid(to);
+			const char *default_tos[2] = { bare_jid };
+
+			purple_notify_emails(js->gc, count, FALSE, NULL, NULL, default_tos, NULL, NULL, NULL);
+			g_free(bare_jid);
+		} else {
+			purple_notify_emails(js->gc, count, FALSE, NULL, NULL, NULL, NULL, NULL, NULL);
+		}
+
 		return;
 	}
 
@@ -657,10 +678,10 @@ jabber_gmail_parse(JabberStream *js, const char *from,
 	 * accordingly */
 	for (returned_count = 0; message; returned_count++, message=xmlnode_get_next_twin(message));
 
-	froms    = g_new0(const char* , returned_count);
-	tos      = g_new0(const char* , returned_count);
-	subjects = g_new0(char* , returned_count);
-	urls     = g_new0(const char* , returned_count);
+	froms    = g_new0(const char* , returned_count + 1);
+	tos      = g_new0(const char* , returned_count + 1);
+	subjects = g_new0(char* , returned_count + 1);
+	urls     = g_new0(const char* , returned_count + 1);
 
 	to = xmlnode_get_attrib(packet, "to");
 	to_name = jabber_get_bare_jid(to);
@@ -710,16 +731,12 @@ jabber_gmail_parse(JabberStream *js, const char *from,
 	if (i>0)
 		purple_notify_emails(js->gc, count, count == i, (const char**) subjects, froms, tos,
 				urls, NULL, NULL);
-	else
-		purple_notify_emails(js->gc, count, FALSE, NULL, NULL, (const char**) default_tos, NULL, NULL, NULL);
-
 
 	g_free(to_name);
 	g_free(tos);
-	g_free(default_tos[0]);
 	g_free(froms);
-	for (; i > 0; i--)
-		g_free(subjects[i - 1]);
+	for (i = 0; i < returned_count; i++)
+		g_free(subjects[i]);
 	g_free(subjects);
 	g_free(urls);
 
@@ -744,6 +761,13 @@ jabber_gmail_poke(JabberStream *js, const char *from, JabberIqType type,
 	/* Is this an initial incoming mail notification? If so, send a request for more info */
 	if (type != JABBER_IQ_SET)
 		return;
+
+	/* Acknowledge the notification */
+	iq = jabber_iq_new(js, JABBER_IQ_RESULT);
+	if (from)
+		xmlnode_set_attrib(iq->node, "to", from);
+	xmlnode_set_attrib(iq->node, "id", id);
+	jabber_iq_send(iq);
 
 	purple_debug(PURPLE_DEBUG_MISC, "jabber",
 		   "Got new mail notification. Sending request for more info\n");

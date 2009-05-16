@@ -4420,15 +4420,19 @@ void gtk_imhtml_set_editable(GtkIMHtml *imhtml, gboolean editable)
 	 * people can highlight stuff.
 	 */
 	/* gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(imhtml), editable); */
-	imhtml->editable = editable;
-	imhtml->format_functions = GTK_IMHTML_ALL;
-
-	if (editable)
-	{
+	if (editable && !imhtml->editable) {
 		g_signal_connect_after(G_OBJECT(GTK_IMHTML(imhtml)->text_buffer), "mark-set",
 				G_CALLBACK(mark_set_cb), imhtml);
 		g_signal_connect(G_OBJECT(imhtml), "backspace", G_CALLBACK(smart_backspace_cb), NULL);
+	} else if (!editable && imhtml->editable) {
+		g_signal_handlers_disconnect_by_func(G_OBJECT(GTK_IMHTML(imhtml)->text_buffer),
+			mark_set_cb, imhtml);
+		g_signal_handlers_disconnect_by_func(G_OBJECT(imhtml),
+			smart_backspace_cb, NULL);
 	}
+
+	imhtml->editable = editable;
+	imhtml->format_functions = GTK_IMHTML_ALL;
 }
 
 void gtk_imhtml_set_whole_buffer_formatting_only(GtkIMHtml *imhtml, gboolean wbfo)
@@ -5879,4 +5883,29 @@ void gtk_imhtml_set_return_inserts_newline(GtkIMHtml *imhtml)
 {
 	g_signal_connect(G_OBJECT(imhtml), "message_send",
 		G_CALLBACK(return_add_newline_cb), NULL);
+}
+
+void gtk_imhtml_set_populate_primary_clipboard(GtkIMHtml *imhtml, gboolean populate)
+{
+	gulong signal_id;
+	signal_id = g_signal_handler_find(imhtml->text_buffer,
+			G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_UNBLOCKED, 0, 0, NULL,
+			mark_set_so_update_selection_cb, NULL);
+	if (populate) {
+		if (!signal_id) {
+			/* We didn't find an unblocked signal handler, which means there
+			   is a blocked handler. Now unblock it.
+			   This is necessary to avoid a mutex-lock when the debug message
+			   saying 'no handler is blocked' is printed in the debug window.
+				-- sad
+			 */
+			g_signal_handlers_unblock_matched(imhtml->text_buffer,
+					G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
+					mark_set_so_update_selection_cb, NULL);
+		}
+	} else {
+		/* Block only if we found an unblocked handler */
+		if (signal_id)
+			g_signal_handler_block(imhtml->text_buffer, signal_id);
+	}
 }

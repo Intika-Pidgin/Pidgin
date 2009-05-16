@@ -77,6 +77,8 @@ typedef struct _JabberStream JabberStream;
 /* Index into attention_types list */
 #define JABBER_BUZZ 0
 
+PurplePlugin *jabber_plugin;
+
 typedef enum {
 	JABBER_STREAM_OFFLINE,
 	JABBER_STREAM_CONNECTING,
@@ -373,6 +375,7 @@ gboolean jabber_initiate_media(PurpleAccount *account, const char *who,
 PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who);
 
 void jabber_register_commands(void);
+void jabber_unregister_commands(void);
 
 void jabber_init_plugin(PurplePlugin *plugin);
 void jabber_uninit_plugin(void);
