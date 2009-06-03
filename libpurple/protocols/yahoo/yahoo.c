@@ -1584,7 +1584,8 @@ static void yahoo_auth16_stage3(PurpleConnection *gc, const char *crypt)
 
 	to_y64(base64_string, md5_digest, 16);
 
-	pkt = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP, YAHOO_STATUS_WEBLOGIN, yd->session_id);
+	purple_debug_info("yahoo", "yahoo status: %d\n", yd->current_status);
+	pkt = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP, yd->current_status, yd->session_id);
 	if(yd->jp) {
 		yahoo_packet_hash(pkt, "ssssssss",
 					1, name,
@@ -1790,7 +1791,10 @@ static void yahoo_auth16_stage1_cb(PurpleUtilFetchUrlData *unused, gpointer user
 				"yahoojp", 0);
 
 			url = g_strdup_printf(yahoojp ? YAHOOJP_LOGIN_URL : YAHOO_LOGIN_URL, token);
-			url_data = purple_util_fetch_url_request(url, TRUE, YAHOO_CLIENT_USERAGENT, TRUE, NULL, FALSE, yahoo_auth16_stage2, auth_data);
+			url_data = purple_util_fetch_url_request_len_with_account(
+					purple_connection_get_account(gc), url, TRUE,
+					YAHOO_CLIENT_USERAGENT, TRUE, NULL, FALSE, -1,
+					yahoo_auth16_stage2, auth_data);
 			g_free(url);
 			g_free(token);
 		}
@@ -1826,7 +1830,11 @@ static void yahoo_auth16_stage1(PurpleConnection *gc, const char *seed)
 	g_free(encoded_password);
 	g_free(encoded_username);
 
-	url_data = purple_util_fetch_url_request(url, TRUE, YAHOO_CLIENT_USERAGENT, TRUE, NULL, FALSE, yahoo_auth16_stage1_cb, auth_data);
+	url_data = purple_util_fetch_url_request_len_with_account(
+			purple_connection_get_account(gc), url, TRUE,
+			YAHOO_CLIENT_USERAGENT, TRUE, NULL, FALSE, -1,
+			yahoo_auth16_stage1_cb, auth_data);
+
 	g_free(url);
 }
 
@@ -3948,8 +3956,9 @@ static void yahoo_show_inbox(PurplePluginAction *action)
 		use_whole_url ? base_url : "",
 		yd->cookie_t, yd->cookie_y);
 
-	url_data = purple_util_fetch_url_request(base_url, use_whole_url,
-			YAHOO_CLIENT_USERAGENT, TRUE, request, FALSE,
+	url_data = purple_util_fetch_url_request_len_with_account(
+			purple_connection_get_account(gc), base_url, use_whole_url,
+			YAHOO_CLIENT_USERAGENT, TRUE, request, FALSE, -1,
 			yahoo_get_inbox_token_cb, gc);
 
 	g_free(request);
@@ -4110,8 +4119,9 @@ static void yahoo_get_sms_carrier(PurpleConnection *gc, gpointer data)
 	if ((gc->account->proxy_info) && (gc->account->proxy_info->type == PURPLE_PROXY_HTTP))
 	    use_whole_url = TRUE;
 
-	url_data = purple_util_fetch_url_request(YAHOO_SMS_CARRIER_URL, use_whole_url,
-			YAHOO_CLIENT_USERAGENT, TRUE, request, FALSE,
+	url_data = purple_util_fetch_url_request_len_with_account(
+			purple_connection_get_account(gc), YAHOO_SMS_CARRIER_URL, use_whole_url,
+			YAHOO_CLIENT_USERAGENT, TRUE, request, FALSE, -1,
 			yahoo_get_sms_carrier_cb, data);
 
 	g_free(request);

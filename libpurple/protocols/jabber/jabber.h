@@ -348,6 +348,9 @@ GList *jabber_status_types(PurpleAccount *account);
 void jabber_login(PurpleAccount *account);
 void jabber_close(PurpleConnection *gc);
 void jabber_idle_set(PurpleConnection *gc, int idle);
+void jabber_blocklist_parse_push(JabberStream *js, const char *from,
+                                 JabberIqType type, const char *id,
+                                 xmlnode *child);
 void jabber_request_block_list(JabberStream *js);
 void jabber_add_deny(PurpleConnection *gc, const char *who);
 void jabber_rem_deny(PurpleConnection *gc, const char *who);
@@ -364,6 +367,7 @@ int jabber_prpl_send_raw(PurpleConnection *gc, const char *buf, int len);
 GList *jabber_actions(PurplePlugin *plugin, gpointer context);
 
 gboolean jabber_audio_enabled(JabberStream *js, const char *unused);
+gboolean jabber_video_enabled(JabberStream *js, const char *unused);
 gboolean jabber_initiate_media(PurpleAccount *account, const char *who,
 		PurpleMediaSessionType type);
 PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who);
