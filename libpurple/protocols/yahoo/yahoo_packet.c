@@ -195,11 +195,13 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 						   "Key: %d  \tValue: %s\n", pair->key, esc);
 				g_free(esc);
 			}
-#endif
+#endif /* DEBUG */
 		} else {
 			g_free(pair);
 		}
 		pos += 2;
+
+		if (pos + 1 > len) break;
 
 		/* Skip over garbage we've noticed in the mail notifications */
 		if (data[0] == '9' && data[pos] == 0x01)
@@ -280,7 +282,7 @@ void yahoo_packet_dump(guchar *data, int len)
 	}
 
 	purple_debug(PURPLE_DEBUG_MISC, NULL, "\n");
-#endif
+#endif /* YAHOO_DEBUG */
 }
 
 static void
@@ -327,7 +329,7 @@ size_t yahoo_packet_build(struct yahoo_packet *pkt, int pad, gboolean wm,
 	if (wm)
 		pos += yahoo_put16(data + pos, YAHOO_WEBMESSENGER_PROTO_VER);
 	else if (jp)
-		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER_JAPAN);		
+		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER_JAPAN);
 	else
 		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER);
 	pos += yahoo_put16(data + pos, 0x0000);

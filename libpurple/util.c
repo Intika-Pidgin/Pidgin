@@ -98,7 +98,7 @@ purple_menu_action_free(PurpleMenuAction *act)
 void
 purple_util_init(void)
 {
-	/* This does nothing right now.  It exists for symmetry with 
+	/* This does nothing right now.  It exists for symmetry with
 	 * purple_util_uninit() and forwards compatibility. */
 }
 
@@ -129,7 +129,7 @@ purple_base16_encode(const guchar *data, gsize len)
 	ascii = g_malloc(len * 2 + 1);
 
 	for (i = 0; i < len; i++)
-		snprintf(&ascii[i * 2], 3, "%02hhx", data[i]);
+		g_snprintf(&ascii[i * 2], 3, "%02hhx", data[i]);
 
 	return ascii;
 }
@@ -1041,6 +1041,35 @@ purple_markup_get_css_property(const gchar *style,
 	return ret;
 }
 
+gboolean purple_markup_is_rtl(const char *html)
+{
+	GData *attributes;
+	const gchar *start, *end;
+	gboolean res = FALSE;
+
+	if (purple_markup_find_tag("span", html, &start, &end, &attributes))
+	{
+		/* tmp is a member of attributes and is free with g_datalist_clear call */
+		const char *tmp = g_datalist_get_data(&attributes, "dir");
+		if (tmp && !g_ascii_strcasecmp(tmp, "RTL"))
+			res = TRUE;
+		if (!res)
+		{
+			tmp = g_datalist_get_data(&attributes, "style");
+			if (tmp)
+			{
+				char *tmp2 = purple_markup_get_css_property(tmp, "direction");
+				if (tmp2 && !g_ascii_strcasecmp(tmp2, "RTL"))
+					res = TRUE;
+				g_free(tmp2);
+			}
+
+		}
+		g_datalist_clear(&attributes);
+	}
+	return res;
+}
+
 gboolean
 purple_markup_find_tag(const char *needle, const char *haystack,
 					 const char **start, const char **end, GData **attributes)
@@ -1409,7 +1438,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						struct purple_parse_tag *pt = tags->data;
 						if(xhtml)
 							g_string_append_printf(xhtml, "</%s>", pt->dest_tag);
-						if(plain && !strcmp(pt->src_tag, "a")) {
+						if(plain && purple_strequal(pt->src_tag, "a")) {
 							/* if this is a link, we have to add the url to the plaintext, too */
 							if (cdata && url &&
 									(!g_string_equal(cdata, url) && (g_ascii_strncasecmp(url->str, "mailto:", 7) != 0 ||
@@ -1623,7 +1652,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					pt->dest_tag = "a";
 					tags = g_list_prepend(tags, pt);
 					if(xhtml)
-						g_string_append_printf(xhtml, "<a href='%s'>", url ? g_strstrip(url->str) : "");
+						g_string_append_printf(xhtml, "<a href=\"%s\">", url ? g_strstrip(url->str) : "");
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<font", 5) && (*(c+5) == '>' || *(c+5) == ' ')) {
@@ -2017,7 +2046,6 @@ badchar(char c)
 	case '<':
 	case '>':
 	case '"':
-	case '\'':
 		return TRUE;
 	default:
 		return FALSE;
@@ -2693,7 +2721,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 		return FALSE;
 	}
 #endif
-    
+
 	/* Close file */
 	if (fclose(file) != 0)
 	{
@@ -2774,70 +2802,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 xmlnode *
 purple_util_read_xml_from_file(const char *filename, const char *description)
 {
-	const char *user_dir = purple_user_dir();
-	gchar *filename_full;
-	GError *error = NULL;
-	gchar *contents = NULL;
-	gsize length;
-	xmlnode *node = NULL;
-
-	g_return_val_if_fail(user_dir != NULL, NULL);
-
-	purple_debug_info("util", "Reading file %s from directory %s\n",
-					filename, user_dir);
-
-	filename_full = g_build_filename(user_dir, filename, NULL);
-
-	if (!g_file_test(filename_full, G_FILE_TEST_EXISTS))
-	{
-		purple_debug_info("util", "File %s does not exist (this is not "
-						"necessarily an error)\n", filename_full);
-		g_free(filename_full);
-		return NULL;
-	}
-
-	if (!g_file_get_contents(filename_full, &contents, &length, &error))
-	{
-		purple_debug_error("util", "Error reading file %s: %s\n",
-						 filename_full, error->message);
-		g_error_free(error);
-	}
-
-	if ((contents != NULL) && (length > 0))
-	{
-		node = xmlnode_from_str(contents, length);
-
-		/* If we were unable to parse the file then save its contents to a backup file */
-		if (node == NULL)
-		{
-			gchar *filename_temp;
-
-			filename_temp = g_strdup_printf("%s~", filename);
-			purple_debug_error("util", "Error parsing file %s.  Renaming old "
-							 "file to %s\n", filename_full, filename_temp);
-			purple_util_write_data_to_file(filename_temp, contents, length);
-			g_free(filename_temp);
-		}
-
-		g_free(contents);
-	}
-
-	/* If we could not parse the file then show the user an error message */
-	if (node == NULL)
-	{
-		gchar *title, *msg;
-		title = g_strdup_printf(_("Error Reading %s"), filename);
-		msg = g_strdup_printf(_("An error was encountered reading your "
-					"%s.  They have not been loaded, and the old file "
-					"has been renamed to %s~."), description, filename_full);
-		purple_notify_error(NULL, NULL, title, msg);
-		g_free(title);
-		g_free(msg);
-	}
-
-	g_free(filename_full);
-
-	return node;
+	return xmlnode_from_file(purple_user_dir(), filename, description, "util");
 }
 
 /*
@@ -2913,6 +2878,12 @@ purple_util_get_image_extension(gconstpointer data, size_t len)
 	return "icon";
 }
 
+/*
+ * TODO: Consider using something faster than SHA-1, such as MD5, MD4
+ *       or CRC32.  Are there security implications to that?  Would
+ *       probably be a good idea to benchmark some algorithms with
+ *       3KB-10KB chunks of data (typical buddy icon sizes).
+ */
 char *
 purple_util_get_image_checksum(gconstpointer image_data, size_t image_len)
 {
@@ -3012,7 +2983,7 @@ purple_running_kde(void)
 	g_free(tmp);
 
 	session = g_getenv("KDE_FULL_SESSION");
-	if (session != NULL && !strcmp(session, "true"))
+	if (purple_strequal(session, "true"))
 		return TRUE;
 
 	/* If you run Purple from Konsole under !KDE, this will provide a
@@ -3053,6 +3024,17 @@ purple_fd_get_ip(int fd)
 /**************************************************************************
  * String Functions
  **************************************************************************/
+gboolean
+purple_strequal(const gchar *left, const gchar *right)
+{
+#if GLIB_CHECK_VERSION(2,16,0)
+	return (g_strcmp0(left, right) == 0);
+#else
+	return ((left == NULL && right == NULL) ||
+	        (left != NULL && right != NULL && strcmp(left, right) == 0));
+#endif
+}
+
 const char *
 purple_normalize(const PurpleAccount *account, const char *str)
 {
@@ -3167,7 +3149,7 @@ purple_str_has_suffix(const char *s, const char *x)
 	g_return_val_if_fail(x != NULL, FALSE);
 
 	off = strlen(s) - strlen(x);
-	return (off >= 0 && !strcmp(s + off, x));
+	return (off >= 0 && purple_strequal(s + off, x));
 #endif
 }
 
@@ -3916,7 +3898,7 @@ static void ssl_url_fetch_recv_cb(gpointer data, PurpleSslConnection *ssl_connec
 	url_fetch_recv_cb(data, -1, cond);
 }
 
-/*
+/**
  * This function is called when the socket is available to be written
  * to.
  *
@@ -4055,7 +4037,7 @@ purple_util_fetch_url_request(const char *url, gboolean full,
 		const char *request, gboolean include_headers,
 		PurpleUtilFetchUrlCallback callback, void *user_data)
 {
-	return purple_util_fetch_url_request_len(url, full,
+	return purple_util_fetch_url_request_len_with_account(NULL, url, full,
 					     user_agent, http11,
 					     request, include_headers, -1,
 					     callback, user_data);
@@ -4064,6 +4046,17 @@ purple_util_fetch_url_request(const char *url, gboolean full,
 PurpleUtilFetchUrlData *
 purple_util_fetch_url_request_len(const char *url, gboolean full,
 		const char *user_agent, gboolean http11,
+		const char *request, gboolean include_headers, gssize max_len,
+		PurpleUtilFetchUrlCallback callback, void *user_data)
+{
+	return purple_util_fetch_url_request_len_with_account(NULL, url, full,
+			user_agent, http11, request, include_headers, max_len, callback,
+			user_data);
+}
+
+PurpleUtilFetchUrlData *
+purple_util_fetch_url_request_len_with_account(PurpleAccount *account,
+		const char *url, gboolean full,	const char *user_agent, gboolean http11,
 		const char *request, gboolean include_headers, gssize max_len,
 		PurpleUtilFetchUrlCallback callback, void *user_data)
 {
@@ -4096,12 +4089,19 @@ purple_util_fetch_url_request_len(const char *url, gboolean full,
 				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
 
 	if (purple_strcasestr(url, "https://") != NULL) {
+		if (!purple_ssl_is_supported()) {
+			purple_util_fetch_url_error(gfud,
+					_("Unable to connect to %s: Server requires TLS/SSL, but no TLS/SSL support was found."),
+					gfud->website.address);
+			return NULL;
+		}
+
 		gfud->is_ssl = TRUE;
-		gfud->ssl_connection = purple_ssl_connect(NULL,
+		gfud->ssl_connection = purple_ssl_connect(account,
 				gfud->website.address, gfud->website.port,
 				ssl_url_fetch_connect_cb, ssl_url_fetch_error_cb, gfud);
 	} else {
-		gfud->connect_data = purple_proxy_connect(NULL, NULL,
+		gfud->connect_data = purple_proxy_connect(NULL, account,
 				gfud->website.address, gfud->website.port,
 				url_fetch_connect_cb, gfud);
 	}
@@ -4422,6 +4422,37 @@ purple_utf8_salvage(const char *str)
 	} while (*str != '\0');
 
 	return g_string_free(workstr, FALSE);
+}
+
+gchar *
+purple_utf8_strip_unprintables(const gchar *str)
+{
+	gchar *workstr, *iter;
+
+	if (str == NULL)
+		/* Act like g_strdup */
+		return NULL;
+
+	g_return_val_if_fail(g_utf8_validate(str, -1, NULL), NULL);
+
+	workstr = iter = g_new(gchar, strlen(str) + 1);
+	while (*str) {
+		gunichar c = g_utf8_get_char(str);
+		const gchar *next = g_utf8_next_char(str);
+		size_t len = next - str;
+
+		if (g_unichar_isprint(c)) {
+			memcpy(iter, str, len);
+			iter += len;
+		}
+
+		str = next;
+	}
+
+	/* nul-terminate the new string */
+	*iter = '\0';
+
+	return workstr;
 }
 
 /*
@@ -4770,7 +4801,7 @@ purple_escape_filename(const char *str)
 
 const char *_purple_oscar_convert(const char *act, const char *protocol)
 {
-	if (protocol && act && strcmp(protocol, "prpl-oscar") == 0) {
+	if (act && purple_strequal(protocol, "prpl-oscar")) {
 		int i;
 		for (i = 0; act[i] != '\0'; i++)
 			if (!isdigit(act[i]))

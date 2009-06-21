@@ -327,14 +327,13 @@ msg_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	/* NOTE: cmd is not always cmdproc->last_cmd, sometimes cmd is a queued
 	 * command and we are processing it */
 	if (cmd->payload == NULL) {
-		cmdproc->last_cmd->payload_cb  = msg_cmd_post;
+		cmdproc->last_cmd->payload_cb = msg_cmd_post;
 		cmd->payload_len = atoi(cmd->params[2]);
-
 	} else {
 		g_return_if_fail(cmd->payload_cb != NULL);
 
 #if 0 /* glib on win32 doesn't correctly support precision modifiers for a string */
-		purple_debug_info("msn", "MSG payload:{%.*s}\n", cmd->payload_len, cmd->payload);
+		purple_debug_info("msn", "MSG payload:{%.*s}\n", (guint)cmd->payload_len, cmd->payload);
 #endif
 		cmd->payload_cb(cmdproc, cmd, cmd->payload, cmd->payload_len);
 	}
@@ -828,10 +827,10 @@ adl_error_parse(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload, size_t len)
 	MsnSession *session;
 	PurpleAccount *account;
 	PurpleConnection *gc;
-	/*char *adl = g_strndup(payload, len);*/
-	char *reason = g_strdup_printf(_("Unknown error (%d)"),
-		GPOINTER_TO_INT(cmd->payload_cbdata)/*, adl*/);
-	/*g_free(adl);*/
+	char *adl = g_strndup(payload, len);
+	char *reason = g_strdup_printf(_("Unknown error (%d): %s"),
+		GPOINTER_TO_INT(cmd->payload_cbdata), adl);
+	g_free(adl);
 
 	session = cmdproc->session;
 	account = session->account;
@@ -1477,7 +1476,7 @@ gcf_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload,
 
 	if ( (root = xmlnode_from_str(cmd->payload, cmd->payload_len)) == NULL)
 	{
-		purple_debug_error("msn", "Unable to parse GCF payload into a XML tree");
+		purple_debug_error("msn", "Unable to parse GCF payload into a XML tree\n");
 		return;
 	}
 
@@ -1550,7 +1549,7 @@ ubx_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload,
 	user = msn_userlist_find_user(session->userlist, passport);
 	if (user == NULL) {
 		char *str = g_strndup(payload, len);
-		purple_debug_info("msn", "unknown user %s, payload is %s",
+		purple_debug_info("msn", "unknown user %s, payload is %s\n",
 			passport, str);
 		g_free(str);
 		return;

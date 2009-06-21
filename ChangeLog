@@ -1,6 +1,113 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-version 2.5.7 (06/19/2009):
+version 2.6.0 (??/??/2009):
+	General:
+	* Theme support in libpurple thanks to Justin Rodriguez's summer of code
+	  project.  With some minor additions and clean ups from Paul Aurich.
+	* Voice & Video framework in libpurple, thanks to Mike Ruprecht's summer
+	  of code project in 2008.
+	* It should no longer be possible to end up with duplicates of buddies
+	  in a group on the buddy list. (Paul Aurich)
+	* Removed the unmaintained and unneeded toc protocol plugin.
+	* Fixed NTLM authentication on big-endian systems.
+
+	libpurple:
+	* Various memory cleanups when unloading libpurple. (Nick Hebner)
+	* Report idle time 'From last message sent' should work properly.
+	* Show the invite message for buddies that requested authorization
+	  from you on MSN.
+	* DNS servers are re-read when DNS queries fail in case the system has
+	  moved to a new network and the old servers are not accessible.
+	* Gadu-Gadu accounts can specify a server to which to connect.
+	  (Krzysztof "kreez" Tobola)
+
+	XMPP:
+	* Voice & Video support with Jingle (XEP-0166, 0167, 0176, & 0177), voice
+	  support with GTalk and voice and video support with the GMail web
+	  client. (Mike "Maiku" Ruprecht)
+	* Added a Service Discovery Browser plugin for Pidgin. (Andrei Mozzhuhin)
+	* Support for in-band bytestreams for file transfers (XEP-0047). (Marcus
+	  Lundblad)
+	* Support for sending and receiving attentions (equivalent to "buzz"
+	  and "nudge") using the command /buzz. (XEP-0224)
+	* Support for connecting using BOSH. (Tobias Markmann)
+	* A buddy's local time is displayed in the Get Info dialog if the remote
+	  client supports it.
+	* The set_chat_topic function can unset the chat topic.
+	* The Ad-Hoc commands associated with our server are now always shown at
+	  login.
+	* Support showing and reporting idle times in the buddy list. (XEP-0256)
+	* Support most recent version of User Avatar. (XEP-0084 v1.1)
+	* Updated Entity Capabilities support. (Tobias Markmann)
+	* Better support for receiving remote users' nicknames.
+	* /affiliate and /role will now list the room members with the specified
+	  affiliation/role if possible. (Andrei Mozzhuhin)
+	* Put section breaks between resources in "Get Info" to improve readability.
+	* Silently remove invalid XML 1.0 entities (e.g. ASCII control characters)
+	  from sent messages.
+	* XHTML markup is only included in outgoing messages when the message
+	  contains formatting.
+	* Show when the user was last logged in when doing "Get Info" on an offline
+	  buddy, provided the server supports it.
+	* Support custom smileys in MUCs (only when all participants support the
+	  "Bits of Binary" extension, and a maximum of 10 participants are in the
+	  chat to avoid getting too many fetch requests).
+	* Fix an issue with Jabber (pre-XMPP) servers and the user's preference
+	  to require SSL not being respected.
+	* Fix an issue where Cyrus SASL DIGEST MD5 authentication might fail if
+	  the username, password, or realm (the JID domain) contain non-ASCII
+	  characters.
+	* Show emblem for mobile, handheld, and web clients and bots (if the other
+	  client supports it).
+
+	Yahoo:
+	* P2P file transfers.  (Sulabh Mahajan)
+	* Sending text messages (address to +<countrycode><phone number>).
+	  (Sulabh Mahajan)
+	* Addition of MSN buddies to Yahoo accounts by adding them as
+	  'msn/buddy@somedomain.com' is now supported.  (Sulabh Mahajan)
+
+	Pidgin:
+	* Added -f command line option to tell Pidgin to ignore NetworkManager
+	  and assume it has a valid network connection.
+	* Allow plugins to specify custom link types to the GtkIMHtml widget.
+	* The status message input box at the bottom of the buddy list expands
+	  correctly when starting a new line of text.
+	* Pressing the Enter key in the message entry box of the New Status
+	  dialog and various other dialogs now causes the cursor to move to
+	  the next line.
+	* Created a unified Buddy Pounce notification window for all pounces
+	  where "Pop up a notification" is selected, which avoids having a
+	  new dialog box every time a pounce is triggered. (Jorge Villaseñor)
+	* The New Account dialog is now broken into three tabs.  Proxy
+	  configuration has been moved from the Advanced tab to the new tab.
+	* Dragging a buddy onto a chat pops up a chat-invitation dialog.
+	  (Carlos Bederian)
+	* The nicks of the persons who leave the chatroom are italicized in the
+	  chat's conversation history. The nicks are un-italicized when they
+	  rejoin.
+	* Always set unseen-count and unseen-state on conversations.
+	  (Joshua Stein)
+	* Fix a bug in 'Conversation Colors' plugin for RTL messages.
+	* Pressing the Left and Right arrow keys in the buddy list will expand and
+	  collapse buddy groups or contacts. (Peter Ruibal)
+	* Support saving animated custom smileys as animated images or animated
+	  custom smileys. (Andrea Piccinelli)
+	* Support for keyboard navigation on the status icon. (Li Yuan)
+
+	Finch:
+	* The hardware cursor is updated correctly. This will be useful
+	  especially for users of braille terminals, screen readers etc.
+	* Added a TinyURL plugin, which aids copying longer URLs.
+
+	Pidgin GTK+ Theme Control Plugin:
+	* Removed mouse cursor color preferences.
+	* Added "Typing Notification Color" preference.
+	* Added "Disable Typing Notification Text" preference.
+	* Preferences have been reorganized into three tabs for Colors, Fonts, and
+	  Miscellaneous categories.
+
+version 2.5.7 (06/20/2009):
 	* Yahoo Protocol 16 support, including new HTTPS login method; this should
 	  fix a number of login problems that have recently cropped up.  (Sulabh
 	  Mahajan, Mike "Maiku" Ruprecht)
@@ -18,7 +125,7 @@ version 2.5.6 (05/19/2009):
 	* Make XML parsing more resilient to interactions with other libraries.
 	  This, along with the fix for libxml2 bug 564217, fixes the crashes
 	  on connect in XMPP with recent gst-plugins-bad (see #8830 for details).
-	* Many security related fixes
+	* Many security related fixes.
 
 	IRC:
 	* Correctly handle WHOIS for users who are joined to a large number of

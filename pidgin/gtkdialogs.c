@@ -73,7 +73,8 @@ struct artist {
 /* Order: Alphabetical by Last Name */
 static const struct developer developers[] = {
 	{"Daniel 'datallah' Atallah",	NULL, NULL},
-	{"John 'rekkanoryo' Bailey",	N_("bug master"), "rekkanoryo@pidgin.im"},
+	{"Paul 'darkrain42' Aurich",	NULL, NULL },
+	{"John 'rekkanoryo' Bailey",	N_("bug master"), NULL},
 	{"Ethan 'Paco-Paco' Blanton",	NULL, NULL},
 	{"Hylke Bons",			N_("artist"), "h.bons@student.rug.nl"},
 	{"Thomas Butter",				NULL, NULL},
@@ -90,6 +91,7 @@ static const struct developer developers[] = {
 	{"Bartosz Oler",		NULL, NULL},
 	{"Etan 'deryni' Reisner",       NULL, NULL},
 	{"Tim 'marv' Ringenbach",		NULL, NULL},
+	{"Michael 'Maiku' Ruprecht",	N_("voice and video"), NULL},
 	{"Elliott 'QuLogic' Sales de Andrade",	NULL,	NULL},
 	{"Luke 'LSchiere' Schierer",	N_("support"), "lschiere@users.sf.net"},
 	{"Evan Schoenberg",		NULL, NULL},
@@ -101,7 +103,6 @@ static const struct developer developers[] = {
 
 /* Order: Alphabetical by Last Name */
 static const struct developer patch_writers[] = {
-	{"Paul 'darkrain42' Aurich", NULL, NULL },
 	{"Marcus 'malu' Lundblad", NULL, NULL},
 	{"Dennis 'EvilDennisR' Ristuccia",	N_("Senior Contributor/QA"),	NULL},
 	{"Peter 'Fmoo' Ruibal",		NULL,	NULL},
@@ -185,11 +186,12 @@ static const struct translator translators[] = {
 	{N_("Hebrew"),              "he", "Shalom Craimer", "scraimer@gmail.com"},
 	{N_("Hindi"),               "hi", "Ravishankar Shrivastava", "raviratlami@yahoo.com"},
 	{N_("Hungarian"),           "hu", "Kelemen Gábor", "kelemeng@gnome.hu"},
+	{N_("Armenian"),            "hy", "David Avsharyan", "avsharyan@gmail.com"},
 	{N_("Indonesian"),          "id", "Rai S. Regawa", "raireg@yahoo.com"},
 	{N_("Italian"),             "it", "Claudio Satriano", "satriano@na.infn.it"},
 	{N_("Japanese"),            "ja", "Takashi Aihana", "aihana@gnome.gr.jp"},
 	{N_("Georgian"),            "ka", N_("Ubuntu Georgian Translators"), "alexander.didebulidze@stusta.mhn.de"},
-	{"Khmer",                   "km", "Khoem Sokhem", "khoemsokhem@khmeros.info"},
+	{N_("Khmer"),               "km", "Khoem Sokhem", "khoemsokhem@khmeros.info"},
 	{N_("Kannada"),             "kn", N_("Kannada Translation team"), "translation@sampada.info"},
 	{N_("Korean"),              "ko", "Sushizang", "sushizang@empal.com"},
 	{N_("Kurdish"),             "ku", "Erdal Ronahi", "erdal.ronahi@gmail.com"},
@@ -222,6 +224,7 @@ static const struct translator translators[] = {
 	{N_("Sinhala"),             "si", "Danishka Navin", "snavin@redhat.com"},
 	{N_("Sinhala"),             "si", "Yajith Ajantha Dayarathna", "yajith@gmail.com"},
 	{N_("Swedish"),             "sv", "Peter Hjalmarsson", "xake@telia.com"},
+	{N_("Swahili"),             "sw", "Paul Msegeya", "msegeya@gmail.com"},
 	{N_("Tamil"),               "ta", "Viveka Nathan K", "vivekanathan@users.sourceforge.net"},
 	{N_("Telugu"),              "te", "Mr. Subbaramaih", "info.gist@cdac.in"},
 	{N_("Thai"),                "th", "Isriya Paireepairit", "markpeak@gmail.com"},
@@ -351,7 +354,7 @@ static void destroy_about(void)
 }
 
 #if 0
-/* This function puts the version number onto the pixmap we use in the 'about' 
+/* This function puts the version number onto the pixmap we use in the 'about'
  * screen in Pidgin. */
 static void
 pidgin_logo_versionize(GdkPixbuf **original, GtkWidget *widget) {
@@ -427,7 +430,7 @@ void pidgin_dialogs_about()
 #endif
 	gtk_widget_destroy(logo);
 	logo = gtk_image_new_from_pixbuf(pixbuf);
-	gdk_pixbuf_unref(pixbuf);
+	g_object_unref(G_OBJECT(pixbuf));
 	/* Insert the logo */
 	obj = gtk_widget_get_accessible(logo);
 	tmp = g_strconcat(PIDGIN_NAME, " " DISPLAY_VERSION, NULL);
@@ -494,7 +497,7 @@ void pidgin_dialogs_about()
 						   _("Retired Crazy Patch Writers"));
 	add_developers(str, retired_patch_writers);
 	g_string_append(str, "<BR/>");
-			
+
 	/* Current Translators */
 	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
 						   _("Current Translators"));
@@ -643,6 +646,12 @@ if (purple_plugins_find_with_id("core-tcl") != NULL) {
 	g_string_append(str, "    <b>Tcl:</b> Disabled<br/>");
 	g_string_append(str, "    <b>Tk:</b> Disabled<br/>");
 }
+
+#ifdef USE_VV
+	g_string_append(str, "    <b>Voice and Video:</b> Enabled<br/>");
+#else
+	g_string_append(str, "    <b>Voice and Video:</b> Disabled<br/>");
+#endif
 
 #ifndef _WIN32
 #ifdef USE_SM
@@ -1068,8 +1077,8 @@ pidgin_dialogs_remove_contact(PurpleContact *contact)
 	g_return_if_fail(contact != NULL);
 	g_return_if_fail(buddy != NULL);
 
-	if (((PurpleBlistNode*)contact)->child == (PurpleBlistNode*)buddy &&
-			!((PurpleBlistNode*)buddy)->next) {
+	if (PURPLE_BLIST_NODE(contact)->child == PURPLE_BLIST_NODE(buddy) &&
+	    PURPLE_BLIST_NODE(buddy)->next == NULL) {
 		pidgin_dialogs_remove_buddy(buddy);
 	} else {
 		gchar *text;
@@ -1123,7 +1132,7 @@ pidgin_dialogs_merge_groups(PurpleGroup *source, const char *new_name)
 	ggp = g_new(struct _PidginGroupMergeObject, 1);
 	ggp->parent = source;
 	ggp->new_name = g_strdup(new_name);
-	
+
 	purple_request_action(source, NULL, _("Merge Groups"), text, 0,
 			NULL, NULL, NULL,
 			ggp, 2,

@@ -86,6 +86,8 @@ jabber_parser_element_start_libxml(void *user_data,
 			}
 		}
 		for(i=0; i < nb_attributes * 5; i+=5) {
+			const char *name = (const char *)attributes[i];
+			const char *prefix = (const char *)attributes[i+1];
 			const char *attrib_ns = (const char *)attributes[i+2];
 			char *txt;
 			int attrib_len = attributes[i+4] - attributes[i+3];
@@ -97,7 +99,7 @@ jabber_parser_element_start_libxml(void *user_data,
 			txt = attrib;
 			attrib = purple_unescape_html(txt);
 			g_free(txt);
-			xmlnode_set_attrib_with_namespace(node, (const char*) attributes[i], attrib_ns, attrib);
+			xmlnode_set_attrib_full(node, name, attrib_ns, prefix, attrib);
 			g_free(attrib);
 		}
 
@@ -203,12 +205,6 @@ jabber_parser_setup(JabberStream *js)
 	 * out the encoding at creation time. So, setting up the parser is
 	 * just a matter of destroying any current parser. */
 	jabber_parser_free(js);
-}
-
-void
-jabber_parser_close_stream(JabberStream *js)
-{
-	xmlParseChunk(js->context, "</stream:stream>", 16 /* length */, 0);
 }
 
 void jabber_parser_free(JabberStream *js) {
