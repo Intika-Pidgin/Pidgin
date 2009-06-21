@@ -30,7 +30,7 @@
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
+#endif /* HAVE_CONFIG_H */
 
 #include "debug.h"
 #include "privacy.h"
@@ -519,7 +519,7 @@ void yahoo_process_chat_join(PurpleConnection *gc, struct yahoo_packet *pkt)
 		GList *l;
 		GList *flags = NULL;
 		for (l = members; l; l = l->next)
-			flags = g_list_append(flags, GINT_TO_POINTER(PURPLE_CBFLAGS_NONE));
+			flags = g_list_prepend(flags, GINT_TO_POINTER(PURPLE_CBFLAGS_NONE));
 		if (c && purple_conv_chat_has_left(PURPLE_CONV_CHAT(c))) {
 			/* this might be a hack, but oh well, it should nicely */
 			char *tmpmsg;
@@ -1519,7 +1519,7 @@ PurpleRoomlist *yahoo_roomlist_get_list(PurpleConnection *gc)
 
 	purple_roomlist_set_fields(rl, fields);
 
-	if (purple_proxy_connect(NULL, account, yrl->host, 80,
+	if (purple_proxy_connect(gc, account, yrl->host, 80,
 	                       yahoo_roomlist_got_connected, yrl) == NULL)
 	{
 		purple_notify_error(gc, NULL, _("Connection problem"), _("Unable to fetch room list."));
@@ -1588,8 +1588,9 @@ void yahoo_roomlist_expand_category(PurpleRoomlist *list, PurpleRoomlistRoom *ca
 	yrl->ucat = purple_roomlist_room_new(PURPLE_ROOMLIST_ROOMTYPE_CATEGORY, _("User Rooms"), yrl->cat);
 	purple_roomlist_room_add(list, yrl->ucat);
 
-	if (purple_proxy_connect(NULL, list->account, yrl->host, 80,
-	                       yahoo_roomlist_got_connected, yrl) == NULL)
+	if (purple_proxy_connect(purple_account_get_connection(list->account),
+			list->account, yrl->host, 80,
+			yahoo_roomlist_got_connected, yrl) == NULL)
 	{
 		purple_notify_error(purple_account_get_connection(list->account),
 		                  NULL, _("Connection problem"), _("Unable to fetch room list."));

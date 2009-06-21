@@ -196,44 +196,44 @@ static void simple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGro
 {
 	struct simple_account_data *sip = (struct simple_account_data *)gc->proto_data;
 	struct simple_buddy *b;
-	if(strncmp(buddy->name, "sip:", 4)) {
-		gchar *buf = g_strdup_printf("sip:%s", buddy->name);
+	const char *name = purple_buddy_get_name(buddy);
+	if(strncmp(name, "sip:", 4)) {
+		gchar *buf = g_strdup_printf("sip:%s", name);
 		purple_blist_rename_buddy(buddy, buf);
 		g_free(buf);
 	}
-	if(!g_hash_table_lookup(sip->buddies, buddy->name)) {
+	if(!g_hash_table_lookup(sip->buddies, name)) {
 		b = g_new0(struct simple_buddy, 1);
-		purple_debug_info("simple", "simple_add_buddy %s\n", buddy->name);
-		b->name = g_strdup(buddy->name);
+		purple_debug_info("simple", "simple_add_buddy %s\n", name);
+		b->name = g_strdup(name);
 		g_hash_table_insert(sip->buddies, b->name, b);
 	} else {
-		purple_debug_info("simple", "buddy %s already in internal list\n", buddy->name);
+		purple_debug_info("simple", "buddy %s already in internal list\n", name);
 	}
 }
 
 static void simple_get_buddies(PurpleConnection *gc) {
-	PurpleBlistNode *gnode, *cnode, *bnode;
+	GSList *buddies;
+	PurpleAccount *account;
 
 	purple_debug_info("simple", "simple_get_buddies\n");
 
-	for(gnode = purple_get_blist()->root; gnode; gnode = gnode->next) {
-		if(!PURPLE_BLIST_NODE_IS_GROUP(gnode)) continue;
-		for(cnode = gnode->child; cnode; cnode = cnode->next) {
-			if(!PURPLE_BLIST_NODE_IS_CONTACT(cnode)) continue;
-			for(bnode = cnode->child; bnode; bnode = bnode->next) {
-				if(!PURPLE_BLIST_NODE_IS_BUDDY(bnode)) continue;
-				if(((PurpleBuddy*)bnode)->account == gc->account)
-					simple_add_buddy(gc, (PurpleBuddy*)bnode, (PurpleGroup *)gnode);
-			}
-		}
+	account = purple_connection_get_account(gc);
+	buddies = purple_find_buddies(account, NULL);
+	while (buddies) {
+		PurpleBuddy *buddy = buddies->data;
+		simple_add_buddy(gc, buddy, purple_buddy_get_group(buddy));
+
+		buddies = g_slist_delete_link(buddies, buddies);
 	}
 }
 
 static void simple_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 {
+	const char *name = purple_buddy_get_name(buddy);
 	struct simple_account_data *sip = (struct simple_account_data *)gc->proto_data;
-	struct simple_buddy *b = g_hash_table_lookup(sip->buddies, buddy->name);
-	g_hash_table_remove(sip->buddies, buddy->name);
+	struct simple_buddy *b = g_hash_table_lookup(sip->buddies, name);
+	g_hash_table_remove(sip->buddies, name);
 	g_free(b->name);
 	g_free(b);
 }
@@ -445,13 +445,6 @@ static void send_later_cb(gpointer data, gint source, const gchar *error) {
 	PurpleConnection *gc = data;
 	struct simple_account_data *sip;
 	struct sip_connection *conn;
-
-	if (!PURPLE_CONNECTION_IS_VALID(gc))
-	{
-		if (source >= 0)
-			close(source);
-		return;
-	}
 
 	if(source < 0) {
 		purple_connection_error_reason(gc,
@@ -922,7 +915,7 @@ static gboolean simple_add_lcs_contacts(struct simple_account_data *sip, struct 
 			purple_blist_add_buddy(b, NULL, g, NULL);
 			purple_blist_alias_buddy(b, uri);
 			bs = g_new0(struct simple_buddy, 1);
-			bs->name = g_strdup(b->name);
+			bs->name = g_strdup(purple_buddy_get_name(b));
 			g_hash_table_insert(sip->buddies, bs->name, bs);
 		}
 		xmlnode_free(isc);
@@ -1735,13 +1728,6 @@ static void login_cb(gpointer data, gint source, const gchar *error_message) {
 	struct simple_account_data *sip;
 	struct sip_connection *conn;
 
-	if (!PURPLE_CONNECTION_IS_VALID(gc))
-	{
-		if (source >= 0)
-			close(source);
-		return;
-	}
-
 	if(source < 0) {
 		purple_connection_error_reason(gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
@@ -2088,13 +2074,13 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* whiteboard_prpl_ops */
 	simple_send_raw,		/* send_raw */
 	NULL,					/* roomlist_room_serialize */
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
+	NULL,					/* unregister_user */
+	NULL,					/* send_attention */
+	NULL,					/* get_attention_types */
 	sizeof(PurplePluginProtocolInfo),       /* struct_size */
-	NULL
+	NULL,					/* get_account_text_table */
+	NULL,					/* initiate_media */
+	NULL					/* can_do_media */
 };
 
 
