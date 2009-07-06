@@ -979,8 +979,8 @@ purple_markup_unescape_entity(const char *text, int *length)
 		buf[buflen] = '\0';
 		pln = buf;
 
-		len = 2;
-		while(isdigit((gint) text[len])) len++;
+		len = (*(text+2) == 'x' ? 3 : 2);
+		while(isxdigit((gint) text[len])) len++;
 		if(text[len] == ';') len++;
 	}
 	else
@@ -2399,30 +2399,32 @@ purple_markup_linkify(const char *text)
 	return g_string_free(ret, FALSE);
 }
 
-char *
-purple_unescape_html(const char *html) {
-	if (html != NULL) {
-		const char *c = html;
-		GString *ret = g_string_new("");
-		while (*c) {
-			int len;
-			const char *ent;
+char *purple_unescape_html(const char *html)
+{
+	GString *ret;
+	const char *c = html;
 
-			if ((ent = purple_markup_unescape_entity(c, &len)) != NULL) {
-				ret = g_string_append(ret, ent);
-				c += len;
-			} else if (!strncmp(c, "<br>", 4)) {
-				ret = g_string_append_c(ret, '\n');
-				c += 4;
-			} else {
-				ret = g_string_append_c(ret, *c);
-				c++;
-			}
+	if (html == NULL)
+		return NULL;
+
+	ret = g_string_new("");
+	while (*c) {
+		int len;
+		const char *ent;
+
+		if ((ent = purple_markup_unescape_entity(c, &len)) != NULL) {
+			g_string_append(ret, ent);
+			c += len;
+		} else if (!strncmp(c, "<br>", 4)) {
+			g_string_append_c(ret, '\n');
+			c += 4;
+		} else {
+			g_string_append_c(ret, *c);
+			c++;
 		}
-		return g_string_free(ret, FALSE);
 	}
 
-	return NULL;
+	return g_string_free(ret, FALSE);
 }
 
 char *
@@ -3776,45 +3778,70 @@ parse_content_len(const char *data, size_t data_len)
 static gboolean
 content_is_chunked(const char *data, size_t data_len)
 {
-	gboolean chunked = FALSE;
 	const char *p = find_header_content(data, data_len, "\nTransfer-Encoding: ", sizeof("\nTransfer-Encoding: ") - 1);
 	if (p && g_strncasecmp(p, "chunked", 7) == 0)
-		chunked = TRUE;
+		return TRUE;
 
-	return chunked;
+	return FALSE;
 }
 
 /* Process in-place */
 static void
-process_chunked_data(char *data, gssize *len)
+process_chunked_data(char *data, gsize *len)
 {
-	gssize sz;
-	gssize nlen = 0;
+	gsize sz;
+	gsize newlen = 0;
 	char *p = data;
 	char *s = data;
 
 	while (*s) {
-		if (sscanf(s, "%x\r\n", &sz) != 1) {
-			purple_debug_error("util", "Error processing chunked data. Expected data length, found: %s\n", s);
+		/* Read the size of this chunk */
+		if (sscanf(s, "%" G_GSIZE_MODIFIER "x", &sz) != 1)
+		{
+			purple_debug_error("util", "Error processing chunked data: "
+					"Expected data length, found: %s\n", s);
 			break;
 		}
-		if (sz == 0)
+		if (sz == 0) {
+			/* We've reached the last chunk */
+			/*
+			 * TODO: The spec allows "footers" to follow the last chunk.
+			 *       If there is more data after this line then we should
+			 *       treat it like a header.
+			 */
 			break;
-		s = strstr(s, "\r\n") + 2;
+		}
+
+		/* Advance to the start of the data */
+		s = strstr(s, "\r\n");
+		if (s == NULL)
+			break;
+		s += 2;
+
+		if (s + sz > data + *len) {
+			purple_debug_error("util", "Error processing chunked data: "
+					"Chunk size %" G_GSIZE_FORMAT " bytes was longer "
+					"than the data remaining in the buffer (%"
+					G_GSIZE_FORMAT " bytes)\n", sz, data + *len - s);
+		}
+
+		/* Move all data overtop of the chunk length that we read in earlier */
 		g_memmove(p, s, sz);
 		p += sz;
 		s += sz;
-		nlen += sz;
+		newlen += sz;
 		if (*s != '\r' && *(s + 1) != '\n') {
-			purple_debug_error("util", "Error processing chunked data. Expected \\r\\n, found: %s\n", s);
+			purple_debug_error("util", "Error processing chunked data: "
+					"Expected \\r\\n, found: %s\n", s);
 			break;
 		}
 		s += 2;
 	}
+
+	/* NULL terminate the data */
 	*p = 0;
 
-	if (len)
-		*len = nlen;
+	*len = newlen;
 }
 
 static void
@@ -4014,7 +4041,7 @@ url_fetch_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		}
 	}
 
-	if(g_getenv("PURPLE_UNSAFE_DEBUG"))
+	if(purple_debug_is_unsafe())
 		purple_debug_misc("util", "Request: '%s'\n", gfud->request);
 	else
 		purple_debug_misc("util", "request constructed\n");
@@ -4131,7 +4158,7 @@ purple_util_fetch_url_request_len_with_account(PurpleAccount *account,
 	g_return_val_if_fail(url      != NULL, NULL);
 	g_return_val_if_fail(callback != NULL, NULL);
 
-	if(g_getenv("PURPLE_UNSAFE_DEBUG"))
+	if(purple_debug_is_unsafe())
 		purple_debug_info("util",
 				 "requested to fetch (%s), full=%d, user_agent=(%s), http11=%d\n",
 				 url, full, user_agent?user_agent:"(null)", http11);
@@ -4157,8 +4184,9 @@ purple_util_fetch_url_request_len_with_account(PurpleAccount *account,
 	if (purple_strcasestr(url, "https://") != NULL) {
 		if (!purple_ssl_is_supported()) {
 			purple_util_fetch_url_error(gfud,
-					_("Unable to connect to %s: Server requires TLS/SSL, but no TLS/SSL support was found."),
-					gfud->website.address);
+					_("Unable to connect to %s: %s"),
+					gfud->website.address,
+					_("Server requires TLS/SSL, but no TLS/SSL support was found."));
 			return NULL;
 		}
 

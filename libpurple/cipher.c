@@ -61,10 +61,143 @@
 #include "signals.h"
 #include "value.h"
 
+#if GLIB_CHECK_VERSION(2,16,0)
+static void
+purple_g_checksum_init(PurpleCipherContext *context, GChecksumType type)
+{
+	GChecksum *checksum;
+
+	checksum = g_checksum_new(type);
+	purple_cipher_context_set_data(context, checksum);
+}
+
+static void
+purple_g_checksum_reset(PurpleCipherContext *context, GChecksumType type)
+{
+	GChecksum *checksum;
+
+	checksum = purple_cipher_context_get_data(context);
+	g_return_if_fail(checksum != NULL);
+
+#if GLIB_CHECK_VERSION(2,18,0)
+	g_checksum_reset(checksum);
+#else
+	g_checksum_free(checksum);
+	checksum = g_checksum_new(type);
+	purple_cipher_context_set_data(context, checksum);
+#endif
+}
+
+static void
+purple_g_checksum_uninit(PurpleCipherContext *context)
+{
+	GChecksum *checksum;
+
+	checksum = purple_cipher_context_get_data(context);
+	g_return_if_fail(checksum != NULL);
+
+	g_checksum_free(checksum);
+}
+
+static void
+purple_g_checksum_append(PurpleCipherContext *context, const guchar *data,
+                         gsize len)
+{
+	GChecksum *checksum;
+
+	checksum = purple_cipher_context_get_data(context);
+	g_return_if_fail(checksum != NULL);
+
+	while (len >= G_MAXSSIZE) {
+		g_checksum_update(checksum, data, G_MAXSSIZE);
+		len -= G_MAXSSIZE;
+		data += G_MAXSSIZE;
+	}
+
+	if (len)
+		g_checksum_update(checksum, data, len);
+}
+
+static gboolean
+purple_g_checksum_digest(PurpleCipherContext *context, GChecksumType type,
+                         gsize len, guchar *digest, gsize *out_len)
+{
+	GChecksum *checksum;
+	const gssize required_length = g_checksum_type_get_length(type);
+
+	checksum = purple_cipher_context_get_data(context);
+
+	g_return_val_if_fail(len >= required_length, FALSE);
+	g_return_val_if_fail(checksum != NULL, FALSE);
+
+	g_checksum_get_digest(checksum, digest, &len);
+
+	purple_cipher_context_reset(context, NULL);
+
+	if (out_len)
+		*out_len = len;
+
+	return TRUE;
+}
+#endif
+
+
 /*******************************************************************************
  * MD5
  ******************************************************************************/
 #define MD5_HMAC_BLOCK_SIZE	64
+
+static size_t
+md5_get_block_size(PurpleCipherContext *context)
+{
+	/* This does not change (in this case) */
+	return MD5_HMAC_BLOCK_SIZE;
+}
+
+#if GLIB_CHECK_VERSION(2,16,0)
+
+static void
+md5_init(PurpleCipherContext *context, void *extra)
+{
+	purple_g_checksum_init(context, G_CHECKSUM_MD5);
+}
+
+static void
+md5_reset(PurpleCipherContext *context, void *extra)
+{
+	purple_g_checksum_reset(context, G_CHECKSUM_MD5);
+}
+
+static gboolean
+md5_digest(PurpleCipherContext *context, gsize in_len, guchar digest[16],
+           size_t *out_len)
+{
+	return purple_g_checksum_digest(context, G_CHECKSUM_MD5, in_len,
+	                                digest, out_len);
+}
+
+static PurpleCipherOps MD5Ops = {
+	NULL,			/* Set Option		*/
+	NULL,			/* Get Option		*/
+	md5_init,		/* init				*/
+	md5_reset,		/* reset			*/
+	purple_g_checksum_uninit,	/* uninit			*/
+	NULL,			/* set iv			*/
+	purple_g_checksum_append,	/* append			*/
+	md5_digest,		/* digest			*/
+	NULL,			/* encrypt			*/
+	NULL,			/* decrypt			*/
+	NULL,			/* set salt			*/
+	NULL,			/* get salt size	*/
+	NULL,			/* set key			*/
+	NULL,			/* get key size		*/
+	NULL,			/* set batch mode */
+	NULL,			/* get batch mode */
+	md5_get_block_size,	/* get block size */
+	NULL			/* set key with len */
+};
+
+#else /* GLIB_CHECK_VERSION(2,16,0) */
 
 struct MD5Context {
 	guint32 total[2];
@@ -327,13 +460,6 @@ md5_digest(PurpleCipherContext *context, size_t in_len, guchar digest[16],
 	return TRUE;
 }
 
-static size_t
-md5_get_block_size(PurpleCipherContext *context)
-{
-	/* This does not change (in this case) */
-	return MD5_HMAC_BLOCK_SIZE;
-}
-
 static PurpleCipherOps MD5Ops = {
 	NULL,			/* Set option */
 	NULL,			/* Get option */
@@ -354,6 +480,8 @@ static PurpleCipherOps MD5Ops = {
 	md5_get_block_size,	/* get block size */
 	NULL			/* set key with len */
 };
+
+#endif /* GLIB_CHECK_VERSION(2,16,0) */
 
 /*******************************************************************************
  * MD4
@@ -1613,6 +1741,61 @@ static PurpleCipherOps DES3Ops = {
  * SHA-1
  ******************************************************************************/
 #define SHA1_HMAC_BLOCK_SIZE	64
+
+static size_t
+sha1_get_block_size(PurpleCipherContext *context)
+{
+	/* This does not change (in this case) */
+	return SHA1_HMAC_BLOCK_SIZE;
+}
+
+
+#if GLIB_CHECK_VERSION(2,16,0)
+
+static void
+sha1_init(PurpleCipherContext *context, void *extra)
+{
+	purple_g_checksum_init(context, G_CHECKSUM_SHA1);
+}
+
+static void
+sha1_reset(PurpleCipherContext *context, void *extra)
+{
+	purple_g_checksum_reset(context, G_CHECKSUM_SHA1);
+}
+
+static gboolean
+sha1_digest(PurpleCipherContext *context, gsize in_len, guchar digest[20],
+            gsize *out_len)
+{
+	return purple_g_checksum_digest(context, G_CHECKSUM_SHA1, in_len,
+	                                digest, out_len);
+}
+
+static PurpleCipherOps SHA1Ops = {
+	NULL,			/* Set Option		*/
+	NULL,			/* Get Option		*/
+	sha1_init,		/* init				*/
+	sha1_reset,		/* reset			*/
+	purple_g_checksum_uninit,	/* uninit			*/
+	NULL,			/* set iv			*/
+	purple_g_checksum_append,	/* append			*/
+	sha1_digest,	/* digest			*/
+	NULL,			/* encrypt			*/
+	NULL,			/* decrypt			*/
+	NULL,			/* set salt			*/
+	NULL,			/* get salt size	*/
+	NULL,			/* set key			*/
+	NULL,			/* get key size		*/
+	NULL,			/* set batch mode */
+	NULL,			/* get batch mode */
+	sha1_get_block_size,	/* get block size */
+	NULL			/* set key with len */
+};
+
+#else /* GLIB_CHECK_VERSION(2,16,0) */
+
+#define SHA1_HMAC_BLOCK_SIZE	64
 #define SHA1_ROTL(X,n) ((((X) << (n)) | ((X) >> (32-(n)))) & 0xFFFFFFFF)
 
 struct SHA1Context {
@@ -1833,13 +2016,6 @@ sha1_digest(PurpleCipherContext *context, size_t in_len, guchar digest[20],
 	return TRUE;
 }
 
-static size_t
-sha1_get_block_size(PurpleCipherContext *context)
-{
-	/* This does not change (in this case) */
-	return SHA1_HMAC_BLOCK_SIZE;
-}
-
 static PurpleCipherOps SHA1Ops = {
 	sha1_set_opt,	/* Set Option		*/
 	sha1_get_opt,	/* Get Option		*/
@@ -1861,10 +2037,65 @@ static PurpleCipherOps SHA1Ops = {
 	NULL			/* set key with len */
 };
 
+#endif /* GLIB_CHECK_VERSION(2,16,0) */
+
 /*******************************************************************************
  * SHA-256
  ******************************************************************************/
 #define SHA256_HMAC_BLOCK_SIZE	64
+
+static size_t
+sha256_get_block_size(PurpleCipherContext *context)
+{
+	/* This does not change (in this case) */
+	return SHA256_HMAC_BLOCK_SIZE;
+}
+
+#if GLIB_CHECK_VERSION(2,16,0)
+
+static void
+sha256_init(PurpleCipherContext *context, void *extra)
+{
+	purple_g_checksum_init(context, G_CHECKSUM_SHA256);
+}
+
+static void
+sha256_reset(PurpleCipherContext *context, void *extra)
+{
+	purple_g_checksum_reset(context, G_CHECKSUM_SHA256);
+}
+
+static gboolean
+sha256_digest(PurpleCipherContext *context, gsize in_len, guchar digest[20],
+            gsize *out_len)
+{
+	return purple_g_checksum_digest(context, G_CHECKSUM_SHA256, in_len,
+	                                digest, out_len);
+}
+
+static PurpleCipherOps SHA256Ops = {
+	NULL,			/* Set Option		*/
+	NULL,			/* Get Option		*/
+	sha256_init,	/* init				*/
+	sha256_reset,	/* reset			*/
+	purple_g_checksum_uninit,	/* uninit			*/
+	NULL,			/* set iv			*/
+	purple_g_checksum_append,	/* append			*/
+	sha256_digest,	/* digest			*/
+	NULL,			/* encrypt			*/
+	NULL,			/* decrypt			*/
+	NULL,			/* set salt			*/
+	NULL,			/* get salt size	*/
+	NULL,			/* set key			*/
+	NULL,			/* get key size		*/
+	NULL,			/* set batch mode */
+	NULL,			/* get batch mode */
+	sha256_get_block_size,	/* get block size */
+	NULL			/* set key with len */
+};
+
+#else /* GLIB_CHECK_VERSION(2,16,0) */
+
 #define SHA256_ROTR(X,n) ((((X) >> (n)) | ((X) << (32-(n)))) & 0xFFFFFFFF)
 
 static const guint32 sha256_K[64] =
@@ -2088,13 +2319,6 @@ sha256_digest(PurpleCipherContext *context, size_t in_len, guchar digest[32],
 	return TRUE;
 }
 
-static size_t
-sha256_get_block_size(PurpleCipherContext *context)
-{
-	/* This does not change (in this case) */
-	return SHA256_HMAC_BLOCK_SIZE;
-}
-
 static PurpleCipherOps SHA256Ops = {
 	sha256_set_opt,	/* Set Option		*/
 	sha256_get_opt,	/* Get Option		*/
@@ -2115,6 +2339,8 @@ static PurpleCipherOps SHA256Ops = {
 	sha256_get_block_size,	/* get block size */
 	NULL			/* set key with len */
 };
+
+#endif /* GLIB_CHECK_VERSION(2,16,0) */
 
 /*******************************************************************************
  * RC4
@@ -2379,7 +2605,7 @@ purple_cipher_digest_region(const gchar *name, const guchar *data,
 	g_return_val_if_fail(cipher, FALSE);
 
 	if(!cipher->ops->append || !cipher->ops->digest) {
-		purple_debug_info("cipher", "purple_cipher_region failed: "
+		purple_debug_warning("cipher", "purple_cipher_region failed: "
 						"the %s cipher does not support appending and or "
 						"digesting.", cipher->name);
 		return FALSE;
@@ -2527,7 +2753,7 @@ purple_cipher_context_set_option(PurpleCipherContext *context, const gchar *name
 	if(cipher->ops && cipher->ops->set_option)
 		cipher->ops->set_option(context, name, value);
 	else
-		purple_debug_info("cipher", "the %s cipher does not support the "
+		purple_debug_warning("cipher", "the %s cipher does not support the "
 						"set_option operation\n", cipher->name);
 }
 
@@ -2544,7 +2770,7 @@ purple_cipher_context_get_option(PurpleCipherContext *context, const gchar *name
 	if(cipher->ops && cipher->ops->get_option)
 		return cipher->ops->get_option(context, name);
 	else {
-		purple_debug_info("cipher", "the %s cipher does not support the "
+		purple_debug_warning("cipher", "the %s cipher does not support the "
 						"get_option operation\n", cipher->name);
 
 		return NULL;
@@ -2627,7 +2853,7 @@ purple_cipher_context_set_iv(PurpleCipherContext *context, guchar *iv, size_t le
 	if(cipher->ops && cipher->ops->set_iv)
 		cipher->ops->set_iv(context, iv, len);
 	else
-		purple_debug_info("cipher", "the %s cipher does not support the set"
+		purple_debug_warning("cipher", "the %s cipher does not support the set"
 						"initialization vector operation\n", cipher->name);
 }
 
@@ -2645,7 +2871,7 @@ purple_cipher_context_append(PurpleCipherContext *context, const guchar *data,
 	if(cipher->ops && cipher->ops->append)
 		cipher->ops->append(context, data, len);
 	else
-		purple_debug_info("cipher", "the %s cipher does not support the append "
+		purple_debug_warning("cipher", "the %s cipher does not support the append "
 						"operation\n", cipher->name);
 }
 
@@ -2662,7 +2888,7 @@ purple_cipher_context_digest(PurpleCipherContext *context, size_t in_len,
 	if(cipher->ops && cipher->ops->digest)
 		return cipher->ops->digest(context, in_len, digest, out_len);
 	else {
-		purple_debug_info("cipher", "the %s cipher does not support the digest "
+		purple_debug_warning("cipher", "the %s cipher does not support the digest "
 						"operation\n", cipher->name);
 		return FALSE;
 	}
@@ -2712,7 +2938,7 @@ purple_cipher_context_encrypt(PurpleCipherContext *context, const guchar data[],
 	if(cipher->ops && cipher->ops->encrypt)
 		return cipher->ops->encrypt(context, data, len, output, outlen);
 	else {
-		purple_debug_info("cipher", "the %s cipher does not support the encrypt"
+		purple_debug_warning("cipher", "the %s cipher does not support the encrypt"
 						"operation\n", cipher->name);
 
 		if(outlen)
@@ -2736,7 +2962,7 @@ purple_cipher_context_decrypt(PurpleCipherContext *context, const guchar data[],
 	if(cipher->ops && cipher->ops->decrypt)
 		return cipher->ops->decrypt(context, data, len, output, outlen);
 	else {
-		purple_debug_info("cipher", "the %s cipher does not support the decrypt"
+		purple_debug_warning("cipher", "the %s cipher does not support the decrypt"
 						"operation\n", cipher->name);
 
 		if(outlen)
@@ -2758,7 +2984,7 @@ purple_cipher_context_set_salt(PurpleCipherContext *context, guchar *salt) {
 	if(cipher->ops && cipher->ops->set_salt)
 		cipher->ops->set_salt(context, salt);
 	else
-		purple_debug_info("cipher", "the %s cipher does not support the "
+		purple_debug_warning("cipher", "the %s cipher does not support the "
 						"set_salt operation\n", cipher->name);
 }
 
@@ -2774,7 +3000,7 @@ purple_cipher_context_get_salt_size(PurpleCipherContext *context) {
 	if(cipher->ops && cipher->ops->get_salt_size)
 		return cipher->ops->get_salt_size(context);
 	else {
-		purple_debug_info("cipher", "the %s cipher does not support the "
+		purple_debug_warning("cipher", "the %s cipher does not support the "
 						"get_salt_size operation\n", cipher->name);
 
 		return -1;
@@ -2793,7 +3019,7 @@ purple_cipher_context_set_key(PurpleCipherContext *context, const guchar *key) {
 	if(cipher->ops && cipher->ops->set_key)
 		cipher->ops->set_key(context, key);
 	else
-		purple_debug_info("cipher", "the %s cipher does not support the "
+		purple_debug_warning("cipher", "the %s cipher does not support the "
 						"set_key operation\n", cipher->name);
 }
 
@@ -2809,7 +3035,7 @@ purple_cipher_context_get_key_size(PurpleCipherContext *context) {
 	if(cipher->ops && cipher->ops->get_key_size)
 		return cipher->ops->get_key_size(context);
 	else {
-		purple_debug_info("cipher", "the %s cipher does not support the "
+		purple_debug_warning("cipher", "the %s cipher does not support the "
 						"get_key_size operation\n", cipher->name);
 
 		return -1;
@@ -2830,7 +3056,7 @@ purple_cipher_context_set_batch_mode(PurpleCipherContext *context,
 	if(cipher->ops && cipher->ops->set_batch_mode)
 		cipher->ops->set_batch_mode(context, mode);
 	else
-		purple_debug_info("cipher", "The %s cipher does not support the "
+		purple_debug_warning("cipher", "The %s cipher does not support the "
 		                            "set_batch_mode operation\n", cipher->name);
 }
 
@@ -2847,7 +3073,7 @@ purple_cipher_context_get_batch_mode(PurpleCipherContext *context)
 	if(cipher->ops && cipher->ops->get_batch_mode)
 		return cipher->ops->get_batch_mode(context);
 	else {
-		purple_debug_info("cipher", "The %s cipher does not support the "
+		purple_debug_warning("cipher", "The %s cipher does not support the "
 		                            "get_batch_mode operation\n", cipher->name);
 		return -1;
 	}
@@ -2866,7 +3092,7 @@ purple_cipher_context_get_block_size(PurpleCipherContext *context)
 	if(cipher->ops && cipher->ops->get_block_size)
 		return cipher->ops->get_block_size(context);
 	else {
-		purple_debug_info("cipher", "The %s cipher does not support the "
+		purple_debug_warning("cipher", "The %s cipher does not support the "
 		                            "get_block_size operation\n", cipher->name);
 		return -1;
 	}
@@ -2886,7 +3112,7 @@ purple_cipher_context_set_key_with_len(PurpleCipherContext *context,
 	if(cipher->ops && cipher->ops->set_key_with_len)
 		cipher->ops->set_key_with_len(context, key, len);
 	else
-		purple_debug_info("cipher", "The %s cipher does not support the "
+		purple_debug_warning("cipher", "The %s cipher does not support the "
 		                            "set_key_with_len operation\n", cipher->name);
 }
 
