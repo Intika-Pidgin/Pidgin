@@ -28,6 +28,7 @@
 #include "pidgin.h"
 
 #include "debug.h"
+#include "nat-pmp.h"
 #include "notify.h"
 #include "prefs.h"
 #include "proxy.h"
@@ -36,7 +37,9 @@
 #include "savedstatuses.h"
 #include "sound.h"
 #include "sound-theme.h"
+#include "stun.h"
 #include "theme-manager.h"
+#include "upnp.h"
 #include "util.h"
 #include "network.h"
 
@@ -114,7 +117,7 @@ pidgin_prefs_labeled_spin_button(GtkWidget *box, const gchar *title,
 
 	val = purple_prefs_get_int(key);
 
-	adjust = gtk_adjustment_new(val, min, max, 1, 1, 1);
+	adjust = gtk_adjustment_new(val, min, max, 1, 1, 0);
 	spin = gtk_spin_button_new(GTK_ADJUSTMENT(adjust), 1, 0);
 	g_object_set_data(G_OBJECT(spin), "val", (char *)key);
 	if (max < 10000)
@@ -1454,7 +1457,7 @@ interface_page(void)
 	gtk_size_group_add_widget(sg, label);
 	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
 
-	vbox = pidgin_make_frame(ret, _("Conversation Window Hiding"));
+	vbox = pidgin_make_frame(ret, _("Conversation Window"));
 	label = pidgin_prefs_dropdown(vbox, _("_Hide new IM conversations:"),
 					PURPLE_PREF_STRING, PIDGIN_PREFS_ROOT "/conversations/im/hide_new",
 					_("Never"), "never",
@@ -1464,6 +1467,9 @@ interface_page(void)
 	gtk_size_group_add_widget(sg, label);
 	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
 
+#ifdef _WIN32
+	pidgin_prefs_checkbox(_("Minimi_ze new conversation windows"), PIDGIN_PREFS_ROOT "/win32/minimize_new_convs", vbox);
+#endif
 
 	/* All the tab options! */
 	vbox = pidgin_make_frame(ret, _("Tabs"));
@@ -1572,15 +1578,12 @@ conv_page(void)
 
 #ifdef _WIN32
 	pidgin_prefs_checkbox(_("F_lash window when IMs are received"), PIDGIN_PREFS_ROOT "/win32/blink_im", vbox);
-
-	pidgin_prefs_checkbox(_("Minimi_ze new conversation windows"), PIDGIN_PREFS_ROOT "/win32/minimize_new_convs", vbox);
 #endif
 
 	pidgin_prefs_labeled_spin_button(vbox,
 		_("Minimum input area height in lines:"),
 		PIDGIN_PREFS_ROOT "/conversations/minimum_entry_lines",
 		1, 8, NULL);
-
 
 #if GTK_CHECK_VERSION(2,4,0)
 	vbox = pidgin_make_frame(ret, _("Font"));
@@ -1590,7 +1593,11 @@ conv_page(void)
 		fontpref = pidgin_prefs_checkbox(_("Use font from _theme"), PIDGIN_PREFS_ROOT "/conversations/use_theme_font", vbox);
 
 	font_name = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font");
-	font_button = gtk_font_button_new_with_font(font_name ? font_name : NULL);
+	if ((font_name == NULL) || (*font_name == '\0')) {
+		font_button = gtk_font_button_new();
+	} else {
+		font_button = gtk_font_button_new_with_font(font_name);
+	}
 
 	gtk_font_button_set_show_style(GTK_FONT_BUTTON(font_button), TRUE);
 	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Conversation _font:"), NULL, font_button, FALSE, NULL);
@@ -1636,82 +1643,31 @@ conv_page(void)
 	return ret;
 }
 
-/* This isn't a very strict check, but should give the user a clue. */
-static gboolean
-verify_ip_address(const gchar *text)
-{
-	char *tmp;
-	long octet;
-
-	if (!text && !isdigit(*text))
-		return FALSE;
-
-	tmp = NULL;
-	octet = strtol(text, &tmp, 10);
-	if (octet < 0 || octet > 255)
-		return FALSE;
-
-	if (!tmp || *tmp != '.')
-		return FALSE;
-
-	text = tmp + 1;
-	if (!isdigit(*text))
-		return FALSE;
-
-	tmp = NULL;
-	octet = strtol(text, &tmp, 10);
-	if (octet < 0 || octet > 255)
-		return FALSE;
-
-	if (!tmp || *tmp != '.')
-		return FALSE;
-
-	text = tmp + 1;
-	if (!isdigit(*text))
-		return FALSE;
-
-	tmp = NULL;
-	octet = strtol(text, &tmp, 10);
-	if (octet < 0 || octet > 255)
-		return FALSE;
-
-	text = tmp + 1;
-	if (!isdigit(*text))
-		return FALSE;
-
-	tmp = NULL;
-	octet = strtol(text, &tmp, 10);
-	if (octet < 0 || octet > 255)
-		return FALSE;
-
-	if (!tmp || *tmp != '\0')
-		return FALSE;
-
-	return TRUE;
-}
-
 static void
 network_ip_changed(GtkEntry *entry, gpointer data)
 {
 	const gchar *text = gtk_entry_get_text(entry);
 	GdkColor color;
 
-	if (verify_ip_address(text))
-	{
-		color.red = 0xAFFF;
-		color.green = 0xFFFF;
-		color.blue = 0xAFFF;
+	if (text && *text) {
+		if (purple_ip_address_is_valid(text)) {
+			color.red = 0xAFFF;
+			color.green = 0xFFFF;
+			color.blue = 0xAFFF;
 
-		purple_network_set_public_ip(text);
-	}
-	else
-	{
-		color.red = 0xFFFF;
-		color.green = 0xAFFF;
-		color.blue = 0xAFFF;
-	}
+			purple_network_set_public_ip(text);
+		} else {
+			color.red = 0xFFFF;
+			color.green = 0xAFFF;
+			color.blue = 0xAFFF;
+		}
 
-	gtk_widget_modify_base(GTK_WIDGET(entry), GTK_STATE_NORMAL, &color);
+		gtk_widget_modify_base(GTK_WIDGET(entry), GTK_STATE_NORMAL, &color);
+
+	} else {
+		purple_network_set_public_ip("");
+		gtk_widget_modify_base(GTK_WIDGET(entry), GTK_STATE_NORMAL, NULL);
+	}
 }
 
 static gboolean
@@ -1798,6 +1754,9 @@ network_page(void)
 	GtkWidget *proxy_button = NULL, *browser_button = NULL;
 	GtkSizeGroup *sg;
 	PurpleProxyInfo *proxy_info = NULL;
+	const char *ip;
+	PurpleStunNatDiscovery *stun;
+	char *auto_ip_text;
 
 	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
@@ -1828,8 +1787,30 @@ network_page(void)
 	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
 	gtk_container_add(GTK_CONTAINER(hbox), label);
 
-	auto_ip_checkbox = pidgin_prefs_checkbox(_("_Autodetect IP address"),
-			"/purple/network/auto_ip", vbox);
+	/* purple_network_get_my_ip will return the IP that was set by the user with
+	   purple_network_set_public_ip, so make a lookup for the auto-detected IP
+	   ourselves. */
+
+	/* Check if STUN discovery was already done */
+	stun = purple_stun_discover(NULL);
+	if ((stun != NULL) && (stun->status == PURPLE_STUN_STATUS_DISCOVERED)) {
+		ip = stun->publicip;
+	} else {
+		/* Attempt to get the IP from a NAT device using UPnP */
+		ip = purple_upnp_get_public_ip();
+		if (ip == NULL) {
+			/* Attempt to get the IP from a NAT device using NAT-PMP */
+			ip = purple_pmp_get_public_ip();
+			if (ip == NULL) {
+				/* Just fetch the IP of the local system */
+				ip = purple_network_get_local_system_ip(-1);
+			}
+		}
+	}
+
+	auto_ip_text = g_strdup_printf(_("Use _automatically detected IP address: %s"), ip);
+	auto_ip_checkbox = pidgin_prefs_checkbox(auto_ip_text, "/purple/network/auto_ip", vbox);
+	g_free(auto_ip_text);
 
 	table = gtk_table_new(2, 2, FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(table), 0);
@@ -1848,16 +1829,9 @@ network_page(void)
 	g_signal_connect(G_OBJECT(entry), "changed",
 					 G_CALLBACK(network_ip_changed), NULL);
 
-	/*
-	 * TODO: This could be better by showing the autodeteced
-	 * IP separately from the user-specified IP.
-	 */
-	if (purple_network_get_my_ip(-1) != NULL)
-		gtk_entry_set_text(GTK_ENTRY(entry),
-		                   purple_network_get_my_ip(-1));
+	gtk_entry_set_text(GTK_ENTRY(entry), purple_network_get_public_ip());
 
-	pidgin_set_accessible_label (entry, label);
-
+	pidgin_set_accessible_label(entry, label);
 
 	if (purple_prefs_get_bool("/purple/network/auto_ip")) {
 		gtk_widget_set_sensitive(GTK_WIDGET(table), FALSE);
@@ -2807,9 +2781,7 @@ away_page(void)
 }
 
 static int
-prefs_notebook_add_page(const char *text,
-  		                GtkWidget *page,
-                        int ind)
+prefs_notebook_add_page(const char *text, GtkWidget *page, int ind)
 {
 #if GTK_CHECK_VERSION(2,4,0)
 	return gtk_notebook_append_page(GTK_NOTEBOOK(prefsnotebook), page, gtk_label_new(text));

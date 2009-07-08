@@ -942,6 +942,77 @@ purple_str_to_time(const char *timestamp, gboolean utc,
  * Markup Functions
  **************************************************************************/
 
+/*
+ * This function is stolen from glib's gmarkup.c and modified to not
+ * replace ' with &apos;
+ */
+static void append_escaped_text(GString *str,
+		const gchar *text, gssize length)
+{
+	const gchar *p;
+	const gchar *end;
+	gunichar c;
+
+	p = text;
+	end = text + length;
+
+	while (p != end)
+	{
+		const gchar *next;
+		next = g_utf8_next_char (p);
+
+		switch (*p)
+		{
+			case '&':
+				g_string_append (str, "&amp;");
+				break;
+
+			case '<':
+				g_string_append (str, "&lt;");
+				break;
+
+			case '>':
+				g_string_append (str, "&gt;");
+				break;
+
+			case '"':
+				g_string_append (str, "&quot;");
+				break;
+
+			default:
+				c = g_utf8_get_char (p);
+				if ((0x1 <= c && c <= 0x8) ||
+						(0xb <= c && c <= 0xc) ||
+						(0xe <= c && c <= 0x1f) ||
+						(0x7f <= c && c <= 0x84) ||
+						(0x86 <= c && c <= 0x9f))
+					g_string_append_printf (str, "&#x%x;", c);
+				else
+					g_string_append_len (str, p, next - p);
+				break;
+		}
+
+		p = next;
+	}
+}
+
+/* This function is stolen from glib's gmarkup.c */
+gchar *purple_markup_escape_text(const gchar *text, gssize length)
+{
+	GString *str;
+
+	g_return_val_if_fail(text != NULL, NULL);
+
+	if (length < 0)
+		length = strlen(text);
+
+	/* prealloc at least as long as original text */
+	str = g_string_sized_new(length);
+	append_escaped_text(str, text, length);
+
+	return g_string_free(str, FALSE);
+}
+
 const char *
 purple_markup_unescape_entity(const char *text, int *length)
 {
@@ -979,8 +1050,8 @@ purple_markup_unescape_entity(const char *text, int *length)
 		buf[buflen] = '\0';
 		pln = buf;
 
-		len = 2;
-		while(isdigit((gint) text[len])) len++;
+		len = (*(text+2) == 'x' ? 3 : 2);
+		while(isxdigit((gint) text[len])) len++;
 		if(text[len] == ';') len++;
 	}
 	else
@@ -2399,30 +2470,32 @@ purple_markup_linkify(const char *text)
 	return g_string_free(ret, FALSE);
 }
 
-char *
-purple_unescape_html(const char *html) {
-	if (html != NULL) {
-		const char *c = html;
-		GString *ret = g_string_new("");
-		while (*c) {
-			int len;
-			const char *ent;
+char *purple_unescape_html(const char *html)
+{
+	GString *ret;
+	const char *c = html;
 
-			if ((ent = purple_markup_unescape_entity(c, &len)) != NULL) {
-				ret = g_string_append(ret, ent);
-				c += len;
-			} else if (!strncmp(c, "<br>", 4)) {
-				ret = g_string_append_c(ret, '\n');
-				c += 4;
-			} else {
-				ret = g_string_append_c(ret, *c);
-				c++;
-			}
+	if (html == NULL)
+		return NULL;
+
+	ret = g_string_new("");
+	while (*c) {
+		int len;
+		const char *ent;
+
+		if ((ent = purple_markup_unescape_entity(c, &len)) != NULL) {
+			g_string_append(ret, ent);
+			c += len;
+		} else if (!strncmp(c, "<br>", 4)) {
+			g_string_append_c(ret, '\n');
+			c += 4;
+		} else {
+			g_string_append_c(ret, *c);
+			c++;
 		}
-		return g_string_free(ret, FALSE);
 	}
 
-	return NULL;
+	return g_string_free(ret, FALSE);
 }
 
 char *
@@ -2894,10 +2967,10 @@ purple_util_get_image_extension(gconstpointer data, size_t len)
 }
 
 /*
- * TODO: Consider using something faster than SHA-1, such as MD5, MD4
- *       or CRC32.  Are there security implications to that?  Would
- *       probably be a good idea to benchmark some algorithms with
- *       3KB-10KB chunks of data (typical buddy icon sizes).
+ * We thought about using non-cryptographic hashes like CRC32 here.
+ * They would be faster, but we think using something more secure is
+ * important, so that it is more difficult for someone to maliciously
+ * replace one buddy's icon with something else.
  */
 char *
 purple_util_get_image_checksum(gconstpointer image_data, size_t image_len)
@@ -3794,8 +3867,7 @@ process_chunked_data(char *data, gsize *len)
 
 	while (*s) {
 		/* Read the size of this chunk */
-		if (sscanf(s, "%" G_GSIZE_MODIFIER "x\r\n", &sz) != 1 &&
-			sscanf(s, "%" G_GSIZE_MODIFIER "x;", &sz) != 1)
+		if (sscanf(s, "%" G_GSIZE_MODIFIER "x", &sz) != 1)
 		{
 			purple_debug_error("util", "Error processing chunked data: "
 					"Expected data length, found: %s\n", s);
@@ -3812,7 +3884,10 @@ process_chunked_data(char *data, gsize *len)
 		}
 
 		/* Advance to the start of the data */
-		s = strstr(s, "\r\n") + 2;
+		s = strstr(s, "\r\n");
+		if (s == NULL)
+			break;
+		s += 2;
 
 		if (s + sz > data + *len) {
 			purple_debug_error("util", "Error processing chunked data: "
@@ -4037,7 +4112,7 @@ url_fetch_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		}
 	}
 
-	if(g_getenv("PURPLE_UNSAFE_DEBUG"))
+	if(purple_debug_is_unsafe())
 		purple_debug_misc("util", "Request: '%s'\n", gfud->request);
 	else
 		purple_debug_misc("util", "request constructed\n");
@@ -4154,7 +4229,7 @@ purple_util_fetch_url_request_len_with_account(PurpleAccount *account,
 	g_return_val_if_fail(url      != NULL, NULL);
 	g_return_val_if_fail(callback != NULL, NULL);
 
-	if(g_getenv("PURPLE_UNSAFE_DEBUG"))
+	if(purple_debug_is_unsafe())
 		purple_debug_info("util",
 				 "requested to fetch (%s), full=%d, user_agent=(%s), http11=%d\n",
 				 url, full, user_agent?user_agent:"(null)", http11);
@@ -4180,8 +4255,9 @@ purple_util_fetch_url_request_len_with_account(PurpleAccount *account,
 	if (purple_strcasestr(url, "https://") != NULL) {
 		if (!purple_ssl_is_supported()) {
 			purple_util_fetch_url_error(gfud,
-					_("Unable to connect to %s: Server requires TLS/SSL, but no TLS/SSL support was found."),
-					gfud->website.address);
+					_("Unable to connect to %s: %s"),
+					gfud->website.address,
+					_("Server requires TLS/SSL, but no TLS/SSL support was found."));
 			return NULL;
 		}
 
