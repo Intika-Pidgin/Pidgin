@@ -1163,7 +1163,10 @@ yahoo_buddy_add_deny_cb(struct yahoo_add_request *add_req, const char *msg)
 	struct yahoo_data *yd = add_req->gc->proto_data;
 	struct yahoo_packet *pkt;
 	char *encoded_msg = NULL;
-	PurpleAccount *account = purple_connection_get_account(add_req->gc);
+	const char *who = add_req->who;
+
+	if (add_req->protocol == 2)
+		who += 4; /* Skip 'msn/' */
 
 	if (msg && *msg)
 		encoded_msg = yahoo_string_encode(add_req->gc, msg, NULL);
@@ -1171,9 +1174,10 @@ yahoo_buddy_add_deny_cb(struct yahoo_add_request *add_req, const char *msg)
 	pkt = yahoo_packet_new(YAHOO_SERVICE_AUTH_REQ_15,
 			YAHOO_STATUS_AVAILABLE, 0);
 
-	yahoo_packet_hash(pkt, "ssiiis",
-			1, purple_normalize(account, purple_account_get_username(account)),
-			5, add_req->who,
+	yahoo_packet_hash(pkt, "ssiiiis",
+			1, add_req->id,
+			5, who,
+			241, add_req->protocol,
 			13, 2,
 			334, 0,
 			97, 1,
@@ -1291,7 +1295,6 @@ static void yahoo_buddy_auth_req_15(PurpleConnection *gc, struct yahoo_packet *p
 			switch (pair->key) {
 			case 4:
 				temp = pair->value;
-				add_req->who = g_strdup(pair->value);
 				break;
 			case 5:
 				add_req->id = g_strdup(pair->value);
@@ -3535,6 +3538,8 @@ void yahoo_close(PurpleConnection *gc) {
 	g_free(yd->pending_chat_goto);
 	g_strfreev(yd->profiles);
 
+	yahoo_personal_details_reset(&yd->ypd);
+
 	g_free(yd->current_list15_grp);
 
 	g_free(yd);
@@ -4009,9 +4014,13 @@ static void yahoo_show_inbox(PurplePluginAction *action)
 				   "Unable to request mail login token; forwarding to login screen.");
 		purple_notify_uri(gc, yahoo_mail_url);
 	}
-
 }
 
+static void
+yahoo_set_userinfo_fn(PurplePluginAction *action)
+{
+	yahoo_set_userinfo(action->context);
+}
 
 static void yahoo_show_act_id(PurplePluginAction *action)
 {
@@ -4057,6 +4066,10 @@ static void yahoo_show_chat_goto(PurplePluginAction *action)
 GList *yahoo_actions(PurplePlugin *plugin, gpointer context) {
 	GList *m = NULL;
 	PurplePluginAction *act;
+
+	act = purple_plugin_action_new(_("Set User Info..."),
+			yahoo_set_userinfo_fn);
+	m = g_list_append(m, act);
 
 	act = purple_plugin_action_new(_("Activate ID..."),
 			yahoo_show_act_id);
