@@ -121,11 +121,28 @@ void yahoo_process_conference_invite(PurpleConnection *gc, struct yahoo_packet *
 	char *msg = NULL;
 	GString *members = NULL;
 	GHashTable *components;
+	PurpleConversation *c = NULL;
 
-	if (pkt->status == 2)
-		return; /* XXX */
+	if ( (pkt->status == 2) || (pkt->status == 11) )
+		return; /* Status is 11 when we are being notified about invitation being sent to someone else */
 
 	account = purple_connection_get_account(gc);
+
+	for (l = pkt->hash; l; l = l->next) {
+		struct yahoo_pair *pair = l->data;
+		if (pair->key == 57)
+		{
+			room = yahoo_string_decode(gc, pair->value, FALSE);
+			if((c = yahoo_find_conference(gc, room)))
+			{
+				/* Looks like we got invited to an already open conference. */
+				/* Laters: Should we accept this conference rather than ignoring the invitation ? */
+				purple_debug_info("yahoo","Ignoring invitation for an already existing chat, room:%s\n",room);
+				g_free(room);
+				return;
+			}
+		}
+	}
 
 	members = g_string_sized_new(512);
 
@@ -143,8 +160,11 @@ void yahoo_process_conference_invite(PurpleConnection *gc, struct yahoo_packet *
 			who = pair->value;
 			g_string_append_printf(members, "%s\n", who);
 			break;
-		case 52: /* invitee (me) */
-		case 53: /* members */
+		case 51: /* This user is being invited to the conference. Comes with status = 11, so we wont reach here */
+			break;
+		case 52: /* Invited users. Assuming us invited, since we got this packet */
+			break; /* break needed, or else we add the users to the conference before they accept the invitation */
+		case 53: /* members who have already joined the conference */
 			g_string_append_printf(members, "%s\n", pair->value);
 			break;
 		case 58:
@@ -254,7 +274,10 @@ void yahoo_process_conference_logon(PurpleConnection *gc, struct yahoo_packet *p
 	if (who && room) {
 		c = yahoo_find_conference(gc, room);
 		if (c)
-			yahoo_chat_add_user(PURPLE_CONV_CHAT(c), who, NULL);
+		{	/* Prevent duplicate users in the chat */
+			if( !purple_conv_chat_find_user(PURPLE_CONV_CHAT(c), who) )
+				yahoo_chat_add_user(PURPLE_CONV_CHAT(c), who, NULL);
+		}
 		g_free(room);
 	}
 }
