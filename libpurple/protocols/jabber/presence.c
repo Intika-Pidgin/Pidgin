@@ -67,7 +67,7 @@ void jabber_presence_fake_to_self(JabberStream *js, PurpleStatus *status)
 	g_return_if_fail(js->user != NULL);
 
 	account = purple_connection_get_account(js->gc);
-	username = purple_account_get_username(account);
+	username = purple_connection_get_display_name(js->gc);
 	if (status == NULL)
 		status = purple_account_get_active_status(account);
 
@@ -613,7 +613,7 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 			/* The rest of the cases used to check xmlns individually. */
 			continue;
 		} else if(!strcmp(y->name, "delay") && !strcmp(xmlns, "urn:xmpp:delay")) {
-			/* XXX: compare the time.  urn:xmpp:delay can happen on presence packets that aren't really and truly delayed */
+			/* XXX: compare the time.  jabber:x:delay can happen on presence packets that aren't really and truly delayed */
 			delayed = TRUE;
 			stamp = xmlnode_get_attrib(y, "stamp");
 		} else if(!strcmp(y->name, "c") && !strcmp(xmlns, "http://jabber.org/protocol/caps")) {
@@ -621,7 +621,11 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 		} else if (g_str_equal(y->name, "nick") && g_str_equal(xmlns, "http://jabber.org/protocol/nick")) {
 			nickname = xmlnode_get_data(y);
 		} else if(!strcmp(y->name, "x")) {
-			if(!strcmp(xmlns, "http://jabber.org/protocol/muc#user")) {
+			if(!strcmp(xmlns, "jabber:x:delay")) {
+				/* XXX: compare the time.  jabber:x:delay can happen on presence packets that aren't really and truly delayed */
+				delayed = TRUE;
+				stamp = xmlnode_get_attrib(y, "stamp");
+			} else if(!strcmp(xmlns, "http://jabber.org/protocol/muc#user")) {
 			} else if(!strcmp(xmlns, "vcard-temp:x:update")) {
 				xmlnode *photo = xmlnode_get_child(y, "photo");
 				if(photo) {
@@ -801,13 +805,13 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 				const char *nick;
 				const char *code = NULL;
 				const char *item_jid = NULL;
+				const char *to;
 				xmlnode *stat;
 				xmlnode *item;
 
 				item = xmlnode_get_child(x, "item");
 				if (item)
 					item_jid = xmlnode_get_attrib(item, "jid");
-
 
 				stat = xmlnode_get_child(x, "status");
 
@@ -885,7 +889,8 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 				 * Also possibly works around bits of an Openfire bug. See
 				 * #8319.
 				 */
-				if (is_our_resource && !purple_strequal(from, item_jid)) {
+				to = xmlnode_get_attrib(packet, "to");
+				if (is_our_resource && item_jid && !purple_strequal(to, item_jid)) {
 					/* TODO: When the above is a loop, this needs to still act
 					 * sanely for all cases (this code is a little fragile). */
 					if (!kick && !nick_change)
