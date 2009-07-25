@@ -939,9 +939,24 @@ jabber_gmail_poke(JabberStream *js, const char *from, JabberIqType type,
 
 void jabber_gmail_init(JabberStream *js) {
 	JabberIq *iq;
+	xmlnode *usersetting, *mailnotifications;
 
-	if (!purple_account_get_check_mail(js->gc->account))
+	if (!purple_account_get_check_mail(purple_connection_get_account(js->gc)))
 		return;
+
+	/*
+	 * Quoting http://code.google.com/apis/talk/jep_extensions/usersettings.html:
+	 * To ensure better compatibility with other clients, rather than
+	 * setting this value to "false" to turn off notifications, it is
+	 * recommended that a client set this to "true" and filter incoming
+	 * email notifications itself.
+	 */
+	iq = jabber_iq_new(js, JABBER_IQ_SET);
+	usersetting = xmlnode_new_child(iq->node, "usersetting");
+	xmlnode_set_namespace(usersetting, "google:setting");
+	mailnotifications = xmlnode_new_child(usersetting, "mailnotifications");
+	xmlnode_set_attrib(mailnotifications, "value", "true");
+	jabber_iq_send(iq);
 
 	iq = jabber_iq_new_query(js, JABBER_IQ_GET, "google:mail:notify");
 	jabber_iq_set_callback(iq, jabber_gmail_parse, NULL);
@@ -967,27 +982,22 @@ void jabber_google_roster_outgoing(JabberStream *js, xmlnode *query, xmlnode *it
 	PurpleAccount *account = purple_connection_get_account(js->gc);
 	GSList *list = account->deny;
 	const char *jid = xmlnode_get_attrib(item, "jid");
-	char *jid_norm = g_strdup(jabber_normalize(account, jid));
+	char *jid_norm = jabber_normalize(account, jid);
 
 	while (list) {
 		if (!strcmp(jid_norm, (char*)list->data)) {
 			xmlnode_set_attrib(query, "xmlns:gr", "google:roster");
-			xmlnode_set_attrib(item, "gr:t", "B");
-			xmlnode_set_attrib(query, "xmlns:gr", "google:roster");
 			xmlnode_set_attrib(query, "gr:ext", "2");
+			xmlnode_set_attrib(item, "gr:t", "B");
 			return;
 		}
 		list = list->next;
 	}
-
-	g_free(jid_norm);
-
 }
 
 gboolean jabber_google_roster_incoming(JabberStream *js, xmlnode *item)
 {
 	PurpleAccount *account = purple_connection_get_account(js->gc);
-	GSList *list = account->deny;
 	const char *jid = xmlnode_get_attrib(item, "jid");
 	gboolean on_block_list = FALSE;
 
@@ -1005,18 +1015,20 @@ gboolean jabber_google_roster_incoming(JabberStream *js, xmlnode *item)
 
  	jid_norm = g_strdup(jabber_normalize(account, jid));
 
-	while (list) {
-		if (!strcmp(jid_norm, (char*)list->data)) {
-			on_block_list = TRUE;
-			break;
-		}
-		list = list->next;
-	}
+	on_block_list = NULL != g_slist_find_custom(account->deny, jid_norm,
+	                                            (GCompareFunc)strcmp);
 
 	if (grt && (*grt == 'H' || *grt == 'h')) {
-		PurpleBuddy *buddy = purple_find_buddy(account, jid_norm);
-		if (buddy)
-			purple_blist_remove_buddy(buddy);
+		/* Hidden; don't show this buddy. */
+		GSList *buddies = purple_find_buddies(account, jid_norm);
+		if (buddies)
+			purple_debug_info("jabber", "Removing %s from local buddy list\n",
+			                  jid_norm);
+
+		for ( ; buddies; buddies = g_slist_delete_link(buddies, buddies)) {
+			purple_blist_remove_buddy(buddies->data);
+		}
+
 		g_free(jid_norm);
 		return FALSE;
 	}
@@ -1047,7 +1059,7 @@ void jabber_google_roster_add_deny(PurpleConnection *gc, const char *who)
 
 	js = (JabberStream*)(gc->proto_data);
 
-	if (!js || !js->server_caps & JABBER_CAP_GOOGLE_ROSTER)
+	if (!js || !(js->server_caps & JABBER_CAP_GOOGLE_ROSTER))
 		return;
 
 	jb = jabber_buddy_find(js, who, TRUE);
@@ -1117,7 +1129,7 @@ void jabber_google_roster_rem_deny(PurpleConnection *gc, const char *who)
 
 	js = (JabberStream*)(gc->proto_data);
 
-	if (!js || !js->server_caps & JABBER_CAP_GOOGLE_ROSTER)
+	if (!js || !(js->server_caps & JABBER_CAP_GOOGLE_ROSTER))
 		return;
 
 	buddies = purple_find_buddies(purple_connection_get_account(js->gc), who);
@@ -1275,9 +1287,10 @@ void jabber_google_presence_incoming(JabberStream *js, const char *user, JabberB
 {
 	if (!js->googletalk)
 		return;
-	if (jbr->status && !strncmp(jbr->status, "♫ ", strlen("♫ "))) {
+	if (jbr->status && purple_str_has_prefix(jbr->status, "♫ ")) {
 		purple_prpl_got_user_status(js->gc->account, user, "tune",
 					    PURPLE_TUNE_TITLE, jbr->status + strlen("♫ "), NULL);
+		g_free(jbr->status);
 		jbr->status = NULL;
 	} else {
 		purple_prpl_got_user_status_deactive(js->gc->account, user, "tune");

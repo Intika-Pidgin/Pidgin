@@ -28,7 +28,7 @@
 #include "internal.h"
 #include "prpl.h"
 
-#include "yahoo.h"
+#include "libymsg.h"
 
 #include <string.h>
 
@@ -214,8 +214,12 @@ static GHashTable *ht = NULL;
 
 void yahoo_init_colorht()
 {
+	if (ht != NULL)
+		/* Hash table has already been initialized */
+		return;
+
 	ht = g_hash_table_new(g_str_hash, g_str_equal);
-/* the numbers in comments are what gyach uses, but i think they're incorrect */
+	/* the numbers in comments are what gyach uses, but i think they're incorrect */
 	g_hash_table_insert(ht, "30", "<FONT COLOR=\"#000000\">"); /* black */
 	g_hash_table_insert(ht, "31", "<FONT COLOR=\"#0000FF\">"); /* blue */
 	g_hash_table_insert(ht, "32", "<FONT COLOR=\"#008080\">"); /* cyan */      /* 00b2b2 */
@@ -284,7 +288,12 @@ void yahoo_init_colorht()
 
 void yahoo_dest_colorht()
 {
+	if (ht == NULL)
+		/* Hash table has already been destroyed */
+		return;
+
 	g_hash_table_destroy(ht);
+	ht = NULL;
 }
 
 static int point_to_html(int x)
@@ -354,7 +363,7 @@ char *yahoo_codes_to_html(const char *x)
 					else if ((match = (char *) g_hash_table_lookup(ht, tmp->str)))
 						g_string_append(s, match);
 					else {
-						purple_debug(PURPLE_DEBUG_ERROR, "yahoo",
+						purple_debug_error("yahoo",
 							"Unknown ansi code 'ESC[%sm'.\n", tmp->str);
 						g_string_free(tmp, TRUE);
 						break;
@@ -423,7 +432,7 @@ char *yahoo_codes_to_html(const char *x)
 
 	ret = s->str;
 	g_string_free(s, FALSE);
-	purple_debug(PURPLE_DEBUG_MISC, "yahoo", "yahoo_codes_to_html:  Returning string: '%s'.\n", ret);
+	purple_debug_misc("yahoo", "yahoo_codes_to_html:  Returning string: '%s'.\n", ret);
 	return ret;
 }
 
@@ -822,7 +831,7 @@ char *yahoo_html_to_codes(const char *src)
 	g_string_free(dest, FALSE);
 
 	esc = g_strescape(ret, NULL);
-	purple_debug(PURPLE_DEBUG_MISC, "yahoo", "yahoo_html_to_codes:  Returning string: '%s'.\n", esc);
+	purple_debug_misc("yahoo", "yahoo_html_to_codes:  Returning string: '%s'.\n", esc);
 	g_free(esc);
 
 	yahoo_htc_queue_cleanup(colors);
