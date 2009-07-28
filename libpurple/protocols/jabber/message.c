@@ -644,10 +644,10 @@ void jabber_message_parse(JabberStream *js, xmlnode *packet)
 
 							if (jid) {
 								chat = jabber_chat_find(js, jid->node, jid->domain);
-								if (chat) conv = chat->conv;
+								if (chat)
+									conv = chat->conv;
+								jabber_id_free(jid);
 							}
-
-							jabber_id_free(jid);
 						} else if (jm->type == JABBER_MESSAGE_NORMAL ||
 						           jm->type == JABBER_MESSAGE_CHAT) {
 							conv =
@@ -742,7 +742,12 @@ void jabber_message_parse(JabberStream *js, xmlnode *packet)
 			if(timestamp)
 				jm->sent = purple_str_to_time(timestamp, TRUE, NULL, NULL, NULL);
 		} else if(!strcmp(child->name, "x")) {
-			if(!strcmp(xmlns, "jabber:x:conference") &&
+			if(!strcmp(xmlns, "jabber:x:delay")) {
+				const char *timestamp = xmlnode_get_attrib(child, "stamp");
+				jm->delayed = TRUE;
+				if(timestamp)
+					jm->sent = purple_str_to_time(timestamp, TRUE, NULL, NULL, NULL);
+			} else if(!strcmp(xmlns, "jabber:x:conference") &&
 					jm->type != JABBER_MESSAGE_GROUPCHAT_INVITE &&
 					jm->type != JABBER_MESSAGE_ERROR) {
 				const char *jid = xmlnode_get_attrib(child, "jid");
@@ -785,6 +790,10 @@ void jabber_message_parse(JabberStream *js, xmlnode *packet)
 		handle_buzz(jm);
 
 	switch(jm->type) {
+		case JABBER_MESSAGE_OTHER:
+			purple_debug(PURPLE_DEBUG_INFO, "jabber",
+					"Received message of unknown type: %s\n", type);
+			/* Fall-through is intentional */
 		case JABBER_MESSAGE_NORMAL:
 		case JABBER_MESSAGE_CHAT:
 			handle_chat(jm);
@@ -803,10 +812,6 @@ void jabber_message_parse(JabberStream *js, xmlnode *packet)
 			break;
 		case JABBER_MESSAGE_ERROR:
 			handle_error(jm);
-			break;
-		case JABBER_MESSAGE_OTHER:
-			purple_debug(PURPLE_DEBUG_INFO, "jabber",
-					"Received message of unknown type: %s\n", type);
 			break;
 	}
 	jabber_message_free(jm);
