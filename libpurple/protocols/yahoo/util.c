@@ -53,7 +53,7 @@ gchar* yahoo_get_cookies(PurpleConnection *gc)
 	gchar *t1,*t2,*t3;
 	GSList *tmp;
 	GSList *cookies;
-	cookies = ((struct yahoo_data*)(gc->proto_data))->cookies;
+	cookies = ((YahooData*)(gc->proto_data))->cookies;
 	tmp = cookies;
 	while(tmp)
 	{
@@ -118,7 +118,7 @@ gchar* yahoo_get_cookies(PurpleConnection *gc)
  */
 char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8)
 {
-	struct yahoo_data *yd = gc->proto_data;
+	YahooData *yd = gc->proto_data;
 	char *ret;
 	const char *to_codeset;
 
@@ -147,7 +147,7 @@ char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8)
  */
 char *yahoo_string_decode(PurpleConnection *gc, const char *str, gboolean utf8)
 {
-	struct yahoo_data *yd = gc->proto_data;
+	YahooData *yd = gc->proto_data;
 	char *ret;
 	const char *from_codeset;
 
@@ -172,7 +172,6 @@ char *yahoo_string_decode(PurpleConnection *gc, const char *str, gboolean utf8)
 char *yahoo_convert_to_numeric(const char *str)
 {
 	GString *gstr = NULL;
-	char *retstr;
 	const unsigned char *p;
 
 	gstr = g_string_sized_new(strlen(str) * 6 + 1);
@@ -181,11 +180,7 @@ char *yahoo_convert_to_numeric(const char *str)
 		g_string_append_printf(gstr, "&#%u;", *p);
 	}
 
-	retstr = gstr->str;
-
-	g_string_free(gstr, FALSE);
-
-	return retstr;
+	return g_string_free(gstr, FALSE);
 }
 
 /*
@@ -220,23 +215,23 @@ void yahoo_init_colorht()
 
 	ht = g_hash_table_new(g_str_hash, g_str_equal);
 	/* the numbers in comments are what gyach uses, but i think they're incorrect */
-	g_hash_table_insert(ht, "30", "<FONT COLOR=\"#000000\">"); /* black */
-	g_hash_table_insert(ht, "31", "<FONT COLOR=\"#0000FF\">"); /* blue */
-	g_hash_table_insert(ht, "32", "<FONT COLOR=\"#008080\">"); /* cyan */      /* 00b2b2 */
-	g_hash_table_insert(ht, "33", "<FONT COLOR=\"#808080\">"); /* gray */      /* 808080 */
-	g_hash_table_insert(ht, "34", "<FONT COLOR=\"#008000\">"); /* green */     /* 00c200 */
-	g_hash_table_insert(ht, "35", "<FONT COLOR=\"#FF0080\">"); /* pink */      /* ffafaf */
-	g_hash_table_insert(ht, "36", "<FONT COLOR=\"#800080\">"); /* purple */    /* b200b2 */
-	g_hash_table_insert(ht, "37", "<FONT COLOR=\"#FF8000\">"); /* orange */    /* ffff00 */
-	g_hash_table_insert(ht, "38", "<FONT COLOR=\"#FF0000\">"); /* red */
-	g_hash_table_insert(ht, "39", "<FONT COLOR=\"#808000\">"); /* olive */     /* 546b50 */
+	g_hash_table_insert(ht, "30", "<span style=\"color: #000000\">"); /* black */
+	g_hash_table_insert(ht, "31", "<span style=\"color: #0000FF\">"); /* blue */
+	g_hash_table_insert(ht, "32", "<span style=\"color: #008080\">"); /* cyan */      /* 00b2b2 */
+	g_hash_table_insert(ht, "33", "<span style=\"color: #808080\">"); /* gray */      /* 808080 */
+	g_hash_table_insert(ht, "34", "<span style=\"color: #008000\">"); /* green */     /* 00c200 */
+	g_hash_table_insert(ht, "35", "<span style=\"color: #FF0080\">"); /* pink */      /* ffafaf */
+	g_hash_table_insert(ht, "36", "<span style=\"color: #800080\">"); /* purple */    /* b200b2 */
+	g_hash_table_insert(ht, "37", "<span style=\"color: #FF8000\">"); /* orange */    /* ffff00 */
+	g_hash_table_insert(ht, "38", "<span style=\"color: #FF0000\">"); /* red */
+	g_hash_table_insert(ht, "39", "<span style=\"color: #808000\">"); /* olive */     /* 546b50 */
 
-	g_hash_table_insert(ht,  "1",  "<B>");
-	g_hash_table_insert(ht, "x1", "</B>");
-	g_hash_table_insert(ht,  "2",  "<I>");
-	g_hash_table_insert(ht, "x2", "</I>");
-	g_hash_table_insert(ht,  "4",  "<U>");
-	g_hash_table_insert(ht, "x4", "</U>");
+	g_hash_table_insert(ht,  "1",  "<b>");
+	g_hash_table_insert(ht, "x1", "</b>");
+	g_hash_table_insert(ht,  "2",  "<i>");
+	g_hash_table_insert(ht, "x2", "</i>");
+	g_hash_table_insert(ht,  "4",  "<u>");
+	g_hash_table_insert(ht, "x4", "</u>");
 
 	/* these just tell us the text they surround is supposed
 	 * to be a link. purple figures that out on its own so we
@@ -245,27 +240,27 @@ void yahoo_init_colorht()
 	g_hash_table_insert(ht, "l", ""); /* link start */
 	g_hash_table_insert(ht, "xl", ""); /* link end */
 
-	g_hash_table_insert(ht, "<black>",  "<FONT COLOR=\"#000000\">");
-	g_hash_table_insert(ht, "<blue>",   "<FONT COLOR=\"#0000FF\">");
-	g_hash_table_insert(ht, "<cyan>",   "<FONT COLOR=\"#008284\">");
-	g_hash_table_insert(ht, "<gray>",   "<FONT COLOR=\"#848284\">");
-	g_hash_table_insert(ht, "<green>",  "<FONT COLOR=\"#008200\">");
-	g_hash_table_insert(ht, "<pink>",   "<FONT COLOR=\"#FF0084\">");
-	g_hash_table_insert(ht, "<purple>", "<FONT COLOR=\"#840084\">");
-	g_hash_table_insert(ht, "<orange>", "<FONT COLOR=\"#FF8000\">");
-	g_hash_table_insert(ht, "<red>",    "<FONT COLOR=\"#FF0000\">");
-	g_hash_table_insert(ht, "<yellow>", "<FONT COLOR=\"#848200\">");
+	g_hash_table_insert(ht, "<black>",  "<span style=\"color: #000000\">");
+	g_hash_table_insert(ht, "<blue>",   "<span style=\"color: #0000FF\">");
+	g_hash_table_insert(ht, "<cyan>",   "<span style=\"color: #008284\">");
+	g_hash_table_insert(ht, "<gray>",   "<span style=\"color: #848284\">");
+	g_hash_table_insert(ht, "<green>",  "<span style=\"color: #008200\">");
+	g_hash_table_insert(ht, "<pink>",   "<span style=\"color: #FF0084\">");
+	g_hash_table_insert(ht, "<purple>", "<span style=\"color: #840084\">");
+	g_hash_table_insert(ht, "<orange>", "<span style=\"color: #FF8000\">");
+	g_hash_table_insert(ht, "<red>",    "<span style=\"color: #FF0000\">");
+	g_hash_table_insert(ht, "<yellow>", "<span style=\"color: #848200\">");
 
-	g_hash_table_insert(ht, "</black>",  "</FONT>");
-	g_hash_table_insert(ht, "</blue>",   "</FONT>");
-	g_hash_table_insert(ht, "</cyan>",   "</FONT>");
-	g_hash_table_insert(ht, "</gray>",   "</FONT>");
-	g_hash_table_insert(ht, "</green>",  "</FONT>");
-	g_hash_table_insert(ht, "</pink>",   "</FONT>");
-	g_hash_table_insert(ht, "</purple>", "</FONT>");
-	g_hash_table_insert(ht, "</orange>", "</FONT>");
-	g_hash_table_insert(ht, "</red>",    "</FONT>");
-	g_hash_table_insert(ht, "</yellow>", "</FONT>");
+	g_hash_table_insert(ht, "</black>",  "</span>");
+	g_hash_table_insert(ht, "</blue>",   "</span>");
+	g_hash_table_insert(ht, "</cyan>",   "</span>");
+	g_hash_table_insert(ht, "</gray>",   "</span>");
+	g_hash_table_insert(ht, "</green>",  "</span>");
+	g_hash_table_insert(ht, "</pink>",   "</span>");
+	g_hash_table_insert(ht, "</purple>", "</span>");
+	g_hash_table_insert(ht, "</orange>", "</span>");
+	g_hash_table_insert(ht, "</red>",    "</span>");
+	g_hash_table_insert(ht, "</yellow>", "</span>");
 
 	/* remove these once we have proper support for <FADE> and <ALT> */
 	g_hash_table_insert(ht, "</fade>", "");
@@ -345,7 +340,7 @@ char *yahoo_codes_to_html(const char *x)
 {
 	GString *s, *tmp;
 	int i, j, xs, nomoreendtags = 0; /* s/endtags/closinganglebrackets */
-	char *match, *ret;
+	char *match;
 
 	s = g_string_sized_new(strlen(x));
 
@@ -359,7 +354,7 @@ char *yahoo_codes_to_html(const char *x)
 				else {
 					tmp = g_string_new_len(x + i + 2, j - i - 2);
 					if (tmp->str[0] == '#')
-						g_string_append_printf(s, "<FONT COLOR=\"%s\">", tmp->str);
+						g_string_append_printf(s, "<span style=\"color: %s\">", tmp->str);
 					else if ((match = (char *) g_hash_table_lookup(ht, tmp->str)))
 						g_string_append(s, match);
 					else {
@@ -430,10 +425,8 @@ char *yahoo_codes_to_html(const char *x)
 		}
 	}
 
-	ret = s->str;
-	g_string_free(s, FALSE);
-	purple_debug_misc("yahoo", "yahoo_codes_to_html:  Returning string: '%s'.\n", ret);
-	return ret;
+	purple_debug_misc("yahoo", "yahoo_codes_to_html:  Returning string: '%s'.\n", s->str);
+	return g_string_free(s, FALSE);
 }
 
 /* borrowed from gtkimhtml */
@@ -642,7 +635,7 @@ char *yahoo_html_to_codes(const char *src)
 {
 	int i, j, len;
 	GString *dest;
-	char *ret, *esc;
+	char *esc;
 	GQueue *colors, *tags;
 	GQueue *ftattr = NULL;
 	gboolean no_more_specials = FALSE;
@@ -827,15 +820,12 @@ char *yahoo_html_to_codes(const char *src)
 		}
 	}
 
-	ret = dest->str;
-	g_string_free(dest, FALSE);
-
-	esc = g_strescape(ret, NULL);
+	esc = g_strescape(dest->str, NULL);
 	purple_debug_misc("yahoo", "yahoo_html_to_codes:  Returning string: '%s'.\n", esc);
 	g_free(esc);
 
 	yahoo_htc_queue_cleanup(colors);
 	yahoo_htc_queue_cleanup(tags);
 
-	return ret;
+	return g_string_free(dest, FALSE);
 }
