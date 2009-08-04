@@ -1830,6 +1830,7 @@ static void yahoo_auth16_stage1_cb(PurpleUtilFetchUrlData *unused, gpointer user
 			g_free(error_reason);
 			g_free(auth_data->seed);
 			g_free(auth_data);
+			g_free(token);
 		}
 		else {
 			/* OK to login, correct information provided */
@@ -2081,6 +2082,12 @@ static void yahoo_process_authresp(PurpleConnection *gc, struct yahoo_packet *pk
 	case 14:
 		msg = g_strdup(_("Your account is locked, please log in to the Yahoo! website."));
 		reason = PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED;
+		break;
+	case 52:
+		/* See #9660. As much as we know, reconnecting shouldn't hurt */
+		purple_debug_info("yahoo", "Got error 52, Set to autoreconnect\n");
+		msg = g_strdup_printf(_("Unknown error"));
+		reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
 		break;
 	case 1013:
 		msg = g_strdup(_("Invalid username"));
