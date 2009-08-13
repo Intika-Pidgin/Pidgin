@@ -76,49 +76,7 @@ typedef struct
 	void (*update_progress)(PurpleXfer *xfer, double percent);
 	void (*cancel_local)(PurpleXfer *xfer);
 	void (*cancel_remote)(PurpleXfer *xfer);
-
-	/**
-	 * UI op to write data received from the prpl. The UI must deal with the
-	 * entire buffer and return size, or it is treated as an error.
-	 *
-	 * @param xfer    The file transfer structure
-	 * @param buffer  The buffer to write
-	 * @param size    The size of the buffer
-	 *
-	 * @return size if the write was successful, or a value between 0 and
-	 *         size on error.
-	 * @since 2.6.0
-	 */
-	gssize (*ui_write)(PurpleXfer *xfer, const guchar *buffer, gssize size);
-
-	/**
-	 * UI op to read data to send to the prpl for a file transfer.
-	 *
-	 * @param xfer    The file transfer structure
-	 * @param buffer  A pointer to a buffer. The UI must allocate this buffer.
-	 *                libpurple will free the data.
-	 * @param size    The maximum amount of data to put in the buffer.
-	 *
-	 * @returns The amount of data in the buffer, 0 if nothing is available,
-	 *          and a negative value if an error occurred and the transfer
-	 *          should be cancelled (libpurple will cancel).
-	 * @since 2.6.0
-	 */
-	gssize (*ui_read)(PurpleXfer *xfer, guchar **buffer, gssize size);
-
-	/**
-	 * Op to notify the UI that not all the data read in was written. The UI
-	 * should re-enqueue this data and return it the next time read is called.
-	 *
-	 * This MUST be implemented if read and write are implemented.
-	 *
-	 * @param xfer    The file transfer structure
-	 * @param buffer  A pointer to the beginning of the unwritten data.
-	 * @param size    The amount of unwritten data.
-	 *
-	 * @since 2.6.0
-	 */
-	void (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer, gsize size);
+	void (*add_thumbnail)(PurpleXfer *xfer);
 
 	void (*_purple_reserved1)(void);
 } PurpleXferUiOps;
@@ -178,6 +136,9 @@ struct _PurpleXfer
 	void *ui_data;                    /**< UI-specific data.       */
 
 	void *data;                       /**< prpl-specific data.     */
+
+	gpointer thumbnail_data;		/**< thumbnail image */
+	gsize thumbnail_size;
 };
 
 #ifdef __cplusplus
@@ -661,28 +622,6 @@ void purple_xfer_update_progress(PurpleXfer *xfer);
  * @param is_error Is this an error message?.
  */
 void purple_xfer_conversation_write(PurpleXfer *xfer, char *message, gboolean is_error);
-
-/**
- * Allows the UI to signal it's ready to send/receive data (depending on
- * the direction of the file transfer. Used when the UI is providing
- * read/write/data_not_sent UI ops.
- *
- * @param xfer The file transfer which is ready.
- *
- * @since 2.6.0
- */
-void purple_xfer_ui_ready(PurpleXfer *xfer);
-
-/**
- * Allows the prpl to signal it's readh to send/receive data (depending on
- * the direction of the file transfer. Used when the prpl provides read/write
- * ops and cannot/does not provide a raw fd to the core.
- *
- * @param xfer The file transfer which is ready.
- *
- * @since 2.6.0
- */
-void purple_xfer_prpl_ready(PurpleXfer *xfer);
 
 /*@}*/
 
