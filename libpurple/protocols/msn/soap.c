@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA
  */
 
 #include "internal.h"
@@ -68,6 +68,7 @@ typedef struct _MsnSoapConnection {
 
 	GQueue *queue;
 	MsnSoapRequest *current_request;
+	gboolean unsafe_debug;
 } MsnSoapConnection;
 
 static gboolean msn_soap_connection_run(gpointer data);
@@ -79,6 +80,7 @@ msn_soap_connection_new(MsnSession *session, const char *host)
 	conn->session = session;
 	conn->host = g_strdup(host);
 	conn->queue = g_queue_new();
+	conn->unsafe_debug = purple_debug_is_unsafe();
 	return conn;
 }
 
@@ -340,12 +342,14 @@ msn_soap_handle_body(MsnSoapConnection *conn, MsnSoapMessage *response)
 	}
 
 	if (fault || body) {
-		MsnSoapRequest *request = conn->current_request;
-		conn->current_request = NULL;
-		request->cb(request->message, response,
-			request->cb_data);
+		if (conn->current_request) {
+			MsnSoapRequest *request = conn->current_request;
+			conn->current_request = NULL;
+			request->cb(request->message, response,
+				request->cb_data);
+			msn_soap_request_destroy(request, FALSE);
+		}
 		msn_soap_message_destroy(response);
-		msn_soap_request_destroy(request, FALSE);
 	}
 
 	return TRUE;
@@ -381,7 +385,7 @@ msn_soap_process(MsnSoapConnection *conn)
 					msn_soap_connection_handle_next(conn);
 					handled = TRUE;
 					break;
-				} else if (conn->response_code == 503) {
+				} else if (conn->response_code == 503 && conn->session->login_step < MSN_LOGIN_STEP_END) {
 					msn_soap_connection_sanitize(conn, TRUE);
 					msn_session_set_error(conn->session, MSN_ERROR_SERV_UNAVAILABLE, NULL);
 					return;
@@ -430,7 +434,7 @@ msn_soap_process(MsnSoapConnection *conn)
 					g_free(line);
 					return;
 				} else if (strcmp(key, "Content-Length") == 0) {
-					conn->body_len = atoi(value);
+					sscanf(value, "%" G_GSIZE_FORMAT, &(conn->body_len));
 				} else if (strcmp(key, "Connection") == 0) {
 					if (strcmp(value, "close") == 0) {
 						conn->close_when_done = TRUE;
@@ -504,12 +508,10 @@ msn_soap_read_cb(gpointer data, gint fd, PurpleInputCondition cond)
 	if (cnt < 0 && perrno != EAGAIN)
 		purple_debug_info("soap", "read: %s\n", g_strerror(perrno));
 
-#ifndef MSN_UNSAFE_DEBUG
-	if (conn->current_request && conn->current_request->secure)
+	if (conn->current_request && conn->current_request->secure &&
+		!conn->unsafe_debug)
 		purple_debug_misc("soap", "Received secure request.\n");
-	else
-#endif
-	if (count != 0)
+	else if (count != 0)
 		purple_debug_misc("soap", "current %s\n", conn->buf->str + cursor);
 
 	/* && count is necessary for Adium, on OS X the last read always
@@ -657,16 +659,16 @@ msn_soap_connection_run(gpointer data)
 			g_string_append(conn->buf, "\r\n");
 			g_string_append(conn->buf, body);
 
-#ifndef MSN_UNSAFE_DEBUG
-			if (req->secure)
+			if (req->secure && !conn->unsafe_debug)
 				purple_debug_misc("soap", "Sending secure request.\n");
 			else
-#endif
-			purple_debug_misc("soap", "%s\n", conn->buf->str);
+				purple_debug_misc("soap", "%s\n", conn->buf->str);
 
 			conn->handled_len = 0;
 			conn->current_request = req;
 
+			if (conn->event_handle)
+				purple_input_remove(conn->event_handle);
 			conn->event_handle = purple_input_add(conn->ssl->fd,
 				PURPLE_INPUT_WRITE, msn_soap_write_cb, conn);
 			if (!msn_soap_write_cb_internal(conn, conn->ssl->fd, PURPLE_INPUT_WRITE, TRUE)) {

@@ -467,7 +467,10 @@ gchar *qq_emoticon_to_purple(gchar *text)
 	/* qq_show_packet("text", (guint8 *)text, strlen(text)); */
 	g_return_val_if_fail(text != NULL && strlen(text) != 0, g_strdup(""));
 
-	segments = g_strsplit_set(text, "\x14\x15", 0);
+	while ((cur = strchr(text, '\x14')) != NULL)
+		*cur = '\x15';
+
+	segments = g_strsplit(text, "\x15", 0);
 	if(segments == NULL) {
 		return g_strdup("");
 	}
@@ -715,7 +718,7 @@ void qq_got_message(PurpleConnection *gc, const gchar *msg)
 	qq_buddy_find_or_new(gc, qd->uid);
 
 	from = uid_to_purple_name(qd->uid);
-	serv_got_im(gc, from, msg, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NOTIFY, now);
+	serv_got_im(gc, from, msg, PURPLE_MESSAGE_SYSTEM, now);
 	g_free(from);
 }
 
@@ -785,7 +788,7 @@ static void process_im_text(PurpleConnection *gc, guint8 *data, gint len, qq_im_
 		/* create no-auth buddy */
 		buddy = qq_buddy_new(gc, im_header->uid_from);
 	}
-	bd = (buddy == NULL) ? NULL : (qq_buddy_data *) buddy->proto_data;
+	bd = (buddy == NULL) ? NULL : purple_buddy_get_protocol_data(buddy);
 	if (bd != NULL) {
 		bd->client_tag = im_header->version_from;
 		bd->face = im_text.sender_icon;
@@ -886,7 +889,7 @@ static void process_extend_im_text(PurpleConnection *gc, guint8 *data, gint len,
 		/* create no-auth buddy */
 		buddy = qq_buddy_new(gc, im_header->uid_from);
 	}
-	bd = (buddy == NULL) ? NULL : (qq_buddy_data *) buddy->proto_data;
+	bd = (buddy == NULL) ? NULL : purple_buddy_get_protocol_data(buddy);
 	if (bd != NULL) {
 		bd->client_tag = im_header->version_from;
 		bd->face = im_text.sender_icon;

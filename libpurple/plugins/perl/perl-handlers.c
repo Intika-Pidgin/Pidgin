@@ -284,19 +284,25 @@ perl_signal_cb(va_list args, void *data)
 	DATATYPE **copy_args;
 
 	dSP;
+	PERL_SET_CONTEXT(my_perl);
+	SPAGAIN;
 	ENTER;
 	SAVETMPS;
 	PUSHMARK(sp);
 
 	purple_signal_get_values(handler->instance, handler->signal,
-	                       &ret_value, &value_count, &values);
+	                         &ret_value, &value_count, &values);
 
 	sv_args   = g_new(SV *,    value_count);
 	copy_args = g_new(void **, value_count);
 
 	for (i = 0; i < value_count; i++) {
 		sv_args[i] = purple_perl_sv_from_vargs(values[i],
+#ifdef VA_COPY_AS_ARRAY
+		                                       args,
+#else
 		                                       (va_list*)&args,
+#endif
 		                                       &copy_args[i]);
 
 		XPUSHs(sv_args[i]);
@@ -360,7 +366,8 @@ perl_signal_cb(va_list args, void *data)
 					break;
 
 				case PURPLE_TYPE_STRING:
-					if (strcmp(*((char **)copy_args[i]), SvPVX(sv_args[i]))) {
+					if (!*((char **)copy_args[i]) || !SvPVX(sv_args[i]) ||
+							strcmp(*((char **)copy_args[i]), SvPVX(sv_args[i]))) {
 						g_free(*((char **)copy_args[i]));
 						*((char **)copy_args[i]) =
 							g_strdup(SvPVutf8_nolen(sv_args[i]));

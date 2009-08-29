@@ -555,9 +555,12 @@ handle_count_xprop(PidginWindow *purplewin)
 }
 
 static void
-handle_urgent(PidginWindow *win, gboolean set)
+handle_urgent(PidginWindow *purplewin, gboolean set)
 {
-	pidgin_set_urgent(GTK_WINDOW(win->window), set);
+	g_return_if_fail(purplewin != NULL);
+	g_return_if_fail(purplewin->window != NULL);
+
+	pidgin_set_urgent(GTK_WINDOW(purplewin->window), set);
 }
 
 static void
@@ -569,6 +572,9 @@ handle_raise(PidginWindow *purplewin)
 static void
 handle_present(PurpleConversation *conv)
 {
+	if (pidgin_conv_is_hidden(PIDGIN_CONVERSATION(conv)))
+		return;
+
 	purple_conversation_present(conv);
 }
 

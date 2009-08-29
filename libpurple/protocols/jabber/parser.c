@@ -1,7 +1,9 @@
 /*
  * purple - Jabber XML parser stuff
  *
- * Copyright (C) 2003, Nathan Walp <faceprint@faceprint.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,15 +88,12 @@ jabber_parser_element_start_libxml(void *user_data,
 			}
 		}
 		for(i=0; i < nb_attributes * 5; i+=5) {
-			const char *prefix = (const char *)attributes[i + 1];
+			const char *name = (const char *)attributes[i];
+			const char *prefix = (const char *)attributes[i+1];
+			const char *attrib_ns = (const char *)attributes[i+2];
 			char *txt;
 			int attrib_len = attributes[i+4] - attributes[i+3];
 			char *attrib = g_malloc(attrib_len + 1);
-			char *attrib_ns = NULL;
-
-			if (attributes[i+2]) {
-				attrib_ns = g_strdup((char*)attributes[i+2]);
-			}
 
 			memcpy(attrib, attributes[i+3], attrib_len);
 			attrib[attrib_len] = '\0';
@@ -102,12 +101,8 @@ jabber_parser_element_start_libxml(void *user_data,
 			txt = attrib;
 			attrib = purple_unescape_html(txt);
 			g_free(txt);
-			xmlnode_set_attrib_with_namespace(node, (const char*) attributes[i], attrib_ns, attrib);
-			if (prefix && *prefix) {
-				node->prefix = g_strdup(prefix);
-			}
+			xmlnode_set_attrib_full(node, name, attrib_ns, prefix, attrib);
 			g_free(attrib);
-			g_free(attrib_ns);
 		}
 
 		js->current = node;
@@ -233,13 +228,32 @@ void jabber_parser_process(JabberStream *js, const char *buf, int len)
 		xmlParseChunk(js->context, "", 0, 0);
 	} else if ((ret = xmlParseChunk(js->context, buf, len, 0)) != XML_ERR_OK) {
 		xmlError *err = xmlCtxtGetLastError(js->context);
+		/*
+		 * libxml2 uses a global setting to determine whether or not to store
+		 * warnings.  Other libraries may set this, which causes err to be
+		 * NULL. See #8136 for details.
+		 */
+		xmlErrorLevel level = XML_ERR_WARNING;
 
-		purple_debug_error("jabber", "xmlParseChunk returned error %i\n", ret);
+		if (err)
+			level = err->level;
 
-		if (err->level == XML_ERR_FATAL) {
-			purple_connection_error_reason (js->gc,
-				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-				_("XML Parse error"));
+		switch (level) {
+			case XML_ERR_NONE:
+				purple_debug_info("jabber", "xmlParseChunk returned info %i\n", ret);
+				break;
+			case XML_ERR_WARNING:
+				purple_debug_warning("jabber", "xmlParseChunk returned warning %i\n", ret);
+				break;
+			case XML_ERR_ERROR:
+				purple_debug_error("jabber", "xmlParseChunk returned error %i\n", ret);
+				break;
+			case XML_ERR_FATAL:
+				purple_debug_error("jabber", "xmlParseChunk returned fatal %i\n", ret);
+				purple_connection_error_reason (js->gc,
+				                                PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				                                _("XML Parse error"));
+				break;
 		}
 	}
 }
