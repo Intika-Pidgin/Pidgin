@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA
  */
 
 #define PURPLE_PLUGIN
@@ -87,7 +87,7 @@ static gpointer on_offline_find_parent(PurpleBlistNode *node)
 
 	switch (purple_blist_node_get_type(node)) {
 		case PURPLE_BLIST_CONTACT_NODE:
-			node = (PurpleBlistNode*)purple_contact_get_priority_buddy((PurpleContact*)node);
+			node = PURPLE_BLIST_NODE(purple_contact_get_priority_buddy(PURPLE_CONTACT(node)));
 			ret = PURPLE_BUDDY_IS_ONLINE((PurpleBuddy*)node) ? &online : &offline;
 			break;
 		case PURPLE_BLIST_BUDDY_NODE:
@@ -383,6 +383,6 @@ init_plugin(PurplePlugin *plugin)
 {
 }
 
-PURPLE_INIT_PLUGIN(ignore, init_plugin, info)
+PURPLE_INIT_PLUGIN(grouping, init_plugin, info)
 
 

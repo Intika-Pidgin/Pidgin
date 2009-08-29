@@ -1,7 +1,9 @@
 /*
  * purple - Jabber Protocol Plugin
  *
- * Copyright (C) 2007, Andreas Monitzer <andy@monitzer.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	 02111-1307	 USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -103,7 +105,7 @@ static void jabber_mood_cb(JabberStream *js, const char *from, xmlnode *items) {
 	/* ignore the mood of people not on our buddy list */
 	if (!buddy || !item)
 		return;
-	
+
 	mood = xmlnode_get_child_with_namespace(item, "mood", "http://jabber.org/protocol/mood");
 	if (!mood)
 		return;
@@ -141,8 +143,8 @@ static void jabber_mood_cb(JabberStream *js, const char *from, xmlnode *items) {
 }
 
 void jabber_mood_init(void) {
-	jabber_add_feature("mood", "http://jabber.org/protocol/mood", jabber_pep_namespace_only_when_pep_enabled_cb);
-	jabber_pep_register_handler("moodn", "http://jabber.org/protocol/mood", jabber_mood_cb);
+	jabber_add_feature("http://jabber.org/protocol/mood", jabber_pep_namespace_only_when_pep_enabled_cb);
+	jabber_pep_register_handler("http://jabber.org/protocol/mood", jabber_mood_cb);
 }
 
 static void do_mood_set_from_fields(PurpleConnection *gc, PurpleRequestFields *fields) {
@@ -179,10 +181,10 @@ static void do_mood_set_mood(PurplePluginAction *action) {
 
 	field = purple_request_field_choice_new("mood",
 											_("Mood"), 0);
-	
+
 	for(i = 0; moodstrings[i]; ++i)
 		purple_request_field_choice_add(field, _(moodstrings[i]));
-	
+
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
@@ -190,7 +192,7 @@ static void do_mood_set_mood(PurplePluginAction *action) {
 											_("Description"), NULL,
 											FALSE);
 	purple_request_field_group_add_field(group, field);
-	
+
 	purple_request_fields(gc, _("Edit User Mood"),
 						  _("Edit User Mood"),
 						  _("Please select your mood from the list."),
@@ -199,7 +201,7 @@ static void do_mood_set_mood(PurplePluginAction *action) {
 						  _("Cancel"), NULL,
 						  purple_connection_get_account(gc), NULL, NULL,
 						  gc);
-	
+
 }
 
 void jabber_mood_init_action(GList **m) {
@@ -222,7 +224,7 @@ void jabber_mood_set(JabberStream *js, const char *mood, const char *text) {
 		xmlnode *textnode = xmlnode_new_child(moodnode, "text");
 		xmlnode_insert_data(textnode, text, -1);
 	}
-	
+
 	jabber_pep_publish(js, publish);
 	/* publish is freed by jabber_pep_publish -> jabber_iq_send -> jabber_iq_free
 	   (yay for well-defined memory management rules) */

@@ -69,7 +69,7 @@ purple_message_meify(SV *msg)
 	PREINIT:
 		char *message = NULL;
 		gboolean ret;
-		gssize len;
+		gsize len;
 	CODE:
 		message = SvPV(msg, len);
 		message = g_strndup(message, len);
@@ -99,25 +99,8 @@ purple_program_is_valid(program)
 	const char *program
 
 gchar_own *
-purple_strcasereplace(string, delimiter, replacement)
-	const char *string
-	const char *delimiter
-	const char *replacement
-
-const char *
-purple_strcasestr(haystack, needle)
-	const char *haystack
-	const char *needle
-
-gchar_own *
 purple_strdup_withhtml(src)
 	const gchar *src
-
-gchar_own *
-purple_strreplace(string, delimiter, replacement)
-	const char *string
-	const char *delimiter
-	const char *replacement
 
 gchar_own *
 purple_text_strip_mnemonic(in)
@@ -256,7 +239,7 @@ purple_base16_decode(str)
 	CODE:
 		ret = purple_base16_decode(str, &len);
 		if(len) {
-			RETVAL = newSVpv(ret, len);
+			RETVAL = newSVpv((gchar *)ret, len);
 		} else {
 			g_free(ret);
 			XSRETURN_UNDEF;
@@ -274,7 +257,7 @@ purple_base64_decode(str)
 	CODE:
 		ret = purple_base64_decode(str, &len);
 		if(len) {
-			RETVAL = newSVpv(ret, len);
+			RETVAL = newSVpv((gchar *)ret, len);
 		} else {
 			g_free(ret);
 			XSRETURN_UNDEF;
@@ -292,7 +275,7 @@ purple_quotedp_decode(str)
 	CODE:
 		ret = purple_quotedp_decode(str, &len);
 		if(len) {
-			RETVAL = newSVpv(ret, len);
+			RETVAL = newSVpv((gchar *)ret, len);
 		} else {
 			g_free(ret);
 			XSRETURN_UNDEF;
@@ -355,10 +338,6 @@ purple_str_seconds_to_string(sec)
 gchar_own *
 purple_str_size_to_units(size)
 	size_t size
-
-void
-purple_str_strip_char(IN_OUT char str, thechar)
-	char thechar
 
 time_t
 purple_str_to_time(timestamp, utc = FALSE, tm = NULL, OUTLIST long tz_off, OUTLIST const char *rest)
@@ -512,11 +491,6 @@ purple_util_set_current_song(title, artist, album)
 	const char *artist
 	const char *album
 
-void
-purple_util_chrreplace(IN_OUT char string, delimiter, replacement)
-	char delimiter
-	char replacement
-
 gchar_own*
 purple_util_format_song_info(title, artist, album, unused)
 	const char* title
@@ -525,11 +499,11 @@ purple_util_format_song_info(title, artist, album, unused)
 	gpointer unused
 
 const char*
-purple_util_get_image_extension(gconstpointer data, size_t length(data))
+purple_util_get_image_extension(const char *data, size_t length(data))
 	PROTOTYPE: $
 
 gchar_own*
-purple_util_get_image_filename(gconstpointer image_data, size_t length(image_data))
+purple_util_get_image_filename(const char *image_data, size_t length(image_data))
 	PROTOTYPE: $
 
 Purple::XMLNode

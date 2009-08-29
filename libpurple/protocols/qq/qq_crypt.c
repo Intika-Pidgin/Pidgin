@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA
  *
  *
  * QQ encryption algorithm
@@ -163,9 +163,11 @@ static inline void encrypt_out(guint8 *crypted, const gint crypted_len, const gu
 		c32_prev[0] = crypted32[0]; c32_prev[1] = crypted32[1];
 		
 		/* set next 64 bits want to crypt*/
-		crypted_ptr += 8;
-		memcpy(crypted32, crypted_ptr, sizeof(crypted32));
-		plain32[0] = crypted32[0] ^ c32_prev[0]; plain32[1] = crypted32[1] ^ c32_prev[1];
+		if (count64 > 0) {
+			crypted_ptr += 8;
+			memcpy(crypted32, crypted_ptr, sizeof(crypted32));
+			plain32[0] = crypted32[0] ^ c32_prev[0]; plain32[1] = crypted32[1] ^ c32_prev[1];
+		}
 	}
 }
 
@@ -275,7 +277,7 @@ static inline gint decrypt_out(guint8 *dest, gint crypted_len, const guint8* con
 	}
 	
 	count64 = crypted_len / 8;
-	while (count64-- > 0){
+	while (--count64 > 0){
 		c32_prev[0] = crypted32[0]; c32_prev[1] = crypted32[1];
 		crypted_ptr += 8;
 

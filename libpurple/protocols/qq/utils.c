@@ -95,8 +95,8 @@ gchar *get_index_str_by_name(gchar **array, const gchar *name, gint amount)
 gchar **split_data(guint8 *data, gint len, const gchar *delimit, gint expected_fields)
 {
 	guint8 *input;
-	gchar **segments;
-	gint count, j;
+	gchar **segments, **seg;
+	gint count = 0, j;
 
 	g_return_val_if_fail(data != NULL && len != 0 && delimit != 0, NULL);
 
@@ -106,11 +106,12 @@ gchar **split_data(guint8 *data, gint len, const gchar *delimit, gint expected_f
 	g_memmove(input, data, len);
 	input[len] = 0x00;
 
-	segments = g_strsplit_set((gchar *) input, delimit, 0);
+	segments = g_strsplit((gchar *) input, delimit, 0);
 	if (expected_fields <= 0)
 		return segments;
 
-	count = g_strv_length(segments);
+	for (seg = segments; *seg != NULL; seg++)
+		count++;
 	if (count < expected_fields) {	/* not enough fields */
 		purple_debug_error("QQ", "Less fields %d then %d\n", count, expected_fields);
 		return NULL;
@@ -221,7 +222,8 @@ static gchar *strstrip(const gchar *const buffer)
  * The return should be freed later. */
 guint8 *hex_str_to_bytes(const gchar *const buffer, gint *out_len)
 {
-	gchar *hex_str, *hex_buffer, *cursor, tmp;
+	gchar *hex_str, *hex_buffer, *cursor;
+	gchar tmp[2];
 	guint8 *bytes, nibble1, nibble2;
 	gint index;
 
@@ -241,7 +243,9 @@ guint8 *hex_str_to_bytes(const gchar *const buffer, gint *out_len)
 	index = 0;
 	for (cursor = hex_str; cursor < hex_str + sizeof(gchar) * (strlen(hex_str)) - 1; cursor++) {
 		if (g_ascii_isdigit(*cursor)) {
-			tmp = *cursor; nibble1 = atoi(&tmp);
+			tmp[0] = *cursor;
+			tmp[1] = '\0';
+			nibble1 = atoi(tmp);
 		} else if (g_ascii_isalpha(*cursor) && (gint) *cursor - 87 < 16) {
 			nibble1 = (gint) *cursor - 87;
 		} else {
@@ -253,7 +257,9 @@ guint8 *hex_str_to_bytes(const gchar *const buffer, gint *out_len)
 		nibble1 = nibble1 << 4;
 		cursor++;
 		if (g_ascii_isdigit(*cursor)) {
-			tmp = *cursor; nibble2 = atoi(&tmp);
+			tmp[0] = *cursor;
+			tmp[1] = '\0';
+			nibble2 = atoi(tmp);
 		} else if (g_ascii_isalpha(*cursor) && (gint) (*cursor - 87) < 16) {
 			nibble2 = (gint) *cursor - 87;
 		} else {

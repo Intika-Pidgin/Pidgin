@@ -34,6 +34,9 @@ Novell GroupWise, Lotus Sametime, Zephyr, Gadu-Gadu, and QQ all at once. It has
 many common features found in other clients, as well as many unique features.
 Pidgin is not endorsed by or affiliated with America Online, ICQ, Microsoft, or
 Yahoo.
+.PP
+Pidgin can be extended by plugins written in multiple programming languages and
+controlled through DBus or \fBpurple-remote\fR.
 
 .SH OPTIONS
 The following options are provided by Pidgin using the standard GNU
@@ -125,11 +128,11 @@ buddy or chat.
 .TP
 .B Alias
 Create an alias for this buddy.  This will show an editable text field where
-the buddy's screen name was displayed.  In this field one can give this
+the buddy's name was displayed.  In this field one can give this
 buddy an alternate, more friendly name to appear on the buddy list and in
 conversations.
 
-For example, if a buddy's name screen name was jsmith1281xx and his real
+For example, if a buddy's name was jsmith1281xx and his real
 name was 'John Q. Smith,' one could create an alias as to identify the
 buddy by his common name.
 .LP
@@ -147,7 +150,7 @@ them.  It can be accessed by selecting \fBManage\fR from the Accounts menu.
 Clicking \fIDelete\fR will delete the currently selected account.
 Clicking \fIAdd\fR or \fIModify\fR will invoke a \fBModify Account\fR
 window.  Here, the user  can add or alter account information.  When creating
-a new account, the user will submit a screen name and password.  The user will
+a new account, the user will submit a username and password.  The user will
 also choose the protocol for the account.
 
 If \fIRemember Password\fR is chosen, the password will be saved in
@@ -542,7 +545,7 @@ about this interaction exists.
 .br
   \fI~/.purple/status.xml\fR: stores the user's away messages.
 .br
-  \fI~/.purple/logs/PROTOCOL/ACCOUNT/SCREENNAME/DATE.{html,txt}\fR: conversation logs.
+  \fI~/.purple/logs/PROTOCOL/ACCOUNT/BUDDYNAME/DATE.{html,txt}\fR: conversation logs.
 
 .SH DIRECTORIES
   \fI@prefix@/lib/pidgin/\fR: Pidgin's plugins directory.
@@ -556,20 +559,28 @@ about this interaction exists.
 .SH BUGS
 The bug tracker can be reached by visiting \fIhttp://developer.pidgin.im/query\fR
 
-.SH PATCHES
-If you fix a bug in Pidgin (or otherwise enhance it), please submit a
-patch (using \fImtn diff > my.diff\fR against the latest version from the
-Monotone repository) at \fIhttp://developer.pidgin.im/simpleticket\fR
-
 Before sending a bug report, please verify that you have the latest
 version of Pidgin.  Many bugs (major and minor) are fixed
 at each release, and if yours is out of date, the problem may already
 have been solved.
 
+.SH PATCHES
+If you fix a bug in Pidgin (or otherwise enhance it), please submit a
+patch (using \fBmtn diff > my.diff\fR against the latest version from the
+Monotone repository) at \fIhttp://developer.pidgin.im/simpleticket\fR
+
+You are also encouraged to drop by at \fB#pidgin\fR on \fIirc.freenode.net\fR
+to discuss development.
+
+
 .SH SEE ALSO
 \fIhttp://pidgin.im/\fR
 .br
 \fIhttp://developer.pidgin.im/\fR
+.br
+\fBpurple-remote\fR(1)
+.br
+\fBfinch\fR(1)
 
 .SH LICENSE
 This program is free software; you can redistribute it and/or modify
@@ -591,7 +602,9 @@ Pidgin's active developers are:
 .br
   Daniel 'datallah' Atallah (developer)
 .br
-  John 'rekkanoryo' Bailey (developer)
+  Paul 'darkrain42' Aurich (developer)
+.br
+  John 'rekkanoryo' Bailey (developer and bugmaster)
 .br
   Ethan 'Paco-Paco' Blanton (developer)
 .br
@@ -621,6 +634,8 @@ Pidgin's active developers are:
 .br
   Tim 'marv' Ringenbach (developer) <\fImarv_sf@users.sf.net\fR>
 .br
+  Michael 'Maiku' Ruprecht (developer, voice and video)
+.br
   Elliott 'QuLogic' Sales de Andrade (developer)
 .br
   Luke 'LSchiere' Schierer (support)
@@ -642,8 +657,6 @@ Pidgin's active developers are:
 Our crazy patch writers include:
 .br
   Paul Aurich
-.br
-  Felipe 'shx' Contreras
 .br
   Marcus 'malu' Lundblad
 .br
@@ -686,6 +699,8 @@ Our retired developers are:
 
 
 Our retired crazy patch writers include:
+.br
+  Felipe 'shx' Contreras
 .br
   Decklin Foster
 .br

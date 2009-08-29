@@ -21,7 +21,7 @@
 
 #define PLUGIN_ID			"gtk-plugin_pack-markerline"
 #define PLUGIN_NAME			N_("Markerline")
-#define PLUGIN_STATIC_NAME	"Markerline"
+#define PLUGIN_STATIC_NAME	Markerline
 #define PLUGIN_SUMMARY		N_("Draw a line to indicate new messages in a conversation.")
 #define PLUGIN_DESCRIPTION	N_("Draw a line to indicate new messages in a conversation.")
 #define PLUGIN_AUTHOR		"Sadrul H Chowdhury <sadrul@users.sourceforge.net>"
@@ -84,7 +84,7 @@ imhtml_expose_cb(GtkWidget *widget, GdkEventExpose *event, PidginConversation *g
 		gdk_gc_set_rgb_fg_color(gc, &red);
 		gdk_draw_line(event->window, gc,
 					0, y, visible_rect.width, y);
-		gdk_gc_unref(gc);
+		g_object_unref(G_OBJECT(gc));
 	}
 	return FALSE;
 }

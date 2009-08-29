@@ -46,6 +46,8 @@ struct _MsnCmdProc
 
 	MsnHistory *history;
 
+	GHashTable *multiparts; /**< Multi-part message ID's */
+
 	void *data; /**< Extra data, like the switchboard. */
 };
 
@@ -68,7 +70,5 @@ void msn_cmdproc_process_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd);
 void msn_cmdproc_process_cmd_text(MsnCmdProc *cmdproc, const char *command);
 void msn_cmdproc_process_payload(MsnCmdProc *cmdproc,
 								 char *payload, int payload_len);
-
-void msn_cmdproc_disconnect(MsnCmdProc *cmdproc);
 
 #endif /* _MSN_CMDPROC_H_ */

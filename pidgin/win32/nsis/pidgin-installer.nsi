@@ -2,7 +2,7 @@
 ; Original Author: Herman Bloggs <hermanator12002@yahoo.com>
 ; Updated By: Daniel Atallah <daniel_atallah@yahoo.com>
 
-; NOTE: this .NSI script is intended for NSIS 2.27
+; NOTE: this .NSI script is intended for NSIS 2.27+
 ;
 
 ;--------------------------------
@@ -12,6 +12,7 @@ Var GTK_FOLDER
 Var ISSILENT
 Var STARTUP_RUN_KEY
 Var SPELLCHECK_SEL
+Var LANGUAGE_SET
 
 ;--------------------------------
 ;Configuration
@@ -74,7 +75,7 @@ SetDateSave on
 !define PERL_REG_KEY				"SOFTWARE\Perl"
 !define PERL_DLL				"perl510.dll"
 !define GTK_DEFAULT_INSTALL_PATH		"$COMMONFILES\GTK\2.0"
-!define GTK_RUNTIME_INSTALLER			"..\..\..\..\gtk_installer\gtk-runtime*.exe"
+!define GTK_RUNTIME_INSTALLER			"..\..\..\..\gtk_installer\gtk-runtime-${GTK_INSTALL_VERSION}*.exe"
 
 !define ASPELL_REG_KEY				"SOFTWARE\Aspell"
 !define DOWNLOADER_URL				"http://pidgin.im/win32/download_redir.php"
@@ -567,6 +568,7 @@ SectionGroup /e $(URI_HANDLERS_SECTION_TITLE) SecURIHandlers
   !insertmacro URI_SECTION "msnim"
   !insertmacro URI_SECTION "myim"
   !insertmacro URI_SECTION "ymsgr"
+  !insertmacro URI_SECTION "xmpp"
 SectionGroupEnd
 
 ;--------------------------------
@@ -708,21 +710,30 @@ Section Uninstall
     Call un.UnregisterURIHandler
     Push "ymsgr"
     Call un.UnregisterURIHandler
+    Push "xmpp"
+    Call un.UnregisterURIHandler
 
+    Delete "$INSTDIR\ca-certs\America_Online_Root_Certification_Authority_1.pem"
+    Delete "$INSTDIR\ca-certs\AOL_Member_CA.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Class3.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Root.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_CA.pem"
+    Delete "$INSTDIR\ca-certs\Equifax_Secure_Global_eBusiness_CA-1.pem"
     Delete "$INSTDIR\ca-certs\GTE_CyberTrust_Global_Root.pem"
     Delete "$INSTDIR\ca-certs\Microsoft_Internet_Authority.pem"
     Delete "$INSTDIR\ca-certs\Microsoft_Secure_Server_Authority.pem"
+    Delete "$INSTDIR\ca-certs\StartCom_Certification_Authority.pem"
     Delete "$INSTDIR\ca-certs\StartCom_Free_SSL_CA.pem"
+    Delete "$INSTDIR\ca-certs\Thawte_Premium_Server_CA.pem"
+    Delete "$INSTDIR\ca-certs\VeriSign_Class3_Extended_Validation_CA.pem"
     Delete "$INSTDIR\ca-certs\Verisign_Class3_Primary_CA.pem"
     Delete "$INSTDIR\ca-certs\VeriSign_Class_3_Public_Primary_Certification_Authority_-_G5.pem"
+    Delete "$INSTDIR\ca-certs\VeriSign_Class_3_Public_Primary_Certification_Authority_-_G5_2.pem"
+    Delete "$INSTDIR\ca-certs\VeriSign_International_Server_Class_3_CA.pem"
     Delete "$INSTDIR\ca-certs\Verisign_RSA_Secure_Server_CA.pem"
     RMDir "$INSTDIR\ca-certs"
     RMDir /r "$INSTDIR\locale"
     RMDir /r "$INSTDIR\pixmaps"
-    RMDir /r "$INSTDIR\perlmod"
     Delete "$INSTDIR\plugins\autoaccept.dll"
     Delete "$INSTDIR\plugins\buddynote.dll"
     Delete "$INSTDIR\plugins\convcolors.dll"
@@ -747,6 +758,7 @@ Section Uninstall
     Delete "$INSTDIR\plugins\libsimple.dll"
     Delete "$INSTDIR\plugins\libtoc.dll"
     Delete "$INSTDIR\plugins\libyahoo.dll"
+    Delete "$INSTDIR\plugins\libyahoojp.dll"
     Delete "$INSTDIR\plugins\libxmpp.dll"
     Delete "$INSTDIR\plugins\log_reader.dll"
     Delete "$INSTDIR\plugins\markerline.dll"
@@ -769,6 +781,8 @@ Section Uninstall
     Delete "$INSTDIR\plugins\win2ktrans.dll"
     Delete "$INSTDIR\plugins\winprefs.dll"
     Delete "$INSTDIR\plugins\xmppconsole.dll"
+    Delete "$INSTDIR\plugins\xmppdisco.dll"
+    RMDir /r "$INSTDIR\plugins\perl"
     RMDir "$INSTDIR\plugins"
     RMDir /r "$INSTDIR\sasl2"
     Delete "$INSTDIR\sounds\purple\alert.wav"
@@ -789,6 +803,7 @@ Section Uninstall
     Delete "$INSTDIR\libsilc-1-1-2.dll"
     Delete "$INSTDIR\libsilcclient-1-1-2.dll"
     Delete "$INSTDIR\libxml2.dll"
+    Delete "$INSTDIR\libymsg.dll"
     Delete "$INSTDIR\nspr4.dll"
     Delete "$INSTDIR\nss3.dll"
     Delete "$INSTDIR\nssckbi.dll"
@@ -810,6 +825,7 @@ Section Uninstall
 
     ; Shortcuts..
     Delete "$DESKTOP\Pidgin.lnk"
+    Delete "$SMPROGRAMS\Pidgin.lnk"
 
     Goto done
 
@@ -1246,6 +1262,9 @@ Function .onInit
   Push $R0
   Push $R1
   Push $R2
+  Push $R3 ; This is only used for the Parameters throughout the function
+
+  ${GetParameters} $R3
 
   IntOp $R1 0 + 0
   retry_runcheck:
@@ -1257,7 +1276,14 @@ Function .onInit
   IntCmp $R0 0 +3 ;This could check for ERROR_ALREADY_EXISTS(183), but lets just assume
     MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION $(INSTALLER_IS_RUNNING) /SD IDCANCEL IDRETRY retry_runcheck
     Abort
+
+  ; Allow installer to run even if pidgin is running via "/NOPIDGINRUNCHECK=1"
+  ; This is useful for testing
+  ClearErrors
+  ${GetOptions} "$R3" "/NOPIDGINRUNCHECK=" $R1
+  IfErrors 0 +2
   Call RunCheck
+
   StrCpy $name "Pidgin ${PIDGIN_VERSION}"
   StrCpy $SPELLCHECK_SEL ""
 
@@ -1311,18 +1337,17 @@ Function .onInit
   SetShellVarContext "current"
 
   StrCpy $ISSILENT "/S"
-
-  ; GTK installer has two silent states.. one with Message boxes, one without
+  ; GTK installer has two silent states - one with Message boxes, one without
   ; If pidgin installer was run silently, we want to supress gtk installer msg boxes.
-  IfSilent 0 set_gtk_normal
-      StrCpy $ISSILENT "/NOUI"
-  set_gtk_normal:
+  IfSilent 0 +2
+    StrCpy $ISSILENT "/NOUI"
 
-  ${GetParameters} $R0
+  StrCpy $LANGUAGE_SET "0"
   ClearErrors
-  ${GetOptions} "$R0" "/L=" $R1
+  ${GetOptions} "$R3" "/L=" $R1
   IfErrors +3
   StrCpy $LANGUAGE $R1
+  StrCpy $LANGUAGE_SET "1"
   Goto skip_lang
 
   ; Select Language
@@ -1331,7 +1356,7 @@ Function .onInit
     skip_lang:
 
   ClearErrors
-  ${GetOptions} "$R0" "/DS=" $R1
+  ${GetOptions} "$R3" "/DS=" $R1
   IfErrors +8
   SectionGetFlags ${SecDesktopShortcut} $R2
   StrCmp "1" $R1 0 +2
@@ -1342,7 +1367,7 @@ Function .onInit
   SectionSetFlags ${SecDesktopShortcut} $R2
 
   ClearErrors
-  ${GetOptions} "$R0" "/SMS=" $R1
+  ${GetOptions} "$R3" "/SMS=" $R1
   IfErrors +8
   SectionGetFlags ${SecStartMenuShortcut} $R2
   StrCmp "1" $R1 0 +2
@@ -1379,9 +1404,21 @@ Function .onInit
 
   instdir_done:
 ;LogSet on
+  Pop $R3
   Pop $R2
   Pop $R1
   Pop $R0
+FunctionEnd
+
+Function .onInstSuccess
+  ; NSIS doesn't appear to save the language when in Silent Mode, so we do so manually
+  IfSilent 0 done
+
+  StrCmp $LANGUAGE_SET "0" done
+
+  WriteRegStr "${MUI_LANGDLL_REGISTRY_ROOT}" "${MUI_LANGDLL_REGISTRY_KEY}" "${MUI_LANGDLL_REGISTRY_VALUENAME}" $LANGUAGE
+
+  done:
 FunctionEnd
 
 Function un.onInit
@@ -1693,6 +1730,7 @@ Function InstallAspellDictionary
   Push $R1
   Push $R2
   Push $R3
+  Push $R4
 
   check:
   ClearErrors
@@ -1713,7 +1751,12 @@ Function InstallAspellDictionary
   StrCmp $R3 "success" +3
     StrCpy $R0 $R3
     Goto done
+  ; Use a specific temporary $OUTDIR for each dictionary because the installer doesn't clean up after itself
+  StrCpy $R4 "$OUTDIR"
+  SetOutPath "$TEMP\aspell_dict-$R0"
   ExecWait '"$R1"'
+  SetOutPath "$R4"
+  RMDir /r "$TEMP\aspell_dict-$R0"
   Delete $R1
   Goto check ; Check that it is now installed correctly
 
@@ -1722,6 +1765,7 @@ Function InstallAspellDictionary
     StrCpy $R0 ''
 
   done:
+  Pop $R4
   Pop $R3
   Pop $R2
   Pop $R1

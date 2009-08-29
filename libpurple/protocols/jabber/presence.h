@@ -3,7 +3,9 @@
  *
  * purple
  *
- * Copyright (C) 2003 Nathan Walp <faceprint@faceprint.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,20 +21,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _PURPLE_JABBER_PRESENCE_H_
-#define _PURPLE_JABBER_PRESENCE_H_
+#ifndef PURPLE_JABBER_PRESENCE_H_
+#define PURPLE_JABBER_PRESENCE_H_
 
 #include "buddy.h"
 #include "jabber.h"
 #include "xmlnode.h"
 
-void jabber_presence_send(PurpleAccount *account, PurpleStatus *status);
+void jabber_set_status(PurpleAccount *account, PurpleStatus *status);
+
+/**
+ *	Send a full presence stanza.
+ *
+ *	@param js       A JabberStream object.
+ *	@param force    Force sending the presence stanza, irrespective of whether
+ *	                the contents seem to have changed.
+ */
+void jabber_presence_send(JabberStream *js, gboolean force);
+
 xmlnode *jabber_presence_create(JabberBuddyState state, const char *msg, int priority); /* DEPRECATED */
 xmlnode *jabber_presence_create_js(JabberStream *js, JabberBuddyState state, const char *msg, int priority);
 void jabber_presence_parse(JabberStream *js, xmlnode *packet);
 void jabber_presence_subscription_set(JabberStream *js, const char *who,
 		const char *type);
-void jabber_presence_fake_to_self(JabberStream *js, const PurpleStatus *status);
+void jabber_presence_fake_to_self(JabberStream *js, PurpleStatus *status);
 void purple_status_to_jabber(const PurpleStatus *status, JabberBuddyState *state, char **msg, int *priority);
 
-#endif /* _PURPLE_JABBER_PRESENCE_H_ */
+#endif /* PURPLE_JABBER_PRESENCE_H_ */

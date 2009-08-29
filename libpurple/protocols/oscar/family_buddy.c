@@ -121,7 +121,7 @@ aim_buddylist_addbuddy(OscarData *od, FlapConnection *conn, const char *sn)
  *
  * This just builds the "set buddy list" command then queues it.
  *
- * buddy_list = "Screen Name One&ScreenNameTwo&";
+ * buddy_list = "Buddy Name One&BuddyNameTwo&";
  *
  * XXX Clean this up.
  *
@@ -220,9 +220,6 @@ buddychange(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
 		ret = userfunc(od, conn, frame, &userinfo);
-
-	if (snac->subtype == SNAC_SUBTYPE_BUDDY_ONCOMING && userinfo.flags & AIM_FLAG_AWAY)
-		aim_locate_autofetch_away_message(od, userinfo.sn);
 
 	aim_info_free(&userinfo);
 
