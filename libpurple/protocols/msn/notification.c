@@ -582,7 +582,7 @@ msn_notification_send_fqy(MsnSession *session,
 
 	trans = msn_transaction_new(cmdproc, "FQY", "%d", payload_len);
 	msn_transaction_set_payload(trans, payload, payload_len);
-	msn_transaction_set_data(trans, data);
+	msn_transaction_set_data(trans, data);	/* XXX: 'data' leaks */
 	msn_cmdproc_send_trans(cmdproc, trans);
 }
 
@@ -621,7 +621,7 @@ update_contact_network(MsnSession *session, const char *passport, MsnNetwork net
 				user->list_op & MSN_LIST_OP_MASK, network);
 		payload = xmlnode_to_str(adl_node, &payload_len);
 		msn_notification_post_adl(session->notification->cmdproc, payload, payload_len);
-
+		g_free(payload);
 	} else {
 		purple_debug_error("msn",
 		                   "Got FQY update for unknown user %s on network %d.\n",
