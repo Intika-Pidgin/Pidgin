@@ -12,6 +12,7 @@ Var GTK_FOLDER
 Var ISSILENT
 Var STARTUP_RUN_KEY
 Var SPELLCHECK_SEL
+Var LANGUAGE_SET
 
 ;--------------------------------
 ;Configuration
@@ -74,7 +75,7 @@ SetDateSave on
 !define PERL_REG_KEY				"SOFTWARE\Perl"
 !define PERL_DLL				"perl510.dll"
 !define GTK_DEFAULT_INSTALL_PATH		"$COMMONFILES\GTK\2.0"
-!define GTK_RUNTIME_INSTALLER			"..\..\..\..\gtk_installer\gtk-runtime*.exe"
+!define GTK_RUNTIME_INSTALLER			"..\..\..\..\gtk_installer\gtk-runtime-${GTK_INSTALL_VERSION}*.exe"
 
 !define ASPELL_REG_KEY				"SOFTWARE\Aspell"
 !define DOWNLOADER_URL				"http://pidgin.im/win32/download_redir.php"
@@ -716,6 +717,7 @@ Section Uninstall
     Delete "$INSTDIR\ca-certs\AOL_Member_CA.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Class3.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Root.pem"
+    Delete "$INSTDIR\ca-certs\Entrust.net_Secure_Server_CA.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_CA.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_Global_eBusiness_CA-1.pem"
     Delete "$INSTDIR\ca-certs\GTE_CyberTrust_Global_Root.pem"
@@ -1341,14 +1343,17 @@ Function .onInit
   IfSilent 0 +2
     StrCpy $ISSILENT "/NOUI"
 
+  StrCpy $LANGUAGE_SET "0"
   ClearErrors
   ${GetOptions} "$R3" "/L=" $R1
-  IfErrors +3
+  IfErrors +4
   StrCpy $LANGUAGE $R1
+  StrCpy $LANGUAGE_SET "1"
   Goto skip_lang
 
   ; Select Language
     ; Display Language selection dialog
+    !define MUI_LANGDLL_ALWAYSSHOW
     !insertmacro MUI_LANGDLL_DISPLAY
     skip_lang:
 
@@ -1405,6 +1410,17 @@ Function .onInit
   Pop $R2
   Pop $R1
   Pop $R0
+FunctionEnd
+
+Function .onInstSuccess
+  ; NSIS doesn't appear to save the language when in Silent Mode, so we do so manually
+  IfSilent 0 done
+
+  StrCmp $LANGUAGE_SET "0" done
+
+  WriteRegStr "${MUI_LANGDLL_REGISTRY_ROOT}" "${MUI_LANGDLL_REGISTRY_KEY}" "${MUI_LANGDLL_REGISTRY_VALUENAME}" $LANGUAGE
+
+  done:
 FunctionEnd
 
 Function un.onInit
