@@ -31,6 +31,7 @@
 #include "jabber.h"
 #include "presence.h"
 #include "iq.h"
+#include "chat.h"
 
 #include "jingle/jingle.h"
 
@@ -95,21 +96,22 @@ google_session_send_candidates(PurpleMedia *media, gchar *session_id,
 		gchar *participant, GoogleSession *session)
 {
 	GList *candidates = purple_media_get_local_candidates(
-			session->media, session_id, session->remote_jid);
+			session->media, session_id, session->remote_jid), *iter;
 	PurpleMediaCandidate *transport;
 	gboolean video = FALSE;
 
 	if (!strcmp(session_id, "google-video"))
 		video = TRUE;
 
-	for (;candidates;candidates = candidates->next) {
+	for (iter = candidates; iter; iter = iter->next) {
 		JabberIq *iq;
-		gchar *ip, *port, *pref, *username, *password;
+		gchar *ip, *port, *username, *password;
+		gchar pref[16];
 		PurpleMediaCandidateType type;
 		xmlnode *sess;
 		xmlnode *candidate;
 		guint component_id;
-		transport = (PurpleMediaCandidate*)(candidates->data);
+		transport = PURPLE_MEDIA_CANDIDATE(iter->data);
 		component_id = purple_media_candidate_get_component_id(
 				transport);
 
@@ -123,9 +125,8 @@ google_session_send_candidates(PurpleMedia *media, gchar *session_id,
 		ip = purple_media_candidate_get_ip(transport);
 		port = g_strdup_printf("%d",
 				purple_media_candidate_get_port(transport));
-		pref = g_strdup_printf("%f",
-				purple_media_candidate_get_priority(transport)
-				/1000.0);
+		g_ascii_dtostr(pref, 16,
+			purple_media_candidate_get_priority(transport) / 1000.0);
 		username = purple_media_candidate_get_username(transport);
 		password = purple_media_candidate_get_password(transport);
 		type = purple_media_candidate_get_candidate_type(transport);
@@ -163,12 +164,12 @@ google_session_send_candidates(PurpleMedia *media, gchar *session_id,
 
 		g_free(ip);
 		g_free(port);
-		g_free(pref);
 		g_free(username);
 		g_free(password);
 
 		jabber_iq_send(iq);
 	}
+	purple_media_candidate_list_free(candidates);
 }
 
 static void
@@ -1424,4 +1425,44 @@ jabber_google_send_jingle_info(JabberStream *js)
 		NULL);
 	purple_debug_info("jabber", "sending google:jingleinfo query\n");
 	jabber_iq_send(jingle_info);
+}
+
+void google_buddy_node_chat(PurpleBlistNode *node, gpointer data)
+{
+	PurpleBuddy *buddy;
+	PurpleConnection *gc;
+	JabberStream *js;
+	JabberChat *chat;
+	gchar *room;
+	guint32 tmp, a, b;
+
+	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+
+	buddy = PURPLE_BUDDY(node);
+	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
+	g_return_if_fail(gc != NULL);
+	js = purple_connection_get_protocol_data(gc);
+
+	/* Generate a version 4 UUID */
+	tmp = g_random_int();
+	a = 0x4000 | (tmp & 0xFFF); /* 0x4000 to 0x4FFF */
+	tmp >>= 12;
+	b = ((1 << 3) << 12) | (tmp & 0x3FFF); /* 0x8000 to 0xBFFF */
+
+	tmp = g_random_int();
+	room = g_strdup_printf("private-chat-%08x-%04x-%04x-%04x-%04x%08x",
+			g_random_int(),
+			tmp & 0xFFFF,
+			a,
+			b,
+			(tmp >> 16) & 0xFFFF, g_random_int());
+
+	chat = jabber_join_chat(js, room, GOOGLE_GROUPCHAT_SERVER, js->user->node,
+	                        NULL, NULL);
+	if (chat) {
+		chat->muc = TRUE;
+		jabber_chat_invite(gc, chat->id, "", buddy->name);
+	}
+
+	g_free(room);
 }

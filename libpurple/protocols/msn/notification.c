@@ -583,6 +583,7 @@ msn_notification_send_fqy(MsnSession *session,
 	trans = msn_transaction_new(cmdproc, "FQY", "%d", payload_len);
 	msn_transaction_set_payload(trans, payload, payload_len);
 	msn_transaction_set_data(trans, data);
+	msn_transaction_set_data_free(trans, g_free);
 	msn_cmdproc_send_trans(cmdproc, trans);
 }
 
@@ -621,7 +622,7 @@ update_contact_network(MsnSession *session, const char *passport, MsnNetwork net
 				user->list_op & MSN_LIST_OP_MASK, network);
 		payload = xmlnode_to_str(adl_node, &payload_len);
 		msn_notification_post_adl(session->notification->cmdproc, payload, payload_len);
-
+		g_free(payload);
 	} else {
 		purple_debug_error("msn",
 		                   "Got FQY update for unknown user %s on network %d.\n",
@@ -962,9 +963,8 @@ fqy_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload,
 			if (cmd->trans->data) {
 				MsnFqyCbData *fqy_data = cmd->trans->data;
 				fqy_data->cb(session, passport, network, fqy_data->data);
-				/* TODO: This leaks, but the server responds to FQY multiple times, so we
-				         can't free it yet. We need to figure out somewhere else to do so.
-				g_free(fqy_data); */
+				/* Don't free fqy_data yet since the server responds to FQY multiple times.
+				   It will be freed when cmd->trans is freed. */
 			}
 
 			g_free(passport);
@@ -1098,7 +1098,6 @@ iln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	}
 
 	if (msn_user_set_friendly_name(user, friendly)) {
-		serv_got_alias(gc, passport, friendly);
 		msn_update_contact(session, passport, MSN_UPDATE_DISPLAY, friendly);
 	}
 	g_free(friendly);
@@ -1263,7 +1262,6 @@ nln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 
 	if (msn_user_set_friendly_name(user, friendly))
 	{
-		serv_got_alias(gc, passport, friendly);
 		msn_update_contact(session, passport, MSN_UPDATE_DISPLAY, friendly);
 	}
 

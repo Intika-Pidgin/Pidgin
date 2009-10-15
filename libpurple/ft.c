@@ -1038,7 +1038,7 @@ do_transfer(PurpleXfer *xfer)
 				 * watcher.
 				 */
 				if (xfer->watcher != 0) {
-					purple_timeout_remove(xfer->watcher);
+					purple_input_remove(xfer->watcher);
 					xfer->watcher = 0;
 				}
 
