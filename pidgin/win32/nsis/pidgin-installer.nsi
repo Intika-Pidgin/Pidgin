@@ -717,6 +717,7 @@ Section Uninstall
     Delete "$INSTDIR\ca-certs\AOL_Member_CA.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Class3.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Root.pem"
+    Delete "$INSTDIR\ca-certs\Entrust.net_Secure_Server_CA.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_CA.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_Global_eBusiness_CA-1.pem"
     Delete "$INSTDIR\ca-certs\GTE_CyberTrust_Global_Root.pem"
@@ -1345,13 +1346,14 @@ Function .onInit
   StrCpy $LANGUAGE_SET "0"
   ClearErrors
   ${GetOptions} "$R3" "/L=" $R1
-  IfErrors +3
+  IfErrors +4
   StrCpy $LANGUAGE $R1
   StrCpy $LANGUAGE_SET "1"
   Goto skip_lang
 
   ; Select Language
     ; Display Language selection dialog
+    !define MUI_LANGDLL_ALWAYSSHOW
     !insertmacro MUI_LANGDLL_DISPLAY
     skip_lang:
 
