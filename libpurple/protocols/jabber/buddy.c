@@ -38,6 +38,7 @@
 #include "xdata.h"
 #include "pep.h"
 #include "adhoccommands.h"
+#include "google.h"
 
 typedef struct {
 	long idle_seconds;
@@ -1149,9 +1150,8 @@ static void jabber_vcard_parse(JabberStream *js, const char *from,
 				char *bintext = NULL;
 				xmlnode *binval;
 
-				if( ((binval = xmlnode_get_child(child, "BINVAL")) &&
-						(bintext = xmlnode_get_data(binval))) ||
-						(bintext = xmlnode_get_data(child))) {
+				if ((binval = xmlnode_get_child(child, "BINVAL")) &&
+						(bintext = xmlnode_get_data(binval))) {
 					gsize size;
 					guchar *data;
 					gboolean photo = (strcmp(child->name, "PHOTO") == 0);
@@ -1839,6 +1839,13 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 		   removed? */
 		act = purple_menu_action_new(_("Unsubscribe"),
 		                           PURPLE_CALLBACK(jabber_buddy_unsubscribe),
+		                           NULL, NULL);
+		m = g_list_append(m, act);
+	}
+
+	if (js->googletalk) {
+		act = purple_menu_action_new(_("Initiate _Chat"),
+		                           PURPLE_CALLBACK(google_buddy_node_chat),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
 	}

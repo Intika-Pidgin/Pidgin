@@ -206,6 +206,7 @@ msn_contact_request_cb(MsnSoapMessage *req, MsnSoapMessage *resp,
 		                   "Operation {%s} failed. No response received from server.\n",
 		                   msn_contact_operation_str(state->action));
 		msn_session_set_error(state->session, MSN_ERROR_BAD_BLIST, NULL);
+		msn_callback_state_free(state);
 		return;
 	}
 
@@ -355,9 +356,10 @@ msn_parse_each_member(MsnSession *session, xmlnode *member, const char *node,
 	char *type;
 	char *member_id;
 	MsnUser *user;
-	xmlnode *annotation;
+	xmlnode *annotation, *display;
 	guint nid = MSN_NETWORK_UNKNOWN;
 	char *invite = NULL;
+	char *display_text;
 
 	passport = xmlnode_get_data(xmlnode_get_child(member, node));
 	if (!purple_email_is_valid(passport)) {
@@ -367,7 +369,13 @@ msn_parse_each_member(MsnSession *session, xmlnode *member, const char *node,
 
 	type = xmlnode_get_data(xmlnode_get_child(member, "Type"));
 	member_id = xmlnode_get_data(xmlnode_get_child(member, "MembershipId"));
-	user = msn_userlist_find_add_user(session->userlist, passport, NULL);
+	if ((display = xmlnode_get_child(member, "DisplayName"))) {
+		display_text = xmlnode_get_data(display);
+	} else {
+		display_text = NULL;
+	}
+
+	user = msn_userlist_find_add_user(session->userlist, passport, display_text);
 
 	for (annotation = xmlnode_get_child(member, "Annotations/Annotation");
 	     annotation;
@@ -408,6 +416,7 @@ msn_parse_each_member(MsnSession *session, xmlnode *member, const char *node,
 	g_free(type);
 	g_free(member_id);
 	g_free(invite);
+	g_free(display_text);
 }
 
 static void
@@ -1417,12 +1426,20 @@ msn_update_contact(MsnSession *session, const char *passport, MsnContactUpdateTy
 	xmlnode *contact;
 	xmlnode *contact_info;
 	xmlnode *changes;
+	MsnUser *user = NULL;
 
-	purple_debug_info("msn", "Update contact information with new %s: %s\n",
+	purple_debug_info("msn", "Update contact information for %s with new %s: %s\n",
+		passport ? passport : "(null)",
 		type == MSN_UPDATE_DISPLAY ? "display name" : "alias",
 		value ? value : "(null)");
-	purple_debug_info("msn", "passport=%s\n", passport);
 	g_return_if_fail(passport != NULL);
+
+	if (strcmp(passport, "Me") != 0) {
+		user = msn_userlist_find_user(session->userlist, passport);
+		if (!user)
+			return;
+	}
+
 	contact_info = xmlnode_new("contactInfo");
 	changes = xmlnode_new("propertiesChanged");
 
@@ -1451,8 +1468,6 @@ msn_update_contact(MsnSession *session, const char *passport, MsnContactUpdateTy
 			g_return_if_reached();
 	}
 
-
-
 	state = msn_callback_state_new(session);
 
 	state->body = xmlnode_from_str(MSN_CONTACT_UPDATE_TEMPLATE, -1);
@@ -1465,14 +1480,13 @@ msn_update_contact(MsnSession *session, const char *passport, MsnContactUpdateTy
 	xmlnode_insert_child(contact, contact_info);
 	xmlnode_insert_child(contact, changes);
 
-	if (!strcmp(passport, "Me")) {
-		xmlnode *contactType = xmlnode_new_child(contact_info, "contactType");
-		xmlnode_insert_data(contactType, "Me", -1);
-	} else {
-		MsnUser *user = msn_userlist_find_user(session->userlist, passport);
+	if (user) {
 		xmlnode *contactId = xmlnode_new_child(contact, "contactId");
 		msn_callback_state_set_uid(state, user->uid);
 		xmlnode_insert_data(contactId, state->uid, -1);
+	} else {
+		xmlnode *contactType = xmlnode_new_child(contact_info, "contactType");
+		xmlnode_insert_data(contactType, "Me", -1);
 	}
 
 	msn_contact_request(state);

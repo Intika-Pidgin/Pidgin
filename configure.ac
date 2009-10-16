@@ -46,8 +46,8 @@ AC_PREREQ([2.50])
 m4_define([purple_lt_current], [6])
 m4_define([purple_major_version], [2])
 m4_define([purple_minor_version], [6])
-m4_define([purple_micro_version], [3])
-m4_define([purple_version_suffix], [])
+m4_define([purple_micro_version], [4])
+m4_define([purple_version_suffix], [devel])
 m4_define([purple_version],
           [purple_major_version.purple_minor_version.purple_micro_version])
 m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suffix],[purple_version_suffix]))
@@ -55,8 +55,8 @@ m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suf
 m4_define([gnt_lt_current], [6])
 m4_define([gnt_major_version], [2])
 m4_define([gnt_minor_version], [6])
-m4_define([gnt_micro_version], [3])
-m4_define([gnt_version_suffix], [])
+m4_define([gnt_micro_version], [4])
+m4_define([gnt_version_suffix], [devel])
 m4_define([gnt_version],
           [gnt_major_version.gnt_minor_version.gnt_micro_version])
 m4_define([gnt_display_version], gnt_version[]m4_ifdef([gnt_version_suffix],[gnt_version_suffix]))
@@ -1772,6 +1772,23 @@ if test "x$enable_gnutls" = "xyes"; then
 	CPPFLAGS="$CPPFLAGS_save"
         LIBS="$LIBS_save"
 fi
+
+if test "x$enable_gnutls" = "xyes"; then
+	AC_MSG_CHECKING(for GNUTLS_CERT_INSECURE_ALGORITHM)
+	LIBS_save="$LIBS"
+	LIBS="$LIBS $GNUTLS_LIBS"
+	CPPFLAGS_save="$CPPFLAGS"
+	CPPFLAGS="$CPPFLAGS $GNUTLS_CFLAGS"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <gnutls/gnutls.h>]],
+                                        [[unsigned int verify = GNUTLS_CERT_INSECURE_ALGORITHM;]])],
+	               [AC_DEFINE([HAVE_GNUTLS_CERT_INSECURE_ALGORITHM], 1,
+                                  [Define if your gnutls has the GNUTLS_CERT_INSECURE_ALGORITHM flag])
+	                AC_MSG_RESULT(yes)],
+	               [AC_MSG_RESULT(no)])
+	CPPFLAGS="$CPPFLAGS_save"
+        LIBS="$LIBS_save"
+fi
+
 
 AM_CONDITIONAL(USE_GNUTLS, test "x$enable_gnutls" = "xyes")
 
