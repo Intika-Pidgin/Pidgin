@@ -11,9 +11,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: de\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-09-04 12:28+0200\n"
-"PO-Revision-Date: 2009-09-04 12:28+0200\n"
-"Last-Translator: Björn Voigt <bjoern@cs.tu-berlin.de>\n"
+"POT-Creation-Date: 2009-10-07 22:35+0200\n"
+"PO-Revision-Date: 2009-10-07 22:34+0200\n"
+"Last-Translator: Bjoern Voigt <bjoern@cs.tu-berlin.de>\n"
 "Language-Team: Deutsch <de@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -267,7 +267,7 @@ msgid "Retrieving..."
 msgstr "Empfange..."
 
 msgid "Get Info"
-msgstr "Benutzer-Info"
+msgstr "Info abrufen"
 
 msgid "Add Buddy Pounce"
 msgstr "Buddy-Alarm hinzufügen"
@@ -644,8 +644,8 @@ msgid_plural "List of %d users:\n"
 msgstr[0] "Liste von %d Benutzer:\n"
 msgstr[1] "Liste von %d Benutzern:\n"
 
-msgid "Supported debug options are:  version"
-msgstr "Unterstützte Debug-Optionen sind:  version"
+msgid "Supported debug options are: plugins version"
+msgstr "Unterstützte Debug-Optionen sind: plugins version"
 
 msgid "No such command (in this context)."
 msgstr "Kein solches Kommando (in diesem Kontext)."
@@ -951,6 +951,9 @@ msgstr "Einladen"
 msgid "(none)"
 msgstr "(kein)"
 
+#. XXX: The following expects that finch_notify_message gets called. This
+#. * may not always happen, e.g. when another plugin sets its own
+#. * notify_message. So tread carefully.
 msgid "URI"
 msgstr "URI"
 
@@ -1041,10 +1044,10 @@ msgid "Pounce When Buddy..."
 msgstr "Alarm, wenn Buddy..."
 
 msgid "Signs on"
-msgstr "sich anmeldet"
+msgstr "sich angemeldet"
 
 msgid "Signs off"
-msgstr "sich abmeldet"
+msgstr "sich abgemeldet"
 
 msgid "Goes away"
 msgstr "hinausgeht"
@@ -1461,7 +1464,7 @@ msgid "%s sent a message in %s"
 msgstr "%s hat eine Nachricht in %s gesendet"
 
 msgid "Buddy signs on/off"
-msgstr "Buddy sich an/abmeldet"
+msgstr "Buddy hat sich an- oder abgemeldet"
 
 msgid "You receive an IM"
 msgstr "Sie empfangen einen Nachricht"
@@ -1525,6 +1528,13 @@ msgid ""
 msgstr ""
 "\n"
 "Hole TinyURL..."
+
+#, c-format
+msgid "TinyURL for above: %s"
+msgstr "TinyURL für oben: %s"
+
+msgid "Please wait while TinyURL fetches a shorter URL ..."
+msgstr "Bitte warten Sie, während TinyURL eine kürzere URL holt ..."
 
 msgid "Only create TinyURL for URLs of this length or greater"
 msgstr "TinyURL nur für URLs mit mindestens dieser Länge generieren"
@@ -1651,9 +1661,8 @@ msgid "The certificate is self-signed and cannot be automatically checked."
 msgstr ""
 "Das Zertifikat ist selbstsigniert und kann nicht automatisch geprüft werden."
 
-msgid ""
-"The root certificate this one claims to be issued by is unknown to Pidgin."
-msgstr "Das Root-Zertifikat, welches angegeben wird, ist für Pidgin ungültig."
+msgid "The root certificate this one claims to be issued by is unknown."
+msgstr "Das Root-Zertifikat, welches für dieses angegeben ist, ist unbekannt."
 
 msgid "The certificate is not valid yet."
 msgstr "Das Zertifikat ist noch nicht gültig."
@@ -1884,6 +1893,10 @@ msgstr ""
 
 msgid "Resolver process exited without answering our request"
 msgstr "Auflösungsprozess hat sich beendet ohne die Anfrage zu beantworten"
+
+#, c-format
+msgid "Error converting %s to punycode: %d"
+msgstr "Fehler beim Konvertieren von %s zu Punycode: %d"
 
 #, c-format
 msgid "Thread creation failure: %s"
@@ -2202,13 +2215,13 @@ msgstr ""
 msgid "A non-recoverable Farsight2 error has occurred."
 msgstr "Ein nicht behebbarer Farsight2-Fehler ist aufgetreten."
 
-msgid "Conference error."
+msgid "Conference error"
 msgstr "Konferenz-Fehler"
 
-msgid "Error with your microphone."
+msgid "Error with your microphone"
 msgstr "Fehler mit Ihrem Mikrofon"
 
-msgid "Error with your webcam."
+msgid "Error with your webcam"
 msgstr "Fehler mit Ihrer Webcam"
 
 #, c-format
@@ -2899,7 +2912,7 @@ msgid "Buddy Goes _Idle"
 msgstr "Buddy _untätig wird"
 
 msgid "Buddy _Signs On/Off"
-msgstr "Buddy _sich an/abmeldet"
+msgstr "Buddy hat_sich an- oder abgemeldet"
 
 #. *< type
 #. *< ui_requirement
@@ -5180,7 +5193,7 @@ msgstr ""
 #, c-format
 msgid ""
 "Unable to add the buddy %s because the username is invalid.  Usernames must "
-"be a valid email address."
+"be valid email addresses."
 msgstr ""
 "Konnte den Buddy %s nicht hinzufügen, da der Benutzername ungültig ist.  "
 "Benutzernamen müssen gültige E-Mail-Adressen sein."
@@ -7105,7 +7118,7 @@ msgid "C_onnect"
 msgstr "V_erbinden"
 
 msgid "You closed the connection."
-msgstr "Sie haben die Verbindung beendet"
+msgstr "Sie haben die Verbindung beendet."
 
 msgid "Get AIM Info"
 msgstr "AIM-Info"
@@ -9709,6 +9722,17 @@ msgstr "Einen Benutzer zum Chat einladen..."
 msgid "Open Inbox"
 msgstr "Öffne Posteingang"
 
+msgid "Can't send SMS. Unable to obtain mobile carrier."
+msgstr ""
+"Die SMS kann nicht gesendet werden. Es konnte kein Mobilfunkkanal erreicht "
+"werden."
+
+msgid "Can't send SMS. Unknown mobile carrier."
+msgstr "Die SMS kann nicht gesendet werden. Unbekannter Mobilfunkkanal."
+
+msgid "Getting mobile carrier to send the SMS."
+msgstr "Hole einen Mobilfunkkanal zum Senden der SMS."
+
 #. Write a local message to this conversation showing that a request for a
 #. * Doodle session has been made
 #.
@@ -11094,7 +11118,7 @@ msgid "/Conversation/Add Buddy _Pounce..."
 msgstr "/Unterhaltung/_Buddy-Alarm hinzufügen..."
 
 msgid "/Conversation/_Get Info"
-msgstr "/Unterhaltung/Ben_utzer-Info abrufen"
+msgstr "/Unterhaltung/_Info abrufen"
 
 msgid "/Conversation/In_vite..."
 msgstr "/Unterhaltung/_Einladen..."
@@ -12261,14 +12285,14 @@ msgstr "NAME"
 
 msgid ""
 "enable specified account(s) (optional argument NAME\n"
-"                      specifies account(s) to use, separated by commas."
+"                      specifies account(s) to use, separated by commas.\n"
+"                      Without this only the first account will be enabled)."
 msgstr ""
 "angegebene Konten aktivieren (optionales Argument NAME\n"
 "                      bestimmt Konto(n), die benutzt werden sollen,\n"
-"                      getrennt durch Kommata."
-
-msgid "Without this only the first account will be enabled)."
-msgstr "Ohne diesen Parameter wirdnur das erste Konto aktiviert)."
+"                      getrennt durch Kommata.\n"
+"                      Ohne diesen Parameter wird nur das erste "
+"Konto                       aktiviert)."
 
 msgid "X display to use"
 msgstr "das zu benutzenden X-Display"
@@ -12377,7 +12401,7 @@ msgid "Dismiss"
 msgstr "Verwerfen"
 
 msgid "<span weight=\"bold\" size=\"larger\">You have pounced!</span>"
-msgstr "<span weight=\"bold\" size=\"larger\">Sie haben geklopft!</span>"
+msgstr "<span weight=\"bold\" size=\"larger\">Sie wurden angestoßen!</span>"
 
 msgid "The following plugins will be unloaded."
 msgstr "Die folgenden Plugins werden entladen."
@@ -12441,10 +12465,10 @@ msgid "_Buddy name:"
 msgstr "Budd_y-Name:"
 
 msgid "Si_gns on"
-msgstr "si_ch anmeldet"
+msgstr "si_ch angemeldet"
 
 msgid "Signs o_ff"
-msgstr "sich abmel_det"
+msgstr "sich abgemel_det"
 
 msgid "Goes a_way"
 msgstr "hinausgeh_t"
@@ -12510,7 +12534,7 @@ msgid "Paused while typing"
 msgstr "Hat beim Tippen angehalten"
 
 msgid "Signed on"
-msgstr "Hat sich anmeldet"
+msgstr "Hat sich angemeldet"
 
 msgid "Returned from being idle"
 msgstr "Ist nicht mehr inaktiv"
@@ -12522,7 +12546,7 @@ msgid "Stopped typing"
 msgstr "Hat das Tippen gestoppt"
 
 msgid "Signed off"
-msgstr "Hat sich abmeldet"
+msgstr "Hat sich abgemeldet"
 
 msgid "Became idle"
 msgstr "Wurde untätig"
@@ -12535,6 +12559,21 @@ msgstr "Eine Nachricht senden"
 
 msgid "Unknown.... Please report this!"
 msgstr "Unbekannt.... Bitte berichten Sie dieses Problem!"
+
+msgid "(Custom)"
+msgstr "(Benutzerdefiniert)"
+
+msgid "(Default)"
+msgstr "(Standard)"
+
+msgid "The default Pidgin sound theme"
+msgstr "Das Standard-Klangthema für Pidgin"
+
+msgid "The default Pidgin buddy list theme"
+msgstr "Das Standard-Buddy-Listen-Thema für Pidgin"
+
+msgid "The default Pidgin status icon theme"
+msgstr "Das Standard-Status-Icon-Thema für Pidgin"
 
 msgid "Theme failed to unpack."
 msgstr "Thema konnte nicht entpackt werden."
@@ -12679,12 +12718,15 @@ msgstr "Kann das Proxy-Konfigurationsprogramm nicht starten."
 msgid "Cannot start browser configuration program."
 msgstr "Kann das Browser-Konfigurationsprogramm nicht starten."
 
-msgid "<span style=\"italic\">Example: stunserver.org</span>"
-msgstr "<span style=\"italic\">Beispiel: stunserver.org</span>"
+msgid "Disabled"
+msgstr "Deaktiviert"
 
 #, c-format
 msgid "Use _automatically detected IP address: %s"
 msgstr "Benutze _automatisch erkannte IP-Adresse: %s"
+
+msgid "<span style=\"italic\">Example: stunserver.org</span>"
+msgstr "<span style=\"italic\">Beispiel: stunserver.org</span>"
 
 msgid "Public _IP:"
 msgstr "Öffentliche _IP:"
@@ -13251,7 +13293,7 @@ msgid "Close _tabs"
 msgstr "_Reiter schließen"
 
 msgid "_Get Info"
-msgstr "_Benutzer-Info"
+msgstr "_Info abrufen"
 
 msgid "_Invite"
 msgstr "_Einladen"
@@ -14315,12 +14357,13 @@ msgstr "Sprach-/Video-Einstellungen"
 #. *< name
 #. *< version
 msgid "Configure your microphone and webcam."
-msgstr "Mikrofon und Webcam konfigurieren"
+msgstr "Mikrofon und Webcam konfigurieren."
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
-"Die Mikrofon- und Webcam-Einstellungen für Audio- und Video-Anrufe bearbeiten"
+"Die Mikrofon- und Webcam-Einstellungen für Audio- und Video-Anrufe "
+"bearbeiten."
 
 msgid "Opacity:"
 msgstr "Durchlässigkeit:"
@@ -14378,9 +14421,6 @@ msgstr ""
 "\n"
 "* Hinweis: Dieses Plugin verlangt Win2000 oder höher."
 
-msgid "GTK+ Runtime Version"
-msgstr "GTK+ Runtime Version"
-
 #. Autostart
 msgid "Startup"
 msgstr "Start"
@@ -14388,6 +14428,9 @@ msgstr "Start"
 #, c-format
 msgid "_Start %s on Windows startup"
 msgstr "_Starte %s beim Windows-Start"
+
+msgid "Allow multiple instances"
+msgstr "Mehrere Instanzen erlauben"
 
 msgid "_Dockable Buddy List"
 msgstr "An_dockbare Buddy-Liste"
