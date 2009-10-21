@@ -13,16 +13,19 @@ version 2.7.0 (??/??/????):
 	* Moved the Translator information from the About box to a "Translator
 	  Information" dialog accessible on the Help menu.
 
-version 2.6.3 (??/??/20??):
+version 2.6.4 (??/??/20??):
+	libpurple:
+	* Actually emit the hold signal for media calls.
+
 	General:
 	* New 'plugins' sub-command to 'debug' command (i.e. '/debug plugins')
 	  to announce the list of loaded plugins (in both Finch and Pidgin).
-	* Fix a crash when performing DNS queries on Unixes that use the
-	  blocking DNS lookups.  (Brian Lu)
 	* Fix building the GnuTLS plugin with older versions of GnuTLS.
+	* Fix DNS TXT query resolution.
 
 	MSN:
 	* Don't forget display names for buddies.
+	* Fix a random crash that might occur when idle.
 
 	XMPP:
 	* Users connecting to Google Talk now have an "Initiate Chat" context menu
@@ -39,6 +42,7 @@ version 2.6.3 (??/??/20??):
 	* Add support for adding OCS and Sametime buddies.  OCS users are added
 	  as "ocs/user@domain.tld" and Sametime users are added as
 	  "ibm/sametime_id".  (Jason Cohen)
+
 	Finch:
 	* The TinyURL plugin now creates shorter URLs for long non-conversation
 	  URLs, e.g. URLs to open Inbox in Yahoo/MSN protocols, or the Yahoo
@@ -46,7 +50,18 @@ version 2.6.3 (??/??/20??):
 
 	Pidgin:
 	* The userlist in a multiuser chat can be styled via gtkrc by using the
-	  widget name "pidgin_conv_userlist".
+	  widget name "pidgin_conv_userlist". (Heiko Schmitt)
+	* Add a hold button to the media window.
+
+version 2.6.3 (10/16/2009):
+	General:
+	* Fix a crash when performing DNS queries on Unixes that use the
+	  blocking DNS lookups.  (Brian Lu)
+
+	AIM and ICQ:
+	* Fix a crash when some clients send contacts in a format we don't
+	  understand.
+	* Fix blocking and other privacy lists.  (Thanks to AOL)
 
 version 2.6.2 (09/05/2009):
 	libpurple:

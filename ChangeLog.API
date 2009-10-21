@@ -17,6 +17,9 @@ version 2.7.0 (??/??/????):
 		* pidgin_dialogs_developers (should not be used by anything but Pidgin)
 		* pidgin_dialogs_translators (should not be used by anything but Pidgin)
 
+version 2.6.3 (10/16/2009):
+	No changes
+
 version 2.6.2 (09/05/2009):
 	Perl:
 		Added:

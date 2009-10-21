@@ -106,7 +106,7 @@ JabberChat *jabber_chat_find(JabberStream *js, const char *room,
 	{
 		char *room_jid = g_strdup_printf("%s@%s", room, server);
 
-		chat = g_hash_table_lookup(js->chats, jabber_normalize(NULL, room_jid));
+		chat = g_hash_table_lookup(js->chats, room_jid);
 		g_free(room_jid);
 	}
 
@@ -177,10 +177,21 @@ void jabber_chat_invite(PurpleConnection *gc, int id, const char *msg,
 		xmlnode_insert_data(body, msg, -1);
 	} else {
 		xmlnode_set_attrib(message, "to", name);
+		/*
+		 * Putting the reason into the body was an 'undocumented protocol,
+		 * ...not part of "groupchat 1.0"'.
+		 * http://xmpp.org/extensions/attic/jep-0045-1.16.html#invite
+		 *
+		 * Left here for compatibility.
+		 */
 		body = xmlnode_new_child(message, "body");
 		xmlnode_insert_data(body, msg, -1);
+
 		x = xmlnode_new_child(message, "x");
 		xmlnode_set_attrib(x, "jid", room_jid);
+
+		/* The better place for it! XEP-0249 style. */
+		xmlnode_set_attrib(x, "reason", msg);
 		xmlnode_set_namespace(x, "jabber:x:conference");
 	}
 
@@ -216,7 +227,8 @@ static JabberChat *jabber_chat_new(JabberStream *js, const char *room,
 	JabberChat *chat;
 	char *jid;
 
-	g_return_val_if_fail(jabber_chat_find(js, room, server) == NULL, NULL);
+	if (jabber_chat_find(js, room, server) != NULL)
+		return NULL;
 
 	chat = g_new0(JabberChat, 1);
 	chat->js = js;
@@ -264,7 +276,8 @@ JabberChat *jabber_join_chat(JabberStream *js, const char *room,
 	char *jid;
 
 	chat = jabber_chat_new(js, room, server, handle, password, data);
-	g_return_val_if_fail(chat != NULL, NULL);
+	if (chat == NULL)
+		return NULL;
 
 	gc = js->gc;
 	account = purple_connection_get_account(gc);
@@ -371,7 +384,7 @@ void jabber_chat_destroy(JabberChat *chat)
 	JabberStream *js = chat->js;
 	char *room_jid = g_strdup_printf("%s@%s", chat->room, chat->server);
 
-	g_hash_table_remove(js->chats, jabber_normalize(NULL, room_jid));
+	g_hash_table_remove(js->chats, room_jid);
 	g_free(room_jid);
 }
 
