@@ -144,6 +144,26 @@ static const char * const msgerrreason[] = {
 };
 static const int msgerrreasonlen = G_N_ELEMENTS(msgerrreason);
 
+static const char * const errcodereason[] = {
+	N_("Invalid error"),
+	N_("Not logged in"),
+	N_("Cannot receive IM due to parental controls"),
+	N_("Cannot send SMS without accepting terms"),
+	N_("Cannot send SMS"), /* SMS_WITHOUT_DISCLAIMER is weird */
+	N_("Cannot send SMS to this country"),
+	N_("Unknown error"), /* Undocumented */
+	N_("Unknown error"), /* Undocumented */
+	N_("Cannot send SMS to unknown country"),
+	N_("Bot accounts cannot initiate IMs"),
+	N_("Bot account cannot IM this user"),
+	N_("Bot account reached IM limit"),
+	N_("Bot account reached daily IM limit"),
+	N_("Bot account reached monthly IM limit"),
+	N_("Unable to receive offline messages"),
+	N_("Offline message store full")
+};
+static const int errcodereasonlen = G_N_ELEMENTS(errcodereason);
+
 /* All the libfaim->purple callback functions */
 
 /* Only used when connecting with the old-style BUCP login */
@@ -1168,7 +1188,8 @@ connection_common_established_cb(FlapConnection *conn)
 			ClientInfo icqinfo = CLIENTINFO_PURPLE_ICQ;
 			flap_connection_send_version_with_cookie_and_clientinfo(od,
 					conn, conn->cookielen, conn->cookie,
-					od->icq ? &icqinfo : &aiminfo);
+					od->icq ? &icqinfo : &aiminfo,
+					purple_account_get_bool(account, "allow_multiple_logins", OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS));
 		} else {
 			flap_connection_send_version_with_cookie(od, conn,
 					conn->cookielen, conn->cookie);
@@ -1394,9 +1415,9 @@ idle_reporting_pref_cb(const char *name, PurplePrefType type,
 	presence = aim_ssi_getpresence(od->ssi.local);
 
 	if (report_idle)
-		aim_ssi_setpresence(od, presence | 0x400);
+		aim_ssi_setpresence(od, presence | AIM_SSI_PRESENCE_FLAG_SHOWIDLE);
 	else
-		aim_ssi_setpresence(od, presence & ~0x400);
+		aim_ssi_setpresence(od, presence & ~AIM_SSI_PRESENCE_FLAG_SHOWIDLE);
 }
 
 /**
@@ -1877,7 +1898,7 @@ purple_parse_auth_resp(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 			break;
 		case 0x18:
 			/* username connecting too frequently */
-			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, _("You have been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
+			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, _("Your username has been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
 			break;
 		case 0x1c:
 		{
@@ -1889,7 +1910,7 @@ purple_parse_auth_resp(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 		}
 		case 0x1d:
 			/* IP address connecting too frequently */
-			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, _("You have been connecting and disconnecting too frequently. Wait a minute and try again. If you continue to try, you will need to wait even longer."));
+			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, _("Your IP address has been connecting and disconnecting too frequently. Wait a minute and try again. If you continue to try, you will need to wait even longer."));
 			break;
 		default:
 			purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, _("Unknown reason"));
@@ -2876,7 +2897,7 @@ incomingim_chan4(OscarData *od, FlapConnection *conn, aim_userinfo_t *userinfo, 
 			if (text) {
 				/* Read the number of contacts that we were sent */
 				errno = 0;
-				num = strtoul(text[0], NULL, 10);
+				num = text[0] ? strtoul(text[0], NULL, 10) : 0;
 
 				if (num > 0 && errno == 0) {
 					for (i=0; i<num; i++) {
@@ -3217,17 +3238,18 @@ static int purple_parse_msgerr(OscarData *od, FlapConnection *conn, FlapFrame *f
 	PurpleXfer *xfer;
 #endif
 	va_list ap;
-	guint16 reason;
-	char *data, *buf;
+	guint16 reason, errcode;
+	char *data, *reason_str, *buf;
 
 	va_start(ap, fr);
 	reason = (guint16)va_arg(ap, unsigned int);
+	errcode = (guint16)va_arg(ap, unsigned int);
 	data = va_arg(ap, char *);
 	va_end(ap);
 
 	purple_debug_error("oscar",
-			   "Message error with data %s and reason %hu\n",
-				(data != NULL ? data : ""), reason);
+			   "Message error with data %s and reason %hu and errcode %hu\n",
+				(data != NULL ? data : ""), reason, errcode);
 
 	if ((data == NULL) || (*data == '\0'))
 		/* We can't do anything if data is empty */
@@ -3242,14 +3264,27 @@ static int purple_parse_msgerr(OscarData *od, FlapConnection *conn, FlapFrame *f
 #endif
 
 	/* Data is assumed to be the destination bn */
-	buf = g_strdup_printf(_("Unable to send message: %s"), (reason < msgerrreasonlen) ? _(msgerrreason[reason]) : _("Unknown reason."));
+
+	reason_str = g_strdup((reason < msgerrreasonlen) ? _(msgerrreason[reason]) : _("Unknown reason"));
+	if (errcode != 0 && errcode < errcodereasonlen)
+		buf = g_strdup_printf(_("Unable to send message: %s (%s)"), reason_str,
+		                      _(errcodereason[errcode]));
+	else
+		buf = g_strdup_printf(_("Unable to send message: %s"), reason_str);
+
 	if (!purple_conv_present_error(data, purple_connection_get_account(gc), buf)) {
 		g_free(buf);
-		buf = g_strdup_printf(_("Unable to send message to %s:"), data ? data : "(unknown)");
-		purple_notify_error(od->gc, NULL, buf,
-				  (reason < msgerrreasonlen) ? _(msgerrreason[reason]) : _("Unknown reason."));
+		if (errcode != 0 && errcode < errcodereasonlen)
+			buf = g_strdup_printf(_("Unable to send message to %s: %s (%s)"),
+			                      data ? data : "(unknown)", reason_str,
+			                      _(errcodereason[errcode]));
+		else
+			buf = g_strdup_printf(_("Unable to send message to %s: %s"),
+			                      data ? data : "(unknown)", reason_str);
+		purple_notify_error(od->gc, NULL, buf, reason_str);
 	}
 	g_free(buf);
+	g_free(reason_str);
 
 	return 1;
 }
@@ -3740,7 +3775,8 @@ static int purple_parse_ratechange(OscarData *od, FlapConnection *conn, FlapFram
 	};
 	va_list ap;
 	guint16 code, rateclass;
-	guint32 windowsize, clear, alert, limit, disconnect, currentavg, maxavg;
+	guint32 windowsize, clear, alert, limit, disconnect, currentavg, maxavg, delta;
+	guint8 dropping_snacs;
 
 	va_start(ap, fr);
 	code = (guint16)va_arg(ap, unsigned int);
@@ -3752,23 +3788,28 @@ static int purple_parse_ratechange(OscarData *od, FlapConnection *conn, FlapFram
 	disconnect = va_arg(ap, guint32);
 	currentavg = va_arg(ap, guint32);
 	maxavg = va_arg(ap, guint32);
+	delta = va_arg(ap, guint32);
+	dropping_snacs = (guint8)va_arg(ap, unsigned int);
 	va_end(ap);
 
 	purple_debug_misc("oscar",
 			   "rate %s (param ID 0x%04hx): curavg = %u, maxavg = %u, alert at %u, "
-		     "clear warning at %u, limit at %u, disconnect at %u (window size = %u)\n",
+		     "clear warning at %u, limit at %u, disconnect at %u, delta is %u, dropping is %u (window size = %u)\n",
 		     (code < 5) ? codes[code] : codes[0],
 		     rateclass,
 		     currentavg, maxavg,
 		     alert, clear,
 		     limit, disconnect,
-		     windowsize);
+		     delta,
+		     dropping_snacs,
+		     windowsize
+		     );
 
 	if (code == AIM_RATE_CODE_LIMIT)
 	{
 		purple_debug_warning("oscar",  _("The last action you attempted could not be "
 				"performed because you are over the rate limit. "
-				"Please wait 10 seconds and try again."));
+				"Please wait 10 seconds and try again.\n"));
 	}
 
 	return 1;
@@ -5264,9 +5305,9 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 			report_idle = strcmp(idle_reporting_pref, "none") != 0;
 
 			if (report_idle)
-				aim_ssi_setpresence(od, tmp | 0x400);
+				aim_ssi_setpresence(od, tmp | AIM_SSI_PRESENCE_FLAG_SHOWIDLE);
 			else
-				aim_ssi_setpresence(od, tmp & ~0x400);
+				aim_ssi_setpresence(od, tmp & ~AIM_SSI_PRESENCE_FLAG_SHOWIDLE);
 		}
 
 
@@ -5276,7 +5317,7 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 	for (curitem=od->ssi.local; curitem; curitem=curitem->next) {
 	  if ((curitem->name == NULL) || (g_utf8_validate(curitem->name, -1, NULL)))
 		switch (curitem->type) {
-			case 0x0000: { /* Buddy */
+			case AIM_SSI_TYPE_BUDDY: { /* Buddy */
 				if (curitem->name) {
 					struct aim_ssi_item *groupitem;
 					char *gname, *gname_utf8, *alias, *alias_utf8;
@@ -5342,7 +5383,7 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 				}
 			} break;
 
-			case 0x0001: { /* Group */
+			case AIM_SSI_TYPE_GROUP: { /* Group */
 				char *gname;
 				char *gname_utf8;
 
@@ -5362,7 +5403,7 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 				g_free(gname_utf8);
 			} break;
 
-			case 0x0002: { /* Permit buddy */
+			case AIM_SSI_TYPE_PERMIT: { /* Permit buddy */
 				if (curitem->name) {
 					/* if (!find_permdeny_by_name(gc->permit, curitem->name)) { AAA */
 					GSList *list;
@@ -5375,7 +5416,7 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 				}
 			} break;
 
-			case 0x0003: { /* Deny buddy */
+			case AIM_SSI_TYPE_DENY: { /* Deny buddy */
 				if (curitem->name) {
 					GSList *list;
 					for (list=account->deny; (list && oscar_util_name_compare(curitem->name, list->data)); list=list->next);
@@ -5387,7 +5428,7 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 				}
 			} break;
 
-			case 0x0004: { /* Permit/deny setting */
+			case AIM_SSI_TYPE_PDINFO: { /* Permit/deny setting */
 				/*
 				 * We don't inherit the permit/deny setting from the server
 				 * for ICQ because, for ICQ, this setting controls who can
@@ -5405,7 +5446,7 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 				}
 			} break;
 
-			case 0x0005: { /* Presence setting */
+			case AIM_SSI_TYPE_PRESENCEPREFS: { /* Presence setting */
 				/* We don't want to change Purple's setting because it applies to all accounts */
 			} break;
 		} /* End of switch on curitem->type */

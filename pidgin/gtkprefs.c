@@ -77,6 +77,7 @@ static GtkWidget *sound_entry = NULL;
 static GtkListStore *smiley_theme_store = NULL;
 static GtkTreeSelection *smiley_theme_sel = NULL;
 static GtkWidget *prefs_proxy_frame = NULL;
+static GtkWidget *prefs_proxy_subframe = NULL;
 
 static GtkWidget *prefs = NULL;
 static GtkWidget *debugbutton = NULL;
@@ -624,7 +625,8 @@ prefs_themes_refresh(void)
 		_("The default Pidgin status icon theme"));
 	gtk_list_store_set(prefs_status_icon_themes, &iter, 0, pixbuf, 1, tmp, 2, "", -1);
 	g_free(tmp);
-	g_object_unref(G_OBJECT(pixbuf));
+	if (pixbuf)
+		g_object_unref(G_OBJECT(pixbuf));
 
 	purple_theme_manager_for_each_theme(prefs_themes_sort);
 	pref_sound_generate_markup();
@@ -1886,22 +1888,26 @@ network_page(void)
 	pidgin_prefs_checkbox(_("_Enable automatic router port forwarding"),
 			"/purple/network/map_ports", vbox);
 
-	ports_checkbox = pidgin_prefs_checkbox(_("_Manually specify range of ports to listen on"),
-			"/purple/network/ports_range_use", vbox);
+	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 
-	spin_button = pidgin_prefs_labeled_spin_button(vbox, _("_Start port:"),
+	ports_checkbox = pidgin_prefs_checkbox(_("_Manually specify range of ports to listen on:"),
+			"/purple/network/ports_range_use", hbox);
+
+	spin_button = pidgin_prefs_labeled_spin_button(hbox, _("_Start:"),
 			"/purple/network/ports_range_start", 0, 65535, sg);
 	if (!purple_prefs_get_bool("/purple/network/ports_range_use"))
 		gtk_widget_set_sensitive(GTK_WIDGET(spin_button), FALSE);
 	g_signal_connect(G_OBJECT(ports_checkbox), "clicked",
 					 G_CALLBACK(pidgin_toggle_sensitive), spin_button);
 
-	spin_button = pidgin_prefs_labeled_spin_button(vbox, _("_End port:"),
+	spin_button = pidgin_prefs_labeled_spin_button(hbox, _("_End:"),
 			"/purple/network/ports_range_end", 0, 65535, sg);
 	if (!purple_prefs_get_bool("/purple/network/ports_range_use"))
 		gtk_widget_set_sensitive(GTK_WIDGET(spin_button), FALSE);
 	g_signal_connect(G_OBJECT(ports_checkbox), "clicked",
 					 G_CALLBACK(pidgin_toggle_sensitive), spin_button);
+
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox), NULL, NULL, hbox, TRUE, NULL);
 
 	g_object_unref(sg);
 
@@ -1921,9 +1927,9 @@ network_page(void)
 
 	pidgin_prefs_labeled_spin_button(hbox, _("_Port:"),
 		"/purple/network/turn_port", 0, 65535, NULL);
-	hbox = pidgin_prefs_labeled_entry(vbox, _("_Username:"),
+	hbox = pidgin_prefs_labeled_entry(vbox, _("Use_rname:"),
 		"/purple/network/turn_username", sg);
-	pidgin_prefs_labeled_password(hbox, _("_Password:"),
+	pidgin_prefs_labeled_password(hbox, _("Pass_word:"),
 		"/purple/network/turn_password", NULL);
 
 	if (purple_running_gnome()) {
@@ -1967,9 +1973,15 @@ network_page(void)
 		gtk_widget_show(browser_button);
 	} else {
 		vbox = pidgin_make_frame(ret, _("Proxy Server"));
-		prefs_proxy_frame = gtk_vbox_new(FALSE, 0);
+		prefs_proxy_frame = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		prefs_proxy_subframe = gtk_vbox_new(FALSE, 0);
 
-		pidgin_prefs_dropdown(vbox, _("Proxy _type:"), PURPLE_PREF_STRING,
+		/* This is a global option that affects SOCKS4 usage even with account-specific proxy settings */
+		pidgin_prefs_checkbox(_("Use remote _DNS with SOCKS4 proxies"),
+							  "/purple/proxy/socks4_remotedns", prefs_proxy_frame);
+		gtk_box_pack_start(GTK_BOX(vbox), prefs_proxy_frame, 0, 0, 0);
+
+		pidgin_prefs_dropdown(prefs_proxy_frame, _("Proxy t_ype:"), PURPLE_PREF_STRING,
 					"/purple/proxy/type",
 					_("No proxy"), "none",
 					"SOCKS 4", "socks4",
@@ -1977,21 +1989,17 @@ network_page(void)
 					"HTTP", "http",
 					_("Use Environmental Settings"), "envvar",
 					NULL);
-		gtk_box_pack_start(GTK_BOX(vbox), prefs_proxy_frame, 0, 0, 0);
+		gtk_box_pack_start(GTK_BOX(prefs_proxy_frame), prefs_proxy_subframe, 0, 0, 0);
 		proxy_info = purple_global_proxy_get_info();
 
 		purple_prefs_connect_callback(prefs, "/purple/proxy/type",
-					    proxy_changed_cb, prefs_proxy_frame);
-
-		/* This is a global option that affects SOCKS4 usage even with account-specific proxy settings */
-		pidgin_prefs_checkbox(_("Use remote DNS with SOCKS4 proxies"),
-							  "/purple/proxy/socks4_remotedns", prefs_proxy_frame);
+					    proxy_changed_cb, prefs_proxy_subframe);
 
 		table = gtk_table_new(4, 2, FALSE);
 		gtk_container_set_border_width(GTK_CONTAINER(table), 0);
 		gtk_table_set_col_spacings(GTK_TABLE(table), 5);
 		gtk_table_set_row_spacings(GTK_TABLE(table), 10);
-		gtk_container_add(GTK_CONTAINER(prefs_proxy_frame), table);
+		gtk_container_add(GTK_CONTAINER(prefs_proxy_subframe), table);
 
 
 		label = gtk_label_new_with_mnemonic(_("_Host:"));
@@ -2012,11 +2020,11 @@ network_page(void)
 		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 		pidgin_set_accessible_label (entry, label);
 
-		label = gtk_label_new_with_mnemonic(_("_Port:"));
+		label = gtk_label_new_with_mnemonic(_("P_ort:"));
 		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
 		gtk_table_attach(GTK_TABLE(table), label, 2, 3, 0, 1, GTK_FILL, 0, 0, 0);
 
-		entry = gtk_entry_new();
+		entry = gtk_spin_button_new_with_range(0, 65535, 1);
 		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
 		gtk_table_attach(GTK_TABLE(table), entry, 3, 4, 0, 1, GTK_FILL, 0, 0, 0);
 		g_signal_connect(G_OBJECT(entry), "changed",
@@ -2031,7 +2039,7 @@ network_page(void)
 		}
 		pidgin_set_accessible_label (entry, label);
 
-		label = gtk_label_new_with_mnemonic(_("_User:"));
+		label = gtk_label_new_with_mnemonic(_("User_name:"));
 		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
 		gtk_table_attach(GTK_TABLE(table), label, 0, 1, 1, 2, GTK_FILL, 0, 0, 0);
 
