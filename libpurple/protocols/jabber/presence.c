@@ -403,19 +403,20 @@ jabber_vcard_parse_avatar(JabberStream *js, const char *from,
 			g_free(nickname);
 		}
 
-		if((photo = xmlnode_get_child(vcard, "PHOTO")) &&
-				(( (binval = xmlnode_get_child(photo, "BINVAL")) &&
-				(text = xmlnode_get_data(binval))) ||
-				(text = xmlnode_get_data(photo)))) {
+		if ((photo = xmlnode_get_child(vcard, "PHOTO")) &&
+				(binval = xmlnode_get_child(photo, "BINVAL")) &&
+				(text = xmlnode_get_data(binval))) {
 			guchar *data;
-			gchar *hash;
 			gsize size;
 
 			data = purple_base64_decode(text, &size);
-			hash = jabber_calculate_data_sha1sum(data, size);
+			if (data) {
+				gchar *hash = jabber_calculate_data_sha1sum(data, size);
+				purple_buddy_icons_set_for_user(js->gc->account, from, data,
+				                                size, hash);
+				g_free(hash);
+			}
 
-			purple_buddy_icons_set_for_user(js->gc->account, from, data, size, hash);
-			g_free(hash);
 			g_free(text);
 		}
 	}
@@ -475,7 +476,7 @@ jabber_presence_set_capabilities(JabberCapsClientInfo *info, GList *exts,
 	/*
 	 * Versions of libpurple before 2.6.0 didn't advertise this capability, so
 	 * we can't yet use Entity Capabilities to determine whether or not the
-	 * other client supports Entity Capabilities.
+	 * other client supports Chat States.
 	 */
 	if (jabber_resource_has_capability(jbr, "http://jabber.org/protocol/chatstates"))
 		jbr->chat_states = JABBER_CHAT_STATES_SUPPORTED;
@@ -517,7 +518,7 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 	jb = jabber_buddy_find(js, from, TRUE);
 	g_return_if_fail(jb != NULL);
 
-	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(jabber_plugin,
+	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_prpl(js->gc),
 			"jabber-receiving-presence", js->gc, type, from, packet));
 	if (signal_return)
 		return;

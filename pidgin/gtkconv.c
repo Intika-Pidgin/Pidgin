@@ -4277,7 +4277,7 @@ tab_complete(PurpleConversation *conv)
 		/* Users */
 		for (; l != NULL; l = l->next) {
 			tab_complete_process_item(&most_matched, entered, entered_bytes, &partial, nick_partial,
-									  &matches, TRUE, ((PurpleConvChatBuddy *)l->data)->name);
+									  &matches, FALSE, ((PurpleConvChatBuddy *)l->data)->name);
 		}
 
 
@@ -4811,6 +4811,9 @@ setup_chat_userlist(PidginConversation *gtkconv, GtkWidget *hpaned)
 									sort_chat_users, NULL, NULL);
 
 	list = gtk_tree_view_new_with_model(GTK_TREE_MODEL(ls));
+
+	/* Allow a user to specify gtkrc settings for the chat userlist only */
+	gtk_widget_set_name(list, "pidgin_conv_userlist");
 
 	rend = gtk_cell_renderer_pixbuf_new();
 	g_object_set(G_OBJECT(rend),
@@ -7598,6 +7601,28 @@ account_signed_off_cb(PurpleConnection *gc, gpointer event)
 	}
 }
 
+static void
+account_signing_off(PurpleConnection *gc)
+{
+	GList *list = purple_get_chats();
+	PurpleAccount *account = purple_connection_get_account(gc);
+
+	/* We are about to sign off. See which chats we are currently in, and mark
+	 * them for rejoin on reconnect. */
+	while (list) {
+		PurpleConversation *conv = list->data;
+		if (!purple_conv_chat_has_left(PURPLE_CONV_CHAT(conv)) &&
+				purple_conversation_get_account(conv) == account) {
+			purple_conversation_set_data(conv, "want-to-rejoin", GINT_TO_POINTER(TRUE));
+			purple_conversation_write(conv, NULL, _("The account has disconnected and you are no "
+						"longer in this chat. You will be automatically rejoined in the chat when "
+						"the account reconnects."),
+					PURPLE_MESSAGE_SYSTEM, time(NULL));
+		}
+		list = list->next;
+	}
+}
+
 static gboolean
 update_buddy_status_timeout(PurpleBuddy *buddy)
 {
@@ -8092,6 +8117,8 @@ pidgin_conversations_init(void)
 	purple_signal_connect(purple_connections_get_handle(), "signed-off", handle,
 						G_CALLBACK(account_signed_off_cb),
 						GINT_TO_POINTER(PURPLE_CONV_ACCOUNT_OFFLINE));
+	purple_signal_connect(purple_connections_get_handle(), "signing-off", handle,
+						G_CALLBACK(account_signing_off), NULL);
 
 	purple_signal_connect(purple_conversations_get_handle(), "received-im-msg",
 						handle, G_CALLBACK(received_im_msg_cb), NULL);

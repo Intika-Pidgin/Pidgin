@@ -881,6 +881,9 @@ char *yahoo_html_to_codes(const char *src)
 						}
 						g_free(etag);
 					}
+				} else {
+					/* We don't know what the tag is. Send it unmodified. */
+					g_string_append(dest, tag);
 				}
 
 				i = j;
@@ -913,3 +916,18 @@ char *yahoo_html_to_codes(const char *src)
 
 	return g_string_free(dest, FALSE);
 }
+
+YahooFederation yahoo_get_federation_from_name(const char *who)
+{
+	YahooFederation fed = YAHOO_FEDERATION_NONE;
+	if (who[3] == '/') {
+		if (!g_ascii_strncasecmp(who, "msn", 3))
+			fed = YAHOO_FEDERATION_MSN;
+		else if (!g_ascii_strncasecmp(who, "ocs", 3))
+			fed = YAHOO_FEDERATION_OCS;
+		else if (!g_ascii_strncasecmp(who, "ibm", 3))
+			fed = YAHOO_FEDERATION_IBM;
+	}
+	return fed;
+}
+
