@@ -38,6 +38,7 @@
 #include "xdata.h"
 #include "pep.h"
 #include "adhoccommands.h"
+#include "google.h"
 
 typedef struct {
 	long idle_seconds;
@@ -580,8 +581,7 @@ jabber_format_info(PurpleConnection *gc, PurpleRequestFields *fields)
 		if (text != NULL && *text != '\0') {
 			xmlnode *xp;
 
-			purple_debug(PURPLE_DEBUG_INFO, "jabber",
-					"Setting %s to '%s'\n", vc_tp->tag, text);
+			purple_debug_info("jabber", "Setting %s to '%s'\n", vc_tp->tag, text);
 
 			if ((xp = insert_tag_to_parent_tag(vc_node,
 											   NULL, vc_tp->tag)) != NULL) {
@@ -1149,9 +1149,8 @@ static void jabber_vcard_parse(JabberStream *js, const char *from,
 				char *bintext = NULL;
 				xmlnode *binval;
 
-				if( ((binval = xmlnode_get_child(child, "BINVAL")) &&
-						(bintext = xmlnode_get_data(binval))) ||
-						(bintext = xmlnode_get_data(child))) {
+				if ((binval = xmlnode_get_child(child, "BINVAL")) &&
+						(bintext = xmlnode_get_data(binval))) {
 					gsize size;
 					guchar *data;
 					gboolean photo = (strcmp(child->name, "PHOTO") == 0);
@@ -1839,6 +1838,13 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 		   removed? */
 		act = purple_menu_action_new(_("Unsubscribe"),
 		                           PURPLE_CALLBACK(jabber_buddy_unsubscribe),
+		                           NULL, NULL);
+		m = g_list_append(m, act);
+	}
+
+	if (js->googletalk) {
+		act = purple_menu_action_new(_("Initiate _Chat"),
+		                           PURPLE_CALLBACK(google_buddy_node_chat),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
 	}

@@ -31,6 +31,7 @@
 #include "jabber.h"
 #include "presence.h"
 #include "iq.h"
+#include "chat.h"
 
 #include "jingle/jingle.h"
 
@@ -97,14 +98,14 @@ google_session_send_candidates(PurpleMedia *media, gchar *session_id,
 		gchar *participant, GoogleSession *session)
 {
 	GList *candidates = purple_media_get_local_candidates(
-			session->media, session_id, session->remote_jid);
+			session->media, session_id, session->remote_jid), *iter;
 	PurpleMediaCandidate *transport;
 	gboolean video = FALSE;
 
 	if (!strcmp(session_id, "google-video"))
 		video = TRUE;
 
-	for (;candidates;candidates = candidates->next) {
+	for (iter = candidates; iter; iter = iter->next) {
 		JabberIq *iq;
 		gchar *ip, *port, *username, *password;
 		gchar pref[16];
@@ -112,7 +113,7 @@ google_session_send_candidates(PurpleMedia *media, gchar *session_id,
 		xmlnode *sess;
 		xmlnode *candidate;
 		guint component_id;
-		transport = (PurpleMediaCandidate*)(candidates->data);
+		transport = PURPLE_MEDIA_CANDIDATE(iter->data);
 		component_id = purple_media_candidate_get_component_id(
 				transport);
 
@@ -170,6 +171,7 @@ google_session_send_candidates(PurpleMedia *media, gchar *session_id,
 
 		jabber_iq_send(iq);
 	}
+	purple_media_candidate_list_free(candidates);
 }
 
 static void
@@ -1075,7 +1077,7 @@ jabber_gmail_poke(JabberStream *js, const char *from, JabberIqType type,
 	xmlnode_set_attrib(iq->node, "id", id);
 	jabber_iq_send(iq);
 
-	purple_debug(PURPLE_DEBUG_MISC, "jabber",
+	purple_debug_misc("jabber",
 		   "Got new mail notification. Sending request for more info\n");
 
 	iq = jabber_iq_new_query(js, JABBER_IQ_GET, "google:mail:notify");
@@ -1159,8 +1161,9 @@ gboolean jabber_google_roster_incoming(JabberStream *js, xmlnode *item)
 
 	const char *grt = xmlnode_get_attrib_with_namespace(item, "t", "google:roster");
 	const char *subscription = xmlnode_get_attrib(item, "subscription");
+	const char *ask = xmlnode_get_attrib(item, "ask");
 
-	if (!subscription || !strcmp(subscription, "none")) {
+	if ((!subscription || !strcmp(subscription, "none")) && !ask) {
 		/* The Google Talk servers will automatically add people from your Gmail address book
 		 * with subscription=none. If we see someone with subscription=none, ignore them.
 		 */
@@ -1258,12 +1261,13 @@ void jabber_google_roster_add_deny(PurpleConnection *gc, const char *who)
 			jbr = l->data;
 			if (jbr && jbr->name)
 			{
-				purple_debug(PURPLE_DEBUG_MISC, "jabber", "Removing resource %s\n", jbr->name);
+				purple_debug_misc("jabber", "Removing resource %s\n", jbr->name);
 				jabber_buddy_remove_resource(jb, jbr->name);
 			}
 			l = l->next;
 		}
 	}
+
 	purple_prpl_got_user_status(purple_connection_get_account(gc), who, "offline", NULL);
 }
 
@@ -1606,4 +1610,44 @@ jabber_google_send_jingle_info(JabberStream *js)
 		NULL);
 	purple_debug_info("jabber", "sending google:jingleinfo query\n");
 	jabber_iq_send(jingle_info);
+}
+
+void google_buddy_node_chat(PurpleBlistNode *node, gpointer data)
+{
+	PurpleBuddy *buddy;
+	PurpleConnection *gc;
+	JabberStream *js;
+	JabberChat *chat;
+	gchar *room;
+	guint32 tmp, a, b;
+
+	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+
+	buddy = PURPLE_BUDDY(node);
+	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
+	g_return_if_fail(gc != NULL);
+	js = purple_connection_get_protocol_data(gc);
+
+	/* Generate a version 4 UUID */
+	tmp = g_random_int();
+	a = 0x4000 | (tmp & 0xFFF); /* 0x4000 to 0x4FFF */
+	tmp >>= 12;
+	b = ((1 << 3) << 12) | (tmp & 0x3FFF); /* 0x8000 to 0xBFFF */
+
+	tmp = g_random_int();
+	room = g_strdup_printf("private-chat-%08x-%04x-%04x-%04x-%04x%08x",
+			g_random_int(),
+			tmp & 0xFFFF,
+			a,
+			b,
+			(tmp >> 16) & 0xFFFF, g_random_int());
+
+	chat = jabber_join_chat(js, room, GOOGLE_GROUPCHAT_SERVER, js->user->node,
+	                        NULL, NULL);
+	if (chat) {
+		chat->muc = TRUE;
+		jabber_chat_invite(gc, chat->id, "", buddy->name);
+	}
+
+	g_free(room);
 }

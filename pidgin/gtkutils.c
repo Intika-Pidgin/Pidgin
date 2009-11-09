@@ -75,7 +75,7 @@ typedef struct {
 } AopMenu;
 
 static guint accels_save_timer = 0;
-static GList *gnome_url_handlers = NULL;
+static GSList *registered_url_handlers = NULL;
 
 static gboolean
 url_clicked_idle_cb(gpointer data)
@@ -3890,7 +3890,7 @@ register_gnome_url_handlers(void)
 				start += sizeof("/desktop/gnome/url-handlers/") - 1;
 
 				protocol = g_strdup_printf("%s:", start);
-				gnome_url_handlers = g_list_prepend(gnome_url_handlers, protocol);
+				registered_url_handlers = g_slist_prepend(registered_url_handlers, protocol);
 				gtk_imhtml_class_register_protocol(protocol, url_clicked_cb, link_context_menu);
 			}
 			start = c + 1;
@@ -3898,8 +3898,44 @@ register_gnome_url_handlers(void)
 	}
 	g_free(tmp);
 
-	return (gnome_url_handlers != NULL);
+	return (registered_url_handlers != NULL);
 }
+
+#ifdef _WIN32
+static void
+winpidgin_register_win32_url_handlers(void)
+{
+	int idx = 0;
+	LONG ret = ERROR_SUCCESS;
+
+	do {
+		DWORD nameSize = 256;
+		char start[256];
+		/* I don't think we need to worry about non-ASCII protocol names */
+		ret = RegEnumKeyExA(HKEY_CLASSES_ROOT, idx++, start, &nameSize,
+							NULL, NULL, NULL, NULL);
+		if (ret == ERROR_SUCCESS) {
+			HKEY reg_key = NULL;
+			ret = RegOpenKeyExA(HKEY_CLASSES_ROOT, start, 0, KEY_READ, &reg_key);
+			if (ret == ERROR_SUCCESS) {
+				ret = RegQueryValueExA(reg_key, "URL Protocol", NULL, NULL, NULL, NULL);
+				if (ret == ERROR_SUCCESS) {
+					gchar *protocol = g_strdup_printf("%s:", start);
+					registered_url_handlers = g_slist_prepend(registered_url_handlers, protocol);
+					/* We still pass everything to the "http" "open" handler for security reasons */
+					gtk_imhtml_class_register_protocol(protocol, url_clicked_cb, link_context_menu);
+				}
+				RegCloseKey(reg_key);
+			}
+			ret = ERROR_SUCCESS;
+		}
+	} while (ret == ERROR_SUCCESS);
+
+	if (ret != ERROR_NO_MORE_ITEMS)
+		purple_debug_error("winpidgin", "Error iterating HKEY_CLASSES_ROOT subkeys: %ld\n",
+						   ret);
+}
+#endif
 
 void pidgin_utils_init(void)
 {
@@ -3918,6 +3954,11 @@ void pidgin_utils_init(void)
 	/* If we're under GNOME, try registering the system URL handlers. */
 	if (purple_running_gnome())
 		register_gnome_url_handlers();
+
+#ifdef _WIN32
+	winpidgin_register_win32_url_handlers();
+#endif
+
 }
 
 void pidgin_utils_uninit(void)
@@ -3925,16 +3966,16 @@ void pidgin_utils_uninit(void)
 	gtk_imhtml_class_register_protocol("open://", NULL, NULL);
 
 	/* If we have GNOME handlers registered, unregister them. */
-	if (gnome_url_handlers)
+	if (registered_url_handlers)
 	{
-		GList *l;
-		for (l = gnome_url_handlers ; l ; l = l->next)
+		GSList *l;
+		for (l = registered_url_handlers; l; l = l->next)
 		{
 			gtk_imhtml_class_register_protocol((char *)l->data, NULL, NULL);
 			g_free(l->data);
 		}
-		g_list_free(gnome_url_handlers);
-		gnome_url_handlers = NULL;
+		g_slist_free(registered_url_handlers);
+		registered_url_handlers = NULL;
 		return;
 	}
 
