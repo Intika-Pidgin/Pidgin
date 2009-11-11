@@ -493,7 +493,7 @@ pref_sound_generate_markup(void)
 			if (!name || *name == '\0') {
 				g_free(name);
 				name = g_strdup(_("(Default)"));
-				author = _("None");
+				author = _("Penguin Pimps");
 				description = _("The default Pidgin sound theme");
 			} else {
 				theme = PURPLE_SOUND_THEME(purple_theme_manager_find_theme(name, "sound"));
@@ -613,7 +613,7 @@ prefs_themes_refresh(void)
 	/* blist themes */
 	gtk_list_store_clear(prefs_blist_themes);
 	gtk_list_store_append(prefs_blist_themes, &iter);
-	tmp = get_theme_markup(_("(Default)"), FALSE, _("None"),
+	tmp = get_theme_markup(_("(Default)"), FALSE, _("Penguin Pimps"),
 		_("The default Pidgin buddy list theme"));
 	gtk_list_store_set(prefs_blist_themes, &iter, 0, pixbuf, 1, tmp, 2, "", -1);
 	g_free(tmp);
@@ -621,7 +621,7 @@ prefs_themes_refresh(void)
 	/* status icon themes */
 	gtk_list_store_clear(prefs_status_icon_themes);
 	gtk_list_store_append(prefs_status_icon_themes, &iter);
-	tmp = get_theme_markup(_("(Default)"), FALSE, _("None"),
+	tmp = get_theme_markup(_("(Default)"), FALSE, _("Penguin Pimps"),
 		_("The default Pidgin status icon theme"));
 	gtk_list_store_set(prefs_status_icon_themes, &iter, 0, pixbuf, 1, tmp, 2, "", -1);
 	g_free(tmp);
@@ -1104,6 +1104,49 @@ remove_theme_button_clicked_cb(GtkWidget *button, GtkTreeView *tv)
 	g_free(theme_name);
 }
 
+/* sets the current buddy list theme */
+static void
+prefs_set_blist_theme_cb(GtkComboBox *combo_box, gpointer user_data)
+{
+	PidginBlistTheme *theme =  NULL;
+	GtkTreeIter iter;
+	gchar *name = NULL;
+
+	if(gtk_combo_box_get_active_iter(combo_box, &iter)) {
+
+		gtk_tree_model_get(GTK_TREE_MODEL(prefs_blist_themes), &iter, 2, &name, -1);
+
+		if(!name || !g_str_equal(name, ""))
+			theme = PIDGIN_BLIST_THEME(purple_theme_manager_find_theme(name, "blist"));
+
+		g_free(name);
+
+		pidgin_blist_set_theme(theme);
+	}
+}
+
+/* sets the current icon theme */
+static void
+prefs_set_status_icon_theme_cb(GtkComboBox *combo_box, gpointer user_data)
+{
+	PidginStatusIconTheme *theme = NULL;
+	GtkTreeIter iter;
+	gchar *name = NULL;
+
+	if(gtk_combo_box_get_active_iter(combo_box, &iter)) {
+
+		gtk_tree_model_get(GTK_TREE_MODEL(prefs_status_icon_themes), &iter, 2, &name, -1);
+
+		if(!name || !g_str_equal(name, ""))
+			theme = PIDGIN_STATUS_ICON_THEME(purple_theme_manager_find_theme(name, "status-icon"));
+
+		g_free(name);
+
+		pidgin_stock_load_status_icon_theme(theme);
+		pidgin_blist_refresh(purple_get_blist());
+	}
+}
+
 static GtkWidget *
 theme_page(void)
 {
@@ -1123,10 +1166,48 @@ theme_page(void)
 		{"text/uri-list", 0, 1},
 		{"STRING", 0, 2}
 	};
+	GtkWidget *themesel_hbox;
+	GtkSizeGroup *label_sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	GtkSizeGroup *combo_sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
 	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
 
+	/* Buddy List Themes */
+	themesel_hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+
+	label = gtk_label_new(_("Buddy List Theme:"));
+	gtk_size_group_add_widget(label_sg, label);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), label, FALSE, FALSE, 0);
+
+	prefs_blist_themes_combo_box = prefs_build_theme_combo_box(prefs_blist_themes,
+						purple_prefs_get_string(PIDGIN_PREFS_ROOT "/blist/theme"),
+						"blist");
+	g_signal_connect(G_OBJECT(prefs_blist_themes_combo_box), "changed",
+						(GCallback)prefs_set_blist_theme_cb, NULL);
+	gtk_size_group_add_widget(combo_sg, prefs_blist_themes_combo_box);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_blist_themes_combo_box, FALSE, FALSE, 0);
+
+	gtk_box_pack_start(GTK_BOX(ret), themesel_hbox, FALSE, FALSE, 0);
+
+	/* Status Icon Themes */
+	themesel_hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+
+	label = gtk_label_new(_("Status Icon Theme:"));
+	gtk_size_group_add_widget(label_sg, label);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), label, FALSE, FALSE, 0);
+
+	prefs_status_themes_combo_box = prefs_build_theme_combo_box(prefs_status_icon_themes,
+						purple_prefs_get_string(PIDGIN_PREFS_ROOT "/status/icon-theme"),
+						"icon");
+	g_signal_connect(G_OBJECT(prefs_status_themes_combo_box), "changed",
+						(GCallback)prefs_set_status_icon_theme_cb, NULL);
+	gtk_size_group_add_widget(combo_sg, prefs_status_themes_combo_box);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_status_themes_combo_box, FALSE, FALSE, 0);
+
+	gtk_box_pack_start(GTK_BOX(ret), themesel_hbox, FALSE, FALSE, 0);
+
+	/* Smiley Themes */
 	label = gtk_label_new(_("Select a smiley theme that you would like to use from the list below."
 	                        " New themes can be installed by dragging and dropping them onto the theme list."));
 
@@ -1407,49 +1488,6 @@ keyboard_shortcuts(GtkWidget *page)
 	gtk_box_pack_start(GTK_BOX(vbox), checkbox, FALSE, FALSE, 0);
 }
 
-/* sets the current buddy list theme */
-static void
-prefs_set_blist_theme_cb(GtkComboBox *combo_box, gpointer user_data)
-{
-	PidginBlistTheme *theme =  NULL;
-	GtkTreeIter iter;
-	gchar *name = NULL;
-
-	if(gtk_combo_box_get_active_iter(combo_box, &iter)) {
-
-		gtk_tree_model_get(GTK_TREE_MODEL(prefs_blist_themes), &iter, 2, &name, -1);
-
-		if(!name || !g_str_equal(name, ""))
-			theme = PIDGIN_BLIST_THEME(purple_theme_manager_find_theme(name, "blist"));
-
-		g_free(name);
-
-		pidgin_blist_set_theme(theme);
-	}
-}
-
-/* sets the current icon theme */
-static void
-prefs_set_status_icon_theme_cb(GtkComboBox *combo_box, gpointer user_data)
-{
-	PidginStatusIconTheme *theme = NULL;
-	GtkTreeIter iter;
-	gchar *name = NULL;
-
-	if(gtk_combo_box_get_active_iter(combo_box, &iter)) {
-
-		gtk_tree_model_get(GTK_TREE_MODEL(prefs_status_icon_themes), &iter, 2, &name, -1);
-
-		if(!name || !g_str_equal(name, ""))
-			theme = PIDGIN_STATUS_ICON_THEME(purple_theme_manager_find_theme(name, "status-icon"));
-
-		g_free(name);
-
-		pidgin_stock_load_status_icon_theme(theme);
-		pidgin_blist_refresh(purple_get_blist());
-	}
-}
-
 static GtkWidget *
 interface_page(void)
 {
@@ -1464,24 +1502,6 @@ interface_page(void)
 	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-
-	/* Buddy List Themes */
-	vbox = pidgin_make_frame(ret, _("Buddy List Theme"));
-
-	prefs_blist_themes_combo_box = prefs_build_theme_combo_box(prefs_blist_themes,
-						purple_prefs_get_string(PIDGIN_PREFS_ROOT "/blist/theme"),
-						"blist");
-
-	gtk_box_pack_start(GTK_BOX (vbox), prefs_blist_themes_combo_box, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(prefs_blist_themes_combo_box), "changed", (GCallback)prefs_set_blist_theme_cb, NULL);
-
-	/* Status Icon Themes */
-	prefs_status_themes_combo_box = prefs_build_theme_combo_box(prefs_status_icon_themes,
-						purple_prefs_get_string(PIDGIN_PREFS_ROOT "/status/icon-theme"),
-						"icon");
-
-	gtk_box_pack_start(GTK_BOX (vbox), prefs_status_themes_combo_box, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(prefs_status_themes_combo_box), "changed", (GCallback)prefs_set_status_icon_theme_cb, NULL);
 
 	/* System Tray */
 	vbox = pidgin_make_frame(ret, _("System Tray Icon"));
@@ -1971,113 +1991,8 @@ network_page(void)
 		                 G_CALLBACK(browser_button_clicked_cb), NULL);
 		gtk_box_pack_start(GTK_BOX(hbox), browser_button, FALSE, FALSE, 0);
 		gtk_widget_show(browser_button);
-	} else {
-		vbox = pidgin_make_frame(ret, _("Proxy Server"));
-		prefs_proxy_frame = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
-		prefs_proxy_subframe = gtk_vbox_new(FALSE, 0);
-
-		/* This is a global option that affects SOCKS4 usage even with account-specific proxy settings */
-		pidgin_prefs_checkbox(_("Use remote _DNS with SOCKS4 proxies"),
-							  "/purple/proxy/socks4_remotedns", prefs_proxy_frame);
-		gtk_box_pack_start(GTK_BOX(vbox), prefs_proxy_frame, 0, 0, 0);
-
-		pidgin_prefs_dropdown(prefs_proxy_frame, _("Proxy t_ype:"), PURPLE_PREF_STRING,
-					"/purple/proxy/type",
-					_("No proxy"), "none",
-					"SOCKS 4", "socks4",
-					"SOCKS 5", "socks5",
-					"HTTP", "http",
-					_("Use Environmental Settings"), "envvar",
-					NULL);
-		gtk_box_pack_start(GTK_BOX(prefs_proxy_frame), prefs_proxy_subframe, 0, 0, 0);
-		proxy_info = purple_global_proxy_get_info();
-
-		purple_prefs_connect_callback(prefs, "/purple/proxy/type",
-					    proxy_changed_cb, prefs_proxy_subframe);
-
-		table = gtk_table_new(4, 2, FALSE);
-		gtk_container_set_border_width(GTK_CONTAINER(table), 0);
-		gtk_table_set_col_spacings(GTK_TABLE(table), 5);
-		gtk_table_set_row_spacings(GTK_TABLE(table), 10);
-		gtk_container_add(GTK_CONTAINER(prefs_proxy_subframe), table);
-
-
-		label = gtk_label_new_with_mnemonic(_("_Host:"));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_table_attach(GTK_TABLE(table), label, 0, 1, 0, 1, GTK_FILL, 0, 0, 0);
-
-		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_table_attach(GTK_TABLE(table), entry, 1, 2, 0, 1, GTK_FILL, 0, 0, 0);
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYHOST);
-
-		if (proxy_info != NULL && purple_proxy_info_get_host(proxy_info))
-			gtk_entry_set_text(GTK_ENTRY(entry),
-					   purple_proxy_info_get_host(proxy_info));
-
-		hbox = gtk_hbox_new(TRUE, 5);
-		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-		pidgin_set_accessible_label (entry, label);
-
-		label = gtk_label_new_with_mnemonic(_("P_ort:"));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_table_attach(GTK_TABLE(table), label, 2, 3, 0, 1, GTK_FILL, 0, 0, 0);
-
-		entry = gtk_spin_button_new_with_range(0, 65535, 1);
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_table_attach(GTK_TABLE(table), entry, 3, 4, 0, 1, GTK_FILL, 0, 0, 0);
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYPORT);
-
-		if (proxy_info != NULL && purple_proxy_info_get_port(proxy_info) != 0) {
-			char buf[128];
-			g_snprintf(buf, sizeof(buf), "%d",
-				   purple_proxy_info_get_port(proxy_info));
-
-			gtk_entry_set_text(GTK_ENTRY(entry), buf);
-		}
-		pidgin_set_accessible_label (entry, label);
-
-		label = gtk_label_new_with_mnemonic(_("User_name:"));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_table_attach(GTK_TABLE(table), label, 0, 1, 1, 2, GTK_FILL, 0, 0, 0);
-
-		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_table_attach(GTK_TABLE(table), entry, 1, 2, 1, 2, GTK_FILL, 0, 0, 0);
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYUSER);
-
-		if (proxy_info != NULL && purple_proxy_info_get_username(proxy_info) != NULL)
-			gtk_entry_set_text(GTK_ENTRY(entry),
-						   purple_proxy_info_get_username(proxy_info));
-
-		hbox = gtk_hbox_new(TRUE, 5);
-		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-		pidgin_set_accessible_label (entry, label);
-
-		label = gtk_label_new_with_mnemonic(_("Pa_ssword:"));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_table_attach(GTK_TABLE(table), label, 2, 3, 1, 2, GTK_FILL, 0, 0, 0);
-
-		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_table_attach(GTK_TABLE(table), entry, 3, 4, 1, 2, GTK_FILL , 0, 0, 0);
-		gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
-#if !GTK_CHECK_VERSION(2,16,0)
-		if (gtk_entry_get_invisible_char(GTK_ENTRY(entry)) == '*')
-			gtk_entry_set_invisible_char(GTK_ENTRY(entry), PIDGIN_INVISIBLE_CHAR);
-#endif /* Less than GTK+ 2.16 */
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYPASS);
-
-		if (proxy_info != NULL && purple_proxy_info_get_password(proxy_info) != NULL)
-			gtk_entry_set_text(GTK_ENTRY(entry),
-					   purple_proxy_info_get_password(proxy_info));
-		pidgin_set_accessible_label (entry, label);
 	}
-
+		
 	gtk_widget_show_all(ret);
 	g_object_unref(sg);
 	/* Only hide table if not running gnome otherwise we hide the IP address table! */
@@ -2257,6 +2172,126 @@ browser_page(void)
 	return ret;
 }
 #endif /*_WIN32*/
+
+static GtkWidget *
+proxy_page(void)
+{
+	GtkWidget *ret = NULL, *vbox = NULL, *hbox = NULL;
+	GtkWidget *table = NULL, *entry = NULL, *label = NULL;
+	PurpleProxyInfo *proxy_info;
+
+	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
+
+	vbox = pidgin_make_frame(ret, _("Proxy Server"));
+	prefs_proxy_frame = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	prefs_proxy_subframe = gtk_vbox_new(FALSE, 0);
+
+	/* This is a global option that affects SOCKS4 usage even with account-specific proxy settings */
+	pidgin_prefs_checkbox(_("Use remote _DNS with SOCKS4 proxies"),
+						  "/purple/proxy/socks4_remotedns", prefs_proxy_frame);
+	gtk_box_pack_start(GTK_BOX(vbox), prefs_proxy_frame, 0, 0, 0);
+
+	pidgin_prefs_dropdown(prefs_proxy_frame, _("Proxy t_ype:"), PURPLE_PREF_STRING,
+				"/purple/proxy/type",
+				_("No proxy"), "none",
+				"SOCKS 4", "socks4",
+				"SOCKS 5", "socks5",
+				"HTTP", "http",
+				_("Use Environmental Settings"), "envvar",
+				NULL);
+	gtk_box_pack_start(GTK_BOX(prefs_proxy_frame), prefs_proxy_subframe, 0, 0, 0);
+	proxy_info = purple_global_proxy_get_info();
+
+	gtk_widget_show_all(ret);
+
+	purple_prefs_connect_callback(prefs, "/purple/proxy/type",
+				    proxy_changed_cb, prefs_proxy_subframe);
+
+	table = gtk_table_new(4, 2, FALSE);
+	gtk_container_set_border_width(GTK_CONTAINER(table), 0);
+	gtk_table_set_col_spacings(GTK_TABLE(table), 5);
+	gtk_table_set_row_spacings(GTK_TABLE(table), 10);
+	gtk_container_add(GTK_CONTAINER(prefs_proxy_subframe), table);
+
+
+	label = gtk_label_new_with_mnemonic(_("_Host:"));
+	gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
+	gtk_table_attach(GTK_TABLE(table), label, 0, 1, 0, 1, GTK_FILL, 0, 0, 0);
+
+	entry = gtk_entry_new();
+	gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+	gtk_table_attach(GTK_TABLE(table), entry, 1, 2, 0, 1, GTK_FILL, 0, 0, 0);
+	g_signal_connect(G_OBJECT(entry), "changed",
+			 G_CALLBACK(proxy_print_option), (void *)PROXYHOST);
+
+	if (proxy_info != NULL && purple_proxy_info_get_host(proxy_info))
+		gtk_entry_set_text(GTK_ENTRY(entry),
+				   purple_proxy_info_get_host(proxy_info));
+
+	hbox = gtk_hbox_new(TRUE, 5);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	pidgin_set_accessible_label (entry, label);
+
+	label = gtk_label_new_with_mnemonic(_("P_ort:"));
+	gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
+	gtk_table_attach(GTK_TABLE(table), label, 2, 3, 0, 1, GTK_FILL, 0, 0, 0);
+
+	entry = gtk_spin_button_new_with_range(0, 65535, 1);
+	gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+	gtk_table_attach(GTK_TABLE(table), entry, 3, 4, 0, 1, GTK_FILL, 0, 0, 0);
+	g_signal_connect(G_OBJECT(entry), "changed",
+			 G_CALLBACK(proxy_print_option), (void *)PROXYPORT);
+
+	if (proxy_info != NULL && purple_proxy_info_get_port(proxy_info) != 0) {
+		char buf[128];
+		g_snprintf(buf, sizeof(buf), "%d",
+			   purple_proxy_info_get_port(proxy_info));
+
+			gtk_entry_set_text(GTK_ENTRY(entry), buf);
+	}
+	pidgin_set_accessible_label (entry, label);
+
+	label = gtk_label_new_with_mnemonic(_("User_name:"));
+	gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
+	gtk_table_attach(GTK_TABLE(table), label, 0, 1, 1, 2, GTK_FILL, 0, 0, 0);
+
+	entry = gtk_entry_new();
+	gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+	gtk_table_attach(GTK_TABLE(table), entry, 1, 2, 1, 2, GTK_FILL, 0, 0, 0);
+	g_signal_connect(G_OBJECT(entry), "changed",
+			 G_CALLBACK(proxy_print_option), (void *)PROXYUSER);
+
+	if (proxy_info != NULL && purple_proxy_info_get_username(proxy_info) != NULL)
+		gtk_entry_set_text(GTK_ENTRY(entry),
+					   purple_proxy_info_get_username(proxy_info));
+
+	hbox = gtk_hbox_new(TRUE, 5);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	pidgin_set_accessible_label (entry, label);
+
+	label = gtk_label_new_with_mnemonic(_("Pa_ssword:"));
+	gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
+	gtk_table_attach(GTK_TABLE(table), label, 2, 3, 1, 2, GTK_FILL, 0, 0, 0);
+
+	entry = gtk_entry_new();
+	gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+	gtk_table_attach(GTK_TABLE(table), entry, 3, 4, 1, 2, GTK_FILL , 0, 0, 0);
+	gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
+#if !GTK_CHECK_VERSION(2,16,0)
+	if (gtk_entry_get_invisible_char(GTK_ENTRY(entry)) == '*')
+		gtk_entry_set_invisible_char(GTK_ENTRY(entry), PIDGIN_INVISIBLE_CHAR);
+#endif /* Less than GTK+ 2.16 */
+	g_signal_connect(G_OBJECT(entry), "changed",
+			 G_CALLBACK(proxy_print_option), (void *)PROXYPASS);
+
+	if (proxy_info != NULL && purple_proxy_info_get_password(proxy_info) != NULL)
+		gtk_entry_set_text(GTK_ENTRY(entry),
+				   purple_proxy_info_get_password(proxy_info));
+	pidgin_set_accessible_label (entry, label);
+
+	return ret;
+}
 
 static GtkWidget *
 logging_page(void)
@@ -2841,19 +2876,23 @@ static void
 prefs_notebook_init(void)
 {
 	prefs_notebook_add_page(_("Interface"), interface_page(), notebook_page++);
-	prefs_notebook_add_page(_("Conversations"), conv_page(), notebook_page++);
-	prefs_notebook_add_page(_("Smiley Themes"), theme_page(), notebook_page++);
-	prefs_notebook_add_page(_("Sounds"), sound_page(), notebook_page++);
-	prefs_notebook_add_page(_("Network"), network_page(), notebook_page++);
+
 #ifndef _WIN32
 	/* We use the registered default browser in windows */
 	/* if the user is running gnome 2.x or Mac OS X, hide the browsers tab */
-	if ((purple_running_gnome() == FALSE) && (purple_running_osx() == FALSE)) {
+	if((purple_running_gnome() == FALSE) && (purple_running_osx() == FALSE))
 		prefs_notebook_add_page(_("Browser"), browser_page(), notebook_page++);
-	}
 #endif
+
+	prefs_notebook_add_page(_("Conversations"), conv_page(), notebook_page++);
 	prefs_notebook_add_page(_("Logging"), logging_page(), notebook_page++);
+	prefs_notebook_add_page(_("Network"), network_page(), notebook_page++);
+	if(purple_running_gnome() == FALSE)
+		prefs_notebook_add_page(_("Proxy"), proxy_page(), notebook_page++);
+
+	prefs_notebook_add_page(_("Sounds"), sound_page(), notebook_page++);
 	prefs_notebook_add_page(_("Status / Idle"), away_page(), notebook_page++);
+	prefs_notebook_add_page(_("Themes"), theme_page(), notebook_page++);
 }
 
 void
@@ -2883,7 +2922,8 @@ pidgin_prefs_show(void)
 
 	/* The notebook */
 	prefsnotebook = notebook = gtk_notebook_new ();
-	gtk_box_pack_start (GTK_BOX (vbox), notebook, FALSE, FALSE, 0);
+	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_LEFT);
+	gtk_box_pack_start(GTK_BOX (vbox), notebook, FALSE, FALSE, 0);
 	gtk_widget_show(prefsnotebook);
 
 	button = pidgin_dialog_add_button(GTK_DIALOG(prefs), GTK_STOCK_CLOSE, NULL, NULL);
