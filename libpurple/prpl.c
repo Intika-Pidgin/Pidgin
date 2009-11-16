@@ -409,6 +409,16 @@ purple_prpl_get_statuses(PurpleAccount *account, PurplePresence *presence)
 	return statuses;
 }
 
+static void
+purple_prpl_attention(PurpleConversation *conv, const char *who,
+	guint type, PurpleMessageFlags flags, time_t mtime)
+{
+	PurpleAccount *account = purple_conversation_get_account(conv);
+	purple_signal_emit(purple_conversations_get_handle(),
+		flags == PURPLE_MESSAGE_SEND ? "sent-attention" : "got-attention",
+		account, who, conv, type);
+}
+
 void
 purple_prpl_send_attention(PurpleConnection *gc, const char *who, guint type_code)
 {
@@ -454,6 +464,7 @@ purple_prpl_send_attention(PurpleConnection *gc, const char *who, guint type_cod
 
 	conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, gc->account, who);
 	purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, description, flags, mtime);
+	purple_prpl_attention(conv, who, type_code, PURPLE_MESSAGE_SEND, time(NULL));
 
 	g_free(description);
 }
@@ -505,7 +516,15 @@ got_attention(PurpleConnection *gc, int id, const char *who, guint type_code)
 void
 purple_prpl_got_attention(PurpleConnection *gc, const char *who, guint type_code)
 {
+	PurpleConversation *conv = NULL;
+	PurpleAccount *account = purple_connection_get_account(gc);
+
 	got_attention(gc, -1, who, type_code);
+	conv = 
+		purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, who, account);
+	if (conv)
+		purple_prpl_attention(conv, who, type_code, PURPLE_MESSAGE_RECV,
+			time(NULL));
 }
 
 void
