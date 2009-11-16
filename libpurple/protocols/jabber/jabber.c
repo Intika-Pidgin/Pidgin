@@ -52,6 +52,7 @@
 #include "data.h"
 #include "disco.h"
 #include "google.h"
+#include "ibb.h"
 #include "iq.h"
 #include "jutil.h"
 #include "message.h"
@@ -2864,6 +2865,11 @@ static PurpleCmdRet jabber_cmd_buzz(PurpleConversation *conv,
 {
 	JabberStream *js = conv->account->gc->proto_data;
 	const gchar *who;
+	gchar *description;
+	PurpleBuddy *buddy;
+	const char *alias;
+	PurpleAttentionType *attn = 
+		purple_get_attention_type_from_code(conv->account, 0);
 
 	if (!args || !args[0]) {
 		/* use the buddy from conversation, if it's a one-to-one conversation */
@@ -2876,27 +2882,18 @@ static PurpleCmdRet jabber_cmd_buzz(PurpleConversation *conv,
 		who = args[0];
 	}
 
-	if (_jabber_send_buzz(js, who, error)) {
-		const gchar *alias;
-		gchar *str;
-		PurpleBuddy *buddy =
-			purple_find_buddy(purple_connection_get_account(conv->account->gc),
-				who);
-
-		if (buddy != NULL)
-			alias = purple_buddy_get_contact_alias(buddy);
-		else
-			alias = who;
-
-		str = g_strdup_printf(_("Buzzing %s..."), alias);
-		purple_conversation_write(conv, NULL, str,
-			PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NOTIFY, time(NULL));
-		g_free(str);
-
-		return PURPLE_CMD_RET_OK;
-	} else {
-		return PURPLE_CMD_RET_FAILED;
-	}
+	buddy = purple_find_buddy(conv->account, who);
+	if (buddy != NULL)
+		alias = purple_buddy_get_contact_alias(buddy);
+	else
+		alias = who;
+	
+	description = 
+		g_strdup_printf(purple_attention_type_get_outgoing_desc(attn), alias);
+	purple_conversation_write(conv, NULL, description, 
+		PURPLE_MESSAGE_NOTIFY | PURPLE_MESSAGE_SYSTEM, time(NULL));
+	g_free(description);
+	return _jabber_send_buzz(js, who, error)  ? PURPLE_CMD_RET_OK : PURPLE_CMD_RET_FAILED;
 }
 
 GList *jabber_attention_types(PurpleAccount *account)
@@ -3222,6 +3219,50 @@ PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who)
 #else
 	return PURPLE_MEDIA_CAPS_NONE;
 #endif
+}
+
+gboolean jabber_can_receive_file(PurpleConnection *gc, const char *who)
+{
+	JabberStream *js = gc->proto_data;
+
+	if (js) {
+		JabberBuddy *jb = jabber_buddy_find(js, who, FALSE);
+		GList *iter;
+		gboolean has_resources_without_caps = FALSE;
+
+		/* find out if there is any resources without caps */
+		for (iter = jb->resources; iter ; iter = g_list_next(iter)) {
+			JabberBuddyResource *jbr = (JabberBuddyResource *) iter->data;
+
+			if (!jabber_resource_know_capabilities(jbr)) {
+				has_resources_without_caps = TRUE;
+			}
+		}
+
+		if (has_resources_without_caps) {
+			/* there is at least one resource which we don't have caps for, 
+			 let's assume they can receive files... */
+			return TRUE;
+		} else {
+			/* we have caps for all the resources, see if at least one has
+			 right caps */
+			for (iter = jb->resources; iter ; iter = g_list_next(iter)) {
+				JabberBuddyResource *jbr = (JabberBuddyResource *) iter->data;
+
+				if (jabber_resource_has_capability(jbr,
+						"http://jabber.org/protocol/si/profile/file-transfer")
+			    	&& (jabber_resource_has_capability(jbr,
+			    			"http://jabber.org/protocol/bytestreams")
+			        	|| jabber_resource_has_capability(jbr,
+				           		XEP_0047_NAMESPACE))) {
+					return TRUE;
+				}
+			}
+			return FALSE;
+		}
+	} else {
+		return TRUE;
+	}
 }
 
 void jabber_register_commands(void)
