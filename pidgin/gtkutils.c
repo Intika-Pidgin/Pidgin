@@ -75,7 +75,7 @@ typedef struct {
 } AopMenu;
 
 static guint accels_save_timer = 0;
-static GList *gnome_url_handlers = NULL;
+static GSList *registered_url_handlers = NULL;
 
 static gboolean
 url_clicked_idle_cb(gpointer data)
@@ -113,26 +113,12 @@ pidgin_setup_imhtml(GtkWidget *imhtml)
 
 	gtk_imhtml_set_funcs(GTK_IMHTML(imhtml), &gtkimhtml_cbs);
 
+#ifdef _WIN32
 	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font")) {
 		const char *font = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font");
 		desc = pango_font_description_from_string(font);
-	} else if (purple_running_gnome()) {
-		/* Use the GNOME "document" font, if applicable */
-		char *path;
-
-		if ((path = g_find_program_in_path("gconftool-2"))) {
-			char *font = NULL;
-			char *err = NULL;
-			g_free(path);
-			if (g_spawn_command_line_sync(
-					"gconftool-2 -g /desktop/gnome/interface/document_font_name",
-					&font, &err, NULL, NULL)) {
-				desc = pango_font_description_from_string(font);
-			}
-			g_free(err);
-			g_free(font);
-		}
 	}
+#endif
 
 	if (desc) {
 		gtk_widget_modify_font(imhtml, desc);
@@ -3890,7 +3876,7 @@ register_gnome_url_handlers(void)
 				start += sizeof("/desktop/gnome/url-handlers/") - 1;
 
 				protocol = g_strdup_printf("%s:", start);
-				gnome_url_handlers = g_list_prepend(gnome_url_handlers, protocol);
+				registered_url_handlers = g_slist_prepend(registered_url_handlers, protocol);
 				gtk_imhtml_class_register_protocol(protocol, url_clicked_cb, link_context_menu);
 			}
 			start = c + 1;
@@ -3898,7 +3884,7 @@ register_gnome_url_handlers(void)
 	}
 	g_free(tmp);
 
-	return (gnome_url_handlers != NULL);
+	return (registered_url_handlers != NULL);
 }
 
 #ifdef _WIN32
@@ -3910,16 +3896,18 @@ winpidgin_register_win32_url_handlers(void)
 
 	do {
 		DWORD nameSize = 256;
-		char protocol[256];
+		char start[256];
 		/* I don't think we need to worry about non-ASCII protocol names */
-		ret = RegEnumKeyExA(HKEY_CLASSES_ROOT, idx++, protocol, &nameSize,
+		ret = RegEnumKeyExA(HKEY_CLASSES_ROOT, idx++, start, &nameSize,
 							NULL, NULL, NULL, NULL);
 		if (ret == ERROR_SUCCESS) {
 			HKEY reg_key = NULL;
-			ret = RegOpenKeyExA(HKEY_CLASSES_ROOT, protocol, 0, KEY_READ, &reg_key);
+			ret = RegOpenKeyExA(HKEY_CLASSES_ROOT, start, 0, KEY_READ, &reg_key);
 			if (ret == ERROR_SUCCESS) {
 				ret = RegQueryValueExA(reg_key, "URL Protocol", NULL, NULL, NULL, NULL);
 				if (ret == ERROR_SUCCESS) {
+					gchar *protocol = g_strdup_printf("%s:", start);
+					registered_url_handlers = g_slist_prepend(registered_url_handlers, protocol);
 					/* We still pass everything to the "http" "open" handler for security reasons */
 					gtk_imhtml_class_register_protocol(protocol, url_clicked_cb, link_context_menu);
 				}
@@ -3964,16 +3952,16 @@ void pidgin_utils_uninit(void)
 	gtk_imhtml_class_register_protocol("open://", NULL, NULL);
 
 	/* If we have GNOME handlers registered, unregister them. */
-	if (gnome_url_handlers)
+	if (registered_url_handlers)
 	{
-		GList *l;
-		for (l = gnome_url_handlers ; l ; l = l->next)
+		GSList *l;
+		for (l = registered_url_handlers; l; l = l->next)
 		{
 			gtk_imhtml_class_register_protocol((char *)l->data, NULL, NULL);
 			g_free(l->data);
 		}
-		g_list_free(gnome_url_handlers);
-		gnome_url_handlers = NULL;
+		g_slist_free(registered_url_handlers);
+		registered_url_handlers = NULL;
 		return;
 	}
 

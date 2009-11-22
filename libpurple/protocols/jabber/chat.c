@@ -106,7 +106,7 @@ JabberChat *jabber_chat_find(JabberStream *js, const char *room,
 	{
 		char *room_jid = g_strdup_printf("%s@%s", room, server);
 
-		chat = g_hash_table_lookup(js->chats, jabber_normalize(NULL, room_jid));
+		chat = g_hash_table_lookup(js->chats, room_jid);
 		g_free(room_jid);
 	}
 
@@ -177,10 +177,21 @@ void jabber_chat_invite(PurpleConnection *gc, int id, const char *msg,
 		xmlnode_insert_data(body, msg, -1);
 	} else {
 		xmlnode_set_attrib(message, "to", name);
+		/*
+		 * Putting the reason into the body was an 'undocumented protocol,
+		 * ...not part of "groupchat 1.0"'.
+		 * http://xmpp.org/extensions/attic/jep-0045-1.16.html#invite
+		 *
+		 * Left here for compatibility.
+		 */
 		body = xmlnode_new_child(message, "body");
 		xmlnode_insert_data(body, msg, -1);
+
 		x = xmlnode_new_child(message, "x");
 		xmlnode_set_attrib(x, "jid", room_jid);
+
+		/* The better place for it! XEP-0249 style. */
+		xmlnode_set_attrib(x, "reason", msg);
 		xmlnode_set_namespace(x, "jabber:x:conference");
 	}
 
@@ -373,7 +384,7 @@ void jabber_chat_destroy(JabberChat *chat)
 	JabberStream *js = chat->js;
 	char *room_jid = g_strdup_printf("%s@%s", chat->room, chat->server);
 
-	g_hash_table_remove(js->chats, jabber_normalize(NULL, room_jid));
+	g_hash_table_remove(js->chats, room_jid);
 	g_free(room_jid);
 }
 
@@ -681,11 +692,11 @@ void jabber_chat_set_topic(PurpleConnection *gc, int id, const char *topic)
 }
 
 
-void jabber_chat_change_nick(JabberChat *chat, const char *nick)
+gboolean jabber_chat_change_nick(JabberChat *chat, const char *nick)
 {
 	xmlnode *presence;
 	char *full_jid;
-	PurplePresence *gpresence;
+	PurpleAccount *account;
 	PurpleStatus *status;
 	JabberBuddyState state;
 	char *msg;
@@ -695,11 +706,11 @@ void jabber_chat_change_nick(JabberChat *chat, const char *nick)
 		purple_conv_chat_write(PURPLE_CONV_CHAT(chat->conv), "",
 				_("Nick changing not supported in non-MUC chatrooms"),
 				PURPLE_MESSAGE_SYSTEM, time(NULL));
-		return;
+		return FALSE;
 	}
 
-	gpresence = purple_account_get_presence(chat->js->gc->account);
-	status = purple_presence_get_active_status(gpresence);
+	account = purple_connection_get_account(chat->js->gc);
+	status = purple_account_get_active_status(account);
 
 	purple_status_to_jabber(status, &state, &msg, &priority);
 
@@ -711,6 +722,8 @@ void jabber_chat_change_nick(JabberChat *chat, const char *nick)
 
 	jabber_send(chat->js, presence);
 	xmlnode_free(presence);
+
+	return TRUE;
 }
 
 void jabber_chat_part(JabberChat *chat, const char *msg)

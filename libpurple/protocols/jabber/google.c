@@ -910,7 +910,7 @@ jabber_gmail_poke(JabberStream *js, const char *from, JabberIqType type,
 	xmlnode_set_attrib(iq->node, "id", id);
 	jabber_iq_send(iq);
 
-	purple_debug(PURPLE_DEBUG_MISC, "jabber",
+	purple_debug_misc("jabber",
 		   "Got new mail notification. Sending request for more info\n");
 
 	iq = jabber_iq_new_query(js, JABBER_IQ_GET, "google:mail:notify");
@@ -994,8 +994,9 @@ gboolean jabber_google_roster_incoming(JabberStream *js, xmlnode *item)
 
 	const char *grt = xmlnode_get_attrib_with_namespace(item, "t", "google:roster");
 	const char *subscription = xmlnode_get_attrib(item, "subscription");
+	const char *ask = xmlnode_get_attrib(item, "ask");
 
-	if (!subscription || !strcmp(subscription, "none")) {
+	if ((!subscription || !strcmp(subscription, "none")) && !ask) {
 		/* The Google Talk servers will automatically add people from your Gmail address book
 		 * with subscription=none. If we see someone with subscription=none, ignore them.
 		 */
@@ -1093,12 +1094,13 @@ void jabber_google_roster_add_deny(PurpleConnection *gc, const char *who)
 			jbr = l->data;
 			if (jbr && jbr->name)
 			{
-				purple_debug(PURPLE_DEBUG_MISC, "jabber", "Removing resource %s\n", jbr->name);
+				purple_debug_misc("jabber", "Removing resource %s\n", jbr->name);
 				jabber_buddy_remove_resource(jb, jbr->name);
 			}
 			l = l->next;
 		}
 	}
+
 	purple_prpl_got_user_status(purple_connection_get_account(gc), who, "offline", NULL);
 }
 

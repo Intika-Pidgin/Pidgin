@@ -118,6 +118,29 @@ msn_normalize(const PurpleAccount *account, const char *str)
 	return buf;
 }
 
+gboolean
+msn_email_is_valid(const char *passport)
+{
+	if (purple_email_is_valid(passport)) {
+		/* Special characters aren't allowed in domains, so only go to '@' */
+		while (*passport != '@') {
+			if (*passport == '/')
+				return FALSE;
+			else if (*passport == '?')
+				return FALSE;
+			else if (*passport == '=')
+				return FALSE;
+			/* MSN also doesn't like colons, but that's checked already */
+
+			passport++;
+		}
+
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 static gboolean
 msn_send_attention(PurpleConnection *gc, const char *username, guint type)
 {
@@ -611,9 +634,14 @@ msn_can_receive_file(PurpleConnection *gc, const char *who)
 		MsnSession *session = gc->proto_data;
 		if (session) {
 			MsnUser *user = msn_userlist_find_user(session->userlist, who);
-			if (user)
+			if (user) {
 				/* Include these too: MSN_CLIENT_CAP_MSNMOBILE|MSN_CLIENT_CAP_MSNDIRECT ? */
-				ret = (user->clientid & MSN_CLIENT_CAP_WEBMSGR) == 0;
+				if ((user->clientid & MSN_CLIENT_CAP_WEBMSGR) ||
+						user->networkid == MSN_NETWORK_YAHOO)
+					ret = FALSE;
+				else
+					ret = TRUE;
+			}
 		} else
 			ret = FALSE;
 	}
@@ -1511,7 +1539,7 @@ msn_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 
 	bname = purple_buddy_get_name(buddy);
 
-	if (!purple_email_is_valid(bname)) {
+	if (!msn_email_is_valid(bname)) {
 		gchar *buf;
 		buf = g_strdup_printf(_("Unable to add the buddy %s because the username is invalid.  Usernames must be valid email addresses."), bname);
 		if (!purple_conv_present_error(bname, purple_connection_get_account(gc), buf))
