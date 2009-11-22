@@ -62,6 +62,8 @@ char *jabber_get_chat_name(GHashTable *data);
  * in-prpl function for joining a chat room. Doesn't require sticking goop
  * into a hash table.
  *
+ * @param room     The room to join. This MUST be normalized already.
+ * @param server   The server the room is on. This MUST be normalized already.
  * @param password The password (if required) to join the room. May be NULL.
  * @param data     The chat hash table.  May be NULL (it will be generated
  *                 for current core<>prpl API interface.)
@@ -87,7 +89,7 @@ void jabber_chat_create_instant_room(JabberChat *chat);
 void jabber_chat_register(JabberChat *chat);
 void jabber_chat_change_topic(JabberChat *chat, const char *topic);
 void jabber_chat_set_topic(PurpleConnection *gc, int id, const char *topic);
-void jabber_chat_change_nick(JabberChat *chat, const char *nick);
+gboolean jabber_chat_change_nick(JabberChat *chat, const char *nick);
 void jabber_chat_part(JabberChat *chat, const char *msg);
 void jabber_chat_track_handle(JabberChat *chat, const char *handle,
 		const char *jid, const char *affiliation, const char *role);
