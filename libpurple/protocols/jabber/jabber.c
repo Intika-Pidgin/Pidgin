@@ -81,8 +81,8 @@ static void jabber_stream_init(JabberStream *js)
 	char *open_stream;
 
 	open_stream = g_strdup_printf("<stream:stream to='%s' "
-				          "xmlns='jabber:client' "
-						  "xmlns:stream='http://etherx.jabber.org/streams' "
+				          "xmlns='" NS_XMPP_CLIENT "' "
+						  "xmlns:stream='" NS_XMPP_STREAMS "' "
 						  "version='1.0'>",
 						  js->user->domain);
 	/* setup the parser fresh for each stream */
@@ -116,7 +116,7 @@ static void jabber_session_init(JabberStream *js)
 	jabber_iq_set_callback(iq, jabber_session_initialized_cb, NULL);
 
 	session = xmlnode_new_child(iq->node, "session");
-	xmlnode_set_namespace(session, "urn:ietf:params:xml:ns:xmpp-session");
+	xmlnode_set_namespace(session, NS_XMPP_SESSION);
 
 	jabber_iq_send(iq);
 }
@@ -128,7 +128,7 @@ static void jabber_bind_result_cb(JabberStream *js, const char *from,
 	xmlnode *bind;
 
 	if (type == JABBER_IQ_RESULT &&
-			(bind = xmlnode_get_child_with_namespace(packet, "bind", "urn:ietf:params:xml:ns:xmpp-bind"))) {
+			(bind = xmlnode_get_child_with_namespace(packet, "bind", NS_XMPP_BIND))) {
 		xmlnode *jid;
 		char *full_jid;
 		if((jid = xmlnode_get_child(bind, "jid")) && (full_jid = xmlnode_get_data(jid))) {
@@ -217,7 +217,7 @@ void jabber_stream_features_parse(JabberStream *js, xmlnode *packet)
 		char *requested_resource;
 		JabberIq *iq = jabber_iq_new(js, JABBER_IQ_SET);
 		bind = xmlnode_new_child(iq->node, "bind");
-		xmlnode_set_namespace(bind, "urn:ietf:params:xml:ns:xmpp-bind");
+		xmlnode_set_namespace(bind, NS_XMPP_BIND);
 		requested_resource = jabber_prep_resource(js->user->resource);
 
 		if (requested_resource != NULL) {
@@ -272,11 +272,11 @@ void jabber_process_packet(JabberStream *js, xmlnode **packet)
 	} else if(!strcmp((*packet)->name, "stream:features")) {
 		jabber_stream_features_parse(js, *packet);
 	} else if (!strcmp((*packet)->name, "features") && xmlns &&
-		   !strcmp(xmlns, "http://etherx.jabber.org/streams")) {
+		   !strcmp(xmlns, NS_XMPP_STREAMS)) {
 		jabber_stream_features_parse(js, *packet);
 	} else if(!strcmp((*packet)->name, "stream:error") ||
 			 (!strcmp((*packet)->name, "error") && xmlns &&
-				!strcmp(xmlns, "http://etherx.jabber.org/streams")))
+				!strcmp(xmlns, NS_XMPP_STREAMS)))
 	{
 		jabber_stream_handle_error(js, *packet);
 	} else if(!strcmp((*packet)->name, "challenge")) {
@@ -385,7 +385,7 @@ void jabber_send_raw(JabberStream *js, const char *data, int len)
 		if(js->state != JABBER_STREAM_CONNECTED &&
 				/* Either <auth> or <query><password>... */
 				(((tag_start = strstr(data, "<auth ")) &&
-					strstr(data, "xmlns='urn:ietf:params:xml:ns:xmpp-sasl'")) ||
+					strstr(data, "xmlns='" NS_XMPP_SASL "'")) ||
 				((tag_start = strstr(data, "<query ")) &&
 					strstr(data, "xmlns='jabber:iq:auth'>") &&
 					(tag_start = strstr(tag_start, "<password>"))))) {
@@ -476,12 +476,19 @@ void jabber_send_signal_cb(PurpleConnection *pc, xmlnode **packet,
 	if (NULL == packet)
 		return;
 
+	if (!PURPLE_CONNECTION_IS_VALID(pc))
+		return;
+
 	js = purple_connection_get_protocol_data(pc);
+
+	if (NULL == js)
+		return;
+
 	if (js->bosh)
 		if (g_str_equal((*packet)->name, "message") ||
 				g_str_equal((*packet)->name, "iq") ||
 				g_str_equal((*packet)->name, "presence"))
-			xmlnode_set_namespace(*packet, "jabber:client");
+			xmlnode_set_namespace(*packet, NS_XMPP_CLIENT);
 	txt = xmlnode_to_str(*packet, &len);
 	jabber_send_raw(js, txt, len);
 	g_free(txt);
@@ -1206,7 +1213,7 @@ void jabber_register_parse(JabberStream *js, const char *from, JabberIqType type
 		jabber_x_data_request(js, x, jabber_register_x_data_cb, g_strdup(from));
 		return;
 
-	} else if((x = xmlnode_get_child_with_namespace(query, "x", "jabber:x:oob"))) {
+	} else if((x = xmlnode_get_child_with_namespace(query, "x", NS_OOB_X_DATA))) {
 		xmlnode *url;
 
 		if((url = xmlnode_get_child(x, "url"))) {
@@ -1632,7 +1639,7 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 		error = xmlnode_new_child(result->node, "error");
 		xmlnode_set_attrib(error, "type", "cancel");
 		x = xmlnode_new_child(error, "not-allowed");
-		xmlnode_set_namespace(x, "urn:ietf:params:xml:ns:xmpp-stanzas");
+		xmlnode_set_namespace(x, NS_XMPP_STANZAS);
 
 		jabber_iq_send(result);
 		return;
@@ -1658,7 +1665,7 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 		error = xmlnode_new_child(result->node, "error");
 		xmlnode_set_attrib(error, "type", "modify");
 		x = xmlnode_new_child(error, "bad-request");
-		xmlnode_set_namespace(x, "urn:ietf:params:xml:ns:xmpp-stanzas");
+		xmlnode_set_namespace(x, NS_XMPP_STANZAS);
 
 		jabber_iq_send(result);
 		return;
@@ -1688,7 +1695,7 @@ static void jabber_blocklist_parse(JabberStream *js, const char *from,
 	PurpleAccount *account;
 
 	blocklist = xmlnode_get_child_with_namespace(packet,
-			"blocklist", "urn:xmpp:blocking");
+			"blocklist", NS_SIMPLE_BLOCKING);
 	account = purple_connection_get_account(js->gc);
 
 	if (type == JABBER_IQ_ERROR || blocklist == NULL)
@@ -1721,7 +1728,7 @@ void jabber_request_block_list(JabberStream *js)
 	iq = jabber_iq_new(js, JABBER_IQ_GET);
 
 	blocklist = xmlnode_new_child(iq->node, "blocklist");
-	xmlnode_set_namespace(blocklist, "urn:xmpp:blocking");
+	xmlnode_set_namespace(blocklist, NS_SIMPLE_BLOCKING);
 
 	jabber_iq_set_callback(iq, jabber_blocklist_parse, NULL);
 
@@ -1754,7 +1761,7 @@ void jabber_add_deny(PurpleConnection *gc, const char *who)
 	iq = jabber_iq_new(js, JABBER_IQ_SET);
 
 	block = xmlnode_new_child(iq->node, "block");
-	xmlnode_set_namespace(block, "urn:xmpp:blocking");
+	xmlnode_set_namespace(block, NS_SIMPLE_BLOCKING);
 
 	item = xmlnode_new_child(block, "item");
 	xmlnode_set_attrib(item, "jid", who);
@@ -1784,7 +1791,7 @@ void jabber_rem_deny(PurpleConnection *gc, const char *who)
 	iq = jabber_iq_new(js, JABBER_IQ_SET);
 
 	unblock = xmlnode_new_child(iq->node, "unblock");
-	xmlnode_set_namespace(unblock, "urn:xmpp:blocking");
+	xmlnode_set_namespace(unblock, NS_SIMPLE_BLOCKING);
 
 	item = xmlnode_new_child(unblock, "item");
 	xmlnode_set_attrib(item, "jid", who);
@@ -2448,7 +2455,7 @@ char *jabber_parse_error(JabberStream *js,
 		} else if(xmlnode_get_child(error, "undefined-condition")) {
 			text = _("Unknown Error");
 		}
-	} else if(xmlns && !strcmp(xmlns, "urn:ietf:params:xml:ns:xmpp-sasl")) {
+	} else if(xmlns && !strcmp(xmlns, NS_XMPP_SASL)) {
 		/* Most common reason can be the default */
 		SET_REASON(PURPLE_CONNECTION_ERROR_NETWORK_ERROR);
 		if(xmlnode_get_child(packet, "aborted")) {
@@ -2476,7 +2483,7 @@ char *jabber_parse_error(JabberStream *js,
 		}
 	} else if(!strcmp(packet->name, "stream:error") ||
 			 (!strcmp(packet->name, "error") && xmlns &&
-				!strcmp(xmlns, "http://etherx.jabber.org/streams"))) {
+				!strcmp(xmlns, NS_XMPP_STREAMS))) {
 		/* Most common reason as default: */
 		SET_REASON(PURPLE_CONNECTION_ERROR_NETWORK_ERROR);
 		if(xmlnode_get_child(packet, "bad-format")) {
@@ -2832,7 +2839,7 @@ static gboolean _jabber_send_buzz(JabberStream *js, const char *username, char *
 		return FALSE;
 	}
 
-	if (jabber_resource_has_capability(jbr, XEP_0224_NAMESPACE)) {
+	if (jabber_resource_has_capability(jbr, NS_ATTENTION)) {
 		xmlnode *buzz, *msg = xmlnode_new("message");
 		gchar *to;
 
@@ -2844,7 +2851,7 @@ static gboolean _jabber_send_buzz(JabberStream *js, const char *username, char *
 		xmlnode_set_attrib(msg, "type", "headline");
 
 		buzz = xmlnode_new_child(msg, "attention");
-		xmlnode_set_namespace(buzz, XEP_0224_NAMESPACE);
+		xmlnode_set_namespace(buzz, NS_ATTENTION);
 
 		jabber_send(js, msg);
 		xmlnode_free(msg);
@@ -3009,8 +3016,7 @@ jabber_initiate_media(PurpleAccount *account, const char *who,
 		if (type & PURPLE_MEDIA_AUDIO &&
 				!jabber_resource_has_capability(jbr,
 				JINGLE_APP_RTP_SUPPORT_AUDIO) &&
-				jabber_resource_has_capability(jbr,
-				GOOGLE_VOICE_CAP))
+				jabber_resource_has_capability(jbr, NS_GOOGLE_VOICE))
 			return jabber_google_session_initiate(js, who, type);
 		else
 			return jingle_rtp_initiate_media(js, who, type);
@@ -3179,10 +3185,9 @@ PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who)
 				caps |= PURPLE_MEDIA_CAPS_MODIFY_SESSION |
 						PURPLE_MEDIA_CAPS_CHANGE_DIRECTION;
 		}
-		if (jabber_resource_has_capability(jbr, GOOGLE_VOICE_CAP)) {
+		if (jabber_resource_has_capability(jbr, NS_GOOGLE_VOICE)) {
 			caps |= PURPLE_MEDIA_CAPS_AUDIO;
-			if (jabber_resource_has_capability(jbr,
-					GOOGLE_VIDEO_CAP))
+			if (jabber_resource_has_capability(jbr, NS_GOOGLE_VIDEO))
 				caps |= PURPLE_MEDIA_CAPS_AUDIO_VIDEO;
 		}
 		return caps;
@@ -3259,9 +3264,8 @@ gboolean jabber_can_receive_file(PurpleConnection *gc, const char *who)
 				if (jabber_resource_has_capability(jbr,
 						"http://jabber.org/protocol/si/profile/file-transfer")
 			    	&& (jabber_resource_has_capability(jbr,
-			    			"http://jabber.org/protocol/bytestreams")
-			        	|| jabber_resource_has_capability(jbr,
-				           		XEP_0047_NAMESPACE))) {
+			    			NS_BYTESTREAMS)
+			        	|| jabber_resource_has_capability(jbr, NS_IBB))) {
 					return TRUE;
 				}
 			}
@@ -3472,38 +3476,38 @@ jabber_init_plugin(PurplePlugin *plugin)
 	jabber_add_identity("client", type, NULL, ui_name);
 
 	/* initialize jabber_features list */
-	jabber_add_feature("jabber:iq:last", 0);
-	jabber_add_feature("jabber:iq:oob", 0);
-	jabber_add_feature("urn:xmpp:time", 0);
+	jabber_add_feature(NS_LAST_ACTIVITY, 0);
+	jabber_add_feature(NS_OOB_IQ_DATA, 0);
+	jabber_add_feature(NS_ENTITY_TIME, 0);
 	jabber_add_feature("jabber:iq:version", 0);
 	jabber_add_feature("jabber:x:conference", 0);
-	jabber_add_feature("http://jabber.org/protocol/bytestreams", 0);
+	jabber_add_feature(NS_BYTESTREAMS, 0);
 	jabber_add_feature("http://jabber.org/protocol/caps", 0);
 	jabber_add_feature("http://jabber.org/protocol/chatstates", 0);
-	jabber_add_feature("http://jabber.org/protocol/disco#info", 0);
-	jabber_add_feature("http://jabber.org/protocol/disco#items", 0);
-	jabber_add_feature("http://jabber.org/protocol/ibb", 0);
+	jabber_add_feature(NS_DISCO_INFO, 0);
+	jabber_add_feature(NS_DISCO_ITEMS, 0);
+	jabber_add_feature(NS_IBB, 0);
 	jabber_add_feature("http://jabber.org/protocol/muc", 0);
 	jabber_add_feature("http://jabber.org/protocol/muc#user", 0);
 	jabber_add_feature("http://jabber.org/protocol/si", 0);
 	jabber_add_feature("http://jabber.org/protocol/si/profile/file-transfer", 0);
-	jabber_add_feature("http://jabber.org/protocol/xhtml-im", 0);
-	jabber_add_feature("urn:xmpp:ping", 0);
+	jabber_add_feature(NS_XHTML_IM, 0);
+	jabber_add_feature(NS_PING, 0);
 
 	/* Buzz/Attention */
-	jabber_add_feature(XEP_0224_NAMESPACE, jabber_buzz_isenabled);
+	jabber_add_feature(NS_ATTENTION, jabber_buzz_isenabled);
 
 	/* Bits Of Binary */
-	jabber_add_feature(XEP_0231_NAMESPACE, 0);
+	jabber_add_feature(NS_BOB, 0);
 
 	/* Jingle features! */
 	jabber_add_feature(JINGLE, 0);
 
 #ifdef USE_VV
-	jabber_add_feature("http://www.google.com/xmpp/protocol/session", jabber_audio_enabled);
-	jabber_add_feature("http://www.google.com/xmpp/protocol/voice/v1", jabber_audio_enabled);
-	jabber_add_feature("http://www.google.com/xmpp/protocol/video/v1", jabber_video_enabled);
-	jabber_add_feature("http://www.google.com/xmpp/protocol/camera/v1", jabber_video_enabled);
+	jabber_add_feature(NS_GOOGLE_PROTOCOL_SESSION, jabber_audio_enabled);
+	jabber_add_feature(NS_GOOGLE_VOICE, jabber_audio_enabled);
+	jabber_add_feature(NS_GOOGLE_VIDEO, jabber_video_enabled);
+	jabber_add_feature(NS_GOOGLE_CAMERA, jabber_video_enabled);
 	jabber_add_feature(JINGLE_APP_RTP, 0);
 	jabber_add_feature(JINGLE_APP_RTP_SUPPORT_AUDIO, jabber_audio_enabled);
 	jabber_add_feature(JINGLE_APP_RTP_SUPPORT_VIDEO, jabber_video_enabled);

@@ -5,7 +5,10 @@ EXTRA_DIST = \
 
 pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
-JABBERSOURCES = auth.c \
+JABBERSOURCES = \
+			  adhoccommands.c \
+			  adhoccommands.h \
+			  auth.c \
 			  auth.h \
 			  auth_digest_md5.c \
 			  auth_plain.c \
@@ -15,6 +18,8 @@ JABBERSOURCES = auth.c \
 			  buddy.h \
 			  bosh.c \
 			  bosh.h \
+			  caps.c \
+			  caps.h \
 			  chat.c \
 			  chat.h \
 			  data.c \
@@ -47,10 +52,13 @@ JABBERSOURCES = auth.c \
 			  jutil.h \
 			  message.c \
 			  message.h \
+			  namespaces.h \
 			  oob.c \
 			  oob.h \
 			  parser.c \
 			  parser.h \
+			  pep.c \
+			  pep.h \
 			  ping.c \
 			  ping.h \
 			  presence.c \
@@ -59,14 +67,6 @@ JABBERSOURCES = auth.c \
 			  roster.h \
 			  si.c \
 			  si.h \
-			  xdata.c \
-			  xdata.h \
-			  caps.c \
-			  caps.h \
-			  adhoccommands.c \
-			  adhoccommands.h \
-			  pep.c \
-			  pep.h \
 			  useravatar.c \
 			  useravatar.h \
 			  usermood.c \
@@ -74,7 +74,9 @@ JABBERSOURCES = auth.c \
 			  usernick.c \
 			  usernick.h \
 			  usertune.c \
-			  usertune.h
+			  usertune.h \
+			  xdata.c \
+			  xdata.h
 
 AM_CFLAGS = $(st)
 
