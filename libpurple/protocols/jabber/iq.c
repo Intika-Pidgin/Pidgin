@@ -462,8 +462,8 @@ void jabber_iq_init(void)
 			jabber_gmail_poke);
 	jabber_iq_register_handler("new-mail", "google:mail:notify",
 			jabber_gmail_poke);
-	jabber_iq_register_handler("ping", "urn:xmpp:ping", jabber_ping_parse);
-	jabber_iq_register_handler("query", GOOGLE_JINGLE_INFO_NAMESPACE,
+	jabber_iq_register_handler("ping", NS_PING, jabber_ping_parse);
+	jabber_iq_register_handler("query", NS_GOOGLE_JINGLE_INFO,
 			jabber_google_handle_jingle_info);
 	jabber_iq_register_handler("query", "http://jabber.org/protocol/bytestreams",
 			jabber_bytestreams_parse);
@@ -480,7 +480,7 @@ void jabber_iq_init(void)
 	jabber_iq_register_handler("query", "jabber:iq:version",
 			jabber_iq_version_parse);
 #ifdef USE_VV
-	jabber_iq_register_handler("session", "http://www.google.com/session",
+	jabber_iq_register_handler("session", NS_GOOGLE_SESSION,
 		jabber_google_session_parse);
 #endif
 	jabber_iq_register_handler("block", "urn:xmpp:blocking", jabber_blocklist_parse_push);
