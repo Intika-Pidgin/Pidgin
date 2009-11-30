@@ -24,6 +24,11 @@ version 2.7.0 (??/??/????):
 		* pidgin_dialogs_translators (should not be used by anything but Pidgin)
 		* gtk_imhtmltoolbar_switch_active_conversation
 
+version 2.6.5 (??/??/20??):
+
+version 2.6.4 (11/29/2009):
+	No changes
+
 version 2.6.3 (10/16/2009):
 	No changes
 
