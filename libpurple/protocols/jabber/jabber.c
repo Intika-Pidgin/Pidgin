@@ -229,6 +229,8 @@ void jabber_stream_features_parse(JabberStream *js, xmlnode *packet)
 		jabber_iq_set_callback(iq, jabber_bind_result_cb, NULL);
 
 		jabber_iq_send(iq);
+	} else if (xmlnode_get_child_with_namespace(packet, "ver", NS_ROSTER_VERSIONING)) {
+		js->server_caps |= JABBER_CAP_ROSTER_VERSIONING;
 	} else /* if(xmlnode_get_child_with_namespace(packet, "auth")) */ {
 		/* If we get an empty stream:features packet, or we explicitly get
 		 * an auth feature with namespace http://jabber.org/features/iq-auth
@@ -1742,13 +1744,15 @@ void jabber_add_deny(PurpleConnection *gc, const char *who)
 	JabberIq *iq;
 	xmlnode *block, *item;
 
-	js = gc->proto_data;
+	g_return_if_fail(who != NULL && *who != '\0');
+
+	js = purple_connection_get_protocol_data(gc);
 	if (js == NULL)
 		return;
 
 	if (js->server_caps & JABBER_CAP_GOOGLE_ROSTER)
 	{
-		jabber_google_roster_add_deny(gc, who);
+		jabber_google_roster_add_deny(js, who);
 		return;
 	}
 
@@ -1776,13 +1780,15 @@ void jabber_rem_deny(PurpleConnection *gc, const char *who)
 	JabberIq *iq;
 	xmlnode *unblock, *item;
 
-	js = gc->proto_data;
+	g_return_if_fail(who != NULL && *who != '\0');
+
+	js = purple_connection_get_protocol_data(gc);
 	if (js == NULL)
 		return;
 
 	if (js->server_caps & JABBER_CAP_GOOGLE_ROSTER)
 	{
-		jabber_google_roster_rem_deny(gc, who);
+		jabber_google_roster_rem_deny(js, who);
 		return;
 	}
 
