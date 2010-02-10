@@ -144,7 +144,7 @@ darwin*)
 	;;
 esac
 
-ALL_LINGUAS="af am ar az be@latin bg bn bs ca ca@valencia cs da de dz el en_AU en_CA en_GB eo es et eu fa fi fr ga gl gu he hi hu hy id it ja ka km kn ko ku lo lt mk mn mr ms_MY my_MM nb ne nl nn oc pa pl pt_BR pt ps ro ru si sk sl sq sr sr@latin sv sw ta te th tr uk ur vi xh zh_CN zh_HK zh_TW"
+ALL_LINGUAS="af am ar az be@latin bg bn bs ca ca@valencia cs da de dz el en_AU en_CA en_GB eo es et eu fa fi fr ga gl gu he hi hu hy id it ja ka km kn ko ku lo lt mk mn mr ms_MY my_MM nb ne nl nn oc or pa pl pt_BR pt ps ro ru si sk sl sq sr sr@latin sv sw ta te th tr uk ur vi xh zh_CN zh_HK zh_TW"
 AM_GLIB_GNU_GETTEXT
 
 dnl If we don't have msgfmt, then po/ is going to fail -- ensure that
@@ -2391,30 +2391,6 @@ AC_CACHE_CHECK(for tm_gmtoff in struct tm, ac_cv_struct_tm_gmtoff,
         ], ac_cv_struct_tm_gmtoff=yes, ac_cv_struct_tm_gmtoff=no))
 if test $ac_cv_struct_tm_gmtoff = yes; then
         AC_DEFINE(HAVE_TM_GMTOFF, 1, [Define if you have a tm_gmtoff member in struct tm])
-fi
-
-AC_CACHE_CHECK([whether va_lists can be copied by value], ac_cv_va_val_copy,[
-	AC_TRY_RUN([#include <stdarg.h>
-#include <stdlib.h>
-	void f (int i, ...) {
-	va_list args1, args2;
-	va_start (args1, i);
-	args2 = args1;
-	if (va_arg (args2, int) != 42 || va_arg (args1, int) != 42)
-	  exit (1);
-	va_end (args1); va_end (args2);
-	}
-	int main() {
-	  f (0, 42);
-	  return 0;
-	}],
-	[ac_cv_va_val_copy=yes],
-	[ac_cv_va_val_copy=no],
-	[ac_cv_va_val_copy=yes])
-])
-
-if test "x$ac_cv_va_val_copy" = "xno"; then
-	AC_DEFINE(VA_COPY_AS_ARRAY, 1, ['va_lists' cannot be copied as values])
 fi
 
 dnl #######################################################################
