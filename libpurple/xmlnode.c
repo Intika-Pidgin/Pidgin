@@ -590,7 +590,7 @@ xmlnode_parser_element_start_libxml(void *user_data,
 			int attrib_len = attributes[i+4] - attributes[i+3];
 			char *attrib = g_strndup((const char *)attributes[i+3], attrib_len);
 			txt = attrib;
-			attrib = purple_unescape_html(txt);
+			attrib = purple_unescape_text(txt);
 			g_free(txt);
 			xmlnode_set_attrib_full(node, name, NULL, prefix, attrib);
 			g_free(attrib);

@@ -651,21 +651,79 @@ jabber_is_own_account(JabberStream *js, const char *str)
 	return equal;
 }
 
-PurpleConversation *
-jabber_find_unnormalized_conv(const char *name, PurpleAccount *account)
+static const struct {
+		const char *status_id; /* link to core */
+		const char *show; /* The show child's cdata in a presence stanza */
+		const char *readable; /* readable representation */
+		JabberBuddyState state;
+} jabber_statuses[] = {
+	{ "offline",       NULL,   N_("Offline"),        JABBER_BUDDY_STATE_UNAVAILABLE },
+	{ "available",     NULL,   N_("Available"),      JABBER_BUDDY_STATE_ONLINE},
+	{ "freeforchat",   "chat", N_("Chatty"),         JABBER_BUDDY_STATE_CHAT },
+	{ "away",          "away", N_("Away"),           JABBER_BUDDY_STATE_AWAY },
+	{ "extended_away", "xa",   N_("Extended Away"),  JABBER_BUDDY_STATE_XA },
+	{ "dnd",           "dnd",  N_("Do Not Disturb"), JABBER_BUDDY_STATE_DND },
+	{ "error",         NULL,   N_("Error"),          JABBER_BUDDY_STATE_ERROR }
+};
+
+const char *
+jabber_buddy_state_get_name(const JabberBuddyState state)
 {
-	PurpleConversation *c = NULL;
-	GList *cnv;
+	int i;
+	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
+		if (jabber_statuses[i].state == state)
+			return _(jabber_statuses[i].readable);
 
-	g_return_val_if_fail(name != NULL, NULL);
+	return _("Unknown");
+}
 
-	for(cnv = purple_get_conversations(); cnv; cnv = cnv->next) {
-		c = (PurpleConversation*)cnv->data;
-		if(purple_conversation_get_type(c) == PURPLE_CONV_TYPE_IM &&
-				!purple_utf8_strcasecmp(name, purple_conversation_get_name(c)) &&
-				account == purple_conversation_get_account(c))
-			return c;
-	}
+JabberBuddyState
+jabber_buddy_status_id_get_state(const char *id)
+{
+	int i;
+	if (!id)
+		return JABBER_BUDDY_STATE_UNKNOWN;
+
+	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
+		if (g_str_equal(id, jabber_statuses[i].status_id))
+			return jabber_statuses[i].state;
+
+	return JABBER_BUDDY_STATE_UNKNOWN;
+}
+
+JabberBuddyState jabber_buddy_show_get_state(const char *id)
+{
+	int i;
+
+	g_return_val_if_fail(id != NULL, JABBER_BUDDY_STATE_UNKNOWN);
+
+	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
+		if (jabber_statuses[i].show && g_str_equal(id, jabber_statuses[i].show))
+			return jabber_statuses[i].state;
+
+	purple_debug_warning("jabber", "Invalid value of presence <show/> "
+	                     "attribute: %s\n", id);
+	return JABBER_BUDDY_STATE_UNKNOWN;
+}
+
+const char *
+jabber_buddy_state_get_show(JabberBuddyState state)
+{
+	int i;
+	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
+		if (state == jabber_statuses[i].state)
+			return jabber_statuses[i].show;
+
+	return NULL;
+}
+
+const char *
+jabber_buddy_state_get_status_id(JabberBuddyState state)
+{
+	int i;
+	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
+		if (state == jabber_statuses[i].state)
+			return jabber_statuses[i].status_id;
 
 	return NULL;
 }
