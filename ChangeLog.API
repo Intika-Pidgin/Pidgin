@@ -31,7 +31,7 @@ version 2.7.0 (??/??/????):
 		* pidgin_dialogs_translators (should not be used by anything but Pidgin)
 		* gtk_imhtmltoolbar_switch_active_conversation
 
-version 2.6.6 (??/??/2010):
+version 2.6.6 (02/18/2010):
 	libpurple:
 		Changed:
 		* purple_xfer_cancel_local is now called instead of

@@ -5,7 +5,7 @@ version 2.7.0 (??/??/????):
 	* Crash Report files (pidgin.RPT) are now generated in the ~/.purple
 	  directory instead of the installation directory.
 
-version 2.6.6 (??/??/20??):
+version 2.6.6 (02/18/2010):
 	* Installer translations for: Norwegian nynorsk
 
 version 2.6.5 (01/08/2010):
