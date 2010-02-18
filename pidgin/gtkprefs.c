@@ -223,16 +223,8 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 
 	g_return_val_if_fail(menuitems != NULL, NULL);
 
-#if 0 /* GTK_CHECK_VERSION(2,4,0) */
-	if(type == PURPLE_PREF_INT)
-		model = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
-	else if(type == PURPLE_PREF_STRING)
-		model = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
-	dropdown = gtk_combo_box_new_with_model(model);
-#else
 	dropdown = gtk_option_menu_new();
 	menu = gtk_menu_new();
-#endif
 
 	if (type == PURPLE_PREF_INT)
 		stored_int = purple_prefs_get_int(key);
@@ -908,11 +900,11 @@ prefs_build_theme_combo_box(GtkListStore *store, const char *current_theme, cons
 	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(combo_box), cell_rend, "pixbuf", 0, NULL);
 
 	cell_rend = gtk_cell_renderer_text_new();
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT (combo_box), cell_rend, FALSE);
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT (combo_box), cell_rend, TRUE);
 	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(combo_box), cell_rend, "markup", 1, NULL);
-/*#if GTK_CHECK_VERSION(2,6,0)
-			g_object_set(cell_rend, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
-#endif*/
+#if GTK_CHECK_VERSION(2,6,0)
+	g_object_set(cell_rend, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
+#endif
 
 	gtk_drag_dest_set(combo_box, GTK_DEST_DEFAULT_MOTION | GTK_DEST_DEFAULT_HIGHLIGHT | GTK_DEST_DEFAULT_DROP, te,
 					sizeof(te) / sizeof(GtkTargetEntry) , GDK_ACTION_COPY | GDK_ACTION_MOVE);
@@ -1090,7 +1082,7 @@ theme_page(void)
 	g_signal_connect(G_OBJECT(prefs_blist_themes_combo_box), "changed",
 						(GCallback)prefs_set_blist_theme_cb, NULL);
 	gtk_size_group_add_widget(combo_sg, prefs_blist_themes_combo_box);
-	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_blist_themes_combo_box, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_blist_themes_combo_box, TRUE, TRUE, 0);
 
 	gtk_box_pack_start(GTK_BOX(vbox), themesel_hbox, FALSE, FALSE, 0);
 
@@ -1108,7 +1100,7 @@ theme_page(void)
 	g_signal_connect(G_OBJECT(prefs_status_themes_combo_box), "changed",
 						(GCallback)prefs_set_status_icon_theme_cb, NULL);
 	gtk_size_group_add_widget(combo_sg, prefs_status_themes_combo_box);
-	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_status_themes_combo_box, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_status_themes_combo_box, TRUE, TRUE, 0);
 
 	gtk_box_pack_start(GTK_BOX(vbox), themesel_hbox, FALSE, FALSE, 0);
 
@@ -1126,7 +1118,7 @@ theme_page(void)
 	g_signal_connect(G_OBJECT(prefs_sound_themes_combo_box), "changed",
 						(GCallback)prefs_set_sound_theme_cb, NULL);
 	gtk_size_group_add_widget(combo_sg, prefs_sound_themes_combo_box);
-	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_sound_themes_combo_box, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_sound_themes_combo_box, TRUE, TRUE, 0);
 
 	gtk_box_pack_start(GTK_BOX(vbox), themesel_hbox, FALSE, FALSE, 0);
 
@@ -1144,7 +1136,7 @@ theme_page(void)
 	g_signal_connect(G_OBJECT(prefs_smiley_themes_combo_box), "changed",
 						(GCallback)prefs_set_smiley_theme_cb, NULL);
 	gtk_size_group_add_widget(combo_sg, prefs_smiley_themes_combo_box);
-	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_smiley_themes_combo_box, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(themesel_hbox), prefs_smiley_themes_combo_box, TRUE, TRUE, 0);
 
 	gtk_box_pack_start(GTK_BOX(vbox), themesel_hbox, FALSE, FALSE, 0);
 
@@ -1445,11 +1437,27 @@ interface_page(void)
 
 #ifdef _WIN32
 static void
+apply_custom_font(void)
+{
+	PangoFontDescription *desc = NULL;
+	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font")) {
+		const char *font = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font");
+		desc = pango_font_description_from_string(font);
+	}
+
+	gtk_widget_modify_font(sample_imhtml, desc);
+	if (desc)
+		pango_font_description_free(desc);
+
+}
+static void
 pidgin_custom_font_set(GtkFontButton *font_button, gpointer nul)
 {
+
 	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/custom_font",
-				gtk_font_button_get_font_name(font_button))
-;
+				gtk_font_button_get_font_name(font_button));
+
+	apply_custom_font();
 }
 #endif
 
@@ -1522,6 +1530,7 @@ conv_page(void)
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font"))
 		gtk_widget_set_sensitive(hbox, FALSE);
 	g_signal_connect(G_OBJECT(fontpref), "clicked", G_CALLBACK(pidgin_toggle_sensitive), hbox);
+	g_signal_connect(G_OBJECT(fontpref), "clicked", G_CALLBACK(apply_custom_font), hbox);
 	g_signal_connect(G_OBJECT(font_button), "font-set", G_CALLBACK(pidgin_custom_font_set), NULL);
 
 	}
