@@ -34,6 +34,8 @@
 #include "gtkdocklet.h"
 #include <gdk/gdkkeysyms.h>
 
+#if !GTK_CHECK_VERSION(2,10,0)
+
 #define SHORT_EMBED_TIMEOUT 5000
 #define LONG_EMBED_TIMEOUT 15000
 
@@ -61,7 +63,7 @@ docklet_x11_recreate_cb(gpointer data)
 static void
 docklet_x11_embedded_cb(GtkWidget *widget, void *data)
 {
-	purple_debug(PURPLE_DEBUG_INFO, "docklet", "embedded\n");
+	purple_debug(PURPLE_DEBUG_INFO, "docklet", "X11 embedded\n");
 
 	g_source_remove(embed_timeout);
 	embed_timeout = 0;
@@ -72,7 +74,7 @@ docklet_x11_embedded_cb(GtkWidget *widget, void *data)
 static void
 docklet_x11_destroyed_cb(GtkWidget *widget, void *data)
 {
-	purple_debug(PURPLE_DEBUG_INFO, "docklet", "destroyed\n");
+	purple_debug(PURPLE_DEBUG_INFO, "docklet", "X11 destroyed\n");
 
 	pidgin_docklet_remove();
 
@@ -215,7 +217,6 @@ docklet_x11_set_tooltip(gchar *tooltip)
 #endif
 }
 
-#if GTK_CHECK_VERSION(2,2,0)
 static void
 docklet_x11_position_menu(GtkMenu *menu, int *x, int *y, gboolean *push_in,
 						  gpointer user_data)
@@ -240,7 +241,6 @@ docklet_x11_position_menu(GtkMenu *menu, int *x, int *y, gboolean *push_in,
 
 	*push_in = TRUE;
 }
-#endif
 
 static void
 docklet_x11_destroy(void)
@@ -264,7 +264,7 @@ docklet_x11_destroy(void)
 
 	image = NULL;
 
-	purple_debug(PURPLE_DEBUG_INFO, "docklet", "destroyed\n");
+	purple_debug(PURPLE_DEBUG_INFO, "docklet", "X11 destroyed\n");
 }
 
 static gboolean
@@ -275,7 +275,7 @@ docklet_x11_embed_timeout_cb(gpointer data)
 	 * loaded so that it can embed automatically if/when a notification
 	 * area becomes available.
 	 */
-	purple_debug_info("docklet", "failed to embed within timeout\n");
+	purple_debug_info("docklet", "X11 failed to embed within timeout\n");
 	pidgin_docklet_remove();
 
 	return FALSE;
@@ -338,7 +338,7 @@ docklet_x11_create(gboolean recreate)
 		}
 	}
 
-	purple_debug(PURPLE_DEBUG_INFO, "docklet", "created\n");
+	purple_debug(PURPLE_DEBUG_INFO, "docklet", "X11 created\n");
 }
 
 static void
@@ -354,11 +354,7 @@ static struct docklet_ui_ops ui_ops =
 	docklet_x11_update_icon,
 	docklet_x11_blank_icon,
 	docklet_x11_set_tooltip,
-#if GTK_CHECK_VERSION(2,2,0)
 	docklet_x11_position_menu
-#else
-	NULL
-#endif
 };
 
 void
@@ -368,3 +364,6 @@ docklet_ui_init()
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/docklet/x11");
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/docklet/x11/embedded", FALSE);
 }
+
+#endif  /* !GTK_CHECK_VERSION(2,10,0) */
+
