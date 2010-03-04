@@ -43,6 +43,7 @@
 #include "presence.h"
 #include "google.h"
 #include "pep.h"
+#include "usermood.h"
 #include "usertune.h"
 #include "caps.h"
 #include "data.h"
@@ -126,6 +127,7 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL, /* get_account_text_table */
 	jabber_initiate_media,          /* initiate_media */
 	jabber_get_media_caps,                  /* get_media_caps */
+	jabber_get_moods  							/* get_moods */
 };
 
 static gboolean load_plugin(PurplePlugin *plugin)
@@ -383,7 +385,7 @@ init_plugin(PurplePlugin *plugin)
 						  "ft_proxies",
 						/* TODO: Is this an acceptable default?
 						 * Also, keep this in sync as they add more servers */
-						  "proxy.eu.jabber.org");
+						  JABBER_DEFAULT_FT_PROXIES);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 						  option);
 
