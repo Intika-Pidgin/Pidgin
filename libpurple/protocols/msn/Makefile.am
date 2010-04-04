@@ -12,8 +12,6 @@ MSNSOURCES = \
 	command.h \
 	contact.c\
 	contact.h\
-	dialog.c \
-	dialog.h \
 	error.c \
 	error.h \
 	group.c \
@@ -54,8 +52,6 @@ MSNSOURCES = \
 	state.h \
 	switchboard.c \
 	switchboard.h \
-	sync.c \
-	sync.h \
 	table.c \
 	table.h \
 	transaction.c \
