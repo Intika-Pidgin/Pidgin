@@ -37,6 +37,7 @@ msn_transaction_new(MsnCmdProc *cmdproc, const char *command,
 
 	trans->cmdproc = cmdproc;
 	trans->command = g_strdup(command);
+	trans->saveable = TRUE;
 
 	if (format != NULL)
 	{
@@ -96,8 +97,10 @@ msn_transaction_to_string(MsnTransaction *trans)
 
 	if (trans->params != NULL)
 		str = g_strdup_printf("%s %u %s\r\n", trans->command, trans->trId, trans->params);
-	else
+	else if (trans->saveable)
 		str = g_strdup_printf("%s %u\r\n", trans->command, trans->trId);
+	else
+		str = g_strdup_printf("%s\r\n", trans->command);
 
 	return str;
 }
@@ -172,6 +175,14 @@ void msn_transaction_set_data_free(MsnTransaction *trans, GDestroyNotify fn)
 {
 	g_return_if_fail(trans != NULL);
 	trans->data_free = fn;
+}
+
+void
+msn_transaction_set_saveable(MsnTransaction  *trans, gboolean saveable)
+{
+	g_return_if_fail(trans != NULL);
+
+	trans->saveable = saveable;
 }
 
 void
