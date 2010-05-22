@@ -25,6 +25,13 @@
 #include "user.h"
 #include "slp.h"
 
+static void free_user_endpoint(MsnUserEndpoint *data)
+{
+	g_free(data->id);
+	g_free(data->name);
+	g_free(data);
+}
+
 /*new a user object*/
 MsnUser *
 msn_user_new(MsnUserList *userlist, const char *passport,
@@ -47,6 +54,11 @@ void
 msn_user_destroy(MsnUser *user)
 {
 	g_return_if_fail(user != NULL);
+
+	while (user->endpoints != NULL) {
+		free_user_endpoint(user->endpoints->data);
+		user->endpoints = g_slist_delete_link(user->endpoints, user->endpoints);
+	}
 
 	if (user->clientcaps != NULL)
 		g_hash_table_destroy(user->clientcaps);
@@ -186,6 +198,9 @@ msn_user_set_friendly_name(MsnUser *user, const char *name)
 {
 	g_return_val_if_fail(user != NULL, FALSE);
 
+	if (user == user->userlist->session->user)
+		return FALSE;
+
 	if (user->friendly_name && name && (!strcmp(user->friendly_name, name) ||
 				!strcmp(user->passport, name)))
 		return FALSE;
@@ -214,6 +229,47 @@ msn_user_set_uid(MsnUser *user, const char *uid)
 
 	g_free(user->uid);
 	user->uid = g_strdup(uid);
+}
+
+void
+msn_user_set_endpoint_data(MsnUser *user, const char *input, MsnUserEndpoint *newep)
+{
+	MsnUserEndpoint *ep;
+	char *endpoint;
+	GSList *l;
+
+	g_return_if_fail(user != NULL);
+	g_return_if_fail(input != NULL);
+
+	endpoint = g_ascii_strdown(input, -1);
+
+	for (l = user->endpoints; l; l = l->next) {
+		ep = l->data;
+		if (g_str_equal(ep->id, endpoint)) {
+			/* We have info about this endpoint! */
+
+			g_free(endpoint);
+
+			if (newep == NULL) {
+				/* Delete it and exit */
+				user->endpoints = g_slist_delete_link(user->endpoints, l);
+				free_user_endpoint(ep);
+				return;
+			}
+
+			/* Break out of our loop and update it */
+			break;
+		}
+	}
+	if (l == NULL) {
+		/* Need to add a new endpoint */
+		ep = g_new0(MsnUserEndpoint, 1);
+		ep->id = endpoint;
+		user->endpoints = g_slist_prepend(user->endpoints, ep);
+	}
+
+	ep->clientid = newep->clientid;
+	ep->extcaps = newep->extcaps;
 }
 
 void
@@ -406,6 +462,14 @@ msn_user_set_clientid(MsnUser *user, guint clientid)
 }
 
 void
+msn_user_set_extcaps(MsnUser *user, guint extcaps)
+{
+	g_return_if_fail(user != NULL);
+
+	user->extcaps = extcaps;
+}
+
+void
 msn_user_set_network(MsnUser *user, MsnNetwork network)
 {
 	g_return_if_fail(user != NULL);
@@ -423,7 +487,7 @@ msn_user_set_object(MsnUser *user, MsnObject *obj)
 
 	user->msnobj = obj;
 
-	if (user->list_op & MSN_LIST_FL_OP)
+	if (user != user->userlist->session->user && user->list_op & MSN_LIST_FL_OP)
 		msn_queue_buddy_icon_request(user);
 }
 
@@ -496,6 +560,39 @@ msn_user_get_clientid(const MsnUser *user)
 	return user->clientid;
 }
 
+guint
+msn_user_get_extcaps(const MsnUser *user)
+{
+	g_return_val_if_fail(user != NULL, 0);
+
+	return user->extcaps;
+}
+
+MsnUserEndpoint *
+msn_user_get_endpoint_data(MsnUser *user, const char *input)
+{
+	char *endpoint;
+	GSList *l;
+	MsnUserEndpoint *ep;
+
+	g_return_val_if_fail(user != NULL, NULL);
+	g_return_val_if_fail(input != NULL, NULL);
+
+	endpoint = g_ascii_strdown(input, -1);
+
+	for (l = user->endpoints; l; l = l->next) {
+		ep = l->data;
+		if (g_str_equal(ep->id, endpoint)) {
+			g_free(endpoint);
+			return ep;
+		}
+	}
+
+	g_free(endpoint);
+
+	return NULL;
+}
+
 MsnObject *
 msn_user_get_object(const MsnUser *user)
 {
@@ -520,3 +617,18 @@ msn_user_get_invite_message(const MsnUser *user)
 	return user->invite_message;
 }
 
+gboolean
+msn_user_is_capable(MsnUser *user, char *endpoint, guint capability, guint extcap)
+{
+	g_return_val_if_fail(user != NULL, FALSE);
+
+	if (endpoint != NULL) {
+		MsnUserEndpoint *ep = msn_user_get_endpoint_data(user, endpoint);
+		if (ep != NULL)
+			return (ep->clientid & capability) && (ep->extcaps & extcap);
+		else
+			return FALSE;
+	}
+
+	return (user->clientid & capability) && (user->extcaps & extcap);
+}
