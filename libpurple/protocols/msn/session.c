@@ -21,12 +21,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#include "error.h"
 #include "msn.h"
+#include "msnutils.h"
 #include "session.h"
 #include "notification.h"
 #include "oim.h"
-
-#include "dialog.h"
 
 MsnSession *
 msn_session_new(PurpleAccount *account)
@@ -45,7 +45,9 @@ msn_session_new(PurpleAccount *account)
 								 purple_account_get_username(account), NULL);
 	session->oim = msn_oim_new(session);
 
-	session->protocol_ver = WLM_PROT_VER;
+	session->protocol_ver = 0;
+
+	session->guid = rand_guid();
 
 	return session;
 }
@@ -72,9 +74,6 @@ msn_session_destroy(MsnSession *session)
 	while (session->switches != NULL)
 		msn_switchboard_destroy(session->switches->data);
 
-	if (session->sync != NULL)
-		msn_sync_destroy(session->sync);
-
 	if (session->oim != NULL)
 		msn_oim_destroy(session->oim);
 
@@ -90,6 +89,7 @@ msn_session_destroy(MsnSession *session)
 	msn_userlist_destroy(session->userlist);
 
 	g_free(session->psm);
+	g_free(session->guid);
 	g_free(session->abch_cachekey);
 #if 0
 	g_free(session->blocked_text);
@@ -297,7 +297,7 @@ msn_session_sync_users(MsnSession *session)
 			if (!found) {
 				if ((remote_user == NULL) || !(remote_user->list_op & MSN_LIST_FL_OP)) {
 					/* The user is not on the server list */
-					msn_show_sync_issue(session, buddy_name, group_name);
+					msn_error_sync_issue(session, buddy_name, group_name);
 				} else {
 					/* The user is not in that group on the server list */
 					to_remove = g_list_prepend(to_remove, buddy);
@@ -448,6 +448,11 @@ msn_session_finish_login(MsnSession *session)
 		msn_session_sync_users(session);
 	}
 
+	if (session->protocol_ver >= 16) {
+		/* TODO: Send this when updating status instead? */
+		msn_notification_send_uux_endpointdata(session);
+		msn_notification_send_uux_private_endpointdata(session);
+	}
 	msn_change_status(session);
 }
 
