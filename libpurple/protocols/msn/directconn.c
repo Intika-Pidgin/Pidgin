@@ -63,13 +63,28 @@ msn_dc_calculate_nonce_hash(MsnDirectConnNonceType type,
 	}
 
 	g_sprintf(nonce_hash,
-	          "%08X-%04X-%04X-%04X-%08X%04X",
-	          GUINT32_FROM_LE(*((guint32 *)(digest + 0))),
-	          GUINT16_FROM_LE(*((guint16 *)(digest + 4))),
-	          GUINT16_FROM_LE(*((guint16 *)(digest + 6))),
-	          GUINT16_FROM_BE(*((guint16 *)(digest + 8))),
-	          GUINT32_FROM_BE(*((guint32 *)(digest + 10))),
-	          GUINT16_FROM_BE(*((guint16 *)(digest + 14)))
+	          "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+
+	          digest[3],
+	          digest[2],
+	          digest[1],
+	          digest[0],
+
+	          digest[5],
+	          digest[4],
+
+	          digest[7],
+	          digest[6],
+
+	          digest[8],
+	          digest[9],
+
+	          digest[10],
+	          digest[11],
+	          digest[12],
+	          digest[13],
+	          digest[14],
+	          digest[15]
 	);
 }
 
@@ -796,14 +811,11 @@ msn_dc_connected_to_peer_cb(gpointer data, gint fd, const gchar *error_msg)
 static gboolean
 msn_dc_incoming_connection_timeout_cb(gpointer data) {
 	MsnDirectConn *dc = data;
-	MsnSlpCall *slpcall;
 
 	if (purple_debug_is_verbose())
 		purple_debug_info("msn", "msn_dc_incoming_connection_timeout_cb %p\n", dc);
 
 	g_return_val_if_fail(dc != NULL, FALSE);
-
-	slpcall = dc->slpcall;
 
 	if (dc->listen_data != NULL) {
 		purple_network_listen_cancel(dc->listen_data);
