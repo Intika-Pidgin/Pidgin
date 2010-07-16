@@ -2667,10 +2667,10 @@ incomingim_chan2(OscarData *od, FlapConnection *conn, aim_userinfo_t *userinfo, 
 					g_free(rtfmsg);
 				}
 			}
-		} else if (args->info.rtfmsg.msgtype == 26)
+		} else if (args->info.rtfmsg.msgtype == 26) {
 			purple_debug_info("oscar", "Sending X-Status Reply\n");
 			icq_relay_xstatus(od, userinfo->bn, args->cookie);
-
+		}
 	}
 	else
 	{
@@ -4651,7 +4651,8 @@ oscar_send_im(PurpleConnection *gc, const char *name, const char *message, Purpl
 			tmp2 = purple_markup_strip_html(tmp1);
 			is_html = FALSE;
 		} else {
-			tmp2 = g_strdup(tmp1);
+			/* ICQ 6 wants its HTML wrapped in these tags. Oblige it. */
+			tmp2 = g_strdup_printf("<HTML><BODY>%s</BODY></HTML>", tmp1);
 			is_html = TRUE;
 		}
 		g_free(tmp1);
