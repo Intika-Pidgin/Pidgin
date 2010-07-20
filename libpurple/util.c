@@ -28,6 +28,7 @@
 #include "core.h"
 #include "debug.h"
 #include "notify.h"
+#include "ntlm.h"
 #include "prpl.h"
 #include "prefs.h"
 #include "util.h"
@@ -69,6 +70,7 @@ struct _PurpleUtilFetchUrlData
 	unsigned long data_len;
 	gssize max_len;
 	gboolean chunked;
+	PurpleAccount *account;
 };
 
 static char *custom_user_dir = NULL;
@@ -3421,7 +3423,7 @@ purple_url_parse(const char *url, char **ret_host, int *ret_port,
 			   char **ret_path, char **ret_user, char **ret_passwd)
 {
 	gboolean is_https = FALSE;
-	char scan_info[255];
+	const char * scan_info;
 	char port_str[6];
 	int f;
 	const char *at, *slash;
@@ -3429,11 +3431,12 @@ purple_url_parse(const char *url, char **ret_host, int *ret_port,
 	char host[256], path[256], user[256], passwd[256];
 	int port = 0;
 	/* hyphen at end includes it in control set */
-	static const char addr_ctrl[] = "A-Za-z0-9.-";
-	static const char port_ctrl[] = "0-9";
-	static const char page_ctrl[] = "A-Za-z0-9.~_/:*!@&%%?=+^-";
-	static const char user_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
-	static const char passwd_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
+
+#define ADDR_CTRL "A-Za-z0-9.-"
+#define PORT_CTRL "0-9"
+#define PAGE_CTRL "A-Za-z0-9.~_/:*!@&%%?=+^-"
+#define USER_CTRL "A-Za-z0-9.~_/*!&%%?=+^-"
+#define PASSWD_CTRL "A-Za-z0-9.~_/*!&%%?=+^-"
 
 	g_return_val_if_fail(url != NULL, FALSE);
 
@@ -3453,37 +3456,32 @@ purple_url_parse(const char *url, char **ret_host, int *ret_port,
 	/* Only care about @ char BEFORE the first / */
 	at = strchr(url, '@');
 	slash = strchr(url, '/');
-	if ((at != NULL) &&
-			(((slash != NULL) && (strlen(at) > strlen(slash))) ||
-			(slash == NULL))) {
-		g_snprintf(scan_info, sizeof(scan_info),
-					"%%255[%s]:%%255[%s]^@", user_ctrl, passwd_ctrl);
+	f = 0;
+	if (at && (!slash || at < slash)) {
+		scan_info = "%255[" USER_CTRL "]:%255[" PASSWD_CTRL "]^@";
 		f = sscanf(url, scan_info, user, passwd);
 
-		if (f ==1 ) {
+		if (f == 1) {
 			/* No passwd, possibly just username supplied */
-			g_snprintf(scan_info, sizeof(scan_info),
-						"%%255[%s]^@", user_ctrl);
+			scan_info = "%255[" USER_CTRL "]^@";
 			f = sscanf(url, scan_info, user);
-			*passwd = '\0';
 		}
 
 		url = at+1; /* move pointer after the @ char */
-	} else {
-		*user = '\0';
-		*passwd = '\0';
 	}
 
-	g_snprintf(scan_info, sizeof(scan_info),
-			   "%%255[%s]:%%5[%s]/%%255[%s]", addr_ctrl, port_ctrl, page_ctrl);
+	if (f < 1) {
+		*user = '\0';
+		*passwd = '\0';
+	} else if (f == 1)
+		*passwd = '\0';
 
+	scan_info = "%255[" ADDR_CTRL "]:%5[" PORT_CTRL "]/%255[" PAGE_CTRL "]";
 	f = sscanf(url, scan_info, host, port_str, path);
 
 	if (f == 1)
 	{
-		g_snprintf(scan_info, sizeof(scan_info),
-				   "%%255[%s]/%%255[%s]",
-				   addr_ctrl, page_ctrl);
+		scan_info = "%255[" ADDR_CTRL "]/%255[" PAGE_CTRL "]";
 		f = sscanf(url, scan_info, host, path);
 		/* Use the default port */
 		if (is_https)
@@ -3507,6 +3505,12 @@ purple_url_parse(const char *url, char **ret_host, int *ret_port,
 	if (ret_passwd != NULL) *ret_passwd = g_strdup(passwd);
 
 	return ((*host != '\0') ? TRUE : FALSE);
+
+#undef ADDR_CTRL
+#undef PORT_CTRL
+#undef PAGE_CTRL
+#undef USER_CTRL
+#undef PASSWD_CTRL
 }
 
 /**
@@ -3619,11 +3623,11 @@ parse_redirect(const char *data, size_t data_len,
 
 	if (purple_strcasestr(new_url, "https://") != NULL) {
 		gfud->is_ssl = TRUE;
-		gfud->ssl_connection = purple_ssl_connect(NULL,
+		gfud->ssl_connection = purple_ssl_connect(gfud->account,
 				gfud->website.address, gfud->website.port,
 				ssl_url_fetch_connect_cb, ssl_url_fetch_error_cb, gfud);
 	} else {
-		gfud->connect_data = purple_proxy_connect(NULL, NULL,
+		gfud->connect_data = purple_proxy_connect(NULL, gfud->account,
 				gfud->website.address, gfud->website.port,
 				url_fetch_connect_cb, gfud);
 	}
@@ -3915,36 +3919,68 @@ url_fetch_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 	gfud = data;
 
-	if (gfud->request == NULL)
-	{
+	if (gfud->request == NULL) {
+
+		PurpleProxyInfo *gpi = purple_proxy_get_setup(gfud->account);
+		GString *request_str = g_string_new(NULL);
+
+		g_string_append_printf(request_str, "GET %s%s HTTP/%s\r\n"
+						    "Connection: close\r\n",
+			(gfud->full ? "" : "/"),
+			(gfud->full ? (gfud->url ? gfud->url : "") : (gfud->website.page ? gfud->website.page : "")),
+			(gfud->http11 ? "1.1" : "1.0"));
+
+		if (gfud->user_agent)
+			g_string_append_printf(request_str, "User-Agent: %s\r\n", gfud->user_agent);
+
 		/* Host header is not forbidden in HTTP/1.0 requests, and HTTP/1.1
 		 * clients must know how to handle the "chunked" transfer encoding.
 		 * Purple doesn't know how to handle "chunked", so should always send
 		 * the Host header regardless, to get around some observed problems
 		 */
-		if (gfud->user_agent) {
-			gfud->request = g_strdup_printf(
-				"GET %s%s HTTP/%s\r\n"
-				"Connection: close\r\n"
-				"User-Agent: %s\r\n"
-				"Accept: */*\r\n"
-				"Host: %s\r\n\r\n",
-				(gfud->full ? "" : "/"),
-				(gfud->full ? (gfud->url ? gfud->url : "") : (gfud->website.page ? gfud->website.page : "")),
-				(gfud->http11 ? "1.1" : "1.0"),
-				(gfud->user_agent ? gfud->user_agent : ""),
-				(gfud->website.address ? gfud->website.address : ""));
-		} else {
-			gfud->request = g_strdup_printf(
-				"GET %s%s HTTP/%s\r\n"
-				"Connection: close\r\n"
-				"Accept: */*\r\n"
-				"Host: %s\r\n\r\n",
-				(gfud->full ? "" : "/"),
-				(gfud->full ? (gfud->url ? gfud->url : "") : (gfud->website.page ? gfud->website.page : "")),
-				(gfud->http11 ? "1.1" : "1.0"),
-				(gfud->website.address ? gfud->website.address : ""));
+		g_string_append_printf(request_str, "Accept: */*\r\n"
+						    "Host: %s\r\n",
+			(gfud->website.address ? gfud->website.address : ""));
+
+		if (purple_proxy_info_get_username(gpi) != NULL
+				&& (purple_proxy_info_get_type(gpi) == PURPLE_PROXY_USE_ENVVAR
+					|| purple_proxy_info_get_type(gpi) == PURPLE_PROXY_HTTP)) {
+			/* This chunk of code was copied from proxy.c http_start_connect_tunneling()
+			 * This is really a temporary hack - we need a more complete proxy handling solution,
+			 * so I didn't think it was worthwhile to refactor for reuse
+			 */ 
+			char *t1, *t2, *ntlm_type1;
+			char hostname[256];
+			int ret;
+	
+			ret = gethostname(hostname, sizeof(hostname));
+			hostname[sizeof(hostname) - 1] = '\0';
+			if (ret < 0 || hostname[0] == '\0') {
+				purple_debug_warning("util", "proxy - gethostname() failed -- is your hostname set?");
+				strcpy(hostname, "localhost");
+			}
+	
+			t1 = g_strdup_printf("%s:%s",
+				purple_proxy_info_get_username(gpi),
+				purple_proxy_info_get_password(gpi) ?
+					purple_proxy_info_get_password(gpi) : "");
+			t2 = purple_base64_encode((const guchar *)t1, strlen(t1));
+			g_free(t1);
+	
+			ntlm_type1 = purple_ntlm_gen_type1(hostname, "");
+	
+			g_string_append_printf(request_str,
+				"Proxy-Authorization: Basic %s\r\n"
+				"Proxy-Authorization: NTLM %s\r\n"
+				"Proxy-Connection: Keep-Alive\r\n",
+				t2, ntlm_type1);
+			g_free(ntlm_type1);
+			g_free(t2);
 		}
+
+		g_string_append(request_str, "\r\n");
+
+		gfud->request = g_string_free(request_str, FALSE);
 	}
 
 	if(purple_debug_is_unsafe())
@@ -4083,6 +4119,7 @@ purple_util_fetch_url_request_len_with_account(PurpleAccount *account,
 	gfud->include_headers = include_headers;
 	gfud->fd = -1;
 	gfud->max_len = max_len;
+	gfud->account = account;
 
 	purple_url_parse(url, &gfud->website.address, &gfud->website.port,
 				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
@@ -4236,6 +4273,8 @@ purple_email_is_valid(const char *address)
 
 	g_return_val_if_fail(address != NULL, FALSE);
 
+	if (*address == '.') return FALSE;
+
 	/* first we validate the name portion (name@domain) (rfc822)*/
 	for (c = address;  *c;  c++) {
 		if (*c == '\"' && (c == address || *(c - 1) == '.' || *(c - 1) == '\"')) {
@@ -4269,7 +4308,7 @@ purple_email_is_valid(const char *address)
 	do {
 		if (*c == '.' && (c == domain || *(c - 1) == '.' || *(c - 1) == '-'))
 			return FALSE;
-		if (*c == '-' && *(c - 1) == '.') return FALSE;
+		if (*c == '-' && (*(c - 1) == '.' || *(c - 1) == '@')) return FALSE;
 		if ((*c < '0' && *c != '-' && *c != '.') || (*c > '9' && *c < 'A') ||
 			(*c > 'Z' && *c < 'a') || (*c > 'z')) return FALSE;
 	} while (*++c);
