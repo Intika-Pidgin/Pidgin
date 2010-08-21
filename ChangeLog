@@ -1,6 +1,10 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-version 2.7.3 (??/??/????):
+version 2.7.4 (MM/DD/YYYY):
+	General:
+	* Fix search path for Tk when compiling on Debian Squeeze. (#12465)
+
+version 2.7.3 (08/10/2010):
 	General:
 	* Use silent build rules for automake >1.11. You can enable verbose
 	  builds with the --disable-silent-rules configure option, or using
@@ -71,7 +75,7 @@ version 2.7.3 (??/??/????):
 version 2.7.2 (07/21/2010):
 	AIM and ICQ:
 	* Fix a crash bug related to X-Status messages that can be triggered by
-	  remove users.  This is CVE-2010-2528.
+	  remote users.  This is CVE-2010-2528.
 	* Fix a rare crash bug caused by certain incoming SMS messages
 	  (discovered by Jan Kaluza--thanks Jan!).
 	* Change HTML sent from ICQ accounts so that official ICQ clients
