@@ -49,6 +49,7 @@ typedef struct _MsnNotification MsnNotification;
 #include "servconn.h"
 #include "state.h"
 #include "user.h"
+#include "userlist.h"
 
 struct _MsnNotification
 {

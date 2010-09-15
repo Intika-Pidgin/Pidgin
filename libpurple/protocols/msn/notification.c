@@ -21,17 +21,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#include "msn.h"
+
+#include "internal.h"
+#include "cipher.h"
 #include "core.h"
+#include "debug.h"
+
 #include "notification.h"
+
 #include "contact.h"
-#include "state.h"
 #include "error.h"
 #include "msnutils.h"
-#include "page.h"
-
+#include "state.h"
 #include "userlist.h"
-#include "slplink.h"
 
 static MsnTable *cbs_table;
 
@@ -93,6 +95,7 @@ connect_cb(MsnServConn *servconn)
 	MsnCmdProc *cmdproc;
 	MsnSession *session;
 	MsnTransaction *trans;
+	PurpleAccount *account;
 	GString *vers;
 	const char *ver_str;
 	int i;
@@ -101,6 +104,7 @@ connect_cb(MsnServConn *servconn)
 
 	cmdproc = servconn->cmdproc;
 	session = servconn->session;
+	account = session->account;
 
 	vers = g_string_new("");
 
@@ -186,8 +190,10 @@ static void
 usr_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 {
 	MsnSession *session;
+	PurpleAccount *account;
 
 	session = cmdproc->session;
+	account = session->account;
 
 	if (!g_ascii_strcasecmp(cmd->params[1], "OK"))
 	{
@@ -1016,6 +1022,7 @@ iln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 {
 	MsnSession *session;
 	PurpleAccount *account;
+	PurpleConnection *gc;
 	MsnUser *user;
 	MsnObject *msnobj = NULL;
 	unsigned long clientid, extcaps;
@@ -1026,6 +1033,7 @@ iln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 
 	session = cmdproc->session;
 	account = session->account;
+	gc = purple_account_get_connection(account);
 
 	state    = cmd->params[1];
 	passport = cmd->params[2];
@@ -1239,6 +1247,7 @@ nln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 {
 	MsnSession *session;
 	PurpleAccount *account;
+	PurpleConnection *gc;
 	MsnUser *user;
 	MsnObject *msnobj;
 	unsigned long clientid, extcaps;
@@ -1248,6 +1257,7 @@ nln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 
 	session = cmdproc->session;
 	account = session->account;
+	gc = purple_account_get_connection(account);
 
 	state    = cmd->params[0];
 	passport = cmd->params[1];
@@ -1431,13 +1441,11 @@ rng_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	MsnSession *session;
 	MsnSwitchBoard *swboard;
 	const char *session_id;
-	const char *auth_key;
 	char *host;
 	int port;
 
 	session = cmdproc->session;
 	session_id = cmd->params[0];
-	auth_key = cmd->params[3];
 
 	msn_parse_socket(cmd->params[1], &host, &port);
 
@@ -1447,8 +1455,8 @@ rng_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	swboard = msn_switchboard_new(session);
 
 	msn_switchboard_set_invited(swboard, TRUE);
-	msn_switchboard_set_session_id(swboard, session_id);
-	msn_switchboard_set_auth_key(swboard, auth_key);
+	msn_switchboard_set_session_id(swboard, cmd->params[0]);
+	msn_switchboard_set_auth_key(swboard, cmd->params[3]);
 	swboard->im_user = g_strdup(cmd->params[4]);
 	/* msn_switchboard_add_user(swboard, cmd->params[4]); */
 
@@ -1688,12 +1696,14 @@ ubx_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload,
 			 size_t len)
 {
 	MsnSession *session;
+	PurpleAccount *account;
 	MsnUser *user;
 	const char *passport;
 	xmlnode *payloadNode;
 	char *psm_str, *str;
 
 	session = cmdproc->session;
+	account = session->account;
 
 	passport = cmd->params[0];
 	if (g_str_equal(passport, session->user->passport))

@@ -61,13 +61,11 @@ typedef enum
 
 #define MSN_LOGIN_FQY_TIMEOUT 30
 
-#include "group.h"
-#include "httpconn.h"
+#define MSN_LOGIN_FQY_TIMEOUT 30
+
 #include "nexus.h"
 #include "notification.h"
 #include "oim.h"
-#include "slpcall.h"
-#include "sslconn.h"
 #include "switchboard.h"
 #include "user.h"
 #include "userlist.h"
