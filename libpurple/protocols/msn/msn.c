@@ -23,7 +23,11 @@
  */
 #define PHOTO_SUPPORT 1
 
-#include "msn.h"
+#include "internal.h"
+
+#include "debug.h"
+#include "request.h"
+
 #include "accountopt.h"
 #include "contact.h"
 #include "msg.h"
@@ -40,6 +44,7 @@
 #include "msnutils.h"
 #include "version.h"
 
+#include "error.h"
 #include "msg.h"
 #include "switchboard.h"
 #include "notification.h"
@@ -113,29 +118,6 @@ msn_normalize(const PurpleAccount *account, const char *str)
 	g_free(tmp);
 
 	return buf;
-}
-
-gboolean
-msn_email_is_valid(const char *passport)
-{
-	if (purple_email_is_valid(passport)) {
-		/* Special characters aren't allowed in domains, so only go to '@' */
-		while (*passport != '@') {
-			if (*passport == '/')
-				return FALSE;
-			else if (*passport == '?')
-				return FALSE;
-			else if (*passport == '=')
-				return FALSE;
-			/* MSN also doesn't like colons, but that's checked already */
-
-			passport++;
-		}
-
-		return TRUE;
-	}
-
-	return FALSE;
 }
 
 static gboolean
@@ -818,9 +800,7 @@ initiate_chat_cb(PurpleBlistNode *node, gpointer data)
 static void
 t_msn_xfer_init(PurpleXfer *xfer)
 {
-	MsnSlpLink *slplink = xfer->data;
-	msn_slplink_request_ft(slplink, xfer);
-	msn_slplink_unref(slplink);
+	msn_request_ft(xfer);
 }
 
 static void
@@ -1697,7 +1677,7 @@ add_pending_buddy(MsnSession *session,
 		MsnUser *user2 = msn_userlist_find_user(userlist, who);
 		if (user2 != NULL) {
 			/* User already in userlist, so just update it. */
-			msn_user_destroy(user);
+			msn_user_unref(user);
 			user = user2;
 		} else {
 			msn_userlist_add_user(userlist, user);
@@ -1717,7 +1697,7 @@ add_pending_buddy(MsnSession *session,
 
 		/* Remove from local list */
 		purple_blist_remove_buddy(buddy);
-		msn_user_destroy(user);
+		msn_user_unref(user);
 	}
 	g_free(group);
 }

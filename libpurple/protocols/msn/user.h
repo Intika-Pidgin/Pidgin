@@ -79,6 +79,8 @@ struct _MsnUser
 {
 	MsnUserList *userlist;
 
+	guint8 refcount;        /**< The reference count of this object */
+
 	char *passport;         /**< The passport account.          */
 	char *friendly_name;    /**< The friendly name.             */
 
@@ -148,12 +150,20 @@ MsnUser *msn_user_new(MsnUserList *userlist, const char *passport,
 					  const char *friendly_name);
 
 /**
- * Destroys a user structure.
+ * Increment the reference count.
  *
- * @param user The user to destroy.
+ * @param user 	The user.
+ *
+ * @return 		user.
  */
-void msn_user_destroy(MsnUser *user);
+MsnUser *msn_user_ref(MsnUser *user);
 
+/**
+ * Decrement the reference count.
+ *
+ * @param user 	The user
+ */
+void msn_user_unref(MsnUser *user);
 
 /**
  * Updates the user.
@@ -406,6 +416,30 @@ guint msn_user_get_clientid(const MsnUser *user);
  */
 guint msn_user_get_extcaps(const MsnUser *user);
 
+/**************************************************************************
+ * Utility functions
+ **************************************************************************/
+
+
+/**
+ * Check if the user is part of the group.
+ *
+ * @param user 		The user we are asking group membership.
+ * @param group_id 	The group where the user may be in.
+ * 
+ * @return TRUE if user is part of the group. Otherwise, FALSE.
+ */
+gboolean msn_user_is_in_group(MsnUser *user, const char * group_id);
+
+/**
+ * Check if user is on list.
+ *
+ * @param user 		The user we are asking list membership.
+ * @param list_id 	The list where the user may be in.
+ *
+ * @return TRUE if the user is on the list, else FALSE.
+ */
+gboolean msn_user_is_in_list(MsnUser *user, MsnListId list_id);
 /**
  * Returns the network id for a user.
  *
@@ -454,6 +488,18 @@ gboolean msn_user_is_yahoo(PurpleAccount *account, const char *name);
 
 void msn_user_set_op(MsnUser *user, MsnListOp list_op);
 void msn_user_unset_op(MsnUser *user, MsnListOp list_op);
+
+/**
+ * Compare the given passport with the one of the user
+ *
+ * @param user 	User to compare.
+ * @oaran passport 	Passport to compare.
+ *
+ * @return Zero if the passport match with the one of the user, otherwise
+ * a positive integer if the user passport is greather than the one given
+ * and a negative integer if it is less.
+ */
+int msn_user_passport_cmp(MsnUser *user, const char *passport);
 
 /**
  * Checks whether a user is capable of some task.
