@@ -1,5 +1,15 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
+version 2.7.6 (??/??/????):
+	MSN:
+	* Added support for MSNP16, including Multiple Points of Presence (MPOP)
+	  which allows multiple simultaneous sign-ins.
+	* Added extended capabilities support (none implemented).
+	* Merged the work done on the Google SoC (major rewrite of SLP code)
+	* Reworked the data transfer architecture.
+	  (http://developer.pidgin.im/wiki/SlpArchitecture)
+	* Lots of little changes.
+
 version 2.7.5 (10/31/2010):
 	General:
 	* Added Verisign Class 3 Public CA - G2 root CA.

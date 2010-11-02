@@ -621,7 +621,7 @@ static const gchar *login_servers[] = {
 
 static const gchar *get_login_server(gboolean is_icq, gboolean use_ssl)
 {
-	return login_servers[is_icq*2 + use_ssl];
+	return login_servers[(is_icq ? 2 : 0) + (use_ssl ? 1 : 0)];
 }
 
 void
@@ -5678,7 +5678,7 @@ void oscar_init(PurplePlugin *plugin, gboolean is_icq)
 	PurpleAccountOption *option;
 	static gboolean init = FALSE;
 
-	option = purple_account_option_string_new(_("Server"), "server", get_login_server(is_icq, FALSE));
+	option = purple_account_option_string_new(_("Server"), "server", get_login_server(is_icq, OSCAR_DEFAULT_USE_SSL));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	option = purple_account_option_int_new(_("Port"), "port", OSCAR_DEFAULT_LOGIN_PORT);
