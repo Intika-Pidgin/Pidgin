@@ -49,6 +49,7 @@ msn_session_new(PurpleAccount *account)
 	session->oim = msn_oim_new(session);
 
 	session->protocol_ver = 0;
+	session->enable_mpop = TRUE; /* Default only */
 
 	session->guid = rand_guid();
 
@@ -103,7 +104,6 @@ msn_session_destroy(MsnSession *session)
 	g_free(session->blocked_text);
 #endif
 
-	g_free(session->passport_info.kv);
 	g_free(session->passport_info.sid);
 	g_free(session->passport_info.mspauth);
 	g_free(session->passport_info.client_ip);
