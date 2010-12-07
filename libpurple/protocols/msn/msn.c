@@ -250,7 +250,7 @@ msn_set_public_alias(PurpleConnection *pc, const char *alias,
 	MsnSession *session;
 	MsnTransaction *trans;
 	PurpleAccount *account;
-	char real_alias[BUDDY_ALIAS_MAXLEN+1];
+	char real_alias[BUDDY_ALIAS_MAXLEN + 1];
 	struct public_alias_closure *closure;
 
 	session = purple_connection_get_protocol_data(pc);
@@ -258,53 +258,25 @@ msn_set_public_alias(PurpleConnection *pc, const char *alias,
 	account = purple_connection_get_account(pc);
 
 	if (alias && *alias) {
-		int i = 0;
-		while (isspace(*alias))
-			alias++;
-
-		for (; *alias && i < BUDDY_ALIAS_MAXLEN; alias++) {
-			if (*alias == '%') {
-				if (i > BUF_LEN - 4)
-					break;
-				real_alias[i++] = '%';
-				real_alias[i++] = '2';
-				real_alias[i++] = '5';
-			} else if (*alias == ' ') {
-				if (i > BUF_LEN - 4)
-					break;
-				real_alias[i++] = '%';
-				real_alias[i++] = '2';
-				real_alias[i++] = '0';
+		if (!msn_encode_spaces(alias, real_alias, BUDDY_ALIAS_MAXLEN + 1)) {
+			if (failure_cb) {
+				struct public_alias_closure *closure =
+					g_new0(struct public_alias_closure, 1);
+				closure->account = account;
+				closure->failure_cb = failure_cb;
+				purple_timeout_add(0, set_public_alias_length_error, closure);
 			} else {
-				real_alias[i++] = *alias;
+				purple_notify_error(pc, NULL,
+				                    _("Your new MSN friendly name is too long."),
+				                    NULL);
 			}
+			return;
 		}
 
-		while (i && isspace(real_alias[i - 1]))
-			i--;
-
-		real_alias[i] = '\0';
+		if (real_alias[0] == '\0')
+			strcpy(real_alias, purple_account_get_username(account));
 	} else
-		real_alias[0] = '\0';
-
-	if (*alias) {
-		if (failure_cb) {
-			struct public_alias_closure *closure =
-				g_new0(struct public_alias_closure, 1);
-			closure->account = account;
-			closure->failure_cb = failure_cb;
-			purple_timeout_add(0, set_public_alias_length_error, closure);
-		} else {
-			purple_notify_error(pc, NULL,
-			                    _("Your new MSN friendly name is too long."),
-			                    NULL);
-		}
-		return;
-	}
-
-	if (real_alias[0] == '\0') {
 		strcpy(real_alias, purple_account_get_username(account));
-	}
 
 	closure = g_new0(struct public_alias_closure, 1);
 	closure->account = account;
@@ -614,6 +586,67 @@ msn_show_locations(PurplePluginAction *action)
 	                      _("Cancel"), G_CALLBACK(g_free),
 	                      account, NULL, NULL,
 	                      data);
+}
+
+static void
+enable_mpop_cb(PurpleConnection *pc)
+{
+	MsnSession *session = purple_connection_get_protocol_data(pc);
+
+	purple_debug_info("msn", "Enabling MPOP\n");
+
+	session->enable_mpop = TRUE;
+	msn_annotate_contact(session, "Me", "MSN.IM.MPOP", "1", NULL);
+
+	purple_prpl_got_account_actions(purple_connection_get_account(pc));
+}
+
+static void
+disable_mpop_cb(PurpleConnection *pc)
+{
+	PurpleAccount *account = purple_connection_get_account(pc);
+	MsnSession *session = purple_connection_get_protocol_data(pc);
+	GSList *l;
+
+	purple_debug_info("msn", "Disabling MPOP\n");
+
+	session->enable_mpop = FALSE;
+	msn_annotate_contact(session, "Me", "MSN.IM.MPOP", "0", NULL);
+
+	for (l = session->user->endpoints; l; l = l->next) {
+		MsnUserEndpoint *ep = l->data;
+		char *user;
+
+		if (ep->id[0] != '\0' && strncasecmp(ep->id + 1, session->guid, 36) == 0)
+			/* Don't kick myself */
+			continue;
+
+		purple_debug_info("msn", "Disconnecting Endpoint %s\n", ep->id);
+
+		user = g_strdup_printf("%s;%s", purple_account_get_username(account), ep->id);
+		msn_notification_send_uun(session, user, MSN_UNIFIED_NOTIFICATION_MPOP, "goawyplzthxbye");
+		g_free(user);
+	}
+
+	purple_prpl_got_account_actions(account);
+}
+
+static void
+msn_show_set_mpop(PurplePluginAction *action)
+{
+	PurpleConnection *pc;
+
+	pc = (PurpleConnection *)action->context;
+
+	purple_request_action(pc, NULL, _("Allow multiple logins?"),
+						_("Do you want to allow or disallow connecting from "
+						  "multiple locations simultaneously?"),
+						PURPLE_DEFAULT_ACTION_NONE,
+						purple_connection_get_account(pc), NULL, NULL,
+						pc, 3,
+						_("Allow"), G_CALLBACK(enable_mpop_cb),
+						_("Disallow"), G_CALLBACK(disable_mpop_cb),
+						_("Cancel"), NULL);
 }
 
 static void
@@ -1201,7 +1234,7 @@ msn_actions(PurplePlugin *plugin, gpointer context)
 	m = g_list_append(m, act);
 	m = g_list_append(m, NULL);
 
-	if (session->protocol_ver >= 16)
+	if (session->enable_mpop && session->protocol_ver >= 16)
 	{
 		act = purple_plugin_action_new(_("View Locations..."),
 		                               msn_show_locations);
@@ -1227,6 +1260,10 @@ msn_actions(PurplePlugin *plugin, gpointer context)
 			msn_show_set_mobile_support);
 	m = g_list_append(m, act);
 #endif
+
+	act = purple_plugin_action_new(_("Allow/Disallow Multiple Logins..."),
+			msn_show_set_mpop);
+	m = g_list_append(m, act);
 
 	act = purple_plugin_action_new(_("Allow/Disallow Mobile Pages..."),
 			msn_show_set_mobile_pages);
@@ -3082,6 +3119,11 @@ init_plugin(PurplePlugin *plugin)
 
 	option = purple_account_option_bool_new(_("Allow direct connections"),
 										  "direct_connect", TRUE);
+	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+											   option);
+
+	option = purple_account_option_bool_new(_("Allow connecting from multiple locations"),
+										  "mpop", TRUE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 											   option);
 
