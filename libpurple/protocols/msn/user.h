@@ -21,15 +21,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_USER_H_
-#define _MSN_USER_H_
+#ifndef MSN_USER_H
+#define MSN_USER_H
 
 typedef struct _MsnUser  MsnUser;
-
-#include "session.h"
-#include "object.h"
-
-#include "userlist.h"
 
 typedef enum
 {
@@ -53,13 +48,29 @@ typedef enum
 	CURRENT_MEDIA_OFFICE
 } CurrentMediaType;
 
-typedef struct _CurrentMedia
+#include "object.h"
+#include "session.h"
+#include "userlist.h"
+
+/**
+ * Contains optional info about a user that is fairly uncommon.  We
+ * put this info in in a separate struct to save memory because we
+ * allocate an MsnUser struct for each buddy, but we generally only
+ * need this information for a small percentage of our buddies
+ * (usually less than 1%).  Putting it in a separate struct makes
+ * MsnUser smaller by the size of a few pointers.
+ */
+typedef struct _MsnUserExtendedInfo
 {
-	CurrentMediaType type;     /**< Type.   */
-	char *title;    /**< Title.  */
-	char *artist;   /**< Artist. */
-	char *album;    /**< Album.  */
-} CurrentMedia;
+	CurrentMediaType media_type; /**< Type of the user's current media.   */
+	char *media_title;  /**< Title of the user's current media.  */
+	char *media_artist; /**< Artist of the user's current media. */
+	char *media_album;  /**< Album of the user's current media.  */
+
+	char *phone_home;   /**< E.T. uses this.                     */
+	char *phone_work;   /**< Work phone number.                  */
+	char *phone_mobile; /**< Mobile phone number.                */
+} MsnUserExtendedInfo;
 
 /**
  * A user.
@@ -68,25 +79,20 @@ struct _MsnUser
 {
 	MsnUserList *userlist;
 
+	guint8 refcount;        /**< The reference count of this object */
+
 	char *passport;         /**< The passport account.          */
 	char *friendly_name;    /**< The friendly name.             */
 
-	char * uid;				/*< User Id							*/
-	GHashTable *endpoints;	/*< Endpoint-specific data          */
+	char *uid;              /*< User ID                         */
+	GSList *endpoints;      /*< Endpoint-specific data          */
 
 	const char *status;     /**< The state of the user.         */
 	char *statusline;       /**< The state of the user.         */
-	CurrentMedia media;     /**< Current media of the user.     */
 
 	gboolean idle;          /**< The idle state of the user.    */
 
-	struct
-	{
-		char *home;         /**< Home phone number.             */
-		char *work;         /**< Work phone number.             */
-		char *mobile;       /**< Mobile phone number.           */
-
-	} phone;
+	MsnUserExtendedInfo *extinfo; /**< Extended info for the user. */
 
 	gboolean authorized;    /**< Authorized to add this user.   */
 	gboolean mobile;        /**< Signed up with MSN Mobile.     */
@@ -103,10 +109,13 @@ struct _MsnUser
 
 	MsnNetwork networkid;   /**< The user's network             */
 
-	int list_op;            /**< Which lists the user is in     */
+	MsnListOp list_op;      /**< Which lists the user is in     */
 
-	guint membership_id[5];	/**< The membershipId sent by the contacts server,
-				     indexed by the list it belongs to		*/
+	/**
+	 * The membershipId for this buddy on our pending list.  Sent by
+	 * the contact's server
+	 */
+	guint member_id_on_pending_list;
 
 	char *invite_message;   /**< Invite message of user request */
 };
@@ -115,9 +124,11 @@ struct _MsnUser
  * A specific user endpoint.
  */
 typedef struct MsnUserEndpoint {
-	char *id;				/**< The client's endpoint ID          */
+	char *id;               /**< The client's endpoint ID          */
+	char *name;             /**< The client's endpoint's name      */
+	int type;               /**< The client's endpoint type        */
 	guint clientid;         /**< The client's ID                   */
-	guint extcaps;			/**< The client's extended capabilites */
+	guint extcaps;          /**< The client's extended capabilites */
 
 } MsnUserEndpoint;
 
@@ -139,12 +150,20 @@ MsnUser *msn_user_new(MsnUserList *userlist, const char *passport,
 					  const char *friendly_name);
 
 /**
- * Destroys a user structure.
+ * Increment the reference count.
  *
- * @param user The user to destroy.
+ * @param user 	The user.
+ *
+ * @return 		user.
  */
-void msn_user_destroy(MsnUser *user);
+MsnUser *msn_user_ref(MsnUser *user);
 
+/**
+ * Decrement the reference count.
+ *
+ * @param user 	The user
+ */
+void msn_user_unref(MsnUser *user);
 
 /**
  * Updates the user.
@@ -162,14 +181,6 @@ void msn_user_update(MsnUser *user);
   *  @param state The statusline string.
   */
 void msn_user_set_statusline(MsnUser *user, const char *statusline);
-
- /**
-  *  Sets the current media of user.
-  *
-  *  @param user   The user.
-  *  @param cmedia Current media.
-  */
-void msn_user_set_currentmedia(MsnUser *user, const CurrentMedia *cmedia);
 
 /**
  * Sets the new state of user.
@@ -273,6 +284,14 @@ void msn_user_set_uid(MsnUser *user, const char *uid);
  */
 void
 msn_user_set_endpoint_data(MsnUser *user, const char *endpoint, MsnUserEndpoint *data);
+
+/**
+ * Clears all endpoint data for a user.
+ *
+ * @param user     The user.
+ */
+void
+msn_user_clear_endpoints(MsnUser *user);
 
 /**
  * Sets the client id for a user.
@@ -405,6 +424,30 @@ guint msn_user_get_clientid(const MsnUser *user);
  */
 guint msn_user_get_extcaps(const MsnUser *user);
 
+/**************************************************************************
+ * Utility functions
+ **************************************************************************/
+
+
+/**
+ * Check if the user is part of the group.
+ *
+ * @param user 		The user we are asking group membership.
+ * @param group_id 	The group where the user may be in.
+ * 
+ * @return TRUE if user is part of the group. Otherwise, FALSE.
+ */
+gboolean msn_user_is_in_group(MsnUser *user, const char * group_id);
+
+/**
+ * Check if user is on list.
+ *
+ * @param user 		The user we are asking list membership.
+ * @param list_id 	The list where the user may be in.
+ *
+ * @return TRUE if the user is on the list, else FALSE.
+ */
+gboolean msn_user_is_in_list(MsnUser *user, MsnListId list_id);
 /**
  * Returns the network id for a user.
  *
@@ -444,17 +487,27 @@ const char *msn_user_get_invite_message(const MsnUser *user);
 /**
  * check to see if user is online
  */
-gboolean
-msn_user_is_online(PurpleAccount *account, const char *name);
+gboolean msn_user_is_online(PurpleAccount *account, const char *name);
 
 /**
  * check to see if user is Yahoo User
  */
-gboolean
-msn_user_is_yahoo(PurpleAccount *account ,const char *name);
+gboolean msn_user_is_yahoo(PurpleAccount *account, const char *name);
 
-void msn_user_set_op(MsnUser *user, int list_op);
-void msn_user_unset_op(MsnUser *user, int list_op);
+void msn_user_set_op(MsnUser *user, MsnListOp list_op);
+void msn_user_unset_op(MsnUser *user, MsnListOp list_op);
+
+/**
+ * Compare the given passport with the one of the user
+ *
+ * @param user 	User to compare.
+ * @oaran passport 	Passport to compare.
+ *
+ * @return Zero if the passport match with the one of the user, otherwise
+ * a positive integer if the user passport is greather than the one given
+ * and a negative integer if it is less.
+ */
+int msn_user_passport_cmp(MsnUser *user, const char *passport);
 
 /**
  * Checks whether a user is capable of some task.
@@ -471,5 +524,4 @@ msn_user_is_capable(MsnUser *user, char *endpoint, guint capability, guint extca
 
 /*@}*/
 
-
-#endif /* _MSN_USER_H_ */
+#endif /* MSN_USER_H */

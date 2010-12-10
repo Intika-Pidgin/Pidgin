@@ -23,6 +23,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#include <internal.h>
+
 #include <gnt.h>
 #include <gntbox.h>
 #include <gntbutton.h>
@@ -35,7 +37,6 @@
 #include <gnttree.h>
 
 #include "finch.h"
-#include <internal.h>
 #include "gntrequest.h"
 #include "debug.h"
 #include "util.h"
@@ -348,10 +349,9 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 			}
 			else if (type == PURPLE_REQUEST_FIELD_LIST)
 			{
-				GList *list = NULL;
+				GList *list = NULL, *iter;
 				if (purple_request_field_list_get_multi_select(field))
 				{
-					GList *iter;
 					GntWidget *tree = FINCH_GET_DATA(field);
 
 					iter = purple_request_field_list_get_items(field);
@@ -360,14 +360,23 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 						const char *text = iter->data;
 						gpointer key = purple_request_field_list_get_data(field, text);
 						if (gnt_tree_get_choice(GNT_TREE(tree), key))
-							list = g_list_prepend(list, key);
+							list = g_list_prepend(list, (gpointer)text);
 					}
 				}
 				else
 				{
 					GntWidget *combo = FINCH_GET_DATA(field);
 					gpointer data = gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo));
-					list = g_list_append(list, data);
+
+					iter = purple_request_field_list_get_items(field);
+					for (; iter; iter = iter->next) {
+						const char *text = iter->data;
+						gpointer key = purple_request_field_list_get_data(field, text);
+						if (key == data) {
+							list = g_list_prepend(list, (gpointer)text);
+							break;
+						}
+					}
 				}
 
 				purple_request_field_list_set_selected(field, list);
@@ -814,7 +823,7 @@ void finch_request_save_in_prefs(gpointer null, PurpleRequestFields *allfields)
 	for (list = purple_request_fields_get_groups(allfields); list; list = list->next) {
 		PurpleRequestFieldGroup *group = list->data;
 		GList *fields = purple_request_field_group_get_fields(group);
-		
+
 		for (; fields ; fields = fields->next) {
 			PurpleRequestField *field = fields->data;
 			PurpleRequestFieldType type = purple_request_field_get_type(field);
@@ -825,6 +834,7 @@ void finch_request_save_in_prefs(gpointer null, PurpleRequestFields *allfields)
 			switch (type) {
 				case PURPLE_REQUEST_FIELD_LIST:
 					val = purple_request_field_list_get_selected(field)->data;
+					val = purple_request_field_list_get_data(field, val);
 					break;
 				case PURPLE_REQUEST_FIELD_BOOLEAN:
 					val = GINT_TO_POINTER(purple_request_field_bool_get_value(field));
