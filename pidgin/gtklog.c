@@ -252,7 +252,6 @@ static void delete_log_cb(gpointer *data)
 		GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(treestore), iter);
 		gboolean first = !gtk_tree_path_prev(path);
 
-#if GTK_CHECK_VERSION(2,2,0)
 		if (!gtk_tree_store_remove(treestore, iter) && first)
 		{
 			/* iter was the last child at its level */
@@ -263,9 +262,7 @@ static void delete_log_cb(gpointer *data)
 				gtk_tree_store_remove(treestore, iter);
 			}
 		}
-#else
-		gtk_tree_store_remove(treestore, iter);
-#endif
+
 		gtk_tree_path_free(path);
 	}
 
@@ -423,6 +420,7 @@ static gboolean search_find_cb(gpointer data)
 {
 	PidginLogViewer *viewer = data;
 	gtk_imhtml_search_find(GTK_IMHTML(viewer->imhtml), viewer->search);
+	g_object_steal_data(G_OBJECT(viewer->entry), "search-find-cb");
 	return FALSE;
 }
 
@@ -475,8 +473,11 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 	g_free(read);
 
 	if (viewer->search != NULL) {
+		guint source;
 		gtk_imhtml_search_clear(GTK_IMHTML(viewer->imhtml));
-		g_idle_add(search_find_cb, viewer);
+		source = g_idle_add(search_find_cb, viewer);
+		g_object_set_data_full(G_OBJECT(viewer->entry), "search-find-cb",
+		                       GINT_TO_POINTER(source), (GDestroyNotify)g_source_remove);
 	}
 
 	pidgin_clear_cursor(viewer->window);
