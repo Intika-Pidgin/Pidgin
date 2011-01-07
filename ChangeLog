@@ -1,6 +1,46 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-version 2.7.8 (??/??/????):
+version 2.7.10 (??/??/????):
+	General:
+	* Force video sources to all have the same capabilities.  This reduces the
+	  number of times video must be scaled down, saving CPU time. (Jakub Adam)
+	  (half of #13095)
+
+	IRC:
+	* Don't send ISON messages longer than 512 bytes. (Jeffrey Honig) (#9692)
+
+	libpurple:
+	* Stop sending audio when placing a call on hold. (Jakub Adam) (#13032)
+	* Stop translating gpointers to ints in the dbus API.  This removes
+	  functions from the dbus API.  (The openSUSE Project) (#12507)
+
+	Pidgin:
+	* Support using the Page Up and Page Down keys on the numeric keypad in
+	  the conversation window.  (Ryan Flegel) (#13127)
+	* Fix a few memory leaks. (Nader Morshed) (#13162)
+	* Support rendering strikethrough when received as in-line CSS. (#13168)
+
+	Plugins:
+	* The Voice/Video Settings plugin no longer resets selected devices to
+	  defaults. (Jakub Adam) (#13044)
+	* The Autoaccept plugin now allows disabling filename escaping. (Rok
+	  Mandeljc) (half of #11459)
+	* The Autoaccept plugin now allows choosing Reject/Ask/Accept for
+	  non-buddies. (Rok Mandeljc) (half of #11459)
+
+	QQ:
+	* QQ2008 is now the default protocol version. (Michael Terry) (#11635)
+
+	Yahoo!/Yahoo! JAPAN:
+	* Fix a crash when an account disconnects before a p2p session is
+	  completely set up. (Jan Kaluza) (#12432)
+
+version 2.7.9 (12/26/2010):
+	MSN:
+	* Fix CVE-2010-4528, a crash when receiving short packets related to
+	  P2Pv2 messages.
+
+version 2.7.8 (12/19/2010):
 	General:
 	* Fix the exceptions in purple-remote on Python 2.6+. (Ari Pollak)
 	  (#12151)
@@ -11,7 +51,10 @@ version 2.7.8 (??/??/????):
 	  when it contains HTML-escapable characters (e.g. "<3" was previously
 	  displayed as "&lt;3").
 	* Drop dependency on GdkGC and use Cairo instead.
-	* New UI hack to assist in first-time setup of Facebook accounts.
+	* New UI hack to assist in first-time setup of Facebook accounts with
+	  icon from Jakub Szypulka.
+	* Don't hide the buddy list if there is no notification area in which
+	  to put the icon. (#12129)
 
 	libpurple:
 	* Fix multipart parsing when '=' is included in the boundary for
@@ -34,6 +77,11 @@ version 2.7.8 (??/??/????):
 	  services. (#13022)
 	* Correctly remove old endpoints from the list when they sign out.
 	* Add option to disable connections from multiple locations. (#13017)
+	* Correctly update your own display name in the buddy list. (#13064) 
+	* Correctly show ourselves as offline in the buddy list when going
+	  invisible. (#12945)
+	* Correctly update your own icon in the buddy list. (#12973)
+	* Remove struct packing for better portability. (#12856)
 
 	XMPP:
 	* Terminate Jingle sessions with unsupported content types. (#13048)

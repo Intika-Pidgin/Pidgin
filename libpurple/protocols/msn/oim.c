@@ -166,14 +166,10 @@ msn_oim_request_cb(MsnSoapMessage *request, MsnSoapMessage *response,
 	xmlnode *fault = NULL;
 	xmlnode *faultcode = NULL;
 
-	if (response == NULL)
-		return;
+	if (response != NULL)
+		fault = xmlnode_get_child(response->xml, "Body/Fault");
 
-	fault = xmlnode_get_child(response->xml, "Body/Fault");
-	if (fault)
-		faultcode = xmlnode_get_child(fault, "faultcode");
-
-	if (faultcode) {
+	if (fault && (faultcode = xmlnode_get_child(fault, "faultcode"))) {
 		gchar *faultcode_str = xmlnode_get_data(faultcode);
 		gboolean need_token_update = FALSE;
 
@@ -422,8 +418,8 @@ msn_oim_send_read_cb(MsnSoapMessage *request, MsnSoapMessage *response,
 						str_reason = _("Message was not sent because an unknown "
 						               "error occurred.");
 					}
-					
-					msn_session_report_user(oim->session, msg->to_member, 
+
+					msn_session_report_user(oim->session, msg->to_member,
 						str_reason, PURPLE_MESSAGE_ERROR);
 					msn_session_report_user(oim->session, msg->to_member,
 						msg->oim_msg, PURPLE_MESSAGE_RAW);

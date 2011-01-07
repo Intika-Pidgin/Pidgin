@@ -74,7 +74,7 @@ typedef void (*MsnMsgCb)(MsnMessage *, void *data);
  */
 struct _MsnMessage
 {
-	size_t ref_count;           /**< The reference count.       */
+	guint ref_count;        /**< The reference count.       */
 
 	MsnMsgType type;
 
@@ -89,8 +89,8 @@ struct _MsnMessage
 	char *charset;
 	char *body;
 	gsize body_len;
-	guint total_chunks;   /**< How many chunks in this multi-part message */
-	guint received_chunks; /**< How many chunks we've received so far */
+	guint total_chunks;     /**< How many chunks in this multi-part message */
+	guint received_chunks;  /**< How many chunks we've received so far */
 
 	GHashTable *header_table;
 	GList *header_list;
@@ -301,8 +301,6 @@ GHashTable *msn_message_get_hashtable_from_body(const MsnMessage *msg);
 
 void msn_message_show_readable(MsnMessage *msg, const char *info,
 							   gboolean text_body);
-
-char *msn_message_gen_slp_body(MsnMessage *msg, size_t *ret_size);
 
 char *msn_message_to_string(MsnMessage *msg);
 
