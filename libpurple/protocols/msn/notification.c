@@ -1250,13 +1250,10 @@ nln_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	networkid = atoi(cmd->params[2]);
 	friendly = purple_url_decode(cmd->params[3]);
 
-	if (g_str_equal(passport, session->user->passport))
-		user = session->user;
-	else
-		user = msn_userlist_find_user(session->userlist, passport);
+	user = msn_userlist_find_user(session->userlist, passport);
 	if (user == NULL) return;
 
-	if (msn_user_set_friendly_name(user, friendly))
+	if (msn_user_set_friendly_name(user, friendly) && user != session->user)
 	{
 		msn_update_contact(session, passport, MSN_UPDATE_DISPLAY, friendly);
 	}
@@ -1705,10 +1702,7 @@ ubx_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload,
 	session = cmdproc->session;
 
 	passport = cmd->params[0];
-	if (g_str_equal(passport, session->user->passport))
-		user = session->user;
-	else
-		user = msn_userlist_find_user(session->userlist, passport);
+	user = msn_userlist_find_user(session->userlist, passport);
 	if (user == NULL) {
 		char *str = g_strndup(payload, len);
 		purple_debug_info("msn", "unknown user %s, payload is %s\n",
@@ -1996,9 +1990,6 @@ profile_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 	/* always get the full list? */
 	msn_get_contact_list(session, MSN_PS_INITIAL, NULL);
 #endif
-#if 0
-	msn_contact_connect(session);
-#endif
 }
 
 static void
@@ -2225,7 +2216,7 @@ system_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 }
 
 /**************************************************************************
- * Dispatch server list management 
+ * Dispatch server list management
  **************************************************************************/
 typedef struct MsnAddRemoveListData {
 	MsnCmdProc *cmdproc;

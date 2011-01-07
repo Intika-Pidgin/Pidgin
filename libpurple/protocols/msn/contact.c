@@ -1,5 +1,5 @@
 /**
- * @file contact.c 
+ * @file contact.c
  * 	get MSN contacts via SOAP request
  *	created by MaYuan<mayuan2006@gmail.com>
  *
@@ -339,7 +339,7 @@ msn_create_address_book(MsnSession *session)
 	g_return_if_fail(session != NULL);
 	g_return_if_fail(session->user != NULL);
 	g_return_if_fail(session->user->passport != NULL);
-	
+
 	purple_debug_info("msn", "Creating an Address Book.\n");
 
 	body = g_strdup_printf(MSN_ADD_ADDRESSBOOK_TEMPLATE,
@@ -1093,18 +1093,6 @@ msn_add_contact(MsnSession *session, MsnCallbackState *state, const char *passpo
 	gchar *body = NULL;
 	gchar *contact_xml = NULL;
 
-#if 0
-	gchar *escaped_displayname;
-
-
-	 if (displayname != NULL) {
-		escaped_displayname = g_markup_decode_text(displayname, -1);
-	 } else {
-		escaped_displayname = passport;
-	 }
-	contact_xml = g_strdup_printf(MSN_XML_ADD_CONTACT, escaped_displayname, passport);
-#endif
-
 	purple_debug_info("msn", "Adding contact %s to contact list\n", passport);
 
 	user = msn_userlist_find_user(session->userlist, passport);
@@ -1686,7 +1674,7 @@ msn_del_contact_from_list(MsnSession *session, MsnCallbackState *state,
 	msn_callback_state_set_who(state, passport);
 
 	user = msn_userlist_find_user(session->userlist, passport);
-	
+
 	if (list == MSN_LIST_PL) {
 		partner_scenario = MSN_PS_CONTACT_API;
 		if (user->networkid != MSN_NETWORK_PASSPORT)
@@ -1890,7 +1878,7 @@ msn_group_read_cb(MsnSoapMessage *req, MsnSoapMessage *resp, gpointer data)
 			} else if (state->action & MSN_MOVE_BUDDY) {
 				/* This will be freed when the add contact callback fires */
 				MsnCallbackState *new_state = msn_callback_state_dup(state);
-				msn_add_contact_to_group(session, new_state, state->who, guid); 
+				msn_add_contact_to_group(session, new_state, state->who, guid);
 				g_free(guid);
 				return;
 			}

@@ -270,7 +270,7 @@ msn_switchboard_add_user(MsnSwitchBoard *swboard, const char *user)
 		g_free(passport);
 		return;
 	}
-	
+
 	if (!msnuser) {
 		purple_debug_info("msn","User %s is not on our list.\n", passport);
 		msnuser = msn_user_new(userlist, passport, NULL);
@@ -577,33 +577,6 @@ msg_error(MsnCmdProc *cmdproc, MsnTransaction *trans, int error)
 	msg_error_helper(cmdproc, trans->data, MSN_MSG_ERROR_UNKNOWN);
 }
 
-#if 0
-/** Called when we receive an ack of a special message. */
-static void
-msg_ack(MsnCmdProc *cmdproc, MsnCommand *cmd)
-{
-	MsnMessage *msg;
-
-	msg = cmd->trans->data;
-
-	if (msg->ack_cb != NULL)
-		msg->ack_cb(msg->ack_data);
-
-	msn_message_unref(msg);
-}
-
-/** Called when we receive a nak of a special message. */
-static void
-msg_nak(MsnCmdProc *cmdproc, MsnCommand *cmd)
-{
-	MsnMessage *msg;
-
-	msg = cmd->trans->data;
-
-	msn_message_unref(msg);
-}
-#endif
-
 gboolean
 msn_switchboard_can_send(MsnSwitchBoard *swboard)
 {
@@ -858,7 +831,7 @@ msn_switchboard_show_ink(MsnSwitchBoard *swboard, const char *passport,
 
 	data += sizeof("base64:") - 1;
 	image_data = purple_base64_decode(data, &image_len);
-	if (!image_data || !image_len) 
+	if (!image_data || !image_len)
 	{
 		purple_debug_error("msn", "Unable to decode Ink from Base64 format.\n");
 		return;
