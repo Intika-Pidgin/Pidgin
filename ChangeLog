@@ -1,6 +1,15 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
 version 2.7.10 (??/??/????):
+	General:
+	* Force video sources to all have the same capabilities.  This reduces the
+	  number of times video must be scaled down, saving CPU time. (Jakub Adam)
+	  (half of #13095)
+	* Starting multiple video calls and ending one no longer causes the other
+	  calls to stop sending audio and video. (Jakub Adam) (#12758)
+	* Perl bindings now respect LDFLAGS. (Peter Volkov, Markos Chandras)
+	  (#12638)
+
 	IRC:
 	* Don't send ISON messages longer than 512 bytes. (Jeffrey Honig) (#9692)
 
@@ -8,11 +17,14 @@ version 2.7.10 (??/??/????):
 	* Stop sending audio when placing a call on hold. (Jakub Adam) (#13032)
 	* Stop translating gpointers to ints in the dbus API.  This removes
 	  functions from the dbus API.  (The openSUSE Project) (#12507)
+	* Fix D-Bus introspection calls that omit the interface parameter.  (Tom
+	  Samstag) (#13073)
 
 	Pidgin:
 	* Support using the Page Up and Page Down keys on the numeric keypad in
 	  the conversation window.  (Ryan Flegel) (#13127)
 	* Fix a few memory leaks. (Nader Morshed) (#13162)
+	* Support rendering strikethrough when received as in-line CSS. (#13168)
 
 	Plugins:
 	* The Voice/Video Settings plugin no longer resets selected devices to
@@ -24,6 +36,10 @@ version 2.7.10 (??/??/????):
 
 	QQ:
 	* QQ2008 is now the default protocol version. (Michael Terry) (#11635)
+
+	XMPP:
+	* Don't crash when receiving an unexpected/invalid jingle transport type.
+	  (Nikita Kozlov) (#13136)
 
 	Yahoo!/Yahoo! JAPAN:
 	* Fix a crash when an account disconnects before a p2p session is
