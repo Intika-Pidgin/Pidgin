@@ -11,6 +11,10 @@ version 2.7.10 (??/??/????):
 	  (#12638)
 	* Added AddTrust External Root CA.  (#11554)
 
+	Groupwise:
+	* Don't show two windows when using "Get Info" on a buddy. (Gabriel Burt;
+	  Novell, Inc.) (#13108)
+
 	IRC:
 	* Don't send ISON messages longer than 512 bytes. (Jeffrey Honig) (#9692)
 
