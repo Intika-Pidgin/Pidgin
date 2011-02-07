@@ -34,6 +34,8 @@ version 2.7.10 (??/??/????):
 	  check' failures.  (Nader Morshed) (#13131)
 	* Correct an issue that caused some UIs other than Pidgin or Finch to
 	  leave a buddy in the "is typing" state.  (Jan Kaluza)
+	* Fix potential information disclosure issues in the Cipher code.  (Julia
+	  Lawall)
 
 	Pidgin:
 	* Support using the Page Up and Page Down keys on the numeric keypad in
