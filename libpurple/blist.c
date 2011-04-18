@@ -28,6 +28,7 @@
 #include "dbus-maybe.h"
 #include "debug.h"
 #include "notify.h"
+#include "pounce.h"
 #include "prefs.h"
 #include "privacy.h"
 #include "prpl.h"
@@ -2178,6 +2179,9 @@ void purple_blist_remove_buddy(PurpleBuddy *buddy)
 
 	if (ops && ops->remove_node)
 		ops->remove_node(node);
+
+	/* Remove this buddy's pounces */
+	purple_pounce_destroy_all_by_buddy(buddy);
 
 	/* Signal that the buddy has been removed before freeing the memory for it */
 	purple_signal_emit(purple_blist_get_handle(), "buddy-removed", buddy);
