@@ -8,6 +8,8 @@ version 2.8.0 (??/??/????):
 	General:
 	* Implement simple silence suppression for voice calls, preventing wasted
 	  bandwidth for silent periods during a call. (Jakub Adam) (half of #13180)
+	* Added the DigiCert High Assurance CA-3 intermediate CA, needed for
+	  validation of the Facebook XMPP interface's certificate.
 
 	Pidgin:
 	* Duplicate code cleanup.  (Gabriel Schulhof) (#10599)
@@ -15,9 +17,12 @@ version 2.8.0 (??/??/????):
 	  on the fly. (Jakub Adam) (half of #13535)
 	* Don't cancel an ongoing call when rejecting the addition of a stream to
 	  the existing call. (Jakub Adam) (#13537)
+	* Pidgin plugins can now override tab completion and detect clicks on
+	  usernames in the chat userlist. (kawaii.neko) (#12599)
 
 	libpurple:
-	* media: Allow obtaining active local and remote candidates. (#11830)
+	* media: Allow obtaining active local and remote candidates. (Jakub
+	  Adam) (#11830)
 	* media: Allow getting/setting video capabilities. (Jakub Adam) (half of
 	  #13095)
 	* Simple Silence Suppression is optional per-account. (Jakub Adam) (half
@@ -25,6 +30,10 @@ version 2.8.0 (??/??/????):
 	* Fix purple-url-handler being unable to find an account.
 	* media: Allow adding/removing streams on the fly. (Jakub Adam) (half of
 	  #13535)
+	* Support new connection states in NetworkManager 0.9. (Dan Williams)
+	  (#13505)
+	* When removing a buddy, delete the pounces associated with it.
+	  (Kartik Mohta) (#1131)
 
 	Gadu-Gadu:
 	* Allow showing your status only to buddies. (Mateusz Piękos) (#13358)
@@ -34,8 +43,18 @@ version 2.8.0 (??/??/????):
 	  images. (Tomasz Wasilczyk) (#13554)
 	* Fix sending inline images to remote users, don't crash when
 	  trying to send large (> 256kB) images. (Tomasz Wasilczyk) (#13580)
-	* Support incoming typing notifications. (Jan Zachorowski) (#13362)
+	* Support typing notifications. (Jan Zachorowski, Tomasz Wasilczyk,
+	  Krzysztof Klinikowski) (#13362, #13590)
 	* Require libgadu 1.10.1 to avoid using internal libgadu.
+	* SSL connection support for GNUTLS users (not on Windows yet!).
+	  (Tomasz Wasilczyk) (#13613)
+	* Don't count received messages or statuses when determining whether
+	  to send a keepalive packet. (Jan Zachorowski) (#13699)
+	* Fix a crash when receiving images on Windows or an incorrect
+	  timestamp in the log when receiving images on Linux. (Tomasz
+	  Wasilczyk) (#10268)
+	* Support XML events, resulting in immediate update of other users'
+	  buddy icons. (Tomasz Wasilczyk) (#13739)
 
 	ICQ:
 	* Fix unsetting your mood when "None" is selected.  (Dustin Gathmann)
@@ -45,6 +64,13 @@ version 2.8.0 (??/??/????):
 	* It is now possible to specify multiple encodings on the Advanced tab of
 	  an ICQ account's settings by using a comma-delimited list.  (Dmitry
 	  Utkin (#13496)
+
+	IRC:
+	* Add "authserv" service command.  (tomos) (#13337)
+
+	XMPP:
+	* Remember the previously entered user directory when searching.
+	  (Keith Moyer) (#12451)
 
 	Plugins:
 	* The Voice/Video Settings plugin now includes the ability to test

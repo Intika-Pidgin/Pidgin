@@ -1044,6 +1044,29 @@ out:
 }
 
 /**
+ * Try to update avatar of the buddy.
+ *
+ * @param gc     PurpleConnection
+ * @param uin    UIN of the buddy.
+ */
+static void ggp_update_buddy_avatar(PurpleConnection *gc, uin_t uin)
+{
+	gchar *avatarurl;
+	PurpleUtilFetchUrlData *url_data;
+
+	purple_debug_info("gg", "ggp_update_buddy_avatar(gc, %u)\n", uin);
+
+	avatarurl = g_strdup_printf("http://api.gadu-gadu.pl/avatars/%u/0.xml", uin);
+
+	url_data = purple_util_fetch_url_request_len_with_account(
+			purple_connection_get_account(gc), avatarurl, TRUE,
+			"Mozilla/4.0 (compatible; MSIE 5.5)", FALSE, NULL, FALSE, -1,
+			gg_get_avatar_url_cb, gc);
+
+	g_free(avatarurl);
+}
+
+/**
  * Handle change of the status of the buddy.
  *
  * @param gc     PurpleConnection
@@ -1056,18 +1079,10 @@ static void ggp_generic_status_handler(PurpleConnection *gc, uin_t uin,
 {
 	gchar *from;
 	const char *st;
-	gchar *avatarurl;
-	PurpleUtilFetchUrlData *url_data;
+
+	ggp_update_buddy_avatar(gc, uin);
 
 	from = g_strdup_printf("%u", uin);
-	avatarurl = g_strdup_printf("http://api.gadu-gadu.pl/avatars/%s/0.xml", from);
-
-	url_data = purple_util_fetch_url_request_len_with_account(
-			purple_connection_get_account(gc), avatarurl, TRUE,
-			"Mozilla/4.0 (compatible; MSIE 5.5)", FALSE, NULL, FALSE, -1,
-			gg_get_avatar_url_cb, gc);
-
-	g_free(avatarurl);
 
 	switch (status) {
 		case GG_STATUS_NOT_AVAIL:
@@ -1383,8 +1398,8 @@ static void ggp_recv_image_handler(PurpleConnection *gc, const struct gg_event *
 			info->pending_richtext_messages = g_list_remove(info->pending_richtext_messages, entry->data);
 			/* We don't have any more images to download */
 			if (strstr(text, "<IMG ID=\"IMGID_HANDLER") == NULL) {
-				gchar *buf = g_strdup_printf("%lu", (unsigned long int)ev->event.msg.sender);
-				serv_got_im(gc, buf, text, PURPLE_MESSAGE_IMAGES, ev->event.msg.time);
+				gchar *buf = g_strdup_printf("%lu", (unsigned long int)ev->event.image_reply.sender);
+				serv_got_im(gc, buf, text, PURPLE_MESSAGE_IMAGES, time(NULL));
 				g_free(buf);
 				purple_debug_info("gg", "ggp_recv_image_handler: richtext message: %s\n", text);
 				g_free(text);
@@ -1610,8 +1625,77 @@ static void ggp_typing_notification_handler(PurpleConnection *gc, uin_t uin, int
     if (length)
 	serv_got_typing(gc, from, 0, PURPLE_TYPING);
     else
-	serv_got_typing(gc, from, 0, PURPLE_NOT_TYPING);
+	serv_got_typing_stopped(gc, from);
     g_free(from);
+}
+
+/**
+ * Handling of XML events.
+ *
+ * @param gc PurpleConnection.
+ * @param data Raw XML contents.
+ *
+ * @see http://toxygen.net/libgadu/protocol/#ch1.13
+ */
+static void ggp_xml_event_handler(PurpleConnection *gc, char *data)
+{
+	xmlnode *xml = NULL;
+	xmlnode *xmlnode_next_event;
+
+	xml = xmlnode_from_str(data, -1);
+	if (xml == NULL)
+		goto out;
+
+	xmlnode_next_event = xmlnode_get_child(xml, "event");
+	while (xmlnode_next_event != NULL)
+	{
+		xmlnode *xmlnode_current_event = xmlnode_next_event;
+		
+		xmlnode *xmlnode_type;
+		char *event_type_raw;
+		int event_type = 0;
+		
+		xmlnode *xmlnode_sender;
+		char *event_sender_raw;
+		uin_t event_sender = 0;
+
+		xmlnode_next_event = xmlnode_get_next_twin(xmlnode_next_event);
+		
+		xmlnode_type = xmlnode_get_child(xmlnode_current_event, "type");
+		if (xmlnode_type == NULL)
+			continue;
+		event_type_raw = xmlnode_get_data(xmlnode_type);
+		if (event_type_raw != NULL)
+			event_type = atoi(event_type_raw);
+		g_free(event_type_raw);
+		
+		xmlnode_sender = xmlnode_get_child(xmlnode_current_event, "sender");
+		if (xmlnode_sender != NULL)
+		{
+			event_sender_raw = xmlnode_get_data(xmlnode_sender);
+			if (event_sender_raw != NULL)
+				event_sender = ggp_str_to_uin(event_sender_raw);
+			g_free(event_sender_raw);
+		}
+		
+		switch (event_type)
+		{
+			case 28: /* avatar update */
+				purple_debug_info("gg",
+					"ggp_xml_event_handler: avatar updated (uid: %u)\n",
+					event_sender);
+				ggp_update_buddy_avatar(gc, event_sender);
+				break;
+			default:
+				purple_debug_error("gg",
+					"ggp_xml_event_handler: unsupported event type=%d from=%u\n",
+					event_type, event_sender);
+		}
+	}
+	
+	out:
+		if (xml)
+			xmlnode_free(xml);
 }
 
 static void ggp_callback_recv(gpointer _gc, gint fd, PurpleInputCondition cond)
@@ -1629,7 +1713,7 @@ static void ggp_callback_recv(gpointer _gc, gint fd, PurpleInputCondition cond)
 			_("Unable to read from socket"));
 		return;
 	}
-	gc->last_received = time(NULL);
+
 	switch (ev->type) {
 		case GG_EVENT_NONE:
 			/* Nothing happened. */
@@ -1730,6 +1814,10 @@ static void ggp_callback_recv(gpointer _gc, gint fd, PurpleInputCondition cond)
 		case GG_EVENT_TYPING_NOTIFICATION:
 			ggp_typing_notification_handler(gc, ev->event.typing_notification.uin,
 				ev->event.typing_notification.length);
+			break;
+		case GG_EVENT_XML_EVENT:
+			purple_debug_info("gg", "GG_EVENT_XML_EVENT\n");
+			ggp_xml_event_handler(gc, ev->event.xml_event.data);
 			break;
 		default:
 			purple_debug_error("gg",
@@ -2041,7 +2129,12 @@ static void ggp_login(PurpleAccount *account)
 
 	glp->async = 1;
 	glp->status = ggp_to_gg_status(status, &glp->status_descr);
+#if defined(USE_GNUTLS) || !defined(USE_INTERNAL_LIBGADU)
+	glp->tls = 1;
+#else
 	glp->tls = 0;
+#endif
+	purple_debug_info("gg", "TLS enabled: %d\n", glp->tls);
 
 	if (!info->status_broadcasting)
 		glp->status = glp->status|GG_STATUS_FRIENDS_MASK;
@@ -2239,6 +2332,26 @@ static int ggp_send_im(PurpleConnection *gc, const char *who, const char *msg,
 	g_free(tmp);
 
 	return ret;
+}
+
+static unsigned int ggp_send_typing(PurpleConnection *gc, const char *name, PurpleTypingState state)
+{
+	int dummy_length; // we don't send real length of typed message
+	
+	if (state == PURPLE_TYPED) // not supported
+		return 1;
+	
+	if (state == PURPLE_TYPING)
+		dummy_length = (int)g_random_int();
+	else // PURPLE_NOT_TYPING
+		dummy_length = 0;
+	
+	gg_typing_notification(
+		((GGPInfo*)gc->proto_data)->session,
+		ggp_str_to_uin(name),
+		dummy_length); 
+	
+	return 1; // wait 1 second before another notification
 }
 
 static void ggp_get_info(PurpleConnection *gc, const char *name)
@@ -2546,7 +2659,7 @@ static PurplePluginProtocolInfo prpl_info =
 	ggp_close,			/* close */
 	ggp_send_im,			/* send_im */
 	NULL,				/* set_info */
-	NULL,				/* send_typing */
+	ggp_send_typing,		/* send_typing */
 	ggp_get_info,			/* get_info */
 	ggp_set_status,			/* set_away */
 	NULL,				/* set_idle */
