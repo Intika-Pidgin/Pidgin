@@ -410,9 +410,9 @@ pounce_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 				GtkSelectionData *sd, guint info, guint t, gpointer data)
 {
 	PidginPounceDialog *dialog;
-  GdkAtom target = gtk_selection_data_get_target(sd);
-  const guchar *sd_data = gtk_selection_data_get_data(sd);
-    
+	GdkAtom target = gtk_selection_data_get_target(sd);
+	const guchar *sd_data = gtk_selection_data_get_data(sd);
+
 	if (target == gdk_atom_intern("PURPLE_BLIST_NODE", FALSE))
 	{
 		PurpleBlistNode *node = NULL;
@@ -1223,20 +1223,10 @@ search_func(GtkTreeModel *model, gint column, const gchar *key, GtkTreeIter *ite
 static GtkWidget *
 create_pounces_list(PouncesManager *dialog)
 {
-	GtkWidget *sw;
 	GtkWidget *treeview;
 	GtkTreeSelection *sel;
 	GtkTreeViewColumn *column;
 	GtkCellRenderer *renderer;
-
-	/* Create the scrolled window */
-	sw = gtk_scrolled_window_new(0, 0);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-					GTK_POLICY_AUTOMATIC,
-					GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-						GTK_SHADOW_IN);
-	gtk_widget_show(sw);
 
 	/* Create the list model */
 	dialog->model = gtk_list_store_new(POUNCES_MANAGER_NUM_COLUMNS,
@@ -1261,7 +1251,6 @@ create_pounces_list(PouncesManager *dialog)
 	/* Handle double-clicking */
 	g_signal_connect(G_OBJECT(treeview), "button_press_event",
 					 G_CALLBACK(pounce_double_click_cb), dialog);
-	gtk_container_add(GTK_CONTAINER(sw), treeview);
 	gtk_widget_show(treeview);
 
 	/* Pouncee Column */
@@ -1321,7 +1310,7 @@ create_pounces_list(PouncesManager *dialog)
 	/* Populate list */
 	populate_pounces_list(dialog);
 
-	return sw;
+	return pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, -1);
 }
 
 void

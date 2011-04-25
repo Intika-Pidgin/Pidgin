@@ -867,7 +867,7 @@ theme_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 	gchar *name = g_strchomp((gchar *)gtk_selection_data_get_data(sd));
 
 	if ((gtk_selection_data_get_length(sd) >= 0)
-      && (gtk_selection_data_get_format(sd) == 8)) {
+	 && (gtk_selection_data_get_format(sd) == 8)) {
 		/* Well, it looks like the drag event was cool.
 		 * Let's do something with it */
 		gchar *temp;
@@ -2540,27 +2540,20 @@ sound_page(void)
 								sound_changed2_cb, vbox);
 #endif
 	vbox = pidgin_make_frame(ret, _("Sound Events"));
-  parent = gtk_widget_get_parent(vbox);
-  parent_parent = gtk_widget_get_parent(parent);
-  parent_parent_parent = gtk_widget_get_parent(parent_parent);
-    
+	parent = gtk_widget_get_parent(vbox);
+	parent_parent = gtk_widget_get_parent(parent);
+	parent_parent_parent = gtk_widget_get_parent(parent_parent);
+
 	/* The following is an ugly hack to make the frame expand so the
 	 * sound events list is big enough to be usable */
 	gtk_box_set_child_packing(GTK_BOX(parent), vbox, TRUE, TRUE, 0,
 			GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(parent_parent),
-      parent, TRUE, TRUE, 0, GTK_PACK_START);
-	gtk_box_set_child_packing(
-      GTK_BOX(parent_parent_parent),
+			parent, TRUE, TRUE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(parent_parent_parent),
 			parent_parent, TRUE, TRUE, 0, GTK_PACK_START);
 
 	/* SOUND SELECTION */
-	sw = gtk_scrolled_window_new(NULL,NULL);
-	gtk_widget_set_size_request(sw, -1, 100);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW(sw), GTK_SHADOW_IN);
-
-	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
 	event_store = gtk_list_store_new (4, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_UINT);
 
 	for (j=0; j < PURPLE_NUM_SOUNDS; j++) {
@@ -2609,7 +2602,9 @@ sound_page(void)
 							NULL);
 	gtk_tree_view_append_column (GTK_TREE_VIEW(event_view), col);
 	g_object_unref(G_OBJECT(event_store));
-	gtk_container_add(GTK_CONTAINER(sw), event_view);
+	gtk_box_pack_start(GTK_BOX(vbox),
+		pidgin_make_scrollable(event_view, GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, 100),
+		TRUE, TRUE, 0);
 
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);

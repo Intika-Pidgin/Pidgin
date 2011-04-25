@@ -359,9 +359,8 @@ pidgin_roomlist_paint_tooltip(GtkWidget *widget, gpointer user_data)
 	int current_height, max_width;
 	int max_text_width;
 	GtkTextDirection dir = gtk_widget_get_direction(GTK_WIDGET(grl->tree));
-  cairo_t *cr =
-        gdk_cairo_create(gtk_widget_get_window(grl->tipwindow));
-    
+	cairo_t *cr = gdk_cairo_create(gtk_widget_get_window(grl->tipwindow));
+
 	style = gtk_widget_get_style(grl->tipwindow);
 
 	max_text_width = MAX(grl->tip_width, grl->tip_name_width);
@@ -390,7 +389,7 @@ pidgin_roomlist_paint_tooltip(GtkWidget *widget, gpointer user_data)
 				current_height + grl->tip_name_height,
 				grl->tip_layout);
 	}
-  cairo_destroy(cr);
+	cairo_destroy(cr);
 
 	return FALSE;
 }
@@ -552,15 +551,8 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
 
 	/* scrolled window */
-	dialog->sw = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(dialog->sw),
-	                                    GTK_SHADOW_IN);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(dialog->sw),
-	                               GTK_POLICY_AUTOMATIC,
-	                               GTK_POLICY_AUTOMATIC);
+	dialog->sw = pidgin_make_scrollable(NULL, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, 250);
 	gtk_box_pack_start(GTK_BOX(vbox2), dialog->sw, TRUE, TRUE, 0);
-	gtk_widget_set_size_request(dialog->sw, -1, 250);
-	gtk_widget_show(dialog->sw);
 
 	/* progress bar */
 	dialog->progress = gtk_progress_bar_new();

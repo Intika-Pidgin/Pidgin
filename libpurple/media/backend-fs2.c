@@ -125,6 +125,7 @@ struct _PurpleMediaBackendFs2Session
 
 	GstElement *src;
 	GstElement *tee;
+	GstElement *srcvalve;
 
 	GstPad *srcpad;
 
@@ -142,6 +143,8 @@ struct _PurpleMediaBackendFs2Private
 	GHashTable *participants;
 
 	GList *streams;
+
+	gdouble silence_threshold;
 };
 
 enum {
@@ -152,8 +155,7 @@ enum {
 
 static void
 purple_media_backend_fs2_init(PurpleMediaBackendFs2 *self)
-{
-}
+{}
 
 static gboolean
 event_probe_cb(GstPad *srcpad, GstEvent *event, gboolean release_pad)
@@ -766,6 +768,22 @@ get_session_from_fs_stream(PurpleMediaBackendFs2 *self, FsStream *stream)
 	return NULL;
 }
 
+static gdouble
+gst_msg_db_to_percent(GstMessage *msg, gchar *value_name)
+{
+	const GValue *list;
+	const GValue *value;
+	gdouble value_db;
+	gdouble percent;
+
+	list = gst_structure_get_value(
+				gst_message_get_structure(msg), value_name);
+	value = gst_value_list_get_value(list, 0);
+	value_db = g_value_get_double(value);
+	percent = pow(10, value_db / 20);
+	return (percent > 1.0) ? 1.0 : percent;
+}
+
 static void
 gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		PurpleMediaBackendFs2 *self)
@@ -778,17 +796,12 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 	if (level_id == 0)
 		level_id = g_signal_lookup("level", PURPLE_TYPE_MEDIA);
 
-	if (g_signal_has_handler_pending(priv->media, level_id, 0, FALSE)
-			&& gst_structure_has_name(
-			gst_message_get_structure(msg), "level")) {
+	if (gst_structure_has_name(msg->structure, "level")) {
 		GstElement *src = GST_ELEMENT(GST_MESSAGE_SRC(msg));
 		gchar *name;
 		gchar *participant = NULL;
 		PurpleMediaBackendFs2Session *session = NULL;
-		gdouble rms_db;
 		gdouble percent;
-		const GValue *list;
-		const GValue *value;
 
 		if (!PURPLE_IS_MEDIA(priv->media) ||
 				GST_ELEMENT_PARENT(src) != priv->confbin)
@@ -798,7 +811,19 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 
 		if (!strncmp(name, "sendlevel_", 10)) {
 			session = get_session(self, name+10);
-		} else {
+			if (priv->silence_threshold > 0) {
+				percent = gst_msg_db_to_percent(msg, "decay");
+				g_object_set(session->srcvalve,
+						"drop", (percent < priv->silence_threshold), NULL);
+			}
+		}
+
+		g_free(name);
+
+		if (!g_signal_has_handler_pending(priv->media, level_id, 0, FALSE))
+			return;
+
+		if (!session) {
 			GList *iter = priv->streams;
 			PurpleMediaBackendFs2Stream *stream;
 			for (; iter; iter = g_list_next(iter)) {
@@ -811,19 +836,10 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 			}
 		}
 
-		g_free(name);
-
 		if (!session)
 			return;
 
-		list = gst_structure_get_value(
-				gst_message_get_structure(msg), "rms");
-		value = gst_value_list_get_value(list, 0);
-		rms_db = g_value_get_double(value);
-		percent = pow(10, rms_db / 20) * 5;
-
-		if(percent > 1.0)
-			percent = 1.0;
+		percent = gst_msg_db_to_percent(msg, "rms");
 
 		g_signal_emit(priv->media, level_id, 0,
 				session->id, participant, percent);
@@ -1235,6 +1251,13 @@ init_conference(PurpleMediaBackendFs2 *self)
 		return FALSE;
 	}
 
+	if (purple_account_get_silence_suppression(
+				purple_media_get_account(priv->media)))
+		priv->silence_threshold = purple_prefs_get_int(
+				"/purple/media/audio/silence_threshold") / 100.0;
+	else
+		priv->silence_threshold = 0;
+
 	pipeline = purple_media_manager_get_pipeline(
 			purple_media_get_manager(priv->media));
 
@@ -1376,13 +1399,17 @@ create_src(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 		name = g_strdup_printf("sendlevel_%s", session->id);
 		level = gst_element_factory_make("level", name);
 		g_free(name);
+		session->srcvalve = gst_element_factory_make("valve", NULL);
 		gst_bin_add(GST_BIN(priv->confbin), volume);
 		gst_bin_add(GST_BIN(priv->confbin), level);
+		gst_bin_add(GST_BIN(priv->confbin), session->srcvalve);
 		gst_element_set_state(level, GST_STATE_PLAYING);
 		gst_element_set_state(volume, GST_STATE_PLAYING);
+		gst_element_set_state(session->srcvalve, GST_STATE_PLAYING);
+		gst_element_link(level, session->srcvalve);
 		gst_element_link(volume, level);
 		gst_element_link(session->tee, volume);
-		srcpad = gst_element_get_static_pad(level, "src");
+		srcpad = gst_element_get_static_pad(session->srcvalve, "src");
 		g_object_set(volume, "volume", input_volume, NULL);
 	} else {
 		srcpad = gst_element_get_request_pad(session->tee, "src%d");

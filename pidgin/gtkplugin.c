@@ -562,13 +562,13 @@ static gboolean
 pidgin_plugins_paint_tooltip(GtkWidget *tipwindow, gpointer data)
 {
 	PangoLayout *layout = g_object_get_data(G_OBJECT(tipwindow), "tooltip-plugin");
-  cairo_t *cr = gdk_cairo_create(gtk_widget_get_window(tipwindow));
-  gtk_paint_layout(gtk_widget_get_style(tipwindow), cr, GTK_STATE_NORMAL, FALSE,
+	cairo_t *cr = gdk_cairo_create(gtk_widget_get_window(tipwindow));
+	gtk_paint_layout(gtk_widget_get_style(tipwindow), cr, GTK_STATE_NORMAL, FALSE,
 			tipwindow, "tooltip",
 			6, 6, layout);
-  cairo_destroy(cr);
+	cairo_destroy(cr);
 
-  return TRUE;
+	return TRUE;
 }
 
 static gboolean
@@ -709,7 +709,6 @@ create_details()
 
 void pidgin_plugin_dialog_show()
 {
-	GtkWidget *sw;
 	GtkWidget *event_view;
 	GtkListStore *ls;
 	GtkCellRenderer *rend, *rendt;
@@ -732,13 +731,6 @@ void pidgin_plugin_dialog_show()
 						GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
 	gtk_widget_set_sensitive(pref_button, FALSE);
 	gtk_window_set_role(GTK_WINDOW(plugin_dialog), "plugins");
-
-	sw = gtk_scrolled_window_new(NULL,NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW(sw), GTK_SHADOW_IN);
-
-	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(plugin_dialog))),
-                     sw, TRUE, TRUE, 0);
 
 	ls = gtk_list_store_new(4, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_POINTER, G_TYPE_BOOLEAN);
 	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(ls),
@@ -784,7 +776,9 @@ void pidgin_plugin_dialog_show()
 	gtk_tree_view_append_column (GTK_TREE_VIEW(event_view), col);
 	gtk_tree_view_column_set_sort_column_id(col, 1);
 	g_object_unref(G_OBJECT(ls));
-	gtk_container_add(GTK_CONTAINER(sw), event_view);
+	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(plugin_dialog))), 
+		pidgin_make_scrollable(event_view, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, -1), 
+		TRUE, TRUE, 0);
 	gtk_tree_view_set_search_column(GTK_TREE_VIEW(event_view), 1);
 	gtk_tree_view_set_search_equal_func(GTK_TREE_VIEW(event_view),
 				pidgin_tree_view_search_equal_func, NULL, NULL);
@@ -799,7 +793,7 @@ void pidgin_plugin_dialog_show()
 	gtk_widget_set_sensitive(expander, FALSE);
 	gtk_container_add(GTK_CONTAINER(expander), create_details());
 	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(plugin_dialog))),
-    expander, FALSE, FALSE, 0);
+	                   expander, FALSE, FALSE, 0);
 
 
 	g_signal_connect (G_OBJECT (sel), "changed", G_CALLBACK (prefs_plugin_sel), NULL);
