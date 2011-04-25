@@ -531,7 +531,6 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	GtkWidget *title_box;
 	char *text;
 	GtkWidget *pane;
-	GtkWidget *sw;
 	GtkCellRenderer *rend;
 	GtkTreeViewColumn *col;
 	GtkTreeSelection *sel;
@@ -582,10 +581,11 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	gtk_dialog_add_button(GTK_DIALOG(lv->window), _("_Browse logs folder"), GTK_RESPONSE_HELP);
 #endif
 	gtk_container_set_border_width (GTK_CONTAINER(lv->window), PIDGIN_HIG_BOX_SPACE);
-  /* TODO: is it possible to set this in GTK+ 3.0?
-  gtk_dialog_set_has_separator(GTK_DIALOG(lv->window), FALSE);
-  */
-  gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))), 0);
+	/* TODO: is it possible to set this in GTK+ 3.0? */
+#if 0
+	gtk_dialog_set_has_separator(GTK_DIALOG(lv->window), FALSE);
+#endif
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))), 0);
 	g_signal_connect(G_OBJECT(lv->window), "response",
 					 G_CALLBACK(destroy_cb), ht);
 	gtk_window_set_role(GTK_WINDOW(lv->window), "log_viewer");
@@ -595,7 +595,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		title_box = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 		gtk_container_set_border_width(GTK_CONTAINER(title_box), PIDGIN_HIG_BOX_SPACE);
 		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
-                       title_box, FALSE, FALSE, 0);
+		                   title_box, FALSE, FALSE, 0);
 
 		gtk_box_pack_start(GTK_BOX(title_box), icon, FALSE, FALSE, 0);
 	} else
@@ -615,13 +615,9 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	pane = gtk_hpaned_new();
 	gtk_container_set_border_width(GTK_CONTAINER(pane), PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
-                     pane, TRUE, TRUE, 0);
+	                   pane, TRUE, TRUE, 0);
 
 	/* List *************/
-	sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (sw), GTK_SHADOW_IN);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
-	gtk_paned_add1(GTK_PANED(pane), sw);
 	lv->treestore = gtk_tree_store_new (2, G_TYPE_STRING, G_TYPE_POINTER);
 	lv->treeview = gtk_tree_view_new_with_model (GTK_TREE_MODEL (lv->treestore));
 	g_object_unref(G_OBJECT(lv->treestore));
@@ -629,7 +625,8 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	col = gtk_tree_view_column_new_with_attributes ("time", rend, "markup", 0, NULL);
 	gtk_tree_view_append_column (GTK_TREE_VIEW(lv->treeview), col);
 	gtk_tree_view_set_headers_visible (GTK_TREE_VIEW (lv->treeview), FALSE);
-	gtk_container_add (GTK_CONTAINER (sw), lv->treeview);
+	gtk_paned_add1(GTK_PANED(pane), 
+		pidgin_make_scrollable(lv->treeview, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1));
 
 	populate_log_tree(lv);
 
@@ -654,7 +651,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		/*		gtk_paned_add1(GTK_PANED(pane), size_label); */
 		gtk_misc_set_alignment(GTK_MISC(size_label), 0, 0);
 		gtk_box_pack_end(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
-                     size_label, FALSE, FALSE, 0);
+		                 size_label, FALSE, FALSE, 0);
 		g_free(sz_txt);
 		g_free(text);
 	}

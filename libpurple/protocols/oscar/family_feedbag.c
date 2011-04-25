@@ -824,7 +824,7 @@ aim_ssi_add_to_private_list(OscarData *od, const char* name, guint16 list_type)
 		return -EINVAL;
 
 	if (aim_ssi_itemlist_find(od->ssi.local, 0x0000, 0x0000) == NULL)
-		aim_ssi_itemlist_add(&od->ssi.local, NULL, 0x0000, 0x0000, list_type, NULL);
+		aim_ssi_itemlist_add(&od->ssi.local, NULL, 0x0000, 0x0000, AIM_SSI_TYPE_GROUP, NULL);
 
 	aim_ssi_itemlist_add(&od->ssi.local, name, 0x0000, 0xFFFF, list_type, NULL);
 	return aim_ssi_sync(od);
@@ -1682,7 +1682,7 @@ static int receiveauthgrant(OscarData *od, FlapConnection *conn, aim_module_t *m
  * granted, denied, or dropped.
  *
  */
-int aim_ssi_sendauthrequest(OscarData *od, char *bn, const char *msg)
+int aim_ssi_sendauthrequest(OscarData *od, const char *bn, const char *msg)
 {
 	FlapConnection *conn;
 	ByteStream bs;
@@ -1759,7 +1759,7 @@ static int receiveauthrequest(OscarData *od, FlapConnection *conn, aim_module_t 
  * if reply=0x01 then grant
  *
  */
-int aim_ssi_sendauthreply(OscarData *od, char *bn, guint8 reply, const char *msg)
+int aim_ssi_sendauthreply(OscarData *od, const char *bn, guint8 reply, const char *msg)
 {
 	FlapConnection *conn;
 	ByteStream bs;

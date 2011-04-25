@@ -385,21 +385,22 @@ msim_status_text(PurpleBuddy *buddy)
 
 	g_return_val_if_fail(buddy != NULL, NULL);
 
-	user = msim_get_user_from_buddy(buddy, TRUE);
-
 	account = purple_buddy_get_account(buddy);
 	gc = purple_account_get_connection(account);
 	session = (MsimSession *)gc->proto_data;
 
 	display_name = headline = NULL;
 
-	/* Retrieve display name and/or headline, depending on user preference. */
-	if (purple_account_get_bool(session->account, "show_headline", TRUE)) {
-		headline = user->headline;
-	}
+	user = msim_get_user_from_buddy(buddy, FALSE);
+	if (user != NULL) {
+		/* Retrieve display name and/or headline, depending on user preference. */
+		if (purple_account_get_bool(account, "show_headline", TRUE)) {
+			headline = user->headline;
+		}
 
-	if (purple_account_get_bool(session->account, "show_display_name", FALSE)) {
-		display_name = user->display_name;
+		if (purple_account_get_bool(account, "show_display_name", FALSE)) {
+			display_name = user->display_name;
+		}
 	}
 
 	/* Return appropriate combination of display name and/or headline, or neither. */
@@ -3096,7 +3097,9 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,                   /* get_media_caps */
 	NULL,                   /* get_moods */
 	NULL,                   /* set_public_alias */
-	NULL                    /* get_public_alias */
+	NULL,                   /* get_public_alias */
+	NULL,                   /* add_buddy_with_invite */
+	NULL                    /* add_buddies_with_invite */
 };
 
 /**

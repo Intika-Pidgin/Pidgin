@@ -106,9 +106,9 @@ pidgin_widget_decorate_account(GtkWidget *cont, PurpleAccount *account)
 
 	if (GTK_IS_DIALOG(cont)) {
 		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(cont))),
-                       image, FALSE, TRUE, 0);
+	                       image, FALSE, TRUE, 0);
 		gtk_box_reorder_child(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(cont))),
-                          image, 0);
+	                          image, 0);
 	} else if (GTK_IS_HBOX(cont)) {
 		gtk_misc_set_alignment(GTK_MISC(image), 0, 0);
 		gtk_box_pack_end(GTK_BOX(cont), image, FALSE, TRUE, 0);
@@ -362,20 +362,21 @@ pidgin_request_input(const char *title, const char *primary,
 	/* Setup the dialog */
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER/2);
 	gtk_container_set_border_width(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                                 PIDGIN_HIG_BORDER / 2);
+	                               PIDGIN_HIG_BORDER / 2);
 	if (!multiline)
 		gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
-  /* TODO: not sure how to do this with GTK+ 3 
+	/* TODO: not sure how to do this with GTK+ 3 */
+#if 0
 	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
-  */
+#endif
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), 0);
 	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                      PIDGIN_HIG_BORDER);
+	                    PIDGIN_HIG_BORDER);
 
 	/* Setup the main horizontal box */
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                    hbox);
+	                  hbox);
 
 	/* Dialog icon. */
 	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
@@ -432,16 +433,6 @@ pidgin_request_input(const char *title, const char *primary,
 	}
 	else {
 		if (multiline) {
-			GtkWidget *sw;
-
-			sw = gtk_scrolled_window_new(NULL, NULL);
-			gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-										   GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
-			gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-												GTK_SHADOW_IN);
-
-			gtk_widget_set_size_request(sw, 320, 130);
-
 			/* GtkTextView */
 			entry = gtk_text_view_new();
 			gtk_text_view_set_editable(GTK_TEXT_VIEW(entry), TRUE);
@@ -455,12 +446,12 @@ pidgin_request_input(const char *title, const char *primary,
 
 			gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(entry), GTK_WRAP_WORD_CHAR);
 
-			gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-
 			if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
 				pidgin_setup_gtkspell(GTK_TEXT_VIEW(entry));
 
-			gtk_container_add(GTK_CONTAINER(sw), entry);
+			gtk_box_pack_start(GTK_BOX(vbox), 
+				pidgin_make_scrollable(entry, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, 320, 130),
+				TRUE, TRUE, 0);
 		}
 		else {
 			entry = gtk_entry_new();
@@ -544,18 +535,19 @@ pidgin_request_choice(const char *title, const char *primary,
 	/* Setup the dialog */
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER/2);
 	gtk_container_set_border_width(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                                 PIDGIN_HIG_BORDER / 2);
+	                               PIDGIN_HIG_BORDER / 2);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
-  /* TODO: don't know if this is possible with GTK+ 3
-  gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
-  */
+	/* TODO: don't know if this is possible with GTK+ 3 */
+#if 0
+	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
+#endif
 	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                      PIDGIN_HIG_BORDER);
+	                    PIDGIN_HIG_BORDER);
 
 	/* Setup the main horizontal box */
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                    hbox);
+	                  hbox);
 
 	/* Dialog icon. */
 	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
@@ -671,18 +663,19 @@ pidgin_request_action_with_icon(const char *title, const char *primary,
 	/* Setup the dialog */
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER/2);
 	gtk_container_set_border_width(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                                 PIDGIN_HIG_BORDER / 2);
+	                               PIDGIN_HIG_BORDER / 2);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
-  /* TODO: this is probably not supported by GTK+ 3
-  gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
-  */
+	/* TODO: this is probably not supported by GTK+ 3 */
+#if 0
+	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
+#endif
 	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                      PIDGIN_HIG_BORDER);
+	                    PIDGIN_HIG_BORDER);
 
 	/* Setup the main horizontal box */
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                    hbox);
+	                  hbox);
 
 	/* Dialog icon. */
 	if (icon_data) {
@@ -753,8 +746,8 @@ pidgin_request_action_with_icon(const char *title, const char *primary,
 
 
 	if (default_action == PURPLE_DEFAULT_ACTION_NONE) {
-    gtk_widget_set_can_default(img, TRUE);
-    gtk_widget_set_can_focus(img, TRUE);
+		gtk_widget_set_can_default(img, TRUE);
+		gtk_widget_set_can_focus(img, TRUE);
 		gtk_widget_grab_focus(img);
 		gtk_widget_grab_default(img);
 	} else
@@ -875,12 +868,6 @@ create_string_field(PurpleRequestField *field)
 	{
 		GtkWidget *textview;
 
-		widget = gtk_scrolled_window_new(NULL, NULL);
-		gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(widget),
-											GTK_SHADOW_IN);
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(widget),
-									   GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
-
 		textview = gtk_text_view_new();
 		gtk_text_view_set_editable(GTK_TEXT_VIEW(textview),
 								   TRUE);
@@ -890,10 +877,7 @@ create_string_field(PurpleRequestField *field)
 		if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
 			pidgin_setup_gtkspell(GTK_TEXT_VIEW(textview));
 
-		gtk_container_add(GTK_CONTAINER(widget), textview);
 		gtk_widget_show(textview);
-
-		gtk_widget_set_size_request(widget, -1, 75);
 
 		if (value != NULL)
 		{
@@ -916,6 +900,8 @@ create_string_field(PurpleRequestField *field)
 			g_signal_connect(G_OBJECT(buffer), "changed",
 							 G_CALLBACK(req_entry_field_changed_cb), field);
 	    }
+
+		widget = pidgin_make_scrollable(textview, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, 75);
 	}
 	else
 	{
@@ -1116,7 +1102,6 @@ list_field_select_changed_cb(GtkTreeSelection *sel, PurpleRequestField *field)
 static GtkWidget *
 create_list_field(PurpleRequestField *field)
 {
-	GtkWidget *sw;
 	GtkWidget *treeview;
 	GtkListStore *store;
 	GtkCellRenderer *renderer;
@@ -1128,14 +1113,6 @@ create_list_field(PurpleRequestField *field)
 
 	icons = purple_request_field_list_get_icons(field);
 
-	/* Create the scrolled window */
-	sw = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-				       GTK_POLICY_AUTOMATIC,
-				       GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-										GTK_SHADOW_IN);
-	gtk_widget_show(sw);
 
 	/* Create the list store */
 	if (icons)
@@ -1211,10 +1188,9 @@ create_list_field(PurpleRequestField *field)
 	g_signal_connect(G_OBJECT(sel), "changed",
 					 G_CALLBACK(list_field_select_changed_cb), field);
 
-	gtk_container_add(GTK_CONTAINER(sw), treeview);
 	gtk_widget_show(treeview);
 
-	return sw;
+	return pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, -1);
 }
 
 static void *
@@ -1235,7 +1211,6 @@ pidgin_request_fields(const char *title, const char *primary,
 	GtkWidget *table;
 	GtkWidget *button;
 	GtkWidget *img;
-	GtkWidget *sw;
 	GtkSizeGroup *sg;
 	GList *gl, *fl;
 	PurpleRequestFieldGroup *group;
@@ -1281,12 +1256,12 @@ pidgin_request_fields(const char *title, const char *primary,
 
 	/* Cancel button */
 	button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(cancel_text), G_CALLBACK(multifield_cancel_cb), data);
-  gtk_widget_set_can_default(button, TRUE);
+	gtk_widget_set_can_default(button, TRUE);
 
 	/* OK button */
 	button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(ok_text), G_CALLBACK(multifield_ok_cb), data);
 	data->ok_button = button;
-  gtk_widget_set_can_default(button, TRUE);
+	gtk_widget_set_can_default(button, TRUE);
 	gtk_window_set_default(GTK_WINDOW(win), button);
 
 	pidgin_widget_decorate_account(hbox, account);
@@ -1320,18 +1295,10 @@ pidgin_request_fields(const char *title, const char *primary,
 	if(total_fields > 9) {
 		GtkWidget *hbox_for_spacing, *vbox_for_spacing;
 
-		sw = gtk_scrolled_window_new(NULL, NULL);
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-				GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-		gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-				GTK_SHADOW_NONE);
-		gtk_widget_set_size_request(sw, -1, 200);
-		gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-		gtk_widget_show(sw);
-
 		hbox_for_spacing = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-		gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(sw),
-				hbox_for_spacing);
+		gtk_box_pack_start(GTK_BOX(vbox), 
+			pidgin_make_scrollable(hbox_for_spacing, GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC, GTK_SHADOW_NONE, -1, 200), 
+			TRUE, TRUE, 0);
 		gtk_widget_show(hbox_for_spacing);
 
 		vbox_for_spacing = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);

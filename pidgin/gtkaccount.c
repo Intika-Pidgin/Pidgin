@@ -143,6 +143,10 @@ typedef struct
 	GtkWidget *proxy_user_entry;
 	GtkWidget *proxy_pass_entry;
 
+	/* Voice & Video Options*/
+	GtkWidget *voice_frame;
+	GtkWidget *suppression_check;
+
 } AccountPrefsDialog;
 
 static AccountsWindow *accounts_window = NULL;
@@ -159,6 +163,7 @@ static void add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent);
 static void add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent);
 static void add_protocol_options(AccountPrefsDialog *dialog);
 static void add_proxy_options(AccountPrefsDialog *dialog, GtkWidget *parent);
+static void add_voice_options(AccountPrefsDialog *dialog);
 
 static const char *
 xmpp_default_domain_hackery(GtkWidget *protocol_combo)
@@ -273,6 +278,7 @@ set_account_protocol_cb(GtkWidget *widget, const char *id,
 	add_login_options(dialog,    dialog->top_vbox);
 	add_user_options(dialog,     dialog->top_vbox);
 	add_protocol_options(dialog);
+	add_voice_options(dialog);
 
 	gtk_widget_grab_focus(dialog->protocol_menu);
 
@@ -829,8 +835,11 @@ add_protocol_options(AccountPrefsDialog *dialog)
 			gtk_label_new_with_mnemonic(_("Ad_vanced")), 1);
 	gtk_widget_show(vbox);
 
+/* FIXME: Facebook forced-options hack */
+#if 0
 	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(dialog->protocol_menu));
 	item = gtk_menu_get_active(GTK_MENU(menu));
+#endif
 
 	for (l = dialog->prpl_info->protocol_options; l != NULL; l = l->next)
 	{
@@ -946,9 +955,12 @@ add_protocol_options(AccountPrefsDialog *dialog)
 				model = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_POINTER);
 				opt_entry->widget = combo = gtk_combo_box_new_with_model(GTK_TREE_MODEL(model));
 
+/* FIXME: Facebook forced-options hack */
+#if 0
 				if (g_object_get_data(G_OBJECT(item), "fakefacebook") &&
 					!strcmp(opt_entry->setting, "connection_security"))
 					str_value = "opportunistic_tls";
+#endif
 
 				/* Loop through list of PurpleKeyValuePair items */
 				for (node = list; node != NULL; node = node->next) {
@@ -1189,6 +1201,39 @@ add_proxy_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	/* Connect signals. */
 	g_signal_connect(G_OBJECT(dialog->proxy_dropdown), "changed",
 					 G_CALLBACK(proxy_type_changed_cb), dialog);
+}
+
+static void
+add_voice_options(AccountPrefsDialog *dialog)
+{
+#ifdef USE_VV
+	if (!dialog->prpl_info || !PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(dialog->prpl_info, initiate_media)) {
+		if (dialog->voice_frame) {
+			gtk_widget_destroy(dialog->voice_frame);
+			dialog->voice_frame = NULL;
+			dialog->suppression_check = NULL;
+		}
+		return;
+	}
+
+	if (!dialog->voice_frame) {
+		dialog->voice_frame = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
+		gtk_container_set_border_width(GTK_CONTAINER(dialog->voice_frame),
+										PIDGIN_HIG_BORDER);
+
+		dialog->suppression_check =
+				gtk_check_button_new_with_mnemonic(_("Use _silence suppression"));
+		gtk_box_pack_start(GTK_BOX(dialog->voice_frame), dialog->suppression_check,
+				FALSE, FALSE, 0);
+
+		gtk_notebook_append_page(GTK_NOTEBOOK(dialog->notebook),
+				dialog->voice_frame, gtk_label_new_with_mnemonic(_("_Voice and Video")));
+		gtk_widget_show_all(dialog->voice_frame);
+	}
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dialog->suppression_check),
+								purple_account_get_silence_suppression(dialog->account));
+#endif
 }
 
 static gboolean
@@ -1465,6 +1510,12 @@ ok_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 		proxy_info = NULL;
 	}
 
+	/* Voice and Video settings */
+	if (dialog->voice_frame) {
+		purple_account_set_silence_suppression(account,
+				gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(dialog->suppression_check)));
+	}
+
 	/* If this is a new account, add it to our list */
 	if (new_acct)
 		purple_accounts_add(account);
@@ -1585,6 +1636,8 @@ pidgin_account_dialog_show(PidginAccountDialogType type,
 			gtk_label_new_with_mnemonic(_("P_roxy")));
 	gtk_widget_show(dbox);
 	add_proxy_options(dialog, dbox);
+
+	add_voice_options(dialog);
 
 	/* Cancel button */
 	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CANCEL, G_CALLBACK(cancel_account_prefs_cb), dialog);
@@ -2174,7 +2227,6 @@ static GtkWidget *
 create_accounts_list(AccountsWindow *dialog)
 {
 	GtkWidget *frame;
-	GtkWidget *sw;
 	GtkWidget *label;
 	GtkWidget *treeview;
 	GtkTreeSelection *sel;
@@ -2214,16 +2266,6 @@ create_accounts_list(AccountsWindow *dialog)
 	gtk_misc_set_alignment(GTK_MISC(label), 0.5, 0.5);
 	gtk_notebook_append_page(GTK_NOTEBOOK(accounts_window->notebook), label, NULL);
 
-	/* Create the scrolled window. */
-	sw = gtk_scrolled_window_new(0, 0);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-					GTK_POLICY_AUTOMATIC,
-					GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-					GTK_SHADOW_NONE);
-	gtk_notebook_append_page(GTK_NOTEBOOK(accounts_window->notebook), sw, NULL);
-	gtk_widget_show(sw);
-
 	/* Create the list model. */
 	dialog->model = gtk_list_store_new(NUM_COLUMNS,
 					GDK_TYPE_PIXBUF,   /* COLUMN_ICON */
@@ -2249,7 +2291,9 @@ create_accounts_list(AccountsWindow *dialog)
 	g_signal_connect(G_OBJECT(treeview), "button_press_event",
 					 G_CALLBACK(account_treeview_double_click_cb), dialog);
 
-	gtk_container_add(GTK_CONTAINER(sw), treeview);
+	gtk_notebook_append_page(GTK_NOTEBOOK(accounts_window->notebook),
+		pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_NONE, -1, -1), 
+		NULL);
 
 	add_columns(treeview, dialog);
 	gtk_tree_view_columns_autosize(GTK_TREE_VIEW(treeview));

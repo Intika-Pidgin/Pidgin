@@ -654,6 +654,8 @@ silcpurple_close_final(gpointer *context)
 {
 	SilcPurple sg = (SilcPurple)context;
 
+	purple_debug_info("silc", "Finalizing SilcPurple %p\n", sg);
+
 	silc_client_stop(sg->client, NULL, NULL);
 	silc_client_free(sg->client);
 	if (sg->sha1hash)
@@ -714,6 +716,8 @@ silcpurple_close(PurpleConnection *gc)
 #endif /* __SILC_TOOLKIT_VERSION */
 
 	purple_timeout_remove(sg->scheduler);
+
+	purple_debug_info("silc", "Scheduling destruction of SilcPurple %p\n", sg);
 	purple_timeout_add(1, (GSourceFunc)silcpurple_close_final, sg);
 }
 
@@ -2119,7 +2123,9 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,				        /* get_media_caps */
 	NULL,				        /* get_moods */
 	NULL,				        /* set_public_alias */
-	NULL				        /* get_public_alias */
+	NULL,				        /* get_public_alias */
+	NULL,				        /* add_buddy_with_invite */
+	NULL				        /* add_buddies_with_invite */
 };
 
 static PurplePluginInfo info =
