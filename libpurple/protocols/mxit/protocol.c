@@ -1763,7 +1763,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 	int						count;
 	int						i;
 	const char*				avatarId	= NULL;
-	const char*				statusMsg	= NULL;
+	char*					statusMsg	= NULL;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_parse_cmd_extprofile: profile for '%s'\n", mxitId );
 
@@ -1820,7 +1820,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 		}
 		else if ( strcmp( CP_PROFILE_STATUS, fname ) == 0 ) {
 			/* status message - just keep a reference to the value */
-			statusMsg = fvalue;
+			statusMsg = g_markup_escape_text( fvalue, -1 );
 		}
 		else if ( strcmp( CP_PROFILE_AVATAR, fname ) == 0 ) {
 			/* avatar id - just keep a reference to the value */
@@ -1907,10 +1907,29 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 			/* this is a contact */
 			if ( avatarId )
 				mxit_update_buddy_avatar( session, mxitId, avatarId );
+
+			if ( ( statusMsg ) && ( strlen( statusMsg ) > 0 ) ) {
+				/* update the status message */
+				PurpleBuddy*		buddy	= NULL;
+
+				buddy = purple_find_buddy( session->acc, mxitId );
+				if ( buddy ) {
+					contact = purple_buddy_get_protocol_data( buddy );
+					if ( contact ) {
+						if ( contact->statusMsg )
+							g_free( contact->statusMsg );
+						contact->statusMsg = strdup( statusMsg );
+					}
+				}
+			}
+
+			/* show the profile */
 			mxit_show_profile( session, mxitId, profile );
 			g_free( profile );
 		}
 	}
+
+	g_free( statusMsg );
 }
 
 
@@ -1966,6 +1985,14 @@ static void mxit_parse_cmd_suggestcontacts( struct MXitSession* session, struct 
 			if ( strcmp( CP_PROFILE_BIRTHDATE, fname ) == 0 ) {
 				/* birthdate */
 				g_strlcpy( profile->birthday, fvalue, sizeof( profile->birthday ) );
+			}
+			else if ( strcmp( CP_PROFILE_FIRSTNAME, fname ) == 0 ) {
+				/* first name */
+				g_strlcpy( profile->firstname, fvalue, sizeof( profile->firstname ) );
+			}
+			else if ( strcmp( CP_PROFILE_LASTNAME, fname ) == 0 ) {
+				/* last name */
+				g_strlcpy( profile->lastname, fvalue, sizeof( profile->lastname ) );
 			}
 			else if ( strcmp( CP_PROFILE_GENDER, fname ) == 0 ) {
 				/* gender */
@@ -2099,6 +2126,7 @@ static void mxit_parse_cmd_media( struct MXitSession* session, struct record** r
 					if ( contact ) {
 						/* this is an invite (add image to the internal image store) */
 						contact->imgid = purple_imgstore_add_with_id( chunk.data, chunk.length, NULL );
+						/* show the profile */
 						mxit_show_profile( session, chunk.mxitid, contact->profile );
 					}
 					else {

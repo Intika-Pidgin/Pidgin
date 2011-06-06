@@ -166,6 +166,7 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 	PurpleNotifyUserInfo*	info		= purple_notify_user_info_new();
 	struct contact*			contact		= NULL;
 	PurpleBuddy*			buddy;
+	gchar*					tmp			= NULL;
 
 	buddy = purple_find_buddy( session->acc, username );
 	if ( buddy ) {
@@ -175,7 +176,11 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 	}
 
 	purple_notify_user_info_add_pair( info, _( "Display Name" ), profile->nickname );
-	purple_notify_user_info_add_pair( info, _( "Birthday" ), profile->birthday );
+
+	tmp = g_strdup_printf("%s (%i)", profile->birthday, calculateAge( profile->birthday ) );
+	purple_notify_user_info_add_pair( info, _( "Birthday" ), tmp );
+	g_free( tmp );
+
 	purple_notify_user_info_add_pair( info, _( "Gender" ), profile->male ? _( "Male" ) : _( "Female" ) );
 
 	/* optional information */
@@ -282,6 +287,10 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 	purple_notify_searchresults_column_add( results, column );
 	column = purple_notify_searchresults_column_new( _( "Display Name" ) );
 	purple_notify_searchresults_column_add( results, column );
+	column = purple_notify_searchresults_column_new( _( "First Name" ) );
+	purple_notify_searchresults_column_add( results, column );
+	column = purple_notify_searchresults_column_new( _( "Last Name" ) );
+	purple_notify_searchresults_column_add( results, column );
 	column = purple_notify_searchresults_column_new( _( "Gender" ) );
 	purple_notify_searchresults_column_add( results, column );
 	column = purple_notify_searchresults_column_new( _( "Age" ) );
@@ -292,16 +301,21 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 	while (entries != NULL) {
 		struct MXitProfile* profile	= ( struct MXitProfile *) entries->data;
 		GList*	row;
+		gchar* tmp = purple_base64_encode( (unsigned char *) profile->userid, strlen( profile->userid ) );
 
 		/* column values */
-		row = g_list_append( NULL, g_strdup( profile->userid ) );
+		row = g_list_append( NULL, g_strdup_printf( "#%s", tmp ) );
 		row = g_list_append( row, g_strdup( profile->nickname ) );
+		row = g_list_append( row, g_strdup( profile->firstname ) );
+		row = g_list_append( row, g_strdup( profile->lastname ) );
 		row = g_list_append( row, g_strdup( profile->male ? "Male" : "Female" ) );
 		row = g_list_append( row, g_strdup_printf( "%i", calculateAge( profile->birthday ) ) );
 		row = g_list_append( row, g_strdup( profile->whereami ) );
 
 		purple_notify_searchresults_row_add( results, row );
 		entries = g_list_next( entries );
+
+		g_free( tmp );
 	}
 
 	/* button */
