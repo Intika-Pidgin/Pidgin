@@ -1081,7 +1081,17 @@ gst_handle_message_error(GstBus *bus, GstMessage *msg,
 	GstElement *lastElement = NULL;
 	GList *sessions;
 
-	while (!GST_IS_PIPELINE(element)) {
+	GError *error = NULL;
+	gchar *debug_msg = NULL;
+
+	gst_message_parse_error(msg, &error, &debug_msg);
+	purple_debug_error("backend-fs2", "gst error %s\ndebugging: %s\n",
+			error->message, debug_msg);
+
+	g_error_free(error);
+	g_free(debug_msg);
+
+	while (element && !GST_IS_PIPELINE(element)) {
 		if (element == priv->confbin)
 			break;
 
@@ -1089,7 +1099,7 @@ gst_handle_message_error(GstBus *bus, GstMessage *msg,
 		element = GST_ELEMENT_PARENT(element);
 	}
 
-	if (!GST_IS_PIPELINE(element))
+	if (!element || !GST_IS_PIPELINE(element))
 		return;
 
 	sessions = purple_media_get_session_ids(priv->media);
