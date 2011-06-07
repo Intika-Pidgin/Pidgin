@@ -1,6 +1,8 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-version 2.8.0 (??/??/????):
+version 2.8.1 (MM/DD/YYYY):
+
+version 2.8.0 (06/07/2011):
 	General:
 	* Implement simple silence suppression for voice calls, preventing
 	  wasted bandwidth for silent periods during a call. (Jakub Adam)
@@ -40,6 +42,12 @@ version 2.8.0 (??/??/????):
 	* proxy: Add new "Tor/Privacy" proxy type that can be used to
 	  restrict operations that could leak potentially sensitive data
 	  (e.g. DNS queries).  (#11110, #13928)
+	* media: Add support for using TCP relaying with TURN (will only work with
+	  libnice 0.1.0 and later).
+
+	AIM:
+	* Fix setting icons with dimensions greater than 64x64 pixels by scaling
+	  them down to at most 64x64. (#12874, #13165)
 
 	AIM:
 	* Fix setting icons with dimensions greater than 64x64 pixels by scaling
@@ -80,10 +88,14 @@ version 2.8.0 (??/??/????):
 	  birthdays. (Dustin Gathmann) (#13533)
 	* It is now possible to specify multiple encodings on the Advanced
 	  tab of an ICQ account's settings by using a comma-delimited list.
-	  (Dmitry Utkin (#13496)
+	  (Dmitry Utkin) (#13496)
 
 	IRC:
 	* Add "authserv" service command.  (tomos) (#13337)
+
+	MSN:
+	* Fix a hard-to-exploit crash in the MSN protocol when using the
+	  HTTP connection method (Reported by Marius Wachtler).
 
 	MXit:
 	* Support for an Invite Message when adding a buddy.
