@@ -474,7 +474,7 @@ void mxit_update_buddy_presence( struct MXitSession* session, const char* userna
 	contact->capabilities = flags;
 
 	/* validate mood */
-	if (( contact->mood < MXIT_MOOD_NONE ) || ( contact->mood > MXIT_MOOD_STRESSED ))
+	if ( ( contact->mood < MXIT_MOOD_NONE ) || ( contact->mood > MXIT_MOOD_STRESSED ) )
 		contact->mood = MXIT_MOOD_NONE;
 
 	g_strlcpy( contact->customMood, customMood, sizeof( contact->customMood ) );
@@ -485,7 +485,7 @@ void mxit_update_buddy_presence( struct MXitSession* session, const char* userna
 		g_free( contact->statusMsg );
 		contact->statusMsg = NULL;
 	}
-	if ( statusMsg[0] != '\0' )
+	if ( ( statusMsg ) && ( statusMsg[0] != '\0' ) )
 		contact->statusMsg = g_markup_escape_text( statusMsg, -1 );
 
 	/* update the buddy's status (reference: "libpurple/prpl.h") */
@@ -747,7 +747,14 @@ void mxit_add_buddy( PurpleConnection* gc, PurpleBuddy* buddy, PurpleGroup* grou
 		 * you accept an invite.  so in that case the user is already
 		 * in our blist and ready to be chatted to.
 		 */
-		mxit_send_invite( session, buddy_name, TRUE, buddy_alias, group_name, message );
+
+		if ( buddy_name[0] == '#' ) {
+			gchar *tmp = (gchar*) purple_base64_decode( buddy_name + 1, NULL );
+			mxit_send_invite( session, tmp, FALSE, buddy_alias, group_name, message );
+			g_free( tmp );
+		}
+		else
+			mxit_send_invite( session, buddy_name, TRUE, buddy_alias, group_name, message );
 	}
 	else {
 		purple_debug_info( MXIT_PLUGIN_ID, "mxit_add_buddy (scenario 2) (list:%i)\n", g_slist_length( list ) );
