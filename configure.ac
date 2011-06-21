@@ -565,15 +565,12 @@ Use --disable-gtkspell if you do not need it.
 	if test "x$enable_gevolution" = "xyes"; then
 		evo_deps="libebook-1.2 libedata-book-1.2"
 		PKG_CHECK_MODULES(EVOLUTION_ADDRESSBOOK, $evo_deps, , [
-			AC_MSG_RESULT(yes)
 			enable_gevolution="no"
 		])
 		if test "x$enable_gevolution" = "xno"; then
 			evo_deps="libebook-1.0 libedata-book-1.0"
 			PKG_CHECK_MODULES(EVOLUTION_ADDRESSBOOK, $evo_deps, [
 				enable_gevolution="yes"
-			], [
-				AC_MSG_RESULT(yes)
 			])
 		fi
 		if test "x$enable_gevolution" = "xyes"; then
