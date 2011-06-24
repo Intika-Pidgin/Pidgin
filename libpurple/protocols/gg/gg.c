@@ -487,15 +487,16 @@ static void ggp_callback_show_next(PurpleConnection *gc, GList *row, gpointer us
 	GGPSearchForm *form = user_data;
 	guint32 seq;
 
-	g_free(form->offset);
-	form->offset = g_strdup(form->last_uin);
+	form->page_number++;
 
 	ggp_search_remove(info->searches, form->seq);
-	purple_debug_info("gg", "ggp_callback_show_next(): Removed seq %u", form->seq);
+	purple_debug_info("gg", "ggp_callback_show_next(): Removed seq %u\n",
+		form->seq);
 
 	seq = ggp_search_start(gc, form);
 	ggp_search_add(info->searches, seq, form);
-	purple_debug_info("gg", "ggp_callback_show_next(): Added seq %u", seq);
+	purple_debug_info("gg", "ggp_callback_show_next(): Added seq %u\n",
+		seq);
 }
 
 static void ggp_callback_add_buddy(PurpleConnection *gc, GList *row, gpointer user_data)
@@ -526,21 +527,16 @@ static void ggp_callback_find_buddies(PurpleConnection *gc, PurpleRequestFields 
 	form = ggp_search_form_new(GGP_SEARCH_TYPE_FULL);
 
 	form->user_data = info;
-	form->lastname  = charset_convert(
-				purple_request_fields_get_string(fields, "lastname"),
-				"UTF-8", "CP1250");
-	form->firstname = charset_convert(
-				purple_request_fields_get_string(fields, "firstname"),
-				"UTF-8", "CP1250");
-	form->nickname  = charset_convert(
-				purple_request_fields_get_string(fields, "nickname"),
-				"UTF-8", "CP1250");
-	form->city      = charset_convert(
-				purple_request_fields_get_string(fields, "city"),
-				"UTF-8", "CP1250");
-	form->birthyear = charset_convert(
-				purple_request_fields_get_string(fields, "year"),
-				"UTF-8", "CP1250");
+	form->lastname = g_strdup(
+		purple_request_fields_get_string(fields, "lastname"));
+	form->firstname = g_strdup(
+		purple_request_fields_get_string(fields, "firstname"));
+	form->nickname = g_strdup(
+		purple_request_fields_get_string(fields, "nickname"));
+	form->city = g_strdup(
+		purple_request_fields_get_string(fields, "city"));
+	form->birthyear = g_strdup(
+		purple_request_fields_get_string(fields, "year"));
 
 	switch (purple_request_fields_get_choice(fields, "gender")) {
 		case 1:
@@ -557,11 +553,10 @@ static void ggp_callback_find_buddies(PurpleConnection *gc, PurpleRequestFields 
 	form->active = purple_request_fields_get_bool(fields, "active")
 				   ? g_strdup(GG_PUBDIR50_ACTIVE_TRUE) : NULL;
 
-	form->offset = g_strdup("0");
-
 	seq = ggp_search_start(gc, form);
 	ggp_search_add(info->searches, seq, form);
-	purple_debug_info("gg", "ggp_callback_find_buddies(): Added seq %u", seq);
+	purple_debug_info("gg", "ggp_callback_find_buddies(): Added seq %u\n",
+		seq);
 }
 
 static void ggp_find_buddies(PurplePluginAction *action)
@@ -1076,6 +1071,7 @@ static void ggp_generic_status_handler(PurpleConnection *gc, uin_t uin,
 {
 	gchar *from;
 	const char *st;
+	char *status_msg = NULL;
 
 	ggp_update_buddy_avatar(gc, uin);
 
@@ -1113,14 +1109,24 @@ static void ggp_generic_status_handler(PurpleConnection *gc, uin_t uin,
 			break;
 	}
 
-	purple_debug_info("gg", "st = %s\n", st);
-	//msg = charset_convert(descr, "CP1250", "UTF-8");
-	if (descr == NULL) {
+	if (descr != NULL) {
+		status_msg = g_strdup(descr);
+		g_strstrip(status_msg);
+		if (status_msg[0] == '\0') {
+			g_free(status_msg);
+			status_msg = NULL;
+		}
+	}
+
+	purple_debug_info("gg", "status of %u is %s [%s]\n", uin, st,
+		status_msg ? status_msg : "");
+	if (status_msg == NULL) {
 		purple_prpl_got_user_status(purple_connection_get_account(gc),
-		      from, st, NULL);
+			from, st, NULL);
 	} else {
 		purple_prpl_got_user_status(purple_connection_get_account(gc),
-		    from, st, "message", descr, NULL);
+			from, st, "message", status_msg, NULL);
+		g_free(status_msg);
 	}
 	g_free(from);
 }
@@ -1131,7 +1137,8 @@ static void ggp_sr_close_cb(gpointer user_data)
 	GGPInfo *info = form->user_data;
 
 	ggp_search_remove(info->searches, form->seq);
-	purple_debug_info("gg", "ggp_sr_close_cb(): Removed seq %u", form->seq);
+	purple_debug_info("gg", "ggp_sr_close_cb(): Removed seq %u\n",
+		form->seq);
 	ggp_search_form_destroy(form);
 }
 
@@ -1246,6 +1253,8 @@ static void ggp_pubdir_handle_full(PurpleConnection *gc, gg_pubdir50_t req,
 
 	res_count = gg_pubdir50_count(req);
 	res_count = (res_count > PUBDIR_RESULTS_MAX) ? PUBDIR_RESULTS_MAX : res_count;
+	if (form->page_size == 0)
+		form->page_size = res_count;
 
 	results = purple_notify_searchresults_new();
 
@@ -1255,7 +1264,8 @@ static void ggp_pubdir_handle_full(PurpleConnection *gc, gg_pubdir50_t req,
 		purple_notify_error(gc, NULL,
 				  _("Unable to display the search results."),
 				  NULL);
-		ggp_sr_close_cb(form);
+		if (form->window == NULL)
+			ggp_sr_close_cb(form);
 		return;
 	}
 
@@ -1297,11 +1307,6 @@ static void ggp_pubdir_handle_full(PurpleConnection *gc, gg_pubdir50_t req,
 			(birth && strncmp(birth, "0", 1)) ? birth : g_strdup("-"));
 
 		purple_notify_searchresults_row_add(results, row);
-
-		if (i == res_count - 1) {
-			g_free(form->last_uin);
-			form->last_uin = ggp_search_get_result(req, i, GG_PUBDIR50_UIN);
-		}
 	}
 
 	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_CONTINUE,
@@ -1342,7 +1347,8 @@ static void ggp_pubdir_reply_handler(PurpleConnection *gc, gg_pubdir50_t req)
 
 	seq = gg_pubdir50_seq(req);
 	form = ggp_search_get(info->searches, seq);
-	purple_debug_info("gg", "ggp_pubdir_reply_handler(): seq %u --> form %p", seq, form);
+	purple_debug_info("gg",
+		"ggp_pubdir_reply_handler(): seq %u --> form %p\n", seq, form);
 	/*
 	 * this can happen when user will request more results
 	 * and close the results window before they arrive.
@@ -1355,7 +1361,8 @@ static void ggp_pubdir_reply_handler(PurpleConnection *gc, gg_pubdir50_t req)
 		purple_notify_error(gc, NULL,
 			_("No matching users found"),
 			_("There are no users matching your search criteria."));
-		ggp_sr_close_cb(form);
+		if (form->window == NULL)
+			ggp_sr_close_cb(form);
 		return;
 	}
 
@@ -1914,6 +1921,17 @@ static void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition 
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 				_("Connection failed"));
 			break;
+		case GG_EVENT_MSG:
+			if (ev->event.msg.sender == 0)
+				/* system messages are mostly ads */
+				purple_debug_info("gg", "System message:\n%s\n",
+					ev->event.msg.message);
+			else
+				purple_debug_warning("gg", "GG_EVENT_MSG: message from user %u "
+					"unexpected while connecting:\n%s\n",
+					ev->event.msg.sender,
+					ev->event.msg.message);
+			break;
 		default:
 			purple_debug_error("gg", "strange event: %d\n", ev->type);
 			break;
@@ -1938,23 +1956,18 @@ static char *ggp_status_text(PurpleBuddy *b)
 	char *text;
 	char *tmp;
 
-	status = purple_presence_get_active_status(purple_buddy_get_presence(b));
-
+	status = purple_presence_get_active_status(
+		purple_buddy_get_presence(b));
 	msg = purple_status_get_attr_string(status, "message");
 
-	if (msg != NULL) {
-		tmp = purple_markup_strip_html(msg);
-		text = g_markup_escape_text(tmp, -1);
-		g_free(tmp);
+	if (msg == NULL)
+		return NULL;
 
-		return text;
-	} else {
-		tmp = purple_utf8_salvage(purple_status_get_name(status));
-		text = g_markup_escape_text(tmp, -1);
-		g_free(tmp);
+	tmp = purple_markup_strip_html(msg);
+	text = g_markup_escape_text(tmp, -1);
+	g_free(tmp);
 
-		return text;
-	}
+	return text;
 }
 
 static void ggp_tooltip_text(PurpleBuddy *b, PurpleNotifyUserInfo *user_info, gboolean full)
@@ -2371,8 +2384,6 @@ static void ggp_get_info(PurpleConnection *gc, const char *name)
 
 	form->user_data = info;
 	form->uin = g_strdup(name);
-	form->offset = g_strdup("0");
-	form->last_uin = g_strdup("0");
 
 	seq = ggp_search_start(gc, form);
 	ggp_search_add(info->searches, seq, form);
