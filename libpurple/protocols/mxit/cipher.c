@@ -85,12 +85,12 @@ char* mxit_encrypt_password( struct MXitSession* session )
 	pass[sizeof( pass ) - 1] = '\0';
 
 	/* build the custom AES encryption key */
-	strcpy( key, INITIAL_KEY );
+	g_strlcpy( key, INITIAL_KEY, sizeof( key ) );
 	memcpy( key, session->clientkey, strlen( session->clientkey ) );
 	ExpandKey( (unsigned char*) key, (unsigned char*) exkey );
 
 	/* build the custom data to be encrypted */
-	strcpy( pass, SECRET_HEADER );
+	g_strlcpy( pass, SECRET_HEADER, sizeof( pass ) );
 	strcat( pass, session->acc->password );
 
 	/* pad the secret data */
@@ -109,7 +109,7 @@ char* mxit_encrypt_password( struct MXitSession* session )
 
 
 /*------------------------------------------------------------------------
- * Decrypt a transport-layer encryptede message.
+ * Decrypt a transport-layer encrypted message.
  *
  *  @param session	The MXit session object
  *	@param message	The encrypted message data.
@@ -149,20 +149,97 @@ char* mxit_decrypt_message( struct MXitSession* session, char* message )
 		Decrypt( (unsigned char*) raw_message + i, (unsigned char*) exkey, (unsigned char*) block );
 		g_string_append_len( decoded, block, 16 );
 	}
-
 	g_free( raw_message );
-
-	purple_debug_info( MXIT_PLUGIN_ID, "decrypted: '%s'\n", decoded->str );
 
 	/* check that the decrypted message starts with header: <mxit/> */
 	if ( strncmp( decoded->str, SECRET_HEADER, strlen( SECRET_HEADER ) != 0 ) ) {
 		g_string_free( decoded, TRUE );
 		return NULL;			/* message could not be decoded */
 	}
-	g_string_erase( decoded, 0, strlen( SECRET_HEADER ) );		/* remove header */
 
 	/* remove ISO10126 padding */
-// TODO
+	{
+		/* last byte indicates the number of padding bytes */
+		unsigned int padding = decoded->str[decoded->len - 1];
+		g_string_truncate( decoded, decoded->len - padding );
+	}
+
+	/* remove encryption header */
+	g_string_erase( decoded, 0, strlen( SECRET_HEADER ) );
 
 	return g_string_free( decoded, FALSE );
+}
+
+
+/*------------------------------------------------------------------------
+ * Encrypt a message using transport-layer encryption.
+ *
+ *  @param session	The MXit session object
+ *	@param message	The message data.
+ *  @return			The encrypted message.  Must be g_free'd when no longer needed.
+ */
+char* mxit_encrypt_message( struct MXitSession* session, char* message )
+{
+	char		key[64];
+	int			pwdlen		= strlen( session->acc->password );
+	char		exkey[512];
+	int			i;
+	GString*	decoded		= NULL;
+	GString*	encoded		= NULL;
+	gchar*		base64;
+
+	purple_debug_info( MXIT_PLUGIN_ID, "encrypt message: '%s'\n", message );
+
+	/* build the key - Client key, appended with last 8 characters of the PIN. (no padding) */
+	memset( key, 0x00, sizeof( key ) );
+	memcpy( key, session->clientkey, strlen( session->clientkey ) );
+	if ( pwdlen <= 8 )
+		strcat( key, session->acc->password );
+	else
+		strncat( key, session->acc->password + ( pwdlen - 8 ), 8 );
+	ExpandKey( (unsigned char*) key, (unsigned char*) exkey );
+
+	/* append encryption header */
+	decoded = g_string_sized_new( strlen( SECRET_HEADER ) + strlen( message ) );
+	g_string_append( decoded, SECRET_HEADER );
+	g_string_append( decoded, message );
+
+	/* add ISO10126 padding */
+	{
+		int blocks = ( decoded->len / 16 ) + 1;
+		int padding = ( blocks * 16 ) - decoded->len;
+
+		g_string_set_size( decoded, blocks * 16 );
+		decoded->str[decoded->len - 1] = padding;
+	}
+
+	/* encrypt each block */
+	encoded = g_string_sized_new( decoded->len );
+	for ( i = 0; i < decoded->len; i += 16 ) {
+		char	block[16];
+
+		Encrypt( (unsigned char*) decoded->str + i, (unsigned char*) exkey, (unsigned char*) block );
+		g_string_append_len( encoded, block, 16 );
+	}
+
+	/* now base64 encode the encrypted message */
+	base64 = purple_base64_encode( (unsigned char *) encoded->str, encoded->len );
+
+#if 0
+	/* and add optional header */
+	{
+		GString* tmp = g_string_sized_new( strlen( base64 ) + strlen( ENCRYPT_HEADER ) );
+		g_string_append( tmp, ENCRYPT_HEADER );
+		g_string_append( tmp, base64 );
+		g_free(base64);
+		base64 = g_string_free( tmp, FALSE );
+	}
+#endif
+
+	g_string_free( decoded, TRUE );
+	g_string_free( encoded, TRUE );
+
+	purple_debug_info( MXIT_PLUGIN_ID, "encrypted message: '%s'\n", base64 );
+
+	return base64;
 }

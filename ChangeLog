@@ -11,6 +11,14 @@ version 2.10.0 (MM/DD/YYYY):
 
 	libpurple:
 	* Fix a potential crash in the Log Reader plugin when reading QIP logs.
+	* Fix a large number of strcpy() and strcat() invocations to use
+	  strlcpy() and strlcat(), etc., forestalling an entire class of
+	  string buffer overrun bugs.
+	  (The Electronic Frontier Foundation, Dan Auerbach, Chris Palmer,
+          Jacob Appelbaum)
+	* Change some filename manipulations in filectl.c to use MAXPATHLEN
+	  instead of arbitrary length constants.  (The Electronic Frontier
+	  Foundation, Dan Auerbach, Chris Palmer, Jacob Appelbaum)
 
 	Gadu-Gadu:
 	* Fixed searching for buddies in public directory. (Tomasz Wasilczyk)
@@ -36,8 +44,9 @@ version 2.10.0 (MM/DD/YYYY):
 	* Fix the /join <room> behavior.  (Broken when adding support for
 	  <room>@<server>)  (#14205)
 
-	Yahoo:
+	Yahoo!/Yahoo! JAPAN:
 	* Fix coming out of idle while in an unavailable state
+	* Fix logging into Yahoo! JAPAN.  (#14259)
 
 version 2.9.0 (06/23/2011):
 	Pidgin:
