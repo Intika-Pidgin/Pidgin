@@ -1,7 +1,7 @@
 /*
  *					MXit Protocol libPurple Plugin
  *
- *					-- user password encryption --
+ *						-- encryption --
  *
  *				Pieter Loubser	<libpurple@mxit.com>
  *
@@ -31,31 +31,69 @@
 #include	"aes.h"
 
 
-/* password encryption */
+/* encryption */
 #define		INITIAL_KEY		"6170383452343567"
 #define		SECRET_HEADER	"<mxit/>"
 #define		ENCRYPT_HEADER	"<mxitencrypted ver=\"5.2\"/>"
 
 
 /*------------------------------------------------------------------------
- * Pad the secret data using ISO10126 Padding.
+ * Add ISO10126 Padding to the data.
  *
- *  @param secret	The data to pad (caller must ensure buffer has enough space for padding)
- *  @return			The total number of 128-bit blocks used
+ *  @param data		The data to pad.
  */
-static int pad_secret_data( char* secret )
+static void padding_add( GString* data )
 {
-	int		blocks	= 0;
-	int		passlen;
-	int		padding;
+	unsigned int blocks = ( data->len / 16 ) + 1;
+	unsigned int padding = ( blocks * 16 ) - data->len;
 
-	passlen = strlen( secret );
-	blocks = ( passlen / 16 ) + 1;
-	padding = ( blocks * 16 ) - passlen;
-	secret[passlen] = 0x50;
-	secret[(blocks * 16) - 1] = padding;
+	g_string_set_size( data, blocks * 16 );
+	data->str[data->len - 1] = padding;
+}
 
-	return blocks;
+
+/*------------------------------------------------------------------------
+ * Remove ISO10126 Padding from the data.
+ *
+ *  @param data		The data from which to remove padding.
+ */
+static void padding_remove( GString* data )
+{
+	unsigned int padding;
+
+	if ( data->len == 0 )
+		return;
+
+	padding = data->str[data->len - 1];
+	g_string_truncate( data, data->len - padding );
+}
+
+
+/*------------------------------------------------------------------------
+ * Generate the Transport-Layer crypto key.
+ *  (Note: this function is not-thread safe)
+ *
+ *  @param session	The MXit Session object
+ *	@return			The transport-layer crypto key.
+ */
+static char* transport_layer_key( struct MXitSession* session )
+{
+	static char	key[16 + 1];
+	int			passlen			= strlen( session->acc->password );
+
+	/* initialize with initial key */
+	g_strlcpy( key, INITIAL_KEY, sizeof( key ) );
+
+	/* client key (8 bytes) */
+	memcpy( key, session->clientkey, strlen( session->clientkey ) );
+
+	/* add last 8 characters of the PIN (no padding if less characters) */
+	if ( passlen <= 8 )
+		memcpy( key + 8, session->acc->password, passlen );
+	else
+		memcpy( key + 8, session->acc->password + ( passlen - 8 ), 8 );
+
+	return key;
 }
 
 
@@ -68,62 +106,54 @@ static int pad_secret_data( char* secret )
  */
 char* mxit_encrypt_password( struct MXitSession* session )
 {
-	char		key[64];
+	char		key[16 + 1];
 	char		exkey[512];
-	char		pass[64];
+	GString*	pass			= NULL;
 	char		encrypted[64];
 	char*		base64;
-	int			blocks;
-	int			size;
 	int			i;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_encrypt_password\n" );
 
 	memset( encrypted, 0x00, sizeof( encrypted ) );
-	memset( exkey, 0x00, sizeof( exkey ) );
-	memset( pass, 0x58, sizeof( pass ) );
-	pass[sizeof( pass ) - 1] = '\0';
 
-	/* build the custom AES encryption key */
+	/* build the AES encryption key */
 	g_strlcpy( key, INITIAL_KEY, sizeof( key ) );
 	memcpy( key, session->clientkey, strlen( session->clientkey ) );
 	ExpandKey( (unsigned char*) key, (unsigned char*) exkey );
 
-	/* build the custom data to be encrypted */
-	g_strlcpy( pass, SECRET_HEADER, sizeof( pass ) );
-	strcat( pass, session->acc->password );
+	/* build the secret data to be encrypted: SECRET_HEADER + password */
+	pass = g_string_new( SECRET_HEADER );
+	g_string_append( pass, session->acc->password );
+	padding_add( pass );		/* add ISO10126 padding */
 
-	/* pad the secret data */
-	blocks = pad_secret_data( pass );
-	size = blocks * 16;
-
-	/* now encrypt the password. we encrypt each block separately (ECB mode) */
-	for ( i = 0; i < size; i += 16 )
-		Encrypt( (unsigned char*) pass + i, (unsigned char*) exkey, (unsigned char*) encrypted + i );
+	/* now encrypt the secret. we encrypt each block separately (ECB mode) */
+	for ( i = 0; i < pass->len; i += 16 )
+		Encrypt( (unsigned char*) pass->str + i, (unsigned char*) exkey, (unsigned char*) encrypted + i );
 
 	/* now base64 encode the encrypted password */
-	base64 = purple_base64_encode( (unsigned char*) encrypted, size );
+	base64 = purple_base64_encode( (unsigned char*) encrypted, pass->len );
+
+	g_string_free( pass, TRUE );
 
 	return base64;
 }
 
 
 /*------------------------------------------------------------------------
- * Decrypt a transport-layer encrypted message.
+ * Decrypt a message using transport-layer encryption.
  *
  *  @param session	The MXit session object
- *	@param message	The encrypted message data.
+ *	@param message	The encrypted message data (is base64-encoded).
  *  @return			The decrypted message.  Must be g_free'd when no longer needed.
  */
 char* mxit_decrypt_message( struct MXitSession* session, char* message )
 {
-	gsize		raw_len;
 	guchar*		raw_message;
-	char		key[64];
-	int			pwdlen		= strlen( session->acc->password );
+	gsize		raw_len;
 	char		exkey[512];
-	int			i;
 	GString*	decoded		= NULL;
+	int			i;
 
 	/* remove optional header: <mxitencrypted ver="5.2"/> */
 	if ( strncmp( message, ENCRYPT_HEADER, strlen( ENCRYPT_HEADER ) ) == 0 )
@@ -132,16 +162,10 @@ char* mxit_decrypt_message( struct MXitSession* session, char* message )
 	/* base64 decode the message */
 	raw_message = purple_base64_decode( message, &raw_len );
 
-	/* build the key - Client key, appended with last 8 characters of the PIN. (no padding) */
-	memset( key, 0x00, sizeof( key ) );
-	memcpy( key, session->clientkey, strlen( session->clientkey ) );
-	if ( pwdlen <= 8 )
-		strcat( key, session->acc->password );
-	else
-		strncat( key, session->acc->password + ( pwdlen - 8 ), 8 );
-	ExpandKey( (unsigned char*) key, (unsigned char*) exkey );
+	/* build the AES key */
+	ExpandKey( (unsigned char*) transport_layer_key( session ), (unsigned char*) exkey );
 
-	/* decode each block */
+	/* AES decrypt each block */
 	decoded = g_string_sized_new( raw_len );
 	for ( i = 0; i < raw_len; i += 16 ) {
 		char	block[16];
@@ -154,15 +178,11 @@ char* mxit_decrypt_message( struct MXitSession* session, char* message )
 	/* check that the decrypted message starts with header: <mxit/> */
 	if ( strncmp( decoded->str, SECRET_HEADER, strlen( SECRET_HEADER ) != 0 ) ) {
 		g_string_free( decoded, TRUE );
-		return NULL;			/* message could not be decoded */
+		return NULL;			/* message could not be decrypted */
 	}
 
 	/* remove ISO10126 padding */
-	{
-		/* last byte indicates the number of padding bytes */
-		unsigned int padding = decoded->str[decoded->len - 1];
-		g_string_truncate( decoded, decoded->len - padding );
-	}
+	padding_remove( decoded );
 
 	/* remove encryption header */
 	g_string_erase( decoded, 0, strlen( SECRET_HEADER ) );
@@ -180,63 +200,34 @@ char* mxit_decrypt_message( struct MXitSession* session, char* message )
  */
 char* mxit_encrypt_message( struct MXitSession* session, char* message )
 {
-	char		key[64];
-	int			pwdlen		= strlen( session->acc->password );
+	GString*	raw_message	= NULL;
 	char		exkey[512];
-	int			i;
-	GString*	decoded		= NULL;
 	GString*	encoded		= NULL;
 	gchar*		base64;
+	int			i;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "encrypt message: '%s'\n", message );
 
-	/* build the key - Client key, appended with last 8 characters of the PIN. (no padding) */
-	memset( key, 0x00, sizeof( key ) );
-	memcpy( key, session->clientkey, strlen( session->clientkey ) );
-	if ( pwdlen <= 8 )
-		strcat( key, session->acc->password );
-	else
-		strncat( key, session->acc->password + ( pwdlen - 8 ), 8 );
-	ExpandKey( (unsigned char*) key, (unsigned char*) exkey );
+	/* append encryption header to message data */
+	raw_message = g_string_new( SECRET_HEADER );
+	g_string_append( raw_message, message );
+	padding_add( raw_message );		/* add ISO10126 padding */
 
-	/* append encryption header */
-	decoded = g_string_sized_new( strlen( SECRET_HEADER ) + strlen( message ) );
-	g_string_append( decoded, SECRET_HEADER );
-	g_string_append( decoded, message );
+	/* build the AES key */
+	ExpandKey( (unsigned char*) transport_layer_key( session ), (unsigned char*) exkey );
 
-	/* add ISO10126 padding */
-	{
-		int blocks = ( decoded->len / 16 ) + 1;
-		int padding = ( blocks * 16 ) - decoded->len;
-
-		g_string_set_size( decoded, blocks * 16 );
-		decoded->str[decoded->len - 1] = padding;
-	}
-
-	/* encrypt each block */
-	encoded = g_string_sized_new( decoded->len );
-	for ( i = 0; i < decoded->len; i += 16 ) {
+	/* AES encrypt each block */
+	encoded = g_string_sized_new( raw_message->len );
+	for ( i = 0; i < raw_message->len; i += 16 ) {
 		char	block[16];
 
-		Encrypt( (unsigned char*) decoded->str + i, (unsigned char*) exkey, (unsigned char*) block );
+		Encrypt( (unsigned char*) raw_message->str + i, (unsigned char*) exkey, (unsigned char*) block );
 		g_string_append_len( encoded, block, 16 );
 	}
+	g_string_free( raw_message, TRUE );
 
-	/* now base64 encode the encrypted message */
+	/* base64 encode the encrypted message */
 	base64 = purple_base64_encode( (unsigned char *) encoded->str, encoded->len );
-
-#if 0
-	/* and add optional header */
-	{
-		GString* tmp = g_string_sized_new( strlen( base64 ) + strlen( ENCRYPT_HEADER ) );
-		g_string_append( tmp, ENCRYPT_HEADER );
-		g_string_append( tmp, base64 );
-		g_free(base64);
-		base64 = g_string_free( tmp, FALSE );
-	}
-#endif
-
-	g_string_free( decoded, TRUE );
 	g_string_free( encoded, TRUE );
 
 	purple_debug_info( MXIT_PLUGIN_ID, "encrypted message: '%s'\n", base64 );
