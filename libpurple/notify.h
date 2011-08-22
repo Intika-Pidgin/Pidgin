@@ -439,20 +439,20 @@ void purple_notify_user_info_destroy(PurpleNotifyUserInfo *user_info);
  * Retrieve the array of PurpleNotifyUserInfoEntry objects from a
  * PurpleNotifyUserInfo
  *
- * This GList may be manipulated directly with normal GList functions such
- * as g_list_insert(). Only PurpleNotifyUserInfoEntry are allowed in the
- * list.  If a PurpleNotifyUserInfoEntry item is added to the list, it
- * should not be g_free()'d by the caller; PurpleNotifyUserInfo will g_free
- * it when destroyed.
+ * This GQueue may be manipulated directly with normal GQueue functions such
+ * as g_queue_push_tail(). Only PurpleNotifyUserInfoEntry are allowed in the
+ * queue.  If a PurpleNotifyUserInfoEntry item is added to the queue, it
+ * should not be freed by the caller; PurpleNotifyUserInfo will free it when
+ * destroyed.
  *
  * To remove a PurpleNotifyUserInfoEntry, use
- * purple_notify_user_info_remove_entry(). Do not use the GList directly.
+ * purple_notify_user_info_remove_entry(). Do not use the GQueue directly.
  *
  * @param user_info  The PurpleNotifyUserInfo
  *
- * @constreturn A GList of PurpleNotifyUserInfoEntry objects
+ * @constreturn A GQueue of PurpleNotifyUserInfoEntry objects.
  */
-GList *purple_notify_user_info_get_entries(PurpleNotifyUserInfo *user_info);
+GQueue *purple_notify_user_info_get_entries(PurpleNotifyUserInfo *user_info);
 
 /**
  * Create a textual representation of a PurpleNotifyUserInfo, separating
@@ -480,34 +480,25 @@ char *purple_notify_user_info_get_text_with_newline(PurpleNotifyUserInfo *user_i
  *                   the UI should treat label as independent and not
  *                   include a colon if it would otherwise.
  */
-/*
- * TODO: In 3.0.0 this function should be renamed to
- *       purple_notify_user_info_add_pair_html().  And optionally
- *       purple_notify_user_info_add_pair_plaintext() could be renamed to
- *       purple_notify_user_info_add_pair().
- */
-void purple_notify_user_info_add_pair(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
+void purple_notify_user_info_add_pair_html(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 /**
- * Like purple_notify_user_info_add_pair, but value should be plaintext
+ * Like purple_notify_user_info_add_pair_html, but value should be plaintext
  * and will be escaped using g_markup_escape_text().
  */
 void purple_notify_user_info_add_pair_plaintext(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 /**
- * Prepend a label/value pair to a PurpleNotifyUserInfo object
- *
- * @param user_info  The PurpleNotifyUserInfo
- * @param label      A label, which for example might be displayed by a
- *                   UI with a colon after it ("Status:"). Do not include
- *                   a colon.  If NULL, value will be displayed without a
- *                   label.
- * @param value      The value, which might be displayed by a UI after
- *                   the label.  If NULL, label will still be displayed;
- *                   the UI should then treat label as independent and not
- *                   include a colon if it would otherwise.
+ * Like purple_notify_user_info_add_pair_html, but the pair is inserted
+ * at the beginning of the list.
  */
-void purple_notify_user_info_prepend_pair(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
+void purple_notify_user_info_prepend_pair_html(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
+
+/**
+ * Like purple_notify_user_info_prepend_pair_html, but value should be plaintext
+ * and will be escaped using g_markup_escape_text().
+ */
+void purple_notify_user_info_prepend_pair_plaintext(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 #if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_NOTIFY_C_)
 /**
@@ -530,9 +521,11 @@ void purple_notify_user_info_remove_entry(PurpleNotifyUserInfo *user_info, Purpl
  *
  * If added to a PurpleNotifyUserInfo object, this should not be free()'d,
  * as PurpleNotifyUserInfo will do so when destroyed.
- * purple_notify_user_info_add_pair() and
- * purple_notify_user_info_prepend_pair() are convenience methods for
- * creating entries and adding them to a PurpleNotifyUserInfo.
+ * purple_notify_user_info_add_pair_html(),
+ * purple_notify_user_info_add_pair_plaintext(),
+ * purple_notify_user_info_prepend_pair_html() and
+ * purple_notify_user_info_prepend_pair_plaintext() are convenience
+ * methods for creating entries and adding them to a PurpleNotifyUserInfo.
  *
  * @param label  A label, which for example might be displayed by a UI
  *               with a colon after it ("Status:"). Do not include a
