@@ -861,7 +861,7 @@ static PurpleBuddy *buddy_ensure(PurpleConnection *gc, PurpleGroup *group,
   enum mwSametimeUserType type = mwSametimeUser_getType(stuser);
 
   g_return_val_if_fail(id != NULL, NULL);
-  g_return_val_if_fail(strlen(id) > 0, NULL);
+  g_return_val_if_fail(*id, NULL);
 
   buddy = purple_find_buddy_in_group(acct, id, group);
   if(! buddy) {
@@ -3334,23 +3334,21 @@ static void mw_prpl_tooltip_text(PurpleBuddy *b, PurpleNotifyUserInfo *user_info
   status = status_text(b);
 
   if(message != NULL && g_utf8_validate(message, -1, NULL) && purple_utf8_strcasecmp(status, message)) {
-    tmp = g_markup_escape_text(message, -1);
-	purple_notify_user_info_add_pair(user_info, status, tmp);
-    g_free(tmp);
+	purple_notify_user_info_add_pair_plaintext(user_info, status, message);
 
   } else {
-	purple_notify_user_info_add_pair(user_info, _("Status"), status);
+	purple_notify_user_info_add_pair_plaintext(user_info, _("Status"), status);
   }
 
   if(full && pd != NULL) {
     tmp = user_supports_text(pd->srvc_aware, purple_buddy_get_name(b));
     if(tmp) {
-	  purple_notify_user_info_add_pair(user_info, _("Supports"), tmp);
+	  purple_notify_user_info_add_pair_plaintext(user_info, _("Supports"), tmp);
       g_free(tmp);
     }
 
     if(buddy_is_external(b)) {
-	  purple_notify_user_info_add_pair(user_info, NULL, _("External User"));
+	  purple_notify_user_info_add_pair_plaintext(user_info, NULL, _("External User"));
     }
   }
 }
@@ -4200,46 +4198,47 @@ static void mw_prpl_get_info(PurpleConnection *gc, const char *who) {
   user_info = purple_notify_user_info_new();
 
   if(purple_str_has_prefix(who, "@E ")) {
-	purple_notify_user_info_add_pair(user_info, _("External User"), NULL);
+	purple_notify_user_info_add_pair_html(user_info, _("External User"), NULL);
   }
 
-  purple_notify_user_info_add_pair(user_info, _("User ID"), who);
+  purple_notify_user_info_add_pair_plaintext(user_info, _("User ID"), who);
 
   if(b) {
     guint32 type;
 
     if(purple_buddy_get_server_alias(b)) {
-		purple_notify_user_info_add_pair(user_info, _("Full Name"), purple_buddy_get_server_alias(b));
+		/* TODO: Check whether it's correct to call add_pair_html,
+		         or if we should be using add_pair_plaintext */
+		purple_notify_user_info_add_pair_html(user_info, _("Full Name"), purple_buddy_get_server_alias(b));
     }
 
     type = purple_blist_node_get_int((PurpleBlistNode *) b, BUDDY_KEY_CLIENT);
     if(type) {
-	  tmp = g_strdup(mw_client_name(type));
-	  if (!tmp)
+	  tmp2 = mw_client_name(type);
+	  if (tmp2) {
+		purple_notify_user_info_add_pair_plaintext(user_info, _("Last Known Client"), tmp2);
+	  } else {
 		tmp = g_strdup_printf(_("Unknown (0x%04x)<br>"), type);
-
-	  purple_notify_user_info_add_pair(user_info, _("Last Known Client"), tmp);
-
-	  g_free(tmp);
+		purple_notify_user_info_add_pair_html(user_info, _("Last Known Client"), tmp);
+	    g_free(tmp);
+	  }
     }
   }
 
   tmp = user_supports_text(pd->srvc_aware, who);
   if(tmp) {
-	purple_notify_user_info_add_pair(user_info, _("Supports"), tmp);
+	purple_notify_user_info_add_pair_plaintext(user_info, _("Supports"), tmp);
 	g_free(tmp);
   }
 
   if(b) {
-	purple_notify_user_info_add_pair(user_info, _("Status"), status_text(b));
+	purple_notify_user_info_add_pair_plaintext(user_info, _("Status"), status_text(b));
 
 	/* XXX Is this adding a status message in its own section rather than with the "Status" label? */
     tmp2 = mwServiceAware_getText(pd->srvc_aware, &idb);
     if(tmp2 && g_utf8_validate(tmp2, -1, NULL)) {
-      tmp = g_markup_escape_text(tmp2, -1);
 	  purple_notify_user_info_add_section_break(user_info);
-	  purple_notify_user_info_add_pair(user_info, NULL, tmp);
-      g_free(tmp);
+	  purple_notify_user_info_add_pair_plaintext(user_info, NULL, tmp2);
     }
   }
 
