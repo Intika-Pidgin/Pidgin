@@ -113,7 +113,7 @@ msn_slpcall_destroy(MsnSlpCall *slpcall)
 	if (slpcall->xfer != NULL) {
 		if (purple_xfer_get_type(slpcall->xfer) == PURPLE_XFER_RECEIVE)
 			g_byte_array_free(slpcall->u.incoming_data, TRUE);
-		slpcall->xfer->data = NULL;
+		purple_xfer_set_protocol_data(slpcall->xfer, NULL);
 		purple_xfer_unref(slpcall->xfer);
 	}
 
@@ -485,17 +485,15 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 			if (img)
 				purple_imgstore_ref(img);
 		}
-		msn_object_destroy(obj);
+		msn_object_destroy(obj, FALSE);
 
 		if (img != NULL) {
 			/* DATA PREP */
 			slpmsg = msn_slpmsg_dataprep_new(slpcall);
-			msn_slpmsg_set_slplink(slpmsg, slplink);
 			msn_slplink_queue_slpmsg(slplink, slpmsg);
 
 			/* DATA */
 			slpmsg = msn_slpmsg_obj_new(slpcall, img);
-			msn_slpmsg_set_slplink(slpmsg, slplink);
 			msn_slplink_queue_slpmsg(slplink, slpmsg);
 			purple_imgstore_unref(img);
 
@@ -552,7 +550,7 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 			slpcall->xfer = xfer;
 			purple_xfer_ref(slpcall->xfer);
 
-			xfer->data = slpcall;
+			purple_xfer_set_protocol_data(xfer, slpcall);
 
 			if (file_context->preview) {
 				purple_xfer_set_thumbnail(xfer, file_context->preview,

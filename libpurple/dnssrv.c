@@ -250,6 +250,52 @@ purple_srv_sort(GList *list)
 	return list;
 }
 
+static PurpleSrvTxtQueryData *
+query_data_new(int type, gchar *query, gpointer extradata)
+{
+	PurpleSrvTxtQueryData *query_data = g_new0(PurpleSrvTxtQueryData, 1);
+	query_data->type = type;
+	query_data->extradata = extradata;
+	query_data->query = query;
+#ifndef _WIN32
+	query_data->fd_in = -1;
+	query_data->fd_out = -1;
+#endif
+	return query_data;
+}
+
+void
+purple_srv_txt_query_destroy(PurpleSrvTxtQueryData *query_data)
+{
+	PurpleSrvTxtQueryUiOps *ops = purple_srv_txt_query_get_ui_ops();
+
+	if (ops && ops->destroy)
+		ops->destroy(query_data);
+
+	if (query_data->handle > 0)
+		purple_input_remove(query_data->handle);
+#ifdef _WIN32
+	if (query_data->resolver != NULL)
+	{
+		/*
+		 * It's not really possible to kill a thread.  So instead we
+		 * just set the callback to NULL and let the DNS lookup
+		 * finish.
+		 */
+		query_data->cb.srv = NULL;
+		return;
+	}
+	g_free(query_data->error_message);
+#else
+	if (query_data->fd_out != -1)
+		close(query_data->fd_out);
+	if (query_data->fd_in != -1)
+		close(query_data->fd_in);
+#endif
+	g_free(query_data->query);
+	g_free(query_data);
+}
+
 #ifdef USE_IDN
 static gboolean
 dns_str_is_ascii(const char *name)
@@ -382,7 +428,11 @@ resolve(int in, int out)
 			cp += size;
 
 			srvres = g_new0(PurpleSrvResponse, 1);
-			strcpy(srvres->hostname, name);
+			if (strlen(name) > sizeof(srvres->hostname) - 1) {
+				purple_debug_error("dnssrv", "hostname is longer than available buffer ('%s', %zd bytes)!",
+				                   name, strlen(name));
+			}
+			g_strlcpy(srvres->hostname, name, sizeof(srvres->hostname));
 			srvres->pref = pref;
 			srvres->port = port;
 			srvres->weight = weight;
@@ -523,7 +573,7 @@ resolved(gpointer data, gint source, PurpleInputCondition cond)
 	}
 
 	waitpid(query_data->pid, &status, 0);
-	purple_srv_cancel(query_data);
+	purple_srv_txt_query_destroy(query_data);
 }
 
 #else /* _WIN32 */
@@ -583,7 +633,7 @@ res_main_thread_cb(gpointer data)
 	query_data->resolver = NULL;
 	query_data->handle = 0;
 
-	purple_srv_cancel(query_data);
+	purple_srv_txt_query_destroy(query_data);
 
 	return FALSE;
 }
@@ -675,15 +725,7 @@ res_thread(gpointer data)
 #endif
 
 PurpleSrvTxtQueryData *
-purple_srv_resolve(const char *protocol, const char *transport,
-	const char *domain, PurpleSrvCallback cb, gpointer extradata)
-{
-	return purple_srv_resolve_account(NULL, protocol, transport, domain,
-			cb, extradata);
-}
-
-PurpleSrvTxtQueryData *
-purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
+purple_srv_resolve(PurpleAccount *account, const char *protocol,
 	const char *transport, const char *domain, PurpleSrvCallback cb,
 	gpointer extradata)
 {
@@ -730,13 +772,10 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 	purple_debug_info("dnssrv","querying SRV record for %s: %s\n", domain,
 			query);
 	g_free(hostname);
-	
-	query_data = g_new0(PurpleSrvTxtQueryData, 1);
-	query_data->type = PurpleDnsTypeSrv;
+
+	query_data = query_data_new(PurpleDnsTypeSrv, query, extradata);
 	query_data->cb.srv = cb;
-	query_data->extradata = extradata;
-	query_data->query = query;
-	
+
 	if (purple_srv_txt_query_ui_resolve(query_data))
 	{
 		return query_data;
@@ -746,15 +785,23 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 	if(pipe(in) || pipe(out)) {
 		purple_debug_error("dnssrv", "Could not create pipe\n");
 		g_free(query);
+		g_free(query_data);
 		cb(NULL, 0, extradata);
 		return NULL;
 	}
 
+	/*
+	 * TODO: We should put a cap on the number of forked processes that we
+	 *       allow at any given time.  If we get too many requests they
+	 *       should be put into a queue and handled later.  (This is what
+	 *       we do for A record lookups.)
+	 */
 	pid = fork();
 	if (pid == -1) {
 		purple_debug_error("dnssrv", "Could not create process!\n");
-		cb(NULL, 0, extradata);
 		g_free(query);
+		g_free(query_data);
+		cb(NULL, 0, extradata);
 		return NULL;
 	}
 
@@ -762,6 +809,7 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 	if (pid == 0)
 	{
 		g_free(query);
+		g_free(query_data);
 
 		close(out[0]);
 		close(in[1]);
@@ -783,8 +831,6 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 	query_data->fd_out = out[0];
 	query_data->fd_in = in[1];
 	query_data->handle = purple_input_add(out[0], PURPLE_INPUT_READ, resolved, query_data);
-
-	g_free(query);
 
 	return query_data;
 #else
@@ -815,13 +861,7 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 #endif
 }
 
-PurpleSrvTxtQueryData *purple_txt_resolve(const char *owner,
-	const char *domain, PurpleTxtCallback cb, gpointer extradata)
-{
-	return purple_txt_resolve_account(NULL, owner, domain, cb, extradata);
-}
-
-PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
+PurpleSrvTxtQueryData *purple_txt_resolve(PurpleAccount *account,
 	const char *owner, const char *domain, PurpleTxtCallback cb,
 	gpointer extradata)
 {
@@ -862,13 +902,10 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 	purple_debug_info("dnssrv","querying TXT record for %s: %s\n", domain,
 			query);
 	g_free(hostname);
-	
-	query_data = g_new0(PurpleSrvTxtQueryData, 1);
-	query_data->type = PurpleDnsTypeTxt;
+
+	query_data = query_data_new(PurpleDnsTypeTxt, query, extradata);
 	query_data->cb.txt = cb;
-	query_data->extradata = extradata;
-	query_data->query = query;
-	
+
 	if (purple_srv_txt_query_ui_resolve(query_data)) {
 		/* query intentionally not freed
 		 */
@@ -879,15 +916,23 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 	if(pipe(in) || pipe(out)) {
 		purple_debug_error("dnssrv", "Could not create pipe\n");
 		g_free(query);
+		g_free(query_data);
 		cb(NULL, extradata);
 		return NULL;
 	}
 
+	/*
+	 * TODO: We should put a cap on the number of forked processes that we
+	 *       allow at any given time.  If we get too many requests they
+	 *       should be put into a queue and handled later.  (This is what
+	 *       we do for A record lookups.)
+	 */
 	pid = fork();
 	if (pid == -1) {
 		purple_debug_error("dnssrv", "Could not create process!\n");
-		cb(NULL, extradata);
 		g_free(query);
+		g_free(query_data);
+		cb(NULL, extradata);
 		return NULL;
 	}
 
@@ -895,6 +940,7 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 	if (pid == 0)
 	{
 		g_free(query);
+		g_free(query_data);
 
 		close(out[0]);
 		close(in[1]);
@@ -911,13 +957,11 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 
 	if (write(in[1], &internal_query, sizeof(internal_query)) < 0)
 		purple_debug_error("dnssrv", "Could not write to TXT resolver\n");
-	
+
 	query_data->pid = pid;
 	query_data->fd_out = out[0];
 	query_data->fd_in = in[1];
 	query_data->handle = purple_input_add(out[0], PURPLE_INPUT_READ, resolved, query_data);
-
-	g_free(query);
 
 	return query_data;
 #else
@@ -948,42 +992,6 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 #endif
 }
 
-void
-purple_srv_cancel(PurpleSrvTxtQueryData *query_data)
-{
-	PurpleSrvTxtQueryUiOps *ops = purple_srv_txt_query_get_ui_ops();
-
-	if (ops && ops->destroy)
-		ops->destroy(query_data);
-	
-	if (query_data->handle > 0)
-		purple_input_remove(query_data->handle);
-#ifdef _WIN32
-	if (query_data->resolver != NULL)
-	{
-		/*
-		 * It's not really possible to kill a thread.  So instead we
-		 * just set the callback to NULL and let the DNS lookup
-		 * finish.
-		 */
-		query_data->cb.srv = NULL;
-		return;
-	}
-	g_free(query_data->query);
-	g_free(query_data->error_message);
-#else
-	close(query_data->fd_out);
-	close(query_data->fd_in);
-#endif
-	g_free(query_data);
-}
-
-void
-purple_txt_cancel(PurpleSrvTxtQueryData *query_data)
-{
-	purple_srv_cancel(query_data);
-}
-
 const gchar *
 purple_txt_response_get_content(PurpleTxtResponse *resp)
 {
@@ -1006,12 +1014,41 @@ void purple_txt_response_destroy(PurpleTxtResponse *resp)
 static void
 purple_srv_query_resolved(PurpleSrvTxtQueryData *query_data, GList *records)
 {
+	GList *l;
+	PurpleSrvResponse *records_array;
+	int i = 0, length;
+
 	g_return_if_fail(records != NULL);
-	
-	purple_debug_info("dnssrv", "SRV records resolved for %s, count: %d\n", query_data->query, g_list_length(records));
-	
-	if (query_data->cb.srv != NULL)
-		query_data->cb.srv(purple_srv_sort(records)->data, g_list_length(records), query_data->extradata);
+
+	if (query_data->cb.srv == NULL) {
+		purple_srv_txt_query_destroy(query_data);
+
+		while (records) {
+			g_free(records->data);
+			records = g_list_delete_link(records, records);
+		}
+		return;
+	}
+
+	records = purple_srv_sort(records);
+	length = g_list_length(records);
+
+	purple_debug_info("dnssrv", "SRV records resolved for %s, count: %d\n",
+	                            query_data->query, length);
+
+	records_array = g_new(PurpleSrvResponse, length);
+	for (l = records; l; l = l->next, i++) {
+		records_array[i] = *(PurpleSrvResponse *)l->data;
+	}
+
+	query_data->cb.srv(records_array, length, query_data->extradata);
+
+	purple_srv_txt_query_destroy(query_data);
+
+	while (records) {
+		g_free(records->data);
+		records = g_list_delete_link(records, records);
+	}
 }
 
 /*
@@ -1024,19 +1061,29 @@ purple_txt_query_resolved(PurpleSrvTxtQueryData *query_data, GList *entries)
 
 	purple_debug_info("dnssrv", "TXT entries resolved for %s, count: %d\n", query_data->query, g_list_length(entries));
 
+	/* the callback should g_free the entries.
+	 */
 	if (query_data->cb.txt != NULL)
 		query_data->cb.txt(entries, query_data->extradata);
+	else {
+		while (entries) {
+			g_free(entries->data);
+			entries = g_list_delete_link(entries, entries);
+		}
+	}
+
+	purple_srv_txt_query_destroy(query_data);
 }
 
 static void
 purple_srv_query_failed(PurpleSrvTxtQueryData *query_data, const gchar *error_message)
 {
 	purple_debug_error("dnssrv", "%s\n", error_message);
-	
+
 	if (query_data->cb.srv != NULL)
 		query_data->cb.srv(NULL, 0, query_data->extradata);
-		
-	purple_srv_cancel(query_data);
+
+	purple_srv_txt_query_destroy(query_data);
 }
 
 static gboolean
@@ -1069,7 +1116,7 @@ char *
 purple_srv_txt_query_get_query(PurpleSrvTxtQueryData *query_data)
 {
 	g_return_val_if_fail(query_data != NULL, NULL);
-	
+
 	return query_data->query;
 }
 
@@ -1078,6 +1125,6 @@ int
 purple_srv_txt_query_get_type(PurpleSrvTxtQueryData *query_data)
 {
 	g_return_val_if_fail(query_data != NULL, 0);
-	
+
 	return query_data->type;
 }

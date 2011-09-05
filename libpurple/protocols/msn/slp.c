@@ -284,7 +284,6 @@ send_file_cb(MsnSlpCall *slpcall)
 	purple_xfer_unref(xfer);
 
 	slpmsg = msn_slpmsg_file_new(slpcall, purple_xfer_get_size(xfer));
-	msn_slpmsg_set_slplink(slpmsg, slpcall->slplink);
 
 	msn_slplink_send_slpmsg(slpcall->slplink, slpmsg);
 }
@@ -365,7 +364,7 @@ msn_request_ft(PurpleXfer *xfer)
 	fn = purple_xfer_get_filename(xfer);
 	fp = purple_xfer_get_local_filename(xfer);
 
-	slplink = xfer->data;
+	slplink = purple_xfer_get_protocol_data(xfer);
 
 	g_return_if_fail(slplink != NULL);
 	g_return_if_fail(fp != NULL);
@@ -385,7 +384,7 @@ msn_request_ft(PurpleXfer *xfer)
 	purple_xfer_set_read_fnc(xfer, msn_xfer_read);
 	purple_xfer_set_write_fnc(xfer, msn_xfer_write);
 
-	xfer->data = slpcall;
+	purple_xfer_set_protocol_data(xfer, slpcall);
 
 	context = gen_context(xfer, fn, fp);
 
