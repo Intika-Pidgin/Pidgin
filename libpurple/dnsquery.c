@@ -154,8 +154,27 @@ purple_dnsquery_ui_resolve(PurpleDnsQueryData *query_data)
 static gboolean
 resolve_ip(PurpleDnsQueryData *query_data)
 {
+#if defined(HAVE_GETADDRINFO) && defined(AI_NUMERICHOST)
+	struct addrinfo hints, *res;
+	char servname[20];
+
+	g_snprintf(servname, sizeof(servname), "%d", query_data->port);
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_flags |= AI_NUMERICHOST;
+
+	if (0 == getaddrinfo(query_data->hostname, servname, &hints, &res))
+	{
+		GSList *hosts = NULL;
+		hosts = g_slist_append(hosts, GINT_TO_POINTER(res->ai_addrlen));
+		hosts = g_slist_append(hosts, g_memdup(res->ai_addr, res->ai_addrlen));
+		purple_dnsquery_resolved(query_data, hosts);
+
+		freeaddrinfo(res);
+		return TRUE;
+	}
+#else /* defined(HAVE_GETADDRINFO) && defined(AI_NUMERICHOST) */
 	struct sockaddr_in sin;
-	/* TODO: Use inet_pton for IPv6 support */
 	if (inet_aton(query_data->hostname, &sin.sin_addr))
 	{
 		/*
@@ -171,6 +190,7 @@ resolve_ip(PurpleDnsQueryData *query_data)
 
 		return TRUE;
 	}
+#endif
 
 	return FALSE;
 }
@@ -277,6 +297,10 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 		}
 		rc = read(child_in, &dns_params, sizeof(dns_params_t));
 		if (rc < 0) {
+			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+				/* Try again */
+				continue;
+			}
 			fprintf(stderr, "dns[%d]: Error: Could not read dns_params: "
 					"%s\n", getpid(), strerror(errno));
 			break;
@@ -890,7 +914,7 @@ initiate_resolving(gpointer data)
 }
 
 PurpleDnsQueryData *
-purple_dnsquery_a_account(PurpleAccount *account, const char *hostname, int port,
+purple_dnsquery_a(PurpleAccount *account, const char *hostname, int port,
 				PurpleDnsQueryConnectFunction callback, gpointer data)
 {
 	PurpleDnsQueryData *query_data;
@@ -918,13 +942,6 @@ purple_dnsquery_a_account(PurpleAccount *account, const char *hostname, int port
 	query_data->timeout = purple_timeout_add(0, initiate_resolving, query_data);
 
 	return query_data;
-}
-
-PurpleDnsQueryData *
-purple_dnsquery_a(const char *hostname, int port,
-				PurpleDnsQueryConnectFunction callback, gpointer data)
-{
-	return purple_dnsquery_a_account(NULL, hostname, port, callback, data);
 }
 
 void

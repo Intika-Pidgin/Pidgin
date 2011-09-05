@@ -48,7 +48,7 @@
 #define YAHOO_ROOMLIST_LOCALE "us"
 
 /* Yahoo! JAPAN stuff */
-#define YAHOOJP_PAGER_HOST_REQ_URL "http://cs1.msg.vip.ogk.yahoo.co.jp/capacity"
+#define YAHOOJP_PAGER_HOST_REQ_URL "http://cs1.yahoo.co.jp/capacity"
 #define YAHOOJP_TOKEN_URL "https://login.yahoo.co.jp/config/pwtoken_get?src=ymsgr&ts=&login=%s&passwd=%s&chal=%s"
 #define YAHOOJP_LOGIN_URL "https://login.yahoo.co.jp/config/pwtoken_login?src=ymsgr&ts=&token=%s"
 #define YAHOOJP_PROFILE_URL "http://profiles.yahoo.co.jp/"
@@ -371,7 +371,7 @@ int yahoo_send_im(PurpleConnection *gc, const char *who, const char *what, Purpl
 unsigned int yahoo_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state);
 void yahoo_set_status(PurpleAccount *account, PurpleStatus *status);
 void yahoo_set_idle(PurpleConnection *gc, int idle);
-void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *g);
+void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *g, const char *message);
 void yahoo_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group);
 void yahoo_add_deny(PurpleConnection *gc, const char *who);
 void yahoo_rem_deny(PurpleConnection *gc, const char *who);

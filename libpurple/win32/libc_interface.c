@@ -467,12 +467,6 @@ int wpurple_gettimeofday(struct timeval *p, struct timezone *z) {
 	return res;
 }
 
-/* stdio.h */
-
-int wpurple_rename (const char *oldname, const char *newname) {
-	return g_rename(oldname, newname);
-}
-
 /* time.h */
 
 struct tm * wpurple_localtime_r (const time_t *time, struct tm *resultp) {
@@ -982,7 +976,7 @@ wpurple_get_timezone_abbreviation(const struct tm *tm)
 		if (strcmp(tzname, zonename) == 0)
 		{
 			/* Matched zone */
-			strcpy(localtzname, keyname);
+			g_strlcpy(localtzname, keyname, sizeof(localtzname));
 			RegCloseKey(key);
 			break;
 		}
@@ -997,7 +991,7 @@ wpurple_get_timezone_abbreviation(const struct tm *tm)
 		if (strcmp(tzname, zonename) == 0)
 		{
 			/* Matched DST zone */
-			strcpy(localtzname, keyname);
+			g_strlcpy(localtzname, keyname, sizeof(localtzname));
 			RegCloseKey(key);
 			break;
 		}
