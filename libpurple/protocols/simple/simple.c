@@ -193,7 +193,7 @@ static void connection_free_all(struct simple_account_data *sip) {
 	}
 }
 
-static void simple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
+static void simple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, const char *message)
 {
 	struct simple_account_data *sip = purple_connection_get_protocol_data(gc);
 	struct simple_buddy *b;
@@ -223,7 +223,7 @@ static void simple_get_buddies(PurpleConnection *gc) {
 	buddies = purple_find_buddies(account, NULL);
 	while (buddies) {
 		PurpleBuddy *buddy = buddies->data;
-		simple_add_buddy(gc, buddy, purple_buddy_get_group(buddy));
+		simple_add_buddy(gc, buddy, purple_buddy_get_group(buddy), NULL);
 
 		buddies = g_slist_delete_link(buddies, buddies);
 	}
@@ -1904,7 +1904,7 @@ static void srvresolved(PurpleSrvResponse *resp, int results, gpointer data) {
 	} else { /* UDP */
 		purple_debug_info("simple", "using udp with server %s and port %d\n", hostname, port);
 
-		sip->query_data = purple_dnsquery_a_account(sip->account, hostname,
+		sip->query_data = purple_dnsquery_a(sip->account, hostname,
 			port, simple_udp_host_resolved, sip);
 		if (sip->query_data == NULL) {
 			purple_connection_error(sip->gc,
@@ -1970,7 +1970,7 @@ static void simple_login(PurpleAccount *account)
 		hosttoconnect = purple_account_get_string(account, "proxy", sip->servername);
 	}
 
-	sip->srv_query_data = purple_srv_resolve_account(account, "sip",
+	sip->srv_query_data = purple_srv_resolve(account, "sip",
 			sip->udp ? "udp" : "tcp", hosttoconnect, srvresolved, sip);
 }
 
@@ -2007,7 +2007,7 @@ static void simple_close(PurpleConnection *gc)
 		purple_dnsquery_destroy(sip->query_data);
 
 	if (sip->srv_query_data != NULL)
-		purple_srv_cancel(sip->srv_query_data);
+		purple_srv_txt_query_destroy(sip->srv_query_data);
 
 	if (sip->listen_data != NULL)
 		purple_network_listen_cancel(sip->listen_data);
@@ -2046,6 +2046,7 @@ static void simple_close(PurpleConnection *gc)
 
 static PurplePluginProtocolInfo prpl_info =
 {
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	0,
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
@@ -2086,7 +2087,6 @@ static PurplePluginProtocolInfo prpl_info =
 	simple_keep_alive,		/* keepalive */
 	NULL,					/* register_user */
 	NULL,					/* get_cb_info */
-	NULL,					/* get_cb_away */
 	NULL,					/* alias_buddy */
 	NULL,					/* group_buddy */
 	NULL,					/* rename_group */
@@ -2111,15 +2111,12 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* unregister_user */
 	NULL,					/* send_attention */
 	NULL,					/* get_attention_types */
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	NULL,					/* get_account_text_table */
 	NULL,					/* initiate_media */
 	NULL,					/* get_media_caps */
 	NULL,					/* get_moods */
 	NULL,					/* set_public_alias */
-	NULL,					/* get_public_alias */
-	NULL,					/* add_buddy_with_invite */
-	NULL					/* add_buddies_with_invite */
+	NULL					/* get_public_alias */
 };
 
 
