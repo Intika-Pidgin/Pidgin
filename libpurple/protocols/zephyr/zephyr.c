@@ -2853,6 +2853,7 @@ static GList *zephyr_actions(PurplePlugin *plugin, gpointer context)
 static PurplePlugin *my_protocol = NULL;
 
 static PurplePluginProtocolInfo prpl_info = {
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	OPT_PROTO_CHAT_TOPIC | OPT_PROTO_NO_PASSWORD,
 	NULL,					/* ??? user_splits */
 	NULL,					/* ??? protocol_options */
@@ -2893,7 +2894,6 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,					/* keepalive -- Not necessary*/
 	NULL,					/* register_user -- Not supported*/
 	NULL,					/* XXX get_cb_info */
-	NULL,					/* get_cb_away */
 	NULL,					/* alias_buddy */
 	NULL,					/* group_buddy */
 	NULL,					/* rename_group */
@@ -2919,15 +2919,12 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,
 	NULL,
 	NULL,
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	NULL,					/* get_account_text_table */
 	NULL,					/* initate_media */
 	NULL,					/* get_media_caps */
 	NULL,					/* get_moods */
 	NULL,					/* set_public_alias */
-	NULL,					/* get_public_alias */
-	NULL,					/* add_buddy_with_invite */
-	NULL					/* add_buddies_with_invite */
+	NULL					/* get_public_alias */
 };
 
 static PurplePluginInfo info = {

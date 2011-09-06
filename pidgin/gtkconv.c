@@ -74,6 +74,39 @@
 
 #include "gtknickcolors.h"
 
+/**
+ * A GTK+ Instant Message pane.
+ */
+struct _PidginImPane
+{
+	GtkWidget *block;
+	GtkWidget *send_file;
+	GtkWidget *sep1;
+	GtkWidget *sep2;
+	GtkWidget *check;
+	GtkWidget *progress;
+	guint32 typing_timer;
+
+	/* Buddy icon stuff */
+	GtkWidget *icon_container;
+	GtkWidget *icon;
+	gboolean show_icon;
+	gboolean animate;
+	GdkPixbufAnimation *anim;
+	GdkPixbufAnimationIter *iter;
+	guint32 icon_timer;
+};
+
+/**
+ * GTK+ Chat panes.
+ */
+struct _PidginChatPane
+{
+	GtkWidget *count;
+	GtkWidget *list;
+	GtkWidget *topic_text;
+};
+
 #define CLOSE_CONV_TIMEOUT_SECS  (10 * 60)
 
 #define AUTO_RESPONSE "&lt;AUTO-REPLY&gt; : "
@@ -1546,32 +1579,6 @@ menu_chat_info_cb(GtkWidget *w, PidginConversation *gtkconv)
 }
 
 static void
-menu_chat_get_away_cb(GtkWidget *w, PidginConversation *gtkconv)
-{
-	PurpleConversation *conv = gtkconv->active_conv;
-	PurplePluginProtocolInfo *prpl_info = NULL;
-	PurpleConnection *gc;
-	char *who;
-
-	gc  = purple_conversation_get_gc(conv);
-	who = g_object_get_data(G_OBJECT(w), "user_data");
-
-	if (gc != NULL) {
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
-
-		/*
-		 * May want to expand this to work similarly to menu_info_cb?
-		 */
-
-		if (prpl_info->get_cb_away != NULL)
-		{
-			prpl_info->get_cb_away(gc,
-				purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv)), who);
-		}
-	}
-}
-
-static void
 menu_chat_add_remove_cb(GtkWidget *w, PidginConversation *gtkconv)
 {
 	PurpleConversation *conv = gtkconv->active_conv;
@@ -1695,16 +1702,6 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 	if (prpl_info && (prpl_info->get_info || prpl_info->get_cb_info)) {
 		button = pidgin_new_item_from_stock(menu, _("Info"), PIDGIN_STOCK_TOOLBAR_USER_INFO,
 						G_CALLBACK(menu_chat_info_cb), PIDGIN_CONVERSATION(conv), 0, 0, NULL);
-
-		if (gc == NULL)
-			gtk_widget_set_sensitive(button, FALSE);
-		else
-			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
-	}
-
-	if (prpl_info && prpl_info->get_cb_away) {
-		button = pidgin_new_item_from_stock(menu, _("Get Away Message"), PIDGIN_STOCK_AWAY,
-					G_CALLBACK(menu_chat_get_away_cb), PIDGIN_CONVERSATION(conv), 0, 0, NULL);
 
 		if (gc == NULL)
 			gtk_widget_set_sensitive(button, FALSE);
@@ -6657,7 +6654,7 @@ gray_stuff_out(PidginConversation *gtkconv)
 
 		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
 		{
-			gtk_widget_set_sensitive(win->menu.add, (prpl_info->add_buddy != NULL) || (prpl_info->add_buddy_with_invite != NULL));
+			gtk_widget_set_sensitive(win->menu.add, (prpl_info->add_buddy != NULL));
 			gtk_widget_set_sensitive(win->menu.remove, (prpl_info->remove_buddy != NULL));
 			gtk_widget_set_sensitive(win->menu.send_file,
 									 (prpl_info->send_file != NULL && (!prpl_info->can_receive_file ||
