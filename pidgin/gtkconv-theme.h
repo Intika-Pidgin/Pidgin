@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include "conversation.h"
 #include "theme.h"
 
 /**
@@ -68,6 +69,9 @@ G_BEGIN_DECLS
  */
 GType pidgin_conversation_theme_get_type(void);
 
+const GHashTable *pidgin_conversation_theme_get_info(const PidginConvTheme *theme);
+void pidgin_conversation_theme_set_info(PidginConvTheme *theme, GHashTable *info);
+
 PidginConvTheme *pidgin_conversation_theme_load(const char *styledir);
 PidginConvTheme *pidgin_conversation_theme_copy(const PidginConvTheme *theme);
 void pidgin_conversation_theme_save_state(const PidginConvTheme *theme);
@@ -77,6 +81,9 @@ GList *pidgin_conversation_theme_get_variants(PidginConvTheme *theme);
 void pidgin_conversation_theme_set_variant(PidginConvTheme *theme, const char *variant);
 
 char *pidgin_conversation_theme_get_css(PidginConvTheme *theme);
+
+void
+pidgin_conversation_theme_apply(PidginConvTheme *theme, PurpleConversation *conv);
 
 G_END_DECLS
 #endif /* PIDGIN_CONV_THEME_H */
