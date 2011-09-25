@@ -87,7 +87,6 @@ typedef struct
 	 *
 	 * @return size if the write was successful, or a value between 0 and
 	 *         size on error.
-	 * @since 2.6.0
 	 */
 	gssize (*ui_write)(PurpleXfer *xfer, const guchar *buffer, gssize size);
 
@@ -102,7 +101,6 @@ typedef struct
 	 * @returns The amount of data in the buffer, 0 if nothing is available,
 	 *          and a negative value if an error occurred and the transfer
 	 *          should be cancelled (libpurple will cancel).
-	 * @since 2.6.0
 	 */
 	gssize (*ui_read)(PurpleXfer *xfer, guchar **buffer, gssize size);
 
@@ -115,8 +113,6 @@ typedef struct
 	 * @param xfer    The file transfer structure
 	 * @param buffer  A pointer to the beginning of the unwritten data.
 	 * @param size    The amount of unwritten data.
-	 *
-	 * @since 2.6.0
 	 */
 	void (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer, gsize size);
 
@@ -307,8 +303,6 @@ PurpleAccount *purple_xfer_get_account(const PurpleXfer *xfer);
  * @param xfer The file transfer.
  *
  * @return The name of the remote user.
- *
- * @since 2.1.0
  */
 const char *purple_xfer_get_remote_user(const PurpleXfer *xfer);
 
@@ -327,9 +321,8 @@ PurpleXferStatusType purple_xfer_get_status(const PurpleXfer *xfer);
  * @param xfer The file transfer.
  *
  * @return Whether or not the transfer was cancelled.
- * FIXME: This should be renamed using cancelled for 3.0.0.
  */
-gboolean purple_xfer_is_canceled(const PurpleXfer *xfer);
+gboolean purple_xfer_is_cancelled(const PurpleXfer *xfer);
 
 /**
  * Returns the completed state for a file transfer.
@@ -429,7 +422,6 @@ unsigned int purple_xfer_get_remote_port(const PurpleXfer *xfer);
  * @param xfer  The file transfer.
  *
  * @return The time when the transfer started.
- * @since 2.4.0
  */
 time_t purple_xfer_get_start_time(const PurpleXfer *xfer);
 
@@ -439,7 +431,6 @@ time_t purple_xfer_get_start_time(const PurpleXfer *xfer);
  * @param xfer  The file transfer.
  *
  * @return The time when the transfer ended.
- * @since 2.4.0
  */
 time_t purple_xfer_get_end_time(const PurpleXfer *xfer);
 
@@ -646,11 +637,8 @@ gssize purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size);
  * file receive transfer. On send, @a fd must be specified, and
  * @a ip and @a port are ignored.
  *
- * Prior to libpurple 2.6.0, passing '0' to @a fd was special-cased to
- * allow the protocol plugin to facilitate the file transfer itself. As of
- * 2.6.0, this is supported (for backward compatibility), but will be
- * removed in libpurple 3.0.0. If a prpl detects that the running libpurple
- * is running 2.6.0 or higher, it should use the invalid fd '-1'.
+ * Passing @a fd as '-1' is a special-case and indicates to the
+ * protocol plugin to facilitate the file transfer itself.
  *
  * @param xfer The file transfer.
  * @param fd   The file descriptor for the socket.
@@ -727,8 +715,6 @@ void purple_xfer_conversation_write(PurpleXfer *xfer, char *message, gboolean is
  * read/write/data_not_sent UI ops.
  *
  * @param xfer The file transfer which is ready.
- *
- * @since 2.6.0
  */
 void purple_xfer_ui_ready(PurpleXfer *xfer);
 
@@ -738,8 +724,6 @@ void purple_xfer_ui_ready(PurpleXfer *xfer);
  * ops and cannot/does not provide a raw fd to the core.
  *
  * @param xfer The file transfer which is ready.
- *
- * @since 2.6.0
  */
 void purple_xfer_prpl_ready(PurpleXfer *xfer);
 
@@ -750,7 +734,6 @@ void purple_xfer_prpl_ready(PurpleXfer *xfer);
  * @param len  If not @c NULL, the length of the thumbnail data returned
  *             will be set in the location pointed to by this.
  * @return The thumbnail data, or NULL if there is no thumbnail
- * @since 2.7.0
  */
 gconstpointer purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len);
 
@@ -759,7 +742,6 @@ gconstpointer purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len);
  *
  * @param xfer The file transfer to get the mimetype for
  * @return The mimetype of the thumbnail, or @c NULL if not thumbnail is set
- * @since 2.7.0
  */
 const gchar *purple_xfer_get_thumbnail_mimetype(const PurpleXfer *xfer);
 
@@ -771,7 +753,6 @@ const gchar *purple_xfer_get_thumbnail_mimetype(const PurpleXfer *xfer);
  * @param thumbnail A pointer to the thumbnail data, this will be copied
  * @param size The size in bytes of the passed in thumbnail data
  * @param mimetype The mimetype of the generated thumbnail
- * @since 2.7.0
  */
 void purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
 	gsize size, const gchar *mimetype);
@@ -783,7 +764,6 @@ void purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
  * @param xfer The file transfer to create a thumbnail for
  * @param formats A comma-separated list of mimetypes for image formats
  *	 	  the protocols can use for thumbnails.
- * @since 2.7.0
  */
 void purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats);
 
@@ -792,8 +772,6 @@ void purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats);
  *
  * @param xfer			The file transfer.
  * @param proto_data	The protocol data to set for the file transfer.
- *
- * @since 3.0.0
  */
 void purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data);
  
@@ -803,8 +781,6 @@ void purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data);
  * @param xfer			The file transfer.
  *
  * @return The protocol data for the file transfer.
- *
- * @since 3.0.0
  */
 gpointer purple_xfer_get_protocol_data(const PurpleXfer *xfer);
 
