@@ -1872,8 +1872,7 @@ static void jabber_blocklist_parse(JabberStream *js, const char *from,
 		return;
 
 	/* This is the only privacy method supported by XEP-0191 */
-	if (account->perm_deny != PURPLE_PRIVACY_DENY_USERS)
-		account->perm_deny = PURPLE_PRIVACY_DENY_USERS;
+	purple_account_set_privacy_type(account, PURPLE_PRIVACY_DENY_USERS);
 
 	/*
 	 * TODO: When account->deny is something more than a hash table, this can
@@ -3163,13 +3162,14 @@ static gboolean _jabber_send_buzz(JabberStream *js, const char *username, char *
 static PurpleCmdRet jabber_cmd_buzz(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberStream *js = purple_connection_get_protocol_data(conv->account->gc);
+	PurpleAccount *account = purple_conversation_get_account(conv);
+	JabberStream *js = purple_connection_get_protocol_data(purple_account_get_connection(account));
 	const gchar *who;
 	gchar *description;
 	PurpleBuddy *buddy;
 	const char *alias;
 	PurpleAttentionType *attn =
-		purple_get_attention_type_from_code(conv->account, 0);
+		purple_get_attention_type_from_code(account, 0);
 
 	if (!args || !args[0]) {
 		/* use the buddy from conversation, if it's a one-to-one conversation */
@@ -3182,7 +3182,7 @@ static PurpleCmdRet jabber_cmd_buzz(PurpleConversation *conv,
 		who = args[0];
 	}
 
-	buddy = purple_find_buddy(conv->account, who);
+	buddy = purple_find_buddy(account, who);
 	if (buddy != NULL)
 		alias = purple_buddy_get_contact_alias(buddy);
 	else
@@ -3574,7 +3574,8 @@ static PurpleCmdRet
 jabber_cmd_mood(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberStream *js = purple_connection_get_protocol_data(conv->account->gc);
+	PurpleAccount *account = purple_conversation_get_account(conv);
+	JabberStream *js = purple_connection_get_protocol_data(purple_account_get_connection(account));
 
 	if (js->pep) {
 		/* if no argument was given, unset mood */

@@ -2480,12 +2480,12 @@ static void convo_error(struct mwConversation *conv, guint32 err) {
   text = g_strconcat(_("Unable to send message: "), tmp, NULL);
 
   gconv = convo_get_gconv(conv);
-  if(gconv && !purple_conv_present_error(idb->user, gconv->account, text)) {
+  if(gconv && !purple_conv_present_error(idb->user, purple_conversation_get_account(gconv), text)) {
 
     g_free(text);
     text = g_strdup_printf(_("Unable to send message to %s:"),
 			   (idb->user)? idb->user: "(unknown)");
-    purple_notify_error(purple_account_get_connection(gconv->account),
+    purple_notify_error(purple_account_get_connection(purple_conversation_get_account(gconv)),
 		      NULL, text, tmp);
   }
 
@@ -4672,7 +4672,7 @@ static void mw_prpl_set_permit_deny(PurpleConnection *gc) {
   session = pd->session;
   g_return_if_fail(session != NULL);
 
-  switch(acct->perm_deny) {
+  switch(purple_account_get_privacy_type(acct)) {
   case PURPLE_PRIVACY_DENY_USERS:
     DEBUG_INFO("PURPLE_PRIVACY_DENY_USERS\n");
     privacy_fill(&privacy, acct->deny);
@@ -4696,7 +4696,7 @@ static void mw_prpl_set_permit_deny(PurpleConnection *gc) {
     break;
 
   default:
-    DEBUG_INFO("acct->perm_deny is 0x%x\n", acct->perm_deny);
+    DEBUG_INFO("acct->perm_deny is 0x%x\n", purple_account_get_privacy_type(acct));
     return;
   }
 

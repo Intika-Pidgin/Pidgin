@@ -573,7 +573,7 @@ static void yahoo_process_list_15(PurpleConnection *gc, struct yahoo_packet *pkt
 						yahoo_friend_set_p2p_status(f, YAHOO_P2PSTATUS_DO_NOT_CONNECT);
 				} else {
 					/* This buddy is on the ignore list (and therefore in no group) */
-					purple_debug_info("yahoo", "%s adding %s to the deny list because of the ignore list / no group was found\n",account->username, norm_bud);
+					purple_debug_info("yahoo", "%s adding %s to the deny list because of the ignore list / no group was found\n", purple_account_get_username(account), norm_bud);
 					purple_privacy_deny_add(account, norm_bud, 1);
 				}
 
@@ -748,13 +748,13 @@ static void yahoo_process_list(PurpleConnection *gc, struct yahoo_packet *pkt)
 	}
 
 	if (got_serv_list &&
-		((account->perm_deny != PURPLE_PRIVACY_ALLOW_BUDDYLIST) &&
-		(account->perm_deny != PURPLE_PRIVACY_DENY_ALL) &&
-		(account->perm_deny != PURPLE_PRIVACY_ALLOW_USERS)))
+		((purple_account_get_privacy_type(account) != PURPLE_PRIVACY_ALLOW_BUDDYLIST) &&
+		(purple_account_get_privacy_type(account) != PURPLE_PRIVACY_DENY_ALL) &&
+		(purple_account_get_privacy_type(account) != PURPLE_PRIVACY_ALLOW_USERS)))
 	{
-		account->perm_deny = PURPLE_PRIVACY_DENY_USERS;
+		purple_account_set_privacy_type(account, PURPLE_PRIVACY_DENY_USERS);
 		purple_debug_info("yahoo", "%s privacy defaulting to PURPLE_PRIVACY_DENY_USERS.\n",
-				account->username);
+				purple_account_get_username(account));
 	}
 
 	if (yd->tmp_serv_plist) {
@@ -763,7 +763,7 @@ static void yahoo_process_list(PurpleConnection *gc, struct yahoo_packet *pkt)
 			f = yahoo_friend_find(gc, *bud);
 			if (f) {
 				purple_debug_info("yahoo", "%s setting presence for %s to PERM_OFFLINE\n",
-						account->username, *bud);
+						purple_account_get_username(account), *bud);
 				f->presence = YAHOO_PRESENCE_PERM_OFFLINE;
 			}
 		}
@@ -4476,7 +4476,7 @@ static void yahoo_get_sms_carrier(PurpleConnection *gc, gpointer data)
 		YAHOO_CLIENT_VERSION, yd->cookie_t, yd->cookie_y, strlen(validate_request_str), validate_request_str);
 
 	/* use whole URL if using HTTP Proxy */
-	if ((gc->account->proxy_info) && (purple_proxy_info_get_type(gc->account->proxy_info) == PURPLE_PROXY_HTTP))
+	if ((purple_account_get_proxy_info(gc->account)) && (purple_proxy_info_get_type(purple_account_get_proxy_info(gc->account)) == PURPLE_PROXY_HTTP))
 	    use_whole_url = TRUE;
 
 	url_data = purple_util_fetch_url_request(
@@ -5117,7 +5117,7 @@ void yahoo_set_permit_deny(PurpleConnection *gc)
 
 	account = purple_connection_get_account(gc);
 
-	switch (account->perm_deny)
+	switch (purple_account_get_privacy_type(account))
 	{
 		case PURPLE_PRIVACY_ALLOW_ALL:
 			for (deny = account->deny; deny; deny = deny->next)
@@ -5213,7 +5213,7 @@ yahoopurple_cmd_buzz(PurpleConversation *c, const gchar *cmd, gchar **args, gcha
 	if (*args && args[0])
 		return PURPLE_CMD_RET_FAILED;
 
-	purple_prpl_send_attention(account->gc, c->name, YAHOO_BUZZ);
+	purple_prpl_send_attention(purple_account_get_connection(account), purple_conversation_get_name(c), YAHOO_BUZZ);
 
 	return PURPLE_CMD_RET_OK;
 }
@@ -5267,7 +5267,7 @@ gboolean yahoo_send_attention(PurpleConnection *gc, const char *username, guint 
 	g_return_val_if_fail(c != NULL, FALSE);
 
 	purple_debug_info("yahoo", "Sending <ding> on account %s to buddy %s.\n",
-			username, c->name);
+			username, purple_conversation_get_name(c));
 	purple_conv_im_send_with_flags(PURPLE_CONV_IM(c), "<ding>", PURPLE_MESSAGE_INVISIBLE);
 
 	return TRUE;
