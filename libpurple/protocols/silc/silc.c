@@ -555,7 +555,7 @@ silcpurple_login(PurpleAccount *account)
 	char *username, *hostname, *realname, **up;
 	int i;
 
-	gc = account->gc;
+	gc = purple_account_get_connection(account);
 	if (!gc)
 		return;
 	purple_connection_set_protocol_data(gc, NULL);
@@ -1593,7 +1593,7 @@ static PurpleCmdRet silcpurple_cmd_chat_topic(PurpleConversation *conv,
 			g_free(tmp2);
 		} else
 			buf = g_strdup(_("No topic is set"));
-		purple_conv_chat_write(PURPLE_CONV_CHAT(conv), gc->account->username, buf,
+		purple_conv_chat_write(PURPLE_CONV_CHAT(conv), purple_account_get_username(gc->account), buf,
 							 PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
 		g_free(buf);
 

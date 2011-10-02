@@ -4,6 +4,8 @@ version 3.0.0 (??/??/????):
 	libpurple:
 		Added:
 		* pidgin_create_webview
+		* purple_account_get_ui_data
+		* purple_account_set_ui_data
 		* purple_conv_chat_cb_get_alias
 		* purple_conv_chat_cb_get_flags
 		* purple_conv_chat_cb_is_buddy
@@ -192,6 +194,7 @@ version 3.0.0 (??/??/????):
 		* struct _PidginChatPane
 		* struct _PidginImPane
 		* struct _PurpleAttentionType
+		* struct _PurpleConversation
 		* struct _PurpleConvChat
 		* struct _PurpleConvChatBuddy
 		* struct _PurpleConvIm
@@ -202,6 +205,8 @@ version 3.0.0 (??/??/????):
 		* struct _PurpleRoomlist
 		* struct _PurpleRoomlistField
 		* struct _PurpleRoomlistRoom
+		* struct PurpleAccountOption
+		* struct PurpleAccountUserSplit
 		* wpurple_g_access
 		* xmlnode_set_attrib_with_namespace
 		* xmlnode_set_attrib_with_prefix

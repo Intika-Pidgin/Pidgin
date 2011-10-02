@@ -235,15 +235,16 @@ static const GdkColor *get_nick_color(PidginConversation *gtkconv, const char *n
 static PurpleBlistNode *
 get_conversation_blist_node(PurpleConversation *conv)
 {
+	PurpleAccount *account = purple_conversation_get_account(conv);
 	PurpleBlistNode *node = NULL;
 
 	switch (purple_conversation_get_type(conv)) {
 		case PURPLE_CONV_TYPE_IM:
-			node = PURPLE_BLIST_NODE(purple_find_buddy(conv->account, conv->name));
+			node = PURPLE_BLIST_NODE(purple_find_buddy(account, purple_conversation_get_name(conv)));
 			node = node ? node->parent : NULL;
 			break;
 		case PURPLE_CONV_TYPE_CHAT:
-			node = PURPLE_BLIST_NODE(purple_blist_find_chat(conv->account, conv->name));
+			node = PURPLE_BLIST_NODE(purple_blist_find_chat(account, purple_conversation_get_name(conv)));
 			break;
 		default:
 			break;
@@ -315,7 +316,7 @@ static void
 default_formatize(PidginConversation *c)
 {
 	PurpleConversation *conv = c->active_conv;
-	gtk_imhtml_setup_entry(GTK_IMHTML(c->entry), conv->features);
+	gtk_imhtml_setup_entry(GTK_IMHTML(c->entry), purple_conversation_get_features(conv));
 }
 
 static void
@@ -655,7 +656,7 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 		flags |= PURPLE_MESSAGE_IMAGES;
 
 	gc = purple_account_get_connection(account);
-	if (gc && (conv->features & PURPLE_CONNECTION_NO_NEWLINES)) {
+	if (gc && (purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_NEWLINES)) {
 		char **bufs;
 		int i;
 
@@ -1092,7 +1093,8 @@ menu_save_as_cb(gpointer data, guint action, GtkWidget *widget)
 {
 	PidginWindow *win = data;
 	PurpleConversation *conv = pidgin_conv_window_get_active_conversation(win);
-	PurpleBuddy *buddy = purple_find_buddy(conv->account, conv->name);
+	PurpleAccount *account = purple_conversation_get_account(conv);
+	PurpleBuddy *buddy = purple_find_buddy(account, purple_conversation_get_name(conv));
 	const char *name;
 	gchar *buf;
 	gchar *c;
@@ -1100,7 +1102,7 @@ menu_save_as_cb(gpointer data, guint action, GtkWidget *widget)
 	if (buddy != NULL)
 		name = purple_buddy_get_contact_alias(buddy);
 	else
-		name = purple_normalize(conv->account, conv->name);
+		name = purple_normalize(account, purple_conversation_get_name(conv));
 
 	buf = g_strdup_printf("%s.html", name);
 	for (c = buf ; *c ; c++)
@@ -1423,16 +1425,14 @@ menu_logging_cb(gpointer data, guint action, GtkWidget *widget)
 
 		purple_conversation_write(conv, NULL,
 								_("Logging started. Future messages in this conversation will be logged."),
-								conv->logs ? (PURPLE_MESSAGE_SYSTEM) :
-								             (PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG),
+								PURPLE_MESSAGE_SYSTEM,
 								time(NULL));
 	}
 	else
 	{
 		purple_conversation_write(conv, NULL,
 								_("Logging stopped. Future messages in this conversation will not be logged."),
-								conv->logs ? (PURPLE_MESSAGE_SYSTEM) :
-								             (PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG),
+								PURPLE_MESSAGE_SYSTEM,
 								time(NULL));
 
 		/* Disable the logging second, so that the above message can be logged. */
@@ -1440,7 +1440,7 @@ menu_logging_cb(gpointer data, guint action, GtkWidget *widget)
 	}
 
 	/* Save the setting IFF it's different than the pref. */
-	switch (conv->type)
+	switch (purple_conversation_get_type(conv))
 	{
 		case PURPLE_CONV_TYPE_IM:
 			if (logging == purple_prefs_get_bool("/purple/logging/log_ims"))
@@ -1643,6 +1643,7 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 	static GtkWidget *menu = NULL;
 	PurplePluginProtocolInfo *prpl_info = NULL;
 	PurpleConvChat *chat = PURPLE_CONV_CHAT(conv);
+	PurpleAccount *account = purple_conversation_get_account(conv);
 	gboolean is_me = FALSE;
 	GtkWidget *button;
 	PurpleBuddy *buddy = NULL;
@@ -1657,7 +1658,7 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 	if (menu)
 		gtk_widget_destroy(menu);
 
-	if (!strcmp(purple_conv_chat_get_nick(chat), purple_normalize(conv->account, who)))
+	if (!strcmp(purple_conv_chat_get_nick(chat), purple_normalize(account, who)))
 		is_me = TRUE;
 
 	menu = gtk_menu_new();
@@ -1723,7 +1724,7 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 	}
 
 	if (!is_me && prpl_info && !(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
-		if ((buddy = purple_find_buddy(conv->account, who)) != NULL)
+		if ((buddy = purple_find_buddy(account, who)) != NULL)
 			button = pidgin_new_item_from_stock(menu, _("Remove"), GTK_STOCK_REMOVE,
 						G_CALLBACK(menu_chat_add_remove_cb), PIDGIN_CONVERSATION(conv), 0, 0, NULL);
 		else
@@ -1744,8 +1745,8 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 
 	if (buddy != NULL)
 	{
-		if (purple_account_is_connected(conv->account))
-			pidgin_append_blist_node_proto_menu(menu, conv->account->gc,
+		if (purple_account_is_connected(account))
+			pidgin_append_blist_node_proto_menu(menu, purple_account_get_connection(account),
 												  (PurpleBlistNode *)buddy);
 		pidgin_append_blist_node_extended_menu(menu, (PurpleBlistNode *)buddy);
 		gtk_widget_show_all(menu);
@@ -1771,7 +1772,7 @@ gtkconv_chat_popup_menu_cb(GtkWidget *widget, PidginConversation *gtkconv)
 	gtkconv = PIDGIN_CONVERSATION(conv);
 	gtkchat = gtkconv->u.chat;
 	account = purple_conversation_get_account(conv);
-	gc      = account->gc;
+	gc      = purple_account_get_connection(account);
 
 	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gtkchat->list));
 
@@ -1807,7 +1808,7 @@ right_click_chat_cb(GtkWidget *widget, GdkEventButton *event,
 
 	gtkchat = gtkconv->u.chat;
 	account = purple_conversation_get_account(conv);
-	gc      = account->gc;
+	gc      = purple_account_get_connection(account);
 
 	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gtkchat->list));
 
@@ -2300,14 +2301,14 @@ pidgin_conv_switch_active_conversation(PurpleConversation *conv)
 		gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(gtkconv->win->menu.logging)));
 
 	entry = GTK_IMHTML(gtkconv->entry);
-	protocol_name = purple_account_get_protocol_name(conv->account);
+	protocol_name = purple_account_get_protocol_name(purple_conversation_get_account(conv));
 	gtk_imhtml_set_protocol_name(entry, protocol_name);
 	/* TODO WEBKIT: gtk_imhtml_set_protocol_name(GTK_IMHTML(gtkconv->imhtml), protocol_name); */
 
-	if (!(conv->features & PURPLE_CONNECTION_HTML))
+	if (!(purple_conversation_get_features(conv) & PURPLE_CONNECTION_HTML))
 		gtk_imhtml_clear_formatting(GTK_IMHTML(gtkconv->entry));
-	else if (conv->features & PURPLE_CONNECTION_FORMATTING_WBFO &&
-	         !(old_conv->features & PURPLE_CONNECTION_FORMATTING_WBFO))
+	else if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_FORMATTING_WBFO &&
+	         !(purple_conversation_get_features(old_conv) & PURPLE_CONNECTION_FORMATTING_WBFO))
 	{
 		/* The old conversation allowed formatting on parts of the
 		 * buffer, but the new one only allows it on the whole
@@ -2347,12 +2348,12 @@ pidgin_conv_switch_active_conversation(PurpleConversation *conv)
 
 		gtk_imhtml_toggle_fontface(entry, fontface);
 
-		if (!(conv->features & PURPLE_CONNECTION_NO_FONTSIZE))
+		if (!(purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_FONTSIZE))
 			gtk_imhtml_font_set_size(entry, fontsize);
 
 		gtk_imhtml_toggle_forecolor(entry, forecolor);
 
-		if (!(conv->features & PURPLE_CONNECTION_NO_BGCOLOR))
+		if (!(purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_BGCOLOR))
 		{
 			gtk_imhtml_toggle_backcolor(entry, backcolor);
 			gtk_imhtml_toggle_background(entry, background);
@@ -2370,7 +2371,7 @@ pidgin_conv_switch_active_conversation(PurpleConversation *conv)
 		 * here, we didn't call gtk_imhtml_clear_formatting() (because we want to
 		 * preserve the formatting exactly as it is), so we have to do this now. */
 		gtk_imhtml_set_whole_buffer_formatting_only(entry,
-			(conv->features & PURPLE_CONNECTION_FORMATTING_WBFO));
+			(purple_conversation_get_features(conv) & PURPLE_CONNECTION_FORMATTING_WBFO));
 	}
 
 	purple_signal_emit(pidgin_conversations_get_handle(), "conversation-switched", conv);
@@ -2600,7 +2601,7 @@ update_tab_icon(PurpleConversation *conv)
 	status = infopane_status = pidgin_conv_get_icon_stock(conv);
 
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) {
-		PurpleBuddy *b = purple_find_buddy(conv->account, conv->name);
+		PurpleBuddy *b = purple_find_buddy(purple_conversation_get_account(conv), purple_conversation_get_name(conv));
 		if (b)
 			emblem = pidgin_blist_get_emblem((PurpleBlistNode*)b);
 	}
@@ -2621,7 +2622,7 @@ update_tab_icon(PurpleConversation *conv)
 		g_object_unref(emblem);
 
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/show_protocol_icons")) {
-		emblem = pidgin_create_prpl_icon(gtkconv->active_conv->account, PIDGIN_PRPL_ICON_SMALL);
+		emblem = pidgin_create_prpl_icon(purple_conversation_get_account(gtkconv->active_conv), PIDGIN_PRPL_ICON_SMALL);
 	} else {
 		emblem = NULL;
 	}
@@ -2677,7 +2678,7 @@ redraw_icon(gpointer data)
 	gtkconv = PIDGIN_CONVERSATION(conv);
 	account = purple_conversation_get_account(conv);
 
-	if (!(account && account->gc)) {
+	if (!(account && purple_account_get_connection(account))) {
 		gtkconv->u.im->icon_timer = 0;
 		return FALSE;
 	}
@@ -2884,11 +2885,11 @@ icon_menu_save_cb(GtkWidget *widget, PidginConversation *gtkconv)
 
 	ext = purple_buddy_icon_get_extension(purple_conv_im_get_icon(PURPLE_CONV_IM(conv)));
 
-	buf = g_strdup_printf("%s.%s", purple_normalize(conv->account, conv->name), ext);
+	buf = g_strdup_printf("%s.%s", purple_normalize(purple_conversation_get_account(conv), purple_conversation_get_name(conv)), ext);
 
 	purple_request_file(gtkconv, _("Save Icon"), buf, TRUE,
 					 G_CALLBACK(saveicon_writefile_cb), NULL,
-					conv->account, NULL, conv,
+					purple_conversation_get_account(conv), NULL, conv,
 					gtkconv);
 
 	g_free(buf);
@@ -3228,15 +3229,17 @@ populate_menu_with_options(GtkWidget *menu, PidginConversation *gtkconv, gboolea
 {
 	GList *list;
 	PurpleConversation *conv;
+	PurpleAccount *account;
 	PurpleBlistNode *node = NULL;
 	PurpleChat *chat = NULL;
 	PurpleBuddy *buddy = NULL;
 	gboolean ret;
 
 	conv = gtkconv->active_conv;
+	account = purple_conversation_get_account(conv);
 
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
-		chat = purple_blist_find_chat(conv->account, conv->name);
+		chat = purple_blist_find_chat(account, purple_conversation_get_name(conv));
 
 		if ((chat == NULL) && (gtkconv->webview != NULL)) {
 			chat = g_object_get_data(G_OBJECT(gtkconv->webview), "transient_chat");
@@ -3257,17 +3260,17 @@ populate_menu_with_options(GtkWidget *menu, PidginConversation *gtkconv, gboolea
 				g_hash_table_replace(components, g_strdup("channel"),
 						g_strdup(purple_conversation_get_name(conv)));
 			}
-			chat = purple_chat_new(conv->account, NULL, components);
+			chat = purple_chat_new(account, NULL, components);
 			purple_blist_node_set_flags((PurpleBlistNode *)chat,
 					PURPLE_BLIST_NODE_FLAG_NO_SAVE);
 			g_object_set_data_full(G_OBJECT(gtkconv->webview), "transient_chat",
 					chat, (GDestroyNotify)purple_blist_remove_chat);
 		}
 	} else {
-		if (!purple_account_is_connected(conv->account))
+		if (!purple_account_is_connected(account))
 			return FALSE;
 
-		buddy = purple_find_buddy(conv->account, conv->name);
+		buddy = purple_find_buddy(account, purple_conversation_get_name(conv));
 
 		/* gotta remain bug-compatible :( libpurple < 2.0.2 didn't handle
 		 * removing "isolated" buddy nodes well */
@@ -3277,7 +3280,7 @@ populate_menu_with_options(GtkWidget *menu, PidginConversation *gtkconv, gboolea
 			}
 
 			if ((buddy == NULL) && (gtkconv->webview != NULL)) {
-				buddy = purple_buddy_new(conv->account, conv->name, NULL);
+				buddy = purple_buddy_new(account, purple_conversation_get_name(conv), NULL);
 				purple_blist_node_set_flags((PurpleBlistNode *)buddy,
 						PURPLE_BLIST_NODE_FLAG_NO_SAVE);
 				g_object_set_data_full(G_OBJECT(gtkconv->webview), "transient_buddy",
@@ -3299,8 +3302,8 @@ populate_menu_with_options(GtkWidget *menu, PidginConversation *gtkconv, gboolea
 			/* XXX: */
 		}
 	} else if (node) {
-		if (purple_account_is_connected(conv->account))
-			pidgin_append_blist_node_proto_menu(menu, conv->account->gc, node);
+		if (purple_account_is_connected(account))
+			pidgin_append_blist_node_proto_menu(menu, purple_account_get_connection(account), node);
 		pidgin_append_blist_node_extended_menu(menu, node);
 	}
 
@@ -3782,7 +3785,7 @@ update_send_to_selection(PidginWindow *win)
 	if (win->menu.send_to == NULL)
 		return FALSE;
 
-	if (!(b = purple_find_buddy(account, conv->name)))
+	if (!(b = purple_find_buddy(account, purple_conversation_get_name(conv))))
 		return FALSE;
 
 
@@ -3942,8 +3945,8 @@ generate_send_to_items(PidginWindow *win)
 
 	gtk_widget_show(menu);
 
-	if (gtkconv->active_conv->type == PURPLE_CONV_TYPE_IM) {
-		buds = purple_find_buddies(gtkconv->active_conv->account, gtkconv->active_conv->name);
+	if (purple_conversation_get_type(gtkconv->active_conv) == PURPLE_CONV_TYPE_IM) {
+		buds = purple_find_buddies(purple_conversation_get_account(gtkconv->active_conv), purple_conversation_get_name(gtkconv->active_conv));
 
 		if (buds == NULL)
 		{
@@ -3968,7 +3971,7 @@ generate_send_to_items(PidginWindow *win)
 
 					account = purple_buddy_get_account(buddy);
 					/* TODO WEBKIT: (I'm not actually sure if this is webkit-related --Mark Doliner) */
-					if (purple_account_is_connected(account) /*|| account == gtkconv->active_conv->account*/)
+					if (purple_account_is_connected(account) /*|| account == purple_conversation_get_account(gtkconv->active_conv)*/)
 					{
 						/* Use the PurplePresence to get unique buddies. */
 						PurplePresence *presence = purple_buddy_get_presence(buddy);
@@ -4072,7 +4075,7 @@ add_chat_buddy_common(PurpleConversation *conv, PurpleConvChatBuddy *cb, const c
 
 	stock = get_chat_buddy_status_icon(chat, name, flags);
 
-	if (!strcmp(purple_conv_chat_get_nick(chat), purple_normalize(conv->account, old_name != NULL ? old_name : name)))
+	if (!strcmp(purple_conv_chat_get_nick(chat), purple_normalize(purple_conversation_get_account(conv), old_name != NULL ? old_name : name)))
 		is_me = TRUE;
 
 	is_buddy = purple_conv_chat_cb_is_buddy(cb);
@@ -4449,6 +4452,7 @@ update_chat_alias(PurpleBuddy *buddy, PurpleConversation *conv, PurpleConnection
 {
 	PidginConversation *gtkconv = PIDGIN_CONVERSATION(conv);
 	PurpleConvChat *chat = PURPLE_CONV_CHAT(conv);
+	PurpleAccount *account = purple_conversation_get_account(conv);
 	GtkTreeModel *model;
 	char *normalized_name;
 	GtkTreeIter iter;
@@ -4463,23 +4467,23 @@ update_chat_alias(PurpleBuddy *buddy, PurpleConversation *conv, PurpleConnection
 	if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(model), &iter))
 		return;
 
-	normalized_name = g_strdup(purple_normalize(conv->account, buddy->name));
+	normalized_name = g_strdup(purple_normalize(account, buddy->name));
 
 	do {
 		char *name;
 
 		gtk_tree_model_get(model, &iter, CHAT_USERS_NAME_COLUMN, &name, -1);
 
-		if (!strcmp(normalized_name, purple_normalize(conv->account, name))) {
+		if (!strcmp(normalized_name, purple_normalize(account, name))) {
 			const char *alias = name;
 			char *tmp;
 			char *alias_key = NULL;
 			PurpleBuddy *buddy2;
 
-			if (strcmp(purple_conv_chat_get_nick(chat), purple_normalize(conv->account, name))) {
+			if (strcmp(purple_conv_chat_get_nick(chat), purple_normalize(account, name))) {
 				/* This user is not me, so look into updating the alias. */
 
-				if ((buddy2 = purple_find_buddy(conv->account, name)) != NULL) {
+				if ((buddy2 = purple_find_buddy(account, name)) != NULL) {
 					alias = purple_buddy_get_contact_alias(buddy2);
 				}
 
@@ -4566,14 +4570,14 @@ buddy_cb_common(PurpleBuddy *buddy, PurpleConversation *conv, gboolean is_buddy)
 	if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(model), &iter))
 		return;
 
-	normalized_name = g_strdup(purple_normalize(conv->account, buddy->name));
+	normalized_name = g_strdup(purple_normalize(purple_conversation_get_account(conv), buddy->name));
 
 	do {
 		char *name;
 
 		gtk_tree_model_get(model, &iter, CHAT_USERS_NAME_COLUMN, &name, -1);
 
-		if (!strcmp(normalized_name, purple_normalize(conv->account, name))) {
+		if (!strcmp(normalized_name, purple_normalize(purple_conversation_get_account(conv), name))) {
 			gtk_list_store_set(GTK_LIST_STORE(model), &iter,
 			                   CHAT_USERS_WEIGHT_COLUMN, is_buddy ? PANGO_WEIGHT_BOLD : PANGO_WEIGHT_NORMAL, -1);
 			g_free(name);
@@ -4766,7 +4770,7 @@ pidgin_conv_userlist_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 	PurpleAccount *account = purple_conversation_get_account(conv);
 	char *who = NULL;
 
-	if (account->gc == NULL)
+	if (purple_account_get_connection(account) == NULL)
 		return FALSE;
 
 	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path))
@@ -4774,8 +4778,8 @@ pidgin_conv_userlist_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 
 	gtk_tree_model_get(GTK_TREE_MODEL(model), &iter, CHAT_USERS_NAME_COLUMN, &who, -1);
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(account->gc->prpl);
-	node = (PurpleBlistNode*)(purple_find_buddy(conv->account, who));
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_account_get_connection(account)->prpl);
+	node = (PurpleBlistNode*)(purple_find_buddy(purple_conversation_get_account(conv), who));
 	if (node && prpl_info && (prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME))
 		pidgin_blist_draw_tooltip(node, gtkconv->infopane);
 
@@ -4890,11 +4894,11 @@ pidgin_conv_create_tooltip(GtkWidget *tipwindow, gpointer userdata, int *w, int 
 
 	conv = gtkconv->active_conv;
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
-		node = (PurpleBlistNode*)(purple_blist_find_chat(conv->account, conv->name));
+		node = (PurpleBlistNode*)(purple_blist_find_chat(purple_conversation_get_account(conv), purple_conversation_get_name(conv)));
 		if (!node)
 			node = g_object_get_data(G_OBJECT(gtkconv->webview), "transient_chat");
 	} else {
-		node = (PurpleBlistNode*)(purple_find_buddy(conv->account, conv->name));
+		node = (PurpleBlistNode*)(purple_find_buddy(purple_conversation_get_account(conv), purple_conversation_get_name(conv)));
 #if 0
 		/* Using the transient blist nodes to show the tooltip doesn't quite work yet. */
 		if (!node)
@@ -4979,6 +4983,7 @@ pidgin_conv_setup_quickfind(PidginConversation *gtkconv, GtkWidget *container)
 static char *
 replace_header_tokens(PurpleConversation *conv, const char *text)
 {
+	PurpleAccount *account = purple_conversation_get_account(conv);
 	GString *str;
 	const char *cur = text;
 	const char *prev = cur;
@@ -4992,19 +4997,19 @@ replace_header_tokens(PurpleConversation *conv, const char *text)
 		const char *fin = NULL;
 
 		if (g_str_has_prefix(cur, "%chatName%")) {
-			replace = conv->name;
+			replace = purple_conversation_get_name(conv);
 
 		} else if (g_str_has_prefix(cur, "%sourceName%")) {
-			replace = purple_account_get_alias(conv->account);
+			replace = purple_account_get_alias(account);
 			if (replace == NULL)
-				replace = purple_account_get_username(conv->account);
+				replace = purple_account_get_username(account);
 
 		} else if (g_str_has_prefix(cur, "%destinationName%")) {
-			PurpleBuddy *buddy = purple_find_buddy(conv->account, conv->name);
+			PurpleBuddy *buddy = purple_find_buddy(account, purple_conversation_get_name(conv));
 			if (buddy) {
 				replace = purple_buddy_get_alias(buddy);
 			} else {
-				replace = conv->name;
+				replace = purple_conversation_get_name(conv);
 			}
 
 		} else if (g_str_has_prefix(cur, "%incomingIconPath%")) {
@@ -5013,7 +5018,7 @@ replace_header_tokens(PurpleConversation *conv, const char *text)
 				replace = purple_buddy_icon_get_full_path(icon);
 
 		} else if (g_str_has_prefix(cur, "%outgoingIconPath%")) {
-			replace = purple_account_get_buddy_icon_path(conv->account);
+			replace = purple_account_get_buddy_icon_path(account);
 
 		} else if (g_str_has_prefix(cur, "%timeOpened")) {
 			const char *tmp = cur + strlen("%timeOpened");
@@ -5133,7 +5138,7 @@ setup_common_pane(PidginConversation *gtkconv)
 	GtkTreePath *path;
 	PurpleConversation *conv = gtkconv->active_conv;
 	PurpleBuddy *buddy;
-	gboolean chat = (conv->type == PURPLE_CONV_TYPE_CHAT);
+	gboolean chat = (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT);
 	int buddyicon_size = 0;
 	char *header, *footer;
 	char *template;
@@ -5300,7 +5305,7 @@ setup_common_pane(PidginConversation *gtkconv)
 
 	gtk_widget_set_name(gtkconv->entry, "pidgin_conv_entry");
 	gtk_imhtml_set_protocol_name(GTK_IMHTML(gtkconv->entry),
-			purple_account_get_protocol_name(conv->account));
+			purple_account_get_protocol_name(purple_conversation_get_account(conv)));
 
 	g_signal_connect(G_OBJECT(gtkconv->entry), "populate-popup",
 	                 G_CALLBACK(entry_popup_menu_cb), gtkconv);
@@ -5467,7 +5472,7 @@ static const GtkTargetEntry te[] =
 static PidginConversation *
 pidgin_conv_find_gtkconv(PurpleConversation * conv)
 {
-	PurpleBuddy *bud = purple_find_buddy(conv->account, conv->name);
+	PurpleBuddy *bud = purple_find_buddy(purple_conversation_get_account(conv), purple_conversation_get_name(conv));
 	PurpleContact *c;
 	PurpleBlistNode *cn, *bn;
 
@@ -5689,7 +5694,7 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		nick_colors = generate_nick_colors(&nbr_nick_colors, gtk_widget_get_style(gtkconv->webview)->base[GTK_STATE_NORMAL]);
 	}
 
-	if (conv->features & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY)
+	if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY)
 		pidgin_themes_smiley_themeize_custom(gtkconv->entry);
 }
 
@@ -6048,10 +6053,10 @@ replace_message_tokens(
 
 		} else if (g_str_has_prefix(cur, "%userIconPath%")) {
 			if (flags & PURPLE_MESSAGE_SEND) {
-				if (purple_account_get_bool(conv->account, "use-global-buddyicon", TRUE)) {
+				if (purple_account_get_bool(purple_conversation_get_account(conv), "use-global-buddyicon", TRUE)) {
 					replace = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/accounts/buddyicon");
 				} else {
-					PurpleStoredImage *img = purple_buddy_icons_find_account_icon(conv->account);
+					PurpleStoredImage *img = purple_buddy_icons_find_account_icon(purple_conversation_get_account(conv));
 					replace = purple_imgstore_get_filename(img);
 				}
 				if (replace == NULL || !g_file_test(replace, G_FILE_TEST_EXISTS)) {
@@ -6073,7 +6078,7 @@ replace_message_tokens(
 			replace = alias;
 
 		} else if (g_str_has_prefix(cur, "%service%")) {
-			replace = purple_account_get_protocol_name(conv->account);
+			replace = purple_account_get_protocol_name(purple_conversation_get_account(conv));
 
 		} else {
 			cur++;
@@ -6264,12 +6269,12 @@ pidgin_conv_write_conv(PurpleConversation *conv, const char *name, const char *a
 		gtk_font_options |= GTK_IMHTML_NO_COLOURS | GTK_IMHTML_NO_FONTS | GTK_IMHTML_NO_SIZES | GTK_IMHTML_NO_FORMATTING;
 
 	/* this is gonna crash one day, I can feel it. */
-	if (PURPLE_PLUGIN_PROTOCOL_INFO(purple_find_prpl(purple_account_get_protocol_id(conv->account)))->options &
+	if (PURPLE_PLUGIN_PROTOCOL_INFO(purple_find_prpl(purple_account_get_protocol_id(purple_conversation_get_account(conv))))->options &
 	    OPT_PROTO_USE_POINTSIZE) {
 		gtk_font_options |= GTK_IMHTML_USE_POINTSIZE;
 	}
 
-	if (!(flags & PURPLE_MESSAGE_RECV) && (conv->features & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY))
+	if (!(flags & PURPLE_MESSAGE_RECV) && (purple_conversation_get_features(conv) & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY))
 	{
 		/* We want to see our own smileys. Need to revert it after send*/
 		pidgin_themes_smiley_themeize_custom(gtkconv->webview);
@@ -6431,7 +6436,7 @@ pidgin_conv_write_conv(PurpleConversation *conv, const char *name, const char *a
 	}
 
 #if 0
-	if (!(flags & PURPLE_MESSAGE_RECV) && (conv->features & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY))
+	if (!(flags & PURPLE_MESSAGE_RECV) && (purple_conversation_get_features(conv) & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY))
 	{
 		/* Restore the smiley-data */
 		pidgin_themes_smiley_themeize(gtkconv->webview);
@@ -6704,7 +6709,7 @@ pidgin_conv_custom_smiley_add(PurpleConversation *conv, const char *smile, gbool
 
 	/* If possible add this smiley to the current theme.
 	 * The addition is only temporary: custom smilies aren't saved to disk. */
-	conv_sml = purple_account_get_protocol_name(conv->account);
+	conv_sml = purple_account_get_protocol_name(purple_conversation_get_account(conv));
 	gtkconv = PIDGIN_CONVERSATION(conv);
 
 	for (list = (struct smiley_list *)current_smiley_theme->list; list; list = list->next) {
@@ -6735,7 +6740,7 @@ pidgin_conv_custom_smiley_write(PurpleConversation *conv, const char *smile,
 	const char *sml;
 	GError *error = NULL;
 
-	sml = purple_account_get_protocol_name(conv->account);
+	sml = purple_account_get_protocol_name(purple_conversation_get_account(conv));
 	gtkconv = PIDGIN_CONVERSATION(conv);
 	smiley = gtk_imhtml_smiley_get(GTK_IMHTML(gtkconv->imhtml), sml, smile);
 
@@ -6780,7 +6785,7 @@ pidgin_conv_custom_smiley_close(PurpleConversation *conv, const char *smile)
 	g_return_if_fail(conv  != NULL);
 	g_return_if_fail(smile != NULL);
 
-	sml = purple_account_get_protocol_name(conv->account);
+	sml = purple_account_get_protocol_name(purple_conversation_get_account(conv));
 	gtkconv = PIDGIN_CONVERSATION(conv);
 	smiley = gtk_imhtml_smiley_get(GTK_IMHTML(gtkconv->imhtml), sml, smile);
 
@@ -6920,29 +6925,29 @@ gray_stuff_out(PidginConversation *gtkconv)
 	{
 		/* Account is online */
 		/* Deal with the toolbar */
-		if (conv->features & PURPLE_CONNECTION_HTML)
+		if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_HTML)
 		{
 			buttons = GTK_IMHTML_ALL; /* Everything on */
-			if (conv->features & PURPLE_CONNECTION_NO_BGCOLOR)
+			if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_BGCOLOR)
 				buttons &= ~GTK_IMHTML_BACKCOLOR;
-			if (conv->features & PURPLE_CONNECTION_NO_FONTSIZE)
+			if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_FONTSIZE)
 			{
 				buttons &= ~GTK_IMHTML_GROW;
 				buttons &= ~GTK_IMHTML_SHRINK;
 			}
-			if (conv->features & PURPLE_CONNECTION_NO_URLDESC)
+			if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_URLDESC)
 				buttons &= ~GTK_IMHTML_LINKDESC;
 		} else {
 			buttons = GTK_IMHTML_SMILEY | GTK_IMHTML_IMAGE;
 		}
 
 		if (!(prpl_info->options & OPT_PROTO_IM_IMAGE))
-			conv->features |= PURPLE_CONNECTION_NO_IMAGES;
+			purple_conversation_set_features(conv, purple_conversation_get_features(conv) | PURPLE_CONNECTION_NO_IMAGES);
 
-		if(conv->features & PURPLE_CONNECTION_NO_IMAGES)
+		if(purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_IMAGES)
 			buttons &= ~GTK_IMHTML_IMAGE;
 
-		if (conv->features & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY)
+		if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY)
 			buttons |= GTK_IMHTML_CUSTOM_SMILEY;
 		else
 			buttons &= ~GTK_IMHTML_CUSTOM_SMILEY;
@@ -6956,8 +6961,8 @@ gray_stuff_out(PidginConversation *gtkconv)
 		gtk_widget_set_sensitive(win->menu.add_pounce, TRUE);
 		gtk_widget_set_sensitive(win->menu.get_info, (prpl_info->get_info != NULL));
 		gtk_widget_set_sensitive(win->menu.invite, (prpl_info->chat_invite != NULL));
-		gtk_widget_set_sensitive(win->menu.insert_link, (conv->features & PURPLE_CONNECTION_HTML));
-		gtk_widget_set_sensitive(win->menu.insert_image, !(conv->features & PURPLE_CONNECTION_NO_IMAGES));
+		gtk_widget_set_sensitive(win->menu.insert_link, (purple_conversation_get_features(conv) & PURPLE_CONNECTION_HTML));
+		gtk_widget_set_sensitive(win->menu.insert_image, !(purple_conversation_get_features(conv) & PURPLE_CONNECTION_NO_IMAGES));
 
 		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
 		{
@@ -7008,7 +7013,7 @@ gray_stuff_out(PidginConversation *gtkconv)
 		if ((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) &&
 				(gtkconv->u.im->anim))
 		{
-			PurpleBuddy *buddy = purple_find_buddy(conv->account, conv->name);
+			PurpleBuddy *buddy = purple_find_buddy(purple_conversation_get_account(conv), purple_conversation_get_name(conv));
 			window_icon =
 				gdk_pixbuf_animation_get_static_image(gtkconv->u.im->anim);
 
@@ -7111,7 +7116,7 @@ pidgin_conv_update_fields(PurpleConversation *conv, PidginConvFields fields)
 			title = g_strdup(purple_conversation_get_title(conv));
 
 		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) {
-			buddy = purple_find_buddy(account, conv->name);
+			buddy = purple_find_buddy(account, purple_conversation_get_name(conv));
 			if (buddy) {
 				markup = pidgin_blist_get_name_markup(buddy, FALSE, FALSE);
 			} else {
@@ -7156,7 +7161,7 @@ pidgin_conv_update_fields(PurpleConversation *conv, PidginConvFields fields)
 			style = "tab-label-attention";
 		} else if (gtkconv->unseen_state == PIDGIN_UNSEEN_TEXT)	{
 			atk_object_set_description(accessibility_obj, _("Unread Messages"));
-			if (gtkconv->active_conv->type == PURPLE_CONV_TYPE_CHAT)
+			if (purple_conversation_get_type(gtkconv->active_conv) == PURPLE_CONV_TYPE_CHAT)
 				style = "tab-label-unreadchat";
 			else
 				style = "tab-label-attention";
@@ -7834,7 +7839,7 @@ hide_new_pref_cb(const char *name, PurplePrefType type,
 
 		conv = gtkconv->active_conv;
 
-		if (conv->type == PURPLE_CONV_TYPE_CHAT ||
+		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT ||
 				gtkconv->unseen_count == 0 ||
 				(when_away && !purple_status_is_available(
 							purple_account_get_active_status(
@@ -7899,14 +7904,14 @@ account_signed_off_cb(PurpleConnection *gc, gpointer event)
 							PIDGIN_CONV_MENU | PIDGIN_CONV_COLORIZE_TITLE);
 
 		if (PURPLE_CONNECTION_IS_CONNECTED(gc) &&
-				conv->type == PURPLE_CONV_TYPE_CHAT &&
-				conv->account == gc->account &&
+				purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
+				purple_conversation_get_account(conv) == gc->account &&
 				purple_conversation_get_data(conv, "want-to-rejoin")) {
 			GHashTable *comps = NULL;
-			PurpleChat *chat = purple_blist_find_chat(conv->account, conv->name);
+			PurpleChat *chat = purple_blist_find_chat(purple_conversation_get_account(conv), purple_conversation_get_name(conv));
 			if (chat == NULL) {
 				if (PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl)->chat_info_defaults != NULL)
-					comps = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl)->chat_info_defaults(gc, conv->name);
+					comps = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl)->chat_info_defaults(gc, purple_conversation_get_name(conv));
 			} else {
 				comps = chat->components;
 			}
@@ -8061,7 +8066,7 @@ add_message_history_to_gtkconv(gpointer data)
 	int count = 0;
 	int timer = gtkconv->attach.timer;
 	time_t when = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(gtkconv->entry), "attach-start-time"));
-	gboolean im = (gtkconv->active_conv->type == PURPLE_CONV_TYPE_IM);
+	gboolean im = (purple_conversation_get_type(gtkconv->active_conv) == PURPLE_CONV_TYPE_IM);
 
 	gtkconv->attach.timer = 0;
 	while (gtkconv->attach.current && count < 100) {  /* XXX: 100 is a random value here */
@@ -8185,7 +8190,7 @@ gboolean pidgin_conv_attach_to_conversation(PurpleConversation *conv)
 				"conversation-displayed", gtkconv);
 	}
 
-	if (conv->type == PURPLE_CONV_TYPE_CHAT) {
+	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
 		pidgin_conv_update_fields(conv, PIDGIN_CONV_TOPIC);
 		pidgin_conv_chat_add_users(conv, purple_conv_chat_get_users(PURPLE_CONV_CHAT(conv)), TRUE);
 	}
@@ -9383,13 +9388,13 @@ infopane_entry_activate(PidginConversation *gtkconv)
 		return FALSE;
 	}
 
-	if (!purple_account_is_connected(gtkconv->active_conv->account)) {
+	if (!purple_account_is_connected(purple_conversation_get_account(gtkconv->active_conv))) {
 		/* Do not allow aliasing someone on a disconnected account. */
 		return FALSE;
 	}
 
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) {
-		PurpleBuddy *buddy = purple_find_buddy(gtkconv->active_conv->account, gtkconv->active_conv->name);
+		PurpleBuddy *buddy = purple_find_buddy(purple_conversation_get_account(gtkconv->active_conv), purple_conversation_get_name(gtkconv->active_conv));
 		if (!buddy)
 			/* This buddy isn't in your buddy list, so we can't alias him */
 			return FALSE;

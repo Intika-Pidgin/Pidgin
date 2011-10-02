@@ -110,6 +110,40 @@ struct _PurpleConvChatBuddy
 	gpointer ui_data;
 };
 
+/**
+ * A core representation of a conversation between two or more people.
+ *
+ * The conversation can be an IM or a chat.
+ */
+struct _PurpleConversation
+{
+	PurpleConversationType type;  /**< The type of conversation.          */
+
+	PurpleAccount *account;       /**< The user using this conversation.  */
+
+
+	char *name;                 /**< The name of the conversation.      */
+	char *title;                /**< The window title.                  */
+
+	gboolean logging;           /**< The status of logging.             */
+
+	GList *logs;                /**< This conversation's logs           */
+
+	union
+	{
+		PurpleConvIm   *im;       /**< IM-specific data.                  */
+		PurpleConvChat *chat;     /**< Chat-specific data.                */
+	} u;
+
+	PurpleConversationUiOps *ui_ops;           /**< UI-specific operations. */
+	void *ui_data;                           /**< UI-specific data.       */
+
+	GHashTable *data;                        /**< Plugin-specific data.   */
+
+	PurpleConnectionFlags features; /**< The supported features */
+	GList *message_history;         /**< Message history, as a GList of PurpleConvMessage's */
+};
+
 
 static GList *conversations = NULL;
 static GList *ims = NULL;
@@ -338,7 +372,7 @@ add_message_to_history(PurpleConversation *conv, const char *who, const char *al
 		if (gc)
 			me = purple_connection_get_display_name(gc);
 		if (!me)
-			me = conv->account->username;
+			me = purple_account_get_username(conv->account);
 		who = me;
 	}
 
@@ -492,7 +526,7 @@ purple_conversation_new(PurpleConversationType type, PurpleAccount *account,
 
 		chats = g_list_prepend(chats, conv);
 
-		if ((disp = purple_connection_get_display_name(account->gc)))
+		if ((disp = purple_connection_get_display_name(purple_account_get_connection(account))))
 			purple_conv_chat_set_nick(conv->u.chat, disp);
 		else
 			purple_conv_chat_set_nick(conv->u.chat,
@@ -781,7 +815,7 @@ purple_conversation_get_gc(const PurpleConversation *conv)
 	if (account == NULL)
 		return NULL;
 
-	return account->gc;
+	return purple_account_get_connection(account);
 }
 
 void
@@ -1066,7 +1100,7 @@ purple_conversation_write(PurpleConversation *conv, const char *who,
 							purple_account_get_username(account));
 
 				if (purple_account_get_alias(account) != NULL)
-					alias = account->alias;
+					alias = purple_account_get_alias(account);
 				else if (b != NULL && !purple_strequal(purple_buddy_get_name(b), purple_buddy_get_contact_alias(b)))
 					alias = purple_buddy_get_contact_alias(b);
 				else if (purple_connection_get_display_name(gc) != NULL)

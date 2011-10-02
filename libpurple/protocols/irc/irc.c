@@ -645,9 +645,10 @@ static void irc_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGro
 
 static void read_input(struct irc_conn *irc, int len)
 {
+	PurpleConnection *connection = purple_account_get_connection(irc->account);
 	char *cur, *end;
 
-	irc->account->gc->last_received = time(NULL);
+	connection->last_received = time(NULL);
 	irc->inbufused += len;
 	irc->inbuf[irc->inbufused] = '\0';
 
@@ -807,7 +808,7 @@ static int irc_chat_send(PurpleConnection *gc, int id, const char *what, PurpleM
 	}
 #endif
 	purple_markup_html_to_xhtml(what, NULL, &tmp);
-	args[0] = convo->name;
+	args[0] = purple_conversation_get_name(convo);
 	args[1] = tmp;
 
 	irc_cmd_privmsg(irc, "msg", NULL, args);
