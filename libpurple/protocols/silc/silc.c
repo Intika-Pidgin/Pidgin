@@ -530,7 +530,7 @@ static void silcpurple_running(SilcClient client, void *context)
 				(char *)purple_account_get_string(account, "private-key", prd),
 				(purple_connection_get_password(gc) == NULL) ? "" : purple_connection_get_password(gc),
 				&sg->public_key, &sg->private_key)) {
-		if (!purple_account_get_password(account)) {
+		if (!purple_connection_get_password(gc)) {
 			purple_account_request_password(account, G_CALLBACK(silcpurple_got_password_cb),
 											G_CALLBACK(silcpurple_no_password_cb), gc);
 			return;

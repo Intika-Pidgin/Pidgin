@@ -372,7 +372,7 @@ void jabber_auth_start_old(JabberStream *js)
 	 * password prompting here
 	 */
 
-	if (!purple_account_get_password(account)) {
+	if (!purple_connection_get_password(js->gc)) {
 		purple_account_request_password(account, G_CALLBACK(auth_old_pass_cb), G_CALLBACK(auth_no_pass_cb), js->gc);
 		return;
 	}
