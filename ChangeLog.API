@@ -59,7 +59,7 @@ version 3.0.0 (??/??/????):
 		* purple_xfer_get_ui_data
 		* purple_xfer_get_watcher
 		* purple_xfer_set_fd
-		* purple_Xfer_set_local_port
+		* purple_xfer_set_local_port
 		* purple_xfer_set_protocol_data
 		* purple_xfer_set_status
 		* purple_xfer_set_ui_data
@@ -239,6 +239,9 @@ version 3.0.0 (??/??/????):
 		* wpurple_g_access
 		* xmlnode_set_attrib_with_namespace
 		* xmlnode_set_attrib_with_prefix
+
+version 2.10.1:
+	* No changes
 
 version 2.10.0:
 	libpurple:
