@@ -356,7 +356,7 @@ static void irc_login(PurpleAccount *account)
 	const char *username = purple_account_get_username(account);
 
 	gc = purple_account_get_connection(account);
-	gc->flags |= PURPLE_CONNECTION_NO_NEWLINES;
+	purple_connection_set_flags(gc, PURPLE_CONNECTION_NO_NEWLINES);
 
 	if (strpbrk(username, " \t\v\r\n") != NULL) {
 		purple_connection_error (gc,
@@ -500,7 +500,7 @@ static void irc_login_cb(gpointer data, gint source, const gchar *error_message)
 	irc->fd = source;
 
 	if (do_login(gc)) {
-		gc->inpa = purple_input_add(irc->fd, PURPLE_INPUT_READ, irc_input_cb, gc);
+		irc->inpa = purple_input_add(irc->fd, PURPLE_INPUT_READ, irc_input_cb, gc);
 	}
 }
 
@@ -526,8 +526,10 @@ static void irc_close(PurpleConnection *gc)
 	if (irc->gsc || (irc->fd >= 0))
 		irc_cmd_quit(irc, "quit", NULL, NULL);
 
-	if (gc->inpa)
-		purple_input_remove(gc->inpa);
+	if (irc->inpa) {
+		purple_input_remove(irc->inpa);
+		irc->inpa = 0;
+	}
 
 	g_free(irc->inbuf);
 	if (irc->gsc) {
@@ -648,7 +650,7 @@ static void read_input(struct irc_conn *irc, int len)
 	PurpleConnection *connection = purple_account_get_connection(irc->account);
 	char *cur, *end;
 
-	connection->last_received = time(NULL);
+	purple_connection_update_last_received(connection);
 	irc->inbufused += len;
 	irc->inbuf[irc->inbufused] = '\0';
 

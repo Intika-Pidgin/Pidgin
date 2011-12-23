@@ -124,7 +124,7 @@ static void mxit_xfer_init( PurpleXfer* xfer )
 	if ( purple_xfer_get_type( xfer ) == PURPLE_XFER_SEND ) {
 		/* we are trying to send a file to MXit */
 
-		if ( purple_xfer_get_size( xfer ) > CP_MAX_FILESIZE ) {
+		if ( purple_xfer_get_size( xfer ) > ( CP_MAX_PACKET - 1000 ) ) {	/* need to reserve some space for packet headers */
 			/* the file is too big */
 			purple_xfer_error( purple_xfer_get_type( xfer ), purple_xfer_get_account( xfer ), purple_xfer_get_remote_user( xfer ), _( "The file you are trying to send is too large!" ) );
 			purple_xfer_cancel_local( xfer );
@@ -139,7 +139,7 @@ static void mxit_xfer_init( PurpleXfer* xfer )
 		 * we have just accepted a file transfer request from MXit.  send a confirmation
 		 * to the MXit server so that can send us the file
 		 */
-		mxit_send_file_accept( mx->session, mx->fileid, purple_xfer_get_size( xfer ), 0 );
+		mxit_send_file_accept( mx->session, mx->fileid, (int) purple_xfer_get_size( xfer ), 0 );
 	}
 }
 
@@ -151,7 +151,7 @@ static void mxit_xfer_init( PurpleXfer* xfer )
  */
 static void mxit_xfer_start( PurpleXfer* xfer )
 {
-	size_t			filesize;
+	goffset			filesize;
 	unsigned char*	buffer;
 	int				size;
 	int				wrote;
@@ -427,15 +427,12 @@ static PurpleXfer* find_mxit_xfer( struct MXitSession* session, const char* file
 void mxit_xfer_rx_file( struct MXitSession* session, const char* fileid, const char* data, int datalen )
 {
 	PurpleXfer*			xfer	= NULL;
-	struct mxitxfer*	mx		= NULL;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_xfer_rx_file: (size=%i)\n", datalen );
 
 	/* find the file-transfer object */
 	xfer = find_mxit_xfer( session, fileid );
 	if ( xfer ) {
-		mx = purple_xfer_get_protocol_data( xfer );
-
 		/* this is the transfer we have been looking for */
 		purple_xfer_ref( xfer );
 		purple_xfer_start( xfer, -1, NULL, 0 );

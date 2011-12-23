@@ -427,9 +427,9 @@ pounce_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 
 		dialog = (PidginPounceDialog *)data;
 
-		gtk_entry_set_text(GTK_ENTRY(dialog->buddy_entry), buddy->name);
-		dialog->account = buddy->account;
-		pidgin_account_option_menu_set_selected(dialog->account_menu, buddy->account);
+		gtk_entry_set_text(GTK_ENTRY(dialog->buddy_entry), purple_buddy_get_name(buddy));
+		dialog->account = purple_buddy_get_account(buddy);
+		pidgin_account_option_menu_set_selected(dialog->account_menu, purple_buddy_get_account(buddy));
 
 		gtk_drag_finish(dc, TRUE, (dc->action == GDK_ACTION_MOVE), t);
 	}
@@ -476,7 +476,7 @@ reset_send_msg_entry(PidginPounceDialog *dialog, GtkWidget *dontcare)
 {
 	PurpleAccount *account = pidgin_account_option_menu_get_selected(dialog->account_menu);
 	gtk_imhtml_setup_entry(GTK_IMHTML(dialog->send_msg_entry),
-			(account && purple_account_get_connection(account)) ? purple_account_get_connection(account)->flags : PURPLE_CONNECTION_HTML);
+			(account && purple_account_get_connection(account)) ? purple_connection_get_flags(purple_account_get_connection(account)) : PURPLE_CONNECTION_HTML);
 }
 
 void
@@ -1423,7 +1423,6 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 	if (purple_pounce_action_is_enabled(pounce, "popup-notify"))
 	{
 		char *tmp;
-		const char *name_shown;
 		const char *reason;
 		reason = purple_pounce_action_get_attribute(pounce, "popup-notify",
 														  "reason");
@@ -1455,14 +1454,6 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 				   _("Sent a message") :
 				   _("Unknown.... Please report this!")
 				   );
-
-		/*
-		 * Ok here is where I change the second argument, title, from
-		 * NULL to the account alias if we have it or the account
-		 * name if that's all we have
-		 */
-		if ((name_shown = purple_account_get_alias(account)) == NULL)
-			name_shown = purple_account_get_username(account);
 
 		pidgin_notify_pounce_add(account, pounce, alias, tmp, reason,
 				purple_date_format_full(NULL));

@@ -217,6 +217,7 @@ struct mwPurplePluginData {
 
   /** socket fd */
   int socket;
+  guint inpa;  /* input watcher */
   gint outpa;  /* like inpa, but the other way */
 
   /** circular buffer for outgoing data */
@@ -449,9 +450,9 @@ static void mw_session_io_close(struct mwSession *session) {
     pd->socket = 0;
   }
 
-  if(gc->inpa) {
-    purple_input_remove(gc->inpa);
-    gc->inpa = 0;
+  if(pd->inpa) {
+    purple_input_remove(pd->inpa);
+    pd->inpa = 0;
   }
 }
 
@@ -1279,7 +1280,7 @@ static void conversation_created_cb(PurpleConversation *g_conv,
   struct mwIdBlock who = { 0, 0 };
   struct mwConversation *conv;
 
-  gc = purple_conversation_get_gc(g_conv);
+  gc = purple_conversation_get_connection(g_conv);
   if(pd->gc != gc)
     return; /* not ours */
 
@@ -1760,9 +1761,9 @@ static void read_cb(gpointer data, gint source, PurpleInputCondition cond) {
     pd->socket = 0;
   }
 
-  if(pd->gc->inpa) {
-    purple_input_remove(pd->gc->inpa);
-    pd->gc->inpa = 0;
+  if(pd->inpa) {
+    purple_input_remove(pd->inpa);
+    pd->inpa = 0;
   }
 
   if(! ret) {
@@ -1791,7 +1792,6 @@ static void read_cb(gpointer data, gint source, PurpleInputCondition cond) {
 static void connect_cb(gpointer data, gint source, const gchar *error_message) {
 
   struct mwPurplePluginData *pd = data;
-  PurpleConnection *gc = pd->gc;
 
   if(source < 0) {
     /* connection failed */
@@ -1819,7 +1819,7 @@ static void connect_cb(gpointer data, gint source, const gchar *error_message) {
   }
 
   pd->socket = source;
-  gc->inpa = purple_input_add(source, PURPLE_INPUT_READ,
+  pd->inpa = purple_input_add(source, PURPLE_INPUT_READ,
 			    read_cb, pd);
 
   mwSession_start(pd->session);
@@ -2351,7 +2351,7 @@ static void mw_ft_ack(struct mwFileTransfer *ft) {
 
   xfer = mwFileTransfer_getClientData(ft);
   g_return_if_fail(xfer != NULL);
-  g_return_if_fail(xfer->watcher == 0);
+  g_return_if_fail(purple_xfer_get_watcher(xfer) == 0);
 
   if(! mwFileTransfer_getRemaining(ft)) {
     purple_xfer_set_completed(xfer, TRUE);
@@ -2528,10 +2528,10 @@ static void convo_nofeatures(struct mwConversation *conv) {
   gconv = convo_get_gconv(conv);
   if(! gconv) return;
 
-  gc = purple_conversation_get_gc(gconv);
+  gc = purple_conversation_get_connection(gconv);
   if(! gc) return;
 
-  purple_conversation_set_features(gconv, gc->flags);
+  purple_conversation_set_features(gconv, purple_connection_get_flags(gc));
 }
 
 
@@ -3701,7 +3701,7 @@ static void mw_prpl_login(PurpleAccount *account) {
   pd = mwPurplePluginData_new(gc);
 
   /* while we do support images, the default is to not offer it */
-  gc->flags |= PURPLE_CONNECTION_NO_IMAGES;
+  purple_connection_set_flags(gc, PURPLE_CONNECTION_NO_IMAGES);
 
   user = g_strdup(purple_account_get_username(account));
 
@@ -3794,9 +3794,9 @@ static void mw_prpl_close(PurpleConnection *gc) {
   purple_connection_set_protocol_data(gc, NULL);
 
   /* stop watching the socket */
-  if(gc->inpa) {
-    purple_input_remove(gc->inpa);
-    gc->inpa = 0;
+  if(pd->inpa) {
+    purple_input_remove(pd->inpa);
+    pd->inpa = 0;
   }
 
   /* clean up the rest */

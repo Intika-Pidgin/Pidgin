@@ -4,15 +4,24 @@ version 3.0.0 (??/??/????):
 	libpurple:
 		Added:
 		* pidgin_create_webview
+		* purple_account_is_disconnecting
 		* purple_account_get_ui_data
 		* purple_account_set_ui_data
+		* purple_account_register_completed
 		* purple_conv_chat_cb_get_alias
 		* purple_conv_chat_cb_get_flags
 		* purple_conv_chat_cb_is_buddy
 		* purple_conv_chat_cb_get_ui_data
 		* purple_conv_chat_cb_set_ui_data
+		* purple_connection_get_flags
+		* purple_connection_set_flags
+		* purple_connection_update_last_received
 		* purple_conversation_get_ui_data
 		* purple_conversation_set_ui_data
+		* purple_conversation_message_get_alias
+		* purple_conversation_message_get_conv
+		* purple_contact_get_contact_size
+		* purple_notify_searchresult_column_get_title
 		* purple_notify_searchresult_column_is_visible
 		* purple_notify_searchresult_column_set_visible
 		* purple_notify_user_info_prepend_pair_plaintext
@@ -50,7 +59,7 @@ version 3.0.0 (??/??/????):
 		* purple_xfer_get_ui_data
 		* purple_xfer_get_watcher
 		* purple_xfer_set_fd
-		* purple_Xfer_set_local_port
+		* purple_xfer_set_local_port
 		* purple_xfer_set_protocol_data
 		* purple_xfer_set_status
 		* purple_xfer_set_ui_data
@@ -68,6 +77,8 @@ version 3.0.0 (??/??/????):
 		  PurpleCertificate*s as the second parameter
 		* purple_connection_error now takes a PurpleConnectionError
 		  as the second parameter
+		* purple_conversation_get_gc renamed to
+		  purple_conversation_get_connection
 		* purple_dnsquery_a now takes a PurpleAccount as the first parameter
 		* purple_network_listen now takes the protocol family as the second
 		  parameter
@@ -84,15 +95,25 @@ version 3.0.0 (??/??/????):
 		* purple_notify_user_info_prepend_pair renamed to
 		  purple_notify_user_info_prepend_pair_html
 		* purple_srv_resolve now takes a PurpleAccount as the first parameter
+		* purple_str_size_to_units now takes a goffset as the size parameter
 		* purple_txt_resolve now takes a PurpleAccount as the first parameter
 		* purple_util_fetch_url_request now takes a PurpleAccount as
 		  the first parameter
 		* purple_util_fetch_url_request now takes a length as the eighth
 		  parameter
 		* purple_util_fetch_url_len now takes a length as the fifth parameter
+		* purple_xfer_get_bytes_remaining now returns a goffset
+		* purple_xfer_get_bytes_sent now returns a goffset
+		* purple_xfer_get_size now returns a goffset
 		* purple_xfer_is_canceled renamed to purple_xfer_is_cancelled
+		* purple_xfer_set_bytes_sent now takes a goffset as the bytes_sent
+		  parameter
+		* purple_xfer_set_size now takes a goffset as the size parameter
 		* PurpleConnectionUiOps.report_disconnect now passes a
 		  PurpleConnectionError as the second parameter
+		* PurpleXfer.bytes_remaining is now a goffset
+		* PurpleXfer.bytes_sent is now a goffset
+		* PurpleXfer.size is now a goffset
 
 		Removed:
 		* _GntFileType
@@ -190,7 +211,12 @@ version 3.0.0 (??/??/????):
 		* PurplePluginProtocolInfo.get_cb_away
 		* serv_got_attention
 		* serv_send_attention
+		* struct _GtkIMHtmlAnimation
 		* struct _GtkIMHtmlFontDetail
+		* struct _GtkIMHtmlHr
+		* struct _GtkIMHtmlImage
+		* struct _GtkIMHtmlScalable
+		* struct _GtkSmileyTree
 		* struct _PidginChatPane
 		* struct _PidginImPane
 		* struct _PurpleAttentionType
@@ -198,6 +224,7 @@ version 3.0.0 (??/??/????):
 		* struct _PurpleConvChat
 		* struct _PurpleConvChatBuddy
 		* struct _PurpleConvIm
+		* struct _PurpleConvMessage
 		* struct _PurpleMenuAction
 		* struct _PurplePounce
 		* struct _PurpleProxyInfo
@@ -205,11 +232,16 @@ version 3.0.0 (??/??/????):
 		* struct _PurpleRoomlist
 		* struct _PurpleRoomlistField
 		* struct _PurpleRoomlistRoom
+		* struct _PurpleWhiteboard
 		* struct PurpleAccountOption
 		* struct PurpleAccountUserSplit
+		* struct PurpleNotifySearchColumn
 		* wpurple_g_access
 		* xmlnode_set_attrib_with_namespace
 		* xmlnode_set_attrib_with_prefix
+
+version 2.10.1:
+	* No changes
 
 version 2.10.0:
 	libpurple:

@@ -691,6 +691,8 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 	PurpleAccount *account;
 	PidginNotifyMailData *data = NULL, *data2;
 	gboolean new_data = FALSE;
+	GtkTreeSelection *sel;
+	GtkTreeIter iter;
 
 	/* Don't bother updating if there aren't new emails and we don't have any displayed currently */
 	if (count == 0 && mail_dialog == NULL)
@@ -775,6 +777,13 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 				return NULL;
 			}
 		}
+	}
+
+	/* Select first item if nothing selected */
+	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(mail_dialog->treeview));
+	if ((gtk_tree_selection_count_selected_rows(sel) < 1)
+		&& gtk_tree_model_get_iter_first(GTK_TREE_MODEL(mail_dialog->treemodel), &iter)) {
+		gtk_tree_selection_select_iter(sel, &iter);
 	}
 
 #if GTK_CHECK_VERSION(2,18,0)
@@ -1027,7 +1036,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 		renderer = gtk_cell_renderer_text_new();
 
 		gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(treeview), -1,
-				column->title, renderer, "text", i, NULL);
+				purple_notify_searchresult_column_get_title(column), renderer, "text", i, NULL);
 
 		if (!purple_notify_searchresult_column_is_visible(column))
 			gtk_tree_view_column_set_visible(gtk_tree_view_get_column(GTK_TREE_VIEW(treeview), i), FALSE);
@@ -1041,7 +1050,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 		switch (b->type) {
 			case PURPLE_NOTIFY_BUTTON_LABELED:
 				if(b->label) {
-					button = gtk_button_new_with_label(b->label);
+					button = gtk_dialog_add_button(GTK_DIALOG(window), b->label, GTK_RESPONSE_NONE);
 				} else {
 					purple_debug_warning("gtknotify", "Missing button label\n");
 				}
@@ -1086,7 +1095,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	g_signal_connect_swapped(G_OBJECT(close_button), "clicked",
 	                         G_CALLBACK(searchresults_close_cb), data);
 
-	data->account = gc->account;
+	data->account = purple_connection_get_account(gc);
 	data->model = model;
 	data->treeview = treeview;
 	data->window = window;
@@ -1542,11 +1551,13 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 		gtk_tree_view_set_search_column(GTK_TREE_VIEW(spec_dialog->treeview), PIDGIN_MAIL_TEXT);
 		gtk_tree_view_set_search_equal_func(GTK_TREE_VIEW(spec_dialog->treeview),
 			             pidgin_tree_view_search_equal_func, NULL, NULL);
+		sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(spec_dialog->treeview));
+		gtk_tree_selection_set_mode(sel, GTK_SELECTION_BROWSE);
 
 		g_signal_connect(G_OBJECT(dialog), "response",
 						 G_CALLBACK(email_response_cb), spec_dialog);
-		g_signal_connect(G_OBJECT(gtk_tree_view_get_selection(GTK_TREE_VIEW(spec_dialog->treeview))),
-						 "changed", G_CALLBACK(selection_changed_cb), spec_dialog);
+		g_signal_connect(G_OBJECT(sel), "changed",
+		                 G_CALLBACK(selection_changed_cb), spec_dialog);
 		g_signal_connect(G_OBJECT(spec_dialog->treeview), "row-activated", G_CALLBACK(email_row_activated_cb), NULL);
 
 		column = gtk_tree_view_column_new();

@@ -69,7 +69,12 @@ static struct MXitSession* mxit_create_object( PurpleAccount* account )
 
 	/* configure the connection (reference: "libpurple/connection.h") */
 	purple_connection_set_protocol_data( con, session );
-	con->flags |= PURPLE_CONNECTION_NO_BGCOLOR | PURPLE_CONNECTION_NO_URLDESC | PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_SUPPORT_MOODS;
+	purple_connection_set_flags( con,
+			  PURPLE_CONNECTION_NO_BGCOLOR
+			| PURPLE_CONNECTION_NO_URLDESC
+			| PURPLE_CONNECTION_HTML
+			| PURPLE_CONNECTION_SUPPORT_MOODS
+	);
 
 	/* configure the session (reference: "libpurple/account.h") */
 	g_strlcpy( session->server, purple_account_get_string( account, MXIT_CONFIG_SERVER_ADDR, DEFAULT_SERVER ), sizeof( session->server ) );
@@ -171,7 +176,7 @@ static void mxit_cb_connect( gpointer user_data, gint source, const gchar* error
 	session->fd = source;
 
 	/* start listening on the open connection for messages from the server (reference: "libpurple/eventloop.h") */
-	session->con->inpa = purple_input_add( session->fd, PURPLE_INPUT_READ, mxit_cb_rx, session );
+	session->inpa = purple_input_add( session->fd, PURPLE_INPUT_READ, mxit_cb_rx, session );
 
 	mxit_connected( session );
 }
@@ -562,6 +567,7 @@ static void mxit_cb_captcha_ok( PurpleConnection* gc, PurpleRequestFields* field
 			MXIT_CAPTCHA_WIDTH,
 			time( NULL )
 	);
+	/* FIXME: This should be cancelled somewhere if not needed. */
 	url_data = purple_util_fetch_url_request( session->acc, url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, -1, mxit_cb_clientinfo2, session );
 
 #ifdef	DEBUG_PROTOCOL
@@ -726,6 +732,7 @@ static void get_clientinfo( struct MXitSession* session )
 
 	/* reference: "libpurple/util.h" */
 	url = g_strdup_printf( "%s/res/?type=challenge&getcountries=true&getlanguage=true&getimage=true&h=%i&w=%i&ts=%li", wapserver, MXIT_CAPTCHA_HEIGHT, MXIT_CAPTCHA_WIDTH, time( NULL ) );
+	/* FIXME: This should be cancelled somewhere if not needed. */
 	url_data = purple_util_fetch_url_request( session->acc, url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, -1, mxit_cb_clientinfo1, session );
 
 #ifdef	DEBUG_PROTOCOL
@@ -775,9 +782,9 @@ void mxit_reconnect( struct MXitSession* session )
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_reconnect\n" );
 
 	/* remove the input cb function */
-	if ( session->con->inpa ) {
-		purple_input_remove( session->con->inpa );
-		session->con->inpa = 0;
+	if ( session->inpa ) {
+		purple_input_remove( session->inpa );
+		session->inpa = 0;
 	}
 
 	/* close existing connection */

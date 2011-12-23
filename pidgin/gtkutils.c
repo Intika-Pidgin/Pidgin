@@ -1023,7 +1023,7 @@ void pidgin_retrieve_user_info_in_chat(PurpleConnection *conn, const char *name,
 		return;
 	}
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(conn->prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(conn));
 	if (prpl_info != NULL && prpl_info->get_cb_real_name)
 		who = prpl_info->get_cb_real_name(conn, chat, name);
 	if (prpl_info == NULL || prpl_info->get_cb_info == NULL) {
@@ -1149,7 +1149,7 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 					gc = (PurpleConnection *)l->data;
 					account = purple_connection_get_account(gc);
 
-					prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+					prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 				}
 
 				protoname = prpl_info->list_icon(account, NULL);
@@ -1191,7 +1191,7 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 						gc = (PurpleConnection *)l->data;
 						account = purple_connection_get_account(gc);
 
-						prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+						prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 					}
 
 					protoname = prpl_info->list_icon(account, NULL);
@@ -1603,7 +1603,7 @@ pidgin_dnd_file_manage(GtkSelectionData *sd, PurpleAccount *account, const char 
 			data->account = account;
 
 			if (gc)
-				prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+				prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 
 			if (prpl_info && prpl_info->options & OPT_PROTO_IM_IMAGE)
 				im = TRUE;
@@ -2088,8 +2088,8 @@ add_completion_list(PidginCompletionData *data)
 					add_buddyname_autocomplete_entry(data->store,
 														((PurpleContact *)cnode)->alias,
 														purple_buddy_get_contact_alias(entry.entry.buddy),
-														entry.entry.buddy->account,
-														entry.entry.buddy->name
+														purple_buddy_get_account(entry.entry.buddy),
+														purple_buddy_get_name(entry.entry.buddy)
 													 );
 				}
 			}
@@ -2181,7 +2181,7 @@ pidgin_screenname_autocomplete_default_filter(const PidginBuddyCompletionEntry *
 	gboolean all = GPOINTER_TO_INT(all_accounts);
 
 	if (completion_entry->is_buddy) {
-		return all || purple_account_is_connected(completion_entry->entry.buddy->account);
+		return all || purple_account_is_connected(purple_buddy_get_account(completion_entry->entry.buddy));
 	} else {
 		return all || (completion_entry->entry.logged_buddy->account != NULL && purple_account_is_connected(completion_entry->entry.logged_buddy->account));
 	}
@@ -2487,9 +2487,9 @@ pidgin_convert_buddy_icon(PurplePlugin *plugin, const char *path, size_t *len)
 					   the image. */
 					purple_debug_info("buddyicon", "Converted image from "
 							"%dx%d to %dx%d, format=%s, quality=%u, "
-							"filesize=%zu\n", orig_width, orig_height,
-							new_width, new_height, prpl_formats[i], quality,
-							length);
+							"filesize=%" G_GSIZE_FORMAT "\n",
+							orig_width, orig_height, new_width, new_height,
+							prpl_formats[i], quality, length);
 					if (len)
 						*len = length;
 					g_strfreev(prpl_formats);
@@ -3080,7 +3080,7 @@ static GObject *pidgin_pixbuf_from_data_helper(const guchar *buf, gsize count, g
 
 	if (!gdk_pixbuf_loader_write(loader, buf, count, &error) || error) {
 		purple_debug_warning("gtkutils", "gdk_pixbuf_loader_write() "
-				"failed with size=%zu: %s\n", count,
+				"failed with size=%" G_GSIZE_FORMAT ": %s\n", count,
 				error ? error->message : "(no error message)");
 		if (error)
 			g_error_free(error);
@@ -3090,7 +3090,7 @@ static GObject *pidgin_pixbuf_from_data_helper(const guchar *buf, gsize count, g
 
 	if (!gdk_pixbuf_loader_close(loader, &error) || error) {
 		purple_debug_warning("gtkutils", "gdk_pixbuf_loader_close() "
-				"failed for image of size %zu: %s\n", count,
+				"failed for image of size %" G_GSIZE_FORMAT ": %s\n", count,
 				error ? error->message : "(no error message)");
 		if (error)
 			g_error_free(error);
@@ -3104,7 +3104,7 @@ static GObject *pidgin_pixbuf_from_data_helper(const guchar *buf, gsize count, g
 		pixbuf = G_OBJECT(gdk_pixbuf_loader_get_pixbuf(loader));
 	if (!pixbuf) {
 		purple_debug_warning("gtkutils", "%s() returned NULL for image "
-				"of size %zu\n",
+				"of size %" G_GSIZE_FORMAT "\n",
 				animated ? "gdk_pixbuf_loader_get_animation"
 					: "gdk_pixbuf_loader_get_pixbuf", count);
 		g_object_unref(G_OBJECT(loader));

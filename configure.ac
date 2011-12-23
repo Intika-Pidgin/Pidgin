@@ -202,6 +202,12 @@ AC_SYS_LARGEFILE
 dnl FreeBSD doesn't have libdl, dlopen is provided by libc
 AC_CHECK_FUNC(dlopen, LIBDL="", [AC_CHECK_LIB(dl, dlopen, LIBDL="-ldl")])
 
+dnl Windows and Haiku do not use libm for the math functions, they are part
+dnl of the C library
+AC_SEARCH_LIBS([ceil], [m], [], [
+  AC_MSG_ERROR([unable to find the ceil() function])
+])
+
 AC_MSG_CHECKING(for fileno())
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdio.h>
@@ -401,6 +407,10 @@ AC_ARG_ENABLE(gestures,
 	[AC_HELP_STRING([--disable-gestures],
 		[compile without the gestures plugin])],
 	enable_gestures="$enableval", enable_gestures="yes")
+AC_ARG_ENABLE(gcr,
+	[AC_HELP_STRING([--enable-gcr],
+		[compile with GCR certificate widgets])],
+	enable_gcr="$enableval", enable_gcr="no")
 
 AC_PATH_XTRA
 # We can't assume that $x_libraries will be set, because autoconf does not
@@ -614,9 +624,26 @@ Use --disable-cap if you do not need the Contact Availability Prediction plugin.
 ])
 			fi])
 	fi
-        
+
+	dnl #######################################################################
+	dnl # Check for GCR for its certificate widgets
+	dnl #######################################################################
+	if test "x$enable_gcr" = "xyes"; then
+		PKG_CHECK_MODULES(GCR, gcr-0, [
+			AC_DEFINE(ENABLE_GCR, 1, [Define to 1 if GCR is found.])], [
+			AC_MSG_RESULT(no)
+			enable_gcr="no"
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_ERROR([
+GCR development headers not found.
+Use --disable-gcr if you do not need GCR certificate widgets.
+])
+			fi])
+	fi
+
 
 else # GTK
+	enable_gcr=no
 	enable_cap=no
 	enable_gevolution=no
 	enable_gtkspell=no
@@ -629,6 +656,7 @@ AM_CONDITIONAL(ENABLE_GTK, test "x$enable_gtkui" = "xyes")
 AM_CONDITIONAL(BUILD_GEVOLUTION, test "x$enable_gevolution" = "xyes")
 AM_CONDITIONAL(ENABLE_CAP, test "x$enable_cap" = "xyes")
 AM_CONDITIONAL(ENABLE_GESTURES, test "x$enable_gestures" = "xyes")
+AM_CONDITIONAL(ENABLE_GCR, test "x$enable_gcr" = "xyes")
 
 
 dnl #######################################################################
@@ -2496,7 +2524,6 @@ AC_CONFIG_FILES([Makefile
 		   pidgin/pixmaps/emotes/none/Makefile
 		   pidgin/pixmaps/emotes/small/16/Makefile
 		   pidgin/plugins/Makefile
-		   pidgin/plugins/adiumthemes/Makefile
 		   pidgin/plugins/cap/Makefile
 		   pidgin/plugins/disco/Makefile
 		   pidgin/plugins/gestures/Makefile
@@ -2505,6 +2532,7 @@ AC_CONFIG_FILES([Makefile
 		   pidgin/plugins/perl/Makefile
 		   pidgin/plugins/perl/common/Makefile.PL
 		   pidgin/plugins/ticker/Makefile
+		   pidgin/themes/Makefile
 		   libpurple/ciphers/Makefile
 		   libpurple/example/Makefile
 		   libpurple/gconf/Makefile
@@ -2588,6 +2616,7 @@ echo Use XScreenSaver Extension.... : $enable_screensaver
 echo Use X Session Management...... : $enable_sm
 echo Use startup notification...... : $enable_startup_notification
 echo Build with GtkSpell support... : $enable_gtkspell
+echo Build with GCR widgets........ : $enable_gcr
 echo
 echo Build with plugin support..... : $enable_plugins
 echo Build with Mono support....... : $enable_mono
