@@ -206,7 +206,9 @@ _jabber_parse_and_write_message_to_ui(xmlnode *message_node, PurpleBuddy *pb)
 						g_string_append_printf(str, " face='%s'", font_face);
 					if (font_size)
 						g_string_append_printf(str, " size='%s'", font_size);
-					if (ichat_text_color)
+					if (font_color)
+						g_string_append_printf(str, " color='%s'", font_color);
+					else if (ichat_text_color)
 						g_string_append_printf(str, " color='%s'", ichat_text_color);
 					if (ichat_balloon_color)
 						g_string_append_printf(str, " back='%s'", ichat_balloon_color);
@@ -665,9 +667,13 @@ _server_socket_handler(gpointer data, int server_socket, PurpleInputCondition co
 
 	/* Look for the buddy that has opened the conversation and fill information */
 #ifdef HAVE_INET_NTOP
-	if (their_addr.ss_family == AF_INET6)
+	if (their_addr.ss_family == AF_INET6) {
 		address_text = inet_ntop(their_addr.ss_family, &((struct sockaddr_in6 *)&their_addr)->sin6_addr,
 			addrstr, sizeof(addrstr));
+
+		append_iface_if_linklocal(addrstr,
+			((struct sockaddr_in6 *)&their_addr)->sin6_scope_id);
+	}
 	else
 		address_text = inet_ntop(their_addr.ss_family, &((struct sockaddr_in *)&their_addr)->sin_addr,
 			addrstr, sizeof(addrstr));
@@ -1164,7 +1170,7 @@ bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
 				tmp_next = xfers->next;
 				/* We only need to cancel this if it hasn't actually started transferring. */
 				/* This will change if we ever support IBB transfers. */
-				if (strcmp(xfer->who, purple_buddy_get_name(bconv->pb)) == 0
+				if (strcmp(purple_xfer_get_remote_user(xfer), purple_buddy_get_name(bconv->pb)) == 0
 						&& (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_NOT_STARTED
 							|| purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_UNKNOWN)) {
 					purple_xfer_cancel_remote(xfer);
@@ -1448,4 +1454,20 @@ bonjour_jabber_get_local_ips(int fd)
 #endif
 
 	return ips;
+}
+
+void
+append_iface_if_linklocal(char *ip, guint32 interface_param) {
+	struct in6_addr in6_addr;
+	int len_remain = INET6_ADDRSTRLEN - strlen(ip);
+
+	if (len_remain <= 1)
+		return;
+
+	if (inet_pton(AF_INET6, ip, &in6_addr) != 1 ||
+	    !IN6_IS_ADDR_LINKLOCAL(&in6_addr))
+		return;
+
+	snprintf(ip + strlen(ip), len_remain, "%%%d",
+		 interface_param);
 }

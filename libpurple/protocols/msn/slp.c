@@ -291,7 +291,7 @@ send_file_cb(MsnSlpCall *slpcall)
 static gchar *
 gen_context(PurpleXfer *xfer, const char *file_name, const char *file_path)
 {
-	gsize size = 0;
+	goffset size = 0;
 	MsnFileContext context;
 	gchar *u8 = NULL;
 	gchar *ret;
@@ -322,7 +322,7 @@ gen_context(PurpleXfer *xfer, const char *file_name, const char *file_path)
 
 	preview = purple_xfer_get_thumbnail(xfer, &preview_len);
 
-	context.length = MSN_FILE_CONTEXT_SIZE;
+	context.length = MSN_FILE_CONTEXT_SIZE_V2;
 	context.version = 2; /* V.3 contains additional unnecessary data */
 	context.file_size = size;
 	if (preview)
@@ -336,15 +336,17 @@ gen_context(PurpleXfer *xfer, const char *file_name, const char *file_path)
 	}
 	memset(&context.file_name[currentChar], 0x00, (MAX_FILE_NAME_LEN - currentChar) * 2);
 
+#if 0
 	memset(&context.unknown1, 0, sizeof(context.unknown1));
 	context.unknown2 = 0xffffffff;
+#endif
 
 	/* Mind the cast, as in, don't free it after! */
 	context.preview = (char *)preview;
 	context.preview_len = preview_len;
 
 	u8 = msn_file_context_to_wire(&context);
-	ret = purple_base64_encode((const guchar *)u8, MSN_FILE_CONTEXT_SIZE + preview_len);
+	ret = purple_base64_encode((const guchar *)u8, MSN_FILE_CONTEXT_SIZE_V2 + preview_len);
 
 	g_free(uni);
 	g_free(u8);

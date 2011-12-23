@@ -1121,8 +1121,8 @@ gboolean process_register_response(struct simple_account_data *sip, struct sipms
 			if(sip->registerstatus != SIMPLE_REGISTER_RETRY) {
 				purple_debug_info("simple", "REGISTER retries %d\n", sip->registrar.retries);
 				if(sip->registrar.retries > SIMPLE_REGISTER_RETRY_MAX) {
-					if (!purple_account_get_remember_password(sip->gc->account))
-						purple_account_set_password(sip->gc->account, NULL);
+					if (!purple_account_get_remember_password(purple_connection_get_account(sip->gc)))
+						purple_account_set_password(purple_connection_get_account(sip->gc), NULL);
 					purple_connection_error(sip->gc,
 						PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
 						_("Incorrect password"));
@@ -1705,7 +1705,7 @@ static void simple_input_cb(gpointer data, gint source, PurpleInputCondition con
 		if(sip->fd == source) sip->fd = -1;
 		return;
 	}
-	gc->last_received = time(NULL);
+	purple_connection_update_last_received(gc);
 	conn->inbufused += len;
 	conn->inbuf[conn->inbufused] = '\0';
 

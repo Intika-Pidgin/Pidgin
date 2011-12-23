@@ -39,6 +39,7 @@ static const gchar *AUDIO_SRC_PLUGINS[] = {
 	/* "esdmon",	"ESD", ? */
 	"osssrc",	"OSS",
 	"pulsesrc",	"PulseAudio",
+	"libsndiosrc",	"sndio",
 	/* "audiotestsrc wave=silence", "Silence", */
 	"audiotestsrc",	"Test Sound",
 	NULL
@@ -50,6 +51,7 @@ static const gchar *AUDIO_SINK_PLUGINS[] = {
 	"esdsink",	"ESD",
 	"osssink",	"OSS",
 	"pulsesink",	"PulseAudio",
+	"libsndiosink",	"sndio",
 	NULL
 };
 
@@ -610,7 +612,7 @@ gst_bus_cb(GstBus *bus, GstMessage *msg, BusCbCtx *ctx)
 			GstElement *valve;
 
 			percent = gst_msg_db_to_percent(msg, "rms");
-			gtk_progress_bar_set_fraction(ctx->level, percent * 5);
+			gtk_progress_bar_set_fraction(ctx->level, percent);
 
 			percent = gst_msg_db_to_percent(msg, "decay");
 			threshold = gtk_range_get_value(ctx->threshold) / 100.0;

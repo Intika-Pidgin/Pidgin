@@ -1119,6 +1119,15 @@ purple_account_register(PurpleAccount *account)
 }
 
 void
+purple_account_register_completed(PurpleAccount *account, gboolean succeeded)
+{
+	g_return_if_fail(account != NULL);
+
+	if (account->registration_cb)
+		(account->registration_cb)(account, succeeded, account->registration_cb_user_data);
+}
+
+void
 purple_account_unregister(PurpleAccount *account, PurpleAccountUnregistrationCb cb, void *user_data)
 {
 	g_return_if_fail(account != NULL);
@@ -1263,6 +1272,14 @@ purple_account_disconnect(PurpleAccount *account)
 	purple_account_set_connection(account, NULL);
 
 	account->disconnecting = FALSE;
+}
+
+gboolean
+purple_account_is_disconnecting(const PurpleAccount *account)
+{
+	g_return_val_if_fail(account != NULL, TRUE);
+	
+	return account->disconnecting;
 }
 
 void
@@ -1591,7 +1608,7 @@ purple_account_request_change_user_info(PurpleAccount *account)
 	purple_request_input(gc, _("Set User Info"), primary, NULL,
 					   purple_account_get_user_info(account),
 					   TRUE, FALSE, ((gc != NULL) &&
-					   (gc->flags & PURPLE_CONNECTION_HTML) ? "html" : NULL),
+					   (purple_connection_get_flags(gc) & PURPLE_CONNECTION_HTML) ? "html" : NULL),
 					   _("Save"), G_CALLBACK(set_user_info_cb),
 					   _("Cancel"), NULL,
 					   account, NULL, NULL,

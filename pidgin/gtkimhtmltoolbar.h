@@ -69,6 +69,7 @@ struct _GtkIMHtmlToolbar {
 	GtkWidget *image;
 	GtkWidget *link;
 	GtkWidget *smiley;
+	GtkWidget *attention;
 
 	GtkWidget *font_dialog;
 	GtkWidget *fgcolor_dialog;

@@ -400,7 +400,7 @@ silcpurple_stream_created(SilcSocketStreamStatus status, SilcStream stream,
 	}
 
 	/* Perform SILC Key Exchange. */
-	silc_client_key_exchange(sg->client, &params, sg->public_key,
+	silc_client_key_exchange(client, &params, sg->public_key,
 				 sg->private_key, stream, SILC_CONN_SERVER,
 				 silcpurple_connect_cb, gc);
 
@@ -528,7 +528,7 @@ static void silcpurple_running(SilcClient client, void *context)
 	g_snprintf(prd, sizeof(prd), "%s" G_DIR_SEPARATOR_S "private_key.prv", silcpurple_silcdir());
 	if (!silc_load_key_pair((char *)purple_account_get_string(account, "public-key", pkd),
 				(char *)purple_account_get_string(account, "private-key", prd),
-				(gc->password == NULL) ? "" : gc->password,
+				(purple_connection_get_password(gc) == NULL) ? "" : purple_connection_get_password(gc),
 				&sg->public_key, &sg->private_key)) {
 		if (!purple_account_get_password(account)) {
 			purple_account_request_password(account, G_CALLBACK(silcpurple_got_password_cb),
@@ -1061,7 +1061,7 @@ silcpurple_attrs(PurplePluginAction *action)
 			    fields,
 			    _("OK"), G_CALLBACK(silcpurple_attrs_cb),
 			    _("Cancel"), G_CALLBACK(silcpurple_attrs_cancel),
-				gc->account, NULL, NULL, gc);
+				purple_connection_get_account(gc), NULL, NULL, gc);
 }
 
 static void
@@ -1226,9 +1226,9 @@ silcpurple_create_keypair(PurplePluginAction *action)
 	g_snprintf(pkd2, sizeof(pkd2), "%s" G_DIR_SEPARATOR_S"public_key.pub", silcpurple_silcdir());
 	g_snprintf(prd2, sizeof(prd2), "%s" G_DIR_SEPARATOR_S"private_key.prv", silcpurple_silcdir());
 	g_snprintf(pkd, sizeof(pkd) - 1, "%s",
-		   purple_account_get_string(gc->account, "public-key", pkd2));
+		   purple_account_get_string(purple_connection_get_account(gc), "public-key", pkd2));
 	g_snprintf(prd, sizeof(prd) - 1, "%s",
-		   purple_account_get_string(gc->account, "private-key", prd2));
+		   purple_account_get_string(purple_connection_get_account(gc), "private-key", prd2));
 
 	fields = purple_request_fields_new();
 
@@ -1269,7 +1269,7 @@ silcpurple_create_keypair(PurplePluginAction *action)
 			      _("Create New SILC Key Pair"), NULL, fields,
 			      _("Generate Key Pair"), G_CALLBACK(silcpurple_create_keypair_cb),
 			      _("Cancel"), G_CALLBACK(silcpurple_create_keypair_cancel),
-			      gc->account, NULL, NULL, gc);
+			      purple_connection_get_account(gc), NULL, NULL, gc);
 
 	g_strfreev(u);
 	silc_free(hostname);
@@ -1287,7 +1287,7 @@ silcpurple_change_passwd(PurpleConnection *gc, const char *old, const char *new)
 {
 	char prd[256];
 	g_snprintf(prd, sizeof(prd), "%s" G_DIR_SEPARATOR_S "private_key.pub", silcpurple_silcdir());
-	silc_change_private_key_passphrase(purple_account_get_string(gc->account,
+	silc_change_private_key_passphrase(purple_account_get_string(purple_connection_get_account(gc),
 								     "private-key",
 								     prd), old ? old : "", new ? new : "");
 }
@@ -1548,14 +1548,14 @@ static PurpleCmdRet silcpurple_cmd_chat_part(PurpleConversation *conv,
 	PurpleConversation *convo = conv;
 	int id = 0;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
 
 	if(args && args[0])
 		convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[0],
-									gc->account);
+									purple_connection_get_account(gc));
 
 	if (convo != NULL)
 		id = purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo));
@@ -1577,7 +1577,7 @@ static PurpleCmdRet silcpurple_cmd_chat_topic(PurpleConversation *conv,
 	char *buf, *tmp, *tmp2;
 	const char *topic;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 	id = purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv));
 
 	if (gc == NULL || id == 0)
@@ -1593,7 +1593,7 @@ static PurpleCmdRet silcpurple_cmd_chat_topic(PurpleConversation *conv,
 			g_free(tmp2);
 		} else
 			buf = g_strdup(_("No topic is set"));
-		purple_conv_chat_write(PURPLE_CONV_CHAT(conv), purple_account_get_username(gc->account), buf,
+		purple_conv_chat_write(PURPLE_CONV_CHAT(conv), purple_account_get_username(purple_connection_get_account(gc)), buf,
 							 PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
 		g_free(buf);
 
@@ -1623,7 +1623,7 @@ static PurpleCmdRet silcpurple_cmd_chat_join(PurpleConversation *conv,
 	if(args[1])
 		g_hash_table_replace(comp, "passphrase", args[1]);
 
-	silcpurple_chat_join(purple_conversation_get_gc(conv), comp);
+	silcpurple_chat_join(purple_conversation_get_connection(conv), comp);
 
 	g_hash_table_destroy(comp);
 	return PURPLE_CMD_RET_OK;
@@ -1633,7 +1633,7 @@ static PurpleCmdRet silcpurple_cmd_chat_list(PurpleConversation *conv,
         const char *cmd, char **args, char **error, void *data)
 {
 	PurpleConnection *gc;
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 	purple_roomlist_show_with_account(purple_connection_get_account(gc));
 	return PURPLE_CMD_RET_OK;
 }
@@ -1643,7 +1643,7 @@ static PurpleCmdRet silcpurple_cmd_whois(PurpleConversation *conv,
 {
 	PurpleConnection *gc;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1659,7 +1659,7 @@ static PurpleCmdRet silcpurple_cmd_msg(PurpleConversation *conv,
 	int ret;
 	PurpleConnection *gc;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1685,7 +1685,7 @@ static PurpleCmdRet silcpurple_cmd_query(PurpleConversation *conv,
 		return PURPLE_CMD_RET_FAILED;
 	}
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1713,7 +1713,7 @@ static PurpleCmdRet silcpurple_cmd_motd(PurpleConversation *conv,
 	SilcPurple sg;
 	char *tmp;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1742,7 +1742,7 @@ static PurpleCmdRet silcpurple_cmd_detach(PurpleConversation *conv,
 	PurpleConnection *gc;
 	SilcPurple sg;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1767,7 +1767,7 @@ static PurpleCmdRet silcpurple_cmd_cmode(PurpleConversation *conv,
 	char *silccmd, *silcargs, *msg, tmp[256];
 	const char *chname;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL || !args || purple_connection_get_protocol_data(gc) == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1818,7 +1818,7 @@ static PurpleCmdRet silcpurple_cmd_generic(PurpleConversation *conv,
 	SilcPurple sg;
 	char *silccmd, *silcargs;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1850,7 +1850,7 @@ static PurpleCmdRet silcpurple_cmd_quit(PurpleConversation *conv,
 	const char *ui_name = NULL, *ui_website = NULL;
 	char *quit_msg;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -1887,7 +1887,7 @@ static PurpleCmdRet silcpurple_cmd_call(PurpleConversation *conv,
 	PurpleConnection *gc;
 	SilcPurple sg;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 
 	if (gc == NULL)
 		return PURPLE_CMD_RET_FAILED;

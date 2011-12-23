@@ -2167,8 +2167,7 @@ msim_connect_cb(gpointer data, gint source, const gchar *error_message)
 	}
 
 	session->fd = source;
-
-	gc->inpa = purple_input_add(source, PURPLE_INPUT_READ, msim_input_cb, gc);
+	session->inpa = purple_input_add(source, PURPLE_INPUT_READ, msim_input_cb, gc);
 }
 
 /**
@@ -2190,7 +2189,7 @@ msim_login(PurpleAccount *acct)
 
 	gc = purple_account_get_connection(acct);
 	purple_connection_set_protocol_data(gc, msim_session_new(acct));
-	gc->flags |= PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_NO_URLDESC;
+	purple_connection_set_flags(gc, PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_NO_URLDESC);
 
 	/*
 	 * Lets wipe out our local list of blocked buddies.  We'll get a
@@ -2263,8 +2262,9 @@ msim_close(PurpleConnection *gc)
 
 	purple_connection_set_protocol_data(gc, NULL);
 
-	if (session->gc->inpa) {
-		purple_input_remove(session->gc->inpa);
+	if (session->inpa) {
+		purple_input_remove(session->inpa);
+		session->inpa = 0;
 	}
 	if (session->fd >= 0) {
 		close(session->fd);
