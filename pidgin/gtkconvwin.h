@@ -107,6 +107,8 @@ struct _PidginWindow
 
 /*@}*/
 
+G_BEGIN_DECLS
+
 /**************************************************************************
  * @name GTK+ Conversation Window API
  **************************************************************************/
@@ -152,5 +154,7 @@ PidginConvPlacementFunc pidgin_conv_placement_get_current_func(void);
 void pidgin_conv_placement_place(PidginConversation *gtkconv);
 
 /*@}*/
+
+G_END_DECLS
 
 #endif /* _PIDGIN_CONVERSATION_WINDOW_H_ */

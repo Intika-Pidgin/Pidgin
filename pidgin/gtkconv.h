@@ -157,6 +157,8 @@ struct _PidginConversation
 
 /*@}*/
 
+G_BEGIN_DECLS
+
 /**************************************************************************
  * @name GTK+ Conversation API
  **************************************************************************/
@@ -268,5 +270,7 @@ void pidgin_conversations_init(void);
 void pidgin_conversations_uninit(void);
 
 /*@}*/
+
+G_END_DECLS
 
 #endif /* _PIDGIN_CONVERSATION_H_ */
