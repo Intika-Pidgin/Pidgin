@@ -32,34 +32,27 @@
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
 
-#include "notify.h"
-
 #define GTK_TYPE_WEBVIEW            (gtk_webview_get_type())
 #define GTK_WEBVIEW(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), GTK_TYPE_WEBVIEW, GtkWebView))
 #define GTK_WEBVIEW_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), GTK_TYPE_WEBVIEW, GtkWebViewClass))
 #define GTK_IS_WEBVIEW(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), GTK_TYPE_WEBVIEW))
-#define GTK_IS_WEBVIEW_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), GTK_TYPE_WEBVIEW))
+#define GTK_IS_WEBVIEW_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), GTK_TYPE_WEBVIEW))
+#define GTK_WEBVIEW_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), GTK_TYPE_WEBVIEW, GtkWebViewClass))
 
-
-struct GtkWebViewPriv;
+typedef struct _GtkWebView GtkWebView;
+typedef struct _GtkWebViewClass GtkWebViewClass;
 
 struct _GtkWebView
 {
-	WebKitWebView webkit_web_view;
-
-	/*< private >*/
-	struct GtkWebViewPriv *priv;
+	WebKitWebView parent;
 };
-
-typedef struct _GtkWebView GtkWebView;
 
 struct _GtkWebViewClass
 {
 	WebKitWebViewClass parent;
 };
 
-typedef struct _GtkWebViewClass GtkWebViewClass;
-
+G_BEGIN_DECLS
 
 /**
  * Returns the GType for a GtkWebView widget
@@ -76,12 +69,15 @@ GType gtk_webview_get_type(void);
 GtkWidget *gtk_webview_new(void);
 
 /**
- * Set the vertical adjustment for the GtkWebView.
+ * TODO WEBKIT: Right now this just tests whether an append has been called
+ * since the last clear or since the Widget was created.  So it does not
+ * test for load_string's called in between.
  *
- * @param webview  The GtkWebView object
- * @param vadj     The GtkAdjustment that control the webview
+ * @param webview The GtkWebView object
+ *
+ * @return gboolean indicating whether the webview is empty
  */
-void gtk_webview_set_vadjustment(GtkWebView *webview, GtkAdjustment *vadj);
+gboolean gtk_webview_is_empty(GtkWebView *webview);
 
 /**
  * A very basic routine to append html, which can be considered
@@ -101,17 +97,6 @@ void gtk_webview_append_html(GtkWebView *webview, const char *markup);
  * @param html    The HTML content to load
  */
 void gtk_webview_load_html_string_with_imgstore(GtkWebView *webview, const char *html);
-
-/**
- * TODO WEBKIT: Right now this just tests whether an append has been called
- * since the last clear or since the Widget was created.  So it does not
- * test for load_string's called in between.
- *
- * @param webview The GtkWebView object
- *
- * @return gboolean indicating whether the webview is empty
- */
-gboolean gtk_webview_is_empty(GtkWebView *webview);
 
 /**
  * Execute the JavaScript only after the webkit_webview_load_string
@@ -136,6 +121,14 @@ void gtk_webview_safe_execute_script(GtkWebView *webview, const char *script);
 char *gtk_webview_quote_js_string(const char *str);
 
 /**
+ * Set the vertical adjustment for the GtkWebView.
+ *
+ * @param webview  The GtkWebView object
+ * @param vadj     The GtkAdjustment that control the webview
+ */
+void gtk_webview_set_vadjustment(GtkWebView *webview, GtkAdjustment *vadj);
+
+/**
  * Scrolls the Webview to the end of its contents.
  *
  * @param webview The GtkWebView object
@@ -156,6 +149,8 @@ void gtk_webview_page_up(GtkWebView *webview);
  * @param webview The GtkWebView.
  */
 void gtk_webview_page_down(GtkWebView *webview);
+
+G_END_DECLS
 
 #endif /* _PIDGIN_WEBVIEW_H_ */
 
