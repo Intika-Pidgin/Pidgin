@@ -244,9 +244,7 @@ struct _PurpleBlistUiOps
 	void (*_purple_reserved1)(void);
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Buddy List API                                                  */
@@ -756,6 +754,15 @@ gboolean purple_contact_on_account(PurpleContact *contact, PurpleAccount *accoun
 void purple_contact_invalidate_priority_buddy(PurpleContact *contact);
 
 /**
+ * Determines the total size of a contact.
+ *
+ * @param contact	The contact
+ * @param offline	Count buddies in offline accounts
+ * @return The number of buddies in the contact
+ */
+int purple_contact_get_contact_size(PurpleContact *contact, gboolean offline);
+
+/**
  * Removes a buddy from the buddy list and frees the memory allocated to it.
  * This doesn't actually try to remove the buddy from the server list.
  *
@@ -1045,6 +1052,16 @@ void purple_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
 void purple_blist_request_add_group(void);
 
 /**
+ * Checks whether a named setting exists for a node in the buddy list
+ *
+ * @param node  The node to check from which to check settings
+ * @param key   The identifier of the data
+ *
+ * @return TRUE if a value exists, or FALSE if there is no setting
+ */
+gboolean purple_blist_node_has_setting(PurpleBlistNode *node, const char *key);
+
+/**
  * Associates a boolean with a node in the buddy list
  *
  * @param node  The node to associate the data with
@@ -1193,8 +1210,6 @@ void purple_blist_uninit(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_BLIST_H_ */

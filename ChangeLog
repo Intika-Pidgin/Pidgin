@@ -1,10 +1,31 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
 version 3.0.0 (??/??/????):
+	Finch:
+	* Support the conversation-extended signal for extending the
+	  conversation menu. (Howard Chu) (#14818)
+
 	AIM and ICQ:
 	* Make buddy list management code more efficient. (Oliver) (#4816)
-	* Don't try to format ICQ usernames entered as email addresses.
-	  Gets rid of an "Unable to format username" error at login. (#13883)
+
+	Bonjour:
+	* Support file transfers up to ~9 EiB.
+
+	Gadu-Gadu:
+	* Possibility to require encryption. Also, using encryption when
+	  available is default option now. (Tomasz Wasilczyk)
+	* Show local time for incoming messages. (Tomasz Wasilczyk) (#4579)
+	* Fixed password change dialog and problems with connecting to accounts
+	  with non-ASCII passwords. (Tomasz Wasilczyk) (#14652)
+	* Option to show links from strangers. (Tomasz Wasilczyk) (#10591)
+	* Better handling of "invisible" and "chatty" statuses. (Tomasz
+	  Wasilczyk) (#13836)
+
+	MSN:
+	* Fix file transfer with older Mac MSN clients.
+	* Support file transfers up to ~9 EiB.
+	* Support new protocol version MSNP18. (#14753)
+	* Fix messages to offline contacts. (#14302)
 
 	MXit:
 	* Remove all reference to Hidden Number.
@@ -18,6 +39,77 @@ version 3.0.0 (??/??/????):
 	* Strip element prefixes from XHTML-IM messages as they're presented
 	  to the core (and UIs) as incoming messages (Thijs Alkemade).
 	  (#14529)
+	* Support file transfers up to ~9 EiB.
+
+	Plugins:
+	* The Voice/Video Settings plugin supports using the sndio GStreamer
+	 backends. (Brad Smith) (#14414)
+
+version 2.10.2 (02/22/2012):
+	General:
+	* Fix compilation when using binutils 2.22 and new GDK pixbuf. (#14799)
+	* Fix compilation of the MXit protocol plugin with GLib 2.31. (#14773)
+
+	Pidgin:
+	* Add support for the GNOME3 Network dialog. (#13882)
+	* Fix rare crash. (#14392)
+
+	libpurple:
+	* Support new connection states and signals for NetworkManager 0.9+.
+	  (Dan Williams) (#13859)
+
+	AIM and ICQ:
+	* Allow signing on with usernames containing periods and
+	  underscores. (#13500)
+	* Allow adding buddies containing periods and underscores. (#13500)
+	* Don't try to format ICQ usernames entered as email addresses.
+	  Gets rid of an "Unable to format username" error at login. (#13883)
+
+	MSN:
+	* Fix possible crashes caused by not validating incoming messages as
+	  UTF-8. (Thijs Alkemade) (#14884)
+
+	Windows-Specific Changes:
+	* Fix compilation of the Bonjour protocol plugin. (#14802)
+
+version 2.10.1 (12/06/2011):
+	Finch:
+	* Fix compilation on OpenBSD.
+
+	AIM and ICQ:
+	* Fix remotely-triggerable crashes by validating strings in a few
+	  messages related to buddy list management.  Thanks to Evgeny Boger
+	  for reporting this!  (#14682)
+
+	Bonjour:
+	* IPv6 fixes (Linus Lüssing)
+
+	Gadu-Gadu:
+	* Fix problems linking against GnuTLS. (#14544)
+
+	IRC:
+	* Fix a memory leak when admitting UTF-8 text with a non-UTF-8 primary
+	  encoding.  (#14700)
+
+	Jabber:
+	* Fix crashes and memory leaks when receiving malformed voice
+	  and video requests.  Thanks to Thijs Alkemade for reporting this!
+
+	Sametime:
+	* Separate "username" and "server" when adding new Sametime accounts.
+	  (#14608)
+	* Fix compilation in Visual C++. (#14608)
+
+	SILC:
+	* Fix CVE-2011-3594, by UTF-8 validating incoming messages before
+	  passing them to glib or libpurple.  Identified by Diego Bauche
+	  Madero from IOActive.  (#14636)
+
+	Yahoo!:
+	* Fetch buddy icons in some cases where we previously weren't. (#13050)
+
+	Windows-Specific Changes:
+	* Fix compilation
 
 version 2.10.0 (08/18/2011):
 	Pidgin:

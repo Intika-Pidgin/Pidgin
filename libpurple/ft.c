@@ -490,7 +490,7 @@ static void
 purple_xfer_ask_recv(PurpleXfer *xfer)
 {
 	char *buf, *size_buf;
-	size_t size;
+	goffset size;
 	gconstpointer thumb;
 	gsize thumb_size;
 
@@ -765,9 +765,8 @@ purple_xfer_get_status(const PurpleXfer *xfer)
 	return xfer->status;
 }
 
-/* FIXME: Rename with cancelled for 3.0.0. */
 gboolean
-purple_xfer_is_canceled(const PurpleXfer *xfer)
+purple_xfer_is_cancelled(const PurpleXfer *xfer)
 {
 	g_return_val_if_fail(xfer != NULL, TRUE);
 
@@ -802,7 +801,7 @@ purple_xfer_get_local_filename(const PurpleXfer *xfer)
 	return xfer->local_filename;
 }
 
-size_t
+goffset
 purple_xfer_get_bytes_sent(const PurpleXfer *xfer)
 {
 	g_return_val_if_fail(xfer != NULL, 0);
@@ -810,7 +809,7 @@ purple_xfer_get_bytes_sent(const PurpleXfer *xfer)
 	return xfer->bytes_sent;
 }
 
-size_t
+goffset
 purple_xfer_get_bytes_remaining(const PurpleXfer *xfer)
 {
 	g_return_val_if_fail(xfer != NULL, 0);
@@ -818,7 +817,7 @@ purple_xfer_get_bytes_remaining(const PurpleXfer *xfer)
 	return xfer->bytes_remaining;
 }
 
-size_t
+goffset
 purple_xfer_get_size(const PurpleXfer *xfer)
 {
 	g_return_val_if_fail(xfer != NULL, 0);
@@ -966,7 +965,7 @@ purple_xfer_set_local_filename(PurpleXfer *xfer, const char *filename)
 }
 
 void
-purple_xfer_set_size(PurpleXfer *xfer, size_t size)
+purple_xfer_set_size(PurpleXfer *xfer, goffset size)
 {
 	g_return_if_fail(xfer != NULL);
 
@@ -983,7 +982,7 @@ purple_xfer_set_local_port(PurpleXfer *xfer, unsigned int local_port)
 }
 
 void
-purple_xfer_set_bytes_sent(PurpleXfer *xfer, size_t bytes_sent)
+purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent)
 {
 	g_return_if_fail(xfer != NULL);
 
@@ -1439,13 +1438,6 @@ purple_xfer_start(PurpleXfer *xfer, int fd, const char *ip,
 	type = purple_xfer_get_type(xfer);
 
 	purple_xfer_set_status(xfer, PURPLE_XFER_STATUS_STARTED);
-
-	/*
-	 * FIXME 3.0.0 -- there's too much broken code depending on fd == 0
-	 * meaning "don't use a real fd"
-	 */
-	if (fd == 0)
-		fd = -1;
 
 	if (type == PURPLE_XFER_RECEIVE) {
 		cond = PURPLE_INPUT_READ;

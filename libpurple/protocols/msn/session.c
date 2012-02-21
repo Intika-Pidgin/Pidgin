@@ -459,7 +459,7 @@ msn_session_set_login_step(MsnSession *session, MsnLoginStep step)
 	if (session->logged_in)
 		return;
 
-	gc = session->account->gc;
+	gc = purple_account_get_connection(session->account);
 
 	session->login_step = step;
 
@@ -491,11 +491,10 @@ msn_session_finish_login(MsnSession *session)
 		msn_session_sync_users(session);
 	}
 
-	if (session->protocol_ver >= 16) {
-		/* TODO: Send this when updating status instead? */
-		msn_notification_send_uux_endpointdata(session);
-		msn_notification_send_uux_private_endpointdata(session);
-	}
+	/* TODO: Send this when updating status instead? */
+	msn_notification_send_uux_endpointdata(session);
+	msn_notification_send_uux_private_endpointdata(session);
+
 	msn_change_status(session);
 }
 

@@ -740,6 +740,20 @@ msn_parse_addressbook_contacts(MsnSession *session, xmlnode *node)
 		}
 
 		passportName = xmlnode_get_child(contactInfo, "passportName");
+		if (passportName != NULL) {
+			xmlnode *messenger_user;
+			/* ignore non-messenger contacts */
+			if ((messenger_user = xmlnode_get_child(contactInfo, "isMessengerUser"))) {
+				char *is_messenger_user = xmlnode_get_data(messenger_user);
+
+				if (is_messenger_user && !strcmp(is_messenger_user, "false")) {
+					passportName = NULL;
+				}
+
+				g_free(is_messenger_user);
+			}
+		}
+
 		if (passportName == NULL) {
 			xmlnode *emailsNode, *contactEmailNode, *emailNode;
 			xmlnode *messengerEnabledNode;
@@ -773,19 +787,6 @@ msn_parse_addressbook_contacts(MsnSession *session, xmlnode *node)
 				}
 			}
 		} else {
-			xmlnode *messenger_user;
-			/* ignore non-messenger contacts */
-			if ((messenger_user = xmlnode_get_child(contactInfo, "isMessengerUser"))) {
-				char *is_messenger_user = xmlnode_get_data(messenger_user);
-
-				if (is_messenger_user && !strcmp(is_messenger_user, "false")) {
-					g_free(is_messenger_user);
-					continue;
-				}
-
-				g_free(is_messenger_user);
-			}
-
 			passport = xmlnode_get_data(passportName);
 		}
 
@@ -864,6 +865,21 @@ msn_parse_addressbook_contacts(MsnSession *session, xmlnode *node)
 	g_free(alias);
 }
 
+static void
+msn_parse_addressbook_circles(MsnSession *session, xmlnode *node)
+{
+	xmlnode *ticket;
+
+	/* TODO: Parse groups */
+
+	ticket = xmlnode_get_child(node, "CircleTicket");
+	if (ticket) {
+		char *data = xmlnode_get_data(ticket);
+		msn_notification_send_circle_auth(session, data);
+		g_free(data);
+	}
+}
+
 static gboolean
 msn_parse_addressbook(MsnSession *session, xmlnode *node)
 {
@@ -871,6 +887,7 @@ msn_parse_addressbook(MsnSession *session, xmlnode *node)
 	xmlnode *groups;
 	xmlnode *contacts;
 	xmlnode *abNode;
+	xmlnode *circleNode;
 	xmlnode *fault;
 
 	if ((fault = xmlnode_get_child(node, "Body/Fault"))) {
@@ -897,7 +914,7 @@ msn_parse_addressbook(MsnSession *session, xmlnode *node)
 		return FALSE;
 	}
 
-	result = xmlnode_get_child(node, "Body/ABFindAllResponse/ABFindAllResult");
+	result = xmlnode_get_child(node, "Body/ABFindContactsPagedResponse/ABFindContactsPagedResult");
 	if (result == NULL) {
 		purple_debug_misc("msn", "Received no address book update\n");
 		return TRUE;
@@ -906,7 +923,7 @@ msn_parse_addressbook(MsnSession *session, xmlnode *node)
 	/* I don't see this "groups" tag documented on msnpiki, need to find out
 	   if they are really there, and update msnpiki */
 	/*Process Group List*/
-	groups = xmlnode_get_child(result, "groups");
+	groups = xmlnode_get_child(result, "Groups");
 	if (groups != NULL) {
 		msn_parse_addressbook_groups(session, groups);
 	}
@@ -931,12 +948,12 @@ msn_parse_addressbook(MsnSession *session, xmlnode *node)
 
 	/*Process contact List*/
 	purple_debug_info("msn", "Process contact list...\n");
-	contacts = xmlnode_get_child(result, "contacts");
+	contacts = xmlnode_get_child(result, "Contacts");
 	if (contacts != NULL) {
 		msn_parse_addressbook_contacts(session, contacts);
 	}
 
-	abNode = xmlnode_get_child(result, "ab");
+	abNode = xmlnode_get_child(result, "Ab");
 	if (abNode != NULL) {
 		xmlnode *node2;
 		char *tmp = NULL;
@@ -954,6 +971,11 @@ msn_parse_addressbook(MsnSession *session, xmlnode *node)
 		g_free(tmp);
 	}
 
+	circleNode = xmlnode_get_child(result, "CircleResult");
+	if (circleNode != NULL) {
+		msn_parse_addressbook_circles(session, circleNode);
+	}
+
 	return TRUE;
 }
 
@@ -968,7 +990,7 @@ msn_get_address_cb(MsnSoapMessage *req, MsnSoapMessage *resp, gpointer data)
 	purple_debug_misc("msn", "Got the Address Book!\n");
 
 	if (msn_parse_addressbook(session, resp->xml)) {
-		msn_send_privacy(session->account->gc);
+		msn_send_privacy(purple_account_get_connection(session->account));
 		msn_notification_dump_contact(session);
 	} else {
 		/* This is making us loop infinitely when we fail to parse the
@@ -1251,7 +1273,7 @@ msn_add_contact_to_group(MsnSession *session, MsnCallbackState *state,
 		body = g_markup_escape_text(user->invite_message, -1);
 
 		/* Ignore the cast, we treat it as const anyway. */
-		tmp = (char *)purple_connection_get_display_name(session->account->gc);
+		tmp = (char *)purple_connection_get_display_name(purple_account_get_connection(session->account));
 		tmp = tmp ? g_markup_escape_text(tmp, -1) : g_strdup("");
 
 		invite = g_strdup_printf(MSN_CONTACT_INVITE_MESSAGE_XML, body, tmp);

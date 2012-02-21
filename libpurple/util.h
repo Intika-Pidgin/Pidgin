@@ -58,10 +58,6 @@ typedef struct _PurpleKeyValuePair PurpleKeyValuePair;
 #include "notify.h"
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef char *(*PurpleInfoFieldFormatCallback)(const char *field, size_t len);
 
 struct _PurpleKeyValuePair
@@ -70,6 +66,8 @@ struct _PurpleKeyValuePair
 	void *value;
 
 };
+
+G_BEGIN_DECLS
 
 /**
  * Creates a new PurpleMenuAction.
@@ -1091,7 +1089,7 @@ const char *purple_strcasestr(const char *haystack, const char *needle);
  *
  * @return The string in units form. This must be freed.
  */
-char *purple_str_size_to_units(size_t size);
+char *purple_str_size_to_units(goffset size);
 
 /**
  * Converts seconds into a human-readable form.
@@ -1344,7 +1342,7 @@ gchar *purple_utf8_strip_unprintables(const gchar *str);
  *
  * @return The UTF-8 error message.
  */
-G_CONST_RETURN gchar *purple_gai_strerror(gint errnum);
+const gchar *purple_gai_strerror(gint errnum);
 
 /**
  * Compares two UTF-8 strings case-insensitively.  This comparison is
@@ -1459,8 +1457,6 @@ const gchar *purple_get_host_name(void);
  */
 gchar *purple_uuid_random(void);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_UTIL_H_ */

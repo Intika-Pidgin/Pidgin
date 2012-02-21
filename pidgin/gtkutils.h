@@ -31,10 +31,6 @@
 #include "prpl.h"
 #include "util.h"
 
-
-
-
-
 typedef enum
 {
 	PIDGIN_BUTTON_HORIZONTAL,
@@ -80,6 +76,8 @@ typedef struct {
 typedef gboolean (*PidginFilterBuddyCompletionEntryFunc) (const PidginBuddyCompletionEntry *completion_entry, gpointer user_data);
 
 
+G_BEGIN_DECLS
+
 /**
  * Sets up a gtkimhtml widget, loads it with smileys, and sets the
  * default signal handlers.
@@ -107,6 +105,14 @@ void pidgin_setup_imhtml(GtkWidget *imhtml);
  * @return The GtkFrame containing the toolbar and imhtml.
  */
 GtkWidget *pidgin_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **toolbar_ret, GtkWidget **sw_ret);
+
+/**
+ * Sets up a gtkwebview widget, loads it with smileys, and sets the
+ * default signal handlers.
+ *
+ * @param webview The gtkwebview widget to setup.
+ */
+void pidgin_setup_webview(GtkWidget *webview);
 
 /**
  * Create an GtkWebView widget and associated GtkIMHtmlToolbar widget.  This
@@ -902,6 +908,8 @@ void pidgin_utils_init(void);
  * Uninitialize some utility functions.
  */
 void pidgin_utils_uninit(void);
+
+G_END_DECLS
 
 #endif /* _PIDGINUTILS_H_ */
 

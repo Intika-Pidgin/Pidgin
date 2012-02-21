@@ -34,11 +34,6 @@
 
 #include <glib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-
 typedef enum
 {
 	PURPLE_CERTIFICATE_INVALID = 0,
@@ -257,9 +252,17 @@ struct _PurpleCertificateScheme
 	 */
 	GSList * (* import_certificates)(const gchar * filename);
 
+	/**
+	 * Retrieves the certificate data in DER form
+	 *
+	 * @param crt   Certificate instance
+	 * @return Binary DER representation of certificate - must be freed using
+	 *         g_byte_array_free()
+	 */
+	GByteArray * (* get_der_data)(PurpleCertificate *crt);
+
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
 };
 
 /** A set of operations used to provide logic for verifying a Certificate's
@@ -348,6 +351,8 @@ struct _PurpleCertificateVerificationRequest
 	/** Data to pass to the post-verification callback */
 	gpointer cb_data;
 };
+
+G_BEGIN_DECLS
 
 /*****************************************************************************/
 /** @name Certificate Verification Functions                                 */
@@ -560,6 +565,17 @@ purple_certificate_check_subject_name(PurpleCertificate *crt, const gchar *name)
  */
 gboolean
 purple_certificate_get_times(PurpleCertificate *crt, time_t *activation, time_t *expiration);
+
+/**
+ * Retrieves the certificate data in DER form.
+ *
+ * @param crt Certificate instance
+ *
+ * @return Binary DER representation of the certificate - must be freed using
+ *         g_byte_array_free().
+ */
+GByteArray *
+purple_certificate_get_der_data(PurpleCertificate *crt);
 
 /*@}*/
 
@@ -814,8 +830,6 @@ purple_certificate_display_x509(PurpleCertificate *crt);
  */
 void purple_certificate_add_ca_search_path(const char *path);
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _PURPLE_CERTIFICATE_H */

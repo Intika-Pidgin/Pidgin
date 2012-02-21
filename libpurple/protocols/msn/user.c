@@ -566,7 +566,7 @@ queue_buddy_icon_request(MsnUser *user)
 		return;
 	}
 
-	if (!buddy_icon_cached(account->gc, obj)) {
+	if (!buddy_icon_cached(purple_account_get_connection(account), obj)) {
 		MsnUserList *userlist;
 
 		userlist = user->userlist;
@@ -697,6 +697,14 @@ msn_user_get_endpoint_data(MsnUser *user, const char *input)
 	g_free(endpoint);
 
 	return NULL;
+}
+
+MsnNetwork
+msn_user_get_network(const MsnUser *user)
+{
+	g_return_val_if_fail(user != NULL, MSN_NETWORK_UNKNOWN);
+
+	return user->networkid;
 }
 
 MsnObject *

@@ -28,6 +28,7 @@
 #include "xmlnode.h"
 
 #include "pidgin.h"
+#include "internal.h"
 #include "gtkconv.h"
 #include "gtkwebview.h"
 
@@ -83,7 +84,9 @@ enum {
  *****************************************************************************/
 
 static GObjectClass *parent_class = NULL;
+#if GLIB_CHECK_VERSION(2,26,0)
 static GParamSpec *properties[PROP_LAST];
+#endif
 
 /******************************************************************************
  * Helper Functions
@@ -109,6 +112,23 @@ get_key(PidginConvThemePrivate *priv, const char *key, gboolean specific)
 	return val;
 }
 
+/* The template path can either come from the theme, or can
+ * be stock Template.html that comes with Pidgin */
+static char *
+get_template_path(const char *dir)
+{
+	char *file;
+
+	file = g_build_filename(dir, "Contents", "Resources", "Template.html", NULL);
+
+	if (!g_file_test(file, G_FILE_TEST_EXISTS)) {
+		g_free(file);
+		file = g_build_filename(DATADIR, "pidgin", "theme", "conversation", "Template.html", NULL);
+	}
+
+	return file;
+}
+
 static const char *
 get_template_html(PidginConvThemePrivate *priv, const char *dir)
 {
@@ -117,14 +137,7 @@ get_template_html(PidginConvThemePrivate *priv, const char *dir)
 	if (priv->template_html)
 		return priv->template_html;
 
-	/* The template path can either come from the theme, or can
-	 * be stock Template.html that comes with the plugin */
-	file = g_build_filename(dir, "Contents", "Resources", "Template.html", NULL);
-
-	if (!g_file_test(file, G_FILE_TEST_EXISTS)) {
-		g_free(file);
-		file = g_build_filename(DATADIR, "pidgin", "webkit", "Template.html", NULL);
-	}
+	file = get_template_path(dir);
 
 	if (!g_file_get_contents(file, &priv->template_html, NULL, NULL)) {
 		purple_debug_error("webkit", "Could not locate a Template.html (%s)\n", file);
@@ -369,6 +382,7 @@ get_outgoing_next_context_html(PidginConvThemePrivate *priv, const char *dir)
 	if (!g_file_get_contents(file, &priv->outgoing_next_context_html, NULL, NULL)) {
 		priv->outgoing_next_context_html = g_strdup(get_outgoing_context_html(priv, dir));
 	}
+	g_free(file);
 
 	return priv->outgoing_next_context_html;
 }
@@ -507,15 +521,18 @@ pidgin_conv_theme_class_init(PidginConvThemeClass *klass)
 			G_TYPE_HASH_TABLE,
 			G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 	g_object_class_install_property(obj_class, PROP_INFO, pspec);
+#if GLIB_CHECK_VERSION(2,26,0)
 	properties[PROP_INFO] = pspec;
+#endif
 
 	/* VARIANT */
 	pspec = g_param_spec_string("variant", "Variant",
 			"The current variant for this theme",
-			NULL, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+			NULL, G_PARAM_READWRITE);
 	g_object_class_install_property(obj_class, PROP_VARIANT, pspec);
+#if GLIB_CHECK_VERSION(2,26,0)
 	properties[PROP_VARIANT] = pspec;
-
+#endif
 }
 
 GType
@@ -680,7 +697,11 @@ void
 pidgin_conversation_theme_set_variant(PidginConvTheme *theme, const char *variant)
 {
 	_set_variant(theme, variant);
+#if GLIB_CHECK_VERSION(2,26,0)
 	g_object_notify_by_pspec(G_OBJECT(theme), properties[PROP_VARIANT]);
+#else
+	g_object_notify(G_OBJECT(theme), "variant");
+#endif
 }
 
 const GList *
@@ -699,19 +720,12 @@ char *
 pidgin_conversation_theme_get_template_path(PidginConvTheme *theme)
 {
 	const char *dir;
-	char *filename;
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
 	dir = purple_theme_get_dir(PURPLE_THEME(theme));
-	filename = g_build_filename(dir, "Contents", "Resources", "Template.html", NULL);
 
-	if (!g_file_test(filename, G_FILE_TEST_EXISTS)) {
-		g_free(filename);
-		filename = g_build_filename(DATADIR, "pidgin", "webkit", "Template.html", NULL);
-	}
-
-	return filename;
+	return get_template_path(dir);
 }
 
 char *
