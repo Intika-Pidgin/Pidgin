@@ -59,7 +59,9 @@ struct tag {
 };
 
 
-#define		MXIT_VIBE_MSG_COLOR		"#9933FF"
+#define		MXIT_VIBE_MSG_COLOR			"#9933FF"
+#define		MXIT_FAREWELL_MSG_COLOR		"#949494"
+
 
 /* vibes */
 static const char*	vibes[] = {
@@ -992,6 +994,15 @@ void mxit_parse_markup( struct RXMsgData* mx, char* message, int len, short msgt
 					g_string_append_c( mx->msg, message[i] );
 					break;
 		}
+	}
+
+	if ( msgflags & CP_MSG_FAREWELL ) {
+		/* this is a farewell message */
+		GString* premsg = g_string_sized_new( 36 );
+		g_string_append_printf( premsg, "<font color=\"%s\"><i>", MXIT_FAREWELL_MSG_COLOR );
+		g_string_prepend( mx->msg, premsg->str );
+		g_string_append( mx->msg, "</i></font>" );
+		g_string_free( premsg, TRUE );
 	}
 }
 
