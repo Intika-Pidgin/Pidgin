@@ -26,9 +26,7 @@
 #include <gtk/gtk.h>
 #include "gtkimhtml.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 #define DEFAULT_FONT_FACE "Helvetica 12"
 
@@ -65,6 +63,7 @@ struct _GtkIMHtmlToolbar {
 	GtkWidget *image;
 	GtkWidget *link;
 	GtkWidget *smiley;
+	GtkWidget *attention;
 
 	GtkWidget *font_dialog;
 	GtkWidget *fgcolor_dialog;
@@ -93,8 +92,6 @@ void gtk_imhtmltoolbar_associate_smileys (GtkIMHtmlToolbar *toolbar, const char 
 void gtk_imhtmltoolbar_switch_active_conversation(GtkIMHtmlToolbar *toolbar,
 	PurpleConversation *conv);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PIDGINIMHTMLTOOLBAR_H_ */

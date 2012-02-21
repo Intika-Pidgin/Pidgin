@@ -34,7 +34,7 @@ if ENABLE_GTK
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = pidgin-3.pc
 
-SUBDIRS = pixmaps plugins
+SUBDIRS = pixmaps plugins themes
 
 bin_PROGRAMS = pidgin
 
@@ -86,6 +86,7 @@ pidgin_SOURCES = \
 	gtkthemes.c \
 	gtkutils.c \
 	gtkwebview.c \
+	gtkwebviewtoolbar.c \
 	gtkwhiteboard.c \
 	minidialog.c \
 	pidgintooltip.c \
@@ -140,6 +141,7 @@ pidgin_headers = \
 	gtkthemes.h \
 	gtkutils.h \
 	gtkwebview.h \
+	gtkwebviewtoolbar.h \
 	gtkwhiteboard.h \
 	minidialog.h \
 	pidgintooltip.h \
@@ -156,6 +158,7 @@ pidgin_LDFLAGS = -export-dynamic
 pidgin_LDADD = \
 	@LIBOBJS@ \
 	$(GLIB_LIBS) \
+	$(GCR_LIBS) \
 	$(DBUS_LIBS) \
 	$(GSTREAMER_LIBS) \
 	$(XSS_LIBS) \
@@ -181,6 +184,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir) \
 	-I$(top_srcdir) \
 	$(GLIB_CFLAGS) \
+	$(GCR_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(GTK_CFLAGS) \

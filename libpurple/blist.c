@@ -314,7 +314,7 @@ accountprivacy_to_xmlnode(PurpleAccount *account)
 	node = xmlnode_new("account");
 	xmlnode_set_attrib(node, "proto", purple_account_get_protocol_id(account));
 	xmlnode_set_attrib(node, "name", purple_account_get_username(account));
-	g_snprintf(buf, sizeof(buf), "%d", account->perm_deny);
+	g_snprintf(buf, sizeof(buf), "%d", purple_account_get_privacy_type(account));
 	xmlnode_set_attrib(node, "mode", buf);
 
 	for (cur = account->permit; cur; cur = cur->next)
@@ -641,7 +641,7 @@ purple_blist_load()
 				continue;
 
 			imode = atoi(mode);
-			account->perm_deny = (imode != 0 ? imode : PURPLE_PRIVACY_ALLOW_ALL);
+			purple_account_set_privacy_type(account, (imode != 0 ? imode : PURPLE_PRIVACY_ALLOW_ALL));
 
 			for (x = anode->child; x; x = x->next) {
 				char *name;
@@ -1774,6 +1774,13 @@ void purple_contact_invalidate_priority_buddy(PurpleContact *contact)
 	contact->priority_valid = FALSE;
 }
 
+int purple_contact_get_contact_size(PurpleContact *contact, gboolean offline)   
+{
+	g_return_val_if_fail(contact != NULL, 0);
+
+	return offline ? contact->totalsize : contact->currentsize;
+}   
+
 PurpleGroup *purple_group_new(const char *name)
 {
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
@@ -2899,6 +2906,17 @@ purple_blist_node_get_type(PurpleBlistNode *node)
 {
 	g_return_val_if_fail(node != NULL, PURPLE_BLIST_OTHER_NODE);
 	return node->type;
+}
+
+gboolean
+purple_blist_node_has_setting(PurpleBlistNode* node, const char *key)
+{
+	g_return_val_if_fail(node != NULL, FALSE);
+	g_return_val_if_fail(node->settings != NULL, FALSE);
+	g_return_val_if_fail(key != NULL, FALSE);
+
+	/* Boxed type, so it won't ever be NULL, so no need for _extended */
+	return (g_hash_table_lookup(node->settings, key) != NULL);
 }
 
 void

@@ -140,7 +140,7 @@ struct _PurpleXfer
 	char *message;                /**< A message sent with the request     */
 	char *filename;               /**< The name sent over the network.     */
 	char *local_filename;         /**< The name on the local hard drive.   */
-	size_t size;                  /**< The size of the file.               */
+	goffset size;                 /**< The size of the file.               */
 
 	FILE *dest_fp;                /**< The destination file pointer.       */
 
@@ -151,8 +151,8 @@ struct _PurpleXfer
 	int fd;                       /**< The socket file descriptor.         */
 	int watcher;                  /**< Watcher.                            */
 
-	size_t bytes_sent;            /**< The number of bytes sent.           */
-	size_t bytes_remaining;       /**< The number of bytes remaining.      */
+	goffset bytes_sent;           /**< The number of bytes sent.           */
+	goffset bytes_remaining;      /**< The number of bytes remaining.      */
 	time_t start_time;            /**< When the transfer of data began.    */
 	time_t end_time;              /**< When the transfer of data ended.    */
 
@@ -184,9 +184,7 @@ struct _PurpleXfer
 	void *proto_data;                 /**< prpl-specific data.     */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name File Transfer API                                               */
@@ -321,9 +319,8 @@ PurpleXferStatusType purple_xfer_get_status(const PurpleXfer *xfer);
  * @param xfer The file transfer.
  *
  * @return Whether or not the transfer was cancelled.
- * FIXME: This should be renamed using cancelled for 3.0.0.
  */
-gboolean purple_xfer_is_canceled(const PurpleXfer *xfer);
+gboolean purple_xfer_is_cancelled(const PurpleXfer *xfer);
 
 /**
  * Returns the completed state for a file transfer.
@@ -359,7 +356,7 @@ const char *purple_xfer_get_local_filename(const PurpleXfer *xfer);
  *
  * @return The number of bytes sent.
  */
-size_t purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
+goffset purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
 
 /**
  * Returns the number of bytes remaining to send or receive.
@@ -368,7 +365,7 @@ size_t purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
  *
  * @return The number of bytes remaining.
  */
-size_t purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
+goffset purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
 
 /**
  * Returns the size of the file being sent or received.
@@ -377,7 +374,7 @@ size_t purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
  *
  * @return The total size of the file.
  */
-size_t purple_xfer_get_size(const PurpleXfer *xfer);
+goffset purple_xfer_get_size(const PurpleXfer *xfer);
 
 /**
  * Returns the current percentage of progress of the transfer.
@@ -497,7 +494,7 @@ void purple_xfer_set_local_filename(PurpleXfer *xfer, const char *filename);
  * @param xfer The file transfer.
  * @param size The size of the file.
  */
-void purple_xfer_set_size(PurpleXfer *xfer, size_t size);
+void purple_xfer_set_size(PurpleXfer *xfer, goffset size);
 
 /**
  * Sets the local port of the file transfer.
@@ -520,7 +517,7 @@ void purple_xfer_set_local_port(PurpleXfer *xfer, unsigned int local_port);
  *                   send.  If we're receiving a file, this is the
  *                   next byte that we expect to receive.
  */
-void purple_xfer_set_bytes_sent(PurpleXfer *xfer, size_t bytes_sent);
+void purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent);
 
 /**
  * Returns the UI operations structure for a file transfer.
@@ -638,11 +635,8 @@ gssize purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size);
  * file receive transfer. On send, @a fd must be specified, and
  * @a ip and @a port are ignored.
  *
- * Prior to libpurple 2.6.0, passing '0' to @a fd was special-cased to
- * allow the protocol plugin to facilitate the file transfer itself. As of
- * 2.6.0, this is supported (for backward compatibility), but will be
- * removed in libpurple 3.0.0. If a prpl detects that the running libpurple
- * is running 2.6.0 or higher, it should use the invalid fd '-1'.
+ * Passing @a fd as '-1' is a special-case and indicates to the
+ * protocol plugin to facilitate the file transfer itself.
  *
  * @param xfer The file transfer.
  * @param fd   The file descriptor for the socket.
@@ -847,8 +841,7 @@ PurpleXferUiOps *purple_xfers_get_ui_ops(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_FT_H_ */
+

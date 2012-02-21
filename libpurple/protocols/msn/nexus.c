@@ -44,9 +44,8 @@ static char *ticket_domains[][2] = {
 	{"messenger.msn.com", "?id=507"},        /* Authentication for receiving OIMs. */
 	{"contacts.msn.com", "MBI"},             /* Authentication for the Contact server. */
 	{"messengersecure.live.com", "MBI_SSL"}, /* Authentication for sending OIMs. */
-	{"spaces.live.com", "MBI"},              /* Authentication for the Windows Live Spaces */
-	{"livecontacts.live.com", "MBI"},        /* Live Contacts API, a simplified version of the Contacts SOAP service */
 	{"storage.live.com", "MBI"},             /* Storage REST API */
+	{"sup.live.com", "MBI"},                 /* What's New service */
 };
 
 /**************************************************************************
@@ -390,7 +389,7 @@ msn_nexus_connect(MsnNexus *nexus)
 	msn_session_set_login_step(session, MSN_LOGIN_STEP_GET_COOKIE);
 
 	username = purple_account_get_username(session->account);
-	password = purple_connection_get_password(session->account->gc);
+	password = purple_connection_get_password(purple_account_get_connection(session->account));
 	if (g_utf8_strlen(password, -1) > 16) {
 		/* max byte size for 16 utf8 characters is 64 + 1 for the null */
 		gchar truncated[65];

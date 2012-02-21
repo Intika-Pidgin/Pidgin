@@ -155,7 +155,7 @@ get_xfer_info_strings(PurpleXfer *xfer, char **kbsec, char **time_elapsed,
 		if (purple_xfer_is_completed(xfer)) {
 			*time_remaining = g_strdup(_("Finished"));
 		}
-		else if (purple_xfer_is_canceled(xfer)) {
+		else if (purple_xfer_is_cancelled(xfer)) {
 			*time_remaining = g_strdup(_("Cancelled"));
 		}
 		else if (purple_xfer_get_size(xfer) == 0 || (kb_sent > 0 && kbps == 0)) {
@@ -247,7 +247,7 @@ update_detailed_info(PidginXferDialog *dialog, PurpleXfer *xfer)
 
 	get_xfer_info_strings(xfer, &kbsec, &time_elapsed, &time_remaining);
 
-	status = g_strdup_printf("%d%% (%" G_GSIZE_FORMAT " of %" G_GSIZE_FORMAT " bytes)",
+	status = g_strdup_printf("%d%% (%" G_GOFFSET_FORMAT " of %" G_GOFFSET_FORMAT " bytes)",
 							 (int)(purple_xfer_get_progress(xfer)*100),
 							 purple_xfer_get_bytes_sent(xfer),
 							 purple_xfer_get_size(xfer));
@@ -357,7 +357,7 @@ update_buttons(PidginXferDialog *dialog, PurpleXfer *xfer)
 #endif
 
 		gtk_widget_set_sensitive(dialog->remove_button, TRUE);
-	} else if (purple_xfer_is_canceled(xfer)) {
+	} else if (purple_xfer_is_cancelled(xfer)) {
 		gtk_widget_hide(dialog->stop_button);
 		gtk_widget_show(dialog->remove_button);
 
@@ -979,7 +979,7 @@ pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 									PIDGIN_STOCK_FILE_CANCELED,
 									GTK_ICON_SIZE_MENU, NULL);
 
-	if (purple_xfer_is_canceled(xfer))
+	if (purple_xfer_is_cancelled(xfer))
 		status = _("Cancelled");
 	else
 		status = _("Failed");

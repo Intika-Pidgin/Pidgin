@@ -119,10 +119,10 @@ static void jabber_oob_xfer_start(PurpleXfer *xfer)
 		jox->written_len = 0;
 	}
 
-	jox->writeh = purple_input_add(xfer->fd, PURPLE_INPUT_WRITE,
+	jox->writeh = purple_input_add(purple_xfer_get_fd(xfer), PURPLE_INPUT_WRITE,
 		jabber_oob_xfer_request_send, xfer);
 
-	jabber_oob_xfer_request_send(xfer, xfer->fd, PURPLE_INPUT_WRITE);
+	jabber_oob_xfer_request_send(xfer, purple_xfer_get_fd(xfer), PURPLE_INPUT_WRITE);
 }
 
 static gssize jabber_oob_xfer_read(guchar **buffer, PurpleXfer *xfer) {
@@ -131,14 +131,14 @@ static gssize jabber_oob_xfer_read(guchar **buffer, PurpleXfer *xfer) {
 	char *tmp, *lenstr;
 	int len;
 
-	if((len = read(xfer->fd, test, sizeof(test))) > 0) {
+	if((len = read(purple_xfer_get_fd(xfer), test, sizeof(test))) > 0) {
 		jox->headers = g_string_append_len(jox->headers, test, len);
 		if((tmp = strstr(jox->headers->str, "\r\n\r\n"))) {
 			*tmp = '\0';
 			lenstr = strstr(jox->headers->str, "Content-Length: ");
 			if(lenstr) {
-				int size;
-				sscanf(lenstr, "Content-Length: %d", &size);
+				goffset size;
+				sscanf(lenstr, "Content-Length: %" G_GOFFSET_FORMAT, &size);
 				purple_xfer_set_size(xfer, size);
 			}
 			purple_xfer_set_read_fnc(xfer, NULL);
@@ -218,7 +218,7 @@ void jabber_oob_parse(JabberStream *js, const char *from, JabberIqType type,
 	jox->headers = g_string_new("");
 	jox->iq_id = g_strdup(id);
 
-	xfer = purple_xfer_new(js->gc->account, PURPLE_XFER_RECEIVE, from);
+	xfer = purple_xfer_new(purple_connection_get_account(js->gc), PURPLE_XFER_RECEIVE, from);
 	if (xfer)
 	{
 		purple_xfer_set_protocol_data(xfer, jox);

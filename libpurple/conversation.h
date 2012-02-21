@@ -249,133 +249,7 @@ struct _PurpleConversationUiOps
 	void (*_purple_reserved4)(void);
 };
 
-/**
- * Data specific to Instant Messages.
- */
-struct _PurpleConvIm
-{
-	PurpleConversation *conv;            /**< The parent conversation.     */
-
-	PurpleTypingState typing_state;      /**< The current typing state.    */
-	guint  typing_timeout;             /**< The typing timer handle.     */
-	time_t type_again;                 /**< The type again time.         */
-	guint  send_typed_timeout;         /**< The type again timer handle. */
-
-	PurpleBuddyIcon *icon;               /**< The buddy icon.              */
-};
-
-/**
- * Data specific to Chats.
- */
-struct _PurpleConvChat
-{
-	PurpleConversation *conv;          /**< The parent conversation.      */
-
-	GList *in_room;                  /**< The users in the room.
-	                                  *   @deprecated Will be removed in 3.0.0
-									  */
-	GList *ignored;                  /**< Ignored users.                */
-	char  *who;                      /**< The person who set the topic. */
-	char  *topic;                    /**< The topic.                    */
-	int    id;                       /**< The chat ID.                  */
-	char *nick;                      /**< Your nick in this chat.       */
-
-	gboolean left;                   /**< We left the chat and kept the window open */
-	GHashTable *users;               /**< Hash table of the users in the room. */
-};
-
-/**
- * Data for "Chat Buddies"
- */
-struct _PurpleConvChatBuddy
-{
-	/** The chat participant's name in the chat. */
-	char *name;
-
-	/** The chat participant's alias, if known; @a NULL otherwise. */
-	char *alias;
-
-	/**
-	 * A string by which this buddy will be sorted, or @c NULL if the
-	 * buddy should be sorted by its @c name.  (This is currently always
-	 * @c NULL.
-	 */
-	char *alias_key;
-
-	/**
-	 * @a TRUE if this chat participant is on the buddy list;
-	 * @a FALSE otherwise.
-	 */
-	gboolean buddy;
-
-	/**
-	 * A bitwise OR of flags for this participant, such as whether they
-	 * are a channel operator.
-	 */
-	PurpleConvChatBuddyFlags flags;
-
-	/**
-	 * A hash table of attributes about the user, such as real name,
-	 * user\@host, etc.
-	 */
-	GHashTable *attributes;
-
-	/** The UI can put whatever it wants here. */
-	gpointer ui_data;
-};
-
-/**
- * Description of a conversation message
- */
-struct _PurpleConvMessage
-{
-	char *who;
-	char *what;
-	PurpleMessageFlags flags;
-	time_t when;
-	PurpleConversation *conv;
-	char *alias;
-};
-
-/**
- * A core representation of a conversation between two or more people.
- *
- * The conversation can be an IM or a chat.
- */
-struct _PurpleConversation
-{
-	PurpleConversationType type;  /**< The type of conversation.          */
-
-	PurpleAccount *account;       /**< The user using this conversation.  */
-
-
-	char *name;                 /**< The name of the conversation.      */
-	char *title;                /**< The window title.                  */
-
-	gboolean logging;           /**< The status of logging.             */
-
-	GList *logs;                /**< This conversation's logs           */
-
-	union
-	{
-		PurpleConvIm   *im;       /**< IM-specific data.                  */
-		PurpleConvChat *chat;     /**< Chat-specific data.                */
-		void *misc;             /**< Misc. data.                        */
-
-	} u;
-
-	PurpleConversationUiOps *ui_ops;           /**< UI-specific operations. */
-	void *ui_data;                           /**< UI-specific data.       */
-
-	GHashTable *data;                        /**< Plugin-specific data.   */
-
-	PurpleConnectionFlags features; /**< The supported features */
-	GList *message_history;         /**< Message history, as a GList of PurpleConvMessage's */
-};
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Conversation API                                                */
@@ -479,13 +353,11 @@ PurpleAccount *purple_conversation_get_account(const PurpleConversation *conv);
 /**
  * Returns the specified conversation's purple_connection.
  *
- * This is the same as purple_conversation_get_user(conv)->gc.
- *
  * @param conv The conversation.
  *
  * @return The conversation's purple_connection.
  */
-PurpleConnection *purple_conversation_get_gc(const PurpleConversation *conv);
+PurpleConnection *purple_conversation_get_connection(const PurpleConversation *conv);
 
 /**
  * Sets the specified conversation's title.
@@ -771,7 +643,7 @@ void purple_conversation_clear_message_history(PurpleConversation *conv);
  *
  * @return   The name of the sender of the message
  */
-const char *purple_conversation_message_get_sender(PurpleConvMessage *msg);
+const char *purple_conversation_message_get_sender(const PurpleConvMessage *msg);
 
 /**
  * Get the message from a PurpleConvMessage
@@ -780,7 +652,7 @@ const char *purple_conversation_message_get_sender(PurpleConvMessage *msg);
  *
  * @return   The name of the sender of the message
  */
-const char *purple_conversation_message_get_message(PurpleConvMessage *msg);
+const char *purple_conversation_message_get_message(const PurpleConvMessage *msg);
 
 /**
  * Get the message-flags of a PurpleConvMessage
@@ -789,7 +661,7 @@ const char *purple_conversation_message_get_message(PurpleConvMessage *msg);
  *
  * @return   The message flags
  */
-PurpleMessageFlags purple_conversation_message_get_flags(PurpleConvMessage *msg);
+PurpleMessageFlags purple_conversation_message_get_flags(const PurpleConvMessage *msg);
 
 /**
  * Get the timestamp of a PurpleConvMessage
@@ -798,7 +670,25 @@ PurpleMessageFlags purple_conversation_message_get_flags(PurpleConvMessage *msg)
  *
  * @return   The timestamp of the message
  */
-time_t purple_conversation_message_get_timestamp(PurpleConvMessage *msg);
+time_t purple_conversation_message_get_timestamp(const PurpleConvMessage *msg);
+
+/**
+ * Get the alias from a PurpleConvMessage
+ *
+ * @param msg   A PurpleConvMessage
+ *
+ * @return   The alias of the sender of the message
+ */
+const char *purple_conversation_message_get_alias(const PurpleConvMessage *msg);
+
+/**
+ * Get the conversation associated with the PurpleConvMessage
+ *
+ * @param msg   A PurpleConvMessage
+ *
+ * @return   The conversation
+ */
+PurpleConversation *purple_conversation_message_get_conv(const PurpleConvMessage *msg);
 
 /**
  * Set the UI data associated with this conversation.
@@ -1399,13 +1289,59 @@ PurpleConvChatBuddy *purple_conv_chat_cb_new(const char *name, const char *alias
 PurpleConvChatBuddy *purple_conv_chat_cb_find(PurpleConvChat *chat, const char *name);
 
 /**
+ * Set the UI data associated with this chat buddy.
+ *
+ * @param cb			The chat buddy
+ * @param ui_data		A pointer to associate with this chat buddy.
+ */
+void purple_conv_chat_cb_set_ui_data(PurpleConvChatBuddy *cb, gpointer ui_data);
+
+/**
+ * Get the UI data associated with this chat buddy.
+ *
+ * @param cb			The chat buddy.
+ *
+ * @return The UI data associated with this chat buddy.  This is a
+ *         convenience field provided to the UIs--it is not
+ *         used by the libpurple core.
+ */
+gpointer purple_conv_chat_cb_get_ui_data(const PurpleConvChatBuddy *conv);
+
+/**
+ * Get the alias of a chat buddy
+ *
+ * @param cb    The chat buddy.
+ *
+ * @return The alias of the chat buddy.
+ */
+const char *purple_conv_chat_cb_get_alias(const PurpleConvChatBuddy *cb);
+
+/**
  * Get the name of a chat buddy
  *
  * @param cb    The chat buddy.
  *
  * @return The name of the chat buddy.
  */
-const char *purple_conv_chat_cb_get_name(PurpleConvChatBuddy *cb);
+const char *purple_conv_chat_cb_get_name(const PurpleConvChatBuddy *cb);
+
+/**
+ * Get the flags of a chat buddy.
+ *
+ * @param cb	The chat buddy.
+ *
+ * @return The flags of the chat buddy.
+ */
+PurpleConvChatBuddyFlags purple_conv_chat_cb_get_flags(const PurpleConvChatBuddy *cb);
+
+/**
+ * Indicates if this chat buddy is on the buddy list.
+ *
+ * @param cb	The chat buddy.
+ *
+ * @return TRUE if the chat buddy is on the buddy list.
+ */
+gboolean purple_conv_chat_cb_is_buddy(const PurpleConvChatBuddy *cb);
 
 /**
  * Destroys a chat buddy
@@ -1464,8 +1400,6 @@ void purple_conversations_uninit(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_CONVERSATION_H_ */
