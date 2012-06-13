@@ -1,9 +1,11 @@
 /**
- * @file jutil.h utility functions
+ * @file si.h SI transfer functions
  *
- * gaim
+ * purple
  *
- * Copyright (C) 2003 Nathan Walp <faceprint@faceprint.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +19,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_JABBER_SI_H_
-#define _GAIM_JABBER_SI_H_
+#ifndef PURPLE_JABBER_SI_H_
+#define PURPLE_JABBER_SI_H_
 
 #include "ft.h"
 
 #include "jabber.h"
 
-void jabber_bytestreams_parse(JabberStream *js, xmlnode *packet);
-void jabber_si_parse(JabberStream *js, xmlnode *packet);
-GaimXfer *jabber_si_new_xfer(GaimConnection *gc, const char *who);
-void jabber_si_xfer_send(GaimConnection *gc, const char *who, const char *file);
+void jabber_bytestreams_parse(JabberStream *js, const char *from,
+                              JabberIqType type, const char *id, xmlnode *query);
+void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
+                     const char *id, xmlnode *si);
+PurpleXfer *jabber_si_new_xfer(PurpleConnection *gc, const char *who);
+void jabber_si_xfer_send(PurpleConnection *gc, const char *who, const char *file);
+void jabber_si_init(void);
+void jabber_si_uninit(void);
 
-#endif /* _GAIM_JABBER_SI_H_ */
+#endif /* PURPLE_JABBER_SI_H_ */

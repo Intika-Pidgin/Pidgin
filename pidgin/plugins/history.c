@@ -2,7 +2,7 @@
  * stolen by Trillian "Pro") */
 
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "conversation.h"
 #include "debug.h"
@@ -16,157 +16,190 @@
 #include "gtkconv.h"
 #include "gtkimhtml.h"
 #include "gtkplugin.h"
+#include "gtkwebview.h"
 
 #define HISTORY_PLUGIN_ID "gtk-history"
 
 #define HISTORY_SIZE (4 * 1024)
 
-static gboolean _scroll_imhtml_to_end(gpointer data)
+static gboolean _scroll_webview_to_end(gpointer data)
 {
-	GtkIMHtml *imhtml = data;
-	gtk_imhtml_scroll_to_end(GTK_IMHTML(imhtml), FALSE);
-	g_object_unref(G_OBJECT(imhtml));
+	GtkWebView *webview = data;
+	gtk_webview_scroll_to_end(GTK_WEBVIEW(webview), FALSE);
+	g_object_unref(G_OBJECT(webview));
 	return FALSE;
 }
 
-static void historize(GaimConversation *c)
+static void historize(PurpleConversation *c)
 {
-	GaimAccount *account = gaim_conversation_get_account(c);
-	const char *name = gaim_conversation_get_name(c);
-	GaimConversationType convtype;
+	PurpleAccount *account = purple_conversation_get_account(c);
+	const char *name = purple_conversation_get_name(c);
+	PurpleConversationType convtype;
 	GList *logs = NULL;
 	const char *alias = name;
 	guint flags;
 	char *history;
-	GaimGtkConversation *gtkconv;
+	PidginConversation *gtkconv;
+#if 0
+	/* FIXME: WebView has no options */
 	GtkIMHtmlOptions options = GTK_IMHTML_NO_COLOURS;
+#endif
 	char *header;
+#if 0
+	/* FIXME: WebView has no protocol setting */
 	char *protocol;
+#endif
+	char *escaped_alias;
+	const char *header_date;
 
-	convtype = gaim_conversation_get_type(c);
-	gtkconv = GAIM_GTK_CONVERSATION(c);
-	if (convtype == GAIM_CONV_TYPE_IM && g_list_length(gtkconv->convs) < 2)
+	convtype = purple_conversation_get_type(c);
+	gtkconv = PIDGIN_CONVERSATION(c);
+	g_return_if_fail(gtkconv != NULL);
+
+	/* An IM which is the first active conversation. */
+	g_return_if_fail(gtkconv->convs != NULL);
+	if (convtype == PURPLE_CONV_TYPE_IM && !gtkconv->convs->next)
 	{
 		GSList *buddies;
 		GSList *cur;
 
 		/* If we're not logging, don't show anything.
 		 * Otherwise, we might show a very old log. */
-		if (!gaim_prefs_get_bool("/core/logging/log_ims"))
+		if (!purple_prefs_get_bool("/purple/logging/log_ims"))
 			return;
 
 		/* Find buddies for this conversation. */
-	        buddies = gaim_find_buddies(account, name);
+		buddies = purple_find_buddies(account, name);
 
 		/* If we found at least one buddy, save the first buddy's alias. */
 		if (buddies != NULL)
-			alias = gaim_buddy_get_contact_alias((GaimBuddy *)buddies->data);
+			alias = purple_buddy_get_contact_alias((PurpleBuddy *)buddies->data);
 
-	        for (cur = buddies; cur != NULL; cur = cur->next)
-	        {
-	                GaimBlistNode *node = cur->data;
-	                if ((node != NULL) && ((node->prev != NULL) || (node->next != NULL)))
-	                {
-				GaimBlistNode *node2;
+		for (cur = buddies; cur != NULL; cur = cur->next)
+		{
+			PurpleBlistNode *node = cur->data;
+			PurpleBlistNode *prev = purple_blist_node_get_sibling_prev(node);
+			PurpleBlistNode *next = purple_blist_node_get_sibling_next(node);
+			if ((node != NULL) && ((prev != NULL) || (next != NULL)))
+			{
+				PurpleBlistNode *node2;
+				PurpleBlistNode *parent = purple_blist_node_get_parent(node);
+				PurpleBlistNode *child = purple_blist_node_get_first_child(parent);
 
-				alias = gaim_buddy_get_contact_alias((GaimBuddy *)node);
+				alias = purple_buddy_get_contact_alias((PurpleBuddy *)node);
 
 				/* We've found a buddy that matches this conversation.  It's part of a
-				 * GaimContact with more than one GaimBuddy.  Loop through the GaimBuddies
+				 * PurpleContact with more than one PurpleBuddy.  Loop through the PurpleBuddies
 				 * in the contact and get all the logs. */
-				for (node2 = node->parent->child ; node2 != NULL ; node2 = node2->next)
+				for (node2 = child ; node2 != NULL ; node2 = purple_blist_node_get_sibling_next(node2))
 				{
-					logs = g_list_concat(
-						gaim_log_get_logs(GAIM_LOG_IM,
-							gaim_buddy_get_name((GaimBuddy *)node2),
-							gaim_buddy_get_account((GaimBuddy *)node2)),
-						logs);
+					logs = g_list_concat(purple_log_get_logs(PURPLE_LOG_IM,
+							purple_buddy_get_name((PurpleBuddy *)node2),
+							purple_buddy_get_account((PurpleBuddy *)node2)),
+							logs);
 				}
 				break;
-	                }
-	        }
-	        g_slist_free(buddies);
+			}
+		}
+		g_slist_free(buddies);
 
 		if (logs == NULL)
-			logs = gaim_log_get_logs(GAIM_LOG_IM, name, account);
+			logs = purple_log_get_logs(PURPLE_LOG_IM, name, account);
 		else
-			logs = g_list_sort(logs, gaim_log_compare);
+			logs = g_list_sort(logs, purple_log_compare);
 	}
-	else if (convtype == GAIM_CONV_TYPE_CHAT)
+	else if (convtype == PURPLE_CONV_TYPE_CHAT)
 	{
 		/* If we're not logging, don't show anything.
 		 * Otherwise, we might show a very old log. */
-		if (!gaim_prefs_get_bool("/core/logging/log_chats"))
+		if (!purple_prefs_get_bool("/purple/logging/log_chats"))
 			return;
 
-		logs = gaim_log_get_logs(GAIM_LOG_CHAT, name, account);
+		logs = purple_log_get_logs(PURPLE_LOG_CHAT, name, account);
 	}
 
 	if (logs == NULL)
 		return;
 
-	history = gaim_log_read((GaimLog*)logs->data, &flags);
-	gtkconv = GAIM_GTK_CONVERSATION(c);
-	if (flags & GAIM_LOG_READ_NO_NEWLINE)
+	history = purple_log_read((PurpleLog*)logs->data, &flags);
+	gtkconv = PIDGIN_CONVERSATION(c);
+#if 0
+	/* FIXME: WebView has no options */
+	if (flags & PURPLE_LOG_READ_NO_NEWLINE)
 		options |= GTK_IMHTML_NO_NEWLINE;
+#endif
 
+#if 0
+	/* FIXME: WebView has no protocol setting */
 	protocol = g_strdup(gtk_imhtml_get_protocol_name(GTK_IMHTML(gtkconv->imhtml)));
 	gtk_imhtml_set_protocol_name(GTK_IMHTML(gtkconv->imhtml),
-							      gaim_account_get_protocol_name(((GaimLog*)logs->data)->account));
+			purple_account_get_protocol_name(((PurpleLog*)logs->data)->account));
+#endif
 
-	if (gtk_text_buffer_get_char_count(gtk_text_view_get_buffer(GTK_TEXT_VIEW(gtkconv->imhtml))))
-		gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), "<BR>", options);
+	if (!gtk_webview_is_empty(GTK_WEBVIEW(gtkconv->webview)))
+		gtk_webview_append_html(GTK_WEBVIEW(gtkconv->webview), "<BR>");
 
-	header = g_strdup_printf(_("<b>Conversation with %s on %s:</b><br>"), alias,
-							 gaim_date_format_full(localtime(&((GaimLog *)logs->data)->time)));
-	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), header, options);
+	escaped_alias = g_markup_escape_text(alias, -1);
+
+	if (((PurpleLog *)logs->data)->tm)
+		header_date = purple_date_format_full(((PurpleLog *)logs->data)->tm);
+	else
+		header_date = purple_date_format_full(localtime(&((PurpleLog *)logs->data)->time));
+
+	header = g_strdup_printf(_("<b>Conversation with %s on %s:</b><br>"), escaped_alias, header_date);
+	gtk_webview_append_html(GTK_WEBVIEW(gtkconv->webview), header);
 	g_free(header);
+	g_free(escaped_alias);
 
 	g_strchomp(history);
-	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), history, options);
+	gtk_webview_append_html(GTK_WEBVIEW(gtkconv->webview), history);
 	g_free(history);
 
-	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), "<hr>", options);
+	gtk_webview_append_html(GTK_WEBVIEW(gtkconv->webview), "<hr>");
 
+#if 0
+	/* FIXME: WebView has no protocol setting */
 	gtk_imhtml_set_protocol_name(GTK_IMHTML(gtkconv->imhtml), protocol);
 	g_free(protocol);
+#endif
 
-	g_object_ref(G_OBJECT(gtkconv->imhtml));
-	g_idle_add(_scroll_imhtml_to_end, gtkconv->imhtml);
+	g_object_ref(G_OBJECT(gtkconv->webview));
+	g_idle_add(_scroll_webview_to_end, gtkconv->webview);
 
-	g_list_foreach(logs, (GFunc)gaim_log_free, NULL);
+	g_list_foreach(logs, (GFunc)purple_log_free, NULL);
 	g_list_free(logs);
 }
 
 static void
-history_prefs_check(GaimPlugin *plugin)
+history_prefs_check(PurplePlugin *plugin)
 {
-	if (!gaim_prefs_get_bool("/core/logging/log_ims") &&
-	    !gaim_prefs_get_bool("/core/logging/log_chats"))
+	if (!purple_prefs_get_bool("/purple/logging/log_ims") &&
+	    !purple_prefs_get_bool("/purple/logging/log_chats"))
 	{
-		gaim_notify_warning(plugin, NULL, _("History Plugin Requires Logging"),
+		purple_notify_warning(plugin, NULL, _("History Plugin Requires Logging"),
 							_("Logging can be enabled from Tools -> Preferences -> Logging.\n\n"
 							  "Enabling logs for instant messages and/or chats will activate "
 							  "history for the same conversation type(s)."));
 	}
 }
 
-static void history_prefs_cb(const char *name, GaimPrefType type,
+static void history_prefs_cb(const char *name, PurplePrefType type,
 							 gconstpointer val, gpointer data)
 {
-	history_prefs_check((GaimPlugin *)data);
+	history_prefs_check((PurplePlugin *)data);
 }
 
 static gboolean
-plugin_load(GaimPlugin *plugin)
+plugin_load(PurplePlugin *plugin)
 {
-	gaim_signal_connect(gaim_conversations_get_handle(),
+	purple_signal_connect(purple_conversations_get_handle(),
 						"conversation-created",
-						plugin, GAIM_CALLBACK(historize), NULL);
+						plugin, PURPLE_CALLBACK(historize), NULL);
+	/* XXX: Do we want to listen to pidgin's "conversation-displayed" signal? */
 
-	gaim_prefs_connect_callback(plugin, "/core/logging/log_ims",
+	purple_prefs_connect_callback(plugin, "/purple/logging/log_ims",
 								history_prefs_cb, plugin);
-	gaim_prefs_connect_callback(plugin, "/core/logging/log_chats",
+	purple_prefs_connect_callback(plugin, "/purple/logging/log_chats",
 								history_prefs_cb, plugin);
 
 	history_prefs_check(plugin);
@@ -174,27 +207,33 @@ plugin_load(GaimPlugin *plugin)
 	return TRUE;
 }
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,
-	GAIM_MAJOR_VERSION,
-	GAIM_MINOR_VERSION,
-	GAIM_PLUGIN_STANDARD,
-	GAIM_GTK_PLUGIN_TYPE,
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_STANDARD,
+	PIDGIN_PLUGIN_TYPE,
 	0,
 	NULL,
-	GAIM_PRIORITY_DEFAULT,
+	PURPLE_PRIORITY_DEFAULT,
 	HISTORY_PLUGIN_ID,
 	N_("History"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Shows recently logged conversations in new conversations."),
 	N_("When a new conversation is opened this plugin will insert "
 	   "the last conversation into the current conversation."),
 	"Sean Egan <seanegan@gmail.com>",
-	GAIM_WEBSITE,
+	PURPLE_WEBSITE,
 	plugin_load,
 	NULL,
 	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+
+	/* padding */
 	NULL,
 	NULL,
 	NULL,
@@ -202,8 +241,8 @@ static GaimPluginInfo info =
 };
 
 static void
-init_plugin(GaimPlugin *plugin)
+init_plugin(PurplePlugin *plugin)
 {
 }
 
-GAIM_INIT_PLUGIN(history, init_plugin, info)
+PURPLE_INIT_PLUGIN(history, init_plugin, info)

@@ -6,7 +6,7 @@
  *
  *	Copyright (c) 1987,1988,1991 by the Massachusetts Institute of Technology.
  *	For copying and distribution information, see the file
- *	"mit-copyright.h". 
+ *	"mit-copyright.h".
  */
 
 #include "internal.h"
@@ -21,13 +21,13 @@
 Code_t ZSetLocation(exposure)
     char *exposure;
 {
-    return (Z_SendLocation(LOGIN_CLASS, exposure, ZAUTH, 
+    return (Z_SendLocation(LOGIN_CLASS, exposure, ZAUTH,
 			   "$sender logged in to $1 on $3 at $2"));
 }
 
 Code_t ZUnsetLocation()
 {
-    return (Z_SendLocation(LOGIN_CLASS, LOGIN_USER_LOGOUT, ZNOAUTH, 
+    return (Z_SendLocation(LOGIN_CLASS, LOGIN_USER_LOGOUT, ZNOAUTH,
 			   "$sender logged out of $1 on $3 at $2"));
 }
 
@@ -36,7 +36,8 @@ Code_t ZFlushMyLocations()
     return (Z_SendLocation(LOGIN_CLASS, LOGIN_USER_FLUSH, ZAUTH, ""));
 }
 
-static char host[MAXHOSTNAMELEN], mytty[MAXPATHLEN];
+static char host[MAXHOSTNAMELEN];
+static char *mytty = NULL;
 static int reenter = 0;
 
 Code_t Z_SendLocation(class, opcode, auth, format)
@@ -87,21 +88,20 @@ Code_t Z_SendLocation(class, opcode, auth, format)
 	    }
 #ifndef X_DISPLAY_MISSING
 	    if ((display = getenv("DISPLAY")) && *display) {
-		    (void) strncpy(mytty, display, sizeof(mytty));
+		    mytty = g_strdup(display);
 	    } else {
 #endif
 #ifdef WIN32
-              	    strncpy(mytty, "WinGaim", sizeof(mytty));
+		    mytty = g_strdup("WinPurple");
 #else
 		    ttyp = ttyname(0);
 		    if (ttyp && *ttyp) {
 			p = strchr(ttyp + 1, '/');
-			strcpy(mytty, (p) ? p + 1 : ttyp);
+			mytty = g_strdup((p) ? p + 1 : ttyp);
 		    } else {
-			strncpy(mytty, "unknown", sizeof(mytty));
+			mytty = g_strdup("unknown");
 		    }
 #endif
-		    mytty[sizeof(mytty)-1] = '\0';
 #ifndef X_DISPLAY_MISSING
 	    }
 #endif
@@ -114,7 +114,6 @@ Code_t Z_SendLocation(class, opcode, auth, format)
     bptr[1][strlen(bptr[1])-1] = '\0';
     bptr[2] = mytty;
 
-	
     if ((retval = ZSendList(&notice, bptr, 3, auth)) != ZERR_NONE)
 	return (retval);
 
@@ -138,8 +137,8 @@ Code_t Z_SendLocation(class, opcode, auth, format)
 	}
 	ZFreeNotice(&retnotice);
 	return (ZERR_SERVNAK);
-    } 
-	
+    }
+
     if (retnotice.z_kind != SERVACK) {
 	ZFreeNotice(&retnotice);
 	return (ZERR_INTERNAL);
@@ -157,6 +156,6 @@ Code_t Z_SendLocation(class, opcode, auth, format)
     }
 
     ZFreeNotice(&retnotice);
-	
+
     return (ZERR_NONE);
 }

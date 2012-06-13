@@ -1,13 +1,13 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*- 
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *  gtksourceiter.c
  *
- *  Gaim is the legal property of its developers, whose names are too numerous
+ *  Pidgin is the legal property of its developers, whose names are too numerous
  *  to list here.  Please refer to the COPYRIGHT file distributed with this
  *  source distribution.
  *
  *  The following copyright notice applies to this file:
  *
- *  Copyright (C) 2000 - 2005 Paolo Maggi 
+ *  Copyright (C) 2000 - 2005 Paolo Maggi
  *  Copyright (C) 2002, 2003 Jeroen Zwartepoorte
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU Library General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
 /*
@@ -154,7 +154,7 @@ g_utf8_strrcasestr (const gchar *haystack, const gchar *needle)
 	p = g_utf8_offset_to_pointer (caseless_haystack, i);
 	needle_len = strlen (needle);
 
-	while (p >= caseless_haystack)
+	while (1)
 	{
 		if (strncmp (p, needle, needle_len) == 0)
 		{
@@ -162,7 +162,11 @@ g_utf8_strrcasestr (const gchar *haystack, const gchar *needle)
 			goto finally_1;
 		}
 
-		p = g_utf8_prev_char (p);
+		if (p > caseless_haystack)
+			p = g_utf8_prev_char (p);
+		else
+			goto finally_1;
+
 		i--;
 	}
 
@@ -206,7 +210,7 @@ g_utf8_caselessnmatch (const char *s1, const char *s2,
 
 finally_2:
 	g_free (normalized_s1);
-	g_free (normalized_s2);	
+	g_free (normalized_s2);
 
 	return ret;
 }
@@ -247,7 +251,7 @@ forward_chars_with_skipping (GtkTextIter *iter,
 		{
 			/* being UTF8 correct sucks; this accounts for extra
 			   offsets coming from canonical decompositions of
-			   UTF8 characters (e.g. accented characters) which 
+			   UTF8 characters (e.g. accented characters) which
 			   g_utf8_normalize() performs */
 			gchar *normal;
 			gchar buffer[6];
@@ -530,14 +534,14 @@ strbreakup (const char *string,
  * @match_start: return location for start of match, or %%NULL.
  * @match_end: return location for end of match, or %%NULL.
  * @limit: bound for the search, or %%NULL for the end of the buffer.
- * 
- * Searches forward for @str. Any match is returned by setting 
- * @match_start to the first character of the match and @match_end to the 
+ *
+ * Searches forward for @str. Any match is returned by setting
+ * @match_start to the first character of the match and @match_end to the
  * first character after the match. The search will not continue past
  * @limit. Note that a search is a linear or O(n) operation, so you
  * may wish to use @limit to avoid locking up your UI on large
  * buffers.
- * 
+ *
  * If the #GTK_SOURCE_SEARCH_VISIBLE_ONLY flag is present, the match may
  * have invisible text interspersed in @str. i.e. @str will be a
  * possibly-noncontiguous subsequence of the matched range. similarly,
@@ -550,7 +554,7 @@ strbreakup (const char *string,
  *
  * Same as gtk_text_iter_forward_search(), but supports case insensitive
  * searching.
- * 
+ *
  * Return value: whether a match was found.
  **/
 gboolean
@@ -574,7 +578,7 @@ gtk_source_iter_forward_search (const GtkTextIter   *iter,
 	if ((flags & GTK_SOURCE_SEARCH_CASE_INSENSITIVE) == 0)
 		return gtk_text_iter_forward_search (iter, str, flags,
 						     match_start, match_end,
-						     limit); 
+						     limit);
 
 	if (limit && gtk_text_iter_compare (iter, limit) >= 0)
 		return FALSE;
@@ -650,10 +654,10 @@ gtk_source_iter_forward_search (const GtkTextIter   *iter,
  * @match_start: return location for start of match, or %%NULL.
  * @match_end: return location for end of match, or %%NULL.
  * @limit: location of last possible @match_start, or %%NULL for start of buffer.
- * 
+ *
  * Same as gtk_text_iter_backward_search(), but supports case insensitive
  * searching.
- * 
+ *
  * Return value: whether a match was found.
  **/
 gboolean
@@ -677,7 +681,7 @@ gtk_source_iter_backward_search (const GtkTextIter   *iter,
 	if ((flags & GTK_SOURCE_SEARCH_CASE_INSENSITIVE) == 0)
 		return gtk_text_iter_backward_search (iter, str, flags,
 						      match_start, match_end,
-						      limit); 
+						      limit);
 
 	if (limit && gtk_text_iter_compare (iter, limit) <= 0)
 		return FALSE;

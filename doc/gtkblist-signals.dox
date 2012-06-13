@@ -5,13 +5,16 @@
   @signal gtkblist-unhiding
   @signal gtkblist-created
   @signal drawing-tooltip
+  @signal drawing-buddy
  @endsignals
+
+ @see gtkblist.h
 
  <hr>
 
  @signaldef gtkblist-hiding
   @signalproto
-void (*gtkblist-hiding)(GaimBuddyList *blist);
+void (*gtkblist-hiding)(PurpleBuddyList *blist);
   @endsignalproto
   @signaldesc
    Emitted when the buddy list is about to be hidden.
@@ -20,7 +23,7 @@ void (*gtkblist-hiding)(GaimBuddyList *blist);
 
  @signaldef gtkblist-unhiding
   @signalproto
-void (*gtkblist-unhiding)(GaimBuddyList *blist);
+void (*gtkblist-unhiding)(PurpleBuddyList *blist);
   @endsignalproto
   @signaldesc
    Emitted when the buddy list is about to be unhidden.
@@ -29,7 +32,7 @@ void (*gtkblist-unhiding)(GaimBuddyList *blist);
 
  @signaldef gtkblist-created
   @signalproto
-void (*gtkblist-created)(GaimBuddyList *blist);
+void (*gtkblist-created)(PurpleBuddyList *blist);
   @endsignalproto
   @signaldesc
    Emitted when the buddy list is created.
@@ -38,7 +41,7 @@ void (*gtkblist-created)(GaimBuddyList *blist);
 
  @signaldef drawing-tooltip
   @signalproto
-void (*drawing-tooltip)(GaimBlistNode *node, GString *text, gboolean full);
+void (*drawing-tooltip)(PurpleBlistNode *node, GString *text, gboolean full);
   @endsignalproto
   @signaldesc
    Emitted just before a tooltip is displayed.
@@ -51,5 +54,17 @@ void (*drawing-tooltip)(GaimBlistNode *node, GString *text, gboolean full);
   @param full Whether we're doing a full tooltip for the priority buddy or
               a compact tooltip for a non-priority buddy.
  @endsignaldef
+
+ @signaldef drawing-buddy
+  @signalproto
+char *(*drawing-buddy)(PurpleBuddy *buddy);
+  @endsignalproto
+  @signaldesc
+   Emitted to allow plugins to handle markup within a buddy's name or to
+   override the default of no formatting for names shown in the buddy list.
+   @param buddy A pointer to the PurpleBuddy that will be displayed.
+   @return The text to display (must be allocated), or @c NULL if no
+           changes to the default behavior are desired.
+ @endsignaldef
 */
-// vim: syntax=c tw=75 et
+// vim: syntax=c.doxygen tw=75 et

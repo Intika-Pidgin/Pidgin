@@ -1,10 +1,11 @@
 /**
  * @file gtkutils.c GTK+ utility functions
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,10 +21,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#define _PIDGIN_GTKUTILS_C_
+
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #ifndef _WIN32
 # include <X11/Xlib.h>
@@ -51,57 +54,210 @@
 #include "prpl.h"
 #include "request.h"
 #include "signals.h"
+#include "sound.h"
 #include "util.h"
+
+#include "gtkaccount.h"
+#include "gtkprefs.h"
 
 #include "gtkconv.h"
 #include "gtkdialogs.h"
 #include "gtkimhtml.h"
 #include "gtkimhtmltoolbar.h"
-#include "gaimstock.h"
+#include "pidginstock.h"
 #include "gtkthemes.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
+#include "gtkwebviewtoolbar.h"
+#include "pidgin/minidialog.h"
+
+#if !GTK_CHECK_VERSION(2,18,0)
+#define gtk_widget_get_visible(x) GTK_WIDGET_VISIBLE(x)
+#define gtk_widget_is_sensitive(x) GTK_WIDGET_IS_SENSITIVE(x)
+#endif
+
+enum {
+	AOP_ICON_COLUMN,
+	AOP_NAME_COLUMN,
+	AOP_DATA_COLUMN,
+	AOP_COLUMN_COUNT
+};
+
+typedef struct {
+	GtkTreeModel *model;
+	gint default_item;
+} AopMenu;
 
 static guint accels_save_timer = 0;
+static GSList *registered_url_handlers = NULL;
 
 static gboolean
 url_clicked_idle_cb(gpointer data)
 {
-	gaim_notify_uri(NULL, data);
+	purple_notify_uri(NULL, data);
 	g_free(data);
 	return FALSE;
 }
 
-static void
-url_clicked_cb(GtkWidget *w, const char *uri)
+static gboolean
+url_clicked_cb(GtkIMHtml *unused, GtkIMHtmlLink *link)
 {
+	const char *uri = gtk_imhtml_link_get_url(link);
 	g_idle_add(url_clicked_idle_cb, g_strdup(uri));
+	return TRUE;
 }
 
 static GtkIMHtmlFuncs gtkimhtml_cbs = {
-	(GtkIMHtmlGetImageFunc)gaim_imgstore_get,
-	(GtkIMHtmlGetImageDataFunc)gaim_imgstore_get_data,
-	(GtkIMHtmlGetImageSizeFunc)gaim_imgstore_get_size,
-	(GtkIMHtmlGetImageFilenameFunc)gaim_imgstore_get_filename,
-	gaim_imgstore_ref,
-	gaim_imgstore_unref,
+	(GtkIMHtmlGetImageFunc)purple_imgstore_find_by_id,
+	(GtkIMHtmlGetImageDataFunc)purple_imgstore_get_data,
+	(GtkIMHtmlGetImageSizeFunc)purple_imgstore_get_size,
+	(GtkIMHtmlGetImageFilenameFunc)purple_imgstore_get_filename,
+	purple_imgstore_ref_by_id,
+	purple_imgstore_unref_by_id,
 };
 
 void
-gaim_setup_imhtml(GtkWidget *imhtml)
+pidgin_setup_imhtml(GtkWidget *imhtml)
 {
 	g_return_if_fail(imhtml != NULL);
 	g_return_if_fail(GTK_IS_IMHTML(imhtml));
 
-	g_signal_connect(G_OBJECT(imhtml), "url_clicked",
-					 G_CALLBACK(url_clicked_cb), NULL);
-
-	gaim_gtkthemes_smiley_themeize(imhtml);
+	pidgin_themes_smiley_themeize(imhtml);
 
 	gtk_imhtml_set_funcs(GTK_IMHTML(imhtml), &gtkimhtml_cbs);
+
+#ifdef _WIN32
+	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font")) {
+		PangoFontDescription *desc;
+		const char *font = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font");
+		desc = pango_font_description_from_string(font);
+		if (desc) {
+			gtk_widget_modify_font(imhtml, desc);
+			pango_font_description_free(desc);
+		}
+	}
+#endif
+
+}
+
+void
+pidgin_setup_webview(GtkWidget *webview)
+{
+	g_return_if_fail(webview != NULL);
+	g_return_if_fail(GTK_IS_WEBVIEW(webview));
+
+#if 0
+/* TODO: WebKit this stuff... */
+	pidgin_themes_smiley_themeize(webview);
+#endif
+
+#ifdef _WIN32
+	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font")) {
+		WebKitWebSettings *settings = webkit_web_settings_new();
+		g_object_set(G_OBJECT(settings), "default-font-size",
+		             purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/font_size"),
+		             NULL);
+		g_object_set(G_OBJECT(settings), "default-font-family",
+		             purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font"),
+		             NULL);
+
+		webkit_web_view_set_settings(WEBKIT_WEB_VIEW(webview), settings);
+	}
+#endif
+}
+
+static
+void pidgin_window_init(GtkWindow *wnd, const char *title, guint border_width, const char *role, gboolean resizable)
+{
+	if (title)
+		gtk_window_set_title(wnd, title);
+#ifdef _WIN32
+	else
+		gtk_window_set_title(wnd, PIDGIN_ALERT_TITLE);
+#endif
+	gtk_container_set_border_width(GTK_CONTAINER(wnd), border_width);
+	if (role)
+		gtk_window_set_role(wnd, role);
+	gtk_window_set_resizable(wnd, resizable);
 }
 
 GtkWidget *
-gaim_gtk_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **toolbar_ret, GtkWidget **sw_ret)
+pidgin_create_window(const char *title, guint border_width, const char *role, gboolean resizable)
+{
+	GtkWindow *wnd = NULL;
+
+	wnd = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
+	pidgin_window_init(wnd, title, border_width, role, resizable);
+
+	return GTK_WIDGET(wnd);
+}
+
+GtkWidget *
+pidgin_create_small_button(GtkWidget *image)
+{
+	GtkWidget *button;
+
+	button = gtk_button_new();
+	gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
+
+	/* don't allow focus on the close button */
+	gtk_button_set_focus_on_click(GTK_BUTTON(button), FALSE);
+
+	/* set style to make it as small as possible */
+	gtk_widget_set_name(button, "pidgin-small-close-button");
+
+	gtk_widget_show(image);
+
+	gtk_container_add(GTK_CONTAINER(button), image);
+
+	return button;
+}
+
+GtkWidget *
+pidgin_create_dialog(const char *title, guint border_width, const char *role, gboolean resizable)
+{
+	GtkWindow *wnd = NULL;
+
+	wnd = GTK_WINDOW(gtk_dialog_new());
+	pidgin_window_init(wnd, title, border_width, role, resizable);
+	g_object_set(G_OBJECT(wnd), "has-separator", FALSE, NULL);
+
+	return GTK_WIDGET(wnd);
+}
+
+GtkWidget *
+pidgin_dialog_get_vbox_with_properties(GtkDialog *dialog, gboolean homogeneous, gint spacing)
+{
+	GtkBox *vbox = GTK_BOX(GTK_DIALOG(dialog)->vbox);
+	gtk_box_set_homogeneous(vbox, homogeneous);
+	gtk_box_set_spacing(vbox, spacing);
+	return GTK_WIDGET(vbox);
+}
+
+GtkWidget *pidgin_dialog_get_vbox(GtkDialog *dialog)
+{
+	return GTK_DIALOG(dialog)->vbox;
+}
+
+GtkWidget *pidgin_dialog_get_action_area(GtkDialog *dialog)
+{
+	return GTK_DIALOG(dialog)->action_area;
+}
+
+GtkWidget *pidgin_dialog_add_button(GtkDialog *dialog, const char *label,
+		GCallback callback, gpointer callbackdata)
+{
+	GtkWidget *button = gtk_button_new_from_stock(label);
+	GtkWidget *bbox = pidgin_dialog_get_action_area(dialog);
+	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
+	if (callback)
+		g_signal_connect(G_OBJECT(button), "clicked", callback, callbackdata);
+	gtk_widget_show(button);
+	return button;
+}
+
+GtkWidget *
+pidgin_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **toolbar_ret, GtkWidget **sw_ret)
 {
 	GtkWidget *frame;
 	GtkWidget *imhtml;
@@ -129,19 +285,13 @@ gaim_gtk_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **to
 		gtk_widget_show(sep);
 	}
 
-	sw = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-								   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-	gtk_widget_show(sw);
-
 	imhtml = gtk_imhtml_new(NULL, NULL);
 	gtk_imhtml_set_editable(GTK_IMHTML(imhtml), editable);
 	gtk_imhtml_set_format_functions(GTK_IMHTML(imhtml), GTK_IMHTML_ALL ^ GTK_IMHTML_IMAGE);
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(imhtml), GTK_WRAP_WORD_CHAR);
 #ifdef USE_GTKSPELL
-	if (editable && gaim_prefs_get_bool("/gaim/gtk/conversations/spellcheck"))
-		gaim_gtk_setup_gtkspell(GTK_TEXT_VIEW(imhtml));
+	if (editable && purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
+		pidgin_setup_gtkspell(GTK_TEXT_VIEW(imhtml));
 #endif
 	gtk_widget_show(imhtml);
 
@@ -149,9 +299,10 @@ gaim_gtk_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **to
 		gtk_imhtmltoolbar_attach(GTK_IMHTMLTOOLBAR(toolbar), imhtml);
 		gtk_imhtmltoolbar_associate_smileys(GTK_IMHTMLTOOLBAR(toolbar), "default");
 	}
-	gaim_setup_imhtml(imhtml);
+	pidgin_setup_imhtml(imhtml);
 
-	gtk_container_add(GTK_CONTAINER(sw), imhtml);
+	sw = pidgin_make_scrollable(imhtml, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_NONE, -1, -1);
+	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
 
 	if (imhtml_ret != NULL)
 		*imhtml_ret = imhtml;
@@ -165,8 +316,69 @@ gaim_gtk_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **to
 	return frame;
 }
 
+GtkWidget *
+pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, GtkWidget **toolbar_ret, GtkWidget **sw_ret)
+{
+	GtkWidget *frame;
+	GtkWidget *webview;
+	GtkWidget *sep;
+	GtkWidget *sw;
+	GtkWidget *toolbar = NULL;
+	GtkWidget *vbox;
+
+	frame = gtk_frame_new(NULL);
+	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
+
+	vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+	gtk_widget_show(vbox);
+
+	if (editable) {
+		toolbar = gtk_webviewtoolbar_new();
+		gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
+		gtk_widget_show(toolbar);
+
+		sep = gtk_hseparator_new();
+		gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 0);
+		g_signal_connect_swapped(G_OBJECT(toolbar), "show", G_CALLBACK(gtk_widget_show), sep);
+		g_signal_connect_swapped(G_OBJECT(toolbar), "hide", G_CALLBACK(gtk_widget_hide), sep);
+		gtk_widget_show(sep);
+	}
+
+	webview = gtk_webview_new();
+	gtk_webview_set_editable(GTK_WEBVIEW(webview), editable);
+#ifdef USE_GTKSPELL
+	if (editable && purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
+		pidgin_setup_gtkspell(GTK_TEXT_VIEW(webview));
+#endif
+	gtk_widget_show(webview);
+
+	if (editable) {
+		gtk_webviewtoolbar_attach(GTK_WEBVIEWTOOLBAR(toolbar), webview);
+		gtk_webviewtoolbar_associate_smileys(GTK_WEBVIEWTOOLBAR(toolbar), "default");
+	}
+	pidgin_setup_webview(webview);
+
+	sw = pidgin_make_scrollable(webview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_NONE, -1, -1);
+	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
+
+	gtk_webview_set_vadjustment(GTK_WEBVIEW(webview),
+			gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(sw)));
+
+	if (webview_ret != NULL)
+		*webview_ret = webview;
+
+	if (editable && (toolbar_ret != NULL))
+		*toolbar_ret = toolbar;
+
+	if (sw_ret != NULL)
+		*sw_ret = sw;
+
+	return frame;
+}
+
 void
-gaim_gtk_set_sensitive_if_input(GtkWidget *entry, GtkWidget *dialog)
+pidgin_set_sensitive_if_input(GtkWidget *entry, GtkWidget *dialog)
 {
 	const char *text = gtk_entry_get_text(GTK_ENTRY(entry));
 	gtk_dialog_set_response_sensitive(GTK_DIALOG(dialog), GTK_RESPONSE_OK,
@@ -174,20 +386,20 @@ gaim_gtk_set_sensitive_if_input(GtkWidget *entry, GtkWidget *dialog)
 }
 
 void
-gaim_gtk_toggle_sensitive(GtkWidget *widget, GtkWidget *to_toggle)
+pidgin_toggle_sensitive(GtkWidget *widget, GtkWidget *to_toggle)
 {
 	gboolean sensitivity;
 
 	if (to_toggle == NULL)
 		return;
 
-	sensitivity = GTK_WIDGET_IS_SENSITIVE(to_toggle);
+	sensitivity = gtk_widget_is_sensitive(to_toggle);
 
 	gtk_widget_set_sensitive(to_toggle, !sensitivity);
 }
 
 void
-gaim_gtk_toggle_sensitive_array(GtkWidget *w, GPtrArray *data)
+pidgin_toggle_sensitive_array(GtkWidget *w, GPtrArray *data)
 {
 	gboolean sensitivity;
 	gpointer element;
@@ -198,34 +410,35 @@ gaim_gtk_toggle_sensitive_array(GtkWidget *w, GPtrArray *data)
 		if (element == NULL)
 			continue;
 
-		sensitivity = GTK_WIDGET_IS_SENSITIVE(element);
+		sensitivity = gtk_widget_is_sensitive(element);
 
 		gtk_widget_set_sensitive(element, !sensitivity);
 	}
 }
 
 void
-gaim_gtk_toggle_showhide(GtkWidget *widget, GtkWidget *to_toggle)
+pidgin_toggle_showhide(GtkWidget *widget, GtkWidget *to_toggle)
 {
 	if (to_toggle == NULL)
 		return;
 
-	if (GTK_WIDGET_VISIBLE(to_toggle))
+	if (gtk_widget_get_visible(to_toggle))
 		gtk_widget_hide(to_toggle);
 	else
 		gtk_widget_show(to_toggle);
 }
 
-void gaim_separator(GtkWidget *menu)
+GtkWidget *pidgin_separator(GtkWidget *menu)
 {
 	GtkWidget *menuitem;
 
 	menuitem = gtk_separator_menu_item_new();
 	gtk_widget_show(menuitem);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+	return menuitem;
 }
 
-GtkWidget *gaim_new_item(GtkWidget *menu, const char *str)
+GtkWidget *pidgin_new_item(GtkWidget *menu, const char *str)
 {
 	GtkWidget *menuitem;
 	GtkWidget *label;
@@ -244,12 +457,12 @@ GtkWidget *gaim_new_item(GtkWidget *menu, const char *str)
 	gtk_widget_add_accelerator(menuitem, "activate", accel, str[0],
 				   GDK_MOD1_MASK, GTK_ACCEL_LOCKED);
 */
-	gaim_set_accessible_label (menuitem, label);
+	pidgin_set_accessible_label (menuitem, label);
 	return menuitem;
 }
 
-GtkWidget *gaim_new_check_item(GtkWidget *menu, const char *str,
-		GtkSignalFunc sf, gpointer data, gboolean checked)
+GtkWidget *pidgin_new_check_item(GtkWidget *menu, const char *str,
+		GCallback cb, gpointer data, gboolean checked)
 {
 	GtkWidget *menuitem;
 	menuitem = gtk_check_menu_item_new_with_mnemonic(str);
@@ -259,8 +472,8 @@ GtkWidget *gaim_new_check_item(GtkWidget *menu, const char *str,
 
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitem), checked);
 
-	if (sf)
-		g_signal_connect(G_OBJECT(menuitem), "activate", sf, data);
+	if (cb)
+		g_signal_connect(G_OBJECT(menuitem), "activate", cb, data);
 
 	gtk_widget_show_all(menuitem);
 
@@ -268,7 +481,7 @@ GtkWidget *gaim_new_check_item(GtkWidget *menu, const char *str,
 }
 
 GtkWidget *
-gaim_pixbuf_toolbar_button_from_stock(const char *icon)
+pidgin_pixbuf_toolbar_button_from_stock(const char *icon)
 {
 	GtkWidget *button, *image, *bbox;
 
@@ -279,7 +492,7 @@ gaim_pixbuf_toolbar_button_from_stock(const char *icon)
 
 	gtk_container_add (GTK_CONTAINER(button), bbox);
 
-	image = gtk_image_new_from_stock(icon, GTK_ICON_SIZE_MENU);
+	image = gtk_image_new_from_stock(icon, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL));
 	gtk_box_pack_start(GTK_BOX(bbox), image, FALSE, FALSE, 0);
 
 	gtk_widget_show_all(bbox);
@@ -288,14 +501,14 @@ gaim_pixbuf_toolbar_button_from_stock(const char *icon)
 }
 
 GtkWidget *
-gaim_pixbuf_button_from_stock(const char *text, const char *icon,
-							  GaimButtonOrientation style)
+pidgin_pixbuf_button_from_stock(const char *text, const char *icon,
+							  PidginButtonOrientation style)
 {
 	GtkWidget *button, *image, *label, *bbox, *ibox, *lbox = NULL;
 
 	button = gtk_button_new();
 
-	if (style == GAIM_BUTTON_HORIZONTAL) {
+	if (style == PIDGIN_BUTTON_HORIZONTAL) {
 		bbox = gtk_hbox_new(FALSE, 0);
 		ibox = gtk_hbox_new(FALSE, 0);
 		if (text)
@@ -310,18 +523,18 @@ gaim_pixbuf_button_from_stock(const char *text, const char *icon,
 	gtk_container_add(GTK_CONTAINER(button), bbox);
 
 	if (icon) {
-		gtk_box_pack_start_defaults(GTK_BOX(bbox), ibox);
+		gtk_box_pack_start(GTK_BOX(bbox), ibox, TRUE, TRUE, 0);
 		image = gtk_image_new_from_stock(icon, GTK_ICON_SIZE_BUTTON);
 		gtk_box_pack_end(GTK_BOX(ibox), image, FALSE, TRUE, 0);
 	}
 
 	if (text) {
-		gtk_box_pack_start_defaults(GTK_BOX(bbox), lbox);
+		gtk_box_pack_start(GTK_BOX(bbox), lbox, TRUE, TRUE, 0);
 		label = gtk_label_new(NULL);
 		gtk_label_set_text_with_mnemonic(GTK_LABEL(label), text);
 		gtk_label_set_mnemonic_widget(GTK_LABEL(label), button);
 		gtk_box_pack_start(GTK_BOX(lbox), label, FALSE, TRUE, 0);
-		gaim_set_accessible_label (button, label);
+		pidgin_set_accessible_label (button, label);
 	}
 
 	gtk_widget_show_all(bbox);
@@ -330,7 +543,7 @@ gaim_pixbuf_button_from_stock(const char *text, const char *icon,
 }
 
 
-GtkWidget *gaim_new_item_from_stock(GtkWidget *menu, const char *str, const char *icon, GtkSignalFunc sf, gpointer data, guint accel_key, guint accel_mods, char *mod)
+GtkWidget *pidgin_new_item_from_stock(GtkWidget *menu, const char *str, const char *icon, GCallback cb, gpointer data, guint accel_key, guint accel_mods, char *mod)
 {
 	GtkWidget *menuitem;
 	/*
@@ -347,11 +560,11 @@ GtkWidget *gaim_new_item_from_stock(GtkWidget *menu, const char *str, const char
 	if (menu)
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 
-	if (sf)
-		g_signal_connect(G_OBJECT(menuitem), "activate", sf, data);
+	if (cb)
+		g_signal_connect(G_OBJECT(menuitem), "activate", cb, data);
 
 	if (icon != NULL) {
-		image = gtk_image_new_from_stock(icon, GTK_ICON_SIZE_MENU);
+		image = gtk_image_new_from_stock(icon, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL));
 		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menuitem), image);
 	}
 /* FIXME: this isn't right
@@ -374,12 +587,12 @@ GtkWidget *gaim_new_item_from_stock(GtkWidget *menu, const char *str, const char
 }
 
 GtkWidget *
-gaim_gtk_make_frame(GtkWidget *parent, const char *title)
+pidgin_make_frame(GtkWidget *parent, const char *title)
 {
 	GtkWidget *vbox, *label, *hbox;
 	char *labeltitle;
 
-	vbox = gtk_vbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(parent), vbox, FALSE, FALSE, 0);
 	gtk_widget_show(vbox);
 
@@ -392,9 +605,9 @@ gaim_gtk_make_frame(GtkWidget *parent, const char *title)
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
-	gaim_set_accessible_label (vbox, label);
+	pidgin_set_accessible_label (vbox, label);
 
-	hbox = gtk_hbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
 	gtk_widget_show(hbox);
 
@@ -402,201 +615,213 @@ gaim_gtk_make_frame(GtkWidget *parent, const char *title)
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 
-	vbox = gtk_vbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox, FALSE, FALSE, 0);
 	gtk_widget_show(vbox);
 
 	return vbox;
 }
 
-static void
-protocol_menu_cb(GtkWidget *optmenu, GCallback cb)
+static gpointer
+aop_option_menu_get_selected(GtkWidget *optmenu)
 {
-	GtkWidget *menu;
-	GtkWidget *item;
-	const char *protocol;
-	gpointer user_data;
+	gpointer data = NULL;
+	GtkTreeIter iter;
 
-	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(optmenu));
-	item = gtk_menu_get_active(GTK_MENU(menu));
+	g_return_val_if_fail(optmenu != NULL, NULL);
 
-	protocol = g_object_get_data(G_OBJECT(item), "protocol");
-	user_data = (g_object_get_data(G_OBJECT(optmenu), "user_data"));
+	if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(optmenu), &iter))
+		gtk_tree_model_get(gtk_combo_box_get_model(GTK_COMBO_BOX(optmenu)),
+		                   &iter, AOP_DATA_COLUMN, &data, -1);
 
-	if (cb != NULL)
-		((void (*)(GtkWidget *, const char *, gpointer))cb)(item, protocol,
-															user_data);
+	return data;
 }
 
-GtkWidget *
-gaim_gtk_protocol_option_menu_new(const char *id, GCallback cb,
-								  gpointer user_data)
+static void
+aop_menu_cb(GtkWidget *optmenu, GCallback cb)
 {
-	GaimPluginProtocolInfo *prpl_info;
-	GaimPlugin *plugin;
-	GtkWidget *hbox;
-	GtkWidget *label;
-	GtkWidget *optmenu;
-	GtkWidget *menu;
-	GtkWidget *item;
-	GtkWidget *image;
+	if (cb != NULL) {
+		((void (*)(GtkWidget *, gpointer, gpointer))cb)(optmenu,
+			aop_option_menu_get_selected(optmenu),
+			g_object_get_data(G_OBJECT(optmenu), "user_data"));
+	}
+}
+
+static void
+aop_option_menu_replace_menu(GtkWidget *optmenu, AopMenu *new_aop_menu)
+{
+	gtk_combo_box_set_model(GTK_COMBO_BOX(optmenu), new_aop_menu->model);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(optmenu), new_aop_menu->default_item);
+	g_free(new_aop_menu);
+}
+
+static GdkPixbuf *
+pidgin_create_prpl_icon_from_prpl(PurplePlugin *prpl, PidginPrplIconSize size, PurpleAccount *account)
+{
+	PurplePluginProtocolInfo *prpl_info;
+	const char *protoname = NULL;
+	char *tmp;
+	char *filename = NULL;
 	GdkPixbuf *pixbuf;
-	GdkPixbuf *scale;
-	GList *p;
-	GtkSizeGroup *sg;
-	char *filename;
-	const char *proto_name;
-	char buf[256];
-	int i, selected_index = -1;
 
-	optmenu = gtk_option_menu_new();
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	if (prpl_info->list_icon == NULL)
+		return NULL;
+
+	protoname = prpl_info->list_icon(account, NULL);
+	if (protoname == NULL)
+		return NULL;
+
+	/*
+	 * Status icons will be themeable too, and then it will look up
+	 * protoname from the theme
+	 */
+	tmp = g_strconcat(protoname, ".png", NULL);
+
+	filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "protocols",
+				    size == PIDGIN_PRPL_ICON_SMALL ? "16" :
+				    size == PIDGIN_PRPL_ICON_MEDIUM ? "22" : "48",
+				    tmp, NULL);
+	g_free(tmp);
+
+	pixbuf = pidgin_pixbuf_new_from_file(filename);
+	g_free(filename);
+
+	return pixbuf;
+}
+
+static GtkWidget *
+aop_option_menu_new(AopMenu *aop_menu, GCallback cb, gpointer user_data)
+{
+	GtkWidget *optmenu = NULL;
+	GtkCellRenderer *cr = NULL;
+
+	optmenu = gtk_combo_box_new();
 	gtk_widget_show(optmenu);
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu), cr = gtk_cell_renderer_pixbuf_new(), FALSE);
+	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "pixbuf", AOP_ICON_COLUMN);
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu), cr = gtk_cell_renderer_text_new(), TRUE);
+	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "text", AOP_NAME_COLUMN);
 
+	aop_option_menu_replace_menu(optmenu, aop_menu);
 	g_object_set_data(G_OBJECT(optmenu), "user_data", user_data);
 
-	menu = gtk_menu_new();
-	gtk_widget_show(menu);
-
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-
-	for (p = gaim_plugins_get_protocols(), i = 0;
-		 p != NULL;
-		 p = p->next, i++) {
-
-		plugin = (GaimPlugin *)p->data;
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(plugin);
-
-		/* Create the item. */
-		item = gtk_menu_item_new();
-
-		/* Create the hbox. */
-		hbox = gtk_hbox_new(FALSE, 4);
-		gtk_container_add(GTK_CONTAINER(item), hbox);
-		gtk_widget_show(hbox);
-
-		/* Load the image. */
-		proto_name = prpl_info->list_icon(NULL, NULL);
-		g_snprintf(buf, sizeof(buf), "%s.png", proto_name);
-
-		filename = g_build_filename(DATADIR, "pixmaps", "gaim", "status",
-									"default", buf, NULL);
-		pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
-		g_free(filename);
-
-		if (pixbuf != NULL) {
-			/* Scale and insert the image */
-			scale = gdk_pixbuf_scale_simple(pixbuf, 16, 16,
-											GDK_INTERP_BILINEAR);
-			image = gtk_image_new_from_pixbuf(scale);
-
-			g_object_unref(G_OBJECT(pixbuf));
-			g_object_unref(G_OBJECT(scale));
-		}
-		else
-			image = gtk_image_new();
-
-		gtk_size_group_add_widget(sg, image);
-
-		gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE, 0);
-		gtk_widget_show(image);
-
-		/* Create the label. */
-		label = gtk_label_new(plugin->info->name);
-		gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-		gtk_box_pack_start(GTK_BOX(hbox), label, TRUE, TRUE, 0);
-		gtk_widget_show(label);
-
-		g_object_set_data(G_OBJECT(item), "protocol", plugin->info->id);
-
-		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-		gtk_widget_show(item);
-		gaim_set_accessible_label (item, label);
-
-		if (id != NULL && !strcmp(plugin->info->id, id))
-			selected_index = i;
-	}
-
-	gtk_option_menu_set_menu(GTK_OPTION_MENU(optmenu), menu);
-
-	if (selected_index != -1)
-		gtk_option_menu_set_history(GTK_OPTION_MENU(optmenu), selected_index);
-
-	g_signal_connect(G_OBJECT(optmenu), "changed",
-					 G_CALLBACK(protocol_menu_cb), cb);
-
-	g_object_unref(sg);
+	g_signal_connect(G_OBJECT(optmenu), "changed", G_CALLBACK(aop_menu_cb), cb);
 
 	return optmenu;
 }
 
-GaimAccount *
-gaim_gtk_account_option_menu_get_selected(GtkWidget *optmenu)
+static void
+aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 {
-	GtkWidget *menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(optmenu));
-	GtkWidget *item = gtk_menu_get_active(GTK_MENU(menu));
-	return g_object_get_data(G_OBJECT(item), "account");
+	GtkTreeModel *model;
+	GtkTreeIter iter;
+	gpointer iter_data;
+	model = gtk_combo_box_get_model(GTK_COMBO_BOX(optmenu));
+	if (gtk_tree_model_get_iter_first(model, &iter)) {
+		do {
+			gtk_tree_model_get(model, &iter, AOP_DATA_COLUMN, &iter_data, -1);
+			if (iter_data == data) {
+				gtk_combo_box_set_active_iter(GTK_COMBO_BOX(optmenu), &iter);
+				return;
+			}
+		} while (gtk_tree_model_iter_next(model, &iter));
+	}
 }
 
-static void
-account_menu_cb(GtkWidget *optmenu, GCallback cb)
+static AopMenu *
+create_protocols_menu(const char *default_proto_id)
 {
-	GtkWidget *menu;
-	GtkWidget *item;
-	GaimAccount *account;
-	gpointer user_data;
+	AopMenu *aop_menu = NULL;
+	PurplePlugin *plugin;
+	GdkPixbuf *pixbuf = NULL;
+	GtkTreeIter iter;
+	GtkListStore *ls;
+	GList *p;
+	int i;
 
-	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(optmenu));
-	item = gtk_menu_get_active(GTK_MENU(menu));
+	ls = gtk_list_store_new(AOP_COLUMN_COUNT, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_POINTER);
 
-	account   = g_object_get_data(G_OBJECT(item),    "account");
-	user_data = g_object_get_data(G_OBJECT(optmenu), "user_data");
+	aop_menu = g_malloc0(sizeof(AopMenu));
+	aop_menu->default_item = 0;
+	aop_menu->model = GTK_TREE_MODEL(ls);
 
-	if (cb != NULL)
-		((void (*)(GtkWidget *, GaimAccount *, gpointer))cb)(item, account,
-															 user_data);
+	for (p = purple_plugins_get_protocols(), i = 0;
+		 p != NULL;
+		 p = p->next, i++) {
+
+		plugin = (PurplePlugin *)p->data;
+
+		pixbuf = pidgin_create_prpl_icon_from_prpl(plugin, PIDGIN_PRPL_ICON_SMALL, NULL);
+
+		gtk_list_store_append(ls, &iter);
+		gtk_list_store_set(ls, &iter,
+		                   AOP_ICON_COLUMN, pixbuf,
+		                   AOP_NAME_COLUMN, plugin->info->name,
+		                   AOP_DATA_COLUMN, plugin->info->id,
+		                   -1);
+
+		if (pixbuf)
+			g_object_unref(pixbuf);
+
+		if (default_proto_id != NULL && !strcmp(plugin->info->id, default_proto_id))
+			aop_menu->default_item = i;
+	}
+
+	return aop_menu;
 }
 
-static void
-create_account_menu(GtkWidget *optmenu, GaimAccount *default_account,
-					GaimFilterAccountFunc filter_func, gboolean show_all)
+GtkWidget *
+pidgin_protocol_option_menu_new(const char *id, GCallback cb,
+								  gpointer user_data)
 {
-	GaimAccount *account;
-	GtkWidget *menu;
-	GtkWidget *item;
-	GtkWidget *image;
-	GtkWidget *hbox;
-	GtkWidget *label;
-	GdkPixbuf *pixbuf;
-	GdkPixbuf *scale;
+	return aop_option_menu_new(create_protocols_menu(id), cb, user_data);
+}
+
+const char *
+pidgin_protocol_option_menu_get_selected(GtkWidget *optmenu)
+{
+	return (const char *)aop_option_menu_get_selected(optmenu);
+}
+
+PurpleAccount *
+pidgin_account_option_menu_get_selected(GtkWidget *optmenu)
+{
+	return (PurpleAccount *)aop_option_menu_get_selected(optmenu);
+}
+
+static AopMenu *
+create_account_menu(PurpleAccount *default_account,
+					PurpleFilterAccountFunc filter_func, gboolean show_all)
+{
+	AopMenu *aop_menu = NULL;
+	PurpleAccount *account;
+	GdkPixbuf *pixbuf = NULL;
 	GList *list;
 	GList *p;
-	GtkSizeGroup *sg;
-	char *filename;
-	const char *proto_name;
+	GtkListStore *ls;
+	GtkTreeIter iter;
+	int i;
 	char buf[256];
-	int i, selected_index = -1;
 
 	if (show_all)
-		list = gaim_accounts_get_all();
+		list = purple_accounts_get_all();
 	else
-		list = gaim_connections_get_all();
+		list = purple_connections_get_all();
 
-	menu = gtk_menu_new();
-	gtk_widget_show(menu);
+	ls = gtk_list_store_new(AOP_COLUMN_COUNT, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_POINTER);
 
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	aop_menu = g_malloc0(sizeof(AopMenu));
+	aop_menu->default_item = 0;
+	aop_menu->model = GTK_TREE_MODEL(ls);
 
 	for (p = list, i = 0; p != NULL; p = p->next, i++) {
-		GaimPluginProtocolInfo *prpl_info = NULL;
-		GaimPlugin *plugin;
-
 		if (show_all)
-			account = (GaimAccount *)p->data;
+			account = (PurpleAccount *)p->data;
 		else {
-			GaimConnection *gc = (GaimConnection *)p->data;
+			PurpleConnection *gc = (PurpleConnection *)p->data;
 
-			account = gaim_connection_get_account(gc);
+			account = purple_connection_get_account(gc);
 		}
 
 		if (filter_func && !filter_func(account)) {
@@ -604,123 +829,64 @@ create_account_menu(GtkWidget *optmenu, GaimAccount *default_account,
 			continue;
 		}
 
-		plugin = gaim_find_prpl(gaim_account_get_protocol_id(account));
+		pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
 
-		if (plugin != NULL)
-			prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(plugin);
-
-		/* Create the item. */
-		item = gtk_menu_item_new();
-
-		/* Create the hbox. */
-		hbox = gtk_hbox_new(FALSE, 4);
-		gtk_container_add(GTK_CONTAINER(item), hbox);
-		gtk_widget_show(hbox);
-
-		/* Load the image. */
-		if (prpl_info != NULL) {
-			proto_name = prpl_info->list_icon(account, NULL);
-			g_snprintf(buf, sizeof(buf), "%s.png", proto_name);
-
-			filename = g_build_filename(DATADIR, "pixmaps", "gaim", "status",
-			                            "default", buf, NULL);
-			pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
-			g_free(filename);
-
-			if (pixbuf != NULL) {
-				/* Scale and insert the image */
-				scale = gdk_pixbuf_scale_simple(pixbuf, 16, 16,
-				                                GDK_INTERP_BILINEAR);
-
-				if (gaim_account_is_disconnected(account) && show_all &&
-						gaim_connections_get_all())
-					gdk_pixbuf_saturate_and_pixelate(scale, scale, 0.0, FALSE);
-
-				image = gtk_image_new_from_pixbuf(scale);
-
-				g_object_unref(G_OBJECT(pixbuf));
-				g_object_unref(G_OBJECT(scale));
-			}
-			else
-				image = gtk_image_new();
+		if (pixbuf) {
+			if (purple_account_is_disconnected(account) && show_all &&
+					purple_connections_get_all())
+				gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
 		}
-		else
-			image = gtk_image_new();
 
-		gtk_size_group_add_widget(sg, image);
-
-		gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE, 0);
-		gtk_widget_show(image);
-
-		if (gaim_account_get_alias(account)) {
+		if (purple_account_get_alias(account)) {
 			g_snprintf(buf, sizeof(buf), "%s (%s) (%s)",
-					   gaim_account_get_username(account),
-					   gaim_account_get_alias(account),
-					   gaim_account_get_protocol_name(account));
+					   purple_account_get_username(account),
+					   purple_account_get_alias(account),
+					   purple_account_get_protocol_name(account));
 		} else {
 			g_snprintf(buf, sizeof(buf), "%s (%s)",
-					   gaim_account_get_username(account),
-					   gaim_account_get_protocol_name(account));
+					   purple_account_get_username(account),
+					   purple_account_get_protocol_name(account));
 		}
 
-		/* Create the label. */
-		label = gtk_label_new(buf);
-		gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-		gtk_box_pack_start(GTK_BOX(hbox), label, TRUE, TRUE, 0);
-		gtk_widget_show(label);
+		gtk_list_store_append(ls, &iter);
+		gtk_list_store_set(ls, &iter, 
+		                   AOP_ICON_COLUMN, pixbuf,
+		                   AOP_NAME_COLUMN, buf,
+		                   AOP_DATA_COLUMN, account,
+		                   -1);
 
-		g_object_set_data(G_OBJECT(item), "account", account);
+		if (pixbuf)
+			g_object_unref(pixbuf);
 
-		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-		gtk_widget_show(item);
-		gaim_set_accessible_label (item, label);
-
-		if (default_account != NULL && account == default_account)
-			selected_index = i;
+		if (default_account && account == default_account)
+			aop_menu->default_item = i;
 	}
 
-	g_object_unref(sg);
-
-	gtk_option_menu_set_menu(GTK_OPTION_MENU(optmenu), menu);
-
-	/* Set the place we should be at. */
-	if (selected_index != -1)
-		gtk_option_menu_set_history(GTK_OPTION_MENU(optmenu), selected_index);
+	return aop_menu;
 }
 
 static void
 regenerate_account_menu(GtkWidget *optmenu)
 {
-	GtkWidget *menu;
-	GtkWidget *item;
 	gboolean show_all;
-	GaimAccount *account;
-	GaimFilterAccountFunc filter_func;
+	PurpleAccount *account;
+	PurpleFilterAccountFunc filter_func;
 
-	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(optmenu));
-	item = gtk_menu_get_active(GTK_MENU(menu));
-	account = g_object_get_data(G_OBJECT(item), "account");
+	account = (PurpleAccount *)aop_option_menu_get_selected(optmenu);
+	show_all = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(optmenu), "show_all"));
+	filter_func = g_object_get_data(G_OBJECT(optmenu), "filter_func");
 
-	show_all = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(optmenu),
-												 "show_all"));
-
-	filter_func = g_object_get_data(G_OBJECT(optmenu),
-										   "filter_func");
-
-	gtk_option_menu_remove_menu(GTK_OPTION_MENU(optmenu));
-
-	create_account_menu(optmenu, account, filter_func, show_all);
+	aop_option_menu_replace_menu(optmenu, create_account_menu(account, filter_func, show_all));
 }
 
 static void
-account_menu_sign_on_off_cb(GaimConnection *gc, GtkWidget *optmenu)
+account_menu_sign_on_off_cb(PurpleConnection *gc, GtkWidget *optmenu)
 {
 	regenerate_account_menu(optmenu);
 }
 
 static void
-account_menu_added_removed_cb(GaimAccount *account, GtkWidget *optmenu)
+account_menu_added_removed_cb(PurpleAccount *account, GtkWidget *optmenu)
 {
 	regenerate_account_menu(optmenu);
 }
@@ -729,105 +895,55 @@ static gboolean
 account_menu_destroyed_cb(GtkWidget *optmenu, GdkEvent *event,
 						  void *user_data)
 {
-	gaim_signals_disconnect_by_handle(optmenu);
+	purple_signals_disconnect_by_handle(optmenu);
 
 	return FALSE;
 }
 
 void
-gaim_gtk_account_option_menu_set_selected(GtkWidget *optmenu, GaimAccount *account)
+pidgin_account_option_menu_set_selected(GtkWidget *optmenu, PurpleAccount *account)
 {
-	GtkWidget *menu;
-	GtkWidget *item;
-	gboolean show_all;
-	GaimAccount *curaccount;
-	GaimFilterAccountFunc filter_func;
-
-	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(optmenu));
-	item = gtk_menu_get_active(GTK_MENU(menu));
-	curaccount = g_object_get_data(G_OBJECT(item), "account");
-
-	if (account == curaccount)
-		return;
-
-	show_all = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(optmenu),
-												 "show_all"));
-
-	filter_func = g_object_get_data(G_OBJECT(optmenu),
-										   "filter_func");
-
-	gtk_option_menu_remove_menu(GTK_OPTION_MENU(optmenu));
-
-	create_account_menu(optmenu, account, filter_func, show_all);
+	aop_option_menu_select_by_data(optmenu, account);
 }
 
 GtkWidget *
-gaim_gtk_account_option_menu_new(GaimAccount *default_account,
+pidgin_account_option_menu_new(PurpleAccount *default_account,
 								 gboolean show_all, GCallback cb,
-								 GaimFilterAccountFunc filter_func,
+								 PurpleFilterAccountFunc filter_func,
 								 gpointer user_data)
 {
 	GtkWidget *optmenu;
 
 	/* Create the option menu */
-	optmenu = gtk_option_menu_new();
-	gtk_widget_show(optmenu);
+	optmenu = aop_option_menu_new(create_account_menu(default_account, filter_func, show_all), cb, user_data);
 
 	g_signal_connect(G_OBJECT(optmenu), "destroy",
 					 G_CALLBACK(account_menu_destroyed_cb), NULL);
 
-	/* Register the gaim sign on/off event callbacks. */
-	gaim_signal_connect(gaim_connections_get_handle(), "signed-on",
-						optmenu, GAIM_CALLBACK(account_menu_sign_on_off_cb),
+	/* Register the purple sign on/off event callbacks. */
+	purple_signal_connect(purple_connections_get_handle(), "signed-on",
+						optmenu, PURPLE_CALLBACK(account_menu_sign_on_off_cb),
 						optmenu);
-	gaim_signal_connect(gaim_connections_get_handle(), "signed-off",
-						optmenu, GAIM_CALLBACK(account_menu_sign_on_off_cb),
+	purple_signal_connect(purple_connections_get_handle(), "signed-off",
+						optmenu, PURPLE_CALLBACK(account_menu_sign_on_off_cb),
 						optmenu);
-	gaim_signal_connect(gaim_accounts_get_handle(), "account-added",
-						optmenu, GAIM_CALLBACK(account_menu_added_removed_cb),
+	purple_signal_connect(purple_accounts_get_handle(), "account-added",
+						optmenu, PURPLE_CALLBACK(account_menu_added_removed_cb),
 						optmenu);
-	gaim_signal_connect(gaim_accounts_get_handle(), "account-removed",
-						optmenu, GAIM_CALLBACK(account_menu_added_removed_cb),
+	purple_signal_connect(purple_accounts_get_handle(), "account-removed",
+						optmenu, PURPLE_CALLBACK(account_menu_added_removed_cb),
 						optmenu);
 
 	/* Set some data. */
 	g_object_set_data(G_OBJECT(optmenu), "user_data", user_data);
 	g_object_set_data(G_OBJECT(optmenu), "show_all", GINT_TO_POINTER(show_all));
-	g_object_set_data(G_OBJECT(optmenu), "filter_func",
-					  filter_func);
-
-	/* Create and set the actual menu. */
-	create_account_menu(optmenu, default_account, filter_func, show_all);
-
-	/* And now the last callback. */
-	g_signal_connect(G_OBJECT(optmenu), "changed",
-					 G_CALLBACK(account_menu_cb), cb);
+	g_object_set_data(G_OBJECT(optmenu), "filter_func", filter_func);
 
 	return optmenu;
 }
 
-gboolean
-gaim_gtk_check_if_dir(const char *path, GtkFileSelection *filesel)
-{
-	char *dirname;
-
-	if (g_file_test(path, G_FILE_TEST_IS_DIR)) {
-		/* append a / if needed */
-		if (path[strlen(path) - 1] != G_DIR_SEPARATOR) {
-			dirname = g_strconcat(path, G_DIR_SEPARATOR_S, NULL);
-		} else {
-			dirname = g_strdup(path);
-		}
-		gtk_file_selection_set_filename(filesel, dirname);
-		g_free(dirname);
-		return TRUE;
-	}
-
-	return FALSE;
-}
-
 void
-gaim_gtk_setup_gtkspell(GtkTextView *textview)
+pidgin_setup_gtkspell(GtkTextView *textview)
 {
 #ifdef USE_GTKSPELL
 	GError *error = NULL;
@@ -838,7 +954,7 @@ gaim_gtk_setup_gtkspell(GtkTextView *textview)
 
 	if (gtkspell_new_attach(textview, locale, &error) == NULL && error)
 	{
-		gaim_debug_warning("gtkspell", "Failed to setup GtkSpell: %s\n",
+		purple_debug_warning("gtkspell", "Failed to setup GtkSpell: %s\n",
 						   error->message);
 		g_error_free(error);
 	}
@@ -846,26 +962,26 @@ gaim_gtk_setup_gtkspell(GtkTextView *textview)
 }
 
 void
-gaim_gtk_save_accels_cb(GtkAccelGroup *accel_group, guint arg1,
+pidgin_save_accels_cb(GtkAccelGroup *accel_group, guint arg1,
                          GdkModifierType arg2, GClosure *arg3,
                          gpointer data)
 {
-	gaim_debug(GAIM_DEBUG_MISC, "accels",
+	purple_debug(PURPLE_DEBUG_MISC, "accels",
 	           "accel changed, scheduling save.\n");
 
 	if (!accels_save_timer)
-		accels_save_timer = g_timeout_add(5000, gaim_gtk_save_accels,
+		accels_save_timer = purple_timeout_add_seconds(5, pidgin_save_accels,
 		                                  NULL);
 }
 
 gboolean
-gaim_gtk_save_accels(gpointer data)
+pidgin_save_accels(gpointer data)
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(gaim_user_dir(), G_DIR_SEPARATOR_S,
+	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
 	                            "accels", NULL);
-	gaim_debug(GAIM_DEBUG_MISC, "accels", "saving accels to %s\n", filename);
+	purple_debug(PURPLE_DEBUG_MISC, "accels", "saving accels to %s\n", filename);
 	gtk_accel_map_save(filename);
 	g_free(filename);
 
@@ -874,26 +990,65 @@ gaim_gtk_save_accels(gpointer data)
 }
 
 void
-gaim_gtk_load_accels()
+pidgin_load_accels()
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(gaim_user_dir(), G_DIR_SEPARATOR_S,
+	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
 	                            "accels", NULL);
 	gtk_accel_map_load(filename);
 	g_free(filename);
 }
 
+static void
+show_retrieveing_info(PurpleConnection *conn, const char *name)
+{
+	PurpleNotifyUserInfo *info = purple_notify_user_info_new();
+	purple_notify_user_info_add_pair_plaintext(info, _("Information"), _("Retrieving..."));
+	purple_notify_userinfo(conn, name, info, NULL, NULL);
+	purple_notify_user_info_destroy(info);
+}
+
+void pidgin_retrieve_user_info(PurpleConnection *conn, const char *name)
+{
+	show_retrieveing_info(conn, name);
+	serv_get_info(conn, name);
+}
+
+void pidgin_retrieve_user_info_in_chat(PurpleConnection *conn, const char *name, int chat)
+{
+	char *who = NULL;
+	PurplePluginProtocolInfo *prpl_info = NULL;
+
+	if (chat < 0) {
+		pidgin_retrieve_user_info(conn, name);
+		return;
+	}
+
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(conn));
+	if (prpl_info != NULL && prpl_info->get_cb_real_name)
+		who = prpl_info->get_cb_real_name(conn, chat, name);
+	if (prpl_info == NULL || prpl_info->get_cb_info == NULL) {
+		pidgin_retrieve_user_info(conn, who ? who : name);
+		g_free(who);
+		return;
+	}
+
+	show_retrieveing_info(conn, who ? who : name);
+	prpl_info->get_cb_info(conn, chat, name);
+	g_free(who);
+}
+
 gboolean
-gaim_gtk_parse_x_im_contact(const char *msg, gboolean all_accounts,
-							GaimAccount **ret_account, char **ret_protocol,
+pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
+							PurpleAccount **ret_account, char **ret_protocol,
 							char **ret_username, char **ret_alias)
 {
 	char *protocol = NULL;
 	char *username = NULL;
 	char *alias    = NULL;
 	char *str;
-	char *c, *s;
+	char *s;
 	gboolean valid;
 
 	g_return_val_if_fail(msg          != NULL, FALSE);
@@ -935,7 +1090,7 @@ gaim_gtk_parse_x_im_contact(const char *msg, gboolean all_accounts,
 		if (*s == '\r') *s++ = '\0';
 		if (*s == '\n') *s++ = '\0';
 
-		if ((c = strchr(key, ':')) != NULL)
+		if (strchr(key, ':') != NULL)
 		{
 			if (!g_ascii_strcasecmp(key, "X-IM-Username:"))
 				username = g_strdup(value);
@@ -960,27 +1115,27 @@ gaim_gtk_parse_x_im_contact(const char *msg, gboolean all_accounts,
 		if (ret_account != NULL)
 		{
 			GList *list;
-			GaimAccount *account = NULL;
+			PurpleAccount *account = NULL;
 			GList *l;
 			const char *protoname;
 
 			if (all_accounts)
-				list = gaim_accounts_get_all();
+				list = purple_accounts_get_all();
 			else
-				list = gaim_connections_get_all();
+				list = purple_connections_get_all();
 
 			for (l = list; l != NULL; l = l->next)
 			{
-				GaimConnection *gc;
-				GaimPluginProtocolInfo *prpl_info = NULL;
-				GaimPlugin *plugin;
+				PurpleConnection *gc;
+				PurplePluginProtocolInfo *prpl_info = NULL;
+				PurplePlugin *plugin;
 
 				if (all_accounts)
 				{
-					account = (GaimAccount *)l->data;
+					account = (PurpleAccount *)l->data;
 
-					plugin = gaim_plugins_find_with_id(
-						gaim_account_get_protocol_id(account));
+					plugin = purple_plugins_find_with_id(
+						purple_account_get_protocol_id(account));
 
 					if (plugin == NULL)
 					{
@@ -989,14 +1144,14 @@ gaim_gtk_parse_x_im_contact(const char *msg, gboolean all_accounts,
 						continue;
 					}
 
-					prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(plugin);
+					prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
 				}
 				else
 				{
-					gc = (GaimConnection *)l->data;
-					account = gaim_connection_get_account(gc);
+					gc = (PurpleConnection *)l->data;
+					account = purple_connection_get_account(gc);
 
-					prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+					prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 				}
 
 				protoname = prpl_info->list_icon(account, NULL);
@@ -1013,16 +1168,16 @@ gaim_gtk_parse_x_im_contact(const char *msg, gboolean all_accounts,
 			{
 				for (l = list; l != NULL; l = l->next)
 				{
-					GaimConnection *gc;
-					GaimPluginProtocolInfo *prpl_info = NULL;
-					GaimPlugin *plugin;
+					PurpleConnection *gc;
+					PurplePluginProtocolInfo *prpl_info = NULL;
+					PurplePlugin *plugin;
 
 					if (all_accounts)
 					{
-						account = (GaimAccount *)l->data;
+						account = (PurpleAccount *)l->data;
 
-						plugin = gaim_plugins_find_with_id(
-							gaim_account_get_protocol_id(account));
+						plugin = purple_plugins_find_with_id(
+							purple_account_get_protocol_id(account));
 
 						if (plugin == NULL)
 						{
@@ -1031,14 +1186,14 @@ gaim_gtk_parse_x_im_contact(const char *msg, gboolean all_accounts,
 							continue;
 						}
 
-						prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(plugin);
+						prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
 					}
 					else
 					{
-						gc = (GaimConnection *)l->data;
-						account = gaim_connection_get_account(gc);
+						gc = (PurpleConnection *)l->data;
+						account = purple_connection_get_account(gc);
 
-						prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+						prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 					}
 
 					protoname = prpl_info->list_icon(account, NULL);
@@ -1068,17 +1223,13 @@ gaim_gtk_parse_x_im_contact(const char *msg, gboolean all_accounts,
 }
 
 void
-gaim_set_accessible_label (GtkWidget *w, GtkWidget *l)
+pidgin_set_accessible_label (GtkWidget *w, GtkWidget *l)
 {
-	AtkObject *acc, *label;
-	AtkObject *rel_obj[1];
-	AtkRelationSet *set;
-	AtkRelation *relation;
+	AtkObject *acc;
 	const gchar *label_text;
 	const gchar *existing_name;
 
 	acc = gtk_widget_get_accessible (w);
-	label = gtk_widget_get_accessible (l);
 
 	/* If this object has no name, set it's name with the label text */
 	existing_name = atk_object_get_name (acc);
@@ -1088,12 +1239,30 @@ gaim_set_accessible_label (GtkWidget *w, GtkWidget *l)
 			atk_object_set_name (acc, label_text);
 	}
 
+	pidgin_set_accessible_relations(w, l);
+}
+
+void
+pidgin_set_accessible_relations (GtkWidget *w, GtkWidget *l)
+{
+	AtkObject *acc, *label;
+	AtkObject *rel_obj[1];
+	AtkRelationSet *set;
+	AtkRelation *relation;
+
+	acc = gtk_widget_get_accessible (w);
+	label = gtk_widget_get_accessible (l);
+
+	/* Make sure mnemonics work */
+	gtk_label_set_mnemonic_widget(GTK_LABEL(l), w);
+
 	/* Create the labeled-by relation */
 	set = atk_object_ref_relation_set (acc);
 	rel_obj[0] = label;
 	relation = atk_relation_new (rel_obj, 1, ATK_RELATION_LABELLED_BY);
 	atk_relation_set_add (set, relation);
 	g_object_unref (relation);
+	g_object_unref(set);
 
 	/* Create the label-for relation */
 	set = atk_object_ref_relation_set (label);
@@ -1101,11 +1270,11 @@ gaim_set_accessible_label (GtkWidget *w, GtkWidget *l)
 	relation = atk_relation_new (rel_obj, 1, ATK_RELATION_LABEL_FOR);
 	atk_relation_set_add (set, relation);
 	g_object_unref (relation);
+	g_object_unref(set);
 }
 
-#if GTK_CHECK_VERSION(2,2,0)
-static void
-gaim_gtk_menu_position_func(GtkMenu *menu,
+void
+pidgin_menu_position_func_helper(GtkMenu *menu,
 							gint *x,
 							gint *y,
 							gboolean *push_in,
@@ -1141,7 +1310,7 @@ gaim_gtk_menu_position_func(GtkMenu *menu,
 
 	monitor_num = gdk_screen_get_monitor_at_point (screen, *x, *y);
 
-	push_in = FALSE;
+	*push_in = FALSE;
 
 	/*
 	 * The placement of popup menus horizontally works like this (with
@@ -1253,10 +1422,9 @@ gaim_gtk_menu_position_func(GtkMenu *menu,
 	}
 }
 
-#endif
 
 void
-gaim_gtk_treeview_popup_menu_position_func(GtkMenu *menu,
+pidgin_treeview_popup_menu_position_func(GtkMenu *menu,
 										   gint *x,
 										   gint *y,
 										   gboolean *push_in,
@@ -1275,9 +1443,7 @@ gaim_gtk_treeview_popup_menu_position_func(GtkMenu *menu,
 
 	*x += rect.x+rect.width;
 	*y += rect.y+rect.height+ythickness;
-#if GTK_CHECK_VERSION(2,2,0)
-	gaim_gtk_menu_position_func (menu, x, y, push_in, data);
-#endif
+	pidgin_menu_position_func_helper(menu, x, y, push_in, data);
 }
 
 enum {
@@ -1288,78 +1454,88 @@ enum {
 
 typedef struct {
 	char *filename;
-	GaimAccount *account;
+	PurpleAccount *account;
 	char *who;
 } _DndData;
 
 static void dnd_image_ok_callback(_DndData *data, int choice)
 {
-	char *filedata;
+	const gchar *shortname;
+	gchar *filedata;
 	size_t size;
 	struct stat st;
 	GError *err = NULL;
-	GaimConversation *conv;
-	GaimGtkConversation *gtkconv;
+	PurpleConversation *conv;
+	PidginConversation *gtkconv;
 	GtkTextIter iter;
 	int id;
+	PurpleBuddy *buddy;
+	PurpleContact *contact;
 	switch (choice) {
 	case DND_BUDDY_ICON:
 		if (g_stat(data->filename, &st)) {
 			char *str;
 
 			str = g_strdup_printf(_("The following error has occurred loading %s: %s"),
-						data->filename, strerror(errno));
-			gaim_notify_error(NULL, NULL,
+						data->filename, g_strerror(errno));
+			purple_notify_error(NULL, NULL,
 					  _("Failed to load image"),
 					  str);
 			g_free(str);
 
-			return;
+			break;
 		}
 
-		gaim_gtk_set_custom_buddy_icon(data->account, data->who, data->filename);
+		buddy = purple_find_buddy(data->account, data->who);
+		if (!buddy) {
+			purple_debug_info("custom-icon", "You can only set custom icons for people on your buddylist.\n");
+			break;
+		}
+		contact = purple_buddy_get_contact(buddy);
+		purple_buddy_icons_node_set_custom_icon_from_file((PurpleBlistNode*)contact, data->filename);
 		break;
 	case DND_FILE_TRANSFER:
-		serv_send_file(gaim_account_get_connection(data->account), data->who, data->filename);
+		serv_send_file(purple_account_get_connection(data->account), data->who, data->filename);
 		break;
 	case DND_IM_IMAGE:
-		conv = gaim_conversation_new(GAIM_CONV_TYPE_IM, data->account, data->who);
-		gtkconv = GAIM_GTK_CONVERSATION(conv);
+		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, data->account, data->who);
+		gtkconv = PIDGIN_CONVERSATION(conv);
 
 		if (!g_file_get_contents(data->filename, &filedata, &size,
 					 &err)) {
 			char *str;
 
 			str = g_strdup_printf(_("The following error has occurred loading %s: %s"), data->filename, err->message);
-			gaim_notify_error(NULL, NULL,
+			purple_notify_error(NULL, NULL,
 					  _("Failed to load image"),
 					  str);
 
 			g_error_free(err);
 			g_free(str);
 
-			return;
+			break;
 		}
-		id = gaim_imgstore_add(filedata, size, data->filename);
-		g_free(filedata);
+		shortname = strrchr(data->filename, G_DIR_SEPARATOR);
+		shortname = shortname ? shortname + 1 : data->filename;
+		id = purple_imgstore_add_with_id(filedata, size, shortname);
 
 		gtk_text_buffer_get_iter_at_mark(GTK_IMHTML(gtkconv->entry)->text_buffer, &iter,
 						 gtk_text_buffer_get_insert(GTK_IMHTML(gtkconv->entry)->text_buffer));
 		gtk_imhtml_insert_image_at_iter(GTK_IMHTML(gtkconv->entry), id, &iter);
-		gaim_imgstore_unref(id);
+		purple_imgstore_unref_by_id(id);
 
 		break;
 	}
-	free(data->filename);
-	free(data->who);
-	free(data);
+	g_free(data->filename);
+	g_free(data->who);
+	g_free(data);
 }
 
 static void dnd_image_cancel_callback(_DndData *data, int choice)
 {
-	free(data->filename);
-	free(data->who);
-	free(data);
+	g_free(data->filename);
+	g_free(data->who);
+	g_free(data);
 }
 
 static void dnd_set_icon_ok_cb(_DndData *data)
@@ -1369,33 +1545,33 @@ static void dnd_set_icon_ok_cb(_DndData *data)
 
 static void dnd_set_icon_cancel_cb(_DndData *data)
 {
-	free(data->filename);
-	free(data->who);
-	free(data);
+	g_free(data->filename);
+	g_free(data->who);
+	g_free(data);
 }
 
 void
-gaim_dnd_file_manage(GtkSelectionData *sd, GaimAccount *account, const char *who)
+pidgin_dnd_file_manage(GtkSelectionData *sd, PurpleAccount *account, const char *who)
 {
-	GList *tmp;
 	GdkPixbuf *pb;
-	GList *files = gaim_uri_list_extract_filenames((const gchar *)sd->data);
-	GaimConnection *gc = gaim_account_get_connection(account);
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	gboolean file_send_ok = FALSE;
+	GList *files = purple_uri_list_extract_filenames((const gchar *)sd->data);
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
 #ifndef _WIN32
-	GaimDesktopItem *item;
+	PurpleDesktopItem *item;
 #endif
+	gchar *filename = NULL;
+	gchar *basename = NULL;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(who != NULL);
 
-	for(tmp = files; tmp != NULL ; tmp = g_list_next(tmp)) {
-		gchar *filename = tmp->data;
-		gchar *basename = g_path_get_basename(filename);
+	for ( ; files; files = g_list_delete_link(files, files)) {
+		g_free(filename);
+		g_free(basename);
 
-		/* Set the default action: don't send anything */
-		file_send_ok = FALSE;
+		filename = files->data;
+		basename = g_path_get_basename(filename);
 
 		/* XXX - Make ft API support creating a transfer with more than one file */
 		if (!g_file_test(filename, G_FILE_TEST_EXISTS)) {
@@ -1405,19 +1581,21 @@ gaim_dnd_file_manage(GtkSelectionData *sd, GaimAccount *account, const char *who
 		/* XXX - make ft api suupport sending a directory */
 		/* Are we dealing with a directory? */
 		if (g_file_test(filename, G_FILE_TEST_IS_DIR)) {
-			char *str;
+			char *str, *str2;
 
 			str = g_strdup_printf(_("Cannot send folder %s."), basename);
-			gaim_notify_error(NULL, NULL,
-					  str,_("Gaim cannot transfer a folder. You will need to send the files within individually"));
+			str2 = g_strdup_printf(_("%s cannot transfer a folder. You will need to send the files within individually."), PIDGIN_NAME);
+
+			purple_notify_error(NULL, NULL,
+					  str, str2);
 
 			g_free(str);
-
+			g_free(str2);
 			continue;
 		}
 
 		/* Are we dealing with an image? */
-		pb = gdk_pixbuf_new_from_file(filename, NULL);
+		pb = pidgin_pixbuf_new_from_file(filename);
 		if (pb) {
 			_DndData *data = g_malloc(sizeof(_DndData));
 			gboolean ft = FALSE, im = FALSE;
@@ -1427,105 +1605,124 @@ gaim_dnd_file_manage(GtkSelectionData *sd, GaimAccount *account, const char *who
 			data->account = account;
 
 			if (gc)
-				prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+				prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 
 			if (prpl_info && prpl_info->options & OPT_PROTO_IM_IMAGE)
 				im = TRUE;
 
 			if (prpl_info && prpl_info->can_receive_file)
 				ft = prpl_info->can_receive_file(gc, who);
+			else if (prpl_info && prpl_info->send_file)
+				ft = TRUE;
 
 			if (im && ft)
-				gaim_request_choice(NULL, NULL,
+				purple_request_choice(NULL, NULL,
 						    _("You have dragged an image"),
 						    _("You can send this image as a file transfer, "
 						      "embed it into this message, or use it as the buddy icon for this user."),
-						    DND_FILE_TRANSFER, "OK", (GCallback)dnd_image_ok_callback,
-						    "Cancel", (GCallback)dnd_image_cancel_callback, data,
-						    _("Set as buddy icon"), DND_BUDDY_ICON,
+						    DND_FILE_TRANSFER, _("OK"), (GCallback)dnd_image_ok_callback,
+						    _("Cancel"), (GCallback)dnd_image_cancel_callback,
+							account, who, NULL,
+							data,
+							_("Set as buddy icon"), DND_BUDDY_ICON,
 						    _("Send image file"), DND_FILE_TRANSFER,
-						    _("Insert in message"), DND_IM_IMAGE, NULL);
+						    _("Insert in message"), DND_IM_IMAGE,
+							NULL);
 			else if (!(im || ft))
-				gaim_request_yes_no(NULL, NULL, _("You have dragged an image"),
-						       _("Would you like to set it as the buddy icon for this user?"),
-						    0, data, (GCallback)dnd_set_icon_ok_cb, (GCallback)dnd_set_icon_cancel_cb);
+				purple_request_yes_no(NULL, NULL, _("You have dragged an image"),
+							_("Would you like to set it as the buddy icon for this user?"),
+							PURPLE_DEFAULT_ACTION_NONE,
+							account, who, NULL,
+							data, (GCallback)dnd_set_icon_ok_cb, (GCallback)dnd_set_icon_cancel_cb);
 			else
-				gaim_request_choice(NULL, NULL,
+				purple_request_choice(NULL, NULL,
 						    _("You have dragged an image"),
-						    ft ? _("You can send this image as a file transfer or "
-							   "embed it into this message, or use it as the buddy icon for this user.") :
-						    _("You can insert this image into this message, or use it as the buddy icon for this user"),
-						    ft ? DND_FILE_TRANSFER : DND_IM_IMAGE, "OK", (GCallback)dnd_image_ok_callback,
-						    "Cancel", (GCallback)dnd_image_cancel_callback, data,
+						    (ft ? _("You can send this image as a file transfer, or use it as the buddy icon for this user.") :
+						    _("You can insert this image into this message, or use it as the buddy icon for this user")),
+						    (ft ? DND_FILE_TRANSFER : DND_IM_IMAGE),
+							_("OK"), (GCallback)dnd_image_ok_callback,
+						    _("Cancel"), (GCallback)dnd_image_cancel_callback,
+							account, who, NULL,
+							data,
 						    _("Set as buddy icon"), DND_BUDDY_ICON,
-						    ft ? _("Send image file") : _("Insert in message"), ft ? DND_FILE_TRANSFER : DND_IM_IMAGE, NULL);
+						    (ft ? _("Send image file") : _("Insert in message")), (ft ? DND_FILE_TRANSFER : DND_IM_IMAGE),
+							NULL);
+			g_object_unref(G_OBJECT(pb));
+
+			g_free(basename);
+			while (files) {
+				g_free(files->data);
+				files = g_list_delete_link(files, files);
+			}
 			return;
 		}
 
 #ifndef _WIN32
 		/* Are we trying to send a .desktop file? */
-		else if (gaim_str_has_suffix(basename, ".desktop") && (item = gaim_desktop_item_new_from_file(filename))) {
-			GaimDesktopItemType dtype;
+		else if (purple_str_has_suffix(basename, ".desktop") && (item = purple_desktop_item_new_from_file(filename))) {
+			PurpleDesktopItemType dtype;
 			char key[64];
 			const char *itemname = NULL;
 
-#if GTK_CHECK_VERSION(2,6,0)
 			const char * const *langs;
 			int i;
 			langs = g_get_language_names();
 			for (i = 0; langs[i]; i++) {
 				g_snprintf(key, sizeof(key), "Name[%s]", langs[i]);
-				itemname = gaim_desktop_item_get_string(item, key);
+				itemname = purple_desktop_item_get_string(item, key);
 				break;
 			}
-#else
-			const char *lang = g_getenv("LANG");
-			char *dot;
-			dot = strchr(lang, '.');
-			if (dot)
-				*dot = '\0';
-			g_snprintf(key, sizeof(key), "Name[%s]", lang);
-			itemname = gaim_desktop_item_get_string(item, key);
-#endif
+
 			if (!itemname)
-				itemname = gaim_desktop_item_get_string(item, "Name");
+				itemname = purple_desktop_item_get_string(item, "Name");
 
-			dtype = gaim_desktop_item_get_entry_type(item);
+			dtype = purple_desktop_item_get_entry_type(item);
 			switch (dtype) {
-				GaimConversation *conv;
-				GaimGtkConversation *gtkconv;
+				PurpleConversation *conv;
+				PidginConversation *gtkconv;
 
-			case GAIM_DESKTOP_ITEM_TYPE_LINK:
-				conv = gaim_conversation_new(GAIM_CONV_TYPE_IM, account, who);
-				gtkconv =  GAIM_GTK_CONVERSATION(conv);
+			case PURPLE_DESKTOP_ITEM_TYPE_LINK:
+				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, who);
+				gtkconv =  PIDGIN_CONVERSATION(conv);
 				gtk_imhtml_insert_link(GTK_IMHTML(gtkconv->entry),
 						       gtk_text_buffer_get_insert(GTK_IMHTML(gtkconv->entry)->text_buffer),
-						       gaim_desktop_item_get_string(item, "URL"), itemname);
+						       purple_desktop_item_get_string(item, "URL"), itemname);
 				break;
 			default:
-				/* I don't know if we really want to do anything here.  Most of the desktop item types are crap like
-				 * "MIME Type" (I have no clue how that would be a desktop item) and "Comment"... nothing we can really
-				 * send.  The only logical one is "Application," but do we really want to send a binary and nothing else?
-				 * Probably not.  I'll just give an error and return. */
+				/* I don't know if we really want to do anything here.  Most of
+				 * the desktop item types are crap like "MIME Type" (I have no
+				 * clue how that would be a desktop item) and "Comment"...
+				 * nothing we can really send.  The only logical one is
+				 * "Application," but do we really want to send a binary and
+				 * nothing else? Probably not.  I'll just give an error and
+				 * return. */
 				/* The original patch sent the icon used by the launcher.  That's probably wrong */
-				gaim_notify_error(NULL, NULL, _("Cannot send launcher"), _("You dragged a desktop launcher. "
-											   "Most likely you wanted to send whatever this launcher points to instead of this launcher"
-											   " itself."));
+				purple_notify_error(NULL, NULL, _("Cannot send launcher"),
+				                    _("You dragged a desktop launcher. Most "
+				                      "likely you wanted to send the target "
+				                      "of this launcher instead of this "
+				                      "launcher itself."));
 				break;
 			}
-			gaim_desktop_item_unref(item);
+			purple_desktop_item_unref(item);
+			g_free(basename);
+			while (files) {
+				g_free(files->data);
+				files = g_list_delete_link(files, files);
+			}
 			return;
 		}
 #endif /* _WIN32 */
 
 		/* Everything is fine, let's send */
 		serv_send_file(gc, who, filename);
-		g_free(filename);
 	}
-	g_list_free(files);
+
+	g_free(filename);
+	g_free(basename);
 }
 
-void gaim_gtk_buddy_icon_get_scale_size(GdkPixbuf *buf, GaimBuddyIconSpec *spec, GaimIconScaleRules rules, int *width, int *height)
+void pidgin_buddy_icon_get_scale_size(GdkPixbuf *buf, PurpleBuddyIconSpec *spec, PurpleIconScaleRules rules, int *width, int *height)
 {
 	*width = gdk_pixbuf_get_width(buf);
 	*height = gdk_pixbuf_get_height(buf);
@@ -1533,7 +1730,7 @@ void gaim_gtk_buddy_icon_get_scale_size(GdkPixbuf *buf, GaimBuddyIconSpec *spec,
 	if ((spec == NULL) || !(spec->scale_rules & rules))
 		return;
 
-	gaim_buddy_icon_get_scale_size(spec, width, height);
+	purple_buddy_icon_get_scale_size(spec, width, height);
 
 	/* and now for some arbitrary sanity checks */
 	if(*width > 100)
@@ -1542,134 +1739,83 @@ void gaim_gtk_buddy_icon_get_scale_size(GdkPixbuf *buf, GaimBuddyIconSpec *spec,
 		*height = 100;
 }
 
-GdkPixbuf *
-gaim_gtk_create_prpl_icon(GaimAccount *account, double scale_factor)
+GdkPixbuf * pidgin_create_status_icon(PurpleStatusPrimitive prim, GtkWidget *w, const char *size)
 {
-	GaimPlugin *prpl;
-	GaimPluginProtocolInfo *prpl_info;
-	const char *protoname = NULL;
-	char buf[256]; /* TODO: We should use a define for max file length */
-	char *filename = NULL;
-	GdkPixbuf *pixbuf, *scaled;
+	GtkIconSize icon_size = gtk_icon_size_from_name(size);
+	GdkPixbuf *pixbuf = NULL;
+	const char *stock = pidgin_stock_id_from_status_primitive(prim);
 
-	g_return_val_if_fail(account != NULL, NULL);
-
-	prpl = gaim_find_prpl(gaim_account_get_protocol_id(account));
-	if (prpl == NULL)
-		return NULL;
-
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(prpl);
-	if (prpl_info->list_icon == NULL)
-		return NULL;
-
-	protoname = prpl_info->list_icon(account, NULL);
-	if (protoname == NULL)
-		return NULL;
-
-	/*
-	 * Status icons will be themeable too, and then it will look up
-	 * protoname from the theme
-	 */
-	g_snprintf(buf, sizeof(buf), "%s.png", protoname);
-
-	filename = g_build_filename(DATADIR, "pixmaps", "gaim", "status",
-								"default", buf, NULL);
-	pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
-	g_free(filename);
-
-	scaled = gdk_pixbuf_scale_simple(pixbuf, 32*scale_factor,
-				32*scale_factor, GDK_INTERP_BILINEAR);
-	g_object_unref(pixbuf);
-
-	return scaled;
-}
-
-static GdkPixbuf *
-overlay_status_onto_icon(GdkPixbuf *pixbuf, GaimStatusPrimitive primitive)
-{
-	const char *type_name;
-	char basename[256];
-	char *filename;
-	GdkPixbuf *emblem;
-
-	type_name = gaim_primitive_get_id_from_type(primitive);
-
-	g_snprintf(basename, sizeof(basename), "%s.png", type_name);
-	filename = g_build_filename(DATADIR, "pixmaps", "gaim", "status",
-								"default", basename, NULL);
-	emblem = gdk_pixbuf_new_from_file(filename, NULL);
-	g_free(filename);
-
-	if (emblem != NULL) {
-		int width, height, emblem_width, emblem_height;
-		int new_emblem_width, new_emblem_height;
-
-		width = gdk_pixbuf_get_width(pixbuf);
-		height = gdk_pixbuf_get_height(pixbuf);
-		emblem_width = gdk_pixbuf_get_width(emblem);
-		emblem_height = gdk_pixbuf_get_height(emblem);
-
-		/*
-		 * Figure out how big to make the emblem.  Normally the emblem
-		 * will have half the width of the pixbuf.  But we don't make
-		 * an emblem any smaller than 10 pixels because it becomes
-		 * unrecognizable, unless the width of the pixbuf is less than
-		 * 10 pixels, in which case we make the emblem width the same
-		 * as the pixbuf width.
-		 */
-		new_emblem_width = MAX(width / 2, MIN(width, 10));
-		new_emblem_height = MAX(height / 2, MIN(height, 10));
-
-		/* Overlay emblem onto the bottom right corner of pixbuf */
-		gdk_pixbuf_composite(emblem, pixbuf,
-				width - new_emblem_width, height - new_emblem_height,
-				new_emblem_width, new_emblem_height,
-				width - new_emblem_width, height - new_emblem_height,
-				(double)new_emblem_width / (double)emblem_width,
-				(double)new_emblem_height / (double)emblem_height,
-				GDK_INTERP_BILINEAR,
-				255);
-		g_object_unref(emblem);
-	}
-
+	pixbuf = gtk_widget_render_icon (w, stock ? stock : PIDGIN_STOCK_STATUS_AVAILABLE,
+			icon_size, "GtkWidget");
 	return pixbuf;
 }
 
-GdkPixbuf *
-gaim_gtk_create_prpl_icon_with_status(GaimAccount *account, GaimStatusType *status_type, double scale_factor)
+static const char *
+stock_id_from_status_primitive_idle(PurpleStatusPrimitive prim, gboolean idle)
 {
-	GdkPixbuf *pixbuf;
+	const char *stock = NULL;
+	switch (prim) {
+		case PURPLE_STATUS_UNSET:
+			stock = NULL;
+			break;
+		case PURPLE_STATUS_UNAVAILABLE:
+			stock = idle ? PIDGIN_STOCK_STATUS_BUSY_I : PIDGIN_STOCK_STATUS_BUSY;
+			break;
+		case PURPLE_STATUS_AWAY:
+			stock = idle ? PIDGIN_STOCK_STATUS_AWAY_I : PIDGIN_STOCK_STATUS_AWAY;
+			break;
+		case PURPLE_STATUS_EXTENDED_AWAY:
+			stock = idle ? PIDGIN_STOCK_STATUS_XA_I : PIDGIN_STOCK_STATUS_XA;
+			break;
+		case PURPLE_STATUS_INVISIBLE:
+			stock = PIDGIN_STOCK_STATUS_INVISIBLE;
+			break;
+		case PURPLE_STATUS_OFFLINE:
+			stock = idle ? PIDGIN_STOCK_STATUS_OFFLINE_I : PIDGIN_STOCK_STATUS_OFFLINE;
+			break;
+		default:
+			stock = idle ? PIDGIN_STOCK_STATUS_AVAILABLE_I : PIDGIN_STOCK_STATUS_AVAILABLE;
+			break;
+	}
+	return stock;
+}
 
-	pixbuf = gaim_gtk_create_prpl_icon(account, scale_factor);
-	if (pixbuf == NULL)
-		return NULL;
+const char *
+pidgin_stock_id_from_status_primitive(PurpleStatusPrimitive prim)
+{
+	return stock_id_from_status_primitive_idle(prim, FALSE);
+}
 
-	/*
-	 * TODO: Let the prpl pick the emblem on a per status basis,
-	 *       and only use the primitive as a fallback?
-	 */
+const char *
+pidgin_stock_id_from_presence(PurplePresence *presence)
+{
+	PurpleStatus *status;
+	PurpleStatusType *type;
+	PurpleStatusPrimitive prim;
+	gboolean idle;
 
-	return overlay_status_onto_icon(pixbuf,
-				gaim_status_type_get_primitive(status_type));
+	g_return_val_if_fail(presence, NULL);
+
+	status = purple_presence_get_active_status(presence);
+	type = purple_status_get_type(status);
+	prim = purple_status_type_get_primitive(type);
+
+	idle = purple_presence_is_idle(presence);
+
+	return stock_id_from_status_primitive_idle(prim, idle);
 }
 
 GdkPixbuf *
-gaim_gtk_create_gaim_icon_with_status(GaimStatusPrimitive primitive, double scale_factor)
+pidgin_create_prpl_icon(PurpleAccount *account, PidginPrplIconSize size)
 {
-	gchar *filename;
-	GdkPixbuf *orig, *pixbuf;
+	PurplePlugin *prpl;
 
-	filename = g_build_filename(DATADIR, "pixmaps", "gaim.png", NULL);
-	orig = gdk_pixbuf_new_from_file(filename, NULL);
-	g_free(filename);
-	if (orig == NULL)
+	g_return_val_if_fail(account != NULL, NULL);
+
+	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	if (prpl == NULL)
 		return NULL;
-
-	pixbuf = gdk_pixbuf_scale_simple(orig, 32*scale_factor,
-					32*scale_factor, GDK_INTERP_BILINEAR);
-	g_object_unref(G_OBJECT(orig));
-
-	return overlay_status_onto_icon(pixbuf, primitive);
+	return pidgin_create_prpl_icon_from_prpl(prpl, size, account);
 }
 
 static void
@@ -1678,169 +1824,99 @@ menu_action_cb(GtkMenuItem *item, gpointer object)
 	gpointer data;
 	void (*callback)(gpointer, gpointer);
 
-	callback = g_object_get_data(G_OBJECT(item), "gaimcallback");
-	data = g_object_get_data(G_OBJECT(item), "gaimcallbackdata");
+	callback = g_object_get_data(G_OBJECT(item), "purplecallback");
+	data = g_object_get_data(G_OBJECT(item), "purplecallbackdata");
 
 	if (callback)
 		callback(object, data);
 }
 
-void
-gaim_gtk_append_menu_action(GtkWidget *menu, GaimMenuAction *act,
+GtkWidget *
+pidgin_append_menu_action(GtkWidget *menu, PurpleMenuAction *act,
                             gpointer object)
 {
+	GtkWidget *menuitem;
+	GList *list;
+
 	if (act == NULL) {
-		gaim_separator(menu);
-	} else {
-		GtkWidget *menuitem;
-
-		if (act->children == NULL) {
-			menuitem = gtk_menu_item_new_with_mnemonic(act->label);
-
-			if (act->callback != NULL) {
-				g_object_set_data(G_OBJECT(menuitem),
-				                  "gaimcallback",
-				                  act->callback);
-				g_object_set_data(G_OBJECT(menuitem),
-				                  "gaimcallbackdata",
-				                  act->data);
-				g_signal_connect(G_OBJECT(menuitem), "activate",
-				                 G_CALLBACK(menu_action_cb),
-				                 object);
-			} else {
-				gtk_widget_set_sensitive(menuitem, FALSE);
-			}
-
-			gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
-		} else {
-			GList *l = NULL;
-			GtkWidget *submenu = NULL;
-			GtkAccelGroup *group;
-
-			menuitem = gtk_menu_item_new_with_mnemonic(act->label);
-			gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
-
-			submenu = gtk_menu_new();
-			gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
-
-			group = gtk_menu_get_accel_group(GTK_MENU(menu));
-			if (group) {
-				char *path = g_strdup_printf("%s/%s", GTK_MENU_ITEM(menuitem)->accel_path, act->label);
-				gtk_menu_set_accel_path(GTK_MENU(submenu), path);
-				g_free(path);
-				gtk_menu_set_accel_group(GTK_MENU(submenu), group);
-			}
-
-			for (l = act->children; l; l = l->next) {
-				GaimMenuAction *act = (GaimMenuAction *)l->data;
-
-				gaim_gtk_append_menu_action(submenu, act, object);
-			}
-			g_list_free(act->children);
-			act->children = NULL;
-		}
-		gaim_menu_action_free(act);
+		return pidgin_separator(menu);
 	}
+
+	list = purple_menu_action_get_children(act);
+	menuitem = gtk_menu_item_new_with_mnemonic(purple_menu_action_get_label(act));
+
+	if (list == NULL) {
+		PurpleCallback callback;
+
+		callback = purple_menu_action_get_callback(act);
+
+		if (callback != NULL) {
+			g_object_set_data(G_OBJECT(menuitem),
+							  "purplecallback",
+							  callback);
+			g_object_set_data(G_OBJECT(menuitem),
+							  "purplecallbackdata",
+							  purple_menu_action_get_data(act));
+			g_signal_connect(G_OBJECT(menuitem), "activate",
+							 G_CALLBACK(menu_action_cb),
+							 object);
+		} else {
+			gtk_widget_set_sensitive(menuitem, FALSE);
+		}
+
+		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+	} else {
+		GList *l = NULL;
+		GtkWidget *submenu = NULL;
+		GtkAccelGroup *group;
+
+		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+
+		submenu = gtk_menu_new();
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
+
+		group = gtk_menu_get_accel_group(GTK_MENU(menu));
+		if (group) {
+			char *path = g_strdup_printf("%s/%s", GTK_MENU_ITEM(menuitem)->accel_path,
+					purple_menu_action_get_label(act));
+			gtk_menu_set_accel_path(GTK_MENU(submenu), path);
+			g_free(path);
+			gtk_menu_set_accel_group(GTK_MENU(submenu), group);
+		}
+
+		for (l = list; l; l = l->next) {
+			PurpleMenuAction *act = (PurpleMenuAction *)l->data;
+
+			pidgin_append_menu_action(submenu, act, object);
+		}
+		g_list_free(list);
+		purple_menu_action_set_children(act, NULL);
+	}
+	purple_menu_action_free(act);
+	return menuitem;
 }
 
-#if GTK_CHECK_VERSION(2,3,0)
-# define NEW_STYLE_COMPLETION
-#endif
+enum {
+	COMPLETION_DISPLAYED_COLUMN,  /* displayed completion value */
+	COMPLETION_BUDDY_COLUMN,      /* buddy name */
+	COMPLETION_NORMALIZED_COLUMN, /* UTF-8 normalized & casefolded buddy name */
+	COMPLETION_COMPARISON_COLUMN, /* UTF-8 normalized & casefolded value for comparison */
+	COMPLETION_ACCOUNT_COLUMN,    /* account */
+	COMPLETION_COLUMN_COUNT
+};
 
-#ifndef NEW_STYLE_COMPLETION
 typedef struct
 {
-	GCompletion *completion;
+	GtkWidget *entry;
+	GtkWidget *accountopt;
 
-	gboolean completion_started;
-	gboolean all;
+	PidginFilterBuddyCompletionEntryFunc filter_func;
+	gpointer filter_func_user_data;
 
-} GaimGtkCompletionData;
-#endif
+	GtkListStore *store;
+} PidginCompletionData;
 
-#ifndef NEW_STYLE_COMPLETION
-static gboolean
-completion_entry_event(GtkEditable *entry, GdkEventKey *event,
-					   GaimGtkCompletionData *data)
-{
-	int pos, end_pos;
-
-	if (event->type == GDK_KEY_PRESS && event->keyval == GDK_Tab)
-	{
-		gtk_editable_get_selection_bounds(entry, &pos, &end_pos);
-
-		if (data->completion_started &&
-			pos != end_pos && pos > 1 &&
-			end_pos == strlen(gtk_entry_get_text(GTK_ENTRY(entry))))
-		{
-			gtk_editable_select_region(entry, 0, 0);
-			gtk_editable_set_position(entry, -1);
-
-			return TRUE;
-		}
-	}
-	else if (event->type == GDK_KEY_PRESS && event->length > 0)
-	{
-		char *prefix, *nprefix;
-
-		gtk_editable_get_selection_bounds(entry, &pos, &end_pos);
-
-		if (data->completion_started &&
-			pos != end_pos && pos > 1 &&
-			end_pos == strlen(gtk_entry_get_text(GTK_ENTRY(entry))))
-		{
-			char *temp;
-
-			temp = gtk_editable_get_chars(entry, 0, pos);
-			prefix = g_strconcat(temp, event->string, NULL);
-			g_free(temp);
-		}
-		else if (pos == end_pos && pos > 1 &&
-				 end_pos == strlen(gtk_entry_get_text(GTK_ENTRY(entry))))
-		{
-			prefix = g_strconcat(gtk_entry_get_text(GTK_ENTRY(entry)),
-								 event->string, NULL);
-		}
-		else
-			return FALSE;
-
-		pos = strlen(prefix);
-		nprefix = NULL;
-
-		g_completion_complete(data->completion, prefix, &nprefix);
-
-		if (nprefix != NULL)
-		{
-			gtk_entry_set_text(GTK_ENTRY(entry), nprefix);
-			gtk_editable_set_position(entry, pos);
-			gtk_editable_select_region(entry, pos, -1);
-
-			data->completion_started = TRUE;
-
-			g_free(nprefix);
-			g_free(prefix);
-
-			return TRUE;
-		}
-
-		g_free(prefix);
-	}
-
-	return FALSE;
-}
-
-static void
-destroy_completion_data(GtkWidget *w, GaimGtkCompletionData *data)
-{
-	g_list_foreach(data->completion->items, (GFunc)g_free, NULL);
-	g_completion_free(data->completion);
-
-	g_free(data);
-}
-#endif /* !NEW_STYLE_COMPLETION */
-
-#ifdef NEW_STYLE_COMPLETION
-static gboolean screenname_completion_match_func(GtkEntryCompletion *completion,
+static gboolean buddyname_completion_match_func(GtkEntryCompletion *completion,
 		const gchar *key, GtkTreeIter *iter, gpointer user_data)
 {
 	GtkTreeModel *model;
@@ -1848,12 +1924,12 @@ static gboolean screenname_completion_match_func(GtkEntryCompletion *completion,
 	GValue val2;
 	const char *tmp;
 
-	model = gtk_entry_completion_get_model (completion);
+	model = gtk_entry_completion_get_model(completion);
 
 	val1.g_type = 0;
-	gtk_tree_model_get_value(model, iter, 2, &val1);
+	gtk_tree_model_get_value(model, iter, COMPLETION_NORMALIZED_COLUMN, &val1);
 	tmp = g_value_get_string(&val1);
-	if (tmp != NULL && gaim_str_has_prefix(tmp, key))
+	if (tmp != NULL && purple_str_has_prefix(tmp, key))
 	{
 		g_value_unset(&val1);
 		return TRUE;
@@ -1861,9 +1937,9 @@ static gboolean screenname_completion_match_func(GtkEntryCompletion *completion,
 	g_value_unset(&val1);
 
 	val2.g_type = 0;
-	gtk_tree_model_get_value(model, iter, 3, &val2);
+	gtk_tree_model_get_value(model, iter, COMPLETION_COMPARISON_COLUMN, &val2);
 	tmp = g_value_get_string(&val2);
-	if (tmp != NULL && gaim_str_has_prefix(tmp, key))
+	if (tmp != NULL && purple_str_has_prefix(tmp, key))
 	{
 		g_value_unset(&val2);
 		return TRUE;
@@ -1873,61 +1949,48 @@ static gboolean screenname_completion_match_func(GtkEntryCompletion *completion,
 	return FALSE;
 }
 
-static gboolean screenname_completion_match_selected_cb(GtkEntryCompletion *completion,
-		GtkTreeModel *model, GtkTreeIter *iter, gpointer *user_data)
+static gboolean buddyname_completion_match_selected_cb(GtkEntryCompletion *completion,
+		GtkTreeModel *model, GtkTreeIter *iter, PidginCompletionData *data)
 {
 	GValue val;
-	GtkWidget *optmenu = user_data[1];
-	GaimAccount *account;
+	GtkWidget *optmenu = data->accountopt;
+	PurpleAccount *account;
 
 	val.g_type = 0;
-	gtk_tree_model_get_value(model, iter, 1, &val);
-	gtk_entry_set_text(GTK_ENTRY(user_data[0]), g_value_get_string(&val));
+	gtk_tree_model_get_value(model, iter, COMPLETION_BUDDY_COLUMN, &val);
+	gtk_entry_set_text(GTK_ENTRY(data->entry), g_value_get_string(&val));
 	g_value_unset(&val);
 
-	gtk_tree_model_get_value(model, iter, 4, &val);
+	gtk_tree_model_get_value(model, iter, COMPLETION_ACCOUNT_COLUMN, &val);
 	account = g_value_get_pointer(&val);
 	g_value_unset(&val);
 
 	if (account == NULL)
 		return TRUE;
 
-	if (optmenu != NULL) {
-		GList *items;
-		guint index = 0;
-		gaim_gtk_account_option_menu_set_selected(optmenu, account);
-		items = GTK_MENU_SHELL(gtk_option_menu_get_menu(GTK_OPTION_MENU(optmenu)))->children;
-
-		do {
-			if (account == g_object_get_data(G_OBJECT(items->data), "account")) {
-				/* Set the account in the GUI. */
-				gtk_option_menu_set_history(GTK_OPTION_MENU(optmenu), index);
-				return TRUE;
-			}
-			index++;
-		} while ((items = items->next) != NULL);
-	}
+	if (optmenu != NULL)
+		aop_option_menu_select_by_data(optmenu, account);
 
 	return TRUE;
 }
 
 static void
-add_screenname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, const char *contact_alias,
-								  const GaimAccount *account, const char *screenname)
+add_buddyname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, const char *contact_alias,
+								  const PurpleAccount *account, const char *buddyname)
 {
 	GtkTreeIter iter;
 	gboolean completion_added = FALSE;
-	gchar *normalized_screenname;
+	gchar *normalized_buddyname;
 	gchar *tmp;
 
-	tmp = g_utf8_normalize(screenname, -1, G_NORMALIZE_DEFAULT);
-	normalized_screenname = g_utf8_casefold(tmp, -1);
+	tmp = g_utf8_normalize(buddyname, -1, G_NORMALIZE_DEFAULT);
+	normalized_buddyname = g_utf8_casefold(tmp, -1);
 	g_free(tmp);
 
 	/* There's no sense listing things like: 'xxx "xxx"'
-	   when the screenname and buddy alias match. */
-	if (buddy_alias && strcmp(buddy_alias, screenname)) {
-		char *completion_entry = g_strdup_printf("%s \"%s\"", screenname, buddy_alias);
+	   when the name and buddy alias match. */
+	if (buddy_alias && strcmp(buddy_alias, buddyname)) {
+		char *completion_entry = g_strdup_printf("%s \"%s\"", buddyname, buddy_alias);
 		char *tmp2 = g_utf8_normalize(buddy_alias, -1, G_NORMALIZE_DEFAULT);
 
 		tmp = g_utf8_casefold(tmp2, -1);
@@ -1935,11 +1998,11 @@ add_screenname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, 
 
 		gtk_list_store_append(store, &iter);
 		gtk_list_store_set(store, &iter,
-				0, completion_entry,
-				1, screenname,
-				2, normalized_screenname,
-				3, tmp,
-				4, account,
+				COMPLETION_DISPLAYED_COLUMN, completion_entry,
+				COMPLETION_BUDDY_COLUMN, buddyname,
+				COMPLETION_NORMALIZED_COLUMN, normalized_buddyname,
+				COMPLETION_COMPARISON_COLUMN, tmp,
+				COMPLETION_ACCOUNT_COLUMN, account,
 				-1);
 		g_free(completion_entry);
 		g_free(tmp);
@@ -1947,12 +2010,12 @@ add_screenname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, 
 	}
 
 	/* There's no sense listing things like: 'xxx "xxx"'
-	   when the screenname and contact alias match. */
-	if (contact_alias && strcmp(contact_alias, screenname)) {
+	   when the name and contact alias match. */
+	if (contact_alias && strcmp(contact_alias, buddyname)) {
 		/* We don't want duplicates when the contact and buddy alias match. */
 		if (!buddy_alias || strcmp(contact_alias, buddy_alias)) {
 			char *completion_entry = g_strdup_printf("%s \"%s\"",
-							screenname, contact_alias);
+							buddyname, contact_alias);
 			char *tmp2 = g_utf8_normalize(contact_alias, -1, G_NORMALIZE_DEFAULT);
 
 			tmp = g_utf8_casefold(tmp2, -1);
@@ -1960,11 +2023,11 @@ add_screenname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, 
 
 			gtk_list_store_append(store, &iter);
 			gtk_list_store_set(store, &iter,
-					0, completion_entry,
-					1, screenname,
-					2, normalized_screenname,
-					3, tmp,
-					4, account,
+					COMPLETION_DISPLAYED_COLUMN, completion_entry,
+					COMPLETION_BUDDY_COLUMN, buddyname,
+					COMPLETION_NORMALIZED_COLUMN, normalized_buddyname,
+					COMPLETION_COMPARISON_COLUMN, tmp,
+					COMPLETION_ACCOUNT_COLUMN, account,
 					-1);
 			g_free(completion_entry);
 			g_free(tmp);
@@ -1973,138 +2036,88 @@ add_screenname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, 
 	}
 
 	if (completion_added == FALSE) {
-		/* Add the buddy's screenname. */
+		/* Add the buddy's name. */
 		gtk_list_store_append(store, &iter);
 		gtk_list_store_set(store, &iter,
-				0, screenname,
-				1, screenname,
-				2, normalized_screenname,
-				3, NULL,
-				4, account,
+				COMPLETION_DISPLAYED_COLUMN, buddyname,
+				COMPLETION_BUDDY_COLUMN, buddyname,
+				COMPLETION_NORMALIZED_COLUMN, normalized_buddyname,
+				COMPLETION_COMPARISON_COLUMN, NULL,
+				COMPLETION_ACCOUNT_COLUMN, account,
 				-1);
 	}
 
-	g_free(normalized_screenname);
+	g_free(normalized_buddyname);
 }
-#endif /* NEW_STYLE_COMPLETION */
 
-static void get_log_set_name(GaimLogSet *set, gpointer value, gpointer **set_hash_data)
+static void get_log_set_name(PurpleLogSet *set, gpointer value, PidginCompletionData *data)
 {
+	PidginFilterBuddyCompletionEntryFunc filter_func = data->filter_func;
+	gpointer user_data = data->filter_func_user_data;
+
 	/* 1. Don't show buddies because we will have gotten them already.
-	 * 2. Only show those with non-NULL accounts that are currently connected.
-	 * 3. The boxes that use this autocomplete code handle only IMs. */
-	if (!set->buddy &&
-	    (GPOINTER_TO_INT(set_hash_data[1]) ||
-	     (set->account != NULL && gaim_account_is_connected(set->account))) &&
-		set->type == GAIM_LOG_IM) {
-#ifdef NEW_STYLE_COMPLETION
-			add_screenname_autocomplete_entry((GtkListStore *)set_hash_data[0],
-											  NULL, NULL, set->account, set->name);
-#else
-			GList **items = ((GList **)set_hash_data[0]);
-			/* Steal the name for the GCompletion. */
-			*items = g_list_append(*items, set->name);
-			set->name = set->normalized_name = NULL;
-#endif /* NEW_STYLE_COMPLETION */
+	 * 2. The boxes that use this autocomplete code handle only IMs. */
+	if (!set->buddy && set->type == PURPLE_LOG_IM) {
+		PidginBuddyCompletionEntry entry;
+		entry.is_buddy = FALSE;
+		entry.entry.logged_buddy = set;
+
+		if (filter_func(&entry, user_data)) {
+			add_buddyname_autocomplete_entry(data->store,
+												NULL, NULL, set->account, set->name);
+		}
 	}
 }
 
-#ifdef NEW_STYLE_COMPLETION
 static void
-add_completion_list(GtkListStore *store)
+add_completion_list(PidginCompletionData *data)
 {
-	GaimBlistNode *gnode, *cnode, *bnode;
-	gboolean all = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(store), "screenname-all"));
+	PurpleBlistNode *gnode, *cnode, *bnode;
+	PidginFilterBuddyCompletionEntryFunc filter_func = data->filter_func;
+	gpointer user_data = data->filter_func_user_data;
 	GHashTable *sets;
-	gpointer set_hash_data[] = {store, GINT_TO_POINTER(all)};
 
-	gtk_list_store_clear(store);
+	gtk_list_store_clear(data->store);
 
-	for (gnode = gaim_get_blist()->root; gnode != NULL; gnode = gnode->next)
+	for (gnode = purple_get_blist()->root; gnode != NULL; gnode = gnode->next)
 	{
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
+		if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
 			continue;
 
 		for (cnode = gnode->child; cnode != NULL; cnode = cnode->next)
 		{
-			if (!GAIM_BLIST_NODE_IS_CONTACT(cnode))
+			if (!PURPLE_BLIST_NODE_IS_CONTACT(cnode))
 				continue;
 
 			for (bnode = cnode->child; bnode != NULL; bnode = bnode->next)
 			{
-				GaimBuddy *buddy = (GaimBuddy *)bnode;
+				PidginBuddyCompletionEntry entry;
+				entry.is_buddy = TRUE;
+				entry.entry.buddy = (PurpleBuddy *) bnode;
 
-				if (!all && !gaim_account_is_connected(buddy->account))
-					continue;
-
-				add_screenname_autocomplete_entry(store,
-												  ((GaimContact *)cnode)->alias,
-												  gaim_buddy_get_contact_alias(buddy),
-												  buddy->account,
-												  buddy->name
-												 );
+				if (filter_func(&entry, user_data)) {
+					add_buddyname_autocomplete_entry(data->store,
+														((PurpleContact *)cnode)->alias,
+														purple_buddy_get_contact_alias(entry.entry.buddy),
+														purple_buddy_get_account(entry.entry.buddy),
+														purple_buddy_get_name(entry.entry.buddy)
+													 );
+				}
 			}
 		}
 	}
 
-	sets = gaim_log_get_log_sets();
-	g_hash_table_foreach(sets, (GHFunc)get_log_set_name, &set_hash_data);
+	sets = purple_log_get_log_sets();
+	g_hash_table_foreach(sets, (GHFunc)get_log_set_name, data);
 	g_hash_table_destroy(sets);
+
 }
-#else
-static void
-add_completion_list(GaimGtkCompletionData *data)
-{
-	GaimBlistNode *gnode, *cnode, *bnode;
-	GCompletion *completion;
-	GList *item = g_list_append(NULL, NULL);
-	GHashTable *sets;
-	gpointer set_hash_data[2];
-
-	completion = data->completion;
-
-	g_list_foreach(completion->items, (GFunc)g_free, NULL);
-	g_completion_clear_items(completion);
-
-	for (gnode = gaim_get_blist()->root; gnode != NULL; gnode = gnode->next)
-	{
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
-			continue;
-
-		for (cnode = gnode->child; cnode != NULL; cnode = cnode->next)
-		{
-			if (!GAIM_BLIST_NODE_IS_CONTACT(cnode))
-				continue;
-
-			for (bnode = cnode->child; bnode != NULL; bnode = bnode->next)
-			{
-				GaimBuddy *buddy = (GaimBuddy *)bnode;
-
-				if (!data->all && !gaim_account_is_connected(buddy->account))
-					continue;
-
-				item->data = g_strdup(buddy->name);
-				g_completion_add_items(data->completion, item);
-			}
-		}
-	}
-	g_list_free(item);
-
-	sets = gaim_log_get_log_sets();
-	item = NULL;
-	set_hash_data[0] = &item;
-	set_hash_data[1] = GINT_TO_POINTER(data->all);
-	g_hash_table_foreach(sets, (GHFunc)get_log_set_name, &set_hash_data);
-	g_hash_table_destroy(sets);
-	g_completion_add_items(data->completion, item);
-	g_list_free(item);
-}
-#endif
 
 static void
-screenname_autocomplete_destroyed_cb(GtkWidget *widget, gpointer data)
+buddyname_autocomplete_destroyed_cb(GtkWidget *widget, gpointer data)
 {
-	gaim_signals_disconnect_by_handle(widget);
+	g_free(data);
+	purple_signals_disconnect_by_handle(widget);
 }
 
 static void
@@ -2114,35 +2127,47 @@ repopulate_autocomplete(gpointer something, gpointer data)
 }
 
 void
-gaim_gtk_setup_screenname_autocomplete(GtkWidget *entry, GtkWidget *accountopt, gboolean all)
+pidgin_setup_screenname_autocomplete_with_filter(GtkWidget *entry, GtkWidget *accountopt, PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data)
 {
-	gpointer cb_data = NULL;
+	PidginCompletionData *data;
 
-#ifdef NEW_STYLE_COMPLETION
-	/* Store the displayed completion value, the screenname, the UTF-8 normalized & casefolded screenname,
-	 * the UTF-8 normalized & casefolded value for comparison, and the account. */
-	GtkListStore *store = gtk_list_store_new(5, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_POINTER);
+	/*
+	 * Store the displayed completion value, the buddy name, the UTF-8
+	 * normalized & casefolded buddy name, the UTF-8 normalized &
+	 * casefolded value for comparison, and the account.
+	 */
+	GtkListStore *store;
 
 	GtkEntryCompletion *completion;
-	gpointer *data;
 
-	g_object_set_data(G_OBJECT(store), "screenname-all", GINT_TO_POINTER(all));
-	add_completion_list(store);
+	data = g_new0(PidginCompletionData, 1);
+	store = gtk_list_store_new(COMPLETION_COLUMN_COUNT, G_TYPE_STRING,
+	                           G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
+	                           G_TYPE_POINTER);
 
-	cb_data = store;
+	data->entry = entry;
+	data->accountopt = accountopt;
+	if (filter_func == NULL) {
+		data->filter_func = pidgin_screenname_autocomplete_default_filter;
+		data->filter_func_user_data = NULL;
+	} else {
+		data->filter_func = filter_func;
+		data->filter_func_user_data = user_data;
+	}
+	data->store = store;
 
-	/* Sort the completion list by screenname. */
+	add_completion_list(data);
+
+	/* Sort the completion list by buddy name */
 	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store),
-	                                     1, GTK_SORT_ASCENDING);
+	                                     COMPLETION_BUDDY_COLUMN,
+	                                     GTK_SORT_ASCENDING);
 
 	completion = gtk_entry_completion_new();
-	gtk_entry_completion_set_match_func(completion, screenname_completion_match_func, NULL, NULL);
+	gtk_entry_completion_set_match_func(completion, buddyname_completion_match_func, NULL, NULL);
 
-	data = g_new0(gpointer, 2);
-	data[0] = entry;
-	data[1] = accountopt;
 	g_signal_connect(G_OBJECT(completion), "match-selected",
-		G_CALLBACK(screenname_completion_match_selected_cb), data);
+		G_CALLBACK(buddyname_completion_match_selected_cb), data);
 
 	gtk_entry_set_completion(GTK_ENTRY(entry), completion);
 	g_object_unref(completion);
@@ -2150,45 +2175,33 @@ gaim_gtk_setup_screenname_autocomplete(GtkWidget *entry, GtkWidget *accountopt, 
 	gtk_entry_completion_set_model(completion, GTK_TREE_MODEL(store));
 	g_object_unref(store);
 
-	gtk_entry_completion_set_text_column(completion, 0);
+	gtk_entry_completion_set_text_column(completion, COMPLETION_DISPLAYED_COLUMN);
 
-#else /* !NEW_STYLE_COMPLETION */
-	GaimGtkCompletionData *data;
+	purple_signal_connect(purple_connections_get_handle(), "signed-on", entry,
+						PURPLE_CALLBACK(repopulate_autocomplete), data);
+	purple_signal_connect(purple_connections_get_handle(), "signed-off", entry,
+						PURPLE_CALLBACK(repopulate_autocomplete), data);
 
-	data = g_new0(GaimGtkCompletionData, 1);
+	purple_signal_connect(purple_accounts_get_handle(), "account-added", entry,
+						PURPLE_CALLBACK(repopulate_autocomplete), data);
+	purple_signal_connect(purple_accounts_get_handle(), "account-removed", entry,
+						PURPLE_CALLBACK(repopulate_autocomplete), data);
 
-	data->completion = g_completion_new(NULL);
-	data->all = all;
-
-	g_completion_set_compare(data->completion, g_ascii_strncasecmp);
-
-	add_completion_list(data);
-	cb_data = data;
-
-	g_signal_connect(G_OBJECT(entry), "event",
-					 G_CALLBACK(completion_entry_event), data);
-	g_signal_connect(G_OBJECT(entry), "destroy",
-					 G_CALLBACK(destroy_completion_data), data);
-
-#endif /* !NEW_STYLE_COMPLETION */
-
-	if (!all)
-	{
-		gaim_signal_connect(gaim_connections_get_handle(), "signed-on", entry,
-							GAIM_CALLBACK(repopulate_autocomplete), cb_data);
-		gaim_signal_connect(gaim_connections_get_handle(), "signed-off", entry,
-							GAIM_CALLBACK(repopulate_autocomplete), cb_data);
-	}
-
-	gaim_signal_connect(gaim_accounts_get_handle(), "account-added", entry,
-						GAIM_CALLBACK(repopulate_autocomplete), cb_data);
-	gaim_signal_connect(gaim_accounts_get_handle(), "account-removed", entry,
-						GAIM_CALLBACK(repopulate_autocomplete), cb_data);
-
-	g_signal_connect(G_OBJECT(entry), "destroy", G_CALLBACK(screenname_autocomplete_destroyed_cb), NULL);
+	g_signal_connect(G_OBJECT(entry), "destroy", G_CALLBACK(buddyname_autocomplete_destroyed_cb), data);
 }
 
-void gaim_gtk_set_cursor(GtkWidget *widget, GdkCursorType cursor_type)
+gboolean
+pidgin_screenname_autocomplete_default_filter(const PidginBuddyCompletionEntry *completion_entry, gpointer all_accounts) {
+	gboolean all = GPOINTER_TO_INT(all_accounts);
+
+	if (completion_entry->is_buddy) {
+		return all || purple_account_is_connected(purple_buddy_get_account(completion_entry->entry.buddy));
+	} else {
+		return all || (completion_entry->entry.logged_buddy->account != NULL && purple_account_is_connected(completion_entry->entry.logged_buddy->account));
+	}
+}
+
+void pidgin_set_cursor(GtkWidget *widget, GdkCursorType cursor_type)
 {
 	GdkCursor *cursor;
 
@@ -2196,18 +2209,14 @@ void gaim_gtk_set_cursor(GtkWidget *widget, GdkCursorType cursor_type)
 	if (widget->window == NULL)
 		return;
 
-	cursor = gdk_cursor_new(GDK_WATCH);
+	cursor = gdk_cursor_new(cursor_type);
 	gdk_window_set_cursor(widget->window, cursor);
 	gdk_cursor_unref(cursor);
 
-#if GTK_CHECK_VERSION(2,4,0)
 	gdk_display_flush(gdk_drawable_get_display(GDK_DRAWABLE(widget->window)));
-#else
-	gdk_flush();
-#endif
 }
 
-void gaim_gtk_clear_cursor(GtkWidget *widget)
+void pidgin_clear_cursor(GtkWidget *widget)
 {
 	g_return_if_fail(widget != NULL);
 	if (widget->window == NULL)
@@ -2225,23 +2234,6 @@ struct _icon_chooser {
 	gpointer data;
 };
 
-#if !GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
-static void
-icon_filesel_delete_cb(GtkWidget *w, struct _icon_chooser *dialog)
-{
-	if (dialog->icon_filesel != NULL)
-		gtk_widget_destroy(dialog->icon_filesel);
-
-	if (dialog->callback)
-		dialog->callback(NULL, dialog->data);
-
-	g_free(dialog);
-}
-#endif /* FILECHOOSER */
-
-
-
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
 static void
 icon_filesel_choose_cb(GtkWidget *widget, gint response, struct _icon_chooser *dialog)
 {
@@ -2261,34 +2253,11 @@ icon_filesel_choose_cb(GtkWidget *widget, gint response, struct _icon_chooser *d
 	filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog->icon_filesel));
 	current_folder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(dialog->icon_filesel));
 	if (current_folder != NULL) {
-		gaim_prefs_set_path("/gaim/gtk/filelocations/last_icon_folder", current_folder);
+		purple_prefs_set_path(PIDGIN_PREFS_ROOT "/filelocations/last_icon_folder", current_folder);
 		g_free(current_folder);
 	}
 
-#else /* FILECHOOSER */
-static void
-icon_filesel_choose_cb(GtkWidget *w, struct _icon_chooser *dialog)
-{
-	char *filename, *current_folder;
 
-	filename = g_strdup(gtk_file_selection_get_filename(
-				GTK_FILE_SELECTION(dialog->icon_filesel)));
-
-	/* If they typed in a directory, change there */
-	if (gaim_gtk_check_if_dir(filename,
-				GTK_FILE_SELECTION(dialog->icon_filesel)))
-	{
-		g_free(filename);
-		return;
-	}
-
-	current_folder = g_path_get_dirname(filename);
-	if (current_folder != NULL) {
-		gaim_prefs_set_path("/gaim/gtk/filelocations/last_icon_folder", current_folder);
-		g_free(current_folder);
-	}
-
-#endif /* FILECHOOSER */
 	if (dialog->callback)
 		dialog->callback(filename, dialog->data);
 	gtk_widget_destroy(dialog->icon_filesel);
@@ -2298,11 +2267,7 @@ icon_filesel_choose_cb(GtkWidget *w, struct _icon_chooser *dialog)
 
 
 static void
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
 icon_preview_change_cb(GtkFileChooser *widget, struct _icon_chooser *dialog)
-#else /* FILECHOOSER */
-icon_preview_change_cb(GtkTreeSelection *sel, struct _icon_chooser *dialog)
-#endif /* FILECHOOSER */
 {
 	GdkPixbuf *pixbuf, *scale;
 	int height, width;
@@ -2310,28 +2275,13 @@ icon_preview_change_cb(GtkTreeSelection *sel, struct _icon_chooser *dialog)
 	struct stat st;
 	char *filename;
 
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
 	filename = gtk_file_chooser_get_preview_filename(
 					GTK_FILE_CHOOSER(dialog->icon_filesel));
-#else /* FILECHOOSER */
-	filename = g_strdup(gtk_file_selection_get_filename(
-		GTK_FILE_SELECTION(dialog->icon_filesel)));
-#endif /* FILECHOOSER */
 
-	if (!filename || g_stat(filename, &st))
+	if (!filename || g_stat(filename, &st) || !(pixbuf = pidgin_pixbuf_new_from_file(filename)))
 	{
-		g_free(filename);
-		return;
-	}
-
-	pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
-	if (!pixbuf) {
 		gtk_image_set_from_pixbuf(GTK_IMAGE(dialog->icon_preview), NULL);
 		gtk_label_set_markup(GTK_LABEL(dialog->icon_text), "");
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
-		gtk_file_chooser_set_preview_widget_active(
-					GTK_FILE_CHOOSER(dialog->icon_filesel), FALSE);
-#endif /* FILECHOOSER */
 		g_free(filename);
 		return;
 	}
@@ -2339,7 +2289,7 @@ icon_preview_change_cb(GtkTreeSelection *sel, struct _icon_chooser *dialog)
 	width = gdk_pixbuf_get_width(pixbuf);
 	height = gdk_pixbuf_get_height(pixbuf);
 	basename = g_path_get_basename(filename);
-	size = gaim_str_size_to_units(st.st_size);
+	size = purple_str_size_to_units(st.st_size);
 	markup = g_strdup_printf(_("<b>File:</b> %s\n"
 							   "<b>File size:</b> %s\n"
 							   "<b>Image size:</b> %dx%d"),
@@ -2348,10 +2298,6 @@ icon_preview_change_cb(GtkTreeSelection *sel, struct _icon_chooser *dialog)
 	scale = gdk_pixbuf_scale_simple(pixbuf, width * 50 / height,
 									50, GDK_INTERP_BILINEAR);
 	gtk_image_set_from_pixbuf(GTK_IMAGE(dialog->icon_preview), scale);
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
-	gtk_file_chooser_set_preview_widget_active(
-					GTK_FILE_CHOOSER(dialog->icon_filesel), TRUE);
-#endif /* FILECHOOSER */
 	gtk_label_set_markup(GTK_LABEL(dialog->icon_text), markup);
 
 	g_object_unref(G_OBJECT(pixbuf));
@@ -2363,26 +2309,16 @@ icon_preview_change_cb(GtkTreeSelection *sel, struct _icon_chooser *dialog)
 }
 
 
-GtkWidget *gaim_gtk_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(const char *, gpointer), gpointer data) {
+GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(const char *, gpointer), gpointer data) {
 	struct _icon_chooser *dialog = g_new0(struct _icon_chooser, 1);
 
-#if !GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
-	GtkWidget *hbox;
-	GtkWidget *tv;
-	GtkTreeSelection *sel;
-#endif /* FILECHOOSER */
+	GtkWidget *vbox;
 	const char *current_folder;
 
 	dialog->callback = callback;
 	dialog->data = data;
 
-	if (dialog->icon_filesel != NULL) {
-		gtk_window_present(GTK_WINDOW(dialog->icon_filesel));
-		return NULL;
-	}
-
-	current_folder = gaim_prefs_get_path("/gaim/gtk/filelocations/last_icon_folder");
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
+	current_folder = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/filelocations/last_icon_folder");
 
 	dialog->icon_filesel = gtk_file_chooser_dialog_new(_("Buddy Icon"),
 							   parent,
@@ -2397,52 +2333,34 @@ GtkWidget *gaim_gtk_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(co
 
 	dialog->icon_preview = gtk_image_new();
 	dialog->icon_text = gtk_label_new(NULL);
-	gtk_widget_set_size_request(GTK_WIDGET(dialog->icon_preview), -1, 50);
-	gtk_file_chooser_set_preview_widget(GTK_FILE_CHOOSER(dialog->icon_filesel),
-					    GTK_WIDGET(dialog->icon_preview));
+
+	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	gtk_widget_set_size_request(GTK_WIDGET(vbox), -1, 50);
+	gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(dialog->icon_preview), TRUE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(vbox), GTK_WIDGET(dialog->icon_text), FALSE, FALSE, 0);
+	gtk_widget_show_all(vbox);
+
+	gtk_file_chooser_set_preview_widget(GTK_FILE_CHOOSER(dialog->icon_filesel), vbox);
+	gtk_file_chooser_set_preview_widget_active(GTK_FILE_CHOOSER(dialog->icon_filesel), TRUE);
+	gtk_file_chooser_set_use_preview_label(GTK_FILE_CHOOSER(dialog->icon_filesel), FALSE);
+
 	g_signal_connect(G_OBJECT(dialog->icon_filesel), "update-preview",
 					 G_CALLBACK(icon_preview_change_cb), dialog);
 	g_signal_connect(G_OBJECT(dialog->icon_filesel), "response",
 					 G_CALLBACK(icon_filesel_choose_cb), dialog);
 	icon_preview_change_cb(NULL, dialog);
-#else /* FILECHOOSER */
-	dialog->icon_filesel = gtk_file_selection_new(_("Buddy Icon"));
-	dialog->icon_preview = gtk_image_new();
-	dialog->icon_text = gtk_label_new(NULL);
-	if ((current_folder != NULL) && (*current_folder != '\0'))
-		gtk_file_selection_set_filename(GTK_FILE_SELECTION(dialog->icon_filesel),
-										current_folder);
 
-	gtk_widget_set_size_request(GTK_WIDGET(dialog->icon_preview), -1, 50);
-	hbox = gtk_hbox_new(FALSE, GAIM_HIG_BOX_SPACE);
-	gtk_box_pack_start(
-		GTK_BOX(GTK_FILE_SELECTION(dialog->icon_filesel)->main_vbox),
-		hbox, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox), dialog->icon_preview,
-			 FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox), dialog->icon_text, FALSE, FALSE, 0);
+#ifdef _WIN32
+	g_signal_connect(G_OBJECT(dialog->icon_filesel), "show",
+		G_CALLBACK(winpidgin_ensure_onscreen), dialog->icon_filesel);
+#endif
 
-	tv = GTK_FILE_SELECTION(dialog->icon_filesel)->file_list;
-	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(tv));
-
-	g_signal_connect(G_OBJECT(sel), "changed",
-					 G_CALLBACK(icon_preview_change_cb), dialog);
-	g_signal_connect(
-		G_OBJECT(GTK_FILE_SELECTION(dialog->icon_filesel)->ok_button),
-		"clicked",
-		G_CALLBACK(icon_filesel_choose_cb), dialog);
-	g_signal_connect(
-		G_OBJECT(GTK_FILE_SELECTION(dialog->icon_filesel)->cancel_button),
-		"clicked",
-		G_CALLBACK(icon_filesel_delete_cb), dialog);
-	g_signal_connect(G_OBJECT(dialog->icon_filesel), "destroy",
-					 G_CALLBACK(icon_filesel_delete_cb), dialog);
-#endif /* FILECHOOSER */
-	return 	dialog->icon_filesel;
+	return dialog->icon_filesel;
 }
 
-
-#if GTK_CHECK_VERSION(2,2,0)
+/**
+ * @return True if any string from array a exists in array b.
+ */
 static gboolean
 str_array_match(char **a, char **b)
 {
@@ -2456,412 +2374,179 @@ str_array_match(char **a, char **b)
 				return TRUE;
 	return FALSE;
 }
-#endif
 
-char *
-gaim_gtk_convert_buddy_icon(GaimPlugin *plugin, const char *path)
+gpointer
+pidgin_convert_buddy_icon(PurplePlugin *plugin, const char *path, size_t *len)
 {
-	GaimPluginProtocolInfo *prpl_info;
-#if GTK_CHECK_VERSION(2,2,0)
-	char **prpl_formats;
-	int width, height;
-	char **pixbuf_formats = NULL;
-	struct stat st;
+	PurplePluginProtocolInfo *prpl_info;
+	PurpleBuddyIconSpec *spec;
+	int orig_width, orig_height, new_width, new_height;
 	GdkPixbufFormat *format;
-	GdkPixbuf *pixbuf;
-#if !GTK_CHECK_VERSION(2,4,0)
-	GdkPixbufLoader *loader;
-#endif
-#endif
+	char **pixbuf_formats;
+	char **prpl_formats;
+	GError *error = NULL;
 	gchar *contents;
 	gsize length;
-	const char *dirname;
-	char *random;
-	char *filename;
+	GdkPixbuf *pixbuf, *original;
+	float scale_factor;
+	int i;
+	gchar *tmp;
 
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(plugin);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
+	spec = &prpl_info->icon_spec;
+	g_return_val_if_fail(spec->format != NULL, NULL);
 
-	g_return_val_if_fail(prpl_info->icon_spec.format != NULL, NULL);
-
-	dirname = gaim_buddy_icons_get_cache_dir();
-	if (!g_file_test(dirname, G_FILE_TEST_IS_DIR)) {
-		gaim_debug_info("buddyicon", "Creating icon cache directory.\n");
-
-		if (g_mkdir(dirname, S_IRUSR | S_IWUSR | S_IXUSR) < 0) {
-			gaim_debug_error("buddyicon",
-							 "Unable to create directory %s: %s\n",
-							 dirname, strerror(errno));
-			return NULL;
-		}
-	}
-
-	random = g_strdup_printf("%x", g_random_int());
-	filename = g_build_filename(dirname, random, NULL);
-
-#if GTK_CHECK_VERSION(2,2,0)
-#if GTK_CHECK_VERSION(2,4,0)
-	format = gdk_pixbuf_get_file_info(path, &width, &height);
-#else
-	loader = gdk_pixbuf_loader_new();
-	if (g_file_get_contents(path, &contents, &length, NULL)) {
-		gdk_pixbuf_loader_write(loader, contents, length, NULL);
-		g_free(contents);
-	}
-	gdk_pixbuf_loader_close(loader, NULL);
-	pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
-	width = gdk_pixbuf_get_width(pixbuf);
-	height = gdk_pixbuf_get_height(pixbuf);
-	format = gdk_pixbuf_loader_get_format(loader);
-	g_object_unref(G_OBJECT(loader));
-#endif
-	if (format == NULL)
+	format = gdk_pixbuf_get_file_info(path, &orig_width, &orig_height);
+	if (format == NULL) {
+		purple_debug_warning("buddyicon", "Could not get file info of %s\n", path);
 		return NULL;
+	}
 
 	pixbuf_formats = gdk_pixbuf_format_get_extensions(format);
-	prpl_formats = g_strsplit(prpl_info->icon_spec.format,",",0);
-	if (str_array_match(pixbuf_formats, prpl_formats) &&                  /* This is an acceptable format AND */
-		 (!(prpl_info->icon_spec.scale_rules & GAIM_ICON_SCALE_SEND) ||   /* The prpl doesn't scale before it sends OR */
-		  (prpl_info->icon_spec.min_width <= width &&
-		   prpl_info->icon_spec.max_width >= width &&
-		   prpl_info->icon_spec.min_height <= height &&
-		   prpl_info->icon_spec.max_height >= height)))                   /* The icon is the correct size */
-#endif
+	prpl_formats = g_strsplit(spec->format, ",", 0);
+
+	if (str_array_match(pixbuf_formats, prpl_formats) && /* This is an acceptable format AND */
+		 (!(spec->scale_rules & PURPLE_ICON_SCALE_SEND) || /* The prpl doesn't scale before it sends OR */
+		  (spec->min_width <= orig_width && spec->max_width >= orig_width &&
+		   spec->min_height <= orig_height && spec->max_height >= orig_height))) /* The icon is the correct size */
 	{
-		FILE *image;
-
-#if GTK_CHECK_VERSION(2,2,0)
-		g_strfreev(prpl_formats);
-		g_strfreev(pixbuf_formats);
-#endif
-
-		/* We don't need to scale the image, so copy it to the cache folder verbatim */
-
-		contents = NULL;
-		if (!g_file_get_contents(path, &contents, &length, NULL) ||
-		    (image = g_fopen(filename, "wb")) == NULL)
-		{
-			g_free(random);
-			g_free(filename);
-			g_free(contents);
-#if GTK_CHECK_VERSION(2,2,0) && !GTK_CHECK_VERSION(2,4,0)
-			g_object_unref(G_OBJECT(pixbuf));
-#endif
-			return NULL;
-		}
-
-		if (fwrite(contents, 1, length, image) != length)
-		{
-			fclose(image);
-			g_unlink(filename);
-
-			g_free(random);
-			g_free(filename);
-			g_free(contents);
-#if GTK_CHECK_VERSION(2,2,0) && !GTK_CHECK_VERSION(2,4,0)
-			g_object_unref(G_OBJECT(pixbuf));
-#endif
-			return NULL;
-		}
-		fclose(image);
-		g_free(contents);
-
-#if GTK_CHECK_VERSION(2,2,0) && !GTK_CHECK_VERSION(2,4,0)
-		g_object_unref(G_OBJECT(pixbuf));
-#endif
-	}
-#if GTK_CHECK_VERSION(2,2,0)
-	else
-	{
-		int i;
-		GError *error = NULL;
-		GdkPixbuf *scale;
 		g_strfreev(pixbuf_formats);
 
-		pixbuf = gdk_pixbuf_new_from_file(path, &error);
-		if (error) {
-			gaim_debug_error("buddyicon", "Could not open icon for conversion: %s\n", error->message);
-			g_error_free(error);
-			g_free(random);
-			g_free(filename);
+		if (!g_file_get_contents(path, &contents, &length, &error)) {
+			purple_debug_warning("buddyicon", "Could not get file contents "
+					"of %s: %s\n", path, error->message);
 			g_strfreev(prpl_formats);
 			return NULL;
 		}
 
-		if ((prpl_info->icon_spec.scale_rules & GAIM_ICON_SCALE_SEND) &&
-			(width < prpl_info->icon_spec.min_width ||
-			 width > prpl_info->icon_spec.max_width ||
-			 height < prpl_info->icon_spec.min_height ||
-			 height > prpl_info->icon_spec.max_height))
-		{
-			int new_width = width;
-			int new_height = height;
-
-			gaim_buddy_icon_get_scale_size(&prpl_info->icon_spec, &new_width, &new_height);
-
-			scale = gdk_pixbuf_scale_simple(pixbuf, new_width, new_height,
-					GDK_INTERP_HYPER);
-			g_object_unref(G_OBJECT(pixbuf));
-			pixbuf = scale;
+		if (spec->max_filesize == 0 || length < spec->max_filesize) {
+			/* The supplied image fits the file size, dimensions and type
+			   constraints.  Great!  Return it without making any changes. */
+			if (len)
+				*len = length;
+			g_strfreev(prpl_formats);
+			return contents;
 		}
 
-		for (i = 0; prpl_formats[i]; i++) {
-			gaim_debug_info("buddyicon", "Converting buddy icon to %s as %s\n", prpl_formats[i], filename);
-			if (strcmp(prpl_formats[i], "png") == 0) {
-				if (gdk_pixbuf_save(pixbuf, filename, prpl_formats[i],
-					&error, "compression", "9", NULL))
-				/* Success! */
-				break;
-			} else if (gdk_pixbuf_save(pixbuf, filename, prpl_formats[i],
-					&error, NULL)) {
-				/* Success! */
-				break;
-			}
-			gaim_debug_warning("buddyicon", "Could not convert to %s: %s\n", prpl_formats[i], error->message);
-			g_error_free(error);
-			error = NULL;
-		}
-		g_strfreev(prpl_formats);
-		g_object_unref(G_OBJECT(pixbuf));
-		if (error) {
-			gaim_debug_error("buddyicon", "Could not convert icon to usable format: %s\n", error->message);
-			g_error_free(error);
-			g_free(random);
-			g_free(filename);
-			return NULL;
-		}
-	}
-
-	if (g_stat(filename, &st) != 0) {
-		gaim_debug_error("buddyicon",
-				"Could not stat '%s', which we just wrote to disk: %s\n",
-				filename, strerror(errno));
-		g_free(random);
-		g_free(filename);
-		return NULL;
-	}
-
-	/* Check the file size */
-	/*
-	 * TODO: If the file is too big, it would be cool if we checked if
-	 *       the prpl supported jpeg, and then we could convert to that
-	 *       and use a lower quality setting.
-	 */
-	if ((prpl_info->icon_spec.max_filesize != 0) &&
-		(st.st_size > prpl_info->icon_spec.max_filesize))
-	{
-		gchar *tmp;
-		tmp = g_strdup_printf(_("The file '%s' is too large for %s.  Please try a smaller image.\n"),
-				path, plugin->info->name);
-		gaim_notify_error(NULL, _("Icon Error"),
-				_("Could not set icon"), tmp);
-		gaim_debug_info("buddyicon",
-				"'%s' was converted to an image which is %" G_GSIZE_FORMAT
-				" bytes, but the maximum icon size for %s is %" G_GSIZE_FORMAT
-				" bytes\n", path, st.st_size, plugin->info->name,
-				prpl_info->icon_spec.max_filesize);
-		g_free(tmp);
-		g_free(random);
-		g_free(filename);
-		return NULL;
-	}
-
-	g_free(filename);
-	return random;
-#else
-	/*
-	 * The chosen icon wasn't the right size, and we're using
-	 * GTK+ 2.0 so we can't scale it.
-	 */
-	return NULL;
-#endif
-}
-
-#if !GTK_CHECK_VERSION(2,6,0)
-static void
-_gdk_file_scale_size_prepared_cb (GdkPixbufLoader *loader,
-		  int              width,
-		  int              height,
-		  gpointer         data)
-{
-	struct {
-		gint width;
-		gint height;
-		gboolean preserve_aspect_ratio;
-	} *info = data;
-
-	g_return_if_fail (width > 0 && height > 0);
-
-	if (info->preserve_aspect_ratio &&
-		(info->width > 0 || info->height > 0)) {
-		if (info->width < 0)
-		{
-			width = width * (double)info->height/(double)height;
-			height = info->height;
-		}
-		else if (info->height < 0)
-		{
-			height = height * (double)info->width/(double)width;
-			width = info->width;
-		}
-		else if ((double)height * (double)info->width >
-				 (double)width * (double)info->height) {
-			width = 0.5 + (double)width * (double)info->height / (double)height;
-			height = info->height;
-		} else {
-			height = 0.5 + (double)height * (double)info->width / (double)width;
-			width = info->width;
-		}
+		/* The image was too big.  Fall-through and try scaling it down. */
+		g_free(contents);
 	} else {
-			if (info->width > 0)
-				width = info->width;
-			if (info->height > 0)
-				height = info->height;
+		g_strfreev(pixbuf_formats);
 	}
 
-#if GTK_CHECK_VERSION(2,2,0) /* 2.0 users are going to have very strangely sized things */
-	gdk_pixbuf_loader_set_size (loader, width, height);
-#else
-#warning  nosnilmot could not be bothered to fix this properly for you
-#warning  ... good luck ... your images may end up strange sizes
-#endif
-}
-
-GdkPixbuf *
-gdk_pixbuf_new_from_file_at_scale(const char *filename, int width, int height,
-				  				  gboolean preserve_aspect_ratio,
-								  GError **error)
-{
-	GdkPixbufLoader *loader;
-	GdkPixbuf       *pixbuf;
-	guchar buffer [4096];
-	int length;
-	FILE *f;
-	struct {
-		gint width;
-		gint height;
-		gboolean preserve_aspect_ratio;
-	} info;
-	GdkPixbufAnimation *animation;
-	GdkPixbufAnimationIter *iter;
-	gboolean has_frame;
-
-	g_return_val_if_fail (filename != NULL, NULL);
-	g_return_val_if_fail (width > 0 || width == -1, NULL);
-	g_return_val_if_fail (height > 0 || height == -1, NULL);
-
-	f = g_fopen (filename, "rb");
-	if (!f) {
-		gint save_errno = errno;
-		gchar *display_name = g_filename_to_utf8 (filename, -1, NULL, NULL, NULL);
-		g_set_error (error, G_FILE_ERROR, g_file_error_from_errno (save_errno),
-					 _("Failed to open file '%s': %s"),
-					 display_name ? display_name : "(unknown)",
-					 g_strerror (save_errno));
-		g_free (display_name);
+	/* The original image wasn't compatible.  Scale it or convert file type. */
+	pixbuf = gdk_pixbuf_new_from_file(path, &error);
+	if (error) {
+		purple_debug_warning("buddyicon", "Could not open icon '%s' for "
+				"conversion: %s\n", path, error->message);
+		g_error_free(error);
+		g_strfreev(prpl_formats);
 		return NULL;
 	}
+	original = g_object_ref(G_OBJECT(pixbuf));
 
-	loader = gdk_pixbuf_loader_new ();
+	new_width = orig_width;
+	new_height = orig_height;
 
-	info.width = width;
-	info.height = height;
-	info.preserve_aspect_ratio = preserve_aspect_ratio;
+	/* Make sure the image is the correct dimensions */
+	if (spec->scale_rules & PURPLE_ICON_SCALE_SEND &&
+		(orig_width < spec->min_width || orig_width > spec->max_width ||
+		 orig_height < spec->min_height || orig_height > spec->max_height))
+	{
+		purple_buddy_icon_get_scale_size(spec, &new_width, &new_height);
 
-	g_signal_connect (loader, "size-prepared", G_CALLBACK (_gdk_file_scale_size_prepared_cb), &info);
+		g_object_unref(G_OBJECT(pixbuf));
+		pixbuf = gdk_pixbuf_scale_simple(original, new_width, new_height, GDK_INTERP_HYPER);
+	}
 
-	has_frame = FALSE;
-	while (!has_frame && !feof (f) && !ferror (f)) {
-		length = fread (buffer, 1, sizeof (buffer), f);
-		if (length > 0)
-			if (!gdk_pixbuf_loader_write (loader, buffer, length, error)) {
-				gdk_pixbuf_loader_close (loader, NULL);
-				fclose (f);
-				g_object_unref (loader);
-				return NULL;
-			}
+	scale_factor = 1;
+	do {
+		for (i = 0; prpl_formats[i]; i++) {
+			int quality = 100;
+			do {
+				const char *key = NULL;
+				const char *value = NULL;
+				gchar tmp_buf[4];
 
-		animation = gdk_pixbuf_loader_get_animation (loader);
-		if (animation) {
-			iter = gdk_pixbuf_animation_get_iter (animation, 0);
-			if (!gdk_pixbuf_animation_iter_on_currently_loading_frame (iter)) {
-				has_frame = TRUE;
-			}
-			g_object_unref (iter);
+				purple_debug_info("buddyicon", "Converting buddy icon to %s\n", prpl_formats[i]);
+
+				if (g_str_equal(prpl_formats[i], "png")) {
+					key = "compression";
+					value = "9";
+				} else if (g_str_equal(prpl_formats[i], "jpeg")) {
+					sprintf(tmp_buf, "%u", quality);
+					key = "quality";
+					value = tmp_buf;
+				}
+
+				if (!gdk_pixbuf_save_to_buffer(pixbuf, &contents, &length,
+						prpl_formats[i], &error, key, value, NULL))
+				{
+					/* The NULL checking of error is necessary due to this bug:
+					 * http://bugzilla.gnome.org/show_bug.cgi?id=405539 */
+					purple_debug_warning("buddyicon",
+							"Could not convert to %s: %s\n", prpl_formats[i],
+							(error && error->message) ? error->message : "Unknown error");
+					g_error_free(error);
+					error = NULL;
+
+					/* We couldn't convert to this image type.  Try the next
+					   image type. */
+					break;
+				}
+
+				if (spec->max_filesize == 0 || length <= spec->max_filesize) {
+					/* We were able to save the image as this image type and
+					   have it be within the size constraints.  Great!  Return
+					   the image. */
+					purple_debug_info("buddyicon", "Converted image from "
+							"%dx%d to %dx%d, format=%s, quality=%u, "
+							"filesize=%" G_GSIZE_FORMAT "\n",
+							orig_width, orig_height, new_width, new_height,
+							prpl_formats[i], quality, length);
+					if (len)
+						*len = length;
+					g_strfreev(prpl_formats);
+					g_object_unref(G_OBJECT(pixbuf));
+					g_object_unref(G_OBJECT(original));
+					return contents;
+				}
+
+				g_free(contents);
+
+				if (!g_str_equal(prpl_formats[i], "jpeg")) {
+					/* File size was too big and we can't lower the quality,
+					   so skip to the next image type. */
+					break;
+				}
+
+				/* File size was too big, but we're dealing with jpeg so try
+				   lowering the quality. */
+				quality -= 5;
+			} while (quality >= 70);
 		}
-	}
 
-	fclose (f);
+		/* We couldn't save the image in any format that was below the max
+		   file size.  Maybe we can reduce the image dimensions? */
+		scale_factor *= 0.8;
+		new_width = orig_width * scale_factor;
+		new_height = orig_height * scale_factor;
+		g_object_unref(G_OBJECT(pixbuf));
+		pixbuf = gdk_pixbuf_scale_simple(original, new_width, new_height, GDK_INTERP_HYPER);
+	} while ((new_width > 10 || new_height > 10) && new_width > spec->min_width && new_height > spec->min_height);
+	g_strfreev(prpl_formats);
+	g_object_unref(G_OBJECT(pixbuf));
+	g_object_unref(G_OBJECT(original));
 
-	if (!gdk_pixbuf_loader_close (loader, error) && !has_frame) {
-		g_object_unref (loader);
-		return NULL;
-	}
+	tmp = g_strdup_printf(_("The file '%s' is too large for %s.  Please try a smaller image.\n"),
+			path, plugin->info->name);
+	purple_notify_error(NULL, _("Icon Error"), _("Could not set icon"), tmp);
+	g_free(tmp);
 
-	pixbuf = gdk_pixbuf_loader_get_pixbuf (loader);
-
-	if (!pixbuf) {
-		gchar *display_name = g_filename_to_utf8 (filename, -1, NULL, NULL, NULL);
-		g_object_unref (loader);
-		g_set_error (error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_FAILED,
-					 _("Failed to load image '%s': reason not known, probably a corrupt image file"),
-					 display_name ? display_name : "(unknown)");
-		g_free (display_name);
-		return NULL;
-	}
-
-	g_object_ref (pixbuf);
-
-	g_object_unref (loader);
-
-	return pixbuf;
-}
-#endif /* ! Gtk 2.6.0 */
-
-void gaim_gtk_set_custom_buddy_icon(GaimAccount *account, const char *who, const char *filename)
-{
-	GaimConversation *conv;
-	GaimBuddy *buddy;
-	GaimBlistNode *node;
-	char *path = NULL;
-
-	buddy = gaim_find_buddy(account, who);
-	if (!buddy) {
-		gaim_debug_info("custom-icon", "You can only set custom icon for someone in your buddylist.\n");
-		return;
-	}
-
-	node = (GaimBlistNode*)gaim_buddy_get_contact(buddy);
-	path = (char*)gaim_blist_node_get_string(node, "custom_buddy_icon");
-	if (path) {
-		struct stat st;
-		if (g_stat(path, &st) == 0)
-			g_unlink(path);
-		path = NULL;
-	}
-
-	if (filename) {
-		char *newfile;
-
-		newfile = gaim_gtk_convert_buddy_icon(gaim_find_prpl(gaim_account_get_protocol_id(account)),
-						filename);
-		path = gaim_buddy_icons_get_full_path(newfile);
-		g_free(newfile);
-	}
-
-	gaim_blist_node_set_string(node, "custom_buddy_icon", path);
-	g_free(path);
-
-	/* Update the conversation */
-	conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, who, account);
-	if (conv)
-		gaim_conversation_update(conv, GAIM_CONV_UPDATE_ICON);
-
-	/* Update the buddylist */
-	if (buddy)
-		gaim_blist_update_buddy_icon(buddy);
+	return NULL;
 }
 
-char *gaim_gtk_make_pretty_arrows(const char *str)
+char *pidgin_make_pretty_arrows(const char *str)
 {
 	char *ret;
 	char **split = g_strsplit(str, "->", -1);
@@ -2876,51 +2561,30 @@ char *gaim_gtk_make_pretty_arrows(const char *str)
 	return ret;
 }
 
-void gaim_gtk_set_urgent(GtkWindow *window, gboolean urgent)
+void pidgin_set_urgent(GtkWindow *window, gboolean urgent)
 {
-#if GTK_CHECK_VERSION(2,8,0)
-	gtk_window_set_urgency_hint(window, urgent);
-#elif defined _WIN32
-	gtkwgaim_window_flash(window, urgent);
+#if defined _WIN32
+	winpidgin_window_flash(window, urgent);
 #else
-	GdkWindow *gdkwin;
-	XWMHints *hints;
-
-	g_return_if_fail(window != NULL);
-
-	gdkwin = GTK_WIDGET(window)->window;
-
-	g_return_if_fail(gdkwin != NULL);
-
-	hints = XGetWMHints(GDK_WINDOW_XDISPLAY(gdkwin),
-	                    GDK_WINDOW_XWINDOW(gdkwin));
-	if(!hints)
-		hints = XAllocWMHints();
-
-	if (urgent)
-		hints->flags |= XUrgencyHint;
-	else
-		hints->flags &= ~XUrgencyHint;
-	XSetWMHints(GDK_WINDOW_XDISPLAY(gdkwin),
-	            GDK_WINDOW_XWINDOW(gdkwin), hints);
-	XFree(hints);
+	gtk_window_set_urgency_hint(window, urgent);
 #endif
 }
 
-GSList *minidialogs = NULL;
+static GSList *minidialogs = NULL;
 
 static void *
-gaim_gtk_utils_get_handle()
+pidgin_utils_get_handle(void)
 {
 	static int handle;
 
 	return &handle;
 }
 
-static void connection_signed_off_cb(GaimConnection *gc)
+static void connection_signed_off_cb(PurpleConnection *gc)
 {
-	GSList *list;
-	for (list = minidialogs; list; list = list->next) {
+	GSList *list, *l_next;
+	for (list = minidialogs; list; list = l_next) {
+		l_next = list->next;
 		if (g_object_get_data(G_OBJECT(list->data), "gc") == gc) {
 				gtk_widget_destroy(GTK_WIDGET(list->data));
 		}
@@ -2932,88 +2596,100 @@ static void alert_killed_cb(GtkWidget *widget)
 	minidialogs = g_slist_remove(minidialogs, widget);
 }
 
-void *gaim_gtk_make_mini_dialog(GaimConnection *gc, const char *icon_name,
-				const char *primary, const char *secondary,
-				void *user_data,  ...)
+struct _old_button_clicked_cb_data
 {
-	GtkWidget *vbox;
-        GtkWidget *hbox;
-        GtkWidget *hbox2;
-        GtkWidget *label;
-        GtkWidget *button;
-        GtkWidget *img = NULL;
-	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_BOTH);
-	char label_text[2048];
+	PidginUtilMiniDialogCallback cb;
+	gpointer data;
+};
+
+static void
+old_mini_dialog_button_clicked_cb(PidginMiniDialog *mini_dialog,
+                                  GtkButton *button,
+                                  gpointer user_data)
+{
+	struct _old_button_clicked_cb_data *data = user_data;
+	data->cb(data->data, button);
+}
+
+static void
+old_mini_dialog_destroy_cb(GtkWidget *dialog,
+                           GList *cb_datas)
+{
+	while (cb_datas != NULL)
+	{
+		g_free(cb_datas->data);
+		cb_datas = g_list_delete_link(cb_datas, cb_datas);
+	}
+}
+
+static void
+mini_dialog_init(PidginMiniDialog *mini_dialog, PurpleConnection *gc, void *user_data, va_list args)
+{
 	const char *button_text;
-	GCallback callback;
-	char *primary_esc, *secondary_esc;
-	va_list args;
+	GList *cb_datas = NULL;
 	static gboolean first_call = TRUE;
-
-	img = gtk_image_new_from_stock(icon_name, GTK_ICON_SIZE_BUTTON);
-	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
-
-	vbox = gtk_vbox_new(FALSE,0);
-        gtk_container_set_border_width(GTK_CONTAINER(vbox), GAIM_HIG_BOX_SPACE);
-
-	g_object_set_data(G_OBJECT(vbox), "gc" ,gc);
-	minidialogs = g_slist_prepend(minidialogs, vbox);
-	g_signal_connect(G_OBJECT(vbox), "destroy", G_CALLBACK(alert_killed_cb), NULL);
 
 	if (first_call) {
 		first_call = FALSE;
-		gaim_signal_connect(gaim_connections_get_handle(), "signed-off",
-				    gaim_gtk_utils_get_handle(),
-				    GAIM_CALLBACK(connection_signed_off_cb), NULL);
+		purple_signal_connect(purple_connections_get_handle(), "signed-off",
+		                      pidgin_utils_get_handle(),
+		                      PURPLE_CALLBACK(connection_signed_off_cb), NULL);
 	}
 
-      	hbox = gtk_hbox_new(FALSE, 0);
-        gtk_container_add(GTK_CONTAINER(vbox), hbox);
+	g_object_set_data(G_OBJECT(mini_dialog), "gc" ,gc);
+	g_signal_connect(G_OBJECT(mini_dialog), "destroy",
+		G_CALLBACK(alert_killed_cb), NULL);
 
-        if (img != NULL)
-		gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
-
-	primary_esc = g_markup_escape_text(primary, -1);
-
-	if (secondary)
-		secondary_esc = g_markup_escape_text(secondary, -1);
-	g_snprintf(label_text, sizeof(label_text),
-		   "<span weight=\"bold\" size=\"smaller\">%s</span>%s<span size=\"smaller\">%s</span>",
-		   primary_esc, secondary ? "\n" : "", secondary?secondary_esc:"");
-	g_free(primary_esc);
-	label = gtk_label_new(NULL);
-	gtk_widget_set_size_request(label, gaim_prefs_get_int("/gaim/gtk/blist/width")-25,-1);
-	gtk_label_set_markup(GTK_LABEL(label), label_text);
-        gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-        gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
-        gtk_box_pack_start(GTK_BOX(hbox), label, TRUE, TRUE, 0);
-
-	hbox2 = gtk_hbox_new(FALSE, GAIM_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox2, FALSE, FALSE, 0);
-
-	va_start(args, user_data);
 	while ((button_text = va_arg(args, char*))) {
-		callback = va_arg(args, GCallback);
-		button = gtk_button_new();
+		struct _old_button_clicked_cb_data *data = NULL;
+		PidginMiniDialogCallback wrapper_cb = NULL;
+		PidginUtilMiniDialogCallback callback =
+			va_arg(args, PidginUtilMiniDialogCallback);
 
-		if (callback)
-			g_signal_connect_swapped(G_OBJECT(button), "clicked", callback, user_data);
-		g_signal_connect_swapped(G_OBJECT(button), "clicked", G_CALLBACK(gtk_widget_destroy), vbox);
-		hbox = gtk_hbox_new(FALSE, 0);
-		gtk_container_add(GTK_CONTAINER(button), hbox);
-		gtk_container_set_border_width(GTK_CONTAINER(hbox), 3);
-		g_snprintf(label_text, sizeof(label_text),
-			   "<span size=\"smaller\">%s</span>", button_text);
-		label = gtk_label_new(NULL);
-		gtk_label_set_markup_with_mnemonic(GTK_LABEL(label), label_text);
-		gtk_misc_set_alignment(GTK_MISC(label), 0.5, 0.5);
-		gtk_box_pack_start(GTK_BOX(hbox), label, TRUE, TRUE, 0);
-		gtk_box_pack_end(GTK_BOX(hbox2), button, FALSE, FALSE, 0);
-		gtk_size_group_add_widget(sg, button);
+		if (callback != NULL) {
+			data = g_new0(struct _old_button_clicked_cb_data, 1);
+			data->cb = callback;
+			data->data = user_data;
+			wrapper_cb = old_mini_dialog_button_clicked_cb;
+		}
+		pidgin_mini_dialog_add_button(mini_dialog, button_text,
+			wrapper_cb, data);
+		cb_datas = g_list_append(cb_datas, data);
 	}
-	va_end(args);
 
-	return vbox;
+	g_signal_connect(G_OBJECT(mini_dialog), "destroy",
+		G_CALLBACK(old_mini_dialog_destroy_cb), cb_datas);
+}
+
+#define INIT_AND_RETURN_MINI_DIALOG(mini_dialog) \
+	va_list args; \
+	va_start(args, user_data); \
+	mini_dialog_init(mini_dialog, gc, user_data, args); \
+	va_end(args); \
+	return GTK_WIDGET(mini_dialog);
+
+GtkWidget *
+pidgin_make_mini_dialog(PurpleConnection *gc,
+                        const char *icon_name,
+                        const char *primary,
+                        const char *secondary,
+                        void *user_data,
+                        ...)
+{
+	PidginMiniDialog *mini_dialog = pidgin_mini_dialog_new(primary, secondary, icon_name);
+	INIT_AND_RETURN_MINI_DIALOG(mini_dialog);
+}
+
+GtkWidget *
+pidgin_make_mini_dialog_with_custom_icon(PurpleConnection *gc,
+					GdkPixbuf *custom_icon,
+					const char *primary,
+					const char *secondary,
+					void *user_data,
+					...)
+{
+	PidginMiniDialog *mini_dialog = pidgin_mini_dialog_new_with_custom_icon(primary, secondary, custom_icon);
+	INIT_AND_RETURN_MINI_DIALOG(mini_dialog);
 }
 
 /*
@@ -3031,7 +2707,7 @@ void *gaim_gtk_make_mini_dialog(GaimConnection *gc, const char *icon_name,
  * is to add an extra column to the GtkTreeModel.  And this function is
  * used rarely, so it shouldn't matter TOO much.
  */
-gboolean gaim_gtk_tree_view_search_equal_func(GtkTreeModel *model, gint column,
+gboolean pidgin_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 			const gchar *key, GtkTreeIter *iter, gpointer data)
 {
 	gchar *enteredstring;
@@ -3045,9 +2721,9 @@ gboolean gaim_gtk_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 	PangoLogAttr *log_attrs;
 	gchar *word;
 
-	if (strcasecmp(key, "Global Thermonuclear War") == 0)
+	if (g_ascii_strcasecmp(key, "Global Thermonuclear War") == 0)
 	{
-		gaim_notify_info(NULL, "WOPR",
+		purple_notify_info(NULL, "WOPR",
 				"Wouldn't you prefer a nice game of chess?", NULL);
 		return FALSE;
 	}
@@ -3060,13 +2736,13 @@ gboolean gaim_gtk_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 	enteredstring = g_utf8_casefold(tmp, -1);
 	g_free(tmp);
 
-	nomarkup = gaim_markup_strip_html(withmarkup);
+	nomarkup = purple_markup_strip_html(withmarkup);
 	tmp = g_utf8_normalize(nomarkup, -1, G_NORMALIZE_DEFAULT);
 	g_free(nomarkup);
 	normalized = g_utf8_casefold(tmp, -1);
 	g_free(tmp);
 
-	if (gaim_str_has_prefix(normalized, enteredstring))
+	if (purple_str_has_prefix(normalized, enteredstring))
 	{
 		g_free(withmarkup);
 		g_free(enteredstring);
@@ -3086,7 +2762,7 @@ gboolean gaim_gtk_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 	for (i = 0; i < (len - 1) ; i++)
 	{
 		if (log_attrs[i].is_word_start &&
-		    gaim_str_has_prefix(word, enteredstring))
+		    purple_str_has_prefix(word, enteredstring))
 		{
 			result = FALSE;
 			break;
@@ -3105,7 +2781,7 @@ gboolean gaim_gtk_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 		if (!g_unichar_isalnum(c))
 		{
 			word = g_utf8_find_next_char(word, NULL);
-			if (gaim_str_has_prefix(word, enteredstring))
+			if (purple_str_has_prefix(word, enteredstring))
 			{
 				result = FALSE;
 				break;
@@ -3124,27 +2800,908 @@ gboolean gaim_gtk_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 }
 
 
-#if !GTK_CHECK_VERSION(2,2,0)
-GtkTreePath *
-gtk_tree_path_new_from_indices (gint first_index, ...)
-{
-	int arg;
-	va_list args;
-	GtkTreePath *path;
+gboolean pidgin_gdk_pixbuf_is_opaque(GdkPixbuf *pixbuf) {
+	int height, rowstride, i;
+	unsigned char *pixels;
+	unsigned char *row;
 
-	path = gtk_tree_path_new ();
+	if (!gdk_pixbuf_get_has_alpha(pixbuf))
+		return TRUE;
 
-	va_start (args, first_index);
-	arg = first_index;
+	height = gdk_pixbuf_get_height (pixbuf);
+	rowstride = gdk_pixbuf_get_rowstride (pixbuf);
+	pixels = gdk_pixbuf_get_pixels (pixbuf);
 
-	while (arg != -1)
-	{
-		gtk_tree_path_append_index (path, arg);
-		arg = va_arg (args, gint);
+	row = pixels;
+	for (i = 3; i < rowstride; i+=4) {
+		if (row[i] < 0xfe)
+			return FALSE;
 	}
 
-	va_end (args);
+	for (i = 1; i < height - 1; i++) {
+		row = pixels + (i * rowstride);
+		if (row[3] < 0xfe || row[rowstride - 1] < 0xfe) {
+			return FALSE;
+	    }
+	}
 
-	return path;
+	row = pixels + ((height - 1) * rowstride);
+	for (i = 3; i < rowstride; i += 4) {
+		if (row[i] < 0xfe)
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+void pidgin_gdk_pixbuf_make_round(GdkPixbuf *pixbuf) {
+	int width, height, rowstride;
+	guchar *pixels;
+	if (!gdk_pixbuf_get_has_alpha(pixbuf))
+		return;
+	width = gdk_pixbuf_get_width(pixbuf);
+	height = gdk_pixbuf_get_height(pixbuf);
+	rowstride = gdk_pixbuf_get_rowstride(pixbuf);
+	pixels = gdk_pixbuf_get_pixels(pixbuf);
+
+	if (width < 6 || height < 6)
+		return;
+	/* Top left */
+	pixels[3] = 0;
+	pixels[7] = 0x80;
+	pixels[11] = 0xC0;
+	pixels[rowstride + 3] = 0x80;
+	pixels[rowstride * 2 + 3] = 0xC0;
+
+	/* Top right */
+	pixels[width * 4 - 1] = 0;
+	pixels[width * 4 - 5] = 0x80;
+	pixels[width * 4 - 9] = 0xC0;
+	pixels[rowstride + (width * 4) - 1] = 0x80;
+	pixels[(2 * rowstride) + (width * 4) - 1] = 0xC0;
+
+	/* Bottom left */
+	pixels[(height - 1) * rowstride + 3] = 0;
+	pixels[(height - 1) * rowstride + 7] = 0x80;
+	pixels[(height - 1) * rowstride + 11] = 0xC0;
+	pixels[(height - 2) * rowstride + 3] = 0x80;
+	pixels[(height - 3) * rowstride + 3] = 0xC0;
+
+	/* Bottom right */
+	pixels[height * rowstride - 1] = 0;
+	pixels[(height - 1) * rowstride - 1] = 0x80;
+	pixels[(height - 2) * rowstride - 1] = 0xC0;
+	pixels[height * rowstride - 5] = 0x80;
+	pixels[height * rowstride - 9] = 0xC0;
+}
+
+const char *pidgin_get_dim_grey_string(GtkWidget *widget) {
+	static char dim_grey_string[8] = "";
+	GtkStyle *style;
+
+	if (!widget)
+		return "dim grey";
+
+ 	style = gtk_widget_get_style(widget);
+	if (!style)
+		return "dim grey";
+
+	snprintf(dim_grey_string, sizeof(dim_grey_string), "#%02x%02x%02x",
+	style->text_aa[GTK_STATE_NORMAL].red >> 8,
+	style->text_aa[GTK_STATE_NORMAL].green >> 8,
+	style->text_aa[GTK_STATE_NORMAL].blue >> 8);
+	return dim_grey_string;
+}
+
+static void
+combo_box_changed_cb(GtkComboBox *combo_box, GtkEntry *entry)
+{
+	char *text = gtk_combo_box_get_active_text(combo_box);
+	gtk_entry_set_text(entry, text ? text : "");
+	g_free(text);
+}
+
+static gboolean
+entry_key_pressed_cb(GtkWidget *entry, GdkEventKey *key, GtkComboBox *combo)
+{
+	if (key->keyval == GDK_Down || key->keyval == GDK_Up) {
+		gtk_combo_box_popup(combo);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+GtkWidget *
+pidgin_text_combo_box_entry_new(const char *default_item, GList *items)
+{
+	GtkComboBox *ret = NULL;
+	GtkWidget *the_entry = NULL;
+
+	ret = GTK_COMBO_BOX(gtk_combo_box_entry_new_text());
+	the_entry = gtk_entry_new();
+	gtk_container_add(GTK_CONTAINER(ret), the_entry);
+
+	if (default_item)
+		gtk_entry_set_text(GTK_ENTRY(the_entry), default_item);
+
+	for (; items != NULL ; items = items->next) {
+		char *text = items->data;
+		if (text && *text)
+			gtk_combo_box_append_text(ret, text);
+	}
+
+	g_signal_connect(G_OBJECT(ret), "changed", (GCallback)combo_box_changed_cb, the_entry);
+	g_signal_connect_after(G_OBJECT(the_entry), "key-press-event", G_CALLBACK(entry_key_pressed_cb), ret);
+
+	return GTK_WIDGET(ret);
+}
+
+const char *pidgin_text_combo_box_entry_get_text(GtkWidget *widget)
+{
+	return gtk_entry_get_text(GTK_ENTRY(GTK_BIN((widget))->child));
+}
+
+void pidgin_text_combo_box_entry_set_text(GtkWidget *widget, const char *text)
+{
+	gtk_entry_set_text(GTK_ENTRY(GTK_BIN((widget))->child), (text));
+}
+
+GtkWidget *
+pidgin_add_widget_to_vbox(GtkBox *vbox, const char *widget_label, GtkSizeGroup *sg, GtkWidget *widget, gboolean expand, GtkWidget **p_label)
+{
+	GtkWidget *hbox;
+	GtkWidget *label = NULL;
+
+	if (widget_label) {
+		hbox = gtk_hbox_new(FALSE, 5);
+		gtk_widget_show(hbox);
+		gtk_box_pack_start(vbox, hbox, FALSE, FALSE, 0);
+
+		label = gtk_label_new_with_mnemonic(widget_label);
+		gtk_widget_show(label);
+		if (sg) {
+			gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+			gtk_size_group_add_widget(sg, label);
+		}
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+	} else {
+		hbox = GTK_WIDGET(vbox);
+	}
+
+	gtk_widget_show(widget);
+	gtk_box_pack_start(GTK_BOX(hbox), widget, expand, TRUE, 0);
+	if (label) {
+		gtk_label_set_mnemonic_widget(GTK_LABEL(label), widget);
+		pidgin_set_accessible_label (widget, label);
+	}
+
+	if (p_label)
+		(*p_label) = label;
+	return hbox;
+}
+
+gboolean pidgin_auto_parent_window(GtkWidget *widget)
+{
+#if 0
+	/* This looks at the most recent window that received focus, and makes
+	 * that the parent window. */
+#ifndef _WIN32
+	static GdkAtom _WindowTime = GDK_NONE;
+	static GdkAtom _Cardinal = GDK_NONE;
+	GList *windows = NULL;
+	GtkWidget *parent = NULL;
+	time_t window_time = 0;
+
+	windows = gtk_window_list_toplevels();
+
+	if (_WindowTime == GDK_NONE) {
+		_WindowTime = gdk_x11_xatom_to_atom(gdk_x11_get_xatom_by_name("_NET_WM_USER_TIME"));
+	}
+	if (_Cardinal == GDK_NONE) {
+		_Cardinal = gdk_atom_intern("CARDINAL", FALSE);
+	}
+
+	while (windows) {
+		GtkWidget *window = windows->data;
+		guchar *data = NULL;
+		int al = 0;
+		time_t value;
+
+		windows = g_list_delete_link(windows, windows);
+
+		if (window == widget ||
+				!gtk_widget_get_visible(window))
+			continue;
+
+		if (!gdk_property_get(window->window, _WindowTime, _Cardinal, 0, sizeof(time_t), FALSE,
+				NULL, NULL, &al, &data))
+			continue;
+		value = *(time_t *)data;
+		if (window_time < value) {
+			window_time = value;
+			parent = window;
+		}
+		g_free(data);
+	}
+	if (windows)
+		g_list_free(windows);
+	if (parent) {
+		if (!gtk_get_current_event() && gtk_window_has_toplevel_focus(GTK_WINDOW(parent))) {
+			/* The window is in focus, and the new window was not triggered by a keypress/click
+			 * event. So do not set it transient, to avoid focus stealing and all that.
+			 */
+			return FALSE;
+		}
+		gtk_window_set_transient_for(GTK_WINDOW(widget), GTK_WINDOW(parent));
+		return TRUE;
+	}
+	return FALSE;
+#endif
+#else
+	/* This finds the currently active window and makes that the parent window. */
+	GList *windows = NULL;
+	GtkWidget *parent = NULL;
+	GdkEvent *event = gtk_get_current_event();
+	GdkWindow *menu = NULL;
+
+	if (event == NULL)
+		/* The window was not triggered by a user action. */
+		return FALSE;
+
+	/* We need to special case events from a popup menu. */
+	if (event->type == GDK_BUTTON_RELEASE) {
+		/* XXX: Neither of the following works:
+			menu = event->button.window;
+			menu = gdk_window_get_parent(event->button.window);
+			menu = gdk_window_get_toplevel(event->button.window);
+		*/
+	} else if (event->type == GDK_KEY_PRESS)
+		menu = event->key.window;
+
+	windows = gtk_window_list_toplevels();
+	while (windows) {
+		GtkWidget *window = windows->data;
+		windows = g_list_delete_link(windows, windows);
+
+		if (window == widget ||
+				!gtk_widget_get_visible(window)) {
+			continue;
+		}
+
+		if (gtk_window_has_toplevel_focus(GTK_WINDOW(window)) ||
+				(menu && menu == window->window)) {
+			parent = window;
+			break;
+		}
+	}
+	if (windows)
+		g_list_free(windows);
+	if (parent) {
+		gtk_window_set_transient_for(GTK_WINDOW(widget), GTK_WINDOW(parent));
+		return TRUE;
+	}
+	return FALSE;
+#endif
+}
+
+static GObject *pidgin_pixbuf_from_data_helper(const guchar *buf, gsize count, gboolean animated)
+{
+	GObject *pixbuf;
+	GdkPixbufLoader *loader;
+	GError *error = NULL;
+
+	loader = gdk_pixbuf_loader_new();
+
+	if (!gdk_pixbuf_loader_write(loader, buf, count, &error) || error) {
+		purple_debug_warning("gtkutils", "gdk_pixbuf_loader_write() "
+				"failed with size=%" G_GSIZE_FORMAT ": %s\n", count,
+				error ? error->message : "(no error message)");
+		if (error)
+			g_error_free(error);
+		g_object_unref(G_OBJECT(loader));
+		return NULL;
+	}
+
+	if (!gdk_pixbuf_loader_close(loader, &error) || error) {
+		purple_debug_warning("gtkutils", "gdk_pixbuf_loader_close() "
+				"failed for image of size %" G_GSIZE_FORMAT ": %s\n", count,
+				error ? error->message : "(no error message)");
+		if (error)
+			g_error_free(error);
+		g_object_unref(G_OBJECT(loader));
+		return NULL;
+	}
+
+	if (animated)
+		pixbuf = G_OBJECT(gdk_pixbuf_loader_get_animation(loader));
+	else
+		pixbuf = G_OBJECT(gdk_pixbuf_loader_get_pixbuf(loader));
+	if (!pixbuf) {
+		purple_debug_warning("gtkutils", "%s() returned NULL for image "
+				"of size %" G_GSIZE_FORMAT "\n",
+				animated ? "gdk_pixbuf_loader_get_animation"
+					: "gdk_pixbuf_loader_get_pixbuf", count);
+		g_object_unref(G_OBJECT(loader));
+		return NULL;
+	}
+
+	g_object_ref(pixbuf);
+	g_object_unref(G_OBJECT(loader));
+
+	return pixbuf;
+}
+
+GdkPixbuf *pidgin_pixbuf_from_data(const guchar *buf, gsize count)
+{
+	return GDK_PIXBUF(pidgin_pixbuf_from_data_helper(buf, count, FALSE));
+}
+
+GdkPixbufAnimation *pidgin_pixbuf_anim_from_data(const guchar *buf, gsize count)
+{
+	return GDK_PIXBUF_ANIMATION(pidgin_pixbuf_from_data_helper(buf, count, TRUE));
+}
+
+GdkPixbuf *pidgin_pixbuf_from_imgstore(PurpleStoredImage *image)
+{
+	return pidgin_pixbuf_from_data(purple_imgstore_get_data(image),
+			purple_imgstore_get_size(image));
+}
+
+GdkPixbuf *pidgin_pixbuf_new_from_file(const gchar *filename)
+{
+	GdkPixbuf *pixbuf;
+	GError *error = NULL;
+
+	pixbuf = gdk_pixbuf_new_from_file(filename, &error);
+	if (!pixbuf || error) {
+		purple_debug_warning("gtkutils", "gdk_pixbuf_new_from_file() "
+				"returned %s for file %s: %s\n",
+				pixbuf ? "something" : "nothing",
+				filename,
+				error ? error->message : "(no error message)");
+		if (error)
+			g_error_free(error);
+		if (pixbuf)
+			g_object_unref(G_OBJECT(pixbuf));
+		return NULL;
+	}
+
+	return pixbuf;
+}
+
+GdkPixbuf *pidgin_pixbuf_new_from_file_at_size(const char *filename, int width, int height)
+{
+	GdkPixbuf *pixbuf;
+	GError *error = NULL;
+
+	pixbuf = gdk_pixbuf_new_from_file_at_size(filename,
+			width, height, &error);
+	if (!pixbuf || error) {
+		purple_debug_warning("gtkutils", "gdk_pixbuf_new_from_file_at_size() "
+				"returned %s for file %s: %s\n",
+				pixbuf ? "something" : "nothing",
+				filename,
+				error ? error->message : "(no error message)");
+		if (error)
+			g_error_free(error);
+		if (pixbuf)
+			g_object_unref(G_OBJECT(pixbuf));
+		return NULL;
+	}
+
+	return pixbuf;
+}
+
+GdkPixbuf *pidgin_pixbuf_new_from_file_at_scale(const char *filename, int width, int height, gboolean preserve_aspect_ratio)
+{
+	GdkPixbuf *pixbuf;
+	GError *error = NULL;
+
+	pixbuf = gdk_pixbuf_new_from_file_at_scale(filename,
+			width, height, preserve_aspect_ratio, &error);
+	if (!pixbuf || error) {
+		purple_debug_warning("gtkutils", "gdk_pixbuf_new_from_file_at_scale() "
+				"returned %s for file %s: %s\n",
+				pixbuf ? "something" : "nothing",
+				filename,
+				error ? error->message : "(no error message)");
+		if (error)
+			g_error_free(error);
+		if (pixbuf)
+			g_object_unref(G_OBJECT(pixbuf));
+		return NULL;
+	}
+
+	return pixbuf;
+}
+
+static void url_copy(GtkWidget *w, gchar *url)
+{
+	GtkClipboard *clipboard;
+
+	clipboard = gtk_widget_get_clipboard(w, GDK_SELECTION_PRIMARY);
+	gtk_clipboard_set_text(clipboard, url, -1);
+
+	clipboard = gtk_widget_get_clipboard(w, GDK_SELECTION_CLIPBOARD);
+	gtk_clipboard_set_text(clipboard, url, -1);
+}
+
+static gboolean
+link_context_menu(GtkIMHtml *imhtml, GtkIMHtmlLink *link, GtkWidget *menu)
+{
+	GtkWidget *img, *item;
+	const char *url;
+
+	url = gtk_imhtml_link_get_url(link);
+
+	/* Open Link */
+	img = gtk_image_new_from_stock(GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU);
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Open Link"));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+	g_signal_connect_swapped(G_OBJECT(item), "activate", G_CALLBACK(gtk_imhtml_link_activate), link);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+	/* Copy Link Location */
+	img = gtk_image_new_from_stock(GTK_STOCK_COPY, GTK_ICON_SIZE_MENU);
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Copy Link Location"));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(url_copy), (gpointer)url);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+	return TRUE;
+}
+
+static gboolean
+copy_email_address(GtkIMHtml *imhtml, GtkIMHtmlLink *link, GtkWidget *menu)
+{
+	GtkWidget *img, *item;
+	const char *text;
+	char *address;
+#define MAILTOSIZE  (sizeof("mailto:") - 1)
+
+	text = gtk_imhtml_link_get_url(link);
+	g_return_val_if_fail(text && strlen(text) > MAILTOSIZE, FALSE);
+	address = (char*)text + MAILTOSIZE;
+
+	/* Copy Email Address */
+	img = gtk_image_new_from_stock(GTK_STOCK_COPY, GTK_ICON_SIZE_MENU);
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Copy Email Address"));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(url_copy), address);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+	return TRUE;
+}
+
+static void
+file_open_uri(GtkIMHtml *imhtml, const char *uri)
+{
+	/* Copied from gtkft.c:open_button_cb */
+#ifdef _WIN32
+	/* If using Win32... */
+	int code;
+	if (purple_str_has_prefix(uri, "file://"))
+	{
+		gchar *escaped = g_shell_quote(uri);
+		gchar *param = g_strconcat("/select,\"", uri, "\"", NULL);
+		wchar_t *wc_param = g_utf8_to_utf16(param, -1, NULL, NULL, NULL);
+
+		code = (int)ShellExecuteW(NULL, L"OPEN", L"explorer.exe", wc_param, NULL, SW_NORMAL);
+
+		g_free(wc_param);
+		g_free(param);
+		g_free(escaped);
+	} else {
+		wchar_t *wc_filename = g_utf8_to_utf16(
+				uri, -1, NULL, NULL, NULL);
+
+		code = (int)ShellExecuteW(NULL, NULL, wc_filename, NULL, NULL,
+				SW_SHOW);
+
+		g_free(wc_filename);
+	}
+
+	if (code == SE_ERR_ASSOCINCOMPLETE || code == SE_ERR_NOASSOC)
+	{
+		purple_notify_error(imhtml, NULL,
+				_("There is no application configured to open this type of file."), NULL);
+	}
+	else if (code < 32)
+	{
+		purple_notify_error(imhtml, NULL,
+				_("An error occurred while opening the file."), NULL);
+		purple_debug_warning("gtkutils", "filename: %s; code: %d\n", uri, code);
+	}
+#else
+	char *command = NULL;
+	char *tmp = NULL;
+	GError *error = NULL;
+
+	if (purple_running_gnome())
+	{
+		char *escaped = g_shell_quote(uri);
+		command = g_strdup_printf("gnome-open %s", escaped);
+		g_free(escaped);
+	}
+	else if (purple_running_kde())
+	{
+		char *escaped = g_shell_quote(uri);
+
+		if (purple_str_has_suffix(uri, ".desktop"))
+			command = g_strdup_printf("kfmclient openURL %s 'text/plain'", escaped);
+		else
+			command = g_strdup_printf("kfmclient openURL %s", escaped);
+		g_free(escaped);
+	}
+	else
+	{
+		purple_notify_uri(NULL, uri);
+		return;
+	}
+
+	if (purple_program_is_valid(command))
+	{
+		gint exit_status;
+		if (!g_spawn_command_line_sync(command, NULL, NULL, &exit_status, &error))
+		{
+			tmp = g_strdup_printf(_("Error launching %s: %s"),
+							uri, error->message);
+			purple_notify_error(imhtml, NULL, _("Unable to open file."), tmp);
+			g_free(tmp);
+			g_error_free(error);
+		}
+		if (exit_status != 0)
+		{
+			char *primary = g_strdup_printf(_("Error running %s"), command);
+			char *secondary = g_strdup_printf(_("Process returned error code %d"),
+									exit_status);
+			purple_notify_error(imhtml, NULL, primary, secondary);
+			g_free(tmp);
+		}
+	}
+#endif
+}
+
+#define FILELINKSIZE  (sizeof("file://") - 1)
+static gboolean
+file_clicked_cb(GtkIMHtml *imhtml, GtkIMHtmlLink *link)
+{
+	const char *uri = gtk_imhtml_link_get_url(link) + FILELINKSIZE;
+	file_open_uri(imhtml, uri);
+	return TRUE;
+}
+
+static gboolean
+open_containing_cb(GtkIMHtml *imhtml, const char *url)
+{
+	char *dir = g_path_get_dirname(url + FILELINKSIZE);
+	file_open_uri(imhtml, dir);
+	g_free(dir);
+	return TRUE;
+}
+
+static gboolean
+file_context_menu(GtkIMHtml *imhtml, GtkIMHtmlLink *link, GtkWidget *menu)
+{
+	GtkWidget *img, *item;
+	const char *url;
+
+	url = gtk_imhtml_link_get_url(link);
+
+	/* Open File */
+	img = gtk_image_new_from_stock(GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU);
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Open File"));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+	g_signal_connect_swapped(G_OBJECT(item), "activate", G_CALLBACK(gtk_imhtml_link_activate), link);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+	/* Open Containing Directory */
+	img = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_MENU);
+	item = gtk_image_menu_item_new_with_mnemonic(_("Open _Containing Directory"));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(open_containing_cb), (gpointer)url);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+	return TRUE;
+}
+
+#define AUDIOLINKSIZE  (sizeof("audio://") - 1)
+static gboolean
+audio_clicked_cb(GtkIMHtml *imhtml, GtkIMHtmlLink *link)
+{
+	const char *uri;
+	PidginConversation *conv = g_object_get_data(G_OBJECT(imhtml), "gtkconv");
+	if (!conv) /* no playback in debug window */
+		return TRUE;
+	uri = gtk_imhtml_link_get_url(link) + AUDIOLINKSIZE;
+	purple_sound_play_file(uri, NULL);
+	return TRUE;
+}
+
+static void
+savefile_write_cb(gpointer user_data, char *file)
+{
+	char *temp_file = user_data;
+	gchar *contents;
+	gsize length;
+	GError *error = NULL;
+
+	if (!g_file_get_contents(temp_file, &contents, &length, &error)) {
+		purple_debug_error("gtkutils", "Unable to read contents of %s: %s\n",
+		                   temp_file, error->message);
+		g_error_free(error);
+		return;
+	}
+
+	if (!purple_util_write_data_to_file_absolute(file, contents, length)) {
+		purple_debug_error("gtkutils", "Unable to write contents to %s\n",
+		                   file);
+	}
+}
+
+static gboolean
+save_file_cb(GtkWidget *item, const char *url)
+{
+	PidginConversation *conv = g_object_get_data(G_OBJECT(item), "gtkconv");
+	if (!conv)
+		return TRUE;
+	purple_request_file(conv->active_conv, _("Save File"), NULL, TRUE,
+	                    G_CALLBACK(savefile_write_cb), NULL,
+	                    purple_conversation_get_account(conv->active_conv), NULL, conv->active_conv,
+	                    (void *)url);
+	return TRUE;
+}
+
+static gboolean
+audio_context_menu(GtkIMHtml *imhtml, GtkIMHtmlLink *link, GtkWidget *menu)
+{
+	GtkWidget *img, *item;
+	const char *url;
+	PidginConversation *conv = g_object_get_data(G_OBJECT(imhtml), "gtkconv");
+	if (!conv) /* No menu in debug window */
+		return TRUE;
+
+	url = gtk_imhtml_link_get_url(link);
+
+	/* Play Sound */
+	img = gtk_image_new_from_stock(GTK_STOCK_MEDIA_PLAY, GTK_ICON_SIZE_MENU);
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Play Sound"));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+
+	g_signal_connect_swapped(G_OBJECT(item), "activate", G_CALLBACK(gtk_imhtml_link_activate), link);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+	/* Save File */
+	img = gtk_image_new_from_stock(GTK_STOCK_SAVE, GTK_ICON_SIZE_MENU);
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Save File"));
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
+	g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(save_file_cb), (gpointer)(url+AUDIOLINKSIZE));
+	g_object_set_data(G_OBJECT(item), "gtkconv", conv);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+	return TRUE;
+}
+
+/* XXX: The following two functions are for demonstration purposes only! */
+static gboolean
+open_dialog(GtkIMHtml *imhtml, GtkIMHtmlLink *link)
+{
+	const char *url;
+	const char *str;
+
+	url = gtk_imhtml_link_get_url(link);
+	if (!url || strlen(url) < sizeof("open://"))
+		return FALSE;
+
+	str = url + sizeof("open://") - 1;
+
+	if (strcmp(str, "accounts") == 0)
+		pidgin_accounts_window_show();
+	else if (strcmp(str, "prefs") == 0)
+		pidgin_prefs_show();
+	else
+		return FALSE;
+	return TRUE;
+}
+
+static gboolean
+dummy(GtkIMHtml *imhtml, GtkIMHtmlLink *link, GtkWidget *menu)
+{
+	return TRUE;
+}
+
+static gboolean
+register_gnome_url_handlers(void)
+{
+	char *tmp;
+	char *err;
+	char *c;
+	char *start;
+
+	tmp = g_find_program_in_path("gconftool-2");
+	if (tmp == NULL)
+		return FALSE;
+
+	g_free(tmp);
+	tmp = NULL;
+
+	if (!g_spawn_command_line_sync("gconftool-2 --all-dirs /desktop/gnome/url-handlers",
+	                               &tmp, &err, NULL, NULL))
+	{
+		g_free(tmp);
+		g_free(err);
+		g_return_val_if_reached(FALSE);
+	}
+	g_free(err);
+	err = NULL;
+
+	for (c = start = tmp ; *c ; c++)
+	{
+		/* Skip leading spaces. */
+		if (c == start && *c == ' ')
+			start = c + 1;
+		else if (*c == '\n')
+		{
+			*c = '\0';
+			if (g_str_has_prefix(start, "/desktop/gnome/url-handlers/"))
+			{
+				char *cmd;
+				char *tmp2 = NULL;
+				char *protocol;
+
+				/* If there is an enabled boolean, honor it. */
+				cmd = g_strdup_printf("gconftool-2 -g %s/enabled", start);
+				if (g_spawn_command_line_sync(cmd, &tmp2, &err, NULL, NULL))
+				{
+					g_free(err);
+					err = NULL;
+					if (!strcmp(tmp2, "false\n"))
+					{
+						g_free(tmp2);
+						g_free(cmd);
+						start = c + 1;
+						continue;
+					}
+				}
+				g_free(cmd);
+				g_free(tmp2);
+
+				start += sizeof("/desktop/gnome/url-handlers/") - 1;
+
+				protocol = g_strdup_printf("%s:", start);
+				registered_url_handlers = g_slist_prepend(registered_url_handlers, protocol);
+				gtk_imhtml_class_register_protocol(protocol, url_clicked_cb, link_context_menu);
+			}
+			start = c + 1;
+		}
+	}
+	g_free(tmp);
+
+	return (registered_url_handlers != NULL);
+}
+
+#ifdef _WIN32
+static void
+winpidgin_register_win32_url_handlers(void)
+{
+	int idx = 0;
+	LONG ret = ERROR_SUCCESS;
+
+	do {
+		DWORD nameSize = 256;
+		wchar_t start[256];
+		ret = RegEnumKeyExW(HKEY_CLASSES_ROOT, idx++, start, &nameSize,
+							NULL, NULL, NULL, NULL);
+		if (ret == ERROR_SUCCESS) {
+			HKEY reg_key = NULL;
+			ret = RegOpenKeyExW(HKEY_CLASSES_ROOT, start, 0, KEY_READ, &reg_key);
+			if (ret == ERROR_SUCCESS) {
+				ret = RegQueryValueExW(reg_key, L"URL Protocol", NULL, NULL, NULL, NULL);
+				if (ret == ERROR_SUCCESS) {
+					gchar *utf8 = g_utf16_to_utf8(start, -1, NULL, NULL, NULL);
+					gchar *protocol = g_strdup_printf("%s:", utf8);
+					g_free(utf8);
+					registered_url_handlers = g_slist_prepend(registered_url_handlers, protocol);
+					/* We still pass everything to the "http" "open" handler for security reasons */
+					gtk_imhtml_class_register_protocol(protocol, url_clicked_cb, link_context_menu);
+				}
+				RegCloseKey(reg_key);
+			}
+			ret = ERROR_SUCCESS;
+		}
+	} while (ret == ERROR_SUCCESS);
+
+	if (ret != ERROR_NO_MORE_ITEMS)
+		purple_debug_error("winpidgin", "Error iterating HKEY_CLASSES_ROOT subkeys: %ld\n",
+						   ret);
 }
 #endif
+
+GtkWidget *
+pidgin_make_scrollable(GtkWidget *child, GtkPolicyType hscrollbar_policy, GtkPolicyType vscrollbar_policy, GtkShadowType shadow_type, int width, int height)
+{
+	GtkWidget *sw = gtk_scrolled_window_new(NULL, NULL);
+
+	if (G_LIKELY(sw)) {
+		gtk_widget_show(sw);
+		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw), hscrollbar_policy, vscrollbar_policy);
+		gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw), shadow_type);
+		if (width != -1 || height != -1)
+			gtk_widget_set_size_request(sw, width, height);
+		if (child) {
+			if (GTK_WIDGET_GET_CLASS(child)->set_scroll_adjustments_signal)
+				gtk_container_add(GTK_CONTAINER(sw), child);
+			else
+				gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(sw), child);
+		}
+		return sw;
+	}
+
+	return child;
+}
+
+void pidgin_utils_init(void)
+{
+	gtk_imhtml_class_register_protocol("http://", url_clicked_cb, link_context_menu);
+	gtk_imhtml_class_register_protocol("https://", url_clicked_cb, link_context_menu);
+	gtk_imhtml_class_register_protocol("ftp://", url_clicked_cb, link_context_menu);
+	gtk_imhtml_class_register_protocol("gopher://", url_clicked_cb, link_context_menu);
+	gtk_imhtml_class_register_protocol("mailto:", url_clicked_cb, copy_email_address);
+
+	gtk_imhtml_class_register_protocol("file://", file_clicked_cb, file_context_menu);
+	gtk_imhtml_class_register_protocol("audio://", audio_clicked_cb, audio_context_menu);
+
+	/* Example custom URL handler. */
+	gtk_imhtml_class_register_protocol("open://", open_dialog, dummy);
+
+	/* If we're under GNOME, try registering the system URL handlers. */
+	if (purple_running_gnome())
+		register_gnome_url_handlers();
+
+	/* Used to make small buttons */
+	gtk_rc_parse_string("style \"pidgin-small-close-button\"\n"
+	                    "{\n"
+	                    "GtkWidget::focus-padding = 0\n"
+	                    "GtkWidget::focus-line-width = 0\n"
+	                    "xthickness = 0\n"
+	                    "ythickness = 0\n"
+	                    "GtkContainer::border-width = 0\n"
+	                    "GtkButton::inner-border = {0, 0, 0, 0}\n"
+	                    "GtkButton::default-border = {0, 0, 0, 0}\n"
+	                    "}\n"
+	                    "widget \"*.pidgin-small-close-button\" style \"pidgin-small-close-button\"");
+
+#ifdef _WIN32
+	winpidgin_register_win32_url_handlers();
+#endif
+
+}
+
+void pidgin_utils_uninit(void)
+{
+	gtk_imhtml_class_register_protocol("open://", NULL, NULL);
+
+	/* If we have GNOME handlers registered, unregister them. */
+	if (registered_url_handlers)
+	{
+		GSList *l;
+		for (l = registered_url_handlers; l; l = l->next)
+		{
+			gtk_imhtml_class_register_protocol((char *)l->data, NULL, NULL);
+			g_free(l->data);
+		}
+		g_slist_free(registered_url_handlers);
+		registered_url_handlers = NULL;
+		return;
+	}
+
+	gtk_imhtml_class_register_protocol("audio://", NULL, NULL);
+	gtk_imhtml_class_register_protocol("file://", NULL, NULL);
+
+	gtk_imhtml_class_register_protocol("http://", NULL, NULL);
+	gtk_imhtml_class_register_protocol("https://", NULL, NULL);
+	gtk_imhtml_class_register_protocol("ftp://", NULL, NULL);
+	gtk_imhtml_class_register_protocol("mailto:", NULL, NULL);
+	gtk_imhtml_class_register_protocol("gopher://", NULL, NULL);
+}

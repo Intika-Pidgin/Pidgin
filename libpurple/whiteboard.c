@@ -1,7 +1,7 @@
 /*
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,20 +17,36 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
-#include <string.h>
-
+#include "internal.h"
 #include "whiteboard.h"
 #include "prpl.h"
+
+/**
+ * A PurpleWhiteboard
+ */
+struct _PurpleWhiteboard
+{
+	int state;                       /**< State of whiteboard session */
+
+	PurpleAccount *account;            /**< Account associated with this session */
+	char *who;                       /**< Name of the remote user */
+
+	void *ui_data;                   /**< Graphical user-interface data */
+	void *proto_data;                /**< Protocol specific data */
+	PurpleWhiteboardPrplOps *prpl_ops; /**< Protocol-plugin operations */
+
+	GList *draw_list;                /**< List of drawing elements/deltas to send */
+};
 
 /******************************************************************************
  * Globals
  *****************************************************************************/
-static GaimWhiteboardUiOps *whiteboard_ui_ops = NULL;
-/* static GaimWhiteboardPrplOps *whiteboard_prpl_ops = NULL; */
+static PurpleWhiteboardUiOps *whiteboard_ui_ops = NULL;
+/* static PurpleWhiteboardPrplOps *whiteboard_prpl_ops = NULL; */
 
 static GList *wbList = NULL;
 
@@ -39,27 +55,28 @@ static GList *wbList = NULL;
 /******************************************************************************
  * API
  *****************************************************************************/
-void gaim_whiteboard_set_ui_ops(GaimWhiteboardUiOps *ops)
+void purple_whiteboard_set_ui_ops(PurpleWhiteboardUiOps *ops)
 {
 	whiteboard_ui_ops = ops;
 }
 
-void gaim_whiteboard_set_prpl_ops(GaimWhiteboard *wb, GaimWhiteboardPrplOps *ops)
+void purple_whiteboard_set_prpl_ops(PurpleWhiteboard *wb, PurpleWhiteboardPrplOps *ops)
 {
 	wb->prpl_ops = ops;
 }
 
-GaimWhiteboard *gaim_whiteboard_create(GaimAccount *account, const char *who, int state)
+PurpleWhiteboard *purple_whiteboard_create(PurpleAccount *account, const char *who, int state)
 {
-	GaimPluginProtocolInfo *prpl_info;
-	GaimWhiteboard *wb = g_new0(GaimWhiteboard, 1);
+	PurplePluginProtocolInfo *prpl_info;
+	PurpleWhiteboard *wb = g_new0(PurpleWhiteboard, 1);
 
 	wb->account = account;
 	wb->state   = state;
 	wb->who     = g_strdup(who);
 
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(account->gc->prpl);
-	gaim_whiteboard_set_prpl_ops(wb, prpl_info->whiteboard_prpl_ops);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(
+				purple_account_get_connection(account)));
+	purple_whiteboard_set_prpl_ops(wb, prpl_info->whiteboard_prpl_ops);
 
 	/* Start up protocol specifics */
 	if(wb->prpl_ops && wb->prpl_ops->start)
@@ -70,7 +87,7 @@ GaimWhiteboard *gaim_whiteboard_create(GaimAccount *account, const char *who, in
 	return wb;
 }
 
-void gaim_whiteboard_destroy(GaimWhiteboard *wb)
+void purple_whiteboard_destroy(PurpleWhiteboard *wb)
 {
 	g_return_if_fail(wb != NULL);
 
@@ -90,7 +107,35 @@ void gaim_whiteboard_destroy(GaimWhiteboard *wb)
 	g_free(wb);
 }
 
-void gaim_whiteboard_start(GaimWhiteboard *wb)
+PurpleAccount *purple_whiteboard_get_account(const PurpleWhiteboard *wb)
+{
+	g_return_val_if_fail(wb != NULL, NULL);
+
+	return wb->account;
+}
+
+const char *purple_whiteboard_get_who(const PurpleWhiteboard *wb)
+{
+	g_return_val_if_fail(wb != NULL, NULL);
+
+	return wb->who;	
+}
+
+void purple_whiteboard_set_state(PurpleWhiteboard *wb, int state)
+{
+	g_return_if_fail(wb != NULL);
+
+	wb->state = state;
+}
+
+int purple_whiteboard_get_state(const PurpleWhiteboard *wb)
+{
+	g_return_val_if_fail(wb != NULL, -1);
+
+	return wb->state;
+}
+
+void purple_whiteboard_start(PurpleWhiteboard *wb)
 {
 	/* Create frontend for whiteboard */
 	if(whiteboard_ui_ops && whiteboard_ui_ops->create)
@@ -101,9 +146,9 @@ void gaim_whiteboard_start(GaimWhiteboard *wb)
  * usernames 'me' and 'who'.  Returns a pointer to a matching whiteboard
  * session; if none match, it returns NULL.
  */
-GaimWhiteboard *gaim_whiteboard_get_session(GaimAccount *account, const char *who)
+PurpleWhiteboard *purple_whiteboard_get_session(const PurpleAccount *account, const char *who)
 {
-	GaimWhiteboard *wb = NULL;
+	PurpleWhiteboard *wb;
 
 	GList *l = wbList;
 
@@ -113,7 +158,7 @@ GaimWhiteboard *gaim_whiteboard_get_session(GaimAccount *account, const char *wh
 	{
 		wb = l->data;
 
-		if(wb->account == account && !strcmp(wb->who, who))
+		if(wb->account == account && purple_strequal(wb->who, who))
 			return wb;
 
 		l = l->next;
@@ -122,14 +167,14 @@ GaimWhiteboard *gaim_whiteboard_get_session(GaimAccount *account, const char *wh
 	return NULL;
 }
 
-void gaim_whiteboard_draw_list_destroy(GList *draw_list)
+void purple_whiteboard_draw_list_destroy(GList *draw_list)
 {
 	g_list_free(draw_list);
 }
 
-gboolean gaim_whiteboard_get_dimensions(GaimWhiteboard *wb, int *width, int *height)
+gboolean purple_whiteboard_get_dimensions(const PurpleWhiteboard *wb, int *width, int *height)
 {
-	GaimWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
+	PurpleWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
 
 	if (prpl_ops && prpl_ops->get_dimensions)
 	{
@@ -140,57 +185,57 @@ gboolean gaim_whiteboard_get_dimensions(GaimWhiteboard *wb, int *width, int *hei
 	return FALSE;
 }
 
-void gaim_whiteboard_set_dimensions(GaimWhiteboard *wb, int width, int height)
+void purple_whiteboard_set_dimensions(PurpleWhiteboard *wb, int width, int height)
 {
 	if(whiteboard_ui_ops && whiteboard_ui_ops->set_dimensions)
 		whiteboard_ui_ops->set_dimensions(wb, width, height);
 }
 
-void gaim_whiteboard_send_draw_list(GaimWhiteboard *wb, GList *list)
+void purple_whiteboard_send_draw_list(PurpleWhiteboard *wb, GList *list)
 {
-	GaimWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
+	PurpleWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
 
 	if (prpl_ops && prpl_ops->send_draw_list)
 		prpl_ops->send_draw_list(wb, list);
 }
 
-void gaim_whiteboard_draw_point(GaimWhiteboard *wb, int x, int y, int color, int size)
+void purple_whiteboard_draw_point(PurpleWhiteboard *wb, int x, int y, int color, int size)
 {
 	if(whiteboard_ui_ops && whiteboard_ui_ops->draw_point)
 		whiteboard_ui_ops->draw_point(wb, x, y, color, size);
 }
 
-void gaim_whiteboard_draw_line(GaimWhiteboard *wb, int x1, int y1, int x2, int y2, int color, int size)
+void purple_whiteboard_draw_line(PurpleWhiteboard *wb, int x1, int y1, int x2, int y2, int color, int size)
 {
 	if(whiteboard_ui_ops && whiteboard_ui_ops->draw_line)
 		whiteboard_ui_ops->draw_line(wb, x1, y1, x2, y2, color, size);
 }
 
-void gaim_whiteboard_clear(GaimWhiteboard *wb)
+void purple_whiteboard_clear(PurpleWhiteboard *wb)
 {
 	if(whiteboard_ui_ops && whiteboard_ui_ops->clear)
 		whiteboard_ui_ops->clear(wb);
 }
 
-void gaim_whiteboard_send_clear(GaimWhiteboard *wb)
+void purple_whiteboard_send_clear(PurpleWhiteboard *wb)
 {
-	GaimWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
+	PurpleWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
 
 	if (prpl_ops && prpl_ops->clear)
 		prpl_ops->clear(wb);
 }
 
-void gaim_whiteboard_send_brush(GaimWhiteboard *wb, int size, int color)
+void purple_whiteboard_send_brush(PurpleWhiteboard *wb, int size, int color)
 {
-	GaimWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
+	PurpleWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
 
 	if (prpl_ops && prpl_ops->set_brush)
 		prpl_ops->set_brush(wb, size, color);
 }
 
-gboolean gaim_whiteboard_get_brush(GaimWhiteboard *wb, int *size, int *color)
+gboolean purple_whiteboard_get_brush(const PurpleWhiteboard *wb, int *size, int *color)
 {
-	GaimWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
+	PurpleWhiteboardPrplOps *prpl_ops = wb->prpl_ops;
 
 	if (prpl_ops && prpl_ops->get_brush)
 	{
@@ -200,9 +245,50 @@ gboolean gaim_whiteboard_get_brush(GaimWhiteboard *wb, int *size, int *color)
 	return FALSE;
 }
 
-void gaim_whiteboard_set_brush(GaimWhiteboard *wb, int size, int color)
+void purple_whiteboard_set_brush(PurpleWhiteboard *wb, int size, int color)
 {
 	if (whiteboard_ui_ops && whiteboard_ui_ops->set_brush)
 		whiteboard_ui_ops->set_brush(wb, size, color);
 }
 
+GList *purple_whiteboard_get_draw_list(const PurpleWhiteboard *wb)
+{
+	g_return_val_if_fail(wb != NULL, NULL);
+
+	return wb->draw_list;
+}
+
+void purple_whiteboard_set_draw_list(PurpleWhiteboard *wb, GList* draw_list)
+{
+	g_return_if_fail(wb != NULL);
+
+	wb->draw_list = draw_list;
+}
+
+void purple_whiteboard_set_protocol_data(PurpleWhiteboard *wb, gpointer proto_data)
+{
+	g_return_if_fail(wb != NULL);
+
+	wb->proto_data = proto_data;
+}
+
+gpointer purple_whiteboard_get_protocol_data(const PurpleWhiteboard *wb)
+{
+	g_return_val_if_fail(wb != NULL, NULL);
+
+	return wb->proto_data;
+}
+
+void purple_whiteboard_set_ui_data(PurpleWhiteboard *wb, gpointer ui_data)
+{
+	g_return_if_fail(wb != NULL);
+
+	wb->ui_data = ui_data;
+}
+
+gpointer purple_whiteboard_get_ui_data(const PurpleWhiteboard *wb)
+{
+	g_return_val_if_fail(wb != NULL, NULL);
+
+	return wb->ui_data;
+}

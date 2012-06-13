@@ -1,9 +1,9 @@
 /**
  * @file slp.h MSNSLP support
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,30 +19,33 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_SLP_H_
-#define _MSN_SLP_H_
+#ifndef MSN_SLP_H
+#define MSN_SLP_H
 
-#include "slpcall.h"
-#include "session.h"
 #include "internal.h"
 #include "ft.h"
 
-void msn_xfer_progress_cb(MsnSlpCall *slpcall, gsize total_length, gsize
-						  len, gsize offset);
+#include "session.h"
+#include "slpcall.h"
+#include "slplink.h"
+#include "user.h"
 
-MsnSlpCall * msn_slp_sip_recv(MsnSlpLink *slplink,
-							  const char *body);
+void
+msn_slp_send_ok(MsnSlpCall *slpcall, const char *branch,
+		const char *type, const char *content);
+
+void
+msn_slp_send_decline(MsnSlpCall *slpcall, const char *branch,
+			 const char *type, const char *content);
+
 
 void send_bye(MsnSlpCall *slpcall, const char *type);
 
-void msn_xfer_completed_cb(MsnSlpCall *slpcall,
-						   const guchar *body, gsize size);
 
-void msn_xfer_cancel(GaimXfer *xfer);
-void msn_xfer_end_cb(MsnSlpCall *slpcall, MsnSession *session);
+void msn_request_user_display(MsnUser *user);
 
-void msn_queue_buddy_icon_request(MsnUser *user);
+void msn_request_ft(PurpleXfer *xfer);
 
-#endif /* _MSN_SLP_H_ */
+#endif /* MSN_SLP_H */

@@ -1,7 +1,7 @@
 /**
  * @file simple.h
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2005, Thomas Butter <butter@uni-mannheim.de>
  *
@@ -17,11 +17,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GAIM_SIMPLE_H
-#define _GAIM_SIMPLE_H
+#ifndef _PURPLE_SIMPLE_H
+#define _PURPLE_SIMPLE_H
 
 #include <glib.h>
 #include <time.h>
@@ -37,6 +37,14 @@
 #include "sipmsg.h"
 
 #define SIMPLE_BUF_INC 1024
+#define SIMPLE_REGISTER_RETRY_MAX 2
+
+#define SIMPLE_REGISTER_SENT 1
+#define SIMPLE_REGISTER_RETRY 2
+#define SIMPLE_REGISTER_COMPLETE 3
+
+#define PUBLISH_EXPIRATION 600
+#define SUBSCRIBE_EXPIRATION 1200
 
 struct sip_dialog {
 	gchar *ourtag;
@@ -54,6 +62,7 @@ struct simple_watcher {
 struct simple_buddy {
 	gchar *name;
 	time_t resubscribe;
+	struct sip_dialog *dialog;
 };
 
 struct sip_auth {
@@ -69,13 +78,13 @@ struct sip_auth {
 };
 
 struct simple_account_data {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 	gchar *servername;
 	gchar *username;
 	gchar *password;
-	GaimDnsQueryData *query_data;
-	GaimSrvQueryData *srv_query_data;
-	GaimNetworkListenData *listen_data;
+	PurpleDnsQueryData *query_data;
+	PurpleSrvTxtQueryData *srv_query_data;
+	PurpleNetworkListenData *listen_data;
 	int fd;
 	int cseq;
 	time_t reregister;
@@ -91,8 +100,8 @@ struct simple_account_data {
 	guint registertimeout;
 	guint resendtimeout;
 	gboolean connecting;
-	GaimAccount *account;
-	GaimCircBuffer *txbuf;
+	PurpleAccount *account;
+	PurpleCircBuffer *txbuf;
 	guint tx_handler;
 	gchar *regcallid;
 	GSList *transactions;
@@ -103,6 +112,7 @@ struct simple_account_data {
 	int registerexpire;
 	gchar *realhostname;
 	int realport; /* port and hostname from SRV record */
+	gchar *publish_etag;
 };
 
 struct sip_connection {
@@ -122,9 +132,9 @@ struct transaction {
 	int retries;
 	int transport; /* 0 = tcp, 1 = udp */
 	int fd;
-	gchar *cseq;
+	const gchar *cseq;
 	struct sipmsg *msg;
 	TransCallback callback;
 };
 
-#endif /* _GAIM_SIMPLE_H */
+#endif /* _PURPLE_SIMPLE_H */

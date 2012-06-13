@@ -1,10 +1,11 @@
 /**
  * @file connection.c Connection API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,8 +21,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#define _PURPLE_CONNECTION_C_
+
 #include "internal.h"
 #include "account.h"
 #include "blist.h"
@@ -37,73 +40,79 @@
 #include "signals.h"
 #include "util.h"
 
+#define KEEPALIVE_INTERVAL 30
+
 static GList *connections = NULL;
 static GList *connections_connecting = NULL;
-static GaimConnectionUiOps *connection_ui_ops = NULL;
+static PurpleConnectionUiOps *connection_ui_ops = NULL;
 
 static int connections_handle;
 
 static gboolean
 send_keepalive(gpointer data)
 {
-	GaimConnection *gc = data;
-	GaimPluginProtocolInfo *prpl_info = NULL;
+	PurpleConnection *gc = data;
+	PurplePluginProtocolInfo *prpl_info;
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	/* Only send keep-alives if we haven't heard from the
+	 * server in a while.
+	 */
+	if ((time(NULL) - gc->last_received) < KEEPALIVE_INTERVAL)
+		return TRUE;
 
-	if (prpl_info && prpl_info->keepalive)
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (prpl_info->keepalive)
 		prpl_info->keepalive(gc);
 
 	return TRUE;
 }
 
 static void
-update_keepalive(GaimConnection *gc, gboolean on)
+update_keepalive(PurpleConnection *gc, gboolean on)
 {
-	GaimPluginProtocolInfo *prpl_info = NULL;
+	PurplePluginProtocolInfo *prpl_info = NULL;
 
 	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
 
 	if (!prpl_info || !prpl_info->keepalive)
 		return;
 
 	if (on && !gc->keepalive)
 	{
-		gaim_debug_info("connection", "Activating keepalive.\n");
-		gc->keepalive = gaim_timeout_add(30000, send_keepalive, gc);
+		purple_debug_info("connection", "Activating keepalive.\n");
+		gc->keepalive = purple_timeout_add_seconds(KEEPALIVE_INTERVAL, send_keepalive, gc);
 	}
 	else if (!on && gc->keepalive > 0)
 	{
-		gaim_debug_info("connection", "Deactivating keepalive.\n");
-		gaim_timeout_remove(gc->keepalive);
+		purple_debug_info("connection", "Deactivating keepalive.\n");
+		purple_timeout_remove(gc->keepalive);
 		gc->keepalive = 0;
 	}
 }
 
 void
-gaim_connection_new(GaimAccount *account, gboolean regist, const char *password)
+_purple_connection_new(PurpleAccount *account, gboolean regist, const char *password)
 {
-	GaimConnection *gc;
-	GaimPlugin *prpl;
-	GaimPluginProtocolInfo *prpl_info;
+	PurpleConnection *gc;
+	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info;
 
 	g_return_if_fail(account != NULL);
 
-	if (!gaim_account_is_disconnected(account))
+	if (!purple_account_is_disconnected(account))
 		return;
 
-	prpl = gaim_find_prpl(gaim_account_get_protocol_id(account));
+	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
 
 	if (prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(prpl);
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 	else {
 		gchar *message;
 
 		message = g_strdup_printf(_("Missing protocol plugin for %s"),
-			gaim_account_get_username(account));
-		gaim_notify_error(NULL, regist ? _("Registration Error") :
+			purple_account_get_username(account));
+		purple_notify_error(NULL, regist ? _("Registration Error") :
 						  _("Connection Error"), message, NULL);
 		g_free(message);
 		return;
@@ -120,28 +129,28 @@ gaim_connection_new(GaimAccount *account, gboolean regist, const char *password)
 			!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
 			!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
 		{
-			gaim_debug_error("connection", "Can not connect to account %s without "
-							 "a password.\n", gaim_account_get_username(account));
+			purple_debug_error("connection", "Cannot connect to account %s without "
+							 "a password.\n", purple_account_get_username(account));
 			return;
 		}
 	}
 
-	gc = g_new0(GaimConnection, 1);
-	GAIM_DBUS_REGISTER_POINTER(gc, GaimConnection);
+	gc = g_new0(PurpleConnection, 1);
+	PURPLE_DBUS_REGISTER_POINTER(gc, PurpleConnection);
 
 	gc->prpl = prpl;
 	if ((password != NULL) && (*password != '\0'))
 		gc->password = g_strdup(password);
-	gaim_connection_set_account(gc, account);
-	gaim_connection_set_state(gc, GAIM_CONNECTING);
+	purple_connection_set_account(gc, account);
+	purple_connection_set_state(gc, PURPLE_CONNECTING);
 	connections = g_list_append(connections, gc);
-	gaim_account_set_connection(account, gc);
+	purple_account_set_connection(account, gc);
 
-	gaim_signal_emit(gaim_connections_get_handle(), "signing-on", gc);
+	purple_signal_emit(purple_connections_get_handle(), "signing-on", gc);
 
 	if (regist)
 	{
-		gaim_debug_info("connection", "Registering.  gc = %p\n", gc);
+		purple_debug_info("connection", "Registering.  gc = %p\n", gc);
 
 		/* set this so we don't auto-reconnect after registering */
 		gc->wants_to_die = TRUE;
@@ -150,95 +159,136 @@ gaim_connection_new(GaimAccount *account, gboolean regist, const char *password)
 	}
 	else
 	{
-		gaim_debug_info("connection", "Connecting. gc = %p\n", gc);
+		purple_debug_info("connection", "Connecting. gc = %p\n", gc);
 
-		gaim_signal_emit(gaim_accounts_get_handle(), "account-connecting", account);
+		purple_signal_emit(purple_accounts_get_handle(), "account-connecting", account);
 		prpl_info->login(account);
 	}
 }
 
 void
-gaim_connection_destroy(GaimConnection *gc)
+_purple_connection_new_unregister(PurpleAccount *account, const char *password, PurpleAccountUnregistrationCb cb, void *user_data)
 {
-	GaimAccount *account;
-	GSList *buddies, *tmp;
-#if 0
-	GList *wins;
-#endif
-	GaimPluginProtocolInfo *prpl_info = NULL;
+	/* Lots of copy/pasted code to avoid API changes. You might want to integrate that into the previous function when posssible. */
+	PurpleConnection *gc;
+	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info;
+
+	g_return_if_fail(account != NULL);
+
+	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	else {
+		gchar *message;
+
+		message = g_strdup_printf(_("Missing protocol plugin for %s"),
+								  purple_account_get_username(account));
+		purple_notify_error(NULL, _("Unregistration Error"), message, NULL);
+		g_free(message);
+		return;
+	}
+
+	if (!purple_account_is_disconnected(account)) {
+		prpl_info->unregister_user(account, cb, user_data);
+		return;
+	}
+
+	if (((password == NULL) || (*password == '\0')) &&
+		!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
+		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
+	{
+		purple_debug_error("connection", "Cannot connect to account %s without "
+						   "a password.\n", purple_account_get_username(account));
+		return;
+	}
+
+	gc = g_new0(PurpleConnection, 1);
+	PURPLE_DBUS_REGISTER_POINTER(gc, PurpleConnection);
+
+	gc->prpl = prpl;
+	if ((password != NULL) && (*password != '\0'))
+		gc->password = g_strdup(password);
+	purple_connection_set_account(gc, account);
+	purple_connection_set_state(gc, PURPLE_CONNECTING);
+	connections = g_list_append(connections, gc);
+	purple_account_set_connection(account, gc);
+
+	purple_signal_emit(purple_connections_get_handle(), "signing-on", gc);
+
+	purple_debug_info("connection", "Unregistering.  gc = %p\n", gc);
+
+	prpl_info->unregister_user(account, cb, user_data);
+}
+
+void
+_purple_connection_destroy(PurpleConnection *gc)
+{
+	PurpleAccount *account;
+	GSList *buddies;
+	PurplePluginProtocolInfo *prpl_info = NULL;
 	gboolean remove = FALSE;
 
 	g_return_if_fail(gc != NULL);
 
-	account = gaim_connection_get_account(gc);
+	account = purple_connection_get_account(gc);
 
-	gaim_debug_info("connection", "Disconnecting connection %p\n", gc);
+	purple_debug_info("connection", "Disconnecting connection %p\n", gc);
 
-	if (gaim_connection_get_state(gc) != GAIM_CONNECTING)
+	if (purple_connection_get_state(gc) != PURPLE_CONNECTING)
 		remove = TRUE;
 
-	gaim_signal_emit(gaim_connections_get_handle(), "signing-off", gc);
+	purple_signal_emit(purple_connections_get_handle(), "signing-off", gc);
 
 	while (gc->buddy_chats)
 	{
-		GaimConversation *b = gc->buddy_chats->data;
+		PurpleConversation *b = gc->buddy_chats->data;
 
 		gc->buddy_chats = g_slist_remove(gc->buddy_chats, b);
-		gaim_conv_chat_left(GAIM_CONV_CHAT(b));
+		purple_conv_chat_left(PURPLE_CONV_CHAT(b));
 	}
 
 	update_keepalive(gc, FALSE);
 
-	gaim_proxy_connect_cancel_with_handle(gc);
+	purple_proxy_connect_cancel_with_handle(gc);
 
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
 	if (prpl_info->close)
 		(prpl_info->close)(gc);
 
 	/* Clear out the proto data that was freed in the prpl close method*/
-	buddies = gaim_find_buddies(account, NULL);
-	for (tmp = buddies; tmp; tmp = tmp->next) {
-		GaimBuddy *buddy = tmp->data;
-		buddy->proto_data = NULL;
+	buddies = purple_find_buddies(account, NULL);
+	while (buddies != NULL) {
+		PurpleBuddy *buddy = buddies->data;
+		purple_buddy_set_protocol_data(buddy, NULL);
+		buddies = g_slist_delete_link(buddies, buddies);
 	}
-	g_slist_free(buddies);
 
 	connections = g_list_remove(connections, gc);
 
-	gaim_connection_set_state(gc, GAIM_DISCONNECTED);
+	purple_connection_set_state(gc, PURPLE_DISCONNECTED);
 
 	if (remove)
-		gaim_blist_remove_account(account);
+		purple_blist_remove_account(account);
 
-	gaim_signal_emit(gaim_connections_get_handle(), "signed-off", gc);
+	purple_signal_emit(purple_connections_get_handle(), "signed-off", gc);
 
-#if 0
-	/* see comment later in file on if 0'd same code */
-	/*
-	 * XXX This is a hack! Remove this and replace it with a better event
-	 *     notification system.
-	 */
-	for (wins = gaim_get_windows(); wins != NULL; wins = wins->next) {
-		GaimConvWindow *win = (GaimConvWindow *)wins->data;
-		gaim_conversation_update(gaim_conv_window_get_conversation_at(win, 0),
-								 GAIM_CONV_ACCOUNT_OFFLINE);
-	}
-#endif
+	purple_account_request_close_with_account(account);
+	purple_request_close_with_handle(gc);
+	purple_notify_close_with_handle(gc);
 
-	gaim_request_close_with_handle(gc);
-	gaim_notify_close_with_handle(gc);
+	purple_debug_info("connection", "Destroying connection %p\n", gc);
 
-	gaim_debug_info("connection", "Destroying connection %p\n", gc);
-
-	gaim_account_set_connection(account, NULL);
+	purple_account_set_connection(account, NULL);
 
 	g_free(gc->password);
 	g_free(gc->display_name);
 
-	if (gc->disconnect_timeout)
-		gaim_timeout_remove(gc->disconnect_timeout);
+	if (gc->disconnect_timeout > 0)
+		purple_timeout_remove(gc->disconnect_timeout);
 
-	GAIM_DBUS_UNREGISTER_POINTER(gc);
+	PURPLE_DBUS_UNREGISTER_POINTER(gc);
 	g_free(gc);
 }
 
@@ -253,9 +303,9 @@ gaim_connection_destroy(GaimConnection *gc)
  */
 
 void
-gaim_connection_set_state(GaimConnection *gc, GaimConnectionState state)
+purple_connection_set_state(PurpleConnection *gc, PurpleConnectionState state)
 {
-	GaimConnectionUiOps *ops;
+	PurpleConnectionUiOps *ops;
 
 	g_return_if_fail(gc != NULL);
 
@@ -264,36 +314,36 @@ gaim_connection_set_state(GaimConnection *gc, GaimConnectionState state)
 
 	gc->state = state;
 
-	ops = gaim_connections_get_ui_ops();
+	ops = purple_connections_get_ui_ops();
 
-	if (gc->state == GAIM_CONNECTING) {
+	if (gc->state == PURPLE_CONNECTING) {
 		connections_connecting = g_list_append(connections_connecting, gc);
 	}
 	else {
 		connections_connecting = g_list_remove(connections_connecting, gc);
 	}
 
-	if (gc->state == GAIM_CONNECTED) {
-		GaimAccount *account;
-		GaimPresence *presence;
+	if (gc->state == PURPLE_CONNECTED) {
+		PurpleAccount *account;
+		PurplePresence *presence;
 
-		account = gaim_connection_get_account(gc);
-		presence = gaim_account_get_presence(account);
+		account = purple_connection_get_account(gc);
+		presence = purple_account_get_presence(account);
 
 		/* Set the time the account came online */
-		gaim_presence_set_login_time(presence, time(NULL));
+		purple_presence_set_login_time(presence, time(NULL));
 
-		if (gaim_prefs_get_bool("/core/logging/log_system"))
+		if (purple_prefs_get_bool("/purple/logging/log_system"))
 		{
-			GaimLog *log = gaim_account_get_log(account, TRUE);
+			PurpleLog *log = purple_account_get_log(account, TRUE);
 
 			if (log != NULL)
 			{
 				char *msg = g_strdup_printf(_("+++ %s signed on"),
-											gaim_account_get_username(account));
-				gaim_log_write(log, GAIM_MESSAGE_SYSTEM,
-							   gaim_account_get_username(account),
-							   gaim_presence_get_login_time(presence),
+											purple_account_get_username(account));
+				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
+							   purple_account_get_username(account),
+							   purple_presence_get_login_time(presence),
 							   msg);
 				g_free(msg);
 			}
@@ -302,33 +352,34 @@ gaim_connection_set_state(GaimConnection *gc, GaimConnectionState state)
 		if (ops != NULL && ops->connected != NULL)
 			ops->connected(gc);
 
-		gaim_blist_add_account(account);
+		purple_blist_add_account(account);
 
-		gaim_signal_emit(gaim_connections_get_handle(), "signed-on", gc);
+		purple_signal_emit(purple_connections_get_handle(), "signed-on", gc);
+		purple_signal_emit_return_1(purple_connections_get_handle(), "autojoin", gc);
 
 		serv_set_permit_deny(gc);
 
 		update_keepalive(gc, TRUE);
 	}
-	else if (gc->state == GAIM_DISCONNECTED) {
-		GaimAccount *account = gaim_connection_get_account(gc);
+	else if (gc->state == PURPLE_DISCONNECTED) {
+		PurpleAccount *account = purple_connection_get_account(gc);
 
-		if (gaim_prefs_get_bool("/core/logging/log_system"))
+		if (purple_prefs_get_bool("/purple/logging/log_system"))
 		{
-			GaimLog *log = gaim_account_get_log(account, FALSE);
+			PurpleLog *log = purple_account_get_log(account, FALSE);
 
 			if (log != NULL)
 			{
 				char *msg = g_strdup_printf(_("+++ %s signed off"),
-											gaim_account_get_username(account));
-				gaim_log_write(log, GAIM_MESSAGE_SYSTEM,
-							   gaim_account_get_username(account), time(NULL),
+											purple_account_get_username(account));
+				purple_log_write(log, PURPLE_MESSAGE_SYSTEM,
+							   purple_account_get_username(account), time(NULL),
 							   msg);
 				g_free(msg);
 			}
 		}
 
-		gaim_account_destroy_log(account);
+		purple_account_destroy_log(account);
 
 		if (ops != NULL && ops->disconnected != NULL)
 			ops->disconnected(gc);
@@ -336,7 +387,15 @@ gaim_connection_set_state(GaimConnection *gc, GaimConnectionState state)
 }
 
 void
-gaim_connection_set_account(GaimConnection *gc, GaimAccount *account)
+purple_connection_set_flags(PurpleConnection *gc, PurpleConnectionFlags flags)
+{
+	g_return_if_fail(gc != NULL);
+
+	gc->flags = flags;
+}
+
+void
+purple_connection_set_account(PurpleConnection *gc, PurpleAccount *account)
 {
 	g_return_if_fail(gc != NULL);
 	g_return_if_fail(account != NULL);
@@ -345,7 +404,7 @@ gaim_connection_set_account(GaimConnection *gc, GaimAccount *account)
 }
 
 void
-gaim_connection_set_display_name(GaimConnection *gc, const char *name)
+purple_connection_set_display_name(PurpleConnection *gc, const char *name)
 {
 	g_return_if_fail(gc != NULL);
 
@@ -353,174 +412,312 @@ gaim_connection_set_display_name(GaimConnection *gc, const char *name)
 	gc->display_name = g_strdup(name);
 }
 
-GaimConnectionState
-gaim_connection_get_state(const GaimConnection *gc)
+void
+purple_connection_set_protocol_data(PurpleConnection *connection, void *proto_data) {
+	g_return_if_fail(connection != NULL);
+
+	connection->proto_data = proto_data;
+}
+
+PurpleConnectionState
+purple_connection_get_state(const PurpleConnection *gc)
 {
-	g_return_val_if_fail(gc != NULL, GAIM_DISCONNECTED);
+	g_return_val_if_fail(gc != NULL, PURPLE_DISCONNECTED);
 
 	return gc->state;
 }
 
-GaimAccount *
-gaim_connection_get_account(const GaimConnection *gc)
+PurpleConnectionFlags
+purple_connection_get_flags(const PurpleConnection *gc)
+{
+	g_return_val_if_fail(gc != NULL, 0);
+
+	return gc->flags;
+}
+
+PurpleAccount *
+purple_connection_get_account(const PurpleConnection *gc)
 {
 	g_return_val_if_fail(gc != NULL, NULL);
 
 	return gc->account;
 }
 
-const char *
-gaim_connection_get_password(const GaimConnection *gc)
+PurplePlugin *
+purple_connection_get_prpl(const PurpleConnection *gc)
 {
 	g_return_val_if_fail(gc != NULL, NULL);
 
-	return gc->password;
+	return gc->prpl;
 }
 
 const char *
-gaim_connection_get_display_name(const GaimConnection *gc)
+purple_connection_get_password(const PurpleConnection *gc)
+{
+	g_return_val_if_fail(gc != NULL, NULL);
+
+	return gc->password ? gc->password : purple_account_get_password(gc->account);
+}
+
+const char *
+purple_connection_get_display_name(const PurpleConnection *gc)
 {
 	g_return_val_if_fail(gc != NULL, NULL);
 
 	return gc->display_name;
 }
 
+void *
+purple_connection_get_protocol_data(const PurpleConnection *connection) {
+	g_return_val_if_fail(connection != NULL, NULL);
+
+	return connection->proto_data;
+}
+
 void
-gaim_connection_update_progress(GaimConnection *gc, const char *text,
+purple_connection_update_progress(PurpleConnection *gc, const char *text,
 								size_t step, size_t count)
 {
-	GaimConnectionUiOps *ops;
+	PurpleConnectionUiOps *ops;
 
 	g_return_if_fail(gc   != NULL);
 	g_return_if_fail(text != NULL);
 	g_return_if_fail(step < count);
 	g_return_if_fail(count > 1);
 
-	ops = gaim_connections_get_ui_ops();
+	ops = purple_connections_get_ui_ops();
 
 	if (ops != NULL && ops->connect_progress != NULL)
 		ops->connect_progress(gc, text, step, count);
 }
 
 void
-gaim_connection_notice(GaimConnection *gc, const char *text)
+purple_connection_notice(PurpleConnection *gc, const char *text)
 {
-	GaimConnectionUiOps *ops;
+	PurpleConnectionUiOps *ops;
 
 	g_return_if_fail(gc   != NULL);
 	g_return_if_fail(text != NULL);
 
-	ops = gaim_connections_get_ui_ops();
+	ops = purple_connections_get_ui_ops();
 
 	if (ops != NULL && ops->notice != NULL)
 		ops->notice(gc, text);
 }
 
 static gboolean
-gaim_connection_disconnect_cb(gpointer data)
+purple_connection_disconnect_cb(gpointer data)
 {
-	GaimAccount *account = data;
-	char *password = g_strdup(gaim_account_get_password(account));
-	gaim_account_disconnect(account);
-	gaim_account_set_password(account, password);
+	PurpleAccount *account;
+	PurpleConnection *gc;
+	char *password;
+
+	account = data;
+	gc = purple_account_get_connection(account);
+
+	if (gc != NULL)
+		gc->disconnect_timeout = 0;
+
+	password = g_strdup(purple_account_get_password(account));
+	purple_account_disconnect(account);
+	purple_account_set_password(account, password);
 	g_free(password);
+
 	return FALSE;
 }
 
 void
-gaim_connection_error(GaimConnection *gc, const char *text)
+purple_connection_error (PurpleConnection *gc,
+                                PurpleConnectionError reason,
+                                const char *description)
 {
-	GaimConnectionUiOps *ops;
+	PurpleConnectionUiOps *ops;
 
 	g_return_if_fail(gc   != NULL);
-	g_return_if_fail(text != NULL);
-
-	/* If we've already got one error, we don't need any more */
-	if (gc->disconnect_timeout)
-		return;
-
-	ops = gaim_connections_get_ui_ops();
-
-	if (ops != NULL) {
-		if (ops->report_disconnect != NULL)
-			ops->report_disconnect(gc, text);
+	/* This sanity check relies on PURPLE_CONNECTION_ERROR_OTHER_ERROR
+	 * being the last member of the PurpleConnectionError enum in
+	 * connection.h; if other reasons are added after it, this check should
+	 * be updated.
+	 */
+	if (reason > PURPLE_CONNECTION_ERROR_OTHER_ERROR) {
+		purple_debug_error("connection",
+			"purple_connection_error: reason %u isn't a "
+			"valid reason\n", reason);
+		reason = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
 	}
 
-	gc->disconnect_timeout = gaim_timeout_add(0, gaim_connection_disconnect_cb,
-			gaim_connection_get_account(gc));
+	if (description == NULL) {
+		purple_debug_error("connection", "purple_connection_error called with NULL description\n");
+		description = _("Unknown error");
+	}
+
+	/* If we've already got one error, we don't need any more */
+	if (gc->disconnect_timeout > 0)
+		return;
+
+	gc->wants_to_die = purple_connection_error_is_fatal (reason);
+
+	purple_debug_info("connection", "Connection error on %p (reason: %u description: %s)\n",
+	                  gc, reason, description);
+
+	ops = purple_connections_get_ui_ops();
+
+	if (ops && ops->report_disconnect)
+		ops->report_disconnect(gc, reason, description);
+
+	purple_signal_emit(purple_connections_get_handle(), "connection-error",
+		gc, reason, description);
+
+	gc->disconnect_timeout = purple_timeout_add(0, purple_connection_disconnect_cb,
+			purple_connection_get_account(gc));
 }
 
 void
-gaim_connections_disconnect_all(void)
+purple_connection_ssl_error (PurpleConnection *gc,
+                             PurpleSslErrorType ssl_error)
+{
+	PurpleConnectionError reason;
+
+	switch (ssl_error) {
+		case PURPLE_SSL_HANDSHAKE_FAILED:
+			reason = PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR;
+			break;
+		case PURPLE_SSL_CONNECT_FAILED:
+			reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+			break;
+		case PURPLE_SSL_CERTIFICATE_INVALID:
+			/* TODO: maybe PURPLE_SSL_* should be more specific? */
+			reason = PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR;
+			break;
+		default:
+			g_assert_not_reached ();
+			reason = PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR;
+	}
+
+	purple_connection_error (gc, reason,
+		purple_ssl_strerror(ssl_error));
+}
+
+gboolean
+purple_connection_error_is_fatal (PurpleConnectionError reason)
+{
+	switch (reason)
+	{
+		case PURPLE_CONNECTION_ERROR_NETWORK_ERROR:
+		case PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR:
+			return FALSE;
+		case PURPLE_CONNECTION_ERROR_INVALID_USERNAME:
+		case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
+		case PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE:
+		case PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT:
+		case PURPLE_CONNECTION_ERROR_NAME_IN_USE:
+		case PURPLE_CONNECTION_ERROR_INVALID_SETTINGS:
+		case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
+		case PURPLE_CONNECTION_ERROR_CERT_NOT_PROVIDED:
+		case PURPLE_CONNECTION_ERROR_CERT_UNTRUSTED:
+		case PURPLE_CONNECTION_ERROR_CERT_EXPIRED:
+		case PURPLE_CONNECTION_ERROR_CERT_NOT_ACTIVATED:
+		case PURPLE_CONNECTION_ERROR_CERT_HOSTNAME_MISMATCH:
+		case PURPLE_CONNECTION_ERROR_CERT_FINGERPRINT_MISMATCH:
+		case PURPLE_CONNECTION_ERROR_CERT_SELF_SIGNED:
+		case PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR:
+			return TRUE;
+		default:
+			g_return_val_if_reached(TRUE);
+	}
+}
+
+void purple_connection_update_last_received(PurpleConnection *gc)
+{
+	g_return_if_fail(gc != NULL);
+
+	gc->last_received = time(NULL);
+}
+
+void
+purple_connections_disconnect_all(void)
 {
 	GList *l;
-	GaimConnection *gc;
+	PurpleConnection *gc;
 
-	while ((l = gaim_connections_get_all()) != NULL) {
+	while ((l = purple_connections_get_all()) != NULL) {
 		gc = l->data;
 		gc->wants_to_die = TRUE;
-		gaim_account_disconnect(gc->account);
+		purple_account_disconnect(gc->account);
 	}
 }
 
 GList *
-gaim_connections_get_all(void)
+purple_connections_get_all(void)
 {
 	return connections;
 }
 
 GList *
-gaim_connections_get_connecting(void)
+purple_connections_get_connecting(void)
 {
 	return connections_connecting;
 }
 
 void
-gaim_connections_set_ui_ops(GaimConnectionUiOps *ops)
+purple_connections_set_ui_ops(PurpleConnectionUiOps *ops)
 {
 	connection_ui_ops = ops;
 }
 
-GaimConnectionUiOps *
-gaim_connections_get_ui_ops(void)
+PurpleConnectionUiOps *
+purple_connections_get_ui_ops(void)
 {
 	return connection_ui_ops;
 }
 
 void
-gaim_connections_init(void)
+purple_connections_init(void)
 {
-	void *handle = gaim_connections_get_handle();
+	void *handle = purple_connections_get_handle();
 
-	gaim_signal_register(handle, "signing-on",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_CONNECTION));
+	purple_signal_register(handle, "signing-on",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_CONNECTION));
 
-	gaim_signal_register(handle, "signed-on",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_CONNECTION));
+	purple_signal_register(handle, "signed-on",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_CONNECTION));
 
-	gaim_signal_register(handle, "signing-off",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_CONNECTION));
+	purple_signal_register(handle, "signing-off",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_CONNECTION));
 
-	gaim_signal_register(handle, "signed-off",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_CONNECTION));
+	purple_signal_register(handle, "signed-off",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_CONNECTION));
+
+	purple_signal_register(handle, "connection-error",
+	                       purple_marshal_VOID__POINTER_INT_POINTER, NULL, 3,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_CONNECTION),
+	                       purple_value_new(PURPLE_TYPE_ENUM),
+	                       purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "autojoin",
+	                       purple_marshal_BOOLEAN__POINTER, NULL, 1,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_CONNECTION));
+
 }
 
 void
-gaim_connections_uninit(void)
+purple_connections_uninit(void)
 {
-	gaim_signals_unregister_by_instance(gaim_connections_get_handle());
+	purple_signals_unregister_by_instance(purple_connections_get_handle());
 }
 
 void *
-gaim_connections_get_handle(void)
+purple_connections_get_handle(void)
 {
 	return &connections_handle;
 }

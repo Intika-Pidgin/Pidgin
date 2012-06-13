@@ -5,11 +5,13 @@
   @signal plugin-unload
  @endsignals
 
+ @see plugin.h
+
  <hr>
 
  @signaldef plugin-load
   @signalproto
-void (*plugin_load)(GaimPlugin *plugin);
+void (*plugin_load)(PurplePlugin *plugin);
   @endsignalproto
   @signaldesc
    Emitted when a plugin is loaded.
@@ -18,7 +20,7 @@ void (*plugin_load)(GaimPlugin *plugin);
 
  @signaldef plugin-unload
   @signalproto
-void (*plugin_unload)(GaimPlugin *plugin);
+void (*plugin_unload)(PurplePlugin *plugin);
   @endsignalproto
   @signaldesc
    Emitted when a plugin is unloaded.
@@ -26,4 +28,4 @@ void (*plugin_unload)(GaimPlugin *plugin);
  @endsignaldef
 
  */
-// vim: syntax=c tw=75 et
+// vim: syntax=c.doxygen tw=75 et

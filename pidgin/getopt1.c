@@ -1,5 +1,5 @@
 /* getopt_long and getopt_long_only entry points for GNU getopt.
-   Gaim is the legal property of its developers, whose names are too numerous
+   Pidgin is the legal property of its developers, whose names are too numerous
    to list here.  Please refer to the COPYRIGHT file distributed with this
    source distribution.
 
@@ -81,7 +81,7 @@ getopt_long_only (argc, argv, options, long_options, opt_index)
 
 
 #endif	/* _LIBC or not __GNU_LIBRARY__.  */
-
+
 #ifdef TEST
 
 #include <stdio.h>

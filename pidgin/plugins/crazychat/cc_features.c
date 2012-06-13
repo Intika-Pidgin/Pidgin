@@ -116,7 +116,7 @@ struct input_instance *init_input(struct crazychat *cc)
 
   /*pthread_t userinput_t; // should we put this in a nicer wrapper?*/
 	struct draw_info *info;
-	struct input_instance *instance; 
+	struct input_instance *instance;
 	info = (struct draw_info*)malloc(sizeof(*info));
 	assert(info);
 	memset(info, 0, sizeof(*info));
@@ -155,20 +155,16 @@ struct input_instance *init_input(struct crazychat *cc)
 	gtk_box_pack_start(GTK_BOX(ret.vbox), hbox, FALSE, FALSE, 0);
 	gtk_widget_show(hbox);
 
-	GtkWidget *model_combo = gtk_combo_new();
 	GList *glist = NULL;
-
 	glist = g_list_append(glist, "Dog");
 	glist = g_list_append(glist, "Shark");
-	gtk_combo_set_popdown_strings(GTK_COMBO(model_combo), glist);
+	instance->model = pidgin_text_combo_box_entry_new(NULL, glist);
 	g_list_free(glist);
 	//gtk_combo_box_set_column_span_column(GTK_COMBO(model_combo),
 	//		10);
-	gtk_box_pack_start(GTK_BOX(hbox), model_combo, TRUE, TRUE, 0);
-	gtk_widget_show(model_combo);
-	instance->model = model_combo;
+	gtk_box_pack_start(GTK_BOX(hbox), instance->model, TRUE, TRUE, 0);
+	gtk_widget_show(instance->model);
 
-	GtkWidget *head_material_combo = gtk_combo_new();
 	glist = NULL;
 	glist = g_list_append(glist, "Red");
 	glist = g_list_append(glist, "Dark Brown");
@@ -176,15 +172,13 @@ struct input_instance *init_input(struct crazychat *cc)
 	glist = g_list_append(glist, "White");
 	glist = g_list_append(glist, "Green");
 	glist = g_list_append(glist, "Black");
-	gtk_combo_set_popdown_strings(GTK_COMBO(head_material_combo), glist);
+	instance->head = pidgin_text_combo_box_entry_new(NULL, glist);
 	g_list_free(glist);
 	//gtk_combo_box_set_column_span_column(GTK_COMBO(head_material_combo),
 	//		10);
-	gtk_box_pack_start(GTK_BOX(hbox), head_material_combo, TRUE, TRUE, 0);
-	gtk_widget_show(head_material_combo);
-	instance->head = head_material_combo;
+	gtk_box_pack_start(GTK_BOX(hbox), instance->head, TRUE, TRUE, 0);
+	gtk_widget_show(instance->head);
 
-	GtkWidget *appendage_material_combo = gtk_combo_new();
 	glist = NULL;
 	glist = g_list_append(glist, "Red");
 	glist = g_list_append(glist, "Dark Brown");
@@ -192,20 +186,17 @@ struct input_instance *init_input(struct crazychat *cc)
 	glist = g_list_append(glist, "White");
 	glist = g_list_append(glist, "Green");
 	glist = g_list_append(glist, "Black");
-	gtk_combo_set_popdown_strings(GTK_COMBO(appendage_material_combo),
-			glist);
+	instance->appendage = pidgin_text_combo_box_entry_new(NULL, glist);
 	g_list_free(glist);
 	//gtk_combo_box_set_column_span_column(GTK_COMBO(appendage_material_combo), 10);
-	gtk_box_pack_start(GTK_BOX(hbox), appendage_material_combo,
+	gtk_box_pack_start(GTK_BOX(hbox), instance->appendage,
 			TRUE, TRUE, 0);
-	gtk_widget_show(appendage_material_combo);
-	instance->appendage = appendage_material_combo;
+	gtk_widget_show(instance->appendage);
 
 	hbox = gtk_hbox_new(TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(ret.vbox), hbox, FALSE, FALSE, 0);
 	gtk_widget_show(hbox);
-	
-	GtkWidget *lids_material_combo = gtk_combo_new();
+
 	glist = NULL;
 	glist = g_list_append(glist, "Red");
 	glist = g_list_append(glist, "Dark Brown");
@@ -213,14 +204,12 @@ struct input_instance *init_input(struct crazychat *cc)
 	glist = g_list_append(glist, "White");
 	glist = g_list_append(glist, "Green");
 	glist = g_list_append(glist, "Black");
-	gtk_combo_set_popdown_strings(GTK_COMBO(lids_material_combo), glist);
+	instance->lid = pidgin_text_combo_box_entry_new(NULL, glist);
 	g_list_free(glist);
 	//gtk_combo_box_set_column_span_column(GTK_COMBO(lids_material_combo), 10);
-	gtk_box_pack_start(GTK_BOX(hbox), lids_material_combo, TRUE, TRUE, 0);
-	gtk_widget_show(lids_material_combo);
-	instance->lid = lids_material_combo;
+	gtk_box_pack_start(GTK_BOX(hbox), instance->lid, TRUE, TRUE, 0);
+	gtk_widget_show(instance->lid);
 
-	GtkWidget *left_iris_material_combo = gtk_combo_new();
 	glist = NULL;
 	glist = g_list_append(glist, "Red");
 	glist = g_list_append(glist, "Dark Brown");
@@ -228,17 +217,13 @@ struct input_instance *init_input(struct crazychat *cc)
 	glist = g_list_append(glist, "White");
 	glist = g_list_append(glist, "Green");
 	glist = g_list_append(glist, "Black");
-	gtk_combo_set_popdown_strings(GTK_COMBO(left_iris_material_combo),
-			glist);
+	instance->left_iris = pidgin_text_combo_box_entry_new(NULL, glist);
 	g_list_free(glist);
 	//gtk_combo_box_set_column_span_column(GTK_COMBO(left_iris_material_combo), 10);
-	gtk_box_pack_start(GTK_BOX(hbox), left_iris_material_combo,
-			TRUE, TRUE, 0);
-	gtk_widget_show(left_iris_material_combo);
-	instance->left_iris = left_iris_material_combo;
+	gtk_box_pack_start(GTK_BOX(hbox), instance->left_iris, TRUE, TRUE, 0);
+	gtk_widget_show(instance->left_iris);
 
 	/*
-	GtkWidget *right_iris_material_combo = gtk_combo_new();
 	glist = NULL;
 	glist = g_list_append(glist, "Red");
 	glist = g_list_append(glist, "Dark Brown");
@@ -246,14 +231,11 @@ struct input_instance *init_input(struct crazychat *cc)
 	glist = g_list_append(glist, "White");
 	glist = g_list_append(glist, "Green");
 	glist = g_list_append(glist, "Black");
-	gtk_combo_set_popdown_strings(GTK_COMBO(right_iris_material_combo),
-			glist);
+	instance->right_iris = pidgin_text_combo_box_entry_new(NULL, glist);
 	g_list_free(glist);
 	//gtk_combo_box_set_column_span_column(GTK_COMBO(right_iris_material_combo), 10);
-	gtk_box_pack_start(GTK_BOX(hbox), right_iris_material_combo,
-			TRUE, TRUE, 0);
-	gtk_widget_show(right_iris_material_combo);
-	instance->right_iris = right_iris_material_combo;
+	gtk_box_pack_start(GTK_BOX(hbox), instance->right_iris, TRUE, TRUE, 0);
+	gtk_widget_show(instance->right_iris);
 */
 	gtk_widget_add_events(ret.draw_area, GDK_BUTTON_PRESS_MASK);
 	g_signal_connect(G_OBJECT(ret.draw_area), "button_press_event",
@@ -324,7 +306,7 @@ static gboolean config_wrapper(GtkWidget *widget, GdkEventConfigure *event,
 	/*** OpenGL BEGIN ***/
 	if (!gdk_gl_drawable_gl_begin(gldrawable, glcontext))
 		return FALSE;
-	
+
 
 /* Undo all of the Model lighting here*/
 
@@ -347,8 +329,8 @@ static gboolean config_wrapper(GtkWidget *widget, GdkEventConfigure *event,
 	glLoadIdentity();
 
 
-	
-	
+
+
 	gdk_gl_drawable_gl_end(gldrawable);
 	/*** OpenGL END ***/
 
@@ -370,7 +352,7 @@ static gboolean mydraw(GtkWidget *widget, GdkEventExpose *event,
 	} else if (!strcmp(string, "Shark")) {
 		features->kind = 1;
 	}
-	
+
 	material_set(GTK_ENTRY(GTK_COMBO(instance->head)->entry),
 			&features->head_color);
 	material_set(GTK_ENTRY(GTK_COMBO(instance->appendage)->entry),
@@ -387,7 +369,7 @@ static gboolean mydraw(GtkWidget *widget, GdkEventExpose *event,
 	} else {
 		instance->face.mode = 0;
 	}
-	
+
 	if (mode_change>0){
 		mode_change--;
 		config_wrapper(widget, event, data);
@@ -410,7 +392,7 @@ static gboolean mydraw(GtkWidget *widget, GdkEventExpose *event,
 	//	fprintf(stderr, "We're fucked this time.\n");
 		return FALSE;
 	}
-	
+
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -420,11 +402,11 @@ static gboolean mydraw(GtkWidget *widget, GdkEventExpose *event,
 		gdk_gl_drawable_swap_buffers(gldrawable);
 	else
 		glFlush();
-	
+
 	gdk_gl_drawable_gl_end(gldrawable);
-	
+
 	/*** OpenGL END ***/
-	
+
 	return TRUE;
 }
 

@@ -1,9 +1,9 @@
 /**
  * @file switchboard.h MSN switchboard functions
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,21 +19,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_SWITCHBOARD_H_
-#define _MSN_SWITCHBOARD_H_
+#ifndef MSN_SWITCHBOARD_H
+#define MSN_SWITCHBOARD_H
 
 typedef struct _MsnSwitchBoard MsnSwitchBoard;
-
-#include "conversation.h"
-
-#include "msg.h"
-#include "user.h"
-
-#include "servconn.h"
-
-#include "slplink.h"
 
 /**
  * A switchboard error.
@@ -46,8 +37,8 @@ typedef enum
 	MSN_SB_ERROR_USER_OFFLINE, /**< The user to call is offline. */
 	MSN_SB_ERROR_CONNECTION, /**< There was a connection error. */
 	MSN_SB_ERROR_TOO_FAST, /**< We are sending too fast */
+	MSN_SB_ERROR_AUTHFAILED, /**< Authentication failed joining the switchboard session */
 	MSN_SB_ERROR_UNKNOWN /**< An unknown error occurred. */
-
 } MsnSBErrorType;
 
 /**
@@ -56,9 +47,13 @@ typedef enum
 typedef enum
 {
 	MSN_SB_FLAG_IM = 0x01, /**< This switchboard is being used for a conversation. */
-	MSN_SB_FLAG_FT = 0x02, /**< This switchboard is being used for file transfer. */
-
+	MSN_SB_FLAG_FT = 0x02  /**< This switchboard is being used for file transfer. */
 } MsnSBFlag;
+
+#include "cmdproc.h"
+#include "msg.h"
+#include "servconn.h"
+#include "session.h"
 
 /**
  * A switchboard.
@@ -67,16 +62,16 @@ typedef enum
  */
 struct _MsnSwitchBoard
 {
-	MsnSession *session;
-	MsnServConn *servconn;
-	MsnCmdProc *cmdproc;
+	MsnSession *session;   /**< Our parent session. */
+	MsnServConn *servconn; /**< The physical connection for this switchboard. */
+	MsnCmdProc *cmdproc;   /**< Convenience variable for servconn->cmdproc. */
 	char *im_user;
 
 	MsnSBFlag flag;
 	char *auth_key;
 	char *session_id;
 
-	GaimConversation *conv; /**< The conversation that displays the
+	PurpleConversation *conv; /**< The conversation that displays the
 							  messages of this switchboard, or @c NULL if
 							  this is a helper switchboard. */
 
@@ -103,6 +98,7 @@ struct _MsnSwitchBoard
 	MsnSBErrorType error; /**< The error that occurred in this switchboard
 							(if applicable). */
 	GList *slplinks; /**< The list of slplinks that are using this switchboard. */
+	guint reconn_timeout_h;
 };
 
 /**
@@ -166,6 +162,13 @@ void msn_switchboard_set_session_id(MsnSwitchBoard *swboard, const char *id);
 const char *msn_switchboard_get_session_id(MsnSwitchBoard *swboard);
 
 /**
+ * Returns the next chat ID for use by a switchboard.
+ *
+ * @return The chat ID.
+ */
+int msn_switchboard_get_chat_id(void);
+
+/**
  * Sets whether or not we were invited to this switchboard.
  *
  * @param swboard The switchboard.
@@ -215,10 +218,8 @@ void msn_switchboard_close(MsnSwitchBoard *swboard);
  *
  * @param swboard The switchboard to release.
  * @param flag The flag that states the function.
- *
- * @return @c TRUE if the switchboard was closed, @c FALSE otherwise.
  */
-gboolean msn_switchboard_release(MsnSwitchBoard *swboard, MsnSBFlag flag);
+void msn_switchboard_release(MsnSwitchBoard *swboard, MsnSBFlag flag);
 
 /**
  * Returns whether or not we currently can send a message through this
@@ -243,34 +244,23 @@ gboolean msn_switchboard_can_send(MsnSwitchBoard *swboard);
 void msn_switchboard_send_msg(MsnSwitchBoard *swboard, MsnMessage *msg,
 							  gboolean queue);
 
+void
+msg_error_helper(MsnCmdProc *cmdproc, MsnMessage *msg, MsnMsgErrorType error);
+
 gboolean msn_switchboard_chat_leave(MsnSwitchBoard *swboard);
 gboolean msn_switchboard_chat_invite(MsnSwitchBoard *swboard, const char *who);
 
-void msn_switchboard_request(MsnSwitchBoard *swboard);
+gboolean msn_switchboard_request(MsnSwitchBoard *swboard);
 void msn_switchboard_request_add_user(MsnSwitchBoard *swboard, const char *user);
 
 /**
- * Processes peer to peer messages.
+ * Shows an ink message from this switchboard.
  *
- * @param cmdproc The command processor.
- * @param msg     The message.
+ * @param swboard  The switchboard.
+ * @param passport The user that sent the ink.
+ * @param data     The ink data.
  */
-void msn_p2p_msg(MsnCmdProc *cmdproc, MsnMessage *msg);
+void msn_switchboard_show_ink(MsnSwitchBoard *swboard, const char *passport,
+                              const char *data);
 
-/**
- * Processes emoticon messages.
- *
- * @param cmdproc The command processor.
- * @param msg     The message.
- */
-void msn_emoticon_msg(MsnCmdProc *cmdproc, MsnMessage *msg);
-
-/**
- * Processes INVITE messages.
- *
- * @param cmdproc The command processor.
- * @param msg     The message.
- */
-void msn_invite_msg(MsnCmdProc *cmdproc, MsnMessage *msg);
-
-#endif /* _MSN_SWITCHBOARD_H_ */
+#endif /* MSN_SWITCHBOARD_H */

@@ -1,5 +1,5 @@
 /*
- * Evolution integration plugin for Gaim
+ * Evolution integration plugin for Purple
  *
  * Copyright (C) 2003 Christian Hammond.
  *
@@ -15,13 +15,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 #include "internal.h"
 #include "gtkblist.h"
-#include "gtkexpander.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 #include "gtkutils.h"
 #include "gtkimhtml.h"
 
@@ -138,6 +137,7 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 	const char *prpl_id;
 	gboolean status;
 	GList *cards, *c;
+	GError *err = NULL;
 
 	if (dialog->book != NULL)
 	{
@@ -154,10 +154,11 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 
 	gtk_list_store_clear(dialog->model);
 
-	if (!gevo_load_addressbook(uri, &book, NULL))
+	if (!gevo_load_addressbook(uri, &book, &err))
 	{
-		gaim_debug_error("evolution",
-						 "Error retrieving addressbook\n");
+		purple_debug_error("evolution",
+						 "Error retrieving addressbook: %s\n", err->message);
+		g_error_free(err);
 
 		return;
 	}
@@ -166,7 +167,7 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 
 	if (query == NULL)
 	{
-		gaim_debug_error("evolution", "Error in creating query\n");
+		purple_debug_error("evolution", "Error in creating query\n");
 
 		g_object_unref(book);
 
@@ -179,7 +180,7 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 
 	if (!status)
 	{
-		gaim_debug_error("evolution", "Error %d in getting card list\n",
+		purple_debug_error("evolution", "Error %d in getting card list\n",
 						 status);
 
 		g_object_unref(book);
@@ -187,7 +188,7 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 		return;
 	}
 
-	prpl_id = gaim_account_get_protocol_id(dialog->buddy->account);
+	prpl_id = purple_account_get_protocol_id(dialog->buddy->account);
 
 	for (c = cards; c != NULL; c = c->next)
 	{
@@ -299,7 +300,7 @@ assoc_buddy_cb(GtkWidget *w, GevoAssociateBuddyDialog *dialog)
 	e_contact_set(contact, protocol_field, list);
 
 	if (!e_book_commit_contact(dialog->book, contact, NULL))
-		gaim_debug_error("evolution", "Error adding contact to book\n");
+		purple_debug_error("evolution", "Error adding contact to book\n");
 
 	/* Free the list. */
 	g_list_foreach(list, (GFunc)g_free, NULL);
@@ -309,11 +310,10 @@ assoc_buddy_cb(GtkWidget *w, GevoAssociateBuddyDialog *dialog)
 }
 
 GevoAssociateBuddyDialog *
-gevo_associate_buddy_dialog_new(GaimBuddy *buddy)
+gevo_associate_buddy_dialog_new(PurpleBuddy *buddy)
 {
 	GevoAssociateBuddyDialog *dialog;
 	GtkWidget *button;
-	GtkWidget *sw;
 	GtkWidget *label;
 	GtkWidget *vbox;
 	GtkWidget *hbox;
@@ -329,9 +329,7 @@ gevo_associate_buddy_dialog_new(GaimBuddy *buddy)
 
 	dialog->buddy = buddy;
 
-	dialog->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_role(GTK_WINDOW(dialog->win), "assoc_buddy");
-	gtk_container_set_border_width(GTK_CONTAINER(dialog->win), 12);
+	dialog->win = pidgin_create_window(NULL, PIDGIN_HIG_BORDER, "assoc_buddy", TRUE);
 
 	g_signal_connect(G_OBJECT(dialog->win), "delete_event",
 					 G_CALLBACK(delete_win_cb), dialog);
@@ -390,16 +388,6 @@ gevo_associate_buddy_dialog_new(GaimBuddy *buddy)
 	g_signal_connect(G_OBJECT(button), "clicked",
 					 G_CALLBACK(clear_cb), dialog);
 
-	/* Scrolled Window */
-	sw = gtk_scrolled_window_new(0, 0);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-								   GTK_POLICY_AUTOMATIC,
-								   GTK_POLICY_ALWAYS);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-										GTK_SHADOW_IN);
-	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-	gtk_widget_show(sw);
-
 	/* Create the list model for the treeview. */
 	dialog->model = gtk_list_store_new(NUM_COLUMNS,
 									   G_TYPE_STRING, G_TYPE_POINTER);
@@ -408,7 +396,9 @@ gevo_associate_buddy_dialog_new(GaimBuddy *buddy)
 	dialog->treeview = gtk_tree_view_new_with_model(
 			GTK_TREE_MODEL(dialog->model));
 	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(dialog->treeview), TRUE);
-	gtk_container_add(GTK_CONTAINER(sw), dialog->treeview);
+	gtk_box_pack_start(GTK_BOX(vbox),
+		pidgin_make_scrollable(dialog->treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),
+		TRUE, TRUE, 0);
 	gtk_widget_show(dialog->treeview);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(dialog->treeview));
@@ -438,19 +428,10 @@ gevo_associate_buddy_dialog_new(GaimBuddy *buddy)
 	 * User details
 	 */
 
-	/* Scrolled Window */
-	sw = gtk_scrolled_window_new(0, 0);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-								   GTK_POLICY_NEVER,
-								   GTK_POLICY_ALWAYS);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-										GTK_SHADOW_IN);
-	gtk_container_add(GTK_CONTAINER(expander), sw);
-	gtk_widget_show(sw);
-
 	/* Textview */
 	dialog->imhtml = gtk_imhtml_new(NULL, NULL);
-	gtk_container_add(GTK_CONTAINER(sw), dialog->imhtml);
+	gtk_container_add(GTK_CONTAINER(expander), 
+		pidgin_make_scrollable(dialog->imhtml, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1));
 	gtk_widget_show(dialog->imhtml);
 
 	/* Separator. */
@@ -466,8 +447,8 @@ gevo_associate_buddy_dialog_new(GaimBuddy *buddy)
 	gtk_widget_show(bbox);
 
 	/* "New Person" button */
-	button = gaim_pixbuf_button_from_stock(_("New Person"), GTK_STOCK_NEW,
-										   GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("New Person"), GTK_STOCK_NEW,
+										   PIDGIN_BUTTON_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 
@@ -483,9 +464,9 @@ gevo_associate_buddy_dialog_new(GaimBuddy *buddy)
 					 G_CALLBACK(cancel_cb), dialog);
 
 	/* "Associate Buddy" button */
-	button = gaim_pixbuf_button_from_stock(_("_Associate Buddy"),
+	button = pidgin_pixbuf_button_from_stock(_("_Associate Buddy"),
 										   GTK_STOCK_APPLY,
-										   GAIM_BUTTON_HORIZONTAL);
+										   PIDGIN_BUTTON_HORIZONTAL);
 	dialog->assoc_button = button;
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(button, FALSE);

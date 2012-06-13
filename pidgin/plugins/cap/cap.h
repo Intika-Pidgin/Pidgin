@@ -1,5 +1,5 @@
 /*
- * Contact Availability Prediction plugin for Gaim
+ * Contact Availability Prediction plugin for Purple
  *
  * Copyright (C) 2006 Geoffrey Foster.
  *
@@ -15,15 +15,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 
 #ifndef _CAP_H_
 #define _CAP_H_
 
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "conversation.h"
 
@@ -47,7 +47,7 @@
 #define CAP_PLUGIN_ID "gtk-g-off_-cap"
 
 /* Variables used throughout lifetime of the plugin */
-GaimPlugin *_plugin_pointer;
+PurplePlugin *_plugin_pointer;
 sqlite3 *_db; /**< The database */
 
 GHashTable *_buddy_stats = NULL;
@@ -58,7 +58,7 @@ gboolean _sqlite_initialized;
 /* Prefs UI */
 typedef struct _CapPrefsUI CapPrefsUI;
 
-struct _CapPrefsUI { 
+struct _CapPrefsUI {
 	GtkWidget *ret;
 	GtkWidget *cap_vbox;
 	GtkWidget *table_layout;
@@ -77,8 +77,8 @@ struct _CapPrefsUI {
 };
 
 static void generate_prediction(CapStatistics *statistics);
-static double generate_prediction_for(GaimBuddy *buddy);
-static CapStatistics * get_stats_for(GaimBuddy *buddy);
+static double generate_prediction_for(PurpleBuddy *buddy);
+static CapStatistics * get_stats_for(PurpleBuddy *buddy);
 static void destroy_stats(gpointer data);
 static void insert_cap_msg_count_success(const char *buddy_name, const char *account, const char *protocol, int minute);
 static void insert_cap_status_count_success(const char *buddy_name, const char *account, const char *protocol, const char *status_id);
@@ -87,45 +87,42 @@ static void insert_cap_status_count_failed(const char *buddy_name, const char *a
 static void insert_cap_success(CapStatistics *stats);
 static void insert_cap_failure(CapStatistics *stats);
 static gboolean max_message_difference_cb(gpointer data);
-/* Gaim Signal Handlers */
+/* Pidgin Signal Handlers */
 /* sent-im-msg */
-static void sent_im_msg(GaimAccount *account, const char *receiver, const char *message);
+static void sent_im_msg(PurpleAccount *account, const char *receiver, const char *message);
 /* received-im-msg */
-static void received_im_msg(GaimAccount *account, char *sender, char *message, GaimConversation *conv, GaimMessageFlags flags);
+static void received_im_msg(PurpleAccount *account, char *sender, char *message, PurpleConversation *conv, PurpleMessageFlags flags);
 /* buddy-status-changed */
-static void buddy_status_changed(GaimBuddy *buddy, GaimStatus *old_status, GaimStatus *status);
+static void buddy_status_changed(PurpleBuddy *buddy, PurpleStatus *old_status, PurpleStatus *status);
 /* buddy-signed-on */
-static void buddy_signed_on(GaimBuddy *buddy);
+static void buddy_signed_on(PurpleBuddy *buddy);
 /* buddy-signed-off */
-static void buddy_signed_off(GaimBuddy *buddy);
-static void buddy_idle(GaimBuddy *buddy, gboolean old_idle, gboolean idle);
-static void blist_node_extended_menu(GaimBlistNode *node, GList **menu);
+static void buddy_signed_off(PurpleBuddy *buddy);
 /* drawing-tooltip */
-static void drawing_tooltip(GaimBlistNode *node, GString *text, gboolean full);
+static void drawing_tooltip(PurpleBlistNode *node, GString *text, gboolean full);
 /* signed-on */
-static void signed_on(GaimConnection *gc);
+static void signed_on(PurpleConnection *gc);
 /* signed-off */
-static void signed_off(GaimConnection *gc);
+static void signed_off(PurpleConnection *gc);
 static void reset_all_last_message_times(gpointer key, gpointer value, gpointer user_data);
-static GaimStatus * get_status_for(GaimBuddy *buddy);
-static void create_tables();
-static gboolean create_database_connection();
-static void destroy_database_connection();
+static PurpleStatus * get_status_for(PurpleBuddy *buddy);
+static void create_tables(void);
+static gboolean create_database_connection(void);
+static void destroy_database_connection(void);
 static guint word_count(const gchar *string);
 static void insert_status_change(CapStatistics *statistics);
-static void insert_status_change_from_gaim_status(CapStatistics *statistics, GaimStatus *status);
+static void insert_status_change_from_purple_status(CapStatistics *statistics, PurpleStatus *status);
 static void insert_word_count(const char *sender, const char *receiver, guint count);
-void display_statistics_action_cb(GaimBlistNode *node, gpointer data);
-static gboolean plugin_load(GaimPlugin *plugin);
-static void add_plugin_functionality(GaimPlugin *plugin);
+static gboolean plugin_load(PurplePlugin *plugin);
+static void add_plugin_functionality(PurplePlugin *plugin);
 static void cancel_conversation_timeouts(gpointer key, gpointer value, gpointer user_data);
-static void remove_plugin_functionality(GaimPlugin *plugin);
+static void remove_plugin_functionality(PurplePlugin *plugin);
 static void write_stats_on_unload(gpointer key, gpointer value, gpointer user_data);
-static gboolean plugin_unload(GaimPlugin *plugin);
-static CapPrefsUI * create_cap_prefs_ui();
+static gboolean plugin_unload(PurplePlugin *plugin);
+static CapPrefsUI * create_cap_prefs_ui(void);
 static void cap_prefs_ui_destroy_cb(GtkObject *object, gpointer user_data);
 static void numeric_spinner_prefs_cb(GtkSpinButton *spinbutton, gpointer user_data);
-static GtkWidget * get_config_frame(GaimPlugin *plugin);
-static void init_plugin(GaimPlugin *plugin);
+static GtkWidget * get_config_frame(PurplePlugin *plugin);
+static void init_plugin(PurplePlugin *plugin);
 
 #endif

@@ -24,10 +24,10 @@ common_sources = \
 	common/GtkSound.xs \
 	common/GtkStatusBox.xs \
 	common/GtkThemes.xs \
-	common/GtkUI.pm \
-	common/GtkUI.xs \
 	common/GtkUtils.xs \
 	common/Makefile.PL.in \
+	common/Pidgin.pm \
+	common/Pidgin.xs \
 	common/gtkmodule.h \
 	common/typemap
 
@@ -39,10 +39,12 @@ EXTRA_DIST = \
 common/Makefile: common/Makefile.PL
 	@if test "x${top_srcdir}" != "x${top_builddir}"; then \
 		for f in ${common_sources}; do \
-			${LN_S} -f ../${srcdir}/$$f $$f; \
+			srcloc=${srcdir}; \
+			case $$srcloc in /*) ;; *) srcloc=../${srcdir} ;; esac; \
+			${LN_S} -f $$srcloc/$$f $$f; \
 		done; \
 	fi
-	@cd common && $(perlpath) Makefile.PL $(PERL_MM_PARAMS)
+	@cd common && $(perlpath) Makefile.PL
 
 common/Makefile.PL: common/Makefile.PL.in $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)
@@ -51,7 +53,7 @@ all-local: common/Makefile
 	@for dir in $(perl_dirs); do \
 		cd $$dir && \
 		if [ ! -f Makefile ]; then \
-			$(perlpath) Makefile.PL $(PERL_MM_PARAMS); \
+			$(perlpath) Makefile.PL; \
 		fi && \
 		($(MAKE) CC="$(CC)" CCFLAGS="$(PERL_CFLAGS) $(CFLAGS)" $(PERL_EXTRA_OPTS) || \
 		$(MAKE) CC="$(CC)" CCFLAGS="$(PERL_CFLAGS) $(CFLAGS)" $(PERL_EXTRA_OPTS)) && \
@@ -95,9 +97,9 @@ distclean-generic:
 	@rm -f Makefile
 
 AM_CPPFLAGS = \
-	-DVERSION=\"$(VERSION)\" \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/libpurple \
+	-I$(top_builddir)/libpurple \
 	-I$(top_srcdir)/pidgin \
 	$(DEBUG_CFLAGS) \
 	$(GTK_CFLAGS) \

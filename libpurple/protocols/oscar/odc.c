@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,17 +15,20 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /* From the oscar PRPL */
+#include "encoding.h"
 #include "oscar.h"
 #include "peer.h"
 
-/* From Gaim */
+/* From Purple */
 #include "conversation.h"
 #include "imgstore.h"
 #include "util.h"
+
+#define DIRECTIM_MAX_FILESIZE 52428800
 
 /**
  * Free any ODC related data and print a message to the conversation
@@ -46,7 +49,7 @@ peer_odc_close(PeerConnection *conn)
 	else if (conn->disconnect_reason == OSCAR_DISCONNECT_INVALID_DATA)
 		tmp = g_strdup(_("Received invalid data on connection with remote user."));
 	else if (conn->disconnect_reason == OSCAR_DISCONNECT_COULD_NOT_CONNECT)
-		tmp = g_strdup(_("Could not establish a connection with the remote user."));
+		tmp = g_strdup(_("Unable to establish a connection with the remote user."));
 	else
 		/*
 		 * We shouldn't print a message for some disconnect_reasons.
@@ -56,12 +59,12 @@ peer_odc_close(PeerConnection *conn)
 
 	if (tmp != NULL)
 	{
-		GaimAccount *account;
-		GaimConversation *conv;
+		PurpleAccount *account;
+		PurpleConversation *conv;
 
-		account = gaim_connection_get_account(conn->od->gc);
-		conv = gaim_conversation_new(GAIM_CONV_TYPE_IM, account, conn->sn);
-		gaim_conversation_write(conv, NULL, tmp, GAIM_MESSAGE_SYSTEM, time(NULL));
+		account = purple_connection_get_account(conn->od->gc);
+		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
+		purple_conversation_write(conv, NULL, tmp, PURPLE_MESSAGE_SYSTEM, time(NULL));
 		g_free(tmp);
 	}
 
@@ -81,18 +84,18 @@ peer_odc_close(PeerConnection *conn)
 static void
 peer_odc_send(PeerConnection *conn, OdcFrame *frame)
 {
-	GaimAccount *account;
+	PurpleAccount *account;
 	const char *username;
 	size_t length;
 	ByteStream bs;
 
-	gaim_debug_info("oscar", "Outgoing ODC frame to %s with "
-		"type=0x%04x, flags=0x%04x, payload length=%u\n",
-		conn->sn, frame->type, frame->flags, frame->payload.len);
+	purple_debug_info("oscar", "Outgoing ODC frame to %s with "
+		"type=0x%04x, flags=0x%04x, payload length=%" G_GSIZE_FORMAT "\n",
+		conn->bn, frame->type, frame->flags, frame->payload.len);
 
-	account = gaim_connection_get_account(conn->od->gc);
-	username = gaim_account_get_username(account);
-	memcpy(frame->sn, username, strlen(username));
+	account = purple_connection_get_account(conn->od->gc);
+	username = purple_account_get_username(account);
+	memcpy(frame->bn, username, strlen(username));
 	memcpy(frame->cookie, conn->cookie, 8);
 
 	length = 76;
@@ -108,18 +111,18 @@ peer_odc_send(PeerConnection *conn, OdcFrame *frame)
 	byte_stream_put16(&bs, 0x0000);
 	byte_stream_put16(&bs, 0x0000);
 	byte_stream_put32(&bs, frame->payload.len);
-	byte_stream_put16(&bs, 0x0000);
 	byte_stream_put16(&bs, frame->encoding);
+	byte_stream_put16(&bs, 0x0000);
 	byte_stream_put16(&bs, 0x0000);
 	byte_stream_put16(&bs, frame->flags);
 	byte_stream_put16(&bs, 0x0000);
 	byte_stream_put16(&bs, 0x0000);
-	byte_stream_putraw(&bs, frame->sn, 32);
+	byte_stream_putraw(&bs, frame->bn, 32);
 	byte_stream_putraw(&bs, frame->payload.data, frame->payload.len);
 
 	peer_connection_send(conn, &bs);
 
-	g_free(bs.data);
+	byte_stream_destroy(&bs);
 }
 
 /**
@@ -146,16 +149,16 @@ peer_odc_send_cookie(PeerConnection *conn)
  * Send client-to-client typing notification over an established direct connection.
  */
 void
-peer_odc_send_typing(PeerConnection *conn, GaimTypingState typing)
+peer_odc_send_typing(PeerConnection *conn, PurpleTypingState typing)
 {
 	OdcFrame frame;
 
 	memset(&frame, 0, sizeof(OdcFrame));
 	frame.type = 0x0001;
 	frame.subtype = 0x0006;
-	if (typing == GAIM_TYPING)
+	if (typing == PURPLE_TYPING)
 		frame.flags = 0x0002 | 0x0008;
-	else if (typing == GAIM_TYPED)
+	else if (typing == PURPLE_TYPED)
 		frame.flags = 0x0002 | 0x0004;
 	else
 		frame.flags = 0x0002;
@@ -209,7 +212,7 @@ struct embedded_data
  * This function rips out all the data chunks and creates an imgstore for
  * each one.  In order to do this, it first goes through the IM and takes
  * out all the IMG tags.  When doing so, it rewrites the original IMG tag
- * with one compatible with the imgstore Gaim core code. For each one, we
+ * with one compatible with the imgstore Purple core code. For each one, we
  * then read in chunks of data from the end of the message and actually
  * create the img store using the given data.
  *
@@ -233,8 +236,8 @@ struct embedded_data
 static void
 peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int encoding, gboolean autoreply)
 {
-	GaimConnection *gc;
-	GaimAccount *account;
+	PurpleConnection *gc;
+	PurpleAccount *account;
 	const char *msgend, *binary_start, *dataend;
 	const char *tmp, *start, *end, *idstr, *src, *sizestr;
 	GData *attributes;
@@ -243,10 +246,10 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 	GSList *images;
 	gchar *utf8;
 	GString *newmsg;
-	GaimMessageFlags imflags;
+	PurpleMessageFlags imflags;
 
 	gc = conn->od->gc;
-	account = gaim_connection_get_account(gc);
+	account = purple_connection_get_account(gc);
 
 	dataend = msg + len;
 
@@ -264,7 +267,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 	 * parsing it, and the local user will see broken image icons.
 	 */
 	/* TODO: Use a length argument when looking for the <binary> tag! */
-	binary_start = gaim_strcasestr(msg, "<binary>");
+	binary_start = purple_strcasestr(msg, "<binary>");
 	if (binary_start == NULL)
 		msgend = dataend;
 	else
@@ -277,7 +280,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 		/* The embedded binary markup has a mimimum length of 29 bytes */
 		/* TODO: Use a length argument when looking for the <data> tag! */
 		while ((tmp + 29 <= dataend) &&
-				gaim_markup_find_tag("data", tmp, &start, &tmp, &attributes))
+				purple_markup_find_tag("data", tmp, &start, &tmp, &attributes))
 		{
 			unsigned int id;
 			size_t size;
@@ -314,7 +317,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 			tmp += size;
 
 			/* Skip past the closing </data> tag */
-			if (strncasecmp(tmp, "</data>", 7))
+			if (g_ascii_strncasecmp(tmp, "</data>", 7))
 			{
 				g_free(embedded_data);
 				break;
@@ -328,12 +331,12 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 
 	/*
 	 * Loop through the message, replacing OSCAR img tags with the
-	 * equivalent Gaim img tag.
+	 * equivalent Purple img tag.
 	 */
 	images = NULL;
 	newmsg = g_string_new("");
 	tmp = msg;
-	while (gaim_markup_find_tag("img", tmp, &start, &end, &attributes))
+	while (purple_markup_find_tag("img", tmp, &start, &end, &attributes))
 	{
 		int imgid = 0;
 
@@ -353,7 +356,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 
 			if ((embedded_data != NULL) && (embedded_data->size == size))
 			{
-				imgid = gaim_imgstore_add(embedded_data->data, size, src);
+				imgid = purple_imgstore_add_with_id(g_memdup(embedded_data->data, size), size, src);
 
 				/* Record the image number */
 				images = g_slist_append(images, GINT_TO_POINTER(imgid));
@@ -364,8 +367,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 		g_datalist_clear(&attributes);
 
 		/* Append the message up to the tag */
-		utf8 = gaim_plugin_oscar_decode_im_part(account, conn->sn,
-				encoding, 0x0000, tmp, start - tmp);
+		utf8 = oscar_decode_im(account, conn->bn, encoding, tmp, start - tmp);
 		if (utf8 != NULL) {
 			g_string_append(newmsg, utf8);
 			g_free(utf8);
@@ -384,21 +386,20 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 	/* Append any remaining message data */
 	if (tmp <= msgend)
 	{
-		utf8 = gaim_plugin_oscar_decode_im_part(account, conn->sn,
-				encoding, 0x0000, tmp, msgend - tmp);
+		utf8 = oscar_decode_im(account, conn->bn, encoding, tmp, msgend - tmp);
 		if (utf8 != NULL) {
 			g_string_append(newmsg, utf8);
 			g_free(utf8);
 		}
 	}
 
-	/* Send the message */
+	/* Display the message we received */
 	imflags = 0;
 	if (images != NULL)
-		imflags |= GAIM_MESSAGE_IMAGES;
+		imflags |= PURPLE_MESSAGE_IMAGES;
 	if (autoreply)
-		imflags |= GAIM_MESSAGE_AUTO_RESP;
-	serv_got_im(gc, conn->sn, newmsg->str, imflags, time(NULL));
+		imflags |= PURPLE_MESSAGE_AUTO_RESP;
+	serv_got_im(gc, conn->bn, newmsg->str, imflags, time(NULL));
 	g_string_free(newmsg, TRUE);
 
 	/* unref any images we allocated */
@@ -406,7 +407,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 	{
 		GSList *l;
 		for (l = images; l != NULL; l = l->next)
-			gaim_imgstore_unref(GPOINTER_TO_INT(l->data));
+			purple_imgstore_unref_by_id(GPOINTER_TO_INT(l->data));
 		g_slist_free(images);
 	}
 
@@ -415,7 +416,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 }
 
 /**
- * This is a gaim_input_add() watcher callback function for reading
+ * This is a purple_input_add() watcher callback function for reading
  * direct IM payload data.  "Payload data" is always an IM and
  * maybe some embedded images or files or something.  The actual
  * ODC frame is read using peer_connection_recv_cb().  We temporarily
@@ -423,12 +424,12 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
  * switch back once we're done.
  */
 static void
-peer_odc_recv_cb(gpointer data, gint source, GaimInputCondition cond)
+peer_odc_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	PeerConnection *conn;
 	OdcFrame *frame;
 	ByteStream *bs;
-	ssize_t read;
+	gssize read;
 
 	conn = data;
 	frame = conn->frame;
@@ -447,14 +448,14 @@ peer_odc_recv_cb(gpointer data, gint source, GaimInputCondition cond)
 		return;
 	}
 
-	if (read == -1)
+	if (read < 0)
 	{
 		if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
 			/* No worries */
 			return;
 
 		peer_connection_destroy(conn,
-				OSCAR_DISCONNECT_LOST_CONNECTION, strerror(errno));
+				OSCAR_DISCONNECT_LOST_CONNECTION, g_strerror(errno));
 		return;
 	}
 
@@ -472,9 +473,9 @@ peer_odc_recv_cb(gpointer data, gint source, GaimInputCondition cond)
 	g_free(frame);
 	conn->frame = NULL;
 
-	gaim_input_remove(conn->watcher_incoming);
-	conn->watcher_incoming = gaim_input_add(conn->fd,
-			GAIM_INPUT_READ, peer_connection_recv_cb, conn);
+	purple_input_remove(conn->watcher_incoming);
+	conn->watcher_incoming = purple_input_add(conn->fd,
+			PURPLE_INPUT_READ, peer_connection_recv_cb, conn);
 }
 
 /**
@@ -485,7 +486,7 @@ peer_odc_recv_cb(gpointer data, gint source, GaimInputCondition cond)
 void
 peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 	OdcFrame *frame;
 
 	gc = conn->od->gc;
@@ -501,11 +502,11 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 	byte_stream_advance(bs, 4);
 	frame->flags = byte_stream_get16(bs);
 	byte_stream_advance(bs, 4);
-	byte_stream_getrawbuf(bs, frame->sn, 32);
+	byte_stream_getrawbuf(bs, frame->bn, 32);
 
-	gaim_debug_info("oscar", "Incoming ODC frame from %s with "
-			"type=0x%04x, flags=0x%04x, payload length=%u\n",
-			frame->sn, frame->type, frame->flags, frame->payload.len);
+	purple_debug_info("oscar", "Incoming ODC frame from %s with "
+			"type=0x%04x, flags=0x%04x, payload length=%" G_GSIZE_FORMAT "\n",
+			frame->bn, frame->type, frame->flags, frame->payload.len);
 
 	if (!conn->ready)
 	{
@@ -514,8 +515,8 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 		 * connected to our friend and not a malicious middle man.
 		 */
 
-		GaimAccount *account;
-		GaimConversation *conv;
+		PurpleAccount *account;
+		PurpleConversation *conv;
 
 		if (conn->flags & PEER_CONNECTION_FLAG_IS_INCOMING)
 		{
@@ -526,7 +527,7 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 				 * the correct cookie!  They are not our friend.  Go try
 				 * to accept another connection?
 				 */
-				gaim_debug_info("oscar", "Received an incorrect cookie.  "
+				purple_debug_info("oscar", "Received an incorrect cookie.  "
 					"Closing connection.\n");
 				peer_connection_destroy(conn,
 						OSCAR_DISCONNECT_INVALID_DATA, NULL);
@@ -555,45 +556,68 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 		}
 
 		/* Tell the local user that we are connected */
-		account = gaim_connection_get_account(gc);
-		conv = gaim_conversation_new(GAIM_CONV_TYPE_IM, account, conn->sn);
-		gaim_conversation_write(conv, NULL, _("Direct IM established"),
-				GAIM_MESSAGE_SYSTEM, time(NULL));
+		account = purple_connection_get_account(gc);
+		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
+		purple_conversation_write(conv, NULL, _("Direct IM established"),
+				PURPLE_MESSAGE_SYSTEM, time(NULL));
 	}
 
 	if ((frame->type != 0x0001) && (frame->subtype != 0x0006))
 	{
-		gaim_debug_info("oscar", "Unknown ODC frame type 0x%04hx, "
+		purple_debug_info("oscar", "Unknown ODC frame type 0x%04hx, "
 				"subtype 0x%04hx.\n", frame->type, frame->subtype);
+		g_free(frame);
 		return;
 	}
 
 	if (frame->flags & 0x0008)
 	{
 		/* I had to leave this. It's just too funny. It reminds me of my sister. */
-		gaim_debug_info("oscar", "ohmigod! %s has started typing "
+		purple_debug_info("oscar", "ohmigod! %s has started typing "
 			"(DirectIM). He's going to send you a message! "
-			"*squeal*\n", conn->sn);
-		serv_got_typing(gc, conn->sn, 0, GAIM_TYPING);
+			"*squeal*\n", conn->bn);
+		serv_got_typing(gc, conn->bn, 0, PURPLE_TYPING);
 	}
 	else if (frame->flags & 0x0004)
 	{
-		serv_got_typing(gc, conn->sn, 0, GAIM_TYPED);
+		serv_got_typing(gc, conn->bn, 0, PURPLE_TYPED);
 	}
 	else
 	{
-		serv_got_typing_stopped(gc, conn->sn);
+		serv_got_typing_stopped(gc, conn->bn);
 	}
 
 	if (frame->payload.len > 0)
 	{
+		if (frame->payload.len > DIRECTIM_MAX_FILESIZE)
+		{
+			gchar *tmp, *size1, *size2;
+			PurpleAccount *account;
+			PurpleConversation *conv;
+
+			size1 = purple_str_size_to_units(frame->payload.len);
+			size2 = purple_str_size_to_units(DIRECTIM_MAX_FILESIZE);
+			tmp = g_strdup_printf(_("%s tried to send you a %s file, but we only allow files up to %s over Direct IM.  Try using file transfer instead.\n"), conn->bn, size1, size2);
+			g_free(size1);
+			g_free(size2);
+
+			account = purple_connection_get_account(conn->od->gc);
+			conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
+			purple_conversation_write(conv, NULL, tmp, PURPLE_MESSAGE_SYSTEM, time(NULL));
+			g_free(tmp);
+
+			peer_connection_destroy(conn, OSCAR_DISCONNECT_LOCAL_CLOSED, NULL);
+			g_free(frame);
+			return;
+		}
+
 		/* We have payload data!  Switch to the ODC watcher to read it. */
 		frame->payload.data = g_new(guint8, frame->payload.len);
 		frame->payload.offset = 0;
 		conn->frame = frame;
-		gaim_input_remove(conn->watcher_incoming);
-		conn->watcher_incoming = gaim_input_add(conn->fd,
-				GAIM_INPUT_READ, peer_odc_recv_cb, conn);
+		purple_input_remove(conn->watcher_incoming);
+		conn->watcher_incoming = purple_input_add(conn->fd,
+				PURPLE_INPUT_READ, peer_odc_recv_cb, conn);
 		return;
 	}
 

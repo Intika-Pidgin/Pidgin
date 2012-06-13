@@ -1,5 +1,5 @@
 /*
- * gaim
+ * purple
  *
  * File: win32dep.h
  *
@@ -17,16 +17,33 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _WIN32DEP_H_
 #define _WIN32DEP_H_
-#include <shlobj.h>
 #include <winsock2.h>
+#include <windows.h>
+#include <shlobj.h>
 #include <process.h>
-#include "wgaimerror.h"
+#include "wpurpleerror.h"
 #include "libc_interface.h"
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+/* the winapi headers don't yet have winhttp.h, so we use the struct from msdn directly */
+typedef struct {
+  BOOL fAutoDetect;
+  LPWSTR lpszAutoConfigUrl;
+  LPWSTR lpszProxy;
+  LPWSTR lpszProxyBypass;
+} WINHTTP_CURRENT_USER_IE_PROXY_CONFIG;
+
+/* rpcndr.h defines small as char, causing problems, so we need to undefine it */
+#undef small
 
 /*
  *  PROTOS
@@ -36,36 +53,43 @@
  ** win32dep.c
  **/
 /* Windows helper functions */
-FARPROC wgaim_find_and_loadproc(const char *dllname, const char *procedure);
-char *wgaim_read_reg_string(HKEY rootkey, const char *subkey, const char *valname); /* needs to be g_free'd */
-gboolean wgaim_write_reg_string(HKEY rootkey, const char *subkey, const char *valname, const char *value);
-char *wgaim_escape_dirsep(const char *filename); /* needs to be g_free'd */
-GIOChannel *wgaim_g_io_channel_win32_new_socket(int socket); /* Until we get the post-2.8 glib win32 giochannel implementation working, use the thread-based one */
-/** Check for changes to the system proxy settings and update the HTTP_PROXY env. var. if there have been changes */
-gboolean wgaim_check_for_proxy_changes(void);
+FARPROC wpurple_find_and_loadproc(const char *dllname, const char *procedure);
+gboolean wpurple_read_reg_dword(HKEY rootkey, const char *subkey, const char *valname, LPDWORD result);
+char *wpurple_read_reg_string(HKEY rootkey, const char *subkey, const char *valname); /* needs to be g_free'd */
+gboolean wpurple_write_reg_string(HKEY rootkey, const char *subkey, const char *valname, const char *value);
+char *wpurple_escape_dirsep(const char *filename); /* needs to be g_free'd */
+GIOChannel *wpurple_g_io_channel_win32_new_socket(int socket); /* Until we get the post-2.8 glib win32 giochannel implementation working, use the thread-based one */
 
-/* Determine Gaim paths */
-char *wgaim_get_special_folder(int folder_type); /* needs to be g_free'd */
-const char *wgaim_install_dir(void);
-const char *wgaim_lib_dir(void);
-const char *wgaim_locale_dir(void);
-const char *wgaim_data_dir(void);
+/* Simulate unix pipes by creating a pair of connected sockets */
+int wpurple_input_pipe(int pipefd[2]);
+
+/* Determine Purple paths */
+gchar *wpurple_get_special_folder(int folder_type); /* needs to be g_free'd */
+const char *wpurple_install_dir(void);
+const char *wpurple_lib_dir(void);
+const char *wpurple_locale_dir(void);
+const char *wpurple_data_dir(void);
 
 /* init / cleanup */
-void wgaim_init(void);
-void wgaim_cleanup(void);
+void wpurple_init(void);
+void wpurple_cleanup(void);
 
+long wpurple_get_tz_offset(void);
 
 /*
  *  MACROS
  */
 
 /*
- *  Gaim specific
+ *  Purple specific
  */
-#define DATADIR wgaim_install_dir()
-#define LIBDIR wgaim_lib_dir()
-#define LOCALEDIR wgaim_locale_dir()
+#define DATADIR wpurple_install_dir()
+#define LIBDIR wpurple_lib_dir()
+#define LOCALEDIR wpurple_locale_dir()
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _WIN32DEP_H_ */
 
