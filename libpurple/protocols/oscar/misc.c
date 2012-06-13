@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -39,66 +39,42 @@
 void
 aim_genericreq_n(OscarData *od, FlapConnection *conn, guint16 family, guint16 subtype)
 {
-	FlapFrame *frame;
 	aim_snacid_t snacid = 0x00000000;
 
-	frame = flap_frame_new(od, 0x02, 10);
-
-	aim_putsnac(&frame->data, family, subtype, 0x0000, snacid);
-
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, family, subtype, snacid, NULL);
 }
 
 void
 aim_genericreq_n_snacid(OscarData *od, FlapConnection *conn, guint16 family, guint16 subtype)
 {
-	FlapFrame *frame;
 	aim_snacid_t snacid;
 
-	frame = flap_frame_new(od, 0x02, 10);
-
 	snacid = aim_cachesnac(od, family, subtype, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, family, subtype, 0x0000, snacid);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, family, subtype, snacid, NULL);
 }
 
 void
 aim_genericreq_l(OscarData *od, FlapConnection *conn, guint16 family, guint16 subtype, guint32 *longdata)
 {
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	if (!longdata)
-		return aim_genericreq_n(od, conn, family, subtype);
+	{
+		aim_genericreq_n(od, conn, family, subtype);
+		return;
+	}
 
-	frame = flap_frame_new(od, 0x02, 10+4);
-
-	snacid = aim_cachesnac(od, family, subtype, 0x0000, NULL, 0);
-
-	aim_putsnac(&frame->data, family, subtype, 0x0000, snacid);
-	byte_stream_put32(&frame->data, *longdata);
-
-	flap_connection_send(conn, frame);
-}
-
-void
-aim_genericreq_s(OscarData *od, FlapConnection *conn, guint16 family, guint16 subtype, guint16 *shortdata)
-{
-	FlapFrame *frame;
-	aim_snacid_t snacid;
-
-	if (!shortdata)
-		return aim_genericreq_n(od, conn, family, subtype);
-
-	frame = flap_frame_new(od, 0x02, 10+2);
+	byte_stream_new(&bs, 4);
 
 	snacid = aim_cachesnac(od, family, subtype, 0x0000, NULL, 0);
 
-	aim_putsnac(&frame->data, family, subtype, 0x0000, snacid);
-	byte_stream_put16(&frame->data, *shortdata);
+	byte_stream_put32(&bs, *longdata);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, family, subtype, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 }
 
 /*
@@ -115,15 +91,16 @@ generror(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fram
 
 	snac2 = aim_remsnac(od, snac->id);
 
-	if (byte_stream_empty(bs))
+	if (byte_stream_bytes_left(bs))
 		error = byte_stream_get16(bs);
 
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
 		ret = userfunc(od, conn, frame, error, snac2 ? snac2->data : NULL);
 
-	if (snac2)
-		free(snac2->data);
-	free(snac2);
+	if (snac2) {
+		g_free(snac2->data);
+		g_free(snac2);
+	}
 
 	return ret;
 }

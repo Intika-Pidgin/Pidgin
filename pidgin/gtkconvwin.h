@@ -1,10 +1,11 @@
 /**
  * @file gtkconvwin.h GTK+ Conversation Window API
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,12 +21,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTKCONVERSATION_WINDOW_H_
-#define _GAIM_GTKCONVERSATION_WINDOW_H_
+#ifndef _PIDGIN_CONVERSATION_WINDOW_H_
+#define _PIDGIN_CONVERSATION_WINDOW_H_
 
-typedef struct _GaimGtkWindow       GaimGtkWindow;
+typedef struct _PidginWindow       PidginWindow;
 
 
 /**************************************************************************
@@ -37,7 +38,7 @@ typedef struct _GaimGtkWindow       GaimGtkWindow;
  * A GTK+ representation of a graphical window containing one or more
  * conversations.
  */
-struct _GaimGtkWindow
+struct _PidginWindow
 {
 	GtkWidget *window;           /**< The window.                      */
 	GtkWidget *notebook;         /**< The notebook of conversations.   */
@@ -47,26 +48,26 @@ struct _GaimGtkWindow
 	{
 		GtkWidget *menubar;
 
-		GtkWidget *view_log;
+		GtkAction *view_log;
 
-		GtkWidget *send_file;
-		GtkWidget *add_pounce;
-		GtkWidget *get_info;
-		GtkWidget *invite;
+		GtkAction *send_file;
+		GtkAction *get_attention;
+		GtkAction *add_pounce;
+		GtkAction *get_info;
+		GtkAction *invite;
 
-		GtkWidget *alias;
-		GtkWidget *block;
-		GtkWidget *add;
-		GtkWidget *remove;
+		GtkAction *alias;
+		GtkAction *block;
+		GtkAction *unblock;
+		GtkAction *add;
+		GtkAction *remove;
 
-		GtkWidget *insert_link;
-		GtkWidget *insert_image;
+		GtkAction *insert_link;
+		GtkAction *insert_image;
 
-		GtkWidget *logging;
-		GtkWidget *sounds;
-		GtkWidget *show_formatting_toolbar;
-		GtkWidget *show_timestamps;
-		GtkWidget *show_icon;
+		GtkAction *logging;
+		GtkAction *sounds;
+		GtkAction *show_formatting_toolbar;
 
 		GtkWidget *send_to;
 
@@ -74,7 +75,7 @@ struct _GaimGtkWindow
 
 		GtkWidget *typing_icon;
 
-		GtkItemFactory *item_factory;
+		GtkUIManager *ui;
 
 	} menu;
 
@@ -94,35 +95,42 @@ struct _GaimGtkWindow
 
 	gint drag_motion_signal;
 	gint drag_leave_signal;
+
+	/* Media menu options. */
+	GtkAction *audio_call;
+	GtkAction *video_call;
+	GtkAction *audio_video_call;
 };
 
 /*@}*/
+
+G_BEGIN_DECLS
 
 /**************************************************************************
  * @name GTK+ Conversation Window API
  **************************************************************************/
 /*@{*/
 
-GaimGtkWindow * gaim_gtk_conv_window_new(void);
-void gaim_gtk_conv_window_destroy(GaimGtkWindow *win);
-GList *gaim_gtk_conv_windows_get_list(void);
-void gaim_gtk_conv_window_show(GaimGtkWindow *win);
-void gaim_gtk_conv_window_hide(GaimGtkWindow *win);
-void gaim_gtk_conv_window_raise(GaimGtkWindow *win);
-void gaim_gtk_conv_window_switch_gtkconv(GaimGtkWindow *win, GaimGtkConversation *gtkconv);
-void gaim_gtk_conv_window_add_gtkconv(GaimGtkWindow *win, GaimGtkConversation *gtkconv);
-void gaim_gtk_conv_window_remove_gtkconv(GaimGtkWindow *win, GaimGtkConversation *gtkconv);
-GaimGtkConversation *gaim_gtk_conv_window_get_gtkconv_at_index(const GaimGtkWindow *win, int index);
-GaimGtkConversation *gaim_gtk_conv_window_get_active_gtkconv(const GaimGtkWindow *win);
-GaimConversation *gaim_gtk_conv_window_get_active_conversation(const GaimGtkWindow *win);
-gboolean gaim_gtk_conv_window_is_active_conversation(const GaimConversation *conv);
-gboolean gaim_gtk_conv_window_has_focus(GaimGtkWindow *win);
-GaimGtkWindow *gaim_gtk_conv_window_get_at_xy(int x, int y);
-GList *gaim_gtk_conv_window_get_gtkconvs(GaimGtkWindow *win);
-guint gaim_gtk_conv_window_get_gtkconv_count(GaimGtkWindow *win);
+PidginWindow * pidgin_conv_window_new(void);
+void pidgin_conv_window_destroy(PidginWindow *win);
+GList *pidgin_conv_windows_get_list(void);
+void pidgin_conv_window_show(PidginWindow *win);
+void pidgin_conv_window_hide(PidginWindow *win);
+void pidgin_conv_window_raise(PidginWindow *win);
+void pidgin_conv_window_switch_gtkconv(PidginWindow *win, PidginConversation *gtkconv);
+void pidgin_conv_window_add_gtkconv(PidginWindow *win, PidginConversation *gtkconv);
+void pidgin_conv_window_remove_gtkconv(PidginWindow *win, PidginConversation *gtkconv);
+PidginConversation *pidgin_conv_window_get_gtkconv_at_index(const PidginWindow *win, int index);
+PidginConversation *pidgin_conv_window_get_active_gtkconv(const PidginWindow *win);
+PurpleConversation *pidgin_conv_window_get_active_conversation(const PidginWindow *win);
+gboolean pidgin_conv_window_is_active_conversation(const PurpleConversation *conv);
+gboolean pidgin_conv_window_has_focus(PidginWindow *win);
+PidginWindow *pidgin_conv_window_get_at_xy(int x, int y);
+GList *pidgin_conv_window_get_gtkconvs(PidginWindow *win);
+guint pidgin_conv_window_get_gtkconv_count(PidginWindow *win);
 
-GaimGtkWindow *gaim_gtk_conv_window_first_with_type(GaimConversationType type);
-GaimGtkWindow *gaim_gtk_conv_window_last_with_type(GaimConversationType type);
+PidginWindow *pidgin_conv_window_first_with_type(PurpleConversationType type);
+PidginWindow *pidgin_conv_window_last_with_type(PurpleConversationType type);
 
 /*@}*/
 
@@ -131,17 +139,19 @@ GaimGtkWindow *gaim_gtk_conv_window_last_with_type(GaimConversationType type);
  **************************************************************************/
 /*@{*/
 
-typedef void (*GaimConvPlacementFunc)(GaimGtkConversation *);
+typedef void (*PidginConvPlacementFunc)(PidginConversation *);
 
-GList *gaim_gtkconv_placement_get_options(void);
-void gaim_gtkconv_placement_add_fnc(const char *id, const char *name, GaimConvPlacementFunc fnc);
-void gaim_gtkconv_placement_remove_fnc(const char *id);
-const char *gaim_gtkconv_placement_get_name(const char *id);
-GaimConvPlacementFunc gaim_gtkconv_placement_get_fnc(const char *id);
-void gaim_gtkconv_placement_set_current_func(GaimConvPlacementFunc func);
-GaimConvPlacementFunc gaim_gtkconv_placement_get_current_func(void);
-void gaim_gtkconv_placement_place(GaimGtkConversation *gtkconv);
+GList *pidgin_conv_placement_get_options(void);
+void pidgin_conv_placement_add_fnc(const char *id, const char *name, PidginConvPlacementFunc fnc);
+void pidgin_conv_placement_remove_fnc(const char *id);
+const char *pidgin_conv_placement_get_name(const char *id);
+PidginConvPlacementFunc pidgin_conv_placement_get_fnc(const char *id);
+void pidgin_conv_placement_set_current_func(PidginConvPlacementFunc func);
+PidginConvPlacementFunc pidgin_conv_placement_get_current_func(void);
+void pidgin_conv_placement_place(PidginConversation *gtkconv);
 
 /*@}*/
 
-#endif /* _GAIM_GTKCONVERSATION_WINDOW_H_ */
+G_END_DECLS
+
+#endif /* _PIDGIN_CONVERSATION_WINDOW_H_ */

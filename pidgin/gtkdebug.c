@@ -1,10 +1,11 @@
 /**
  * @file gtkdebug.c GTK+ Debug API
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,10 +21,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "notify.h"
 #include "prefs.h"
@@ -34,10 +35,15 @@
 #include "gtkdialogs.h"
 #include "gtkimhtml.h"
 #include "gtkutils.h"
-#include "gaimstock.h"
+#include "pidginstock.h"
 
 #ifdef HAVE_REGEX_H
 # include <regex.h>
+#	define USE_REGEX 1
+#else
+#if GLIB_CHECK_VERSION(2,14,0)
+#	define USE_REGEX 1
+#endif
 #endif /* HAVE_REGEX_H */
 
 #include <gdk/gdkkeysyms.h>
@@ -49,10 +55,9 @@ typedef struct
 
 	GtkListStore *store;
 
-	gboolean timestamps;
 	gboolean paused;
 
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 	GtkWidget *filter;
 	GtkWidget *expression;
 
@@ -60,15 +65,18 @@ typedef struct
 	gboolean highlight;
 
 	guint timer;
-
+#	ifdef HAVE_REGEX_H
 	regex_t regex;
+#	else
+	GRegex *regex;
+#	endif /* HAVE_REGEX_H */
 #else
 	GtkWidget *find;
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 	GtkWidget *filterlevel;
 } DebugWindow;
 
-static char debug_fg_colors[][8] = {
+static const char debug_fg_colors[][8] = {
 	"#000000",    /**< All debug levels. */
 	"#666666",    /**< Misc.             */
 	"#000000",    /**< Information.      */
@@ -78,37 +86,41 @@ static char debug_fg_colors[][8] = {
 };
 
 static DebugWindow *debug_win = NULL;
+static guint debug_enabled_timer = 0;
 
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 static void regex_filter_all(DebugWindow *win);
 static void regex_show_all(DebugWindow *win);
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 
 static gint
 debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 {
-	gaim_prefs_disconnect_by_handle(gaim_gtk_debug_get_handle());
+	purple_prefs_disconnect_by_handle(pidgin_debug_get_handle());
 
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 	if(debug_win->timer != 0) {
 		const gchar *text;
 
-		g_source_remove(debug_win->timer);
+		purple_timeout_remove(debug_win->timer);
 
 		text = gtk_entry_get_text(GTK_ENTRY(debug_win->expression));
-		gaim_prefs_set_string("/gaim/gtk/debug/regex", text);
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/debug/regex", text);
 	}
-
+#ifdef HAVE_REGEX_H
 	regfree(&debug_win->regex);
-#endif
+#else
+	g_regex_unref(debug_win->regex);
+#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 
 	/* If the "Save Log" dialog is open then close it */
-	gaim_request_close_with_handle(debug_win);
+	purple_request_close_with_handle(debug_win);
 
 	g_free(debug_win);
 	debug_win = NULL;
 
-	gaim_prefs_set_bool("/gaim/gtk/debug/enabled", FALSE);
+	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/enabled", FALSE);
 
 	return FALSE;
 }
@@ -116,15 +128,15 @@ debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 static gboolean
 configure_cb(GtkWidget *w, GdkEventConfigure *event, DebugWindow *win)
 {
-	if (GTK_WIDGET_VISIBLE(w)) {
-		gaim_prefs_set_int("/gaim/gtk/debug/width",  event->width);
-		gaim_prefs_set_int("/gaim/gtk/debug/height", event->height);
+	if (gtk_widget_get_visible(w)) {
+		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/debug/width",  event->width);
+		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/debug/height", event->height);
 	}
 
 	return FALSE;
 }
 
-#ifndef HAVE_REGEX_H
+#ifndef USE_REGEX
 struct _find {
 	DebugWindow *window;
 	GtkWidget *entry;
@@ -172,18 +184,17 @@ find_cb(GtkWidget *w, DebugWindow *win)
 	g_signal_connect(G_OBJECT(win->find), "response",
 					G_CALLBACK(do_find_cb), f);
 
-	gtk_container_set_border_width(GTK_CONTAINER(win->find), GAIM_HIG_BOX_SPACE);
+	gtk_container_set_border_width(GTK_CONTAINER(win->find), PIDGIN_HIG_BOX_SPACE);
 	gtk_window_set_resizable(GTK_WINDOW(win->find), FALSE);
-	gtk_dialog_set_has_separator(GTK_DIALOG(win->find), FALSE);
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(win->find)->vbox), GAIM_HIG_BORDER);
+	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(win->find)->vbox), PIDGIN_HIG_BORDER);
 	gtk_container_set_border_width(
-		GTK_CONTAINER(GTK_DIALOG(win->find)->vbox), GAIM_HIG_BOX_SPACE);
+		GTK_CONTAINER(GTK_DIALOG(win->find)->vbox), PIDGIN_HIG_BOX_SPACE);
 
-	hbox = gtk_hbox_new(FALSE, GAIM_HIG_BORDER);
+	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(win->find)->vbox),
 					  hbox);
-	img = gtk_image_new_from_stock(GAIM_STOCK_DIALOG_QUESTION,
-								   GTK_ICON_SIZE_DIALOG);
+	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
+				       gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
@@ -198,14 +209,14 @@ find_cb(GtkWidget *w, DebugWindow *win)
 	gtk_entry_set_activates_default(GTK_ENTRY(f->entry), TRUE);
 	gtk_label_set_mnemonic_widget(GTK_LABEL(label), GTK_WIDGET(f->entry));
 	g_signal_connect(G_OBJECT(f->entry), "changed",
-					 G_CALLBACK(gaim_gtk_set_sensitive_if_input),
+					 G_CALLBACK(pidgin_set_sensitive_if_input),
 					 win->find);
 	gtk_box_pack_start(GTK_BOX(hbox), f->entry, FALSE, FALSE, 0);
 
 	gtk_widget_show_all(win->find);
 	gtk_widget_grab_focus(f->entry);
 }
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 
 static void
 save_writefile_cb(void *user_data, const char *filename)
@@ -215,12 +226,12 @@ save_writefile_cb(void *user_data, const char *filename)
 	char *tmp;
 
 	if ((fp = g_fopen(filename, "w+")) == NULL) {
-		gaim_notify_error(win, NULL, _("Unable to open file."), NULL);
+		purple_notify_error(win, NULL, _("Unable to open file."), NULL);
 		return;
 	}
 
 	tmp = gtk_imhtml_get_text(GTK_IMHTML(win->text), NULL, NULL);
-	fprintf(fp, "Gaim Debug Log : %s\n", gaim_date_format_full(NULL));
+	fprintf(fp, "Pidgin Debug Log : %s\n", purple_date_format_full(NULL));
 	fprintf(fp, "%s", tmp);
 	g_free(tmp);
 
@@ -230,8 +241,10 @@ save_writefile_cb(void *user_data, const char *filename)
 static void
 save_cb(GtkWidget *w, DebugWindow *win)
 {
-	gaim_request_file(win, _("Save Debug Log"), "gaim-debug.log", TRUE,
-					  G_CALLBACK(save_writefile_cb), NULL, win);
+	purple_request_file(win, _("Save Debug Log"), "purple-debug.log", TRUE,
+					  G_CALLBACK(save_writefile_cb), NULL,
+					  NULL, NULL, NULL,
+					  win);
 }
 
 static void
@@ -239,45 +252,30 @@ clear_cb(GtkWidget *w, DebugWindow *win)
 {
 	gtk_imhtml_clear(GTK_IMHTML(win->text));
 
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 	gtk_list_store_clear(win->store);
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 }
 
 static void
 pause_cb(GtkWidget *w, DebugWindow *win)
 {
-	win->paused = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w));
+	win->paused = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(w));
 
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 	if(!win->paused) {
-		if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter)))
+		if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
 			regex_filter_all(win);
 		else
 			regex_show_all(win);
 	}
-#endif /* HAVE_REGEX_H */
-}
-
-static void
-timestamps_cb(GtkWidget *w, DebugWindow *win)
-{
-	win->timestamps = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w));
-
-	gaim_prefs_set_bool("/core/debug/timestamps", win->timestamps);
-}
-
-static void
-timestamps_pref_cb(const char *name, GaimPrefType type,
-				   gconstpointer value, gpointer data)
-{
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(data), GPOINTER_TO_INT(value));
+#endif /* USE_REGEX */
 }
 
 /******************************************************************************
  * regex stuff
  *****************************************************************************/
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 static void
 regex_clear_color(GtkWidget *w) {
 	gtk_widget_modify_base(w, GTK_STATE_NORMAL, NULL);
@@ -307,27 +305,34 @@ regex_highlight_clear(DebugWindow *win) {
 static void
 regex_match(DebugWindow *win, const gchar *text) {
 	GtkIMHtml *imhtml = GTK_IMHTML(win->text);
+#ifdef HAVE_REGEX_H
 	regmatch_t matches[4]; /* adjust if necessary */
 	size_t n_matches = sizeof(matches) / sizeof(matches[0]);
-	gchar *plaintext;
 	gint inverted;
+#else
+	GMatchInfo *match_info;
+#endif /* HAVE_REGEX_H */
+	gchar *plaintext;
 
 	if(!text)
 		return;
 
-	inverted = (win->invert) ? REG_NOMATCH : 0;
-
 	/* I don't like having to do this, but we need it for highlighting.  Plus
 	 * it makes the ^ and $ operators work :)
 	 */
-	plaintext = gaim_markup_strip_html(text);
+	plaintext = purple_markup_strip_html(text);
 
 	/* we do a first pass to see if it matches at all.  If it does we append
 	 * it, and work out the offsets to highlight.
 	 */
+#ifdef HAVE_REGEX_H
+	inverted = (win->invert) ? REG_NOMATCH : 0;
 	if(regexec(&win->regex, plaintext, n_matches, matches, 0) == inverted) {
-		GtkTextIter ins;
+#else
+	if(g_regex_match(win->regex, plaintext, 0, &match_info) != win->invert) {
+#endif /* HAVE_REGEX_H */
 		gchar *p = plaintext;
+		GtkTextIter ins;
 		gint i, offset = 0;
 
 		gtk_text_buffer_get_iter_at_mark(imhtml->text_buffer, &ins,
@@ -339,14 +344,18 @@ regex_match(DebugWindow *win, const gchar *text) {
 		/* If we're not highlighting or the expression is inverted, we're
 		 * done and move on.
 		 */
-		if(!win->highlight || inverted == REG_NOMATCH) {
+		if(!win->highlight || win->invert) {
 			g_free(plaintext);
+#ifndef HAVE_REGEX_H
+			g_match_info_free(match_info);
+#endif
 			return;
 		}
 
 		/* we use a do-while to highlight the first match, and then continue
 		 * if necessary...
 		 */
+#ifdef HAVE_REGEX_H
 		do {
 			size_t m;
 
@@ -369,6 +378,41 @@ regex_match(DebugWindow *win, const gchar *text) {
 
 			p += offset;
 		} while(regexec(&win->regex, p, n_matches, matches, REG_NOTBOL) == inverted);
+#else
+		do
+		{
+			gint m;
+			gint start_pos, end_pos;
+			GtkTextIter ms, me;
+
+			if (!g_match_info_matches(match_info))
+				break;
+
+			for (m = 0; m < g_match_info_get_match_count(match_info); m++)
+			{
+				if (m == 1)
+					continue;
+
+				g_match_info_fetch_pos(match_info, m, &start_pos, &end_pos);
+
+				if (end_pos == -1)
+					break;
+
+				gtk_text_buffer_get_iter_at_offset(imhtml->text_buffer, &ms,
+													i + start_pos);
+				gtk_text_buffer_get_iter_at_offset(imhtml->text_buffer, &me,
+													i + end_pos);
+				gtk_text_buffer_apply_tag_by_name(imhtml->text_buffer, "regex",
+												  &ms, &me);
+				offset = end_pos;
+			}
+
+			g_match_info_free(match_info);
+			p += offset;
+			i += offset;
+		} while (g_regex_match(win->regex, p, G_REGEX_MATCH_NOTBOL, &match_info) != win->invert);
+		g_match_info_free(match_info);
+#endif /* HAVE_REGEX_H */
 	}
 
 	g_free(plaintext);
@@ -380,11 +424,11 @@ regex_filter_all_cb(GtkTreeModel *m, GtkTreePath *p, GtkTreeIter *iter,
 {
 	DebugWindow *win = (DebugWindow *)data;
 	gchar *text;
-	GaimDebugLevel level;
+	PurpleDebugLevel level;
 
 	gtk_tree_model_get(m, iter, 0, &text, 1, &level, -1);
 
-	if (level >= gaim_prefs_get_int("/gaim/gtk/debug/filterlevel"))
+	if (level >= purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"))
 		regex_match(win, text);
 
 	g_free(text);
@@ -409,10 +453,10 @@ regex_show_all_cb(GtkTreeModel *m, GtkTreePath *p, GtkTreeIter *iter,
 {
 	DebugWindow *win = (DebugWindow *)data;
 	gchar *text;
-	GaimDebugLevel level;
+	PurpleDebugLevel level;
 
 	gtk_tree_model_get(m, iter, 0, &text, 1, &level, -1);
-	if (level >= gaim_prefs_get_int("/gaim/gtk/debug/filterlevel"))
+	if (level >= purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"))
 		gtk_imhtml_append_text(GTK_IMHTML(win->text), text, 0);
 	g_free(text);
 
@@ -442,9 +486,15 @@ regex_compile(DebugWindow *win) {
 		return;
 	}
 
+#ifdef HAVE_REGEX_H
 	regfree(&win->regex);
-
 	if(regcomp(&win->regex, text, REG_EXTENDED | REG_ICASE) != 0) {
+#else
+	if (win->regex)
+		g_regex_unref(win->regex);
+	win->regex = g_regex_new(text, G_REGEX_EXTENDED | G_REGEX_CASELESS, 0, NULL);
+	if(win->regex == NULL) {
+#endif
 		/* failed to compile */
 		regex_change_color(win->expression, 0xFFFF, 0xAFFF, 0xAFFF);
 		gtk_widget_set_sensitive(win->filter, FALSE);
@@ -457,12 +507,12 @@ regex_compile(DebugWindow *win) {
 	/* we check if the filter is on in case it was only of the options that
 	 * got changed, and not the expression.
 	 */
-	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter)))
+	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
 		regex_filter_all(win);
 }
 
 static void
-regex_pref_filter_cb(const gchar *name, GaimPrefType type,
+regex_pref_filter_cb(const gchar *name, PurplePrefType type,
 					 gconstpointer val, gpointer data)
 {
 	DebugWindow *win = (DebugWindow *)data;
@@ -471,13 +521,13 @@ regex_pref_filter_cb(const gchar *name, GaimPrefType type,
 	if(!win || !win->window)
 		return;
 
-	current = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter));
+	current = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter));
 	if(active != current)
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win->filter), active);
+		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(win->filter), active);
 }
 
 static void
-regex_pref_expression_cb(const gchar *name, GaimPrefType type,
+regex_pref_expression_cb(const gchar *name, PurplePrefType type,
 						 gconstpointer val, gpointer data)
 {
 	DebugWindow *win = (DebugWindow *)data;
@@ -487,7 +537,7 @@ regex_pref_expression_cb(const gchar *name, GaimPrefType type,
 }
 
 static void
-regex_pref_invert_cb(const gchar *name, GaimPrefType type,
+regex_pref_invert_cb(const gchar *name, PurplePrefType type,
 					 gconstpointer val, gpointer data)
 {
 	DebugWindow *win = (DebugWindow *)data;
@@ -495,12 +545,12 @@ regex_pref_invert_cb(const gchar *name, GaimPrefType type,
 
 	win->invert = active;
 
-	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter)))
+	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
 		regex_filter_all(win);
 }
 
 static void
-regex_pref_highlight_cb(const gchar *name, GaimPrefType type,
+regex_pref_highlight_cb(const gchar *name, PurplePrefType type,
 						gconstpointer val, gpointer data)
 {
 	DebugWindow *win = (DebugWindow *)data;
@@ -508,7 +558,7 @@ regex_pref_highlight_cb(const gchar *name, GaimPrefType type,
 
 	win->highlight = active;
 
-	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter)))
+	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
 		regex_filter_all(win);
 }
 
@@ -517,7 +567,7 @@ regex_row_changed_cb(GtkTreeModel *model, GtkTreePath *path,
 					 GtkTreeIter *iter, DebugWindow *win)
 {
 	gchar *text;
-	GaimDebugLevel level;
+	PurpleDebugLevel level;
 
 	if(!win || !win->window)
 		return;
@@ -533,8 +583,8 @@ regex_row_changed_cb(GtkTreeModel *model, GtkTreePath *path,
 
 	gtk_tree_model_get(model, iter, 0, &text, 1, &level, -1);
 
-	if (level >= gaim_prefs_get_int("/gaim/gtk/debug/filterlevel")) {
-		if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter))) {
+	if (level >= purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel")) {
+		if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter))) {
 			regex_match(win, text);
 		} else {
 			gtk_imhtml_append_text(GTK_IMHTML(win->text), text, 0);
@@ -549,7 +599,7 @@ regex_timer_cb(DebugWindow *win) {
 	const gchar *text;
 
 	text = gtk_entry_get_text(GTK_ENTRY(win->expression));
-	gaim_prefs_set_string("/gaim/gtk/debug/regex", text);
+	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/debug/regex", text);
 
 	win->timer = 0;
 
@@ -558,24 +608,24 @@ regex_timer_cb(DebugWindow *win) {
 
 static void
 regex_changed_cb(GtkWidget *w, DebugWindow *win) {
-	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter))) {
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win->filter),
+	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter))) {
+		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(win->filter),
 									 FALSE);
 	}
 
 	if(win->timer == 0)
-		win->timer = gaim_timeout_add(5000, (GSourceFunc)regex_timer_cb, win);
+		win->timer = purple_timeout_add_seconds(5, (GSourceFunc)regex_timer_cb, win);
 
 	regex_compile(win);
 }
 
 static void
 regex_key_release_cb(GtkWidget *w, GdkEventKey *e, DebugWindow *win) {
-	if(e->keyval == GDK_Return &&
-	   GTK_WIDGET_IS_SENSITIVE(win->filter) &&
-	   !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter)))
+	if(e->keyval == GDK_KEY_Return &&
+	   gtk_widget_is_sensitive(win->filter) &&
+	   !gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
 	{
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win->filter), TRUE);
+		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(win->filter), TRUE);
 	}
 }
 
@@ -585,27 +635,27 @@ regex_menu_cb(GtkWidget *item, const gchar *pref) {
 
 	active = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
 
-	gaim_prefs_set_bool(pref, active);
+	purple_prefs_set_bool(pref, active);
 }
 
 static void
 regex_popup_cb(GtkEntry *entry, GtkWidget *menu, DebugWindow *win) {
-	gaim_separator(menu);
-	gaim_new_check_item(menu, _("Invert"),
+	pidgin_separator(menu);
+	pidgin_new_check_item(menu, _("Invert"),
 						G_CALLBACK(regex_menu_cb),
-						"/gaim/gtk/debug/invert", win->invert);
-	gaim_new_check_item(menu, _("Highlight matches"),
+						PIDGIN_PREFS_ROOT "/debug/invert", win->invert);
+	pidgin_new_check_item(menu, _("Highlight matches"),
 						G_CALLBACK(regex_menu_cb),
-						"/gaim/gtk/debug/highlight", win->highlight);
+						PIDGIN_PREFS_ROOT "/debug/highlight", win->highlight);
 }
 
 static void
-regex_filter_toggled_cb(GtkToggleButton *button, DebugWindow *win) {
+regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win) {
 	gboolean active;
 
-	active = gtk_toggle_button_get_active(button);
+	active = gtk_toggle_tool_button_get_active(button);
 
-	gaim_prefs_set_bool("/gaim/gtk/debug/filter", active);
+	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/filter", active);
 
 	if(!GTK_IS_IMHTML(win->text))
 		return;
@@ -617,28 +667,28 @@ regex_filter_toggled_cb(GtkToggleButton *button, DebugWindow *win) {
 }
 
 static void
-filter_level_pref_changed(const char *name, GaimPrefType type, gconstpointer value, gpointer data)
+filter_level_pref_changed(const char *name, PurplePrefType type, gconstpointer value, gpointer data)
 {
 	DebugWindow *win = data;
 
 	if (GPOINTER_TO_INT(value) != gtk_combo_box_get_active(GTK_COMBO_BOX(win->filterlevel)))
 		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel), GPOINTER_TO_INT(value));
-	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win->filter)))
+	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
 		regex_filter_all(win);
 	else
 		regex_show_all(win);
 }
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 
 static void
 filter_level_changed_cb(GtkWidget *combo, gpointer null)
 {
-	gaim_prefs_set_int("/gaim/gtk/debug/filterlevel",
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/debug/filterlevel",
 				gtk_combo_box_get_active(GTK_COMBO_BOX(combo)));
 }
 
 static void
-toolbar_style_pref_changed_cb(const char *name, GaimPrefType type, gconstpointer value, gpointer data)
+toolbar_style_pref_changed_cb(const char *name, PurplePrefType type, gconstpointer value, gpointer data)
 {
 	gtk_toolbar_set_style(GTK_TOOLBAR(data), GPOINTER_TO_INT(value));
 }
@@ -647,7 +697,7 @@ static void
 toolbar_icon_pref_changed(GtkWidget *item, GtkWidget *toolbar)
 {
 	int style = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "user_data"));
-	gaim_prefs_set_int("/gaim/gtk/debug/style", style);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/debug/style", style);
 }
 
 static gboolean
@@ -671,7 +721,7 @@ toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
 		item = gtk_check_menu_item_new_with_mnemonic(text[i]);
 		g_object_set_data(G_OBJECT(item), "user_data", GINT_TO_POINTER(value[i]));
 		g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(toolbar_icon_pref_changed), toolbar);
-		if (value[i] == gaim_prefs_get_int("/gaim/gtk/debug/style"))
+		if (value[i] == purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/style"))
 			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 	}
@@ -689,32 +739,32 @@ debug_window_new(void)
 	GtkWidget *vbox;
 	GtkWidget *toolbar;
 	GtkWidget *frame;
-	GtkWidget *button;
-	GtkWidget *image;
 	gint width, height;
 	void *handle;
+	GtkToolItem *item;
+#if !GTK_CHECK_VERSION(2,12,0)
+	GtkTooltips *tooltips;
+#endif
 
 	win = g_new0(DebugWindow, 1);
 
-	width  = gaim_prefs_get_int("/gaim/gtk/debug/width");
-	height = gaim_prefs_get_int("/gaim/gtk/debug/height");
+	width  = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/width");
+	height = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/height");
 
-	GAIM_DIALOG(win->window);
-	gaim_debug_info("gtkdebug", "Setting dimensions to %d, %d\n",
+	win->window = pidgin_create_window(_("Debug Window"), 0, "debug", TRUE);
+	purple_debug_info("gtkdebug", "Setting dimensions to %d, %d\n",
 					width, height);
 
 	gtk_window_set_default_size(GTK_WINDOW(win->window), width, height);
-	gtk_window_set_role(GTK_WINDOW(win->window), "debug");
-	gtk_window_set_title(GTK_WINDOW(win->window), _("Debug Window"));
 
 	g_signal_connect(G_OBJECT(win->window), "delete_event",
 	                 G_CALLBACK(debug_window_destroy), NULL);
 	g_signal_connect(G_OBJECT(win->window), "configure_event",
 	                 G_CALLBACK(configure_cb), win);
 
-	handle = gaim_gtk_debug_get_handle();
-	
-#ifdef HAVE_REGEX_H
+	handle = pidgin_debug_get_handle();
+
+#ifdef USE_REGEX
 	/* the list store for all the messages */
 	win->store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
 
@@ -726,147 +776,170 @@ debug_window_new(void)
 	g_signal_connect(G_OBJECT(win->store), "row-changed",
 					 G_CALLBACK(regex_row_changed_cb), win);
 
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 
 	/* Setup the vbox */
 	vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(win->window), vbox);
 
-	if (gaim_prefs_get_bool("/gaim/gtk/debug/toolbar")) {
+	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/toolbar")) {
 		/* Setup our top button bar thingie. */
 		toolbar = gtk_toolbar_new();
-		gtk_toolbar_set_tooltips(GTK_TOOLBAR(toolbar), TRUE);
-#if GTK_CHECK_VERSION(2,4,0)
-		gtk_toolbar_set_show_arrow(GTK_TOOLBAR(toolbar), TRUE);
+#if !GTK_CHECK_VERSION(2,12,0)
+		tooltips = gtk_tooltips_new();
 #endif
+#if !GTK_CHECK_VERSION(2,14,0)
+		gtk_toolbar_set_tooltips(GTK_TOOLBAR(toolbar), TRUE);
+#endif
+		gtk_toolbar_set_show_arrow(GTK_TOOLBAR(toolbar), TRUE);
 		g_signal_connect(G_OBJECT(toolbar), "button-press-event", G_CALLBACK(toolbar_context), win);
 
 		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar),
-		                      gaim_prefs_get_int("/gaim/gtk/debug/style"));
-		gaim_prefs_connect_callback(handle, "/gaim/gtk/debug/style",
+		                      purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/style"));
+		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/style",
 	                                toolbar_style_pref_changed_cb, toolbar);
 		gtk_toolbar_set_icon_size(GTK_TOOLBAR(toolbar),
 		                          GTK_ICON_SIZE_SMALL_TOOLBAR);
 
 		gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
 
-#ifndef HAVE_REGEX_H
+#ifndef USE_REGEX
 		/* Find button */
-		gtk_toolbar_insert_stock(GTK_TOOLBAR(toolbar), GTK_STOCK_FIND,
-		                         _("Find"), NULL, G_CALLBACK(find_cb),
-		                         win, -1);
-#endif /* HAVE_REGEX_H */
+		item = gtk_tool_button_new_from_stock(GTK_STOCK_FIND);
+		gtk_tool_item_set_is_important(item, TRUE);
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_tool_item_set_tooltip_text(item, _("Find"));
+#else
+		gtk_tool_item_set_tooltip(item, tooltips, _("Find"), NULL);
+#endif
+		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(find_cb), win);
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
+#endif /* USE_REGEX */
 
 		/* Save */
-		gtk_toolbar_insert_stock(GTK_TOOLBAR(toolbar), GTK_STOCK_SAVE,
-		                         _("Save"), NULL, G_CALLBACK(save_cb),
-		                         win, -1);
+		item = gtk_tool_button_new_from_stock(GTK_STOCK_SAVE);
+		gtk_tool_item_set_is_important(item, TRUE);
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_tool_item_set_tooltip_text(item, _("Save"));
+#else
+		gtk_tool_item_set_tooltip(item, tooltips, _("Save"), NULL);
+#endif
+		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(save_cb), win);
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
 		/* Clear button */
-		gtk_toolbar_insert_stock(GTK_TOOLBAR(toolbar), GTK_STOCK_CLEAR,
-		                         _("Clear"), NULL, G_CALLBACK(clear_cb),
-		                         win, -1);
+		item = gtk_tool_button_new_from_stock(GTK_STOCK_CLEAR);
+		gtk_tool_item_set_is_important(item, TRUE);
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_tool_item_set_tooltip_text(item, _("Clear"));
+#else
+		gtk_tool_item_set_tooltip(item, tooltips, _("Clear"), NULL);
+#endif
+		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(clear_cb), win);
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
-		gtk_toolbar_insert_space(GTK_TOOLBAR(toolbar), -1);
+		item = gtk_separator_tool_item_new();
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
 		/* Pause */
-		image = gtk_image_new_from_stock(GAIM_STOCK_PAUSE, GTK_ICON_SIZE_MENU);
-		gtk_toolbar_append_element(GTK_TOOLBAR(toolbar),
-		                                    GTK_TOOLBAR_CHILD_TOGGLEBUTTON,
-		                                    NULL, _("Pause"), _("Pause"),
-		                                    NULL, image,
-		                                    G_CALLBACK(pause_cb), win);
+		item = gtk_toggle_tool_button_new_from_stock(PIDGIN_STOCK_PAUSE);
+		gtk_tool_item_set_is_important(item, TRUE);
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_tool_item_set_tooltip_text(item, _("Pause"));
+#else
+		gtk_tool_item_set_tooltip(item, tooltips, _("Pause"), NULL);
+#endif
+		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(pause_cb), win);
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
-		/* Timestamps */
-		button = gtk_toolbar_append_element(GTK_TOOLBAR(toolbar),
-		                                    GTK_TOOLBAR_CHILD_TOGGLEBUTTON,
-		                                    NULL, _("Timestamps"),
-		                                    _("Timestamps"), NULL, NULL,
-		                                    G_CALLBACK(timestamps_cb),
-		                                    win);
-
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button),
-		                             gaim_prefs_get_bool("/core/debug/timestamps"));
-
-		gaim_prefs_connect_callback(handle, "/core/debug/timestamps",
-		                            timestamps_pref_cb, button);
-
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 		/* regex stuff */
-		gtk_toolbar_insert_space(GTK_TOOLBAR(toolbar), -1);
+		item = gtk_separator_tool_item_new();
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
 		/* regex toggle button */
-		win->filter =
-			gtk_toolbar_append_element(GTK_TOOLBAR(toolbar),
-									   GTK_TOOLBAR_CHILD_TOGGLEBUTTON,
-									   NULL, _("Filter"), _("Filter"), 
-									   NULL, NULL,
-									   G_CALLBACK(regex_filter_toggled_cb),
-									   win);
+		item = gtk_toggle_tool_button_new_from_stock(GTK_STOCK_FIND);
+		gtk_tool_item_set_is_important(item, TRUE);
+		win->filter = GTK_WIDGET(item);
+		gtk_tool_button_set_label(GTK_TOOL_BUTTON(win->filter), _("Filter"));
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_tool_item_set_tooltip_text(GTK_TOOL_ITEM(win->filter), _("Filter"));
+#else
+		gtk_tooltips_set_tip(tooltips, win->filter, _("Filter"), NULL);
+#endif
+		g_signal_connect(G_OBJECT(win->filter), "clicked", G_CALLBACK(regex_filter_toggled_cb), win);
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(win->filter));
+
 		/* we purposely disable the toggle button here in case
-		 * /gaim/gtk/debug/expression has an empty string.  If it does not have
+		 * /purple/gtk/debug/expression has an empty string.  If it does not have
 		 * an empty string, the change signal will get called and make the
 		 * toggle button sensitive.
 		 */
 		gtk_widget_set_sensitive(win->filter, FALSE);
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win->filter),
-									 gaim_prefs_get_bool("/gaim/gtk/debug/filter"));
-		gaim_prefs_connect_callback(handle, "/gaim/gtk/debug/filter",
+		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(win->filter),
+									 purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/filter"));
+		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/filter",
 									regex_pref_filter_cb, win);
 
 		/* regex entry */
 		win->expression = gtk_entry_new();
-		gtk_toolbar_append_element(GTK_TOOLBAR(toolbar),
-								   GTK_TOOLBAR_CHILD_WIDGET, win->expression,
-								   NULL, _("Right click for more options."),
-								   NULL, NULL, NULL, NULL);
+		item = gtk_tool_item_new();
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_widget_set_tooltip_text(win->expression, _("Right click for more options."));
+#else
+		gtk_tooltips_set_tip(tooltips, win->expression, _("Right click for more options."), NULL);
+#endif
+		gtk_container_add(GTK_CONTAINER(item), GTK_WIDGET(win->expression));
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
+
 		/* this needs to be before the text is set from the pref if we want it
 		 * to colorize a stored expression.
 		 */
 		g_signal_connect(G_OBJECT(win->expression), "changed",
 						 G_CALLBACK(regex_changed_cb), win);
 		gtk_entry_set_text(GTK_ENTRY(win->expression),
-						   gaim_prefs_get_string("/gaim/gtk/debug/regex"));
+						   purple_prefs_get_string(PIDGIN_PREFS_ROOT "/debug/regex"));
 		g_signal_connect(G_OBJECT(win->expression), "populate-popup",
 						 G_CALLBACK(regex_popup_cb), win);
 		g_signal_connect(G_OBJECT(win->expression), "key-release-event",
 						 G_CALLBACK(regex_key_release_cb), win);
-		gaim_prefs_connect_callback(handle, "/gaim/gtk/debug/regex",
+		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/regex",
 									regex_pref_expression_cb, win);
 
 		/* connect the rest of our pref callbacks */
-		win->invert = gaim_prefs_get_bool("/gaim/gtk/debug/invert");
-		gaim_prefs_connect_callback(handle, "/gaim/gtk/debug/invert",
+		win->invert = purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/invert");
+		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/invert",
 									regex_pref_invert_cb, win);
 
-		win->highlight = gaim_prefs_get_bool("/gaim/gtk/debug/highlight");
-		gaim_prefs_connect_callback(handle, "/gaim/gtk/debug/highlight",
+		win->highlight = purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/highlight");
+		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/highlight",
 									regex_pref_highlight_cb, win);
 
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 
-		gtk_toolbar_insert_space(GTK_TOOLBAR(toolbar), -1);
+		item = gtk_separator_tool_item_new();
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
-		gtk_toolbar_append_element(GTK_TOOLBAR(toolbar),
-		                           GTK_TOOLBAR_CHILD_WIDGET, gtk_label_new(_("Level ")),
-		                           NULL, _("Select the debug filter level."),
-		                           NULL, NULL, NULL, NULL);
-		
-		win->filterlevel = gtk_combo_box_new_text();
-		gtk_toolbar_append_element(GTK_TOOLBAR(toolbar),
-		                           GTK_TOOLBAR_CHILD_WIDGET, win->filterlevel,
-		                           NULL, _("Select the debug filter level."),
-		                           NULL, NULL, NULL, NULL);
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("All"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Misc"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Info"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Warning"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Error "));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Fatal Error"));
+		item = gtk_tool_item_new();
+		gtk_container_add(GTK_CONTAINER(item), gtk_label_new(_("Level ")));
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
+
+		win->filterlevel = gtk_combo_box_text_new();
+		item = gtk_tool_item_new();
+		gtk_widget_set_tooltip_text(win->filterlevel, _("Select the debug filter level."));
+		gtk_container_add(GTK_CONTAINER(item), win->filterlevel);
+		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
+
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("All"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Misc"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Info"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Warning"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Error "));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Fatal Error"));
 		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel),
-					gaim_prefs_get_int("/gaim/gtk/debug/filterlevel"));
-#ifdef HAVE_REGEX_H
-		gaim_prefs_connect_callback(handle, "/gaim/gtk/debug/filterlevel",
+					purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"));
+#ifdef USE_REGEX
+		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/filterlevel",
 						filter_level_pref_changed, win);
 #endif
 		g_signal_connect(G_OBJECT(win->filterlevel), "changed",
@@ -874,72 +947,82 @@ debug_window_new(void)
 	}
 
 	/* Add the gtkimhtml */
-	frame = gaim_gtk_create_imhtml(FALSE, &win->text, NULL, NULL);
+	frame = pidgin_create_imhtml(FALSE, &win->text, NULL, NULL);
 	gtk_imhtml_set_format_functions(GTK_IMHTML(win->text),
 									GTK_IMHTML_ALL ^ GTK_IMHTML_SMILEY ^ GTK_IMHTML_IMAGE);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 	gtk_widget_show(frame);
 
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 	/* add the tag for regex highlighting */
 	gtk_text_buffer_create_tag(GTK_IMHTML(win->text)->text_buffer, "regex",
 							   "background", "#FFAFAF",
 							   "weight", "bold",
 							   NULL);
-#endif /* HAVE_REGEX_H */
+#endif /* USE_REGEX */
 
 	gtk_widget_show_all(win->window);
 
 	return win;
 }
 
-static void
-debug_enabled_cb(const char *name, GaimPrefType type,
-				 gconstpointer value, gpointer data)
+static gboolean
+debug_enabled_timeout_cb(gpointer data)
 {
-	if (value)
-		gaim_gtk_debug_window_show();
+	debug_enabled_timer = 0;
+
+	if (data)
+		pidgin_debug_window_show();
 	else
-		gaim_gtk_debug_window_hide();
+		pidgin_debug_window_hide();
+
+	return FALSE;
 }
 
 static void
-gaim_glib_log_handler(const gchar *domain, GLogLevelFlags flags,
+debug_enabled_cb(const char *name, PurplePrefType type,
+				 gconstpointer value, gpointer data)
+{
+	debug_enabled_timer = g_timeout_add(0, debug_enabled_timeout_cb, GINT_TO_POINTER(GPOINTER_TO_INT(value)));
+}
+
+static void
+pidgin_glib_log_handler(const gchar *domain, GLogLevelFlags flags,
 					  const gchar *msg, gpointer user_data)
 {
-	GaimDebugLevel level;
+	PurpleDebugLevel level;
 	char *new_msg = NULL;
 	char *new_domain = NULL;
 
 	if ((flags & G_LOG_LEVEL_ERROR) == G_LOG_LEVEL_ERROR)
-		level = GAIM_DEBUG_ERROR;
+		level = PURPLE_DEBUG_ERROR;
 	else if ((flags & G_LOG_LEVEL_CRITICAL) == G_LOG_LEVEL_CRITICAL)
-		level = GAIM_DEBUG_FATAL;
+		level = PURPLE_DEBUG_FATAL;
 	else if ((flags & G_LOG_LEVEL_WARNING) == G_LOG_LEVEL_WARNING)
-		level = GAIM_DEBUG_WARNING;
+		level = PURPLE_DEBUG_WARNING;
 	else if ((flags & G_LOG_LEVEL_MESSAGE) == G_LOG_LEVEL_MESSAGE)
-		level = GAIM_DEBUG_INFO;
+		level = PURPLE_DEBUG_INFO;
 	else if ((flags & G_LOG_LEVEL_INFO) == G_LOG_LEVEL_INFO)
-		level = GAIM_DEBUG_INFO;
+		level = PURPLE_DEBUG_INFO;
 	else if ((flags & G_LOG_LEVEL_DEBUG) == G_LOG_LEVEL_DEBUG)
-		level = GAIM_DEBUG_MISC;
+		level = PURPLE_DEBUG_MISC;
 	else
 	{
-		gaim_debug_warning("gtkdebug",
+		purple_debug_warning("gtkdebug",
 				   "Unknown glib logging level in %d\n", flags);
 
-		level = GAIM_DEBUG_MISC; /* This will never happen. */
+		level = PURPLE_DEBUG_MISC; /* This will never happen. */
 	}
 
 	if (msg != NULL)
-		new_msg = gaim_utf8_try_convert(msg);
+		new_msg = purple_utf8_try_convert(msg);
 
 	if (domain != NULL)
-		new_domain = gaim_utf8_try_convert(domain);
+		new_domain = purple_utf8_try_convert(domain);
 
 	if (new_msg != NULL)
 	{
-		gaim_debug(level, (new_domain != NULL ? new_domain : "g_log"),
+		purple_debug(level, (new_domain != NULL ? new_domain : "g_log"),
 				   "%s\n", new_msg);
 
 		g_free(new_msg);
@@ -950,13 +1033,13 @@ gaim_glib_log_handler(const gchar *domain, GLogLevelFlags flags,
 
 #ifdef _WIN32
 static void
-gaim_glib_dummy_print_handler(const gchar *string)
+pidgin_glib_dummy_print_handler(const gchar *string)
 {
 }
 #endif
 
 void
-gaim_gtk_debug_init(void)
+pidgin_debug_init(void)
 {
 	/* Debug window preferences. */
 	/*
@@ -966,32 +1049,32 @@ gaim_gtk_debug_init(void)
 	 *       configure event, which overrides the width and height! :P
 	 */
 
-	gaim_prefs_add_none("/gaim/gtk/debug");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/debug");
 
 	/* Controls printing to the debug window */
-	gaim_prefs_add_bool("/gaim/gtk/debug/enabled", FALSE);
-	gaim_prefs_add_int("/gaim/gtk/debug/filterlevel", GAIM_DEBUG_ALL);
-	gaim_prefs_add_int("/gaim/gtk/debug/style", GTK_TOOLBAR_BOTH_HORIZ);
+	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/enabled", FALSE);
+	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/debug/filterlevel", PURPLE_DEBUG_ALL);
+	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/debug/style", GTK_TOOLBAR_BOTH_HORIZ);
 
-	gaim_prefs_add_bool("/gaim/gtk/debug/toolbar", TRUE);
-	gaim_prefs_add_int("/gaim/gtk/debug/width",  450);
-	gaim_prefs_add_int("/gaim/gtk/debug/height", 250);
+	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/toolbar", TRUE);
+	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/debug/width",  450);
+	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/debug/height", 250);
 
-#ifdef HAVE_REGEX_H
-	gaim_prefs_add_string("/gaim/gtk/debug/regex", "");
-	gaim_prefs_add_bool("/gaim/gtk/debug/filter", FALSE);
-	gaim_prefs_add_bool("/gaim/gtk/debug/invert", FALSE);
-	gaim_prefs_add_bool("/gaim/gtk/debug/case_insensitive", FALSE);
-	gaim_prefs_add_bool("/gaim/gtk/debug/highlight", FALSE);
-#endif /* HAVE_REGEX_H */
+#ifdef USE_REGEX
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/debug/regex", "");
+	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/filter", FALSE);
+	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/invert", FALSE);
+	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/case_insensitive", FALSE);
+	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/highlight", FALSE);
+#endif /* USE_REGEX */
 
-	gaim_prefs_connect_callback(NULL, "/gaim/gtk/debug/enabled",
+	purple_prefs_connect_callback(NULL, PIDGIN_PREFS_ROOT "/debug/enabled",
 								debug_enabled_cb, NULL);
 
 #define REGISTER_G_LOG_HANDLER(name) \
 	g_log_set_handler((name), G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL \
 					  | G_LOG_FLAG_RECURSION, \
-					  gaim_glib_log_handler, NULL)
+					  pidgin_glib_log_handler, NULL)
 
 	/* Register the glib/gtk log handlers. */
 	REGISTER_G_LOG_HANDLER(NULL);
@@ -1002,32 +1085,38 @@ gaim_gtk_debug_init(void)
 	REGISTER_G_LOG_HANDLER("GModule");
 	REGISTER_G_LOG_HANDLER("GLib-GObject");
 	REGISTER_G_LOG_HANDLER("GThread");
+#ifdef USE_GSTREAMER
+	REGISTER_G_LOG_HANDLER("GStreamer");
+#endif
 
 #ifdef _WIN32
-	if (!gaim_debug_is_enabled())
-		g_set_print_handler(gaim_glib_dummy_print_handler);
+	if (!purple_debug_is_enabled())
+		g_set_print_handler(pidgin_glib_dummy_print_handler);
 #endif
 }
 
 void
-gaim_gtk_debug_uninit(void)
+pidgin_debug_uninit(void)
 {
-	gaim_debug_set_ui_ops(NULL);
+	purple_debug_set_ui_ops(NULL);
+
+	if (debug_enabled_timer != 0)
+		g_source_remove(debug_enabled_timer);
 }
 
 void
-gaim_gtk_debug_window_show(void)
+pidgin_debug_window_show(void)
 {
 	if (debug_win == NULL)
 		debug_win = debug_window_new();
 
 	gtk_widget_show(debug_win->window);
 
-	gaim_prefs_set_bool("/gaim/gtk/debug/enabled", TRUE);
+	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/enabled", TRUE);
 }
 
 void
-gaim_gtk_debug_window_hide(void)
+pidgin_debug_window_hide(void)
 {
 	if (debug_win != NULL) {
 		gtk_widget_destroy(debug_win->window);
@@ -1036,38 +1125,26 @@ gaim_gtk_debug_window_hide(void)
 }
 
 static void
-gaim_gtk_debug_print(GaimDebugLevel level, const char *category,
+pidgin_debug_print(PurpleDebugLevel level, const char *category,
 					 const char *arg_s)
 {
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 	GtkTreeIter iter;
-#endif /* HAVE_REGEX_H */
-	gboolean timestamps;
+#endif /* USE_REGEX */
 	gchar *ts_s;
 	gchar *esc_s, *cat_s, *tmp, *s;
+	const char *mdate;
+	time_t mtime;
 
-	if (!gaim_prefs_get_bool("/gaim/gtk/debug/enabled") ||
-	    (debug_win == NULL))
+	if (debug_win == NULL ||
+		!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"))
 	{
 		return;
 	}
 
-	timestamps = gaim_prefs_get_bool("/core/debug/timestamps");
-
-	/*
-	 * For some reason we only print the timestamp if category is
-	 * not NULL.  Why the hell do we do that?  --Mark
-	 */
-	if ((category != NULL) && (timestamps)) {
-		const char *mdate;
-
-		time_t mtime = time(NULL);
-		mdate = gaim_utf8_strftime("%H:%M:%S", localtime(&mtime));
-		ts_s = g_strdup_printf("(%s) ", mdate);
-	} else {
-		ts_s = g_strdup("");
-	}
-
+	mtime = time(NULL);
+	mdate = purple_utf8_strftime("%H:%M:%S", localtime(&mtime));
+	ts_s = g_strdup_printf("(%s) ", mdate);
 	if (category == NULL)
 		cat_s = g_strdup("");
 	else
@@ -1082,41 +1159,53 @@ gaim_gtk_debug_print(GaimDebugLevel level, const char *category,
 	g_free(cat_s);
 	g_free(esc_s);
 
-	tmp = gaim_utf8_try_convert(s);
+	tmp = purple_utf8_try_convert(s);
 	g_free(s);
 	s = tmp;
 
-	if (level == GAIM_DEBUG_FATAL) {
+	if (level == PURPLE_DEBUG_FATAL) {
 		tmp = g_strdup_printf("<b>%s</b>", s);
 		g_free(s);
 		s = tmp;
 	}
 
-#ifdef HAVE_REGEX_H
+#ifdef USE_REGEX
 	/* add the text to the list store */
 	gtk_list_store_append(debug_win->store, &iter);
 	gtk_list_store_set(debug_win->store, &iter, 0, s, 1, level, -1);
-#else /* HAVE_REGEX_H */
-	if(!debug_win->paused && level >= gaim_prefs_get_int("/gaim/gtk/debug/filterlevel"))
+#else /* USE_REGEX */
+	if(!debug_win->paused && level >= purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"))
 		gtk_imhtml_append_text(GTK_IMHTML(debug_win->text), s, 0);
-#endif /* !HAVE_REGEX_H */
+#endif /* !USE_REGEX */
 
 	g_free(s);
 }
 
-static GaimDebugUiOps ops =
+static gboolean
+pidgin_debug_is_enabled(PurpleDebugLevel level, const char *category)
 {
-	gaim_gtk_debug_print,
+	return (debug_win != NULL &&
+			purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"));
+}
+
+static PurpleDebugUiOps ops =
+{
+	pidgin_debug_print,
+	pidgin_debug_is_enabled,
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
-GaimDebugUiOps *
-gaim_gtk_debug_get_ui_ops(void)
+PurpleDebugUiOps *
+pidgin_debug_get_ui_ops(void)
 {
 	return &ops;
 }
 
 void *
-gaim_gtk_debug_get_handle() {
+pidgin_debug_get_handle() {
 	static int handle;
 
 	return &handle;

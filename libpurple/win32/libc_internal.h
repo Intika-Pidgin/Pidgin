@@ -1,5 +1,5 @@
 /*
- * gaim
+ * purple
  *
  * File: libc_internal.h
  *
@@ -17,18 +17,54 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _LIBC_INTERNAL_
 #define _LIBC_INTERNAL_
+#include <glib.h>
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+/* helper for purple_utf8_strftime() by way of purple_internal_strftime() in src/util.c */
+const char *wpurple_get_timezone_abbreviation(const struct tm *tm);
+
+/* sys/socket.h */
+int wpurple_socket(int domain, int style, int protocol);
+int wpurple_connect(int socket, struct sockaddr *addr, u_long length);
+int wpurple_getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlenptr);
+int wpurple_setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen);
+int wpurple_getsockname (int socket, struct sockaddr *addr, socklen_t *lenptr);
+int wpurple_bind(int socket, struct sockaddr *addr, socklen_t length);
+int wpurple_listen(int socket, unsigned int n);
+int wpurple_sendto(int socket, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
+int wpurple_recv(int fd, void *buf, size_t len, int flags);
+int wpurple_send(int fd, const void *buf, unsigned int size, int flags);
+
+/* arpa/inet.h */
+int wpurple_inet_aton(const char *name, struct in_addr *addr);
+const char *
+wpurple_inet_ntop (int af, const void *src, char *dst, socklen_t cnt);
+int wpurple_inet_pton(int af, const char *src, void *dst);
+
+/* netdb.h */
+struct hostent* wpurple_gethostbyname(const char *name);
+
+/* string.h */
+char* wpurple_strerror( int errornum );
 
 /* fcntl.h */
-#define F_SETFL 1
-#define O_NONBLOCK 1
+int wpurple_fcntl(int socket, int command, ...);
+#define F_GETFL 3
+#define F_SETFL 4
+#define O_NONBLOCK 04000
 
-/* ioctl.h */
+/* sys/ioctl.h */
 #define SIOCGIFCONF 0x8912 /* get iface list */
+int wpurple_ioctl(int fd, int command, void* opt);
 
 /* net/if.h */
 struct ifreq
@@ -85,10 +121,29 @@ struct ifconf
 # define ifc_req ifc_ifcu.ifcu_req /* Array of structures.  */
 
 /* sys/time.h */
+#if __MINGW32_MAJOR_VERSION < 3 || (__MINGW32_MAJOR_VERSION == 3 && __MINGW32_MINOR_VERSION < 10)
 struct timezone {
 	int tz_minuteswest;
 	int tz_dsttime;
 };
+#else
+#    include <sys/time.h>
+#endif
+int wpurple_gettimeofday(struct timeval *p, struct timezone *z);
 
+/* time.h */
+struct tm *wpurple_localtime_r(const time_t *time, struct tm *resultp);
+
+
+/* unistd.h */
+int wpurple_read(int fd, void *buf, unsigned int size);
+int wpurple_write(int fd, const void *buf, unsigned int size);
+int wpurple_close(int fd);
+int wpurple_gethostname(char *name, size_t size);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _LIBC_INTERNAL_ */

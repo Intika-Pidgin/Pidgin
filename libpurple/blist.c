@@ -1,7 +1,7 @@
 /*
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,15 +17,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+#define _PURPLE_BLIST_C_
+
 #include "internal.h"
 #include "blist.h"
 #include "conversation.h"
 #include "dbus-maybe.h"
 #include "debug.h"
 #include "notify.h"
+#include "pounce.h"
 #include "prefs.h"
 #include "privacy.h"
 #include "prpl.h"
@@ -35,22 +38,33 @@
 #include "value.h"
 #include "xmlnode.h"
 
-#define PATHSIZE 1024
+static PurpleBlistUiOps *blist_ui_ops = NULL;
 
-static GaimBlistUiOps *blist_ui_ops = NULL;
+static PurpleBuddyList *purplebuddylist = NULL;
 
-static GaimBuddyList *gaimbuddylist = NULL;
+/**
+ * A hash table used for efficient lookups of buddies by name.
+ * PurpleAccount* => GHashTable*, with the inner hash table being
+ * struct _purple_hbuddy => PurpleBuddy*
+ */
+static GHashTable *buddies_cache = NULL;
+
+/**
+ * A hash table used for efficient lookups of groups by name.
+ * UTF-8 collate-key => PurpleGroup*.
+ */
+static GHashTable *groups_cache = NULL;
+
 static guint          save_timer = 0;
 static gboolean       blist_loaded = FALSE;
-
 
 /*********************************************************************
  * Private utility functions                                         *
  *********************************************************************/
 
-static GaimBlistNode *gaim_blist_get_last_sibling(GaimBlistNode *node)
+static PurpleBlistNode *purple_blist_get_last_sibling(PurpleBlistNode *node)
 {
-	GaimBlistNode *n = node;
+	PurpleBlistNode *n = node;
 	if (!n)
 		return NULL;
 	while (n->next)
@@ -58,38 +72,57 @@ static GaimBlistNode *gaim_blist_get_last_sibling(GaimBlistNode *node)
 	return n;
 }
 
-static GaimBlistNode *gaim_blist_get_last_child(GaimBlistNode *node)
+static PurpleBlistNode *purple_blist_get_last_child(PurpleBlistNode *node)
 {
 	if (!node)
 		return NULL;
-	return gaim_blist_get_last_sibling(node->child);
+	return purple_blist_get_last_sibling(node->child);
 }
 
 struct _list_account_buddies {
 	GSList *list;
-	GaimAccount *account;
+	PurpleAccount *account;
 };
 
-struct _gaim_hbuddy {
+struct _purple_hbuddy {
 	char *name;
-	GaimAccount *account;
-	GaimBlistNode *group;
+	PurpleAccount *account;
+	PurpleBlistNode *group;
 };
 
-static guint _gaim_blist_hbuddy_hash(struct _gaim_hbuddy *hb)
+/* This function must not use purple_normalize */
+static guint _purple_blist_hbuddy_hash(struct _purple_hbuddy *hb)
 {
-	return g_str_hash(hb->name);
+	return g_str_hash(hb->name) ^ g_direct_hash(hb->group) ^ g_direct_hash(hb->account);
 }
 
-static guint _gaim_blist_hbuddy_equal(struct _gaim_hbuddy *hb1, struct _gaim_hbuddy *hb2)
+/* This function must not use purple_normalize */
+static guint _purple_blist_hbuddy_equal(struct _purple_hbuddy *hb1, struct _purple_hbuddy *hb2)
 {
-	return ((!strcmp(hb1->name, hb2->name)) && hb1->account == hb2->account && hb1->group == hb2->group);
+	return (hb1->group == hb2->group &&
+	        hb1->account == hb2->account &&
+	        g_str_equal(hb1->name, hb2->name));
 }
 
-static void _gaim_blist_hbuddy_free_key(struct _gaim_hbuddy *hb)
+static void _purple_blist_hbuddy_free_key(struct _purple_hbuddy *hb)
 {
 	g_free(hb->name);
 	g_free(hb);
+}
+
+static void
+purple_blist_buddies_cache_add_account(PurpleAccount *account)
+{
+	GHashTable *account_buddies = g_hash_table_new_full((GHashFunc)_purple_blist_hbuddy_hash,
+						(GEqualFunc)_purple_blist_hbuddy_equal,
+						(GDestroyNotify)_purple_blist_hbuddy_free_key, NULL);
+	g_hash_table_insert(buddies_cache, account, account_buddies);
+}
+
+static void
+purple_blist_buddies_cache_remove_account(const PurpleAccount *account)
+{
+	g_hash_table_remove(buddies_cache, account);
 }
 
 
@@ -101,12 +134,12 @@ static void
 value_to_xmlnode(gpointer key, gpointer hvalue, gpointer user_data)
 {
 	const char *name;
-	GaimValue *value;
+	PurpleValue *value;
 	xmlnode *node, *child;
-	char buf[20];
+	char buf[21];
 
 	name    = (const char *)key;
-	value   = (GaimValue *)hvalue;
+	value   = (PurpleValue *)hvalue;
 	node    = (xmlnode *)user_data;
 
 	g_return_if_fail(value != NULL);
@@ -114,18 +147,18 @@ value_to_xmlnode(gpointer key, gpointer hvalue, gpointer user_data)
 	child = xmlnode_new_child(node, "setting");
 	xmlnode_set_attrib(child, "name", name);
 
-	if (gaim_value_get_type(value) == GAIM_TYPE_INT) {
+	if (purple_value_get_type(value) == PURPLE_TYPE_INT) {
 		xmlnode_set_attrib(child, "type", "int");
-		snprintf(buf, sizeof(buf), "%d", gaim_value_get_int(value));
+		g_snprintf(buf, sizeof(buf), "%d", purple_value_get_int(value));
 		xmlnode_insert_data(child, buf, -1);
 	}
-	else if (gaim_value_get_type(value) == GAIM_TYPE_STRING) {
+	else if (purple_value_get_type(value) == PURPLE_TYPE_STRING) {
 		xmlnode_set_attrib(child, "type", "string");
-		xmlnode_insert_data(child, gaim_value_get_string(value), -1);
+		xmlnode_insert_data(child, purple_value_get_string(value), -1);
 	}
-	else if (gaim_value_get_type(value) == GAIM_TYPE_BOOLEAN) {
+	else if (purple_value_get_type(value) == PURPLE_TYPE_BOOLEAN) {
 		xmlnode_set_attrib(child, "type", "bool");
-		snprintf(buf, sizeof(buf), "%d", gaim_value_get_boolean(value));
+		g_snprintf(buf, sizeof(buf), "%d", purple_value_get_boolean(value));
 		xmlnode_insert_data(child, buf, -1);
 	}
 }
@@ -149,16 +182,16 @@ chat_component_to_xmlnode(gpointer key, gpointer value, gpointer user_data)
 }
 
 static xmlnode *
-buddy_to_xmlnode(GaimBlistNode *bnode)
+buddy_to_xmlnode(PurpleBlistNode *bnode)
 {
 	xmlnode *node, *child;
-	GaimBuddy *buddy;
+	PurpleBuddy *buddy;
 
-	buddy = (GaimBuddy *)bnode;
+	buddy = (PurpleBuddy *)bnode;
 
 	node = xmlnode_new("buddy");
-	xmlnode_set_attrib(node, "account", gaim_account_get_username(buddy->account));
-	xmlnode_set_attrib(node, "proto", gaim_account_get_protocol_id(buddy->account));
+	xmlnode_set_attrib(node, "account", purple_account_get_username(buddy->account));
+	xmlnode_set_attrib(node, "proto", purple_account_get_protocol_id(buddy->account));
 
 	child = xmlnode_new_child(node, "name");
 	xmlnode_insert_data(child, buddy->name, -1);
@@ -176,13 +209,13 @@ buddy_to_xmlnode(GaimBlistNode *bnode)
 }
 
 static xmlnode *
-contact_to_xmlnode(GaimBlistNode *cnode)
+contact_to_xmlnode(PurpleBlistNode *cnode)
 {
 	xmlnode *node, *child;
-	GaimContact *contact;
-	GaimBlistNode *bnode;
+	PurpleContact *contact;
+	PurpleBlistNode *bnode;
 
-	contact = (GaimContact *)cnode;
+	contact = (PurpleContact *)cnode;
 
 	node = xmlnode_new("contact");
 
@@ -194,9 +227,9 @@ contact_to_xmlnode(GaimBlistNode *cnode)
 	/* Write buddies */
 	for (bnode = cnode->child; bnode != NULL; bnode = bnode->next)
 	{
-		if (!GAIM_BLIST_NODE_SHOULD_SAVE(bnode))
+		if (!PURPLE_BLIST_NODE_SHOULD_SAVE(bnode))
 			continue;
-		if (GAIM_BLIST_NODE_IS_BUDDY(bnode))
+		if (PURPLE_BLIST_NODE_IS_BUDDY(bnode))
 		{
 			child = buddy_to_xmlnode(bnode);
 			xmlnode_insert_child(node, child);
@@ -210,16 +243,16 @@ contact_to_xmlnode(GaimBlistNode *cnode)
 }
 
 static xmlnode *
-chat_to_xmlnode(GaimBlistNode *cnode)
+chat_to_xmlnode(PurpleBlistNode *cnode)
 {
 	xmlnode *node, *child;
-	GaimChat *chat;
+	PurpleChat *chat;
 
-	chat = (GaimChat *)cnode;
+	chat = (PurpleChat *)cnode;
 
 	node = xmlnode_new("chat");
-	xmlnode_set_attrib(node, "proto", gaim_account_get_protocol_id(chat->account));
-	xmlnode_set_attrib(node, "account", gaim_account_get_username(chat->account));
+	xmlnode_set_attrib(node, "proto", purple_account_get_protocol_id(chat->account));
+	xmlnode_set_attrib(node, "account", purple_account_get_username(chat->account));
 
 	if (chat->alias != NULL)
 	{
@@ -237,13 +270,13 @@ chat_to_xmlnode(GaimBlistNode *cnode)
 }
 
 static xmlnode *
-group_to_xmlnode(GaimBlistNode *gnode)
+group_to_xmlnode(PurpleBlistNode *gnode)
 {
 	xmlnode *node, *child;
-	GaimGroup *group;
-	GaimBlistNode *cnode;
+	PurpleGroup *group;
+	PurpleBlistNode *cnode;
 
-	group = (GaimGroup *)gnode;
+	group = (PurpleGroup *)gnode;
 
 	node = xmlnode_new("group");
 	xmlnode_set_attrib(node, "name", group->name);
@@ -254,14 +287,14 @@ group_to_xmlnode(GaimBlistNode *gnode)
 	/* Write contacts and chats */
 	for (cnode = gnode->child; cnode != NULL; cnode = cnode->next)
 	{
-		if (!GAIM_BLIST_NODE_SHOULD_SAVE(cnode))
+		if (!PURPLE_BLIST_NODE_SHOULD_SAVE(cnode))
 			continue;
-		if (GAIM_BLIST_NODE_IS_CONTACT(cnode))
+		if (PURPLE_BLIST_NODE_IS_CONTACT(cnode))
 		{
 			child = contact_to_xmlnode(cnode);
 			xmlnode_insert_child(node, child);
 		}
-		else if (GAIM_BLIST_NODE_IS_CHAT(cnode))
+		else if (PURPLE_BLIST_NODE_IS_CHAT(cnode))
 		{
 			child = chat_to_xmlnode(cnode);
 			xmlnode_insert_child(node, child);
@@ -272,16 +305,16 @@ group_to_xmlnode(GaimBlistNode *gnode)
 }
 
 static xmlnode *
-accountprivacy_to_xmlnode(GaimAccount *account)
+accountprivacy_to_xmlnode(PurpleAccount *account)
 {
 	xmlnode *node, *child;
 	GSList *cur;
 	char buf[10];
 
 	node = xmlnode_new("account");
-	xmlnode_set_attrib(node, "proto", gaim_account_get_protocol_id(account));
-	xmlnode_set_attrib(node, "name", gaim_account_get_username(account));
-	snprintf(buf, sizeof(buf), "%d", account->perm_deny);
+	xmlnode_set_attrib(node, "proto", purple_account_get_protocol_id(account));
+	xmlnode_set_attrib(node, "name", purple_account_get_username(account));
+	g_snprintf(buf, sizeof(buf), "%d", purple_account_get_privacy_type(account));
 	xmlnode_set_attrib(node, "mode", buf);
 
 	for (cur = account->permit; cur; cur = cur->next)
@@ -300,22 +333,22 @@ accountprivacy_to_xmlnode(GaimAccount *account)
 }
 
 static xmlnode *
-blist_to_xmlnode()
+blist_to_xmlnode(void)
 {
 	xmlnode *node, *child, *grandchild;
-	GaimBlistNode *gnode;
+	PurpleBlistNode *gnode;
 	GList *cur;
 
-	node = xmlnode_new("gaim");
+	node = xmlnode_new("purple");
 	xmlnode_set_attrib(node, "version", "1.0");
 
 	/* Write groups */
 	child = xmlnode_new_child(node, "blist");
-	for (gnode = gaimbuddylist->root; gnode != NULL; gnode = gnode->next)
+	for (gnode = purplebuddylist->root; gnode != NULL; gnode = gnode->next)
 	{
-		if (!GAIM_BLIST_NODE_SHOULD_SAVE(gnode))
+		if (!PURPLE_BLIST_NODE_SHOULD_SAVE(gnode))
 			continue;
-		if (GAIM_BLIST_NODE_IS_GROUP(gnode))
+		if (PURPLE_BLIST_NODE_IS_GROUP(gnode))
 		{
 			grandchild = group_to_xmlnode(gnode);
 			xmlnode_insert_child(child, grandchild);
@@ -324,7 +357,7 @@ blist_to_xmlnode()
 
 	/* Write privacy settings */
 	child = xmlnode_new_child(node, "privacy");
-	for (cur = gaim_accounts_get_all(); cur != NULL; cur = cur->next)
+	for (cur = purple_accounts_get_all(); cur != NULL; cur = cur->next)
 	{
 		grandchild = accountprivacy_to_xmlnode(cur->data);
 		xmlnode_insert_child(child, grandchild);
@@ -334,21 +367,21 @@ blist_to_xmlnode()
 }
 
 static void
-gaim_blist_sync()
+purple_blist_sync(void)
 {
 	xmlnode *node;
 	char *data;
 
 	if (!blist_loaded)
 	{
-		gaim_debug_error("blist", "Attempted to save buddy list before it "
+		purple_debug_error("blist", "Attempted to save buddy list before it "
 						 "was read!\n");
 		return;
 	}
 
 	node = blist_to_xmlnode();
 	data = xmlnode_to_formatted_str(node, NULL);
-	gaim_util_write_data_to_file("blist.xml", data, -1);
+	purple_util_write_data_to_file("blist.xml", data, -1);
 	g_free(data);
 	xmlnode_free(node);
 }
@@ -356,16 +389,45 @@ gaim_blist_sync()
 static gboolean
 save_cb(gpointer data)
 {
-	gaim_blist_sync();
+	purple_blist_sync();
 	save_timer = 0;
 	return FALSE;
 }
 
-void
-gaim_blist_schedule_save()
+static void
+_purple_blist_schedule_save()
 {
 	if (save_timer == 0)
-		save_timer = gaim_timeout_add(5000, save_cb, NULL);
+		save_timer = purple_timeout_add_seconds(5, save_cb, NULL);
+}
+
+static void
+purple_blist_save_account(PurpleAccount *account)
+{
+#if 1
+	_purple_blist_schedule_save();
+#else
+	if (account != NULL) {
+		/* Save the buddies and privacy data for this account */
+	} else {
+		/* Save all buddies and privacy data */
+	}
+#endif
+}
+
+static void
+purple_blist_save_node(PurpleBlistNode *node)
+{
+	_purple_blist_schedule_save();
+}
+
+void purple_blist_schedule_save()
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+
+	/* Save everything */
+	if (ops && ops->save_account)
+		ops->save_account(NULL);
 }
 
 
@@ -374,7 +436,7 @@ gaim_blist_schedule_save()
  *********************************************************************/
 
 static void
-parse_setting(GaimBlistNode *node, xmlnode *setting)
+parse_setting(PurpleBlistNode *node, xmlnode *setting)
 {
 	const char *name = xmlnode_get_attrib(setting, "name");
 	const char *type = xmlnode_get_attrib(setting, "type");
@@ -383,33 +445,32 @@ parse_setting(GaimBlistNode *node, xmlnode *setting)
 	if (!value)
 		return;
 
-	if (!type || !strcmp(type, "string"))
-		gaim_blist_node_set_string(node, name, value);
-	else if (!strcmp(type, "bool"))
-		gaim_blist_node_set_bool(node, name, atoi(value));
-	else if (!strcmp(type, "int"))
-		gaim_blist_node_set_int(node, name, atoi(value));
+	if (!type || purple_strequal(type, "string"))
+		purple_blist_node_set_string(node, name, value);
+	else if (purple_strequal(type, "bool"))
+		purple_blist_node_set_bool(node, name, atoi(value));
+	else if (purple_strequal(type, "int"))
+		purple_blist_node_set_int(node, name, atoi(value));
 
 	g_free(value);
 }
 
 static void
-parse_buddy(GaimGroup *group, GaimContact *contact, xmlnode *bnode)
+parse_buddy(PurpleGroup *group, PurpleContact *contact, xmlnode *bnode)
 {
-	GaimAccount *account;
-	GaimBuddy *buddy;
+	PurpleAccount *account;
+	PurpleBuddy *buddy;
 	char *name = NULL, *alias = NULL;
-	const char *acct_name, *proto, *protocol;
+	const char *acct_name, *proto;
 	xmlnode *x;
 
 	acct_name = xmlnode_get_attrib(bnode, "account");
-	protocol = xmlnode_get_attrib(bnode, "protocol");
 	proto = xmlnode_get_attrib(bnode, "proto");
 
-	if (!acct_name || (!proto && !protocol))
+	if (!acct_name || !proto)
 		return;
 
-	account = gaim_accounts_find(acct_name, proto ? proto : protocol);
+	account = purple_accounts_find(acct_name, proto);
 
 	if (!account)
 		return;
@@ -423,12 +484,12 @@ parse_buddy(GaimGroup *group, GaimContact *contact, xmlnode *bnode)
 	if ((x = xmlnode_get_child(bnode, "alias")))
 		alias = xmlnode_get_data(x);
 
-	buddy = gaim_buddy_new(account, name, alias);
-	gaim_blist_add_buddy(buddy, contact, group,
-			gaim_blist_get_last_child((GaimBlistNode*)contact));
+	buddy = purple_buddy_new(account, name, alias);
+	purple_blist_add_buddy(buddy, contact, group,
+			purple_blist_get_last_child((PurpleBlistNode*)contact));
 
 	for (x = xmlnode_get_child(bnode, "setting"); x; x = xmlnode_get_next_twin(x)) {
-		parse_setting((GaimBlistNode*)buddy, x);
+		parse_setting((PurpleBlistNode*)buddy, x);
 	}
 
 	g_free(name);
@@ -436,51 +497,50 @@ parse_buddy(GaimGroup *group, GaimContact *contact, xmlnode *bnode)
 }
 
 static void
-parse_contact(GaimGroup *group, xmlnode *cnode)
+parse_contact(PurpleGroup *group, xmlnode *cnode)
 {
-	GaimContact *contact = gaim_contact_new();
+	PurpleContact *contact = purple_contact_new();
 	xmlnode *x;
 	const char *alias;
 
-	gaim_blist_add_contact(contact, group,
-			gaim_blist_get_last_child((GaimBlistNode*)group));
+	purple_blist_add_contact(contact, group,
+			purple_blist_get_last_child((PurpleBlistNode*)group));
 
 	if ((alias = xmlnode_get_attrib(cnode, "alias"))) {
-		gaim_contact_set_alias(contact, alias);
+		purple_blist_alias_contact(contact, alias);
 	}
 
 	for (x = cnode->child; x; x = x->next) {
 		if (x->type != XMLNODE_TYPE_TAG)
 			continue;
-		if (!strcmp(x->name, "buddy"))
+		if (purple_strequal(x->name, "buddy"))
 			parse_buddy(group, contact, x);
-		else if (!strcmp(x->name, "setting"))
-			parse_setting((GaimBlistNode*)contact, x);
+		else if (purple_strequal(x->name, "setting"))
+			parse_setting((PurpleBlistNode*)contact, x);
 	}
 
 	/* if the contact is empty, don't keep it around.  it causes problems */
-	if (!((GaimBlistNode*)contact)->child)
-		gaim_blist_remove_contact(contact);
+	if (!((PurpleBlistNode*)contact)->child)
+		purple_blist_remove_contact(contact);
 }
 
 static void
-parse_chat(GaimGroup *group, xmlnode *cnode)
+parse_chat(PurpleGroup *group, xmlnode *cnode)
 {
-	GaimChat *chat;
-	GaimAccount *account;
-	const char *acct_name, *proto, *protocol;
+	PurpleChat *chat;
+	PurpleAccount *account;
+	const char *acct_name, *proto;
 	xmlnode *x;
 	char *alias = NULL;
 	GHashTable *components;
 
 	acct_name = xmlnode_get_attrib(cnode, "account");
-	protocol = xmlnode_get_attrib(cnode, "protocol");
 	proto = xmlnode_get_attrib(cnode, "proto");
 
-	if (!acct_name || (!proto && !protocol))
+	if (!acct_name || !proto)
 		return;
 
-	account = gaim_accounts_find(acct_name, proto ? proto : protocol);
+	account = purple_accounts_find(acct_name, proto);
 
 	if (!account)
 		return;
@@ -499,12 +559,12 @@ parse_chat(GaimGroup *group, xmlnode *cnode)
 		g_hash_table_replace(components, g_strdup(name), value);
 	}
 
-	chat = gaim_chat_new(account, alias, components);
-	gaim_blist_add_chat(chat, group,
-			gaim_blist_get_last_child((GaimBlistNode*)group));
+	chat = purple_chat_new(account, alias, components);
+	purple_blist_add_chat(chat, group,
+			purple_blist_get_last_child((PurpleBlistNode*)group));
 
 	for (x = xmlnode_get_child(cnode, "setting"); x; x = xmlnode_get_next_twin(x)) {
-		parse_setting((GaimBlistNode*)chat, x);
+		parse_setting((PurpleBlistNode*)chat, x);
 	}
 
 	g_free(alias);
@@ -514,43 +574,43 @@ static void
 parse_group(xmlnode *groupnode)
 {
 	const char *name = xmlnode_get_attrib(groupnode, "name");
-	GaimGroup *group;
+	PurpleGroup *group;
 	xmlnode *cnode;
 
 	if (!name)
 		name = _("Buddies");
 
-	group = gaim_group_new(name);
-	gaim_blist_add_group(group,
-			gaim_blist_get_last_sibling(gaimbuddylist->root));
+	group = purple_group_new(name);
+	purple_blist_add_group(group,
+			purple_blist_get_last_sibling(purplebuddylist->root));
 
 	for (cnode = groupnode->child; cnode; cnode = cnode->next) {
 		if (cnode->type != XMLNODE_TYPE_TAG)
 			continue;
-		if (!strcmp(cnode->name, "setting"))
-			parse_setting((GaimBlistNode*)group, cnode);
-		else if (!strcmp(cnode->name, "contact") ||
-				!strcmp(cnode->name, "person"))
+		if (purple_strequal(cnode->name, "setting"))
+			parse_setting((PurpleBlistNode*)group, cnode);
+		else if (purple_strequal(cnode->name, "contact") ||
+				purple_strequal(cnode->name, "person"))
 			parse_contact(group, cnode);
-		else if (!strcmp(cnode->name, "chat"))
+		else if (purple_strequal(cnode->name, "chat"))
 			parse_chat(group, cnode);
 	}
 }
 
 /* TODO: Make static and rename to load_blist */
 void
-gaim_blist_load()
+purple_blist_load()
 {
-	xmlnode *gaim, *blist, *privacy;
+	xmlnode *purple, *blist, *privacy;
 
 	blist_loaded = TRUE;
 
-	gaim = gaim_util_read_xml_from_file("blist.xml", _("buddy list"));
+	purple = purple_util_read_xml_from_file("blist.xml", _("buddy list"));
 
-	if (gaim == NULL)
+	if (purple == NULL)
 		return;
 
-	blist = xmlnode_get_child(gaim, "blist");
+	blist = xmlnode_get_child(purple, "blist");
 	if (blist) {
 		xmlnode *groupnode;
 		for (groupnode = xmlnode_get_child(blist, "group"); groupnode != NULL;
@@ -559,50 +619,52 @@ gaim_blist_load()
 		}
 	}
 
-	privacy = xmlnode_get_child(gaim, "privacy");
+	privacy = xmlnode_get_child(purple, "privacy");
 	if (privacy) {
 		xmlnode *anode;
 		for (anode = privacy->child; anode; anode = anode->next) {
 			xmlnode *x;
-			GaimAccount *account;
+			PurpleAccount *account;
 			int imode;
-			const char *acct_name, *proto, *mode, *protocol;
+			const char *acct_name, *proto, *mode;
 
 			acct_name = xmlnode_get_attrib(anode, "name");
-			protocol = xmlnode_get_attrib(anode, "protocol");
 			proto = xmlnode_get_attrib(anode, "proto");
 			mode = xmlnode_get_attrib(anode, "mode");
 
-			if (!acct_name || (!proto && !protocol) || !mode)
+			if (!acct_name || !proto || !mode)
 				continue;
 
-			account = gaim_accounts_find(acct_name, proto ? proto : protocol);
+			account = purple_accounts_find(acct_name, proto);
 
 			if (!account)
 				continue;
 
 			imode = atoi(mode);
-			account->perm_deny = (imode != 0 ? imode : GAIM_PRIVACY_ALLOW_ALL);
+			purple_account_set_privacy_type(account, (imode != 0 ? imode : PURPLE_PRIVACY_ALLOW_ALL));
 
 			for (x = anode->child; x; x = x->next) {
 				char *name;
 				if (x->type != XMLNODE_TYPE_TAG)
 					continue;
 
-				if (!strcmp(x->name, "permit")) {
+				if (purple_strequal(x->name, "permit")) {
 					name = xmlnode_get_data(x);
-					gaim_privacy_permit_add(account, name, TRUE);
+					purple_privacy_permit_add(account, name, TRUE);
 					g_free(name);
-				} else if (!strcmp(x->name, "block")) {
+				} else if (purple_strequal(x->name, "block")) {
 					name = xmlnode_get_data(x);
-					gaim_privacy_deny_add(account, name, TRUE);
+					purple_privacy_deny_add(account, name, TRUE);
 					g_free(name);
 				}
 			}
 		}
 	}
 
-	xmlnode_free(gaim);
+	xmlnode_free(purple);
+
+	/* This tells the buddy icon code to do its thing. */
+	_purple_buddy_icons_blist_loaded_cb();
 }
 
 
@@ -611,38 +673,39 @@ gaim_blist_load()
  *********************************************************************/
 
 static void
-gaim_contact_compute_priority_buddy(GaimContact *contact)
+purple_contact_compute_priority_buddy(PurpleContact *contact)
 {
-	GaimBlistNode *bnode;
-	GaimBuddy *new_priority = NULL;
+	PurpleBlistNode *bnode;
+	PurpleBuddy *new_priority = NULL;
 
 	g_return_if_fail(contact != NULL);
 
 	contact->priority = NULL;
-	for (bnode = ((GaimBlistNode*)contact)->child;
+	for (bnode = ((PurpleBlistNode*)contact)->child;
 			bnode != NULL;
 			bnode = bnode->next)
 	{
-		GaimBuddy *buddy;
+		PurpleBuddy *buddy;
 
-		if (!GAIM_BLIST_NODE_IS_BUDDY(bnode))
+		if (!PURPLE_BLIST_NODE_IS_BUDDY(bnode))
 			continue;
 
-		buddy = (GaimBuddy*)bnode;
-
-		if (!gaim_account_is_connected(buddy->account))
-			continue;
+		buddy = (PurpleBuddy*)bnode;
 		if (new_priority == NULL)
-			new_priority = buddy;
-		else
 		{
-			int cmp;
+			new_priority = buddy;
+			continue;
+		}
 
-			cmp = gaim_presence_compare(gaim_buddy_get_presence(new_priority),
-			                            gaim_buddy_get_presence(buddy));
+		if (purple_account_is_connected(buddy->account))
+		{
+			int cmp = 1;
+			if (purple_account_is_connected(new_priority->account))
+				cmp = purple_presence_compare(purple_buddy_get_presence(new_priority),
+						purple_buddy_get_presence(buddy));
 
 			if (cmp > 0 || (cmp == 0 &&
-			                gaim_prefs_get_bool("/core/contact/last_match")))
+			                purple_prefs_get_bool("/purple/contact/last_match")))
 			{
 				new_priority = buddy;
 			}
@@ -658,17 +721,30 @@ gaim_contact_compute_priority_buddy(GaimContact *contact)
  * Public API functions                                                      *
  *****************************************************************************/
 
-GaimBuddyList *gaim_blist_new()
+PurpleBuddyList *purple_blist_new()
 {
-	GaimBlistUiOps *ui_ops;
-	GaimBuddyList *gbl = g_new0(GaimBuddyList, 1);
-	GAIM_DBUS_REGISTER_POINTER(gbl, GaimBuddyList);
+	PurpleBlistUiOps *ui_ops;
+	GList *account;
+	PurpleBuddyList *gbl = g_new0(PurpleBuddyList, 1);
+	PURPLE_DBUS_REGISTER_POINTER(gbl, PurpleBuddyList);
 
-	ui_ops = gaim_blist_get_ui_ops();
+	ui_ops = purple_blist_get_ui_ops();
 
-	gbl->buddies = g_hash_table_new_full((GHashFunc)_gaim_blist_hbuddy_hash,
-					 (GEqualFunc)_gaim_blist_hbuddy_equal,
-					 (GDestroyNotify)_gaim_blist_hbuddy_free_key, NULL);
+	gbl->buddies = g_hash_table_new_full((GHashFunc)_purple_blist_hbuddy_hash,
+					 (GEqualFunc)_purple_blist_hbuddy_equal,
+					 (GDestroyNotify)_purple_blist_hbuddy_free_key, NULL);
+
+	buddies_cache = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+					 NULL, (GDestroyNotify)g_hash_table_destroy);
+
+	groups_cache = g_hash_table_new_full((GHashFunc)g_str_hash,
+					 (GEqualFunc)g_str_equal,
+					 (GDestroyNotify)g_free, NULL);
+
+	for (account = purple_accounts_get_all(); account != NULL; account = account->next)
+	{
+		purple_blist_buddies_cache_add_account(account->data);
+	}
 
 	if (ui_ops != NULL && ui_ops->new_list != NULL)
 		ui_ops->new_list(gbl);
@@ -677,50 +753,81 @@ GaimBuddyList *gaim_blist_new()
 }
 
 void
-gaim_set_blist(GaimBuddyList *list)
+purple_set_blist(PurpleBuddyList *list)
 {
-	gaimbuddylist = list;
+	purplebuddylist = list;
 }
 
-GaimBuddyList *
-gaim_get_blist()
+PurpleBuddyList *
+purple_get_blist()
 {
-	return gaimbuddylist;
+	return purplebuddylist;
 }
 
-GaimBlistNode *
-gaim_blist_get_root()
+PurpleBlistNode *
+purple_blist_get_root()
 {
-	return gaimbuddylist ? gaimbuddylist->root : NULL;
+	return purplebuddylist ? purplebuddylist->root : NULL;
 }
 
-void gaim_blist_show()
+static void
+append_buddy(gpointer key, gpointer value, gpointer user_data)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
+	GSList **list = user_data;
+	*list = g_slist_prepend(*list, value);
+}
+
+GSList *
+purple_blist_get_buddies()
+{
+	GSList *buddies = NULL;
+
+	if (!purplebuddylist)
+		return NULL;
+
+	g_hash_table_foreach(purplebuddylist->buddies, append_buddy, &buddies);
+	return buddies;
+}
+
+void *
+purple_blist_get_ui_data()
+{
+	return purplebuddylist->ui_data;
+}
+
+void
+purple_blist_set_ui_data(void *ui_data)
+{
+	purplebuddylist->ui_data = ui_data;
+}
+
+void purple_blist_show()
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	if (ops && ops->show)
-		ops->show(gaimbuddylist);
+		ops->show(purplebuddylist);
 }
 
-void gaim_blist_destroy()
+void purple_blist_destroy()
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
-	gaim_debug(GAIM_DEBUG_INFO, "blist", "Destroying\n");
+	purple_debug(PURPLE_DEBUG_INFO, "blist", "Destroying\n");
 
 	if (ops && ops->destroy)
-		ops->destroy(gaimbuddylist);
+		ops->destroy(purplebuddylist);
 }
 
-void gaim_blist_set_visible(gboolean show)
+void purple_blist_set_visible(gboolean show)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	if (ops && ops->set_visible)
-		ops->set_visible(gaimbuddylist, show);
+		ops->set_visible(purplebuddylist, show);
 }
 
-static GaimBlistNode *get_next_node(GaimBlistNode *node, gboolean godeep)
+static PurpleBlistNode *get_next_node(PurpleBlistNode *node, gboolean godeep)
 {
 	if (node == NULL)
 		return NULL;
@@ -734,53 +841,91 @@ static GaimBlistNode *get_next_node(GaimBlistNode *node, gboolean godeep)
 	return get_next_node(node->parent, FALSE);
 }
 
-GaimBlistNode *gaim_blist_node_next(GaimBlistNode *node, gboolean offline)
+PurpleBlistNode *purple_blist_node_next(PurpleBlistNode *node, gboolean offline)
 {
-	GaimBlistNode *ret = node;
+	PurpleBlistNode *ret = node;
 
 	if (offline)
 		return get_next_node(ret, TRUE);
 	do
 	{
 		ret = get_next_node(ret, TRUE);
-	} while (ret && GAIM_BLIST_NODE_IS_BUDDY(ret) &&
-			!gaim_account_is_connected(gaim_buddy_get_account((GaimBuddy *)ret)));
+	} while (ret && PURPLE_BLIST_NODE_IS_BUDDY(ret) &&
+			!purple_account_is_connected(purple_buddy_get_account((PurpleBuddy *)ret)));
 
 	return ret;
 }
 
-void
-gaim_blist_update_buddy_status(GaimBuddy *buddy, GaimStatus *old_status)
+PurpleBlistNode *purple_blist_node_get_parent(PurpleBlistNode *node)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimPresence *presence;
-	GaimStatus *status;
+	return node ? node->parent : NULL;
+}
+
+PurpleBlistNode *purple_blist_node_get_first_child(PurpleBlistNode *node)
+{
+	return node ? node->child : NULL;
+}
+
+PurpleBlistNode *purple_blist_node_get_sibling_next(PurpleBlistNode *node)
+{
+	return node? node->next : NULL;
+}
+
+PurpleBlistNode *purple_blist_node_get_sibling_prev(PurpleBlistNode *node)
+{
+	return node? node->prev : NULL;
+}
+
+void *
+purple_blist_node_get_ui_data(const PurpleBlistNode *node)
+{
+	g_return_val_if_fail(node, NULL);
+
+	return node->ui_data;
+}
+
+void
+purple_blist_node_set_ui_data(PurpleBlistNode *node, void *ui_data) {
+	g_return_if_fail(node);
+
+	node->ui_data = ui_data;
+}
+
+void
+purple_blist_update_buddy_status(PurpleBuddy *buddy, PurpleStatus *old_status)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurplePresence *presence;
+	PurpleStatus *status;
+	PurpleBlistNode *cnode;
 
 	g_return_if_fail(buddy != NULL);
 
-	presence = gaim_buddy_get_presence(buddy);
-	status = gaim_presence_get_active_status(presence);
+	presence = purple_buddy_get_presence(buddy);
+	status = purple_presence_get_active_status(presence);
 
-	gaim_debug_info("blist", "Updating buddy status for %s (%s)\n",
-			buddy->name, gaim_account_get_protocol_name(buddy->account));
+	purple_debug_info("blist", "Updating buddy status for %s (%s)\n",
+			buddy->name, purple_account_get_protocol_name(buddy->account));
 
-	if (gaim_status_is_online(status) &&
-		!gaim_status_is_online(old_status)) {
+	if (purple_status_is_online(status) &&
+		!purple_status_is_online(old_status)) {
 
-		gaim_signal_emit(gaim_blist_get_handle(), "buddy-signed-on", buddy);
+		purple_signal_emit(purple_blist_get_handle(), "buddy-signed-on", buddy);
 
-		((GaimContact*)((GaimBlistNode*)buddy)->parent)->online++;
-		if (((GaimContact*)((GaimBlistNode*)buddy)->parent)->online == 1)
-			((GaimGroup *)((GaimBlistNode *)buddy)->parent->parent)->online++;
-	} else if (!gaim_status_is_online(status) &&
-				gaim_status_is_online(old_status)) {
-		gaim_blist_node_set_int(&buddy->node, "last_seen", time(NULL));
-		gaim_signal_emit(gaim_blist_get_handle(), "buddy-signed-off", buddy);
-		((GaimContact*)((GaimBlistNode*)buddy)->parent)->online--;
-		if (((GaimContact*)((GaimBlistNode*)buddy)->parent)->online == 0)
-			((GaimGroup *)((GaimBlistNode *)buddy)->parent->parent)->online--;
+		cnode = buddy->node.parent;
+		if (++(PURPLE_CONTACT(cnode)->online) == 1)
+			PURPLE_GROUP(cnode->parent)->online++;
+	} else if (!purple_status_is_online(status) &&
+				purple_status_is_online(old_status)) {
+
+		purple_blist_node_set_int(&buddy->node, "last_seen", time(NULL));
+		purple_signal_emit(purple_blist_get_handle(), "buddy-signed-off", buddy);
+
+		cnode = buddy->node.parent;
+		if (--(PURPLE_CONTACT(cnode)->online) == 0)
+			PURPLE_GROUP(cnode->parent)->online--;
 	} else {
-		gaim_signal_emit(gaim_blist_get_handle(),
+		purple_signal_emit(purple_blist_get_handle(),
 		                 "buddy-status-changed", buddy, old_status,
 		                 status);
 	}
@@ -795,167 +940,234 @@ gaim_blist_update_buddy_status(GaimBuddy *buddy, GaimStatus *old_status)
 	 * because something, somewhere changed.  Calling the stuff below
 	 * certainly won't hurt anything.  Unless you're on a K6-2 300.
 	 */
-	gaim_contact_invalidate_priority_buddy(gaim_buddy_get_contact(buddy));
+	purple_contact_invalidate_priority_buddy(purple_buddy_get_contact(buddy));
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)buddy);
+		ops->update(purplebuddylist, (PurpleBlistNode *)buddy);
 }
 
-void gaim_blist_update_buddy_icon(GaimBuddy *buddy)
+void
+purple_blist_update_node_icon(PurpleBlistNode *node)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
-	g_return_if_fail(buddy != NULL);
+	g_return_if_fail(node != NULL);
 
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)buddy);
+		ops->update(purplebuddylist, node);
 }
 
 /*
  * TODO: Maybe remove the call to this from server.c and call it
  * from oscar.c and toc.c instead?
  */
-void gaim_blist_rename_buddy(GaimBuddy *buddy, const char *name)
+void purple_blist_rename_buddy(PurpleBuddy *buddy, const char *name)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	struct _gaim_hbuddy *hb;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	struct _purple_hbuddy *hb, *hb2;
+	GHashTable *account_buddies;
 
 	g_return_if_fail(buddy != NULL);
 
-	hb = g_new(struct _gaim_hbuddy, 1);
-	hb->name = g_strdup(gaim_normalize(buddy->account, buddy->name));
+	hb = g_new(struct _purple_hbuddy, 1);
+	hb->name = (gchar *)purple_normalize(buddy->account, buddy->name);
 	hb->account = buddy->account;
-	hb->group = ((GaimBlistNode *)buddy)->parent->parent;
-	g_hash_table_remove(gaimbuddylist->buddies, hb);
+	hb->group = ((PurpleBlistNode *)buddy)->parent->parent;
+	g_hash_table_remove(purplebuddylist->buddies, hb);
 
-	g_free(hb->name);
-	hb->name = g_strdup(gaim_normalize(buddy->account, name));
-	g_hash_table_replace(gaimbuddylist->buddies, hb, buddy);
+	account_buddies = g_hash_table_lookup(buddies_cache, buddy->account);
+	g_hash_table_remove(account_buddies, hb);
+
+	hb->name = g_strdup(purple_normalize(buddy->account, name));
+	g_hash_table_replace(purplebuddylist->buddies, hb, buddy);
+
+	hb2 = g_new(struct _purple_hbuddy, 1);
+	hb2->name = g_strdup(hb->name);
+	hb2->account = buddy->account;
+	hb2->group = ((PurpleBlistNode *)buddy)->parent->parent;
+
+	g_hash_table_replace(account_buddies, hb2, buddy);
 
 	g_free(buddy->name);
 	buddy->name = g_strdup(name);
 
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node)
+		ops->save_node((PurpleBlistNode *) buddy);
 
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)buddy);
+		ops->update(purplebuddylist, (PurpleBlistNode *)buddy);
 }
 
-void gaim_blist_alias_contact(GaimContact *contact, const char *alias)
+static gboolean
+purple_strings_are_different(const char *one, const char *two)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimConversation *conv;
-	GaimBlistNode *bnode;
+	return !((one && two && g_utf8_collate(one, two) == 0) ||
+			((one == NULL || *one == '\0') && (two == NULL || *two == '\0')));
+}
+
+void purple_blist_alias_contact(PurpleContact *contact, const char *alias)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleConversation *conv;
+	PurpleBlistNode *bnode;
 	char *old_alias;
+	char *new_alias = NULL;
 
 	g_return_if_fail(contact != NULL);
 
-	old_alias = contact->alias;
-
 	if ((alias != NULL) && (*alias != '\0'))
-		contact->alias = g_strdup(alias);
-	else
-		contact->alias = NULL;
+		new_alias = purple_utf8_strip_unprintables(alias);
 
-	gaim_blist_schedule_save();
-
-	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)contact);
-
-	for(bnode = ((GaimBlistNode *)contact)->child; bnode != NULL; bnode = bnode->next)
-	{
-		GaimBuddy *buddy = (GaimBuddy *)bnode;
-
-		conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, buddy->name,
-												   buddy->account);
-		if (conv)
-			gaim_conversation_autoset_title(conv);
+	if (!purple_strings_are_different(contact->alias, new_alias)) {
+		g_free(new_alias);
+		return;
 	}
 
-	gaim_signal_emit(gaim_blist_get_handle(), "blist-node-aliased",
+	old_alias = contact->alias;
+
+	if ((new_alias != NULL) && (*new_alias != '\0'))
+		contact->alias = new_alias;
+	else {
+		contact->alias = NULL;
+		g_free(new_alias); /* could be "\0" */
+	}
+
+	if (ops && ops->save_node)
+		ops->save_node((PurpleBlistNode*) contact);
+
+	if (ops && ops->update)
+		ops->update(purplebuddylist, (PurpleBlistNode *)contact);
+
+	for(bnode = ((PurpleBlistNode *)contact)->child; bnode != NULL; bnode = bnode->next)
+	{
+		PurpleBuddy *buddy = (PurpleBuddy *)bnode;
+
+		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy->name,
+												   buddy->account);
+		if (conv)
+			purple_conversation_autoset_title(conv);
+	}
+
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 contact, old_alias);
 	g_free(old_alias);
 }
 
-void gaim_blist_alias_chat(GaimChat *chat, const char *alias)
+void purple_blist_alias_chat(PurpleChat *chat, const char *alias)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	char *old_alias;
+	char *new_alias = NULL;
 
 	g_return_if_fail(chat != NULL);
 
+	if ((alias != NULL) && (*alias != '\0'))
+		new_alias = purple_utf8_strip_unprintables(alias);
+
+	if (!purple_strings_are_different(chat->alias, new_alias)) {
+		g_free(new_alias);
+		return;
+	}
+
 	old_alias = chat->alias;
 
-	if ((alias != NULL) && (*alias != '\0'))
-		chat->alias = g_strdup(alias);
-	else
+	if ((new_alias != NULL) && (*new_alias != '\0'))
+		chat->alias = new_alias;
+	else {
 		chat->alias = NULL;
+		g_free(new_alias); /* could be "\0" */
+	}
 
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node)
+		ops->save_node((PurpleBlistNode*) chat);
 
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)chat);
+		ops->update(purplebuddylist, (PurpleBlistNode *)chat);
 
-	gaim_signal_emit(gaim_blist_get_handle(), "blist-node-aliased",
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 chat, old_alias);
 	g_free(old_alias);
 }
 
-void gaim_blist_alias_buddy(GaimBuddy *buddy, const char *alias)
+void purple_blist_alias_buddy(PurpleBuddy *buddy, const char *alias)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimConversation *conv;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleConversation *conv;
 	char *old_alias;
+	char *new_alias = NULL;
 
 	g_return_if_fail(buddy != NULL);
 
+	if ((alias != NULL) && (*alias != '\0'))
+		new_alias = purple_utf8_strip_unprintables(alias);
+
+	if (!purple_strings_are_different(buddy->alias, new_alias)) {
+		g_free(new_alias);
+		return;
+	}
+
 	old_alias = buddy->alias;
 
-	if ((alias != NULL) && (*alias != '\0'))
-		buddy->alias = g_strdup(alias);
-	else
+	if ((new_alias != NULL) && (*new_alias != '\0'))
+		buddy->alias = new_alias;
+	else {
 		buddy->alias = NULL;
+		g_free(new_alias); /* could be "\0" */
+	}
 
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node)
+		ops->save_node((PurpleBlistNode*) buddy);
 
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)buddy);
+		ops->update(purplebuddylist, (PurpleBlistNode *)buddy);
 
-	conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, buddy->name,
+	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy->name,
 											   buddy->account);
 	if (conv)
-		gaim_conversation_autoset_title(conv);
+		purple_conversation_autoset_title(conv);
 
-	gaim_signal_emit(gaim_blist_get_handle(), "blist-node-aliased",
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 buddy, old_alias);
 	g_free(old_alias);
 }
 
-void gaim_blist_server_alias_buddy(GaimBuddy *buddy, const char *alias)
+void purple_blist_server_alias_buddy(PurpleBuddy *buddy, const char *alias)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimConversation *conv;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleConversation *conv;
 	char *old_alias;
+	char *new_alias = NULL;
 
 	g_return_if_fail(buddy != NULL);
 
+	if ((alias != NULL) && (*alias != '\0') && g_utf8_validate(alias, -1, NULL))
+		new_alias = purple_utf8_strip_unprintables(alias);
+
+	if (!purple_strings_are_different(buddy->server_alias, new_alias)) {
+		g_free(new_alias);
+		return;
+	}
+
 	old_alias = buddy->server_alias;
 
-	if ((alias != NULL) && (*alias != '\0') && g_utf8_validate(alias, -1, NULL))
-		buddy->server_alias = g_strdup(alias);
-	else
+	if ((new_alias != NULL) && (*new_alias != '\0'))
+		buddy->server_alias = new_alias;
+	else {
 		buddy->server_alias = NULL;
+		g_free(new_alias); /* could be "\0"; */
+	}
 
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node)
+		ops->save_node((PurpleBlistNode*) buddy);
 
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)buddy);
+		ops->update(purplebuddylist, (PurpleBlistNode *)buddy);
 
-	conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, buddy->name,
+	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy->name,
 											   buddy->account);
 	if (conv)
-		gaim_conversation_autoset_title(conv);
+		purple_conversation_autoset_title(conv);
 
-	gaim_signal_emit(gaim_blist_get_handle(), "blist-node-aliased",
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 buddy, old_alias);
 	g_free(old_alias);
 }
@@ -963,27 +1175,32 @@ void gaim_blist_server_alias_buddy(GaimBuddy *buddy, const char *alias)
 /*
  * TODO: If merging, prompt the user if they want to merge.
  */
-void gaim_blist_rename_group(GaimGroup *source, const char *new_name)
+void purple_blist_rename_group(PurpleGroup *source, const char *name)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimGroup *dest;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleGroup *dest;
 	gchar *old_name;
+	gchar *new_name;
 	GList *moved_buddies = NULL;
 	GSList *accts;
 
 	g_return_if_fail(source != NULL);
-	g_return_if_fail(new_name != NULL);
+	g_return_if_fail(name != NULL);
 
-	if (*new_name == '\0' || !strcmp(new_name, source->name))
+	new_name = purple_utf8_strip_unprintables(name);
+
+	if (*new_name == '\0' || purple_strequal(new_name, source->name)) {
+		g_free(new_name);
 		return;
+	}
 
-	dest = gaim_find_group(new_name);
-	if (dest != NULL) {
+	dest = purple_find_group(new_name);
+	if (dest != NULL && purple_utf8_strcasecmp(source->name, dest->name) != 0) {
 		/* We're merging two groups */
-		GaimBlistNode *prev, *child, *next;
+		PurpleBlistNode *prev, *child, *next;
 
-		prev = gaim_blist_get_last_child((GaimBlistNode*)dest);
-		child = ((GaimBlistNode*)source)->child;
+		prev = purple_blist_get_last_child((PurpleBlistNode*)dest);
+		child = ((PurpleBlistNode*)source)->child;
 
 		/*
 		 * TODO: This seems like a dumb way to do this... why not just
@@ -994,20 +1211,20 @@ void gaim_blist_rename_group(GaimGroup *source, const char *new_name)
 		while (child)
 		{
 			next = child->next;
-			if (GAIM_BLIST_NODE_IS_CONTACT(child)) {
-				GaimBlistNode *bnode;
-				gaim_blist_add_contact((GaimContact *)child, dest, prev);
+			if (PURPLE_BLIST_NODE_IS_CONTACT(child)) {
+				PurpleBlistNode *bnode;
+				purple_blist_add_contact((PurpleContact *)child, dest, prev);
 				for (bnode = child->child; bnode != NULL; bnode = bnode->next) {
-					gaim_blist_add_buddy((GaimBuddy *)bnode, (GaimContact *)child,
+					purple_blist_add_buddy((PurpleBuddy *)bnode, (PurpleContact *)child,
 							NULL, bnode->prev);
 					moved_buddies = g_list_append(moved_buddies, bnode);
 				}
 				prev = child;
-			} else if (GAIM_BLIST_NODE_IS_CHAT(child)) {
-				gaim_blist_add_chat((GaimChat *)child, dest, prev);
+			} else if (PURPLE_BLIST_NODE_IS_CHAT(child)) {
+				purple_blist_add_chat((PurpleChat *)child, dest, prev);
 				prev = child;
 			} else {
-				gaim_debug(GAIM_DEBUG_ERROR, "blist",
+				purple_debug(PURPLE_DEBUG_ERROR, "blist",
 						"Unknown child type in group %s\n", source->name);
 			}
 			child = next;
@@ -1015,65 +1232,82 @@ void gaim_blist_rename_group(GaimGroup *source, const char *new_name)
 
 		/* Make a copy of the old group name and then delete the old group */
 		old_name = g_strdup(source->name);
-		gaim_blist_remove_group(source);
+		purple_blist_remove_group(source);
 		source = dest;
+		g_free(new_name);
 	} else {
 		/* A simple rename */
-		GaimBlistNode *cnode, *bnode;
+		PurpleBlistNode *cnode, *bnode;
+		gchar* key;
 
 		/* Build a GList of all buddies in this group */
-		for (cnode = ((GaimBlistNode *)source)->child; cnode != NULL; cnode = cnode->next) {
-			if (GAIM_BLIST_NODE_IS_CONTACT(cnode))
+		for (cnode = ((PurpleBlistNode *)source)->child; cnode != NULL; cnode = cnode->next) {
+			if (PURPLE_BLIST_NODE_IS_CONTACT(cnode))
 				for (bnode = cnode->child; bnode != NULL; bnode = bnode->next)
 					moved_buddies = g_list_append(moved_buddies, bnode);
 		}
 
 		old_name = source->name;
-		source->name = g_strdup(new_name);
+		source->name = new_name;
+
+		key = g_utf8_collate_key(old_name, -1);
+		g_hash_table_remove(groups_cache, key);
+		g_free(key);
+
+		key = g_utf8_collate_key(new_name, -1);
+		g_hash_table_insert(groups_cache, key, source);
 	}
 
 	/* Save our changes */
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node)
+		ops->save_node((PurpleBlistNode*) source);
 
 	/* Update the UI */
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode*)source);
+		ops->update(purplebuddylist, (PurpleBlistNode*)source);
 
 	/* Notify all PRPLs */
 	/* TODO: Is this condition needed?  Seems like it would always be TRUE */
-	if(old_name && source && strcmp(source->name, old_name)) {
-		for (accts = gaim_group_get_accounts(source); accts; accts = g_slist_remove(accts, accts->data)) {
-			GaimAccount *account = accts->data;
-			GaimPluginProtocolInfo *prpl_info = NULL;
+	if(old_name && !purple_strequal(source->name, old_name)) {
+		for (accts = purple_group_get_accounts(source); accts; accts = g_slist_remove(accts, accts->data)) {
+			PurpleAccount *account = accts->data;
+			PurpleConnection *gc = NULL;
+			PurplePlugin *prpl = NULL;
+			PurplePluginProtocolInfo *prpl_info = NULL;
 			GList *l = NULL, *buddies = NULL;
 
-			if(account->gc && account->gc->prpl)
-				prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(account->gc->prpl);
+			gc = purple_account_get_connection(account);
+
+			if(gc)
+				prpl = purple_connection_get_prpl(gc);
+
+			if(gc && prpl)
+				prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 			if(!prpl_info)
 				continue;
 
 			for(l = moved_buddies; l; l = l->next) {
-				GaimBuddy *buddy = (GaimBuddy *)l->data;
+				PurpleBuddy *buddy = (PurpleBuddy *)l->data;
 
 				if(buddy && buddy->account == account)
-					buddies = g_list_append(buddies, (GaimBlistNode *)buddy);
+					buddies = g_list_append(buddies, (PurpleBlistNode *)buddy);
 			}
 
 			if(prpl_info->rename_group) {
-				prpl_info->rename_group(account->gc, old_name, source, buddies);
+				prpl_info->rename_group(gc, old_name, source, buddies);
 			} else {
 				GList *cur, *groups = NULL;
 
 				/* Make a list of what the groups each buddy is in */
 				for(cur = buddies; cur; cur = cur->next) {
-					GaimBlistNode *node = (GaimBlistNode *)cur->data;
+					PurpleBlistNode *node = (PurpleBlistNode *)cur->data;
 					groups = g_list_prepend(groups, node->parent->parent);
 				}
 
-				gaim_account_remove_buddies(account, buddies, groups);
+				purple_account_remove_buddies(account, buddies, groups);
 				g_list_free(groups);
-				gaim_account_add_buddies(account, buddies);
+				purple_account_add_buddies(account, buddies, NULL);
 			}
 
 			g_list_free(buddies);
@@ -1083,83 +1317,121 @@ void gaim_blist_rename_group(GaimGroup *source, const char *new_name)
 	g_free(old_name);
 }
 
-static void gaim_blist_node_initialize_settings(GaimBlistNode *node);
+static void purple_blist_node_initialize_settings(PurpleBlistNode *node);
 
-GaimChat *gaim_chat_new(GaimAccount *account, const char *alias, GHashTable *components)
+PurpleChat *purple_chat_new(PurpleAccount *account, const char *alias, GHashTable *components)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimChat *chat;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleChat *chat;
 
-	g_return_val_if_fail(account != NULL, FALSE);
-	g_return_val_if_fail(components != NULL, FALSE);
+	g_return_val_if_fail(account != NULL, NULL);
+	g_return_val_if_fail(components != NULL, NULL);
 
-	chat = g_new0(GaimChat, 1);
+	chat = g_new0(PurpleChat, 1);
 	chat->account = account;
 	if ((alias != NULL) && (*alias != '\0'))
-		chat->alias = g_strdup(alias);
+		chat->alias = purple_utf8_strip_unprintables(alias);
 	chat->components = components;
-	gaim_blist_node_initialize_settings((GaimBlistNode *)chat);
-	((GaimBlistNode *)chat)->type = GAIM_BLIST_CHAT_NODE;
+	purple_blist_node_initialize_settings((PurpleBlistNode *)chat);
+	((PurpleBlistNode *)chat)->type = PURPLE_BLIST_CHAT_NODE;
 
 	if (ops != NULL && ops->new_node != NULL)
-		ops->new_node((GaimBlistNode *)chat);
+		ops->new_node((PurpleBlistNode *)chat);
 
-	GAIM_DBUS_REGISTER_POINTER(chat, GaimChat);
+	PURPLE_DBUS_REGISTER_POINTER(chat, PurpleChat);
 	return chat;
 }
 
-GaimBuddy *gaim_buddy_new(GaimAccount *account, const char *screenname, const char *alias)
+void
+purple_chat_destroy(PurpleChat *chat)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimBuddy *buddy;
+	g_hash_table_destroy(chat->components);
+	g_hash_table_destroy(chat->node.settings);
+	g_free(chat->alias);
+	PURPLE_DBUS_UNREGISTER_POINTER(chat);
+	g_free(chat);
+}
 
-	g_return_val_if_fail(account != NULL, FALSE);
-	g_return_val_if_fail(screenname != NULL, FALSE);
+PurpleBuddy *purple_buddy_new(PurpleAccount *account, const char *name, const char *alias)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleBuddy *buddy;
 
-	buddy = g_new0(GaimBuddy, 1);
+	g_return_val_if_fail(account != NULL, NULL);
+	g_return_val_if_fail(name != NULL, NULL);
+
+	buddy = g_new0(PurpleBuddy, 1);
 	buddy->account  = account;
-	buddy->name     = g_strdup(screenname);
-	buddy->alias    = g_strdup(alias);
-	buddy->presence = gaim_presence_new_for_buddy(buddy);
-	((GaimBlistNode *)buddy)->type = GAIM_BLIST_BUDDY_NODE;
+	buddy->name     = purple_utf8_strip_unprintables(name);
+	buddy->alias    = purple_utf8_strip_unprintables(alias);
+	buddy->presence = purple_presence_new_for_buddy(buddy);
+	((PurpleBlistNode *)buddy)->type = PURPLE_BLIST_BUDDY_NODE;
 
-	gaim_presence_set_status_active(buddy->presence, "offline", TRUE);
+	purple_presence_set_status_active(buddy->presence, "offline", TRUE);
 
-	gaim_blist_node_initialize_settings((GaimBlistNode *)buddy);
+	purple_blist_node_initialize_settings((PurpleBlistNode *)buddy);
 
 	if (ops && ops->new_node)
-		ops->new_node((GaimBlistNode *)buddy);
+		ops->new_node((PurpleBlistNode *)buddy);
 
-	GAIM_DBUS_REGISTER_POINTER(buddy, GaimBuddy);
+	PURPLE_DBUS_REGISTER_POINTER(buddy, PurpleBuddy);
 	return buddy;
 }
 
 void
-gaim_buddy_set_icon(GaimBuddy *buddy, GaimBuddyIcon *icon)
+purple_buddy_destroy(PurpleBuddy *buddy)
+{
+	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info;
+
+	/*
+	 * Tell the owner PRPL that we're about to free the buddy so it
+	 * can free proto_data
+	 */
+	prpl = purple_find_prpl(purple_account_get_protocol_id(buddy->account));
+	if (prpl) {
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+		if (prpl_info && prpl_info->buddy_free)
+			prpl_info->buddy_free(buddy);
+	}
+
+	/* Delete the node */
+	purple_buddy_icon_unref(buddy->icon);
+	g_hash_table_destroy(buddy->node.settings);
+	purple_presence_destroy(buddy->presence);
+	g_free(buddy->name);
+	g_free(buddy->alias);
+	g_free(buddy->server_alias);
+
+	PURPLE_DBUS_UNREGISTER_POINTER(buddy);
+	g_free(buddy);
+
+	/* FIXME: Once PurpleBuddy is a GObject, timeout callbacks can
+	 * g_object_ref() it when connecting the callback and
+	 * g_object_unref() it in the handler.  That way, it won't
+	 * get freed while the timeout is pending and this line can
+	 * be removed. */
+	while (g_source_remove_by_user_data((gpointer *)buddy));
+}
+
+void
+purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 {
 	g_return_if_fail(buddy != NULL);
 
-	if (buddy->icon != icon) {
-		if (buddy->icon != NULL)
-			gaim_buddy_icon_unref(buddy->icon);
-		
-		buddy->icon = (icon != NULL ? gaim_buddy_icon_ref(icon) : NULL);
+	if (buddy->icon != icon)
+	{
+		purple_buddy_icon_unref(buddy->icon);
+		buddy->icon = (icon != NULL ? purple_buddy_icon_ref(icon) : NULL);
 	}
 
-	if (buddy->icon)
-		gaim_buddy_icon_cache(icon, buddy);
-	else
-		gaim_buddy_icon_uncache(buddy);
+	purple_signal_emit(purple_blist_get_handle(), "buddy-icon-changed", buddy);
 
-	gaim_blist_schedule_save();
-
-	gaim_signal_emit(gaim_blist_get_handle(), "buddy-icon-changed", buddy);
-
-	gaim_blist_update_buddy_icon(buddy);
+	purple_blist_update_node_icon((PurpleBlistNode*)buddy);
 }
 
-GaimAccount *
-gaim_buddy_get_account(const GaimBuddy *buddy)
+PurpleAccount *
+purple_buddy_get_account(const PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 
@@ -1167,37 +1439,57 @@ gaim_buddy_get_account(const GaimBuddy *buddy)
 }
 
 const char *
-gaim_buddy_get_name(const GaimBuddy *buddy)
+purple_buddy_get_name(const PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 
 	return buddy->name;
 }
 
-GaimBuddyIcon *
-gaim_buddy_get_icon(const GaimBuddy *buddy)
+PurpleBuddyIcon *
+purple_buddy_get_icon(const PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 
 	return buddy->icon;
 }
 
-void gaim_blist_add_chat(GaimChat *chat, GaimGroup *group, GaimBlistNode *node)
+gpointer
+purple_buddy_get_protocol_data(const PurpleBuddy *buddy)
 {
-	GaimBlistNode *cnode = (GaimBlistNode*)chat;
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
+	g_return_val_if_fail(buddy != NULL, NULL);
+
+	return buddy->proto_data;
+}
+
+void
+purple_buddy_set_protocol_data(PurpleBuddy *buddy, gpointer data)
+{
+	g_return_if_fail(buddy != NULL);
+
+	buddy->proto_data = data;
+}
+
+
+void purple_blist_add_chat(PurpleChat *chat, PurpleGroup *group, PurpleBlistNode *node)
+{
+	PurpleBlistNode *cnode = (PurpleBlistNode*)chat;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	g_return_if_fail(chat != NULL);
-	g_return_if_fail(GAIM_BLIST_NODE_IS_CHAT((GaimBlistNode *)chat));
+	g_return_if_fail(PURPLE_BLIST_NODE_IS_CHAT((PurpleBlistNode *)chat));
 
 	if (node == NULL) {
-		if (group == NULL) {
-			group = gaim_group_new(_("Chats"));
-			gaim_blist_add_group(group,
-					gaim_blist_get_last_sibling(gaimbuddylist->root));
+		if (group == NULL)
+			group = purple_group_new(_("Chats"));
+
+		/* Add group to blist if isn't already on it. Fixes #2752. */
+		if (!purple_find_group(group->name)) {
+			purple_blist_add_group(group,
+					purple_blist_get_last_sibling(purplebuddylist->root));
 		}
 	} else {
-		group = (GaimGroup*)node->parent;
+		group = (PurpleGroup*)node->parent;
 	}
 
 	/* if we're moving to overtop of ourselves, do nothing */
@@ -1208,10 +1500,10 @@ void gaim_blist_add_chat(GaimChat *chat, GaimGroup *group, GaimBlistNode *node)
 		/* This chat was already in the list and is
 		 * being moved.
 		 */
-		((GaimGroup *)cnode->parent)->totalsize--;
-		if (gaim_account_is_connected(chat->account)) {
-			((GaimGroup *)cnode->parent)->online--;
-			((GaimGroup *)cnode->parent)->currentsize--;
+		((PurpleGroup *)cnode->parent)->totalsize--;
+		if (purple_account_is_connected(chat->account)) {
+			((PurpleGroup *)cnode->parent)->online--;
+			((PurpleGroup *)cnode->parent)->currentsize--;
 		}
 		if (cnode->next)
 			cnode->next->prev = cnode->prev;
@@ -1221,13 +1513,11 @@ void gaim_blist_add_chat(GaimChat *chat, GaimGroup *group, GaimBlistNode *node)
 			cnode->parent->child = cnode->next;
 
 		if (ops && ops->remove)
-			ops->remove(gaimbuddylist, cnode);
+			ops->remove(purplebuddylist, cnode);
 		/* ops->remove() cleaned up the cnode's ui_data, so we need to
 		 * reinitialize it */
 		if (ops && ops->new_node)
 			ops->new_node(cnode);
-
-		gaim_blist_schedule_save();
 	}
 
 	if (node != NULL) {
@@ -1237,87 +1527,93 @@ void gaim_blist_add_chat(GaimChat *chat, GaimGroup *group, GaimBlistNode *node)
 		cnode->prev = node;
 		cnode->parent = node->parent;
 		node->next = cnode;
-		((GaimGroup *)node->parent)->totalsize++;
-		if (gaim_account_is_connected(chat->account)) {
-			((GaimGroup *)node->parent)->online++;
-			((GaimGroup *)node->parent)->currentsize++;
+		((PurpleGroup *)node->parent)->totalsize++;
+		if (purple_account_is_connected(chat->account)) {
+			((PurpleGroup *)node->parent)->online++;
+			((PurpleGroup *)node->parent)->currentsize++;
 		}
 	} else {
-		if (((GaimBlistNode *)group)->child)
-			((GaimBlistNode *)group)->child->prev = cnode;
-		cnode->next = ((GaimBlistNode *)group)->child;
+		if (((PurpleBlistNode *)group)->child)
+			((PurpleBlistNode *)group)->child->prev = cnode;
+		cnode->next = ((PurpleBlistNode *)group)->child;
 		cnode->prev = NULL;
-		((GaimBlistNode *)group)->child = cnode;
-		cnode->parent = (GaimBlistNode *)group;
+		((PurpleBlistNode *)group)->child = cnode;
+		cnode->parent = (PurpleBlistNode *)group;
 		group->totalsize++;
-		if (gaim_account_is_connected(chat->account)) {
+		if (purple_account_is_connected(chat->account)) {
 			group->online++;
 			group->currentsize++;
 		}
 	}
 
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node)
+		ops->save_node(cnode);
 
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode *)cnode);
+		ops->update(purplebuddylist, (PurpleBlistNode *)cnode);
+
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-added",
+			cnode);
 }
 
-void gaim_blist_add_buddy(GaimBuddy *buddy, GaimContact *contact, GaimGroup *group, GaimBlistNode *node)
+void purple_blist_add_buddy(PurpleBuddy *buddy, PurpleContact *contact, PurpleGroup *group, PurpleBlistNode *node)
 {
-	GaimBlistNode *cnode, *bnode;
-	GaimGroup *g;
-	GaimContact *c;
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	struct _gaim_hbuddy *hb;
+	PurpleBlistNode *cnode, *bnode;
+	PurpleGroup *g;
+	PurpleContact *c;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	struct _purple_hbuddy *hb, *hb2;
+	GHashTable *account_buddies;
 
 	g_return_if_fail(buddy != NULL);
-	g_return_if_fail(GAIM_BLIST_NODE_IS_BUDDY((GaimBlistNode*)buddy));
+	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY((PurpleBlistNode*)buddy));
 
-	bnode = (GaimBlistNode *)buddy;
+	bnode = (PurpleBlistNode *)buddy;
 
 	/* if we're moving to overtop of ourselves, do nothing */
 	if (bnode == node || (!node && bnode->parent &&
-				contact && bnode->parent == (GaimBlistNode*)contact
+				contact && bnode->parent == (PurpleBlistNode*)contact
 				&& bnode == bnode->parent->child))
 		return;
 
-	if (node && GAIM_BLIST_NODE_IS_BUDDY(node)) {
-		c = (GaimContact*)node->parent;
-		g = (GaimGroup*)node->parent->parent;
+	if (node && PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+		c = (PurpleContact*)node->parent;
+		g = (PurpleGroup*)node->parent->parent;
 	} else if (contact) {
 		c = contact;
-		g = (GaimGroup *)((GaimBlistNode *)c)->parent;
+		g = PURPLE_GROUP(PURPLE_BLIST_NODE(c)->parent);
 	} else {
-		if (group) {
-			g = group;
-		} else {
-			g = gaim_group_new(_("Buddies"));
-			gaim_blist_add_group(g,
-					gaim_blist_get_last_sibling(gaimbuddylist->root));
+		g = group;
+		if (g == NULL)
+			g = purple_group_new(_("Buddies"));
+		/* Add group to blist if isn't already on it. Fixes #2752. */
+		if (!purple_find_group(g->name)) {
+			purple_blist_add_group(g,
+					purple_blist_get_last_sibling(purplebuddylist->root));
 		}
-		c = gaim_contact_new();
-		gaim_blist_add_contact(c, g,
-				gaim_blist_get_last_child((GaimBlistNode*)g));
+		c = purple_contact_new();
+		purple_blist_add_contact(c, g,
+				purple_blist_get_last_child((PurpleBlistNode*)g));
 	}
 
-	cnode = (GaimBlistNode *)c;
+	cnode = (PurpleBlistNode *)c;
 
 	if (bnode->parent) {
-		if (GAIM_BUDDY_IS_ONLINE(buddy)) {
-			((GaimContact*)bnode->parent)->online--;
-			if (((GaimContact*)bnode->parent)->online == 0)
-				((GaimGroup*)bnode->parent->parent)->online--;
+		if (PURPLE_BUDDY_IS_ONLINE(buddy)) {
+			((PurpleContact*)bnode->parent)->online--;
+			if (((PurpleContact*)bnode->parent)->online == 0)
+				((PurpleGroup*)bnode->parent->parent)->online--;
 		}
-		if (gaim_account_is_connected(buddy->account)) {
-			((GaimContact*)bnode->parent)->currentsize--;
-			if (((GaimContact*)bnode->parent)->currentsize == 0)
-				((GaimGroup*)bnode->parent->parent)->currentsize--;
+		if (purple_account_is_connected(buddy->account)) {
+			((PurpleContact*)bnode->parent)->currentsize--;
+			if (((PurpleContact*)bnode->parent)->currentsize == 0)
+				((PurpleGroup*)bnode->parent->parent)->currentsize--;
 		}
-		((GaimContact*)bnode->parent)->totalsize--;
+		((PurpleContact*)bnode->parent)->totalsize--;
 		/* the group totalsize will be taken care of by remove_contact below */
 
-		if (bnode->parent->parent != (GaimBlistNode*)g)
-			serv_move_buddy(buddy, (GaimGroup *)bnode->parent->parent, g);
+		if (bnode->parent->parent != (PurpleBlistNode*)g)
+			serv_move_buddy(buddy, (PurpleGroup *)bnode->parent->parent, g);
 
 		if (bnode->next)
 			bnode->next->prev = bnode->prev;
@@ -1327,30 +1623,29 @@ void gaim_blist_add_buddy(GaimBuddy *buddy, GaimContact *contact, GaimGroup *gro
 			bnode->parent->child = bnode->next;
 
 		if (ops && ops->remove)
-			ops->remove(gaimbuddylist, bnode);
+			ops->remove(purplebuddylist, bnode);
 
-		gaim_blist_schedule_save();
+		if (bnode->parent->parent != (PurpleBlistNode*)g) {
+			struct _purple_hbuddy hb;
+			hb.name = (gchar *)purple_normalize(buddy->account, buddy->name);
+			hb.account = buddy->account;
+			hb.group = bnode->parent->parent;
+			g_hash_table_remove(purplebuddylist->buddies, &hb);
 
-		if (bnode->parent->parent != (GaimBlistNode*)g) {
-			hb = g_new(struct _gaim_hbuddy, 1);
-			hb->name = g_strdup(gaim_normalize(buddy->account, buddy->name));
-			hb->account = buddy->account;
-			hb->group = bnode->parent->parent;
-			g_hash_table_remove(gaimbuddylist->buddies, hb);
-			g_free(hb->name);
-			g_free(hb);
+			account_buddies = g_hash_table_lookup(buddies_cache, buddy->account);
+			g_hash_table_remove(account_buddies, &hb);
 		}
 
 		if (!bnode->parent->child) {
-			gaim_blist_remove_contact((GaimContact*)bnode->parent);
+			purple_blist_remove_contact((PurpleContact*)bnode->parent);
 		} else {
-			gaim_contact_invalidate_priority_buddy((GaimContact*)bnode->parent);
+			purple_contact_invalidate_priority_buddy((PurpleContact*)bnode->parent);
 			if (ops && ops->update)
-				ops->update(gaimbuddylist, bnode->parent);
+				ops->update(purplebuddylist, bnode->parent);
 		}
 	}
 
-	if (node && GAIM_BLIST_NODE_IS_BUDDY(node)) {
+	if (node && PURPLE_BLIST_NODE_IS_BUDDY(node)) {
 		if (node->next)
 			node->next->prev = bnode;
 		bnode->next = node->next;
@@ -1366,167 +1661,190 @@ void gaim_blist_add_buddy(GaimBuddy *buddy, GaimContact *contact, GaimGroup *gro
 		bnode->parent = cnode;
 	}
 
-	if (GAIM_BUDDY_IS_ONLINE(buddy)) {
-		((GaimContact*)bnode->parent)->online++;
-		if (((GaimContact*)bnode->parent)->online == 1)
-			((GaimGroup*)bnode->parent->parent)->online++;
+	if (PURPLE_BUDDY_IS_ONLINE(buddy)) {
+		if (++(PURPLE_CONTACT(bnode->parent)->online) == 1)
+			PURPLE_GROUP(bnode->parent->parent)->online++;
 	}
-	if (gaim_account_is_connected(buddy->account)) {
-		((GaimContact*)bnode->parent)->currentsize++;
-		if (((GaimContact*)bnode->parent)->currentsize == 1)
-			((GaimGroup*)bnode->parent->parent)->currentsize++;
+	if (purple_account_is_connected(buddy->account)) {
+		if (++(PURPLE_CONTACT(bnode->parent)->currentsize) == 1)
+			PURPLE_GROUP(bnode->parent->parent)->currentsize++;
 	}
-	((GaimContact*)bnode->parent)->totalsize++;
+	PURPLE_CONTACT(bnode->parent)->totalsize++;
 
-	hb = g_new(struct _gaim_hbuddy, 1);
-	hb->name = g_strdup(gaim_normalize(buddy->account, buddy->name));
+	hb = g_new(struct _purple_hbuddy, 1);
+	hb->name = g_strdup(purple_normalize(buddy->account, buddy->name));
 	hb->account = buddy->account;
-	hb->group = ((GaimBlistNode*)buddy)->parent->parent;
+	hb->group = ((PurpleBlistNode*)buddy)->parent->parent;
 
-	g_hash_table_replace(gaimbuddylist->buddies, hb, buddy);
+	g_hash_table_replace(purplebuddylist->buddies, hb, buddy);
 
-	gaim_contact_invalidate_priority_buddy(gaim_buddy_get_contact(buddy));
+	account_buddies = g_hash_table_lookup(buddies_cache, buddy->account);
 
-	gaim_blist_schedule_save();
+	hb2 = g_new(struct _purple_hbuddy, 1);
+	hb2->name = g_strdup(hb->name);
+	hb2->account = buddy->account;
+	hb2->group = ((PurpleBlistNode*)buddy)->parent->parent;
+
+	g_hash_table_replace(account_buddies, hb2, buddy);
+
+	purple_contact_invalidate_priority_buddy(purple_buddy_get_contact(buddy));
+
+	if (ops && ops->save_node)
+		ops->save_node((PurpleBlistNode*) buddy);
 
 	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode*)buddy);
+		ops->update(purplebuddylist, (PurpleBlistNode*)buddy);
 
 	/* Signal that the buddy has been added */
-	gaim_signal_emit(gaim_blist_get_handle(), "buddy-added", buddy);
+	purple_signal_emit(purple_blist_get_handle(), "buddy-added", buddy);
+
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-added",
+			PURPLE_BLIST_NODE(buddy));
 }
 
-GaimContact *gaim_contact_new()
+PurpleContact *purple_contact_new()
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
-	GaimContact *contact = g_new0(GaimContact, 1);
+	PurpleContact *contact = g_new0(PurpleContact, 1);
 	contact->totalsize = 0;
 	contact->currentsize = 0;
 	contact->online = 0;
-	gaim_blist_node_initialize_settings((GaimBlistNode *)contact);
-	((GaimBlistNode *)contact)->type = GAIM_BLIST_CONTACT_NODE;
+	purple_blist_node_initialize_settings((PurpleBlistNode *)contact);
+	((PurpleBlistNode *)contact)->type = PURPLE_BLIST_CONTACT_NODE;
 
 	if (ops && ops->new_node)
-		ops->new_node((GaimBlistNode *)contact);
+		ops->new_node((PurpleBlistNode *)contact);
 
-	GAIM_DBUS_REGISTER_POINTER(contact, GaimContact);
+	PURPLE_DBUS_REGISTER_POINTER(contact, PurpleContact);
 	return contact;
 }
 
-void gaim_contact_set_alias(GaimContact *contact, const char *alias)
+void
+purple_contact_destroy(PurpleContact *contact)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	char *old_alias;
-
-	g_return_if_fail(contact != NULL);
-
-	old_alias = contact->alias;
-
-	if ((alias != NULL) && (*alias != '\0'))
-		contact->alias = g_strdup(alias);
-	else
-		contact->alias = NULL;
-
-	gaim_blist_schedule_save();
-
-	if (ops && ops->update)
-		ops->update(gaimbuddylist, (GaimBlistNode*)contact);
-
-	gaim_signal_emit(gaim_blist_get_handle(), "blist-node-aliased",
-					 contact, old_alias);
-	g_free(old_alias);
+	g_hash_table_destroy(contact->node.settings);
+	g_free(contact->alias);
+	PURPLE_DBUS_UNREGISTER_POINTER(contact);
+	g_free(contact);
 }
 
-const char *gaim_contact_get_alias(GaimContact* contact)
+PurpleGroup *
+purple_contact_get_group(const PurpleContact *contact)
+{
+	g_return_val_if_fail(contact, NULL);
+
+	return (PurpleGroup *)(((PurpleBlistNode *)contact)->parent);
+}
+
+const char *purple_contact_get_alias(PurpleContact* contact)
 {
 	g_return_val_if_fail(contact != NULL, NULL);
 
 	if (contact->alias)
 		return contact->alias;
 
-	return gaim_buddy_get_alias(gaim_contact_get_priority_buddy(contact));
+	return purple_buddy_get_alias(purple_contact_get_priority_buddy(contact));
 }
 
-gboolean gaim_contact_on_account(GaimContact *c, GaimAccount *account)
+gboolean purple_contact_on_account(PurpleContact *c, PurpleAccount *account)
 {
-	GaimBlistNode *bnode, *cnode = (GaimBlistNode *) c;
+	PurpleBlistNode *bnode, *cnode = (PurpleBlistNode *) c;
 
 	g_return_val_if_fail(c != NULL, FALSE);
 	g_return_val_if_fail(account != NULL, FALSE);
 
 	for (bnode = cnode->child; bnode; bnode = bnode->next) {
-		GaimBuddy *buddy;
+		PurpleBuddy *buddy;
 
-		if (! GAIM_BLIST_NODE_IS_BUDDY(bnode))
+		if (! PURPLE_BLIST_NODE_IS_BUDDY(bnode))
 			continue;
 
-		buddy = (GaimBuddy *)bnode;
+		buddy = (PurpleBuddy *)bnode;
 		if (buddy->account == account)
 			return TRUE;
 	}
 	return FALSE;
 }
 
-void gaim_contact_invalidate_priority_buddy(GaimContact *contact)
+void purple_contact_invalidate_priority_buddy(PurpleContact *contact)
 {
 	g_return_if_fail(contact != NULL);
 
 	contact->priority_valid = FALSE;
 }
 
-GaimGroup *gaim_group_new(const char *name)
+int purple_contact_get_contact_size(PurpleContact *contact, gboolean offline)   
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimGroup *group;
+	g_return_val_if_fail(contact != NULL, 0);
+
+	return offline ? contact->totalsize : contact->currentsize;
+}   
+
+PurpleGroup *purple_group_new(const char *name)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleGroup *group;
 
 	g_return_val_if_fail(name  != NULL, NULL);
 	g_return_val_if_fail(*name != '\0', NULL);
 
-	group = gaim_find_group(name);
+	group = purple_find_group(name);
 	if (group != NULL)
 		return group;
 
-	group = g_new0(GaimGroup, 1);
-	group->name = g_strdup(name);
+	group = g_new0(PurpleGroup, 1);
+	group->name = purple_utf8_strip_unprintables(name);
 	group->totalsize = 0;
 	group->currentsize = 0;
 	group->online = 0;
-	gaim_blist_node_initialize_settings((GaimBlistNode *)group);
-	((GaimBlistNode *)group)->type = GAIM_BLIST_GROUP_NODE;
+	purple_blist_node_initialize_settings((PurpleBlistNode *)group);
+	((PurpleBlistNode *)group)->type = PURPLE_BLIST_GROUP_NODE;
 
 	if (ops && ops->new_node)
-		ops->new_node((GaimBlistNode *)group);
+		ops->new_node((PurpleBlistNode *)group);
 
-	GAIM_DBUS_REGISTER_POINTER(group, GaimGroup);
+	PURPLE_DBUS_REGISTER_POINTER(group, PurpleGroup);
 	return group;
 }
 
-void gaim_blist_add_contact(GaimContact *contact, GaimGroup *group, GaimBlistNode *node)
+void
+purple_group_destroy(PurpleGroup *group)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimGroup *g;
-	GaimBlistNode *gnode, *cnode, *bnode;
+	g_hash_table_destroy(group->node.settings);
+	g_free(group->name);
+	PURPLE_DBUS_UNREGISTER_POINTER(group);
+	g_free(group);
+}
+
+void purple_blist_add_contact(PurpleContact *contact, PurpleGroup *group, PurpleBlistNode *node)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleGroup *g;
+	PurpleBlistNode *gnode, *cnode, *bnode;
 
 	g_return_if_fail(contact != NULL);
-	g_return_if_fail(GAIM_BLIST_NODE_IS_CONTACT((GaimBlistNode*)contact));
+	g_return_if_fail(PURPLE_BLIST_NODE_IS_CONTACT((PurpleBlistNode*)contact));
 
-	if ((GaimBlistNode*)contact == node)
+	if (PURPLE_BLIST_NODE(contact) == node)
 		return;
 
-	if (node && (GAIM_BLIST_NODE_IS_CONTACT(node) ||
-				GAIM_BLIST_NODE_IS_CHAT(node)))
-		g = (GaimGroup*)node->parent;
+	if (node && (PURPLE_BLIST_NODE_IS_CONTACT(node) ||
+				PURPLE_BLIST_NODE_IS_CHAT(node)))
+		g = (PurpleGroup*)node->parent;
 	else if (group)
 		g = group;
 	else {
-		g = gaim_group_new(_("Buddies"));
-		gaim_blist_add_group(g,
-				gaim_blist_get_last_sibling(gaimbuddylist->root));
+		g = purple_find_group(_("Buddies"));
+		if (g == NULL) {
+			g = purple_group_new(_("Buddies"));
+			purple_blist_add_group(g,
+					purple_blist_get_last_sibling(purplebuddylist->root));
+		}
 	}
 
-	gnode = (GaimBlistNode*)g;
-	cnode = (GaimBlistNode*)contact;
+	gnode = (PurpleBlistNode*)g;
+	cnode = (PurpleBlistNode*)contact;
 
 	if (cnode->parent) {
 		if (cnode->parent->child == cnode)
@@ -1539,22 +1857,35 @@ void gaim_blist_add_contact(GaimContact *contact, GaimGroup *group, GaimBlistNod
 		if (cnode->parent != gnode) {
 			bnode = cnode->child;
 			while (bnode) {
-				GaimBlistNode *next_bnode = bnode->next;
-				GaimBuddy *b = (GaimBuddy*)bnode;
+				PurpleBlistNode *next_bnode = bnode->next;
+				PurpleBuddy *b = (PurpleBuddy*)bnode;
+				GHashTable *account_buddies;
 
-				struct _gaim_hbuddy *hb = g_new(struct _gaim_hbuddy, 1);
-				hb->name = g_strdup(gaim_normalize(b->account, b->name));
+				struct _purple_hbuddy *hb, *hb2;
+
+				hb = g_new(struct _purple_hbuddy, 1);
+				hb->name = g_strdup(purple_normalize(b->account, b->name));
 				hb->account = b->account;
 				hb->group = cnode->parent;
 
-				g_hash_table_remove(gaimbuddylist->buddies, hb);
+				g_hash_table_remove(purplebuddylist->buddies, hb);
 
-				if (!gaim_find_buddy_in_group(b->account, b->name, g)) {
+				account_buddies = g_hash_table_lookup(buddies_cache, b->account);
+				g_hash_table_remove(account_buddies, hb);
+
+				if (!purple_find_buddy_in_group(b->account, b->name, g)) {
 					hb->group = gnode;
-					g_hash_table_replace(gaimbuddylist->buddies, hb, b);
+					g_hash_table_replace(purplebuddylist->buddies, hb, b);
 
-					if (b->account->gc)
-						serv_move_buddy(b, (GaimGroup *)cnode->parent, g);
+					hb2 = g_new(struct _purple_hbuddy, 1);
+					hb2->name = g_strdup(hb->name);
+					hb2->account = b->account;
+					hb2->group = gnode;
+
+					g_hash_table_replace(account_buddies, hb2, b);
+
+					if (purple_account_get_connection(b->account))
+						serv_move_buddy(b, (PurpleGroup *)cnode->parent, g);
 				} else {
 					gboolean empty_contact = FALSE;
 
@@ -1562,14 +1893,14 @@ void gaim_blist_add_contact(GaimContact *contact, GaimGroup *group, GaimBlistNod
 					 * gonna delete it instead */
 					g_free(hb->name);
 					g_free(hb);
-					if (b->account->gc)
-						gaim_account_remove_buddy(b->account, b, (GaimGroup *)cnode->parent);
+					if (purple_account_get_connection(b->account))
+						purple_account_remove_buddy(b->account, b, (PurpleGroup *)cnode->parent);
 
 					if (!cnode->child->next)
 						empty_contact = TRUE;
-					gaim_blist_remove_buddy(b);
+					purple_blist_remove_buddy(b);
 
-					/** in gaim_blist_remove_buddy(), if the last buddy in a
+					/** in purple_blist_remove_buddy(), if the last buddy in a
 					 * contact is removed, the contact is cleaned up and
 					 * g_free'd, so we mustn't try to reference bnode->next */
 					if (empty_contact)
@@ -1580,19 +1911,20 @@ void gaim_blist_add_contact(GaimContact *contact, GaimGroup *group, GaimBlistNod
 		}
 
 		if (contact->online > 0)
-			((GaimGroup*)cnode->parent)->online--;
+			((PurpleGroup*)cnode->parent)->online--;
 		if (contact->currentsize > 0)
-			((GaimGroup*)cnode->parent)->currentsize--;
-		((GaimGroup*)cnode->parent)->totalsize--;
+			((PurpleGroup*)cnode->parent)->currentsize--;
+		((PurpleGroup*)cnode->parent)->totalsize--;
 
 		if (ops && ops->remove)
-			ops->remove(gaimbuddylist, cnode);
+			ops->remove(purplebuddylist, cnode);
 
-		gaim_blist_schedule_save();
+		if (ops && ops->remove_node)
+			ops->remove_node(cnode);
 	}
 
-	if (node && (GAIM_BLIST_NODE_IS_CONTACT(node) ||
-				GAIM_BLIST_NODE_IS_CHAT(node))) {
+	if (node && (PURPLE_BLIST_NODE_IS_CONTACT(node) ||
+				PURPLE_BLIST_NODE_IS_CHAT(node))) {
 		if (node->next)
 			node->next->prev = cnode;
 		cnode->next = node->next;
@@ -1614,33 +1946,38 @@ void gaim_blist_add_contact(GaimContact *contact, GaimGroup *group, GaimBlistNod
 		g->currentsize++;
 	g->totalsize++;
 
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node)
+	{
+		if (cnode->child)
+			ops->save_node(cnode);
+		for (bnode = cnode->child; bnode; bnode = bnode->next)
+			ops->save_node(bnode);
+	}
 
 	if (ops && ops->update)
 	{
 		if (cnode->child)
-			ops->update(gaimbuddylist, cnode);
+			ops->update(purplebuddylist, cnode);
 
 		for (bnode = cnode->child; bnode; bnode = bnode->next)
-			ops->update(gaimbuddylist, bnode);
+			ops->update(purplebuddylist, bnode);
 	}
 }
 
-void gaim_blist_merge_contact(GaimContact *source, GaimBlistNode *node)
+void purple_blist_merge_contact(PurpleContact *source, PurpleBlistNode *node)
 {
-	GaimBlistNode *sourcenode = (GaimBlistNode*)source;
-	GaimBlistNode *targetnode;
-	GaimBlistNode *prev, *cur, *next;
-	GaimContact *target;
+	PurpleBlistNode *sourcenode = (PurpleBlistNode*)source;
+	PurpleBlistNode *prev, *cur, *next;
+	PurpleContact *target;
 
 	g_return_if_fail(source != NULL);
 	g_return_if_fail(node != NULL);
 
-	if (GAIM_BLIST_NODE_IS_CONTACT(node)) {
-		target = (GaimContact *)node;
-		prev = gaim_blist_get_last_child(node);
-	} else if (GAIM_BLIST_NODE_IS_BUDDY(node)) {
-		target = (GaimContact *)node->parent;
+	if (PURPLE_BLIST_NODE_IS_CONTACT(node)) {
+		target = (PurpleContact *)node;
+		prev = purple_blist_get_last_child(node);
+	} else if (PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+		target = (PurpleContact *)node->parent;
 		prev = node;
 	} else {
 		return;
@@ -1649,83 +1986,92 @@ void gaim_blist_merge_contact(GaimContact *source, GaimBlistNode *node)
 	if (source == target || !target)
 		return;
 
-	targetnode = (GaimBlistNode *)target;
 	next = sourcenode->child;
 
 	while (next) {
 		cur = next;
 		next = cur->next;
-		if (GAIM_BLIST_NODE_IS_BUDDY(cur)) {
-			gaim_blist_add_buddy((GaimBuddy *)cur, target, NULL, prev);
+		if (PURPLE_BLIST_NODE_IS_BUDDY(cur)) {
+			purple_blist_add_buddy((PurpleBuddy *)cur, target, NULL, prev);
 			prev = cur;
 		}
 	}
 }
 
-void gaim_blist_add_group(GaimGroup *group, GaimBlistNode *node)
+void purple_blist_add_group(PurpleGroup *group, PurpleBlistNode *node)
 {
-	GaimBlistUiOps *ops;
-	GaimBlistNode *gnode = (GaimBlistNode*)group;
+	PurpleBlistUiOps *ops;
+	PurpleBlistNode *gnode = (PurpleBlistNode*)group;
+	gchar* key;
 
 	g_return_if_fail(group != NULL);
-	g_return_if_fail(GAIM_BLIST_NODE_IS_GROUP((GaimBlistNode *)group));
+	g_return_if_fail(PURPLE_BLIST_NODE_IS_GROUP((PurpleBlistNode *)group));
 
-	ops = gaim_blist_get_ui_ops();
-
-	if (!gaimbuddylist->root) {
-		gaimbuddylist->root = gnode;
-		return;
-	}
+	ops = purple_blist_get_ui_ops();
 
 	/* if we're moving to overtop of ourselves, do nothing */
-	if (gnode == node)
-		return;
+	if (gnode == node) {
+		if (!purplebuddylist->root)
+			node = NULL;
+		else
+			return;
+	}
 
-	if (gaim_find_group(group->name)) {
+	if (purple_find_group(group->name)) {
 		/* This is just being moved */
 
 		if (ops && ops->remove)
-			ops->remove(gaimbuddylist, (GaimBlistNode *)group);
+			ops->remove(purplebuddylist, (PurpleBlistNode *)group);
 
-		if (gnode == gaimbuddylist->root)
-			gaimbuddylist->root = gnode->next;
+		if (gnode == purplebuddylist->root)
+			purplebuddylist->root = gnode->next;
 		if (gnode->prev)
 			gnode->prev->next = gnode->next;
 		if (gnode->next)
 			gnode->next->prev = gnode->prev;
+	} else {
+		key = g_utf8_collate_key(group->name, -1);
+		g_hash_table_insert(groups_cache, key, group);
 	}
 
-	if (node && GAIM_BLIST_NODE_IS_GROUP(node)) {
+	if (node && PURPLE_BLIST_NODE_IS_GROUP(node)) {
 		gnode->next = node->next;
 		gnode->prev = node;
 		if (node->next)
 			node->next->prev = gnode;
 		node->next = gnode;
 	} else {
-		if (gaimbuddylist->root)
-			gaimbuddylist->root->prev = gnode;
-		gnode->next = gaimbuddylist->root;
+		if (purplebuddylist->root)
+			purplebuddylist->root->prev = gnode;
+		gnode->next = purplebuddylist->root;
 		gnode->prev = NULL;
-		gaimbuddylist->root = gnode;
+		purplebuddylist->root = gnode;
 	}
 
-	gaim_blist_schedule_save();
+	if (ops && ops->save_node) {
+		ops->save_node(gnode);
+		for (node = gnode->child; node; node = node->next)
+			ops->save_node(node);
+	}
 
 	if (ops && ops->update) {
-		ops->update(gaimbuddylist, gnode);
+		ops->update(purplebuddylist, gnode);
 		for (node = gnode->child; node; node = node->next)
-			ops->update(gaimbuddylist, node);
+			ops->update(purplebuddylist, node);
 	}
+
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-added",
+			gnode);
 }
 
-void gaim_blist_remove_contact(GaimContact *contact)
+void purple_blist_remove_contact(PurpleContact *contact)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimBlistNode *node, *gnode;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleBlistNode *node, *gnode;
 
 	g_return_if_fail(contact != NULL);
 
-	node = (GaimBlistNode *)contact;
+	node = (PurpleBlistNode *)contact;
 	gnode = node->parent;
 
 	if (node->child) {
@@ -1735,14 +2081,14 @@ void gaim_blist_remove_contact(GaimContact *contact)
 		 * deleted.
 		 */
 		while (node->child->next) {
-			gaim_blist_remove_buddy((GaimBuddy*)node->child);
+			purple_blist_remove_buddy((PurpleBuddy*)node->child);
 		}
 		/*
 		 * Remove the last buddy and trigger the deletion of the contact.
 		 * It would probably be cleaner if contact-deletion was done after
 		 * a timeout?  Or if it had to be done manually, like below?
 		 */
-		gaim_blist_remove_buddy((GaimBuddy*)node->child);
+		purple_blist_remove_buddy((PurpleBuddy*)node->child);
 	} else {
 		/* Remove the node from its parent */
 		if (gnode->child == node)
@@ -1752,118 +2098,111 @@ void gaim_blist_remove_contact(GaimContact *contact)
 		if (node->next)
 			node->next->prev = node->prev;
 
-		gaim_blist_schedule_save();
-
 		/* Update the UI */
 		if (ops && ops->remove)
-			ops->remove(gaimbuddylist, node);
+			ops->remove(purplebuddylist, node);
+
+		if (ops && ops->remove_node)
+			ops->remove_node(node);
+
+		purple_signal_emit(purple_blist_get_handle(), "blist-node-removed",
+				PURPLE_BLIST_NODE(contact));
 
 		/* Delete the node */
-		g_hash_table_destroy(contact->node.settings);
-		GAIM_DBUS_UNREGISTER_POINTER(contact);
-		g_free(contact);
+		purple_contact_destroy(contact);
 	}
 }
 
-void gaim_blist_remove_buddy(GaimBuddy *buddy)
+void purple_blist_remove_buddy(PurpleBuddy *buddy)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimBlistNode *node, *cnode, *gnode;
-	GaimContact *contact;
-	GaimGroup *group;
-	struct _gaim_hbuddy hb;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleBlistNode *node, *cnode, *gnode;
+	PurpleContact *contact;
+	PurpleGroup *group;
+	struct _purple_hbuddy hb;
+	GHashTable *account_buddies;
 
 	g_return_if_fail(buddy != NULL);
 
-	node = (GaimBlistNode *)buddy;
+	node = (PurpleBlistNode *)buddy;
 	cnode = node->parent;
-	gnode = cnode->parent;
-	contact = (GaimContact *)cnode;
-	group = (GaimGroup *)gnode;
-
-	/* Delete any buddy icon. */
-	gaim_buddy_icon_uncache(buddy);
+	gnode = (cnode != NULL) ? cnode->parent : NULL;
+	contact = (PurpleContact *)cnode;
+	group = (PurpleGroup *)gnode;
 
 	/* Remove the node from its parent */
 	if (node->prev)
 		node->prev->next = node->next;
 	if (node->next)
 		node->next->prev = node->prev;
-	if (cnode->child == node)
+	if ((cnode != NULL) && (cnode->child == node))
 		cnode->child = node->next;
 
 	/* Adjust size counts */
-	if (GAIM_BUDDY_IS_ONLINE(buddy)) {
-		contact->online--;
-		if (contact->online == 0)
-			group->online--;
-	}
-	if (gaim_account_is_connected(buddy->account)) {
-		contact->currentsize--;
-		if (contact->currentsize == 0)
-			group->currentsize--;
-	}
-	contact->totalsize--;
+	if (contact != NULL) {
+		if (PURPLE_BUDDY_IS_ONLINE(buddy)) {
+			contact->online--;
+			if (contact->online == 0)
+				group->online--;
+		}
+		if (purple_account_is_connected(buddy->account)) {
+			contact->currentsize--;
+			if (contact->currentsize == 0)
+				group->currentsize--;
+		}
+		contact->totalsize--;
 
-	gaim_blist_schedule_save();
-
-	/* Re-sort the contact */
-	if (cnode->child && contact->priority == buddy) {
-		gaim_contact_invalidate_priority_buddy(contact);
-		if (ops && ops->update)
-			ops->update(gaimbuddylist, cnode);
+		/* Re-sort the contact */
+		if (cnode->child && contact->priority == buddy) {
+			purple_contact_invalidate_priority_buddy(contact);
+			if (ops && ops->update)
+				ops->update(purplebuddylist, cnode);
+		}
 	}
 
 	/* Remove this buddy from the buddies hash table */
-	hb.name = g_strdup(gaim_normalize(buddy->account, buddy->name));
+	hb.name = (gchar *)purple_normalize(buddy->account, buddy->name);
 	hb.account = buddy->account;
-	hb.group = ((GaimBlistNode*)buddy)->parent->parent;
-	g_hash_table_remove(gaimbuddylist->buddies, &hb);
-	g_free(hb.name);
+	hb.group = gnode;
+	g_hash_table_remove(purplebuddylist->buddies, &hb);
+
+	account_buddies = g_hash_table_lookup(buddies_cache, buddy->account);
+	g_hash_table_remove(account_buddies, &hb);
 
 	/* Update the UI */
 	if (ops && ops->remove)
-		ops->remove(gaimbuddylist, node);
+		ops->remove(purplebuddylist, node);
+
+	if (ops && ops->remove_node)
+		ops->remove_node(node);
+
+	/* Remove this buddy's pounces */
+	purple_pounce_destroy_all_by_buddy(buddy);
 
 	/* Signal that the buddy has been removed before freeing the memory for it */
-	gaim_signal_emit(gaim_blist_get_handle(), "buddy-removed", buddy);
+	purple_signal_emit(purple_blist_get_handle(), "buddy-removed", buddy);
 
-	/* Delete the node */
-	if (buddy->icon != NULL)
-		gaim_buddy_icon_unref(buddy->icon);
-	g_hash_table_destroy(buddy->node.settings);
-	gaim_presence_remove_buddy(buddy->presence, buddy);
-	gaim_presence_destroy(buddy->presence);
-	g_free(buddy->name);
-	g_free(buddy->alias);
-	g_free(buddy->server_alias);
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-removed",
+			PURPLE_BLIST_NODE(buddy));
 
-	GAIM_DBUS_UNREGISTER_POINTER(buddy);
-	g_free(buddy);
-
-	/* FIXME: Once GaimBuddy is a GObject, timeout callbacks can
-	 * g_object_ref() it when connecting the callback and
-	 * g_object_unref() it in the handler.  That way, it won't
-	 * get freed while the timeout is pending and this line can
-	 * be removed. */
-	while (g_source_remove_by_user_data((gpointer *)buddy));
+	purple_buddy_destroy(buddy);
 
 	/* If the contact is empty then remove it */
-	if (!cnode->child)
-		gaim_blist_remove_contact(contact);
+	if ((contact != NULL) && !cnode->child)
+		purple_blist_remove_contact(contact);
 }
 
-void gaim_blist_remove_chat(GaimChat *chat)
+void purple_blist_remove_chat(PurpleChat *chat)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimBlistNode *node, *gnode;
-	GaimGroup *group;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleBlistNode *node, *gnode;
+	PurpleGroup *group;
 
 	g_return_if_fail(chat != NULL);
 
-	node = (GaimBlistNode *)chat;
+	node = (PurpleBlistNode *)chat;
 	gnode = node->parent;
-	group = (GaimGroup *)gnode;
+	group = (PurpleGroup *)gnode;
 
 	if (gnode != NULL)
 	{
@@ -1876,102 +2215,89 @@ void gaim_blist_remove_chat(GaimChat *chat)
 			node->next->prev = node->prev;
 
 		/* Adjust size counts */
-		if (gaim_account_is_connected(chat->account)) {
+		if (purple_account_is_connected(chat->account)) {
 			group->online--;
 			group->currentsize--;
 		}
 		group->totalsize--;
 
-		gaim_blist_schedule_save();
 	}
 
 	/* Update the UI */
 	if (ops && ops->remove)
-		ops->remove(gaimbuddylist, node);
+		ops->remove(purplebuddylist, node);
+
+	if (ops && ops->remove_node)
+		ops->remove_node(node);
+
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-removed",
+			PURPLE_BLIST_NODE(chat));
 
 	/* Delete the node */
-	g_hash_table_destroy(chat->components);
-	g_hash_table_destroy(chat->node.settings);
-	g_free(chat->alias);
-	GAIM_DBUS_UNREGISTER_POINTER(chat);
-	g_free(chat);
+	purple_chat_destroy(chat);
 }
 
-void gaim_blist_remove_group(GaimGroup *group)
+void purple_blist_remove_group(PurpleGroup *group)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimBlistNode *node;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleBlistNode *node;
 	GList *l;
+	gchar* key;
 
 	g_return_if_fail(group != NULL);
 
-	node = (GaimBlistNode *)group;
+	node = (PurpleBlistNode *)group;
 
 	/* Make sure the group is empty */
-	if (node->child) {
-		char *buf;
-		int count = 0;
-		GaimBlistNode *child;
-
-		for (child = node->child; child != NULL; child = child->next)
-			count++;
-
-		buf = g_strdup_printf(ngettext("%d buddy from group %s was not removed "
-									   "because it belongs to an account which is "
-									   "disabled or offline.  This buddy and the "
-									   "group were not removed.\n",
-									   "%d buddies from group %s were not "
-									   "removed because they belong to accounts "
-									   "which are currently disabled or offline.  "
-									   "These buddies and the group were not "
-									   "removed.\n", count),
-							  count, group->name);
-		gaim_notify_error(NULL, NULL, _("Group not removed"), buf);
-		g_free(buf);
+	if (node->child)
 		return;
-	}
 
 	/* Remove the node from its parent */
-	if (gaimbuddylist->root == node)
-		gaimbuddylist->root = node->next;
+	if (purplebuddylist->root == node)
+		purplebuddylist->root = node->next;
 	if (node->prev)
 		node->prev->next = node->next;
 	if (node->next)
 		node->next->prev = node->prev;
 
-	gaim_blist_schedule_save();
+	key = g_utf8_collate_key(group->name, -1);
+	g_hash_table_remove(groups_cache, key);
+	g_free(key);
 
 	/* Update the UI */
 	if (ops && ops->remove)
-		ops->remove(gaimbuddylist, node);
+		ops->remove(purplebuddylist, node);
+
+	if (ops && ops->remove_node)
+		ops->remove_node(node);
+
+	purple_signal_emit(purple_blist_get_handle(), "blist-node-removed",
+			PURPLE_BLIST_NODE(group));
 
 	/* Remove the group from all accounts that are online */
-	for (l = gaim_connections_get_all(); l != NULL; l = l->next)
+	for (l = purple_connections_get_all(); l != NULL; l = l->next)
 	{
-		GaimConnection *gc = (GaimConnection *)l->data;
+		PurpleConnection *gc = (PurpleConnection *)l->data;
 
-		if (gaim_connection_get_state(gc) == GAIM_CONNECTED)
-			gaim_account_remove_group(gaim_connection_get_account(gc), group);
+		if (purple_connection_get_state(gc) == PURPLE_CONNECTED)
+			purple_account_remove_group(purple_connection_get_account(gc), group);
 	}
 
 	/* Delete the node */
-	g_hash_table_destroy(group->node.settings);
-	g_free(group->name);
-	GAIM_DBUS_UNREGISTER_POINTER(group);
-	g_free(group);
+	purple_group_destroy(group);
 }
 
-GaimBuddy *gaim_contact_get_priority_buddy(GaimContact *contact)
+PurpleBuddy *purple_contact_get_priority_buddy(PurpleContact *contact)
 {
 	g_return_val_if_fail(contact != NULL, NULL);
 
 	if (!contact->priority_valid)
-		gaim_contact_compute_priority_buddy(contact);
+		purple_contact_compute_priority_buddy(contact);
 
 	return contact->priority;
 }
 
-const char *gaim_buddy_get_alias_only(GaimBuddy *buddy)
+const char *purple_buddy_get_alias_only(PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 
@@ -1987,9 +2313,9 @@ const char *gaim_buddy_get_alias_only(GaimBuddy *buddy)
 }
 
 
-const char *gaim_buddy_get_contact_alias(GaimBuddy *buddy)
+const char *purple_buddy_get_contact_alias(PurpleBuddy *buddy)
 {
-	GaimContact *c;
+	PurpleContact *c;
 
 	g_return_val_if_fail(buddy != NULL, NULL);
 
@@ -1999,7 +2325,7 @@ const char *gaim_buddy_get_contact_alias(GaimBuddy *buddy)
 		return buddy->alias;
 
 	/* The contact alias */
-	c = gaim_buddy_get_contact(buddy);
+	c = purple_buddy_get_contact(buddy);
 	if ((c != NULL) && (c->alias != NULL))
 		return c->alias;
 
@@ -2012,7 +2338,7 @@ const char *gaim_buddy_get_contact_alias(GaimBuddy *buddy)
 }
 
 
-const char *gaim_buddy_get_alias(GaimBuddy *buddy)
+const char *purple_buddy_get_alias(PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 
@@ -2029,7 +2355,13 @@ const char *gaim_buddy_get_alias(GaimBuddy *buddy)
 	return buddy->name;
 }
 
-const char *gaim_buddy_get_server_alias(GaimBuddy *buddy)
+const char *purple_buddy_get_local_buddy_alias(PurpleBuddy *buddy)
+{
+	g_return_val_if_fail(buddy, NULL);
+	return buddy->alias;
+}
+
+const char *purple_buddy_get_server_alias(PurpleBuddy *buddy)
 {
         g_return_val_if_fail(buddy != NULL, NULL);
 
@@ -2039,248 +2371,261 @@ const char *gaim_buddy_get_server_alias(GaimBuddy *buddy)
 	return NULL;
 }
 
-const char *gaim_buddy_get_local_alias(GaimBuddy *buddy)
+const char *purple_chat_get_name(PurpleChat *chat)
 {
-	GaimContact *c;
-
-	g_return_val_if_fail(buddy != NULL, NULL);
-
-	/* Search for an alias for the buddy. In order of precedence: */
-	/* The buddy alias */
-	if (buddy->alias != NULL)
-		return buddy->alias;
-
-	/* The contact alias */
-	c = gaim_buddy_get_contact(buddy);
-	if ((c != NULL) && (c->alias != NULL))
-		return c->alias;
-
-	/* The buddy's user name (i.e. no alias) */
-	return buddy->name;
-}
-
-const char *gaim_chat_get_name(GaimChat *chat)
-{
-	struct proto_chat_entry *pce;
-	GList *parts;
-	char *ret;
+	char *ret = NULL;
+	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info = NULL;
 
 	g_return_val_if_fail(chat != NULL, NULL);
 
 	if ((chat->alias != NULL) && (*chat->alias != '\0'))
 		return chat->alias;
 
-	parts = GAIM_PLUGIN_PROTOCOL_INFO(chat->account->gc->prpl)->chat_info(chat->account->gc);
-	pce = parts->data;
-	ret = g_hash_table_lookup(chat->components, pce->identifier);
-	g_list_foreach(parts, (GFunc)g_free, NULL);
-	g_list_free(parts);
+	prpl = purple_find_prpl(purple_account_get_protocol_id(chat->account));
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+
+	if (prpl_info->chat_info) {
+		struct proto_chat_entry *pce;
+		GList *parts = prpl_info->chat_info(purple_account_get_connection(chat->account));
+		pce = parts->data;
+		ret = g_hash_table_lookup(chat->components, pce->identifier);
+		g_list_foreach(parts, (GFunc)g_free, NULL);
+		g_list_free(parts);
+	}
 
 	return ret;
 }
 
-GaimBuddy *gaim_find_buddy(GaimAccount *account, const char *name)
+PurpleBuddy *purple_find_buddy(PurpleAccount *account, const char *name)
 {
-	GaimBuddy *buddy;
-	struct _gaim_hbuddy hb;
-	GaimBlistNode *group;
+	PurpleBuddy *buddy;
+	struct _purple_hbuddy hb;
+	PurpleBlistNode *group;
 
-	g_return_val_if_fail(gaimbuddylist != NULL, NULL);
+	g_return_val_if_fail(purplebuddylist != NULL, NULL);
 	g_return_val_if_fail(account != NULL, NULL);
 	g_return_val_if_fail((name != NULL) && (*name != '\0'), NULL);
 
 	hb.account = account;
-	hb.name = g_strdup(gaim_normalize(account, name));
+	hb.name = (gchar *)purple_normalize(account, name);
 
-	for (group = gaimbuddylist->root; group; group = group->next) {
+	for (group = purplebuddylist->root; group; group = group->next) {
+		if (!group->child)
+			continue;
+
 		hb.group = group;
-		if ((buddy = g_hash_table_lookup(gaimbuddylist->buddies, &hb))) {
-			g_free(hb.name);
+		if ((buddy = g_hash_table_lookup(purplebuddylist->buddies, &hb))) {
 			return buddy;
 		}
 	}
-	g_free(hb.name);
 
 	return NULL;
 }
 
-GaimBuddy *gaim_find_buddy_in_group(GaimAccount *account, const char *name,
-		GaimGroup *group)
+PurpleBuddy *purple_find_buddy_in_group(PurpleAccount *account, const char *name,
+		PurpleGroup *group)
 {
-	struct _gaim_hbuddy hb;
-	GaimBuddy *ret;
+	struct _purple_hbuddy hb;
 
-	g_return_val_if_fail(gaimbuddylist != NULL, NULL);
+	g_return_val_if_fail(purplebuddylist != NULL, NULL);
 	g_return_val_if_fail(account != NULL, NULL);
 	g_return_val_if_fail((name != NULL) && (*name != '\0'), NULL);
 
-	hb.name = g_strdup(gaim_normalize(account, name));
+	hb.name = (gchar *)purple_normalize(account, name);
 	hb.account = account;
-	hb.group = (GaimBlistNode*)group;
+	hb.group = (PurpleBlistNode*)group;
 
-	ret = g_hash_table_lookup(gaimbuddylist->buddies, &hb);
-	g_free(hb.name);
-
-	return ret;
+	return g_hash_table_lookup(purplebuddylist->buddies, &hb);
 }
 
 static void find_acct_buddies(gpointer key, gpointer value, gpointer data)
 {
-	struct _gaim_hbuddy *hb = key;
-	GaimBuddy *buddy = value;
-	struct _list_account_buddies *ab = data;
+	PurpleBuddy *buddy = value;
+	GSList **list = data;
 
-	if (hb->account == ab->account) {
-		ab->list = g_slist_prepend(ab->list, buddy);
-	}
+	*list = g_slist_prepend(*list, buddy);
 }
 
-GSList *gaim_find_buddies(GaimAccount *account, const char *name)
+GSList *purple_find_buddies(PurpleAccount *account, const char *name)
 {
-	GaimBuddy *buddy;
-	GaimBlistNode *node;
+	PurpleBuddy *buddy;
+	PurpleBlistNode *node;
 	GSList *ret = NULL;
 
-	g_return_val_if_fail(gaimbuddylist != NULL, NULL);
+	g_return_val_if_fail(purplebuddylist != NULL, NULL);
 	g_return_val_if_fail(account != NULL, NULL);
 
-
 	if ((name != NULL) && (*name != '\0')) {
-		struct _gaim_hbuddy hb;
+		struct _purple_hbuddy hb;
 
-		hb.name = g_strdup(gaim_normalize(account, name));
+		hb.name = (gchar *)purple_normalize(account, name);
 		hb.account = account;
 
-		for (node = gaimbuddylist->root; node != NULL; node = node->next) {
+		for (node = purplebuddylist->root; node != NULL; node = node->next) {
+			if (!node->child)
+				continue;
+
 			hb.group = node;
-			if ((buddy = g_hash_table_lookup(gaimbuddylist->buddies, &hb)) != NULL)
+			if ((buddy = g_hash_table_lookup(purplebuddylist->buddies, &hb)) != NULL)
 				ret = g_slist_prepend(ret, buddy);
 		}
-		g_free(hb.name);
 	} else {
-		struct _list_account_buddies *ab = g_new0(struct _list_account_buddies, 1);
-		ab->account = account;
-		g_hash_table_foreach(gaimbuddylist->buddies, find_acct_buddies, ab);
-		ret = ab->list;
-		g_free(ab);
+		GSList *list = NULL;
+		GHashTable *buddies = g_hash_table_lookup(buddies_cache, account);
+		g_hash_table_foreach(buddies, find_acct_buddies, &list);
+		ret = list;
 	}
 
 	return ret;
 }
 
-GaimGroup *gaim_find_group(const char *name)
+PurpleGroup *purple_find_group(const char *name)
 {
-	GaimBlistNode *node;
+	gchar* key;
+	PurpleGroup *group;
 
-	g_return_val_if_fail(gaimbuddylist != NULL, NULL);
+	g_return_val_if_fail(purplebuddylist != NULL, NULL);
 	g_return_val_if_fail((name != NULL) && (*name != '\0'), NULL);
 
-	for (node = gaimbuddylist->root; node != NULL; node = node->next) {
-		if (!strcmp(((GaimGroup *)node)->name, name))
-			return (GaimGroup *)node;
-	}
+	key = g_utf8_collate_key(name, -1);
+	group = g_hash_table_lookup(groups_cache, key);
+	g_free(key);
 
-	return NULL;
+	return group;
 }
 
-GaimChat *
-gaim_blist_find_chat(GaimAccount *account, const char *name)
+PurpleChat *
+purple_blist_find_chat(PurpleAccount *account, const char *name)
 {
 	char *chat_name;
-	GaimChat *chat;
-	GaimPlugin *prpl;
-	GaimPluginProtocolInfo *prpl_info = NULL;
+	PurpleChat *chat;
+	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info = NULL;
 	struct proto_chat_entry *pce;
-	GaimBlistNode *node, *group;
+	PurpleBlistNode *node, *group;
 	GList *parts;
+	char *normname;
 
-	g_return_val_if_fail(gaimbuddylist != NULL, NULL);
+	g_return_val_if_fail(purplebuddylist != NULL, NULL);
 	g_return_val_if_fail((name != NULL) && (*name != '\0'), NULL);
 
-	if (!gaim_account_is_connected(account))
+	if (!purple_account_is_connected(account))
 		return NULL;
 
-	prpl = gaim_find_prpl(gaim_account_get_protocol_id(account));
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(prpl);
+	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 	if (prpl_info->find_blist_chat != NULL)
 		return prpl_info->find_blist_chat(account, name);
 
-	for (group = gaimbuddylist->root; group != NULL; group = group->next) {
+	normname = g_strdup(purple_normalize(account, name));
+	for (group = purplebuddylist->root; group != NULL; group = group->next) {
 		for (node = group->child; node != NULL; node = node->next) {
-			if (GAIM_BLIST_NODE_IS_CHAT(node)) {
+			if (PURPLE_BLIST_NODE_IS_CHAT(node)) {
 
-				chat = (GaimChat*)node;
+				chat = (PurpleChat*)node;
 
 				if (account != chat->account)
 					continue;
 
 				parts = prpl_info->chat_info(
-					gaim_account_get_connection(chat->account));
+					purple_account_get_connection(chat->account));
 
 				pce = parts->data;
 				chat_name = g_hash_table_lookup(chat->components,
 												pce->identifier);
+				g_list_foreach(parts, (GFunc)g_free, NULL);
+				g_list_free(parts);
 
 				if (chat->account == account && chat_name != NULL &&
-					name != NULL && !strcmp(chat_name, name)) {
-
+					normname != NULL && !strcmp(purple_normalize(account, chat_name), normname)) {
+					g_free(normname);
 					return chat;
 				}
 			}
 		}
 	}
 
+	g_free(normname);
 	return NULL;
 }
 
-GaimGroup *
-gaim_chat_get_group(GaimChat *chat)
+PurpleGroup *
+purple_chat_get_group(PurpleChat *chat)
 {
 	g_return_val_if_fail(chat != NULL, NULL);
 
-	return (GaimGroup *)(((GaimBlistNode *)chat)->parent);
+	return (PurpleGroup *)(((PurpleBlistNode *)chat)->parent);
 }
 
-GaimContact *gaim_buddy_get_contact(GaimBuddy *buddy)
+PurpleAccount *
+purple_chat_get_account(PurpleChat *chat)
+{
+	g_return_val_if_fail(chat != NULL, NULL);
+
+	return chat->account;
+}
+
+GHashTable *
+purple_chat_get_components(PurpleChat *chat)
+{
+	g_return_val_if_fail(chat != NULL, NULL);
+
+	return chat->components;
+}
+
+PurpleContact *purple_buddy_get_contact(PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 
-	return (GaimContact*)((GaimBlistNode*)buddy)->parent;
+	return PURPLE_CONTACT(PURPLE_BLIST_NODE(buddy)->parent);
 }
 
-GaimPresence *gaim_buddy_get_presence(const GaimBuddy *buddy)
+PurplePresence *purple_buddy_get_presence(const PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 	return buddy->presence;
 }
 
-GaimGroup *gaim_buddy_get_group(GaimBuddy *buddy)
+PurpleMediaCaps purple_buddy_get_media_caps(const PurpleBuddy *buddy)
+{
+	g_return_val_if_fail(buddy != NULL, 0);
+	return buddy->media_caps;
+}
+
+void purple_buddy_set_media_caps(PurpleBuddy *buddy, PurpleMediaCaps media_caps)
+{
+	g_return_if_fail(buddy != NULL);
+	buddy->media_caps = media_caps;
+}
+
+PurpleGroup *purple_buddy_get_group(PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 
-	if (((GaimBlistNode *)buddy)->parent == NULL)
+	if (((PurpleBlistNode *)buddy)->parent == NULL)
 		return NULL;
 
-	return (GaimGroup *)(((GaimBlistNode*)buddy)->parent->parent);
+	return (PurpleGroup *)(((PurpleBlistNode*)buddy)->parent->parent);
 }
 
-GSList *gaim_group_get_accounts(GaimGroup *group)
+GSList *purple_group_get_accounts(PurpleGroup *group)
 {
 	GSList *l = NULL;
-	GaimBlistNode *gnode, *cnode, *bnode;
+	PurpleBlistNode *gnode, *cnode, *bnode;
 
-	gnode = (GaimBlistNode *)group;
+	gnode = (PurpleBlistNode *)group;
 
 	for (cnode = gnode->child;  cnode; cnode = cnode->next) {
-		if (GAIM_BLIST_NODE_IS_CHAT(cnode)) {
-			if (!g_slist_find(l, ((GaimChat *)cnode)->account))
-				l = g_slist_append(l, ((GaimChat *)cnode)->account);
-		} else if (GAIM_BLIST_NODE_IS_CONTACT(cnode)) {
+		if (PURPLE_BLIST_NODE_IS_CHAT(cnode)) {
+			if (!g_slist_find(l, ((PurpleChat *)cnode)->account))
+				l = g_slist_append(l, ((PurpleChat *)cnode)->account);
+		} else if (PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
 			for (bnode = cnode->child; bnode; bnode = bnode->next) {
-				if (GAIM_BLIST_NODE_IS_BUDDY(bnode)) {
-					if (!g_slist_find(l, ((GaimBuddy *)bnode)->account))
-						l = g_slist_append(l, ((GaimBuddy *)bnode)->account);
+				if (PURPLE_BLIST_NODE_IS_BUDDY(bnode)) {
+					if (!g_slist_find(l, ((PurpleBuddy *)bnode)->account))
+						l = g_slist_append(l, ((PurpleBuddy *)bnode)->account);
 				}
 			}
 		}
@@ -2289,88 +2634,87 @@ GSList *gaim_group_get_accounts(GaimGroup *group)
 	return l;
 }
 
-void gaim_blist_add_account(GaimAccount *account)
+void purple_blist_add_account(PurpleAccount *account)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimBlistNode *gnode, *cnode, *bnode;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleBlistNode *gnode, *cnode, *bnode;
 
-	g_return_if_fail(gaimbuddylist != NULL);
+	g_return_if_fail(purplebuddylist != NULL);
 
 	if (!ops || !ops->update)
 		return;
 
-	for (gnode = gaimbuddylist->root; gnode; gnode = gnode->next) {
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
+	for (gnode = purplebuddylist->root; gnode; gnode = gnode->next) {
+		if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
 			continue;
 		for (cnode = gnode->child; cnode; cnode = cnode->next) {
-			if (GAIM_BLIST_NODE_IS_CONTACT(cnode)) {
+			if (PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
 				gboolean recompute = FALSE;
 					for (bnode = cnode->child; bnode; bnode = bnode->next) {
-						if (GAIM_BLIST_NODE_IS_BUDDY(bnode) &&
-								((GaimBuddy*)bnode)->account == account) {
+						if (PURPLE_BLIST_NODE_IS_BUDDY(bnode) &&
+								((PurpleBuddy*)bnode)->account == account) {
 							recompute = TRUE;
-							((GaimContact*)cnode)->currentsize++;
-							if (((GaimContact*)cnode)->currentsize == 1)
-								((GaimGroup*)gnode)->currentsize++;
-							ops->update(gaimbuddylist, bnode);
+							((PurpleContact*)cnode)->currentsize++;
+							if (((PurpleContact*)cnode)->currentsize == 1)
+								((PurpleGroup*)gnode)->currentsize++;
+							ops->update(purplebuddylist, bnode);
 						}
 					}
 					if (recompute ||
-							gaim_blist_node_get_bool(cnode, "show_offline")) {
-						gaim_contact_invalidate_priority_buddy((GaimContact*)cnode);
-						ops->update(gaimbuddylist, cnode);
+							purple_blist_node_get_bool(cnode, "show_offline")) {
+						purple_contact_invalidate_priority_buddy((PurpleContact*)cnode);
+						ops->update(purplebuddylist, cnode);
 					}
-			} else if (GAIM_BLIST_NODE_IS_CHAT(cnode) &&
-					((GaimChat*)cnode)->account == account) {
-				((GaimGroup *)gnode)->online++;
-				((GaimGroup *)gnode)->currentsize++;
-				ops->update(gaimbuddylist, cnode);
+			} else if (PURPLE_BLIST_NODE_IS_CHAT(cnode) &&
+					((PurpleChat*)cnode)->account == account) {
+				((PurpleGroup *)gnode)->online++;
+				((PurpleGroup *)gnode)->currentsize++;
+				ops->update(purplebuddylist, cnode);
 			}
 		}
-		ops->update(gaimbuddylist, gnode);
+		ops->update(purplebuddylist, gnode);
 	}
 }
 
-void gaim_blist_remove_account(GaimAccount *account)
+void purple_blist_remove_account(PurpleAccount *account)
 {
-	GaimBlistUiOps *ops = gaim_blist_get_ui_ops();
-	GaimBlistNode *gnode, *cnode, *bnode;
-	GaimBuddy *buddy;
-	GaimChat *chat;
-	GaimContact *contact;
-	GaimGroup *group;
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleBlistNode *gnode, *cnode, *bnode;
+	PurpleBuddy *buddy;
+	PurpleChat *chat;
+	PurpleContact *contact;
+	PurpleGroup *group;
 	GList *list = NULL, *iter = NULL;
 
-	g_return_if_fail(gaimbuddylist != NULL);
+	g_return_if_fail(purplebuddylist != NULL);
 
-	for (gnode = gaimbuddylist->root; gnode; gnode = gnode->next) {
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
+	for (gnode = purplebuddylist->root; gnode; gnode = gnode->next) {
+		if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
 			continue;
 
-		group = (GaimGroup *)gnode;
+		group = (PurpleGroup *)gnode;
 
 		for (cnode = gnode->child; cnode; cnode = cnode->next) {
-			if (GAIM_BLIST_NODE_IS_CONTACT(cnode)) {
+			if (PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
 				gboolean recompute = FALSE;
-				contact = (GaimContact *)cnode;
+				contact = (PurpleContact *)cnode;
 
 				for (bnode = cnode->child; bnode; bnode = bnode->next) {
-					if (!GAIM_BLIST_NODE_IS_BUDDY(bnode))
+					if (!PURPLE_BLIST_NODE_IS_BUDDY(bnode))
 						continue;
 
-					buddy = (GaimBuddy *)bnode;
+					buddy = (PurpleBuddy *)bnode;
 					if (account == buddy->account) {
-						GaimPresence *presence;
-						recompute = TRUE;
+						PurplePresence *presence;
 
-						presence = gaim_buddy_get_presence(buddy);
+						presence = purple_buddy_get_presence(buddy);
 
-						if(gaim_presence_is_online(presence)) {
+						if(purple_presence_is_online(presence)) {
 							contact->online--;
 							if (contact->online == 0)
 								group->online--;
 
-							gaim_blist_node_set_int(&buddy->node,
+							purple_blist_node_set_int(&buddy->node,
 													"last_seen", time(NULL));
 						}
 
@@ -2381,24 +2725,30 @@ void gaim_blist_remove_account(GaimAccount *account)
 						if (!g_list_find(list, presence))
 							list = g_list_prepend(list, presence);
 
-						if (ops && ops->remove)
-							ops->remove(gaimbuddylist, bnode);
+						if (contact->priority == buddy)
+							purple_contact_invalidate_priority_buddy(contact);
+						else
+							recompute = TRUE;
+
+						if (ops && ops->remove) {
+							ops->remove(purplebuddylist, bnode);
+						}
 					}
 				}
 				if (recompute) {
-					gaim_contact_invalidate_priority_buddy(contact);
+					purple_contact_invalidate_priority_buddy(contact);
 					if (ops && ops->update)
-						ops->update(gaimbuddylist, cnode);
+						ops->update(purplebuddylist, cnode);
 				}
-			} else if (GAIM_BLIST_NODE_IS_CHAT(cnode)) {
-				chat = (GaimChat *)cnode;
+			} else if (PURPLE_BLIST_NODE_IS_CHAT(cnode)) {
+				chat = (PurpleChat *)cnode;
 
 				if(chat->account == account) {
 					group->currentsize--;
 					group->online--;
 
 					if (ops && ops->remove)
-						ops->remove(gaimbuddylist, cnode);
+						ops->remove(purplebuddylist, cnode);
 				}
 			}
 		}
@@ -2406,21 +2756,21 @@ void gaim_blist_remove_account(GaimAccount *account)
 
 	for (iter = list; iter; iter = iter->next)
 	{
-		gaim_presence_set_status_active(iter->data, "offline", TRUE);
+		purple_presence_set_status_active(iter->data, "offline", TRUE);
 	}
 	g_list_free(list);
 }
 
-gboolean gaim_group_on_account(GaimGroup *g, GaimAccount *account)
+gboolean purple_group_on_account(PurpleGroup *g, PurpleAccount *account)
 {
-	GaimBlistNode *cnode;
-	for (cnode = ((GaimBlistNode *)g)->child; cnode; cnode = cnode->next) {
-		if (GAIM_BLIST_NODE_IS_CONTACT(cnode)) {
-			if(gaim_contact_on_account((GaimContact *) cnode, account))
+	PurpleBlistNode *cnode;
+	for (cnode = ((PurpleBlistNode *)g)->child; cnode; cnode = cnode->next) {
+		if (PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
+			if(purple_contact_on_account((PurpleContact *) cnode, account))
 				return TRUE;
-		} else if (GAIM_BLIST_NODE_IS_CHAT(cnode)) {
-			GaimChat *chat = (GaimChat *)cnode;
-			if ((!account && gaim_account_is_connected(chat->account))
+		} else if (PURPLE_BLIST_NODE_IS_CHAT(cnode)) {
+			PurpleChat *chat = (PurpleChat *)cnode;
+			if ((!account && purple_account_is_connected(chat->account))
 					|| chat->account == account)
 				return TRUE;
 		}
@@ -2428,108 +2778,171 @@ gboolean gaim_group_on_account(GaimGroup *g, GaimAccount *account)
 	return FALSE;
 }
 
+const char *purple_group_get_name(PurpleGroup *group)
+{
+	g_return_val_if_fail(group != NULL, NULL);
+
+	return group->name;
+}
+
 void
-gaim_blist_request_add_buddy(GaimAccount *account, const char *username,
+purple_blist_request_add_buddy(PurpleAccount *account, const char *username,
 							 const char *group, const char *alias)
 {
-	GaimBlistUiOps *ui_ops;
+	PurpleBlistUiOps *ui_ops;
 
-	ui_ops = gaim_blist_get_ui_ops();
+	ui_ops = purple_blist_get_ui_ops();
 
 	if (ui_ops != NULL && ui_ops->request_add_buddy != NULL)
 		ui_ops->request_add_buddy(account, username, group, alias);
 }
 
 void
-gaim_blist_request_add_chat(GaimAccount *account, GaimGroup *group,
+purple_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
 							const char *alias, const char *name)
 {
-	GaimBlistUiOps *ui_ops;
+	PurpleBlistUiOps *ui_ops;
 
-	ui_ops = gaim_blist_get_ui_ops();
+	ui_ops = purple_blist_get_ui_ops();
 
 	if (ui_ops != NULL && ui_ops->request_add_chat != NULL)
 		ui_ops->request_add_chat(account, group, alias, name);
 }
 
 void
-gaim_blist_request_add_group(void)
+purple_blist_request_add_group(void)
 {
-	GaimBlistUiOps *ui_ops;
+	PurpleBlistUiOps *ui_ops;
 
-	ui_ops = gaim_blist_get_ui_ops();
+	ui_ops = purple_blist_get_ui_ops();
 
 	if (ui_ops != NULL && ui_ops->request_add_group != NULL)
 		ui_ops->request_add_group();
 }
 
 static void
-gaim_blist_node_setting_free(gpointer data)
+purple_blist_node_destroy(PurpleBlistNode *node)
 {
-	GaimValue *value;
+	PurpleBlistUiOps *ui_ops;
+	PurpleBlistNode *child, *next_child;
 
-	value = (GaimValue *)data;
+	ui_ops = purple_blist_get_ui_ops();
+	child = node->child;
+	while (child) {
+		next_child = child->next;
+		purple_blist_node_destroy(child);
+		child = next_child;
+	}
 
-	gaim_value_destroy(value);
+	/* Allow the UI to free data */
+	node->parent = NULL;
+	node->child  = NULL;
+	node->next   = NULL;
+	node->prev   = NULL;
+	if (ui_ops && ui_ops->remove)
+		ui_ops->remove(purplebuddylist, node);
+
+	if (PURPLE_BLIST_NODE_IS_BUDDY(node))
+		purple_buddy_destroy((PurpleBuddy*)node);
+	else if (PURPLE_BLIST_NODE_IS_CHAT(node))
+		purple_chat_destroy((PurpleChat*)node);
+	else if (PURPLE_BLIST_NODE_IS_CONTACT(node))
+		purple_contact_destroy((PurpleContact*)node);
+	else if (PURPLE_BLIST_NODE_IS_GROUP(node))
+		purple_group_destroy((PurpleGroup*)node);
 }
 
-static void gaim_blist_node_initialize_settings(GaimBlistNode *node)
+static void
+purple_blist_node_setting_free(gpointer data)
+{
+	PurpleValue *value;
+
+	value = (PurpleValue *)data;
+
+	purple_value_destroy(value);
+}
+
+static void purple_blist_node_initialize_settings(PurpleBlistNode *node)
 {
 	if (node->settings)
 		return;
 
 	node->settings = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-			(GDestroyNotify)gaim_blist_node_setting_free);
+			(GDestroyNotify)purple_blist_node_setting_free);
 }
 
-void gaim_blist_node_remove_setting(GaimBlistNode *node, const char *key)
+void purple_blist_node_remove_setting(PurpleBlistNode *node, const char *key)
 {
+	PurpleBlistUiOps *ops;
 	g_return_if_fail(node != NULL);
 	g_return_if_fail(node->settings != NULL);
 	g_return_if_fail(key != NULL);
 
 	g_hash_table_remove(node->settings, key);
 
-	gaim_blist_schedule_save();
+	ops = purple_blist_get_ui_ops();
+	if (ops && ops->save_node)
+		ops->save_node(node);
 }
 
 void
-gaim_blist_node_set_flags(GaimBlistNode *node, GaimBlistNodeFlags flags)
+purple_blist_node_set_flags(PurpleBlistNode *node, PurpleBlistNodeFlags flags)
 {
 	g_return_if_fail(node != NULL);
 
 	node->flags = flags;
 }
 
-GaimBlistNodeFlags
-gaim_blist_node_get_flags(GaimBlistNode *node)
+PurpleBlistNodeFlags
+purple_blist_node_get_flags(PurpleBlistNode *node)
 {
 	g_return_val_if_fail(node != NULL, 0);
 
 	return node->flags;
 }
 
-void
-gaim_blist_node_set_bool(GaimBlistNode* node, const char *key, gboolean data)
+PurpleBlistNodeType
+purple_blist_node_get_type(PurpleBlistNode *node)
 {
-	GaimValue *value;
+	g_return_val_if_fail(node != NULL, PURPLE_BLIST_OTHER_NODE);
+	return node->type;
+}
+
+gboolean
+purple_blist_node_has_setting(PurpleBlistNode* node, const char *key)
+{
+	g_return_val_if_fail(node != NULL, FALSE);
+	g_return_val_if_fail(node->settings != NULL, FALSE);
+	g_return_val_if_fail(key != NULL, FALSE);
+
+	/* Boxed type, so it won't ever be NULL, so no need for _extended */
+	return (g_hash_table_lookup(node->settings, key) != NULL);
+}
+
+void
+purple_blist_node_set_bool(PurpleBlistNode* node, const char *key, gboolean data)
+{
+	PurpleValue *value;
+	PurpleBlistUiOps *ops;
 
 	g_return_if_fail(node != NULL);
 	g_return_if_fail(node->settings != NULL);
 	g_return_if_fail(key != NULL);
 
-	value = gaim_value_new(GAIM_TYPE_BOOLEAN);
-	gaim_value_set_boolean(value, data);
+	value = purple_value_new(PURPLE_TYPE_BOOLEAN);
+	purple_value_set_boolean(value, data);
 
 	g_hash_table_replace(node->settings, g_strdup(key), value);
 
-	gaim_blist_schedule_save();
+	ops = purple_blist_get_ui_ops();
+	if (ops && ops->save_node)
+		ops->save_node(node);
 }
 
 gboolean
-gaim_blist_node_get_bool(GaimBlistNode* node, const char *key)
+purple_blist_node_get_bool(PurpleBlistNode* node, const char *key)
 {
-	GaimValue *value;
+	PurpleValue *value;
 
 	g_return_val_if_fail(node != NULL, FALSE);
 	g_return_val_if_fail(node->settings != NULL, FALSE);
@@ -2540,32 +2953,35 @@ gaim_blist_node_get_bool(GaimBlistNode* node, const char *key)
 	if (value == NULL)
 		return FALSE;
 
-	g_return_val_if_fail(gaim_value_get_type(value) == GAIM_TYPE_BOOLEAN, FALSE);
+	g_return_val_if_fail(purple_value_get_type(value) == PURPLE_TYPE_BOOLEAN, FALSE);
 
-	return gaim_value_get_boolean(value);
+	return purple_value_get_boolean(value);
 }
 
 void
-gaim_blist_node_set_int(GaimBlistNode* node, const char *key, int data)
+purple_blist_node_set_int(PurpleBlistNode* node, const char *key, int data)
 {
-	GaimValue *value;
+	PurpleValue *value;
+	PurpleBlistUiOps *ops;
 
 	g_return_if_fail(node != NULL);
 	g_return_if_fail(node->settings != NULL);
 	g_return_if_fail(key != NULL);
 
-	value = gaim_value_new(GAIM_TYPE_INT);
-	gaim_value_set_int(value, data);
+	value = purple_value_new(PURPLE_TYPE_INT);
+	purple_value_set_int(value, data);
 
 	g_hash_table_replace(node->settings, g_strdup(key), value);
 
-	gaim_blist_schedule_save();
+	ops = purple_blist_get_ui_ops();
+	if (ops && ops->save_node)
+		ops->save_node(node);
 }
 
 int
-gaim_blist_node_get_int(GaimBlistNode* node, const char *key)
+purple_blist_node_get_int(PurpleBlistNode* node, const char *key)
 {
-	GaimValue *value;
+	PurpleValue *value;
 
 	g_return_val_if_fail(node != NULL, 0);
 	g_return_val_if_fail(node->settings != NULL, 0);
@@ -2576,32 +2992,35 @@ gaim_blist_node_get_int(GaimBlistNode* node, const char *key)
 	if (value == NULL)
 		return 0;
 
-	g_return_val_if_fail(gaim_value_get_type(value) == GAIM_TYPE_INT, 0);
+	g_return_val_if_fail(purple_value_get_type(value) == PURPLE_TYPE_INT, 0);
 
-	return gaim_value_get_int(value);
+	return purple_value_get_int(value);
 }
 
 void
-gaim_blist_node_set_string(GaimBlistNode* node, const char *key, const char *data)
+purple_blist_node_set_string(PurpleBlistNode* node, const char *key, const char *data)
 {
-	GaimValue *value;
+	PurpleValue *value;
+	PurpleBlistUiOps *ops;
 
 	g_return_if_fail(node != NULL);
 	g_return_if_fail(node->settings != NULL);
 	g_return_if_fail(key != NULL);
 
-	value = gaim_value_new(GAIM_TYPE_STRING);
-	gaim_value_set_string(value, data);
+	value = purple_value_new(PURPLE_TYPE_STRING);
+	purple_value_set_string(value, data);
 
 	g_hash_table_replace(node->settings, g_strdup(key), value);
 
-	gaim_blist_schedule_save();
+	ops = purple_blist_get_ui_ops();
+	if (ops && ops->save_node)
+		ops->save_node(node);
 }
 
 const char *
-gaim_blist_node_get_string(GaimBlistNode* node, const char *key)
+purple_blist_node_get_string(PurpleBlistNode* node, const char *key)
 {
-	GaimValue *value;
+	PurpleValue *value;
 
 	g_return_val_if_fail(node != NULL, NULL);
 	g_return_val_if_fail(node->settings != NULL, NULL);
@@ -2612,25 +3031,25 @@ gaim_blist_node_get_string(GaimBlistNode* node, const char *key)
 	if (value == NULL)
 		return NULL;
 
-	g_return_val_if_fail(gaim_value_get_type(value) == GAIM_TYPE_STRING, NULL);
+	g_return_val_if_fail(purple_value_get_type(value) == PURPLE_TYPE_STRING, NULL);
 
-	return gaim_value_get_string(value);
+	return purple_value_get_string(value);
 }
 
 GList *
-gaim_blist_node_get_extended_menu(GaimBlistNode *n)
+purple_blist_node_get_extended_menu(PurpleBlistNode *n)
 {
 	GList *menu = NULL;
 
 	g_return_val_if_fail(n != NULL, NULL);
 
-	gaim_signal_emit(gaim_blist_get_handle(),
+	purple_signal_emit(purple_blist_get_handle(),
 			"blist-node-extended-menu",
 			n, &menu);
 	return menu;
 }
 
-int gaim_blist_get_group_size(GaimGroup *group, gboolean offline)
+int purple_blist_get_group_size(PurpleGroup *group, gboolean offline)
 {
 	if (!group)
 		return 0;
@@ -2638,7 +3057,7 @@ int gaim_blist_get_group_size(GaimGroup *group, gboolean offline)
 	return offline ? group->totalsize : group->currentsize;
 }
 
-int gaim_blist_get_group_online_count(GaimGroup *group)
+int purple_blist_get_group_online_count(PurpleGroup *group)
 {
 	if (!group)
 		return 0;
@@ -2647,20 +3066,44 @@ int gaim_blist_get_group_online_count(GaimGroup *group)
 }
 
 void
-gaim_blist_set_ui_ops(GaimBlistUiOps *ops)
+purple_blist_set_ui_ops(PurpleBlistUiOps *ops)
 {
+	gboolean overrode = FALSE;
 	blist_ui_ops = ops;
+
+	if (!ops)
+		return;
+
+	if (!ops->save_node) {
+		ops->save_node = purple_blist_save_node;
+		overrode = TRUE;
+	}
+	if (!ops->remove_node) {
+		ops->remove_node = purple_blist_save_node;
+		overrode = TRUE;
+	}
+	if (!ops->save_account) {
+		ops->save_account = purple_blist_save_account;
+		overrode = TRUE;
+	}
+
+	if (overrode && (ops->save_node    != purple_blist_save_node ||
+	                 ops->remove_node  != purple_blist_save_node ||
+	                 ops->save_account != purple_blist_save_account)) {
+		purple_debug_warning("blist", "Only some of the blist saving UI ops "
+				"were overridden. This probably is not what you want!\n");
+	}
 }
 
-GaimBlistUiOps *
-gaim_blist_get_ui_ops(void)
+PurpleBlistUiOps *
+purple_blist_get_ui_ops(void)
 {
 	return blist_ui_ops;
 }
 
 
 void *
-gaim_blist_get_handle(void)
+purple_blist_get_handle(void)
 {
 	static int handle;
 
@@ -2668,88 +3111,142 @@ gaim_blist_get_handle(void)
 }
 
 void
-gaim_blist_init(void)
+purple_blist_init(void)
 {
-	void *handle = gaim_blist_get_handle();
+	void *handle = purple_blist_get_handle();
 
-	gaim_signal_register(handle, "buddy-status-changed",
-	                     gaim_marshal_VOID__POINTER_POINTER_POINTER, NULL,
+	purple_signal_register(handle, "buddy-status-changed",
+	                     purple_marshal_VOID__POINTER_POINTER_POINTER, NULL,
 	                     3,
-	                     gaim_value_new(GAIM_TYPE_SUBTYPE,
-	                                    GAIM_SUBTYPE_BLIST_BUDDY),
-	                     gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_STATUS),
-	                     gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_STATUS));
-	gaim_signal_register(handle, "buddy-privacy-changed",
-	                     gaim_marshal_VOID__POINTER, NULL,
+	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                    PURPLE_SUBTYPE_BLIST_BUDDY),
+	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_STATUS),
+	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_STATUS));
+	purple_signal_register(handle, "buddy-privacy-changed",
+	                     purple_marshal_VOID__POINTER, NULL,
 	                     1,
-	                     gaim_value_new(GAIM_TYPE_SUBTYPE,
-	                                    GAIM_SUBTYPE_BLIST_BUDDY));
+	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                    PURPLE_SUBTYPE_BLIST_BUDDY));
 
-	gaim_signal_register(handle, "buddy-idle-changed",
-	                     gaim_marshal_VOID__POINTER_INT_INT, NULL,
+	purple_signal_register(handle, "buddy-idle-changed",
+	                     purple_marshal_VOID__POINTER_INT_INT, NULL,
 	                     3,
-	                     gaim_value_new(GAIM_TYPE_SUBTYPE,
-	                                    GAIM_SUBTYPE_BLIST_BUDDY),
-	                     gaim_value_new(GAIM_TYPE_INT),
-	                     gaim_value_new(GAIM_TYPE_INT));
+	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                    PURPLE_SUBTYPE_BLIST_BUDDY),
+	                     purple_value_new(PURPLE_TYPE_INT),
+	                     purple_value_new(PURPLE_TYPE_INT));
 
 
-	gaim_signal_register(handle, "buddy-signed-on",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_BLIST_BUDDY));
+	purple_signal_register(handle, "buddy-signed-on",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_BUDDY));
 
-	gaim_signal_register(handle, "buddy-signed-off",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_BLIST_BUDDY));
+	purple_signal_register(handle, "buddy-signed-off",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_BUDDY));
 
-	gaim_signal_register(handle, "buddy-got-login-time",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_BLIST_BUDDY));
+	purple_signal_register(handle, "buddy-got-login-time",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_BUDDY));
 
-	gaim_signal_register(handle, "buddy-added",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_BLIST_BUDDY));
+	purple_signal_register(handle, "blist-node-added",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_NODE));
 
-	gaim_signal_register(handle, "buddy-removed",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_BLIST_BUDDY));
+	purple_signal_register(handle, "blist-node-removed",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_NODE));
 
-	gaim_signal_register(handle, "buddy-icon-changed",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_BLIST_BUDDY));
+	purple_signal_register(handle, "buddy-added",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_BUDDY));
 
-	gaim_signal_register(handle, "update-idle", gaim_marshal_VOID, NULL, 0);
+	purple_signal_register(handle, "buddy-removed",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_BUDDY));
 
-	gaim_signal_register(handle, "blist-node-extended-menu",
-			     gaim_marshal_VOID__POINTER_POINTER, NULL, 2,
-			     gaim_value_new(GAIM_TYPE_SUBTYPE,
-					    GAIM_SUBTYPE_BLIST_NODE),
-			     gaim_value_new(GAIM_TYPE_BOXED, "GList **"));
+	purple_signal_register(handle, "buddy-icon-changed",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_BUDDY));
 
-	gaim_signal_register(handle, "blist-node-aliased",
-						 gaim_marshal_VOID__POINTER_POINTER, NULL, 2,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_BLIST_NODE),
-						 gaim_value_new(GAIM_TYPE_STRING));
+	purple_signal_register(handle, "update-idle", purple_marshal_VOID, NULL, 0);
+
+	purple_signal_register(handle, "blist-node-extended-menu",
+			     purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+			     purple_value_new(PURPLE_TYPE_SUBTYPE,
+					    PURPLE_SUBTYPE_BLIST_NODE),
+			     purple_value_new(PURPLE_TYPE_BOXED, "GList **"));
+
+	purple_signal_register(handle, "blist-node-aliased",
+						 purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_BLIST_NODE),
+						 purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "buddy-caps-changed",
+			purple_marshal_VOID__POINTER_INT_INT, NULL,
+			3, purple_value_new(PURPLE_TYPE_SUBTYPE,
+				PURPLE_SUBTYPE_BLIST_BUDDY),
+			purple_value_new(PURPLE_TYPE_INT),
+			purple_value_new(PURPLE_TYPE_INT));
+
+	purple_signal_connect(purple_accounts_get_handle(), "account-created",
+			handle,
+			PURPLE_CALLBACK(purple_blist_buddies_cache_add_account),
+			NULL);
+
+	purple_signal_connect(purple_accounts_get_handle(), "account-destroying",
+			handle,
+			PURPLE_CALLBACK(purple_blist_buddies_cache_remove_account),
+			NULL);
 }
 
 void
-gaim_blist_uninit(void)
+purple_blist_uninit(void)
 {
-	if (save_timer != 0)
-	{
-		gaim_timeout_remove(save_timer);
+	PurpleBlistNode *node, *next_node;
+
+	/* This happens if we quit before purple_set_blist is called. */
+	if (purplebuddylist == NULL)
+		return;
+
+	if (save_timer != 0) {
+		purple_timeout_remove(save_timer);
 		save_timer = 0;
-		gaim_blist_sync();
+		purple_blist_sync();
 	}
 
-	gaim_signals_unregister_by_instance(gaim_blist_get_handle());
+	purple_blist_destroy();
+
+	node = purple_blist_get_root();
+	while (node) {
+		next_node = node->next;
+		purple_blist_node_destroy(node);
+		node = next_node;
+	}
+	purplebuddylist->root = NULL;
+
+	g_hash_table_destroy(purplebuddylist->buddies);
+	g_hash_table_destroy(buddies_cache);
+	g_hash_table_destroy(groups_cache);
+
+	buddies_cache = NULL;
+	groups_cache = NULL;
+
+	PURPLE_DBUS_UNREGISTER_POINTER(purplebuddylist);
+	g_free(purplebuddylist);
+	purplebuddylist = NULL;
+
+	purple_signals_disconnect_by_handle(purple_blist_get_handle());
+	purple_signals_unregister_by_instance(purple_blist_get_handle());
 }

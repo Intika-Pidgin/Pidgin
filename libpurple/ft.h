@@ -1,10 +1,12 @@
 /**
  * @file ft.h File Transfer API
  * @ingroup core
+ * @see @ref xfer-signals
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,17 +22,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * @see @ref xfer-signals
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_FT_H_
-#define _GAIM_FT_H_
+#ifndef _PURPLE_FT_H_
+#define _PURPLE_FT_H_
 
 /**************************************************************************/
 /** Data Structures                                                       */
 /**************************************************************************/
-typedef struct _GaimXfer GaimXfer;
+typedef struct _PurpleXfer PurpleXfer;
 
 #include <glib.h>
 #include <stdio.h>
@@ -42,52 +42,97 @@ typedef struct _GaimXfer GaimXfer;
  */
 typedef enum
 {
-	GAIM_XFER_UNKNOWN = 0,  /**< Unknown file transfer type. */
-	GAIM_XFER_SEND,         /**< File sending.               */
-	GAIM_XFER_RECEIVE       /**< File receiving.             */
+	PURPLE_XFER_UNKNOWN = 0,  /**< Unknown file transfer type. */
+	PURPLE_XFER_SEND,         /**< File sending.               */
+	PURPLE_XFER_RECEIVE       /**< File receiving.             */
 
-} GaimXferType;
+} PurpleXferType;
 
 /**
  * The different states of the xfer.
  */
 typedef enum
 {
-	GAIM_XFER_STATUS_UNKNOWN = 0,   /**< Unknown, the xfer may be null. */
-	GAIM_XFER_STATUS_NOT_STARTED,   /**< It hasn't started yet. */
-	GAIM_XFER_STATUS_ACCEPTED,      /**< Receive accepted, but destination file not selected yet */
-	GAIM_XFER_STATUS_STARTED,       /**< gaim_xfer_start has been called. */
-	GAIM_XFER_STATUS_DONE,          /**< The xfer completed successfully. */
-	GAIM_XFER_STATUS_CANCEL_LOCAL,  /**< The xfer was canceled by us. */
-	GAIM_XFER_STATUS_CANCEL_REMOTE  /**< The xfer was canceled by the other end, or we couldn't connect. */
-} GaimXferStatusType;
+	PURPLE_XFER_STATUS_UNKNOWN = 0,   /**< Unknown, the xfer may be null. */
+	PURPLE_XFER_STATUS_NOT_STARTED,   /**< It hasn't started yet. */
+	PURPLE_XFER_STATUS_ACCEPTED,      /**< Receive accepted, but destination file not selected yet */
+	PURPLE_XFER_STATUS_STARTED,       /**< purple_xfer_start has been called. */
+	PURPLE_XFER_STATUS_DONE,          /**< The xfer completed successfully. */
+	PURPLE_XFER_STATUS_CANCEL_LOCAL,  /**< The xfer was cancelled by us. */
+	PURPLE_XFER_STATUS_CANCEL_REMOTE  /**< The xfer was cancelled by the other end, or we couldn't connect. */
+} PurpleXferStatusType;
 
 /**
  * File transfer UI operations.
  *
  * Any UI representing a file transfer must assign a filled-out
- * GaimXferUiOps structure to the gaim_xfer.
+ * PurpleXferUiOps structure to the purple_xfer.
  */
 typedef struct
 {
-	void (*new_xfer)(GaimXfer *xfer);
-	void (*destroy)(GaimXfer *xfer);
-	void (*add_xfer)(GaimXfer *xfer);
-	void (*update_progress)(GaimXfer *xfer, double percent);
-	void (*cancel_local)(GaimXfer *xfer);
-	void (*cancel_remote)(GaimXfer *xfer);
+	void (*new_xfer)(PurpleXfer *xfer);
+	void (*destroy)(PurpleXfer *xfer);
+	void (*add_xfer)(PurpleXfer *xfer);
+	void (*update_progress)(PurpleXfer *xfer, double percent);
+	void (*cancel_local)(PurpleXfer *xfer);
+	void (*cancel_remote)(PurpleXfer *xfer);
 
-} GaimXferUiOps;
+	/**
+	 * UI op to write data received from the prpl. The UI must deal with the
+	 * entire buffer and return size, or it is treated as an error.
+	 *
+	 * @param xfer    The file transfer structure
+	 * @param buffer  The buffer to write
+	 * @param size    The size of the buffer
+	 *
+	 * @return size if the write was successful, or a value between 0 and
+	 *         size on error.
+	 */
+	gssize (*ui_write)(PurpleXfer *xfer, const guchar *buffer, gssize size);
+
+	/**
+	 * UI op to read data to send to the prpl for a file transfer.
+	 *
+	 * @param xfer    The file transfer structure
+	 * @param buffer  A pointer to a buffer. The UI must allocate this buffer.
+	 *                libpurple will free the data.
+	 * @param size    The maximum amount of data to put in the buffer.
+	 *
+	 * @returns The amount of data in the buffer, 0 if nothing is available,
+	 *          and a negative value if an error occurred and the transfer
+	 *          should be cancelled (libpurple will cancel).
+	 */
+	gssize (*ui_read)(PurpleXfer *xfer, guchar **buffer, gssize size);
+
+	/**
+	 * Op to notify the UI that not all the data read in was written. The UI
+	 * should re-enqueue this data and return it the next time read is called.
+	 *
+	 * This MUST be implemented if read and write are implemented.
+	 *
+	 * @param xfer    The file transfer structure
+	 * @param buffer  A pointer to the beginning of the unwritten data.
+	 * @param size    The amount of unwritten data.
+	 */
+	void (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer, gsize size);
+
+	/**
+	 * Op to create a thumbnail image for a file transfer
+	 *
+	 * @param xfer   The file transfer structure
+	 */
+	void (*add_thumbnail)(PurpleXfer *xfer, const gchar *formats);
+} PurpleXferUiOps;
 
 /**
  * A core representation of a file transfer.
  */
-struct _GaimXfer
+struct _PurpleXfer
 {
 	guint ref;                    /**< The reference count.                */
-	GaimXferType type;            /**< The type of transfer.               */
+	PurpleXferType type;            /**< The type of transfer.               */
 
-	GaimAccount *account;         /**< The account.                        */
+	PurpleAccount *account;         /**< The account.                        */
 
 	char *who;                    /**< The person on the other end of the
 	                                   transfer.                           */
@@ -95,7 +140,7 @@ struct _GaimXfer
 	char *message;                /**< A message sent with the request     */
 	char *filename;               /**< The name sent over the network.     */
 	char *local_filename;         /**< The name on the local hard drive.   */
-	size_t size;                  /**< The size of the file.               */
+	goffset size;                 /**< The size of the file.               */
 
 	FILE *dest_fp;                /**< The destination file pointer.       */
 
@@ -106,40 +151,40 @@ struct _GaimXfer
 	int fd;                       /**< The socket file descriptor.         */
 	int watcher;                  /**< Watcher.                            */
 
-	size_t bytes_sent;            /**< The number of bytes sent.           */
-	size_t bytes_remaining;       /**< The number of bytes remaining.      */
+	goffset bytes_sent;           /**< The number of bytes sent.           */
+	goffset bytes_remaining;      /**< The number of bytes remaining.      */
 	time_t start_time;            /**< When the transfer of data began.    */
 	time_t end_time;              /**< When the transfer of data ended.    */
 
 	size_t current_buffer_size;   /**< This gradually increases for fast
 	                                   network connections. */
 
-	GaimXferStatusType status;    /**< File Transfer's status.             */
+	PurpleXferStatusType status;    /**< File Transfer's status.             */
 
-	/* I/O operations. */
+	/** I/O operations, which should be set by the prpl using
+	 *  purple_xfer_set_init_fnc() and friends.  Setting #init is
+	 *  mandatory; all others are optional.
+	 */
 	struct
 	{
-		void (*init)(GaimXfer *xfer);
-		void (*request_denied)(GaimXfer *xfer);
-		void (*start)(GaimXfer *xfer);
-		void (*end)(GaimXfer *xfer);
-		void (*cancel_send)(GaimXfer *xfer);
-		void (*cancel_recv)(GaimXfer *xfer);
-		gssize (*read)(guchar **buffer, GaimXfer *xfer);
-		gssize (*write)(const guchar *buffer, size_t size, GaimXfer *xfer);
-		void (*ack)(GaimXfer *xfer, const guchar *buffer, size_t size);
-
+		void (*init)(PurpleXfer *xfer);
+		void (*request_denied)(PurpleXfer *xfer);
+		void (*start)(PurpleXfer *xfer);
+		void (*end)(PurpleXfer *xfer);
+		void (*cancel_send)(PurpleXfer *xfer);
+		void (*cancel_recv)(PurpleXfer *xfer);
+		gssize (*read)(guchar **buffer, PurpleXfer *xfer);
+		gssize (*write)(const guchar *buffer, size_t size, PurpleXfer *xfer);
+		void (*ack)(PurpleXfer *xfer, const guchar *buffer, size_t size);
 	} ops;
 
-	GaimXferUiOps *ui_ops;            /**< UI-specific operations. */
+	PurpleXferUiOps *ui_ops;            /**< UI-specific operations. */
 	void *ui_data;                    /**< UI-specific data.       */
 
-	void *data;                       /**< prpl-specific data.     */
+	void *proto_data;                 /**< prpl-specific data.     */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name File Transfer API                                               */
@@ -151,7 +196,7 @@ extern "C" {
  * This is called by prpls.
  * The handle starts with a ref count of 1, and this reference
  * is owned by the core. The prpl normally does not need to
- * gaim_xfer_ref or unref.
+ * purple_xfer_ref or unref.
  *
  * @param account The account sending or receiving the file.
  * @param type    The type of file transfer.
@@ -159,27 +204,34 @@ extern "C" {
  *
  * @return A file transfer handle.
  */
-GaimXfer *gaim_xfer_new(GaimAccount *account,
-								GaimXferType type, const char *who);
+PurpleXfer *purple_xfer_new(PurpleAccount *account,
+								PurpleXferType type, const char *who);
 
 /**
- * Increases the reference count on a GaimXfer.
- * Please call gaim_xfer_unref later.
+ * Returns all xfers
+ *
+ * @return all current xfers with refs
+ */
+GList *purple_xfers_get_all(void);
+
+/**
+ * Increases the reference count on a PurpleXfer.
+ * Please call purple_xfer_unref later.
  *
  * @param xfer A file transfer handle.
  */
-void gaim_xfer_ref(GaimXfer *xfer);
+void purple_xfer_ref(PurpleXfer *xfer);
 
 /**
- * Decreases the reference count on a GaimXfer.
- * If the reference reaches 0, gaim_xfer_destroy (an internal function)
+ * Decreases the reference count on a PurpleXfer.
+ * If the reference reaches 0, purple_xfer_destroy (an internal function)
  * will destroy the xfer. It calls the ui destroy cb first.
  * Since the core keeps a ref on the xfer, only an erroneous call to
  * this function will destroy the xfer while still in use.
  *
  * @param xfer A file transfer handle.
  */
-void gaim_xfer_unref(GaimXfer *xfer);
+void purple_xfer_unref(PurpleXfer *xfer);
 
 /**
  * Requests confirmation for a file transfer from the user. If receiving
@@ -190,7 +242,7 @@ void gaim_xfer_unref(GaimXfer *xfer);
  *
  * @param xfer The file transfer to request confirmation on.
  */
-void gaim_xfer_request(GaimXfer *xfer);
+void purple_xfer_request(PurpleXfer *xfer);
 
 /**
  * Called if the user accepts the file transfer request.
@@ -198,14 +250,32 @@ void gaim_xfer_request(GaimXfer *xfer);
  * @param xfer     The file transfer.
  * @param filename The filename.
  */
-void gaim_xfer_request_accepted(GaimXfer *xfer, const char *filename);
+void purple_xfer_request_accepted(PurpleXfer *xfer, const char *filename);
 
 /**
  * Called if the user rejects the file transfer request.
  *
  * @param xfer The file transfer.
  */
-void gaim_xfer_request_denied(GaimXfer *xfer);
+void purple_xfer_request_denied(PurpleXfer *xfer);
+
+/**
+ * Returns the socket file descriptor.
+ *
+ * @param xfer The file transfer.
+ *
+ * @return The socket file descriptor.
+ */
+int purple_xfer_get_fd(PurpleXfer *xfer);
+
+/**
+ * Returns the Watcher for the transfer.
+ *
+ * @param xfer The file transfer.
+ *
+ * @return The watcher.
+ */
+int purple_xfer_get_watcher(PurpleXfer *xfer);
 
 /**
  * Returns the type of file transfer.
@@ -214,7 +284,7 @@ void gaim_xfer_request_denied(GaimXfer *xfer);
  *
  * @return The type of the file transfer.
  */
-GaimXferType gaim_xfer_get_type(const GaimXfer *xfer);
+PurpleXferType purple_xfer_get_type(const PurpleXfer *xfer);
 
 /**
  * Returns the account the file transfer is using.
@@ -223,7 +293,16 @@ GaimXferType gaim_xfer_get_type(const GaimXfer *xfer);
  *
  * @return The account.
  */
-GaimAccount *gaim_xfer_get_account(const GaimXfer *xfer);
+PurpleAccount *purple_xfer_get_account(const PurpleXfer *xfer);
+
+/**
+ * Returns the name of the remote user.
+ *
+ * @param xfer The file transfer.
+ *
+ * @return The name of the remote user.
+ */
+const char *purple_xfer_get_remote_user(const PurpleXfer *xfer);
 
 /**
  * Returns the status of the xfer.
@@ -232,16 +311,16 @@ GaimAccount *gaim_xfer_get_account(const GaimXfer *xfer);
  *
  * @return The status.
  */
-GaimXferStatusType gaim_xfer_get_status(const GaimXfer *xfer);
+PurpleXferStatusType purple_xfer_get_status(const PurpleXfer *xfer);
 
 /**
- * Returns true if the file transfer was canceled.
+ * Returns true if the file transfer was cancelled.
  *
  * @param xfer The file transfer.
  *
- * @return Whether or not the transfer was canceled.
+ * @return Whether or not the transfer was cancelled.
  */
-gboolean gaim_xfer_is_canceled(const GaimXfer *xfer);
+gboolean purple_xfer_is_cancelled(const PurpleXfer *xfer);
 
 /**
  * Returns the completed state for a file transfer.
@@ -250,7 +329,7 @@ gboolean gaim_xfer_is_canceled(const GaimXfer *xfer);
  *
  * @return The completed state.
  */
-gboolean gaim_xfer_is_completed(const GaimXfer *xfer);
+gboolean purple_xfer_is_completed(const PurpleXfer *xfer);
 
 /**
  * Returns the name of the file being sent or received.
@@ -259,7 +338,7 @@ gboolean gaim_xfer_is_completed(const GaimXfer *xfer);
  *
  * @return The filename.
  */
-const char *gaim_xfer_get_filename(const GaimXfer *xfer);
+const char *purple_xfer_get_filename(const PurpleXfer *xfer);
 
 /**
  * Returns the file's destination filename,
@@ -268,7 +347,7 @@ const char *gaim_xfer_get_filename(const GaimXfer *xfer);
  *
  * @return The destination filename.
  */
-const char *gaim_xfer_get_local_filename(const GaimXfer *xfer);
+const char *purple_xfer_get_local_filename(const PurpleXfer *xfer);
 
 /**
  * Returns the number of bytes sent (or received) so far.
@@ -277,7 +356,7 @@ const char *gaim_xfer_get_local_filename(const GaimXfer *xfer);
  *
  * @return The number of bytes sent.
  */
-size_t gaim_xfer_get_bytes_sent(const GaimXfer *xfer);
+goffset purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
 
 /**
  * Returns the number of bytes remaining to send or receive.
@@ -286,7 +365,7 @@ size_t gaim_xfer_get_bytes_sent(const GaimXfer *xfer);
  *
  * @return The number of bytes remaining.
  */
-size_t gaim_xfer_get_bytes_remaining(const GaimXfer *xfer);
+goffset purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
 
 /**
  * Returns the size of the file being sent or received.
@@ -295,7 +374,7 @@ size_t gaim_xfer_get_bytes_remaining(const GaimXfer *xfer);
  *
  * @return The total size of the file.
  */
-size_t gaim_xfer_get_size(const GaimXfer *xfer);
+goffset purple_xfer_get_size(const PurpleXfer *xfer);
 
 /**
  * Returns the current percentage of progress of the transfer.
@@ -306,7 +385,7 @@ size_t gaim_xfer_get_size(const GaimXfer *xfer);
  *
  * @return The percentage complete.
  */
-double gaim_xfer_get_progress(const GaimXfer *xfer);
+double purple_xfer_get_progress(const PurpleXfer *xfer);
 
 /**
  * Returns the local port number in the file transfer.
@@ -315,7 +394,7 @@ double gaim_xfer_get_progress(const GaimXfer *xfer);
  *
  * @return The port number on this end.
  */
-unsigned int gaim_xfer_get_local_port(const GaimXfer *xfer);
+unsigned int purple_xfer_get_local_port(const PurpleXfer *xfer);
 
 /**
  * Returns the remote IP address in the file transfer.
@@ -324,7 +403,7 @@ unsigned int gaim_xfer_get_local_port(const GaimXfer *xfer);
  *
  * @return The IP address on the other end.
  */
-const char *gaim_xfer_get_remote_ip(const GaimXfer *xfer);
+const char *purple_xfer_get_remote_ip(const PurpleXfer *xfer);
 
 /**
  * Returns the remote port number in the file transfer.
@@ -333,7 +412,41 @@ const char *gaim_xfer_get_remote_ip(const GaimXfer *xfer);
  *
  * @return The port number on the other end.
  */
-unsigned int gaim_xfer_get_remote_port(const GaimXfer *xfer);
+unsigned int purple_xfer_get_remote_port(const PurpleXfer *xfer);
+
+/**
+ * Returns the time the transfer of a file started.
+ *
+ * @param xfer  The file transfer.
+ *
+ * @return The time when the transfer started.
+ */
+time_t purple_xfer_get_start_time(const PurpleXfer *xfer);
+
+/**
+ * Returns the time the transfer of a file ended.
+ *
+ * @param xfer  The file transfer.
+ *
+ * @return The time when the transfer ended.
+ */
+time_t purple_xfer_get_end_time(const PurpleXfer *xfer);
+
+/**
+ * Sets the socket file descriptor.
+ *
+ * @param xfer      The file transfer.
+ * @param fd        The file descriptor.
+ */
+void purple_xfer_set_fd(PurpleXfer *xfer, int fd);
+
+/**
+ * Sets the watcher for the file transfer.
+ *
+ * @param xfer      The file transfer.
+ * @param watcher   The watcher.
+ */
+void purple_xfer_set_watcher(PurpleXfer *xfer, int watcher);
 
 /**
  * Sets the completed state for the file transfer.
@@ -341,7 +454,15 @@ unsigned int gaim_xfer_get_remote_port(const GaimXfer *xfer);
  * @param xfer      The file transfer.
  * @param completed The completed state.
  */
-void gaim_xfer_set_completed(GaimXfer *xfer, gboolean completed);
+void purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed);
+
+/**
+ * Sets the current status for the file transfer.
+ *
+ * @param xfer      The file transfer.
+ * @param status    The current status.
+ */
+void purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatusType status);
 
 /**
  * Sets the filename for the file transfer.
@@ -349,7 +470,7 @@ void gaim_xfer_set_completed(GaimXfer *xfer, gboolean completed);
  * @param xfer     The file transfer.
  * @param message The message.
  */
-void gaim_xfer_set_message(GaimXfer *xfer, const char *message);
+void purple_xfer_set_message(PurpleXfer *xfer, const char *message);
 
 /**
  * Sets the filename for the file transfer.
@@ -357,7 +478,7 @@ void gaim_xfer_set_message(GaimXfer *xfer, const char *message);
  * @param xfer     The file transfer.
  * @param filename The filename.
  */
-void gaim_xfer_set_filename(GaimXfer *xfer, const char *filename);
+void purple_xfer_set_filename(PurpleXfer *xfer, const char *filename);
 
 /**
  * Sets the local filename for the file transfer.
@@ -365,7 +486,7 @@ void gaim_xfer_set_filename(GaimXfer *xfer, const char *filename);
  * @param xfer     The file transfer.
  * @param filename The filename
  */
-void gaim_xfer_set_local_filename(GaimXfer *xfer, const char *filename);
+void purple_xfer_set_local_filename(PurpleXfer *xfer, const char *filename);
 
 /**
  * Sets the size of the file in a file transfer.
@@ -373,7 +494,15 @@ void gaim_xfer_set_local_filename(GaimXfer *xfer, const char *filename);
  * @param xfer The file transfer.
  * @param size The size of the file.
  */
-void gaim_xfer_set_size(GaimXfer *xfer, size_t size);
+void purple_xfer_set_size(PurpleXfer *xfer, goffset size);
+
+/**
+ * Sets the local port of the file transfer.
+ *
+ * @param xfer          The file transfer.
+ * @param local_port    The local port.
+ */
+void purple_xfer_set_local_port(PurpleXfer *xfer, unsigned int local_port);
 
 /**
  * Sets the current working position in the active file transfer.  This
@@ -388,7 +517,7 @@ void gaim_xfer_set_size(GaimXfer *xfer, size_t size);
  *                   send.  If we're receiving a file, this is the
  *                   next byte that we expect to receive.
  */
-void gaim_xfer_set_bytes_sent(GaimXfer *xfer, size_t bytes_sent);
+void purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent);
 
 /**
  * Returns the UI operations structure for a file transfer.
@@ -397,7 +526,7 @@ void gaim_xfer_set_bytes_sent(GaimXfer *xfer, size_t bytes_sent);
  *
  * @return The UI operations structure.
  */
-GaimXferUiOps *gaim_xfer_get_ui_ops(const GaimXfer *xfer);
+PurpleXferUiOps *purple_xfer_get_ui_ops(const PurpleXfer *xfer);
 
 /**
  * Sets the read function for the file transfer.
@@ -405,8 +534,8 @@ GaimXferUiOps *gaim_xfer_get_ui_ops(const GaimXfer *xfer);
  * @param xfer The file transfer.
  * @param fnc  The read function.
  */
-void gaim_xfer_set_read_fnc(GaimXfer *xfer,
-		gssize (*fnc)(guchar **, GaimXfer *));
+void purple_xfer_set_read_fnc(PurpleXfer *xfer,
+		gssize (*fnc)(guchar **, PurpleXfer *));
 
 /**
  * Sets the write function for the file transfer.
@@ -414,8 +543,8 @@ void gaim_xfer_set_read_fnc(GaimXfer *xfer,
  * @param xfer The file transfer.
  * @param fnc  The write function.
  */
-void gaim_xfer_set_write_fnc(GaimXfer *xfer,
-		gssize (*fnc)(const guchar *, size_t, GaimXfer *));
+void purple_xfer_set_write_fnc(PurpleXfer *xfer,
+		gssize (*fnc)(const guchar *, size_t, PurpleXfer *));
 
 /**
  * Sets the acknowledge function for the file transfer.
@@ -423,8 +552,8 @@ void gaim_xfer_set_write_fnc(GaimXfer *xfer,
  * @param xfer The file transfer.
  * @param fnc  The acknowledge function.
  */
-void gaim_xfer_set_ack_fnc(GaimXfer *xfer,
-		void (*fnc)(GaimXfer *, const guchar *, size_t));
+void purple_xfer_set_ack_fnc(PurpleXfer *xfer,
+		void (*fnc)(PurpleXfer *, const guchar *, size_t));
 
 /**
  * Sets the function to be called if the request is denied.
@@ -432,19 +561,19 @@ void gaim_xfer_set_ack_fnc(GaimXfer *xfer,
  * @param xfer The file transfer.
  * @param fnc The request denied prpl callback.
  */
-void gaim_xfer_set_request_denied_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
+void purple_xfer_set_request_denied_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *));
 
 /**
  * Sets the transfer initialization function for the file transfer.
  *
- * This function is required, and must call gaim_xfer_start() with
+ * This function is required, and must call purple_xfer_start() with
  * the necessary parameters. This will be called if the file transfer
  * is accepted by the user.
  *
  * @param xfer The file transfer.
  * @param fnc  The transfer initialization function.
  */
-void gaim_xfer_set_init_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
+void purple_xfer_set_init_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *));
 
 /**
  * Sets the start transfer function for the file transfer.
@@ -452,7 +581,7 @@ void gaim_xfer_set_init_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
  * @param xfer The file transfer.
  * @param fnc  The start transfer function.
  */
-void gaim_xfer_set_start_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
+void purple_xfer_set_start_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *));
 
 /**
  * Sets the end transfer function for the file transfer.
@@ -460,7 +589,7 @@ void gaim_xfer_set_start_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
  * @param xfer The file transfer.
  * @param fnc  The end transfer function.
  */
-void gaim_xfer_set_end_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
+void purple_xfer_set_end_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *));
 
 /**
  * Sets the cancel send function for the file transfer.
@@ -468,7 +597,7 @@ void gaim_xfer_set_end_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
  * @param xfer The file transfer.
  * @param fnc  The cancel send function.
  */
-void gaim_xfer_set_cancel_send_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
+void purple_xfer_set_cancel_send_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *));
 
 /**
  * Sets the cancel receive function for the file transfer.
@@ -476,7 +605,7 @@ void gaim_xfer_set_cancel_send_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
  * @param xfer The file transfer.
  * @param fnc  The cancel receive function.
  */
-void gaim_xfer_set_cancel_recv_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
+void purple_xfer_set_cancel_recv_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *));
 
 /**
  * Reads in data from a file transfer stream.
@@ -486,7 +615,7 @@ void gaim_xfer_set_cancel_recv_fnc(GaimXfer *xfer, void (*fnc)(GaimXfer *));
  *
  * @return The number of bytes read, or -1.
  */
-gssize gaim_xfer_read(GaimXfer *xfer, guchar **buffer);
+gssize purple_xfer_read(PurpleXfer *xfer, guchar **buffer);
 
 /**
  * Writes data to a file transfer stream.
@@ -497,7 +626,7 @@ gssize gaim_xfer_read(GaimXfer *xfer, guchar **buffer);
  *
  * @return The number of bytes written, or -1.
  */
-gssize gaim_xfer_write(GaimXfer *xfer, const guchar *buffer, gsize size);
+gssize purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size);
 
 /**
  * Starts a file transfer.
@@ -506,12 +635,15 @@ gssize gaim_xfer_write(GaimXfer *xfer, const guchar *buffer, gsize size);
  * file receive transfer. On send, @a fd must be specified, and
  * @a ip and @a port are ignored.
  *
+ * Passing @a fd as '-1' is a special-case and indicates to the
+ * protocol plugin to facilitate the file transfer itself.
+ *
  * @param xfer The file transfer.
  * @param fd   The file descriptor for the socket.
  * @param ip   The IP address to connect to.
  * @param port The port to connect to.
  */
-void gaim_xfer_start(GaimXfer *xfer, int fd, const char *ip,
+void purple_xfer_start(PurpleXfer *xfer, int fd, const char *ip,
 					 unsigned int port);
 
 /**
@@ -519,34 +651,34 @@ void gaim_xfer_start(GaimXfer *xfer, int fd, const char *ip,
  *
  * @param xfer The file transfer.
  */
-void gaim_xfer_end(GaimXfer *xfer);
+void purple_xfer_end(PurpleXfer *xfer);
 
 /**
  * Adds a new file transfer to the list of file transfers. Call this only
- * if you are not using gaim_xfer_start.
+ * if you are not using purple_xfer_start.
  *
  * @param xfer The file transfer.
  */
-void gaim_xfer_add(GaimXfer *xfer);
+void purple_xfer_add(PurpleXfer *xfer);
 
 /**
  * Cancels a file transfer on the local end.
  *
  * @param xfer The file transfer.
  */
-void gaim_xfer_cancel_local(GaimXfer *xfer);
+void purple_xfer_cancel_local(PurpleXfer *xfer);
 
 /**
  * Cancels a file transfer from the remote end.
  *
  * @param xfer The file transfer.
  */
-void gaim_xfer_cancel_remote(GaimXfer *xfer);
+void purple_xfer_cancel_remote(PurpleXfer *xfer);
 
 /**
  * Displays a file transfer-related error message.
  *
- * This is a wrapper around gaim_notify_error(), which automatically
+ * This is a wrapper around purple_notify_error(), which automatically
  * specifies a title ("File transfer to <i>user</i> failed" or
  * "File Transfer from <i>user</i> failed").
  *
@@ -555,25 +687,119 @@ void gaim_xfer_cancel_remote(GaimXfer *xfer);
  * @param who     The user on the other end of the transfer.
  * @param msg     The message to display.
  */
-void gaim_xfer_error(GaimXferType type, GaimAccount *account, const char *who, const char *msg);
+void purple_xfer_error(PurpleXferType type, PurpleAccount *account, const char *who, const char *msg);
 
 /**
  * Updates file transfer progress.
  *
  * @param xfer      The file transfer.
  */
-void gaim_xfer_update_progress(GaimXfer *xfer);
+void purple_xfer_update_progress(PurpleXfer *xfer);
 
 /**
  * Displays a file transfer-related message in the conversation window
  *
- * This is a wrapper around gaim_conversation_write
+ * This is a wrapper around purple_conversation_write
  *
  * @param xfer The file transfer to which this message relates.
  * @param message The message to display.
  * @param is_error Is this an error message?.
  */
-void gaim_xfer_conversation_write(GaimXfer *xfer, char *message, gboolean is_error);
+void purple_xfer_conversation_write(PurpleXfer *xfer, char *message, gboolean is_error);
+
+/**
+ * Allows the UI to signal it's ready to send/receive data (depending on
+ * the direction of the file transfer. Used when the UI is providing
+ * read/write/data_not_sent UI ops.
+ *
+ * @param xfer The file transfer which is ready.
+ */
+void purple_xfer_ui_ready(PurpleXfer *xfer);
+
+/**
+ * Allows the prpl to signal it's ready to send/receive data (depending on
+ * the direction of the file transfer. Used when the prpl provides read/write
+ * ops and cannot/does not provide a raw fd to the core.
+ *
+ * @param xfer The file transfer which is ready.
+ */
+void purple_xfer_prpl_ready(PurpleXfer *xfer);
+
+/**
+ * Gets the thumbnail data for a transfer
+ *
+ * @param xfer The file transfer to get the thumbnail for
+ * @param len  If not @c NULL, the length of the thumbnail data returned
+ *             will be set in the location pointed to by this.
+ * @return The thumbnail data, or NULL if there is no thumbnail
+ */
+gconstpointer purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len);
+
+/**
+ * Gets the mimetype of the thumbnail preview for a transfer
+ *
+ * @param xfer The file transfer to get the mimetype for
+ * @return The mimetype of the thumbnail, or @c NULL if not thumbnail is set
+ */
+const gchar *purple_xfer_get_thumbnail_mimetype(const PurpleXfer *xfer);
+
+
+/**
+ * Sets the thumbnail data for a transfer
+ *
+ * @param xfer The file transfer to set the data for
+ * @param thumbnail A pointer to the thumbnail data, this will be copied
+ * @param size The size in bytes of the passed in thumbnail data
+ * @param mimetype The mimetype of the generated thumbnail
+ */
+void purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
+	gsize size, const gchar *mimetype);
+
+/**
+ * Prepare a thumbnail for a transfer (if the UI supports it)
+ * will be no-op in case the UI doesn't implement thumbnail creation
+ *
+ * @param xfer The file transfer to create a thumbnail for
+ * @param formats A comma-separated list of mimetypes for image formats
+ *	 	  the protocols can use for thumbnails.
+ */
+void purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats);
+
+/**
+ * Sets the protocol data for a file transfer.
+ *
+ * @param xfer			The file transfer.
+ * @param proto_data	The protocol data to set for the file transfer.
+ */
+void purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data);
+ 
+/**
+ * Gets the protocol data for a file transfer.
+ *
+ * @param xfer			The file transfer.
+ *
+ * @return The protocol data for the file transfer.
+ */
+gpointer purple_xfer_get_protocol_data(const PurpleXfer *xfer);
+
+/**
+ * Set the UI data associated with this file transfer.
+ *
+ * @param xfer			The file transfer.
+ * @param ui_data		A pointer to associate with this file transfer.
+ */
+void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data);
+
+/**
+ * Get the UI data associated with this file transfer.
+ *
+ * @param xfer			The file transfer.
+ *
+ * @return The UI data associated with this file transfer.  This is a
+ *         convenience field provided to the UIs--it is not
+ *         used by the libpurple core.
+ */
+gpointer purple_xfer_get_ui_data(const PurpleXfer *xfer);
 
 /*@}*/
 
@@ -587,36 +813,35 @@ void gaim_xfer_conversation_write(GaimXfer *xfer, char *message, gboolean is_err
  *
  * @return The handle
  */
-void *gaim_xfers_get_handle(void);
+void *purple_xfers_get_handle(void);
 
 /**
  * Initializes the file transfer subsystem
  */
-void gaim_xfers_init(void);
+void purple_xfers_init(void);
 
 /**
  * Uninitializes the file transfer subsystem
  */
-void gaim_xfers_uninit(void);
+void purple_xfers_uninit(void);
 
 /**
- * Sets the UI operations structure to be used in all gaim file transfers.
+ * Sets the UI operations structure to be used in all purple file transfers.
  *
  * @param ops The UI operations structure.
  */
-void gaim_xfers_set_ui_ops(GaimXferUiOps *ops);
+void purple_xfers_set_ui_ops(PurpleXferUiOps *ops);
 
 /**
- * Returns the UI operations structure to be used in all gaim file transfers.
+ * Returns the UI operations structure to be used in all purple file transfers.
  *
  * @return The UI operations structure.
  */
-GaimXferUiOps *gaim_xfers_get_ui_ops(void);
+PurpleXferUiOps *purple_xfers_get_ui_ops(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
-#endif /* _GAIM_FT_H_ */
+#endif /* _PURPLE_FT_H_ */
+

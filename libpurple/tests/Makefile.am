@@ -1,26 +1,40 @@
 if HAVE_CHECK
-TESTS=check_libgaim
+TESTS=check_libpurple
 
-check_PROGRAMS=check_libgaim
+clean-local:
+	-rm -rf libpurple..
 
-check_libgaim_SOURCES=\
-        check_libgaim.c \
+check_PROGRAMS=check_libpurple
+
+check_libpurple_SOURCES=\
+        check_libpurple.c \
 	    tests.h \
 		test_cipher.c \
+		test_jabber_caps.c \
+		test_jabber_digest_md5.c \
 		test_jabber_jutil.c \
+		test_jabber_scram.c \
+		test_oscar_util.c \
+		test_yahoo_util.c \
 		test_util.c \
-		$(top_builddir)/libgaim/util.h
+		test_xmlnode.c \
+		$(top_builddir)/libpurple/util.h
 
-check_libgaim_CFLAGS=\
+check_libpurple_CFLAGS=\
         @CHECK_CFLAGS@ \
 		$(GLIB_CFLAGS) \
+		$(DEBUG_CFLAGS) \
+		$(LIBXML_CFLAGS) \
 		-I.. \
+		-I$(top_srcdir)/libpurple \
 		-DBUILDDIR=\"$(top_builddir)\"
 
-check_libgaim_LDADD=\
+check_libpurple_LDADD=\
+		$(top_builddir)/libpurple/protocols/jabber/libjabber.la \
+		$(top_builddir)/libpurple/protocols/oscar/liboscar.la \
+		$(top_builddir)/libpurple/protocols/yahoo/libymsg.la \
+		$(top_builddir)/libpurple/libpurple.la \
         @CHECK_LIBS@ \
-		$(GLIB_LIBS) \
-		$(top_builddir)/libgaim/protocols/jabber/libjabber.la \
-		$(top_builddir)/libgaim/libgaim.la
+		$(GLIB_LIBS)
 
 endif
