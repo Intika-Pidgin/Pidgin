@@ -1,8 +1,9 @@
 /*
  * @file gtksession.c X Windows session management API
- * @ingroup gtkui
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * @ingroup pidgin
+ */
+
+/* Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -18,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -35,6 +36,8 @@
 #include <gdk/gdkx.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <gdk/gdk.h>
+#include <gtk/gtk.h>
 
 #define ERROR_LENGTH 512
 
@@ -52,7 +55,7 @@ struct ice_connection_info {
 };
 
 static void ice_process_messages(gpointer data, gint fd,
-								 GaimInputCondition condition) {
+								 PurpleInputCondition condition) {
 	struct ice_connection_info *conninfo = (struct ice_connection_info*) data;
 	IceProcessMessagesStatus status;
 
@@ -60,17 +63,17 @@ static void ice_process_messages(gpointer data, gint fd,
 	status = IceProcessMessages(conninfo->connection, NULL, NULL);
 
 	if (status == IceProcessMessagesIOError) {
-		gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 				   "ICE IO error, closing connection... ");
 
 		/* IO error, please disconnect */
 		IceSetShutdownNegotiation(conninfo->connection, False);
 		IceCloseConnection(conninfo->connection);
 
-		gaim_debug(GAIM_DEBUG_INFO, NULL, "done.\n");
+		purple_debug(PURPLE_DEBUG_INFO, NULL, "done.\n");
 
 		/* cancel the handler */
-		gaim_input_remove(conninfo->input_id);
+		purple_input_remove(conninfo->input_id);
 	}
 }
 
@@ -79,8 +82,8 @@ static void ice_connection_watch(IceConn connection, IcePointer client_data,
 	struct ice_connection_info *conninfo = NULL;
 
 	if (opening) {
-		gaim_debug(GAIM_DEBUG_INFO, "Session Management",
-				   "Handling new ICE connection... ");
+		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
+				   "Handling new ICE connection... \n");
 
 		/* ensure ICE connection is not passed to child processes */
 		fcntl(IceConnectionNumber(connection), F_SETFD, FD_CLOEXEC);
@@ -89,23 +92,23 @@ static void ice_connection_watch(IceConn connection, IcePointer client_data,
 		conninfo->connection = connection;
 
 		/* watch the connection */
-		conninfo->input_id = gaim_input_add(IceConnectionNumber(connection), GAIM_INPUT_READ,
+		conninfo->input_id = purple_input_add(IceConnectionNumber(connection), PURPLE_INPUT_READ,
 											ice_process_messages, conninfo);
 		*watch_data = conninfo;
 	} else {
-		gaim_debug(GAIM_DEBUG_INFO, "Session Management",
-				   "Handling closed ICE connection... ");
+		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
+				   "Handling closed ICE connection... \n");
 
 		/* get the input ID back and stop watching it */
 		conninfo = (struct ice_connection_info*) *watch_data;
-		gaim_input_remove(conninfo->input_id);
+		purple_input_remove(conninfo->input_id);
 		g_free(conninfo);
 	}
 
-	gaim_debug(GAIM_DEBUG_INFO, NULL, "done.\n");
+	purple_debug(PURPLE_DEBUG_INFO, NULL, "done.\n");
 }
 
-/* We call any handler installed before (or after) ice_init but 
+/* We call any handler installed before (or after) ice_init but
  * avoid calling the default libICE handler which does an exit().
  *
  * This means we do nothing by default, which is probably correct,
@@ -113,16 +116,16 @@ static void ice_connection_watch(IceConn connection, IcePointer client_data,
  */
 
 static void ice_io_error_handler(IceConn connection) {
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "Handling ICE IO error... ");
 
 	if (ice_installed_io_error_handler)
 		(*ice_installed_io_error_handler)(connection);
 
-	gaim_debug(GAIM_DEBUG_INFO, NULL, "done.\n");
+	purple_debug(PURPLE_DEBUG_INFO, NULL, "done.\n");
 }
 
-static void ice_init() {
+static void ice_init(void) {
 	IceIOErrorHandler default_handler;
 
 	ice_installed_io_error_handler = IceSetIOErrorHandler(NULL);
@@ -133,19 +136,19 @@ static void ice_init() {
 
 	IceAddConnectionWatch(ice_connection_watch, NULL);
 
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "ICE initialized.\n");
 }
 
 /* my magic utility function */
 
 static gchar **session_make_command(gchar *client_id, gchar *config_dir) {
-	gint i = 2;
+	gint i = 4;
 	gint j = 0;
 	gchar **ret;
 
 	if (client_id) i += 2;
-	if (config_dir)	i += 2; /* we will specify gaim's user dir */
+	if (config_dir)	i += 2; /* we will specify purple's user dir */
 
 	ret = g_new(gchar *, i);
 	ret[j++] = g_strdup(myself);
@@ -160,7 +163,10 @@ static gchar **session_make_command(gchar *client_id, gchar *config_dir) {
 		ret[j++] = g_strdup(config_dir);
 	}
 
-	ret[j++] = NULL;
+	ret[j++] = g_strdup("--display");
+	ret[j++] = g_strdup((gchar *)gdk_display_get_name(gdk_display_get_default()));
+
+	ret[j] = NULL;
 
 	return ret;
 }
@@ -173,7 +179,7 @@ static void session_save_yourself(SmcConn conn, SmPointer data, int save_type,
 	      interact_style == SmInteractStyleNone && !shutdown &&
 	      !fast) {
 		/* this is just a dry run, spit it back */
-		gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 				   "Received first save_yourself\n");
 		SmcSaveYourselfDone(conn, True);
 		had_first_save = TRUE;
@@ -183,7 +189,7 @@ static void session_save_yourself(SmcConn conn, SmPointer data, int save_type,
 	/* tum ti tum... don't add anything else here without *
          * reading SMlib.PS from an X.org ftp server near you */
 
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "Received save_yourself\n");
 
 	if (save_type == SmSaveGlobal || save_type == SmSaveBoth) {
@@ -195,18 +201,18 @@ static void session_save_yourself(SmcConn conn, SmPointer data, int save_type,
 }
 
 static void session_die(SmcConn conn, SmPointer data) {
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "Received die\n");
-	gaim_core_quit();
+	purple_core_quit();
 }
 
 static void session_save_complete(SmcConn conn, SmPointer data) {
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "Received save_complete\n");
 }
 
 static void session_shutdown_cancelled(SmcConn conn, SmPointer data) {
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "Received shutdown_cancelled\n");
 }
 
@@ -279,7 +285,7 @@ static void session_set_array(SmcConn conn, gchar *name, gchar *array[]) {
 /* setup functions */
 
 void
-gaim_gtk_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir)
+pidgin_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir)
 {
 #ifdef USE_SM
 	SmcCallbacks callbacks;
@@ -290,13 +296,13 @@ gaim_gtk_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir)
 
 	if (session != NULL) {
 		/* session is already established, what the hell is going on? */
-		gaim_debug(GAIM_DEBUG_WARNING, "Session Management",
-				   "Duplicated call to gaim_gtk_session_init!\n");
+		purple_debug(PURPLE_DEBUG_WARNING, "Session Management",
+				   "Duplicated call to pidgin_session_init!\n");
 		return;
 	}
 
 	if (g_getenv("SESSION_MANAGER") == NULL) {
-		gaim_debug(GAIM_DEBUG_ERROR, "Session Management",
+		purple_debug(PURPLE_DEBUG_ERROR, "Session Management",
 				   "No SESSION_MANAGER found, aborting.\n");
 		return;
 	}
@@ -314,10 +320,10 @@ gaim_gtk_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir)
 	callbacks.shutdown_cancelled.client_data = NULL;
 
 	if (previous_id) {
-		gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 				   "Connecting with previous ID %s\n", previous_id);
 	} else {
-		gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+		purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 				   "Connecting with no previous ID\n");
 	}
 
@@ -327,20 +333,20 @@ gaim_gtk_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir)
 
 	if (session == NULL) {
 		if (error[0] != '\0') {
-			gaim_debug(GAIM_DEBUG_ERROR, "Session Management",
+			purple_debug(PURPLE_DEBUG_ERROR, "Session Management",
 					   "Connection failed with error: %s\n", error);
 		} else {
-			gaim_debug(GAIM_DEBUG_ERROR, "Session Management",
+			purple_debug(PURPLE_DEBUG_ERROR, "Session Management",
 					   "Connetion failed with unknown error.\n");
 		}
 		return;
 	}
 
 	tmp = SmcVendor(session);
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "Connected to manager (%s) with client ID %s\n",
 			   tmp, client_id);
-	g_free(tmp);
+	free(tmp);
 
 	session_managed = TRUE;
 	gdk_set_sm_client_id(client_id);
@@ -361,7 +367,7 @@ gaim_gtk_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir)
 	session_set_string(session, SmProgram, g_get_prgname());
 
 	myself = g_strdup(argv0);
-	gaim_debug(GAIM_DEBUG_MISC, "Session Management",
+	purple_debug(PURPLE_DEBUG_MISC, "Session Management",
 			   "Using %s as command\n", myself);
 
 	cmd = session_make_command(NULL, config_dir);
@@ -386,7 +392,7 @@ gaim_gtk_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir)
 }
 
 void
-gaim_gtk_session_end()
+pidgin_session_end()
 {
 #ifdef USE_SM
 	if (session == NULL) /* no session to close */
@@ -394,7 +400,7 @@ gaim_gtk_session_end()
 
 	SmcCloseConnection(session, 0, NULL);
 
-	gaim_debug(GAIM_DEBUG_INFO, "Session Management",
+	purple_debug(PURPLE_DEBUG_INFO, "Session Management",
 			   "Connection closed.\n");
 #endif /* USE_SM */
 }

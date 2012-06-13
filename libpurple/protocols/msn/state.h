@@ -1,9 +1,9 @@
 /**
  * @file state.h State functions and definitions
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,10 +19,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_STATE_H_
-#define _MSN_STATE_H_
+#ifndef MSN_STATE_H
+#define MSN_STATE_H
 
 /**
  * Away types.
@@ -38,7 +38,6 @@ typedef enum
 	MSN_LUNCH   = 7,
 	MSN_OFFLINE = 8,
 	MSN_HIDDEN  = 9
-
 } MsnAwayType;
 
 /**
@@ -59,6 +58,12 @@ const char *msn_away_get_text(MsnAwayType type);
 
 const char *msn_state_get_text(MsnAwayType state);
 
-MsnAwayType msn_state_from_account(GaimAccount *account);
+/* Get the CurrentMedia info from the XML node */
+char *msn_get_currentmedia(xmlnode *payloadNode);
 
-#endif /* _MSN_STATE_H_ */
+/* Get the PSM info from the XML node */
+char *msn_get_psm(xmlnode *payloadNode);
+
+MsnAwayType msn_state_from_account(PurpleAccount *account);
+
+#endif /* MSN_STATE_H */

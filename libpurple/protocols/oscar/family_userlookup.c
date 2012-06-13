@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -40,7 +40,7 @@ static int error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 
 	/* XXX the modules interface should have already retrieved this for us */
 	if (!(snac2 = aim_remsnac(od, snac->id))) {
-		gaim_debug_misc("oscar", "search error: couldn't get a snac for 0x%08lx\n", snac->id);
+		purple_debug_misc("oscar", "search error: couldn't get a snac for 0x%08x\n", snac->id);
 		return 0;
 	}
 
@@ -49,8 +49,8 @@ static int error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 
 	/* XXX freesnac()? */
 	if (snac2)
-		free(snac2->data);
-	free(snac2);
+		g_free(snac2->data);
+	g_free(snac2);
 
 	return ret;
 }
@@ -62,7 +62,7 @@ static int error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 int aim_search_address(OscarData *od, const char *address)
 {
 	FlapConnection *conn;
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
 	conn = flap_connection_findbygroup(od, SNAC_FAMILY_USERLOOKUP);
@@ -70,14 +70,14 @@ int aim_search_address(OscarData *od, const char *address)
 	if (!conn || !address)
 		return -EINVAL;
 
-	frame = flap_frame_new(od, 0x02, 10+strlen(address));
+	byte_stream_new(&bs, strlen(address));
 
-	snacid = aim_cachesnac(od, 0x000a, 0x0002, 0x0000, address, strlen(address)+1);
-	aim_putsnac(&frame->data, 0x000a, 0x0002, 0x0000, snacid);
+	byte_stream_putstr(&bs, address);
 
-	byte_stream_putstr(&frame->data, address);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_USERLOOKUP, 0x0002, 0x0000, address, strlen(address)+1);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_USERLOOKUP, 0x0002, snacid, &bs);
 
-	flap_connection_send(conn, frame);
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -89,7 +89,7 @@ int aim_search_address(OscarData *od, const char *address)
 static int reply(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
 	int j = 0, m, ret = 0;
-	aim_tlvlist_t *tlvlist;
+	GSList *tlvlist;
 	char *cur = NULL, *buf = NULL;
 	aim_rxcallback_t userfunc;
 	aim_snac_t *snac2;
@@ -99,7 +99,7 @@ static int reply(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 		searchaddr = (const char *)snac2->data;
 
 	tlvlist = aim_tlvlist_read(bs);
-	m = aim_tlvlist_count(&tlvlist);
+	m = aim_tlvlist_count(tlvlist);
 
 	/* XXX uhm.
 	 * This is the only place that uses something other than 1 for the 3rd
@@ -107,26 +107,26 @@ static int reply(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 	 */
 	while ((cur = aim_tlv_getstr(tlvlist, 0x0001, j+1)) && j < m)
 	{
-		buf = realloc(buf, (j+1) * (MAXSNLEN+1));
+		buf = g_realloc(buf, (j+1) * (MAXSNLEN+1));
 
 		strncpy(&buf[j * (MAXSNLEN+1)], cur, MAXSNLEN);
-		free(cur);
+		g_free(cur);
 
 		j++;
 	}
-	free(cur);
+	g_free(cur);
 
-	aim_tlvlist_free(&tlvlist);
+	aim_tlvlist_free(tlvlist);
 
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
 		ret = userfunc(od, conn, frame, searchaddr, j, buf);
 
 	/* XXX freesnac()? */
 	if (snac2)
-		free(snac2->data);
-	free(snac2);
+		g_free(snac2->data);
+	g_free(snac2);
 
-	free(buf);
+	g_free(buf);
 
 	return ret;
 }
@@ -145,7 +145,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 search_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x000a;
+	mod->family = SNAC_FAMILY_USERLOOKUP;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
 	mod->toolversion = 0x0629;

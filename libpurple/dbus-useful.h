@@ -1,13 +1,13 @@
 #include "conversation.h"
 
-GaimAccount *gaim_accounts_find_ext(const char *name, const char *protocol_id,
-				    gboolean (*account_test)(const GaimAccount *account));
+G_BEGIN_DECLS
 
-GaimAccount *gaim_accounts_find_any(const char *name, const char *protocol);
+PurpleAccount *purple_accounts_find_ext(const char *name, const char *protocol_id,
+				    gboolean (*account_test)(const PurpleAccount *account));
 
-GaimAccount *gaim_accounts_find_connected(const char *name, const char *protocol);
+PurpleAccount *purple_accounts_find_any(const char *name, const char *protocol);
 
+PurpleAccount *purple_accounts_find_connected(const char *name, const char *protocol);
 
-
-
+G_END_DECLS
 

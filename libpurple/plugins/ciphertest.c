@@ -1,5 +1,5 @@
 /*
- * A plugin to test the ciphers that ship with gaim
+ * A plugin to test the ciphers that ship with purple
  *
  * Copyright (C) 2004, Gary Kramlich <amc_grim@users.sf.net>
  *
@@ -15,16 +15,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
-#ifndef GAIM_PLUGINS
-#define GAIM_PLUGINS
+#ifndef PURPLE_PLUGINS
+#define PURPLE_PLUGINS
 #endif
 
 #include "internal.h"
@@ -61,49 +61,49 @@ struct test md5_tests[8] = {
 };
 
 static void
-cipher_test_md5() {
-	GaimCipher *cipher;
-	GaimCipherContext *context;
+cipher_test_md5(void) {
+	PurpleCipher *cipher;
+	PurpleCipherContext *context;
 	gchar digest[33];
 	gboolean ret;
 	gint i = 0;
 
-	cipher = gaim_ciphers_find_cipher("md5");
+	cipher = purple_ciphers_find_cipher("md5");
 	if(!cipher) {
-		gaim_debug_info("cipher-test",
+		purple_debug_info("cipher-test",
 						"could not find md5 cipher, not testing\n");
 		return;
 	}
 
-	gaim_debug_info("cipher-test", "Running md5 tests\n");
+	purple_debug_info("cipher-test", "Running md5 tests\n");
 
-	context = gaim_cipher_context_new(cipher, NULL);
+	context = purple_cipher_context_new(cipher, NULL);
 
 	while(md5_tests[i].answer) {
-		gaim_debug_info("cipher-test", "Test %02d:\n", i);
-		gaim_debug_info("cipher-test", "Testing '%s'\n", md5_tests[i].question);
+		purple_debug_info("cipher-test", "Test %02d:\n", i);
+		purple_debug_info("cipher-test", "Testing '%s'\n", md5_tests[i].question);
 
-		gaim_cipher_context_append(context, (guchar *)md5_tests[i].question,
+		purple_cipher_context_append(context, (guchar *)md5_tests[i].question,
 								   strlen(md5_tests[i].question));
 
-		ret = gaim_cipher_context_digest_to_str(context, sizeof(digest),
+		ret = purple_cipher_context_digest_to_str(context, sizeof(digest),
 												digest, NULL);
 
 		if(!ret) {
-			gaim_debug_info("cipher-test", "failed\n");
+			purple_debug_info("cipher-test", "failed\n");
 		} else {
-			gaim_debug_info("cipher-test", "\tGot:    %s\n", digest);
-			gaim_debug_info("cipher-test", "\tWanted: %s\n",
+			purple_debug_info("cipher-test", "\tGot:    %s\n", digest);
+			purple_debug_info("cipher-test", "\tWanted: %s\n",
 							md5_tests[i].answer);
 		}
 
-		gaim_cipher_context_reset(context, NULL);
+		purple_cipher_context_reset(context, NULL);
 		i++;
 	}
 
-	gaim_cipher_context_destroy(context);
+	purple_cipher_context_destroy(context);
 
-	gaim_debug_info("cipher-test", "md5 tests completed\n\n");
+	purple_debug_info("cipher-test", "md5 tests completed\n\n");
 }
 
 /**************************************************************************
@@ -113,37 +113,37 @@ struct test sha1_tests[5] = {
 	{"a", "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"},
 	{"abc", "a9993e364706816aba3e25717850c26c9cd0d89d"} ,
 	{"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "84983e441c3bd26ebaae4aa1f95129e5e54670f1"} ,
-    {NULL, "34aa973cd4c4daa4f61eeb2bdbad27316534016f"},
+	{NULL, "34aa973cd4c4daa4f61eeb2bdbad27316534016f"},
 	{NULL, NULL}
 };
 
 static void
-cipher_test_sha1() {
-	GaimCipher *cipher;
-	GaimCipherContext *context;
+cipher_test_sha1(void) {
+	PurpleCipher *cipher;
+	PurpleCipherContext *context;
 	gchar digest[41];
 	gint i = 0;
 	gboolean ret;
 
-	cipher = gaim_ciphers_find_cipher("sha1");
+	cipher = purple_ciphers_find_cipher("sha1");
 	if(!cipher) {
-		gaim_debug_info("cipher-test",
+		purple_debug_info("cipher-test",
 						"could not find sha1 cipher, not testing\n");
 		return;
 	}
 
-	gaim_debug_info("cipher-test", "Running sha1 tests\n");
+	purple_debug_info("cipher-test", "Running sha1 tests\n");
 
-	context = gaim_cipher_context_new(cipher, NULL);
+	context = purple_cipher_context_new(cipher, NULL);
 
 	while(sha1_tests[i].answer) {
-		gaim_debug_info("cipher-test", "Test %02d:\n", i);
-		gaim_debug_info("cipher-test", "Testing '%s'\n",
+		purple_debug_info("cipher-test", "Test %02d:\n", i);
+		purple_debug_info("cipher-test", "Testing '%s'\n",
 						(sha1_tests[i].question != NULL) ?
 						sha1_tests[i].question : "'a'x1000, 1000 times");
 
 		if(sha1_tests[i].question) {
-			gaim_cipher_context_append(context, (guchar *)sha1_tests[i].question,
+			purple_cipher_context_append(context, (guchar *)sha1_tests[i].question,
 									   strlen(sha1_tests[i].question));
 		} else {
 			gint j;
@@ -152,31 +152,31 @@ cipher_test_sha1() {
 			memset(buff, 'a', 1000);
 
 			for(j = 0; j < 1000; j++)
-				gaim_cipher_context_append(context, buff, 1000);
+				purple_cipher_context_append(context, buff, 1000);
 		}
 
-		ret = gaim_cipher_context_digest_to_str(context, sizeof(digest),
+		ret = purple_cipher_context_digest_to_str(context, sizeof(digest),
 												digest, NULL);
 
 		if(!ret) {
-			gaim_debug_info("cipher-test", "failed\n");
+			purple_debug_info("cipher-test", "failed\n");
 		} else {
-			gaim_debug_info("cipher-test", "\tGot:    %s\n", digest);
-			gaim_debug_info("cipher-test", "\tWanted: %s\n",
+			purple_debug_info("cipher-test", "\tGot:    %s\n", digest);
+			purple_debug_info("cipher-test", "\tWanted: %s\n",
 							sha1_tests[i].answer);
 		}
 
-		gaim_cipher_context_reset(context, NULL);
+		purple_cipher_context_reset(context, NULL);
 		i++;
 	}
 
-	gaim_cipher_context_destroy(context);
+	purple_cipher_context_destroy(context);
 
-	gaim_debug_info("cipher-test", "sha1 tests completed\n\n");
+	purple_debug_info("cipher-test", "sha1 tests completed\n\n");
 }
 
 static void
-cipher_test_digest()
+cipher_test_digest(void)
 {
 	const gchar *nonce = "dcd98b7102dd2f0e8b11d0f600bfb0c093";
 	const gchar *client_nonce = "0a4f113b";
@@ -192,25 +192,25 @@ cipher_test_digest()
 
 	gchar *session_key;
 
-	gaim_debug_info("cipher-test", "Running HTTP Digest tests\n");
+	purple_debug_info("cipher-test", "Running HTTP Digest tests\n");
 
-	session_key = gaim_cipher_http_digest_calculate_session_key(
+	session_key = purple_cipher_http_digest_calculate_session_key(
 						algorithm, username, realm, password,
 						nonce, client_nonce);
 
 	if (session_key == NULL)
 	{
-		gaim_debug_info("cipher-test",
-						"gaim_cipher_http_digest_calculate_session_key failed.\n");
+		purple_debug_info("cipher-test",
+						"purple_cipher_http_digest_calculate_session_key failed.\n");
 	}
 	else
 	{
 		gchar *response;
 
-		gaim_debug_info("cipher-test", "\tsession_key: Got:    %s\n", session_key);
-		gaim_debug_info("cipher-test", "\tsession_key: Wanted: %s\n", "939e7578ed9e3c518a452acee763bce9");
+		purple_debug_info("cipher-test", "\tsession_key: Got:    %s\n", session_key);
+		purple_debug_info("cipher-test", "\tsession_key: Wanted: %s\n", "939e7578ed9e3c518a452acee763bce9");
 
-		response = gaim_cipher_http_digest_calculate_response(
+		response = purple_cipher_http_digest_calculate_response(
 				algorithm, method, digest_uri, qop, entity,
 				nonce, nonce_count, client_nonce, session_key);
 
@@ -218,25 +218,25 @@ cipher_test_digest()
 
 		if (response == NULL)
 		{
-			gaim_debug_info("cipher-test",
-							"gaim_cipher_http_digest_calculate_session_key failed.\n");
+			purple_debug_info("cipher-test",
+							"purple_cipher_http_digest_calculate_session_key failed.\n");
 		}
 		else
 		{
-			gaim_debug_info("cipher-test", "\tresponse: Got:    %s\n", response);
-			gaim_debug_info("cipher-test", "\tresponse: Wanted: %s\n", "6629fae49393a05397450978507c4ef1");
+			purple_debug_info("cipher-test", "\tresponse: Got:    %s\n", response);
+			purple_debug_info("cipher-test", "\tresponse: Wanted: %s\n", "6629fae49393a05397450978507c4ef1");
 			g_free(response);
 		}
 	}
 
-	gaim_debug_info("cipher-test", "HTTP Digest tests completed\n\n");
+	purple_debug_info("cipher-test", "HTTP Digest tests completed\n\n");
 }
 
 /**************************************************************************
  * Plugin stuff
  **************************************************************************/
 static gboolean
-plugin_load(GaimPlugin *plugin) {
+plugin_load(PurplePlugin *plugin) {
 	cipher_test_md5();
 	cipher_test_sha1();
 	cipher_test_digest();
@@ -245,30 +245,30 @@ plugin_load(GaimPlugin *plugin) {
 }
 
 static gboolean
-plugin_unload(GaimPlugin *plugin) {
+plugin_unload(PurplePlugin *plugin) {
 	return TRUE;
 }
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,
-	GAIM_MAJOR_VERSION,
-	GAIM_MINOR_VERSION,
-	GAIM_PLUGIN_STANDARD,								/**< type           */
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_STANDARD,								/**< type           */
 	NULL,												/**< ui_requirement */
 	0,													/**< flags          */
 	NULL,												/**< dependencies   */
-	GAIM_PRIORITY_DEFAULT,								/**< priority       */
+	PURPLE_PRIORITY_DEFAULT,								/**< priority       */
 
 	"core-cipher-test",									/**< id             */
 	N_("Cipher Test"),									/**< name           */
-	VERSION,											/**< version        */
+	DISPLAY_VERSION,										/**< version        */
 														/**  summary        */
-	N_("Tests the ciphers that ship with gaim."),
+	N_("Tests the ciphers that ship with libpurple."),
 														/**  description    */
-	N_("Tests the ciphers that ship with gaim."),
+	N_("Tests the ciphers that ship with libpurple."),
 	"Gary Kramlich <amc_grim@users.sf.net>",			/**< author         */
-	GAIM_WEBSITE,										/**< homepage       */
+	PURPLE_WEBSITE,										/**< homepage       */
 
 	plugin_load,										/**< load           */
 	plugin_unload,										/**< unload         */
@@ -277,11 +277,16 @@ static GaimPluginInfo info =
 	NULL,												/**< ui_info        */
 	NULL,												/**< extra_info     */
 	NULL,
+	NULL,
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
 	NULL
 };
 
 static void
-init_plugin(GaimPlugin *plugin) {
+init_plugin(PurplePlugin *plugin) {
 }
 
-GAIM_INIT_PLUGIN(cipher_test, init_plugin, info)
+PURPLE_INIT_PLUGIN(cipher_test, init_plugin, info)

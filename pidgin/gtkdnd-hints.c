@@ -1,10 +1,11 @@
 /*
  * @file gtkdnd-hints.c GTK+ Drag-and-Drop arrow hints
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
 #include "gtkdnd-hints.h"
@@ -45,11 +46,11 @@ typedef struct
 /**
  * Info about each hint widget. See DndHintWindowId enum.
  */
-static HintWindowInfo hint_windows[] = { 
-	{ NULL, "tb_drag_arrow_up.xpm",   -13/2,     0 },
-	{ NULL, "tb_drag_arrow_down.xpm", -13/2,   -16 },
-	{ NULL, "tb_drag_arrow_left.xpm",     0, -13/2 },
-	{ NULL, "tb_drag_arrow_right.xpm",  -16, -13/2 },
+static HintWindowInfo hint_windows[] = {
+	{ NULL, "arrow-up.xpm",   -13/2,     0 },
+	{ NULL, "arrow-down.xpm", -13/2,   -16 },
+	{ NULL, "arrow-left.xpm",     0, -13/2 },
+	{ NULL, "arrow-right.xpm",  -16, -13/2 },
 	{ NULL, NULL, 0, 0 }
 };
 
@@ -91,8 +92,6 @@ get_widget_coords(GtkWidget *w, gint *x1, gint *y1, gint *x2, gint *y2)
 	if (w->parent && w->parent->window == w->window)
 	{
 		get_widget_coords(w->parent, &ox, &oy, NULL, NULL);
-		ox += w->allocation.x;
-		oy += w->allocation.y;
 		height = w->allocation.height;
 		width = w->allocation.width;
 	}
@@ -122,7 +121,7 @@ dnd_hints_init(void)
 	for (i = 0; hint_windows[i].filename != NULL; i++) {
 		gchar *fname;
 
-		fname = g_build_filename(DATADIR, "pixmaps", "gaim",
+		fname = g_build_filename(DATADIR, "pixmaps", "pidgin",
 								 hint_windows[i].filename, NULL);
 
 		hint_windows[i].widget = dnd_hints_init_window(fname);
@@ -140,7 +139,7 @@ dnd_hints_hide_all(void)
 		dnd_hints_hide(i);
 }
 
-void 
+void
 dnd_hints_hide(DndHintWindowId i)
 {
 	GtkWidget *w = hint_windows[i].widget;
@@ -149,7 +148,7 @@ dnd_hints_hide(DndHintWindowId i)
 		gtk_widget_hide(w);
 }
 
-void 
+void
 dnd_hints_show(DndHintWindowId id, gint x, gint y)
 {
 	GtkWidget *w;
@@ -166,7 +165,7 @@ dnd_hints_show(DndHintWindowId id, gint x, gint y)
 	}
 }
 
-void 
+void
 dnd_hints_show_relative(DndHintWindowId id, GtkWidget *widget,
 						DndHintPosition horiz, DndHintPosition vert)
 {
@@ -174,6 +173,8 @@ dnd_hints_show_relative(DndHintWindowId id, GtkWidget *widget,
 	gint x = 0, y = 0;
 
 	get_widget_coords(widget, &x1, &y1, &x2, &y2);
+	x1 += widget->allocation.x;	x2 += widget->allocation.x;
+	y1 += widget->allocation.y;	y2 += widget->allocation.y;
 
 	switch (horiz)
 	{

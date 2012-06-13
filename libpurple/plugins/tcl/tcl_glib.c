@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  * TERMS 2
  *
@@ -43,17 +43,17 @@
 
 /*
  * NOTES
- * 
- * This file was developed for the Gaim project.  It inserts the Tcl
+ *
+ * This file was developed for the Purple project.  It inserts the Tcl
  * event loop into the glib2 event loop for the purposes of providing
  * Tcl bindings in a glib2 (e.g. Gtk2) program.  To use it, simply
  * link it into your executable, include tcl_glib.h, and call the
  * function tcl_glib_init() before creating or using any Tcl
  * interpreters.  Then go ahead and use Tcl, Tk, whatever to your
  * heart's content.
- * 
+ *
  * BUGS
- * 
+ *
  * tcl_wait_for_event seems to have a bug that makes vwait not work so
  * well...  I'm not sure why, yet, but I haven't put much time into
  * it.  Hopefully I will figure it out soon.  In the meantime, this
@@ -159,7 +159,7 @@ static void tcl_create_file_handler(int fd, int mask, Tcl_FileProc *proc, Client
 
 	if (g_hash_table_lookup(tcl_file_handlers, GINT_TO_POINTER(fd)))
             tcl_delete_file_handler(fd);
-	
+
 	if (mask & TCL_READABLE)
 		cond |= G_IO_IN;
 	if (mask & TCL_WRITABLE)
