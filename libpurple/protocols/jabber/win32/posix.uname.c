@@ -1,10 +1,10 @@
 /*
    posix.uname.c - version 1.1
-   Copyright (C) 1999, 2000 
+   Copyright (C) 1999, 2000
 	     Earnie Boyd and assigns
 
    Fills the utsname structure with the appropriate values.
-  
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as published
    by the Free Software Foundation; either version 2.1, or (at your option)
@@ -17,7 +17,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
 /*
@@ -33,10 +33,12 @@
 /*#define _ANONYMOUS_STRUCT*/
 /*#define _ANONYMOUS_UNION*/
 #include <windows.h>
+#ifdef __MINGW32__
 #include <_mingw.h>
+#endif
 
 int
-uname( struct utsname *uts )
+jabber_win32_uname( struct utsname *uts )
 {
   DWORD sLength;
   OSVERSIONINFO OS_version;
@@ -52,7 +54,7 @@ uname( struct utsname *uts )
   GetVersionEx ( &OS_version );
   GetSystemInfo ( &System_Info );
 
-  strcpy( uts->sysname, "MINGW_" );
+  strcpy( uts->sysname, "WIN32_" );
   switch( OS_version.dwPlatformId )
   {
     case VER_PLATFORM_WIN32_NT:
@@ -82,8 +84,10 @@ uname( struct utsname *uts )
       break;
   }
 
+#ifdef __MINGW32__
   sprintf( uts->version, "%i", __MINGW32_MAJOR_VERSION );
   sprintf( uts->release, "%i", __MINGW32_MINOR_VERSION );
+#endif
 
   switch( System_Info.wProcessorArchitecture )
   {
@@ -127,7 +131,7 @@ uname( struct utsname *uts )
       strcpy( uts->machine, "unknown" );
       break;
   }
-  
+
   sLength = sizeof ( uts->nodename ) - 1;
   GetComputerNameA( uts->nodename, &sLength );
   return 1;

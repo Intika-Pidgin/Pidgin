@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA	02111-1301	USA
  *
  */
 
@@ -57,7 +57,7 @@ nm_create_user_record()
 
 	user_record->ref_count = 1;
 
-	gaim_debug(GAIM_DEBUG_INFO, "novell", "Creating user_record, total=%d\n",
+	purple_debug(PURPLE_DEBUG_INFO, "novell", "Creating user_record, total=%d\n",
 			   count++);
 
 	return user_record;
@@ -279,7 +279,7 @@ nm_release_user_record(NMUserRecord * user_record)
 {
 	if (--(user_record->ref_count) == 0) {
 
-		gaim_debug(GAIM_DEBUG_INFO, "novell",
+		purple_debug(PURPLE_DEBUG_INFO, "novell",
 				   "Releasing user_record, total=%d\n", --count);
 
 		if (user_record->dn) {

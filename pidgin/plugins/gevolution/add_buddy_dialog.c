@@ -1,5 +1,5 @@
 /*
- * Evolution integration plugin for Gaim
+ * Evolution integration plugin for Purple
  *
  * Copyright (C) 2003 Christian Hammond.
  *
@@ -15,12 +15,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 #include "internal.h"
 #include "gtkblist.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 #include "gtkutils.h"
 
 #include "debug.h"
@@ -54,8 +54,7 @@ delete_win_cb(GtkWidget *w, GdkEvent *event, GevoAddBuddyDialog *dialog)
 
 	gevo_addrbooks_model_unref(dialog->addrbooks);
 
-	if (dialog->username != NULL)
-		g_free(dialog->username);
+	g_free(dialog->username);
 
 	g_free(dialog);
 
@@ -68,7 +67,7 @@ new_person_cb(GtkWidget *w, GevoAddBuddyDialog *dialog)
 	const char *group_name;
 
 	group_name =
-		gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(dialog->group_combo)->entry));
+		pidgin_text_combo_box_entry_get_text(dialog->group_combo);
 
 	gevo_new_person_dialog_show(dialog->book, NULL, dialog->account, dialog->username,
 								(*group_name ? group_name : NULL),
@@ -105,7 +104,7 @@ select_buddy_cb(GtkWidget *w, GevoAddBuddyDialog *dialog)
 					   -1);
 
 	group_name =
-		gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(dialog->group_combo)->entry));
+		pidgin_text_combo_box_entry_get_text(dialog->group_combo);
 
 	if (username == NULL || *username == '\0')
 	{
@@ -161,7 +160,7 @@ static void
 add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 		GList *list, const char *id)
 {
-	GaimAccount *account = NULL;
+	PurpleAccount *account = NULL;
 	GList *l;
 	GtkTreeIter iter;
 	GdkPixbuf *pixbuf;
@@ -169,13 +168,13 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 	if (list == NULL)
 		return;
 
-	for (l = gaim_connections_get_all(); l != NULL; l = l->next)
+	for (l = purple_connections_get_all(); l != NULL; l = l->next)
 	{
-		GaimConnection *gc = (GaimConnection *)l->data;
+		PurpleConnection *gc = (PurpleConnection *)l->data;
 
-		account = gaim_connection_get_account(gc);
+		account = purple_connection_get_account(gc);
 
-		if (!strcmp(gaim_account_get_protocol_id(account), id))
+		if (!strcmp(purple_account_get_protocol_id(account), id))
 			break;
 
 		account = NULL;
@@ -184,7 +183,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 	if (account == NULL)
 		return;
 
-	pixbuf = gaim_gtk_create_prpl_icon(account, 0.5);
+	pixbuf = pidgin_create_prpl_icon(account, 0.5);
 
 	for (l = list; l != NULL; l = l->next)
 	{
@@ -193,7 +192,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 		if (account_name == NULL)
 			continue;
 
-		if (gaim_find_buddy(dialog->account, account_name) != NULL)
+		if (purple_find_buddy(dialog->account, account_name) != NULL)
 			continue;
 
 		gtk_list_store_append(dialog->model, &iter);
@@ -205,8 +204,8 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 						   COLUMN_DATA, contact,
 						   -1);
 
-		if (!strcmp(gaim_account_get_protocol_id(account),
-					gaim_account_get_protocol_id(dialog->account)) &&
+		if (!strcmp(purple_account_get_protocol_id(account),
+					purple_account_get_protocol_id(dialog->account)) &&
 			dialog->username != NULL &&
 			!strcmp(account_name, dialog->username))
 		{
@@ -234,6 +233,7 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 	EBook *book;
 	gboolean status;
 	GList *cards, *c;
+	GError *err = NULL;
 
 	if (dialog->book != NULL)
 	{
@@ -250,10 +250,11 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 
 	gtk_list_store_clear(dialog->model);
 
-	if (!gevo_load_addressbook(uri, &book, NULL))
+	if (!gevo_load_addressbook(uri, &book, &err))
 	{
-		gaim_debug_error("evolution",
-						 "Error retrieving default addressbook\n");
+		purple_debug_error("evolution",
+						 "Error retrieving default addressbook: %s\n", err->message);
+		g_error_free(err);
 
 		return;
 	}
@@ -262,7 +263,7 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 
 	if (query == NULL)
 	{
-		gaim_debug_error("evolution", "Error in creating query\n");
+		purple_debug_error("evolution", "Error in creating query\n");
 
 		g_object_unref(book);
 
@@ -275,7 +276,7 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 
 	if (!status)
 	{
-		gaim_debug_error("evolution", "Error %d in getting card list\n",
+		purple_debug_error("evolution", "Error %d in getting card list\n",
 						 status);
 
 		g_object_unref(book);
@@ -287,7 +288,7 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 	{
 		EContact *contact = E_CONTACT(c->data);
 		const char *name;
-		GList *aims, *jabbers, *yahoos, *msns, *icqs, *novells;
+		GList *aims, *jabbers, *yahoos, *msns, *icqs, *novells, *ggs;
 
 		name = e_contact_get_const(contact, E_CONTACT_FULL_NAME);
 
@@ -297,9 +298,11 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 		msns    = e_contact_get(contact, E_CONTACT_IM_MSN);
 		icqs    = e_contact_get(contact, E_CONTACT_IM_ICQ);
 		novells = e_contact_get(contact, E_CONTACT_IM_GROUPWISE);
+		ggs     = e_contact_get(contact, E_CONTACT_IM_GADUGADU);
 
 		if (aims == NULL && jabbers == NULL && yahoos == NULL &&
-			msns == NULL && icqs == NULL && novells == NULL)
+			msns == NULL && icqs == NULL && novells == NULL &&
+			ggs == NULL)
 		{
 			GtkTreeIter iter;
 
@@ -312,12 +315,13 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 		}
 		else
 		{
-			add_ims(dialog, contact, name, aims,    "prpl-oscar");
+			add_ims(dialog, contact, name, aims,    "prpl-aim");
 			add_ims(dialog, contact, name, jabbers, "prpl-jabber");
 			add_ims(dialog, contact, name, yahoos,  "prpl-yahoo");
 			add_ims(dialog, contact, name, msns,    "prpl-msn");
-			add_ims(dialog, contact, name, icqs,    "prpl-oscar");
+			add_ims(dialog, contact, name, icqs,    "prpl-icq");
 			add_ims(dialog, contact, name, novells, "prpl-novell");
+			add_ims(dialog, contact, name, ggs,     "prpl-gg");
 		}
 	}
 
@@ -363,7 +367,7 @@ search_changed_cb(GtkEntry *entry, GevoAddBuddyDialog *dialog)
 	{
 		EContact *contact = E_CONTACT(l->data);
 		const char *name;
-		GList *aims, *jabbers, *yahoos, *msns, *icqs, *novells;
+		GList *aims, *jabbers, *yahoos, *msns, *icqs, *novells, *ggs;
 
 		name = e_contact_get_const(contact, E_CONTACT_FULL_NAME);
 
@@ -379,9 +383,11 @@ search_changed_cb(GtkEntry *entry, GevoAddBuddyDialog *dialog)
 		msns    = e_contact_get(contact, E_CONTACT_IM_MSN);
 		icqs    = e_contact_get(contact, E_CONTACT_IM_ICQ);
 		novells = e_contact_get(contact, E_CONTACT_IM_GROUPWISE);
+		ggs     = e_contact_get(contact, E_CONTACT_IM_GADUGADU);
 
 		if (aims == NULL && jabbers == NULL && yahoos == NULL &&
-			msns == NULL && icqs == NULL && novells == NULL)
+			msns == NULL && icqs == NULL && novells == NULL &&
+			ggs == NULL)
 		{
 			GtkTreeIter iter;
 
@@ -394,12 +400,13 @@ search_changed_cb(GtkEntry *entry, GevoAddBuddyDialog *dialog)
 		}
 		else
 		{
-			add_ims(dialog, contact, name, aims,    "prpl-oscar");
+			add_ims(dialog, contact, name, aims,    "prpl-aim");
 			add_ims(dialog, contact, name, jabbers, "prpl-jabber");
 			add_ims(dialog, contact, name, yahoos,  "prpl-yahoo");
 			add_ims(dialog, contact, name, msns,    "prpl-msn");
-			add_ims(dialog, contact, name, icqs,    "prpl-oscar");
+			add_ims(dialog, contact, name, icqs,    "prpl-icq");
 			add_ims(dialog, contact, name, novells, "prpl-novell");
+			add_ims(dialog, contact, name, ggs,     "prpl-gg");
 		}
 	}
 }
@@ -418,12 +425,11 @@ clear_cb(GtkWidget *w, GevoAddBuddyDialog *dialog)
 }
 
 void
-gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
+gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 						   const char *group, const char *alias)
 {
 	GevoAddBuddyDialog *dialog;
 	GtkWidget *button;
-	GtkWidget *sw;
 	GtkWidget *label;
 	GtkWidget *vbox;
 	GtkWidget *hbox;
@@ -437,15 +443,12 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 	dialog->account =
 		(account != NULL
 		 ? account
-		 : gaim_connection_get_account(gaim_connections_get_all()->data));
+		 : purple_connection_get_account(purple_connections_get_all()->data));
 
 	if (username != NULL)
 		dialog->username = g_strdup(username);
 
-	dialog->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_role(GTK_WINDOW(dialog->win), "add_buddy");
-	gtk_window_set_title(GTK_WINDOW(dialog->win), _("Add Buddy"));
-	gtk_container_set_border_width(GTK_CONTAINER(dialog->win), 12);
+	dialog->win = pidgin_create_window(_("Add Buddy"), PIDGIN_HIG_BORDER, "add_buddy", TRUE);
 	gtk_widget_set_size_request(dialog->win, -1, 400);
 
 	g_signal_connect(G_OBJECT(dialog->win), "delete_event",
@@ -506,16 +509,6 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 	g_signal_connect(G_OBJECT(button), "clicked",
 					 G_CALLBACK(clear_cb), dialog);
 
-	/* Scrolled Window */
-	sw = gtk_scrolled_window_new(0, 0);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-								   GTK_POLICY_AUTOMATIC,
-								   GTK_POLICY_ALWAYS);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-										GTK_SHADOW_IN);
-	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-	gtk_widget_show(sw);
-
 	/* Create the list model for the treeview. */
 	dialog->model = gtk_list_store_new(NUM_COLUMNS,
 									   G_TYPE_STRING, GDK_TYPE_PIXBUF,
@@ -525,7 +518,9 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 	dialog->treeview =
 		gtk_tree_view_new_with_model(GTK_TREE_MODEL(dialog->model));
 	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(dialog->treeview), TRUE);
-	gtk_container_add(GTK_CONTAINER(sw), dialog->treeview);
+	gtk_box_pack_start(GTK_BOX(vbox), 
+		pidgin_make_scrollable(dialog->treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1), 
+		TRUE, TRUE, 0);
 	gtk_widget_show(dialog->treeview);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(dialog->treeview));
@@ -547,20 +542,11 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 	gtk_combo_box_set_active(GTK_COMBO_BOX(dialog->addrbooks_combo), 0);
 
 	/* Group box */
-	hbox = gtk_hbox_new(FALSE, 6);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	gtk_widget_show(hbox);
-
-	label = gtk_label_new(_("Group:"));
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	gtk_widget_show(label);
-
-	dialog->group_combo = gtk_combo_new();
-	gtk_combo_set_popdown_strings(GTK_COMBO(dialog->group_combo),
-								  gevo_get_groups());
-	gtk_box_pack_start(GTK_BOX(hbox), dialog->group_combo, TRUE, TRUE, 0);
-	gtk_widget_show(dialog->group_combo);
+	dialog->group_combo =
+		pidgin_text_combo_box_entry_new(group, gevo_get_groups());
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Group:"), NULL,
+							  dialog->group_combo, TRUE, NULL);
+	gtk_widget_show_all(dialog->group_combo);
 
 	/* Cool. Now we only have a little left... */
 
@@ -577,8 +563,8 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 	gtk_widget_show(bbox);
 
 	/* "New Person" button */
-	button = gaim_pixbuf_button_from_stock(_("New Person"), GTK_STOCK_NEW,
-										   GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("New Person"), GTK_STOCK_NEW,
+										   PIDGIN_BUTTON_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 
@@ -594,8 +580,8 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 					 G_CALLBACK(cancel_cb), dialog);
 
 	/* "Select Buddy" button */
-	button = gaim_pixbuf_button_from_stock(_("Select Buddy"), GTK_STOCK_APPLY,
-										   GAIM_BUTTON_HORIZONTAL);
+	button = pidgin_pixbuf_button_from_stock(_("Select Buddy"), GTK_STOCK_APPLY,
+										   PIDGIN_BUTTON_HORIZONTAL);
 	dialog->select_button = button;
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(button, FALSE);
@@ -611,12 +597,12 @@ gevo_add_buddy_dialog_show(GaimAccount *account, const char *username,
 void
 gevo_add_buddy_dialog_add_person(GevoAddBuddyDialog *dialog,
 								 EContact *contact, const char *name,
-								 GaimAccount *account, const char *screenname)
+								 PurpleAccount *account, const char *screenname)
 {
 	GdkPixbuf *pixbuf;
 	GtkTreeIter iter;
 
-	pixbuf = gaim_gtk_create_prpl_icon(account, 0.5);
+	pixbuf = pidgin_create_prpl_icon(account, 0.5);
 
 	gtk_list_store_append(dialog->model, &iter);
 

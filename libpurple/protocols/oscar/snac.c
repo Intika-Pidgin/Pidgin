@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -56,11 +56,9 @@ aim_snacid_t aim_cachesnac(OscarData *od, const guint16 family, const guint16 ty
 	snac.type = type;
 	snac.flags = flags;
 
-	if (datalen) {
-		if (!(snac.data = malloc(datalen)))
-			return 0; /* er... */
-		memcpy(snac.data, data, datalen);
-	} else
+	if (datalen)
+		snac.data = g_memdup(data, datalen);
+	else
 		snac.data = NULL;
 
 	return aim_newsnac(od, &snac);
@@ -78,9 +76,7 @@ aim_snacid_t aim_newsnac(OscarData *od, aim_snac_t *newsnac)
 	if (!newsnac)
 		return 0;
 
-	if (!(snac = malloc(sizeof(aim_snac_t))))
-		return 0;
-	memcpy(snac, newsnac, sizeof(aim_snac_t));
+	snac = g_memdup(newsnac, sizeof(aim_snac_t));
 	snac->issuetime = time(NULL);
 
 	index = snac->id % FAIM_SNAC_HASH_SIZE;
@@ -109,7 +105,7 @@ aim_snac_t *aim_remsnac(OscarData *od, aim_snacid_t id)
 		if (cur->id == id) {
 			*prev = cur->next;
 			if (cur->flags & AIM_SNACFLAGS_DESTRUCTOR) {
-				free(cur->data);
+				g_free(cur->data);
 				cur->data = NULL;
 			}
 			return cur;
@@ -145,8 +141,8 @@ void aim_cleansnacs(OscarData *od, int maxage)
 
 				*prev = cur->next;
 
-				free(cur->data);
-				free(cur);
+				g_free(cur->data);
+				g_free(cur);
 			} else
 				prev = &cur->next;
 		}
@@ -155,12 +151,12 @@ void aim_cleansnacs(OscarData *od, int maxage)
 	return;
 }
 
-int aim_putsnac(ByteStream *bs, guint16 family, guint16 subtype, guint16 flags, aim_snacid_t snacid)
+int aim_putsnac(ByteStream *bs, guint16 family, guint16 subtype, aim_snacid_t snacid)
 {
 
 	byte_stream_put16(bs, family);
 	byte_stream_put16(bs, subtype);
-	byte_stream_put16(bs, flags);
+	byte_stream_put16(bs, 0x0000);
 	byte_stream_put32(bs, snacid);
 
 	return 10;

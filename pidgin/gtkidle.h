@@ -1,10 +1,11 @@
 /**
  * @file gtkidle.h GTK+ Idle API
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,10 +21,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTK_IDLE_H_
-#define _GAIM_GTK_IDLE_H_
+#ifndef _PIDGIN_IDLE_H_
+#define _PIDGIN_IDLE_H_
 
 #include "idle.h"
 
@@ -37,8 +38,8 @@
  *
  * @return The UI operations structure.
  */
-GaimIdleUiOps *gaim_gtk_idle_get_ui_ops(void);
+PurpleIdleUiOps *pidgin_idle_get_ui_ops(void);
 
 /*@}*/
 
-#endif /* _GAIM_GTK_IDLE_H_ */
+#endif /* _PIDGIN_IDLE_H_ */

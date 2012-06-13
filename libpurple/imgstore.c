@@ -1,10 +1,11 @@
 /**
- * @file imgstore.h IM Image Store API
+ * @file imgstore.c IM Image Store API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,147 +21,207 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
 */
 
-#include <glib.h>
+#include "internal.h"
+
+#include "dbus-maybe.h"
 #include "debug.h"
 #include "imgstore.h"
+#include "util.h"
 
-static GSList *imgstore = NULL;
-static int nextid = 0;
+static GHashTable *imgstore;
+static unsigned int nextid = 0;
 
-/**
- * Stored image
- *
- * Represents a single IM image awaiting display and/or transmission.
- * Now that this type is basicly private too, these two structs could
- * probably be combined.
+/*
+ * NOTE: purple_imgstore_add() creates these without zeroing the memory, so
+ * NOTE: make sure to update that function when adding members.
  */
-struct _GaimStoredImage
-{
-	char *data;		/**< The image data.		*/
-	size_t size;		/**< The image data's size.	*/
-	char *filename;		/**< The filename (for the UI)	*/
-};
-
-typedef struct
+struct _PurpleStoredImage
 {
 	int id;
-	int refcount;
-	GaimStoredImage *img;
-} GaimStoredImagePriv;
+	guint8 refcount;
+	size_t size;		/**< The image data's size.	*/
+	char *filename;		/**< The filename (for the UI)	*/
+	gpointer data;		/**< The image data.		*/
+};
 
-/* private functions */
+PurpleStoredImage *
+purple_imgstore_add(gpointer data, size_t size, const char *filename)
+{
+	PurpleStoredImage *img;
 
-static GaimStoredImagePriv *gaim_imgstore_get_priv(int id) {
-	GSList *tmp = imgstore;
-	GaimStoredImagePriv *priv = NULL;
+	g_return_val_if_fail(data != NULL, NULL);
+	g_return_val_if_fail(size > 0, NULL);
 
-	g_return_val_if_fail(id > 0, NULL);
-
-	while (tmp && !priv) {
-		GaimStoredImagePriv *tmp_priv = tmp->data;
-
-		if (tmp_priv->id == id)
-			priv = tmp_priv;
-
-		tmp = tmp->next;
-	}
-
-	if (!priv)
-		gaim_debug(GAIM_DEBUG_ERROR, "imgstore", "failed to find image id %d\n", id);
-
-	return priv;
-}
-
-static void gaim_imgstore_free_priv(GaimStoredImagePriv *priv) {
-	GaimStoredImage *img = NULL;
-
-	g_return_if_fail(priv != NULL);
-
-	img = priv->img;
-	if (img) {
-		g_free(img->data);
-		g_free(img->filename);
-		g_free(img);
-	}
-
-	gaim_debug(GAIM_DEBUG_INFO, "imgstore", "freed image id %d\n", priv->id);
-
-	g_free(priv);
-
-	imgstore = g_slist_remove(imgstore, priv);
-}
-
-/* public functions */
-
-int gaim_imgstore_add(const void *data, size_t size, const char *filename) {
-	GaimStoredImagePriv *priv;
-	GaimStoredImage *img;
-
-	g_return_val_if_fail(data != NULL, 0);
-	g_return_val_if_fail(size > 0, 0);
-
-	img = g_new0(GaimStoredImage, 1);
-	img->data = g_memdup(data, size);
+	img = g_new(PurpleStoredImage, 1);
+	PURPLE_DBUS_REGISTER_POINTER(img, PurpleStoredImage);
+	img->data = data;
 	img->size = size;
 	img->filename = g_strdup(filename);
+	img->refcount = 1;
+	img->id = 0;
 
-	priv = g_new0(GaimStoredImagePriv, 1);
-	priv->id = ++nextid;
-	priv->refcount = 1;
-	priv->img = img;
-
-	imgstore = g_slist_append(imgstore, priv);
-	gaim_debug(GAIM_DEBUG_INFO, "imgstore", "added image id %d\n", priv->id);
-
-	return priv->id;
+	return img;
 }
 
-GaimStoredImage *gaim_imgstore_get(int id) {
-	GaimStoredImagePriv *priv = gaim_imgstore_get_priv(id);
+PurpleStoredImage *
+purple_imgstore_new_from_file(const char *path)
+{
+	gchar *data = NULL;
+	size_t len;
+	GError *err = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(path != NULL && *path != '\0', NULL);
 
-	gaim_debug(GAIM_DEBUG_INFO, "imgstore", "retrieved image id %d\n", priv->id);
-
-	return priv->img;
+	if (!g_file_get_contents(path, &data, &len, &err)) {
+		purple_debug_error("imgstore", "Error reading %s: %s\n",
+				path, err->message);
+		g_error_free(err);
+		return NULL;
+	}
+	return purple_imgstore_add(data, len, path);
 }
 
-gpointer gaim_imgstore_get_data(GaimStoredImage *i) {
-	return i->data;
+int
+purple_imgstore_add_with_id(gpointer data, size_t size, const char *filename)
+{
+	PurpleStoredImage *img = purple_imgstore_add(data, size, filename);
+	if (img) {
+		/*
+		 * Use the next unused id number.  We do it in a loop on the
+		 * off chance that nextid wraps back around to 0 and the hash
+		 * table still contains entries from the first time around.
+		 */
+		do {
+			img->id = ++nextid;
+		} while (img->id == 0 || g_hash_table_lookup(imgstore, &(img->id)) != NULL);
+
+		g_hash_table_insert(imgstore, &(img->id), img);
+	}
+
+	return (img ? img->id : 0);
 }
 
-size_t gaim_imgstore_get_size(GaimStoredImage *i) {
-	return i->size;
+PurpleStoredImage *purple_imgstore_find_by_id(int id) {
+	PurpleStoredImage *img = g_hash_table_lookup(imgstore, &id);
+
+	if (img != NULL)
+		purple_debug_misc("imgstore", "retrieved image id %d\n", img->id);
+
+	return img;
 }
 
-const char *gaim_imgstore_get_filename(GaimStoredImage *i) {
-	return i->filename;
+gconstpointer purple_imgstore_get_data(PurpleStoredImage *img) {
+	g_return_val_if_fail(img != NULL, NULL);
+
+	return img->data;
 }
 
-void gaim_imgstore_ref(int id) {
-	GaimStoredImagePriv *priv = gaim_imgstore_get_priv(id);
+size_t purple_imgstore_get_size(PurpleStoredImage *img)
+{
+	g_return_val_if_fail(img != NULL, 0);
 
-	g_return_if_fail(priv != NULL);
-
-	(priv->refcount)++;
-
-	gaim_debug(GAIM_DEBUG_INFO, "imgstore", "referenced image id %d (count now %d)\n", priv->id, priv->refcount);
+	return img->size;
 }
 
-void gaim_imgstore_unref(int id) {
-	GaimStoredImagePriv *priv = gaim_imgstore_get_priv(id);
+const char *purple_imgstore_get_filename(const PurpleStoredImage *img)
+{
+	g_return_val_if_fail(img != NULL, NULL);
 
-	g_return_if_fail(priv != NULL);
-	g_return_if_fail(priv->refcount > 0);
+	return img->filename;
+}
 
-	(priv->refcount)--;
+const char *purple_imgstore_get_extension(PurpleStoredImage *img)
+{
+	g_return_val_if_fail(img != NULL, NULL);
 
-	gaim_debug(GAIM_DEBUG_INFO, "imgstore", "unreferenced image id %d (count now %d)\n", priv->id, priv->refcount);
+	return purple_util_get_image_extension(img->data, img->size);
+}
 
-	if (priv->refcount == 0)
-		gaim_imgstore_free_priv(priv);
+void purple_imgstore_ref_by_id(int id)
+{
+	PurpleStoredImage *img = purple_imgstore_find_by_id(id);
+
+	g_return_if_fail(img != NULL);
+
+	purple_imgstore_ref(img);
+}
+
+void purple_imgstore_unref_by_id(int id)
+{
+	PurpleStoredImage *img = purple_imgstore_find_by_id(id);
+
+	g_return_if_fail(img != NULL);
+
+	purple_imgstore_unref(img);
+}
+
+PurpleStoredImage *
+purple_imgstore_ref(PurpleStoredImage *img)
+{
+	g_return_val_if_fail(img != NULL, NULL);
+
+	img->refcount++;
+
+	return img;
+}
+
+PurpleStoredImage *
+purple_imgstore_unref(PurpleStoredImage *img)
+{
+	if (img == NULL)
+		return NULL;
+
+	g_return_val_if_fail(img->refcount > 0, NULL);
+
+	img->refcount--;
+
+	if (img->refcount == 0)
+	{
+		purple_signal_emit(purple_imgstore_get_handle(),
+		                   "image-deleting", img);
+		if (img->id)
+			g_hash_table_remove(imgstore, &img->id);
+
+		g_free(img->data);
+		g_free(img->filename);
+		PURPLE_DBUS_UNREGISTER_POINTER(img);
+		g_free(img);
+		img = NULL;
+	}
+
+	return img;
+}
+
+void *
+purple_imgstore_get_handle()
+{
+	static int handle;
+
+	return &handle;
+}
+
+void
+purple_imgstore_init()
+{
+	void *handle = purple_imgstore_get_handle();
+
+	purple_signal_register(handle, "image-deleting",
+	                       purple_marshal_VOID__POINTER, NULL,
+	                       1,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_STORED_IMAGE));
+
+	imgstore = g_hash_table_new(g_int_hash, g_int_equal);
+}
+
+void
+purple_imgstore_uninit()
+{
+	g_hash_table_destroy(imgstore);
+
+	purple_signals_unregister_by_instance(purple_imgstore_get_handle());
 }

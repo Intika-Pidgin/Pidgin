@@ -4,46 +4,52 @@
 # Description: Makefile for win32 (mingw) version of libbonjour
 #
 
-GAIM_TOP := ../../..
-include $(GAIM_TOP)/libpurple/win32/global.mak
+PIDGIN_TREE_TOP := ../../..
+include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
 TARGET = libbonjour
-NEEDED_DLLS = $(HOWL_TOP)/bin/libhowl-1.dll
 TYPE = PLUGIN
 
 # Static or Plugin...
 ifeq ($(TYPE),STATIC)
   DEFINES += -DSTATIC
-  DLL_INSTALL_DIR =	$(GAIM_INSTALL_DIR)
+  DLL_INSTALL_DIR =	$(PURPLE_INSTALL_DIR)
 else
 ifeq ($(TYPE),PLUGIN)
-  DLL_INSTALL_DIR =	$(GAIM_INSTALL_PLUGINS_DIR)
+  DLL_INSTALL_DIR =	$(PURPLE_INSTALL_PLUGINS_DIR)
 endif
 endif
+
+CFLAGS += -DUSE_BONJOUR_APPLE
 
 ##
 ## INCLUDE PATHS
 ##
-INCLUDE_PATHS +=	-I$(BONJOUR_ROOT) \
+INCLUDE_PATHS +=	-I. \
 			-I$(GTK_TOP)/include \
 			-I$(GTK_TOP)/include/glib-2.0 \
 			-I$(GTK_TOP)/lib/glib-2.0/include \
-			-I$(HOWL_TOP)/include \
-			-I$(GAIM_LIB_TOP) \
-			-I$(GAIM_LIB_TOP)/win32 \
-			-I$(GAIM_TOP)
+			-I$(BONJOUR_TOP)/Include \
+			-I$(LIBXML2_TOP)/include/libxml2 \
+			-I$(PURPLE_TOP) \
+			-I$(PURPLE_TOP)/win32 \
+			-I$(PIDGIN_TREE_TOP)
 
-LIB_PATHS =		-L$(GTK_TOP)/lib \
-			-L$(HOWL_TOP)/lib \
-			-L$(GAIM_LIB_TOP)
+LIB_PATHS +=		-L$(GTK_TOP)/lib \
+			-L$(LIBXML2_TOP)/lib \
+			-L$(PURPLE_TOP)
 
 ##
 ##  SOURCES, OBJECTS
 ##
 C_SRC =			bonjour.c \
+			bonjour_ft.c \
 			buddy.c \
-			dns_sd.c \
-			jabber.c
+			dns_sd_proxy.c \
+			jabber.c \
+			mdns_common.c \
+			mdns_win32.c \
+			parser.c
 
 OBJECTS = $(C_SRC:%.c=%.o)
 
@@ -54,10 +60,17 @@ LIBS =	\
 			-lglib-2.0 \
 			-lws2_32 \
 			-lintl \
-			-lhowl \
+			-lnetapi32 \
+			-lxml2 \
 			-lpurple
 
-include $(GAIM_COMMON_RULES)
+ifeq ($(LINK_DNS_SD_DIRECTLY), 1)
+	CFLAGS += -DLINK_DNS_SD_DIRECTLY
+	LIB_PATHS += -L$(BONJOUR_TOP)/lib/win32 -L$(BONJOUR_TOP)/lib
+	LIBS += -ldnssd
+endif
+
+include $(PIDGIN_COMMON_RULES)
 
 ##
 ## TARGET DEFINITIONS
@@ -68,11 +81,10 @@ all: $(TARGET).dll
 
 install: all $(DLL_INSTALL_DIR)
 	cp $(TARGET).dll $(DLL_INSTALL_DIR)
-	cp $(NEEDED_DLLS) $(GAIM_INSTALL_DIR)
 
-$(OBJECTS): $(GAIM_CONFIG_H)
+$(OBJECTS): $(PURPLE_CONFIG_H)
 
-$(TARGET).dll: $(GAIM_LIBGAIM_DLL).a $(OBJECTS)
+$(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
 
 ##
@@ -83,4 +95,4 @@ clean:
 	rm -f $(OBJECTS)
 	rm -f $(TARGET).dll
 
-include $(GAIM_COMMON_TARGETS)
+include $(PIDGIN_COMMON_TARGETS)

@@ -1,7 +1,7 @@
 /*
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,14 +17,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
 #include "internal.h"
 #include "debug.h"
 
-#include "yahoo.h"
+#include "libymsg.h"
 #include "yahoo_packet.h"
 
 struct yahoo_packet *yahoo_packet_new(enum yahoo_service service, enum yahoo_status status, int id)
@@ -80,7 +80,7 @@ void yahoo_packet_hash(struct yahoo_packet *pkt, const char *fmt, ...)
 			yahoo_packet_hash_str(pkt, key, strval);
 			break;
 		default:
-			gaim_debug_error("yahoo", "Invalid format character '%c'\n", *cur);
+			purple_debug_error("yahoo", "Invalid format character '%c'\n", *cur);
 			break;
 		}
 	}
@@ -110,6 +110,29 @@ size_t yahoo_packet_length(struct yahoo_packet *pkt)
 	return len;
 }
 
+/*
+ * 'len' is the value given to us by the server that is supposed to
+ * be the length of 'data'.  But apparently there's a time when this
+ * length is incorrect.  Christopher Layne thinks it might be a bug
+ * in their server code.
+ *
+ * The following information is from Christopher:
+ *
+ * It sometimes happens when Yahoo! sends a packet continuation within
+ * chat.  Sometimes when joining a large chatroom the initial
+ * SERVICE_CHATJOIN packet will be so large that it will need to be
+ * split into multiple packets.  That's fine, except that the length
+ * of the second packet is wrong.  The packet has the same length as
+ * the first packet, and the length given in the header is the same,
+ * however the actual data in the packet is shorter than this length.
+ * So half of the packet contains good, valid data, and then the rest
+ * of the packet is junk.  Luckily there is a null terminator after
+ * the valid data and before the invalid data.
+ *
+ * What does all this mean?  It means that we parse through the data
+ * pulling out key/value pairs until we've parsed 'len' bytes, or until
+ * we run into a null terminator, whichever comes first.
+ */
 void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 {
 	int pos = 0;
@@ -121,18 +144,8 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 
 	while (pos + 1 < len)
 	{
-		/* this is weird, and in one of the chat packets, and causes us to
-		 * think all the values are keys and all the keys are values after
-		 * this point if we don't handle it */
-		if (data[pos] == '\0') {
-			while (pos + 1 < len) {
-				if (data[pos] == 0xc0 && data[pos + 1] == 0x80)
-					break;
-				pos++;
-			}
-			pos += 2;
-			continue;
-		}
+		if (data[pos] == '\0')
+			break;
 
 		pair = g_new0(struct yahoo_pair, 1);
 
@@ -161,7 +174,7 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 		}
 
 		if (accept) {
-			delimiter = (const guchar *)strstr((char *)&data[pos], "\xc0\x80");
+			delimiter = (const guchar *)g_strstr_len((const char *)&data[pos], len - pos, "\xc0\x80");
 			if (delimiter == NULL)
 			{
 				/* Malformed packet! (It doesn't end in 0xc0 0x80) */
@@ -174,19 +187,18 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 			pos = x;
 			pkt->hash = g_slist_prepend(pkt->hash, pair);
 
-#ifdef DEBUG
-			{
+			if (purple_debug_is_verbose() || g_getenv("PURPLE_YAHOO_DEBUG")) {
 				char *esc;
 				esc = g_strescape(pair->value, NULL);
-				gaim_debug(GAIM_DEBUG_MISC, "yahoo",
-						   "Key: %d  \tValue: %s\n", pair->key, esc);
+				purple_debug_misc("yahoo", "Key: %d  \tValue: %s\n", pair->key, esc);
 				g_free(esc);
 			}
-#endif
 		} else {
 			g_free(pair);
 		}
 		pos += 2;
+
+		if (pos + 1 > len) break;
 
 		/* Skip over garbage we've noticed in the mail notifications */
 		if (data[0] == '9' && data[pos] == 0x01)
@@ -206,8 +218,13 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 
 void yahoo_packet_write(struct yahoo_packet *pkt, guchar *data)
 {
-	GSList *l = pkt->hash;
+	GSList *l;
 	int pos = 0;
+
+	/* This is only called from one place, and the list is
+	 * always backwards */
+
+	l = pkt->hash = g_slist_reverse(pkt->hash);
 
 	while (l) {
 		struct yahoo_pair *pair = l->data;
@@ -233,49 +250,49 @@ void yahoo_packet_dump(guchar *data, int len)
 #ifdef YAHOO_DEBUG
 	int i;
 
-	gaim_debug(GAIM_DEBUG_MISC, "yahoo", "");
+	purple_debug_misc("yahoo", "");
 
 	for (i = 0; i + 1 < len; i += 2) {
 		if ((i % 16 == 0) && i) {
-			gaim_debug(GAIM_DEBUG_MISC, NULL, "\n");
-			gaim_debug(GAIM_DEBUG_MISC, "yahoo", "");
+			purple_debug_misc(NULL, "\n");
+			purple_debug_misc("yahoo", "");
 		}
 
-		gaim_debug(GAIM_DEBUG_MISC, NULL, "%02x%02x ", data[i], data[i + 1]);
+		purple_debug_misc(NULL, "%02x%02x ", data[i], data[i + 1]);
 	}
 	if (i < len)
-		gaim_debug(GAIM_DEBUG_MISC, NULL, "%02x", data[i]);
+		purple_debug_misc(NULL, "%02x", data[i]);
 
-	gaim_debug(GAIM_DEBUG_MISC, NULL, "\n");
-	gaim_debug(GAIM_DEBUG_MISC, "yahoo", "");
+	purple_debug_misc(NULL, "\n");
+	purple_debug_misc("yahoo", "");
 
 	for (i = 0; i < len; i++) {
 		if ((i % 16 == 0) && i) {
-			gaim_debug(GAIM_DEBUG_MISC, NULL, "\n");
-			gaim_debug(GAIM_DEBUG_MISC, "yahoo", "");
+			purple_debug_misc(NULL, "\n");
+			purple_debug_misc("yahoo", "");
 		}
 
 		if (g_ascii_isprint(data[i]))
-			gaim_debug(GAIM_DEBUG_MISC, NULL, "%c ", data[i]);
+			purple_debug_misc(NULL, "%c ", data[i]);
 		else
-			gaim_debug(GAIM_DEBUG_MISC, NULL, ". ");
+			purple_debug_misc(NULL, ". ");
 	}
 
-	gaim_debug(GAIM_DEBUG_MISC, NULL, "\n");
-#endif
+	purple_debug_misc(NULL, "\n");
+#endif /* YAHOO_DEBUG */
 }
 
 static void
-yahoo_packet_send_can_write(gpointer data, gint source, GaimInputCondition cond)
+yahoo_packet_send_can_write(gpointer data, gint source, PurpleInputCondition cond)
 {
-	struct yahoo_data *yd = data;
+	YahooData *yd = data;
 	int ret, writelen;
 
-	writelen = gaim_circ_buffer_get_max_read(yd->txbuf);
+	writelen = purple_circ_buffer_get_max_read(yd->txbuf);
 
 	if (writelen == 0) {
-		gaim_input_remove(yd->txhandler);
-		yd->txhandler = -1;
+		purple_input_remove(yd->txhandler);
+		yd->txhandler = 0;
 		return;
 	}
 
@@ -285,11 +302,12 @@ yahoo_packet_send_can_write(gpointer data, gint source, GaimInputCondition cond)
 		return;
 	else if (ret < 0) {
 		/* TODO: what to do here - do we really have to disconnect? */
-		gaim_connection_error(yd->gc, _("Write Error"));
+		purple_connection_error_reason(yd->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		                               _("Write Error"));
 		return;
 	}
 
-	gaim_circ_buffer_mark_read(yd->txbuf, ret);
+	purple_circ_buffer_mark_read(yd->txbuf, ret);
 }
 
 
@@ -308,7 +326,7 @@ size_t yahoo_packet_build(struct yahoo_packet *pkt, int pad, gboolean wm,
 	if (wm)
 		pos += yahoo_put16(data + pos, YAHOO_WEBMESSENGER_PROTO_VER);
 	else if (jp)
-		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER_JAPAN);		
+		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER_JAPAN);
 	else
 		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER);
 	pos += yahoo_put16(data + pos, 0x0000);
@@ -324,10 +342,10 @@ size_t yahoo_packet_build(struct yahoo_packet *pkt, int pad, gboolean wm,
 	return len;
 }
 
-int yahoo_packet_send(struct yahoo_packet *pkt, struct yahoo_data *yd)
+int yahoo_packet_send(struct yahoo_packet *pkt, YahooData *yd)
 {
 	size_t len;
-	int ret;
+	gssize ret;
 	guchar *data;
 
 	if (yd->fd < 0)
@@ -336,7 +354,7 @@ int yahoo_packet_send(struct yahoo_packet *pkt, struct yahoo_data *yd)
 	len = yahoo_packet_build(pkt, 0, yd->wm, yd->jp, &data);
 
 	yahoo_packet_dump(data, len);
-	if (yd->txhandler == -1)
+	if (yd->txhandler == 0)
 		ret = write(yd->fd, data, len);
 	else {
 		ret = -1;
@@ -346,16 +364,17 @@ int yahoo_packet_send(struct yahoo_packet *pkt, struct yahoo_data *yd)
 	if (ret < 0 && errno == EAGAIN)
 		ret = 0;
 	else if (ret <= 0) {
-		gaim_debug_warning("yahoo", "Only wrote %d of %d bytes!", ret, len);
+		purple_debug_warning("yahoo", "Only wrote %" G_GSSIZE_FORMAT
+				" of %" G_GSIZE_FORMAT " bytes!\n", ret, len);
 		g_free(data);
 		return ret;
 	}
 
 	if (ret < len) {
-		if (yd->txhandler == -1)
-			yd->txhandler = gaim_input_add(yd->fd, GAIM_INPUT_WRITE,
+		if (yd->txhandler == 0)
+			yd->txhandler = purple_input_add(yd->fd, PURPLE_INPUT_WRITE,
 				yahoo_packet_send_can_write, yd);
-		gaim_circ_buffer_append(yd->txbuf, data + ret, len - ret);
+		purple_circ_buffer_append(yd->txbuf, data + ret, len - ret);
 	}
 
 	g_free(data);
@@ -363,7 +382,7 @@ int yahoo_packet_send(struct yahoo_packet *pkt, struct yahoo_data *yd)
 	return ret;
 }
 
-int yahoo_packet_send_and_free(struct yahoo_packet *pkt, struct yahoo_data *yd)
+int yahoo_packet_send_and_free(struct yahoo_packet *pkt, YahooData *yd)
 {
 	int ret;
 
@@ -378,7 +397,7 @@ void yahoo_packet_free(struct yahoo_packet *pkt)
 		struct yahoo_pair *pair = pkt->hash->data;
 		g_free(pair->value);
 		g_free(pair);
-		pkt->hash = g_slist_remove(pkt->hash, pair);
+		pkt->hash = g_slist_delete_link(pkt->hash, pkt->hash);
 	}
 	g_free(pkt);
 }

@@ -1,7 +1,7 @@
 /*
- * Themes for Gaim
+ * Themes for Pidgin
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,11 +17,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "conversation.h"
 #include "debug.h"
@@ -31,12 +31,15 @@
 #include "gtkconv.h"
 #include "gtkdialogs.h"
 #include "gtkimhtml.h"
+#include "gtksmiley.h"
 #include "gtkthemes.h"
 
 GSList *smiley_themes = NULL;
 struct smiley_theme *current_smiley_theme;
 
-gboolean gaim_gtkthemes_smileys_disabled()
+static void pidgin_themes_destroy_smiley_theme_smileys(struct smiley_theme *theme);
+
+gboolean pidgin_themes_smileys_disabled()
 {
 	if (!current_smiley_theme)
 		return 1;
@@ -44,7 +47,80 @@ gboolean gaim_gtkthemes_smileys_disabled()
 	return strcmp(current_smiley_theme->name, "none") == 0;
 }
 
-void gaim_gtkthemes_smiley_themeize(GtkWidget *imhtml)
+static void
+pidgin_themes_destroy_smiley_theme(struct smiley_theme *theme)
+{
+	pidgin_themes_destroy_smiley_theme_smileys(theme);
+
+	g_free(theme->name);
+	g_free(theme->desc);
+	g_free(theme->author);
+	g_free(theme->icon);
+	g_free(theme->path);
+	g_free(theme);
+}
+
+static void pidgin_themes_remove_theme_dir(const char *theme_dir_name)
+{
+	GString *str = NULL;
+	const char *file_name = NULL;
+	GDir *theme_dir = NULL;
+
+	if ((theme_dir = g_dir_open(theme_dir_name, 0, NULL)) != NULL) {
+		if ((str = g_string_new(theme_dir_name)) != NULL) {
+			while ((file_name = g_dir_read_name(theme_dir)) != NULL) {
+				g_string_printf(str, "%s%s%s", theme_dir_name, G_DIR_SEPARATOR_S, file_name);
+				g_unlink(str->str);
+			}
+			g_string_free(str, TRUE);
+		}
+		g_dir_close(theme_dir);
+		g_rmdir(theme_dir_name);
+	}
+}
+
+void pidgin_themes_remove_smiley_theme(const char *file)
+{
+	char *theme_dir = NULL, *last_slash = NULL;
+	g_return_if_fail(NULL != file);
+
+	if (!g_file_test(file, G_FILE_TEST_EXISTS)) return;
+	if ((theme_dir = g_strdup(file)) == NULL) return ;
+
+	if ((last_slash = g_strrstr(theme_dir, G_DIR_SEPARATOR_S)) != NULL) {
+		GSList *iter = NULL;
+		struct smiley_theme *theme = NULL, *new_theme = NULL;
+
+		*last_slash = 0;
+
+		/* Delete files on disk */
+		pidgin_themes_remove_theme_dir(theme_dir);
+
+		/* Find theme in themes list and remove it */
+		for (iter = smiley_themes ; iter ; iter = iter->next) {
+			theme = ((struct smiley_theme *)(iter->data));
+			if (!strcmp(theme->path, file))
+				break ;
+		}
+		if (iter) {
+			if (theme == current_smiley_theme) {
+				new_theme = ((struct smiley_theme *)(NULL == iter->next ? (smiley_themes == iter ? NULL : smiley_themes->data) : iter->next->data));
+				if (new_theme)
+					purple_prefs_set_string(PIDGIN_PREFS_ROOT "/smileys/theme", new_theme->name);
+				else
+					current_smiley_theme = NULL;
+			}
+			smiley_themes = g_slist_delete_link(smiley_themes, iter);
+
+			/* Destroy theme structure */
+			pidgin_themes_destroy_smiley_theme(theme);
+		}
+	}
+
+	g_free(theme_dir);
+}
+
+static void _pidgin_themes_smiley_themeize(GtkWidget *imhtml, gboolean custom)
 {
 	struct smiley_list *list;
 	if (!current_smiley_theme)
@@ -59,11 +135,92 @@ void gaim_gtkthemes_smiley_themeize(GtkWidget *imhtml)
 			gtk_imhtml_associate_smiley(GTK_IMHTML(imhtml), sml, icons->data);
 			icons = icons->next;
 		}
+
+		if (custom == TRUE) {
+			icons = pidgin_smileys_get_all();
+
+			while (icons) {
+				gtk_imhtml_associate_smiley(GTK_IMHTML(imhtml), sml, icons->data);
+				icons = icons->next;
+			}
+		}
+
 		list = list->next;
 	}
 }
 
-void gaim_gtkthemes_load_smiley_theme(const char *file, gboolean load)
+void pidgin_themes_smiley_themeize(GtkWidget *imhtml)
+{
+	_pidgin_themes_smiley_themeize(imhtml, FALSE);
+}
+
+void pidgin_themes_smiley_themeize_custom(GtkWidget *imhtml)
+{
+	_pidgin_themes_smiley_themeize(imhtml, TRUE);
+}
+
+static void
+pidgin_themes_destroy_smiley_theme_smileys(struct smiley_theme *theme)
+{
+	GHashTable *already_freed;
+	struct smiley_list *wer;
+
+	already_freed = g_hash_table_new(g_direct_hash, g_direct_equal);
+	for (wer = theme->list; wer != NULL; wer = theme->list) {
+		while (wer->smileys) {
+			GtkIMHtmlSmiley *uio = wer->smileys->data;
+
+			if (uio->imhtml) {
+				g_signal_handlers_disconnect_matched(uio->imhtml, G_SIGNAL_MATCH_DATA,
+					0, 0, NULL, NULL, uio);
+			}
+
+			if (uio->icon)
+				g_object_unref(uio->icon);
+			if (g_hash_table_lookup(already_freed, uio->file) == NULL) {
+				g_free(uio->file);
+				g_hash_table_insert(already_freed, uio->file, GINT_TO_POINTER(1));
+			}
+			g_free(uio->smile);
+			g_free(uio);
+			wer->smileys = g_slist_delete_link(wer->smileys, wer->smileys);
+		}
+		theme->list = wer->next;
+		g_free(wer->sml);
+		g_free(wer);
+	}
+	theme->list = NULL;
+
+	g_hash_table_destroy(already_freed);
+}
+
+static void
+pidgin_smiley_themes_remove_non_existing(void)
+{
+	static struct smiley_theme *theme = NULL;
+	GSList *iter = NULL;
+
+	if (!smiley_themes) return ;
+
+	for (iter = smiley_themes ; iter ; iter = iter->next) {
+		theme = ((struct smiley_theme *)(iter->data));
+		if (!g_file_test(theme->path, G_FILE_TEST_EXISTS)) {
+			if (theme == current_smiley_theme)
+				current_smiley_theme = ((struct smiley_theme *)(NULL == iter->next ? NULL : iter->next->data));
+			pidgin_themes_destroy_smiley_theme(theme);
+			iter->data = NULL;
+		}
+	}
+	/* Remove all elements whose data is NULL */
+	smiley_themes = g_slist_remove_all(smiley_themes, NULL);
+
+	if (!current_smiley_theme && smiley_themes) {
+		struct smiley_theme *smile = g_slist_last(smiley_themes)->data;
+		pidgin_themes_load_smiley_theme(smile->path, TRUE);
+	}
+}
+
+void pidgin_themes_load_smiley_theme(const char *file, gboolean load)
 {
 	FILE *f = g_fopen(file, "r");
 	char buf[256];
@@ -72,7 +229,6 @@ void gaim_gtkthemes_load_smiley_theme(const char *file, gboolean load)
 	struct smiley_list *list = NULL;
 	GSList *lst = smiley_themes;
 	char *dirname;
-	gboolean new_theme = FALSE;
 
 	if (!f)
 		return;
@@ -86,14 +242,16 @@ void gaim_gtkthemes_load_smiley_theme(const char *file, gboolean load)
 		lst = lst->next;
 	}
 
-	if (!theme) {
-		new_theme = TRUE;
-		theme = g_new0(struct smiley_theme, 1);
-		theme->path = g_strdup(file);
-	} else if (theme == current_smiley_theme) {
+	if (theme != NULL && theme == current_smiley_theme) {
 		/* Don't reload the theme if it is already loaded */
 		fclose(f);
 		return;
+	}
+
+	if (theme == NULL) {
+		theme = g_new0(struct smiley_theme, 1);
+		theme->path = g_strdup(file);
+		smiley_themes = g_slist_prepend(smiley_themes, theme);
 	}
 
 	dirname = g_path_get_dirname(file);
@@ -105,6 +263,13 @@ void gaim_gtkthemes_load_smiley_theme(const char *file, gboolean load)
 
 		if (buf[0] == '#' || buf[0] == '\0')
 			continue;
+		else {
+			int len = strlen(buf);
+			while (len && (buf[len - 1] == '\r' || buf[len - 1] == '\n'))
+				buf[--len] = '\0';
+			if (len == 0)
+				continue;
+		}
 
 		i = buf;
 		while (isspace(*i))
@@ -117,27 +282,22 @@ void gaim_gtkthemes_load_smiley_theme(const char *file, gboolean load)
 				list->next = child;
 			else
 				theme->list = child;
+			/* Reverse the Smiley list since it was built in reverse order for efficiency reasons */
+			if (list != NULL)
+				list->smileys = g_slist_reverse(list->smileys);
 			list = child;
 		} else if (!g_ascii_strncasecmp(i, "Name=", strlen("Name="))) {
-			int len;
 			g_free(theme->name);
-			theme->name = g_strdup(i+ strlen("Name="));
-			len = strlen(theme->name);
-			theme->name[len-1] = 0;
-			if(len > 2 && theme->name[len-2] == '\r')
-				theme->name[len-2] = 0;
+			theme->name = g_strdup(i + strlen("Name="));
 		} else if (!g_ascii_strncasecmp(i, "Description=", strlen("Description="))) {
 			g_free(theme->desc);
 			theme->desc = g_strdup(i + strlen("Description="));
-			theme->desc[strlen(theme->desc)-1] = 0;
 		} else if (!g_ascii_strncasecmp(i, "Icon=", strlen("Icon="))) {
 			g_free(theme->icon);
 			theme->icon = g_build_filename(dirname, i + strlen("Icon="), NULL);
-			theme->icon[strlen(theme->icon)-1] = 0;
 		} else if (!g_ascii_strncasecmp(i, "Author=", strlen("Author="))) {
 			g_free(theme->author);
 			theme->author = g_strdup(i + strlen("Author="));
-			theme->author[strlen(theme->author)-1] = 0;
 		} else if (load && list) {
 			gboolean hidden = FALSE;
 			char *sfile = NULL;
@@ -149,136 +309,91 @@ void gaim_gtkthemes_load_smiley_theme(const char *file, gboolean load)
 			while  (*i) {
 				char l[64];
 				int li = 0;
-				while (!isspace(*i) && li < sizeof(l) - 1) {
-					if (*i == '\\' && *(i+1) != '\0' && *(i+1) != '\n' && *(i+1) != '\r')
+				while (*i && !isspace(*i) && li < sizeof(l) - 1) {
+					if (*i == '\\' && *(i+1) != '\0')
 						i++;
 					l[li++] = *(i++);
 				}
+				l[li] = 0;
 				if (!sfile) {
-					l[li] = 0;
 					sfile = g_build_filename(dirname, l, NULL);
 				} else {
-					GtkIMHtmlSmiley *smiley = g_new0(GtkIMHtmlSmiley, 1);
-					l[li] = 0;
-					smiley->file = sfile;
-					smiley->smile = g_strdup(l);
-					smiley->hidden = hidden;
-					list->smileys = g_slist_append(list->smileys, smiley);
+					GtkIMHtmlSmiley *smiley = gtk_imhtml_smiley_create(sfile, l, hidden, 0);
+					list->smileys = g_slist_prepend(list->smileys, smiley);
 				}
 				while (isspace(*i))
 					i++;
 
 			}
+
+
+			g_free(sfile);
 		}
 	}
+
+	/* Reverse the Smiley list since it was built in reverse order for efficiency reasons */
+	if (list != NULL)
+		list->smileys = g_slist_reverse(list->smileys);
 
 	g_free(dirname);
 	fclose(f);
 
 	if (!theme->name || !theme->desc || !theme->author) {
-		GSList *already_freed = NULL;
-		struct smiley_list *wer = theme->list, *wer2;
+		purple_debug_error("gtkthemes", "Invalid file format, not loading smiley theme from '%s'\n", file);
 
-		gaim_debug_error("gtkthemes", "Invalid file format, not loading smiley theme from '%s'\n", file);
-
-		while (wer) {
-			while (wer->smileys) {
-				GtkIMHtmlSmiley *uio = wer->smileys->data;
-				if (uio->icon)
-					g_object_unref(uio->icon);
-				if (!g_slist_find(already_freed, uio->file)) {
-					g_free(uio->file);
-					already_freed = g_slist_append(already_freed, uio->file);
-				}
-				g_free(uio->smile);
-				g_free(uio);
-				wer->smileys = g_slist_remove(wer->smileys, uio);
-			}
-			wer2 = wer->next;
-			g_free(wer->sml);
-			g_free(wer);
-			wer = wer2;
-		}
-		theme->list = NULL;
-		g_slist_free(already_freed);
-
-		g_free(theme->name);
-		g_free(theme->desc);
-		g_free(theme->author);
-		g_free(theme->icon);
-		g_free(theme->path);
-		g_free(theme);
-
+		smiley_themes = g_slist_remove(smiley_themes, theme);
+		pidgin_themes_destroy_smiley_theme(theme);
 		return;
-	}
-
-	if (new_theme) {
-		smiley_themes = g_slist_append(smiley_themes, theme);
 	}
 
 	if (load) {
 		GList *cnv;
 
-		if (current_smiley_theme) {
-			GSList *already_freed = NULL;
-			struct smiley_list *wer = current_smiley_theme->list, *wer2;
-			while (wer) {
-				while (wer->smileys) {
-					GtkIMHtmlSmiley *uio = wer->smileys->data;
-					if (uio->icon)
-						g_object_unref(uio->icon);
-					if (!g_slist_find(already_freed, uio->file)) {
-						g_free(uio->file);
-						already_freed = g_slist_append(already_freed, uio->file);
-					}
-					g_free(uio->smile);
-					g_free(uio);
-					wer->smileys = g_slist_remove(wer->smileys, uio);
-				}
-				wer2 = wer->next;
-				g_free(wer->sml);
-				g_free(wer);
-				wer = wer2;
-			}
-			current_smiley_theme->list = NULL;
-			g_slist_free(already_freed);
-		}
+		if (current_smiley_theme)
+			pidgin_themes_destroy_smiley_theme_smileys(current_smiley_theme);
 		current_smiley_theme = theme;
 
-		for (cnv = gaim_get_conversations(); cnv != NULL; cnv = cnv->next) {
-			GaimConversation *conv = cnv->data;
+		for (cnv = purple_get_conversations(); cnv != NULL; cnv = cnv->next) {
+			PurpleConversation *conv = cnv->data;
 
-			if (GAIM_IS_GTK_CONVERSATION(conv)) {
-				gaim_gtkthemes_smiley_themeize(GAIM_GTK_CONVERSATION(conv)->imhtml);
-				gaim_gtkthemes_smiley_themeize(GAIM_GTK_CONVERSATION(conv)->entry);
+			if (PIDGIN_IS_PIDGIN_CONVERSATION(conv)) {
+				/* We want to see our custom smileys on our entry if we write the shortcut */
+				pidgin_themes_smiley_themeize(PIDGIN_CONVERSATION(conv)->imhtml);
+				pidgin_themes_smiley_themeize_custom(PIDGIN_CONVERSATION(conv)->entry);
 			}
 		}
 	}
 }
 
-void gaim_gtkthemes_smiley_theme_probe()
+void pidgin_themes_smiley_theme_probe()
 {
 	GDir *dir;
 	const gchar *file;
-	gchar *path;
+	gchar *path, *test_path;
 	int l;
-
 	char* probedirs[3];
-	probedirs[0] = g_build_filename(DATADIR, "pixmaps", "gaim", "smileys", NULL);
-	probedirs[1] = g_build_filename(gaim_user_dir(), "smileys", NULL);
+
+	pidgin_smiley_themes_remove_non_existing();
+
+	probedirs[0] = g_build_filename(DATADIR, "pixmaps", "pidgin", "emotes", NULL);
+	probedirs[1] = g_build_filename(purple_user_dir(), "smileys", NULL);
 	probedirs[2] = 0;
 	for (l=0; probedirs[l]; l++) {
 		dir = g_dir_open(probedirs[l], 0, NULL);
 		if (dir) {
 			while ((file = g_dir_read_name(dir))) {
-				path = g_build_filename(probedirs[l], file, "theme", NULL);
+				test_path = g_build_filename(probedirs[l], file, NULL);
+				if (g_file_test(test_path, G_FILE_TEST_IS_DIR)) {
+					path = g_build_filename(probedirs[l], file, "theme", NULL);
 
-				/* Here we check to see that the theme has proper syntax.
-				 * We set the second argument to FALSE so that it doesn't load
-				 * the theme yet.
-				 */
-				gaim_gtkthemes_load_smiley_theme(path, FALSE);
-				g_free(path);
+					/* Here we check to see that the theme has proper syntax.
+					 * We set the second argument to FALSE so that it doesn't load
+					 * the theme yet.
+					 */
+					pidgin_themes_load_smiley_theme(path, FALSE);
+					g_free(path);
+				}
+				g_free(test_path);
 			}
 			g_dir_close(dir);
 		} else if (l == 1) {
@@ -286,10 +401,15 @@ void gaim_gtkthemes_smiley_theme_probe()
 		}
 		g_free(probedirs[l]);
 	}
+
+	if (!current_smiley_theme && smiley_themes) {
+		struct smiley_theme *smile = smiley_themes->data;
+		pidgin_themes_load_smiley_theme(smile->path, TRUE);
+	}
 }
 
-GSList *gaim_gtkthemes_get_proto_smileys(const char *id) {
-	GaimPlugin *proto;
+GSList *pidgin_themes_get_proto_smileys(const char *id) {
+	PurplePlugin *proto;
 	struct smiley_list *list, *def;
 
 	if ((current_smiley_theme == NULL) || (current_smiley_theme->list == NULL))
@@ -300,7 +420,7 @@ GSList *gaim_gtkthemes_get_proto_smileys(const char *id) {
 	if (id == NULL)
 		return def->smileys;
 
-	proto = gaim_find_prpl(id);
+	proto = purple_find_prpl(id);
 
 	while (list) {
 		if (!strcmp(list->sml, "default"))
@@ -314,18 +434,18 @@ GSList *gaim_gtkthemes_get_proto_smileys(const char *id) {
 	return list ? list->smileys : def->smileys;
 }
 
-void gaim_gtkthemes_init()
+void pidgin_themes_init()
 {
 	GSList *l;
 	const char *current_theme =
-		gaim_prefs_get_string("/gaim/gtk/smileys/theme");
+		purple_prefs_get_string(PIDGIN_PREFS_ROOT "/smileys/theme");
 
-	gaim_gtkthemes_smiley_theme_probe();
+	pidgin_themes_smiley_theme_probe();
 
 	for (l = smiley_themes; l; l = l->next) {
 		struct smiley_theme *smile = l->data;
 		if (smile->name && strcmp(current_theme, smile->name) == 0) {
-			gaim_gtkthemes_load_smiley_theme(smile->path, TRUE);
+			pidgin_themes_load_smiley_theme(smile->path, TRUE);
 			break;
 		}
 	}
@@ -333,7 +453,6 @@ void gaim_gtkthemes_init()
 	/* If we still don't have a smiley theme, choose the first one */
 	if (!current_smiley_theme && smiley_themes) {
 		struct smiley_theme *smile = smiley_themes->data;
-		gaim_gtkthemes_load_smiley_theme(smile->path, TRUE);
+		pidgin_themes_load_smiley_theme(smile->path, TRUE);
 	}
-
 }

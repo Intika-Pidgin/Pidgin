@@ -1,9 +1,9 @@
 /**
  * @file session.h MSN session functions
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,28 +19,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_SESSION_H_
-#define _MSN_SESSION_H_
+#ifndef MSN_SESSION_H
+#define MSN_SESSION_H
 
 typedef struct _MsnSession MsnSession;
-
-#include "sslconn.h"
-
-#include "user.h"
-#include "slpcall.h"
-
-#include "notification.h"
-#include "switchboard.h"
-#include "group.h"
-
-#include "cmdproc.h"
-#include "nexus.h"
-#include "httpconn.h"
-
-#include "userlist.h"
-#include "sync.h"
 
 /**
  * Types of errors.
@@ -55,7 +39,6 @@ typedef enum
 	MSN_ERROR_SIGN_OTHER,
 	MSN_ERROR_SERV_DOWN,
 	MSN_ERROR_SERV_UNAVAILABLE
-
 } MsnErrorType;
 
 /**
@@ -68,54 +51,76 @@ typedef enum
 	MSN_LOGIN_STEP_TRANSFER,
 	MSN_LOGIN_STEP_HANDSHAKE2,
 	MSN_LOGIN_STEP_AUTH_START,
-	MSN_LOGIN_STEP_AUTH,
 	MSN_LOGIN_STEP_GET_COOKIE,
 	MSN_LOGIN_STEP_AUTH_END,
 	MSN_LOGIN_STEP_SYN,
 	MSN_LOGIN_STEP_END
-
 } MsnLoginStep;
 
 #define MSN_LOGIN_STEPS MSN_LOGIN_STEP_END
 
+#define MSN_LOGIN_FQY_TIMEOUT 30
+
+#define MSN_LOGIN_FQY_TIMEOUT 30
+
+#include "nexus.h"
+#include "notification.h"
+#include "oim.h"
+#include "switchboard.h"
+#include "user.h"
+#include "userlist.h"
+
 struct _MsnSession
 {
-	GaimAccount *account;
+	PurpleAccount *account;
 	MsnUser *user;
 
 	guint protocol_ver;
 
 	MsnLoginStep login_step; /**< The current step in the login process. */
 
-	gboolean connected;
-	gboolean logged_in; /**< A temporal flag to ignore local buddy list adds. */
-	gboolean destroying; /**< A flag that states if the session is being destroyed. */
-	gboolean http_method;
+	gboolean connected:1;
+	gboolean logged_in:1; /**< A temporal flag to ignore local buddy list adds. */
+	gboolean destroying:1; /**< A flag that states if the session is being destroyed. */
+	gboolean http_method:1;
+	gboolean enable_mpop:1; /**< Use Multiple Points of Presence? */
+	int      adl_fqy; /**< A count of ADL/FQY so status is only changed once. */
+	guint    login_timeout; /**< Timeout to force status change if ADL/FQY fail. */
 
 	MsnNotification *notification;
-	MsnNexus *nexus;
-	MsnSync *sync;
-
-	MsnUserList *userlist;
+	MsnNexus        *nexus;
+	MsnOim          *oim;
+	MsnUserList     *userlist;
+	char            *abch_cachekey;
 
 	int servconns_count; /**< The count of server connections. */
 	GList *switches; /**< The list of all the switchboards. */
-	GList *directconns; /**< The list of all the directconnections. */
 	GList *slplinks; /**< The list of all the slplinks. */
 
-	int conv_seq; /**< The current conversation sequence number. */
+	/*psm info*/
+	char *psm;
+
+#if 0
+	char *blocked_text;
+#endif
 
 	struct
 	{
-		char *kv;
 		char *sid;
 		char *mspauth;
 		unsigned long sl;
-		char *file;
 		char *client_ip;
 		int client_port;
-
+		char *mail_url;
+		gulong mail_timestamp;
+		gboolean email_enabled;
 	} passport_info;
+
+	GHashTable *soap_table;
+	guint soap_cleanup_handle;
+	char *guid;
+
+	GSList *url_datas; /**< PurpleUtilFetchUrlData to be cancelled on exit */
 };
 
 /**
@@ -125,7 +130,7 @@ struct _MsnSession
  *
  * @return The new MSN session.
  */
-MsnSession *msn_session_new(GaimAccount *account);
+MsnSession *msn_session_new(PurpleAccount *account);
 
 /**
  * Destroys an MSN session.
@@ -175,7 +180,7 @@ MsnSwitchBoard *msn_session_find_swboard(MsnSession *session,
  * @return The switchboard, if found.
  */
 MsnSwitchBoard *msn_session_find_swboard_with_conv(MsnSession *session,
-												   GaimConversation *conv);
+												   PurpleConversation *conv);
 /**
  * Finds a switchboard with the given chat ID.
  *
@@ -210,7 +215,16 @@ void msn_session_set_error(MsnSession *session, MsnErrorType error,
 						   const char *info);
 
 /**
- * Sets the current step in the login proccess.
+ * Starts a timeout to initiate finishing login. Sometimes the server ignores
+ * our FQY requests, so this forces ourselves online eventually.
+ *
+ * @param session The MSN session.
+ */
+void
+msn_session_activate_login_timeout(MsnSession *session);
+
+/**
+ * Sets the current step in the login process.
  *
  * @param session The MSN session.
  * @param step The current step.
@@ -224,4 +238,8 @@ void msn_session_set_login_step(MsnSession *session, MsnLoginStep step);
  */
 void msn_session_finish_login(MsnSession *session);
 
-#endif /* _MSN_SESSION_H_ */
+/*post message to User*/
+void msn_session_report_user(MsnSession *session,const char *passport,
+							const char *msg,PurpleMessageFlags flags);
+
+#endif /* MSN_SESSION_H */
