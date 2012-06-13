@@ -53,10 +53,10 @@ struct _xmlnode
 	XMLNodeType type;		/**< The type of the node. */
 	char *data;			/**< The data for the node. */
 	size_t data_sz;			/**< The size of the data. */
-	struct _xmlnode *parent;	/**< The parent node or @c NULL.*/
-	struct _xmlnode *child;		/**< The child node or @c NULL.*/
-	struct _xmlnode *lastchild;	/**< The last child node or @c NULL.*/
-	struct _xmlnode *next;		/**< The next node or @c NULL. */
+	xmlnode *parent;            /**< The parent node or @c NULL.*/
+	xmlnode *child;             /**< The child node or @c NULL.*/
+	xmlnode *lastchild;         /**< The last child node or @c NULL.*/
+	xmlnode *next;              /**< The next node or @c NULL. */
 	char *prefix;               /**< The namespace prefix if any. */
 	GHashTable *namespace_map;  /**< The namespace map. */
 };
@@ -205,7 +205,7 @@ void xmlnode_set_attrib_full(xmlnode *node, const char *attr, const char *xmlns,
  *
  * @return The value of the attribute.
  */
-const char *xmlnode_get_attrib(xmlnode *node, const char *attr);
+const char *xmlnode_get_attrib(const xmlnode *node, const char *attr);
 
 /**
  * Gets a namespaced attribute from a node
@@ -216,7 +216,7 @@ const char *xmlnode_get_attrib(xmlnode *node, const char *attr);
  *
  * @return The value of the attribute/
  */
-const char *xmlnode_get_attrib_with_namespace(xmlnode *node, const char *attr, const char *xmlns);
+const char *xmlnode_get_attrib_with_namespace(const xmlnode *node, const char *attr, const char *xmlns);
 
 /**
  * Removes an attribute from a node.

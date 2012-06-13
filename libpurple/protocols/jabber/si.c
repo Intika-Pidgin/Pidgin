@@ -1,7 +1,9 @@
 /*
  * purple - Jabber Protocol Plugin
  *
- * Copyright (C) 2003, Nathan Walp <faceprint@faceprint.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +32,7 @@
 #include "notify.h"
 
 #include "buddy.h"
+#include "data.h"
 #include "disco.h"
 #include "jabber.h"
 #include "ibb.h"
@@ -37,6 +40,7 @@
 #include "si.h"
 
 #define STREAMHOST_CONNECT_TIMEOUT 15
+#define ENABLE_FT_THUMBNAILS 0
 
 typedef struct _JabberSIXfer {
 	JabberStream *js;
@@ -67,7 +71,7 @@ typedef struct _JabberSIXfer {
 
 	JabberIBBSession *ibb_session;
 	guint ibb_timeout_handle;
-	FILE *fp;
+	PurpleCircBuffer *ibb_buffer;
 } JabberSIXfer;
 
 /* some forward declarations */
@@ -142,7 +146,7 @@ jabber_si_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_
 	if(xfer->type == PURPLE_XFER_SEND)
 	{
 		xmlnode *activate;
-		iq = jabber_iq_new_query(jsx->js, JABBER_IQ_SET, "http://jabber.org/protocol/bytestreams");
+		iq = jabber_iq_new_query(jsx->js, JABBER_IQ_SET, NS_BYTESTREAMS);
 		xmlnode_set_attrib(iq->node, "to", streamhost->jid);
 		query = xmlnode_get_child(iq->node, "query");
 		xmlnode_set_attrib(query, "sid", jsx->stream_id);
@@ -153,7 +157,7 @@ jabber_si_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_
 	}
 	else
 	{
-		iq = jabber_iq_new_query(jsx->js, JABBER_IQ_RESULT, "http://jabber.org/protocol/bytestreams");
+		iq = jabber_iq_new_query(jsx->js, JABBER_IQ_RESULT, NS_BYTESTREAMS);
 		xmlnode_set_attrib(iq->node, "to", xfer->who);
 		jabber_iq_set_id(iq, jsx->iq_id);
 		query = xmlnode_get_child(iq->node, "query");
@@ -230,7 +234,7 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 		xmlnode_set_attrib(error, "code", "404");
 		xmlnode_set_attrib(error, "type", "cancel");
 		inf = xmlnode_new_child(error, "item-not-found");
-		xmlnode_set_namespace(inf, "urn:ietf:params:xml:ns:xmpp-stanzas");
+		xmlnode_set_namespace(inf, NS_XMPP_STANZAS);
 
 		jabber_iq_send(iq);
 
@@ -273,6 +277,7 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 
 	if(dstjid != NULL && streamhost->host && streamhost->port > 0) {
 		char *dstaddr, *hash;
+		PurpleAccount *account;
 		jsx->gpi = purple_proxy_info_new();
 		purple_proxy_info_set_type(jsx->gpi, PURPLE_PROXY_SOCKS5);
 		purple_proxy_info_set_host(jsx->gpi, streamhost->host);
@@ -287,10 +292,11 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 				jsx->js->user->node, jsx->js->user->domain, jsx->js->user->resource);
 
 		/* Per XEP-0065, the 'host' must be SHA1(SID + from JID + to JID) */
-		hash = jabber_calculate_data_sha1sum(dstaddr, strlen(dstaddr));
+		hash = jabber_calculate_data_hash(dstaddr, strlen(dstaddr), "sha1");
 
-		jsx->connect_data = purple_proxy_connect_socks5(NULL, jsx->gpi,
-				hash, 0,
+		account = purple_connection_get_account(jsx->js->gc);
+		jsx->connect_data = purple_proxy_connect_socks5_account(NULL, account,
+				jsx->gpi, hash, 0,
 				jabber_si_bytestreams_connect_cb, xfer);
 		g_free(hash);
 		g_free(dstaddr);
@@ -472,7 +478,7 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 			jsx->js->user->resource, xfer->who);
 
 	/* Per XEP-0065, the 'host' must be SHA1(SID + from JID + to JID) */
-	hash = jabber_calculate_data_sha1sum(dstaddr, strlen(dstaddr));
+	hash = jabber_calculate_data_hash(dstaddr, strlen(dstaddr), "sha1");
 
 	if(strncmp(hash, jsx->rxqueue + 5, 40) ||
 			jsx->rxqueue[45] != 0x00 || jsx->rxqueue[46] != 0x00) {
@@ -841,8 +847,7 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 
 	purple_xfer_unref(xfer);
 
-	iq = jabber_iq_new_query(jsx->js, JABBER_IQ_SET,
-			"http://jabber.org/protocol/bytestreams");
+	iq = jabber_iq_new_query(jsx->js, JABBER_IQ_SET, NS_BYTESTREAMS);
 	xmlnode_set_attrib(iq->node, "to", xfer->who);
 	query = xmlnode_get_child(iq->node, "query");
 
@@ -851,7 +856,10 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 	/* If we successfully started listening locally */
 	if (sock >= 0) {
 		gchar *jid;
-		const char *local_ip, *public_ip;
+		GList *local_ips =
+			purple_network_get_all_local_system_ips();
+		const char *public_ip;
+		gboolean has_public_ip = FALSE;
 
 		jsx->local_streamhost_fd = sock;
 
@@ -860,19 +868,24 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 		xfer->local_port = purple_network_get_port_from_fd(sock);
 		g_snprintf(port, sizeof(port), "%hu", xfer->local_port);
 
-		/* Include the localhost's IP (for in-network transfers) */
-		local_ip = purple_network_get_local_system_ip(jsx->js->fd);
-		if (strcmp(local_ip, "0.0.0.0") != 0) {
+		public_ip = purple_network_get_my_ip(jsx->js->fd);
+
+		/* Include the localhost's IPs (for in-network transfers) */
+		while (local_ips) {
+			gchar *local_ip = local_ips->data;
 			streamhost_count++;
 			streamhost = xmlnode_new_child(query, "streamhost");
 			xmlnode_set_attrib(streamhost, "jid", jid);
 			xmlnode_set_attrib(streamhost, "host", local_ip);
 			xmlnode_set_attrib(streamhost, "port", port);
+			if (purple_strequal(local_ip, public_ip))
+				has_public_ip = TRUE;
+			g_free(local_ip);
+			local_ips = g_list_delete_link(local_ips, local_ips);
 		}
 
 		/* Include the public IP (assuming that there is a port mapped somehow) */
-		public_ip = purple_network_get_my_ip(jsx->js->fd);
-		if (strcmp(public_ip, local_ip) != 0 && strcmp(public_ip, "0.0.0.0") != 0) {
+		if (!has_public_ip && strcmp(public_ip, "0.0.0.0") != 0) {
 			streamhost_count++;
 			streamhost = xmlnode_new_child(query, "streamhost");
 			xmlnode_set_attrib(streamhost, "jid", jid);
@@ -952,15 +965,23 @@ static void
 jabber_si_xfer_bytestreams_send_init(PurpleXfer *xfer)
 {
 	JabberSIXfer *jsx;
+	PurpleProxyType proxy_type;
 
 	purple_xfer_ref(xfer);
 
 	jsx = xfer->data;
 
-	/* TODO: Should there be an option to not use the local host as a ft proxy?
-	 *       (to prevent revealing IP address, etc.) */
-	jsx->listen_data = purple_network_listen_range(0, 0, SOCK_STREAM,
+	/* TODO: This should probably be done with an account option instead of
+	 *       piggy-backing on the TOR proxy type. */
+	proxy_type = purple_proxy_info_get_type(
+		purple_proxy_get_setup(purple_connection_get_account(jsx->js->gc)));
+	if (proxy_type == PURPLE_PROXY_TOR) {
+		purple_debug_info("jabber", "Skipping attempting local streamhost.\n");
+		jsx->listen_data = NULL;
+	} else
+		jsx->listen_data = purple_network_listen_range(0, 0, SOCK_STREAM,
 				jabber_si_xfer_bytestreams_listen_cb, xfer);
+
 	if (jsx->listen_data == NULL) {
 		/* We couldn't open a local port.  Perhaps we can use a proxy. */
 		jabber_si_xfer_bytestreams_listen_cb(-1, xfer);
@@ -972,14 +993,8 @@ static void
 jabber_si_xfer_ibb_error_cb(JabberIBBSession *sess)
 {
 	PurpleXfer *xfer = (PurpleXfer *) jabber_ibb_session_get_user_data(sess);
-	JabberStream *js = jabber_ibb_session_get_js(sess);
-	PurpleConnection *gc = js->gc;
-	PurpleAccount *account = purple_connection_get_account(gc);
 
 	purple_debug_error("jabber", "an error occurred during IBB file transfer\n");
-	purple_xfer_error(purple_xfer_get_type(xfer), account,
-		jabber_ibb_session_get_who(sess),
-			_("An error occurred on the in-band bytestream transfer\n"));
 	purple_xfer_cancel_remote(xfer);
 }
 
@@ -987,14 +1002,9 @@ static void
 jabber_si_xfer_ibb_closed_cb(JabberIBBSession *sess)
 {
 	PurpleXfer *xfer = (PurpleXfer *) jabber_ibb_session_get_user_data(sess);
-	JabberStream *js = jabber_ibb_session_get_js(sess);
-	PurpleConnection *gc = js->gc;
-	PurpleAccount *account = purple_connection_get_account(gc);
 
 	purple_debug_info("jabber", "the remote user closed the transfer\n");
 	if (purple_xfer_get_bytes_remaining(xfer) > 0) {
-		purple_xfer_error(purple_xfer_get_type(xfer), account,
-			jabber_ibb_session_get_who(sess), _("Transfer was closed."));
 		purple_xfer_cancel_remote(xfer);
 	} else {
 		purple_xfer_set_completed(xfer, TRUE);
@@ -1012,18 +1022,8 @@ jabber_si_xfer_ibb_recv_data_cb(JabberIBBSession *sess, gpointer data,
 	if (size <= purple_xfer_get_bytes_remaining(xfer)) {
 		purple_debug_info("jabber", "about to write %" G_GSIZE_FORMAT " bytes from IBB stream\n",
 			size);
-		if(!fwrite(data, size, 1, jsx->fp)) {
-			purple_debug_error("jabber", "error writing to file\n");
-			purple_xfer_cancel_remote(xfer);
-			return;
-		}
-		purple_xfer_set_bytes_sent(xfer, purple_xfer_get_bytes_sent(xfer) + size);
-		purple_xfer_update_progress(xfer);
-
-		if (purple_xfer_get_bytes_remaining(xfer) == 0) {
-			purple_xfer_set_completed(xfer, TRUE);
-			purple_xfer_end(xfer);
-		}
+		purple_circ_buffer_append(jsx->ibb_buffer, data, size);
+		purple_xfer_prpl_ready(xfer);
 	} else {
 		/* trying to write past size of file transfers negotiated size,
 		  reject transfer to protect against malicious behaviour */
@@ -1032,6 +1032,25 @@ jabber_si_xfer_ibb_recv_data_cb(JabberIBBSession *sess, gpointer data,
 		purple_xfer_cancel_remote(xfer);
 	}
 
+}
+
+static gssize
+jabber_si_xfer_ibb_read(guchar **out_buffer, PurpleXfer *xfer)
+{
+	JabberSIXfer *jsx = xfer->data;
+	guchar *buffer;
+	gsize size;
+	gsize tmp;
+
+	size = jsx->ibb_buffer->bufused;
+	*out_buffer = buffer = g_malloc(size);
+	while ((tmp = purple_circ_buffer_get_max_read(jsx->ibb_buffer))) {
+		memcpy(buffer, jsx->ibb_buffer->outptr, tmp);
+		buffer += tmp;
+		purple_circ_buffer_mark_read(jsx->ibb_buffer, tmp);
+	}
+
+	return size;
 }
 
 static gboolean
@@ -1044,21 +1063,10 @@ jabber_si_xfer_ibb_open_cb(JabberStream *js, const char *who, const char *id,
 		JabberSIXfer *jsx = (JabberSIXfer *) xfer->data;
 		JabberIBBSession *sess =
 			jabber_ibb_session_create_from_xmlnode(js, who, id, open, xfer);
-		const char *filename;
 
 		jabber_si_bytestreams_ibb_timeout_remove(jsx);
 
 		if (sess) {
-			/* open the file to write to */
-			filename = purple_xfer_get_local_filename(xfer);
-			jsx->fp = g_fopen(filename, "wb");
-			if (jsx->fp == NULL) {
-				purple_debug_error("jabber", "failed to open file %s for writing: %s\n",
-					filename, g_strerror(errno));
-				purple_xfer_cancel_remote(xfer);
-				return FALSE;
-			}
-
 			/* setup callbacks here...*/
 			jabber_ibb_session_set_data_received_callback(sess,
 				jabber_si_xfer_ibb_recv_data_cb);
@@ -1068,9 +1076,17 @@ jabber_si_xfer_ibb_open_cb(JabberStream *js, const char *who, const char *id,
 				jabber_si_xfer_ibb_error_cb);
 
 			jsx->ibb_session = sess;
+			/* we handle up to block-size bytes of decoded data, to handle
+			 clients interpreting the block-size attribute as that
+			 (see also remark in ibb.c) */
+			jsx->ibb_buffer =
+				purple_circ_buffer_new(jabber_ibb_session_get_block_size(sess));
+
+			/* set up read function */
+			purple_xfer_set_read_fnc(xfer, jabber_si_xfer_ibb_read);
 
 			/* start the transfer */
-			purple_xfer_start(xfer, 0, NULL, 0);
+			purple_xfer_start(xfer, -1, NULL, 0);
 			return TRUE;
 		} else {
 			/* failed to create IBB session */
@@ -1086,32 +1102,17 @@ jabber_si_xfer_ibb_open_cb(JabberStream *js, const char *who, const char *id,
 	}
 }
 
-static void
-jabber_si_xfer_ibb_send_data(JabberIBBSession *sess)
+static gssize
+jabber_si_xfer_ibb_write(const guchar *buffer, size_t len, PurpleXfer *xfer)
 {
-	PurpleXfer *xfer = (PurpleXfer *) jabber_ibb_session_get_user_data(sess);
 	JabberSIXfer *jsx = (JabberSIXfer *) xfer->data;
-	gsize remaining = purple_xfer_get_bytes_remaining(xfer);
-	gsize packet_size = remaining < jabber_ibb_session_get_block_size(sess) ?
-		remaining : jabber_ibb_session_get_block_size(sess);
-	gpointer data = g_malloc(packet_size);
-	int res;
+	JabberIBBSession *sess = jsx->ibb_session;
+	gsize packet_size = len < jabber_ibb_session_get_max_data_size(sess) ?
+		len : jabber_ibb_session_get_max_data_size(sess);
 
-	purple_debug_info("jabber", "IBB: about to read %" G_GSIZE_FORMAT " bytes from file %p\n",
-		packet_size, jsx->fp);
-	res = fread(data, packet_size, 1, jsx->fp);
+	jabber_ibb_session_send_data(sess, buffer, packet_size);
 
-	if (res == 1) {
-		jabber_ibb_session_send_data(sess, data, packet_size);
-		purple_xfer_set_bytes_sent(xfer,
-			purple_xfer_get_bytes_sent(xfer) + packet_size);
-		purple_xfer_update_progress(xfer);
-	} else {
-		purple_debug_error("jabber",
-			"jabber_si_xfer_ibb_send_data: error reading from file\n");
-		purple_xfer_cancel_local(xfer);
-	}
-	g_free(data);
+	return packet_size;
 }
 
 static void
@@ -1127,7 +1128,7 @@ jabber_si_xfer_ibb_sent_cb(JabberIBBSession *sess)
 		purple_xfer_end(xfer);
 	} else {
 		/* send more... */
-		jabber_si_xfer_ibb_send_data(sess);
+		purple_xfer_prpl_ready(xfer);
 	}
 }
 
@@ -1135,33 +1136,12 @@ static void
 jabber_si_xfer_ibb_opened_cb(JabberIBBSession *sess)
 {
 	PurpleXfer *xfer = (PurpleXfer *) jabber_ibb_session_get_user_data(sess);
-	JabberSIXfer *jsx = (JabberSIXfer *) xfer->data;
-	JabberStream *js = jabber_ibb_session_get_js(sess);
-	PurpleConnection *gc = js->gc;
-	PurpleAccount *account = purple_connection_get_account(gc);
 
 	if (jabber_ibb_session_get_state(sess) == JABBER_IBB_SESSION_OPENED) {
-		const char *filename = purple_xfer_get_local_filename(xfer);
-		jsx->fp = g_fopen(filename, "rb");
-		if (jsx->fp == NULL) {
-			purple_debug_error("jabber", "Failed to open file %s for reading: %s\n",
-				filename, g_strerror(errno));
-			purple_xfer_error(purple_xfer_get_type(xfer), account,
-				jabber_ibb_session_get_who(sess),
-				_("Failed to open the file"));
-			purple_xfer_cancel_local(xfer);
-			return;
-		}
-
-		purple_xfer_start(xfer, 0, NULL, 0);
-		purple_xfer_set_bytes_sent(xfer, 0);
-		purple_xfer_update_progress(xfer);
-		jabber_si_xfer_ibb_send_data(sess);
+		purple_xfer_start(xfer, -1, NULL, 0);
+		purple_xfer_prpl_ready(xfer);
 	} else {
 		/* error */
-		purple_xfer_error(purple_xfer_get_type(xfer), account,
-			jabber_ibb_session_get_who(sess),
-			_("Failed to open in-band bytestream"));
 		purple_xfer_end(xfer);
 	}
 }
@@ -1170,8 +1150,6 @@ static void
 jabber_si_xfer_ibb_send_init(JabberStream *js, PurpleXfer *xfer)
 {
 	JabberSIXfer *jsx = (JabberSIXfer *) xfer->data;
-
-	purple_xfer_ref(xfer);
 
 	jsx->ibb_session = jabber_ibb_session_create(js, jsx->stream_id,
 		purple_xfer_get_remote_user(xfer), xfer);
@@ -1186,6 +1164,11 @@ jabber_si_xfer_ibb_send_init(JabberStream *js, PurpleXfer *xfer)
 			jabber_si_xfer_ibb_closed_cb);
 		jabber_ibb_session_set_error_callback(jsx->ibb_session,
 			jabber_si_xfer_ibb_error_cb);
+
+		purple_xfer_set_write_fnc(xfer, jabber_si_xfer_ibb_write);
+
+		jsx->ibb_buffer =
+			purple_circ_buffer_new(jabber_ibb_session_get_max_data_size(jsx->ibb_session));
 
 		/* open the IBB session */
 		jabber_ibb_session_open(jsx->ibb_session);
@@ -1228,11 +1211,11 @@ static void jabber_si_xfer_send_method_cb(JabberStream *js, const char *from,
 		if(var && !strcmp(var, "stream-method")) {
 			if((value = xmlnode_get_child(field, "value"))) {
 				char *val = xmlnode_get_data(value);
-				if(val && !strcmp(val, "http://jabber.org/protocol/bytestreams")) {
+				if(val && !strcmp(val, NS_BYTESTREAMS)) {
 					jabber_si_xfer_bytestreams_send_init(xfer);
 					jsx->stream_method |= STREAM_METHOD_BYTESTREAMS;
 					found_method = TRUE;
-				} else if (val && !strcmp(val, XEP_0047_NAMESPACE)) {
+				} else if (val && !strcmp(val, NS_IBB)) {
 					jsx->stream_method |= STREAM_METHOD_IBB;
 					if (!found_method) {
 						/* we haven't tried to init a bytestream session, yet
@@ -1258,7 +1241,12 @@ static void jabber_si_xfer_send_request(PurpleXfer *xfer)
 	JabberIq *iq;
 	xmlnode *si, *file, *feature, *x, *field, *option, *value;
 	char buf[32];
+#if ENABLE_FT_THUMBNAILS
+	gconstpointer thumb;
+	gsize thumb_size;
 
+	purple_xfer_prepare_thumbnail(xfer, "jpeg,png");
+#endif
 	xfer->filename = g_path_get_basename(xfer->local_filename);
 
 	iq = jabber_iq_new(jsx->js, JABBER_IQ_SET);
@@ -1267,16 +1255,31 @@ static void jabber_si_xfer_send_request(PurpleXfer *xfer)
 	xmlnode_set_namespace(si, "http://jabber.org/protocol/si");
 	jsx->stream_id = jabber_get_next_id(jsx->js);
 	xmlnode_set_attrib(si, "id", jsx->stream_id);
-	xmlnode_set_attrib(si, "profile",
-			"http://jabber.org/protocol/si/profile/file-transfer");
+	xmlnode_set_attrib(si, "profile", NS_SI_FILE_TRANSFER);
 
 	file = xmlnode_new_child(si, "file");
-	xmlnode_set_namespace(file,
-			"http://jabber.org/protocol/si/profile/file-transfer");
+	xmlnode_set_namespace(file, NS_SI_FILE_TRANSFER);
 	xmlnode_set_attrib(file, "name", xfer->filename);
 	g_snprintf(buf, sizeof(buf), "%" G_GSIZE_FORMAT, xfer->size);
 	xmlnode_set_attrib(file, "size", buf);
 	/* maybe later we'll do hash and date attribs */
+
+#if ENABLE_FT_THUMBNAILS
+	/* add thumbnail, if appropriate */
+	if ((thumb = purple_xfer_get_thumbnail(xfer, &thumb_size))) {
+		const gchar *mimetype = purple_xfer_get_thumbnail_mimetype(xfer);
+		JabberData *thumbnail_data =
+			jabber_data_create_from_data(thumb, thumb_size,
+				mimetype, TRUE, jsx->js);
+		xmlnode *thumbnail = xmlnode_new_child(file, "thumbnail");
+		xmlnode_set_namespace(thumbnail, NS_THUMBS);
+		xmlnode_set_attrib(thumbnail, "cid",
+			jabber_data_get_cid(thumbnail_data));
+		xmlnode_set_attrib(thumbnail, "mime-type", mimetype);
+		/* cache data */
+		jabber_data_associate_local(thumbnail_data, NULL);
+	}
+#endif
 
 	feature = xmlnode_new_child(si, "feature");
 	xmlnode_set_namespace(feature, "http://jabber.org/protocol/feature-neg");
@@ -1290,10 +1293,10 @@ static void jabber_si_xfer_send_request(PurpleXfer *xfer)
 		behind troublesome firewalls */
 	option = xmlnode_new_child(field, "option");
 	value = xmlnode_new_child(option, "value");
-	xmlnode_insert_data(value, "http://jabber.org/protocol/bytestreams", -1);
+	xmlnode_insert_data(value, NS_BYTESTREAMS, -1);
 	option = xmlnode_new_child(field, "option");
 	value = xmlnode_new_child(option, "value");
-	xmlnode_insert_data(value, "http://jabber.org/protocol/ibb", -1);
+	xmlnode_insert_data(value, NS_IBB, -1);
 
 	jabber_iq_set_callback(iq, jabber_si_xfer_send_method_cb, xfer);
 
@@ -1342,11 +1345,11 @@ static void jabber_si_xfer_free(PurpleXfer *xfer)
 			jabber_ibb_session_destroy(jsx->ibb_session);
 		}
 
-		if (jsx->fp) {
-			purple_debug_info("jabber",
-				"jabber_si_xfer_free: closing file for IBB transfer\n");
-			fclose(jsx->fp);
+		if (jsx->ibb_buffer) {
+			purple_circ_buffer_destroy(jsx->ibb_buffer);
 		}
+
+		purple_debug_info("jabber", "jabber_si_xfer_free(): freeing jsx %p\n", jsx);
 
 		g_free(jsx->stream_id);
 		g_free(jsx->iq_id);
@@ -1354,8 +1357,6 @@ static void jabber_si_xfer_free(PurpleXfer *xfer)
 		g_free(jsx->rxqueue);
 		g_free(jsx);
 		xfer->data = NULL;
-
-		purple_debug_info("jabber", "jabber_si_xfer_free(): freeing jsx %p\n", jsx);
 	}
 }
 
@@ -1373,7 +1374,7 @@ static void jabber_si_xfer_cancel_send(PurpleXfer *xfer)
 		jabber_ibb_session_close(jsx->ibb_session);
 	}
 	jabber_si_xfer_free(xfer);
-	purple_debug(PURPLE_DEBUG_INFO, "jabber", "in jabber_si_xfer_cancel_send\n");
+	purple_debug_info("jabber", "in jabber_si_xfer_cancel_send\n");
 }
 
 
@@ -1396,16 +1397,16 @@ static void jabber_si_xfer_request_denied(PurpleXfer *xfer)
 		error = xmlnode_new_child(iq->node, "error");
 		xmlnode_set_attrib(error, "type", "cancel");
 		child = xmlnode_new_child(error, "forbidden");
-		xmlnode_set_namespace(child, "urn:ietf:params:xml:ns:xmpp-stanzas");
+		xmlnode_set_namespace(child, NS_XMPP_STANZAS);
 		child = xmlnode_new_child(error, "text");
-		xmlnode_set_namespace(child, "urn:ietf:params:xml:ns:xmpp-stanzas");
+		xmlnode_set_namespace(child, NS_XMPP_STANZAS);
 		xmlnode_insert_data(child, "Offer Declined", -1);
 
 		jabber_iq_send(iq);
 	}
 
 	jabber_si_xfer_free(xfer);
-	purple_debug(PURPLE_DEBUG_INFO, "jabber", "in jabber_si_xfer_request_denied\n");
+	purple_debug_info("jabber", "in jabber_si_xfer_request_denied\n");
 }
 
 
@@ -1417,7 +1418,7 @@ static void jabber_si_xfer_cancel_recv(PurpleXfer *xfer)
 		jabber_ibb_session_close(jsx->ibb_session);
 	}
 	jabber_si_xfer_free(xfer);
-	purple_debug(PURPLE_DEBUG_INFO, "jabber", "in jabber_si_xfer_cancel_recv\n");
+	purple_debug_info("jabber", "in jabber_si_xfer_cancel_recv\n");
 }
 
 
@@ -1473,12 +1474,12 @@ static void do_transfer_send(PurpleXfer *xfer, const char *resource)
 	g_free(xfer->who);
 	xfer->who = who;
 
-	if (jbr) {
+	if (jbr && jabber_resource_know_capabilities(jbr)) {
 		char *msg;
 
-		if (jabber_resource_has_capability(jbr, XEP_0047_NAMESPACE))
+		if (jabber_resource_has_capability(jbr, NS_IBB))
 			jsx->stream_method |= STREAM_METHOD_IBB;
-		if (jabber_resource_has_capability(jbr, "http://jabber.org/protocol/si/profile/file-transfer")) {
+		if (jabber_resource_has_capability(jbr, NS_SI_FILE_TRANSFER)) {
 			jabber_si_xfer_send_request(xfer);
 			return;
 		}
@@ -1513,6 +1514,7 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 		JabberBuddy *jb;
 		JabberBuddyResource *jbr = NULL;
 		char *resource;
+		GList *resources = NULL;
 
 		if(NULL != (resource = jabber_get_resource(xfer->who))) {
 			/* they've specified a resource, no need to ask or
@@ -1525,7 +1527,22 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 
 		jb = jabber_buddy_find(jsx->js, xfer->who, TRUE);
 
-		if(!jb || !jb->resources) {
+		if (jb) {
+			GList *l;
+
+			for (l = jb->resources ; l ; l = g_list_next(l)) {
+				jbr = l->data;
+
+				if (!jabber_resource_know_capabilities(jbr) ||
+				    (jabber_resource_has_capability(jbr, NS_SI_FILE_TRANSFER)
+				     && (jabber_resource_has_capability(jbr, NS_BYTESTREAMS)
+				         || jabber_resource_has_capability(jbr, NS_IBB)))) {
+					resources = g_list_append(resources, jbr);
+				}
+			}
+		}
+
+		if (!resources) {
 			/* no resources online, we're trying to send to someone
 			 * whose presence we're not subscribed to, or
 			 * someone who is offline.  Let's inform the user */
@@ -1541,13 +1558,11 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 
 			purple_notify_error(jsx->js->gc, _("File Send Failed"), _("File Send Failed"), msg);
 			g_free(msg);
-		} else if(!jb->resources->next) {
+		} else if (g_list_length(resources) == 1) {
 			/* only 1 resource online (probably our most common case)
 			 * so no need to ask who to send to */
-			jbr = jb->resources->data;
-
+			jbr = resources->data;
 			do_transfer_send(xfer, jbr->name);
-
 		} else {
 			/* we've got multiple resources, we need to pick one to send to */
 			GList *l;
@@ -1556,10 +1571,8 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 			PurpleRequestField *field = purple_request_field_choice_new("resource", _("Resource"), 0);
 			PurpleRequestFieldGroup *group = purple_request_field_group_new(NULL);
 
-			for(l = jb->resources; l; l = l->next)
-			{
+			for(l = resources; l; l = l->next) {
 				jbr = l->data;
-
 				purple_request_field_choice_add(field, jbr->name);
 			}
 
@@ -1573,6 +1586,8 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 
 			g_free(msg);
 		}
+
+		g_list_free(resources);
 	} else {
 		xmlnode *si, *feature, *x, *field, *value;
 
@@ -1604,10 +1619,10 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 			for people who know their firewalls are very restrictive */
 		if (jsx->stream_method & STREAM_METHOD_BYTESTREAMS) {
 			value = xmlnode_new_child(field, "value");
-			xmlnode_insert_data(value, "http://jabber.org/protocol/bytestreams", -1);
+			xmlnode_insert_data(value, NS_BYTESTREAMS, -1);
 		} else if(jsx->stream_method & STREAM_METHOD_IBB) {
 			value = xmlnode_new_child(field, "value");
-			xmlnode_insert_data(value, "http://jabber.org/protocol/ibb", -1);
+			xmlnode_insert_data(value, NS_IBB, -1);
 		}
 
 		jabber_iq_send(iq);
@@ -1631,7 +1646,6 @@ PurpleXfer *jabber_si_new_xfer(PurpleConnection *gc, const char *who)
 		jsx->local_streamhost_fd = -1;
 
 		jsx->ibb_session = NULL;
-		jsx->fp = NULL;
 
 		purple_xfer_set_init_fnc(xfer, jabber_si_xfer_init);
 		purple_xfer_set_cancel_send_fnc(xfer, jabber_si_xfer_cancel_send);
@@ -1645,11 +1659,7 @@ PurpleXfer *jabber_si_new_xfer(PurpleConnection *gc, const char *who)
 
 void jabber_si_xfer_send(PurpleConnection *gc, const char *who, const char *file)
 {
-	JabberStream *js;
-
 	PurpleXfer *xfer;
-
-	js = gc->proto_data;
 
 	xfer = jabber_si_new_xfer(gc, who);
 
@@ -1659,17 +1669,38 @@ void jabber_si_xfer_send(PurpleConnection *gc, const char *who, const char *file
 		purple_xfer_request(xfer);
 }
 
+#if ENABLE_FT_THUMBNAILS
+static void
+jabber_si_thumbnail_cb(JabberData *data, gchar *alt, gpointer userdata)
+{
+	PurpleXfer *xfer = (PurpleXfer *) userdata;
+
+	if (data) {
+		purple_xfer_set_thumbnail(xfer, jabber_data_get_data(data),
+			jabber_data_get_size(data), jabber_data_get_type(data));
+		/* data is ephemeral, get rid of now (the xfer re-owned the thumbnail */
+		jabber_data_destroy(data);
+	}
+
+	purple_xfer_request(xfer);
+}
+#endif
+
 void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
                      const char *id, xmlnode *si)
 {
 	JabberSIXfer *jsx;
 	PurpleXfer *xfer;
 	xmlnode *file, *feature, *x, *field, *option, *value;
+#if ENABLE_FT_THUMBNAILS
+	xmlnode *thumbnail;
+#endif
 	const char *stream_id, *filename, *filesize_c, *profile;
+	guint64 filesize_64 = 0;
 	size_t filesize = 0;
 
 	if(!(profile = xmlnode_get_attrib(si, "profile")) ||
-			strcmp(profile, "http://jabber.org/protocol/si/profile/file-transfer"))
+			strcmp(profile, NS_SI_FILE_TRANSFER))
 		return;
 
 	if(!(stream_id = xmlnode_get_attrib(si, "id")))
@@ -1682,7 +1713,17 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 		return;
 
 	if((filesize_c = xmlnode_get_attrib(file, "size")))
-		filesize = atoi(filesize_c);
+		filesize_64 = g_ascii_strtoull(filesize_c, NULL, 10);
+	/* TODO 3.0.0: When the core uses a guint64, this is redundant.
+	 * See #8477.
+	 */
+	if (filesize_64 > G_MAXSIZE) {
+		/* Should this pop up a warning? */
+		purple_debug_warning("jabber", "Unable to transfer file (too large)"
+		                     " -- see #8477 for more details.");
+		return;
+	}
+	filesize = filesize_64;
 
 	if(!(feature = xmlnode_get_child(si, "feature")))
 		return;
@@ -1696,7 +1737,7 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 	/* if they've already sent us this file transfer with the same damn id
 	 * then we're gonna ignore it, until I think of something better to do
 	 * with it */
-	if((xfer = jabber_si_xfer_find(js, stream_id, from)))
+	if(jabber_si_xfer_find(js, stream_id, from) != NULL)
 		return;
 
 	jsx = g_new0(JabberSIXfer, 1);
@@ -1712,9 +1753,9 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 				if((value = xmlnode_get_child(option, "value"))) {
 					char *val;
 					if((val = xmlnode_get_data(value))) {
-						if(!strcmp(val, "http://jabber.org/protocol/bytestreams")) {
+						if(!strcmp(val, NS_BYTESTREAMS)) {
 							jsx->stream_method |= STREAM_METHOD_BYTESTREAMS;
-						} else if(!strcmp(val, "http://jabber.org/protocol/ibb")) {
+						} else if(!strcmp(val, NS_IBB)) {
 							jsx->stream_method |= STREAM_METHOD_IBB;
 						}
 						g_free(val);
@@ -1748,6 +1789,19 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 	purple_xfer_set_end_fnc(xfer, jabber_si_xfer_end);
 
 	js->file_transfers = g_list_append(js->file_transfers, xfer);
+
+#if ENABLE_FT_THUMBNAILS
+	/* if there is a thumbnail, we should request it... */
+	if ((thumbnail = xmlnode_get_child_with_namespace(file, "thumbnail",
+		NS_THUMBS))) {
+		const char *cid = xmlnode_get_attrib(thumbnail, "cid");
+		if (cid) {
+			jabber_data_request(js, cid, purple_xfer_get_remote_user(xfer),
+			    NULL, TRUE, jabber_si_thumbnail_cb, xfer);
+			return;
+		}
+	}
+#endif
 
 	purple_xfer_request(xfer);
 }

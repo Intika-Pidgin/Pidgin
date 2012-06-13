@@ -23,6 +23,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#include <internal.h>
+
 #include <gnt.h>
 #include <gntbox.h>
 #include <gntbutton.h>
@@ -32,7 +34,6 @@
 #include <gntwindow.h>
 
 #include "finch.h"
-#include <internal.h>
 
 #include <util.h>
 
@@ -83,6 +84,10 @@ finch_notify_message(PurpleNotifyMsgType type, const char *title,
 
 	if (secondary) {
 		GntWidget *msg;
+		/* XXX: This is broken.  type is PurpleNotifyMsgType, not
+		 * PurpleNotifyType.  Also, the if() followed by the
+		 * inner switch doesn't make much sense.
+		 */
 		if (type == PURPLE_NOTIFY_FORMATTED) {
 			int width = -1, height = -1;
 			char *plain = (char*)secondary;
@@ -129,7 +134,7 @@ static void finch_close_notify(PurpleNotifyType type, void *handle)
 
 	while (widget->parent)
 		widget = widget->parent;
-	
+
 	if (type == PURPLE_NOTIFY_SEARCHRESULTS)
 		purple_notify_searchresults_free(g_object_get_data(handle, "notify-results"));
 #if 1
@@ -488,7 +493,7 @@ finch_notify_uri(const char *url)
 	return finch_notify_message(PURPLE_NOTIFY_URI, _("URI"), url, NULL);
 }
 
-static PurpleNotifyUiOps ops = 
+static PurpleNotifyUiOps ops =
 {
 	finch_notify_message,
 	finch_notify_email,

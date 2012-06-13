@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	 02111-1307	 USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -28,12 +28,6 @@
 #include "imgstore.h"
 
 /* Implementation of XEP-0084 */
-
-#define NS_AVATAR_0_12_DATA     "http://www.xmpp.org/extensions/xep-0084.html#ns-data"
-#define NS_AVATAR_0_12_METADATA "http://www.xmpp.org/extensions/xep-0084.html#ns-metadata"
-
-#define NS_AVATAR_1_1_DATA      "urn:xmpp:avatar:data"
-#define NS_AVATAR_1_1_METADATA  "urn:xmpp:avatar:metadata"
 
 void jabber_avatar_init(void);
 void jabber_avatar_set(JabberStream *js, PurpleStoredImage *img);

@@ -20,9 +20,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include <glib.h>
-#include <string.h>
-
 #include "internal.h"
 #include "theme.h"
 #include "util.h"
@@ -190,7 +187,7 @@ purple_theme_class_init(PurpleThemeClass *klass)
 
 	/* TYPE STRING (read only) */
 	pspec = g_param_spec_string("type", "Type",
-			"The string represtenting the type of the theme",
+			"The string representing the type of the theme",
 			NULL,
 			G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 	g_object_class_install_property(obj_class, PROP_TYPE, pspec);
