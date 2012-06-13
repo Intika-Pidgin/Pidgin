@@ -387,7 +387,6 @@ parse_substatus(xmlnode *substatus)
 		const char *protocol;
 		acct_name = xmlnode_get_data(node);
 		protocol = xmlnode_get_attrib(node, "protocol");
-		protocol = _purple_oscar_convert(acct_name, protocol); /* XXX: Remove */
 		if ((acct_name != NULL) && (protocol != NULL))
 			ret->account = purple_accounts_find(acct_name, protocol);
 		g_free(acct_name);
@@ -404,7 +403,7 @@ parse_substatus(xmlnode *substatus)
 	if ((node != NULL) && ((data = xmlnode_get_data(node)) != NULL))
 	{
 		ret->type = purple_status_type_find_with_id(
-							ret->account->status_types, data);
+							purple_account_get_status_types(ret->account), data);
 		g_free(data);
 	}
 
@@ -436,12 +435,12 @@ parse_substatus(xmlnode *substatus)
  *   And I can always make them smile
  *   From White Castle to the Nile</message>
  *       <substatus>
- *           <account protocol='prpl-oscar'>markdoliner</account>
+ *           <account protocol='prpl-aim'>markdoliner</account>
  *           <state>available</state>
  *           <message>The ladies man is here to answer your queries.</message>
  *       </substatus>
  *       <substatus>
- *           <account protocol='prpl-oscar'>giantgraypanda</account>
+ *           <account protocol='prpl-aim'>giantgraypanda</account>
  *           <state>away</state>
  *           <message>A.C. ain't in charge no more.</message>
  *       </substatus>
@@ -1235,6 +1234,8 @@ purple_savedstatuses_init(void)
 void
 purple_savedstatuses_uninit(void)
 {
+	gpointer handle = purple_savedstatuses_get_handle();
+
 	remove_old_transient_statuses();
 
 	if (save_timer != 0)
@@ -1253,6 +1254,7 @@ purple_savedstatuses_uninit(void)
 	g_hash_table_destroy(creation_times);
 	creation_times = NULL;
 
-	purple_signals_unregister_by_instance(purple_savedstatuses_get_handle());
+	purple_signals_unregister_by_instance(handle);
+	purple_signals_disconnect_by_handle(handle);
 }
 

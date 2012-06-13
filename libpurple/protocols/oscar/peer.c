@@ -69,7 +69,7 @@
 #endif
 
 PeerConnection *
-peer_connection_find_by_type(OscarData *od, const char *bn, OscarCapability type)
+peer_connection_find_by_type(OscarData *od, const char *bn, guint64 type)
 {
 	GSList *cur;
 	PeerConnection *conn;
@@ -104,7 +104,7 @@ peer_connection_find_by_cookie(OscarData *od, const char *bn, const guchar *cook
 }
 
 PeerConnection *
-peer_connection_new(OscarData *od, OscarCapability type, const char *bn)
+peer_connection_new(OscarData *od, guint64 type, const char *bn)
 {
 	PeerConnection *conn;
 	PurpleAccount *account;
@@ -212,7 +212,7 @@ peer_connection_destroy_cb(gpointer data)
 	if (conn->xfer != NULL)
 	{
 		PurpleXferStatusType status;
-		conn->xfer->data = NULL;
+		purple_xfer_set_protocol_data(conn->xfer, NULL);
 		status = purple_xfer_get_status(conn->xfer);
 		if ((status != PURPLE_XFER_STATUS_DONE) &&
 			(status != PURPLE_XFER_STATUS_CANCEL_LOCAL) &&
@@ -603,15 +603,11 @@ void
 peer_connection_listen_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	PeerConnection *conn;
-	OscarData *od;
-	PurpleConnection *gc;
 	struct sockaddr addr;
 	socklen_t addrlen = sizeof(addr);
 	int flags;
 
 	conn = data;
-	od = conn->od;
-	gc = od->gc;
 
 	purple_debug_info("oscar", "Accepting connection on listener socket.\n");
 
@@ -660,6 +656,7 @@ peer_connection_establish_listener_cb(int listenerfd, gpointer data)
 	char *tmp;
 	FlapConnection *bos_conn;
 	const char *listener_ip;
+	const guchar *ip_atoi;
 	unsigned short listener_port;
 
 	conn = data;
@@ -694,11 +691,28 @@ peer_connection_establish_listener_cb(int listenerfd, gpointer data)
 		listener_ip = purple_network_get_my_ip(bos_conn->gsc->fd);
 	else
 		listener_ip = purple_network_get_my_ip(bos_conn->fd);
+
+	ip_atoi = purple_network_ip_atoi(listener_ip);
+	if (ip_atoi == NULL) {
+		/* Could not convert IP to 4 byte array--weird, but this does
+		   happen for some users (#4829, Adium #15839).  Maybe they're
+		   connecting with IPv6...?  Maybe through a proxy? */
+		purple_debug_error("oscar", "Can't ask peer to connect to us "
+				"because purple_network_ip_atoi(%s) returned NULL. "
+				"fd=%d. is_ssl=%d\n",
+				listener_ip ? listener_ip : "(null)",
+				bos_conn->gsc ? bos_conn->gsc->fd : bos_conn->fd,
+				bos_conn->gsc ? 1 : 0);
+		peer_connection_trynext(conn);
+		return;
+	}
+
 	listener_port = purple_network_get_port_from_fd(conn->listenerfd);
+
 	if (conn->type == OSCAR_CAPABILITY_DIRECTIM)
 	{
 		aim_im_sendch2_odc_requestdirect(od,
-				conn->cookie, conn->bn, purple_network_ip_atoi(listener_ip),
+				conn->cookie, conn->bn, ip_atoi,
 				listener_port, ++conn->lastrequestnumber);
 
 		/* Print a message to a local conversation window */
@@ -710,15 +724,6 @@ peer_connection_establish_listener_cb(int listenerfd, gpointer data)
 	}
 	else if (conn->type == OSCAR_CAPABILITY_SENDFILE)
 	{
-		const guchar *ip_atoi = purple_network_ip_atoi(listener_ip);
-		if (ip_atoi == NULL) {
-			purple_debug_error("oscar", "Cannot send file. atoi(%s) failed.\n"
-					"Other possibly useful information: fd = %d, port = %d\n",
-					listener_ip ? listener_ip : "(null!)", conn->listenerfd,
-					listener_port);
-			purple_xfer_cancel_local(conn->xfer);
-			return;
-		}
 		aim_im_sendch2_sendfile_requestdirect(od,
 				conn->cookie, conn->bn,
 				ip_atoi,
@@ -842,7 +847,7 @@ peer_connection_trynext(PeerConnection *conn)
 		 */
 		conn->flags |= PEER_CONNECTION_FLAG_IS_INCOMING;
 
-		conn->listen_data = purple_network_listen_range(5190, 5290, SOCK_STREAM,
+		conn->listen_data = purple_network_listen_range(5190, 5290, AF_UNSPEC, SOCK_STREAM, TRUE,
 				peer_connection_establish_listener_cb, conn);
 		if (conn->listen_data != NULL)
 		{
@@ -879,7 +884,9 @@ peer_connection_trynext(PeerConnection *conn)
 		}
 
 		conn->verified_connect_data = purple_proxy_connect(NULL, account,
-				(conn->proxyip != NULL) ? conn->proxyip : PEER_PROXY_SERVER,
+				(conn->proxyip != NULL)
+					? conn->proxyip
+					: (conn->od->icq ? ICQ_PEER_PROXY_SERVER : AIM_PEER_PROXY_SERVER),
 				PEER_PROXY_PORT,
 				peer_proxy_connection_established_cb, conn);
 		if (conn->verified_connect_data != NULL)
@@ -897,7 +904,7 @@ peer_connection_trynext(PeerConnection *conn)
  * Initiate a peer connection with someone.
  */
 void
-peer_connection_propose(OscarData *od, OscarCapability type, const char *bn)
+peer_connection_propose(OscarData *od, guint64 type, const char *bn)
 {
 	PeerConnection *conn;
 
@@ -1070,7 +1077,7 @@ peer_connection_got_proposition(OscarData *od, const gchar *bn, const gchar *mes
 		conn->xfer = purple_xfer_new(account, PURPLE_XFER_RECEIVE, bn);
 		if (conn->xfer)
 		{
-			conn->xfer->data = conn;
+			purple_xfer_set_protocol_data(conn->xfer, conn);
 			purple_xfer_ref(conn->xfer);
 			purple_xfer_set_size(conn->xfer, args->info.sendfile.totsize);
 

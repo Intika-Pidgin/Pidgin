@@ -23,8 +23,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#include "eventloop.h"
 #include "internal.h"
+#include "eventloop.h"
 
 static PurpleEventLoopUiOps *eventloop_ui_ops = NULL;
 
@@ -89,6 +89,16 @@ purple_input_get_error(int fd, int *error)
 
 		return getsockopt(fd, SOL_SOCKET, SO_ERROR, error, &len);
 	}
+}
+
+int
+purple_input_pipe(int pipefd[2])
+{
+#ifdef _WIN32
+	return wpurple_input_pipe(pipefd);
+#else
+	return pipe(pipefd);
+#endif
 }
 
 void

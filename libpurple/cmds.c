@@ -21,8 +21,6 @@
  *
  */
 
-#include <string.h>
-
 #include "internal.h"
 
 #include "account.h"
@@ -387,5 +385,10 @@ void purple_cmds_init(void)
 void purple_cmds_uninit(void)
 {
 	purple_signals_unregister_by_instance(purple_cmds_get_handle());
+
+	while (cmds) {
+		purple_cmd_free(cmds->data);
+		cmds = g_list_delete_link(cmds, cmds);
+	}
 }
 

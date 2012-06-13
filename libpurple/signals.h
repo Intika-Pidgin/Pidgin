@@ -35,9 +35,7 @@ typedef void (*PurpleCallback)(void);
 typedef void (*PurpleSignalMarshalFunc)(PurpleCallback cb, va_list args,
 									  void *data, void **return_val);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Signal API                                                      */
@@ -330,12 +328,16 @@ void purple_marshal_INT__INT_INT(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
 void purple_marshal_INT__POINTER_POINTER(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
+void purple_marshal_INT__POINTER_POINTER_POINTER(
+		PurpleCallback cb, va_list args, void *data, void **return_val);
 void purple_marshal_INT__POINTER_POINTER_POINTER_POINTER_POINTER(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
 
 void purple_marshal_BOOLEAN__POINTER(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
 void purple_marshal_BOOLEAN__POINTER_POINTER(
+		PurpleCallback cb, va_list args, void *data, void **return_val);
+void purple_marshal_BOOLEAN__POINTER_BOOLEAN(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
 void purple_marshal_BOOLEAN__POINTER_POINTER_POINTER(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
@@ -355,6 +357,8 @@ void purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_POINTER_POINTER(
 void purple_marshal_BOOLEAN__INT_POINTER(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
 
+void purple_marshal_POINTER__POINTER(
+		PurpleCallback cb, va_list args, void *data, void **return_val);
 void purple_marshal_POINTER__POINTER_INT(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
 void purple_marshal_POINTER__POINTER_INT64(
@@ -367,8 +371,7 @@ void purple_marshal_POINTER__POINTER_POINTER(
 		PurpleCallback cb, va_list args, void *data, void **return_val);
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_SIGNALS_H_ */
+

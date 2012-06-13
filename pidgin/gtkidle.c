@@ -29,7 +29,7 @@
 #else
 # ifdef USE_SCREENSAVER
 #  ifdef _WIN32
-#   include "idletrack.h"
+#   include "gtkwin32dep.h"
 #  else
     /* We're on X11 and not MacOS X with IOKit. */
 #   include <X11/Xlib.h>
@@ -107,14 +107,16 @@ pidgin_get_time_idle(void)
 	int event_base, error_base;
 
 	if (has_extension == -1)
-		has_extension = XScreenSaverQueryExtension(GDK_DISPLAY(), &event_base, &error_base);
+		has_extension = XScreenSaverQueryExtension(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()),
+		                                           &event_base, &error_base);
 
 	if (has_extension)
 	{
 		if (mit_info == NULL)
 			mit_info = XScreenSaverAllocInfo();
 
-		XScreenSaverQueryInfo(GDK_DISPLAY(), GDK_ROOT_WINDOW(), mit_info);
+		XScreenSaverQueryInfo(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()),
+		                      GDK_ROOT_WINDOW(), mit_info);
 		return (mit_info->idle) / 1000;
 	}
 	else

@@ -58,8 +58,8 @@ typedef enum
 	PURPLE_XFER_STATUS_ACCEPTED,      /**< Receive accepted, but destination file not selected yet */
 	PURPLE_XFER_STATUS_STARTED,       /**< purple_xfer_start has been called. */
 	PURPLE_XFER_STATUS_DONE,          /**< The xfer completed successfully. */
-	PURPLE_XFER_STATUS_CANCEL_LOCAL,  /**< The xfer was canceled by us. */
-	PURPLE_XFER_STATUS_CANCEL_REMOTE  /**< The xfer was canceled by the other end, or we couldn't connect. */
+	PURPLE_XFER_STATUS_CANCEL_LOCAL,  /**< The xfer was cancelled by us. */
+	PURPLE_XFER_STATUS_CANCEL_REMOTE  /**< The xfer was cancelled by the other end, or we couldn't connect. */
 } PurpleXferStatusType;
 
 /**
@@ -77,10 +77,51 @@ typedef struct
 	void (*cancel_local)(PurpleXfer *xfer);
 	void (*cancel_remote)(PurpleXfer *xfer);
 
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
+	/**
+	 * UI op to write data received from the prpl. The UI must deal with the
+	 * entire buffer and return size, or it is treated as an error.
+	 *
+	 * @param xfer    The file transfer structure
+	 * @param buffer  The buffer to write
+	 * @param size    The size of the buffer
+	 *
+	 * @return size if the write was successful, or a value between 0 and
+	 *         size on error.
+	 */
+	gssize (*ui_write)(PurpleXfer *xfer, const guchar *buffer, gssize size);
+
+	/**
+	 * UI op to read data to send to the prpl for a file transfer.
+	 *
+	 * @param xfer    The file transfer structure
+	 * @param buffer  A pointer to a buffer. The UI must allocate this buffer.
+	 *                libpurple will free the data.
+	 * @param size    The maximum amount of data to put in the buffer.
+	 *
+	 * @returns The amount of data in the buffer, 0 if nothing is available,
+	 *          and a negative value if an error occurred and the transfer
+	 *          should be cancelled (libpurple will cancel).
+	 */
+	gssize (*ui_read)(PurpleXfer *xfer, guchar **buffer, gssize size);
+
+	/**
+	 * Op to notify the UI that not all the data read in was written. The UI
+	 * should re-enqueue this data and return it the next time read is called.
+	 *
+	 * This MUST be implemented if read and write are implemented.
+	 *
+	 * @param xfer    The file transfer structure
+	 * @param buffer  A pointer to the beginning of the unwritten data.
+	 * @param size    The amount of unwritten data.
+	 */
+	void (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer, gsize size);
+
+	/**
+	 * Op to create a thumbnail image for a file transfer
+	 *
+	 * @param xfer   The file transfer structure
+	 */
+	void (*add_thumbnail)(PurpleXfer *xfer, const gchar *formats);
 } PurpleXferUiOps;
 
 /**
@@ -99,7 +140,7 @@ struct _PurpleXfer
 	char *message;                /**< A message sent with the request     */
 	char *filename;               /**< The name sent over the network.     */
 	char *local_filename;         /**< The name on the local hard drive.   */
-	size_t size;                  /**< The size of the file.               */
+	goffset size;                 /**< The size of the file.               */
 
 	FILE *dest_fp;                /**< The destination file pointer.       */
 
@@ -110,8 +151,8 @@ struct _PurpleXfer
 	int fd;                       /**< The socket file descriptor.         */
 	int watcher;                  /**< Watcher.                            */
 
-	size_t bytes_sent;            /**< The number of bytes sent.           */
-	size_t bytes_remaining;       /**< The number of bytes remaining.      */
+	goffset bytes_sent;           /**< The number of bytes sent.           */
+	goffset bytes_remaining;      /**< The number of bytes remaining.      */
 	time_t start_time;            /**< When the transfer of data began.    */
 	time_t end_time;              /**< When the transfer of data ended.    */
 
@@ -120,7 +161,10 @@ struct _PurpleXfer
 
 	PurpleXferStatusType status;    /**< File Transfer's status.             */
 
-	/* I/O operations. */
+	/** I/O operations, which should be set by the prpl using
+	 *  purple_xfer_set_init_fnc() and friends.  Setting #init is
+	 *  mandatory; all others are optional.
+	 */
 	struct
 	{
 		void (*init)(PurpleXfer *xfer);
@@ -132,18 +176,15 @@ struct _PurpleXfer
 		gssize (*read)(guchar **buffer, PurpleXfer *xfer);
 		gssize (*write)(const guchar *buffer, size_t size, PurpleXfer *xfer);
 		void (*ack)(PurpleXfer *xfer, const guchar *buffer, size_t size);
-
 	} ops;
 
 	PurpleXferUiOps *ui_ops;            /**< UI-specific operations. */
 	void *ui_data;                    /**< UI-specific data.       */
 
-	void *data;                       /**< prpl-specific data.     */
+	void *proto_data;                 /**< prpl-specific data.     */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name File Transfer API                                               */
@@ -219,6 +260,24 @@ void purple_xfer_request_accepted(PurpleXfer *xfer, const char *filename);
 void purple_xfer_request_denied(PurpleXfer *xfer);
 
 /**
+ * Returns the socket file descriptor.
+ *
+ * @param xfer The file transfer.
+ *
+ * @return The socket file descriptor.
+ */
+int purple_xfer_get_fd(PurpleXfer *xfer);
+
+/**
+ * Returns the Watcher for the transfer.
+ *
+ * @param xfer The file transfer.
+ *
+ * @return The watcher.
+ */
+int purple_xfer_get_watcher(PurpleXfer *xfer);
+
+/**
  * Returns the type of file transfer.
  *
  * @param xfer The file transfer.
@@ -242,8 +301,6 @@ PurpleAccount *purple_xfer_get_account(const PurpleXfer *xfer);
  * @param xfer The file transfer.
  *
  * @return The name of the remote user.
- *
- * @since 2.1.0
  */
 const char *purple_xfer_get_remote_user(const PurpleXfer *xfer);
 
@@ -257,13 +314,13 @@ const char *purple_xfer_get_remote_user(const PurpleXfer *xfer);
 PurpleXferStatusType purple_xfer_get_status(const PurpleXfer *xfer);
 
 /**
- * Returns true if the file transfer was canceled.
+ * Returns true if the file transfer was cancelled.
  *
  * @param xfer The file transfer.
  *
- * @return Whether or not the transfer was canceled.
+ * @return Whether or not the transfer was cancelled.
  */
-gboolean purple_xfer_is_canceled(const PurpleXfer *xfer);
+gboolean purple_xfer_is_cancelled(const PurpleXfer *xfer);
 
 /**
  * Returns the completed state for a file transfer.
@@ -299,7 +356,7 @@ const char *purple_xfer_get_local_filename(const PurpleXfer *xfer);
  *
  * @return The number of bytes sent.
  */
-size_t purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
+goffset purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
 
 /**
  * Returns the number of bytes remaining to send or receive.
@@ -308,7 +365,7 @@ size_t purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
  *
  * @return The number of bytes remaining.
  */
-size_t purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
+goffset purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
 
 /**
  * Returns the size of the file being sent or received.
@@ -317,7 +374,7 @@ size_t purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
  *
  * @return The total size of the file.
  */
-size_t purple_xfer_get_size(const PurpleXfer *xfer);
+goffset purple_xfer_get_size(const PurpleXfer *xfer);
 
 /**
  * Returns the current percentage of progress of the transfer.
@@ -363,7 +420,6 @@ unsigned int purple_xfer_get_remote_port(const PurpleXfer *xfer);
  * @param xfer  The file transfer.
  *
  * @return The time when the transfer started.
- * @since 2.4.0
  */
 time_t purple_xfer_get_start_time(const PurpleXfer *xfer);
 
@@ -373,9 +429,24 @@ time_t purple_xfer_get_start_time(const PurpleXfer *xfer);
  * @param xfer  The file transfer.
  *
  * @return The time when the transfer ended.
- * @since 2.4.0
  */
 time_t purple_xfer_get_end_time(const PurpleXfer *xfer);
+
+/**
+ * Sets the socket file descriptor.
+ *
+ * @param xfer      The file transfer.
+ * @param fd        The file descriptor.
+ */
+void purple_xfer_set_fd(PurpleXfer *xfer, int fd);
+
+/**
+ * Sets the watcher for the file transfer.
+ *
+ * @param xfer      The file transfer.
+ * @param watcher   The watcher.
+ */
+void purple_xfer_set_watcher(PurpleXfer *xfer, int watcher);
 
 /**
  * Sets the completed state for the file transfer.
@@ -384,6 +455,14 @@ time_t purple_xfer_get_end_time(const PurpleXfer *xfer);
  * @param completed The completed state.
  */
 void purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed);
+
+/**
+ * Sets the current status for the file transfer.
+ *
+ * @param xfer      The file transfer.
+ * @param status    The current status.
+ */
+void purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatusType status);
 
 /**
  * Sets the filename for the file transfer.
@@ -415,7 +494,15 @@ void purple_xfer_set_local_filename(PurpleXfer *xfer, const char *filename);
  * @param xfer The file transfer.
  * @param size The size of the file.
  */
-void purple_xfer_set_size(PurpleXfer *xfer, size_t size);
+void purple_xfer_set_size(PurpleXfer *xfer, goffset size);
+
+/**
+ * Sets the local port of the file transfer.
+ *
+ * @param xfer          The file transfer.
+ * @param local_port    The local port.
+ */
+void purple_xfer_set_local_port(PurpleXfer *xfer, unsigned int local_port);
 
 /**
  * Sets the current working position in the active file transfer.  This
@@ -430,7 +517,7 @@ void purple_xfer_set_size(PurpleXfer *xfer, size_t size);
  *                   send.  If we're receiving a file, this is the
  *                   next byte that we expect to receive.
  */
-void purple_xfer_set_bytes_sent(PurpleXfer *xfer, size_t bytes_sent);
+void purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent);
 
 /**
  * Returns the UI operations structure for a file transfer.
@@ -548,6 +635,9 @@ gssize purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size);
  * file receive transfer. On send, @a fd must be specified, and
  * @a ip and @a port are ignored.
  *
+ * Passing @a fd as '-1' is a special-case and indicates to the
+ * protocol plugin to facilitate the file transfer itself.
+ *
  * @param xfer The file transfer.
  * @param fd   The file descriptor for the socket.
  * @param ip   The IP address to connect to.
@@ -617,6 +707,100 @@ void purple_xfer_update_progress(PurpleXfer *xfer);
  */
 void purple_xfer_conversation_write(PurpleXfer *xfer, char *message, gboolean is_error);
 
+/**
+ * Allows the UI to signal it's ready to send/receive data (depending on
+ * the direction of the file transfer. Used when the UI is providing
+ * read/write/data_not_sent UI ops.
+ *
+ * @param xfer The file transfer which is ready.
+ */
+void purple_xfer_ui_ready(PurpleXfer *xfer);
+
+/**
+ * Allows the prpl to signal it's ready to send/receive data (depending on
+ * the direction of the file transfer. Used when the prpl provides read/write
+ * ops and cannot/does not provide a raw fd to the core.
+ *
+ * @param xfer The file transfer which is ready.
+ */
+void purple_xfer_prpl_ready(PurpleXfer *xfer);
+
+/**
+ * Gets the thumbnail data for a transfer
+ *
+ * @param xfer The file transfer to get the thumbnail for
+ * @param len  If not @c NULL, the length of the thumbnail data returned
+ *             will be set in the location pointed to by this.
+ * @return The thumbnail data, or NULL if there is no thumbnail
+ */
+gconstpointer purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len);
+
+/**
+ * Gets the mimetype of the thumbnail preview for a transfer
+ *
+ * @param xfer The file transfer to get the mimetype for
+ * @return The mimetype of the thumbnail, or @c NULL if not thumbnail is set
+ */
+const gchar *purple_xfer_get_thumbnail_mimetype(const PurpleXfer *xfer);
+
+
+/**
+ * Sets the thumbnail data for a transfer
+ *
+ * @param xfer The file transfer to set the data for
+ * @param thumbnail A pointer to the thumbnail data, this will be copied
+ * @param size The size in bytes of the passed in thumbnail data
+ * @param mimetype The mimetype of the generated thumbnail
+ */
+void purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
+	gsize size, const gchar *mimetype);
+
+/**
+ * Prepare a thumbnail for a transfer (if the UI supports it)
+ * will be no-op in case the UI doesn't implement thumbnail creation
+ *
+ * @param xfer The file transfer to create a thumbnail for
+ * @param formats A comma-separated list of mimetypes for image formats
+ *	 	  the protocols can use for thumbnails.
+ */
+void purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats);
+
+/**
+ * Sets the protocol data for a file transfer.
+ *
+ * @param xfer			The file transfer.
+ * @param proto_data	The protocol data to set for the file transfer.
+ */
+void purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data);
+ 
+/**
+ * Gets the protocol data for a file transfer.
+ *
+ * @param xfer			The file transfer.
+ *
+ * @return The protocol data for the file transfer.
+ */
+gpointer purple_xfer_get_protocol_data(const PurpleXfer *xfer);
+
+/**
+ * Set the UI data associated with this file transfer.
+ *
+ * @param xfer			The file transfer.
+ * @param ui_data		A pointer to associate with this file transfer.
+ */
+void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data);
+
+/**
+ * Get the UI data associated with this file transfer.
+ *
+ * @param xfer			The file transfer.
+ *
+ * @return The UI data associated with this file transfer.  This is a
+ *         convenience field provided to the UIs--it is not
+ *         used by the libpurple core.
+ */
+gpointer purple_xfer_get_ui_data(const PurpleXfer *xfer);
+
 /*@}*/
 
 /**************************************************************************/
@@ -657,8 +841,7 @@ PurpleXferUiOps *purple_xfers_get_ui_ops(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_FT_H_ */
+

@@ -1,7 +1,9 @@
 /*
  * purple - Jabber Protocol Plugin
  *
- * Copyright (C) 2007, Andreas Monitzer <andy@monitzer.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	 02111-1307	 USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -112,5 +114,16 @@ const gchar* jabber_caps_get_own_hash(JabberStream *js);
  *  Broadcast a new calculated hash using a <presence> stanza.
  */
 void jabber_caps_broadcast_change(void);
+
+/**
+ * Parse the <query/> element from an IQ stanza into a JabberCapsClientInfo
+ * struct.
+ *
+ * Exposed for tests
+ *
+ * @param query The 'query' element from an IQ reply stanza.
+ * @returns A JabberCapsClientInfo struct, or NULL on error
+ */
+JabberCapsClientInfo *jabber_caps_parse_client_info(xmlnode *query);
 
 #endif /* PURPLE_JABBER_CAPS_H_ */
