@@ -1,10 +1,11 @@
 /**
  * @file prefs.h Prefs API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,34 +21,45 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _GAIM_PREFS_H_
-#define _GAIM_PREFS_H_
+#ifndef _PURPLE_PREFS_H_
+#define _PURPLE_PREFS_H_
 
 #include <glib.h>
 
 /**
- * Pref data types.
+ * Preference data types.
  */
-typedef enum _GaimPrefType
+typedef enum _PurplePrefType
 {
-	GAIM_PREF_NONE,
-	GAIM_PREF_BOOLEAN,
-	GAIM_PREF_INT,
-	GAIM_PREF_STRING,
-	GAIM_PREF_STRING_LIST,
-	GAIM_PREF_PATH,
-	GAIM_PREF_PATH_LIST
+	PURPLE_PREF_NONE,        /**< No type.         */
+	PURPLE_PREF_BOOLEAN,     /**< Boolean.         */
+	PURPLE_PREF_INT,         /**< Integer.         */
+	PURPLE_PREF_STRING,      /**< String.          */
+	PURPLE_PREF_STRING_LIST, /**< List of strings. */
+	PURPLE_PREF_PATH,        /**< Path.            */
+	PURPLE_PREF_PATH_LIST    /**< List of paths.   */
 
-} GaimPrefType;
+} PurplePrefType;
 
 /**
- * Pref change callback type
+ * The type of callbacks for preference changes.
+ *
+ * @param name the name of the preference which has changed.
+ * @param type the type of the preferenced named @a name
+ * @param val  the new value of the preferencs; should be cast to the correct
+ *             type.  For instance, to recover the value of a #PURPLE_PREF_INT
+ *             preference, use <tt>GPOINTER_TO_INT(val)</tt>.  Alternatively,
+ *             just call purple_prefs_get_int(), purple_prefs_get_string_list()
+ *             etc.
+ * @param data Arbitrary data specified when the callback was connected with
+ *             purple_prefs_connect_callback().
+ *
+ * @see purple_prefs_connect_callback()
  */
-
-typedef void (*GaimPrefCallback) (const char *name, GaimPrefType type,
+typedef void (*PurplePrefCallback) (const char *name, PurplePrefType type,
 		gconstpointer val, gpointer data);
 
 #ifdef __cplusplus
@@ -55,7 +67,9 @@ extern "C" {
 #endif
 
 /**************************************************************************/
-/** @name Prefs API                                                       */
+/** @name Prefs API
+    Preferences are named according to a directory-like structure.
+    Example: "/plugins/core/potato/is_from_idaho" (probably a boolean)    */
 /**************************************************************************/
 /*@{*/
 
@@ -64,24 +78,24 @@ extern "C" {
  *
  * @return The prefs subsystem handle.
  */
-void *gaim_prefs_get_handle(void);
+void *purple_prefs_get_handle(void);
 
 /**
  * Initialize core prefs
  */
-void gaim_prefs_init(void);
+void purple_prefs_init(void);
 
 /**
  * Uninitializes the prefs subsystem.
  */
-void gaim_prefs_uninit(void);
+void purple_prefs_uninit(void);
 
 /**
  * Add a new typeless pref.
  *
  * @param name  The name of the pref
  */
-void gaim_prefs_add_none(const char *name);
+void purple_prefs_add_none(const char *name);
 
 /**
  * Add a new boolean pref.
@@ -89,7 +103,7 @@ void gaim_prefs_add_none(const char *name);
  * @param name  The name of the pref
  * @param value The initial value to set
  */
-void gaim_prefs_add_bool(const char *name, gboolean value);
+void purple_prefs_add_bool(const char *name, gboolean value);
 
 /**
  * Add a new integer pref.
@@ -97,7 +111,7 @@ void gaim_prefs_add_bool(const char *name, gboolean value);
  * @param name  The name of the pref
  * @param value The initial value to set
  */
-void gaim_prefs_add_int(const char *name, int value);
+void purple_prefs_add_int(const char *name, int value);
 
 /**
  * Add a new string pref.
@@ -105,15 +119,18 @@ void gaim_prefs_add_int(const char *name, int value);
  * @param name  The name of the pref
  * @param value The initial value to set
  */
-void gaim_prefs_add_string(const char *name, const char *value);
+void purple_prefs_add_string(const char *name, const char *value);
 
 /**
  * Add a new string list pref.
  *
  * @param name  The name of the pref
  * @param value The initial value to set
+ * @note This function takes a copy of the strings in the value list. The list
+ *       itself and original copies of the strings are up to the caller to
+ *       free.
  */
-void gaim_prefs_add_string_list(const char *name, GList *value);
+void purple_prefs_add_string_list(const char *name, GList *value);
 
 /**
  * Add a new path pref.
@@ -121,15 +138,18 @@ void gaim_prefs_add_string_list(const char *name, GList *value);
  * @param name  The name of the pref
  * @param value The initial value to set
  */
-void gaim_prefs_add_path(const char *name, const char *value);
+void purple_prefs_add_path(const char *name, const char *value);
 
 /**
  * Add a new path list pref.
  *
  * @param name  The name of the pref
  * @param value The initial value to set
+ * @note This function takes a copy of the strings in the value list. The list
+ *       itself and original copies of the strings are up to the caller to
+ *       free.
  */
-void gaim_prefs_add_path_list(const char *name, GList *value);
+void purple_prefs_add_path_list(const char *name, GList *value);
 
 
 /**
@@ -137,7 +157,7 @@ void gaim_prefs_add_path_list(const char *name, GList *value);
  *
  * @param name The name of the pref
  */
-void gaim_prefs_remove(const char *name);
+void purple_prefs_remove(const char *name);
 
 /**
  * Rename a pref
@@ -145,7 +165,7 @@ void gaim_prefs_remove(const char *name);
  * @param oldname The old name of the pref
  * @param newname The new name for the pref
  */
-void gaim_prefs_rename(const char *oldname, const char *newname);
+void purple_prefs_rename(const char *oldname, const char *newname);
 
 /**
  * Rename a boolean pref, toggling it's value
@@ -153,20 +173,29 @@ void gaim_prefs_rename(const char *oldname, const char *newname);
  * @param oldname The old name of the pref
  * @param newname The new name for the pref
  */
-void gaim_prefs_rename_boolean_toggle(const char *oldname, const char *newname);
+void purple_prefs_rename_boolean_toggle(const char *oldname, const char *newname);
 
 /**
  * Remove all prefs.
  */
-void gaim_prefs_destroy(void);
+void purple_prefs_destroy(void);
 
 /**
  * Set raw pref value
  *
  * @param name  The name of the pref
  * @param value The value to set
+ *
+ * @deprecated We're not really sure what purpose this function serves, so it
+ *             will be removed in 3.0.0.  Preferences values set using this
+ *             function aren't serialized to prefs.xml, which could be
+ *             misleading.  There is also no purple_prefs_get_generic, which
+ *             means that if you can't really get the value (other in a
+ *             connected callback).  If you think you have a use for this then
+ *             please let us know.
  */
-void gaim_prefs_set_generic(const char *name, gpointer value);
+/* TODO: When this is removed, also remove struct purple_pref->value.generic */
+void purple_prefs_set_generic(const char *name, gpointer value);
 
 /**
  * Set boolean pref value
@@ -174,7 +203,7 @@ void gaim_prefs_set_generic(const char *name, gpointer value);
  * @param name  The name of the pref
  * @param value The value to set
  */
-void gaim_prefs_set_bool(const char *name, gboolean value);
+void purple_prefs_set_bool(const char *name, gboolean value);
 
 /**
  * Set integer pref value
@@ -182,7 +211,7 @@ void gaim_prefs_set_bool(const char *name, gboolean value);
  * @param name  The name of the pref
  * @param value The value to set
  */
-void gaim_prefs_set_int(const char *name, int value);
+void purple_prefs_set_int(const char *name, int value);
 
 /**
  * Set string pref value
@@ -190,7 +219,7 @@ void gaim_prefs_set_int(const char *name, int value);
  * @param name  The name of the pref
  * @param value The value to set
  */
-void gaim_prefs_set_string(const char *name, const char *value);
+void purple_prefs_set_string(const char *name, const char *value);
 
 /**
  * Set string list pref value
@@ -198,7 +227,7 @@ void gaim_prefs_set_string(const char *name, const char *value);
  * @param name  The name of the pref
  * @param value The value to set
  */
-void gaim_prefs_set_string_list(const char *name, GList *value);
+void purple_prefs_set_string_list(const char *name, GList *value);
 
 /**
  * Set path pref value
@@ -206,7 +235,7 @@ void gaim_prefs_set_string_list(const char *name, GList *value);
  * @param name  The name of the pref
  * @param value The value to set
  */
-void gaim_prefs_set_path(const char *name, const char *value);
+void purple_prefs_set_path(const char *name, const char *value);
 
 /**
  * Set path list pref value
@@ -214,7 +243,7 @@ void gaim_prefs_set_path(const char *name, const char *value);
  * @param name  The name of the pref
  * @param value The value to set
  */
-void gaim_prefs_set_path_list(const char *name, GList *value);
+void purple_prefs_set_path_list(const char *name, GList *value);
 
 
 /**
@@ -223,7 +252,7 @@ void gaim_prefs_set_path_list(const char *name, GList *value);
  * @param name The name of the pref
  * @return TRUE if the pref exists.  Otherwise FALSE.
  */
-gboolean gaim_prefs_exists(const char *name);
+gboolean purple_prefs_exists(const char *name);
 
 /**
  * Get pref type
@@ -231,7 +260,7 @@ gboolean gaim_prefs_exists(const char *name);
  * @param name The name of the pref
  * @return The type of the pref
  */
-GaimPrefType gaim_prefs_get_type(const char *name);
+PurplePrefType purple_prefs_get_type(const char *name);
 
 /**
  * Get boolean pref value
@@ -239,7 +268,7 @@ GaimPrefType gaim_prefs_get_type(const char *name);
  * @param name The name of the pref
  * @return The value of the pref
  */
-gboolean gaim_prefs_get_bool(const char *name);
+gboolean purple_prefs_get_bool(const char *name);
 
 /**
  * Get integer pref value
@@ -247,7 +276,7 @@ gboolean gaim_prefs_get_bool(const char *name);
  * @param name The name of the pref
  * @return The value of the pref
  */
-int gaim_prefs_get_int(const char *name);
+int purple_prefs_get_int(const char *name);
 
 /**
  * Get string pref value
@@ -255,7 +284,7 @@ int gaim_prefs_get_int(const char *name);
  * @param name The name of the pref
  * @return The value of the pref
  */
-const char *gaim_prefs_get_string(const char *name);
+const char *purple_prefs_get_string(const char *name);
 
 /**
  * Get string list pref value
@@ -263,7 +292,7 @@ const char *gaim_prefs_get_string(const char *name);
  * @param name The name of the pref
  * @return The value of the pref
  */
-GList *gaim_prefs_get_string_list(const char *name);
+GList *purple_prefs_get_string_list(const char *name);
 
 /**
  * Get path pref value
@@ -271,7 +300,7 @@ GList *gaim_prefs_get_string_list(const char *name);
  * @param name The name of the pref
  * @return The value of the pref
  */
-const char *gaim_prefs_get_path(const char *name);
+const char *purple_prefs_get_path(const char *name);
 
 /**
  * Get path list pref value
@@ -279,39 +308,59 @@ const char *gaim_prefs_get_path(const char *name);
  * @param name The name of the pref
  * @return The value of the pref
  */
-GList *gaim_prefs_get_path_list(const char *name);
+GList *purple_prefs_get_path_list(const char *name);
 
+/**
+ * Returns a list of children for a pref
+ *
+ * @param name The parent pref
+ * @return A list of newly allocated strings denoting the names of the children.
+ *         Returns @c NULL if there are no children or if pref doesn't exist.
+ *         The caller must free all the strings and the list.
+ *
+ * @since 2.1.0
+ */
+GList *purple_prefs_get_children_names(const char *name);
 
 /**
  * Add a callback to a pref (and its children)
+ *
+ * @param handle   The handle of the receiver.
+ * @param name     The name of the preference
+ * @param cb       The callback function
+ * @param data     The data to pass to the callback function.
+ *
+ * @return An id to disconnect the callback
+ *
+ * @see purple_prefs_disconnect_callback
  */
-guint gaim_prefs_connect_callback(void *handle, const char *name, GaimPrefCallback cb,
+guint purple_prefs_connect_callback(void *handle, const char *name, PurplePrefCallback cb,
 		gpointer data);
 
 /**
  * Remove a callback to a pref
  */
-void gaim_prefs_disconnect_callback(guint callback_id);
+void purple_prefs_disconnect_callback(guint callback_id);
 
 /**
  * Remove all pref callbacks by handle
  */
-void gaim_prefs_disconnect_by_handle(void *handle);
+void purple_prefs_disconnect_by_handle(void *handle);
 
 /**
  * Trigger callbacks as if the pref changed
  */
-void gaim_prefs_trigger_callback(const char *name);
+void purple_prefs_trigger_callback(const char *name);
 
 /**
  * Read preferences
  */
-gboolean gaim_prefs_load(void);
+gboolean purple_prefs_load(void);
 
 /**
  * Rename legacy prefs and delete some that no longer exist.
  */
-void gaim_prefs_update_old(void);
+void purple_prefs_update_old(void);
 
 /*@}*/
 
@@ -319,4 +368,4 @@ void gaim_prefs_update_old(void);
 }
 #endif
 
-#endif /* _GAIM_PREFS_H_ */
+#endif /* _PURPLE_PREFS_H_ */

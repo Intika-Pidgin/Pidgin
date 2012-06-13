@@ -1,6 +1,6 @@
 /*
- * gaim
- * 
+ * purple
+ *
  * Copyright (C) 2002-2003, Herman Bloggs <hermanator12002@yahoo.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include <winsock2.h>
@@ -28,29 +28,48 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <glib.h>
+#include "config.h"
 #include "debug.h"
 #include "libc_internal.h"
-#if GLIB_CHECK_VERSION(2,6,0)
-# include <glib/gstdio.h>
+#include <glib/gstdio.h>
+
+/** This is redefined here because we can't include internal.h */
+#ifdef ENABLE_NLS
+#  include <locale.h>
+#  include <libintl.h>
+#  define _(String) ((const char *)dgettext(PACKAGE, String))
+#  ifdef gettext_noop
+#    define N_(String) gettext_noop (String)
+#  else
+#    define N_(String) (String)
+#  endif
 #else
-#define g_remove remove
-#define g_rename rename
-#define g_stat stat
+#  include <locale.h>
+#  define N_(String) (String)
+#  ifndef _
+#    define _(String) ((const char *)String)
+#  endif
+#  define ngettext(Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
+#  define dngettext(Domain, Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
+#endif
+
+#ifndef S_ISDIR
+# define S_ISDIR(m) (((m)&S_IFDIR)==S_IFDIR)
 #endif
 
 static char errbuf[1024];
 
 /* helpers */
-static int wgaim_is_socket( int fd ) {
+static int wpurple_is_socket( int fd ) {
 	int optval;
-	unsigned int optlen = sizeof(int);
+	int optlen = sizeof(int);
 
 	if( (getsockopt(fd, SOL_SOCKET, SO_TYPE, (void*)&optval, &optlen)) == SOCKET_ERROR ) {
 		int error = WSAGetLastError();
 		if( error == WSAENOTSOCK )
 			return FALSE;
 		else {
-                        gaim_debug(GAIM_DEBUG_WARNING, "wgaim", "wgaim_is_socket: getsockopt returned error: %d\n", error);
+                        purple_debug(PURPLE_DEBUG_WARNING, "wpurple", "wpurple_is_socket: getsockopt returned error: %d\n", error);
 			return FALSE;
 		}
 	}
@@ -58,7 +77,7 @@ static int wgaim_is_socket( int fd ) {
 }
 
 /* socket.h */
-int wgaim_socket (int namespace, int style, int protocol) {
+int wpurple_socket (int namespace, int style, int protocol) {
 	int ret;
 
 	ret = socket( namespace, style, protocol );
@@ -70,11 +89,11 @@ int wgaim_socket (int namespace, int style, int protocol) {
 	return ret;
 }
 
-int wgaim_connect(int socket, struct sockaddr *addr, u_long length) {
+int wpurple_connect(int socket, struct sockaddr *addr, u_long length) {
 	int ret;
 
 	ret = connect( socket, addr, length );
-	
+
 	if( ret == SOCKET_ERROR ) {
 		errno = WSAGetLastError();
 		if( errno == WSAEWOULDBLOCK )
@@ -84,7 +103,7 @@ int wgaim_connect(int socket, struct sockaddr *addr, u_long length) {
 	return 0;
 }
 
-int wgaim_getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlenptr) {
+int wpurple_getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlenptr) {
 	if(getsockopt(socket, level, optname, optval, optlenptr) == SOCKET_ERROR ) {
 		errno = WSAGetLastError();
 		return -1;
@@ -92,7 +111,7 @@ int wgaim_getsockopt(int socket, int level, int optname, void *optval, socklen_t
 	return 0;
 }
 
-int wgaim_setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen) {
+int wpurple_setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen) {
 	if(setsockopt(socket, level, optname, optval, optlen) == SOCKET_ERROR ) {
 		errno = WSAGetLastError();
 		return -1;
@@ -100,7 +119,7 @@ int wgaim_setsockopt(int socket, int level, int optname, const void *optval, soc
 	return 0;
 }
 
-int wgaim_getsockname(int socket, struct sockaddr *addr, socklen_t *lenptr) {
+int wpurple_getsockname(int socket, struct sockaddr *addr, socklen_t *lenptr) {
         if(getsockname(socket, addr, lenptr) == SOCKET_ERROR) {
                 errno = WSAGetLastError();
                 return -1;
@@ -108,7 +127,7 @@ int wgaim_getsockname(int socket, struct sockaddr *addr, socklen_t *lenptr) {
         return 0;
 }
 
-int wgaim_bind(int socket, struct sockaddr *addr, socklen_t length) {
+int wpurple_bind(int socket, struct sockaddr *addr, socklen_t length) {
         if(bind(socket, addr, length) == SOCKET_ERROR) {
                 errno = WSAGetLastError();
                 return -1;
@@ -116,7 +135,7 @@ int wgaim_bind(int socket, struct sockaddr *addr, socklen_t length) {
         return 0;
 }
 
-int wgaim_listen(int socket, unsigned int n) {
+int wpurple_listen(int socket, unsigned int n) {
         if(listen(socket, n) == SOCKET_ERROR) {
                 errno = WSAGetLastError();
                 return -1;
@@ -124,11 +143,13 @@ int wgaim_listen(int socket, unsigned int n) {
         return 0;
 }
 
-int wgaim_sendto(int socket, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen) {
+int wpurple_sendto(int socket, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen) {
 	int ret;
 	if ((ret = sendto(socket, buf, len, flags, to, tolen)
 			) == SOCKET_ERROR) {
 		errno = WSAGetLastError();
+		if(errno == WSAEWOULDBLOCK || errno == WSAEINPROGRESS)
+			errno = EAGAIN;
 		return -1;
 	}
 	return ret;
@@ -136,11 +157,21 @@ int wgaim_sendto(int socket, const void *buf, size_t len, int flags, const struc
 
 /* fcntl.h */
 /* This is not a full implementation of fcntl. Update as needed.. */
-int wgaim_fcntl(int socket, int command, int val) {
+int wpurple_fcntl(int socket, int command, ...) {
+
 	switch( command ) {
+	case F_GETFL:
+		return 0;
+
 	case F_SETFL:
 	{
+		va_list args;
+		int val;
 		int ret=0;
+
+		va_start(args, command);
+		val = va_arg(args, int);
+		va_end(args);
 
 		switch( val ) {
 		case O_NONBLOCK:
@@ -150,7 +181,7 @@ int wgaim_fcntl(int socket, int command, int val) {
 			break;
 		}
 		case 0:
-	        {
+		{
 			u_long imode=0;
 			ret = ioctlsocket(socket, FIONBIO, &imode);
 			break;
@@ -166,13 +197,13 @@ int wgaim_fcntl(int socket, int command, int val) {
 		return 0;
 	}
 	default:
-                gaim_debug(GAIM_DEBUG_WARNING, "wgaim", "wgaim_fcntl: Unsupported command\n");
+                purple_debug(PURPLE_DEBUG_WARNING, "wpurple", "wpurple_fcntl: Unsupported command\n");
 		return -1;
 	}/*end switch*/
 }
 
 /* sys/ioctl.h */
-int wgaim_ioctl(int fd, int command, void* val) {
+int wpurple_ioctl(int fd, int command, void* val) {
 	switch( command ) {
 	case FIONBIO:
 	{
@@ -225,7 +256,7 @@ int wgaim_ioctl(int fd, int command, void* val) {
 }
 
 /* arpa/inet.h */
-int wgaim_inet_aton(const char *name, struct in_addr *addr) {
+int wpurple_inet_aton(const char *name, struct in_addr *addr) {
 	if((addr->s_addr = inet_addr(name)) == INADDR_NONE)
 		return 0;
 	else
@@ -234,7 +265,7 @@ int wgaim_inet_aton(const char *name, struct in_addr *addr) {
 
 /* Thanks to GNU wget for this inet_ntop() implementation */
 const char *
-wgaim_inet_ntop (int af, const void *src, char *dst, socklen_t cnt)
+wpurple_inet_ntop (int af, const void *src, char *dst, socklen_t cnt)
 {
   /* struct sockaddr can't accomodate struct sockaddr_in6. */
   union {
@@ -269,9 +300,53 @@ wgaim_inet_ntop (int af, const void *src, char *dst, socklen_t cnt)
   return (const char *) dst;
 }
 
+int
+wpurple_inet_pton(int af, const char *src, void *dst)
+{
+	/* struct sockaddr can't accomodate struct sockaddr_in6. */
+	union {
+		struct sockaddr_in6 sin6;
+		struct sockaddr_in sin;
+	} sa;
+	size_t srcsize;
+	
+	switch(af)
+	{
+		case AF_INET:
+			sa.sin.sin_family = AF_INET;
+			srcsize = sizeof (sa.sin);
+		break;
+		case AF_INET6:
+			sa.sin6.sin6_family = AF_INET6;
+			srcsize = sizeof (sa.sin6);
+		break;
+		default:
+			errno = WSAEPFNOSUPPORT;
+			return -1;
+	}
+	
+	if (WSAStringToAddress(src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
+	{
+		errno = WSAGetLastError();
+		return -1;
+	}
+	
+	switch(af)
+	{
+		case AF_INET:
+			memcpy(dst, &sa.sin.sin_addr, sizeof(sa.sin.sin_addr));
+		break;
+		case AF_INET6:
+			memcpy(dst, &sa.sin6.sin6_addr, sizeof(sa.sin6.sin6_addr));
+		break;
+	}
+	
+	return 1;
+}
+
 
 /* netdb.h */
-struct hostent* wgaim_gethostbyname(const char *name) {
+struct hostent* wpurple_gethostbyname(const char *name) {
 	struct hostent *hp;
 
 	if((hp = gethostbyname(name)) == NULL) {
@@ -282,13 +357,32 @@ struct hostent* wgaim_gethostbyname(const char *name) {
 }
 
 /* string.h */
-char* wgaim_strerror( int errornum ) {
-	if( errornum > WSABASEERR ) {
-		sprintf( errbuf, "Windows socket error #%d", errornum );
-		return errbuf;
+char* wpurple_strerror(int errornum) {
+	if (errornum > WSABASEERR) {
+		switch(errornum) {
+			case WSAECONNABORTED: /* 10053 */
+				g_snprintf(errbuf, sizeof(errbuf), "%s", _("Connection interrupted by other software on your computer."));
+				break;
+			case WSAECONNRESET: /* 10054 */
+				g_snprintf(errbuf, sizeof(errbuf), "%s", _("Remote host closed connection."));
+				break;
+			case WSAETIMEDOUT: /* 10060 */
+				g_snprintf(errbuf, sizeof(errbuf), "%s", _("Connection timed out."));
+				break;
+			case WSAECONNREFUSED: /* 10061 */
+				g_snprintf(errbuf, sizeof(errbuf), "%s", _("Connection refused."));
+				break;
+			case WSAEADDRINUSE: /* 10048 */
+				g_snprintf(errbuf, sizeof(errbuf), "%s", _("Address already in use."));
+				break;
+			default:
+				g_snprintf(errbuf, sizeof(errbuf), "Windows socket error #%d", errornum);
+		}
+	} else {
+		const char *tmp = g_strerror(errornum);
+		g_snprintf(errbuf, sizeof(errbuf), "%s", tmp);
 	}
-	else
-		return strerror( errornum );
+	return errbuf;
 }
 
 /* unistd.h */
@@ -296,13 +390,18 @@ char* wgaim_strerror( int errornum ) {
 /*
  *  We need to figure out whether fd is a file or socket handle.
  */
-int wgaim_read(int fd, void *buf, unsigned int size) {
+int wpurple_read(int fd, void *buf, unsigned int size) {
 	int ret;
 
-	if(wgaim_is_socket(fd)) {
+	if (fd < 0) {
+		errno = EBADF;
+		g_return_val_if_reached(-1);
+	}
+
+	if(wpurple_is_socket(fd)) {
 		if((ret = recv(fd, buf, size, 0)) == SOCKET_ERROR) {
 			errno = WSAGetLastError();
-			if(errno == WSAEWOULDBLOCK)
+			if(errno == WSAEWOULDBLOCK || errno == WSAEINPROGRESS)
 				errno = EAGAIN;
 			return -1;
 		}
@@ -319,38 +418,43 @@ int wgaim_read(int fd, void *buf, unsigned int size) {
 		}
 	} else {
 		/* fd is not a socket handle.. pass it off to read */
-		return read(fd, buf, size);
+		return _read(fd, buf, size);
 	}
 }
 
-int wgaim_send(int fd, const void *buf, unsigned int size, int flags) {
+int wpurple_send(int fd, const void *buf, unsigned int size, int flags) {
 	int ret;
 
 	ret = send(fd, buf, size, flags);
 
 	if (ret == SOCKET_ERROR) {
 		errno = WSAGetLastError();
-		if(errno == WSAEWOULDBLOCK)
+		if(errno == WSAEWOULDBLOCK || errno == WSAEINPROGRESS)
 			errno = EAGAIN;
 		return -1;
 	}
 	return ret;
 }
 
-int wgaim_write(int fd, const void *buf, unsigned int size) {
+int wpurple_write(int fd, const void *buf, unsigned int size) {
 
-	if(wgaim_is_socket(fd))
-		return wgaim_send(fd, buf, size, 0);
+	if (fd < 0) {
+		errno = EBADF;
+		g_return_val_if_reached(-1);
+	}
+
+	if(wpurple_is_socket(fd))
+		return wpurple_send(fd, buf, size, 0);
 	else
-		return write(fd, buf, size);
+		return _write(fd, buf, size);
 }
 
-int wgaim_recv(int fd, void *buf, size_t len, int flags) {
+int wpurple_recv(int fd, void *buf, size_t len, int flags) {
 	int ret;
 
 	if((ret = recv(fd, buf, len, flags)) == SOCKET_ERROR) {
 			errno = WSAGetLastError();
-			if(errno == WSAEWOULDBLOCK)
+			if(errno == WSAEWOULDBLOCK || errno == WSAEINPROGRESS)
 				errno = EAGAIN;
 			return -1;
 	} else {
@@ -358,10 +462,15 @@ int wgaim_recv(int fd, void *buf, size_t len, int flags) {
 	}
 }
 
-int wgaim_close(int fd) {
+int wpurple_close(int fd) {
 	int ret;
 
-	if( wgaim_is_socket(fd) ) {
+	if (fd < 0) {
+		errno = EBADF;
+		g_return_val_if_reached(-1);
+	}
+
+	if( wpurple_is_socket(fd) ) {
 		if( (ret = closesocket(fd)) == SOCKET_ERROR ) {
 			errno = WSAGetLastError();
 			return -1;
@@ -370,10 +479,10 @@ int wgaim_close(int fd) {
 			return 0;
 	}
 	else
-		return close(fd);
+		return _close(fd);
 }
 
-int wgaim_gethostname(char *name, size_t size) {
+int wpurple_gethostname(char *name, size_t size) {
         if(gethostname(name, size) == SOCKET_ERROR) {
                 errno = WSAGetLastError();
 			return -1;
@@ -383,7 +492,7 @@ int wgaim_gethostname(char *name, size_t size) {
 
 /* sys/time.h */
 
-int wgaim_gettimeofday(struct timeval *p, struct timezone *z) {
+int wpurple_gettimeofday(struct timeval *p, struct timezone *z) {
 	int res = 0;
 	struct _timeb timebuffer;
 
@@ -392,10 +501,10 @@ int wgaim_gettimeofday(struct timeval *p, struct timezone *z) {
 		z->tz_minuteswest = _timezone/60;
 		z->tz_dsttime = _daylight;
 	}
-	
+
 	if (p != 0) {
 		_ftime(&timebuffer);
-	   	p->tv_sec = timebuffer.time;			/* seconds since 1-1-1970 */
+		p->tv_sec = timebuffer.time;			/* seconds since 1-1-1970 */
 		p->tv_usec = timebuffer.millitm*1000; 	/* microseconds */
 	}
 
@@ -404,56 +513,13 @@ int wgaim_gettimeofday(struct timeval *p, struct timezone *z) {
 
 /* stdio.h */
 
-int wgaim_rename (const char *oldname, const char *newname) {
-	struct stat oldstat, newstat;
-
-	if(g_stat(oldname, &oldstat) == 0) {
-		/* newname exists */
-		if(g_stat(newname, &newstat) == 0) {
-			/* oldname is a dir */
-			if(_S_ISDIR(oldstat.st_mode)) {
-				if(!_S_ISDIR(newstat.st_mode)) {
-					return g_rename(oldname, newname);
-				}
-				/* newname is a dir */
-				else {
-					/* This is not quite right.. If newname is empty and
-					   is not a sub dir of oldname, newname should be
-					   deleted and oldname should be renamed.
-					*/
-					gaim_debug(GAIM_DEBUG_WARNING, "wgaim", "wgaim_rename does not behave here as it should\n");
-					return g_rename(oldname, newname);
-				}
-			}
-			/* oldname is not a dir */
-			else {
-				/* newname is a dir */
-				if(_S_ISDIR(newstat.st_mode)) {
-					errno = EISDIR;
-					return -1;
-				}
-				/* newname is not a dir */
-				else {
-					g_remove(newname);
-					return g_rename(oldname, newname);
-				}
-			}
-		}
-		/* newname doesn't exist */
-		else
-			return g_rename(oldname, newname);
-	}
-	else {
-		/* oldname doesn't exist */
-		errno = ENOENT;
-		return -1;
-	}
-
+int wpurple_rename (const char *oldname, const char *newname) {
+	return g_rename(oldname, newname);
 }
 
 /* time.h */
 
-struct tm * wgaim_localtime_r (const time_t *time, struct tm *resultp) {
+struct tm * wpurple_localtime_r (const time_t *time, struct tm *resultp) {
 	struct tm* tmptm;
 
 	if(!time)
@@ -466,7 +532,7 @@ struct tm * wgaim_localtime_r (const time_t *time, struct tm *resultp) {
 }
 
 /*
- * Used by gaim_utf8_strftime() by way of gaim_internal_strftime()
+ * Used by purple_utf8_strftime() by way of purple_internal_strftime()
  * in src/util.c
  *
  * Code derived from PostgreSQL src/timezone/pgtz.c:
@@ -845,7 +911,7 @@ static struct
 };
 
 const char *
-wgaim_get_timezone_abbreviation(const struct tm *tm)
+wpurple_get_timezone_abbreviation(const struct tm *tm)
 {
 	int i;
 	char tzname[128];
@@ -855,13 +921,13 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 
 	if (!tm)
 	{
-		gaim_debug_warning("wgaim", "could not determine current date/time: localtime failed\n");
+		purple_debug_warning("wpurple", "could not determine current date/time: localtime failed\n");
 		return "";
 	}
 
 	if (strftime(tzname, sizeof(tzname) - 1, "%Z", tm) == 0)
 	{
-		gaim_debug_error("wgaim", "timezone name is too long for the buffer\n");
+		purple_debug_error("wpurple", "timezone name is too long for the buffer\n");
 		return "";
 	}
 
@@ -870,7 +936,7 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 		if (strcmp(tzname, win32_tzmap[i].wstd) == 0)
 		{
 #if 0
-			gaim_debug_info("wgaim", "TZ \"%s\" matches Windows timezone \"%s\"\n",
+			purple_debug_info("wpurple", "TZ \"%s\" matches Windows timezone \"%s\"\n",
 			                win32_tzmap[i].ustd, tzname);
 #endif
 			/* Cache the Result */
@@ -886,7 +952,7 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 		if (strcmp(tzname, win32_tzmap[i].wdst) == 0)
 		{
 #if 0
-			gaim_debug_info("wgaim", "TZ \"%s\" matches Windows timezone \"%s\"\n",
+			purple_debug_info("wpurple", "TZ \"%s\" matches Windows timezone \"%s\"\n",
 			                win32_tzmap[i].udst, tzname);
 #endif
 			/* Cache the Result */
@@ -913,7 +979,7 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 					 KEY_READ,
 					 &rootKey) != ERROR_SUCCESS)
 	{
-		gaim_debug_warning("wgaim", "could not open registry key to identify Windows timezone: %i\n", (int) GetLastError());
+		purple_debug_warning("wpurple", "could not open registry key to identify Windows timezone: %i\n", (int) GetLastError());
 		return "";
 	}
 
@@ -939,43 +1005,43 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 		{
 			if (r == ERROR_NO_MORE_ITEMS)
 				break;
-			gaim_debug_warning("wgaim", "could not enumerate registry subkeys to identify Windows timezone: %i\n", (int) r);
+			purple_debug_warning("wpurple", "could not enumerate registry subkeys to identify Windows timezone: %i\n", (int) r);
 			break;
 		}
 
 		if ((r = RegOpenKeyEx(rootKey, keyname, 0, KEY_READ, &key)) != ERROR_SUCCESS)
 		{
-			gaim_debug_warning("wgaim", "could not open registry subkey to identify Windows timezone: %i\n", (int) r);
+			purple_debug_warning("wpurple", "could not open registry subkey to identify Windows timezone: %i\n", (int) r);
 			break;
 		}
 
 		memset(zonename, 0, sizeof(zonename));
 		namesize = sizeof(zonename);
-		if ((r = RegQueryValueEx(key, "Std", NULL, NULL, zonename, &namesize)) != ERROR_SUCCESS)
+		if ((r = RegQueryValueEx(key, "Std", NULL, NULL, (LPBYTE)zonename, &namesize)) != ERROR_SUCCESS)
 		{
-			gaim_debug_warning("wgaim", "could not query value for 'std' to identify Windows timezone: %i\n", (int) r);
+			purple_debug_warning("wpurple", "could not query value for 'std' to identify Windows timezone: %i\n", (int) r);
 			RegCloseKey(key);
 			break;
 		}
 		if (strcmp(tzname, zonename) == 0)
 		{
 			/* Matched zone */
-			strcpy(localtzname, keyname);
+			g_strlcpy(localtzname, keyname, sizeof(localtzname));
 			RegCloseKey(key);
 			break;
 		}
 		memset(zonename, 0, sizeof(zonename));
 		namesize = sizeof(zonename);
-		if ((r = RegQueryValueEx(key, "Dlt", NULL, NULL, zonename, &namesize)) != ERROR_SUCCESS)
+		if ((r = RegQueryValueEx(key, "Dlt", NULL, NULL, (LPBYTE)zonename, &namesize)) != ERROR_SUCCESS)
 		{
-			gaim_debug_warning("wgaim", "could not query value for 'dlt' to identify Windows timezone: %i\n", (int) r);
+			purple_debug_warning("wpurple", "could not query value for 'dlt' to identify Windows timezone: %i\n", (int) r);
 			RegCloseKey(key);
 			break;
 		}
 		if (strcmp(tzname, zonename) == 0)
 		{
 			/* Matched DST zone */
-			strcpy(localtzname, keyname);
+			g_strlcpy(localtzname, keyname, sizeof(localtzname));
 			RegCloseKey(key);
 			break;
 		}
@@ -993,7 +1059,7 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 			if (strcmp(localtzname, win32_tzmap[i].wstd) == 0)
 			{
 #if 0
-				gaim_debug_info("wgaim", "TZ \"%s\" matches localized Windows timezone \"%s\" (\"%s\")\n",
+				purple_debug_info("wpurple", "TZ \"%s\" matches localized Windows timezone \"%s\" (\"%s\")\n",
 				                win32_tzmap[i].ustd, tzname, localtzname);
 #endif
 				/* Cache the Result */
@@ -1007,7 +1073,7 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 			if (strcmp(localtzname, win32_tzmap[i].wdst) == 0)
 			{
 #if 0
-				gaim_debug_info("wgaim", "TZ \"%s\" matches localized Windows timezone \"%s\" (\"%s\")\n",
+				purple_debug_info("wpurple", "TZ \"%s\" matches localized Windows timezone \"%s\" (\"%s\")\n",
 				                win32_tzmap[i].udst, tzname, localtzname);
 #endif
 				/* Cache the Result */
@@ -1022,76 +1088,18 @@ wgaim_get_timezone_abbreviation(const struct tm *tm)
 		}
 	}
 
-	gaim_debug_warning("wgaim", "could not find a match for Windows timezone \"%s\"\n", tzname);
+	purple_debug_warning("wpurple", "could not find a match for Windows timezone \"%s\"\n", tzname);
 	return "";
 }
 
-#if !GLIB_CHECK_VERSION(2,8,0)
+int wpurple_g_access (const gchar *filename, int mode);
 /**
- * g_access:
- * @filename: a pathname in the GLib file name encoding (UTF-8 on Windows)
- * @mode: as in access()
- *
- * A wrapper for the POSIX access() function. This function is used to
- * test a pathname for one or several of read, write or execute
- * permissions, or just existence. On Windows, the underlying access()
- * function in the C library only checks the READONLY attribute, and
- * does not look at the ACL at all. Software that needs to handle file
- * permissions on Windows more exactly should use the Win32 API.
- *
- * See the C library manual for more details about access().
- *
- * Returns: zero if the pathname refers to an existing file system
- * object that has all the tested permissions, or -1 otherwise or on
- * error.
- * 
- * Since: 2.8
+ * @deprecated - remove for 3.0.0
  */
 int
-wgaim_g_access (const gchar *filename,
-	  int          mode)
+wpurple_g_access (const gchar *filename, int mode)
 {
-  if (G_WIN32_HAVE_WIDECHAR_API ())
-    {
-      wchar_t *wfilename = g_utf8_to_utf16 (filename, -1, NULL, NULL, NULL);
-      int retval;
-      int save_errno;
-      
-      if (wfilename == NULL)
-	{
-	  errno = EINVAL;
-	  return -1;
-	}
-
-      retval = _waccess (wfilename, mode);
-      save_errno = errno;
-
-      g_free (wfilename);
-
-      errno = save_errno;
-      return retval;
-    }
-  else
-    {    
-      gchar *cp_filename = g_locale_from_utf8 (filename, -1, NULL, NULL, NULL);
-      int retval;
-      int save_errno;
-
-      if (cp_filename == NULL)
-	{
-	  errno = EINVAL;
-	  return -1;
-	}
-
-      retval = access (cp_filename, mode);
-      save_errno = errno;
-
-      g_free (cp_filename);
-
-      errno = save_errno;
-      return retval;
-    }
+	return g_access(filename, mode);
 }
-#endif
 
 

@@ -1,7 +1,7 @@
 /**
- * @file tcl_cmd.c Gaim Tcl cmd API
+ * @file tcl_cmd.c Purple Tcl cmd API
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2006 Etan Reisner <deryni@gmail.com>
  *
@@ -17,11 +17,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include <tcl.h>
 
-#include "tcl_gaim.h"
+#include "tcl_purple.h"
 
 #include "internal.h"
 #include "cmds.h"
@@ -29,7 +29,7 @@
 
 static GList *tcl_cmd_callbacks;
 
-static GaimCmdRet tcl_cmd_callback(GaimConversation *conv, const gchar *cmd,
+static PurpleCmdRet tcl_cmd_callback(PurpleConversation *conv, const gchar *cmd,
                                    gchar **args, gchar **errors,
                                    struct tcl_cmd_handler *handler);
 static Tcl_Obj *new_cmd_cb_namespace(void);
@@ -56,7 +56,7 @@ void tcl_cmd_cleanup(Tcl_Interp *interp)
 	for (cur = tcl_cmd_callbacks; cur != NULL; cur = g_list_next(cur)) {
 		handler = cur->data;
 		if (handler->interp == interp) {
-			gaim_cmd_unregister(handler->id);
+			purple_cmd_unregister(handler->id);
 			tcl_cmd_handler_free(handler);
 			cur->data = NULL;
 		}
@@ -64,15 +64,15 @@ void tcl_cmd_cleanup(Tcl_Interp *interp)
 	tcl_cmd_callbacks = g_list_remove_all(tcl_cmd_callbacks, NULL);
 }
 
-GaimCmdId tcl_cmd_register(struct tcl_cmd_handler *handler)
+PurpleCmdId tcl_cmd_register(struct tcl_cmd_handler *handler)
 {
 	int id;
 	GString *proc;
 
-	if ((id = gaim_cmd_register(Tcl_GetString(handler->cmd),
+	if ((id = purple_cmd_register(Tcl_GetString(handler->cmd),
 				    handler->args, handler->priority,
 				    handler->flags, handler->prpl_id,
-				    GAIM_CMD_FUNC(tcl_cmd_callback),
+				    PURPLE_CMD_FUNC(tcl_cmd_callback),
 				    handler->helpstr, (void *)handler)) == 0)
 		return 0;
 
@@ -94,7 +94,7 @@ GaimCmdId tcl_cmd_register(struct tcl_cmd_handler *handler)
 	return id;
 }
 
-void tcl_cmd_unregister(GaimCmdId id, Tcl_Interp *interp)
+void tcl_cmd_unregister(PurpleCmdId id, Tcl_Interp *interp)
 {
 	GList *cur;
 	GString *cmd;
@@ -104,7 +104,7 @@ void tcl_cmd_unregister(GaimCmdId id, Tcl_Interp *interp)
 	for (cur = tcl_cmd_callbacks; cur != NULL; cur = g_list_next(cur)) {
 		handler = cur->data;
 		if (handler->interp == interp && handler->id == id) {
-			gaim_cmd_unregister(id);
+			purple_cmd_unregister(id);
 			cmd = g_string_sized_new(64);
 			g_string_printf(cmd, "namespace delete %s",
 			                Tcl_GetString(handler->namespace));
@@ -121,11 +121,11 @@ void tcl_cmd_unregister(GaimCmdId id, Tcl_Interp *interp)
 		tcl_cmd_callbacks = g_list_remove_all(tcl_cmd_callbacks, NULL);
 }
 
-static GaimCmdRet tcl_cmd_callback(GaimConversation *conv, const gchar *cmd,
+static PurpleCmdRet tcl_cmd_callback(PurpleConversation *conv, const gchar *cmd,
                                    gchar **args, gchar **errors,
                                    struct tcl_cmd_handler *handler)
 {
-	int retval, error, i;
+	int retval, i;
 	Tcl_Obj *command, *arg, *tclargs, *result;
 
 	command = Tcl_NewListObj(0, NULL);
@@ -137,7 +137,7 @@ static GaimCmdRet tcl_cmd_callback(GaimConversation *conv, const gchar *cmd,
 	Tcl_ListObjAppendElement(handler->interp, command, arg);
 
 	/* The conversation */
-	arg = gaim_tcl_ref_new(GaimTclRefConversation, conv);
+	arg = purple_tcl_ref_new(PurpleTclRefConversation, conv);
 	Tcl_ListObjAppendElement(handler->interp, command, arg);
 
 	/* The command */
@@ -153,26 +153,25 @@ static GaimCmdRet tcl_cmd_callback(GaimConversation *conv, const gchar *cmd,
 	}
 	Tcl_ListObjAppendElement(handler->interp, command, tclargs);
 
-	if ((error = Tcl_EvalObjEx(handler->interp, command,
-	                           TCL_EVAL_GLOBAL)) != TCL_OK) {
+	if (Tcl_EvalObjEx(handler->interp, command, TCL_EVAL_GLOBAL) != TCL_OK) {
 		gchar *errorstr;
 
 		errorstr = g_strdup_printf("error evaluating callback: %s\n",
 		                           Tcl_GetString(Tcl_GetObjResult(handler->interp)));
-		gaim_debug(GAIM_DEBUG_ERROR, "tcl", errorstr);
+		purple_debug(PURPLE_DEBUG_ERROR, "tcl", "%s", errorstr);
 		*errors = errorstr;
-		retval = GAIM_CMD_RET_FAILED;
+		retval = PURPLE_CMD_RET_FAILED;
 	} else {
 		result = Tcl_GetObjResult(handler->interp);
-		if ((error = Tcl_GetIntFromObj(handler->interp, result,
-		                               &retval)) != TCL_OK) {
+		if (Tcl_GetIntFromObj(handler->interp, result,
+		                      &retval) != TCL_OK) {
 			gchar *errorstr;
 
 			errorstr = g_strdup_printf("Error retreiving procedure result: %s\n",
 			                           Tcl_GetString(Tcl_GetObjResult(handler->interp)));
-			gaim_debug(GAIM_DEBUG_ERROR, "tcl", errorstr);
+			purple_debug(PURPLE_DEBUG_ERROR, "tcl", "%s", errorstr);
 			*errors = errorstr;
-			retval = GAIM_CMD_RET_FAILED;
+			retval = PURPLE_CMD_RET_FAILED;
 		}
 	}
 
@@ -184,7 +183,7 @@ static Tcl_Obj *new_cmd_cb_namespace()
 	char name[32];
 	static int cbnum;
 
-	g_snprintf(name, sizeof(name), "::gaim::_cmd_callback::cb_%d",
+	g_snprintf(name, sizeof(name), "::purple::_cmd_callback::cb_%d",
 	           cbnum++);
 	return Tcl_NewStringObj(name, -1);
 }

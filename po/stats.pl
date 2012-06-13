@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # Copyright 2003-2005 Nathan Walp <faceprint@faceprint.com>
 #
@@ -14,25 +14,31 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 50 Temple Place, Suite 330, Boston, MA 02111-1307  USA
+# Foundation, Inc., 50 Temple Place, Suite 330, Boston, MA 02111-1301  USA
 #
 
 use POSIX qw(strftime);
 
 
-my $PACKAGE="gaim";
+my $PACKAGE="pidgin";
 
 
 use Locale::Language;
 
 $lang{'ca@valencia'} = "Catalan (Valencian)";
+$lang{'be@latin'} = "Belarusian (Latin)";
+$lang{bn_IN} = "Bengali-India";
 $lang{en_AU} = "English (Australian)";
 $lang{en_CA} = "English (Canadian)";
 $lang{en_GB} = "English (British)";
+$lang{mai} = "Maithili";
+$lang{mhr} = "Meadow Mari";
+$lang{ms_MY} = "Malay";
 $lang{my_MM} = "Burmese (Myanmar)";
 $lang{pt_BR} = "Portuguese (Brazilian)";
-$lang{'sr@Latn'} = "Serbian (Latin)";
+$lang{'sr@latin'} = "Serbian (Latin)";
 $lang{zh_CN} = "Chinese (Simplified)";
+$lang{zh_HK} = "Chinese (Hong Kong)";
 $lang{zh_TW} = "Chinese (Traditional)";
 
 opendir(DIR, ".") || die "can't open directory: $!";
@@ -61,13 +67,16 @@ foreach $index (0 .. $#pos) {
 	$trans = $fuzz = $untrans = 0;
 	$po = $pos[$index];
 	print STDERR "$po..." if($ARGV[0] eq '-v');
-	system("msgmerge $po.po $PACKAGE.pot -o $po.new 2>/dev/null");
-	$_ = `msgfmt --statistics $po.new -o /dev/null 2>&1`;
+	system("msgmerge --no-location -U $po.po $PACKAGE.pot 2>/dev/null");
+	if (($? & 127) == 2) {
+		printf STDERR "Caught keyboard interrupt--exiting\n";
+		exit
+	}
+	$_ = `msgfmt --statistics $po -o /dev/null 2>&1`;
 	chomp;
 	if(/(\d+) translated message/) { $trans = $1; }
 	if(/(\d+) fuzzy translation/) { $fuzz = $1; }
 	if(/(\d+) untranslated message/) { $untrans = $1; }
-	unlink("$po.new");
 
 	$name = "";
 	$name = $lang{$po};

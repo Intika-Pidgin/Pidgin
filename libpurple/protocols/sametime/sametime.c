@@ -1,7 +1,7 @@
 
 /*
-  Meanwhile Protocol Plugin for Gaim
-  Adds Lotus Sametime support to Gaim using the Meanwhile library
+  Meanwhile Protocol Plugin for Purple
+  Adds Lotus Sametime support to Purple using the Meanwhile library
 
   Copyright (C) 2004 Christopher (siege) O'Brien <siege@preoccupied.net>
 
@@ -17,10 +17,11 @@
 
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301,
   USA.
 */
 
+#include "internal.h"
 
 /* system includes */
 #include <stdlib.h>
@@ -28,13 +29,8 @@
 
 /* glib includes */
 #include <glib.h>
-#include <glib/ghash.h>
-#include <glib/glist.h>
 
-/* gaim includes */
-#include "internal.h"
-#include "config.h"
-
+/* purple includes */
 #include "account.h"
 #include "accountopt.h"
 #include "circbuffer.h"
@@ -138,7 +134,7 @@
 #define mwSession_NO_SECRET  "meanwhile.no_secret"
 
 
-/* keys to get/set gaim plugin information */
+/* keys to get/set purple plugin information */
 #define MW_KEY_HOST        "server"
 #define MW_KEY_PORT        "port"
 #define MW_KEY_FORCE       "force_login"
@@ -158,7 +154,7 @@ enum blist_choice {
   blist_choice_LOCAL = 1, /**< local only */
   blist_choice_MERGE = 2, /**< merge from server */
   blist_choice_STORE = 3, /**< merge from and save to server */
-  blist_choice_SYNCH = 4, /**< sync with server */
+  blist_choice_SYNCH = 4  /**< sync with server */
 };
 
 
@@ -167,7 +163,7 @@ enum blist_choice {
 
 
 /* testing for the above */
-#define BLIST_PREF_IS(n) (gaim_prefs_get_int(MW_PRPL_OPT_BLIST_ACTION)==(n))
+#define BLIST_PREF_IS(n) (purple_prefs_get_int(MW_PRPL_OPT_BLIST_ACTION)==(n))
 #define BLIST_PREF_IS_LOCAL()  BLIST_PREF_IS(blist_choice_LOCAL)
 #define BLIST_PREF_IS_MERGE()  BLIST_PREF_IS(blist_choice_MERGE)
 #define BLIST_PREF_IS_STORE()  BLIST_PREF_IS(blist_choice_STORE)
@@ -175,10 +171,10 @@ enum blist_choice {
 
 
 /* debugging output */
-#define DEBUG_ERROR(a...)  gaim_debug_error(G_LOG_DOMAIN, a)
-#define DEBUG_INFO(a...)   gaim_debug_info(G_LOG_DOMAIN, a)
-#define DEBUG_MISC(a...)   gaim_debug_misc(G_LOG_DOMAIN, a)
-#define DEBUG_WARN(a...)   gaim_debug_warning(G_LOG_DOMAIN, a)
+#define DEBUG_ERROR(...)  purple_debug_error(G_LOG_DOMAIN, __VA_ARGS__)
+#define DEBUG_INFO(...)   purple_debug_info(G_LOG_DOMAIN, __VA_ARGS__)
+#define DEBUG_MISC(...)   purple_debug_misc(G_LOG_DOMAIN, __VA_ARGS__)
+#define DEBUG_WARN(...)   purple_debug_warning(G_LOG_DOMAIN, __VA_ARGS__)
 
 
 /** ensure non-null strings */
@@ -200,9 +196,9 @@ static const unsigned char no_secret[] = {
 static guint log_handler[2] = { 0, 0 };
 
 
-/** the gaim plugin data.
+/** the purple plugin data.
     available as gc->proto_data and mwSession_getClientData */
-struct mwGaimPluginData {
+struct mwPurplePluginData {
   struct mwSession *session;
 
   struct mwServiceAware *srvc_aware;
@@ -213,7 +209,7 @@ struct mwGaimPluginData {
   struct mwServiceResolve *srvc_resolve;
   struct mwServiceStorage *srvc_store;
 
-  /** map of GaimGroup:mwAwareList and mwAwareList:GaimGroup */
+  /** map of PurpleGroup:mwAwareList and mwAwareList:PurpleGroup */
   GHashTable *group_list_map;
 
   /** event id for the buddy list save callback */
@@ -224,59 +220,59 @@ struct mwGaimPluginData {
   gint outpa;  /* like inpa, but the other way */
 
   /** circular buffer for outgoing data */
-  GaimCircBuffer *sock_buf;
+  PurpleCircBuffer *sock_buf;
 
-  GaimConnection *gc;
+  PurpleConnection *gc;
 };
 
 
 typedef struct {
-  GaimBuddy *buddy;
-  GaimGroup *group;
+  PurpleBuddy *buddy;
+  PurpleGroup *group;
 } BuddyAddData;
 
 
 /* blist and aware functions */
 
-static void blist_export(GaimConnection *gc, struct mwSametimeList *stlist);
+static void blist_export(PurpleConnection *gc, struct mwSametimeList *stlist);
 
-static void blist_store(struct mwGaimPluginData *pd);
+static void blist_store(struct mwPurplePluginData *pd);
 
-static void blist_schedule(struct mwGaimPluginData *pd);
+static void blist_schedule(struct mwPurplePluginData *pd);
 
-static void blist_merge(GaimConnection *gc, struct mwSametimeList *stlist);
+static void blist_merge(PurpleConnection *gc, struct mwSametimeList *stlist);
 
-static void blist_sync(GaimConnection *gc, struct mwSametimeList *stlist);
+static void blist_sync(PurpleConnection *gc, struct mwSametimeList *stlist);
 
-static gboolean buddy_is_external(GaimBuddy *b);
+static gboolean buddy_is_external(PurpleBuddy *b);
 
-static void buddy_add(struct mwGaimPluginData *pd, GaimBuddy *buddy);
+static void buddy_add(struct mwPurplePluginData *pd, PurpleBuddy *buddy);
 
-static GaimBuddy *
-buddy_ensure(GaimConnection *gc, GaimGroup *group,
+static PurpleBuddy *
+buddy_ensure(PurpleConnection *gc, PurpleGroup *group,
 	     struct mwSametimeUser *stuser);
 
-static void group_add(struct mwGaimPluginData *pd, GaimGroup *group);
+static void group_add(struct mwPurplePluginData *pd, PurpleGroup *group);
 
-static GaimGroup *
-group_ensure(GaimConnection *gc, struct mwSametimeGroup *stgroup);
+static PurpleGroup *
+group_ensure(PurpleConnection *gc, struct mwSametimeGroup *stgroup);
 
 static struct mwAwareList *
-list_ensure(struct mwGaimPluginData *pd, GaimGroup *group);
+list_ensure(struct mwPurplePluginData *pd, PurpleGroup *group);
 
 
 /* session functions */
 
 static struct mwSession *
-gc_to_session(GaimConnection *gc);
+gc_to_session(PurpleConnection *gc);
 
-static GaimConnection *session_to_gc(struct mwSession *session);
+static PurpleConnection *session_to_gc(struct mwSession *session);
 
 
 /* conference functions */
 
 static struct mwConference *
-conf_find_by_id(struct mwGaimPluginData *pd, int id);
+conf_find_by_id(struct mwPurplePluginData *pd, int id);
 
 
 /* conversation functions */
@@ -299,7 +295,7 @@ static void convo_data_free(struct convo_data *conv);
 
 static void convo_features(struct mwConversation *conv);
 
-static GaimConversation *convo_get_gconv(struct mwConversation *conv);
+static PurpleConversation *convo_get_gconv(struct mwConversation *conv);
 
 
 /* name and id */
@@ -318,22 +314,22 @@ static void connect_cb(gpointer data, gint source, const gchar *error_message);
 /* ----- session ------ */
 
 
-/** resolves a mwSession from a GaimConnection */
-static struct mwSession *gc_to_session(GaimConnection *gc) {
-  struct mwGaimPluginData *pd;
-  
+/** resolves a mwSession from a PurpleConnection */
+static struct mwSession *gc_to_session(PurpleConnection *gc) {
+  struct mwPurplePluginData *pd;
+
   g_return_val_if_fail(gc != NULL, NULL);
-  
+
   pd = gc->proto_data;
   g_return_val_if_fail(pd != NULL, NULL);
-  
+
   return pd->session;
 }
 
 
-/** resolves a GaimConnection from a mwSession */
-static GaimConnection *session_to_gc(struct mwSession *session) {
-  struct mwGaimPluginData *pd;
+/** resolves a PurpleConnection from a mwSession */
+static PurpleConnection *session_to_gc(struct mwSession *session) {
+  struct mwPurplePluginData *pd;
 
   g_return_val_if_fail(session != NULL, NULL);
 
@@ -344,9 +340,9 @@ static GaimConnection *session_to_gc(struct mwSession *session) {
 }
 
 
-static void write_cb(gpointer data, gint source, GaimInputCondition cond) {
-  struct mwGaimPluginData *pd = data;
-  GaimCircBuffer *circ = pd->sock_buf;
+static void write_cb(gpointer data, gint source, PurpleInputCondition cond) {
+  struct mwPurplePluginData *pd = data;
+  PurpleCircBuffer *circ = pd->sock_buf;
   gsize avail;
   int ret;
 
@@ -354,22 +350,22 @@ static void write_cb(gpointer data, gint source, GaimInputCondition cond) {
 
   g_return_if_fail(circ != NULL);
 
-  avail = gaim_circ_buffer_get_max_read(circ);
+  avail = purple_circ_buffer_get_max_read(circ);
   if(BUF_LONG < avail) avail = BUF_LONG;
 
   while(avail) {
     ret = write(pd->socket, circ->outptr, avail);
-    
+
     if(ret <= 0)
       break;
 
-    gaim_circ_buffer_mark_read(circ, ret);
-    avail = gaim_circ_buffer_get_max_read(circ);
+    purple_circ_buffer_mark_read(circ, ret);
+    avail = purple_circ_buffer_get_max_read(circ);
     if(BUF_LONG < avail) avail = BUF_LONG;
   }
 
   if(! avail) {
-    gaim_input_remove(pd->outpa);
+    purple_input_remove(pd->outpa);
     pd->outpa = 0;
   }
 }
@@ -377,8 +373,8 @@ static void write_cb(gpointer data, gint source, GaimInputCondition cond) {
 
 static int mw_session_io_write(struct mwSession *session,
 			       const guchar *buf, gsize len) {
-  struct mwGaimPluginData *pd;
-  int ret = 0;
+  struct mwPurplePluginData *pd;
+  gssize ret = 0;
   int err = 0;
 
   pd = mwSession_getClientData(session);
@@ -389,7 +385,7 @@ static int mw_session_io_write(struct mwSession *session,
 
   if(pd->outpa) {
     DEBUG_INFO("already pending INPUT_WRITE, buffering\n");
-    gaim_circ_buffer_append(pd->sock_buf, buf, len);
+    purple_circ_buffer_append(pd->sock_buf, buf, len);
     return 0;
   }
 
@@ -409,12 +405,18 @@ static int mw_session_io_write(struct mwSession *session,
   if(err == EAGAIN) {
     /* append remainder to circular buffer */
     DEBUG_INFO("EAGAIN\n");
-    gaim_circ_buffer_append(pd->sock_buf, buf, len);
-    pd->outpa = gaim_input_add(pd->socket, GAIM_INPUT_WRITE, write_cb, pd);
+    purple_circ_buffer_append(pd->sock_buf, buf, len);
+    pd->outpa = purple_input_add(pd->socket, PURPLE_INPUT_WRITE, write_cb, pd);
 
   } else if(len > 0) {
-    DEBUG_ERROR("write returned %i, %i bytes left unwritten\n", ret, len);
-    gaim_connection_error(pd->gc, _("Connection closed (writing)"));
+	gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
+			g_strerror(errno));
+    DEBUG_ERROR("write returned %" G_GSSIZE_FORMAT ", %" G_GSIZE_FORMAT
+			" bytes left unwritten\n", ret, len);
+    purple_connection_error_reason(pd->gc,
+                                   PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   tmp);
+	g_free(tmp);
 
 #if 0
     close(pd->socket);
@@ -429,16 +431,16 @@ static int mw_session_io_write(struct mwSession *session,
 
 
 static void mw_session_io_close(struct mwSession *session) {
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
 
   pd = mwSession_getClientData(session);
   g_return_if_fail(pd != NULL);
 
   gc = pd->gc;
-  
+
   if(pd->outpa) {
-    gaim_input_remove(pd->outpa);
+    purple_input_remove(pd->outpa);
     pd->outpa = 0;
   }
 
@@ -446,9 +448,9 @@ static void mw_session_io_close(struct mwSession *session) {
     close(pd->socket);
     pd->socket = 0;
   }
-  
+
   if(gc->inpa) {
-    gaim_input_remove(gc->inpa);
+    purple_input_remove(gc->inpa);
     gc->inpa = 0;
   }
 }
@@ -477,25 +479,25 @@ static void blist_resolve_alias_cb(struct mwServiceResolve *srvc,
   match = result->matches->data;
   g_return_if_fail(match != NULL);
 
-  gaim_blist_server_alias_buddy(data, match->name);
-  gaim_blist_node_set_string(data, BUDDY_KEY_NAME, match->name);
+  purple_blist_server_alias_buddy(data, match->name);
+  purple_blist_node_set_string(data, BUDDY_KEY_NAME, match->name);
 }
 
 
 static void mw_aware_list_on_aware(struct mwAwareList *list,
 				   struct mwAwareSnapshot *aware) {
 
-  GaimConnection *gc;
-  GaimAccount *acct;
-    
-  struct mwGaimPluginData *pd;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
+
+  struct mwPurplePluginData *pd;
   guint32 idle;
   guint stat;
   const char *id;
   const char *status = MW_STATE_ACTIVE;
 
   gc = mwAwareList_getClientData(list);
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
 
   pd = gc->proto_data;
   idle = aware->status.time;
@@ -505,13 +507,18 @@ static void mw_aware_list_on_aware(struct mwAwareList *list,
   if(idle) {
     guint32 idle_len;       /*< how long a client has been idle */
     guint32 ugly_idle_len;  /*< how long a broken client has been idle */
-    
+
     DEBUG_INFO("%s has idle value 0x%x\n", NSTR(id), idle);
 
     idle_len = time(NULL) - idle;
     ugly_idle_len = ((time(NULL) * 1000) - idle) / 1000;
 
-    /* 
+	if(idle > ugly_idle_len)
+		ugly_idle_len = 0;
+	else
+		ugly_idle_len = (ugly_idle_len - idle) / 1000;
+
+    /*
        what's the deal here? Well, good clients are smart enough to
        publish their idle time by using an attribute to indicate that
        they went idle at some time UTC, in seconds since epoch. Bad
@@ -547,34 +554,34 @@ static void mw_aware_list_on_aware(struct mwAwareList *list,
   case mwStatus_IDLE:
     if(! idle) idle = -1;
     break;
-    
+
   case mwStatus_AWAY:
     status = MW_STATE_AWAY;
     break;
-    
+
   case mwStatus_BUSY:
     status = MW_STATE_BUSY;
     break;
   }
-  
+
   /* NAB group members */
   if(aware->group) {
-    GaimGroup *group;
-    GaimBuddy *buddy;
-    GaimBlistNode *bnode;
+    PurpleGroup *group;
+    PurpleBuddy *buddy;
+    PurpleBlistNode *bnode;
 
     group = g_hash_table_lookup(pd->group_list_map, list);
-    buddy = gaim_find_buddy_in_group(acct, id, group);
-    bnode = (GaimBlistNode *) buddy;
+    buddy = purple_find_buddy_in_group(acct, id, group);
+    bnode = (PurpleBlistNode *) buddy;
 
     if(! buddy) {
       struct mwServiceResolve *srvc;
       GList *query;
 
-      buddy = gaim_buddy_new(acct, id, NULL);
-      gaim_blist_add_buddy(buddy, NULL, group, NULL);
+      buddy = purple_buddy_new(acct, id, NULL);
+      purple_blist_add_buddy(buddy, NULL, group, NULL);
 
-      bnode = (GaimBlistNode *) buddy;
+      bnode = (PurpleBlistNode *) buddy;
 
       srvc = pd->srvc_resolve;
       query = g_list_append(NULL, (char *) id);
@@ -584,15 +591,15 @@ static void mw_aware_list_on_aware(struct mwAwareList *list,
       g_list_free(query);
     }
 
-    gaim_blist_node_set_int(bnode, BUDDY_KEY_TYPE, mwSametimeUser_NORMAL);
+    purple_blist_node_set_int(bnode, BUDDY_KEY_TYPE, mwSametimeUser_NORMAL);
   }
-  
+
   if(aware->online) {
-    gaim_prpl_got_user_status(acct, id, status, NULL);
-    gaim_prpl_got_user_idle(acct, id, !!idle, (time_t) idle);
+    purple_prpl_got_user_status(acct, id, status, NULL);
+    purple_prpl_got_user_idle(acct, id, !!idle, (time_t) idle);
 
   } else {
-    gaim_prpl_got_user_status(acct, id, MW_STATE_OFFLINE, NULL);
+    purple_prpl_got_user_status(acct, id, MW_STATE_OFFLINE, NULL);
   }
 }
 
@@ -611,27 +618,27 @@ static void mw_aware_list_clear(struct mwAwareList *list) {
 
 
 static struct mwAwareListHandler mw_aware_list_handler = {
-  .on_aware = mw_aware_list_on_aware,
-  .on_attrib = mw_aware_list_on_attrib,
-  .clear = mw_aware_list_clear,
+  mw_aware_list_on_aware,
+  mw_aware_list_on_attrib,
+  mw_aware_list_clear,
 };
 
 
 /** Ensures that an Aware List is associated with the given group, and
     returns that list. */
 static struct mwAwareList *
-list_ensure(struct mwGaimPluginData *pd, GaimGroup *group) {
-  
+list_ensure(struct mwPurplePluginData *pd, PurpleGroup *group) {
+
   struct mwAwareList *list;
-  
+
   g_return_val_if_fail(pd != NULL, NULL);
   g_return_val_if_fail(group != NULL, NULL);
-  
+
   list = g_hash_table_lookup(pd->group_list_map, group);
   if(! list) {
     list = mwAwareList_new(pd->srvc_aware, &mw_aware_list_handler);
     mwAwareList_setClientData(list, pd->gc, NULL);
-    
+
     mwAwareList_watchAttributes(list,
 				mwAttribute_AV_PREFS_SET,
 				mwAttribute_MICROPHONE,
@@ -643,64 +650,61 @@ list_ensure(struct mwGaimPluginData *pd, GaimGroup *group) {
     g_hash_table_replace(pd->group_list_map, group, list);
     g_hash_table_insert(pd->group_list_map, list, group);
   }
-  
+
   return list;
 }
 
 
-static void blist_export(GaimConnection *gc, struct mwSametimeList *stlist) {
+static void blist_export(PurpleConnection *gc, struct mwSametimeList *stlist) {
   /* - find the account for this connection
      - iterate through the buddy list
      - add each buddy matching this account to the stlist
   */
 
-  GaimAccount *acct;
-  GaimBuddyList *blist;
-  GaimBlistNode *gn, *cn, *bn;
-  GaimGroup *grp;
-  GaimBuddy *bdy;
+  PurpleAccount *acct;
+  PurpleBlistNode *gn, *cn, *bn;
+  PurpleGroup *grp;
+  PurpleBuddy *bdy;
 
   struct mwSametimeGroup *stg = NULL;
   struct mwIdBlock idb = { NULL, NULL };
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
 
-  blist = gaim_get_blist();
-  g_return_if_fail(blist != NULL);
-
-  for(gn = blist->root; gn; gn = gn->next) {
+  for(gn = purple_blist_get_root(); gn;
+		  gn = purple_blist_node_get_sibling_next(gn)) {
     const char *owner;
     const char *gname;
     enum mwSametimeGroupType gtype;
     gboolean gopen;
 
-    if(! GAIM_BLIST_NODE_IS_GROUP(gn)) continue;
-    grp = (GaimGroup *) gn;
+    if(! PURPLE_BLIST_NODE_IS_GROUP(gn)) continue;
+    grp = (PurpleGroup *) gn;
 
     /* the group's type (normal or dynamic) */
-    gtype = gaim_blist_node_get_int(gn, GROUP_KEY_TYPE);
+    gtype = purple_blist_node_get_int(gn, GROUP_KEY_TYPE);
     if(! gtype) gtype = mwSametimeGroup_NORMAL;
 
     /* if it's a normal group with none of our people in it, skip it */
-    if(gtype == mwSametimeGroup_NORMAL && !gaim_group_on_account(grp, acct))
-      continue;
-    
-    /* if the group has an owner and we're not it, skip it */
-    owner = gaim_blist_node_get_string(gn, GROUP_KEY_OWNER);
-    if(owner && strcmp(owner, gaim_account_get_username(acct)))
+    if(gtype == mwSametimeGroup_NORMAL && !purple_group_on_account(grp, acct))
       continue;
 
-    /* the group's actual name may be different from the gaim group's
+    /* if the group has an owner and we're not it, skip it */
+    owner = purple_blist_node_get_string(gn, GROUP_KEY_OWNER);
+    if(owner && strcmp(owner, purple_account_get_username(acct)))
+      continue;
+
+    /* the group's actual name may be different from the purple group's
        name. Find whichever is there */
-    gname = gaim_blist_node_get_string(gn, GROUP_KEY_NAME);
-    if(! gname) gname = grp->name;
+    gname = purple_blist_node_get_string(gn, GROUP_KEY_NAME);
+    if(! gname) gname = purple_group_get_name(grp);
 
     /* we save this, but never actually honor it */
-    gopen = ! gaim_blist_node_get_bool(gn, GROUP_KEY_COLLAPSED);
+    gopen = ! purple_blist_node_get_bool(gn, GROUP_KEY_COLLAPSED);
 
     stg = mwSametimeGroup_new(stlist, gtype, gname);
-    mwSametimeGroup_setAlias(stg, grp->name);
+    mwSametimeGroup_setAlias(stg, purple_group_get_name(grp));
     mwSametimeGroup_setOpen(stg, gopen);
 
     /* don't attempt to put buddies in a dynamic group, it breaks
@@ -708,41 +712,45 @@ static void blist_export(GaimConnection *gc, struct mwSametimeList *stlist) {
     if(gtype == mwSametimeGroup_DYNAMIC)
       continue;
 
-    for(cn = gn->child; cn; cn = cn->next) {
-      if(! GAIM_BLIST_NODE_IS_CONTACT(cn)) continue;
+    for(cn = purple_blist_node_get_first_child(gn);
+			cn;
+			cn = purple_blist_node_get_sibling_next(cn)) {
+      if(! PURPLE_BLIST_NODE_IS_CONTACT(cn)) continue;
 
-      for(bn = cn->child; bn; bn = bn->next) {
-	if(! GAIM_BLIST_NODE_IS_BUDDY(bn)) continue;
-	if(! GAIM_BLIST_NODE_SHOULD_SAVE(bn)) continue;
+      for(bn = purple_blist_node_get_first_child(cn);
+			  bn;
+			  bn = purple_blist_node_get_sibling_next(bn)) {
+	if(! PURPLE_BLIST_NODE_IS_BUDDY(bn)) continue;
+	if(! PURPLE_BLIST_NODE_SHOULD_SAVE(bn)) continue;
 
-	bdy = (GaimBuddy *) bn;
+	bdy = (PurpleBuddy *) bn;
 
-	if(bdy->account == acct) {
+	if(purple_buddy_get_account(bdy) == acct) {
 	  struct mwSametimeUser *stu;
 	  enum mwSametimeUserType utype;
 
-	  idb.user = bdy->name;
+	  idb.user = (char *)purple_buddy_get_name(bdy);
 
-	  utype = gaim_blist_node_get_int(bn, BUDDY_KEY_TYPE);
+	  utype = purple_blist_node_get_int(bn, BUDDY_KEY_TYPE);
 	  if(! utype) utype = mwSametimeUser_NORMAL;
 
 	  stu = mwSametimeUser_new(stg, utype, &idb);
-	  mwSametimeUser_setShortName(stu, bdy->server_alias);
-	  mwSametimeUser_setAlias(stu, bdy->alias);
+	  mwSametimeUser_setShortName(stu, purple_buddy_get_server_alias(bdy));
+	  mwSametimeUser_setAlias(stu, purple_buddy_get_local_buddy_alias(bdy));
 	}
       }
     }
-  }  
+  }
 }
 
 
-static void blist_store(struct mwGaimPluginData *pd) {
+static void blist_store(struct mwPurplePluginData *pd) {
 
   struct mwSametimeList *stlist;
   struct mwServiceStorage *srvc;
   struct mwStorageUnit *unit;
 
-  GaimConnection *gc;
+  PurpleConnection *gc;
 
   struct mwPutBuffer *b;
   struct mwOpaque *o;
@@ -789,7 +797,7 @@ static void blist_store(struct mwGaimPluginData *pd) {
 
 
 static gboolean blist_save_cb(gpointer data) {
-  struct mwGaimPluginData *pd = data;
+  struct mwPurplePluginData *pd = data;
 
   blist_store(pd);
   pd->save_event = 0;
@@ -798,54 +806,54 @@ static gboolean blist_save_cb(gpointer data) {
 
 
 /** schedules the buddy list to be saved to the server */
-static void blist_schedule(struct mwGaimPluginData *pd) {
+static void blist_schedule(struct mwPurplePluginData *pd) {
   if(pd->save_event) return;
 
-  pd->save_event = gaim_timeout_add(BLIST_SAVE_SECONDS * 1000,
+  pd->save_event = purple_timeout_add_seconds(BLIST_SAVE_SECONDS,
 				    blist_save_cb, pd);
 }
 
 
-static gboolean buddy_is_external(GaimBuddy *b) {
+static gboolean buddy_is_external(PurpleBuddy *b) {
   g_return_val_if_fail(b != NULL, FALSE);
-  return gaim_str_has_prefix(b->name, "@E ");
+  return purple_str_has_prefix(purple_buddy_get_name(b), "@E ");
 }
 
 
 /** Actually add a buddy to the aware service, and schedule the buddy
     list to be saved to the server */
-static void buddy_add(struct mwGaimPluginData *pd,
-		      GaimBuddy *buddy) {
+static void buddy_add(struct mwPurplePluginData *pd,
+		      PurpleBuddy *buddy) {
 
-  struct mwAwareIdBlock idb = { mwAware_USER, (char *) buddy->name, NULL };
+  struct mwAwareIdBlock idb = { mwAware_USER, (char *) purple_buddy_get_name(buddy), NULL };
   struct mwAwareList *list;
 
-  GaimGroup *group;
+  PurpleGroup *group;
   GList *add;
 
   add = g_list_prepend(NULL, &idb);
 
-  group = gaim_buddy_get_group(buddy);
+  group = purple_buddy_get_group(buddy);
   list = list_ensure(pd, group);
 
   if(mwAwareList_addAware(list, add)) {
-    gaim_blist_remove_buddy(buddy);
+    purple_blist_remove_buddy(buddy);
   }
 
   blist_schedule(pd);
 
-  g_list_free(add);  
+  g_list_free(add);
 }
 
 
-/** ensure that a GaimBuddy exists in the group with data
+/** ensure that a PurpleBuddy exists in the group with data
     appropriately matching the st user entry from the st list */
-static GaimBuddy *buddy_ensure(GaimConnection *gc, GaimGroup *group,
+static PurpleBuddy *buddy_ensure(PurpleConnection *gc, PurpleGroup *group,
 			       struct mwSametimeUser *stuser) {
 
-  struct mwGaimPluginData *pd = gc->proto_data;
-  GaimBuddy *buddy;
-  GaimAccount *acct = gaim_connection_get_account(gc);
+  struct mwPurplePluginData *pd = gc->proto_data;
+  PurpleBuddy *buddy;
+  PurpleAccount *acct = purple_connection_get_account(gc);
 
   const char *id = mwSametimeUser_getUser(stuser);
   const char *name = mwSametimeUser_getShortName(stuser);
@@ -855,34 +863,34 @@ static GaimBuddy *buddy_ensure(GaimConnection *gc, GaimGroup *group,
   g_return_val_if_fail(id != NULL, NULL);
   g_return_val_if_fail(strlen(id) > 0, NULL);
 
-  buddy = gaim_find_buddy_in_group(acct, id, group);
+  buddy = purple_find_buddy_in_group(acct, id, group);
   if(! buddy) {
-    buddy = gaim_buddy_new(acct, id, alias);
-  
-    gaim_blist_add_buddy(buddy, NULL, group, NULL);
+    buddy = purple_buddy_new(acct, id, alias);
+
+    purple_blist_add_buddy(buddy, NULL, group, NULL);
     buddy_add(pd, buddy);
   }
-  
-  gaim_blist_alias_buddy(buddy, alias);
-  gaim_blist_server_alias_buddy(buddy, name);
-  gaim_blist_node_set_string((GaimBlistNode *) buddy, BUDDY_KEY_NAME, name);
-  gaim_blist_node_set_int((GaimBlistNode *) buddy, BUDDY_KEY_TYPE, type);
+
+  purple_blist_alias_buddy(buddy, alias);
+  purple_blist_server_alias_buddy(buddy, name);
+  purple_blist_node_set_string((PurpleBlistNode *) buddy, BUDDY_KEY_NAME, name);
+  purple_blist_node_set_int((PurpleBlistNode *) buddy, BUDDY_KEY_TYPE, type);
 
   return buddy;
 }
 
 
 /** add aware watch for a dynamic group */
-static void group_add(struct mwGaimPluginData *pd,
-		      GaimGroup *group) {
+static void group_add(struct mwPurplePluginData *pd,
+		      PurpleGroup *group) {
 
   struct mwAwareIdBlock idb = { mwAware_GROUP, NULL, NULL };
   struct mwAwareList *list;
   const char *n;
   GList *add;
-  
-  n = gaim_blist_node_get_string((GaimBlistNode *) group, GROUP_KEY_NAME);
-  if(! n) n = group->name;
+
+  n = purple_blist_node_get_string((PurpleBlistNode *) group, GROUP_KEY_NAME);
+  if(! n) n = purple_group_get_name(group);
 
   idb.user = (char *) n;
   add = g_list_prepend(NULL, &idb);
@@ -893,43 +901,54 @@ static void group_add(struct mwGaimPluginData *pd,
 }
 
 
-/** ensure that a GaimGroup exists in the blist with data
+/** ensure that a PurpleGroup exists in the blist with data
     appropriately matching the st group entry from the st list */
-static GaimGroup *group_ensure(GaimConnection *gc,
+static PurpleGroup *group_ensure(PurpleConnection *gc,
 			       struct mwSametimeGroup *stgroup) {
-  GaimAccount *acct;
-  GaimGroup *group = NULL;
-  GaimBuddyList *blist;
-  GaimBlistNode *gn;
+  PurpleAccount *acct;
+  PurpleGroup *group = NULL;
+  PurpleBuddyList *blist;
+  PurpleBlistNode *gn;
   const char *name, *alias, *owner;
   enum mwSametimeGroupType type;
 
-  acct = gaim_connection_get_account(gc);
-  owner = gaim_account_get_username(acct);
+  acct = purple_connection_get_account(gc);
+  owner = purple_account_get_username(acct);
 
-  blist = gaim_get_blist();
+  blist = purple_get_blist();
   g_return_val_if_fail(blist != NULL, NULL);
 
   name = mwSametimeGroup_getName(stgroup);
   alias = mwSametimeGroup_getAlias(stgroup);
   type = mwSametimeGroup_getType(stgroup);
 
+  if (!name) {
+    DEBUG_WARN("Can't ensure a null group\n");
+    return NULL;
+  }
+
+  if (!name) {
+    DEBUG_WARN("Can't ensure a null group\n");
+    return NULL;
+  }
+
   DEBUG_INFO("attempting to ensure group %s, called %s\n",
 	     NSTR(name), NSTR(alias));
 
   /* first attempt at finding the group, by the name key */
-  for(gn = blist->root; gn; gn = gn->next) {
+  for(gn = purple_blist_get_root(); gn;
+		  gn = purple_blist_node_get_sibling_next(gn)) {
     const char *n, *o;
-    if(! GAIM_BLIST_NODE_IS_GROUP(gn)) continue;
-    n = gaim_blist_node_get_string(gn, GROUP_KEY_NAME);
-    o = gaim_blist_node_get_string(gn, GROUP_KEY_OWNER);
+    if(! PURPLE_BLIST_NODE_IS_GROUP(gn)) continue;
+    n = purple_blist_node_get_string(gn, GROUP_KEY_NAME);
+    o = purple_blist_node_get_string(gn, GROUP_KEY_OWNER);
 
     DEBUG_INFO("found group named %s, owned by %s\n", NSTR(n), NSTR(o));
 
     if(n && !strcmp(n, name)) {
       if(!o || !strcmp(o, owner)) {
 	DEBUG_INFO("that'll work\n");
-	group = (GaimGroup *) gn;
+	group = (PurpleGroup *) gn;
 	break;
       }
     }
@@ -938,36 +957,36 @@ static GaimGroup *group_ensure(GaimConnection *gc,
   /* try again, by alias */
   if(! group) {
     DEBUG_INFO("searching for group by alias %s\n", NSTR(alias));
-    group = gaim_find_group(alias);
+    group = purple_find_group(alias);
   }
 
   /* oh well, no such group. Let's create it! */
   if(! group) {
     DEBUG_INFO("creating group\n");
-    group = gaim_group_new(alias);
-    gaim_blist_add_group(group, NULL);
+    group = purple_group_new(alias);
+    purple_blist_add_group(group, NULL);
   }
 
-  gn = (GaimBlistNode *) group;
-  gaim_blist_node_set_string(gn, GROUP_KEY_NAME, name);
-  gaim_blist_node_set_int(gn, GROUP_KEY_TYPE, type);
+  gn = (PurpleBlistNode *) group;
+  purple_blist_node_set_string(gn, GROUP_KEY_NAME, name);
+  purple_blist_node_set_int(gn, GROUP_KEY_TYPE, type);
 
   if(type == mwSametimeGroup_DYNAMIC) {
-    gaim_blist_node_set_string(gn, GROUP_KEY_OWNER, owner);
+    purple_blist_node_set_string(gn, GROUP_KEY_OWNER, owner);
     group_add(gc->proto_data, group);
   }
-  
+
   return group;
 }
 
 
-/** merge the entries from a st list into the gaim blist */
-static void blist_merge(GaimConnection *gc, struct mwSametimeList *stlist) {
+/** merge the entries from a st list into the purple blist */
+static void blist_merge(PurpleConnection *gc, struct mwSametimeList *stlist) {
   struct mwSametimeGroup *stgroup;
   struct mwSametimeUser *stuser;
 
-  GaimGroup *group;
-  GaimBuddy *buddy;
+  PurpleGroup *group;
+  PurpleBuddy *buddy;
 
   GList *gl, *gtl, *ul, *utl;
 
@@ -991,73 +1010,77 @@ static void blist_merge(GaimConnection *gc, struct mwSametimeList *stlist) {
 
 /** remove all buddies on account from group. If del is TRUE and group
     is left empty, remove group as well */
-static void group_clear(GaimGroup *group, GaimAccount *acct, gboolean del) {
-  GaimConnection *gc;
+static void group_clear(PurpleGroup *group, PurpleAccount *acct, gboolean del) {
+  PurpleConnection *gc;
   GList *prune = NULL;
-  GaimBlistNode *gn, *cn, *bn;
+  PurpleBlistNode *gn, *cn, *bn;
 
   g_return_if_fail(group != NULL);
 
-  DEBUG_INFO("clearing members from pruned group %s\n", NSTR(group->name));
+  DEBUG_INFO("clearing members from pruned group %s\n", NSTR(purple_group_get_name(group)));
 
-  gc = gaim_account_get_connection(acct);
+  gc = purple_account_get_connection(acct);
   g_return_if_fail(gc != NULL);
 
-  gn = (GaimBlistNode *) group;
+  gn = (PurpleBlistNode *) group;
 
-  for(cn = gn->child; cn; cn = cn->next) {
-    if(! GAIM_BLIST_NODE_IS_CONTACT(cn)) continue;
+  for(cn = purple_blist_node_get_first_child(gn);
+		  cn;
+		  cn = purple_blist_node_get_sibling_next(cn)) {
+    if(! PURPLE_BLIST_NODE_IS_CONTACT(cn)) continue;
 
-    for(bn = cn->child; bn; bn = bn->next) {
-      GaimBuddy *gb = (GaimBuddy *) bn;
+    for(bn = purple_blist_node_get_first_child(cn);
+			bn;
+			bn = purple_blist_node_get_sibling_next(bn)) {
+      PurpleBuddy *gb = (PurpleBuddy *) bn;
 
-      if(! GAIM_BLIST_NODE_IS_BUDDY(bn)) continue;
-      
-      if(gb->account == acct) {
-	DEBUG_INFO("clearing %s from group\n", NSTR(gb->name));
+      if(! PURPLE_BLIST_NODE_IS_BUDDY(bn)) continue;
+
+      if(purple_buddy_get_account(gb) == acct) {
+	DEBUG_INFO("clearing %s from group\n", NSTR(purple_buddy_get_name(gb)));
 	prune = g_list_prepend(prune, gb);
       }
     }
   }
 
   /* quickly unsubscribe from presence for the entire group */
-  gaim_account_remove_group(acct, group);
+  purple_account_remove_group(acct, group);
 
   /* remove blist entries that need to go */
   while(prune) {
-    gaim_blist_remove_buddy(prune->data);
+    purple_blist_remove_buddy(prune->data);
     prune = g_list_delete_link(prune, prune);
   }
   DEBUG_INFO("cleared buddies\n");
 
   /* optionally remove group from blist */
-  if(del && !gaim_blist_get_group_size(group, TRUE)) {
+  if(del && !purple_blist_get_group_size(group, TRUE)) {
     DEBUG_INFO("removing empty group\n");
-    gaim_blist_remove_group(group);
+    purple_blist_remove_group(group);
   }
 }
 
 
 /** prune out group members that shouldn't be there */
-static void group_prune(GaimConnection *gc, GaimGroup *group,
+static void group_prune(PurpleConnection *gc, PurpleGroup *group,
 			struct mwSametimeGroup *stgroup) {
 
-  GaimAccount *acct;
-  GaimBlistNode *gn, *cn, *bn;
-  
+  PurpleAccount *acct;
+  PurpleBlistNode *gn, *cn, *bn;
+
   GHashTable *stusers;
   GList *prune = NULL;
   GList *ul, *utl;
 
   g_return_if_fail(group != NULL);
 
-  DEBUG_INFO("pruning membership of group %s\n", NSTR(group->name));
+  DEBUG_INFO("pruning membership of group %s\n", NSTR(purple_group_get_name(group)));
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
 
   stusers = g_hash_table_new(g_str_hash, g_str_equal);
-  
+
   /* build a hash table for quick lookup while pruning the group
      contents */
   utl = mwSametimeGroup_getUsers(stgroup);
@@ -1068,20 +1091,24 @@ static void group_prune(GaimConnection *gc, GaimGroup *group,
   }
   g_list_free(utl);
 
-  gn = (GaimBlistNode *) group;
+  gn = (PurpleBlistNode *) group;
 
-  for(cn = gn->child; cn; cn = cn->next) {
-    if(! GAIM_BLIST_NODE_IS_CONTACT(cn)) continue;
+  for(cn = purple_blist_node_get_first_child(gn);
+		  cn;
+		  cn = purple_blist_node_get_sibling_next(cn)) {
+    if(! PURPLE_BLIST_NODE_IS_CONTACT(cn)) continue;
 
-    for(bn = cn->child; bn; bn = bn->next) {
-      GaimBuddy *gb = (GaimBuddy *) bn;
+    for(bn = purple_blist_node_get_first_child(cn);
+			bn;
+			bn = purple_blist_node_get_sibling_next(bn)) {
+      PurpleBuddy *gb = (PurpleBuddy *) bn;
 
-      if(! GAIM_BLIST_NODE_IS_BUDDY(bn)) continue;
+      if(! PURPLE_BLIST_NODE_IS_BUDDY(bn)) continue;
 
       /* if the account is correct and they're not in our table, mark
 	 them for pruning */
-      if(gb->account == acct && !g_hash_table_lookup(stusers, gb->name)) {
-	DEBUG_INFO("marking %s for pruning\n", NSTR(gb->name));
+      if(purple_buddy_get_account(gb) == acct && !g_hash_table_lookup(stusers, purple_buddy_get_name(gb))) {
+	DEBUG_INFO("marking %s for pruning\n", NSTR(purple_buddy_get_name(gb)));
 	prune = g_list_prepend(prune, gb);
       }
     }
@@ -1091,22 +1118,22 @@ static void group_prune(GaimConnection *gc, GaimGroup *group,
   g_hash_table_destroy(stusers);
 
   if(prune) {
-    gaim_account_remove_buddies(acct, prune, NULL);
+    purple_account_remove_buddies(acct, prune, NULL);
     while(prune) {
-      gaim_blist_remove_buddy(prune->data);
+      purple_blist_remove_buddy(prune->data);
       prune = g_list_delete_link(prune, prune);
     }
   }
 }
 
 
-/** synch the entries from a st list into the gaim blist, removing any
+/** synch the entries from a st list into the purple blist, removing any
     existing buddies that aren't in the st list */
-static void blist_sync(GaimConnection *gc, struct mwSametimeList *stlist) {
+static void blist_sync(PurpleConnection *gc, struct mwSametimeList *stlist) {
 
-  GaimAccount *acct;
-  GaimBuddyList *blist;
-  GaimBlistNode *gn;
+  PurpleAccount *acct;
+  PurpleBuddyList *blist;
+  PurpleBlistNode *gn;
 
   GHashTable *stgroups;
   GList *g_prune = NULL;
@@ -1117,12 +1144,12 @@ static void blist_sync(GaimConnection *gc, struct mwSametimeList *stlist) {
 
   DEBUG_INFO("synchronizing local buddy list from server list\n");
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
 
-  acct_n = gaim_account_get_username(acct);
+  acct_n = purple_account_get_username(acct);
 
-  blist = gaim_get_blist();
+  blist = purple_get_blist();
   g_return_if_fail(blist != NULL);
 
   /* build a hash table for quick lookup while pruning the local
@@ -1137,31 +1164,32 @@ static void blist_sync(GaimConnection *gc, struct mwSametimeList *stlist) {
   g_list_free(gtl);
 
   /* find all groups which should be pruned from the local list */
-  for(gn = blist->root; gn; gn = gn->next) {
-    GaimGroup *grp = (GaimGroup *) gn;
+  for(gn = purple_blist_get_root(); gn;
+		  gn = purple_blist_node_get_sibling_next(gn)) {
+    PurpleGroup *grp = (PurpleGroup *) gn;
     const char *gname, *owner;
     struct mwSametimeGroup *stgrp;
 
-    if(! GAIM_BLIST_NODE_IS_GROUP(gn)) continue;
+    if(! PURPLE_BLIST_NODE_IS_GROUP(gn)) continue;
 
     /* group not belonging to this account */
-    if(! gaim_group_on_account(grp, acct))
+    if(! purple_group_on_account(grp, acct))
       continue;
 
     /* dynamic group belonging to this account. don't prune contents */
-    owner = gaim_blist_node_get_string(gn, GROUP_KEY_OWNER);
+    owner = purple_blist_node_get_string(gn, GROUP_KEY_OWNER);
     if(owner && !strcmp(owner, acct_n))
        continue;
 
     /* we actually are synching by this key as opposed to the group
        title, which can be different things in the st list */
-    gname = gaim_blist_node_get_string(gn, GROUP_KEY_NAME);
-    if(! gname) gname = grp->name;
+    gname = purple_blist_node_get_string(gn, GROUP_KEY_NAME);
+    if(! gname) gname = purple_group_get_name(grp);
 
     stgrp = g_hash_table_lookup(stgroups, gname);
     if(! stgrp) {
       /* remove the whole group */
-      DEBUG_INFO("marking group %s for pruning\n", grp->name);
+      DEBUG_INFO("marking group %s for pruning\n", purple_group_get_name(grp));
       g_prune = g_list_prepend(g_prune, grp);
 
     } else {
@@ -1176,18 +1204,18 @@ static void blist_sync(GaimConnection *gc, struct mwSametimeList *stlist) {
 
   /* prune all marked groups */
   while(g_prune) {
-    GaimGroup *grp = g_prune->data;
-    GaimBlistNode *gn = (GaimBlistNode *) grp;
+    PurpleGroup *grp = g_prune->data;
+    PurpleBlistNode *gn = (PurpleBlistNode *) grp;
     const char *owner;
     gboolean del = TRUE;
 
-    owner = gaim_blist_node_get_string(gn, GROUP_KEY_OWNER);
+    owner = purple_blist_node_get_string(gn, GROUP_KEY_OWNER);
     if(owner && strcmp(owner, acct_n)) {
       /* it's a specialty group belonging to another account with some
 	 of our members in it, so don't fully delete it */
       del = FALSE;
     }
-    
+
     group_clear(g_prune->data, acct, del);
     g_prune = g_list_delete_link(g_prune, g_prune);
   }
@@ -1203,7 +1231,7 @@ static void fetch_blist_cb(struct mwServiceStorage *srvc,
 			   guint32 result, struct mwStorageUnit *item,
 			   gpointer data) {
 
-  struct mwGaimPluginData *pd = data;
+  struct mwPurplePluginData *pd = data;
   struct mwSametimeList *stlist;
 
   struct mwGetBuffer *b;
@@ -1230,69 +1258,72 @@ static void fetch_blist_cb(struct mwServiceStorage *srvc,
   }
 
   mwSametimeList_free(stlist);
+  mwGetBuffer_free(b);
 }
 
 
-/** signal triggered when a conversation is opened in Gaim */
-static void conversation_created_cb(GaimConversation *g_conv,
-				    struct mwGaimPluginData *pd) {
+/** signal triggered when a conversation is opened in Purple */
+static void conversation_created_cb(PurpleConversation *g_conv,
+				    struct mwPurplePluginData *pd) {
 
   /* we need to tell the IM service to negotiate features for the
      conversation right away, otherwise it'll wait until the first
      message is sent before offering NotesBuddy features. Therefore
-     whenever Gaim creates a conversation, we'll immediately open the
+     whenever Purple creates a conversation, we'll immediately open the
      channel to the other side and figure out what the target can
      handle. Unfortunately, this makes us vulnerable to Psychic Mode,
      whereas a more lazy negotiation based on the first message
      would not */
 
-  GaimConnection *gc;
+  PurpleConnection *gc;
   struct mwIdBlock who = { 0, 0 };
   struct mwConversation *conv;
 
-  gc = gaim_conversation_get_gc(g_conv);
+  gc = purple_conversation_get_gc(g_conv);
   if(pd->gc != gc)
     return; /* not ours */
 
-  if(gaim_conversation_get_type(g_conv) != GAIM_CONV_TYPE_IM)
+  if(purple_conversation_get_type(g_conv) != PURPLE_CONV_TYPE_IM)
     return; /* wrong type */
 
-  who.user = (char *) gaim_conversation_get_name(g_conv);
+  who.user = (char *) purple_conversation_get_name(g_conv);
   conv = mwServiceIm_getConversation(pd->srvc_im, &who);
 
   convo_features(conv);
-    
+
   if(mwConversation_isClosed(conv))
     mwConversation_open(conv);
 }
 
 
-static void blist_menu_nab(GaimBlistNode *node, gpointer data) {
-  struct mwGaimPluginData *pd = data;
-  GaimConnection *gc;
+static void blist_menu_nab(PurpleBlistNode *node, gpointer data) {
+  struct mwPurplePluginData *pd = data;
+  PurpleConnection *gc;
 
-  GaimGroup *group = (GaimGroup *) node;
+  PurpleGroup *group = (PurpleGroup *) node;
 
   GString *str;
   char *tmp;
+  const char *gname;
 
   g_return_if_fail(pd != NULL);
 
   gc = pd->gc;
   g_return_if_fail(gc != NULL);
 
-  g_return_if_fail(GAIM_BLIST_NODE_IS_GROUP(node));
+  g_return_if_fail(PURPLE_BLIST_NODE_IS_GROUP(node));
 
   str = g_string_new(NULL);
 
-  tmp = (char *) gaim_blist_node_get_string(node, GROUP_KEY_NAME);
+  tmp = (char *) purple_blist_node_get_string(node, GROUP_KEY_NAME);
+  gname = purple_group_get_name(group);
 
-  g_string_append_printf(str, _("<b>Group Title:</b> %s<br>"), group->name);
+  g_string_append_printf(str, _("<b>Group Title:</b> %s<br>"), gname);
   g_string_append_printf(str, _("<b>Notes Group ID:</b> %s<br>"), tmp);
 
-  tmp = g_strdup_printf(_("Info for Group %s"), group->name);
+  tmp = g_strdup_printf(_("Info for Group %s"), gname);
 
-  gaim_notify_formatted(gc, tmp, _("Notes Address Book Information"),
+  purple_notify_formatted(gc, tmp, _("Notes Address Book Information"),
 			NULL, str->str, NULL, NULL);
 
   g_free(tmp);
@@ -1303,39 +1334,39 @@ static void blist_menu_nab(GaimBlistNode *node, gpointer data) {
 /** The normal blist menu prpl function doesn't get called for groups,
     so we use the blist-node-extended-menu signal to trigger this
     handler */
-static void blist_node_menu_cb(GaimBlistNode *node,
-                               GList **menu, struct mwGaimPluginData *pd) {
+static void blist_node_menu_cb(PurpleBlistNode *node,
+                               GList **menu, struct mwPurplePluginData *pd) {
   const char *owner;
-  GaimGroup *group;
-  GaimAccount *acct;
-  GaimMenuAction *act;
+  PurpleGroup *group;
+  PurpleAccount *acct;
+  PurpleMenuAction *act;
 
   /* we only want groups */
-  if(! GAIM_BLIST_NODE_IS_GROUP(node)) return;
-  group = (GaimGroup *) node;
+  if(! PURPLE_BLIST_NODE_IS_GROUP(node)) return;
+  group = (PurpleGroup *) node;
 
-  acct = gaim_connection_get_account(pd->gc);
+  acct = purple_connection_get_account(pd->gc);
   g_return_if_fail(acct != NULL);
 
   /* better make sure we're connected */
-  if(! gaim_account_is_connected(acct)) return;
+  if(! purple_account_is_connected(acct)) return;
 
 #if 0
   /* if there's anyone in the group for this acct, offer to invite
      them all to a conference */
-  if(gaim_group_on_account(group, acct)) {
-    act = gaim_menu_action_new(_("Invite Group to Conference..."),
-                               GAIM_CALLBACK(blist_menu_group_invite),
+  if(purple_group_on_account(group, acct)) {
+    act = purple_menu_action_new(_("Invite Group to Conference..."),
+                               PURPLE_CALLBACK(blist_menu_group_invite),
                                pd, NULL);
     *menu = g_list_append(*menu, NULL);
   }
 #endif
 
   /* check if it's a NAB group for this account */
-  owner = gaim_blist_node_get_string(node, GROUP_KEY_OWNER);
-  if(owner && !strcmp(owner, gaim_account_get_username(acct))) {
-    act = gaim_menu_action_new(_("Get Notes Address Book Info"),
-                               GAIM_CALLBACK(blist_menu_nab), pd, NULL);
+  owner = purple_blist_node_get_string(node, GROUP_KEY_OWNER);
+  if(owner && !strcmp(owner, purple_account_get_username(acct))) {
+    act = purple_menu_action_new(_("Get Notes Address Book Info"),
+                               PURPLE_CALLBACK(blist_menu_nab), pd, NULL);
     *menu = g_list_append(*menu, act);
   }
 }
@@ -1343,68 +1374,72 @@ static void blist_node_menu_cb(GaimBlistNode *node,
 
 /* lifted this from oldstatus, since HEAD doesn't do this at login
    anymore. */
-static void blist_init(GaimAccount *acct) {
-  GaimBlistNode *gnode, *cnode, *bnode;
+static void blist_init(PurpleAccount *acct) {
+  PurpleBlistNode *gnode, *cnode, *bnode;
   GList *add_buds = NULL;
 
-  for(gnode = gaim_get_blist()->root; gnode; gnode = gnode->next) {
-    if(! GAIM_BLIST_NODE_IS_GROUP(gnode)) continue;
+  for(gnode = purple_blist_get_root(); gnode;
+		  gnode = purple_blist_node_get_sibling_next(gnode)) {
+    if(! PURPLE_BLIST_NODE_IS_GROUP(gnode)) continue;
 
-    for(cnode = gnode->child; cnode; cnode = cnode->next) {
-      if(! GAIM_BLIST_NODE_IS_CONTACT(cnode))
+    for(cnode = purple_blist_node_get_first_child(gnode);
+			cnode;
+			cnode = purple_blist_node_get_sibling_next(cnode)) {
+      if(! PURPLE_BLIST_NODE_IS_CONTACT(cnode))
 	continue;
-      for(bnode = cnode->child; bnode; bnode = bnode->next) {
-	GaimBuddy *b;
-	if(!GAIM_BLIST_NODE_IS_BUDDY(bnode))
+      for(bnode = purple_blist_node_get_first_child(cnode);
+			  bnode;
+			  bnode = purple_blist_node_get_sibling_next(bnode)) {
+	PurpleBuddy *b;
+	if(!PURPLE_BLIST_NODE_IS_BUDDY(bnode))
 	  continue;
-	
-	b = (GaimBuddy *)bnode;
-	if(b->account == acct) {
+
+	b = (PurpleBuddy *)bnode;
+	if(purple_buddy_get_account(b) == acct) {
 	  add_buds = g_list_append(add_buds, b);
 	}
       }
     }
   }
-  
+
   if(add_buds) {
-    gaim_account_add_buddies(acct, add_buds);
+    purple_account_add_buddies(acct, add_buds);
     g_list_free(add_buds);
   }
 }
 
 
 /** Last thing to happen from a started session */
-static void services_starting(struct mwGaimPluginData *pd) {
+static void services_starting(struct mwPurplePluginData *pd) {
 
-  GaimConnection *gc;
-  GaimAccount *acct;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
   struct mwStorageUnit *unit;
-  GaimBuddyList *blist;
-  GaimBlistNode *l;
+  PurpleBlistNode *l;
 
   gc = pd->gc;
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
 
   /* grab the buddy list from the server */
   unit = mwStorageUnit_new(mwStore_AWARE_LIST);
-  mwServiceStorage_load(pd->srvc_store, unit, fetch_blist_cb, pd, NULL); 
+  mwServiceStorage_load(pd->srvc_store, unit, fetch_blist_cb, pd, NULL);
 
   /* find all the NAB groups and subscribe to them */
-  blist = gaim_get_blist();
-  for(l = blist->root; l; l = l->next) {
-    GaimGroup *group = (GaimGroup *) l;
+  for(l = purple_blist_get_root(); l;
+		  l = purple_blist_node_get_sibling_next(l)) {
+    PurpleGroup *group = (PurpleGroup *) l;
     enum mwSametimeGroupType gt;
     const char *owner;
 
-    if(! GAIM_BLIST_NODE_IS_GROUP(l)) continue;
+    if(! PURPLE_BLIST_NODE_IS_GROUP(l)) continue;
 
     /* if the group is ownerless, or has an owner and we're not it,
        skip it */
-    owner = gaim_blist_node_get_string(l, GROUP_KEY_OWNER);
-    if(!owner || strcmp(owner, gaim_account_get_username(acct)))
+    owner = purple_blist_node_get_string(l, GROUP_KEY_OWNER);
+    if(!owner || strcmp(owner, purple_account_get_username(acct)))
       continue;
 
-    gt = gaim_blist_node_get_int(l, GROUP_KEY_TYPE);
+    gt = purple_blist_node_get_int(l, GROUP_KEY_TYPE);
     if(gt == mwSametimeGroup_DYNAMIC)
       group_add(pd, group);
   }
@@ -1427,22 +1462,22 @@ static void services_starting(struct mwGaimPluginData *pd) {
 
 static void session_loginRedirect(struct mwSession *session,
 				  const char *host) {
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimAccount *account;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleAccount *account;
   guint port;
   const char *current_host;
 
   pd = mwSession_getClientData(session);
   gc = pd->gc;
-  account = gaim_connection_get_account(gc);
-  port = gaim_account_get_int(account, MW_KEY_PORT, MW_PLUGIN_DEFAULT_PORT);
-  current_host = gaim_account_get_string(account, MW_KEY_HOST,
+  account = purple_connection_get_account(gc);
+  port = purple_account_get_int(account, MW_KEY_PORT, MW_PLUGIN_DEFAULT_PORT);
+  current_host = purple_account_get_string(account, MW_KEY_HOST,
 					 MW_PLUGIN_DEFAULT_HOST);
 
-  if(gaim_account_get_bool(account, MW_KEY_FORCE, FALSE) ||
-     (! strcmp(current_host, host)) ||
-     (gaim_proxy_connect(NULL, account, host, port, connect_cb, pd) == NULL)) {
+  if(purple_account_get_bool(account, MW_KEY_FORCE, FALSE) ||
+     !host || (! strcmp(current_host, host)) ||
+     (purple_proxy_connect(gc, account, host, port, connect_cb, pd) == NULL)) {
 
     /* if we're configured to force logins, or if we're being
        redirected to the already configured host, or if we couldn't
@@ -1453,47 +1488,47 @@ static void session_loginRedirect(struct mwSession *session,
 }
 
 
-static void mw_prpl_set_status(GaimAccount *acct, GaimStatus *status);
+static void mw_prpl_set_status(PurpleAccount *acct, PurpleStatus *status);
 
 
 /** called from mw_session_stateChange when the session's state is
     mwSession_STARTED. Any finalizing of start-up stuff should go
     here */
-static void session_started(struct mwGaimPluginData *pd) {
-  GaimStatus *status;
-  GaimAccount *acct;
+static void session_started(struct mwPurplePluginData *pd) {
+  PurpleStatus *status;
+  PurpleAccount *acct;
 
   /* set out initial status */
-  acct = gaim_connection_get_account(pd->gc);
-  status = gaim_account_get_active_status(acct);
+  acct = purple_connection_get_account(pd->gc);
+  status = purple_account_get_active_status(acct);
   mw_prpl_set_status(acct, status);
-  
+
   /* start watching for new conversations */
-  gaim_signal_connect(gaim_conversations_get_handle(),
+  purple_signal_connect(purple_conversations_get_handle(),
 		      "conversation-created", pd,
-		      GAIM_CALLBACK(conversation_created_cb), pd);
+		      PURPLE_CALLBACK(conversation_created_cb), pd);
 
   /* watch for group extended menu items */
-  gaim_signal_connect(gaim_blist_get_handle(),
+  purple_signal_connect(purple_blist_get_handle(),
 		      "blist-node-extended-menu", pd,
-		      GAIM_CALLBACK(blist_node_menu_cb), pd);
-  
+		      PURPLE_CALLBACK(blist_node_menu_cb), pd);
+
   /* use our services to do neat things */
   services_starting(pd);
 }
 
 
-static void session_stopping(struct mwGaimPluginData *pd) {
+static void session_stopping(struct mwPurplePluginData *pd) {
   /* stop watching the signals from session_started */
-  gaim_signals_disconnect_by_handle(pd);
+  purple_signals_disconnect_by_handle(pd);
 }
 
 
 static void mw_session_stateChange(struct mwSession *session,
 				   enum mwSessionState state,
 				   gpointer info) {
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
   const char *msg = NULL;
 
   pd = mwSession_getClientData(session);
@@ -1502,48 +1537,48 @@ static void mw_session_stateChange(struct mwSession *session,
   switch(state) {
   case mwSession_STARTING:
     msg = _("Sending Handshake");
-    gaim_connection_update_progress(gc, msg, 2, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 2, MW_CONNECT_STEPS);
     break;
 
   case mwSession_HANDSHAKE:
     msg = _("Waiting for Handshake Acknowledgement");
-    gaim_connection_update_progress(gc, msg, 3, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 3, MW_CONNECT_STEPS);
     break;
 
   case mwSession_HANDSHAKE_ACK:
     msg = _("Handshake Acknowledged, Sending Login");
-    gaim_connection_update_progress(gc, msg, 4, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 4, MW_CONNECT_STEPS);
     break;
 
   case mwSession_LOGIN:
     msg = _("Waiting for Login Acknowledgement");
-    gaim_connection_update_progress(gc, msg, 5, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 5, MW_CONNECT_STEPS);
     break;
 
   case mwSession_LOGIN_REDIR:
     msg = _("Login Redirected");
-    gaim_connection_update_progress(gc, msg, 6, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 6, MW_CONNECT_STEPS);
     session_loginRedirect(session, info);
     break;
 
   case mwSession_LOGIN_CONT:
     msg = _("Forcing Login");
-    gaim_connection_update_progress(gc, msg, 7, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 7, MW_CONNECT_STEPS);
 
   case mwSession_LOGIN_ACK:
     msg = _("Login Acknowledged");
-    gaim_connection_update_progress(gc, msg, 8, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 8, MW_CONNECT_STEPS);
     break;
 
   case mwSession_STARTED:
     msg = _("Starting Services");
-    gaim_connection_update_progress(gc, msg, 9, MW_CONNECT_STEPS);
+    purple_connection_update_progress(gc, msg, 9, MW_CONNECT_STEPS);
 
     session_started(pd);
 
     msg = _("Connected");
-    gaim_connection_update_progress(gc, msg, 10, MW_CONNECT_STEPS);
-    gaim_connection_set_state(gc, GAIM_CONNECTED);
+    purple_connection_update_progress(gc, msg, 10, MW_CONNECT_STEPS);
+    purple_connection_set_state(gc, PURPLE_CONNECTED);
     break;
 
   case mwSession_STOPPING:
@@ -1552,7 +1587,38 @@ static void mw_session_stateChange(struct mwSession *session,
 
     if(GPOINTER_TO_UINT(info) & ERR_FAILURE) {
       char *err = mwError(GPOINTER_TO_UINT(info));
-      gaim_connection_error(gc, err);
+      PurpleConnectionError reason;
+      switch (GPOINTER_TO_UINT(info)) {
+      case VERSION_MISMATCH:
+        reason = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
+        break;
+
+      case USER_RESTRICTED:
+      case INCORRECT_LOGIN:
+      case USER_UNREGISTERED:
+      case GUEST_IN_USE:
+        reason = PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED;
+        break;
+
+      case ENCRYPT_MISMATCH:
+      case ERR_ENCRYPT_NO_SUPPORT:
+      case ERR_NO_COMMON_ENCRYPT:
+        reason = PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR;
+        break;
+
+      case VERIFICATION_DOWN:
+        reason = PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE;
+        break;
+
+      case MULTI_SERVER_LOGIN:
+      case MULTI_SERVER_LOGIN2:
+        reason = PURPLE_CONNECTION_ERROR_NAME_IN_USE;
+        break;
+
+      default:
+        reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+      }
+      purple_connection_error_reason(gc, reason, err);
       g_free(err);
     }
     break;
@@ -1568,9 +1634,9 @@ static void mw_session_stateChange(struct mwSession *session,
 
 
 static void mw_session_setPrivacyInfo(struct mwSession *session) {
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimAccount *acct;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
   struct mwPrivacyInfo *privacy;
   GSList *l, **ll;
   guint count;
@@ -1585,7 +1651,7 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
   gc = pd->gc;
   g_return_if_fail(gc != NULL);
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
 
   privacy = mwSession_getPrivacyInfo(session);
@@ -1605,8 +1671,8 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
 
 
 static void mw_session_setUserStatus(struct mwSession *session) {
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
   struct mwAwareIdBlock idb = { mwAware_USER, NULL, NULL };
   struct mwUserStatus *stat;
 
@@ -1628,8 +1694,8 @@ static void mw_session_setUserStatus(struct mwSession *session) {
 
 static void mw_session_admin(struct mwSession *session,
 			     const char *text) {
-  GaimConnection *gc;
-  GaimAccount *acct;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
   const char *host;
   const char *msg;
   char *prim;
@@ -1637,16 +1703,16 @@ static void mw_session_admin(struct mwSession *session,
   gc = session_to_gc(session);
   g_return_if_fail(gc != NULL);
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
 
-  host = gaim_account_get_string(acct, MW_KEY_HOST, NULL);
+  host = purple_account_get_string(acct, MW_KEY_HOST, NULL);
 
   msg = _("A Sametime administrator has issued the following announcement"
 	   " on server %s");
   prim = g_strdup_printf(msg, NSTR(host));
 
-  gaim_notify_message(gc, GAIM_NOTIFY_MSG_INFO,
+  purple_notify_message(gc, PURPLE_NOTIFY_MSG_INFO,
 		      _("Sametime Administrator Announcement"),
 		      prim, text, NULL, NULL);
 
@@ -1662,20 +1728,22 @@ static int read_recv(struct mwSession *session, int sock) {
   int len;
 
   len = read(sock, buf, BUF_LEN);
-  if(len > 0) mwSession_recv(session, buf, len);
+  if(len > 0) {
+    mwSession_recv(session, buf, len);
+  }
 
   return len;
 }
 
 
-/** callback triggered from gaim_input_add, watches the socked for
+/** callback triggered from purple_input_add, watches the socked for
     available data to be processed by the session */
-static void read_cb(gpointer data, gint source, GaimInputCondition cond) {
-  struct mwGaimPluginData *pd = data;
+static void read_cb(gpointer data, gint source, PurpleInputCondition cond) {
+  struct mwPurplePluginData *pd = data;
   int ret = 0, err = 0;
 
   g_return_if_fail(pd != NULL);
- 
+
   ret = read_recv(pd->session, pd->socket);
 
   /* normal operation ends here */
@@ -1693,32 +1761,37 @@ static void read_cb(gpointer data, gint source, GaimInputCondition cond) {
   }
 
   if(pd->gc->inpa) {
-    gaim_input_remove(pd->gc->inpa);
+    purple_input_remove(pd->gc->inpa);
     pd->gc->inpa = 0;
   }
 
   if(! ret) {
     DEBUG_INFO("connection reset\n");
-    gaim_connection_error(pd->gc, _("Connection reset"));
+    purple_connection_error_reason(pd->gc,
+                                   PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   _("Server closed the connection"));
 
   } else if(ret < 0) {
-    char *msg = strerror(err);
+    const gchar *err_str = g_strerror(err);
+    char *msg = NULL;
 
-    DEBUG_INFO("error in read callback: %s\n", msg);
+    DEBUG_INFO("error in read callback: %s\n", err_str);
 
-    msg = g_strdup_printf(_("Error reading from socket: %s"), msg);
-    gaim_connection_error(pd->gc, msg);
+    msg = g_strdup_printf(_("Lost connection with server: %s"), err_str);
+    purple_connection_error_reason(pd->gc,
+                                   PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   msg);
     g_free(msg);
   }
 }
 
 
-/** Callback passed to gaim_proxy_connect when an account is logged
+/** Callback passed to purple_proxy_connect when an account is logged
     in, and if the session logging in receives a redirect message */
 static void connect_cb(gpointer data, gint source, const gchar *error_message) {
 
-  struct mwGaimPluginData *pd = data;
-  GaimConnection *gc = pd->gc;
+  struct mwPurplePluginData *pd = data;
+  PurpleConnection *gc = pd->gc;
 
   if(source < 0) {
     /* connection failed */
@@ -1729,7 +1802,12 @@ static void connect_cb(gpointer data, gint source, const gchar *error_message) {
 
     } else {
       /* this is a regular connect, error out */
-      gaim_connection_error(pd->gc, _("Unable to connect to host"));
+      gchar *tmp = g_strdup_printf(_("Unable to connect: %s"),
+          error_message);
+      purple_connection_error_reason(pd->gc,
+                                     PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                     tmp);
+      g_free(tmp);
     }
 
     return;
@@ -1741,7 +1819,7 @@ static void connect_cb(gpointer data, gint source, const gchar *error_message) {
   }
 
   pd->socket = source;
-  gc->inpa = gaim_input_add(source, GAIM_INPUT_READ,
+  gc->inpa = purple_input_add(source, PURPLE_INPUT_READ,
 			    read_cb, pd);
 
   mwSession_start(pd->session);
@@ -1752,39 +1830,39 @@ static void mw_session_announce(struct mwSession *s,
 				struct mwLoginInfo *from,
 				gboolean may_reply,
 				const char *text) {
-  struct mwGaimPluginData *pd;
-  GaimAccount *acct;
-  GaimConversation *conv;
-  GaimBuddy *buddy;
+  struct mwPurplePluginData *pd;
+  PurpleAccount *acct;
+  PurpleConversation *conv;
+  PurpleBuddy *buddy;
   char *who = from->user_id;
   char *msg;
-  
-  pd = mwSession_getClientData(s);
-  acct = gaim_connection_get_account(pd->gc);
-  conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, who, acct);
-  if(! conv) conv = gaim_conversation_new(GAIM_CONV_TYPE_IM, acct, who);
 
-  buddy = gaim_find_buddy(acct, who);
-  if(buddy) who = (char *) gaim_buddy_get_contact_alias(buddy);
+  pd = mwSession_getClientData(s);
+  acct = purple_connection_get_account(pd->gc);
+  conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, who, acct);
+  if(! conv) conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, who);
+
+  buddy = purple_find_buddy(acct, who);
+  if(buddy) who = (char *) purple_buddy_get_contact_alias(buddy);
 
   who = g_strdup_printf(_("Announcement from %s"), who);
-  msg = gaim_markup_linkify(text);
+  msg = purple_markup_linkify(text);
 
-  gaim_conversation_write(conv, who, msg, GAIM_MESSAGE_RECV, time(NULL));
+  purple_conversation_write(conv, who, msg ? msg : "", PURPLE_MESSAGE_RECV, time(NULL));
   g_free(who);
   g_free(msg);
 }
 
 
 static struct mwSessionHandler mw_session_handler = {
-  .io_write = mw_session_io_write,
-  .io_close = mw_session_io_close,
-  .clear = mw_session_clear,
-  .on_stateChange = mw_session_stateChange,
-  .on_setPrivacyInfo = mw_session_setPrivacyInfo,
-  .on_setUserStatus = mw_session_setUserStatus,
-  .on_admin = mw_session_admin,
-  .on_announce = mw_session_announce,
+  mw_session_io_write,
+  mw_session_io_close,
+  mw_session_clear,
+  mw_session_stateChange,
+  mw_session_setPrivacyInfo,
+  mw_session_setUserStatus,
+  mw_session_admin,
+  mw_session_announce,
 };
 
 
@@ -1803,8 +1881,8 @@ static void mw_aware_clear(struct mwServiceAware *srvc) {
 
 
 static struct mwAwareHandler mw_aware_handler = {
-  .on_attrib = mw_aware_on_attrib,
-  .clear = mw_aware_clear,
+  mw_aware_on_attrib,
+  mw_aware_clear,
 };
 
 
@@ -1818,11 +1896,11 @@ static struct mwServiceAware *mw_srvc_aware_new(struct mwSession *s) {
 static void mw_conf_invited(struct mwConference *conf,
 			    struct mwLoginInfo *inviter,
 			    const char *invitation) {
-  
+
   struct mwServiceConference *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
 
   char *c_inviter, *c_name, *c_topic, *c_invitation;
   GHashTable *ht;
@@ -1856,30 +1934,30 @@ static void mw_conf_invited(struct mwConference *conf,
 }
 
 
-/* The following mess helps us relate a mwConference to a GaimConvChat
+/* The following mess helps us relate a mwConference to a PurpleConvChat
    in the various forms by which either may be indicated */
 
 #define CONF_TO_ID(conf)   (GPOINTER_TO_INT(conf))
 #define ID_TO_CONF(pd, id) (conf_find_by_id((pd), (id)))
 
-#define CHAT_TO_ID(chat)   (gaim_conv_chat_get_id(chat))
-#define ID_TO_CHAT(id)     (gaim_find_chat(id))
+#define CHAT_TO_ID(chat)   (purple_conv_chat_get_id(chat))
+#define ID_TO_CHAT(id)     (purple_find_chat(id))
 
 #define CHAT_TO_CONF(pd, chat)  (ID_TO_CONF((pd), CHAT_TO_ID(chat)))
 #define CONF_TO_CHAT(conf)      (ID_TO_CHAT(CONF_TO_ID(conf)))
 
 
 static struct mwConference *
-conf_find_by_id(struct mwGaimPluginData *pd, int id) {
+conf_find_by_id(struct mwPurplePluginData *pd, int id) {
 
   struct mwServiceConference *srvc = pd->srvc_conf;
   struct mwConference *conf = NULL;
   GList *l, *ll;
-  
+
   ll = mwServiceConference_getConferences(srvc);
   for(l = ll; l; l = l->next) {
     struct mwConference *c = l->data;
-    GaimConvChat *h = mwConference_getClientData(c);
+    PurpleConvChat *h = mwConference_getClientData(c);
 
     if(CHAT_TO_ID(h) == id) {
       conf = c;
@@ -1887,7 +1965,7 @@ conf_find_by_id(struct mwGaimPluginData *pd, int id) {
     }
   }
   g_list_free(ll);
-  
+
   return conf;
 }
 
@@ -1895,9 +1973,9 @@ conf_find_by_id(struct mwGaimPluginData *pd, int id) {
 static void mw_conf_opened(struct mwConference *conf, GList *members) {
   struct mwServiceConference *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimConversation *g_conf;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleConversation *g_conf;
 
   const char *n = mwConference_getName(conf);
   const char *t = mwConference_getTitle(conf);
@@ -1913,12 +1991,12 @@ static void mw_conf_opened(struct mwConference *conf, GList *members) {
   if(! t) t = "(no title)";
   g_conf = serv_got_joined_chat(gc, CONF_TO_ID(conf), t);
 
-  mwConference_setClientData(conf, GAIM_CONV_CHAT(g_conf), NULL);
+  mwConference_setClientData(conf, PURPLE_CONV_CHAT(g_conf), NULL);
 
   for(; members; members = members->next) {
     struct mwLoginInfo *peer = members->data;
-    gaim_conv_chat_add_user(GAIM_CONV_CHAT(g_conf), peer->user_id,
-			    NULL, GAIM_CBFLAGS_NONE, FALSE);
+    purple_conv_chat_add_user(PURPLE_CONV_CHAT(g_conf), peer->user_id,
+			    NULL, PURPLE_CBFLAGS_NONE, FALSE);
   }
 }
 
@@ -1926,8 +2004,8 @@ static void mw_conf_opened(struct mwConference *conf, GList *members) {
 static void mw_conf_closed(struct mwConference *conf, guint32 reason) {
   struct mwServiceConference *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
 
   const char *n = mwConference_getName(conf);
   char *msg = mwError(reason);
@@ -1941,7 +2019,7 @@ static void mw_conf_closed(struct mwConference *conf, guint32 reason) {
 
   serv_got_chat_left(gc, CONF_TO_ID(conf));
 
-  gaim_notify_error(gc, _("Conference Closed"), NULL, msg);
+  purple_notify_error(gc, _("Conference Closed"), NULL, msg);
   g_free(msg);
 }
 
@@ -1951,9 +2029,9 @@ static void mw_conf_peer_joined(struct mwConference *conf,
 
   struct mwServiceConference *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimConvChat *g_conf;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleConvChat *g_conf;
 
   const char *n = mwConference_getName(conf);
 
@@ -1967,19 +2045,19 @@ static void mw_conf_peer_joined(struct mwConference *conf,
   g_conf = mwConference_getClientData(conf);
   g_return_if_fail(g_conf != NULL);
 
-  gaim_conv_chat_add_user(g_conf, peer->user_id,
-			  NULL, GAIM_CBFLAGS_NONE, TRUE);
+  purple_conv_chat_add_user(g_conf, peer->user_id,
+			  NULL, PURPLE_CBFLAGS_NONE, TRUE);
 }
 
 
 static void mw_conf_peer_parted(struct mwConference *conf,
 				struct mwLoginInfo *peer) {
-  
+
   struct mwServiceConference *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimConvChat *g_conf;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleConvChat *g_conf;
 
   const char *n = mwConference_getName(conf);
 
@@ -1993,17 +2071,17 @@ static void mw_conf_peer_parted(struct mwConference *conf,
   g_conf = mwConference_getClientData(conf);
   g_return_if_fail(g_conf != NULL);
 
-  gaim_conv_chat_remove_user(g_conf, peer->user_id, NULL);
+  purple_conv_chat_remove_user(g_conf, peer->user_id, NULL);
 }
 
 
 static void mw_conf_text(struct mwConference *conf,
 			 struct mwLoginInfo *who, const char *text) {
-  
+
   struct mwServiceConference *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
   char *esc;
 
   if(! text) return;
@@ -2022,7 +2100,7 @@ static void mw_conf_text(struct mwConference *conf,
 static void mw_conf_typing(struct mwConference *conf,
 			   struct mwLoginInfo *who, gboolean typing) {
 
-  /* gaim really has no good way to expose this to the user. */
+  /* purple really has no good way to expose this to the user. */
 
   const char *n = mwConference_getName(conf);
   const char *w = who->user_id;
@@ -2042,14 +2120,14 @@ static void mw_conf_clear(struct mwServiceConference *srvc) {
 
 
 static struct mwConferenceHandler mw_conference_handler = {
-  .on_invited = mw_conf_invited,
-  .conf_opened = mw_conf_opened,
-  .conf_closed = mw_conf_closed,
-  .on_peer_joined = mw_conf_peer_joined,
-  .on_peer_parted = mw_conf_peer_parted,
-  .on_text = mw_conf_text,
-  .on_typing = mw_conf_typing,
-  .clear = mw_conf_clear,
+  mw_conf_invited,
+  mw_conf_opened,
+  mw_conf_closed,
+  mw_conf_peer_joined,
+  mw_conf_peer_parted,
+  mw_conf_text,
+  mw_conf_typing,
+  mw_conf_clear,
 };
 
 
@@ -2064,16 +2142,16 @@ static struct mwServiceConference *mw_srvc_conf_new(struct mwSession *s) {
 #define MW_FT_LEN  (BUF_LONG * 2)
 
 
-static void ft_incoming_cancel(GaimXfer *xfer) {
-  /* incoming transfer rejected or canceled in-progress */
+static void ft_incoming_cancel(PurpleXfer *xfer) {
+  /* incoming transfer rejected or cancelled in-progress */
   struct mwFileTransfer *ft = xfer->data;
   if(ft) mwFileTransfer_reject(ft);
 }
 
 
-static void ft_incoming_init(GaimXfer *xfer) {
+static void ft_incoming_init(PurpleXfer *xfer) {
   /* incoming transfer accepted */
-  
+
   /* - accept the mwFileTransfer
      - open/create the local FILE "wb"
      - stick the FILE's fp in xfer->dest_fp
@@ -2097,24 +2175,24 @@ static void ft_incoming_init(GaimXfer *xfer) {
 
 static void mw_ft_offered(struct mwFileTransfer *ft) {
   /*
-    - create a gaim ft object
+    - create a purple ft object
     - offer it
   */
 
   struct mwServiceFileTransfer *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimAccount *acct;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
   const char *who;
-  GaimXfer *xfer;
+  PurpleXfer *xfer;
 
   /* @todo add some safety checks */
   srvc = mwFileTransfer_getService(ft);
   session = mwService_getSession(MW_SERVICE(srvc));
   pd = mwSession_getClientData(session);
   gc = pd->gc;
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
 
   who = mwFileTransfer_getUser(ft)->user;
 
@@ -2124,50 +2202,50 @@ static void mw_ft_offered(struct mwFileTransfer *ft) {
   DEBUG_INFO(" size: %u\n", mwFileTransfer_getFileSize(ft));
   DEBUG_INFO(" text: %s\n", NSTR(mwFileTransfer_getMessage(ft)));
 
-  xfer = gaim_xfer_new(acct, GAIM_XFER_RECEIVE, who);
+  xfer = purple_xfer_new(acct, PURPLE_XFER_RECEIVE, who);
   if (xfer)
   {
-	gaim_xfer_ref(xfer);
-	mwFileTransfer_setClientData(ft, xfer, (GDestroyNotify) gaim_xfer_unref);
+	purple_xfer_ref(xfer);
+	mwFileTransfer_setClientData(ft, xfer, (GDestroyNotify) purple_xfer_unref);
 	xfer->data = ft;
 
-	gaim_xfer_set_init_fnc(xfer, ft_incoming_init);
-	gaim_xfer_set_cancel_recv_fnc(xfer, ft_incoming_cancel);
-	gaim_xfer_set_request_denied_fnc(xfer, ft_incoming_cancel);
+	purple_xfer_set_init_fnc(xfer, ft_incoming_init);
+	purple_xfer_set_cancel_recv_fnc(xfer, ft_incoming_cancel);
+	purple_xfer_set_request_denied_fnc(xfer, ft_incoming_cancel);
 
-	gaim_xfer_set_filename(xfer, mwFileTransfer_getFileName(ft));
-	gaim_xfer_set_size(xfer, mwFileTransfer_getFileSize(ft));
-	gaim_xfer_set_message(xfer, mwFileTransfer_getMessage(ft));
+	purple_xfer_set_filename(xfer, mwFileTransfer_getFileName(ft));
+	purple_xfer_set_size(xfer, mwFileTransfer_getFileSize(ft));
+	purple_xfer_set_message(xfer, mwFileTransfer_getMessage(ft));
 
-	gaim_xfer_request(xfer);
+	purple_xfer_request(xfer);
   }
 }
 
 
 static void ft_send(struct mwFileTransfer *ft, FILE *fp) {
   guchar buf[MW_FT_LEN];
-  struct mwOpaque o = { .data = buf, .len = MW_FT_LEN };
+  struct mwOpaque o = { MW_FT_LEN, buf };
   guint32 rem;
-  GaimXfer *xfer;
+  PurpleXfer *xfer;
 
   xfer = mwFileTransfer_getClientData(ft);
 
   rem = mwFileTransfer_getRemaining(ft);
   if(rem < MW_FT_LEN) o.len = rem;
-  
+
   if(fread(buf, (size_t) o.len, 1, fp)) {
 
     /* calculate progress and display it */
     xfer->bytes_sent += o.len;
     xfer->bytes_remaining -= o.len;
-    gaim_xfer_update_progress(xfer);
+    purple_xfer_update_progress(xfer);
 
     mwFileTransfer_send(ft, &o);
 
   } else {
     int err = errno;
     DEBUG_WARN("problem reading from file %s: %s\n",
-	       NSTR(mwFileTransfer_getFileName(ft)), strerror(err));
+	       NSTR(mwFileTransfer_getFileName(ft)), g_strerror(err));
 
     mwFileTransfer_cancel(ft);
   }
@@ -2176,11 +2254,11 @@ static void ft_send(struct mwFileTransfer *ft, FILE *fp) {
 
 static void mw_ft_opened(struct mwFileTransfer *ft) {
   /*
-    - get gaim ft from client data in ft
+    - get purple ft from client data in ft
     - set the state to active
   */
 
-  GaimXfer *xfer;
+  PurpleXfer *xfer;
 
   xfer = mwFileTransfer_getClientData(ft);
 
@@ -2190,42 +2268,42 @@ static void mw_ft_opened(struct mwFileTransfer *ft) {
     g_return_if_reached();
   }
 
-  if(gaim_xfer_get_type(xfer) == GAIM_XFER_SEND) {
+  if(purple_xfer_get_type(xfer) == PURPLE_XFER_SEND) {
     xfer->dest_fp = g_fopen(xfer->local_filename, "rb");
     ft_send(ft, xfer->dest_fp);
-  }  
+  }
 }
 
 
 static void mw_ft_closed(struct mwFileTransfer *ft, guint32 code) {
   /*
-    - get gaim ft from client data in ft
+    - get purple ft from client data in ft
     - indicate rejection/cancelation/completion
     - free the file transfer itself
   */
 
-  GaimXfer *xfer;
+  PurpleXfer *xfer;
 
   xfer = mwFileTransfer_getClientData(ft);
   if(xfer) {
     xfer->data = NULL;
 
     if(! mwFileTransfer_getRemaining(ft)) {
-      gaim_xfer_set_completed(xfer, TRUE);
-      gaim_xfer_end(xfer);
+      purple_xfer_set_completed(xfer, TRUE);
+      purple_xfer_end(xfer);
 
     } else if(mwFileTransfer_isCancelLocal(ft)) {
-      /* calling gaim_xfer_cancel_local is redundant, since that's
+      /* calling purple_xfer_cancel_local is redundant, since that's
 	 probably what triggered this function to be called */
       ;
 
     } else if(mwFileTransfer_isCancelRemote(ft)) {
       /* steal the reference for the xfer */
       mwFileTransfer_setClientData(ft, NULL, NULL);
-      gaim_xfer_cancel_remote(xfer);
+      purple_xfer_cancel_remote(xfer);
 
       /* drop the stolen reference */
-      gaim_xfer_unref(xfer);
+      purple_xfer_unref(xfer);
       return;
     }
   }
@@ -2237,13 +2315,14 @@ static void mw_ft_closed(struct mwFileTransfer *ft, guint32 code) {
 static void mw_ft_recv(struct mwFileTransfer *ft,
 		       struct mwOpaque *data) {
   /*
-    - get gaim ft from client data in ft
+    - get purple ft from client data in ft
     - update transfered percentage
-    - if done, destroy the ft, disassociate from gaim ft
+    - if done, destroy the ft, disassociate from purple ft
   */
 
-  GaimXfer *xfer;
+  PurpleXfer *xfer;
   FILE *fp;
+  size_t wc;
 
   xfer = mwFileTransfer_getClientData(ft);
   g_return_if_fail(xfer != NULL);
@@ -2252,12 +2331,17 @@ static void mw_ft_recv(struct mwFileTransfer *ft,
   g_return_if_fail(fp != NULL);
 
   /* we must collect and save our precious data */
-  fwrite(data->data, 1, data->len, fp);
+  wc = fwrite(data->data, 1, data->len, fp);
+  if (wc != data->len) {
+    DEBUG_ERROR("failed to write data\n");
+    purple_xfer_cancel_local(xfer);
+    return;
+  }
 
   /* update the progress */
   xfer->bytes_sent += data->len;
   xfer->bytes_remaining -= data->len;
-  gaim_xfer_update_progress(xfer);
+  purple_xfer_update_progress(xfer);
 
   /* let the other side know we got it, and to send some more */
   mwFileTransfer_ack(ft);
@@ -2265,15 +2349,15 @@ static void mw_ft_recv(struct mwFileTransfer *ft,
 
 
 static void mw_ft_ack(struct mwFileTransfer *ft) {
-  GaimXfer *xfer;
+  PurpleXfer *xfer;
 
   xfer = mwFileTransfer_getClientData(ft);
   g_return_if_fail(xfer != NULL);
   g_return_if_fail(xfer->watcher == 0);
 
   if(! mwFileTransfer_getRemaining(ft)) {
-    gaim_xfer_set_completed(xfer, TRUE);
-    gaim_xfer_end(xfer);
+    purple_xfer_set_completed(xfer, TRUE);
+    purple_xfer_end(xfer);
 
   } else if(mwFileTransfer_isOpen(ft)) {
     ft_send(ft, xfer->dest_fp);
@@ -2287,12 +2371,12 @@ static void mw_ft_clear(struct mwServiceFileTransfer *srvc) {
 
 
 static struct mwFileTransferHandler mw_ft_handler = {
-  .ft_offered = mw_ft_offered,
-  .ft_opened = mw_ft_opened,
-  .ft_closed = mw_ft_closed,
-  .ft_recv = mw_ft_recv,
-  .ft_ack = mw_ft_ack,
-  .clear = mw_ft_clear,
+  mw_ft_offered,
+  mw_ft_opened,
+  mw_ft_closed,
+  mw_ft_recv,
+  mw_ft_ack,
+  mw_ft_clear,
 };
 
 
@@ -2341,12 +2425,12 @@ static void convo_data_new(struct mwConversation *conv) {
 }
 
 
-static GaimConversation *convo_get_gconv(struct mwConversation *conv) {
+static PurpleConversation *convo_get_gconv(struct mwConversation *conv) {
   struct mwServiceIm *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimAccount *acct;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
 
   struct mwIdBlock *idb;
 
@@ -2354,11 +2438,11 @@ static GaimConversation *convo_get_gconv(struct mwConversation *conv) {
   session = mwService_getSession(MW_SERVICE(srvc));
   pd = mwSession_getClientData(session);
   gc = pd->gc;
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
 
   idb = mwConversation_getTarget(conv);
 
-  return gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM,
+  return purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
 					     idb->user, acct);
 }
 
@@ -2380,7 +2464,7 @@ static void convo_queue(struct mwConversation *conv,
     m->data = g_strdup(data);
     m->clear = g_free;
     break;
-    
+
   case mwImSend_TYPING:
   default:
     m->data = (gpointer) data;
@@ -2393,25 +2477,25 @@ static void convo_queue(struct mwConversation *conv,
 
 /* Does what it takes to get an error displayed for a conversation */
 static void convo_error(struct mwConversation *conv, guint32 err) {
-  GaimConversation *gconv;
+  PurpleConversation *gconv;
   char *tmp, *text;
   struct mwIdBlock *idb;
-  
+
   idb = mwConversation_getTarget(conv);
-  
+
   tmp = mwError(err);
   text = g_strconcat(_("Unable to send message: "), tmp, NULL);
-  
+
   gconv = convo_get_gconv(conv);
-  if(gconv && !gaim_conv_present_error(idb->user, gconv->account, text)) {
-    
+  if(gconv && !purple_conv_present_error(idb->user, gconv->account, text)) {
+
     g_free(text);
     text = g_strdup_printf(_("Unable to send message to %s:"),
 			   (idb->user)? idb->user: "(unknown)");
-    gaim_notify_error(gaim_account_get_connection(gconv->account),
+    purple_notify_error(purple_account_get_connection(gconv->account),
 		      NULL, text, tmp);
   }
-  
+
   g_free(tmp);
   g_free(text);
 }
@@ -2420,7 +2504,7 @@ static void convo_error(struct mwConversation *conv, guint32 err) {
 static void convo_queue_send(struct mwConversation *conv) {
   struct convo_data *cd;
   GList *l;
-  
+
   cd = mwConversation_getClientData(conv);
 
   for(l = cd->queue; l; l = g_list_delete_link(l, l)) {
@@ -2436,50 +2520,50 @@ static void convo_queue_send(struct mwConversation *conv) {
 }
 
 
-/**  called when a mw conversation leaves a gaim conversation to
-     inform the gaim conversation that it's unsafe to offer any *cool*
+/**  called when a mw conversation leaves a purple conversation to
+     inform the purple conversation that it's unsafe to offer any *cool*
      features. */
 static void convo_nofeatures(struct mwConversation *conv) {
-  GaimConversation *gconv;
-  GaimConnection *gc;
+  PurpleConversation *gconv;
+  PurpleConnection *gc;
 
   gconv = convo_get_gconv(conv);
   if(! gconv) return;
 
-  gc = gaim_conversation_get_gc(gconv);
+  gc = purple_conversation_get_gc(gconv);
   if(! gc) return;
 
-  gaim_conversation_set_features(gconv, gc->flags);
+  purple_conversation_set_features(gconv, gc->flags);
 }
 
 
-/** called when a mw conversation and gaim conversation come together,
-    to inform the gaim conversation of what features to offer the
+/** called when a mw conversation and purple conversation come together,
+    to inform the purple conversation of what features to offer the
     user */
 static void convo_features(struct mwConversation *conv) {
-  GaimConversation *gconv;
-  GaimConnectionFlags feat;
+  PurpleConversation *gconv;
+  PurpleConnectionFlags feat;
 
   gconv = convo_get_gconv(conv);
   if(! gconv) return;
 
-  feat = gaim_conversation_get_features(gconv);
+  feat = purple_conversation_get_features(gconv);
 
   if(mwConversation_isOpen(conv)) {
     if(mwConversation_supports(conv, mwImSend_HTML)) {
-      feat |= GAIM_CONNECTION_HTML;
+      feat |= PURPLE_CONNECTION_HTML;
     } else {
-      feat &= ~GAIM_CONNECTION_HTML;
+      feat &= ~PURPLE_CONNECTION_HTML;
     }
 
     if(mwConversation_supports(conv, mwImSend_MIME)) {
-      feat &= ~GAIM_CONNECTION_NO_IMAGES;
+      feat &= ~PURPLE_CONNECTION_NO_IMAGES;
     } else {
-      feat |= GAIM_CONNECTION_NO_IMAGES;
+      feat |= PURPLE_CONNECTION_NO_IMAGES;
     }
 
     DEBUG_INFO("conversation features set to 0x%04x\n", feat);
-    gaim_conversation_set_features(gconv, feat);
+    purple_conversation_set_features(gconv, feat);
 
   } else {
     convo_nofeatures(conv);
@@ -2490,9 +2574,9 @@ static void convo_features(struct mwConversation *conv) {
 static void mw_conversation_opened(struct mwConversation *conv) {
   struct mwServiceIm *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimAccount *acct;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
 
   struct convo_dat *cd;
 
@@ -2500,13 +2584,13 @@ static void mw_conversation_opened(struct mwConversation *conv) {
   session = mwService_getSession(MW_SERVICE(srvc));
   pd = mwSession_getClientData(session);
   gc = pd->gc;
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
 
   /* set up the queue */
   cd = mwConversation_getClientData(conv);
   if(cd) {
     convo_queue_send(conv);
-  
+
     if(! convo_get_gconv(conv)) {
       mwConversation_free(conv);
       return;
@@ -2517,13 +2601,13 @@ static void mw_conversation_opened(struct mwConversation *conv) {
   }
 
   { /* record the client key for the buddy */
-    GaimBuddy *buddy;
+    PurpleBuddy *buddy;
     struct mwLoginInfo *info;
     info = mwConversation_getTargetInfo(conv);
-    
-    buddy = gaim_find_buddy(acct, info->user_id);
+
+    buddy = purple_find_buddy(acct, info->user_id);
     if(buddy) {
-      gaim_blist_node_set_int((GaimBlistNode *) buddy,
+      purple_blist_node_set_int((PurpleBlistNode *) buddy,
 			      BUDDY_KEY_CLIENT, info->type);
     }
   }
@@ -2565,7 +2649,7 @@ static void mw_conversation_closed(struct mwConversation *conv,
 
 
 static void im_recv_text(struct mwConversation *conv,
-			 struct mwGaimPluginData *pd,
+			 struct mwPurplePluginData *pd,
 			 const char *msg) {
 
   struct mwIdBlock *idb;
@@ -2574,7 +2658,7 @@ static void im_recv_text(struct mwConversation *conv,
 
   idb = mwConversation_getTarget(conv);
 
-  txt = gaim_utf8_try_convert(msg);
+  txt = purple_utf8_try_convert(msg);
   t = txt? txt: msg;
 
   esc = g_markup_escape_text(t, -1);
@@ -2586,19 +2670,19 @@ static void im_recv_text(struct mwConversation *conv,
 
 
 static void im_recv_typing(struct mwConversation *conv,
-			   struct mwGaimPluginData *pd,
+			   struct mwPurplePluginData *pd,
 			   gboolean typing) {
 
   struct mwIdBlock *idb;
   idb = mwConversation_getTarget(conv);
 
   serv_got_typing(pd->gc, idb->user, 0,
-		  typing? GAIM_TYPING: GAIM_NOT_TYPING);
+		  typing? PURPLE_TYPING: PURPLE_NOT_TYPING);
 }
 
 
 static void im_recv_html(struct mwConversation *conv,
-			 struct mwGaimPluginData *pd,
+			 struct mwPurplePluginData *pd,
 			 const char *msg) {
   struct mwIdBlock *idb;
   char *t1, *t2;
@@ -2607,11 +2691,11 @@ static void im_recv_html(struct mwConversation *conv,
   idb = mwConversation_getTarget(conv);
 
   /* ensure we're receiving UTF8 */
-  t1 = gaim_utf8_try_convert(msg);
+  t1 = purple_utf8_try_convert(msg);
   t = t1? t1: msg;
 
   /* convert entities to UTF8 so they'll log correctly */
-  t2 = gaim_utf8_ncr_decode(t);
+  t2 = purple_utf8_ncr_decode(t);
   t = t2? t2: t;
 
   serv_got_im(pd->gc, idb->user, t, 0, time(NULL));
@@ -2622,7 +2706,7 @@ static void im_recv_html(struct mwConversation *conv,
 
 
 static void im_recv_subj(struct mwConversation *conv,
-			 struct mwGaimPluginData *pd,
+			 struct mwPurplePluginData *pd,
 			 const char *subj) {
 
   /** @todo somehow indicate receipt of a conversation subject. It
@@ -2651,7 +2735,7 @@ static char *make_cid(const char *cid) {
 
 
 static void im_recv_mime(struct mwConversation *conv,
-			 struct mwGaimPluginData *pd,
+			 struct mwPurplePluginData *pd,
 			 const char *data) {
 
   GHashTable *img_by_cid;
@@ -2659,30 +2743,30 @@ static void im_recv_mime(struct mwConversation *conv,
 
   GString *str;
 
-  GaimMimeDocument *doc;
-  const GList *parts;
+  PurpleMimeDocument *doc;
+  GList *parts;
 
   img_by_cid = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
   images = NULL;
 
   /* don't want the contained string to ever be NULL */
   str = g_string_new("");
-  
-  doc = gaim_mime_document_parse(data);
+
+  doc = purple_mime_document_parse(data);
 
   /* handle all the MIME parts */
-  parts = gaim_mime_document_get_parts(doc);
+  parts = purple_mime_document_get_parts(doc);
   for(; parts; parts = parts->next) {
-    GaimMimePart *part = parts->data;
+    PurpleMimePart *part = parts->data;
     const char *type;
 
-    type = gaim_mime_part_get_field(part, "content-type");
+    type = purple_mime_part_get_field(part, "content-type");
     DEBUG_INFO("MIME part Content-Type: %s\n", NSTR(type));
 
     if(! type) {
       ; /* feh */
-      
-    } else if(gaim_str_has_prefix(type, "image")) {
+
+    } else if(purple_str_has_prefix(type, "image")) {
       /* put images into the image store */
 
       guchar *d_dat;
@@ -2691,35 +2775,34 @@ static void im_recv_mime(struct mwConversation *conv,
       int img;
 
       /* obtain and unencode the data */
-      gaim_mime_part_get_data_decoded(part, &d_dat, &d_len);
-      
+      purple_mime_part_get_data_decoded(part, &d_dat, &d_len);
+
       /* look up the content id */
-      cid = (char *) gaim_mime_part_get_field(part, "Content-ID");
+      cid = (char *) purple_mime_part_get_field(part, "Content-ID");
       cid = make_cid(cid);
 
-      /* add image to the gaim image store */
-      img = gaim_imgstore_add(d_dat, d_len, cid);
-      g_free(d_dat);
+      /* add image to the purple image store */
+      img = purple_imgstore_add_with_id(d_dat, d_len, cid);
 
       /* map the cid to the image store identifier */
       g_hash_table_insert(img_by_cid, cid, GINT_TO_POINTER(img));
 
       /* recall the image for dereferencing later */
       images = g_list_append(images, GINT_TO_POINTER(img));
-      
-    } else if(gaim_str_has_prefix(type, "text")) {
+
+    } else if(purple_str_has_prefix(type, "text")) {
 
       /* concatenate all the text parts together */
       guchar *data;
       gsize len;
 
-      gaim_mime_part_get_data_decoded(part, &data, &len);
+      purple_mime_part_get_data_decoded(part, &data, &len);
       g_string_append(str, (const char *)data);
       g_free(data);
     }
-  }  
+  }
 
-  gaim_mime_document_free(doc);
+  purple_mime_document_free(doc);
 
   /* @todo should put this in its own function */
   { /* replace each IMG tag's SRC attribute with an ID attribute. This
@@ -2728,7 +2811,7 @@ static void im_recv_mime(struct mwConversation *conv,
     char *start, *end;
     char *tmp = str->str;
 
-    while(*tmp && gaim_markup_find_tag("img", tmp, (const char **) &start,
+    while(*tmp && purple_markup_find_tag("img", tmp, (const char **) &start,
 				       (const char **) &end, &attribs)) {
 
       char *alt, *align, *border, *src;
@@ -2766,13 +2849,13 @@ static void im_recv_mime(struct mwConversation *conv,
   im_recv_html(conv, pd, str->str);
 
   g_string_free(str, TRUE);
-  
+
   /* clean up the cid table */
   g_hash_table_destroy(img_by_cid);
 
   /* dereference all the imgages */
   while(images) {
-    gaim_imgstore_unref(GPOINTER_TO_INT(images->data));
+    purple_imgstore_unref_by_id(GPOINTER_TO_INT(images->data));
     images = g_list_delete_link(images, images);
   }
 }
@@ -2783,7 +2866,7 @@ static void mw_conversation_recv(struct mwConversation *conv,
 				 gconstpointer msg) {
   struct mwServiceIm *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
 
   srvc = mwConversation_getService(conv);
   session = mwService_getSession(MW_SERVICE(srvc));
@@ -2822,7 +2905,7 @@ static void mw_place_invite(struct mwConversation *conv,
 			    const char *title, const char *name) {
   struct mwServiceIm *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
 
   struct mwIdBlock *idb;
   GHashTable *ht;
@@ -2832,7 +2915,7 @@ static void mw_place_invite(struct mwConversation *conv,
   pd = mwSession_getClientData(session);
 
   idb = mwConversation_getTarget(conv);
-  
+
   ht = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
   g_hash_table_insert(ht, CHAT_KEY_CREATOR, g_strdup(idb->user));
   g_hash_table_insert(ht, CHAT_KEY_NAME, g_strdup(name));
@@ -2855,11 +2938,11 @@ static void mw_im_clear(struct mwServiceIm *srvc) {
 
 
 static struct mwImHandler mw_im_handler = {
-  .conversation_opened = mw_conversation_opened,
-  .conversation_closed = mw_conversation_closed,
-  .conversation_recv = mw_conversation_recv,
-  .place_invite = mw_place_invite,
-  .clear = mw_im_clear,
+  mw_conversation_opened,
+  mw_conversation_closed,
+  mw_conversation_recv,
+  mw_place_invite,
+  mw_im_clear,
 };
 
 
@@ -2871,7 +2954,7 @@ static struct mwServiceIm *mw_srvc_im_new(struct mwSession *s) {
 }
 
 
-/* The following helps us relate a mwPlace to a GaimConvChat in the
+/* The following helps us relate a mwPlace to a PurpleConvChat in the
    various forms by which either may be indicated. Uses some of
    the similar macros from the conference service above */
 
@@ -2883,7 +2966,7 @@ static struct mwServiceIm *mw_srvc_im_new(struct mwSession *s) {
 
 
 static struct mwPlace *
-place_find_by_id(struct mwGaimPluginData *pd, int id) {
+place_find_by_id(struct mwPurplePluginData *pd, int id) {
   struct mwServicePlace *srvc = pd->srvc_place;
   struct mwPlace *place = NULL;
   GList *l;
@@ -2891,7 +2974,7 @@ place_find_by_id(struct mwGaimPluginData *pd, int id) {
   l = (GList *) mwServicePlace_getPlaces(srvc);
   for(; l; l = l->next) {
     struct mwPlace *p = l->data;
-    GaimConvChat *h = GAIM_CONV_CHAT(mwPlace_getClientData(p));
+    PurpleConvChat *h = PURPLE_CONV_CHAT(mwPlace_getClientData(p));
 
     if(CHAT_TO_ID(h) == id) {
       place = p;
@@ -2906,9 +2989,9 @@ place_find_by_id(struct mwGaimPluginData *pd, int id) {
 static void mw_place_opened(struct mwPlace *place) {
   struct mwServicePlace *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimConversation *gconf;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleConversation *gconf;
 
   GList *members, *l;
 
@@ -2932,8 +3015,8 @@ static void mw_place_opened(struct mwPlace *place) {
 
   for(l = members; l; l = l->next) {
     struct mwIdBlock *idb = l->data;
-    gaim_conv_chat_add_user(GAIM_CONV_CHAT(gconf), idb->user,
-			    NULL, GAIM_CBFLAGS_NONE, FALSE);
+    purple_conv_chat_add_user(PURPLE_CONV_CHAT(gconf), idb->user,
+			    NULL, PURPLE_CBFLAGS_NONE, FALSE);
   }
   g_list_free(members);
 }
@@ -2942,8 +3025,8 @@ static void mw_place_opened(struct mwPlace *place) {
 static void mw_place_closed(struct mwPlace *place, guint32 code) {
   struct mwServicePlace *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
 
   const char *n = mwPlace_getName(place);
   char *msg = mwError(code);
@@ -2957,7 +3040,7 @@ static void mw_place_closed(struct mwPlace *place, guint32 code) {
 
   serv_got_chat_left(gc, PLACE_TO_ID(place));
 
-  gaim_notify_error(gc, _("Place Closed"), NULL, msg);
+  purple_notify_error(gc, _("Place Closed"), NULL, msg);
   g_free(msg);
 }
 
@@ -2966,9 +3049,9 @@ static void mw_place_peerJoined(struct mwPlace *place,
 				const struct mwIdBlock *peer) {
   struct mwServicePlace *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimConversation *gconf;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleConversation *gconf;
 
   const char *n = mwPlace_getName(place);
 
@@ -2982,8 +3065,8 @@ static void mw_place_peerJoined(struct mwPlace *place,
   gconf = mwPlace_getClientData(place);
   g_return_if_fail(gconf != NULL);
 
-  gaim_conv_chat_add_user(GAIM_CONV_CHAT(gconf), peer->user,
-			  NULL, GAIM_CBFLAGS_NONE, TRUE);
+  purple_conv_chat_add_user(PURPLE_CONV_CHAT(gconf), peer->user,
+			  NULL, PURPLE_CBFLAGS_NONE, TRUE);
 }
 
 
@@ -2991,9 +3074,9 @@ static void mw_place_peerParted(struct mwPlace *place,
 				const struct mwIdBlock *peer) {
   struct mwServicePlace *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
-  GaimConversation *gconf;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
+  PurpleConversation *gconf;
 
   const char *n = mwPlace_getName(place);
 
@@ -3007,7 +3090,7 @@ static void mw_place_peerParted(struct mwPlace *place,
   gconf = mwPlace_getClientData(place);
   g_return_if_fail(gconf != NULL);
 
-  gaim_conv_chat_remove_user(GAIM_CONV_CHAT(gconf), peer->user, NULL);
+  purple_conv_chat_remove_user(PURPLE_CONV_CHAT(gconf), peer->user, NULL);
 }
 
 
@@ -3030,8 +3113,8 @@ static void mw_place_message(struct mwPlace *place,
 			     const char *msg) {
   struct mwServicePlace *srvc;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
   char *esc;
 
   if(! msg) return;
@@ -3053,14 +3136,14 @@ static void mw_place_clear(struct mwServicePlace *srvc) {
 
 
 static struct mwPlaceHandler mw_place_handler = {
-  .opened = mw_place_opened,
-  .closed = mw_place_closed,
-  .peerJoined = mw_place_peerJoined,
-  .peerParted = mw_place_peerParted,
-  .peerSetAttribute = mw_place_peerSetAttribute,
-  .peerUnsetAttribute = mw_place_peerUnsetAttribute,
-  .message = mw_place_message,
-  .clear = mw_place_clear,
+  mw_place_opened,
+  mw_place_closed,
+  mw_place_peerJoined,
+  mw_place_peerParted,
+  mw_place_peerSetAttribute,
+  mw_place_peerUnsetAttribute,
+  mw_place_message,
+  mw_place_clear,
 };
 
 
@@ -3085,13 +3168,13 @@ static struct mwServiceStorage *mw_srvc_store_new(struct mwSession *s) {
 }
 
 
-/** allocate and associate a mwGaimPluginData with a GaimConnection */
-static struct mwGaimPluginData *mwGaimPluginData_new(GaimConnection *gc) {
-  struct mwGaimPluginData *pd;
+/** allocate and associate a mwPurplePluginData with a PurpleConnection */
+static struct mwPurplePluginData *mwPurplePluginData_new(PurpleConnection *gc) {
+  struct mwPurplePluginData *pd;
 
   g_return_val_if_fail(gc != NULL, NULL);
 
-  pd = g_new0(struct mwGaimPluginData, 1);
+  pd = g_new0(struct mwPurplePluginData, 1);
   pd->gc = gc;
   pd->session = mwSession_new(&mw_session_handler);
   pd->srvc_aware = mw_srvc_aware_new(pd->session);
@@ -3102,7 +3185,7 @@ static struct mwGaimPluginData *mwGaimPluginData_new(GaimConnection *gc) {
   pd->srvc_resolve = mw_srvc_resolve_new(pd->session);
   pd->srvc_store = mw_srvc_store_new(pd->session);
   pd->group_list_map = g_hash_table_new(g_direct_hash, g_direct_equal);
-  pd->sock_buf = gaim_circ_buffer_new(0);
+  pd->sock_buf = purple_circ_buffer_new(0);
 
   mwSession_addService(pd->session, MW_SERVICE(pd->srvc_aware));
   mwSession_addService(pd->session, MW_SERVICE(pd->srvc_conf));
@@ -3122,7 +3205,7 @@ static struct mwGaimPluginData *mwGaimPluginData_new(GaimConnection *gc) {
 }
 
 
-static void mwGaimPluginData_free(struct mwGaimPluginData *pd) {
+static void mwPurplePluginData_free(struct mwPurplePluginData *pd) {
   g_return_if_fail(pd != NULL);
 
   pd->gc->proto_data = NULL;
@@ -3149,13 +3232,13 @@ static void mwGaimPluginData_free(struct mwGaimPluginData *pd) {
   mwSession_free(pd->session);
 
   g_hash_table_destroy(pd->group_list_map);
-  gaim_circ_buffer_destroy(pd->sock_buf);
+  purple_circ_buffer_destroy(pd->sock_buf);
 
   g_free(pd);
 }
 
 
-static const char *mw_prpl_list_icon(GaimAccount *a, GaimBuddy *b) {
+static const char *mw_prpl_list_icon(PurpleAccount *a, PurpleBuddy *b) {
   /* my little green dude is a chopped up version of the aim running
      guy.  First, cut off the head and store someplace safe. Then,
      take the left-half side of the body and throw it away. Make a
@@ -3171,58 +3254,37 @@ static const char *mw_prpl_list_icon(GaimAccount *a, GaimBuddy *b) {
 }
 
 
-static void mw_prpl_list_emblems(GaimBuddy *b,
-				 const char **se, const char **sw,
-				 const char **nw, const char **ne) {
+static const char* mw_prpl_list_emblem(PurpleBuddy *b)
+{
+  if(buddy_is_external(b))
+    return "external";
 
-  /* speaking of custom icons, the external icon here is an ugly
-     little example of what happens when I use Gimp */
-
-  GaimPresence *presence;
-  GaimStatus *status;
-  const char *status_id;
-
-  presence = gaim_buddy_get_presence(b);
-  status = gaim_presence_get_active_status(presence);
-  status_id = gaim_status_get_id(status);
-
-  if(! GAIM_BUDDY_IS_ONLINE(b)) {
-    *se = "offline";
-  } else if(!strcmp(status_id, MW_STATE_AWAY)) {
-    *se = "away";
-  } else if(!strcmp(status_id, MW_STATE_BUSY)) {
-    *se = "dnd";
-  }  
-
-  if(buddy_is_external(b)) {
-    /* best assignment ever */
-    *(*se?sw:se) = "external";
-  }
+  return NULL;
 }
 
 
-static char *mw_prpl_status_text(GaimBuddy *b) {
-  GaimConnection *gc;
-  struct mwGaimPluginData *pd;
-  struct mwAwareIdBlock t = { mwAware_USER, b->name, NULL };
-  const char *ret;
+static char *mw_prpl_status_text(PurpleBuddy *b) {
+  PurpleConnection *gc;
+  struct mwPurplePluginData *pd;
+  struct mwAwareIdBlock t = { mwAware_USER, (char *)purple_buddy_get_name(b), NULL };
+  const char *ret = NULL;
 
-  gc = b->account->gc;
-  pd = gc->proto_data;
+  if ((gc = purple_account_get_connection(purple_buddy_get_account(b)))
+      && (pd = gc->proto_data))
+    ret = mwServiceAware_getText(pd->srvc_aware, &t);
 
-  ret = mwServiceAware_getText(pd->srvc_aware, &t);
-  return ret? g_markup_escape_text(ret, -1): NULL;
+  return (ret && g_utf8_validate(ret, -1, NULL)) ? g_markup_escape_text(ret, -1): NULL;
 }
 
 
-static const char *status_text(GaimBuddy *b) {
-  GaimPresence *presence;
-  GaimStatus *status;
+static const char *status_text(PurpleBuddy *b) {
+  PurplePresence *presence;
+  PurpleStatus *status;
 
-  presence = gaim_buddy_get_presence(b);
-  status = gaim_presence_get_active_status(presence);
+  presence = purple_buddy_get_presence(b);
+  status = purple_presence_get_active_status(presence);
 
-  return gaim_status_get_name(status);
+  return purple_status_get_name(status);
 }
 
 
@@ -3240,278 +3302,280 @@ static gboolean user_supports(struct mwServiceAware *srvc,
 static char *user_supports_text(struct mwServiceAware *srvc, const char *who) {
   const char *feat[] = {NULL, NULL, NULL, NULL, NULL};
   const char **f = feat;
-  
+
   if(user_supports(srvc, who, mwAttribute_AV_PREFS_SET)) {
     gboolean mic, speak, video;
-    
+
     mic = user_supports(srvc, who, mwAttribute_MICROPHONE);
     speak = user_supports(srvc, who, mwAttribute_SPEAKERS);
     video = user_supports(srvc, who, mwAttribute_VIDEO_CAMERA);
-    
+
     if(mic) *f++ = _("Microphone");
     if(speak) *f++ = _("Speakers");
     if(video) *f++ = _("Video Camera");
   }
-  
+
   if(user_supports(srvc, who, mwAttribute_FILE_TRANSFER))
     *f++ = _("File Transfer");
-  
+
   return (*feat)? g_strjoinv(", ", (char **)feat): NULL;
   /* jenni loves siege */
 }
 
 
-static void mw_prpl_tooltip_text(GaimBuddy *b, GaimNotifyUserInfo *user_info, gboolean full) {
-  GaimConnection *gc;
-  struct mwGaimPluginData *pd;
-  struct mwAwareIdBlock idb = { mwAware_USER, b->name, NULL };
+static void mw_prpl_tooltip_text(PurpleBuddy *b, PurpleNotifyUserInfo *user_info, gboolean full) {
+  PurpleConnection *gc;
+  struct mwPurplePluginData *pd = NULL;
+  struct mwAwareIdBlock idb = { mwAware_USER, (char *)purple_buddy_get_name(b), NULL };
 
-  const char *message;
+  const char *message = NULL;
   const char *status;
   char *tmp;
 
-  gc = b->account->gc;
-  pd = gc->proto_data;
+  if ((gc = purple_account_get_connection(purple_buddy_get_account(b)))
+      && (pd = gc->proto_data))
+     message = mwServiceAware_getText(pd->srvc_aware, &idb);
 
-  message = mwServiceAware_getText(pd->srvc_aware, &idb);
   status = status_text(b);
 
-  if(message != NULL && gaim_utf8_strcasecmp(status, message)) {
+  if(message != NULL && g_utf8_validate(message, -1, NULL) && purple_utf8_strcasecmp(status, message)) {
     tmp = g_markup_escape_text(message, -1);
-	gaim_notify_user_info_add_pair(user_info, status, tmp);
+	purple_notify_user_info_add_pair(user_info, status, tmp);
     g_free(tmp);
 
   } else {
-	gaim_notify_user_info_add_pair(user_info, _("Status"), status);
+	purple_notify_user_info_add_pair(user_info, _("Status"), status);
   }
 
-  if(full) {
-    tmp = user_supports_text(pd->srvc_aware, b->name);
+  if(full && pd != NULL) {
+    tmp = user_supports_text(pd->srvc_aware, purple_buddy_get_name(b));
     if(tmp) {
-	  gaim_notify_user_info_add_pair(user_info, _("Supports"), tmp);
+	  purple_notify_user_info_add_pair(user_info, _("Supports"), tmp);
       g_free(tmp);
     }
 
     if(buddy_is_external(b)) {
-	  gaim_notify_user_info_add_pair(user_info, NULL, _("External User"));
+	  purple_notify_user_info_add_pair(user_info, NULL, _("External User"));
     }
   }
 }
 
+static GList *mw_prpl_status_types(PurpleAccount *acct)
+{
+	GList *types = NULL;
+	PurpleStatusType *type;
 
-static GList *mw_prpl_status_types(GaimAccount *acct) {
-  GList *types = NULL;
-  GaimStatusType *type;
+	type = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE,
+			MW_STATE_ACTIVE, NULL, TRUE, TRUE, FALSE,
+			MW_STATE_MESSAGE, _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			NULL);
+	types = g_list_append(types, type);
 
-  type = gaim_status_type_new(GAIM_STATUS_AVAILABLE, MW_STATE_ACTIVE,
-			      NULL, TRUE);
-  gaim_status_type_add_attr(type, MW_STATE_MESSAGE, _("Message"),
-			    gaim_value_new(GAIM_TYPE_STRING));
-  types = g_list_append(types, type);
+	type = purple_status_type_new_with_attrs(PURPLE_STATUS_AWAY,
+			MW_STATE_AWAY, NULL, TRUE, TRUE, FALSE,
+			MW_STATE_MESSAGE, _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			NULL);
+	types = g_list_append(types, type);
 
-  type = gaim_status_type_new(GAIM_STATUS_AWAY, MW_STATE_AWAY,
-			      NULL, TRUE);
-  gaim_status_type_add_attr(type, MW_STATE_MESSAGE, _("Message"),
-			    gaim_value_new(GAIM_TYPE_STRING));
-  types = g_list_append(types, type);
-  
-  type = gaim_status_type_new(GAIM_STATUS_UNAVAILABLE, MW_STATE_BUSY,
-			      _("Do Not Disturb"), TRUE);
-  gaim_status_type_add_attr(type, MW_STATE_MESSAGE, _("Message"),
-			    gaim_value_new(GAIM_TYPE_STRING));
-  types = g_list_append(types, type);
-  
-  type = gaim_status_type_new(GAIM_STATUS_OFFLINE, MW_STATE_OFFLINE,
-			      NULL, TRUE);
-  types = g_list_append(types, type);
+	type = purple_status_type_new_with_attrs(PURPLE_STATUS_UNAVAILABLE,
+			MW_STATE_BUSY, _("Do Not Disturb"), TRUE, TRUE, FALSE,
+			MW_STATE_MESSAGE, _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			NULL);
+	types = g_list_append(types, type);
 
-  return types;
+	type = purple_status_type_new_full(PURPLE_STATUS_OFFLINE,
+			MW_STATE_OFFLINE, NULL, TRUE, TRUE, FALSE);
+	types = g_list_append(types, type);
+
+	return types;
 }
 
 
-static void conf_create_prompt_cancel(GaimBuddy *buddy,
-				      GaimRequestFields *fields) {
+static void conf_create_prompt_cancel(PurpleBuddy *buddy,
+				      PurpleRequestFields *fields) {
   ; /* nothing to do */
 }
 
 
-static void conf_create_prompt_join(GaimBuddy *buddy,
-				    GaimRequestFields *fields) {
-  GaimAccount *acct;
-  GaimConnection *gc;
-  struct mwGaimPluginData *pd;
+static void conf_create_prompt_join(PurpleBuddy *buddy,
+				    PurpleRequestFields *fields) {
+  PurpleAccount *acct;
+  PurpleConnection *gc;
+  struct mwPurplePluginData *pd;
   struct mwServiceConference *srvc;
 
-  GaimRequestField *f;
+  PurpleRequestField *f;
 
   const char *topic, *invite;
   struct mwConference *conf;
   struct mwIdBlock idb = { NULL, NULL };
 
-  acct = buddy->account;
-  gc = gaim_account_get_connection(acct);
+  acct = purple_buddy_get_account(buddy);
+  gc = purple_account_get_connection(acct);
   pd = gc->proto_data;
   srvc = pd->srvc_conf;
 
-  f = gaim_request_fields_get_field(fields, CHAT_KEY_TOPIC);
-  topic = gaim_request_field_string_get_value(f);
+  f = purple_request_fields_get_field(fields, CHAT_KEY_TOPIC);
+  topic = purple_request_field_string_get_value(f);
 
-  f = gaim_request_fields_get_field(fields, CHAT_KEY_INVITE);
-  invite = gaim_request_field_string_get_value(f);
+  f = purple_request_fields_get_field(fields, CHAT_KEY_INVITE);
+  invite = purple_request_field_string_get_value(f);
 
   conf = mwConference_new(srvc, topic);
   mwConference_open(conf);
 
-  idb.user = buddy->name;
+  idb.user = (char *)purple_buddy_get_name(buddy);
   mwConference_invite(conf, &idb, invite);
 }
 
 
-static void blist_menu_conf_create(GaimBuddy *buddy, const char *msg) {
+static void blist_menu_conf_create(PurpleBuddy *buddy, const char *msg) {
 
-  GaimRequestFields *fields;
-  GaimRequestFieldGroup *g;
-  GaimRequestField *f;
+  PurpleRequestFields *fields;
+  PurpleRequestFieldGroup *g;
+  PurpleRequestField *f;
 
-  GaimAccount *acct;
-  GaimConnection *gc;
+  PurpleAccount *acct;
+  PurpleConnection *gc;
 
   const char *msgA;
   const char *msgB;
   char *msg1;
-  
+
   g_return_if_fail(buddy != NULL);
 
-  acct = buddy->account;
+  acct = purple_buddy_get_account(buddy);
   g_return_if_fail(acct != NULL);
 
-  gc = gaim_account_get_connection(acct);
+  gc = purple_account_get_connection(acct);
   g_return_if_fail(gc != NULL);
-  
-  fields = gaim_request_fields_new();
 
-  g = gaim_request_field_group_new(NULL);
-  gaim_request_fields_add_group(fields, g);
-  
-  f = gaim_request_field_string_new(CHAT_KEY_TOPIC, _("Topic"), NULL, FALSE);
-  gaim_request_field_group_add_field(g, f);
+  fields = purple_request_fields_new();
 
-  f = gaim_request_field_string_new(CHAT_KEY_INVITE, _("Message"), msg, FALSE);
-  gaim_request_field_group_add_field(g, f);
-  
+  g = purple_request_field_group_new(NULL);
+  purple_request_fields_add_group(fields, g);
+
+  f = purple_request_field_string_new(CHAT_KEY_TOPIC, _("Topic"), NULL, FALSE);
+  purple_request_field_group_add_field(g, f);
+
+  f = purple_request_field_string_new(CHAT_KEY_INVITE, _("Message"), msg, FALSE);
+  purple_request_field_group_add_field(g, f);
+
   msgA = _("Create conference with user");
   msgB = _("Please enter a topic for the new conference, and an invitation"
 	   " message to be sent to %s");
-  msg1 = g_strdup_printf(msgB, buddy->name);
+  msg1 = g_strdup_printf(msgB, purple_buddy_get_name(buddy));
 
-  gaim_request_fields(gc, _("New Conference"),
+  purple_request_fields(gc, _("New Conference"),
 		      msgA, msg1, fields,
 		      _("Create"), G_CALLBACK(conf_create_prompt_join),
 		      _("Cancel"), G_CALLBACK(conf_create_prompt_cancel),
+			  acct, purple_buddy_get_name(buddy), NULL,
 		      buddy);
   g_free(msg1);
 }
 
 
-static void conf_select_prompt_cancel(GaimBuddy *buddy,
-				      GaimRequestFields *fields) {
+static void conf_select_prompt_cancel(PurpleBuddy *buddy,
+				      PurpleRequestFields *fields) {
   ;
 }
 
 
-static void conf_select_prompt_invite(GaimBuddy *buddy,
-				      GaimRequestFields *fields) {
-  GaimRequestField *f;
-  const GList *l;
+static void conf_select_prompt_invite(PurpleBuddy *buddy,
+				      PurpleRequestFields *fields) {
+  PurpleRequestField *f;
+  GList *l;
   const char *msg;
-  
-  f = gaim_request_fields_get_field(fields, CHAT_KEY_INVITE);
-  msg = gaim_request_field_string_get_value(f);
 
-  f = gaim_request_fields_get_field(fields, "conf");
-  l = gaim_request_field_list_get_selected(f);
+  f = purple_request_fields_get_field(fields, CHAT_KEY_INVITE);
+  msg = purple_request_field_string_get_value(f);
+
+  f = purple_request_fields_get_field(fields, "conf");
+  l = purple_request_field_list_get_selected(f);
 
   if(l) {
-    gpointer d = gaim_request_field_list_get_data(f, l->data);
-    
+    gpointer d = purple_request_field_list_get_data(f, l->data);
+
     if(GPOINTER_TO_INT(d) == 0x01) {
       blist_menu_conf_create(buddy, msg);
 
     } else {
-      struct mwIdBlock idb = { buddy->name, NULL };
+      struct mwIdBlock idb = { (char *)purple_buddy_get_name(buddy), NULL };
       mwConference_invite(d, &idb, msg);
     }
   }
 }
 
 
-static void blist_menu_conf_list(GaimBuddy *buddy,
+static void blist_menu_conf_list(PurpleBuddy *buddy,
 				 GList *confs) {
-  
-  GaimRequestFields *fields;
-  GaimRequestFieldGroup *g;
-  GaimRequestField *f;
 
-  GaimAccount *acct;
-  GaimConnection *gc;
+  PurpleRequestFields *fields;
+  PurpleRequestFieldGroup *g;
+  PurpleRequestField *f;
+
+  PurpleAccount *acct;
+  PurpleConnection *gc;
 
   const char *msgA;
   const char *msgB;
   char *msg;
 
-  acct = buddy->account;
+  acct = purple_buddy_get_account(buddy);
   g_return_if_fail(acct != NULL);
 
-  gc = gaim_account_get_connection(acct);
+  gc = purple_account_get_connection(acct);
   g_return_if_fail(gc != NULL);
 
-  fields = gaim_request_fields_new();
-  
-  g = gaim_request_field_group_new(NULL);
-  gaim_request_fields_add_group(fields, g);
+  fields = purple_request_fields_new();
 
-  f = gaim_request_field_list_new("conf", _("Available Conferences"));
-  gaim_request_field_list_set_multi_select(f, FALSE);
+  g = purple_request_field_group_new(NULL);
+  purple_request_fields_add_group(fields, g);
+
+  f = purple_request_field_list_new("conf", _("Available Conferences"));
+  purple_request_field_list_set_multi_select(f, FALSE);
   for(; confs; confs = confs->next) {
     struct mwConference *c = confs->data;
-    gaim_request_field_list_add(f, mwConference_getTitle(c), c);
+    purple_request_field_list_add_icon(f, mwConference_getTitle(c), NULL, c);
   }
-  gaim_request_field_list_add(f, _("Create New Conference..."),
-			      GINT_TO_POINTER(0x01));
-  gaim_request_field_group_add_field(g, f);
-  
-  f = gaim_request_field_string_new(CHAT_KEY_INVITE, "Message", NULL, FALSE);
-  gaim_request_field_group_add_field(g, f);
-  
+  purple_request_field_list_add_icon(f, _("Create New Conference..."),
+			      NULL, GINT_TO_POINTER(0x01));
+  purple_request_field_group_add_field(g, f);
+
+  f = purple_request_field_string_new(CHAT_KEY_INVITE, "Message", NULL, FALSE);
+  purple_request_field_group_add_field(g, f);
+
   msgA = _("Invite user to a conference");
   msgB = _("Select a conference from the list below to send an invite to"
 	   " user %s. Select \"Create New Conference\" if you'd like to"
 	   " create a new conference to invite this user to.");
-  msg = g_strdup_printf(msgB, buddy->name);
+  msg = g_strdup_printf(msgB, purple_buddy_get_name(buddy));
 
-  gaim_request_fields(gc, _("Invite to Conference"),
+  purple_request_fields(gc, _("Invite to Conference"),
 		      msgA, msg, fields,
 		      _("Invite"), G_CALLBACK(conf_select_prompt_invite),
 		      _("Cancel"), G_CALLBACK(conf_select_prompt_cancel),
+			  acct, purple_buddy_get_name(buddy), NULL,
 		      buddy);
   g_free(msg);
 }
 
 
-static void blist_menu_conf(GaimBlistNode *node, gpointer data) {
-  GaimBuddy *buddy = (GaimBuddy *) node;
-  GaimAccount *acct;
-  GaimConnection *gc;
-  struct mwGaimPluginData *pd;
+static void blist_menu_conf(PurpleBlistNode *node, gpointer data) {
+  PurpleBuddy *buddy = (PurpleBuddy *) node;
+  PurpleAccount *acct;
+  PurpleConnection *gc;
+  struct mwPurplePluginData *pd;
   GList *l;
 
   g_return_if_fail(node != NULL);
-  g_return_if_fail(GAIM_BLIST_NODE_IS_BUDDY(node));
+  g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
 
-  acct = buddy->account;
+  acct = purple_buddy_get_account(buddy);
   g_return_if_fail(acct != NULL);
 
-  gc = gaim_account_get_connection(acct);
+  gc = purple_account_get_connection(acct);
   g_return_if_fail(gc != NULL);
 
   pd = gc->proto_data;
@@ -3535,22 +3599,22 @@ static void blist_menu_conf(GaimBlistNode *node, gpointer data) {
 
 
 #if 0
-static void blist_menu_announce(GaimBlistNode *node, gpointer data) {
-  GaimBuddy *buddy = (GaimBuddy *) node;
-  GaimAccount *acct;
-  GaimConnection *gc;
-  struct mwGaimPluginData *pd;
+static void blist_menu_announce(PurpleBlistNode *node, gpointer data) {
+  PurpleBuddy *buddy = (PurpleBuddy *) node;
+  PurpleAccount *acct;
+  PurpleConnection *gc;
+  struct mwPurplePluginData *pd;
   struct mwSession *session;
   char *rcpt_name;
   GList *rcpt;
 
   g_return_if_fail(node != NULL);
-  g_return_if_fail(GAIM_BLIST_NODE_IS_BUDDY(node));
+  g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
 
   acct = buddy->account;
   g_return_if_fail(acct != NULL);
 
-  gc = gaim_account_get_connection(acct);
+  gc = purple_account_get_connection(acct);
   g_return_if_fail(gc != NULL);
 
   pd = gc->proto_data;
@@ -3570,26 +3634,26 @@ static void blist_menu_announce(GaimBlistNode *node, gpointer data) {
 #endif
 
 
-static GList *mw_prpl_blist_node_menu(GaimBlistNode *node) {
+static GList *mw_prpl_blist_node_menu(PurpleBlistNode *node) {
   GList *l = NULL;
-  GaimMenuAction *act;
+  PurpleMenuAction *act;
 
-  if(! GAIM_BLIST_NODE_IS_BUDDY(node))
+  if(! PURPLE_BLIST_NODE_IS_BUDDY(node))
     return l;
 
   l = g_list_append(l, NULL);
 
-  act = gaim_menu_action_new(_("Invite to Conference..."),
-                             GAIM_CALLBACK(blist_menu_conf), NULL, NULL);
+  act = purple_menu_action_new(_("Invite to Conference..."),
+                             PURPLE_CALLBACK(blist_menu_conf), NULL, NULL);
   l = g_list_append(l, act);
 
 #if 0
-  act = gaim_menu_action_new(_("Send TEST Announcement"),
-			     GAIM_CALLBACK(blist_menu_announce), NULL, NULL);
+  act = purple_menu_action_new(_("Send TEST Announcement"),
+			     PURPLE_CALLBACK(blist_menu_announce), NULL, NULL);
   l = g_list_append(l, act);
 #endif
 
-  /** note: this never gets called for a GaimGroup, have to use the
+  /** note: this never gets called for a PurpleGroup, have to use the
       blist-node-extended-menu signal for that. The function
       blist_node_menu_cb is assigned to this signal in the function
       services_starting */
@@ -3598,20 +3662,20 @@ static GList *mw_prpl_blist_node_menu(GaimBlistNode *node) {
 }
 
 
-static GList *mw_prpl_chat_info(GaimConnection *gc) {
+static GList *mw_prpl_chat_info(PurpleConnection *gc) {
   GList *l = NULL;
   struct proto_chat_entry *pce;
-  
+
   pce = g_new0(struct proto_chat_entry, 1);
   pce->label = _("Topic:");
   pce->identifier = CHAT_KEY_TOPIC;
   l = g_list_append(l, pce);
-  
+
   return l;
 }
 
 
-static GHashTable *mw_prpl_chat_info_defaults(GaimConnection *gc,
+static GHashTable *mw_prpl_chat_info_defaults(PurpleConnection *gc,
 					      const char *name) {
   GHashTable *table;
 
@@ -3627,84 +3691,48 @@ static GHashTable *mw_prpl_chat_info_defaults(GaimConnection *gc,
 }
 
 
-static void mw_prpl_login(GaimAccount *acct);
+static void mw_prpl_login(PurpleAccount *acct);
 
 
-static void prompt_host_cancel_cb(GaimConnection *gc) {
-  gaim_connection_error(gc, _("No Sametime Community Server specified"));
-}
-
-
-static void prompt_host_ok_cb(GaimConnection *gc, const char *host) {
-  if(host && *host) {
-    GaimAccount *acct = gaim_connection_get_account(gc);
-    gaim_account_set_string(acct, MW_KEY_HOST, host);
-    mw_prpl_login(acct);
-
-  } else {
-    prompt_host_cancel_cb(gc);
-  }
-}
-
-
-static void prompt_host(GaimConnection *gc) {
-  GaimAccount *acct;
-  const char *msgA;
-  char *msg;
-  
-  acct = gaim_connection_get_account(gc);
-  msgA = _("No host or IP address has been configured for the"
-	  " Meanwhile account %s. Please enter one below to"
-	  " continue logging in.");
-  msg = g_strdup_printf(msgA, NSTR(gaim_account_get_username(acct)));
-  
-  gaim_request_input(gc, _("Meanwhile Connection Setup"),
-		     _("No Sametime Community Server Specified"), msg,
-		     MW_PLUGIN_DEFAULT_HOST, FALSE, FALSE, NULL,
-		     _("Connect"), G_CALLBACK(prompt_host_ok_cb),
-		     _("Cancel"), G_CALLBACK(prompt_host_cancel_cb),
-		     gc);
-
-  g_free(msg);
-}
-
-
-static void mw_prpl_login(GaimAccount *account) {
-  GaimConnection *gc;
-  struct mwGaimPluginData *pd;
+static void mw_prpl_login(PurpleAccount *account) {
+  PurpleConnection *gc;
+  struct mwPurplePluginData *pd;
 
   char *user, *pass, *host;
   guint port;
 
-  gc = gaim_account_get_connection(account);
-  pd = mwGaimPluginData_new(gc);
+  gc = purple_account_get_connection(account);
+  pd = mwPurplePluginData_new(gc);
 
   /* while we do support images, the default is to not offer it */
-  gc->flags |= GAIM_CONNECTION_NO_IMAGES;
+  gc->flags |= PURPLE_CONNECTION_NO_IMAGES;
 
-  user = g_strdup(gaim_account_get_username(account));
-  pass = g_strdup(gaim_account_get_password(account));
+  user = g_strdup(purple_account_get_username(account));
 
   host = strrchr(user, ':');
   if(host) {
     /* annoying user split from 1.2.0, need to undo it */
     *host++ = '\0';
-    gaim_account_set_string(account, MW_KEY_HOST, host);
-    gaim_account_set_username(account, user);
-    
+    purple_account_set_string(account, MW_KEY_HOST, host);
+    purple_account_set_username(account, user);
+
   } else {
-    host = (char *) gaim_account_get_string(account, MW_KEY_HOST,
+    host = (char *) purple_account_get_string(account, MW_KEY_HOST,
 					    MW_PLUGIN_DEFAULT_HOST);
   }
 
   if(! host || ! *host) {
     /* somehow, we don't have a host to connect to. Well, we need one
        to actually continue, so let's ask the user directly. */
-    prompt_host(gc);
+    g_free(user);
+    purple_connection_error_reason(gc,
+            PURPLE_CONNECTION_ERROR_INVALID_SETTINGS,
+            _("A server is required to connect this account"));
     return;
   }
 
-  port = gaim_account_get_int(account, MW_KEY_PORT, MW_PLUGIN_DEFAULT_PORT);
+  pass = g_strdup(purple_account_get_password(account));
+  port = purple_account_get_int(account, MW_KEY_PORT, MW_PLUGIN_DEFAULT_PORT);
 
   DEBUG_INFO("user: '%s'\n", user);
   DEBUG_INFO("host: '%s'\n", host);
@@ -3715,23 +3743,23 @@ static void mw_prpl_login(GaimAccount *account) {
   mwSession_setProperty(pd->session, mwSession_AUTH_USER_ID, user, g_free);
   mwSession_setProperty(pd->session, mwSession_AUTH_PASSWORD, pass, g_free);
 
-  if(gaim_account_get_bool(account, MW_KEY_FAKE_IT, FALSE)) {
+  if(purple_account_get_bool(account, MW_KEY_FAKE_IT, FALSE)) {
     guint client, major, minor;
 
     /* if we're faking the login, let's also fake the version we're
        reporting. Let's also allow the actual values to be specified */
 
-    client = gaim_account_get_int(account, MW_KEY_CLIENT, mwLogin_BINARY);
-    major = gaim_account_get_int(account, MW_KEY_MAJOR, 0x001e);
-    minor = gaim_account_get_int(account, MW_KEY_MINOR, 0x001d);
+    client = purple_account_get_int(account, MW_KEY_CLIENT, mwLogin_BINARY);
+    major = purple_account_get_int(account, MW_KEY_MAJOR, 0x001e);
+    minor = purple_account_get_int(account, MW_KEY_MINOR, 0x196f);
 
     DEBUG_INFO("client id: 0x%04x\n", client);
     DEBUG_INFO("client major: 0x%04x\n", major);
     DEBUG_INFO("client minor: 0x%04x\n", minor);
-  
+
     mwSession_setProperty(pd->session, mwSession_CLIENT_TYPE_ID,
 			  GUINT_TO_POINTER(client), NULL);
-    
+
     mwSession_setProperty(pd->session, mwSession_CLIENT_VER_MAJOR,
 			  GUINT_TO_POINTER(major), NULL);
 
@@ -3739,16 +3767,17 @@ static void mw_prpl_login(GaimAccount *account) {
 			  GUINT_TO_POINTER(minor), NULL);
   }
 
-  gaim_connection_update_progress(gc, _("Connecting"), 1, MW_CONNECT_STEPS);
+  purple_connection_update_progress(gc, _("Connecting"), 1, MW_CONNECT_STEPS);
 
-  if (gaim_proxy_connect(gc, account, host, port, connect_cb, pd) == NULL) {
-    gaim_connection_error(gc, _("Unable to connect to host"));
+  if (purple_proxy_connect(gc, account, host, port, connect_cb, pd) == NULL) {
+    purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+                                   _("Unable to connect"));
   }
 }
 
 
-static void mw_prpl_close(GaimConnection *gc) {
-  struct mwGaimPluginData *pd;
+static void mw_prpl_close(PurpleConnection *gc) {
+  struct mwPurplePluginData *pd;
 
   g_return_if_fail(gc != NULL);
 
@@ -3757,7 +3786,7 @@ static void mw_prpl_close(GaimConnection *gc) {
 
   /* get rid of the blist save timeout */
   if(pd->save_event) {
-    gaim_timeout_remove(pd->save_event);
+    purple_timeout_remove(pd->save_event);
     pd->save_event = 0;
     blist_store(pd);
   }
@@ -3770,16 +3799,16 @@ static void mw_prpl_close(GaimConnection *gc) {
 
   /* stop watching the socket */
   if(gc->inpa) {
-    gaim_input_remove(gc->inpa);
+    purple_input_remove(gc->inpa);
     gc->inpa = 0;
   }
 
   /* clean up the rest */
-  mwGaimPluginData_free(pd);
+  mwPurplePluginData_free(pd);
 }
 
 
-static int mw_rand() {
+static int mw_rand(void) {
   static int seed = 0;
 
   /* for diversity, not security. don't touch */
@@ -3791,7 +3820,7 @@ static int mw_rand() {
 
 
 /** generates a random-ish content id string */
-static char *im_mime_content_id() {
+static char *im_mime_content_id(void) {
   return g_strdup_printf("%03x@%05xmeanwhile",
 			 mw_rand() & 0xfff, mw_rand() & 0xfffff);
 }
@@ -3799,7 +3828,7 @@ static char *im_mime_content_id() {
 
 /** generates a multipart/related content type with a random-ish
     boundary value */
-static char *im_mime_content_type() {
+static char *im_mime_content_type(void) {
   return g_strdup_printf("multipart/related; boundary=related_MW%03x_%04x",
                          mw_rand() & 0xfff, mw_rand() & 0xffff);
 }
@@ -3807,8 +3836,8 @@ static char *im_mime_content_type() {
 
 /** determine content type from extension. Not so happy about this,
     but I don't want to actually write image type detection */
-static char *im_mime_img_content_type(GaimStoredImage *img) {
-  const char *fn = gaim_imgstore_get_filename(img);
+static char *im_mime_img_content_type(PurpleStoredImage *img) {
+  const char *fn = purple_imgstore_get_filename(img);
   const char *ct = NULL;
 
   ct = strrchr(fn, '.');
@@ -3835,40 +3864,40 @@ static char *im_mime_img_content_type(GaimStoredImage *img) {
 }
 
 
-static char *im_mime_img_content_disp(GaimStoredImage *img) {
-  const char *fn = gaim_imgstore_get_filename(img);
+static char *im_mime_img_content_disp(PurpleStoredImage *img) {
+  const char *fn = purple_imgstore_get_filename(img);
   return g_strdup_printf("attachment; filename=\"%s\"", fn);
 }
 
 
 /** turn an IM with embedded images into a multi-part mime document */
-static char *im_mime_convert(GaimConnection *gc,
+static char *im_mime_convert(PurpleConnection *gc,
 			     struct mwConversation *conv,
 			     const char *message) {
   GString *str;
-  GaimMimeDocument *doc;
-  GaimMimePart *part;
+  PurpleMimeDocument *doc;
+  PurpleMimePart *part;
 
   GData *attr;
   char *tmp, *start, *end;
 
   str = g_string_new(NULL);
 
-  doc = gaim_mime_document_new();
+  doc = purple_mime_document_new();
 
-  gaim_mime_document_set_field(doc, "Mime-Version", "1.0");
-  gaim_mime_document_set_field(doc, "Content-Disposition", "inline");
+  purple_mime_document_set_field(doc, "Mime-Version", "1.0");
+  purple_mime_document_set_field(doc, "Content-Disposition", "inline");
 
   tmp = im_mime_content_type();
-  gaim_mime_document_set_field(doc, "Content-Type", tmp);
+  purple_mime_document_set_field(doc, "Content-Type", tmp);
   g_free(tmp);
 
   tmp = (char *) message;
-  while(*tmp && gaim_markup_find_tag("img", tmp, (const char **) &start,
+  while(*tmp && purple_markup_find_tag("img", tmp, (const char **) &start,
 				     (const char **) &end, &attr)) {
     char *id;
-    GaimStoredImage *img = NULL;
-    
+    PurpleStoredImage *img = NULL;
+
     gsize len = (start - tmp);
 
     /* append the in-between-tags text */
@@ -3877,42 +3906,41 @@ static char *im_mime_convert(GaimConnection *gc,
     /* find the imgstore data by the id tag */
     id = g_datalist_get_data(&attr, "id");
     if(id && *id)
-      img = gaim_imgstore_get(atoi(id));
+      img = purple_imgstore_find_by_id(atoi(id));
 
     if(img) {
       char *cid;
       gpointer data;
       size_t size;
 
-      part = gaim_mime_part_new(doc);
+      part = purple_mime_part_new(doc);
 
       data = im_mime_img_content_disp(img);
-      gaim_mime_part_set_field(part, "Content-Disposition", data);
+      purple_mime_part_set_field(part, "Content-Disposition", data);
       g_free(data);
 
       data = im_mime_img_content_type(img);
-      gaim_mime_part_set_field(part, "Content-Type", data);
+      purple_mime_part_set_field(part, "Content-Type", data);
       g_free(data);
 
       cid = im_mime_content_id();
       data = g_strdup_printf("<%s>", cid);
-      gaim_mime_part_set_field(part, "Content-ID", data);
+      purple_mime_part_set_field(part, "Content-ID", data);
       g_free(data);
 
-      gaim_mime_part_set_field(part, "Content-transfer-encoding", "base64");
+      purple_mime_part_set_field(part, "Content-transfer-encoding", "base64");
 
       /* obtain and base64 encode the image data, and put it in the
 	 mime part */
-      data = gaim_imgstore_get_data(img);
-      size = gaim_imgstore_get_size(img);
-      data = gaim_base64_encode(data, (gsize) size);
-      gaim_mime_part_set_data(part, data);
+      size = purple_imgstore_get_size(img);
+      data = purple_base64_encode(purple_imgstore_get_data(img), (gsize) size);
+      purple_mime_part_set_data(part, data);
       g_free(data);
 
       /* append the modified tag */
       g_string_append_printf(str, "<img src=\"cid:%s\">", cid);
       g_free(cid);
-      
+
     } else {
       /* append the literal image tag, since we couldn't find a
 	 relative imgstore object */
@@ -3928,19 +3956,19 @@ static char *im_mime_convert(GaimConnection *gc,
   g_string_append(str, tmp);
 
   /* add the text/html part */
-  part = gaim_mime_part_new(doc);
-  gaim_mime_part_set_field(part, "Content-Disposition", "inline");
+  part = purple_mime_part_new(doc);
+  purple_mime_part_set_field(part, "Content-Disposition", "inline");
 
-  tmp = gaim_utf8_ncr_encode(str->str);
-  gaim_mime_part_set_field(part, "Content-Type", "text/html");
-  gaim_mime_part_set_field(part, "Content-Transfer-Encoding", "7bit");
-  gaim_mime_part_set_data(part, tmp);
+  tmp = purple_utf8_ncr_encode(str->str);
+  purple_mime_part_set_field(part, "Content-Type", "text/html");
+  purple_mime_part_set_field(part, "Content-Transfer-Encoding", "7bit");
+  purple_mime_part_set_data(part, tmp);
   g_free(tmp);
 
   g_string_free(str, TRUE);
 
   str = g_string_new(NULL);
-  gaim_mime_document_write(doc, str);
+  purple_mime_document_write(doc, str);
   tmp = str->str;
   g_string_free(str, FALSE);
 
@@ -3948,12 +3976,12 @@ static char *im_mime_convert(GaimConnection *gc,
 }
 
 
-static int mw_prpl_send_im(GaimConnection *gc,
+static int mw_prpl_send_im(PurpleConnection *gc,
 			   const char *name,
 			   const char *message,
-			   GaimMessageFlags flags) {
+			   PurpleMessageFlags flags) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   struct mwIdBlock who = { (char *) name, NULL };
   struct mwConversation *conv;
 
@@ -3973,26 +4001,26 @@ static int mw_prpl_send_im(GaimConnection *gc,
      which is bad. I'm not sure how to fix this correctly. */
 
   if(strstr(message, "<img ") || strstr(message, "<IMG "))
-    flags |= GAIM_MESSAGE_IMAGES;
+    flags |= PURPLE_MESSAGE_IMAGES;
 
   if(mwConversation_isOpen(conv)) {
     char *tmp;
     int ret;
 
-    if((flags & GAIM_MESSAGE_IMAGES) &&
+    if((flags & PURPLE_MESSAGE_IMAGES) &&
        mwConversation_supports(conv, mwImSend_MIME)) {
       /* send a MIME message */
 
       tmp = im_mime_convert(gc, conv, message);
       ret = mwConversation_send(conv, mwImSend_MIME, tmp);
       g_free(tmp);
-      
+
     } else if(mwConversation_supports(conv, mwImSend_HTML)) {
       /* send an HTML message */
 
       char *ncr;
-      ncr = gaim_utf8_ncr_encode(message);
-      tmp = gaim_strdup_withhtml(ncr);
+      ncr = purple_utf8_ncr_encode(message);
+      tmp = purple_strdup_withhtml(ncr);
       g_free(ncr);
 
       ret = mwConversation_send(conv, mwImSend_HTML, tmp);
@@ -4000,17 +4028,17 @@ static int mw_prpl_send_im(GaimConnection *gc,
 
     } else {
       /* default to text */
-      tmp = gaim_markup_strip_html(message);
+      tmp = purple_markup_strip_html(message);
       ret = mwConversation_send(conv, mwImSend_PLAIN, tmp);
       g_free(tmp);
     }
-    
+
     return !ret;
 
   } else {
 
     /* queue up the message safely as plain text */
-    char *tmp = gaim_markup_strip_html(message);
+    char *tmp = purple_markup_strip_html(message);
     convo_queue(conv, mwImSend_PLAIN, tmp);
     g_free(tmp);
 
@@ -4022,11 +4050,11 @@ static int mw_prpl_send_im(GaimConnection *gc,
 }
 
 
-static unsigned int mw_prpl_send_typing(GaimConnection *gc,
+static unsigned int mw_prpl_send_typing(PurpleConnection *gc,
 					const char *name,
-					GaimTypingState state) {
-  
-  struct mwGaimPluginData *pd;
+					PurpleTypingState state) {
+
+  struct mwPurplePluginData *pd;
   struct mwIdBlock who = { (char *) name, NULL };
   struct mwConversation *conv;
 
@@ -4041,14 +4069,14 @@ static unsigned int mw_prpl_send_typing(GaimConnection *gc,
 
   if(mwConversation_isOpen(conv)) {
     mwConversation_send(conv, mwImSend_TYPING, t);
-    
-  } else if((state == GAIM_TYPING) || (state == GAIM_TYPED)) {
+
+  } else if((state == PURPLE_TYPING) || (state == PURPLE_TYPED)) {
     /* only open a channel for sending typing notification, not for
        when typing has stopped. There's no point in re-opening a
        channel just to tell someone that this side isn't typing. */
-    
+
     convo_queue(conv, mwImSend_TYPING, t);
-    
+
     if(! mwConversation_isPending(conv)) {
       mwConversation_open(conv);
     }
@@ -4062,7 +4090,7 @@ static const char *mw_client_name(guint16 type) {
   switch(type) {
   case mwLogin_LIB:
     return "Lotus Binary Library";
-    
+
   case mwLogin_JAVA_WEB:
     return "Lotus Java Client Applet";
 
@@ -4115,14 +4143,14 @@ static const char *mw_client_name(guint16 type) {
 }
 
 
-static void mw_prpl_get_info(GaimConnection *gc, const char *who) {
+static void mw_prpl_get_info(PurpleConnection *gc, const char *who) {
 
   struct mwAwareIdBlock idb = { mwAware_USER, (char *) who, NULL };
 
-  struct mwGaimPluginData *pd;
-  GaimAccount *acct;
-  GaimBuddy *b;
-  GaimNotifyUserInfo *user_info;
+  struct mwPurplePluginData *pd;
+  PurpleAccount *acct;
+  PurpleBuddy *b;
+  PurpleNotifyUserInfo *user_info;
   char *tmp;
   const char *tmp2;
 
@@ -4131,50 +4159,50 @@ static void mw_prpl_get_info(GaimConnection *gc, const char *who) {
 
   pd = gc->proto_data;
 
-  acct = gaim_connection_get_account(gc);
-  b = gaim_find_buddy(acct, who);
-  user_info = gaim_notify_user_info_new();
+  acct = purple_connection_get_account(gc);
+  b = purple_find_buddy(acct, who);
+  user_info = purple_notify_user_info_new();
 
-  if(gaim_str_has_prefix(who, "@E ")) {
-	gaim_notify_user_info_add_pair(user_info, _("External User"), NULL);
+  if(purple_str_has_prefix(who, "@E ")) {
+	purple_notify_user_info_add_pair(user_info, _("External User"), NULL);
   }
 
-  gaim_notify_user_info_add_pair(user_info, _("User ID"), who);
+  purple_notify_user_info_add_pair(user_info, _("User ID"), who);
 
   if(b) {
     guint32 type;
 
-    if(b->server_alias) {
-		gaim_notify_user_info_add_pair(user_info, _("Full Name"), b->server_alias);
+    if(purple_buddy_get_server_alias(b)) {
+		purple_notify_user_info_add_pair(user_info, _("Full Name"), purple_buddy_get_server_alias(b));
     }
 
-    type = gaim_blist_node_get_int((GaimBlistNode *) b, BUDDY_KEY_CLIENT);
+    type = purple_blist_node_get_int((PurpleBlistNode *) b, BUDDY_KEY_CLIENT);
     if(type) {
 	  tmp = g_strdup(mw_client_name(type));
 	  if (!tmp)
 		tmp = g_strdup_printf(_("Unknown (0x%04x)<br>"), type);
 
-	  gaim_notify_user_info_add_pair(user_info, _("Last Known Client"), tmp);
-		
+	  purple_notify_user_info_add_pair(user_info, _("Last Known Client"), tmp);
+
 	  g_free(tmp);
     }
   }
-  
+
   tmp = user_supports_text(pd->srvc_aware, who);
   if(tmp) {
-	gaim_notify_user_info_add_pair(user_info, _("Supports"), tmp);
+	purple_notify_user_info_add_pair(user_info, _("Supports"), tmp);
 	g_free(tmp);
   }
 
   if(b) {
-	gaim_notify_user_info_add_pair(user_info, _("Status"), status_text(b));
+	purple_notify_user_info_add_pair(user_info, _("Status"), status_text(b));
 
 	/* XXX Is this adding a status message in its own section rather than with the "Status" label? */
     tmp2 = mwServiceAware_getText(pd->srvc_aware, &idb);
-    if(tmp2) {
+    if(tmp2 && g_utf8_validate(tmp2, -1, NULL)) {
       tmp = g_markup_escape_text(tmp2, -1);
-	  gaim_notify_user_info_add_section_break(user_info);
-	  gaim_notify_user_info_add_pair(user_info, NULL, tmp);
+	  purple_notify_user_info_add_section_break(user_info);
+	  purple_notify_user_info_add_pair(user_info, NULL, tmp);
       g_free(tmp);
     }
   }
@@ -4182,68 +4210,68 @@ static void mw_prpl_get_info(GaimConnection *gc, const char *who) {
   /* @todo emit a signal to allow a plugin to override the display of
      this notification, so that it can create its own */
 
-  gaim_notify_userinfo(gc, who, user_info, NULL, NULL);
-  gaim_notify_user_info_destroy(user_info);
+  purple_notify_userinfo(gc, who, user_info, NULL, NULL);
+  purple_notify_user_info_destroy(user_info);
 }
- 
- 
-static void mw_prpl_set_status(GaimAccount *acct, GaimStatus *status) {
-  GaimConnection *gc;
+
+
+static void mw_prpl_set_status(PurpleAccount *acct, PurpleStatus *status) {
+  PurpleConnection *gc;
   const char *state;
   char *message = NULL;
   struct mwSession *session;
   struct mwUserStatus stat;
-  
+
   g_return_if_fail(acct != NULL);
-  gc = gaim_account_get_connection(acct);
-  
-  state = gaim_status_get_id(status);
-  
-  DEBUG_INFO("Set status to %s\n", gaim_status_get_name(status));
-  
+  gc = purple_account_get_connection(acct);
+
+  state = purple_status_get_id(status);
+
+  DEBUG_INFO("Set status to %s\n", purple_status_get_name(status));
+
   g_return_if_fail(gc != NULL);
-  
+
   session = gc_to_session(gc);
   g_return_if_fail(session != NULL);
-  
+
   /* get a working copy of the current status */
   mwUserStatus_clone(&stat, mwSession_getUserStatus(session));
-  
+
   /* determine the state */
   if(! strcmp(state, MW_STATE_ACTIVE)) {
     stat.status = mwStatus_ACTIVE;
-    
+
   } else if(! strcmp(state, MW_STATE_AWAY)) {
     stat.status = mwStatus_AWAY;
-    
+
   } else if(! strcmp(state, MW_STATE_BUSY)) {
     stat.status = mwStatus_BUSY;
   }
-  
+
   /* determine the message */
-  message = (char *) gaim_status_get_attr_string(status, MW_STATE_MESSAGE);
-  
+  message = (char *) purple_status_get_attr_string(status, MW_STATE_MESSAGE);
+
   if(message) {
     /* all the possible non-NULL values of message up to this point
        are const, so we don't need to free them */
-    message = gaim_markup_strip_html(message);
+    message = purple_markup_strip_html(message);
   }
-  
+
   /* out with the old */
   g_free(stat.desc);
-  
+
   /* in with the new */
   stat.desc = (char *) message;
-  
+
   mwSession_setUserStatus(session, &stat);
   mwUserStatus_clear(&stat);
 }
 
- 
-static void mw_prpl_set_idle(GaimConnection *gc, int t) {
+
+static void mw_prpl_set_idle(PurpleConnection *gc, int t) {
   struct mwSession *session;
   struct mwUserStatus stat;
- 
+
 
   session = gc_to_session(gc);
   g_return_if_fail(session != NULL);
@@ -4272,28 +4300,28 @@ static void mw_prpl_set_idle(GaimConnection *gc, int t) {
 }
 
 
-static void notify_im(GaimConnection *gc, GList *row, void *user_data) {
-  GaimAccount *acct;
-  GaimConversation *conv;
+static void notify_im(PurpleConnection *gc, GList *row, void *user_data) {
+  PurpleAccount *acct;
+  PurpleConversation *conv;
   char *id;
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
   id = g_list_nth_data(row, 1);
-  conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, id, acct);
-  if(! conv) conv = gaim_conversation_new(GAIM_CONV_TYPE_IM, acct, id);
-  gaim_conversation_present(conv);
+  conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, id, acct);
+  if(! conv) conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, id);
+  purple_conversation_present(conv);
 }
 
 
-static void notify_add(GaimConnection *gc, GList *row, void *user_data) {
+static void notify_add(PurpleConnection *gc, GList *row, void *user_data) {
   BuddyAddData *data = user_data;
-  char *group_name = NULL;
-  
+  const char *group_name = NULL;
+
   if (data && data->group) {
-    group_name = data->group->name;
+    group_name = purple_group_get_name(data->group);
   }
 
-  gaim_blist_request_add_buddy(gaim_connection_get_account(gc),
+  purple_blist_request_add_buddy(purple_connection_get_account(gc),
 			       g_list_nth_data(row, 1), group_name,
 			       g_list_nth_data(row, 0));
 }
@@ -4307,42 +4335,42 @@ static void notify_close(gpointer data) {
 
 
 static void multi_resolved_query(struct mwResolveResult *result,
-				 GaimConnection *gc, gpointer data) {
+				 PurpleConnection *gc, gpointer data) {
   GList *l;
   const char *msgA;
   const char *msgB;
   char *msg;
 
-  GaimNotifySearchResults *sres;
-  GaimNotifySearchColumn *scol;
+  PurpleNotifySearchResults *sres;
+  PurpleNotifySearchColumn *scol;
 
-  sres = gaim_notify_searchresults_new();
+  sres = purple_notify_searchresults_new();
 
-  scol = gaim_notify_searchresults_column_new(_("User Name"));
-  gaim_notify_searchresults_column_add(sres, scol);
+  scol = purple_notify_searchresults_column_new(_("User Name"));
+  purple_notify_searchresults_column_add(sres, scol);
 
-  scol = gaim_notify_searchresults_column_new(_("Sametime ID"));
-  gaim_notify_searchresults_column_add(sres, scol);
+  scol = purple_notify_searchresults_column_new(_("Sametime ID"));
+  purple_notify_searchresults_column_add(sres, scol);
 
-  gaim_notify_searchresults_button_add(sres, GAIM_NOTIFY_BUTTON_IM,
+  purple_notify_searchresults_button_add(sres, PURPLE_NOTIFY_BUTTON_IM,
 				       notify_im);
 
-  gaim_notify_searchresults_button_add(sres, GAIM_NOTIFY_BUTTON_ADD,
+  purple_notify_searchresults_button_add(sres, PURPLE_NOTIFY_BUTTON_ADD,
 				       notify_add);
 
   for(l = result->matches; l; l = l->next) {
     struct mwResolveMatch *match = l->data;
     GList *row = NULL;
-        
+
     DEBUG_INFO("multi resolve: %s, %s\n",
 	       NSTR(match->id), NSTR(match->name));
 
     if(!match->id || !match->name)
       continue;
-    
+
     row = g_list_append(row, g_strdup(match->name));
     row = g_list_append(row, g_strdup(match->id));
-    gaim_notify_searchresults_row_add(sres, row);
+    purple_notify_searchresults_row_add(sres, row);
   }
 
   msgA = _("An ambiguous user ID was entered");
@@ -4351,7 +4379,7 @@ static void multi_resolved_query(struct mwResolveResult *result,
 	   " add them to your buddy list.");
   msg = g_strdup_printf(msgB, result->name);
 
-  gaim_notify_searchresults(gc, _("Select User"),
+  purple_notify_searchresults(gc, _("Select User"),
 			    msgA, msg, sres, notify_close, data);
 
   g_free(msg);
@@ -4364,37 +4392,37 @@ static void add_buddy_resolved(struct mwServiceResolve *srvc,
 
   struct mwResolveResult *res = NULL;
   BuddyAddData *data = b;
-  GaimBuddy *buddy = NULL;
-  GaimConnection *gc;
-  struct mwGaimPluginData *pd;
+  PurpleBuddy *buddy = NULL;
+  PurpleConnection *gc;
+  struct mwPurplePluginData *pd;
 
-  if (data) {
-    buddy = data->buddy;
-  }
+  g_return_if_fail(data != NULL);
 
-  gc = gaim_account_get_connection(buddy->account);
+  buddy = data->buddy;
+
+  gc = purple_account_get_connection(purple_buddy_get_account(buddy));
   pd = gc->proto_data;
 
   if(results)
     res = results->data;
 
   if(!code && res && res->matches) {
-    if(g_list_length(res->matches) == 1) {
+    if(!res->matches->next) {
       struct mwResolveMatch *match = res->matches->data;
-      
+
       /* only one? that might be the right one! */
       if(strcmp(res->name, match->id)) {
 	/* uh oh, the single result isn't identical to the search
 	   term, better safe then sorry, so let's make sure it's who
 	   the user meant to add */
-	gaim_blist_remove_buddy(buddy);
+	purple_blist_remove_buddy(buddy);
 	multi_resolved_query(res, gc, data);
-	
+
       } else {
 
 	/* same person, set the server alias */
-	gaim_blist_server_alias_buddy(buddy, match->name);
-	gaim_blist_node_set_string((GaimBlistNode *) buddy,
+	purple_blist_server_alias_buddy(buddy, match->name);
+	purple_blist_node_set_string((PurpleBlistNode *) buddy,
 				   BUDDY_KEY_NAME, match->name);
 
 	/* subscribe to awareness */
@@ -4404,13 +4432,13 @@ static void add_buddy_resolved(struct mwServiceResolve *srvc,
 
         g_free(data);
       }
-      
+
     } else {
       /* prompt user if more than one match was returned */
-      gaim_blist_remove_buddy(buddy);
+      purple_blist_remove_buddy(buddy);
       multi_resolved_query(res, gc, data);
     }
-    
+
     return;
   }
 
@@ -4426,7 +4454,7 @@ static void add_buddy_resolved(struct mwServiceResolve *srvc,
      out unless I can think of a very good reason to do this. -siege */
 
   DEBUG_INFO("no such buddy in community\n");
-  gaim_blist_remove_buddy(buddy);
+  purple_blist_remove_buddy(buddy);
   blist_schedule(pd);
 
   if(res && res->name) {
@@ -4442,7 +4470,7 @@ static void add_buddy_resolved(struct mwServiceResolve *srvc,
 	     " your buddy list.");
     msg = g_strdup_printf(msgB, NSTR(res->name));
 
-    gaim_notify_error(gc, _("Unable to add user"), msgA, msg);
+    purple_notify_error(gc, _("Unable to add user"), msgA, msg);
 
     g_free(msg);
   }
@@ -4450,24 +4478,16 @@ static void add_buddy_resolved(struct mwServiceResolve *srvc,
 }
 
 
-static void mw_prpl_add_buddy(GaimConnection *gc,
-			      GaimBuddy *buddy,
-			      GaimGroup *group) {
+static void mw_prpl_add_buddy(PurpleConnection *gc,
+			      PurpleBuddy *buddy,
+			      PurpleGroup *group) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd = gc->proto_data;
   struct mwServiceResolve *srvc;
   GList *query;
   enum mwResolveFlag flags;
   guint32 req;
-
   BuddyAddData *data;
-
-  data = g_new0(BuddyAddData, 1);
-  data->buddy = buddy;
-  data->group = group;
-
-  pd = gc->proto_data;
-  srvc = pd->srvc_resolve;
 
   /* catch external buddies. They won't be in the resolve service */
   if(buddy_is_external(buddy)) {
@@ -4475,7 +4495,13 @@ static void mw_prpl_add_buddy(GaimConnection *gc,
     return;
   }
 
-  query = g_list_prepend(NULL, buddy->name);
+  data = g_new0(BuddyAddData, 1);
+  data->buddy = buddy;
+  data->group = group;
+
+  srvc = pd->srvc_resolve;
+
+  query = g_list_prepend(NULL, (char *)purple_buddy_get_name(buddy));
   flags = mwResolveFlag_FIRST | mwResolveFlag_USERS;
 
   req = mwServiceResolve_resolve(srvc, query, flags, add_buddy_resolved,
@@ -4483,14 +4509,14 @@ static void mw_prpl_add_buddy(GaimConnection *gc,
   g_list_free(query);
 
   if(req == SEARCH_ERROR) {
-    gaim_blist_remove_buddy(buddy);
+    purple_blist_remove_buddy(buddy);
     blist_schedule(pd);
   }
 }
 
 
-static void foreach_add_buddies(GaimGroup *group, GList *buddies,
-				struct mwGaimPluginData *pd) {
+static void foreach_add_buddies(PurpleGroup *group, GList *buddies,
+				struct mwPurplePluginData *pd) {
   struct mwAwareList *list;
 
   list = list_ensure(pd, group);
@@ -4499,17 +4525,17 @@ static void foreach_add_buddies(GaimGroup *group, GList *buddies,
 }
 
 
-static void mw_prpl_add_buddies(GaimConnection *gc,
+static void mw_prpl_add_buddies(PurpleConnection *gc,
 				GList *buddies,
 				GList *groups) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   GHashTable *group_sets;
   struct mwAwareIdBlock *idbs, *idb;
 
   pd = gc->proto_data;
 
-  /* map GaimGroup:GList of mwAwareIdBlock */
+  /* map PurpleGroup:GList of mwAwareIdBlock */
   group_sets = g_hash_table_new(g_direct_hash, g_direct_equal);
 
   /* bunch of mwAwareIdBlock allocated at once, free'd at once */
@@ -4517,22 +4543,22 @@ static void mw_prpl_add_buddies(GaimConnection *gc,
 
   /* first pass collects mwAwareIdBlock lists for each group */
   for(; buddies; buddies = buddies->next) {
-    GaimBuddy *b = buddies->data;
-    GaimGroup *g;
+    PurpleBuddy *b = buddies->data;
+    PurpleGroup *g;
     const char *fn;
     GList *l;
 
     /* nab the saved server alias and stick it on the buddy */
-    fn = gaim_blist_node_get_string((GaimBlistNode *) b, BUDDY_KEY_NAME);
-    gaim_blist_server_alias_buddy(b, fn);
+    fn = purple_blist_node_get_string((PurpleBlistNode *) b, BUDDY_KEY_NAME);
+    purple_blist_server_alias_buddy(b, fn);
 
-    /* convert GaimBuddy into a mwAwareIdBlock */
+    /* convert PurpleBuddy into a mwAwareIdBlock */
     idb->type = mwAware_USER;
-    idb->user = (char *) b->name;
+    idb->user = (char *) purple_buddy_get_name(b);
     idb->community = NULL;
 
     /* put idb into the list associated with the buddy's group */
-    g = gaim_buddy_get_group(b);
+    g = purple_buddy_get_group(b);
     l = g_hash_table_lookup(group_sets, g);
     l = g_list_prepend(l, idb++);
     g_hash_table_insert(group_sets, g, l);
@@ -4549,17 +4575,17 @@ static void mw_prpl_add_buddies(GaimConnection *gc,
 }
 
 
-static void mw_prpl_remove_buddy(GaimConnection *gc,
-				 GaimBuddy *buddy, GaimGroup *group) {
+static void mw_prpl_remove_buddy(PurpleConnection *gc,
+				 PurpleBuddy *buddy, PurpleGroup *group) {
 
-  struct mwGaimPluginData *pd;
-  struct mwAwareIdBlock idb = { mwAware_USER, buddy->name, NULL };
+  struct mwPurplePluginData *pd;
+  struct mwAwareIdBlock idb = { mwAware_USER, (char *)purple_buddy_get_name(buddy), NULL };
   struct mwAwareList *list;
 
   GList *rem = g_list_prepend(NULL, &idb);
 
   pd = gc->proto_data;
-  group = gaim_buddy_get_group(buddy);
+  group = purple_buddy_get_group(buddy);
   list = list_ensure(pd, group);
 
   mwAwareList_removeAware(list, rem);
@@ -4571,7 +4597,7 @@ static void mw_prpl_remove_buddy(GaimConnection *gc,
 
 static void privacy_fill(struct mwPrivacyInfo *priv,
 			 GSList *members) {
-  
+
   struct mwUserItem *u;
   guint count;
 
@@ -4589,20 +4615,20 @@ static void privacy_fill(struct mwPrivacyInfo *priv,
 }
 
 
-static void mw_prpl_set_permit_deny(GaimConnection *gc) {
-  GaimAccount *acct;
-  struct mwGaimPluginData *pd;
+static void mw_prpl_set_permit_deny(PurpleConnection *gc) {
+  PurpleAccount *acct;
+  struct mwPurplePluginData *pd;
   struct mwSession *session;
 
   struct mwPrivacyInfo privacy = {
-    .deny = FALSE,
-    .count = 0,
-    .users = NULL,
+    FALSE, /* deny  */
+    0,     /* count */
+    NULL,  /* users */
   };
 
   g_return_if_fail(gc != NULL);
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
 
   pd = gc->proto_data;
@@ -4612,28 +4638,28 @@ static void mw_prpl_set_permit_deny(GaimConnection *gc) {
   g_return_if_fail(session != NULL);
 
   switch(acct->perm_deny) {
-  case GAIM_PRIVACY_DENY_USERS:
-    DEBUG_INFO("GAIM_PRIVACY_DENY_USERS\n");
+  case PURPLE_PRIVACY_DENY_USERS:
+    DEBUG_INFO("PURPLE_PRIVACY_DENY_USERS\n");
     privacy_fill(&privacy, acct->deny);
     privacy.deny = TRUE;
     break;
 
-  case GAIM_PRIVACY_ALLOW_ALL:
-    DEBUG_INFO("GAIM_PRIVACY_ALLOW_ALL\n");
+  case PURPLE_PRIVACY_ALLOW_ALL:
+    DEBUG_INFO("PURPLE_PRIVACY_ALLOW_ALL\n");
     privacy.deny = TRUE;
     break;
 
-  case GAIM_PRIVACY_ALLOW_USERS:
-    DEBUG_INFO("GAIM_PRIVACY_ALLOW_USERS\n");
+  case PURPLE_PRIVACY_ALLOW_USERS:
+    DEBUG_INFO("PURPLE_PRIVACY_ALLOW_USERS\n");
     privacy_fill(&privacy, acct->permit);
     privacy.deny = FALSE;
     break;
 
-  case GAIM_PRIVACY_DENY_ALL:
-    DEBUG_INFO("GAIM_PRIVACY_DENY_ALL\n");
+  case PURPLE_PRIVACY_DENY_ALL:
+    DEBUG_INFO("PURPLE_PRIVACY_DENY_ALL\n");
     privacy.deny = FALSE;
     break;
-    
+
   default:
     DEBUG_INFO("acct->perm_deny is 0x%x\n", acct->perm_deny);
     return;
@@ -4644,22 +4670,22 @@ static void mw_prpl_set_permit_deny(GaimConnection *gc) {
 }
 
 
-static void mw_prpl_add_permit(GaimConnection *gc, const char *name) {
+static void mw_prpl_add_permit(PurpleConnection *gc, const char *name) {
   mw_prpl_set_permit_deny(gc);
 }
 
 
-static void mw_prpl_add_deny(GaimConnection *gc, const char *name) {
+static void mw_prpl_add_deny(PurpleConnection *gc, const char *name) {
   mw_prpl_set_permit_deny(gc);
 }
 
 
-static void mw_prpl_rem_permit(GaimConnection *gc, const char *name) {
+static void mw_prpl_rem_permit(PurpleConnection *gc, const char *name) {
   mw_prpl_set_permit_deny(gc);
 }
 
 
-static void mw_prpl_rem_deny(GaimConnection *gc, const char *name) {
+static void mw_prpl_rem_deny(PurpleConnection *gc, const char *name) {
   mw_prpl_set_permit_deny(gc);
 }
 
@@ -4683,17 +4709,17 @@ static struct mwConference *conf_find(struct mwServiceConference *srvc,
 }
 
 
-static void mw_prpl_join_chat(GaimConnection *gc,
+static void mw_prpl_join_chat(PurpleConnection *gc,
 			      GHashTable *components) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   char *c, *t;
-  
+
   pd = gc->proto_data;
 
   c = g_hash_table_lookup(components, CHAT_KEY_NAME);
   t = g_hash_table_lookup(components, CHAT_KEY_TOPIC);
-  
+
   if(g_hash_table_lookup(components, CHAT_KEY_IS_PLACE)) {
     /* use place service */
     struct mwServicePlace *srvc;
@@ -4702,7 +4728,7 @@ static void mw_prpl_join_chat(GaimConnection *gc,
     srvc = pd->srvc_place;
     place = mwPlace_new(srvc, c, t);
     mwPlace_open(place);
-     
+
   } else {
     /* use conference service */
     struct mwServiceConference *srvc;
@@ -4714,7 +4740,7 @@ static void mw_prpl_join_chat(GaimConnection *gc,
     if(conf) {
       DEBUG_INFO("accepting conference invitation\n");
       mwConference_accept(conf);
-      
+
     } else {
       DEBUG_INFO("creating new conference\n");
       conf = mwConference_new(srvc, t);
@@ -4724,13 +4750,13 @@ static void mw_prpl_join_chat(GaimConnection *gc,
 }
 
 
-static void mw_prpl_reject_chat(GaimConnection *gc,
+static void mw_prpl_reject_chat(PurpleConnection *gc,
 				GHashTable *components) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   struct mwServiceConference *srvc;
   char *c;
-  
+
   pd = gc->proto_data;
   srvc = pd->srvc_conf;
 
@@ -4753,12 +4779,12 @@ static char *mw_prpl_get_chat_name(GHashTable *components) {
 }
 
 
-static void mw_prpl_chat_invite(GaimConnection *gc,
+static void mw_prpl_chat_invite(PurpleConnection *gc,
 				int id,
 				const char *invitation,
 				const char *who) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   struct mwConference *conf;
   struct mwPlace *place;
   struct mwIdBlock idb = { (char *) who, NULL };
@@ -4781,10 +4807,10 @@ static void mw_prpl_chat_invite(GaimConnection *gc,
 }
 
 
-static void mw_prpl_chat_leave(GaimConnection *gc,
+static void mw_prpl_chat_leave(PurpleConnection *gc,
 			       int id) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   struct mwConference *conf;
 
   pd = gc->proto_data;
@@ -4804,7 +4830,7 @@ static void mw_prpl_chat_leave(GaimConnection *gc,
 }
 
 
-static void mw_prpl_chat_whisper(GaimConnection *gc,
+static void mw_prpl_chat_whisper(PurpleConnection *gc,
 				 int id,
 				 const char *who,
 				 const char *message) {
@@ -4813,12 +4839,12 @@ static void mw_prpl_chat_whisper(GaimConnection *gc,
 }
 
 
-static int mw_prpl_chat_send(GaimConnection *gc,
+static int mw_prpl_chat_send(PurpleConnection *gc,
 			     int id,
 			     const char *message,
-			     GaimMessageFlags flags) {
+			     PurpleMessageFlags flags) {
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   struct mwConference *conf;
   char *msg;
   int ret;
@@ -4828,16 +4854,16 @@ static int mw_prpl_chat_send(GaimConnection *gc,
   g_return_val_if_fail(pd != NULL, 0);
   conf = ID_TO_CONF(pd, id);
 
-  msg = gaim_markup_strip_html(message);
+  msg = purple_markup_strip_html(message);
 
   if(conf) {
-    ret = ! mwConference_sendText(conf, message);
+    ret = ! mwConference_sendText(conf, msg);
 
   } else {
     struct mwPlace *place = ID_TO_PLACE(pd, id);
     g_return_val_if_fail(place != NULL, 0);
 
-    ret = ! mwPlace_sendText(place, message);
+    ret = ! mwPlace_sendText(place, msg);
   }
 
   g_free(msg);
@@ -4845,7 +4871,7 @@ static int mw_prpl_chat_send(GaimConnection *gc,
 }
 
 
-static void mw_prpl_keepalive(GaimConnection *gc) {
+static void mw_prpl_keepalive(PurpleConnection *gc) {
   struct mwSession *session;
 
   g_return_if_fail(gc != NULL);
@@ -4857,11 +4883,11 @@ static void mw_prpl_keepalive(GaimConnection *gc) {
 }
 
 
-static void mw_prpl_alias_buddy(GaimConnection *gc,
+static void mw_prpl_alias_buddy(PurpleConnection *gc,
 				const char *who,
 				const char *alias) {
 
-  struct mwGaimPluginData *pd = gc->proto_data;
+  struct mwPurplePluginData *pd = gc->proto_data;
   g_return_if_fail(pd != NULL);
 
   /* it's a change to the buddy list, so we've gotta reflect that in
@@ -4871,7 +4897,7 @@ static void mw_prpl_alias_buddy(GaimConnection *gc,
 }
 
 
-static void mw_prpl_group_buddy(GaimConnection *gc,
+static void mw_prpl_group_buddy(PurpleConnection *gc,
 				const char *who,
 				const char *old_group,
 				const char *new_group) {
@@ -4879,17 +4905,17 @@ static void mw_prpl_group_buddy(GaimConnection *gc,
   struct mwAwareIdBlock idb = { mwAware_USER, (char *) who, NULL };
   GList *gl = g_list_prepend(NULL, &idb);
 
-  struct mwGaimPluginData *pd = gc->proto_data;
-  GaimGroup *group;
+  struct mwPurplePluginData *pd = gc->proto_data;
+  PurpleGroup *group;
   struct mwAwareList *list;
 
   /* add who to new_group's aware list */
-  group = gaim_find_group(new_group);
+  group = purple_find_group(new_group);
   list = list_ensure(pd, group);
   mwAwareList_addAware(list, gl);
 
   /* remove who from old_group's aware list */
-  group = gaim_find_group(old_group);
+  group = purple_find_group(old_group);
   list = list_ensure(pd, group);
   mwAwareList_removeAware(list, gl);
 
@@ -4900,32 +4926,32 @@ static void mw_prpl_group_buddy(GaimConnection *gc,
 }
 
 
-static void mw_prpl_rename_group(GaimConnection *gc,
+static void mw_prpl_rename_group(PurpleConnection *gc,
 				 const char *old,
-				 GaimGroup *group,
+				 PurpleGroup *group,
 				 GList *buddies) {
 
-  struct mwGaimPluginData *pd = gc->proto_data;
+  struct mwPurplePluginData *pd = gc->proto_data;
   g_return_if_fail(pd != NULL);
 
   /* it's a change in the buddy list, so we've gotta reflect that in
      the server copy. Also, having this function should prevent all
      those buddies from being removed and re-added. We don't really
-     give a crap what the group is named in Gaim other than to record
+     give a crap what the group is named in Purple other than to record
      that as the group name/alias */
 
   blist_schedule(pd);
 }
 
 
-static void mw_prpl_buddy_free(GaimBuddy *buddy) {
+static void mw_prpl_buddy_free(PurpleBuddy *buddy) {
   /* I don't think we have any cleanup for buddies yet */
   ;
 }
 
 
-static void mw_prpl_convo_closed(GaimConnection *gc, const char *who) {
-  struct mwGaimPluginData *pd = gc->proto_data;
+static void mw_prpl_convo_closed(PurpleConnection *gc, const char *who) {
+  struct mwPurplePluginData *pd = gc->proto_data;
   struct mwServiceIm *srvc;
   struct mwConversation *conv;
   struct mwIdBlock idb = { (char *) who, NULL };
@@ -4943,7 +4969,7 @@ static void mw_prpl_convo_closed(GaimConnection *gc, const char *who) {
 }
 
 
-static const char *mw_prpl_normalize(const GaimAccount *account,
+static const char *mw_prpl_normalize(const PurpleAccount *account,
 				     const char *id) {
 
   /* code elsewhere assumes that the return value points to different
@@ -4956,8 +4982,8 @@ static const char *mw_prpl_normalize(const GaimAccount *account,
 }
 
 
-static void mw_prpl_remove_group(GaimConnection *gc, GaimGroup *group) {
-  struct mwGaimPluginData *pd;
+static void mw_prpl_remove_group(PurpleConnection *gc, PurpleGroup *group) {
+  struct mwPurplePluginData *pd;
   struct mwAwareList *list;
 
   pd = gc->proto_data;
@@ -4976,11 +5002,11 @@ static void mw_prpl_remove_group(GaimConnection *gc, GaimGroup *group) {
 }
 
 
-static gboolean mw_prpl_can_receive_file(GaimConnection *gc,
+static gboolean mw_prpl_can_receive_file(PurpleConnection *gc,
 					 const char *who) {
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   struct mwServiceAware *srvc;
-  GaimAccount *acct;
+  PurpleAccount *acct;
 
   g_return_val_if_fail(gc != NULL, FALSE);
 
@@ -4989,20 +5015,20 @@ static gboolean mw_prpl_can_receive_file(GaimConnection *gc,
 
   srvc = pd->srvc_aware;
   g_return_val_if_fail(srvc != NULL, FALSE);
-  
-  acct = gaim_connection_get_account(gc);
+
+  acct = purple_connection_get_account(gc);
   g_return_val_if_fail(acct != NULL, FALSE);
 
-  return gaim_find_buddy(acct, who) &&
+  return purple_find_buddy(acct, who) &&
     user_supports(srvc, who, mwAttribute_FILE_TRANSFER);
 }
 
 
-static void ft_outgoing_init(GaimXfer *xfer) {
-  GaimAccount *acct;
-  GaimConnection *gc;
+static void ft_outgoing_init(PurpleXfer *xfer) {
+  PurpleAccount *acct;
+  PurpleConnection *gc;
 
-  struct mwGaimPluginData *pd;
+  struct mwPurplePluginData *pd;
   struct mwServiceFileTransfer *srvc;
   struct mwFileTransfer *ft;
 
@@ -5014,23 +5040,23 @@ static void ft_outgoing_init(GaimXfer *xfer) {
 
   DEBUG_INFO("ft_outgoing_init\n");
 
-  acct = gaim_xfer_get_account(xfer);
-  gc = gaim_account_get_connection(acct);
+  acct = purple_xfer_get_account(xfer);
+  gc = purple_account_get_connection(acct);
   pd = gc->proto_data;
   srvc = pd->srvc_ft;
 
-  filename = gaim_xfer_get_local_filename(xfer);
-  filesize = gaim_xfer_get_size(xfer);
+  filename = purple_xfer_get_local_filename(xfer);
+  filesize = purple_xfer_get_size(xfer);
   idb.user = xfer->who;
 
-  gaim_xfer_update_progress(xfer);
+  purple_xfer_update_progress(xfer);
 
   /* test that we can actually send the file */
   fp = g_fopen(filename, "rb");
   if(! fp) {
     char *msg = g_strdup_printf(_("Error reading file %s: \n%s\n"),
-				filename, strerror(errno));
-    gaim_xfer_error(gaim_xfer_get_type(xfer), acct, xfer->who, msg);
+				filename, g_strerror(errno));
+    purple_xfer_error(purple_xfer_get_type(xfer), acct, xfer->who, msg);
     g_free(msg);
     return;
   }
@@ -5040,158 +5066,178 @@ static void ft_outgoing_init(GaimXfer *xfer) {
     char *tmp = strrchr(filename, G_DIR_SEPARATOR);
     if(tmp++) filename = tmp;
   }
-  
+
   ft = mwFileTransfer_new(srvc, &idb, NULL, filename, filesize);
 
-  gaim_xfer_ref(xfer);
-  mwFileTransfer_setClientData(ft, xfer, (GDestroyNotify) gaim_xfer_unref);
+  purple_xfer_ref(xfer);
+  mwFileTransfer_setClientData(ft, xfer, (GDestroyNotify) purple_xfer_unref);
   xfer->data = ft;
 
   mwFileTransfer_offer(ft);
 }
 
 
-static void ft_outgoing_cancel(GaimXfer *xfer) {
+static void ft_outgoing_cancel(PurpleXfer *xfer) {
   struct mwFileTransfer *ft = xfer->data;
-  
+
   DEBUG_INFO("ft_outgoing_cancel called\n");
 
   if(ft) mwFileTransfer_cancel(ft);
 }
 
 
-static GaimXfer *mw_prpl_new_xfer(GaimConnection *gc, const char *who) {
-  GaimAccount *acct;
-  GaimXfer *xfer;
+static PurpleXfer *mw_prpl_new_xfer(PurpleConnection *gc, const char *who) {
+  PurpleAccount *acct;
+  PurpleXfer *xfer;
 
-  acct = gaim_connection_get_account(gc);
+  acct = purple_connection_get_account(gc);
 
-  xfer = gaim_xfer_new(acct, GAIM_XFER_SEND, who);
+  xfer = purple_xfer_new(acct, PURPLE_XFER_SEND, who);
   if (xfer)
   {
-    gaim_xfer_set_init_fnc(xfer, ft_outgoing_init);
-    gaim_xfer_set_cancel_send_fnc(xfer, ft_outgoing_cancel);
+    purple_xfer_set_init_fnc(xfer, ft_outgoing_init);
+    purple_xfer_set_cancel_send_fnc(xfer, ft_outgoing_cancel);
   }
 
   return xfer;
 }
 
-static void mw_prpl_send_file(GaimConnection *gc,
+static void mw_prpl_send_file(PurpleConnection *gc,
 			      const char *who, const char *file) {
 
-  GaimXfer *xfer = mw_prpl_new_xfer(gc, who);
+  PurpleXfer *xfer = mw_prpl_new_xfer(gc, who);
 
   if(file) {
     DEBUG_INFO("file != NULL\n");
-    gaim_xfer_request_accepted(xfer, file);
+    purple_xfer_request_accepted(xfer, file);
 
   } else {
     DEBUG_INFO("file == NULL\n");
-    gaim_xfer_request(xfer);
+    purple_xfer_request(xfer);
   }
 }
 
 
-static GaimPluginProtocolInfo mw_prpl_info = {
-  .options                   = OPT_PROTO_IM_IMAGE,
-  .user_splits               = NULL, /*< set in mw_plugin_init */
-  .protocol_options          = NULL, /*< set in mw_plugin_init */
-  .icon_spec                 = NO_BUDDY_ICONS,
-  .list_icon                 = mw_prpl_list_icon,
-  .list_emblems              = mw_prpl_list_emblems,
-  .status_text               = mw_prpl_status_text,
-  .tooltip_text              = mw_prpl_tooltip_text,
-  .status_types              = mw_prpl_status_types,
-  .blist_node_menu           = mw_prpl_blist_node_menu,
-  .chat_info                 = mw_prpl_chat_info,
-  .chat_info_defaults        = mw_prpl_chat_info_defaults,
-  .login                     = mw_prpl_login,
-  .close                     = mw_prpl_close,
-  .send_im                   = mw_prpl_send_im,
-  .set_info                  = NULL,
-  .send_typing               = mw_prpl_send_typing,
-  .get_info                  = mw_prpl_get_info,
-  .set_status                = mw_prpl_set_status,
-  .set_idle                  = mw_prpl_set_idle,
-  .change_passwd             = NULL,
-  .add_buddy                 = mw_prpl_add_buddy,
-  .add_buddies               = mw_prpl_add_buddies,
-  .remove_buddy              = mw_prpl_remove_buddy,
-  .remove_buddies            = NULL,
-  .add_permit                = mw_prpl_add_permit,
-  .add_deny                  = mw_prpl_add_deny,
-  .rem_permit                = mw_prpl_rem_permit,
-  .rem_deny                  = mw_prpl_rem_deny,
-  .set_permit_deny           = mw_prpl_set_permit_deny,
-  .join_chat                 = mw_prpl_join_chat,
-  .reject_chat               = mw_prpl_reject_chat,
-  .get_chat_name             = mw_prpl_get_chat_name,
-  .chat_invite               = mw_prpl_chat_invite,
-  .chat_leave                = mw_prpl_chat_leave,
-  .chat_whisper              = mw_prpl_chat_whisper,
-  .chat_send                 = mw_prpl_chat_send,
-  .keepalive                 = mw_prpl_keepalive,
-  .register_user             = NULL,
-  .get_cb_info               = NULL,
-  .get_cb_away               = NULL,
-  .alias_buddy               = mw_prpl_alias_buddy,
-  .group_buddy               = mw_prpl_group_buddy,
-  .rename_group              = mw_prpl_rename_group,
-  .buddy_free                = mw_prpl_buddy_free,
-  .convo_closed              = mw_prpl_convo_closed,
-  .normalize                 = mw_prpl_normalize,
-  .set_buddy_icon            = NULL,
-  .remove_group              = mw_prpl_remove_group,
-  .get_cb_real_name          = NULL,
-  .set_chat_topic            = NULL,
-  .find_blist_chat           = NULL,
-  .roomlist_get_list         = NULL,
-  .roomlist_expand_category  = NULL,
-  .can_receive_file          = mw_prpl_can_receive_file,
-  .send_file                 = mw_prpl_send_file,
-  .new_xfer                  = mw_prpl_new_xfer,
-  .offline_message           = NULL,
-  .whiteboard_prpl_ops       = NULL,
-  .send_raw                  = NULL
+static PurplePluginProtocolInfo mw_prpl_info = {
+  OPT_PROTO_IM_IMAGE,
+  NULL, /*< set in mw_plugin_init */
+  NULL, /*< set in mw_plugin_init */
+  NO_BUDDY_ICONS,
+  mw_prpl_list_icon,
+  mw_prpl_list_emblem,
+  mw_prpl_status_text,
+  mw_prpl_tooltip_text,
+  mw_prpl_status_types,
+  mw_prpl_blist_node_menu,
+  mw_prpl_chat_info,
+  mw_prpl_chat_info_defaults,
+  mw_prpl_login,
+  mw_prpl_close,
+  mw_prpl_send_im,
+  NULL,
+  mw_prpl_send_typing,
+  mw_prpl_get_info,
+  mw_prpl_set_status,
+  mw_prpl_set_idle,
+  NULL,
+  mw_prpl_add_buddy,
+  mw_prpl_add_buddies,
+  mw_prpl_remove_buddy,
+  NULL,
+  mw_prpl_add_permit,
+  mw_prpl_add_deny,
+  mw_prpl_rem_permit,
+  mw_prpl_rem_deny,
+  mw_prpl_set_permit_deny,
+  mw_prpl_join_chat,
+  mw_prpl_reject_chat,
+  mw_prpl_get_chat_name,
+  mw_prpl_chat_invite,
+  mw_prpl_chat_leave,
+  mw_prpl_chat_whisper,
+  mw_prpl_chat_send,
+  mw_prpl_keepalive,
+  NULL,
+  NULL,
+  NULL,
+  mw_prpl_alias_buddy,
+  mw_prpl_group_buddy,
+  mw_prpl_rename_group,
+  mw_prpl_buddy_free,
+  mw_prpl_convo_closed,
+  mw_prpl_normalize,
+  NULL,
+  mw_prpl_remove_group,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  mw_prpl_can_receive_file,
+  mw_prpl_send_file,
+  mw_prpl_new_xfer,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  sizeof(PurplePluginProtocolInfo),
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL
 };
 
 
-static GaimPluginPrefFrame *
-mw_plugin_get_plugin_pref_frame(GaimPlugin *plugin) {
-  GaimPluginPrefFrame *frame;
-  GaimPluginPref *pref;
+static PurplePluginPrefFrame *
+mw_plugin_get_plugin_pref_frame(PurplePlugin *plugin) {
+  PurplePluginPrefFrame *frame;
+  PurplePluginPref *pref;
 
-  frame = gaim_plugin_pref_frame_new();
-  
-  pref = gaim_plugin_pref_new_with_label(_("Remotely Stored Buddy List"));
-  gaim_plugin_pref_frame_add(frame, pref);
-  
+  frame = purple_plugin_pref_frame_new();
 
-  pref = gaim_plugin_pref_new_with_name(MW_PRPL_OPT_BLIST_ACTION);
-  gaim_plugin_pref_set_label(pref, _("Buddy List Storage Mode"));
+  pref = purple_plugin_pref_new_with_label(_("Remotely Stored Buddy List"));
+  purple_plugin_pref_frame_add(frame, pref);
 
-  gaim_plugin_pref_set_type(pref, GAIM_PLUGIN_PREF_CHOICE);
-  gaim_plugin_pref_add_choice(pref, _("Local Buddy List Only"),
+
+  pref = purple_plugin_pref_new_with_name(MW_PRPL_OPT_BLIST_ACTION);
+  purple_plugin_pref_set_label(pref, _("Buddy List Storage Mode"));
+
+  purple_plugin_pref_set_type(pref, PURPLE_PLUGIN_PREF_CHOICE);
+  purple_plugin_pref_add_choice(pref, _("Local Buddy List Only"),
 			      GINT_TO_POINTER(blist_choice_LOCAL));
-  gaim_plugin_pref_add_choice(pref, _("Merge List from Server"),
+  purple_plugin_pref_add_choice(pref, _("Merge List from Server"),
 			      GINT_TO_POINTER(blist_choice_MERGE));
-  gaim_plugin_pref_add_choice(pref, _("Merge and Save List to Server"),
+  purple_plugin_pref_add_choice(pref, _("Merge and Save List to Server"),
 			      GINT_TO_POINTER(blist_choice_STORE));
-  gaim_plugin_pref_add_choice(pref, _("Synchronize List with Server"),
+  purple_plugin_pref_add_choice(pref, _("Synchronize List with Server"),
 			      GINT_TO_POINTER(blist_choice_SYNCH));
 
-  gaim_plugin_pref_frame_add(frame, pref);
+  purple_plugin_pref_frame_add(frame, pref);
 
   return frame;
 }
 
 
-static GaimPluginUiInfo mw_plugin_ui_info = {
-  .get_plugin_pref_frame = mw_plugin_get_plugin_pref_frame,
+static PurplePluginUiInfo mw_plugin_ui_info = {
+  mw_plugin_get_plugin_pref_frame,
+  0,    /* page_num */
+  NULL, /* frame */
+  NULL,
+  NULL,
+  NULL,
+  NULL
 };
 
 
-static void st_import_action_cb(GaimConnection *gc, char *filename) {
+static void st_import_action_cb(PurpleConnection *gc, char *filename) {
   struct mwSametimeList *l;
 
   FILE *file;
@@ -5219,25 +5265,26 @@ static void st_import_action_cb(GaimConnection *gc, char *filename) {
 
 
 /** prompts for a file to import blist from */
-static void st_import_action(GaimPluginAction *act) {
-  GaimConnection *gc;
-  GaimAccount *account;
+static void st_import_action(PurplePluginAction *act) {
+  PurpleConnection *gc;
+  PurpleAccount *account;
   char *title;
 
   gc = act->context;
-  account = gaim_connection_get_account(gc);
+  account = purple_connection_get_account(gc);
   title = g_strdup_printf(_("Import Sametime List for Account %s"),
-			  gaim_account_get_username(account));
+			  purple_account_get_username(account));
 
-  gaim_request_file(gc, title, NULL, FALSE,
+  purple_request_file(gc, title, NULL, FALSE,
 		    G_CALLBACK(st_import_action_cb), NULL,
+		    account, NULL, NULL,
 		    gc);
 
   g_free(title);
 }
 
 
-static void st_export_action_cb(GaimConnection *gc, char *filename) {
+static void st_export_action_cb(PurpleConnection *gc, char *filename) {
   struct mwSametimeList *l;
   char *str;
   FILE *file;
@@ -5258,18 +5305,19 @@ static void st_export_action_cb(GaimConnection *gc, char *filename) {
 
 
 /** prompts for a file to export blist to */
-static void st_export_action(GaimPluginAction *act) {
-  GaimConnection *gc;
-  GaimAccount *account;
+static void st_export_action(PurplePluginAction *act) {
+  PurpleConnection *gc;
+  PurpleAccount *account;
   char *title;
 
   gc = act->context;
-  account = gaim_connection_get_account(gc);
+  account = purple_connection_get_account(gc);
   title = g_strdup_printf(_("Export Sametime List for Account %s"),
-			  gaim_account_get_username(account));
+			  purple_account_get_username(account));
 
-  gaim_request_file(gc, title, NULL, TRUE,
+  purple_request_file(gc, title, NULL, TRUE,
 		    G_CALLBACK(st_export_action_cb), NULL,
+			account, NULL, NULL,
 		    gc);
 
   g_free(title);
@@ -5277,19 +5325,19 @@ static void st_export_action(GaimPluginAction *act) {
 
 
 static void remote_group_multi_cleanup(gpointer ignore,
-				       GaimRequestFields *fields) {
-  
-  GaimRequestField *f;
-  const GList *l;
+				       PurpleRequestFields *fields) {
 
-  f = gaim_request_fields_get_field(fields, "group");
-  l = gaim_request_field_list_get_items(f);
+  PurpleRequestField *f;
+  GList *l;
+
+  f = purple_request_fields_get_field(fields, "group");
+  l = purple_request_field_list_get_items(f);
 
   for(; l; l = l->next) {
     const char *i = l->data;
     struct named_id *res;
 
-    res = gaim_request_field_list_get_data(f, i);
+    res = purple_request_field_list_get_data(f, i);
 
     g_free(res->id);
     g_free(res->name);
@@ -5298,21 +5346,21 @@ static void remote_group_multi_cleanup(gpointer ignore,
 }
 
 
-static void remote_group_done(struct mwGaimPluginData *pd,
+static void remote_group_done(struct mwPurplePluginData *pd,
 			      const char *id, const char *name) {
-  GaimConnection *gc;
-  GaimAccount *acct;
-  GaimGroup *group;
-  GaimBlistNode *gn;
+  PurpleConnection *gc;
+  PurpleAccount *acct;
+  PurpleGroup *group;
+  PurpleBlistNode *gn;
   const char *owner;
 
   g_return_if_fail(pd != NULL);
 
   gc = pd->gc;
-  acct = gaim_connection_get_account(gc);
-  
+  acct = purple_connection_get_account(gc);
+
   /* collision checking */
-  group = gaim_find_group(name);
+  group = purple_find_group(name);
   if(group) {
     const char *msgA;
     const char *msgB;
@@ -5322,40 +5370,40 @@ static void remote_group_done(struct mwGaimPluginData *pd,
     msgB = _("A group named '%s' already exists in your buddy list.");
     msg = g_strdup_printf(msgB, name);
 
-    gaim_notify_error(gc, _("Unable to add group"), msgA, msg);
+    purple_notify_error(gc, _("Unable to add group"), msgA, msg);
 
     g_free(msg);
     return;
   }
 
-  group = gaim_group_new(name);
-  gn = (GaimBlistNode *) group;
+  group = purple_group_new(name);
+  gn = (PurpleBlistNode *) group;
 
-  owner = gaim_account_get_username(acct);
+  owner = purple_account_get_username(acct);
 
-  gaim_blist_node_set_string(gn, GROUP_KEY_NAME, id);
-  gaim_blist_node_set_int(gn, GROUP_KEY_TYPE, mwSametimeGroup_DYNAMIC);
-  gaim_blist_node_set_string(gn, GROUP_KEY_OWNER, owner);
-  gaim_blist_add_group(group, NULL);
+  purple_blist_node_set_string(gn, GROUP_KEY_NAME, id);
+  purple_blist_node_set_int(gn, GROUP_KEY_TYPE, mwSametimeGroup_DYNAMIC);
+  purple_blist_node_set_string(gn, GROUP_KEY_OWNER, owner);
+  purple_blist_add_group(group, NULL);
 
   group_add(pd, group);
   blist_schedule(pd);
 }
 
 
-static void remote_group_multi_cb(struct mwGaimPluginData *pd,
-				  GaimRequestFields *fields) {
-  GaimRequestField *f;
-  const GList *l;
+static void remote_group_multi_cb(struct mwPurplePluginData *pd,
+				  PurpleRequestFields *fields) {
+  PurpleRequestField *f;
+  GList *l;
 
-  f = gaim_request_fields_get_field(fields, "group");
-  l = gaim_request_field_list_get_selected(f);
+  f = purple_request_fields_get_field(fields, "group");
+  l = purple_request_field_list_get_selected(f);
 
   if(l) {
     const char *i = l->data;
     struct named_id *res;
 
-    res = gaim_request_field_list_get_data(f, i);
+    res = purple_request_field_list_get_data(f, i);
     remote_group_done(pd, res->id, res->name);
   }
 
@@ -5364,26 +5412,26 @@ static void remote_group_multi_cb(struct mwGaimPluginData *pd,
 
 
 static void remote_group_multi(struct mwResolveResult *result,
-			       struct mwGaimPluginData *pd) {
+			       struct mwPurplePluginData *pd) {
 
-  GaimRequestFields *fields;
-  GaimRequestFieldGroup *g;
-  GaimRequestField *f;
+  PurpleRequestFields *fields;
+  PurpleRequestFieldGroup *g;
+  PurpleRequestField *f;
   GList *l;
   const char *msgA;
   const char *msgB;
   char *msg;
 
-  GaimConnection *gc = pd->gc;
+  PurpleConnection *gc = pd->gc;
 
-  fields = gaim_request_fields_new();
+  fields = purple_request_fields_new();
 
-  g = gaim_request_field_group_new(NULL);
-  gaim_request_fields_add_group(fields, g);
+  g = purple_request_field_group_new(NULL);
+  purple_request_fields_add_group(fields, g);
 
-  f = gaim_request_field_list_new("group", _("Possible Matches"));
-  gaim_request_field_list_set_multi_select(f, FALSE);
-  gaim_request_field_set_required(f, TRUE);
+  f = purple_request_field_list_new("group", _("Possible Matches"));
+  purple_request_field_list_set_multi_select(f, FALSE);
+  purple_request_field_set_required(f, TRUE);
 
   for(l = result->matches; l; l = l->next) {
     struct mwResolveMatch *match = l->data;
@@ -5392,10 +5440,10 @@ static void remote_group_multi(struct mwResolveResult *result,
     res->id = g_strdup(match->id);
     res->name = g_strdup(match->name);
 
-    gaim_request_field_list_add(f, res->name, res);
+    purple_request_field_list_add_icon(f, res->name, NULL, res);
   }
 
-  gaim_request_field_group_add_field(g, f);
+  purple_request_field_group_add_field(g, f);
 
   msgA = _("Notes Address Book group results");
   msgB = _("The identifier '%s' may possibly refer to any of the following"
@@ -5403,10 +5451,11 @@ static void remote_group_multi(struct mwResolveResult *result,
 	  " the list below to add it to your buddy list.");
   msg = g_strdup_printf(msgB, result->name);
 
-  gaim_request_fields(gc, _("Select Notes Address Book"),
+  purple_request_fields(gc, _("Select Notes Address Book"),
 		      msgA, msg, fields,
 		      _("Add Group"), G_CALLBACK(remote_group_multi_cb),
 		      _("Cancel"), G_CALLBACK(remote_group_multi_cleanup),
+			  purple_connection_get_account(gc), result->name, NULL,
 		      pd);
 
   g_free(msg);
@@ -5419,8 +5468,8 @@ static void remote_group_resolved(struct mwServiceResolve *srvc,
 
   struct mwResolveResult *res = NULL;
   struct mwSession *session;
-  struct mwGaimPluginData *pd;
-  GaimConnection *gc;
+  struct mwPurplePluginData *pd;
+  PurpleConnection *gc;
 
   session = mwService_getSession(MW_SERVICE(srvc));
   g_return_if_fail(session != NULL);
@@ -5430,7 +5479,7 @@ static void remote_group_resolved(struct mwServiceResolve *srvc,
 
   gc = pd->gc;
   g_return_if_fail(gc != NULL);
-  
+
   if(!code && results) {
     res = results->data;
 
@@ -5451,15 +5500,15 @@ static void remote_group_resolved(struct mwServiceResolve *srvc,
 	    " groups in your Sametime community.");
     msg = g_strdup_printf(msgB, res->name);
 
-    gaim_notify_error(gc, _("Unable to add group"), msgA, msg);
+    purple_notify_error(gc, _("Unable to add group"), msgA, msg);
 
     g_free(msg);
   }
 }
 
 
-static void remote_group_action_cb(GaimConnection *gc, const char *name) {
-  struct mwGaimPluginData *pd;
+static void remote_group_action_cb(PurpleConnection *gc, const char *name) {
+  struct mwPurplePluginData *pd;
   struct mwServiceResolve *srvc;
   GList *query;
   enum mwResolveFlag flags;
@@ -5470,7 +5519,7 @@ static void remote_group_action_cb(GaimConnection *gc, const char *name) {
 
   query = g_list_prepend(NULL, (char *) name);
   flags = mwResolveFlag_FIRST | mwResolveFlag_GROUPS;
-  
+
   req = mwServiceResolve_resolve(srvc, query, flags, remote_group_resolved,
 				 NULL, NULL);
   g_list_free(query);
@@ -5481,8 +5530,8 @@ static void remote_group_action_cb(GaimConnection *gc, const char *name) {
 }
 
 
-static void remote_group_action(GaimPluginAction *act) {
-  GaimConnection *gc;
+static void remote_group_action(PurplePluginAction *act) {
+  PurpleConnection *gc;
   const char *msgA;
   const char *msgB;
 
@@ -5492,37 +5541,38 @@ static void remote_group_action(GaimPluginAction *act) {
   msgB = _("Enter the name of a Notes Address Book group in the field below"
 	  " to add the group and its members to your buddy list.");
 
-  gaim_request_input(gc, _("Add Group"), msgA, msgB, NULL,
+  purple_request_input(gc, _("Add Group"), msgA, msgB, NULL,
 		     FALSE, FALSE, NULL,
 		     _("Add"), G_CALLBACK(remote_group_action_cb),
 		     _("Cancel"), NULL,
+			 purple_connection_get_account(gc), NULL, NULL,
 		     gc);
 }
 
 
 static void search_notify(struct mwResolveResult *result,
-			  GaimConnection *gc) {
+			  PurpleConnection *gc) {
   GList *l;
   const char *msgA;
   const char *msgB;
   char *msg1;
   char *msg2;
 
-  GaimNotifySearchResults *sres;
-  GaimNotifySearchColumn *scol;
+  PurpleNotifySearchResults *sres;
+  PurpleNotifySearchColumn *scol;
 
-  sres = gaim_notify_searchresults_new();
+  sres = purple_notify_searchresults_new();
 
-  scol = gaim_notify_searchresults_column_new(_("User Name"));
-  gaim_notify_searchresults_column_add(sres, scol);
+  scol = purple_notify_searchresults_column_new(_("User Name"));
+  purple_notify_searchresults_column_add(sres, scol);
 
-  scol = gaim_notify_searchresults_column_new(_("Sametime ID"));
-  gaim_notify_searchresults_column_add(sres, scol);
+  scol = purple_notify_searchresults_column_new(_("Sametime ID"));
+  purple_notify_searchresults_column_add(sres, scol);
 
-  gaim_notify_searchresults_button_add(sres, GAIM_NOTIFY_BUTTON_IM,
+  purple_notify_searchresults_button_add(sres, PURPLE_NOTIFY_BUTTON_IM,
 				       notify_im);
 
-  gaim_notify_searchresults_button_add(sres, GAIM_NOTIFY_BUTTON_ADD,
+  purple_notify_searchresults_button_add(sres, PURPLE_NOTIFY_BUTTON_ADD,
 				       notify_add);
 
   for(l = result->matches; l; l = l->next) {
@@ -5531,10 +5581,10 @@ static void search_notify(struct mwResolveResult *result,
 
     if(!match->id || !match->name)
       continue;
-    
+
     row = g_list_append(row, g_strdup(match->name));
     row = g_list_append(row, g_strdup(match->id));
-    gaim_notify_searchresults_row_add(sres, row);
+    purple_notify_searchresults_row_add(sres, row);
   }
 
   msgA = _("Search results for '%s'");
@@ -5545,7 +5595,7 @@ static void search_notify(struct mwResolveResult *result,
   msg1 = g_strdup_printf(msgA, result->name);
   msg2 = g_strdup_printf(msgB, result->name);
 
-  gaim_notify_searchresults(gc, _("Search Results"),
+  purple_notify_searchresults(gc, _("Search Results"),
 			    msg1, msg2, sres, notify_close, NULL);
 
   g_free(msg1);
@@ -5557,7 +5607,7 @@ static void search_resolved(struct mwServiceResolve *srvc,
 			    guint32 id, guint32 code, GList *results,
 			    gpointer b) {
 
-  GaimConnection *gc = b;
+  PurpleConnection *gc = b;
   struct mwResolveResult *res = NULL;
 
   if(results) res = results->data;
@@ -5573,17 +5623,17 @@ static void search_resolved(struct mwServiceResolve *srvc,
     msgA = _("No matches");
     msgB = _("The identifier '%s' did not match any users in your"
 	     " Sametime community.");
-    msg = g_strdup_printf(msgB, NSTR(res->name));
+    msg = g_strdup_printf(msgB, (res && res->name) ? NSTR(res->name) : "");
 
-    gaim_notify_error(gc, _("No Matches"), msgA, msg);
+    purple_notify_error(gc, _("No Matches"), msgA, msg);
 
     g_free(msg);
   }
 }
 
 
-static void search_action_cb(GaimConnection *gc, const char *name) {
-  struct mwGaimPluginData *pd;
+static void search_action_cb(PurpleConnection *gc, const char *name) {
+  struct mwPurplePluginData *pd;
   struct mwServiceResolve *srvc;
   GList *query;
   enum mwResolveFlag flags;
@@ -5591,7 +5641,7 @@ static void search_action_cb(GaimConnection *gc, const char *name) {
 
   pd = gc->proto_data;
   srvc = pd->srvc_resolve;
-  
+
   query = g_list_prepend(NULL, (char *) name);
   flags = mwResolveFlag_FIRST | mwResolveFlag_USERS;
 
@@ -5605,8 +5655,8 @@ static void search_action_cb(GaimConnection *gc, const char *name) {
 }
 
 
-static void search_action(GaimPluginAction *act) {
-  GaimConnection *gc;
+static void search_action(PurplePluginAction *act) {
+  PurpleConnection *gc;
   const char *msgA;
   const char *msgB;
 
@@ -5616,31 +5666,32 @@ static void search_action(GaimPluginAction *act) {
   msgB = _("Enter a name or partial ID in the field below to search"
 	   " for matching users in your Sametime community.");
 
-  gaim_request_input(gc, _("User Search"), msgA, msgB, NULL,
+  purple_request_input(gc, _("User Search"), msgA, msgB, NULL,
 		     FALSE, FALSE, NULL,
 		     _("Search"), G_CALLBACK(search_action_cb),
 		     _("Cancel"), NULL,
-		     gc);
+			 purple_connection_get_account(gc), NULL, NULL,
+			 gc);
 }
 
 
-static GList *mw_plugin_actions(GaimPlugin *plugin, gpointer context) {
-  GaimPluginAction *act;
+static GList *mw_plugin_actions(PurplePlugin *plugin, gpointer context) {
+  PurplePluginAction *act;
   GList *l = NULL;
 
-  act = gaim_plugin_action_new(_("Import Sametime List..."),
+  act = purple_plugin_action_new(_("Import Sametime List..."),
 			       st_import_action);
   l = g_list_append(l, act);
 
-  act = gaim_plugin_action_new(_("Export Sametime List..."),
+  act = purple_plugin_action_new(_("Export Sametime List..."),
 			       st_export_action);
   l = g_list_append(l, act);
 
-  act = gaim_plugin_action_new(_("Add Notes Address Book Group..."),
+  act = purple_plugin_action_new(_("Add Notes Address Book Group..."),
 			       remote_group_action);
   l = g_list_append(l, act);
 
-  act = gaim_plugin_action_new(_("User Search..."),
+  act = purple_plugin_action_new(_("User Search..."),
 			       search_action);
   l = g_list_append(l, act);
 
@@ -5648,45 +5699,54 @@ static GList *mw_plugin_actions(GaimPlugin *plugin, gpointer context) {
 }
 
 
-static gboolean mw_plugin_load(GaimPlugin *plugin) {
+static gboolean mw_plugin_load(PurplePlugin *plugin) {
   return TRUE;
 }
 
 
-static gboolean mw_plugin_unload(GaimPlugin *plugin) {
+static gboolean mw_plugin_unload(PurplePlugin *plugin) {
   return TRUE;
 }
 
 
-static void mw_plugin_destroy(GaimPlugin *plugin) {
+static void mw_plugin_destroy(PurplePlugin *plugin) {
   g_log_remove_handler(G_LOG_DOMAIN, log_handler[0]);
   g_log_remove_handler("meanwhile", log_handler[1]);
 }
 
+static PurplePluginInfo mw_plugin_info =
+{
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_PROTOCOL,                           /**< type           */
+	NULL,                                             /**< ui_requirement */
+	0,                                                /**< flags          */
+	NULL,                                             /**< dependencies   */
+	PURPLE_PRIORITY_DEFAULT,                          /**< priority       */
 
-static GaimPluginInfo mw_plugin_info = {
-  .magic           = GAIM_PLUGIN_MAGIC,
-  .major_version   = GAIM_MAJOR_VERSION,
-  .minor_version   = GAIM_MINOR_VERSION,
-  .type            = GAIM_PLUGIN_PROTOCOL,
-  .ui_requirement  = NULL,
-  .flags           = 0,
-  .dependencies    = NULL,
-  .priority        = GAIM_PRIORITY_DEFAULT,
-  .id              = PLUGIN_ID,
-  .name            = PLUGIN_NAME,
-  .version         = VERSION,
-  .summary         = PLUGIN_SUMMARY,
-  .description     = PLUGIN_DESC,
-  .author          = PLUGIN_AUTHOR,
-  .homepage        = PLUGIN_HOMEPAGE,
-  .load            = mw_plugin_load,
-  .unload          = mw_plugin_unload,
-  .destroy         = mw_plugin_destroy,
-  .ui_info         = NULL,
-  .extra_info      = &mw_prpl_info,
-  .prefs_info      = &mw_plugin_ui_info,
-  .actions         = mw_plugin_actions,
+	PLUGIN_ID,                                        /**< id             */
+	PLUGIN_NAME,                                      /**< name           */
+	DISPLAY_VERSION,                                  /**< version        */
+	PLUGIN_SUMMARY,                                   /**< summary        */
+	PLUGIN_DESC,                                      /**<  description    */
+	PLUGIN_AUTHOR,                                    /**< author         */
+	PLUGIN_HOMEPAGE,                                  /**< homepage       */
+
+	mw_plugin_load,                                   /**< load           */
+	mw_plugin_unload,                                 /**< unload         */
+	mw_plugin_destroy,                                /**< destroy        */
+
+	NULL,                                             /**< ui_info        */
+	&mw_prpl_info,                                    /**< extra_info     */
+	&mw_plugin_ui_info,                               /**< prefs_info     */
+	mw_plugin_actions,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 
@@ -5695,41 +5755,42 @@ static void mw_log_handler(const gchar *domain, GLogLevelFlags flags,
 
   if(! (msg && *msg)) return;
 
-  /* handle g_log requests via gaim's built-in debug logging */
+  /* handle g_log requests via purple's built-in debug logging */
   if(flags & G_LOG_LEVEL_ERROR) {
-    gaim_debug_error(domain, "%s\n", msg);
+    purple_debug_error(domain, "%s\n", msg);
 
   } else if(flags & G_LOG_LEVEL_WARNING) {
-    gaim_debug_warning(domain, "%s\n", msg);
+    purple_debug_warning(domain, "%s\n", msg);
 
   } else {
-    gaim_debug_info(domain, "%s\n", msg);
+    purple_debug_info(domain, "%s\n", msg);
   }
 }
 
 
-static void mw_plugin_init(GaimPlugin *plugin) {
-  GaimAccountOption *opt;
+static void mw_plugin_init(PurplePlugin *plugin) {
+  PurpleAccountUserSplit *split;
+  PurpleAccountOption *opt;
   GList *l = NULL;
 
   GLogLevelFlags logflags =
     G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION;
 
   /* set up the preferences */
-  gaim_prefs_add_none(MW_PRPL_OPT_BASE);
-  gaim_prefs_add_int(MW_PRPL_OPT_BLIST_ACTION, BLIST_CHOICE_DEFAULT);
+  purple_prefs_add_none(MW_PRPL_OPT_BASE);
+  purple_prefs_add_int(MW_PRPL_OPT_BLIST_ACTION, BLIST_CHOICE_DEFAULT);
+
+  /* set up account ID as user:server */
+  split = purple_account_user_split_new(_("Server"),
+                                        MW_PLUGIN_DEFAULT_HOST, ':');
+  mw_prpl_info.user_splits = g_list_append(mw_prpl_info.user_splits, split);
 
   /* remove dead preferences */
-  gaim_prefs_remove(MW_PRPL_OPT_PSYCHIC);
-  gaim_prefs_remove(MW_PRPL_OPT_SAVE_DYNAMIC);
-
-  /* host to connect to */
-  opt = gaim_account_option_string_new(_("Server"), MW_KEY_HOST,
-				       MW_PLUGIN_DEFAULT_HOST);
-  l = g_list_append(l, opt);
+  purple_prefs_remove(MW_PRPL_OPT_PSYCHIC);
+  purple_prefs_remove(MW_PRPL_OPT_SAVE_DYNAMIC);
 
   /* port to connect to */
-  opt = gaim_account_option_int_new(_("Port"), MW_KEY_PORT,
+  opt = purple_account_option_int_new(_("Port"), MW_KEY_PORT,
 				    MW_PLUGIN_DEFAULT_PORT);
   l = g_list_append(l, opt);
 
@@ -5739,33 +5800,33 @@ static void mw_plugin_init(GaimPlugin *plugin) {
     gboolean b = FALSE;
     const char *label = _("Force login (ignore server redirects)");
 
-    if(gaim_prefs_exists(MW_PRPL_OPT_FORCE_LOGIN))
-      b = gaim_prefs_get_bool(MW_PRPL_OPT_FORCE_LOGIN);
+    if(purple_prefs_exists(MW_PRPL_OPT_FORCE_LOGIN))
+      b = purple_prefs_get_bool(MW_PRPL_OPT_FORCE_LOGIN);
 
-    opt = gaim_account_option_bool_new(label, MW_KEY_FORCE, b);
+    opt = purple_account_option_bool_new(label, MW_KEY_FORCE, b);
     l = g_list_append(l, opt);
   }
 
   /* pretend to be Sametime Connect */
-  opt = gaim_account_option_bool_new(_("Hide client identity"),
+  opt = purple_account_option_bool_new(_("Hide client identity"),
 				     MW_KEY_FAKE_IT, FALSE);
   l = g_list_append(l, opt);
 
   mw_prpl_info.protocol_options = l;
   l = NULL;
 
-  /* forward all our g_log messages to gaim. Generally all the logging
-     calls are using gaim_log directly, but the g_return macros will
+  /* forward all our g_log messages to purple. Generally all the logging
+     calls are using purple_log directly, but the g_return macros will
      get caught here */
   log_handler[0] = g_log_set_handler(G_LOG_DOMAIN, logflags,
 				     mw_log_handler, NULL);
-  
-  /* redirect meanwhile's logging to gaim's */
+
+  /* redirect meanwhile's logging to purple's */
   log_handler[1] = g_log_set_handler("meanwhile", logflags,
 				     mw_log_handler, NULL);
 }
 
 
-GAIM_INIT_PLUGIN(sametime, mw_plugin_init, mw_plugin_info);
+PURPLE_INIT_PLUGIN(sametime, mw_plugin_init, mw_plugin_info);
 /* The End. */
 

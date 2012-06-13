@@ -1,8 +1,9 @@
 /**
  * @file gtkdnd-hints.h GTK+ Drag-and-Drop arrow hints
- * @ingroup gtkui
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * @ingroup pidgin
+ */
+
+/* Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -18,13 +19,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
-#ifndef _GAIM_DND_HINTS_H_
-#define _GAIM_DND_HINTS_H_
+#ifndef _PIDGIN_DND_HINTS_H_
+#define _PIDGIN_DND_HINTS_H_
 
 #include <glib.h>
-#include <gtk/gtkwidget.h>
+#include <gtk/gtk.h>
 
 /**
  * Conversation drag-and-drop arrow types.
@@ -83,4 +84,4 @@ void dnd_hints_hide_all(void);
 void dnd_hints_show_relative(DndHintWindowId id, GtkWidget *widget,
 							 DndHintPosition horiz, DndHintPosition vert);
 
-#endif /* _GAIM_DND_HINTS_H_ */
+#endif /* _PIDGIN_DND_HINTS_H_ */

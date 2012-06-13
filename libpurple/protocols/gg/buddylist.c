@@ -1,7 +1,7 @@
 /**
  * @file buddylist.c
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2005  Bartosz Oler <bartosz@bzimage.us>
  *
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 
@@ -27,71 +27,64 @@
 #include "gg-utils.h"
 #include "buddylist.h"
 
+#define F_FIRSTNAME 0
+#define F_LASTNAME 1
+/* #define F_ 2 */
+#define F_NICKNAME 3
+#define F_PHONE 4
+#define F_GROUP 5
+#define F_UIN 6
 
-/* void ggp_buddylist_send(GaimConnection *gc) {{{ */
-void ggp_buddylist_send(GaimConnection *gc)
+/* void ggp_buddylist_send(PurpleConnection *gc) {{{ */
+void ggp_buddylist_send(PurpleConnection *gc)
 {
 	GGPInfo *info = gc->proto_data;
-	GaimAccount *account = gaim_connection_get_account(gc);
+	PurpleAccount *account = purple_connection_get_account(gc);
+	GSList *buddies;
+	uin_t *userlist;
+	gchar *types;
+	int i = 0, ret = 0;
+	int size;
 
-	GaimBuddyList *blist;
-	GaimBlistNode *gnode, *cnode, *bnode;
-	GaimBuddy *buddy;
-	uin_t *userlist = NULL;
-	gchar *types = NULL;
-	int size = 0;
+	buddies = purple_find_buddies(account, NULL);
 
-	if ((blist = gaim_get_blist()) == NULL)
-	    return;
+	size = g_slist_length(buddies);
+	userlist = g_new(uin_t, size);
+	types    = g_new(gchar, size);
 
-	for (gnode = blist->root; gnode != NULL; gnode = gnode->next) {
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
-			continue;
+	for (buddies = purple_find_buddies(account, NULL); buddies;
+			buddies = g_slist_delete_link(buddies, buddies), ++i)
+	{
+		PurpleBuddy *buddy = buddies->data;
+		const gchar *name = purple_buddy_get_name(buddy);
 
-		for (cnode = gnode->child; cnode != NULL; cnode = cnode->next) {
-			if (!GAIM_BLIST_NODE_IS_CONTACT(cnode))
-				continue;
-
-			for (bnode = cnode->child; bnode != NULL; bnode = bnode->next) {
-				if (!GAIM_BLIST_NODE_IS_BUDDY(bnode))
-					continue;
-
-				buddy = (GaimBuddy *)bnode;
-
-				if (buddy->account != account)
-					continue;
-
-				size++;
-				userlist = (uin_t *) g_renew(uin_t, userlist, size);
-				types    = (gchar *) g_renew(gchar, types, size);
-				userlist[size - 1] = ggp_str_to_uin(buddy->name);
-				types[size - 1]    = GG_USER_NORMAL;
-				gaim_debug_info("gg", "ggp_buddylist_send: adding %d\n",
-						userlist[size - 1]);
-			}
-		}
+		userlist[i] = ggp_str_to_uin(name);
+		types[i]    = GG_USER_NORMAL;
+		purple_debug_info("gg", "ggp_buddylist_send: adding %d\n",
+		                  userlist[i]);
 	}
 
+	ret = gg_notify_ex(info->session, userlist, types, size);
+	purple_debug_info("gg", "send: ret=%d; size=%d\n", ret, size);
+
 	if (userlist) {
-		int ret = gg_notify_ex(info->session, userlist, types, size);
 		g_free(userlist);
 		g_free(types);
-
-		gaim_debug_info("gg", "send: ret=%d; size=%d\n", ret, size);
 	}
 }
 /* }}} */
 
-/* void ggp_buddylist_load(GaimConnection *gc, char *buddylist) {{{ */
-void ggp_buddylist_load(GaimConnection *gc, char *buddylist)
+/* void ggp_buddylist_load(PurpleConnection *gc, char *buddylist) {{{ */
+void ggp_buddylist_load(PurpleConnection *gc, char *buddylist)
 {
-	GaimBuddy *buddy;
-	GaimGroup *group;
+	PurpleBuddy *buddy;
+	PurpleGroup *group;
 	gchar **users_tbl;
 	int i;
+	char *utf8buddylist = charset_convert(buddylist, "CP1250", "UTF-8");
 
-	/* Don't limit a number of records in a buddylist. */
-	users_tbl = g_strsplit(buddylist, "\r\n", -1);
+	/* Don't limit the number of records in a buddylist. */
+	users_tbl = g_strsplit(utf8buddylist, "\r\n", -1);
 
 	for (i = 0; users_tbl[i] != NULL; i++) {
 		gchar **data_tbl;
@@ -102,39 +95,38 @@ void ggp_buddylist_load(GaimConnection *gc, char *buddylist)
 
 		data_tbl = g_strsplit(users_tbl[i], ";", 8);
 		if (ggp_array_size(data_tbl) < 8) {
-			gaim_debug_warning("gg", 
+			purple_debug_warning("gg",
 				"Something is wrong on line %d of the buddylist. Skipping.\n",
 				i + 1);
 			continue;
 		}
 
-		show = charset_convert(data_tbl[3], "CP1250", "UTF-8");
-		name = data_tbl[6];
-		if ('\0' == *name) {
-			gaim_debug_warning("gg",
-				"Something is wrong on line %d of the buddylist. Skipping.\n",
+		show = data_tbl[F_NICKNAME];
+		name = data_tbl[F_UIN];
+		if ('\0' == *name || !atol(name)) {
+			purple_debug_warning("gg",
+				"Identifier on line %d of the buddylist is not a number. Skipping.\n",
 				i + 1);
 			continue;
 		}
 
 		if ('\0' == *show) {
-			show = g_strdup(name);
+			show = name;
 		}
 
-		gaim_debug_info("gg", "got buddy: name=%s show=%s\n", name, show);
+		purple_debug_info("gg", "got buddy: name=%s; show=%s\n", name, show);
 
-		if (gaim_find_buddy(gaim_connection_get_account(gc), name)) {
-			g_free(show);
+		if (purple_find_buddy(purple_connection_get_account(gc), name)) {
 			g_strfreev(data_tbl);
 			continue;
 		}
 
 		g = g_strdup("Gadu-Gadu");
 
-		if ('\0' != data_tbl[5]) {
+		if ('\0' != data_tbl[F_GROUP]) {
 			/* XXX: Probably buddy should be added to all the groups. */
 			/* Hard limit to at most 50 groups */
-			gchar **group_tbl = g_strsplit(data_tbl[5], ",", 50);
+			gchar **group_tbl = g_strsplit(data_tbl[F_GROUP], ",", 50);
 			if (ggp_array_size(group_tbl) > 0) {
 				g_free(g);
 				g = g_strdup(group_tbl[0]);
@@ -142,126 +134,53 @@ void ggp_buddylist_load(GaimConnection *gc, char *buddylist)
 			g_strfreev(group_tbl);
 		}
 
-		buddy = gaim_buddy_new(gaim_connection_get_account(gc), name,
-				       strlen(show) ? show : NULL);
+		buddy = purple_buddy_new(purple_connection_get_account(gc), name,
+					 strlen(show) ? show : NULL);
 
-		if (!(group = gaim_find_group(g))) {
-			group = gaim_group_new(g);
-			gaim_blist_add_group(group, NULL);
+		if (!(group = purple_find_group(g))) {
+			group = purple_group_new(g);
+			purple_blist_add_group(group, NULL);
 		}
 
-		gaim_blist_add_buddy(buddy, NULL, group, NULL);
+		purple_blist_add_buddy(buddy, NULL, group, NULL);
 		g_free(g);
 
-		g_free(show);
 		g_strfreev(data_tbl);
 	}
 	g_strfreev(users_tbl);
+	g_free(utf8buddylist);
 
 	ggp_buddylist_send(gc);
-
 }
 /* }}} */
 
-/* void ggp_buddylist_offline(GaimConnection *gc) {{{ */
-void ggp_buddylist_offline(GaimConnection *gc)
+/* char *ggp_buddylist_dump(PurpleAccount *account) {{{ */
+char *ggp_buddylist_dump(PurpleAccount *account)
 {
-	GaimAccount *account = gaim_connection_get_account(gc);
-	GaimBuddyList *blist;
-	GaimBlistNode *gnode, *cnode, *bnode;
-	GaimBuddy *buddy;
-
-	if ((blist = gaim_get_blist()) == NULL)
-		return;
-
-	for (gnode = blist->root; gnode != NULL; gnode = gnode->next) {
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
-			continue;
-
-		for (cnode = gnode->child; cnode != NULL; cnode = cnode->next) {
-			if (!GAIM_BLIST_NODE_IS_CONTACT(cnode))
-				continue;
-
-			for (bnode = cnode->child; bnode != NULL; bnode = bnode->next) {
-				if (!GAIM_BLIST_NODE_IS_BUDDY(bnode))
-					continue;
-
-				buddy = (GaimBuddy *)bnode;
-
-				if (buddy->account != account)
-					continue;
-
-				gaim_prpl_got_user_status(
-					gaim_connection_get_account(gc),
-					buddy->name, "offline", NULL);
-
-				gaim_debug_info("gg",
-					"ggp_buddylist_offline: gone: %s\n",
-					buddy->name);
-			}
-		}
-	}
-}
-/* }}} */
-
-/* char *ggp_buddylist_dump(GaimAccount *account) {{{ */
-char *ggp_buddylist_dump(GaimAccount *account)
-{
-	GaimBuddyList *blist;
-	GaimBlistNode *gnode, *cnode, *bnode;
-	GaimGroup *group;
-	GaimBuddy *buddy;
-
-	char *buddylist = g_strdup("");
+	GSList *buddies;
+	GString *buddylist = g_string_sized_new(1024);
 	char *ptr;
 
-	if ((blist = gaim_get_blist()) == NULL)
-		return NULL;
+	for (buddies = purple_find_buddies(account, NULL); buddies;
+			buddies = g_slist_delete_link(buddies, buddies)) {
+		PurpleBuddy *buddy = buddies->data;
+		PurpleGroup *group = purple_buddy_get_group(buddy);
+		const char *bname = purple_buddy_get_name(buddy);
+		const char *gname = purple_group_get_name(group);
+		const char *alias = purple_buddy_get_alias(buddy);
 
-	for (gnode = blist->root; gnode != NULL; gnode = gnode->next) {
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
-			continue;
+		if (alias == NULL)
+			alias = bname;
 
-		group = (GaimGroup *)gnode;
-
-		for (cnode = gnode->child; cnode != NULL; cnode = cnode->next) {
-			if (!GAIM_BLIST_NODE_IS_CONTACT(cnode))
-				continue;
-
-			for (bnode = cnode->child; bnode != NULL; bnode = bnode->next) {
-				gchar *newdata, *name, *alias, *gname;
-				gchar *cp_alias, *cp_gname;
-
-				if (!GAIM_BLIST_NODE_IS_BUDDY(bnode))
-					continue;
-
-				buddy = (GaimBuddy *)bnode;
-				if (buddy->account != account)
-					continue;
-
-				name = buddy->name;
-				alias = buddy->alias ? buddy->alias : buddy->name;
-				gname = group->name;
-
-				cp_gname = charset_convert(gname, "UTF-8", "CP1250");
-				cp_alias = charset_convert(alias, "UTF-8", "CP1250");
-				newdata = g_strdup_printf(
-						"%s;%s;%s;%s;%s;%s;%s;%s%s\r\n",
-						cp_alias, cp_alias, cp_alias, cp_alias,
-						"", cp_gname, name, "", "");
-
-				ptr = buddylist;
-				buddylist = g_strconcat(ptr, newdata, NULL);
-
-				g_free(newdata);
-				g_free(ptr);
-				g_free(cp_gname);
-				g_free(cp_alias);
-			}
-		}
+		g_string_append_printf(buddylist,
+				"%s;%s;%s;%s;%s;%s;%s;%s%s\r\n",
+				alias, alias, alias, alias,
+				"", gname, bname, "", "");
 	}
 
-	return buddylist;
+	ptr = charset_convert(buddylist->str, "UTF-8", "CP1250");
+	g_string_free(buddylist, TRUE);
+	return ptr;
 }
 /* }}} */
 
