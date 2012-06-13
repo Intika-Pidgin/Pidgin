@@ -1,7 +1,7 @@
 /**
  * @file cmds.c
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2003, Ethan Blanton <eblanton@cs.purdue.edu>
  *
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -34,17 +34,17 @@ static void irc_do_mode(struct irc_conn *irc, const char *target, const char *si
 
 int irc_cmd_default(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
-	GaimConversation *convo = gaim_find_conversation_with_account(GAIM_CONV_TYPE_ANY, target, irc->account);
+	PurpleConversation *convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, target, irc->account);
 	char *buf;
 
 	if (!convo)
 		return 1;
 
 	buf = g_strdup_printf(_("Unknown command: %s"), cmd);
-	if (gaim_conversation_get_type(convo) == GAIM_CONV_TYPE_IM)
-		gaim_conv_im_write(GAIM_CONV_IM(convo), "", buf, GAIM_MESSAGE_SYSTEM|GAIM_MESSAGE_NO_LOG, time(NULL));
+	if (purple_conversation_get_type(convo) == PURPLE_CONV_TYPE_IM)
+		purple_conv_im_write(PURPLE_CONV_IM(convo), "", buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
 	else
-		gaim_conv_chat_write(GAIM_CONV_CHAT(convo), "", buf, GAIM_MESSAGE_SYSTEM|GAIM_MESSAGE_NO_LOG, time(NULL));
+		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), "", buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
 	g_free(buf);
 
 	return 1;
@@ -55,8 +55,8 @@ int irc_cmd_away(struct irc_conn *irc, const char *cmd, const char *target, cons
 	char *buf, *message;
 
 	if (args[0] && strcmp(cmd, "back")) {
-		message = gaim_markup_strip_html(args[0]);
-		gaim_util_chrreplace(message, '\n', ' ');
+		message = purple_markup_strip_html(args[0]);
+		purple_util_chrreplace(message, '\n', ' ');
 		buf = irc_format(irc, "v:", "AWAY", message);
 		g_free(message);
 	} else {
@@ -68,12 +68,37 @@ int irc_cmd_away(struct irc_conn *irc, const char *cmd, const char *target, cons
 	return 0;
 }
 
+int irc_cmd_ctcp(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
+{
+	/* we have defined args as args[0] is target and args[1] is ctcp command */
+	char *buf;
+	GString *string;
+
+	/* check if we have args */
+	if (!args || !args[0] || !args[1])
+		return 0;
+
+	/* TODO:strip newlines or send each line as separate ctcp or something
+	 * actually, this shouldn't be done here but somewhere else since irc should support escaping newlines */
+
+	string = g_string_new(args[1]);
+	g_string_prepend_c (string,'\001');
+	g_string_append_c (string,'\001');
+	buf = irc_format(irc, "vn:", "PRIVMSG", args[0], string->str);
+	g_string_free(string,TRUE);
+
+	irc_send(irc, buf);
+	g_free(buf);
+
+	return 1;
+}
+
 int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
-	GaimConnection *gc = gaim_account_get_connection(irc->account);
+	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	char *action, *escaped, *dst, **newargs;
 	const char *src;
-	GaimConversation *convo;
+	PurpleConversation *convo;
 
 	if (!args || !args[0] || !gc)
 		return 0;
@@ -107,20 +132,20 @@ int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *targe
 	g_free(newargs[1]);
 	g_free(newargs);
 
-	convo = gaim_find_conversation_with_account(GAIM_CONV_TYPE_ANY, target, irc->account);
+	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, target, irc->account);
 	if (convo) {
 		escaped = g_markup_escape_text(args[0], -1);
 		action = g_strdup_printf("/me %s", escaped);
 		g_free(escaped);
 		if (action[strlen(action) - 1] == '\n')
 			action[strlen(action) - 1] = '\0';
-		if (gaim_conversation_get_type(convo) == GAIM_CONV_TYPE_CHAT)
-			serv_got_chat_in(gc, gaim_conv_chat_get_id(GAIM_CONV_CHAT(convo)),
-			         	 gaim_connection_get_display_name(gc),
-				         0, action, time(NULL));
+		if (purple_conversation_get_type(convo) == PURPLE_CONV_TYPE_CHAT)
+			serv_got_chat_in(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)),
+			                 purple_connection_get_display_name(gc),
+			                 PURPLE_MESSAGE_SEND, action, time(NULL));
 		else
-			gaim_conv_im_write(GAIM_CONV_IM(convo), gaim_connection_get_display_name(gc),
-			                  action, 0, time(NULL));
+			purple_conv_im_write(PURPLE_CONV_IM(convo), purple_connection_get_display_name(gc),
+			                     action, PURPLE_MESSAGE_SEND, time(NULL));
 		g_free(action);
 	}
 
@@ -130,7 +155,6 @@ int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *targe
 int irc_cmd_ctcp_version(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
 	char *buf;
-
 
 	if (!args || !args[0])
 		return 0;
@@ -176,12 +200,12 @@ int irc_cmd_join(struct irc_conn *irc, const char *cmd, const char *target, cons
 int irc_cmd_kick(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
 	char *buf;
-	GaimConversation *convo;
+	PurpleConversation *convo;
 
 	if (!args || !args[0])
 		return 0;
 
-	convo = gaim_find_conversation_with_account(GAIM_CONV_TYPE_CHAT, target, irc->account);
+	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, target, irc->account);
 	if (!convo)
 		return 0;
 
@@ -197,14 +221,14 @@ int irc_cmd_kick(struct irc_conn *irc, const char *cmd, const char *target, cons
 
 int irc_cmd_list(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
-	gaim_roomlist_show_with_account(irc->account);
+	purple_roomlist_show_with_account(irc->account);
 
 	return 0;
 }
 
 int irc_cmd_mode(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 	char *buf;
 
 	if (!args)
@@ -214,16 +238,16 @@ int irc_cmd_mode(struct irc_conn *irc, const char *cmd, const char *target, cons
 		if (!args[0] && irc_ischannel(target))
 			buf = irc_format(irc, "vc", "MODE", target);
 		else if (args[0] && (*args[0] == '+' || *args[0] == '-'))
-			buf = irc_format(irc, "vcv", "MODE", target, args[0]);
+			buf = irc_format(irc, "vcn", "MODE", target, args[0]);
 		else if (args[0])
-			buf = irc_format(irc, "vv", "MODE", args[0]);
+			buf = irc_format(irc, "vn", "MODE", args[0]);
 		else
 			return 0;
 	} else if (!strcmp(cmd, "umode")) {
 		if (!args[0])
 			return 0;
-		gc = gaim_account_get_connection(irc->account);
-		buf = irc_format(irc, "vnv", "MODE", gaim_connection_get_display_name(gc), args[0]);
+		gc = purple_account_get_connection(irc->account);
+		buf = irc_format(irc, "vnc", "MODE", purple_connection_get_display_name(gc), args[0]);
 	} else {
 		return 0;
 	}
@@ -245,8 +269,6 @@ int irc_cmd_names(struct irc_conn *irc, const char *cmd, const char *target, con
 	irc_send(irc, buf);
 	g_free(buf);
 
-	irc->nameconv = g_strdup(target);
-
 	return 0;
 }
 
@@ -258,6 +280,9 @@ int irc_cmd_nick(struct irc_conn *irc, const char *cmd, const char *target, cons
 		return 0;
 
 	buf = irc_format(irc, "v:", "NICK", args[0]);
+	g_free(irc->reqnick);
+	irc->reqnick = g_strdup(args[0]);
+	irc->nickused = FALSE;
 	irc_send(irc, buf);
 	g_free(buf);
 
@@ -285,7 +310,7 @@ int irc_cmd_op(struct irc_conn *irc, const char *cmd, const char *target, const 
 		sign = "-";
 		mode = "v";
 	} else {
-		gaim_debug(GAIM_DEBUG_ERROR, "irc", "invalid 'op' command '%s'\n", cmd);
+		purple_debug(PURPLE_DEBUG_ERROR, "irc", "invalid 'op' command '%s'\n", cmd);
 		return 0;
 	}
 
@@ -296,14 +321,15 @@ int irc_cmd_op(struct irc_conn *irc, const char *cmd, const char *target, const 
 	ops = g_new0(char *, i * 2 + 1);
 
 	for (i = 0; nicks[i]; i++) {
-		if (!*nicks[i])
-			continue;
-		ops[used++] = mode;
-		ops[used++] = nicks[i];
+		if (*nicks[i]) {
+			ops[used++] = mode;
+			ops[used++] = nicks[i];
+		}
 	}
 
 	irc_do_mode(irc, target, sign, ops);
 	g_free(ops);
+	g_strfreev(nicks);
 
 	return 0;
 }
@@ -366,7 +392,12 @@ int irc_cmd_privmsg(struct irc_conn *irc, const char *cmd, const char *target, c
 		if (!end)
 			end = cur + strlen(cur);
 		msg = g_strndup(cur, end - cur);
-		buf = irc_format(irc, "vt:", "PRIVMSG", args[0], msg);
+
+		if(!strcmp(cmd, "notice"))
+			buf = irc_format(irc, "vt:", "NOTICE", args[0], msg);
+		else
+			buf = irc_format(irc, "vt:", "PRIVMSG", args[0], msg);
+
 		irc_send(irc, buf);
 		g_free(msg);
 		g_free(buf);
@@ -382,7 +413,7 @@ int irc_cmd_quit(struct irc_conn *irc, const char *cmd, const char *target, cons
 
 	if (!irc->quitting) {
 		/*
-		 * Use gaim_account_get_string(irc->account, "quitmsg", IRC_DEFAULT_QUIT)
+		 * Use purple_account_get_string(irc->account, "quitmsg", IRC_DEFAULT_QUIT)
 		 * and uncomment the appropriate account preference in irc.c if we
 		 * decide we want custom quit messages.
 		 */
@@ -392,8 +423,8 @@ int irc_cmd_quit(struct irc_conn *irc, const char *cmd, const char *target, cons
 
 		irc->quitting = TRUE;
 
-		if (!irc->account->disconnecting)
-			gaim_account_set_status(irc->account, "offline", TRUE, NULL);
+		if (!purple_account_is_disconnecting(irc->account))
+			purple_account_set_status(irc->account, "offline", TRUE, NULL);
 	}
 
 	return 0;
@@ -406,7 +437,7 @@ int irc_cmd_quote(struct irc_conn *irc, const char *cmd, const char *target, con
 	if (!args || !args[0])
 		return 0;
 
-	buf = irc_format(irc, "v", args[0]);
+	buf = irc_format(irc, "n", args[0]);
 	irc_send(irc, buf);
 	g_free(buf);
 
@@ -415,20 +446,20 @@ int irc_cmd_quote(struct irc_conn *irc, const char *cmd, const char *target, con
 
 int irc_cmd_query(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
-	GaimConversation *convo;
-	GaimConnection *gc;
+	PurpleConversation *convo;
+	PurpleConnection *gc;
 
 	if (!args || !args[0])
 		return 0;
 
-	convo = gaim_conversation_new(GAIM_CONV_TYPE_IM, irc->account, args[0]);
-	gaim_conversation_present(convo);
+	convo = purple_conversation_new(PURPLE_CONV_TYPE_IM, irc->account, args[0]);
+	purple_conversation_present(convo);
 
 	if (args[1]) {
-		gc = gaim_account_get_connection(irc->account);
+		gc = purple_account_get_connection(irc->account);
 		irc_cmd_privmsg(irc, cmd, target, args);
-		gaim_conv_im_write(GAIM_CONV_IM(convo), gaim_connection_get_display_name(gc),
-			      args[1], GAIM_MESSAGE_SEND, time(NULL));
+		purple_conv_im_write(PURPLE_CONV_IM(convo), purple_connection_get_display_name(gc),
+			      args[1], PURPLE_MESSAGE_SEND, time(NULL));
 	}
 
 	return 0;
@@ -486,28 +517,28 @@ int irc_cmd_topic(struct irc_conn *irc, const char *cmd, const char *target, con
 {
 	char *buf;
 	const char *topic;
-	GaimConversation *convo;
+	PurpleConversation *convo;
 
 	if (!args)
 		return 0;
 
-	convo = gaim_find_conversation_with_account(GAIM_CONV_TYPE_CHAT, target, irc->account);
+	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, target, irc->account);
 	if (!convo)
 		return 0;
 
 	if (!args[0]) {
-		topic = gaim_conv_chat_get_topic (GAIM_CONV_CHAT(convo));
+		topic = purple_conv_chat_get_topic (PURPLE_CONV_CHAT(convo));
 
 		if (topic) {
 			char *tmp, *tmp2;
 			tmp = g_markup_escape_text(topic, -1);
-			tmp2 = gaim_markup_linkify(tmp);
+			tmp2 = purple_markup_linkify(tmp);
 			buf = g_strdup_printf(_("current topic is: %s"), tmp2);
 			g_free(tmp);
 			g_free(tmp2);
 		} else
 			buf = g_strdup(_("No topic is set"));
-		gaim_conv_chat_write(GAIM_CONV_CHAT(convo), target, buf, GAIM_MESSAGE_SYSTEM|GAIM_MESSAGE_NO_LOG, time(NULL));
+		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), target, buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
 		g_free(buf);
 
 		return 0;
@@ -555,6 +586,22 @@ int irc_cmd_whois(struct irc_conn *irc, const char *cmd, const char *target, con
 		irc->whois.nick = g_strdup(args[0]);
 	}
 
+	irc_send(irc, buf);
+	g_free(buf);
+
+	return 0;
+}
+
+int irc_cmd_whowas(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
+{
+	char *buf;
+
+	if (!args || !args[0])
+		return 0;
+
+	buf = irc_format(irc, "vn", "WHOWAS", args[0]);
+
+	irc->whois.nick = g_strdup(args[0]);
 	irc_send(irc, buf);
 	g_free(buf);
 

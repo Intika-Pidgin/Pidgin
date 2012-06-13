@@ -1,9 +1,9 @@
 /*
- * gaim
+ * pidgin
  *
  * File: wspell.c
  * Date: March, 2003
- * Description: Windows Gaim gtkspell interface.
+ * Description: Windows Pidgin gtkspell interface.
  *
  * Copyright (C) 2002-2003, Herman Bloggs <hermanator12002@yahoo.com>
  *
@@ -19,9 +19,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+#ifdef USE_GTKSPELL
 #include <windows.h>
 #include <string.h>
 #include <stdlib.h>
@@ -30,75 +35,76 @@
 #include <gtkspell/gtkspell.h>
 #include "debug.h"
 #include "win32dep.h"
+#include "wspell.h"
+
+/* Intermediate function so that we can eat Enchant error popups when it doesn't find a DLL
+ * This is fixed upstream, but not released */
+GtkSpell*         (*wpidginspell_new_attach_proxy)              (GtkTextView *,
+							     const gchar *,
+							     GError **) = NULL;
 
 /* GTKSPELL DUMMY FUNCS */
-GtkSpell* wgtkspell_new_attach(GtkTextView *view,
-			       const gchar *lang,
-			       GError **error) {return NULL;}
-GtkSpell* wgtkspell_get_from_text_view(GtkTextView *view) {return NULL;}
-void      wgtkspell_detach(GtkSpell *spell) {}
-gboolean  wgtkspell_set_language(GtkSpell *spell,
-				const gchar *lang,
-				GError **error) {return 0;}
-void      wgtkspell_recheck_all(GtkSpell *spell) {}
+static GtkSpell* wgtkspell_new_attach(GtkTextView *view, const gchar *lang, GError **error) {
+	GtkSpell *ret = NULL;
+	if (wpidginspell_new_attach_proxy) {
+		UINT old_error_mode = SetErrorMode(SEM_FAILCRITICALERRORS);
+		ret = wpidginspell_new_attach_proxy(view, lang, error);
+		SetErrorMode(old_error_mode);
+	}
+	return ret;
+}
+static GtkSpell* wgtkspell_get_from_text_view(GtkTextView *view) {return NULL;}
+static void wgtkspell_detach(GtkSpell *spell) {}
+static gboolean wgtkspell_set_language(GtkSpell *spell, const gchar *lang, GError **error) {return FALSE;}
+static void wgtkspell_recheck_all(GtkSpell *spell) {}
 
 /* GTKSPELL PROTOS */
-GtkSpell*         (*wgaim_gtkspell_new_attach)              (GtkTextView *,
+GtkSpell*         (*wpidginspell_new_attach)              (GtkTextView *,
 							     const gchar *,
 							     GError **) = wgtkspell_new_attach;
 
-GtkSpell*         (*wgaim_gtkspell_get_from_text_view)      (GtkTextView*) = wgtkspell_get_from_text_view;
+GtkSpell*         (*wpidginspell_get_from_text_view)      (GtkTextView*) = wgtkspell_get_from_text_view;
 
-void              (*wgaim_gtkspell_detach)                  (GtkSpell*) = wgtkspell_detach;
+void              (*wpidginspell_detach)                  (GtkSpell*) = wgtkspell_detach;
 
-gboolean          (*wgaim_gtkspell_set_language)            (GtkSpell*,
+gboolean          (*wpidginspell_set_language)            (GtkSpell*,
 							     const gchar*,
 							     GError**) = wgtkspell_set_language;
 
-void              (*wgaim_gtkspell_recheck_all)             (GtkSpell*) = wgtkspell_recheck_all;
+void              (*wpidginspell_recheck_all)             (GtkSpell*) = wgtkspell_recheck_all;
+
+#define GTKSPELL_DLL "libgtkspell-0.dll"
 
 static void load_gtkspell() {
-	wgaim_gtkspell_new_attach = (void*)wgaim_find_and_loadproc("libgtkspell.dll", "gtkspell_new_attach" );
-	wgaim_gtkspell_get_from_text_view = (void*)wgaim_find_and_loadproc("libgtkspell.dll", "gtkspell_get_from_text_view");
-	wgaim_gtkspell_detach = (void*)wgaim_find_and_loadproc("libgtkspell.dll", "gtkspell_detach");
-	wgaim_gtkspell_set_language = (void*)wgaim_find_and_loadproc("libgtkspell.dll", "gtkspell_set_language");
-	wgaim_gtkspell_recheck_all = (void*)wgaim_find_and_loadproc("libgtkspell.dll", "gtkspell_recheck_all");
-}
+	UINT old_error_mode = SetErrorMode(SEM_FAILCRITICALERRORS);
+	gchar *tmp, *tmp2;
 
-static char* lookup_aspell_path() {
-	const char *tmp;
+	const char *path = g_getenv("PATH");
+	tmp = g_build_filename(wpurple_install_dir(), "spellcheck", NULL);
+	tmp2 = g_strdup_printf("%s%s%s", tmp,
+		(path ? G_SEARCHPATH_SEPARATOR_S : ""),
+		(path ? path : ""));
+	g_free(tmp);
+	g_setenv("PATH", tmp2, TRUE);
+	g_free(tmp2);
 
-	if ((tmp = g_getenv("GAIM_ASPELL_DIR")))
-		return g_strdup(tmp);
-
-	return wgaim_read_reg_string(HKEY_LOCAL_MACHINE, "Software\\Aspell", "Path");
-}
-
-void wgaim_gtkspell_init() {
-	char *aspell_path = lookup_aspell_path();
-
-	if (aspell_path != NULL) {
-		char *tmp = g_strconcat(aspell_path, "\\aspell-15.dll", NULL);
-		if (g_file_test(tmp, G_FILE_TEST_EXISTS)) {
-			const char *path = g_getenv("PATH");
-			gaim_debug_info("wspell", "Found Aspell in %s\n", aspell_path);
-
-			g_free(tmp);
-
-			tmp = g_strdup_printf("%s%s%s", (path ? path : ""),
-					(path ? G_SEARCHPATH_SEPARATOR_S : ""),
-					aspell_path);
-
-			g_setenv("PATH", tmp, TRUE);
-
-			load_gtkspell();
-		} else {
-			gaim_debug_warning("wspell", "Couldn't find aspell-15.dll\n");
-		}
-
-		g_free(tmp);
-		g_free(aspell_path);
+	tmp = g_build_filename(wpurple_install_dir(), "spellcheck", GTKSPELL_DLL, NULL);
+	/* Suppress error popups */
+	wpidginspell_new_attach_proxy = (void*) wpurple_find_and_loadproc(tmp, "gtkspell_new_attach" );
+	if (wpidginspell_new_attach_proxy) {
+		wpidginspell_get_from_text_view = (void*) wpurple_find_and_loadproc(tmp, "gtkspell_get_from_text_view");
+		wpidginspell_detach = (void*) wpurple_find_and_loadproc(tmp, "gtkspell_detach");
+		wpidginspell_set_language = (void*) wpurple_find_and_loadproc(tmp, "gtkspell_set_language");
+		wpidginspell_recheck_all = (void*) wpurple_find_and_loadproc(tmp, "gtkspell_recheck_all");
 	} else {
-		gaim_debug_warning("wspell", "Couldn't find path for Aspell\n");
+		purple_debug_warning("wspell", "Couldn't load gtkspell (%s) \n", tmp);
+		/*wpidginspell_new_attach = wgtkspell_new_attach;*/
 	}
+	g_free(tmp);
+	SetErrorMode(old_error_mode);
 }
+
+void winpidgin_spell_init() {
+	load_gtkspell();
+}
+#endif

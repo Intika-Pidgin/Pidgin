@@ -1,8 +1,9 @@
 /*
  * @file util.h Utility Functions
  * @ingroup core
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ */
+
+/* Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -18,20 +19,23 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 
+#include "cipher.h"
 #include "conversation.h"
+#include "core.h"
 #include "debug.h"
 #include "notify.h"
+#include "ntlm.h"
 #include "prpl.h"
 #include "prefs.h"
 #include "util.h"
 
-struct _GaimUtilFetchUrlData
+struct _PurpleUtilFetchUrlData
 {
-	GaimUtilFetchUrlCallback callback;
+	PurpleUtilFetchUrlCallback callback;
 	void *user_data;
 
 	struct
@@ -45,6 +49,7 @@ struct _GaimUtilFetchUrlData
 	} website;
 
 	char *url;
+	int num_times_redirected;
 	gboolean full;
 	char *user_agent;
 	gboolean http11;
@@ -52,25 +57,39 @@ struct _GaimUtilFetchUrlData
 	gsize request_written;
 	gboolean include_headers;
 
-	GaimProxyConnectData *connect_data;
+	gboolean is_ssl;
+	PurpleSslConnection *ssl_connection;
+	PurpleProxyConnectData *connect_data;
 	int fd;
 	guint inpa;
 
 	gboolean got_headers;
 	gboolean has_explicit_data_len;
 	char *webdata;
-	unsigned long len;
+	gsize len;
 	unsigned long data_len;
+	gssize max_len;
+	gboolean chunked;
+	PurpleAccount *account;
 };
 
-static char custom_home_dir[MAXPATHLEN];
-static char home_dir[MAXPATHLEN];
+struct _PurpleMenuAction
+{
+	char *label;
+	PurpleCallback callback;
+	gpointer data;
+	GList *children;
+};
 
-GaimMenuAction *
-gaim_menu_action_new(const char *label, GaimCallback callback, gpointer data,
+static char *custom_user_dir = NULL;
+static char *user_dir = NULL;
+
+
+PurpleMenuAction *
+purple_menu_action_new(const char *label, PurpleCallback callback, gpointer data,
                      GList *children)
 {
-	GaimMenuAction *act = g_new0(GaimMenuAction, 1);
+	PurpleMenuAction *act = g_new0(PurpleMenuAction, 1);
 	act->label = g_strdup(label);
 	act->callback = callback;
 	act->data = data;
@@ -79,7 +98,7 @@ gaim_menu_action_new(const char *label, GaimCallback callback, gpointer data,
 }
 
 void
-gaim_menu_action_free(GaimMenuAction *act)
+purple_menu_action_free(PurpleMenuAction *act)
 {
 	g_return_if_fail(act != NULL);
 
@@ -87,11 +106,86 @@ gaim_menu_action_free(GaimMenuAction *act)
 	g_free(act);
 }
 
+char * purple_menu_action_get_label(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->label;
+}
+
+PurpleCallback purple_menu_action_get_callback(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->callback;
+}
+
+gpointer purple_menu_action_get_data(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->data;
+}
+
+GList* purple_menu_action_get_children(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->children;
+}
+
+void purple_menu_action_set_label(PurpleMenuAction *act, char *label)
+{
+	g_return_if_fail(act != NULL);
+
+	act-> label = label;
+}
+
+void purple_menu_action_set_callback(PurpleMenuAction *act, PurpleCallback callback)
+{
+	g_return_if_fail(act != NULL);
+
+	act->callback = callback;
+}
+
+void purple_menu_action_set_data(PurpleMenuAction *act, gpointer data)
+{
+	g_return_if_fail(act != NULL);
+
+	act->data = data;
+}
+
+void purple_menu_action_set_children(PurpleMenuAction *act, GList *children)
+{
+	g_return_if_fail(act != NULL);
+
+	act->children = children;
+}
+
+void
+purple_util_init(void)
+{
+	/* This does nothing right now.  It exists for symmetry with
+	 * purple_util_uninit() and forwards compatibility. */
+}
+
+void
+purple_util_uninit(void)
+{
+	/* Free these so we don't have leaks at shutdown. */
+
+	g_free(custom_user_dir);
+	custom_user_dir = NULL;
+
+	g_free(user_dir);
+	user_dir = NULL;
+}
+
 /**************************************************************************
  * Base16 Functions
  **************************************************************************/
 gchar *
-gaim_base16_encode(const guchar *data, gsize len)
+purple_base16_encode(const guchar *data, gsize len)
 {
 	int i;
 	gchar *ascii = NULL;
@@ -102,13 +196,13 @@ gaim_base16_encode(const guchar *data, gsize len)
 	ascii = g_malloc(len * 2 + 1);
 
 	for (i = 0; i < len; i++)
-		snprintf(&ascii[i * 2], 3, "%02hhx", data[i]);
+		g_snprintf(&ascii[i * 2], 3, "%02hhx", data[i]);
 
 	return ascii;
 }
 
 guchar *
-gaim_base16_decode(const char *str, gsize *ret_len)
+purple_base16_decode(const char *str, gsize *ret_len)
 {
 	int len, i, accumulator = 0;
 	guchar *data;
@@ -117,7 +211,7 @@ gaim_base16_decode(const char *str, gsize *ret_len)
 
 	len = strlen(str);
 
-	g_return_val_if_fail(strlen(str) > 0, 0);
+	g_return_val_if_fail(*str, 0);
 	g_return_val_if_fail(len % 2 == 0,    0);
 
 	data = g_malloc(len / 2);
@@ -133,14 +227,14 @@ gaim_base16_decode(const char *str, gsize *ret_len)
 			accumulator |= str[i] - 48;
 		else
 		{
-			switch(str[i])
+			switch(tolower(str[i]))
 			{
-				case 'a':  case 'A':  accumulator |= 10;  break;
-				case 'b':  case 'B':  accumulator |= 11;  break;
-				case 'c':  case 'C':  accumulator |= 12;  break;
-				case 'd':  case 'D':  accumulator |= 13;  break;
-				case 'e':  case 'E':  accumulator |= 14;  break;
-				case 'f':  case 'F':  accumulator |= 15;  break;
+				case 'a':  accumulator |= 10;  break;
+				case 'b':  accumulator |= 11;  break;
+				case 'c':  accumulator |= 12;  break;
+				case 'd':  accumulator |= 13;  break;
+				case 'e':  accumulator |= 14;  break;
+				case 'f':  accumulator |= 15;  break;
 			}
 		}
 
@@ -154,6 +248,31 @@ gaim_base16_decode(const char *str, gsize *ret_len)
 	return data;
 }
 
+gchar *
+purple_base16_encode_chunked(const guchar *data, gsize len)
+{
+	int i;
+	gchar *ascii = NULL;
+
+	g_return_val_if_fail(data != NULL, NULL);
+	g_return_val_if_fail(len > 0,   NULL);
+
+	/* For each byte of input, we need 2 bytes for the hex representation
+	 * and 1 for the colon.
+	 * The final colon will be replaced by a terminating NULL
+	 */
+	ascii = g_malloc(len * 3 + 1);
+
+	for (i = 0; i < len; i++)
+		g_snprintf(&ascii[i * 3], 4, "%02hhx:", data[i]);
+
+	/* Replace the final colon with NULL */
+	ascii[len * 3 - 1] = 0;
+
+	return ascii;
+}
+
+
 /**************************************************************************
  * Base64 Functions
  **************************************************************************/
@@ -165,115 +284,28 @@ static const char xdigits[] =
 	"0123456789abcdef";
 
 gchar *
-gaim_base64_encode(const guchar *data, gsize len)
+purple_base64_encode(const guchar *data, gsize len)
 {
-	char *out, *rv;
-
-	g_return_val_if_fail(data != NULL, NULL);
-	g_return_val_if_fail(len > 0,  NULL);
-
-	rv = out = g_malloc(((len/3)+1)*4 + 1);
-
-	for (; len >= 3; len -= 3)
-	{
-		*out++ = alphabet[data[0] >> 2];
-		*out++ = alphabet[((data[0] << 4) & 0x30) | (data[1] >> 4)];
-		*out++ = alphabet[((data[1] << 2) & 0x3c) | (data[2] >> 6)];
-		*out++ = alphabet[data[2] & 0x3f];
-		data += 3;
-	}
-
-	if (len > 0)
-	{
-		unsigned char fragment;
-
-		*out++ = alphabet[data[0] >> 2];
-		fragment = (data[0] << 4) & 0x30;
-
-		if (len > 1)
-			fragment |= data[1] >> 4;
-
-		*out++ = alphabet[fragment];
-		*out++ = (len < 2) ? '=' : alphabet[(data[1] << 2) & 0x3c];
-		*out++ = '=';
-	}
-
-	*out = '\0';
-
-	return rv;
+	return g_base64_encode(data, len);
 }
 
 guchar *
-gaim_base64_decode(const char *str, gsize *ret_len)
+purple_base64_decode(const char *str, gsize *ret_len)
 {
-	guchar *out = NULL;
-	char tmp = 0;
-	const char *c;
-	gint32 tmp2 = 0;
-	int len = 0, n = 0;
-
-	g_return_val_if_fail(str != NULL, NULL);
-
-	c = str;
-
-	while (*c) {
-		if (*c >= 'A' && *c <= 'Z') {
-			tmp = *c - 'A';
-		} else if (*c >= 'a' && *c <= 'z') {
-			tmp = 26 + (*c - 'a');
-		} else if (*c >= '0' && *c <= 57) {
-			tmp = 52 + (*c - '0');
-		} else if (*c == '+') {
-			tmp = 62;
-		} else if (*c == '/') {
-			tmp = 63;
-		} else if (*c == '\r' || *c == '\n') {
-			c++;
-			continue;
-		} else if (*c == '=') {
-			if (n == 3) {
-				out = g_realloc(out, len + 2);
-				out[len] = (guchar)(tmp2 >> 10) & 0xff;
-				len++;
-				out[len] = (guchar)(tmp2 >> 2) & 0xff;
-				len++;
-			} else if (n == 2) {
-				out = g_realloc(out, len + 1);
-				out[len] = (guchar)(tmp2 >> 4) & 0xff;
-				len++;
-			}
-			break;
-		}
-		tmp2 = ((tmp2 << 6) | (tmp & 0xff));
-		n++;
-		if (n == 4) {
-			out = g_realloc(out, len + 3);
-			out[len] = (guchar)((tmp2 >> 16) & 0xff);
-			len++;
-			out[len] = (guchar)((tmp2 >> 8) & 0xff);
-			len++;
-			out[len] = (guchar)(tmp2 & 0xff);
-			len++;
-			tmp2 = 0;
-			n = 0;
-		}
-		c++;
-	}
-
-	out = g_realloc(out, len + 1);
-	out[len] = 0;
-
-	if (ret_len != NULL)
-		*ret_len = len;
-
-	return out;
+	/*
+	 * We want to allow ret_len to be NULL for backward compatibility,
+	 * but g_base64_decode() requires a valid length variable.  So if
+	 * ret_len is NULL then pass in a dummy variable.
+	 */
+	gsize unused;
+	return g_base64_decode(str, ret_len != NULL ? ret_len : &unused);
 }
 
 /**************************************************************************
  * Quoted Printable Functions (see RFC 2045).
  **************************************************************************/
 guchar *
-gaim_quotedp_decode(const char *str, gsize *ret_len)
+purple_quotedp_decode(const char *str, gsize *ret_len)
 {
 	char *n, *new;
 	const char *end, *p;
@@ -323,7 +355,7 @@ gaim_quotedp_decode(const char *str, gsize *ret_len)
  * MIME Functions
  **************************************************************************/
 char *
-gaim_mime_decode_field(const char *str)
+purple_mime_decode_field(const char *str)
 {
 	/*
 	 * This is wing's version, partially based on revo/shx's version
@@ -338,7 +370,7 @@ gaim_mime_decode_field(const char *str)
 	encoded_word_state_t state = state_start;
 	const char *cur, *mark;
 	const char *charset0 = NULL, *encoding0 = NULL, *encoded_text0 = NULL;
-	char *n, *new;
+	GString *new;
 
 	/* token can be any CHAR (supposedly ISO8859-1/ISO2022), not just ASCII */
 	#define token_char_p(c) \
@@ -348,16 +380,9 @@ gaim_mime_decode_field(const char *str)
 	#define encoded_text_char_p(c) \
 		((c & 0x80) == 0 && c != '?' && c != ' ' && isgraph(c))
 
-	#define RECOVER_MARKED_TEXT strncpy(n, mark, cur - mark + 1); \
-		n += cur - mark + 1
-
 	g_return_val_if_fail(str != NULL, NULL);
 
-	/* NOTE: Assuming that we need just strlen(str)+1 *may* be wrong.
-	 * It would be wrong if one byte (in some unknown encoding) could
-	 * expand to >=4 bytes of UTF-8; I don't know if there are such things.
-	 */
-	n = new = g_malloc(strlen(str) + 1);
+	new = g_string_new(NULL);
 
 	/* Here we will be looking for encoded words and if they seem to be
 	 * valid then decode them.
@@ -370,7 +395,7 @@ gaim_mime_decode_field(const char *str)
 			if (*cur == '?') {
 				state = state_question1;
 			} else {
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -379,7 +404,7 @@ gaim_mime_decode_field(const char *str)
 				charset0 = cur;
 				state = state_charset;
 			} else { /* This should never happen */
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -387,7 +412,7 @@ gaim_mime_decode_field(const char *str)
 			if (*cur == '?') {
 				state = state_question2;
 			} else if (!token_char_p(*cur)) { /* This should never happen */
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -396,7 +421,7 @@ gaim_mime_decode_field(const char *str)
 				encoding0 = cur;
 				state = state_encoding;
 			} else { /* This should never happen */
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -404,7 +429,7 @@ gaim_mime_decode_field(const char *str)
 			if (*cur == '?') {
 				state = state_question3;
 			} else if (!token_char_p(*cur)) { /* This should never happen */
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -416,7 +441,7 @@ gaim_mime_decode_field(const char *str)
 				encoded_text0 = cur;
 				state = state_question4;
 			} else { /* This should never happen */
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -424,7 +449,7 @@ gaim_mime_decode_field(const char *str)
 			if (*cur == '?') {
 				state = state_question4;
 			} else if (!encoded_text_char_p(*cur)) {
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -436,9 +461,9 @@ gaim_mime_decode_field(const char *str)
 				guchar *decoded = NULL;
 				gsize dec_len;
 				if (g_ascii_strcasecmp(encoding, "Q") == 0)
-					decoded = gaim_quotedp_decode(encoded_text, &dec_len);
+					decoded = purple_quotedp_decode(encoded_text, &dec_len);
 				else if (g_ascii_strcasecmp(encoding, "B") == 0)
-					decoded = gaim_base64_decode(encoded_text, &dec_len);
+					decoded = purple_base64_decode(encoded_text, &dec_len);
 				else
 					decoded = NULL;
 				if (decoded) {
@@ -446,7 +471,7 @@ gaim_mime_decode_field(const char *str)
 					char *converted = g_convert((const gchar *)decoded, dec_len, "utf-8", charset, NULL, &len, NULL);
 
 					if (converted) {
-						n = strncpy(n, converted, len) + len;
+						g_string_append_len(new, converted, len);
 						g_free(converted);
 					}
 					g_free(decoded);
@@ -456,7 +481,7 @@ gaim_mime_decode_field(const char *str)
 				g_free(encoded_text);
 				state = state_equal2; /* Restart the FSM */
 			} else { /* This should never happen */
-				RECOVER_MARKED_TEXT;
+				g_string_append_len(new, mark, cur - mark + 1);
 				state = state_start;
 			}
 			break;
@@ -466,19 +491,16 @@ gaim_mime_decode_field(const char *str)
 				state = state_equal1;
 			} else {
 				/* Some unencoded text. */
-				*n = *cur;
-				n += 1;
+				g_string_append_c(new, *cur);
 			}
 			break;
 		} /* switch */
 	} /* for */
 
-	if (state != state_start) {
-		RECOVER_MARKED_TEXT;
-	}
-	*n = '\0';
+	if (state != state_start)
+		g_string_append_len(new, mark, cur - mark + 1);
 
-	return new;
+	return g_string_free(new, FALSE);;
 }
 
 
@@ -486,27 +508,9 @@ gaim_mime_decode_field(const char *str)
  * Date/Time Functions
  **************************************************************************/
 
-#ifdef _WIN32
-static long win32_get_tz_offset() {
-	TIME_ZONE_INFORMATION tzi;
-	DWORD ret;
-	long off = -1;
-
-	if ((ret = GetTimeZoneInformation(&tzi)) != TIME_ZONE_ID_INVALID)
-	{
-		off = -(tzi.Bias * 60);
-		if (ret == TIME_ZONE_ID_DAYLIGHT)
-			off -= tzi.DaylightBias * 60;
-	}
-
-	return off;
-}
-#endif
-
-#ifndef HAVE_STRFTIME_Z_FORMAT
-static const char *get_tmoff(const struct tm *tm)
+const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso)
 {
-	static char buf[6];
+	static char buf[7];
 	long off;
 	gint8 min;
 	gint8 hrs;
@@ -518,7 +522,7 @@ static const char *get_tmoff(const struct tm *tm)
 		g_return_val_if_reached("");
 
 #ifdef _WIN32
-	if ((off = win32_get_tz_offset()) == -1)
+	if ((off = wpurple_get_tz_offset()) == -1)
 		return "";
 #else
 # ifdef HAVE_TM_GMTOFF
@@ -526,7 +530,7 @@ static const char *get_tmoff(const struct tm *tm)
 # else
 #  ifdef HAVE_TIMEZONE
 	tzset();
-	off = -timezone;
+	off = -1 * timezone;
 #  endif /* HAVE_TIMEZONE */
 # endif /* !HAVE_TM_GMTOFF */
 #endif /* _WIN32 */
@@ -534,22 +538,32 @@ static const char *get_tmoff(const struct tm *tm)
 	min = (off / 60) % 60;
 	hrs = ((off / 60) - min) / 60;
 
-	if (g_snprintf(buf, sizeof(buf), "%+03d%02d", hrs, ABS(min)) > 5)
-		g_return_val_if_reached("");
+	if(iso) {
+		if (0 == off) {
+			strcpy(buf, "Z");
+		} else {
+			/* please leave the colons...they're optional for iso, but jabber
+			 * wants them */
+			if(g_snprintf(buf, sizeof(buf), "%+03d:%02d", hrs, ABS(min)) > 6)
+				g_return_val_if_reached("");
+		}
+	} else {
+		if (g_snprintf(buf, sizeof(buf), "%+03d%02d", hrs, ABS(min)) > 5)
+			g_return_val_if_reached("");
+	}
 
 	return buf;
 }
-#endif
 
 /* Windows doesn't HAVE_STRFTIME_Z_FORMAT, but this seems clearer. -- rlaager */
 #if !defined(HAVE_STRFTIME_Z_FORMAT) || defined(_WIN32)
-static size_t gaim_internal_strftime(char *s, size_t max, const char *format, const struct tm *tm)
+static size_t purple_internal_strftime(char *s, size_t max, const char *format, const struct tm *tm)
 {
 	const char *start;
 	const char *c;
 	char *fmt = NULL;
 
-	/* Yes, this is checked in gaim_utf8_strftime(),
+	/* Yes, this is checked in purple_utf8_strftime(),
 	 * but better safe than sorry. -- rlaager */
 	g_return_val_if_fail(format != NULL, 0);
 
@@ -572,7 +586,7 @@ static size_t gaim_internal_strftime(char *s, size_t max, const char *format, co
 			                            fmt ? fmt : "",
 			                            c - start - 1,
 			                            start,
-			                            get_tmoff(tm));
+			                            purple_get_tzoff_str(tm, FALSE));
 			g_free(fmt);
 			fmt = tmp;
 			start = c + 1;
@@ -585,7 +599,7 @@ static size_t gaim_internal_strftime(char *s, size_t max, const char *format, co
 			                            fmt ? fmt : "",
 			                            c - start - 1,
 			                            start,
-			                            wgaim_get_timezone_abbreviation(tm));
+			                            wpurple_get_timezone_abbreviation(tm));
 			g_free(fmt);
 			fmt = tmp;
 			start = c + 1;
@@ -613,11 +627,11 @@ static size_t gaim_internal_strftime(char *s, size_t max, const char *format, co
 	return strftime(s, max, format, tm);
 }
 #else /* HAVE_STRFTIME_Z_FORMAT && !_WIN32 */
-#define gaim_internal_strftime strftime
+#define purple_internal_strftime strftime
 #endif
 
 const char *
-gaim_utf8_strftime(const char *format, const struct tm *tm)
+purple_utf8_strftime(const char *format, const struct tm *tm)
 {
 	static char buf[128];
 	char *locale;
@@ -636,8 +650,9 @@ gaim_utf8_strftime(const char *format, const struct tm *tm)
 	locale = g_locale_from_utf8(format, -1, NULL, NULL, &err);
 	if (err != NULL)
 	{
-		gaim_debug_error("util", "Format conversion failed in gaim_utf8_strftime(): %s", err->message);
+		purple_debug_error("util", "Format conversion failed in purple_utf8_strftime(): %s\n", err->message);
 		g_error_free(err);
+		err = NULL;
 		locale = g_strdup(format);
 	}
 
@@ -645,7 +660,7 @@ gaim_utf8_strftime(const char *format, const struct tm *tm)
 	 * which case, the contents of the buffer are
 	 * undefined) or the empty string (in which
 	 * case, no harm is done here). */
-	if ((len = gaim_internal_strftime(buf, sizeof(buf), locale, tm)) == 0)
+	if ((len = purple_internal_strftime(buf, sizeof(buf), locale, tm)) == 0)
 	{
 		g_free(locale);
 		return "";
@@ -656,12 +671,12 @@ gaim_utf8_strftime(const char *format, const struct tm *tm)
 	utf8 = g_locale_to_utf8(buf, len, NULL, NULL, &err);
 	if (err != NULL)
 	{
-		gaim_debug_error("util", "Result conversion failed in gaim_utf8_strftime(): %s", err->message);
+		purple_debug_error("util", "Result conversion failed in purple_utf8_strftime(): %s\n", err->message);
 		g_error_free(err);
 	}
 	else
 	{
-		gaim_strlcpy(buf, utf8);
+		g_strlcpy(buf, utf8, sizeof(buf));
 		g_free(utf8);
 	}
 
@@ -669,31 +684,37 @@ gaim_utf8_strftime(const char *format, const struct tm *tm)
 }
 
 const char *
-gaim_date_format_short(const struct tm *tm)
+purple_date_format_short(const struct tm *tm)
 {
-	return gaim_utf8_strftime("%x", tm);
+	return purple_utf8_strftime("%x", tm);
 }
 
 const char *
-gaim_date_format_long(const struct tm *tm)
+purple_date_format_long(const struct tm *tm)
 {
-	return gaim_utf8_strftime(_("%x %X"), tm);
+	/*
+	 * This string determines how some dates are displayed.  The default
+	 * string "%x %X" shows the date then the time.  Translators can
+	 * change this to "%X %x" if they want the time to be shown first,
+	 * followed by the date.
+	 */
+	return purple_utf8_strftime(_("%x %X"), tm);
 }
 
 const char *
-gaim_date_format_full(const struct tm *tm)
+purple_date_format_full(const struct tm *tm)
 {
-	return gaim_utf8_strftime("%c", tm);
+	return purple_utf8_strftime("%c", tm);
 }
 
 const char *
-gaim_time_format(const struct tm *tm)
+purple_time_format(const struct tm *tm)
 {
-	return gaim_utf8_strftime("%X", tm);
+	return purple_utf8_strftime("%X", tm);
 }
 
 time_t
-gaim_time_build(int year, int month, int day, int hour, int min, int sec)
+purple_time_build(int year, int month, int day, int hour, int min, int sec)
 {
 	struct tm tm;
 
@@ -707,147 +728,199 @@ gaim_time_build(int year, int month, int day, int hour, int min, int sec)
 	return mktime(&tm);
 }
 
-time_t
-gaim_str_to_time(const char *timestamp, gboolean utc,
-                 struct tm *tm, long *tz_off, const char **rest)
+/* originally taken from GLib trunk 1-6-11 */
+/* originally licensed as LGPL 2+ */
+static time_t
+mktime_utc(struct tm *tm)
 {
-	time_t retval = 0;
-	struct tm *t;
-	const char *c = timestamp;
-	int year = 0;
-	long tzoff = GAIM_NO_TZ_OFF;
+	time_t retval;
 
-	time(&retval);
-	t = localtime(&retval);
+#ifndef HAVE_TIMEGM
+	static const gint days_before[] =
+	{
+		0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
+	};
+#endif
+
+#ifndef HAVE_TIMEGM
+	if (tm->tm_mon < 0 || tm->tm_mon > 11)
+		return (time_t) -1;
+
+	retval = (tm->tm_year - 70) * 365;
+	retval += (tm->tm_year - 68) / 4;
+	retval += days_before[tm->tm_mon] + tm->tm_mday - 1;
+
+	if (tm->tm_year % 4 == 0 && tm->tm_mon < 2)
+		retval -= 1;
+
+	retval = ((((retval * 24) + tm->tm_hour) * 60) + tm->tm_min) * 60 + tm->tm_sec;
+#else
+	retval = timegm (tm);
+#endif /* !HAVE_TIMEGM */
+
+	return retval;
+}
+
+time_t
+purple_str_to_time(const char *timestamp, gboolean utc,
+	struct tm *tm, long *tz_off, const char **rest)
+{
+	struct tm t;
+	const gchar *str;
+	gint year = 0;
+	long tzoff = PURPLE_NO_TZ_OFF;
+	time_t retval;
+	gboolean mktime_with_utc = TRUE;
+
+	if (rest != NULL)
+		*rest = NULL;
+
+	g_return_val_if_fail(timestamp != NULL, 0);
+
+	memset(&t, 0, sizeof(struct tm));
+
+	str = timestamp;
+
+	/* Strip leading whitespace */
+	while (g_ascii_isspace(*str))
+		str++;
+
+	if (*str == '\0') {
+		if (rest != NULL && *str != '\0')
+			*rest = str;
+
+		return 0;
+	}
+
+	if (!g_ascii_isdigit(*str) && *str != '-' && *str != '+') {
+		if (rest != NULL && *str != '\0')
+			*rest = str;
+
+		return 0;
+	}
 
 	/* 4 digit year */
-	if (sscanf(c, "%04d", &year) && year > 1900)
-	{
-		c += 4;
-		if (*c == '-')
-			c++;
-		t->tm_year = year - 1900;
+	if (sscanf(str, "%04d", &year) && year >= 1900) {
+		str += 4;
+
+		if (*str == '-' || *str == '/')
+			str++;
+
+		t.tm_year = year - 1900;
 	}
 
 	/* 2 digit month */
-	if (!sscanf(c, "%02d", &t->tm_mon))
-	{
-		if (rest != NULL && *c != '\0')
-			*rest = c;
+	if (!sscanf(str, "%02d", &t.tm_mon)) {
+		if (rest != NULL && *str != '\0')
+			*rest = str;
+
 		return 0;
 	}
-	c += 2;
-	if (*c == '-' || *c == '/')
-		c++;
-	t->tm_mon -= 1;
+
+	str += 2;
+	t.tm_mon -= 1;
+
+	if (*str == '-' || *str == '/')
+		str++;
 
 	/* 2 digit day */
-	if (!sscanf(c, "%02d", &t->tm_mday))
-	{
-		if (rest != NULL && *c != '\0')
-			*rest = c;
+	if (!sscanf(str, "%02d", &t.tm_mday)) {
+		if (rest != NULL && *str != '\0')
+			*rest = str;
+
 		return 0;
 	}
-	c += 2;
-	if (*c == '/')
-	{
-		c++;
 
-		if (!sscanf(c, "%04d", &t->tm_year))
-		{
-			if (rest != NULL && *c != '\0')
-				*rest = c;
+	str += 2;
+
+	/* Grab the year off the end if there's still stuff */
+	if (*str == '/' || *str == '-') {
+		/* But make sure we don't read the year twice */
+		if (year >= 1900) {
+			if (rest != NULL && *str != '\0')
+				*rest = str;
+
 			return 0;
 		}
-		t->tm_year -= 1900;
-	}
-	else if (*c == 'T' || *c == '.')
-	{
-		c++;
-		/* we have more than a date, keep going */
 
-		/* 2 digit hour */
-		if ((sscanf(c, "%02d:%02d:%02d", &t->tm_hour, &t->tm_min, &t->tm_sec) == 3 && (c = c + 8)) ||
-		    (sscanf(c, "%02d%02d%02d", &t->tm_hour, &t->tm_min, &t->tm_sec) == 3 && (c = c + 6)))
-		{
-			gboolean offset_positive = FALSE;
-			int tzhrs;
-			int tzmins;
+		str++;
 
-			t->tm_isdst = -1;
+		if (!sscanf(str, "%04d", &t.tm_year)) {
+			if (rest != NULL && *str != '\0')
+				*rest = str;
 
-			if (*c == '.' && *(c+1) >= '0' && *(c+1) <= '9') /* dealing with precision we don't care about */
-				c += 4;
-			if (*c == '+')
-				offset_positive = TRUE;
-			if (((*c == '+' || *c == '-') && (c = c + 1)) &&
-			    ((sscanf(c, "%02d:%02d", &tzhrs, &tzmins) == 2 && (c = c + 5)) ||
-			     (sscanf(c, "%02d%02d", &tzhrs, &tzmins) == 2 && (c = c + 4))))
-			{
-				tzoff = tzhrs*60*60 + tzmins*60;
-				if (offset_positive)
-					tzoff *= -1;
-				/* We don't want the C library doing DST calculations
-				 * if we know the UTC offset already. */
-				t->tm_isdst = 0;
-			}
-			else if (utc)
-			{
-				t->tm_isdst = 0;
-			}
-
-			if (rest != NULL && *c != '\0')
-			{
-				if (*c == ' ')
-					c++;
-				if (*c != '\0')
-					*rest = c;
-			}
-
-			if (tzoff != GAIM_NO_TZ_OFF || utc)
-			{
-#if defined(_WIN32)
-				long sys_tzoff;
-#endif
-
-#if defined(_WIN32) || defined(HAVE_TM_GMTOFF) || defined (HAVE_TIMEZONE)
-				if (tzoff == GAIM_NO_TZ_OFF)
-					tzoff = 0;
-#endif
-
-#ifdef _WIN32
-				if ((sys_tzoff = win32_get_tz_offset()) == -1)
-					tzoff = GAIM_NO_TZ_OFF;
-				else
-					tzoff += sys_tzoff;
-#else
-#ifdef HAVE_TM_GMTOFF
-				tzoff += t->tm_gmtoff;
-#else
-#	ifdef HAVE_TIMEZONE
-				tzset();    /* making sure */
-				tzoff -= timezone;
-#	endif
-#endif
-#endif /* _WIN32 */
-			}
+			return 0;
 		}
-		else
+
+		t.tm_year -= 1900;
+	} else if (*str == 'T' || *str == '.') {
+		str++;
+
+		/* Continue grabbing the hours/minutes/seconds */
+		if ((sscanf(str, "%02d:%02d:%02d", &t.tm_hour, &t.tm_min, &t.tm_sec) == 3 &&
+				(str += 8)) ||
+		    (sscanf(str, "%02d%02d%02d", &t.tm_hour, &t.tm_min, &t.tm_sec) == 3 &&
+				(str += 6)))
 		{
-			if (rest != NULL && *c != '\0')
-				*rest = c;
+			gint sign, tzhrs, tzmins;
+
+			if (*str == '.') {
+				/* Cut off those pesky micro-seconds */
+				do {
+					str++;
+				} while (*str >= '0' && *str <= '9');
+			}
+
+			sign = (*str == '+') ? -1 : 1;
+
+			/* Process the timezone */
+			if (*str == '+' || *str == '-') {
+				str++;
+
+				if (((sscanf(str, "%02d:%02d", &tzhrs, &tzmins) == 2 && (str += 5)) ||
+					(sscanf(str, "%02d%02d", &tzhrs, &tzmins) == 2 && (str += 4))))
+				{
+					tzoff = tzhrs * 60 * 60 + tzmins * 60;
+					tzoff *= sign;
+				} else {
+					if (rest != NULL && *str != '\0')
+						*rest = str;
+
+					return 0;
+				}
+			} else if (*str == 'Z') {
+				/* 'Z' = Zulu = UTC */
+				str++;
+				utc = TRUE;
+			} else if (!utc) {
+				/* Local Time */
+				t.tm_isdst = -1;
+				mktime_with_utc = FALSE;
+			}
+
+			if (utc)
+				tzoff = 0;
 		}
 	}
+
+	if (rest != NULL && *str != '\0') {
+		/* Strip trailing whitespace */
+		while (g_ascii_isspace(*str))
+			str++;
+
+		if (*str != '\0')
+			*rest = str;
+	}
+
+	if (mktime_with_utc)
+		retval = mktime_utc(&t);
+	else
+		retval = mktime(&t);
 
 	if (tm != NULL)
-	{
-		*tm = *t;
-		tm->tm_isdst = -1;
-		mktime(tm);
-	}
+		*tm = t;
 
-	retval = mktime(t);
-	if (tzoff != GAIM_NO_TZ_OFF)
+	if (tzoff != PURPLE_NO_TZ_OFF)
 		retval += tzoff;
 
 	if (tz_off != NULL)
@@ -860,13 +933,83 @@ gaim_str_to_time(const char *timestamp, gboolean utc,
  * Markup Functions
  **************************************************************************/
 
-/* Returns a NULL-terminated string after unescaping an entity
- * (eg. &amp;, &lt; &#38 etc.) starting at s. Returns NULL on failure.*/
-static const char *
-detect_entity(const char *text, int *length)
+/*
+ * This function is stolen from glib's gmarkup.c and modified to not
+ * replace ' with &apos;
+ */
+static void append_escaped_text(GString *str,
+		const gchar *text, gssize length)
+{
+	const gchar *p;
+	const gchar *end;
+	gunichar c;
+
+	p = text;
+	end = text + length;
+
+	while (p != end)
+	{
+		const gchar *next;
+		next = g_utf8_next_char (p);
+
+		switch (*p)
+		{
+			case '&':
+				g_string_append (str, "&amp;");
+				break;
+
+			case '<':
+				g_string_append (str, "&lt;");
+				break;
+
+			case '>':
+				g_string_append (str, "&gt;");
+				break;
+
+			case '"':
+				g_string_append (str, "&quot;");
+				break;
+
+			default:
+				c = g_utf8_get_char (p);
+				if ((0x1 <= c && c <= 0x8) ||
+						(0xb <= c && c <= 0xc) ||
+						(0xe <= c && c <= 0x1f) ||
+						(0x7f <= c && c <= 0x84) ||
+						(0x86 <= c && c <= 0x9f))
+					g_string_append_printf (str, "&#x%x;", c);
+				else
+					g_string_append_len (str, p, next - p);
+				break;
+		}
+
+		p = next;
+	}
+}
+
+/* This function is stolen from glib's gmarkup.c */
+gchar *purple_markup_escape_text(const gchar *text, gssize length)
+{
+	GString *str;
+
+	g_return_val_if_fail(text != NULL, NULL);
+
+	if (length < 0)
+		length = strlen(text);
+
+	/* prealloc at least as long as original text */
+	str = g_string_sized_new(length);
+	append_escaped_text(str, text, length);
+
+	return g_string_free(str, FALSE);
+}
+
+const char *
+purple_markup_unescape_entity(const char *text, int *length)
 {
 	const char *pln;
 	int len, pound;
+	char temp[2];
 
 	if (!text || *text != '&')
 		return NULL;
@@ -889,15 +1032,17 @@ detect_entity(const char *text, int *length)
 		pln = "\302\256";      /* or use g_unichar_to_utf8(0xae); */
 	else if(IS_ENTITY("&apos;"))
 		pln = "\'";
-	else if(*(text+1) == '#' && (sscanf(text, "&#%u;", &pound) == 1) &&
-			pound != 0 && *(text+3+(gint)log10(pound)) == ';') {
+	else if(*(text+1) == '#' &&
+			(sscanf(text, "&#%u%1[;]", &pound, temp) == 2 ||
+			 sscanf(text, "&#x%x%1[;]", &pound, temp) == 2) &&
+			pound != 0) {
 		static char buf[7];
 		int buflen = g_unichar_to_utf8((gunichar)pound, buf);
 		buf[buflen] = '\0';
 		pln = buf;
 
-		len = 2;
-		while(isdigit((gint) text[len])) len++;
+		len = (*(text+2) == 'x' ? 3 : 2);
+		while(isxdigit((gint) text[len])) len++;
 		if(text[len] == ';') len++;
 	}
 	else
@@ -908,8 +1053,102 @@ detect_entity(const char *text, int *length)
 	return pln;
 }
 
+char *
+purple_markup_get_css_property(const gchar *style,
+				const gchar *opt)
+{
+	const gchar *css_str = style;
+	const gchar *css_value_start;
+	const gchar *css_value_end;
+	gchar *tmp;
+	gchar *ret;
+
+	g_return_val_if_fail(opt != NULL, NULL);
+
+	if (!css_str)
+		return NULL;
+
+	/* find the CSS property */
+	while (1)
+	{
+		/* skip whitespace characters */
+		while (*css_str && g_ascii_isspace(*css_str))
+			css_str++;
+		if (!g_ascii_isalpha(*css_str))
+			return NULL;
+		if (g_ascii_strncasecmp(css_str, opt, strlen(opt)))
+		{
+			/* go to next css property positioned after the next ';' */
+			while (*css_str && *css_str != '"' && *css_str != ';')
+				css_str++;
+			if(*css_str != ';')
+				return NULL;
+			css_str++;
+		}
+		else
+			break;
+	}
+
+	/* find the CSS value position in the string */
+	css_str += strlen(opt);
+	while (*css_str && g_ascii_isspace(*css_str))
+		css_str++;
+	if (*css_str != ':')
+		return NULL;
+	css_str++;
+	while (*css_str && g_ascii_isspace(*css_str))
+		css_str++;
+	if (*css_str == '\0' || *css_str == '"' || *css_str == ';')
+		return NULL;
+
+	/* mark the CSS value */
+	css_value_start = css_str;
+	while (*css_str && *css_str != '"' && *css_str != ';')
+		css_str++;
+	css_value_end = css_str - 1;
+
+	/* Removes trailing whitespace */
+	while (css_value_end > css_value_start && g_ascii_isspace(*css_value_end))
+		css_value_end--;
+
+	tmp = g_strndup(css_value_start, css_value_end - css_value_start + 1);
+	ret = purple_unescape_html(tmp);
+	g_free(tmp);
+
+	return ret;
+}
+
+gboolean purple_markup_is_rtl(const char *html)
+{
+	GData *attributes;
+	const gchar *start, *end;
+	gboolean res = FALSE;
+
+	if (purple_markup_find_tag("span", html, &start, &end, &attributes))
+	{
+		/* tmp is a member of attributes and is free with g_datalist_clear call */
+		const char *tmp = g_datalist_get_data(&attributes, "dir");
+		if (tmp && !g_ascii_strcasecmp(tmp, "RTL"))
+			res = TRUE;
+		if (!res)
+		{
+			tmp = g_datalist_get_data(&attributes, "style");
+			if (tmp)
+			{
+				char *tmp2 = purple_markup_get_css_property(tmp, "direction");
+				if (tmp2 && !g_ascii_strcasecmp(tmp2, "RTL"))
+					res = TRUE;
+				g_free(tmp2);
+			}
+
+		}
+		g_datalist_clear(&attributes);
+	}
+	return res;
+}
+
 gboolean
-gaim_markup_find_tag(const char *needle, const char *haystack,
+purple_markup_find_tag(const char *needle, const char *haystack,
 					 const char **start, const char **end, GData **attributes)
 {
 	GData *attribs;
@@ -924,7 +1163,6 @@ gaim_markup_find_tag(const char *needle, const char *haystack,
 	g_return_val_if_fail(    needle != NULL, FALSE);
 	g_return_val_if_fail(   *needle != '\0', FALSE);
 	g_return_val_if_fail(  haystack != NULL, FALSE);
-	g_return_val_if_fail( *haystack != '\0', FALSE);
 	g_return_val_if_fail(     start != NULL, FALSE);
 	g_return_val_if_fail(       end != NULL, FALSE);
 	g_return_val_if_fail(attributes != NULL, FALSE);
@@ -1061,13 +1299,13 @@ gaim_markup_find_tag(const char *needle, const char *haystack,
 }
 
 gboolean
-gaim_markup_extract_info_field(const char *str, int len, GaimNotifyUserInfo *user_info,
+purple_markup_extract_info_field(const char *str, int len, PurpleNotifyUserInfo *user_info,
 							   const char *start_token, int skip,
 							   const char *end_token, char check_value,
 							   const char *no_value_token,
 							   const char *display_name, gboolean is_link,
 							   const char *link_prefix,
-							   GaimInfoFieldFormatCallback format_cb)
+							   PurpleInfoFieldFormatCallback format_cb)
 {
 	const char *p, *q;
 
@@ -1147,7 +1385,7 @@ gaim_markup_extract_info_field(const char *str, int len, GaimNotifyUserInfo *use
 				g_string_append_len(dest, p, q - p);
 		}
 
-		gaim_notify_user_info_add_pair(user_info, display_name, dest->str);
+		purple_notify_user_info_add_pair_html(user_info, display_name, dest->str);
 		g_string_free(dest, TRUE);
 
 		return TRUE;
@@ -1156,21 +1394,32 @@ gaim_markup_extract_info_field(const char *str, int len, GaimNotifyUserInfo *use
 	return FALSE;
 }
 
-struct gaim_parse_tag {
+struct purple_parse_tag {
 	char *src_tag;
 	char *dest_tag;
 	gboolean ignore;
 };
 
+/* NOTE: Do not put `do {} while(0)` around this macro (as this is the method
+         recommended in the GCC docs). It contains 'continue's that should
+         affect the while-loop in purple_markup_html_to_xhtml and doing the
+         above would break that.
+         Also, remember to put braces in constructs that require them for
+         multiple statements when using this macro. */
 #define ALLOW_TAG_ALT(x, y) if(!g_ascii_strncasecmp(c, "<" x " ", strlen("<" x " "))) { \
 						const char *o = c + strlen("<" x); \
 						const char *p = NULL, *q = NULL, *r = NULL; \
+						/* o = iterating over full tag \
+						 * p = > (end of tag) \
+						 * q = start of quoted bit \
+						 * r = < inside tag \
+						 */ \
 						GString *innards = g_string_new(""); \
 						while(o && *o) { \
 							if(!q && (*o == '\"' || *o == '\'') ) { \
 								q = o; \
 							} else if(q) { \
-								if(*o == *q) { \
+								if(*o == *q) { /* end of quoted bit */ \
 									char *unescaped = g_strndup(q+1, o-q-1); \
 									char *escaped = g_markup_escape_text(unescaped, -1); \
 									g_string_append_printf(innards, "%c%s%c", *q, escaped, *q); \
@@ -1190,59 +1439,83 @@ struct gaim_parse_tag {
 							} \
 							o++; \
 						} \
-						if(p && !r) { \
+						if(p && !r) { /* got an end of tag and no other < earlier */\
 							if(*(p-1) != '/') { \
-								struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1); \
+								struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1); \
 								pt->src_tag = x; \
 								pt->dest_tag = y; \
 								tags = g_list_prepend(tags, pt); \
 							} \
-							xhtml = g_string_append(xhtml, "<" y); \
-							c += strlen("<" x ); \
-							xhtml = g_string_append(xhtml, innards->str); \
-							xhtml = g_string_append_c(xhtml, '>'); \
+							if(xhtml) { \
+								xhtml = g_string_append(xhtml, "<" y); \
+								xhtml = g_string_append(xhtml, innards->str); \
+								xhtml = g_string_append_c(xhtml, '>'); \
+							} \
 							c = p + 1; \
-						} else { \
-							xhtml = g_string_append(xhtml, "&lt;"); \
-							plain = g_string_append_c(plain, '<'); \
+						} else { /* got end of tag with earlier < *or* didn't get anything */ \
+							if(xhtml) \
+								xhtml = g_string_append(xhtml, "&lt;"); \
+							if(plain) \
+								plain = g_string_append_c(plain, '<'); \
 							c++; \
 						} \
 						g_string_free(innards, TRUE); \
 						continue; \
 					} \
-						if(!g_ascii_strncasecmp(c, "<" x, strlen("<" x)) && \
-								(*(c+strlen("<" x)) == '>' || \
-								 !g_ascii_strncasecmp(c+strlen("<" x), "/>", 2))) { \
+					if(!g_ascii_strncasecmp(c, "<" x, strlen("<" x)) && \
+							(*(c+strlen("<" x)) == '>' || \
+							 !g_ascii_strncasecmp(c+strlen("<" x), "/>", 2))) { \
+						if(xhtml) \
 							xhtml = g_string_append(xhtml, "<" y); \
-							c += strlen("<" x); \
-							if(*c != '/') { \
-								struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1); \
-								pt->src_tag = x; \
-								pt->dest_tag = y; \
-								tags = g_list_prepend(tags, pt); \
+						c += strlen("<" x); \
+						if(*c != '/') { \
+							struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1); \
+							pt->src_tag = x; \
+							pt->dest_tag = y; \
+							tags = g_list_prepend(tags, pt); \
+							if(xhtml) \
 								xhtml = g_string_append_c(xhtml, '>'); \
-							} else { \
+						} else { \
+							if(xhtml) \
 								xhtml = g_string_append(xhtml, "/>");\
-							} \
-							c = strchr(c, '>') + 1; \
-							continue; \
-						}
+						} \
+						c = strchr(c, '>') + 1; \
+						continue; \
+					}
+/* Don't forget to check the note above for ALLOW_TAG_ALT. */
 #define ALLOW_TAG(x) ALLOW_TAG_ALT(x, x)
 void
-gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
+purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						  char **plain_out)
 {
-	GString *xhtml = g_string_new("");
-	GString *plain = g_string_new("");
+	GString *xhtml = NULL;
+	GString *plain = NULL;
+	GString *url = NULL;
+	GString *cdata = NULL;
 	GList *tags = NULL, *tag;
 	const char *c = html;
+	char quote = '\0';
+
+#define CHECK_QUOTE(ptr) if (*(ptr) == '\'' || *(ptr) == '\"') \
+			quote = *(ptr++); \
+		else \
+			quote = '\0';
+
+#define VALID_CHAR(ptr) (*(ptr) && *(ptr) != quote && (quote || (*(ptr) != ' ' && *(ptr) != '>')))
+
+	g_return_if_fail(xhtml_out != NULL || plain_out != NULL);
+
+	if(xhtml_out)
+		xhtml = g_string_new("");
+	if(plain_out)
+		plain = g_string_new("");
 
 	while(c && *c) {
 		if(*c == '<') {
 			if(*(c+1) == '/') { /* closing tag */
 				tag = tags;
 				while(tag) {
-					struct gaim_parse_tag *pt = tag->data;
+					struct purple_parse_tag *pt = tag->data;
 					if(!g_ascii_strncasecmp((c+2), pt->src_tag, strlen(pt->src_tag)) && *(c+strlen(pt->src_tag)+2) == '>') {
 						c += strlen(pt->src_tag) + 3;
 						break;
@@ -1251,8 +1524,21 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 				}
 				if(tag) {
 					while(tags) {
-						struct gaim_parse_tag *pt = tags->data;
-						g_string_append_printf(xhtml, "</%s>", pt->dest_tag);
+						struct purple_parse_tag *pt = tags->data;
+						if(xhtml && !pt->ignore)
+							g_string_append_printf(xhtml, "</%s>", pt->dest_tag);
+						if(plain && purple_strequal(pt->src_tag, "a")) {
+							/* if this is a link, we have to add the url to the plaintext, too */
+							if (cdata && url &&
+									(!g_string_equal(cdata, url) && (g_ascii_strncasecmp(url->str, "mailto:", 7) != 0 ||
+									                                 g_utf8_collate(url->str + 7, cdata->str) != 0)))
+								g_string_append_printf(plain, " <%s>", g_strstrip(url->str));
+							if (cdata) {
+								g_string_free(cdata, TRUE);
+								cdata = NULL;
+							}
+
+						}
 						if(tags == tag)
 							break;
 						tags = g_list_remove(tags, pt);
@@ -1270,13 +1556,14 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					if(*end == '>') {
 						c = end+1;
 					} else {
-						xhtml = g_string_append(xhtml, "&lt;");
-						plain = g_string_append_c(plain, '<');
+						if(xhtml)
+							xhtml = g_string_append(xhtml, "&lt;");
+						if(plain)
+							plain = g_string_append_c(plain, '<');
 						c++;
 					}
 				}
 			} else { /* opening tag */
-				ALLOW_TAG("a");
 				ALLOW_TAG("blockquote");
 				ALLOW_TAG("cite");
 				ALLOW_TAG("div");
@@ -1288,8 +1575,9 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 				ALLOW_TAG("h5");
 				ALLOW_TAG("h6");
 				/* we only allow html to start the message */
-				if(c == html)
+				if(c == html) {
 					ALLOW_TAG("html");
+				}
 				ALLOW_TAG_ALT("i", "em");
 				ALLOW_TAG_ALT("italic", "em");
 				ALLOW_TAG("li");
@@ -1298,8 +1586,8 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 				ALLOW_TAG("pre");
 				ALLOW_TAG("q");
 				ALLOW_TAG("span");
-				ALLOW_TAG("strong");
 				ALLOW_TAG("ul");
+
 
 				/* we skip <HR> because it's not legal in XHTML-IM.  However,
 				 * we still want to send something sensible, so we put a
@@ -1311,106 +1599,195 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							!g_ascii_strncasecmp(c+3, "/>", 2) ||
 							!g_ascii_strncasecmp(c+3, " />", 3))) {
 					c = strchr(c, '>') + 1;
-					xhtml = g_string_append(xhtml, "<br/>");
-					if(*c != '\n')
+					if(xhtml)
+						xhtml = g_string_append(xhtml, "<br/>");
+					if(plain && *c != '\n')
 						plain = g_string_append_c(plain, '\n');
 					continue;
 				}
-				if(!g_ascii_strncasecmp(c, "<b>", 3) || !g_ascii_strncasecmp(c, "<bold>", strlen("<bold>"))) {
-					struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1);
-					pt->src_tag = *(c+2) == '>' ? "b" : "bold";
+				if(!g_ascii_strncasecmp(c, "<b>", 3) || !g_ascii_strncasecmp(c, "<bold>", strlen("<bold>")) || !g_ascii_strncasecmp(c, "<strong>", strlen("<strong>"))) {
+					struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
+					if (*(c+2) == '>')
+						pt->src_tag = "b";
+					else if (*(c+2) == 'o')
+						pt->src_tag = "bold";
+					else
+						pt->src_tag = "strong";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
 					c = strchr(c, '>') + 1;
-					xhtml = g_string_append(xhtml, "<span style='font-weight: bold;'>");
+					if(xhtml)
+						xhtml = g_string_append(xhtml, "<span style='font-weight: bold;'>");
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<u>", 3) || !g_ascii_strncasecmp(c, "<underline>", strlen("<underline>"))) {
-					struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1);
+					struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
 					pt->src_tag = *(c+2) == '>' ? "u" : "underline";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
 					c = strchr(c, '>') + 1;
-					xhtml = g_string_append(xhtml, "<span style='text-decoration: underline;'>");
+					if (xhtml)
+						xhtml = g_string_append(xhtml, "<span style='text-decoration: underline;'>");
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<s>", 3) || !g_ascii_strncasecmp(c, "<strike>", strlen("<strike>"))) {
-					struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1);
+					struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
 					pt->src_tag = *(c+2) == '>' ? "s" : "strike";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
 					c = strchr(c, '>') + 1;
-					xhtml = g_string_append(xhtml, "<span style='text-decoration: line-through;'>");
+					if(xhtml)
+						xhtml = g_string_append(xhtml, "<span style='text-decoration: line-through;'>");
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<sub>", 5)) {
-					struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1);
+					struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
 					pt->src_tag = "sub";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
 					c = strchr(c, '>') + 1;
-					xhtml = g_string_append(xhtml, "<span style='vertical-align:sub;'>");
+					if(xhtml)
+						xhtml = g_string_append(xhtml, "<span style='vertical-align:sub;'>");
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<sup>", 5)) {
-					struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1);
+					struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
 					pt->src_tag = "sup";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
 					c = strchr(c, '>') + 1;
-					xhtml = g_string_append(xhtml, "<span style='vertical-align:super;'>");
+					if(xhtml)
+						xhtml = g_string_append(xhtml, "<span style='vertical-align:super;'>");
+					continue;
+				}
+				if (!g_ascii_strncasecmp(c, "<img", 4) && (*(c+4) == '>' || *(c+4) == ' ')) {
+					const char *p = c + 4;
+					GString *src = NULL, *alt = NULL;
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "src=", 4)) {
+							const char *q = p + 4;
+							if (src)
+								g_string_free(src, TRUE);
+							src = g_string_new("");
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
+								src = g_string_append_c(src, *q);
+								q++;
+							}
+							p = q;
+						} else if (!g_ascii_strncasecmp(p, "alt=", 4)) {
+							const char *q = p + 4;
+							if (alt)
+								g_string_free(alt, TRUE);
+							alt = g_string_new("");
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
+								alt = g_string_append_c(alt, *q);
+								q++;
+							}
+							p = q;
+						} else {
+							p++;
+						}
+					}
+					if ((c = strchr(p, '>')) != NULL)
+						c++;
+					else
+						c = p;
+					/* src and alt are required! */
+					if(src && xhtml)
+						g_string_append_printf(xhtml, "<img src='%s' alt='%s' />", g_strstrip(src->str), alt ? alt->str : "");
+					if(alt) {
+						if(plain)
+							plain = g_string_append(plain, alt->str);
+						if(!src && xhtml)
+							xhtml = g_string_append(xhtml, alt->str);
+						g_string_free(alt, TRUE);
+					}
+					g_string_free(src, TRUE);
+					continue;
+				}
+				if (!g_ascii_strncasecmp(c, "<a", 2) && (*(c+2) == '>' || *(c+2) == ' ')) {
+					const char *p = c + 2;
+					struct purple_parse_tag *pt;
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "href=", 5)) {
+							const char *q = p + 5;
+							if (url)
+								g_string_free(url, TRUE);
+							url = g_string_new("");
+							if (cdata)
+								g_string_free(cdata, TRUE);
+							cdata = g_string_new("");
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
+								int len;
+								if ((*q == '&') && (purple_markup_unescape_entity(q, &len) == NULL))
+									url = g_string_append(url, "&amp;");
+								else
+									url = g_string_append_c(url, *q);
+								q++;
+							}
+							p = q;
+						} else {
+							p++;
+						}
+					}
+					if ((c = strchr(p, '>')) != NULL)
+						c++;
+					else
+						c = p;
+					pt = g_new0(struct purple_parse_tag, 1);
+					pt->src_tag = "a";
+					pt->dest_tag = "a";
+					tags = g_list_prepend(tags, pt);
+					if(xhtml)
+						g_string_append_printf(xhtml, "<a href=\"%s\">", url ? g_strstrip(url->str) : "");
 					continue;
 				}
 				if(!g_ascii_strncasecmp(c, "<font", 5) && (*(c+5) == '>' || *(c+5) == ' ')) {
-					const char *p = c;
+					const char *p = c + 5;
 					GString *style = g_string_new("");
-					struct gaim_parse_tag *pt;
-					while(*p && *p != '>') {
-						if(!g_ascii_strncasecmp(p, "back=", strlen("back="))) {
-							const char *q = p + strlen("back=");
+					struct purple_parse_tag *pt;
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "back=", 5)) {
+							const char *q = p + 5;
 							GString *color = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								color = g_string_append_c(color, *q);
 								q++;
 							}
 							g_string_append_printf(style, "background: %s; ", color->str);
 							g_string_free(color, TRUE);
 							p = q;
-						} else if(!g_ascii_strncasecmp(p, "color=", strlen("color="))) {
-							const char *q = p + strlen("color=");
+						} else if (!g_ascii_strncasecmp(p, "color=", 6)) {
+							const char *q = p + 6;
 							GString *color = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								color = g_string_append_c(color, *q);
 								q++;
 							}
 							g_string_append_printf(style, "color: %s; ", color->str);
 							g_string_free(color, TRUE);
 							p = q;
-						} else if(!g_ascii_strncasecmp(p, "face=", strlen("face="))) {
-							const char *q = p + strlen("face=");
-							gboolean space_allowed = FALSE;
+						} else if (!g_ascii_strncasecmp(p, "face=", 5)) {
+							const char *q = p + 5;
 							GString *face = g_string_new("");
-							if(*q == '\'' || *q == '\"') {
-								space_allowed = TRUE;
-								q++;
-							}
-							while(*q && *q != '\"' && *q != '\'' && (space_allowed || *q != ' ')) {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								face = g_string_append_c(face, *q);
 								q++;
 							}
 							g_string_append_printf(style, "font-family: %s; ", g_strstrip(face->str));
 							g_string_free(face, TRUE);
 							p = q;
-						} else if(!g_ascii_strncasecmp(p, "size=", strlen("size="))) {
-							const char *q = p + strlen("size=");
+						} else if (!g_ascii_strncasecmp(p, "size=", 5)) {
+							const char *q = p + 5;
 							int sz;
 							const char *size = "medium";
-							if(*q == '\'' || *q == '\"')
-								q++;
+							CHECK_QUOTE(q);
 							sz = atoi(q);
 							switch (sz)
 							{
@@ -1418,20 +1795,18 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							  size = "xx-small";
 							  break;
 							case 2:
-							  size = "x-small";
-							  break;
-							case 3:
 							  size = "small";
 							  break;
-							case 4:
+							case 3:
 							  size = "medium";
 							  break;
-							case 5:
+							case 4:
 							  size = "large";
 							  break;
-							case 6:
+							case 5:
 							  size = "x-large";
 							  break;
+							case 6:
 							case 7:
 							  size = "xx-large";
 							  break;
@@ -1440,41 +1815,42 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							}
 							g_string_append_printf(style, "font-size: %s; ", size);
 							p = q;
+						} else {
+							p++;
 						}
-						p++;
 					}
-					if ((c = strchr(c, '>')) != NULL)
+					if ((c = strchr(p, '>')) != NULL)
 						c++;
 					else
 						c = p;
-					pt = g_new0(struct gaim_parse_tag, 1);
+					pt = g_new0(struct purple_parse_tag, 1);
 					pt->src_tag = "font";
 					pt->dest_tag = "span";
 					tags = g_list_prepend(tags, pt);
-					if(style->len)
+					if(style->len && xhtml)
 						g_string_append_printf(xhtml, "<span style='%s'>", g_strstrip(style->str));
 					else
 						pt->ignore = TRUE;
 					g_string_free(style, TRUE);
 					continue;
 				}
-				if(!g_ascii_strncasecmp(c, "<body ", 6)) {
-					const char *p = c;
+				if (!g_ascii_strncasecmp(c, "<body ", 6)) {
+					const char *p = c + 6;
 					gboolean did_something = FALSE;
-					while(*p && *p != '>') {
-						if(!g_ascii_strncasecmp(p, "bgcolor=", strlen("bgcolor="))) {
-							const char *q = p + strlen("bgcolor=");
-							struct gaim_parse_tag *pt = g_new0(struct gaim_parse_tag, 1);
+					while (*p && *p != '>') {
+						if (!g_ascii_strncasecmp(p, "bgcolor=", 8)) {
+							const char *q = p + 8;
+							struct purple_parse_tag *pt = g_new0(struct purple_parse_tag, 1);
 							GString *color = g_string_new("");
-							if(*q == '\'' || *q == '\"')
-								q++;
-							while(*q && *q != '\"' && *q != '\'' && *q != ' ') {
+							CHECK_QUOTE(q);
+							while (VALID_CHAR(q)) {
 								color = g_string_append_c(color, *q);
 								q++;
 							}
-							g_string_append_printf(xhtml, "<span style='background: %s;'>", g_strstrip(color->str));
+							if (xhtml)
+								g_string_append_printf(xhtml, "<span style='background: %s;'>", g_strstrip(color->str));
 							g_string_free(color, TRUE);
-							if ((c = strchr(c, '>')) != NULL)
+							if ((c = strchr(p, '>')) != NULL)
 								c++;
 							else
 								c = p;
@@ -1486,21 +1862,24 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						}
 						p++;
 					}
-					if(did_something) continue;
+					if (did_something) continue;
 				}
 				/* this has to come after the special case for bgcolor */
 				ALLOW_TAG("body");
 				if(!g_ascii_strncasecmp(c, "<!--", strlen("<!--"))) {
 					char *p = strstr(c + strlen("<!--"), "-->");
 					if(p) {
-						xhtml = g_string_append(xhtml, "<!--");
+						if(xhtml)
+							xhtml = g_string_append(xhtml, "<!--");
 						c += strlen("<!--");
 						continue;
 					}
 				}
 
-				xhtml = g_string_append(xhtml, "&lt;");
-				plain = g_string_append_c(plain, '<');
+				if(xhtml)
+					xhtml = g_string_append(xhtml, "&lt;");
+				if(plain)
+					plain = g_string_append_c(plain, '<');
 				c++;
 			}
 		} else if(*c == '&') {
@@ -1508,34 +1887,46 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
 			const char *pln;
 			int len;
 
-			if ((pln = detect_entity(c, &len)) == NULL) {
+			if ((pln = purple_markup_unescape_entity(c, &len)) == NULL) {
 				len = 1;
 				g_snprintf(buf, sizeof(buf), "%c", *c);
 				pln = buf;
 			}
-			xhtml = g_string_append_len(xhtml, c, len);
-			plain = g_string_append(plain, pln);
+			if(xhtml)
+				xhtml = g_string_append_len(xhtml, c, len);
+			if(plain)
+				plain = g_string_append(plain, pln);
+			if(cdata)
+				cdata = g_string_append_len(cdata, c, len);
 			c += len;
 		} else {
-			xhtml = g_string_append_c(xhtml, *c);
-			plain = g_string_append_c(plain, *c);
+			if(xhtml)
+				xhtml = g_string_append_c(xhtml, *c);
+			if(plain)
+				plain = g_string_append_c(plain, *c);
+			if(cdata)
+				cdata = g_string_append_c(cdata, *c);
 			c++;
 		}
 	}
-	tag = tags;
-	while(tag) {
-		struct gaim_parse_tag *pt = tag->data;
-		if(!pt->ignore)
-			g_string_append_printf(xhtml, "</%s>", pt->dest_tag);
-		tag = tag->next;
+	if(xhtml) {
+		for (tag = tags; tag ; tag = tag->next) {
+			struct purple_parse_tag *pt = tag->data;
+			if(!pt->ignore)
+				g_string_append_printf(xhtml, "</%s>", pt->dest_tag);
+		}
 	}
 	g_list_free(tags);
 	if(xhtml_out)
-		*xhtml_out = g_strdup(xhtml->str);
+		*xhtml_out = g_string_free(xhtml, FALSE);
 	if(plain_out)
-		*plain_out = g_strdup(plain->str);
-	g_string_free(xhtml, TRUE);
-	g_string_free(plain, TRUE);
+		*plain_out = g_string_free(plain, FALSE);
+	if(url)
+		g_string_free(url, TRUE);
+	if (cdata)
+		g_string_free(cdata, TRUE);
+#undef CHECK_QUOTE
+#undef VALID_CHAR
 }
 
 /* The following are probably reasonable changes:
@@ -1548,7 +1939,7 @@ gaim_markup_html_to_xhtml(const char *html, char **xhtml_out,
  */
 
 char *
-gaim_markup_strip_html(const char *str)
+purple_markup_strip_html(const char *str)
 {
 	int i, j, k, entlen;
 	gboolean visible = TRUE;
@@ -1570,7 +1961,7 @@ gaim_markup_strip_html(const char *str)
 			if (cdata_close_tag)
 			{
 				/* Note: Don't even assume any other tag is a tag in CDATA */
-				if (strncasecmp(str2 + i, cdata_close_tag,
+				if (g_ascii_strncasecmp(str2 + i, cdata_close_tag,
 						strlen(cdata_close_tag)) == 0)
 				{
 					i += strlen(cdata_close_tag) - 1;
@@ -1578,12 +1969,12 @@ gaim_markup_strip_html(const char *str)
 				}
 				continue;
 			}
-			else if (strncasecmp(str2 + i, "<td", 3) == 0 && closing_td_p)
+			else if (g_ascii_strncasecmp(str2 + i, "<td", 3) == 0 && closing_td_p)
 			{
 				str2[j++] = '\t';
 				visible = TRUE;
 			}
-			else if (strncasecmp(str2 + i, "</td>", 5) == 0)
+			else if (g_ascii_strncasecmp(str2 + i, "</td>", 5) == 0)
 			{
 				closing_td_p = TRUE;
 				visible = FALSE;
@@ -1611,7 +2002,7 @@ gaim_markup_strip_html(const char *str)
 
 				/* If we've got an <a> tag with an href, save the address
 				 * to print later. */
-				if (strncasecmp(str2 + i, "<a", 2) == 0 &&
+				if (g_ascii_strncasecmp(str2 + i, "<a", 2) == 0 &&
 				    g_ascii_isspace(str2[i+2]))
 				{
 					int st; /* start of href, inclusive [ */
@@ -1620,12 +2011,12 @@ gaim_markup_strip_html(const char *str)
 					/* Find start of href */
 					for (st = i + 3; st < k; st++)
 					{
-						if (strncasecmp(str2+st, "href=", 5) == 0)
+						if (g_ascii_strncasecmp(str2+st, "href=", 5) == 0)
 						{
 							st += 5;
-							if (str2[st] == '"')
+							if (str2[st] == '"' || str2[st] == '\'')
 							{
-								delim = '"';
+								delim = str2[st];
 								st++;
 							}
 							break;
@@ -1644,7 +2035,7 @@ gaim_markup_strip_html(const char *str)
 						char *tmp;
 						g_free(href);
 						tmp = g_strndup(str2 + st, end - st);
-						href = gaim_unescape_html(tmp);
+						href = purple_unescape_html(tmp);
 						g_free(tmp);
 						href_st = j;
 					}
@@ -1652,7 +2043,7 @@ gaim_markup_strip_html(const char *str)
 
 				/* Replace </a> with an ascii representation of the
 				 * address the link was pointing to. */
-				else if (href != NULL && strncasecmp(str2 + i, "</a>", 4) == 0)
+				else if (href != NULL && g_ascii_strncasecmp(str2 + i, "</a>", 4) == 0)
 				{
 
 					size_t hrlen = strlen(href);
@@ -1673,29 +2064,31 @@ gaim_markup_strip_html(const char *str)
 					}
 				}
 
-				/* Check for tags which should be mapped to newline */
-				else if (strncasecmp(str2 + i, "<p>", 3) == 0
-				 || strncasecmp(str2 + i, "<tr", 3) == 0
-				 || strncasecmp(str2 + i, "<br", 3) == 0
-				 || strncasecmp(str2 + i, "<li", 3) == 0
-				 || strncasecmp(str2 + i, "<div", 4) == 0
-				 || strncasecmp(str2 + i, "</table>", 8) == 0)
+				/* Check for tags which should be mapped to newline (but ignore some of
+				 * the tags at the beginning of the text) */
+				else if ((j && (g_ascii_strncasecmp(str2 + i, "<p>", 3) == 0
+				              || g_ascii_strncasecmp(str2 + i, "<tr", 3) == 0
+				              || g_ascii_strncasecmp(str2 + i, "<hr", 3) == 0
+				              || g_ascii_strncasecmp(str2 + i, "<li", 3) == 0
+				              || g_ascii_strncasecmp(str2 + i, "<div", 4) == 0))
+				 || g_ascii_strncasecmp(str2 + i, "<br", 3) == 0
+				 || g_ascii_strncasecmp(str2 + i, "</table>", 8) == 0)
 				{
 					str2[j++] = '\n';
 				}
 				/* Check for tags which begin CDATA and need to be closed */
 #if 0 /* FIXME.. option is end tag optional, we can't handle this right now */
-				else if (strncasecmp(str2 + i, "<option", 7) == 0)
+				else if (g_ascii_strncasecmp(str2 + i, "<option", 7) == 0)
 				{
 					/* FIXME: We should not do this if the OPTION is SELECT'd */
 					cdata_close_tag = "</option>";
 				}
 #endif
-				else if (strncasecmp(str2 + i, "<script", 7) == 0)
+				else if (g_ascii_strncasecmp(str2 + i, "<script", 7) == 0)
 				{
 					cdata_close_tag = "</script>";
 				}
-				else if (strncasecmp(str2 + i, "<style", 6) == 0)
+				else if (g_ascii_strncasecmp(str2 + i, "<style", 6) == 0)
 				{
 					cdata_close_tag = "</style>";
 				}
@@ -1713,7 +2106,7 @@ gaim_markup_strip_html(const char *str)
 			visible = TRUE;
 		}
 
-		if (str2[i] == '&' && (ent = detect_entity(str2 + i, &entlen)) != NULL)
+		if (str2[i] == '&' && (ent = purple_markup_unescape_entity(str2 + i, &entlen)) != NULL)
 		{
 			while (*ent)
 				str2[j++] = *ent++;
@@ -1744,7 +2137,6 @@ badchar(char c)
 	case '<':
 	case '>':
 	case '"':
-	case '\'':
 		return TRUE;
 	default:
 		return FALSE;
@@ -1762,16 +2154,59 @@ badentity(const char *c)
 	return FALSE;
 }
 
+static const char *
+process_link(GString *ret,
+		const char *start, const char *c,
+		int matchlen,
+		const char *urlprefix,
+		int inside_paren)
+{
+	char *url_buf, *tmpurlbuf;
+	const char *t;
+
+	for (t = c;; t++) {
+		if (!badchar(*t) && !badentity(t))
+			continue;
+
+		if (t - c == matchlen)
+			break;
+
+		if (*t == ',' && *(t + 1) != ' ') {
+			continue;
+		}
+
+		if (t > start && *(t - 1) == '.')
+			t--;
+		if (t > start && *(t - 1) == ')' && inside_paren > 0)
+			t--;
+
+		url_buf = g_strndup(c, t - c);
+		tmpurlbuf = purple_unescape_html(url_buf);
+		g_string_append_printf(ret, "<A HREF=\"%s%s\">%s</A>",
+				urlprefix,
+				tmpurlbuf, url_buf);
+		g_free(tmpurlbuf);
+		g_free(url_buf);
+		return t;
+	}
+
+	return c;
+}
+
 char *
-gaim_markup_linkify(const char *text)
+purple_markup_linkify(const char *text)
 {
 	const char *c, *t, *q = NULL;
 	char *tmpurlbuf, *url_buf;
 	gunichar g;
 	gboolean inside_html = FALSE;
 	int inside_paren = 0;
-	GString *ret = g_string_new("");
-	/* Assumes you have a buffer able to carry at least BUF_LEN * 2 bytes */
+	GString *ret;
+
+	if (text == NULL)
+		return NULL;
+
+	ret = g_string_new("");
 
 	c = text;
 	while (*c) {
@@ -1805,126 +2240,43 @@ gaim_markup_linkify(const char *text)
 						break;
 				}
 			}
-		} else if ((*c=='h') && (!g_ascii_strncasecmp(c, "http://", 7) ||
-					(!g_ascii_strncasecmp(c, "https://", 8)))) {
-			t = c;
-			while (1) {
-				if (badchar(*t) || badentity(t)) {
-
-					if (*(t) == ',' && (*(t + 1) != ' ')) {
-						t++;
-						continue;
-					}
-
-					if (*(t - 1) == '.')
-						t--;
-					if ((*(t - 1) == ')' && (inside_paren > 0))) {
-						t--;
-					}
-
-					url_buf = g_strndup(c, t - c);
-					tmpurlbuf = gaim_unescape_html(url_buf);
-					g_string_append_printf(ret, "<A HREF=\"%s\">%s</A>",
-							tmpurlbuf, url_buf);
-					g_free(url_buf);
-					g_free(tmpurlbuf);
-					c = t;
-					break;
-				}
-				t++;
-
-			}
-		} else if (!g_ascii_strncasecmp(c, "www.", 4) && (c == text || badchar(c[-1]) || badentity(c-1))) {
-			if (c[4] != '.') {
-				t = c;
-				while (1) {
-					if (badchar(*t) || badentity(t)) {
-						if (t - c == 4) {
-							break;
-						}
-
-						if (*(t) == ',' && (*(t + 1) != ' ')) {
-							t++;
-							continue;
-						}
-
-						if (*(t - 1) == '.')
-							t--;
-						if ((*(t - 1) == ')' && (inside_paren > 0))) {
-							t--;
-						}
-						url_buf = g_strndup(c, t - c);
-						tmpurlbuf = gaim_unescape_html(url_buf);
-						g_string_append_printf(ret,
-								"<A HREF=\"http://%s\">%s</A>", tmpurlbuf,
-								url_buf);
-						g_free(url_buf);
-						g_free(tmpurlbuf);
-						c = t;
-						break;
-					}
-					t++;
-				}
-			}
-		} else if (!g_ascii_strncasecmp(c, "ftp://", 6) || !g_ascii_strncasecmp(c, "sftp://", 7)) {
-			t = c;
-			while (1) {
-				if (badchar(*t) || badentity(t)) {
-					if (*(t - 1) == '.')
-						t--;
-					if ((*(t - 1) == ')' && (inside_paren > 0))) {
-						t--;
-					}
-					url_buf = g_strndup(c, t - c);
-					tmpurlbuf = gaim_unescape_html(url_buf);
-					g_string_append_printf(ret, "<A HREF=\"%s\">%s</A>",
-							tmpurlbuf, url_buf);
-					g_free(url_buf);
-					g_free(tmpurlbuf);
-					c = t;
-					break;
-				}
-				if (!t)
-					break;
-				t++;
-
-			}
-		} else if (!g_ascii_strncasecmp(c, "ftp.", 4) && (c == text || badchar(c[-1]) || badentity(c-1))) {
-			if (c[4] != '.') {
-				t = c;
-				while (1) {
-					if (badchar(*t) || badentity(t)) {
-						if (t - c == 4) {
-							break;
-						}
-						if (*(t - 1) == '.')
-							t--;
-						if ((*(t - 1) == ')' && (inside_paren > 0))) {
-							t--;
-						}
-						url_buf = g_strndup(c, t - c);
-						tmpurlbuf = gaim_unescape_html(url_buf);
-						g_string_append_printf(ret,
-								"<A HREF=\"ftp://%s\">%s</A>", tmpurlbuf,
-								url_buf);
-						g_free(url_buf);
-						g_free(tmpurlbuf);
-						c = t;
-						break;
-					}
-					if (!t)
-						break;
-					t++;
-				}
-			}
+		} else if (!g_ascii_strncasecmp(c, "http://", 7)) {
+			c = process_link(ret, text, c, 7, "", inside_paren);
+		} else if (!g_ascii_strncasecmp(c, "https://", 8)) {
+			c = process_link(ret, text, c, 8, "", inside_paren);
+		} else if (!g_ascii_strncasecmp(c, "ftp://", 6)) {
+			c = process_link(ret, text, c, 6, "", inside_paren);
+		} else if (!g_ascii_strncasecmp(c, "sftp://", 7)) {
+			c = process_link(ret, text, c, 7, "", inside_paren);
+		} else if (!g_ascii_strncasecmp(c, "file://", 7)) {
+			c = process_link(ret, text, c, 7, "", inside_paren);
+		} else if (!g_ascii_strncasecmp(c, "www.", 4) && c[4] != '.' && (c == text || badchar(c[-1]) || badentity(c-1))) {
+			c = process_link(ret, text, c, 4, "http://", inside_paren);
+		} else if (!g_ascii_strncasecmp(c, "ftp.", 4) && c[4] != '.' && (c == text || badchar(c[-1]) || badentity(c-1))) {
+			c = process_link(ret, text, c, 4, "ftp://", inside_paren);
+		} else if (!g_ascii_strncasecmp(c, "xmpp:", 5) && (c == text || badchar(c[-1]) || badentity(c-1))) {
+			c = process_link(ret, text, c, 5, "", inside_paren);
 		} else if (!g_ascii_strncasecmp(c, "mailto:", 7)) {
 			t = c;
 			while (1) {
 				if (badchar(*t) || badentity(t)) {
-					if (*(t - 1) == '.')
+					char *d;
+					if (t - c == 7) {
+						break;
+					}
+					if (t > text && *(t - 1) == '.')
 						t--;
+					if ((d = strstr(c + 7, "?")) != NULL && d < t)
+						url_buf = g_strndup(c + 7, d - c - 7);
+					else
+						url_buf = g_strndup(c + 7, t - c - 7);
+					if (!purple_email_is_valid(url_buf)) {
+						g_free(url_buf);
+						break;
+					}
+					g_free(url_buf);
 					url_buf = g_strndup(c, t - c);
-					tmpurlbuf = gaim_unescape_html(url_buf);
+					tmpurlbuf = purple_unescape_html(url_buf);
 					g_string_append_printf(ret, "<A HREF=\"%s\">%s</A>",
 							  tmpurlbuf, url_buf);
 					g_free(url_buf);
@@ -1932,10 +2284,7 @@ gaim_markup_linkify(const char *text)
 					c = t;
 					break;
 				}
-				if (!t)
-					break;
 				t++;
-
 			}
 		} else if (c != text && (*c == '@')) {
 			int flag;
@@ -1982,13 +2331,13 @@ gaim_markup_linkify(const char *text)
 					url_buf = g_string_free(gurl_buf, FALSE);
 
 					/* strip off trailing periods */
-					if (strlen(url_buf) > 0) {
+					if (*url_buf) {
 						for (d = url_buf + strlen(url_buf) - 1; *d == '.'; d--, t--)
 							*d = '\0';
 					}
 
-					tmpurlbuf = gaim_unescape_html(url_buf);
-					if (gaim_email_is_valid(tmpurlbuf)) {
+					tmpurlbuf = purple_unescape_html(url_buf);
+					if (purple_email_is_valid(tmpurlbuf)) {
 						g_string_append_printf(ret, "<A HREF=\"mailto:%s\">%s</A>",
 								tmpurlbuf, url_buf);
 					} else {
@@ -2022,34 +2371,61 @@ gaim_markup_linkify(const char *text)
 	return g_string_free(ret, FALSE);
 }
 
-char *
-gaim_unescape_html(const char *html) {
-	if (html != NULL) {
-		const char *c = html;
-		GString *ret = g_string_new("");
-		while (*c) {
-			int len;
-			const char *ent;
+char *purple_unescape_text(const char *in)
+{
+    GString *ret;
+    const char *c = in;
 
-			if ((ent = detect_entity(c, &len)) != NULL) {
-				ret = g_string_append(ret, ent);
-				c += len;
-			} else if (!strncmp(c, "<br>", 4)) {
-				ret = g_string_append_c(ret, '\n');
-				c += 4;
-			} else {
-				ret = g_string_append_c(ret, *c);
-				c++;
-			}
+    if (in == NULL)
+        return NULL;
+
+    ret = g_string_new("");
+    while (*c) {
+        int len;
+        const char *ent;
+
+        if ((ent = purple_markup_unescape_entity(c, &len)) != NULL) {
+            g_string_append(ret, ent);
+            c += len;
+        } else {
+            g_string_append_c(ret, *c);
+            c++;
+        }
+    }
+
+    return g_string_free(ret, FALSE);
+}
+
+char *purple_unescape_html(const char *html)
+{
+	GString *ret;
+	const char *c = html;
+
+	if (html == NULL)
+		return NULL;
+
+	ret = g_string_new("");
+	while (*c) {
+		int len;
+		const char *ent;
+
+		if ((ent = purple_markup_unescape_entity(c, &len)) != NULL) {
+			g_string_append(ret, ent);
+			c += len;
+		} else if (!strncmp(c, "<br>", 4)) {
+			g_string_append_c(ret, '\n');
+			c += 4;
+		} else {
+			g_string_append_c(ret, *c);
+			c++;
 		}
-		return g_string_free(ret, FALSE);
 	}
 
-	return NULL;
+	return g_string_free(ret, FALSE);
 }
 
 char *
-gaim_markup_slice(const char *str, guint x, guint y)
+purple_markup_slice(const char *str, guint x, guint y)
 {
 	GString *ret;
 	GQueue *q;
@@ -2058,6 +2434,7 @@ gaim_markup_slice(const char *str, guint x, guint y)
 	gunichar c;
 	char *tag;
 
+	g_return_val_if_fail(str != NULL, NULL);
 	g_return_val_if_fail(x <= y, NULL);
 
 	if (x == y)
@@ -2146,7 +2523,7 @@ gaim_markup_slice(const char *str, guint x, guint y)
 	while ((tag = g_queue_pop_head(q))) {
 		char *name;
 
-		name = gaim_markup_get_tag_name(tag);
+		name = purple_markup_get_tag_name(tag);
 		g_string_append_printf(ret, "</%s>", name);
 		g_free(name);
 		g_free(tag);
@@ -2157,7 +2534,7 @@ gaim_markup_slice(const char *str, guint x, guint y)
 }
 
 char *
-gaim_markup_get_tag_name(const char *tag)
+purple_markup_get_tag_name(const char *tag)
 {
 	int i;
 	g_return_val_if_fail(tag != NULL, NULL);
@@ -2174,95 +2551,40 @@ gaim_markup_get_tag_name(const char *tag)
  * Path/Filename Functions
  **************************************************************************/
 const char *
-gaim_home_dir(void)
+purple_home_dir(void)
 {
 #ifndef _WIN32
 	return g_get_home_dir();
 #else
-	return wgaim_data_dir();
+	return wpurple_data_dir();
 #endif
 }
 
-/* returns a string of the form ~/.gaim, where ~ is replaced by the user's home
- * dir. Note that there is no trailing slash after .gaim. */
+/* Returns the argument passed to -c IFF it was present, or ~/.purple. */
 const char *
-gaim_user_dir(void)
+purple_user_dir(void)
 {
-	if (custom_home_dir != NULL && strlen(custom_home_dir) > 0) {
-		strcpy ((char*) &home_dir, (char*) &custom_home_dir);
-	} else {
-		const gchar *hd = gaim_home_dir();
+	if (custom_user_dir != NULL)
+		return custom_user_dir;
+	else if (!user_dir)
+		user_dir = g_build_filename(purple_home_dir(), ".purple", NULL);
 
-		if (hd) {
-			g_strlcpy((char*) &home_dir, hd, sizeof(home_dir));
-			g_strlcat((char*) &home_dir, G_DIR_SEPARATOR_S ".gaim",
-					sizeof(home_dir));
-		}
-	}
-
-	return home_dir;
+	return user_dir;
 }
 
-void gaim_util_set_user_dir(const char *dir)
+void purple_util_set_user_dir(const char *dir)
 {
-	if (dir != NULL && strlen(dir) > 0) {
-		g_strlcpy((char*) &custom_home_dir, dir,
-				sizeof(custom_home_dir));
-	}
+	g_free(custom_user_dir);
+
+	if (dir != NULL && *dir)
+		custom_user_dir = g_strdup(dir);
+	else
+		custom_user_dir = NULL;
 }
 
-int gaim_build_dir (const char *path, int mode)
+int purple_build_dir (const char *path, int mode)
 {
-#if GLIB_CHECK_VERSION(2,8,0)
 	return g_mkdir_with_parents(path, mode);
-#else
-	char *dir, **components, delim[] = { G_DIR_SEPARATOR, '\0' };
-	int cur, len;
-
-	g_return_val_if_fail(path != NULL, -1);
-
-	dir = g_new0(char, strlen(path) + 1);
-	components = g_strsplit(path, delim, -1);
-	len = 0;
-	for (cur = 0; components[cur] != NULL; cur++) {
-		/* If you don't know what you're doing on both
-		 * win32 and *NIX, stay the hell away from this code */
-		if(cur > 1)
-			dir[len++] = G_DIR_SEPARATOR;
-		strcpy(dir + len, components[cur]);
-		len += strlen(components[cur]);
-		if(cur == 0)
-			dir[len++] = G_DIR_SEPARATOR;
-
-		if(g_file_test(dir, G_FILE_TEST_IS_DIR)) {
-			continue;
-#ifdef _WIN32
-		/* allow us to create subdirs on UNC paths
-		 * (\\machinename\path\to\blah)
-		 * g_file_test() doesn't work on "\\machinename" */
-		} else if (cur == 2 && dir[0] == '\\' && dir[1] == '\\'
-				&& components[cur + 1] != NULL) {
-			continue;
-#endif
-		} else if(g_file_test(dir, G_FILE_TEST_EXISTS)) {
-			gaim_debug_warning("build_dir", "bad path: %s\n", path);
-			g_strfreev(components);
-			g_free(dir);
-			return -1;
-		}
-
-		if (g_mkdir(dir, mode) < 0) {
-			gaim_debug_warning("build_dir", "mkdir: %s\n", strerror(errno));
-			g_strfreev(components);
-			g_free(dir);
-			return -1;
-		}
-	}
-
-	g_strfreev(components);
-	g_free(dir);
-	return 0;
-#endif
 }
 
 /*
@@ -2271,17 +2593,15 @@ int gaim_build_dir (const char *path, int mode)
  * people's settings if there is a problem writing the new values.
  */
 gboolean
-gaim_util_write_data_to_file(const char *filename, const char *data, size_t size)
+purple_util_write_data_to_file(const char *filename, const char *data, gssize size)
 {
-	const char *user_dir = gaim_user_dir();
-	gchar *filename_temp, *filename_full;
-	FILE *file;
-	size_t real_size, byteswritten;
-	struct stat st;
+	const char *user_dir = purple_user_dir();
+	gchar *filename_full;
+	gboolean ret = FALSE;
 
 	g_return_val_if_fail(user_dir != NULL, FALSE);
 
-	gaim_debug_info("util", "Writing file %s to directory %s\n",
+	purple_debug_info("util", "Writing file %s to directory %s\n",
 					filename, user_dir);
 
 	/* Ensure the user directory exists */
@@ -2289,13 +2609,36 @@ gaim_util_write_data_to_file(const char *filename, const char *data, size_t size
 	{
 		if (g_mkdir(user_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 		{
-			gaim_debug_error("util", "Error creating directory %s: %s\n",
-							 user_dir, strerror(errno));
+			purple_debug_error("util", "Error creating directory %s: %s\n",
+							 user_dir, g_strerror(errno));
 			return FALSE;
 		}
 	}
 
 	filename_full = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", user_dir, filename);
+
+	ret = purple_util_write_data_to_file_absolute(filename_full, data, size);
+
+	g_free(filename_full);
+	return ret;
+}
+
+gboolean
+purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size)
+{
+	gchar *filename_temp;
+	FILE *file;
+	size_t real_size, byteswritten;
+	struct stat st;
+#ifndef HAVE_FILENO
+	int fd;
+#endif
+
+	purple_debug_info("util", "Writing file %s\n",
+					filename_full);
+
+	g_return_val_if_fail((size >= -1), FALSE);
+
 	filename_temp = g_strdup_printf("%s.save", filename_full);
 
 	/* Remove an old temporary file, if one exists */
@@ -2303,8 +2646,9 @@ gaim_util_write_data_to_file(const char *filename, const char *data, size_t size
 	{
 		if (g_unlink(filename_temp) == -1)
 		{
-			gaim_debug_error("util", "Error removing old file %s: %s\n",
-							 filename_temp, strerror(errno));
+			purple_debug_error("util", "Error removing old file "
+					   "%s: %s\n",
+					   filename_temp, g_strerror(errno));
 		}
 	}
 
@@ -2312,44 +2656,88 @@ gaim_util_write_data_to_file(const char *filename, const char *data, size_t size
 	file = g_fopen(filename_temp, "wb");
 	if (file == NULL)
 	{
-		gaim_debug_error("util", "Error opening file %s for writing: %s\n",
-						 filename_temp, strerror(errno));
-		g_free(filename_full);
+		purple_debug_error("util", "Error opening file %s for "
+				   "writing: %s\n",
+				   filename_temp, g_strerror(errno));
 		g_free(filename_temp);
 		return FALSE;
 	}
 
 	/* Write to file */
-	real_size = (size == -1) ? strlen(data) : size;
+	real_size = (size == -1) ? strlen(data) : (size_t) size;
 	byteswritten = fwrite(data, 1, real_size, file);
+
+#ifdef HAVE_FILENO
+	/* Apparently XFS (and possibly other filesystems) do not
+	 * guarantee that file data is flushed before file metadata,
+	 * so this procedure is insufficient without some flushage. */
+	if (fflush(file) < 0) {
+		purple_debug_error("util", "Error flushing %s: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		fclose(file);
+		return FALSE;
+	}
+	if (fsync(fileno(file)) < 0) {
+		purple_debug_error("util", "Error syncing file contents for %s: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		fclose(file);
+		return FALSE;
+	}
+#endif
 
 	/* Close file */
 	if (fclose(file) != 0)
 	{
-		gaim_debug_error("util", "Error closing file %s: %s\n",
-						 filename_temp, strerror(errno));
-		g_free(filename_full);
+		purple_debug_error("util", "Error closing file %s: %s\n",
+				   filename_temp, g_strerror(errno));
 		g_free(filename_temp);
 		return FALSE;
 	}
 
+#ifndef HAVE_FILENO
+	/* This is the same effect (we hope) as the HAVE_FILENO block
+	 * above, but for systems without fileno(). */
+	if ((fd = open(filename_temp, O_RDWR)) < 0) {
+		purple_debug_error("util", "Error opening file %s for flush: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		return FALSE;
+	}
+	if (fsync(fd) < 0) {
+		purple_debug_error("util", "Error syncing %s: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		close(fd);
+		return FALSE;
+	}
+	if (close(fd) < 0) {
+		purple_debug_error("util", "Error closing %s after sync: %s\n",
+				   filename_temp, g_strerror(errno));
+		g_free(filename_temp);
+		return FALSE;
+	}
+#endif
+
 	/* Ensure the file is the correct size */
 	if (byteswritten != real_size)
 	{
-		gaim_debug_error("util", "Error writing to file %s: Wrote %" G_GSIZE_FORMAT " bytes "
-						 "but should have written %" G_GSIZE_FORMAT "; is your disk full?\n",
-						 filename_temp, byteswritten, real_size);
-		g_free(filename_full);
+		purple_debug_error("util", "Error writing to file %s: Wrote %"
+				   G_GSIZE_FORMAT " bytes "
+				   "but should have written %" G_GSIZE_FORMAT
+				   "; is your disk full?\n",
+				   filename_temp, byteswritten, real_size);
 		g_free(filename_temp);
 		return FALSE;
 	}
 	/* Use stat to be absolutely sure. */
 	if ((g_stat(filename_temp, &st) == -1) || (st.st_size != real_size))
 	{
-		gaim_debug_error("util", "Error writing data to file %s: "
-						 "Incomplete file written; is your disk full?\n",
-						 filename_temp);
-		g_free(filename_full);
+		purple_debug_error("util", "Error writing data to file %s: "
+				   "Incomplete file written; is your disk "
+				   "full?\n",
+				   filename_temp);
 		g_free(filename_temp);
 		return FALSE;
 	}
@@ -2358,91 +2746,28 @@ gaim_util_write_data_to_file(const char *filename, const char *data, size_t size
 	/* Set file permissions */
 	if (chmod(filename_temp, S_IRUSR | S_IWUSR) == -1)
 	{
-		gaim_debug_error("util", "Error setting permissions of file %s: %s\n",
-						 filename_temp, strerror(errno));
+		purple_debug_error("util", "Error setting permissions of file %s: %s\n",
+						 filename_temp, g_strerror(errno));
 	}
 #endif
 
 	/* Rename to the REAL name */
 	if (g_rename(filename_temp, filename_full) == -1)
 	{
-		gaim_debug_error("util", "Error renaming %s to %s: %s\n",
-						 filename_temp, filename_full, strerror(errno));
+		purple_debug_error("util", "Error renaming %s to %s: %s\n",
+				   filename_temp, filename_full,
+				   g_strerror(errno));
 	}
 
-	g_free(filename_full);
 	g_free(filename_temp);
 
 	return TRUE;
 }
 
 xmlnode *
-gaim_util_read_xml_from_file(const char *filename, const char *description)
+purple_util_read_xml_from_file(const char *filename, const char *description)
 {
-	const char *user_dir = gaim_user_dir();
-	gchar *filename_full;
-	GError *error = NULL;
-	gchar *contents = NULL;
-	gsize length;
-	xmlnode *node = NULL;
-
-	g_return_val_if_fail(user_dir != NULL, NULL);
-
-	gaim_debug_info("util", "Reading file %s from directory %s\n",
-					filename, user_dir);
-
-	filename_full = g_build_filename(user_dir, filename, NULL);
-
-	if (!g_file_test(filename_full, G_FILE_TEST_EXISTS))
-	{
-		gaim_debug_info("util", "File %s does not exist (this is not "
-						"necessarily an error)\n", filename_full);
-		g_free(filename_full);
-		return NULL;
-	}
-
-	if (!g_file_get_contents(filename_full, &contents, &length, &error))
-	{
-		gaim_debug_error("util", "Error reading file %s: %s\n",
-						 filename_full, error->message);
-		g_error_free(error);
-	}
-
-	if ((contents != NULL) && (length > 0))
-	{
-		node = xmlnode_from_str(contents, length);
-
-		/* If we were unable to parse the file then save its contents to a backup file */
-		if (node == NULL)
-		{
-			gchar *filename_temp;
-
-			filename_temp = g_strdup_printf("%s~", filename);
-			gaim_debug_error("util", "Error parsing file %s.  Renaming old "
-							 "file to %s\n", filename_full, filename_temp);
-			gaim_util_write_data_to_file(filename_temp, contents, length);
-			g_free(filename_temp);
-		}
-
-		g_free(contents);
-	}
-
-	/* If we could not parse the file then show the user an error message */
-	if (node == NULL)
-	{
-		gchar *title, *msg;
-		title = g_strdup_printf(_("Error Reading %s"), filename);
-		msg = g_strdup_printf(_("An error was encountered reading your "
-					"%s.  They have not been loaded, and the old file "
-					"has been renamed to %s~."), description, filename_full);
-		gaim_notify_error(NULL, NULL, title, msg);
-		g_free(title);
-		g_free(msg);
-	}
-
-	g_free(filename_full);
-
-	return node;
+	return xmlnode_from_file(purple_user_dir(), filename, description, "util");
 }
 
 /*
@@ -2455,61 +2780,113 @@ gaim_util_read_xml_from_file(const char *filename, const char *description)
  *
  * Returns NULL on failure and cleans up after itself if so.
  */
-static const char *gaim_mkstemp_templ = {"gaimXXXXXX"};
+static const char *purple_mkstemp_templ = {"purpleXXXXXX"};
 
 FILE *
-gaim_mkstemp(char **fpath, gboolean binary)
+purple_mkstemp(char **fpath, gboolean binary)
 {
 	const gchar *tmpdir;
-#ifndef _WIN32
 	int fd;
-#endif
 	FILE *fp = NULL;
 
 	g_return_val_if_fail(fpath != NULL, NULL);
 
 	if((tmpdir = (gchar*)g_get_tmp_dir()) != NULL) {
-		if((*fpath = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", tmpdir, gaim_mkstemp_templ)) != NULL) {
-#ifdef _WIN32
-			char* result = _mktemp( *fpath );
-			if( result == NULL )
-				gaim_debug(GAIM_DEBUG_ERROR, "gaim_mkstemp",
-						   "Problem creating the template\n");
-			else
-			{
-				if( (fp = g_fopen( result, binary?"wb+":"w+")) == NULL ) {
-					gaim_debug(GAIM_DEBUG_ERROR, "gaim_mkstemp",
-							   "Couldn't fopen() %s\n", result);
-				}
-			}
-#else
-			if((fd = mkstemp(*fpath)) == -1) {
-				gaim_debug(GAIM_DEBUG_ERROR, "gaim_mkstemp",
+		if((*fpath = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", tmpdir, purple_mkstemp_templ)) != NULL) {
+			fd = g_mkstemp(*fpath);
+			if(fd == -1) {
+				purple_debug(PURPLE_DEBUG_ERROR, "purple_mkstemp",
 						   "Couldn't make \"%s\", error: %d\n",
 						   *fpath, errno);
 			} else {
 				if((fp = fdopen(fd, "r+")) == NULL) {
 					close(fd);
-					gaim_debug(GAIM_DEBUG_ERROR, "gaim_mkstemp",
+					purple_debug(PURPLE_DEBUG_ERROR, "purple_mkstemp",
 							   "Couldn't fdopen(), error: %d\n", errno);
 				}
 			}
-#endif
+
 			if(!fp) {
 				g_free(*fpath);
 				*fpath = NULL;
 			}
 		}
 	} else {
-		gaim_debug(GAIM_DEBUG_ERROR, "gaim_mkstemp",
+		purple_debug(PURPLE_DEBUG_ERROR, "purple_mkstemp",
 				   "g_get_tmp_dir() failed!\n");
 	}
 
 	return fp;
 }
 
+const char *
+purple_util_get_image_extension(gconstpointer data, size_t len)
+{
+	g_return_val_if_fail(data != NULL, NULL);
+	g_return_val_if_fail(len   > 0,    NULL);
+
+	if (len >= 4)
+	{
+		if (!strncmp((char *)data, "GIF8", 4))
+			return "gif";
+		else if (!strncmp((char *)data, "\xff\xd8\xff", 3)) /* 4th may be e0 through ef */
+			return "jpg";
+		else if (!strncmp((char *)data, "\x89PNG", 4))
+			return "png";
+		else if (!strncmp((char *)data, "MM", 2) ||
+				 !strncmp((char *)data, "II", 2))
+			return "tif";
+		else if (!strncmp((char *)data, "BM", 2))
+			return "bmp";
+	}
+
+	return "icon";
+}
+
+/*
+ * We thought about using non-cryptographic hashes like CRC32 here.
+ * They would be faster, but we think using something more secure is
+ * important, so that it is more difficult for someone to maliciously
+ * replace one buddy's icon with something else.
+ */
+char *
+purple_util_get_image_checksum(gconstpointer image_data, size_t image_len)
+{
+	PurpleCipherContext *context;
+	gchar digest[41];
+
+	context = purple_cipher_context_new_by_name("sha1", NULL);
+	if (context == NULL)
+	{
+		purple_debug_error("util", "Could not find sha1 cipher\n");
+		g_return_val_if_reached(NULL);
+	}
+
+	/* Hash the image data */
+	purple_cipher_context_append(context, image_data, image_len);
+	if (!purple_cipher_context_digest_to_str(context, sizeof(digest), digest, NULL))
+	{
+		purple_debug_error("util", "Failed to get SHA-1 digest.\n");
+		g_return_val_if_reached(NULL);
+	}
+	purple_cipher_context_destroy(context);
+
+	return g_strdup(digest);
+}
+
+char *
+purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
+{
+	/* Return the filename */
+	char *checksum = purple_util_get_image_checksum(image_data, image_len);
+	char *filename = g_strdup_printf("%s.%s", checksum,
+	                       purple_util_get_image_extension(image_data, image_len));
+	g_free(checksum);
+	return filename;
+}
+
 gboolean
-gaim_program_is_valid(const char *program)
+purple_program_is_valid(const char *program)
 {
 	GError *error = NULL;
 	char **argv;
@@ -2520,7 +2897,7 @@ gaim_program_is_valid(const char *program)
 	g_return_val_if_fail(*program != '\0', FALSE);
 
 	if (!g_shell_parse_argv(program, NULL, &argv, &error)) {
-		gaim_debug(GAIM_DEBUG_ERROR, "program_is_valid",
+		purple_debug(PURPLE_DEBUG_ERROR, "program_is_valid",
 				   "Could not parse program '%s': %s\n",
 				   program, error->message);
 		g_error_free(error);
@@ -2534,6 +2911,10 @@ gaim_program_is_valid(const char *program)
 	progname = g_find_program_in_path(argv[0]);
 	is_valid = (progname != NULL);
 
+	if(purple_debug_is_verbose())
+		purple_debug_info("program_is_valid", "Tested program %s.  %s.\n", program,
+				is_valid ? "Valid" : "Invalid");
+
 	g_strfreev(argv);
 	g_free(progname);
 
@@ -2542,7 +2923,7 @@ gaim_program_is_valid(const char *program)
 
 
 gboolean
-gaim_running_gnome(void)
+purple_running_gnome(void)
 {
 #ifndef _WIN32
 	gchar *tmp = g_find_program_in_path("gnome-open");
@@ -2551,14 +2932,16 @@ gaim_running_gnome(void)
 		return FALSE;
 	g_free(tmp);
 
-	return (g_getenv("GNOME_DESKTOP_SESSION_ID") != NULL);
+	tmp = (gchar *)g_getenv("GNOME_DESKTOP_SESSION_ID");
+
+	return ((tmp != NULL) && (*tmp != '\0'));
 #else
 	return FALSE;
 #endif
 }
 
 gboolean
-gaim_running_kde(void)
+purple_running_kde(void)
 {
 #ifndef _WIN32
 	gchar *tmp = g_find_program_in_path("kfmclient");
@@ -2569,13 +2952,13 @@ gaim_running_kde(void)
 	g_free(tmp);
 
 	session = g_getenv("KDE_FULL_SESSION");
-	if (session != NULL && !strcmp(session, "true"))
+	if (purple_strequal(session, "true"))
 		return TRUE;
 
-	/* If you run Gaim from Konsole under !KDE, this will provide a
+	/* If you run Purple from Konsole under !KDE, this will provide a
 	 * a false positive.  Since we do the GNOME checks first, this is
 	 * only a problem if you're running something !(KDE || GNOME) and
-	 * you run Gaim from Konsole. This really shouldn't be a problem. */
+	 * you run Purple from Konsole. This really shouldn't be a problem. */
 	return ((g_getenv("KDEDIR") != NULL) || g_getenv("KDEDIRS") != NULL);
 #else
 	return FALSE;
@@ -2583,54 +2966,134 @@ gaim_running_kde(void)
 }
 
 gboolean
-gaim_running_osx(void)
+purple_running_osx(void)
 {
-#if defined(__APPLE__)	
+#if defined(__APPLE__)
 	return TRUE;
 #else
 	return FALSE;
 #endif
 }
 
+typedef union purple_sockaddr {
+	struct sockaddr         sa;
+	struct sockaddr_in      sa_in;
+#if defined(AF_INET6)
+	struct sockaddr_in6     sa_in6;
+#endif
+	struct sockaddr_storage sa_stor;
+} PurpleSockaddr;
+
 char *
-gaim_fd_get_ip(int fd)
+purple_fd_get_ip(int fd)
 {
-	struct sockaddr addr;
+	PurpleSockaddr addr;
 	socklen_t namelen = sizeof(addr);
+	int family;
 
 	g_return_val_if_fail(fd != 0, NULL);
 
-	if (getsockname(fd, &addr, &namelen))
+	if (getsockname(fd, &(addr.sa), &namelen))
 		return NULL;
 
-	return g_strdup(inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr));
+	family = addr.sa.sa_family;
+
+	if (family == AF_INET) {
+		return g_strdup(inet_ntoa(addr.sa_in.sin_addr));
+	}
+#if defined(AF_INET6) && defined(HAVE_INET_NTOP)
+	else if (family == AF_INET6) {
+		char host[INET6_ADDRSTRLEN];
+		const char *tmp;
+
+		tmp = inet_ntop(family, &(addr.sa_in6.sin6_addr), host, sizeof(host));
+		return g_strdup(tmp);
+	}
+#endif
+
+	return NULL;
 }
 
+int
+purple_socket_get_family(int fd)
+{
+	PurpleSockaddr addr;
+	socklen_t len = sizeof(addr);
+
+	g_return_val_if_fail(fd >= 0, -1);
+
+	if (getsockname(fd, &(addr.sa), &len))
+		return -1;
+
+	return addr.sa.sa_family;
+}
+
+gboolean
+purple_socket_speaks_ipv4(int fd)
+{
+	int family;
+
+	g_return_val_if_fail(fd >= 0, FALSE);
+
+	family = purple_socket_get_family(fd);
+
+	switch (family) {
+	case AF_INET:
+		return TRUE;
+#if defined(IPV6_V6ONLY)
+	case AF_INET6:
+	{
+		int val = 0;
+		guint len = sizeof(val);
+
+		if (getsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &val, &len) != 0)
+			return FALSE;
+		return !val;
+	}
+#endif
+	default:
+		return FALSE;
+	}
+}
 
 /**************************************************************************
  * String Functions
  **************************************************************************/
+gboolean
+purple_strequal(const gchar *left, const gchar *right)
+{
+#if GLIB_CHECK_VERSION(2,16,0)
+	return (g_strcmp0(left, right) == 0);
+#else
+	return ((left == NULL && right == NULL) ||
+	        (left != NULL && right != NULL && strcmp(left, right) == 0));
+#endif
+}
+
 const char *
-gaim_normalize(const GaimAccount *account, const char *str)
+purple_normalize(const PurpleAccount *account, const char *str)
 {
 	const char *ret = NULL;
+	static char buf[BUF_LEN];
+
+	/* This should prevent a crash if purple_normalize gets called with NULL str, see #10115 */
+	g_return_val_if_fail(str != NULL, "");
 
 	if (account != NULL)
 	{
-		GaimPlugin *prpl = gaim_find_prpl(gaim_account_get_protocol_id(account));
+		PurplePlugin *prpl = purple_find_prpl(purple_account_get_protocol_id(account));
 
 		if (prpl != NULL)
 		{
-			GaimPluginProtocolInfo *prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(prpl);
+			PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
-			if(prpl_info && prpl_info->normalize)
+			if (prpl_info->normalize)
 				ret = prpl_info->normalize(account, str);
 		}
 	}
 
 	if (ret == NULL)
 	{
-		static char buf[BUF_LEN];
 		char *tmp;
 
 		tmp = g_utf8_normalize(str, -1, G_NORMALIZE_DEFAULT);
@@ -2649,7 +3112,7 @@ gaim_normalize(const GaimAccount *account, const char *str)
  * comments in util.h.
  */
 const char *
-gaim_normalize_nocase(const GaimAccount *account, const char *str)
+purple_normalize_nocase(const PurpleAccount *account, const char *str)
 {
 	static char buf[BUF_LEN];
 	char *tmp1, *tmp2;
@@ -2666,7 +3129,7 @@ gaim_normalize_nocase(const GaimAccount *account, const char *str)
 }
 
 gchar *
-gaim_strdup_withhtml(const gchar *src)
+purple_strdup_withhtml(const gchar *src)
 {
 	gulong destsize, i, j;
 	gchar *dest;
@@ -2700,36 +3163,19 @@ gaim_strdup_withhtml(const gchar *src)
 }
 
 gboolean
-gaim_str_has_prefix(const char *s, const char *p)
+purple_str_has_prefix(const char *s, const char *p)
 {
-#if GLIB_CHECK_VERSION(2,2,0)
 	return g_str_has_prefix(s, p);
-#else
-	g_return_val_if_fail(s != NULL, FALSE);
-	g_return_val_if_fail(p != NULL, FALSE);
-
-	return (!strncmp(s, p, strlen(p)));
-#endif
 }
 
 gboolean
-gaim_str_has_suffix(const char *s, const char *x)
+purple_str_has_suffix(const char *s, const char *x)
 {
-#if GLIB_CHECK_VERSION(2,2,0)
 	return g_str_has_suffix(s, x);
-#else
-	int off;
-
-	g_return_val_if_fail(s != NULL, FALSE);
-	g_return_val_if_fail(x != NULL, FALSE);
-
-	off = strlen(s) - strlen(x);
-	return (off >= 0 && !strcmp(s + off, x));
-#endif
 }
 
 char *
-gaim_str_add_cr(const char *text)
+purple_str_add_cr(const char *text)
 {
 	char *ret = NULL;
 	int count = 0, j;
@@ -2758,14 +3204,11 @@ gaim_str_add_cr(const char *text)
 		ret[j++] = text[i];
 	}
 
-	gaim_debug_misc("gaim_str_add_cr", "got: %s, leaving with %s\n",
-					text, ret);
-
 	return ret;
 }
 
 void
-gaim_str_strip_char(char *text, char thechar)
+purple_str_strip_char(char *text, char thechar)
 {
 	int i, j;
 
@@ -2775,11 +3218,11 @@ gaim_str_strip_char(char *text, char thechar)
 		if (text[i] != thechar)
 			text[j++] = text[i];
 
-	text[j++] = '\0';
+	text[j] = '\0';
 }
 
 void
-gaim_util_chrreplace(char *string, char delimiter,
+purple_util_chrreplace(char *string, char delimiter,
 					 char replacement)
 {
 	int i = 0;
@@ -2795,7 +3238,7 @@ gaim_util_chrreplace(char *string, char delimiter,
 }
 
 gchar *
-gaim_strreplace(const char *string, const char *delimiter,
+purple_strreplace(const char *string, const char *delimiter,
 				const char *replacement)
 {
 	gchar **split;
@@ -2813,7 +3256,7 @@ gaim_strreplace(const char *string, const char *delimiter,
 }
 
 gchar *
-gaim_strcasereplace(const char *string, const char *delimiter,
+purple_strcasereplace(const char *string, const char *delimiter,
 					const char *replacement)
 {
 	gchar *ret;
@@ -2830,7 +3273,7 @@ gaim_strcasereplace(const char *string, const char *delimiter,
 	i = 0; /* position in the source string */
 	j = 0; /* number of occurrences of "delimiter" */
 	while (string[i] != '\0') {
-		if (!strncasecmp(&string[i], delimiter, length_del)) {
+		if (!g_ascii_strncasecmp(&string[i], delimiter, length_del)) {
 			i += length_del;
 			j += length_rep;
 		} else {
@@ -2844,7 +3287,7 @@ gaim_strcasereplace(const char *string, const char *delimiter,
 	i = 0; /* position in the source string */
 	j = 0; /* position in the destination string */
 	while (string[i] != '\0') {
-		if (!strncasecmp(&string[i], delimiter, length_del)) {
+		if (!g_ascii_strncasecmp(&string[i], delimiter, length_del)) {
 			strncpy(&ret[j], replacement, length_rep);
 			i += length_del;
 			j += length_rep;
@@ -2861,7 +3304,7 @@ gaim_strcasereplace(const char *string, const char *delimiter,
 }
 
 const char *
-gaim_strcasestr(const char *haystack, const char *needle)
+purple_strcasestr(const char *haystack, const char *needle)
 {
 	size_t hlen, nlen;
 	const char *tmp, *ret;
@@ -2888,9 +3331,9 @@ gaim_strcasestr(const char *haystack, const char *needle)
 }
 
 char *
-gaim_str_size_to_units(size_t size)
+purple_str_size_to_units(goffset size)
 {
-	static const char *size_str[4] = { "bytes", "KB", "MB", "GB" };
+	static const char * const size_str[] = { "bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" };
 	float size_mag;
 	int size_index = 0;
 
@@ -2903,7 +3346,7 @@ gaim_str_size_to_units(size_t size)
 	else {
 		size_mag = (float)size;
 
-		while ((size_index < 3) && (size_mag > 1024)) {
+		while ((size_index < G_N_ELEMENTS(size_str) - 1) && (size_mag > 1024)) {
 			size_mag /= 1024;
 			size_index++;
 		}
@@ -2917,14 +3360,14 @@ gaim_str_size_to_units(size_t size)
 }
 
 char *
-gaim_str_seconds_to_string(guint secs)
+purple_str_seconds_to_string(guint secs)
 {
 	char *ret = NULL;
 	guint days, hrs, mins;
 
 	if (secs < 60)
 	{
-		return g_strdup_printf(ngettext("%d second", "%d seconds", secs), secs);
+		return g_strdup_printf(dngettext(PACKAGE, "%d second", "%d seconds", secs), secs);
 	}
 
 	days = secs / (60 * 60 * 24);
@@ -2936,7 +3379,7 @@ gaim_str_seconds_to_string(guint secs)
 
 	if (days > 0)
 	{
-		ret = g_strdup_printf(ngettext("%d day", "%d days", days), days);
+		ret = g_strdup_printf(dngettext(PACKAGE, "%d day", "%d days", days), days);
 	}
 
 	if (hrs > 0)
@@ -2944,13 +3387,13 @@ gaim_str_seconds_to_string(guint secs)
 		if (ret != NULL)
 		{
 			char *tmp = g_strdup_printf(
-					ngettext("%s, %d hour", "%s, %d hours", hrs),
+					dngettext(PACKAGE, "%s, %d hour", "%s, %d hours", hrs),
 							ret, hrs);
 			g_free(ret);
 			ret = tmp;
 		}
 		else
-			ret = g_strdup_printf(ngettext("%d hour", "%d hours", hrs), hrs);
+			ret = g_strdup_printf(dngettext(PACKAGE, "%d hour", "%d hours", hrs), hrs);
 	}
 
 	if (mins > 0)
@@ -2958,13 +3401,13 @@ gaim_str_seconds_to_string(guint secs)
 		if (ret != NULL)
 		{
 			char *tmp = g_strdup_printf(
-					ngettext("%s, %d minute", "%s, %d minutes", mins),
+					dngettext(PACKAGE, "%s, %d minute", "%s, %d minutes", mins),
 							ret, mins);
 			g_free(ret);
 			ret = tmp;
 		}
 		else
-			ret = g_strdup_printf(ngettext("%d minute", "%d minutes", mins), mins);
+			ret = g_strdup_printf(dngettext(PACKAGE, "%d minute", "%d minutes", mins), mins);
 	}
 
 	return ret;
@@ -2972,7 +3415,7 @@ gaim_str_seconds_to_string(guint secs)
 
 
 char *
-gaim_str_binary_to_ascii(const unsigned char *binary, guint len)
+purple_str_binary_to_ascii(const unsigned char *binary, guint len)
 {
 	GString *ret;
 	guint i;
@@ -2995,11 +3438,95 @@ gaim_str_binary_to_ascii(const unsigned char *binary, guint len)
 /**************************************************************************
  * URI/URL Functions
  **************************************************************************/
+
+void purple_got_protocol_handler_uri(const char *uri)
+{
+	char proto[11];
+	char delimiter;
+	const char *tmp, *param_string;
+	char *cmd;
+	GHashTable *params = NULL;
+	int len;
+	if (!(tmp = strchr(uri, ':')) || tmp == uri) {
+		purple_debug_error("util", "Malformed protocol handler message - missing protocol.\n");
+		return;
+	}
+
+	len = MIN(sizeof(proto) - 1, (tmp - uri));
+
+	strncpy(proto, uri, len);
+	proto[len] = '\0';
+
+	tmp++;
+
+	if (g_str_equal(proto, "xmpp"))
+		delimiter = ';';
+	else
+		delimiter = '&';
+
+	purple_debug_info("util", "Processing message '%s' for protocol '%s' using delimiter '%c'.\n", tmp, proto, delimiter);
+
+	if ((param_string = strchr(tmp, '?'))) {
+		const char *keyend = NULL, *pairstart;
+		char *key, *value = NULL;
+
+		cmd = g_strndup(tmp, (param_string - tmp));
+		param_string++;
+
+		params = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+		pairstart = tmp = param_string;
+
+		while (*tmp || *pairstart) {
+			if (*tmp == delimiter || !(*tmp)) {
+				/* If there is no explicit value */
+				if (keyend == NULL)
+					keyend = tmp;
+
+				if (keyend && keyend != pairstart) {
+					char *p;
+					key = g_strndup(pairstart, (keyend - pairstart));
+					/* If there is an explicit value */
+					if (keyend != tmp && keyend != (tmp - 1))
+						value = g_strndup(keyend + 1, (tmp - keyend - 1));
+					for (p = key; *p; ++p)
+						*p = g_ascii_tolower(*p);
+					g_hash_table_insert(params, key, value);
+				}
+				keyend = value = NULL;
+				pairstart = (*tmp) ? tmp + 1 : tmp;
+			} else if (*tmp == '=')
+				keyend = tmp;
+
+			if (*tmp)
+				tmp++;
+		}
+	} else
+		cmd = g_strdup(tmp);
+
+	purple_signal_emit_return_1(purple_get_core(), "uri-handler", proto, cmd, params);
+
+	g_free(cmd);
+	if (params)
+		g_hash_table_destroy(params);
+}
+
+/*
+ * TODO: Should probably add a "gboolean *ret_ishttps" parameter that
+ *       is set to TRUE if this URL is https, otherwise it is set to
+ *       FALSE.  But that change will break the API.
+ *
+ *       This is important for Yahoo! web messenger login.  They now
+ *       force https login, and if you access the web messenger login
+ *       page via http then it redirects you to the https version, but
+ *       purple_util_fetch_url() ignores the "https" and attempts to
+ *       fetch the URL via http again, which gets redirected again.
+ */
 gboolean
-gaim_url_parse(const char *url, char **ret_host, int *ret_port,
+purple_url_parse(const char *url, char **ret_host, int *ret_port,
 			   char **ret_path, char **ret_user, char **ret_passwd)
 {
-	char scan_info[255];
+	gboolean is_https = FALSE;
+	const char * scan_info;
 	char port_str[6];
 	int f;
 	const char *at, *slash;
@@ -3007,18 +3534,24 @@ gaim_url_parse(const char *url, char **ret_host, int *ret_port,
 	char host[256], path[256], user[256], passwd[256];
 	int port = 0;
 	/* hyphen at end includes it in control set */
-	static char addr_ctrl[] = "A-Za-z0-9.-";
-	static char port_ctrl[] = "0-9";
-	static char page_ctrl[] = "A-Za-z0-9.~_/:*!@&%%?=+^-";
-	static char user_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
-	static char passwd_ctrl[] = "A-Za-z0-9.~_/*!&%%?=+^-";
+
+#define ADDR_CTRL "A-Za-z0-9.-"
+#define PORT_CTRL "0-9"
+#define PAGE_CTRL "A-Za-z0-9.~_/:*!@&%%?=+^-"
+#define USER_CTRL "A-Za-z0-9.~_/*!&%%?=+^-"
+#define PASSWD_CTRL "A-Za-z0-9.~_/*!&%%?=+^-"
 
 	g_return_val_if_fail(url != NULL, FALSE);
 
-	if ((turl = strstr(url, "http://")) != NULL ||
-		(turl = strstr(url, "HTTP://")) != NULL)
+	if ((turl = purple_strcasestr(url, "http://")) != NULL)
 	{
 		turl += 7;
+		url = turl;
+	}
+	else if ((turl = purple_strcasestr(url, "https://")) != NULL)
+	{
+		is_https = TRUE;
+		turl += 8;
 		url = turl;
 	}
 
@@ -3026,42 +3559,44 @@ gaim_url_parse(const char *url, char **ret_host, int *ret_port,
 	/* Only care about @ char BEFORE the first / */
 	at = strchr(url, '@');
 	slash = strchr(url, '/');
-	if ((at != NULL) &&
-			(((slash != NULL) && (strlen(at) > strlen(slash))) ||
-			(slash == NULL))) {
-		g_snprintf(scan_info, sizeof(scan_info),
-					"%%255[%s]:%%255[%s]^@", user_ctrl, passwd_ctrl);
+	f = 0;
+	if (at && (!slash || at < slash)) {
+		scan_info = "%255[" USER_CTRL "]:%255[" PASSWD_CTRL "]^@";
 		f = sscanf(url, scan_info, user, passwd);
 
-		if (f ==1 ) {
+		if (f == 1) {
 			/* No passwd, possibly just username supplied */
-			g_snprintf(scan_info, sizeof(scan_info),
-						"%%255[%s]^@", user_ctrl);
+			scan_info = "%255[" USER_CTRL "]^@";
 			f = sscanf(url, scan_info, user);
-			*passwd = '\0';
 		}
 
 		url = at+1; /* move pointer after the @ char */
-	} else {
-		*user = '\0';
-		*passwd = '\0';
 	}
 
-	g_snprintf(scan_info, sizeof(scan_info),
-			   "%%255[%s]:%%5[%s]/%%255[%s]", addr_ctrl, port_ctrl, page_ctrl);
+	if (f < 1) {
+		*user = '\0';
+		*passwd = '\0';
+	} else if (f == 1)
+		*passwd = '\0';
 
+	scan_info = "%255[" ADDR_CTRL "]:%5[" PORT_CTRL "]/%255[" PAGE_CTRL "]";
 	f = sscanf(url, scan_info, host, port_str, path);
 
 	if (f == 1)
 	{
-		g_snprintf(scan_info, sizeof(scan_info),
-				   "%%255[%s]/%%255[%s]",
-				   addr_ctrl, page_ctrl);
+		scan_info = "%255[" ADDR_CTRL "]/%255[" PAGE_CTRL "]";
 		f = sscanf(url, scan_info, host, path);
-		g_snprintf(port_str, sizeof(port_str), "80");
+		/* Use the default port */
+		if (is_https)
+			g_snprintf(port_str, sizeof(port_str), "443");
+		else
+			g_snprintf(port_str, sizeof(port_str), "80");
 	}
 
-	if (f == 1)
+	if (f == 0)
+		*host = '\0';
+
+	if (f <= 1)
 		*path = '\0';
 
 	sscanf(port_str, "%d", &port);
@@ -3072,14 +3607,20 @@ gaim_url_parse(const char *url, char **ret_host, int *ret_port,
 	if (ret_user != NULL) *ret_user = g_strdup(user);
 	if (ret_passwd != NULL) *ret_passwd = g_strdup(passwd);
 
-	return TRUE;
+	return ((*host != '\0') ? TRUE : FALSE);
+
+#undef ADDR_CTRL
+#undef PORT_CTRL
+#undef PAGE_CTRL
+#undef USER_CTRL
+#undef PASSWD_CTRL
 }
 
 /**
  * The arguments to this function are similar to printf.
  */
 static void
-gaim_util_fetch_url_error(GaimUtilFetchUrlData *gfud, const char *format, ...)
+purple_util_fetch_url_error(PurpleUtilFetchUrlData *gfud, const char *format, ...)
 {
 	gchar *error_message;
 	va_list args;
@@ -3090,87 +3631,146 @@ gaim_util_fetch_url_error(GaimUtilFetchUrlData *gfud, const char *format, ...)
 
 	gfud->callback(gfud, gfud->user_data, NULL, 0, error_message);
 	g_free(error_message);
-	gaim_util_fetch_url_cancel(gfud);
+	purple_util_fetch_url_cancel(gfud);
 }
 
 static void url_fetch_connect_cb(gpointer url_data, gint source, const gchar *error_message);
+static void ssl_url_fetch_connect_cb(gpointer data, PurpleSslConnection *ssl_connection, PurpleInputCondition cond);
+static void ssl_url_fetch_error_cb(PurpleSslConnection *ssl_connection, PurpleSslErrorType error, gpointer data);
 
 static gboolean
-parse_redirect(const char *data, size_t data_len, gint sock,
-			   GaimUtilFetchUrlData *gfud)
+parse_redirect(const char *data, size_t data_len,
+			   PurpleUtilFetchUrlData *gfud)
 {
 	gchar *s;
+	gchar *new_url, *temp_url, *end;
+	gboolean full;
+	int len;
 
-	if ((s = g_strstr_len(data, data_len, "Location: ")) != NULL)
+	if ((s = g_strstr_len(data, data_len, "\nLocation: ")) == NULL)
+		/* We're not being redirected */
+		return FALSE;
+
+	s += strlen("Location: ");
+	end = strchr(s, '\r');
+
+	/* Just in case :) */
+	if (end == NULL)
+		end = strchr(s, '\n');
+
+	if (end == NULL)
+		return FALSE;
+
+	len = end - s;
+
+	new_url = g_malloc(len + 1);
+	strncpy(new_url, s, len);
+	new_url[len] = '\0';
+
+	full = gfud->full;
+
+	if (*new_url == '/' || g_strstr_len(new_url, len, "://") == NULL)
 	{
-		gchar *new_url, *temp_url, *end;
-		gboolean full;
-		int len;
+		temp_url = new_url;
 
-		s += strlen("Location: ");
-		end = strchr(s, '\r');
+		new_url = g_strdup_printf("%s:%d%s", gfud->website.address,
+								  gfud->website.port, temp_url);
 
-		/* Just in case :) */
-		if (end == NULL)
-			end = strchr(s, '\n');
+		g_free(temp_url);
 
-		if (end == NULL)
-			return FALSE;
+		full = FALSE;
+	}
 
-		len = end - s;
+	purple_debug_info("util", "Redirecting to %s\n", new_url);
 
-		new_url = g_malloc(len + 1);
-		strncpy(new_url, s, len);
-		new_url[len] = '\0';
-
-		full = gfud->full;
-
-		if (*new_url == '/' || g_strstr_len(new_url, len, "://") == NULL)
-		{
-			temp_url = new_url;
-
-			new_url = g_strdup_printf("%s:%d%s", gfud->website.address,
-									  gfud->website.port, temp_url);
-
-			g_free(temp_url);
-
-			full = FALSE;
-		}
-
-		gaim_debug_info("util", "Redirecting to %s\n", new_url);
-
-		/*
-		 * Try again, with this new location.  This code is somewhat
-		 * ugly, but we need to reuse the gfud because whoever called
-		 * us is holding a reference to it.
-		 */
-		g_free(gfud->url);
-		gfud->url = new_url;
-		gfud->full = full;
-		g_free(gfud->request);
-		gfud->request = NULL;
-
-		g_free(gfud->website.user);
-		g_free(gfud->website.passwd);
-		g_free(gfud->website.address);
-		g_free(gfud->website.page);
-		gaim_url_parse(new_url, &gfud->website.address, &gfud->website.port,
-					   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
-
-		gfud->connect_data = gaim_proxy_connect(NULL, NULL,
-				gfud->website.address, gfud->website.port,
-				url_fetch_connect_cb, gfud);
-
-		if (gfud->connect_data == NULL)
-		{
-			gaim_util_fetch_url_error(gfud, _("Unable to connect to %s"),
-					gfud->website.address);
-		}
-
+	gfud->num_times_redirected++;
+	if (gfud->num_times_redirected >= 5)
+	{
+		purple_util_fetch_url_error(gfud,
+				_("Could not open %s: Redirected too many times"),
+				gfud->url);
 		return TRUE;
 	}
 
-	return FALSE;
+	/*
+	 * Try again, with this new location.  This code is somewhat
+	 * ugly, but we need to reuse the gfud because whoever called
+	 * us is holding a reference to it.
+	 */
+	g_free(gfud->url);
+	gfud->url = new_url;
+	gfud->full = full;
+	g_free(gfud->request);
+	gfud->request = NULL;
+
+	if (gfud->is_ssl) {
+		gfud->is_ssl = FALSE;
+		purple_ssl_close(gfud->ssl_connection);
+		gfud->ssl_connection = NULL;
+	} else {
+		purple_input_remove(gfud->inpa);
+		gfud->inpa = 0;
+		close(gfud->fd);
+		gfud->fd = -1;
+	}
+	gfud->request_written = 0;
+	gfud->len = 0;
+	gfud->data_len = 0;
+
+	g_free(gfud->website.user);
+	g_free(gfud->website.passwd);
+	g_free(gfud->website.address);
+	g_free(gfud->website.page);
+	purple_url_parse(new_url, &gfud->website.address, &gfud->website.port,
+				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
+
+	if (purple_strcasestr(new_url, "https://") != NULL) {
+		gfud->is_ssl = TRUE;
+		gfud->ssl_connection = purple_ssl_connect(gfud->account,
+				gfud->website.address, gfud->website.port,
+				ssl_url_fetch_connect_cb, ssl_url_fetch_error_cb, gfud);
+	} else {
+		gfud->connect_data = purple_proxy_connect(NULL, gfud->account,
+				gfud->website.address, gfud->website.port,
+				url_fetch_connect_cb, gfud);
+	}
+
+	if (gfud->ssl_connection == NULL && gfud->connect_data == NULL)
+	{
+		purple_util_fetch_url_error(gfud, _("Unable to connect to %s"),
+				gfud->website.address);
+	}
+
+	return TRUE;
+}
+
+static const char *
+find_header_content(const char *data, size_t data_len, const char *header, size_t header_len)
+{
+	const char *p = NULL;
+
+	if (header_len <= 0)
+		header_len = strlen(header);
+
+	/* Note: data is _not_ nul-terminated.  */
+	if (data_len > header_len) {
+		if (header[0] == '\n')
+			p = (g_ascii_strncasecmp(data, header + 1, header_len - 1) == 0) ? data : NULL;
+		if (!p)
+			p = purple_strcasestr(data, header);
+		if (p)
+			p += header_len;
+	}
+
+	/* If we can find the header at all, try to sscanf it.
+	 * Response headers should end with at least \r\n, so sscanf is safe,
+	 * if we make sure that there is indeed a \n in our header.
+	 */
+	if (p && g_strstr_len(p, data_len - (p - data), "\n")) {
+		return p;
+	}
+
+	return NULL;
 }
 
 static size_t
@@ -3179,53 +3779,107 @@ parse_content_len(const char *data, size_t data_len)
 	size_t content_len = 0;
 	const char *p = NULL;
 
-	/* This is still technically wrong, since headers are case-insensitive
-	 * [RFC 2616, section 4.2], though this ought to catch the normal case.
-	 * Note: data is _not_ nul-terminated.
-	 */
-	if(data_len > 16) {
-		p = (strncmp(data, "Content-Length: ", 16) == 0) ? data : NULL;
-		if(!p)
-			p = (strncmp(data, "CONTENT-LENGTH: ", 16) == 0)
-				? data : NULL;
-		if(!p) {
-			p = g_strstr_len(data, data_len, "\nContent-Length: ");
-			if (p)
-				p++;
-		}
-		if(!p) {
-			p = g_strstr_len(data, data_len, "\nCONTENT-LENGTH: ");
-			if (p)
-				p++;
-		}
-
-		if(p)
-			p += 16;
-	}
-
-	/* If we can find a Content-Length header at all, try to sscanf it.
-	 * Response headers should end with at least \r\n, so sscanf is safe,
-	 * if we make sure that there is indeed a \n in our header.
-	 */
-	if (p && g_strstr_len(p, data_len - (p - data), "\n")) {
+	p = find_header_content(data, data_len, "\nContent-Length: ", sizeof("\nContent-Length: ") - 1);
+	if (p) {
 		sscanf(p, "%" G_GSIZE_FORMAT, &content_len);
-		gaim_debug_misc("util", "parsed %u\n", content_len);
+		purple_debug_misc("util", "parsed %" G_GSIZE_FORMAT "\n", content_len);
 	}
 
 	return content_len;
 }
 
+static gboolean
+content_is_chunked(const char *data, size_t data_len)
+{
+	const char *p = find_header_content(data, data_len, "\nTransfer-Encoding: ", sizeof("\nTransfer-Encoding: ") - 1);
+	if (p && g_ascii_strncasecmp(p, "chunked", 7) == 0)
+		return TRUE;
+
+	return FALSE;
+}
+
+/* Process in-place */
+static void
+process_chunked_data(char *data, gsize *len)
+{
+	gsize sz;
+	gsize newlen = 0;
+	char *p = data;
+	char *s = data;
+
+	while (*s) {
+		/* Read the size of this chunk */
+		if (sscanf(s, "%" G_GSIZE_MODIFIER "x", &sz) != 1)
+		{
+			purple_debug_error("util", "Error processing chunked data: "
+					"Expected data length, found: %s\n", s);
+			break;
+		}
+		if (sz == 0) {
+			/* We've reached the last chunk */
+			/*
+			 * TODO: The spec allows "footers" to follow the last chunk.
+			 *       If there is more data after this line then we should
+			 *       treat it like a header.
+			 */
+			break;
+		}
+
+		/* Advance to the start of the data */
+		s = strstr(s, "\r\n");
+		if (s == NULL)
+			break;
+		s += 2;
+
+		if (s + sz > data + *len) {
+			purple_debug_error("util", "Error processing chunked data: "
+					"Chunk size %" G_GSIZE_FORMAT " bytes was longer "
+					"than the data remaining in the buffer (%"
+					G_GSIZE_FORMAT " bytes)\n", sz, data + *len - s);
+		}
+
+		/* Move all data overtop of the chunk length that we read in earlier */
+		g_memmove(p, s, sz);
+		p += sz;
+		s += sz;
+		newlen += sz;
+		if (*s != '\r' && *(s + 1) != '\n') {
+			purple_debug_error("util", "Error processing chunked data: "
+					"Expected \\r\\n, found: %s\n", s);
+			break;
+		}
+		s += 2;
+	}
+
+	/* NULL terminate the data */
+	*p = 0;
+
+	*len = newlen;
+}
 
 static void
-url_fetch_recv_cb(gpointer url_data, gint source, GaimInputCondition cond)
+url_fetch_recv_cb(gpointer url_data, gint source, PurpleInputCondition cond)
 {
-	GaimUtilFetchUrlData *gfud = url_data;
+	PurpleUtilFetchUrlData *gfud = url_data;
 	int len;
 	char buf[4096];
 	char *data_cursor;
 	gboolean got_eof = FALSE;
 
-	while((len = read(source, buf, sizeof(buf))) > 0) {
+	/*
+	 * Read data in a loop until we can't read any more!  This is a
+	 * little confusing because we read using a different function
+	 * depending on whether the socket is ssl or cleartext.
+	 */
+	while ((gfud->is_ssl && ((len = purple_ssl_read(gfud->ssl_connection, buf, sizeof(buf))) > 0)) ||
+			(!gfud->is_ssl && (len = read(source, buf, sizeof(buf))) > 0))
+	{
+		if(gfud->max_len != -1 && (gfud->len + len) > gfud->max_len) {
+			purple_util_fetch_url_error(gfud, _("Error reading from %s: response too long (%d bytes limit)"),
+						    gfud->website.address, gfud->max_len);
+			return;
+		}
+
 		/* If we've filled up our buffer, make it bigger */
 		if((gfud->len + len) >= gfud->data_len) {
 			while((gfud->len + len) >= gfud->data_len)
@@ -3243,27 +3897,29 @@ url_fetch_recv_cb(gpointer url_data, gint source, GaimInputCondition cond)
 		gfud->webdata[gfud->len] = '\0';
 
 		if(!gfud->got_headers) {
-			char *tmp;
+			char *end_of_headers;
 
 			/* See if we've reached the end of the headers yet */
-			if((tmp = strstr(gfud->webdata, "\r\n\r\n"))) {
-				char * new_data;
-				guint header_len = (tmp + 4 - gfud->webdata);
+			end_of_headers = strstr(gfud->webdata, "\r\n\r\n");
+			if (end_of_headers) {
+				char *new_data;
+				guint header_len = (end_of_headers + 4 - gfud->webdata);
 				size_t content_len;
 
-				gaim_debug_misc("util", "Response headers: '%.*s'\n",
+				purple_debug_misc("util", "Response headers: '%.*s'\n",
 					header_len, gfud->webdata);
 
 				/* See if we can find a redirect. */
-				if(parse_redirect(gfud->webdata, header_len, source, gfud))
+				if(parse_redirect(gfud->webdata, header_len, gfud))
 					return;
 
 				gfud->got_headers = TRUE;
 
 				/* No redirect. See if we can find a content length. */
 				content_len = parse_content_len(gfud->webdata, header_len);
+				gfud->chunked = content_is_chunked(gfud->webdata, header_len);
 
-				if(content_len == 0) {
+				if (content_len == 0) {
 					/* We'll stick with an initial 8192 */
 					content_len = 8192;
 				} else {
@@ -3272,23 +3928,20 @@ url_fetch_recv_cb(gpointer url_data, gint source, GaimInputCondition cond)
 
 
 				/* If we're returning the headers too, we don't need to clean them out */
-				if(gfud->include_headers) {
+				if (gfud->include_headers) {
 					gfud->data_len = content_len + header_len;
 					gfud->webdata = g_realloc(gfud->webdata, gfud->data_len);
 				} else {
-					size_t body_len = 0;
-
-					if(gfud->len > (header_len + 1))
-						body_len = (gfud->len - header_len);
+					size_t body_len = gfud->len - header_len;
 
 					content_len = MAX(content_len, body_len);
 
 					new_data = g_try_malloc(content_len);
-					if(new_data == NULL) {
-						gaim_debug_error("util",
-								"Failed to allocate %u bytes: %s\n",
-								content_len, strerror(errno));
-						gaim_util_fetch_url_error(gfud,
+					if (new_data == NULL) {
+						purple_debug_error("util",
+								"Failed to allocate %" G_GSIZE_FORMAT " bytes: %s\n",
+								content_len, g_strerror(errno));
+						purple_util_fetch_url_error(gfud,
 								_("Unable to allocate enough memory to hold "
 								  "the contents from %s.  The web server may "
 								  "be trying something malicious."),
@@ -3298,9 +3951,8 @@ url_fetch_recv_cb(gpointer url_data, gint source, GaimInputCondition cond)
 					}
 
 					/* We may have read part of the body when reading the headers, don't lose it */
-					if(body_len > 0) {
-						tmp += 4;
-						memcpy(new_data, tmp, body_len);
+					if (body_len > 0) {
+						memcpy(new_data, end_of_headers + 4, body_len);
 					}
 
 					/* Out with the old... */
@@ -3324,8 +3976,8 @@ url_fetch_recv_cb(gpointer url_data, gint source, GaimInputCondition cond)
 		if(errno == EAGAIN) {
 			return;
 		} else {
-			gaim_util_fetch_url_error(gfud, _("Error reading from %s: %s"),
-					gfud->website.address, strerror(errno));
+			purple_util_fetch_url_error(gfud, _("Error reading from %s: %s"),
+					gfud->website.address, g_strerror(errno));
 			return;
 		}
 	}
@@ -3334,114 +3986,205 @@ url_fetch_recv_cb(gpointer url_data, gint source, GaimInputCondition cond)
 		gfud->webdata = g_realloc(gfud->webdata, gfud->len + 1);
 		gfud->webdata[gfud->len] = '\0';
 
+		if (!gfud->include_headers && gfud->chunked) {
+			/* Process only if we don't want the headers. */
+			process_chunked_data(gfud->webdata, &gfud->len);
+		}
+
 		gfud->callback(gfud, gfud->user_data, gfud->webdata, gfud->len, NULL);
-		gaim_util_fetch_url_cancel(gfud);
+		purple_util_fetch_url_cancel(gfud);
 	}
 }
 
-static void
-url_fetch_send_cb(gpointer data, gint source, GaimInputCondition cond)
+static void ssl_url_fetch_recv_cb(gpointer data, PurpleSslConnection *ssl_connection, PurpleInputCondition cond)
 {
-	GaimUtilFetchUrlData *gfud;
+	url_fetch_recv_cb(data, -1, cond);
+}
+
+/**
+ * This function is called when the socket is available to be written
+ * to.
+ *
+ * @param source The file descriptor that can be written to.  This can
+ *        be an http connection or it can be the SSL connection of an
+ *        https request.  So be careful what you use it for!  If it's
+ *        an https request then use purple_ssl_write() instead of
+ *        writing to it directly.
+ */
+static void
+url_fetch_send_cb(gpointer data, gint source, PurpleInputCondition cond)
+{
+	PurpleUtilFetchUrlData *gfud;
 	int len, total_len;
 
 	gfud = data;
 
+	if (gfud->request == NULL) {
+
+		PurpleProxyInfo *gpi = purple_proxy_get_setup(gfud->account);
+		GString *request_str = g_string_new(NULL);
+
+		g_string_append_printf(request_str, "GET %s%s HTTP/%s\r\n"
+						    "Connection: close\r\n",
+			(gfud->full ? "" : "/"),
+			(gfud->full ? (gfud->url ? gfud->url : "") : (gfud->website.page ? gfud->website.page : "")),
+			(gfud->http11 ? "1.1" : "1.0"));
+
+		if (gfud->user_agent)
+			g_string_append_printf(request_str, "User-Agent: %s\r\n", gfud->user_agent);
+
+		/* Host header is not forbidden in HTTP/1.0 requests, and HTTP/1.1
+		 * clients must know how to handle the "chunked" transfer encoding.
+		 * Purple doesn't know how to handle "chunked", so should always send
+		 * the Host header regardless, to get around some observed problems
+		 */
+		g_string_append_printf(request_str, "Accept: */*\r\n"
+						    "Host: %s\r\n",
+			(gfud->website.address ? gfud->website.address : ""));
+
+		if (purple_proxy_info_get_username(gpi) != NULL
+				&& (purple_proxy_info_get_type(gpi) == PURPLE_PROXY_USE_ENVVAR
+					|| purple_proxy_info_get_type(gpi) == PURPLE_PROXY_HTTP)) {
+			/* This chunk of code was copied from proxy.c http_start_connect_tunneling()
+			 * This is really a temporary hack - we need a more complete proxy handling solution,
+			 * so I didn't think it was worthwhile to refactor for reuse
+			 */
+			char *t1, *t2, *ntlm_type1;
+			char hostname[256];
+			int ret;
+
+			ret = gethostname(hostname, sizeof(hostname));
+			hostname[sizeof(hostname) - 1] = '\0';
+			if (ret < 0 || hostname[0] == '\0') {
+				purple_debug_warning("util", "proxy - gethostname() failed -- is your hostname set?");
+				strcpy(hostname, "localhost");
+			}
+
+			t1 = g_strdup_printf("%s:%s",
+				purple_proxy_info_get_username(gpi),
+				purple_proxy_info_get_password(gpi) ?
+					purple_proxy_info_get_password(gpi) : "");
+			t2 = purple_base64_encode((const guchar *)t1, strlen(t1));
+			g_free(t1);
+
+			ntlm_type1 = purple_ntlm_gen_type1(hostname, "");
+
+			g_string_append_printf(request_str,
+				"Proxy-Authorization: Basic %s\r\n"
+				"Proxy-Authorization: NTLM %s\r\n"
+				"Proxy-Connection: Keep-Alive\r\n",
+				t2, ntlm_type1);
+			g_free(ntlm_type1);
+			g_free(t2);
+		}
+
+		g_string_append(request_str, "\r\n");
+
+		gfud->request = g_string_free(request_str, FALSE);
+	}
+
+	if(purple_debug_is_unsafe())
+		purple_debug_misc("util", "Request: '%s'\n", gfud->request);
+	else
+		purple_debug_misc("util", "request constructed\n");
+
 	total_len = strlen(gfud->request);
 
-	len = write(gfud->fd, gfud->request + gfud->request_written,
-			total_len - gfud->request_written);
+	if (gfud->is_ssl)
+		len = purple_ssl_write(gfud->ssl_connection, gfud->request + gfud->request_written,
+				total_len - gfud->request_written);
+	else
+		len = write(gfud->fd, gfud->request + gfud->request_written,
+				total_len - gfud->request_written);
 
 	if (len < 0 && errno == EAGAIN)
 		return;
 	else if (len < 0) {
-		gaim_util_fetch_url_error(gfud, _("Error writing to %s: %s"),
-				gfud->website.address, strerror(errno));
+		purple_util_fetch_url_error(gfud, _("Error writing to %s: %s"),
+				gfud->website.address, g_strerror(errno));
 		return;
 	}
 	gfud->request_written += len;
 
-	if (gfud->request_written != total_len)
+	if (gfud->request_written < total_len)
 		return;
 
 	/* We're done writing our request, now start reading the response */
-	gaim_input_remove(gfud->inpa);
-	gfud->inpa = gaim_input_add(gfud->fd, GAIM_INPUT_READ, url_fetch_recv_cb,
-		gfud);
+	if (gfud->is_ssl) {
+		purple_input_remove(gfud->inpa);
+		gfud->inpa = 0;
+		purple_ssl_input_add(gfud->ssl_connection, ssl_url_fetch_recv_cb, gfud);
+	} else {
+		purple_input_remove(gfud->inpa);
+		gfud->inpa = purple_input_add(gfud->fd, PURPLE_INPUT_READ, url_fetch_recv_cb,
+			gfud);
+	}
 }
 
 static void
 url_fetch_connect_cb(gpointer url_data, gint source, const gchar *error_message)
 {
-	GaimUtilFetchUrlData *gfud;
+	PurpleUtilFetchUrlData *gfud;
 
 	gfud = url_data;
 	gfud->connect_data = NULL;
 
 	if (source == -1)
 	{
-		gaim_util_fetch_url_error(gfud, _("Unable to connect to %s: %s"),
+		purple_util_fetch_url_error(gfud, _("Unable to connect to %s: %s"),
 				(gfud->website.address ? gfud->website.address : ""), error_message);
 		return;
 	}
 
 	gfud->fd = source;
 
-	if (!gfud->request)
-	{
-		if (gfud->user_agent) {
-			/* Host header is not forbidden in HTTP/1.0 requests, and HTTP/1.1
-			 * clients must know how to handle the "chunked" transfer encoding.
-			 * Gaim doesn't know how to handle "chunked", so should always send
-			 * the Host header regardless, to get around some observed problems
-			 */
-			gfud->request = g_strdup_printf(
-				"GET %s%s HTTP/%s\r\n"
-				"Connection: close\r\n"
-				"User-Agent: %s\r\n"
-				"Accept: */*\r\n"
-				"Host: %s\r\n\r\n",
-				(gfud->full ? "" : "/"),
-				(gfud->full ? (gfud->url ? gfud->url : "") : (gfud->website.page ? gfud->website.page : "")),
-				(gfud->http11 ? "1.1" : "1.0"),
-				(gfud->user_agent ? gfud->user_agent : ""),
-				(gfud->website.address ? gfud->website.address : ""));
-		} else {
-			gfud->request = g_strdup_printf(
-				"GET %s%s HTTP/%s\r\n"
-				"Connection: close\r\n"
-				"Accept: */*\r\n"
-				"Host: %s\r\n\r\n",
-				(gfud->full ? "" : "/"),
-				(gfud->full ? (gfud->url ? gfud->url : "") : (gfud->website.page ? gfud->website.page : "")),
-				(gfud->http11 ? "1.1" : "1.0"),
-				(gfud->website.address ? gfud->website.address : ""));
-		}
-	}
-
-	gaim_debug_misc("util", "Request: '%s'\n", gfud->request);
-
-	gfud->inpa = gaim_input_add(source, GAIM_INPUT_WRITE,
+	gfud->inpa = purple_input_add(source, PURPLE_INPUT_WRITE,
 								url_fetch_send_cb, gfud);
-	url_fetch_send_cb(gfud, source, GAIM_INPUT_WRITE);
+	url_fetch_send_cb(gfud, source, PURPLE_INPUT_WRITE);
 }
 
-GaimUtilFetchUrlData *
-gaim_util_fetch_url_request(const char *url, gboolean full,
-		const char *user_agent, gboolean http11,
-		const char *request, gboolean include_headers,
-		GaimUtilFetchUrlCallback callback, void *user_data)
+static void ssl_url_fetch_connect_cb(gpointer data, PurpleSslConnection *ssl_connection, PurpleInputCondition cond)
 {
-	GaimUtilFetchUrlData *gfud;
+	PurpleUtilFetchUrlData *gfud;
+
+	gfud = data;
+
+	gfud->inpa = purple_input_add(ssl_connection->fd, PURPLE_INPUT_WRITE,
+			url_fetch_send_cb, gfud);
+	url_fetch_send_cb(gfud, ssl_connection->fd, PURPLE_INPUT_WRITE);
+}
+
+static void ssl_url_fetch_error_cb(PurpleSslConnection *ssl_connection, PurpleSslErrorType error, gpointer data)
+{
+	PurpleUtilFetchUrlData *gfud;
+
+	gfud = data;
+	gfud->ssl_connection = NULL;
+
+	purple_util_fetch_url_error(gfud, _("Unable to connect to %s: %s"),
+			(gfud->website.address ? gfud->website.address : ""),
+	purple_ssl_strerror(error));
+}
+
+PurpleUtilFetchUrlData *
+purple_util_fetch_url_request(PurpleAccount *account,
+		const char *url, gboolean full,	const char *user_agent, gboolean http11,
+		const char *request, gboolean include_headers, gssize max_len,
+		PurpleUtilFetchUrlCallback callback, void *user_data)
+{
+	PurpleUtilFetchUrlData *gfud;
 
 	g_return_val_if_fail(url      != NULL, NULL);
 	g_return_val_if_fail(callback != NULL, NULL);
 
-	gaim_debug_info("util",
-			 "requested to fetch (%s), full=%d, user_agent=(%s), http11=%d\n",
-			 url, full, user_agent?user_agent:"(null)", http11);
+	if(purple_debug_is_unsafe())
+		purple_debug_info("util",
+				 "requested to fetch (%s), full=%d, user_agent=(%s), http11=%d\n",
+				 url, full, user_agent?user_agent:"(null)", http11);
+	else
+		purple_debug_info("util", "requesting to fetch a URL\n");
 
-	gfud = g_new0(GaimUtilFetchUrlData, 1);
+	gfud = g_new0(PurpleUtilFetchUrlData, 1);
 
 	gfud->callback = callback;
 	gfud->user_data  = user_data;
@@ -3451,17 +4194,35 @@ gaim_util_fetch_url_request(const char *url, gboolean full,
 	gfud->full = full;
 	gfud->request = g_strdup(request);
 	gfud->include_headers = include_headers;
+	gfud->fd = -1;
+	gfud->max_len = max_len;
+	gfud->account = account;
 
-	gaim_url_parse(url, &gfud->website.address, &gfud->website.port,
+	purple_url_parse(url, &gfud->website.address, &gfud->website.port,
 				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
 
-	gfud->connect_data = gaim_proxy_connect(NULL, NULL,
-			gfud->website.address, gfud->website.port,
-			url_fetch_connect_cb, gfud);
+	if (purple_strcasestr(url, "https://") != NULL) {
+		if (!purple_ssl_is_supported()) {
+			purple_util_fetch_url_error(gfud,
+					_("Unable to connect to %s: %s"),
+					gfud->website.address,
+					_("Server requires TLS/SSL, but no TLS/SSL support was found."));
+			return NULL;
+		}
 
-	if (gfud->connect_data == NULL)
+		gfud->is_ssl = TRUE;
+		gfud->ssl_connection = purple_ssl_connect(account,
+				gfud->website.address, gfud->website.port,
+				ssl_url_fetch_connect_cb, ssl_url_fetch_error_cb, gfud);
+	} else {
+		gfud->connect_data = purple_proxy_connect(NULL, account,
+				gfud->website.address, gfud->website.port,
+				url_fetch_connect_cb, gfud);
+	}
+
+	if (gfud->ssl_connection == NULL && gfud->connect_data == NULL)
 	{
-		gaim_util_fetch_url_error(gfud, _("Unable to connect to %s"),
+		purple_util_fetch_url_error(gfud, _("Unable to connect to %s"),
 				gfud->website.address);
 		return NULL;
 	}
@@ -3470,13 +4231,16 @@ gaim_util_fetch_url_request(const char *url, gboolean full,
 }
 
 void
-gaim_util_fetch_url_cancel(GaimUtilFetchUrlData *gfud)
+purple_util_fetch_url_cancel(PurpleUtilFetchUrlData *gfud)
 {
+	if (gfud->ssl_connection != NULL)
+		purple_ssl_close(gfud->ssl_connection);
+
 	if (gfud->connect_data != NULL)
-		gaim_proxy_connect_cancel(gfud->connect_data);
+		purple_proxy_connect_cancel(gfud->connect_data);
 
 	if (gfud->inpa > 0)
-		gaim_input_remove(gfud->inpa);
+		purple_input_remove(gfud->inpa);
 
 	if (gfud->fd >= 0)
 		close(gfud->fd);
@@ -3494,7 +4258,7 @@ gaim_util_fetch_url_cancel(GaimUtilFetchUrlData *gfud)
 }
 
 const char *
-gaim_url_decode(const char *str)
+purple_url_decode(const char *str)
 {
 	static char buf[BUF_LEN];
 	guint i, j = 0;
@@ -3538,7 +4302,7 @@ gaim_url_decode(const char *str)
 }
 
 const char *
-gaim_url_encode(const char *str)
+purple_url_encode(const char *str)
 {
 	const char *iter;
 	static char buf[BUF_LEN];
@@ -3553,14 +4317,14 @@ gaim_url_encode(const char *str)
 		gunichar c = g_utf8_get_char(iter);
 		/* If the character is an ASCII character and is alphanumeric
 		 * no need to escape */
-		if (c < 128 && isalnum(c)) {
+		if (c < 128 && (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~')) {
 			buf[j++] = c;
 		} else {
 			int bytes = g_unichar_to_utf8(c, utf_char);
 			for (i = 0; i < bytes; i++) {
 				if (j > (BUF_LEN - 4))
 					break;
-				sprintf(buf + j, "%%%02x", utf_char[i] & 0xff);
+				sprintf(buf + j, "%%%02X", utf_char[i] & 0xff);
 				j += 3;
 			}
 		}
@@ -3579,10 +4343,14 @@ gaim_url_encode(const char *str)
  *     but not completely checking to avoid conflicts with IP addresses
  */
 gboolean
-gaim_email_is_valid(const char *address)
+purple_email_is_valid(const char *address)
 {
 	const char *c, *domain;
 	static char *rfc822_specials = "()<>@,;:\\\"[]";
+
+	g_return_val_if_fail(address != NULL, FALSE);
+
+	if (*address == '.') return FALSE;
 
 	/* first we validate the name portion (name@domain) (rfc822)*/
 	for (c = address;  *c;  c++) {
@@ -3604,6 +4372,10 @@ gaim_email_is_valid(const char *address)
 		if (*c <= ' ' || *c >= 127) return FALSE;
 		if (strchr(rfc822_specials, *c)) return FALSE;
 	}
+
+	/* It's obviously not an email address if we didn't find an '@' above */
+	if (*c == '\0') return FALSE;
+
 	/* strictly we should return false if (*(c - 1) == '.') too, but I think
 	 * we should permit user.@domain type addresses - they do work :) */
 	if (c == address) return FALSE;
@@ -3613,7 +4385,7 @@ gaim_email_is_valid(const char *address)
 	do {
 		if (*c == '.' && (c == domain || *(c - 1) == '.' || *(c - 1) == '-'))
 			return FALSE;
-		if (*c == '-' && *(c - 1) == '.') return FALSE;
+		if (*c == '-' && (*(c - 1) == '.' || *(c - 1) == '@')) return FALSE;
 		if ((*c < '0' && *c != '-' && *c != '.') || (*c > '9' && *c < 'A') ||
 			(*c > 'Z' && *c < 'a') || (*c > 'z')) return FALSE;
 	} while (*++c);
@@ -3623,9 +4395,74 @@ gaim_email_is_valid(const char *address)
 	return ((c - domain) > 3 ? TRUE : FALSE);
 }
 
+gboolean
+purple_ipv4_address_is_valid(const char *ip)
+{
+	int c, o1, o2, o3, o4;
+	char end;
+
+	g_return_val_if_fail(ip != NULL, FALSE);
+
+	c = sscanf(ip, "%d.%d.%d.%d%c", &o1, &o2, &o3, &o4, &end);
+	if (c != 4 || o1 < 0 || o1 > 255 || o2 < 0 || o2 > 255 || o3 < 0 || o3 > 255 || o4 < 0 || o4 > 255)
+		return FALSE;
+	return TRUE;
+}
+
+gboolean
+purple_ipv6_address_is_valid(const gchar *ip)
+{
+	const gchar *c;
+	gboolean double_colon = FALSE;
+	gint chunks = 1;
+	gint in = 0;
+
+	g_return_val_if_fail(ip != NULL, FALSE);
+
+	if (*ip == '\0')
+		return FALSE;
+
+	for (c = ip; *c; ++c) {
+		if ((*c >= '0' && *c <= '9') ||
+		        (*c >= 'a' && *c <= 'f') ||
+		        (*c >= 'A' && *c <= 'F')) {
+			if (++in > 4)
+				/* Only four hex digits per chunk */
+				return FALSE;
+			continue;
+		} else if (*c == ':') {
+			/* The start of a new chunk */
+			++chunks;
+			in = 0;
+			if (*(c + 1) == ':') {
+				/*
+				 * '::' indicates a consecutive series of chunks full
+				 * of zeroes. There can be only one of these per address.
+				 */
+				if (double_colon)
+					return FALSE;
+				double_colon = TRUE;
+			}
+		} else
+			return FALSE;
+	}
+
+	/*
+	 * Either we saw a '::' and there were fewer than 8 chunks -or-
+	 * we didn't see a '::' and saw exactly 8 chunks.
+	 */
+	return (double_colon && chunks < 8) || (!double_colon && chunks == 8);
+}
+
+gboolean
+purple_ip_address_is_valid(const char *ip)
+{
+	return (purple_ipv4_address_is_valid(ip) || purple_ipv6_address_is_valid(ip));
+}
+
 /* Stolen from gnome_uri_list_extract_uris */
 GList *
-gaim_uri_list_extract_uris(const gchar *uri_list)
+purple_uri_list_extract_uris(const gchar *uri_list)
 {
 	const gchar *p, *q;
 	gchar *retval;
@@ -3672,13 +4509,13 @@ gaim_uri_list_extract_uris(const gchar *uri_list)
 
 /* Stolen from gnome_uri_list_extract_filenames */
 GList *
-gaim_uri_list_extract_filenames(const gchar *uri_list)
+purple_uri_list_extract_filenames(const gchar *uri_list)
 {
 	GList *tmp_list, *node, *result;
 
 	g_return_val_if_fail (uri_list != NULL, NULL);
 
-	result = gaim_uri_list_extract_uris(uri_list);
+	result = purple_uri_list_extract_uris(uri_list);
 
 	tmp_list = result;
 	while (tmp_list) {
@@ -3692,8 +4529,7 @@ gaim_uri_list_extract_filenames(const gchar *uri_list)
 			/* not sure if this fallback is useful at all */
 			if (!node->data) node->data = g_strdup (s+5);
 		} else {
-			result = g_list_remove_link(result, node);
-			g_list_free_1 (node);
+			result = g_list_delete_link(result, node);
 		}
 		g_free (s);
 	}
@@ -3704,7 +4540,7 @@ gaim_uri_list_extract_filenames(const gchar *uri_list)
  * UTF8 String Functions
  **************************************************************************/
 gchar *
-gaim_utf8_try_convert(const char *str)
+purple_utf8_try_convert(const char *str)
 {
 	gsize converted;
 	gchar *utf8;
@@ -3731,7 +4567,7 @@ gaim_utf8_try_convert(const char *str)
 #define utf8_first(x) ((x & 0x80) == 0 || (x & 0xe0) == 0xc0 \
 		       || (x & 0xf0) == 0xe0 || (x & 0xf8) == 0xf)
 gchar *
-gaim_utf8_salvage(const char *str)
+purple_utf8_salvage(const char *str)
 {
 	GString *workstr;
 	const char *end;
@@ -3755,9 +4591,98 @@ gaim_utf8_salvage(const char *str)
 	return g_string_free(workstr, FALSE);
 }
 
+gchar *
+purple_utf8_strip_unprintables(const gchar *str)
+{
+	gchar *workstr, *iter;
+	const gchar *bad;
+
+	if (str == NULL)
+		/* Act like g_strdup */
+		return NULL;
+
+	if (!g_utf8_validate(str, -1, &bad)) {
+		purple_debug_error("util", "purple_utf8_strip_unprintables(%s) failed; "
+		                           "first bad character was %02x (%c)\n",
+		                   str, *bad, *bad);
+		g_return_val_if_reached(NULL);
+	}
+
+	workstr = iter = g_new(gchar, strlen(str) + 1);
+	while (*str) {
+		gunichar ch = g_utf8_get_char(str);
+		gchar *next = g_utf8_next_char(str);
+		/*
+		 * Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] |
+		 *          [#x10000-#x10FFFF]
+		 */
+		if ((ch == '\t' || ch == '\n' || ch == '\r') ||
+				(ch >= 0x20 && ch <= 0xD7FF) ||
+				(ch >= 0xE000 && ch <= 0xFFFD) ||
+				(ch >= 0x10000 && ch <= 0x10FFFF)) {
+			memcpy(iter, str, next - str);
+			iter += (next - str);
+		}
+
+		str = next;
+	}
+
+	/* nul-terminate the new string */
+	*iter = '\0';
+
+	return workstr;
+}
+
+/*
+ * This function is copied from g_strerror() but changed to use
+ * gai_strerror().
+ */
+const gchar *
+purple_gai_strerror(gint errnum)
+{
+	static GStaticPrivate msg_private = G_STATIC_PRIVATE_INIT;
+	char *msg;
+	int saved_errno = errno;
+
+	const char *msg_locale;
+
+	msg_locale = gai_strerror(errnum);
+	if (g_get_charset(NULL))
+	{
+		/* This string is already UTF-8--great! */
+		errno = saved_errno;
+		return msg_locale;
+	}
+	else
+	{
+		gchar *msg_utf8 = g_locale_to_utf8(msg_locale, -1, NULL, NULL, NULL);
+		if (msg_utf8)
+		{
+			/* Stick in the quark table so that we can return a static result */
+			GQuark msg_quark = g_quark_from_string(msg_utf8);
+			g_free(msg_utf8);
+
+			msg_utf8 = (gchar *)g_quark_to_string(msg_quark);
+			errno = saved_errno;
+			return msg_utf8;
+		}
+	}
+
+	msg = g_static_private_get(&msg_private);
+	if (!msg)
+	{
+		msg = g_new(gchar, 64);
+		g_static_private_set(&msg_private, msg, g_free);
+	}
+
+	sprintf(msg, "unknown error (%d)", errnum);
+
+	errno = saved_errno;
+	return msg;
+}
 
 char *
-gaim_utf8_ncr_encode(const char *str)
+purple_utf8_ncr_encode(const char *str)
 {
 	GString *out;
 
@@ -3782,7 +4707,7 @@ gaim_utf8_ncr_encode(const char *str)
 
 
 char *
-gaim_utf8_ncr_decode(const char *str)
+purple_utf8_ncr_decode(const char *str)
 {
 	GString *out;
 	char *buf, *b;
@@ -3826,7 +4751,7 @@ gaim_utf8_ncr_decode(const char *str)
 
 
 int
-gaim_utf8_strcasecmp(const char *a, const char *b)
+purple_utf8_strcasecmp(const char *a, const char *b)
 {
 	char *a_norm = NULL;
 	char *b_norm = NULL;
@@ -3841,7 +4766,7 @@ gaim_utf8_strcasecmp(const char *a, const char *b)
 
 	if(!g_utf8_validate(a, -1, NULL) || !g_utf8_validate(b, -1, NULL))
 	{
-		gaim_debug_error("gaim_utf8_strcasecmp",
+		purple_debug_error("purple_utf8_strcasecmp",
 						 "One or both parameters are invalid UTF8\n");
 		return ret;
 	}
@@ -3857,21 +4782,38 @@ gaim_utf8_strcasecmp(const char *a, const char *b)
 
 /* previously conversation::find_nick() */
 gboolean
-gaim_utf8_has_word(const char *haystack, const char *needle)
+purple_utf8_has_word(const char *haystack, const char *needle)
 {
 	char *hay, *pin, *p;
+	const char *start, *prev_char;
+	gunichar before, after;
 	int n;
 	gboolean ret = FALSE;
 
-	hay = g_utf8_strdown(haystack, -1);
+	start = hay = g_utf8_strdown(haystack, -1);
 
 	pin = g_utf8_strdown(needle, -1);
 	n = strlen(pin);
 
-	if ((p = strstr(hay, pin)) != NULL) {
-		if ((p == hay || !isalnum(*(p - 1))) && !isalnum(*(p + n))) {
-			ret = TRUE;
+	while ((p = strstr(start, pin)) != NULL) {
+		prev_char = g_utf8_find_prev_char(hay, p);
+		before = -2;
+		if (prev_char) {
+			before = g_utf8_get_char(prev_char);
 		}
+		after = g_utf8_get_char_validated(p + n, - 1);
+
+		if ((p == hay ||
+				/* The character before is a reasonable guess for a word boundary
+				   ("!g_unichar_isalnum()" is not a valid way to determine word
+				    boundaries, but it is the only reasonable thing to do here),
+				   and isn't the '&' from a "&amp;" or some such entity*/
+				(before != -2 && !g_unichar_isalnum(before) && *(p - 1) != '&'))
+				&& after != -2 && !g_unichar_isalnum(after)) {
+			ret = TRUE;
+			break;
+		}
+		start = p + 1;
 	}
 
 	g_free(pin);
@@ -3881,7 +4823,7 @@ gaim_utf8_has_word(const char *haystack, const char *needle)
 }
 
 void
-gaim_print_utf8_to_console(FILE *filestream, char *message)
+purple_print_utf8_to_console(FILE *filestream, char *message)
 {
 	gchar *message_conv;
 	GError *error = NULL;
@@ -3901,7 +4843,7 @@ gaim_print_utf8_to_console(FILE *filestream, char *message)
 	}
 }
 
-gboolean gaim_message_meify(char *message, size_t len)
+gboolean purple_message_meify(char *message, gssize len)
 {
 	char *c;
 	gboolean inside_html = FALSE;
@@ -3931,7 +4873,7 @@ gboolean gaim_message_meify(char *message, size_t len)
 	return FALSE;
 }
 
-char *gaim_text_strip_mnemonic(const char *in)
+char *purple_text_strip_mnemonic(const char *in)
 {
 	char *out;
 	char *a;
@@ -3992,16 +4934,16 @@ char *gaim_text_strip_mnemonic(const char *in)
 	return out;
 }
 
-const char* gaim_unescape_filename(const char *escaped) {
-	return gaim_url_decode(escaped);
+const char* purple_unescape_filename(const char *escaped) {
+	return purple_url_decode(escaped);
 }
 
 
-/* this is almost identical to gaim_url_encode (hence gaim_url_decode
+/* this is almost identical to purple_url_encode (hence purple_url_decode
  * being used above), but we want to keep certain characters unescaped
  * for compat reasons */
 const char *
-gaim_escape_filename(const char *str)
+purple_escape_filename(const char *str)
 {
 	const char *iter;
 	static char buf[BUF_LEN];
@@ -4016,7 +4958,7 @@ gaim_escape_filename(const char *str)
 		gunichar c = g_utf8_get_char(iter);
 		/* If the character is an ASCII character and is alphanumeric,
 		 * or one of the specified values, no need to escape */
-		if (c < 128 && (isalnum(c) || c == '@' || c == '-' ||
+		if (c < 128 && (g_ascii_isalnum(c) || c == '@' || c == '-' ||
 				c == '_' || c == '.' || c == '#')) {
 			buf[j++] = c;
 		} else {
@@ -4029,9 +4971,136 @@ gaim_escape_filename(const char *str)
 			}
 		}
 	}
-
+#ifdef _WIN32
+	/* File/Directory names in windows cannot end in periods/spaces.
+	 * http://msdn.microsoft.com/en-us/library/aa365247%28VS.85%29.aspx
+	 */
+	while (j > 0 && (buf[j - 1] == '.' || buf[j - 1] == ' '))
+		j--;
+#endif
 	buf[j] = '\0';
 
 	return buf;
 }
 
+void purple_restore_default_signal_handlers(void)
+{
+#ifndef _WIN32
+#ifdef HAVE_SIGNAL_H
+	signal(SIGHUP, SIG_DFL);	/* 1: terminal line hangup */
+	signal(SIGINT, SIG_DFL);	/* 2: interrupt program */
+	signal(SIGQUIT, SIG_DFL);	/* 3: quit program */
+	signal(SIGILL,  SIG_DFL);	/* 4:  illegal instruction (not reset when caught) */
+	signal(SIGTRAP, SIG_DFL);	/* 5:  trace trap (not reset when caught) */
+	signal(SIGABRT, SIG_DFL);	/* 6:  abort program */
+
+#ifdef SIGPOLL
+	signal(SIGPOLL,  SIG_DFL);	/* 7:  pollable event (POSIX) */
+#endif /* SIGPOLL */
+
+#ifdef SIGEMT
+	signal(SIGEMT,  SIG_DFL);	/* 7:  EMT instruction (Non-POSIX) */
+#endif /* SIGEMT */
+
+	signal(SIGFPE,  SIG_DFL);	/* 8:  floating point exception */
+	signal(SIGBUS,  SIG_DFL);	/* 10: bus error */
+	signal(SIGSEGV, SIG_DFL);	/* 11: segmentation violation */
+	signal(SIGSYS,  SIG_DFL);	/* 12: bad argument to system call */
+	signal(SIGPIPE, SIG_DFL);	/* 13: write on a pipe with no reader */
+	signal(SIGALRM, SIG_DFL);	/* 14: real-time timer expired */
+	signal(SIGTERM, SIG_DFL);	/* 15: software termination signal */
+	signal(SIGCHLD, SIG_DFL);	/* 20: child status has changed */
+	signal(SIGXCPU, SIG_DFL);	/* 24: exceeded CPU time limit */
+	signal(SIGXFSZ, SIG_DFL);	/* 25: exceeded file size limit */
+#endif /* HAVE_SIGNAL_H */
+#endif /* !_WIN32 */
+}
+
+static void
+set_status_with_attrs(PurpleStatus *status, ...)
+{
+	va_list args;
+	va_start(args, status);
+	purple_status_set_active_with_attrs(status, TRUE, args);
+	va_end(args);
+}
+
+void purple_util_set_current_song(const char *title, const char *artist, const char *album)
+{
+	GList *list = purple_accounts_get_all();
+	for (; list; list = list->next) {
+		PurplePresence *presence;
+		PurpleStatus *tune;
+		PurpleAccount *account = list->data;
+		if (!purple_account_get_enabled(account, purple_core_get_ui()))
+			continue;
+
+		presence = purple_account_get_presence(account);
+		tune = purple_presence_get_status(presence, "tune");
+		if (!tune)
+			continue;
+		if (title) {
+			set_status_with_attrs(tune,
+					PURPLE_TUNE_TITLE, title,
+					PURPLE_TUNE_ARTIST, artist,
+					PURPLE_TUNE_ALBUM, album,
+					NULL);
+		} else {
+			purple_status_set_active(tune, FALSE);
+		}
+	}
+}
+
+char * purple_util_format_song_info(const char *title, const char *artist, const char *album, gpointer unused)
+{
+	GString *string;
+	char *esc;
+
+	if (!title || !*title)
+		return NULL;
+
+	esc = g_markup_escape_text(title, -1);
+	string = g_string_new("");
+	g_string_append_printf(string, "%s", esc);
+	g_free(esc);
+
+	if (artist && *artist) {
+		esc = g_markup_escape_text(artist, -1);
+		g_string_append_printf(string, _(" - %s"), esc);
+		g_free(esc);
+	}
+
+	if (album && *album) {
+		esc = g_markup_escape_text(album, -1);
+		g_string_append_printf(string, _(" (%s)"), esc);
+		g_free(esc);
+	}
+
+	return g_string_free(string, FALSE);
+}
+
+const gchar *
+purple_get_host_name(void)
+{
+	return g_get_host_name();
+}
+
+gchar *
+purple_uuid_random(void)
+{
+	guint32 tmp, a, b;
+
+	tmp = g_random_int();
+	a = 0x4000 | (tmp & 0xFFF); /* 0x4000 to 0x4FFF */
+	tmp >>= 12;
+	b = ((1 << 3) << 12) | (tmp & 0x3FFF); /* 0x8000 to 0xBFFF */
+
+	tmp = g_random_int();
+
+	return g_strdup_printf("%08x-%04x-%04x-%04x-%04x%08x",
+			g_random_int(),
+			tmp & 0xFFFF,
+			a,
+			b,
+			(tmp >> 16) & 0xFFFF, g_random_int());
+}

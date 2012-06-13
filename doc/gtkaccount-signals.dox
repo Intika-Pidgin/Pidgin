@@ -4,15 +4,17 @@
   @signal account-modified
  @endsignals
 
+ @see gtkaccount.h
+
  <hr>
 
  @signaldef account-modified
   @signalproto
-void (*account-modified)(GaimAccount *account);
+void (*account-modified)(PurpleAccount *account);
   @endsignalproto
   @signaldesc
    Emitted when the settings for an account have been changed and saved.
   @param account The account that has been modified.
  @endsignaldef
 */
-// vim: syntax=c tw=75 et
+// vim: syntax=c.doxygen tw=75 et

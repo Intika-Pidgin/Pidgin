@@ -1,10 +1,12 @@
 /**
  * @file sound.h Sound API
  * @ingroup core
+ * @see @ref sound-signals
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,10 +22,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_SOUND_H_
-#define _GAIM_SOUND_H_
+#ifndef _PURPLE_SOUND_H_
+#define _PURPLE_SOUND_H_
 
 #include "account.h"
 
@@ -36,35 +38,41 @@
  * A type of sound.
  */
 
-typedef enum _GaimSoundEventID
+typedef enum
 {
-	GAIM_SOUND_BUDDY_ARRIVE = 0, /**< Buddy signs on.                       */
-	GAIM_SOUND_BUDDY_LEAVE,      /**< Buddy signs off.                      */
-	GAIM_SOUND_RECEIVE,          /**< Receive an IM.                        */
-	GAIM_SOUND_FIRST_RECEIVE,    /**< Receive an IM that starts a conv.     */
-	GAIM_SOUND_SEND,             /**< Send an IM.                           */
-	GAIM_SOUND_CHAT_JOIN,        /**< Someone joins a chat.                 */
-	GAIM_SOUND_CHAT_LEAVE,       /**< Someone leaves a chat.                */
-	GAIM_SOUND_CHAT_YOU_SAY,     /**< You say something in a chat.          */
-	GAIM_SOUND_CHAT_SAY,         /**< Someone else says somthing in a chat. */
-	GAIM_SOUND_POUNCE_DEFAULT,   /**< Default sound for a buddy pounce.     */
-	GAIM_SOUND_CHAT_NICK,        /**< Someone says your name in a chat.     */
-	GAIM_NUM_SOUNDS              /**< Total number of sounds.               */
+	PURPLE_SOUND_BUDDY_ARRIVE = 0, /**< Buddy signs on.                       */
+	PURPLE_SOUND_BUDDY_LEAVE,      /**< Buddy signs off.                      */
+	PURPLE_SOUND_RECEIVE,          /**< Receive an IM.                        */
+	PURPLE_SOUND_FIRST_RECEIVE,    /**< Receive an IM that starts a conv.     */
+	PURPLE_SOUND_SEND,             /**< Send an IM.                           */
+	PURPLE_SOUND_CHAT_JOIN,        /**< Someone joins a chat.                 */
+	PURPLE_SOUND_CHAT_LEAVE,       /**< Someone leaves a chat.                */
+	PURPLE_SOUND_CHAT_YOU_SAY,     /**< You say something in a chat.          */
+	PURPLE_SOUND_CHAT_SAY,         /**< Someone else says somthing in a chat. */
+	PURPLE_SOUND_POUNCE_DEFAULT,   /**< Default sound for a buddy pounce.     */
+	PURPLE_SOUND_CHAT_NICK,        /**< Someone says your name in a chat.     */
+	PURPLE_SOUND_GOT_ATTENTION,	   /**< Got an attention					  */
+	PURPLE_NUM_SOUNDS              /**< Total number of sounds.               */
 
-} GaimSoundEventID;
+} PurpleSoundEventID;
 
-typedef struct _GaimSoundUiOps
+/** Operations used by the core to request that particular sound files, or the
+ *  sound associated with a particular event, should be played.
+ */
+typedef struct _PurpleSoundUiOps
 {
 	void (*init)(void);
 	void (*uninit)(void);
 	void (*play_file)(const char *filename);
-	void (*play_event)(GaimSoundEventID event);
+	void (*play_event)(PurpleSoundEventID event);
 
-} GaimSoundUiOps;
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
+} PurpleSoundUiOps;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Sound API                                                       */
@@ -80,7 +88,7 @@ extern "C" {
  *        account.  This is needed for the "sounds while away?"
  *        preference to work correctly.
  */
-void gaim_sound_play_file(const char *filename, const GaimAccount *account);
+void purple_sound_play_file(const char *filename, const PurpleAccount *account);
 
 /**
  * Plays the sound associated with the specified event.
@@ -91,43 +99,41 @@ void gaim_sound_play_file(const char *filename, const GaimAccount *account);
  *        account.  This is needed for the "sounds while away?"
  *        preference to work correctly.
  */
-void gaim_sound_play_event(GaimSoundEventID event, const GaimAccount *account);
+void purple_sound_play_event(PurpleSoundEventID event, const PurpleAccount *account);
 
 /**
  * Sets the UI sound operations
  *
  * @param ops The UI sound operations structure.
  */
-void gaim_sound_set_ui_ops(GaimSoundUiOps *ops);
+void purple_sound_set_ui_ops(PurpleSoundUiOps *ops);
 
 /**
  * Gets the UI sound operations
  *
  * @return The UI sound operations structure.
  */
-GaimSoundUiOps *gaim_sound_get_ui_ops(void);
+PurpleSoundUiOps *purple_sound_get_ui_ops(void);
 
 /**
  * Initializes the sound subsystem
  */
-void gaim_sound_init(void);
+void purple_sound_init(void);
 
 /**
  * Shuts down the sound subsystem
  */
-void gaim_sound_uninit(void);
+void purple_sound_uninit(void);
 
 /**
  * Returns the sound subsystem handle.
  *
  * @return The sound subsystem handle.
  */
-void *gaim_sounds_get_handle(void);
+void *purple_sounds_get_handle(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
-#endif /* _GAIM_SOUND_H_ */
+#endif /* _PURPLE_SOUND_H_ */

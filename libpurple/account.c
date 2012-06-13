@@ -1,10 +1,11 @@
 /**
  * @file account.c Account API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "account.h"
@@ -40,10 +41,10 @@
 #include "util.h"
 #include "xmlnode.h"
 
-/* TODO: Should use GaimValue instead of this?  What about "ui"? */
+/* TODO: Should use PurpleValue instead of this?  What about "ui"? */
 typedef struct
 {
-	GaimPrefType type;
+	PurplePrefType type;
 
 	char *ui;
 
@@ -51,19 +52,34 @@ typedef struct
 	{
 		int integer;
 		char *string;
-		gboolean bool;
+		gboolean boolean;
 
 	} value;
 
-} GaimAccountSetting;
+} PurpleAccountSetting;
 
+typedef struct
+{
+	PurpleAccountRequestType type;
+	PurpleAccount *account;
+	void *ui_handle;
+	char *user;
+	gpointer userdata;
+	PurpleAccountRequestAuthorizationCb auth_cb;
+	PurpleAccountRequestAuthorizationCb deny_cb;
+	guint ref;
+} PurpleAccountRequestInfo;
 
-static GaimAccountUiOps *account_ui_ops = NULL;
+static PurpleAccountUiOps *account_ui_ops = NULL;
 
 static GList   *accounts = NULL;
 static guint    save_timer = 0;
 static gboolean accounts_loaded = FALSE;
 
+static GList *handles = NULL;
+
+static void set_current_error(PurpleAccount *account,
+	PurpleConnectionErrorInfo *new_err);
 
 /*********************************************************************
  * Writing to disk                                                   *
@@ -73,29 +89,29 @@ static void
 setting_to_xmlnode(gpointer key, gpointer value, gpointer user_data)
 {
 	const char *name;
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 	xmlnode *node, *child;
-	char buf[20];
+	char buf[21];
 
 	name    = (const char *)key;
-	setting = (GaimAccountSetting *)value;
+	setting = (PurpleAccountSetting *)value;
 	node    = (xmlnode *)user_data;
 
 	child = xmlnode_new_child(node, "setting");
 	xmlnode_set_attrib(child, "name", name);
 
-	if (setting->type == GAIM_PREF_INT) {
+	if (setting->type == PURPLE_PREF_INT) {
 		xmlnode_set_attrib(child, "type", "int");
-		snprintf(buf, sizeof(buf), "%d", setting->value.integer);
+		g_snprintf(buf, sizeof(buf), "%d", setting->value.integer);
 		xmlnode_insert_data(child, buf, -1);
 	}
-	else if (setting->type == GAIM_PREF_STRING && setting->value.string != NULL) {
+	else if (setting->type == PURPLE_PREF_STRING && setting->value.string != NULL) {
 		xmlnode_set_attrib(child, "type", "string");
 		xmlnode_insert_data(child, setting->value.string, -1);
 	}
-	else if (setting->type == GAIM_PREF_BOOLEAN) {
+	else if (setting->type == PURPLE_PREF_BOOLEAN) {
 		xmlnode_set_attrib(child, "type", "bool");
-		snprintf(buf, sizeof(buf), "%d", setting->value.bool);
+		g_snprintf(buf, sizeof(buf), "%d", setting->value.boolean);
 		xmlnode_insert_data(child, buf, -1);
 	}
 }
@@ -120,57 +136,55 @@ ui_setting_to_xmlnode(gpointer key, gpointer value, gpointer user_data)
 }
 
 static xmlnode *
-status_attr_to_xmlnode(const GaimStatus *status, const GaimStatusType *type, const GaimStatusAttr *attr)
+status_attr_to_xmlnode(const PurpleStatus *status, const PurpleStatusType *type, const PurpleStatusAttr *attr)
 {
 	xmlnode *node;
 	const char *id;
 	char *value = NULL;
-	GaimStatusAttr *default_attr;
-	GaimValue *default_value;
-	GaimType attr_type;
-	GaimValue *attr_value;
+	PurpleStatusAttr *default_attr;
+	PurpleValue *default_value;
+	PurpleType attr_type;
+	PurpleValue *attr_value;
 
-	id = gaim_status_attr_get_id(attr);
+	id = purple_status_attr_get_id(attr);
 	g_return_val_if_fail(id, NULL);
 
-	attr_value = gaim_status_get_attr_value(status, id);
+	attr_value = purple_status_get_attr_value(status, id);
 	g_return_val_if_fail(attr_value, NULL);
-	attr_type = gaim_value_get_type(attr_value);
+	attr_type = purple_value_get_type(attr_value);
 
 	/*
 	 * If attr_value is a different type than it should be
 	 * then don't write it to the file.
 	 */
-	default_attr = gaim_status_type_get_attr(type, id);
-	default_value = gaim_status_attr_get_value(default_attr);
-	if (attr_type != gaim_value_get_type(default_value))
+	default_attr = purple_status_type_get_attr(type, id);
+	default_value = purple_status_attr_get_value(default_attr);
+	if (attr_type != purple_value_get_type(default_value))
 		return NULL;
 
 	/*
 	 * If attr_value is the same as the default for this status
 	 * then there is no need to write it to the file.
 	 */
-	if (attr_type == GAIM_TYPE_STRING)
+	if (attr_type == PURPLE_TYPE_STRING)
 	{
-		const char *string_value = gaim_value_get_string(attr_value);
-		const char *default_string_value = gaim_value_get_string(default_value);
-		if (((string_value == NULL) && (default_string_value == NULL)) ||
-			((string_value != NULL) && (default_string_value != NULL) &&
-			 !strcmp(string_value, default_string_value)))
+		const char *string_value = purple_value_get_string(attr_value);
+		const char *default_string_value = purple_value_get_string(default_value);
+		if (purple_strequal(string_value, default_string_value))
 			return NULL;
-		value = g_strdup(gaim_value_get_string(attr_value));
+		value = g_strdup(purple_value_get_string(attr_value));
 	}
-	else if (attr_type == GAIM_TYPE_INT)
+	else if (attr_type == PURPLE_TYPE_INT)
 	{
-		int int_value = gaim_value_get_int(attr_value);
-		if (int_value == gaim_value_get_int(default_value))
+		int int_value = purple_value_get_int(attr_value);
+		if (int_value == purple_value_get_int(default_value))
 			return NULL;
 		value = g_strdup_printf("%d", int_value);
 	}
-	else if (attr_type == GAIM_TYPE_BOOLEAN)
+	else if (attr_type == PURPLE_TYPE_BOOLEAN)
 	{
-		gboolean boolean_value = gaim_value_get_boolean(attr_value);
-		if (boolean_value == gaim_value_get_boolean(default_value))
+		gboolean boolean_value = purple_value_get_boolean(attr_value);
+		if (boolean_value == purple_value_get_boolean(default_value))
 			return NULL;
 		value = g_strdup(boolean_value ?
 								"true" : "false");
@@ -193,18 +207,18 @@ status_attr_to_xmlnode(const GaimStatus *status, const GaimStatusType *type, con
 }
 
 static xmlnode *
-status_attrs_to_xmlnode(const GaimStatus *status)
+status_attrs_to_xmlnode(const PurpleStatus *status)
 {
-	GaimStatusType *type = gaim_status_get_type(status);
+	PurpleStatusType *type = purple_status_get_type(status);
 	xmlnode *node, *child;
-	const GList *attrs, *attr;
+	GList *attrs, *attr;
 
 	node = xmlnode_new("attributes");
 
-	attrs = gaim_status_type_get_attrs(type);
+	attrs = purple_status_type_get_attrs(type);
 	for (attr = attrs; attr != NULL; attr = attr->next)
 	{
-		child = status_attr_to_xmlnode(status, type, (const GaimStatusAttr *)attr->data);
+		child = status_attr_to_xmlnode(status, type, (const PurpleStatusAttr *)attr->data);
 		if (child)
 			xmlnode_insert_child(node, child);
 	}
@@ -213,15 +227,15 @@ status_attrs_to_xmlnode(const GaimStatus *status)
 }
 
 static xmlnode *
-status_to_xmlnode(const GaimStatus *status)
+status_to_xmlnode(const PurpleStatus *status)
 {
 	xmlnode *node, *child;
 
 	node = xmlnode_new("status");
-	xmlnode_set_attrib(node, "type", gaim_status_get_id(status));
-	if (gaim_status_get_name(status) != NULL)
-		xmlnode_set_attrib(node, "name", gaim_status_get_name(status));
-	xmlnode_set_attrib(node, "active", gaim_status_is_active(status) ? "true" : "false");
+	xmlnode_set_attrib(node, "type", purple_status_get_id(status));
+	if (purple_status_get_name(status) != NULL)
+		xmlnode_set_attrib(node, "name", purple_status_get_name(status));
+	xmlnode_set_attrib(node, "active", purple_status_is_active(status) ? "true" : "false");
 
 	child = status_attrs_to_xmlnode(status);
 	xmlnode_insert_child(node, child);
@@ -230,65 +244,71 @@ status_to_xmlnode(const GaimStatus *status)
 }
 
 static xmlnode *
-statuses_to_xmlnode(const GaimPresence *presence)
+statuses_to_xmlnode(const PurplePresence *presence)
 {
 	xmlnode *node, *child;
-	const GList *statuses, *status;
+	GList *statuses;
+	PurpleStatus *status;
 
 	node = xmlnode_new("statuses");
 
-	statuses = gaim_presence_get_statuses(presence);
-	for (status = statuses; status != NULL; status = status->next)
+	statuses = purple_presence_get_statuses(presence);
+	for (; statuses != NULL; statuses = statuses->next)
 	{
-		child = status_to_xmlnode((GaimStatus *)status->data);
-		xmlnode_insert_child(node, child);
+		status = statuses->data;
+		if (purple_status_type_is_saveable(purple_status_get_type(status)))
+		{
+			child = status_to_xmlnode(status);
+			xmlnode_insert_child(node, child);
+		}
 	}
 
 	return node;
 }
 
 static xmlnode *
-proxy_settings_to_xmlnode(GaimProxyInfo *proxy_info)
+proxy_settings_to_xmlnode(PurpleProxyInfo *proxy_info)
 {
 	xmlnode *node, *child;
-	GaimProxyType proxy_type;
+	PurpleProxyType proxy_type;
 	const char *value;
 	int int_value;
-	char buf[20];
+	char buf[21];
 
-	proxy_type = gaim_proxy_info_get_type(proxy_info);
+	proxy_type = purple_proxy_info_get_type(proxy_info);
 
 	node = xmlnode_new("proxy");
 
 	child = xmlnode_new_child(node, "type");
 	xmlnode_insert_data(child,
-			(proxy_type == GAIM_PROXY_USE_GLOBAL ? "global" :
-			 proxy_type == GAIM_PROXY_NONE       ? "none"   :
-			 proxy_type == GAIM_PROXY_HTTP       ? "http"   :
-			 proxy_type == GAIM_PROXY_SOCKS4     ? "socks4" :
-			 proxy_type == GAIM_PROXY_SOCKS5     ? "socks5" :
-			 proxy_type == GAIM_PROXY_USE_ENVVAR ? "envvar" : "unknown"), -1);
+			(proxy_type == PURPLE_PROXY_USE_GLOBAL ? "global" :
+			 proxy_type == PURPLE_PROXY_NONE       ? "none"   :
+			 proxy_type == PURPLE_PROXY_HTTP       ? "http"   :
+			 proxy_type == PURPLE_PROXY_SOCKS4     ? "socks4" :
+			 proxy_type == PURPLE_PROXY_SOCKS5     ? "socks5" :
+			 proxy_type == PURPLE_PROXY_TOR        ? "tor" :
+			 proxy_type == PURPLE_PROXY_USE_ENVVAR ? "envvar" : "unknown"), -1);
 
-	if ((value = gaim_proxy_info_get_host(proxy_info)) != NULL)
+	if ((value = purple_proxy_info_get_host(proxy_info)) != NULL)
 	{
 		child = xmlnode_new_child(node, "host");
 		xmlnode_insert_data(child, value, -1);
 	}
 
-	if ((int_value = gaim_proxy_info_get_port(proxy_info)) != 0)
+	if ((int_value = purple_proxy_info_get_port(proxy_info)) != 0)
 	{
-		snprintf(buf, sizeof(buf), "%d", int_value);
+		g_snprintf(buf, sizeof(buf), "%d", int_value);
 		child = xmlnode_new_child(node, "port");
 		xmlnode_insert_data(child, buf, -1);
 	}
 
-	if ((value = gaim_proxy_info_get_username(proxy_info)) != NULL)
+	if ((value = purple_proxy_info_get_username(proxy_info)) != NULL)
 	{
 		child = xmlnode_new_child(node, "username");
 		xmlnode_insert_data(child, value, -1);
 	}
 
-	if ((value = gaim_proxy_info_get_password(proxy_info)) != NULL)
+	if ((value = purple_proxy_info_get_password(proxy_info)) != NULL)
 	{
 		child = xmlnode_new_child(node, "password");
 		xmlnode_insert_data(child, value, -1);
@@ -298,50 +318,77 @@ proxy_settings_to_xmlnode(GaimProxyInfo *proxy_info)
 }
 
 static xmlnode *
-account_to_xmlnode(GaimAccount *account)
+current_error_to_xmlnode(PurpleConnectionErrorInfo *err)
+{
+	xmlnode *node, *child;
+	char type_str[3];
+
+	node = xmlnode_new("current_error");
+
+	if(err == NULL)
+		return node;
+
+	/* It doesn't make sense to have transient errors persist across a
+	 * restart.
+	 */
+	if(!purple_connection_error_is_fatal (err->type))
+		return node;
+
+	child = xmlnode_new_child(node, "type");
+	g_snprintf(type_str, sizeof(type_str), "%u", err->type);
+	xmlnode_insert_data(child, type_str, -1);
+
+	child = xmlnode_new_child(node, "description");
+	if(err->description) {
+		char *utf8ized = purple_utf8_try_convert(err->description);
+		if(utf8ized == NULL)
+			utf8ized = purple_utf8_salvage(err->description);
+		xmlnode_insert_data(child, utf8ized, -1);
+		g_free(utf8ized);
+	}
+
+	return node;
+}
+
+static xmlnode *
+account_to_xmlnode(PurpleAccount *account)
 {
 	xmlnode *node, *child;
 	const char *tmp;
-	GaimPresence *presence;
-	GaimProxyInfo *proxy_info;
+	PurplePresence *presence;
+	PurpleProxyInfo *proxy_info;
 
 	node = xmlnode_new("account");
 
 	child = xmlnode_new_child(node, "protocol");
-	xmlnode_insert_data(child, gaim_account_get_protocol_id(account), -1);
+	xmlnode_insert_data(child, purple_account_get_protocol_id(account), -1);
 
 	child = xmlnode_new_child(node, "name");
-	xmlnode_insert_data(child, gaim_account_get_username(account), -1);
+	xmlnode_insert_data(child, purple_account_get_username(account), -1);
 
-	if (gaim_account_get_remember_password(account) &&
-		((tmp = gaim_account_get_password(account)) != NULL))
+	if (purple_account_get_remember_password(account) &&
+		((tmp = purple_account_get_password(account)) != NULL))
 	{
 		child = xmlnode_new_child(node, "password");
 		xmlnode_insert_data(child, tmp, -1);
 	}
 
-	if ((tmp = gaim_account_get_alias(account)) != NULL)
+	if ((tmp = purple_account_get_alias(account)) != NULL)
 	{
 		child = xmlnode_new_child(node, "alias");
 		xmlnode_insert_data(child, tmp, -1);
 	}
 
-	if ((presence = gaim_account_get_presence(account)) != NULL)
+	if ((presence = purple_account_get_presence(account)) != NULL)
 	{
 		child = statuses_to_xmlnode(presence);
 		xmlnode_insert_child(node, child);
 	}
 
-	if ((tmp = gaim_account_get_user_info(account)) != NULL)
+	if ((tmp = purple_account_get_user_info(account)) != NULL)
 	{
-		/* TODO: Do we need to call gaim_str_strip_char(tmp, '\r') here? */
+		/* TODO: Do we need to call purple_str_strip_char(tmp, '\r') here? */
 		child = xmlnode_new_child(node, "userinfo");
-		xmlnode_insert_data(child, tmp, -1);
-	}
-
-	if ((tmp = gaim_account_get_buddy_icon(account)) != NULL)
-	{
-		child = xmlnode_new_child(node, "buddyicon");
 		xmlnode_insert_data(child, tmp, -1);
 	}
 
@@ -356,11 +403,14 @@ account_to_xmlnode(GaimAccount *account)
 		g_hash_table_foreach(account->ui_settings, ui_setting_to_xmlnode, node);
 	}
 
-	if ((proxy_info = gaim_account_get_proxy_info(account)) != NULL)
+	if ((proxy_info = purple_account_get_proxy_info(account)) != NULL)
 	{
 		child = proxy_settings_to_xmlnode(proxy_info);
 		xmlnode_insert_child(node, child);
 	}
+
+	child = current_error_to_xmlnode(account->current_error);
+	xmlnode_insert_child(node, child);
 
 	return node;
 }
@@ -374,7 +424,7 @@ accounts_to_xmlnode(void)
 	node = xmlnode_new("account");
 	xmlnode_set_attrib(node, "version", "1.0");
 
-	for (cur = gaim_accounts_get_all(); cur != NULL; cur = cur->next)
+	for (cur = purple_accounts_get_all(); cur != NULL; cur = cur->next)
 	{
 		child = account_to_xmlnode(cur->data);
 		xmlnode_insert_child(node, child);
@@ -391,14 +441,14 @@ sync_accounts(void)
 
 	if (!accounts_loaded)
 	{
-		gaim_debug_error("account", "Attempted to save accounts before "
+		purple_debug_error("account", "Attempted to save accounts before "
 						 "they were read!\n");
 		return;
 	}
 
 	node = accounts_to_xmlnode();
 	data = xmlnode_to_formatted_str(node, NULL);
-	gaim_util_write_data_to_file("accounts.xml", data, -1);
+	purple_util_write_data_to_file("accounts.xml", data, -1);
 	g_free(data);
 	xmlnode_free(node);
 }
@@ -412,19 +462,87 @@ save_cb(gpointer data)
 }
 
 static void
-schedule_accounts_save()
+schedule_accounts_save(void)
 {
 	if (save_timer == 0)
-		save_timer = gaim_timeout_add(5000, save_cb, NULL);
+		save_timer = purple_timeout_add_seconds(5, save_cb, NULL);
 }
 
 
 /*********************************************************************
  * Reading from disk                                                 *
  *********************************************************************/
+static void
+migrate_yahoo_japan(PurpleAccount *account)
+{
+	/* detect a Yahoo! JAPAN account that existed prior to 2.6.0 and convert it
+	 * to use the new prpl-yahoojp.  Also remove the account-specific settings
+	 * we no longer need */
+
+	if(purple_strequal(purple_account_get_protocol_id(account), "prpl-yahoo")) {
+		if(purple_account_get_bool(account, "yahoojp", FALSE)) {
+			const char *serverjp = purple_account_get_string(account, "serverjp", NULL);
+			const char *xferjp_host = purple_account_get_string(account, "xferjp_host", NULL);
+
+			g_return_if_fail(serverjp != NULL);
+			g_return_if_fail(xferjp_host != NULL);
+
+			purple_account_set_string(account, "server", serverjp);
+			purple_account_set_string(account, "xfer_host", xferjp_host);
+
+			purple_account_set_protocol_id(account, "prpl-yahoojp");
+		}
+
+		/* these should always be nuked */
+		purple_account_remove_setting(account, "yahoojp");
+		purple_account_remove_setting(account, "serverjp");
+		purple_account_remove_setting(account, "xferjp_host");
+
+	}
+}
 
 static void
-parse_settings(xmlnode *node, GaimAccount *account)
+migrate_icq_server(PurpleAccount *account)
+{
+	/* Migrate the login server setting for ICQ accounts.  See
+	 * 'mtn log --last 1 --no-graph --from b6d7712e90b68610df3bd2d8cbaf46d94c8b3794'
+	 * for details on the change. */
+
+	if(purple_strequal(purple_account_get_protocol_id(account), "prpl-icq")) {
+		const char *tmp = purple_account_get_string(account, "server", NULL);
+
+		/* Non-secure server */
+		if(purple_strequal(tmp,	"login.messaging.aol.com") ||
+				purple_strequal(tmp, "login.oscar.aol.com"))
+			purple_account_set_string(account, "server", "login.icq.com");
+
+		/* Secure server */
+		if(purple_strequal(tmp, "slogin.oscar.aol.com"))
+			purple_account_set_string(account, "server", "slogin.icq.com");
+	}
+}
+
+static void
+migrate_xmpp_encryption(PurpleAccount *account)
+{
+	/* When this is removed, nuke the "old_ssl" and "require_tls" settings */
+	if (g_str_equal(purple_account_get_protocol_id(account), "prpl-jabber")) {
+		const char *sec = purple_account_get_string(account, "connection_security", "");
+
+		if (g_str_equal("", sec)) {
+			const char *val = "require_tls";
+			if (purple_account_get_bool(account, "old_ssl", FALSE))
+				val = "old_ssl";
+			else if (!purple_account_get_bool(account, "require_tls", TRUE))
+				val = "opportunistic_tls";
+
+			purple_account_set_string(account, "connection_security", val);
+		}
+	}
+}
+
+static void
+parse_settings(xmlnode *node, PurpleAccount *account)
 {
 	const char *ui;
 	xmlnode *child;
@@ -437,7 +555,7 @@ parse_settings(xmlnode *node, GaimAccount *account)
 			child = xmlnode_get_next_twin(child))
 	{
 		const char *name, *str_type;
-		GaimPrefType type;
+		PurplePrefType type;
 		char *data;
 
 		name = xmlnode_get_attrib(child, "name");
@@ -450,12 +568,12 @@ parse_settings(xmlnode *node, GaimAccount *account)
 			/* Ignore this setting */
 			continue;
 
-		if (!strcmp(str_type, "string"))
-			type = GAIM_PREF_STRING;
-		else if (!strcmp(str_type, "int"))
-			type = GAIM_PREF_INT;
-		else if (!strcmp(str_type, "bool"))
-			type = GAIM_PREF_BOOLEAN;
+		if (purple_strequal(str_type, "string"))
+			type = PURPLE_PREF_STRING;
+		else if (purple_strequal(str_type, "int"))
+			type = PURPLE_PREF_INT;
+		else if (purple_strequal(str_type, "bool"))
+			type = PURPLE_PREF_BOOLEAN;
 		else
 			/* Ignore this setting */
 			continue;
@@ -467,33 +585,43 @@ parse_settings(xmlnode *node, GaimAccount *account)
 
 		if (ui == NULL)
 		{
-			if (type == GAIM_PREF_STRING)
-				gaim_account_set_string(account, name, data);
-			else if (type == GAIM_PREF_INT)
-				gaim_account_set_int(account, name, atoi(data));
-			else if (type == GAIM_PREF_BOOLEAN)
-				gaim_account_set_bool(account, name,
+			if (type == PURPLE_PREF_STRING)
+				purple_account_set_string(account, name, data);
+			else if (type == PURPLE_PREF_INT)
+				purple_account_set_int(account, name, atoi(data));
+			else if (type == PURPLE_PREF_BOOLEAN)
+				purple_account_set_bool(account, name,
 									  (*data == '0' ? FALSE : TRUE));
 		} else {
-			if (type == GAIM_PREF_STRING)
-				gaim_account_set_ui_string(account, ui, name, data);
-			else if (type == GAIM_PREF_INT)
-				gaim_account_set_ui_int(account, ui, name, atoi(data));
-			else if (type == GAIM_PREF_BOOLEAN)
-				gaim_account_set_ui_bool(account, ui, name,
+			if (type == PURPLE_PREF_STRING)
+				purple_account_set_ui_string(account, ui, name, data);
+			else if (type == PURPLE_PREF_INT)
+				purple_account_set_ui_int(account, ui, name, atoi(data));
+			else if (type == PURPLE_PREF_BOOLEAN)
+				purple_account_set_ui_bool(account, ui, name,
 										 (*data == '0' ? FALSE : TRUE));
 		}
 
 		g_free(data);
 	}
+
+	/* we do this here because we need access to account settings to determine
+	 * if we can/should migrate an old Yahoo! JAPAN account */
+	migrate_yahoo_japan(account);
+	/* we do this here because we need access to account settings to determine
+	 * if we can/should migrate an ICQ account's server setting */
+	migrate_icq_server(account);
+	/* we do this here because we need to do it before the user views the
+	 * Edit Account dialog. */
+	migrate_xmpp_encryption(account);
 }
 
 static GList *
-parse_status_attrs(xmlnode *node, GaimStatus *status)
+parse_status_attrs(xmlnode *node, PurpleStatus *status)
 {
 	GList *list = NULL;
 	xmlnode *child;
-	GaimValue *attr_value;
+	PurpleValue *attr_value;
 
 	for (child = xmlnode_get_child(node, "attribute"); child != NULL;
 			child = xmlnode_get_next_twin(child))
@@ -504,19 +632,19 @@ parse_status_attrs(xmlnode *node, GaimStatus *status)
 		if (!id || !*id || !value || !*value)
 			continue;
 
-		attr_value = gaim_status_get_attr_value(status, id);
+		attr_value = purple_status_get_attr_value(status, id);
 		if (!attr_value)
 			continue;
 
 		list = g_list_append(list, (char *)id);
 
-		switch (gaim_value_get_type(attr_value))
+		switch (purple_value_get_type(attr_value))
 		{
-			case GAIM_TYPE_STRING:
+			case PURPLE_TYPE_STRING:
 				list = g_list_append(list, (char *)value);
 				break;
-			case GAIM_TYPE_INT:
-			case GAIM_TYPE_BOOLEAN:
+			case PURPLE_TYPE_INT:
+			case PURPLE_TYPE_BOOLEAN:
 			{
 				int v;
 				if (sscanf(value, "%d", &v) == 1)
@@ -534,7 +662,7 @@ parse_status_attrs(xmlnode *node, GaimStatus *status)
 }
 
 static void
-parse_status(xmlnode *node, GaimAccount *account)
+parse_status(xmlnode *node, PurpleAccount *account)
 {
 	gboolean active = FALSE;
 	const char *data;
@@ -546,9 +674,9 @@ parse_status(xmlnode *node, GaimAccount *account)
 	data = xmlnode_get_attrib(node, "active");
 	if (data == NULL)
 		return;
-	if (strcasecmp(data, "true") == 0)
+	if (g_ascii_strcasecmp(data, "true") == 0)
 		active = TRUE;
-	else if (strcasecmp(data, "false") == 0)
+	else if (g_ascii_strcasecmp(data, "false") == 0)
 		active = FALSE;
 	else
 		return;
@@ -563,16 +691,16 @@ parse_status(xmlnode *node, GaimAccount *account)
 	if (child != NULL)
 	{
 		attrs = parse_status_attrs(child,
-						gaim_account_get_status(account, type));
+						purple_account_get_status(account, type));
 	}
 
-	gaim_account_set_status_list(account, type, active, attrs);
+	purple_account_set_status_list(account, type, active, attrs);
 
 	g_list_free(attrs);
 }
 
 static void
-parse_statuses(xmlnode *node, GaimAccount *account)
+parse_statuses(xmlnode *node, PurpleAccount *account)
 {
 	xmlnode *child;
 
@@ -584,38 +712,40 @@ parse_statuses(xmlnode *node, GaimAccount *account)
 }
 
 static void
-parse_proxy_info(xmlnode *node, GaimAccount *account)
+parse_proxy_info(xmlnode *node, PurpleAccount *account)
 {
-	GaimProxyInfo *proxy_info;
+	PurpleProxyInfo *proxy_info;
 	xmlnode *child;
 	char *data;
 
-	proxy_info = gaim_proxy_info_new();
+	proxy_info = purple_proxy_info_new();
 
 	/* Use the global proxy settings, by default */
-	gaim_proxy_info_set_type(proxy_info, GAIM_PROXY_USE_GLOBAL);
+	purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_USE_GLOBAL);
 
 	/* Read proxy type */
 	child = xmlnode_get_child(node, "type");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		if (!strcmp(data, "global"))
-			gaim_proxy_info_set_type(proxy_info, GAIM_PROXY_USE_GLOBAL);
-		else if (!strcmp(data, "none"))
-			gaim_proxy_info_set_type(proxy_info, GAIM_PROXY_NONE);
-		else if (!strcmp(data, "http"))
-			gaim_proxy_info_set_type(proxy_info, GAIM_PROXY_HTTP);
-		else if (!strcmp(data, "socks4"))
-			gaim_proxy_info_set_type(proxy_info, GAIM_PROXY_SOCKS4);
-		else if (!strcmp(data, "socks5"))
-			gaim_proxy_info_set_type(proxy_info, GAIM_PROXY_SOCKS5);
-		else if (!strcmp(data, "envvar"))
-			gaim_proxy_info_set_type(proxy_info, GAIM_PROXY_USE_ENVVAR);
+		if (purple_strequal(data, "global"))
+			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_USE_GLOBAL);
+		else if (purple_strequal(data, "none"))
+			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_NONE);
+		else if (purple_strequal(data, "http"))
+			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_HTTP);
+		else if (purple_strequal(data, "socks4"))
+			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_SOCKS4);
+		else if (purple_strequal(data, "socks5"))
+			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_SOCKS5);
+		else if (purple_strequal(data, "tor"))
+			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_TOR);
+		else if (purple_strequal(data, "envvar"))
+			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_USE_ENVVAR);
 		else
 		{
-			gaim_debug_error("account", "Invalid proxy type found when "
+			purple_debug_error("account", "Invalid proxy type found when "
 							 "loading account information for %s\n",
-							 gaim_account_get_username(account));
+							 purple_account_get_username(account));
 		}
 		g_free(data);
 	}
@@ -624,7 +754,7 @@ parse_proxy_info(xmlnode *node, GaimAccount *account)
 	child = xmlnode_get_child(node, "host");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		gaim_proxy_info_set_host(proxy_info, data);
+		purple_proxy_info_set_host(proxy_info, data);
 		g_free(data);
 	}
 
@@ -632,7 +762,7 @@ parse_proxy_info(xmlnode *node, GaimAccount *account)
 	child = xmlnode_get_child(node, "port");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		gaim_proxy_info_set_port(proxy_info, atoi(data));
+		purple_proxy_info_set_port(proxy_info, atoi(data));
 		g_free(data);
 	}
 
@@ -640,7 +770,7 @@ parse_proxy_info(xmlnode *node, GaimAccount *account)
 	child = xmlnode_get_child(node, "username");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		gaim_proxy_info_set_username(proxy_info, data);
+		purple_proxy_info_set_username(proxy_info, data);
 		g_free(data);
 	}
 
@@ -648,28 +778,65 @@ parse_proxy_info(xmlnode *node, GaimAccount *account)
 	child = xmlnode_get_child(node, "password");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		gaim_proxy_info_set_password(proxy_info, data);
+		purple_proxy_info_set_password(proxy_info, data);
 		g_free(data);
 	}
 
 	/* If there are no values set then proxy_info NULL */
-	if ((gaim_proxy_info_get_type(proxy_info) == GAIM_PROXY_USE_GLOBAL) &&
-		(gaim_proxy_info_get_host(proxy_info) == NULL) &&
-		(gaim_proxy_info_get_port(proxy_info) == 0) &&
-		(gaim_proxy_info_get_username(proxy_info) == NULL) &&
-		(gaim_proxy_info_get_password(proxy_info) == NULL))
+	if ((purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_USE_GLOBAL) &&
+		(purple_proxy_info_get_host(proxy_info) == NULL) &&
+		(purple_proxy_info_get_port(proxy_info) == 0) &&
+		(purple_proxy_info_get_username(proxy_info) == NULL) &&
+		(purple_proxy_info_get_password(proxy_info) == NULL))
 	{
-		gaim_proxy_info_destroy(proxy_info);
+		purple_proxy_info_destroy(proxy_info);
 		return;
 	}
 
-	gaim_account_set_proxy_info(account, proxy_info);
+	purple_account_set_proxy_info(account, proxy_info);
 }
 
-static GaimAccount *
+static void
+parse_current_error(xmlnode *node, PurpleAccount *account)
+{
+	guint type;
+	char *type_str = NULL, *description = NULL;
+	xmlnode *child;
+	PurpleConnectionErrorInfo *current_error = NULL;
+
+	child = xmlnode_get_child(node, "type");
+	if (child == NULL || (type_str = xmlnode_get_data(child)) == NULL)
+		return;
+	type = atoi(type_str);
+	g_free(type_str);
+
+	if (type > PURPLE_CONNECTION_ERROR_OTHER_ERROR)
+	{
+		purple_debug_error("account",
+			"Invalid PurpleConnectionError value %d found when "
+			"loading account information for %s\n",
+			type, purple_account_get_username(account));
+		type = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
+	}
+
+	child = xmlnode_get_child(node, "description");
+	if (child)
+		description = xmlnode_get_data(child);
+	if (description == NULL)
+		description = g_strdup("");
+
+	current_error = g_new0(PurpleConnectionErrorInfo, 1);
+	PURPLE_DBUS_REGISTER_POINTER(current_error, PurpleConnectionErrorInfo);
+	current_error->type = type;
+	current_error->description = description;
+
+	set_current_error(account, current_error);
+}
+
+static PurpleAccount *
 parse_account(xmlnode *node)
 {
-	GaimAccount *ret;
+	PurpleAccount *ret;
 	xmlnode *child;
 	char *protocol_id = NULL;
 	char *name = NULL;
@@ -697,7 +864,7 @@ parse_account(xmlnode *node)
 		return NULL;
 	}
 
-	ret = gaim_account_new(name, protocol_id);
+	ret = purple_account_new(name, protocol_id);
 	g_free(name);
 	g_free(protocol_id);
 
@@ -705,8 +872,8 @@ parse_account(xmlnode *node)
 	child = xmlnode_get_child(node, "password");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		gaim_account_set_remember_password(ret, TRUE);
-		gaim_account_set_password(ret, data);
+		purple_account_set_remember_password(ret, TRUE);
+		purple_account_set_password(ret, data);
 		g_free(data);
 	}
 
@@ -715,7 +882,7 @@ parse_account(xmlnode *node)
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
 		if (*data != '\0')
-			gaim_account_set_alias(ret, data);
+			purple_account_set_alias(ret, data);
 		g_free(data);
 	}
 
@@ -730,15 +897,25 @@ parse_account(xmlnode *node)
 	child = xmlnode_get_child(node, "userinfo");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		gaim_account_set_user_info(ret, data);
+		purple_account_set_user_info(ret, data);
 		g_free(data);
 	}
 
-	/* Read the buddyicon */
+	/* Read an old buddyicon */
 	child = xmlnode_get_child(node, "buddyicon");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
 	{
-		gaim_account_set_buddy_icon(ret, data);
+		const char *dirname = purple_buddy_icons_get_cache_dir();
+		char *filename = g_build_filename(dirname, data, NULL);
+		gchar *contents;
+		gsize len;
+
+		if (g_file_get_contents(filename, &contents, &len, NULL))
+		{
+			purple_buddy_icons_set_account_icon(ret, (guchar *)contents, len);
+		}
+
+		g_free(filename);
 		g_free(data);
 	}
 
@@ -756,6 +933,13 @@ parse_account(xmlnode *node)
 		parse_proxy_info(child, ret);
 	}
 
+	/* Read current error */
+	child = xmlnode_get_child(node, "current_error");
+	if (child != NULL)
+	{
+		parse_current_error(child, ret);
+	}
+
 	return ret;
 }
 
@@ -766,7 +950,7 @@ load_accounts(void)
 
 	accounts_loaded = TRUE;
 
-	node = gaim_util_read_xml_from_file("accounts.xml", _("accounts"));
+	node = purple_util_read_xml_from_file("accounts.xml", _("accounts"));
 
 	if (node == NULL)
 		return;
@@ -774,50 +958,52 @@ load_accounts(void)
 	for (child = xmlnode_get_child(node, "account"); child != NULL;
 			child = xmlnode_get_next_twin(child))
 	{
-		GaimAccount *new_acct;
+		PurpleAccount *new_acct;
 		new_acct = parse_account(child);
-		gaim_accounts_add(new_acct);
+		purple_accounts_add(new_acct);
 	}
 
 	xmlnode_free(node);
+
+	_purple_buddy_icons_account_loaded_cb();
 }
 
 
 static void
 delete_setting(void *data)
 {
-	GaimAccountSetting *setting = (GaimAccountSetting *)data;
+	PurpleAccountSetting *setting = (PurpleAccountSetting *)data;
 
 	g_free(setting->ui);
 
-	if (setting->type == GAIM_PREF_STRING)
+	if (setting->type == PURPLE_PREF_STRING)
 		g_free(setting->value.string);
 
 	g_free(setting);
 }
 
-GaimAccount *
-gaim_account_new(const char *username, const char *protocol_id)
+PurpleAccount *
+purple_account_new(const char *username, const char *protocol_id)
 {
-	GaimAccount *account = NULL;
-	GaimPlugin *prpl = NULL;
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	GaimStatusType *status_type;
+	PurpleAccount *account = NULL;
+	PurplePlugin *prpl = NULL;
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleStatusType *status_type;
 
 	g_return_val_if_fail(username != NULL, NULL);
 	g_return_val_if_fail(protocol_id != NULL, NULL);
 
-	account = gaim_accounts_find(username, protocol_id);
+	account = purple_accounts_find(username, protocol_id);
 
 	if (account != NULL)
 		return account;
 
-	account = g_new0(GaimAccount, 1);
-	GAIM_DBUS_REGISTER_POINTER(account, GaimAccount);
+	account = g_new0(PurpleAccount, 1);
+	PURPLE_DBUS_REGISTER_POINTER(account, PurpleAccount);
 
-	gaim_account_set_username(account, username);
+	purple_account_set_username(account, username);
 
-	gaim_account_set_protocol_id(account, protocol_id);
+	purple_account_set_protocol_id(account, protocol_id);
 
 	account->settings = g_hash_table_new_full(g_str_hash, g_str_equal,
 											  g_free, delete_setting);
@@ -825,26 +1011,28 @@ gaim_account_new(const char *username, const char *protocol_id)
 				g_free, (GDestroyNotify)g_hash_table_destroy);
 	account->system_log = NULL;
 	/* 0 is not a valid privacy setting */
-	account->perm_deny = GAIM_PRIVACY_ALLOW_ALL;
+	account->perm_deny = PURPLE_PRIVACY_ALLOW_ALL;
 
-	account->presence = gaim_presence_new_for_account(account);
+	purple_signal_emit(purple_accounts_get_handle(), "account-created", account);
 
-	prpl = gaim_find_prpl(protocol_id);
+	prpl = purple_find_prpl(protocol_id);
 
 	if (prpl == NULL)
 		return account;
 
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(prpl);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 	if (prpl_info != NULL && prpl_info->status_types != NULL)
-		gaim_account_set_status_types(account, prpl_info->status_types(account));
+		purple_account_set_status_types(account, prpl_info->status_types(account));
 
-	status_type = gaim_account_get_status_type_with_primitive(account, GAIM_STATUS_AVAILABLE);
+	account->presence = purple_presence_new_for_account(account);
+
+	status_type = purple_account_get_status_type_with_primitive(account, PURPLE_STATUS_AVAILABLE);
 	if (status_type != NULL)
-		gaim_presence_set_status_active(account->presence,
-										gaim_status_type_get_id(status_type),
+		purple_presence_set_status_active(account->presence,
+										purple_status_type_get_id(status_type),
 										TRUE);
 	else
-		gaim_presence_set_status_active(account->presence,
+		purple_presence_set_status_active(account->presence,
 										"offline",
 										TRUE);
 
@@ -852,294 +1040,535 @@ gaim_account_new(const char *username, const char *protocol_id)
 }
 
 void
-gaim_account_destroy(GaimAccount *account)
+purple_account_destroy(PurpleAccount *account)
 {
 	GList *l;
 
 	g_return_if_fail(account != NULL);
 
-	gaim_debug_info("account", "Destroying account %p\n", account);
+	purple_debug_info("account", "Destroying account %p\n", account);
+	purple_signal_emit(purple_accounts_get_handle(), "account-destroying", account);
 
-	for (l = gaim_get_conversations(); l != NULL; l = l->next)
+	for (l = purple_get_conversations(); l != NULL; l = l->next)
 	{
-		GaimConversation *conv = (GaimConversation *)l->data;
+		PurpleConversation *conv = (PurpleConversation *)l->data;
 
-		if (gaim_conversation_get_account(conv) == account)
-			gaim_conversation_set_account(conv, NULL);
+		if (purple_conversation_get_account(conv) == account)
+			purple_conversation_set_account(conv, NULL);
 	}
 
 	g_free(account->username);
 	g_free(account->alias);
 	g_free(account->password);
 	g_free(account->user_info);
-	g_free(account->buddy_icon);
 	g_free(account->buddy_icon_path);
 	g_free(account->protocol_id);
 
 	g_hash_table_destroy(account->settings);
 	g_hash_table_destroy(account->ui_settings);
 
-	gaim_account_set_status_types(account, NULL);
+	if (account->proxy_info)
+		purple_proxy_info_destroy(account->proxy_info);
 
-	gaim_presence_destroy(account->presence);
+	purple_account_set_status_types(account, NULL);
+
+	if (account->presence)
+		purple_presence_destroy(account->presence);
 
 	if(account->system_log)
-		gaim_log_free(account->system_log);
+		purple_log_free(account->system_log);
 
-	GAIM_DBUS_UNREGISTER_POINTER(account);
+	while (account->deny) {
+		g_free(account->deny->data);
+		account->deny = g_slist_delete_link(account->deny, account->deny);
+	}
+
+	while (account->permit) {
+		g_free(account->permit->data);
+		account->permit = g_slist_delete_link(account->permit, account->permit);
+	}
+
+	PURPLE_DBUS_UNREGISTER_POINTER(account->current_error);
+	if (account->current_error) {
+		g_free(account->current_error->description);
+		g_free(account->current_error);
+	}
+
+	PURPLE_DBUS_UNREGISTER_POINTER(account);
 	g_free(account);
 }
 
 void
-gaim_account_register(GaimAccount *account)
+purple_account_set_register_callback(PurpleAccount *account, PurpleAccountRegistrationCb cb, void *user_data)
 {
 	g_return_if_fail(account != NULL);
 
-	gaim_debug_info("account", "Registering account %s\n",
-					gaim_account_get_username(account));
+	account->registration_cb = cb;
+	account->registration_cb_user_data = user_data;
+}
 
-	gaim_connection_new(account, TRUE, gaim_account_get_password(account));
+void
+purple_account_register(PurpleAccount *account)
+{
+	g_return_if_fail(account != NULL);
+
+	purple_debug_info("account", "Registering account %s\n",
+					purple_account_get_username(account));
+
+	_purple_connection_new(account, TRUE, purple_account_get_password(account));
+}
+
+void
+purple_account_register_completed(PurpleAccount *account, gboolean succeeded)
+{
+	g_return_if_fail(account != NULL);
+
+	if (account->registration_cb)
+		(account->registration_cb)(account, succeeded, account->registration_cb_user_data);
+}
+
+void
+purple_account_unregister(PurpleAccount *account, PurpleAccountUnregistrationCb cb, void *user_data)
+{
+	g_return_if_fail(account != NULL);
+
+	purple_debug_info("account", "Unregistering account %s\n",
+					  purple_account_get_username(account));
+
+	_purple_connection_new_unregister(account, purple_account_get_password(account), cb, user_data);
 }
 
 static void
-request_password_ok_cb(GaimAccount *account, GaimRequestFields *fields)
+request_password_ok_cb(PurpleAccount *account, PurpleRequestFields *fields)
 {
 	const char *entry;
 	gboolean remember;
 
-	entry = gaim_request_fields_get_string(fields, "password");
-	remember = gaim_request_fields_get_bool(fields, "remember");
+	entry = purple_request_fields_get_string(fields, "password");
+	remember = purple_request_fields_get_bool(fields, "remember");
 
 	if (!entry || !*entry)
 	{
-		gaim_notify_error(account, NULL, _("Password is required to sign on."), NULL);
+		purple_notify_error(account, NULL, _("Password is required to sign on."), NULL);
 		return;
 	}
 
 	if(remember)
-	  gaim_account_set_remember_password(account, TRUE);
+		purple_account_set_remember_password(account, TRUE);
 
-	gaim_account_set_password(account, entry);
+	purple_account_set_password(account, entry);
 
-	gaim_connection_new(account, FALSE, entry);
+	_purple_connection_new(account, FALSE, entry);
 }
 
 static void
-request_password(GaimAccount *account)
+request_password_cancel_cb(PurpleAccount *account, PurpleRequestFields *fields)
+{
+	/* Disable the account as the user has cancelled connecting */
+	purple_account_set_enabled(account, purple_core_get_ui(), FALSE);
+}
+
+
+void
+purple_account_request_password(PurpleAccount *account, GCallback ok_cb,
+				GCallback cancel_cb, void *user_data)
 {
 	gchar *primary;
 	const gchar *username;
-	GaimRequestFieldGroup *group;
-	GaimRequestField *field;
-	GaimRequestFields *fields;
+	PurpleRequestFieldGroup *group;
+	PurpleRequestField *field;
+	PurpleRequestFields *fields;
 
 	/* Close any previous password request windows */
-	gaim_request_close_with_handle(account);
+	purple_request_close_with_handle(account);
 
-	username = gaim_account_get_username(account);
+	username = purple_account_get_username(account);
 	primary = g_strdup_printf(_("Enter password for %s (%s)"), username,
-								  gaim_account_get_protocol_name(account));
+								  purple_account_get_protocol_name(account));
 
-	fields = gaim_request_fields_new();
-	group = gaim_request_field_group_new(NULL);
-	gaim_request_fields_add_group(fields, group);
+	fields = purple_request_fields_new();
+	group = purple_request_field_group_new(NULL);
+	purple_request_fields_add_group(fields, group);
 
-	field = gaim_request_field_string_new("password", _("Enter Password"), NULL, FALSE);
-	gaim_request_field_string_set_masked(field, TRUE);
-	gaim_request_field_set_required(field, TRUE);
-	gaim_request_field_group_add_field(group, field);
+	field = purple_request_field_string_new("password", _("Enter Password"), NULL, FALSE);
+	purple_request_field_string_set_masked(field, TRUE);
+	purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
 
-	field = gaim_request_field_bool_new("remember", _("Save password"), FALSE);
-	gaim_request_field_group_add_field(group, field);
+	field = purple_request_field_bool_new("remember", _("Save password"), FALSE);
+	purple_request_field_group_add_field(group, field);
 
-	gaim_request_fields(account,
+	purple_request_fields(account,
                         NULL,
                         primary,
                         NULL,
                         fields,
-                        _("OK"), G_CALLBACK(request_password_ok_cb),
-                        _("Cancel"), NULL,
-                        account);
+                        _("OK"), ok_cb,
+                        _("Cancel"), cancel_cb,
+						account, NULL, NULL,
+                        user_data);
 	g_free(primary);
 }
 
 void
-gaim_account_connect(GaimAccount *account)
+purple_account_connect(PurpleAccount *account)
 {
-	GaimPlugin *prpl;
-	GaimPluginProtocolInfo *prpl_info;
-	const char *password;
+	PurplePlugin *prpl;
+	const char *password, *username;
+	PurplePluginProtocolInfo *prpl_info;
 
 	g_return_if_fail(account != NULL);
 
-	gaim_debug_info("account", "Connecting to account %s\n",
-					gaim_account_get_username(account));
+	username = purple_account_get_username(account);
 
-	if (!gaim_account_get_enabled(account, gaim_core_get_ui()))
+	if (!purple_account_get_enabled(account, purple_core_get_ui())) {
+		purple_debug_info("account",
+				  "Account %s not enabled, not connecting.\n",
+				  username);
 		return;
+	}
 
-	prpl = gaim_find_prpl(gaim_account_get_protocol_id(account));
-	if (prpl == NULL)
-	{
+	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	if (prpl == NULL) {
 		gchar *message;
 
-		message = g_strdup_printf(_("Missing protocol plugin for %s"),
-			gaim_account_get_username(account));
-		gaim_notify_error(account, _("Connection Error"), message, NULL);
+		message = g_strdup_printf(_("Missing protocol plugin for %s"), username);
+		purple_notify_error(account, _("Connection Error"), message, NULL);
 		g_free(message);
 		return;
 	}
 
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(prpl);
-	password = gaim_account_get_password(account);
+	purple_debug_info("account", "Connecting to account %s.\n", username);
+
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	password = purple_account_get_password(account);
 	if ((password == NULL) &&
 		!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
 		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
-		request_password(account);
+		purple_account_request_password(account, G_CALLBACK(request_password_ok_cb), G_CALLBACK(request_password_cancel_cb), account);
 	else
-		gaim_connection_new(account, FALSE, password);
+		_purple_connection_new(account, FALSE, password);
 }
 
 void
-gaim_account_disconnect(GaimAccount *account)
+purple_account_disconnect(PurpleAccount *account)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
+	const char *username;
 
 	g_return_if_fail(account != NULL);
-	g_return_if_fail(!gaim_account_is_disconnected(account));
+	g_return_if_fail(!purple_account_is_disconnected(account));
 
-	gaim_debug_info("account", "Disconnecting account %p\n", account);
+	username = purple_account_get_username(account);
+	purple_debug_info("account", "Disconnecting account %s (%p)\n",
+	                  username ? username : "(null)", account);
 
 	account->disconnecting = TRUE;
 
-	gc = gaim_account_get_connection(account);
-	gaim_connection_destroy(gc);
-	if (!gaim_account_get_remember_password(account))
-		gaim_account_set_password(account, NULL);
-	gaim_account_set_connection(account, NULL);
+	gc = purple_account_get_connection(account);
+	_purple_connection_destroy(gc);
+	if (!purple_account_get_remember_password(account))
+		purple_account_set_password(account, NULL);
+	purple_account_set_connection(account, NULL);
 
 	account->disconnecting = FALSE;
 }
 
+gboolean
+purple_account_is_disconnecting(const PurpleAccount *account)
+{
+	g_return_val_if_fail(account != NULL, TRUE);
+	
+	return account->disconnecting;
+}
+
 void
-gaim_account_notify_added(GaimAccount *account, const char *remote_user,
+purple_account_notify_added(PurpleAccount *account, const char *remote_user,
                           const char *id, const char *alias,
                           const char *message)
 {
-	GaimAccountUiOps *ui_ops;
+	PurpleAccountUiOps *ui_ops;
 
 	g_return_if_fail(account     != NULL);
 	g_return_if_fail(remote_user != NULL);
 
-	ui_ops = gaim_accounts_get_ui_ops();
+	ui_ops = purple_accounts_get_ui_ops();
 
 	if (ui_ops != NULL && ui_ops->notify_added != NULL)
 		ui_ops->notify_added(account, remote_user, id, alias, message);
 }
 
 void
-gaim_account_request_add(GaimAccount *account, const char *remote_user,
+purple_account_request_add(PurpleAccount *account, const char *remote_user,
                          const char *id, const char *alias,
                          const char *message)
 {
-	GaimAccountUiOps *ui_ops;
+	PurpleAccountUiOps *ui_ops;
 
 	g_return_if_fail(account     != NULL);
 	g_return_if_fail(remote_user != NULL);
 
-	ui_ops = gaim_accounts_get_ui_ops();
+	ui_ops = purple_accounts_get_ui_ops();
 
 	if (ui_ops != NULL && ui_ops->request_add != NULL)
 		ui_ops->request_add(account, remote_user, id, alias, message);
 }
 
-void
-gaim_account_request_authorization(GaimAccount *account, const char *remote_user,
-			           const char *id, const char *alias, const char *message, gboolean on_list,
-				   GCallback auth_cb, GCallback deny_cb, void *user_data)
+static PurpleAccountRequestInfo *
+purple_account_request_info_unref(PurpleAccountRequestInfo *info)
 {
-        GaimAccountUiOps *ui_ops;
+	if (--info->ref)
+		return info;
 
-	g_return_if_fail(account     != NULL);
-        g_return_if_fail(remote_user != NULL);
-
-        ui_ops = gaim_accounts_get_ui_ops();
-
-        if (ui_ops != NULL && ui_ops->request_authorize != NULL)
-               ui_ops->request_authorize(account, remote_user, id, alias, message, on_list, auth_cb, deny_cb, user_data);
-						
+	/* TODO: This will leak info->user_data, but there is no callback to just clean that up */
+	g_free(info->user);
+	g_free(info);
+	return NULL;
 }
 
 static void
-change_password_cb(GaimAccount *account, GaimRequestFields *fields)
+purple_account_request_close_info(PurpleAccountRequestInfo *info)
+{
+	PurpleAccountUiOps *ops;
+
+	ops = purple_accounts_get_ui_ops();
+
+	if (ops != NULL && ops->close_account_request != NULL)
+		ops->close_account_request(info->ui_handle);
+
+	purple_account_request_info_unref(info);
+}
+
+void
+purple_account_request_close_with_account(PurpleAccount *account)
+{
+	GList *l, *l_next;
+
+	g_return_if_fail(account != NULL);
+
+	for (l = handles; l != NULL; l = l_next) {
+		PurpleAccountRequestInfo *info = l->data;
+
+		l_next = l->next;
+
+		if (info->account == account) {
+			handles = g_list_remove(handles, info);
+			purple_account_request_close_info(info);
+		}
+	}
+}
+
+void
+purple_account_request_close(void *ui_handle)
+{
+	GList *l, *l_next;
+
+	g_return_if_fail(ui_handle != NULL);
+
+	for (l = handles; l != NULL; l = l_next) {
+		PurpleAccountRequestInfo *info = l->data;
+
+		l_next = l->next;
+
+		if (info->ui_handle == ui_handle) {
+			handles = g_list_remove(handles, info);
+			purple_account_request_close_info(info);
+		}
+	}
+}
+
+static void
+request_auth_cb(void *data)
+{
+	PurpleAccountRequestInfo *info = data;
+
+	handles = g_list_remove(handles, info);
+
+	if (info->auth_cb != NULL)
+		info->auth_cb(info->userdata);
+
+	purple_signal_emit(purple_accounts_get_handle(),
+			"account-authorization-granted", info->account, info->user);
+
+	purple_account_request_info_unref(info);
+}
+
+static void
+request_deny_cb(void *data)
+{
+	PurpleAccountRequestInfo *info = data;
+
+	handles = g_list_remove(handles, info);
+
+	if (info->deny_cb != NULL)
+		info->deny_cb(info->userdata);
+
+	purple_signal_emit(purple_accounts_get_handle(),
+			"account-authorization-denied", info->account, info->user);
+
+	purple_account_request_info_unref(info);
+}
+
+void *
+purple_account_request_authorization(PurpleAccount *account, const char *remote_user,
+				     const char *id, const char *alias, const char *message, gboolean on_list,
+				     PurpleAccountRequestAuthorizationCb auth_cb, PurpleAccountRequestAuthorizationCb deny_cb, void *user_data)
+{
+	PurpleAccountUiOps *ui_ops;
+	PurpleAccountRequestInfo *info;
+	int plugin_return;
+
+	g_return_val_if_fail(account     != NULL, NULL);
+	g_return_val_if_fail(remote_user != NULL, NULL);
+
+	ui_ops = purple_accounts_get_ui_ops();
+
+	plugin_return = GPOINTER_TO_INT(
+			purple_signal_emit_return_1(purple_accounts_get_handle(),
+				"account-authorization-requested", account, remote_user));
+
+	if (plugin_return > 0) {
+		if (auth_cb != NULL)
+			auth_cb(user_data);
+		return NULL;
+	} else if (plugin_return < 0) {
+		if (deny_cb != NULL)
+			deny_cb(user_data);
+		return NULL;
+	}
+
+	plugin_return = GPOINTER_TO_INT(
+			purple_signal_emit_return_1(
+				purple_accounts_get_handle(),
+				"account-authorization-requested-with-message",
+				account, remote_user, message
+			));
+
+	switch (plugin_return)
+	{
+		case PURPLE_ACCOUNT_RESPONSE_IGNORE:
+			return NULL;
+		case PURPLE_ACCOUNT_RESPONSE_ACCEPT:
+			if (auth_cb != NULL)
+				auth_cb(user_data);
+			return NULL;
+		case PURPLE_ACCOUNT_RESPONSE_DENY:
+			if (deny_cb != NULL)
+				deny_cb(user_data);
+			return NULL;
+	}
+
+	if (ui_ops != NULL && ui_ops->request_authorize != NULL) {
+		info            = g_new0(PurpleAccountRequestInfo, 1);
+		info->type      = PURPLE_ACCOUNT_REQUEST_AUTHORIZATION;
+		info->account   = account;
+		info->auth_cb   = auth_cb;
+		info->deny_cb   = deny_cb;
+		info->userdata  = user_data;
+		info->user      = g_strdup(remote_user);
+		info->ref       = 2;  /* We hold an extra ref to make sure info remains valid
+		                         if any of the callbacks are called synchronously. We
+		                         unref it after the function call */
+
+		info->ui_handle = ui_ops->request_authorize(account, remote_user, id, alias, message,
+							    on_list, request_auth_cb, request_deny_cb, info);
+
+		info = purple_account_request_info_unref(info);
+		if (info) {
+			handles = g_list_append(handles, info);
+			return info->ui_handle;
+		}
+	}
+
+	return NULL;
+}
+
+static void
+change_password_cb(PurpleAccount *account, PurpleRequestFields *fields)
 {
 	const char *orig_pass, *new_pass_1, *new_pass_2;
 
-	orig_pass  = gaim_request_fields_get_string(fields, "password");
-	new_pass_1 = gaim_request_fields_get_string(fields, "new_password_1");
-	new_pass_2 = gaim_request_fields_get_string(fields, "new_password_2");
+	orig_pass  = purple_request_fields_get_string(fields, "password");
+	new_pass_1 = purple_request_fields_get_string(fields, "new_password_1");
+	new_pass_2 = purple_request_fields_get_string(fields, "new_password_2");
 
 	if (g_utf8_collate(new_pass_1, new_pass_2))
 	{
-		gaim_notify_error(account, NULL,
+		purple_notify_error(account, NULL,
 						  _("New passwords do not match."), NULL);
 
 		return;
 	}
 
-	if (orig_pass == NULL || new_pass_1 == NULL || new_pass_2 == NULL ||
-		*orig_pass == '\0' || *new_pass_1 == '\0' || *new_pass_2 == '\0')
+	if ((purple_request_fields_is_field_required(fields, "password") &&
+			(orig_pass == NULL || *orig_pass == '\0')) ||
+		(purple_request_fields_is_field_required(fields, "new_password_1") &&
+			(new_pass_1 == NULL || *new_pass_1 == '\0')) ||
+		(purple_request_fields_is_field_required(fields, "new_password_2") &&
+			(new_pass_2 == NULL || *new_pass_2 == '\0')))
 	{
-		gaim_notify_error(account, NULL,
+		purple_notify_error(account, NULL,
 						  _("Fill out all fields completely."), NULL);
 		return;
 	}
 
-	gaim_account_change_password(account, orig_pass, new_pass_1);
+	purple_account_change_password(account, orig_pass, new_pass_1);
 }
 
 void
-gaim_account_request_change_password(GaimAccount *account)
+purple_account_request_change_password(PurpleAccount *account)
 {
-	GaimRequestFields *fields;
-	GaimRequestFieldGroup *group;
-	GaimRequestField *field;
+	PurpleRequestFields *fields;
+	PurpleRequestFieldGroup *group;
+	PurpleRequestField *field;
+	PurpleConnection *gc;
+	PurplePlugin *prpl = NULL;
+	PurplePluginProtocolInfo *prpl_info = NULL;
 	char primary[256];
 
 	g_return_if_fail(account != NULL);
-	g_return_if_fail(gaim_account_is_connected(account));
+	g_return_if_fail(purple_account_is_connected(account));
 
-	fields = gaim_request_fields_new();
+	gc = purple_account_get_connection(account);
+	if (gc != NULL)
+		prpl = purple_connection_get_prpl(gc);
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
-	group = gaim_request_field_group_new(NULL);
-	gaim_request_fields_add_group(fields, group);
+	fields = purple_request_fields_new();
 
-	field = gaim_request_field_string_new("password", _("Original password"),
+	group = purple_request_field_group_new(NULL);
+	purple_request_fields_add_group(fields, group);
+
+	field = purple_request_field_string_new("password", _("Original password"),
 										  NULL, FALSE);
-	gaim_request_field_string_set_masked(field, TRUE);
-	gaim_request_field_set_required(field, TRUE);
-	gaim_request_field_group_add_field(group, field);
+	purple_request_field_string_set_masked(field, TRUE);
+	if (!(prpl_info && (prpl_info->options | OPT_PROTO_PASSWORD_OPTIONAL)))
+		purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
 
-	field = gaim_request_field_string_new("new_password_1",
+	field = purple_request_field_string_new("new_password_1",
 										  _("New password"),
 										  NULL, FALSE);
-	gaim_request_field_string_set_masked(field, TRUE);
-	gaim_request_field_set_required(field, TRUE);
-	gaim_request_field_group_add_field(group, field);
+	purple_request_field_string_set_masked(field, TRUE);
+	if (!(prpl_info && (prpl_info->options | OPT_PROTO_PASSWORD_OPTIONAL)))
+		purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
 
-	field = gaim_request_field_string_new("new_password_2",
+	field = purple_request_field_string_new("new_password_2",
 										  _("New password (again)"),
 										  NULL, FALSE);
-	gaim_request_field_string_set_masked(field, TRUE);
-	gaim_request_field_set_required(field, TRUE);
-	gaim_request_field_group_add_field(group, field);
+	purple_request_field_string_set_masked(field, TRUE);
+	if (!(prpl_info && (prpl_info->options | OPT_PROTO_PASSWORD_OPTIONAL)))
+		purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
 
 	g_snprintf(primary, sizeof(primary), _("Change password for %s"),
-			   gaim_account_get_username(account));
+			   purple_account_get_username(account));
 
 	/* I'm sticking this somewhere in the code: bologna */
 
-	gaim_request_fields(gaim_account_get_connection(account),
+	purple_request_fields(purple_account_get_connection(account),
 						NULL,
 						primary,
 						_("Please enter your current password and your "
@@ -1147,45 +1576,50 @@ gaim_account_request_change_password(GaimAccount *account)
 						fields,
 						_("OK"), G_CALLBACK(change_password_cb),
 						_("Cancel"), NULL,
+						account, NULL, NULL,
 						account);
 }
 
 static void
-set_user_info_cb(GaimAccount *account, const char *user_info)
+set_user_info_cb(PurpleAccount *account, const char *user_info)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 
-	gaim_account_set_user_info(account, user_info);
-	gc = gaim_account_get_connection(account);
+	purple_account_set_user_info(account, user_info);
+	gc = purple_account_get_connection(account);
 	serv_set_info(gc, user_info);
 }
 
 void
-gaim_account_request_change_user_info(GaimAccount *account)
+purple_account_request_change_user_info(PurpleAccount *account)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 	char primary[256];
 
 	g_return_if_fail(account != NULL);
-	g_return_if_fail(gaim_account_is_connected(account));
+	g_return_if_fail(purple_account_is_connected(account));
 
-	gc = gaim_account_get_connection(account);
+	gc = purple_account_get_connection(account);
 
 	g_snprintf(primary, sizeof(primary),
 			   _("Change user information for %s"),
-			   gaim_account_get_username(account));
+			   purple_account_get_username(account));
 
-	gaim_request_input(gc, _("Set User Info"), primary, NULL,
-					   gaim_account_get_user_info(account),
+	purple_request_input(gc, _("Set User Info"), primary, NULL,
+					   purple_account_get_user_info(account),
 					   TRUE, FALSE, ((gc != NULL) &&
-					   (gc->flags & GAIM_CONNECTION_HTML) ? "html" : NULL),
+					   (purple_connection_get_flags(gc) & PURPLE_CONNECTION_HTML) ? "html" : NULL),
 					   _("Save"), G_CALLBACK(set_user_info_cb),
-					   _("Cancel"), NULL, account);
+					   _("Cancel"), NULL,
+					   account, NULL, NULL,
+					   account);
 }
 
 void
-gaim_account_set_username(GaimAccount *account, const char *username)
+purple_account_set_username(PurpleAccount *account, const char *username)
 {
+	PurpleBlistUiOps *blist_ops;
+
 	g_return_if_fail(account != NULL);
 
 	g_free(account->username);
@@ -1195,11 +1629,13 @@ gaim_account_set_username(GaimAccount *account, const char *username)
 
 	/* if the name changes, we should re-write the buddy list
 	 * to disk with the new name */
-	gaim_blist_schedule_save();
+	blist_ops = purple_blist_get_ui_ops();
+	if (blist_ops != NULL && blist_ops->save_account != NULL)
+		blist_ops->save_account(account);
 }
 
 void
-gaim_account_set_password(GaimAccount *account, const char *password)
+purple_account_set_password(PurpleAccount *account, const char *password)
 {
 	g_return_if_fail(account != NULL);
 
@@ -1210,7 +1646,7 @@ gaim_account_set_password(GaimAccount *account, const char *password)
 }
 
 void
-gaim_account_set_alias(GaimAccount *account, const char *alias)
+purple_account_set_alias(PurpleAccount *account, const char *alias)
 {
 	g_return_if_fail(account != NULL);
 
@@ -1227,7 +1663,7 @@ gaim_account_set_alias(GaimAccount *account, const char *alias)
 		char *old = account->alias;
 
 		account->alias = g_strdup(alias);
-		gaim_signal_emit(gaim_accounts_get_handle(), "account-alias-changed",
+		purple_signal_emit(purple_accounts_get_handle(), "account-alias-changed",
 						 account, old);
 		g_free(old);
 
@@ -1236,7 +1672,7 @@ gaim_account_set_alias(GaimAccount *account, const char *alias)
 }
 
 void
-gaim_account_set_user_info(GaimAccount *account, const char *user_info)
+purple_account_set_user_info(PurpleAccount *account, const char *user_info)
 {
 	g_return_if_fail(account != NULL);
 
@@ -1246,57 +1682,7 @@ gaim_account_set_user_info(GaimAccount *account, const char *user_info)
 	schedule_accounts_save();
 }
 
-void
-gaim_account_set_buddy_icon(GaimAccount *account, const char *icon)
-{
-	g_return_if_fail(account != NULL);
-
-	/* Delete an existing icon from the cache. */
-	if (account->buddy_icon != NULL && (icon == NULL || strcmp(account->buddy_icon, icon)))
-	{
-		const char *dirname = gaim_buddy_icons_get_cache_dir();
-
-		if (g_file_test(account->buddy_icon, G_FILE_TEST_IS_REGULAR))
-		{
-			/* The file exists. This is a full path. */
-
-			/* XXX: This is a hack so we only delete the file if it's
-			 * in the cache dir. Otherwise, people who upgrade (who
-			 * may have buddy icon filenames set outside of the cache
-			 * dir) could lose files. */
-			if (!strncmp(dirname, account->buddy_icon, strlen(dirname)))
-				g_unlink(account->buddy_icon);
-		}
-		else
-		{
-			char *filename = g_build_filename(dirname, account->buddy_icon, NULL);
-			g_unlink(filename);
-			g_free(filename);
-		}
-	}
-
-	g_free(account->buddy_icon);
-	account->buddy_icon = g_strdup(icon);
-	if (gaim_account_is_connected(account))
-	{
-		GaimConnection *gc;
-		GaimPluginProtocolInfo *prpl_info;
-
-		gc = gaim_account_get_connection(account);
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
-
-		if (prpl_info && prpl_info->set_buddy_icon)
-		{
-			char *cached_path = gaim_buddy_icons_get_full_path(icon);
-			prpl_info->set_buddy_icon(gc, cached_path);
-			g_free(cached_path);
-		}
-	}
-
-	schedule_accounts_save();
-}
-
-void gaim_account_set_buddy_icon_path(GaimAccount *account, const char *path)
+void purple_account_set_buddy_icon_path(PurpleAccount *account, const char *path)
 {
 	g_return_if_fail(account != NULL);
 
@@ -1307,7 +1693,7 @@ void gaim_account_set_buddy_icon_path(GaimAccount *account, const char *path)
 }
 
 void
-gaim_account_set_protocol_id(GaimAccount *account, const char *protocol_id)
+purple_account_set_protocol_id(PurpleAccount *account, const char *protocol_id)
 {
 	g_return_if_fail(account     != NULL);
 	g_return_if_fail(protocol_id != NULL);
@@ -1319,7 +1705,7 @@ gaim_account_set_protocol_id(GaimAccount *account, const char *protocol_id)
 }
 
 void
-gaim_account_set_connection(GaimAccount *account, GaimConnection *gc)
+purple_account_set_connection(PurpleAccount *account, PurpleConnection *gc)
 {
 	g_return_if_fail(account != NULL);
 
@@ -1327,7 +1713,7 @@ gaim_account_set_connection(GaimAccount *account, GaimConnection *gc)
 }
 
 void
-gaim_account_set_remember_password(GaimAccount *account, gboolean value)
+purple_account_set_remember_password(PurpleAccount *account, gboolean value)
 {
 	g_return_if_fail(account != NULL);
 
@@ -1337,49 +1723,49 @@ gaim_account_set_remember_password(GaimAccount *account, gboolean value)
 }
 
 void
-gaim_account_set_check_mail(GaimAccount *account, gboolean value)
+purple_account_set_check_mail(PurpleAccount *account, gboolean value)
 {
 	g_return_if_fail(account != NULL);
 
-	gaim_account_set_bool(account, "check-mail", value);
+	purple_account_set_bool(account, "check-mail", value);
 }
 
 void
-gaim_account_set_enabled(GaimAccount *account, const char *ui,
+purple_account_set_enabled(PurpleAccount *account, const char *ui,
 			 gboolean value)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 	gboolean was_enabled = FALSE;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(ui      != NULL);
 
-	was_enabled = gaim_account_get_enabled(account, ui);
+	was_enabled = purple_account_get_enabled(account, ui);
 
-	gaim_account_set_ui_bool(account, ui, "auto-login", value);
-	gc = gaim_account_get_connection(account);
+	purple_account_set_ui_bool(account, ui, "auto-login", value);
+	gc = purple_account_get_connection(account);
 
 	if(was_enabled && !value)
-		gaim_signal_emit(gaim_accounts_get_handle(), "account-disabled", account);
+		purple_signal_emit(purple_accounts_get_handle(), "account-disabled", account);
 	else if(!was_enabled && value)
-		gaim_signal_emit(gaim_accounts_get_handle(), "account-enabled", account);
+		purple_signal_emit(purple_accounts_get_handle(), "account-enabled", account);
 
 	if ((gc != NULL) && (gc->wants_to_die == TRUE))
 		return;
 
-	if (value && gaim_presence_is_online(account->presence))
-		gaim_account_connect(account);
-	else if (!value && !gaim_account_is_disconnected(account))
-		gaim_account_disconnect(account);
+	if (value && purple_presence_is_online(account->presence))
+		purple_account_connect(account);
+	else if (!value && !purple_account_is_disconnected(account))
+		purple_account_disconnect(account);
 }
 
 void
-gaim_account_set_proxy_info(GaimAccount *account, GaimProxyInfo *info)
+purple_account_set_proxy_info(PurpleAccount *account, PurpleProxyInfo *info)
 {
 	g_return_if_fail(account != NULL);
 
 	if (account->proxy_info != NULL)
-		gaim_proxy_info_destroy(account->proxy_info);
+		purple_proxy_info_destroy(account->proxy_info);
 
 	account->proxy_info = info;
 
@@ -1387,14 +1773,22 @@ gaim_account_set_proxy_info(GaimAccount *account, GaimProxyInfo *info)
 }
 
 void
-gaim_account_set_status_types(GaimAccount *account, GList *status_types)
+purple_account_set_privacy_type(PurpleAccount *account, PurplePrivacyType privacy_type)
+{
+	g_return_if_fail(account != NULL);
+
+	account->perm_deny = privacy_type;
+}
+
+void
+purple_account_set_status_types(PurpleAccount *account, GList *status_types)
 {
 	g_return_if_fail(account != NULL);
 
 	/* Out with the old... */
 	if (account->status_types != NULL)
 	{
-		g_list_foreach(account->status_types, (GFunc)gaim_status_type_destroy, NULL);
+		g_list_foreach(account->status_types, (GFunc)purple_status_type_destroy, NULL);
 		g_list_free(account->status_types);
 	}
 
@@ -1403,7 +1797,7 @@ gaim_account_set_status_types(GaimAccount *account, GList *status_types)
 }
 
 void
-gaim_account_set_status(GaimAccount *account, const char *status_id,
+purple_account_set_status(PurpleAccount *account, const char *status_id,
 						gboolean active, ...)
 {
 	GList *attrs = NULL;
@@ -1418,32 +1812,32 @@ gaim_account_set_status(GaimAccount *account, const char *status_id,
 		data = va_arg(args, void *);
 		attrs = g_list_append(attrs, data);
 	}
-	gaim_account_set_status_list(account, status_id, active, attrs);
+	purple_account_set_status_list(account, status_id, active, attrs);
 	g_list_free(attrs);
 	va_end(args);
 }
 
 void
-gaim_account_set_status_list(GaimAccount *account, const char *status_id,
+purple_account_set_status_list(PurpleAccount *account, const char *status_id,
 							 gboolean active, GList *attrs)
 {
-	GaimStatus *status;
+	PurpleStatus *status;
 
 	g_return_if_fail(account   != NULL);
 	g_return_if_fail(status_id != NULL);
 
-	status = gaim_account_get_status(account, status_id);
+	status = purple_account_get_status(account, status_id);
 	if (status == NULL)
 	{
-		gaim_debug_error("account",
-				   "Invalid status ID %s for account %s (%s)\n",
-				   status_id, gaim_account_get_username(account),
-				   gaim_account_get_protocol_id(account));
+		purple_debug_error("account",
+				   "Invalid status ID '%s' for account %s (%s)\n",
+				   status_id, purple_account_get_username(account),
+				   purple_account_get_protocol_id(account));
 		return;
 	}
 
-	if (active || gaim_status_is_independent(status))
-		gaim_status_set_active_with_attrs_list(status, active, attrs);
+	if (active || purple_status_is_independent(status))
+		purple_status_set_active_with_attrs_list(status, active, attrs);
 
 	/*
 	 * Our current statuses are saved to accounts.xml (so that when we
@@ -1452,8 +1846,108 @@ gaim_account_set_status_list(GaimAccount *account, const char *status_id,
 	schedule_accounts_save();
 }
 
+struct public_alias_closure
+{
+	PurpleAccount *account;
+	gpointer failure_cb;
+};
+
+static gboolean
+set_public_alias_unsupported(gpointer data)
+{
+	struct public_alias_closure *closure = data;
+	PurpleSetPublicAliasFailureCallback failure_cb = closure->failure_cb;
+
+	failure_cb(closure->account,
+	           _("This protocol does not support setting a public alias."));
+	g_free(closure);
+
+	return FALSE;
+}
+
 void
-gaim_account_clear_settings(GaimAccount *account)
+purple_account_set_public_alias(PurpleAccount *account,
+		const char *alias, PurpleSetPublicAliasSuccessCallback success_cb,
+		PurpleSetPublicAliasFailureCallback failure_cb)
+{
+	PurpleConnection *gc;
+	PurplePlugin *prpl = NULL;
+	PurplePluginProtocolInfo *prpl_info = NULL;
+
+	g_return_if_fail(account != NULL);
+	g_return_if_fail(purple_account_is_connected(account));
+
+	gc = purple_account_get_connection(account);
+	prpl = purple_connection_get_prpl(gc);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+
+	if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, set_public_alias))
+		prpl_info->set_public_alias(gc, alias, success_cb, failure_cb);
+	else if (failure_cb) {
+		struct public_alias_closure *closure =
+				g_new0(struct public_alias_closure, 1);
+		closure->account = account;
+		closure->failure_cb = failure_cb;
+		purple_timeout_add(0, set_public_alias_unsupported, closure);
+	}
+}
+
+static gboolean
+get_public_alias_unsupported(gpointer data)
+{
+	struct public_alias_closure *closure = data;
+	PurpleGetPublicAliasFailureCallback failure_cb = closure->failure_cb;
+
+	failure_cb(closure->account,
+	           _("This protocol does not support fetching the public alias."));
+	g_free(closure);
+
+	return FALSE;
+}
+
+void
+purple_account_get_public_alias(PurpleAccount *account,
+		PurpleGetPublicAliasSuccessCallback success_cb,
+		PurpleGetPublicAliasFailureCallback failure_cb)
+{
+	PurpleConnection *gc;
+	PurplePlugin *prpl = NULL;
+	PurplePluginProtocolInfo *prpl_info = NULL;
+
+	g_return_if_fail(account != NULL);
+	g_return_if_fail(purple_account_is_connected(account));
+
+	gc = purple_account_get_connection(account);
+	prpl = purple_connection_get_prpl(gc);
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+
+	if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_public_alias))
+		prpl_info->get_public_alias(gc, success_cb, failure_cb);
+	else if (failure_cb) {
+		struct public_alias_closure *closure =
+				g_new0(struct public_alias_closure, 1);
+		closure->account = account;
+		closure->failure_cb = failure_cb;
+		purple_timeout_add(0, get_public_alias_unsupported, closure);
+	}
+}
+
+gboolean
+purple_account_get_silence_suppression(const PurpleAccount *account)
+{
+	return purple_account_get_bool(account, "silence-suppression", FALSE);
+}
+
+void
+purple_account_set_silence_suppression(PurpleAccount *account, gboolean value)
+{
+	g_return_if_fail(account != NULL);
+
+	purple_account_set_bool(account, "silence-suppression", value);
+}
+
+void
+purple_account_clear_settings(PurpleAccount *account)
 {
 	g_return_if_fail(account != NULL);
 
@@ -1464,16 +1958,25 @@ gaim_account_clear_settings(GaimAccount *account)
 }
 
 void
-gaim_account_set_int(GaimAccount *account, const char *name, int value)
+purple_account_remove_setting(PurpleAccount *account, const char *setting)
 {
-	GaimAccountSetting *setting;
+	g_return_if_fail(account != NULL);
+	g_return_if_fail(setting != NULL);
+
+	g_hash_table_remove(account->settings, setting);
+}
+
+void
+purple_account_set_int(PurpleAccount *account, const char *name, int value)
+{
+	PurpleAccountSetting *setting;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(name    != NULL);
 
-	setting = g_new0(GaimAccountSetting, 1);
+	setting = g_new0(PurpleAccountSetting, 1);
 
-	setting->type          = GAIM_PREF_INT;
+	setting->type          = PURPLE_PREF_INT;
 	setting->value.integer = value;
 
 	g_hash_table_insert(account->settings, g_strdup(name), setting);
@@ -1482,17 +1985,17 @@ gaim_account_set_int(GaimAccount *account, const char *name, int value)
 }
 
 void
-gaim_account_set_string(GaimAccount *account, const char *name,
+purple_account_set_string(PurpleAccount *account, const char *name,
 						const char *value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(name    != NULL);
 
-	setting = g_new0(GaimAccountSetting, 1);
+	setting = g_new0(PurpleAccountSetting, 1);
 
-	setting->type         = GAIM_PREF_STRING;
+	setting->type         = PURPLE_PREF_STRING;
 	setting->value.string = g_strdup(value);
 
 	g_hash_table_insert(account->settings, g_strdup(name), setting);
@@ -1501,17 +2004,17 @@ gaim_account_set_string(GaimAccount *account, const char *name,
 }
 
 void
-gaim_account_set_bool(GaimAccount *account, const char *name, gboolean value)
+purple_account_set_bool(PurpleAccount *account, const char *name, gboolean value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(name    != NULL);
 
-	setting = g_new0(GaimAccountSetting, 1);
+	setting = g_new0(PurpleAccountSetting, 1);
 
-	setting->type       = GAIM_PREF_BOOLEAN;
-	setting->value.bool = value;
+	setting->type       = PURPLE_PREF_BOOLEAN;
+	setting->value.boolean = value;
 
 	g_hash_table_insert(account->settings, g_strdup(name), setting);
 
@@ -1519,7 +2022,7 @@ gaim_account_set_bool(GaimAccount *account, const char *name, gboolean value)
 }
 
 static GHashTable *
-get_ui_settings_table(GaimAccount *account, const char *ui)
+get_ui_settings_table(PurpleAccount *account, const char *ui)
 {
 	GHashTable *table;
 
@@ -1535,19 +2038,19 @@ get_ui_settings_table(GaimAccount *account, const char *ui)
 }
 
 void
-gaim_account_set_ui_int(GaimAccount *account, const char *ui,
+purple_account_set_ui_int(PurpleAccount *account, const char *ui,
 						const char *name, int value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 	GHashTable *table;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(ui      != NULL);
 	g_return_if_fail(name    != NULL);
 
-	setting = g_new0(GaimAccountSetting, 1);
+	setting = g_new0(PurpleAccountSetting, 1);
 
-	setting->type          = GAIM_PREF_INT;
+	setting->type          = PURPLE_PREF_INT;
 	setting->ui            = g_strdup(ui);
 	setting->value.integer = value;
 
@@ -1559,19 +2062,19 @@ gaim_account_set_ui_int(GaimAccount *account, const char *ui,
 }
 
 void
-gaim_account_set_ui_string(GaimAccount *account, const char *ui,
+purple_account_set_ui_string(PurpleAccount *account, const char *ui,
 						   const char *name, const char *value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 	GHashTable *table;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(ui      != NULL);
 	g_return_if_fail(name    != NULL);
 
-	setting = g_new0(GaimAccountSetting, 1);
+	setting = g_new0(PurpleAccountSetting, 1);
 
-	setting->type         = GAIM_PREF_STRING;
+	setting->type         = PURPLE_PREF_STRING;
 	setting->ui           = g_strdup(ui);
 	setting->value.string = g_strdup(value);
 
@@ -1583,21 +2086,21 @@ gaim_account_set_ui_string(GaimAccount *account, const char *ui,
 }
 
 void
-gaim_account_set_ui_bool(GaimAccount *account, const char *ui,
+purple_account_set_ui_bool(PurpleAccount *account, const char *ui,
 						 const char *name, gboolean value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 	GHashTable *table;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(ui      != NULL);
 	g_return_if_fail(name    != NULL);
 
-	setting = g_new0(GaimAccountSetting, 1);
+	setting = g_new0(PurpleAccountSetting, 1);
 
-	setting->type       = GAIM_PREF_BOOLEAN;
+	setting->type       = PURPLE_PREF_BOOLEAN;
 	setting->ui         = g_strdup(ui);
-	setting->value.bool = value;
+	setting->value.boolean = value;
 
 	table = get_ui_settings_table(account, ui);
 
@@ -1606,40 +2109,40 @@ gaim_account_set_ui_bool(GaimAccount *account, const char *ui,
 	schedule_accounts_save();
 }
 
-static GaimConnectionState
-gaim_account_get_state(const GaimAccount *account)
+static PurpleConnectionState
+purple_account_get_state(const PurpleAccount *account)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 
-	g_return_val_if_fail(account != NULL, GAIM_DISCONNECTED);
+	g_return_val_if_fail(account != NULL, PURPLE_DISCONNECTED);
 
-	gc = gaim_account_get_connection(account);
+	gc = purple_account_get_connection(account);
 	if (!gc)
-		return GAIM_DISCONNECTED;
+		return PURPLE_DISCONNECTED;
 
-	return gaim_connection_get_state(gc);
+	return purple_connection_get_state(gc);
 }
 
 gboolean
-gaim_account_is_connected(const GaimAccount *account)
+purple_account_is_connected(const PurpleAccount *account)
 {
-	return (gaim_account_get_state(account) == GAIM_CONNECTED);
+	return (purple_account_get_state(account) == PURPLE_CONNECTED);
 }
 
 gboolean
-gaim_account_is_connecting(const GaimAccount *account)
+purple_account_is_connecting(const PurpleAccount *account)
 {
-	return (gaim_account_get_state(account) == GAIM_CONNECTING);
+	return (purple_account_get_state(account) == PURPLE_CONNECTING);
 }
 
 gboolean
-gaim_account_is_disconnected(const GaimAccount *account)
+purple_account_is_disconnected(const PurpleAccount *account)
 {
-	return (gaim_account_get_state(account) == GAIM_DISCONNECTED);
+	return (purple_account_get_state(account) == PURPLE_DISCONNECTED);
 }
 
 const char *
-gaim_account_get_username(const GaimAccount *account)
+purple_account_get_username(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
@@ -1647,7 +2150,7 @@ gaim_account_get_username(const GaimAccount *account)
 }
 
 const char *
-gaim_account_get_password(const GaimAccount *account)
+purple_account_get_password(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
@@ -1655,7 +2158,7 @@ gaim_account_get_password(const GaimAccount *account)
 }
 
 const char *
-gaim_account_get_alias(const GaimAccount *account)
+purple_account_get_alias(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
@@ -1663,7 +2166,7 @@ gaim_account_get_alias(const GaimAccount *account)
 }
 
 const char *
-gaim_account_get_user_info(const GaimAccount *account)
+purple_account_get_user_info(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
@@ -1671,15 +2174,7 @@ gaim_account_get_user_info(const GaimAccount *account)
 }
 
 const char *
-gaim_account_get_buddy_icon(const GaimAccount *account)
-{
-	g_return_val_if_fail(account != NULL, NULL);
-
-	return account->buddy_icon;
-}
-
-const char *
-gaim_account_get_buddy_icon_path(const GaimAccount *account)
+purple_account_get_buddy_icon_path(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
@@ -1687,43 +2182,70 @@ gaim_account_get_buddy_icon_path(const GaimAccount *account)
 }
 
 const char *
-gaim_account_get_protocol_id(const GaimAccount *account)
+purple_account_get_protocol_id(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
-	/*
-	 * HACK by Seanegan
-	 */
-	if (!strcmp(account->protocol_id, "prpl-oscar")) {
-		if (isdigit(account->username[0]))
-			return "prpl-icq";
-		else
-			return "prpl-aim";
-	}
 	return account->protocol_id;
 }
 
 const char *
-gaim_account_get_protocol_name(const GaimAccount *account)
+purple_account_get_protocol_name(const PurpleAccount *account)
 {
-	GaimPlugin *p;
+	PurplePlugin *p;
 
 	g_return_val_if_fail(account != NULL, NULL);
 
-	p = gaim_find_prpl(gaim_account_get_protocol_id(account));
+	p = purple_find_prpl(purple_account_get_protocol_id(account));
 
 	return ((p && p->info->name) ? _(p->info->name) : _("Unknown"));
 }
 
-GaimConnection *
-gaim_account_get_connection(const GaimAccount *account)
+PurpleConnection *
+purple_account_get_connection(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
 	return account->gc;
 }
 
+const gchar *
+purple_account_get_name_for_display(const PurpleAccount *account)
+{
+	PurpleBuddy *self = NULL;
+	PurpleConnection *gc = NULL;
+	const gchar *name = NULL, *username = NULL, *displayname = NULL;
+
+	name = purple_account_get_alias(account);
+
+	if (name) {
+		return name;
+	}
+
+	username = purple_account_get_username(account);
+	self = purple_find_buddy((PurpleAccount *)account, username);
+
+	if (self) {
+		const gchar *calias= purple_buddy_get_contact_alias(self);
+
+		/* We don't want to return the buddy name if the buddy/contact
+		 * doesn't have an alias set. */
+		if (!purple_strequal(username, calias)) {
+			return calias;
+		}
+	}
+
+	gc = purple_account_get_connection(account);
+	displayname = purple_connection_get_display_name(gc);
+
+	if (displayname) {
+		return displayname;
+	}
+
+	return username;
+}
+
 gboolean
-gaim_account_get_remember_password(const GaimAccount *account)
+purple_account_get_remember_password(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, FALSE);
 
@@ -1731,86 +2253,94 @@ gaim_account_get_remember_password(const GaimAccount *account)
 }
 
 gboolean
-gaim_account_get_check_mail(const GaimAccount *account)
+purple_account_get_check_mail(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, FALSE);
 
-	return gaim_account_get_bool(account, "check-mail", FALSE);
+	return purple_account_get_bool(account, "check-mail", FALSE);
 }
 
 gboolean
-gaim_account_get_enabled(const GaimAccount *account, const char *ui)
+purple_account_get_enabled(const PurpleAccount *account, const char *ui)
 {
 	g_return_val_if_fail(account != NULL, FALSE);
 	g_return_val_if_fail(ui      != NULL, FALSE);
 
-	return gaim_account_get_ui_bool(account, ui, "auto-login", FALSE);
+	return purple_account_get_ui_bool(account, ui, "auto-login", FALSE);
 }
 
-GaimProxyInfo *
-gaim_account_get_proxy_info(const GaimAccount *account)
+PurpleProxyInfo *
+purple_account_get_proxy_info(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
 	return account->proxy_info;
 }
 
-GaimStatus *
-gaim_account_get_active_status(const GaimAccount *account)
+PurplePrivacyType
+purple_account_get_privacy_type(const PurpleAccount *account)
+{
+	g_return_val_if_fail(account != NULL, PURPLE_PRIVACY_ALLOW_ALL);
+
+	return account->perm_deny;
+}
+
+PurpleStatus *
+purple_account_get_active_status(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account   != NULL, NULL);
 
-	return gaim_presence_get_active_status(account->presence);
+	return purple_presence_get_active_status(account->presence);
 }
 
-GaimStatus *
-gaim_account_get_status(const GaimAccount *account, const char *status_id)
+PurpleStatus *
+purple_account_get_status(const PurpleAccount *account, const char *status_id)
 {
 	g_return_val_if_fail(account   != NULL, NULL);
 	g_return_val_if_fail(status_id != NULL, NULL);
 
-	return gaim_presence_get_status(account->presence, status_id);
+	return purple_presence_get_status(account->presence, status_id);
 }
 
-GaimStatusType *
-gaim_account_get_status_type(const GaimAccount *account, const char *id)
+PurpleStatusType *
+purple_account_get_status_type(const PurpleAccount *account, const char *id)
 {
-	const GList *l;
+	GList *l;
 
 	g_return_val_if_fail(account != NULL, NULL);
 	g_return_val_if_fail(id      != NULL, NULL);
 
-	for (l = gaim_account_get_status_types(account); l != NULL; l = l->next)
+	for (l = purple_account_get_status_types(account); l != NULL; l = l->next)
 	{
-		GaimStatusType *status_type = (GaimStatusType *)l->data;
+		PurpleStatusType *status_type = (PurpleStatusType *)l->data;
 
-		if (!strcmp(gaim_status_type_get_id(status_type), id))
+		if (purple_strequal(purple_status_type_get_id(status_type), id))
 			return status_type;
 	}
 
 	return NULL;
 }
 
-GaimStatusType *
-gaim_account_get_status_type_with_primitive(const GaimAccount *account, GaimStatusPrimitive primitive)
+PurpleStatusType *
+purple_account_get_status_type_with_primitive(const PurpleAccount *account, PurpleStatusPrimitive primitive)
 {
-	const GList *l;
+	GList *l;
 
 	g_return_val_if_fail(account != NULL, NULL);
 
-	for (l = gaim_account_get_status_types(account); l != NULL; l = l->next)
+	for (l = purple_account_get_status_types(account); l != NULL; l = l->next)
 	{
-		GaimStatusType *status_type = (GaimStatusType *)l->data;
+		PurpleStatusType *status_type = (PurpleStatusType *)l->data;
 
-		if (gaim_status_type_get_primitive(status_type) == primitive)
+		if (purple_status_type_get_primitive(status_type) == primitive)
 			return status_type;
 	}
 
 	return NULL;
 }
 
-GaimPresence *
-gaim_account_get_presence(const GaimAccount *account)
+PurplePresence *
+purple_account_get_presence(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
@@ -1818,17 +2348,17 @@ gaim_account_get_presence(const GaimAccount *account)
 }
 
 gboolean
-gaim_account_is_status_active(const GaimAccount *account,
+purple_account_is_status_active(const PurpleAccount *account,
 							  const char *status_id)
 {
 	g_return_val_if_fail(account   != NULL, FALSE);
 	g_return_val_if_fail(status_id != NULL, FALSE);
 
-	return gaim_presence_is_status_active(account->presence, status_id);
+	return purple_presence_is_status_active(account->presence, status_id);
 }
 
-const GList *
-gaim_account_get_status_types(const GaimAccount *account)
+GList *
+purple_account_get_status_types(const PurpleAccount *account)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
@@ -1836,10 +2366,10 @@ gaim_account_get_status_types(const GaimAccount *account)
 }
 
 int
-gaim_account_get_int(const GaimAccount *account, const char *name,
+purple_account_get_int(const PurpleAccount *account, const char *name,
 					 int default_value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 
 	g_return_val_if_fail(account != NULL, default_value);
 	g_return_val_if_fail(name    != NULL, default_value);
@@ -1849,16 +2379,16 @@ gaim_account_get_int(const GaimAccount *account, const char *name,
 	if (setting == NULL)
 		return default_value;
 
-	g_return_val_if_fail(setting->type == GAIM_PREF_INT, default_value);
+	g_return_val_if_fail(setting->type == PURPLE_PREF_INT, default_value);
 
 	return setting->value.integer;
 }
 
 const char *
-gaim_account_get_string(const GaimAccount *account, const char *name,
+purple_account_get_string(const PurpleAccount *account, const char *name,
 						const char *default_value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 
 	g_return_val_if_fail(account != NULL, default_value);
 	g_return_val_if_fail(name    != NULL, default_value);
@@ -1868,16 +2398,16 @@ gaim_account_get_string(const GaimAccount *account, const char *name,
 	if (setting == NULL)
 		return default_value;
 
-	g_return_val_if_fail(setting->type == GAIM_PREF_STRING, default_value);
+	g_return_val_if_fail(setting->type == PURPLE_PREF_STRING, default_value);
 
 	return setting->value.string;
 }
 
 gboolean
-gaim_account_get_bool(const GaimAccount *account, const char *name,
+purple_account_get_bool(const PurpleAccount *account, const char *name,
 					  gboolean default_value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 
 	g_return_val_if_fail(account != NULL, default_value);
 	g_return_val_if_fail(name    != NULL, default_value);
@@ -1887,16 +2417,16 @@ gaim_account_get_bool(const GaimAccount *account, const char *name,
 	if (setting == NULL)
 		return default_value;
 
-	g_return_val_if_fail(setting->type == GAIM_PREF_BOOLEAN, default_value);
+	g_return_val_if_fail(setting->type == PURPLE_PREF_BOOLEAN, default_value);
 
-	return setting->value.bool;
+	return setting->value.boolean;
 }
 
 int
-gaim_account_get_ui_int(const GaimAccount *account, const char *ui,
+purple_account_get_ui_int(const PurpleAccount *account, const char *ui,
 						const char *name, int default_value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 	GHashTable *table;
 
 	g_return_val_if_fail(account != NULL, default_value);
@@ -1909,16 +2439,16 @@ gaim_account_get_ui_int(const GaimAccount *account, const char *ui,
 	if ((setting = g_hash_table_lookup(table, name)) == NULL)
 		return default_value;
 
-	g_return_val_if_fail(setting->type == GAIM_PREF_INT, default_value);
+	g_return_val_if_fail(setting->type == PURPLE_PREF_INT, default_value);
 
 	return setting->value.integer;
 }
 
 const char *
-gaim_account_get_ui_string(const GaimAccount *account, const char *ui,
+purple_account_get_ui_string(const PurpleAccount *account, const char *ui,
 						   const char *name, const char *default_value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 	GHashTable *table;
 
 	g_return_val_if_fail(account != NULL, default_value);
@@ -1931,16 +2461,16 @@ gaim_account_get_ui_string(const GaimAccount *account, const char *ui,
 	if ((setting = g_hash_table_lookup(table, name)) == NULL)
 		return default_value;
 
-	g_return_val_if_fail(setting->type == GAIM_PREF_STRING, default_value);
+	g_return_val_if_fail(setting->type == PURPLE_PREF_STRING, default_value);
 
 	return setting->value.string;
 }
 
 gboolean
-gaim_account_get_ui_bool(const GaimAccount *account, const char *ui,
+purple_account_get_ui_bool(const PurpleAccount *account, const char *ui,
 						 const char *name, gboolean default_value)
 {
-	GaimAccountSetting *setting;
+	PurpleAccountSetting *setting;
 	GHashTable *table;
 
 	g_return_val_if_fail(account != NULL, default_value);
@@ -1953,25 +2483,43 @@ gaim_account_get_ui_bool(const GaimAccount *account, const char *ui,
 	if ((setting = g_hash_table_lookup(table, name)) == NULL)
 		return default_value;
 
-	g_return_val_if_fail(setting->type == GAIM_PREF_BOOLEAN, default_value);
+	g_return_val_if_fail(setting->type == PURPLE_PREF_BOOLEAN, default_value);
 
-	return setting->value.bool;
+	return setting->value.boolean;
 }
 
-GaimLog *
-gaim_account_get_log(GaimAccount *account, gboolean create)
+gpointer
+purple_account_get_ui_data(const PurpleAccount *account)
+{
+        g_return_val_if_fail(account != NULL, NULL);
+
+        return account->ui_data;
+}
+
+void
+purple_account_set_ui_data(PurpleAccount *account,
+                                 gpointer ui_data)
+{
+        g_return_if_fail(account != NULL);
+
+        account->ui_data = ui_data;
+}
+
+
+PurpleLog *
+purple_account_get_log(PurpleAccount *account, gboolean create)
 {
 	g_return_val_if_fail(account != NULL, NULL);
 
 	if(!account->system_log && create){
-		GaimPresence *presence;
+		PurplePresence *presence;
 		int login_time;
 
-		presence = gaim_account_get_presence(account);
-		login_time = gaim_presence_get_login_time(presence);
+		presence = purple_account_get_presence(account);
+		login_time = purple_presence_get_login_time(presence);
 
-		account->system_log	 = gaim_log_new(GAIM_LOG_SYSTEM,
-				gaim_account_get_username(account), account, NULL,
+		account->system_log	 = purple_log_new(PURPLE_LOG_SYSTEM,
+				purple_account_get_username(account), account, NULL,
 				(login_time != 0) ? login_time : time(NULL), NULL);
 	}
 
@@ -1979,54 +2527,68 @@ gaim_account_get_log(GaimAccount *account, gboolean create)
 }
 
 void
-gaim_account_destroy_log(GaimAccount *account)
+purple_account_destroy_log(PurpleAccount *account)
 {
 	g_return_if_fail(account != NULL);
 
 	if(account->system_log){
-		gaim_log_free(account->system_log);
+		purple_log_free(account->system_log);
 		account->system_log = NULL;
 	}
 }
 
 void
-gaim_account_add_buddy(GaimAccount *account, GaimBuddy *buddy)
+purple_account_add_buddy(PurpleAccount *account, PurpleBuddy *buddy, const char *message)
 {
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	GaimConnection *gc = gaim_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleConnection *gc;
+	PurplePlugin *prpl = NULL;
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	g_return_if_fail(account != NULL);
+	g_return_if_fail(buddy != NULL);
 
-	if (prpl_info != NULL && prpl_info->add_buddy != NULL)
-		prpl_info->add_buddy(gc, buddy, gaim_buddy_get_group(buddy));
+	gc = purple_account_get_connection(account);
+	if (gc != NULL)
+		prpl = purple_connection_get_prpl(gc);
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+
+	if (prpl_info != NULL) {
+		if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, add_buddy))
+			prpl_info->add_buddy(gc, buddy, purple_buddy_get_group(buddy), message);
+	}
 }
 
 void
-gaim_account_add_buddies(GaimAccount *account, GList *buddies)
+purple_account_add_buddies(PurpleAccount *account, GList *buddies, const char *message)
 {
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	GaimConnection *gc = gaim_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurplePlugin *prpl = NULL;
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (gc != NULL)
+		prpl = purple_connection_get_prpl(gc);
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 	if (prpl_info) {
 		GList *cur, *groups = NULL;
 
 		/* Make a list of what group each buddy is in */
 		for (cur = buddies; cur != NULL; cur = cur->next) {
-			GaimBlistNode *node = cur->data;
-			groups = g_list_append(groups, node->parent->parent);
+			PurpleBuddy *buddy = cur->data;
+			groups = g_list_append(groups, purple_buddy_get_group(buddy));
 		}
 
-		if (prpl_info->add_buddies != NULL)
-			prpl_info->add_buddies(gc, buddies, groups);
-		else if (prpl_info->add_buddy != NULL) {
+		if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, add_buddies))
+			prpl_info->add_buddies(gc, buddies, groups, message);
+		else if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, add_buddy)) {
 			GList *curb = buddies, *curg = groups;
 
 			while ((curb != NULL) && (curg != NULL)) {
-				prpl_info->add_buddy(gc, curb->data, curg->data);
+				prpl_info->add_buddy(gc, curb->data, curg->data, message);
 				curb = curb->next;
 				curg = curg->next;
 			}
@@ -2037,27 +2599,35 @@ gaim_account_add_buddies(GaimAccount *account, GList *buddies)
 }
 
 void
-gaim_account_remove_buddy(GaimAccount *account, GaimBuddy *buddy,
-		GaimGroup *group)
+purple_account_remove_buddy(PurpleAccount *account, PurpleBuddy *buddy,
+		PurpleGroup *group)
 {
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	GaimConnection *gc = gaim_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurplePlugin *prpl = NULL;
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (gc != NULL)
+		prpl = purple_connection_get_prpl(gc);
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 	if (prpl_info && prpl_info->remove_buddy)
 		prpl_info->remove_buddy(gc, buddy, group);
 }
 
 void
-gaim_account_remove_buddies(GaimAccount *account, GList *buddies, GList *groups)
+purple_account_remove_buddies(PurpleAccount *account, GList *buddies, GList *groups)
 {
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	GaimConnection *gc = gaim_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurplePlugin *prpl = NULL;
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (gc != NULL)
+		prpl = purple_connection_get_prpl(gc);
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 	if (prpl_info) {
 		if (prpl_info->remove_buddies)
@@ -2066,7 +2636,7 @@ gaim_account_remove_buddies(GaimAccount *account, GList *buddies, GList *groups)
 			GList *curb = buddies;
 			GList *curg = groups;
 			while ((curb != NULL) && (curg != NULL)) {
-				gaim_account_remove_buddy(account, curb->data, curg->data);
+				purple_account_remove_buddy(account, curb->data, curg->data);
 				curb = curb->next;
 				curg = curg->next;
 			}
@@ -2075,55 +2645,151 @@ gaim_account_remove_buddies(GaimAccount *account, GList *buddies, GList *groups)
 }
 
 void
-gaim_account_remove_group(GaimAccount *account, GaimGroup *group)
+purple_account_remove_group(PurpleAccount *account, PurpleGroup *group)
 {
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	GaimConnection *gc = gaim_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurplePlugin *prpl = NULL;
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (gc != NULL)
+		prpl = purple_connection_get_prpl(gc);
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 	if (prpl_info && prpl_info->remove_group)
 		prpl_info->remove_group(gc, group);
 }
 
 void
-gaim_account_change_password(GaimAccount *account, const char *orig_pw,
+purple_account_change_password(PurpleAccount *account, const char *orig_pw,
 		const char *new_pw)
 {
-	GaimPluginProtocolInfo *prpl_info = NULL;
-	GaimConnection *gc = gaim_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurplePlugin *prpl = NULL;
 
-	gaim_account_set_password(account, new_pw);
+	purple_account_set_password(account, new_pw);
 
-	if (gc != NULL && gc->prpl != NULL)
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (gc != NULL)
+		prpl = purple_connection_get_prpl(gc);
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 	if (prpl_info && prpl_info->change_passwd)
 		prpl_info->change_passwd(gc, orig_pw, new_pw);
 }
 
-gboolean gaim_account_supports_offline_message(GaimAccount *account, GaimBuddy *buddy)
+gboolean purple_account_supports_offline_message(PurpleAccount *account, PurpleBuddy *buddy)
 {
-	GaimConnection *gc;
-	GaimPluginProtocolInfo *prpl_info;
+	PurpleConnection *gc;
+	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurplePlugin *prpl = NULL;
 
 	g_return_val_if_fail(account, FALSE);
 	g_return_val_if_fail(buddy, FALSE);
 
-	gc = gaim_account_get_connection(account);
+	gc = purple_account_get_connection(account);
 	if (gc == NULL)
 		return FALSE;
 
-	prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	prpl = purple_connection_get_prpl(gc);
+
+	if (prpl != NULL)
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
 	if (!prpl_info || !prpl_info->offline_message)
 		return FALSE;
 	return prpl_info->offline_message(buddy);
 }
 
+static void
+signed_on_cb(PurpleConnection *gc,
+             gpointer unused)
+{
+	PurpleAccount *account = purple_connection_get_account(gc);
+	purple_account_clear_current_error(account);
+
+	purple_signal_emit(purple_accounts_get_handle(), "account-signed-on",
+	                   account);
+}
+
+static void
+signed_off_cb(PurpleConnection *gc,
+              gpointer unused)
+{
+	PurpleAccount *account = purple_connection_get_account(gc);
+
+	purple_signal_emit(purple_accounts_get_handle(), "account-signed-off",
+	                   account);
+}
+
+static void
+set_current_error(PurpleAccount *account, PurpleConnectionErrorInfo *new_err)
+{
+	PurpleConnectionErrorInfo *old_err;
+
+	g_return_if_fail(account != NULL);
+
+	old_err = account->current_error;
+
+	if(new_err == old_err)
+		return;
+
+	account->current_error = new_err;
+
+	purple_signal_emit(purple_accounts_get_handle(),
+	                   "account-error-changed",
+	                   account, old_err, new_err);
+	schedule_accounts_save();
+
+	if(old_err)
+		g_free(old_err->description);
+
+	PURPLE_DBUS_UNREGISTER_POINTER(old_err);
+	g_free(old_err);
+}
+
+static void
+connection_error_cb(PurpleConnection *gc,
+                    PurpleConnectionError type,
+                    const gchar *description,
+                    gpointer unused)
+{
+	PurpleAccount *account;
+	PurpleConnectionErrorInfo *err;
+
+	account = purple_connection_get_account(gc);
+
+	g_return_if_fail(account != NULL);
+
+	err = g_new0(PurpleConnectionErrorInfo, 1);
+	PURPLE_DBUS_REGISTER_POINTER(err, PurpleConnectionErrorInfo);
+
+	err->type = type;
+	err->description = g_strdup(description);
+
+	set_current_error(account, err);
+
+	purple_signal_emit(purple_accounts_get_handle(), "account-connection-error",
+	                   account, type, description);
+}
+
+const PurpleConnectionErrorInfo *
+purple_account_get_current_error(PurpleAccount *account)
+{
+	return account->current_error;
+}
+
 void
-gaim_accounts_add(GaimAccount *account)
+purple_account_clear_current_error(PurpleAccount *account)
+{
+	set_current_error(account, NULL);
+}
+
+void
+purple_accounts_add(PurpleAccount *account)
 {
 	g_return_if_fail(account != NULL);
 
@@ -2134,11 +2800,11 @@ gaim_accounts_add(GaimAccount *account)
 
 	schedule_accounts_save();
 
-	gaim_signal_emit(gaim_accounts_get_handle(), "account-added", account);
+	purple_signal_emit(purple_accounts_get_handle(), "account-added", account);
 }
 
 void
-gaim_accounts_remove(GaimAccount *account)
+purple_accounts_remove(PurpleAccount *account)
 {
 	g_return_if_fail(account != NULL);
 
@@ -2146,13 +2812,19 @@ gaim_accounts_remove(GaimAccount *account)
 
 	schedule_accounts_save();
 
-	gaim_signal_emit(gaim_accounts_get_handle(), "account-removed", account);
+	/* Clearing the error ensures that account-error-changed is emitted,
+	 * which is the end of the guarantee that the the error's pointer is
+	 * valid.
+	 */
+	purple_account_clear_current_error(account);
+	purple_signal_emit(purple_accounts_get_handle(), "account-removed", account);
 }
 
 void
-gaim_accounts_delete(GaimAccount *account)
+purple_accounts_delete(PurpleAccount *account)
 {
-	GaimBlistNode *gnode, *cnode, *bnode;
+	PurpleBlistNode *gnode, *cnode, *bnode;
+	GList *iter;
 
 	g_return_if_fail(account != NULL);
 
@@ -2162,56 +2834,67 @@ gaim_accounts_delete(GaimAccount *account)
 	 * account for all UIs rather than the just the current UI,
 	 * but it doesn't really matter.
 	 */
-	gaim_account_set_enabled(account, gaim_core_get_ui(), FALSE);
+	purple_account_set_enabled(account, purple_core_get_ui(), FALSE);
 
-	gaim_notify_close_with_handle(account);
-	gaim_request_close_with_handle(account);
+	purple_notify_close_with_handle(account);
+	purple_request_close_with_handle(account);
 
-	gaim_accounts_remove(account);
+	purple_accounts_remove(account);
 
 	/* Remove this account's buddies */
-	for (gnode = gaim_get_blist()->root; gnode != NULL; gnode = gnode->next) {
-		if (!GAIM_BLIST_NODE_IS_GROUP(gnode))
+	for (gnode = purple_blist_get_root();
+	     gnode != NULL;
+		 gnode = purple_blist_node_get_sibling_next(gnode))
+	{
+		if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
 			continue;
 
-		cnode = gnode->child;
+		cnode = purple_blist_node_get_first_child(gnode);
 		while (cnode) {
-			GaimBlistNode *cnode_next = cnode->next;
+			PurpleBlistNode *cnode_next = purple_blist_node_get_sibling_next(cnode);
 
-			if(GAIM_BLIST_NODE_IS_CONTACT(cnode)) {
-				bnode = cnode->child;
+			if(PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
+				bnode = purple_blist_node_get_first_child(cnode);
 				while (bnode) {
-					GaimBlistNode *bnode_next = bnode->next;
+					PurpleBlistNode *bnode_next = purple_blist_node_get_sibling_next(bnode);
 
-					if (GAIM_BLIST_NODE_IS_BUDDY(bnode)) {
-						GaimBuddy *b = (GaimBuddy *)bnode;
+					if (PURPLE_BLIST_NODE_IS_BUDDY(bnode)) {
+						PurpleBuddy *b = (PurpleBuddy *)bnode;
 
-						if (b->account == account)
-							gaim_blist_remove_buddy(b);
+						if (purple_buddy_get_account(b) == account)
+							purple_blist_remove_buddy(b);
 					}
 					bnode = bnode_next;
 				}
-			} else if (GAIM_BLIST_NODE_IS_CHAT(cnode)) {
-				GaimChat *c = (GaimChat *)cnode;
+			} else if (PURPLE_BLIST_NODE_IS_CHAT(cnode)) {
+				PurpleChat *c = (PurpleChat *)cnode;
 
-				if (c->account == account)
-					gaim_blist_remove_chat(c);
+				if (purple_chat_get_account(c) == account)
+					purple_blist_remove_chat(c);
 			}
 			cnode = cnode_next;
 		}
 	}
 
+	/* Remove any open conversation for this account */
+	for (iter = purple_get_conversations(); iter; ) {
+		PurpleConversation *conv = iter->data;
+		iter = iter->next;
+		if (purple_conversation_get_account(conv) == account)
+			purple_conversation_destroy(conv);
+	}
+
 	/* Remove this account's pounces */
-	gaim_pounce_destroy_all_by_account(account);
+	purple_pounce_destroy_all_by_account(account);
 
 	/* This will cause the deletion of an old buddy icon. */
-	gaim_account_set_buddy_icon(account, NULL);
+	purple_buddy_icons_set_account_icon(account, NULL, 0);
 
-	gaim_account_destroy(account);
+	purple_account_destroy(account);
 }
 
 void
-gaim_accounts_reorder(GaimAccount *account, gint new_index)
+purple_accounts_reorder(PurpleAccount *account, gint new_index)
 {
 	gint index;
 	GList *l;
@@ -2222,9 +2905,9 @@ gaim_accounts_reorder(GaimAccount *account, gint new_index)
 	index = g_list_index(accounts, account);
 
 	if (index == -1) {
-		gaim_debug_error("account",
+		purple_debug_error("account",
 				   "Unregistered account (%s) discovered during reorder!\n",
-				   gaim_account_get_username(account));
+				   purple_account_get_username(account));
 		return;
 	}
 
@@ -2243,21 +2926,21 @@ gaim_accounts_reorder(GaimAccount *account, gint new_index)
 }
 
 GList *
-gaim_accounts_get_all(void)
+purple_accounts_get_all(void)
 {
 	return accounts;
 }
 
 GList *
-gaim_accounts_get_all_active(void)
+purple_accounts_get_all_active(void)
 {
 	GList *list = NULL;
-	GList *all = gaim_accounts_get_all();
+	GList *all = purple_accounts_get_all();
 
 	while (all != NULL) {
-		GaimAccount *account = all->data;
+		PurpleAccount *account = all->data;
 
-		if (gaim_account_get_enabled(account, gaim_core_get_ui()))
+		if (purple_account_get_enabled(account, purple_core_get_ui()))
 			list = g_list_append(list, account);
 
 		all = all->next;
@@ -2266,72 +2949,70 @@ gaim_accounts_get_all_active(void)
 	return list;
 }
 
-GaimAccount *
-gaim_accounts_find(const char *name, const char *protocol_id)
+PurpleAccount *
+purple_accounts_find(const char *name, const char *protocol_id)
 {
-	GaimAccount *account = NULL;
+	PurpleAccount *account = NULL;
 	GList *l;
 	char *who;
 
 	g_return_val_if_fail(name != NULL, NULL);
+	g_return_val_if_fail(protocol_id != NULL, NULL);
 
-	who = g_strdup(gaim_normalize(NULL, name));
+	for (l = purple_accounts_get_all(); l != NULL; l = l->next) {
+		account = (PurpleAccount *)l->data;
+		if (!purple_strequal(account->protocol_id, protocol_id))
+			continue;
 
-	for (l = gaim_accounts_get_all(); l != NULL; l = l->next) {
-		account = (GaimAccount *)l->data;
-
-		if (!strcmp(gaim_normalize(NULL, gaim_account_get_username(account)), who) &&
-			(!protocol_id || !strcmp(account->protocol_id, protocol_id))) {
-
-			break;
+		who = g_strdup(purple_normalize(account, name));
+		if (purple_strequal(purple_normalize(account, purple_account_get_username(account)), who)) {
+			g_free(who);
+			return account;
 		}
-
-		account = NULL;
+		g_free(who);
 	}
 
-	g_free(who);
-
-	return account;
+	return NULL;
 }
 
 void
-gaim_accounts_restore_current_statuses()
+purple_accounts_restore_current_statuses()
 {
 	GList *l;
-	GaimAccount *account;
+	PurpleAccount *account;
 
 	/* If we're not connected to the Internet right now, we bail on this */
-	if (!gaim_network_is_available())
+	if (!purple_network_is_available())
 	{
-		gaim_debug_info("account", "Network not connected; skipping reconnect\n");
+		purple_debug_warning("account", "Network not connected; skipping reconnect\n");
 		return;
 	}
 
-	for (l = gaim_accounts_get_all(); l != NULL; l = l->next)
+	for (l = purple_accounts_get_all(); l != NULL; l = l->next)
 	{
-		account = (GaimAccount *)l->data;
-		if (gaim_account_get_enabled(account, gaim_core_get_ui()) &&
-			(gaim_presence_is_online(account->presence)))
+		account = (PurpleAccount *)l->data;
+		if (purple_account_get_enabled(account, purple_core_get_ui()) &&
+			(purple_presence_is_online(account->presence)))
 		{
-			gaim_account_connect(account);
+			purple_account_connect(account);
 		}
 	}
 }
 
 void
-gaim_accounts_set_ui_ops(GaimAccountUiOps *ops)
+purple_accounts_set_ui_ops(PurpleAccountUiOps *ops)
 {
 	account_ui_ops = ops;
 }
 
-GaimAccountUiOps *
-gaim_accounts_get_ui_ops(void)
+PurpleAccountUiOps *
+purple_accounts_get_ui_ops(void)
 {
 	return account_ui_ops;
 }
 
 void *
-gaim_accounts_get_handle(void)
+purple_accounts_get_handle(void)
 {
 	static int handle;
 
@@ -2339,73 +3020,149 @@ gaim_accounts_get_handle(void)
 }
 
 void
-gaim_accounts_init(void)
+purple_accounts_init(void)
 {
-	void *handle = gaim_accounts_get_handle();
+	void *handle = purple_accounts_get_handle();
+	void *conn_handle = purple_connections_get_handle();
 
-	gaim_signal_register(handle, "account-connecting",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_ACCOUNT));
+	purple_signal_register(handle, "account-connecting",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT));
 
-	gaim_signal_register(handle, "account-disabled",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_ACCOUNT));
+	purple_signal_register(handle, "account-disabled",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT));
 
-	gaim_signal_register(handle, "account-enabled",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_ACCOUNT));
+	purple_signal_register(handle, "account-enabled",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT));
 
-	gaim_signal_register(handle, "account-setting-info",
-						 gaim_marshal_VOID__POINTER_POINTER, NULL, 2,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_ACCOUNT),
-						 gaim_value_new(GAIM_TYPE_STRING));
+	purple_signal_register(handle, "account-setting-info",
+						 purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						 purple_value_new(PURPLE_TYPE_STRING));
 
-	gaim_signal_register(handle, "account-set-info",
-						 gaim_marshal_VOID__POINTER_POINTER, NULL, 2,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_ACCOUNT),
-						 gaim_value_new(GAIM_TYPE_STRING));
+	purple_signal_register(handle, "account-set-info",
+						 purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						 purple_value_new(PURPLE_TYPE_STRING));
 
-	gaim_signal_register(handle, "account-added",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE, GAIM_SUBTYPE_ACCOUNT));
+	purple_signal_register(handle, "account-created",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT));
 
-	gaim_signal_register(handle, "account-removed",
-						 gaim_marshal_VOID__POINTER, NULL, 1,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE, GAIM_SUBTYPE_ACCOUNT));
+	purple_signal_register(handle, "account-destroying",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT));
 
-	gaim_signal_register(handle, "account-status-changed",
-						 gaim_marshal_VOID__POINTER_POINTER_POINTER, NULL, 3,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_ACCOUNT),
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_STATUS),
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-										GAIM_SUBTYPE_STATUS));
+	purple_signal_register(handle, "account-added",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT));
 
-	gaim_signal_register(handle, "account-alias-changed",
-						 gaim_marshal_VOID__POINTER_POINTER, NULL, 2,
-						 gaim_value_new(GAIM_TYPE_SUBTYPE,
-							 			GAIM_SUBTYPE_ACCOUNT),
-						 gaim_value_new(GAIM_TYPE_STRING));
-	
+	purple_signal_register(handle, "account-removed",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT));
+
+	purple_signal_register(handle, "account-status-changed",
+						 purple_marshal_VOID__POINTER_POINTER_POINTER, NULL, 3,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_STATUS),
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_STATUS));
+
+	purple_signal_register(handle, "account-actions-changed",
+						 purple_marshal_VOID__POINTER, NULL, 1,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT));
+
+	purple_signal_register(handle, "account-alias-changed",
+						 purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						 purple_value_new(PURPLE_TYPE_SUBTYPE,
+							 			PURPLE_SUBTYPE_ACCOUNT),
+						 purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "account-authorization-requested",
+						purple_marshal_INT__POINTER_POINTER,
+						purple_value_new(PURPLE_TYPE_INT), 2,
+						purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "account-authorization-requested-with-message",
+						purple_marshal_INT__POINTER_POINTER_POINTER,
+						purple_value_new(PURPLE_TYPE_INT), 3,
+						purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING),
+						purple_value_new(PURPLE_TYPE_STRING));
+	purple_signal_register(handle, "account-authorization-denied",
+						purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "account-authorization-granted",
+						purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						purple_value_new(PURPLE_TYPE_SUBTYPE,
+										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "account-error-changed",
+	                       purple_marshal_VOID__POINTER_POINTER_POINTER,
+	                       NULL, 3,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_ACCOUNT),
+	                       purple_value_new(PURPLE_TYPE_POINTER),
+	                       purple_value_new(PURPLE_TYPE_POINTER));
+
+	purple_signal_register(handle, "account-signed-on",
+	                       purple_marshal_VOID__POINTER, NULL, 1,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_ACCOUNT));
+
+	purple_signal_register(handle, "account-signed-off",
+	                       purple_marshal_VOID__POINTER, NULL, 1,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_ACCOUNT));
+
+	purple_signal_register(handle, "account-connection-error",
+	                       purple_marshal_VOID__POINTER_INT_POINTER, NULL, 3,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_ACCOUNT),
+	                       purple_value_new(PURPLE_TYPE_ENUM),
+	                       purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_connect(conn_handle, "signed-on", handle,
+	                      PURPLE_CALLBACK(signed_on_cb), NULL);
+	purple_signal_connect(conn_handle, "signed-off", handle,
+	                      PURPLE_CALLBACK(signed_off_cb), NULL);
+	purple_signal_connect(conn_handle, "connection-error", handle,
+	                      PURPLE_CALLBACK(connection_error_cb), NULL);
+
 	load_accounts();
 
 }
 
 void
-gaim_accounts_uninit(void)
+purple_accounts_uninit(void)
 {
+	gpointer handle = purple_accounts_get_handle();
 	if (save_timer != 0)
 	{
-		gaim_timeout_remove(save_timer);
+		purple_timeout_remove(save_timer);
 		save_timer = 0;
 		sync_accounts();
 	}
 
-	gaim_signals_unregister_by_instance(gaim_accounts_get_handle());
+	for (; accounts; accounts = g_list_delete_link(accounts, accounts))
+		purple_account_destroy(accounts->data);
+
+	purple_signals_disconnect_by_handle(handle);
+	purple_signals_unregister_by_instance(handle);
 }

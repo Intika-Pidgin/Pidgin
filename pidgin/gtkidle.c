@@ -1,7 +1,7 @@
 /*
- * gaim
+ * pidgin
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
@@ -29,7 +29,7 @@
 #else
 # ifdef USE_SCREENSAVER
 #  ifdef _WIN32
-#   include "idletrack.h"
+#   include "gtkwin32dep.h"
 #  else
     /* We're on X11 and not MacOS X with IOKit. */
 #   include <X11/Xlib.h>
@@ -52,7 +52,7 @@
  *
  * In Debian bug #271639, jwz says:
  *
- * Gaim should simply ask xscreensaver how long the user has been idle:
+ * Purple should simply ask xscreensaver how long the user has been idle:
  *   % xscreensaver-command -time
  *   XScreenSaver 4.18: screen blanked since Tue Sep 14 14:10:45 2004
  *
@@ -69,7 +69,7 @@
  */
 #if defined(USE_SCREENSAVER) || defined(HAVE_IOKIT)
 static time_t
-gaim_gtk_get_time_idle()
+pidgin_get_time_idle(void)
 {
 # ifdef HAVE_IOKIT
 	/* Query the IOKit API */
@@ -97,37 +97,48 @@ gaim_gtk_get_time_idle()
 # else
 #  ifdef _WIN32
 	/* Query Windows */
-	return (GetTickCount() - wgaim_get_lastactive()) / 1000;
+	return (GetTickCount() - winpidgin_get_lastactive()) / 1000;
 #  else
 	/* We're on X11 and not MacOS X with IOKit. */
 
 	/* Query xscreensaver */
 	static XScreenSaverInfo *mit_info = NULL;
+	static int has_extension = -1;
 	int event_base, error_base;
-	if (XScreenSaverQueryExtension(GDK_DISPLAY(), &event_base, &error_base)) {
-		if (mit_info == NULL) {
+
+	if (has_extension == -1)
+		has_extension = XScreenSaverQueryExtension(GDK_DISPLAY(), &event_base, &error_base);
+
+	if (has_extension)
+	{
+		if (mit_info == NULL)
 			mit_info = XScreenSaverAllocInfo();
-		}
+
 		XScreenSaverQueryInfo(GDK_DISPLAY(), GDK_ROOT_WINDOW(), mit_info);
 		return (mit_info->idle) / 1000;
-	} else
+	}
+	else
 		return 0;
 #  endif /* !_WIN32 */
 # endif /* !HAVE_IOKIT */
 }
 #endif /* USE_SCREENSAVER || HAVE_IOKIT */
 
-static GaimIdleUiOps ui_ops =
+static PurpleIdleUiOps ui_ops =
 {
 #if defined(USE_SCREENSAVER) || defined(HAVE_IOKIT)
-	gaim_gtk_get_time_idle
+	pidgin_get_time_idle,
 #else
-	NULL
+	NULL,
 #endif /* USE_SCREENSAVER || HAVE_IOKIT */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
-GaimIdleUiOps *
-gaim_gtk_idle_get_ui_ops()
+PurpleIdleUiOps *
+pidgin_idle_get_ui_ops()
 {
 	return &ui_ops;
 }

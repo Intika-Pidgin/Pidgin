@@ -1,10 +1,11 @@
 /**
  * @file debug.h Debug API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,10 +21,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_DEBUG_H_
-#define _GAIM_DEBUG_H_
+#ifndef _PURPLE_DEBUG_H_
+#define _PURPLE_DEBUG_H_
 
 #include <glib.h>
 #include <stdarg.h>
@@ -33,27 +34,32 @@
  */
 typedef enum
 {
-	GAIM_DEBUG_ALL = 0,  /**< All debug levels.              */
-	GAIM_DEBUG_MISC,     /**< General chatter.               */
-	GAIM_DEBUG_INFO,     /**< General operation Information. */
-	GAIM_DEBUG_WARNING,  /**< Warnings.                      */
-	GAIM_DEBUG_ERROR,    /**< Errors.                        */
-	GAIM_DEBUG_FATAL     /**< Fatal errors.                  */
+	PURPLE_DEBUG_ALL = 0,  /**< All debug levels.              */
+	PURPLE_DEBUG_MISC,     /**< General chatter.               */
+	PURPLE_DEBUG_INFO,     /**< General operation Information. */
+	PURPLE_DEBUG_WARNING,  /**< Warnings.                      */
+	PURPLE_DEBUG_ERROR,    /**< Errors.                        */
+	PURPLE_DEBUG_FATAL     /**< Fatal errors.                  */
 
-} GaimDebugLevel;
+} PurpleDebugLevel;
 
 /**
  * Debug UI operations.
  */
 typedef struct
 {
-	void (*print)(GaimDebugLevel level, const char *category,
+	void (*print)(PurpleDebugLevel level, const char *category,
 				  const char *arg_s);
-} GaimDebugUiOps;
+	gboolean (*is_enabled)(PurpleDebugLevel level,
+			const char *category);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
+} PurpleDebugUiOps;
+
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Debug API                                                       */
@@ -65,87 +71,123 @@ extern "C" {
  * @param category The category (or @c NULL).
  * @param format   The format string.
  */
-void gaim_debug(GaimDebugLevel level, const char *category,
-				const char *format, ...);
+void purple_debug(PurpleDebugLevel level, const char *category,
+				const char *format, ...) G_GNUC_PRINTF(3, 4);
 
 /**
  * Outputs misc. level debug information.
  *
- * This is a wrapper for gaim_debug(), and uses GAIM_DEBUG_MISC as
+ * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_MISC as
  * the level.
  *
  * @param category The category (or @c NULL).
  * @param format   The format string.
  *
- * @see gaim_debug()
+ * @see purple_debug()
  */
-void gaim_debug_misc(const char *category, const char *format, ...);
+void purple_debug_misc(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
  * Outputs info level debug information.
  *
- * This is a wrapper for gaim_debug(), and uses GAIM_DEBUG_INFO as
+ * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_INFO as
  * the level.
  *
  * @param category The category (or @c NULL).
  * @param format   The format string.
  *
- * @see gaim_debug()
+ * @see purple_debug()
  */
-void gaim_debug_info(const char *category, const char *format, ...);
+void purple_debug_info(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
  * Outputs warning level debug information.
  *
- * This is a wrapper for gaim_debug(), and uses GAIM_DEBUG_WARNING as
+ * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_WARNING as
  * the level.
  *
  * @param category The category (or @c NULL).
  * @param format   The format string.
  *
- * @see gaim_debug()
+ * @see purple_debug()
  */
-void gaim_debug_warning(const char *category, const char *format, ...);
+void purple_debug_warning(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
  * Outputs error level debug information.
  *
- * This is a wrapper for gaim_debug(), and uses GAIM_DEBUG_ERROR as
+ * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_ERROR as
  * the level.
  *
  * @param category The category (or @c NULL).
  * @param format   The format string.
  *
- * @see gaim_debug()
+ * @see purple_debug()
  */
-void gaim_debug_error(const char *category, const char *format, ...);
+void purple_debug_error(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
  * Outputs fatal error level debug information.
  *
- * This is a wrapper for gaim_debug(), and uses GAIM_DEBUG_ERROR as
+ * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_ERROR as
  * the level.
  *
  * @param category The category (or @c NULL).
  * @param format   The format string.
  *
- * @see gaim_debug()
+ * @see purple_debug()
  */
-void gaim_debug_fatal(const char *category, const char *format, ...);
+void purple_debug_fatal(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
  * Enable or disable printing debug output to the console.
  *
  * @param enabled TRUE to enable debug output or FALSE to disable it.
  */
-void gaim_debug_set_enabled(gboolean enabled);
+void purple_debug_set_enabled(gboolean enabled);
 
 /**
  * Check if console debug output is enabled.
  *
- * @return TRUE if debuggin is enabled, FALSE if it is not.
+ * @return TRUE if debugging is enabled, FALSE if it is not.
  */
-gboolean gaim_debug_is_enabled(void);
+gboolean purple_debug_is_enabled(void);
+
+/**
+ * Enable or disable verbose debugging.  This ordinarily should only be called
+ * by #purple_debug_init, but there are cases where this can be useful for
+ * plugins.
+ *
+ * @param verbose TRUE to enable verbose debugging or FALSE to disable it.
+ */
+void purple_debug_set_verbose(gboolean verbose);
+
+/**
+ * Check if verbose logging is enabled.
+ *
+ * @return TRUE if verbose debugging is enabled, FALSE if it is not.
+ */
+gboolean purple_debug_is_verbose(void);
+
+/**
+ * Enable or disable unsafe debugging.  This ordinarily should only be called
+ * by #purple_debug_init, but there are cases where this can be useful for
+ * plugins.
+ *
+ * @param unsafe TRUE to enable debug logging of messages that could
+ *        potentially contain passwords and other sensitive information.
+ *        FALSE to disable it.
+ */
+void purple_debug_set_unsafe(gboolean unsafe);
+
+/**
+ * Check if unsafe debugging is enabled.  Defaults to FALSE.
+ *
+ * @return TRUE if the debug logging of all messages is enabled, FALSE
+ *         if messages that could potentially contain passwords and other
+ *         sensitive information are not logged.
+ */
+gboolean purple_debug_is_unsafe(void);
 
 /*@}*/
 
@@ -160,7 +202,7 @@ gboolean gaim_debug_is_enabled(void);
  *
  * @param ops The UI operations structure.
  */
-void gaim_debug_set_ui_ops(GaimDebugUiOps *ops);
+void purple_debug_set_ui_ops(PurpleDebugUiOps *ops);
 
 /**
  * Returns the UI operations structure used when outputting debug
@@ -168,7 +210,7 @@ void gaim_debug_set_ui_ops(GaimDebugUiOps *ops);
  *
  * @return The UI operations structure in use.
  */
-GaimDebugUiOps *gaim_debug_get_ui_ops(void);
+PurpleDebugUiOps *purple_debug_get_ui_ops(void);
 
 /*@}*/
 
@@ -180,12 +222,10 @@ GaimDebugUiOps *gaim_debug_get_ui_ops(void);
 /**
  * Initializes the debug subsystem.
  */
-void gaim_debug_init(void);
+void purple_debug_init(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
-#endif /* _GAIM_DEBUG_H_ */
+#endif /* _PURPLE_DEBUG_H_ */

@@ -1,6 +1,6 @@
-/* gaim
+/* purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -16,26 +16,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
-/* libaim is the AIM protocol plugin. It is linked against liboscarcommon,
+/* libaim is the AIM protocol plugin. It is linked against liboscar,
  * which contains all the shared implementation code with libicq
  */
 
 #include "oscarcommon.h"
+#include "oscar.h"
 
-static GaimPluginProtocolInfo prpl_info =
+static PurplePluginProtocolInfo prpl_info =
 {
-	OPT_PROTO_MAIL_CHECK | OPT_PROTO_IM_IMAGE,
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	OPT_PROTO_MAIL_CHECK | OPT_PROTO_IM_IMAGE | OPT_PROTO_INVITE_MESSAGE,
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
-	/* The mimimum icon size below is not needed in AIM 6.0 */
-	{"gif,jpeg,bmp,ico", 48, 48, 50, 50, 7168,
-		GAIM_ICON_SCALE_SEND | GAIM_ICON_SCALE_DISPLAY},	/* icon_spec */
+	{"gif,jpeg,bmp,ico", 0, 0, 64, 64, 7168, PURPLE_ICON_SCALE_SEND | PURPLE_ICON_SCALE_DISPLAY}, /* icon_spec */
 	oscar_list_icon_aim,		/* list_icon */
-	oscar_list_emblems,		/* list_emblems */
+	oscar_list_emblem,		/* list_emblems */
 	oscar_status_text,		/* status_text */
 	oscar_tooltip_text,		/* tooltip_text */
 	oscar_status_types,		/* status_types */
@@ -59,7 +59,7 @@ static GaimPluginProtocolInfo prpl_info =
 	oscar_add_deny,			/* add_deny */
 	oscar_rem_permit,		/* rem_permit */
 	oscar_rem_deny,			/* rem_deny */
-	oscar_set_permit_deny,	/* set_permit_deny */
+	oscar_set_aim_permdeny,	/* set_permit_deny */
 	oscar_join_chat,		/* join_chat */
 	NULL,					/* reject_chat */
 	oscar_get_chat_name,	/* get_chat_name */
@@ -70,7 +70,6 @@ static GaimPluginProtocolInfo prpl_info =
 	oscar_keepalive,		/* keepalive */
 	NULL,					/* register_user */
 	NULL,					/* get_cb_info */
-	NULL,					/* get_cb_away */
 	oscar_alias_buddy,		/* alias_buddy */
 	oscar_move_buddy,		/* group_buddy */
 	oscar_rename_group,		/* rename_group */
@@ -78,7 +77,7 @@ static GaimPluginProtocolInfo prpl_info =
 	oscar_convo_closed,		/* convo_closed */
 	oscar_normalize,		/* normalize */
 	oscar_set_icon,			/* set_buddy_icon */
-	NULL,					/* remove_group */
+	oscar_remove_group,		/* remove_group */
 	NULL,					/* get_cb_real_name */
 	NULL,					/* set_chat_topic */
 	NULL,					/* find_blist_chat */
@@ -92,28 +91,37 @@ static GaimPluginProtocolInfo prpl_info =
 	NULL,					/* whiteboard_prpl_ops */
 	NULL,					/* send_raw */
 	NULL,					/* roomlist_room_serialize */
+	NULL,					/* unregister_user */
+	NULL,					/* send_attention */
+	NULL,					/* get_attention_types */
+	NULL,					/* get_account_text_table */
+	NULL,					/* initiate_media */
+	NULL,					/* get_media_caps */
+	NULL,					/* get_moods */
+	NULL,					/* set_public_alias */
+	NULL					/* get_public_alias */
 };
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,
-	GAIM_MAJOR_VERSION,
-	GAIM_MINOR_VERSION,
-	GAIM_PLUGIN_PROTOCOL,                             /**< type           */
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
 	NULL,                                             /**< ui_requirement */
 	0,                                                /**< flags          */
 	NULL,                                             /**< dependencies   */
-	GAIM_PRIORITY_DEFAULT,                            /**< priority       */
+	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
 	"prpl-aim",                                       /**< id             */
 	"AIM",                                            /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("AIM Protocol Plugin"),
 	                                                  /**  description    */
 	N_("AIM Protocol Plugin"),
 	NULL,                                             /**< author         */
-	GAIM_WEBSITE,                                     /**< homepage       */
+	PURPLE_WEBSITE,                                     /**< homepage       */
 
 	NULL,                                             /**< load           */
 	NULL,                                             /**< unload         */
@@ -122,30 +130,19 @@ static GaimPluginInfo info =
 	NULL,                                             /**< ui_info        */
 	&prpl_info,                                       /**< extra_info     */
 	NULL,
-	oscar_actions
+	oscar_actions,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static void
-init_plugin(GaimPlugin *plugin)
+init_plugin(PurplePlugin *plugin)
 {
-	GaimAccountOption *option;
-
-	option = gaim_account_option_string_new(_("Server"), "server", OSCAR_DEFAULT_LOGIN_SERVER);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
-
-	option = gaim_account_option_int_new(_("Port"), "port", OSCAR_DEFAULT_LOGIN_PORT);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
-
-	option = gaim_account_option_bool_new(
-		_("Always use AIM/ICQ proxy server for file transfers\n(slower, but does not reveal your IP address)"), "always_use_rv_proxy",
-		OSCAR_DEFAULT_ALWAYS_USE_RV_PROXY);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
-
-	/* Preferences */
-	gaim_prefs_add_none("/plugins/prpl/oscar");
-	gaim_prefs_add_bool("/plugins/prpl/oscar/recent_buddies", FALSE);
-	gaim_prefs_add_bool("/plugins/prpl/oscar/show_idle", FALSE);
-	gaim_prefs_remove("/plugins/prpl/oscar/always_use_rv_proxy");
+	oscar_init(plugin, FALSE);
 }
 
-GAIM_INIT_PLUGIN(aim, init_plugin, info);
+PURPLE_INIT_PLUGIN(aim, init_plugin, info);

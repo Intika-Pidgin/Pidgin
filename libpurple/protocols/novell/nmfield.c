@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA	02111-1301	USA
  *
  */
 
@@ -164,9 +164,7 @@ _free_field_value(NMField * field)
 		case NMFIELD_TYPE_BINARY:
 		case NMFIELD_TYPE_UTF8:
 		case NMFIELD_TYPE_DN:
-			if (field->ptr_value != NULL) {
-				g_free(field->ptr_value);
-			}
+			g_free(field->ptr_value);
 			break;
 
 		case NMFIELD_TYPE_ARRAY:

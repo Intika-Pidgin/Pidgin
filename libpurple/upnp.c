@@ -1,10 +1,11 @@
 /**
  * @file upnp.c UPnP Implementation
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,18 +21,19 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 
-#include "debug.h"
-#include "util.h"
-#include "proxy.h"
-#include "xmlnode.h"
-#include "network.h"
-#include "eventloop.h"
 #include "upnp.h"
 
+#include "debug.h"
+#include "eventloop.h"
+#include "network.h"
+#include "proxy.h"
+#include "signals.h"
+#include "util.h"
+#include "xmlnode.h"
 
 /***************************************************************
 ** General Defines                                             *
@@ -39,6 +41,8 @@
 #define HTTP_OK "200 OK"
 #define DEFAULT_HTTP_PORT 80
 #define DISCOVERY_TIMEOUT 1000
+/* limit UPnP-triggered http downloads to 128k */
+#define MAX_UPNP_DOWNLOAD (128 * 1024)
 
 /***************************************************************
 ** Discovery/Description Defines                               *
@@ -84,7 +88,7 @@
 	"</s:Envelope>"
 
 #define PORT_MAPPING_LEASE_TIME "0"
-#define PORT_MAPPING_DESCRIPTION "GAIM_UPNP_PORT_FORWARD"
+#define PORT_MAPPING_DESCRIPTION "PURPLE_UPNP_PORT_FORWARD"
 
 #define ADD_PORT_MAPPING_PARAMS \
 	"<NewRemoteHost></NewRemoteHost>\r\n" \
@@ -106,64 +110,81 @@
 	"<NewProtocol>%s</NewProtocol>\r\n"
 
 typedef enum {
-	GAIM_UPNP_STATUS_UNDISCOVERED = -1,
-	GAIM_UPNP_STATUS_UNABLE_TO_DISCOVER,
-	GAIM_UPNP_STATUS_DISCOVERING,
-	GAIM_UPNP_STATUS_DISCOVERED
-} GaimUPnPStatus;
+	PURPLE_UPNP_STATUS_UNDISCOVERED = -1,
+	PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER,
+	PURPLE_UPNP_STATUS_DISCOVERING,
+	PURPLE_UPNP_STATUS_DISCOVERED
+} PurpleUPnPStatus;
 
 typedef struct {
-	GaimUPnPStatus status;
+	PurpleUPnPStatus status;
 	gchar* control_url;
 	gchar service_type[20];
 	char publicip[16];
 	char internalip[16];
 	time_t lookup_time;
-} GaimUPnPControlInfo;
+} PurpleUPnPControlInfo;
 
 typedef struct {
-	guint inpa;	/* gaim_input_add handle */
-	guint tima;	/* gaim_timeout_add handle */
+	guint inpa;	/* purple_input_add handle */
+	guint tima;	/* purple_timeout_add handle */
 	int fd;
 	struct sockaddr_in server;
-	gchar service_type[25];
+	gchar service_type[20];
 	int retry_count;
 	gchar *full_url;
 } UPnPDiscoveryData;
 
-typedef struct {
+struct _UPnPMappingAddRemove
+{
 	unsigned short portmap;
 	gchar protocol[4];
 	gboolean add;
-	GaimUPnPCallback cb;
+	PurpleUPnPCallback cb;
 	gpointer cb_data;
-} UPnPMappingAddRemove;
+	gboolean success;
+	guint tima; /* purple_timeout_add handle */
+	PurpleUtilFetchUrlData *gfud;
+};
 
-static GaimUPnPControlInfo control_info = {
-	GAIM_UPNP_STATUS_UNDISCOVERED,
+static PurpleUPnPControlInfo control_info = {
+	PURPLE_UPNP_STATUS_UNDISCOVERED,
 	NULL, "\0", "\0", "\0", 0};
 
 static GSList *discovery_callbacks = NULL;
 
-static void gaim_upnp_discover_send_broadcast(UPnPDiscoveryData *dd);
+static void purple_upnp_discover_send_broadcast(UPnPDiscoveryData *dd);
 static void lookup_public_ip(void);
 static void lookup_internal_ip(void);
+
+static gboolean
+fire_ar_cb_async_and_free(gpointer data)
+{
+	UPnPMappingAddRemove *ar = data;
+	if (ar) {
+		if (ar->cb)
+			ar->cb(ar->success, ar->cb_data);
+		g_free(ar);
+	}
+
+	return FALSE;
+}
 
 static void
 fire_discovery_callbacks(gboolean success)
 {
 	while(discovery_callbacks) {
 		gpointer data;
-		GaimUPnPCallback cb = discovery_callbacks->data;
-		discovery_callbacks = g_slist_remove(discovery_callbacks, cb);
+		PurpleUPnPCallback cb = discovery_callbacks->data;
+		discovery_callbacks = g_slist_delete_link(discovery_callbacks, discovery_callbacks);
 		data = discovery_callbacks->data;
-		discovery_callbacks = g_slist_remove(discovery_callbacks, data);
+		discovery_callbacks = g_slist_delete_link(discovery_callbacks, discovery_callbacks);
 		cb(success, data);
 	}
 }
 
 static gboolean
-gaim_upnp_compare_device(const xmlnode* device, const gchar* deviceType)
+purple_upnp_compare_device(const xmlnode* device, const gchar* deviceType)
 {
 	xmlnode* deviceTypeNode = xmlnode_get_child(device, "deviceType");
 	char *tmp;
@@ -181,7 +202,7 @@ gaim_upnp_compare_device(const xmlnode* device, const gchar* deviceType)
 }
 
 static gboolean
-gaim_upnp_compare_service(const xmlnode* service, const gchar* serviceType)
+purple_upnp_compare_service(const xmlnode* service, const gchar* serviceType)
 {
 	xmlnode* serviceTypeNode;
 	char *tmp;
@@ -205,7 +226,7 @@ gaim_upnp_compare_service(const xmlnode* service, const gchar* serviceType)
 }
 
 static gchar*
-gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
+purple_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	const gchar* httpURL, const gchar* serviceType)
 {
 	gchar *xmlRoot, *baseURL, *controlURL, *service;
@@ -214,14 +235,14 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 
 	/* make sure we have a valid http response */
 	if(g_strstr_len(httpResponse, len, HTTP_OK) == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): Failed In HTTP_OK\n");
 		return NULL;
 	}
 
 	/* find the root of the xml document */
 	if((xmlRoot = g_strstr_len(httpResponse, len, "<root")) == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): Failed finding root\n");
 		return NULL;
 	}
@@ -229,7 +250,7 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	/* create the xml root node */
 	if((xmlRootNode = xmlnode_from_str(xmlRoot,
 			len - (xmlRoot - httpResponse))) == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): Could not parse xml root node\n");
 		return NULL;
 	}
@@ -245,13 +266,13 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 
 	/* get urn:schemas-upnp-org:device:InternetGatewayDevice:1 and its devicelist */
 	serviceTypeNode = xmlnode_get_child(xmlRootNode, "device");
-	while(!gaim_upnp_compare_device(serviceTypeNode,
+	while(!purple_upnp_compare_device(serviceTypeNode,
 			"urn:schemas-upnp-org:device:InternetGatewayDevice:1") &&
 			serviceTypeNode != NULL) {
 		serviceTypeNode = xmlnode_get_next_twin(serviceTypeNode);
 	}
 	if(serviceTypeNode == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): could not get serviceTypeNode 1\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -259,7 +280,7 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	}
 	serviceTypeNode = xmlnode_get_child(serviceTypeNode, "deviceList");
 	if(serviceTypeNode == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): could not get serviceTypeNode 2\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -268,13 +289,13 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 
 	/* get urn:schemas-upnp-org:device:WANDevice:1 and its devicelist */
 	serviceTypeNode = xmlnode_get_child(serviceTypeNode, "device");
-	while(!gaim_upnp_compare_device(serviceTypeNode,
+	while(!purple_upnp_compare_device(serviceTypeNode,
 			"urn:schemas-upnp-org:device:WANDevice:1") &&
 			serviceTypeNode != NULL) {
 		serviceTypeNode = xmlnode_get_next_twin(serviceTypeNode);
 	}
 	if(serviceTypeNode == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): could not get serviceTypeNode 3\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -282,7 +303,7 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	}
 	serviceTypeNode = xmlnode_get_child(serviceTypeNode, "deviceList");
 	if(serviceTypeNode == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): could not get serviceTypeNode 4\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -291,12 +312,12 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 
 	/* get urn:schemas-upnp-org:device:WANConnectionDevice:1 and its servicelist */
 	serviceTypeNode = xmlnode_get_child(serviceTypeNode, "device");
-	while(serviceTypeNode && !gaim_upnp_compare_device(serviceTypeNode,
+	while(serviceTypeNode && !purple_upnp_compare_device(serviceTypeNode,
 			"urn:schemas-upnp-org:device:WANConnectionDevice:1")) {
 		serviceTypeNode = xmlnode_get_next_twin(serviceTypeNode);
 	}
 	if(serviceTypeNode == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): could not get serviceTypeNode 5\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -304,7 +325,7 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	}
 	serviceTypeNode = xmlnode_get_child(serviceTypeNode, "serviceList");
 	if(serviceTypeNode == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): could not get serviceTypeNode 6\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -314,14 +335,14 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	/* get the serviceType variable passed to this function */
 	service = g_strdup_printf(SEARCH_REQUEST_DEVICE, serviceType);
 	serviceTypeNode = xmlnode_get_child(serviceTypeNode, "service");
-	while(!gaim_upnp_compare_service(serviceTypeNode, service) &&
+	while(!purple_upnp_compare_service(serviceTypeNode, service) &&
 			serviceTypeNode != NULL) {
 		serviceTypeNode = xmlnode_get_next_twin(serviceTypeNode);
 	}
 
 	g_free(service);
 	if(serviceTypeNode == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): could not get serviceTypeNode 7\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -331,7 +352,7 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	/* get the controlURL of the service */
 	if((controlURLNode = xmlnode_get_child(serviceTypeNode,
 			"controlURL")) == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_description_response(): Could not find controlURL\n");
 		g_free(baseURL);
 		xmlnode_free(xmlRootNode);
@@ -339,8 +360,8 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	}
 
 	tmp = xmlnode_get_data(controlURLNode);
-	if(baseURL && !gaim_str_has_prefix(tmp, "http://") &&
-	   !gaim_str_has_prefix(tmp, "HTTP://")) {
+	if(baseURL && !purple_str_has_prefix(tmp, "http://") &&
+	   !purple_str_has_prefix(tmp, "HTTP://")) {
 		/* Handle absolute paths in a relative URL.  This probably
 		 * belongs in util.c. */
 		if (tmp[0] == '/') {
@@ -349,7 +370,7 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 			start = start ? start + 3 : baseURL;
 			path = strchr(start, '/');
 			length = path ? path - baseURL : strlen(baseURL);
-			controlURL = g_strdup_printf("%.*s%s", length, baseURL, tmp);
+			controlURL = g_strdup_printf("%.*s%s", (int)length, baseURL, tmp);
 		} else {
 			controlURL = g_strdup_printf("%s%s", baseURL, tmp);
 		}
@@ -364,25 +385,25 @@ gaim_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 }
 
 static void
-upnp_parse_description_cb(GaimUtilFetchUrlData *url_data, gpointer user_data,
+upnp_parse_description_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 		const gchar *httpResponse, gsize len, const gchar *error_message)
 {
 	UPnPDiscoveryData *dd = user_data;
 	gchar *control_url = NULL;
 
 	if (len > 0)
-		control_url = gaim_upnp_parse_description_response(
+		control_url = purple_upnp_parse_description_response(
 			httpResponse, len, dd->full_url, dd->service_type);
 
 	g_free(dd->full_url);
 
 	if(control_url == NULL) {
-		gaim_debug_error("upnp",
-			"gaim_upnp_parse_description(): control URL is NULL\n");
+		purple_debug_error("upnp",
+			"purple_upnp_parse_description(): control URL is NULL\n");
 	}
 
-	control_info.status = control_url ? GAIM_UPNP_STATUS_DISCOVERED
-		: GAIM_UPNP_STATUS_UNABLE_TO_DISCOVER;
+	control_info.status = control_url ? PURPLE_UPNP_STATUS_DISCOVERED
+		: PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER;
 	control_info.lookup_time = time(NULL);
 	control_info.control_url = control_url;
 	strncpy(control_info.service_type, dd->service_type,
@@ -396,11 +417,16 @@ upnp_parse_description_cb(GaimUtilFetchUrlData *url_data, gpointer user_data,
 		lookup_internal_ip();
 	}
 
+	if (dd->inpa > 0)
+		purple_input_remove(dd->inpa);
+	if (dd->tima > 0)
+		purple_timeout_remove(dd->tima);
+
 	g_free(dd);
 }
 
 static void
-gaim_upnp_parse_description(const gchar* descriptionURL, UPnPDiscoveryData *dd)
+purple_upnp_parse_description(const gchar* descriptionURL, UPnPDiscoveryData *dd)
 {
 	gchar* httpRequest;
 	gchar* descriptionXMLAddress;
@@ -411,7 +437,7 @@ gaim_upnp_parse_description(const gchar* descriptionURL, UPnPDiscoveryData *dd)
 	   example description URL: http://192.168.1.1:5678/rootDesc.xml */
 
 	/* parse the url into address, port, path variables */
-	if(!gaim_url_parse(descriptionURL, &descriptionAddress,
+	if(!purple_url_parse(descriptionURL, &descriptionAddress,
 			&port, &descriptionXMLAddress, NULL, NULL)) {
 		return;
 	}
@@ -435,18 +461,18 @@ gaim_upnp_parse_description(const gchar* descriptionURL, UPnPDiscoveryData *dd)
 
 	/* Remove the timeout because everything it is waiting for has
 	 * successfully completed */
-	gaim_timeout_remove(dd->tima);
+	purple_timeout_remove(dd->tima);
 	dd->tima = 0;
 
-	gaim_util_fetch_url_request(descriptionURL, TRUE, NULL, TRUE, httpRequest,
-			TRUE, upnp_parse_description_cb, dd);
+	purple_util_fetch_url_request(NULL, descriptionURL, TRUE, NULL, TRUE, httpRequest,
+			TRUE, MAX_UPNP_DOWNLOAD, upnp_parse_description_cb, dd);
 
 	g_free(httpRequest);
 
 }
 
 static void
-gaim_upnp_parse_discover_response(const gchar* buf, unsigned int buf_len,
+purple_upnp_parse_discover_response(const gchar* buf, unsigned int buf_len,
 	UPnPDiscoveryData *dd)
 {
 	gchar* startDescURL;
@@ -454,13 +480,13 @@ gaim_upnp_parse_discover_response(const gchar* buf, unsigned int buf_len,
 	gchar* descURL;
 
 	if(g_strstr_len(buf, buf_len, HTTP_OK) == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_discover_response(): Failed In HTTP_OK\n");
 		return;
 	}
 
 	if((startDescURL = g_strstr_len(buf, buf_len, "http://")) == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_discover_response(): Failed In finding http://\n");
 		return;
 	}
@@ -471,7 +497,7 @@ gaim_upnp_parse_discover_response(const gchar* buf, unsigned int buf_len,
 		endDescURL = g_strstr_len(startDescURL,
 				buf_len - (startDescURL - buf), "\n");
 		if(endDescURL == NULL) {
-			gaim_debug_error("upnp",
+			purple_debug_error("upnp",
 				"parse_discover_response(): Failed In endDescURL\n");
 			return;
 		}
@@ -479,38 +505,40 @@ gaim_upnp_parse_discover_response(const gchar* buf, unsigned int buf_len,
 
 	/* XXX: I'm not sure how this could ever happen */
 	if(endDescURL == startDescURL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"parse_discover_response(): endDescURL == startDescURL\n");
 		return;
 	}
 
 	descURL = g_strndup(startDescURL, endDescURL - startDescURL);
 
-	gaim_upnp_parse_description(descURL, dd);
+	purple_upnp_parse_description(descURL, dd);
 
 	g_free(descURL);
 
 }
 
 static gboolean
-gaim_upnp_discover_timeout(gpointer data)
+purple_upnp_discover_timeout(gpointer data)
 {
 	UPnPDiscoveryData* dd = data;
 
 	if (dd->inpa)
-		gaim_input_remove(dd->inpa);
+		purple_input_remove(dd->inpa);
+	if (dd->tima > 0)
+		purple_timeout_remove(dd->tima);
 	dd->inpa = 0;
 	dd->tima = 0;
 
 	if (dd->retry_count < NUM_UDP_ATTEMPTS) {
 		/* TODO: We probably shouldn't be incrementing retry_count in two places */
 		dd->retry_count++;
-		gaim_upnp_discover_send_broadcast(dd);
+		purple_upnp_discover_send_broadcast(dd);
 	} else {
-		if (dd->fd)
+		if (dd->fd != -1)
 			close(dd->fd);
 
-		control_info.status = GAIM_UPNP_STATUS_UNABLE_TO_DISCOVER;
+		control_info.status = PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER;
 		control_info.lookup_time = time(NULL);
 		control_info.service_type[0] = '\0';
 		g_free(control_info.control_url);
@@ -525,7 +553,7 @@ gaim_upnp_discover_timeout(gpointer data)
 }
 
 static void
-gaim_upnp_discover_udp_read(gpointer data, gint sock, GaimInputCondition cond)
+purple_upnp_discover_udp_read(gpointer data, gint sock, PurpleInputCondition cond)
 {
 	int len;
 	UPnPDiscoveryData *dd = data;
@@ -535,7 +563,7 @@ gaim_upnp_discover_udp_read(gpointer data, gint sock, GaimInputCondition cond)
 		len = recv(dd->fd, buf,
 			sizeof(buf) - 1, 0);
 
-		if(len > 0) {
+		if(len >= 0) {
 			buf[len] = '\0';
 			break;
 		} else if(errno != EINTR) {
@@ -544,23 +572,23 @@ gaim_upnp_discover_udp_read(gpointer data, gint sock, GaimInputCondition cond)
 		}
 	} while (errno == EINTR);
 
-	gaim_input_remove(dd->inpa);
+	purple_input_remove(dd->inpa);
 	dd->inpa = 0;
 
 	close(dd->fd);
-	dd->fd = 0;
+	dd->fd = -1;
 
 	/* parse the response, and see if it was a success */
-	gaim_upnp_parse_discover_response(buf, len, dd);
+	purple_upnp_parse_discover_response(buf, len, dd);
 
 	/* We'll either time out or continue successfully */
 }
 
 static void
-gaim_upnp_discover_send_broadcast(UPnPDiscoveryData *dd)
+purple_upnp_discover_send_broadcast(UPnPDiscoveryData *dd)
 {
 	gchar *sendMessage = NULL;
-	gsize totalSize;
+	size_t totalSize;
 	gboolean sentSuccess;
 
 	/* because we are sending over UDP, if there is a failure
@@ -592,10 +620,10 @@ gaim_upnp_discover_send_broadcast(UPnPDiscoveryData *dd)
 		g_free(sendMessage);
 
 		if(sentSuccess) {
-			dd->tima = gaim_timeout_add(DISCOVERY_TIMEOUT,
-				gaim_upnp_discover_timeout, dd);
-			dd->inpa = gaim_input_add(dd->fd, GAIM_INPUT_READ,
-				gaim_upnp_discover_udp_read, dd);
+			dd->tima = purple_timeout_add(DISCOVERY_TIMEOUT,
+				purple_upnp_discover_timeout, dd);
+			dd->inpa = purple_input_add(dd->fd, PURPLE_INPUT_READ,
+				purple_upnp_discover_udp_read, dd);
 
 			return;
 		}
@@ -603,11 +631,11 @@ gaim_upnp_discover_send_broadcast(UPnPDiscoveryData *dd)
 
 	/* We have already done all our retries. Make sure that the callback
 	 * doesn't get called before the original function returns */
-	gaim_timeout_add(10, gaim_upnp_discover_timeout, dd);
+	dd->tima = purple_timeout_add(10, purple_upnp_discover_timeout, dd);
 }
 
 void
-gaim_upnp_discover(GaimUPnPCallback cb, gpointer cb_data)
+purple_upnp_discover(PurpleUPnPCallback cb, gpointer cb_data)
 {
 	/* Socket Setup Variables */
 	int sock;
@@ -616,7 +644,7 @@ gaim_upnp_discover(GaimUPnPCallback cb, gpointer cb_data)
 	/* UDP RECEIVE VARIABLES */
 	UPnPDiscoveryData *dd;
 
-	if (control_info.status == GAIM_UPNP_STATUS_DISCOVERING) {
+	if (control_info.status == PURPLE_UPNP_STATUS_DISCOVERING) {
 		if (cb) {
 			discovery_callbacks = g_slist_append(
 					discovery_callbacks, cb);
@@ -634,25 +662,23 @@ gaim_upnp_discover(GaimUPnPCallback cb, gpointer cb_data)
 	}
 
 	/* Set up the sockets */
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	dd->fd = sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if(sock == -1) {
-		gaim_debug_error("upnp",
-			"gaim_upnp_discover(): Failed In sock creation\n");
+		purple_debug_error("upnp",
+			"purple_upnp_discover(): Failed In sock creation\n");
 		/* Short circuit the retry attempts */
 		dd->retry_count = NUM_UDP_ATTEMPTS;
-		gaim_timeout_add(10, gaim_upnp_discover_timeout, dd);
+		dd->tima = purple_timeout_add(10, purple_upnp_discover_timeout, dd);
 		return;
 	}
 
-	dd->fd = sock;
-
 	/* TODO: Non-blocking! */
 	if((hp = gethostbyname(HTTPMU_HOST_ADDRESS)) == NULL) {
-		gaim_debug_error("upnp",
-			"gaim_upnp_discover(): Failed In gethostbyname\n");
+		purple_debug_error("upnp",
+			"purple_upnp_discover(): Failed In gethostbyname\n");
 		/* Short circuit the retry attempts */
 		dd->retry_count = NUM_UDP_ATTEMPTS;
-		gaim_timeout_add(10, gaim_upnp_discover_timeout, dd);
+		dd->tima = purple_timeout_add(10, purple_upnp_discover_timeout, dd);
 		return;
 	}
 
@@ -661,17 +687,17 @@ gaim_upnp_discover(GaimUPnPCallback cb, gpointer cb_data)
 	memcpy(&(dd->server.sin_addr), hp->h_addr_list[0], hp->h_length);
 	dd->server.sin_port = htons(HTTPMU_HOST_PORT);
 
-	control_info.status = GAIM_UPNP_STATUS_DISCOVERING;
+	control_info.status = PURPLE_UPNP_STATUS_DISCOVERING;
 
-	gaim_upnp_discover_send_broadcast(dd);
+	purple_upnp_discover_send_broadcast(dd);
 }
 
-static void
-gaim_upnp_generate_action_message_and_send(const gchar* actionName,
-		const gchar* actionParams, GaimUtilFetchUrlCallback cb,
+static PurpleUtilFetchUrlData*
+purple_upnp_generate_action_message_and_send(const gchar* actionName,
+		const gchar* actionParams, PurpleUtilFetchUrlCallback cb,
 		gpointer cb_data)
 {
-
+	PurpleUtilFetchUrlData* gfud;
 	gchar* soapMessage;
 	gchar* totalSendMessage;
 	gchar* pathOfControl;
@@ -679,13 +705,14 @@ gaim_upnp_generate_action_message_and_send(const gchar* actionName,
 	int port = 0;
 
 	/* parse the url into address, port, path variables */
-	if(!gaim_url_parse(control_info.control_url, &addressOfControl,
+	if(!purple_url_parse(control_info.control_url, &addressOfControl,
 			&port, &pathOfControl, NULL, NULL)) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"generate_action_message_and_send(): Failed In Parse URL\n");
 		/* XXX: This should probably be async */
 		if(cb)
 			cb(NULL, cb_data, NULL, 0, NULL);
+		return NULL;
 	}
 	if(port == 0 || port == -1) {
 		port = DEFAULT_HTTP_PORT;
@@ -703,32 +730,34 @@ gaim_upnp_generate_action_message_and_send(const gchar* actionName,
 	g_free(pathOfControl);
 	g_free(soapMessage);
 
-	gaim_util_fetch_url_request(control_info.control_url, FALSE, NULL, TRUE,
-			totalSendMessage, TRUE, cb, cb_data);
+	gfud = purple_util_fetch_url_request(NULL, control_info.control_url, FALSE, NULL, TRUE,
+				totalSendMessage, TRUE, MAX_UPNP_DOWNLOAD, cb, cb_data);
 
 	g_free(totalSendMessage);
 	g_free(addressOfControl);
+
+	return gfud;
 }
 
 const gchar *
-gaim_upnp_get_public_ip()
+purple_upnp_get_public_ip()
 {
-	if (control_info.status == GAIM_UPNP_STATUS_DISCOVERED
+	if (control_info.status == PURPLE_UPNP_STATUS_DISCOVERED
 			&& control_info.publicip
-			&& strlen(control_info.publicip) > 0)
+			&& *control_info.publicip)
 		return control_info.publicip;
 
 	/* Trigger another UPnP discovery if 5 minutes have elapsed since the
 	 * last one, and it wasn't successful */
-	if (control_info.status < GAIM_UPNP_STATUS_DISCOVERING
+	if (control_info.status < PURPLE_UPNP_STATUS_DISCOVERING
 			&& (time(NULL) - control_info.lookup_time) > 300)
-		gaim_upnp_discover(NULL, NULL);
+		purple_upnp_discover(NULL, NULL);
 
 	return NULL;
 }
 
 static void
-looked_up_public_ip_cb(GaimUtilFetchUrlData *url_data, gpointer user_data,
+looked_up_public_ip_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 		const gchar *httpResponse, gsize len, const gchar *error_message)
 {
 	gchar* temp, *temp2;
@@ -739,17 +768,17 @@ looked_up_public_ip_cb(GaimUtilFetchUrlData *url_data, gpointer user_data,
 	/* extract the ip, or see if there is an error */
 	if((temp = g_strstr_len(httpResponse, len,
 			"<NewExternalIPAddress")) == NULL) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"looked_up_public_ip_cb(): Failed Finding <NewExternalIPAddress\n");
 		return;
 	}
 	if(!(temp = g_strstr_len(temp, len - (temp - httpResponse), ">"))) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"looked_up_public_ip_cb(): Failed In Finding >\n");
 		return;
 	}
 	if(!(temp2 = g_strstr_len(temp, len - (temp - httpResponse), "<"))) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"looked_up_public_ip_cb(): Failed In Finding <\n");
 		return;
 	}
@@ -758,30 +787,30 @@ looked_up_public_ip_cb(GaimUtilFetchUrlData *url_data, gpointer user_data,
 	strncpy(control_info.publicip, temp + 1,
 			sizeof(control_info.publicip));
 
-	gaim_debug_info("upnp", "NAT Returned IP: %s\n", control_info.publicip);
+	purple_debug_info("upnp", "NAT Returned IP: %s\n", control_info.publicip);
 }
 
 static void
 lookup_public_ip()
 {
-	gaim_upnp_generate_action_message_and_send("GetExternalIPAddress", "",
+	purple_upnp_generate_action_message_and_send("GetExternalIPAddress", "",
 			looked_up_public_ip_cb, NULL);
 }
 
 /* TODO: This could be exported */
 static const gchar *
-gaim_upnp_get_internal_ip()
+purple_upnp_get_internal_ip(void)
 {
-	if (control_info.status == GAIM_UPNP_STATUS_DISCOVERED
+	if (control_info.status == PURPLE_UPNP_STATUS_DISCOVERED
 			&& control_info.internalip
-			&& strlen(control_info.internalip) > 0)
+			&& *control_info.internalip)
 		return control_info.internalip;
 
 	/* Trigger another UPnP discovery if 5 minutes have elapsed since the
 	 * last one, and it wasn't successful */
-	if (control_info.status < GAIM_UPNP_STATUS_DISCOVERING
+	if (control_info.status < PURPLE_UPNP_STATUS_DISCOVERING
 			&& (time(NULL) - control_info.lookup_time) > 300)
-		gaim_upnp_discover(NULL, NULL);
+		purple_upnp_discover(NULL, NULL);
 
 	return NULL;
 }
@@ -789,15 +818,15 @@ gaim_upnp_get_internal_ip()
 static void
 looked_up_internal_ip_cb(gpointer data, gint source, const gchar *error_message)
 {
-	if (source) {
+	if (source != -1) {
 		strncpy(control_info.internalip,
-			gaim_network_get_local_system_ip(source),
+			purple_network_get_local_system_ip(source),
 			sizeof(control_info.internalip));
-		gaim_debug_info("upnp", "Local IP: %s\n",
+		purple_debug_info("upnp", "Local IP: %s\n",
 				control_info.internalip);
 		close(source);
 	} else
-		gaim_debug_info("upnp", "Unable to look up local IP\n");
+		purple_debug_error("upnp", "Unable to look up local IP\n");
 
 }
 
@@ -807,9 +836,9 @@ lookup_internal_ip()
 	gchar* addressOfControl;
 	int port = 0;
 
-	if(!gaim_url_parse(control_info.control_url, &addressOfControl, &port,
+	if(!purple_url_parse(control_info.control_url, &addressOfControl, &port,
 			NULL, NULL, NULL)) {
-		gaim_debug_error("upnp",
+		purple_debug_error("upnp",
 			"lookup_internal_ip(): Failed In Parse URL\n");
 		return;
 	}
@@ -817,10 +846,10 @@ lookup_internal_ip()
 		port = DEFAULT_HTTP_PORT;
 	}
 
-	if(gaim_proxy_connect(NULL, NULL, addressOfControl, port,
+	if(purple_proxy_connect(NULL, NULL, addressOfControl, port,
 			looked_up_internal_ip_cb, NULL) == NULL)
 	{
-		gaim_debug_error("upnp", "Get Local IP Connect Failed: Address: %s @@@ Port %d\n",
+		purple_debug_error("upnp", "Get Local IP Connect Failed: Address: %s @@@ Port %d\n",
 			addressOfControl, port);
 	}
 
@@ -828,7 +857,7 @@ lookup_internal_ip()
 }
 
 static void
-done_port_mapping_cb(GaimUtilFetchUrlData *url_data, gpointer user_data,
+done_port_mapping_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 		const gchar *httpResponse, gsize len, const gchar *error_message)
 {
 	UPnPMappingAddRemove *ar = user_data;
@@ -839,16 +868,15 @@ done_port_mapping_cb(GaimUtilFetchUrlData *url_data, gpointer user_data,
 	if ((error_message != NULL) || (httpResponse == NULL) ||
 		(g_strstr_len(httpResponse, len, HTTP_OK) == NULL))
 	{
-		gaim_debug_error("upnp",
-			"gaim_upnp_set_port_mapping(): Failed HTTP_OK\n%s\n",
+		purple_debug_error("upnp",
+			"purple_upnp_set_port_mapping(): Failed HTTP_OK\n%s\n",
 			httpResponse ? httpResponse : "(null)");
 		success =  FALSE;
 	} else
-		gaim_debug_info("upnp", "Successfully completed port mapping operation\n");
+		purple_debug_info("upnp", "Successfully completed port mapping operation\n");
 
-	if (ar->cb)
-		ar->cb(success, ar->cb_data);
-	g_free(ar);
+	ar->success = success;
+	ar->tima = purple_timeout_add(0, fire_ar_cb_async_and_free, ar);
 }
 
 static void
@@ -862,13 +890,11 @@ do_port_mapping_cb(gboolean has_control_mapping, gpointer data)
 		if(ar->add) {
 			const gchar *internal_ip;
 			/* get the internal IP */
-			if(!(internal_ip = gaim_upnp_get_internal_ip())) {
-				gaim_debug_error("upnp",
-					"gaim_upnp_set_port_mapping(): couldn't get local ip\n");
-				/* UGLY */
-				if (ar->cb)
-					ar->cb(FALSE, ar->cb_data);
-				g_free(ar);
+			if(!(internal_ip = purple_upnp_get_internal_ip())) {
+				purple_debug_error("upnp",
+					"purple_upnp_set_port_mapping(): couldn't get local ip\n");
+				ar->success = FALSE;
+				ar->tima = purple_timeout_add(0, fire_ar_cb_async_and_free, ar);
 				return;
 			}
 			strncpy(action_name, "AddPortMapping",
@@ -884,29 +910,60 @@ do_port_mapping_cb(gboolean has_control_mapping, gpointer data)
 				ar->portmap, ar->protocol);
 		}
 
-		gaim_upnp_generate_action_message_and_send(action_name,
-				action_params, done_port_mapping_cb, ar);
+		ar->gfud = purple_upnp_generate_action_message_and_send(action_name,
+						action_params, done_port_mapping_cb, ar);
 
 		g_free(action_params);
 		return;
 	}
 
-
-	if (ar->cb)
-		ar->cb(FALSE, ar->cb_data);
-	g_free(ar);
+	ar->success = FALSE;
+	ar->tima = purple_timeout_add(0, fire_ar_cb_async_and_free, ar);
 }
 
 static gboolean
 fire_port_mapping_failure_cb(gpointer data)
 {
+	UPnPMappingAddRemove *ar = data;
+
+	ar->tima = 0;
 	do_port_mapping_cb(FALSE, data);
 	return FALSE;
 }
 
-void
-gaim_upnp_set_port_mapping(unsigned short portmap, const gchar* protocol,
-		GaimUPnPCallback cb, gpointer cb_data)
+void purple_upnp_cancel_port_mapping(UPnPMappingAddRemove *ar)
+{
+	GSList *l;
+
+	/* Remove ar from discovery_callbacks if present; it was inserted after a cb.
+	 * The same cb may be in the list multiple times, so be careful to remove
+	 * the one associated with ar. */
+	l = discovery_callbacks;
+	while (l)
+	{
+		GSList *next = l->next;
+
+		if (next && (next->data == ar)) {
+			discovery_callbacks = g_slist_delete_link(discovery_callbacks, next);
+			next = l->next;
+			discovery_callbacks = g_slist_delete_link(discovery_callbacks, l);
+		}
+
+		l = next;
+	}
+
+	if (ar->tima > 0)
+		purple_timeout_remove(ar->tima);
+
+	if (ar->gfud)
+		purple_util_fetch_url_cancel(ar->gfud);
+
+	g_free(ar);
+}
+
+UPnPMappingAddRemove *
+purple_upnp_set_port_mapping(unsigned short portmap, const gchar* protocol,
+		PurpleUPnPCallback cb, gpointer cb_data)
 {
 	UPnPMappingAddRemove *ar;
 
@@ -918,40 +975,42 @@ gaim_upnp_set_port_mapping(unsigned short portmap, const gchar* protocol,
 	strncpy(ar->protocol, protocol, sizeof(ar->protocol));
 
 	/* If we're waiting for a discovery, add to the callbacks list */
-	if(control_info.status == GAIM_UPNP_STATUS_DISCOVERING) {
+	if(control_info.status == PURPLE_UPNP_STATUS_DISCOVERING) {
 		/* TODO: This will fail because when this cb is triggered,
 		 * the internal IP lookup won't be complete */
 		discovery_callbacks = g_slist_append(
 				discovery_callbacks, do_port_mapping_cb);
 		discovery_callbacks = g_slist_append(
 				discovery_callbacks, ar);
-		return;
+		return ar;
 	}
 
 	/* If we haven't had a successful UPnP discovery, check if 5 minutes has
 	 * elapsed since the last try, try again */
-	if(control_info.status == GAIM_UPNP_STATUS_UNDISCOVERED ||
-			(control_info.status == GAIM_UPNP_STATUS_UNABLE_TO_DISCOVER
+	if(control_info.status == PURPLE_UPNP_STATUS_UNDISCOVERED ||
+			(control_info.status == PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER
 			 && (time(NULL) - control_info.lookup_time) > 300)) {
-		gaim_upnp_discover(do_port_mapping_cb, ar);
-		return;
-	} else if(control_info.status == GAIM_UPNP_STATUS_UNABLE_TO_DISCOVER) {
+		purple_upnp_discover(do_port_mapping_cb, ar);
+		return ar;
+	} else if(control_info.status == PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER) {
 		if (cb) {
 			/* Asynchronously trigger a failed response */
-			gaim_timeout_add(10, fire_port_mapping_failure_cb, ar);
+			ar->tima = purple_timeout_add(10, fire_port_mapping_failure_cb, ar);
 		} else {
 			/* No need to do anything if nobody expects a response*/
 			g_free(ar);
+			ar = NULL;
 		}
-		return;
+		return ar;
 	}
 
 	do_port_mapping_cb(TRUE, ar);
+	return ar;
 }
 
-void
-gaim_upnp_remove_port_mapping(unsigned short portmap, const char* protocol,
-		GaimUPnPCallback cb, gpointer cb_data)
+UPnPMappingAddRemove *
+purple_upnp_remove_port_mapping(unsigned short portmap, const char* protocol,
+		PurpleUPnPCallback cb, gpointer cb_data)
 {
 	UPnPMappingAddRemove *ar;
 
@@ -963,31 +1022,62 @@ gaim_upnp_remove_port_mapping(unsigned short portmap, const char* protocol,
 	strncpy(ar->protocol, protocol, sizeof(ar->protocol));
 
 	/* If we're waiting for a discovery, add to the callbacks list */
-	if(control_info.status == GAIM_UPNP_STATUS_DISCOVERING) {
+	if(control_info.status == PURPLE_UPNP_STATUS_DISCOVERING) {
 		discovery_callbacks = g_slist_append(
 				discovery_callbacks, do_port_mapping_cb);
 		discovery_callbacks = g_slist_append(
 				discovery_callbacks, ar);
-		return;
+		return ar;
 	}
 
 	/* If we haven't had a successful UPnP discovery, check if 5 minutes has
 	 * elapsed since the last try, try again */
-	if(control_info.status == GAIM_UPNP_STATUS_UNDISCOVERED ||
-			(control_info.status == GAIM_UPNP_STATUS_UNABLE_TO_DISCOVER
+	if(control_info.status == PURPLE_UPNP_STATUS_UNDISCOVERED ||
+			(control_info.status == PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER
 			 && (time(NULL) - control_info.lookup_time) > 300)) {
-		gaim_upnp_discover(do_port_mapping_cb, ar);
-		return;
-	} else if(control_info.status == GAIM_UPNP_STATUS_UNABLE_TO_DISCOVER) {
+		purple_upnp_discover(do_port_mapping_cb, ar);
+		return ar;
+	} else if(control_info.status == PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER) {
 		if (cb) {
 			/* Asynchronously trigger a failed response */
-			gaim_timeout_add(10, fire_port_mapping_failure_cb, ar);
+			ar->tima = purple_timeout_add(10, fire_port_mapping_failure_cb, ar);
 		} else {
 			/* No need to do anything if nobody expects a response*/
 			g_free(ar);
+			ar = NULL;
 		}
-		return;
+		return ar;
 	}
 
 	do_port_mapping_cb(TRUE, ar);
+	return ar;
+}
+
+static void
+purple_upnp_network_config_changed_cb(void *data)
+{
+	/* Reset the control_info to default values */
+	control_info.status = PURPLE_UPNP_STATUS_UNDISCOVERED;
+	g_free(control_info.control_url);
+	control_info.control_url = NULL;
+	control_info.service_type[0] = '\0';
+	control_info.publicip[0] = '\0';
+	control_info.internalip[0] = '\0';
+	control_info.lookup_time = 0;
+}
+
+static void*
+purple_upnp_get_handle(void)
+{
+	static int handle;
+
+	return &handle;
+}
+
+void
+purple_upnp_init()
+{
+	purple_signal_connect(purple_network_get_handle(), "network-configuration-changed",
+						  purple_upnp_get_handle(), PURPLE_CALLBACK(purple_upnp_network_config_changed_cb),
+						  NULL);
 }

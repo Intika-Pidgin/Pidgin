@@ -1,10 +1,11 @@
 /**
- * @file gtkeventloop.h Gaim GTK+ Event Loop Implementation
- * @ingroup gtkui
+ * @file gtkeventloop.h Pidgin GTK+ Event Loop Implementation
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,18 +21,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTKEVENTLOOP_H_
-#define _GAIM_GTKEVENTLOOP_H_
+#ifndef _PIDGINEVENTLOOP_H_
+#define _PIDGINEVENTLOOP_H_
 
 #include "eventloop.h"
+
+G_BEGIN_DECLS
 
 /**
  * Returns the GTK+ event loop UI operations structure.
  *
  * @return The GTK+ event loop UI operations structure.
  */
-GaimEventLoopUiOps *gaim_gtk_eventloop_get_ui_ops(void);
+PurpleEventLoopUiOps *pidgin_eventloop_get_ui_ops(void);
 
-#endif /* _GAIM_GTKEVENTLOOP_H_ */
+G_END_DECLS
+
+#endif /* _PIDGINEVENTLOOP_H_ */

@@ -1,10 +1,11 @@
 /**
  * @file xmlnode.h XML DOM functions
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,19 +21,17 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_XMLNODE_H_
-#define _GAIM_XMLNODE_H_
+#ifndef _PURPLE_XMLNODE_H_
+#define _PURPLE_XMLNODE_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <glib.h>
 
 /**
  * The valid types for an xmlnode
  */
-typedef enum _XMLNodeType
+typedef enum
 {
 	XMLNODE_TYPE_TAG,		/**< Just a tag */
 	XMLNODE_TYPE_ATTRIB,		/**< Has attributes */
@@ -50,11 +49,15 @@ struct _xmlnode
 	XMLNodeType type;		/**< The type of the node. */
 	char *data;			/**< The data for the node. */
 	size_t data_sz;			/**< The size of the data. */
-	struct _xmlnode *parent;	/**< The parent node or @c NULL.*/
-	struct _xmlnode *child;		/**< The child node or @c NULL.*/
-	struct _xmlnode *lastchild;	/**< The last child node or @c NULL.*/
-	struct _xmlnode *next;		/**< The next node or @c NULL. */
+	xmlnode *parent;            /**< The parent node or @c NULL.*/
+	xmlnode *child;             /**< The child node or @c NULL.*/
+	xmlnode *lastchild;         /**< The last child node or @c NULL.*/
+	xmlnode *next;              /**< The next node or @c NULL. */
+	char *prefix;               /**< The namespace prefix if any. */
+	GHashTable *namespace_map;  /**< The namespace map. */
 };
+
+G_BEGIN_DECLS
 
 /**
  * Creates a new xmlnode.
@@ -124,14 +127,24 @@ xmlnode *xmlnode_get_next_twin(xmlnode *node);
 void xmlnode_insert_data(xmlnode *node, const char *data, gssize size);
 
 /**
- * Gets data from a node.
+ * Gets (escaped) data from a node.
  *
  * @param node The node to get data from.
  *
- * @return The data from the node.  You must g_free
+ * @return The data from the node or NULL. This data is in raw escaped format.
+ *         You must g_free this string when finished using it.
+ */
+char *xmlnode_get_data(const xmlnode *node);
+
+/**
+ * Gets unescaped data from a node.
+ *
+ * @param node The node to get data from.
+ *
+ * @return The data from the node, in unescaped form.   You must g_free
  *         this string when finished using it.
  */
-char *xmlnode_get_data(xmlnode *node);
+char *xmlnode_get_data_unescaped(const xmlnode *node);
 
 /**
  * Sets an attribute for a node.
@@ -145,12 +158,14 @@ void xmlnode_set_attrib(xmlnode *node, const char *attr, const char *value);
 /**
  * Sets a namespaced attribute for a node
  *
- * @param node  The node to set an attribute for.
- * @param attr  The name of the attribute to set
- * @param xmlns The namespace of the attribute to ste
- * @param value The value of the attribute
+ * @param node   The node to set an attribute for.
+ * @param attr   The name of the attribute to set
+ * @param xmlns  The namespace of the attribute to set
+ * @param prefix The prefix of the attribute to set
+ * @param value  The value of the attribute
  */
-void xmlnode_set_attrib_with_namespace(xmlnode *node, const char *attr, const char *xmlns, const char *value);
+void xmlnode_set_attrib_full(xmlnode *node, const char *attr, const char *xmlns,
+	const char *prefix, const char *value);
 
 /**
  * Gets an attribute from a node.
@@ -160,7 +175,7 @@ void xmlnode_set_attrib_with_namespace(xmlnode *node, const char *attr, const ch
  *
  * @return The value of the attribute.
  */
-const char *xmlnode_get_attrib(xmlnode *node, const char *attr);
+const char *xmlnode_get_attrib(const xmlnode *node, const char *attr);
 
 /**
  * Gets a namespaced attribute from a node
@@ -171,7 +186,7 @@ const char *xmlnode_get_attrib(xmlnode *node, const char *attr);
  *
  * @return The value of the attribute/
  */
-const char *xmlnode_get_attrib_with_namespace(xmlnode *node, const char *attr, const char *xmlns);
+const char *xmlnode_get_attrib_with_namespace(const xmlnode *node, const char *attr, const char *xmlns);
 
 /**
  * Removes an attribute from a node.
@@ -204,7 +219,75 @@ void xmlnode_set_namespace(xmlnode *node, const char *xmlns);
  * @param node The node to get the namepsace from
  * @return The namespace of this node
  */
-const char *xmlnode_get_namespace(xmlnode *node);
+const char *xmlnode_get_namespace(const xmlnode *node);
+
+/**
+ * Returns the current default namespace.  The default
+ * namespace is the current namespace which applies to child
+ * elements which are unprefixed and which do not contain their
+ * own namespace.
+ *
+ * For example, given:
+ * \verbatim
+ * <iq type='get' xmlns='jabber:client' xmlns:ns1='http://example.org/ns1'>
+ *     <ns1:element><child1/></ns1:element>
+ * </iq>
+ * \endverbatim
+ *
+ * The default namespace of all nodes (including 'child1') is "jabber:client",
+ * though the namespace for 'element' is "http://example.org/ns1".
+ *
+ * @param node The node for which to return the default namespace
+ * @return The default namespace of this node
+ */
+const char *xmlnode_get_default_namespace(const xmlnode *node);
+
+/**
+ * Returns the defined namespace for a prefix.
+ *
+ * @param node The node from which to start the search.
+ * @param prefix The prefix for which to return the associated namespace.
+ * @return The namespace for this prefix.
+ */
+const char *xmlnode_get_prefix_namespace(const xmlnode *node, const char *prefix);
+
+/**
+ * Sets the prefix of a node
+ *
+ * @param node   The node to qualify
+ * @param prefix The prefix of the node
+ */
+void xmlnode_set_prefix(xmlnode *node, const char *prefix);
+
+/**
+ * Returns the prefix of a node
+ *
+ * @param node The node to get the prefix from
+ * @return The prefix of this node
+ */
+const char *xmlnode_get_prefix(const xmlnode *node);
+
+/**
+ * Remove all element prefixes from an xmlnode tree.  The prefix's
+ * namespace is transformed into the default namespace for an element.
+ *
+ * Note that this will not necessarily remove all prefixes in use
+ * (prefixed attributes may still exist), and that this usage may
+ * break some applications (SOAP / XPath apparently often rely on
+ * the prefixes having the same name.
+ *
+ * @param node The node from which to strip prefixes
+ */
+void xmlnode_strip_prefixes(xmlnode *node);
+
+/**
+ * Gets the parent node.
+ *
+ * @param child The child node.
+ *
+ * @return The parent or NULL.
+ */
+xmlnode *xmlnode_get_parent(const xmlnode *child);
 
 /**
  * Returns the node in a string of xml.
@@ -215,7 +298,7 @@ const char *xmlnode_get_namespace(xmlnode *node);
  * @return The node represented as a string.  You must
  *         g_free this string when finished using it.
  */
-char *xmlnode_to_str(xmlnode *node, int *len);
+char *xmlnode_to_str(const xmlnode *node, int *len);
 
 /**
  * Returns the node in a string of human readable xml.
@@ -227,7 +310,7 @@ char *xmlnode_to_str(xmlnode *node, int *len);
  *         tab and new line characters.  You must
  *         g_free this string when finished using it.
  */
-char *xmlnode_to_formatted_str(xmlnode *node, int *len);
+char *xmlnode_to_formatted_str(const xmlnode *node, int *len);
 
 /**
  * Creates a node from a string of XML.  Calling this on the
@@ -249,17 +332,33 @@ xmlnode *xmlnode_from_str(const char *str, gssize size);
  *
  * @return A new copy of the src node.
  */
-xmlnode *xmlnode_copy(xmlnode *src);
+xmlnode *xmlnode_copy(const xmlnode *src);
 
 /**
- * Frees a node and all of it's children.
+ * Frees a node and all of its children.
  *
  * @param node The node to free.
  */
 void xmlnode_free(xmlnode *node);
 
-#ifdef __cplusplus
-}
-#endif
+/**
+ * Creates a node from a XML File.  Calling this on the
+ * root node of an XML document will parse the entire document
+ * into a tree of nodes, and return the xmlnode of the root.
+ *
+ * @param dir  The directory where the file is located
+ * @param filename  The filename
+ * @param description  A description of the file being parsed. Displayed to
+ * 			the user if the file cannot be read.
+ * @param process  The subsystem that is calling xmlnode_from_file. Used as
+ * 			the category for debugging.
+ *
+ * @return The new node or NULL if an error occurred.
+ */
+xmlnode *xmlnode_from_file(const char *dir, const char *filename,
+			   const char *description, const char *process);
 
-#endif /* _GAIM_XMLNODE_H_ */
+G_END_DECLS
+
+#endif /* _PURPLE_XMLNODE_H_ */
+

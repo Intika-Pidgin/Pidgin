@@ -1,5 +1,5 @@
 /*
- * Evolution integration plugin for Gaim
+ * Evolution integration plugin for Purple
  *
  * Copyright (C) 2003 Christian Hammond.
  *
@@ -15,63 +15,72 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 #include "internal.h"
 #include "gtkblist.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 #include "gtkutils.h"
 
 #include "gevolution.h"
 
 void
-gevo_add_buddy(GaimAccount *account, const char *group_name,
-			   const char *screenname, const char *alias)
+gevo_add_buddy(PurpleAccount *account, const char *group_name,
+			   const char *buddy_name, const char *alias)
 {
-	GaimConversation *conv = NULL;
-	GaimBuddy *buddy;
-	GaimGroup *group;
+	PurpleConversation *conv = NULL;
+	PurpleBuddy *buddy;
+	PurpleGroup *group;
 
-	conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, screenname, account);
+	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy_name, account);
 
-	if ((group = gaim_find_group(group_name)) == NULL)
+	group = purple_find_group(group_name);
+	if (group == NULL)
 	{
-		group = gaim_group_new(group_name);
-		gaim_blist_add_group(group, NULL);
+		group = purple_group_new(group_name);
+		purple_blist_add_group(group, NULL);
 	}
 
-	buddy = gaim_buddy_new(account, screenname, alias);
-	gaim_blist_add_buddy(buddy, NULL, group, NULL);
-	gaim_account_add_buddy(account, buddy);
+	buddy = purple_find_buddy_in_group(account, buddy_name, group);
+	if (buddy == NULL)
+	{
+		buddy = purple_buddy_new(account, buddy_name, alias);
+		purple_blist_add_buddy(buddy, NULL, group, NULL);
+	}
+
+	purple_account_add_buddy(account, buddy, NULL);
 
 	if (conv != NULL)
 	{
-		gaim_buddy_icon_update(gaim_conv_im_get_icon(GAIM_CONV_IM(conv)));
-		gaim_conversation_update(conv, GAIM_CONV_UPDATE_ADD);
+		purple_buddy_icon_update(purple_conv_im_get_icon(PURPLE_CONV_IM(conv)));
+		purple_conversation_update(conv, PURPLE_CONV_UPDATE_ADD);
 	}
 }
 
 GList *
 gevo_get_groups(void)
 {
-	GList *list = NULL;
-	GaimGroup *g;
-	GaimBlistNode *gnode;
+	static GList *list = NULL;
+	PurpleGroup *g;
+	PurpleBlistNode *gnode;
 
-	if (gaim_get_blist()->root == NULL)
+	g_list_free(list);
+	list = NULL;
+
+	if (purple_get_blist()->root == NULL)
 	{
 		list  = g_list_append(list, (gpointer)_("Buddies"));
 	}
 	else
 	{
-		for (gnode = gaim_get_blist()->root;
+		for (gnode = purple_get_blist()->root;
 			 gnode != NULL;
 			 gnode = gnode->next)
 		{
-			if (GAIM_BLIST_NODE_IS_GROUP(gnode))
+			if (PURPLE_BLIST_NODE_IS_GROUP(gnode))
 			{
-				g = (GaimGroup *)gnode;
+				g = (PurpleGroup *)gnode;
 				list = g_list_append(list, g->name);
 			}
 		}
@@ -81,31 +90,19 @@ gevo_get_groups(void)
 }
 
 EContactField
-gevo_prpl_get_field(GaimAccount *account, GaimBuddy *buddy)
+gevo_prpl_get_field(PurpleAccount *account, PurpleBuddy *buddy)
 {
 	EContactField protocol_field = 0;
 	const char *protocol_id;
 
 	g_return_val_if_fail(account != NULL, 0);
 
-	protocol_id = gaim_account_get_protocol_id(account);
+	protocol_id = purple_account_get_protocol_id(account);
 
-	if (!strcmp(protocol_id, "prpl-oscar"))
-	{
-		GaimConnection *gc;
-		GaimPluginProtocolInfo *prpl_info;
-
-		gc = gaim_account_get_connection(account);
-
-		prpl_info = GAIM_PLUGIN_PROTOCOL_INFO(gc->prpl);
-
-		if (!strcmp("aim", prpl_info->list_icon(account, buddy)))
-		{
-			protocol_field = E_CONTACT_IM_AIM;
-		}
-		else
-			protocol_field = E_CONTACT_IM_ICQ;
-	}
+	if (!strcmp(protocol_id, "prpl-aim"))
+		protocol_field = E_CONTACT_IM_AIM;
+	else if (!strcmp(protocol_id, "prpl-icq"))
+		protocol_field = E_CONTACT_IM_ICQ;
 	else if (!strcmp(protocol_id, "prpl-msn"))
 		protocol_field = E_CONTACT_IM_MSN;
 	else if (!strcmp(protocol_id, "prpl-yahoo"))
@@ -114,12 +111,14 @@ gevo_prpl_get_field(GaimAccount *account, GaimBuddy *buddy)
 		protocol_field = E_CONTACT_IM_JABBER;
 	else if (!strcmp(protocol_id, "prpl-novell"))
 		protocol_field = E_CONTACT_IM_GROUPWISE;
+	else if (!strcmp(protocol_id, "prpl-gg"))
+		protocol_field = E_CONTACT_IM_GADUGADU;
 
 	return protocol_field;
 }
 
 gboolean
-gevo_prpl_is_supported(GaimAccount *account, GaimBuddy *buddy)
+gevo_prpl_is_supported(PurpleAccount *account, PurpleBuddy *buddy)
 {
 	return (gevo_prpl_get_field(account, buddy) != 0);
 }
@@ -132,11 +131,16 @@ gevo_load_addressbook(const gchar* uri, EBook **book, GError **error)
 	g_return_val_if_fail(book != NULL, FALSE);
 
 	if (uri == NULL)
-		*book = e_book_new_system_addressbook(NULL);
+		*book = e_book_new_system_addressbook(error);
 	else
 		*book = e_book_new_from_uri(uri, error);
 
-	result = e_book_open(*book, FALSE, NULL);
+	if (*book == NULL)
+		return FALSE;
+
+	*error = NULL;
+
+	result = e_book_open(*book, FALSE, error);
 
 	if (!result && *book != NULL)
 	{
@@ -148,7 +152,7 @@ gevo_load_addressbook(const gchar* uri, EBook **book, GError **error)
 }
 
 char *
-gevo_get_email_for_buddy(GaimBuddy *buddy)
+gevo_get_email_for_buddy(PurpleBuddy *buddy)
 {
 	EContact *contact;
 	char *mail = NULL;
@@ -163,19 +167,19 @@ gevo_get_email_for_buddy(GaimBuddy *buddy)
 
 	if (mail == NULL)
 	{
-		GaimAccount *account = gaim_buddy_get_account(buddy);
-		const char *prpl_id = gaim_account_get_protocol_id(account);
+		PurpleAccount *account = purple_buddy_get_account(buddy);
+		const char *prpl_id = purple_account_get_protocol_id(account);
 
 		if (!strcmp(prpl_id, "prpl-msn"))
 		{
-			mail = g_strdup(gaim_normalize(account,
-										   gaim_buddy_get_name(buddy)));
+			mail = g_strdup(purple_normalize(account,
+										   purple_buddy_get_name(buddy)));
 		}
 		else if (!strcmp(prpl_id, "prpl-yahoo"))
 		{
 			mail = g_strdup_printf("%s@yahoo.com",
-								   gaim_normalize(account,
-												  gaim_buddy_get_name(buddy)));
+								   purple_normalize(account,
+												  purple_buddy_get_name(buddy)));
 		}
 	}
 

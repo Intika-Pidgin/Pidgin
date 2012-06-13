@@ -1,10 +1,11 @@
 /**
  * @file gtkpluginpref.c GTK+ Plugin preferences
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -40,7 +41,7 @@ static gboolean
 entry_cb(GtkWidget *entry, gpointer data) {
 	char *pref = data;
 
-	gaim_prefs_set_string(pref, gtk_entry_get_text(GTK_ENTRY(entry)));
+	purple_prefs_set_string(pref, gtk_entry_get_text(GTK_ENTRY(entry)));
 
 	return FALSE;
 }
@@ -57,7 +58,7 @@ imhtml_cb(GtkTextBuffer *buffer, gpointer data)
 	g_return_if_fail(pref);
 
 	text = gtk_imhtml_get_markup(imhtml);
-	gaim_prefs_set_string(pref, text);
+	purple_prefs_set_string(pref, text);
 	g_free(text);
 }
 
@@ -68,63 +69,47 @@ imhtml_format_cb(GtkIMHtml *imhtml, GtkIMHtmlButtons buttons, gpointer data)
 }
 
 static void
-make_string_pref(GtkWidget *parent, GaimPluginPref *pref, GtkSizeGroup *sg) {
+make_string_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 	GtkWidget *box, *gtk_label, *entry;
 	const gchar *pref_name;
 	const gchar *pref_label;
-	GaimStringFormatType format;
+	PurpleStringFormatType format;
 
-	pref_name = gaim_plugin_pref_get_name(pref);
-	pref_label = gaim_plugin_pref_get_label(pref);
-	format = gaim_plugin_pref_get_format_type(pref);
+	pref_name = purple_plugin_pref_get_name(pref);
+	pref_label = purple_plugin_pref_get_label(pref);
+	format = purple_plugin_pref_get_format_type(pref);
 
-	switch(gaim_plugin_pref_get_type(pref)) {
-		case GAIM_PLUGIN_PREF_CHOICE:
-			gtk_label = gaim_gtk_prefs_dropdown_from_list(parent, pref_label,
-											  GAIM_PREF_STRING, pref_name,
-											  gaim_plugin_pref_get_choices(pref));
+	switch(purple_plugin_pref_get_type(pref)) {
+		case PURPLE_PLUGIN_PREF_CHOICE:
+			gtk_label = pidgin_prefs_dropdown_from_list(parent, pref_label,
+											  PURPLE_PREF_STRING, pref_name,
+											  purple_plugin_pref_get_choices(pref));
 			gtk_misc_set_alignment(GTK_MISC(gtk_label), 0, 0.5);
 
 			if(sg)
 				gtk_size_group_add_widget(sg, gtk_label);
 
 			break;
-		case GAIM_PLUGIN_PREF_NONE:
+		case PURPLE_PLUGIN_PREF_NONE:
 		default:
-			if (format == GAIM_STRING_FORMAT_TYPE_NONE)
-				box = gtk_hbox_new(FALSE, GAIM_HIG_BOX_SPACE);
-			else
-				box = gtk_vbox_new(FALSE, GAIM_HIG_BOX_SPACE);
-
-			gtk_widget_show(box);
-			gtk_box_pack_start(GTK_BOX(parent), box, FALSE, FALSE, 0);
-
-			gtk_label = gtk_label_new_with_mnemonic(pref_label);
-			gtk_misc_set_alignment(GTK_MISC(gtk_label), 0, 0.5);
-			gtk_widget_show(gtk_label);
-			gtk_box_pack_start(GTK_BOX(box), gtk_label, FALSE, FALSE, 0);
-
-			if(sg)
-				gtk_size_group_add_widget(sg, gtk_label);
-
-			if (format == GAIM_STRING_FORMAT_TYPE_NONE)
-			{				
+			if (format == PURPLE_STRING_FORMAT_TYPE_NONE)
+			{
 				entry = gtk_entry_new();
-				gtk_entry_set_text(GTK_ENTRY(entry), gaim_prefs_get_string(pref_name));
+				gtk_entry_set_text(GTK_ENTRY(entry), purple_prefs_get_string(pref_name));
 				gtk_entry_set_max_length(GTK_ENTRY(entry),
-									 gaim_plugin_pref_get_max_length(pref));
-				if (gaim_plugin_pref_get_masked(pref))
+									 purple_plugin_pref_get_max_length(pref));
+				if (purple_plugin_pref_get_masked(pref))
 				{
 					gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
+#if !GTK_CHECK_VERSION(2,16,0)
 					if (gtk_entry_get_invisible_char(GTK_ENTRY(entry)) == '*')
-						gtk_entry_set_invisible_char(GTK_ENTRY(entry), GAIM_INVISIBLE_CHAR);
+						gtk_entry_set_invisible_char(GTK_ENTRY(entry), PIDGIN_INVISIBLE_CHAR);
+#endif /* Less than GTK+ 2.16 */
 				}
 				g_signal_connect(G_OBJECT(entry), "changed",
 								 G_CALLBACK(entry_cb),
 								 (gpointer)pref_name);
-				gtk_label_set_mnemonic_widget(GTK_LABEL(gtk_label), entry);
-				gtk_widget_show(entry);
-				gtk_box_pack_start(GTK_BOX(box), entry, FALSE, FALSE, 0);
+				pidgin_add_widget_to_vbox(GTK_BOX(parent), pref_label, sg, entry, TRUE, NULL);
 			}
 			else
 			{
@@ -134,7 +119,20 @@ make_string_pref(GtkWidget *parent, GaimPluginPref *pref, GtkSizeGroup *sg) {
 				GtkWidget *toolbar;
 				GtkWidget *frame;
 
-				hbox = gtk_hbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+				box = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+
+				gtk_widget_show(box);
+				gtk_box_pack_start(GTK_BOX(parent), box, FALSE, FALSE, 0);
+
+				gtk_label = gtk_label_new_with_mnemonic(pref_label);
+				gtk_misc_set_alignment(GTK_MISC(gtk_label), 0, 0.5);
+				gtk_widget_show(gtk_label);
+				gtk_box_pack_start(GTK_BOX(box), gtk_label, FALSE, FALSE, 0);
+
+				if(sg)
+					gtk_size_group_add_widget(sg, gtk_label);
+
+				hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 				gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
 				gtk_widget_show(hbox);
 
@@ -142,12 +140,12 @@ make_string_pref(GtkWidget *parent, GaimPluginPref *pref, GtkSizeGroup *sg) {
 				gtk_box_pack_start(GTK_BOX(hbox), spacer, FALSE, FALSE, 0);
 				gtk_widget_show(spacer);
 
-				frame = gaim_gtk_create_imhtml(TRUE, &imhtml, &toolbar, NULL);
-				if (!(format & GAIM_STRING_FORMAT_TYPE_HTML))
+				frame = pidgin_create_imhtml(TRUE, &imhtml, &toolbar, NULL);
+				if (!(format & PURPLE_STRING_FORMAT_TYPE_HTML))
 					gtk_widget_destroy(toolbar);
 
-				gtk_imhtml_append_text(GTK_IMHTML(imhtml), gaim_prefs_get_string(pref_name),
-						(format & GAIM_STRING_FORMAT_TYPE_MULTILINE) ? 0 : GTK_IMHTML_NO_NEWLINE);
+				gtk_imhtml_append_text(GTK_IMHTML(imhtml), purple_prefs_get_string(pref_name),
+						(format & PURPLE_STRING_FORMAT_TYPE_MULTILINE) ? 0 : GTK_IMHTML_NO_NEWLINE);
 				gtk_label_set_mnemonic_widget(GTK_LABEL(gtk_label), imhtml);
 				gtk_widget_show_all(frame);
 				g_object_set_data(G_OBJECT(imhtml), "pref-key", (gpointer)pref_name);
@@ -163,29 +161,29 @@ make_string_pref(GtkWidget *parent, GaimPluginPref *pref, GtkSizeGroup *sg) {
 }
 
 static void
-make_int_pref(GtkWidget *parent, GaimPluginPref *pref, GtkSizeGroup *sg) {
+make_int_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 	GtkWidget *gtk_label;
 	const gchar *pref_name;
 	const gchar *pref_label;
 	gint max, min;
 
-	pref_name = gaim_plugin_pref_get_name(pref);
-	pref_label = gaim_plugin_pref_get_label(pref);
+	pref_name = purple_plugin_pref_get_name(pref);
+	pref_label = purple_plugin_pref_get_label(pref);
 
-	switch(gaim_plugin_pref_get_type(pref)) {
-		case GAIM_PLUGIN_PREF_CHOICE:
-			gtk_label = gaim_gtk_prefs_dropdown_from_list(parent, pref_label,
-					GAIM_PREF_INT, pref_name, gaim_plugin_pref_get_choices(pref));
+	switch(purple_plugin_pref_get_type(pref)) {
+		case PURPLE_PLUGIN_PREF_CHOICE:
+			gtk_label = pidgin_prefs_dropdown_from_list(parent, pref_label,
+					PURPLE_PREF_INT, pref_name, purple_plugin_pref_get_choices(pref));
 			gtk_misc_set_alignment(GTK_MISC(gtk_label), 0, 0.5);
 
 			if(sg)
 				gtk_size_group_add_widget(sg, gtk_label);
 
 			break;
-		case GAIM_PLUGIN_PREF_NONE:
+		case PURPLE_PLUGIN_PREF_NONE:
 		default:
-			gaim_plugin_pref_get_bounds(pref, &min, &max);
-			gaim_gtk_prefs_labeled_spin_button(parent, pref_label,
+			purple_plugin_pref_get_bounds(pref, &min, &max);
+			pidgin_prefs_labeled_spin_button(parent, pref_label,
 					pref_name, min, max, sg);
 			break;
 	}
@@ -193,8 +191,8 @@ make_int_pref(GtkWidget *parent, GaimPluginPref *pref, GtkSizeGroup *sg) {
 
 
 static void
-make_info_pref(GtkWidget *parent, GaimPluginPref *pref) {
-	GtkWidget *gtk_label = gtk_label_new(gaim_plugin_pref_get_label(pref));
+make_info_pref(GtkWidget *parent, PurplePluginPref *pref) {
+	GtkWidget *gtk_label = gtk_label_new(purple_plugin_pref_get_label(pref));
 	gtk_misc_set_alignment(GTK_MISC(gtk_label), 0, 0);
 	gtk_label_set_line_wrap(GTK_LABEL(gtk_label), TRUE);
 	gtk_box_pack_start(GTK_BOX(parent), gtk_label, FALSE, FALSE, 0);
@@ -203,7 +201,7 @@ make_info_pref(GtkWidget *parent, GaimPluginPref *pref) {
 
 
 GtkWidget *
-gaim_gtk_plugin_pref_create_frame(GaimPluginPrefFrame *frame) {
+pidgin_plugin_pref_create_frame(PurplePluginPrefFrame *frame) {
 	GtkWidget *ret, *parent;
 	GtkSizeGroup *sg;
 	GList *pp;
@@ -213,46 +211,48 @@ gaim_gtk_plugin_pref_create_frame(GaimPluginPrefFrame *frame) {
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
 	parent = ret = gtk_vbox_new(FALSE, 16);
-	gtk_container_set_border_width(GTK_CONTAINER(ret), GAIM_HIG_BORDER);
+	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 	gtk_widget_show(ret);
 
-	for(pp = gaim_plugin_pref_frame_get_prefs(frame);
+	for(pp = purple_plugin_pref_frame_get_prefs(frame);
 		pp != NULL;
 		pp = pp->next)
 	{
-		GaimPluginPref *pref = (GaimPluginPref *)pp->data;
+		PurplePluginPref *pref = (PurplePluginPref *)pp->data;
 
-		const char *name = gaim_plugin_pref_get_name(pref);
-		const char *label = gaim_plugin_pref_get_label(pref);
+		const char *name = purple_plugin_pref_get_name(pref);
+		const char *label = purple_plugin_pref_get_label(pref);
 
 		if(name == NULL) {
 			if(label == NULL)
 				continue;
 
-			if(gaim_plugin_pref_get_type(pref) == GAIM_PLUGIN_PREF_INFO) {
+			if(purple_plugin_pref_get_type(pref) == PURPLE_PLUGIN_PREF_INFO) {
 				make_info_pref(parent, pref);
 			} else {
-				parent = gaim_gtk_make_frame(ret, label);
+				parent = pidgin_make_frame(ret, label);
 				gtk_widget_show(parent);
 			}
 
 			continue;
 		}
 
-		switch(gaim_prefs_get_type(name)) {
-			case GAIM_PREF_BOOLEAN:
-				gaim_gtk_prefs_checkbox(label, name, parent);
+		switch(purple_prefs_get_type(name)) {
+			case PURPLE_PREF_BOOLEAN:
+				pidgin_prefs_checkbox(label, name, parent);
 				break;
-			case GAIM_PREF_INT:
+			case PURPLE_PREF_INT:
 				make_int_pref(parent, pref, sg);
 				break;
-			case GAIM_PREF_STRING:
+			case PURPLE_PREF_STRING:
 				make_string_pref(parent, pref, sg);
 				break;
 			default:
 				break;
 		}
 	}
+
+	g_object_unref(sg);
 
 	return ret;
 }
