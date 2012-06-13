@@ -141,8 +141,18 @@ static void pidgin_disco_create_tree(PidginDiscoList *pdl);
 static void dialog_select_account_cb(GObject *w, PurpleAccount *account,
                                      PidginDiscoDialog *dialog)
 {
+	gboolean change = (account != dialog->account);
 	dialog->account = account;
 	gtk_widget_set_sensitive(dialog->browse_button, account != NULL);
+
+	if (change && dialog->discolist) {
+		if (dialog->discolist->tree) {
+			gtk_widget_destroy(dialog->discolist->tree);
+			dialog->discolist->tree = NULL;
+		}
+		pidgin_disco_list_unref(dialog->discolist);
+		dialog->discolist = NULL;
+	}
 }
 
 static void register_button_cb(GtkWidget *unused, PidginDiscoDialog *dialog)
@@ -152,12 +162,15 @@ static void register_button_cb(GtkWidget *unused, PidginDiscoDialog *dialog)
 
 static void discolist_cancel_cb(PidginDiscoList *pdl, const char *server)
 {
+	pdl->dialog->prompt_handle = NULL;
+
 	pidgin_disco_list_set_in_progress(pdl, FALSE);
 	pidgin_disco_list_unref(pdl);
 }
 
 static void discolist_ok_cb(PidginDiscoList *pdl, const char *server)
 {
+	pdl->dialog->prompt_handle = NULL;
 	gtk_widget_set_sensitive(pdl->dialog->browse_button, TRUE);
 
 	if (!server || !*server) {
@@ -212,8 +225,8 @@ static void browse_button_cb(GtkWidget *button, PidginDiscoDialog *dialog)
 		gtk_widget_set_sensitive(dialog->account_widget, FALSE);
 
 	username = purple_account_get_username(dialog->account);
-	at = g_utf8_strchr(username, -1, '@');
-	slash = g_utf8_strchr(username, -1, '/');
+	at = strchr(username, '@');
+	slash = strchr(username, '/');
 	if (at && !slash) {
 		server = g_strdup_printf("%s", at + 1);
 	} else if (at && slash && at + 1 < slash) {
@@ -224,7 +237,9 @@ static void browse_button_cb(GtkWidget *button, PidginDiscoDialog *dialog)
 		/* This shouldn't ever happen since the account is connected */
 		server = g_strdup("jabber.org");
 
-	purple_request_input(my_plugin, _("Server name request"), _("Enter an XMPP Server"),
+	/* Note to translators: The string "Enter an XMPP Server" is asking the
+	   user to type the name of an XMPP server which will then be queried */
+	dialog->prompt_handle = purple_request_input(my_plugin, _("Server name request"), _("Enter an XMPP Server"),
 			_("Select an XMPP server to query"),
 			server, FALSE, FALSE, NULL,
 			_("Find Services"), PURPLE_CALLBACK(discolist_ok_cb),
@@ -378,6 +393,9 @@ destroy_win_cb(GtkWidget *window, gpointer d)
 	PidginDiscoDialog *dialog = d;
 	PidginDiscoList *list = dialog->discolist;
 
+	if (dialog->prompt_handle)
+		purple_request_close(PURPLE_REQUEST_INPUT, dialog->prompt_handle);
+
 	if (list) {
 		list->dialog = NULL;
 
@@ -412,7 +430,13 @@ static gboolean
 disco_paint_tooltip(GtkWidget *tipwindow, gpointer data)
 {
 	PangoLayout *layout = g_object_get_data(G_OBJECT(tipwindow), "tooltip-plugin");
+#if GTK_CHECK_VERSION(2,14,0)
+	gtk_paint_layout(gtk_widget_get_style(tipwindow),
+			gtk_widget_get_window(tipwindow),
+			GTK_STATE_NORMAL, FALSE,
+#else
 	gtk_paint_layout(tipwindow->style, tipwindow->window, GTK_STATE_NORMAL, FALSE,
+#endif
 			NULL, tipwindow, "tooltip",
 			6, 6, layout);
 	return TRUE;
@@ -438,6 +462,8 @@ disco_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 	gtk_tree_model_get_value(GTK_TREE_MODEL(pdl->model), &iter, SERVICE_COLUMN,
 	                         &val);
 	service = g_value_get_pointer(&val);
+	if (!service)
+		return FALSE;
 
 	switch (service->type) {
 		case XMPP_DISCO_SERVICE_TYPE_UNSET:
@@ -627,15 +653,8 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
 
 	/* scrolled window */
-	dialog->sw = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(dialog->sw),
-	                                    GTK_SHADOW_IN);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(dialog->sw),
-	                               GTK_POLICY_AUTOMATIC,
-	                               GTK_POLICY_AUTOMATIC);
+	dialog->sw = pidgin_make_scrollable(NULL, GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, 250);
 	gtk_box_pack_start(GTK_BOX(vbox2), dialog->sw, TRUE, TRUE, 0);
-	gtk_widget_set_size_request(dialog->sw, -1, 250);
-	gtk_widget_show(dialog->sw);
 
 	/* progress bar */
 	dialog->progress = gtk_progress_bar_new();

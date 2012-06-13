@@ -3,7 +3,9 @@
  *
  * purple
  *
- * Copyright (C) 2008, Tobias Markmann <tmarkmann@googlemail.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,9 +35,9 @@ PurpleBOSHConnection* jabber_bosh_connection_init(JabberStream *js, const char *
 void jabber_bosh_connection_destroy(PurpleBOSHConnection *conn);
 
 gboolean jabber_bosh_connection_is_ssl(PurpleBOSHConnection *conn);
+void jabber_bosh_connection_send_keepalive(PurpleBOSHConnection *conn);
 
 void jabber_bosh_connection_connect(PurpleBOSHConnection *conn);
 void jabber_bosh_connection_close(PurpleBOSHConnection *conn);
 void jabber_bosh_connection_send_raw(PurpleBOSHConnection *conn, const char *data);
-void jabber_bosh_connection_refresh(PurpleBOSHConnection *conn);
 #endif /* PURPLE_JABBER_BOSH_H_ */

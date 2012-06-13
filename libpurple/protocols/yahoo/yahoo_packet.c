@@ -302,7 +302,7 @@ yahoo_packet_send_can_write(gpointer data, gint source, PurpleInputCondition con
 		return;
 	else if (ret < 0) {
 		/* TODO: what to do here - do we really have to disconnect? */
-		purple_connection_error_reason(yd->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		purple_connection_error(yd->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 		                               _("Write Error"));
 		return;
 	}
@@ -397,7 +397,7 @@ void yahoo_packet_free(struct yahoo_packet *pkt)
 		struct yahoo_pair *pair = pkt->hash->data;
 		g_free(pair->value);
 		g_free(pair);
-		pkt->hash = g_slist_remove(pkt->hash, pair);
+		pkt->hash = g_slist_delete_link(pkt->hash, pkt->hash);
 	}
 	g_free(pkt);
 }

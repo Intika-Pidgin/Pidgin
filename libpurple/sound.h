@@ -38,7 +38,7 @@
  * A type of sound.
  */
 
-typedef enum _PurpleSoundEventID
+typedef enum
 {
 	PURPLE_SOUND_BUDDY_ARRIVE = 0, /**< Buddy signs on.                       */
 	PURPLE_SOUND_BUDDY_LEAVE,      /**< Buddy signs off.                      */
@@ -51,6 +51,7 @@ typedef enum _PurpleSoundEventID
 	PURPLE_SOUND_CHAT_SAY,         /**< Someone else says somthing in a chat. */
 	PURPLE_SOUND_POUNCE_DEFAULT,   /**< Default sound for a buddy pounce.     */
 	PURPLE_SOUND_CHAT_NICK,        /**< Someone says your name in a chat.     */
+	PURPLE_SOUND_GOT_ATTENTION,	   /**< Got an attention					  */
 	PURPLE_NUM_SOUNDS              /**< Total number of sounds.               */
 
 } PurpleSoundEventID;
@@ -71,9 +72,7 @@ typedef struct _PurpleSoundUiOps
 	void (*_purple_reserved4)(void);
 } PurpleSoundUiOps;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Sound API                                                       */
@@ -135,8 +134,6 @@ void *purple_sounds_get_handle(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_SOUND_H_ */

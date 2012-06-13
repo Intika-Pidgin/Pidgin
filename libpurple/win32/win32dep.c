@@ -22,7 +22,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#define _WIN32_IE 0x500
+#define _WIN32_IE 0x501
 #include "internal.h"
 #include <winuser.h>
 
@@ -30,20 +30,12 @@
 #include "notify.h"
 
 /*
- *  DEFINES & MACROS
- */
-
-/* For shfolder.dll */
-typedef HRESULT (CALLBACK* LPFNSHGETFOLDERPATHA)(HWND, int, HANDLE, DWORD, LPSTR);
-typedef HRESULT (CALLBACK* LPFNSHGETFOLDERPATHW)(HWND, int, HANDLE, DWORD, LPWSTR);
-
-/*
  * LOCALS
  */
 static char *app_data_dir = NULL, *install_dir = NULL,
 	*lib_dir = NULL, *locale_dir = NULL;
 
-static HINSTANCE libpurpledll_hInstance = 0;
+static HINSTANCE libpurpledll_hInstance = NULL;
 
 /*
  *  PUBLIC CODE
@@ -85,15 +77,22 @@ FARPROC wpurple_find_and_loadproc(const char *dllname, const char *procedure) {
 	BOOL did_load = FALSE;
 	FARPROC proc = 0;
 
-	if(!(hmod = GetModuleHandle(dllname))) {
+	wchar_t *wc_dllname = g_utf8_to_utf16(dllname, -1, NULL, NULL, NULL);
+
+	if(!(hmod = GetModuleHandleW(wc_dllname))) {
 		purple_debug_warning("wpurple", "%s not already loaded; loading it...\n", dllname);
-		if(!(hmod = LoadLibrary(dllname))) {
-			purple_debug_error("wpurple", "Could not load: %s\n", dllname);
+		if(!(hmod = LoadLibraryW(wc_dllname))) {
+			purple_debug_error("wpurple", "Could not load: %s (%s)\n", dllname,
+				g_win32_error_message(GetLastError()));
+			g_free(wc_dllname);
 			return NULL;
 		}
 		else
 			did_load = TRUE;
 	}
+
+	g_free(wc_dllname);
+	wc_dllname = NULL;
 
 	if((proc = GetProcAddress(hmod, procedure))) {
 		purple_debug_info("wpurple", "This version of %s contains %s\n",
@@ -115,37 +114,12 @@ FARPROC wpurple_find_and_loadproc(const char *dllname, const char *procedure) {
 
 /* Get paths to special Windows folders. */
 gchar *wpurple_get_special_folder(int folder_type) {
-	static LPFNSHGETFOLDERPATHA MySHGetFolderPathA = NULL;
-	static LPFNSHGETFOLDERPATHW MySHGetFolderPathW = NULL;
 	gchar *retval = NULL;
+	wchar_t utf_16_dir[MAX_PATH + 1];
 
-	if (!MySHGetFolderPathW) {
-		MySHGetFolderPathW = (LPFNSHGETFOLDERPATHW)
-			wpurple_find_and_loadproc("shfolder.dll", "SHGetFolderPathW");
-	}
-
-	if (MySHGetFolderPathW) {
-		wchar_t utf_16_dir[MAX_PATH + 1];
-
-		if (SUCCEEDED(MySHGetFolderPathW(NULL, folder_type, NULL,
-						SHGFP_TYPE_CURRENT, utf_16_dir))) {
-			retval = g_utf16_to_utf8(utf_16_dir, -1, NULL, NULL, NULL);
-		}
-	}
-
-	if (!retval) {
-		if (!MySHGetFolderPathA) {
-			MySHGetFolderPathA = (LPFNSHGETFOLDERPATHA)
-				wpurple_find_and_loadproc("shfolder.dll", "SHGetFolderPathA");
-		}
-		if (MySHGetFolderPathA) {
-			char locale_dir[MAX_PATH + 1];
-
-			if (SUCCEEDED(MySHGetFolderPathA(NULL, folder_type, NULL,
-							SHGFP_TYPE_CURRENT, locale_dir))) {
-				retval = g_locale_to_utf8(locale_dir, -1, NULL, NULL, NULL);
-			}
-		}
+	if (SUCCEEDED(SHGetFolderPathW(NULL, folder_type, NULL,
+					SHGFP_TYPE_CURRENT, utf_16_dir))) {
+		retval = g_utf16_to_utf8(utf_16_dir, -1, NULL, NULL, NULL);
 	}
 
 	return retval;
@@ -156,20 +130,11 @@ const char *wpurple_install_dir(void) {
 
 	if (!initialized) {
 		char *tmp = NULL;
-		if (G_WIN32_HAVE_WIDECHAR_API()) {
-			wchar_t winstall_dir[MAXPATHLEN];
-			if (GetModuleFileNameW(NULL, winstall_dir,
-					MAXPATHLEN) > 0) {
-				tmp = g_utf16_to_utf8(winstall_dir, -1,
-					NULL, NULL, NULL);
-			}
-		} else {
-			gchar cpinstall_dir[MAXPATHLEN];
-			if (GetModuleFileNameA(NULL, cpinstall_dir,
-					MAXPATHLEN) > 0) {
-				tmp = g_locale_to_utf8(cpinstall_dir,
-					-1, NULL, NULL, NULL);
-			}
+		wchar_t winstall_dir[MAXPATHLEN];
+		if (GetModuleFileNameW(libpurpledll_hInstance, winstall_dir,
+				MAXPATHLEN) > 0) {
+			tmp = g_utf16_to_utf8(winstall_dir, -1,
+				NULL, NULL, NULL);
 		}
 
 		if (tmp == NULL) {
@@ -246,61 +211,33 @@ gboolean wpurple_write_reg_string(HKEY rootkey, const char *subkey, const char *
 	HKEY reg_key;
 	gboolean success = FALSE;
 
-	if(G_WIN32_HAVE_WIDECHAR_API()) {
-		wchar_t *wc_subkey = g_utf8_to_utf16(subkey, -1, NULL,
-			NULL, NULL);
+	wchar_t *wc_subkey = g_utf8_to_utf16(subkey, -1, NULL,
+		NULL, NULL);
 
-		if(RegOpenKeyExW(rootkey, wc_subkey, 0,
-				KEY_SET_VALUE, &reg_key) == ERROR_SUCCESS) {
-			wchar_t *wc_valname = NULL;
+	if(RegOpenKeyExW(rootkey, wc_subkey, 0,
+			KEY_SET_VALUE, &reg_key) == ERROR_SUCCESS) {
+		wchar_t *wc_valname = NULL;
 
-			if (valname)
-				wc_valname = g_utf8_to_utf16(valname, -1,
-					NULL, NULL, NULL);
+		if (valname)
+			wc_valname = g_utf8_to_utf16(valname, -1,
+				NULL, NULL, NULL);
 
-			if(value) {
-				wchar_t *wc_value = g_utf8_to_utf16(value, -1,
-					NULL, NULL, NULL);
-				int len = (wcslen(wc_value) * sizeof(wchar_t)) + 1;
-				if(RegSetValueExW(reg_key, wc_valname, 0, REG_SZ,
-						(LPBYTE)wc_value, len
-						) == ERROR_SUCCESS)
-					success = TRUE;
-				g_free(wc_value);
-			} else
-				if(RegDeleteValueW(reg_key, wc_valname) ==  ERROR_SUCCESS)
-					success = TRUE;
+		if(value) {
+			wchar_t *wc_value = g_utf8_to_utf16(value, -1,
+				NULL, NULL, NULL);
+			int len = (wcslen(wc_value) * sizeof(wchar_t)) + 1;
+			if(RegSetValueExW(reg_key, wc_valname, 0, REG_SZ,
+					(LPBYTE)wc_value, len
+					) == ERROR_SUCCESS)
+				success = TRUE;
+			g_free(wc_value);
+		} else
+			if(RegDeleteValueW(reg_key, wc_valname) ==  ERROR_SUCCESS)
+				success = TRUE;
 
-			g_free(wc_valname);
-		}
-		g_free(wc_subkey);
-	} else {
-		char *cp_subkey = g_locale_from_utf8(subkey, -1, NULL,
-			NULL, NULL);
-		if(RegOpenKeyExA(rootkey, cp_subkey, 0,
-				KEY_SET_VALUE, &reg_key) == ERROR_SUCCESS) {
-			char *cp_valname = NULL;
-			if(valname)
-				cp_valname = g_locale_from_utf8(valname, -1,
-					NULL, NULL, NULL);
-
-			if (value) {
-				char *cp_value = g_locale_from_utf8(value, -1,
-					NULL, NULL, NULL);
-				int len = strlen(cp_value) + 1;
-				if(RegSetValueExA(reg_key, cp_valname, 0, REG_SZ,
-						cp_value, len
-						) == ERROR_SUCCESS)
-					success = TRUE;
-				g_free(cp_value);
-			} else
-				if(RegDeleteValueA(reg_key, cp_valname) ==  ERROR_SUCCESS)
-					success = TRUE;
-
-			g_free(cp_valname);
-		}
-		g_free(cp_subkey);
+		g_free(wc_valname);
 	}
+	g_free(wc_subkey);
 
 	if(reg_key != NULL)
 		RegCloseKey(reg_key);
@@ -312,17 +249,11 @@ static HKEY _reg_open_key(HKEY rootkey, const char *subkey, REGSAM access) {
 	HKEY reg_key = NULL;
 	LONG rv;
 
-	if(G_WIN32_HAVE_WIDECHAR_API()) {
-		wchar_t *wc_subkey = g_utf8_to_utf16(subkey, -1, NULL,
-			NULL, NULL);
-		rv = RegOpenKeyExW(rootkey, wc_subkey, 0, access, &reg_key);
-		g_free(wc_subkey);
-	} else {
-		char *cp_subkey = g_locale_from_utf8(subkey, -1, NULL,
-			NULL, NULL);
-		rv = RegOpenKeyExA(rootkey, cp_subkey, 0, access, &reg_key);
-		g_free(cp_subkey);
-	}
+	wchar_t *wc_subkey = g_utf8_to_utf16(subkey, -1, NULL,
+		NULL, NULL);
+	rv = RegOpenKeyExW(rootkey, wc_subkey, 0, access, &reg_key);
+
+	g_free(wc_subkey);
 
 	if (rv != ERROR_SUCCESS) {
 		char *errmsg = g_win32_error_message(rv);
@@ -340,19 +271,11 @@ static HKEY _reg_open_key(HKEY rootkey, const char *subkey, REGSAM access) {
 static gboolean _reg_read(HKEY reg_key, const char *valname, LPDWORD type, LPBYTE data, LPDWORD data_len) {
 	LONG rv;
 
-	if(G_WIN32_HAVE_WIDECHAR_API()) {
-		wchar_t *wc_valname = NULL;
-		if (valname)
-			wc_valname = g_utf8_to_utf16(valname, -1, NULL, NULL, NULL);
-		rv = RegQueryValueExW(reg_key, wc_valname, 0, type, data, data_len);
-		g_free(wc_valname);
-	} else {
-		char *cp_valname = NULL;
-		if(valname)
-			cp_valname = g_locale_from_utf8(valname, -1, NULL, NULL, NULL);
-		rv = RegQueryValueExA(reg_key, cp_valname, 0, type, data, data_len);
-		g_free(cp_valname);
-	}
+	wchar_t *wc_valname = NULL;
+	if (valname)
+		wc_valname = g_utf8_to_utf16(valname, -1, NULL, NULL, NULL);
+	rv = RegQueryValueExW(reg_key, wc_valname, 0, type, data, data_len);
+	g_free(wc_valname);
 
 	if (rv != ERROR_SUCCESS) {
 		char *errmsg = g_win32_error_message(rv);
@@ -389,24 +312,13 @@ char *wpurple_read_reg_string(HKEY rootkey, const char *subkey, const char *valn
 
 	if(reg_key) {
 		if(_reg_read(reg_key, valname, &type, NULL, &nbytes) && type == REG_SZ) {
-			LPBYTE data;
-			if(G_WIN32_HAVE_WIDECHAR_API())
-				data = (LPBYTE) g_new(wchar_t, ((nbytes + 1) / sizeof(wchar_t)) + 1);
-			else
-				data = (LPBYTE) g_malloc(nbytes + 1);
+			LPBYTE data = (LPBYTE) g_new(wchar_t, ((nbytes + 1) / sizeof(wchar_t)) + 1);
 
 			if(_reg_read(reg_key, valname, &type, data, &nbytes)) {
-				if(G_WIN32_HAVE_WIDECHAR_API()) {
-					wchar_t *wc_temp = (wchar_t*) data;
-					wc_temp[nbytes / sizeof(wchar_t)] = '\0';
-					result = g_utf16_to_utf8(wc_temp, -1,
-						NULL, NULL, NULL);
-				} else {
-					char *cp_temp = (char*) data;
-					cp_temp[nbytes] = '\0';
-					result = g_locale_to_utf8(cp_temp, -1,
-						NULL, NULL, NULL);
-				}
+				wchar_t *wc_temp = (wchar_t*) data;
+				wc_temp[nbytes / sizeof(wchar_t)] = '\0';
+				result = g_utf16_to_utf8(wc_temp, -1,
+					NULL, NULL, NULL);
 			}
 			g_free(data);
 		}
@@ -414,6 +326,111 @@ char *wpurple_read_reg_string(HKEY rootkey, const char *subkey, const char *valn
 	}
 
 	return result;
+}
+
+int wpurple_input_pipe(int pipefd[2])
+{
+	SOCKET sock_server, sock_client, sock_server_established;
+	struct sockaddr_in saddr_in;
+	struct sockaddr * const saddr_p = (struct sockaddr *)&saddr_in;
+	int saddr_len = sizeof(struct sockaddr_in);
+	u_long arg;
+	fd_set select_set;
+	char succ = 1;
+
+	sock_server = sock_client = sock_server_established = INVALID_SOCKET;
+
+	purple_debug_misc("wpurple", "wpurple_input_pipe(0x%x[%d,%d])\n",
+		(unsigned int)pipefd, pipefd[0], pipefd[1]);
+
+	/* create client and passive server sockets */
+	sock_server = socket(AF_INET, SOCK_STREAM, 0);
+	sock_client = socket(AF_INET, SOCK_STREAM, 0);
+	succ = (sock_server != INVALID_SOCKET || sock_client != INVALID_SOCKET);
+
+	/* set created sockets into nonblocking mode */
+	arg = 1;
+	succ = (succ &&
+		ioctlsocket(sock_server, FIONBIO, &arg) != SOCKET_ERROR);
+	arg = 1;
+	succ = (succ &&
+		ioctlsocket(sock_client, FIONBIO, &arg) != SOCKET_ERROR);
+
+	/* listen on server socket */
+	memset(&saddr_in, 0, saddr_len);
+	saddr_in.sin_family = AF_INET;
+	saddr_in.sin_port = 0;
+	saddr_in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	succ = (succ &&
+		bind(sock_server, saddr_p, saddr_len) != SOCKET_ERROR &&
+		listen(sock_server, 1) != SOCKET_ERROR &&
+		getsockname(sock_server, saddr_p, &saddr_len) != SOCKET_ERROR);
+
+	/* request a connection from client to server socket */
+	succ = (succ &&
+		connect(sock_client, saddr_p, saddr_len) == SOCKET_ERROR &&
+		WSAGetLastError() == WSAEWOULDBLOCK);
+
+	/* ensure, that server socket is readable */
+	if (succ)
+	{
+		FD_ZERO(&select_set);
+		FD_SET(sock_server, &select_set);
+	}
+	succ = (succ &&
+		select(0, &select_set, NULL, NULL, NULL) != SOCKET_ERROR &&
+		FD_ISSET(sock_server, &select_set));
+
+	/* accept (establish) connection from client socket */
+	if (succ)
+	{
+		sock_server_established =
+			accept(sock_server, saddr_p, &saddr_len);
+		succ = (sock_server_established != INVALID_SOCKET);
+	}
+
+	/* ensure, that client socket is writable */
+	if (succ)
+	{
+		FD_ZERO(&select_set);
+		FD_SET(sock_client, &select_set);
+	}
+	succ = (succ &&
+		select(0, NULL, &select_set, NULL, NULL) != SOCKET_ERROR &&
+		FD_ISSET(sock_client, &select_set));
+
+	/* set sockets into blocking mode */
+	arg = 0;
+	succ = (succ &&
+		ioctlsocket(sock_client, FIONBIO, &arg) != SOCKET_ERROR);
+	arg = 0;
+	succ = (succ &&
+		ioctlsocket(sock_server_established, FIONBIO, &arg)
+			!= SOCKET_ERROR);
+
+	/* we don't need (passive) server socket anymore */
+	if (sock_server != INVALID_SOCKET)
+		closesocket(sock_server);
+
+	if (succ)
+	{
+		purple_debug_misc("wpurple",
+			"wpurple_input_pipe created pipe [%d,%d]\n",
+			sock_client, sock_server_established);
+		pipefd[0] = sock_client; /* for reading */
+		pipefd[1] = sock_server_established; /* for writing */
+		return 0;
+	}
+	else
+	{
+		purple_debug_error("wpurple", "wpurple_input_pipe failed\n");
+		if (sock_client != INVALID_SOCKET)
+			closesocket(sock_client);
+		if (sock_server_established != INVALID_SOCKET)
+			closesocket(sock_server_established);
+		errno = EMFILE;
+		return -1;
+	}
 }
 
 void wpurple_init(void) {
