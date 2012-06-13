@@ -1,10 +1,11 @@
 /**
  * @file gtknotify.h GTK+ Notification API
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,18 +21,42 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTKNOTIFY_H_
-#define _GAIM_GTKNOTIFY_H_
+#ifndef _PIDGINNOTIFY_H_
+#define _PIDGINNOTIFY_H_
 
 #include "notify.h"
+#include "pounce.h"
+
+/**
+ * Adds a buddy pounce to the buddy pounce dialog
+ *
+ * @param account	The account
+ * @param pounce	The pounce
+ * @param alias		The buddy alias
+ * @param event		Event description
+ * @param message	Pounce message
+ * @param date		Pounce date
+ */
+void pidgin_notify_pounce_add(PurpleAccount *account, PurplePounce *pounce,
+		const char *alias, const char *event, const char *message, const char *date);
 
 /**
  * Returns the UI operations structure for GTK+ notification functions.
  *
  * @return The GTK+ UI notify operations structure.
  */
-GaimNotifyUiOps *gaim_gtk_notify_get_ui_ops(void);
+PurpleNotifyUiOps *pidgin_notify_get_ui_ops(void);
 
-#endif /* _GAIM_GTKNOTIFY_H_ */
+/**
+ * Initializes the GTK+ notifications subsystem.
+ */
+void pidgin_notify_init(void);
+
+/**
+ * Uninitialized the GTK+ notifications subsystem.
+ */
+void pidgin_notify_uninit(void);
+
+#endif /* _PIDGINNOTIFY_H_ */

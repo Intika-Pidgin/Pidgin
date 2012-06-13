@@ -1,10 +1,11 @@
 /**
  * @file gtksound.h GTK+ Sound API
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,10 +21,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTKSOUND_H_
-#define _GAIM_GTKSOUND_H_
+#ifndef _PIDGINSOUND_H_
+#define _PIDGINSOUND_H_
 
 #include "sound.h"
 
@@ -38,7 +39,7 @@
  * @param event The event.
  * @return The option.
  */
-const char *gaim_gtk_sound_get_event_option(GaimSoundEventID event);
+const char *pidgin_sound_get_event_option(PurpleSoundEventID event);
 
 /**
  * Get the label for an event.
@@ -46,22 +47,31 @@ const char *gaim_gtk_sound_get_event_option(GaimSoundEventID event);
  * @param event The event.
  * @return The label.
  */
-const char *gaim_gtk_sound_get_event_label(GaimSoundEventID event);
+const char *pidgin_sound_get_event_label(PurpleSoundEventID event);
 
 /**
  * Gets GTK+ sound UI ops.
  *
  * @return The UI operations structure.
  */
-GaimSoundUiOps *gaim_gtk_sound_get_ui_ops(void);
+PurpleSoundUiOps *pidgin_sound_get_ui_ops(void);
 
 /**
  * Get the handle for the GTK+ sound system.
  *
  * @return The handle to the sound system
  */
-void *gaim_gtk_sound_get_handle(void);
+void *pidgin_sound_get_handle(void);
+
+/**
+ * Returns true Pidgin is using customized sounds
+ *
+ * @return TRUE if non default sounds are used.
+ *
+ * @since 2.6.0
+ */
+gboolean pidgin_sound_is_customized(void);
 
 /*@}*/
 
-#endif /* _GAIM_GTKSOUND_H_ */
+#endif /* _PIDGINSOUND_H_ */

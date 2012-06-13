@@ -1,10 +1,11 @@
 /**
  * @file internal.h Internal definitions and includes
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,15 +21,19 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_INTERNAL_H_
-#define _GAIM_INTERNAL_H_
+#ifndef _PURPLE_INTERNAL_H_
+#define _PURPLE_INTERNAL_H_
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
+/* for SIOCGIFCONF  in SKYOS */
+#ifdef SKYOS
+#include <net/sockios.h>
+#endif
 /*
  * If we're using NLS, make sure gettext works.  If not, then define
  * dummy macros in place of the normal gettext macros.
@@ -43,7 +48,7 @@
 #ifdef ENABLE_NLS
 #  include <locale.h>
 #  include <libintl.h>
-#  define _(String) ((const char *)gettext(String))
+#  define _(String) ((const char *)dgettext(PACKAGE, String))
 #  ifdef gettext_noop
 #    define N_(String) gettext_noop (String)
 #  else
@@ -56,6 +61,7 @@
 #    define _(String) ((const char *)String)
 #  endif
 #  define ngettext(Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
+#  define dngettext(Domain, Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
 #endif
 
 #ifdef HAVE_ENDIAN_H
@@ -74,6 +80,7 @@
 #ifndef _WIN32
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 #endif
 #include <ctype.h>
 #include <errno.h>
@@ -92,9 +99,10 @@
 #include <langinfo.h>
 #endif
 
-#ifdef GAIM_PLUGINS
-# include <gmodule.h>
-# ifndef _WIN32
+#include <gmodule.h>
+
+#ifdef PURPLE_PLUGINS
+# ifdef HAVE_DLFCN_H
 #  include <dlfcn.h>
 # endif
 #endif
@@ -110,83 +118,112 @@
 # include <unistd.h>
 #endif
 
-#ifndef MAXPATHLEN
-# define MAXPATHLEN 1024
-#endif
-
 #ifndef HOST_NAME_MAX
 # define HOST_NAME_MAX 255
 #endif
 
-#define PATHSIZE 1024
-
 #include <glib.h>
-#if !GLIB_CHECK_VERSION(2,4,0)
-#	define G_MAXUINT32 ((guint32) 0xffffffff)
+
+/* This wasn't introduced until Glib 2.14 :( */
+#ifndef G_MAXSSIZE
+#	if GLIB_SIZEOF_LONG == 8
+#		define G_MAXSSIZE ((gssize) 0x7fffffffffffffff)
+#	else
+#		define G_MAXSSIZE ((gssize) 0x7fffffff)
+#	endif
 #endif
 
-#if GLIB_CHECK_VERSION(2,6,0)
-#	include <glib/gstdio.h>
-#endif
-
-#if !GLIB_CHECK_VERSION(2,6,0)
-#	define g_freopen freopen
-#	define g_fopen fopen
-#	define g_rmdir rmdir
-#	define g_remove remove
-#	define g_unlink unlink
-#	define g_lstat lstat
-#	define g_stat stat
-#	define g_mkdir mkdir
-#	define g_rename rename
-#	define g_open open
-#endif
-
-#if !GLIB_CHECK_VERSION(2,8,0) && !defined _WIN32
-#	define g_access access
-#endif
-
-#if !GLIB_CHECK_VERSION(2,10,0)
-#	define g_slice_new(type) g_new(type, 1)
-#	define g_slice_new0(type) g_new0(type, 1)
-#	define g_slice_free(type, mem) g_free(mem)
-#endif
+#include <glib/gstdio.h>
 
 #ifdef _WIN32
 #include "win32dep.h"
 #endif
 
-/* ugly ugly ugly */
-/* This is a workaround for the fact that G_GINT64_MODIFIER and G_GSIZE_FORMAT
- * are only defined in Glib >= 2.4 */
-#ifndef G_GINT64_MODIFIER
-#	if GLIB_SIZEOF_LONG == 8
-#		define G_GINT64_MODIFIER "l"
-#	else
-#		define G_GINT64_MODIFIER "ll"
-#	endif
+#ifdef HAVE_CONFIG_H
+#if SIZEOF_TIME_T == 4
+#	define PURPLE_TIME_T_MODIFIER "lu"
+#elif SIZEOF_TIME_T == 8
+#	define PURPLE_TIME_T_MODIFIER "zu"
+#else
+#error Unknown size of time_t
+#endif
 #endif
 
-#ifndef G_GSIZE_FORMAT
-#	if GLIB_SIZEOF_LONG == 8
-#		define G_GSIZE_FORMAT "lu"
-#	else
-#		define G_GSIZE_FORMAT "u"
-#	endif
-#endif
+#include <glib-object.h>
 
 /* Safer ways to work with static buffers. When using non-static
  * buffers, either use g_strdup_* functions (preferred) or use
  * g_strlcpy/g_strlcpy directly. */
-#define gaim_strlcpy(dest, src) g_strlcpy(dest, src, sizeof(dest))
-#define gaim_strlcat(dest, src) g_strlcat(dest, src, sizeof(dest))
+#define purple_strlcpy(dest, src) g_strlcpy(dest, src, sizeof(dest))
+#define purple_strlcat(dest, src) g_strlcat(dest, src, sizeof(dest))
 
-#define GAIM_WEBSITE "http://gaim.sourceforge.net/"
+#define PURPLE_WEBSITE "http://pidgin.im/"
+#define PURPLE_DEVEL_WEBSITE "http://developer.pidgin.im/"
 
-#ifndef _WIN32
-/* Everything needs to include this, because
- * everything gets the autoconf macros */
-#include "prefix.h"
-#endif /* _WIN32 */
 
-#endif /* _GAIM_INTERNAL_H_ */
+/* INTERNAL FUNCTIONS */
+
+#include "account.h"
+#include "connection.h"
+
+/* This is for the accounts code to notify the buddy icon code that
+ * it's done loading.  We may want to replace this with a signal. */
+void
+_purple_buddy_icons_account_loaded_cb(void);
+
+/* This is for the buddy list to notify the buddy icon code that
+ * it's done loading.  We may want to replace this with a signal. */
+void
+_purple_buddy_icons_blist_loaded_cb(void);
+
+/* This is for the purple_core_migrate() code to tell the buddy
+ * icon subsystem about the old icons directory so it can
+ * migrate any icons in use. */
+void
+_purple_buddy_icon_set_old_icons_dir(const char *dirname);
+
+/**
+ * Creates a connection to the specified account and either connects
+ * or attempts to register a new account.  If you are logging in,
+ * the connection uses the current active status for this account.
+ * So if you want to sign on as "away," for example, you need to
+ * have called purple_account_set_status(account, "away").
+ * (And this will call purple_account_connect() automatically).
+ *
+ * @note This function should only be called by purple_account_connect()
+ *       in account.c.  If you're trying to sign on an account, use that
+ *       function instead.
+ *
+ * @param account  The account the connection should be connecting to.
+ * @param regist   Whether we are registering a new account or just
+ *                 trying to do a normal signon.
+ * @param password The password to use.
+ */
+void _purple_connection_new(PurpleAccount *account, gboolean regist,
+                            const char *password);
+/**
+ * Tries to unregister the account on the server. If the account is not
+ * connected, also creates a new connection.
+ *
+ * @note This function should only be called by purple_account_unregister()
+ *       in account.c.
+ *
+ * @param account  The account to unregister
+ * @param password The password to use.
+ * @param cb Optional callback to be called when unregistration is complete
+ * @param user_data user data to pass to the callback
+ */
+void _purple_connection_new_unregister(PurpleAccount *account, const char *password,
+                                       PurpleAccountUnregistrationCb cb, void *user_data);
+/**
+ * Disconnects and destroys a PurpleConnection.
+ *
+ * @note This function should only be called by purple_account_disconnect()
+ *        in account.c.  If you're trying to sign off an account, use that
+ *        function instead.
+ *
+ * @param gc The purple connection to destroy.
+ */
+void _purple_connection_destroy(PurpleConnection *gc);
+
+#endif /* _PURPLE_INTERNAL_H_ */

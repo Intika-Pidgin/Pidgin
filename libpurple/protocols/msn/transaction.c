@@ -1,9 +1,9 @@
 /**
  * @file transaction.c MSN transaction functions
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,8 +19,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
+#include "internal.h"
+#include "debug.h"
+
 #include "msn.h"
 #include "transaction.h"
 
@@ -37,6 +41,7 @@ msn_transaction_new(MsnCmdProc *cmdproc, const char *command,
 
 	trans->cmdproc = cmdproc;
 	trans->command = g_strdup(command);
+	trans->saveable = TRUE;
 
 	if (format != NULL)
 	{
@@ -59,6 +64,9 @@ msn_transaction_destroy(MsnTransaction *trans)
 	g_free(trans->params);
 	g_free(trans->payload);
 
+	if (trans->data_free)
+		trans->data_free(trans->data);
+
 #if 0
 	if (trans->pendent_cmd != NULL)
 		msn_message_unref(trans->pendent_msg);
@@ -79,7 +87,7 @@ msn_transaction_destroy(MsnTransaction *trans)
 		g_hash_table_destroy(trans->callbacks);
 
 	if (trans->timer)
-		gaim_timeout_remove(trans->timer);
+		purple_timeout_remove(trans->timer);
 
 	g_free(trans);
 }
@@ -93,8 +101,10 @@ msn_transaction_to_string(MsnTransaction *trans)
 
 	if (trans->params != NULL)
 		str = g_strdup_printf("%s %u %s\r\n", trans->command, trans->trId, trans->params);
-	else
+	else if (trans->saveable)
 		str = g_strdup_printf("%s %u\r\n", trans->command, trans->trId);
+	else
+		str = g_strdup_printf("%s\r\n", trans->command);
 
 	return str;
 }
@@ -102,7 +112,7 @@ msn_transaction_to_string(MsnTransaction *trans)
 void
 msn_transaction_queue_cmd(MsnTransaction *trans, MsnCommand *cmd)
 {
-	gaim_debug_info("msn", "queueing command.\n");
+	purple_debug_info("msn", "queueing command.\n");
 	trans->pendent_cmd = cmd;
 	msn_command_ref(cmd);
 }
@@ -115,7 +125,7 @@ msn_transaction_unqueue_cmd(MsnTransaction *trans, MsnCmdProc *cmdproc)
 	if (!cmdproc->servconn->connected)
 		return;
 
-	gaim_debug_info("msn", "unqueueing command.\n");
+	purple_debug_info("msn", "unqueueing command.\n");
 	cmd = trans->pendent_cmd;
 
 	g_return_if_fail(cmd != NULL);
@@ -165,6 +175,20 @@ msn_transaction_set_data(MsnTransaction *trans, void *data)
 	trans->data = data;
 }
 
+void msn_transaction_set_data_free(MsnTransaction *trans, GDestroyNotify fn)
+{
+	g_return_if_fail(trans != NULL);
+	trans->data_free = fn;
+}
+
+void
+msn_transaction_set_saveable(MsnTransaction  *trans, gboolean saveable)
+{
+	g_return_if_fail(trans != NULL);
+
+	trans->saveable = saveable;
+}
+
 void
 msn_transaction_add_cb(MsnTransaction *trans, char *answer,
 					   MsnTransCb cb)
@@ -193,8 +217,10 @@ transaction_timeout(gpointer data)
 	g_return_val_if_fail(trans != NULL, FALSE);
 
 #if 0
-	gaim_debug_info("msn", "timed out: %s %d %s\n", trans->command, trans->trId, trans->params);
+	purple_debug_info("msn", "timed out: %s %d %s\n", trans->command, trans->trId, trans->params);
 #endif
+
+	trans->timer = 0;
 
 	if (trans->timeout_cb != NULL)
 		trans->timeout_cb(trans->cmdproc, trans);
@@ -207,11 +233,11 @@ msn_transaction_set_timeout_cb(MsnTransaction *trans, MsnTimeoutCb cb)
 {
 	if (trans->timer)
 	{
-		gaim_debug_error("msn", "This shouldn't be happening\n");
-		gaim_timeout_remove(trans->timer);
+		purple_debug_error("msn", "This shouldn't be happening\n");
+		purple_timeout_remove(trans->timer);
 	}
 	trans->timeout_cb = cb;
-	trans->timer = gaim_timeout_add(60000, transaction_timeout, trans);
+	trans->timer = purple_timeout_add_seconds(60, transaction_timeout, trans);
 }
 
 void

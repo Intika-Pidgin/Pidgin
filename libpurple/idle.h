@@ -1,10 +1,11 @@
 /**
  * @file idle.h Idle API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,10 +21,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_IDLE_H_
-#define _GAIM_IDLE_H_
+#ifndef _PURPLE_IDLE_H_
+#define _PURPLE_IDLE_H_
+
+#include <time.h>
 
 /**
  * Idle UI operations.
@@ -31,7 +34,12 @@
 typedef struct
 {
 	time_t (*get_time_idle)(void);
-} GaimIdleUiOps;
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
+} PurpleIdleUiOps;
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,14 +55,14 @@ extern "C" {
  * 'active'.  The conversation code calls this when the
  * user sends an IM, for example.
  */
-void gaim_idle_touch(void);
+void purple_idle_touch(void);
 
 /**
  * Fake our idle time by setting the time at which our
  * accounts purportedly became idle.  This is used by
  * the I'dle Mak'er plugin.
  */
-void gaim_idle_set(time_t time);
+void purple_idle_set(time_t time);
 
 /*@}*/
 
@@ -68,24 +76,24 @@ void gaim_idle_set(time_t time);
  *
  * @param ops The UI operations structure.
  */
-void gaim_idle_set_ui_ops(GaimIdleUiOps *ops);
+void purple_idle_set_ui_ops(PurpleIdleUiOps *ops);
 
 /**
  * Returns the UI operations structure used for idle reporting.
  *
  * @return The UI operations structure in use.
  */
-GaimIdleUiOps *gaim_idle_get_ui_ops(void);
+PurpleIdleUiOps *purple_idle_get_ui_ops(void);
 
 /**
  * Initializes the idle system.
  */
-void gaim_idle_init(void);
+void purple_idle_init(void);
 
 /**
  * Uninitializes the idle system.
  */
-void gaim_idle_uninit(void);
+void purple_idle_uninit(void);
 
 /*@}*/
 
@@ -93,4 +101,4 @@ void gaim_idle_uninit(void);
 }
 #endif
 
-#endif /* _GAIM_IDLE_H_ */
+#endif /* _PURPLE_IDLE_H_ */

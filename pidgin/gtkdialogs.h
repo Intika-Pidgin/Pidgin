@@ -1,9 +1,10 @@
 /**
- * @defgroup gtkui GTK+ User Interface
+ * @defgroup pidgin Pidgin (GTK+ User Interface)
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,40 +20,53 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTKDIALOGS_H_
-#define _GAIM_GTKDIALOGS_H_
+#ifndef _PIDGINDIALOGS_H_
+#define _PIDGINDIALOGS_H_
 
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "account.h"
 #include "conversation.h"
 
 /* Functions in gtkdialogs.c (these should actually stay in this file) */
-void gaim_gtkdialogs_destroy_all(void);
-void gaim_gtkdialogs_about(void);
-void gaim_gtkdialogs_im(void);
-void gaim_gtkdialogs_im_with_user(GaimAccount *, const char *);
-void gaim_gtkdialogs_info(void);
-void gaim_gtkdialogs_log(void);
-void gaim_gtkdialogs_alias_contact(GaimContact *);
-void gaim_gtkdialogs_alias_buddy(GaimBuddy *);
-void gaim_gtkdialogs_alias_chat(GaimChat *);
+void pidgin_dialogs_destroy_all(void);
+void pidgin_dialogs_about(void);
+void pidgin_dialogs_buildinfo(void);
+void pidgin_dialogs_developers(void);
+void pidgin_dialogs_translators(void);
+void pidgin_dialogs_plugins_info(void);
+void pidgin_dialogs_im(void);
+void pidgin_dialogs_im_with_user(PurpleAccount *, const char *);
+void pidgin_dialogs_info(void);
+void pidgin_dialogs_log(void);
 
-void gaim_gtkdialogs_remove_buddy(GaimBuddy *);
-void gaim_gtkdialogs_remove_group(GaimGroup *);
-void gaim_gtkdialogs_remove_chat(GaimChat *);
-void gaim_gtkdialogs_remove_contact(GaimContact *);
-void gaim_gtkdialogs_merge_groups(GaimGroup *, const char *);
+#if !(defined PIDGIN_DISABLE_DEPRECATED) || (defined _PIDGIN_GTKDIALOGS_C_)
+/**
+ * @deprecated This function is no longer used and will be removed in
+ *             Pidgin 3.0.0 unless there is sufficient demand to keep it.
+ */
+void pidgin_dialogs_alias_contact(PurpleContact *);
+#endif
+
+void pidgin_dialogs_alias_buddy(PurpleBuddy *);
+void pidgin_dialogs_alias_chat(PurpleChat *);
+void pidgin_dialogs_remove_buddy(PurpleBuddy *);
+void pidgin_dialogs_remove_group(PurpleGroup *);
+void pidgin_dialogs_remove_chat(PurpleChat *);
+void pidgin_dialogs_remove_contact(PurpleContact *);
+void pidgin_dialogs_merge_groups(PurpleGroup *, const char *);
 
 /* Everything after this should probably be moved elsewhere */
 
-/**
- * Our UI's identifier.
- */
-#define GAIM_DIALOG(x)	x = gtk_window_new(GTK_WINDOW_TOPLEVEL); \
+#ifndef PIDGIN_DISABLE_DEPRECATED
+/* This PIDGIN_DISABLE_DEPRECATED doesn't need to be deactivated by
+ * _PIDGIN_GTKDIALOGS_C_, because it shouldn't be using this macro. */
+#define PIDGIN_DIALOG(x)	x = gtk_window_new(GTK_WINDOW_TOPLEVEL); \
 			gtk_window_set_type_hint(GTK_WINDOW(x), GDK_WINDOW_TYPE_HINT_DIALOG)
-#define GAIM_WINDOW_ICONIFIED(x) (gdk_window_get_state(GTK_WIDGET(x)->window) & GDK_WINDOW_STATE_ICONIFIED)
+#endif
 
-#endif /* _GAIM_GTKDIALOGS_H_ */
+#define PIDGIN_WINDOW_ICONIFIED(x) (gdk_window_get_state(GTK_WIDGET(x)->window) & GDK_WINDOW_STATE_ICONIFIED)
+
+#endif /* _PIDGINDIALOGS_H_ */

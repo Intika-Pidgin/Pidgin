@@ -1,10 +1,10 @@
 /*
 
-  silcgaim_util.c
+  silcpurple_util.c
 
   Author: Pekka Riikonen <priikone@silcnet.org>
 
-  Copyright (C) 2004 - 2005 Pekka Riikonen
+  Copyright (C) 2004 - 2007 Pekka Riikonen
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,32 +17,33 @@
 
 */
 
-#include "silcincludes.h"
+#include "internal.h"
+#include "silc.h"
 #include "silcclient.h"
-#include "silcgaim.h"
+#include "silcpurple.h"
 #include "imgstore.h"
 
 /**************************** Utility Routines *******************************/
 
 static char str[256], str2[256];
 
-const char *silcgaim_silcdir(void)
+const char *silcpurple_silcdir(void)
 {
-	const char *hd = gaim_home_dir();
+	const char *hd = purple_home_dir();
 	memset(str, 0, sizeof(str));
 	g_snprintf(str, sizeof(str) - 1, "%s" G_DIR_SEPARATOR_S ".silc", hd ? hd : "/tmp");
 	return (const char *)str;
 }
 
-const char *silcgaim_session_file(const char *account)
+const char *silcpurple_session_file(const char *account)
 {
 	memset(str2, 0, sizeof(str2));
 	g_snprintf(str2, sizeof(str2) - 1, "%s" G_DIR_SEPARATOR_S "%s_session",
-		   silcgaim_silcdir(), account);
+		   silcpurple_silcdir(), account);
 	return (const char *)str2;
 }
 
-gboolean silcgaim_ip_is_private(const char *ip)
+gboolean silcpurple_ip_is_private(const char *ip)
 {
 	if (silc_net_is_ip4(ip)) {
 		if (!strncmp(ip, "10.", 3)) {
@@ -68,7 +69,7 @@ gboolean silcgaim_ip_is_private(const char *ip)
    it doesn't exist, it will create the directory. After that it checks if
    user's Public and Private key files exists and creates them if needed. */
 
-gboolean silcgaim_check_silc_dir(GaimConnection *gc)
+gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 {
 	char filename[256], file_public_key[256], file_private_key[256];
 	char servfilename[256], clientfilename[256], friendsfilename[256];
@@ -79,17 +80,17 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 
 	pw = getpwuid(getuid());
 	if (!pw) {
-		gaim_debug_error("silc", "silc: %s\n", strerror(errno));
+		purple_debug_error("silc", "silc: %s\n", g_strerror(errno));
 		return FALSE;
 	}
 
-	g_snprintf(filename, sizeof(filename) - 1, "%s", silcgaim_silcdir());
+	g_snprintf(filename, sizeof(filename) - 1, "%s", silcpurple_silcdir());
 	g_snprintf(servfilename, sizeof(servfilename) - 1, "%s" G_DIR_SEPARATOR_S "serverkeys",
-		   silcgaim_silcdir());
+		   silcpurple_silcdir());
 	g_snprintf(clientfilename, sizeof(clientfilename) - 1, "%s" G_DIR_SEPARATOR_S "clientkeys",
-		   silcgaim_silcdir());
+		   silcpurple_silcdir());
 	g_snprintf(friendsfilename, sizeof(friendsfilename) - 1, "%s" G_DIR_SEPARATOR_S "friends",
-		   silcgaim_silcdir());
+		   silcpurple_silcdir());
 
 	/*
 	 * Check ~/.silc directory
@@ -99,23 +100,23 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 		if (errno == ENOENT) {
 			if (pw->pw_uid == geteuid()) {
 				if ((g_mkdir(filename, 0755)) == -1) {
-					gaim_debug_error("silc", "Couldn't create '%s' directory\n", filename);
+					purple_debug_error("silc", "Couldn't create '%s' directory\n", filename);
 					return FALSE;
 				}
 			} else {
-				gaim_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
+				purple_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
 					filename);
 				return FALSE;
 			}
 		} else {
-			gaim_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n", filename, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n", filename, g_strerror(errno));
 			return FALSE;
 		}
 	} else {
 #ifndef _WIN32
 		/* Check the owner of the dir */
 		if (st.st_uid != 0 && st.st_uid != pw->pw_uid) {
-			gaim_debug_error("silc", "You don't seem to own '%s' directory\n",
+			purple_debug_error("silc", "You don't seem to own '%s' directory\n",
 				filename);
 			return FALSE;
 		}
@@ -130,17 +131,17 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 		if (errno == ENOENT) {
 			if (pw->pw_uid == geteuid()) {
 				if ((g_mkdir(servfilename, 0755)) == -1) {
-					gaim_debug_error("silc", "Couldn't create '%s' directory\n", servfilename);
+					purple_debug_error("silc", "Couldn't create '%s' directory\n", servfilename);
 					return FALSE;
 				}
 			} else {
-				gaim_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
+				purple_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
 					servfilename);
 				return FALSE;
 			}
 		} else {
-			gaim_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
-							 servfilename, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
+							 servfilename, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -153,17 +154,17 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 		if (errno == ENOENT) {
 			if (pw->pw_uid == geteuid()) {
 				if ((g_mkdir(clientfilename, 0755)) == -1) {
-					gaim_debug_error("silc", "Couldn't create '%s' directory\n", clientfilename);
+					purple_debug_error("silc", "Couldn't create '%s' directory\n", clientfilename);
 					return FALSE;
 				}
 			} else {
-				gaim_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
+				purple_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
 					clientfilename);
 				return FALSE;
 			}
 		} else {
-			gaim_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
-							 clientfilename, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
+							 clientfilename, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -176,17 +177,17 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 		if (errno == ENOENT) {
 			if (pw->pw_uid == geteuid()) {
 				if ((g_mkdir(friendsfilename, 0755)) == -1) {
-					gaim_debug_error("silc", "Couldn't create '%s' directory\n", friendsfilename);
+					purple_debug_error("silc", "Couldn't create '%s' directory\n", friendsfilename);
 					return FALSE;
 				}
 			} else {
-				gaim_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
+				purple_debug_error("silc", "Couldn't create '%s' directory due to a wrong uid!\n",
 					friendsfilename);
 				return FALSE;
 			}
 		} else {
-			gaim_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
-							 friendsfilename, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' directory, error: %s\n",
+							 friendsfilename, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -194,34 +195,37 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 	/*
 	 * Check Public and Private keys
 	 */
-	g_snprintf(pkd, sizeof(pkd), "%s" G_DIR_SEPARATOR_S "public_key.pub", silcgaim_silcdir());
-	g_snprintf(prd, sizeof(prd), "%s" G_DIR_SEPARATOR_S "private_key.prv", silcgaim_silcdir());
+	g_snprintf(pkd, sizeof(pkd), "%s" G_DIR_SEPARATOR_S "public_key.pub", silcpurple_silcdir());
+	g_snprintf(prd, sizeof(prd), "%s" G_DIR_SEPARATOR_S "private_key.prv", silcpurple_silcdir());
 	g_snprintf(file_public_key, sizeof(file_public_key) - 1, "%s",
-		   gaim_account_get_string(gc->account, "public-key", pkd));
+		   purple_account_get_string(gc->account, "public-key", pkd));
 	g_snprintf(file_private_key, sizeof(file_public_key) - 1, "%s",
-		   gaim_account_get_string(gc->account, "private-key", prd));
+		   purple_account_get_string(gc->account, "private-key", prd));
 
 	if ((g_stat(file_public_key, &st)) == -1) {
 		/* If file doesn't exist */
 		if (errno == ENOENT) {
-			gaim_connection_update_progress(gc, _("Creating SILC key pair..."), 1, 5);
-			if (!silc_create_key_pair(SILCGAIM_DEF_PKCS,
-					     SILCGAIM_DEF_PKCS_LEN,
-					     file_public_key, file_private_key, NULL,
-					     (gc->password == NULL) ? "" : gc->password,
-						 NULL, NULL, NULL, FALSE)) {
-				gaim_debug_error("silc", "Couldn't create key pair\n");
+			purple_connection_update_progress(gc, _("Creating SILC key pair..."), 1, 5);
+			if (!silc_create_key_pair(SILCPURPLE_DEF_PKCS,
+						  SILCPURPLE_DEF_PKCS_LEN,
+						  file_public_key,
+						  file_private_key, NULL,
+						  (gc->password == NULL)
+						  ? "" : gc->password,
+						  NULL, NULL, FALSE)) {
+				purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				                             _("Unable to create SILC key pair"));
 				return FALSE;
 			}
 
 			if ((g_stat(file_public_key, &st)) == -1) {
-				gaim_debug_error("silc", "Couldn't stat '%s' public key, error: %s\n",
-					file_public_key, strerror(errno));
+				purple_debug_error("silc", "Couldn't stat '%s' public key, error: %s\n",
+						   file_public_key, g_strerror(errno));
 				return FALSE;
 			}
 		} else {
-			gaim_debug_error("silc", "Couldn't stat '%s' public key, error: %s\n",
-							 file_public_key, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' public key, error: %s\n",
+					   file_public_key, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -229,35 +233,38 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 #ifndef _WIN32
 	/* Check the owner of the public key */
 	if (st.st_uid != 0 && st.st_uid != pw->pw_uid) {
-		gaim_debug_error("silc", "You don't seem to own your public key!?\n");
+		purple_debug_error("silc", "You don't seem to own your public key!?\n");
 		return FALSE;
 	}
 #endif
 
 	if ((fd = g_open(file_private_key, O_RDONLY, 0)) != -1) {
 		if ((fstat(fd, &st)) == -1) {
-			gaim_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-							 file_private_key, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
+					   file_private_key, g_strerror(errno));
 			close(fd);
 			return FALSE;
 		}
 	} else if ((g_stat(file_private_key, &st)) == -1) {
 		/* If file doesn't exist */
 		if (errno == ENOENT) {
-			gaim_connection_update_progress(gc, _("Creating SILC key pair..."), 1, 5);
-			if (!silc_create_key_pair(SILCGAIM_DEF_PKCS,
-					     SILCGAIM_DEF_PKCS_LEN,
-					     file_public_key, file_private_key, NULL,
-					     (gc->password == NULL) ? "" : gc->password,
-						 NULL, NULL, NULL, FALSE)) {
-				gaim_debug_error("silc", "Couldn't create key pair\n");
+			purple_connection_update_progress(gc, _("Creating SILC key pair..."), 1, 5);
+			if (!silc_create_key_pair(SILCPURPLE_DEF_PKCS,
+						  SILCPURPLE_DEF_PKCS_LEN,
+						  file_public_key,
+						  file_private_key, NULL,
+						  (gc->password == NULL)
+						  ? "" : gc->password,
+						  NULL, NULL, FALSE)) {
+				purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				                             _("Unable to create SILC key pair"));
 				return FALSE;
 			}
 
 			if ((fd = g_open(file_private_key, O_RDONLY, 0)) != -1) {
 				if ((fstat(fd, &st)) == -1) {
-					gaim_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-							 file_private_key, strerror(errno));
+					purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
+							   file_private_key, g_strerror(errno));
 					close(fd);
 					return FALSE;
 				}
@@ -265,13 +272,13 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 			/* This shouldn't really happen because silc_create_key_pair()
 			 * will set the permissions */
 			else if ((g_stat(file_private_key, &st)) == -1) {
-				gaim_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-					file_private_key, strerror(errno));
+				purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
+						   file_private_key, g_strerror(errno));
 				return FALSE;
 			}
 		} else {
-			gaim_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
-							 file_private_key, strerror(errno));
+			purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
+					   file_private_key, g_strerror(errno));
 			return FALSE;
 		}
 	}
@@ -279,7 +286,7 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 #ifndef _WIN32
 	/* Check the owner of the private key */
 	if (st.st_uid != 0 && st.st_uid != pw->pw_uid) {
-		gaim_debug_error("silc", "You don't seem to own your private key!?\n");
+		purple_debug_error("silc", "You don't seem to own your private key!?\n");
 		if (fd != -1)
 			close(fd);
 		return FALSE;
@@ -287,17 +294,17 @@ gboolean silcgaim_check_silc_dir(GaimConnection *gc)
 
 	/* Check the permissions for the private key */
 	if ((st.st_mode & 0777) != 0600) {
-		gaim_debug_warning("silc", "Wrong permissions in your private key file `%s'!\n"
+		purple_debug_warning("silc", "Wrong permissions in your private key file `%s'!\n"
 			"Trying to change them ...\n", file_private_key);
 		if ((fd == -1) || (fchmod(fd, S_IRUSR | S_IWUSR)) == -1) {
-			gaim_debug_error("silc",
+			purple_debug_error("silc",
 				"Failed to change permissions for private key file!\n"
 				"Permissions for your private key file must be 0600.\n");
 			if (fd != -1)
 				close(fd);
 			return FALSE;
 		}
-		gaim_debug_warning("silc", "Done.\n\n");
+		purple_debug_warning("silc", "Done.\n\n");
 	}
 #endif
 
@@ -322,30 +329,32 @@ uid_t geteuid() {
 }
 #endif
 
-void silcgaim_show_public_key(SilcGaim sg,
-			      const char *name, SilcPublicKey public_key,
-			      GCallback callback, void *context)
+void silcpurple_show_public_key(SilcPurple sg,
+				const char *name, SilcPublicKey public_key,
+				GCallback callback, void *context)
 {
 	SilcPublicKeyIdentifier ident;
-	SilcPKCS pkcs;
+	SilcSILCPublicKey silc_pubkey;
 	char *fingerprint, *babbleprint;
 	unsigned char *pk;
 	SilcUInt32 pk_len, key_len = 0;
 	GString *s;
-	char *buf;
 
-	ident = silc_pkcs_decode_identifier(public_key->identifier);
-	if (!ident)
-		return;
+	/* We support showing only SILC public keys for now */
+	if (silc_pkcs_get_type(public_key) != SILC_PKCS_SILC)
+	  return;
+
+	silc_pubkey = silc_pkcs_get_context(SILC_PKCS_SILC, public_key);
+	ident = &silc_pubkey->identifier;
+	key_len = silc_pkcs_public_key_get_len(public_key);
 
 	pk = silc_pkcs_public_key_encode(public_key, &pk_len);
+	if (!pk)
+	  return;
 	fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
 	babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
-
-	if (silc_pkcs_alloc((unsigned char *)public_key->name, &pkcs)) {
-		key_len = silc_pkcs_public_key_set(pkcs, public_key);
-		silc_pkcs_free(pkcs);
-	}
+	if (!fingerprint || !babbleprint)
+	  return;
 
 	s = g_string_new("");
 	if (ident->realname)
@@ -356,35 +365,34 @@ void silcgaim_show_public_key(SilcGaim sg,
 	if (ident->username)
 		g_string_append_printf(s, _("User Name: \t%s\n"), ident->username);
 	if (ident->email)
-		g_string_append_printf(s, _("E-Mail: \t\t%s\n"), ident->email);
+		g_string_append_printf(s, _("Email: \t\t%s\n"), ident->email);
 	if (ident->host)
 		g_string_append_printf(s, _("Host Name: \t%s\n"), ident->host);
 	if (ident->org)
 		g_string_append_printf(s, _("Organization: \t%s\n"), ident->org);
 	if (ident->country)
 		g_string_append_printf(s, _("Country: \t%s\n"), ident->country);
-	g_string_append_printf(s, _("Algorithm: \t%s\n"), public_key->name);
+	g_string_append_printf(s, _("Algorithm: \t%s\n"), silc_pubkey->pkcs->name);
 	g_string_append_printf(s, _("Key Length: \t%d bits\n"), (int)key_len);
+	if (ident->version)
+	  g_string_append_printf(s, _("Version: \t%s\n"), ident->version);
 	g_string_append_printf(s, "\n");
 	g_string_append_printf(s, _("Public Key Fingerprint:\n%s\n\n"), fingerprint);
 	g_string_append_printf(s, _("Public Key Babbleprint:\n%s"), babbleprint);
 
-	buf = g_string_free(s, FALSE);
+	purple_request_action(sg->gc, _("Public Key Information"),
+			      _("Public Key Information"),
+			      s->str, 0, purple_connection_get_account(sg->gc),
+			      NULL, NULL, context, 1, _("Close"), callback);
 
-	gaim_request_action(sg->gc, _("Public Key Information"),
-			    _("Public Key Information"),
-			    buf, 0, context, 1,
-			    _("Close"), callback);
-
-	g_free(buf);
+	g_string_free(s, TRUE);
 	silc_free(fingerprint);
 	silc_free(babbleprint);
 	silc_free(pk);
-	silc_pkcs_free_identifier(ident);
 }
 
 SilcAttributePayload
-silcgaim_get_attr(SilcDList attrs, SilcAttribute attribute)
+silcpurple_get_attr(SilcDList attrs, SilcAttribute attribute)
 {
 	SilcAttributePayload attr = NULL;
 
@@ -399,8 +407,8 @@ silcgaim_get_attr(SilcDList attrs, SilcAttribute attribute)
 	return attr;
 }
 
-void silcgaim_get_umode_string(SilcUInt32 mode, char *buf,
-			       SilcUInt32 buf_size)
+void silcpurple_get_umode_string(SilcUInt32 mode, char *buf,
+				 SilcUInt32 buf_size)
 {
 	memset(buf, 0, buf_size);
 	if ((mode & SILC_UMODE_SERVER_OPERATOR) ||
@@ -432,18 +440,17 @@ void silcgaim_get_umode_string(SilcUInt32 mode, char *buf,
 		strcat(buf, "[rejects watching] ");
 	if (mode & SILC_UMODE_BLOCK_INVITE)
 		strcat(buf, "[blocks invites] ");
+	g_strchomp(buf);
 }
 
-void silcgaim_get_chmode_string(SilcUInt32 mode, char *buf,
-				SilcUInt32 buf_size)
+void silcpurple_get_chmode_string(SilcUInt32 mode, char *buf,
+				  SilcUInt32 buf_size)
 {
 	memset(buf, 0, buf_size);
 	if (mode & SILC_CHANNEL_MODE_FOUNDER_AUTH)
 		strcat(buf, "[permanent] ");
 	if (mode & SILC_CHANNEL_MODE_PRIVATE)
 		strcat(buf, "[private] ");
-	if (mode & SILC_CHANNEL_MODE_SECRET)
-		strcat(buf, "[secret] ");
 	if (mode & SILC_CHANNEL_MODE_SECRET)
 		strcat(buf, "[secret] ");
 	if (mode & SILC_CHANNEL_MODE_PRIVKEY)
@@ -462,9 +469,10 @@ void silcgaim_get_chmode_string(SilcUInt32 mode, char *buf,
 		strcat(buf, "[users silenced] ");
 	if (mode & SILC_CHANNEL_MODE_SILENCE_OPERS)
 		strcat(buf, "[operators silenced] ");
+	g_strchomp(buf);
 }
 
-void silcgaim_get_chumode_string(SilcUInt32 mode, char *buf,
+void silcpurple_get_chumode_string(SilcUInt32 mode, char *buf,
 				 SilcUInt32 buf_size)
 {
 	memset(buf, 0, buf_size);
@@ -480,12 +488,13 @@ void silcgaim_get_chumode_string(SilcUInt32 mode, char *buf,
 		strcat(buf, "[blocks robot messages] ");
 	if (mode & SILC_CHANNEL_UMODE_QUIET)
 		strcat(buf, "[quieted] ");
+	g_strchomp(buf);
 }
 
 void
-silcgaim_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
-					 char **contactstr, char **langstr, char **devicestr,
-					 char **tzstr, char **geostr)
+silcpurple_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
+		       char **contactstr, char **langstr, char **devicestr,
+		       char **tzstr, char **geostr)
 {
 	SilcAttributePayload attr;
 	SilcAttributeMood mood = 0;
@@ -508,7 +517,7 @@ silcgaim_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 		return;
 
 	s = g_string_new("");
-	attr = silcgaim_get_attr(attrs, SILC_ATTRIBUTE_STATUS_MOOD);
+	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_STATUS_MOOD);
 	if (attr && silc_attribute_get_object(attr, &mood, sizeof(mood))) {
 		if (mood & SILC_ATTRIBUTE_MOOD_HAPPY)
 			g_string_append_printf(s, "[%s] ", _("Happy"));
@@ -534,23 +543,23 @@ silcgaim_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 			g_string_append_printf(s, "[%s] ", _("Anxious"));
 	}
 	if (strlen(s->str)) {
-		*moodstr = s->str;
-		g_string_free(s, FALSE);
+		*moodstr = g_string_free(s, FALSE);
+		g_strchomp(*moodstr);
 	} else
 		g_string_free(s, TRUE);
 
-	attr = silcgaim_get_attr(attrs, SILC_ATTRIBUTE_STATUS_FREETEXT);
+	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_STATUS_FREETEXT);
 	memset(tmp, 0, sizeof(tmp));
 	if (attr && silc_attribute_get_object(attr, tmp, sizeof(tmp)))
 		*statusstr = g_strdup(tmp);
 
 	s = g_string_new("");
-	attr = silcgaim_get_attr(attrs, SILC_ATTRIBUTE_PREFERRED_CONTACT);
+	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_PREFERRED_CONTACT);
 	if (attr && silc_attribute_get_object(attr, &contact, sizeof(contact))) {
 		if (contact & SILC_ATTRIBUTE_CONTACT_CHAT)
 			g_string_append_printf(s, "[%s] ", _("Chat"));
 		if (contact & SILC_ATTRIBUTE_CONTACT_EMAIL)
-			g_string_append_printf(s, "[%s] ", _("E-Mail"));
+			g_string_append_printf(s, "[%s] ", _("Email"));
 		if (contact & SILC_ATTRIBUTE_CONTACT_CALL)
 			g_string_append_printf(s, "[%s] ", _("Phone"));
 		if (contact & SILC_ATTRIBUTE_CONTACT_PAGE)
@@ -563,18 +572,18 @@ silcgaim_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 			g_string_append_printf(s, "[%s] ", _("Video Conferencing"));
 	}
 	if (strlen(s->str)) {
-		*contactstr = s->str;
-		g_string_free(s, FALSE);
+		*contactstr = g_string_free(s, FALSE);
+		g_strchomp(*contactstr);
 	} else
 		g_string_free(s, TRUE);
 
-	attr = silcgaim_get_attr(attrs, SILC_ATTRIBUTE_PREFERRED_LANGUAGE);
+	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_PREFERRED_LANGUAGE);
 	memset(tmp, 0, sizeof(tmp));
 	if (attr && silc_attribute_get_object(attr, tmp, sizeof(tmp)))
 		*langstr = g_strdup(tmp);
 
 	s = g_string_new("");
-	attr = silcgaim_get_attr(attrs, SILC_ATTRIBUTE_DEVICE_INFO);
+	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_DEVICE_INFO);
 	memset(&device, 0, sizeof(device));
 	if (attr && silc_attribute_get_object(attr, &device, sizeof(device))) {
 		if (device.type == SILC_ATTRIBUTE_DEVICE_COMPUTER)
@@ -591,18 +600,17 @@ silcgaim_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 				device.model ? device.model : "",
 				device.language ? device.language : "");
 	}
-	if (strlen(s->str)) {
-		*devicestr = s->str;
-		g_string_free(s, FALSE);
-	} else
+	if (strlen(s->str))
+		*devicestr = g_string_free(s, FALSE);
+	else
 		g_string_free(s, TRUE);
 
-	attr = silcgaim_get_attr(attrs, SILC_ATTRIBUTE_TIMEZONE);
+	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_TIMEZONE);
 	memset(tmp, 0, sizeof(tmp));
 	if (attr && silc_attribute_get_object(attr, tmp, sizeof(tmp)))
 		*tzstr = g_strdup(tmp);
 
-	attr = silcgaim_get_attr(attrs, SILC_ATTRIBUTE_GEOLOCATION);
+	attr = silcpurple_get_attr(attrs, SILC_ATTRIBUTE_GEOLOCATION);
 	memset(&geo, 0, sizeof(geo));
 	if (attr && silc_attribute_get_object(attr, &geo, sizeof(geo)))
 		*geostr = g_strdup_printf("%s %s %s (%s)",
@@ -612,36 +620,35 @@ silcgaim_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 				geo.accuracy ? geo.accuracy : "");
 }
 
-#ifdef HAVE_SILCMIME_H
 /* Returns MIME type of filetype */
 
-char *silcgaim_file2mime(const char *filename)
+char *silcpurple_file2mime(const char *filename)
 {
 	const char *ct;
 
 	ct = strrchr(filename, '.');
 	if (!ct)
 		return NULL;
-	else if (!strcasecmp(".png", ct))
-		return strdup("image/png");
-	else if (!strcasecmp(".jpg", ct))
-		return strdup("image/jpeg");
-	else if (!strcasecmp(".jpeg", ct))
-		return strdup("image/jpeg");
-	else if (!strcasecmp(".gif", ct))
-		return strdup("image/gif");
-	else if (!strcasecmp(".tiff", ct))
-		return strdup("image/tiff");
-	
+	else if (!g_ascii_strcasecmp(".png", ct))
+		return g_strdup("image/png");
+	else if (!g_ascii_strcasecmp(".jpg", ct))
+		return g_strdup("image/jpeg");
+	else if (!g_ascii_strcasecmp(".jpeg", ct))
+		return g_strdup("image/jpeg");
+	else if (!g_ascii_strcasecmp(".gif", ct))
+		return g_strdup("image/gif");
+	else if (!g_ascii_strcasecmp(".tiff", ct))
+		return g_strdup("image/tiff");
+
 	return NULL;
 }
 
-/* Checks if message has images, and assembles MIME message if it has. 
-   If only one image is present, creates simple MIME image message.  If 
-   there are multiple images and/or text with images multipart MIME 
+/* Checks if message has images, and assembles MIME message if it has.
+   If only one image is present, creates simple MIME image message.  If
+   there are multiple images and/or text with images multipart MIME
    message is created. */
 
-SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
+SilcDList silcpurple_image_message(const char *msg, SilcUInt32 *mflags)
 {
 	SilcMime mime = NULL, p;
 	SilcDList list, parts = NULL;
@@ -651,9 +658,9 @@ SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
 	gboolean images = FALSE;
 
 	last = msg;
-	while (last && *last && gaim_markup_find_tag("img", last, &start,
+	while (last && *last && purple_markup_find_tag("img", last, &start,
 						     &end, &attribs)) {
-		GaimStoredImage *image = NULL;
+		PurpleStoredImage *image = NULL;
 		const char *id;
 
 		/* Check if there is text before image */
@@ -666,10 +673,11 @@ SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
 					    "text/plain; charset=utf-8");
 
 			tmp = g_strndup(last, start - last);
-			text = gaim_unescape_html(tmp);
+			text = purple_unescape_html(tmp);
 			g_free(tmp);
+
 			/* Add text */
-			silc_mime_add_data(p, text, strlen(text));
+			silc_mime_add_data(p, (const unsigned char *)text, strlen(text));
 			g_free(text);
 
 			if (!parts)
@@ -678,21 +686,21 @@ SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
 		}
 
 		id = g_datalist_get_data(&attribs, "id");
-		if (id && (image = gaim_imgstore_get(atoi(id)))) {
-			unsigned long imglen = gaim_imgstore_get_size(image);
-			gpointer img = gaim_imgstore_get_data(image);
+		if (id && (image = purple_imgstore_find_by_id(atoi(id)))) {
+			unsigned long imglen = purple_imgstore_get_size(image);
+			gconstpointer img = purple_imgstore_get_data(image);
 
 			p = silc_mime_alloc();
 
 			/* Add content type */
-			type = silcgaim_file2mime(gaim_imgstore_get_filename(image));
+			type = silcpurple_file2mime(purple_imgstore_get_filename(image));
 			if (!type) {
 				g_datalist_clear(&attribs);
 				last = end + 1;
 				continue;
 			}
 			silc_mime_add_field(p, "Content-Type", type);
-			silc_free(type);
+			g_free(type);
 
 			/* Add content transfer encoding */
 			silc_mime_add_field(p, "Content-Transfer-Encoding", "binary");
@@ -714,7 +722,7 @@ SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
 
 	/* Check for text after the image(s) */
 	if (images && last && *last) {
-		char *tmp = gaim_unescape_html(last);
+		char *tmp = purple_unescape_html(last);
 		p = silc_mime_alloc();
 
 		/* Add content type */
@@ -722,7 +730,7 @@ SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
 				    "text/plain; charset=utf-8");
 
 		/* Add text */
-		silc_mime_add_data(p, tmp, strlen(tmp));
+		silc_mime_add_data(p, (const unsigned char *)tmp, strlen(tmp));
 		g_free(tmp);
 
 		if (!parts)
@@ -744,7 +752,7 @@ SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
 		silc_mime_add_field(mime, "MIME-Version", "1.0");
 		g_snprintf(b, sizeof(b), "b%4X%4X",
 			   (unsigned int)time(NULL),
-			   silc_dlist_count(parts)); 
+			   silc_dlist_count(parts));
 		silc_mime_set_multipart(mime, "mixed", b);
 		silc_dlist_start(parts);
 		while ((p = silc_dlist_get(parts)) != SILC_LIST_END)
@@ -769,5 +777,3 @@ SilcDList silcgaim_image_message(const char *msg, SilcUInt32 *mflags)
 
 	return list;
 }
-
-#endif /* HAVE_SILCMIME_H */

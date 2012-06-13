@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA	02111-1301	USA
  *
  */
 
@@ -170,7 +170,7 @@ handle_receive_message(NMUser * user, NMEvent * event, gboolean autoreply)
 			msg = g_new0(char, size + 1);
 			rc = nm_read_all(conn, msg, size);
 
-			gaim_debug(GAIM_DEBUG_INFO, "novell", "Message is %s\n", msg);
+			purple_debug(PURPLE_DEBUG_INFO, "novell", "Message is %s\n", msg);
 
 			/* Auto replies are not in RTF format! */
 			if (!autoreply) {
@@ -180,7 +180,7 @@ handle_receive_message(NMUser * user, NMEvent * event, gboolean autoreply)
 				nortf = nm_rtf_strip_formatting(ctx, msg);
 				nm_rtf_deinit(ctx);
 
-				gaim_debug(GAIM_DEBUG_INFO, "novell",
+				purple_debug(PURPLE_DEBUG_INFO, "novell",
 						   "Message without RTF is %s\n", nortf);
 
 				/* Store the event data */
@@ -910,7 +910,7 @@ nm_process_event(NMUser * user, int type)
 				break;
 
 			default:
-				gaim_debug(GAIM_DEBUG_INFO, "novell",
+				purple_debug(PURPLE_DEBUG_INFO, "novell",
 						   "Unknown event %d received.\n", type);
 				rc = NMERR_PROTOCOL;
 				break;

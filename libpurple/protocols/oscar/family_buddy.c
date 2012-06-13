@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -47,7 +47,7 @@ static int
 rights(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
 	aim_rxcallback_t userfunc;
-	aim_tlvlist_t *tlvlist;
+	GSList *tlvlist;
 	guint16 maxbuddies = 0, maxwatchers = 0;
 	int ret = 0;
 
@@ -82,118 +82,9 @@ rights(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame,
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
 		ret = userfunc(od, conn, frame, maxbuddies, maxwatchers);
 
-	aim_tlvlist_free(&tlvlist);
+	aim_tlvlist_free(tlvlist);
 
 	return ret;
-}
-
-/*
- * Subtype 0x0004 (SNAC_SUBTYPE_BUDDY_ADDBUDDY) - Add buddy to list.
- *
- * Adds a single buddy to your buddy list after login.
- * XXX This should just be an extension of setbuddylist()
- *
- */
-int
-aim_buddylist_addbuddy(OscarData *od, FlapConnection *conn, const char *sn)
-{
-	FlapFrame *frame;
-	aim_snacid_t snacid;
-
-	if (!sn || !strlen(sn))
-		return -EINVAL;
-
-	frame = flap_frame_new(od, 0x02, 10+1+strlen(sn));
-
-	snacid = aim_cachesnac(od, 0x0003, 0x0004, 0x0000, sn, strlen(sn)+1);
-	aim_putsnac(&frame->data, 0x0003, 0x0004, 0x0000, snacid);
-
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
-
-	flap_connection_send(conn, frame);
-
-	return 0;
-}
-
-/*
- * Subtype 0x0004 (SNAC_SUBTYPE_BUDDY_ADDBUDDY) - Add multiple buddies to your buddy list.
- *
- * This just builds the "set buddy list" command then queues it.
- *
- * buddy_list = "Screen Name One&ScreenNameTwo&";
- *
- * XXX Clean this up.
- *
- */
-int
-aim_buddylist_set(OscarData *od, FlapConnection *conn, const char *buddy_list)
-{
-	FlapFrame *frame;
-	aim_snacid_t snacid;
-	int len = 0;
-	char *localcpy = NULL;
-	char *tmpptr = NULL;
-
-	if (!buddy_list || !(localcpy = strdup(buddy_list)))
-		return -EINVAL;
-
-	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
-		gaim_debug_misc("oscar", "---adding: %s (%d)\n", tmpptr, strlen(tmpptr));
-		len += 1 + strlen(tmpptr);
-		tmpptr = strtok(NULL, "&");
-	}
-
-	frame = flap_frame_new(od, 0x02, 10+len);
-
-	snacid = aim_cachesnac(od, 0x0003, 0x0004, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x0003, 0x0004, 0x0000, snacid);
-
-	strncpy(localcpy, buddy_list, strlen(buddy_list) + 1);
-
-	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
-
-		gaim_debug_misc("oscar", "---adding: %s (%d)\n", tmpptr, strlen(tmpptr));
-
-		byte_stream_put8(&frame->data, strlen(tmpptr));
-		byte_stream_putstr(&frame->data, tmpptr);
-		tmpptr = strtok(NULL, "&");
-	}
-
-	flap_connection_send(conn, frame);
-
-	free(localcpy);
-
-	return 0;
-}
-
-/*
- * Subtype 0x0005 (SNAC_SUBTYPE_BUDDY_REMBUDDY) - Remove buddy from list.
- *
- * XXX generalise to support removing multiple buddies (basically, its
- * the same as setbuddylist() but with a different snac subtype).
- *
- */
-int
-aim_buddylist_removebuddy(OscarData *od, FlapConnection *conn, const char *sn)
-{
-	FlapFrame *frame;
-	aim_snacid_t snacid;
-
-	if (!sn || !strlen(sn))
-		return -EINVAL;
-
-	frame = flap_frame_new(od, 0x02, 10+1+strlen(sn));
-
-	snacid = aim_cachesnac(od, 0x0003, 0x0005, 0x0000, sn, strlen(sn)+1);
-	aim_putsnac(&frame->data, 0x0003, 0x0005, 0x0000, snacid);
-
-	byte_stream_put8(&frame->data, strlen(sn));
-	byte_stream_putstr(&frame->data, sn);
-
-	flap_connection_send(conn, frame);
-
-	return 0;
 }
 
 /*
@@ -219,8 +110,18 @@ buddychange(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
 		ret = userfunc(od, conn, frame, &userinfo);
 
-	if (snac->subtype == SNAC_SUBTYPE_BUDDY_ONCOMING)
-		aim_locate_requestuserinfo(od, userinfo.sn);
+	if (snac->subtype == SNAC_SUBTYPE_BUDDY_ONCOMING &&
+	    userinfo.capabilities & OSCAR_CAPABILITY_XTRAZ) {
+		PurpleAccount *account = purple_connection_get_account(od->gc);
+		PurpleBuddy *buddy = purple_find_buddy(account, userinfo.bn);
+
+		if (buddy) {
+			PurplePresence *presence = purple_buddy_get_presence(buddy);
+
+			if (purple_presence_is_status_primitive_active(presence, PURPLE_STATUS_MOOD))
+				icq_im_xstatus_request(od, userinfo.bn);
+		}
+	}
 	aim_info_free(&userinfo);
 
 	return ret;
@@ -240,7 +141,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 buddylist_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x0003;
+	mod->family = SNAC_FAMILY_BUDDY;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
 	mod->toolversion = 0x0629;

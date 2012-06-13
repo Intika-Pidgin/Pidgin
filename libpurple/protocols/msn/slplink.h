@@ -1,9 +1,9 @@
 /**
  * @file slplink.h MSNSLP Link support
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,22 +19,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_SLPLINK_H_
-#define _MSN_SLPLINK_H_
+#ifndef MSN_SLPLINK_H
+#define MSN_SLPLINK_H
 
 typedef struct _MsnSlpLink MsnSlpLink;
 
 #include "directconn.h"
+#include "session.h"
 #include "slpcall.h"
 #include "slpmsg.h"
-
 #include "switchboard.h"
-
-#include "ft.h"
-
-#include "session.h"
 
 typedef void (*MsnSlpCb)(MsnSlpCall *slpcall,
 						 const guchar *data, gsize size);
@@ -44,47 +40,52 @@ struct _MsnSlpLink
 {
 	MsnSession *session;
 	MsnSwitchBoard *swboard;
+	MsnDirectConn *dc;
 
-	char *local_user;
+	guint refs;
+
 	char *remote_user;
+	MsnP2PVersion p2p_version;
 
 	int slp_seq_id;
 
-	MsnDirectConn *directconn;
-
 	GList *slp_calls;
-	GList *slp_sessions;
 	GList *slp_msgs;
 
 	GQueue *slp_msg_queue;
 };
 
-MsnSlpLink *msn_slplink_new(MsnSession *session, const char *username);
-void msn_slplink_destroy(MsnSlpLink *slplink);
+MsnSlpLink *msn_slplink_ref(MsnSlpLink *slplink);
+void msn_slplink_unref(MsnSlpLink *slplink);
+
+/**
+ * @return An MsnSlpLink for the given user, or NULL if there is no
+ *         existing MsnSlpLink.
+ */
 MsnSlpLink *msn_session_find_slplink(MsnSession *session,
 									 const char *who);
+
+/**
+ * @return An MsnSlpLink for the given user.  One will be created if
+ *         it does not already exist.
+ */
 MsnSlpLink *msn_session_get_slplink(MsnSession *session, const char *username);
-MsnSlpSession *msn_slplink_find_slp_session(MsnSlpLink *slplink,
-											long session_id);
+
 void msn_slplink_add_slpcall(MsnSlpLink *slplink, MsnSlpCall *slpcall);
 void msn_slplink_remove_slpcall(MsnSlpLink *slplink, MsnSlpCall *slpcall);
 MsnSlpCall *msn_slplink_find_slp_call(MsnSlpLink *slplink,
 									  const char *id);
 MsnSlpCall *msn_slplink_find_slp_call_with_session_id(MsnSlpLink *slplink, long id);
-void msn_slplink_send_msg(MsnSlpLink *slplink, MsnMessage *msg);
-void msn_slplink_release_slpmsg(MsnSlpLink *slplink,
-								MsnSlpMessage *slpmsg);
+MsnP2PVersion msn_slplink_get_p2p_version(MsnSlpLink *slplink);
+
 void msn_slplink_queue_slpmsg(MsnSlpLink *slplink, MsnSlpMessage *slpmsg);
 void msn_slplink_send_slpmsg(MsnSlpLink *slplink,
 							 MsnSlpMessage *slpmsg);
-void msn_slplink_unleash(MsnSlpLink *slplink);
-void msn_slplink_send_ack(MsnSlpLink *slplink, MsnMessage *msg);
-void msn_slplink_process_msg(MsnSlpLink *slplink, MsnMessage *msg);
-MsnSlpMessage *msn_slplink_message_find(MsnSlpLink *slplink, long session_id, long id);
-void msn_slplink_append_slp_msg(MsnSlpLink *slplink, MsnSlpMessage *slpmsg);
-void msn_slplink_remove_slp_msg(MsnSlpLink *slplink,
-								MsnSlpMessage *slpmsg);
-void msn_slplink_request_ft(MsnSlpLink *slplink, GaimXfer *xfer);
+void msn_slplink_send_queued_slpmsgs(MsnSlpLink *slplink);
+void msn_slplink_process_msg(MsnSlpLink *slplink, MsnSlpMessagePart *part);
+
+/* Only exported for msn_xfer_write */
+void msn_slplink_send_msgpart(MsnSlpLink *slplink, MsnSlpMessage *slpmsg);
 
 void msn_slplink_request_object(MsnSlpLink *slplink,
 								const char *info,
@@ -94,4 +95,4 @@ void msn_slplink_request_object(MsnSlpLink *slplink,
 
 MsnSlpCall *msn_slp_process_msg(MsnSlpLink *slplink, MsnSlpMessage *slpmsg);
 
-#endif /* _MSN_SLPLINK_H_ */
+#endif /* MSN_SLPLINK_H */

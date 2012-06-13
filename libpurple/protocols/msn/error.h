@@ -1,9 +1,9 @@
 /**
  * @file error.h Error functions
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,10 +19,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_ERROR_H_
-#define _MSN_ERROR_H_
+#ifndef MSN_ERROR_H
+#define MSN_ERROR_H
 
 #include "session.h"
 
@@ -30,10 +30,11 @@
  * Returns the string representation of an error type.
  *
  * @param type The error type.
+ * @param debug Whether this should be treated as a debug log message or a user-visible error
  *
  * @return The string representation of the error type.
  */
-const char *msn_error_get_text(unsigned int type);
+const char *msn_error_get_text(unsigned int type, gboolean *debug);
 
 /**
  * Handles an error.
@@ -43,4 +44,14 @@ const char *msn_error_get_text(unsigned int type);
  */
 void msn_error_handle(MsnSession *session, unsigned int type);
 
-#endif /* _MSN_ERROR_H_ */
+/**
+ * Show the sync issue in a dialog using request api
+ *
+ * @param sesion 		MsnSession associated to this error.
+ * @param passport 		The passport associated with the error.
+ * @param group_name 	The group in the buddy is suppoused to be
+ */
+void msn_error_sync_issue(MsnSession *session, const char *passport,
+						 const char *group_name);
+
+#endif /* MSN_ERROR_H */
