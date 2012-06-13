@@ -1,10 +1,11 @@
 /**
  * @file stringref.c Reference-counted immutable strings
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -30,6 +31,7 @@
 #include <stdarg.h>
 
 #include "debug.h"
+#include "eventloop.h"
 #include "stringref.h"
 
 /**
@@ -39,7 +41,7 @@
  * it must be immutable -- for this reason, do _not_ access it
  * directly!
  */
-struct _GaimStringref {
+struct _PurpleStringref {
 	guint32 ref;	/**< The reference count of this string.
 					 *   Note that reference counts are only
 					 *   31 bits, and the high-order bit
@@ -57,51 +59,54 @@ struct _GaimStringref {
 
 static GList *gclist = NULL;
 
-static void stringref_free(GaimStringref *stringref);
+static void stringref_free(PurpleStringref *stringref);
 static gboolean gs_idle_cb(gpointer data);
 
-GaimStringref *gaim_stringref_new(const char *value)
+PurpleStringref *purple_stringref_new(const char *value)
 {
-	GaimStringref *newref;
+	PurpleStringref *newref;
+	size_t len;
 
 	if (value == NULL)
 		return NULL;
 
-	newref = g_malloc(sizeof(GaimStringref) + strlen(value));
-	strcpy(newref->value, value);
+	len = strlen(value);
+
+	newref = g_malloc(sizeof(PurpleStringref) + len);
+	g_strlcpy(newref->value, value, len);
 	newref->ref = 1;
 
 	return newref;
 }
 
-GaimStringref *gaim_stringref_new_noref(const char *value)
+PurpleStringref *purple_stringref_new_noref(const char *value)
 {
-	GaimStringref *newref;
+	PurpleStringref *newref;
 
 	if (value == NULL)
 		return NULL;
 
-	newref = g_malloc(sizeof(GaimStringref) + strlen(value));
+	newref = g_malloc(sizeof(PurpleStringref) + strlen(value));
 	strcpy(newref->value, value);
 	newref->ref = 0x80000000;
 
 	if (gclist == NULL)
-		g_idle_add(gs_idle_cb, NULL);
+		purple_timeout_add(0, gs_idle_cb, NULL);
 	gclist = g_list_prepend(gclist, newref);
 
 	return newref;
 }
 
-GaimStringref *gaim_stringref_printf(const char *format, ...)
+PurpleStringref *purple_stringref_printf(const char *format, ...)
 {
-	GaimStringref *newref;
+	PurpleStringref *newref;
 	va_list ap;
 
 	if (format == NULL)
 		return NULL;
 
 	va_start(ap, format);
-	newref = g_malloc(sizeof(GaimStringref) + g_printf_string_upper_bound(format, ap));
+	newref = g_malloc(sizeof(PurpleStringref) + g_printf_string_upper_bound(format, ap));
 	vsprintf(newref->value, format, ap);
 	va_end(ap);
 	newref->ref = 1;
@@ -109,7 +114,7 @@ GaimStringref *gaim_stringref_printf(const char *format, ...)
 	return newref;
 }
 
-GaimStringref *gaim_stringref_ref(GaimStringref *stringref)
+PurpleStringref *purple_stringref_ref(PurpleStringref *stringref)
 {
 	if (stringref == NULL)
 		return NULL;
@@ -117,7 +122,7 @@ GaimStringref *gaim_stringref_ref(GaimStringref *stringref)
 	return stringref;
 }
 
-void gaim_stringref_unref(GaimStringref *stringref)
+void purple_stringref_unref(PurpleStringref *stringref)
 {
 	if (stringref == NULL)
 		return;
@@ -128,26 +133,26 @@ void gaim_stringref_unref(GaimStringref *stringref)
 	}
 }
 
-const char *gaim_stringref_value(const GaimStringref *stringref)
+const char *purple_stringref_value(const PurpleStringref *stringref)
 {
 	return (stringref == NULL ? NULL : stringref->value);
 }
 
-int gaim_stringref_cmp(const GaimStringref *s1, const GaimStringref *s2)
+int purple_stringref_cmp(const PurpleStringref *s1, const PurpleStringref *s2)
 {
-	return (s1 == s2 ? 0 : strcmp(gaim_stringref_value(s1), gaim_stringref_value(s2)));
+	return (s1 == s2 ? 0 : strcmp(purple_stringref_value(s1), purple_stringref_value(s2)));
 }
 
-size_t gaim_stringref_len(const GaimStringref *stringref)
+size_t purple_stringref_len(const PurpleStringref *stringref)
 {
-	return strlen(gaim_stringref_value(stringref));
+	return strlen(purple_stringref_value(stringref));
 }
 
-static void stringref_free(GaimStringref *stringref)
+static void stringref_free(PurpleStringref *stringref)
 {
 #ifdef DEBUG
 	if (REFCOUNT(stringref->ref) != 0) {
-		gaim_debug(GAIM_DEBUG_ERROR, "stringref", "Free of nonzero (%d) ref stringref!\n", REFCOUNT(stringref->ref));
+		purple_debug(PURPLE_DEBUG_ERROR, "stringref", "Free of nonzero (%d) ref stringref!\n", REFCOUNT(stringref->ref));
 		return;
 	}
 #endif /* DEBUG */
@@ -156,7 +161,7 @@ static void stringref_free(GaimStringref *stringref)
 
 static gboolean gs_idle_cb(gpointer data)
 {
-	GaimStringref *ref;
+	PurpleStringref *ref;
 	GList *del;
 
 	while (gclist != NULL) {

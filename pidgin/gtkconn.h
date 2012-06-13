@@ -1,9 +1,10 @@
 /**
  * @file gtkconn.h GTK+ Connection API
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,10 +20,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTKCONN_H_
-#define _GAIM_GTKCONN_H_
+#ifndef _PIDGINCONN_H_
+#define _PIDGINCONN_H_
 
 /**************************************************************************/
 /** @name GTK+ Connection API                                             */
@@ -34,7 +35,7 @@
  *
  * @return UI operations struct
  */
-GaimConnectionUiOps *gaim_gtk_connections_get_ui_ops(void);
+PurpleConnectionUiOps *pidgin_connections_get_ui_ops(void);
 
 /*@}*/
 
@@ -43,16 +44,16 @@ GaimConnectionUiOps *gaim_gtk_connections_get_ui_ops(void);
  *
  * @return The handle to the GTK+ connection system.
  */
-void *gaim_gtk_connection_get_handle(void);
+void *pidgin_connection_get_handle(void);
 
 /**
  * Initializes the GTK+ connection system.
  */
-void gaim_gtk_connection_init(void);
+void pidgin_connection_init(void);
 
 /**
  * Uninitializes the GTK+ connection system.
  */
-void gaim_gtk_connection_uninit(void);
+void pidgin_connection_uninit(void);
 
-#endif /* _GAIM_GTKCONN_H_ */
+#endif /* _PIDGINCONN_H_ */

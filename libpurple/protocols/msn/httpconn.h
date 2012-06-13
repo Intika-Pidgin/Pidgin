@@ -1,9 +1,9 @@
 /**
  * @file httpconn.h HTTP connection
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,15 +19,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _MSN_HTTPCONN_H_
-#define _MSN_HTTPCONN_H_
+#ifndef MSN_HTTPCONN_H
+#define MSN_HTTPCONN_H
 
 typedef struct _MsnHttpConn MsnHttpConn;
 
 #include "circbuffer.h"
 #include "servconn.h"
+#include "session.h"
 
 /**
  * An HTTP Connection.
@@ -37,7 +38,7 @@ struct _MsnHttpConn
 	MsnSession *session; /**< The MSN Session. */
 	MsnServConn *servconn; /**< The connection object. */
 
-	GaimProxyConnectData *connect_data;
+	PurpleProxyConnectData *connect_data;
 
 	char *full_session_id; /**< The full session id. */
 	char *session_id; /**< The trimmed session id. */
@@ -60,7 +61,7 @@ struct _MsnHttpConn
 	char *rx_buf; /**< The receive buffer. */
 	int rx_len; /**< The receive buffer length. */
 
-	GaimCircBuffer *tx_buf;
+	PurpleCircBuffer *tx_buf;
 	guint tx_handler;
 };
 
@@ -89,7 +90,7 @@ void msn_httpconn_destroy(MsnHttpConn *httpconn);
  *
  * @return The number of bytes written.
  */
-ssize_t msn_httpconn_write(MsnHttpConn *httpconn, const char *data, size_t data_len);
+gssize msn_httpconn_write(MsnHttpConn *httpconn, const char *data, size_t data_len);
 
 /**
  * Connects the HTTP connection object to a host.
@@ -108,4 +109,4 @@ gboolean msn_httpconn_connect(MsnHttpConn *httpconn,
  */
 void msn_httpconn_disconnect(MsnHttpConn *httpconn);
 
-#endif /* _MSN_HTTPCONN_H_ */
+#endif /* MSN_HTTPCONN_H */

@@ -1,9 +1,11 @@
 /**
  * @file message.h Message handlers
  *
- * gaim
+ * purple
  *
- * Copyright (C) 2003 Nathan Walp <faceprint@faceprint.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +19,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_JABBER_MESSAGE_H_
-#define _GAIM_JABBER_MESSAGE_H_
+#ifndef PURPLE_JABBER_MESSAGE_H_
+#define PURPLE_JABBER_MESSAGE_H_
 
+#include "buddy.h"
 #include "jabber.h"
 #include "xmlnode.h"
 
@@ -34,10 +37,12 @@ typedef struct _JabberMessage {
 		JABBER_MESSAGE_HEADLINE,
 		JABBER_MESSAGE_ERROR,
 		JABBER_MESSAGE_GROUPCHAT_INVITE,
+		JABBER_MESSAGE_EVENT,
 		JABBER_MESSAGE_OTHER
 	} type;
 	time_t sent;
 	gboolean delayed;
+	gboolean hasBuzz;
 	char *id;
 	char *from;
 	char *to;
@@ -48,11 +53,7 @@ typedef struct _JabberMessage {
 	char *error;
 	char *thread_id;
 	enum {
-		JM_TS_NONE = 0,
-		JM_TS_JEP_0022 = 0x1,
-		JM_TS_JEP_0085 = 0x2
-	} typing_style;
-	enum {
+		JM_STATE_NONE,
 		JM_STATE_ACTIVE,
 		JM_STATE_COMPOSING,
 		JM_STATE_PAUSED,
@@ -60,6 +61,7 @@ typedef struct _JabberMessage {
 		JM_STATE_GONE
 	} chat_state;
 	GList *etc;
+	GList *eventitems;
 } JabberMessage;
 
 void jabber_message_free(JabberMessage *jm);
@@ -67,11 +69,14 @@ void jabber_message_free(JabberMessage *jm);
 void jabber_message_send(JabberMessage *jm);
 
 void jabber_message_parse(JabberStream *js, xmlnode *packet);
-int jabber_message_send_im(GaimConnection *gc, const char *who, const char *msg,
-		GaimMessageFlags flags);
-int jabber_message_send_chat(GaimConnection *gc, int id, const char *message, GaimMessageFlags flags);
+int jabber_message_send_im(PurpleConnection *gc, const char *who, const char *msg,
+		PurpleMessageFlags flags);
+int jabber_message_send_chat(PurpleConnection *gc, int id, const char *message, PurpleMessageFlags flags);
 
-unsigned int jabber_send_typing(GaimConnection *gc, const char *who, GaimTypingState state);
+unsigned int jabber_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state);
 
+gboolean jabber_buzz_isenabled(JabberStream *js, const gchar *namespace);
 
-#endif /* _GAIM_JABBER_MESSAGE_H_ */
+gboolean jabber_custom_smileys_isenabled(JabberStream *js, const const gchar *namespace);
+
+#endif /* PURPLE_JABBER_MESSAGE_H_ */

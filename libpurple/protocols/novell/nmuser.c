@@ -14,13 +14,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA	02111-1301	USA
  *
  */
 
-#include <glib.h>
-#include <string.h>
 #include "internal.h"
+#include <string.h>
 #include "nmfield.h"
 #include "nmuser.h"
 #include "nmconn.h"
@@ -477,8 +476,8 @@ nm_send_message(NMUser * user, NMMessage * message, nm_response_cb callback)
 
 		rtfized = nm_rtfize_text(text);
 
-		gaim_debug_info("novell", "message text is: %s\n", text);
-		gaim_debug_info("novell", "message rtf is: %s\n", rtfized);
+		purple_debug_info("novell", "message text is: %s\n", text);
+		purple_debug_info("novell", "message rtf is: %s\n", rtfized);
 
 		tmp = nm_field_add_pointer(tmp, NM_A_SZ_MESSAGE_BODY, 0, NMFIELD_METHOD_VALID, 0,
 								   rtfized, NMFIELD_TYPE_UTF8);
@@ -944,7 +943,7 @@ nm_send_remove_privacy_item(NMUser *user, const char *dn, gboolean allow_list,
 	}
 
 	/* Remove item from the cached list */
-	if ((node = g_slist_find_custom(*list_ptr, dn, (GCompareFunc)nm_utf8_strcasecmp))) {
+	if ((node = g_slist_find_custom(*list_ptr, dn, (GCompareFunc)purple_utf8_strcasecmp))) {
 		*list_ptr = g_slist_remove_link(*list_ptr, node);
 		g_slist_free_1(node);
 	}
@@ -1223,13 +1222,13 @@ _create_privacy_list(NMUser * user, NMRequest *request)
 	locate = nm_locate_field(NM_A_LOCKED_ATTR_LIST, user->fields);
 	if (locate && locate->ptr_value) {
 		if (locate->type == NMFIELD_TYPE_UTF8 &&
-			(nm_utf8_strcasecmp(locate->ptr_value, NM_A_BLOCKING) == 0)) {
+			(purple_utf8_strcasecmp(locate->ptr_value, NM_A_BLOCKING) == 0)) {
 			user->privacy_locked = TRUE;
 		} else if (locate->type == NMFIELD_TYPE_MV ||
 				   locate->type == NMFIELD_TYPE_ARRAY) {
 			NMField *tmp = (NMField *)locate->ptr_value;
 			while (tmp && tmp->tag) {
-				if (nm_utf8_strcasecmp(tmp->ptr_value, NM_A_BLOCKING) == 0) {
+				if (purple_utf8_strcasecmp(tmp->ptr_value, NM_A_BLOCKING) == 0) {
 					user->privacy_locked = TRUE;
 					break;
 				}
@@ -1534,13 +1533,12 @@ _handle_multiple_get_details_joinconf_cb(NMUser * user, NMERR_T ret_code,
 		}
 
 		/* Time to callback? */
-		if (g_slist_length(list) == 0) {
+		if (list == NULL) {
 			nm_response_cb cb = nm_request_get_callback(request);
 
 			if (cb) {
 				cb(user, 0, conference, conference);
 			}
-			g_slist_free(list);
 			nm_release_request(request);
 		}
 	}
@@ -1750,7 +1748,7 @@ nm_call_handler(NMUser * user, NMRequest * request, NMField * fields)
 		} else {
 
 			/* Nothing to do, just print debug message  */
-			gaim_debug(GAIM_DEBUG_INFO, "novell",
+			purple_debug(PURPLE_DEBUG_INFO, "novell",
 					   "nm_call_handler(): Unknown request command, %s\n", cmd);
 
 		}
@@ -1801,25 +1799,11 @@ nm_process_response(NMUser * user)
  * Some utility functions...haven't figured out where
  * they belong yet.
  */
-gint
-nm_utf8_strcasecmp(gconstpointer str1, gconstpointer str2)
-{
-	gint rv;
-	char *str1_down = g_utf8_strdown(str1, -1);
-	char *str2_down = g_utf8_strdown(str2, -1);
-
-	rv = g_utf8_collate(str1_down, str2_down);
-
-	g_free(str1_down);
-	g_free(str2_down);
-
-	return rv;
-}
 
 gboolean
 nm_utf8_str_equal(gconstpointer str1, gconstpointer str2)
 {
-	return (nm_utf8_strcasecmp(str1, str2) == 0);
+	return (purple_utf8_strcasecmp(str1, str2) == 0);
 }
 
 char *
@@ -1934,10 +1918,10 @@ nm_error_to_string(NMERR_T err)
 
 		case NMERR_AUTHENTICATION_FAILED:
 		case NMERR_CREDENTIALS_MISSING:
-			return _("Incorrect screen name or password");
+			return _("Incorrect username or password");
 
 		case NMERR_HOST_NOT_FOUND:
-			return _("Could not recognize the host of the screen name you entered");
+			return _("Could not recognize the host of the username you entered");
 
 		case NMERR_ACCESS_DENIED:
 			return _("Your account has been disabled because too many incorrect passwords were entered");
@@ -1950,7 +1934,7 @@ nm_error_to_string(NMERR_T err)
 			return _("You have reached your limit for the number of contacts allowed");
 
 		case NMERR_OBJECT_NOT_FOUND:
-			return _("You have entered an incorrect screen name");
+			return _("You have entered an incorrect username");
 
 		case NMERR_DIRECTORY_UPDATE:
 			return _("An error occurred while updating the directory");
@@ -2135,12 +2119,12 @@ nm_rtfize_text(char *text)
 				bytes = 6;
 			} else {
 				/* should never happen ... bogus utf-8! */
-				gaim_debug_info("novell", "bogus utf-8 lead byte: 0x%X\n", pch[0]);
+				purple_debug_info("novell", "bogus utf-8 lead byte: 0x%X\n", pch[0]);
 				uc = 0x003F;
 				bytes = 1;
 			}
 			uni_str = g_strdup_printf("\\u%d?", uc);
-			gaim_debug_info("novell", "unicode escaped char %s\n", uni_str);
+			purple_debug_info("novell", "unicode escaped char %s\n", uni_str);
 			gstr = g_string_append(gstr, uni_str);
 			pch += bytes;
 			g_free(uni_str);
