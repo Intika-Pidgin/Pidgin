@@ -80,19 +80,12 @@
 #include "untar.h"
 #include <glib.h>
 
-#if GLIB_CHECK_VERSION(2,6,0)
-#	include <glib/gstdio.h>
-#else
-#define mkdir(a,b) _mkdir((a))
-#define g_mkdir mkdir
-#define g_fopen fopen
-#define g_unlink unlink
-#endif
+#include <glib/gstdio.h>
 
-#define untar_error( error, args... )      gaim_debug(GAIM_DEBUG_ERROR, "untar", error, ## args )
-#define untar_warning( warning, args... )  gaim_debug(GAIM_DEBUG_WARNING, "untar", warning, ## args )
-#define untar_verbose( args... )           gaim_debug(GAIM_DEBUG_INFO, "untar", ## args )
- 
+#define untar_error( error, args... )      purple_debug(PURPLE_DEBUG_ERROR, "untar", error, ## args )
+#define untar_warning( warning, args... )  purple_debug(PURPLE_DEBUG_WARNING, "untar", warning, ## args )
+#define untar_verbose( args... )           purple_debug(PURPLE_DEBUG_INFO, "untar", ## args )
+
 #define WSIZE	32768	/* size of decompression buffer */
 #define TSIZE	512	/* size of a "tape" block */
 #define CR	13	/* carriage-return character */
@@ -212,9 +205,11 @@ static void linkorcopy(src, dst, sym)
 	 * make sure the directory path exists.
 	 */
 	fpdst = createpath(dst);
-	if (!fpdst)
+	if (!fpdst) {
 		/* error message already given */
+		fclose(fpsrc);
 		return;
+	}
 
 #ifdef _POSIX_SOURCE
 # ifndef _WEAK_POSIX
@@ -376,7 +371,7 @@ static int untar_block(Uchar_t *blk) {
 	else
 	{
 		/* file header */
-	
+
 		/* half-assed verification -- does it look like header? */
 		if ((tblk)->filename[99] != '\0'
 		 || ((tblk)->size[0] < '0'
@@ -583,7 +578,8 @@ static int untar_block(Uchar_t *blk) {
  */
 int untar(const char *filename, const char* destdir, untar_opt options) {
 	int ret=1;
-	char curdir[_MAX_PATH];
+	wchar_t curdir[_MAX_PATH];
+	wchar_t *w_destdir;
 	untarops = options;
 	/* open the archive */
 	inname = filename;
@@ -593,15 +589,17 @@ int untar(const char *filename, const char* destdir, untar_opt options) {
 		untar_error("Error opening: %s\n", filename);
 		return 0;
 	}
-	
+
+	w_destdir = g_utf8_to_utf16(destdir, -1, NULL, NULL, NULL);
+
 	/* Set current directory */
-	if(!GetCurrentDirectory(_MAX_PATH, curdir)) {
-		untar_error("Could not get current directory (error %d).\n", GetLastError());
+	if(!GetCurrentDirectoryW(_MAX_PATH, curdir)) {
+		untar_error("Could not get current directory (error %lu).\n", GetLastError());
 		fclose(infp);
 		return 0;
 	}
-	if(!SetCurrentDirectory(destdir)) {
-		untar_error("Could not set current directory to (error %d): %s\n", GetLastError(), destdir);
+	if(!SetCurrentDirectoryW(w_destdir)) {
+		untar_error("Could not set current directory to (error %lu): %s\n", GetLastError(), destdir);
 		fclose(infp);
 		return 0;
 	} else {
@@ -619,11 +617,13 @@ int untar(const char *filename, const char* destdir, untar_opt options) {
 			fclose(outfp);
 			outfp = NULL;
 		}
-		if(!SetCurrentDirectory(curdir)) {
-			untar_error("Could not set current dir back to original (error %d).\n", GetLastError());
+		if(!SetCurrentDirectoryW(curdir)) {
+			untar_error("Could not set current dir back to original (error %lu).\n", GetLastError());
 			ret=0;
 		}
 	}
+
+	g_free(w_destdir);
 
 	/* close the archive file. */
 	fclose(infp);

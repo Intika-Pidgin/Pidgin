@@ -1,5 +1,5 @@
 /*
- * Evolution integration plugin for Gaim
+ * Evolution integration plugin for Purple
  *
  * Copyright (C) 2003 Christian Hammond.
  *
@@ -15,11 +15,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 #include "gtkutils.h"
 
 #include "debug.h"
@@ -67,7 +67,7 @@ cancel_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 }
 
 static void
-screenname_changed_cb(GtkEntry *entry, GevoNewPersonDialog *dialog)
+username_changed_cb(GtkEntry *entry, GevoNewPersonDialog *dialog)
 {
 	gtk_widget_set_sensitive(dialog->add_button,
 							 *gtk_entry_get_text(entry) != '\0');
@@ -85,7 +85,7 @@ static void
 add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 {
 	EContact *contact = NULL;
-	const char *screenname;
+	const char *username;
 	const char *firstname;
 	const char *lastname;
 	const char *email;
@@ -96,9 +96,9 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 	char *full_name = NULL;
 
 	if (dialog->person_only)
-		screenname = dialog->buddy->name;
+		username = dialog->buddy->name;
 	else
-		screenname = gtk_entry_get_text(GTK_ENTRY(dialog->screenname));
+		username = gtk_entry_get_text(GTK_ENTRY(dialog->username));
 
 	firstname  = gtk_entry_get_text(GTK_ENTRY(dialog->firstname));
 	lastname   = gtk_entry_get_text(GTK_ENTRY(dialog->lastname));
@@ -136,18 +136,15 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 		full_name = e_contact_name_to_string(name);
 		e_contact_set(contact, E_CONTACT_FULL_NAME, full_name);
 
-		im_service = gaim_account_get_protocol_id(dialog->account);
+		im_service = purple_account_get_protocol_id(dialog->account);
 
 		if (*email)
 			e_contact_set(contact, E_CONTACT_EMAIL_1, (gpointer)email);
 
-		if (!strcmp(im_service, "prpl-oscar"))
-		{
-			if (isdigit(*screenname))
-				field = E_CONTACT_IM_ICQ;
-			else
-				field = E_CONTACT_IM_AIM;
-		}
+		if (!strcmp(im_service, "prpl-aim"))
+			field = E_CONTACT_IM_AIM;
+		else if (!strcmp(im_service, "prpl-icq"))
+			field = E_CONTACT_IM_ICQ;
 		else if (!strcmp(im_service, "prpl-yahoo"))
 			field = E_CONTACT_IM_YAHOO;
 		else if (!strcmp(im_service, "prpl-jabber"))
@@ -156,10 +153,12 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 			field = E_CONTACT_IM_MSN;
 		else if (!strcmp(im_service, "prpl-novell"))
 			field = E_CONTACT_IM_GROUPWISE;
+		else if (!strcmp(im_service, "prpl-gg"))
+			field = E_CONTACT_IM_GADUGADU;
 
 		if (field > 0)
 		{
-			GList *list = g_list_append(NULL, g_strdup(screenname));
+			GList *list = g_list_append(NULL, g_strdup(username));
 
 			e_contact_set(contact, field, list);
 
@@ -171,7 +170,7 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 		{
 			if (!e_book_add_contact(dialog->book, contact, NULL))
 			{
-				gaim_debug_error("evolution", "Error adding contact to book\n");
+				purple_debug_error("evolution", "Error adding contact to book\n");
 
 				g_object_unref(contact);
 				delete_win_cb(NULL, NULL, dialog);
@@ -182,7 +181,7 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 		{
 			if (!e_book_commit_contact(dialog->book, contact, NULL))
 			{
-				gaim_debug_error("evolution", "Error adding contact to book\n");
+				purple_debug_error("evolution", "Error adding contact to book\n");
 
 				g_object_unref(contact);
 				delete_win_cb(NULL, NULL, dialog);
@@ -195,25 +194,23 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 
 	if (!dialog->person_only)
 	{
-		GtkWidget *entry = GTK_COMBO(dialog->group_combo)->entry;
 		const char *group_name;
 
-		group_name = gtk_entry_get_text(GTK_ENTRY(entry));
+		group_name = pidgin_text_combo_box_entry_get_text(dialog->group_combo);
 
-		gevo_add_buddy(dialog->account, group_name, screenname, full_name);
+		gevo_add_buddy(dialog->account, group_name, username, full_name);
 	}
 
 	if (name != NULL)
 		e_contact_name_free(name);
 
-	if (full_name != NULL)
-		g_free(full_name);
+	g_free(full_name);
 
 	delete_win_cb(NULL, NULL, dialog);
 }
 
 static void
-select_account_cb(GObject *w, GaimAccount *account,
+select_account_cb(GObject *w, PurpleAccount *account,
 				  GevoNewPersonDialog *dialog)
 {
 	dialog->account = account;
@@ -221,8 +218,8 @@ select_account_cb(GObject *w, GaimAccount *account,
 
 void
 gevo_new_person_dialog_show(EBook *book, EContact *contact,
-							GaimAccount *account, const char *username,
-							const char *group, GaimBuddy *buddy,
+							PurpleAccount *account, const char *username,
+							const char *group, PurpleBuddy *buddy,
 							gboolean person_only)
 {
 	GevoNewPersonDialog *dialog;
@@ -246,11 +243,7 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	dialog->book = book;
 	g_object_ref(book);
 
-	dialog->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_role(GTK_WINDOW(dialog->win), "new_person");
-	gtk_window_set_title(GTK_WINDOW(dialog->win), _("New Person"));	
-	gtk_window_set_resizable(GTK_WINDOW(dialog->win), FALSE);
-	gtk_container_set_border_width(GTK_CONTAINER(dialog->win), 12);
+	dialog->win = pidgin_create_window(_("New Person"), PIDGIN_HIG_BORDER, "new_person", FALSE);
 
 	g_signal_connect(G_OBJECT(dialog->win), "delete_event",
 					 G_CALLBACK(delete_win_cb), dialog);
@@ -268,7 +261,7 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	}
 	else
 	{
-		label = gtk_label_new(_("Please enter the buddy's screen name and "
+		label = gtk_label_new(_("Please enter the buddy's username and "
 								"account type below."));
 	}
 
@@ -285,26 +278,26 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	{
 		/* Add the account type stuff. */
 		dialog->accounts_menu =
-			gaim_gtk_account_option_menu_new(account, FALSE,
+			pidgin_account_option_menu_new(account, FALSE,
 											 G_CALLBACK(select_account_cb),
 											 NULL, dialog);
 		add_pref_box(sg, vbox, _("Account type:"), dialog->accounts_menu);
 
-		/* Screen Name */
-		dialog->screenname = gtk_entry_new();
-		add_pref_box(sg, vbox, _("Screen name:"), dialog->screenname);
+		/* Username */
+		dialog->username = gtk_entry_new();
+		add_pref_box(sg, vbox, _("Username:"), dialog->username);
 
 		if (username != NULL)
-			gtk_entry_set_text(GTK_ENTRY(dialog->screenname), username);
+			gtk_entry_set_text(GTK_ENTRY(dialog->username), username);
 
-		g_signal_connect(G_OBJECT(dialog->screenname), "changed",
-						 G_CALLBACK(screenname_changed_cb), dialog);
+		g_signal_connect(G_OBJECT(dialog->username), "changed",
+						 G_CALLBACK(username_changed_cb), dialog);
 
 		/* Group */
-		dialog->group_combo = gtk_combo_new();
-		gtk_combo_set_popdown_strings(GTK_COMBO(dialog->group_combo),
-									  gevo_get_groups());
+		dialog->group_combo = pidgin_text_combo_box_entry_new(group,
+			gevo_get_groups());
 		add_pref_box(sg, vbox, _("Group:"), dialog->group_combo);
+		gtk_widget_show_all(dialog->group_combo);
 
 		/* Separator */
 		sep = gtk_hseparator_new();
@@ -377,9 +370,9 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 						 G_CALLBACK(person_info_changed_cb), dialog);
 	}
 
-	/* E-Mail address field */
+	/* Email address field */
 	dialog->email = gtk_entry_new();
-	add_pref_box(sg2, vbox2, _("E-mail:"), dialog->email);
+	add_pref_box(sg2, vbox2, _("Email:"), dialog->email);
 
 	if (contact != NULL)
 	{
@@ -422,4 +415,6 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 
 	/* Show it. */
 	gtk_widget_show(dialog->win);
+	g_object_unref(sg);
+	g_object_unref(sg2);
 }

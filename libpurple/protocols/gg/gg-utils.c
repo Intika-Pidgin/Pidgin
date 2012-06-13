@@ -1,7 +1,7 @@
 /**
  * @file gg-utils.c
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2005  Bartosz Oler <bartosz@bzimage.us>
  *
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 
@@ -74,7 +74,7 @@ char *charset_convert(const gchar *locstr, const char *encsrc, const char *encds
 	msg = g_convert_with_fallback(locstr, strlen(locstr), encdst, encsrc,
 				      "?", NULL, NULL, &err);
 	if (err != NULL) {
-		gaim_debug_error("gg", "Error converting from %s to %s: %s\n",
+		purple_debug_error("gg", "Error converting from %s to %s: %s\n",
 				 encsrc, encdst, err->message);
 		g_error_free(err);
 	}
@@ -87,30 +87,74 @@ char *charset_convert(const gchar *locstr, const char *encsrc, const char *encds
 }
 /* }}} */
 
-/* ggp_get_uin(GaimAccount *account) {{{ */
-uin_t ggp_get_uin(GaimAccount *account)
+/* ggp_get_uin(PurpleAccount *account) {{{ */
+uin_t ggp_get_uin(PurpleAccount *account)
 {
-	return ggp_str_to_uin(gaim_account_get_username(account));
+	return ggp_str_to_uin(purple_account_get_username(account));
 }
 /* }}} */
 
-/* char *ggp_buddy_get_name(GaimConnection *gc, const uin_t uin) {{{ */
-char *ggp_buddy_get_name(GaimConnection *gc, const uin_t uin)
+/* char *ggp_buddy_get_name(PurpleConnection *gc, const uin_t uin) {{{ */
+char *ggp_buddy_get_name(PurpleConnection *gc, const uin_t uin)
 {
-	GaimBuddy *buddy;
+	PurpleBuddy *buddy;
 	gchar *str_uin;
 
 	str_uin = g_strdup_printf("%lu", (unsigned long int)uin);
 
-	buddy = gaim_find_buddy(gaim_connection_get_account(gc), str_uin);
+	buddy = purple_find_buddy(purple_connection_get_account(gc), str_uin);
 	if (buddy != NULL) {
 		g_free(str_uin);
-		return g_strdup(gaim_buddy_get_alias(buddy));
+		return g_strdup(purple_buddy_get_alias(buddy));
 	} else {
 		return str_uin;
 	}
 }
 /* }}} */
 
+void ggp_status_fake_to_self(PurpleAccount *account)
+{
+	PurplePresence *presence;
+	PurpleStatus *status;
+	const char *status_id;
+	const char *msg;
+
+	if (! purple_find_buddy(account, purple_account_get_username(account)))
+		return;
+
+	presence = purple_account_get_presence(account);
+	status = purple_presence_get_active_status(presence);
+	msg = purple_status_get_attr_string(status, "message");
+	if (msg && !*msg)
+		msg = NULL;
+
+	status_id = purple_status_get_id(status);
+	if (strcmp(status_id, "invisible") == 0) {
+		status_id = "offline";
+	}
+
+	if (msg) {
+		if (strlen(msg) > GG_STATUS_DESCR_MAXSIZE) {
+			msg = purple_markup_slice(msg, 0, GG_STATUS_DESCR_MAXSIZE);
+		}
+	}
+	purple_prpl_got_user_status(account, purple_account_get_username(account),
+				    status_id,
+				    msg ? "message" : NULL, msg, NULL);
+}
+
+guint ggp_http_input_add(struct gg_http *http_req, PurpleInputFunction func,
+	gpointer user_data)
+{
+	PurpleInputCondition cond = 0;
+	int check = http_req->check;
+
+	if (check & GG_CHECK_READ)
+		cond |= PURPLE_INPUT_READ;
+	if (check & GG_CHECK_WRITE)
+		cond |= PURPLE_INPUT_WRITE;
+
+	return purple_input_add(http_req->fd, cond, func, user_data);
+}
 
 /* vim: set ts=8 sts=0 sw=8 noet: */

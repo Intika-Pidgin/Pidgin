@@ -1,7 +1,7 @@
 /*
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,31 +17,29 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #include "internal.h"
 
 #include "connection.h"
 #include "debug.h"
+#include "eventloop.h"
 #include "idle.h"
 #include "log.h"
 #include "prefs.h"
 #include "savedstatuses.h"
 #include "signals.h"
 
-#define IDLEMARK 600 /* 10 minutes! */
-#define IDLE_CHECK_INTERVAL 5 /* 5 seconds */
-
 typedef enum
 {
-	GAIM_IDLE_NOT_AWAY = 0,
-	GAIM_IDLE_AUTO_AWAY,
-	GAIM_IDLE_AWAY_BUT_NOT_AUTO_AWAY
+	PURPLE_IDLE_NOT_AWAY = 0,
+	PURPLE_IDLE_AUTO_AWAY,
+	PURPLE_IDLE_AWAY_BUT_NOT_AUTO_AWAY
 
-} GaimAutoAwayState;
+} PurpleAutoAwayState;
 
-static GaimIdleUiOps *idle_ui_ops = NULL;
+static PurpleIdleUiOps *idle_ui_ops = NULL;
 
 /**
  * This is needed for the I'dle Mak'er plugin to work correctly.  We
@@ -58,131 +56,182 @@ static guint idle_timer = 0;
 static time_t last_active_time = 0;
 
 static void
-set_account_idle(GaimAccount *account, int time_idle)
+set_account_idle(PurpleAccount *account, int time_idle)
 {
-	GaimPresence *presence;
+	PurplePresence *presence;
 
-	presence = gaim_account_get_presence(account);
+	presence = purple_account_get_presence(account);
 
-	if (gaim_presence_is_idle(presence))
+	if (purple_presence_is_idle(presence))
 		/* This account is already idle! */
 		return;
 
-	gaim_debug_info("idle", "Setting %s idle %d seconds\n",
-			   gaim_account_get_username(account), time_idle);
-	gaim_presence_set_idle(presence, TRUE, time(NULL) - time_idle);
+	purple_debug_info("idle", "Setting %s idle %d seconds\n",
+			   purple_account_get_username(account), time_idle);
+	purple_presence_set_idle(presence, TRUE, time(NULL) - time_idle);
 	idled_accts = g_list_prepend(idled_accts, account);
 }
 
 static void
-set_account_unidle(GaimAccount *account)
+set_account_unidle(PurpleAccount *account)
 {
-	GaimPresence *presence;
+	PurplePresence *presence;
 
-	presence = gaim_account_get_presence(account);
+	presence = purple_account_get_presence(account);
 
 	idled_accts = g_list_remove(idled_accts, account);
 
-	if (!gaim_presence_is_idle(presence))
+	if (!purple_presence_is_idle(presence))
 		/* This account is already unidle! */
 		return;
 
-	gaim_debug_info("idle", "Setting %s unidle\n",
-			   gaim_account_get_username(account));
-	gaim_presence_set_idle(presence, FALSE, 0);
+	purple_debug_info("idle", "Setting %s unidle\n",
+			   purple_account_get_username(account));
+	purple_presence_set_idle(presence, FALSE, 0);
 }
 
+
+static gboolean no_away = FALSE;
+static gint time_until_next_idle_event;
 /*
  * This function should be called when you think your idle state
  * may have changed.  Maybe you're over the 10-minute mark and
- * Gaim should start reporting idle time to the server.  Maybe
+ * Purple should start reporting idle time to the server.  Maybe
  * you've returned from being idle.  Maybe your auto-away message
  * should be set.
  *
  * There is no harm to calling this many many times, other than
- * it will be kinda slow.  This is called every 5 seconds by a
- * timer set when Gaim starts.  It is also called when
- * you send an IM, a chat, etc.
+ * it will be kinda slow.  This is called by a timer set when
+ * Purple starts.  It is also called when you send an IM, a chat, etc.
  *
  * This function has 3 sections.
  * 1. Get your idle time.  It will query XScreenSaver or Windows
- *    or use the Gaim idle time.  Whatever.
+ *    or use the Purple idle time.  Whatever.
  * 2. Set or unset your auto-away message.
  * 3. Report your current idle time to the IM server.
  */
-static gint
-check_idleness()
+
+static void
+check_idleness(void)
 {
 	time_t time_idle;
 	gboolean auto_away;
 	const gchar *idle_reporting;
-	gboolean report_idle;
-	GList *l;
+	gboolean report_idle = TRUE;
+	gint away_seconds = 0;
+	gint idle_recheck_interval = 0;
+	gint idle_poll_seconds = purple_prefs_get_int("/purple/away/mins_before_away") * 60;
+	purple_signal_emit(purple_blist_get_handle(), "update-idle");
 
-	gaim_signal_emit(gaim_blist_get_handle(), "update-idle");
+	idle_reporting = purple_prefs_get_string("/purple/away/idle_reporting");
+	auto_away = purple_prefs_get_bool("/purple/away/away_when_idle");
 
-	idle_reporting = gaim_prefs_get_string("/core/away/idle_reporting");
-	report_idle = TRUE;
-	if (!strcmp(idle_reporting, "system") &&
+	if (purple_strequal(idle_reporting, "system") &&
 		(idle_ui_ops != NULL) && (idle_ui_ops->get_time_idle != NULL))
 	{
 		/* Use system idle time (mouse or keyboard movement, etc.) */
 		time_idle = idle_ui_ops->get_time_idle();
+		idle_recheck_interval = 1;
 	}
-	else if (!strcmp(idle_reporting, "gaim"))
+	else if (purple_strequal(idle_reporting, "purple"))
 	{
-		/* Use 'Gaim idle' */
+		/* Use 'Purple idle' */
 		time_idle = time(NULL) - last_active_time;
+		idle_recheck_interval = 0;
 	}
 	else
 	{
 		/* Don't report idle time */
 		time_idle = 0;
 		report_idle = FALSE;
-	}
 
-	/* Auto-away stuff */
-	auto_away = gaim_prefs_get_bool("/core/away/away_when_idle");
-
-	/* If we're not reporting idle, we can still do auto-away.
-	 * First try "system" and if that isn't possible, use "gaim" */
-	if (!report_idle && auto_away) {
-		if ((idle_ui_ops != NULL) && (idle_ui_ops->get_time_idle != NULL))
-			time_idle = idle_ui_ops->get_time_idle();
+		/* If we're not reporting idle, we can still do auto-away.
+		 * First try "system" and if that isn't possible, use "purple" */
+		if (auto_away)
+		{
+			if ((idle_ui_ops != NULL) && (idle_ui_ops->get_time_idle != NULL))
+			{
+				time_idle = idle_ui_ops->get_time_idle();
+				idle_recheck_interval = 1;
+			}
+			else
+			{
+				time_idle = time(NULL) - last_active_time;
+				idle_recheck_interval = 0;
+			}
+		}
 		else
-			time_idle = time(NULL) - last_active_time;
+		{
+			if (!no_away)
+			{
+				no_away = TRUE;
+				purple_savedstatus_set_idleaway(FALSE);
+			}
+			time_until_next_idle_event = 0;
+			return;
+		}
 	}
 
-	if (auto_away &&
-		(time_idle > (60 * gaim_prefs_get_int("/core/away/mins_before_away"))))
+	time_until_next_idle_event = idle_poll_seconds - time_idle;
+	if (time_until_next_idle_event < 0)
 	{
-		gaim_savedstatus_set_idleaway(TRUE);
+		/* If we're already idle, check again as appropriate. */
+		time_until_next_idle_event = idle_recheck_interval;
 	}
-	else if (time_idle < 60 * gaim_prefs_get_int("/core/away/mins_before_away"))
+
+	if (auto_away || !no_away)
+		away_seconds = 60 * purple_prefs_get_int("/purple/away/mins_before_away");
+
+	if (auto_away && time_idle > away_seconds)
 	{
-		gaim_savedstatus_set_idleaway(FALSE);
+		purple_savedstatus_set_idleaway(TRUE);
+		no_away = FALSE;
+	}
+	else if (purple_savedstatus_is_idleaway() && time_idle < away_seconds)
+	{
+		purple_savedstatus_set_idleaway(FALSE);
+		if (time_until_next_idle_event == 0 || (away_seconds - time_idle) < time_until_next_idle_event)
+			time_until_next_idle_event = away_seconds - time_idle;
 	}
 
 	/* Idle reporting stuff */
-	if (report_idle && (time_idle >= IDLEMARK))
+	if (report_idle && (time_idle >= idle_poll_seconds))
 	{
-		for (l = gaim_connections_get_all(); l != NULL; l = l->next)
+		GList *l;
+		for (l = purple_connections_get_all(); l != NULL; l = l->next)
 		{
-			GaimConnection *gc = l->data;
-			set_account_idle(gaim_connection_get_account(gc), time_idle);
+			PurpleConnection *gc = l->data;
+			set_account_idle(purple_connection_get_account(gc), time_idle);
 		}
 	}
-	else if (!report_idle || (time_idle < IDLEMARK))
+	else if (!report_idle || (time_idle < idle_poll_seconds ))
 	{
 		while (idled_accts != NULL)
 			set_account_unidle(idled_accts->data);
 	}
+}
 
-	return TRUE;
+
+/*
+ * Check idle and set the timer to fire at the next idle-worth event
+ */
+static gboolean
+check_idleness_timer(void)
+{
+	check_idleness();
+	if (time_until_next_idle_event == 0)
+		idle_timer = 0;
+	else
+	{
+		/* +1 for the boundary,
+		 * +1 more for g_timeout_add_seconds rounding. */
+		idle_timer = purple_timeout_add_seconds(time_until_next_idle_event + 2, (GSourceFunc)check_idleness_timer, NULL);
+	}
+	return FALSE;
 }
 
 static void
-im_msg_sent_cb(GaimAccount *account, const char *receiver,
+im_msg_sent_cb(PurpleAccount *account, const char *receiver,
 			   const char *message, void *data)
 {
 	/* Check our idle time after an IM is sent */
@@ -190,79 +239,112 @@ im_msg_sent_cb(GaimAccount *account, const char *receiver,
 }
 
 static void
-signing_on_cb(GaimConnection *gc, void *data)
+signing_on_cb(PurpleConnection *gc, void *data)
 {
 	/* When signing on a new account, check if the account should be idle */
 	check_idleness();
 }
 
 static void
-signing_off_cb(GaimConnection *gc, void *data)
+signing_off_cb(PurpleConnection *gc, void *data)
 {
-	GaimAccount *account;
+	PurpleAccount *account;
 
-	account = gaim_connection_get_account(gc);
+	account = purple_connection_get_account(gc);
 	set_account_unidle(account);
 }
 
-void
-gaim_idle_touch()
+static void
+idle_reporting_cb(const char *name, PurplePrefType type, gconstpointer val, gpointer data)
 {
-	time(&last_active_time);
+	if (idle_timer)
+		purple_timeout_remove(idle_timer);
+	idle_timer = 0;
+	check_idleness_timer();
 }
 
 void
-gaim_idle_set(time_t time)
+purple_idle_touch()
+{
+	time(&last_active_time);
+	if (!no_away)
+	{
+		if (idle_timer)
+			purple_timeout_remove(idle_timer);
+		idle_timer = 0;
+		check_idleness_timer();
+	}
+}
+
+void
+purple_idle_set(time_t time)
 {
 	last_active_time = time;
 }
 
 void
-gaim_idle_set_ui_ops(GaimIdleUiOps *ops)
+purple_idle_set_ui_ops(PurpleIdleUiOps *ops)
 {
 	idle_ui_ops = ops;
 }
 
-GaimIdleUiOps *
-gaim_idle_get_ui_ops(void)
+PurpleIdleUiOps *
+purple_idle_get_ui_ops(void)
 {
 	return idle_ui_ops;
 }
 
 static void *
-gaim_idle_get_handle()
+purple_idle_get_handle(void)
 {
 	static int handle;
 
 	return &handle;
 }
 
-void
-gaim_idle_init()
+static gboolean _do_purple_idle_touch_cb(gpointer data)
 {
-	/* Add the timer to check if we're idle */
-	idle_timer = gaim_timeout_add(IDLE_CHECK_INTERVAL * 1000, check_idleness, NULL);
+	int idle_poll_minutes = purple_prefs_get_int("/purple/away/mins_before_away");
 
-	gaim_signal_connect(gaim_conversations_get_handle(), "sent-im-msg",
-						gaim_idle_get_handle(),
-						GAIM_CALLBACK(im_msg_sent_cb), NULL);
-	gaim_signal_connect(gaim_connections_get_handle(), "signing-on",
-						gaim_idle_get_handle(),
-						GAIM_CALLBACK(signing_on_cb), NULL);
-	gaim_signal_connect(gaim_connections_get_handle(), "signing-off",
-						gaim_idle_get_handle(),
-						GAIM_CALLBACK(signing_off_cb), NULL);
+	 /* +1 more for g_timeout_add_seconds rounding. */
+	idle_timer = purple_timeout_add_seconds((idle_poll_minutes * 60) + 2, (GSourceFunc)check_idleness_timer, NULL);
 
-	gaim_idle_touch();
+	purple_idle_touch();
+
+	return FALSE;
+}
+
+
+void
+purple_idle_init()
+{
+	purple_signal_connect(purple_conversations_get_handle(), "sent-im-msg",
+						purple_idle_get_handle(),
+						PURPLE_CALLBACK(im_msg_sent_cb), NULL);
+	purple_signal_connect(purple_connections_get_handle(), "signing-on",
+						purple_idle_get_handle(),
+						PURPLE_CALLBACK(signing_on_cb), NULL);
+	purple_signal_connect(purple_connections_get_handle(), "signing-off",
+						purple_idle_get_handle(),
+						PURPLE_CALLBACK(signing_off_cb), NULL);
+
+	purple_prefs_connect_callback(purple_idle_get_handle(), "/purple/away/idle_reporting",
+	                              idle_reporting_cb, NULL);
+
+	/* Initialize the idleness asynchronously so it doesn't check idleness,
+	 * and potentially try to change the status before the UI is initialized */
+	purple_timeout_add(0, _do_purple_idle_touch_cb, NULL);
+
 }
 
 void
-gaim_idle_uninit()
+purple_idle_uninit()
 {
-	gaim_signals_disconnect_by_handle(gaim_idle_get_handle());
+	purple_signals_disconnect_by_handle(purple_idle_get_handle());
+	purple_prefs_disconnect_by_handle(purple_idle_get_handle());
 
 	/* Remove the idle timer */
 	if (idle_timer > 0)
-		gaim_timeout_remove(idle_timer);
+		purple_timeout_remove(idle_timer);
 	idle_timer = 0;
 }

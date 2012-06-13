@@ -5,37 +5,55 @@
 # files for better handling of cross directory dependencies
 #
 
-$(GAIM_CONFIG_H): $(GAIM_TOP)/config.h.mingw
-	cp $(GAIM_TOP)/config.h.mingw $(GAIM_CONFIG_H)
+$(PIDGIN_CONFIG_H): $(PIDGIN_CONFIG_H).mingw $(PIDGIN_TREE_TOP)/configure.ac
+	sed -e 's/@VERSION@/$(PIDGIN_VERSION)/; s/@DISPLAY_VERSION@/$(DISPLAY_VERSION)/' $@.mingw > $@
 
-$(GAIM_LIBGAIM_DLL) $(GAIM_LIBGAIM_DLL).a:
-	$(MAKE) -C $(GAIM_LIB_TOP) -f $(GAIM_WIN32_MAKEFILE) libpurple.dll
+$(PURPLE_PURPLE_H): $(PURPLE_PURPLE_H).in
+	sed -e 's/@PLUGINS_DEFINE@/#define PURPLE_PLUGINS 1/' $@.in > $@
 
-$(GAIM_LIBGAIM_PERL_DLL) $(GAIM_LIBGAIM_PERL_DLL).a:
-	$(MAKE) -C $(GAIM_LIB_PERL_TOP) -f $(GAIM_WIN32_MAKEFILE) perl.dll
+$(PURPLE_VERSION_H): $(PURPLE_VERSION_H).in $(PIDGIN_TREE_TOP)/configure.ac
+	awk 'BEGIN {FS="[\\(\\)\\[\\]]"} \
+	  /^m4_define..purple_major_version/ {system("sed -e s/@PURPLE_MAJOR_VERSION@/"$$5"/ $@.in > $@");} \
+	  /^m4_define..purple_minor_version/ {system("sed -e s/@PURPLE_MINOR_VERSION@/"$$5"/ $@ > $@.tmp && mv $@.tmp $@");} \
+	  /^m4_define..purple_micro_version/ {system("sed -e s/@PURPLE_MICRO_VERSION@/"$$5"/ $@ > $@.tmp && mv $@.tmp $@"); exit}' $(PIDGIN_TREE_TOP)/configure.ac
 
-$(GAIM_GTKGAIM_DLL) $(GAIM_GTKGAIM_DLL).a:
-	$(MAKE) -C $(GAIM_GTK_TOP) -f $(GAIM_WIN32_MAKEFILE) pidgin.dll
+$(PIDGIN_REVISION_RAW_TXT):
+	(hg --cwd $(PIDGIN_TREE_TOP) id -i --debug) 2>/dev/null >$@ \
+	|| rm -f $@
 
-$(GAIM_IDLETRACK_DLL) $(GAIM_IDLETRACK_DLL).a:
-	$(MAKE) -C $(GAIM_GTK_IDLETRACK_TOP) -f $(GAIM_WIN32_MAKEFILE) idletrack.dll
+$(PIDGIN_REVISION_H): $(PIDGIN_REVISION_RAW_TXT)
+	if [ -f $< ]; then \
+		sed 's/^\(.\{1,\}\)$$/#define REVISION "\1"/' $< > $@; \
+	fi
+	[ -f $@ ] || echo "#define REVISION \"unknown\"" > $@
 
-$(GAIM_EXE):
-	$(MAKE) -C $(GAIM_GTK_TOP) -f $(GAIM_WIN32_MAKEFILE) pidgin.exe
+$(PURPLE_DLL) $(PURPLE_DLL).a: $(PURPLE_VERSION_H)
+	$(MAKE) -C $(PURPLE_TOP) -f $(MINGW_MAKEFILE) libpurple.dll
 
-$(GAIM_PORTABLE_EXE):
-	$(MAKE) -C $(GAIM_GTK_TOP) -f $(GAIM_WIN32_MAKEFILE) pidgin-portable.exe
+$(PURPLE_PERL_DLL) $(PURPLE_PERL_DLL).a:
+	$(MAKE) -C $(PURPLE_PERL_TOP) -f $(MINGW_MAKEFILE) perl.dll
+
+$(PIDGIN_DLL) $(PIDGIN_DLL).a:
+	$(MAKE) -C $(PIDGIN_TOP) -f $(MINGW_MAKEFILE) pidgin.dll
+
+$(PIDGIN_EXE):
+	$(MAKE) -C $(PIDGIN_TOP) -f $(MINGW_MAKEFILE) pidgin.exe
 
 # Installation Directories
-$(GAIM_INSTALL_DIR):
-	mkdir -p $(GAIM_INSTALL_DIR)
+$(PIDGIN_INSTALL_DIR):
+	mkdir -p $(PIDGIN_INSTALL_DIR)
 
-$(GAIM_INSTALL_PERLMOD_DIR):
-	mkdir -p $(GAIM_INSTALL_PERLMOD_DIR)
+$(PIDGIN_INSTALL_PERL_DIR):
+	mkdir -p $(PIDGIN_INSTALL_PERL_DIR)
 
-$(GAIM_INSTALL_PLUGINS_DIR):
-	mkdir -p $(GAIM_INSTALL_PLUGINS_DIR)
+$(PIDGIN_INSTALL_PLUGINS_DIR):
+	mkdir -p $(PIDGIN_INSTALL_PLUGINS_DIR)
 
-$(GAIM_INSTALL_PO_DIR):
-	mkdir -p $(GAIM_INSTALL_PO_DIR)
+$(PURPLE_INSTALL_PO_DIR):
+	mkdir -p $(PURPLE_INSTALL_PO_DIR)
 
+#$(PURPLE_INSTALL_PLUGINS_DIR):
+#	mkdir -p $(PURPLE_INSTALL_PLUGINS_DIR)
+
+#$(PURPLE_INSTALL_PERL_DIR):
+#	mkdir -p $(PURPLE_INSTALL_PERL_DIR)

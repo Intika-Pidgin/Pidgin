@@ -4,8 +4,8 @@
 # Description: Makefile for ssl plugin.
 #
 
-GAIM_TOP := ../../..
-include $(GAIM_TOP)/libpurple/win32/global.mak
+PIDGIN_TREE_TOP := ../../..
+include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
 ##
 ## VARIABLE DEFINITIONS
@@ -15,13 +15,16 @@ TARGET_NSS = ssl-nss
 
 NEEDED_DLLS = \
 			$(NSS_TOP)/lib/freebl3.dll \
+			$(NSS_TOP)/lib/libnspr4.dll \
+			$(NSS_TOP)/lib/libplc4.dll \
+			$(NSS_TOP)/lib/libplds4.dll \
 			$(NSS_TOP)/lib/nss3.dll \
 			$(NSS_TOP)/lib/nssckbi.dll \
+			$(NSS_TOP)/lib/nssutil3.dll \
+			$(NSS_TOP)/lib/smime3.dll \
 			$(NSS_TOP)/lib/softokn3.dll \
-			$(NSS_TOP)/lib/ssl3.dll \
-			$(NSPR_TOP)/lib/nspr4.dll \
-			$(NSPR_TOP)/lib/plc4.dll \
-			$(NSPR_TOP)/lib/plds4.dll
+                        $(NSS_TOP)/lib/sqlite3.dll \
+			$(NSS_TOP)/lib/ssl3.dll 
 
 ##
 ## INCLUDE PATHS
@@ -30,16 +33,14 @@ INCLUDE_PATHS +=	-I. \
 			-I$(GTK_TOP)/include \
 			-I$(GTK_TOP)/include/glib-2.0 \
 			-I$(GTK_TOP)/lib/glib-2.0/include \
-			-I$(GAIM_LIB_TOP) \
-			-I$(GAIM_LIB_TOP)/win32 \
-			-I$(GAIM_TOP) \
-			-I$(NSS_TOP)/include \
-			-I$(NSPR_TOP)/include
+			-I$(PURPLE_TOP) \
+			-I$(PURPLE_TOP)/win32 \
+			-I$(PIDGIN_TREE_TOP) \
+			-I$(NSS_TOP)/include
 
-LIB_PATHS =		-L$(GTK_TOP)/lib \
-			-L$(GAIM_LIB_TOP) \
-			-L$(NSS_TOP)/lib \
-			-L$(NSPR_TOP)/lib
+LIB_PATHS +=		-L$(GTK_TOP)/lib \
+			-L$(PURPLE_TOP) \
+			-L$(NSS_TOP)/lib
 
 ##
 ##  SOURCES, OBJECTS
@@ -59,9 +60,10 @@ LIBS =	\
 			-lpurple \
 			-lnss3 \
 			-lnspr4 \
-			-lssl3
+			-lssl3 \
+			-lsmime3
 
-include $(GAIM_COMMON_RULES)
+include $(PIDGIN_COMMON_RULES)
 
 ##
 ## TARGET DEFINITIONS
@@ -70,20 +72,20 @@ include $(GAIM_COMMON_RULES)
 
 all: $(TARGET).dll $(TARGET_NSS).dll
 
-install: all $(GAIM_INSTALL_PLUGINS_DIR) $(GAIM_INSTALL_DIR)
-	cp $(TARGET).dll $(GAIM_INSTALL_PLUGINS_DIR)
-	cp $(TARGET_NSS).dll $(GAIM_INSTALL_PLUGINS_DIR)
-	cp $(NEEDED_DLLS) $(GAIM_INSTALL_DIR)
+install: all $(PURPLE_INSTALL_PLUGINS_DIR) $(PURPLE_INSTALL_DIR)
+	cp $(TARGET).dll $(PURPLE_INSTALL_PLUGINS_DIR)
+	cp $(TARGET_NSS).dll $(PURPLE_INSTALL_PLUGINS_DIR)
+	cp $(NEEDED_DLLS) $(PURPLE_INSTALL_DIR)
 
-$(OBJECTS) $(OBJECTS_NSS): $(GAIM_CONFIG_H)
+$(OBJECTS) $(OBJECTS_NSS): $(PURPLE_CONFIG_H)
 
 ##
 ## BUILD DLL
 ##
-$(TARGET).dll: $(GAIM_LIBGAIM_DLL).a $(OBJECTS)
+$(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
 
-$(TARGET_NSS).dll: $(GAIM_LIBGAIM_DLL) $(OBJECTS_NSS)
+$(TARGET_NSS).dll: $(PURPLE_DLL) $(OBJECTS_NSS)
 	$(CC) -shared $(OBJECTS_NSS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET_NSS).dll
 
 ##
@@ -92,4 +94,4 @@ $(TARGET_NSS).dll: $(GAIM_LIBGAIM_DLL) $(OBJECTS_NSS)
 clean:
 	rm -f $(OBJECTS) $(OBJECTS_NSS) $(TARGET).dll $(TARGET_NSS).dll
 
-include $(GAIM_COMMON_TARGETS)
+include $(PIDGIN_COMMON_TARGETS)

@@ -1,7 +1,7 @@
 /*
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #ifndef _YAHOO_FILEXFER_H_
 #define _YAHOO_FILEXFER_H_
@@ -27,28 +27,44 @@
 /**
  * Process ymsg events, particular IMViroments like Doodle
  */
-void yahoo_process_p2pfilexfer( GaimConnection *gc, struct yahoo_packet *pkt );
+void yahoo_process_p2pfilexfer( PurpleConnection *gc, struct yahoo_packet *pkt );
 
 /**
  * Process ymsg file receive invites.
  */
-void yahoo_process_filetransfer(GaimConnection *gc, struct yahoo_packet *pkt);
+void yahoo_process_filetransfer(PurpleConnection *gc, struct yahoo_packet *pkt);
 
 /**
- * Create a new GaimXfer
+ * Create a new PurpleXfer
  *
- * @param gc The GaimConnection handle.
+ * @param gc The PurpleConnection handle.
  * @param who Who will we be sending it to?
  */
-GaimXfer *yahoo_new_xfer(GaimConnection *gc, const char *who);
+PurpleXfer *yahoo_new_xfer(PurpleConnection *gc, const char *who);
+
+/**
+ * Returns TRUE if the buddy can receive file, FALSE otherwise.
+ * Federated users cannot receive files. So this will return FALSE only
+ * for them.
+ *
+ * @param gc The connection
+ * @param who The name of the remote user
+ *
+ * @return TRUE or FALSE
+ */
+gboolean yahoo_can_receive_file(PurpleConnection *gc, const char *who);
 
 /**
  * Send a file.
  *
- * @param gc The GaimConnection handle.
+ * @param gc The PurpleConnection handle.
  * @param who Who are we sending it to?
  * @param file What file? If NULL, user will choose after this call.
  */
-void yahoo_send_file(GaimConnection *gc, const char *who, const char *file);
+void yahoo_send_file(PurpleConnection *gc, const char *who, const char *file);
+
+void yahoo_process_filetrans_15(PurpleConnection *gc, struct yahoo_packet *pkt);
+void yahoo_process_filetrans_info_15(PurpleConnection *gc, struct yahoo_packet *pkt);
+void yahoo_process_filetrans_acc_15(PurpleConnection *gc, struct yahoo_packet *pkt);
 
 #endif

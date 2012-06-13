@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -45,7 +45,7 @@ typedef struct _PeerConnection        PeerConnection;
 #define PEER_TYPE_PROMPT 0x0101 /* "I am going to send you this file, is that ok?" */
 #define PEER_TYPE_RESUMEACCEPT 0x0106 /* We are accepting the resume */
 #define PEER_TYPE_ACK 0x0202 /* "Yes, it is ok for you to send me that file" */
-#define PEER_TYPE_DONE 0x0204 /* "I received that file with no problems, thanks a bunch" */
+#define PEER_TYPE_DONE 0x0204 /* "I received that file with no problems" or "I already have that file, great!" */
 #define PEER_TYPE_RESUME 0x0205 /* Resume transferring, sent by whoever receives */
 #define PEER_TYPE_RESUMEACK 0x0207 /* Our resume accept was ACKed */
 
@@ -58,7 +58,8 @@ typedef struct _PeerConnection        PeerConnection;
 /*
  * For peer proxying
  */
-#define PEER_PROXY_SERVER         "ars.oscar.aol.com"
+#define AIM_PEER_PROXY_SERVER         "ars.oscar.aol.com"
+#define ICQ_PEER_PROXY_SERVER         "ars.icq.com"
 #define PEER_PROXY_PORT           5190   /* The port we should always connect to */
 #define PEER_PROXY_PACKET_VERSION 0x044a
 
@@ -83,7 +84,7 @@ struct _OdcFrame
 	/* Unknown */
 	guint16 flags;                /* 38 */
 	/* Unknown */
-	guchar sn[32];                /* 44 */
+	guchar bn[32];                /* 44 */
 	/* Unknown */
 	ByteStream payload;           /* 76 */
 };
@@ -136,8 +137,8 @@ struct _ProxyFrame
 struct _PeerConnection
 {
 	OscarData *od;
-	OscarCapability type;
-	char *sn;
+	guint64 type;
+	char *bn;
 	guchar magic[4];
 	guchar cookie[8];
 	guint16 lastrequestnumber;
@@ -157,13 +158,13 @@ struct _PeerConnection
 	/**
 	 * This is only used when the peer connection is being established.
 	 */
-	GaimProxyConnectData *client_connect_data;
-	GaimProxyConnectData *verified_connect_data;
+	PurpleProxyConnectData *client_connect_data;
+	PurpleProxyConnectData *verified_connect_data;
 
 	/**
 	 * This is only used when the peer connection is being established.
 	 */
-	GaimNetworkListenData *listen_data;
+	PurpleNetworkListenData *listen_data;
 
 
 	/**
@@ -179,11 +180,11 @@ struct _PeerConnection
 
 	int fd;
 	guint8 header[6];
-	ssize_t header_received;
+	gssize header_received;
 	guint8 proxy_header[12];
-	ssize_t proxy_header_received;
+	gssize proxy_header_received;
 	ByteStream buffer_incoming;
-	GaimCircBuffer *buffer_outgoing;
+	PurpleCircBuffer *buffer_outgoing;
 	guint watcher_incoming;
 	guint watcher_outgoing;
 
@@ -212,7 +213,7 @@ struct _PeerConnection
 	ChecksumData *checksum_data;
 
 	/* TODOFT */
-	GaimXfer *xfer;
+	PurpleXfer *xfer;
 	OftFrame xferdata;
 	guint sending_data_timer;
 };
@@ -228,21 +229,21 @@ struct _PeerConnection
  * @param type The type of the peer connection.  One of
  *        OSCAR_CAPABILITY_DIRECTIM or OSCAR_CAPABILITY_SENDFILE.
  */
-PeerConnection *peer_connection_new(OscarData *od, OscarCapability type, const char *sn);
+PeerConnection *peer_connection_new(OscarData *od, guint64 type, const char *bn);
 
 void peer_connection_destroy(PeerConnection *conn, OscarDisconnectReason reason, const gchar *error_message);
 void peer_connection_schedule_destroy(PeerConnection *conn, OscarDisconnectReason reason, const gchar *error_message);
-PeerConnection *peer_connection_find_by_type(OscarData *od, const char *sn, OscarCapability type);
-PeerConnection *peer_connection_find_by_cookie(OscarData *od, const char *sn, const guchar *cookie);
+PeerConnection *peer_connection_find_by_type(OscarData *od, const char *bn, guint64 type);
+PeerConnection *peer_connection_find_by_cookie(OscarData *od, const char *bn, const guchar *cookie);
 
-void peer_connection_listen_cb(gpointer data, gint source, GaimInputCondition cond);
-void peer_connection_recv_cb(gpointer data, gint source, GaimInputCondition cond);
+void peer_connection_listen_cb(gpointer data, gint source, PurpleInputCondition cond);
+void peer_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond);
 void peer_connection_send(PeerConnection *conn, ByteStream *bs);
 
 void peer_connection_trynext(PeerConnection *conn);
 void peer_connection_finalize_connection(PeerConnection *conn);
-void peer_connection_propose(OscarData *od, OscarCapability type, const char *sn);
-void peer_connection_got_proposition(OscarData *od, const gchar *sn, const gchar *message, IcbmArgsCh2 *args);
+void peer_connection_propose(OscarData *od, guint64 type, const char *bn);
+void peer_connection_got_proposition(OscarData *od, const gchar *bn, const gchar *message, IcbmArgsCh2 *args);
 
 /*
  * For ODC
@@ -250,7 +251,7 @@ void peer_connection_got_proposition(OscarData *od, const gchar *sn, const gchar
 void peer_odc_close(PeerConnection *conn);
 void peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs);
 void peer_odc_send_cookie(PeerConnection *conn);
-void peer_odc_send_typing(PeerConnection *conn, GaimTypingState typing);
+void peer_odc_send_typing(PeerConnection *conn, PurpleTypingState typing);
 void peer_odc_send_im(PeerConnection *conn, const char *msg, int len, int encoding, gboolean autoreply);
 
 /*
@@ -262,31 +263,20 @@ void peer_oft_send_prompt(PeerConnection *conn);
 void peer_oft_checksum_destroy(ChecksumData *checksum_data);
 
 /* Xfer callbacks for receiving a file */
-void peer_oft_recvcb_init(GaimXfer *xfer);
-void peer_oft_recvcb_end(GaimXfer *xfer);
-void peer_oft_recvcb_ack_recv(GaimXfer *xfer, const guchar *buffer, size_t size);
+void peer_oft_recvcb_init(PurpleXfer *xfer);
+void peer_oft_recvcb_end(PurpleXfer *xfer);
+void peer_oft_recvcb_ack_recv(PurpleXfer *xfer, const guchar *buffer, size_t size);
 
 /* Xfer callbacks for sending a file */
-void peer_oft_sendcb_init(GaimXfer *xfer);
-void peer_oft_sendcb_ack(GaimXfer *xfer, const guchar *buffer, size_t size);
+void peer_oft_sendcb_init(PurpleXfer *xfer);
+void peer_oft_sendcb_ack(PurpleXfer *xfer, const guchar *buffer, size_t size);
 
 /* Xfer callbacks for both sending and receiving */
-void peer_oft_cb_generic_cancel(GaimXfer *xfer);
+void peer_oft_cb_generic_cancel(PurpleXfer *xfer);
 
 /*
  * For peer proxying
  */
 void peer_proxy_connection_established_cb(gpointer data, gint source, const gchar *error_message);
-
-#if 0
-int peer_oft_sendheader(OscarData *od, guint16 type, PeerConnection *peer_connection);
-guint32 peer_oft_checksum_chunk(const guint8 *buffer, int bufferlen, guint32 prevcheck);
-guint32 peer_oft_checksum_file(char *filename);
-int peer_oft_sendheader(OscarData *od, guint16 type, PeerConnection *peer_connection);
-PeerConnection *peer_oft_createinfo(OscarData *od, const guchar *cookie, const char *sn,
-	const char *ip, guint16 port, guint32 size, guint32 modtime, char *filename, int send_or_recv,
-	int method, int stage);
-int peer_oft_destroyinfo(PeerConnection *peer_connection);
-#endif
 
 #endif /* _PEER_H_ */

@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 #ifdef HAVE_CONFIG_H
@@ -31,9 +31,9 @@ peer_proxy_send(PeerConnection *conn, ProxyFrame *frame)
 	size_t length;
 	ByteStream bs;
 
-	gaim_debug_info("oscar", "Outgoing peer proxy frame with "
-			"type=0x%04hx, unknown=0x%08x, "
-			"flags=0x%04hx, and payload length=%hd\n",
+	purple_debug_info("oscar", "Outgoing peer proxy frame with "
+			"type=0x%04hx, unknown=0x%08x, flags=0x%04hx, and "
+			"payload length=%" G_GSIZE_FORMAT "\n",
 			frame->type, frame->unknown,
 			frame->flags, frame->payload.len);
 
@@ -48,7 +48,7 @@ peer_proxy_send(PeerConnection *conn, ProxyFrame *frame)
 
 	peer_connection_send(conn, &bs);
 
-	g_free(bs.data);
+	byte_stream_destroy(&bs);
 }
 
 /**
@@ -62,20 +62,20 @@ static void
 peer_proxy_send_create_new_conn(PeerConnection *conn)
 {
 	ProxyFrame frame;
-	GaimAccount *account;
-	const gchar *sn;
-	guint8 sn_length;
+	PurpleAccount *account;
+	const gchar *bn;
+	guint8 bn_length;
 
 	memset(&frame, 0, sizeof(ProxyFrame));
 	frame.type = PEER_PROXY_TYPE_CREATE;
 	frame.flags = 0x0000;
 
-	account = gaim_connection_get_account(conn->od->gc);
-	sn = gaim_account_get_username(account);
-	sn_length = strlen(sn);
-	byte_stream_new(&frame.payload, 1 + sn_length + 8 + 20);
-	byte_stream_put8(&frame.payload, sn_length);
-	byte_stream_putraw(&frame.payload, (const guint8 *)sn, sn_length);
+	account = purple_connection_get_account(conn->od->gc);
+	bn = purple_account_get_username(account);
+	bn_length = strlen(bn);
+	byte_stream_new(&frame.payload, 1 + bn_length + 8 + 20);
+	byte_stream_put8(&frame.payload, bn_length);
+	byte_stream_putraw(&frame.payload, (const guint8 *)bn, bn_length);
 	byte_stream_putraw(&frame.payload, conn->cookie, 8);
 
 	byte_stream_put16(&frame.payload, 0x0001); /* Type */
@@ -83,6 +83,8 @@ peer_proxy_send_create_new_conn(PeerConnection *conn)
 	byte_stream_putcaps(&frame.payload, conn->type); /* Value */
 
 	peer_proxy_send(conn, &frame);
+
+	byte_stream_destroy(&frame.payload);
 }
 
 /**
@@ -98,20 +100,20 @@ static void
 peer_proxy_send_join_existing_conn(PeerConnection *conn, guint16 pin)
 {
 	ProxyFrame frame;
-	GaimAccount *account;
-	const gchar *sn;
-	guint8 sn_length;
+	PurpleAccount *account;
+	const gchar *bn;
+	guint8 bn_length;
 
 	memset(&frame, 0, sizeof(ProxyFrame));
 	frame.type = PEER_PROXY_TYPE_JOIN;
 	frame.flags = 0x0000;
 
-	account = gaim_connection_get_account(conn->od->gc);
-	sn = gaim_account_get_username(account);
-	sn_length = strlen(sn);
-	byte_stream_new(&frame.payload, 1 + sn_length + 2 + 8 + 20);
-	byte_stream_put8(&frame.payload, sn_length);
-	byte_stream_putraw(&frame.payload, (const guint8 *)sn, sn_length);
+	account = purple_connection_get_account(conn->od->gc);
+	bn = purple_account_get_username(account);
+	bn_length = strlen(bn);
+	byte_stream_new(&frame.payload, 1 + bn_length + 2 + 8 + 20);
+	byte_stream_put8(&frame.payload, bn_length);
+	byte_stream_putraw(&frame.payload, (const guint8 *)bn, bn_length);
 	byte_stream_put16(&frame.payload, pin);
 	byte_stream_putraw(&frame.payload, conn->cookie, 8);
 
@@ -120,6 +122,8 @@ peer_proxy_send_join_existing_conn(PeerConnection *conn, guint16 pin)
 	byte_stream_putcaps(&frame.payload, conn->type); /* Value */
 
 	peer_proxy_send(conn, &frame);
+
+	byte_stream_destroy(&frame.payload);
 }
 
 /**
@@ -128,9 +132,9 @@ peer_proxy_send_join_existing_conn(PeerConnection *conn, guint16 pin)
 static void
 peer_proxy_recv_frame(PeerConnection *conn, ProxyFrame *frame)
 {
-	gaim_debug_info("oscar", "Incoming peer proxy frame with "
-			"type=0x%04hx, unknown=0x%08x, "
-			"flags=0x%04hx, and payload length=%hd\n", frame->type,
+	purple_debug_info("oscar", "Incoming peer proxy frame with "
+			"type=0x%04hx, unknown=0x%08x, flags=0x%04hx, and "
+			"payload length=%" G_GSIZE_FORMAT "\n", frame->type,
 			frame->unknown, frame->flags, frame->payload.len);
 
 	if (frame->type == PEER_PROXY_TYPE_CREATED)
@@ -149,11 +153,11 @@ peer_proxy_recv_frame(PeerConnection *conn, ProxyFrame *frame)
 		if (conn->type == OSCAR_CAPABILITY_DIRECTIM)
 			aim_im_sendch2_odc_requestproxy(conn->od,
 					conn->cookie,
-					conn->sn, ip, pin, ++conn->lastrequestnumber);
+					conn->bn, ip, pin, ++conn->lastrequestnumber);
 		else if (conn->type == OSCAR_CAPABILITY_SENDFILE)
 		{
 			aim_im_sendch2_sendfile_requestproxy(conn->od,
-					conn->cookie, conn->sn,
+					conn->cookie, conn->bn,
 					ip, pin, ++conn->lastrequestnumber,
 					(const gchar *)conn->xferdata.name,
 					conn->xferdata.size, conn->xferdata.totfiles);
@@ -161,14 +165,14 @@ peer_proxy_recv_frame(PeerConnection *conn, ProxyFrame *frame)
 	}
 	else if (frame->type == PEER_PROXY_TYPE_READY)
 	{
-		gaim_input_remove(conn->watcher_incoming);
+		purple_input_remove(conn->watcher_incoming);
 		conn->watcher_incoming = 0;
 
 		peer_connection_finalize_connection(conn);
 	}
 	else if (frame->type == PEER_PROXY_TYPE_ERROR)
 	{
-		if (byte_stream_empty(&frame->payload) >= 2)
+		if (byte_stream_bytes_left(&frame->payload) >= 2)
 		{
 			guint16 error;
 			const char *msg;
@@ -181,28 +185,28 @@ peer_proxy_recv_frame(PeerConnection *conn, ProxyFrame *frame)
 				msg ="accept period timed out";
 			else
 				msg = "unknown reason";
-			gaim_debug_info("oscar", "Proxy negotiation failed with "
+			purple_debug_info("oscar", "Proxy negotiation failed with "
 					"error 0x%04hx: %s\n", error, msg);
 		}
 		else
 		{
-			gaim_debug_warning("oscar", "Proxy negotiation failed with "
+			purple_debug_warning("oscar", "Proxy negotiation failed with "
 					"an unknown error\n");
 		}
 		peer_connection_trynext(conn);
 	}
 	else
 	{
-		gaim_debug_warning("oscar", "Unknown peer proxy frame type 0x%04hx.\n",
+		purple_debug_warning("oscar", "Unknown peer proxy frame type 0x%04hx.\n",
 				frame->type);
 	}
 }
 
 static void
-peer_proxy_connection_recv_cb(gpointer data, gint source, GaimInputCondition cond)
+peer_proxy_connection_recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	PeerConnection *conn;
-	ssize_t read;
+	gssize read;
 	ProxyFrame *frame;
 
 	conn = data;
@@ -218,19 +222,19 @@ peer_proxy_connection_recv_cb(gpointer data, gint source, GaimInputCondition con
 		/* Check if the proxy server closed the connection */
 		if (read == 0)
 		{
-			gaim_debug_info("oscar", "Peer proxy server closed connection\n");
+			purple_debug_info("oscar", "Peer proxy server closed connection\n");
 			peer_connection_trynext(conn);
 			return;
 		}
 
 		/* If there was an error then close the connection */
-		if (read == -1)
+		if (read < 0)
 		{
 			if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
 				/* No worries */
 				return;
 
-			gaim_debug_info("oscar", "Lost connection with peer proxy server\n");
+			purple_debug_info("oscar", "Lost connection with peer proxy server\n");
 			peer_connection_trynext(conn);
 			return;
 		}
@@ -245,7 +249,7 @@ peer_proxy_connection_recv_cb(gpointer data, gint source, GaimInputCondition con
 		/* We only support a specific version of the proxy protocol */
 		if (aimutil_get16(&conn->proxy_header[2]) != PEER_PROXY_PACKET_VERSION)
 		{
-			gaim_debug_warning("oscar", "Expected peer proxy protocol "
+			purple_debug_warning("oscar", "Expected peer proxy protocol "
 				"version %u but received version %u.  Closing "
 				"connection.\n", PEER_PROXY_PACKET_VERSION,
 				aimutil_get16(&conn->proxy_header[2]));
@@ -277,7 +281,7 @@ peer_proxy_connection_recv_cb(gpointer data, gint source, GaimInputCondition con
 		/* Check if the proxy server closed the connection */
 		if (read == 0)
 		{
-			gaim_debug_info("oscar", "Peer proxy server closed connection\n");
+			purple_debug_info("oscar", "Peer proxy server closed connection\n");
 			g_free(frame->payload.data);
 			g_free(frame);
 			conn->frame = NULL;
@@ -285,13 +289,14 @@ peer_proxy_connection_recv_cb(gpointer data, gint source, GaimInputCondition con
 			return;
 		}
 
-		if (read == -1)
+		/* If there was an error then close the connection */
+		if (read < 0)
 		{
 			if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
 				/* No worries */
 				return;
 
-			gaim_debug_info("oscar", "Lost connection with peer proxy server\n");
+			purple_debug_info("oscar", "Lost connection with peer proxy server\n");
 			g_free(frame->payload.data);
 			g_free(frame);
 			conn->frame = NULL;
@@ -338,8 +343,8 @@ peer_proxy_connection_established_cb(gpointer data, gint source, const gchar *er
 	}
 
 	conn->fd = source;
-	conn->watcher_incoming = gaim_input_add(conn->fd,
-			GAIM_INPUT_READ, peer_proxy_connection_recv_cb, conn);
+	conn->watcher_incoming = purple_input_add(conn->fd,
+			PURPLE_INPUT_READ, peer_proxy_connection_recv_cb, conn);
 
 	if (conn->proxyip != NULL)
 		/* Connect to the session created by the remote user */

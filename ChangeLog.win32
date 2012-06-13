@@ -1,5 +1,155 @@
-version 2.0.0:
-	* Updated GTK+ to 2.6.10 (rev.a)
+Starting with Pidgin version 2.7.1, this ChangeLog file will no longer be
+updated.  It will be kept in the source tree for historical reasons only.
+
+version 2.7.1 (05/29/2010):
+	* No changes
+
+version 2.7.0 (05/12/2010):
+	* Updated GTK+ to 2.16.6
+	* Private GTK+ Runtime now used (GTK+ Installer no longer supported)
+	* Minimum required GTK+ version increased to 2.14.7
+	* Windows 95, Windows 98, Windows 98 Second Edition, Windows ME
+	  (Millennium Edition), and Windows NT 4.0 longer supported due to GTK+
+	  requirements changes.
+	* Crash Report files (pidgin.RPT) are now generated in the ~/.purple
+	  directory instead of the installation directory.
+	* NSS SSL Library upgraded to 3.12.5 (thanks to Berke Viktor)
+	* GtkSpell upgraded to 2.0.16, changing the spellchecking backend to
+	  enchant.  This means that myspell and hunspell (OpenOffice)
+	  dictionaries can be used (previous versions' aspell dictionaries
+	  will not work).
+
+version 2.6.6 (02/18/2010):
+	* Installer translations for: Norwegian nynorsk
+
+version 2.6.5 (01/08/2010):
+	* No changes
+
+version 2.6.4 (11/29/2009):
+	* Register URL handlers for everything that Windows knows about.  Still
+	  use the HTTP "open" handler for security reasons.
+
+version 2.6.3 (10/16/2009):
+	* No changes
+
+version 2.6.2 (09/05/2009):
+	* No changes
+
+version 2.6.1 (08/18/2009):
+	* No changes
+
+version 2.6.0 (08/18/2009):
+	* Added XMPP URI support.
+
+version 2.5.9 (08/18/2009):
+	* No changes and no win32 packages built.
+
+version 2.5.8 (06/27/2009):
+	* No changes
+
+version 2.5.7 (06/20/2009):
+	* No changes
+
+version 2.5.6 (05/19/2009):
+	* No changes
+
+version 2.5.5 (03/01/2009):
+	* Remove the "Flash window when chat messages are received" pref from
+	  the Windows Pidgin Options plugin - the Message Notification plugin
+	  does this (and much more).
+	* Updated GTK+ to 2.14.7
+
+version 2.5.4 (01/12/2009):
+	* Fix the "Hang on Exit" issue that a number of users encountered.
+	* Updated GTK+ to 2.14.6
+
+version 2.5.3 (12/20/2008):
+	* Upgrade SILC to use the 1.1.8 toolkit
+	* Updated included Meanwhile library to include patch referenced in #7563
+
+version 2.5.2 (10/19/2008):
+	* Updated GTK+ to 2.12.12
+	  This will resolve an issue with stuff in QQ appearing as "(NULL)"
+
+version 2.5.1 (08/30/2008):
+	* No changes
+
+version 2.5.0 (08/18/2008):
+	* Don't install the GSSAPI SASL plugin on NT4 to avoid an error popup.
+	* Use the Kerberos for Windows libraries installed on the system (if
+	  present) instead of including enough to load the plugin (Kfw still
+	  needed to be installed for it to actually work before this change).
+	* Upgrade to Perl 5.10 (System Perl runtime must be upgraded for Perl
+	  plugins to continue to work).
+	* Upgrade SILC to use the 1.1.7 toolkit
+
+version 2.4.3 (07/01/2008):
+	* No changes
+
+version 2.4.2 (05/17/2008):
+	* No changes
+
+version 2.4.1 (03/31/2008):
+	* Fix an issue preventing the Buddy List being raised when pidgin.exe
+	  is run for a second time.
+	* Fix protocol handlers
+	* Fix AIM/ICQ usage of non-ASCII text with new Glib versions.
+
+version 2.4.0 (02/29/2008):
+	* Updated GTK+ to 2.12.8
+	* Updated included Meanwhile library to include patches referenced at:
+	  https://sourceforge.net/tracker/?func=detail&atid=656718&aid=1626349&group_id=110565
+	* Build the xmpp protocol with SASL support (and include Cyrus SASL
+	  2.1.22).
+
+version 2.3.1 (12/7/2007):
+	* No changes
+
+version 2.3.0 (11/24/2007):
+	* Updated GTK+ to 2.12.1 (This was actually included in 2.2.2, but 
+	  didn't get into the Changelog.)
+	* Upgrade SILC to use the 1.1.5 toolkit
+
+version 2.2.2 (10/23/2007):
+	* Updated gtkspell to include a patch to share Aspell dictionaries
+	  among all the input fields to avoid excessive memory usage.
+	* Update libxml2 to 2.6.30
+	* Bonjour protocol now appears even if Bonjour for Windows isn't
+	  present (displays message indicating Bonjour for Windows must be
+	  installed if you try to log in and it isn't installed).
+	* libpurple now looks for a default prefs.xml in the COMMON_APPDATA
+	  directory (e.g. \Documents and Settings\All Users\Application Data\purple\prefs.xml)
+	  similarly to how this is done on other platforms.
+	* Updated GTK+ to 2.12.1
+
+version 2.2.1 (09/29/2007):
+	* No changes
+
+version 2.2.0 (09/13/2007):
+	* Updated gtkspell to 2.0.11
+	* Upgrade SILC to use the 1.1.2 toolkit
+
+version 2.1.1 (08/20/2007):
+	* No changes
+
+version 2.1.0 (7/28/2007):
+	* Updated launcher application (pidgin.exe) to support portable mode
+	  via `pidgin.exe --portable-mode` or by renaming the binary to
+	  `pidgin-portable.exe`
+	* Updated GTK+ to 2.10.13
+
+version 2.0.2 (6/14/2007):
+	* Add Bonjour protocol support thanks to Chris Davies. This requires
+	  Apple Bonjour for Windows from:
+	  http://www.apple.com/support/downloads/bonjourforwindows.html
+
+version 2.0.1 (5/24/2007):
+	* No changes
+
+version 2.0.0 (5/3/2007):
+	* URI Handler support added via `pidgin.exe --protocolhandler=`
+	* Running a second instance will popup the Buddy List, if possible.
+	* Updated GTK+ to 2.10.11 (rev.b) (Win98/ME will need to use 2.6.10)
 	* The transparency plugin has been rewritten and enhanced.
 	* MSN open email bug fixed.
 	* Update SILC to use the 1.0.2 toolkit
@@ -92,7 +242,7 @@ version 0.82.1 (08/27/2004):
 
 version 0.82 (08/26/2004):
 	* Selecting away messages using the system tray icon works
-	  (Thanks François Gagné)
+	  (Thanks FranÃ§ois GagnÃ©)
 	* Transparency plugin will save your settings again (Kevin Stange)
 	* Updated gtk-wimp to 0.6.2
 	* Updated libpng to 1.2.6 (major security update)
