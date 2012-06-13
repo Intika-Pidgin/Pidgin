@@ -1,7 +1,6 @@
 /**
  * @file smiley.h Smiley API
  * @ingroup core
- * @since 2.5.0
  */
 
 /* purple
@@ -51,9 +50,7 @@ typedef struct _PurpleSmileyClass   PurpleSmileyClass;
 #define PURPLE_IS_SMILEY_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), PURPLE_TYPE_SMILEY))
 #define PURPLE_SMILEY_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Custom Smiley API                                               */
@@ -95,7 +92,7 @@ PurpleSmiley *
 purple_smiley_new_from_file(const char *shortcut, const char *filepath);
 
 /**
- * Destroys the custom smiley and release the associated resources.
+ * Destroys the custom smiley and releases the associated resources.
  *
  * @param smiley    The custom smiley.
  */
@@ -183,7 +180,7 @@ const char *purple_smiley_get_extension(const PurpleSmiley *smiley);
  * If the custom smiley has data and the file exists in the cache, this
  * will return a full path to the cached file.
  *
- * In general, it is not appropriate to be poking in the file cached
+ * In general, it is not appropriate to be poking in the file cache
  * directly.  If you find yourself wanting to use this function, think
  * very long and hard about it, and then don't.
  *
@@ -192,7 +189,7 @@ const char *purple_smiley_get_extension(const PurpleSmiley *smiley);
  * @param smiley  The custom smiley.
  *
  * @return A full path to the file, or @c NULL under various conditions.
- *         The caller should use #g_free to free the returned string.
+ *         The caller should use g_free to free the returned string.
  */
 char *purple_smiley_get_full_path(PurpleSmiley *smiley);
 
@@ -254,9 +251,7 @@ void purple_smileys_uninit(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_SMILEY_H_ */
 

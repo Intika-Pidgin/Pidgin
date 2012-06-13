@@ -26,11 +26,12 @@
  *
  */
 
+#include "oscar.h"
+#include "oscarcommon.h"
+
 #include <ctype.h>
 
 #include "cipher.h"
-
-#include "oscar.h"
 
 /* #define USE_XOR_FOR_ICQ */
 
@@ -56,17 +57,10 @@ static int
 aim_encode_password(const char *password, guint8 *encoded)
 {
 	guint8 encoding_table[] = {
-#if 0 /* old v1 table */
-		0xf3, 0xb3, 0x6c, 0x99,
-		0x95, 0x3f, 0xac, 0xb6,
-		0xc5, 0xfa, 0x6b, 0x63,
-		0x69, 0x6c, 0xc3, 0x9f
-#else /* v2.1 table, also works for ICQ */
 		0xf3, 0x26, 0x81, 0xc4,
 		0x39, 0x86, 0xdb, 0x92,
 		0x71, 0xa3, 0xb9, 0xe6,
 		0x53, 0x7a, 0x95, 0x7c
-#endif
 	};
 	unsigned int i;
 
@@ -234,7 +228,7 @@ aim_send_login(OscarData *od, FlapConnection *conn, const char *sn, const char *
 	frame = flap_frame_new(od, 0x02, 1152);
 
 	snacid = aim_cachesnac(od, SNAC_FAMILY_AUTH, 0x0002, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, SNAC_FAMILY_AUTH, 0x0002, 0x0000, snacid);
+	aim_putsnac(&frame->data, SNAC_FAMILY_AUTH, 0x0002, snacid);
 
 	aim_tlvlist_add_str(&tlvlist, 0x0001, sn);
 
@@ -277,7 +271,7 @@ aim_send_login(OscarData *od, FlapConnection *conn, const char *sn, const char *
 	 * If set, old-fashioned buddy lists will not work. You will need
 	 * to use SSI.
 	 */
-	aim_tlvlist_add_8(&tlvlist, 0x004a, (allow_multiple_logins ? 0x01 : 0x02));
+	aim_tlvlist_add_8(&tlvlist, 0x004a, (allow_multiple_logins ? 0x01 : 0x03));
 
 	aim_tlvlist_write(&frame->data, &tlvlist);
 
@@ -385,12 +379,6 @@ parse(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 	if (aim_tlv_gettlv(tlvlist, 0x0043, 1))
 		info->latestbeta.name = aim_tlv_getstr(tlvlist, 0x0043, 1);
 
-#if 0
-	if (aim_tlv_gettlv(tlvlist, 0x0048, 1)) {
-		/* beta serial */
-	}
-#endif
-
 	if (aim_tlv_gettlv(tlvlist, 0x0044, 1))
 		info->latestrelease.build = aim_tlv_get32(tlvlist, 0x0044, 1);
 	if (aim_tlv_gettlv(tlvlist, 0x0045, 1))
@@ -400,26 +388,11 @@ parse(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 	if (aim_tlv_gettlv(tlvlist, 0x0047, 1))
 		info->latestrelease.name = aim_tlv_getstr(tlvlist, 0x0047, 1);
 
-#if 0
-	if (aim_tlv_gettlv(tlvlist, 0x0049, 1)) {
-		/* lastest release serial */
-	}
-#endif
-
 	/*
 	 * URL to change password.
 	 */
 	if (aim_tlv_gettlv(tlvlist, 0x0054, 1))
 		info->chpassurl = aim_tlv_getstr(tlvlist, 0x0054, 1);
-
-#if 0
-	/*
-	 * Unknown.  Seen on an @mac.com username with value of 0x003f
-	 */
-	if (aim_tlv_gettlv(tlvlist, 0x0055, 1)) {
-		/* Unhandled */
-	}
-#endif
 
 	od->authinfo = info;
 
@@ -504,7 +477,7 @@ aim_request_login(OscarData *od, FlapConnection *conn, const char *sn)
 	frame = flap_frame_new(od, 0x02, 10+2+2+strlen(sn)+8);
 
 	snacid = aim_cachesnac(od, SNAC_FAMILY_AUTH, 0x0006, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, SNAC_FAMILY_AUTH, 0x0006, 0x0000, snacid);
+	aim_putsnac(&frame->data, SNAC_FAMILY_AUTH, 0x0006, snacid);
 
 	aim_tlvlist_add_str(&tlvlist, 0x0001, sn);
 
@@ -534,14 +507,29 @@ aim_request_login(OscarData *od, FlapConnection *conn, const char *sn)
 static int
 keyparse(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
-	int keylen, ret = 1;
-	aim_rxcallback_t userfunc;
+	int keylen;
 	char *keystr;
 	GSList *tlvlist;
 	gboolean truncate_pass;
+	PurpleConnection *gc;
+	PurpleAccount *account;
+	ClientInfo aiminfo = CLIENTINFO_PURPLE_AIM;
+	ClientInfo icqinfo = CLIENTINFO_PURPLE_ICQ;
+
+	gc = od->gc;
+	account = purple_connection_get_account(gc);
 
 	keylen = byte_stream_get16(bs);
 	keystr = byte_stream_getstr(bs, keylen);
+	if (!g_utf8_validate(keystr, -1, NULL)) {
+		purple_debug_warning("oscar", "Received SNAC %04hx/%04hx with "
+				"invalid UTF-8 keystr.\n", snac->family, snac->subtype);
+		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				_("Received unexpected response from server"));
+		g_free(keystr);
+		return 1;
+	}
+
 	tlvlist = aim_tlvlist_read(bs);
 
 	/*
@@ -555,13 +543,18 @@ keyparse(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fram
 	 * for the netscape network.  This SNAC had a type 0x0058 TLV with length 10.
 	 * Data is 0x0007 0004 3e19 ae1e 0006 0004 0000 0005 */
 
-	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
-		ret = userfunc(od, conn, frame, keystr, (int)truncate_pass);
+	aim_send_login(od, conn, purple_account_get_username(account),
+			purple_connection_get_password(gc), truncate_pass,
+			od->icq ? &icqinfo : &aiminfo, keystr,
+			purple_account_get_bool(account, "allow_multiple_logins", OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS));
+
+	purple_connection_update_progress(gc,
+			_("Password sent"), 2, OSCAR_CONNECT_STEPS);
 
 	g_free(keystr);
 	aim_tlvlist_free(tlvlist);
 
-	return ret;
+	return 1;
 }
 
 /**
@@ -602,7 +595,7 @@ aim_auth_securid_send(OscarData *od, const char *securid)
 	frame = flap_frame_new(od, 0x02, 10+2+len);
 
 	snacid = aim_cachesnac(od, SNAC_FAMILY_AUTH, SNAC_SUBTYPE_AUTH_SECURID_RESPONSE, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, SNAC_FAMILY_AUTH, SNAC_SUBTYPE_AUTH_SECURID_RESPONSE, 0x0000, 0);
+	aim_putsnac(&frame->data, SNAC_FAMILY_AUTH, SNAC_SUBTYPE_AUTH_SECURID_RESPONSE, 0);
 
 	byte_stream_put16(&frame->data, len);
 	byte_stream_putstr(&frame->data, securid);

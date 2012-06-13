@@ -24,8 +24,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include "finch.h"
 #include <internal.h>
+#include "finch.h"
 #include "gntconv.h"
 #include "gntmedia.h"
 
@@ -156,7 +156,7 @@ finch_media_init (FinchMedia *media)
 {
 	media->priv = FINCH_MEDIA_GET_PRIVATE(media);
 
-	media->priv->calling = gnt_label_new(_("Calling ... "));
+	media->priv->calling = gnt_label_new(_("Calling..."));
 	media->priv->hangup = gnt_button_new(_("Hangup"));
 	media->priv->accept = gnt_button_new(_("Accept"));
 	media->priv->reject = gnt_button_new(_("Reject"));
@@ -252,7 +252,7 @@ finch_media_state_changed_cb(PurpleMedia *media, PurpleMediaState state,
 	} else if (state == PURPLE_MEDIA_STATE_CONNECTED) {
 		finch_media_connected_cb(media, gntmedia);
 	} else if (state == PURPLE_MEDIA_STATE_NEW &&
-			sid != NULL && name != NULL && 
+			sid != NULL && name != NULL &&
 			purple_media_is_initiator(media, sid, name) == FALSE) {
 		PurpleAccount *account;
 		PurpleBuddy *buddy;
@@ -360,7 +360,7 @@ finch_media_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 			g_value_set_object(value, media->priv->media);
 			break;
 		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);	
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
 	}
 }
@@ -417,11 +417,7 @@ static GstElement *
 create_default_audio_src(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
-	GstElement *bin, *src, *volume;
-	GstPad *pad, *ghost;
-	double input_volume = purple_prefs_get_int(
-			"/finch/media/audio/volume/input")/10.0;
-
+	GstElement *src;
 	src = gst_element_factory_make("gconfaudiosrc", NULL);
 	if (src == NULL)
 		src = gst_element_factory_make("autoaudiosrc", NULL);
@@ -436,28 +432,15 @@ create_default_audio_src(PurpleMedia *media,
 				"element for the default audio source.\n");
 		return NULL;
 	}
-
-	bin = gst_bin_new("finchdefaultaudiosrc");
-	volume = gst_element_factory_make("volume", "purpleaudioinputvolume");
-	g_object_set(volume, "volume", input_volume, NULL);
-	gst_bin_add_many(GST_BIN(bin), src, volume, NULL);
-	gst_element_link(src, volume);
-	pad = gst_element_get_pad(volume, "src");
-	ghost = gst_ghost_pad_new("ghostsrc", pad);
-	gst_element_add_pad(bin, ghost);
-
-	return bin;
+	gst_element_set_name(src, "finchdefaultaudiosrc");
+	return src;
 }
 
 static GstElement *
 create_default_audio_sink(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
-	GstElement *bin, *sink, *volume, *queue;
-	GstPad *pad, *ghost;
-	double output_volume = purple_prefs_get_int(
-			"/finch/media/audio/volume/output")/10.0;
-
+	GstElement *sink;
 	sink = gst_element_factory_make("gconfaudiosink", NULL);
 	if (sink == NULL)
 		sink = gst_element_factory_make("autoaudiosink",NULL);
@@ -466,19 +449,7 @@ create_default_audio_sink(PurpleMedia *media,
 				"element for the default audio sink.\n");
 		return NULL;
 	}
-
-	bin = gst_bin_new("finchdefaultaudiosink");
-	volume = gst_element_factory_make("volume", "purpleaudiooutputvolume");
-	g_object_set(volume, "volume", output_volume, NULL);
-	queue = gst_element_factory_make("queue", NULL);
-	gst_bin_add_many(GST_BIN(bin), sink, volume, queue, NULL);
-	gst_element_link(volume, sink);
-	gst_element_link(queue, volume);
-	pad = gst_element_get_pad(queue, "sink");
-	ghost = gst_ghost_pad_new("ghostsink", pad);
-	gst_element_add_pad(bin, ghost);
-
-	return bin;
+	return sink;
 }
 #endif  /* USE_VV */
 
@@ -509,19 +480,13 @@ void finch_media_manager_init(void)
 			PURPLE_CMD_FLAG_IM, NULL,
 			call_cmd_cb, _("call: Make an audio call."), NULL);
 
-	purple_media_manager_set_ui_caps(manager, 
+	purple_media_manager_set_ui_caps(manager,
 			PURPLE_MEDIA_CAPS_AUDIO |
 			PURPLE_MEDIA_CAPS_AUDIO_SINGLE_DIRECTION);
 
 	purple_debug_info("gntmedia", "Registering media element types\n");
 	purple_media_manager_set_active_element(manager, default_audio_src);
 	purple_media_manager_set_active_element(manager, default_audio_sink);
-
-	purple_prefs_add_none("/finch/media");
-	purple_prefs_add_none("/finch/media/audio");
-	purple_prefs_add_none("/finch/media/audio/volume");
-	purple_prefs_add_int("/finch/media/audio/volume/input", 10);
-	purple_prefs_add_int("/finch/media/audio/volume/output", 10);
 #endif
 }
 

@@ -3,7 +3,7 @@ import string
 import sys
 
 # types translated into "int"
-simpletypes = ["int", "gint", "guint", "gboolean", "gpointer", "size_t", "gssize", "time_t"]
+simpletypes = ["int", "gint", "guint", "gboolean", "size_t", "gssize", "time_t"]
 
 # List "excluded" contains functions that shouldn't be exported via
 # DBus.  If you remove a function from this list, please make sure
@@ -29,7 +29,11 @@ excluded = [\
     # Similar to the above:
     "purple_account_set_register_callback",
     "purple_account_unregister",
-    "purple_connection_new_unregister",
+
+    # Similar to the above, again
+    "purple_menu_action_new",
+    "purple_menu_action_set_callback",
+    "purple_menu_action_get_callback",
 
     # These functions are excluded because they involve setting arbitrary
     # data via pointers for protocols and UIs.  This just won't work.
@@ -170,7 +174,7 @@ class Binding:
                 return self.inputpurplestructure(type, name)
 
             # special case for *_get_data functions, be careful here...
-            elif (type[0] == "size_t") and (name == "len"):
+            elif (type[0] == "size_t" or type[0] == "gsize") and name == "len":
                 return self.inputgetdata(type, name)
             
             # unknown pointers are always replaced with NULL
@@ -181,14 +185,19 @@ class Binding:
 
    
     def processoutput(self, type, name):
+        const = False
+        unsigned = False
         # the "void" type is simple ...
         if type == ["void"]:
             return self.outputvoid(type, name)
 
-        const = False
         if type[0] == "const":
             type = type[1:]
             const = True
+
+        if type[0] == "unsigned":
+            type = type[1:]
+            unsigned = True
 
         # a string
         if type == ["char", pointer] or type == ["gchar", pointer]:
@@ -197,7 +206,7 @@ class Binding:
         # simple types (ints, booleans, enums, ...)
         if (len(type) == 1) and \
                ((type[0] in simpletypes) or (type[0].startswith("Purple"))):
-            return self.outputsimple(type, name)
+            return self.outputsimple(type, name, unsigned)
 
         # pointers ...
         if (len(type) == 2) and (type[1] == pointer):
@@ -303,10 +312,13 @@ class ClientBinding (Binding):
 #        self.returncode.append("NULLIFY(%s);" % name)
         self.returncode.append("return %s;" % name);
 
-    def outputsimple(self, type, name):
+    def outputsimple(self, type, name, us):
         self.functiontype = type[0]
         self.decls.append("%s %s = 0;" % (type[0], name))
-        self.outputparams.append(("G_TYPE_INT", name))
+        if us:
+            self.outputparams.append(("G_TYPE_UINT", name))
+        else:
+            self.outputparams.append(("G_TYPE_INT", name))
         self.returncode.append("return %s;" % name);
 
     # we could add "const" to the return type but this would probably
@@ -455,11 +467,16 @@ class ServerBinding (Binding):
         if not const:
             self.ccodeout.append("\tg_free(%s);" % name)
 
-    def outputsimple(self, type, name):
-        self.cdecls.append("\tdbus_int32_t %s;" % name)
+    def outputsimple(self, type, name, us):
+        if us:
+            self.cdecls.append("\tdbus_uint32_t %s;" % name)
+            self.cparamsout.append(("UINT32", name))
+            self.addouttype("u", name)
+        else:
+            self.cdecls.append("\tdbus_int32_t %s;" % name)
+            self.cparamsout.append(("INT32", name))
+            self.addouttype("i", name)
         self.ccode.append("\t%s = %s;" % (name, self.call))
-        self.cparamsout.append(("INT32", name))
-        self.addouttype("i", name)
 
     def outputpurplestructure(self, type, name):
         self.cdecls.append("\tdbus_int32_t %s;" % name)
@@ -478,7 +495,7 @@ class ServerBinding (Binding):
         if self.function.name in stringlists:
             self.cdecls.append("\tchar **%s;" % name)
             self.ccode.append("\tlist = %s;" % self.call)
-            self.ccode.append("\t%s = (char **)purple_%s_to_array(list, FALSE, &%s_LEN);" % \
+            self.ccode.append("\t%s = (char **)purple_%s_to_array(list, &%s_LEN);" % \
                          (name, type[0], name))
             self.cparamsout.append("DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &%s, %s_LEN" \
                           % (name, name))
@@ -490,7 +507,7 @@ class ServerBinding (Binding):
         else:
             self.cdecls.append("\tdbus_int32_t *%s;" % name)
             self.ccode.append("\tlist = %s;" % self.call)
-            self.ccode.append("\t%s = purple_dbusify_%s(list, FALSE, &%s_LEN);" % \
+            self.ccode.append("\t%s = purple_dbusify_%s(list, &%s_LEN);" % \
                          (name, type[0], name))
             if (not (self.function.name in constlists)):
                 self.ccode.append("\tg_%s_free(list);" % type[0].lower()[1:])

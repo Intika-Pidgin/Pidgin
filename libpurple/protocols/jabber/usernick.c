@@ -1,7 +1,9 @@
 /*
  * purple - Jabber Protocol Plugin
  *
- * Copyright (C) 2007, Andreas Monitzer <andy@monitzer.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	 02111-1307	 USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -66,7 +68,7 @@ static void do_nick_set(JabberStream *js, const char *nick) {
 static void do_nick_got_own_nick_cb(JabberStream *js, const char *from, xmlnode *items) {
 	char *oldnickname = NULL;
 	xmlnode *item = NULL;
-	
+
 	if (items)
 		item = xmlnode_get_child(items,"item");
 
@@ -84,14 +86,12 @@ static void do_nick_got_own_nick_cb(JabberStream *js, const char *from, xmlnode 
 }
 
 static void do_nick_set_nick(PurplePluginAction *action) {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
-	JabberStream *js = gc->proto_data;
-	char *jid = g_strdup_printf("%s@%s", js->user->node, js->user->domain);
+	PurpleConnection *gc = action->context;
+	JabberStream *js = purple_connection_get_protocol_data(gc);
 
 	/* since the nickname might have been changed by another resource of this account, we always have to request the old one
 		from the server to present as the default for the new one */
-	jabber_pep_request_item(js, jid, "http://jabber.org/protocol/nick", NULL, do_nick_got_own_nick_cb);
-	g_free(jid);
+	jabber_pep_request_item(js, NULL, "http://jabber.org/protocol/nick", NULL, do_nick_got_own_nick_cb);
 }
 
 void jabber_nick_init(void) {
