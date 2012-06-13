@@ -1,7 +1,7 @@
 /**
  * @file gg.h
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2005  Bartosz Oler <bartosz@bzimage.us>
  *
@@ -17,14 +17,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 
-#ifndef _GAIM_GG_H
-#define _GAIM_GG_H
+#ifndef _PURPLE_GG_H
+#define _PURPLE_GG_H
 
 #include <libgadu.h>
+#include "internal.h"
 #include "search.h"
 #include "connection.h"
 
@@ -39,7 +40,7 @@ typedef struct
 
 } GGPChat;
 
-typedef void (*GGPTokenCallback)(GaimConnection *);
+typedef void (*GGPTokenCallback)(PurpleConnection *);
 
 typedef struct
 {
@@ -60,13 +61,12 @@ typedef struct {
 	GGPToken *token;
 	GList *chats;
 	GGPSearches *searches;
-
-	uin_t tmp_buddy;
 	int chats_count;
-
+	GList *pending_richtext_messages;
+	GHashTable *pending_images;
+	gboolean status_broadcasting; //When TRUE status is visible to all, when FALSE status is visible only to friends.
 } GGPInfo;
 
-
-#endif /* _GAIM_GG_H */
+#endif /* _PURPLE_GG_H */
 
 /* vim: set ts=8 sts=0 sw=8 noet: */

@@ -1,50 +1,50 @@
 #include "gtkmodule.h"
 
-MODULE = Gaim::GtkUI::Xfer  PACKAGE = Gaim::GtkUI::Xfer  PREFIX = gaim_gtk_xfer_
+MODULE = Pidgin::Xfer  PACKAGE = Pidgin::Xfer  PREFIX = pidgin_
 PROTOTYPES: ENABLE
 
 void
-gaim_set_gtkxfer_dialog(dialog)
-	Gaim::GtkUI::Xfer::Dialog dialog
+pidgin_set_xfer_dialog(dialog)
+	Pidgin::Xfer::Dialog dialog
 
-Gaim::GtkUI::Xfer::Dialog
-gaim_get_gtkxfer_dialog()
+Pidgin::Xfer::Dialog
+pidgin_get_xfer_dialog()
 
-MODULE = Gaim::GtkUI::Xfer  PACKAGE = Gaim::GtkUI::Xfer::Dialog  PREFIX = gaim_gtkxfer_dialog_
+MODULE = Pidgin::Xfer  PACKAGE = Pidgin::Xfer::Dialog  PREFIX = pidgin_xfer_dialog_
 PROTOTYPES: ENABLE
 
-Gaim::GtkUI::Xfer::Dialog
-gaim_gtkxfer_dialog_new(class)
+Pidgin::Xfer::Dialog
+pidgin_xfer_dialog_new(class)
     C_ARGS: /* void */
 
 void
-gaim_gtkxfer_dialog_destroy(dialog)
-	Gaim::GtkUI::Xfer::Dialog dialog
+pidgin_xfer_dialog_destroy(dialog)
+	Pidgin::Xfer::Dialog dialog
 
 void
-gaim_gtkxfer_dialog_show(dialog = NULL)
-	Gaim::GtkUI::Xfer::Dialog dialog
+pidgin_xfer_dialog_show(dialog = NULL)
+	Pidgin::Xfer::Dialog dialog
 
 void
-gaim_gtkxfer_dialog_hide(dialog)
-	Gaim::GtkUI::Xfer::Dialog dialog
+pidgin_xfer_dialog_hide(dialog)
+	Pidgin::Xfer::Dialog dialog
 
 void
-gaim_gtkxfer_dialog_add_xfer(dialog, xfer)
-	Gaim::GtkUI::Xfer::Dialog dialog
-	Gaim::Xfer xfer
+pidgin_xfer_dialog_add_xfer(dialog, xfer)
+	Pidgin::Xfer::Dialog dialog
+	Purple::Xfer xfer
 
 void
-gaim_gtkxfer_dialog_remove_xfer(dialog, xfer)
-	Gaim::GtkUI::Xfer::Dialog dialog
-	Gaim::Xfer xfer
+pidgin_xfer_dialog_remove_xfer(dialog, xfer)
+	Pidgin::Xfer::Dialog dialog
+	Purple::Xfer xfer
 
 void
-gaim_gtkxfer_dialog_cancel_xfer(dialog, xfer)
-	Gaim::GtkUI::Xfer::Dialog dialog
-	Gaim::Xfer xfer
+pidgin_xfer_dialog_cancel_xfer(dialog, xfer)
+	Pidgin::Xfer::Dialog dialog
+	Purple::Xfer xfer
 
 void
-gaim_gtkxfer_dialog_update_xfer(dialog, xfer)
-	Gaim::GtkUI::Xfer::Dialog dialog
-	Gaim::Xfer xfer
+pidgin_xfer_dialog_update_xfer(dialog, xfer)
+	Pidgin::Xfer::Dialog dialog
+	Purple::Xfer xfer

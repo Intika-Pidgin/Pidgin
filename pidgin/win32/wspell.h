@@ -1,5 +1,5 @@
 /*
- * gaim
+ * pidgin
  *
  * File: wspell.h
  *
@@ -17,33 +17,41 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _WSPELL_H_
 #define _WSPELL_H_
 #include <gtkspell/gtkspell.h>
 
-void wgaim_gtkspell_init(void);
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-extern GtkSpell* (*wgaim_gtkspell_new_attach)(GtkTextView*, const gchar*, GError**);
+void winpidgin_spell_init(void);
+
+extern GtkSpell* (*wpidginspell_new_attach)(GtkTextView*, const gchar*, GError**);
 #define gtkspell_new_attach( view, lang, error ) \
-wgaim_gtkspell_new_attach( view, lang, error )
+wpidginspell_new_attach( view, lang, error )
 
-extern GtkSpell* (*wgaim_gtkspell_get_from_text_view)(GtkTextView*);
+extern GtkSpell* (*wpidginspell_get_from_text_view)(GtkTextView*);
 #define gtkspell_get_from_text_view( view ) \
-wgaim_gtkspell_get_from_text_view( view )
+wpidginspell_get_from_text_view( view )
 
-extern void (*wgaim_gtkspell_detach)(GtkSpell*);
+extern void (*wpidginspell_detach)(GtkSpell*);
 #define gtkspell_detach( spell ) \
-wgaim_gtkspell_detach( spell )
+wpidginspell_detach( spell )
 
-extern gboolean (*wgaim_gtkspell_set_language)(GtkSpell*,	const gchar*, GError**);
+extern gboolean (*wpidginspell_set_language)(GtkSpell*, const gchar*, GError**);
 #define gtkspell_set_language( spell, lang, error ) \
-wgaim_gtkspell_set_language( spell, lang, error )
+wpidginspell_set_language( spell, lang, error )
 
-extern void (*wgaim_gtkspell_recheck_all)(GtkSpell*);
+extern void (*wpidginspell_recheck_all)(GtkSpell*);
 #define gtkspell_recheck_all( spell ) \
-wgaim_gtkspell_recheck_all( spell )
+wpidginspell_recheck_all( spell )
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _WSPELL_H_ */

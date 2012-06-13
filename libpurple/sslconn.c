@@ -1,10 +1,11 @@
 /**
  * @file sslconn.c SSL API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,31 +21,35 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#define _PURPLE_SSLCONN_C_
+
 #include "internal.h"
 
+#include "certificate.h"
 #include "debug.h"
+#include "request.h"
 #include "sslconn.h"
 
 static gboolean _ssl_initialized = FALSE;
-static GaimSslOps *_ssl_ops = NULL;
+static PurpleSslOps *_ssl_ops = NULL;
 
 static gboolean
 ssl_init(void)
 {
-	GaimPlugin *plugin;
-	GaimSslOps *ops;
+	PurplePlugin *plugin;
+	PurpleSslOps *ops;
 
 	if (_ssl_initialized)
 		return FALSE;
 
-	plugin = gaim_plugins_find_with_id("core-ssl");
+	plugin = purple_plugins_find_with_id("core-ssl");
 
-	if (plugin != NULL && !gaim_plugin_is_loaded(plugin))
-		gaim_plugin_load(plugin);
+	if (plugin != NULL && !purple_plugin_is_loaded(plugin))
+		purple_plugin_load(plugin);
 
-	ops = gaim_ssl_get_ops();
+	ops = purple_ssl_get_ops();
 	if ((ops == NULL) || (ops->init == NULL) || (ops->uninit == NULL) ||
 		(ops->connectfunc == NULL) || (ops->close == NULL) ||
 		(ops->read == NULL) || (ops->write == NULL))
@@ -52,25 +57,25 @@ ssl_init(void)
 		return FALSE;
 	}
 
-	return ops->init();
+	return (_ssl_initialized = ops->init());
 }
 
 gboolean
-gaim_ssl_is_supported(void)
+purple_ssl_is_supported(void)
 {
 #ifdef HAVE_SSL
 	ssl_init();
-	return (gaim_ssl_get_ops() != NULL);
+	return (purple_ssl_get_ops() != NULL);
 #else
 	return FALSE;
 #endif
 }
 
 static void
-gaim_ssl_connect_cb(gpointer data, gint source, const gchar *error_message)
+purple_ssl_connect_cb(gpointer data, gint source, const gchar *error_message)
 {
-	GaimSslConnection *gsc;
-	GaimSslOps *ops;
+	PurpleSslConnection *gsc;
+	PurpleSslOps *ops;
 
 	gsc = data;
 	gsc->connect_data = NULL;
@@ -78,29 +83,38 @@ gaim_ssl_connect_cb(gpointer data, gint source, const gchar *error_message)
 	if (source < 0)
 	{
 		if (gsc->error_cb != NULL)
-			gsc->error_cb(gsc, GAIM_SSL_CONNECT_FAILED, gsc->connect_cb_data);
+			gsc->error_cb(gsc, PURPLE_SSL_CONNECT_FAILED, gsc->connect_cb_data);
 
-		gaim_ssl_close(gsc);
+		purple_ssl_close(gsc);
 		return;
 	}
 
 	gsc->fd = source;
 
-	ops = gaim_ssl_get_ops();
+	ops = purple_ssl_get_ops();
 	ops->connectfunc(gsc);
 }
 
-GaimSslConnection *
-gaim_ssl_connect(GaimAccount *account, const char *host, int port,
-				 GaimSslInputFunction func, GaimSslErrorFunction error_func,
+PurpleSslConnection *
+purple_ssl_connect(PurpleAccount *account, const char *host, int port,
+				 PurpleSslInputFunction func, PurpleSslErrorFunction error_func,
 				 void *data)
 {
-	GaimSslConnection *gsc;
+	return purple_ssl_connect_with_ssl_cn(account, host, port, func, error_func,
+	                                  NULL, data);
+}
+
+PurpleSslConnection *
+purple_ssl_connect_with_ssl_cn(PurpleAccount *account, const char *host, int port,
+				 PurpleSslInputFunction func, PurpleSslErrorFunction error_func,
+				 const char *ssl_cn, void *data)
+{
+	PurpleSslConnection *gsc;
 
 	g_return_val_if_fail(host != NULL,            NULL);
 	g_return_val_if_fail(port != 0 && port != -1, NULL);
 	g_return_val_if_fail(func != NULL,            NULL);
-	g_return_val_if_fail(gaim_ssl_is_supported(), NULL);
+	g_return_val_if_fail(purple_ssl_is_supported(), NULL);
 
 	if (!_ssl_initialized)
 	{
@@ -108,16 +122,19 @@ gaim_ssl_connect(GaimAccount *account, const char *host, int port,
 			return NULL;
 	}
 
-	gsc = g_new0(GaimSslConnection, 1);
+	gsc = g_new0(PurpleSslConnection, 1);
 
 	gsc->fd              = -1;
-	gsc->host            = g_strdup(host);
+	gsc->host            = ssl_cn ? g_strdup(ssl_cn) : g_strdup(host);
 	gsc->port            = port;
 	gsc->connect_cb_data = data;
 	gsc->connect_cb      = func;
 	gsc->error_cb        = error_func;
 
-	gsc->connect_data = gaim_proxy_connect(NULL, account, host, port, gaim_ssl_connect_cb, gsc);
+	/* TODO: Move this elsewhere */
+	gsc->verifier = purple_certificate_find_verifier("x509","tls_cached");
+
+	gsc->connect_data = purple_proxy_connect(NULL, account, host, port, purple_ssl_connect_cb, gsc);
 
 	if (gsc->connect_data == NULL)
 	{
@@ -127,41 +144,68 @@ gaim_ssl_connect(GaimAccount *account, const char *host, int port,
 		return NULL;
 	}
 
-	return (GaimSslConnection *)gsc;
+	return (PurpleSslConnection *)gsc;
 }
 
 static void
-recv_cb(gpointer data, gint source, GaimInputCondition cond)
+recv_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
-	GaimSslConnection *gsc = data;
+	PurpleSslConnection *gsc = data;
 
 	gsc->recv_cb(gsc->recv_cb_data, gsc, cond);
 }
 
 void
-gaim_ssl_input_add(GaimSslConnection *gsc, GaimSslInputFunction func,
+purple_ssl_input_add(PurpleSslConnection *gsc, PurpleSslInputFunction func,
 				   void *data)
 {
 	g_return_if_fail(func != NULL);
-	g_return_if_fail(gaim_ssl_is_supported());
+	g_return_if_fail(purple_ssl_is_supported());
 
 	gsc->recv_cb_data = data;
 	gsc->recv_cb      = func;
 
-	gsc->inpa = gaim_input_add(gsc->fd, GAIM_INPUT_READ, recv_cb, gsc);
+	gsc->inpa = purple_input_add(gsc->fd, PURPLE_INPUT_READ, recv_cb, gsc);
 }
 
-GaimSslConnection *
-gaim_ssl_connect_fd(GaimAccount *account, int fd,
-					GaimSslInputFunction func,
-					GaimSslErrorFunction error_func, void *data)
+const gchar *
+purple_ssl_strerror(PurpleSslErrorType error)
 {
-	GaimSslConnection *gsc;
-	GaimSslOps *ops;
+	switch(error) {
+		case PURPLE_SSL_CONNECT_FAILED:
+			return _("SSL Connection Failed");
+		case PURPLE_SSL_HANDSHAKE_FAILED:
+			return _("SSL Handshake Failed");
+		case PURPLE_SSL_CERTIFICATE_INVALID:
+			return _("SSL peer presented an invalid certificate");
+		default:
+			purple_debug_warning("sslconn", "Unknown SSL error code %d\n", error);
+			return _("Unknown SSL error");
+	}
+}
+
+PurpleSslConnection *
+purple_ssl_connect_fd(PurpleAccount *account, int fd,
+					PurpleSslInputFunction func,
+					PurpleSslErrorFunction error_func,
+                    void *data)
+{
+    return purple_ssl_connect_with_host_fd(account, fd, func, error_func, NULL, data);
+}
+
+PurpleSslConnection *
+purple_ssl_connect_with_host_fd(PurpleAccount *account, int fd,
+                      PurpleSslInputFunction func,
+                      PurpleSslErrorFunction error_func,
+                      const char *host,
+                      void *data)
+{
+	PurpleSslConnection *gsc;
+	PurpleSslOps *ops;
 
 	g_return_val_if_fail(fd != -1,                NULL);
 	g_return_val_if_fail(func != NULL,            NULL);
-	g_return_val_if_fail(gaim_ssl_is_supported(), NULL);
+	g_return_val_if_fail(purple_ssl_is_supported(), NULL);
 
 	if (!_ssl_initialized)
 	{
@@ -169,34 +213,43 @@ gaim_ssl_connect_fd(GaimAccount *account, int fd,
 			return NULL;
 	}
 
-	gsc = g_new0(GaimSslConnection, 1);
+	gsc = g_new0(PurpleSslConnection, 1);
 
 	gsc->connect_cb_data = data;
 	gsc->connect_cb      = func;
 	gsc->error_cb        = error_func;
 	gsc->fd              = fd;
+    if(host)
+        gsc->host            = g_strdup(host);
 
-	ops = gaim_ssl_get_ops();
+	/* TODO: Move this elsewhere */
+	gsc->verifier = purple_certificate_find_verifier("x509","tls_cached");
+
+
+	ops = purple_ssl_get_ops();
 	ops->connectfunc(gsc);
 
-	return (GaimSslConnection *)gsc;
+	return (PurpleSslConnection *)gsc;
 }
 
 void
-gaim_ssl_close(GaimSslConnection *gsc)
+purple_ssl_close(PurpleSslConnection *gsc)
 {
-	GaimSslOps *ops;
+	PurpleSslOps *ops;
 
 	g_return_if_fail(gsc != NULL);
 
-	ops = gaim_ssl_get_ops();
+	purple_request_close_with_handle(gsc);
+	purple_notify_close_with_handle(gsc);
+
+	ops = purple_ssl_get_ops();
 	(ops->close)(gsc);
 
 	if (gsc->connect_data != NULL)
-		gaim_proxy_connect_cancel(gsc->connect_data);
+		purple_proxy_connect_cancel(gsc->connect_data);
 
 	if (gsc->inpa > 0)
-		gaim_input_remove(gsc->inpa);
+		purple_input_remove(gsc->inpa);
 
 	if (gsc->fd >= 0)
 		close(gsc->fd);
@@ -206,57 +259,74 @@ gaim_ssl_close(GaimSslConnection *gsc)
 }
 
 size_t
-gaim_ssl_read(GaimSslConnection *gsc, void *data, size_t len)
+purple_ssl_read(PurpleSslConnection *gsc, void *data, size_t len)
 {
-	GaimSslOps *ops;
+	PurpleSslOps *ops;
 
 	g_return_val_if_fail(gsc  != NULL, 0);
 	g_return_val_if_fail(data != NULL, 0);
 	g_return_val_if_fail(len  >  0,    0);
 
-	ops = gaim_ssl_get_ops();
+	ops = purple_ssl_get_ops();
 	return (ops->read)(gsc, data, len);
 }
 
 size_t
-gaim_ssl_write(GaimSslConnection *gsc, const void *data, size_t len)
+purple_ssl_write(PurpleSslConnection *gsc, const void *data, size_t len)
 {
-	GaimSslOps *ops;
+	PurpleSslOps *ops;
 
 	g_return_val_if_fail(gsc  != NULL, 0);
 	g_return_val_if_fail(data != NULL, 0);
 	g_return_val_if_fail(len  >  0,    0);
 
-	ops = gaim_ssl_get_ops();
+	ops = purple_ssl_get_ops();
 	return (ops->write)(gsc, data, len);
 }
 
+GList *
+purple_ssl_get_peer_certificates(PurpleSslConnection *gsc)
+{
+	PurpleSslOps *ops;
+
+	g_return_val_if_fail(gsc != NULL, NULL);
+
+	ops = purple_ssl_get_ops();
+	return (ops->get_peer_certificates)(gsc);
+}
+
 void
-gaim_ssl_set_ops(GaimSslOps *ops)
+purple_ssl_set_ops(PurpleSslOps *ops)
 {
 	_ssl_ops = ops;
 }
 
-GaimSslOps *
-gaim_ssl_get_ops(void)
+PurpleSslOps *
+purple_ssl_get_ops(void)
 {
 	return _ssl_ops;
 }
 
 void
-gaim_ssl_init(void)
+purple_ssl_init(void)
 {
+	/* Although purple_ssl_is_supported will do the initialization on
+	   command, SSL plugins tend to register CertificateSchemes as well
+	   as providing SSL ops. */
+	if (!ssl_init()) {
+		purple_debug_error("sslconn", "Unable to initialize SSL.\n");
+	}
 }
 
 void
-gaim_ssl_uninit(void)
+purple_ssl_uninit(void)
 {
-	GaimSslOps *ops;
+	PurpleSslOps *ops;
 
 	if (!_ssl_initialized)
 		return;
 
-	ops = gaim_ssl_get_ops();
+	ops = purple_ssl_get_ops();
 	ops->uninit();
 
 	_ssl_initialized = FALSE;

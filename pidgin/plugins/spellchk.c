@@ -1,11 +1,11 @@
 /*
- * Gaim - Replace certain misspelled words with their correct form.
+ * Purple - Replace certain misspelled words with their correct form.
  *
  * Signification changes were made by Benjamin Kahn ("xkahn") and
  * Richard Laager ("rlaager") in April 2005--you may want to contact
  * them if you have questions.
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -31,7 +31,7 @@
  */
 
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "debug.h"
 #include "notify.h"
@@ -45,9 +45,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#ifndef _WIN32
-#include <strings.h>
-#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -67,7 +64,7 @@ struct _spellchk {
 	GtkTextMark *mark_insert_start;
 	GtkTextMark *mark_insert_end;
 
-	const gchar *word;
+	gchar *word;
 	gboolean inserting;
 	gboolean ignore_correction;
 	gboolean ignore_correction_on_send;
@@ -268,6 +265,7 @@ substitute_word(gchar *word)
 				g_value_unset(&val1);
 				g_value_unset(&val2);
 
+				g_free(lowerword);
 				g_free(foldedword);
 				return outword;
 			}
@@ -277,6 +275,7 @@ substitute_word(gchar *word)
 
 		} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(model), &iter));
 	}
+	g_free(lowerword);
 	g_free(foldedword);
 
 	return NULL;
@@ -295,6 +294,7 @@ spellchk_free(spellchk *spell)
 			G_SIGNAL_MATCH_DATA,
 			0, 0, NULL, NULL,
 			spell);
+	g_free(spell->word);
 	g_free(spell);
 }
 
@@ -443,6 +443,7 @@ check_range(spellchk *spell, GtkTextBuffer *buffer,
 	/* Move backwards to the beginning of the word. */
 	spellchk_backward_word_start(&start);
 
+	g_free(spell->word);
 	spell->word = gtk_text_iter_get_text(&start, &end);
 
 	/* Hack because otherwise typing things like U.S. gets difficult
@@ -487,6 +488,7 @@ check_range(spellchk *spell, GtkTextBuffer *buffer,
 	}
 	g_free(tmp);
 
+	g_free(spell->word);
 	spell->word = NULL;
 
 	return replaced;
@@ -507,6 +509,7 @@ insert_text_before(GtkTextBuffer *buffer, GtkTextIter *iter,
 
 	spell->inserting = TRUE;
 
+	g_free(spell->word);
 	spell->word = NULL;
 
 	gtk_text_buffer_move_mark(buffer, spell->mark_insert_start, iter);
@@ -564,6 +567,7 @@ delete_range_after(GtkTextBuffer *buffer,
 	place = gtk_text_iter_get_offset(&pos);
 
 	if ((place + 1) != spell->pos) {
+		g_free(spell->word);
 		spell->word = NULL;
 		return;
 	}
@@ -577,6 +581,7 @@ delete_range_after(GtkTextBuffer *buffer,
 	spell->ignore_correction_on_send = TRUE;
 
 	spell->inserting = FALSE;
+	g_free(spell->word);
 	spell->word = NULL;
 }
 
@@ -595,7 +600,7 @@ message_send_cb(GtkWidget *widget, spellchk *spell)
 	}
 
 #if 0
-	if (!gaim_prefs_get_bool("/plugins/gtk/spellchk/last_word_replace"))
+	if (!purple_prefs_get_bool("/plugins/gtk/spellchk/last_word_replace"))
 		return;
 #endif
 
@@ -620,15 +625,15 @@ message_send_cb(GtkWidget *widget, spellchk *spell)
 }
 
 static void
-spellchk_new_attach(GaimConversation *conv)
+spellchk_new_attach(PurpleConversation *conv)
 {
 	spellchk *spell;
 	GtkTextBuffer *buffer;
 	GtkTextIter start, end;
-	GaimGtkConversation *gtkconv;
+	PidginConversation *gtkconv;
 	GtkTextView *view;
 
-	gtkconv = GAIM_GTK_CONVERSATION(conv);
+	gtkconv = PIDGIN_CONVERSATION(conv);
 
 	view = GTK_TEXT_VIEW(gtkconv->entry);
 
@@ -670,7 +675,7 @@ spellchk_new_attach(GaimConversation *conv)
 	return;
 }
 
-static int buf_get_line(char *ibuf, char **buf, int *position, int len)
+static int buf_get_line(char *ibuf, char **buf, int *position, gsize len)
 {
 	int pos = *position;
 	int spos = pos;
@@ -698,7 +703,7 @@ static int buf_get_line(char *ibuf, char **buf, int *position, int len)
 	return 1;
 }
 
-static void load_conf()
+static void load_conf(void)
 {
 	/* Corrections to change "...", "(c)", "(r)", and "(tm)" to their
 	 * Unicode character equivalents were not added here even though
@@ -1735,6 +1740,7 @@ static void load_conf()
 			"BAD wroking\nGOOD working\n"
 			"BAD wtih\nGOOD with\n"
 			"BAD wuould\nGOOD would\n"
+			"BAD wud\nGOOD would\n"
 			"BAD wut\nGOOD what\n"
 			"BAD wya\nGOOD way\n"
 			"BAD y\nGOOD why\n"
@@ -1774,7 +1780,7 @@ static void load_conf()
 	gboolean complete = TRUE;
 	gboolean case_sensitive = FALSE;
 
-	buf = g_build_filename(gaim_user_dir(), "dict", NULL);
+	buf = g_build_filename(purple_user_dir(), "dict", NULL);
 	g_file_get_contents(buf, &ibuf, &size, NULL);
 	g_free(buf);
 	if (!ibuf) {
@@ -1787,19 +1793,19 @@ static void load_conf()
 
 	while (buf_get_line(ibuf, &buf, &pnt, size)) {
 		if (*buf != '#') {
-			if (!strncasecmp(buf, "BAD ", 4))
+			if (!g_ascii_strncasecmp(buf, "BAD ", 4))
 			{
 				strncpy(bad, buf + 4, 81);
 			}
-			else if(!strncasecmp(buf, "CASE ", 5))
+			else if(!g_ascii_strncasecmp(buf, "CASE ", 5))
 			{
 				case_sensitive = *(buf+5) == '0' ? FALSE : TRUE;
 			}
-			else if(!strncasecmp(buf, "COMPLETE ", 9))
+			else if(!g_ascii_strncasecmp(buf, "COMPLETE ", 9))
 			{
 				complete = *(buf+9) == '0' ? FALSE : TRUE;
 			}
-			else if (!strncasecmp(buf, "GOOD ", 5))
+			else if (!g_ascii_strncasecmp(buf, "GOOD ", 5))
 			{
 				strncpy(good, buf + 5, 255);
 
@@ -1915,7 +1921,7 @@ static void case_sensitive_toggled(GtkCellRendererToggle *cellrenderertoggle,
 	save_list();
 }
 
-static void list_add_new()
+static void list_add_new(void)
 {
 	GtkTreeIter iter;
 	const char *word = gtk_entry_get_text(GTK_ENTRY(bad_entry));
@@ -1962,7 +1968,7 @@ static void list_add_new()
 				g_value_unset(&bad_val);
 				g_free(tmpword);
 
-				gaim_notify_error(NULL, _("Duplicate Correction"),
+				purple_notify_error(NULL, _("Duplicate Correction"),
 					_("The specified word already exists in the correction list."),
 					gtk_entry_get_text(GTK_ENTRY(bad_entry)));
 				return;
@@ -2018,7 +2024,7 @@ static void remove_row(void *data1, gpointer data2)
 	gtk_tree_row_reference_free(row_reference);
 }
 
-static void list_delete()
+static void list_delete(void)
 {
 	GtkTreeSelection *sel;
 	GSList *list = NULL;
@@ -2070,29 +2076,16 @@ static void save_list()
 		} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(model), &iter));
 	}
 
-	gaim_util_write_data_to_file("dict", data->str, -1);
+	purple_util_write_data_to_file("dict", data->str, -1);
 
 	g_string_free(data, TRUE);
 }
-
-#if !GTK_CHECK_VERSION(2,2,0)
-static void
-count_selected_helper(GtkTreeModel *model, GtkTreePath *path,
-					GtkTreeIter *iter, gpointer user_data)
-{
-	(*(gint *)user_data)++;
-}
-#endif
 
 static void on_selection_changed(GtkTreeSelection *sel,
 	gpointer data)
 {
 	gint num_selected;
-#if GTK_CHECK_VERSION(2,2,0)
 	num_selected = gtk_tree_selection_count_selected_rows(sel);
-#else
-	gtk_tree_selection_selected_foreach(sel, count_selected_helper, &num_selected);
-#endif
 	gtk_widget_set_sensitive((GtkWidget*)data, (num_selected > 0));
 }
 
@@ -2115,34 +2108,34 @@ static void on_entry_changed(GtkEditable *editable, gpointer data)
  */
 
 static gboolean
-plugin_load(GaimPlugin *plugin)
+plugin_load(PurplePlugin *plugin)
 {
-	void *conv_handle = gaim_conversations_get_handle();
+	void *conv_handle = purple_conversations_get_handle();
 	GList *convs;
 
 	load_conf();
 
 	/* Attach to existing conversations */
-	for (convs = gaim_get_conversations(); convs != NULL; convs = convs->next)
+	for (convs = purple_get_conversations(); convs != NULL; convs = convs->next)
 	{
-		spellchk_new_attach((GaimConversation *)convs->data);
+		spellchk_new_attach((PurpleConversation *)convs->data);
 	}
 
-	gaim_signal_connect(conv_handle, "conversation-created",
-			    plugin, GAIM_CALLBACK(spellchk_new_attach), NULL);
+	purple_signal_connect(conv_handle, "conversation-created",
+			    plugin, PURPLE_CALLBACK(spellchk_new_attach), NULL);
 
 	return TRUE;
 }
 
 static gboolean
-plugin_unload(GaimPlugin *plugin)
+plugin_unload(PurplePlugin *plugin)
 {
 	GList *convs;
 
 	/* Detach from existing conversations */
-	for (convs = gaim_get_conversations(); convs != NULL; convs = convs->next)
+	for (convs = purple_get_conversations(); convs != NULL; convs = convs->next)
 	{
-		GaimGtkConversation *gtkconv = GAIM_GTK_CONVERSATION((GaimConversation *)convs->data);
+		PidginConversation *gtkconv = PIDGIN_CONVERSATION((PurpleConversation *)convs->data);
 		spellchk *spell = g_object_get_data(G_OBJECT(gtkconv->entry), SPELLCHK_OBJECT_KEY);
 
 		g_signal_handlers_disconnect_by_func(gtkconv->entry, message_send_cb, spell);
@@ -2161,34 +2154,24 @@ static void whole_words_button_toggled(GtkToggleButton *complete_toggle, GtkTogg
 }
 
 static GtkWidget *
-get_config_frame(GaimPlugin *plugin)
+get_config_frame(PurplePlugin *plugin)
 {
-	GtkWidget *ret, *vbox, *win;
-	GtkWidget *hbox, *label;
+	GtkWidget *ret, *vbox;
+	GtkWidget *hbox;
 	GtkWidget *button;
 	GtkSizeGroup *sg;
 	GtkSizeGroup *sg2;
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
 	GtkWidget *vbox2;
-	GtkWidget *hbox2;
 	GtkWidget *vbox3;
 
-	ret = gtk_vbox_new(FALSE, GAIM_HIG_CAT_SPACE);
-	gtk_container_set_border_width (GTK_CONTAINER(ret), GAIM_HIG_BORDER);
+	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	gtk_container_set_border_width (GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 
-	vbox = gaim_gtk_make_frame(ret, _("Text Replacements"));
+	vbox = pidgin_make_frame(ret, _("Text Replacements"));
 	gtk_container_set_border_width(GTK_CONTAINER(vbox), 4);
 	gtk_widget_show(vbox);
-
-	win = gtk_scrolled_window_new(0, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), win, TRUE, TRUE, 0);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(win),
-										GTK_SHADOW_IN);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(win),
-			GTK_POLICY_NEVER,
-			GTK_POLICY_ALWAYS);
-	gtk_widget_show(win);
 
 	tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(tree), TRUE);
@@ -2248,7 +2231,9 @@ get_config_frame(GaimPlugin *plugin)
 
 	gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(tree)),
 		 GTK_SELECTION_MULTIPLE);
-	gtk_container_add(GTK_CONTAINER(win), tree);
+	gtk_box_pack_start(GTK_BOX(vbox), 
+		pidgin_make_scrollable(tree, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1), 
+		TRUE, TRUE, 0);
 	gtk_widget_show(tree);
 
 	hbox = gtk_hbutton_box_new();
@@ -2266,49 +2251,27 @@ get_config_frame(GaimPlugin *plugin)
 
 	gtk_widget_show(button);
 
-	vbox = gaim_gtk_make_frame(ret, _("Add a new text replacement"));
+	vbox = pidgin_make_frame(ret, _("Add a new text replacement"));
 
-	hbox = gtk_hbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 	gtk_widget_show(hbox);
-	vbox2 = gtk_vbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+	vbox2 = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox2, TRUE, TRUE, 0);
 	gtk_widget_show(vbox2);
 
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 	sg2 = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
-	hbox2 = gtk_hbox_new(FALSE, 2);
-	gtk_box_pack_start(GTK_BOX(vbox2), hbox2, FALSE, FALSE, 0);
-	gtk_widget_show(hbox2);
-
-	label = gtk_label_new_with_mnemonic(_("You _type:"));
-	gtk_box_pack_start(GTK_BOX(hbox2), label, FALSE, FALSE, 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
-
 	bad_entry = gtk_entry_new();
 	/* Set a minimum size. Since they're in a size group, the other entry will match up. */
 	gtk_widget_set_size_request(bad_entry, 350, -1);
-	gtk_box_pack_start(GTK_BOX(hbox2), bad_entry, TRUE, TRUE, 0);
 	gtk_size_group_add_widget(sg2, bad_entry);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), bad_entry);
-	gtk_widget_show(bad_entry);
-
-	hbox2 = gtk_hbox_new(FALSE, 2);
-	gtk_box_pack_start(GTK_BOX(vbox2), hbox2, FALSE, FALSE, 0);
-	gtk_widget_show(hbox2);
-
-	label = gtk_label_new_with_mnemonic(_("You _send:"));
-	gtk_box_pack_start(GTK_BOX(hbox2), label, FALSE, FALSE, 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("You _type:"), sg, bad_entry, FALSE, NULL);
 
 	good_entry = gtk_entry_new();
-	gtk_box_pack_start(GTK_BOX(hbox2), good_entry, TRUE, TRUE, 0);
 	gtk_size_group_add_widget(sg2, good_entry);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), good_entry);
-	gtk_widget_show(good_entry);
+	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("You _send:"), sg, good_entry, FALSE, NULL);
 
 	/* Created here so it can be passed to whole_words_button_toggled. */
 	case_toggle = gtk_check_button_new_with_mnemonic(_("_Exact case match (uncheck for automatic case handling)"));
@@ -2338,56 +2301,70 @@ get_config_frame(GaimPlugin *plugin)
 	gtk_widget_show(button);
 
 #if 0
-	vbox = gaim_gtk_make_frame(ret, _("General Text Replacement Options"));
-	gaim_gtk_prefs_checkbox(_("Enable replacement of last word on send"),
+	vbox = pidgin_make_frame(ret, _("General Text Replacement Options"));
+	pidgin_prefs_checkbox(_("Enable replacement of last word on send"),
 	                        "/plugins/gtk/spellchk/last_word_replace", vbox);
 #endif
 
 	gtk_widget_show_all(ret);
+	g_object_unref(sg);
+	g_object_unref(sg2);
 	return ret;
 }
 
-static GaimGtkPluginUiInfo ui_info =
+static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0 /* page_num (Reserved) */
+	0, /* page_num (Reserved) */
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,
-	GAIM_MAJOR_VERSION,
-	GAIM_MINOR_VERSION,
-	GAIM_PLUGIN_STANDARD,
-	GAIM_GTK_PLUGIN_TYPE,
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_STANDARD,
+	PIDGIN_PLUGIN_TYPE,
 	0,
 	NULL,
-	GAIM_PRIORITY_DEFAULT,
+	PURPLE_PRIORITY_DEFAULT,
 	SPELLCHECK_PLUGIN_ID,
 	N_("Text replacement"),
-	VERSION,
+	DISPLAY_VERSION,
 	N_("Replaces text in outgoing messages according to user-defined rules."),
 	N_("Replaces text in outgoing messages according to user-defined rules."),
 	"Eric Warmenhoven <eric@warmenhoven.org>",
-	GAIM_WEBSITE,
+	PURPLE_WEBSITE,
 	plugin_load,
 	plugin_unload,
 	NULL,
 	&ui_info,
 	NULL,
 	NULL,
+	NULL,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
 	NULL
 };
 
 static void
-init_plugin(GaimPlugin *plugin)
+init_plugin(PurplePlugin *plugin)
 {
 #if 0
-	gaim_prefs_add_none("/plugins");
-	gaim_prefs_add_none("/plugins/gtk");
-	gaim_prefs_add_none("/plugins/gtk/spellchk");
-	gaim_prefs_add_bool("/plugins/gtk/spellchk/last_word_replace", TRUE);
+	purple_prefs_add_none("/plugins");
+	purple_prefs_add_none("/plugins/gtk");
+	purple_prefs_add_none("/plugins/gtk/spellchk");
+	purple_prefs_add_bool("/plugins/gtk/spellchk/last_word_replace", TRUE);
 #endif
 }
 
-GAIM_INIT_PLUGIN(spellcheck, init_plugin, info)
+PURPLE_INIT_PLUGIN(spellcheck, init_plugin, info)

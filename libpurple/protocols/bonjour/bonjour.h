@@ -1,9 +1,9 @@
 /**
- * @file bonjour.h The Gaim interface to mDNS and peer to peer Jabber.
+ * @file bonjour.h The Purple interface to mDNS and peer to peer Jabber.
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,16 +19,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
 #ifndef _BONJOUR_H_
 #define _BONJOUR_H_
 
-#include <howl.h>
-
-#include "dns_sd.h"
+#include "mdns_common.h"
 #include "internal.h"
 #include "jabber.h"
 
@@ -40,12 +38,19 @@
 #define BONJOUR_STATUS_ID_AVAILABLE "available"
 #define BONJOUR_STATUS_ID_AWAY      "away"
 
-#define BONJOUR_DEFAULT_PORT_INT 5298
+#define BONJOUR_DEFAULT_PORT 5298
 
 typedef struct _BonjourData
 {
 	BonjourDnsSd *dns_sd_data;
 	BonjourJabber *jabber_data;
+	GSList *xfer_lists;
+	gchar *jid;
 } BonjourData;
+
+/**
+ *  This will always be username@machinename
+ */
+const char *bonjour_get_jid(PurpleAccount *account);
 
 #endif /* _BONJOUR_H_ */
