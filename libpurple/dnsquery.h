@@ -30,6 +30,11 @@
 #include "eventloop.h"
 #include "account.h"
 
+/**
+ * An opaque structure representing a DNS query.  The hostname and port
+ * associated with the query can be retrieved using
+ * purple_dnsquery_get_host() and purple_dnsquery_get_port().
+ */
 typedef struct _PurpleDnsQueryData PurpleDnsQueryData;
 
 /**
@@ -53,7 +58,8 @@ typedef void  (*PurpleDnsQueryFailedCallback) (PurpleDnsQueryData *query_data, c
  */
 typedef struct
 {
-	/** If implemented, the UI is responsible for DNS queries */
+	/** If implemented, return TRUE if the UI takes responsibility for DNS
+	  * queries. When returning FALSE, the standard implementation is used. */
 	gboolean (*resolve_host)(PurpleDnsQueryData *query_data,
 	                         PurpleDnsQueryResolvedCallback resolved_cb,
 	                         PurpleDnsQueryFailedCallback failed_cb);
@@ -70,9 +76,7 @@ typedef struct
 	void (*_purple_reserved4)(void);
 } PurpleDnsQueryUiOps;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name DNS query API                                                   */
@@ -82,6 +86,7 @@ extern "C" {
 /**
  * Perform an asynchronous DNS query.
  *
+ * @param account  The account that the query is being done for (or NULL)
  * @param hostname The hostname to resolve.
  * @param port     A port number which is stored in the struct sockaddr.
  * @param callback The callback function to call after resolving.
@@ -90,8 +95,9 @@ extern "C" {
  * @return NULL if there was an error, otherwise return a reference to
  *         a data structure that can be used to cancel the pending
  *         DNS query, if needed.
+ *
  */
-PurpleDnsQueryData *purple_dnsquery_a(const char *hostname, int port, PurpleDnsQueryConnectFunction callback, gpointer data);
+PurpleDnsQueryData *purple_dnsquery_a(PurpleAccount *account, const char *hostname, int port, PurpleDnsQueryConnectFunction callback, gpointer data);
 
 /**
  * Cancel a DNS query and destroy the associated data structure.
@@ -146,8 +152,6 @@ void purple_dnsquery_uninit(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_DNSQUERY_H_ */

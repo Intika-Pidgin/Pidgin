@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -37,8 +37,13 @@
 #endif
 
 #ifdef USE_VV
+#include <media/backend-fs2.h>
 
-#include <gst/farsight/fs-conference-iface.h>
+#ifdef HAVE_FARSIGHT
+#include <gst/farsight/fs-element-added-notifier.h>
+#else
+#include <farstream/fs-element-added-notifier.h>
+#endif
 #include <gst/interfaces/xoverlay.h>
 
 /** @copydoc _PurpleMediaManagerPrivate */
@@ -79,6 +84,8 @@ struct _PurpleMediaManagerPrivate
 	GList *elements;
 	GList *output_windows;
 	gulong next_output_window_id;
+	GType backend_type;
+	GstCaps *video_caps;
 
 	PurpleMediaElementInfo *video_src;
 	PurpleMediaElementInfo *video_sink;
@@ -99,6 +106,7 @@ static GObjectClass *parent_class = NULL;
 
 enum {
 	INIT_MEDIA,
+	UI_CAPS_CHANGED,
 	LAST_SIGNAL
 };
 static guint purple_media_manager_signals[LAST_SIGNAL] = {0};
@@ -137,7 +145,7 @@ purple_media_manager_class_init (PurpleMediaManagerClass *klass)
 {
 	GObjectClass *gobject_class = (GObjectClass*)klass;
 	parent_class = g_type_class_peek_parent(klass);
-	
+
 	gobject_class->finalize = purple_media_manager_finalize;
 
 	purple_media_manager_signals[INIT_MEDIA] = g_signal_new ("init-media",
@@ -147,6 +155,15 @@ purple_media_manager_class_init (PurpleMediaManagerClass *klass)
 		purple_smarshal_BOOLEAN__OBJECT_POINTER_STRING,
 		G_TYPE_BOOLEAN, 3, PURPLE_TYPE_MEDIA,
 		G_TYPE_POINTER, G_TYPE_STRING);
+
+	purple_media_manager_signals[UI_CAPS_CHANGED] = g_signal_new ("ui-caps-changed",
+		G_TYPE_FROM_CLASS (klass),
+		G_SIGNAL_RUN_LAST,
+		0, NULL, NULL,
+		purple_smarshal_VOID__FLAGS_FLAGS,
+		G_TYPE_NONE, 2, PURPLE_MEDIA_TYPE_CAPS,
+		PURPLE_MEDIA_TYPE_CAPS);
+
 	g_type_class_add_private(klass, sizeof(PurpleMediaManagerPrivate));
 }
 
@@ -156,6 +173,16 @@ purple_media_manager_init (PurpleMediaManager *media)
 	media->priv = PURPLE_MEDIA_MANAGER_GET_PRIVATE(media);
 	media->priv->medias = NULL;
 	media->priv->next_output_window_id = 1;
+#ifdef USE_VV
+	media->priv->backend_type = PURPLE_TYPE_MEDIA_BACKEND_FS2;
+#endif
+
+	purple_prefs_add_none("/purple/media");
+	purple_prefs_add_none("/purple/media/audio");
+	purple_prefs_add_int("/purple/media/audio/silence_threshold", 5);
+	purple_prefs_add_none("/purple/media/audio/volume");
+	purple_prefs_add_int("/purple/media/audio/volume/input", 10);
+	purple_prefs_add_int("/purple/media/audio/volume/output", 10);
 }
 
 static void
@@ -170,6 +197,8 @@ purple_media_manager_finalize (GObject *media)
 			g_list_delete_link(priv->elements, priv->elements)) {
 		g_object_unref(priv->elements->data);
 	}
+	if (priv->video_caps)
+		gst_caps_unref(priv->video_caps);
 	parent_class->finalize(media);
 }
 #endif
@@ -229,6 +258,10 @@ purple_media_manager_get_pipeline(PurpleMediaManager *manager)
 	g_return_val_if_fail(PURPLE_IS_MEDIA_MANAGER(manager), NULL);
 
 	if (manager->priv->pipeline == NULL) {
+		FsElementAddedNotifier *notifier;
+		gchar *filename;
+		GError *err = NULL;
+		GKeyFile *keyfile;
 		GstBus *bus;
 		manager->priv->pipeline = gst_pipeline_new(NULL);
 
@@ -240,6 +273,38 @@ purple_media_manager_get_pipeline(PurpleMediaManager *manager)
 		gst_bus_set_sync_handler(bus,
 				gst_bus_sync_signal_handler, NULL);
 		gst_object_unref(bus);
+
+		filename = g_build_filename(purple_user_dir(),
+				"fs-element.conf", NULL);
+		keyfile = g_key_file_new();
+		if (!g_key_file_load_from_file(keyfile, filename,
+				G_KEY_FILE_NONE, &err)) {
+			if (err->code == 4)
+				purple_debug_info("mediamanager",
+						"Couldn't read "
+						"fs-element.conf: %s\n",
+						err->message);
+			else
+				purple_debug_error("mediamanager",
+						"Error reading "
+						"fs-element.conf: %s\n",
+						err->message);
+			g_error_free(err);
+		}
+		g_free(filename);
+
+		/* Hack to make alsasrc stop messing up audio timestamps */
+		if (!g_key_file_has_key(keyfile,
+				"alsasrc", "slave-method", NULL)) {
+			g_key_file_set_integer(keyfile,
+					"alsasrc", "slave-method", 2);
+		}
+
+		notifier = fs_element_added_notifier_new();
+		fs_element_added_notifier_add(notifier,
+				GST_BIN(manager->priv->pipeline));
+		fs_element_added_notifier_set_properties_from_keyfile(
+				notifier, keyfile);
 
 		gst_element_set_state(manager->priv->pipeline,
 				GST_STATE_PLAYING);
@@ -261,33 +326,14 @@ purple_media_manager_create_media(PurpleMediaManager *manager,
 {
 #ifdef USE_VV
 	PurpleMedia *media;
-	FsConference *conference = FS_CONFERENCE(gst_element_factory_make(conference_type, NULL));
-	GstStateChangeReturn ret;
 	gboolean signal_ret;
-
-	if (conference == NULL) {
-		purple_conv_present_error(remote_user, account,
-					  _("Error creating conference."));
-		purple_debug_error("media", "Conference == NULL\n");
-		return NULL;
-	}
 
 	media = PURPLE_MEDIA(g_object_new(purple_media_get_type(),
 			     "manager", manager,
 			     "account", account,
-			     "conference", conference,
+			     "conference-type", conference_type,
 			     "initiator", initiator,
 			     NULL));
-
-	ret = gst_element_set_state(GST_ELEMENT(conference), GST_STATE_PLAYING);
-
-	if (ret == GST_STATE_CHANGE_FAILURE) {
-		purple_conv_present_error(remote_user, account,
-					  _("Error creating conference."));
-		purple_debug_error("media", "Failed to start conference.\n");
-		g_object_unref(media);
-		return NULL;
-	}
 
 	g_signal_emit(manager, purple_media_manager_signals[INIT_MEDIA], 0,
 			media, account, remote_user, &signal_ret);
@@ -356,15 +402,20 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 	GstElement *parent = GST_ELEMENT_PARENT(pad);
 	GstIterator *iter;
 	GstPad *remaining_pad;
+	GstIteratorResult result;
 
 	gst_element_release_request_pad(GST_ELEMENT_PARENT(pad), pad);
-	iter = gst_element_iterate_pads(parent);
 
-	if (gst_iterator_next(iter, (gpointer)&remaining_pad)
-			== GST_ITERATOR_DONE) {
+	iter = gst_element_iterate_src_pads(parent);
+
+	result = gst_iterator_next(iter, (gpointer)&remaining_pad);
+
+	if (result == GST_ITERATOR_DONE) {
 		gst_element_set_locked_state(parent, TRUE);
 		gst_element_set_state(parent, GST_STATE_NULL);
 		gst_bin_remove(GST_BIN(GST_ELEMENT_PARENT(parent)), parent);
+	} else if (result == GST_ITERATOR_OK) {
+		gst_object_unref(remaining_pad);
 	}
 
 	gst_iterator_free(iter);
@@ -372,6 +423,43 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 #endif
 
 #ifdef USE_GSTREAMER
+
+void
+purple_media_manager_set_video_caps(PurpleMediaManager *manager, GstCaps *caps)
+{
+#ifdef USE_VV
+	if (manager->priv->video_caps)
+		gst_caps_unref(manager->priv->video_caps);
+
+	manager->priv->video_caps = caps;
+
+	if (manager->priv->pipeline && manager->priv->video_src) {
+		gchar *id = purple_media_element_info_get_id(manager->priv->video_src);
+		GstElement *src = gst_bin_get_by_name(GST_BIN(manager->priv->pipeline), id);
+
+		if (src) {
+			GstElement *capsfilter = gst_bin_get_by_name(GST_BIN(src), "prpl_video_caps");
+			g_object_set(G_OBJECT(capsfilter), "caps", caps, NULL);
+		}
+
+		g_free(id);
+	}
+#endif
+}
+
+GstCaps *
+purple_media_manager_get_video_caps(PurpleMediaManager *manager)
+{
+#ifdef USE_VV
+	if (manager->priv->video_caps == NULL)
+		manager->priv->video_caps = gst_caps_from_string("video/x-raw-yuv,"
+			"width=[250,352], height=[200,288], framerate=[1/1,20/1]");
+	return manager->priv->video_caps;
+#else
+	return NULL;
+#endif
+}
+
 GstElement *
 purple_media_manager_get_element(PurpleMediaManager *manager,
 		PurpleMediaSessionType type, PurpleMedia *media,
@@ -414,7 +502,21 @@ purple_media_manager_get_element(PurpleMediaManager *manager,
 			bin = gst_bin_new(id);
 			tee = gst_element_factory_make("tee", "tee");
 			gst_bin_add_many(GST_BIN(bin), ret, tee, NULL);
-			gst_element_link(ret, tee);
+
+			if (type & PURPLE_MEDIA_SEND_VIDEO) {
+				GstElement *videoscale;
+				GstElement *capsfilter;
+
+				videoscale = gst_element_factory_make("videoscale", NULL);
+				capsfilter = gst_element_factory_make("capsfilter", "prpl_video_caps");
+
+				g_object_set(G_OBJECT(capsfilter),
+					"caps", purple_media_manager_get_video_caps(manager), NULL);
+
+				gst_bin_add_many(GST_BIN(bin), videoscale, capsfilter, NULL);
+				gst_element_link_many(ret, videoscale, capsfilter, tee, NULL);
+			} else
+				gst_element_link(ret, tee);
 
 			/*
 			 * This shouldn't be necessary, but it stops it from
@@ -426,7 +528,6 @@ purple_media_manager_get_element(PurpleMediaManager *manager,
 			gst_element_link(tee, fakesink);
 
 			ret = bin;
-			gst_element_set_locked_state(ret, TRUE);
 			gst_object_ref(ret);
 			gst_bin_add(GST_BIN(purple_media_manager_get_pipeline(
 					manager)), ret);
@@ -667,7 +768,7 @@ purple_media_manager_create_output_window(PurpleMediaManager *manager,
 				(participant == ow->participant)) &&
 				!strcmp(session_id, ow->session_id)) {
 			GstBus *bus;
-			GstElement *queue;
+			GstElement *queue, *colorspace;
 			GstElement *tee = purple_media_get_tee(media,
 					session_id, participant);
 
@@ -676,6 +777,8 @@ purple_media_manager_create_output_window(PurpleMediaManager *manager,
 
 			queue = gst_element_factory_make(
 					"queue", NULL);
+			colorspace = gst_element_factory_make(
+					"ffmpegcolorspace", NULL);
 			ow->sink = purple_media_manager_get_element(
 					manager, PURPLE_MEDIA_RECV_VIDEO,
 					ow->media, ow->session_id,
@@ -696,7 +799,7 @@ purple_media_manager_create_output_window(PurpleMediaManager *manager,
 			}
 
 			gst_bin_add_many(GST_BIN(GST_ELEMENT_PARENT(tee)),
-					queue, ow->sink, NULL);
+					queue, colorspace, ow->sink, NULL);
 
 			bus = gst_pipeline_get_bus(GST_PIPELINE(
 					manager->priv->pipeline));
@@ -704,9 +807,11 @@ purple_media_manager_create_output_window(PurpleMediaManager *manager,
 					G_CALLBACK(window_id_cb), ow);
 			gst_object_unref(bus);
 
-			gst_element_sync_state_with_parent(ow->sink);
-			gst_element_link(queue, ow->sink);
-			gst_element_sync_state_with_parent(queue);
+			gst_element_set_state(ow->sink, GST_STATE_PLAYING);
+			gst_element_set_state(colorspace, GST_STATE_PLAYING);
+			gst_element_set_state(queue, GST_STATE_PLAYING);
+			gst_element_link(colorspace, ow->sink);
+			gst_element_link(queue, colorspace);
 			gst_element_link(tee, queue);
 		}
 	}
@@ -775,8 +880,14 @@ purple_media_manager_remove_output_window(PurpleMediaManager *manager,
 		GstPad *pad = gst_element_get_static_pad(
 				output_window->sink, "sink");
 		GstPad *peer = gst_pad_get_peer(pad);
-		GstElement *queue = GST_ELEMENT_PARENT(peer);
+		GstElement *colorspace = GST_ELEMENT_PARENT(peer), *queue;
 		gst_object_unref(pad);
+		gst_object_unref(peer);
+		pad = gst_element_get_static_pad(colorspace, "sink");
+		peer = gst_pad_get_peer(pad);
+		queue = GST_ELEMENT_PARENT(peer);
+		gst_object_unref(pad);
+		gst_object_unref(peer);
 		pad = gst_element_get_static_pad(queue, "sink");
 		peer = gst_pad_get_peer(pad);
 		gst_object_unref(pad);
@@ -785,6 +896,9 @@ purple_media_manager_remove_output_window(PurpleMediaManager *manager,
 		gst_element_set_locked_state(queue, TRUE);
 		gst_element_set_state(queue, GST_STATE_NULL);
 		gst_bin_remove(GST_BIN(GST_ELEMENT_PARENT(queue)), queue);
+		gst_element_set_locked_state(colorspace, TRUE);
+		gst_element_set_state(colorspace, GST_STATE_NULL);
+		gst_bin_remove(GST_BIN(GST_ELEMENT_PARENT(colorspace)), colorspace);
 		gst_element_set_locked_state(output_window->sink, TRUE);
 		gst_element_set_state(output_window->sink, GST_STATE_NULL);
 		gst_bin_remove(GST_BIN(GST_ELEMENT_PARENT(output_window->sink)),
@@ -835,8 +949,17 @@ purple_media_manager_set_ui_caps(PurpleMediaManager *manager,
 		PurpleMediaCaps caps)
 {
 #ifdef USE_VV
+	PurpleMediaCaps oldcaps;
+
 	g_return_if_fail(PURPLE_IS_MEDIA_MANAGER(manager));
+
+	oldcaps = manager->priv->ui_caps;
 	manager->priv->ui_caps = caps;
+
+	if (caps != oldcaps)
+		g_signal_emit(manager,
+				purple_media_manager_signals[UI_CAPS_CHANGED],
+				0, caps, oldcaps);
 #endif
 }
 
@@ -849,6 +972,30 @@ purple_media_manager_get_ui_caps(PurpleMediaManager *manager)
 	return manager->priv->ui_caps;
 #else
 	return PURPLE_MEDIA_CAPS_NONE;
+#endif
+}
+
+void
+purple_media_manager_set_backend_type(PurpleMediaManager *manager,
+		GType backend_type)
+{
+#ifdef USE_VV
+	g_return_if_fail(PURPLE_IS_MEDIA_MANAGER(manager));
+
+	manager->priv->backend_type = backend_type;
+#endif
+}
+
+GType
+purple_media_manager_get_backend_type(PurpleMediaManager *manager)
+{
+#ifdef USE_VV
+	g_return_val_if_fail(PURPLE_IS_MEDIA_MANAGER(manager),
+			PURPLE_MEDIA_CAPS_NONE);
+
+	return manager->priv->backend_type;
+#else
+	return G_TYPE_NONE;
 #endif
 }
 
@@ -983,7 +1130,7 @@ purple_media_element_info_set_property (GObject *object, guint prop_id,
 		case PROP_CREATE_CB:
 			priv->create = g_value_get_pointer(value);
 			break;
-		default:	
+		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(
 					object, prop_id, pspec);
 			break;
@@ -996,7 +1143,7 @@ purple_media_element_info_get_property (GObject *object, guint prop_id,
 {
 	PurpleMediaElementInfoPrivate *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_ELEMENT_INFO(object));
-	
+
 	priv = PURPLE_MEDIA_ELEMENT_INFO_GET_PRIVATE(object);
 
 	switch (prop_id) {
@@ -1012,7 +1159,7 @@ purple_media_element_info_get_property (GObject *object, guint prop_id,
 		case PROP_CREATE_CB:
 			g_value_set_pointer(value, priv->create);
 			break;
-		default:	
+		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(
 					object, prop_id, pspec);
 			break;
@@ -1023,7 +1170,7 @@ static void
 purple_media_element_info_class_init(PurpleMediaElementInfoClass *klass)
 {
 	GObjectClass *gobject_class = (GObjectClass*)klass;
-	
+
 	gobject_class->finalize = purple_media_element_info_finalize;
 	gobject_class->set_property = purple_media_element_info_set_property;
 	gobject_class->get_property = purple_media_element_info_get_property;

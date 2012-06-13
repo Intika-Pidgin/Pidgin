@@ -1,7 +1,9 @@
 /*
  * purple - Jabber Protocol Plugin
  *
- * Copyright (C) 2007, Andreas Monitzer <andy@monitzer.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	 02111-1307	 USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
@@ -90,7 +92,7 @@ static void jabber_tune_cb(JabberStream *js, const char *from, xmlnode *items) {
 	}
 
 	if (valid) {
-		purple_prpl_got_user_status(js->gc->account, from, "tune",
+		purple_prpl_got_user_status(purple_connection_get_account(js->gc), from, "tune",
 				PURPLE_TUNE_ARTIST, tuneinfodata.artist,
 				PURPLE_TUNE_TITLE, tuneinfodata.title,
 				PURPLE_TUNE_ALBUM, tuneinfodata.album,
@@ -98,7 +100,7 @@ static void jabber_tune_cb(JabberStream *js, const char *from, xmlnode *items) {
 				PURPLE_TUNE_TIME, tuneinfodata.time,
 				PURPLE_TUNE_URL, tuneinfodata.url, NULL);
 	} else {
-		purple_prpl_got_user_status_deactive(js->gc->account, from, "tune");
+		purple_prpl_got_user_status_deactive(purple_connection_get_account(js->gc), from, "tune");
 	}
 
 	g_free(tuneinfodata.artist);
@@ -115,7 +117,7 @@ void jabber_tune_init(void) {
 
 void jabber_tune_set(PurpleConnection *gc, const PurpleJabberTuneInfo *tuneinfo) {
 	xmlnode *publish, *tunenode;
-	JabberStream *js = gc->proto_data;
+	JabberStream *js = purple_connection_get_protocol_data(gc);
 
 	publish = xmlnode_new("publish");
 	xmlnode_set_attrib(publish,"node","http://jabber.org/protocol/tune");

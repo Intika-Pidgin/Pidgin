@@ -73,7 +73,10 @@ static const struct options {
 }, chatemblems[] = {
 	{PIDGIN_STOCK_STATUS_IGNORED, N_("Ignored")},
 	{PIDGIN_STOCK_STATUS_FOUNDER, N_("Founder")},
+	/* A user in a chat room who has special privileges. */
 	{PIDGIN_STOCK_STATUS_OPERATOR, N_("Operator")},
+	/* A half operator is someone who has a subset of the privileges
+	   that an operator has. */
 	{PIDGIN_STOCK_STATUS_HALFOP, N_("Half Operator")},
 	{PIDGIN_STOCK_STATUS_VOICE, N_("Voice")},
 	{NULL, NULL}
@@ -103,9 +106,16 @@ static PidginStatusIconTheme *
 create_icon_theme(GtkWidget *window)
 {
 	int s, i, j;
-	char *dirname = "/tmp";   /* FIXME */
-	PidginStatusIconTheme *theme = g_object_new(PIDGIN_TYPE_STATUS_ICON_THEME, "type", "status-icon",
-				"author", getlogin(),
+	const char *dirname = g_get_tmp_dir();
+	PidginStatusIconTheme *theme;
+	const char *author;
+#ifndef _WIN32
+	author = getlogin();
+#else
+	author = "user";
+#endif
+	theme = g_object_new(PIDGIN_TYPE_STATUS_ICON_THEME, "type", "status-icon",
+				"author", author,
 				"directory", dirname,
 				NULL);
 

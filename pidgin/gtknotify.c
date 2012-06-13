@@ -36,10 +36,10 @@
 #include "util.h"
 
 #include "gtkblist.h"
-#include "gtkimhtml.h"
 #include "gtknotify.h"
 #include "gtkpounce.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
 
 typedef struct
 {
@@ -60,6 +60,7 @@ typedef struct
 {
 	PurpleAccount *account;
 	PurplePounce *pounce;
+	char *pouncee;
 } PidginNotifyPounceData;
 
 
@@ -155,6 +156,7 @@ pounce_response_close(PidginNotifyDialog *dialog)
 				-1);
 		gtk_tree_store_remove(dialog->treemodel, &iter);
 
+		g_free(pounce_data->pouncee);
 		g_free(pounce_data);
 	}
 
@@ -173,8 +175,29 @@ delete_foreach(GtkTreeModel *model, GtkTreePath *path,
 			PIDGIN_POUNCE_DATA, &pounce_data,
 			-1);
 
-	if (pounce_data != NULL)
+	if (pounce_data != NULL) {
+		g_free(pounce_data->pouncee);
 		g_free(pounce_data);
+	}
+}
+
+static void
+open_im_foreach(GtkTreeModel *model, GtkTreePath *path,
+		GtkTreeIter *iter, gpointer data)
+{
+	PidginNotifyPounceData *pounce_data;
+
+	gtk_tree_model_get(model, iter,
+			PIDGIN_POUNCE_DATA, &pounce_data,
+			-1);
+
+	if (pounce_data != NULL) {
+		PurpleConversation *conv;
+
+		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM,
+				pounce_data->account, pounce_data->pouncee);
+		purple_conversation_present(conv);
+	}
 }
 
 static void
@@ -184,25 +207,69 @@ append_to_list(GtkTreeModel *model, GtkTreePath *path,
 	GList **list = data;
 	*list = g_list_prepend(*list, gtk_tree_path_copy(path));
 }
+
 static void
 pounce_response_dismiss()
 {
+	GtkTreeModel *model = GTK_TREE_MODEL(pounce_dialog->treemodel);
 	GtkTreeSelection *selection;
+	GtkTreeIter iter;
+	GtkTreeIter new_selection;
 	GList *list = NULL;
+	gboolean found_selection = FALSE;
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(pounce_dialog->treeview));
 	gtk_tree_selection_selected_foreach(selection, delete_foreach, pounce_dialog);
 	gtk_tree_selection_selected_foreach(selection, append_to_list, &list);
 
+	g_return_if_fail(list != NULL);
+
+	if (list->next == NULL) {
+		gtk_tree_model_get_iter(model, &new_selection, list->data);
+		if (gtk_tree_model_iter_next(model, &new_selection))
+			found_selection = TRUE;
+		else {
+			/* This is the last thing in the list */
+			GtkTreePath *path;
+
+			/* Because gtk_tree_model_iter_prev doesn't exist... */
+			gtk_tree_model_get_iter(model, &new_selection, list->data);
+			path = gtk_tree_model_get_path(model, &new_selection);
+			if (gtk_tree_path_prev(path)) {
+				gtk_tree_model_get_iter(model, &new_selection, path);
+				found_selection = TRUE;
+			}
+
+			gtk_tree_path_free(path);
+		}
+	}
+
 	while (list) {
-		GtkTreeIter iter;
-		if (gtk_tree_model_get_iter(GTK_TREE_MODEL(pounce_dialog->treemodel), &iter,
-					list->data)) {
+		if (gtk_tree_model_get_iter(model, &iter, list->data)) {
 			gtk_tree_store_remove(GTK_TREE_STORE(pounce_dialog->treemodel), &iter);
 		}
 		gtk_tree_path_free(list->data);
 		list = g_list_delete_link(list, list);
 	}
+
+	if (gtk_tree_model_get_iter_first(model, &iter)) {
+		if (found_selection)
+			gtk_tree_selection_select_iter(selection, &new_selection);
+		else
+			gtk_tree_selection_select_iter(selection, &iter);
+	} else
+		pounce_response_close(pounce_dialog);
+}
+
+static void
+pounce_response_open_ims()
+{
+	GtkTreeSelection *selection;
+
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(pounce_dialog->treeview));
+	gtk_tree_selection_selected_foreach(selection, open_im_foreach, pounce_dialog);
+
+	pounce_response_dismiss();
 }
 
 static void
@@ -241,6 +308,9 @@ pounce_response_cb(GtkDialog *dlg, gint id, PidginNotifyDialog *dialog)
 		case GTK_RESPONSE_DELETE_EVENT:
 			pounce_response_close(dialog);
 			break;
+		case GTK_RESPONSE_YES:
+			pounce_response_open_ims();
+			break;
 		case GTK_RESPONSE_NO:
 			pounce_response_dismiss();
 			break;
@@ -256,40 +326,47 @@ static void
 pounce_row_selected_cb(GtkTreeView *tv, GtkTreePath *path,
 	GtkTreeViewColumn *col, gpointer data)
 {
-	GtkTreeIter iter;
 	GtkTreeSelection *selection;
-	gboolean selected;
-	GList *list;
+	int count;
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(pounce_dialog->treeview));
 
-	selected = gtk_tree_selection_get_selected(selection,
-			NULL, &iter);
+	count = gtk_tree_selection_count_selected_rows(selection);
 
-	if (selected) {
-		PurplePounce *pounce;
+	if (count == 0) {
+		gtk_widget_set_sensitive(pounce_dialog->open_button, FALSE);
+		gtk_widget_set_sensitive(pounce_dialog->edit_button, FALSE);
+		gtk_widget_set_sensitive(pounce_dialog->dismiss_button, FALSE);
+	} else if (count == 1) {
+		GList *pounces;
+		GList *list;
 		PidginNotifyPounceData *pounce_data;
+		GtkTreeIter iter;
 
-		list = purple_pounces_get_all();
-
+		list = gtk_tree_selection_get_selected_rows(selection, NULL);
+		gtk_tree_model_get_iter(GTK_TREE_MODEL(pounce_dialog->treemodel),
+				&iter, list->data);
 		gtk_tree_model_get(GTK_TREE_MODEL(pounce_dialog->treemodel), &iter,
 				PIDGIN_POUNCE_DATA, &pounce_data,
 				-1);
+		g_list_foreach(list, (GFunc)gtk_tree_path_free, NULL);
+		g_list_free(list);
 
-		gtk_widget_set_sensitive(pounce_dialog->edit_button, FALSE);
-
-		for (; list != NULL; list = list->next) {
-			pounce = list->data;
+		pounces = purple_pounces_get_all();
+		for (; pounces != NULL; pounces = pounces->next) {
+			PurplePounce *pounce = pounces->data;
 			if (pounce == pounce_data->pounce) {
 				gtk_widget_set_sensitive(pounce_dialog->edit_button, TRUE);
 				break;
 			}
 		}
 
+		gtk_widget_set_sensitive(pounce_dialog->open_button, TRUE);
 		gtk_widget_set_sensitive(pounce_dialog->dismiss_button, TRUE);
 	} else {
+		gtk_widget_set_sensitive(pounce_dialog->open_button, TRUE);
 		gtk_widget_set_sensitive(pounce_dialog->edit_button, FALSE);
-		gtk_widget_set_sensitive(pounce_dialog->dismiss_button, FALSE);
+		gtk_widget_set_sensitive(pounce_dialog->dismiss_button, TRUE);
 	}
 
 
@@ -457,7 +534,9 @@ pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
 
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+#if !GTK_CHECK_VERSION(2,22,0)
 	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
+#endif
 	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER);
 	gtk_container_set_border_width(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BOX_SPACE);
 
@@ -550,12 +629,7 @@ pidgin_notify_add_mail(GtkTreeStore *treemodel, PurpleAccount *account, char *no
 						PIDGIN_MAIL_DATA, &data, -1);
 				if (data && data->account == account) {
 					if (clear) {
-#if GTK_CHECK_VERSION(2,2,0)
 						advanced = gtk_tree_store_remove(treemodel, &iter);
-#else
-						gtk_tree_store_remove(treemodel, &iter);
-						advanced = (iter.stamp == 0) ? FALSE : TRUE;
-#endif
 						mail_dialog->total_count -= data->count;
 
 						if (data->purple_has_handle)
@@ -617,6 +691,8 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 	PurpleAccount *account;
 	PidginNotifyMailData *data = NULL, *data2;
 	gboolean new_data = FALSE;
+	GtkTreeSelection *sel;
+	GtkTreeIter iter;
 
 	/* Don't bother updating if there aren't new emails and we don't have any displayed currently */
 	if (count == 0 && mail_dialog == NULL)
@@ -703,7 +779,18 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		}
 	}
 
+	/* Select first item if nothing selected */
+	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(mail_dialog->treeview));
+	if ((gtk_tree_selection_count_selected_rows(sel) < 1)
+		&& gtk_tree_model_get_iter_first(GTK_TREE_MODEL(mail_dialog->treemodel), &iter)) {
+		gtk_tree_selection_select_iter(sel, &iter);
+	}
+
+#if GTK_CHECK_VERSION(2,18,0)
+	if (!gtk_widget_get_visible(mail_dialog->dialog)) {
+#else
 	if (!GTK_WIDGET_VISIBLE(mail_dialog->dialog)) {
+#endif
 		GdkPixbuf *pixbuf = gtk_widget_render_icon(mail_dialog->dialog, PIDGIN_STOCK_DIALOG_MAIL,
 							   gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL), NULL);
 		char *label_text = g_strdup_printf(ngettext("<b>%d new email.</b>",
@@ -719,7 +806,11 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		g_free(label_text);
 		if (pixbuf)
 			g_object_unref(pixbuf);
+#if GTK_CHECK_VERSION(2,18,0)
+	} else if (!gtk_widget_has_focus(mail_dialog->dialog))
+#else
 	} else if (!GTK_WIDGET_HAS_FOCUS(mail_dialog->dialog))
+#endif
 		pidgin_set_urgent(GTK_WINDOW(mail_dialog->dialog), TRUE);
 
 	return data;
@@ -738,21 +829,6 @@ formatted_input_cb(GtkWidget *win, GdkEventKey *event, gpointer data)
 	return FALSE;
 }
 
-static GtkIMHtmlOptions
-notify_imhtml_options(void)
-{
-	GtkIMHtmlOptions options = 0;
-
-	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/show_incoming_formatting"))
-		options |= GTK_IMHTML_NO_COLOURS | GTK_IMHTML_NO_FONTS | GTK_IMHTML_NO_SIZES;
-
-	options |= GTK_IMHTML_NO_COMMENTS;
-	options |= GTK_IMHTML_NO_TITLE;
-	options |= GTK_IMHTML_NO_NEWLINE;
-	options |= GTK_IMHTML_NO_SCROLL;
-	return options;
-}
-
 static void *
 pidgin_notify_formatted(const char *title, const char *primary,
 						  const char *secondary, const char *text)
@@ -761,7 +837,7 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	GtkWidget *vbox;
 	GtkWidget *label;
 	GtkWidget *button;
-	GtkWidget *imhtml;
+	GtkWidget *web_view;
 	GtkWidget *frame;
 	char label_text[2048];
 	char *linked_text, *primary_esc, *secondary_esc;
@@ -797,12 +873,10 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 
-	/* Add the imhtml */
-	frame = pidgin_create_imhtml(FALSE, &imhtml, NULL, NULL);
-	gtk_widget_set_name(imhtml, "pidgin_notify_imhtml");
-	gtk_imhtml_set_format_functions(GTK_IMHTML(imhtml),
-			gtk_imhtml_get_format_functions(GTK_IMHTML(imhtml)) | GTK_IMHTML_IMAGE);
-	gtk_widget_set_size_request(imhtml, 300, 250);
+	/* Add the webview */
+	frame = pidgin_create_webview(FALSE, &web_view, NULL, NULL);
+	gtk_widget_set_name(web_view, "pidgin_notify_webview");
+	gtk_widget_set_size_request(web_view, 300, 250);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 	gtk_widget_show(frame);
 
@@ -817,10 +891,10 @@ pidgin_notify_formatted(const char *title, const char *primary,
 
 	/* Make sure URLs are clickable */
 	linked_text = purple_markup_linkify(text);
-	gtk_imhtml_append_text(GTK_IMHTML(imhtml), linked_text, notify_imhtml_options());
+	gtk_webview_load_html_string(GTK_WEBVIEW(web_view), linked_text);
 	g_free(linked_text);
 
-	g_object_set_data(G_OBJECT(window), "info-widget", imhtml);
+	g_object_set_data(G_OBJECT(window), "webview-widget", web_view);
 
 	/* Show the window */
 	pidgin_auto_parent_window(window);
@@ -884,7 +958,6 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 
 	GtkWidget *vbox;
 	GtkWidget *label;
-	GtkWidget *sw;
 	PidginNotifySearchResultsData *data;
 	char *label_text;
 	char *primary_esc, *secondary_esc;
@@ -940,15 +1013,6 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	model = gtk_list_store_newv(col_num, col_types);
 	g_free(col_types);
 
-	/* Setup the scrolled window containing the treeview */
-	sw = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-								   GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-										GTK_SHADOW_IN);
-	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-	gtk_widget_show(sw);
-
 	/* Setup the treeview */
 	treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
 	g_object_unref(G_OBJECT(model));
@@ -957,7 +1021,9 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview)),
 								GTK_SELECTION_SINGLE);
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(treeview), TRUE);
-	gtk_container_add(GTK_CONTAINER(sw), treeview);
+	gtk_box_pack_start(GTK_BOX(vbox),
+		pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),
+		TRUE, TRUE, 0);
 	gtk_widget_show(treeview);
 
 	renderer = gtk_cell_renderer_pixbuf_new();
@@ -970,7 +1036,11 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 		renderer = gtk_cell_renderer_text_new();
 
 		gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(treeview), -1,
-				column->title, renderer, "text", i, NULL);
+				purple_notify_searchresult_column_get_title(column), renderer, "text", i, NULL);
+
+		if (!purple_notify_searchresult_column_is_visible(column))
+			gtk_tree_view_column_set_visible(gtk_tree_view_get_column(GTK_TREE_VIEW(treeview), i), FALSE);
+
 		i++;
 	}
 
@@ -980,7 +1050,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 		switch (b->type) {
 			case PURPLE_NOTIFY_BUTTON_LABELED:
 				if(b->label) {
-					button = gtk_button_new_with_label(b->label);
+					button = gtk_dialog_add_button(GTK_DIALOG(window), b->label, GTK_RESPONSE_NONE);
 				} else {
 					purple_debug_warning("gtknotify", "Missing button label\n");
 				}
@@ -1025,7 +1095,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	g_signal_connect_swapped(G_OBJECT(close_button), "clicked",
 	                         G_CALLBACK(searchresults_close_cb), data);
 
-	data->account = gc->account;
+	data->account = purple_connection_get_account(gc);
 	data->model = model;
 	data->treeview = treeview;
 	data->window = window;
@@ -1079,10 +1149,9 @@ pidgin_notify_userinfo(PurpleConnection *gc, const char *who,
 	info = purple_notify_user_info_get_text_with_newline(user_info, "<br />");
 	pinfo = g_hash_table_lookup(userinfo, key);
 	if (pinfo != NULL) {
-		GtkIMHtml *imhtml = g_object_get_data(G_OBJECT(pinfo->window), "info-widget");
+		GtkWidget *webview = g_object_get_data(G_OBJECT(pinfo->window), "webview-widget");
 		char *linked_text = purple_markup_linkify(info);
-		gtk_imhtml_clear(imhtml);
-		gtk_imhtml_append_text(imhtml, linked_text, notify_imhtml_options());
+		gtk_webview_load_html_string(GTK_WEBVIEW(webview), linked_text);
 		g_free(linked_text);
 		g_free(key);
 		ui_handle = pinfo->window;
@@ -1295,11 +1364,32 @@ pidgin_notify_uri(const char *uri)
 			command = g_strdup_printf("opera %s", escaped);
 
 	}
+	else if (!strcmp(web_browser, "google-chrome"))
+	{
+		/* Google Chrome doesn't have command-line arguments that control the
+		 * opening of links from external calls.  This is controlled solely from
+		 * a preference within Google Chrome. */
+		command = g_strdup_printf("google-chrome %s", escaped);
+	}
+	else if (!strcmp(web_browser, "chrome"))
+	{
+		/* Chromium doesn't have command-line arguments that control the
+		 * opening of links from external calls.  This is controlled solely from
+		 * a preference within Chromium. */
+		command = g_strdup_printf("chrome %s", escaped);
+	}
+	else if (!strcmp(web_browser, "chromium-browser"))
+	{
+		/* Chromium doesn't have command-line arguments that control the
+		 * opening of links from external calls.  This is controlled solely from
+		 * a preference within Chromium. */
+		command = g_strdup_printf("chromium-browser %s", escaped);
+	}
 	else if (!strcmp(web_browser, "custom"))
 	{
 		const char *web_command;
 
-		web_command = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/browsers/command");
+		web_command = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/manual_command");
 
 		if (web_command == NULL || *web_command == '\0')
 		{
@@ -1351,6 +1441,7 @@ pidgin_notify_pounce_add(PurpleAccount *account, PurplePounce *pounce,
 	GdkPixbuf *icon;
 	GtkTreeIter iter;
 	PidginNotifyPounceData *pounce_data;
+	gboolean first = (pounce_dialog == NULL);
 
 	if (pounce_dialog == NULL)
 		pounce_dialog = pidgin_create_notification_dialog(PIDGIN_NOTIFY_POUNCE);
@@ -1361,6 +1452,7 @@ pidgin_notify_pounce_add(PurpleAccount *account, PurplePounce *pounce,
 
 	pounce_data->account = account;
 	pounce_data->pounce = pounce;
+	pounce_data->pouncee = g_strdup(purple_pounce_get_pouncee(pounce));
 
 	gtk_tree_store_append(pounce_dialog->treemodel, &iter, NULL);
 
@@ -1372,6 +1464,12 @@ pidgin_notify_pounce_add(PurpleAccount *account, PurplePounce *pounce,
 			PIDGIN_POUNCE_DATE, date,
 			PIDGIN_POUNCE_DATA, pounce_data,
 			-1);
+
+	if (first) {
+		GtkTreeSelection *selection =
+				gtk_tree_view_get_selection(GTK_TREE_VIEW(pounce_dialog->treeview));
+		gtk_tree_selection_select_iter(selection, &iter);
+	}
 
 	if (icon)
 		g_object_unref(icon);
@@ -1387,7 +1485,6 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 	GtkTreeStore *model = NULL;
 	GtkWidget *dialog = NULL;
 	GtkWidget *label = NULL;
-	GtkWidget *sw;
 	GtkCellRenderer *rend;
 	GtkTreeViewColumn *column;
 	GtkWidget *button = NULL;
@@ -1411,14 +1508,14 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 				G_TYPE_STRING, G_TYPE_POINTER);
 	}
 
-	dialog = gtk_dialog_new_with_buttons(NULL, NULL, 0,
-			GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE,
-			NULL);
+	dialog = gtk_dialog_new();
 
 	/* Setup the dialog */
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BOX_SPACE);
 	gtk_container_set_border_width(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BOX_SPACE);
+#if !GTK_CHECK_VERSION(2,22,0)
 	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
+#endif
 	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER);
 
 	/* Vertical box */
@@ -1426,10 +1523,6 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 
 	/* Golden ratio it up! */
 	gtk_widget_set_size_request(dialog, 550, 400);
-
-	sw = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW(sw), GTK_SHADOW_IN);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw), GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
 
 	spec_dialog = g_new0(PidginNotifyDialog, 1);
 	spec_dialog->dialog = dialog;
@@ -1439,7 +1532,6 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 	g_object_unref(G_OBJECT(model));
 
 	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(spec_dialog->treeview), TRUE);
-	gtk_container_add(GTK_CONTAINER(sw), spec_dialog->treeview);
 
 	if (type == PIDGIN_NOTIFY_MAIL) {
 		gtk_window_set_title(GTK_WINDOW(dialog), _("New Mail"));
@@ -1459,11 +1551,13 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 		gtk_tree_view_set_search_column(GTK_TREE_VIEW(spec_dialog->treeview), PIDGIN_MAIL_TEXT);
 		gtk_tree_view_set_search_equal_func(GTK_TREE_VIEW(spec_dialog->treeview),
 			             pidgin_tree_view_search_equal_func, NULL, NULL);
+		sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(spec_dialog->treeview));
+		gtk_tree_selection_set_mode(sel, GTK_SELECTION_BROWSE);
 
 		g_signal_connect(G_OBJECT(dialog), "response",
 						 G_CALLBACK(email_response_cb), spec_dialog);
-		g_signal_connect(G_OBJECT(gtk_tree_view_get_selection(GTK_TREE_VIEW(spec_dialog->treeview))),
-						 "changed", G_CALLBACK(selection_changed_cb), spec_dialog);
+		g_signal_connect(G_OBJECT(sel), "changed",
+		                 G_CALLBACK(selection_changed_cb), spec_dialog);
 		g_signal_connect(G_OBJECT(spec_dialog->treeview), "row-activated", G_CALLBACK(email_row_activated_cb), NULL);
 
 		column = gtk_tree_view_column_new();
@@ -1484,14 +1578,26 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 		gtk_window_set_title(GTK_WINDOW(dialog), _("New Pounces"));
 
 		button = gtk_dialog_add_button(GTK_DIALOG(dialog),
-						_("Dismiss"), GTK_RESPONSE_NO);
+						_("IM"), GTK_RESPONSE_YES);
 		gtk_widget_set_sensitive(button, FALSE);
-		spec_dialog->dismiss_button = button;
+		spec_dialog->open_button = button;
 
 		button = gtk_dialog_add_button(GTK_DIALOG(dialog),
-						PIDGIN_STOCK_EDIT, GTK_RESPONSE_APPLY);
+						PIDGIN_STOCK_MODIFY, GTK_RESPONSE_APPLY);
 		gtk_widget_set_sensitive(button, FALSE);
 		spec_dialog->edit_button = button;
+
+		/* Translators: Make sure you translate "Dismiss" differently than
+		   "close"!  This string is used in the "You have pounced" dialog
+		   that appears when one of your Buddy Pounces is triggered.  In
+		   this context "Dismiss" means "I acknowledge that I've seen that
+		   this pounce was triggered--remove it from this list."  Translating
+		   it as "Remove" is acceptable if you can't think of a more precise
+		   word. */
+		button = gtk_dialog_add_button(GTK_DIALOG(dialog), _("Dismiss"),
+				GTK_RESPONSE_NO);
+		gtk_widget_set_sensitive(button, FALSE);
+		spec_dialog->dismiss_button = button;
 
 		g_signal_connect(G_OBJECT(dialog), "response",
 						 G_CALLBACK(pounce_response_cb), spec_dialog);
@@ -1536,15 +1642,22 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 		gtk_label_set_markup(GTK_LABEL(label), _("<span weight=\"bold\" size=\"larger\">You have pounced!</span>"));
 
 		sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(spec_dialog->treeview));
-		gtk_tree_selection_set_mode(sel, GTK_SELECTION_SINGLE);
+		gtk_tree_selection_set_mode(sel, GTK_SELECTION_MULTIPLE);
 		g_signal_connect(G_OBJECT(sel), "changed",
 			G_CALLBACK(pounce_row_selected_cb), NULL);
+		g_signal_connect(G_OBJECT(spec_dialog->treeview), "row-activated",
+			G_CALLBACK(pounce_response_open_ims), NULL);
 	}
+
+	button = gtk_dialog_add_button(GTK_DIALOG(dialog),
+	                               GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
 
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 2);
+	gtk_box_pack_start(GTK_BOX(vbox),
+		pidgin_make_scrollable(spec_dialog->treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),
+		TRUE, TRUE, 2);
 
 	return spec_dialog;
 }

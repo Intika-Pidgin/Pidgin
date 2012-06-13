@@ -3,7 +3,9 @@
  *
  * purple
  *
- * Copyright (C) 2003 Nathan Walp <faceprint@faceprint.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +27,6 @@
 #include "buddy.h"
 #include "jabber.h"
 #include "xmlnode.h"
-
-#define XEP_0224_NAMESPACE "urn:xmpp:attention:0"
 
 typedef struct _JabberMessage {
 	JabberStream *js;

@@ -3,7 +3,9 @@
  *
  * purple
  *
- * Copyright (C) 2003 Nathan Walp <faceprint@faceprint.com>
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +32,7 @@ void jabber_roster_parse(JabberStream *js, const char *from,
                          JabberIqType type, const char *id, xmlnode *query);
 
 void jabber_roster_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
-		PurpleGroup *group);
+		PurpleGroup *group, const char *message);
 void jabber_roster_alias_change(PurpleConnection *gc, const char *name,
 		const char *alias);
 void jabber_roster_group_change(PurpleConnection *gc, const char *name,

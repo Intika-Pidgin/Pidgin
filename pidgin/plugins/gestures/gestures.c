@@ -48,7 +48,7 @@ stroke_close(GtkWidget *widget, void *data)
 
 	gtkconv = PIDGIN_CONVERSATION(conv);
 
-	gstroke_cleanup(gtkconv->imhtml);
+	gstroke_cleanup(gtkconv->webview);
 	purple_conversation_destroy(conv);
 }
 
@@ -57,11 +57,7 @@ switch_page(PidginWindow *win, GtkDirectionType dir)
 {
 	int count, current;
 
-#if GTK_CHECK_VERSION(2,2,0)
 	count = gtk_notebook_get_n_pages(GTK_NOTEBOOK(win->notebook));
-#else
-	count = g_list_length(GTK_NOTEBOOK(win->notebook)->children);
-#endif
 	current = gtk_notebook_get_current_page(GTK_NOTEBOOK(win->notebook));
 
 	if (dir == GTK_DIR_LEFT)
@@ -130,15 +126,15 @@ attach_signals(PurpleConversation *conv)
 
 	gtkconv = PIDGIN_CONVERSATION(conv);
 
-	gstroke_enable(gtkconv->imhtml);
-	gstroke_signal_connect(gtkconv->imhtml, "14789",  stroke_close,    conv);
-	gstroke_signal_connect(gtkconv->imhtml, "1456",   stroke_close,    conv);
-	gstroke_signal_connect(gtkconv->imhtml, "1489",   stroke_close,    conv);
-	gstroke_signal_connect(gtkconv->imhtml, "74123",  stroke_next_tab, conv);
-	gstroke_signal_connect(gtkconv->imhtml, "7456",   stroke_next_tab, conv);
-	gstroke_signal_connect(gtkconv->imhtml, "96321",  stroke_prev_tab, conv);
-	gstroke_signal_connect(gtkconv->imhtml, "9654",   stroke_prev_tab, conv);
-	gstroke_signal_connect(gtkconv->imhtml, "25852",  stroke_new_win,  conv);
+	gstroke_enable(gtkconv->webview);
+	gstroke_signal_connect(gtkconv->webview, "14789",  stroke_close,    conv);
+	gstroke_signal_connect(gtkconv->webview, "1456",   stroke_close,    conv);
+	gstroke_signal_connect(gtkconv->webview, "1489",   stroke_close,    conv);
+	gstroke_signal_connect(gtkconv->webview, "74123",  stroke_next_tab, conv);
+	gstroke_signal_connect(gtkconv->webview, "7456",   stroke_next_tab, conv);
+	gstroke_signal_connect(gtkconv->webview, "96321",  stroke_prev_tab, conv);
+	gstroke_signal_connect(gtkconv->webview, "9654",   stroke_prev_tab, conv);
+	gstroke_signal_connect(gtkconv->webview, "25852",  stroke_new_win,  conv);
 }
 
 static void
@@ -150,9 +146,9 @@ new_conv_cb(PurpleConversation *conv)
 
 #if 0
 static void
-mouse_button_menu_cb(GtkMenuItem *item, gpointer data)
+mouse_button_menu_cb(GtkComboBox *opt, gpointer data)
 {
-	int button = (int)data;
+	int button = gtk_combo_box_get_active(opt);
 
 	gstroke_set_mouse_button(button + 2);
 }
@@ -209,8 +205,8 @@ plugin_unload(PurplePlugin *plugin)
 
 		gtkconv = PIDGIN_CONVERSATION(conv);
 
-		gstroke_cleanup(gtkconv->imhtml);
-		gstroke_disable(gtkconv->imhtml);
+		gstroke_cleanup(gtkconv->webview);
+		gstroke_disable(gtkconv->webview);
 	}
 
 	return TRUE;
@@ -224,7 +220,6 @@ get_config_frame(PurplePlugin *plugin)
 	GtkWidget *toggle;
 #if 0
 	GtkWidget *opt;
-	GtkWidget *menu, *item;
 #endif
 
 	/* Outside container */
@@ -236,23 +231,16 @@ get_config_frame(PurplePlugin *plugin)
 
 #if 0
 	/* Mouse button drop-down menu */
-	menu = gtk_menu_new();
-	opt = gtk_option_menu_new();
+	opt = gtk_combo_box_new_text();
 
-	item = gtk_menu_item_new_with_label(_("Middle mouse button"));
-	g_signal_connect(G_OBJECT(item), "activate",
-					 G_CALLBACK(mouse_button_menu_cb), opt);
-	gtk_menu_append(menu, item);
-
-	item = gtk_menu_item_new_with_label(_("Right mouse button"));
-	g_signal_connect(G_OBJECT(item), "activate",
-					 G_CALLBACK(mouse_button_menu_cb), opt);
-	gtk_menu_append(menu, item);
+	gtk_combo_box_append_text(_("Middle mouse button"));
+	gtk_combo_box_append_text(_("Right mouse button"));
+	g_signal_connect(G_OBJECT(opt), "changed",
+	                 G_CALLBACK(mouse_button_menu_cb), NULL);
 
 	gtk_box_pack_start(GTK_BOX(vbox), opt, FALSE, FALSE, 0);
-	gtk_option_menu_set_menu(GTK_OPTION_MENU(opt), menu);
-	gtk_option_menu_set_history(GTK_OPTION_MENU(opt),
-								gstroke_get_mouse_button() - 2);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(opt),
+							gstroke_get_mouse_button() - 2);
 #endif
 
 	/* "Visual gesture display" checkbox */
