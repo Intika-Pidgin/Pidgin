@@ -532,7 +532,8 @@ gtk_source_undo_manager_undo (GtkSourceUndoManager *um)
 					um->priv->document,
 					undo_action->action.insert_anchor.pos,
 					undo_action->action.insert_anchor.pos + 1);
-				undo_action->action.insert_anchor.anchor->segment = NULL; /* XXX: This may be a bug in GTK+ */
+				/* TODO: is this needed in GTK+3? */
+				/*gtk_text_child_anchor_set_segment(undo_action->action.insert_anchor.anchor, NULL); XXX: This may be a bug in GTK+ */
 				break;
 			default:
 				/* Unknown action type. */
@@ -683,8 +684,10 @@ gtk_source_undo_action_free (GtkSourceUndoAction *action)
 		g_free (action->action.delete.text);
 	else if (action->action_type == GTK_SOURCE_UNDO_ACTION_INSERT_ANCHOR)
 		g_object_unref(action->action.insert_anchor.anchor);
-	else
+	else {
+		g_free (action);
 		g_return_if_reached ();
+	}
 
 	g_free (action);
 }
@@ -963,7 +966,7 @@ gtk_source_undo_manager_check_list_size (GtkSourceUndoManager *um)
  * the stack with a new undo action. So when we undo for example
  * typing, we can undo the whole word and not each letter by itself.
  *
- * Return Value: %TRUE is merge was successful, %FALSE otherwise.²
+ * Return Value: %TRUE is merge was successful, %FALSE otherwise.
  **/
 static gboolean
 gtk_source_undo_manager_merge_action (GtkSourceUndoManager 	*um,

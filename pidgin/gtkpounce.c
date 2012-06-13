@@ -194,15 +194,12 @@ add_pounce_to_treeview(GtkListStore *model, PurplePounce *pounce)
 {
 	GtkTreeIter iter;
 	PurpleAccount *account;
-	PurplePounceEvent events;
 	gboolean recurring;
 	const char *pouncer;
 	const char *pouncee;
 	GdkPixbuf *pixbuf;
 
 	account = purple_pounce_get_pouncer(pounce);
-
-	events = purple_pounce_get_events(pounce);
 
 	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
 
@@ -413,13 +410,15 @@ pounce_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 				GtkSelectionData *sd, guint info, guint t, gpointer data)
 {
 	PidginPounceDialog *dialog;
+	GdkAtom target = gtk_selection_data_get_target(sd);
+	const guchar *sd_data = gtk_selection_data_get_data(sd);
 
-	if (sd->target == gdk_atom_intern("PURPLE_BLIST_NODE", FALSE))
+	if (target == gdk_atom_intern("PURPLE_BLIST_NODE", FALSE))
 	{
 		PurpleBlistNode *node = NULL;
 		PurpleBuddy *buddy;
 
-		memcpy(&node, sd->data, sizeof(node));
+		memcpy(&node, sd_data, sizeof(node));
 
 		if (PURPLE_BLIST_NODE_IS_CONTACT(node))
 			buddy = purple_contact_get_priority_buddy((PurpleContact *)node);
@@ -430,19 +429,19 @@ pounce_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 
 		dialog = (PidginPounceDialog *)data;
 
-		gtk_entry_set_text(GTK_ENTRY(dialog->buddy_entry), buddy->name);
-		dialog->account = buddy->account;
-		pidgin_account_option_menu_set_selected(dialog->account_menu, buddy->account);
+		gtk_entry_set_text(GTK_ENTRY(dialog->buddy_entry), purple_buddy_get_name(buddy));
+		dialog->account = purple_buddy_get_account(buddy);
+		pidgin_account_option_menu_set_selected(dialog->account_menu, purple_buddy_get_account(buddy));
 
-		gtk_drag_finish(dc, TRUE, (dc->action == GDK_ACTION_MOVE), t);
+		gtk_drag_finish(dc, TRUE, (gdk_drag_context_get_actions(dc) == GDK_ACTION_MOVE), t);
 	}
-	else if (sd->target == gdk_atom_intern("application/x-im-contact", FALSE))
+	else if (target == gdk_atom_intern("application/x-im-contact", FALSE))
 	{
 		char *protocol = NULL;
 		char *username = NULL;
 		PurpleAccount *account;
 
-		if (pidgin_parse_x_im_contact((const char *)sd->data, FALSE, &account,
+		if (pidgin_parse_x_im_contact((const char *) sd_data, FALSE, &account,
 										&protocol, &username, NULL))
 		{
 			if (account == NULL)
@@ -464,7 +463,7 @@ pounce_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 		g_free(username);
 		g_free(protocol);
 
-		gtk_drag_finish(dc, TRUE, (dc->action == GDK_ACTION_MOVE), t);
+		gtk_drag_finish(dc, TRUE, (gdk_drag_context_get_actions(dc) == GDK_ACTION_MOVE), t);
 	}
 }
 
@@ -479,7 +478,7 @@ reset_send_msg_entry(PidginPounceDialog *dialog, GtkWidget *dontcare)
 {
 	PurpleAccount *account = pidgin_account_option_menu_get_selected(dialog->account_menu);
 	gtk_imhtml_setup_entry(GTK_IMHTML(dialog->send_msg_entry),
-			(account && account->gc) ? account->gc->flags : PURPLE_CONNECTION_HTML);
+			(account && purple_account_get_connection(account)) ? purple_connection_get_flags(purple_account_get_connection(account)) : PURPLE_CONNECTION_HTML);
 }
 
 void
@@ -537,13 +536,12 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	dialog->window = window = gtk_dialog_new();
 	gtk_window_set_title(GTK_WINDOW(window), (cur_pounce == NULL ? _("Add Buddy Pounce") : _("Modify Buddy Pounce")));
 	gtk_window_set_role(GTK_WINDOW(window), "buddy_pounce");
-	gtk_container_set_border_width(GTK_CONTAINER(dialog->window), PIDGIN_HIG_BORDER);
 
 	g_signal_connect(G_OBJECT(window), "delete_event",
 					 G_CALLBACK(delete_win_cb), dialog);
 
 	/* Create the parent vbox for everything. */
-	vbox1 = GTK_DIALOG(window)->vbox;
+	vbox1 = gtk_dialog_get_content_area(GTK_DIALOG(window));
 
 	/* Create the vbox that will contain all the prefs stuff. */
 	vbox2 = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
@@ -1021,7 +1019,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 static gboolean
 pounces_manager_configure_cb(GtkWidget *widget, GdkEventConfigure *event, PouncesManager *dialog)
 {
-	if (GTK_WIDGET_VISIBLE(widget)) {
+	if (gtk_widget_get_visible(widget)) {
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/pounces/dialog/width",  event->width);
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/pounces/dialog/height", event->height);
 	}
@@ -1062,15 +1060,6 @@ pounces_manager_destroy_cb(GtkWidget *widget, GdkEvent *event, gpointer user_dat
 
 	return FALSE;
 }
-
-#if !GTK_CHECK_VERSION(2,2,0)
-static void
-count_selected_helper(GtkTreeModel *model, GtkTreePath *path,
-					GtkTreeIter *iter, gpointer user_data)
-{
-	(*(gint *)user_data)++;
-}
-#endif
 
 static void
 pounces_manager_connection_cb(PurpleConnection *gc, GtkWidget *add_button)
@@ -1163,11 +1152,7 @@ pounce_selected_cb(GtkTreeSelection *sel, gpointer user_data)
 	PouncesManager *dialog = user_data;
 	int num_selected = 0;
 
-#if GTK_CHECK_VERSION(2,2,0)
 	num_selected = gtk_tree_selection_count_selected_rows(sel);
-#else
-	gtk_tree_selection_selected_foreach(sel, count_selected_helper, &num_selected);
-#endif
 
 	gtk_widget_set_sensitive(dialog->modify_button, (num_selected > 0));
 	gtk_widget_set_sensitive(dialog->delete_button, (num_selected > 0));
@@ -1237,20 +1222,10 @@ search_func(GtkTreeModel *model, gint column, const gchar *key, GtkTreeIter *ite
 static GtkWidget *
 create_pounces_list(PouncesManager *dialog)
 {
-	GtkWidget *sw;
 	GtkWidget *treeview;
 	GtkTreeSelection *sel;
 	GtkTreeViewColumn *column;
 	GtkCellRenderer *renderer;
-
-	/* Create the scrolled window */
-	sw = gtk_scrolled_window_new(0, 0);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-					GTK_POLICY_AUTOMATIC,
-					GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-						GTK_SHADOW_IN);
-	gtk_widget_show(sw);
 
 	/* Create the list model */
 	dialog->model = gtk_list_store_new(POUNCES_MANAGER_NUM_COLUMNS,
@@ -1275,7 +1250,6 @@ create_pounces_list(PouncesManager *dialog)
 	/* Handle double-clicking */
 	g_signal_connect(G_OBJECT(treeview), "button_press_event",
 					 G_CALLBACK(pounce_double_click_cb), dialog);
-	gtk_container_add(GTK_CONTAINER(sw), treeview);
 	gtk_widget_show(treeview);
 
 	/* Pouncee Column */
@@ -1335,7 +1309,7 @@ create_pounces_list(PouncesManager *dialog)
 	/* Populate list */
 	populate_pounces_list(dialog);
 
-	return sw;
+	return pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, -1);
 }
 
 void
@@ -1358,7 +1332,7 @@ pidgin_pounces_manager_show(void)
 	width  = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/pounces/dialog/width");
 	height = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/pounces/dialog/height");
 
-	dialog->window = win = pidgin_create_dialog(_("Buddy Pounces"), PIDGIN_HIG_BORDER, "pounces", TRUE);
+	dialog->window = win = pidgin_create_dialog(_("Buddy Pounces"), 0, "pounces", TRUE);
 	gtk_window_set_default_size(GTK_WINDOW(win), width, height);
 
 	g_signal_connect(G_OBJECT(win), "delete_event",
@@ -1446,7 +1420,6 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 	if (purple_pounce_action_is_enabled(pounce, "popup-notify"))
 	{
 		char *tmp;
-		const char *name_shown;
 		const char *reason;
 		reason = purple_pounce_action_get_attribute(pounce, "popup-notify",
 														  "reason");
@@ -1455,7 +1428,7 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 		 * Here we place the protocol name in the pounce dialog to lessen
 		 * confusion about what protocol a pounce is for.
 		 */
-		tmp = g_strdup_printf(
+		tmp = g_strdup(
 				   (events & PURPLE_POUNCE_TYPING) ?
 				   _("Started typing") :
 				   (events & PURPLE_POUNCE_TYPED) ?
@@ -1478,14 +1451,6 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 				   _("Sent a message") :
 				   _("Unknown.... Please report this!")
 				   );
-
-		/*
-		 * Ok here is where I change the second argument, title, from
-		 * NULL to the account alias if we have it or the account
-		 * name if that's all we have
-		 */
-		if ((name_shown = purple_account_get_alias(account)) == NULL)
-			name_shown = purple_account_get_username(account);
 
 		pidgin_notify_pounce_add(account, pounce, alias, tmp, reason,
 				purple_date_format_full(NULL));
@@ -1510,7 +1475,7 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 			purple_conversation_write(conv, NULL, message,
 									PURPLE_MESSAGE_SEND, time(NULL));
 
-			serv_send_im(account->gc, (char *)pouncee, (char *)message, 0);
+			serv_send_im(purple_account_get_connection(account), (char *)pouncee, (char *)message, 0);
 		}
 	}
 
@@ -1546,53 +1511,7 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 				g_free(localecmd);
 			}
 #else /* !_WIN32 */
-			PROCESS_INFORMATION pi;
-			BOOL retval;
-			gchar *message = NULL;
-
-			memset(&pi, 0, sizeof(pi));
-
-			if (G_WIN32_HAVE_WIDECHAR_API ()) {
-				STARTUPINFOW si;
-				wchar_t *wc_cmd = g_utf8_to_utf16(command,
-						-1, NULL, NULL, NULL);
-
-				memset(&si, 0 , sizeof(si));
-				si.cb = sizeof(si);
-
-				retval = CreateProcessW(NULL, wc_cmd, NULL,
-						NULL, 0, 0, NULL, NULL,
-						&si, &pi);
-				g_free(wc_cmd);
-			} else {
-				STARTUPINFOA si;
-				char *l_cmd = g_locale_from_utf8(command,
-						-1, NULL, NULL, NULL);
-
-				memset(&si, 0 , sizeof(si));
-				si.cb = sizeof(si);
-
-				retval = CreateProcessA(NULL, l_cmd, NULL,
-						NULL, 0, 0, NULL, NULL,
-						&si, &pi);
-				g_free(l_cmd);
-			}
-
-			if (retval) {
-				CloseHandle(pi.hProcess);
-				CloseHandle(pi.hThread);
-			} else {
-				message = g_win32_error_message(GetLastError());
-			}
-
-			purple_debug_info("pounce",
-					"Pounce execute command called for: "
-					"%s\n%s%s%s",
-						command,
-						retval ? "" : "Error: ",
-						retval ? "" : message,
-						retval ? "" : "\n");
-			g_free(message);
+			winpidgin_shell_execute(command, "open", NULL);
 #endif /* !_WIN32 */
 		}
 	}

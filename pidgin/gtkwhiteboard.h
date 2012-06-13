@@ -51,7 +51,7 @@ typedef struct _PidginWhiteboard
 	GtkWidget *window;       /**< Window for the Doodle session */
 	GtkWidget *drawing_area; /**< Drawing area */
 
-	GdkPixmap *pixmap;       /**< Memory for drawing area */
+	GdkPixbuf *pixbuf;       /**< Memory for drawing area */
 
 	int  width;              /**< Canvas width */
 	int  height;             /**< Canvas height */
@@ -59,9 +59,7 @@ typedef struct _PidginWhiteboard
 	int brush_size;          /**< Brush size */
 } PidginWhiteboard;
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 /*****************************************************************************/
 /** @name PidginWhiteboard API                                              */
@@ -77,8 +75,6 @@ PurpleWhiteboardUiOps *pidgin_whiteboard_get_ui_ops( void );
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _PIDGINWHITEBOARD_H_ */

@@ -33,6 +33,7 @@
 #include "request.h"
 #include "signals.h"
 #include "util.h"
+#include "valgrind.h"
 #include "version.h"
 
 typedef struct
@@ -62,13 +63,6 @@ static GList *load_queue       = NULL;
 static GList *plugin_loaders   = NULL;
 static GList *plugins_to_disable = NULL;
 #endif
-
-static void (*probe_cb)(void *) = NULL;
-static void *probe_cb_data = NULL;
-static void (*load_cb)(PurplePlugin *, void *) = NULL;
-static void *load_cb_data = NULL;
-static void (*unload_cb)(PurplePlugin *, void *) = NULL;
-static void *unload_cb_data = NULL;
 
 #ifdef PURPLE_PLUGINS
 
@@ -253,11 +247,7 @@ purple_plugin_probe(const char *filename)
 		 *
 		 * G_MODULE_BIND_LOCAL was added in glib 2.3.3.
 		 */
-#if GLIB_CHECK_VERSION(2,3,3)
 		plugin->handle = g_module_open(filename, G_MODULE_BIND_LOCAL);
-#else
-		plugin->handle = g_module_open(filename, 0);
-#endif
 
 		if (plugin->handle == NULL)
 		{
@@ -286,11 +276,7 @@ purple_plugin_probe(const char *filename)
 				purple_debug_error("plugins", "%s is not loadable: %s\n",
 						 plugin->path, plugin->error);
 			}
-#if GLIB_CHECK_VERSION(2,3,3)
 			plugin->handle = g_module_open(filename, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
-#else
-			plugin->handle = g_module_open(filename, G_MODULE_BIND_LAZY);
-#endif
 
 			if (plugin->handle == NULL)
 			{
@@ -622,9 +608,6 @@ purple_plugin_load(PurplePlugin *plugin)
 
 	plugin->loaded = TRUE;
 
-	if (load_cb != NULL)
-		load_cb(plugin, load_cb_data);
-
 	purple_signal_emit(purple_plugins_get_handle(), "plugin-load", plugin);
 
 	return TRUE;
@@ -752,9 +735,6 @@ purple_plugin_unload(PurplePlugin *plugin)
 	g_free(plugin->error);
 	plugin->error = NULL;
 
-	if (unload_cb != NULL)
-		unload_cb(plugin, unload_cb_data);
-
 	purple_signal_emit(purple_plugins_get_handle(), "plugin-unload", plugin);
 
 	purple_prefs_disconnect_by_handle(plugin);
@@ -875,7 +855,7 @@ purple_plugin_destroy(PurplePlugin *plugin)
 		 * it keeps all the plugins open, meaning that valgrind is able to
 		 * resolve symbol names in leak traces from plugins.
 		 */
-		if (!g_getenv("PURPLE_LEAKCHECK_HELP"))
+		if (!g_getenv("PURPLE_LEAKCHECK_HELP") && !RUNNING_ON_VALGRIND)
 		{
 			if (plugin->handle != NULL)
 				g_module_close(plugin->handle);
@@ -1446,10 +1426,6 @@ purple_plugins_probe(const char *ext)
 													(GCompareFunc)compare_prpl);
 		}
 	}
-
-	if (probe_cb != NULL)
-		probe_cb(probe_cb_data);
-
 #endif /* PURPLE_PLUGINS */
 }
 
@@ -1518,50 +1494,6 @@ purple_plugins_enabled(void)
 #else
 	return FALSE;
 #endif
-}
-
-void
-purple_plugins_register_probe_notify_cb(void (*func)(void *), void *data)
-{
-	probe_cb = func;
-	probe_cb_data = data;
-}
-
-void
-purple_plugins_unregister_probe_notify_cb(void (*func)(void *))
-{
-	probe_cb = NULL;
-	probe_cb_data = NULL;
-}
-
-void
-purple_plugins_register_load_notify_cb(void (*func)(PurplePlugin *, void *),
-									 void *data)
-{
-	load_cb = func;
-	load_cb_data = data;
-}
-
-void
-purple_plugins_unregister_load_notify_cb(void (*func)(PurplePlugin *, void *))
-{
-	load_cb = NULL;
-	load_cb_data = NULL;
-}
-
-void
-purple_plugins_register_unload_notify_cb(void (*func)(PurplePlugin *, void *),
-									   void *data)
-{
-	unload_cb = func;
-	unload_cb_data = data;
-}
-
-void
-purple_plugins_unregister_unload_notify_cb(void (*func)(PurplePlugin *, void *))
-{
-	unload_cb = NULL;
-	unload_cb_data = NULL;
 }
 
 PurplePlugin *

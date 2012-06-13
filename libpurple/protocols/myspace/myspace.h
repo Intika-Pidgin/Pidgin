@@ -20,6 +20,8 @@
 #ifndef _MYSPACE_MYSPACE_H
 #define _MYSPACE_MYSPACE_H
 
+#include "internal.h"
+
 /* Other includes */
 #include <string.h>
 #include <errno.h>/* for EAGAIN */
@@ -35,8 +37,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #endif
-
-#include "internal.h"
 
 #include "notify.h"
 #include "plugin.h"
@@ -132,6 +132,7 @@
 #define MSIM_BM_ACTION_OR_IM_INSTANT    121
 #define MSIM_BM_MEDIA                   122
 #define MSIM_BM_PROFILE                 124
+#define MSIM_BM_STATUS_MOOD             126
 #define MSIM_BM_UNOFFICIAL_CLIENT       200
 
 /* Authentication algorithm for login2 */
