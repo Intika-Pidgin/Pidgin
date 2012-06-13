@@ -1,10 +1,10 @@
 /*
- * gaim - WinGaim Options Plugin
+ * purple - WinPurple Options Plugin
  *
  * File: gtkappbar.h
  * Date: August 2, 2003
  * Description: Appbar functionality for Windows GTK+ applications
- * 
+ *
  * Copyright (C) 2003, Herman Bloggs <hermanator12002@yahoo.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,28 +19,32 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 #ifndef _GTKAPPBAR_H_
 #define _GTKAPPBAR_H_
 
+#include <glib.h>
+#include <gtk/gtk.h>
+
 typedef struct {
-        GtkWidget *win;
+	GtkWidget *win;
 	/** The rectangle of the screen area used for docking */
-        RECT docked_rect;
+	RECT docked_rect;
 	/** The height of the window prior to docking */
-        UINT undocked_height;
+	UINT undocked_height;
 	/** The side of the screen to which the window is docked*/
-        UINT side;
+	UINT side;
 	/** Is the window currently docked? */
-        gboolean docked;
+	gboolean docked;
 	/** Is the window currently in the process of docking? */
-        gboolean docking;
+	gboolean docking;
+	gboolean undocking;
 	/** Is the window currently registered as an appbar */
-        gboolean registered;
+	gboolean registered;
 	/** Callback functions to notify of dock state change */
-        GList *dock_cbs;
+	GSList *dock_cbs;
 	/** Is the window currently iconized? */
 	gboolean iconized;
 } GtkAppBar;

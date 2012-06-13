@@ -1,33 +1,35 @@
 #
 # Makefile.mingw
 #
-# Description: Makefile for Gaim perl module.
+# Description: Makefile for Purple perl module.
 #
 
-GAIM_TOP := ../../../..
-include $(GAIM_TOP)/libpurple/win32/global.mak
+PIDGIN_TREE_TOP := ../../../..
+include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
-TARGET = Gaim
-AUTOSPLIT = lib/auto/Gaim/autosplit.ix
-EXTUTILS := C:/perl/lib/ExtUtils
+GCCWARNINGS += -Wno-comment -Wno-unused -Wno-nested-externs
+
+DEFINES := $(subst -DWIN32_LEAN_AND_MEAN,,$(DEFINES))
+
+TARGET = Purple
+AUTOSPLIT = lib/auto/Purple/autosplit.ix
 PERL_PLUGIN_TOP := ..
-
-CFLAGS += -Wno-comment
 
 ##
 ## INCLUDE PATHS
 ##
-INCLUDE_PATHS =		-I. \
-			-I$(GAIM_TOP) \
-			-I$(GAIM_LIB_TOP) \
+INCLUDE_PATHS +=		-I. \
+			-I$(PIDGIN_TREE_TOP) \
+			-I$(PURPLE_TOP) \
+			-I$(PURPLE_TOP)/win32 \
 			-I$(GTK_TOP)/include \
 			-I$(GTK_TOP)/include/glib-2.0 \
 			-I$(GTK_TOP)/lib/glib-2.0/include \
 			-I$(PERL_LIB_TOP)/CORE
 
-LIB_PATHS = 		-L$(PERL_LIB_TOP) \
+LIB_PATHS += 		-L$(PERL_LIB_TOP) \
 			-L$(PERL_PLUGIN_TOP) \
-			-L$(GAIM_LIB_TOP) \
+			-L$(PURPLE_TOP) \
 			-L$(GTK_TOP)/lib
 
 ##
@@ -39,12 +41,14 @@ XS_FILES =		Account.xs \
 				BuddyList.xs \
 				Cipher.xs \
 				Cmds.xs \
+				Certificate.xs \
 				Connection.xs \
 				Conversation.xs \
 				Core.xs \
 				Debug.xs \
 				FT.xs \
-				Gaim.xs \
+				Idle.xs \
+				Purple.xs \
 				ImgStore.xs \
 				Log.xs \
 				Network.xs \
@@ -60,27 +64,29 @@ XS_FILES =		Account.xs \
 				Roomlist.xs \
 				SSLConn.xs \
 				SavedStatuses.xs \
-				Signal.xs \
 				Server.xs \
+				Signal.xs \
+				Smiley.xs \
 				Sound.xs \
 				Status.xs \
 				Stringref.xs \
 				Util.xs \
-				XMLNode.xs \
+				Whiteboard.xs \
+				XMLNode.xs
 
-FALLBACKS =	const-c.inc const-xs.inc
+#FALLBACKS =	const-c.inc const-xs.inc
 C_FILES = $(XS_FILES:%.xs=%.c)
 OBJECTS = $(C_FILES:%.c=%.o)
 
 ##
 ## LIBRARIES
 ##
-LIBS =			-lperl58 \
+LIBS =			-lperl510 \
 			-lperl \
 			-lpurple \
 			-lglib-2.0
 
-include $(GAIM_COMMON_RULES)
+include $(PIDGIN_COMMON_RULES)
 
 %.inc:
 	cp fallback/$@ ./
@@ -91,20 +97,21 @@ include $(GAIM_COMMON_RULES)
 .PHONY: all install clean
 
 all: $(TARGET).dll $(AUTOSPLIT)
-	
-install: all
-	rm -rf $(GAIM_INSTALL_PERLMOD_DIR)
-	cp -R lib $(GAIM_INSTALL_PERLMOD_DIR)
-	cp $(TARGET).dll $(GAIM_INSTALL_PERLMOD_DIR)
 
-$(C_FILES): $(GAIM_CONFIG_H)
+install: all
+	rm -rf $(PURPLE_INSTALL_PERL_DIR)
+	mkdir -p $(PURPLE_INSTALL_PERL_DIR)
+	cp -R lib/* $(PURPLE_INSTALL_PERL_DIR)
+	cp $(TARGET).dll $(PURPLE_INSTALL_PERL_DIR)/auto/Purple
+
+$(C_FILES): $(PURPLE_CONFIG_H)
 
 $(AUTOSPLIT):
 	mkdir -p ./lib/auto
-	cp Gaim.pm ./lib
-	$(PERL) -MAutoSplit -e 'autosplit("lib/Gaim.pm")'
+	cp Purple.pm ./lib
+	$(PERL) -MAutoSplit -e 'autosplit("lib/Purple.pm")'
 
-$(TARGET).dll: $(GAIM_LIBGAIM_DLL).a $(GAIM_LIBGAIM_PERL_DLL).a $(FALLBACKS) $(OBJECTS)
+$(TARGET).dll: $(PURPLE_DLL).a $(PURPLE_PERL_DLL).a $(FALLBACKS) $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) -o $(TARGET).dll
 
 ##
@@ -114,4 +121,4 @@ clean:
 	rm -rf $(TARGET).dll $(FALLBACKS) lib
 	rm -f *.o $(C_FILES)
 
-include $(GAIM_COMMON_TARGETS)
+include $(PIDGIN_COMMON_TARGETS)

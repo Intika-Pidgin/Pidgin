@@ -1,7 +1,7 @@
 /**
  * @file sipmsg.c
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2005 Thomas Butter <butter@uni-mannheim.de>
  *
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -45,28 +45,36 @@ struct sipmsg *sipmsg_parse_msg(const gchar *msg) {
 	line = g_strndup(msg, tmp - msg);
 
 	smsg = sipmsg_parse_header(line);
-	smsg->body = g_strdup(tmp + 4);
+	if(smsg != NULL)
+		smsg->body = g_strdup(tmp + 4);
+	else
+		purple_debug_error("SIMPLE", "No header parsed from line: %s\n", line);
 
 	g_free(line);
 	return smsg;
 }
 
 struct sipmsg *sipmsg_parse_header(const gchar *header) {
-	struct sipmsg *msg = g_new0(struct sipmsg,1);
-	gchar **lines = g_strsplit(header,"\r\n",0);
-	gchar **parts;
-	gchar *dummy;
-	gchar *dummy2;
-	gchar *tmp;
-	int i=1;
-	if(!lines[0]) return NULL;
+	struct sipmsg *msg;
+	gchar **parts, **lines;
+	gchar *dummy, *dummy2, *tmp;
+	const gchar *tmp2;
+	int i = 1;
+
+	lines = g_strsplit(header,"\r\n",0);
+	if(!lines[0]) {
+		g_strfreev(lines);
+		return NULL;
+	}
+
 	parts = g_strsplit(lines[0], " ", 3);
 	if(!parts[0] || !parts[1] || !parts[2]) {
 		g_strfreev(parts);
 		g_strfreev(lines);
-		g_free(msg);
 		return NULL;
 	}
+
+	msg = g_new0(struct sipmsg,1);
 	if(strstr(parts[0],"SIP")) { /* numeric response */
 		msg->method = g_strdup(parts[2]);
 		msg->response = strtol(parts[1],NULL,10);
@@ -76,12 +84,13 @@ struct sipmsg *sipmsg_parse_header(const gchar *header) {
 		msg->response = 0;
 	}
 	g_strfreev(parts);
+
 	for(i=1; lines[i] && strlen(lines[i])>2; i++) {
 		parts = g_strsplit(lines[i], ":", 2);
 		if(!parts[0] || !parts[1]) {
 			g_strfreev(parts);
 			g_strfreev(lines);
-			g_free(msg);
+			sipmsg_free(msg);
 			return NULL;
 		}
 		dummy = parts[1];
@@ -97,34 +106,41 @@ struct sipmsg *sipmsg_parse_header(const gchar *header) {
 			dummy2 = tmp;
 		}
 		sipmsg_add_header(msg, parts[0], dummy2);
+		g_free(dummy2);
 		g_strfreev(parts);
 	}
 	g_strfreev(lines);
-	msg->bodylen = strtol(sipmsg_find_header(msg, "Content-Length"),NULL,10);
+
+	tmp2 = sipmsg_find_header(msg, "Content-Length");
+	if (tmp2 != NULL)
+		msg->bodylen = strtol(tmp2, NULL, 10);
+
 	if(msg->response) {
-		tmp = sipmsg_find_header(msg, "CSeq");
-		if(!tmp) {
+		tmp2 = sipmsg_find_header(msg, "CSeq");
+		g_free(msg->method);
+		if(!tmp2) {
 			/* SHOULD NOT HAPPEN */
-			msg->method = 0;
+			msg->method = NULL;
 		} else {
-			parts = g_strsplit(tmp, " ", 2);
+			parts = g_strsplit(tmp2, " ", 2);
 			msg->method = g_strdup(parts[1]);
 			g_strfreev(parts);
 		}
 	}
+
 	return msg;
 }
 
 void sipmsg_print(const struct sipmsg *msg) {
 	GSList *cur;
 	struct siphdrelement *elem;
-	gaim_debug(GAIM_DEBUG_MISC, "simple", "SIP MSG\n");
-	gaim_debug(GAIM_DEBUG_MISC, "simple", "response: %d\nmethod: %s\nbodylen: %d\n",msg->response,msg->method,msg->bodylen);
-	if(msg->target) gaim_debug(GAIM_DEBUG_MISC, "simple", "target: %s\n",msg->target);
+	purple_debug(PURPLE_DEBUG_MISC, "simple", "SIP MSG\n");
+	purple_debug(PURPLE_DEBUG_MISC, "simple", "response: %d\nmethod: %s\nbodylen: %d\n",msg->response,msg->method,msg->bodylen);
+	if(msg->target) purple_debug(PURPLE_DEBUG_MISC, "simple", "target: %s\n",msg->target);
 	cur = msg->headers;
 	while(cur) {
 		elem = cur->data;
-		gaim_debug(GAIM_DEBUG_MISC, "simple", "name: %s value: %s\n",elem->name, elem->value);
+		purple_debug(PURPLE_DEBUG_MISC, "simple", "name: %s value: %s\n",elem->name, elem->value);
 		cur = g_slist_next(cur);
 	}
 }
@@ -154,7 +170,7 @@ char *sipmsg_to_string(const struct sipmsg *msg) {
 	return g_string_free(outstr, FALSE);
 }
 void sipmsg_add_header(struct sipmsg *msg, const gchar *name, const gchar *value) {
-	struct siphdrelement *element = g_new0(struct siphdrelement,1);
+	struct siphdrelement *element = g_new(struct siphdrelement,1);
 	element->name = g_strdup(name);
 	element->value = g_strdup(value);
 	msg->headers = g_slist_append(msg->headers, element);
@@ -180,7 +196,7 @@ void sipmsg_remove_header(struct sipmsg *msg, const gchar *name) {
 	GSList *tmp = msg->headers;
 	while(tmp) {
 		elem = tmp->data;
-		if(strcmp(elem->name, name)==0) {
+		if(g_ascii_strcasecmp(elem->name, name)==0) {
 			msg->headers = g_slist_remove(msg->headers, elem);
 			g_free(elem->name);
 			g_free(elem->value);
@@ -192,13 +208,13 @@ void sipmsg_remove_header(struct sipmsg *msg, const gchar *name) {
 	return;
 }
 
-gchar *sipmsg_find_header(struct sipmsg *msg, const gchar *name) {
+const gchar *sipmsg_find_header(struct sipmsg *msg, const gchar *name) {
 	GSList *tmp;
 	struct siphdrelement *elem;
 	tmp = msg->headers;
 	while(tmp) {
 		elem = tmp->data;
-		if(strcmp(elem->name,name)==0) {
+		if(g_ascii_strcasecmp(elem->name, name)==0) {
 			return elem->value;
 		}
 		tmp = g_slist_next(tmp);

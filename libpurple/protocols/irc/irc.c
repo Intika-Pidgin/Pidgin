@@ -1,10 +1,10 @@
 /**
  * @file irc.c
  *
- * gaim
+ * purple
  *
- * Copyright (C) 2003, Robbert Haarman <gaim@inglorion.net>
- * Copyright (C) 2003, Ethan Blanton <eblanton@cs.purdue.edu>
+ * Copyright (C) 2003, Robbert Haarman <purple@inglorion.net>
+ * Copyright (C) 2003, 2012 Ethan Blanton <elb@pidgin.im>
  * Copyright (C) 2000-2003, Rob Flynn <rob@tgflinux.com>
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *
@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include "internal.h"
@@ -39,50 +39,47 @@
 
 #define PING_TIMEOUT 60
 
-static void irc_buddy_append(char *name, struct irc_buddy *ib, GString *string);
+static void irc_ison_buddy_init(char *name, struct irc_buddy *ib, GList **list);
 
-static const char *irc_blist_icon(GaimAccount *a, GaimBuddy *b);
-static void irc_blist_emblems(GaimBuddy *b, const char **se, const char **sw, const char **nw, const char **ne);
-static GList *irc_status_types(GaimAccount *account);
-static GList *irc_actions(GaimPlugin *plugin, gpointer context);
-/* static GList *irc_chat_info(GaimConnection *gc); */
-static void irc_login(GaimAccount *account);
-static void irc_login_cb_ssl(gpointer data, GaimSslConnection *gsc, GaimInputCondition cond);
+static const char *irc_blist_icon(PurpleAccount *a, PurpleBuddy *b);
+static GList *irc_status_types(PurpleAccount *account);
+static GList *irc_actions(PurplePlugin *plugin, gpointer context);
+/* static GList *irc_chat_info(PurpleConnection *gc); */
+static void irc_login(PurpleAccount *account);
+static void irc_login_cb_ssl(gpointer data, PurpleSslConnection *gsc, PurpleInputCondition cond);
 static void irc_login_cb(gpointer data, gint source, const gchar *error_message);
-static void irc_ssl_connect_failure(GaimSslConnection *gsc, GaimSslErrorType error, gpointer data);
-static void irc_close(GaimConnection *gc);
-static int irc_im_send(GaimConnection *gc, const char *who, const char *what, GaimMessageFlags flags);
-static int irc_chat_send(GaimConnection *gc, int id, const char *what, GaimMessageFlags flags);
-static void irc_chat_join (GaimConnection *gc, GHashTable *data);
-static void irc_input_cb(gpointer data, gint source, GaimInputCondition cond);
-static void irc_input_cb_ssl(gpointer data, GaimSslConnection *gsc, GaimInputCondition cond);
+static void irc_ssl_connect_failure(PurpleSslConnection *gsc, PurpleSslErrorType error, gpointer data);
+static void irc_close(PurpleConnection *gc);
+static int irc_im_send(PurpleConnection *gc, const char *who, const char *what, PurpleMessageFlags flags);
+static int irc_chat_send(PurpleConnection *gc, int id, const char *what, PurpleMessageFlags flags);
+static void irc_chat_join (PurpleConnection *gc, GHashTable *data);
+static void irc_input_cb(gpointer data, gint source, PurpleInputCondition cond);
+static void irc_input_cb_ssl(gpointer data, PurpleSslConnection *gsc, PurpleInputCondition cond);
 
 static guint irc_nick_hash(const char *nick);
 static gboolean irc_nick_equal(const char *nick1, const char *nick2);
 static void irc_buddy_free(struct irc_buddy *ib);
 
-GaimPlugin *_irc_plugin = NULL;
+PurplePlugin *_irc_plugin = NULL;
 
-static const char *status_chars = "@+%&";
-
-static void irc_view_motd(GaimPluginAction *action)
+static void irc_view_motd(PurplePluginAction *action)
 {
-	GaimConnection *gc = (GaimConnection *) action->context;
+	PurpleConnection *gc = (PurpleConnection *) action->context;
 	struct irc_conn *irc;
 	char *title;
 
-	if (gc == NULL || gc->proto_data == NULL) {
-		gaim_debug(GAIM_DEBUG_ERROR, "irc", "got MOTD request for NULL gc\n");
+	if (gc == NULL || purple_connection_get_protocol_data(gc) == NULL) {
+		purple_debug(PURPLE_DEBUG_ERROR, "irc", "got MOTD request for NULL gc\n");
 		return;
 	}
-	irc = gc->proto_data;
+	irc = purple_connection_get_protocol_data(gc);
 	if (irc->motd == NULL) {
-		gaim_notify_error(gc, _("Error displaying MOTD"), _("No MOTD available"),
+		purple_notify_error(gc, _("Error displaying MOTD"), _("No MOTD available"),
 				  _("There is no MOTD associated with this connection."));
 		return;
 	}
 	title = g_strdup_printf(_("MOTD for %s"), irc->server);
-	gaim_notify_formatted(gc, title, title, NULL, irc->motd->str, NULL, NULL);
+	purple_notify_formatted(gc, title, title, NULL, irc->motd->str, NULL, NULL);
 	g_free(title);
 }
 
@@ -91,7 +88,7 @@ static int do_send(struct irc_conn *irc, const char *buf, gsize len)
 	int ret;
 
 	if (irc->gsc) {
-		ret = gaim_ssl_write(irc->gsc, buf, len);
+		ret = purple_ssl_write(irc->gsc, buf, len);
 	} else {
 		ret = write(irc->fd, buf, len);
 	}
@@ -99,22 +96,26 @@ static int do_send(struct irc_conn *irc, const char *buf, gsize len)
 	return ret;
 }
 
-static int irc_send_raw(GaimConnection *gc, const char *buf, int len)
+static int irc_send_raw(PurpleConnection *gc, const char *buf, int len)
 {
-	struct irc_conn *irc = (struct irc_conn*)gc->proto_data;
-	return do_send(irc, buf, len);
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
+	if (len == -1) {
+		len = strlen(buf);
+	}
+	irc_send_len(irc, buf, len);
+	return len;
 }
 
 static void
-irc_send_cb(gpointer data, gint source, GaimInputCondition cond)
+irc_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	struct irc_conn *irc = data;
 	int ret, writelen;
 
-	writelen = gaim_circ_buffer_get_max_read(irc->outbuf);
+	writelen = purple_circ_buffer_get_max_read(irc->outbuf);
 
 	if (writelen == 0) {
-		gaim_input_remove(irc->writeh);
+		purple_input_remove(irc->writeh);
 		irc->writeh = 0;
 		return;
 	}
@@ -124,12 +125,16 @@ irc_send_cb(gpointer data, gint source, GaimInputCondition cond)
 	if (ret < 0 && errno == EAGAIN)
 		return;
 	else if (ret <= 0) {
-		gaim_connection_error(gaim_account_get_connection(irc->account),
-			      _("Server has disconnected"));
+		PurpleConnection *gc = purple_account_get_connection(irc->account);
+		gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
+			g_strerror(errno));
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
+		g_free(tmp);
 		return;
 	}
 
-	gaim_circ_buffer_mark_read(irc->outbuf, ret);
+	purple_circ_buffer_mark_read(irc->outbuf, ret);
 
 #if 0
 	/* We *could* try to write more if we wrote it all */
@@ -141,16 +146,18 @@ irc_send_cb(gpointer data, gint source, GaimInputCondition cond)
 
 int irc_send(struct irc_conn *irc, const char *buf)
 {
-	int ret, buflen;
+    return irc_send_len(irc, buf, strlen(buf));
+}
+
+int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
+{
+	int ret;
  	char *tosend= g_strdup(buf);
 
-	gaim_signal_emit(_irc_plugin, "irc-sending-text", gaim_account_get_connection(irc->account), &tosend);
+	purple_signal_emit(_irc_plugin, "irc-sending-text", purple_account_get_connection(irc->account), &tosend);
 	if (tosend == NULL)
 		return 0;
-	
-	buflen = strlen(tosend);
-	
-	
+
 	/* If we're not buffering writes, try to send immediately */
 	if (!irc->writeh)
 		ret = do_send(irc, tosend, buflen);
@@ -159,19 +166,23 @@ int irc_send(struct irc_conn *irc, const char *buf)
 		errno = EAGAIN;
 	}
 
-	/* gaim_debug(GAIM_DEBUG_MISC, "irc", "sent%s: %s",
+	/* purple_debug(PURPLE_DEBUG_MISC, "irc", "sent%s: %s",
 		irc->gsc ? " (ssl)" : "", tosend); */
 	if (ret <= 0 && errno != EAGAIN) {
-		gaim_connection_error(gaim_account_get_connection(irc->account),
-				      _("Server has disconnected"));
+		PurpleConnection *gc = purple_account_get_connection(irc->account);
+		gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
+			g_strerror(errno));
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
+		g_free(tmp);
 	} else if (ret < buflen) {
 		if (ret < 0)
 			ret = 0;
 		if (!irc->writeh)
-			irc->writeh = gaim_input_add(
+			irc->writeh = purple_input_add(
 				irc->gsc ? irc->gsc->fd : irc->fd,
-				GAIM_INPUT_WRITE, irc_send_cb, irc);
-		gaim_circ_buffer_append(irc->outbuf, tosend + ret,
+				PURPLE_INPUT_WRITE, irc_send_cb, irc);
+		purple_circ_buffer_append(irc->outbuf, tosend + ret,
 			buflen - ret);
 	}
 	g_free(tosend);
@@ -181,88 +192,106 @@ int irc_send(struct irc_conn *irc, const char *buf)
 /* XXX I don't like messing directly with these buddies */
 gboolean irc_blist_timeout(struct irc_conn *irc)
 {
-	GString *string = g_string_sized_new(512);
-	char *list, *buf;
-
-	g_hash_table_foreach(irc->buddies, (GHFunc)irc_buddy_append, (gpointer)string);
-
-	list = g_string_free(string, FALSE);
-	if (!list || !strlen(list)) {
-		g_free(list);
+	if (irc->ison_outstanding) {
 		return TRUE;
 	}
 
-	buf = irc_format(irc, "vn", "ISON", list);
-	g_free(list);
-	irc_send(irc, buf);
-	g_free(buf);
+	g_hash_table_foreach(irc->buddies, (GHFunc)irc_ison_buddy_init,
+	                     (gpointer *)&irc->buddies_outstanding);
+
+	irc_buddy_query(irc);
 
 	return TRUE;
 }
 
-static void irc_buddy_append(char *name, struct irc_buddy *ib, GString *string)
+void irc_buddy_query(struct irc_conn *irc)
 {
-	ib->flag = FALSE;
-	g_string_append_printf(string, "%s ", name);
+	GList *lp;
+	GString *string;
+	struct irc_buddy *ib;
+	char *buf;
+
+	string = g_string_sized_new(512);
+
+	while ((lp = g_list_first(irc->buddies_outstanding))) {
+		ib = (struct irc_buddy *)lp->data;
+		if (string->len + strlen(ib->name) + 1 > 450)
+			break;
+		g_string_append_printf(string, "%s ", ib->name);
+		ib->new_online_status = FALSE;
+		irc->buddies_outstanding = g_list_remove_link(irc->buddies_outstanding, lp);
+	}
+
+	if (string->len) {
+		buf = irc_format(irc, "vn", "ISON", string->str);
+		irc_send(irc, buf);
+		g_free(buf);
+		irc->ison_outstanding = TRUE;
+	} else
+		irc->ison_outstanding = FALSE;
+
+	g_string_free(string, TRUE);
 }
+
+static void irc_ison_buddy_init(char *name, struct irc_buddy *ib, GList **list)
+{
+	*list = g_list_append(*list, ib);
+}
+
 
 static void irc_ison_one(struct irc_conn *irc, struct irc_buddy *ib)
 {
 	char *buf;
 
-	ib->flag = FALSE;
+	if (irc->buddies_outstanding != NULL) {
+		irc->buddies_outstanding = g_list_append(irc->buddies_outstanding, ib);
+		return;
+	}
+
+	ib->new_online_status = FALSE;
 	buf = irc_format(irc, "vn", "ISON", ib->name);
 	irc_send(irc, buf);
 	g_free(buf);
 }
 
 
-static const char *irc_blist_icon(GaimAccount *a, GaimBuddy *b)
+static const char *irc_blist_icon(PurpleAccount *a, PurpleBuddy *b)
 {
 	return "irc";
 }
 
-static void irc_blist_emblems(GaimBuddy *b, const char **se, const char **sw, const char **nw, const char **ne)
+static GList *irc_status_types(PurpleAccount *account)
 {
-	GaimPresence *presence = gaim_buddy_get_presence(b);
-
-	if (gaim_presence_is_online(presence) == FALSE) {
-		*se = "offline";
-	}
-}
-
-static GList *irc_status_types(GaimAccount *account)
-{
-	GaimStatusType *type;
+	PurpleStatusType *type;
 	GList *types = NULL;
 
-	type = gaim_status_type_new(GAIM_STATUS_AVAILABLE, NULL, NULL, TRUE);
+	type = purple_status_type_new(PURPLE_STATUS_AVAILABLE, NULL, NULL, TRUE);
 	types = g_list_append(types, type);
 
-	type = gaim_status_type_new_with_attrs(
-		GAIM_STATUS_AWAY, NULL, NULL, TRUE, TRUE, FALSE,
-		"message", _("Message"), gaim_value_new(GAIM_TYPE_STRING),
+	type = purple_status_type_new_with_attrs(
+		PURPLE_STATUS_AWAY, NULL, NULL, TRUE, TRUE, FALSE,
+		"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
 		NULL);
 	types = g_list_append(types, type);
 
-	type = gaim_status_type_new(GAIM_STATUS_OFFLINE, NULL, NULL, TRUE);
+	type = purple_status_type_new(PURPLE_STATUS_OFFLINE, NULL, NULL, TRUE);
 	types = g_list_append(types, type);
 
 	return types;
 }
 
-static GList *irc_actions(GaimPlugin *plugin, gpointer context)
+static GList *irc_actions(PurplePlugin *plugin, gpointer context)
 {
 	GList *list = NULL;
-	GaimPluginAction *act = NULL;
+	PurplePluginAction *act = NULL;
 
-	act = gaim_plugin_action_new(_("View MOTD"), irc_view_motd);
+	act = purple_plugin_action_new(_("View MOTD"), irc_view_motd);
 	list = g_list_append(list, act);
 
 	return list;
 }
 
-static GList *irc_chat_join_info(GaimConnection *gc)
+static GList *irc_chat_join_info(PurpleConnection *gc)
 {
 	GList *m = NULL;
 	struct proto_chat_entry *pce;
@@ -282,7 +311,7 @@ static GList *irc_chat_join_info(GaimConnection *gc)
 	return m;
 }
 
-static GHashTable *irc_chat_info_defaults(GaimConnection *gc, const char *chat_name)
+static GHashTable *irc_chat_info_defaults(PurpleConnection *gc, const char *chat_name)
 {
 	GHashTable *defaults;
 
@@ -294,28 +323,31 @@ static GHashTable *irc_chat_info_defaults(GaimConnection *gc, const char *chat_n
 	return defaults;
 }
 
-static void irc_login(GaimAccount *account)
+static void irc_login(PurpleAccount *account)
 {
-	GaimConnection *gc;
+	PurpleConnection *gc;
 	struct irc_conn *irc;
 	char **userparts;
-	const char *username = gaim_account_get_username(account);
+	const char *username = purple_account_get_username(account);
 
-	gc = gaim_account_get_connection(account);
-	gc->flags |= GAIM_CONNECTION_NO_NEWLINES;
+	gc = purple_account_get_connection(account);
+	purple_connection_set_flags(gc, PURPLE_CONNECTION_NO_NEWLINES);
 
 	if (strpbrk(username, " \t\v\r\n") != NULL) {
-		gaim_connection_error(gc, _("IRC nicks may not contain whitespace"));
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_INVALID_SETTINGS,
+			_("IRC nick and server may not contain whitespace"));
 		return;
 	}
 
-	gc->proto_data = irc = g_new0(struct irc_conn, 1);
+	irc = g_new0(struct irc_conn, 1);
+	purple_connection_set_protocol_data(gc, irc);
 	irc->fd = -1;
 	irc->account = account;
-	irc->outbuf = gaim_circ_buffer_new(512);
+	irc->outbuf = purple_circ_buffer_new(512);
 
 	userparts = g_strsplit(username, "@", 2);
-	gaim_connection_set_display_name(gc, userparts[0]);
+	purple_connection_set_display_name(gc, userparts[0]);
 	irc->server = g_strdup(userparts[1]);
 	g_strfreev(userparts);
 
@@ -326,63 +358,86 @@ static void irc_login(GaimAccount *account)
 	irc->msgs = g_hash_table_new(g_str_hash, g_str_equal);
 	irc_msg_table_build(irc);
 
-	gaim_connection_update_progress(gc, _("Connecting"), 1, 2);
+	purple_connection_update_progress(gc, _("Connecting"), 1, 2);
 
-	if (gaim_account_get_bool(account, "ssl", FALSE)) {
-		if (gaim_ssl_is_supported()) {
-			irc->gsc = gaim_ssl_connect(account, irc->server,
-					gaim_account_get_int(account, "port", IRC_DEFAULT_SSL_PORT),
+	if (purple_account_get_bool(account, "ssl", FALSE)) {
+		if (purple_ssl_is_supported()) {
+			irc->gsc = purple_ssl_connect(account, irc->server,
+					purple_account_get_int(account, "port", IRC_DEFAULT_SSL_PORT),
 					irc_login_cb_ssl, irc_ssl_connect_failure, gc);
 		} else {
-			gaim_connection_error(gc, _("SSL support unavailable"));
+			purple_connection_error (gc,
+				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
+				_("SSL support unavailable"));
 			return;
 		}
 	}
 
 	if (!irc->gsc) {
 
-		if (gaim_proxy_connect(gc, account, irc->server,
-				 gaim_account_get_int(account, "port", IRC_DEFAULT_PORT),
+		if (purple_proxy_connect(gc, account, irc->server,
+				 purple_account_get_int(account, "port", IRC_DEFAULT_PORT),
 				 irc_login_cb, gc) == NULL)
 		{
-			gaim_connection_error(gc, _("Couldn't create socket"));
+			purple_connection_error (gc,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				_("Unable to connect"));
 			return;
 		}
 	}
 }
 
-static gboolean do_login(GaimConnection *gc) {
-	char *buf;
-	char hostname[256];
+static gboolean do_login(PurpleConnection *gc) {
+	char *buf, *tmp = NULL;
+	char *server;
 	const char *username, *realname;
-	struct irc_conn *irc = gc->proto_data;
-	const char *pass = gaim_connection_get_password(gc);
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
+	const char *pass = purple_connection_get_password(gc);
 
 	if (pass && *pass) {
-		buf = irc_format(irc, "vv", "PASS", pass);
+		buf = irc_format(irc, "v:", "PASS", pass);
 		if (irc_send(irc, buf) < 0) {
-/*			gaim_connection_error(gc, "Error sending password"); */
 			g_free(buf);
 			return FALSE;
 		}
 		g_free(buf);
 	}
 
-	gethostname(hostname, sizeof(hostname));
-	hostname[sizeof(hostname) - 1] = '\0';
-	username = gaim_account_get_string(irc->account, "username", "");
-	realname = gaim_account_get_string(irc->account, "realname", "");
-	buf = irc_format(irc, "vvvv:", "USER", strlen(username) ? username : g_get_user_name(), hostname, irc->server,
-			      strlen(realname) ? realname : IRC_DEFAULT_ALIAS);
+	realname = purple_account_get_string(irc->account, "realname", "");
+	username = purple_account_get_string(irc->account, "username", "");
+
+	if (username == NULL || *username == '\0') {
+		username = g_get_user_name();
+	}
+
+	if (username != NULL && strchr(username, ' ') != NULL) {
+		tmp = g_strdup(username);
+		while ((buf = strchr(tmp, ' ')) != NULL) {
+			*buf = '_';
+		}
+	}
+
+	if (*irc->server == ':') {
+		/* Same as hostname, above. */
+		server = g_strdup_printf("0%s", irc->server);
+	} else {
+		server = g_strdup(irc->server);
+	}
+
+	buf = irc_format(irc, "vvvv:", "USER", tmp ? tmp : username, "*", server,
+	                 strlen(realname) ? realname : IRC_DEFAULT_ALIAS);
+	g_free(tmp);
+	g_free(server);
 	if (irc_send(irc, buf) < 0) {
-/*		gaim_connection_error(gc, "Error registering with server");*/
 		g_free(buf);
 		return FALSE;
 	}
 	g_free(buf);
-	buf = irc_format(irc, "vn", "NICK", gaim_connection_get_display_name(gc));
+	username = purple_connection_get_display_name(gc);
+	buf = irc_format(irc, "vn", "NICK", username);
+	irc->reqnick = g_strdup(username);
+	irc->nickused = FALSE;
 	if (irc_send(irc, buf) < 0) {
-/*		gaim_connection_error(gc, "Error sending nickname");*/
 		g_free(buf);
 		return FALSE;
 	}
@@ -393,55 +448,52 @@ static gboolean do_login(GaimConnection *gc) {
 	return TRUE;
 }
 
-static void irc_login_cb_ssl(gpointer data, GaimSslConnection *gsc,
-	GaimInputCondition cond)
+static void irc_login_cb_ssl(gpointer data, PurpleSslConnection *gsc,
+	PurpleInputCondition cond)
 {
-	GaimConnection *gc = data;
+	PurpleConnection *gc = data;
 
 	if (do_login(gc)) {
-		gaim_ssl_input_add(gsc, irc_input_cb_ssl, gc);
+		purple_ssl_input_add(gsc, irc_input_cb_ssl, gc);
 	}
 }
 
 static void irc_login_cb(gpointer data, gint source, const gchar *error_message)
 {
-	GaimConnection *gc = data;
-	struct irc_conn *irc = gc->proto_data;
+	PurpleConnection *gc = data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 
 	if (source < 0) {
-		gaim_connection_error(gc, _("Couldn't connect to host"));
+		gchar *tmp = g_strdup_printf(_("Unable to connect: %s"),
+			error_message);
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
+		g_free(tmp);
 		return;
 	}
 
 	irc->fd = source;
 
 	if (do_login(gc)) {
-		gc->inpa = gaim_input_add(irc->fd, GAIM_INPUT_READ, irc_input_cb, gc);
+		irc->inpa = purple_input_add(irc->fd, PURPLE_INPUT_READ, irc_input_cb, gc);
 	}
 }
 
 static void
-irc_ssl_connect_failure(GaimSslConnection *gsc, GaimSslErrorType error,
+irc_ssl_connect_failure(PurpleSslConnection *gsc, PurpleSslErrorType error,
 		gpointer data)
 {
-	GaimConnection *gc = data;
-	struct irc_conn *irc = gc->proto_data;
+	PurpleConnection *gc = data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 
 	irc->gsc = NULL;
 
-	switch(error) {
-		case GAIM_SSL_CONNECT_FAILED:
-			gaim_connection_error(gc, _("Connection Failed"));
-			break;
-		case GAIM_SSL_HANDSHAKE_FAILED:
-			gaim_connection_error(gc, _("SSL Handshake Failed"));
-			break;
-	}
+	purple_connection_ssl_error (gc, error);
 }
 
-static void irc_close(GaimConnection *gc)
+static void irc_close(PurpleConnection *gc)
 {
-	struct irc_conn *irc = gc->proto_data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 
 	if (irc == NULL)
 		return;
@@ -449,17 +501,19 @@ static void irc_close(GaimConnection *gc)
 	if (irc->gsc || (irc->fd >= 0))
 		irc_cmd_quit(irc, "quit", NULL, NULL);
 
-	if (gc->inpa)
-		gaim_input_remove(gc->inpa);
+	if (irc->inpa) {
+		purple_input_remove(irc->inpa);
+		irc->inpa = 0;
+	}
 
 	g_free(irc->inbuf);
 	if (irc->gsc) {
-		gaim_ssl_close(irc->gsc);
+		purple_ssl_close(irc->gsc);
 	} else if (irc->fd >= 0) {
 		close(irc->fd);
 	}
 	if (irc->timer)
-		gaim_timeout_remove(irc->timer);
+		purple_timeout_remove(irc->timer);
 	g_hash_table_destroy(irc->cmds);
 	g_hash_table_destroy(irc->msgs);
 	g_hash_table_destroy(irc->buddies);
@@ -468,25 +522,25 @@ static void irc_close(GaimConnection *gc)
 	g_free(irc->server);
 
 	if (irc->writeh)
-		gaim_input_remove(irc->writeh);
+		purple_input_remove(irc->writeh);
 
-	gaim_circ_buffer_destroy(irc->outbuf);
+	purple_circ_buffer_destroy(irc->outbuf);
+
+	g_free(irc->mode_chars);
+	g_free(irc->reqnick);
 
 	g_free(irc);
 }
 
-static int irc_im_send(GaimConnection *gc, const char *who, const char *what, GaimMessageFlags flags)
+static int irc_im_send(PurpleConnection *gc, const char *who, const char *what, PurpleMessageFlags flags)
 {
-	struct irc_conn *irc = gc->proto_data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	char *plain;
 	const char *args[2];
 
-	if (strchr(status_chars, *who) != NULL)
-		args[0] = who + 1;
-	else
-		args[0] = who;
+	args[0] = irc_nick_skip_mode(irc, who);
 
-	plain = gaim_unescape_html(what);
+	purple_markup_html_to_xhtml(what, NULL, &plain);
 	args[1] = plain;
 
 	irc_cmd_privmsg(irc, "msg", NULL, args);
@@ -494,32 +548,32 @@ static int irc_im_send(GaimConnection *gc, const char *who, const char *what, Ga
 	return 1;
 }
 
-static void irc_get_info(GaimConnection *gc, const char *who)
+static void irc_get_info(PurpleConnection *gc, const char *who)
 {
-	struct irc_conn *irc = gc->proto_data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	const char *args[2];
 	args[0] = who;
 	args[1] = NULL;
 	irc_cmd_whois(irc, "whois", NULL, args);
 }
 
-static void irc_set_status(GaimAccount *account, GaimStatus *status)
+static void irc_set_status(PurpleAccount *account, PurpleStatus *status)
 {
-	GaimConnection *gc = gaim_account_get_connection(account);
+	PurpleConnection *gc = purple_account_get_connection(account);
 	struct irc_conn *irc;
 	const char *args[1];
-	const char *status_id = gaim_status_get_id(status);
+	const char *status_id = purple_status_get_id(status);
 
 	g_return_if_fail(gc != NULL);
-	irc = gc->proto_data;
+	irc = purple_connection_get_protocol_data(gc);
 
-	if (!gaim_status_is_active(status))
+	if (!purple_status_is_active(status))
 		return;
 
 	args[0] = NULL;
 
 	if (!strcmp(status_id, "away")) {
-		args[0] = gaim_status_get_attr_string(status, "message");
+		args[0] = purple_status_get_attr_string(status, "message");
 		if ((args[0] == NULL) || (*args[0] == '\0'))
 			args[0] = _("Away");
 		irc_cmd_away(irc, "away", NULL, args);
@@ -528,12 +582,23 @@ static void irc_set_status(GaimAccount *account, GaimStatus *status)
 	}
 }
 
-static void irc_add_buddy(GaimConnection *gc, GaimBuddy *buddy, GaimGroup *group)
+static void irc_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, const char *message)
 {
-	struct irc_conn *irc = (struct irc_conn *)gc->proto_data;
-	struct irc_buddy *ib = g_new0(struct irc_buddy, 1);
-	ib->name = g_strdup(buddy->name);
-	g_hash_table_insert(irc->buddies, ib->name, ib);
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
+	struct irc_buddy *ib;
+	const char *bname = purple_buddy_get_name(buddy);
+
+	ib = g_hash_table_lookup(irc->buddies, bname);
+	if (ib != NULL) {
+		ib->ref++;
+		purple_prpl_got_user_status(irc->account, bname,
+				ib->online ? "available" : "offline", NULL);
+	} else {
+		ib = g_new0(struct irc_buddy, 1);
+		ib->name = g_strdup(bname);
+		ib->ref = 1;
+		g_hash_table_replace(irc->buddies, ib->name, ib);
+	}
 
 	/* if the timer isn't set, this is during signon, so we don't want to flood
 	 * ourself off with ISON's, so we don't, but after that we want to know when
@@ -542,27 +607,34 @@ static void irc_add_buddy(GaimConnection *gc, GaimBuddy *buddy, GaimGroup *group
 		irc_ison_one(irc, ib);
 }
 
-static void irc_remove_buddy(GaimConnection *gc, GaimBuddy *buddy, GaimGroup *group)
+static void irc_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 {
-	struct irc_conn *irc = (struct irc_conn *)gc->proto_data;
-	g_hash_table_remove(irc->buddies, buddy->name);
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
+	struct irc_buddy *ib;
+
+	ib = g_hash_table_lookup(irc->buddies, purple_buddy_get_name(buddy));
+	if (ib && --ib->ref == 0) {
+		g_hash_table_remove(irc->buddies, purple_buddy_get_name(buddy));
+	}
 }
 
 static void read_input(struct irc_conn *irc, int len)
 {
+	PurpleConnection *connection = purple_account_get_connection(irc->account);
 	char *cur, *end;
 
+	purple_connection_update_last_received(connection);
 	irc->inbufused += len;
 	irc->inbuf[irc->inbufused] = '\0';
 
 	cur = irc->inbuf;
-	
+
 	/* This is a hack to work around the fact that marv gets messages
 	 * with null bytes in them while using some weird irc server at work
 	 */
 	while ((cur < (irc->inbuf + irc->inbufused)) && !*cur)
 		cur++;
-	
+
 	while (cur < irc->inbuf + irc->inbufused &&
 	       ((end = strstr(cur, "\r\n")) || (end = strstr(cur, "\n")))) {
 		int step = (*end == '\r' ? 2 : 1);
@@ -578,16 +650,16 @@ static void read_input(struct irc_conn *irc, int len)
 	}
 }
 
-static void irc_input_cb_ssl(gpointer data, GaimSslConnection *gsc,
-		GaimInputCondition cond)
+static void irc_input_cb_ssl(gpointer data, PurpleSslConnection *gsc,
+		PurpleInputCondition cond)
 {
 
-	GaimConnection *gc = data;
-	struct irc_conn *irc = gc->proto_data;
+	PurpleConnection *gc = data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	int len;
 
-	if(!g_list_find(gaim_connections_get_all(), gc)) {
-		gaim_ssl_close(gsc);
+	if(!g_list_find(purple_connections_get_all(), gc)) {
+		purple_ssl_close(gsc);
 		return;
 	}
 
@@ -596,26 +668,32 @@ static void irc_input_cb_ssl(gpointer data, GaimSslConnection *gsc,
 		irc->inbuf = g_realloc(irc->inbuf, irc->inbuflen);
 	}
 
-	len = gaim_ssl_read(gsc, irc->inbuf + irc->inbufused, IRC_INITIAL_BUFSIZE - 1);
+	len = purple_ssl_read(gsc, irc->inbuf + irc->inbufused, IRC_INITIAL_BUFSIZE - 1);
 
 	if (len < 0 && errno == EAGAIN) {
 		/* Try again later */
 		return;
 	} else if (len < 0) {
-		gaim_connection_error(gc, _("Read error"));
+		gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
+				g_strerror(errno));
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
+		g_free(tmp);
 		return;
 	} else if (len == 0) {
-		gaim_connection_error(gc, _("Server has disconnected"));
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Server closed the connection"));
 		return;
 	}
 
 	read_input(irc, len);
 }
 
-static void irc_input_cb(gpointer data, gint source, GaimInputCondition cond)
+static void irc_input_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
-	GaimConnection *gc = data;
-	struct irc_conn *irc = gc->proto_data;
+	PurpleConnection *gc = data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	int len;
 
 	if (irc->inbuflen < irc->inbufused + IRC_INITIAL_BUFSIZE) {
@@ -627,19 +705,25 @@ static void irc_input_cb(gpointer data, gint source, GaimInputCondition cond)
 	if (len < 0 && errno == EAGAIN) {
 		return;
 	} else if (len < 0) {
-		gaim_connection_error(gc, _("Read error"));
+		gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
+				g_strerror(errno));
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
+		g_free(tmp);
 		return;
 	} else if (len == 0) {
-		gaim_connection_error(gc, _("Server has disconnected"));
+		purple_connection_error (gc,
+			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Server closed the connection"));
 		return;
 	}
 
 	read_input(irc, len);
 }
 
-static void irc_chat_join (GaimConnection *gc, GHashTable *data)
+static void irc_chat_join (PurpleConnection *gc, GHashTable *data)
 {
-	struct irc_conn *irc = gc->proto_data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	const char *args[2];
 
 	args[0] = g_hash_table_lookup(data, "channel");
@@ -651,46 +735,46 @@ static char *irc_get_chat_name(GHashTable *data) {
 	return g_strdup(g_hash_table_lookup(data, "channel"));
 }
 
-static void irc_chat_invite(GaimConnection *gc, int id, const char *message, const char *name) 
+static void irc_chat_invite(PurpleConnection *gc, int id, const char *message, const char *name)
 {
-	struct irc_conn *irc = gc->proto_data;
-	GaimConversation *convo = gaim_find_chat(gc, id);
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
+	PurpleConversation *convo = purple_find_chat(gc, id);
 	const char *args[2];
 
 	if (!convo) {
-		gaim_debug(GAIM_DEBUG_ERROR, "irc", "Got chat invite request for bogus chat\n");
+		purple_debug(PURPLE_DEBUG_ERROR, "irc", "Got chat invite request for bogus chat\n");
 		return;
 	}
 	args[0] = name;
-	args[1] = gaim_conversation_get_name(convo);
-	irc_cmd_invite(irc, "invite", gaim_conversation_get_name(convo), args);
+	args[1] = purple_conversation_get_name(convo);
+	irc_cmd_invite(irc, "invite", purple_conversation_get_name(convo), args);
 }
 
 
-static void irc_chat_leave (GaimConnection *gc, int id)
+static void irc_chat_leave (PurpleConnection *gc, int id)
 {
-	struct irc_conn *irc = gc->proto_data;
-	GaimConversation *convo = gaim_find_chat(gc, id);
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
+	PurpleConversation *convo = purple_find_chat(gc, id);
 	const char *args[2];
 
 	if (!convo)
 		return;
 
-	args[0] = gaim_conversation_get_name(convo);
+	args[0] = purple_conversation_get_name(convo);
 	args[1] = NULL;
-	irc_cmd_part(irc, "part", gaim_conversation_get_name(convo), args);
+	irc_cmd_part(irc, "part", purple_conversation_get_name(convo), args);
 	serv_got_chat_left(gc, id);
 }
 
-static int irc_chat_send(GaimConnection *gc, int id, const char *what, GaimMessageFlags flags)
+static int irc_chat_send(PurpleConnection *gc, int id, const char *what, PurpleMessageFlags flags)
 {
-	struct irc_conn *irc = gc->proto_data;
-	GaimConversation *convo = gaim_find_chat(gc, id);
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
+	PurpleConversation *convo = purple_find_chat(gc, id);
 	const char *args[2];
 	char *tmp;
 
 	if (!convo) {
-		gaim_debug(GAIM_DEBUG_ERROR, "irc", "chat send on nonexistent chat\n");
+		purple_debug(PURPLE_DEBUG_ERROR, "irc", "chat send on nonexistent chat\n");
 		return -EINVAL;
 	}
 #if 0
@@ -698,13 +782,13 @@ static int irc_chat_send(GaimConnection *gc, int id, const char *what, GaimMessa
 		return irc_parse_cmd(irc, convo->name, what + 1);
 	}
 #endif
-	tmp = gaim_unescape_html(what);
-	args[0] = convo->name;
+	purple_markup_html_to_xhtml(what, NULL, &tmp);
+	args[0] = purple_conversation_get_name(convo);
 	args[1] = tmp;
 
 	irc_cmd_privmsg(irc, "msg", NULL, args);
 
-	serv_got_chat_in(gc, id, gaim_connection_get_display_name(gc), 0, what, time(NULL));
+	serv_got_chat_in(gc, id, purple_connection_get_display_name(gc), flags, what, time(NULL));
 	g_free(tmp);
 	return 0;
 }
@@ -723,7 +807,7 @@ static guint irc_nick_hash(const char *nick)
 
 static gboolean irc_nick_equal(const char *nick1, const char *nick2)
 {
-	return (gaim_utf8_strcasecmp(nick1, nick2) == 0);
+	return (purple_utf8_strcasecmp(nick1, nick2) == 0);
 }
 
 static void irc_buddy_free(struct irc_buddy *ib)
@@ -732,14 +816,14 @@ static void irc_buddy_free(struct irc_buddy *ib)
 	g_free(ib);
 }
 
-static void irc_chat_set_topic(GaimConnection *gc, int id, const char *topic)
+static void irc_chat_set_topic(PurpleConnection *gc, int id, const char *topic)
 {
 	char *buf;
 	const char *name = NULL;
 	struct irc_conn *irc;
 
-	irc = gc->proto_data;
-	name = gaim_conversation_get_name(gaim_find_chat(gc, id));
+	irc = purple_connection_get_protocol_data(gc);
+	name = purple_conversation_get_name(purple_find_chat(gc, id));
 
 	if (name == NULL)
 		return;
@@ -749,30 +833,30 @@ static void irc_chat_set_topic(GaimConnection *gc, int id, const char *topic)
 	g_free(buf);
 }
 
-static GaimRoomlist *irc_roomlist_get_list(GaimConnection *gc)
+static PurpleRoomlist *irc_roomlist_get_list(PurpleConnection *gc)
 {
 	struct irc_conn *irc;
 	GList *fields = NULL;
-	GaimRoomlistField *f;
+	PurpleRoomlistField *f;
 	char *buf;
 
-	irc = gc->proto_data;
+	irc = purple_connection_get_protocol_data(gc);
 
 	if (irc->roomlist)
-		gaim_roomlist_unref(irc->roomlist);
+		purple_roomlist_unref(irc->roomlist);
 
-	irc->roomlist = gaim_roomlist_new(gaim_connection_get_account(gc));
+	irc->roomlist = purple_roomlist_new(purple_connection_get_account(gc));
 
-	f = gaim_roomlist_field_new(GAIM_ROOMLIST_FIELD_STRING, "", "channel", TRUE);
+	f = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_STRING, "", "channel", TRUE);
 	fields = g_list_append(fields, f);
 
-	f = gaim_roomlist_field_new(GAIM_ROOMLIST_FIELD_INT, _("Users"), "users", FALSE);
+	f = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_INT, _("Users"), "users", FALSE);
 	fields = g_list_append(fields, f);
 
-	f = gaim_roomlist_field_new(GAIM_ROOMLIST_FIELD_STRING, _("Topic"), "topic", FALSE);
+	f = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_STRING, _("Topic"), "topic", FALSE);
 	fields = g_list_append(fields, f);
 
-	gaim_roomlist_set_fields(irc->roomlist, fields);
+	purple_roomlist_set_fields(irc->roomlist, fields);
 
 	buf = irc_format(irc, "v", "LIST");
 	irc_send(irc, buf);
@@ -781,39 +865,42 @@ static GaimRoomlist *irc_roomlist_get_list(GaimConnection *gc)
 	return irc->roomlist;
 }
 
-static void irc_roomlist_cancel(GaimRoomlist *list)
+static void irc_roomlist_cancel(PurpleRoomlist *list)
 {
-	GaimConnection *gc = gaim_account_get_connection(list->account);
+	PurpleAccount *account = purple_roomlist_get_account(list);
+	PurpleConnection *gc = purple_account_get_connection(account);
 	struct irc_conn *irc;
 
 	if (gc == NULL)
 		return;
 
-	irc = gc->proto_data;
+	irc = purple_connection_get_protocol_data(gc);
 
-	gaim_roomlist_set_in_progress(list, FALSE);
+	purple_roomlist_set_in_progress(list, FALSE);
 
 	if (irc->roomlist == list) {
 		irc->roomlist = NULL;
-		gaim_roomlist_unref(list);
+		purple_roomlist_unref(list);
 	}
 }
 
-static void irc_keepalive(GaimConnection *gc)
+static void irc_keepalive(PurpleConnection *gc)
 {
-	struct irc_conn *irc = gc->proto_data;
+	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	if ((time(NULL) - irc->recv_time) > PING_TIMEOUT)
 		irc_cmd_ping(irc, NULL, NULL, NULL);
 }
 
-static GaimPluginProtocolInfo prpl_info =
+static PurplePluginProtocolInfo prpl_info =
 {
-	OPT_PROTO_CHAT_TOPIC | OPT_PROTO_PASSWORD_OPTIONAL,
+	sizeof(PurplePluginProtocolInfo),    /* struct_size */
+	OPT_PROTO_CHAT_TOPIC | OPT_PROTO_PASSWORD_OPTIONAL |
+	OPT_PROTO_SLASH_COMMANDS_NATIVE,
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
 	NO_BUDDY_ICONS,		/* icon_spec */
 	irc_blist_icon,		/* list_icon */
-	irc_blist_emblems,	/* list_emblems */
+	NULL,			/* list_emblems */
 	NULL,					/* status_text */
 	NULL,					/* tooltip_text */
 	irc_status_types,	/* away_states */
@@ -848,13 +935,12 @@ static GaimPluginProtocolInfo prpl_info =
 	irc_keepalive,		/* keepalive */
 	NULL,					/* register_user */
 	NULL,					/* get_cb_info */
-	NULL,					/* get_cb_away */
 	NULL,					/* alias_buddy */
 	NULL,					/* group_buddy */
 	NULL,					/* rename_group */
 	NULL,					/* buddy_free */
 	NULL,					/* convo_closed */
-	gaim_normalize_nocase,	/* normalize */
+	purple_normalize_nocase,	/* normalize */
 	NULL,					/* set_buddy_icon */
 	NULL,					/* remove_group */
 	NULL,					/* get_cb_real_name */
@@ -870,40 +956,49 @@ static GaimPluginProtocolInfo prpl_info =
 	NULL,					/* whiteboard_prpl_ops */
 	irc_send_raw,			/* send_raw */
 	NULL,					/* roomlist_room_serialize */
+	NULL,                   /* unregister_user */
+	NULL,                   /* send_attention */
+	NULL,                   /* get_attention_types */
+	NULL,                    /* get_account_text_table */
+	NULL,                    /* initiate_media */
+	NULL,					 /* get_media_caps */
+	NULL,					 /* get_moods */
+	NULL,					 /* set_public_alias */
+	NULL					 /* get_public_alias */
 };
 
-static gboolean load_plugin (GaimPlugin *plugin) {
+static gboolean load_plugin (PurplePlugin *plugin) {
 
-	gaim_signal_register(plugin, "irc-sending-text",
-			     gaim_marshal_VOID__POINTER_POINTER, NULL, 2,
-			     gaim_value_new(GAIM_TYPE_SUBTYPE, GAIM_SUBTYPE_CONNECTION),
-			     gaim_value_new_outgoing(GAIM_TYPE_STRING));
-	gaim_signal_register(plugin, "irc-receiving-text",
-			     gaim_marshal_VOID__POINTER_POINTER, NULL, 2,
-			     gaim_value_new(GAIM_TYPE_SUBTYPE, GAIM_SUBTYPE_CONNECTION),
-			     gaim_value_new_outgoing(GAIM_TYPE_STRING));
+	purple_signal_register(plugin, "irc-sending-text",
+			     purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+			     purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
+			     purple_value_new_outgoing(PURPLE_TYPE_STRING));
+	purple_signal_register(plugin, "irc-receiving-text",
+			     purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+			     purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
+			     purple_value_new_outgoing(PURPLE_TYPE_STRING));
 	return TRUE;
 }
 
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,
-	GAIM_MAJOR_VERSION,
-	GAIM_MINOR_VERSION,
-	GAIM_PLUGIN_PROTOCOL,                             /**< type           */
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
 	NULL,                                             /**< ui_requirement */
 	0,                                                /**< flags          */
 	NULL,                                             /**< dependencies   */
-	GAIM_PRIORITY_DEFAULT,                            /**< priority       */
+	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
 	"prpl-irc",                                       /**< id             */
 	"IRC",                                            /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	N_("IRC Protocol Plugin"),                        /**  summary        */
 	N_("The IRC Protocol Plugin that Sucks Less"),    /**  description    */
 	NULL,                                             /**< author         */
-	GAIM_WEBSITE,                                     /**< homepage       */
+	PURPLE_WEBSITE,                                     /**< homepage       */
 
 	load_plugin,                                      /**< load           */
 	NULL,                                             /**< unload         */
@@ -912,43 +1007,52 @@ static GaimPluginInfo info =
 	NULL,                                             /**< ui_info        */
 	&prpl_info,                                       /**< extra_info     */
 	NULL,                                             /**< prefs_info     */
-	irc_actions
+	irc_actions,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
-static void _init_plugin(GaimPlugin *plugin)
+static void _init_plugin(PurplePlugin *plugin)
 {
-	GaimAccountUserSplit *split;
-	GaimAccountOption *option;
+	PurpleAccountUserSplit *split;
+	PurpleAccountOption *option;
 
-	split = gaim_account_user_split_new(_("Server"), IRC_DEFAULT_SERVER, '@');
+	split = purple_account_user_split_new(_("Server"), IRC_DEFAULT_SERVER, '@');
 	prpl_info.user_splits = g_list_append(prpl_info.user_splits, split);
 
-	option = gaim_account_option_int_new(_("Port"), "port", IRC_DEFAULT_PORT);
+	option = purple_account_option_int_new(_("Port"), "port", IRC_DEFAULT_PORT);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
-	option = gaim_account_option_string_new(_("Encodings"), "encoding", IRC_DEFAULT_CHARSET);
+	option = purple_account_option_string_new(_("Encodings"), "encoding", IRC_DEFAULT_CHARSET);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
-	option = gaim_account_option_string_new(_("Username"), "username", "");
+	option = purple_account_option_bool_new(_("Auto-detect incoming UTF-8"), "autodetect_utf8", IRC_DEFAULT_AUTODETECT);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
-	option = gaim_account_option_string_new(_("Real name"), "realname", "");
+	option = purple_account_option_string_new(_("Username"), "username", "");
+	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+
+	option = purple_account_option_string_new(_("Real name"), "realname", "");
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
 	/*
-	option = gaim_account_option_string_new(_("Quit message"), "quitmsg", IRC_DEFAULT_QUIT);
+	option = purple_account_option_string_new(_("Quit message"), "quitmsg", IRC_DEFAULT_QUIT);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 	*/
 
-	option = gaim_account_option_bool_new(_("Use SSL"), "ssl", FALSE);
+	option = purple_account_option_bool_new(_("Use SSL"), "ssl", FALSE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
 	_irc_plugin = plugin;
 
-	gaim_prefs_remove("/plugins/prpl/irc/quitmsg");
-	gaim_prefs_remove("/plugins/prpl/irc");
+	purple_prefs_remove("/plugins/prpl/irc/quitmsg");
+	purple_prefs_remove("/plugins/prpl/irc");
 
 	irc_register_commands();
 }
 
-GAIM_INIT_PLUGIN(irc, _init_plugin, info);
+PURPLE_INIT_PLUGIN(irc, _init_plugin, info);

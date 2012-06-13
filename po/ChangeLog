@@ -1,16 +1,687 @@
-Gaim: The Pimpin' Penguin IM Clone that's good for the soul!
+Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
-version 2.0.0:
+version 2.10.5
+	* No changes
+
+version 2.10.4
+	* German translation updated (Björn Voigt, Jochen Kemnade)
+
+version 2.10.3
+	* Dutch translation updated (Gideon van Melle)
+	* Polish translation updated (Piotr Drąg)
+
+version 2.10.2
+	* Russian translation updated (Антон Самохвалов)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino Peña)
+	* Vietnamese translation updated (Nguyễn Vũ Hưng)
+
+version 2.10.1
+	* No changes
+
+version 2.10.0
+	* Afrikaans translation updated (Friedel Wolff)
+	* Albanian translation updated (Besnik Bleta)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Dutch translation updated (Gideon van Melle)
+	* German translation updated (Björn Voigt, Jochen Kemnade)
+	* Hebrew translation updated (Shalom Craimer)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Drąg)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Romanian translation updated (Mişu Moldovan)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.9.0
+	* No changes
+
+version 2.8.0
+	* Albanian translation updated (Besnik Bleta)
+	* Bengali translation updated (Jamil Ahmed)
+	* Catalan translation updated (Josep Puigdemont)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Croatian translation added (Sabina Drempetić)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Gideon van Melle)
+	* English (Canadian) updated (Elliott Sales de Andrade)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Björn Voigt, Jochen Kemnade)
+	* Hebrew translation updated (Shalom Craimer)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Japanese translation updated (Takayuki Kusano)
+	* Malay translation updated (Muhammad Najmi bin Ahmad Zabidi)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Drąg)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Антон Самохвалов)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.11
+	* Afrikaans translation updated (Friedel Wolff)
+	* Bengali translation updated (Jamil Ahmed)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Simplified) translation updated (Aron Xu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Gideon van Melle)
+	* Italian translation updated (Claudio Satriano)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Drąg)
+	* Romanian translation updated (Mişu Moldovan)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.10
+	* Bengali translation updated (Jamil Ahmed)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Gideon van Melle)
+	* Hebrew translation updated (Shalom Craimer)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Occitan translation updated (Yannig Marchegay)
+	* Polish translation updated (Piotr Drąg)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Антон Самохвалов)
+	* Spanish translation updated (Javier Fernández-Sanguino Peña)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.9
+	* Czech translation updated (David Vachulka)
+	* English (Great Britain) updated (Phil Hannent)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.8
+	* Meadow Mari translation added (David Preece)
+	* Albanian translation updated (Besnik Bleta)
+	* Bengali translation updated (Jamil Ahmed)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Dutch translation updated (Gideon van Melle)
+	* English (Great Britain) updated (Phil Hannent)
+	* Hebrew translation updated (Shalom Craimer)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Drąg)
+	* Romanian translation updated (Mişu Moldovan)
+	* Spanish translation updated (Javier Fernández-Sanguino Peña)
+
+version 2.7.7
+	* No changes
+
+version 2.7.6
+	* Albanian translation updated (Besnik Bleta)
+	* Bengali translation updated (Jamil Ahmed)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Gideon van Melle)
+	* German translation updated (Björn Voigt, Jochen Kemnade)
+	* Hebrew translation updated (Shalom Craimer)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Drąg)
+	* Romanian translation updated (Mişu Moldovan)
+	* Spanish translation updated (Javier Fernández-Sanguino Peña)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.5
+	* German translation updated (Björn Voigt, Jochen Kemnade)
+	* Romanian translation updated (Mişu Moldovan)
+
+version 2.7.4
+	* Bengali translation updated (Jamil Ahmed)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Simplified) translation updated (Aron Xu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Gideon van Melle)
+	* Hebrew translation updated (Shalom Craimer)
+	* Kannada translation updated (Shankar Prasad, Kannada Translation team)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Maithili translation added (Sangeeta Kumari)
+	* Polish translation updated (Piotr Drąg)
+	* Tamil translation updated (I. Felix)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.3
+	* Bengali translation updated (Jamil Ahmed)
+	* Chinese (Simplified) translation updated (Aron Xu)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Gideon van Melle)
+	* Hebrew translation updated (Shalom Craimer)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Drąg)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Russian translation updated (Антон Самохвалов)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino Peña)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.2
+	* No changes
+
+version 2.7.1
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* Hebrew translation updated (Shalom Craimer)
+	* Italian translation updated (Claudio Satriano)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Drąg)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.7.0
+	* Afrikaans translation updated (Friedel Wolff)
+	* Albanian translation updated (Besnik Bleta)
+	* Assamese translation added (Amitakhya Phukan)
+	* Bengali (India) translation added (Runa Bhattacharjee)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* Gujarati translation updated (Sweta Kothari, Gujarati Language team)
+	* Hindi translation updated (Rajesh Ranjan)
+	* Italian translation updated (Claudio Satriano)
+	* Kannada translation updated (Shankar Prasad, Kannada Translation team)
+	* Khmer translation updated (Khoem Sokhem)
+	* Malayalam translation added (Ani Peter)
+	* Marathi translation added (Sandeep Shedmake)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Oriya translation updated (Manoj Kumar Giri)
+	* Polish translation updated (Piotr Drąg)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Антон Самохвалов)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Telugu translation updated under new translator (Krishnababu
+	  Krottapalli)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+	* Vietnamese translation updated (Clytie Siddall)
+
+version 2.6.6
+	* Afrikaans translation updated (Friedel Wolff)
+	* Albanian translation updated (Besnik Bleta)
+	* Bengali translation updated (Jamil Ahmed)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R. Liu)
+	* Chinese (Simplified) translation updated (Aron Xu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Björn Voigt and Jochen Kemnade)
+	* Gujarati translation updated (Sweta Kothari, Gujarati Language team)
+	* Hebrew translation updated (Shalom Craimer)
+	* Kannada translation updated (Shankar Prasad, Kannada Translation team)
+	* Marathi translation added (Sandeep Shedmake)
+	* Norwegian Bokmål translation updated (Hans Fredrik Nordhaug)
+	* Norwegian Nynorsk translation updated and win32 translation
+	  added (Yngve Spjeld Landro)
+	* Oriya translation added (Manoj Kumar Giri)
+	* Polish translation updated (Piotr Drąg)
+	* Polish win32 installer updated (Piotr Drąg)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Russian translation updated (Антон Самохвалов)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Francisco Javier F. Serrador)
+	* Tamil translation updated (I. Felix)
+	* Ukrainian translation updated (Oleksandr Kovalenko)
+
+version 2.6.5
+	* No changes
+
+version 2.6.4
+	* Afrikaans translation updated (Friedel Wolff)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li, Paladin R. Liu)
+	* Chinese (Simplified) translation updated (liyuekui and Aron Xu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li, Paladin R.
+	  Liu)
+	* Czech translation updated (David Vachulka)
+	* Hebrew translation updated (Shalom Craimer)
+	* Malay translation added (Muhammad Najmi bin Ahmad Zabidi)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated under new translator (Piotr Drąg)
+	* Russian translation updated (Антон Самохвалов)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Ukrainian translation updated under new translator (Oleksandr
+	  Kovalenko)
+	* Vietnamese translation updated (Clytie Siddall)
+
+version 2.6.3
+	* No changes
+
+version 2.6.2
+	* Afrikaans translation updated (Friedel Wolff)
+	* Albanian translation updated (Besnik Bleta)
+	* Basque translation updated (Mikel Pascual Aldabaldetreku)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Simplified) translation updated (Aron Xu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Czech translation updated (David Vachulka)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Jochen Kemnade)
+	* Hebrew translation updated (Shalom Craimer)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Italian translation updated (Claudio Satriano)
+	* Lithuanian translation updated (Laurynas Biveinis)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Romanian translation updated (Mişu Moldovan and Andrei Popescu)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+
+version 2.6.1
+	* No changes
+
+version 2.6.0
+	* Afrikaans translation updated (Friedel Wolff)
+	* Armenian translation added (David Avsharyan)
+	* Basque translation updated under new translator (Mikel Pascual
+	  Aldabaldetreku)
+	* Bengali translation updated (Samia Niamatullah)
+	* Catalan translation updated (Josep Puigdemont)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Simplified) translation updated under new
+	  translator (Aron Xu)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Daniël Heres)
+	* English (British) translation updated (Luke Ross)
+	* Esperanto translation updated (Stéphane Fillod)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* Galician translation updated (Frco. Javier Rial Rodríguez)
+	* German translation updated (Jochen Kemnade and Björn Voigt)
+	* Greek translation updated (Bouklis Panos)
+	* Hebrew translation updated (Shalom Craimer)
+	* Italian translation updated (Claudio Satriano)
+	* Khmer translation added (Khoem Sokhem)
+	* Lao translation updated (Anousak Souphavah)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Romanian translation updated (Mişu Moldovan and new translator Andrei
+	  Popescu)
+	* Russian translation updated (Антон Самохвалов)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+	* Swahili translation added (Paul Msegeya)
+	* Swedish translation updated (Peter Hjalmarsson)
+
+version 2.5.9
+	* No changes
+
+version 2.5.8
+	* No changes
+
+version 2.5.7
+	* No changes
+
+version 2.5.6
+	* German translation updated (Björn Vogt)
+
+version 2.5.5
+	* Afrikaans translation updated (Friedel Wolff)
+	* Bengali translation updated (Israt Jahan)
+	* Catalan translation updated (Josep Puigdemont)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Czech translation updated (David Vachulka)
+	* Danish translation updated (Peter Bach)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Jochen Kemnade and Björn Voigt)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Khmer translation added (Khoem Sokhem)
+	* Lithuanian translation updated (Laurynas Biveinis)
+	* Norwegian Bokmål translation updated (Hans Fredrik Nordhaug)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Russian translation updated (Антон Самохвалов)
+	* Serbian translation updated (Miloš Popović)
+	* Serbian Latin translation updated (Miloš Popović)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Swedish translation updated (Peter Hjalmarsson)
+
+version 2.5.4
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Daniël Heres)
+	* Norwegian Bokmål translation updated (Hans Fredrik Nordhaug)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Piotr Makowski)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Антон Самохвалов)
+	* Slovak translation updated (loptosko)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+
+version 2.5.3
+	* Afrikaans translation updated (Friedel Wolff)
+	* Albanian translation updated (Besnik Bleta)
+	* Arabic translation updated (Khaled Hosny)
+	* Bengali translation updated (Israt Jahan)
+	* Catalan translation updated (Josep Puigdemont)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Czech translation updated (David Vachulka)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* Galician translation updated (Frco. Javier Rial Rodríguez)
+	* German translation updated (Jochen Kemnade, Björn Voigt)
+	* Greek translation updated (Bouklis Panos)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Romanian translation updated (Mişu Moldovan)
+	* Serbian translation updated (Miloš Popović)
+	* Serbian Latin translation updated (Miloš Popović)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+	* Valencian-Catalan translation added (Toni Hermoso Pulido)
+
+version 2.5.2
+	* Afrikaans translation updated (Friedel Wolff)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Daniël Heres)
+	* Estonian translation updated (Ivar Smolin)
+	* Finnish translation updated (Timo Jyrinki)
+	* Galician translation updated (Frco. Javier Rial Rodríguez)
+	* German translation updated (Jochen Kemnade, Björn Voigt)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Lithuanian translation updated (Laurynas Biveinis)
+	* Mongolian translation added (gooyo)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Slovak translation updated (Andrej Herceg)
+	* Slovenian translation updated (Martin Srebotnjak)
+
+version 2.5.1
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Daniël Heres)
+	* Galician translation updated (Frco. Javier Rial Rodríguez)
+	* Hebrew translation updated (Shalom Craimer)
+	* Irish translation added (Aaron Kearns)
+	* Italian translation updated (Claudio Satriano)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+
+version 2.5.0
+	* Albanian translation updated (Besnik Bleta)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Czech translation updated (David Vachulka)
+	* Dutch translation updated (Daniël Heres, Hylke Bons)
+	* Estonian translation updated (Ivar Smolin)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Jochen Kemnade, Björn Voigt)
+	* Hebrew translation updated (Shalom Craimer)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Italian translation updated (Claudio Satriano)
+	* Lithuanian translation updated (Laurynas Biveinis)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Romanian translation updated (Mişu Moldovan)
+	* Sinhala translation update (Yajith Ajantha Dayarathna)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+	* Vietnamese translation updated (Clytie Siddall)
+
+version 2.4.2
+	* Afrikaans translation updated (Samuel Murray)
+	* Belarusian Latin translation updated (Ihar Hrachyshka)
+	* Czech translation updated (David Vachulka)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Dutch translation updated (Daniël Heres)
+	* English (British) translation updated (Luke Ross)
+	* Finnish translation updated (Timo Jyrinki)
+	* German translation updated (Björn Voigt)
+	* Hebrew translation updated (Shalom Craimer)
+	* Lithuanian translation updated (Laurynas Biveinis)
+	* Macedonian translation updated (Арангел Ангов)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Occitan translation added (Yannig Marchegay)
+	* Portuguese (Brazilian) translation updated (Rodrigo Luiz
+	  Marques Flores)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Dmitry Beloglazov)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+
+version 2.4.1
+	* Arabic translation updated (Khaled Hosny)
+	* Belarusian Latin translation updated (Ihar Hrachyshka)
+	* Catalan translation updated (Josep Puigdemont)
+	* Czech translation updated (David Vachulka)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Dutch translation updated (Daniël Heres)
+	* Esperanto translation updated (Stéphane Fillod)
+	* Estonian translation updated (Ivar Smolin)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Jochen Kemnade, Björn Voigt)
+	* Hebrew translation updated (Shalom Craimer)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Macedonian translation updated (Арангел Ангов)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Dmitry Beloglazov)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+	* Swedish translation updated (Peter Hjalmarsson)
+
+version 2.4.0
+	* Arabic translation updated (Khaled Hosny)
+	* Belarusian Latin translation updated (Ihar Hrachyshka)
+	* Dutch translation updated (Daniël Heres)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Jochen Kemnade, Björn Voigt)
+	* Greek translation updated (Bouklis Panos)
+	* Hebrew translation updated (Shalom Craimer)
+	* Norwegian Bokmål translation updated (Hallvard Glad, Espen Stefansen)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Polish translation updated (Emil Nowak)
+	* Sinhala translation added (Danishka Navin)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernández-Sanguino)
+	* Vietnamese translation updated (Clytie Siddall)
+
+version 2.3.1
+	* German translation updated (Jochen Kemnade, Björn Voigt)
+
+version 2.3.0
+	* Afrikaans translation added (Friedel Wolff)
+	* Belarusian Latin translation updated (Ihar Hrachyshka)
+	* Catalan translation updated (Josep Puigdemont)
+	* Chinese (Hong Kong) translation updated (Ambrose C. Li)
+	* Chinese (Simplified) translation updated (Funda Wang)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Estonian translation updated (Ivar Smolin)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Jochen Kemnade, Björn Voigt)
+	* Hebrew translation updated (Shalom Craimer)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Indonesian translation updated (Rai S. Regawa)
+	* Italian translation updated (Claudio Satriano)
+	* Korean translation updated (Sushizang)
+	* Norwegian Bokmål translation updated (Hallvard Glad)
+	* Portuguese (Brazilian) translation updated (Mauricio de
+	  L R Collares Neto)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Dmitry Beloglazov)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Swedish translation updated (Peter Hjalmarsson)
+	* Telugu translation updated (RKVS Raman)
+	* Urdu translation added (RKVS Raman)
+
+version 2.2.1
+	* Arabic translation updated (Khaled Hosny)
+	* Italian translation updated (Claudio Satriano)
+	* Lao translation added (Anousak Souphavah)
+	* Norwegian Bokmål translation updated (Espen Stefansen)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Serbian translation updated (Miloš Popović)
+
+version 2.2.0
+	* Basque win32 translation added (Mikel Pascual Aldabaldetreku)
+	* Belarusian Latin translation added (Ihar Hrachyshka)
+	* Czech translation updated (Miloslav Trmac)
+	* English (British) translation updated (Luke Ross)
+	* Estonian translation updated (Ivar Smolin)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* German translation updated (Bjoern Voigt)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Italian translation updated (Claudio Satriano)
+	* Macedonian translation updated (Арангел Ангов)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) translation updated (Mauricio de
+	  L R Collares Neto)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernandez-Sanguino Peña)
+	* Turkish Translation updated (Serdar Soytetir)
+
+version 2.1.1
+	* Afrikaans translation added (Friedel Wolff)
+	* Estonian translation updated (Ivar Smolin)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* Galician translation updated (Frco. Javier Rial Rodríguez)
+	* German translation updated (Bjoern Voigt)
+	* Hebrew translation updated (Shalom Craimer)
+	* Lithuanian translation updated (Laurynas Biveinis)
+	* Macedonian translation updated (Арангел Ангов)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Persian win32 translation added (Elnaz Sarbar)
+	* Polish translation updated (Emil Nowak)
+	* Portuguese (Brazilian) translation updated (Mauricio de
+	  L R Collares Neto)
+	* Russian translation updated (Dmitry Beloglazov)
+	* Slovak translation updated (loptosko)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernandez-Sanguino Peña)
+	* Swedish translation updated (Peter Hjalmarsson)
+
+version 2.1.0
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* Galician translation updated (Mar Castro)
+	* German translation updated (Bjoern Voigt)
+	* German win32 translation updated (Bjoern Voigt)
+	* Hebrew translation updated (Shalom Craimer)
+	* Italian translation updated (Claudio Satriano)
+	* Japanese translation updated (Takeshi Aihana)
+	* Korean translation updated (Sushizang)
+	* Macedonian translation updated (Jovan Naumovski)
+	* Norwegian Nynorsk translation updated (Yngve Spjeld Landro)
+	* Portuguese (Brazilian) win32 translation updated (Mauricio de
+	  L R Collares Neto)
+	* Romanian translation updated (Mişu Moldovan)
+	* Russian translation updated (Dmitry Beloglazov)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernandez-Sanguino Peña)
+	* Swedish translation updated (Peter Hjalmarsson)
+	* Swedish win32 translation updated (Peter Hjalmarsson)
+	* Turkish Translation updated (Serdar Soytetir)
+	* Valencian-Catalan translation added (Toni Hermoso Pulido)
+
+version 2.0.2
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* English (British) translation updated (Luke Ross)
+	* Finnish translation updated (Timo Jyrinki)
+	* Lithuanian translation updated (Laurynas Biveinis)
+	* Portuguese (Brazilian) translation updated (Mauricio de
+	  L R Collares Neto)
+	* Russian translation updated (Dmitry Beloglazov)
+	* Slovenian translation updated (Martin Srebotnjak)
+	* Slovenian win32 installer updated (Martin Srebotnjak)
+
+version 2.0.1
+	* Chinese (Hong Kong) translation added (Ambrose C. Li, Abel Cheung)
+	* Chinese (Simplified) translation updated (Funda Wang)
+	* Chinese (Traditional) translation updated (Ambrose C. Li)
+	* Chinese (Traditional) win32 translation updated (Ambrose C. Li)
+	* Finnish translation updated (Timo Jyrinki)
+	* French translation updated (Éric Boumaour)
+	* French win32 translation updated (Éric Boumaour)
+	* German translation updated (Bjoern Voigt)
+	* German win32 translation updated (Bjoern Voigt)
+	* Greek translation added (snos Bouklis)
+	* Hebrew translation updated (Shalom Craimer)
+	* Hebrew win32 translation updated (Shalom Craimer)
+	* Hungarian translation updated (Gabor Kelemen)
+	* Hungarian win32 installer updated (Gabor Kelemen)
+	* Macedonian translation updated (Арангел Ангов)
+	* Portuguese (Brazilian) translation updated (Mauricio de
+	  L R Collares Neto)
+	* Punjabi translation updated (Amanpreet Singh Alam)
+	* Russian translation updated (Dmitry Beloglazov)
+	* Spanish translation updated (Javier Fernandez-Sanguino Peña)
+	* Turkish Translation updated (Serdar Soytetir)
+
+version 2.0.0 (5/3/2007):
+	* Afrikaans translation added (Friedel Wolff)
+	* Afrikaans win32 translation added (Friedel Wolff)
 	* Albanian translation updated (Besnik Bleta)
 	* Arabic translation added (Mohamed Magdy)
-	* Bengali translation added (INDRANIL DAS GUPTA and Samia Nimatullah)
+	* Bengali translation added (Indranil Das Gupta, Samia Nimatullah,
+	  Tisa Nafisa and Jamil Ahmed)
 	* Bosnian translation added (Lejla Hadzialic)
 	* Bulgarian translation updated (Vladimir "Kaladan" Petkov)
 	* Catalan translation updated (Josep Puigdemont)
 	* Chinese (Simplified) translation updated (Funda Wang)
-	* Chinese (Traditional) translation updated (Paladin R. Liu)
+	* Chinese (Hong Kong) translation added (Paladin R. Liu, Ambrose C. Li)
+	* Chinese (Traditional) translation updated (Paladin R. Liu, Ambrose C. Li)
 	* Czech translation updated (Miloslav Trmac)
-	* Danish translation updated (Morten (mbrix) Brix Pedersen)
+	* Danish translation updated (Morten (mbrix) Brix Pedersen,
+	  Peter Bach)
 	* Dutch translation updated (Roy Spliet, Vincent van Adrighem)
 	* Dzongkha translation added (Wangmo Sherpa, Norbu, Jurmey Rabgay)
 	* English (British) translation updated (Stu Tomlinson and Luke Ross)
@@ -30,17 +701,22 @@ version 2.0.0:
 	* Gujarati translation updated (Ankit Patel)
 	* Hebrew translation updated (Shalom Craimer)
 	* Hungarian translation updated (Gabor Kelemen)
+	* Hungarian win32 installer updated (Gabor Kelemen)
 	* Italian translation updated (Claudio Satriano)
+	* Indonesian translation updated (Rai S. Regawa)
 	* Japanese translation updated (Takeshi Aihana)
+	* Kannada translation added (H P Nadig, Kannada Translation team)
 	* Kurdish translation added (Erdal Ronahi and Amed Ç. Jiyan)
 	* Kurdish win32 installer translation added (Erdal Ronahi)
 	* Lithuanian translation updated (Andrius Štikonas, Laurynas Biveinis)
 	* Lithuanian win32 translation added (Laurynas Biveinis)
 	* Macedonian translation updated (Арангел Ангов)
 	* Nepali translation added (Shyam Krishna Bal)
+	* Norwegian Bokmål translation updated (Hallvard Glad)
+	* Pashto translation added (Kashif Masood)
 	* Persian translation added (Elnaz Sarbar, Meelad Zakaria, Roozbeh
 	  Pournader)
-	* Polish translation updated (Emil Nowak)
+	* Polish translation updated (Emil Nowak, and Paweł Godlewski)
 	* Portuguese translation updated (Duarte Henriques)
 	* Portuguese (Brazilian) translation updated (Rodrigo Torres,  Mauricio de
 	  L R Collares Neto)
@@ -48,8 +724,10 @@ version 2.0.0:
 	* Romanian translation updated (Mişu Moldovan)
 	* Russian translation updated (Dmitry Beloglazov)
 	* Serbian translation updated (Nikola Kotur)
-	* Slovak translation updated (Richard Golier)
+	* Slovak translation updated (Richard Golier, helix84,loptosko,Jozef Káčer)
 	* Slovenian translation updated (Martin Srebotnjak)
+	* Slovenian win32 translation updated (Martin Srebotnjak)
+	* Spanish translation updated (Javier Fernandez-Sanguino Peña)
 	* Spanish gaim.desktop translation updated (Javier Fernandez-Sanguino Peña)	
 	* Swedish translation updated (Peter Hjalmarsson)
 	* Tamil translation updated (Viveka Nathan K)
@@ -255,7 +933,7 @@ version 1.1.2 (1/20/2005):
 	* Danish translation updated (Morten (mbrix) Brix Pedersen)
 	* Dutch translation for gaim.desktop file (Vincent van Adrighem)
 	* Dutch translation updated (Vincent van Adrighem)
-	* English (Australian) transation updated (Peter (Bleeter) Lawler)
+	* English (Australian) translation updated (Peter (Bleeter) Lawler)
 	* English (British) translation updated
 	* English (Canadian) translation updated (Adam Weinberger)
 	* Finnish translation updated (Arto Alakulju)
@@ -335,7 +1013,7 @@ version 1.0.0 (09/17/2004):
 	* Chinese (Traditional) translation updated (Ambrose C. Li)
 	* Danish translation updated (Morten (mbrix) Brix Pedersen)
 	* Dutch translation updated (Vincent van Adrighem)
-	* English (Australian) transation added (Peter (Bleeter) Lawler)
+	* English (Australian) translation added (Peter (Bleeter) Lawler)
 	* English (British) translation updated (Luke (lukeross) Ross)
 	* English (Canadian) translation updated (Adam Weinberger)
 	* Finnish translation updated (Arto Alakulju)

@@ -1,9 +1,9 @@
 /**
  * @file group.c Group functions
  *
- * gaim
+ * purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -19,24 +19,24 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "msn.h"
 #include "group.h"
 
 MsnGroup *
-msn_group_new(MsnUserList *userlist, int id, const char *name)
+msn_group_new(MsnUserList *userlist, const char *id, const char *name)
 {
 	MsnGroup *group;
 
-	g_return_val_if_fail(id >= 0,      NULL);
+	g_return_val_if_fail(id != NULL,      NULL);
 	g_return_val_if_fail(name != NULL, NULL);
 
 	group = g_new0(MsnGroup, 1);
 
 	msn_userlist_add_group(userlist, group);
 
-	group->id      = id;
+	group->id      = g_strdup(id);
 	group->name    = g_strdup(name);
 
 	return group;
@@ -47,17 +47,19 @@ msn_group_destroy(MsnGroup *group)
 {
 	g_return_if_fail(group != NULL);
 
+	g_free(group->id);
 	g_free(group->name);
 	g_free(group);
 }
 
 void
-msn_group_set_id(MsnGroup *group, int id)
+msn_group_set_id(MsnGroup *group, const char *id)
 {
 	g_return_if_fail(group != NULL);
-	g_return_if_fail(id >= 0);
+	g_return_if_fail(id != NULL);
 
-	group->id = id;
+	g_free(group->id);
+	group->id = g_strdup(id);
 }
 
 void
@@ -66,16 +68,14 @@ msn_group_set_name(MsnGroup *group, const char *name)
 	g_return_if_fail(group != NULL);
 	g_return_if_fail(name  != NULL);
 
-	if (group->name != NULL)
-		g_free(group->name);
-
+	g_free(group->name);
 	group->name = g_strdup(name);
 }
 
-int
+char*
 msn_group_get_id(const MsnGroup *group)
 {
-	g_return_val_if_fail(group != NULL, -1);
+	g_return_val_if_fail(group != NULL, NULL);
 
 	return group->id;
 }

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA	02111-1301	USA
  *
  */
 
@@ -211,7 +211,7 @@ void nm_deinitialize_user(NMUser * user);
  *  @param	user		The User to login -- must be initialized
  *	@param	pwd			The password of the user
  *  @param  my_addr		The address of the client machine
- *  @param	user_agent	String describing the client (eg. "Gaim/0.76 (Linux; 2.4.20)")
+ *  @param	user_agent	String describing the client (eg. "Purple/0.76 (Linux; 2.4.20)")
  *	@param	callback	Function to call when we get the response from the server
  *  @param 	data		User defined data to be passed to the callback function
  *
@@ -645,18 +645,6 @@ gboolean nm_user_is_privacy_locked(NMUser *user);
  *
  */
 gboolean nm_are_guids_equal(const char *guid1, const char *guid2);
-
-
-/**
- * Case insensitive compare for utf8 strings
- *
- * @param guid1	First string to compare
- * @param guid2 Second string to compare
- *
- * @return 		-1 if str1 < str2, 0 if str1 = str2, 1 if str1 > str2
- *
- */
-gint nm_utf8_strcasecmp(gconstpointer str1, gconstpointer str2);
 
 /**
  * Compare UTF8 strings for equality only (case insensitive)

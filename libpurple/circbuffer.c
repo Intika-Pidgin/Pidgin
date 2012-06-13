@@ -1,8 +1,9 @@
 /*
  * @file circbuffer.h Buffer Utility Functions
  * @ingroup core
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ */
+
+/* Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -18,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 
@@ -26,24 +27,24 @@
 
 #define DEFAULT_BUF_SIZE 256
 
-GaimCircBuffer *
-gaim_circ_buffer_new(gsize growsize) {
-	GaimCircBuffer *buf = g_new0(GaimCircBuffer, 1);
+PurpleCircBuffer *
+purple_circ_buffer_new(gsize growsize) {
+	PurpleCircBuffer *buf = g_new0(PurpleCircBuffer, 1);
 	buf->growsize = growsize ? growsize : DEFAULT_BUF_SIZE;
 	return buf;
 }
 
-void gaim_circ_buffer_destroy(GaimCircBuffer *buf) {
+void purple_circ_buffer_destroy(PurpleCircBuffer *buf) {
 	g_return_if_fail(buf != NULL);
 
 	g_free(buf->buffer);
 	g_free(buf);
 }
 
-static void grow_circ_buffer(GaimCircBuffer *buf, gsize len) {
+static void grow_circ_buffer(PurpleCircBuffer *buf, gsize len) {
 	int in_offset = 0, out_offset = 0;
 	int start_buflen;
-	
+
 	g_return_if_fail(buf != NULL);
 
 	start_buflen = buf->buflen;
@@ -67,7 +68,8 @@ static void grow_circ_buffer(GaimCircBuffer *buf, gsize len) {
 
 	/* If the fill pointer is wrapped to before the remove
 	 * pointer, we need to shift the data */
-	if (in_offset < out_offset) {
+	if (in_offset < out_offset
+			|| (in_offset == out_offset && buf->bufused > 0)) {
 		int shift_n = MIN(buf->buflen - start_buflen,
 			in_offset);
 		memcpy(buf->buffer + start_buflen, buf->buffer,
@@ -88,12 +90,12 @@ static void grow_circ_buffer(GaimCircBuffer *buf, gsize len) {
 	}
 }
 
-void gaim_circ_buffer_append(GaimCircBuffer *buf, gconstpointer src, gsize len) {
+void purple_circ_buffer_append(PurpleCircBuffer *buf, gconstpointer src, gsize len) {
 
 	int len_stored;
 
 	g_return_if_fail(buf != NULL);
-	
+
 	/* Grow the buffer, if necessary */
 	if ((buf->buflen - buf->bufused) < len)
 		grow_circ_buffer(buf, len);
@@ -108,13 +110,12 @@ void gaim_circ_buffer_append(GaimCircBuffer *buf, gconstpointer src, gsize len) 
 	else
 		len_stored = len;
 
-	memcpy(buf->inptr, src, len_stored);
+	if (len_stored > 0)
+		memcpy(buf->inptr, src, len_stored);
 
 	if (len_stored < len) {
 		memcpy(buf->buffer, (char*)src + len_stored, len - len_stored);
 		buf->inptr = buf->buffer + (len - len_stored);
-	} else if ((buf->buffer - buf->inptr) == len_stored) {
-		buf->inptr = buf->buffer;
 	} else {
 		buf->inptr += len_stored;
 	}
@@ -122,8 +123,8 @@ void gaim_circ_buffer_append(GaimCircBuffer *buf, gconstpointer src, gsize len) 
 	buf->bufused += len;
 }
 
-gsize gaim_circ_buffer_get_max_read(GaimCircBuffer *buf) {
-	int max_read;
+gsize purple_circ_buffer_get_max_read(const PurpleCircBuffer *buf) {
+	gsize max_read;
 
 	g_return_val_if_fail(buf != NULL, 0);
 
@@ -137,9 +138,9 @@ gsize gaim_circ_buffer_get_max_read(GaimCircBuffer *buf) {
 	return max_read;
 }
 
-gboolean gaim_circ_buffer_mark_read(GaimCircBuffer *buf, gsize len) {
+gboolean purple_circ_buffer_mark_read(PurpleCircBuffer *buf, gsize len) {
 	g_return_val_if_fail(buf != NULL, FALSE);
-	g_return_val_if_fail(gaim_circ_buffer_get_max_read(buf) >= len, FALSE);
+	g_return_val_if_fail(purple_circ_buffer_get_max_read(buf) >= len, FALSE);
 
 	buf->outptr += len;
 	buf->bufused -= len;

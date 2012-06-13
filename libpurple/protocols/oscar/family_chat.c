@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -41,76 +41,10 @@ flap_connection_destroy_chat(OscarData *od, FlapConnection *conn)
 	struct chatconnpriv *ccp = (struct chatconnpriv *)conn->internal;
 
 	if (ccp)
-		free(ccp->name);
-	free(ccp);
+		g_free(ccp->name);
+	g_free(ccp);
 
 	return;
-}
-
-char *
-aim_chat_getname(FlapConnection *conn)
-{
-	struct chatconnpriv *ccp;
-
-	if (!conn)
-		return NULL;
-
-	if (conn->type != SNAC_FAMILY_CHAT)
-		return NULL;
-
-	ccp = (struct chatconnpriv *)conn->internal;
-
-	return ccp->name;
-}
-
-/* XXX get this into conn.c -- evil!! */
-FlapConnection *
-aim_chat_getconn(OscarData *od, const char *name)
-{
-	GSList *cur;
-
-	for (cur = od->oscar_connections; cur; cur = cur->next)
-	{
-		FlapConnection *conn;
-		struct chatconnpriv *ccp;
-
-		conn = cur->data;
-		ccp = (struct chatconnpriv *)conn->internal;
-
-		if (conn->type != SNAC_FAMILY_CHAT)
-			continue;
-		if (!conn->internal) {
-			gaim_debug_misc("oscar", "faim: chat: chat connection with no name! (fd = %d)\n", conn->fd);
-			continue;
-		}
-
-		if (strcmp(ccp->name, name) == 0)
-			return conn;;
-	}
-
-	return NULL;
-}
-
-int
-aim_chat_attachname(FlapConnection *conn, guint16 exchange, const char *roomname, guint16 instance)
-{
-	struct chatconnpriv *ccp;
-
-	if (!conn || !roomname)
-		return -EINVAL;
-
-	if (conn->internal)
-		free(conn->internal);
-
-	ccp = g_new(struct chatconnpriv, 1);
-
-	ccp->exchange = exchange;
-	ccp->name = strdup(roomname);
-	ccp->instance = instance;
-
-	conn->internal = (void *)ccp;
-
-	return 0;
 }
 
 int
@@ -127,19 +61,6 @@ aim_chat_readroominfo(ByteStream *bs, struct aim_chat_roominfo *outinfo)
 	return 0;
 }
 
-int
-aim_chat_leaveroom(OscarData *od, const char *name)
-{
-	FlapConnection *conn;
-
-	if (!(conn = aim_chat_getconn(od, name)))
-		return -ENOENT;
-
-	flap_connection_close(od, conn);
-
-	return 0;
-}
-
 /*
  * Subtype 0x0002 - General room information.  Lots of stuff.
  *
@@ -151,32 +72,23 @@ aim_chat_leaveroom(OscarData *od, const char *name)
 static int
 infoupdate(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
-	aim_userinfo_t *userinfo = NULL;
 	aim_rxcallback_t userfunc;
 	int ret = 0;
-	int usercount;
 	guint8 detaillevel = 0;
-	char *roomname;
 	struct aim_chat_roominfo roominfo;
-	guint16 tlvcount = 0;
-	aim_tlvlist_t *tlvlist;
-	aim_tlv_t *tlv;
-	char *roomdesc;
-	guint16 flags;
-	guint32 creationtime;
+	GSList *tlvlist;
 	guint16 maxmsglen, maxvisiblemsglen;
-	guint16 unknown_d2, unknown_d5;
 
 	aim_chat_readroominfo(bs, &roominfo);
 
 	detaillevel = byte_stream_get8(bs);
 
 	if (detaillevel != 0x02) {
-		gaim_debug_misc("oscar", "faim: chat_roomupdateinfo: detail level %d not supported\n", detaillevel);
+		purple_debug_misc("oscar", "faim: chat_roomupdateinfo: detail level %d not supported\n", detaillevel);
 		return 1;
 	}
 
-	tlvcount = byte_stream_get16(bs);
+	byte_stream_get16(bs); /* skip the TLV count */
 
 	/*
 	 * Everything else are TLVs.
@@ -184,101 +96,9 @@ infoupdate(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fr
 	tlvlist = aim_tlvlist_read(bs);
 
 	/*
-	 * TLV type 0x006a is the room name in Human Readable Form.
-	 */
-	roomname = aim_tlv_getstr(tlvlist, 0x006a, 1);
-
-	/*
-	 * Type 0x006f: Number of occupants.
-	 */
-	usercount = aim_tlv_get16(tlvlist, 0x006f, 1);
-
-	/*
-	 * Type 0x0073:  Occupant list.
-	 */
-	tlv = aim_tlv_gettlv(tlvlist, 0x0073, 1);
-	if (tlv != NULL)
-	{
-		int curoccupant = 0;
-		ByteStream occbs;
-
-		/* Allocate enough userinfo structs for all occupants */
-		userinfo = calloc(usercount, sizeof(aim_userinfo_t));
-
-		byte_stream_init(&occbs, tlv->value, tlv->length);
-
-		while (curoccupant < usercount)
-			aim_info_extract(od, &occbs, &userinfo[curoccupant++]);
-	}
-
-	/*
-	 * Type 0x00c9: Flags. (AIM_CHATROOM_FLAG)
-	 */
-	flags = aim_tlv_get16(tlvlist, 0x00c9, 1);
-
-	/*
-	 * Type 0x00ca: Creation time (4 bytes)
-	 */
-	creationtime = aim_tlv_get32(tlvlist, 0x00ca, 1);
-
-	/*
 	 * Type 0x00d1: Maximum Message Length
 	 */
 	maxmsglen = aim_tlv_get16(tlvlist, 0x00d1, 1);
-
-	/*
-	 * Type 0x00d2: Unknown. (2 bytes)
-	 */
-	unknown_d2 = aim_tlv_get16(tlvlist, 0x00d2, 1);
-
-	/*
-	 * Type 0x00d3: Room Description
-	 */
-	roomdesc = aim_tlv_getstr(tlvlist, 0x00d3, 1);
-
-#if 0
-	/*
-	 * Type 0x000d4: Unknown (flag only)
-	 */
-	if (aim_tlv_gettlv(tlvlist, 0x000d4, 1)) {
-		/* Unhandled */
-	}
-#endif
-
-	/*
-	 * Type 0x00d5: Unknown. (1 byte)
-	 */
-	unknown_d5 = aim_tlv_get8(tlvlist, 0x00d5, 1);
-
-#if 0
-	/*
-	 * Type 0x00d6: Encoding 1 ("us-ascii")
-	 */
-	if (aim_tlv_gettlv(tlvlist, 0x000d6, 1)) {
-		/* Unhandled */
-	}
-
-	/*
-	 * Type 0x00d7: Language 1 ("en")
-	 */
-	if (aim_tlv_gettlv(tlvlist, 0x000d7, 1)) {
-		/* Unhandled */
-	}
-
-	/*
-	 * Type 0x00d8: Encoding 2 ("us-ascii")
-	 */
-	if (aim_tlv_gettlv(tlvlist, 0x000d8, 1)) {
-		/* Unhandled */
-	}
-
-	/*
-	 * Type 0x00d9: Language 2 ("en")
-	 */
-	if (aim_tlv_gettlv(tlvlist, 0x000d9, 1)) {
-		/* Unhandled */
-	}
-#endif
 
 	/*
 	 * Type 0x00da: Maximum visible message length
@@ -286,30 +106,12 @@ infoupdate(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fr
 	maxvisiblemsglen = aim_tlv_get16(tlvlist, 0x00da, 1);
 
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype))) {
-		ret = userfunc(od, conn,
-				frame,
-				&roominfo,
-				roomname,
-				usercount,
-				userinfo,
-				roomdesc,
-				flags,
-				creationtime,
-				maxmsglen,
-				unknown_d2,
-				unknown_d5,
-				maxvisiblemsglen);
+		ret = userfunc(od, conn, frame, maxmsglen, maxvisiblemsglen);
 	}
 
-	free(roominfo.name);
+	g_free(roominfo.name);
 
-	while (usercount > 0)
-		aim_info_free(&userinfo[--usercount]);
-
-	free(userinfo);
-	free(roomname);
-	free(roomdesc);
-	aim_tlvlist_free(&tlvlist);
+	aim_tlvlist_free(tlvlist);
 
 	return ret;
 }
@@ -322,9 +124,9 @@ userlistchange(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame
 	aim_rxcallback_t userfunc;
 	int curcount = 0, ret = 0;
 
-	while (byte_stream_empty(bs)) {
+	while (byte_stream_bytes_left(bs)) {
 		curcount++;
-		userinfo = realloc(userinfo, curcount * sizeof(aim_userinfo_t));
+		userinfo = g_realloc(userinfo, curcount * sizeof(aim_userinfo_t));
 		aim_info_extract(od, bs, &userinfo[curcount-1]);
 	}
 
@@ -332,7 +134,7 @@ userlistchange(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame
 		ret = userfunc(od, conn, frame, curcount, userinfo);
 
 	aim_info_free(userinfo);
-	free(userinfo);
+	g_free(userinfo);
 
 	return ret;
 }
@@ -353,19 +155,18 @@ int
 aim_chat_send_im(OscarData *od, FlapConnection *conn, guint16 flags, const gchar *msg, int msglen, const char *encoding, const char *language)
 {
 	int i;
-	FlapFrame *frame;
+	ByteStream bs;
 	IcbmCookie *cookie;
 	aim_snacid_t snacid;
 	guint8 ckstr[8];
-	aim_tlvlist_t *tlvlist = NULL, *inner_tlvlist = NULL;
+	GSList *tlvlist = NULL, *inner_tlvlist = NULL;
 
 	if (!od || !conn || !msg || (msglen <= 0))
 		return 0;
 
-	frame = flap_frame_new(od, 0x02, 1152);
+	byte_stream_new(&bs, 1142);
 
-	snacid = aim_cachesnac(od, 0x000e, 0x0005, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x000e, 0x0005, 0x0000, snacid);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_CHAT, 0x0005, 0x0000, NULL, 0);
 
 	/*
 	 * Cookie
@@ -382,8 +183,8 @@ aim_chat_send_im(OscarData *od, FlapConnection *conn, guint16 flags, const gchar
 	aim_cachecookie(od, cookie);
 
 	/* ICBM Header */
-	byte_stream_putraw(&frame->data, ckstr, 8); /* Cookie */
-	byte_stream_put16(&frame->data, 0x0003); /* Channel */
+	byte_stream_putraw(&bs, ckstr, 8); /* Cookie */
+	byte_stream_put16(&bs, 0x0003); /* Channel */
 
 	/*
 	 * Type 1: Flag meaning this message is destined to the room.
@@ -428,12 +229,14 @@ aim_chat_send_im(OscarData *od, FlapConnection *conn, guint16 flags, const gchar
 	 */
 	aim_tlvlist_add_frozentlvlist(&tlvlist, 0x0005, &inner_tlvlist);
 
-	aim_tlvlist_write(&frame->data, &tlvlist);
+	aim_tlvlist_write(&bs, &tlvlist);
 
-	aim_tlvlist_free(&inner_tlvlist);
-	aim_tlvlist_free(&tlvlist);
+	aim_tlvlist_free(inner_tlvlist);
+	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_CHAT, 0x0005, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -471,7 +274,7 @@ incomingim_ch3(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame
 	aim_userinfo_t userinfo;
 	guint8 cookie[8];
 	guint16 channel;
-	aim_tlvlist_t *tlvlist;
+	GSList *tlvlist;
 	char *msg = NULL;
 	int len = 0;
 	char *encoding = NULL, *language = NULL;
@@ -488,8 +291,8 @@ incomingim_ch3(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame
 		cookie[i] = byte_stream_get8(bs);
 
 	if ((ck = aim_uncachecookie(od, cookie, AIM_COOKIETYPE_CHAT))) {
-		free(ck->data);
-		free(ck);
+		g_free(ck->data);
+		g_free(ck);
 	}
 
 	/*
@@ -501,7 +304,7 @@ incomingim_ch3(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame
 	channel = byte_stream_get16(bs);
 
 	if (channel != 0x0003) {
-		gaim_debug_misc("oscar", "faim: chat_incoming: unknown channel! (0x%04x)\n", channel);
+		purple_debug_misc("oscar", "faim: chat_incoming: unknown channel! (0x%04x)\n", channel);
 		return 0;
 	}
 
@@ -520,23 +323,13 @@ incomingim_ch3(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame
 		aim_info_extract(od, &tbs, &userinfo);
 	}
 
-#if 0
-	/*
-	 * Type 0x0001: If present, it means it was a message to the
-	 * room (as opposed to a whisper).
-	 */
-	if (aim_tlv_gettlv(tlvlist, 0x0001, 1)) {
-		/* Unhandled */
-	}
-#endif
-
 	/*
 	 * Type 0x0005: Message Block.  Conains more TLVs.
 	 */
 	tlv = aim_tlv_gettlv(tlvlist, 0x0005, 1);
 	if (tlv != NULL)
 	{
-		aim_tlvlist_t *inner_tlvlist;
+		GSList *inner_tlvlist;
 		aim_tlv_t *inner_tlv;
 
 		byte_stream_init(&tbs, tlv->value, tlv->length);
@@ -562,17 +355,17 @@ incomingim_ch3(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame
 		 */
 		language = aim_tlv_getstr(inner_tlvlist, 0x0003, 1);
 
-		aim_tlvlist_free(&inner_tlvlist);
+		aim_tlvlist_free(inner_tlvlist);
 	}
 
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
 		ret = userfunc(od, conn, frame, &userinfo, len, msg, encoding, language);
 
 	aim_info_free(&userinfo);
-	free(msg);
-	free(encoding);
-	free(language);
-	aim_tlvlist_free(&tlvlist);
+	g_free(msg);
+	g_free(encoding);
+	g_free(language);
+	aim_tlvlist_free(tlvlist);
 
 	return ret;
 }
@@ -593,7 +386,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 chat_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x000e;
+	mod->family = SNAC_FAMILY_CHAT;
 	mod->version = 0x0001;
 	mod->toolid = 0x0010;
 	mod->toolversion = 0x0629;
