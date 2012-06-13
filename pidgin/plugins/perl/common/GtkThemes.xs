@@ -1,28 +1,28 @@
 #include "gtkmodule.h"
 
-MODULE = Gaim::GtkUI::Themes  PACKAGE = Gaim::GtkUI::Themes  PREFIX = gaim_gtkthemes_
+MODULE = Pidgin::Themes  PACKAGE = Pidgin::Themes  PREFIX = pidgin_themes_
 PROTOTYPES: ENABLE
 
 void
-gaim_gtkthemes_init()
+pidgin_themes_init()
 
 gboolean
-gaim_gtkthemes_smileys_disabled()
+pidgin_themes_smileys_disabled()
 
 void
-gaim_gtkthemes_smiley_theme_probe()
+pidgin_themes_smiley_theme_probe()
 
 void
-gaim_gtkthemes_load_smiley_theme(file, load)
+pidgin_themes_load_smiley_theme(file, load)
 	const char * file
 	gboolean load
 
 void
-gaim_gtkthemes_get_proto_smileys(id)
+pidgin_themes_get_proto_smileys(id)
 	const char * id
 PREINIT:
 	GSList *l;
 PPCODE:
-	for (l = gaim_gtkthemes_get_proto_smileys(id); l != NULL; l = l->next) {
-		XPUSHs(sv_2mortal(gaim_perl_bless_object(l->data, "Gaim::GtkUI::IMHtml::Smiley")));
+	for (l = pidgin_themes_get_proto_smileys(id); l != NULL; l = l->next) {
+		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Pidgin::IMHtml::Smiley")));
 	}

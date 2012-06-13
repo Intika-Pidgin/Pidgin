@@ -1,10 +1,11 @@
 /**
  * @file gtkpluginpref.h GTK+ Plugin Preferences
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,30 +21,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _GAIM_GTKPLUGINPREF_H_
-#define _GAIM_GTKPLUGINPREF_H_
+#ifndef _PIDGINPLUGINPREF_H_
+#define _PIDGINPLUGINPREF_H_
 
 #include "pluginpref.h"
 
-#include "gtkgaim.h"
+#include "pidgin.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**
- * Creates a Gtk Preference frame for a GaimPluginPrefFrame
+ * Creates a Gtk Preference frame for a PurplePluginPrefFrame
  *
- * @param frame GaimPluginPrefFrame
+ * @param frame PurplePluginPrefFrame
  * @return The gtk preference frame
  */
-GtkWidget *gaim_gtk_plugin_pref_create_frame(GaimPluginPrefFrame *frame);
+GtkWidget *pidgin_plugin_pref_create_frame(PurplePluginPrefFrame *frame);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
-#endif /* _GAIM_GTKPLUGINPREF_H_ */
+#endif /* _PIDGINPLUGINPREF_H_ */

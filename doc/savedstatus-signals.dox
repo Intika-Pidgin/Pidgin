@@ -4,15 +4,17 @@
   @signal savedstatus-changed
  @endsignals
 
+ @see savedstatus.h
+
  <hr>
 
  @signaldef savedstatus-changed
   @signalproto
-void (*savedstatus_changed)(GaimSavedStatus *new, GaimSavedStatus *old);
+void (*savedstatus_changed)(PurpleSavedStatus *new, PurpleSavedStatus *old);
   @endsignalproto
   @signaldesc
    Emitted when a new saved status is activated.
  @endsignaldef
 
  */
-// vim: syntax=c tw=75 et
+// vim: syntax=c.doxygen tw=75 et

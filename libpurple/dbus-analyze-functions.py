@@ -2,9 +2,8 @@ import re
 import string
 import sys
 
-
 # types translated into "int"
-simpletypes = ["int", "gint", "guint", "gboolean"]
+simpletypes = ["int", "gint", "guint", "gboolean", "size_t", "gssize", "time_t"]
 
 # List "excluded" contains functions that shouldn't be exported via
 # DBus.  If you remove a function from this list, please make sure
@@ -14,32 +13,86 @@ simpletypes = ["int", "gint", "guint", "gboolean"]
 excluded = [\
     # I don't remember why this function is excluded; something to do
     # with the fact that it takes a (const) GList as a parameter.
-    "gaim_presence_add_list",
+    "purple_presence_add_list",
 
     # These functions are excluded because they involve value of the
-    # type GaimConvPlacementFunc, which is a pointer to a function and
+    # type PurpleConvPlacementFunc, which is a pointer to a function and
     # (currently?) can't be translated into a DBus type.  Normally,
     # functions with untranslatable types are skipped, but this script
-    # assumes that all non-pointer type names beginning with "Gaim"
+    # assumes that all non-pointer type names beginning with "Purple"
     # are enums, which is not true in this case.
-    "gaim_conv_placement_add_fnc",
-    "gaim_conv_placement_get_fnc",
-    "gaim_conv_placement_get_current_func",
-    "gaim_conv_placement_set_current_func",
+    "purple_conv_placement_add_fnc",
+    "purple_conv_placement_get_fnc",
+    "purple_conv_placement_get_current_func",
+    "purple_conv_placement_set_current_func",
 
-    # This is excluded because this script treats GaimLogReadFlags*
+    # Similar to the above:
+    "purple_account_set_register_callback",
+    "purple_account_unregister",
+
+    # Similar to the above, again
+    "purple_menu_action_new",
+    "purple_menu_action_set_callback",
+    "purple_menu_action_get_callback",
+
+    # These functions are excluded because they involve setting arbitrary
+    # data via pointers for protocols and UIs.  This just won't work.
+    "purple_blist_get_ui_data",
+    "purple_blist_set_ui_data",
+    "purple_blist_node_get_ui_data",
+    "purple_blist_node_set_ui_data",
+    "purple_buddy_get_protocol_data",
+    "purple_buddy_set_protocol_data",
+
+    # This is excluded because this script treats PurpleLogReadFlags*
     # as pointer to a struct, instead of a pointer to an enum.  This
     # causes a compilation error. Someone should fix this script.
-    "gaim_log_read",
+    "purple_log_read",
     ]
 
-# This is a list of functions that return a GList* whose elements are
-# string, not pointers to objects.  Don't put any functions here, it
-# won't work.
-stringlists = []
+# This is a list of functions that return a GList* or GSList * whose elements
+# are strings, not pointers to objects.
+stringlists = [
+    "purple_prefs_get_path_list",
+    "purple_prefs_get_string_list",
+    "purple_uri_list_extract_filenames",
+    "purple_uri_list_extract_uris",
+    "purple_prefs_get_children_names",
+]
+
+# This is a list of functions that return a GList* or GSList* that should
+# not be freed.  Ideally, this information should be obtained from the Doxygen
+# documentation at some point.
+constlists = [
+    "purple_account_get_status_types",
+    "purple_accounts_get_all",
+    "purple_account_option_get_list",
+    "purple_connections_get_all",
+    "purple_connections_get_connecting",
+    "purple_get_conversations",
+    "purple_get_ims",
+    "purple_get_chats",
+    "purple_conv_chat_get_users",
+    "purple_conv_chat_get_ignored",
+    "purple_mime_document_get_fields",
+    "purple_mime_document_get_parts",
+    "purple_mime_part_get_fields",
+    "purple_notify_user_info_get_entries",
+    "purple_request_fields_get_required",
+    "purple_request_field_list_get_selected",
+    "purple_request_field_list_get_items",
+    "purple_savedstatuses_get_all",
+    "purple_status_type_get_attrs",
+    "purple_presence_get_statuses",
+    "purple_conversation_get_message_history",
+]
 
 pointer = "#pointer#"
-myexception = "My Exception"
+
+class MyException(Exception):
+    pass
+
+myexception = MyException()
 
 def ctopascal(name):
     newname = ""
@@ -77,7 +130,7 @@ class Binding:
             self.params.append(Parameter.fromtokens(paramtexts[i].split(), i))
 
         self.call = "%s(%s)" % (self.function.name,
-                                ", ".join([param.name for param in self.params]))
+                                ", ".join(param.name for param in self.params))
         
     
     def process(self):
@@ -90,21 +143,26 @@ class Binding:
 
     def processinput(self, type, name):
         const = False
+        unsigned = False
         if type[0] == "const":
             type = type[1:]
             const = True
 
+        if type[0] == "unsigned":
+            type = type[1:]
+            unsigned = True
+
         if len(type) == 1:
             # simple types (int, gboolean, etc.) and enums
-            if (type[0] in simpletypes) or (type[0].startswith("Gaim")):
-                return self.inputsimple(type, name)
+            if (type[0] in simpletypes) or ((type[0].startswith("Purple") and not type[0].endswith("Callback"))):
+                return self.inputsimple(type, name, unsigned)
 
         # pointers ... 
         if (len(type) == 2) and (type[1] == pointer):
             # strings
-            if type[0] == "char":
+            if type[0] in ["char", "gchar"]:
                 if const:
-                    return self.inputstring(type, name)
+                    return self.inputstring(type, name, unsigned)
                 else:
                     raise myexception
 
@@ -112,45 +170,57 @@ class Binding:
                 return self.inputhash(type, name)
                 
             # known object types are transformed to integer handles
-            elif type[0].startswith("Gaim") or type[0] == "xmlnode":
-                return self.inputgaimstructure(type, name)
+            elif type[0].startswith("Purple") or type[0] == "xmlnode":
+                return self.inputpurplestructure(type, name)
 
+            # special case for *_get_data functions, be careful here...
+            elif (type[0] == "size_t" or type[0] == "gsize") and name == "len":
+                return self.inputgetdata(type, name)
+            
             # unknown pointers are always replaced with NULL
             else:
                 return self.inputpointer(type, name)
-                return
 
         raise myexception
 
    
     def processoutput(self, type, name):
+        const = False
+        unsigned = False
         # the "void" type is simple ...
         if type == ["void"]:
             return self.outputvoid(type, name)
 
-        const = False
         if type[0] == "const":
             type = type[1:]
             const = True
 
+        if type[0] == "unsigned":
+            type = type[1:]
+            unsigned = True
+
         # a string
-        if type == ["char", pointer]:
+        if type == ["char", pointer] or type == ["gchar", pointer]:
             return self.outputstring(type, name, const)
 
         # simple types (ints, booleans, enums, ...)
         if (len(type) == 1) and \
-               ((type[0] in simpletypes) or (type[0].startswith("Gaim"))):
-            return self.outputsimple(type, name)
+               ((type[0] in simpletypes) or (type[0].startswith("Purple"))):
+            return self.outputsimple(type, name, unsigned)
 
         # pointers ...
         if (len(type) == 2) and (type[1] == pointer):
 
             # handles
-            if type[0].startswith("Gaim"):
-                return self.outputgaimstructure(type, name)
+            if type[0].startswith("Purple"):
+                return self.outputpurplestructure(type, name)
 
             if type[0] in ["GList", "GSList"]:
                 return self.outputlist(type, name)
+
+        # Special case for *_get_data functions
+        if type[0] == "gconstpointer":
+            return self.outputgetdata(type, name)
 
         raise myexception
     
@@ -167,8 +237,11 @@ class ClientBinding (Binding):
         self.returncode = []
 
     def flush(self):
+        paramslist = ", ".join(self.paramshdr)
+        if (paramslist == "") :
+            paramslist = "void"
         print "%s %s(%s)" % (self.functiontype, self.function.name,
-                             ", ".join(self.paramshdr)),
+                             paramslist),
 
         if self.headersonly:
             print ";"
@@ -179,7 +252,7 @@ class ClientBinding (Binding):
         for decl in self.decls:
             print decl
 
-        print 'dbus_g_proxy_call(gaim_proxy, "%s", NULL,' % ctopascal(self.function.name)
+        print 'dbus_g_proxy_call(purple_proxy, "%s", NULL,' % ctopascal(self.function.name)
         
         for type_name in self.inputparams:
             print "\t%s, %s, " % type_name,
@@ -195,24 +268,30 @@ class ClientBinding (Binding):
         print "}\n"
         
 
-    def definegaimstructure(self, type):
+    def definepurplestructure(self, type):
         if (self.headersonly) and (type[0] not in self.knowntypes):
             print "struct _%s;" % type[0]
             print "typedef struct _%s %s;" % (type[0], type[0])
             self.knowntypes.append(type[0])
 
-    def inputsimple(self, type, name):
+    def inputsimple(self, type, name, us):
         self.paramshdr.append("%s %s" % (type[0], name))
-        self.inputparams.append(("G_TYPE_INT", name))
+        if us:
+            self.inputparams.append(("G_TYPE_UINT", name))
+        else:
+            self.inputparams.append(("G_TYPE_INT", name))
 
-    def inputstring(self, type, name):
-        self.paramshdr.append("const char *%s" % name)
+    def inputstring(self, type, name, us):
+        if us:
+            self.paramshdr.append("const unsigned char *%s" % name)
+        else:
+            self.paramshdr.append("const char *%s" % name)
         self.inputparams.append(("G_TYPE_STRING", name))
         
-    def inputgaimstructure(self, type, name):
+    def inputpurplestructure(self, type, name):
         self.paramshdr.append("const %s *%s" % (type[0], name))
         self.inputparams.append(("G_TYPE_INT", "GPOINTER_TO_INT(%s)" % name))
-        self.definegaimstructure(type)
+        self.definepurplestructure(type)
 
     def inputpointer(self, type, name):
         name += "_NULL"
@@ -233,21 +312,24 @@ class ClientBinding (Binding):
 #        self.returncode.append("NULLIFY(%s);" % name)
         self.returncode.append("return %s;" % name);
 
-    def outputsimple(self, type, name):
+    def outputsimple(self, type, name, us):
         self.functiontype = type[0]
         self.decls.append("%s %s = 0;" % (type[0], name))
-        self.outputparams.append(("G_TYPE_INT", name))
+        if us:
+            self.outputparams.append(("G_TYPE_UINT", name))
+        else:
+            self.outputparams.append(("G_TYPE_INT", name))
         self.returncode.append("return %s;" % name);
 
     # we could add "const" to the return type but this would probably
     # be a nuisance
-    def outputgaimstructure(self, type, name):
+    def outputpurplestructure(self, type, name):
         name = name + "_ID"
         self.functiontype = "%s*" % type[0]
         self.decls.append("int %s = 0;" % name)
         self.outputparams.append(("G_TYPE_INT", "%s" % name))
         self.returncode.append("return (%s*) GINT_TO_POINTER(%s);" % (type[0], name));
-        self.definegaimstructure(type)
+        self.definepurplestructure(type)
 
     def outputlist(self, type, name):
         self.functiontype = "%s*" % type[0]
@@ -256,7 +338,13 @@ class ClientBinding (Binding):
         self.returncode.append("return garray_int_to_%s(%s);" %
                                (type[0].lower(), name));
 
- 
+    # Special case for *_get_data functions, don't need client bindings,
+    #  but do need the name so it doesn't crash
+    def inputgetdata(self, type, name):
+        raise myexception
+    def outputgetdata(self, type, name):
+        raise myexception
+
 class ServerBinding (Binding):
     def __init__(self, functiontext, paramtexts):
         Binding.__init__(self, functiontext, paramtexts)
@@ -278,7 +366,7 @@ class ServerBinding (Binding):
         for decl in self.cdecls:
             print decl
 
-        print "\t%s(message_DBUS, error_DBUS, " % self.argfunc,
+        print "\t%s(message_DBUS, error_DBUS," % self.argfunc,
         for param in self.cparams:
             print "DBUS_TYPE_%s, &%s," % param,
         print "DBUS_TYPE_INVALID);"
@@ -288,14 +376,14 @@ class ServerBinding (Binding):
         for code in self.ccode:
             print code
 
-        print "\treply_DBUS =  dbus_message_new_method_return (message_DBUS);"
+        print "\treply_DBUS = dbus_message_new_method_return (message_DBUS);"
 
-        print "\tdbus_message_append_args(reply_DBUS, ",
+        print "\tdbus_message_append_args(reply_DBUS,",
         for param in self.cparamsout:
             if type(param) is str:
-                print "%s, " % param
+                print "%s," % param,
             else:
-                print "DBUS_TYPE_%s, &%s, " % param,
+                print "DBUS_TYPE_%s, &%s," % param,
         print "DBUS_TYPE_INVALID);"
 
         for code in self.ccodeout:
@@ -317,33 +405,41 @@ class ServerBinding (Binding):
 
     # input parameters
 
-    def inputsimple(self, type, name):
-        self.cdecls.append("\tdbus_int32_t %s;" % name)
-        self.cparams.append(("INT32", name))
-        self.addintype("i", name)
+    def inputsimple(self, type, name, us):
+        if us:
+            self.cdecls.append("\tdbus_uint32_t %s;" % name)
+            self.cparams.append(("UINT32", name))
+            self.addintype("u", name)
+        else:
+            self.cdecls.append("\tdbus_int32_t %s;" % name)
+            self.cparams.append(("INT32", name))
+            self.addintype("i", name)
 
-    def inputstring(self, type, name):
-        self.cdecls.append("\tconst char *%s;" % name)
+    def inputstring(self, type, name, us):
+        if us:
+            self.cdecls.append("\tconst unsigned char *%s;" % name)
+        else:
+            self.cdecls.append("\tconst char *%s;" % name)
         self.cparams.append(("STRING", name))
-        self.ccode  .append("\tNULLIFY(%s);" % name)
+        self.ccode.append("\t%s = (%s && %s[0]) ? %s : NULL;" % (name,name,name,name))
         self.addintype("s", name)
 
     def inputhash(self, type, name):
-        self.argfunc = "gaim_dbus_message_get_args"
+        self.argfunc = "purple_dbus_message_get_args"
         self.cdecls.append("\tDBusMessageIter %s_ITER;" % name)
         self.cdecls.append("\tGHashTable *%s;" % name)
         self.cparams.append(("ARRAY", "%s_ITER" % name))
-        self.ccode.append("\t%s = gaim_dbus_iter_hash_table(&%s_ITER, error_DBUS);" \
+        self.ccode.append("\t%s = purple_dbus_iter_hash_table(&%s_ITER, error_DBUS);" \
                      % (name, name))
         self.ccode.append("\tCHECK_ERROR(error_DBUS);")
         self.ccodeout.append("\tg_hash_table_destroy(%s);" % name)
         self.addintype("a{ss}", name)
 
-    def inputgaimstructure(self, type, name):
+    def inputpurplestructure(self, type, name):
         self.cdecls.append("\tdbus_int32_t %s_ID;" %  name)
         self.cdecls.append("\t%s *%s;" % (type[0], name))
         self.cparams.append(("INT32", name + "_ID"))
-        self.ccode.append("\tGAIM_DBUS_ID_TO_POINTER(%s, %s_ID, %s, error_DBUS);"  % \
+        self.ccode.append("\tPURPLE_DBUS_ID_TO_POINTER(%s, %s_ID, %s, error_DBUS);"  % \
                        (name, name, type[0]))
         self.addintype("i", name)
 
@@ -360,52 +456,80 @@ class ServerBinding (Binding):
         self.ccode.append("\t%s;" % self.call) # just call the function
 
     def outputstring(self, type, name, const):
-        self.cdecls.append("\tconst char *%s;" % name)
-        self.ccode.append("\t%s = null_to_empty(%s);" % (name, self.call))
+        if const:
+            self.cdecls.append("\tconst char *%s;" % name)
+        else:
+            self.cdecls.append("\tchar *%s;" % name)
+        self.ccode.append("\tif ((%s = %s) == NULL)" % (name, self.call))
+        self.ccode.append("\t\t%s = \"\";" % (name))
         self.cparamsout.append(("STRING", name))
         self.addouttype("s", name)
         if not const:
             self.ccodeout.append("\tg_free(%s);" % name)
 
-    def outputsimple(self, type, name):
-        self.cdecls.append("\tdbus_int32_t %s;" % name)
+    def outputsimple(self, type, name, us):
+        if us:
+            self.cdecls.append("\tdbus_uint32_t %s;" % name)
+            self.cparamsout.append(("UINT32", name))
+            self.addouttype("u", name)
+        else:
+            self.cdecls.append("\tdbus_int32_t %s;" % name)
+            self.cparamsout.append(("INT32", name))
+            self.addouttype("i", name)
         self.ccode.append("\t%s = %s;" % (name, self.call))
-        self.cparamsout.append(("INT32", name))
-        self.addouttype("i", name)
 
-    def outputgaimstructure(self, type, name):
+    def outputpurplestructure(self, type, name):
         self.cdecls.append("\tdbus_int32_t %s;" % name)
-        self.ccode .append("\tGAIM_DBUS_POINTER_TO_ID(%s, %s, error_DBUS);" % (name, self.call))
+        self.ccode .append("\tPURPLE_DBUS_POINTER_TO_ID(%s, %s, error_DBUS);" % (name, self.call))
         self.cparamsout.append(("INT32", name))
         self.addouttype("i", name)
 
     # GList*, GSList*, assume that list is a list of objects
-
-    # fixme: at the moment, we do NOT free the memory occupied by
-    # the list, we should free it if the list has NOT been declared const
-
-    # fixme: we assume that this is a list of objects, not a list
-    # of strings
-
+    # unless the function is in stringlists
     def outputlist(self, type, name):
         self.cdecls.append("\tdbus_int32_t %s_LEN;" % name)
         self.ccodeout.append("\tg_free(%s);" % name)
 
+        self.cdecls.append("\t%s *list;" % type[0]);
+
         if self.function.name in stringlists:
             self.cdecls.append("\tchar **%s;" % name)
-            self.ccode.append("\t%s = gaim_%s_to_array(%s, FALSE, &%s_LEN);" % \
-                         (name, type[0], self.call, name))
-            self.cparamsout.append("\tDBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &%s, %s_LEN" \
+            self.ccode.append("\tlist = %s;" % self.call)
+            self.ccode.append("\t%s = (char **)purple_%s_to_array(list, &%s_LEN);" % \
+                         (name, type[0], name))
+            self.cparamsout.append("DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &%s, %s_LEN" \
                           % (name, name))
+            if (not (self.function.name in constlists)):
+                type_name = type[0].lower()[1:]
+                self.ccodeout.append("\tg_%s_foreach(list, (GFunc)g_free, NULL);" % type_name)
+                self.ccodeout.append("\tg_%s_free(list);" % type_name)
             self.addouttype("as", name)
         else:
             self.cdecls.append("\tdbus_int32_t *%s;" % name)
-            self.ccode.append("\t%s = gaim_dbusify_%s(%s, FALSE, &%s_LEN);" % \
-                         (name, type[0], self.call, name))
-            self.cparamsout.append("\tDBUS_TYPE_ARRAY, DBUS_TYPE_INT32, &%s, %s_LEN" \
+            self.ccode.append("\tlist = %s;" % self.call)
+            self.ccode.append("\t%s = purple_dbusify_%s(list, &%s_LEN);" % \
+                         (name, type[0], name))
+            if (not (self.function.name in constlists)):
+                self.ccode.append("\tg_%s_free(list);" % type[0].lower()[1:])
+            self.cparamsout.append("DBUS_TYPE_ARRAY, DBUS_TYPE_INT32, &%s, %s_LEN" \
                               % (name, name))
             self.addouttype("ai", name)
 
+    # Special case for *_get_data functions
+    def inputgetdata(self, type, name):
+        self.cdecls.append("\tsize_t %s = 0;" % name)
+        return True
+    def outputgetdata(self, type, name):
+        # This is a total hack, but self.call is set up before the parameters
+        #  are processed, so we can't tell it to pass a parameter by reference.
+        self.call = "%s(%s)" % (self.function.name,
+                                ", ".join([(param.name, "&len")[param.name == "len"] for param in self.params]))
+
+        self.cdecls.append("\tgconstpointer %s;" % name)
+        self.ccode.append("\t%s = %s;" % (name, self.call))
+        self.cparamsout.append("DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &%s, %s" \
+                               % (name, "len"))
+        self.addouttype("ay", name)
 
 class BindingSet:
     regexp = r"^(\w[^()]*)\(([^()]*)\)\s*;\s*$";
@@ -414,6 +538,7 @@ class BindingSet:
         self.inputiter = iter(inputfile)
         self.functionregexp = \
              re.compile("^%s(\w[^()]*)\(([^()]*)\)\s*;\s*$" % fprefix)    
+        self.typeregexp = re.compile("^\w+\s*\*?\s*$")
 
 
                 
@@ -432,7 +557,7 @@ class BindingSet:
             # accumulate lines until the parentheses are balance or an
             # empty line has been encountered
             myline = line.strip()
-            while myline.count("(") > myline.count(")"):
+            while (myline.count("(") > myline.count(")")) or self.typeregexp.match(myline):
                 newline = self.inputiter.next().strip()
                 if len(newline) == 0:
                     break
@@ -455,10 +580,11 @@ class BindingSet:
 
             try:
                 self.processfunction(functiontext, paramtexts)
-            except myexception:
-                sys.stderr.write(myline + "\n")
+            except MyException:
+#                sys.stderr.write(myline + "\n")
+                 pass
             except:
-                sys.stderr.write(myline + "\n")
+#                sys.stderr.write(myline + "\n")
                 raise
 
         self.flush()
@@ -475,7 +601,7 @@ class ServerBindingSet (BindingSet):
         self.functions.append((binding.function.name, binding.dparams))
         
     def flush(self):
-        print "static GaimDBusBinding bindings_DBUS[] = { "
+        print "static PurpleDBusBinding bindings_DBUS[] = { "
         for function, params in self.functions:
             print '{"%s", "%s", %s_DBUS},' % \
                   (ctopascal(function), params, function)
@@ -483,7 +609,7 @@ class ServerBindingSet (BindingSet):
         print "{NULL, NULL, NULL}"
         print "};"
 
-        print "#define GAIM_DBUS_REGISTER_BINDINGS(handle) gaim_dbus_register_bindings(handle, bindings_DBUS)"
+        print "#define PURPLE_DBUS_REGISTER_BINDINGS(handle) purple_dbus_register_bindings(handle, bindings_DBUS)"
         
 class ClientBindingSet (BindingSet):
     def __init__(self, inputfile, fprefix, headersonly):
@@ -517,7 +643,7 @@ if "export-only" in options:
 else:
     fprefix = ""
 
-sys.stderr.write("%s: Functions not exported:\n" % sys.argv[0])
+#sys.stderr.write("%s: Functions not exported:\n" % sys.argv[0])
 
 if "client" in options:
     bindings = ClientBindingSet(sys.stdin, fprefix,

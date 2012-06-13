@@ -1,10 +1,11 @@
 /*
  * @file gtkcellrendererexpander.c GTK+ Cell Renderer Expander
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -17,53 +18,52 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
 
-/* This is taken largely from GtkCellRenderer[Text|Pixbuf|Toggle] by 
+/* This is taken largely from GtkCellRenderer[Text|Pixbuf|Toggle] by
  * Jonathon Blandford <jrb@redhat.com> for RedHat, Inc.
  */
 
 #include <gtk/gtk.h>
-#include <gtk/gtktreeview.h>
 #include "gtkcellrendererexpander.h"
 
-static void gaim_gtk_cell_renderer_expander_get_property  (GObject                    *object,
+static void pidgin_cell_renderer_expander_get_property  (GObject                    *object,
 						      guint                       param_id,
 						      GValue                     *value,
 						      GParamSpec                 *pspec);
-static void gaim_gtk_cell_renderer_expander_set_property  (GObject                    *object,
+static void pidgin_cell_renderer_expander_set_property  (GObject                    *object,
 						      guint                       param_id,
 						      const GValue               *value,
 						      GParamSpec                 *pspec);
-static void gaim_gtk_cell_renderer_expander_init       (GaimGtkCellRendererExpander      *cellexpander);
-static void gaim_gtk_cell_renderer_expander_class_init (GaimGtkCellRendererExpanderClass *class);
-static void gaim_gtk_cell_renderer_expander_get_size   (GtkCellRenderer            *cell,
+static void pidgin_cell_renderer_expander_init       (PidginCellRendererExpander      *cellexpander);
+static void pidgin_cell_renderer_expander_class_init (PidginCellRendererExpanderClass *class);
+static void pidgin_cell_renderer_expander_get_size   (GtkCellRenderer            *cell,
 						   GtkWidget                  *widget,
 						   GdkRectangle               *cell_area,
 						   gint                       *x_offset,
 						   gint                       *y_offset,
 						   gint                       *width,
 						   gint                       *height);
-static void gaim_gtk_cell_renderer_expander_render     (GtkCellRenderer            *cell,
+static void pidgin_cell_renderer_expander_render     (GtkCellRenderer            *cell,
 						   GdkWindow                  *window,
 						   GtkWidget                  *widget,
 						   GdkRectangle               *background_area,
 						   GdkRectangle               *cell_area,
 						   GdkRectangle               *expose_area,
 						   guint                       flags);
-static gboolean gaim_gtk_cell_renderer_expander_activate  (GtkCellRenderer            *r,
+static gboolean pidgin_cell_renderer_expander_activate  (GtkCellRenderer            *r,
 						      GdkEvent                   *event,
 						      GtkWidget                  *widget,
 						      const gchar                *p,
 						      GdkRectangle               *bg,
 						      GdkRectangle               *cell,
 						      GtkCellRendererState        flags);
-static void  gaim_gtk_cell_renderer_expander_finalize (GObject *gobject);
+static void  pidgin_cell_renderer_expander_finalize (GObject *gobject);
 
 enum {
 	LAST_SIGNAL
@@ -73,61 +73,61 @@ enum {
 	PROP_0,
 	PROP_IS_EXPANDER
 };
-     
+
 static gpointer parent_class;
 /* static guint expander_cell_renderer_signals [LAST_SIGNAL]; */
 
-GType  gaim_gtk_cell_renderer_expander_get_type (void)
+GType  pidgin_cell_renderer_expander_get_type (void)
 {
 	static GType cell_expander_type = 0;
-	
+
 	if (!cell_expander_type)
 		{
 			static const GTypeInfo cell_expander_info =
 				{
-					sizeof (GaimGtkCellRendererExpanderClass),
+					sizeof (PidginCellRendererExpanderClass),
 					NULL,           /* base_init */
 					NULL,           /* base_finalize */
-					(GClassInitFunc) gaim_gtk_cell_renderer_expander_class_init,
+					(GClassInitFunc) pidgin_cell_renderer_expander_class_init,
 					NULL,           /* class_finalize */
 					NULL,           /* class_data */
-					sizeof (GaimGtkCellRendererExpander),
+					sizeof (PidginCellRendererExpander),
 					0,              /* n_preallocs */
-					(GInstanceInitFunc) gaim_gtk_cell_renderer_expander_init,
+					(GInstanceInitFunc) pidgin_cell_renderer_expander_init,
 					NULL		/* value_table */
 				};
-			
+
 			cell_expander_type =
 				g_type_register_static (GTK_TYPE_CELL_RENDERER,
-										"GaimGtkCellRendererExpander",
+										"PidginCellRendererExpander",
 										&cell_expander_info, 0);
 		}
-	
+
 	return cell_expander_type;
 }
 
-static void gaim_gtk_cell_renderer_expander_init (GaimGtkCellRendererExpander *cellexpander)
+static void pidgin_cell_renderer_expander_init (PidginCellRendererExpander *cellexpander)
 {
 	GTK_CELL_RENDERER(cellexpander)->mode = GTK_CELL_RENDERER_MODE_ACTIVATABLE;
 	GTK_CELL_RENDERER(cellexpander)->xpad = 0;
 	GTK_CELL_RENDERER(cellexpander)->ypad = 2;
 }
 
-static void gaim_gtk_cell_renderer_expander_class_init (GaimGtkCellRendererExpanderClass *class)
+static void pidgin_cell_renderer_expander_class_init (PidginCellRendererExpanderClass *class)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS(class);
 	GtkCellRendererClass *cell_class = GTK_CELL_RENDERER_CLASS(class);
-	
-	parent_class = g_type_class_peek_parent (class);
-	object_class->finalize = gaim_gtk_cell_renderer_expander_finalize;
 
-	object_class->get_property = gaim_gtk_cell_renderer_expander_get_property;
-	object_class->set_property = gaim_gtk_cell_renderer_expander_set_property;
-	
-	cell_class->get_size = gaim_gtk_cell_renderer_expander_get_size;
-	cell_class->render   = gaim_gtk_cell_renderer_expander_render;
-	cell_class->activate = gaim_gtk_cell_renderer_expander_activate;
-	
+	parent_class = g_type_class_peek_parent (class);
+	object_class->finalize = pidgin_cell_renderer_expander_finalize;
+
+	object_class->get_property = pidgin_cell_renderer_expander_get_property;
+	object_class->set_property = pidgin_cell_renderer_expander_set_property;
+
+	cell_class->get_size = pidgin_cell_renderer_expander_get_size;
+	cell_class->render   = pidgin_cell_renderer_expander_render;
+	cell_class->activate = pidgin_cell_renderer_expander_activate;
+
 	g_object_class_install_property (object_class,
 					 PROP_IS_EXPANDER,
 					 g_param_spec_boolean ("expander-visible",
@@ -137,21 +137,21 @@ static void gaim_gtk_cell_renderer_expander_class_init (GaimGtkCellRendererExpan
 							      G_PARAM_READWRITE));
 }
 
-static void gaim_gtk_cell_renderer_expander_finalize (GObject *object)
+static void pidgin_cell_renderer_expander_finalize (GObject *object)
 {
 /*
-	GaimGtkCellRendererExpander *cellexpander = GAIM_GTK_CELL_RENDERER_EXPANDER(object);
+	PidginCellRendererExpander *cellexpander = PIDGIN_CELL_RENDERER_EXPANDER(object);
 */
 
 	(* G_OBJECT_CLASS (parent_class)->finalize) (object);
 }
 
-static void gaim_gtk_cell_renderer_expander_get_property (GObject    *object,
+static void pidgin_cell_renderer_expander_get_property (GObject    *object,
 						     guint      param_id,
 						     GValue     *value,
 						     GParamSpec *psec)
 {
-	GaimGtkCellRendererExpander *cellexpander = GAIM_GTK_CELL_RENDERER_EXPANDER(object);
+	PidginCellRendererExpander *cellexpander = PIDGIN_CELL_RENDERER_EXPANDER(object);
 
 	switch (param_id)
 		{
@@ -161,16 +161,16 @@ static void gaim_gtk_cell_renderer_expander_get_property (GObject    *object,
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, param_id, psec);
 			break;
-			
+
 		}
 }
 
-static void gaim_gtk_cell_renderer_expander_set_property (GObject      *object,
+static void pidgin_cell_renderer_expander_set_property (GObject      *object,
 						     guint        param_id,
 						     const GValue *value,
 						     GParamSpec   *pspec)
 {
-	GaimGtkCellRendererExpander *cellexpander = GAIM_GTK_CELL_RENDERER_EXPANDER (object);
+	PidginCellRendererExpander *cellexpander = PIDGIN_CELL_RENDERER_EXPANDER (object);
 
 	switch (param_id)
 		{
@@ -183,12 +183,12 @@ static void gaim_gtk_cell_renderer_expander_set_property (GObject      *object,
 		}
 }
 
-GtkCellRenderer *gaim_gtk_cell_renderer_expander_new(void)
+GtkCellRenderer *pidgin_cell_renderer_expander_new(void)
 {
-	return g_object_new(GAIM_TYPE_GTK_CELL_RENDERER_EXPANDER, NULL);
+	return g_object_new(PIDGIN_TYPE_GTK_CELL_RENDERER_EXPANDER, NULL);
 }
 
-static void gaim_gtk_cell_renderer_expander_get_size (GtkCellRenderer *cell,
+static void pidgin_cell_renderer_expander_get_size (GtkCellRenderer *cell,
 						 GtkWidget       *widget,
 						 GdkRectangle    *cell_area,
 						 gint            *x_offset,
@@ -198,19 +198,19 @@ static void gaim_gtk_cell_renderer_expander_get_size (GtkCellRenderer *cell,
 {
 	gint calc_width;
 	gint calc_height;
-	gint expander_size; 
-	
+	gint expander_size;
+
 	gtk_widget_style_get(widget, "expander-size", &expander_size, NULL);
-	
+
 	calc_width = (gint) cell->xpad * 2 + expander_size;
 	calc_height = (gint) cell->ypad * 2 + expander_size;
-	
+
 	if (width)
 		*width = calc_width;
-	
+
 	if (height)
 		*height = calc_height;
-	
+
 	if (cell_area)
 		{
 			if (x_offset)
@@ -227,7 +227,7 @@ static void gaim_gtk_cell_renderer_expander_get_size (GtkCellRenderer *cell,
 }
 
 
-static void gaim_gtk_cell_renderer_expander_render (GtkCellRenderer *cell,
+static void pidgin_cell_renderer_expander_render(GtkCellRenderer *cell,
 					       GdkWindow       *window,
 					       GtkWidget       *widget,
 					       GdkRectangle    *background_area,
@@ -235,8 +235,8 @@ static void gaim_gtk_cell_renderer_expander_render (GtkCellRenderer *cell,
 					       GdkRectangle    *expose_area,
 					       guint            flags)
 {
-	GaimGtkCellRendererExpander *cellexpander = (GaimGtkCellRendererExpander *) cell;
-	
+	PidginCellRendererExpander *cellexpander = (PidginCellRendererExpander *) cell;
+	gboolean set;
 	gint width, height;
 	GtkStateType state;
 
@@ -245,18 +245,18 @@ static void gaim_gtk_cell_renderer_expander_render (GtkCellRenderer *cell,
 
 	width = cell_area->width;
 	height = cell_area->height;
-	
-#if GTK_CHECK_VERSION(2,6,0)
+
 	if (!cell->sensitive)
 		state = GTK_STATE_INSENSITIVE;
-#else
-	if (GTK_WIDGET_STATE(widget) == GTK_STATE_INSENSITIVE)
-		state = GTK_STATE_INSENSITIVE;
-#endif
 	else if (flags & GTK_CELL_RENDERER_PRELIT)
 		state = GTK_STATE_PRELIGHT;
+#if GTK_CHECK_VERSION(2,18,0)
+	else if (gtk_widget_has_focus (widget) && flags & GTK_CELL_RENDERER_SELECTED)
+		state = GTK_STATE_ACTIVE;
+#else
 	else if (GTK_WIDGET_HAS_FOCUS (widget) && flags & GTK_CELL_RENDERER_SELECTED)
 		state = GTK_STATE_ACTIVE;
+#endif
 	else
 		state = GTK_STATE_NORMAL;
 
@@ -269,9 +269,15 @@ static void gaim_gtk_cell_renderer_expander_render (GtkCellRenderer *cell,
 			    cell_area->x + cell->xpad + (width / 2),
 			    cell_area->y + cell->ypad + (height / 2),
 			    cell->is_expanded ? GTK_EXPANDER_EXPANDED : GTK_EXPANDER_COLLAPSED);
+
+	/* only draw the line if the color isn't set - this prevents a bug where the hline appears only under the expander */
+	g_object_get(cellexpander, "cell-background-set", &set, NULL);
+	if (cell->is_expanded && !set)
+		gtk_paint_hline (widget->style, window, state, NULL, widget, NULL, 0,
+				 widget->allocation.width, cell_area->y + cell_area->height);
 }
 
-static gboolean gaim_gtk_cell_renderer_expander_activate(GtkCellRenderer *r,
+static gboolean pidgin_cell_renderer_expander_activate(GtkCellRenderer *r,
 						     GdkEvent *event,
 						     GtkWidget *widget,
 						     const gchar *p,

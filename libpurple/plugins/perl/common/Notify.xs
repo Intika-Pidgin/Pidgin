@@ -1,29 +1,70 @@
 #include "module.h"
 
-MODULE = Gaim::Notify  PACKAGE = Gaim::Notify  PREFIX = gaim_notify_
+MODULE = Purple::Notify  PACKAGE = Purple::Notify  PREFIX = purple_notify_
 PROTOTYPES: ENABLE
 
+BOOT:
+{
+	HV *type_stash = gv_stashpv("Purple::Notify::Type", 1);
+	HV *msg_type_stash = gv_stashpv("Purple::Notify::Msg", 1);
+	HV *user_info_stash = gv_stashpv("Purple::NotifyUserInfo::Type", 1);
+
+	static const constiv *civ, type_const_iv[] = {
+#define const_iv(name) {#name, (IV)PURPLE_NOTIFY_##name}
+		const_iv(MESSAGE),
+		const_iv(EMAIL),
+		const_iv(EMAILS),
+		const_iv(FORMATTED),
+		const_iv(SEARCHRESULTS),
+		const_iv(USERINFO),
+		const_iv(URI),
+	};
+	static const constiv msg_type_const_iv[] = {
+#undef const_iv
+#define const_iv(name) {#name, (IV)PURPLE_NOTIFY_MSG_##name}
+		const_iv(ERROR),
+		const_iv(WARNING),
+		const_iv(INFO),
+	};
+	static const constiv user_info_const_iv[] = {
+#undef const_iv
+#define const_iv(name) {#name, (IV)PURPLE_NOTIFY_USER_INFO_ENTRY_##name}
+		const_iv(PAIR),
+		const_iv(SECTION_BREAK),
+		const_iv(SECTION_HEADER),
+	};
+
+	for (civ = type_const_iv + sizeof(type_const_iv) / sizeof(type_const_iv[0]); civ-- > type_const_iv; )
+		newCONSTSUB(type_stash, (char *)civ->name, newSViv(civ->iv));
+
+	for (civ = msg_type_const_iv + sizeof(msg_type_const_iv) / sizeof(msg_type_const_iv[0]); civ-- > msg_type_const_iv; )
+		newCONSTSUB(msg_type_stash, (char *)civ->name, newSViv(civ->iv));
+
+	for (civ = user_info_const_iv + sizeof(user_info_const_iv) / sizeof(user_info_const_iv[0]); civ-- > user_info_const_iv; )
+		newCONSTSUB(user_info_stash, (char *)civ->name, newSViv(civ->iv));
+}
+
 void
-gaim_notify_close(type, ui_handle)
-	Gaim::NotifyType type
+purple_notify_close(type, ui_handle)
+	Purple::NotifyType type
 	void * ui_handle
 
 void
-gaim_notify_close_with_handle(handle)
+purple_notify_close_with_handle(handle)
 	void * handle
 
 void *
-gaim_notify_email(handle, subject, from, to, url, cb, user_data)
+purple_notify_email(handle, subject, from, to, url, cb, user_data)
 	void * handle
 	const char *subject
 	const char *from
 	const char *to
 	const char *url
-	Gaim::NotifyCloseCallback cb
+	Purple::NotifyCloseCallback cb
 	gpointer user_data
 
 void *
-gaim_notify_emails(handle, count, detailed, subjects, froms, tos, urls, cb, user_data)
+purple_notify_emails(handle, count, detailed, subjects, froms, tos, urls, cb, user_data)
 	void * handle
 	size_t count
 	gboolean detailed
@@ -31,108 +72,103 @@ gaim_notify_emails(handle, count, detailed, subjects, froms, tos, urls, cb, user
 	const char **froms
 	const char **tos
 	const char **urls
-	Gaim::NotifyCloseCallback cb
+	Purple::NotifyCloseCallback cb
 	gpointer user_data
 
 void *
-gaim_notify_formatted(handle, title, primary, secondary, text, cb, user_data)
+purple_notify_formatted(handle, title, primary, secondary, text, cb, user_data)
 	void * handle
 	const char *title
 	const char *primary
 	const char *secondary
 	const char *text
-	Gaim::NotifyCloseCallback cb
+	Purple::NotifyCloseCallback cb
 	gpointer user_data
 
 void *
-gaim_notify_userinfo(gc, who, user_info, cb, user_data)
-	Gaim::Connection gc
+purple_notify_userinfo(gc, who, user_info, cb, user_data)
+	Purple::Connection gc
 	const char *who
-	Gaim::NotifyUserInfo user_info
-	Gaim::NotifyCloseCallback cb
+	Purple::NotifyUserInfo user_info
+	Purple::NotifyCloseCallback cb
 	gpointer user_data
 
-Gaim::NotifyUserInfo
-gaim_notify_user_info_new()
-
-void
-gaim_notify_user_info_destroy(user_info)
-	Gaim::NotifyUserInfo user_info
-
-void
-gaim_notify_user_info_get_entries(user_info)
-	Gaim::NotifyUserInfo user_info
-PREINIT:
-	const GList *l;
-PPCODE:
-	l = gaim_notify_user_info_get_entries(user_info);
-	for (; l != NULL; l = l->next) {
-		XPUSHs(sv_2mortal(gaim_perl_bless_object(l->data, "Gaim::NotifyUserInfoEntry")));
-	}
-
-gchar_own *
-gaim_notify_user_info_get_text_with_newline(user_info, newline)
-	Gaim::NotifyUserInfo user_info
-	const char *newline
-
-void gaim_notify_user_info_add_pair(user_info, label, value)
-	Gaim::NotifyUserInfo user_info
-	const char *label
-	const char *value
-
-void gaim_notify_user_info_prepend_pair(user_info, label, value)
-	Gaim::NotifyUserInfo user_info
-	const char *label
-	const char *value
-
-void gaim_notify_user_info_add_section_break(user_info)
-	Gaim::NotifyUserInfo user_info
-
-void gaim_notify_user_info_add_section_header(user_info, label)
-	Gaim::NotifyUserInfo user_info
-	const char *label
-
-void gaim_notify_user_info_remove_last_item(user_info)
-	Gaim::NotifyUserInfo user_info
-
-gchar *
-gaim_notify_user_info_entry_get_label(user_info_entry)
-	Gaim::NotifyUserInfoEntry user_info_entry
-
-gchar *
-gaim_notify_user_info_entry_get_value(user_info_entry)
-	Gaim::NotifyUserInfoEntry user_info_entry
-
-Gaim::NotifyUiOps
-gaim_notify_get_ui_ops()
-
-
 void *
-gaim_notify_message(handle, type, title, primary, secondary, cb, user_data)
+purple_notify_message(handle, type, title, primary, secondary, cb, user_data)
 	void * handle
-	Gaim::NotifyMsgType type
+	Purple::NotifyMsgType type
 	const char *title
 	const char *primary
 	const char *secondary
-	Gaim::NotifyCloseCallback cb
+	Purple::NotifyCloseCallback cb
 	gpointer user_data
 
 void *
-gaim_notify_searchresults(gc, title, primary, secondary, results, cb, user_data)
-	Gaim::Connection gc
+purple_notify_searchresults(gc, title, primary, secondary, results, cb, user_data)
+	Purple::Connection gc
 	const char *title
 	const char *primary
 	const char *secondary
-	Gaim::NotifySearchResults results
-	Gaim::NotifyCloseCallback cb
+	Purple::NotifySearchResults results
+	Purple::NotifyCloseCallback cb
 	gpointer user_data
 
-void
-gaim_notify_set_ui_ops(ops)
-	Gaim::NotifyUiOps ops
-
 void *
-gaim_notify_uri(handle, uri)
+purple_notify_uri(handle, uri)
 	void * handle
 	const char *uri
 
+MODULE = Purple::Notify  PACKAGE = Purple::NotifyUserInfo  PREFIX = purple_notify_user_info_
+PROTOTYPES: ENABLE
+
+Purple::NotifyUserInfo
+purple_notify_user_info_new(class)
+	C_ARGS: /* void */
+
+void
+purple_notify_user_info_destroy(user_info)
+	Purple::NotifyUserInfo user_info
+
+void
+purple_notify_user_info_get_entries(user_info)
+	Purple::NotifyUserInfo user_info
+PREINIT:
+	GList *l;
+PPCODE:
+	l = purple_notify_user_info_get_entries(user_info)->head;
+	for (; l != NULL; l = l->next) {
+		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::NotifyUserInfoEntry")));
+	}
+
+gchar_own *
+purple_notify_user_info_get_text_with_newline(user_info, newline)
+	Purple::NotifyUserInfo user_info
+	const char *newline
+
+void purple_notify_user_info_add_pair_html(user_info, label, value)
+	Purple::NotifyUserInfo user_info
+	const char *label
+	const char *value
+
+void purple_notify_user_info_prepend_pair_html(user_info, label, value)
+	Purple::NotifyUserInfo user_info
+	const char *label
+	const char *value
+
+void purple_notify_user_info_add_section_break(user_info)
+	Purple::NotifyUserInfo user_info
+
+void purple_notify_user_info_add_section_header(user_info, label)
+	Purple::NotifyUserInfo user_info
+	const char *label
+
+void purple_notify_user_info_remove_last_item(user_info)
+	Purple::NotifyUserInfo user_info
+
+const gchar *
+purple_notify_user_info_entry_get_label(user_info_entry)
+	Purple::NotifyUserInfoEntry user_info_entry
+
+const gchar *
+purple_notify_user_info_entry_get_value(user_info_entry)
+	Purple::NotifyUserInfoEntry user_info_entry

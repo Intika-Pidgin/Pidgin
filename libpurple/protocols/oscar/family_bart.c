@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -40,24 +40,25 @@ int
 aim_bart_upload(OscarData *od, const guint8 *icon, guint16 iconlen)
 {
 	FlapConnection *conn;
-	FlapFrame *fr;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
-	if (!od || !(conn = flap_connection_findbygroup(od, 0x0010)) || !icon || !iconlen)
+	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_BART)) || !icon || !iconlen)
 		return -EINVAL;
 
-	fr = flap_frame_new(od, 0x02, 10 + 2 + 2+iconlen);
-	snacid = aim_cachesnac(od, 0x0010, 0x0002, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0010, 0x0002, 0x0000, snacid);
+	byte_stream_new(&bs, 2 + 2 + iconlen);
 
 	/* The reference number for the icon */
-	byte_stream_put16(&fr->data, 1);
+	byte_stream_put16(&bs, 1);
 
 	/* The icon */
-	byte_stream_put16(&fr->data, iconlen);
-	byte_stream_putraw(&fr->data, icon, iconlen);
+	byte_stream_put16(&bs, iconlen);
+	byte_stream_putraw(&bs, icon, iconlen);
 
-	flap_connection_send(conn, fr);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_BART, 0x0002, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_BART, 0x0002, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -89,39 +90,40 @@ uploadack(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
  * Subtype 0x0004 - Request someone's icon.
  *
  * @param od The oscar session.
- * @param sn The screen name of the person who's icon you are requesting.
+ * @param bn The name of the buddy whose icon you are requesting.
  * @param iconcsum The MD5 checksum of the icon you are requesting.
  * @param iconcsumlen Length of the MD5 checksum given above.  Should be 10 bytes.
  * @return Return 0 if no errors, otherwise return the error number.
  */
 int
-aim_bart_request(OscarData *od, const char *sn, guint8 iconcsumtype, const guint8 *iconcsum, guint16 iconcsumlen)
+aim_bart_request(OscarData *od, const char *bn, guint8 iconcsumtype, const guint8 *iconcsum, guint16 iconcsumlen)
 {
 	FlapConnection *conn;
-	FlapFrame *fr;
+	ByteStream bs;
 	aim_snacid_t snacid;
 
-	if (!od || !(conn = flap_connection_findbygroup(od, 0x0010)) || !sn || !strlen(sn) || !iconcsum || !iconcsumlen)
+	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_BART)) || !bn || !strlen(bn) || !iconcsum || !iconcsumlen)
 		return -EINVAL;
 
-	fr = flap_frame_new(od, 0x02, 10 + 1+strlen(sn) + 4 + 1+iconcsumlen);
-	snacid = aim_cachesnac(od, 0x0010, 0x0004, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0010, 0x0004, 0x0000, snacid);
+	byte_stream_new(&bs, 1+strlen(bn) + 4 + 1+iconcsumlen);
 
-	/* Screen name */
-	byte_stream_put8(&fr->data, strlen(sn));
-	byte_stream_putstr(&fr->data, sn);
+	/* Buddy name */
+	byte_stream_put8(&bs, strlen(bn));
+	byte_stream_putstr(&bs, bn);
 
 	/* Some numbers.  You like numbers, right? */
-	byte_stream_put8(&fr->data, 0x01);
-	byte_stream_put16(&fr->data, 0x0001);
-	byte_stream_put8(&fr->data, iconcsumtype);
+	byte_stream_put8(&bs, 0x01);
+	byte_stream_put16(&bs, 0x0001);
+	byte_stream_put8(&bs, iconcsumtype);
 
 	/* Icon string */
-	byte_stream_put8(&fr->data, iconcsumlen);
-	byte_stream_putraw(&fr->data, iconcsum, iconcsumlen);
+	byte_stream_put8(&bs, iconcsumlen);
+	byte_stream_putraw(&bs, iconcsum, iconcsumlen);
 
-	flap_connection_send(conn, fr);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_BART, 0x0004, 0x0000, NULL, 0);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_BART, 0x0004, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -136,11 +138,17 @@ parseicon(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 {
 	int ret = 0;
 	aim_rxcallback_t userfunc;
-	char *sn;
+	char *bn;
 	guint16 flags, iconlen;
 	guint8 iconcsumtype, iconcsumlen, *iconcsum, *icon;
 
-	sn = byte_stream_getstr(bs, byte_stream_get8(bs));
+	bn = byte_stream_getstr(bs, byte_stream_get8(bs));
+	if (!g_utf8_validate(bn, -1, NULL)) {
+		purple_debug_warning("oscar", "Received SNAC %04hx/%04hx with "
+				"invalid UTF-8 buddy name.\n", snac->family, snac->subtype);
+		g_free(bn);
+		return 1;
+	}
 	flags = byte_stream_get16(bs);
 	iconcsumtype = byte_stream_get8(bs);
 	iconcsumlen = byte_stream_get8(bs);
@@ -149,11 +157,11 @@ parseicon(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 	icon = byte_stream_getraw(bs, iconlen);
 
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
-		ret = userfunc(od, conn, frame, sn, iconcsumtype, iconcsum, iconcsumlen, icon, iconlen);
+		ret = userfunc(od, conn, frame, bn, iconcsumtype, iconcsum, iconcsumlen, icon, iconlen);
 
-	free(sn);
-	free(iconcsum);
-	free(icon);
+	g_free(bn);
+	g_free(iconcsum);
+	g_free(icon);
 
 	return ret;
 }
@@ -172,7 +180,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 bart_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x0010;
+	mod->family = SNAC_FAMILY_BART;
 	mod->version = 0x0001;
 	mod->toolid = 0x0010;
 	mod->toolversion = 0x0629;

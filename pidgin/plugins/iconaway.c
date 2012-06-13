@@ -1,6 +1,6 @@
-/* gaim
+/* purple
  *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -16,10 +16,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "conversation.h"
 #include "signals.h"
@@ -31,24 +31,24 @@
 #define ICONAWAY_PLUGIN_ID "gtk-iconaway"
 
 static void
-iconify_windows(GaimAccount *account, GaimStatus *old, GaimStatus *newstatus)
+iconify_windows(PurpleAccount *account, PurpleStatus *old, PurpleStatus *newstatus)
 {
-	GaimPresence *presence;
-	GaimGtkWindow *win;
+	PurplePresence *presence;
+	PidginWindow *win;
 	GList *windows;
 
-	presence = gaim_status_get_presence(newstatus);
+	presence = purple_status_get_presence(newstatus);
 
-	if (gaim_presence_is_available(presence))
+	if (purple_presence_is_available(presence))
 		return;
 
-	gaim_blist_set_visible(FALSE);
+	purple_blist_set_visible(FALSE);
 
-	for (windows = gaim_gtk_conv_windows_get_list();
+	for (windows = pidgin_conv_windows_get_list();
 		 windows != NULL;
 		 windows = windows->next) {
 
-		win = (GaimGtkWindow *)windows->data;
+		win = (PidginWindow *)windows->data;
 
 		gtk_window_iconify(GTK_WINDOW(win->window));
 	}
@@ -59,34 +59,34 @@ iconify_windows(GaimAccount *account, GaimStatus *old, GaimStatus *newstatus)
  */
 
 static gboolean
-plugin_load(GaimPlugin *plugin)
+plugin_load(PurplePlugin *plugin)
 {
-	gaim_signal_connect(gaim_accounts_get_handle(), "account-status-changed",
-						plugin, GAIM_CALLBACK(iconify_windows), NULL);
+	purple_signal_connect(purple_accounts_get_handle(), "account-status-changed",
+						plugin, PURPLE_CALLBACK(iconify_windows), NULL);
 
 	return TRUE;
 }
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,
-	GAIM_MAJOR_VERSION,
-	GAIM_MINOR_VERSION,
-	GAIM_PLUGIN_STANDARD,                             /**< type           */
-	GAIM_GTK_PLUGIN_TYPE,                             /**< ui_requirement */
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_STANDARD,                             /**< type           */
+	PIDGIN_PLUGIN_TYPE,                             /**< ui_requirement */
 	0,                                                /**< flags          */
 	NULL,                                             /**< dependencies   */
-	GAIM_PRIORITY_DEFAULT,                            /**< priority       */
+	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
 	ICONAWAY_PLUGIN_ID,                               /**< id             */
 	N_("Iconify on Away"),                            /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("Iconifies the buddy list and your conversations when you go away."),
 	                                                  /**  description    */
 	N_("Iconifies the buddy list and your conversations when you go away."),
 	"Eric Warmenhoven <eric@warmenhoven.org>",        /**< author         */
-	GAIM_WEBSITE,                                     /**< homepage       */
+	PURPLE_WEBSITE,                                     /**< homepage       */
 
 	plugin_load,                                      /**< load           */
 	NULL,                                             /**< unload         */
@@ -95,12 +95,18 @@ static GaimPluginInfo info =
 	NULL,                                             /**< ui_info        */
 	NULL,                                             /**< extra_info     */
 	NULL,
+	NULL,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
 	NULL
 };
 
 static void
-init_plugin(GaimPlugin *plugin)
+init_plugin(PurplePlugin *plugin)
 {
 }
 
-GAIM_INIT_PLUGIN(iconaway, init_plugin, info)
+PURPLE_INIT_PLUGIN(iconaway, init_plugin, info)

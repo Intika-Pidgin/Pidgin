@@ -1,9 +1,9 @@
 /**
  * @file irc.h
  *
- * gaim
+ * purple
  *
- * Copyright (C) 2003, Ethan Blanton <eblanton@cs.purdue.edu>
+ * Copyright (C) 2003, 2012 Ethan Blanton <elb@pidgin.im>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GAIM_IRC_H
-#define _GAIM_IRC_H
+#ifndef _PURPLE_IRC_H
+#define _PURPLE_IRC_H
 
 #include <glib.h>
 
@@ -35,24 +35,31 @@
 #define IRC_DEFAULT_SSL_PORT 994
 
 #define IRC_DEFAULT_CHARSET "UTF-8"
-#define IRC_DEFAULT_ALIAS "gaim"
+#define IRC_DEFAULT_AUTODETECT FALSE
+#define IRC_DEFAULT_ALIAS "purple"
 
 #define IRC_DEFAULT_QUIT "Leaving."
 
 #define IRC_INITIAL_BUFSIZE 1024
+
+#define IRC_NAMES_FLAG "irc-namelist"
 
 
 enum { IRC_USEROPT_SERVER, IRC_USEROPT_PORT, IRC_USEROPT_CHARSET };
 enum irc_state { IRC_STATE_NEW, IRC_STATE_ESTABLISHED };
 
 struct irc_conn {
-	GaimAccount *account;
+	PurpleAccount *account;
 	GHashTable *msgs;
 	GHashTable *cmds;
 	char *server;
 	int fd;
+	guint inpa;
 	guint timer;
 	GHashTable *buddies;
+
+	gboolean ison_outstanding;
+	GList *buddies_outstanding;
 
 	char *inbuf;
 	int inbuflen;
@@ -60,7 +67,6 @@ struct irc_conn {
 
 	GString *motd;
 	GString *names;
-	char *nameconv;
 	struct _whois {
 		char *nick;
 		char *away;
@@ -68,36 +74,49 @@ struct irc_conn {
 		char *name;
 		char *server;
 		char *serverinfo;
-		char *channels;
+		GString *channels;
 		int ircop;
 		int identified;
 		int idle;
 		time_t signon;
 	} whois;
-	GaimRoomlist *roomlist;
-	GaimSslConnection *gsc;
+	PurpleRoomlist *roomlist;
+	PurpleSslConnection *gsc;
 
 	gboolean quitting;
 
-	GaimCircBuffer *outbuf;
+	PurpleCircBuffer *outbuf;
 	guint writeh;
 
 	time_t recv_time;
+
+	char *mode_chars;
+	char *reqnick;
+	gboolean nickused;
 };
 
 struct irc_buddy {
 	char *name;
 	gboolean online;
 	gboolean flag;
+ 	gboolean new_online_status;
+	int ref;
 };
 
 typedef int (*IRCCmdCallback) (struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 
 int irc_send(struct irc_conn *irc, const char *buf);
+int irc_send_len(struct irc_conn *irc, const char *buf, int len);
 gboolean irc_blist_timeout(struct irc_conn *irc);
+gboolean irc_who_channel_timeout(struct irc_conn *irc);
+void irc_buddy_query(struct irc_conn *irc);
+
+char *irc_escape_privmsg(const char *text, gssize length);
 
 char *irc_mirc2html(const char *string);
 char *irc_mirc2txt(const char *string);
+
+const char *irc_nick_skip_mode(struct irc_conn *irc, const char *string);
 
 gboolean irc_ischannel(const char *string);
 
@@ -111,17 +130,19 @@ void irc_msg_default(struct irc_conn *irc, const char *name, const char *from, c
 void irc_msg_away(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_badmode(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_badnick(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_ban(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_banfull(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_banned(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_chanmode(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_endwhois(struct irc_conn *irc, const char *name, const char *from, char **args);
-void irc_msg_endmotd(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_features(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_invite(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_inviteonly(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_ison(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_join(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_kick(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_list(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_luser(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_mode(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_motd(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_names(struct irc_conn *irc, const char *name, const char *from, char **args);
@@ -138,14 +159,15 @@ void irc_msg_part(struct irc_conn *irc, const char *name, const char *from, char
 void irc_msg_ping(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_pong(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_privmsg(struct irc_conn *irc, const char *name, const char *from, char **args);
-void irc_msg_regonly(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_quit(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_regonly(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_time(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_topic(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_unavailable(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_unknown(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_wallops(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_whois(struct irc_conn *irc, const char *name, const char *from, char **args);
+void irc_msg_who(struct irc_conn *irc, const char *name, const char *from, char **args);
 
 void irc_msg_ignore(struct irc_conn *irc, const char *name, const char *from, char **args);
 
@@ -153,6 +175,7 @@ void irc_cmd_table_build(struct irc_conn *irc);
 
 int irc_cmd_default(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_away(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
+int irc_cmd_ctcp(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_ctcp_version(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_invite(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
@@ -175,8 +198,9 @@ int irc_cmd_time(struct irc_conn *irc, const char *cmd, const char *target, cons
 int irc_cmd_topic(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_wallops(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_whois(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
+int irc_cmd_whowas(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 
-GaimXfer *irc_dccsend_new_xfer(GaimConnection *gc, const char *who);
-void irc_dccsend_send_file(GaimConnection *gc, const char *who, const char *file);
+PurpleXfer *irc_dccsend_new_xfer(PurpleConnection *gc, const char *who);
+void irc_dccsend_send_file(PurpleConnection *gc, const char *who, const char *file);
 void irc_dccsend_recv(struct irc_conn *irc, const char *from, const char *msg);
-#endif /* _GAIM_IRC_H */
+#endif /* _PURPLE_IRC_H */

@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -113,7 +113,7 @@ IcbmCookie *aim_mkcookie(guint8 *c, int type, void *data)
 	if (!c)
 		return NULL;
 
-	cookie = calloc(1, sizeof(IcbmCookie));
+	cookie = g_new0(IcbmCookie, 1);
 
 	cookie->data = data;
 	cookie->type = type;
@@ -132,7 +132,7 @@ IcbmCookie *aim_mkcookie(guint8 *c, int type, void *data)
  *         on success; returns NULL on error/not found
  */
 
-IcbmCookie *aim_checkcookie(OscarData *od, const guint8 *cookie, int type)
+IcbmCookie *aim_checkcookie(OscarData *od, const guint8 *cookie, const int type)
 {
 	IcbmCookie *cur;
 
@@ -172,23 +172,8 @@ int aim_cookie_free(OscarData *od, IcbmCookie *cookie)
 			prev = &cur->next;
 	}
 
-	free(cookie->data);
-	free(cookie);
+	g_free(cookie->data);
+	g_free(cookie);
 
 	return 0;
-}
-
-/* XXX I hate switch */
-int aim_msgcookie_gettype(int type)
-{
-	/* XXX: hokey-assed. needs fixed. */
-	switch(type) {
-	case OSCAR_CAPABILITY_BUDDYICON: return AIM_COOKIETYPE_OFTICON;
-	case OSCAR_CAPABILITY_TALK: return AIM_COOKIETYPE_OFTVOICE;
-	case OSCAR_CAPABILITY_DIRECTIM: return AIM_COOKIETYPE_OFTIMAGE;
-	case OSCAR_CAPABILITY_CHAT: return AIM_COOKIETYPE_CHAT;
-	case OSCAR_CAPABILITY_GETFILE: return AIM_COOKIETYPE_OFTGET;
-	case OSCAR_CAPABILITY_SENDFILE: return AIM_COOKIETYPE_OFTSEND;
-	default: return AIM_COOKIETYPE_UNKNOWN;
-	}
 }

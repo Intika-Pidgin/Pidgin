@@ -1,10 +1,11 @@
 /**
  * @file gtkthemes.h GTK+ Smiley Theme API
- * @ingroup gtkui
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,14 +21,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GAIM_GTKTHEMES_H_
-#define _GAIM_GTKTHEMES_H_
+#ifndef _PIDGINTHEMES_H_
+#define _PIDGINTHEMES_H_
 
 struct smiley_list {
 	char *sml;
 	GSList *smileys;
+	GHashTable *files; /**< map from smiley shortcut to filename */
 	struct smiley_list *next;
 };
 
@@ -44,10 +46,24 @@ struct smiley_theme {
 extern struct smiley_theme *current_smiley_theme;
 extern GSList *smiley_themes;
 
-void gaim_gtkthemes_init(void);
-gboolean gaim_gtkthemes_smileys_disabled(void);
-void gaim_gtkthemes_smiley_themeize(GtkWidget *);
-void gaim_gtkthemes_smiley_theme_probe(void);
-void gaim_gtkthemes_load_smiley_theme(const char *file, gboolean load);
-GSList *gaim_gtkthemes_get_proto_smileys(const char *id);
-#endif /* _GAIM_GTKDIALOGS_H_ */
+G_BEGIN_DECLS
+
+void pidgin_themes_init(void);
+
+gboolean pidgin_themes_smileys_disabled(void);
+
+void pidgin_themes_smiley_themeize(GtkWidget *);
+
+void pidgin_themes_smiley_themeize_custom(GtkWidget *);
+
+void pidgin_themes_smiley_theme_probe(void);
+
+void pidgin_themes_load_smiley_theme(const char *file, gboolean load);
+
+void pidgin_themes_remove_smiley_theme(const char *file);
+
+GSList *pidgin_themes_get_proto_smileys(const char *id);
+
+G_END_DECLS
+
+#endif /* _PIDGINTHEMES_H_ */

@@ -1,7 +1,7 @@
 /**
  * @file gg-utils.h
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2005  Bartosz Oler <bartosz@bzimage.us>
  *
@@ -17,11 +17,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GAIM_GG_UTILS_H
-#define _GAIM_GG_UTILS_H
+#ifndef _PURPLE_GG_UTILS_H
+#define _PURPLE_GG_UTILS_H
 
 #include "internal.h"
 
@@ -79,19 +79,43 @@ charset_convert(const gchar *locstr, const char *encsrc, const char *encdst);
  * @return UIN of an account.
  */
 uin_t
-ggp_get_uin(GaimAccount *account);
+ggp_get_uin(PurpleAccount *account);
 
 /**
  * Returns the best name of a buddy from the buddylist.
  *
- * @param gc  GaimConnection instance.
+ * @param gc  PurpleConnection instance.
  * @param uin UIN of the buddy.
  *
  * @return Name of the buddy, or UIN converted to string.
  */
 char *
-ggp_buddy_get_name(GaimConnection *gc, const uin_t uin);
+ggp_buddy_get_name(PurpleConnection *gc, const uin_t uin);
 
-#endif /* _GAIM_GG_UTILS_H */
+/**
+ * Manages the display of account's status in the buddylist.
+ *
+ * @param account Current account.
+ */
+void
+ggp_status_fake_to_self(PurpleAccount *account);
+
+
+/**
+ * Adds an input handler in purple event loop for http request.
+ *
+ * @see purple_input_add
+ *
+ * @param http_req  Http connection to watch.
+ * @param func      The callback function for data.
+ * @param user_data User-specified data.
+ *
+ * @return The resulting handle (will be greater than 0).
+ */
+guint
+ggp_http_input_add(struct gg_http *http_req, PurpleInputFunction func,
+	gpointer user_data);
+
+#endif /* _PURPLE_GG_UTILS_H */
 
 /* vim: set ts=8 sts=0 sw=8 noet: */

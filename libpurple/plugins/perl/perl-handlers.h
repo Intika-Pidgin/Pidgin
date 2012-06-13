@@ -1,71 +1,98 @@
-#ifndef _GAIM_PERL_HANDLERS_H_
-#define _GAIM_PERL_HANDLERS_H_
+#ifndef _PURPLE_PERL_HANDLERS_H_
+#define _PURPLE_PERL_HANDLERS_H_
 
 #include "cmds.h"
 #include "plugin.h"
 #include "prefs.h"
 #include "pluginpref.h"
-#ifdef GAIM_GTKPERL
+#ifdef PURPLE_GTKPERL
 #include "gtkplugin.h"
 #include "gtkutils.h"
 #endif
 
 typedef struct
 {
-	GaimCmdId id;
+	PurpleCmdId id;
 	SV *callback;
 	SV *data;
-	char *prpl_id;
-	char *cmd;
-	GaimPlugin *plugin;
-} GaimPerlCmdHandler;
+	gchar *prpl_id;
+	gchar *cmd;
+	PurplePlugin *plugin;
+} PurplePerlCmdHandler;
 
 typedef struct
 {
 	SV *callback;
 	SV *data;
-	GaimPlugin *plugin;
+	PurplePlugin *plugin;
 	int iotag;
 
-} GaimPerlTimeoutHandler;
+} PurplePerlTimeoutHandler;
 
 typedef struct
 {
-	char *signal;
+	gchar *signal;
 	SV *callback;
 	SV *data;
 	void *instance;
-	GaimPlugin *plugin;
+	PurplePlugin *plugin;
 
-} GaimPerlSignalHandler;
+} PurplePerlSignalHandler;
 
-void gaim_perl_plugin_action_cb(GaimPluginAction * gpa);
-GList *gaim_perl_plugin_actions(GaimPlugin *plugin, gpointer context); 
+typedef struct
+{
+	SV *callback;
+	SV *data;
+	PurplePlugin *plugin;
+	int iotag;
 
-GaimPluginPrefFrame *gaim_perl_get_plugin_frame(GaimPlugin *plugin);
+} PurplePerlPrefsHandler;
 
-#ifdef GAIM_GTKPERL
-GtkWidget *gaim_perl_gtk_get_plugin_frame(GaimPlugin *plugin);
+typedef struct
+{
+	SV *callback;
+	SV *data;
+
+} PurplePerlAccountPasswordHandler;
+
+void purple_perl_plugin_action_cb(PurplePluginAction * gpa);
+GList *purple_perl_plugin_actions(PurplePlugin *plugin, gpointer context);
+
+PurplePluginPrefFrame *purple_perl_get_plugin_frame(PurplePlugin *plugin);
+
+#ifdef PURPLE_GTKPERL
+GtkWidget *purple_perl_gtk_get_plugin_frame(PurplePlugin *plugin);
 #endif
 
-void gaim_perl_timeout_add(GaimPlugin *plugin, int seconds, SV *callback,
-                           SV *data);
-void gaim_perl_timeout_clear_for_plugin(GaimPlugin *plugin);
-void gaim_perl_timeout_clear(void);
+guint purple_perl_timeout_add(PurplePlugin *plugin, int seconds, SV *callback,
+                              SV *data);
+gboolean purple_perl_timeout_remove(guint handle);
+void purple_perl_timeout_clear_for_plugin(PurplePlugin *plugin);
+void purple_perl_timeout_clear(void);
 
-void gaim_perl_signal_connect(GaimPlugin *plugin, void *instance,
+void purple_perl_signal_connect(PurplePlugin *plugin, void *instance,
                               const char *signal, SV *callback,
                               SV *data, int priority);
-void gaim_perl_signal_disconnect(GaimPlugin *plugin, void *instance,
+void purple_perl_signal_disconnect(PurplePlugin *plugin, void *instance,
                                  const char *signal);
-void gaim_perl_signal_clear_for_plugin(GaimPlugin *plugin);
-void gaim_perl_signal_clear(void);
+void purple_perl_signal_clear_for_plugin(PurplePlugin *plugin);
+void purple_perl_signal_clear(void);
 
-GaimCmdId gaim_perl_cmd_register(GaimPlugin *plugin, const gchar *cmd,
-                                 const gchar *args, GaimCmdPriority priority,
-                                 GaimCmdFlag flag, const gchar *prpl_id,
+PurpleCmdId purple_perl_cmd_register(PurplePlugin *plugin, const gchar *cmd,
+                                 const gchar *args, PurpleCmdPriority priority,
+                                 PurpleCmdFlag flag, const gchar *prpl_id,
                                  SV *callback, const gchar *helpstr, SV *data);
-void gaim_perl_cmd_unregister(GaimCmdId id);
-void gaim_perl_cmd_clear_for_plugin(GaimPlugin *plugin);
+void purple_perl_cmd_unregister(PurpleCmdId id);
+void purple_perl_cmd_clear_for_plugin(PurplePlugin *plugin);
 
-#endif /* _GAIM_PERL_HANDLERS_H_ */
+guint purple_perl_prefs_connect_callback(PurplePlugin *plugin, const char *name, SV *callback, SV *data);
+void purple_perl_prefs_disconnect_callback(guint callback_id);
+void purple_perl_pref_cb_clear_for_plugin(PurplePlugin *plugin);
+
+void
+purple_perl_account_get_password(PurpleAccount *account, SV *func, SV *data);
+void
+purple_perl_account_set_password(PurpleAccount *account, const char *password,
+                                 SV *func, SV *data);
+
+#endif /* _PURPLE_PERL_HANDLERS_H_ */
