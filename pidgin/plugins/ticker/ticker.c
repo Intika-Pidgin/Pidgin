@@ -1,6 +1,6 @@
 /*
- * Gaim Ticker Plugin
- * The line below doesn't apply at all, does it?  It should be Syd, Sean, and 
+ * Purple Ticker Plugin
+ * The line below doesn't apply at all, does it?  It should be Syd, Sean, and
  * maybe Nathan, I believe.
  * Copyright (C) 1995-1997 Peter Mattis, Spencer Kimball and Josh MacDonald
  *
@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02111-1301, USA.
  */
 
 /*
@@ -25,7 +25,7 @@
  * pluginized- Sean Egan, Summer 2002
  */
 #include "internal.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 
 #include "blist.h"
 #include "conversation.h"
@@ -36,6 +36,8 @@
 
 #include "gtkblist.h"
 #include "gtkplugin.h"
+#include "gtkutils.h"
+#include "pidginstock.h"
 
 #include "gtkticker.h"
 
@@ -45,16 +47,16 @@ static GtkWidget *tickerwindow = NULL;
 static GtkWidget *ticker;
 
 typedef struct {
-	GaimContact *contact;
+	PurpleContact *contact;
 	GtkWidget *ebox;
 	GtkWidget *label;
 	GtkWidget *icon;
 	guint timeout;
 } TickerData;
 
-GList *tickerbuds = NULL;
+static GList *tickerbuds = NULL;
 
-static void buddy_ticker_update_contact(GaimContact *contact);
+static void buddy_ticker_update_contact(PurpleContact *contact);
 
 static gboolean buddy_ticker_destroy_window(GtkWidget *window,
 		GdkEventAny *event, gpointer data) {
@@ -64,18 +66,16 @@ static gboolean buddy_ticker_destroy_window(GtkWidget *window,
 	return TRUE; /* don't actually destroy the window */
 }
 
-static void buddy_ticker_create_window() {
+static void buddy_ticker_create_window(void) {
 	if(tickerwindow) {
 		gtk_widget_show(tickerwindow);
 		return;
 	}
 
-	tickerwindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	tickerwindow = pidgin_create_window(_("Buddy Ticker"), 0, "ticker", TRUE);
 	gtk_window_set_default_size(GTK_WINDOW(tickerwindow), 500, -1);
 	g_signal_connect(G_OBJECT(tickerwindow), "delete_event",
 			G_CALLBACK (buddy_ticker_destroy_window), NULL);
-	gtk_window_set_title (GTK_WINDOW(tickerwindow), _("Buddy Ticker"));
-	gtk_window_set_role (GTK_WINDOW(tickerwindow), "ticker");
 
 	ticker = gtk_ticker_new();
 	gtk_ticker_set_spacing(GTK_TICKER(ticker), 20);
@@ -89,14 +89,17 @@ static void buddy_ticker_create_window() {
 }
 
 static gboolean buddy_click_cb(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
-	GaimContact *contact = user_data;
-	GaimBuddy *b = gaim_contact_get_priority_buddy(contact);
+	PurpleContact *contact = user_data;
+	PurpleBuddy *b = purple_contact_get_priority_buddy(contact);
 
-	gaim_conversation_new(GAIM_CONV_TYPE_IM, b->account, b->name);
+	PurpleConversation *conv = purple_conversation_new(PURPLE_CONV_TYPE_IM,
+	                                purple_buddy_get_account(b),
+	                                purple_buddy_get_name(b));
+	purple_conversation_present(conv);
 	return TRUE;
 }
 
-static TickerData *buddy_ticker_find_contact(GaimContact *c) {
+static TickerData *buddy_ticker_find_contact(PurpleContact *c) {
 	GList *tb;
 	for(tb = tickerbuds; tb; tb = tb->next) {
 		TickerData *td = tb->data;
@@ -106,37 +109,46 @@ static TickerData *buddy_ticker_find_contact(GaimContact *c) {
 	return NULL;
 }
 
-static void buddy_ticker_set_pixmap(GaimContact *c) {
+static void buddy_ticker_set_pixmap(PurpleContact *c)
+{
 	TickerData *td = buddy_ticker_find_contact(c);
-	GdkPixbuf *pixbuf;
+	PurpleBuddy *buddy;
+	PurplePresence *presence;
+	const char *stock;
 
 	if(!td)
 		return;
 
-	if(!td->icon)
+	buddy = purple_contact_get_priority_buddy(c);
+	presence = purple_buddy_get_presence(buddy);
+	stock = pidgin_stock_id_from_presence(presence);
+	if(!td->icon) {
 		td->icon = gtk_image_new();
-
-	pixbuf = gaim_gtk_blist_get_status_icon((GaimBlistNode*)c,
-			GAIM_STATUS_ICON_SMALL);
-	gtk_image_set_from_pixbuf(GTK_IMAGE(td->icon), pixbuf);
-	g_object_unref(G_OBJECT(pixbuf));
+		g_object_set(G_OBJECT(td->icon), "stock", stock,
+				"icon-size", gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_MICROSCOPIC),
+				NULL);
+	} else {
+		g_object_set(G_OBJECT(td->icon), "stock", stock, NULL);
+	}
 }
 
 static gboolean buddy_ticker_set_pixmap_cb(gpointer data) {
 	TickerData *td = data;
 
-	buddy_ticker_update_contact(td->contact);
-	td->timeout = 0;
+	if (g_list_find(tickerbuds, td) != NULL) {
+		buddy_ticker_update_contact(td->contact);
+		td->timeout = 0;
+	}
 
 	return FALSE;
 }
 
-static void buddy_ticker_add_buddy(GaimBuddy *b) {
+static void buddy_ticker_add_buddy(PurpleBuddy *b) {
 	GtkWidget *hbox;
 	TickerData *td;
-	GaimContact *contact;
+	PurpleContact *contact;
 
-	contact = gaim_buddy_get_contact(b);
+	contact = purple_buddy_get_contact(b);
 
 	buddy_ticker_create_window();
 
@@ -163,7 +175,7 @@ static void buddy_ticker_add_buddy(GaimBuddy *b) {
 	g_signal_connect(G_OBJECT(td->ebox), "button-press-event",
 		G_CALLBACK(buddy_click_cb), contact);
 
-	td->label = gtk_label_new(gaim_contact_get_alias(contact));
+	td->label = gtk_label_new(purple_contact_get_alias(contact));
 	gtk_box_pack_start(GTK_BOX(hbox), td->label, FALSE, FALSE, 2);
 
 	gtk_widget_show_all(td->ebox);
@@ -184,7 +196,7 @@ static void buddy_ticker_remove(TickerData *td) {
 	g_free(td);
 }
 
-static void buddy_ticker_update_contact(GaimContact *contact) {
+static void buddy_ticker_update_contact(PurpleContact *contact) {
 	TickerData *td = buddy_ticker_find_contact(contact);
 
 	if (!td)
@@ -192,48 +204,53 @@ static void buddy_ticker_update_contact(GaimContact *contact) {
 
 	/* pop up the ticker window again */
 	buddy_ticker_create_window();
-	if (gaim_contact_get_priority_buddy(contact) == NULL)
+	if (purple_contact_get_priority_buddy(contact) == NULL)
 		buddy_ticker_remove(td);
 	else {
 		buddy_ticker_set_pixmap(contact);
-		gtk_label_set_text(GTK_LABEL(td->label), gaim_contact_get_alias(contact));
+		gtk_label_set_text(GTK_LABEL(td->label), purple_contact_get_alias(contact));
 	}
 }
 
-static void buddy_ticker_remove_buddy(GaimBuddy *b) {
-	GaimContact *c = gaim_buddy_get_contact(b);
+static void buddy_ticker_remove_buddy(PurpleBuddy *b) {
+	PurpleContact *c = purple_buddy_get_contact(b);
 	TickerData *td = buddy_ticker_find_contact(c);
 
 	if (!td)
 		return;
 
-	gaim_contact_invalidate_priority_buddy(c);
+	purple_contact_invalidate_priority_buddy(c);
 
 	/* pop up the ticker window again */
 	buddy_ticker_create_window();
 	buddy_ticker_update_contact(c);
 }
 
-static void buddy_ticker_show()
+static void buddy_ticker_show(void)
 {
-	GaimBuddyList *list = gaim_get_blist();
-	GaimBlistNode *gnode, *cnode, *bnode;
-	GaimBuddy *b;
+	PurpleBlistNode *gnode, *cnode, *bnode;
+	PurpleBuddy *b;
 
-	if(!list)
-		return;
-
-	for(gnode = list->root; gnode; gnode = gnode->next) {
-		if(!GAIM_BLIST_NODE_IS_GROUP(gnode))
+	for(gnode = purple_blist_get_root();
+	    gnode;
+	    gnode = purple_blist_node_get_sibling_next(gnode))
+	{
+		if(!PURPLE_BLIST_NODE_IS_GROUP(gnode))
 			continue;
-		for(cnode = gnode->child; cnode; cnode = cnode->next) {
-			if(!GAIM_BLIST_NODE_IS_CONTACT(cnode))
+		for(cnode = purple_blist_node_get_first_child(gnode);
+		    cnode;
+		    cnode = purple_blist_node_get_sibling_next(cnode))
+		{
+			if(!PURPLE_BLIST_NODE_IS_CONTACT(cnode))
 				continue;
-			for(bnode = cnode->child; bnode; bnode = bnode->next) {
-				if(!GAIM_BLIST_NODE_IS_BUDDY(bnode))
+			for(bnode = purple_blist_node_get_first_child(cnode);
+			    bnode;
+			    bnode = purple_blist_node_get_sibling_next(bnode))
+			{
+				if(!PURPLE_BLIST_NODE_IS_BUDDY(bnode))
 					continue;
-				b = (GaimBuddy *)bnode;
-				if(GAIM_BUDDY_IS_ONLINE(b))
+				b = (PurpleBuddy *)bnode;
+				if(PURPLE_BUDDY_IS_ONLINE(b))
 					buddy_ticker_add_buddy(b);
 			}
 		}
@@ -241,10 +258,10 @@ static void buddy_ticker_show()
 }
 
 static void
-buddy_signon_cb(GaimBuddy *b)
+buddy_signon_cb(PurpleBuddy *b)
 {
-	GaimContact *c = gaim_buddy_get_contact(b);
-	gaim_contact_invalidate_priority_buddy(c);
+	PurpleContact *c = purple_buddy_get_contact(b);
+	purple_contact_invalidate_priority_buddy(c);
 	if(buddy_ticker_find_contact(c))
 		buddy_ticker_update_contact(c);
 	else
@@ -252,7 +269,7 @@ buddy_signon_cb(GaimBuddy *b)
 }
 
 static void
-buddy_signoff_cb(GaimBuddy *b)
+buddy_signoff_cb(PurpleBuddy *b)
 {
 	buddy_ticker_remove_buddy(b);
 	if(!tickerbuds)
@@ -260,9 +277,9 @@ buddy_signoff_cb(GaimBuddy *b)
 }
 
 static void
-status_changed_cb(GaimBuddy *b, GaimStatus *os, GaimStatus *s)
+status_changed_cb(PurpleBuddy *b, PurpleStatus *os, PurpleStatus *s)
 {
-	GaimContact *c = gaim_buddy_get_contact(b);
+	PurpleContact *c = purple_buddy_get_contact(b);
 	if(buddy_ticker_find_contact(c))
 		buddy_ticker_set_pixmap(c);
 	else
@@ -270,10 +287,10 @@ status_changed_cb(GaimBuddy *b, GaimStatus *os, GaimStatus *s)
 }
 
 static void
-signoff_cb(GaimConnection *gc)
+signoff_cb(PurpleConnection *gc)
 {
 	TickerData *td;
-	if (!gaim_connections_get_all()) {
+	if (!purple_connections_get_all()) {
 		while (tickerbuds) {
 			td = tickerbuds->data;
 			tickerbuds = g_list_delete_link(tickerbuds, tickerbuds);
@@ -300,27 +317,27 @@ signoff_cb(GaimConnection *gc)
  */
 
 static gboolean
-plugin_load(GaimPlugin *plugin)
+plugin_load(PurplePlugin *plugin)
 {
-	void *blist_handle = gaim_blist_get_handle();
+	void *blist_handle = purple_blist_get_handle();
 
-	gaim_signal_connect(gaim_connections_get_handle(), "signed-off",
-						plugin, GAIM_CALLBACK(signoff_cb), NULL);
-	gaim_signal_connect(blist_handle, "buddy-signed-on",
-						plugin, GAIM_CALLBACK(buddy_signon_cb), NULL);
-	gaim_signal_connect(blist_handle, "buddy-signed-off",
-						plugin, GAIM_CALLBACK(buddy_signoff_cb), NULL);
-	gaim_signal_connect(blist_handle, "buddy-status-changed",
-						plugin, GAIM_CALLBACK(status_changed_cb), NULL);
+	purple_signal_connect(purple_connections_get_handle(), "signed-off",
+						plugin, PURPLE_CALLBACK(signoff_cb), NULL);
+	purple_signal_connect(blist_handle, "buddy-signed-on",
+						plugin, PURPLE_CALLBACK(buddy_signon_cb), NULL);
+	purple_signal_connect(blist_handle, "buddy-signed-off",
+						plugin, PURPLE_CALLBACK(buddy_signoff_cb), NULL);
+	purple_signal_connect(blist_handle, "buddy-status-changed",
+						plugin, PURPLE_CALLBACK(status_changed_cb), NULL);
 
-	if (gaim_connections_get_all())
+	if (purple_connections_get_all())
 		buddy_ticker_show();
 
 	return TRUE;
 }
 
 static gboolean
-plugin_unload(GaimPlugin *plugin)
+plugin_unload(PurplePlugin *plugin)
 {
 	TickerData *td;
 
@@ -340,26 +357,26 @@ plugin_unload(GaimPlugin *plugin)
 	return TRUE;
 }
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,
-	GAIM_MAJOR_VERSION,
-	GAIM_MINOR_VERSION,
-	GAIM_PLUGIN_STANDARD,                             /**< type           */
-	GAIM_GTK_PLUGIN_TYPE,                             /**< ui_requirement */
+	PURPLE_PLUGIN_MAGIC,
+	PURPLE_MAJOR_VERSION,
+	PURPLE_MINOR_VERSION,
+	PURPLE_PLUGIN_STANDARD,                             /**< type           */
+	PIDGIN_PLUGIN_TYPE,                             /**< ui_requirement */
 	0,                                                /**< flags          */
 	NULL,                                             /**< dependencies   */
-	GAIM_PRIORITY_DEFAULT,                            /**< priority       */
+	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
 	TICKER_PLUGIN_ID,                                 /**< id             */
 	N_("Buddy Ticker"),                               /**< name           */
-	VERSION,                                          /**< version        */
+	DISPLAY_VERSION,                                  /**< version        */
 	                                                  /**  summary        */
 	N_("A horizontal scrolling version of the buddy list."),
 	                                                  /**  description    */
 	N_("A horizontal scrolling version of the buddy list."),
 	"Syd Logan",                                      /**< author         */
-	GAIM_WEBSITE,                                     /**< homepage       */
+	PURPLE_WEBSITE,                                     /**< homepage       */
 
 	plugin_load,                                      /**< load           */
 	plugin_unload,                                    /**< unload         */
@@ -368,12 +385,18 @@ static GaimPluginInfo info =
 	NULL,                                             /**< ui_info        */
 	NULL,                                             /**< extra_info     */
 	NULL,
+	NULL,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
 	NULL
 };
 
 static void
-init_plugin(GaimPlugin *plugin)
+init_plugin(PurplePlugin *plugin)
 {
 }
 
-GAIM_INIT_PLUGIN(ticker, init_plugin, info)
+PURPLE_INIT_PLUGIN(ticker, init_plugin, info)

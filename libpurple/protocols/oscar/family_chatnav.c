@@ -1,5 +1,5 @@
 /*
- * Gaim's oscar protocol plugin
+ * Purple's oscar protocol plugin
  * This file is the legal property of its developers.
  * Please see the AUTHORS file distributed alongside this file.
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
 /*
@@ -29,6 +29,51 @@
 
 #include "oscar.h"
 
+static int
+error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
+{
+	int ret = 0;
+	aim_snac_t *snac2;
+	guint16 error, chatnav_error;
+	GSList *tlvlist;
+
+	snac2 = aim_remsnac(od, snac->id);
+	if (!snac2) {
+		purple_debug_warning("oscar", "chatnav error: received response to unknown request (%08x)\n", snac->id);
+		return 0;
+	}
+
+	if (snac2->family != SNAC_FAMILY_CHATNAV) {
+		purple_debug_warning("oscar", "chatnav error: received response that maps to corrupt request (fam=%04x)\n", snac2->family);
+		g_free(snac2->data);
+		g_free(snac2);
+		return 0;
+	}
+
+	/*
+	 * We now know what the original SNAC subtype was.
+	 */
+	if (snac2->type == 0x0008) /* create room */
+	{
+		error = byte_stream_get16(bs);
+		tlvlist = aim_tlvlist_read(bs);
+		chatnav_error = aim_tlv_get16(tlvlist, 0x0008, 1);
+
+		purple_debug_warning("oscar",
+				"Could not join room, error=0x%04hx, chatnav_error=0x%04hx\n",
+				error, chatnav_error);
+		purple_notify_error(od->gc, NULL, _("Could not join chat room"),
+				chatnav_error == 0x0033 ? _("Invalid chat room name") : _("Unknown error"));
+
+		ret = 1;
+	}
+
+	g_free(snac2->data);
+	g_free(snac2);
+
+	return ret;
+}
+
 /*
  * Subtype 0x0002
  *
@@ -37,7 +82,7 @@
  */
 void aim_chatnav_reqrights(OscarData *od, FlapConnection *conn)
 {
-	aim_genericreq_n_snacid(od, conn, 0x000d, 0x0002);
+	aim_genericreq_n_snacid(od, conn, SNAC_FAMILY_CHATNAV, 0x0002);
 }
 
 /*
@@ -48,17 +93,16 @@ int aim_chatnav_createroom(OscarData *od, FlapConnection *conn, const char *name
 	static const char ck[] = {"create"};
 	static const char lang[] = {"en"};
 	static const char charset[] = {"us-ascii"};
-	FlapFrame *frame;
+	ByteStream bs;
 	aim_snacid_t snacid;
-	aim_tlvlist_t *tl = NULL;
+	GSList *tlvlist = NULL;
 
-	frame = flap_frame_new(od, 0x02, 1152);
+	byte_stream_new(&bs, 1142);
 
-	snacid = aim_cachesnac(od, 0x000d, 0x0008, 0x0000, NULL, 0);
-	aim_putsnac(&frame->data, 0x000d, 0x0008, 0x0000, snacid);
+	snacid = aim_cachesnac(od, SNAC_FAMILY_CHATNAV, 0x0008, 0x0000, NULL, 0);
 
 	/* exchange */
-	byte_stream_put16(&frame->data, exchange);
+	byte_stream_put16(&bs, exchange);
 
 	/*
 	 * This looks to be a big hack.  You'll note that this entire
@@ -71,8 +115,8 @@ int aim_chatnav_createroom(OscarData *od, FlapConnection *conn, const char *name
 	 * AOL style, I'm going to guess that it is the latter, and that
 	 * the value of the room name in create requests is ignored.
 	 */
-	byte_stream_put8(&frame->data, strlen(ck));
-	byte_stream_putstr(&frame->data, ck);
+	byte_stream_put8(&bs, strlen(ck));
+	byte_stream_putstr(&bs, ck);
 
 	/*
 	 * instance
@@ -80,22 +124,24 @@ int aim_chatnav_createroom(OscarData *od, FlapConnection *conn, const char *name
 	 * Setting this to 0xffff apparently assigns the last instance.
 	 *
 	 */
-	byte_stream_put16(&frame->data, 0xffff);
+	byte_stream_put16(&bs, 0xffff);
 
 	/* detail level */
-	byte_stream_put8(&frame->data, 0x01);
+	byte_stream_put8(&bs, 0x01);
 
-	aim_tlvlist_add_str(&tl, 0x00d3, name);
-	aim_tlvlist_add_str(&tl, 0x00d6, charset);
-	aim_tlvlist_add_str(&tl, 0x00d7, lang);
+	aim_tlvlist_add_str(&tlvlist, 0x00d3, name);
+	aim_tlvlist_add_str(&tlvlist, 0x00d6, charset);
+	aim_tlvlist_add_str(&tlvlist, 0x00d7, lang);
 
 	/* tlvcount */
-	byte_stream_put16(&frame->data, aim_tlvlist_count(&tl));
-	aim_tlvlist_write(&frame->data, &tl);
+	byte_stream_put16(&bs, aim_tlvlist_count(tlvlist));
+	aim_tlvlist_write(&bs, &tlvlist);
 
-	aim_tlvlist_free(&tl);
+	aim_tlvlist_free(tlvlist);
 
-	flap_connection_send(conn, frame);
+	flap_connection_send_snac(od, conn, SNAC_FAMILY_CHATNAV, 0x0008, snacid, &bs);
+
+	byte_stream_destroy(&bs);
 
 	return 0;
 }
@@ -109,7 +155,7 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 	int curexchange;
 	aim_tlv_t *exchangetlv;
 	guint8 maxrooms = 0;
-	aim_tlvlist_t *tlvlist, *innerlist;
+	GSList *tlvlist, *innerlist;
 
 	tlvlist = aim_tlvlist_read(bs);
 
@@ -133,37 +179,11 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 
 		curexchange++;
 
-		exchanges = realloc(exchanges, curexchange * sizeof(struct aim_chat_exchangeinfo));
+		exchanges = g_realloc(exchanges, curexchange * sizeof(struct aim_chat_exchangeinfo));
 
 		/* exchange number */
 		exchanges[curexchange-1].number = byte_stream_get16(&tbs);
 		innerlist = aim_tlvlist_read(&tbs);
-
-#if 0
-		/*
-		 * Type 0x000a: Unknown.
-		 *
-		 * Usually three bytes: 0x0114 (exchange 1) or 0x010f (others).
-		 *
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x000a, 1)) {
-			/* Unhandled */
-		}
-
-		/*
-		 * Type 0x000d: Unknown.
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x000d, 1)) {
-			/* Unhandled */
-		}
-
-		/*
-		 * Type 0x0004: Unknown
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x0004, 1)) {
-			/* Unhandled */
-		}
-#endif
 
 		/*
 		 * Type 0x0002: Unknown
@@ -173,7 +193,7 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 
 			classperms = aim_tlv_get16(innerlist, 0x0002, 1);
 
-			gaim_debug_misc("oscar", "faim: class permissions %x\n", classperms);
+			purple_debug_misc("oscar", "faim: class permissions %x\n", classperms);
 		}
 
 		/*
@@ -188,36 +208,6 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 		if (aim_tlv_gettlv(innerlist, 0x00c9, 1))
 			exchanges[curexchange-1].flags = aim_tlv_get16(innerlist, 0x00c9, 1);
 
-#if 0
-		/*
-		 * Type 0x00ca: Creation Date
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x00ca, 1)) {
-			/* Unhandled */
-		}
-
-		/*
-		 * Type 0x00d0: Mandatory Channels?
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x00d0, 1)) {
-			/* Unhandled */
-		}
-
-		/*
-		 * Type 0x00d1: Maximum Message length
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x00d1, 1)) {
-			/* Unhandled */
-		}
-
-		/*
-		 * Type 0x00d2: Maximum Occupancy?
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x00d2, 1)) {
-			/* Unhandled */
-		}
-#endif
-
 		/*
 		 * Type 0x00d3: Exchange Description
 		 */
@@ -225,15 +215,6 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 			exchanges[curexchange-1].name = aim_tlv_getstr(innerlist, 0x00d3, 1);
 		else
 			exchanges[curexchange-1].name = NULL;
-
-#if 0
-		/*
-		 * Type 0x00d4: Exchange Description URL
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x00d4, 1)) {
-			/* Unhandled */
-		}
-#endif
 
 		/*
 		 * Type 0x00d5: Creation Permissions
@@ -281,16 +262,7 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 		else
 			exchanges[curexchange-1].lang2 = NULL;
 
-#if 0
-		/*
-		 * Type 0x00da: Unknown
-		 */
-		if (aim_tlv_gettlv(innerlist, 0x00da, 1)) {
-			/* Unhandled */
-		}
-#endif
-
-		aim_tlvlist_free(&innerlist);
+		aim_tlvlist_free(innerlist);
 	}
 
 	/*
@@ -300,14 +272,14 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 		ret = userfunc(od, conn, frame, snac2->type, maxrooms, curexchange, exchanges);
 
 	for (curexchange--; curexchange >= 0; curexchange--) {
-		free(exchanges[curexchange].name);
-		free(exchanges[curexchange].charset1);
-		free(exchanges[curexchange].lang1);
-		free(exchanges[curexchange].charset2);
-		free(exchanges[curexchange].lang2);
+		g_free(exchanges[curexchange].name);
+		g_free(exchanges[curexchange].charset1);
+		g_free(exchanges[curexchange].lang1);
+		g_free(exchanges[curexchange].charset2);
+		g_free(exchanges[curexchange].lang2);
 	}
-	free(exchanges);
-	aim_tlvlist_free(&tlvlist);
+	g_free(exchanges);
+	aim_tlvlist_free(tlvlist);
 
 	return ret;
 }
@@ -316,7 +288,7 @@ static int
 parseinfo_create(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs, aim_snac_t *snac2)
 {
 	aim_rxcallback_t userfunc;
-	aim_tlvlist_t *tlvlist, *innerlist;
+	GSList *tlvlist, *innerlist;
 	char *ck = NULL, *fqcn = NULL, *name = NULL;
 	guint16 exchange = 0, instance = 0, unknown = 0, flags = 0, maxmsglen = 0, maxoccupancy = 0;
 	guint32 createtime = 0;
@@ -329,8 +301,8 @@ parseinfo_create(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 	tlvlist = aim_tlvlist_read(bs);
 
 	if (!(bigblock = aim_tlv_gettlv(tlvlist, 0x0004, 1))) {
-		gaim_debug_misc("oscar", "no bigblock in top tlv in create room response\n");
-		aim_tlvlist_free(&tlvlist);
+		purple_debug_misc("oscar", "no bigblock in top tlv in create room response\n");
+		aim_tlvlist_free(tlvlist);
 		return 0;
 	}
 
@@ -343,9 +315,9 @@ parseinfo_create(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 	detaillevel = byte_stream_get8(&bbbs);
 
 	if (detaillevel != 0x02) {
-		gaim_debug_misc("oscar", "unknown detaillevel in create room response (0x%02x)\n", detaillevel);
-		aim_tlvlist_free(&tlvlist);
-		free(ck);
+		purple_debug_misc("oscar", "unknown detaillevel in create room response (0x%02x)\n", detaillevel);
+		aim_tlvlist_free(tlvlist);
+		g_free(ck);
 		return 0;
 	}
 
@@ -378,11 +350,11 @@ parseinfo_create(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 		ret = userfunc(od, conn, frame, snac2->type, fqcn, instance, exchange, flags, createtime, maxmsglen, maxoccupancy, createperms, unknown, name, ck);
 	}
 
-	free(ck);
-	free(name);
-	free(fqcn);
-	aim_tlvlist_free(&innerlist);
-	aim_tlvlist_free(&tlvlist);
+	g_free(ck);
+	g_free(name);
+	g_free(fqcn);
+	aim_tlvlist_free(innerlist);
+	aim_tlvlist_free(tlvlist);
 
 	return ret;
 }
@@ -412,12 +384,14 @@ parseinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 	int ret = 0;
 
 	if (!(snac2 = aim_remsnac(od, snac->id))) {
-		gaim_debug_misc("oscar", "faim: chatnav_parse_info: received response to unknown request! (%08lx)\n", snac->id);
+		purple_debug_misc("oscar", "faim: chatnav_parse_info: received response to unknown request! (%08x)\n", snac->id);
 		return 0;
 	}
 
-	if (snac2->family != 0x000d) {
-		gaim_debug_misc("oscar", "faim: chatnav_parse_info: received response that maps to corrupt request! (fam=%04x)\n", snac2->family);
+	if (snac2->family != SNAC_FAMILY_CHATNAV) {
+		purple_debug_misc("oscar", "faim: chatnav_parse_info: received response that maps to corrupt request! (fam=%04x)\n", snac2->family);
+		g_free(snac2->data);
+		g_free(snac2);
 		return 0;
 	}
 
@@ -427,23 +401,23 @@ parseinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 	if (snac2->type == 0x0002) /* request chat rights */
 		ret = parseinfo_perms(od, conn, mod, frame, snac, bs, snac2);
 	else if (snac2->type == 0x0003) /* request exchange info */
-		gaim_debug_misc("oscar", "chatnav_parse_info: resposne to exchange info\n");
+		purple_debug_misc("oscar", "chatnav_parse_info: response to exchange info\n");
 	else if (snac2->type == 0x0004) /* request room info */
-		gaim_debug_misc("oscar", "chatnav_parse_info: response to room info\n");
+		purple_debug_misc("oscar", "chatnav_parse_info: response to room info\n");
 	else if (snac2->type == 0x0005) /* request more room info */
-		gaim_debug_misc("oscar", "chatnav_parse_info: response to more room info\n");
+		purple_debug_misc("oscar", "chatnav_parse_info: response to more room info\n");
 	else if (snac2->type == 0x0006) /* request occupant list */
-		gaim_debug_misc("oscar", "chatnav_parse_info: response to occupant info\n");
+		purple_debug_misc("oscar", "chatnav_parse_info: response to occupant info\n");
 	else if (snac2->type == 0x0007) /* search for a room */
-		gaim_debug_misc("oscar", "chatnav_parse_info: search results\n");
+		purple_debug_misc("oscar", "chatnav_parse_info: search results\n");
 	else if (snac2->type == 0x0008) /* create room */
 		ret = parseinfo_create(od, conn, mod, frame, snac, bs, snac2);
 	else
-		gaim_debug_misc("oscar", "chatnav_parse_info: unknown request subtype (%04x)\n", snac2->type);
+		purple_debug_misc("oscar", "chatnav_parse_info: unknown request subtype (%04x)\n", snac2->type);
 
 	if (snac2)
-		free(snac2->data);
-	free(snac2);
+		g_free(snac2->data);
+	g_free(snac2);
 
 	return ret;
 }
@@ -451,7 +425,9 @@ parseinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 static int
 snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
-	if (snac->subtype == 0x0009)
+	if (snac->subtype == 0x0001)
+		return error(od, conn, mod, frame, snac, bs);
+	else if (snac->subtype == 0x0009)
 		return parseinfo(od, conn, mod, frame, snac, bs);
 
 	return 0;
@@ -460,7 +436,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 int
 chatnav_modfirst(OscarData *od, aim_module_t *mod)
 {
-	mod->family = 0x000d;
+	mod->family = SNAC_FAMILY_CHATNAV;
 	mod->version = 0x0001;
 	mod->toolid = 0x0010;
 	mod->toolversion = 0x0629;

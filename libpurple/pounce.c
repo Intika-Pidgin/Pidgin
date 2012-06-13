@@ -1,10 +1,11 @@
 /**
  * @file pounce.c Buddy Pounce API
  * @ingroup core
+ */
+
+/* purple
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
 #include "conversation.h"
@@ -35,9 +36,9 @@ typedef struct
 {
 	GString *buffer;
 
-	GaimPounce *pounce;
-	GaimPounceEvent events;
-	GaimPounceOption options;
+	PurplePounce *pounce;
+	PurplePounceEvent events;
+	PurplePounceOption options;
 
 	char *ui_name;
 	char *pouncee;
@@ -58,16 +59,16 @@ typedef struct
 
 	GHashTable *atts;
 
-} GaimPounceActionData;
+} PurplePounceActionData;
 
 typedef struct
 {
 	char *ui;
-	GaimPounceCb cb;
-	void (*new_pounce)(GaimPounce *);
-	void (*free_pounce)(GaimPounce *);
+	PurplePounceCb cb;
+	void (*new_pounce)(PurplePounce *);
+	void (*free_pounce)(PurplePounce *);
 
-} GaimPounceHandler;
+} PurplePounceHandler;
 
 
 static GHashTable *pounce_handlers = NULL;
@@ -80,10 +81,10 @@ static gboolean    pounces_loaded = FALSE;
  * Private utility functions                                         *
  *********************************************************************/
 
-static GaimPounceActionData *
-find_action_data(const GaimPounce *pounce, const char *name)
+static PurplePounceActionData *
+find_action_data(const PurplePounce *pounce, const char *name)
 {
-	GaimPounceActionData *action;
+	PurplePounceActionData *action;
 
 	g_return_val_if_fail(pounce != NULL, NULL);
 	g_return_val_if_fail(name   != NULL, NULL);
@@ -96,7 +97,7 @@ find_action_data(const GaimPounce *pounce, const char *name)
 static void
 free_action_data(gpointer data)
 {
-	GaimPounceActionData *action_data = data;
+	PurplePounceActionData *action_data = data;
 
 	g_free(action_data->name);
 
@@ -129,11 +130,11 @@ static void
 action_parameter_list_to_xmlnode(gpointer key, gpointer value, gpointer user_data)
 {
 	const char *action;
-	GaimPounceActionData *action_data;
+	PurplePounceActionData *action_data;
 	xmlnode *node, *child;
 
 	action      = (const char *)key;
-	action_data = (GaimPounceActionData *)value;
+	action_data = (PurplePounceActionData *)value;
 	node        = (xmlnode *)user_data;
 
 	if (!action_data->enabled)
@@ -164,60 +165,61 @@ add_option_to_xmlnode(xmlnode *node, const char *type)
 }
 
 static xmlnode *
-pounce_to_xmlnode(GaimPounce *pounce)
+pounce_to_xmlnode(PurplePounce *pounce)
 {
 	xmlnode *node, *child;
-	GaimAccount *pouncer;
-	GaimPounceEvent events;
-	GaimPounceOption options;
+	PurpleAccount *pouncer;
+	PurplePounceEvent events;
+	PurplePounceOption options;
 
-	pouncer = gaim_pounce_get_pouncer(pounce);
-	events  = gaim_pounce_get_events(pounce);
-	options = gaim_pounce_get_options(pounce);
+	pouncer = purple_pounce_get_pouncer(pounce);
+	events  = purple_pounce_get_events(pounce);
+	options = purple_pounce_get_options(pounce);
 
 	node = xmlnode_new("pounce");
 	xmlnode_set_attrib(node, "ui", pounce->ui_type);
 
 	child = xmlnode_new_child(node, "account");
 	xmlnode_set_attrib(child, "protocol", pouncer->protocol_id);
-	xmlnode_insert_data(child, gaim_account_get_username(pouncer), -1);
+	xmlnode_insert_data(child,
+			purple_normalize(pouncer, purple_account_get_username(pouncer)), -1);
 
 	child = xmlnode_new_child(node, "pouncee");
-	xmlnode_insert_data(child, gaim_pounce_get_pouncee(pounce), -1);
+	xmlnode_insert_data(child, purple_pounce_get_pouncee(pounce), -1);
 
 	/* Write pounce options */
 	child = xmlnode_new_child(node, "options");
-	if (options & GAIM_POUNCE_OPTION_AWAY)
+	if (options & PURPLE_POUNCE_OPTION_AWAY)
 		add_option_to_xmlnode(child, "on-away");
 
 	/* Write pounce events */
 	child = xmlnode_new_child(node, "events");
-	if (events & GAIM_POUNCE_SIGNON)
+	if (events & PURPLE_POUNCE_SIGNON)
 		add_event_to_xmlnode(child, "sign-on");
-	if (events & GAIM_POUNCE_SIGNOFF)
+	if (events & PURPLE_POUNCE_SIGNOFF)
 		add_event_to_xmlnode(child, "sign-off");
-	if (events & GAIM_POUNCE_AWAY)
+	if (events & PURPLE_POUNCE_AWAY)
 		add_event_to_xmlnode(child, "away");
-	if (events & GAIM_POUNCE_AWAY_RETURN)
+	if (events & PURPLE_POUNCE_AWAY_RETURN)
 		add_event_to_xmlnode(child, "return-from-away");
-	if (events & GAIM_POUNCE_IDLE)
+	if (events & PURPLE_POUNCE_IDLE)
 		add_event_to_xmlnode(child, "idle");
-	if (events & GAIM_POUNCE_IDLE_RETURN)
+	if (events & PURPLE_POUNCE_IDLE_RETURN)
 		add_event_to_xmlnode(child, "return-from-idle");
-	if (events & GAIM_POUNCE_TYPING)
+	if (events & PURPLE_POUNCE_TYPING)
 		add_event_to_xmlnode(child, "start-typing");
-	if (events & GAIM_POUNCE_TYPED)
+	if (events & PURPLE_POUNCE_TYPED)
 		add_event_to_xmlnode(child, "typed");
-	if (events & GAIM_POUNCE_TYPING_STOPPED)
+	if (events & PURPLE_POUNCE_TYPING_STOPPED)
 		add_event_to_xmlnode(child, "stop-typing");
-	if (events & GAIM_POUNCE_MESSAGE_RECEIVED)
+	if (events & PURPLE_POUNCE_MESSAGE_RECEIVED)
 		add_event_to_xmlnode(child, "message-received");
 
 	/* Write pounce actions */
 	child = xmlnode_new_child(node, "actions");
 	g_hash_table_foreach(pounce->actions, action_parameter_list_to_xmlnode, child);
 
-	if (gaim_pounce_get_save(pounce))
+	if (purple_pounce_get_save(pounce))
 		child = xmlnode_new_child(node, "save");
 
 	return node;
@@ -232,7 +234,7 @@ pounces_to_xmlnode(void)
 	node = xmlnode_new("pounces");
 	xmlnode_set_attrib(node, "version", "1.0");
 
-	for (cur = gaim_pounces_get_all(); cur != NULL; cur = cur->next)
+	for (cur = purple_pounces_get_all(); cur != NULL; cur = cur->next)
 	{
 		child = pounce_to_xmlnode(cur->data);
 		xmlnode_insert_child(node, child);
@@ -249,14 +251,14 @@ sync_pounces(void)
 
 	if (!pounces_loaded)
 	{
-		gaim_debug_error("pounce", "Attempted to save buddy pounces before "
+		purple_debug_error("pounce", "Attempted to save buddy pounces before "
 						 "they were read!\n");
 		return;
 	}
 
 	node = pounces_to_xmlnode();
 	data = xmlnode_to_formatted_str(node, NULL);
-	gaim_util_write_data_to_file("pounces.xml", data, -1);
+	purple_util_write_data_to_file("pounces.xml", data, -1);
 	g_free(data);
 	xmlnode_free(node);
 }
@@ -273,7 +275,7 @@ static void
 schedule_pounces_save(void)
 {
 	if (save_timer == 0)
-		save_timer = gaim_timeout_add(5000, save_cb, NULL);
+		save_timer = purple_timeout_add_seconds(5, save_cb, NULL);
 }
 
 
@@ -324,11 +326,11 @@ start_element_handler(GMarkupParseContext *context,
 		data->buffer = NULL;
 	}
 
-	if (!strcmp(element_name, "pounce")) {
+	if (purple_strequal(element_name, "pounce")) {
 		const char *ui = g_hash_table_lookup(atts, "ui");
 
 		if (ui == NULL) {
-			gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+			purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 					   "Unset 'ui' parameter for pounce!\n");
 		}
 		else
@@ -336,51 +338,51 @@ start_element_handler(GMarkupParseContext *context,
 
 		data->events = 0;
 	}
-	else if (!strcmp(element_name, "account")) {
+	else if (purple_strequal(element_name, "account")) {
 		const char *protocol_id = g_hash_table_lookup(atts, "protocol");
 
 		if (protocol_id == NULL) {
-			gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+			purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 					   "Unset 'protocol' parameter for account!\n");
 		}
 		else
 			data->protocol_id = g_strdup(protocol_id);
 	}
-	else if (!strcmp(element_name, "option")) {
+	else if (purple_strequal(element_name, "option")) {
 		const char *type = g_hash_table_lookup(atts, "type");
 
 		if (type == NULL) {
-			gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+			purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 					   "Unset 'type' parameter for option!\n");
 		}
 		else
 			data->option_type = g_strdup(type);
 	}
-	else if (!strcmp(element_name, "event")) {
+	else if (purple_strequal(element_name, "event")) {
 		const char *type = g_hash_table_lookup(atts, "type");
 
 		if (type == NULL) {
-			gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+			purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 					   "Unset 'type' parameter for event!\n");
 		}
 		else
 			data->event_type = g_strdup(type);
 	}
-	else if (!strcmp(element_name, "action")) {
+	else if (purple_strequal(element_name, "action")) {
 		const char *type = g_hash_table_lookup(atts, "type");
 
 		if (type == NULL) {
-			gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+			purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 					   "Unset 'type' parameter for action!\n");
 		}
 		else
 			data->action_name = g_strdup(type);
 	}
-	else if (!strcmp(element_name, "param")) {
+	else if (purple_strequal(element_name, "param")) {
 		const char *param_name = g_hash_table_lookup(atts, "name");
 
 		if (param_name == NULL) {
-			gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+			purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 					   "Unset 'name' parameter for param!\n");
 		}
 		else
@@ -402,68 +404,72 @@ end_element_handler(GMarkupParseContext *context, const gchar *element_name,
 		data->buffer = NULL;
 	}
 
-	if (!strcmp(element_name, "account")) {
+	if (purple_strequal(element_name, "account")) {
+		char *tmp;
 		g_free(data->account_name);
 		data->account_name = g_strdup(buffer);
+		tmp = data->protocol_id;
+		data->protocol_id = g_strdup(_purple_oscar_convert(buffer, tmp));
+		g_free(tmp);
 	}
-	else if (!strcmp(element_name, "pouncee")) {
+	else if (purple_strequal(element_name, "pouncee")) {
 		g_free(data->pouncee);
 		data->pouncee = g_strdup(buffer);
 	}
-	else if (!strcmp(element_name, "option")) {
-		if (!strcmp(data->option_type, "on-away"))
-			data->options |= GAIM_POUNCE_OPTION_AWAY;
+	else if (purple_strequal(element_name, "option")) {
+		if (purple_strequal(data->option_type, "on-away"))
+			data->options |= PURPLE_POUNCE_OPTION_AWAY;
 
 		g_free(data->option_type);
 		data->option_type = NULL;
 	}
-	else if (!strcmp(element_name, "event")) {
-		if (!strcmp(data->event_type, "sign-on"))
-			data->events |= GAIM_POUNCE_SIGNON;
-		else if (!strcmp(data->event_type, "sign-off"))
-			data->events |= GAIM_POUNCE_SIGNOFF;
-		else if (!strcmp(data->event_type, "away"))
-			data->events |= GAIM_POUNCE_AWAY;
-		else if (!strcmp(data->event_type, "return-from-away"))
-			data->events |= GAIM_POUNCE_AWAY_RETURN;
-		else if (!strcmp(data->event_type, "idle"))
-			data->events |= GAIM_POUNCE_IDLE;
-		else if (!strcmp(data->event_type, "return-from-idle"))
-			data->events |= GAIM_POUNCE_IDLE_RETURN;
-		else if (!strcmp(data->event_type, "start-typing"))
-			data->events |= GAIM_POUNCE_TYPING;
-		else if (!strcmp(data->event_type, "typed"))
-			data->events |= GAIM_POUNCE_TYPED;
-		else if (!strcmp(data->event_type, "stop-typing"))
-			data->events |= GAIM_POUNCE_TYPING_STOPPED;
-		else if (!strcmp(data->event_type, "message-received"))
-			data->events |= GAIM_POUNCE_MESSAGE_RECEIVED;
+	else if (purple_strequal(element_name, "event")) {
+		if (purple_strequal(data->event_type, "sign-on"))
+			data->events |= PURPLE_POUNCE_SIGNON;
+		else if (purple_strequal(data->event_type, "sign-off"))
+			data->events |= PURPLE_POUNCE_SIGNOFF;
+		else if (purple_strequal(data->event_type, "away"))
+			data->events |= PURPLE_POUNCE_AWAY;
+		else if (purple_strequal(data->event_type, "return-from-away"))
+			data->events |= PURPLE_POUNCE_AWAY_RETURN;
+		else if (purple_strequal(data->event_type, "idle"))
+			data->events |= PURPLE_POUNCE_IDLE;
+		else if (purple_strequal(data->event_type, "return-from-idle"))
+			data->events |= PURPLE_POUNCE_IDLE_RETURN;
+		else if (purple_strequal(data->event_type, "start-typing"))
+			data->events |= PURPLE_POUNCE_TYPING;
+		else if (purple_strequal(data->event_type, "typed"))
+			data->events |= PURPLE_POUNCE_TYPED;
+		else if (purple_strequal(data->event_type, "stop-typing"))
+			data->events |= PURPLE_POUNCE_TYPING_STOPPED;
+		else if (purple_strequal(data->event_type, "message-received"))
+			data->events |= PURPLE_POUNCE_MESSAGE_RECEIVED;
 
 		g_free(data->event_type);
 		data->event_type = NULL;
 	}
-	else if (!strcmp(element_name, "action")) {
+	else if (purple_strequal(element_name, "action")) {
 		if (data->pounce != NULL) {
-			gaim_pounce_action_register(data->pounce, data->action_name);
-			gaim_pounce_action_set_enabled(data->pounce, data->action_name, TRUE);
+			purple_pounce_action_register(data->pounce, data->action_name);
+			purple_pounce_action_set_enabled(data->pounce, data->action_name, TRUE);
 		}
 
 		g_free(data->action_name);
 		data->action_name = NULL;
 	}
-	else if (!strcmp(element_name, "param")) {
+	else if (purple_strequal(element_name, "param")) {
 		if (data->pounce != NULL) {
-			gaim_pounce_action_set_attribute(data->pounce, data->action_name,
+			purple_pounce_action_set_attribute(data->pounce, data->action_name,
 											 data->param_name, buffer);
 		}
 
 		g_free(data->param_name);
 		data->param_name = NULL;
 	}
-	else if (!strcmp(element_name, "events")) {
-		GaimAccount *account;
+	else if (purple_strequal(element_name, "events")) {
+		PurpleAccount *account;
 
-		account = gaim_accounts_find(data->account_name, data->protocol_id);
+		account = purple_accounts_find(data->account_name, data->protocol_id);
 
 		g_free(data->account_name);
 		g_free(data->protocol_id);
@@ -472,7 +478,7 @@ end_element_handler(GMarkupParseContext *context, const gchar *element_name,
 		data->protocol_id  = NULL;
 
 		if (account == NULL) {
-			gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+			purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 					   "Account for pounce not found!\n");
 			/*
 			 * This pounce has effectively been removed, so make
@@ -481,11 +487,11 @@ end_element_handler(GMarkupParseContext *context, const gchar *element_name,
 			schedule_pounces_save();
 		}
 		else {
-			gaim_debug(GAIM_DEBUG_INFO, "pounce",
+			purple_debug(PURPLE_DEBUG_INFO, "pounce",
 					   "Creating pounce: %s, %s\n", data->ui_name,
 					   data->pouncee);
 
-			data->pounce = gaim_pounce_new(data->ui_name, account,
+			data->pounce = purple_pounce_new(data->ui_name, account,
 										   data->pouncee, data->events,
 										   data->options);
 		}
@@ -493,11 +499,11 @@ end_element_handler(GMarkupParseContext *context, const gchar *element_name,
 		g_free(data->pouncee);
 		data->pouncee = NULL;
 	}
-	else if (!strcmp(element_name, "save")) {
+	else if (purple_strequal(element_name, "save")) {
 		if (data->pounce != NULL)
-			gaim_pounce_set_save(data->pounce, TRUE);
+			purple_pounce_set_save(data->pounce, TRUE);
 	}
-	else if (!strcmp(element_name, "pounce")) {
+	else if (purple_strequal(element_name, "pounce")) {
 		data->pounce  = NULL;
 		data->events  = 0;
 		data->options = 0;
@@ -546,9 +552,9 @@ static GMarkupParser pounces_parser =
 };
 
 gboolean
-gaim_pounces_load(void)
+purple_pounces_load(void)
 {
-	gchar *filename = g_build_filename(gaim_user_dir(), "pounces.xml", NULL);
+	gchar *filename = g_build_filename(purple_user_dir(), "pounces.xml", NULL);
 	gchar *contents = NULL;
 	gsize length;
 	GMarkupParseContext *context;
@@ -561,7 +567,7 @@ gaim_pounces_load(void)
 	}
 
 	if (!g_file_get_contents(filename, &contents, &length, &error)) {
-		gaim_debug(GAIM_DEBUG_ERROR, "pounce",
+		purple_debug(PURPLE_DEBUG_ERROR, "pounce",
 				   "Error reading pounces: %s\n", error->message);
 
 		g_free(filename);
@@ -587,7 +593,7 @@ gaim_pounces_load(void)
 	}
 
 	if (!g_markup_parse_context_end_parse(context, NULL)) {
-		gaim_debug(GAIM_DEBUG_ERROR, "pounce", "Error parsing %s\n",
+		purple_debug(PURPLE_DEBUG_ERROR, "pounce", "Error parsing %s\n",
 				   filename);
 
 		g_markup_parse_context_free(context);
@@ -608,20 +614,20 @@ gaim_pounces_load(void)
 }
 
 
-GaimPounce *
-gaim_pounce_new(const char *ui_type, GaimAccount *pouncer,
-				const char *pouncee, GaimPounceEvent event,
-				GaimPounceOption option)
+PurplePounce *
+purple_pounce_new(const char *ui_type, PurpleAccount *pouncer,
+				const char *pouncee, PurplePounceEvent event,
+				PurplePounceOption option)
 {
-	GaimPounce *pounce;
-	GaimPounceHandler *handler;
+	PurplePounce *pounce;
+	PurplePounceHandler *handler;
 
 	g_return_val_if_fail(ui_type != NULL, NULL);
 	g_return_val_if_fail(pouncer != NULL, NULL);
 	g_return_val_if_fail(pouncee != NULL, NULL);
 	g_return_val_if_fail(event   != 0,    NULL);
 
-	pounce = g_new0(GaimPounce, 1);
+	pounce = g_new0(PurplePounce, 1);
 
 	pounce->ui_type  = g_strdup(ui_type);
 	pounce->pouncer  = pouncer;
@@ -645,9 +651,9 @@ gaim_pounce_new(const char *ui_type, GaimAccount *pouncer,
 }
 
 void
-gaim_pounce_destroy(GaimPounce *pounce)
+purple_pounce_destroy(PurplePounce *pounce)
 {
-	GaimPounceHandler *handler;
+	PurplePounceHandler *handler;
 
 	g_return_if_fail(pounce != NULL);
 
@@ -669,30 +675,55 @@ gaim_pounce_destroy(GaimPounce *pounce)
 }
 
 void
-gaim_pounce_destroy_all_by_account(GaimAccount *account)
+purple_pounce_destroy_all_by_account(PurpleAccount *account)
 {
-	GaimAccount *pouncer;
-	GaimPounce *pounce;
+	PurpleAccount *pouncer;
+	PurplePounce *pounce;
 	GList *l, *l_next;
 
 	g_return_if_fail(account != NULL);
 
-	for (l = gaim_pounces_get_all(); l != NULL; l = l_next)
+	for (l = purple_pounces_get_all(); l != NULL; l = l_next)
 	{
-		pounce = (GaimPounce *)l->data;
+		pounce = (PurplePounce *)l->data;
 		l_next = l->next;
 
-		pouncer = gaim_pounce_get_pouncer(pounce);
+		pouncer = purple_pounce_get_pouncer(pounce);
 		if (pouncer == account)
-			gaim_pounce_destroy(pounce);
+			purple_pounce_destroy(pounce);
 	}
 }
 
 void
-gaim_pounce_set_events(GaimPounce *pounce, GaimPounceEvent events)
+purple_pounce_destroy_all_by_buddy(PurpleBuddy *buddy)
+{
+	const char *pouncee, *bname;
+	PurpleAccount *pouncer, *bacct;
+	PurplePounce *pounce;
+	GList *l, *l_next;
+
+	g_return_if_fail(buddy != NULL);
+
+	bacct = purple_buddy_get_account(buddy);
+	bname = purple_buddy_get_name(buddy);
+
+	for (l = purple_pounces_get_all(); l != NULL; l = l_next) {
+		pounce = (PurplePounce *)l->data;
+		l_next = l->next;
+
+		pouncer = purple_pounce_get_pouncer(pounce);
+		pouncee = purple_pounce_get_pouncee(pounce);
+
+		if ( (pouncer == bacct) && (strcmp(pouncee, bname) == 0) )
+			purple_pounce_destroy(pounce);
+	}
+}
+
+void
+purple_pounce_set_events(PurplePounce *pounce, PurplePounceEvent events)
 {
 	g_return_if_fail(pounce != NULL);
-	g_return_if_fail(events != GAIM_POUNCE_NONE);
+	g_return_if_fail(events != PURPLE_POUNCE_NONE);
 
 	pounce->events = events;
 
@@ -700,7 +731,7 @@ gaim_pounce_set_events(GaimPounce *pounce, GaimPounceEvent events)
 }
 
 void
-gaim_pounce_set_options(GaimPounce *pounce, GaimPounceOption options)
+purple_pounce_set_options(PurplePounce *pounce, PurplePounceOption options)
 {
 	g_return_if_fail(pounce  != NULL);
 
@@ -710,7 +741,7 @@ gaim_pounce_set_options(GaimPounce *pounce, GaimPounceOption options)
 }
 
 void
-gaim_pounce_set_pouncer(GaimPounce *pounce, GaimAccount *pouncer)
+purple_pounce_set_pouncer(PurplePounce *pounce, PurpleAccount *pouncer)
 {
 	g_return_if_fail(pounce  != NULL);
 	g_return_if_fail(pouncer != NULL);
@@ -721,7 +752,7 @@ gaim_pounce_set_pouncer(GaimPounce *pounce, GaimAccount *pouncer)
 }
 
 void
-gaim_pounce_set_pouncee(GaimPounce *pounce, const char *pouncee)
+purple_pounce_set_pouncee(PurplePounce *pounce, const char *pouncee)
 {
 	g_return_if_fail(pounce  != NULL);
 	g_return_if_fail(pouncee != NULL);
@@ -733,7 +764,7 @@ gaim_pounce_set_pouncee(GaimPounce *pounce, const char *pouncee)
 }
 
 void
-gaim_pounce_set_save(GaimPounce *pounce, gboolean save)
+purple_pounce_set_save(PurplePounce *pounce, gboolean save)
 {
 	g_return_if_fail(pounce != NULL);
 
@@ -743,9 +774,9 @@ gaim_pounce_set_save(GaimPounce *pounce, gboolean save)
 }
 
 void
-gaim_pounce_action_register(GaimPounce *pounce, const char *name)
+purple_pounce_action_register(PurplePounce *pounce, const char *name)
 {
-	GaimPounceActionData *action_data;
+	PurplePounceActionData *action_data;
 
 	g_return_if_fail(pounce != NULL);
 	g_return_if_fail(name   != NULL);
@@ -753,7 +784,7 @@ gaim_pounce_action_register(GaimPounce *pounce, const char *name)
 	if (g_hash_table_lookup(pounce->actions, name) != NULL)
 		return;
 
-	action_data = g_new0(GaimPounceActionData, 1);
+	action_data = g_new0(PurplePounceActionData, 1);
 
 	action_data->name    = g_strdup(name);
 	action_data->enabled = FALSE;
@@ -766,10 +797,10 @@ gaim_pounce_action_register(GaimPounce *pounce, const char *name)
 }
 
 void
-gaim_pounce_action_set_enabled(GaimPounce *pounce, const char *action,
+purple_pounce_action_set_enabled(PurplePounce *pounce, const char *action,
 							   gboolean enabled)
 {
-	GaimPounceActionData *action_data;
+	PurplePounceActionData *action_data;
 
 	g_return_if_fail(pounce != NULL);
 	g_return_if_fail(action != NULL);
@@ -784,10 +815,10 @@ gaim_pounce_action_set_enabled(GaimPounce *pounce, const char *action,
 }
 
 void
-gaim_pounce_action_set_attribute(GaimPounce *pounce, const char *action,
+purple_pounce_action_set_attribute(PurplePounce *pounce, const char *action,
 								 const char *attr, const char *value)
 {
-	GaimPounceActionData *action_data;
+	PurplePounceActionData *action_data;
 
 	g_return_if_fail(pounce != NULL);
 	g_return_if_fail(action != NULL);
@@ -807,7 +838,7 @@ gaim_pounce_action_set_attribute(GaimPounce *pounce, const char *action,
 }
 
 void
-gaim_pounce_set_data(GaimPounce *pounce, void *data)
+purple_pounce_set_data(PurplePounce *pounce, void *data)
 {
 	g_return_if_fail(pounce != NULL);
 
@@ -816,24 +847,24 @@ gaim_pounce_set_data(GaimPounce *pounce, void *data)
 	schedule_pounces_save();
 }
 
-GaimPounceEvent
-gaim_pounce_get_events(const GaimPounce *pounce)
+PurplePounceEvent
+purple_pounce_get_events(const PurplePounce *pounce)
 {
-	g_return_val_if_fail(pounce != NULL, GAIM_POUNCE_NONE);
+	g_return_val_if_fail(pounce != NULL, PURPLE_POUNCE_NONE);
 
 	return pounce->events;
 }
 
-GaimPounceOption
-gaim_pounce_get_options(const GaimPounce *pounce)
+PurplePounceOption
+purple_pounce_get_options(const PurplePounce *pounce)
 {
-	g_return_val_if_fail(pounce != NULL, GAIM_POUNCE_OPTION_NONE);
+	g_return_val_if_fail(pounce != NULL, PURPLE_POUNCE_OPTION_NONE);
 
 	return pounce->options;
 }
 
-GaimAccount *
-gaim_pounce_get_pouncer(const GaimPounce *pounce)
+PurpleAccount *
+purple_pounce_get_pouncer(const PurplePounce *pounce)
 {
 	g_return_val_if_fail(pounce != NULL, NULL);
 
@@ -841,7 +872,7 @@ gaim_pounce_get_pouncer(const GaimPounce *pounce)
 }
 
 const char *
-gaim_pounce_get_pouncee(const GaimPounce *pounce)
+purple_pounce_get_pouncee(const PurplePounce *pounce)
 {
 	g_return_val_if_fail(pounce != NULL, NULL);
 
@@ -849,7 +880,7 @@ gaim_pounce_get_pouncee(const GaimPounce *pounce)
 }
 
 gboolean
-gaim_pounce_get_save(const GaimPounce *pounce)
+purple_pounce_get_save(const PurplePounce *pounce)
 {
 	g_return_val_if_fail(pounce != NULL, FALSE);
 
@@ -857,9 +888,9 @@ gaim_pounce_get_save(const GaimPounce *pounce)
 }
 
 gboolean
-gaim_pounce_action_is_enabled(const GaimPounce *pounce, const char *action)
+purple_pounce_action_is_enabled(const PurplePounce *pounce, const char *action)
 {
-	GaimPounceActionData *action_data;
+	PurplePounceActionData *action_data;
 
 	g_return_val_if_fail(pounce != NULL, FALSE);
 	g_return_val_if_fail(action != NULL, FALSE);
@@ -872,10 +903,10 @@ gaim_pounce_action_is_enabled(const GaimPounce *pounce, const char *action)
 }
 
 const char *
-gaim_pounce_action_get_attribute(const GaimPounce *pounce,
+purple_pounce_action_get_attribute(const PurplePounce *pounce,
 								 const char *action, const char *attr)
 {
-	GaimPounceActionData *action_data;
+	PurplePounceActionData *action_data;
 
 	g_return_val_if_fail(pounce != NULL, NULL);
 	g_return_val_if_fail(action != NULL, NULL);
@@ -889,7 +920,7 @@ gaim_pounce_action_get_attribute(const GaimPounce *pounce,
 }
 
 void *
-gaim_pounce_get_data(const GaimPounce *pounce)
+purple_pounce_get_data(const PurplePounce *pounce)
 {
 	g_return_val_if_fail(pounce != NULL, NULL);
 
@@ -897,44 +928,44 @@ gaim_pounce_get_data(const GaimPounce *pounce)
 }
 
 void
-gaim_pounce_execute(const GaimAccount *pouncer, const char *pouncee,
-					GaimPounceEvent events)
+purple_pounce_execute(const PurpleAccount *pouncer, const char *pouncee,
+					PurplePounceEvent events)
 {
-	GaimPounce *pounce;
-	GaimPounceHandler *handler;
-	GaimPresence *presence;
+	PurplePounce *pounce;
+	PurplePounceHandler *handler;
+	PurplePresence *presence;
 	GList *l, *l_next;
 	char *norm_pouncee;
 
 	g_return_if_fail(pouncer != NULL);
 	g_return_if_fail(pouncee != NULL);
-	g_return_if_fail(events  != GAIM_POUNCE_NONE);
+	g_return_if_fail(events  != PURPLE_POUNCE_NONE);
 
-	norm_pouncee = g_strdup(gaim_normalize(pouncer, pouncee));
+	norm_pouncee = g_strdup(purple_normalize(pouncer, pouncee));
 
-	for (l = gaim_pounces_get_all(); l != NULL; l = l_next)
+	for (l = purple_pounces_get_all(); l != NULL; l = l_next)
 	{
-		pounce = (GaimPounce *)l->data;
+		pounce = (PurplePounce *)l->data;
 		l_next = l->next;
 
-		presence = gaim_account_get_presence(pouncer);
+		presence = purple_account_get_presence(pouncer);
 
-		if ((gaim_pounce_get_events(pounce) & events) &&
-			(gaim_pounce_get_pouncer(pounce) == pouncer) &&
-			!gaim_utf8_strcasecmp(gaim_normalize(pouncer, gaim_pounce_get_pouncee(pounce)),
+		if ((purple_pounce_get_events(pounce) & events) &&
+			(purple_pounce_get_pouncer(pounce) == pouncer) &&
+			!purple_utf8_strcasecmp(purple_normalize(pouncer, purple_pounce_get_pouncee(pounce)),
 								  norm_pouncee) &&
-			(pounce->options == GAIM_POUNCE_OPTION_NONE ||
-			 (pounce->options & GAIM_POUNCE_OPTION_AWAY &&
-			  !gaim_presence_is_available(presence))))
+			(pounce->options == PURPLE_POUNCE_OPTION_NONE ||
+			 (pounce->options & PURPLE_POUNCE_OPTION_AWAY &&
+			  !purple_presence_is_available(presence))))
 		{
 			handler = g_hash_table_lookup(pounce_handlers, pounce->ui_type);
 
 			if (handler != NULL && handler->cb != NULL)
 			{
-				handler->cb(pounce, events, gaim_pounce_get_data(pounce));
+				handler->cb(pounce, events, purple_pounce_get_data(pounce));
 
-				if (!gaim_pounce_get_save(pounce))
-					gaim_pounce_destroy(pounce);
+				if (!purple_pounce_get_save(pounce))
+					purple_pounce_destroy(pounce);
 			}
 		}
 	}
@@ -942,27 +973,27 @@ gaim_pounce_execute(const GaimAccount *pouncer, const char *pouncee,
 	g_free(norm_pouncee);
 }
 
-GaimPounce *
-gaim_find_pounce(const GaimAccount *pouncer, const char *pouncee,
-				 GaimPounceEvent events)
+PurplePounce *
+purple_find_pounce(const PurpleAccount *pouncer, const char *pouncee,
+				 PurplePounceEvent events)
 {
-	GaimPounce *pounce = NULL;
+	PurplePounce *pounce = NULL;
 	GList *l;
 	char *norm_pouncee;
 
 	g_return_val_if_fail(pouncer != NULL, NULL);
 	g_return_val_if_fail(pouncee != NULL, NULL);
-	g_return_val_if_fail(events  != GAIM_POUNCE_NONE, NULL);
+	g_return_val_if_fail(events  != PURPLE_POUNCE_NONE, NULL);
 
-	norm_pouncee = g_strdup(gaim_normalize(pouncer, pouncee));
+	norm_pouncee = g_strdup(purple_normalize(pouncer, pouncee));
 
-	for (l = gaim_pounces_get_all(); l != NULL; l = l->next)
+	for (l = purple_pounces_get_all(); l != NULL; l = l->next)
 	{
-		pounce = (GaimPounce *)l->data;
+		pounce = (PurplePounce *)l->data;
 
-		if ((gaim_pounce_get_events(pounce) & events) &&
-			(gaim_pounce_get_pouncer(pounce) == pouncer) &&
-			!gaim_utf8_strcasecmp(gaim_normalize(pouncer, gaim_pounce_get_pouncee(pounce)),
+		if ((purple_pounce_get_events(pounce) & events) &&
+			(purple_pounce_get_pouncer(pounce) == pouncer) &&
+			!purple_utf8_strcasecmp(purple_normalize(pouncer, purple_pounce_get_pouncee(pounce)),
 								  norm_pouncee))
 		{
 			break;
@@ -977,16 +1008,16 @@ gaim_find_pounce(const GaimAccount *pouncer, const char *pouncee,
 }
 
 void
-gaim_pounces_register_handler(const char *ui, GaimPounceCb cb,
-							  void (*new_pounce)(GaimPounce *pounce),
-							  void (*free_pounce)(GaimPounce *pounce))
+purple_pounces_register_handler(const char *ui, PurplePounceCb cb,
+							  void (*new_pounce)(PurplePounce *pounce),
+							  void (*free_pounce)(PurplePounce *pounce))
 {
-	GaimPounceHandler *handler;
+	PurplePounceHandler *handler;
 
 	g_return_if_fail(ui != NULL);
 	g_return_if_fail(cb != NULL);
 
-	handler = g_new0(GaimPounceHandler, 1);
+	handler = g_new0(PurplePounceHandler, 1);
 
 	handler->ui          = g_strdup(ui);
 	handler->cb          = cb;
@@ -997,7 +1028,7 @@ gaim_pounces_register_handler(const char *ui, GaimPounceCb cb,
 }
 
 void
-gaim_pounces_unregister_handler(const char *ui)
+purple_pounces_unregister_handler(const char *ui)
 {
 	g_return_if_fail(ui != NULL);
 
@@ -1005,85 +1036,103 @@ gaim_pounces_unregister_handler(const char *ui)
 }
 
 GList *
-gaim_pounces_get_all(void)
+purple_pounces_get_all(void)
 {
 	return pounces;
+}
+
+GList *purple_pounces_get_all_for_ui(const char *ui)
+{
+	GList *list = NULL, *iter;
+	g_return_val_if_fail(ui != NULL, NULL);
+
+	for (iter = pounces; iter; iter = iter->next) {
+		PurplePounce *pounce = iter->data;
+		if (purple_strequal(pounce->ui_type, ui))
+			list = g_list_prepend(list, pounce);
+	}
+	list = g_list_reverse(list);
+	return list;
 }
 
 static void
 free_pounce_handler(gpointer user_data)
 {
-	GaimPounceHandler *handler = (GaimPounceHandler *)user_data;
+	PurplePounceHandler *handler = (PurplePounceHandler *)user_data;
 
 	g_free(handler->ui);
 	g_free(handler);
 }
 
 static void
-buddy_state_cb(GaimBuddy *buddy, GaimPounceEvent event)
+buddy_state_cb(PurpleBuddy *buddy, PurplePounceEvent event)
 {
-	gaim_pounce_execute(buddy->account, buddy->name, event);
+	PurpleAccount *account = purple_buddy_get_account(buddy);
+	const gchar *name = purple_buddy_get_name(buddy);
+
+	purple_pounce_execute(account, name, event);
 }
 
 static void
-buddy_status_changed_cb(GaimBuddy *buddy, GaimStatus *old_status,
-                        GaimStatus *status)
+buddy_status_changed_cb(PurpleBuddy *buddy, PurpleStatus *old_status,
+                        PurpleStatus *status)
 {
+	PurpleAccount *account = purple_buddy_get_account(buddy);
+	const gchar *name = purple_buddy_get_name(buddy);
 	gboolean old_available, available;
 
-	available = gaim_status_is_available(status);
-	old_available = gaim_status_is_available(old_status);
+	available = purple_status_is_available(status);
+	old_available = purple_status_is_available(old_status);
 
 	if (available && !old_available)
-		gaim_pounce_execute(buddy->account, buddy->name,
-		                    GAIM_POUNCE_AWAY_RETURN);
+		purple_pounce_execute(account, name, PURPLE_POUNCE_AWAY_RETURN);
 	else if (!available && old_available)
-		gaim_pounce_execute(buddy->account, buddy->name,
-		                    GAIM_POUNCE_AWAY);
+		purple_pounce_execute(account, name, PURPLE_POUNCE_AWAY);
 }
 
 static void
-buddy_idle_changed_cb(GaimBuddy *buddy, gboolean old_idle, gboolean idle)
+buddy_idle_changed_cb(PurpleBuddy *buddy, gboolean old_idle, gboolean idle)
 {
+	PurpleAccount *account = purple_buddy_get_account(buddy);
+	const gchar *name = purple_buddy_get_name(buddy);
+
 	if (idle && !old_idle)
-		gaim_pounce_execute(buddy->account, buddy->name,
-		                    GAIM_POUNCE_IDLE);
+		purple_pounce_execute(account, name, PURPLE_POUNCE_IDLE);
 	else if (!idle && old_idle)
-		gaim_pounce_execute(buddy->account, buddy->name,
-		                    GAIM_POUNCE_IDLE_RETURN);
+		purple_pounce_execute(account, name, PURPLE_POUNCE_IDLE_RETURN);
 }
 
 static void
-buddy_typing_cb(GaimAccount *account, const char *name, void *data)
+buddy_typing_cb(PurpleAccount *account, const char *name, void *data)
 {
-	GaimConversation *conv;
+	PurpleConversation *conv;
 
-	conv = gaim_find_conversation_with_account(GAIM_CONV_TYPE_IM, name, account);
+	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, account);
 	if (conv != NULL)
 	{
-		GaimTypingState state;
-		GaimPounceEvent event;
+		PurpleTypingState state;
+		PurplePounceEvent event;
 
-		state = gaim_conv_im_get_typing_state(GAIM_CONV_IM(conv));
-		if (state == GAIM_TYPED)
-			event = GAIM_POUNCE_TYPED;
-		else if (state == GAIM_NOT_TYPING)
-			event = GAIM_POUNCE_TYPING_STOPPED;
+		state = purple_conv_im_get_typing_state(PURPLE_CONV_IM(conv));
+		if (state == PURPLE_TYPED)
+			event = PURPLE_POUNCE_TYPED;
+		else if (state == PURPLE_NOT_TYPING)
+			event = PURPLE_POUNCE_TYPING_STOPPED;
 		else
-			event = GAIM_POUNCE_TYPING;
+			event = PURPLE_POUNCE_TYPING;
 
-		gaim_pounce_execute(account, name, event);
+		purple_pounce_execute(account, name, event);
 	}
 }
 
 static void
-received_message_cb(GaimAccount *account, const char *name, void *data)
+received_message_cb(PurpleAccount *account, const char *name, void *data)
 {
-	gaim_pounce_execute(account, name, GAIM_POUNCE_MESSAGE_RECEIVED);
+	purple_pounce_execute(account, name, PURPLE_POUNCE_MESSAGE_RECEIVED);
 }
 
 void *
-gaim_pounces_get_handle(void)
+purple_pounces_get_handle(void)
 {
 	static int pounce_handle;
 
@@ -1091,46 +1140,49 @@ gaim_pounces_get_handle(void)
 }
 
 void
-gaim_pounces_init(void)
+purple_pounces_init(void)
 {
-	void *handle       = gaim_pounces_get_handle();
-	void *blist_handle = gaim_blist_get_handle();
-	void *conv_handle  = gaim_conversations_get_handle();
+	void *handle       = purple_pounces_get_handle();
+	void *blist_handle = purple_blist_get_handle();
+	void *conv_handle  = purple_conversations_get_handle();
 
 	pounce_handlers = g_hash_table_new_full(g_str_hash, g_str_equal,
 											g_free, free_pounce_handler);
 
-	gaim_signal_connect(blist_handle, "buddy-idle-changed",
-	                    handle, GAIM_CALLBACK(buddy_idle_changed_cb), NULL);
-	gaim_signal_connect(blist_handle, "buddy-status-changed",
-	                    handle, GAIM_CALLBACK(buddy_status_changed_cb), NULL);
-	gaim_signal_connect(blist_handle, "buddy-signed-on",
-						handle, GAIM_CALLBACK(buddy_state_cb),
-						GINT_TO_POINTER(GAIM_POUNCE_SIGNON));
-	gaim_signal_connect(blist_handle, "buddy-signed-off",
-						handle, GAIM_CALLBACK(buddy_state_cb),
-						GINT_TO_POINTER(GAIM_POUNCE_SIGNOFF));
+	purple_signal_connect(blist_handle, "buddy-idle-changed",
+	                    handle, PURPLE_CALLBACK(buddy_idle_changed_cb), NULL);
+	purple_signal_connect(blist_handle, "buddy-status-changed",
+	                    handle, PURPLE_CALLBACK(buddy_status_changed_cb), NULL);
+	purple_signal_connect(blist_handle, "buddy-signed-on",
+						handle, PURPLE_CALLBACK(buddy_state_cb),
+						GINT_TO_POINTER(PURPLE_POUNCE_SIGNON));
+	purple_signal_connect(blist_handle, "buddy-signed-off",
+						handle, PURPLE_CALLBACK(buddy_state_cb),
+						GINT_TO_POINTER(PURPLE_POUNCE_SIGNOFF));
 
-	gaim_signal_connect(conv_handle, "buddy-typing",
-						handle, GAIM_CALLBACK(buddy_typing_cb), NULL);
-	gaim_signal_connect(conv_handle, "buddy-typed",
-						handle, GAIM_CALLBACK(buddy_typing_cb), NULL);
-	gaim_signal_connect(conv_handle, "buddy-typing-stopped",
-						handle, GAIM_CALLBACK(buddy_typing_cb), NULL);
+	purple_signal_connect(conv_handle, "buddy-typing",
+						handle, PURPLE_CALLBACK(buddy_typing_cb), NULL);
+	purple_signal_connect(conv_handle, "buddy-typed",
+						handle, PURPLE_CALLBACK(buddy_typing_cb), NULL);
+	purple_signal_connect(conv_handle, "buddy-typing-stopped",
+						handle, PURPLE_CALLBACK(buddy_typing_cb), NULL);
 
-	gaim_signal_connect(conv_handle, "received-im-msg",
-						handle, GAIM_CALLBACK(received_message_cb), NULL);
+	purple_signal_connect(conv_handle, "received-im-msg",
+						handle, PURPLE_CALLBACK(received_message_cb), NULL);
 }
 
 void
-gaim_pounces_uninit()
+purple_pounces_uninit()
 {
 	if (save_timer != 0)
 	{
-		gaim_timeout_remove(save_timer);
+		purple_timeout_remove(save_timer);
 		save_timer = 0;
 		sync_pounces();
 	}
 
-	gaim_signals_disconnect_by_handle(gaim_pounces_get_handle());
+	purple_signals_disconnect_by_handle(purple_pounces_get_handle());
+
+	g_hash_table_destroy(pounce_handlers);
+	pounce_handlers = NULL;
 }

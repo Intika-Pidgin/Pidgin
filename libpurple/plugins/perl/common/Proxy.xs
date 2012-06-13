@@ -1,65 +1,86 @@
 #include "module.h"
 
-MODULE = Gaim::Proxy  PACKAGE = Gaim::Proxy  PREFIX = gaim_proxy_
+MODULE = Purple::Proxy  PACKAGE = Purple::Proxy  PREFIX = purple_proxy_
 PROTOTYPES: ENABLE
 
-Gaim::ProxyInfo
-gaim_global_proxy_get_info()
+BOOT:
+{
+	HV *stash = gv_stashpv("Purple::ProxyType", 1);
 
-Gaim::Handle
-gaim_proxy_get_handle()
+	static const constiv *civ, const_iv[] = {
+#define const_iv(name) {#name, (IV)PURPLE_PROXY_##name}
+		const_iv(USE_GLOBAL),
+		const_iv(NONE),
+		const_iv(HTTP),
+		const_iv(SOCKS4),
+		const_iv(SOCKS5),
+		const_iv(USE_ENVVAR),
+	};
+
+	for (civ = const_iv + sizeof(const_iv) / sizeof(const_iv[0]); civ-- > const_iv; )
+		newCONSTSUB(stash, (char *)civ->name, newSViv(civ->iv));
+}
+
+Purple::Handle
+purple_proxy_get_handle()
+
+MODULE = Purple::Proxy  PACKAGE = Purple::ProxyInfo  PREFIX = purple_proxy_info_
+PROTOTYPES: ENABLE
 
 void
-gaim_proxy_info_destroy(info)
-	Gaim::ProxyInfo info
+purple_proxy_info_destroy(info)
+	Purple::ProxyInfo info
 
 const char *
-gaim_proxy_info_get_host(info)
-	Gaim::ProxyInfo info
+purple_proxy_info_get_host(info)
+	Purple::ProxyInfo info
 
 const char *
-gaim_proxy_info_get_password(info)
-	Gaim::ProxyInfo info
+purple_proxy_info_get_password(info)
+	Purple::ProxyInfo info
 
 int
-gaim_proxy_info_get_port(info)
-	Gaim::ProxyInfo info
+purple_proxy_info_get_port(info)
+	Purple::ProxyInfo info
 
-Gaim::ProxyType
-gaim_proxy_info_get_type(info)
-	Gaim::ProxyInfo info
+Purple::ProxyType
+purple_proxy_info_get_type(info)
+	Purple::ProxyInfo info
 
 const char *
-gaim_proxy_info_get_username(info)
-	Gaim::ProxyInfo info
+purple_proxy_info_get_username(info)
+	Purple::ProxyInfo info
 
-Gaim::ProxyInfo
-gaim_proxy_info_new()
+Purple::ProxyInfo
+purple_proxy_info_new()
 
 void
-gaim_proxy_info_set_host(info, host)
-	Gaim::ProxyInfo info
+purple_proxy_info_set_host(info, host)
+	Purple::ProxyInfo info
 	const char *host
 
 void
-gaim_proxy_info_set_password(info, password)
-	Gaim::ProxyInfo info
+purple_proxy_info_set_password(info, password)
+	Purple::ProxyInfo info
 	const char *password
 
 void
-gaim_proxy_info_set_port(info, port)
-	Gaim::ProxyInfo info
+purple_proxy_info_set_port(info, port)
+	Purple::ProxyInfo info
 	int port
 
 void
-gaim_proxy_info_set_type(info, type)
-	Gaim::ProxyInfo info
-	Gaim::ProxyType type
+purple_proxy_info_set_type(info, type)
+	Purple::ProxyInfo info
+	Purple::ProxyType type
 
 void
-gaim_proxy_info_set_username(info, username)
-	Gaim::ProxyInfo info
+purple_proxy_info_set_username(info, username)
+	Purple::ProxyInfo info
 	const char *username
 
-void
-gaim_proxy_init()
+MODULE = Purple::Proxy  PACKAGE = Purple::Proxy  PREFIX = purple_
+PROTOTYPES: ENABLE
+
+Purple::ProxyInfo
+purple_global_proxy_get_info()

@@ -14,14 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 #include "internal.h"
 
 #define PLUGIN_ID			"gtk-plugin_pack-convcolors"
 #define PLUGIN_NAME			N_("Conversation Colors")
-#define PLUGIN_STATIC_NAME	"Conversation Colors"
+#define PLUGIN_STATIC_NAME	ConversationColors
 #define PLUGIN_SUMMARY		N_("Customize colors in the conversation window")
 #define PLUGIN_DESCRIPTION	N_("Customize colors in the conversation window")
 #define PLUGIN_AUTHOR		"Sadrul H Chowdhury <sadrul@users.sourceforge.net>"
@@ -31,7 +31,7 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-/* Gaim headers */
+/* Purple headers */
 #include <gtkplugin.h>
 #include <version.h>
 
@@ -48,22 +48,27 @@
 #define	PREF_SEND	PREF_PREFIX "/send"
 #define	PREF_SEND_C	PREF_SEND "/color"
 #define	PREF_SEND_F	PREF_SEND "/format"
+#define	PREF_SEND_E	PREF_SEND "/enabled"
 
 #define PREF_RECV	PREF_PREFIX "/recv"
 #define	PREF_RECV_C	PREF_RECV "/color"
 #define	PREF_RECV_F	PREF_RECV "/format"
+#define	PREF_RECV_E	PREF_RECV "/enabled"
 
 #define PREF_SYSTEM	PREF_PREFIX "/system"
 #define	PREF_SYSTEM_C	PREF_SYSTEM "/color"
 #define	PREF_SYSTEM_F	PREF_SYSTEM "/format"
+#define	PREF_SYSTEM_E	PREF_SYSTEM "/enabled"
 
 #define PREF_ERROR	PREF_PREFIX "/error"
 #define	PREF_ERROR_C	PREF_ERROR "/color"
 #define	PREF_ERROR_F	PREF_ERROR "/format"
+#define	PREF_ERROR_E	PREF_ERROR "/enabled"
 
 #define PREF_NICK	PREF_PREFIX "/nick"
 #define	PREF_NICK_C	PREF_NICK "/color"
 #define	PREF_NICK_F	PREF_NICK "/format"
+#define	PREF_NICK_E	PREF_NICK "/enabled"
 
 enum
 {
@@ -72,30 +77,31 @@ enum
 	FONT_UNDERLINE	= 1 << 2
 };
 
-struct
+static struct
 {
-	GaimMessageFlags flag;
+	PurpleMessageFlags flag;
 	char *prefix;
 	const char *text;
-} formats[] = 
+} formats[] =
 {
-	{GAIM_MESSAGE_ERROR, PREF_ERROR, N_("Error Messages")},
-	{GAIM_MESSAGE_NICK, PREF_NICK, N_("Highlighted Messages")},
-	{GAIM_MESSAGE_SYSTEM, PREF_SYSTEM, N_("System Messages")},
-	{GAIM_MESSAGE_SEND, PREF_SEND, N_("Sent Messages")},
-	{GAIM_MESSAGE_RECV, PREF_RECV, N_("Received Messages")},
+	{PURPLE_MESSAGE_ERROR, PREF_ERROR, N_("Error Messages")},
+	{PURPLE_MESSAGE_NICK, PREF_NICK, N_("Highlighted Messages")},
+	{PURPLE_MESSAGE_SYSTEM, PREF_SYSTEM, N_("System Messages")},
+	{PURPLE_MESSAGE_SEND, PREF_SEND, N_("Sent Messages")},
+	{PURPLE_MESSAGE_RECV, PREF_RECV, N_("Received Messages")},
 	{0, NULL, NULL}
 };
 
 static gboolean
-displaying_msg(GaimAccount *account, const char *who, char **displaying,
-				GaimConversation *conv, GaimMessageFlags flags)
+displaying_msg(PurpleAccount *account, const char *who, char **displaying,
+				PurpleConversation *conv, PurpleMessageFlags flags)
 {
 	int i;
 	char tmp[128], *t;
 	gboolean bold, italic, underline;
 	int f;
 	const char *color;
+	gboolean rtl = FALSE;
 
 	for (i = 0; formats[i].prefix; i++)
 		if (flags & formats[i].flag)
@@ -104,25 +110,43 @@ displaying_msg(GaimAccount *account, const char *who, char **displaying,
 	if (!formats[i].prefix)
 		return FALSE;
 
-	if ((gaim_conversation_get_type(conv) == GAIM_CONV_TYPE_IM &&
-			!gaim_prefs_get_bool(PREF_IMS)) ||
-			(gaim_conversation_get_type(conv) == GAIM_CONV_TYPE_CHAT &&
-			!gaim_prefs_get_bool(PREF_CHATS)))
+	g_snprintf(tmp, sizeof(tmp), "%s/enabled", formats[i].prefix);
+
+	if (!purple_prefs_get_bool(tmp) ||
+			(purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM &&
+			!purple_prefs_get_bool(PREF_IMS)) ||
+			(purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
+			!purple_prefs_get_bool(PREF_CHATS)))
 		return FALSE;
 
 	g_snprintf(tmp, sizeof(tmp), "%s/color", formats[i].prefix);
-	color = gaim_prefs_get_string(tmp);
+	color = purple_prefs_get_string(tmp);
 
 	g_snprintf(tmp, sizeof(tmp), "%s/format", formats[i].prefix);
-	f = gaim_prefs_get_int(tmp);
+	f = purple_prefs_get_int(tmp);
 	bold = (f & FONT_BOLD);
 	italic = (f & FONT_ITALIC);
 	underline = (f & FONT_UNDERLINE);
+	rtl = purple_markup_is_rtl(*displaying);
 
-	if (gaim_prefs_get_bool(PREF_IGNORE))
+	if (purple_prefs_get_bool(PREF_IGNORE))
 	{
+		/* This seems to be necessary, especially for received messages. */
 		t = *displaying;
-		*displaying = gaim_markup_strip_html(t);
+		*displaying = purple_strreplace(t, "\n", "<br>");
+		g_free(t);
+
+		t = *displaying;
+		*displaying = purple_markup_strip_html(t);
+		g_free(t);
+
+		t = *displaying;
+		*displaying = g_markup_escape_text(t, -1);
+		g_free(t);
+
+		/* Restore the links */
+		t = *displaying;
+		*displaying = purple_markup_linkify(t);
 		g_free(t);
 	}
 
@@ -134,11 +158,13 @@ displaying_msg(GaimAccount *account, const char *who, char **displaying,
 	}
 
 	t = *displaying;
-	*displaying = g_strdup_printf("%s%s%s%s%s%s%s",
+	*displaying = g_strdup_printf("%s%s%s%s%s%s%s%s%s",
 						bold ? "<B>" : "</B>",
 						italic ? "<I>" : "</I>",
 						underline ? "<U>" : "</U>",
-						t, 
+						rtl ? "<SPAN style=\"direction:rtl;text-align:right;\">" : "",
+						t,
+						rtl ? "</SPAN>" : "",
 						bold ? "</B>" : "<B>",
 						italic ? "</I>" : "<I>",
 						underline ? "</U>" : "<U>"
@@ -149,30 +175,35 @@ displaying_msg(GaimAccount *account, const char *who, char **displaying,
 }
 
 static gboolean
-plugin_load(GaimPlugin *plugin)
+plugin_load(PurplePlugin *plugin)
 {
-	gaim_signal_connect(gaim_gtk_conversations_get_handle(),
+	purple_signal_connect(pidgin_conversations_get_handle(),
 					"displaying-im-msg", plugin,
-					GAIM_CALLBACK(displaying_msg), NULL);
-	gaim_signal_connect(gaim_gtk_conversations_get_handle(),
+					PURPLE_CALLBACK(displaying_msg), NULL);
+	purple_signal_connect(pidgin_conversations_get_handle(),
 					"displaying-chat-msg", plugin,
-					GAIM_CALLBACK(displaying_msg), NULL);
+					PURPLE_CALLBACK(displaying_msg), NULL);
 	return TRUE;
 }
 
 static gboolean
-plugin_unload(GaimPlugin *plugin)
+plugin_unload(PurplePlugin *plugin)
 {
 	return TRUE;
 }
 
-/* Ripped from GaimRC */
+/* Ripped from PurpleRC */
 static void
 color_response(GtkDialog *color_dialog, gint response, const char *data)
 {
 	if (response == GTK_RESPONSE_OK)
 	{
+#if GTK_CHECK_VERSION(2,14,0)
+		GtkWidget *colorsel =
+			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog));
+#else
 		GtkWidget *colorsel = GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel;
+#endif
 		GdkColor color;
 		char colorstr[8];
 		char tmp[128];
@@ -184,7 +215,7 @@ color_response(GtkDialog *color_dialog, gint response, const char *data)
 
 		g_snprintf(tmp, sizeof(tmp), "%s/color", data);
 
-		gaim_prefs_set_string(tmp, colorstr);
+		purple_prefs_set_string(tmp, colorstr);
 	}
 
 	gtk_widget_destroy(GTK_WIDGET(color_dialog));
@@ -204,13 +235,32 @@ set_color(GtkWidget *widget, const char *data)
 	                 G_CALLBACK(color_response), (gpointer)data);
 
 	g_snprintf(tmp, sizeof(tmp), "%s/color", data);
-	if (gdk_color_parse(gaim_prefs_get_string(tmp), &color))
+	if (gdk_color_parse(purple_prefs_get_string(tmp), &color))
 	{
+#if GTK_CHECK_VERSION(2,14,0)
+		gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(
+			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog))),
+			&color);
+#else
 		gtk_color_selection_set_current_color(
-				GTK_COLOR_SELECTION(GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel), &color);
+			GTK_COLOR_SELECTION(GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel),
+			&color);
+#endif
 	}
 
 	gtk_window_present(GTK_WINDOW(color_dialog));
+}
+
+static void
+toggle_enabled(GtkWidget *widget, gpointer data)
+{
+	const char *prefix = (char *)data;
+	gboolean e;
+	char tmp[128];
+
+	g_snprintf(tmp, sizeof(tmp), "%s/enabled", prefix);
+	e = purple_prefs_get_bool(tmp);
+	purple_prefs_set_bool(tmp, !e);
 }
 
 static void
@@ -218,13 +268,13 @@ toggle_something(const char *prefix, int format)
 {
 	int f;
 	char tmp[128];
-	
+
 	g_snprintf(tmp, sizeof(tmp), "%s/format", prefix);
-	f = gaim_prefs_get_int(tmp);
+	f = purple_prefs_get_int(tmp);
 	f ^= format;
-	gaim_prefs_set_int(tmp, f);
+	purple_prefs_set_int(tmp, f);
 }
-		
+
 static void
 toggle_bold(GtkWidget *widget, gpointer data)
 {
@@ -243,37 +293,67 @@ toggle_underline(GtkWidget *widget, gpointer data)
 	toggle_something(data, FONT_UNDERLINE);
 }
 
+static void
+enable_toggled(const char *name, PurplePrefType type, gconstpointer val, gpointer data)
+{
+	GtkWidget *widget = (GtkWidget *)data;
+
+	gtk_widget_set_sensitive(widget, GPOINTER_TO_INT(val));
+}
+
+static void
+disconnect_prefs_callbacks(GtkObject *object, gpointer data)
+{
+	PurplePlugin *plugin = (PurplePlugin *)data;
+
+	purple_prefs_disconnect_by_handle(plugin);
+}
+
 static GtkWidget *
-get_config_frame(GaimPlugin *plugin)
+get_config_frame(PurplePlugin *plugin)
 {
 	GtkWidget *ret;
 	GtkWidget *frame;
 	int i;
 
-	ret = gtk_vbox_new(FALSE, GAIM_HIG_CAT_SPACE);
-	gtk_container_set_border_width(GTK_CONTAINER(ret), GAIM_HIG_BORDER);
+	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 
 	for (i = 0; formats[i].prefix; i++)
 	{
 		char tmp[128];
+		char tmp2[128];
 		int f;
+		gboolean e;
 		GtkWidget *vbox, *hbox, *button;
 
-		g_snprintf(tmp, sizeof(tmp), "%s/format", formats[i].prefix);
-		f = gaim_prefs_get_int(tmp);
+		g_snprintf(tmp2, sizeof(tmp2), "%s/enabled", formats[i].prefix);
+		e = purple_prefs_get_bool(tmp2);
 
-		frame = gaim_gtk_make_frame(ret, _(formats[i].text));
-		vbox = gtk_vbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+		g_snprintf(tmp, sizeof(tmp), "%s/format", formats[i].prefix);
+		f = purple_prefs_get_int(tmp);
+
+		frame = pidgin_make_frame(ret, _(formats[i].text));
+		vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 		gtk_box_pack_start(GTK_BOX(frame), vbox, FALSE, FALSE, 0);
 
-		hbox = gtk_hbox_new(FALSE, GAIM_HIG_BOX_SPACE);
+		hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 
-		button = gaim_pixbuf_button_from_stock(" Color", GTK_STOCK_SELECT_COLOR,
-				GAIM_BUTTON_HORIZONTAL);
+		button = gtk_check_button_new_with_label(_("Enabled"));
+		gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
+		if (e)
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
+		g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(toggle_enabled),
+				formats[i].prefix);
+
+		button = pidgin_pixbuf_button_from_stock(" Color", GTK_STOCK_SELECT_COLOR,
+				PIDGIN_BUTTON_HORIZONTAL);
 		gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
 		g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(set_color),
 				formats[i].prefix);
+		gtk_widget_set_sensitive(button, e);
+		purple_prefs_connect_callback(plugin, tmp2, enable_toggled, button);
 
 		button = gtk_check_button_new_with_label(_("Bold"));
 		gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
@@ -281,55 +361,68 @@ get_config_frame(GaimPlugin *plugin)
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
 		g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(toggle_bold),
 				formats[i].prefix);
-		
+		gtk_widget_set_sensitive(button, e);
+		purple_prefs_connect_callback(plugin, tmp2, enable_toggled, button);
+
 		button = gtk_check_button_new_with_label(_("Italic"));
 		gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
 		if (f & FONT_ITALIC)
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
 		g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(toggle_italic),
 				formats[i].prefix);
-		
+		gtk_widget_set_sensitive(button, e);
+		purple_prefs_connect_callback(plugin, tmp2, enable_toggled, button);
+
 		button = gtk_check_button_new_with_label(_("Underline"));
 		gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
 		if (f & FONT_UNDERLINE)
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
 		g_signal_connect(G_OBJECT(button), "clicked",
 				G_CALLBACK(toggle_underline), formats[i].prefix);
+		gtk_widget_set_sensitive(button, e);
+		purple_prefs_connect_callback(plugin, tmp2, enable_toggled, button);
 	}
 
-	frame = gaim_gtk_make_frame(ret, _("General"));
-	gaim_gtk_prefs_checkbox(_("Ignore incoming format"), PREF_IGNORE, frame);
-	gaim_gtk_prefs_checkbox(_("Apply in Chats"), PREF_CHATS, frame);
-	gaim_gtk_prefs_checkbox(_("Apply in IMs"), PREF_IMS, frame);
+	g_signal_connect(GTK_OBJECT(ret), "destroy", G_CALLBACK(disconnect_prefs_callbacks), plugin);
+	frame = pidgin_make_frame(ret, _("General"));
+	pidgin_prefs_checkbox(_("Ignore incoming format"), PREF_IGNORE, frame);
+	pidgin_prefs_checkbox(_("Apply in Chats"), PREF_CHATS, frame);
+	pidgin_prefs_checkbox(_("Apply in IMs"), PREF_IMS, frame);
 
 	gtk_widget_show_all(ret);
 	return ret;
 }
 
-static GaimGtkPluginUiInfo ui_info = 
+static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
 	0,
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
-static GaimPluginInfo info =
+static PurplePluginInfo info =
 {
-	GAIM_PLUGIN_MAGIC,            /* Magic              */
-	GAIM_MAJOR_VERSION,           /* Gaim Major Version */
-	GAIM_MINOR_VERSION,           /* Gaim Minor Version */
-	GAIM_PLUGIN_STANDARD,         /* plugin type        */
-	GAIM_GTK_PLUGIN_TYPE,         /* ui requirement     */
+	PURPLE_PLUGIN_MAGIC,            /* Magic              */
+	PURPLE_MAJOR_VERSION,           /* Purple Major Version */
+	PURPLE_MINOR_VERSION,           /* Purple Minor Version */
+	PURPLE_PLUGIN_STANDARD,         /* plugin type        */
+	PIDGIN_PLUGIN_TYPE,         /* ui requirement     */
 	0,                            /* flags              */
 	NULL,                         /* dependencies       */
-	GAIM_PRIORITY_DEFAULT,        /* priority           */
+	PURPLE_PRIORITY_DEFAULT,        /* priority           */
 
 	PLUGIN_ID,                    /* plugin id          */
 	PLUGIN_NAME,                  /* name               */
-	VERSION,                      /* version            */
+	DISPLAY_VERSION,              /* version            */
 	PLUGIN_SUMMARY,               /* summary            */
 	PLUGIN_DESCRIPTION,           /* description        */
 	PLUGIN_AUTHOR,                /* author             */
-	GAIM_WEBSITE,                 /* website            */
+	PURPLE_WEBSITE,                 /* website            */
 
 	plugin_load,                  /* load               */
 	plugin_unload,                /* unload             */
@@ -338,35 +431,47 @@ static GaimPluginInfo info =
 	&ui_info,                     /* ui_info            */
 	NULL,                         /* extra_info         */
 	NULL,                         /* prefs_info         */
-	NULL                          /* actions            */
+	NULL,                         /* actions            */
+
+	/* padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static void
-init_plugin(GaimPlugin *plugin)
+init_plugin(PurplePlugin *plugin)
 {
-	gaim_prefs_add_none(PREF_PREFIX);
+	purple_prefs_add_none(PREF_PREFIX);
 
-	gaim_prefs_add_bool(PREF_IGNORE, TRUE);
-	gaim_prefs_add_bool(PREF_CHATS, TRUE);
-	gaim_prefs_add_bool(PREF_IMS, TRUE);
+	purple_prefs_add_bool(PREF_IGNORE, TRUE);
+	purple_prefs_add_bool(PREF_CHATS, TRUE);
+	purple_prefs_add_bool(PREF_IMS, TRUE);
 
-	gaim_prefs_add_none(PREF_SEND);
-	gaim_prefs_add_none(PREF_RECV);
-	gaim_prefs_add_none(PREF_SYSTEM);
-	gaim_prefs_add_none(PREF_ERROR);
-	gaim_prefs_add_none(PREF_NICK);
+	purple_prefs_add_none(PREF_SEND);
+	purple_prefs_add_none(PREF_RECV);
+	purple_prefs_add_none(PREF_SYSTEM);
+	purple_prefs_add_none(PREF_ERROR);
+	purple_prefs_add_none(PREF_NICK);
 
-	gaim_prefs_add_string(PREF_SEND_C, "#909090");
-	gaim_prefs_add_string(PREF_RECV_C, "#000000");
-	gaim_prefs_add_string(PREF_SYSTEM_C, "#50a050");
-	gaim_prefs_add_string(PREF_ERROR_C, "#ff0000");
-	gaim_prefs_add_string(PREF_NICK_C, "#0000dd");
+	purple_prefs_add_string(PREF_SEND_C, "#909090");
+	purple_prefs_add_string(PREF_RECV_C, "#000000");
+	purple_prefs_add_string(PREF_SYSTEM_C, "#50a050");
+	purple_prefs_add_string(PREF_ERROR_C, "#ff0000");
+	purple_prefs_add_string(PREF_NICK_C, "#0000dd");
 
-	gaim_prefs_add_int(PREF_SEND_F, 0);
-	gaim_prefs_add_int(PREF_RECV_F, 0);
-	gaim_prefs_add_int(PREF_SYSTEM_F, FONT_ITALIC);
-	gaim_prefs_add_int(PREF_ERROR_F, FONT_BOLD | FONT_UNDERLINE);
-	gaim_prefs_add_int(PREF_NICK_F, FONT_BOLD);
+	purple_prefs_add_int(PREF_SEND_F, 0);
+	purple_prefs_add_int(PREF_RECV_F, 0);
+	purple_prefs_add_int(PREF_SYSTEM_F, FONT_ITALIC);
+	purple_prefs_add_int(PREF_ERROR_F, FONT_BOLD | FONT_UNDERLINE);
+	purple_prefs_add_int(PREF_NICK_F, FONT_BOLD);
+
+	purple_prefs_add_bool(PREF_SEND_E, TRUE);
+	purple_prefs_add_bool(PREF_RECV_E, TRUE);
+	purple_prefs_add_bool(PREF_SYSTEM_E, TRUE);
+	purple_prefs_add_bool(PREF_ERROR_E, TRUE);
+	purple_prefs_add_bool(PREF_NICK_E, TRUE);
 }
 
-GAIM_INIT_PLUGIN(PLUGIN_STATIC_NAME, init_plugin, info)
+PURPLE_INIT_PLUGIN(PLUGIN_STATIC_NAME, init_plugin, info)

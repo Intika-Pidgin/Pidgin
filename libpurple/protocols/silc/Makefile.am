@@ -1,35 +1,46 @@
-EXTRA_DIST = README TODO Makefile.mingw
+EXTRA_DIST = \
+	Makefile.mingw \
+	README \
+	TODO
 
-pkgdir = $(libdir)/gaim
+pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
-SILCSOURCES = silc.c silcgaim.h buddy.c chat.c ft.c ops.c pk.c util.c wb.c wb.h
+SILCSOURCES = \
+	buddy.c \
+	chat.c \
+	ft.c \
+	ops.c \
+	pk.c \
+	silc.c \
+	silcpurple.h \
+	util.c \
+	wb.c \
+	wb.h
 
 AM_CFLAGS = $(st)
 
-libsilcgaim_la_LDFLAGS = -module -avoid-version
+libsilcpurple_la_LDFLAGS = -module -avoid-version
 
 if STATIC_SILC
 
-st = -DGAIM_STATIC_PRPL $(SILC_CFLAGS)
-noinst_LIBRARIES = libsilcgaim.a
-pkg_LTLIBRARIES =
-
-libsilcgaim_a_SOURCES = $(SILCSOURCES)
-libsilcgaim_a_CFLAGS  = $(AM_CFLAGS)
-libsilcgaim_a_LIBADD  = $(SILC_LIBS)
+st = -DPURPLE_STATIC_PRPL $(SILC_CFLAGS)
+noinst_LTLIBRARIES       = libsilcpurple.la
+libsilcpurple_la_SOURCES = $(SILCSOURCES)
+libsilcpurple_la_CFLAGS  = $(AM_CFLAGS)
+libsilcpurple_la_LIBADD  = $(SILC_LIBS)
 
 else
 
 st = $(SILC_CFLAGS)
-pkg_LTLIBRARIES = libsilcgaim.la
-noinst_LIBRARIES =
-
-libsilcgaim_la_SOURCES = $(SILCSOURCES)
-libsilcgaim_la_LIBADD  = $(GLIB_LIBS) $(SILC_LIBS)
+pkg_LTLIBRARIES          = libsilcpurple.la
+libsilcpurple_la_SOURCES = $(SILCSOURCES)
+libsilcpurple_la_LIBADD  = $(GLIB_LIBS) $(SILC_LIBS)
 
 endif
 
 AM_CPPFLAGS = \
-	-I$(top_srcdir)/libgaim \
+	-I$(top_srcdir)/libpurple \
+	-I$(top_builddir)/libpurple \
+	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
-	$(DEBUG_CFLAGS)
+	$(SILC_CFLAGS)

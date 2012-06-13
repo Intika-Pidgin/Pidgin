@@ -1,4 +1,8 @@
 
+N: ComBOTS Product GmbH (htfv)
+T: 2007
+E: foss@combots.com
+
 N: Jonathan Clark
 T: 2005-2006
 E: ardentlygnarley a.t users d.o.t sourceforge d.o.t net
@@ -35,7 +39,7 @@ D: Fixed aim_snac.c
 N: Eric Warmenhoven
 T: 1998-2001
 E: warmenhoven a.t linux d.o.t com
-D: Some OFT info, author of the faim interface for gaim
+D: Some OFT info, initial author of the libpurple-side of the oscar protocol plugin
 
 N: Brock Wilcox
 T: 1998-2001
