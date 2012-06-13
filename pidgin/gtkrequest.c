@@ -26,6 +26,7 @@
 #include "internal.h"
 #include "pidgin.h"
 
+#include "debug.h"
 #include "prefs.h"
 #include "util.h"
 
@@ -37,6 +38,11 @@
 #include "gtkblist.h"
 
 #include <gdk/gdkkeysyms.h>
+
+#ifdef ENABLE_GCR
+#define GCR_API_SUBJECT_TO_CHANGE
+#include <gcr/gcr.h>
+#endif
 
 static GtkWidget * create_account_field(PurpleRequestField *field);
 
@@ -79,6 +85,33 @@ typedef struct
 	} u;
 
 } PidginRequestData;
+
+static void
+pidgin_widget_decorate_account(GtkWidget *cont, PurpleAccount *account)
+{
+	GtkWidget *image;
+	GdkPixbuf *pixbuf;
+
+	if (!account)
+		return;
+
+	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+	image = gtk_image_new_from_pixbuf(pixbuf);
+	g_object_unref(G_OBJECT(pixbuf));
+
+	gtk_widget_set_tooltip_text(image, purple_account_get_username(account));
+
+	if (GTK_IS_DIALOG(cont)) {
+		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(cont))),
+	                       image, FALSE, TRUE, 0);
+		gtk_box_reorder_child(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(cont))),
+	                          image, 0);
+	} else if (GTK_IS_HBOX(cont)) {
+		gtk_misc_set_alignment(GTK_MISC(image), 0, 0);
+		gtk_box_pack_end(GTK_BOX(cont), image, FALSE, TRUE, 0);
+	}
+	gtk_widget_show(image);
+}
 
 static void
 generic_response_start(PidginRequestData *data)
@@ -203,10 +236,10 @@ field_bool_cb(GtkToggleButton *button, PurpleRequestField *field)
 }
 
 static void
-field_choice_menu_cb(GtkOptionMenu *menu, PurpleRequestField *field)
+field_choice_menu_cb(GtkComboBox *menu, PurpleRequestField *field)
 {
 	purple_request_field_choice_set_value(field,
-			gtk_option_menu_get_history(menu));
+			gtk_combo_box_get_active(menu));
 }
 
 static void
@@ -229,7 +262,7 @@ multifield_ok_cb(GtkWidget *button, PidginRequestData *data)
 {
 	generic_response_start(data);
 
-	if (!GTK_WIDGET_HAS_FOCUS(button))
+	if (!gtk_widget_has_focus(button))
 		gtk_widget_grab_focus(button);
 
 	if (data->cbs[0] != NULL)
@@ -325,16 +358,18 @@ pidgin_request_input(const char *title, const char *primary,
 
 	/* Setup the dialog */
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER/2);
-	gtk_container_set_border_width(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER/2);
+	gtk_container_set_border_width(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                               PIDGIN_HIG_BORDER / 2);
 	if (!multiline)
 		gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
-	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), 0);
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER);
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                    PIDGIN_HIG_BORDER);
 
 	/* Setup the main horizontal box */
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), hbox);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                  hbox);
 
 	/* Dialog icon. */
 	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
@@ -346,6 +381,8 @@ pidgin_request_input(const char *title, const char *primary,
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
 
 	gtk_box_pack_start(GTK_BOX(hbox), vbox, TRUE, TRUE, 0);
+
+	pidgin_widget_decorate_account(hbox, account);
 
 	/* Descriptive label */
 	primary_esc = (primary != NULL) ? g_markup_escape_text(primary, -1) : NULL;
@@ -389,16 +426,6 @@ pidgin_request_input(const char *title, const char *primary,
 	}
 	else {
 		if (multiline) {
-			GtkWidget *sw;
-
-			sw = gtk_scrolled_window_new(NULL, NULL);
-			gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-										   GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
-			gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-												GTK_SHADOW_IN);
-
-			gtk_widget_set_size_request(sw, 320, 130);
-
 			/* GtkTextView */
 			entry = gtk_text_view_new();
 			gtk_text_view_set_editable(GTK_TEXT_VIEW(entry), TRUE);
@@ -412,12 +439,12 @@ pidgin_request_input(const char *title, const char *primary,
 
 			gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(entry), GTK_WRAP_WORD_CHAR);
 
-			gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-
 			if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
 				pidgin_setup_gtkspell(GTK_TEXT_VIEW(entry));
 
-			gtk_container_add(GTK_CONTAINER(sw), entry);
+			gtk_box_pack_start(GTK_BOX(vbox), 
+				pidgin_make_scrollable(entry, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, 320, 130),
+				TRUE, TRUE, 0);
 		}
 		else {
 			entry = gtk_entry_new();
@@ -500,20 +527,24 @@ pidgin_request_choice(const char *title, const char *primary,
 
 	/* Setup the dialog */
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER/2);
-	gtk_container_set_border_width(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER/2);
+	gtk_container_set_border_width(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                               PIDGIN_HIG_BORDER / 2);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
-	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER);
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                    PIDGIN_HIG_BORDER);
 
 	/* Setup the main horizontal box */
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), hbox);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                  hbox);
 
 	/* Dialog icon. */
 	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
 				       gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
 	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
+
+	pidgin_widget_decorate_account(hbox, account);
 
 	/* Vertical box */
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
@@ -561,9 +592,11 @@ pidgin_request_choice(const char *title, const char *primary,
 }
 
 static void *
-pidgin_request_action(const char *title, const char *primary,
+pidgin_request_action_with_icon(const char *title, const char *primary,
 						const char *secondary, int default_action,
-					    PurpleAccount *account, const char *who, PurpleConversation *conv,
+					    PurpleAccount *account, const char *who,
+						PurpleConversation *conv, gconstpointer icon_data,
+						gsize icon_size,
 						void *user_data, size_t action_count, va_list actions)
 {
 	PidginRequestData *data;
@@ -571,7 +604,7 @@ pidgin_request_action(const char *title, const char *primary,
 	GtkWidget *vbox;
 	GtkWidget *hbox;
 	GtkWidget *label;
-	GtkWidget *img;
+	GtkWidget *img = NULL;
 	void **buttons;
 	char *label_text;
 	char *primary_esc, *secondary_esc;
@@ -595,9 +628,7 @@ pidgin_request_action(const char *title, const char *primary,
 	/* Create the dialog. */
 	data->dialog = dialog = gtk_dialog_new();
 
-#if GTK_CHECK_VERSION(2,10,0)
 	gtk_window_set_deletable(GTK_WINDOW(data->dialog), FALSE);
-#endif
 
 	if (title != NULL)
 		gtk_window_set_title(GTK_WINDOW(dialog), title);
@@ -620,24 +651,57 @@ pidgin_request_action(const char *title, const char *primary,
 
 	/* Setup the dialog */
 	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER/2);
-	gtk_container_set_border_width(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER/2);
+	gtk_container_set_border_width(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                               PIDGIN_HIG_BORDER / 2);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
-	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER);
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                    PIDGIN_HIG_BORDER);
 
 	/* Setup the main horizontal box */
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), hbox);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
+	                  hbox);
 
 	/* Dialog icon. */
-	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
+	if (icon_data) {
+		GdkPixbuf *pixbuf = pidgin_pixbuf_from_data(icon_data, icon_size);
+		if (pixbuf) {
+			/* scale the image if it is too large */
+			int width = gdk_pixbuf_get_width(pixbuf);
+			int height = gdk_pixbuf_get_height(pixbuf);
+			if (width > 128 || height > 128) {
+				int scaled_width = width > height ? 128 : (128 * width) / height;
+				int scaled_height = height > width ? 128 : (128 * height) / width;
+				GdkPixbuf *scaled =
+						gdk_pixbuf_scale_simple(pixbuf, scaled_width, scaled_height,
+						    GDK_INTERP_BILINEAR);
+
+				purple_debug_info("pidgin",
+				    "dialog icon was too large, scaled it down\n");
+				if (scaled) {
+					g_object_unref(pixbuf);
+					pixbuf = scaled;
+				}
+			}
+			img = gtk_image_new_from_pixbuf(pixbuf);
+			g_object_unref(pixbuf);
+		} else {
+			purple_debug_info("pidgin", "failed to parse dialog icon\n");
+		}
+	}
+
+	if (!img) {
+		img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
 				       gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	}
 	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	/* Vertical box */
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox, FALSE, FALSE, 0);
+
+	pidgin_widget_decorate_account(hbox, account);
 
 	/* Descriptive label */
 	primary_esc = (primary != NULL) ? g_markup_escape_text(primary, -1) : NULL;
@@ -662,8 +726,8 @@ pidgin_request_action(const char *title, const char *primary,
 
 
 	if (default_action == PURPLE_DEFAULT_ACTION_NONE) {
-		GTK_WIDGET_SET_FLAGS(img, GTK_CAN_DEFAULT);
-		GTK_WIDGET_SET_FLAGS(img, GTK_CAN_FOCUS);
+		gtk_widget_set_can_default(img, TRUE);
+		gtk_widget_set_can_focus(img, TRUE);
 		gtk_widget_grab_focus(img);
 		gtk_widget_grab_default(img);
 	} else
@@ -681,20 +745,49 @@ pidgin_request_action(const char *title, const char *primary,
 	return data;
 }
 
+static void *
+pidgin_request_action(const char *title, const char *primary,
+						const char *secondary, int default_action,
+					    PurpleAccount *account, const char *who, PurpleConversation *conv,
+						void *user_data, size_t action_count, va_list actions)
+{
+	return pidgin_request_action_with_icon(title, primary, secondary,
+		default_action, account, who, conv, NULL, 0, user_data, action_count,
+		actions);
+}
+
 static void
 req_entry_field_changed_cb(GtkWidget *entry, PurpleRequestField *field)
 {
 	PurpleRequestFieldGroup *group;
+	PurpleRequestFields *fields;
 	PidginRequestData *req_data;
-	const char *text = gtk_entry_get_text(GTK_ENTRY(entry));
 
-	purple_request_field_string_set_value(field, (*text == '\0' ? NULL : text));
+	if (purple_request_field_string_is_multiline(field))
+	{
+		char *text;
+		GtkTextIter start_iter, end_iter;
+
+		gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(entry), &start_iter);
+		gtk_text_buffer_get_end_iter(GTK_TEXT_BUFFER(entry), &end_iter);
+
+		text = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(entry), &start_iter, &end_iter, FALSE);
+		purple_request_field_string_set_value(field, (!text || !*text) ? NULL : text);
+		g_free(text);
+	}
+	else
+	{
+		const char *text = NULL;
+		text = gtk_entry_get_text(GTK_ENTRY(entry));
+		purple_request_field_string_set_value(field, (*text == '\0') ? NULL : text);
+	}
 
 	group = purple_request_field_get_group(field);
-	req_data = (PidginRequestData *)group->fields_list->ui_data;
+	fields = purple_request_field_group_get_fields_list(group);
+	req_data = purple_request_fields_get_ui_data(fields);
 
 	gtk_widget_set_sensitive(req_data->ok_button,
-		purple_request_fields_all_required_filled(group->fields_list));
+		purple_request_fields_all_required_filled(fields));
 }
 
 static void
@@ -716,7 +809,7 @@ setup_entry_field(GtkWidget *entry, PurpleRequestField *field)
 		{
 			GtkWidget *optmenu = NULL;
 			PurpleRequestFieldGroup *group = purple_request_field_get_group(field);
-			GList *fields = group->fields;
+			GList *fields = purple_request_field_group_get_fields(group);
 
 			/* Ensure the account option menu is created (if the widget hasn't
 			 * been initialized already) for username auto-completion. */
@@ -757,12 +850,6 @@ create_string_field(PurpleRequestField *field)
 	{
 		GtkWidget *textview;
 
-		widget = gtk_scrolled_window_new(NULL, NULL);
-		gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(widget),
-											GTK_SHADOW_IN);
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(widget),
-									   GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
-
 		textview = gtk_text_view_new();
 		gtk_text_view_set_editable(GTK_TEXT_VIEW(textview),
 								   TRUE);
@@ -772,10 +859,7 @@ create_string_field(PurpleRequestField *field)
 		if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
 			pidgin_setup_gtkspell(GTK_TEXT_VIEW(textview));
 
-		gtk_container_add(GTK_CONTAINER(widget), textview);
 		gtk_widget_show(textview);
-
-		gtk_widget_set_size_request(widget, -1, 75);
 
 		if (value != NULL)
 		{
@@ -786,11 +870,24 @@ create_string_field(PurpleRequestField *field)
 			gtk_text_buffer_set_text(buffer, value, -1);
 		}
 
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_widget_set_tooltip_text(textview, purple_request_field_get_tooltip(field));
+#endif
+
 		gtk_text_view_set_editable(GTK_TEXT_VIEW(textview),
 			purple_request_field_string_is_editable(field));
 
 		g_signal_connect(G_OBJECT(textview), "focus-out-event",
 						 G_CALLBACK(field_string_focus_out_cb), field);
+
+	    if (purple_request_field_is_required(field))
+	    {
+			GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
+			g_signal_connect(G_OBJECT(buffer), "changed",
+							 G_CALLBACK(req_entry_field_changed_cb), field);
+	    }
+
+		widget = pidgin_make_scrollable(textview, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, 75);
 	}
 	else
 	{
@@ -800,6 +897,10 @@ create_string_field(PurpleRequestField *field)
 
 		if (value != NULL)
 			gtk_entry_set_text(GTK_ENTRY(widget), value);
+
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
+#endif
 
 		if (purple_request_field_string_is_masked(field))
 		{
@@ -841,6 +942,10 @@ create_int_field(PurpleRequestField *field)
 		gtk_entry_set_text(GTK_ENTRY(widget), buf);
 	}
 
+#if GTK_CHECK_VERSION(2,12,0)
+	gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
+#endif
+
 	g_signal_connect(G_OBJECT(widget), "focus-out-event",
 					 G_CALLBACK(field_int_focus_out_cb), field);
 
@@ -854,6 +959,10 @@ create_bool_field(PurpleRequestField *field)
 
 	widget = gtk_check_button_new_with_label(
 		purple_request_field_get_label(field));
+
+#if GTK_CHECK_VERSION(2,12,0)
+	gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
+#endif
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),
 		purple_request_field_bool_get_default_value(field));
@@ -874,27 +983,20 @@ create_choice_field(PurpleRequestField *field)
 
 	if (num_labels > 5)
 	{
-		GtkWidget *menu;
-		GtkWidget *item;
-
-		widget = gtk_option_menu_new();
-
-		menu = gtk_menu_new();
+		widget = gtk_combo_box_text_new();
 
 		for (l = labels; l != NULL; l = l->next)
 		{
 			const char *text = l->data;
-
-			item = gtk_menu_item_new_with_label(text);
-			gtk_widget_show(item);
-
-			gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), text);
 		}
 
-		gtk_widget_show(menu);
-		gtk_option_menu_set_menu(GTK_OPTION_MENU(widget), menu);
-		gtk_option_menu_set_history(GTK_OPTION_MENU(widget),
+		gtk_combo_box_set_active(GTK_COMBO_BOX(widget),
 						purple_request_field_choice_get_default_value(field));
+
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
+#endif
 
 		g_signal_connect(G_OBJECT(widget), "changed",
 						 G_CALLBACK(field_choice_menu_cb), field);
@@ -912,6 +1014,10 @@ create_choice_field(PurpleRequestField *field)
 			box = gtk_vbox_new(FALSE, 0);
 
 		widget = box;
+
+#if GTK_CHECK_VERSION(2,12,0)
+		gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
+#endif
 
 		for (l = labels, i = 0; l != NULL; l = l->next, i++)
 		{
@@ -942,23 +1048,22 @@ create_image_field(PurpleRequestField *field)
 {
 	GtkWidget *widget;
 	GdkPixbuf *buf, *scale;
-	GdkPixbufLoader *loader;
 
-	loader = gdk_pixbuf_loader_new();
-	gdk_pixbuf_loader_write(loader,
-							(const guchar *)purple_request_field_image_get_buffer(field),
-							purple_request_field_image_get_size(field),
-							NULL);
-	gdk_pixbuf_loader_close(loader, NULL);
-	buf = gdk_pixbuf_loader_get_pixbuf(loader);
+	buf = pidgin_pixbuf_from_data(
+			(const guchar *)purple_request_field_image_get_buffer(field),
+			purple_request_field_image_get_size(field));
 
 	scale = gdk_pixbuf_scale_simple(buf,
 			purple_request_field_image_get_scale_x(field) * gdk_pixbuf_get_width(buf),
 			purple_request_field_image_get_scale_y(field) * gdk_pixbuf_get_height(buf),
 			GDK_INTERP_BILINEAR);
 	widget = gtk_image_new_from_pixbuf(scale);
-	g_object_unref(G_OBJECT(loader));
+	g_object_unref(G_OBJECT(buf));
 	g_object_unref(G_OBJECT(scale));
+
+#if GTK_CHECK_VERSION(2,12,0)
+	gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
+#endif
 
 	return widget;
 }
@@ -974,6 +1079,10 @@ create_account_field(PurpleRequestField *field)
 		G_CALLBACK(field_account_cb),
 		purple_request_field_account_get_filter(field),
 		field);
+
+#if GTK_CHECK_VERSION(2,12,0)
+	gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
+#endif
 
 	return widget;
 }
@@ -1002,7 +1111,6 @@ list_field_select_changed_cb(GtkTreeSelection *sel, PurpleRequestField *field)
 static GtkWidget *
 create_list_field(PurpleRequestField *field)
 {
-	GtkWidget *sw;
 	GtkWidget *treeview;
 	GtkListStore *store;
 	GtkCellRenderer *renderer;
@@ -1010,18 +1118,16 @@ create_list_field(PurpleRequestField *field)
 	GtkTreeViewColumn *column;
 	GtkTreeIter iter;
 	GList *l;
+	GList *icons = NULL;
 
-	/* Create the scrolled window */
-	sw = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-				       GTK_POLICY_AUTOMATIC,
-				       GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-										GTK_SHADOW_IN);
-	gtk_widget_show(sw);
+	icons = purple_request_field_list_get_icons(field);
+
 
 	/* Create the list store */
-	store = gtk_list_store_new(2, G_TYPE_POINTER, G_TYPE_STRING);
+	if (icons)
+		store = gtk_list_store_new(3, G_TYPE_POINTER, G_TYPE_STRING, GDK_TYPE_PIXBUF);
+	else
+		store = gtk_list_store_new(2, G_TYPE_POINTER, G_TYPE_STRING);
 
 	/* Create the tree view */
 	treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
@@ -1040,13 +1146,38 @@ create_list_field(PurpleRequestField *field)
 	gtk_tree_view_column_pack_start(column, renderer, TRUE);
 	gtk_tree_view_column_add_attribute(column, renderer, "text", 1);
 
+	if (icons)
+	{
+		renderer = gtk_cell_renderer_pixbuf_new();
+		gtk_tree_view_column_pack_start(column, renderer, TRUE);
+		gtk_tree_view_column_add_attribute(column, renderer, "pixbuf", 2);
+
+		gtk_widget_set_size_request(treeview, 200, 400);
+	}
+
 	for (l = purple_request_field_list_get_items(field); l != NULL; l = l->next)
 	{
 		const char *text = (const char *)l->data;
 
 		gtk_list_store_append(store, &iter);
 
-		gtk_list_store_set(store, &iter,
+		if (icons)
+		{
+			const char *icon_path = (const char *)icons->data;
+			GdkPixbuf* pixbuf = NULL;
+
+			if (icon_path)
+				pixbuf = pidgin_pixbuf_new_from_file(icon_path);
+
+			gtk_list_store_set(store, &iter,
+						   0, purple_request_field_list_get_data(field, text),
+						   1, text,
+						   2, pixbuf,
+						   -1);
+			icons = icons->next;
+		}
+		else
+			gtk_list_store_set(store, &iter,
 						   0, purple_request_field_list_get_data(field, text),
 						   1, text,
 						   -1);
@@ -1066,10 +1197,54 @@ create_list_field(PurpleRequestField *field)
 	g_signal_connect(G_OBJECT(sel), "changed",
 					 G_CALLBACK(list_field_select_changed_cb), field);
 
-	gtk_container_add(GTK_CONTAINER(sw), treeview);
 	gtk_widget_show(treeview);
 
-	return sw;
+	return pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, -1);
+}
+
+static GtkWidget *
+create_certificate_field(PurpleRequestField *field)
+{
+	PurpleCertificate *cert;
+#ifdef ENABLE_GCR
+	GcrCertificateBasicsWidget *cert_widget;
+	GByteArray *der;
+	GcrCertificate *gcrt;
+#else
+	GtkWidget *cert_label;
+	char *str;
+	char *escaped;
+#endif
+
+	cert = purple_request_field_certificate_get_value(field);
+
+#ifdef ENABLE_GCR
+	der = purple_certificate_get_der_data(cert);
+	g_return_val_if_fail(der, NULL);
+
+	gcrt = gcr_simple_certificate_new(der->data, der->len);
+	g_return_val_if_fail(gcrt, NULL);
+
+	cert_widget = gcr_certificate_basics_widget_new(gcrt);
+
+	g_byte_array_free(der, TRUE);
+	g_object_unref(G_OBJECT(gcrt));
+
+	return GTK_WIDGET(cert_widget);
+#else
+	str = purple_certificate_get_display_string(cert);
+	escaped = g_markup_escape_text(str, -1);
+
+	cert_label = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(cert_label), escaped);
+	gtk_label_set_line_wrap(GTK_LABEL(cert_label), TRUE);
+	gtk_misc_set_alignment(GTK_MISC(cert_label), 0, 0);
+
+	g_free(str);
+	g_free(escaped);
+
+	return cert_label;
+#endif
 }
 
 static void *
@@ -1090,7 +1265,6 @@ pidgin_request_fields(const char *title, const char *primary,
 	GtkWidget *table;
 	GtkWidget *button;
 	GtkWidget *img;
-	GtkWidget *sw;
 	GtkSizeGroup *sg;
 	GList *gl, *fl;
 	PurpleRequestFieldGroup *group;
@@ -1104,7 +1278,7 @@ pidgin_request_fields(const char *title, const char *primary,
 	data->user_data = user_data;
 	data->u.multifield.fields = fields;
 
-	fields->ui_data = data;
+	purple_request_fields_set_ui_data(fields, data);
 
 	data->cb_count = 2;
 	data->cbs = g_new0(GCallback, 2);
@@ -1136,13 +1310,15 @@ pidgin_request_fields(const char *title, const char *primary,
 
 	/* Cancel button */
 	button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(cancel_text), G_CALLBACK(multifield_cancel_cb), data);
-	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	gtk_widget_set_can_default(button, TRUE);
 
 	/* OK button */
 	button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(ok_text), G_CALLBACK(multifield_ok_cb), data);
 	data->ok_button = button;
-	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	gtk_widget_set_can_default(button, TRUE);
 	gtk_window_set_default(GTK_WINDOW(win), button);
+
+	pidgin_widget_decorate_account(hbox, account);
 
 	/* Setup the vbox */
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
@@ -1173,18 +1349,10 @@ pidgin_request_fields(const char *title, const char *primary,
 	if(total_fields > 9) {
 		GtkWidget *hbox_for_spacing, *vbox_for_spacing;
 
-		sw = gtk_scrolled_window_new(NULL, NULL);
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
-				GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-		gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
-				GTK_SHADOW_NONE);
-		gtk_widget_set_size_request(sw, -1, 200);
-		gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-		gtk_widget_show(sw);
-
 		hbox_for_spacing = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-		gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(sw),
-				hbox_for_spacing);
+		gtk_box_pack_start(GTK_BOX(vbox), 
+			pidgin_make_scrollable(hbox_for_spacing, GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC, GTK_SHADOW_NONE, -1, 200), 
+			TRUE, TRUE, 0);
 		gtk_widget_show(hbox_for_spacing);
 
 		vbox_for_spacing = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
@@ -1366,6 +1534,8 @@ pidgin_request_fields(const char *title, const char *primary,
 						widget = create_image_field(field);
 					else if (type == PURPLE_REQUEST_FIELD_ACCOUNT)
 						widget = create_account_field(field);
+					else if (type == PURPLE_REQUEST_FIELD_CERTIFICATE)
+						widget = create_certificate_field(field);
 					else
 						continue;
 				}
@@ -1445,7 +1615,6 @@ file_yes_no_cb(PidginRequestData *data, gint id)
 	}
 }
 
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
 static void
 file_ok_check_if_exists_cb(GtkWidget *widget, gint response, PidginRequestData *data)
 {
@@ -1470,51 +1639,6 @@ file_ok_check_if_exists_cb(GtkWidget *widget, gint response, PidginRequestData *
 		}
 		g_free(current_folder);
 	}
-
-#else /* FILECHOOSER */
-
-static void
-file_ok_check_if_exists_cb(GtkWidget *button, PidginRequestData *data)
-{
-	const gchar *name;
-	gchar *current_folder;
-
-	generic_response_start(data);
-
-	name = gtk_file_selection_get_filename(GTK_FILE_SELECTION(data->dialog));
-
-	/* If name is a directory then change directories */
-	if (data->type == PURPLE_REQUEST_FILE) {
-		if (pidgin_check_if_dir(name, GTK_FILE_SELECTION(data->dialog)))
-			return;
-	}
-
-	current_folder = g_path_get_dirname(name);
-
-	g_free(data->u.file.name);
-	if (data->type == PURPLE_REQUEST_FILE)
-		data->u.file.name = g_strdup(name);
-	else
-	{
-		if (g_file_test(name, G_FILE_TEST_IS_DIR))
-			data->u.file.name = g_strdup(name);
-		else
-			data->u.file.name = g_strdup(current_folder);
-	}
-
-	if (current_folder != NULL) {
-		if (data->u.file.savedialog) {
-			purple_prefs_set_path(PIDGIN_PREFS_ROOT "/filelocations/last_save_folder", current_folder);
-		} else {
-			purple_prefs_set_path(PIDGIN_PREFS_ROOT "/filelocations/last_open_folder", current_folder);
-		}
-		g_free(current_folder);
-	}
-
-#endif /* FILECHOOSER */
-#if 0 /* mismatched curly braces */
-	}
-#endif
 	if ((data->u.file.savedialog == TRUE) &&
 		(g_file_test(data->u.file.name, G_FILE_TEST_EXISTS))) {
 		purple_request_action(data, NULL, _("That file already exists"),
@@ -1527,20 +1651,6 @@ file_ok_check_if_exists_cb(GtkWidget *button, PidginRequestData *data)
 		file_yes_no_cb(data, 1);
 }
 
-#if !GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
-static gboolean
-file_cancel_cb(PidginRequestData *data)
-{
-	generic_response_start(data);
-
-	if (data->cbs[0] != NULL)
-		((PurpleRequestFileCb)data->cbs[0])(data->user_data, NULL);
-
-	purple_request_close(data->type, data);
-	return FALSE;
-}
-#endif /* FILECHOOSER */
-
 static void *
 pidgin_request_file(const char *title, const char *filename,
 					  gboolean savedialog,
@@ -1551,9 +1661,7 @@ pidgin_request_file(const char *title, const char *filename,
 	PidginRequestData *data;
 	GtkWidget *filesel;
 	const gchar *current_folder;
-#if GTK_CHECK_VERSION(2,4,0)
 	gboolean folder_set = FALSE;
-#endif
 
 	data = g_new0(PidginRequestData, 1);
 	data->type = PURPLE_REQUEST_FILE;
@@ -1564,7 +1672,6 @@ pidgin_request_file(const char *title, const char *filename,
 	data->cbs[1] = ok_cb;
 	data->u.file.savedialog = savedialog;
 
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
 	filesel = gtk_file_chooser_dialog_new(
 						title ? title : (savedialog ? _("Save File...")
 													: _("Open File...")),
@@ -1610,30 +1717,6 @@ pidgin_request_file(const char *title, const char *filename,
 #endif
 	g_signal_connect(G_OBJECT(GTK_FILE_CHOOSER(filesel)), "response",
 					 G_CALLBACK(file_ok_check_if_exists_cb), data);
-#else /* FILECHOOSER */
-	filesel = gtk_file_selection_new(
-			title ? title : (savedialog ? _("Save File...")
-				: _("Open File...")));
-	if (savedialog) {
-		current_folder = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/filelocations/last_save_folder");
-	} else {
-		current_folder = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/filelocations/last_open_folder");
-	}
-	if (current_folder != NULL) {
-		gchar *path = g_strdup_printf("%s%s", current_folder, G_DIR_SEPARATOR_S);
-		gtk_file_selection_set_filename(GTK_FILE_SELECTION(filesel), path);
-		g_free(path);
-	}
-	if (filename != NULL)
-		gtk_file_selection_set_filename(GTK_FILE_SELECTION(filesel), filename);
-
-	g_signal_connect_swapped(G_OBJECT(GTK_FILE_SELECTION(filesel)), "delete_event",
-							 G_CALLBACK(file_cancel_cb), data);
-	g_signal_connect_swapped(G_OBJECT(GTK_FILE_SELECTION(filesel)->cancel_button),
-					 "clicked", G_CALLBACK(file_cancel_cb), data);
-	g_signal_connect(G_OBJECT(GTK_FILE_SELECTION(filesel)->ok_button), "clicked",
-					 G_CALLBACK(file_ok_check_if_exists_cb), data);
-#endif /* FILECHOOSER */
 
 	pidgin_auto_parent_window(filesel);
 
@@ -1661,7 +1744,6 @@ pidgin_request_folder(const char *title, const char *dirname,
 	data->cbs[1] = ok_cb;
 	data->u.file.savedialog = FALSE;
 
-#if GTK_CHECK_VERSION(2,4,0) /* FILECHOOSER */
 	dirsel = gtk_file_chooser_dialog_new(
 						title ? title : _("Select Folder..."),
 						NULL,
@@ -1676,16 +1758,6 @@ pidgin_request_folder(const char *title, const char *dirname,
 
 	g_signal_connect(G_OBJECT(GTK_FILE_CHOOSER(dirsel)), "response",
 						G_CALLBACK(file_ok_check_if_exists_cb), data);
-#else
-	dirsel = gtk_file_selection_new(title ? title : _("Select Folder..."));
-
-	g_signal_connect_swapped(G_OBJECT(dirsel), "delete_event",
-							 G_CALLBACK(file_cancel_cb), data);
-	g_signal_connect_swapped(G_OBJECT(GTK_FILE_SELECTION(dirsel)->cancel_button),
-					 "clicked", G_CALLBACK(file_cancel_cb), data);
-	g_signal_connect(G_OBJECT(GTK_FILE_SELECTION(dirsel)->ok_button), "clicked",
-					 G_CALLBACK(file_ok_check_if_exists_cb), data);
-#endif
 
 	data->dialog = dirsel;
 	pidgin_auto_parent_window(dirsel);
@@ -1721,7 +1793,7 @@ static PurpleRequestUiOps ops =
 	pidgin_request_file,
 	pidgin_close_request,
 	pidgin_request_folder,
-	NULL,
+	pidgin_request_action_with_icon,
 	NULL,
 	NULL,
 	NULL

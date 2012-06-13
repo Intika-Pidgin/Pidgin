@@ -36,6 +36,8 @@
  */
 typedef struct _PidginXferDialog PidginXferDialog;
 
+G_BEGIN_DECLS
+
 /**************************************************************************/
 /** @name GTK+ File Transfer Dialog API                                   */
 /**************************************************************************/
@@ -88,10 +90,10 @@ void pidgin_xfer_dialog_remove_xfer(PidginXferDialog *dialog,
 									 PurpleXfer *xfer);
 
 /**
- * Indicate in a file transfer dialog that a transfer was canceled.
+ * Indicate in a file transfer dialog that a transfer was cancelled.
  *
  * @param dialog The file transfer dialog.
- * @param xfer   The file transfer that was canceled.
+ * @param xfer   The file transfer that was cancelled.
  */
 void pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 									 PurpleXfer *xfer);
@@ -144,5 +146,7 @@ PidginXferDialog *pidgin_get_xfer_dialog(void);
 PurpleXferUiOps *pidgin_xfers_get_ui_ops(void);
 
 /*@}*/
+
+G_END_DECLS
 
 #endif /* _PIDGINFT_H_ */

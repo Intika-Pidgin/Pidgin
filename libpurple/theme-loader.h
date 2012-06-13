@@ -50,13 +50,13 @@ typedef struct _PurpleThemeLoaderClass   PurpleThemeLoaderClass;
 struct _PurpleThemeLoader
 {
 	GObject parent;
-	gpointer priv;
 };
 
 struct _PurpleThemeLoaderClass
 {
 	GObjectClass parent_class;
 	PurpleTheme *((*purple_theme_loader_build)(const gchar*));
+	gboolean (*probe_directory)(const gchar *);
 };
 
 /**************************************************************************/
@@ -71,11 +71,11 @@ G_BEGIN_DECLS
 GType purple_theme_loader_get_type(void);
 
 /**
- * Returns the string represtenting the type of the theme loader
+ * Returns the string representing the type of the theme loader
  *
  * @param self The theme loader
  *
- * @returns The string represting this type
+ * @returns The string representing this type
  */
 const gchar *purple_theme_loader_get_type_string(PurpleThemeLoader *self);
 
@@ -88,6 +88,20 @@ const gchar *purple_theme_loader_get_type_string(PurpleThemeLoader *self);
  * @returns A PurpleTheme containing the information from the directory
  */
 PurpleTheme *purple_theme_loader_build(PurpleThemeLoader *loader, const gchar *dir);
+
+/**
+ * Probes a directory to see if it might possibly contain a theme
+ *
+ * This function might only check for obvious files or directory structure.
+ * Loading of a theme may fail for other reasons.
+ * The default prober checks for $dir/purple/$type.
+ *
+ * @param loader The theme loader
+ * @param dir    The directory that may contain the theme
+ *
+ * @returns TRUE if the directory appears to contain a theme, FALSE otherwise.
+ */
+gboolean purple_theme_loader_probe(PurpleThemeLoader *loader, const gchar *dir);
 
 G_END_DECLS
 #endif /* PURPLE_THEME_LOADER_H */
