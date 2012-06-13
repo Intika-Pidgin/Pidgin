@@ -1,5 +1,5 @@
 /*
- * Evolution integration plugin for Gaim
+ * Evolution integration plugin for Purple
  *
  * Copyright (C) 2004 Henry Jen.
  *
@@ -15,13 +15,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
  */
 
 #include "internal.h"
 #include "gtkblist.h"
-#include "gtkgaim.h"
+#include "pidgin.h"
 #include "gtkutils.h"
 #include "gtkimhtml.h"
 
@@ -53,7 +53,7 @@ void
 gevo_addrbooks_model_populate(GtkTreeModel *model)
 {
 	ESourceList *addressbooks;
-	GError *err;
+	GError *err = NULL;
 	GSList *groups, *g;
 	GtkTreeIter iter;
 	GtkListStore *list;
@@ -65,7 +65,7 @@ gevo_addrbooks_model_populate(GtkTreeModel *model)
 
 	if (!e_book_get_addressbooks(&addressbooks, &err))
 	{
-		gaim_debug_error("evolution",
+		purple_debug_error("evolution",
 						 "Unable to fetch list of address books.\n");
 
 		gtk_list_store_append(list, &iter);
@@ -113,24 +113,26 @@ gevo_addrbooks_model_populate(GtkTreeModel *model)
 	g_object_unref(addressbooks);
 }
 
-static EContact * 
+static EContact *
 gevo_run_query_in_uri(const gchar *uri, EBookQuery *query)
 {
 	EBook *book;
 	gboolean status;
 	GList *cards;
+	GError *err = NULL;
 
-	if (!gevo_load_addressbook(uri, &book, NULL))
+	if (!gevo_load_addressbook(uri, &book, &err))
 	{
-		gaim_debug_error("evolution",
-						 "Error retrieving addressbook\n");
+		purple_debug_error("evolution",
+						 "Error retrieving addressbook: %s\n", err->message);
+		g_error_free(err);
 		return NULL;
 	}
 
 	status = e_book_get_contacts(book, query, &cards, NULL);
 	if (!status)
 	{
-		gaim_debug_error("evolution", "Error %d in getting card list\n",
+		purple_debug_error("evolution", "Error %d in getting card list\n",
 						 status);
 		g_object_unref(book);
 		return NULL;
@@ -167,11 +169,11 @@ gevo_run_query_in_uri(const gchar *uri, EBookQuery *query)
  *              so callers must e_book_query_ref() it in advance (to obtain a
  *              second reference) if they want to reuse @a query.
  */
-EContact * 
-gevo_search_buddy_in_contacts(GaimBuddy *buddy, EBookQuery *query)
+EContact *
+gevo_search_buddy_in_contacts(PurpleBuddy *buddy, EBookQuery *query)
 {
 	ESourceList *addressbooks;
-	GError *err;
+	GError *err = NULL;
 	EBookQuery *full_query;
 	GSList *groups, *g;
 	EContact *result;
@@ -188,7 +190,7 @@ gevo_search_buddy_in_contacts(GaimBuddy *buddy, EBookQuery *query)
 		queries[1] = e_book_query_field_test(protocol_field, E_BOOK_QUERY_IS, buddy->name);
 		if (queries[1] == NULL)
 		{
-			gaim_debug_error("evolution", "Error in creating protocol query\n");
+			purple_debug_error("evolution", "Error in creating protocol query\n");
 			e_book_query_unref(query);
 			return NULL;
 		}
@@ -200,14 +202,14 @@ gevo_search_buddy_in_contacts(GaimBuddy *buddy, EBookQuery *query)
 		full_query = e_book_query_field_test(protocol_field, E_BOOK_QUERY_IS, buddy->name);
 		if (full_query == NULL)
 		{
-			gaim_debug_error("evolution", "Error in creating protocol query\n");
+			purple_debug_error("evolution", "Error in creating protocol query\n");
 			return NULL;
 		}
 	}
 
 	if (!e_book_get_addressbooks(&addressbooks, &err))
 	{
-		gaim_debug_error("evolution",
+		purple_debug_error("evolution",
 						 "Unable to fetch list of address books.\n");
 		e_book_query_unref(full_query);
 		if (err != NULL)

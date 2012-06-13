@@ -1,7 +1,8 @@
 /**
  * @file ntlm.h
- *
- * gaim
+ */
+
+/* purple
  *
  * Copyright (C) 2005, Thomas Butter <butter@uni-mannheim.de>
  *
@@ -20,15 +21,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GAIM_NTLM_H
-#define _GAIM_NTLM_H
+#ifndef _PURPLE_NTLM_H
+#define _PURPLE_NTLM_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**
  * Generates the base64 encoded type 1 message needed for NTLM authentication
@@ -38,18 +37,18 @@ extern "C" {
  * @return base64 encoded string to send to the server.  This should
  *         be g_free'd by the caller.
  */
-gchar *gaim_ntlm_gen_type1(const gchar *hostname, const gchar *domain);
+gchar *purple_ntlm_gen_type1(const gchar *hostname, const gchar *domain);
 
 /**
  * Parses the ntlm type 2 message
  *
  * @param type2 String containing the base64 encoded type2 message
  * @param flags If not @c NULL, this will store the flags for the message
- * 
+ *
  * @return The nonce for use in message type3.  This is a statically
  *         allocated 8 byte binary string.
  */
-guint8 *gaim_ntlm_parse_type2(const gchar *type2, guint32 *flags);
+guint8 *purple_ntlm_parse_type2(const gchar *type2, guint32 *flags);
 
 /**
  * Generates a type3 message
@@ -58,15 +57,13 @@ guint8 *gaim_ntlm_parse_type2(const gchar *type2, guint32 *flags);
  * @param passw The password
  * @param hostname The hostname
  * @param domain The domain to authenticate against
- * @param nonce The nonce returned by gaim_ntlm_parse_type2
- * @param flags Pointer to the flags returned by gaim_ntlm_parse_type2
+ * @param nonce The nonce returned by purple_ntlm_parse_type2
+ * @param flags Pointer to the flags returned by purple_ntlm_parse_type2
  * @return A base64 encoded type3 message.  This should be g_free'd by
  *         the caller.
  */
-gchar *gaim_ntlm_gen_type3(const gchar *username, const gchar *passw, const gchar *hostname, const gchar *domain, const guint8 *nonce, guint32 *flags);
+gchar *purple_ntlm_gen_type3(const gchar *username, const gchar *passw, const gchar *hostname, const gchar *domain, const guint8 *nonce, guint32 *flags);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
-#endif /* _GAIM_NTLM_H */
+#endif /* _PURPLE_NTLM_H */

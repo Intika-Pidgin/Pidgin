@@ -1,7 +1,7 @@
 EXTRA_DIST = \
-		Makefile.mingw
+	Makefile.mingw
 
-pkgdir = $(libdir)/gaim
+pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
 SIMPLESOURCES = \
 	simple.c \
@@ -9,21 +9,21 @@ SIMPLESOURCES = \
 	sipmsg.c \
 	sipmsg.h
 
-AM_CFLAGS = $(st) 
+AM_CFLAGS = $(st)
 
 libsimple_la_LDFLAGS = -module -avoid-version
 
-if STATIC_MSN
+if STATIC_SIMPLE
 
-st = -DGAIM_STATIC_PRPL
-noinst_LIBRARIES = libsimple.a
-libsimple_a_SOURCES = $(SIMPLESOURCES)
-libsimple_a_CFLAGS  = $(AM_CFLAGS)
+st = -DPURPLE_STATIC_PRPL
+noinst_LTLIBRARIES   = libsimple.la
+libsimple_la_SOURCES = $(SIMPLESOURCES)
+libsimple_la_CFLAGS  = $(AM_CFLAGS)
 
 else
 
 st =
-pkg_LTLIBRARIES   = libsimple.la
+pkg_LTLIBRARIES      = libsimple.la
 libsimple_la_SOURCES = $(SIMPLESOURCES)
 libsimple_la_LIBADD  = $(GLIB_LIBS)
 
@@ -31,5 +31,6 @@ endif
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
+	-I$(top_builddir)/libpurple \
 	$(GLIB_CFLAGS) \
 	$(DEBUG_CFLAGS)

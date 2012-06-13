@@ -1,7 +1,7 @@
 /*
- * Gaim
+ * Purple
  *
- * Gaim is the legal property of its developers, whose names are too
+ * Purple is the legal property of its developers, whose names are too
  * numerous to list here. Please refer to the COPYRIGHT file distributed
  * with this source distribution
  *
@@ -17,19 +17,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301,
  * USA.
  */
 
-#ifndef _GAIM_MIME_H
-#define _GAIM_MIME_H
+#ifndef _PURPLE_MIME_H
+#define _PURPLE_MIME_H
 
 #include <glib.h>
-#include <glib/glist.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @file mime.h
@@ -40,26 +35,28 @@ extern "C" {
  */
 
 /**
- * @typedef GaimMimeDocument A MIME document.
+ * A MIME document.
  */
-typedef struct _GaimMimeDocument GaimMimeDocument;
+typedef struct _PurpleMimeDocument PurpleMimeDocument;
 
 /**
- * @typedef GaimMimePart A part of a multipart MIME document.
+ * A part of a multipart MIME document.
  */
-typedef struct _GaimMimePart GaimMimePart;
+typedef struct _PurpleMimePart PurpleMimePart;
+
+G_BEGIN_DECLS
 
 /**
  * Allocate an empty MIME document.
  */
-GaimMimeDocument *gaim_mime_document_new(void);
+PurpleMimeDocument *purple_mime_document_new(void);
 
 /**
  * Frees memory used in a MIME document and all of its parts and fields
  *
  * @param doc The MIME document to free.
  */
-void gaim_mime_document_free(GaimMimeDocument *doc);
+void purple_mime_document_free(PurpleMimeDocument *doc);
 
 /**
  * Parse a MIME document from a NUL-terminated string.
@@ -68,7 +65,7 @@ void gaim_mime_document_free(GaimMimeDocument *doc);
  *
  * @returns A MIME document.
  */
-GaimMimeDocument *gaim_mime_document_parse(const char *buf);
+PurpleMimeDocument *purple_mime_document_parse(const char *buf);
 
 /**
  * Parse a MIME document from a string
@@ -78,22 +75,22 @@ GaimMimeDocument *gaim_mime_document_parse(const char *buf);
  *
  * @returns   A MIME document.
  */
-GaimMimeDocument *gaim_mime_document_parsen(const char *buf, gsize len);
+PurpleMimeDocument *purple_mime_document_parsen(const char *buf, gsize len);
 
 /**
  * Write (append) a MIME document onto a GString.
  */
-void gaim_mime_document_write(GaimMimeDocument *doc, GString *str);
+void purple_mime_document_write(PurpleMimeDocument *doc, GString *str);
 
 /**
  * The list of fields in the header of a document
  *
  * @param doc The MIME document.
  *
- * @returns   A list of strings indicating the fields (but not the values of
- *            the fields) in the header of doc.
+ * @constreturn A list of strings indicating the fields (but not the values
+ *              of the fields) in the header of doc.
  */
-const GList *gaim_mime_document_get_fields(GaimMimeDocument *doc);
+GList *purple_mime_document_get_fields(PurpleMimeDocument *doc);
 
 /**
  * Get the value of a specific field in the header of a document.
@@ -104,7 +101,7 @@ const GList *gaim_mime_document_get_fields(GaimMimeDocument *doc);
  * @returns     Value associated with the indicated header field, or
  *              NULL if the field doesn't exist.
  */
-const char *gaim_mime_document_get_field(GaimMimeDocument *doc,
+const char *purple_mime_document_get_field(PurpleMimeDocument *doc,
 					 const char *field);
 
 /**
@@ -116,7 +113,7 @@ const char *gaim_mime_document_get_field(GaimMimeDocument *doc,
  * @param value Value to associate with the indicated header field,
  *              of NULL to remove the field.
  */
-void gaim_mime_document_set_field(GaimMimeDocument *doc,
+void purple_mime_document_set_field(PurpleMimeDocument *doc,
 				  const char *field,
 				  const char *value);
 
@@ -125,16 +122,16 @@ void gaim_mime_document_set_field(GaimMimeDocument *doc,
  *
  * @param doc The MIME document.
  *
- * @returns   List of GaimMimePart contained within doc.
+ * @constreturn   List of PurpleMimePart contained within doc.
  */
-const GList *gaim_mime_document_get_parts(GaimMimeDocument *doc);
+GList *purple_mime_document_get_parts(PurpleMimeDocument *doc);
 
 /**
  * Create and insert a new part into a MIME document.
  *
  * @param doc The new part's parent MIME document.
  */
-GaimMimePart *gaim_mime_part_new(GaimMimeDocument *doc);
+PurpleMimePart *purple_mime_part_new(PurpleMimeDocument *doc);
 
 
 /**
@@ -142,10 +139,10 @@ GaimMimePart *gaim_mime_part_new(GaimMimeDocument *doc);
  *
  * @param part The MIME document part.
  *
- * @returns    List of strings indicating the fields (but not the values
- *             of the fields) in the header of part.
+ * @constreturn List of strings indicating the fields (but not the values
+ *              of the fields) in the header of part.
  */
-const GList *gaim_mime_part_get_fields(GaimMimePart *part);
+GList *purple_mime_part_get_fields(PurpleMimePart *part);
 
 
 /**
@@ -157,14 +154,14 @@ const GList *gaim_mime_part_get_fields(GaimMimePart *part);
  * @returns     Value of the specified header field, or NULL if the
  *              field doesn't exist.
  */
-const char *gaim_mime_part_get_field(GaimMimePart *part,
+const char *purple_mime_part_get_field(PurpleMimePart *part,
 				     const char *field);
 
 /**
  * Get the decoded value of a specific field in the header of a
  * document part.
  */
-char *gaim_mime_part_get_field_decoded(GaimMimePart *part,
+char *purple_mime_part_get_field_decoded(PurpleMimePart *part,
 				       const char *field);
 
 /**
@@ -176,7 +173,7 @@ char *gaim_mime_part_get_field_decoded(GaimMimePart *part,
  * @param value Value to associate with the indicated header field,
  *              of NULL to remove the field.
  */
-void gaim_mime_part_set_field(GaimMimePart *part,
+void purple_mime_part_set_field(PurpleMimePart *part,
 			      const char *field,
 			      const char *value);
 
@@ -187,7 +184,7 @@ void gaim_mime_part_set_field(GaimMimePart *part,
  *
  * @returns    NULL-terminated data found in the document part
  */
-const char *gaim_mime_part_get_data(GaimMimePart *part);
+const char *purple_mime_part_get_data(PurpleMimePart *part);
 
 /**
  * Get the data portion of a MIME document part, after attempting to
@@ -199,7 +196,7 @@ const char *gaim_mime_part_get_data(GaimMimePart *part);
  * @param data Buffer for the data.
  * @param len  The length of the buffer.
  */
-void gaim_mime_part_get_data_decoded(GaimMimePart *part,
+void purple_mime_part_get_data_decoded(PurpleMimePart *part,
 				     guchar **data, gsize *len);
 
 /**
@@ -208,12 +205,10 @@ void gaim_mime_part_get_data_decoded(GaimMimePart *part,
  * @param part The MIME document part.
  * @returns    Length of the data in the document part.
  */
-gsize gaim_mime_part_get_length(GaimMimePart *part);
+gsize purple_mime_part_get_length(PurpleMimePart *part);
 
-void gaim_mime_part_set_data(GaimMimePart *part, const char *data);
+void purple_mime_part_set_data(PurpleMimePart *part, const char *data);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif

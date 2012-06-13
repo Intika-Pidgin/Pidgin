@@ -2,28 +2,28 @@
 #
 # Author: hermanator12002@yahoo.com
 # Date 9/11/02
-# Description: Top Makefile for win32 (mingw) port of Gaim
+# Description: Protocols Makefile for win32 (mingw) port of libpurple
 #
 
-GAIM_TOP := ../..
-include $(GAIM_TOP)/libpurple/win32/global.mak
+PIDGIN_TREE_TOP := ../..
+include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
-SUBDIRS = gg irc jabber msn novell oscar qq sametime silc simple yahoo
+SUBDIRS = gg irc jabber msn mxit novell null oscar sametime silc simple yahoo bonjour myspace
 
 .PHONY: all install clean
 
 all:
 	for subdir in $(SUBDIRS); do \
-		$(MAKE) -C $$subdir -f $(GAIM_WIN32_MAKEFILE) || exit 1; \
+		$(MAKE) -C $$subdir -f $(MINGW_MAKEFILE) || exit 1; \
 	done;
 
 install: all
 	for subdir in $(SUBDIRS); do \
-		$(MAKE) -C $$subdir -f $(GAIM_WIN32_MAKEFILE) install || exit 1; \
+		$(MAKE) -C $$subdir -f $(MINGW_MAKEFILE) install || exit 1; \
 	done;
 
 clean:
 	for subdir in $(SUBDIRS); do \
-		$(MAKE) -C $$subdir -f $(GAIM_WIN32_MAKEFILE) clean || exit 1; \
+		$(MAKE) -C $$subdir -f $(MINGW_MAKEFILE) clean || exit 1; \
 	done;
 

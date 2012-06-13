@@ -1,7 +1,7 @@
 /**
  * @file search.h
  *
- * gaim
+ * purple
  *
  * Copyright (C) 2005  Bartosz Oler <bartosz@bzimage.us>
  *
@@ -17,12 +17,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 
-#ifndef _GAIM_GG_SEARCH_H
-#define _GAIM_GG_SEARCH_H
+#ifndef _PURPLE_GG_SEARCH_H
+#define _PURPLE_GG_SEARCH_H
 
 #include "connection.h"
 
@@ -46,12 +46,11 @@ typedef struct {
 	char *birthyear;
 	char *gender;
 	char *active;
-	char *offset;
-
-	char *last_uin;
 
 	GGPSearchType search_type;
 	guint32 seq;
+	guint16 page_number;
+	guint16 page_size; /* how many contacts fits into one page of results */
 
 	void *user_data;
 	void *window;
@@ -127,13 +126,13 @@ ggp_search_destroy(GGPSearches *searches);
 /**
  * Initiate a search in the public directory.
  *
- * @param gc   GaimConnection.
+ * @param gc   PurpleConnection.
  * @param form Filled in GGPSearchForm.
  *
- * @return Sequence number of a search or 0 if an error occured.
+ * @return Sequence number of a search or 0 if an error occurred.
  */
 guint32
-ggp_search_start(GaimConnection *gc, GGPSearchForm *form);
+ggp_search_start(PurpleConnection *gc, GGPSearchForm *form);
 
 /*
  * Return converted to the UTF-8 value of the specified field.
@@ -141,13 +140,13 @@ ggp_search_start(GaimConnection *gc, GGPSearchForm *form);
  * @param res    Public directory look-up result.
  * @param num    Id of the record.
  * @param fileld Name of the field.
- * 
+ *
  * @return UTF-8 encoded value of the field.
  */
 char *
 ggp_search_get_result(gg_pubdir50_t res, int num, const char *field);
 
 
-#endif /* _GAIM_GG_SEARCH_H */
+#endif /* _PURPLE_GG_SEARCH_H */
 
 /* vim: set ts=8 sts=0 sw=8 noet: */

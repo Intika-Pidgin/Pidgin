@@ -1,10 +1,11 @@
 /**
- * @file gtk_eventloop.c Gaim Event Loop API (gtk implementation)
- * @ingroup gtkui
+ * @file gtk_eventloop.c Purple Event Loop API (gtk implementation)
+ * @ingroup pidgin
+ */
+
+/* pidgin
  *
- * gaim
- *
- * Gaim is the legal property of its developers, whose names are too numerous
+ * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -20,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #include <glib.h>
@@ -30,44 +31,39 @@
 #include "win32dep.h"
 #endif
 
-#define GAIM_GTK_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
-#define GAIM_GTK_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
+#define PIDGIN_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
+#define PIDGIN_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-typedef struct _GaimGtkIOClosure {
-	GaimInputFunction function;
+typedef struct _PidginIOClosure {
+	PurpleInputFunction function;
 	guint result;
 	gpointer data;
 
-} GaimGtkIOClosure;
+} PidginIOClosure;
 
-static void gaim_gtk_io_destroy(gpointer data)
+static gboolean pidgin_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
 {
-	g_free(data);
-}
+	PidginIOClosure *closure = data;
+	PurpleInputCondition purple_cond = 0;
 
-static gboolean gaim_gtk_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
-{
-	GaimGtkIOClosure *closure = data;
-	GaimInputCondition gaim_cond = 0;
-
-	if (condition & GAIM_GTK_READ_COND)
-		gaim_cond |= GAIM_INPUT_READ;
-	if (condition & GAIM_GTK_WRITE_COND)
-		gaim_cond |= GAIM_INPUT_WRITE;
+	if (condition & PIDGIN_READ_COND)
+		purple_cond |= PURPLE_INPUT_READ;
+	if (condition & PIDGIN_WRITE_COND)
+		purple_cond |= PURPLE_INPUT_WRITE;
 
 #if 0
-	gaim_debug(GAIM_DEBUG_MISC, "gtk_eventloop",
+	purple_debug_misc("gtk_eventloop",
 			   "CLOSURE: callback for %d, fd is %d\n",
 			   closure->result, g_io_channel_unix_get_fd(source));
 #endif
 
 #ifdef _WIN32
-	if(! gaim_cond) {
-#if DEBUG
-		gaim_debug(GAIM_DEBUG_MISC, "gtk_eventloop",
+	if(! purple_cond) {
+#ifdef DEBUG
+		purple_debug_misc("gtk_eventloop",
 			   "CLOSURE received GIOCondition of 0x%x, which does not"
 			   " match 0x%x (READ) or 0x%x (WRITE)\n",
-			   condition, GAIM_GTK_READ_COND, GAIM_GTK_WRITE_COND);
+			   condition, PIDGIN_READ_COND, PIDGIN_WRITE_COND);
 #endif /* DEBUG */
 
 		return TRUE;
@@ -75,36 +71,44 @@ static gboolean gaim_gtk_io_invoke(GIOChannel *source, GIOCondition condition, g
 #endif /* _WIN32 */
 
 	closure->function(closure->data, g_io_channel_unix_get_fd(source),
-			  gaim_cond);
+			  purple_cond);
 
 	return TRUE;
 }
 
-static guint gaim_gtk_input_add(gint fd, GaimInputCondition condition, GaimInputFunction function,
+static guint pidgin_input_add(gint fd, PurpleInputCondition condition, PurpleInputFunction function,
 							   gpointer data)
 {
-	GaimGtkIOClosure *closure = g_new0(GaimGtkIOClosure, 1);
+	PidginIOClosure *closure = g_new0(PidginIOClosure, 1);
 	GIOChannel *channel;
 	GIOCondition cond = 0;
+#ifdef _WIN32
+	static int use_glib_io_channel = -1;
+
+	if (use_glib_io_channel == -1)
+		use_glib_io_channel = (g_getenv("PIDGIN_GLIB_IO_CHANNEL") != NULL) ? 1 : 0;
+#endif
 
 	closure->function = function;
 	closure->data = data;
 
-	if (condition & GAIM_INPUT_READ)
-		cond |= GAIM_GTK_READ_COND;
-	if (condition & GAIM_INPUT_WRITE)
-		cond |= GAIM_GTK_WRITE_COND;
+	if (condition & PURPLE_INPUT_READ)
+		cond |= PIDGIN_READ_COND;
+	if (condition & PURPLE_INPUT_WRITE)
+		cond |= PIDGIN_WRITE_COND;
 
 #ifdef _WIN32
-	channel = wgaim_g_io_channel_win32_new_socket(fd);
-#else
-	channel = g_io_channel_unix_new(fd);
+	if (use_glib_io_channel == 0)
+		channel = wpurple_g_io_channel_win32_new_socket(fd);
+	else
 #endif
+	channel = g_io_channel_unix_new(fd);
+
 	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      gaim_gtk_io_invoke, closure, gaim_gtk_io_destroy);
+					      pidgin_io_invoke, closure, g_free);
 
 #if 0
-	gaim_debug(GAIM_DEBUG_MISC, "gtk_eventloop",
+	purple_debug_misc("gtk_eventloop",
 			   "CLOSURE: adding input watcher %d for fd %d\n",
 			   closure->result, fd);
 #endif
@@ -113,16 +117,25 @@ static guint gaim_gtk_input_add(gint fd, GaimInputCondition condition, GaimInput
 	return closure->result;
 }
 
-static GaimEventLoopUiOps eventloop_ops =
+static PurpleEventLoopUiOps eventloop_ops =
 {
 	g_timeout_add,
-	(guint (*)(guint))g_source_remove,
-	gaim_gtk_input_add,
-	(guint (*)(guint))g_source_remove
+	g_source_remove,
+	pidgin_input_add,
+	g_source_remove,
+	NULL, /* input_get_error */
+#if GLIB_CHECK_VERSION(2,14,0)
+	g_timeout_add_seconds,
+#else
+	NULL,
+#endif
+	NULL,
+	NULL,
+	NULL
 };
 
-GaimEventLoopUiOps *
-gaim_gtk_eventloop_get_ui_ops(void)
+PurpleEventLoopUiOps *
+pidgin_eventloop_get_ui_ops(void)
 {
 	return &eventloop_ops;
 }
