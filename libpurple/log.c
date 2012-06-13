@@ -302,7 +302,7 @@ gint purple_log_get_activity_score(PurpleLogType type, const char *name, PurpleA
 			}
 		}
 
-		score = (gint)score_double;
+		score = (gint) ceil(score_double);
 		g_hash_table_replace(logsize_users_decayed, lu, GINT_TO_POINTER(score));
 	}
 	return score;
@@ -1157,6 +1157,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 			g_dir_close(username_dir);
 		}
 		g_free(protocol_path);
+		g_list_free(accounts);
 		g_dir_close(protocol_dir);
 	}
 	g_free(log_path);
@@ -1375,6 +1376,7 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 	char *image_corrected_msg;
 	char *date;
 	char *header;
+	char *escaped_from;
 	PurplePlugin *plugin = purple_find_prpl(purple_account_get_protocol_id(log->account));
 	PurpleLogCommonLoggerData *data = log->logger_data;
 	gsize written = 0;
@@ -1413,6 +1415,8 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 	if(!data->file)
 		return 0;
 
+	escaped_from = g_markup_escape_text(from, -1);
+
 	image_corrected_msg = convert_image_tags(log, message);
 	purple_markup_html_to_xhtml(image_corrected_msg, &msg_fixed, NULL);
 
@@ -1434,34 +1438,35 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 			written += fprintf(data->file, "<font color=\"#FF0000\"><font size=\"2\">(%s)</font><b> %s</b></font><br/>\n", date, msg_fixed);
 		else if (type & PURPLE_MESSAGE_WHISPER)
 			written += fprintf(data->file, "<font color=\"#6C2585\"><font size=\"2\">(%s)</font><b> %s:</b></font> %s<br/>\n",
-					date, from, msg_fixed);
+					date, escaped_from, msg_fixed);
 		else if (type & PURPLE_MESSAGE_AUTO_RESP) {
 			if (type & PURPLE_MESSAGE_SEND)
-				written += fprintf(data->file, _("<font color=\"#16569E\"><font size=\"2\">(%s)</font> <b>%s &lt;AUTO-REPLY&gt;:</b></font> %s<br/>\n"), date, from, msg_fixed);
+				written += fprintf(data->file, _("<font color=\"#16569E\"><font size=\"2\">(%s)</font> <b>%s &lt;AUTO-REPLY&gt;:</b></font> %s<br/>\n"), date, escaped_from, msg_fixed);
 			else if (type & PURPLE_MESSAGE_RECV)
-				written += fprintf(data->file, _("<font color=\"#A82F2F\"><font size=\"2\">(%s)</font> <b>%s &lt;AUTO-REPLY&gt;:</b></font> %s<br/>\n"), date, from, msg_fixed);
+				written += fprintf(data->file, _("<font color=\"#A82F2F\"><font size=\"2\">(%s)</font> <b>%s &lt;AUTO-REPLY&gt;:</b></font> %s<br/>\n"), date, escaped_from, msg_fixed);
 		} else if (type & PURPLE_MESSAGE_RECV) {
 			if(purple_message_meify(msg_fixed, -1))
 				written += fprintf(data->file, "<font color=\"#062585\"><font size=\"2\">(%s)</font> <b>***%s</b></font> %s<br/>\n",
-						date, from, msg_fixed);
+						date, escaped_from, msg_fixed);
 			else
 				written += fprintf(data->file, "<font color=\"#A82F2F\"><font size=\"2\">(%s)</font> <b>%s:</b></font> %s<br/>\n",
-						date, from, msg_fixed);
+						date, escaped_from, msg_fixed);
 		} else if (type & PURPLE_MESSAGE_SEND) {
 			if(purple_message_meify(msg_fixed, -1))
 				written += fprintf(data->file, "<font color=\"#062585\"><font size=\"2\">(%s)</font> <b>***%s</b></font> %s<br/>\n",
-						date, from, msg_fixed);
+						date, escaped_from, msg_fixed);
 			else
 				written += fprintf(data->file, "<font color=\"#16569E\"><font size=\"2\">(%s)</font> <b>%s:</b></font> %s<br/>\n",
-						date, from, msg_fixed);
+						date, escaped_from, msg_fixed);
 		} else {
 			purple_debug_error("log", "Unhandled message type.\n");
 			written += fprintf(data->file, "<font size=\"2\">(%s)</font><b> %s:</b></font> %s<br/>\n",
-						date, from, msg_fixed);
+						date, escaped_from, msg_fixed);
 		}
 	}
 	g_free(date);
 	g_free(msg_fixed);
+	g_free(escaped_from);
 	fflush(data->file);
 
 	return written;
@@ -1677,7 +1682,6 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	struct tm tm;
 	char month[4];
 	struct old_logger_data *data = NULL;
-	char *newlog;
 	int logfound = 0;
 	int lastoff = 0;
 	int newlen;
@@ -1779,7 +1783,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	}
 
 	while (fgets(buf, BUF_LONG, file)) {
-		if ((newlog = strstr(buf, "---- New C"))) {
+		if (strstr(buf, "---- New C") != NULL) {
 			int length;
 			int offset;
 			char convostart[32];
@@ -1834,7 +1838,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 
 			g_snprintf(convostart, length, "%s", temp);
 			memset(&tm, 0, sizeof(tm));
-			sscanf(convostart, "%*s %s %d %d:%d:%d %d",
+			sscanf(convostart, "%*s %3s %d %d:%d:%d %d",
 			       month, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &tm.tm_year);
 			/* Ugly hack, in case current locale is not English */
 			if (purple_strequal(month, "Jan")) {

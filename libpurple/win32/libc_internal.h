@@ -48,6 +48,7 @@ int wpurple_send(int fd, const void *buf, unsigned int size, int flags);
 int wpurple_inet_aton(const char *name, struct in_addr *addr);
 const char *
 wpurple_inet_ntop (int af, const void *src, char *dst, socklen_t cnt);
+int wpurple_inet_pton(int af, const char *src, void *dst);
 
 /* netdb.h */
 struct hostent* wpurple_gethostbyname(const char *name);
@@ -140,10 +141,6 @@ int wpurple_write(int fd, const void *buf, unsigned int size);
 int wpurple_close(int fd);
 int wpurple_gethostname(char *name, size_t size);
 
-
-#if !GLIB_CHECK_VERSION(2,8,0)
-int wpurple_g_access(const gchar *filename, int mode);
-#endif
 
 /* stdio.h */
 int wpurple_rename(const char *oldname, const char *newname);

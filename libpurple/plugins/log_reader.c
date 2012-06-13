@@ -1,6 +1,6 @@
-#include <stdio.h>
-
 #include "internal.h"
+
+#include <stdio.h>
 
 #include "debug.h"
 #include "log.h"
@@ -1454,11 +1454,15 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 		const char *footer = NULL;
 		GString *temp = NULL;
 
-		if ((c = strstr(c, "\n")))
-		{
-			*c = '\0';
-			c++;
-		}
+		/* There's always a trailing '\n' at the end of the file (see above), so
+		 * just quit out if we don't find another, because we're at the end.
+		 */
+		c = strchr(c, '\n');
+		if (!c)
+			break;
+
+		*c = '\0';
+		c++;
 
 		/* Convert links.
 		 *
@@ -1482,14 +1486,14 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 				char *end_paren;
 				char *space;
 
-				if (!(end_paren = strstr(link, ")")))
+				if (!(end_paren = strchr(link, ')')))
 				{
 					/* Something is not as we expect.  Bail out. */
 					break;
 				}
 
 				if (!temp)
-					temp = g_string_sized_new(c ? (c - 1 - line) : strlen(line));
+					temp = g_string_sized_new(strlen(line));
 
 				g_string_append_len(temp, line, (tmp - line));
 
@@ -1504,7 +1508,7 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 
 				/* The \r is a bit of a hack to keep there from being a \r in
 				 * the link text, which may not matter. */
-				if ((space = strstr(end_paren, " ")) || (space = strstr(end_paren, "\r")))
+				if ((space = strchr(end_paren, ' ')) || (space = strchr(end_paren, '\r')))
 				{
 					g_string_append_len(temp, end_paren + 1, space - end_paren - 1);
 
@@ -1539,7 +1543,7 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 		if (*line == '[') {
 			const char *timestamp;
 
-			if ((timestamp = strstr(line, "]"))) {
+			if ((timestamp = strchr(line, ']'))) {
 				line++;
 				/* TODO: Parse the timestamp and convert it to Purple's format. */
 				g_string_append(formatted, "<font size=\"2\">(");
@@ -1587,7 +1591,7 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 
 					if (buddy != NULL)
 						alias = purple_buddy_get_alias(buddy);
-					
+
 					if (alias != NULL)
 						g_string_append(formatted, alias);
 					else
@@ -1658,7 +1662,7 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 					}
 				}
 			} else {
-				const char *line2 = strstr(line, ":");
+				const char *line2 = strchr(line, ':');
 				if (line2) {
 					const char *acct_name;
 					line2++;
@@ -1819,20 +1823,20 @@ static GList *qip_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 
 		gboolean add_new_log = FALSE;
 
-		if (*c) {
+		if (c && *c) {
 			if (purple_str_has_prefix(c, QIP_LOG_IN_MESSAGE) ||
 				purple_str_has_prefix(c, QIP_LOG_OUT_MESSAGE)) {
 
 				char *tmp;
-				
+
 				new_line = c;
 
 				/* find EOL */
-				c = strstr(c, "\n");
+				c = strchr(c, '\n');
 				c++;
 
 				/* Find the last '(' character. */
-				if ((tmp = strstr(c, "\n")) != NULL) {
+				if ((tmp = strchr(c, '\n')) != NULL) {
 					while (*tmp && *tmp != '(') --tmp;
 					c = tmp;
 				} else {
@@ -1886,7 +1890,7 @@ static GList *qip_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 			data->offset = offset;
 			offset += data->length;
 			purple_debug_info("QIP logger list",
-				"Creating log: path = (%s); length = (%d); offset = (%d)\n", 
+				"Creating log: path = (%s); length = (%d); offset = (%d)\n",
 				data->path, data->length, data->offset);
 
 			/* XXX: Look into this later... Should we pass in a struct tm? */
@@ -1902,10 +1906,10 @@ static GList *qip_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 			start_log = new_line;
 		}
 
-		if (*c) {
+		if (c && *c) {
 			/* find EOF */
-			c = strstr(c, "\n");
-			c++;
+			if ((c = strchr(c, '\n')))
+				c++;
 		}
 	}
 
@@ -1983,13 +1987,13 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 			is_in_message = purple_str_has_prefix(line, QIP_LOG_IN_MESSAGE_ESC);
 
 			/* find EOL */
-			c = strstr(c, "\n");
+			c = strchr(c, '\n');
 
 			/* XXX: Do we need buddy_name when we have buddy->alias? */
 			buddy_name = ++c;
 
 			/* Find the last '(' character. */
-			if ((tmp = strstr(c, "\n")) != NULL) {
+			if ((tmp = strchr(c, '\n')) != NULL) {
 				while (*tmp && *tmp != '(') --tmp;
 				c = tmp;
 			} else {
@@ -2042,12 +2046,12 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 					}
 
 					/* find EOF */
-					c = strstr(c, "\n");
+					c = strchr(c, '\n');
 					line = ++c;
 				}
 			}
 		} else {
-			if ((c = strstr(c, "\n")))
+			if ((c = strchr(c, '\n')))
 				*c = '\0';
 
 			if (line[0] != '\n' && line[0] != '\r') {
@@ -2186,7 +2190,7 @@ static GList *amsn_logger_parse_file(char *filename, const char *sn, PurpleAccou
 				                  " length = (%d)\n",
 				                  sn, data->path, data->offset, data->length);
 			}
-			c = strstr(c, "\n");
+			c = strchr(c, '\n');
 			c++;
 		}
 
@@ -2323,7 +2327,7 @@ static char *amsn_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 
 	file = g_fopen(data->path, "rb");
 	g_return_val_if_fail(file != NULL, g_strdup(""));
-	
+
 	fseek(file, data->offset, SEEK_SET);
 	data->length = fread(contents, 1, data->length, file);
 	fclose(file);
@@ -2342,7 +2346,7 @@ static char *amsn_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 		char *end;
 		char *old_tag;
 		char *tag;
-		end = strstr(start, "\n");
+		end = strchr(start, '\n');
 		if (!end)
 			break;
 		*end = '\0';
@@ -2417,7 +2421,7 @@ static int amsn_logger_size(PurpleLog *log)
 	g_return_val_if_fail(log != NULL, 0);
 
 	data = log->logger_data;
-	
+
 	if (purple_prefs_get_bool("/plugins/core/log_reader/fast_sizes")) {
 		return data ? data->length : 0;
 	}
@@ -2644,7 +2648,7 @@ static void log_reader_init_prefs(void) {
 			g_free(contents);
 		}
 		g_free(path);
-#endif /* !GTK_CHECK_VERSION(2,6,0) */
+#endif /* !GLIB_CHECK_VERSION(2,6,0) */
 	} /* path */
 
 	if (!found) {

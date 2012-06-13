@@ -3,6 +3,10 @@
  *
  * purple
  *
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -104,13 +108,11 @@ jingle_transport_finalize (GObject *transport)
 static void
 jingle_transport_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-	JingleTransport *transport;
+	g_return_if_fail(object != NULL);
 	g_return_if_fail(JINGLE_IS_TRANSPORT(object));
 
-	transport = JINGLE_TRANSPORT(object);
-
 	switch (prop_id) {
-		default:	
+		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
 	}
@@ -119,14 +121,12 @@ jingle_transport_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 jingle_transport_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-	JingleTransport *transport;
+	g_return_if_fail(object != NULL);
 	g_return_if_fail(JINGLE_IS_TRANSPORT(object));
-	
-	transport = JINGLE_TRANSPORT(object);
 
 	switch (prop_id) {
-		default:	
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);	
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
 	}
 }
@@ -161,13 +161,18 @@ jingle_transport_to_xml_internal(JingleTransport *transport, xmlnode *content, J
 JingleTransport *
 jingle_transport_parse(xmlnode *transport)
 {
-	const gchar *type = xmlnode_get_namespace(transport);
-	return JINGLE_TRANSPORT_CLASS(g_type_class_ref(jingle_get_type(type)))->parse(transport);
+	const gchar *type_name = xmlnode_get_namespace(transport);
+	GType type = jingle_get_type(type_name);
+	if (type == G_TYPE_NONE)
+		return NULL;
+	
+	return JINGLE_TRANSPORT_CLASS(g_type_class_ref(type))->parse(transport);
 }
 
 xmlnode *
 jingle_transport_to_xml(JingleTransport *transport, xmlnode *content, JingleActionType action)
 {
+	g_return_val_if_fail(transport != NULL, NULL);
 	g_return_val_if_fail(JINGLE_IS_TRANSPORT(transport), NULL);
 	return JINGLE_TRANSPORT_GET_CLASS(transport)->to_xml(transport, content, action);
 }

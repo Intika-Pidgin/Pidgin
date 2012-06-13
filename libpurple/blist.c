@@ -28,6 +28,7 @@
 #include "dbus-maybe.h"
 #include "debug.h"
 #include "notify.h"
+#include "pounce.h"
 #include "prefs.h"
 #include "privacy.h"
 #include "prpl.h"
@@ -1118,7 +1119,7 @@ void purple_blist_alias_buddy(PurpleBuddy *buddy, const char *alias)
 	old_alias = buddy->alias;
 
 	if ((new_alias != NULL) && (*new_alias != '\0'))
-		buddy->alias = g_strdup(alias);
+		buddy->alias = new_alias;
 	else {
 		buddy->alias = NULL;
 		g_free(new_alias); /* could be "\0" */
@@ -1739,6 +1740,14 @@ purple_contact_destroy(PurpleContact *contact)
 	g_free(contact);
 }
 
+PurpleGroup *
+purple_contact_get_group(const PurpleContact *contact)
+{
+	g_return_val_if_fail(contact, NULL);
+
+	return (PurpleGroup *)(((PurpleBlistNode *)contact)->parent);
+}
+
 void purple_contact_set_alias(PurpleContact *contact, const char *alias)
 {
 	purple_blist_alias_contact(contact,alias);
@@ -2009,17 +2018,13 @@ void purple_blist_add_group(PurpleGroup *group, PurpleBlistNode *node)
 
 	ops = purple_blist_get_ui_ops();
 
-	if (!purplebuddylist->root) {
-		purplebuddylist->root = gnode;
-
-		key = g_utf8_collate_key(group->name, -1);
-		g_hash_table_insert(groups_cache, key, group);
-		return;
-	}
-
 	/* if we're moving to overtop of ourselves, do nothing */
-	if (gnode == node)
-		return;
+	if (gnode == node) {
+		if (!purplebuddylist->root)
+			node = NULL;
+		else
+			return;
+	}
 
 	if (purple_find_group(group->name)) {
 		/* This is just being moved */
@@ -2179,6 +2184,9 @@ void purple_blist_remove_buddy(PurpleBuddy *buddy)
 
 	if (ops && ops->remove_node)
 		ops->remove_node(node);
+
+	/* Remove this buddy's pounces */
+	purple_pounce_destroy_all_by_buddy(buddy);
 
 	/* Signal that the buddy has been removed before freeing the memory for it */
 	purple_signal_emit(purple_blist_get_handle(), "buddy-removed", buddy);
@@ -2432,6 +2440,9 @@ PurpleBuddy *purple_find_buddy(PurpleAccount *account, const char *name)
 	hb.name = (gchar *)purple_normalize(account, name);
 
 	for (group = purplebuddylist->root; group; group = group->next) {
+		if (!group->child)
+			continue;
+
 		hb.group = group;
 		if ((buddy = g_hash_table_lookup(purplebuddylist->buddies, &hb))) {
 			return buddy;
@@ -2481,6 +2492,9 @@ GSList *purple_find_buddies(PurpleAccount *account, const char *name)
 		hb.account = account;
 
 		for (node = purplebuddylist->root; node != NULL; node = node->next) {
+			if (!node->child)
+				continue;
+
 			hb.group = node;
 			if ((buddy = g_hash_table_lookup(purplebuddylist->buddies, &hb)) != NULL)
 				ret = g_slist_prepend(ret, buddy);
@@ -2601,6 +2615,18 @@ PurplePresence *purple_buddy_get_presence(const PurpleBuddy *buddy)
 {
 	g_return_val_if_fail(buddy != NULL, NULL);
 	return buddy->presence;
+}
+
+PurpleMediaCaps purple_buddy_get_media_caps(const PurpleBuddy *buddy)
+{
+	g_return_val_if_fail(buddy != NULL, 0);
+	return buddy->media_caps;
+}
+
+void purple_buddy_set_media_caps(PurpleBuddy *buddy, PurpleMediaCaps media_caps)
+{
+	g_return_if_fail(buddy != NULL);
+	buddy->media_caps = media_caps;
 }
 
 PurpleGroup *purple_buddy_get_group(PurpleBuddy *buddy)
@@ -3184,6 +3210,13 @@ purple_blist_init(void)
 						 purple_value_new(PURPLE_TYPE_SUBTYPE,
 										PURPLE_SUBTYPE_BLIST_NODE),
 						 purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "buddy-caps-changed",
+			purple_marshal_VOID__POINTER_INT_INT, NULL,
+			3, purple_value_new(PURPLE_TYPE_SUBTYPE,
+				PURPLE_SUBTYPE_BLIST_BUDDY),
+			purple_value_new(PURPLE_TYPE_INT),
+			purple_value_new(PURPLE_TYPE_INT));
 
 	purple_signal_connect(purple_accounts_get_handle(), "account-created",
 			handle,

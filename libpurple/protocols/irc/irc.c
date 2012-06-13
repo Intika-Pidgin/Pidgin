@@ -4,7 +4,7 @@
  * purple
  *
  * Copyright (C) 2003, Robbert Haarman <purple@inglorion.net>
- * Copyright (C) 2003, Ethan Blanton <eblanton@cs.purdue.edu>
+ * Copyright (C) 2003, 2012 Ethan Blanton <elb@pidgin.im>
  * Copyright (C) 2000-2003, Rob Flynn <rob@tgflinux.com>
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *
@@ -39,7 +39,7 @@
 
 #define PING_TIMEOUT 60
 
-static void irc_buddy_append(char *name, struct irc_buddy *ib, GString *string);
+static void irc_ison_buddy_init(char *name, struct irc_buddy *ib, GList **list);
 
 static const char *irc_blist_icon(PurpleAccount *a, PurpleBuddy *b);
 static GList *irc_status_types(PurpleAccount *account);
@@ -99,7 +99,11 @@ static int do_send(struct irc_conn *irc, const char *buf, gsize len)
 static int irc_send_raw(PurpleConnection *gc, const char *buf, int len)
 {
 	struct irc_conn *irc = (struct irc_conn*)gc->proto_data;
-	return do_send(irc, buf, len);
+	if (len == -1) {
+		len = strlen(buf);
+	}
+	irc_send_len(irc, buf, len);
+	return len;
 }
 
 static void
@@ -142,15 +146,17 @@ irc_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 int irc_send(struct irc_conn *irc, const char *buf)
 {
-	int ret, buflen;
+    return irc_send_len(irc, buf, strlen(buf));
+}
+
+int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
+{
+	int ret;
  	char *tosend= g_strdup(buf);
 
 	purple_signal_emit(_irc_plugin, "irc-sending-text", purple_account_get_connection(irc->account), &tosend);
 	if (tosend == NULL)
 		return 0;
-
-	buflen = strlen(tosend);
-
 
 	/* If we're not buffering writes, try to send immediately */
 	if (!irc->writeh)
@@ -186,43 +192,63 @@ int irc_send(struct irc_conn *irc, const char *buf)
 /* XXX I don't like messing directly with these buddies */
 gboolean irc_blist_timeout(struct irc_conn *irc)
 {
-	GString *string;
-	char *list, *buf;
-
-	if (irc->ison_outstanding)
-		return TRUE;
-
-	string = g_string_sized_new(512);
-
-	g_hash_table_foreach(irc->buddies, (GHFunc)irc_buddy_append, (gpointer)string);
-
-	list = g_string_free(string, FALSE);
-	if (!list || !strlen(list)) {
-		g_free(list);
+	if (irc->ison_outstanding) {
 		return TRUE;
 	}
 
-	buf = irc_format(irc, "vn", "ISON", list);
-	g_free(list);
-	irc_send(irc, buf);
-	g_free(buf);
+	g_hash_table_foreach(irc->buddies, (GHFunc)irc_ison_buddy_init,
+	                     (gpointer *)&irc->buddies_outstanding);
 
-	irc->ison_outstanding = TRUE;
+	irc_buddy_query(irc);
 
 	return TRUE;
 }
 
-static void irc_buddy_append(char *name, struct irc_buddy *ib, GString *string)
+void irc_buddy_query(struct irc_conn *irc)
 {
-	ib->flag = FALSE;
-	g_string_append_printf(string, "%s ", name);
+	GList *lp;
+	GString *string;
+	struct irc_buddy *ib;
+	char *buf;
+
+	string = g_string_sized_new(512);
+
+	while ((lp = g_list_first(irc->buddies_outstanding))) {
+		ib = (struct irc_buddy *)lp->data;
+		if (string->len + strlen(ib->name) + 1 > 450)
+			break;
+		g_string_append_printf(string, "%s ", ib->name);
+		ib->new_online_status = FALSE;
+		irc->buddies_outstanding = g_list_remove_link(irc->buddies_outstanding, lp);
+	}
+
+	if (string->len) {
+		buf = irc_format(irc, "vn", "ISON", string->str);
+		irc_send(irc, buf);
+		g_free(buf);
+		irc->ison_outstanding = TRUE;
+	} else
+		irc->ison_outstanding = FALSE;
+
+	g_string_free(string, TRUE);
 }
+
+static void irc_ison_buddy_init(char *name, struct irc_buddy *ib, GList **list)
+{
+	*list = g_list_append(*list, ib);
+}
+
 
 static void irc_ison_one(struct irc_conn *irc, struct irc_buddy *ib)
 {
 	char *buf;
 
-	ib->flag = FALSE;
+	if (irc->buddies_outstanding != NULL) {
+		irc->buddies_outstanding = g_list_append(irc->buddies_outstanding, ib);
+		return;
+	}
+
+	ib->new_online_status = FALSE;
 	buf = irc_format(irc, "vn", "ISON", ib->name);
 	irc_send(irc, buf);
 	g_free(buf);
@@ -362,14 +388,13 @@ static void irc_login(PurpleAccount *account)
 
 static gboolean do_login(PurpleConnection *gc) {
 	char *buf, *tmp = NULL;
-	char *hostname, *server;
-	const char *hosttmp;
+	char *server;
 	const char *username, *realname;
 	struct irc_conn *irc = gc->proto_data;
 	const char *pass = purple_connection_get_password(gc);
 
 	if (pass && *pass) {
-		buf = irc_format(irc, "vv", "PASS", pass);
+		buf = irc_format(irc, "v:", "PASS", pass);
 		if (irc_send(irc, buf) < 0) {
 			g_free(buf);
 			return FALSE;
@@ -391,17 +416,6 @@ static gboolean do_login(PurpleConnection *gc) {
 		}
 	}
 
-	hosttmp = purple_get_host_name();
-	if (*hosttmp == ':') {
-		/* This is either an IPv6 address, or something which
-		 * doesn't belong here.  Either way, we need to escape
-		 * it. */
-		hostname = g_strdup_printf("0%s", hosttmp);
-	} else {
-		/* Ugly, I know. */
-		hostname = g_strdup(hosttmp);
-	}
-
 	if (*irc->server == ':') {
 		/* Same as hostname, above. */
 		server = g_strdup_printf("0%s", irc->server);
@@ -409,10 +423,9 @@ static gboolean do_login(PurpleConnection *gc) {
 		server = g_strdup(irc->server);
 	}
 
-	buf = irc_format(irc, "vvvv:", "USER", tmp ? tmp : username, hostname, server,
+	buf = irc_format(irc, "vvvv:", "USER", tmp ? tmp : username, "*", server,
 	                 strlen(realname) ? realname : IRC_DEFAULT_ALIAS);
 	g_free(tmp);
-	g_free(hostname);
 	g_free(server);
 	if (irc_send(irc, buf) < 0) {
 		g_free(buf);
@@ -569,9 +582,20 @@ static void irc_set_status(PurpleAccount *account, PurpleStatus *status)
 static void irc_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 {
 	struct irc_conn *irc = (struct irc_conn *)gc->proto_data;
-	struct irc_buddy *ib = g_new0(struct irc_buddy, 1);
-	ib->name = g_strdup(purple_buddy_get_name(buddy));
-	g_hash_table_replace(irc->buddies, ib->name, ib);
+	struct irc_buddy *ib;
+	const char *bname = purple_buddy_get_name(buddy);
+
+	ib = g_hash_table_lookup(irc->buddies, bname);
+	if (ib != NULL) {
+		ib->ref++;
+		purple_prpl_got_user_status(irc->account, bname,
+				ib->online ? "available" : "offline", NULL);
+	} else {
+		ib = g_new0(struct irc_buddy, 1);
+		ib->name = g_strdup(bname);
+		ib->ref = 1;
+		g_hash_table_replace(irc->buddies, ib->name, ib);
+	}
 
 	/* if the timer isn't set, this is during signon, so we don't want to flood
 	 * ourself off with ISON's, so we don't, but after that we want to know when
@@ -583,7 +607,12 @@ static void irc_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup 
 static void irc_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
 {
 	struct irc_conn *irc = (struct irc_conn *)gc->proto_data;
-	g_hash_table_remove(irc->buddies, purple_buddy_get_name(buddy));
+	struct irc_buddy *ib;
+
+	ib = g_hash_table_lookup(irc->buddies, purple_buddy_get_name(buddy));
+	if (ib && --ib->ref == 0) {
+		g_hash_table_remove(irc->buddies, purple_buddy_get_name(buddy));
+	}
 }
 
 static void read_input(struct irc_conn *irc, int len)
@@ -928,7 +957,12 @@ static PurplePluginProtocolInfo prpl_info =
 	sizeof(PurplePluginProtocolInfo),    /* struct_size */
 	NULL,                    /* get_account_text_table */
 	NULL,                    /* initiate_media */
-	NULL					 /* can_do_media */
+	NULL,					 /* get_media_caps */
+	NULL,					 /* get_moods */
+	NULL,					 /* set_public_alias */
+	NULL,					 /* get_public_alias */
+	NULL,					 /* add_buddy_with_invite */
+	NULL					 /* add_buddies_with_invite */
 };
 
 static gboolean load_plugin (PurplePlugin *plugin) {

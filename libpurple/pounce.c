@@ -695,6 +695,31 @@ purple_pounce_destroy_all_by_account(PurpleAccount *account)
 }
 
 void
+purple_pounce_destroy_all_by_buddy(PurpleBuddy *buddy)
+{
+	const char *pouncee, *bname;
+	PurpleAccount *pouncer, *bacct;
+	PurplePounce *pounce;
+	GList *l, *l_next;
+
+	g_return_if_fail(buddy != NULL);
+
+	bacct = purple_buddy_get_account(buddy);
+	bname = purple_buddy_get_name(buddy);
+
+	for (l = purple_pounces_get_all(); l != NULL; l = l_next) {
+		pounce = (PurplePounce *)l->data;
+		l_next = l->next;
+
+		pouncer = purple_pounce_get_pouncer(pounce);
+		pouncee = purple_pounce_get_pouncee(pounce);
+
+		if ( (pouncer == bacct) && (strcmp(pouncee, bname) == 0) )
+			purple_pounce_destroy(pounce);
+	}
+}
+
+void
 purple_pounce_set_events(PurplePounce *pounce, PurplePounceEvent events)
 {
 	g_return_if_fail(pounce != NULL);
@@ -1157,4 +1182,7 @@ purple_pounces_uninit()
 	}
 
 	purple_signals_disconnect_by_handle(purple_pounces_get_handle());
+
+	g_hash_table_destroy(pounce_handlers);
+	pounce_handlers = NULL;
 }

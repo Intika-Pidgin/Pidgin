@@ -252,7 +252,6 @@ static void delete_log_cb(gpointer *data)
 		GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(treestore), iter);
 		gboolean first = !gtk_tree_path_prev(path);
 
-#if GTK_CHECK_VERSION(2,2,0)
 		if (!gtk_tree_store_remove(treestore, iter) && first)
 		{
 			/* iter was the last child at its level */
@@ -263,9 +262,7 @@ static void delete_log_cb(gpointer *data)
 				gtk_tree_store_remove(treestore, iter);
 			}
 		}
-#else
-		gtk_tree_store_remove(treestore, iter);
-#endif
+
 		gtk_tree_path_free(path);
 	}
 
@@ -423,6 +420,7 @@ static gboolean search_find_cb(gpointer data)
 {
 	PidginLogViewer *viewer = data;
 	gtk_imhtml_search_find(GTK_IMHTML(viewer->imhtml), viewer->search);
+	g_object_steal_data(G_OBJECT(viewer->entry), "search-find-cb");
 	return FALSE;
 }
 
@@ -475,8 +473,11 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 	g_free(read);
 
 	if (viewer->search != NULL) {
+		guint source;
 		gtk_imhtml_search_clear(GTK_IMHTML(viewer->imhtml));
-		g_idle_add(search_find_cb, viewer);
+		source = g_idle_add(search_find_cb, viewer);
+		g_object_set_data_full(G_OBJECT(viewer->entry), "search-find-cb",
+		                       GINT_TO_POINTER(source), (GDestroyNotify)g_source_remove);
 	}
 
 	pidgin_clear_cursor(viewer->window);
@@ -530,7 +531,6 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	GtkWidget *title_box;
 	char *text;
 	GtkWidget *pane;
-	GtkWidget *sw;
 	GtkCellRenderer *rend;
 	GtkTreeViewColumn *col;
 	GtkTreeSelection *sel;
@@ -613,10 +613,6 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(lv->window)->vbox), pane, TRUE, TRUE, 0);
 
 	/* List *************/
-	sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (sw), GTK_SHADOW_IN);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
-	gtk_paned_add1(GTK_PANED(pane), sw);
 	lv->treestore = gtk_tree_store_new (2, G_TYPE_STRING, G_TYPE_POINTER);
 	lv->treeview = gtk_tree_view_new_with_model (GTK_TREE_MODEL (lv->treestore));
 	g_object_unref(G_OBJECT(lv->treestore));
@@ -624,7 +620,8 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	col = gtk_tree_view_column_new_with_attributes ("time", rend, "markup", 0, NULL);
 	gtk_tree_view_append_column (GTK_TREE_VIEW(lv->treeview), col);
 	gtk_tree_view_set_headers_visible (GTK_TREE_VIEW (lv->treeview), FALSE);
-	gtk_container_add (GTK_CONTAINER (sw), lv->treeview);
+	gtk_paned_add1(GTK_PANED(pane), 
+		pidgin_make_scrollable(lv->treeview, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1));
 
 	populate_log_tree(lv);
 

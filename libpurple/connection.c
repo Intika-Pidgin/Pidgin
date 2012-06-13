@@ -52,10 +52,7 @@ static gboolean
 send_keepalive(gpointer data)
 {
 	PurpleConnection *gc = data;
-	PurplePluginProtocolInfo *prpl_info = NULL;
-
-	if (gc == NULL)
-		return TRUE;
+	PurplePluginProtocolInfo *prpl_info;
 
 	/* Only send keep-alives if we haven't heard from the
 	 * server in a while.
@@ -63,12 +60,8 @@ send_keepalive(gpointer data)
 	if ((time(NULL) - gc->last_received) < KEEPALIVE_INTERVAL)
 		return TRUE;
 
-	if (gc->prpl == NULL)
-		return TRUE;
-
 	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
-
-	if (prpl_info && prpl_info->keepalive)
+	if (prpl_info->keepalive)
 		prpl_info->keepalive(gc);
 
 	return TRUE;
@@ -142,7 +135,7 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 			!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
 			!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
 		{
-			purple_debug_error("connection", "Can not connect to account %s without "
+			purple_debug_error("connection", "Cannot connect to account %s without "
 							 "a password.\n", purple_account_get_username(account));
 			return;
 		}
@@ -217,7 +210,7 @@ _purple_connection_new_unregister(PurpleAccount *account, const char *password, 
 		!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
 		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
 	{
-		purple_debug_error("connection", "Can not connect to account %s without "
+		purple_debug_error("connection", "Cannot connect to account %s without "
 						   "a password.\n", purple_account_get_username(account));
 		return;
 	}
@@ -379,6 +372,7 @@ purple_connection_set_state(PurpleConnection *gc, PurpleConnectionState state)
 		purple_blist_add_account(account);
 
 		purple_signal_emit(purple_connections_get_handle(), "signed-on", gc);
+		purple_signal_emit_return_1(purple_connections_get_handle(), "autojoin", gc);
 
 		serv_set_permit_deny(gc);
 
@@ -522,7 +516,8 @@ purple_connection_disconnect_cb(gpointer data)
 	account = data;
 	gc = purple_account_get_connection(account);
 
-	gc->disconnect_timeout = 0;
+	if (gc != NULL)
+		gc->disconnect_timeout = 0;
 
 	password = g_strdup(purple_account_get_password(account));
 	purple_account_disconnect(account);
@@ -577,6 +572,9 @@ purple_connection_error_reason (PurpleConnection *gc,
 		return;
 
 	gc->wants_to_die = purple_connection_error_is_fatal (reason);
+
+	purple_debug_info("connection", "Connection error on %p (reason: %u description: %s)\n",
+	                  gc, reason, description);
 
 	ops = purple_connections_get_ui_ops();
 
@@ -718,6 +716,11 @@ purple_connections_init(void)
 	                                        PURPLE_SUBTYPE_CONNECTION),
 	                       purple_value_new(PURPLE_TYPE_ENUM),
 	                       purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_register(handle, "autojoin",
+	                       purple_marshal_BOOLEAN__POINTER, NULL, 1,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
+	                                        PURPLE_SUBTYPE_CONNECTION));
 
 }
 

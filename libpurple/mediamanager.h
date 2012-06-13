@@ -21,7 +21,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
 #ifndef _PURPLE_MEDIA_MANAGER_H_
@@ -30,9 +30,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
-/** @copydoc _PurpleMediaManager */
+/** An opaque structure representing a group of (usually all) media calls. */
 typedef struct _PurpleMediaManager PurpleMediaManager;
-/** @copydoc _PurpleMediaManagerClass */
+/** The GObject class structure of the PurpleMediaManager object. */
 typedef struct _PurpleMediaManagerClass PurpleMediaManagerClass;
 
 #include "account.h"
@@ -81,6 +81,7 @@ PurpleMediaManager *purple_media_manager_get(void);
  * @param account The account to create the session on.
  * @param conference_type The conference type to feed into Farsight2.
  * @param remote_user The remote user to initiate the session with.
+ * @param initiator TRUE if the local user is the initiator of this media call, FALSE otherwise.
  *
  * @return A newly created media session.
  *
@@ -211,6 +212,28 @@ void purple_media_manager_set_ui_caps(PurpleMediaManager *manager,
  * @since 2.6.0
  */
 PurpleMediaCaps purple_media_manager_get_ui_caps(PurpleMediaManager *manager);
+
+/**
+ * Sets which media backend type media objects will use.
+ *
+ * @param manager The manager to set the caps on.
+ * @param backend_type The media backend type to use.
+ *
+ * @since 2.7.0
+ */
+void purple_media_manager_set_backend_type(PurpleMediaManager *manager,
+		GType backend_type);
+
+/**
+ * Gets which media backend type media objects will use.
+ *
+ * @param manager The manager to get the media backend type from.
+ *
+ * @return The type of media backend type media objects will use.
+ *
+ * @since 2.7.0
+ */
+GType purple_media_manager_get_backend_type(PurpleMediaManager *manager);
 
 /*}@*/
 

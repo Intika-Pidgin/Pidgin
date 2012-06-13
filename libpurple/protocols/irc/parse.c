@@ -65,6 +65,7 @@ static struct _irc_msg {
 	{ "319", "nn:", irc_msg_whois },	/* Whois channels		*/
 	{ "320", "nn:", irc_msg_whois },	/* Whois (fn ident)		*/
 	{ "314", "nnnvv:", irc_msg_whois },	/* Whowas user			*/
+	{ "315", "nt:", irc_msg_who },      /* end of WHO channel   */
 	{ "369", "nt:", irc_msg_endwhois },	/* End of WHOWAS		*/
 	{ "321", "*", irc_msg_list },		/* Start of list		*/
 	{ "322", "ncv:", irc_msg_list },	/* List.			*/
@@ -73,6 +74,7 @@ static struct _irc_msg {
 	{ "331", "nc:",	irc_msg_topic },	/* No channel topic		*/
 	{ "332", "nc:", irc_msg_topic },	/* Channel topic		*/
 	{ "333", "*", irc_msg_ignore },		/* Topic setter stuff		*/
+	{ "352", "ncvvvnv:", irc_msg_who },	/* Channel WHO			*/
 	{ "353", "nvc:", irc_msg_names },	/* Names list			*/
 	{ "366", "nc:", irc_msg_names },	/* End of names			*/
 	{ "367", "ncnnv", irc_msg_ban },	/* Ban list			*/
@@ -86,6 +88,7 @@ static struct _irc_msg {
 	{ "403", "nc:", irc_msg_nochan },	/* No such channel		*/
 	{ "404", "nt:", irc_msg_nosend },	/* Cannot send to chan		*/
 	{ "421", "nv:", irc_msg_unknown },	/* Unknown command		*/
+	{ "422", "n:", irc_msg_motd },		/* MOTD file missing		*/
 	{ "432", "vn:", irc_msg_badnick },	/* Erroneous nickname		*/
 	{ "433", "vn:", irc_msg_nickused },	/* Nickname already in use	*/
 	{ "437", "nc:", irc_msg_unavailable },  /* Nick/channel is unavailable */
@@ -122,6 +125,7 @@ static struct _irc_user_cmd {
 	char *help;
 } _irc_cmds[] = {
 	{ "action", ":", irc_cmd_ctcp_action, N_("action &lt;action to perform&gt;:  Perform an action.") },
+	{ "authserv", ":", irc_cmd_service, N_("authserv: Send a command to authserv") },
 	{ "away", ":", irc_cmd_away, N_("away [message]:  Set an away message, or use no message to return from being away.") },
 	{ "ctcp", "t:", irc_cmd_ctcp, N_("ctcp <nick> <msg>: sends ctcp msg to nick.") },
 	{ "chanserv", ":", irc_cmd_service, N_("chanserv: Send a command to chanserv") },
@@ -256,18 +260,18 @@ static char *irc_recv_convert(struct irc_conn *irc, const char *string)
 	gboolean autodetect;
 	int i;
 
+	autodetect = purple_account_get_bool(irc->account, "autodetect_utf8", IRC_DEFAULT_AUTODETECT);
+
+	if (autodetect && g_utf8_validate(string, -1, NULL)) {
+		return g_strdup(string);
+	}
+
 	enclist = purple_account_get_string(irc->account, "encoding", IRC_DEFAULT_CHARSET);
 	encodings = g_strsplit(enclist, ",", -1);
 
 	if (encodings[0] == NULL) {
 		g_strfreev(encodings);
 		return purple_utf8_salvage(string);
-	}
-
-	autodetect = purple_account_get_bool(irc->account, "autodetect_utf8", IRC_DEFAULT_AUTODETECT);
-
-	if (autodetect && g_utf8_validate(string, -1, NULL)) {
-		return g_strdup(string);
 	}
 
 	for (i = 0; encodings[i] != NULL; i++) {
@@ -361,7 +365,12 @@ char *irc_mirc2html(const char *string)
 	char fg[3] = "\0\0", bg[3] = "\0\0";
 	int fgnum, bgnum;
 	int font = 0, bold = 0, underline = 0, italic = 0;
-	GString *decoded = g_string_sized_new(strlen(string));
+	GString *decoded;
+
+	if (string == NULL)
+		return NULL;
+
+	decoded = g_string_sized_new(strlen(string));
 
 	cur = string;
 	do {
@@ -450,6 +459,7 @@ char *irc_mirc2html(const char *string)
 				decoded = g_string_append(decoded, "</U>");
 			if (font)
 				decoded = g_string_append(decoded, "</FONT>");
+			bold = italic = underline = font = FALSE;
 			break;
 		default:
 			purple_debug(PURPLE_DEBUG_ERROR, "irc", "Unexpected mIRC formatting character %d\n", *cur);
@@ -461,8 +471,13 @@ char *irc_mirc2html(const char *string)
 
 char *irc_mirc2txt (const char *string)
 {
-	char *result = g_strdup (string);
+	char *result;
 	int i, j;
+
+	if (string == NULL)
+		return NULL;
+
+	result = g_strdup (string);
 
 	for (i = 0, j = 0; result[i]; i++) {
 		switch (result[i]) {
@@ -646,7 +661,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	 * instead of a null terminated string.
 	 */
 	purple_signal_emit(_irc_plugin, "irc-receiving-text", gc, &input);
-	
+
 	if (!strncmp(input, "PING ", 5)) {
 		msg = irc_format(irc, "vv", "PONG", input + 5);
 		irc_send(irc, msg);
@@ -693,7 +708,14 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 		switch (fmt[i]) {
 		case 'v':
 			if (!(end = strchr(cur, ' '))) end = cur + strlen(cur);
-			args[i] = g_strndup(cur, end - cur);
+			/* This is a string of unknown encoding which we do not
+			 * want to transcode, but it may or may not be valid
+			 * UTF-8, so we'll salvage it.  If a nick/channel/target
+			 * field has inadvertently been marked verbatim, this
+			 * could cause weirdness. */
+			tmp = g_strndup(cur, end - cur);
+			args[i] = purple_utf8_salvage(tmp);
+			g_free(tmp);
 			cur += end - cur;
 			break;
 		case 't':
@@ -711,7 +733,9 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 			cur = cur + strlen(cur);
 			break;
 		case '*':
-			args[i] = g_strdup(cur);
+			/* Ditto 'v' above; we're going to salvage this in case
+			 * it leaks past the IRC prpl */
+			args[i] = purple_utf8_salvage(cur);
 			cur = cur + strlen(cur);
 			break;
 		default:

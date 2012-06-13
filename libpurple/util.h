@@ -31,11 +31,18 @@
 
 #include <stdio.h>
 
+/**
+  * An opaque structure representing a URL request. Can be used to cancel
+  * the request.
+  */
 typedef struct _PurpleUtilFetchUrlData PurpleUtilFetchUrlData;
+/** @copydoc _PurpleMenuAction */
 typedef struct _PurpleMenuAction PurpleMenuAction;
+/** @copydoc _PurpleKeyValuePair */
 typedef struct _PurpleKeyValuePair PurpleKeyValuePair;
 
 #include "account.h"
+#include "signals.h"
 #include "xmlnode.h"
 #include "notify.h"
 
@@ -107,7 +114,7 @@ void purple_util_set_current_song(const char *title, const char *artist,
  * @param album     The album of the song, can be @c NULL.
  * @param unused    Currently unused, must be @c NULL.
  *
- * @return   The formatted string. The caller must #g_free the returned string.
+ * @return   The formatted string. The caller must g_free the returned string.
  * @since 2.4.0
  */
 char * purple_util_format_song_info(const char *title, const char *artist,
@@ -509,16 +516,35 @@ char *purple_markup_strip_html(const char *str);
 char *purple_markup_linkify(const char *str);
 
 /**
- * Unescapes HTML entities to their literal characters. Also translates
- * "<br>" to "\n".
- * For example "&amp;" is replaced by '&' and so on.
- * Actually only "&amp;", "&quot;", "&lt;" and "&gt;" are currently
- * supported.
+ * Unescapes HTML entities to their literal characters in the text.
+ * For example "&amp;" is replaced by '&' and so on.  Also converts
+ * numerical entities (e.g. "&#38;" is also '&').
+ *
+ * This function currently supports the following named entities:
+ *     "&amp;", "&lt;", "&gt;", "&copy;", "&quot;", "&reg;", "&apos;"
+ *
+ * purple_unescape_html() is similar, but also converts "<br>" into "\n".
+ *
+ * @param text The string in which to unescape any HTML entities
+ *
+ * @return The text with HTML entities literalized.  You must g_free
+ *         this string when finished with it.
+ *
+ * @see purple_unescape_html()
+ * @since 2.7.0
+ */
+char *purple_unescape_text(const char *text);
+
+/**
+ * Unescapes HTML entities to their literal characters and converts
+ * "<br>" to "\n".  See purple_unescape_text() for more details.
  *
  * @param html The string in which to unescape any HTML entities
  *
  * @return The text with HTML entities literalized.  You must g_free
  *         this string when finished with it.
+ *
+ * @see purple_unescape_text()
  */
 char *purple_unescape_html(const char *html);
 
@@ -792,6 +818,29 @@ gboolean purple_running_osx(void);
  * @return The IP address, or @c NULL on error.
  */
 char *purple_fd_get_ip(int fd);
+
+/**
+ * Returns the address family of a socket.
+ *
+ * @param fd The socket file descriptor.
+ *
+ * @return The address family of the socket (AF_INET, AF_INET6, etc) or -1
+ *         on error.
+ * @since 2.7.0
+ */
+int purple_socket_get_family(int fd);
+
+/**
+ * Returns TRUE if a socket is capable of speaking IPv4.
+ *
+ * This is the case for IPv4 sockets and, on some systems, IPv6 sockets
+ * (due to the IPv4-mapped address functionality).
+ *
+ * @param fd The socket file descriptor
+ * @return TRUE if a socket can speak IPv4.
+ * @since 2.7.0
+ */
+gboolean purple_socket_speaks_ipv4(int fd);
 
 /*@}*/
 
@@ -1286,16 +1335,14 @@ gchar *purple_utf8_salvage(const char *str);
 /**
  * Removes unprintable characters from a UTF-8 string. These characters
  * (in particular low-ASCII characters) are invalid in XML 1.0 and thus
- * are not allowed in XMPP and are rejected by libxml2 by default. This
- * function uses g_unichar_isprint to determine what characters should
- * be stripped. The returned string must be freed by the caller.
+ * are not allowed in XMPP and are rejected by libxml2 by default.
+ *
+ * The returned string must be freed by the caller.
  *
  * @param str A valid UTF-8 string.
  *
  * @return A newly allocated UTF-8 string without the unprintable characters.
  * @since 2.6.0
- *
- * @see g_unichar_isprint
  */
 gchar *purple_utf8_strip_unprintables(const gchar *str);
 
@@ -1405,6 +1452,10 @@ const char *purple_escape_filename(const char *str);
 /**
  * This is added temporarily to assist the split of oscar into aim and icq.
  * This should not be used by plugins.
+ *
+ * @deprecated This function should not be used in new code and should be
+ *             removed in 3.0.0.  The aim/icq prpl split happened a long
+ *             time ago, and we don't need to keep migrating old data.
  */
 const char *_purple_oscar_convert(const char *act, const char *protocol);
 
@@ -1422,6 +1473,14 @@ void purple_restore_default_signal_handlers(void);
  * @constreturn The hostname
  */
 const gchar *purple_get_host_name(void);
+
+/**
+ * Returns a type 4 (random) UUID
+ *
+ * @return A UUID, caller is responsible for freeing it
+ * @since 2.7.0
+ */
+gchar *purple_uuid_random(void);
 
 #ifdef __cplusplus
 }
