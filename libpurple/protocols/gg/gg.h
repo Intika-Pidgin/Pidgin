@@ -24,14 +24,18 @@
 #ifndef _PURPLE_GG_H
 #define _PURPLE_GG_H
 
-#undef printf
 #include <libgadu.h>
 #include "internal.h"
 #include "search.h"
 #include "connection.h"
 
+#include "image.h"
+#include "account.h"
+
 
 #define PUBDIR_RESULTS_MAX 20
+
+#define GGP_UIN_LEN_MAX 10
 
 
 typedef struct
@@ -41,34 +45,16 @@ typedef struct
 
 } GGPChat;
 
-typedef void (*GGPTokenCallback)(PurpleConnection *);
-
-typedef struct
-{
-	char *id;
-	char *data;
-	unsigned int size;
-
-	struct gg_http *req;
-	guint inpa;
-
-	GGPTokenCallback cb;
-
-} GGPToken;
-
 typedef struct {
 
 	struct gg_session *session;
 	guint inpa;
-	GGPToken *token;
 	GList *chats;
 	GGPSearches *searches;
 	int chats_count;
-	GList *pending_richtext_messages;
-	GHashTable *pending_images;
 	gboolean status_broadcasting; //When TRUE status is visible to all, when FALSE status is visible only to friends.
+
+	ggp_image_connection_data image_data;
 } GGPInfo;
 
 #endif /* _PURPLE_GG_H */
-
-/* vim: set ts=8 sts=0 sw=8 noet: */
