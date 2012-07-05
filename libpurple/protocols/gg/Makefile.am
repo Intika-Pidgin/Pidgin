@@ -1,45 +1,18 @@
+pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+
 EXTRA_DIST = \
 	Makefile.mingw \
-	win32-resolver.c \
-	win32-resolver.h \
-	lib/common.c \
-	lib/compat.h \
-	lib/COPYING \
-	lib/dcc.c \
-	lib/dcc7.c \
-	lib/debug.c \
-	lib/deflate.c \
-	lib/deflate.h \
-	lib/encoding.c \
-	lib/encoding.h \
-	lib/events.c \
-	lib/handlers.c \
-	lib/http.c \
-	lib/libgadu.h \
-	lib/libgadu.c \
-	lib/libgadu-config.h \
-	lib/libgadu-debug.h \
-	lib/libgadu-internal.h \
-	lib/message.c \
-	lib/message.h \
-	lib/obsolete.c \
-	lib/protocol.h \
-	lib/pubdir.c \
-	lib/pubdir50.c \
-	lib/resolver.c \
-	lib/resolver.h \
-	lib/session.h \
-	lib/sha1.c
-
-pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+	lib/COPYING
 
 if USE_INTERNAL_LIBGADU
 INTGGSOURCES = \
 	lib/common.c \
 	lib/compat.h \
+	lib/config.h \
 	lib/dcc.c \
 	lib/dcc7.c \
 	lib/debug.c \
+	lib/debug.h \
 	lib/deflate.c \
 	lib/deflate.h \
 	lib/encoding.c \
@@ -47,10 +20,9 @@ INTGGSOURCES = \
 	lib/events.c \
 	lib/handlers.c \
 	lib/http.c \
-	lib/libgadu.h \
+	lib/internal.h \
 	lib/libgadu.c \
-	lib/libgadu-config.h \
-	lib/libgadu-internal.h \
+	lib/libgadu.h \
 	lib/message.c \
 	lib/message.h \
 	lib/obsolete.c \
@@ -62,7 +34,9 @@ INTGGSOURCES = \
 	lib/session.h \
 	lib/sha1.c
 
-INTGG_CFLAGS = -I$(top_srcdir)/libpurple/protocols/gg/lib -DGG_IGNORE_DEPRECATED -DUSE_INTERNAL_LIBGADU
+INTGG_CFLAGS = -I$(top_srcdir)/libpurple/protocols/gg/lib \
+	-DGG_IGNORE_DEPRECATED \
+	-DGG_INTERNAL_LIBGADU_VERSION=$(GADU_LIBGADU_VERSION)
 endif
 
 if USE_GNUTLS
@@ -72,8 +46,8 @@ endif
 
 GGSOURCES = \
 	$(INTGGSOURCES) \
-	gg-utils.h \
-	gg-utils.c \
+	utils.h \
+	utils.c \
 	confer.h \
 	confer.c \
 	search.h \
@@ -81,7 +55,19 @@ GGSOURCES = \
 	buddylist.h \
 	buddylist.c \
 	gg.h \
-	gg.c
+	gg.c \
+	resolver-purple.h \
+	resolver-purple.c \
+	image.h \
+	image.c \
+	account.h \
+	account.c \
+	deprecated.h \
+	deprecated.c \
+	purplew.h \
+	purplew.c \
+	libgaduw.h \
+	libgaduw.c
 
 AM_CFLAGS = $(st)
 
@@ -105,9 +91,9 @@ libgg_la_LIBADD  = $(GLIB_LIBS) $(GADU_LIBS)
 endif
 
 AM_CPPFLAGS = \
+	-Wall -Wextra -Werror \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
 	$(INTGG_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(DEBUG_CFLAGS)
-
