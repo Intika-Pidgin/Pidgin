@@ -312,7 +312,7 @@ msn_switchboard_add_user(MsnSwitchBoard *swboard, const char *user)
 
 			swboard->chat_id = msn_switchboard_get_chat_id();
 			swboard->flag |= MSN_SB_FLAG_IM;
-			swboard->conv = serv_got_joined_chat(account->gc,
+			swboard->conv = serv_got_joined_chat(purple_account_get_connection(account),
 												 swboard->chat_id,
 												 "MSN Chat");
 
@@ -747,7 +747,7 @@ out_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	PurpleConnection *gc;
 	MsnSwitchBoard *swboard;
 
-	gc = cmdproc->session->account->gc;
+	gc = purple_account_get_connection(cmdproc->session->account);
 	swboard = cmdproc->data;
 
 	if (swboard->current_users > 1)
@@ -828,7 +828,8 @@ msn_switchboard_show_ink(MsnSwitchBoard *swboard, const char *passport,
 	}
 
 	imgid = purple_imgstore_add_with_id(image_data, image_len, NULL);
-	image_msg = g_strdup_printf("<IMG ID='%d'>", imgid);
+	image_msg = g_strdup_printf("<IMG SRC='" PURPLE_STORED_IMAGE_PROTOCOL "%d'>",
+	                            imgid);
 
 	if (swboard->current_users > 1 ||
 		((swboard->conv != NULL) &&
