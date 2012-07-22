@@ -220,7 +220,7 @@ set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *ne
 }
 
 static void
-set_account_protocol_cb(GtkWidget *item, const char *id,
+set_account_protocol_cb(GtkWidget *widget, const char *id,
 						AccountPrefsDialog *dialog)
 {
 	PurplePlugin *new_plugin;
@@ -247,14 +247,17 @@ set_account_protocol_cb(GtkWidget *item, const char *id,
 
 	gtk_widget_grab_focus(dialog->protocol_menu);
 
-	if (!dialog->prpl_info || !dialog->prpl_info->register_user ||
-	    g_object_get_data(G_OBJECT(item), "fake")) {
+	if (!dialog->prpl_info || !dialog->prpl_info->register_user) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
+			dialog->register_button), FALSE);
 		gtk_widget_hide(dialog->register_button);
 	} else {
 		if (dialog->prpl_info != NULL &&
 		   (dialog->prpl_info->options & OPT_PROTO_REGISTER_NOSCREENNAME)) {
 			gtk_widget_set_sensitive(dialog->register_button, TRUE);
 		} else {
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
+				dialog->register_button), FALSE);
 			gtk_widget_set_sensitive(dialog->register_button, FALSE);
 		}
 		gtk_widget_show(dialog->register_button);
@@ -266,6 +269,11 @@ username_focus_cb(GtkWidget *widget, GdkEventFocus *event, AccountPrefsDialog *d
 {
 	GHashTable *table;
 	const char *label;
+
+	if (!dialog->prpl_info || ! PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(
+		dialog->prpl_info, get_account_text_table)) {
+		return FALSE;
+	}
 
 	table = dialog->prpl_info->get_account_text_table(NULL);
 	label = g_hash_table_lookup(table, "login_label");
@@ -283,15 +291,27 @@ username_focus_cb(GtkWidget *widget, GdkEventFocus *event, AccountPrefsDialog *d
 static void
 username_changed_cb(GtkEntry *entry, AccountPrefsDialog *dialog)
 {
-	if (dialog->ok_button)
-		gtk_widget_set_sensitive(dialog->ok_button,
-				*gtk_entry_get_text(entry) != '\0');
+	gboolean opt_noscreenname = (dialog->prpl_info != NULL &&
+		(dialog->prpl_info->options & OPT_PROTO_REGISTER_NOSCREENNAME));
+	gboolean username_valid = purple_validate(dialog->plugin,
+		gtk_entry_get_text(entry));
+
+	if (dialog->ok_button) {
+		if (opt_noscreenname && dialog->register_button &&
+			gtk_toggle_button_get_active(
+				GTK_TOGGLE_BUTTON(dialog->register_button)))
+			gtk_widget_set_sensitive(dialog->ok_button, TRUE);
+		else
+			gtk_widget_set_sensitive(dialog->ok_button,
+				username_valid);
+	}
+
 	if (dialog->register_button) {
-		if (dialog->prpl_info != NULL && (dialog->prpl_info->options & OPT_PROTO_REGISTER_NOSCREENNAME))
+		if (opt_noscreenname)
 			gtk_widget_set_sensitive(dialog->register_button, TRUE);
 		else
 			gtk_widget_set_sensitive(dialog->register_button,
-					*gtk_entry_get_text(entry) != '\0');
+				username_valid);
 	}
 }
 
@@ -321,6 +341,37 @@ username_nofocus_cb(GtkWidget *widget, GdkEventFocus *event, AccountPrefsDialog 
 	}
 
 	return FALSE;
+}
+
+static void
+register_button_cb(GtkWidget *checkbox, AccountPrefsDialog *dialog)
+{
+	int register_checked = gtk_toggle_button_get_active(
+		GTK_TOGGLE_BUTTON(dialog->register_button));
+	int opt_noscreenname = (dialog->prpl_info != NULL &&
+		(dialog->prpl_info->options & OPT_PROTO_REGISTER_NOSCREENNAME));
+	int register_noscreenname = (opt_noscreenname && register_checked);
+
+	/* get rid of login_label in username field */
+	username_focus_cb(dialog->username_entry, NULL, dialog);
+
+	if (register_noscreenname) {
+		gtk_entry_set_text(GTK_ENTRY(dialog->username_entry), "");
+		gtk_entry_set_text(GTK_ENTRY(dialog->password_entry), "");
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dialog->remember_pass_check), FALSE);
+	}
+	gtk_widget_set_sensitive(dialog->username_entry, !register_noscreenname);
+	gtk_widget_set_sensitive(dialog->password_entry, !register_noscreenname);
+	gtk_widget_set_sensitive(dialog->remember_pass_check, !register_noscreenname);
+
+	if (dialog->ok_button) {
+		gtk_widget_set_sensitive(dialog->ok_button,
+			(opt_noscreenname && register_checked) ||
+			*gtk_entry_get_text(GTK_ENTRY(dialog->username_entry))
+				!= '\0');
+	}
+
+	username_nofocus_cb(dialog->username_entry, NULL, dialog);
 }
 
 static void
@@ -424,8 +475,6 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	GtkWidget *hbox;
 	GtkWidget *vbox;
 	GtkWidget *entry;
-	GtkWidget *menu;
-	GtkWidget *item;
 	GList *user_splits;
 	GList *l, *l2;
 	char *username = NULL;
@@ -562,17 +611,6 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		}
 		if (value == NULL)
 			value = purple_account_user_split_get_default_value(split);
-
-		/* Google Talk default domain hackery! */
-		menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(dialog->protocol_menu));
-		item = gtk_menu_get_active(GTK_MENU(menu));
-		if (value == NULL && g_object_get_data(G_OBJECT(item), "fakegoogle") &&
-			!strcmp(purple_account_user_split_get_text(split), _("Domain")))
-			value = "gmail.com";
-
-		if (value == NULL && g_object_get_data(G_OBJECT(item), "fakefacebook") &&
-			!strcmp(purple_account_user_split_get_text(split), _("Domain")))
-			value = "chat.facebook.com";
 
 		if (value != NULL)
 			gtk_entry_set_text(GTK_ENTRY(entry), value);
@@ -769,7 +807,7 @@ add_protocol_options(AccountPrefsDialog *dialog)
 {
 	PurpleAccountOption *option;
 	PurpleAccount *account;
-	GtkWidget *vbox, *check, *entry, *combo, *menu, *item;
+	GtkWidget *vbox, *check, *entry, *combo;
 	GList *list, *node;
 	gint i, idx, int_value;
 	GtkListStore *model;
@@ -807,9 +845,6 @@ add_protocol_options(AccountPrefsDialog *dialog)
 	gtk_notebook_insert_page(GTK_NOTEBOOK(dialog->notebook), vbox,
 			gtk_label_new_with_mnemonic(_("Ad_vanced")), 1);
 	gtk_widget_show(vbox);
-
-	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(dialog->protocol_menu));
-	item = gtk_menu_get_active(GTK_MENU(menu));
 
 	for (l = dialog->prpl_info->protocol_options; l != NULL; l = l->next)
 	{
@@ -924,10 +959,6 @@ add_protocol_options(AccountPrefsDialog *dialog)
 				list = purple_account_option_get_list(option);
 				model = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_POINTER);
 				opt_entry->widget = combo = gtk_combo_box_new_with_model(GTK_TREE_MODEL(model));
-
-				if (g_object_get_data(G_OBJECT(item), "fakefacebook") &&
-					!strcmp(opt_entry->setting, "connection_security"))
-					str_value = "opportunistic_tls";
 
 				/* Loop through list of PurpleKeyValuePair items */
 				for (node = list; node != NULL; node = node->next) {
@@ -1213,8 +1244,12 @@ add_voice_options(AccountPrefsDialog *dialog)
 		gtk_widget_show_all(dialog->voice_frame);
 	}
 
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dialog->suppression_check),
-								purple_account_get_silence_suppression(dialog->account));
+	if (dialog->account) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dialog->suppression_check),
+		                             purple_account_get_silence_suppression(dialog->account));
+	} else {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dialog->suppression_check), FALSE);
+	}
 #endif
 }
 
@@ -1251,6 +1286,23 @@ static void
 cancel_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 {
 	account_win_destroy_cb(NULL, NULL, dialog);
+}
+
+static void
+account_register_cb(PurpleAccount *account, gboolean succeeded, void *user_data)
+{
+	if (succeeded)
+	{
+		const PurpleSavedStatus *saved_status = purple_savedstatus_get_current();
+		purple_signal_emit(pidgin_account_get_handle(), "account-modified", account);
+
+		if (saved_status != NULL && purple_account_get_remember_password(account)) {
+			purple_savedstatus_activate_for_account(saved_status, account);
+			purple_account_set_enabled(account, PIDGIN_UI, TRUE);
+		}
+	}
+	else
+		purple_accounts_delete(account);
 }
 
 static void
@@ -1506,6 +1558,7 @@ ok_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 
 	/* If this is a new account, then sign on! */
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(dialog->register_button))) {
+		purple_account_set_register_callback(account, account_register_cb, NULL);
 		purple_account_register(account);
 	} else if (new_acct) {
 		const PurpleSavedStatus *saved_status;
@@ -1602,6 +1655,7 @@ pidgin_account_dialog_show(PidginAccountDialogType type,
 	gtk_box_pack_start(GTK_BOX(main_vbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 	dialog->register_button = button;
+	g_signal_connect(G_OBJECT(dialog->register_button), "toggled", G_CALLBACK(register_button_cb), dialog);
 	if (dialog->account == NULL)
 		gtk_widget_set_sensitive(button, FALSE);
 
@@ -2725,5 +2779,4 @@ pidgin_account_uninit(void)
 	purple_signals_disconnect_by_handle(pidgin_account_get_handle());
 	purple_signals_unregister_by_instance(pidgin_account_get_handle());
 }
-
 
