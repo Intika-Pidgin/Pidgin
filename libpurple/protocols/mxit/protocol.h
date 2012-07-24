@@ -158,6 +158,7 @@
 #define		CP_MSG_ENCRYPTED		0x0010					/* message is encrypted */
 #define		CP_MSG_MARKUP			0x0200					/* message may contain markup */
 #define		CP_MSG_EMOTICON			0x0400					/* message may contain custom emoticons */
+#define		CP_MSG_FAREWELL			0x0800					/* this is a farewell message */
 
 /* redirect types */
 #define		CP_REDIRECT_PERMANENT	1						/* permanent redirect */
@@ -195,9 +196,11 @@
 #define		CP_PROFILE_LASTSEEN		"lastseen"				/* Last-Online timestamp */
 #define		CP_PROFILE_WHEREAMI		"whereami"				/* Where am I / Where I live */
 #define		CP_PROFILE_ABOUTME		"aboutme"				/* About me */
+#define		CP_PROFILE_RELATIONSHIP	"relationship"			/* Relationship Status */
 
 /* extended profile field types */
 #define		CP_PROFILE_TYPE_BOOL	0x02					/* boolean (0 or 1) */
+#define		CP_PROFILE_TYPE_SHORT	0x04					/* short (16-bit) */
 #define		CP_PROFILE_TYPE_INT		0x05					/* integer (32-bit) */
 #define		CP_PROFILE_TYPE_LONG	0x06					/* long (64-bit) */
 #define		CP_PROFILE_TYPE_UTF8	0x0A					/* UTF8 string */
