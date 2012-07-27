@@ -659,6 +659,48 @@ static GList* mxit_blist_menu( PurpleBlistNode *node )
 	return m;
 }
 
+
+/*------------------------------------------------------------------------
+ * Send a typing indicator event.
+ *
+ *  @param gc		The connection object
+ *  @param name		The username of the contact
+ *  @param state	The typing state to be reported.
+ */
+static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, PurpleTypingState state )
+{
+	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	gchar* messageId = purple_uuid_random();		/* generate a unique message id */
+
+	switch ( state ) {
+		case PURPLE_TYPING :
+			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: TYPING\n");
+
+			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_TYPING );
+			break;
+
+		case PURPLE_TYPED :
+			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: TYPED\n");
+
+			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_STOPPED );
+			break;
+
+		case PURPLE_NOT_TYPING:
+			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: NOT TYPING\n");
+			break;
+
+		default:
+			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: UNKNOWN\n");
+
+			break;
+	}
+
+	g_free(messageId);
+
+	return 0;            
+}
+ 
+
 /*========================================================================================================================*/
 
 static PurplePluginProtocolInfo proto_info = {
@@ -685,7 +727,7 @@ static PurplePluginProtocolInfo proto_info = {
 	mxit_close,				/* close */
 	mxit_send_im,			/* send_im */
 	NULL,					/* set_info */
-	NULL,					/* send_typing */
+	mxit_send_typing,		/* send_typing */
 	mxit_get_info,			/* get_info */
 	mxit_set_status,		/* set_status */
 	NULL,					/* set_idle */

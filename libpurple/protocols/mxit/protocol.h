@@ -132,6 +132,7 @@
 #define		CP_CMD_SPLASHCLICK		0x001F					/* (31) splash-screen clickthrough */
 #define		CP_CMD_STATUS			0x0020					/* (32) set shown presence & status */
 #define		CP_CMD_MSGEVENT			0x0023					/* (35) Raise message event */
+#define		CP_CMD_GOT_MSGEVENT		0x0024					/* (36) Get message event */
 #define		CP_CMD_MOOD				0x0029					/* (41) set mood */
 #define		CP_CMD_KICK				0x002B					/* (43) login kick */
 #define		CP_CMD_GRPCHAT_CREATE	0x002C					/* (44) create new groupchat */
@@ -176,6 +177,10 @@
 /* message event types */
 #define		CP_MSGEVENT_DELIVERED	0x02					/* message was delivered */
 #define		CP_MSGEVENT_DISPLAYED	0x04					/* message was viewed */
+#define		CP_MSGEVENT_TYPING		0x10					/* user is typing */
+#define		CP_MSGEVENT_STOPPED		0x20					/* user has stopped typing */
+#define		CP_MSGEVENT_ANGRY		0x40					/* user is typing angrily */
+#define		CP_MSGEVENT_ERASING		0x80					/* user is erasing text */
 
 /* extended profile attribute fields */
 #define		CP_PROFILE_BIRTHDATE	"birthdate"				/* Birthdate (String - ISO 8601 format) */
