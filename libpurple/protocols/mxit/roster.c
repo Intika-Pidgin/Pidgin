@@ -82,9 +82,9 @@ GList* mxit_status_types( PurpleAccount* account )
 	}
 
 	/* add Mood option */
-	type = purple_status_type_new_with_attrs(PURPLE_STATUS_MOOD, "mood", NULL, FALSE, TRUE, TRUE,
+	type = purple_status_type_new_with_attrs( PURPLE_STATUS_MOOD, "mood", NULL, FALSE, TRUE, TRUE,
 		PURPLE_MOOD_NAME, _("Mood Name"), purple_value_new( PURPLE_TYPE_STRING ),
-		NULL);
+		NULL );
 	statuslist = g_list_append( statuslist, type );
 
 	return statuslist;
@@ -135,21 +135,21 @@ const char* mxit_convert_presence_to_name( short no )
 
 /* moods (reference: libpurple/status.h) */
 static PurpleMood mxit_moods[] = {
-	{"angry",		N_("Angry"),		NULL},
-	{"excited",		N_("Excited"),		NULL},
-	{"grumpy",		N_("Grumpy"),		NULL},
-	{"happy",		N_("Happy"),		NULL},
-	{"in_love",		N_("In love"),		NULL},
-	{"invincible",	N_("Invincible"),	NULL},
-	{"sad",			N_("Sad"),			NULL},
-	{"hot",			N_("Hot"),			NULL},
-	{"sick",		N_("Sick"),			NULL},
-	{"sleepy",		N_("Sleepy"),		NULL},
-	{"bored",		N_("Bored"),		NULL},
-	{"cold",		N_("Cold"),			NULL},
-	{"confused",	N_("Confused"),		NULL},
-	{"hungry",		N_("Hungry"),		NULL},
-	{"stressed",	N_("Stressed"),		NULL},
+	{ "angry",		N_( "Angry" ),		NULL },
+	{ "excited",	N_( "Excited" ),	NULL },
+	{ "grumpy",		N_( "Grumpy" ),		NULL },
+	{ "happy",		N_( "Happy" ),		NULL },
+	{ "in_love",	N_( "In love" ),	NULL },
+	{ "invincible",	N_( "Invincible" ),	NULL },
+	{ "sad",		N_( "Sad" ),		NULL },
+	{ "hot",		N_( "Hot" ),		NULL },
+	{ "sick",		N_( "Sick" ),		NULL },
+	{ "sleepy",		N_( "Sleepy" ),		NULL },
+	{ "bored",		N_( "Bored" ),		NULL },
+	{ "cold",		N_( "Cold" ),		NULL },
+	{ "confused",	N_( "Confused" ),	NULL },
+	{ "hungry",		N_( "Hungry" ),		NULL },
+	{ "stressed",	N_( "Stressed" ),	NULL },
 	/* Mark the last record. */
 	{ NULL, NULL, NULL }
 };
@@ -396,7 +396,7 @@ void mxit_update_contact( struct MXitSession* session, struct contact* contact )
 
 		/* create new buddy */
 		buddy = purple_buddy_new( session->acc, contact->username, contact->alias );
-		purple_buddy_set_protocol_data(buddy, contact);
+		purple_buddy_set_protocol_data( buddy, contact );
 
 		/* add new buddy to list */
 		purple_blist_add_buddy( buddy, NULL, group, NULL );
@@ -728,7 +728,7 @@ gboolean is_mxit_chatroom_contact( struct MXitSession* session, const char* user
  */
 void mxit_add_buddy( PurpleConnection* gc, PurpleBuddy* buddy, PurpleGroup* group, const char* message )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 	GSList*				list	= NULL;
 	PurpleBuddy*		mxbuddy	= NULL;
 	unsigned int		i;
@@ -804,7 +804,7 @@ void mxit_add_buddy( PurpleConnection* gc, PurpleBuddy* buddy, PurpleGroup* grou
  */
 void mxit_remove_buddy( PurpleConnection* gc, PurpleBuddy* buddy, PurpleGroup* group )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 	const gchar *		buddy_name = purple_buddy_get_name( buddy );
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_remove_buddy '%s'\n", buddy_name );
@@ -822,7 +822,7 @@ void mxit_remove_buddy( PurpleConnection* gc, PurpleBuddy* buddy, PurpleGroup* g
  */
 void mxit_buddy_alias( PurpleConnection* gc, const char* who, const char* alias )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 	PurpleBuddy*		buddy	= NULL;
 	PurpleGroup*		group	= NULL;
 
@@ -856,7 +856,7 @@ void mxit_buddy_alias( PurpleConnection* gc, const char* who, const char* alias 
  */
 void mxit_buddy_group( PurpleConnection* gc, const char* who, const char* old_group, const char* new_group )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 	PurpleBuddy*		buddy	= NULL;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_buddy_group from '%s' to '%s'\n", old_group, new_group );
@@ -883,7 +883,7 @@ void mxit_buddy_group( PurpleConnection* gc, const char* who, const char* old_gr
  */
 void mxit_rename_group( PurpleConnection* gc, const char* old_name, PurpleGroup* group, GList* moved_buddies )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 	PurpleBuddy*		buddy	= NULL;
 	GList*				item	= NULL;
 

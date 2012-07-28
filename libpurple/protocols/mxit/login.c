@@ -221,7 +221,7 @@ static void mxit_login_connect( struct MXitSession* session )
  */
 static void mxit_cb_register_ok( PurpleConnection *gc, PurpleRequestFields *fields )
 {
-	struct MXitSession*		session		= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*		session		= purple_connection_get_protocol_data( gc );
 	struct MXitProfile*		profile		= session->profile;
 	const char*				str;
 	const char*				pin;
@@ -303,7 +303,7 @@ static void mxit_cb_register_cancel( PurpleConnection *gc, PurpleRequestFields *
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_cb_register_cancel\n" );
 
 	/* disconnect */
-	purple_account_disconnect( gc->account );
+	purple_account_disconnect( purple_connection_get_account( gc ) );
 }
 
 
@@ -507,7 +507,7 @@ static void free_logindata( struct login_data* data )
  */
 static void mxit_cb_captcha_ok( PurpleConnection* gc, PurpleRequestFields* fields )
 {
-	struct MXitSession*		session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*		session	= purple_connection_get_protocol_data( gc );
 	PurpleUtilFetchUrlData*	url_data;
 	PurpleRequestField*		field;
 	const char*				captcha_resp;
@@ -548,9 +548,22 @@ static void mxit_cb_captcha_ok( PurpleConnection* gc, PurpleRequestFields* field
 	state = purple_account_get_int( session->acc, MXIT_CONFIG_STATE, MXIT_STATE_LOGIN );
 
 	url = g_strdup_printf( "%s?type=getpid&sessionid=%s&login=%s&ver=%i.%i.%i&clientid=%s&cat=%s&chalresp=%s&cc=%s&loc=%s&path=%i&brand=%s&model=%s&h=%i&w=%i&ts=%li",
-			session->logindata->wapserver, session->logindata->sessionid, purple_url_encode( session->acc->username ), PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION, MXIT_CLIENT_ID, MXIT_CP_ARCH,
-			captcha_resp, session->logindata->cc, session->logindata->locale, ( state == MXIT_STATE_REGISTER1 ) ? 0 : 1, MXIT_CP_PLATFORM, MXIT_CP_OS,
-			MXIT_CAPTCHA_HEIGHT, MXIT_CAPTCHA_WIDTH, time( NULL ) );
+			session->logindata->wapserver,
+			session->logindata->sessionid,
+			purple_url_encode( purple_account_get_username( session->acc ) ),
+			PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION,
+			MXIT_CLIENT_ID,
+			MXIT_CP_ARCH,
+			captcha_resp,
+			session->logindata->cc,
+			session->logindata->locale,
+			( state == MXIT_STATE_REGISTER1 ) ? 0 : 1,
+			MXIT_CP_PLATFORM,
+			MXIT_CP_OS,
+			MXIT_CAPTCHA_HEIGHT,
+			MXIT_CAPTCHA_WIDTH,
+			time( NULL )
+	);
 	url_data = purple_util_fetch_url_request( url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, mxit_cb_clientinfo2, session );
 
 #ifdef	DEBUG_PROTOCOL
@@ -571,7 +584,7 @@ static void mxit_cb_captcha_ok( PurpleConnection* gc, PurpleRequestFields* field
  */
 static void mxit_cb_captcha_cancel( PurpleConnection* gc, PurpleRequestFields* fields )
 {
-	struct MXitSession*		session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*		session	= purple_connection_get_protocol_data( gc );
 
 	/* free up the login resources */
 	free_logindata( session->logindata );
