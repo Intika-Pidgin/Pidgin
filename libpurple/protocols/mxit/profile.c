@@ -149,7 +149,7 @@ static int calculateAge( const char* date )
 	struct tm now, bdate;
 	int age;
 
-	if ( ( !date ) || ( strlen( date ) == 0 ) )
+	if ( ( !date ) || ( !*date ) )
 		return 0;
 
 	/* current time */
@@ -222,9 +222,9 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 	purple_notify_user_info_add_pair( info, _( "Last Name" ), profile->lastname );
 	purple_notify_user_info_add_pair( info, _( "Country" ), profile->regcountry );
 
-	if ( strlen( profile->aboutme ) > 0 )
+	if ( *profile->aboutme )
 		purple_notify_user_info_add_pair( info, _( "About Me" ), profile->aboutme );
-	if ( strlen( profile->whereami ) > 0 )
+	if ( *profile->whereami )
 		purple_notify_user_info_add_pair( info, _( "Where I Live" ), profile->whereami );
 
 	purple_notify_user_info_add_pair_plaintext( info, _( "Relationship Status" ), mxit_relationship_to_name( profile->relationship ) );

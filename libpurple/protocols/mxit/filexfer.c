@@ -167,6 +167,7 @@ static void mxit_xfer_start( PurpleXfer* xfer )
 		filesize = purple_xfer_get_bytes_remaining( xfer );
 		buffer = g_malloc( filesize );
 		size = fread( buffer, filesize, 1, xfer->dest_fp );
+		// TODO: If (size != 1) -> file read error
 
 		wrote = purple_xfer_write( xfer, buffer, filesize );
 		if ( wrote > 0 )
@@ -426,19 +427,17 @@ static PurpleXfer* find_mxit_xfer( struct MXitSession* session, const char* file
 void mxit_xfer_rx_file( struct MXitSession* session, const char* fileid, const char* data, int datalen )
 {
 	PurpleXfer*			xfer	= NULL;
-	struct mxitxfer*	mx		= NULL;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_xfer_rx_file: (size=%i)\n", datalen );
 
 	/* find the file-transfer object */
 	xfer = find_mxit_xfer( session, fileid );
 	if ( xfer ) {
-		mx = xfer->data;
-
 		/* this is the transfer we have been looking for */
 		purple_xfer_ref( xfer );
 		purple_xfer_start( xfer, -1, NULL, 0 );
 		fwrite( data, datalen, 1, xfer->dest_fp );
+		// TODO: Handle error from fwrite()
 		purple_xfer_unref( xfer );
 		purple_xfer_set_completed( xfer, TRUE );
 		purple_xfer_end( xfer );
