@@ -49,29 +49,27 @@ static void get_clientinfo( struct MXitSession* session );
  */
 static struct MXitSession* mxit_create_object( PurpleAccount* account )
 {
+	PurpleConnection*	con			= purple_account_get_connection( account );
 	struct MXitSession*	session		= NULL;
-	PurpleConnection*	con			= NULL;
 
 	/* currently the wapsite does not handle a '+' in front of the username (mxitid) so we just strip it */
-	if ( account->username[0] == '+' ) {
-		char*		fixed;
+	{
+		const char* username	= purple_account_get_username( account );
 
-		/* cut off the '+' */
-		fixed = g_strdup( &account->username[1] );
-		purple_account_set_username( account, fixed );
-		g_free( fixed );
+		if ( username[0] == '+' ) {
+			char* fixed	= g_strdup( &username[1] );
+			purple_account_set_username( account, fixed );
+			g_free( fixed );
+		}
 	}
 
 	session = g_new0( struct MXitSession, 1 );
+	session->con = con;
+	session->acc = account;
 
 	/* configure the connection (reference: "libpurple/connection.h") */
-	con = purple_account_get_connection( account );
-	con->proto_data = session;
+	purple_connection_set_protocol_data( con, session );
 	con->flags |= PURPLE_CONNECTION_NO_BGCOLOR | PURPLE_CONNECTION_NO_URLDESC | PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_SUPPORT_MOODS;
-	session->con = con;
-
-	/* add account */
-	session->acc = account;
 
 	/* configure the session (reference: "libpurple/account.h") */
 	g_strlcpy( session->server, purple_account_get_string( account, MXIT_CONFIG_SERVER_ADDR, DEFAULT_SERVER ), sizeof( session->server ) );
@@ -756,7 +754,7 @@ void mxit_login( PurpleAccount* account )
 	 * if we don't have any info saved from a previous login, we need to get it from the MXit WAP site.
 	 * we do cache it, so this step is only done on the very first login for each account.
 	 */
-	if ( ( session->distcode == NULL ) || ( strlen( session->distcode ) == 0 ) ) {
+	if ( ( session->distcode == NULL ) || ( !*session->distcode ) ) {
 		/* this must be the very first login, so we need to retrieve the user information */
 		get_clientinfo( session );
 	}
