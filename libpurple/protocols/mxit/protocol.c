@@ -2042,12 +2042,10 @@ static void mxit_parse_cmd_msgevent( struct MXitSession* session, struct record*
 	switch ( event ) {
 		case CP_MSGEVENT_TYPING :							/* user is typing */
 		case CP_MSGEVENT_ANGRY :							/* user is typing angrily */
-			purple_debug_info( MXIT_PLUGIN_ID, "Got a TYPING event for %s\n", records[0]->fields[3]->data );
 			serv_got_typing( session->con, records[0]->fields[0]->data, 0, PURPLE_TYPING );
 			break;
 
 		case CP_MSGEVENT_STOPPED :							/* user has stopped typing */
-			purple_debug_info( MXIT_PLUGIN_ID, "Got a STOPPED event for %s\n", records[0]->fields[3]->data );
 			serv_got_typing_stopped( session->con, records[0]->fields[0]->data );
 			break;
 
