@@ -675,25 +675,16 @@ static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, Pu
 	gchar* messageId = purple_uuid_random();		/* generate a unique message id */
 
 	switch ( state ) {
-		case PURPLE_TYPING :
-			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: TYPING\n");
-
+		case PURPLE_TYPING :		/* currently typing */
 			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_TYPING );
 			break;
 
-		case PURPLE_TYPED :
-			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: TYPED\n");
-
+		case PURPLE_TYPED :			/* stopped typing */
+		case PURPLE_NOT_TYPING :	/* not typing / erased all text */
 			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_STOPPED );
 			break;
 
-		case PURPLE_NOT_TYPING:
-			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: NOT TYPING\n");
-			break;
-
 		default:
-			purple_debug_info( MXIT_PLUGIN_ID, "Send typing state: UNKNOWN\n");
-
 			break;
 	}
 
