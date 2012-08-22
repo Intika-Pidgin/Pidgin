@@ -893,7 +893,7 @@ static void ggp_login(PurpleAccount *account)
 	ggp_status_setup(gc);
 	
 	glp->uin = ggp_str_to_uin(purple_account_get_username(account));
-	glp->password = ggp_convert_to_cp1250(purple_account_get_password(account));
+	glp->password = ggp_convert_to_cp1250(purple_connection_get_password(gc));
 
 	if (glp->uin == 0) {
 		purple_connection_error(gc,
@@ -915,7 +915,7 @@ static void ggp_login(PurpleAccount *account)
 		GG_FEATURE_USER_DATA);
 
 	glp->async = 1;
-	
+
 	encryption_type = purple_account_get_string(account, "encryption",
 		"opportunistic_tls");
 	purple_debug_info("gg", "Requested encryption type: %s\n",
@@ -938,7 +938,7 @@ static void ggp_login(PurpleAccount *account)
 	purple_debug_info("gg", "TLS mode: %d\n", glp->tls);
 
 	ggp_status_set_initial(gc, glp);
-	
+
 	address = purple_account_get_string(account, "gg_server", "");
 	if (address && *address)
 	{
