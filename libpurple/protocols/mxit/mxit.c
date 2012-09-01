@@ -671,8 +671,26 @@ static GHashTable *mxit_chat_info_defaults( PurpleConnection *gc, const char *ch
  */
 static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, PurpleTypingState state )
 {
-	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
-	gchar* messageId = purple_uuid_random();		/* generate a unique message id */
+	PurpleAccount*		account		= purple_connection_get_account( gc );
+	struct MXitSession*	session		= purple_connection_get_protocol_data( gc );
+	PurpleBuddy*		buddy;
+	struct contact*		contact;
+	gchar*				messageId	= purple_uuid_random();		/* generate a unique message id */
+
+	/* find the buddy information for this contact (reference: "libpurple/blist.h") */
+	buddy = purple_find_buddy( account, name );
+	if ( !buddy ) {
+		purple_debug_warning( MXIT_PLUGIN_ID, "mxit_send_typing: unable to find the buddy '%s'\n", name );
+		return 0;
+	}
+
+	contact = purple_buddy_get_protocol_data( buddy );
+	if ( !contact )
+		return 0;
+
+	/* does this contact support and want typing notification? */
+	if ( ! ( contact->capabilities & MXIT_PFLAG_TYPING ) )
+		return 0;
 
 	switch ( state ) {
 		case PURPLE_TYPING :		/* currently typing */
@@ -690,9 +708,9 @@ static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, Pu
 
 	g_free( messageId );
 
-	return 0;            
+	return 0;
 }
- 
+
 
 /*========================================================================================================================*/
 
