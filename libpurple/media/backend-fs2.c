@@ -179,9 +179,10 @@ static void
 purple_media_backend_fs2_init(PurpleMediaBackendFs2 *self)
 {}
 
-static gboolean
-event_probe_cb(GstPad *srcpad, GstEvent *event, gboolean release_pad)
+static GstPadProbeReturn
+event_probe_cb(GstPad *srcpad, GstPadProbeInfo *info, gpointer unused)
 {
+	GstEvent *event = GST_PAD_PROBE_INFO_EVENT(info);
 	if (GST_EVENT_TYPE(event) == GST_EVENT_CUSTOM_DOWNSTREAM
 		&& gst_event_has_name(event, "purple-unlink-tee")) {
 
@@ -189,22 +190,23 @@ event_probe_cb(GstPad *srcpad, GstEvent *event, gboolean release_pad)
 
 		gst_pad_unlink(srcpad, gst_pad_get_peer(srcpad));
 
-		gst_pad_remove_event_probe(srcpad,
+		gst_pad_remove_probe(srcpad,
 			g_value_get_uint(gst_structure_get_value(s, "handler-id")));
 
 		if (g_value_get_boolean(gst_structure_get_value(s, "release-pad")))
 			gst_element_release_request_pad(GST_ELEMENT_PARENT(srcpad), srcpad);
 
-		return FALSE;
+		return GST_PAD_PROBE_DROP;
 	}
 
-	return TRUE;
+	return GST_PAD_PROBE_OK;
 }
 
 static void
 unlink_teepad_dynamic(GstPad *srcpad, gboolean release_pad)
 {
-	guint id = gst_pad_add_event_probe(srcpad, G_CALLBACK(event_probe_cb), NULL);
+	guint id = gst_pad_add_probe(srcpad, GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM,
+	                             event_probe_cb, NULL, NULL);
 
 	if (GST_IS_GHOST_PAD(srcpad))
 		srcpad = gst_ghost_pad_get_target(GST_GHOST_PAD(srcpad));
@@ -793,9 +795,12 @@ gst_msg_db_to_percent(GstMessage *msg, gchar *value_name)
 	gdouble value_db;
 	gdouble percent;
 
-	list = gst_structure_get_value(
-				gst_message_get_structure(msg), value_name);
+	list = gst_structure_get_value(gst_message_get_structure(msg), value_name);
+#if GST_CHECK_VERSION(1,0,0)
+	value = g_value_array_get_nth(g_value_get_boxed(list), 0);
+#else
 	value = gst_value_list_get_value(list, 0);
+#endif
 	value_db = g_value_get_double(value);
 	percent = pow(10, value_db / 20);
 	return (percent > 1.0) ? 1.0 : percent;
@@ -809,11 +814,12 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
 	GstElement *src = GST_ELEMENT(GST_MESSAGE_SRC(msg));
 	static guint level_id = 0;
+	const GstStructure *structure = gst_message_get_structure(msg);
 
 	if (level_id == 0)
 		level_id = g_signal_lookup("level", PURPLE_TYPE_MEDIA);
 
-	if (gst_structure_has_name(msg->structure, "level")) {
+	if (gst_structure_has_name(structure, "level")) {
 		GstElement *src = GST_ELEMENT(GST_MESSAGE_SRC(msg));
 		gchar *name;
 		gchar *participant = NULL;
@@ -868,12 +874,12 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		return;
 
 #ifdef HAVE_FARSIGHT
-	if (gst_structure_has_name(msg->structure, "farsight-error")) {
+	if (gst_structure_has_name(structure, "farsight-error")) {
 #else
-	if (gst_structure_has_name(msg->structure, "farstream-error")) {
+	if (gst_structure_has_name(structure, "farstream-error")) {
 #endif
 		FsError error_no;
-		gst_structure_get_enum(msg->structure, "error-no",
+		gst_structure_get_enum(structure, "error-no",
 				FS_TYPE_ERROR, (gint*)&error_no);
 		switch (error_no) {
 			case FS_ERROR_NO_CODECS:
@@ -910,7 +916,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 #endif
 						error_no,
 						gst_structure_get_string(
-						msg->structure, "error-msg"));
+						structure, "error-msg"));
 				break;
 		}
 
@@ -924,7 +930,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 #endif
 			purple_media_end(priv->media, NULL, NULL);
 		}
-	} else if (gst_structure_has_name(msg->structure,
+	} else if (gst_structure_has_name(structure,
 #ifdef HAVE_FARSIGHT
 			"farsight-new-local-candidate")) {
 #else
@@ -939,9 +945,9 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		PurpleMediaBackendFs2Stream *media_stream;
 		gchar *name;
 
-		value = gst_structure_get_value(msg->structure, "stream");
+		value = gst_structure_get_value(structure, "stream");
 		stream = g_value_get_object(value);
-		value = gst_structure_get_value(msg->structure, "candidate");
+		value = gst_structure_get_value(structure, "candidate");
 		local_candidate = g_value_get_boxed(value);
 
 		session = get_session_from_fs_stream(self, stream);
@@ -963,7 +969,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		g_signal_emit_by_name(self, "new-candidate",
 				session->id, name, candidate);
 		g_object_unref(candidate);
-	} else if (gst_structure_has_name(msg->structure,
+	} else if (gst_structure_has_name(structure,
 #ifdef HAVE_FARSIGHT
 			"farsight-local-candidates-prepared")) {
 #else
@@ -975,7 +981,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		PurpleMediaBackendFs2Session *session;
 		gchar *name;
 
-		value = gst_structure_get_value(msg->structure, "stream");
+		value = gst_structure_get_value(structure, "stream");
 		stream = g_value_get_object(value);
 		session = get_session_from_fs_stream(self, stream);
 
@@ -985,7 +991,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 
 		g_signal_emit_by_name(self, "candidates-prepared",
 				session->id, name);
-	} else if (gst_structure_has_name(msg->structure,
+	} else if (gst_structure_has_name(structure,
 #ifdef HAVE_FARSIGHT
 			"farsight-new-active-candidate-pair")) {
 #else
@@ -1000,13 +1006,11 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		PurpleMediaCandidate *lcandidate, *rcandidate;
 		gchar *name;
 
-		value = gst_structure_get_value(msg->structure, "stream");
+		value = gst_structure_get_value(structure, "stream");
 		stream = g_value_get_object(value);
-		value = gst_structure_get_value(msg->structure,
-				"local-candidate");
+		value = gst_structure_get_value(structure, "local-candidate");
 		local_candidate = g_value_get_boxed(value);
-		value = gst_structure_get_value(msg->structure,
-				"remote-candidate");
+		value = gst_structure_get_value(structure, "remote-candidate");
 		remote_candidate = g_value_get_boxed(value);
 
 		g_object_get(stream, "participant", &participant, NULL);
@@ -1023,7 +1027,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 
 		g_object_unref(lcandidate);
 		g_object_unref(rcandidate);
-	} else if (gst_structure_has_name(msg->structure,
+	} else if (gst_structure_has_name(structure,
 #ifdef HAVE_FARSIGHT
 			"farsight-recv-codecs-changed")) {
 #else
@@ -1033,7 +1037,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		GList *codecs;
 		FsCodec *codec;
 
-		value = gst_structure_get_value(msg->structure, "codecs");
+		value = gst_structure_get_value(structure, "codecs");
 		codecs = g_value_get_boxed(value);
 		codec = codecs->data;
 
@@ -1044,7 +1048,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 				"farstream-recv-codecs-changed: %s\n",
 #endif
 				codec->encoding_name);
-	} else if (gst_structure_has_name(msg->structure,
+	} else if (gst_structure_has_name(structure,
 #ifdef HAVE_FARSIGHT
 			"farsight-component-state-changed")) {
 #else
@@ -1055,9 +1059,9 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		guint component;
 		const gchar *state;
 
-		value = gst_structure_get_value(msg->structure, "state");
+		value = gst_structure_get_value(structure, "state");
 		fsstate = g_value_get_enum(value);
-		value = gst_structure_get_value(msg->structure, "component");
+		value = gst_structure_get_value(structure, "component");
 		component = g_value_get_uint(value);
 
 		switch (fsstate) {
@@ -1092,7 +1096,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 #endif
 				"component: %u state: %s\n",
 				component, state);
-	} else if (gst_structure_has_name(msg->structure,
+	} else if (gst_structure_has_name(structure,
 #ifdef HAVE_FARSIGHT
 			"farsight-send-codec-changed")) {
 #else
@@ -1102,7 +1106,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		FsCodec *codec;
 		gchar *codec_str;
 
-		value = gst_structure_get_value(msg->structure, "codec");
+		value = gst_structure_get_value(structure, "codec");
 		codec = g_value_get_boxed(value);
 		codec_str = fs_codec_to_string(codec);
 
@@ -1115,7 +1119,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 				codec_str);
 
 		g_free(codec_str);
-	} else if (gst_structure_has_name(msg->structure,
+	} else if (gst_structure_has_name(structure,
 #ifdef HAVE_FARSIGHT
 			"farsight-codecs-changed")) {
 #else
@@ -1125,7 +1129,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		FsSession *fssession;
 		GList *sessions;
 
-		value = gst_structure_get_value(msg->structure, "session");
+		value = gst_structure_get_value(structure, "session");
 		fssession = g_value_get_object(value);
 		sessions = g_hash_table_get_values(priv->sessions);
 
@@ -1569,7 +1573,11 @@ create_src(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 		srcpad = gst_element_get_static_pad(session->srcvalve, "src");
 		g_object_set(volume, "volume", input_volume, NULL);
 	} else {
+#if GST_CHECK_VERSION(1,0,0)
+		srcpad = gst_element_get_request_pad(session->tee, "src_%u");
+#else
 		srcpad = gst_element_get_request_pad(session->tee, "src%d");
+#endif
 	}
 
 	purple_debug_info("backend-fs2", "connecting pad: %s\n",
@@ -1787,14 +1795,10 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 			 *   audioresample ! audioconvert ! realsink
 			 */
 			stream->queue = gst_element_factory_make("queue", NULL);
-			stream->volume = gst_element_factory_make(
-					"volume", NULL);
-			g_object_set(stream->volume, "volume",
-					output_volume, NULL);
-			stream->level = gst_element_factory_make(
-					"level", NULL);
-			stream->src = gst_element_factory_make(
-					"liveadder", NULL);
+			stream->volume = gst_element_factory_make("volume", NULL);
+			g_object_set(stream->volume, "volume", output_volume, NULL);
+			stream->level = gst_element_factory_make("level", NULL);
+			stream->src = gst_element_factory_make("liveadder", NULL);
 			sink = purple_media_manager_get_element(
 					purple_media_get_manager(priv->media),
 					PURPLE_MEDIA_RECV_AUDIO, priv->media,
@@ -1813,10 +1817,12 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 			gst_element_link(stream->queue, stream->volume);
 			sink = stream->queue;
 		} else if (codec->media_type == FS_MEDIA_TYPE_VIDEO) {
-			stream->src = gst_element_factory_make(
-					"fsfunnel", NULL);
-			sink = gst_element_factory_make(
-					"fakesink", NULL);
+#if GST_CHECK_VERSION(1,0,0)
+			stream->src = gst_element_factory_make("funnel", NULL);
+#else
+			stream->src = gst_element_factory_make("fsfunnel", NULL);
+#endif
+			sink = gst_element_factory_make("fakesink", NULL);
 			g_object_set(G_OBJECT(sink), "async", FALSE, NULL);
 			gst_bin_add(GST_BIN(priv->confbin), sink);
 			gst_element_set_state(sink, GST_STATE_PLAYING);
@@ -1830,7 +1836,11 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 		gst_element_link_many(stream->src, stream->tee, sink, NULL);
 	}
 
+#if GST_CHECK_VERSION(1,0,0)
+	sinkpad = gst_element_get_request_pad(stream->src, "sink_%u");
+#else
 	sinkpad = gst_element_get_request_pad(stream->src, "sink%d");
+#endif
 	gst_pad_link(srcpad, sinkpad);
 	gst_object_unref(sinkpad);
 
