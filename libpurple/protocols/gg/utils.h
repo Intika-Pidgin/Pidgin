@@ -32,6 +32,7 @@
 
 #include <internal.h>
 #include <libgadu.h>
+#include <json-glib/json-glib.h>
 
 /**
  * Converts stringified UIN to uin_t.
@@ -94,5 +95,11 @@ gchar * ggp_free_if_equal(gchar *str, const gchar *pattern);
 const gchar * ggp_date_strftime(const gchar *format, time_t date);
 
 time_t ggp_date_from_iso8601(const gchar *str);
+
+uint64_t * ggp_uint64dup(uint64_t val);
+
+gint ggp_int64_compare(gconstpointer a, gconstpointer b);
+
+JsonParser * ggp_json_parse(const gchar *data);
 
 #endif /* _GGP_UTILS_H */
