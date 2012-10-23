@@ -232,7 +232,7 @@ const gchar * ggp_date_strftime(const gchar *format, time_t date)
 	GDate g_date;
 	static gchar buff[30];
 	
-	g_date_set_time(&g_date, date);
+	g_date_set_time_t(&g_date, date);
 	if (0 == g_date_strftime(buff, sizeof(buff), format, &g_date))
 		return NULL;
 	return buff;
@@ -247,4 +247,36 @@ time_t ggp_date_from_iso8601(const gchar *str)
 	if (!g_time_val_from_iso8601(str, &g_timeval))
 		return 0;
 	return g_timeval.tv_sec;
+}
+
+uint64_t * ggp_uint64dup(uint64_t val)
+{
+	uint64_t *ptr = g_new(uint64_t, 1);
+	*ptr = val;
+	return ptr;
+}
+
+gint ggp_int64_compare(gconstpointer _a, gconstpointer _b)
+{
+	const int64_t *ap = _a, *bp = _b;
+	const int64_t a = *ap, b = *bp;
+	if (a == b)
+		return 0;
+	if (a < b)
+		return -1;
+	else
+		return 1;
+}
+
+JsonParser * ggp_json_parse(const gchar *data)
+{
+	JsonParser *parser;
+
+	parser = json_parser_new();
+	if (json_parser_load_from_data(parser, data, -1, NULL))
+		return parser;
+
+	if (purple_debug_is_unsafe())
+		purple_debug_warning("gg", "Invalid JSON: %s\n", data);
+	return NULL;
 }
