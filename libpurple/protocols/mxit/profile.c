@@ -35,6 +35,40 @@
 
 
 /*------------------------------------------------------------------------
+ * Return the MXit Relationship status as a string.
+ *
+ * @param id		The Relationship status value (see profile.h)
+ * @return			The relationship status as a text string.
+ */
+const char* mxit_relationship_to_name( short id )
+{
+	switch ( id ) {
+		case MXIT_RELATIONSHIP_UNKNOWN :
+			return _( "Unknown" );
+		case MXIT_RELATIONSHIP_DONTSAY :
+			return _( "Don't want to say" );
+		case MXIT_RELATIONSHIP_SINGLE :
+			return _( "Single" );
+		case MXIT_RELATIONSHIP_INVOLVED :
+			return _( "In a relationship" );
+		case MXIT_RELATIONSHIP_ENGAGED :
+			return _( "Engaged" );
+		case MXIT_RELATIONSHIP_MARRIED :
+			return _( "Married" );
+		case MXIT_RELATIONSHIP_COMPLICATED :
+			return _( "It's complicated" );
+		case MXIT_RELATIONSHIP_WIDOWED :
+			return _( "Widowed" );
+		case MXIT_RELATIONSHIP_SEPARATED :
+			return _( "Separated" );
+		case MXIT_RELATIONSHIP_DIVORCED :
+			return _( "Divorced" );
+		default :
+			return "";
+	}
+}
+
+/*------------------------------------------------------------------------
  * Returns true if it is a valid date.
  *
  * @param bday		Date-of-Birth string (YYYY-MM-DD)
@@ -115,22 +149,22 @@ static int calculateAge( const char* date )
 	struct tm now, bdate;
 	int age;
 
-	if ( ( !date ) || ( strlen( date ) == 0 ) )
+	if ( ( !date ) || ( !*date ) )
 		return 0;
 
 	/* current time */
-	t = time(NULL);
+	t = time( NULL );
 	localtime_r( &t, &now );
 
 	/* decode hdate */
 	memset( &bdate, 0, sizeof( struct tm ) );
-	purple_str_to_time(date, FALSE, &bdate, NULL, NULL);
+	purple_str_to_time( date, FALSE, &bdate, NULL, NULL );
 
 	/* calculate difference */
 	age = now.tm_year - bdate.tm_year;
 	if ( now.tm_mon < bdate.tm_mon )		/* is before month of birth */
 		age--;
-	else if ( (now.tm_mon == bdate.tm_mon ) && ( now.tm_mday < bdate.tm_mday ) )	/* before birthday in current month */
+	else if ( ( now.tm_mon == bdate.tm_mon ) && ( now.tm_mday < bdate.tm_mday ) )	/* before birthday in current month */
 		age--;
 
 	return age;
@@ -172,7 +206,7 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 	if ( buddy ) {
 		purple_notify_user_info_add_pair( info, _( "Alias" ), purple_buddy_get_alias( buddy ) );
 		purple_notify_user_info_add_section_break( info );
-		contact = purple_buddy_get_protocol_data(buddy);
+		contact = purple_buddy_get_protocol_data( buddy );
 	}
 
 	purple_notify_user_info_add_pair( info, _( "Display Name" ), profile->nickname );
@@ -188,10 +222,12 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 	purple_notify_user_info_add_pair( info, _( "Last Name" ), profile->lastname );
 	purple_notify_user_info_add_pair( info, _( "Country" ), profile->regcountry );
 
-	if ( strlen( profile->aboutme ) > 0 )
+	if ( *profile->aboutme )
 		purple_notify_user_info_add_pair( info, _( "About Me" ), profile->aboutme );
-	if ( strlen( profile->whereami ) > 0 )
+	if ( *profile->whereami )
 		purple_notify_user_info_add_pair( info, _( "Where I Live" ), profile->whereami );
+
+	purple_notify_user_info_add_pair_plaintext( info, _( "Relationship Status" ), mxit_relationship_to_name( profile->relationship ) );
 
 	purple_notify_user_info_add_section_break( info );
 
@@ -215,9 +251,6 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 
 		/* subscription type */
 		purple_notify_user_info_add_pair( info, _( "Subscription" ), mxit_convert_subtype_to_name( contact->subtype ) );
-
-		/* hidden number */
-		purple_notify_user_info_add_pair( info, _( "Hidden Number" ), ( contact->flags & MXIT_CFLAG_HIDDEN ) ? _( "Yes" ) : _( "No" ) );
 	}
 	else {
 		/* this is an invite */
@@ -298,7 +331,7 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 	column = purple_notify_searchresults_column_new( _( "Where I live" ) );
 	purple_notify_searchresults_column_add( results, column );
 
-	while (entries != NULL) {
+	while ( entries != NULL ) {
 		struct MXitProfile* profile	= ( struct MXitProfile *) entries->data;
 		GList*	row;
 		gchar* tmp = purple_base64_encode( (unsigned char *) profile->userid, strlen( profile->userid ) );
@@ -328,5 +361,5 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 
 	purple_notify_searchresults( session->con, NULL, text, NULL, results, NULL, NULL );
 
-	g_free( text);
+	g_free( text );
 }
