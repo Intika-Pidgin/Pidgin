@@ -58,7 +58,7 @@ static int not_link_ref_count = 0;
 static void* mxit_link_click( const char* link64 )
 {
 	PurpleAccount*		account;
-	PurpleConnection*	con;
+	PurpleConnection*	gc;
 	gchar**				parts		= NULL;
 	gchar*				link		= NULL;
 	gsize				len;
@@ -75,10 +75,10 @@ static void* mxit_link_click( const char* link64 )
 	link = (gchar*) purple_base64_decode( link64 + strlen( MXIT_LINK_PREFIX ), &len );
 	purple_debug_info( MXIT_PLUGIN_ID, "Clicked Link: '%s'\n", link );
 
-	parts = g_strsplit( link, "|", 5 );
+	parts = g_strsplit( link, "|", 6 );
 
 	/* check if this is a valid mxit link */
-	if ( ( !parts ) || ( !parts[0] ) || ( !parts[1] ) || ( !parts[2] ) || ( !parts[3] ) || ( !parts[4] ) ) {
+	if ( ( !parts ) || ( !parts[0] ) || ( !parts[1] ) || ( !parts[2] ) || ( !parts[3] ) || ( !parts[4] ) || ( !parts[5] ) ) {
 		/* this is not for us */
 		goto skip;
 	}
@@ -91,15 +91,15 @@ static void* mxit_link_click( const char* link64 )
 	account = purple_accounts_find( parts[1], parts[2] );
 	if ( !account )
 		goto skip;
-	con = purple_account_get_connection( account );
-	if ( !con )
+	gc = purple_account_get_connection( account );
+	if ( !gc )
 		goto skip;
 
 	/* determine if it's a command-response to send */
-	is_command = g_str_has_prefix( parts[4], "::type=reply|" );
+	is_command = ( atoi( parts[4] ) == 1 );
 
 	/* send click message back to MXit */
-	mxit_send_message( con->proto_data, parts[3], parts[4], FALSE, is_command );
+	mxit_send_message( purple_connection_get_protocol_data( gc ), parts[3], parts[5], FALSE, is_command );
 
 	g_free( link );
 	link = NULL;
@@ -129,7 +129,7 @@ skip:
 /*------------------------------------------------------------------------
  * Register MXit to receive URI click notifications from the UI
  */
-void mxit_register_uri_handler(void)
+void mxit_register_uri_handler( void )
 {
 	not_link_ref_count++;
 	if ( not_link_ref_count == 1 ) {
@@ -198,7 +198,7 @@ static void mxit_cb_chat_created( PurpleConversation* conv, struct MXitSession* 
 	if ( !buddy )
 		return;
 
-	contact = purple_buddy_get_protocol_data(buddy);
+	contact = purple_buddy_get_protocol_data( buddy );
 	if ( !contact )
 		return;
 
@@ -214,7 +214,7 @@ static void mxit_cb_chat_created( PurpleConversation* conv, struct MXitSession* 
 		case MXIT_TYPE_INFO :
 				tmp = g_strdup_printf("<font color=\"#999999\">%s</font>\n", _( "Loading menu..." ));
 				serv_got_im( session->con, who, tmp, PURPLE_MESSAGE_NOTIFY, time( NULL ) );
-				g_free(tmp);
+				g_free( tmp );
 				mxit_send_message( session, who, " ", FALSE, FALSE );
 		default :
 				break;
@@ -268,7 +268,7 @@ static const char* mxit_list_icon( PurpleAccount* account, PurpleBuddy* buddy )
  */
 static const char* mxit_list_emblem( PurpleBuddy* buddy )
 {
-	struct contact*	contact = purple_buddy_get_protocol_data(buddy);
+	struct contact*	contact = purple_buddy_get_protocol_data( buddy );
 
 	if ( !contact )
 		return NULL;
@@ -309,19 +309,18 @@ static const char* mxit_list_emblem( PurpleBuddy* buddy )
  */
 char* mxit_status_text( PurpleBuddy* buddy )
 {
-	struct contact*	contact = purple_buddy_get_protocol_data(buddy);
+	char* text = NULL;
+	struct contact*	contact = purple_buddy_get_protocol_data( buddy );
 
 	if ( !contact )
 		return NULL;
 
-	if ( contact->statusMsg ) {
-		/* status message */
-		return g_strdup( contact-> statusMsg );
-	}
-	else {
-		/* mood */
-		return g_strdup( mxit_convert_mood_to_name( contact->mood ) );
-	}
+	if ( contact->statusMsg )							/* status message */
+		text = g_strdup( contact-> statusMsg );
+	else if ( contact->mood != MXIT_MOOD_NONE )			/* mood */
+		text = g_strdup( mxit_convert_mood_to_name( contact->mood ) );
+
+	return text;
 }
 
 
@@ -334,7 +333,7 @@ char* mxit_status_text( PurpleBuddy* buddy )
  */
 static void mxit_tooltip( PurpleBuddy* buddy, PurpleNotifyUserInfo* info, gboolean full )
 {
-	struct contact*	contact = purple_buddy_get_protocol_data(buddy);
+	struct contact*	contact = purple_buddy_get_protocol_data( buddy );
 
 	if ( !contact )
 		return;
@@ -358,10 +357,6 @@ static void mxit_tooltip( PurpleBuddy* buddy, PurpleNotifyUserInfo* info, gboole
 	/* rejection message */
 	if ( ( contact->subtype == MXIT_SUBTYPE_REJECTED ) && ( contact->msg != NULL ) )
 		purple_notify_user_info_add_pair( info, _( "Rejection Message" ), contact->msg );
-
-	/* hidden number */
-	if ( contact->flags & MXIT_CFLAG_HIDDEN )
-		purple_notify_user_info_add_pair( info, _( "Hidden Number" ), _( "Yes" ) );
 }
 
 
@@ -372,7 +367,7 @@ static void mxit_tooltip( PurpleBuddy* buddy, PurpleNotifyUserInfo* info, gboole
  */
 static void mxit_close( PurpleConnection* gc )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 
 	/* disable signals */
 	mxit_disable_signals( session );
@@ -408,7 +403,7 @@ static int mxit_send_im( PurpleConnection* gc, const char* who, const char* mess
 {
 	purple_debug_info( MXIT_PLUGIN_ID, "Sending message '%s' to buddy '%s'\n", message, who );
 
-	mxit_send_message( gc->proto_data, who, message, TRUE, FALSE );
+	mxit_send_message( purple_connection_get_protocol_data( gc ), who, message, TRUE, FALSE );
 
 	return 1;		/* echo to conversation window */
 }
@@ -422,14 +417,14 @@ static int mxit_send_im( PurpleConnection* gc, const char* who, const char* mess
  */
 static void mxit_set_status( PurpleAccount* account, PurpleStatus* status )
 {
-	struct MXitSession*		session =	purple_account_get_connection( account )->proto_data;
+	struct MXitSession*		session =	purple_connection_get_protocol_data( purple_account_get_connection( account ) );
 	const char*				statusid;
 	int						presence;
 	char*					statusmsg1;
 	char*					statusmsg2;
 
 	/* Handle mood changes */
-	if (purple_status_type_get_primitive(purple_status_get_type(status)) == PURPLE_STATUS_MOOD) {
+	if ( purple_status_type_get_primitive( purple_status_get_type( status ) ) == PURPLE_STATUS_MOOD ) {
 		const char* moodid = purple_status_get_attr_string( status, PURPLE_MOOD_NAME );
 		int mood;
 
@@ -492,7 +487,7 @@ static void mxit_free_buddy( PurpleBuddy* buddy )
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_free_buddy\n" );
 
-	contact = purple_buddy_get_protocol_data(buddy);
+	contact = purple_buddy_get_protocol_data( buddy );
 	if ( contact ) {
 		if ( contact->statusMsg )
 			g_free( contact->statusMsg );
@@ -503,7 +498,7 @@ static void mxit_free_buddy( PurpleBuddy* buddy )
 		g_free( contact );
 	}
 
-	purple_buddy_set_protocol_data(buddy, NULL);
+	purple_buddy_set_protocol_data( buddy, NULL );
 }
 
 
@@ -515,7 +510,7 @@ static void mxit_free_buddy( PurpleBuddy* buddy )
  */
 static void mxit_keepalive( PurpleConnection *gc )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 
 	/* if not logged in, there is nothing to do */
 	if ( !( session->flags & MXIT_FLAG_LOGGEDIN ) )
@@ -543,7 +538,7 @@ static void mxit_keepalive( PurpleConnection *gc )
  */
 static void mxit_set_buddy_icon( PurpleConnection *gc, PurpleStoredImage *img )
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data( gc );
 
 	if ( img == NULL )
 		mxit_set_avatar( session, NULL, 0 );
@@ -562,10 +557,10 @@ static void mxit_get_info( PurpleConnection *gc, const char *who )
 {
 	PurpleBuddy*			buddy;
 	struct contact*			contact;
-	struct MXitSession*		session			= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*		session			= purple_connection_get_protocol_data( gc );
 	const char*				profilelist[]	= { CP_PROFILE_BIRTHDATE, CP_PROFILE_GENDER, CP_PROFILE_FULLNAME,
 												CP_PROFILE_FIRSTNAME, CP_PROFILE_LASTNAME, CP_PROFILE_REGCOUNTRY, CP_PROFILE_LASTSEEN,
-												CP_PROFILE_STATUS, CP_PROFILE_AVATAR, CP_PROFILE_WHEREAMI, CP_PROFILE_ABOUTME };
+												CP_PROFILE_STATUS, CP_PROFILE_AVATAR, CP_PROFILE_WHEREAMI, CP_PROFILE_ABOUTME, CP_PROFILE_RELATIONSHIP };
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_get_info: '%s'\n", who );
 
@@ -612,14 +607,10 @@ static GHashTable* mxit_get_text_table( PurpleAccount* acc )
  */
 static void mxit_reinvite( PurpleBlistNode *node, gpointer ignored )
 {
-	PurpleBuddy*		buddy;
+	PurpleBuddy*		buddy		= (PurpleBuddy *) node;
+	PurpleConnection*	gc			= purple_account_get_connection( purple_buddy_get_account( buddy ) );
+	struct MXitSession*	session		= purple_connection_get_protocol_data( gc );
 	struct contact*		contact;
-	PurpleConnection*	gc;
-	struct MXitSession*	session;
-
-	buddy = (PurpleBuddy *)node;
-	gc = purple_account_get_connection( purple_buddy_get_account( buddy ) );
-	session = gc->proto_data;
 
 	contact = purple_buddy_get_protocol_data( (PurpleBuddy*) node );
 	if ( !contact )
@@ -653,11 +644,73 @@ static GList* mxit_blist_menu( PurpleBlistNode *node )
 	if ( ( contact->subtype == MXIT_SUBTYPE_DELETED ) || ( contact->subtype == MXIT_SUBTYPE_REJECTED ) || ( contact->subtype == MXIT_SUBTYPE_NONE ) ) {
 		/* contact is in Deleted, Rejected or None state */
 		act = purple_menu_action_new( _( "Re-Invite" ), PURPLE_CALLBACK( mxit_reinvite ), NULL, NULL );
-		m = g_list_append(m, act);
+		m = g_list_append( m, act );
 	}
 
 	return m;
 }
+
+
+/*------------------------------------------------------------------------
+ * Return Chat-room default settings.
+ *
+ *  @return		Chat defaults list
+ */
+static GHashTable *mxit_chat_info_defaults( PurpleConnection *gc, const char *chat_name )
+{
+    return g_hash_table_new_full( g_str_hash, g_str_equal, NULL, g_free );
+}
+
+
+/*------------------------------------------------------------------------
+ * Send a typing indicator event.
+ *
+ *  @param gc		The connection object
+ *  @param name		The username of the contact
+ *  @param state	The typing state to be reported.
+ */
+static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, PurpleTypingState state )
+{
+	PurpleAccount*		account		= purple_connection_get_account( gc );
+	struct MXitSession*	session		= purple_connection_get_protocol_data( gc );
+	PurpleBuddy*		buddy;
+	struct contact*		contact;
+	gchar*				messageId	= purple_uuid_random();		/* generate a unique message id */
+
+	/* find the buddy information for this contact (reference: "libpurple/blist.h") */
+	buddy = purple_find_buddy( account, name );
+	if ( !buddy ) {
+		purple_debug_warning( MXIT_PLUGIN_ID, "mxit_send_typing: unable to find the buddy '%s'\n", name );
+		return 0;
+	}
+
+	contact = purple_buddy_get_protocol_data( buddy );
+	if ( !contact )
+		return 0;
+
+	/* does this contact support and want typing notification? */
+	if ( ! ( contact->capabilities & MXIT_PFLAG_TYPING ) )
+		return 0;
+
+	switch ( state ) {
+		case PURPLE_TYPING :		/* currently typing */
+			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_TYPING );
+			break;
+
+		case PURPLE_TYPED :			/* stopped typing */
+		case PURPLE_NOT_TYPING :	/* not typing / erased all text */
+			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_STOPPED );
+			break;
+
+		default:
+			break;
+	}
+
+	g_free( messageId );
+
+	return 0;
+}
+
 
 /*========================================================================================================================*/
 
@@ -680,12 +733,12 @@ static PurplePluginProtocolInfo proto_info = {
 	mxit_status_types,		/* status types				[roster.c] */
 	mxit_blist_menu,		/* blist_node_menu */
 	mxit_chat_info,			/* chat_info				[multimx.c] */
-	NULL,					/* chat_info_defaults */
+	mxit_chat_info_defaults,/* chat_info_defaults */
 	mxit_login,				/* login					[login.c] */
 	mxit_close,				/* close */
 	mxit_send_im,			/* send_im */
 	NULL,					/* set_info */
-	NULL,					/* send_typing */
+	mxit_send_typing,		/* send_typing */
 	mxit_get_info,			/* get_info */
 	mxit_set_status,		/* set_status */
 	NULL,					/* set_idle */
