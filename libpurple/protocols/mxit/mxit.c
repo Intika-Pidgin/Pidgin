@@ -675,7 +675,7 @@ static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, Pu
 	struct MXitSession*	session		= purple_connection_get_protocol_data( gc );
 	PurpleBuddy*		buddy;
 	struct contact*		contact;
-	gchar*				messageId	= purple_uuid_random();		/* generate a unique message id */
+	gchar*				messageId	= NULL;
 
 	/* find the buddy information for this contact (reference: "libpurple/blist.h") */
 	buddy = purple_find_buddy( account, name );
@@ -691,6 +691,8 @@ static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, Pu
 	/* does this contact support and want typing notification? */
 	if ( ! ( contact->capabilities & MXIT_PFLAG_TYPING ) )
 		return 0;
+
+	messageId = purple_uuid_random();		/* generate a unique message id */
 
 	switch ( state ) {
 		case PURPLE_TYPING :		/* currently typing */
