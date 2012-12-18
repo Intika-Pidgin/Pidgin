@@ -149,22 +149,22 @@ static int calculateAge( const char* date )
 	struct tm now, bdate;
 	int age;
 
-	if ( ( !date ) || ( strlen( date ) == 0 ) )
+	if ( ( !date ) || ( !*date ) )
 		return 0;
 
 	/* current time */
-	t = time(NULL);
+	t = time( NULL );
 	localtime_r( &t, &now );
 
 	/* decode hdate */
 	memset( &bdate, 0, sizeof( struct tm ) );
-	purple_str_to_time(date, FALSE, &bdate, NULL, NULL);
+	purple_str_to_time( date, FALSE, &bdate, NULL, NULL );
 
 	/* calculate difference */
 	age = now.tm_year - bdate.tm_year;
 	if ( now.tm_mon < bdate.tm_mon )		/* is before month of birth */
 		age--;
-	else if ( (now.tm_mon == bdate.tm_mon ) && ( now.tm_mday < bdate.tm_mday ) )	/* before birthday in current month */
+	else if ( ( now.tm_mon == bdate.tm_mon ) && ( now.tm_mday < bdate.tm_mday ) )	/* before birthday in current month */
 		age--;
 
 	return age;
@@ -206,7 +206,7 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 	if ( buddy ) {
 		purple_notify_user_info_add_pair( info, _( "Alias" ), purple_buddy_get_alias( buddy ) );
 		purple_notify_user_info_add_section_break( info );
-		contact = purple_buddy_get_protocol_data(buddy);
+		contact = purple_buddy_get_protocol_data( buddy );
 	}
 
 	purple_notify_user_info_add_pair( info, _( "Display Name" ), profile->nickname );
@@ -222,9 +222,9 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 	purple_notify_user_info_add_pair( info, _( "Last Name" ), profile->lastname );
 	purple_notify_user_info_add_pair( info, _( "Country" ), profile->regcountry );
 
-	if ( strlen( profile->aboutme ) > 0 )
+	if ( *profile->aboutme )
 		purple_notify_user_info_add_pair( info, _( "About Me" ), profile->aboutme );
-	if ( strlen( profile->whereami ) > 0 )
+	if ( *profile->whereami )
 		purple_notify_user_info_add_pair( info, _( "Where I Live" ), profile->whereami );
 
 	purple_notify_user_info_add_pair_plaintext( info, _( "Relationship Status" ), mxit_relationship_to_name( profile->relationship ) );
@@ -251,9 +251,6 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 
 		/* subscription type */
 		purple_notify_user_info_add_pair( info, _( "Subscription" ), mxit_convert_subtype_to_name( contact->subtype ) );
-
-		/* hidden number */
-		purple_notify_user_info_add_pair( info, _( "Hidden Number" ), ( contact->flags & MXIT_CFLAG_HIDDEN ) ? _( "Yes" ) : _( "No" ) );
 	}
 	else {
 		/* this is an invite */
@@ -269,6 +266,7 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 				char* img_text;
 				img_text = g_strdup_printf( "<img id='%d'>", contact->imgid );
 				purple_notify_user_info_add_pair( info, _( "Photo" ), img_text );
+				g_free( img_text );
 			}
 
 			if ( contact->statusMsg )
@@ -334,7 +332,7 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 	column = purple_notify_searchresults_column_new( _( "Where I live" ) );
 	purple_notify_searchresults_column_add( results, column );
 
-	while (entries != NULL) {
+	while ( entries != NULL ) {
 		struct MXitProfile* profile	= ( struct MXitProfile *) entries->data;
 		GList*	row;
 		gchar* tmp = purple_base64_encode( (unsigned char *) profile->userid, strlen( profile->userid ) );
@@ -364,5 +362,5 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 
 	purple_notify_searchresults( session->con, NULL, text, NULL, results, NULL, NULL );
 
-	g_free( text);
+	g_free( text );
 }
