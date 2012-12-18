@@ -1005,11 +1005,8 @@ void mxit_parse_markup( struct RXMsgData* mx, char* message, int len, short msgt
 
 	if ( msgflags & CP_MSG_FAREWELL ) {
 		/* this is a farewell message */
-		GString* premsg = g_string_sized_new( 36 );
-		g_string_append_printf( premsg, "<font color=\"%s\"><i>", MXIT_FAREWELL_MSG_COLOR );
-		g_string_prepend( mx->msg, premsg->str );
+		g_string_prepend( mx->msg, "<font color=\""MXIT_FAREWELL_MSG_COLOR"\"><i>" );
 		g_string_append( mx->msg, "</i></font>" );
-		g_string_free( premsg, TRUE );
 	}
 }
 
