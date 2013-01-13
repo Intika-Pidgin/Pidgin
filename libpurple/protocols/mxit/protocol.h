@@ -34,8 +34,7 @@
 #define		CP_PKT_TERM				'\x02'				/* packet terminator */
 
 
-#define		CP_MAX_PACKET			( 1024 * 1024 )		/* maximum client protocol packet size (1 MiB) */
-#define		CP_MAX_FILESIZE			( 150 * 1000 )		/* maximum client protocol file transfer size (150 KB) */
+#define		CP_MAX_PACKET			( 1 * 1000 * 1000 )	/* maximum client protocol packet size (1 MB) */
 #define		MXIT_EMOTICON_SIZE		18					/* icon size for custom emoticons */
 #define		CP_MAX_STATUS_MSG		250					/* maximum status message length (in characters) */
 
@@ -78,12 +77,9 @@
 #define		MXIT_CF_VOICE			0x1000000
 #define		MXIT_CF_VIDEO			0x2000000
 #define		MXIT_CF_TOUCHSCREEN		0x4000000
-#define		MXIT_CF_SVC_CONNECTION	0x8000000
-#define		MXIT_CF_MXML			0x10000000
-#define		MXIT_CF_TYPING_NOTIFY	0x20000000
 
 /* Client features supported by this implementation */
-#define		MXIT_CP_FEATURES		( MXIT_CF_FILE_TRANSFER | MXIT_CF_FILE_ACCESS | MXIT_CF_AUDIO | MXIT_CF_MARKUP | MXIT_CF_EXT_MARKUP | MXIT_CF_NO_GATEWAYS | MXIT_CF_IMAGES | MXIT_CF_COMMANDS | MXIT_CF_VIBES | MXIT_CF_MIDP2 | MXIT_CF_TYPING_NOTIFY )
+#define		MXIT_CP_FEATURES		( MXIT_CF_FILE_TRANSFER | MXIT_CF_FILE_ACCESS | MXIT_CF_AUDIO | MXIT_CF_MARKUP | MXIT_CF_EXT_MARKUP | MXIT_CF_NO_GATEWAYS | MXIT_CF_IMAGES | MXIT_CF_COMMANDS | MXIT_CF_VIBES | MXIT_CF_MIDP2 )
 
 
 #define		MXIT_PING_INTERVAL		( 5 * 60 )				/* ping the server after X seconds of being idle (5 minutes) */
@@ -136,7 +132,6 @@
 #define		CP_CMD_SPLASHCLICK		0x001F					/* (31) splash-screen clickthrough */
 #define		CP_CMD_STATUS			0x0020					/* (32) set shown presence & status */
 #define		CP_CMD_MSGEVENT			0x0023					/* (35) Raise message event */
-#define		CP_CMD_GOT_MSGEVENT		0x0024					/* (36) Get message event */
 #define		CP_CMD_MOOD				0x0029					/* (41) set mood */
 #define		CP_CMD_KICK				0x002B					/* (43) login kick */
 #define		CP_CMD_GRPCHAT_CREATE	0x002C					/* (44) create new groupchat */
@@ -160,10 +155,12 @@
 /* message flags */
 #define		CP_MSG_NOTIFY_DELIVERY	0x0002					/* request delivery notification */
 #define		CP_MSG_NOTIFY_READ		0x0004					/* request read notification */
-#define		CP_MSG_ENCRYPTED		0x0010					/* message is encrypted */
+#define		CP_MSG_PWD_ENCRYPTED	0x0010					/* message is password encrypted */
+#define		CP_MSG_TL_ENCRYPTED		0x0020					/* message is transport encrypted */
+#define		CP_MSG_RPLY_PWD_ENCRYPT	0x0040					/* reply should be password encrypted */
+#define		CP_MSG_RPLY_TL_ENCRYPT	0x0080					/* reply should be transport encrypted */
 #define		CP_MSG_MARKUP			0x0200					/* message may contain markup */
 #define		CP_MSG_EMOTICON			0x0400					/* message may contain custom emoticons */
-#define		CP_MSG_FAREWELL			0x0800					/* this is a farewell message */
 
 /* redirect types */
 #define		CP_REDIRECT_PERMANENT	1						/* permanent redirect */
@@ -181,15 +178,11 @@
 /* message event types */
 #define		CP_MSGEVENT_DELIVERED	0x02					/* message was delivered */
 #define		CP_MSGEVENT_DISPLAYED	0x04					/* message was viewed */
-#define		CP_MSGEVENT_TYPING		0x10					/* user is typing */
-#define		CP_MSGEVENT_STOPPED		0x20					/* user has stopped typing */
-#define		CP_MSGEVENT_ANGRY		0x40					/* user is typing angrily */
-#define		CP_MSGEVENT_ERASING		0x80					/* user is erasing text */
 
 /* extended profile attribute fields */
 #define		CP_PROFILE_BIRTHDATE	"birthdate"				/* Birthdate (String - ISO 8601 format) */
 #define		CP_PROFILE_GENDER		"gender"				/* Gender (Boolean - 0=female, 1=male) */
-#define		CP_PROFILE_HIDENUMBER	"hidenumber"			/* Hide Number (Boolean - 0=false, 1=true) */
+// #define		CP_PROFILE_HIDENUMBER	"hidenumber"			/* Hide Number (Boolean - 0=false, 1=true) (DEPRECATED) */
 #define		CP_PROFILE_FULLNAME		"fullname"				/* Fullname (UTF8 String) */
 #define		CP_PROFILE_STATUS		"statusmsg"				/* Status Message (UTF8 String) */
 #define		CP_PROFILE_PREVSTATUS	"prevstatusmsgs"		/* Previous Status Messages (UTF8 String) */
@@ -205,11 +198,9 @@
 #define		CP_PROFILE_LASTSEEN		"lastseen"				/* Last-Online timestamp */
 #define		CP_PROFILE_WHEREAMI		"whereami"				/* Where am I / Where I live */
 #define		CP_PROFILE_ABOUTME		"aboutme"				/* About me */
-#define		CP_PROFILE_RELATIONSHIP	"relationship"			/* Relationship Status */
 
 /* extended profile field types */
 #define		CP_PROFILE_TYPE_BOOL	0x02					/* boolean (0 or 1) */
-#define		CP_PROFILE_TYPE_SHORT	0x04					/* short (16-bit) */
 #define		CP_PROFILE_TYPE_INT		0x05					/* integer (32-bit) */
 #define		CP_PROFILE_TYPE_LONG	0x06					/* long (64-bit) */
 #define		CP_PROFILE_TYPE_UTF8	0x0A					/* UTF8 string */

@@ -29,14 +29,14 @@
 
 #include <glib.h>
 
+#define PURPLE_STORED_IMAGE_PROTOCOL "purple-image:"
+
 /** A reference-counted immutable wrapper around an image's data and its
  *  filename.
  */
 typedef struct _PurpleStoredImage PurpleStoredImage;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**
  * Add an image to the store.
@@ -68,7 +68,6 @@ purple_imgstore_add(gpointer data, size_t size, const char *filename);
  * @param path  The path to the image.
  *
  * @return  The stored image.
- * @since 2.X.X
  */
 PurpleStoredImage *
 purple_imgstore_new_from_file(const char *path);
@@ -207,8 +206,6 @@ void purple_imgstore_init(void);
  */
 void purple_imgstore_uninit(void);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_IMGSTORE_H_ */
