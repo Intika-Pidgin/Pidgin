@@ -103,11 +103,7 @@ static PurpleEventLoopUiOps glib_eventloops =
 	glib_input_add,
 	g_source_remove,
 	NULL,
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
 
 	/* padding */
 	NULL,
@@ -237,7 +233,7 @@ static void
 signed_on(PurpleConnection *gc, gpointer null)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
-	printf("Account connected: %s %s\n", account->username, account->protocol_id);
+	printf("Account connected: %s %s\n", purple_account_get_username(account), purple_account_get_protocol_id(account));
 }
 
 static void
