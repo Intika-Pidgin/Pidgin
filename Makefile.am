@@ -6,13 +6,11 @@ EXTRA_DIST = \
 		HACKING \
 		Makefile.mingw \
 		PLUGIN_HOWTO \
-		README.MTN \
+		README.hg \
 		README.mingw \
 		config.h.mingw \
 		doxy2devhelp.xsl \
 		fix-casts.sh \
-		gaim.pc.in \
-		gaim-uninstalled.pc.in \
 		intltool-extract.in \
 		intltool-merge.in \
 		intltool-update.in \
