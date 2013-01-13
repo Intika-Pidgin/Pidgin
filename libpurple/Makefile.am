@@ -9,8 +9,8 @@ EXTRA_DIST = \
 		purple-send-async \
 		purple-url-handler \
 		purple.h.in \
-		purple.pc.in \
-		purple-uninstalled.pc.in \
+		purple-3.pc.in \
+		purple-3-uninstalled.pc.in \
 		version.h.in \
 		Makefile.mingw \
 		win32/global.mak \
@@ -30,7 +30,7 @@ GCONF_DIR=gconf
 endif
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = purple.pc
+pkgconfig_DATA = purple-3.pc
 
 SUBDIRS = $(GCONF_DIR) plugins protocols ciphers . tests example
 
@@ -50,6 +50,7 @@ purple_coresources = \
 	desktopitem.c \
 	eventloop.c \
 	ft.c \
+	http.c \
 	idle.c \
 	imgstore.c \
 	log.c \
@@ -65,6 +66,7 @@ purple_coresources = \
 	network.c \
 	ntlm.c \
 	notify.c \
+	obsolete.c \
 	plugin.c \
 	pluginpref.c \
 	pounce.c \
@@ -117,7 +119,6 @@ purple_coreheaders = \
 	desktopitem.h \
 	eventloop.h \
 	ft.h \
-	gaim-compat.h \
 	idle.h \
 	imgstore.h \
 	log.h \
@@ -284,6 +285,7 @@ libpurple_la_SOURCES = \
 
 noinst_HEADERS= \
 	internal.h \
+	obsolete.h \
 	media/backend-fs2.h \
 	valgrind.h
 
@@ -308,8 +310,10 @@ libpurple_la_LIBADD = \
 	$(INTLLIBS) \
 	$(FARSTREAM_LIBS) \
 	$(GSTREAMER_LIBS) \
+	$(GSTVIDEO_LIBS) \
 	$(GSTINTERFACES_LIBS) \
 	$(IDN_LIBS) \
+	$(JSON_LIBS) \
 	ciphers/libpurple-ciphers.la \
 	-lm
 
@@ -324,9 +328,11 @@ AM_CPPFLAGS = \
 	$(LIBXML_CFLAGS) \
 	$(FARSTREAM_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
+	$(GSTVIDEO_CFLAGS) \
 	$(GSTINTERFACES_CFLAGS) \
 	$(IDN_CFLAGS) \
-	$(NETWORKMANAGER_CFLAGS)
+	$(NETWORKMANAGER_CFLAGS) \
+	$(JSON_CFLAGS)
 
 # INSTALL_SSL_CERTIFICATES is true when SSL_CERTIFICATES_DIR is empty.
 # We want to use SSL_CERTIFICATES_DIR when it's not empty.
