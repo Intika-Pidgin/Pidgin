@@ -149,22 +149,22 @@ static int calculateAge( const char* date )
 	struct tm now, bdate;
 	int age;
 
-	if ( ( !date ) || ( strlen( date ) == 0 ) )
+	if ( ( !date ) || ( !*date ) )
 		return 0;
 
 	/* current time */
-	t = time(NULL);
+	t = time( NULL );
 	localtime_r( &t, &now );
 
 	/* decode hdate */
 	memset( &bdate, 0, sizeof( struct tm ) );
-	purple_str_to_time(date, FALSE, &bdate, NULL, NULL);
+	purple_str_to_time( date, FALSE, &bdate, NULL, NULL );
 
 	/* calculate difference */
 	age = now.tm_year - bdate.tm_year;
 	if ( now.tm_mon < bdate.tm_mon )		/* is before month of birth */
 		age--;
-	else if ( (now.tm_mon == bdate.tm_mon ) && ( now.tm_mday < bdate.tm_mday ) )	/* before birthday in current month */
+	else if ( ( now.tm_mon == bdate.tm_mon ) && ( now.tm_mday < bdate.tm_mday ) )	/* before birthday in current month */
 		age--;
 
 	return age;
@@ -204,28 +204,30 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 
 	buddy = purple_find_buddy( session->acc, username );
 	if ( buddy ) {
-		purple_notify_user_info_add_pair( info, _( "Alias" ), purple_buddy_get_alias( buddy ) );
+		purple_notify_user_info_add_pair_plaintext( info, _( "Alias" ), purple_buddy_get_alias( buddy ) );
 		purple_notify_user_info_add_section_break( info );
-		contact = purple_buddy_get_protocol_data(buddy);
+		contact = purple_buddy_get_protocol_data( buddy );
 	}
 
-	purple_notify_user_info_add_pair( info, _( "Display Name" ), profile->nickname );
+	purple_notify_user_info_add_pair_plaintext( info, _( "Display Name" ), profile->nickname );
 
 	tmp = g_strdup_printf("%s (%i)", profile->birthday, calculateAge( profile->birthday ) );
-	purple_notify_user_info_add_pair( info, _( "Birthday" ), tmp );
+	purple_notify_user_info_add_pair_plaintext( info, _( "Birthday" ), tmp );
 	g_free( tmp );
 
-	purple_notify_user_info_add_pair( info, _( "Gender" ), profile->male ? _( "Male" ) : _( "Female" ) );
+	purple_notify_user_info_add_pair_plaintext( info, _( "Gender" ), profile->male ? _( "Male" ) : _( "Female" ) );
 
 	/* optional information */
-	purple_notify_user_info_add_pair( info, _( "First Name" ), profile->firstname );
-	purple_notify_user_info_add_pair( info, _( "Last Name" ), profile->lastname );
-	purple_notify_user_info_add_pair( info, _( "Country" ), profile->regcountry );
+	purple_notify_user_info_add_pair_plaintext( info, _( "First Name" ), profile->firstname );
+	purple_notify_user_info_add_pair_plaintext( info, _( "Last Name" ), profile->lastname );
 
-	if ( strlen( profile->aboutme ) > 0 )
-		purple_notify_user_info_add_pair( info, _( "About Me" ), profile->aboutme );
-	if ( strlen( profile->whereami ) > 0 )
-		purple_notify_user_info_add_pair( info, _( "Where I Live" ), profile->whereami );
+	purple_notify_user_info_add_pair_plaintext( info, _( "Country" ), profile->regcountry );
+
+	if ( *profile->aboutme )
+		purple_notify_user_info_add_pair_plaintext( info, _( "About Me" ), profile->aboutme );
+
+	if ( *profile->whereami )
+		purple_notify_user_info_add_pair_plaintext( info, _( "Where I Live" ), profile->whereami );
 
 	purple_notify_user_info_add_pair_plaintext( info, _( "Relationship Status" ), mxit_relationship_to_name( profile->relationship ) );
 
@@ -233,24 +235,27 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 
 	if ( contact ) {
 		/* presence */
-		purple_notify_user_info_add_pair( info, _( "Status" ), mxit_convert_presence_to_name( contact->presence ) );
+		purple_notify_user_info_add_pair_plaintext( info, _( "Status" ), mxit_convert_presence_to_name( contact->presence ) );
 
 		/* last online */
 		if ( contact->presence == MXIT_PRESENCE_OFFLINE )
-			purple_notify_user_info_add_pair( info, _( "Last Online" ), ( profile->lastonline == 0 ) ? _( "Unknown" ) : datetime( profile->lastonline ) );
+			purple_notify_user_info_add_pair_plaintext( info, _( "Last Online" ), ( profile->lastonline == 0 ) ? _( "Unknown" ) : datetime( profile->lastonline ) );
 
 		/* mood */
 		if ( contact->mood != MXIT_MOOD_NONE )
-			purple_notify_user_info_add_pair( info, _( "Mood" ), mxit_convert_mood_to_name( contact->mood ) );
+			purple_notify_user_info_add_pair_plaintext( info, _( "Mood" ), mxit_convert_mood_to_name( contact->mood ) );
 		else
-			purple_notify_user_info_add_pair( info, _( "Mood" ), _( "None" ) );
+			purple_notify_user_info_add_pair_plaintext( info, _( "Mood" ), _( "None" ) );
 
 		/* status message */
-		if ( contact->statusMsg )
-			purple_notify_user_info_add_pair( info, _( "Status Message" ), contact->statusMsg );
+		if ( contact->statusMsg ) {
+			/* TODO: Check whether it's correct to call add_pair_html,
+			         or if we should be using add_pair_plaintext */
+			purple_notify_user_info_add_pair_html( info, _( "Status Message" ), contact->statusMsg );
+		}
 
 		/* subscription type */
-		purple_notify_user_info_add_pair( info, _( "Subscription" ), mxit_convert_subtype_to_name( contact->subtype ) );
+		purple_notify_user_info_add_pair_plaintext( info, _( "Subscription" ), mxit_convert_subtype_to_name( contact->subtype ) );
 	}
 	else {
 		/* this is an invite */
@@ -259,17 +264,22 @@ void mxit_show_profile( struct MXitSession* session, const char* username, struc
 			/* invite found */
 
 			if ( contact->msg )
-				purple_notify_user_info_add_pair( info, _( "Invite Message" ), contact->msg );
+				purple_notify_user_info_add_pair_plaintext( info, _( "Invite Message" ), contact->msg );
 
 			if ( contact->imgid ) {
 				/* this invite has a avatar */
 				char* img_text;
-				img_text = g_strdup_printf( "<img id='%d'>", contact->imgid );
-				purple_notify_user_info_add_pair( info, _( "Photo" ), img_text );
+				img_text = g_strdup_printf( "<img src='" PURPLE_STORED_IMAGE_PROTOCOL "%d'>",
+				                            contact->imgid );
+				purple_notify_user_info_add_pair_html( info, _( "Photo" ), img_text );
+				g_free( img_text );
 			}
 
-			if ( contact->statusMsg )
-				purple_notify_user_info_add_pair( info, _( "Status Message" ), contact->statusMsg );
+			if ( contact->statusMsg ) {
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html( info, _( "Status Message" ), contact->statusMsg );
+			}
 		}
 	}
 
@@ -317,6 +327,7 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 
 	/* define columns */
 	column = purple_notify_searchresults_column_new( _( "UserId" ) );
+	purple_notify_searchresult_column_set_visible( column, FALSE );
 	purple_notify_searchresults_column_add( results, column );
 	column = purple_notify_searchresults_column_new( _( "Display Name" ) );
 	purple_notify_searchresults_column_add( results, column );
@@ -331,7 +342,7 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 	column = purple_notify_searchresults_column_new( _( "Where I live" ) );
 	purple_notify_searchresults_column_add( results, column );
 
-	while (entries != NULL) {
+	while ( entries != NULL ) {
 		struct MXitProfile* profile	= ( struct MXitProfile *) entries->data;
 		GList*	row;
 		gchar* tmp = purple_base64_encode( (unsigned char *) profile->userid, strlen( profile->userid ) );
@@ -361,5 +372,5 @@ void mxit_show_search_results( struct MXitSession* session, int searchType, int 
 
 	purple_notify_searchresults( session->con, NULL, text, NULL, results, NULL, NULL );
 
-	g_free( text);
+	g_free( text );
 }
