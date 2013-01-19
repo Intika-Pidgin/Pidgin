@@ -1,4 +1,4 @@
-/* $Id: libgadu.c 1102 2011-05-05 21:17:57Z wojtekka $ */
+/* $Id: libgadu.c 1245 2012-01-10 22:48:31Z wojtekka $ */
 
 /*
  *  (C) Copyright 2001-2010 Wojtek Kaniewski <wojtekka@irc.pl>
@@ -29,36 +29,22 @@
  */
 
 #include <sys/types.h>
-#ifdef _WIN32
-#  include <io.h>
-#  include <fcntl.h>
-#  include <errno.h>
-#  define SHUT_RDWR SD_BOTH
-#else
-#  include <sys/socket.h>
-#  include <netinet/in.h>
-#  include <arpa/inet.h>
-#  ifdef sun
-#    include <sys/filio.h>
-#  endif
+#ifdef sun
+#  include <sys/filio.h>
 #endif
 
 #include "compat.h"
 #include "libgadu.h"
-#include "libgadu-config.h"
 #include "protocol.h"
 #include "resolver.h"
-#include "libgadu-internal.h"
+#include "internal.h"
 #include "encoding.h"
-#include "libgadu-debug.h"
+#include "debug.h"
 #include "session.h"
 #include "message.h"
 #include "deflate.h"
 
-#ifndef _WIN32
-#  include <errno.h> /* on Win32 this is included above */
-#  include <netdb.h>
-#endif
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,8 +59,6 @@
 #  include <openssl/err.h>
 #  include <openssl/rand.h>
 #endif
-
-#define GG_LIBGADU_VERSION "1.11.0"
 
 /**
  * Port gniazda nasłuchującego dla połączeń bezpośrednich.
@@ -146,7 +130,7 @@ static char rcsid[]
 #ifdef __GNUC__
 __attribute__ ((unused))
 #endif
-= "$Id: libgadu.c 1102 2011-05-05 21:17:57Z wojtekka $";
+= "$Id: libgadu.c 1245 2012-01-10 22:48:31Z wojtekka $";
 #endif
 
 #endif /* DOXYGEN */
@@ -163,7 +147,7 @@ const char *gg_libgadu_version()
 	return GG_LIBGADU_VERSION;
 }
 
-#ifdef GG_CONFIG_HAVE_UINT64_T
+#ifdef HAVE_UINT64_T
 /**
  * \internal Zamienia kolejność bajtów w 64-bitowym słowie.
  *
@@ -192,7 +176,7 @@ uint64_t gg_fix64(uint64_t x)
 		((x & (uint64_t) 0xff00000000000000ULL) >> 56));
 #endif
 }
-#endif /* GG_CONFIG_HAVE_UINT64_T */
+#endif /* HAVE_UINT64_T */
 
 /**
  * \internal Zamienia kolejność bajtów w 32-bitowym słowie.
@@ -457,11 +441,11 @@ int gg_write(struct gg_session *sess, const char *buf, int length)
 			res = written;
 		}
 	} else {
-		res = 0;
-
 		if (sess->send_buf == NULL) {
 			res = gg_write_common(sess, buf, length);
 
+			if (res == -1 && errno == EAGAIN)
+				res = 0;
 			if (res == -1)
 				return -1;
 		}
@@ -1122,22 +1106,9 @@ void gg_logoff(struct gg_session *sess)
 	sess->resolver_cleanup(&sess->resolver, 1);
 
 	if (sess->fd != -1) {
-		shutdown(sess->fd, SHUT_RDWR);
 		close(sess->fd);
 		sess->fd = -1;
 	}
-
-#ifdef GG_CONFIG_HAVE_GNUTLS
-	if (sess->ssl != NULL) {
-		gg_session_gnutls_t *tmp;
-
-		tmp = (gg_session_gnutls_t*) sess->ssl;
-		gnutls_deinit(tmp->session);
-		gnutls_certificate_free_credentials(tmp->xcred);
-		gnutls_global_deinit();
-		free(sess->ssl);
-	}
-#endif
 
 	if (sess->send_buf) {
 		free(sess->send_buf);
@@ -1169,6 +1140,18 @@ void gg_free_session(struct gg_session *sess)
 	free(sess->client_version);
 	free(sess->recv_buf);
 	free(sess->header_buf);
+
+#ifdef GG_CONFIG_HAVE_GNUTLS
+	if (sess->ssl != NULL) {
+		gg_session_gnutls_t *tmp;
+
+		tmp = (gg_session_gnutls_t*) sess->ssl;
+		gnutls_deinit(tmp->session);
+		gnutls_certificate_free_credentials(tmp->xcred);
+		gnutls_global_deinit();
+		free(sess->ssl);
+	}
+#endif
 
 #ifdef GG_CONFIG_HAVE_OPENSSL
 	if (sess->ssl)

@@ -25,6 +25,7 @@
 
 #include    "internal.h"
 #include	"purple.h"
+#include	"obsolete.h"
 
 #include	"protocol.h"
 #include	"mxit.h"
@@ -404,7 +405,9 @@ void mxit_show_message( struct RXMsgData* mx )
 			}
 			else {
 				/* insert img tag */
-				g_snprintf( tag, sizeof( tag ), "<img id=\"%i\">", *img_id );
+				g_snprintf( tag, sizeof( tag ),
+				            "<img src=\"" PURPLE_STORED_IMAGE_PROTOCOL "%i\">",
+				            *img_id );
 				g_string_insert( mx->msg, start, tag );
 			}
 
@@ -631,7 +634,8 @@ static void emoticon_request( struct RXMsgData* mx, const char* id )
 
 	/* reference: "libpurple/util.h" */
 	url = g_strdup_printf( "%s/res/?type=emo&mlh=%i&sc=%s&ts=%li", wapserver, MXIT_EMOTICON_SIZE, id, time( NULL ) );
-	url_data = purple_util_fetch_url_request( url, TRUE, NULL, TRUE, NULL, FALSE, emoticon_returned, mx );
+	/* FIXME: This should be cancelled somewhere if not needed. */
+	url_data = purple_util_fetch_url( url, TRUE, NULL, TRUE, -1, emoticon_returned, mx );
 	g_free( url );
 }
 
@@ -748,6 +752,7 @@ void mxit_parse_markup( struct RXMsgData* mx, char* message, int len, short msgt
 	gboolean	tag_bold	= FALSE;
 	gboolean	tag_under	= FALSE;
 	gboolean	tag_italic	= FALSE;
+	int			font_size	= 0;
 
 #ifdef MXIT_DEBUG_MARKUP
 	purple_debug_info( MXIT_PLUGIN_ID, "Markup RX (original): '%s'\n", message );
@@ -875,59 +880,54 @@ void mxit_parse_markup( struct RXMsgData* mx, char* message, int len, short msgt
 					}
 					break;
 			case '.' :
-					if ( !( msgflags & CP_MSG_EMOTICON ) ) {
-						g_string_append_c( mx->msg, message[i] );
-						break;
-					}
-					else if ( i + 1 >= len ) {
+					if ( i + 1 >= len ) {
 						/* message too short */
 						g_string_append_c( mx->msg, '.' );
 						break;
 					}
 
-					switch ( message[i+1] ) {
-						case '+' :
-								/* increment text size */
-								g_string_append( mx->msg, "<font size=\"+1\">" );
-								i++;
-								break;
-						case '-' :
-								/* decrement text size */
-								g_string_append( mx->msg, "<font size=\"-1\">" );
-								i++;
-								break;
-						case '{' :
-								/* custom emoticon */
-								if ( i + 2 >= len ) {
-									/* message too short */
-									g_string_append_c( mx->msg, '.' );
-									break;
-								}
+					if ( ( msgflags & CP_MSG_EMOTICON ) && ( message[i+1] == '{' ) ) {
+						/* custom emoticon */
+						if ( i + 2 >= len ) {
+							/* message too short */
+							g_string_append_c( mx->msg, '.' );
+							break;
+						}
 
-								parse_emoticon_str( &message[i+2], tmpstr1 );
-								if ( tmpstr1[0] != '\0' ) {
-									mx->got_img = TRUE;
+						parse_emoticon_str( &message[i+2], tmpstr1 );
+						if ( tmpstr1[0] != '\0' ) {
+							mx->got_img = TRUE;
 
-									if ( g_hash_table_lookup( mx->session->iimages, tmpstr1 ) ) {
-										/* emoticon found in the cache, so we do not have to request it from the WAPsite */
-									}
-									else {
-										/* request emoticon from the WAPsite */
-										mx->img_count++;
-										emoticon_request( mx, tmpstr1 );
-									}
+							if ( g_hash_table_lookup( mx->session->iimages, tmpstr1 ) ) {
+								/* emoticon found in the cache, so we do not have to request it from the WAPsite */
+							}
+							else {
+								/* request emoticon from the WAPsite */
+								mx->img_count++;
+								emoticon_request( mx, tmpstr1 );
+							}
 
-									g_string_append_printf( mx->msg, MXIT_II_TAG"%s>", tmpstr1 );
-									i += strlen( tmpstr1 ) + 2;
-								}
-								else
-									g_string_append_c( mx->msg, '.' );
-
-								break;
-						default :
-								g_string_append_c( mx->msg, '.' );
-								break;
+							g_string_append_printf( mx->msg, MXIT_II_TAG"%s>", tmpstr1 );
+							i += strlen( tmpstr1 ) + 2;
+						}
+						else
+							g_string_append_c( mx->msg, '.' );
 					}
+					else if ( ( msgflags & CP_MSG_MARKUP ) && ( message[i+1] == '+' ) ) {
+						/* increment text size */
+						font_size++;
+						g_string_append_printf( mx->msg, "<font size=\"%+i\">", font_size );
+						i++;
+					}
+					else if ( ( msgflags & CP_MSG_MARKUP ) && ( message[i+1] == '-' ) ) {
+						/* decrement text size */
+						font_size--;
+						g_string_append_printf( mx->msg, "<font size=\"%+i\">", font_size );
+						i++;
+					}
+					else
+						g_string_append_c( mx->msg, '.' );
+
 					break;
 			case '\\' :
 					if ( i + 1 >= len ) {
@@ -1078,7 +1078,7 @@ char* mxit_convert_markup_tx( const char* message, int* msgtype )
 	 *   Font colour:	<font color=#">...</font>
 	 *   Links:			<a href="">...</a>
 	 *   Newline:		<br>
-	 *   Inline image:  <IMG ID="">
+	 *   Inline image:  <IMG SRC="">
 	 * The following characters are also encoded:
 	 *   &amp;  &quot;  &lt;  &gt;
 	 */
@@ -1145,11 +1145,11 @@ char* mxit_convert_markup_tx( const char* message, int* msgtype )
 						g_free( tag );
 					}
 				}
-				else if ( purple_str_has_prefix( &message[i], "<IMG ID=" ) ) {
+				else if ( purple_str_has_prefix( &message[i], "<IMG SRC=" PURPLE_STORED_IMAGE_PROTOCOL) ) {
 					/* inline image */
 					int imgid;
 
-					if ( sscanf( &message[i+9], "%i", &imgid ) ) {
+					if ( sscanf( &message[i+sizeof("<IMG SRC=" PURPLE_STORED_IMAGE_PROTOCOL)-1], "%i", &imgid ) ) {
 						inline_image_add( mx, imgid );
 						*msgtype = CP_MSGTYPE_COMMAND;		/* inline image must be sent as a MXit command */
 					}
