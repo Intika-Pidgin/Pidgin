@@ -34,8 +34,7 @@
 #define		CP_PKT_TERM				'\x02'				/* packet terminator */
 
 
-#define		CP_MAX_PACKET			( 1024 * 1024 )		/* maximum client protocol packet size (1 MiB) */
-#define		CP_MAX_FILESIZE			( 150 * 1000 )		/* maximum client protocol file transfer size (150 KB) */
+#define		CP_MAX_PACKET			( 1 * 1000 * 1000 )	/* maximum client protocol packet size (1 MB) */
 #define		MXIT_EMOTICON_SIZE		18					/* icon size for custom emoticons */
 #define		CP_MAX_STATUS_MSG		250					/* maximum status message length (in characters) */
 
@@ -160,7 +159,10 @@
 /* message flags */
 #define		CP_MSG_NOTIFY_DELIVERY	0x0002					/* request delivery notification */
 #define		CP_MSG_NOTIFY_READ		0x0004					/* request read notification */
-#define		CP_MSG_ENCRYPTED		0x0010					/* message is encrypted */
+#define		CP_MSG_PWD_ENCRYPTED	0x0010					/* message is password encrypted */
+#define		CP_MSG_TL_ENCRYPTED		0x0020					/* message is transport encrypted */
+#define		CP_MSG_RPLY_PWD_ENCRYPT	0x0040					/* reply should be password encrypted */
+#define		CP_MSG_RPLY_TL_ENCRYPT	0x0080					/* reply should be transport encrypted */
 #define		CP_MSG_MARKUP			0x0200					/* message may contain markup */
 #define		CP_MSG_EMOTICON			0x0400					/* message may contain custom emoticons */
 #define		CP_MSG_FAREWELL			0x0800					/* this is a farewell message */
