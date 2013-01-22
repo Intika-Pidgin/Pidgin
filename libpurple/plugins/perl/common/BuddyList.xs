@@ -35,10 +35,6 @@ BOOT:
 Purple::BuddyList
 purple_get_blist()
 
-void
-purple_set_blist(blist)
-	Purple::BuddyList blist
-
 MODULE = Purple::BuddyList  PACKAGE = Purple::Find  PREFIX = purple_find_
 PROTOTYPES: ENABLE
 
@@ -81,11 +77,6 @@ purple_contact_new();
 Purple::BuddyList::Buddy
 purple_contact_get_priority_buddy(contact)
 	Purple::BuddyList::Contact contact
-
-void
-purple_contact_set_alias(contact, alias)
-	Purple::BuddyList::Contact contact
-	const char * alias
 
 const char *
 purple_contact_get_alias(contact)
@@ -181,9 +172,6 @@ purple_blist_add_chat(chat, group, node)
 	Purple::BuddyList::Group  group
 	Purple::BuddyList::Node node
 
-Purple::BuddyList
-purple_blist_new()
-
 void
 purple_blist_show()
 
@@ -198,10 +186,6 @@ void
 purple_blist_update_buddy_status(buddy, old_status)
 	Purple::BuddyList::Buddy buddy
 	Purple::Status old_status
-
-void
-purple_blist_update_buddy_icon(buddy)
-	Purple::BuddyList::Buddy buddy
 
 void
 purple_blist_rename_buddy(buddy, name)
@@ -244,9 +228,6 @@ purple_blist_get_group_size(group, offline)
 int
 purple_blist_get_group_online_count(group)
 	Purple::BuddyList::Group  group
-
-void
-purple_blist_load()
 
 void
 purple_blist_schedule_save()
@@ -427,10 +408,6 @@ purple_buddy_get_alias_only(buddy)
 
 const char *
 purple_buddy_get_contact_alias(buddy)
-	Purple::BuddyList::Buddy buddy
-
-const char *
-purple_buddy_get_local_alias(buddy)
 	Purple::BuddyList::Buddy buddy
 
 const char *

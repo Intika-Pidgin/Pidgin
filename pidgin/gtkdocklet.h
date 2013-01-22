@@ -25,31 +25,25 @@
 #ifndef _GTKDOCKLET_H_
 #define _GTKDOCKLET_H_
 
-#include "status.h"
+G_BEGIN_DECLS
 
-struct docklet_ui_ops
+typedef enum
 {
-	void (*create)(void);
-	void (*destroy)(void);
-	void (*update_icon)(PurpleStatusPrimitive, gboolean, gboolean);
-	void (*blank_icon)(void);
-	void (*set_tooltip)(gchar *);
-	GtkMenuPositionFunc position_menu;
-};
+	PIDGIN_DOCKLET_CONNECTING 	= 0x1,
+	PIDGIN_DOCKLET_CONV_PENDING 	= 0x2,
+	PIDGIN_DOCKLET_EMAIL_PENDING 	= 0x4
+} PidginDockletFlag;
 
+/**
+ * Returns the GtkStatusIcon used for the docklet.
+ */
+GtkStatusIcon *pidgin_docklet_get_status_icon(void);
 
-/* functions in gtkdocklet.c */
-void pidgin_docklet_update_icon(void);
-void pidgin_docklet_clicked(int);
-void pidgin_docklet_embedded(void);
-void pidgin_docklet_remove(void);
-void pidgin_docklet_set_ui_ops(struct docklet_ui_ops *);
-void pidgin_docklet_unload(void);
 void pidgin_docklet_init(void);
 void pidgin_docklet_uninit(void);
 void*pidgin_docklet_get_handle(void);
 
-/* function in gtkdocklet-{gtk,x11,win32}.c */
-void docklet_ui_init(void);
+G_END_DECLS
 
 #endif /* _GTKDOCKLET_H_ */
+

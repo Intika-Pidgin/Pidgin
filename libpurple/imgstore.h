@@ -1,5 +1,6 @@
 /**
- * @file imgstore.h IM Image Store API
+ * @file imgstore.h Utility functions for reference-counted in-memory
+ *       image data.
  * @ingroup core
  * @see @ref imgstore-signals
  */
@@ -29,16 +30,14 @@
 
 #include <glib.h>
 
-/**
- * A set of utility functions that provide a reference-counted immutable
- * wrapper around an image's data and filename.  These functions do not
- * cache any data to disk.
+#define PURPLE_STORED_IMAGE_PROTOCOL "purple-image:"
+
+/** A reference-counted immutable wrapper around an image's data and its
+ *  filename.
  */
 typedef struct _PurpleStoredImage PurpleStoredImage;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**
  * Create a new PurpleStoredImage.
@@ -74,6 +73,10 @@ purple_imgstore_add(gpointer data, size_t size, const char *filename);
  * need to reference the image by an ID, use purple_imgstore_add_with_id()
  * instead.
  *
+ * Make sure the filename is appropriately escaped.  You may wish to use
+ * purple_escape_filename().  The PurpleStoredImage's filename will be set
+ * to the given path.
+ *
  * The caller owns a reference to this image and must dereference it with
  * purple_imgstore_unref() for it to be freed.
  *
@@ -81,8 +84,6 @@ purple_imgstore_add(gpointer data, size_t size, const char *filename);
  *
  * @return The stored image, or NULL if the image was not added (because of
  *         empty data or size).
- *
- * @since 2.5.0
  */
 PurpleStoredImage *
 purple_imgstore_new_from_file(const char *path);
@@ -104,7 +105,7 @@ purple_imgstore_new_from_file(const char *path);
  *                  image or, more commonly, the filename of the image
  *                  without any directory information.  It can also be
  *                  NULL, if you don't need to keep track of a filename.
- *
+
  * @return ID for the image.  This is a unique number that can be used
  *         within libpurple to reference the image.  0 is returned if the
  *         image was not added (because of empty data or size).
@@ -223,8 +224,6 @@ void purple_imgstore_init(void);
  */
 void purple_imgstore_uninit(void);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_IMGSTORE_H_ */
