@@ -29,79 +29,68 @@
 
 #include <glib.h>
 
+#define PURPLE_STORED_IMAGE_PROTOCOL "purple-image:"
+
 /** A reference-counted immutable wrapper around an image's data and its
  *  filename.
  */
 typedef struct _PurpleStoredImage PurpleStoredImage;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**
- * Create a new PurpleStoredImage.
+ * Add an image to the store.
  *
- * Despite the name of this function, the image is NOT added to the image
- * store.  The caller owns a reference to this image and must dereference
- * it with purple_imgstore_unref() for it to be freed.
+ * The caller owns a reference to the image in the store, and must dereference
+ * the image with purple_imgstore_unref() for it to be freed.
  *
  * No ID is allocated when using this function.  If you need to reference the
  * image by an ID, use purple_imgstore_add_with_id() instead.
  *
- * @param data      Pointer to the image data, which the imgstore will take
- *                  ownership of and free as appropriate.  If you want a
- *                  copy of the data, make it before calling this function.
- * @param size      Image data's size.
- * @param filename  Filename associated with image.  This is for your
+ * @param data		Pointer to the image data, which the imgstore will take
+ *                      ownership of and free as appropriate.  If you want a
+ *                      copy of the data, make it before calling this function.
+ * @param size		Image data's size.
+ * @param filename	Filename associated with image.  This is for your
  *                  convenience.  It could be the full path to the
  *                  image or, more commonly, the filename of the image
  *                  without any directory information.  It can also be
  *                  NULL, if you don't need to keep track of a filename.
  *
- * @return The stored image, or NULL if the image was not added (because of
- *         empty data or size).
+ * @return The stored image.
  */
 PurpleStoredImage *
 purple_imgstore_add(gpointer data, size_t size, const char *filename);
 
 /**
- * Create a PurpleStoredImage using purple_imgstore_add() by reading the
- * given filename from disk.
- *
- * No ID is allocated when using this function.  If you need to reference the
- * image by an ID, use purple_imgstore_add_with_id() instead.
+ * Create an image and add it to the store.
  *
  * @param path  The path to the image.
  *
- * @return The stored image, or NULL if the image was not added (because of
- *         empty data or size).
- *
- * @since 2.5.0
+ * @return  The stored image.
  */
 PurpleStoredImage *
 purple_imgstore_new_from_file(const char *path);
 
 /**
- * Create a PurpleStoredImage using purple_imgstore_add() and add the
- * image to the image store.  A unique ID will be assigned to the image.
+ * Add an image to the store, allocating an ID.
  *
  * The caller owns a reference to the image in the store, and must dereference
  * the image with purple_imgstore_unref_by_id() or purple_imgstore_unref()
  * for it to be freed.
  *
- * @param data      Pointer to the image data, which the imgstore will take
- *                  ownership of and free as appropriate.  If you want a
- *                  copy of the data, make it before calling this function.
- * @param size      Image data's size.
- * @param filename  Filename associated with image.  This is for your
+ * @param data		Pointer to the image data, which the imgstore will take
+ *                      ownership of and free as appropriate.  If you want a
+ *                      copy of the data, make it before calling this function.
+ * @param size		Image data's size.
+ * @param filename	Filename associated with image.  This is for your
  *                  convenience.  It could be the full path to the
  *                  image or, more commonly, the filename of the image
  *                  without any directory information.  It can also be
  *                  NULL, if you don't need to keep track of a filename.
 
  * @return ID for the image.  This is a unique number that can be used
- *         within libpurple to reference the image.  0 is returned if the
- *         image was not added (because of empty data or size).
+ *         within libpurple to reference the image.
  */
 int purple_imgstore_add_with_id(gpointer data, size_t size, const char *filename);
 
@@ -109,7 +98,7 @@ int purple_imgstore_add_with_id(gpointer data, size_t size, const char *filename
  * Retrieve an image from the store. The caller does not own a
  * reference to the image.
  *
- * @param id The ID for the image.
+ * @param id		The ID for the image.
  *
  * @return A pointer to the requested image, or NULL if it was not found.
  */
@@ -118,7 +107,7 @@ PurpleStoredImage *purple_imgstore_find_by_id(int id);
 /**
  * Retrieves a pointer to the image's data.
  *
- * @param img The Image
+ * @param img	The Image
  *
  * @return A pointer to the data, which must not
  *         be freed or modified.
@@ -128,7 +117,7 @@ gconstpointer purple_imgstore_get_data(PurpleStoredImage *img);
 /**
  * Retrieves the length of the image's data.
  *
- * @param img The Image
+ * @param img	The Image
  *
  * @return The size of the data that the pointer returned by
  *         purple_imgstore_get_data points to.
@@ -138,7 +127,7 @@ size_t purple_imgstore_get_size(PurpleStoredImage *img);
 /**
  * Retrieves a pointer to the image's filename.
  *
- * @param img The image
+ * @param img	The image
  *
  * @return A pointer to the filename, which must not
  *         be freed or modified.
@@ -185,7 +174,7 @@ purple_imgstore_unref(PurpleStoredImage *img);
  * purple_imgstore_ref(), so if you have a PurpleStoredImage, it'll
  * be more efficient to call purple_imgstore_ref() directly.
  *
- * @param id The ID for the image.
+ * @param id		The ID for the image.
  */
 void purple_imgstore_ref_by_id(int id);
 
@@ -196,7 +185,7 @@ void purple_imgstore_ref_by_id(int id);
  * purple_imgstore_unref(), so if you have a PurpleStoredImage, it'll
  * be more efficient to call purple_imgstore_unref() directly.
  *
- * @param id The ID for the image.
+ * @param id		The ID for the image.
  */
 void purple_imgstore_unref_by_id(int id);
 
@@ -217,8 +206,6 @@ void purple_imgstore_init(void);
  */
 void purple_imgstore_uninit(void);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_IMGSTORE_H_ */
