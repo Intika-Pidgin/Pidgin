@@ -28,54 +28,16 @@
 
 #include "prefs.h"
 
-/**
- * An option for an account.
- *
- * This is set by protocol plugins, and appears in the account settings
- * dialogs.
- */
-typedef struct
-{
-	PurplePrefType type;      /**< The type of value.                     */
+/**************************************************************************/
+/** Data Structures                                                       */
+/**************************************************************************/
 
-	char *text;             /**< The text that will appear to the user. */
-	char *pref_name;        /**< The name of the associated preference. */
+/** @copydoc _PurpleAccountOption */
+typedef struct _PurpleAccountOption		PurpleAccountOption;
+/** @copydoc _PurpleAccountUserSplit */
+typedef struct _PurpleAccountUserSplit	PurpleAccountUserSplit;
 
-	union
-	{
-		gboolean boolean;   /**< The default boolean value.             */
-		int integer;        /**< The default integer value.             */
-		char *string;       /**< The default string value.              */
-		GList *list;        /**< The default list value.                */
-
-	} default_value;
-
-	gboolean masked;        /**< Whether the value entered should be
-	                         *   obscured from view (for passwords and
-	                         *   similar options)
-	                         */
-} PurpleAccountOption;
-
-/**
- * A username split.
- *
- * This is used by some protocols to separate the fields of the username
- * into more human-readable components.
- */
-typedef struct
-{
-	char *text;             /**< The text that will appear to the user. */
-	char *default_value;    /**< The default value.                     */
-	char  field_sep;        /**< The field separator.                   */
-	gboolean reverse;       /**< TRUE if the separator should be found
-							  starting a the end of the string, FALSE
-							  otherwise                                 */
-
-} PurpleAccountUserSplit;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Account Option API                                              */
@@ -196,7 +158,19 @@ void purple_account_option_set_default_string(PurpleAccountOption *option,
  * @param masked The masking.
  */
 void
-purple_account_option_set_masked(PurpleAccountOption *option, gboolean masked);
+purple_account_option_string_set_masked(PurpleAccountOption *option, gboolean masked);
+
+/**
+ * Sets the hint list for an account option.
+ *
+ * The list passed will be owned by the account option, and the
+ * strings inside will be freed automatically.
+ *
+ * @param option The account option.
+ * @param hints The list of hints, stored as strings.
+ */
+void purple_account_option_string_set_hints(PurpleAccountOption *option,
+	GSList *hints);
 
 /**
  * Sets the list values for an account option.
@@ -299,7 +273,16 @@ const char *purple_account_option_get_default_list_value(
  * @return %TRUE if the option's value should be obscured.
  */
 gboolean
-purple_account_option_get_masked(const PurpleAccountOption *option);
+purple_account_option_string_get_masked(const PurpleAccountOption *option);
+
+/**
+ * Returns the list of hints for an account option.
+ *
+ * @param option The account option.
+ *
+ * @constreturn A list of hints, stored as strings.
+ */
+const GSList * purple_account_option_string_get_hints(const PurpleAccountOption *option);
 
 /**
  * Returns the list values for an account option.
@@ -388,8 +371,6 @@ void purple_account_user_split_set_reverse(PurpleAccountUserSplit *split, gboole
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_ACCOUNTOPT_H_ */
