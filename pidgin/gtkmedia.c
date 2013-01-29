@@ -38,11 +38,17 @@
 #ifdef USE_VV
 #include "media-gst.h"
 
-#ifdef _WIN32
+#ifdef GDK_WINDOWING_WIN32
 #include <gdk/gdkwin32.h>
 #endif
+#ifdef GDK_WINDOWING_X11
+#include <gdk/gdkx.h>
+#endif
+#ifdef GDK_WINDOWING_QUARTZ
+#include <gdk/gdkquartz.h>
+#endif
 
-#include <gst/interfaces/xoverlay.h>
+#include "gtk3compat.h"
 
 #define PIDGIN_TYPE_MEDIA            (pidgin_media_get_type())
 #define PIDGIN_MEDIA(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_MEDIA, PidginMedia))
@@ -439,7 +445,7 @@ pidgin_media_remove_widget(PidginMedia *gtkmedia,
 
 		gtk_widget_destroy(widget);
 
-		gtk_widget_size_request(GTK_WIDGET(gtkmedia), &req);
+		gtk_widget_get_preferred_size(GTK_WIDGET(gtkmedia), NULL, &req);
 		gtk_window_resize(GTK_WINDOW(gtkmedia), req.width, req.height);
 	}
 }
@@ -455,7 +461,7 @@ level_message_cb(PurpleMedia *media, gchar *session_id, gchar *participant,
 		progress = pidgin_media_get_widget(gtkmedia, session_id, participant);
 
 	if (progress)
-		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), level * 5);
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), level);
 }
 
 
@@ -538,30 +544,36 @@ realize_cb_cb(PidginMediaRealizeData *data)
 	GdkWindow *window = NULL;
 
 	if (data->participant == NULL)
-#if GTK_CHECK_VERSION(2, 14, 0)
 		window = gtk_widget_get_window(priv->local_video);
-#else
-		window = (priv->local_video)->window;
-#endif
 	else {
 		GtkWidget *widget = pidgin_media_get_widget(data->gtkmedia,
 				data->session_id, data->participant);
 		if (widget)
-#if GTK_CHECK_VERSION(2, 14, 0)
 			window = gtk_widget_get_window(widget);
-#else
-			window = widget->window;
-#endif
 	}
 
 	if (window) {
-		gulong window_id;
-#ifdef _WIN32
-		window_id = GDK_WINDOW_HWND(window);
-#elif defined(HAVE_X11)
-		window_id = GDK_WINDOW_XWINDOW(window);
-#else
-#		error "Unsupported windowing system"
+		gulong window_id = 0;
+#ifdef GDK_WINDOWING_WIN32
+		if (GDK_IS_WIN32_WINDOW(window))
+			window_id = GDK_WINDOW_HWND(window);
+		else
+#endif
+#ifdef GDK_WINDOWING_X11
+		if (GDK_IS_X11_WINDOW(window))
+			window_id = gdk_x11_window_get_xid(window);
+		else
+#endif
+#ifdef GDK_WINDOWING_QUARTZ
+		if (GDK_IS_QUARTZ_WINDOW(window))
+			window_id = (gulong)gdk_quartz_window_get_nsview(window);
+		else
+#endif
+			g_warning("Unsupported GDK backend");
+#if !(defined(GDK_WINDOWING_WIN32) \
+   || defined(GDK_WINDOWING_X11) \
+   || defined(GDK_WINDOWING_QUARTZ))
+#		error "Unsupported GDK windowing system"
 #endif
 
 		purple_media_set_output_window(priv->media, data->session_id,
@@ -654,30 +666,18 @@ pidgin_request_timeout_cb(PidginMedia *gtkmedia)
 }
 
 static void
-#if GTK_CHECK_VERSION(2,12,0)
 pidgin_media_input_volume_changed(GtkScaleButton *range, double value,
 		PurpleMedia *media)
 {
 	double val = (double)value * 100.0;
-#else
-pidgin_media_input_volume_changed(GtkRange *range, PurpleMedia *media)
-{
-	double val = (double)gtk_range_get_value(GTK_RANGE(range));
-#endif
 	purple_media_set_input_volume(media, NULL, val);
 }
 
 static void
-#if GTK_CHECK_VERSION(2,12,0)
 pidgin_media_output_volume_changed(GtkScaleButton *range, double value,
 		PurpleMedia *media)
 {
 	double val = (double)value * 100.0;
-#else
-pidgin_media_output_volume_changed(GtkRange *range, PurpleMedia *media)
-{
-	double val = (double)gtk_range_get_value(GTK_RANGE(range));
-#endif
 	purple_media_set_output_volume(media, NULL, NULL, val);
 }
 
@@ -705,7 +705,6 @@ pidgin_media_add_audio_widget(PidginMedia *gtkmedia,
 	} else
 		g_return_val_if_reached(NULL);
 
-#if GTK_CHECK_VERSION(2,12,0)
 	/* Setup widget structure */
 	volume_widget = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	progress_parent = gtk_vbox_new(FALSE, 0);
@@ -717,19 +716,6 @@ pidgin_media_add_audio_widget(PidginMedia *gtkmedia,
 	gtk_scale_button_set_value(GTK_SCALE_BUTTON(volume), value/100.0);
 	gtk_box_pack_end(GTK_BOX(volume_widget),
 			volume, FALSE, FALSE, 0);
-#else
-	/* Setup widget structure */
-	volume_widget = gtk_vbox_new(FALSE, 0);
-	progress_parent = volume_widget;
-
-	/* Volume slider */
-	volume = gtk_hscale_new_with_range(0.0, 100.0, 5.0);
-	gtk_range_set_increments(GTK_RANGE(volume), 5.0, 25.0);
-	gtk_range_set_value(GTK_RANGE(volume), value);
-	gtk_scale_set_draw_value(GTK_SCALE(volume), FALSE);
-	gtk_box_pack_end(GTK_BOX(volume_widget),
-			volume, TRUE, FALSE, 0);
-#endif
 
 	/* Volume level indicator */
 	progress = gtk_progress_bar_new();
@@ -969,7 +955,7 @@ pidgin_media_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
 		pidgin_media_set_state(gtkmedia, PIDGIN_MEDIA_ACCEPTED);
 		pidgin_media_emit_message(gtkmedia, _("Call in progress."));
 		gtk_statusbar_push(GTK_STATUSBAR(gtkmedia->priv->statusbar),
-				0, _("Call in progress."));
+				0, _("Call in progress"));
 		gtk_widget_show(GTK_WIDGET(gtkmedia));
 	}
 }
@@ -1082,6 +1068,10 @@ create_default_video_src(PurpleMedia *media,
 		src = gst_element_factory_make("dshowvideosrc", NULL);
 	if (src == NULL)
 		src = gst_element_factory_make("autovideosrc", NULL);
+#elif defined(__APPLE__)
+	src = gst_element_factory_make("osxvideosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("autovideosrc", NULL);
 #else
 	src = gst_element_factory_make("gconfvideosrc", NULL);
 	if (src == NULL)
@@ -1136,6 +1126,8 @@ create_default_audio_src(PurpleMedia *media,
 		src = gst_element_factory_make("osssrc", NULL);
 	if (src == NULL)
 		src = gst_element_factory_make("dshowaudiosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("osxaudiosrc", NULL);
 	if (src == NULL) {
 		purple_debug_error("gtkmedia", "Unable to find a suitable "
 				"element for the default audio source.\n");

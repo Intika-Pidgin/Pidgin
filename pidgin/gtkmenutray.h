@@ -40,7 +40,6 @@ typedef struct _PidginMenuTrayClass		PidginMenuTrayClass;
 struct _PidginMenuTray {
 	GtkMenuItem gparent;					/**< The parent instance */
 	GtkWidget *tray;						/**< The tray */
-	GtkTooltips *tooltips;					/**< Tooltips */
 };
 
 /** A PidginMenuTrayClass */

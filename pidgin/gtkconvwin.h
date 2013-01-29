@@ -42,33 +42,39 @@ struct _PidginWindow
 {
 	GtkWidget *window;           /**< The window.                      */
 	GtkWidget *notebook;         /**< The notebook of conversations.   */
+	GtkWidget *notebook_menu;    /**< The menu on the notebook.        */
+	PidginConversation *clicked_tab; /**< The menu currently clicked.      */
 	GList *gtkconvs;
 
 	struct
 	{
+		GtkUIManager *ui;
 		GtkWidget *menubar;
 
-		GtkWidget *view_log;
+		GtkAction *view_log;
 
-		GtkWidget *send_file;
-		GtkWidget *add_pounce;
-		GtkWidget *get_info;
-		GtkWidget *invite;
+		GtkAction *audio_call;
+		GtkAction *video_call;
+		GtkAction *audio_video_call;
 
-		GtkWidget *alias;
-		GtkWidget *block;
-		GtkWidget *unblock;
-		GtkWidget *add;
-		GtkWidget *remove;
+		GtkAction *send_file;
+		GtkAction *get_attention;
+		GtkAction *add_pounce;
+		GtkAction *get_info;
+		GtkAction *invite;
 
-		GtkWidget *insert_link;
-		GtkWidget *insert_image;
+		GtkAction *alias;
+		GtkAction *block;
+		GtkAction *unblock;
+		GtkAction *add;
+		GtkAction *remove;
 
-		GtkWidget *logging;
-		GtkWidget *sounds;
-		GtkWidget *show_formatting_toolbar;
-		GtkWidget *show_timestamps;
-		GtkWidget *show_icon;
+		GtkAction *insert_link;
+		GtkAction *insert_image;
+
+		GtkAction *logging;
+		GtkAction *sounds;
+		GtkAction *show_formatting_toolbar;
 
 		GtkWidget *send_to;
 
@@ -76,15 +82,7 @@ struct _PidginWindow
 
 		GtkWidget *typing_icon;
 
-		GtkItemFactory *item_factory;
-
 	} menu;
-
-	struct
-	{
-		GtkWidget *search;
-
-	} dialogs;
 
 	/* Tab dragging stuff. */
 	gboolean in_drag;
@@ -96,14 +94,11 @@ struct _PidginWindow
 
 	gint drag_motion_signal;
 	gint drag_leave_signal;
-
-	/* Media menu options. */
-	GtkWidget *audio_call;
-	GtkWidget *video_call;
-	GtkWidget *audio_video_call;
 };
 
 /*@}*/
+
+G_BEGIN_DECLS
 
 /**************************************************************************
  * @name GTK+ Conversation Window API
@@ -124,7 +119,7 @@ PidginConversation *pidgin_conv_window_get_active_gtkconv(const PidginWindow *wi
 PurpleConversation *pidgin_conv_window_get_active_conversation(const PidginWindow *win);
 gboolean pidgin_conv_window_is_active_conversation(const PurpleConversation *conv);
 gboolean pidgin_conv_window_has_focus(PidginWindow *win);
-PidginWindow *pidgin_conv_window_get_at_xy(int x, int y);
+PidginWindow *pidgin_conv_window_get_at_event(GdkEvent *event);
 GList *pidgin_conv_window_get_gtkconvs(PidginWindow *win);
 guint pidgin_conv_window_get_gtkconv_count(PidginWindow *win);
 
@@ -150,5 +145,7 @@ PidginConvPlacementFunc pidgin_conv_placement_get_current_func(void);
 void pidgin_conv_placement_place(PidginConversation *gtkconv);
 
 /*@}*/
+
+G_END_DECLS
 
 #endif /* _PIDGIN_CONVERSATION_WINDOW_H_ */
