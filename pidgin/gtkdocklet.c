@@ -141,7 +141,7 @@ get_pending_list(guint max)
 		return l_im;
 
 	l_chat = pidgin_conversations_find_unseen_list(PURPLE_CONV_TYPE_CHAT,
-		 					 PIDGIN_UNSEEN_NICK,
+	    purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/notification_chat"),
 							 FALSE, max);
 
 	if (l_im != NULL && l_chat != NULL)
@@ -847,38 +847,20 @@ pidgin_docklet_remove(void)
 static gboolean
 docklet_gtk_embed_timeout_cb(gpointer data)
 {
-#if !GTK_CHECK_VERSION(2,12,0)
-	if (gtk_status_icon_is_embedded(docklet)) {
-		/* Older GTK+ (<2.12) don't implement the embedded signal, but the
-		   information is still accessible through the above function. */
-		purple_debug_info("docklet", "embedded\n");
+	/* The docklet was not embedded within the timeout.
+	 * Remove it as a visibility manager, but leave the plugin
+	 * loaded so that it can embed automatically if/when a notification
+	 * area becomes available.
+	 */
+	purple_debug_info("docklet", "failed to embed within timeout\n");
+	pidgin_docklet_remove();
+	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/docklet/gtk/embedded", FALSE);
 
-		pidgin_docklet_embedded();
-		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/docklet/gtk/embedded", TRUE);
-	}
-	else
-#endif
-	{
-		/* The docklet was not embedded within the timeout.
-		 * Remove it as a visibility manager, but leave the plugin
-		 * loaded so that it can embed automatically if/when a notification
-		 * area becomes available.
-		 */
-		purple_debug_info("docklet", "failed to embed within timeout\n");
-		pidgin_docklet_remove();
-		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/docklet/gtk/embedded", FALSE);
-	}
-
-#if GTK_CHECK_VERSION(2,12,0)
 	embed_timeout = 0;
 	return FALSE;
-#else
-	return TRUE;
-#endif
 }
 #endif
 
-#if GTK_CHECK_VERSION(2,12,0)
 static gboolean
 docklet_gtk_embedded_cb(GtkWidget *widget, gpointer data)
 {
@@ -901,7 +883,6 @@ docklet_gtk_embedded_cb(GtkWidget *widget, gpointer data)
 
 	return TRUE;
 }
-#endif
 
 static void
 docklet_gtk_status_activated_cb(GtkStatusIcon *status_icon, gpointer user_data)
@@ -956,9 +937,7 @@ docklet_gtk_status_create(gboolean recreate)
 
 	g_signal_connect(G_OBJECT(docklet), "activate", G_CALLBACK(docklet_gtk_status_activated_cb), NULL);
 	g_signal_connect(G_OBJECT(docklet), "popup-menu", G_CALLBACK(docklet_gtk_status_clicked_cb), NULL);
-#if GTK_CHECK_VERSION(2,12,0)
 	g_signal_connect(G_OBJECT(docklet), "notify::embedded", G_CALLBACK(docklet_gtk_embedded_cb), NULL);
-#endif
 
 	gtk_status_icon_set_visible(docklet, TRUE);
 
@@ -978,15 +957,11 @@ docklet_gtk_status_create(gboolean recreate)
 	if (!recreate) {
 		pidgin_docklet_embedded();
 #ifndef _WIN32
-#if GTK_CHECK_VERSION(2,12,0)
 		if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/gtk/embedded")) {
 			embed_timeout = purple_timeout_add_seconds(LONG_EMBED_TIMEOUT, docklet_gtk_embed_timeout_cb, NULL);
 		} else {
 			embed_timeout = purple_timeout_add_seconds(SHORT_EMBED_TIMEOUT, docklet_gtk_embed_timeout_cb, NULL);
 		}
-#else
-		embed_timeout = purple_timeout_add_seconds(SHORT_EMBED_TIMEOUT, docklet_gtk_embed_timeout_cb, NULL);
-#endif
 #endif
 	}
 
@@ -1026,6 +1001,7 @@ pidgin_docklet_init()
 	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/docklet/show", "always");
 	purple_prefs_connect_callback(docklet_handle, PIDGIN_PREFS_ROOT "/docklet/show",
 				    docklet_show_pref_changed_cb, NULL);
+	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/conversations/notification_chat", PIDGIN_UNSEEN_TEXT);
 
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/docklet/gtk");
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/x11/embedded")) {
