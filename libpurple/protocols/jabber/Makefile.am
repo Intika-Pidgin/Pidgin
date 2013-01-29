@@ -31,6 +31,8 @@ JABBERSOURCES = \
 			  google/gmail.h \
 			  google/google.c \
 			  google/google.h \
+			  google/google_p2p.c \
+			  google/google_p2p.h \
 			  google/google_presence.c \
 			  google/google_presence.h \
 			  google/google_roster.c \
@@ -103,18 +105,23 @@ if STATIC_JABBER
 
 st = -DPURPLE_STATIC_PRPL
 noinst_LTLIBRARIES   = libjabber.la
-libjabber_la_SOURCES = $(JABBERSOURCES) libxmpp.c
+libjabber_la_SOURCES = $(JABBERSOURCES) libfacebook.c libgtalk.c libxmpp.c
 libjabber_la_CFLAGS  = $(AM_CFLAGS)
 
 else
 
 st =
-pkg_LTLIBRARIES      = libjabber.la libxmpp.la
+pkg_LTLIBRARIES      = libjabber.la libfacebook.la libgtalk.la libxmpp.la
 libjabber_la_SOURCES = $(JABBERSOURCES)
 libjabber_la_LIBADD  = $(GLIB_LIBS) $(SASL_LIBS) $(LIBXML_LIBS) $(IDN_LIBS)\
 	$(FARSIGHT_LIBS) \
-	$(GSTREAMER_LIBS) \
-	$(GSTINTERFACES_LIBS)
+	$(GSTREAMER_LIBS)
+
+libfacebook_la_SOURCES = libfacebook.c
+libfacebook_la_LIBADD = libjabber.la
+
+libgtalk_la_SOURCES = libgtalk.c
+libgtalk_la_LIBADD = libjabber.la
 
 libxmpp_la_SOURCES = libxmpp.c
 libxmpp_la_LIBADD = libjabber.la
@@ -129,5 +136,4 @@ AM_CPPFLAGS = \
 	$(IDN_CFLAGS) \
 	$(LIBXML_CFLAGS) \
 	$(FARSIGHT_CFLAGS) \
-	$(GSTREAMER_CFLAGS) \
-	$(GSTINTERFACES_CFLAGS)
+	$(GSTREAMER_CFLAGS)
