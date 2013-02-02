@@ -59,6 +59,14 @@ const char * ggp_uin_to_str(uin_t uin)
 	return buff;
 }
 
+uin_t ggp_get_my_uin(PurpleConnection *gc)
+{
+	g_return_val_if_fail(gc != NULL, 0);
+	
+	return ggp_str_to_uin(purple_account_get_username(
+		purple_connection_get_account(gc)));
+}
+
 static gchar * ggp_convert(const gchar *src, const char *srcenc,
 	const char *dstenc)
 {
@@ -100,16 +108,6 @@ gboolean ggp_password_validate(const gchar *password)
 		return FALSE;
 	return g_regex_match_simple("^[ a-zA-Z0-9~`!@#$%^&*()_+=[\\]{};':\",./?"
 		"<>\\\\|-]+$", password, 0, 0);
-}
-
-guint64 ggp_microtime(void)
-{
-	// replace with g_get_monotonic_time, when gtk 2.28 will be available
-	GTimeVal time_s;
-	
-	g_get_current_time(&time_s);
-	
-	return ((guint64)time_s.tv_sec << 32) | time_s.tv_usec;
 }
 
 gchar * ggp_utf8_strndup(const gchar *str, gsize n)
@@ -232,7 +230,7 @@ const gchar * ggp_date_strftime(const gchar *format, time_t date)
 	GDate g_date;
 	static gchar buff[30];
 	
-	g_date_set_time(&g_date, date);
+	g_date_set_time_t(&g_date, date);
 	if (0 == g_date_strftime(buff, sizeof(buff), format, &g_date))
 		return NULL;
 	return buff;
@@ -247,4 +245,36 @@ time_t ggp_date_from_iso8601(const gchar *str)
 	if (!g_time_val_from_iso8601(str, &g_timeval))
 		return 0;
 	return g_timeval.tv_sec;
+}
+
+uint64_t * ggp_uint64dup(uint64_t val)
+{
+	uint64_t *ptr = g_new(uint64_t, 1);
+	*ptr = val;
+	return ptr;
+}
+
+gint ggp_int64_compare(gconstpointer _a, gconstpointer _b)
+{
+	const int64_t *ap = _a, *bp = _b;
+	const int64_t a = *ap, b = *bp;
+	if (a == b)
+		return 0;
+	if (a < b)
+		return -1;
+	else
+		return 1;
+}
+
+JsonParser * ggp_json_parse(const gchar *data)
+{
+	JsonParser *parser;
+
+	parser = json_parser_new();
+	if (json_parser_load_from_data(parser, data, -1, NULL))
+		return parser;
+
+	if (purple_debug_is_unsafe())
+		purple_debug_warning("gg", "Invalid JSON: %s\n", data);
+	return NULL;
 }
