@@ -25,6 +25,7 @@
 
 #include    "internal.h"
 #include	"purple.h"
+#include	"obsolete.h"
 
 #include	"protocol.h"
 #include	"mxit.h"
@@ -404,7 +405,9 @@ void mxit_show_message( struct RXMsgData* mx )
 			}
 			else {
 				/* insert img tag */
-				g_snprintf( tag, sizeof( tag ), "<img id=\"%i\">", *img_id );
+				g_snprintf( tag, sizeof( tag ),
+				            "<img src=\"" PURPLE_STORED_IMAGE_PROTOCOL "%i\">",
+				            *img_id );
 				g_string_insert( mx->msg, start, tag );
 			}
 
@@ -593,7 +596,7 @@ static void emoticon_returned( PurpleUtilFetchUrlData* url_data, gpointer user_d
 	}
 
 	/* we now have the emoticon, store it in the imagestore */
-	id = purple_imgstore_add_with_id( em_data, em_size, NULL );
+	id = purple_imgstore_new_with_id( em_data, em_size, NULL );
 
 	/* map the mxit emoticon id to purple image id */
 	intptr = g_malloc( sizeof( int ) );
@@ -631,7 +634,8 @@ static void emoticon_request( struct RXMsgData* mx, const char* id )
 
 	/* reference: "libpurple/util.h" */
 	url = g_strdup_printf( "%s/res/?type=emo&mlh=%i&sc=%s&ts=%li", wapserver, MXIT_EMOTICON_SIZE, id, time( NULL ) );
-	url_data = purple_util_fetch_url_request( url, TRUE, NULL, TRUE, NULL, FALSE, emoticon_returned, mx );
+	/* FIXME: This should be cancelled somewhere if not needed. */
+	url_data = purple_util_fetch_url( url, TRUE, NULL, TRUE, -1, emoticon_returned, mx );
 	g_free( url );
 }
 
@@ -1074,7 +1078,7 @@ char* mxit_convert_markup_tx( const char* message, int* msgtype )
 	 *   Font colour:	<font color=#">...</font>
 	 *   Links:			<a href="">...</a>
 	 *   Newline:		<br>
-	 *   Inline image:  <IMG ID="">
+	 *   Inline image:  <IMG SRC="">
 	 * The following characters are also encoded:
 	 *   &amp;  &quot;  &lt;  &gt;
 	 */
@@ -1141,11 +1145,11 @@ char* mxit_convert_markup_tx( const char* message, int* msgtype )
 						g_free( tag );
 					}
 				}
-				else if ( purple_str_has_prefix( &message[i], "<IMG ID=" ) ) {
+				else if ( purple_str_has_prefix( &message[i], "<IMG SRC=" PURPLE_STORED_IMAGE_PROTOCOL) ) {
 					/* inline image */
 					int imgid;
 
-					if ( sscanf( &message[i+9], "%i", &imgid ) ) {
+					if ( sscanf( &message[i+sizeof("<IMG SRC=" PURPLE_STORED_IMAGE_PROTOCOL)-1], "%i", &imgid ) ) {
 						inline_image_add( mx, imgid );
 						*msgtype = CP_MSGTYPE_COMMAND;		/* inline image must be sent as a MXit command */
 					}

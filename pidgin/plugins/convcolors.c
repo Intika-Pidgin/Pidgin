@@ -198,12 +198,8 @@ color_response(GtkDialog *color_dialog, gint response, const char *data)
 {
 	if (response == GTK_RESPONSE_OK)
 	{
-#if GTK_CHECK_VERSION(2,14,0)
 		GtkWidget *colorsel =
 			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog));
-#else
-		GtkWidget *colorsel = GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel;
-#endif
 		GdkColor color;
 		char colorstr[8];
 		char tmp[128];
@@ -237,15 +233,9 @@ set_color(GtkWidget *widget, const char *data)
 	g_snprintf(tmp, sizeof(tmp), "%s/color", data);
 	if (gdk_color_parse(purple_prefs_get_string(tmp), &color))
 	{
-#if GTK_CHECK_VERSION(2,14,0)
 		gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(
 			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog))),
 			&color);
-#else
-		gtk_color_selection_set_current_color(
-			GTK_COLOR_SELECTION(GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel),
-			&color);
-#endif
 	}
 
 	gtk_window_present(GTK_WINDOW(color_dialog));
@@ -302,7 +292,7 @@ enable_toggled(const char *name, PurplePrefType type, gconstpointer val, gpointe
 }
 
 static void
-disconnect_prefs_callbacks(GtkObject *object, gpointer data)
+disconnect_prefs_callbacks(GtkAdjustment *object, gpointer data)
 {
 	PurplePlugin *plugin = (PurplePlugin *)data;
 
@@ -383,7 +373,7 @@ get_config_frame(PurplePlugin *plugin)
 		purple_prefs_connect_callback(plugin, tmp2, enable_toggled, button);
 	}
 
-	g_signal_connect(GTK_OBJECT(ret), "destroy", G_CALLBACK(disconnect_prefs_callbacks), plugin);
+	g_signal_connect(G_OBJECT(ret), "destroy", G_CALLBACK(disconnect_prefs_callbacks), plugin);
 	frame = pidgin_make_frame(ret, _("General"));
 	pidgin_prefs_checkbox(_("Ignore incoming format"), PREF_IGNORE, frame);
 	pidgin_prefs_checkbox(_("Apply in Chats"), PREF_CHATS, frame);
