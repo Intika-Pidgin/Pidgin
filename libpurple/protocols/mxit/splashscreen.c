@@ -144,7 +144,7 @@ void splash_update(struct MXitSession* session, const char* splashId, const char
  */
 static void splash_click_ok(PurpleConnection* gc, PurpleRequestFields* fields)
 {
-	struct MXitSession*	session	= (struct MXitSession*) gc->proto_data;
+	struct MXitSession*	session	= purple_connection_get_protocol_data(gc);
 	const char* splashId;
 
 	/* Get current splash ID */
@@ -184,10 +184,11 @@ void splash_display(struct MXitSession* session)
 		char buf[128];
 
 		/* Add splash-image to imagestore */
-		imgid = purple_imgstore_add_with_id(g_memdup(imgdata, imglen), imglen, NULL);
+		imgid = purple_imgstore_new_with_id(g_memdup(imgdata, imglen), imglen, NULL);
 
 		/* Generate and display message */
-		g_snprintf(buf, sizeof(buf), "<img id=\"%d\">", imgid);
+		g_snprintf(buf, sizeof(buf),
+		           "<img src=\"" PURPLE_STORED_IMAGE_PROTOCOL "%d\">", imgid);
 
 		/* Open a request-type popup to display the image */
 		{

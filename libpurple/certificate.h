@@ -2,7 +2,6 @@
  * @file certificate.h Public-Key Certificate API
  * @ingroup core
  * @see @ref certificate-signals
- * @since 2.2.0
  */
 
 /*
@@ -35,15 +34,51 @@
 
 #include <glib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-
 typedef enum
 {
-	PURPLE_CERTIFICATE_INVALID = 0,
-	PURPLE_CERTIFICATE_VALID = 1
+	PURPLE_CERTIFICATE_UNKNOWN_ERROR = -1,
+
+	/* Not an error */
+	PURPLE_CERTIFICATE_VALID = 0,
+
+	/* Non-fatal */
+	PURPLE_CERTIFICATE_NON_FATALS_MASK = 0x0000FFFF,
+
+	/* The certificate is self-signed. */
+	PURPLE_CERTIFICATE_SELF_SIGNED = 0x01,
+
+	/* The CA is not in libpurple's pool of certificates. */
+	PURPLE_CERTIFICATE_CA_UNKNOWN = 0x02,
+
+	/* The current time is before the certificate's specified
+	 * activation time.
+	 */
+	PURPLE_CERTIFICATE_NOT_ACTIVATED = 0x04,
+
+	/* The current time is after the certificate's specified expiration time */
+	PURPLE_CERTIFICATE_EXPIRED = 0x08,
+
+	/* The certificate's subject name doesn't match the expected */
+	PURPLE_CERTIFICATE_NAME_MISMATCH = 0x10,
+
+	/* No CA pool was found. This shouldn't happen... */
+	PURPLE_CERTIFICATE_NO_CA_POOL = 0x20,
+
+	/* Fatal */
+	PURPLE_CERTIFICATE_FATALS_MASK = 0xFFFF0000,
+
+	/* The signature chain could not be validated. Due to limitations in the
+	 * the current API, this also indicates one of the CA certificates in the
+	 * chain is expired (or not yet activated). FIXME 3.0.0 */
+	PURPLE_CERTIFICATE_INVALID_CHAIN = 0x10000,
+
+	/* The signature has been revoked. */
+	PURPLE_CERTIFICATE_REVOKED = 0x20000,
+
+	/* The certificate was rejected by the user. */
+	PURPLE_CERTIFICATE_REJECTED = 0x40000,
+
+	PURPLE_CERTIFICATE_LAST = 0x80000,
 } PurpleCertificateVerificationStatus;
 
 typedef struct _PurpleCertificate PurpleCertificate;
@@ -258,9 +293,25 @@ struct _PurpleCertificateScheme
 	 */
 	GSList * (* import_certificates)(const gchar * filename);
 
+	/**
+	 * Retrieves the certificate data in DER form
+	 *
+	 * @param crt   Certificate instance
+	 * @return Binary DER representation of certificate - must be freed using
+	 *         g_byte_array_free()
+	 */
+	GByteArray * (* get_der_data)(PurpleCertificate *crt);
+
+	/**
+	 * Retrieves a string representation of the certificate suitable for display
+	 *
+	 * @param crt   Certificate instance
+	 * @return User-displayable string representation of certificate - must be
+	 *         freed using g_free().
+	 */
+	gchar * (* get_display_string)(PurpleCertificate *crt);
+
 	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
 };
 
 /** A set of operations used to provide logic for verifying a Certificate's
@@ -349,6 +400,8 @@ struct _PurpleCertificateVerificationRequest
 	/** Data to pass to the post-verification callback */
 	gpointer cb_data;
 };
+
+G_BEGIN_DECLS
 
 /*****************************************************************************/
 /** @name Certificate Verification Functions                                 */
@@ -462,31 +515,10 @@ purple_certificate_signed_by(PurpleCertificate *crt, PurpleCertificate *issuer);
  *                   chain fails to validate, this will be set to the
  *                   certificate whose signature could not be validated.
  * @return TRUE if the chain is valid. See description.
- *
- * @since 2.6.0
- * @deprecated  This function will become
- *              purple_certificate_check_signature_chain in 3.0.0
  */
 gboolean
-purple_certificate_check_signature_chain_with_failing(GList *chain,
+purple_certificate_check_signature_chain(GList *chain,
 		PurpleCertificate **failing);
-
-/**
- * Check that a certificate chain is valid
- *
- * Uses purple_certificate_signed_by() to verify that each PurpleCertificate
- * in the chain carries a valid signature from the next. A single-certificate
- * chain is considered to be valid.
- *
- * @param chain      List of PurpleCertificate instances comprising the chain,
- *                   in the order certificate, issuer, issuer's issuer, etc.
- * @return TRUE if the chain is valid. See description.
- * @todo Specify which certificate in the chain caused a failure
- * @deprecated  This function will be removed in 3.0.0 and replaced with
- *              purple_certificate_check_signature_chain_with_failing
- */
-gboolean
-purple_certificate_check_signature_chain(GList *chain);
 
 /**
  * Imports a PurpleCertificate from a file
@@ -582,6 +614,28 @@ purple_certificate_check_subject_name(PurpleCertificate *crt, const gchar *name)
  */
 gboolean
 purple_certificate_get_times(PurpleCertificate *crt, time_t *activation, time_t *expiration);
+
+/**
+ * Retrieves the certificate data in DER form.
+ *
+ * @param crt Certificate instance
+ *
+ * @return Binary DER representation of the certificate - must be freed using
+ *         g_byte_array_free().
+ */
+GByteArray *
+purple_certificate_get_der_data(PurpleCertificate *crt);
+
+/**
+ * Retrieves a string suitable for displaying a certificate to the user.
+ *
+ * @param crt Certificate instance
+ *
+ * @return String representing the certificate that may be displayed to the user
+ *         - must be freed using g_free().
+ */
+char *
+purple_certificate_get_display_string(PurpleCertificate *crt);
 
 /*@}*/
 
@@ -821,23 +875,12 @@ purple_certificate_unregister_pool(PurpleCertificatePool *pool);
 
 
 /**
- * Displays a window showing X.509 certificate information
- *
- * @param crt    Certificate under an "x509" Scheme
- * @todo Will break on CA certs, as they have no Common Name
- */
-void
-purple_certificate_display_x509(PurpleCertificate *crt);
-
-/**
  * Add a search path for certificates.
  *
  * @param path   Path to search for certificates.
  */
 void purple_certificate_add_ca_search_path(const char *path);
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _PURPLE_CERTIFICATE_H */
