@@ -88,10 +88,6 @@ static const int catch_sig_list[] = {
 	SIGINT,
 	SIGTERM,
 	SIGQUIT,
-	SIGCHLD,
-#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
-	SIGALRM,
-#endif
 	-1
 };
 
@@ -135,29 +131,6 @@ static char *segfault_message;
 static int signal_sockets[2];
 
 static void sighandler(int sig);
-
-/*
- * This child process reaping stuff is currently only used for processes that
- * were forked to play sounds.  It's not needed for forked DNS child, which
- * have their own waitpid() call.  It might be wise to move this code into
- * gtksound.c.
- */
-static void
-clean_pid(void)
-{
-	int status;
-	pid_t pid;
-
-	do {
-		pid = waitpid(-1, &status, WNOHANG);
-	} while (pid != 0 && pid != (pid_t)-1);
-
-	if ((pid == (pid_t) - 1) && (errno != ECHILD)) {
-		char errmsg[BUFSIZ];
-		snprintf(errmsg, sizeof(errmsg), "Warning: waitpid() returned %d", pid);
-		perror(errmsg);
-	}
-}
 
 static void sighandler(int sig)
 {
@@ -209,33 +182,8 @@ mainloop_sighandler(GIOChannel *source, GIOCondition cond, gpointer data)
 		return FALSE;
 	}
 
-	switch (sig) {
-#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
-/* By default, gstreamer forks when you initialize it, and waitpids for the
- * child.  But if libpurple reaps the child rather than leaving it to
- * gstreamer, gstreamer's initialization fails.  So, we wait a second before
- * reaping child processes, to give gst a chance to reap it if it wants to.
- *
- * This is not needed in later gstreamers, which let us disable the forking.
- * And, it breaks the world on some Real Unices.
- */
-	case SIGCHLD:
-		/* Restore signal catching */
-		signal(SIGCHLD, sighandler);
-		alarm(1);
-		break;
-	case SIGALRM:
-#else
-	case SIGCHLD:
-#endif
-		clean_pid();
-		/* Restore signal catching */
-		signal(SIGCHLD, sighandler);
-		break;
-	default:
-		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_core_quit();
-	}
+	purple_debug_warning("sighandler", "Caught signal %d\n", sig);
+	purple_core_quit();
 
 	return TRUE;
 }
@@ -497,7 +445,6 @@ int main(int argc, char *argv[])
 	int opt;
 	gboolean gui_check;
 	gboolean debug_enabled;
-	gboolean migration_failed = FALSE;
 	GList *active_accounts;
 	struct stat st;
 
@@ -719,7 +666,16 @@ int main(int argc, char *argv[])
 
 	/* set a user-specified config directory */
 	if (opt_config_dir_arg != NULL) {
-		purple_util_set_user_dir(opt_config_dir_arg);
+		if (g_path_is_absolute(opt_config_dir_arg)) {
+			purple_util_set_user_dir(opt_config_dir_arg);
+		} else {
+			/* Make an absolute (if not canonical) path */
+			char *cwd = g_get_current_dir();
+			char *path = g_build_path(G_DIR_SEPARATOR_S, cwd, opt_config_dir_arg, NULL);
+			purple_util_set_user_dir(path);
+			g_free(path);
+			g_free(cwd);
+		}
 	}
 
 	/*
@@ -728,16 +684,6 @@ int main(int argc, char *argv[])
 	 */
 
 	purple_debug_set_enabled(debug_enabled);
-
-	/* If we're using a custom configuration directory, we
-	 * do NOT want to migrate, or weird things will happen. */
-	if (opt_config_dir_arg == NULL)
-	{
-		if (!purple_core_migrate())
-		{
-			migration_failed = TRUE;
-		}
-	}
 
 	search_path = g_build_filename(purple_user_dir(), "gtkrc-2.0", NULL);
 	gtk_rc_add_default_file(search_path);
@@ -763,37 +709,6 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 	winpidgin_init(hint);
 #endif
-
-	if (migration_failed)
-	{
-		char *old = g_strconcat(purple_home_dir(),
-		                        G_DIR_SEPARATOR_S ".gaim", NULL);
-		const char *text = _(
-			"%s encountered errors migrating your settings "
-			"from %s to %s. Please investigate and complete the "
-			"migration by hand. Please report this error at http://developer.pidgin.im");
-		GtkWidget *dialog;
-
-		dialog = gtk_message_dialog_new(NULL,
-		                                0,
-		                                GTK_MESSAGE_ERROR,
-		                                GTK_BUTTONS_CLOSE,
-		                                text, PIDGIN_NAME,
-		                                old, purple_user_dir());
-		g_free(old);
-
-		g_signal_connect_swapped(dialog, "response",
-		                         G_CALLBACK(gtk_main_quit), NULL);
-
-		gtk_widget_show_all(dialog);
-
-		gtk_main();
-
-#ifdef HAVE_SIGNAL_H
-		g_free(segfault_message);
-#endif
-		return 0;
-	}
 
 	purple_core_set_ui_ops(pidgin_core_get_ui_ops());
 	purple_eventloop_set_ui_ops(pidgin_eventloop_get_ui_ops());
@@ -838,15 +753,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	/* TODO: Move blist loading into purple_blist_init() */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved(PIDGIN_PREFS_ROOT "/plugins/loaded");
-
-	/* TODO: Move pounces loading into purple_pounces_init() */
-	purple_pounces_load();
 
 	ui_main();
 

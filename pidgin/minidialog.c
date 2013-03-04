@@ -145,16 +145,6 @@ pidgin_mini_dialog_enable_description_markup(PidginMiniDialog *mini_dialog)
 	g_object_set(G_OBJECT(mini_dialog), "enable-description-markup", TRUE, NULL);
 }
 
-gboolean
-pidgin_mini_dialog_links_supported()
-{
-#if GTK_CHECK_VERSION(2,18,0)
-	return TRUE;
-#else
-	return FALSE;
-#endif
-}
-
 void pidgin_mini_dialog_set_link_callback(PidginMiniDialog *mini_dialog, GCallback cb, gpointer user_data)
 {
 	g_signal_connect(PIDGIN_MINI_DIALOG_GET_PRIVATE(mini_dialog)->desc, "activate-link", cb, user_data);
@@ -184,7 +174,12 @@ struct _mini_dialog_button_clicked_cb_data
 guint
 pidgin_mini_dialog_get_num_children(PidginMiniDialog *mini_dialog)
 {
-	return g_list_length(mini_dialog->contents->children);
+	GList *tmp;
+	guint len;
+	tmp = gtk_container_get_children(GTK_CONTAINER(mini_dialog->contents));
+	len = g_list_length(tmp);
+	g_list_free(tmp);
+	return len;
 }
 
 static gboolean
@@ -450,6 +445,7 @@ pidgin_mini_dialog_class_init(PidginMiniDialogClass *klass)
 	g_object_class_install_property (object_class, PROP_ENABLE_DESCRIPTION_MARKUP, param_spec);
 }
 
+#if !GTK_CHECK_VERSION(3,0,0)
 /* 16 is the width of the icon, due to PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL */
 #define BLIST_WIDTH_OTHER_THAN_LABEL \
 	((PIDGIN_HIG_BOX_SPACE * 3) + 16)
@@ -471,13 +467,16 @@ blist_width_changed_cb(const char *name,
 	gtk_widget_set_size_request(GTK_WIDGET(priv->title), label_width, -1);
 	gtk_widget_set_size_request(GTK_WIDGET(priv->desc), label_width, -1);
 }
+#endif
 
 static void
 pidgin_mini_dialog_init(PidginMiniDialog *self)
 {
 	GtkBox *self_box = GTK_BOX(self);
+#if !GTK_CHECK_VERSION(3,0,0)
 	guint blist_width = purple_prefs_get_int(BLIST_WIDTH_PREF);
 	guint label_width = blist_width - BLIST_WIDTH_OTHER_THAN_LABEL;
+#endif
 
 	PidginMiniDialogPrivate *priv = g_new0(PidginMiniDialogPrivate, 1);
 	self->priv = priv;
@@ -490,7 +489,9 @@ pidgin_mini_dialog_init(PidginMiniDialog *self)
 	gtk_misc_set_alignment(GTK_MISC(priv->icon), 0, 0);
 
 	priv->title = GTK_LABEL(gtk_label_new(NULL));
+#if !GTK_CHECK_VERSION(3,0,0)
 	gtk_widget_set_size_request(GTK_WIDGET(priv->title), label_width, -1);
+#endif
 	gtk_label_set_line_wrap(priv->title, TRUE);
 	gtk_label_set_selectable(priv->title, TRUE);
 	gtk_misc_set_alignment(GTK_MISC(priv->title), 0, 0);
@@ -499,7 +500,9 @@ pidgin_mini_dialog_init(PidginMiniDialog *self)
 	gtk_box_pack_start(priv->title_box, GTK_WIDGET(priv->title), TRUE, TRUE, 0);
 
 	priv->desc = GTK_LABEL(gtk_label_new(NULL));
+#if !GTK_CHECK_VERSION(3,0,0)
 	gtk_widget_set_size_request(GTK_WIDGET(priv->desc), label_width, -1);
+#endif
 	gtk_label_set_line_wrap(priv->desc, TRUE);
 	gtk_misc_set_alignment(GTK_MISC(priv->desc), 0, 0);
 	gtk_label_set_selectable(priv->desc, TRUE);
@@ -508,8 +511,10 @@ pidgin_mini_dialog_init(PidginMiniDialog *self)
 	 */
 	g_object_set(G_OBJECT(priv->desc), "no-show-all", TRUE, NULL);
 
+#if !GTK_CHECK_VERSION(3,0,0)
 	purple_prefs_connect_callback(self, BLIST_WIDTH_PREF,
 		blist_width_changed_cb, self);
+#endif
 
 	self->contents = GTK_BOX(gtk_vbox_new(FALSE, 0));
 
