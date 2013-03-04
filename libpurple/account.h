@@ -36,7 +36,7 @@ typedef struct _PurpleAccountUiOps PurpleAccountUiOps;
 typedef struct _PurpleAccount      PurpleAccount;
 
 typedef gboolean (*PurpleFilterAccountFunc)(PurpleAccount *account);
-typedef void (*PurpleAccountRequestAuthorizationCb)(void *);
+typedef void (*PurpleAccountRequestAuthorizationCb)(const char *, void *);
 typedef void (*PurpleAccountRegistrationCb)(PurpleAccount *account, gboolean succeeded, void *user_data);
 typedef void (*PurpleAccountUnregistrationCb)(PurpleAccount *account, gboolean succeeded, void *user_data);
 typedef void (*PurpleSetPublicAliasSuccessCallback)(PurpleAccount *account, const char *new_alias);
@@ -97,7 +97,8 @@ struct _PurpleAccountUiOps
 
 	/** Prompt for authorization when someone adds this account to their buddy
 	 * list.  To authorize them to see this account's presence, call \a
-	 * authorize_cb (\a user_data); otherwise call \a deny_cb (\a user_data);
+	 * authorize_cb (\a message, \a user_data); otherwise call
+	 * \a deny_cb (\a message, \a user_data);
 	 * @return a UI-specific handle, as passed to #close_account_request.
 	 */
 	void *(*request_authorize)(PurpleAccount *account,
@@ -168,12 +169,10 @@ struct _PurpleAccount
 	PurpleAccountRegistrationCb registration_cb;
 	void *registration_cb_user_data;
 
-	gpointer priv;              /**< Pointer to opaque private data. */
+	PurpleConnectionErrorInfo *current_error;	/**< Errors */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Account API                                                     */
@@ -221,6 +220,15 @@ void purple_account_set_register_callback(PurpleAccount *account, PurpleAccountR
 void purple_account_register(PurpleAccount *account);
 
 /**
+ * Registration of the account was completed.
+ * Calls the registration call-back set with purple_account_set_register_callback().
+ *
+ * @param account The account being registered.
+ * @param succeeded Was the account registration successful?
+ */
+void purple_account_register_completed(PurpleAccount *account, gboolean succeeded);
+
+/**
  * Unregisters an account (deleting it from the server).
  *
  * @param account The account to unregister.
@@ -235,6 +243,15 @@ void purple_account_unregister(PurpleAccount *account, PurpleAccountUnregistrati
  * @param account The account to disconnect from.
  */
 void purple_account_disconnect(PurpleAccount *account);
+
+/**
+ * Indicates if the account is currently being disconnected.
+ *
+ * @param account The account
+ *
+ * @return TRUE if the account is being disconnected.
+ */
+gboolean purple_account_is_disconnecting(const PurpleAccount *account);
 
 /**
  * Notifies the user that the account was added to a remote user's
@@ -433,8 +450,6 @@ void purple_account_set_proxy_info(PurpleAccount *account, PurpleProxyInfo *info
  *
  * @param account      The account.
  * @param privacy_type The privacy type.
- *
- * @since 2.7.0
  */
 void purple_account_set_privacy_type(PurpleAccount *account, PurplePrivacyType privacy_type);
 
@@ -491,8 +506,6 @@ void purple_account_set_status_list(PurpleAccount *account,
  *                   is successfully set on the server (or NULL).
  * @param failure_cb A callback which will be called if the alias
  *                   is not successfully set on the server (or NULL).
- *
- * @since 2.7.0
  */
 void purple_account_set_public_alias(PurpleAccount *account,
 	const char *alias, PurpleSetPublicAliasSuccessCallback success_cb,
@@ -506,7 +519,6 @@ void purple_account_set_public_alias(PurpleAccount *account,
  * @param success_cb A callback which will be called with the alias
  * @param failure_cb A callback which will be called if the prpl is
  *                   unable to retrieve the server-side alias.
- * @since 2.7.0
  */
 void purple_account_get_public_alias(PurpleAccount *account,
 	PurpleGetPublicAliasSuccessCallback success_cb,
@@ -542,8 +554,6 @@ void purple_account_clear_settings(PurpleAccount *account);
  *
  * @param account The account.
  * @param setting The setting to remove.
- *
- * @since 2.6.0
  */
 void purple_account_remove_setting(PurpleAccount *account, const char *setting);
 
@@ -608,6 +618,25 @@ void purple_account_set_ui_string(PurpleAccount *account, const char *ui,
  */
 void purple_account_set_ui_bool(PurpleAccount *account, const char *ui,
 							  const char *name, gboolean value);
+
+/**
+ * Returns the UI data associated with this account.
+ *
+ * @param account The account.
+ *
+ * @return The UI data associated with this object.  This is a
+ *         convenience field provided to the UIs--it is not
+ *         used by the libuprple core.
+ */
+gpointer purple_account_get_ui_data(const PurpleAccount *account);
+
+/**
+ * Set the UI data associated with this account.
+ *
+ * @param account The account.
+ * @param ui_data A pointer to associate with this object.
+ */
+void purple_account_set_ui_data(PurpleAccount *account, gpointer ui_data);
 
 /**
  * Returns whether or not the account is connected.
@@ -717,8 +746,6 @@ PurpleConnection *purple_account_get_connection(const PurpleAccount *account);
  * @param account The account.
  *
  * @return The name to display.
- *
- * @since 2.7.0
  */
 const gchar *purple_account_get_name_for_display(const PurpleAccount *account);
 
@@ -767,8 +794,6 @@ PurpleProxyInfo *purple_account_get_proxy_info(const PurpleAccount *account);
  * @param account   The account.
  *
  * @return The privacy type.
- *
- * @since 2.7.0
  */
 PurplePrivacyType purple_account_get_privacy_type(const PurpleAccount *account);
 
@@ -958,40 +983,18 @@ void purple_account_destroy_log(PurpleAccount *account);
  *
  * @param account The account.
  * @param buddy The buddy to add.
- *
- * @deprecated Use purple_account_add_buddy_with_invite and \c NULL message.
- */
-void purple_account_add_buddy(PurpleAccount *account, PurpleBuddy *buddy);
-/**
- * Adds a buddy to the server-side buddy list for the specified account.
- *
- * @param account The account.
- * @param buddy The buddy to add.
  * @param message The invite message.  This may be ignored by a prpl.
- *
- * @since 2.8.0
  */
-void purple_account_add_buddy_with_invite(PurpleAccount *account, PurpleBuddy *buddy, const char *message);
+void purple_account_add_buddy(PurpleAccount *account, PurpleBuddy *buddy, const char *message);
 
 /**
  * Adds a list of buddies to the server-side buddy list.
  *
  * @param account The account.
  * @param buddies The list of PurpleBlistNodes representing the buddies to add.
- *
- * @deprecated Use purple_account_add_buddies_with_invite and \c NULL message.
- */
-void purple_account_add_buddies(PurpleAccount *account, GList *buddies);
-/**
- * Adds a list of buddies to the server-side buddy list.
- *
- * @param account The account.
- * @param buddies The list of PurpleBlistNodes representing the buddies to add.
  * @param message The invite message.  This may be ignored by a prpl.
- *
- * @since 2.8.0
  */
-void purple_account_add_buddies_with_invite(PurpleAccount *account, GList *buddies, const char *message);
+void purple_account_add_buddies(PurpleAccount *account, GList *buddies, const char *message);
 
 /**
  * Removes a buddy from the server-side buddy list.
@@ -1187,8 +1190,6 @@ void purple_accounts_uninit(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_ACCOUNT_H_ */
