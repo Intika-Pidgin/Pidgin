@@ -150,7 +150,7 @@ chat_nick_matches_name(PurpleConversation *conv, const char *aname)
 		return ret;
 
 	account = purple_conversation_get_account(conv);
-	nick = g_strdup(purple_normalize(account, chat->nick));
+	nick = g_strdup(purple_normalize(account, purple_conv_chat_get_nick(chat)));
 	name = g_strdup(purple_normalize(account, aname));
 
 	if (g_utf8_collate(nick, name) == 0)
@@ -268,7 +268,7 @@ chat_msg_received_cb(PurpleAccount *account, char *sender,
 	if (chat_nick_matches_name(conv, sender))
 		return;
 
-	if (flags & PURPLE_MESSAGE_NICK || purple_utf8_has_word(message, chat->nick))
+	if (flags & PURPLE_MESSAGE_NICK || purple_utf8_has_word(message, purple_conv_chat_get_nick(chat)))
 		play_conv_event(conv, PURPLE_SOUND_CHAT_NICK);
 	else
 		play_conv_event(conv, event);
@@ -553,7 +553,11 @@ finch_sound_play_file(const char *filename)
 		return;
 	}
 
+#if GST_CHECK_VERSION(1,0,0)
 	play = gst_element_factory_make("playbin", "play");
+#else
+	play = gst_element_factory_make("playbin2", "play");
+#endif
 
 	if (play == NULL) {
 		return;
