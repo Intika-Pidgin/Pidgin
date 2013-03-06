@@ -103,11 +103,7 @@ static PurpleEventLoopUiOps glib_eventloops =
 	glib_input_add,
 	g_source_remove,
 	NULL,
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
 
 	/* padding */
 	NULL,
@@ -218,26 +214,19 @@ init_libpurple(void)
 		abort();
 	}
 
-	/* Create and load the buddylist. */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* Load the preferences. */
 	purple_prefs_load();
 
 	/* Load the desired plugins. The client should save the list of loaded plugins in
 	 * the preferences using purple_plugins_save_loaded(PLUGIN_SAVE_PREF) */
 	purple_plugins_load_saved(PLUGIN_SAVE_PREF);
-
-	/* Load the pounces. */
-	purple_pounces_load();
 }
 
 static void
 signed_on(PurpleConnection *gc, gpointer null)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
-	printf("Account connected: %s %s\n", account->username, account->protocol_id);
+	printf("Account connected: %s %s\n", purple_account_get_username(account), purple_account_get_protocol_id(account));
 }
 
 static void

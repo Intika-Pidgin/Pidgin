@@ -25,6 +25,7 @@
 
 #include    "internal.h"
 #include	"purple.h"
+#include	"obsolete.h"
 
 #include	"protocol.h"
 #include	"mxit.h"
@@ -86,7 +87,7 @@ void mxit_popup( int type, const char* heading, const char* message )
 void mxit_strip_domain( char* username )
 {
 	if ( g_str_has_suffix( username, "@m" ) )
-		username[ strlen(username) - 2 ] = '\0';
+		username[ strlen( username ) - 2 ] = '\0';
 }
 
 
@@ -312,7 +313,7 @@ static void mxit_write_http_get( struct MXitSession* session, struct tx_packet* 
 #endif
 
 	/* send the HTTP request */
-	url_data = purple_util_fetch_url_request( url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, mxit_cb_http_rx, session );
+	url_data = purple_util_fetch_url_request( session->acc, url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, -1, mxit_cb_http_rx, session );
 	if ( url_data )
 		session->async_calls = g_slist_prepend( session->async_calls, url_data );
 
@@ -411,7 +412,7 @@ static void mxit_send_packet( struct MXitSession* session, struct tx_packet* pac
 		res = mxit_write_sock_packet( session->fd, data, datalen );
 		if ( res < 0 ) {
 			/* we must have lost the connection, so terminate it so that we can reconnect */
-			purple_connection_error( session->con, _( "We have lost the connection to MXit. Please reconnect." ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "We have lost the connection to MXit. Please reconnect." ) );
 		}
 	}
 	else {
@@ -533,7 +534,7 @@ static void mxit_manage_queue( struct MXitSession* session )
 		if ( session->last_tx <= mxit_now_milli() - ( MXIT_ACK_TIMEOUT * 1000 ) ) {
 			/* ack timeout! so we close the connection here */
 			purple_debug_info( MXIT_PLUGIN_ID, "mxit_manage_queue: Timeout awaiting ACK for command '%i'\n", session->outack );
-			purple_connection_error( session->con, _( "Timeout while waiting for a response from the MXit server." ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Timeout while waiting for a response from the MXit server." ) );
 		}
 		return;
 	}
@@ -707,9 +708,9 @@ void mxit_send_register( struct MXitSession* session )
 	locale = purple_account_get_string( session->acc, MXIT_CONFIG_LOCALE, MXIT_DEFAULT_LOCALE );
 
 	/* Voice and Video supported */
-	if (mxit_audio_enabled() && mxit_video_enabled())
-		features |= (MXIT_CF_VOICE | MXIT_CF_VIDEO);
-	else if (mxit_audio_enabled())
+	if ( mxit_audio_enabled() && mxit_video_enabled() )
+		features |= ( MXIT_CF_VOICE | MXIT_CF_VIDEO );
+	else if ( mxit_audio_enabled() )
 		features |= MXIT_CF_VOICE;
 
 	/* generate client version string (eg, P-2.7.10-Y-PURPLE) */
@@ -721,7 +722,7 @@ void mxit_send_register( struct MXitSession* session )
 								"%s%c%i%c%s%c%s%c"			/* dateOfBirth\1gender\1location\1capabilities\1 */
 								"%s%c%i%c%s%c%s"			/* dc\1features\1dialingcode\1locale */
 								"%c%i%c%i",					/* \1protocolVer\1lastRosterUpdate */
-								session->encpwd, CP_FLD_TERM, clientVersion, CP_FLD_TERM, CP_MAX_FILESIZE, CP_FLD_TERM, profile->nickname, CP_FLD_TERM,
+								session->encpwd, CP_FLD_TERM, clientVersion, CP_FLD_TERM, CP_MAX_PACKET, CP_FLD_TERM, profile->nickname, CP_FLD_TERM,
 								profile->birthday, CP_FLD_TERM, ( profile->male ) ? 1 : 0, CP_FLD_TERM, MXIT_DEFAULT_LOC, CP_FLD_TERM, MXIT_CP_CAP, CP_FLD_TERM,
 								session->distcode, CP_FLD_TERM, features, CP_FLD_TERM, session->dialcode, CP_FLD_TERM, locale,
 								CP_FLD_TERM, MXIT_CP_PROTO_VESION, CP_FLD_TERM, 0
@@ -751,9 +752,9 @@ void mxit_send_login( struct MXitSession* session )
 	locale = purple_account_get_string( session->acc, MXIT_CONFIG_LOCALE, MXIT_DEFAULT_LOCALE );
 
 	/* Voice and Video supported */
-	if (mxit_audio_enabled() && mxit_video_enabled())
-		features |= (MXIT_CF_VOICE | MXIT_CF_VIDEO);
-	else if (mxit_audio_enabled())
+	if ( mxit_audio_enabled() && mxit_video_enabled() )
+		features |= ( MXIT_CF_VOICE | MXIT_CF_VIDEO );
+	else if ( mxit_audio_enabled() )
 		features |= MXIT_CF_VOICE;
 
 	/* generate client version string (eg, P-2.7.10-Y-PURPLE) */
@@ -768,7 +769,7 @@ void mxit_send_login( struct MXitSession* session )
 								session->encpwd, CP_FLD_TERM, clientVersion, CP_FLD_TERM, 1, CP_FLD_TERM,
 								MXIT_CP_CAP, CP_FLD_TERM, session->distcode, CP_FLD_TERM, features, CP_FLD_TERM,
 								session->dialcode, CP_FLD_TERM, locale, CP_FLD_TERM,
-								CP_MAX_FILESIZE, CP_FLD_TERM, MXIT_CP_PROTO_VESION, CP_FLD_TERM, 0
+								CP_MAX_PACKET, CP_FLD_TERM, MXIT_CP_PROTO_VESION, CP_FLD_TERM, 0
 	);
 
 	/* include "custom resource" information */
@@ -838,7 +839,7 @@ void mxit_send_extprofile_request( struct MXitSession* session, const char* user
 
 	/* add attributes */
 	for ( i = 0; i < nr_attrib; i++ )
-		datalen += sprintf(	data + datalen, "%c%s", CP_FLD_TERM, attribute[i] );
+		datalen += sprintf( data + datalen, "%c%s", CP_FLD_TERM, attribute[i] );
 
 	/* queue packet for transmission */
 	mxit_queue_packet( session, data, datalen, CP_CMD_EXTPROFILE_GET );
@@ -876,7 +877,7 @@ void mxit_send_extprofile_update( struct MXitSession* session, const char* passw
 			g_strfreev( parts );
 			return;
 		}
-		datalen += sprintf(	data + datalen, "%c%s%c%s%c%s",		/* \1name\1type\1value  */
+		datalen += sprintf( data + datalen, "%c%s%c%s%c%s",		/* \1name\1type\1value  */
 								CP_FLD_TERM, parts[i], CP_FLD_TERM, parts[i + 1], CP_FLD_TERM, parts[i + 2] );
 	}
 
@@ -909,7 +910,7 @@ void mxit_send_suggest_friends( struct MXitSession* session, int max, unsigned i
 
 	/* add attributes */
 	for ( i = 0; i < nr_attrib; i++ )
-		datalen += sprintf(	data + datalen, "%c%s", CP_FLD_TERM, attribute[i] );
+		datalen += sprintf( data + datalen, "%c%s", CP_FLD_TERM, attribute[i] );
 
 	/* queue packet for transmission */
 	mxit_queue_packet( session, data, datalen, CP_CMD_SUGGESTCONTACTS );
@@ -938,7 +939,7 @@ void mxit_send_suggest_search( struct MXitSession* session, int max, const char*
 
 	/* add attributes */
 	for ( i = 0; i < nr_attrib; i++ )
-		datalen += sprintf(	data + datalen, "%c%s", CP_FLD_TERM, attribute[i] );
+		datalen += sprintf( data + datalen, "%c%s", CP_FLD_TERM, attribute[i] );
 
 	/* queue packet for transmission */
 	mxit_queue_packet( session, data, datalen, CP_CMD_SUGGESTCONTACTS );
@@ -1149,7 +1150,7 @@ void mxit_send_splashclick( struct MXitSession* session, const char* splashid )
  *  @param id			The identifier of the event (received in message)
  *  @param event		Identified the type of event
  */
-void mxit_send_msgevent( struct MXitSession* session, const char* to, const char* id, int event)
+void mxit_send_msgevent( struct MXitSession* session, const char* to, const char* id, int event )
 {
 	char		data[CP_MAX_PACKET];
 	int			datalen;
@@ -1189,7 +1190,7 @@ void mxit_send_groupchat_create( struct MXitSession* session, const char* groupn
 
 	/* add usernames */
 	for ( i = 0; i < nr_usernames; i++ )
-		datalen += sprintf(	data + datalen, "%c%s", CP_FLD_TERM, usernames[i] );
+		datalen += sprintf( data + datalen, "%c%s", CP_FLD_TERM, usernames[i] );
 
 	/* queue packet for transmission */
 	mxit_queue_packet( session, data, datalen, CP_CMD_GRPCHAT_CREATE );
@@ -1218,7 +1219,7 @@ void mxit_send_groupchat_invite( struct MXitSession* session, const char* roomid
 
 	/* add usernames */
 	for ( i = 0; i < nr_usernames; i++ )
-		datalen += sprintf(	data + datalen, "%c%s", CP_FLD_TERM, usernames[i] );
+		datalen += sprintf( data + datalen, "%c%s", CP_FLD_TERM, usernames[i] );
 
 	/* queue packet for transmission */
 	mxit_queue_packet( session, data, datalen, CP_CMD_GRPCHAT_INVITE );
@@ -1662,7 +1663,7 @@ static void mxit_parse_cmd_new_sub( struct MXitSession* session, struct record**
 
 		if ( rec->fcount >= 5 ) {
 			/* there is a personal invite message attached */
-			if ( ( rec->fields[4]->data ) && ( strlen( rec->fields[4]->data ) > 0 ) )
+			if ( ( rec->fields[4]->data ) && ( *rec->fields[4]->data ) )
 				contact->msg = strdup( rec->fields[4]->data );
 		}
 
@@ -1908,7 +1909,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 		contact = get_mxit_invite_contact( session, mxitId );
 		if ( contact ) {
 			/* this is an invite, so update its profile info */
-			if ( ( statusMsg ) && ( strlen( statusMsg ) > 0 ) ) {
+			if ( ( statusMsg ) && ( *statusMsg ) ) {
 				/* update the status message */
 				if ( contact->statusMsg )
 					g_free( contact->statusMsg );
@@ -1919,7 +1920,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 			if ( contact->profile )
 				g_free( contact->profile );
 			contact->profile = profile;
-			if ( ( avatarId ) && ( strlen( avatarId ) > 0 ) ) {
+			if ( ( avatarId ) && ( *avatarId ) ) {
 				/* avatar must be requested for this invite before we can display it */
 				mxit_get_avatar( session, mxitId, avatarId );
 				if ( contact->avatarId )
@@ -1937,7 +1938,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 			if ( avatarId )
 				mxit_update_buddy_avatar( session, mxitId, avatarId );
 
-			if ( ( statusMsg ) && ( strlen( statusMsg ) > 0 ) ) {
+			if ( ( statusMsg ) && ( *statusMsg ) ) {
 				/* update the status message */
 				PurpleBuddy*		buddy	= NULL;
 
@@ -2195,13 +2196,13 @@ static void mxit_parse_cmd_media( struct MXitSession* session, struct record** r
 					contact = get_mxit_invite_contact( session, chunk.mxitid );
 					if ( contact ) {
 						/* this is an invite (add image to the internal image store) */
-						contact->imgid = purple_imgstore_add_with_id( g_memdup( chunk.data, chunk.length ), chunk.length, NULL );
+						contact->imgid = purple_imgstore_new_with_id( g_memdup( chunk.data, chunk.length ), chunk.length, NULL );
 						/* show the profile */
 						mxit_show_profile( session, chunk.mxitid, contact->profile );
 					}
 					else {
 						/* this is a contact's avatar, so update it */
-						purple_buddy_icons_set_for_user( session->acc, chunk.mxitid, g_memdup( chunk.data, chunk.length), chunk.length, chunk.avatarid );
+						purple_buddy_icons_set_for_user( session->acc, chunk.mxitid, g_memdup( chunk.data, chunk.length ), chunk.length, chunk.avatarid );
 					}
 				}
 			}
@@ -2262,7 +2263,7 @@ static void mxit_perform_redirect( struct MXitSession* session, const char* url 
 		session->port = atoi( host[2] );
 	}
 	else {
-		purple_connection_error( session->con, _( "Cannot perform redirect using the specified protocol" ) );
+		purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Cannot perform redirect using the specified protocol" ) );
 		goto redirect_fail;
 	}
 
@@ -2340,7 +2341,7 @@ static int process_success_response( struct MXitSession* session, struct rx_pack
 
 		case CP_CMD_PRESENCE :
 				/* presence update */
-				mxit_parse_cmd_presence(session, &packet->records[2], packet->rcount - 3 );
+				mxit_parse_cmd_presence( session, &packet->records[2], packet->rcount - 3 );
 				break;
 
 		case CP_CMD_RX_MSG :
@@ -2436,7 +2437,7 @@ static int process_error_response( struct MXitSession* session, struct rx_packet
 
 	if ( packet->errcode == MXIT_ERRCODE_LOGGEDOUT ) {
 		/* we are not currently logged in, so we need to reconnect */
-		purple_connection_error( session->con, _( errdesc ) );
+		purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( errdesc ) );
 	}
 
 	/* packet command */
@@ -2450,12 +2451,12 @@ static int process_error_response( struct MXitSession* session, struct rx_packet
 				}
 				else {
 					snprintf( errmsg, sizeof( errmsg ), _( "Login error: %s (%i)" ), errdesc, packet->errcode );
-					purple_connection_error( session->con, errmsg );
+					purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, errmsg );
 					return -1;
 				}
 		case CP_CMD_LOGOUT :
 				snprintf( errmsg, sizeof( errmsg ), _( "Logout error: %s (%i)" ), errdesc, packet->errcode );
-				purple_connection_error_reason( session->con, PURPLE_CONNECTION_ERROR_NAME_IN_USE, _( errmsg ) );
+				purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NAME_IN_USE, _( errmsg ) );
 				return -1;
 		case CP_CMD_CONTACT :
 				mxit_popup( PURPLE_NOTIFY_MSG_WARNING, _( "Contact Error" ), _( errdesc ) );
@@ -2718,7 +2719,7 @@ int mxit_parse_packet( struct MXitSession* session )
 
 		if ( packet.rcount < 2 ) {
 			/* bad packet */
-			purple_connection_error( session->con, _( "Invalid packet received from MXit." ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Invalid packet received from MXit." ) );
 			free_rx_packet( &packet );
 			continue;
 		}
@@ -2783,12 +2784,12 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 		len = read( session->fd, &ch, 1 );
 		if ( len < 0 ) {
 			/* connection error */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x01)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x01)" ) );
 			return;
 		}
 		else if ( len == 0 ) {
 			/* connection closed */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x02)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x02)" ) );
 			return;
 		}
 		else {
@@ -2798,7 +2799,7 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 				session->rx_lbuf[session->rx_i] = '\0';
 				session->rx_res = atoi( &session->rx_lbuf[3] );
 				if ( session->rx_res > CP_MAX_PACKET ) {
-					purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x03)" ) );
+					purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x03)" ) );
 				}
 				session->rx_state = RX_STATE_DATA;
 				session->rx_i = 0;
@@ -2809,7 +2810,7 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 				session->rx_i++;
 				if ( session->rx_i >= sizeof( session->rx_lbuf ) ) {
 					/* malformed packet length record (too long) */
-					purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x04)" ) );
+					purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x04)" ) );
 					return;
 				}
 			}
@@ -2820,12 +2821,12 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 		len = read( session->fd, &session->rx_dbuf[session->rx_i], session->rx_res );
 		if ( len < 0 ) {
 			/* connection error */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x05)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x05)" ) );
 			return;
 		}
 		else if ( len == 0 ) {
 			/* connection closed */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x06)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x06)" ) );
 			return;
 		}
 		else {
@@ -2883,9 +2884,9 @@ void mxit_close_connection( struct MXitSession* session )
 	}
 
 	/* remove the input cb function */
-	if ( session->con->inpa ) {
-		purple_input_remove( session->con->inpa );
-		session->con->inpa = 0;
+	if ( session->inpa ) {
+		purple_input_remove( session->inpa );
+		session->inpa = 0;
 	}
 
 	/* remove HTTP poll timer */
