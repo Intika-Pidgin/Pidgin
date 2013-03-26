@@ -34,8 +34,8 @@
 #define		CP_PKT_TERM				'\x02'				/* packet terminator */
 
 
-#define		CP_MAX_PACKET			( 1024 * 1024 )		/* maximum client protocol packet size (1 MiB) */
-#define		CP_MAX_FILESIZE			( 150 * 1000 )		/* maximum client protocol file transfer size (150 KB) */
+#define		CP_MAX_PACKET			( 1 * 1000 * 1000 )	/* maximum client protocol packet size (1 MB) */
+#define		CP_MAX_FILESIZE			( CP_MAX_PACKET - 1000 )	/* maximum file size (reserve some space for packet headers) */
 #define		MXIT_EMOTICON_SIZE		18					/* icon size for custom emoticons */
 #define		CP_MAX_STATUS_MSG		250					/* maximum status message length (in characters) */
 
@@ -327,7 +327,7 @@ void mxit_send_suggest_search( struct MXitSession* session, int max, const char*
 void mxit_send_invite( struct MXitSession* session, const char* username, gboolean mxitid, const char* alias, const char* groupname, const char* message );
 void mxit_send_remove( struct MXitSession* session, const char* username );
 void mxit_send_allow_sub( struct MXitSession* session, const char* username, const char* alias );
-void mxit_send_deny_sub( struct MXitSession* session, const char* username );
+void mxit_send_deny_sub( struct MXitSession* session, const char* username, const char* reason );
 void mxit_send_update_contact( struct MXitSession* session, const char* username, const char* alias, const char* groupname );
 void mxit_send_splashclick( struct MXitSession* session, const char* splashid );
 void mxit_send_msgevent( struct MXitSession* session, const char* to, const char* id, int event);

@@ -1128,12 +1128,9 @@ static void yahoo_process_message(PurpleConnection *gc, struct yahoo_packet *pkt
 		m = m2;
 		purple_util_chrreplace(m, '\r', '\n');
 		if (!strcmp(m, "<ding>")) {
-			PurpleConversation *conv = NULL;
 			char *username;
 
 			username = g_markup_escape_text(im->fed_from, -1);
-			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY,
-				username, account);
 			purple_prpl_got_attention(gc, username, YAHOO_BUZZ);
 			g_free(username);
 			g_free(m);
@@ -2267,7 +2264,7 @@ static void yahoo_process_authresp(PurpleConnection *gc, struct yahoo_packet *pk
 	case 52:
 		/* See #9660. As much as we know, reconnecting shouldn't hurt */
 		purple_debug_info("yahoo", "Got error 52, Set to autoreconnect\n");
-		msg = g_strdup_printf(_("Unknown error 52.  Reconnecting should fix this."));
+		msg = g_strdup(_("Unknown error 52.  Reconnecting should fix this."));
 		reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
 		break;
 	case 1013:
@@ -2953,7 +2950,7 @@ static void yahoo_process_audible(PurpleConnection *gc, struct yahoo_packet *pkt
 			msg = pair->value;
 			break;
 		case 232:
-			/* weird number (md5 hash?), like 8ebab9094156135f5dcbaccbeee662a5c5fd1420 */
+			/* SHA-1 hash of audible SWF file (eg: 4e8691499d9c0fb8374478ff9720f4a9ea4a4915) */
 			break;
 		}
 
@@ -2974,7 +2971,7 @@ static void yahoo_process_audible(PurpleConnection *gc, struct yahoo_packet *pkt
 		return;
 	}
 	if (id) {
-		/* "http://us.dl1.yimg.com/download.yahoo.com/dl/aud/"+locale+"/"+id+".swf" */
+		/* "http://l.yimg.com/pu/dl/aud/"+locale+"/"+id+".swf" */
 		char **audible_locale = g_strsplit(id, ".", 0);
 		char *buf = g_strdup_printf(_("[ Audible %s/%s/%s.swf ] %s"), YAHOO_AUDIBLE_URL, audible_locale[1], id, msg);
 		g_strfreev(audible_locale);

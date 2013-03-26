@@ -387,6 +387,9 @@ static void mxit_cb_clientinfo2( PurpleUtilFetchUrlData* url_data, gpointer user
 	purple_debug_info( MXIT_PLUGIN_ID, "HTTP RESPONSE: '%s'\n", url_text );
 #endif
 
+	/* remove request from the async outstanding calls list */
+	session->async_calls = g_slist_remove( session->async_calls, url_data );
+
 	if ( !url_text ) {
 		/* no reply from the WAP site */
 		purple_connection_error_reason( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Error contacting the MXit WAP site. Please try again later." ) );
@@ -563,6 +566,8 @@ static void mxit_cb_captcha_ok( PurpleConnection* gc, PurpleRequestFields* field
 			time( NULL )
 	);
 	url_data = purple_util_fetch_url_request( url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, mxit_cb_clientinfo2, session );
+	if ( url_data )
+		session->async_calls = g_slist_prepend( session->async_calls, url_data );
 
 #ifdef	DEBUG_PROTOCOL
 	purple_debug_info( MXIT_PLUGIN_ID, "HTTP REQUEST: '%s'\n", url );
@@ -619,6 +624,9 @@ static void mxit_cb_clientinfo1( PurpleUtilFetchUrlData* url_data, gpointer user
 #ifdef	DEBUG_PROTOCOL
 	purple_debug_info( MXIT_PLUGIN_ID, "RESPONSE: %s\n", url_text );
 #endif
+
+	/* remove request from the async outstanding calls list */
+	session->async_calls = g_slist_remove( session->async_calls, url_data );
 
 	if ( !url_text ) {
 		/* no reply from the WAP site */
@@ -727,6 +735,8 @@ static void get_clientinfo( struct MXitSession* session )
 	/* reference: "libpurple/util.h" */
 	url = g_strdup_printf( "%s/res/?type=challenge&getcountries=true&getlanguage=true&getimage=true&h=%i&w=%i&ts=%li", wapserver, MXIT_CAPTCHA_HEIGHT, MXIT_CAPTCHA_WIDTH, time( NULL ) );
 	url_data = purple_util_fetch_url_request( url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, mxit_cb_clientinfo1, session );
+	if ( url_data )
+		session->async_calls = g_slist_prepend( session->async_calls, url_data );
 
 #ifdef	DEBUG_PROTOCOL
 	purple_debug_info( MXIT_PLUGIN_ID, "HTTP REQUEST: '%s'\n", url );
@@ -754,7 +764,7 @@ void mxit_login( PurpleAccount* account )
 	 * if we don't have any info saved from a previous login, we need to get it from the MXit WAP site.
 	 * we do cache it, so this step is only done on the very first login for each account.
 	 */
-	if ( ( session->distcode == NULL ) || ( !*session->distcode ) ) {
+	if ( strlen( session->distcode ) == 0 ) {
 		/* this must be the very first login, so we need to retrieve the user information */
 		get_clientinfo( session );
 	}
