@@ -93,7 +93,7 @@ void splash_remove(struct MXitSession* session)
 		purple_debug_info(MXIT_PLUGIN_ID, "Removing splashId: '%s'\n", splashId);
 
 		/* Delete stored splash image */
-		filename = g_strdup_printf("%s/mxit/%s.png", purple_user_dir(), splashId);
+		filename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "mxit" G_DIR_SEPARATOR_S "%s.png", purple_user_dir(), splashId);
 		g_unlink(filename);
 		g_free(filename);
 
@@ -179,15 +179,16 @@ void splash_display(struct MXitSession* session)
 	purple_debug_info(MXIT_PLUGIN_ID, "Display Splash: '%s'\n", splashId);
 
 	/* Load splash-screen image from file */
-	filename = g_strdup_printf("%s/mxit/%s.png", purple_user_dir(), splashId);
+	filename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "mxit" G_DIR_SEPARATOR_S "%s.png", purple_user_dir(), splashId);
 	if (g_file_get_contents(filename, &imgdata, &imglen, NULL)) {
 		char buf[128];
 
 		/* Add splash-image to imagestore */
-		imgid = purple_imgstore_add_with_id(g_memdup(imgdata, imglen), imglen, NULL);
+		imgid = purple_imgstore_new_with_id(g_memdup(imgdata, imglen), imglen, NULL);
 
 		/* Generate and display message */
-		g_snprintf(buf, sizeof(buf), "<img id=\"%d\">", imgid);
+		g_snprintf(buf, sizeof(buf),
+		           "<img src=\"" PURPLE_STORED_IMAGE_PROTOCOL "%d\">", imgid);
 
 		/* Open a request-type popup to display the image */
 		{
