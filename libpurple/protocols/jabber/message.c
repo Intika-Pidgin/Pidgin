@@ -219,6 +219,7 @@ static void handle_groupchat(JabberMessage *jm)
 {
 	JabberID *jid = jabber_id_new(jm->from);
 	JabberChat *chat;
+	PurpleMessageFlags messageFlags = 0;
 
 	if(!jid)
 		return;
@@ -231,6 +232,7 @@ static void handle_groupchat(JabberMessage *jm)
 	if(jm->subject) {
 		purple_conv_chat_set_topic(PURPLE_CONV_CHAT(chat->conv), jid->resource,
 				jm->subject);
+		messageFlags |= PURPLE_MESSAGE_NO_LOG;
 		if(!jm->xhtml && !jm->body) {
 			char *msg, *tmp, *tmp2;
 			tmp = g_markup_escape_text(jm->subject, -1);
@@ -239,7 +241,7 @@ static void handle_groupchat(JabberMessage *jm)
 				msg = g_strdup_printf(_("%s has set the topic to: %s"), jid->resource, tmp2);
 			else
 				msg = g_strdup_printf(_("The topic is: %s"), tmp2);
-			purple_conv_chat_write(PURPLE_CONV_CHAT(chat->conv), "", msg, PURPLE_MESSAGE_SYSTEM, jm->sent);
+			purple_conv_chat_write(PURPLE_CONV_CHAT(chat->conv), "", msg, messageFlags | PURPLE_MESSAGE_SYSTEM, jm->sent);
 			g_free(tmp);
 			g_free(tmp2);
 			g_free(msg);
@@ -249,12 +251,12 @@ static void handle_groupchat(JabberMessage *jm)
 	if(jm->xhtml || jm->body) {
 		if(jid->resource)
 			serv_got_chat_in(jm->js->gc, chat->id, jid->resource,
-							jm->delayed ? PURPLE_MESSAGE_DELAYED : 0,
+							messageFlags | (jm->delayed ? PURPLE_MESSAGE_DELAYED : 0),
 							jm->xhtml ? jm->xhtml : jm->body, jm->sent);
 		else if(chat->muc)
 			purple_conv_chat_write(PURPLE_CONV_CHAT(chat->conv), "",
 							jm->xhtml ? jm->xhtml : jm->body,
-							PURPLE_MESSAGE_SYSTEM, jm->sent);
+							messageFlags | PURPLE_MESSAGE_SYSTEM, jm->sent);
 	}
 
 	jabber_id_free(jid);
@@ -637,6 +639,8 @@ void jabber_message_parse(JabberStream *js, xmlnode *packet)
 					/* process any newly provided smileys */
 					jabber_message_add_remote_smileys(js, to, packet);
 				}
+
+				xmlnode_strip_prefixes(child);
 
 				/* reformat xhtml so that img tags with a "cid:" src gets
 				  translated to the bare text of the emoticon (the "alt" attrib) */
@@ -1148,13 +1152,13 @@ int jabber_message_send_im(PurpleConnection *gc, const char *who, const char *ms
 
 	resource = jabber_get_resource(who);
 
-	jb = jabber_buddy_find(gc->proto_data, who, TRUE);
+	jb = jabber_buddy_find(purple_connection_get_protocol_data(gc), who, TRUE);
 	jbr = jabber_buddy_find_resource(jb, resource);
 
 	g_free(resource);
 
 	jm = g_new0(JabberMessage, 1);
-	jm->js = gc->proto_data;
+	jm->js = purple_connection_get_protocol_data(gc);
 	jm->type = JABBER_MESSAGE_CHAT;
 	jm->chat_state = JM_STATE_ACTIVE;
 	jm->to = g_strdup(who);
@@ -1211,14 +1215,14 @@ int jabber_message_send_chat(PurpleConnection *gc, int id, const char *msg, Purp
 	if(!msg || !gc)
 		return 0;
 
-	js = gc->proto_data;
+	js = purple_connection_get_protocol_data(gc);
 	chat = jabber_chat_find_by_id(js, id);
 
 	if(!chat)
 		return 0;
 
 	jm = g_new0(JabberMessage, 1);
-	jm->js = gc->proto_data;
+	jm->js = purple_connection_get_protocol_data(gc);
 	jm->type = JABBER_MESSAGE_GROUPCHAT;
 	jm->to = g_strdup_printf("%s@%s", chat->room, chat->server);
 	jm->id = jabber_get_next_id(jm->js);
