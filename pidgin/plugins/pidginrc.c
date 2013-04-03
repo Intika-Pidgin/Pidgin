@@ -31,6 +31,8 @@
 #include "util.h"
 #include "version.h"
 
+#include "gtk3compat.h"
+
 static guint pref_callback;
 
 static const gchar *color_prefs[] = {
@@ -242,12 +244,8 @@ purplerc_color_response(GtkDialog *color_dialog, gint response, gpointer data)
 	if (response == GTK_RESPONSE_OK) {
 		GdkColor color;
 		gchar colorstr[8];
-#if GTK_CHECK_VERSION(2,14,0)
 		GtkWidget *colorsel =
 			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog));
-#else
-		GtkWidget *colorsel = GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel;
-#endif
 
 		gtk_color_selection_get_current_color(GTK_COLOR_SELECTION(colorsel), &color);
 
@@ -278,13 +276,9 @@ purplerc_set_color(GtkWidget *widget, gpointer data)
 
 	if (pref != NULL && strcmp(pref, "")) {
 		if (gdk_color_parse(pref, &color)) {
-#if GTK_CHECK_VERSION(2,14,0)
 			gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(
 				gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog))),
 				&color);
-#else
-			gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel), &color);
-#endif
 		}
 	}
 
@@ -306,7 +300,7 @@ purplerc_font_response(GtkDialog *font_dialog, gint response, gpointer data)
 			prefpath = font_prefs[subscript];
 		}
 
-		fontname = gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(font_dialog));
+		fontname = gtk_font_chooser_get_font(GTK_FONT_CHOOSER(font_dialog));
 
 		purple_prefs_set_string(prefpath, fontname);
 		g_free(fontname);
@@ -318,6 +312,7 @@ static void
 purplerc_set_font(GtkWidget *widget, gpointer data)
 {
 	gchar title[128];
+	GtkWindow *window;
 	GtkWidget *font_dialog = NULL;
 	gint subscript = GPOINTER_TO_INT(data);
 	const gchar *pref = NULL, *prefpath = NULL;
@@ -331,14 +326,15 @@ purplerc_set_font(GtkWidget *widget, gpointer data)
 		prefpath = font_prefs[subscript];
 	}
 
-	font_dialog = gtk_font_selection_dialog_new(title);
+	window = GTK_WINDOW(gtk_widget_get_toplevel(widget));
+	font_dialog = gtk_font_chooser_dialog_new(title, window);
 	g_signal_connect(G_OBJECT(font_dialog), "response",
 	                 G_CALLBACK(purplerc_font_response), data);
 
 	pref = purple_prefs_get_string(prefpath);
 
 	if (pref != NULL && strcmp(pref, "")) {
-		gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(font_dialog), pref);
+		gtk_font_chooser_set_font(GTK_FONT_CHOOSER(font_dialog), pref);
 	}
 
 	gtk_window_present(GTK_WINDOW(font_dialog));
