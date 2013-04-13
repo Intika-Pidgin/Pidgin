@@ -90,7 +90,8 @@ static PurpleWhiteboardPrplOps yahoo_whiteboard_prpl_ops =
 
 static PurplePluginProtocolInfo prpl_info =
 {
-	OPT_PROTO_MAIL_CHECK | OPT_PROTO_CHAT_TOPIC,
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	OPT_PROTO_MAIL_CHECK | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE,
 	NULL, /* user_splits */
 	NULL, /* protocol_options */
 	{"png,gif,jpeg", 96, 96, 96, 96, 0, PURPLE_ICON_SCALE_SEND},
@@ -130,7 +131,6 @@ static PurplePluginProtocolInfo prpl_info =
 	yahoo_keepalive,
 	NULL, /* register_user */
 	NULL, /* get_cb_info */
-	NULL, /* get_cb_away */
 	yahoo_update_alias, /* alias_buddy */
 	yahoo_change_buddys_group,
 	yahoo_rename_group,
@@ -157,15 +157,12 @@ static PurplePluginProtocolInfo prpl_info =
 	yahoo_send_attention,
 	yahoo_attention_types,
 
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	yahoojp_get_account_text_table,    /* get_account_text_table */
 	NULL, /* initiate_media */
 	NULL, /* get_media_caps */
 	NULL, /* get_moods */
 	NULL, /* set_public_alias */
-	NULL, /* get_public_alias */
-	NULL, /* add_buddy_with_invite */
-	NULL  /* add_buddies_with_invite */
+	NULL  /* get_public_alias */
 };
 
 static PurplePluginInfo info =

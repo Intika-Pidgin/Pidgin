@@ -39,10 +39,7 @@ typedef struct _PurpleBuddyIcon PurpleBuddyIcon;
 #include "prpl.h"
 #include "util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Buddy Icon API                                                  */
@@ -52,8 +49,8 @@ extern "C" {
 /**
  * Creates a new buddy icon structure and populates it.
  *
- * If the buddy icon already exists, you'll get a reference to that structure,
- * which will have been updated with the data supplied.
+ * If an icon for this account+username already exists, you'll get a reference
+ * to that structure, which will have been updated with the data supplied.
  *
  * @param account   The account the user is on.
  * @param username  The username the icon belongs to.
@@ -82,10 +79,8 @@ PurpleBuddyIcon *purple_buddy_icon_ref(PurpleBuddyIcon *icon);
  * If the reference count reaches 0, the icon will be destroyed.
  *
  * @param icon The buddy icon.
- *
- * @return @a icon, or @c NULL if the reference count reached 0.
  */
-PurpleBuddyIcon *purple_buddy_icon_unref(PurpleBuddyIcon *icon);
+void purple_buddy_icon_unref(PurpleBuddyIcon *icon);
 
 /**
  * Updates every instance of this icon.
@@ -275,7 +270,6 @@ purple_buddy_icons_get_account_icon_timestamp(PurpleAccount *account);
  * @param node The blist node.
  *
  * @return A boolean indicating if @a node has a custom buddy icon.
- * @since 2.5.0
  */
 gboolean
 purple_buddy_icons_node_has_custom_icon(PurpleBlistNode *node);
@@ -293,7 +287,6 @@ purple_buddy_icons_node_has_custom_icon(PurpleBlistNode *node);
  * @param node The node.
  *
  * @return The custom buddy icon.
- * @since 2.5.0
  */
 PurpleStoredImage *
 purple_buddy_icons_node_find_custom_icon(PurpleBlistNode *node);
@@ -311,7 +304,6 @@ purple_buddy_icons_node_find_custom_icon(PurpleBlistNode *node);
  *
  * @return The icon that was set. The caller does NOT own a reference to this,
  *         and must call purple_imgstore_ref() if it wants one.
- * @since 2.5.0
  */
 PurpleStoredImage *
 purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
@@ -329,49 +321,15 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
  *
  * @return The icon that was set. The caller does NOT own a reference to this,
  *         and must call purple_imgstore_ref() if it wants one.
- * @since 2.5.0
  */
 PurpleStoredImage *
 purple_buddy_icons_node_set_custom_icon_from_file(PurpleBlistNode *node,
                                                   const gchar *filename);
 
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_BUDDYICON_C_)
-/**
- * PurpleContact version of purple_buddy_icons_node_has_custom_icon.
- *
- * @copydoc purple_buddy_icons_node_has_custom_icon()
- *
- * @deprecated Use purple_buddy_icons_node_has_custom_icon instead.
- */
-gboolean
-purple_buddy_icons_has_custom_icon(PurpleContact *contact);
-
-/**
- * PurpleContact version of purple_buddy_icons_node_find_custom_icon.
- *
- * @copydoc purple_buddy_icons_node_find_custom_icon()
- *
- * @deprecated Use purple_buddy_icons_node_find_custom_icon instead.
- */
-PurpleStoredImage *
-purple_buddy_icons_find_custom_icon(PurpleContact *contact);
-
-/**
- * PurpleContact version of purple_buddy_icons_node_set_custom_icon.
- *
- * @copydoc purple_buddy_icons_node_set_custom_icon()
- *
- * @deprecated Use purple_buddy_icons_node_set_custom_icon instead.
- */
-PurpleStoredImage *
-purple_buddy_icons_set_custom_icon(PurpleContact *contact,
-                                   guchar *icon_data, size_t icon_len);
-#endif
-
 /**
  * Sets whether or not buddy icon caching is enabled.
  *
- * @param caching TRUE of buddy icon caching should be enabled, or
+ * @param caching TRUE if buddy icon caching should be enabled, or
  *                FALSE otherwise.
  */
 void purple_buddy_icons_set_caching(gboolean caching);
@@ -434,8 +392,6 @@ void purple_buddy_icon_get_scale_size(PurpleBuddyIconSpec *spec, int *width, int
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_BUDDYICON_H_ */

@@ -26,6 +26,7 @@
 #include	"internal.h"
 #include	"debug.h"
 #include	"version.h"
+#include	"obsolete.h"
 
 #include	"protocol.h"
 #include	"mxit.h"
@@ -315,7 +316,7 @@ static void mxit_write_http_get( struct MXitSession* session, struct tx_packet* 
 #endif
 
 	/* send the HTTP request */
-	url_data = purple_util_fetch_url_request( url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, mxit_cb_http_rx, session );
+	url_data = purple_util_fetch_url_request( session->acc, url, TRUE, MXIT_HTTP_USERAGENT, TRUE, NULL, FALSE, -1, mxit_cb_http_rx, session );
 	if ( url_data )
 		session->async_calls = g_slist_prepend( session->async_calls, url_data );
 
@@ -414,7 +415,7 @@ static void mxit_send_packet( struct MXitSession* session, struct tx_packet* pac
 		res = mxit_write_sock_packet( session->fd, data, datalen );
 		if ( res < 0 ) {
 			/* we must have lost the connection, so terminate it so that we can reconnect */
-			purple_connection_error( session->con, _( "We have lost the connection to MXit. Please reconnect." ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "We have lost the connection to MXit. Please reconnect." ) );
 		}
 	}
 	else {
@@ -536,7 +537,7 @@ static void mxit_manage_queue( struct MXitSession* session )
 		if ( session->last_tx <= mxit_now_milli() - ( MXIT_ACK_TIMEOUT * 1000 ) ) {
 			/* ack timeout! so we close the connection here */
 			purple_debug_info( MXIT_PLUGIN_ID, "mxit_manage_queue: Timeout awaiting ACK for command '%i'\n", session->outack );
-			purple_connection_error( session->con, _( "Timeout while waiting for a response from the MXit server." ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Timeout while waiting for a response from the MXit server." ) );
 		}
 		return;
 	}
@@ -1664,7 +1665,7 @@ static void mxit_parse_cmd_new_sub( struct MXitSession* session, struct record**
 
 		if ( rec->fcount >= 5 ) {
 			/* there is a personal invite message attached */
-			if ( ( rec->fields[4]->data ) && ( strlen( rec->fields[4]->data ) > 0 ) )
+			if ( ( rec->fields[4]->data ) && ( *rec->fields[4]->data ) )
 				contact->msg = strdup( rec->fields[4]->data );
 		}
 
@@ -1910,7 +1911,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 		contact = get_mxit_invite_contact( session, mxitId );
 		if ( contact ) {
 			/* this is an invite, so update its profile info */
-			if ( ( statusMsg ) && ( strlen( statusMsg ) > 0 ) ) {
+			if ( ( statusMsg ) && ( *statusMsg ) ) {
 				/* update the status message */
 				if ( contact->statusMsg )
 					g_free( contact->statusMsg );
@@ -1921,7 +1922,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 			if ( contact->profile )
 				g_free( contact->profile );
 			contact->profile = profile;
-			if ( ( avatarId ) && ( strlen( avatarId ) > 0 ) ) {
+			if ( ( avatarId ) && ( *avatarId ) ) {
 				/* avatar must be requested for this invite before we can display it */
 				mxit_get_avatar( session, mxitId, avatarId );
 				if ( contact->avatarId )
@@ -1939,7 +1940,7 @@ static void mxit_parse_cmd_extprofile( struct MXitSession* session, struct recor
 			if ( avatarId )
 				mxit_update_buddy_avatar( session, mxitId, avatarId );
 
-			if ( ( statusMsg ) && ( strlen( statusMsg ) > 0 ) ) {
+			if ( ( statusMsg ) && ( *statusMsg ) ) {
 				/* update the status message */
 				PurpleBuddy*		buddy	= NULL;
 
@@ -2197,7 +2198,7 @@ static void mxit_parse_cmd_media( struct MXitSession* session, struct record** r
 					contact = get_mxit_invite_contact( session, chunk.mxitid );
 					if ( contact ) {
 						/* this is an invite (add image to the internal image store) */
-						contact->imgid = purple_imgstore_add_with_id( g_memdup( chunk.data, chunk.length ), chunk.length, NULL );
+						contact->imgid = purple_imgstore_new_with_id( g_memdup( chunk.data, chunk.length ), chunk.length, NULL );
 						/* show the profile */
 						mxit_show_profile( session, chunk.mxitid, contact->profile );
 					}
@@ -2264,7 +2265,7 @@ static void mxit_perform_redirect( struct MXitSession* session, const char* url 
 		session->port = atoi( host[2] );
 	}
 	else {
-		purple_connection_error( session->con, _( "Cannot perform redirect using the specified protocol" ) );
+		purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Cannot perform redirect using the specified protocol" ) );
 		goto redirect_fail;
 	}
 
@@ -2438,7 +2439,7 @@ static int process_error_response( struct MXitSession* session, struct rx_packet
 
 	if ( packet->errcode == MXIT_ERRCODE_LOGGEDOUT ) {
 		/* we are not currently logged in, so we need to reconnect */
-		purple_connection_error( session->con, _( errdesc ) );
+		purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( errdesc ) );
 	}
 
 	/* packet command */
@@ -2452,12 +2453,12 @@ static int process_error_response( struct MXitSession* session, struct rx_packet
 				}
 				else {
 					g_snprintf( errmsg, sizeof( errmsg ), _( "Login error: %s (%i)" ), errdesc, packet->errcode );
-					purple_connection_error( session->con, errmsg );
+					purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, errmsg );
 					return -1;
 				}
 		case CP_CMD_LOGOUT :
 				g_snprintf( errmsg, sizeof( errmsg ), _( "Logout error: %s (%i)" ), errdesc, packet->errcode );
-				purple_connection_error_reason( session->con, PURPLE_CONNECTION_ERROR_NAME_IN_USE, _( errmsg ) );
+				purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NAME_IN_USE, _( errmsg ) );
 				return -1;
 		case CP_CMD_CONTACT :
 				mxit_popup( PURPLE_NOTIFY_MSG_WARNING, _( "Contact Error" ), _( errdesc ) );
@@ -2720,7 +2721,7 @@ int mxit_parse_packet( struct MXitSession* session )
 
 		if ( packet.rcount < 2 ) {
 			/* bad packet */
-			purple_connection_error( session->con, _( "Invalid packet received from MXit." ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Invalid packet received from MXit." ) );
 			free_rx_packet( &packet );
 			continue;
 		}
@@ -2785,12 +2786,12 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 		len = read( session->fd, &ch, 1 );
 		if ( len < 0 ) {
 			/* connection error */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x01)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x01)" ) );
 			return;
 		}
 		else if ( len == 0 ) {
 			/* connection closed */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x02)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x02)" ) );
 			return;
 		}
 		else {
@@ -2800,7 +2801,7 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 				session->rx_lbuf[session->rx_i] = '\0';
 				session->rx_res = atoi( &session->rx_lbuf[3] );
 				if ( session->rx_res > CP_MAX_PACKET ) {
-					purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x03)" ) );
+					purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x03)" ) );
 				}
 				session->rx_state = RX_STATE_DATA;
 				session->rx_i = 0;
@@ -2811,7 +2812,7 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 				session->rx_i++;
 				if ( session->rx_i >= sizeof( session->rx_lbuf ) ) {
 					/* malformed packet length record (too long) */
-					purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x04)" ) );
+					purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x04)" ) );
 					return;
 				}
 			}
@@ -2822,12 +2823,12 @@ void mxit_cb_rx( gpointer user_data, gint source, PurpleInputCondition cond )
 		len = read( session->fd, &session->rx_dbuf[session->rx_i], session->rx_res );
 		if ( len < 0 ) {
 			/* connection error */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x05)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x05)" ) );
 			return;
 		}
 		else if ( len == 0 ) {
 			/* connection closed */
-			purple_connection_error( session->con, _( "A connection error occurred to MXit. (read stage 0x06)" ) );
+			purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "A connection error occurred to MXit. (read stage 0x06)" ) );
 			return;
 		}
 		else {
@@ -2885,9 +2886,9 @@ void mxit_close_connection( struct MXitSession* session )
 	}
 
 	/* remove the input cb function */
-	if ( session->con->inpa ) {
-		purple_input_remove( session->con->inpa );
-		session->con->inpa = 0;
+	if ( session->inpa ) {
+		purple_input_remove( session->inpa );
+		session->inpa = 0;
 	}
 
 	/* remove HTTP poll timer */
