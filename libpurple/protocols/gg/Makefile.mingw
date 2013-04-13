@@ -24,14 +24,14 @@ endif
 ##
 ## INCLUDE PATHS
 ##
-INCLUDE_PATHS +=	-I. \
+INCLUDE_PATHS +=\
+			-I$(PIDGIN_TREE_TOP) \
+			-I$(PURPLE_TOP) \
+			-I$(PURPLE_TOP)/win32 \
 			-I./lib \
 			-I$(GTK_TOP)/include \
 			-I$(GTK_TOP)/include/glib-2.0 \
-			-I$(GTK_TOP)/lib/glib-2.0/include \
-			-I$(PURPLE_TOP) \
-			-I$(PURPLE_TOP)/win32 \
-			-I$(PIDGIN_TREE_TOP)
+			-I$(GTK_TOP)/lib/glib-2.0/include
 
 LIB_PATHS +=		-L$(GTK_TOP)/lib \
 			-L$(PURPLE_TOP) \
@@ -56,11 +56,28 @@ C_SRC =	\
 	lib/pubdir50.c \
 	lib/resolver.c \
 	lib/sha1.c \
-	buddylist.c \
+	utils.c \
 	confer.c \
+	buddylist.c \
 	gg.c \
-	search.c \
-	gg-utils.c
+	resolver-purple.c \
+	image.c \
+	account.c \
+	deprecated.c \
+	purplew.c \
+	libgaduw.c \
+	avatar.c \
+	libgadu-events.c \
+	roster.c \
+	validator.c \
+	xml.c \
+	multilogon.c \
+	status.c \
+	servconn.c \
+	pubdir-prpl.c \
+	oauth/oauth.c \
+	oauth/oauth-parameter.c \
+	oauth/oauth-purple.c
 
 OBJECTS = $(C_SRC:%.c=%.o)
 
@@ -71,7 +88,8 @@ LIBS =	\
 			-lglib-2.0 \
 			-lintl \
 			-lpurple \
-			-lws2_32
+			-lws2_32 \
+			-lz
 
 include $(PIDGIN_COMMON_RULES)
 

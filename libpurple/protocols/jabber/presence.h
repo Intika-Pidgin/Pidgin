@@ -71,6 +71,7 @@ struct _JabberPresence {
 	gboolean delayed;
 	time_t sent;
 	int idle;
+	gboolean adjust_idle_for_delay;
 };
 
 typedef void (JabberPresenceHandler)(JabberStream *js, JabberPresence *presence,
@@ -92,7 +93,6 @@ void jabber_set_status(PurpleAccount *account, PurpleStatus *status);
  */
 void jabber_presence_send(JabberStream *js, gboolean force);
 
-xmlnode *jabber_presence_create(JabberBuddyState state, const char *msg, int priority); /* DEPRECATED */
 xmlnode *jabber_presence_create_js(JabberStream *js, JabberBuddyState state, const char *msg, int priority);
 void jabber_presence_parse(JabberStream *js, xmlnode *packet);
 void jabber_presence_subscription_set(JabberStream *js, const char *who,
