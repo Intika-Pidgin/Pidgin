@@ -43,6 +43,7 @@
 #include "upnp.h"
 #include "util.h"
 #include "network.h"
+#include "keyring.h"
 
 #include "gtkblist.h"
 #include "gtkconv.h"
@@ -109,6 +110,9 @@ static GtkWidget *prefs_conv_themes_combo_box;
 static GtkWidget *prefs_conv_variants_combo_box;
 static GtkWidget *prefs_status_themes_combo_box;
 static GtkWidget *prefs_smiley_themes_combo_box;
+
+/* Keyrings page */
+static gpointer keyring_page_pref_set_instance = NULL;
 
 /* Sound theme specific */
 static GtkWidget *sound_entry = NULL;
@@ -269,83 +273,105 @@ enum {
 	PREF_DROPDOWN_COUNT
 };
 
-static void
-dropdown_set(GObject *w, const char *key)
+typedef struct
 {
-	const char *str_value;
-	int int_value;
-	gboolean bool_value;
 	PurplePrefType type;
+	union {
+		const char *string;
+		int integer;
+		gboolean boolean;
+	} value;
+} PidginPrefValue;
+
+typedef void (*PidginPrefsDropdownCallback)(GtkComboBox *combo_box,
+	PidginPrefValue value);
+
+static void
+dropdown_set(GtkComboBox *combo_box, gpointer _cb)
+{
+	PidginPrefsDropdownCallback cb = _cb;
 	GtkTreeIter iter;
 	GtkTreeModel *tree_model;
+	PidginPrefValue active;
 
-	tree_model = gtk_combo_box_get_model(GTK_COMBO_BOX(w));
-	if (!gtk_combo_box_get_active_iter(GTK_COMBO_BOX(w), &iter))
+	tree_model = gtk_combo_box_get_model(combo_box);
+	if (!gtk_combo_box_get_active_iter(combo_box, &iter))
 		return;
+	active.type = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(combo_box),
+		"type"));
 
-	type = GPOINTER_TO_INT(g_object_get_data(w, "type"));
+	g_object_set_data(G_OBJECT(combo_box), "previously_active",
+		g_object_get_data(G_OBJECT(combo_box), "current_active"));
+	g_object_set_data(G_OBJECT(combo_box), "current_active",
+		GINT_TO_POINTER(gtk_combo_box_get_active(combo_box)));
 
-	if (type == PURPLE_PREF_INT) {
-		gtk_tree_model_get(tree_model, &iter,
-		                   PREF_DROPDOWN_VALUE, &int_value,
-		                   -1);
-
-		purple_prefs_set_int(key, int_value);
+	if (active.type == PURPLE_PREF_INT) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&active.value.integer, -1);
 	}
-	else if (type == PURPLE_PREF_STRING) {
-		gtk_tree_model_get(tree_model, &iter,
-		                   PREF_DROPDOWN_VALUE, &str_value,
-		                   -1);
-
-		purple_prefs_set_string(key, str_value);
+	else if (active.type == PURPLE_PREF_STRING) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&active.value.string, -1);
 	}
-	else if (type == PURPLE_PREF_BOOLEAN) {
-		gtk_tree_model_get(tree_model, &iter,
-		                   PREF_DROPDOWN_VALUE, &bool_value,
-		                   -1);
-
-		purple_prefs_set_bool(key, bool_value);
+	else if (active.type == PURPLE_PREF_BOOLEAN) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&active.value.boolean, -1);
 	}
+
+	cb(combo_box, active);
 }
 
-GtkWidget *
-pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
-		PurplePrefType type, const char *key, GList *menuitems)
+static void pidgin_prefs_dropdown_revert_active(GtkComboBox *combo_box)
 {
-	GtkWidget  *dropdown;
-	GtkWidget  *label = NULL;
-	gchar      *text;
-	const char *stored_str = NULL;
-	int         stored_int = 0;
-	gboolean    stored_bool = FALSE;
-	int         int_value  = 0;
-	const char *str_value  = NULL;
-	gboolean    bool_value = FALSE;
+	gint previously_active;
+
+	g_return_if_fail(combo_box != NULL);
+
+	previously_active = GPOINTER_TO_INT(g_object_get_data(
+		G_OBJECT(combo_box), "previously_active"));
+	g_object_set_data(G_OBJECT(combo_box), "current_active",
+		GINT_TO_POINTER(previously_active));
+
+	gtk_combo_box_set_active(combo_box, previously_active);
+}
+
+static GtkWidget *
+pidgin_prefs_dropdown_from_list_with_cb(GtkWidget *box, const gchar *title,
+	GtkComboBox **dropdown_out, GList *menuitems,
+	PidginPrefValue initial, PidginPrefsDropdownCallback cb)
+{
+	GtkWidget *dropdown;
+	GtkWidget *label = NULL;
+	gchar *text;
 	GtkListStore *store = NULL;
 	GtkTreeIter iter;
 	GtkTreeIter active;
 	GtkCellRenderer *renderer;
+	gpointer current_active;
 
 	g_return_val_if_fail(menuitems != NULL, NULL);
 
-	if (type == PURPLE_PREF_INT) {
+	if (initial.type == PURPLE_PREF_INT) {
 		store = gtk_list_store_new(PREF_DROPDOWN_COUNT, G_TYPE_STRING, G_TYPE_INT);
-		stored_int = purple_prefs_get_int(key);
-	} else if (type == PURPLE_PREF_STRING) {
+	} else if (initial.type == PURPLE_PREF_STRING) {
 		store = gtk_list_store_new(PREF_DROPDOWN_COUNT, G_TYPE_STRING, G_TYPE_STRING);
-		stored_str = purple_prefs_get_string(key);
-	} else if (type == PURPLE_PREF_BOOLEAN) {
+	} else if (initial.type == PURPLE_PREF_BOOLEAN) {
 		store = gtk_list_store_new(PREF_DROPDOWN_COUNT, G_TYPE_STRING, G_TYPE_BOOLEAN);
-		stored_bool = purple_prefs_get_bool(key);
 	} else {
 		g_warn_if_reached();
 		return NULL;
 	}
 
 	dropdown = gtk_combo_box_new_with_model(GTK_TREE_MODEL(store));
-	g_object_set_data(G_OBJECT(dropdown), "type", GINT_TO_POINTER(type));
+	if (dropdown_out != NULL)
+		*dropdown_out = GTK_COMBO_BOX(dropdown);
+	g_object_set_data(G_OBJECT(dropdown), "type", GINT_TO_POINTER(initial.type));
 
 	while (menuitems != NULL && (text = (char *)menuitems->data) != NULL) {
+		int int_value  = 0;
+		const char *str_value  = NULL;
+		gboolean bool_value = FALSE;
+
 		menuitems = g_list_next(menuitems);
 		g_return_val_if_fail(menuitems != NULL, NULL);
 
@@ -354,30 +380,31 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 		                   PREF_DROPDOWN_TEXT, text,
 		                   -1);
 
-		if (type == PURPLE_PREF_INT) {
+		if (initial.type == PURPLE_PREF_INT) {
 			int_value = GPOINTER_TO_INT(menuitems->data);
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, int_value,
 			                   -1);
 		}
-		else if (type == PURPLE_PREF_STRING) {
+		else if (initial.type == PURPLE_PREF_STRING) {
 			str_value = (const char *)menuitems->data;
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, str_value,
 			                   -1);
 		}
-		else if (type == PURPLE_PREF_BOOLEAN) {
+		else if (initial.type == PURPLE_PREF_BOOLEAN) {
 			bool_value = (gboolean)GPOINTER_TO_INT(menuitems->data);
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, bool_value,
 			                   -1);
 		}
 
-		if ((type == PURPLE_PREF_INT && stored_int == int_value) ||
-			(type == PURPLE_PREF_STRING && stored_str != NULL &&
-			 !strcmp(stored_str, str_value)) ||
-			(type == PURPLE_PREF_BOOLEAN &&
-			 (stored_bool == bool_value))) {
+		if ((initial.type == PURPLE_PREF_INT &&
+			initial.value.integer == int_value) ||
+			(initial.type == PURPLE_PREF_STRING &&
+			!g_strcmp0(initial.value.string, str_value)) ||
+			(initial.type == PURPLE_PREF_BOOLEAN &&
+			(initial.value.boolean == bool_value))) {
 
 			active = iter;
 		}
@@ -392,11 +419,61 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 	                               NULL);
 
 	gtk_combo_box_set_active_iter(GTK_COMBO_BOX(dropdown), &active);
+	current_active = GINT_TO_POINTER(gtk_combo_box_get_active(GTK_COMBO_BOX(
+		dropdown)));
+	g_object_set_data(G_OBJECT(dropdown), "current_active", current_active);
+	g_object_set_data(G_OBJECT(dropdown), "previously_active", current_active);
 
 	g_signal_connect(G_OBJECT(dropdown), "changed",
-	                 G_CALLBACK(dropdown_set), (char *)key);
+		G_CALLBACK(dropdown_set), cb);
 
 	pidgin_add_widget_to_vbox(GTK_BOX(box), title, NULL, dropdown, FALSE, &label);
+
+	return label;
+}
+
+static void
+pidgin_prefs_dropdown_from_list_cb(GtkComboBox *combo_box,
+	PidginPrefValue value)
+{
+	const char *key;
+
+	key = g_object_get_data(G_OBJECT(combo_box), "key");
+
+	if (value.type == PURPLE_PREF_INT) {
+		purple_prefs_set_int(key, value.value.integer);
+	} else if (value.type == PURPLE_PREF_STRING) {
+		purple_prefs_set_string(key, value.value.string);
+	} else if (value.type == PURPLE_PREF_BOOLEAN) {
+		purple_prefs_set_bool(key, value.value.boolean);
+	} else {
+		g_return_if_reached();
+	}
+}
+
+GtkWidget *
+pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
+		PurplePrefType type, const char *key, GList *menuitems)
+{
+	PidginPrefValue initial;
+	GtkComboBox *dropdown = NULL;
+	GtkWidget *label;
+
+	initial.type = type;
+	if (type == PURPLE_PREF_INT) {
+		initial.value.integer = purple_prefs_get_int(key);
+	} else if (type == PURPLE_PREF_STRING) {
+		initial.value.string = purple_prefs_get_string(key);
+	} else if (type == PURPLE_PREF_BOOLEAN) {
+		initial.value.boolean = purple_prefs_get_bool(key);
+	} else {
+		g_return_val_if_reached(NULL);
+	}
+
+	label = pidgin_prefs_dropdown_from_list_with_cb(box, title, &dropdown,
+		menuitems, initial, pidgin_prefs_dropdown_from_list_cb);
+
+	g_object_set_data(G_OBJECT(dropdown), "key", (gpointer)key);
 
 	return label;
 }
@@ -463,6 +540,8 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	prefs_conv_variants_combo_box = NULL;
 	prefs_status_themes_combo_box = NULL;
 	prefs_smiley_themes_combo_box = NULL;
+
+	keyring_page_pref_set_instance = NULL;
 
 	sample_webview = NULL;
 
@@ -2507,6 +2586,117 @@ logging_page(void)
 	return ret;
 }
 
+static void
+change_master_password_cb(GtkWidget *button, gpointer ptr)
+{
+	purple_keyring_change_master(NULL, NULL);
+}
+
+static void
+keyring_page_pref_set_inuse(const PurpleKeyring *keyring, GError *error,
+	gpointer _combo_box)
+{
+	GtkComboBox *combo_box = _combo_box;
+	const PurpleKeyring *in_use = purple_keyring_get_inuse();
+
+	if (keyring_page_pref_set_instance != combo_box) {
+		purple_debug_info("gtkprefs", "pref window already closed\n");
+		return;
+	}
+	keyring_page_pref_set_instance = NULL;
+
+	gtk_widget_set_sensitive(GTK_WIDGET(combo_box), TRUE);
+
+	if (error != NULL) {
+		pidgin_prefs_dropdown_revert_active(combo_box);
+		purple_notify_error(NULL, _("Keyring"),
+			_("Failed to set new keyring"), error->message);
+		return;
+	}
+
+	g_return_if_fail(in_use != NULL);
+	purple_prefs_set_string("/purple/keyring/active",
+		purple_keyring_get_id(in_use));
+}
+
+static void
+keyring_page_pref_changed(GtkComboBox *combo_box, PidginPrefValue value)
+{
+	const char *keyring_id;
+	PurpleKeyring *keyring;
+	GtkWidget *change_master_button;
+
+	g_return_if_fail(combo_box != NULL);
+	g_return_if_fail(value.type == PURPLE_PREF_STRING);
+
+	change_master_button = g_object_get_data(G_OBJECT(combo_box),
+		"change_master_button");
+
+	keyring_id = value.value.string;
+	keyring = purple_keyring_find_keyring_by_id(keyring_id);
+	if (keyring == NULL) {
+		pidgin_prefs_dropdown_revert_active(combo_box);
+		purple_notify_error(NULL, _("Keyring"),
+			_("Selected keyring is disabled"), NULL);
+		return;
+	}
+
+	gtk_widget_set_sensitive(GTK_WIDGET(combo_box), FALSE);
+
+	keyring_page_pref_set_instance = combo_box;
+	purple_keyring_set_inuse(keyring, FALSE, keyring_page_pref_set_inuse,
+		combo_box);
+
+	if (purple_keyring_get_change_master(keyring))
+		gtk_widget_set_sensitive(change_master_button, TRUE);
+	else
+		gtk_widget_set_sensitive(change_master_button, FALSE);
+}
+
+static GtkWidget *
+keyring_page(void)
+{
+	GtkWidget *ret;
+	GtkWidget *vbox;
+	GtkWidget *button;
+	GList *names;
+	const char *keyring_id;
+	PurpleKeyring *keyring;
+	PidginPrefValue initial;
+	GtkComboBox *dropdown = NULL;
+
+	keyring_id = purple_prefs_get_string("/purple/keyring/active");
+	keyring = purple_keyring_find_keyring_by_id(keyring_id);
+
+	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	gtk_container_set_border_width(GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
+
+	/* Change master password */
+	button = gtk_button_new_with_mnemonic(_("_Change master password."));
+
+	/* Keyring selection */
+	vbox = pidgin_make_frame(ret, _("Keyring"));
+	names = purple_keyring_get_options();
+	initial.type = PURPLE_PREF_STRING;
+	initial.value.string = purple_prefs_get_string("/purple/keyring/active");
+	pidgin_prefs_dropdown_from_list_with_cb(vbox, _("Keyring:"), &dropdown,
+		names, initial, keyring_page_pref_changed);
+	g_object_set_data(G_OBJECT(dropdown), "change_master_button", button);
+	g_list_free(names);
+
+	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(change_master_password_cb), NULL);
+
+	if (keyring && purple_keyring_get_change_master(keyring))
+		gtk_widget_set_sensitive(button, TRUE);
+	else
+		gtk_widget_set_sensitive(button, FALSE);
+
+	gtk_box_pack_start(GTK_BOX(vbox), button, FALSE, FALSE, 1);
+	gtk_widget_show_all(ret);
+
+	return ret;
+}
+
 #ifndef _WIN32
 static gint
 sound_cmd_yeah(GtkEntry *entry, gpointer d)
@@ -2957,6 +3147,7 @@ away_page(void)
 	GtkWidget *dd;
 	GtkWidget *label;
 	GtkWidget *button;
+	/*GtkWidget *select;*/
 	GtkWidget *menu;
 	GtkSizeGroup *sg;
 
@@ -2979,7 +3170,7 @@ away_page(void)
 	gtk_size_group_add_widget(sg, dd);
 	gtk_misc_set_alignment(GTK_MISC(dd), 0, 0.5);
 
-	pidgin_prefs_labeled_spin_button(vbox,
+	/*select = */pidgin_prefs_labeled_spin_button(vbox,
 			_("_Minutes before becoming idle:"), "/purple/away/mins_before_away",
 			1, 24 * 60, sg);
 
@@ -3674,6 +3865,7 @@ prefs_notebook_init(void)
 	prefs_notebook_add_page(_("Logging"), logging_page(), notebook_page++);
 	prefs_notebook_add_page(_("Network"), network_page(), notebook_page++);
 	prefs_notebook_add_page(_("Proxy"), proxy_page(), notebook_page++);
+	prefs_notebook_add_page(_("Password Storage"), keyring_page(), notebook_page++);
 
 	prefs_notebook_add_page(_("Sounds"), sound_page(), notebook_page++);
 	prefs_notebook_add_page(_("Status / Idle"), away_page(), notebook_page++);
