@@ -1,6 +1,7 @@
 /**
  * @file gntprefs.c GNT Preferences API
  * @ingroup finch
+ * @todo: add support for master password changing.
  */
 
 /* finch
@@ -195,6 +196,12 @@ static Prefs logging[] =
 	{PURPLE_PREF_NONE, NULL, NULL, NULL},
 };
 
+static Prefs keyring[] =
+{
+	{PURPLE_PREF_STRING, "/purple/keyring/active", N_("Active keyring"), purple_keyring_get_options},
+	{PURPLE_PREF_NONE, NULL, NULL, NULL}
+};
+
 static Prefs idle[] =
 {
 	{PURPLE_PREF_STRING, "/purple/away/idle_reporting", N_("Report Idle time"), get_idle_options},
@@ -250,6 +257,7 @@ void finch_prefs_show_all()
 
 	add_pref_group(fields, _("Buddy List"), blist);
 	add_pref_group(fields, _("Conversations"), convs);
+	add_pref_group(fields, _("Keyring"), keyring);
 	add_pref_group(fields, _("Logging"), logging);
 	add_pref_group(fields, _("Idle"), idle);
 
