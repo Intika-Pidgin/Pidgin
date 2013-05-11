@@ -104,7 +104,9 @@ static void mxit_cb_http_read( gpointer user_data, gint source, PurpleInputCondi
 	int					len;
 	char*				tmp;
 	int					res;
+#if 0
 	char*				next;
+#endif
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_cb_http_read\n" );
 
@@ -188,7 +190,10 @@ static void mxit_cb_http_read( gpointer user_data, gint source, PurpleInputCondi
 		}
 		else if ( buflen > ( ( body - buf ) + bodylen ) ) {
 			/* we have a second packet here */
+#if 0
 			next = body + bodylen;
+#endif
+			purple_debug_warning(MXIT_PLUGIN_ID, "Recieved many packets at once\n");
 			session->rx_res = 0;
 		}
 		else {
@@ -278,7 +283,7 @@ static void mxit_cb_http_connect( gpointer user_data, gint source, const gchar* 
 	/* source is the file descriptor of the new connection */
 	if ( source < 0 ) {
 		purple_debug_info( MXIT_PLUGIN_ID, "mxit_cb_http_connect failed: %s\n", error_message );
-		purple_connection_error( req->session->con, _( "Unable to connect to the MXit HTTP server. Please check your server settings." ) );
+		purple_connection_error( req->session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Unable to connect to the MXit HTTP server. Please check your server settings." ) );
 		return;
 	}
 
@@ -329,7 +334,7 @@ void mxit_http_send_request( struct MXitSession* session, char* host, int port, 
 	/* open connection to the HTTP server */
 	con = purple_proxy_connect( NULL, session->acc, host, port, mxit_cb_http_connect, req );
 	if ( !con ) {
-		purple_connection_error_reason( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Unable to connect" ) );
+		purple_connection_error( session->con, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, _( "Unable to connect" ) );
 	}
 }
 

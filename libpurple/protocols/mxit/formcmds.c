@@ -26,6 +26,7 @@
 
 #include "internal.h"
 #include "debug.h"
+#include "obsolete.h"
 
 #include "protocol.h"
 #include "mxit.h"
@@ -104,7 +105,7 @@ static void mxit_cb_ii_returned(PurpleUtilFetchUrlData* url_data, gpointer user_
 	}
 
 	/* we now have the inline image, store a copy in the imagestore */
-	id = purple_imgstore_add_with_id(g_memdup(url_text, len), len, NULL);
+	id = purple_imgstore_new_with_id(g_memdup(url_text, len), len, NULL);
 
 	/* map the inline image id to purple image id */
 	intptr = g_malloc(sizeof(int));
@@ -332,8 +333,10 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 	if (img) {
 		rawimg = purple_base64_decode(img, &rawimglen);
 		//purple_util_write_data_to_file_absolute("/tmp/mxitinline.png", (char*) rawimg, rawimglen);
-		imgid = purple_imgstore_add_with_id(rawimg, rawimglen, NULL);
-		g_string_append_printf(msg, "<img id=\"%i\">", imgid);
+		imgid = purple_imgstore_new_with_id(rawimg, rawimglen, NULL);
+		g_string_append_printf(msg,
+		                       "<img src=\"" PURPLE_STORED_IMAGE_PROTOCOL "%i\">",
+		                       imgid);
 		mx->flags |= PURPLE_MESSAGE_IMAGES;
 	}
 	else {
@@ -358,7 +361,7 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 				purple_debug_info(MXIT_PLUGIN_ID, "sending request for inline image '%s'\n", iireq->url);
 
 				/* request the image (reference: "libpurple/util.h") */
-				purple_util_fetch_url_request(iireq->url, TRUE, NULL, TRUE, NULL, FALSE, mxit_cb_ii_returned, iireq);
+				purple_util_fetch_url(iireq->url, TRUE, NULL, TRUE, -1, mxit_cb_ii_returned, iireq);
 				mx->img_count++;
 			}
 		}

@@ -99,8 +99,8 @@ static void irc_connected(struct irc_conn *irc, const char *nick)
 
 	/* If we're away then set our away message */
 	status = purple_account_get_active_status(irc->account);
-	if (purple_status_get_type(status) != PURPLE_STATUS_AVAILABLE) {
-		PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+	if (purple_status_type_get_primitive(purple_status_get_type(status)) != PURPLE_STATUS_AVAILABLE) {
+		PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
 		prpl_info->set_status(irc->account, status);
 	}
 
@@ -427,44 +427,40 @@ void irc_msg_endwhois(struct irc_conn *irc, const char *name, const char *from, 
 	tmp = g_strdup_printf("%s%s%s", tmp2,
 				(irc->whois.ircop ? _(" <i>(ircop)</i>") : ""),
 				(irc->whois.identified ? _(" <i>(identified)</i>") : ""));
-	purple_notify_user_info_add_pair(user_info, _("Nick"), tmp);
+	purple_notify_user_info_add_pair_html(user_info, _("Nick"), tmp);
 	g_free(tmp2);
 	g_free(tmp);
 
 	if (irc->whois.away) {
-		tmp = g_markup_escape_text(irc->whois.away, strlen(irc->whois.away));
+		purple_notify_user_info_add_pair_plaintext(user_info, _("Away"), irc->whois.away);
 		g_free(irc->whois.away);
-		purple_notify_user_info_add_pair(user_info, _("Away"), tmp);
-		g_free(tmp);
 	}
 	if (irc->whois.userhost) {
-		tmp = g_markup_escape_text(irc->whois.name, strlen(irc->whois.name));
-		g_free(irc->whois.name);
-		purple_notify_user_info_add_pair(user_info, _("Username"), irc->whois.userhost);
-		purple_notify_user_info_add_pair(user_info, _("Real name"), tmp);
+		purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), irc->whois.userhost);
+		purple_notify_user_info_add_pair_plaintext(user_info, _("Real name"), irc->whois.name);
 		g_free(irc->whois.userhost);
-		g_free(tmp);
+		g_free(irc->whois.name);
 	}
 	if (irc->whois.server) {
 		tmp = g_strdup_printf("%s (%s)", irc->whois.server, irc->whois.serverinfo);
-		purple_notify_user_info_add_pair(user_info, _("Server"), tmp);
+		purple_notify_user_info_add_pair_plaintext(user_info, _("Server"), tmp);
 		g_free(tmp);
 		g_free(irc->whois.server);
 		g_free(irc->whois.serverinfo);
 	}
 	if (irc->whois.channels) {
-		purple_notify_user_info_add_pair(user_info, _("Currently on"), irc->whois.channels->str);
+		purple_notify_user_info_add_pair_plaintext(user_info, _("Currently on"), irc->whois.channels->str);
 		g_string_free(irc->whois.channels, TRUE);
 	}
 	if (irc->whois.idle) {
 		gchar *timex = purple_str_seconds_to_string(irc->whois.idle);
-		purple_notify_user_info_add_pair(user_info, _("Idle for"), timex);
+		purple_notify_user_info_add_pair_plaintext(user_info, _("Idle for"), timex);
 		g_free(timex);
-		purple_notify_user_info_add_pair(user_info,
+		purple_notify_user_info_add_pair_plaintext(user_info,
 														_("Online since"), purple_date_format_full(localtime(&irc->whois.signon)));
 	}
-	if (!strcmp(irc->whois.nick, "Paco-Paco")) {
-		purple_notify_user_info_add_pair(user_info,
+	if (!strcmp(irc->whois.nick, "elb")) {
+		purple_notify_user_info_add_pair_plaintext(user_info,
 																   _("<b>Defining adjective:</b>"), _("Glorious"));
 	}
 
@@ -536,16 +532,16 @@ void irc_msg_who(struct irc_conn *irc, const char *name, const char *from, char 
 		g_free(userhost);
 		g_free(realname);
 		
-		flags = cb->flags;
+		flags = purple_conv_chat_cb_get_flags(cb);
 
 		/* FIXME: I'm not sure this is really a good idea, now
 		 * that we no longer do periodic WHO.  It seems to me
 		 * like it's more likely to be confusing than not.
 		 * Comments? */
 		if (args[6][0] == 'G' && !(flags & PURPLE_CBFLAGS_AWAY)) {
-			purple_conv_chat_user_set_flags(chat, cb->name, flags | PURPLE_CBFLAGS_AWAY);
+			purple_conv_chat_user_set_flags(chat, purple_conv_chat_cb_get_name(cb), flags | PURPLE_CBFLAGS_AWAY);
 		} else if(args[6][0] == 'H' && (flags & PURPLE_CBFLAGS_AWAY)) {
-			purple_conv_chat_user_set_flags(chat, cb->name, flags & ~PURPLE_CBFLAGS_AWAY);
+			purple_conv_chat_user_set_flags(chat, purple_conv_chat_cb_get_name(cb), flags & ~PURPLE_CBFLAGS_AWAY);
 		}
 	}
 }
@@ -1186,7 +1182,7 @@ void irc_msg_badnick(struct irc_conn *irc, const char *name, const char *from, c
 				  _("Your selected nickname was rejected by the server.  It probably contains invalid characters."));
 
 	} else {
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 				  PURPLE_CONNECTION_ERROR_INVALID_SETTINGS,
 				  _("Your selected account name was rejected by the server.  It probably contains invalid characters."));
 	}
@@ -1564,7 +1560,7 @@ irc_auth_start_cyrus(struct irc_conn *irc)
 			purple_debug_error("irc", "sasl_client_new failed: %d\n", ret);
 			tmp = g_strdup_printf(_("Failed to initialize SASL authentication: %s"),
 				sasl_errdetail(irc->sasl_conn));
-			purple_connection_error_reason (gc,
+			purple_connection_error (gc,
 				PURPLE_CONNECTION_ERROR_OTHER_ERROR, tmp);
 			g_free(tmp);
 			return;
@@ -1581,7 +1577,7 @@ irc_auth_start_cyrus(struct irc_conn *irc)
 				irc->mech_works = FALSE;
 				break;
 			case SASL_NOMECH:
-				purple_connection_error_reason (gc,
+				purple_connection_error (gc,
 					PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE,
 					_("SASL authentication failed: No worthy authentication mechanisms found."));
 
@@ -1590,7 +1586,7 @@ irc_auth_start_cyrus(struct irc_conn *irc)
 			case SASL_BADPARAM:
 			case SASL_NOMEM:
 				tmp = g_strdup_printf(_("SASL authentication failed: %s"), sasl_errdetail(irc->sasl_conn));
-				purple_connection_error_reason (gc,
+				purple_connection_error (gc,
 					PURPLE_CONNECTION_ERROR_OTHER_ERROR, tmp);
 				g_free(tmp);
 
@@ -1637,7 +1633,7 @@ irc_msg_cap(struct irc_conn *irc, const char *name, const char *from, char **arg
 		return;
 	if (strncmp(args[1], "ACK", 4)) {
 		const char *tmp = _("SASL authentication failed: Server does not support SASL authentication.");
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 			PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, tmp);
 
 		irc_sasl_finish(irc);
@@ -1646,7 +1642,7 @@ irc_msg_cap(struct irc_conn *irc, const char *name, const char *from, char **arg
 
 	if ((ret = sasl_client_init(NULL)) != SASL_OK) {
 		const char *tmp = _("SASL authentication failed: Initializing SASL failed.");
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 			PURPLE_CONNECTION_ERROR_OTHER_ERROR, tmp);
 		return;
 	}
@@ -1654,22 +1650,22 @@ irc_msg_cap(struct irc_conn *irc, const char *name, const char *from, char **arg
 	irc->sasl_cb = g_new0(sasl_callback_t, 5);
 
 	irc->sasl_cb[id].id = SASL_CB_AUTHNAME;
-	irc->sasl_cb[id].proc = irc_sasl_cb_simple;
+	irc->sasl_cb[id].proc = (int (*)(void))irc_sasl_cb_simple; /* sasl_getsimple_t */
 	irc->sasl_cb[id].context = (void *)irc;
 	id++;
 
 	irc->sasl_cb[id].id = SASL_CB_USER;
-	irc->sasl_cb[id].proc = irc_sasl_cb_simple;
+	irc->sasl_cb[id].proc = (int (*)(void))irc_sasl_cb_simple; /* sasl_getsimple_t */
 	irc->sasl_cb[id].context = (void *)irc;
 	id++;
 
 	irc->sasl_cb[id].id = SASL_CB_PASS;
-	irc->sasl_cb[id].proc = irc_sasl_cb_secret;
+	irc->sasl_cb[id].proc = (int (*)(void))irc_sasl_cb_secret; /* sasl_getsecret_t */
 	irc->sasl_cb[id].context = (void *)irc;
 	id++;
 
 	irc->sasl_cb[id].id = SASL_CB_LOG;
-	irc->sasl_cb[id].proc = irc_sasl_cb_log;
+	irc->sasl_cb[id].proc = (int (*)(void))irc_sasl_cb_log; /* sasl_log_t */
 	irc->sasl_cb[id].context = (void *)irc;
 	id++;
 
@@ -1687,7 +1683,7 @@ irc_msg_cap(struct irc_conn *irc, const char *name, const char *from, char **arg
 		purple_debug_error("irc", "sasl_client_new failed: %d\n", ret);
 		tmp = g_strdup_printf(_("Failed to initialize SASL authentication: %s"),
 			sasl_errdetail(irc->sasl_conn));
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 			PURPLE_CONNECTION_ERROR_OTHER_ERROR, tmp);
 		g_free(tmp);
 
@@ -1727,7 +1723,7 @@ irc_msg_auth(struct irc_conn *irc, char *arg)
 
 		gchar *tmp = g_strdup_printf(_("SASL authentication failed: %s"),
 			sasl_errdetail(irc->sasl_conn));
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 			PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, tmp);
 		g_free(tmp);
 
@@ -1771,7 +1767,7 @@ irc_msg_authtryagain(struct irc_conn *irc, const char *name, const char *from, c
 	 * aren't told the server supports no worthy mechanisms.
 	 */
 	if (irc->mech_works) {
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 			PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, _("Incorrect Password"));
 
 		irc_sasl_finish(irc);
@@ -1797,7 +1793,7 @@ irc_msg_authtryagain(struct irc_conn *irc, const char *name, const char *from, c
 		purple_debug_info("irc", "Now trying with %s\n", irc->sasl_mechs->str);
 		irc_auth_start_cyrus(irc);
 	} else {
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 			PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE,
 			_("SASL authentication failed: No worthy mechanisms found"));
 
@@ -1814,7 +1810,7 @@ irc_msg_authfail(struct irc_conn *irc, const char *name, const char *from, char 
 	if (irc->sasl_conn) {
 		purple_debug_info("irc", "SASL authentication failed: %s", sasl_errdetail(irc->sasl_conn));
 
-		purple_connection_error_reason (gc,
+		purple_connection_error (gc,
 			PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, _("Incorrect Password"));
 	}
 
