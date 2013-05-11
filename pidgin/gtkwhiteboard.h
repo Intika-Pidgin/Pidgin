@@ -42,26 +42,29 @@
 #define PALETTE_NUM_COLORS  7
 
 /**
+ * A PidginWhiteboard's private data
+ */
+typedef struct _PidginWhiteboardPrivate PidginWhiteboardPrivate;
+
+/**
  * A PidginWhiteboard
  */
 typedef struct _PidginWhiteboard
 {
-	PurpleWhiteboard *wb;      /**< backend data for this whiteboard */
+	PidginWhiteboardPrivate *priv;  /**< Internal data */
 
-	GtkWidget *window;       /**< Window for the Doodle session */
-	GtkWidget *drawing_area; /**< Drawing area */
+	PurpleWhiteboard *wb;           /**< Backend data for this whiteboard */
 
-	GdkPixmap *pixmap;       /**< Memory for drawing area */
+	GtkWidget *window;              /**< Window for the Doodle session */
+	GtkWidget *drawing_area;        /**< Drawing area */
 
-	int  width;              /**< Canvas width */
-	int  height;             /**< Canvas height */
-	int brush_color;         /**< Foreground color */
-	int brush_size;          /**< Brush size */
+	int width;                      /**< Canvas width */
+	int height;                     /**< Canvas height */
+	int brush_color;                /**< Foreground color */
+	int brush_size;                 /**< Brush size */
 } PidginWhiteboard;
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 /*****************************************************************************/
 /** @name PidginWhiteboard API                                              */
@@ -77,8 +80,6 @@ PurpleWhiteboardUiOps *pidgin_whiteboard_get_ui_ops( void );
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _PIDGINWHITEBOARD_H_ */

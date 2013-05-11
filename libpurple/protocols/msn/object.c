@@ -103,7 +103,7 @@ msn_object_new_from_string(const char *str)
 	if (obj->creator == NULL || obj->size == 0 || obj->type == 0
 	 || obj->sha1d == NULL) {
 		purple_debug_error("msn", "Discarding invalid msnobj: '%s'\n", str);
-		msn_object_destroy(obj);
+		msn_object_destroy(obj, FALSE);
 		return NULL;
 	}
 
@@ -111,12 +111,12 @@ msn_object_new_from_string(const char *str)
 		/* Location/friendly are required for non-buddyicon objects */
 		if (obj->type != MSN_OBJECT_USERTILE) {
 			purple_debug_error("msn", "Discarding invalid msnobj: '%s'\n", str);
-			msn_object_destroy(obj);
+			msn_object_destroy(obj, FALSE);
 			return NULL;
 		/* Buddy icon object can contain Url/Url1 instead */
 		} else if (obj->url == NULL || obj->url1 == NULL) {
 			purple_debug_error("msn", "Discarding invalid msnobj: '%s'\n", str);
-			msn_object_destroy(obj);
+			msn_object_destroy(obj, FALSE);
 			return NULL;
 		}
 	}
@@ -159,7 +159,7 @@ msn_object_new_from_image(PurpleStoredImage *img, const char *location,
 
 	ctx = purple_cipher_context_new_by_name("sha1", NULL);
 	purple_cipher_context_append(ctx, data, size);
-	purple_cipher_context_digest(ctx, sizeof(digest), digest, NULL);
+	purple_cipher_context_digest(ctx, digest, sizeof(digest));
 
 	base64 = purple_base64_encode(digest, sizeof(digest));
 	msn_object_set_sha1d(msnobj, base64);
@@ -181,7 +181,7 @@ msn_object_new_from_image(PurpleStoredImage *img, const char *location,
 
 	purple_cipher_context_reset(ctx, NULL);
 	purple_cipher_context_append(ctx, (const guchar *)buf, strlen(buf));
-	purple_cipher_context_digest(ctx, sizeof(digest), digest, NULL);
+	purple_cipher_context_digest(ctx, digest, sizeof(digest));
 	purple_cipher_context_destroy(ctx);
 	g_free(buf);
 
@@ -193,9 +193,12 @@ msn_object_new_from_image(PurpleStoredImage *img, const char *location,
 }
 
 void
-msn_object_destroy(MsnObject *obj)
+msn_object_destroy(MsnObject *obj, gboolean only_remote)
 {
 	g_return_if_fail(obj != NULL);
+
+	if (only_remote && obj->local)
+		return;
 
 	g_free(obj->creator);
 	g_free(obj->location);

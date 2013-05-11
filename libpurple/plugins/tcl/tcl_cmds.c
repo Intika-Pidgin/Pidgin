@@ -1516,7 +1516,8 @@ int tcl_cmd_status(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CON
 	PurpleStatus *status;
 	PurpleStatusType *status_type;
 	int error;
-#if !(defined PURPLE_DISABLE_DEPRECATED)
+# if (0)
+/* #if !(defined PURPLE_DISABLE_DEPRECATED) */
 	PurpleValue *value;
 	const char *attr;
 	int v;
@@ -1532,7 +1533,8 @@ int tcl_cmd_status(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CON
 
 	switch (cmd) {
 	case CMD_STATUS_ATTR:
-#if !(defined PURPLE_DISABLE_DEPRECATED)
+# if (0)
+/* #if !(defined PURPLE_DISABLE_DEPRECATED) */
 		if (objc != 4 && objc != 5) {
 			Tcl_WrongNumArgs(interp, 2, objv, "status attr_id ?value?");
 			return TCL_ERROR;
@@ -1640,13 +1642,13 @@ int tcl_cmd_status_attr(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj
 int tcl_cmd_status_type(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[])
 {
 	const char *cmds[] = { "attr", "attrs", "available", "exclusive", "id",
-	                       "independent", "name", "primary_attr",
+	                       "independent", "name",
 	                       "primitive", "saveable", "user_settable",
 	                       NULL };
 	enum { CMD_STATUS_TYPE_ATTR, CMD_STATUS_TYPE_ATTRS,
 	       CMD_STATUS_TYPE_AVAILABLE, CMD_STATUS_TYPE_EXCLUSIVE,
 	       CMD_STATUS_TYPE_ID, CMD_STATUS_TYPE_INDEPENDENT,
-	       CMD_STATUS_TYPE_NAME, CMD_STATUS_TYPE_PRIMARY_ATTR,
+	       CMD_STATUS_TYPE_NAME,
 	       CMD_STATUS_TYPE_PRIMITIVE, CMD_STATUS_TYPE_SAVEABLE,
 	       CMD_STATUS_TYPE_USER_SETTABLE } cmd;
 	PurpleStatusType *status_type;
@@ -1750,18 +1752,6 @@ int tcl_cmd_status_type(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj
 		Tcl_SetObjResult(interp,
 				 Tcl_NewStringObj(purple_primitive_get_id_from_type
 						  (purple_status_type_get_primitive(status_type)), -1));
-		break;
-	case CMD_STATUS_TYPE_PRIMARY_ATTR:
-#if !(defined PURPLE_DISABLE_DEPRECATED)
-		if (objc != 3) {
-			Tcl_WrongNumArgs(interp, 2, objv, "statustype");
-			return TCL_ERROR;
-		}
-		if ((status_type = purple_tcl_ref_get(interp, objv[2], PurpleTclRefStatusType)) == NULL)
-			return TCL_ERROR;
-		Tcl_SetObjResult(interp,
-				 Tcl_NewStringObj(purple_status_type_get_primary_attr(status_type), -1));
-#endif
 		break;
 	case CMD_STATUS_TYPE_SAVEABLE:
 		if (objc != 3) {

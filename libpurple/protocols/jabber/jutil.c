@@ -583,10 +583,15 @@ jabber_id_new(const char *str)
 
 const char *jabber_normalize(const PurpleAccount *account, const char *in)
 {
-	PurpleConnection *gc = account ? account->gc : NULL;
-	JabberStream *js = gc ? gc->proto_data : NULL;
+	PurpleConnection *gc = NULL;
+	JabberStream *js = NULL;
 	static char buf[3072]; /* maximum legal length of a jabber jid */
 	JabberID *jid;
+
+	if (account)
+		gc = purple_account_get_connection(account);
+	if (gc)
+		js = purple_connection_get_protocol_data(gc);
 
 	jid = jabber_id_new_internal(in, TRUE);
 	if(!jid)
@@ -743,7 +748,7 @@ jabber_calculate_data_hash(gconstpointer data, size_t len,
 
 	/* Hash the data */
 	purple_cipher_context_append(context, data, len);
-	if (!purple_cipher_context_digest_to_str(context, sizeof(digest), digest, NULL))
+	if (!purple_cipher_context_digest_to_str(context, digest, sizeof(digest)))
 	{
 		purple_debug_error("jabber", "Failed to get digest for %s cipher.\n",
 		    hash_algo);

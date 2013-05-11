@@ -72,7 +72,7 @@ void silc_say(SilcClient client, SilcClientConnection conn,
 		gc = client->application;
 
 	if (gc != NULL)
-		purple_connection_error_reason(gc, reason, tmp);
+		purple_connection_error(gc, reason, tmp);
 	else
 		purple_notify_error(NULL, _("Error"), _("Error occurred"), tmp);
 }
@@ -88,7 +88,7 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 			gboolean recursive)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	const char *type;
 	const unsigned char *data;
 	SilcUInt32 data_len;
@@ -121,7 +121,6 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 		SilcMime p;
 		const char *mtype;
 		SilcDList parts = silc_mime_get_multiparts(mime, &mtype);
-		SilcBool ret;
 
 		if (!strcmp(mtype, "mixed")) {
 			/* Contains multiple messages */
@@ -207,10 +206,12 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 		if (channel && !convo)
 			goto out;
 
-		imgid = purple_imgstore_add_with_id(g_memdup(data, data_len), data_len, "");
+		imgid = purple_imgstore_new_with_id(g_memdup(data, data_len), data_len, "");
 		if (imgid) {
 			cflags |= PURPLE_MESSAGE_IMAGES | PURPLE_MESSAGE_RECV;
-			g_snprintf(tmp, sizeof(tmp), "<IMG ID=\"%d\">", imgid);
+			g_snprintf(tmp, sizeof(tmp),
+			           "<IMG SRC=\"" PURPLE_STORED_IMAGE_PROTOCOL "%d\">",
+			           imgid);
 
 			if (channel)
 				serv_got_chat_in(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)),
@@ -221,7 +222,6 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 					    tmp, cflags, time(NULL));
 
 			purple_imgstore_unref_by_id(imgid);
-			cflags = 0;
 			ret = TRUE;
 		}
 		goto out;
@@ -261,7 +261,7 @@ silc_channel_message(SilcClient client, SilcClientConnection conn,
 		     SilcUInt32 message_len)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	PurpleConversation *convo = NULL;
 	char *msg, *tmp;
 
@@ -358,7 +358,7 @@ silc_private_message(SilcClient client, SilcClientConnection conn,
 		     SilcUInt32 message_len)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	PurpleConversation *convo;
 	char *msg, *tmp;
 
@@ -441,7 +441,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 {
 	va_list va;
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	PurpleAccount *account = purple_connection_get_account(gc);
 	PurpleConversation *convo;
 	SilcClientEntry client_entry, client_entry2;
@@ -951,7 +951,7 @@ silc_command(SilcClient client, SilcClientConnection conn,
 	     SilcUInt32 argc, unsigned char **argv)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 
 	switch (command) {
 
@@ -1088,7 +1088,7 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 		   SilcStatus error, va_list ap)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	PurpleConversation *convo;
 
 	switch (command) {
@@ -1169,10 +1169,10 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 	case SILC_COMMAND_WHOIS:
 		{
-			SilcUInt32 idle, *user_modes;
+			SilcUInt32 *user_modes;
 			SilcDList channels;
 			SilcClientEntry client_entry;
-			char tmp[1024], *tmp2;
+			char tmp[1024];
 			char *moodstr, *statusstr, *contactstr, *langstr, *devicestr, *tzstr, *geostr;
 			PurpleNotifyUserInfo *user_info;
 
@@ -1189,76 +1189,85 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			(void)va_arg(ap, char *);
 			channels = va_arg(ap, SilcDList);
 			(void)va_arg(ap, SilcUInt32);
-			idle = va_arg(ap, SilcUInt32);
+			(void)va_arg(ap, SilcUInt32); /* idle */
 			(void)va_arg(ap, unsigned char *);
 			user_modes = va_arg(ap, SilcUInt32 *);
 
 			user_info = purple_notify_user_info_new();
-			tmp2 = g_markup_escape_text(client_entry->nickname, -1);
-			purple_notify_user_info_add_pair(user_info, _("Nickname"), tmp2);
-			g_free(tmp2);
+			purple_notify_user_info_add_pair_plaintext(user_info, _("Nickname"), client_entry->nickname);
 			if (client_entry->realname) {
-				tmp2 = g_markup_escape_text(client_entry->realname, -1);
-				purple_notify_user_info_add_pair(user_info, _("Real Name"), tmp2);
-				g_free(tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Real Name"), client_entry->realname);
 			}
-			tmp2 = g_markup_escape_text(client_entry->username, -1);
 			if (*client_entry->hostname) {
-				gchar *tmp3;
-				tmp3 = g_strdup_printf("%s@%s", tmp2, client_entry->hostname);
-				purple_notify_user_info_add_pair(user_info, _("Username"), tmp3);
-				g_free(tmp3);
+				gchar *tmp2;
+				tmp2 = g_strdup_printf("%s@%s", client_entry->username, client_entry->hostname);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), tmp2);
+				g_free(tmp2);
 			} else
-				purple_notify_user_info_add_pair(user_info, _("Username"), tmp2);
-			g_free(tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), client_entry->username);
 
 			if (client_entry->mode) {
 				memset(tmp, 0, sizeof(tmp));
 				silcpurple_get_umode_string(client_entry->mode,
 							    tmp, sizeof(tmp) - strlen(tmp));
-				purple_notify_user_info_add_pair(user_info, _("User Modes"), tmp);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("User Modes"), tmp);
 			}
 
 			silcpurple_parse_attrs(client_entry->attrs, &moodstr, &statusstr, &contactstr, &langstr, &devicestr, &tzstr, &geostr);
 			if (moodstr) {
-				purple_notify_user_info_add_pair(user_info, _("Mood"), moodstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Mood"), moodstr);
 				g_free(moodstr);
 			}
 
 			if (statusstr) {
-				tmp2 = g_markup_escape_text(statusstr, -1);
-				purple_notify_user_info_add_pair(user_info, _("Status Text"), tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Status Text"), statusstr);
 				g_free(statusstr);
-				g_free(tmp2);
 			}
 
 			if (contactstr) {
-				purple_notify_user_info_add_pair(user_info, _("Preferred Contact"), contactstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Preferred Contact"), contactstr);
 				g_free(contactstr);
 			}
 
 			if (langstr) {
-				purple_notify_user_info_add_pair(user_info, _("Preferred Language"), langstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Preferred Language"), langstr);
 				g_free(langstr);
 			}
 
 			if (devicestr) {
-				purple_notify_user_info_add_pair(user_info, _("Device"), devicestr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Device"), devicestr);
 				g_free(devicestr);
 			}
 
 			if (tzstr) {
-				purple_notify_user_info_add_pair(user_info, _("Timezone"), tzstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Timezone"), tzstr);
 				g_free(tzstr);
 			}
 
 			if (geostr) {
-				purple_notify_user_info_add_pair(user_info, _("Geolocation"), geostr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Geolocation"), geostr);
 				g_free(geostr);
 			}
 
-			if (*client_entry->server)
-				purple_notify_user_info_add_pair(user_info, _("Server"), client_entry->server);
+			if (*client_entry->server) {
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Server"), client_entry->server);
+			}
 
 			if (channels && user_modes) {
 				SilcChannelPayload entry;
@@ -1276,9 +1285,7 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 					silc_strncat(tmp, sizeof(tmp) - 1, "  ", 1);
 					silc_free(m);
 				}
-				tmp2 = g_markup_escape_text(tmp, -1);
-				purple_notify_user_info_add_pair(user_info, _("Currently on"), tmp2);
-				g_free(tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Currently on"), tmp);
 			}
 
 			if (client_entry->public_key) {
@@ -1289,8 +1296,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				if (pk) {
 					fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
 					babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Fingerprint"), fingerprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Babbleprint"), babbleprint);
 					silc_free(fingerprint);
 					silc_free(babbleprint);
 					silc_free(pk);
@@ -1314,7 +1321,7 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 	case SILC_COMMAND_WHOWAS:
 		{
 			SilcClientEntry client_entry;
-			char *nickname, *realname, *username, *tmp;
+			char *nickname, *realname, *username;
 			PurpleNotifyUserInfo *user_info;
 
 			if (status != SILC_STATUS_OK) {
@@ -1332,27 +1339,23 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				break;
 
 			user_info = purple_notify_user_info_new();
-			tmp = g_markup_escape_text(nickname, -1);
-			purple_notify_user_info_add_pair(user_info, _("Nickname"), tmp);
-			g_free(tmp);
-			if (realname) {
-				tmp = g_markup_escape_text(realname, -1);
-				purple_notify_user_info_add_pair(user_info, _("Real Name"), tmp);
-				g_free(tmp);
-			}
+			purple_notify_user_info_add_pair_plaintext(user_info, _("Nickname"), nickname);
+			if (realname)
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Real Name"), realname);
 			if (username) {
-				tmp = g_markup_escape_text(username, -1);
 				if (client_entry && *client_entry->hostname) {
-					gchar *tmp3;
-					tmp3 = g_strdup_printf("%s@%s", tmp, client_entry->hostname);
-					purple_notify_user_info_add_pair(user_info, _("Username"), tmp3);
-					g_free(tmp3);
+					gchar *tmp;
+					tmp = g_strdup_printf("%s@%s", username, client_entry->hostname);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), tmp);
+					g_free(tmp);
 				} else
-					purple_notify_user_info_add_pair(user_info, _("Username"), tmp);
-				g_free(tmp);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), username);
 			}
-			if (client_entry && *client_entry->server)
-				purple_notify_user_info_add_pair(user_info, _("Server"), client_entry->server);
+			if (client_entry && *client_entry->server) {
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Server"), client_entry->server);
+			}
 
 
 			if (client_entry && client_entry->public_key) {
@@ -1363,8 +1366,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				if (pk) {
 					fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
 					babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Fingerprint"), fingerprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Babbleprint"), babbleprint);
 					silc_free(fingerprint);
 					silc_free(babbleprint);
 					silc_free(pk);
@@ -1731,7 +1734,7 @@ silc_get_auth_method(SilcClient client, SilcClientConnection conn,
 		     SilcGetAuthMeth completion, void *context)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcPurpleAskPassphrase internal;
 	const char *password;
 
@@ -1782,7 +1785,7 @@ silc_verify_public_key(SilcClient client, SilcClientConnection conn,
 		       SilcVerifyPublicKey completion, void *context)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 
 	if (!sg->conn && (conn_type == SILC_CONN_SERVER ||
 			  conn_type == SILC_CONN_ROUTER)) {

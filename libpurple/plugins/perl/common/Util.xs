@@ -1,35 +1,10 @@
 #include "module.h"
 
-static void
-purple_perl_util_url_cb(PurpleUtilFetchUrlData *url_data, void *user_data,
-                        const gchar *url_text, size_t size,
-                        const gchar *error_message)
-{
-	SV *sv = (SV *)user_data;
-	dSP;
-	ENTER;
-	SAVETMPS;
-	PUSHMARK(SP);
-
-	XPUSHs(sv_2mortal(newSVpvn(url_text, size)));
-	PUTBACK;
-
-	call_sv(sv, G_EVAL | G_SCALAR);
-	SPAGAIN;
-
-	/* XXX Make sure this destroys it correctly and that we don't want
-	 * something like sv_2mortal(sv) or something else here instead. */
-	SvREFCNT_dec(sv);
-
-	PUTBACK;
-	FREETMPS;
-	LEAVE;
-}
-
 static void markup_find_tag_foreach(GQuark key_id, char *data, HV *hv) {
 	const char *key = NULL;
 	key = g_quark_to_string(key_id);
-	hv_store(hv, key, strlen(key), newSVpv(data, 0), 0);
+	if (hv_store(hv, key, strlen(key), newSVpv(data, 0), 0) == NULL)
+		purple_debug_error("perl", "hv_store failed\n");
 }
 
 MODULE = Purple::Util  PACKAGE = Purple::Util  PREFIX = purple_
@@ -200,6 +175,14 @@ purple_utf8_try_convert(str)
 
 gboolean
 purple_ip_address_is_valid(ip)
+	const char* ip
+
+gboolean
+purple_ipv4_address_is_valid(ip)
+	const char* ip
+
+gboolean
+purple_ipv6_address_is_valid(ip)
 	const char* ip
 
 const char*
@@ -451,30 +434,6 @@ purple_markup_unescape_entity(text)
 
 MODULE = Purple::Util  PACKAGE = Purple::Util  PREFIX = purple_util_
 PROTOTYPES: ENABLE
-
- #XXX: expand...
-void
-purple_util_fetch_url(plugin, url, full, user_agent, http11, cb)
-	Purple::Plugin plugin
-	const char *url
-	gboolean full
-	const char *user_agent
-	gboolean http11
-	SV * cb
-PREINIT:
-	PurpleUtilFetchUrlData *data;
-PPCODE:
-	/* XXX: i don't like this... only plugins can use it... */
-	SV *sv = purple_perl_sv_from_fun(plugin, cb);
-
-	if (sv != NULL) {
-		data = purple_util_fetch_url(url, full, user_agent, http11,
-		                      purple_perl_util_url_cb, sv);
-		XPUSHs(sv_2mortal(purple_perl_bless_object(data, "Purple::Util::FetchUrlData")));
-	} else {
-		purple_debug_warning("perl", "Callback not a valid type, only strings and coderefs allowed in purple_util_fetch_url.\n");
-		XSRETURN_UNDEF;
-	}
 
 void
 purple_util_set_user_dir(dir)

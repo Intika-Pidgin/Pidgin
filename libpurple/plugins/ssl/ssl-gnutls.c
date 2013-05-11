@@ -34,7 +34,7 @@
 
 typedef struct
 {
-	gnutls_session session;
+	gnutls_session_t session;
 	guint handshake_handler;
 	guint handshake_timer;
 } PurpleSslGnutlsData;
@@ -284,9 +284,9 @@ static void ssl_gnutls_handshake_cb(gpointer data, gint source,
 		g_list_free(peers);
 
 		{
-			const gnutls_datum *cert_list;
+			const gnutls_datum_t *cert_list;
 			unsigned int cert_list_size = 0;
-			gnutls_session session=gnutls_data->session;
+			gnutls_session_t session=gnutls_data->session;
 			int i;
 
 			cert_list =
@@ -303,7 +303,7 @@ static void ssl_gnutls_handshake_cb(gpointer data, gint source,
 				gchar tbuf[256];
 				gsize tsz=sizeof(tbuf);
 				gchar * tasc = NULL;
-				gnutls_x509_crt cert;
+				gnutls_x509_crt_t cert;
 
 				gnutls_x509_crt_init(&cert);
 				gnutls_x509_crt_import (cert, &cert_list[i],
@@ -519,7 +519,7 @@ ssl_gnutls_write(PurpleSslConnection *gsc, const void *data, size_t len)
 
 /* Forward declarations are fun! */
 static PurpleCertificate *
-x509_import_from_datum(const gnutls_datum dt, gnutls_x509_crt_fmt mode);
+x509_import_from_datum(const gnutls_datum_t dt, gnutls_x509_crt_fmt_t mode);
 /* indeed! */
 static gboolean
 x509_certificate_signed_by(PurpleCertificate * crt,
@@ -537,7 +537,7 @@ ssl_gnutls_get_peer_certificates(PurpleSslConnection * gsc)
 	GList * peer_certs = NULL;
 
 	/* List of raw certificates as given by GnuTLS */
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned int cert_list_size = 0;
 
 	unsigned int i;
@@ -585,7 +585,7 @@ static PurpleCertificateScheme x509_gnutls;
 /** Refcounted GnuTLS certificate data instance */
 typedef struct {
 	gint refcount;
-	gnutls_x509_crt crt;
+	gnutls_x509_crt_t crt;
 } x509_crtdata_t;
 
 /** Helper functions for reference counting */
@@ -617,7 +617,7 @@ x509_crtdata_delref(x509_crtdata_t *cd)
 /** Helper macro to retrieve the GnuTLS crt_t from a PurpleCertificate */
 #define X509_GET_GNUTLS_DATA(pcrt) ( ((x509_crtdata_t *) (pcrt->data))->crt)
 
-/** Transforms a gnutls_datum containing an X.509 certificate into a Certificate instance under the x509_gnutls scheme
+/** Transforms a gnutls_datum_t containing an X.509 certificate into a Certificate instance under the x509_gnutls scheme
  *
  * @param dt   Datum to transform
  * @param mode GnuTLS certificate format specifier (GNUTLS_X509_FMT_PEM for
@@ -627,7 +627,7 @@ x509_crtdata_delref(x509_crtdata_t *cd)
  * @return A newly allocated Certificate structure of the x509_gnutls scheme
  */
 static PurpleCertificate *
-x509_import_from_datum(const gnutls_datum dt, gnutls_x509_crt_fmt mode)
+x509_import_from_datum(const gnutls_datum_t dt, gnutls_x509_crt_fmt_t mode)
 {
 	/* Internal certificate data structure */
 	x509_crtdata_t *certdat;
@@ -662,7 +662,7 @@ x509_import_from_file(const gchar * filename)
 	PurpleCertificate *crt;  /* Certificate being constructed */
 	gchar *buf;        /* Used to load the raw file data */
 	gsize buf_sz;      /* Size of the above */
-	gnutls_datum dt; /* Struct to pass down to GnuTLS */
+	gnutls_datum_t dt; /* Struct to pass down to GnuTLS */
 
 	purple_debug_info("gnutls",
 			  "Attempting to load X.509 certificate from %s\n",
@@ -705,7 +705,7 @@ x509_importcerts_from_file(const gchar * filename)
 	gchar *begin, *end;
 	GSList *crts = NULL;
 	gsize buf_sz;      /* Size of the above */
-	gnutls_datum dt; /* Struct to pass down to GnuTLS */
+	gnutls_datum_t dt; /* Struct to pass down to GnuTLS */
 
 	purple_debug_info("gnutls",
 			  "Attempting to load X.509 certificates from %s\n",
@@ -751,7 +751,7 @@ x509_importcerts_from_file(const gchar * filename)
 static gboolean
 x509_export_certificate(const gchar *filename, PurpleCertificate *crt)
 {
-	gnutls_x509_crt crt_dat; /* GnuTLS cert struct */
+	gnutls_x509_crt_t crt_dat; /* GnuTLS cert struct */
 	int ret;
 	gchar * out_buf; /* Data to output */
 	size_t out_size; /* Output size */
@@ -857,8 +857,8 @@ static gboolean
 x509_certificate_signed_by(PurpleCertificate * crt,
 			   PurpleCertificate * issuer)
 {
-	gnutls_x509_crt crt_dat;
-	gnutls_x509_crt issuer_dat;
+	gnutls_x509_crt_t crt_dat;
+	gnutls_x509_crt_t issuer_dat;
 	unsigned int verify; /* used to store result from GnuTLS verifier */
 	int ret;
 	gchar *crt_id = NULL;
@@ -963,7 +963,7 @@ x509_sha1sum(PurpleCertificate *crt)
 {
 	size_t hashlen = 20; /* SHA1 hashes are 20 bytes */
 	size_t tmpsz = hashlen; /* Throw-away variable for GnuTLS to stomp on*/
-	gnutls_x509_crt crt_dat;
+	gnutls_x509_crt_t crt_dat;
 	GByteArray *hash; /**< Final hash container */
 	guchar hashbuf[hashlen]; /**< Temporary buffer to contain hash */
 
@@ -990,7 +990,7 @@ x509_sha1sum(PurpleCertificate *crt)
 static gchar *
 x509_cert_dn (PurpleCertificate *crt)
 {
-	gnutls_x509_crt cert_dat;
+	gnutls_x509_crt_t cert_dat;
 	gchar *dn = NULL;
 	size_t dn_size;
 
@@ -1023,7 +1023,7 @@ x509_cert_dn (PurpleCertificate *crt)
 static gchar *
 x509_issuer_dn (PurpleCertificate *crt)
 {
-	gnutls_x509_crt cert_dat;
+	gnutls_x509_crt_t cert_dat;
 	gchar *dn = NULL;
 	size_t dn_size;
 
@@ -1057,7 +1057,7 @@ x509_issuer_dn (PurpleCertificate *crt)
 static gchar *
 x509_common_name (PurpleCertificate *crt)
 {
-	gnutls_x509_crt cert_dat;
+	gnutls_x509_crt_t cert_dat;
 	gchar *cn = NULL;
 	size_t cn_size;
 	int ret;
@@ -1100,7 +1100,7 @@ x509_common_name (PurpleCertificate *crt)
 static gboolean
 x509_check_name (PurpleCertificate *crt, const gchar *name)
 {
-	gnutls_x509_crt crt_dat;
+	gnutls_x509_crt_t crt_dat;
 
 	g_return_val_if_fail(crt, FALSE);
 	g_return_val_if_fail(crt->scheme == &x509_gnutls, FALSE);
@@ -1118,7 +1118,7 @@ x509_check_name (PurpleCertificate *crt, const gchar *name)
 static gboolean
 x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 {
-	gnutls_x509_crt crt_dat;
+	gnutls_x509_crt_t crt_dat;
 	/* GnuTLS time functions return this on error */
 	const time_t errval = (time_t) (-1);
 	gboolean success = TRUE;
@@ -1142,6 +1142,86 @@ x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 	return success;
 }
 
+static GByteArray *
+x509_get_der_data(PurpleCertificate *crt)
+{
+	gnutls_x509_crt_t crt_dat;
+	GByteArray *data;
+	size_t len;
+	int ret;
+
+	crt_dat = X509_GET_GNUTLS_DATA(crt);
+	g_return_val_if_fail(crt_dat, NULL);
+
+	/* Obtain the output size required */
+	len = 0;
+	ret = gnutls_x509_crt_export(crt_dat, GNUTLS_X509_FMT_DER, NULL, &len);
+	g_return_val_if_fail(ret == GNUTLS_E_SHORT_MEMORY_BUFFER, NULL);
+
+	/* Now allocate a buffer and *really* export it */
+	data = g_byte_array_sized_new(len);
+	data->len = len;
+	ret = gnutls_x509_crt_export(crt_dat, GNUTLS_X509_FMT_DER, data->data, &len);
+	if (ret != 0) {
+		purple_debug_error("gnutls/x509",
+		                   "Failed to export cert to buffer with code %d\n",
+		                   ret);
+		g_byte_array_free(data, TRUE);
+		return NULL;
+	}
+
+	return data;
+}
+
+static gchar *
+x509_display_string(PurpleCertificate *crt)
+{
+	gchar *sha_asc;
+	GByteArray *sha_bin;
+	gchar *cn;
+	time_t activation, expiration;
+	gchar *activ_str, *expir_str;
+	gchar *text;
+
+	/* Pull out the SHA1 checksum */
+	sha_bin = x509_sha1sum(crt);
+	sha_asc = purple_base16_encode_chunked(sha_bin->data, sha_bin->len);
+
+	/* Get the cert Common Name */
+	/* TODO: Will break on CA certs */
+	cn = x509_common_name(crt);
+
+	/* Get the certificate times */
+	/* TODO: Check the times against localtime */
+	/* TODO: errorcheck? */
+	if (!x509_times(crt, &activation, &expiration)) {
+		purple_debug_error("certificate",
+				   "Failed to get certificate times!\n");
+		activation = expiration = 0;
+	}
+	activ_str = g_strdup(ctime(&activation));
+	expir_str = g_strdup(ctime(&expiration));
+
+	/* Make messages */
+	text = g_strdup_printf(_("Common name: %s\n\n"
+	                         "Fingerprint (SHA1): %s\n\n"
+	                         "Activation date: %s\n"
+	                         "Expiration date: %s\n"),
+	                       cn ? cn : "(null)",
+	                       sha_asc ? sha_asc : "(null)",
+	                       activ_str ? activ_str : "(null)",
+	                       expir_str ? expir_str : "(null)");
+
+	/* Cleanup */
+	g_free(cn);
+	g_free(sha_asc);
+	g_free(activ_str);
+	g_free(expir_str);
+	g_byte_array_free(sha_bin, TRUE);
+
+	return text;
+}
+
 /* X.509 certificate operations provided by this plugin */
 static PurpleCertificateScheme x509_gnutls = {
 	"x509",                          /* Scheme name */
@@ -1158,9 +1238,9 @@ static PurpleCertificateScheme x509_gnutls = {
 	x509_check_name,                 /* Check subject name */
 	x509_times,                      /* Activation/Expiration time */
 	x509_importcerts_from_file,      /* Multiple certificates import function */
+	x509_get_der_data,               /* Binary DER data */
+	x509_display_string,             /* Display representation */
 
-	NULL,
-	NULL,
 	NULL
 
 };
