@@ -19,15 +19,26 @@ typedef struct group *Purple__Group;
 
 #include "../perl-common.h"
 
-#include "account.h"
+#include "accounts.h"
 #include "accountopt.h"
 #include "blist.h"
 #include "buddyicon.h"
 #include "certificate.h"
 #include "cipher.h"
+#include "ciphers/aescipher.h"
+#include "ciphers/des3cipher.h"
+#include "ciphers/descipher.h"
+#include "ciphers/hmaccipher.h"
+#include "ciphers/pbkdf2cipher.h"
+#include "ciphers/rc4cipher.h"
+#include "hash.h"
+#include "ciphers/md4hash.h"
+#include "ciphers/md5hash.h"
+#include "ciphers/sha1hash.h"
+#include "ciphers/sha256hash.h"
 #include "cmds.h"
 #include "connection.h"
-#include "conversation.h"
+#include "conversations.h"
 #include "core.h"
 #include "debug.h"
 #include "desktopitem.h"
@@ -48,7 +59,6 @@ typedef struct group *Purple__Group;
 #include "pluginpref.h"
 #include "pounce.h"
 #include "prefs.h"
-#include "privacy.h"
 #include "prpl.h"
 #include "proxy.h"
 #include "request.h"
@@ -71,6 +81,7 @@ typedef struct group *Purple__Group;
 typedef PurpleAccount *			Purple__Account;
 typedef PurpleAccountOption *		Purple__Account__Option;
 typedef PurpleAccountUserSplit *		Purple__Account__UserSplit;
+typedef PurpleAccountPrivacyType		Purple__Account__PrivacyType;
 
 /* blist.h */
 typedef PurpleBlistNode *			Purple__BuddyList__Node;
@@ -95,9 +106,6 @@ typedef PurpleCertificateVerificationStatus	Purple__Certificate__VerificationSta
 
 /* cipher.h */
 typedef PurpleCipher *			Purple__Cipher;
-typedef PurpleCipherCaps			Purple__CipherCaps;
-typedef PurpleCipherContext *		Purple__Cipher__Context;
-typedef PurpleCipherOps *			Purple__Cipher__Ops;
 typedef PurpleCipherBatchMode		Purple__Cipher__BatchMode;
 
 /* cmds.h */
@@ -111,16 +119,15 @@ typedef PurpleConnection *		Purple__Connection;
 typedef PurpleConnectionFlags		Purple__ConnectionFlags;
 typedef PurpleConnectionState		Purple__ConnectionState;
 
-/* conversation.h */
-typedef PurpleConversationType		Purple__ConversationType;
-typedef PurpleConvUpdateType		Purple__ConvUpdateType;
-typedef PurpleTypingState			Purple__TypingState;
-typedef PurpleMessageFlags		Purple__MessageFlags;
-typedef PurpleConvChatBuddyFlags		Purple__ConvChatBuddyFlags;
+/* conversations.h */
+typedef PurpleConversationUpdateType		Purple__Conversation__UpdateType;
+typedef PurpleIMConversationTypingState		Purple__IMConversation__TypingState;
+typedef PurpleConversationMessageFlags		Purple__Conversation__MessageFlags;
+typedef PurpleChatConversationBuddyFlags	Purple__ChatConversation__Buddy__Flags;
 typedef PurpleConversation *		Purple__Conversation;
-typedef PurpleConvIm *			Purple__Conversation__IM;
-typedef PurpleConvChat *			Purple__Conversation__Chat;
-typedef PurpleConvChatBuddy *		Purple__Conversation__ChatBuddy;
+typedef PurpleIMConversation *			Purple__IMConversation;
+typedef PurpleChatConversation *		Purple__ChatConversation;
+typedef PurpleChatConversationBuddy *	Purple__ChatConversation__Buddy;
 
 /* core.h */
 
@@ -168,6 +175,9 @@ typedef GtkTextView *			Purple__GTK__TextView;
 /* gtkconn.h */
 #endif
 
+/* hash.h */
+typedef PurpleHash *			Purple__Hash;
+
 /* imgstore.h */
 typedef PurpleStoredImage *		Purple__StoredImage;
 
@@ -214,9 +224,6 @@ typedef PurplePounceEvent			Purple__PounceEvent;
 
 /* prefs.h */
 typedef PurplePrefType			Purple__PrefType;
-
-/* privacy.h */
-typedef PurplePrivacyType			Purple__PrivacyType;
 
 /* proxy.h */
 typedef PurpleProxyInfo *			Purple__ProxyInfo;
