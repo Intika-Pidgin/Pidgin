@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 
-#include "cipher.h"
 #include "connection.h"
 #include "conversation.h"
 #include "core.h"
@@ -74,7 +73,7 @@ account_alias_changed(PurpleAccount *account, const char *old, gpointer data)
 {
 	purple_debug_misc("signals test", "account-alias-changed (%s, %s, %s)\n",
 					purple_account_get_username(account),
-					old, purple_account_get_alias(account));
+					old, purple_account_get_private_alias(account));
 }
 
 static int
@@ -524,21 +523,6 @@ chat_topic_changed_cb(PurpleConversation *conv, const char *who,
 					(who) ? who : "unknown");
 }
 /**************************************************************************
- * Ciphers signal callbacks
- **************************************************************************/
-static void
-cipher_added_cb(PurpleCipher *cipher, void *data) {
-	purple_debug_misc("signals test", "cipher %s added\n",
-					purple_cipher_get_name(cipher));
-}
-
-static void
-cipher_removed_cb(PurpleCipher *cipher, void *data) {
-	purple_debug_misc("signals test", "cipher %s removed\n",
-					purple_cipher_get_name(cipher));
-}
-
-/**************************************************************************
  * Core signal callbacks
  **************************************************************************/
 static void
@@ -719,7 +703,6 @@ plugin_load(PurplePlugin *plugin)
 	void *conn_handle     = purple_connections_get_handle();
 	void *conv_handle     = purple_conversations_get_handle();
 	void *accounts_handle = purple_accounts_get_handle();
-	void *ciphers_handle  = purple_ciphers_get_handle();
 	void *ft_handle       = purple_xfers_get_handle();
 	void *sound_handle    = purple_sounds_get_handle();
 	void *notify_handle   = purple_notify_get_handle();
@@ -830,12 +813,6 @@ plugin_load(PurplePlugin *plugin)
 						plugin, PURPLE_CALLBACK(chat_left_cb), NULL);
 	purple_signal_connect(conv_handle, "chat-topic-changed",
 						plugin, PURPLE_CALLBACK(chat_topic_changed_cb), NULL);
-
-	/* Ciphers signals */
-	purple_signal_connect(ciphers_handle, "cipher-added",
-						plugin, PURPLE_CALLBACK(cipher_added_cb), NULL);
-	purple_signal_connect(ciphers_handle, "cipher-removed",
-						plugin, PURPLE_CALLBACK(cipher_removed_cb), NULL);
 
 	/* Core signals */
 	purple_signal_connect(core_handle, "quitting",
