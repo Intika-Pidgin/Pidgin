@@ -25,7 +25,7 @@
 #ifndef _LIBYMSG_H_
 #define _LIBYMSG_H_
 
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "cmds.h"
 #include "prpl.h"
 #include "network.h"
@@ -192,7 +192,7 @@ typedef struct {
 	guint inpa;
 	guchar *rxqueue;
 	int rxlen;
-	PurpleCircBuffer *txbuf;
+	PurpleCircularBuffer *txbuf;
 	guint txhandler;
 	GHashTable *friends;
 

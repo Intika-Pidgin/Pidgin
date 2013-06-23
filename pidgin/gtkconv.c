@@ -5140,7 +5140,7 @@ replace_header_tokens(PurpleConversation *conv, const char *text)
 			replace = purple_conversation_get_name(conv);
 
 		} else if (g_str_has_prefix(cur, "%sourceName%")) {
-			replace = purple_account_get_alias(account);
+			replace = purple_account_get_private_alias(account);
 			if (replace == NULL)
 				replace = purple_account_get_username(account);
 
@@ -7205,7 +7205,7 @@ gray_stuff_out(PidginConversation *gtkconv)
 		gtk_action_set_visible(win->menu.get_info, TRUE);
 		gtk_action_set_visible(win->menu.invite, FALSE);
 		gtk_action_set_visible(win->menu.alias, TRUE);
-		if (purple_privacy_check(account, purple_conversation_get_name(conv))) {
+		if (purple_account_privacy_check(account, purple_conversation_get_name(conv))) {
 			gtk_action_set_visible(win->menu.unblock, FALSE);
 			gtk_action_set_visible(win->menu.block, TRUE);
 		} else {

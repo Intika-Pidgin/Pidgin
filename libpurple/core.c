@@ -43,7 +43,6 @@
 #include "plugin.h"
 #include "pounce.h"
 #include "prefs.h"
-#include "privacy.h"
 #include "proxy.h"
 #include "savedstatuses.h"
 #include "signals.h"
@@ -139,7 +138,6 @@ purple_core_init(const char *ui)
 	purple_dbus_init();
 #endif
 
-	purple_ciphers_init();
 	purple_cmds_init();
 
 	/* Since plugins get probed so early we should probably initialize their
@@ -173,7 +171,6 @@ purple_core_init(const char *ui)
 	purple_blist_init();
 	purple_log_init();
 	purple_network_init();
-	purple_privacy_init();
 	purple_pounces_init();
 	purple_proxy_init();
 	purple_dnsquery_init();
@@ -240,7 +237,6 @@ purple_core_quit(void)
 	purple_idle_uninit();
 	purple_pounces_uninit();
 	purple_blist_uninit();
-	purple_ciphers_uninit();
 	purple_notify_uninit();
 	purple_conversations_uninit();
 	purple_connections_uninit();
