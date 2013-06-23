@@ -23,7 +23,7 @@
  */
 
 #include "internal.h"
-#include "cipher.h"
+#include "ciphers/md5hash.h"
 #include "core.h"
 #include "debug.h"
 
@@ -1202,7 +1202,7 @@ ipg_cmd_post(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload, size_t len)
 
 	if (id && strcmp(id, "1")) {
 		PurpleConversation *conv
-			= purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY,
+			= purple_conversations_find_with_account(PURPLE_CONV_TYPE_ANY,
 			                                        who, purple_connection_get_account(gc));
 		if (conv != NULL) {
 			const char *error;
@@ -1394,7 +1394,7 @@ url_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	PurpleAccount *account;
 	const char *rru;
 	const char *url;
-	PurpleCipherContext *cipher;
+	PurpleHash *hash;
 	gchar creds[33];
 	char *buf;
 
@@ -1415,10 +1415,10 @@ url_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	                      tmp_timestamp,
 	                      purple_connection_get_password(gc));
 
-	cipher = purple_cipher_context_new_by_name("md5", NULL);
-	purple_cipher_context_append(cipher, (const guchar *)buf, strlen(buf));
-	purple_cipher_context_digest_to_str(cipher, creds, sizeof(creds));
-	purple_cipher_context_destroy(cipher);
+	hash = purple_md5_hash_new();
+	purple_hash_append(hash, (const guchar *)buf, strlen(buf));
+	purple_hash_digest_to_str(hash, creds, sizeof(creds));
+	g_object_unref(hash);
 	g_free(buf);
 
 	g_free(session->passport_info.mail_url);
