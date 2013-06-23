@@ -115,7 +115,7 @@ serv_got_typing(gc, name, timeout, state)
 	Purple::Connection gc
 	const char *name
 	int timeout
-	Purple::TypingState state
+	Purple::IMConversation::TypingState state
 
 void 
 serv_got_typing_stopped(gc, name)
@@ -203,7 +203,7 @@ int
 serv_send_typing(con, a, state)
 	Purple::Connection con
 	const char * a
-	Purple::TypingState state
+	Purple::IMConversation::TypingState state
 
 void 
 serv_set_info(con, a)

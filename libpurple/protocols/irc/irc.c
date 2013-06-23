@@ -111,8 +111,9 @@ irc_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	struct irc_conn *irc = data;
 	int ret, writelen;
+	const gchar *buffer = NULL;
 
-	writelen = purple_circ_buffer_get_max_read(irc->outbuf);
+	writelen = purple_circular_buffer_get_max_read(irc->outbuf);
 
 	if (writelen == 0) {
 		purple_input_remove(irc->writeh);
@@ -120,7 +121,9 @@ irc_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	ret = do_send(irc, irc->outbuf->outptr, writelen);
+	buffer = purple_circular_buffer_get_output(irc->outbuf);
+
+	ret = do_send(irc, buffer, writelen);
 
 	if (ret < 0 && errno == EAGAIN)
 		return;
@@ -134,7 +137,7 @@ irc_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	purple_circ_buffer_mark_read(irc->outbuf, ret);
+	purple_circular_buffer_mark_read(irc->outbuf, ret);
 
 #if 0
 	/* We *could* try to write more if we wrote it all */
@@ -183,7 +186,7 @@ int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
 			irc->writeh = purple_input_add(
 				irc->gsc ? irc->gsc->fd : irc->fd,
 				PURPLE_INPUT_WRITE, irc_send_cb, irc);
-		purple_circ_buffer_append(irc->outbuf, tosend + ret,
+		purple_circular_buffer_append(irc->outbuf, tosend + ret,
 			buflen - ret);
 	}
 	g_free(tosend);
@@ -345,7 +348,7 @@ static void irc_login(PurpleAccount *account)
 	purple_connection_set_protocol_data(gc, irc);
 	irc->fd = -1;
 	irc->account = account;
-	irc->outbuf = purple_circ_buffer_new(512);
+	irc->outbuf = purple_circular_buffer_new(512);
 
 	userparts = g_strsplit(username, "@", 2);
 	purple_connection_set_display_name(gc, userparts[0]);
@@ -533,7 +536,7 @@ static void irc_close(PurpleConnection *gc)
 	if (irc->writeh)
 		purple_input_remove(irc->writeh);
 
-	purple_circ_buffer_destroy(irc->outbuf);
+	g_object_unref(G_OBJECT(irc->outbuf));
 
 	g_free(irc->mode_chars);
 	g_free(irc->reqnick);
@@ -758,7 +761,7 @@ static char *irc_get_chat_name(GHashTable *data) {
 static void irc_chat_invite(PurpleConnection *gc, int id, const char *message, const char *name)
 {
 	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
-	PurpleConversation *convo = purple_find_chat(gc, id);
+	PurpleConversation *convo = purple_conversations_find_chat(gc, id);
 	const char *args[2];
 
 	if (!convo) {
@@ -774,7 +777,7 @@ static void irc_chat_invite(PurpleConnection *gc, int id, const char *message, c
 static void irc_chat_leave (PurpleConnection *gc, int id)
 {
 	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
-	PurpleConversation *convo = purple_find_chat(gc, id);
+	PurpleConversation *convo = purple_conversations_find_chat(gc, id);
 	const char *args[2];
 
 	if (!convo)
@@ -789,7 +792,7 @@ static void irc_chat_leave (PurpleConnection *gc, int id)
 static int irc_chat_send(PurpleConnection *gc, int id, const char *what, PurpleMessageFlags flags)
 {
 	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
-	PurpleConversation *convo = purple_find_chat(gc, id);
+	PurpleConversation *convo = purple_conversations_find_chat(gc, id);
 	const char *args[2];
 	char *tmp;
 
@@ -843,7 +846,7 @@ static void irc_chat_set_topic(PurpleConnection *gc, int id, const char *topic)
 	struct irc_conn *irc;
 
 	irc = purple_connection_get_protocol_data(gc);
-	name = purple_conversation_get_name(purple_find_chat(gc, id));
+	name = purple_conversation_get_name(purple_conversations_find_chat(gc, id));
 
 	if (name == NULL)
 		return;

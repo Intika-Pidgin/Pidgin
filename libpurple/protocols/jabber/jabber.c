@@ -35,7 +35,6 @@
 #include "message.h"
 #include "notify.h"
 #include "pluginpref.h"
-#include "privacy.h"
 #include "proxy.h"
 #include "prpl.h"
 #include "request.h"
@@ -392,8 +391,11 @@ static int jabber_do_send(JabberStream *js, const char *data, int len)
 static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	JabberStream *js = data;
+	const gchar *output = NULL;
 	int ret, writelen;
-	writelen = purple_circ_buffer_get_max_read(js->write_buffer);
+
+	writelen = purple_circular_buffer_get_max_read(js->write_buffer);
+	output = purple_circular_buffer_get_output(js->write_buffer);
 
 	if (writelen == 0) {
 		purple_input_remove(js->writeh);
@@ -401,7 +403,7 @@ static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond
 		return;
 	}
 
-	ret = jabber_do_send(js, js->write_buffer->outptr, writelen);
+	ret = jabber_do_send(js, output, writelen);
 
 	if (ret < 0 && errno == EAGAIN)
 		return;
@@ -414,7 +416,7 @@ static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond
 		return;
 	}
 
-	purple_circ_buffer_mark_read(js->write_buffer, ret);
+	purple_circular_buffer_mark_read(js->write_buffer, ret);
 }
 
 static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
@@ -457,7 +459,7 @@ static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
 			js->writeh = purple_input_add(
 				js->gsc ? js->gsc->fd : js->fd,
 				PURPLE_INPUT_WRITE, jabber_send_cb, js);
-		purple_circ_buffer_append(js->write_buffer,
+		purple_circular_buffer_append(js->write_buffer,
 			data + ret, len - ret);
 	}
 
@@ -994,7 +996,7 @@ jabber_stream_new(PurpleAccount *account)
 	js->chats = g_hash_table_new_full(g_str_hash, g_str_equal,
 			g_free, (GDestroyNotify)jabber_chat_free);
 	js->next_id = g_random_int();
-	js->write_buffer = purple_circ_buffer_new(512);
+	js->write_buffer = purple_circular_buffer_new(512);
 	js->old_length = 0;
 	js->keepalive_timeout = 0;
 	js->max_inactivity = DEFAULT_INACTIVITY_TIME;
@@ -1419,7 +1421,7 @@ void jabber_register_parse(JabberStream *js, const char *from, JabberIqType type
 	if((node = xmlnode_get_child(query, "name"))) {
 		if(js->registration)
 			field = purple_request_field_string_new("name", _("Name"),
-													purple_account_get_alias(purple_connection_get_account(js->gc)), FALSE);
+													purple_account_get_private_alias(purple_connection_get_account(js->gc)), FALSE);
 		else {
 			char *data = xmlnode_get_data(node);
 			field = purple_request_field_string_new("name", _("Name"), data, FALSE);
@@ -1653,7 +1655,7 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->caps_hash);
 
 	if (js->write_buffer)
-		purple_circ_buffer_destroy(js->write_buffer);
+		g_object_unref(G_OBJECT(js->write_buffer));
 	if(js->writeh)
 		purple_input_remove(js->writeh);
 	if (js->auth_mech && js->auth_mech->dispose)
@@ -1796,6 +1798,7 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 	xmlnode *item;
 	PurpleAccount *account;
 	gboolean is_block;
+	GSList *deny;
 
 	if (!jabber_is_own_account(js, from)) {
 		xmlnode *error, *x;
@@ -1821,8 +1824,8 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 		/* Unblock everyone */
 		purple_debug_info("jabber", "Received unblock push. Unblocking everyone.\n");
 
-		while (account->deny != NULL) {
-			purple_privacy_deny_remove(account, account->deny->data, TRUE);
+		while ((deny = purple_account_privacy_get_denied(account)) != NULL) {
+			purple_account_privacy_deny_remove(account, deny->data, TRUE);
 		}
 	} else if (item == NULL) {
 		/* An empty <block/> is bogus */
@@ -1844,9 +1847,9 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 				continue;
 
 			if (is_block)
-				purple_privacy_deny_add(account, jid, TRUE);
+				purple_account_privacy_deny_add(account, jid, TRUE);
 			else
-				purple_privacy_deny_remove(account, jid, TRUE);
+				purple_account_privacy_deny_remove(account, jid, TRUE);
 		}
 	}
 
@@ -1861,6 +1864,7 @@ static void jabber_blocklist_parse(JabberStream *js, const char *from,
 {
 	xmlnode *blocklist, *item;
 	PurpleAccount *account;
+	GSList *deny;
 
 	blocklist = xmlnode_get_child_with_namespace(packet,
 			"blocklist", NS_SIMPLE_BLOCKING);
@@ -1870,19 +1874,19 @@ static void jabber_blocklist_parse(JabberStream *js, const char *from,
 		return;
 
 	/* This is the only privacy method supported by XEP-0191 */
-	purple_account_set_privacy_type(account, PURPLE_PRIVACY_DENY_USERS);
+	purple_account_set_privacy_type(account, PURPLE_ACCOUNT_PRIVACY_DENY_USERS);
 
 	/*
 	 * TODO: When account->deny is something more than a hash table, this can
 	 * be re-written to find the set intersection and difference.
 	 */
-	while (account->deny)
-		purple_privacy_deny_remove(account, account->deny->data, TRUE);
+	while ((deny = purple_account_privacy_get_denied(account)))
+		purple_account_privacy_deny_remove(account, deny->data, TRUE);
 
 	item = xmlnode_get_child(blocklist, "item");
 	while (item != NULL) {
 		const char *jid = xmlnode_get_attrib(item, "jid");
-		purple_privacy_deny_add(account, jid, TRUE);
+		purple_account_privacy_deny_add(account, jid, TRUE);
 		item = xmlnode_get_next_twin(item);
 	}
 }
@@ -2855,7 +2859,7 @@ static PurpleCmdRet jabber_cmd_chat_topic(PurpleConversation *conv,
 	if (args && args[0] && *args[0])
 		jabber_chat_change_topic(chat, args[0]);
 	else {
-		const char *cur = purple_conv_chat_get_topic(PURPLE_CONV_CHAT(conv));
+		const char *cur = purple_chat_conversation_get_topic(PURPLE_CONV_CHAT(conv));
 		char *buf, *tmp, *tmp2;
 
 		if (cur) {
@@ -2866,7 +2870,7 @@ static PurpleCmdRet jabber_cmd_chat_topic(PurpleConversation *conv,
 			g_free(tmp2);
 		} else
 			buf = g_strdup(_("No topic is set"));
-		purple_conv_chat_write(PURPLE_CONV_CHAT(conv), "", buf,
+		purple_chat_conversation_write_message(PURPLE_CONV_CHAT(conv), "", buf,
 				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG, time(NULL));
 		g_free(buf);
 	}
@@ -2999,7 +3003,7 @@ static PurpleCmdRet jabber_cmd_chat_invite(PurpleConversation *conv,
 		return PURPLE_CMD_RET_FAILED;
 
 	jabber_chat_invite(purple_conversation_get_connection(conv),
-			purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv)), args[1] ? args[1] : "",
+			purple_chat_conversation_get_id(PURPLE_CONV_CHAT(conv)), args[1] ? args[1] : "",
 			args[0]);
 
 	return PURPLE_CMD_RET_OK;
@@ -3214,7 +3218,7 @@ gboolean jabber_send_attention(PurpleConnection *gc, const char *username, guint
 	if (!_jabber_send_buzz(js, username, &error)) {
 		PurpleAccount *account = purple_connection_get_account(gc);
 		PurpleConversation *conv =
-			purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, username, account);
+			purple_conversations_find_with_account(PURPLE_CONV_TYPE_ANY, username, account);
 		purple_debug_error("jabber", "jabber_send_attention: jabber_cmd_buzz failed with error: %s\n", error ? error : "(NULL)");
 
 		if (conv) {
