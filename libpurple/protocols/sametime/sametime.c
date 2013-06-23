@@ -33,7 +33,7 @@
 /* purple includes */
 #include "account.h"
 #include "accountopt.h"
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "conversation.h"
 #include "debug.h"
 #include "ft.h"
@@ -41,7 +41,6 @@
 #include "mime.h"
 #include "notify.h"
 #include "plugin.h"
-#include "privacy.h"
 #include "prpl.h"
 #include "request.h"
 #include "util.h"
@@ -221,7 +220,7 @@ struct mwPurplePluginData {
   gint outpa;  /* like inpa, but the other way */
 
   /** circular buffer for outgoing data */
-  PurpleCircBuffer *sock_buf;
+  PurpleCircularBuffer *sock_buf;
 
   PurpleConnection *gc;
 };
@@ -343,7 +342,7 @@ static PurpleConnection *session_to_gc(struct mwSession *session) {
 
 static void write_cb(gpointer data, gint source, PurpleInputCondition cond) {
   struct mwPurplePluginData *pd = data;
-  PurpleCircBuffer *circ = pd->sock_buf;
+  PurpleCircularBuffer *circ = pd->sock_buf;
   gsize avail;
   int ret;
 
@@ -351,17 +350,17 @@ static void write_cb(gpointer data, gint source, PurpleInputCondition cond) {
 
   g_return_if_fail(circ != NULL);
 
-  avail = purple_circ_buffer_get_max_read(circ);
+  avail = purple_circular_buffer_get_max_read(circ);
   if(BUF_LONG < avail) avail = BUF_LONG;
 
   while(avail) {
-    ret = write(pd->socket, circ->outptr, avail);
+    ret = write(pd->socket, purple_circular_buffer_get_output(circ), avail);
 
     if(ret <= 0)
       break;
 
-    purple_circ_buffer_mark_read(circ, ret);
-    avail = purple_circ_buffer_get_max_read(circ);
+    purple_circular_buffer_mark_read(circ, ret);
+    avail = purple_circular_buffer_get_max_read(circ);
     if(BUF_LONG < avail) avail = BUF_LONG;
   }
 
@@ -386,7 +385,7 @@ static int mw_session_io_write(struct mwSession *session,
 
   if(pd->outpa) {
     DEBUG_INFO("already pending INPUT_WRITE, buffering\n");
-    purple_circ_buffer_append(pd->sock_buf, buf, len);
+    purple_circular_buffer_append(pd->sock_buf, buf, len);
     return 0;
   }
 
@@ -406,7 +405,7 @@ static int mw_session_io_write(struct mwSession *session,
   if(err == EAGAIN) {
     /* append remainder to circular buffer */
     DEBUG_INFO("EAGAIN\n");
-    purple_circ_buffer_append(pd->sock_buf, buf, len);
+    purple_circular_buffer_append(pd->sock_buf, buf, len);
     pd->outpa = purple_input_add(pd->socket, PURPLE_INPUT_WRITE, write_cb, pd);
 
   } else if(len > 0) {
@@ -1634,7 +1633,7 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
   PurpleConnection *gc;
   PurpleAccount *acct;
   struct mwPrivacyInfo *privacy;
-  GSList *l, **ll;
+  GSList *list;
   guint count;
 
   DEBUG_INFO("privacy information set from server\n");
@@ -1653,16 +1652,25 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
   privacy = mwSession_getPrivacyInfo(session);
   count = privacy->count;
 
-  ll = (privacy->deny)? &acct->deny: &acct->permit;
-  for(l = *ll; l; l = l->next) g_free(l->data);
-  g_slist_free(*ll);
-  l = *ll = NULL;
-
-  while(count--) {
-    struct mwUserItem *u = privacy->users + count;
-    l = g_slist_prepend(l, g_strdup(u->id));
+  if (privacy->deny) {
+    while ((list = purple_account_privacy_get_denied(acct))) {
+      g_free(list->data);
+      purple_account_privacy_deny_remove(acct, list->data, TRUE);
+    }
+    while (count--) {
+      struct mwUserItem *u = privacy->users + count;
+      purple_account_privacy_deny_add(acct, u->id, TRUE);
+    }
+  } else {
+    while ((list = purple_account_privacy_get_permitted(acct))) {
+      g_free(list->data);
+      purple_account_privacy_permit_remove(acct, list->data, TRUE);
+    }
+    while (count--) {
+      struct mwUserItem *u = privacy->users + count;
+      purple_account_privacy_permit_add(acct, u->id, TRUE);
+    }
   }
-  *ll = l;
 }
 
 
@@ -3150,7 +3158,7 @@ static struct mwPurplePluginData *mwPurplePluginData_new(PurpleConnection *gc) {
   pd->srvc_resolve = mw_srvc_resolve_new(pd->session);
   pd->srvc_store = mw_srvc_store_new(pd->session);
   pd->group_list_map = g_hash_table_new(g_direct_hash, g_direct_equal);
-  pd->sock_buf = purple_circ_buffer_new(0);
+  pd->sock_buf = purple_circular_buffer_new(0);
 
   mwSession_addService(pd->session, MW_SERVICE(pd->srvc_aware));
   mwSession_addService(pd->session, MW_SERVICE(pd->srvc_conf));
@@ -3197,7 +3205,7 @@ static void mwPurplePluginData_free(struct mwPurplePluginData *pd) {
   mwSession_free(pd->session);
 
   g_hash_table_destroy(pd->group_list_map);
-  purple_circ_buffer_destroy(pd->sock_buf);
+  g_object_unref(G_OBJECT(pd->sock_buf));
 
   g_free(pd);
 }
@@ -4604,25 +4612,25 @@ static void mw_prpl_set_permit_deny(PurpleConnection *gc) {
   g_return_if_fail(session != NULL);
 
   switch(purple_account_get_privacy_type(acct)) {
-  case PURPLE_PRIVACY_DENY_USERS:
-    DEBUG_INFO("PURPLE_PRIVACY_DENY_USERS\n");
-    privacy_fill(&privacy, acct->deny);
+  case PURPLE_ACCOUNT_PRIVACY_DENY_USERS:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_DENY_USERS\n");
+    privacy_fill(&privacy, purple_account_privacy_get_denied(acct));
     privacy.deny = TRUE;
     break;
 
-  case PURPLE_PRIVACY_ALLOW_ALL:
-    DEBUG_INFO("PURPLE_PRIVACY_ALLOW_ALL\n");
+  case PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL\n");
     privacy.deny = TRUE;
     break;
 
-  case PURPLE_PRIVACY_ALLOW_USERS:
-    DEBUG_INFO("PURPLE_PRIVACY_ALLOW_USERS\n");
-    privacy_fill(&privacy, acct->permit);
+  case PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS\n");
+    privacy_fill(&privacy, purple_account_privacy_get_permitted(acct));
     privacy.deny = FALSE;
     break;
 
-  case PURPLE_PRIVACY_DENY_ALL:
-    DEBUG_INFO("PURPLE_PRIVACY_DENY_ALL\n");
+  case PURPLE_ACCOUNT_PRIVACY_DENY_ALL:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_DENY_ALL\n");
     privacy.deny = FALSE;
     break;
 
