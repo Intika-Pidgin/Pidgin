@@ -814,8 +814,8 @@ msn_send_privacy(PurpleConnection *gc)
 	session = purple_connection_get_protocol_data(gc);
 	cmdproc = session->notification->cmdproc;
 
-	if (purple_account_get_privacy_type(account) == PURPLE_PRIVACY_ALLOW_ALL ||
-	    purple_account_get_privacy_type(account) == PURPLE_PRIVACY_DENY_USERS)
+	if (purple_account_get_privacy_type(account) == PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL ||
+	    purple_account_get_privacy_type(account) == PURPLE_ACCOUNT_PRIVACY_DENY_USERS)
 		trans = msn_transaction_new(cmdproc, "BLP", "%s", "AL");
 	else
 		trans = msn_transaction_new(cmdproc, "BLP", "%s", "BL");
@@ -849,16 +849,17 @@ initiate_chat_cb(PurpleBlistNode *node, gpointer data)
 
 	/* TODO: This might move somewhere else, after USR might be */
 	swboard->chat_id = msn_switchboard_get_chat_id();
-	swboard->conv = serv_got_joined_chat(gc, swboard->chat_id, "MSN Chat");
+	swboard->conv = PURPLE_CONVERSATION(serv_got_joined_chat(gc,
+			swboard->chat_id, "MSN Chat"));
 	swboard->flag = MSN_SB_FLAG_IM;
 
 	/* Local alias > Display name > Username */
-	if ((alias = purple_account_get_alias(account)) == NULL)
+	if ((alias = purple_account_get_private_alias(account)) == NULL)
 		if ((alias = purple_connection_get_display_name(gc)) == NULL)
 			alias = purple_account_get_username(account);
 
-	purple_conv_chat_add_user(PURPLE_CONV_CHAT(swboard->conv),
-	                          alias, NULL, PURPLE_CBFLAGS_NONE, TRUE);
+	purple_chat_conversation_add_user(PURPLE_CHAT_CONVERSATION(swboard->conv),
+	                          alias, NULL, PURPLE_CHAT_CONVERSATION_BUDDY_NONE, TRUE);
 }
 
 static void
@@ -1639,7 +1640,7 @@ msn_send_im(PurpleConnection *gc, const char *who, const char *message,
 }
 
 static unsigned int
-msn_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state)
+msn_send_typing(PurpleConnection *gc, const char *who, PurpleIMConversationTypingState state)
 {
 	PurpleAccount *account;
 	MsnSession *session;
@@ -1650,17 +1651,17 @@ msn_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state)
 	session = purple_connection_get_protocol_data(gc);
 
 	/*
-	 * TODO: I feel like this should be "if (state != PURPLE_TYPING)"
+	 * TODO: I feel like this should be "if (state != PURPLE_IM_CONVERSATION_TYPING)"
 	 *       but this is how it was before, and I don't want to break
 	 *       anything. --KingAnt
 	 */
-	if (state == PURPLE_NOT_TYPING)
+	if (state == PURPLE_IM_CONVERSATION_NOT_TYPING)
 		return 0;
 
 	if (!g_ascii_strcasecmp(who, purple_account_get_username(account)))
 	{
 		/* We'll just fake it, since we're sending to ourself. */
-		serv_got_typing(gc, who, MSN_TYPING_RECV_TIMEOUT, PURPLE_TYPING);
+		serv_got_typing(gc, who, MSN_TYPING_RECV_TIMEOUT, PURPLE_IM_CONVERSATION_TYPING);
 
 		return MSN_TYPING_SEND_TIMEOUT;
 	}
@@ -1785,7 +1786,7 @@ msn_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group, cons
 	if (!msn_email_is_valid(bname)) {
 		gchar *buf;
 		buf = g_strdup_printf(_("Unable to add the buddy %s because the username is invalid.  Usernames must be valid email addresses."), bname);
-		if (!purple_conv_present_error(bname, account, buf))
+		if (!purple_conversation_helper_present_error(bname, account, buf))
 			purple_notify_error(pc, NULL, _("Unable to Add"), buf);
 		g_free(buf);
 
@@ -1970,7 +1971,7 @@ msn_chat_invite(PurpleConnection *gc, int id, const char *msg,
 		swboard = msn_switchboard_new(session);
 		msn_switchboard_request(swboard);
 		swboard->chat_id = id;
-		swboard->conv = purple_find_chat(gc, id);
+		swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_chat(gc, id));
 	}
 
 	swboard->flag |= MSN_SB_FLAG_IM;
@@ -2052,14 +2053,14 @@ msn_chat_send(PurpleConnection *gc, int id, const char *message, PurpleMessageFl
 	while (smileys) {
 		smile = (MsnEmoticon *)smileys->data;
 		emoticons = msn_msg_emoticon_add(emoticons, smile);
-		if (purple_conv_custom_smiley_add(swboard->conv, smile->smile,
+		if (purple_conversation_custom_smiley_add(swboard->conv, smile->smile,
 		                                  "sha1", purple_smiley_get_checksum(smile->ps),
 		                                  FALSE)) {
 			gconstpointer data;
 			size_t len;
 			data = purple_smiley_get_data(smile->ps, &len);
-			purple_conv_custom_smiley_write(swboard->conv, smile->smile, data, len);
-			purple_conv_custom_smiley_close(swboard->conv, smile->smile);
+			purple_conversation_custom_smiley_write(swboard->conv, smile->smile, data, len);
+			purple_conversation_custom_smiley_close(swboard->conv, smile->smile);
 		}
 		msn_emoticon_destroy(smile);
 		smileys = g_slist_delete_link(smileys, smileys);
@@ -2871,11 +2872,11 @@ static gboolean msn_uri_handler(const char *proto, const char *cmd, GHashTable *
 	if (!g_ascii_strcasecmp(cmd, "Chat")) {
 		char *sname = g_hash_table_lookup(params, "contact");
 		if (sname) {
-			PurpleConversation *conv = purple_find_conversation_with_account(
-				PURPLE_CONV_TYPE_IM, sname, acct);
-			if (conv == NULL)
-				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, sname);
-			purple_conversation_present(conv);
+			PurpleIMConversation *im = purple_conversations_find_im_with_account(
+				sname, acct);
+			if (im == NULL)
+				im = purple_im_conversation_new(acct, sname);
+			purple_conversation_present(PURPLE_CONVERSATION(im));
 		}
 		/*else
 			**If pidgindialogs_im() was in the core, we could use it here.

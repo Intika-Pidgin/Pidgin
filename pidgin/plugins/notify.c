@@ -277,7 +277,7 @@ im_sent_im(PurpleAccount *account, const char *receiver, const char *message)
 	PurpleConversation *conv = NULL;
 
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/notify_send")) {
-		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, receiver, account);
+		conv = purple_conversations_find_im_with_account(receiver, account);
 		unnotify(conv, TRUE);
 	}
 }
@@ -288,7 +288,7 @@ chat_sent_im(PurpleAccount *account, const char *message, int id)
 	PurpleConversation *conv = NULL;
 
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/notify_send")) {
-		conv = purple_find_chat(purple_account_get_connection(account), id);
+		conv = purple_conversations_find_chat(purple_account_get_connection(account), id);
 		unnotify(conv, TRUE);
 	}
 }
@@ -454,7 +454,7 @@ conversation_dragging(PurpleConversation *active_conv,
 			printf("if else count = %d\n", count_messages(old_purplewin));
 			/*
 			PurpleConversation *old_active_conv = NULL;
-			old_active_conv = purple_conv_window_get_active_conversation(new_purplewin);
+			old_active_conv = purple_conversation_window_get_active_conversation(new_purplewin);
 
 			purple_conversation_autoset_title(old_active_conv);
 			handle_urgent(old_purplewin, FALSE);
@@ -636,7 +636,7 @@ apply_method()
 {
 	GList *convs;
 
-	for (convs = purple_get_conversations(); convs != NULL;
+	for (convs = purple_conversations_get(); convs != NULL;
 	     convs = convs->next) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
 
@@ -652,7 +652,7 @@ apply_method()
 static void
 apply_notify()
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get();
 
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
@@ -836,7 +836,7 @@ get_config_frame(PurplePlugin *plugin)
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get();
 	void *conv_handle = purple_conversations_get_handle();
 	void *gtk_conv_handle = pidgin_conversations_get_handle();
 
@@ -876,7 +876,7 @@ plugin_load(PurplePlugin *plugin)
 static gboolean
 plugin_unload(PurplePlugin *plugin)
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get();
 
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;

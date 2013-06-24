@@ -69,7 +69,7 @@ cancel_poune(OfflineMsg *offline)
 {
 	purple_conversation_set_data(offline->conv, "plugin_pack:offlinemsg",
 				GINT_TO_POINTER(OFFLINE_MSG_NO));
-	purple_conv_im_send_with_flags(PURPLE_CONV_IM(offline->conv), offline->message, 0);
+	purple_conversation_send_message(offline->conv, offline->message, 0);
 	discard_data(offline);
 }
 
@@ -105,7 +105,7 @@ record_pounce(OfflineMsg *offline)
 	purple_conversation_set_data(conv, "plugin_pack:offlinemsg",
 				GINT_TO_POINTER(OFFLINE_MSG_YES));
 
-	purple_conv_im_write(PURPLE_CONV_IM(conv), offline->who, offline->message,
+	purple_conversation_write_message(conv, offline->who, offline->message,
 				PURPLE_MESSAGE_SEND, time(NULL));
 
 	discard_data(offline);
@@ -137,8 +137,7 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 		return;
 	}
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-					who, account);
+	conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(who, account));
 
 	if (!conv)
 		return;

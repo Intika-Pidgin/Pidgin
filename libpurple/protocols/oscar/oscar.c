@@ -33,7 +33,7 @@
 #include "account.h"
 #include "accountopt.h"
 #include "buddyicon.h"
-#include "cipher.h"
+#include "ciphers/md5hash.h"
 #include "conversation.h"
 #include "core.h"
 #include "debug.h"
@@ -41,7 +41,6 @@
 #include "imgstore.h"
 #include "network.h"
 #include "notify.h"
-#include "privacy.h"
 #include "prpl.h"
 #include "proxy.h"
 #include "request.h"
@@ -99,10 +98,10 @@ static int purple_parse_misses     (OscarData *, FlapConnection *, FlapFrame *, 
 static int purple_parse_clientauto (OscarData *, FlapConnection *, FlapFrame *, ...);
 static int purple_parse_motd       (OscarData *, FlapConnection *, FlapFrame *, ...);
 static int purple_chatnav_info     (OscarData *, FlapConnection *, FlapFrame *, ...);
-static int purple_conv_chat_join        (OscarData *, FlapConnection *, FlapFrame *, ...);
-static int purple_conv_chat_leave       (OscarData *, FlapConnection *, FlapFrame *, ...);
-static int purple_conv_chat_info_update (OscarData *, FlapConnection *, FlapFrame *, ...);
-static int purple_conv_chat_incoming_msg(OscarData *, FlapConnection *, FlapFrame *, ...);
+static int purple_chat_conversation_join (OscarData *, FlapConnection *, FlapFrame *, ...);
+static int purple_chat_conversation_left (OscarData *, FlapConnection *, FlapFrame *, ...);
+static int purple_chat_conversation_info_update (OscarData *, FlapConnection *, FlapFrame *, ...);
+static int purple_chat_conversation_incoming_msg(OscarData *, FlapConnection *, FlapFrame *, ...);
 static int purple_email_parseupdate(OscarData *, FlapConnection *, FlapFrame *, ...);
 static int purple_icon_parseicon   (OscarData *, FlapConnection *, FlapFrame *, ...);
 static int purple_parse_searcherror(OscarData *, FlapConnection *, FlapFrame *, ...);
@@ -246,7 +245,7 @@ find_oscar_chat_by_conn(PurpleConnection *gc, FlapConnection *conn)
 }
 
 static struct chat_connection *
-find_oscar_chat_by_conv(PurpleConnection *gc, PurpleConversation *conv)
+find_oscar_chat_by_conv(PurpleConnection *gc, PurpleChatConversation *conv)
 {
 	OscarData *od = purple_connection_get_protocol_data(gc);
 	GSList *cur;
@@ -276,7 +275,7 @@ oscar_chat_kill(PurpleConnection *gc, struct chat_connection *cc)
 	OscarData *od = purple_connection_get_protocol_data(gc);
 
 	/* Notify the conversation window that we've left the chat */
-	serv_got_chat_left(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(cc->conv)));
+	serv_got_chat_left(gc, purple_chat_conversation_get_id(cc->conv));
 
 	/* Destroy the chat_connection */
 	od->oscar_chats = g_slist_remove(od->oscar_chats, cc);
@@ -671,10 +670,10 @@ oscar_login(PurpleAccount *account)
 	oscar_data_addhandler(od, SNAC_FAMILY_BUDDY, SNAC_SUBTYPE_BUDDY_ONCOMING, purple_parse_oncoming, 0);
 	oscar_data_addhandler(od, SNAC_FAMILY_BUDDY, SNAC_SUBTYPE_BUDDY_OFFGOING, purple_parse_offgoing, 0);
 	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, 0x0001, purple_parse_genericerr, 0);
-	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_USERJOIN, purple_conv_chat_join, 0);
-	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_USERLEAVE, purple_conv_chat_leave, 0);
-	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_ROOMINFOUPDATE, purple_conv_chat_info_update, 0);
-	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_INCOMINGMSG, purple_conv_chat_incoming_msg, 0);
+	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_USERJOIN, purple_chat_conversation_join, 0);
+	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_USERLEAVE, purple_chat_conversation_left, 0);
+	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_ROOMINFOUPDATE, purple_chat_conversation_info_update, 0);
+	oscar_data_addhandler(od, SNAC_FAMILY_CHAT, SNAC_SUBTYPE_CHAT_INCOMINGMSG, purple_chat_conversation_incoming_msg, 0);
 	oscar_data_addhandler(od, SNAC_FAMILY_CHATNAV, 0x0001, purple_parse_genericerr, 0);
 	oscar_data_addhandler(od, SNAC_FAMILY_CHATNAV, SNAC_SUBTYPE_CHATNAV_INFO, purple_chatnav_info, 0);
 	oscar_data_addhandler(od, SNAC_FAMILY_FEEDBAG, SNAC_SUBTYPE_FEEDBAG_ERROR, purple_ssi_parseerr, 0);
@@ -2195,7 +2194,7 @@ static int purple_parse_misses(OscarData *od, FlapConnection *conn, FlapFrame *f
 			break;
 	}
 
-	if (!purple_conv_present_error(userinfo->bn, account, buf))
+	if (!purple_conversation_helper_present_error(userinfo->bn, account, buf))
 		purple_notify_error(od->gc, NULL, buf, NULL);
 	g_free(buf);
 
@@ -2359,11 +2358,11 @@ static int purple_parse_mtn(OscarData *od, FlapConnection *conn, FlapFrame *fr, 
 		} break;
 
 		case 0x0001: { /* Paused typing */
-			serv_got_typing(gc, bn, 0, PURPLE_TYPED);
+			serv_got_typing(gc, bn, 0, PURPLE_IM_CONVERSATION_TYPED);
 		} break;
 
 		case 0x0002: { /* Typing */
-			serv_got_typing(gc, bn, 0, PURPLE_TYPING);
+			serv_got_typing(gc, bn, 0, PURPLE_IM_CONVERSATION_TYPING);
 		} break;
 
 		case 0x000f: { /* Closed IM window */
@@ -2477,7 +2476,7 @@ static int purple_chatnav_info(OscarData *od, FlapConnection *conn, FlapFrame *f
 	return 1;
 }
 
-static int purple_conv_chat_join(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
+static int purple_chat_conversation_join(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
 	va_list ap;
 	int count, i;
 	aim_userinfo_t *info;
@@ -2495,12 +2494,12 @@ static int purple_conv_chat_join(OscarData *od, FlapConnection *conn, FlapFrame 
 		return 1;
 
 	for (i = 0; i < count; i++)
-		purple_conv_chat_add_user(PURPLE_CONV_CHAT(c->conv), info[i].bn, NULL, PURPLE_CBFLAGS_NONE, TRUE);
+		purple_chat_conversation_add_user(c->conv, info[i].bn, NULL, PURPLE_CHAT_CONVERSATION_BUDDY_NONE, TRUE);
 
 	return 1;
 }
 
-static int purple_conv_chat_leave(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
+static int purple_chat_conversation_left(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
 	va_list ap;
 	int count, i;
 	aim_userinfo_t *info;
@@ -2518,12 +2517,12 @@ static int purple_conv_chat_leave(OscarData *od, FlapConnection *conn, FlapFrame
 		return 1;
 
 	for (i = 0; i < count; i++)
-		purple_conv_chat_remove_user(PURPLE_CONV_CHAT(c->conv), info[i].bn, NULL);
+		purple_chat_conversation_remove_user(c->conv, info[i].bn, NULL);
 
 	return 1;
 }
 
-static int purple_conv_chat_info_update(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
+static int purple_chat_conversation_info_update(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
 	va_list ap;
 	guint16 maxmsglen, maxvisiblemsglen;
 	PurpleConnection *gc = od->gc;
@@ -2547,7 +2546,7 @@ static int purple_conv_chat_info_update(OscarData *od, FlapConnection *conn, Fla
 	return 1;
 }
 
-static int purple_conv_chat_incoming_msg(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
+static int purple_chat_conversation_incoming_msg(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...) {
 	PurpleConnection *gc = od->gc;
 	struct chat_connection *ccon = find_oscar_chat_by_conn(gc, conn);
 	gchar *utf8;
@@ -2716,14 +2715,14 @@ static int purple_connerr(OscarData *od, FlapConnection *conn, FlapFrame *fr, ..
 
 	if (conn->type == SNAC_FAMILY_CHAT) {
 		struct chat_connection *cc;
-		PurpleConversation *conv = NULL;
+		PurpleChatConversation *chat = NULL;
 
 		cc = find_oscar_chat_by_conn(gc, conn);
 		if (cc != NULL)
 		{
-			conv = purple_find_chat(gc, cc->id);
+			chat = purple_conversations_find_chat(gc, cc->id);
 
-			if (conv != NULL)
+			if (chat != NULL)
 			{
 				/*
 				 * TOOD: Have flap_connection_destroy_cb() send us the
@@ -2733,7 +2732,8 @@ static int purple_connerr(OscarData *od, FlapConnection *conn, FlapFrame *fr, ..
 				gchar *buf;
 				buf = g_strdup_printf(_("You have been disconnected from chat "
 										"room %s."), cc->name);
-				purple_conversation_write(conv, NULL, buf, PURPLE_MESSAGE_ERROR, time(NULL));
+				purple_conversation_write(PURPLE_CONVERSATION(chat), NULL, buf,
+						PURPLE_MESSAGE_ERROR, time(NULL));
 				g_free(buf);
 			}
 			oscar_chat_kill(gc, cc);
@@ -3104,7 +3104,7 @@ oscar_keepalive(PurpleConnection *gc)
 }
 
 unsigned int
-oscar_send_typing(PurpleConnection *gc, const char *name, PurpleTypingState state)
+oscar_send_typing(PurpleConnection *gc, const char *name, PurpleIMConversationTypingState state)
 {
 	OscarData *od;
 	PeerConnection *conn;
@@ -3118,14 +3118,16 @@ oscar_send_typing(PurpleConnection *gc, const char *name, PurpleTypingState stat
 	}
 	else {
 		/* Don't send if this turkey is in our deny list */
+		PurpleAccount *account = purple_connection_get_account(gc);
 		GSList *list;
-		for (list=purple_connection_get_account(gc)->deny; (list && oscar_util_name_compare(name, list->data)); list=list->next);
+
+		for (list=purple_account_privacy_get_denied(account); (list && oscar_util_name_compare(name, list->data)); list=list->next);
 		if (!list) {
-			struct buddyinfo *bi = g_hash_table_lookup(od->buddyinfo, purple_normalize(purple_connection_get_account(gc), name));
+			struct buddyinfo *bi = g_hash_table_lookup(od->buddyinfo, purple_normalize(account, name));
 			if (bi && bi->typingnot) {
-				if (state == PURPLE_TYPING)
+				if (state == PURPLE_IM_CONVERSATION_TYPING)
 					aim_im_sendmtn(od, 0x0001, name, 0x0002);
-				else if (state == PURPLE_TYPED)
+				else if (state == PURPLE_IM_CONVERSATION_TYPED)
 					aim_im_sendmtn(od, 0x0001, name, 0x0001);
 				else
 					aim_im_sendmtn(od, 0x0001, name, 0x0000);
@@ -3266,14 +3268,14 @@ oscar_send_im(PurpleConnection *gc, const char *name, const char *message, Purpl
 	} else {
 		struct buddyinfo *bi;
 		struct aim_sendimext_args args;
-		PurpleConversation *conv;
+		PurpleIMConversation *im;
 		PurpleStoredImage *img;
 		PurpleBuddy *buddy;
 
-		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, account);
+		im = purple_conversations_find_im_with_account(name, account);
 
 		if (strstr(tmp1, "<IMG "))
-			purple_conversation_write(conv, "",
+			purple_conversation_write(PURPLE_CONVERSATION(im), "",
 			                        _("Your IM Image was not sent. "
 			                        "You must be Direct Connected to send IM Images."),
 			                        PURPLE_MESSAGE_ERROR, time(NULL));
@@ -3599,12 +3601,12 @@ oscar_set_icq_permdeny(PurpleAccount *account)
 
 	/*
 	 * For ICQ the permit/deny setting controls who can see you
-	 * online. Mimicking the official client's behavior, we use PURPLE_PRIVACY_ALLOW_USERS
-	 * when our status is "invisible" and PURPLE_PRIVACY_DENY_USERS otherwise.
+	 * online. Mimicking the official client's behavior, we use PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS
+	 * when our status is "invisible" and PURPLE_ACCOUNT_PRIVACY_DENY_USERS otherwise.
 	 * In the former case, we are visible only to buddies on our "permanently visible" list.
 	 * In the latter, we are invisible only to buddies on our "permanently invisible" list.
 	 */
-	aim_ssi_setpermdeny(od, invisible ? PURPLE_PRIVACY_ALLOW_USERS : PURPLE_PRIVACY_DENY_USERS);
+	aim_ssi_setpermdeny(od, invisible ? PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS : PURPLE_ACCOUNT_PRIVACY_DENY_USERS);
 }
 
 void
@@ -3656,7 +3658,7 @@ oscar_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, co
 	if (!oscar_util_valid_name(bname)) {
 		gchar *buf;
 		buf = g_strdup_printf(_("Unable to add the buddy %s because the username is invalid.  Usernames must be a valid email address, or start with a letter and contain only letters, numbers and spaces, or contain only numbers."), bname);
-		if (!purple_conv_present_error(bname, account, buf))
+		if (!purple_conversation_helper_present_error(bname, account, buf))
 			purple_notify_error(gc, NULL, _("Unable to Add"), buf);
 		g_free(buf);
 
@@ -3909,27 +3911,27 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 
 	/* Permit list (ICQ doesn't have one) */
 	if (!od->icq) {
-		next = account->permit;
+		next = purple_account_privacy_get_permitted(account);
 		while (next != NULL) {
 			cur = next;
 			next = next->next;
 			if (!aim_ssi_itemlist_finditem(&od->ssi.local, NULL, cur->data, AIM_SSI_TYPE_PERMIT)) {
 				purple_debug_info("oscar",
 						"ssi: removing permit %s from local list\n", (const char *)cur->data);
-				purple_privacy_permit_remove(account, cur->data, TRUE);
+				purple_account_privacy_permit_remove(account, cur->data, TRUE);
 			}
 		}
 	}
 
 	/* Deny list */
-	next = account->deny;
+	next = purple_account_privacy_get_denied(account);
 	while (next != NULL) {
 		cur = next;
 		next = next->next;
 		if (!aim_ssi_itemlist_finditem(&od->ssi.local, NULL, cur->data, deny_entry_type)) {
 			purple_debug_info("oscar",
 					"ssi: removing deny %s from local list\n", (const char *)cur->data);
-			purple_privacy_deny_remove(account, cur->data, TRUE);
+			purple_account_privacy_deny_remove(account, cur->data, TRUE);
 		}
 	}
 
@@ -4016,11 +4018,11 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 
 			case AIM_SSI_TYPE_PERMIT: { /* Permit buddy (unless we're on ICQ) */
 				if (!od->icq && curitem->name) {
-					for (cur = account->permit; (cur && oscar_util_name_compare(curitem->name, cur->data)); cur = cur->next);
+					for (cur = purple_account_privacy_get_permitted(account); (cur && oscar_util_name_compare(curitem->name, cur->data)); cur = cur->next);
 					if (!cur) {
 						purple_debug_info("oscar",
 								   "ssi: adding permit buddy %s to local list\n", curitem->name);
-						purple_privacy_permit_add(account, curitem->name, TRUE);
+						purple_account_privacy_permit_add(account, curitem->name, TRUE);
 					}
 				}
 			} break;
@@ -4028,11 +4030,11 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 			case AIM_SSI_TYPE_ICQDENY:
 			case AIM_SSI_TYPE_DENY: { /* Deny buddy */
 				if (curitem->type == deny_entry_type && curitem->name) {
-					for (cur = account->deny; (cur && oscar_util_name_compare(curitem->name, cur->data)); cur = cur->next);
+					for (cur = purple_account_privacy_get_denied(account); (cur && oscar_util_name_compare(curitem->name, cur->data)); cur = cur->next);
 					if (!cur) {
 						purple_debug_info("oscar",
 								   "ssi: adding deny buddy %s to local list\n", curitem->name);
-						purple_privacy_deny_add(account, curitem->name, TRUE);
+						purple_account_privacy_deny_add(account, curitem->name, TRUE);
 					}
 				}
 			} break;
@@ -4122,7 +4124,7 @@ static int purple_ssi_parseack(OscarData *od, FlapConnection *conn, FlapFrame *f
 			case 0x000c: { /* you are over the limit, the cheat is to the limit, come on fhqwhgads */
 				gchar *buf;
 				buf = g_strdup_printf(_("Unable to add the buddy %s because you have too many buddies in your buddy list.  Please remove one and try again."), (retval->name ? retval->name : _("(no name)")));
-				if ((retval->name != NULL) && !purple_conv_present_error(retval->name, purple_connection_get_account(gc), buf))
+				if ((retval->name != NULL) && !purple_conversation_helper_present_error(retval->name, purple_connection_get_account(gc), buf))
 					purple_notify_error(gc, NULL, _("Unable to Add"), buf);
 				g_free(buf);
 			} break;
@@ -4137,7 +4139,7 @@ static int purple_ssi_parseack(OscarData *od, FlapConnection *conn, FlapFrame *f
 				purple_debug_error("oscar", "ssi: Action 0x%04hx was unsuccessful with error 0x%04hx\n", retval->action, retval->ack);
 				buf = g_strdup_printf(_("Unable to add the buddy %s for an unknown reason."),
 						(retval->name ? retval->name : _("(no name)")));
-				if ((retval->name != NULL) && !purple_conv_present_error(retval->name, purple_connection_get_account(gc), buf))
+				if ((retval->name != NULL) && !purple_conversation_helper_present_error(retval->name, purple_connection_get_account(gc), buf))
 					purple_notify_error(gc, NULL, _("Unable to Add"), buf);
 				g_free(buf);
 			} break;
@@ -4447,17 +4449,17 @@ oscar_chat_invite(PurpleConnection *gc, int id, const char *message, const char 
 void
 oscar_chat_leave(PurpleConnection *gc, int id)
 {
-	PurpleConversation *conv;
+	PurpleChatConversation *conv;
 	struct chat_connection *cc;
 
-	conv = purple_find_chat(gc, id);
+	conv = purple_conversations_find_chat(gc, id);
 
 	g_return_if_fail(conv != NULL);
 
 	purple_debug_info("oscar", "Leaving chat room %s\n",
-			purple_conversation_get_name(conv));
+			purple_conversation_get_name(PURPLE_CONVERSATION(conv)));
 
-	cc = find_oscar_chat(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv)));
+	cc = find_oscar_chat(gc, purple_chat_conversation_get_id(conv));
 	flap_connection_schedule_destroy(cc->conn, OSCAR_DISCONNECT_DONE, NULL);
 	oscar_chat_kill(gc, cc);
 }
@@ -4465,14 +4467,14 @@ oscar_chat_leave(PurpleConnection *gc, int id)
 int oscar_send_chat(PurpleConnection *gc, int id, const char *message, PurpleMessageFlags flags)
 {
 	OscarData *od = purple_connection_get_protocol_data(gc);
-	PurpleConversation *conv = NULL;
+	PurpleChatConversation *conv = NULL;
 	struct chat_connection *c = NULL;
 	char *buf, *buf2, *buf3;
 	guint16 charset;
 	char *charsetstr;
 	gsize len;
 
-	if (!(conv = purple_find_chat(gc, id)))
+	if (!(conv = purple_conversations_find_chat(gc, id)))
 		return -EINVAL;
 
 	if (!(c = find_oscar_chat_by_conv(gc, conv)))
@@ -4481,7 +4483,7 @@ int oscar_send_chat(PurpleConnection *gc, int id, const char *message, PurpleMes
 	buf = purple_strdup_withhtml(message);
 
 	if (strstr(buf, "<IMG "))
-		purple_conversation_write(conv, "",
+		purple_conversation_write(PURPLE_CONVERSATION(conv), "",
 			_("Your IM Image was not sent. "
 			  "You cannot send IM Images in AIM chats."),
 			PURPLE_MESSAGE_ERROR, time(NULL));
@@ -4959,7 +4961,7 @@ oscar_close_directim(gpointer object, gpointer ignored)
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
 	PurpleConnection *gc;
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	OscarData *od;
 	PeerConnection *conn;
 	const char *name;
@@ -4984,8 +4986,8 @@ oscar_close_directim(gpointer object, gpointer ignored)
 
 		/* OSCAR_DISCONNECT_LOCAL_CLOSED doesn't write anything to the convo
 		 * window. Let the user know that we cancelled the Direct IM. */
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, name);
-		purple_conversation_write(conv, NULL, _("You closed the connection."),
+		im = purple_im_conversation_new(account, name);
+		purple_conversation_write(PURPLE_CONVERSATION(im), NULL, _("You closed the connection."),
 				PURPLE_MESSAGE_SYSTEM, time(NULL));
 	}
 }
@@ -5336,15 +5338,15 @@ void oscar_set_icon(PurpleConnection *gc, PurpleStoredImage *img)
 	if (img == NULL) {
 		aim_ssi_delicon(od);
 	} else {
-		PurpleCipherContext *context;
+		PurpleHash *hash;
 		guchar md5[16];
 		gconstpointer data = purple_imgstore_get_data(img);
 		size_t len = purple_imgstore_get_size(img);
 
-		context = purple_cipher_context_new_by_name("md5", NULL);
-		purple_cipher_context_append(context, data, len);
-		purple_cipher_context_digest(context, md5, sizeof(md5));
-		purple_cipher_context_destroy(context);
+		hash = purple_md5_hash_new();
+		purple_hash_append(hash, data, len);
+		purple_hash_digest(hash, md5, sizeof(md5));
+		g_object_unref(hash);
 
 		aim_ssi_seticon(od, md5, 16);
 	}
@@ -5643,16 +5645,16 @@ static gboolean oscar_uri_handler(const char *proto, const char *cmd, GHashTable
 		if (bname) {
 			char *message = g_hash_table_lookup(params, "message");
 
-			PurpleConversation *conv = purple_find_conversation_with_account(
-				PURPLE_CONV_TYPE_IM, bname, acct);
-			if (conv == NULL)
-				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, bname);
-			purple_conversation_present(conv);
+			PurpleIMConversation *im = purple_conversations_find_im_with_account(
+				bname, acct);
+			if (im == NULL)
+				im = purple_im_conversation_new(acct, bname);
+			purple_conversation_present(PURPLE_CONVERSATION(im));
 
 			if (message) {
 				/* Spaces are encoded as '+' */
 				g_strdelimit(message, "+", ' ');
-				purple_conv_send_confirm(conv, message);
+				purple_conversation_send_confirm(PURPLE_CONVERSATION(im), message);
 			}
 		}
 		/*else

@@ -91,15 +91,15 @@ silcpurple_buddy_keyagr_cb(SilcClient client,
 
 
 			/* Open IM window */
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
+			convo = purple_conversations_find_with_account(PURPLE_CONV_TYPE_IM,
 								      client_entry->nickname, sg->account);
 			if (convo) {
 				/* we don't have windows in the core anymore...but we may want to
 				 * provide some method for asking the UI to show the window
-				purple_conv_window_show(purple_conversation_get_window(convo));
+				purple_conversation_window_show(purple_conversation_get_window(convo));
 				 */
 			} else {
-				convo = purple_conversation_new(PURPLE_CONV_TYPE_IM, sg->account,
+				convo = purple_im_conversation_new(sg->account,
 								client_entry->nickname);
 			}
 			g_snprintf(tmp, sizeof(tmp), "%s [private key]", client_entry->nickname);
