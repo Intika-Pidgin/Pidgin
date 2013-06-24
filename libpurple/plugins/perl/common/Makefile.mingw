@@ -48,6 +48,7 @@ XS_FILES =		Account.xs \
 				Core.xs \
 				Debug.xs \
 				FT.xs \
+				Hash.xs \
 				Idle.xs \
 				Purple.xs \
 				ImgStore.xs \
@@ -58,7 +59,6 @@ XS_FILES =		Account.xs \
 				PluginPref.xs \
 				Pounce.xs \
 				Prefs.xs \
-				Privacy.xs \
 				Proxy.xs \
 				Prpl.xs \
 				Request.xs \

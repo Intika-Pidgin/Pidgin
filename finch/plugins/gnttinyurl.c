@@ -210,7 +210,7 @@ static void url_fetched(PurpleHttpConnection *http_conn,
 {
 	CbInfo *data = (CbInfo *)_data;
 	PurpleConversation *conv = data->conv;
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get();
 	const gchar *url;
 
 	if (purple_http_response_is_successfull(response))
@@ -287,7 +287,7 @@ static gboolean writing_msg(PurpleAccount *account, char *sender, char **message
 	*message = t->str;
 	g_string_free(t, FALSE);
 	if (conv == NULL)
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, sender);
+		conv = purple_im_conversation_new(account, sender);
 	purple_conversation_set_data(conv, "TinyURLs", urls);
 	return FALSE;
 }
