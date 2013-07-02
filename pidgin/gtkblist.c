@@ -376,9 +376,8 @@ find_conversation_with_buddy(PurpleBuddy *buddy)
 	PidginBlistNode *ui = purple_blist_node_get_ui_data(PURPLE_BLIST_NODE(buddy));
 	if (ui)
 		return ui->conv.conv;
-	return purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-									     purple_buddy_get_name(buddy),
-									     purple_buddy_get_account(buddy));
+	return PURPLE_CONVERSATION(purple_conversations_find_im_with_account(
+			purple_buddy_get_name(buddy), purple_buddy_get_account(buddy)));
 }
 
 static void gtk_blist_join_chat(PurpleChat *chat)
@@ -405,8 +404,8 @@ static void gtk_blist_join_chat(PurpleChat *chat)
 	else
 		name = purple_chat_get_name(chat);
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, name,
-	                                             account);
+	conv = PURPLE_CONVERSATION(purple_conversations_find_chat_with_account(name,
+			account));
 
 	if (conv != NULL) {
 		pidgin_conv_attach_to_conversation(conv);
@@ -1416,14 +1415,14 @@ toggle_privacy(GtkWidget *widget, PurpleBlistNode *node)
 	account = purple_buddy_get_account(buddy);
 	name = purple_buddy_get_name(buddy);
 
-	permitted = purple_privacy_check(account, name);
+	permitted = purple_account_privacy_check(account, name);
 
 	/* XXX: Perhaps ask whether to restore the previous lists where appropirate? */
 
 	if (permitted)
-		purple_privacy_deny(account, name, FALSE, FALSE);
+		purple_account_privacy_deny(account, name);
 	else
-		purple_privacy_allow(account, name, FALSE, FALSE);
+		purple_account_privacy_allow(account, name);
 
 	pidgin_blist_update(purple_get_blist(), node);
 }
@@ -1435,7 +1434,7 @@ void pidgin_append_blist_node_privacy_menu(GtkWidget *menu, PurpleBlistNode *nod
 	gboolean permitted;
 
 	account = purple_buddy_get_account(buddy);
-	permitted = purple_privacy_check(account, purple_buddy_get_name(buddy));
+	permitted = purple_account_privacy_check(account, purple_buddy_get_name(buddy));
 
 	pidgin_new_item_from_stock(menu, permitted ? _("_Block") : _("Un_block"),
 						permitted ? PIDGIN_STOCK_TOOLBAR_BLOCK : PIDGIN_STOCK_TOOLBAR_UNBLOCK, G_CALLBACK(toggle_privacy),
@@ -3836,7 +3835,7 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 		GList *cur;
 		struct proto_chat_entry *pce;
 		char *name, *value;
-		PurpleConversation *conv;
+		PurpleChatConversation *conv;
 		PidginBlistNode *bnode = purple_blist_node_get_ui_data(node);
 
 		chat = (PurpleChat *)node;
@@ -3852,7 +3851,7 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 		}
 
 		if (bnode && bnode->conv.conv) {
-			conv = bnode->conv.conv;
+			conv = PURPLE_CHAT_CONVERSATION(bnode->conv.conv);
 		} else {
 			char *chat_name;
 			if (prpl_info && prpl_info->get_chat_name)
@@ -3860,17 +3859,17 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 			else
 				chat_name = g_strdup(purple_chat_get_name(chat));
 
-			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, chat_name,
+			conv = purple_conversations_find_chat_with_account(chat_name,
 					purple_chat_get_account(chat));
 			g_free(chat_name);
 		}
 
-		if (conv && !purple_conv_chat_has_left(PURPLE_CONV_CHAT(conv))) {
+		if (conv && !purple_chat_conversation_has_left(conv)) {
 			g_string_append_printf(str, _("\n<b>Occupants:</b> %d"),
-					g_list_length(purple_conv_chat_get_users(PURPLE_CONV_CHAT(conv))));
+					g_list_length(purple_chat_conversation_get_users(conv)));
 
 			if (prpl_info && (prpl_info->options & OPT_PROTO_CHAT_TOPIC)) {
-				const char *chattopic = purple_conv_chat_get_topic(PURPLE_CONV_CHAT(conv));
+				const char *chattopic = purple_chat_conversation_get_topic(conv);
 				char *topic = chattopic ? g_markup_escape_text(chattopic, -1) : NULL;
 				g_string_append_printf(str, _("\n<b>Topic:</b> %s"), topic ? topic : _("(no topic set)"));
 				g_free(topic);
@@ -4159,7 +4158,7 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 
 	g_return_val_if_fail(buddy != NULL, NULL);
 
-	if (!purple_privacy_check(purple_buddy_get_account(buddy), purple_buddy_get_name(buddy))) {
+	if (!purple_account_privacy_check(purple_buddy_get_account(buddy), purple_buddy_get_name(buddy))) {
 		path = g_build_filename(DATADIR, "pixmaps", "pidgin", "emblems", "16", "blocked.png", NULL);
 		return _pidgin_blist_get_cached_emblem(path);
 	}
@@ -4697,11 +4696,9 @@ unseen_conv_menu(void)
 		menu = NULL;
 	}
 
-	ims = pidgin_conversations_find_unseen_list(PURPLE_CONV_TYPE_IM,
-				PIDGIN_UNSEEN_TEXT, FALSE, 0);
+	ims = pidgin_conversations_get_unseen_ims(PIDGIN_UNSEEN_TEXT, FALSE, 0);
 
-	chats = pidgin_conversations_find_unseen_list(PURPLE_CONV_TYPE_CHAT,
-				PIDGIN_UNSEEN_NICK, FALSE, 0);
+	chats = pidgin_conversations_get_unseen_chats(PIDGIN_UNSEEN_NICK, FALSE, 0);
 
 	if(ims && chats)
 		convs = g_list_concat(ims, chats);
@@ -4730,12 +4727,10 @@ menutray_press_cb(GtkWidget *widget, GdkEventButton *event)
 
 	switch (event->button) {
 		case 1:
-			convs = pidgin_conversations_find_unseen_list(PURPLE_CONV_TYPE_IM,
-							PIDGIN_UNSEEN_TEXT, FALSE, 1);
+			convs = pidgin_conversations_get_unseen_ims(PIDGIN_UNSEEN_TEXT, FALSE, 1);
 
 			if(!convs)
-				convs = pidgin_conversations_find_unseen_list(PURPLE_CONV_TYPE_CHAT,
-								PIDGIN_UNSEEN_NICK, FALSE, 1);
+				convs = pidgin_conversations_get_unseen_chats(PIDGIN_UNSEEN_NICK, FALSE, 1);
 			if (convs) {
 				pidgin_conv_present_conversation((PurpleConversation*)convs->data);
 				g_list_free(convs);
@@ -4749,7 +4744,7 @@ menutray_press_cb(GtkWidget *widget, GdkEventButton *event)
 }
 
 static void
-conversation_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type,
+conversation_updated_cb(PurpleConversation *conv, PurpleConversationUpdateType type,
                         PidginBuddyList *gtkblist)
 {
 	PurpleAccount *account = purple_conversation_get_account(conv);
@@ -4757,7 +4752,7 @@ conversation_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type,
 	GList *ims, *chats;
 	GList *l = NULL;
 
-	if (type != PURPLE_CONV_UPDATE_UNSEEN)
+	if (type != PURPLE_CONVERSATION_UPDATE_UNSEEN)
 		return;
 
 	if(account != NULL && purple_conversation_get_name(conv) != NULL) {
@@ -4771,11 +4766,9 @@ conversation_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type,
 		gtkblist->menutrayicon = NULL;
 	}
 
-	ims = pidgin_conversations_find_unseen_list(PURPLE_CONV_TYPE_IM,
-				PIDGIN_UNSEEN_TEXT, FALSE, 0);
+	ims = pidgin_conversations_get_unseen_ims(PIDGIN_UNSEEN_TEXT, FALSE, 0);
 
-	chats = pidgin_conversations_find_unseen_list(PURPLE_CONV_TYPE_CHAT,
-				PIDGIN_UNSEEN_NICK, FALSE, 0);
+	chats = pidgin_conversations_get_unseen_chats(PIDGIN_UNSEEN_NICK, FALSE, 0);
 
 	if(ims && chats)
 		convs = g_list_concat(ims, chats);
@@ -4796,8 +4789,8 @@ conversation_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type,
 
 			if(gtkconv)
 				count = gtkconv->unseen_count;
-			else if(purple_conversation_get_data(l->data, "unseen-count"))
-				count = GPOINTER_TO_INT(purple_conversation_get_data(l->data, "unseen-count"));
+			else if(g_object_get_data(G_OBJECT(l->data), "unseen-count"))
+				count = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(l->data), "unseen-count"));
 
 			g_string_append_printf(tooltip_text,
 					ngettext("%d unread message from %s\n", "%d unread messages from %s\n", count),
@@ -4826,7 +4819,7 @@ conversation_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type,
 static void
 conversation_deleting_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
 {
-	conversation_updated_cb(conv, PURPLE_CONV_UPDATE_UNSEEN, gtkblist);
+	conversation_updated_cb(conv, PURPLE_CONVERSATION_UPDATE_UNSEEN, gtkblist);
 }
 
 static void
@@ -4848,8 +4841,7 @@ written_msg_update_ui_cb(PurpleAccount *account, const char *who, const char *me
 			!(flag & (PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_RECV)))
 		return;
 	ui->conv.flags |= PIDGIN_BLIST_NODE_HAS_PENDING_MESSAGE;
-	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT
-			&& (flag & PURPLE_MESSAGE_NICK))
+	if (PURPLE_IS_CHAT_CONVERSATION(conv) && (flag & PURPLE_MESSAGE_NICK))
 		ui->conv.flags |= PIDGIN_BLIST_CHAT_HAS_PENDING_MESSAGE_WITH_NICK;
 
 	ui->conv.last_message = time(NULL);    /* XXX: for lack of better data */
@@ -4872,50 +4864,41 @@ conversation_created_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
 {
 	PurpleAccount *account = purple_conversation_get_account(conv);
 
-	switch (purple_conversation_get_type(conv)) {
-		case PURPLE_CONV_TYPE_IM:
-			{
-				GSList *buddies = purple_find_buddies(account, purple_conversation_get_name(conv));
-				while (buddies) {
-					PurpleBlistNode *buddy = buddies->data;
-					struct _pidgin_blist_node *ui = purple_blist_node_get_ui_data(buddy);
-					buddies = g_slist_delete_link(buddies, buddies);
-					if (!ui)
-						continue;
-					ui->conv.conv = conv;
-					ui->conv.flags = 0;
-					ui->conv.last_message = 0;
-					purple_signal_connect(purple_conversations_get_handle(), "deleting-conversation",
-							ui, PURPLE_CALLBACK(conversation_deleted_update_ui_cb), ui);
-					purple_signal_connect(purple_conversations_get_handle(), "wrote-im-msg",
-							ui, PURPLE_CALLBACK(written_msg_update_ui_cb), buddy);
-					purple_signal_connect(pidgin_conversations_get_handle(), "conversation-displayed",
-							ui, PURPLE_CALLBACK(displayed_msg_update_ui_cb), buddy);
-				}
-			}
-			break;
-		case PURPLE_CONV_TYPE_CHAT:
-			{
-				PurpleChat *chat = purple_blist_find_chat(account, purple_conversation_get_name(conv));
-				struct _pidgin_blist_node *ui;
-				if (!chat)
-					break;
-				ui = purple_blist_node_get_ui_data(&(chat->node));
-				if (!ui)
-					break;
-				ui->conv.conv = conv;
-				ui->conv.flags = 0;
-				ui->conv.last_message = 0;
-				purple_signal_connect(purple_conversations_get_handle(), "deleting-conversation",
-						ui, PURPLE_CALLBACK(conversation_deleted_update_ui_cb), ui);
-				purple_signal_connect(purple_conversations_get_handle(), "wrote-chat-msg",
-						ui, PURPLE_CALLBACK(written_msg_update_ui_cb), chat);
-				purple_signal_connect(pidgin_conversations_get_handle(), "conversation-displayed",
-						ui, PURPLE_CALLBACK(displayed_msg_update_ui_cb), chat);
-			}
-			break;
-		default:
-			break;
+	if (PURPLE_IS_IM_CONVERSATION(conv)) {
+		GSList *buddies = purple_find_buddies(account, purple_conversation_get_name(conv));
+		while (buddies) {
+			PurpleBlistNode *buddy = buddies->data;
+			struct _pidgin_blist_node *ui = purple_blist_node_get_ui_data(buddy);
+			buddies = g_slist_delete_link(buddies, buddies);
+			if (!ui)
+				continue;
+			ui->conv.conv = conv;
+			ui->conv.flags = 0;
+			ui->conv.last_message = 0;
+			purple_signal_connect(purple_conversations_get_handle(), "deleting-conversation",
+					ui, PURPLE_CALLBACK(conversation_deleted_update_ui_cb), ui);
+			purple_signal_connect(purple_conversations_get_handle(), "wrote-im-msg",
+					ui, PURPLE_CALLBACK(written_msg_update_ui_cb), buddy);
+			purple_signal_connect(pidgin_conversations_get_handle(), "conversation-displayed",
+					ui, PURPLE_CALLBACK(displayed_msg_update_ui_cb), buddy);
+		}
+	} else {
+		PurpleChat *chat = purple_blist_find_chat(account, purple_conversation_get_name(conv));
+		struct _pidgin_blist_node *ui;
+		if (!chat)
+			return;
+		ui = purple_blist_node_get_ui_data(&(chat->node));
+		if (!ui)
+			return;
+		ui->conv.conv = conv;
+		ui->conv.flags = 0;
+		ui->conv.last_message = 0;
+		purple_signal_connect(purple_conversations_get_handle(), "deleting-conversation",
+				ui, PURPLE_CALLBACK(conversation_deleted_update_ui_cb), ui);
+		purple_signal_connect(purple_conversations_get_handle(), "wrote-chat-msg",
+				ui, PURPLE_CALLBACK(written_msg_update_ui_cb), chat);
+		purple_signal_connect(pidgin_conversations_get_handle(), "conversation-displayed",
+				ui, PURPLE_CALLBACK(displayed_msg_update_ui_cb), chat);
 	}
 }
 
@@ -6309,7 +6292,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	purple_signal_connect(handle, "account-actions-changed", gtkblist,
 	                      PURPLE_CALLBACK(account_actions_changed), NULL);
 
-	handle = pidgin_account_get_handle();
+	handle = pidgin_accounts_get_handle();
 	purple_signal_connect(handle, "account-modified", gtkblist,
 	                      PURPLE_CALLBACK(account_modified), gtkblist);
 
@@ -7239,7 +7222,7 @@ add_buddy_cb(GtkWidget *w, int resp, PidginAddBuddyData *data)
 	PurpleAccount *account;
 	PurpleGroup *g;
 	PurpleBuddy *b;
-	PurpleConversation *c;
+	PurpleIMConversation *im;
 	PurpleBuddyIcon *icon;
 
 	if (resp == GTK_RESPONSE_OK)
@@ -7298,9 +7281,9 @@ add_buddy_cb(GtkWidget *w, int resp, PidginAddBuddyData *data)
 		 * Or something.  --Mark
 		 */
 
-		c = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, who, data->rq_data.account);
-		if (c != NULL) {
-			icon = purple_conv_im_get_icon(PURPLE_CONV_IM(c));
+		im = purple_conversations_find_im_with_account(who, data->rq_data.account);
+		if (im != NULL) {
+			icon = purple_im_conversation_get_icon(im);
 			if (icon != NULL)
 				purple_buddy_icon_update(icon);
 		}

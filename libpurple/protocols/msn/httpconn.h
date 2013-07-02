@@ -26,7 +26,7 @@
 
 typedef struct _MsnHttpConn MsnHttpConn;
 
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "servconn.h"
 #include "session.h"
 
@@ -61,7 +61,7 @@ struct _MsnHttpConn
 	char *rx_buf; /**< The receive buffer. */
 	int rx_len; /**< The receive buffer length. */
 
-	PurpleCircBuffer *tx_buf;
+	PurpleCircularBuffer *tx_buf;
 	guint tx_handler;
 };
 
