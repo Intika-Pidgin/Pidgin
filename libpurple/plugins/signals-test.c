@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 
-#include "cipher.h"
 #include "connection.h"
 #include "conversation.h"
 #include "core.h"
@@ -74,7 +73,7 @@ account_alias_changed(PurpleAccount *account, const char *old, gpointer data)
 {
 	purple_debug_misc("signals test", "account-alias-changed (%s, %s, %s)\n",
 					purple_account_get_username(account),
-					old, purple_account_get_alias(account));
+					old, purple_account_get_private_alias(account));
 }
 
 static int
@@ -429,46 +428,48 @@ buddy_typing_stopped_cb(PurpleAccount *account, const char *name, void *data)
 }
 
 static gboolean
-chat_buddy_joining_cb(PurpleConversation *conv, const char *user,
-					  PurpleConvChatBuddyFlags flags, void *data)
+chat_user_joining_cb(PurpleConversation *conv, const char *user,
+					  PurpleChatUserFlags flags, void *data)
 {
-	purple_debug_misc("signals test", "chat-buddy-joining (%s, %s, %d)\n",
+	purple_debug_misc("signals test", "chat-user-joining (%s, %s, %d)\n",
 					purple_conversation_get_name(conv), user, flags);
 
 	return FALSE;
 }
 
 static void
-chat_buddy_joined_cb(PurpleConversation *conv, const char *user,
-					 PurpleConvChatBuddyFlags flags, gboolean new_arrival, void *data)
+chat_user_joined_cb(PurpleConversation *conv, const char *user,
+					 PurpleChatUserFlags flags, gboolean new_arrival, void *data)
 {
-	purple_debug_misc("signals test", "chat-buddy-joined (%s, %s, %d, %d)\n",
+	purple_debug_misc("signals test", "chat-user-joined (%s, %s, %d, %d)\n",
 					purple_conversation_get_name(conv), user, flags, new_arrival);
 }
 
 static void
-chat_buddy_flags_cb(PurpleConversation *conv, const char *user,
-					PurpleConvChatBuddyFlags oldflags, PurpleConvChatBuddyFlags newflags, void *data)
+chat_user_flags_cb(PurpleChatUser *cb, PurpleChatUserFlags oldflags,
+					 PurpleChatUserFlags newflags, void *data)
 {
-	purple_debug_misc("signals test", "chat-buddy-flags (%s, %s, %d, %d)\n",
-					purple_conversation_get_name(conv), user, oldflags, newflags);
+	purple_debug_misc("signals test", "chat-user-flags (%s, %s, %d, %d)\n",
+					purple_conversation_get_name(PURPLE_CONVERSATION(
+					purple_chat_user_get_chat(cb))),
+					purple_chat_user_get_name(cb), oldflags, newflags);
 }
 
 static gboolean
-chat_buddy_leaving_cb(PurpleConversation *conv, const char *user,
+chat_user_leaving_cb(PurpleConversation *conv, const char *user,
 					  const char *reason, void *data)
 {
-	purple_debug_misc("signals test", "chat-buddy-leaving (%s, %s, %s)\n",
+	purple_debug_misc("signals test", "chat-user-leaving (%s, %s, %s)\n",
 					purple_conversation_get_name(conv), user, reason);
 
 	return FALSE;
 }
 
 static void
-chat_buddy_left_cb(PurpleConversation *conv, const char *user,
+chat_user_left_cb(PurpleConversation *conv, const char *user,
 				   const char *reason, void *data)
 {
-	purple_debug_misc("signals test", "chat-buddy-left (%s, %s, %s)\n",
+	purple_debug_misc("signals test", "chat-user-left (%s, %s, %s)\n",
 					purple_conversation_get_name(conv), user, reason);
 }
 
@@ -523,21 +524,6 @@ chat_topic_changed_cb(PurpleConversation *conv, const char *who,
 					purple_conversation_get_name(conv), topic,
 					(who) ? who : "unknown");
 }
-/**************************************************************************
- * Ciphers signal callbacks
- **************************************************************************/
-static void
-cipher_added_cb(PurpleCipher *cipher, void *data) {
-	purple_debug_misc("signals test", "cipher %s added\n",
-					purple_cipher_get_name(cipher));
-}
-
-static void
-cipher_removed_cb(PurpleCipher *cipher, void *data) {
-	purple_debug_misc("signals test", "cipher %s removed\n",
-					purple_cipher_get_name(cipher));
-}
-
 /**************************************************************************
  * Core signal callbacks
  **************************************************************************/
@@ -719,7 +705,6 @@ plugin_load(PurplePlugin *plugin)
 	void *conn_handle     = purple_connections_get_handle();
 	void *conv_handle     = purple_conversations_get_handle();
 	void *accounts_handle = purple_accounts_get_handle();
-	void *ciphers_handle  = purple_ciphers_get_handle();
 	void *ft_handle       = purple_xfers_get_handle();
 	void *sound_handle    = purple_sounds_get_handle();
 	void *notify_handle   = purple_notify_get_handle();
@@ -808,16 +793,16 @@ plugin_load(PurplePlugin *plugin)
 						plugin, PURPLE_CALLBACK(buddy_typing_cb), NULL);
 	purple_signal_connect(conv_handle, "buddy-typing-stopped",
 						plugin, PURPLE_CALLBACK(buddy_typing_stopped_cb), NULL);
-	purple_signal_connect(conv_handle, "chat-buddy-joining",
-						plugin, PURPLE_CALLBACK(chat_buddy_joining_cb), NULL);
-	purple_signal_connect(conv_handle, "chat-buddy-joined",
-						plugin, PURPLE_CALLBACK(chat_buddy_joined_cb), NULL);
-	purple_signal_connect(conv_handle, "chat-buddy-flags",
-						plugin, PURPLE_CALLBACK(chat_buddy_flags_cb), NULL);
-	purple_signal_connect(conv_handle, "chat-buddy-leaving",
-						plugin, PURPLE_CALLBACK(chat_buddy_leaving_cb), NULL);
-	purple_signal_connect(conv_handle, "chat-buddy-left",
-						plugin, PURPLE_CALLBACK(chat_buddy_left_cb), NULL);
+	purple_signal_connect(conv_handle, "chat-user-joining",
+						plugin, PURPLE_CALLBACK(chat_user_joining_cb), NULL);
+	purple_signal_connect(conv_handle, "chat-user-joined",
+						plugin, PURPLE_CALLBACK(chat_user_joined_cb), NULL);
+	purple_signal_connect(conv_handle, "chat-user-flags",
+						plugin, PURPLE_CALLBACK(chat_user_flags_cb), NULL);
+	purple_signal_connect(conv_handle, "chat-user-leaving",
+						plugin, PURPLE_CALLBACK(chat_user_leaving_cb), NULL);
+	purple_signal_connect(conv_handle, "chat-user-left",
+						plugin, PURPLE_CALLBACK(chat_user_left_cb), NULL);
 	purple_signal_connect(conv_handle, "chat-inviting-user",
 						plugin, PURPLE_CALLBACK(chat_inviting_user_cb), NULL);
 	purple_signal_connect(conv_handle, "chat-invited-user",
@@ -830,12 +815,6 @@ plugin_load(PurplePlugin *plugin)
 						plugin, PURPLE_CALLBACK(chat_left_cb), NULL);
 	purple_signal_connect(conv_handle, "chat-topic-changed",
 						plugin, PURPLE_CALLBACK(chat_topic_changed_cb), NULL);
-
-	/* Ciphers signals */
-	purple_signal_connect(ciphers_handle, "cipher-added",
-						plugin, PURPLE_CALLBACK(cipher_added_cb), NULL);
-	purple_signal_connect(ciphers_handle, "cipher-removed",
-						plugin, PURPLE_CALLBACK(cipher_removed_cb), NULL);
 
 	/* Core signals */
 	purple_signal_connect(core_handle, "quitting",

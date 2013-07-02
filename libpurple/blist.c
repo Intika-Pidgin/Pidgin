@@ -30,13 +30,73 @@
 #include "notify.h"
 #include "pounce.h"
 #include "prefs.h"
-#include "privacy.h"
 #include "prpl.h"
 #include "server.h"
 #include "signals.h"
 #include "util.h"
 #include "value.h"
 #include "xmlnode.h"
+
+/** Private data of a buddy list node */
+struct _PurpleBlistNodePrivate {
+	PurpleBlistNode *prev;    /**< The sibling before this buddy.          */
+	PurpleBlistNode *next;    /**< The sibling after this buddy.           */
+	PurpleBlistNode *parent;  /**< The parent of this node                 */
+	PurpleBlistNode *child;   /**< The child of this node                  */
+	GHashTable *settings;     /**< per-node settings                       */
+	gboolean no_save;         /**< node should not be saved with the buddy
+	                               list                                    */
+};
+
+/** Private data for a counting node */
+struct _PurpleCountingNodePrivate {
+	int totalcount;    /**< The number of children                          */
+	int currentcount;  /**< The number of children corresponding to online
+	                        accounts                                        */
+	int onlinecount;   /**< The number of children who are currently online */
+};
+
+/** Private data for a buddy */
+struct _PurpleBuddyPrivate {
+	char *name;                  /**< The name of the buddy.                  */
+	char *alias;                 /**< The user-set alias of the buddy         */
+	char *server_alias;          /**< The server-specified alias of the buddy.
+	                                  (i.e. MSN "Friendly Names")             */
+	void *proto_data;            /**< TODO remove - use protocol subclasses
+	                                  This allows the prpl to associate
+	                                  whatever data it wants with a buddy     */
+	PurpleBuddyIcon *icon;       /**< The buddy icon.                         */
+	PurpleAccount *account;      /**< the account this buddy belongs to       */
+	PurplePresence *presence;    /**< Presense information of the buddy       */
+	PurpleMediaCaps media_caps;  /**< The media capabilities of the buddy.    */
+};
+
+/** Private data for a contact */
+struct _PurpleContactPrivate {
+	char *alias;              /**< The user-set alias of the contact */
+	PurpleBuddy *priority;    /**< The "top" buddy for this contact  */
+	gboolean priority_valid;  /**< Is priority valid?                */
+};
+
+
+/** Private data for a group */
+struct _PurpleGroupPrivate {
+	char *name;  /**< The name of this group. */
+};
+
+/** Private data for a chat node */
+struct _PurpleChatPrivate {
+	char *alias;             /**< The display name of this chat.              */
+	GHashTable *components;  /**< the stuff the protocol needs to know to join
+	                              the chat                                    */
+	PurpleAccount *account;  /**< The account this chat is attached to        */
+};
+
+/** Private data for the buddy list */
+struct _PurpleBuddyListPrivate {
+	PurpleBlistNode *root;  /**< The first node in the buddy list           */
+	GHashTable *buddies;    /**< Every buddy (no pun intended) in this list */
+};
 
 static PurpleBlistUiOps *blist_ui_ops = NULL;
 
@@ -317,13 +377,13 @@ accountprivacy_to_xmlnode(PurpleAccount *account)
 	g_snprintf(buf, sizeof(buf), "%d", purple_account_get_privacy_type(account));
 	xmlnode_set_attrib(node, "mode", buf);
 
-	for (cur = account->permit; cur; cur = cur->next)
+	for (cur = purple_account_privacy_get_permitted(account); cur; cur = cur->next)
 	{
 		child = xmlnode_new_child(node, "permit");
 		xmlnode_insert_data(child, cur->data, -1);
 	}
 
-	for (cur = account->deny; cur; cur = cur->next)
+	for (cur = purple_account_privacy_get_denied(account); cur; cur = cur->next)
 	{
 		child = xmlnode_new_child(node, "block");
 		xmlnode_insert_data(child, cur->data, -1);
@@ -640,7 +700,7 @@ load_blist(void)
 				continue;
 
 			imode = atoi(mode);
-			purple_account_set_privacy_type(account, (imode != 0 ? imode : PURPLE_PRIVACY_ALLOW_ALL));
+			purple_account_set_privacy_type(account, (imode != 0 ? imode : PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL));
 
 			for (x = anode->child; x; x = x->next) {
 				char *name;
@@ -649,11 +709,11 @@ load_blist(void)
 
 				if (purple_strequal(x->name, "permit")) {
 					name = xmlnode_get_data(x);
-					purple_privacy_permit_add(account, name, TRUE);
+					purple_account_privacy_permit_add(account, name, TRUE);
 					g_free(name);
 				} else if (purple_strequal(x->name, "block")) {
 					name = xmlnode_get_data(x);
-					purple_privacy_deny_add(account, name, TRUE);
+					purple_account_privacy_deny_add(account, name, TRUE);
 					g_free(name);
 				}
 			}
@@ -1003,7 +1063,7 @@ purple_strings_are_different(const char *one, const char *two)
 void purple_blist_alias_contact(PurpleContact *contact, const char *alias)
 {
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	PurpleBlistNode *bnode;
 	char *old_alias;
 	char *new_alias = NULL;
@@ -1037,10 +1097,10 @@ void purple_blist_alias_contact(PurpleContact *contact, const char *alias)
 	{
 		PurpleBuddy *buddy = (PurpleBuddy *)bnode;
 
-		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy->name,
+		im = purple_conversations_find_im_with_account(buddy->name,
 												   buddy->account);
-		if (conv)
-			purple_conversation_autoset_title(conv);
+		if (im)
+			purple_conversation_autoset_title(PURPLE_CONVERSATION(im));
 	}
 
 	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
@@ -1087,7 +1147,7 @@ void purple_blist_alias_chat(PurpleChat *chat, const char *alias)
 void purple_blist_alias_buddy(PurpleBuddy *buddy, const char *alias)
 {
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
 
@@ -1116,10 +1176,10 @@ void purple_blist_alias_buddy(PurpleBuddy *buddy, const char *alias)
 	if (ops && ops->update)
 		ops->update(purplebuddylist, (PurpleBlistNode *)buddy);
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy->name,
+	im = purple_conversations_find_im_with_account(buddy->name,
 											   buddy->account);
-	if (conv)
-		purple_conversation_autoset_title(conv);
+	if (im)
+		purple_conversation_autoset_title(PURPLE_CONVERSATION(im));
 
 	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 buddy, old_alias);
@@ -1129,7 +1189,7 @@ void purple_blist_alias_buddy(PurpleBuddy *buddy, const char *alias)
 void purple_blist_server_alias_buddy(PurpleBuddy *buddy, const char *alias)
 {
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
 
@@ -1158,10 +1218,10 @@ void purple_blist_server_alias_buddy(PurpleBuddy *buddy, const char *alias)
 	if (ops && ops->update)
 		ops->update(purplebuddylist, (PurpleBlistNode *)buddy);
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy->name,
+	im = purple_conversations_find_im_with_account(buddy->name,
 											   buddy->account);
-	if (conv)
-		purple_conversation_autoset_title(conv);
+	if (im)
+		purple_conversation_autoset_title(PURPLE_CONVERSATION(im));
 
 	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 buddy, old_alias);

@@ -25,7 +25,7 @@
 
 #include "oscar.h"
 
-#include "cipher.h"
+#include "ciphers/md5hash.h"
 
 /*
  * Each time we make a FLAP connection to an oscar server the server gives
@@ -972,18 +972,18 @@ aim_sendmemblock(OscarData *od, FlapConnection *conn, guint32 offset, guint32 le
 		byte_stream_putraw(&bs, buf, 0x10);
 
 	} else if (buf && (len > 0)) { /* use input buffer */
-		PurpleCipherContext *context;
+		PurpleHash *hash;
 		guchar digest[16];
 
-		context = purple_cipher_context_new_by_name("md5", NULL);
-		purple_cipher_context_append(context, buf, len);
-		purple_cipher_context_digest(context, digest, sizeof(digest));
-		purple_cipher_context_destroy(context);
+		hash = purple_md5_hash_new();
+		purple_hash_append(hash, buf, len);
+		purple_hash_digest(hash, digest, sizeof(digest));
+		g_object_unref(hash);
 
 		byte_stream_putraw(&bs, digest, 0x10);
 
 	} else if (len == 0) { /* no length, just hash NULL (buf is optional) */
-		PurpleCipherContext *context;
+		PurpleHash *hash;
 		guchar digest[16];
 		guint8 nil = '\0';
 
@@ -991,10 +991,10 @@ aim_sendmemblock(OscarData *od, FlapConnection *conn, guint32 offset, guint32 le
 		 * I'm not sure if we really need the empty append with the
 		 * new MD5 functions, so I'll leave it in, just in case.
 		 */
-		context = purple_cipher_context_new_by_name("md5", NULL);
-		purple_cipher_context_append(context, &nil, 0);
-		purple_cipher_context_digest(context, digest, sizeof(digest));
-		purple_cipher_context_destroy(context);
+		hash = purple_md5_hash_new();
+		purple_hash_append(hash, &nil, 0);
+		purple_hash_digest(hash, digest, sizeof(digest));
+		g_object_unref(hash);
 
 		byte_stream_putraw(&bs, digest, 0x10);
 

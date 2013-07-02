@@ -18,8 +18,3 @@ gboolean PURPLE_BLIST_NODE_SHOULD_SAVE(PurpleBlistNode *node);
 gboolean PURPLE_CONNECTION_IS_CONNECTED(PurpleConnection *connection);
 gboolean PURPLE_CONNECTION_IS_VALID(PurpleConnection *connection);
 
-/* conversation.h */
-PurpleConvIm *PURPLE_CONV_IM(const PurpleConversation *conversation);
-PurpleConvIm *PURPLE_CONV_CHAT(const PurpleConversation *conversation);
-
-
