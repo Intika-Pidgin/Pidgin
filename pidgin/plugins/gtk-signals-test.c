@@ -49,7 +49,7 @@ blist_created_cb(PurpleBuddyList *blist, void *data) {
 }
 
 static void
-blist_drawing_tooltip_cb(PurpleBlistNode *node, GString *str, gboolean full, void *data) {
+blist_drawing_tooltip_cb(PurpleBListNode *node, GString *str, gboolean full, void *data) {
 	purple_debug_info("gtk-signal-test", "drawing tooltip cb\n");
 }
 
@@ -110,7 +110,7 @@ conversation_switched_cb(PurpleConversation *conv, void *data)
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	void *accounts_handle = pidgin_account_get_handle();
+	void *accounts_handle = pidgin_accounts_get_handle();
 	void *blist_handle = pidgin_blist_get_handle();
 	void *conv_handle = pidgin_conversations_get_handle();
 

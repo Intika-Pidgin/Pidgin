@@ -142,7 +142,7 @@ static void add_purple_buddy_to_groups(JabberStream *js, const char *jid,
 			const char *servernick, *balias;
 
 			/* Previously stored serverside / buddy-supplied alias */
-			if((servernick = purple_blist_node_get_string((PurpleBlistNode*)b, "servernick")))
+			if((servernick = purple_blist_node_get_string((PurpleBListNode*)b, "servernick")))
 				serv_got_alias(js->gc, jid, servernick);
 
 			/* Alias from our roster retrieval */
@@ -378,7 +378,7 @@ void jabber_roster_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
 		return;
 	}
 
-	/* Adding a chat room or a chat buddy to the roster is *not* supported. */
+	/* Adding a chat room or a chat user to the roster is *not* supported. */
 	if (jid->node && jabber_chat_find(js, jid->node, jid->domain) != NULL) {
 		/*
 		 * This is the same thing Bonjour does. If it causes problems, move

@@ -733,10 +733,10 @@ create_account_menu(PurpleAccount *default_account,
 				gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
 		}
 
-		if (purple_account_get_alias(account)) {
+		if (purple_account_get_private_alias(account)) {
 			g_snprintf(buf, sizeof(buf), "%s (%s) (%s)",
 					   purple_account_get_username(account),
-					   purple_account_get_alias(account),
+					   purple_account_get_private_alias(account),
 					   purple_account_get_protocol_name(account));
 		} else {
 			g_snprintf(buf, sizeof(buf), "%s (%s)",
@@ -1387,13 +1387,13 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 			break;
 		}
 		contact = purple_buddy_get_contact(buddy);
-		purple_buddy_icons_node_set_custom_icon_from_file((PurpleBlistNode*)contact, data->filename);
+		purple_buddy_icons_node_set_custom_icon_from_file((PurpleBListNode*)contact, data->filename);
 		break;
 	case DND_FILE_TRANSFER:
 		serv_send_file(purple_account_get_connection(data->account), data->who, data->filename);
 		break;
 	case DND_IM_IMAGE:
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, data->account, data->who);
+		conv = PURPLE_CONVERSATION(purple_im_conversation_new(data->account, data->who));
 		gtkconv = PIDGIN_CONVERSATION(conv);
 
 		if (!g_file_get_contents(data->filename, &filedata, &size,
@@ -1573,7 +1573,7 @@ pidgin_dnd_file_manage(GtkSelectionData *sd, PurpleAccount *account, const char 
 				PidginConversation *gtkconv;
 
 			case PURPLE_DESKTOP_ITEM_TYPE_LINK:
-				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, who);
+				conv = PURPLE_CONVERSATION(purple_im_conversation_new(account, who));
 				gtkconv =  PIDGIN_CONVERSATION(conv);
 				gtk_webview_insert_link(GTK_WEBVIEW(gtkconv->entry),
 				                        purple_desktop_item_get_string(item, "URL"),
@@ -1964,7 +1964,7 @@ static void get_log_set_name(PurpleLogSet *set, gpointer value, PidginCompletion
 static void
 add_completion_list(PidginCompletionData *data)
 {
-	PurpleBlistNode *gnode, *cnode, *bnode;
+	PurpleBListNode *gnode, *cnode, *bnode;
 	PidginFilterBuddyCompletionEntryFunc filter_func = data->filter_func;
 	gpointer user_data = data->filter_func_user_data;
 	GHashTable *sets;
@@ -1973,12 +1973,12 @@ add_completion_list(PidginCompletionData *data)
 
 	for (gnode = purple_get_blist()->root; gnode != NULL; gnode = gnode->next)
 	{
-		if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
+		if (!PURPLE_IS_GROUP(gnode))
 			continue;
 
 		for (cnode = gnode->child; cnode != NULL; cnode = cnode->next)
 		{
-			if (!PURPLE_BLIST_NODE_IS_CONTACT(cnode))
+			if (!PURPLE_IS_CONTACT(cnode))
 				continue;
 
 			for (bnode = cnode->child; bnode != NULL; bnode = bnode->next)
