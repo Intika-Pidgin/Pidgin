@@ -33,7 +33,7 @@
 /* purple includes */
 #include "account.h"
 #include "accountopt.h"
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "conversation.h"
 #include "debug.h"
 #include "ft.h"
@@ -41,7 +41,6 @@
 #include "mime.h"
 #include "notify.h"
 #include "plugin.h"
-#include "privacy.h"
 #include "prpl.h"
 #include "request.h"
 #include "util.h"
@@ -221,7 +220,7 @@ struct mwPurplePluginData {
   gint outpa;  /* like inpa, but the other way */
 
   /** circular buffer for outgoing data */
-  PurpleCircBuffer *sock_buf;
+  PurpleCircularBuffer *sock_buf;
 
   PurpleConnection *gc;
 };
@@ -296,7 +295,7 @@ static void convo_data_free(struct convo_data *conv);
 
 static void convo_features(struct mwConversation *conv);
 
-static PurpleConversation *convo_get_gconv(struct mwConversation *conv);
+static PurpleIMConversation *convo_get_im(struct mwConversation *conv);
 
 
 /* name and id */
@@ -343,7 +342,7 @@ static PurpleConnection *session_to_gc(struct mwSession *session) {
 
 static void write_cb(gpointer data, gint source, PurpleInputCondition cond) {
   struct mwPurplePluginData *pd = data;
-  PurpleCircBuffer *circ = pd->sock_buf;
+  PurpleCircularBuffer *circ = pd->sock_buf;
   gsize avail;
   int ret;
 
@@ -351,17 +350,17 @@ static void write_cb(gpointer data, gint source, PurpleInputCondition cond) {
 
   g_return_if_fail(circ != NULL);
 
-  avail = purple_circ_buffer_get_max_read(circ);
+  avail = purple_circular_buffer_get_max_read(circ);
   if(BUF_LONG < avail) avail = BUF_LONG;
 
   while(avail) {
-    ret = write(pd->socket, circ->outptr, avail);
+    ret = write(pd->socket, purple_circular_buffer_get_output(circ), avail);
 
     if(ret <= 0)
       break;
 
-    purple_circ_buffer_mark_read(circ, ret);
-    avail = purple_circ_buffer_get_max_read(circ);
+    purple_circular_buffer_mark_read(circ, ret);
+    avail = purple_circular_buffer_get_max_read(circ);
     if(BUF_LONG < avail) avail = BUF_LONG;
   }
 
@@ -386,7 +385,7 @@ static int mw_session_io_write(struct mwSession *session,
 
   if(pd->outpa) {
     DEBUG_INFO("already pending INPUT_WRITE, buffering\n");
-    purple_circ_buffer_append(pd->sock_buf, buf, len);
+    purple_circular_buffer_append(pd->sock_buf, buf, len);
     return 0;
   }
 
@@ -406,7 +405,7 @@ static int mw_session_io_write(struct mwSession *session,
   if(err == EAGAIN) {
     /* append remainder to circular buffer */
     DEBUG_INFO("EAGAIN\n");
-    purple_circ_buffer_append(pd->sock_buf, buf, len);
+    purple_circular_buffer_append(pd->sock_buf, buf, len);
     pd->outpa = purple_input_add(pd->socket, PURPLE_INPUT_WRITE, write_cb, pd);
 
   } else if(len > 0) {
@@ -566,11 +565,11 @@ static void mw_aware_list_on_aware(struct mwAwareList *list,
   if(aware->group) {
     PurpleGroup *group;
     PurpleBuddy *buddy;
-    PurpleBlistNode *bnode;
+    PurpleBListNode *bnode;
 
     group = g_hash_table_lookup(pd->group_list_map, list);
     buddy = purple_find_buddy_in_group(acct, id, group);
-    bnode = (PurpleBlistNode *) buddy;
+    bnode = (PurpleBListNode *) buddy;
 
     if(! buddy) {
       struct mwServiceResolve *srvc;
@@ -579,7 +578,7 @@ static void mw_aware_list_on_aware(struct mwAwareList *list,
       buddy = purple_buddy_new(acct, id, NULL);
       purple_blist_add_buddy(buddy, NULL, group, NULL);
 
-      bnode = (PurpleBlistNode *) buddy;
+      bnode = (PurpleBListNode *) buddy;
 
       srvc = pd->srvc_resolve;
       query = g_list_append(NULL, (char *) id);
@@ -660,7 +659,7 @@ static void blist_export(PurpleConnection *gc, struct mwSametimeList *stlist) {
   */
 
   PurpleAccount *acct;
-  PurpleBlistNode *gn, *cn, *bn;
+  PurpleBListNode *gn, *cn, *bn;
   PurpleGroup *grp;
   PurpleBuddy *bdy;
 
@@ -677,7 +676,7 @@ static void blist_export(PurpleConnection *gc, struct mwSametimeList *stlist) {
     enum mwSametimeGroupType gtype;
     gboolean gopen;
 
-    if(! PURPLE_BLIST_NODE_IS_GROUP(gn)) continue;
+    if(! PURPLE_IS_GROUP(gn)) continue;
     grp = (PurpleGroup *) gn;
 
     /* the group's type (normal or dynamic) */
@@ -713,13 +712,13 @@ static void blist_export(PurpleConnection *gc, struct mwSametimeList *stlist) {
     for(cn = purple_blist_node_get_first_child(gn);
 			cn;
 			cn = purple_blist_node_get_sibling_next(cn)) {
-      if(! PURPLE_BLIST_NODE_IS_CONTACT(cn)) continue;
+      if(! PURPLE_IS_CONTACT(cn)) continue;
 
       for(bn = purple_blist_node_get_first_child(cn);
 			  bn;
 			  bn = purple_blist_node_get_sibling_next(bn)) {
-	if(! PURPLE_BLIST_NODE_IS_BUDDY(bn)) continue;
-	if(! PURPLE_BLIST_NODE_SHOULD_SAVE(bn)) continue;
+	if(! PURPLE_IS_BUDDY(bn)) continue;
+	if(purple_blist_node_get_dont_save(bn)) continue;
 
 	bdy = (PurpleBuddy *) bn;
 
@@ -871,8 +870,8 @@ static PurpleBuddy *buddy_ensure(PurpleConnection *gc, PurpleGroup *group,
 
   purple_blist_alias_buddy(buddy, alias);
   purple_blist_server_alias_buddy(buddy, name);
-  purple_blist_node_set_string((PurpleBlistNode *) buddy, BUDDY_KEY_NAME, name);
-  purple_blist_node_set_int((PurpleBlistNode *) buddy, BUDDY_KEY_TYPE, type);
+  purple_blist_node_set_string((PurpleBListNode *) buddy, BUDDY_KEY_NAME, name);
+  purple_blist_node_set_int((PurpleBListNode *) buddy, BUDDY_KEY_TYPE, type);
 
   return buddy;
 }
@@ -887,7 +886,7 @@ static void group_add(struct mwPurplePluginData *pd,
   const char *n;
   GList *add;
 
-  n = purple_blist_node_get_string((PurpleBlistNode *) group, GROUP_KEY_NAME);
+  n = purple_blist_node_get_string((PurpleBListNode *) group, GROUP_KEY_NAME);
   if(! n) n = purple_group_get_name(group);
 
   idb.user = (char *) n;
@@ -906,7 +905,7 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
   PurpleAccount *acct;
   PurpleGroup *group = NULL;
   PurpleBuddyList *blist;
-  PurpleBlistNode *gn;
+  PurpleBListNode *gn;
   const char *name, *alias, *owner;
   enum mwSametimeGroupType type;
 
@@ -937,7 +936,7 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
   for(gn = purple_blist_get_root(); gn;
 		  gn = purple_blist_node_get_sibling_next(gn)) {
     const char *n, *o;
-    if(! PURPLE_BLIST_NODE_IS_GROUP(gn)) continue;
+    if(! PURPLE_IS_GROUP(gn)) continue;
     n = purple_blist_node_get_string(gn, GROUP_KEY_NAME);
     o = purple_blist_node_get_string(gn, GROUP_KEY_OWNER);
 
@@ -965,7 +964,7 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
     purple_blist_add_group(group, NULL);
   }
 
-  gn = (PurpleBlistNode *) group;
+  gn = (PurpleBListNode *) group;
   purple_blist_node_set_string(gn, GROUP_KEY_NAME, name);
   purple_blist_node_set_int(gn, GROUP_KEY_TYPE, type);
 
@@ -1010,7 +1009,7 @@ static void blist_merge(PurpleConnection *gc, struct mwSametimeList *stlist) {
 static void group_clear(PurpleGroup *group, PurpleAccount *acct, gboolean del) {
   PurpleConnection *gc;
   GList *prune = NULL;
-  PurpleBlistNode *gn, *cn, *bn;
+  PurpleBListNode *gn, *cn, *bn;
 
   g_return_if_fail(group != NULL);
 
@@ -1019,19 +1018,19 @@ static void group_clear(PurpleGroup *group, PurpleAccount *acct, gboolean del) {
   gc = purple_account_get_connection(acct);
   g_return_if_fail(gc != NULL);
 
-  gn = (PurpleBlistNode *) group;
+  gn = (PurpleBListNode *) group;
 
   for(cn = purple_blist_node_get_first_child(gn);
 		  cn;
 		  cn = purple_blist_node_get_sibling_next(cn)) {
-    if(! PURPLE_BLIST_NODE_IS_CONTACT(cn)) continue;
+    if(! PURPLE_IS_CONTACT(cn)) continue;
 
     for(bn = purple_blist_node_get_first_child(cn);
 			bn;
 			bn = purple_blist_node_get_sibling_next(bn)) {
       PurpleBuddy *gb = (PurpleBuddy *) bn;
 
-      if(! PURPLE_BLIST_NODE_IS_BUDDY(bn)) continue;
+      if(! PURPLE_IS_BUDDY(bn)) continue;
 
       if(purple_buddy_get_account(gb) == acct) {
 	DEBUG_INFO("clearing %s from group\n", NSTR(purple_buddy_get_name(gb)));
@@ -1063,7 +1062,7 @@ static void group_prune(PurpleConnection *gc, PurpleGroup *group,
 			struct mwSametimeGroup *stgroup) {
 
   PurpleAccount *acct;
-  PurpleBlistNode *gn, *cn, *bn;
+  PurpleBListNode *gn, *cn, *bn;
 
   GHashTable *stusers;
   GList *prune = NULL;
@@ -1088,19 +1087,19 @@ static void group_prune(PurpleConnection *gc, PurpleGroup *group,
   }
   g_list_free(utl);
 
-  gn = (PurpleBlistNode *) group;
+  gn = (PurpleBListNode *) group;
 
   for(cn = purple_blist_node_get_first_child(gn);
 		  cn;
 		  cn = purple_blist_node_get_sibling_next(cn)) {
-    if(! PURPLE_BLIST_NODE_IS_CONTACT(cn)) continue;
+    if(! PURPLE_IS_CONTACT(cn)) continue;
 
     for(bn = purple_blist_node_get_first_child(cn);
 			bn;
 			bn = purple_blist_node_get_sibling_next(bn)) {
       PurpleBuddy *gb = (PurpleBuddy *) bn;
 
-      if(! PURPLE_BLIST_NODE_IS_BUDDY(bn)) continue;
+      if(! PURPLE_IS_BUDDY(bn)) continue;
 
       /* if the account is correct and they're not in our table, mark
 	 them for pruning */
@@ -1130,7 +1129,7 @@ static void blist_sync(PurpleConnection *gc, struct mwSametimeList *stlist) {
 
   PurpleAccount *acct;
   PurpleBuddyList *blist;
-  PurpleBlistNode *gn;
+  PurpleBListNode *gn;
 
   GHashTable *stgroups;
   GList *g_prune = NULL;
@@ -1167,7 +1166,7 @@ static void blist_sync(PurpleConnection *gc, struct mwSametimeList *stlist) {
     const char *gname, *owner;
     struct mwSametimeGroup *stgrp;
 
-    if(! PURPLE_BLIST_NODE_IS_GROUP(gn)) continue;
+    if(! PURPLE_IS_GROUP(gn)) continue;
 
     /* group not belonging to this account */
     if(! purple_group_on_account(grp, acct))
@@ -1202,7 +1201,7 @@ static void blist_sync(PurpleConnection *gc, struct mwSametimeList *stlist) {
   /* prune all marked groups */
   while(g_prune) {
     PurpleGroup *grp = g_prune->data;
-    PurpleBlistNode *gn = (PurpleBlistNode *) grp;
+    PurpleBListNode *gn = (PurpleBListNode *) grp;
     const char *owner;
     gboolean del = TRUE;
 
@@ -1280,7 +1279,7 @@ static void conversation_created_cb(PurpleConversation *g_conv,
   if(pd->gc != gc)
     return; /* not ours */
 
-  if(purple_conversation_get_type(g_conv) != PURPLE_CONV_TYPE_IM)
+  if(PURPLE_IS_CHAT_CONVERSATION(g_conv))
     return; /* wrong type */
 
   who.user = (char *) purple_conversation_get_name(g_conv);
@@ -1293,7 +1292,7 @@ static void conversation_created_cb(PurpleConversation *g_conv,
 }
 
 
-static void blist_menu_nab(PurpleBlistNode *node, gpointer data) {
+static void blist_menu_nab(PurpleBListNode *node, gpointer data) {
   struct mwPurplePluginData *pd = data;
   PurpleConnection *gc;
 
@@ -1308,7 +1307,7 @@ static void blist_menu_nab(PurpleBlistNode *node, gpointer data) {
   gc = pd->gc;
   g_return_if_fail(gc != NULL);
 
-  g_return_if_fail(PURPLE_BLIST_NODE_IS_GROUP(node));
+  g_return_if_fail(PURPLE_IS_GROUP(node));
 
   str = g_string_new(NULL);
 
@@ -1331,14 +1330,14 @@ static void blist_menu_nab(PurpleBlistNode *node, gpointer data) {
 /** The normal blist menu prpl function doesn't get called for groups,
     so we use the blist-node-extended-menu signal to trigger this
     handler */
-static void blist_node_menu_cb(PurpleBlistNode *node,
+static void blist_node_menu_cb(PurpleBListNode *node,
                                GList **menu, struct mwPurplePluginData *pd) {
   const char *owner;
   PurpleAccount *acct;
   PurpleMenuAction *act;
 
   /* we only want groups */
-  if(! PURPLE_BLIST_NODE_IS_GROUP(node)) return;
+  if(! PURPLE_IS_GROUP(node)) return;
 
   acct = purple_connection_get_account(pd->gc);
   g_return_if_fail(acct != NULL);
@@ -1371,23 +1370,23 @@ static void blist_node_menu_cb(PurpleBlistNode *node,
 /* lifted this from oldstatus, since HEAD doesn't do this at login
    anymore. */
 static void blist_init(PurpleAccount *acct) {
-  PurpleBlistNode *gnode, *cnode, *bnode;
+  PurpleBListNode *gnode, *cnode, *bnode;
   GList *add_buds = NULL;
 
   for(gnode = purple_blist_get_root(); gnode;
 		  gnode = purple_blist_node_get_sibling_next(gnode)) {
-    if(! PURPLE_BLIST_NODE_IS_GROUP(gnode)) continue;
+    if(! PURPLE_IS_GROUP(gnode)) continue;
 
     for(cnode = purple_blist_node_get_first_child(gnode);
 			cnode;
 			cnode = purple_blist_node_get_sibling_next(cnode)) {
-      if(! PURPLE_BLIST_NODE_IS_CONTACT(cnode))
+      if(! PURPLE_IS_CONTACT(cnode))
 	continue;
       for(bnode = purple_blist_node_get_first_child(cnode);
 			  bnode;
 			  bnode = purple_blist_node_get_sibling_next(bnode)) {
 	PurpleBuddy *b;
-	if(!PURPLE_BLIST_NODE_IS_BUDDY(bnode))
+	if(!PURPLE_IS_BUDDY(bnode))
 	  continue;
 
 	b = (PurpleBuddy *)bnode;
@@ -1411,7 +1410,7 @@ static void services_starting(struct mwPurplePluginData *pd) {
   PurpleConnection *gc;
   PurpleAccount *acct;
   struct mwStorageUnit *unit;
-  PurpleBlistNode *l;
+  PurpleBListNode *l;
 
   gc = pd->gc;
   acct = purple_connection_get_account(gc);
@@ -1427,7 +1426,7 @@ static void services_starting(struct mwPurplePluginData *pd) {
     enum mwSametimeGroupType gt;
     const char *owner;
 
-    if(! PURPLE_BLIST_NODE_IS_GROUP(l)) continue;
+    if(! PURPLE_IS_GROUP(l)) continue;
 
     /* if the group is ownerless, or has an owner and we're not it,
        skip it */
@@ -1634,7 +1633,7 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
   PurpleConnection *gc;
   PurpleAccount *acct;
   struct mwPrivacyInfo *privacy;
-  GSList *l, **ll;
+  GSList *list;
   guint count;
 
   DEBUG_INFO("privacy information set from server\n");
@@ -1653,16 +1652,25 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
   privacy = mwSession_getPrivacyInfo(session);
   count = privacy->count;
 
-  ll = (privacy->deny)? &acct->deny: &acct->permit;
-  for(l = *ll; l; l = l->next) g_free(l->data);
-  g_slist_free(*ll);
-  l = *ll = NULL;
-
-  while(count--) {
-    struct mwUserItem *u = privacy->users + count;
-    l = g_slist_prepend(l, g_strdup(u->id));
+  if (privacy->deny) {
+    while ((list = purple_account_privacy_get_denied(acct))) {
+      g_free(list->data);
+      purple_account_privacy_deny_remove(acct, list->data, TRUE);
+    }
+    while (count--) {
+      struct mwUserItem *u = privacy->users + count;
+      purple_account_privacy_deny_add(acct, u->id, TRUE);
+    }
+  } else {
+    while ((list = purple_account_privacy_get_permitted(acct))) {
+      g_free(list->data);
+      purple_account_privacy_permit_remove(acct, list->data, TRUE);
+    }
+    while (count--) {
+      struct mwUserItem *u = privacy->users + count;
+      purple_account_privacy_permit_add(acct, u->id, TRUE);
+    }
   }
-  *ll = l;
 }
 
 
@@ -1827,15 +1835,15 @@ static void mw_session_announce(struct mwSession *s,
 				const char *text) {
   struct mwPurplePluginData *pd;
   PurpleAccount *acct;
-  PurpleConversation *conv;
+  PurpleIMConversation *im;
   PurpleBuddy *buddy;
   char *who = from->user_id;
   char *msg;
 
   pd = mwSession_getClientData(s);
   acct = purple_connection_get_account(pd->gc);
-  conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, who, acct);
-  if(! conv) conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, who);
+  im = purple_conversations_find_im_with_account(who, acct);
+  if(! im) im = purple_im_conversation_new(acct, who);
 
   buddy = purple_find_buddy(acct, who);
   if(buddy) who = (char *) purple_buddy_get_contact_alias(buddy);
@@ -1843,7 +1851,8 @@ static void mw_session_announce(struct mwSession *s,
   who = g_strdup_printf(_("Announcement from %s"), who);
   msg = purple_markup_linkify(text);
 
-  purple_conversation_write(conv, who, msg ? msg : "", PURPLE_MESSAGE_RECV, time(NULL));
+  purple_conversation_write(PURPLE_CONVERSATION(im), who, msg ? msg : "",
+  		PURPLE_MESSAGE_RECV, time(NULL));
   g_free(who);
   g_free(msg);
 }
@@ -1929,14 +1938,14 @@ static void mw_conf_invited(struct mwConference *conf,
 }
 
 
-/* The following mess helps us relate a mwConference to a PurpleConvChat
+/* The following mess helps us relate a mwConference to a PurpleChatConversation
    in the various forms by which either may be indicated */
 
 #define CONF_TO_ID(conf)   (GPOINTER_TO_INT(conf))
 #define ID_TO_CONF(pd, id) (conf_find_by_id((pd), (id)))
 
-#define CHAT_TO_ID(chat)   (purple_conv_chat_get_id(chat))
-#define ID_TO_CHAT(id)     (purple_find_chat(id))
+#define CHAT_TO_ID(chat)   (purple_chat_conversation_get_id(chat))
+#define ID_TO_CHAT(id)     (purple_conversations_find_chat(id))
 
 #define CHAT_TO_CONF(pd, chat)  (ID_TO_CONF((pd), CHAT_TO_ID(chat)))
 #define CONF_TO_CHAT(conf)      (ID_TO_CHAT(CONF_TO_ID(conf)))
@@ -1952,7 +1961,7 @@ conf_find_by_id(struct mwPurplePluginData *pd, int id) {
   ll = mwServiceConference_getConferences(srvc);
   for(l = ll; l; l = l->next) {
     struct mwConference *c = l->data;
-    PurpleConvChat *h = mwConference_getClientData(c);
+    PurpleChatConversation *h = mwConference_getClientData(c);
 
     if(CHAT_TO_ID(h) == id) {
       conf = c;
@@ -1970,7 +1979,7 @@ static void mw_conf_opened(struct mwConference *conf, GList *members) {
   struct mwSession *session;
   struct mwPurplePluginData *pd;
   PurpleConnection *gc;
-  PurpleConversation *g_conf;
+  PurpleChatConversation *g_conf;
 
   const char *n = mwConference_getName(conf);
   const char *t = mwConference_getTitle(conf);
@@ -1986,12 +1995,12 @@ static void mw_conf_opened(struct mwConference *conf, GList *members) {
   if(! t) t = "(no title)";
   g_conf = serv_got_joined_chat(gc, CONF_TO_ID(conf), t);
 
-  mwConference_setClientData(conf, PURPLE_CONV_CHAT(g_conf), NULL);
+  mwConference_setClientData(conf, g_conf, NULL);
 
   for(; members; members = members->next) {
     struct mwLoginInfo *peer = members->data;
-    purple_conv_chat_add_user(PURPLE_CONV_CHAT(g_conf), peer->user_id,
-			    NULL, PURPLE_CBFLAGS_NONE, FALSE);
+    purple_chat_conversation_add_user(g_conf, peer->user_id,
+			    NULL, PURPLE_CHAT_USER_NONE, FALSE);
   }
 }
 
@@ -2022,7 +2031,7 @@ static void mw_conf_closed(struct mwConference *conf, guint32 reason) {
 static void mw_conf_peer_joined(struct mwConference *conf,
 				struct mwLoginInfo *peer) {
 
-  PurpleConvChat *g_conf;
+  PurpleChatConversation *g_conf;
 
   const char *n = mwConference_getName(conf);
 
@@ -2031,15 +2040,15 @@ static void mw_conf_peer_joined(struct mwConference *conf,
   g_conf = mwConference_getClientData(conf);
   g_return_if_fail(g_conf != NULL);
 
-  purple_conv_chat_add_user(g_conf, peer->user_id,
-			  NULL, PURPLE_CBFLAGS_NONE, TRUE);
+  purple_chat_conversation_add_user(g_conf, peer->user_id,
+			  NULL, PURPLE_CHAT_USER_NONE, TRUE);
 }
 
 
 static void mw_conf_peer_parted(struct mwConference *conf,
 				struct mwLoginInfo *peer) {
 
-  PurpleConvChat *g_conf;
+  PurpleChatConversation *g_conf;
 
   const char *n = mwConference_getName(conf);
 
@@ -2048,7 +2057,7 @@ static void mw_conf_peer_parted(struct mwConference *conf,
   g_conf = mwConference_getClientData(conf);
   g_return_if_fail(g_conf != NULL);
 
-  purple_conv_chat_remove_user(g_conf, peer->user_id, NULL);
+  purple_chat_conversation_remove_user(g_conf, peer->user_id, NULL);
 }
 
 
@@ -2400,7 +2409,7 @@ static void convo_data_new(struct mwConversation *conv) {
 }
 
 
-static PurpleConversation *convo_get_gconv(struct mwConversation *conv) {
+static PurpleIMConversation *convo_get_im(struct mwConversation *conv) {
   struct mwServiceIm *srvc;
   struct mwSession *session;
   struct mwPurplePluginData *pd;
@@ -2417,8 +2426,7 @@ static PurpleConversation *convo_get_gconv(struct mwConversation *conv) {
 
   idb = mwConversation_getTarget(conv);
 
-  return purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-					     idb->user, acct);
+  return purple_conversations_find_im_with_account(idb->user, acct);
 }
 
 
@@ -2452,7 +2460,7 @@ static void convo_queue(struct mwConversation *conv,
 
 /* Does what it takes to get an error displayed for a conversation */
 static void convo_error(struct mwConversation *conv, guint32 err) {
-  PurpleConversation *gconv;
+  PurpleIMConversation *im;
   char *tmp, *text;
   struct mwIdBlock *idb;
 
@@ -2461,13 +2469,15 @@ static void convo_error(struct mwConversation *conv, guint32 err) {
   tmp = mwError(err);
   text = g_strconcat(_("Unable to send message: "), tmp, NULL);
 
-  gconv = convo_get_gconv(conv);
-  if(gconv && !purple_conv_present_error(idb->user, purple_conversation_get_account(gconv), text)) {
+  im = convo_get_im(conv);
+  if(im && !purple_conversation_helper_present_error(idb->user,
+  		purple_conversation_get_account(PURPLE_CONVERSATION(im)), text)) {
 
     g_free(text);
     text = g_strdup_printf(_("Unable to send message to %s:"),
 			   (idb->user)? idb->user: "(unknown)");
-    purple_notify_error(purple_account_get_connection(purple_conversation_get_account(gconv)),
+    purple_notify_error(purple_account_get_connection(
+    		purple_conversation_get_account(PURPLE_CONVERSATION(im))),
 		      NULL, text, tmp);
   }
 
@@ -2499,16 +2509,17 @@ static void convo_queue_send(struct mwConversation *conv) {
      inform the purple conversation that it's unsafe to offer any *cool*
      features. */
 static void convo_nofeatures(struct mwConversation *conv) {
-  PurpleConversation *gconv;
+  PurpleIMConversation *im;
   PurpleConnection *gc;
 
-  gconv = convo_get_gconv(conv);
-  if(! gconv) return;
+  im = convo_get_im(conv);
+  if(! im) return;
 
-  gc = purple_conversation_get_connection(gconv);
+  gc = purple_conversation_get_connection(PURPLE_CONVERSATION(im));
   if(! gc) return;
 
-  purple_conversation_set_features(gconv, purple_connection_get_flags(gc));
+  purple_conversation_set_features(PURPLE_CONVERSATION(im),
+  		purple_connection_get_flags(gc));
 }
 
 
@@ -2516,13 +2527,13 @@ static void convo_nofeatures(struct mwConversation *conv) {
     to inform the purple conversation of what features to offer the
     user */
 static void convo_features(struct mwConversation *conv) {
-  PurpleConversation *gconv;
+  PurpleIMConversation *im;
   PurpleConnectionFlags feat;
 
-  gconv = convo_get_gconv(conv);
-  if(! gconv) return;
+  im = convo_get_im(conv);
+  if(! im) return;
 
-  feat = purple_conversation_get_features(gconv);
+  feat = purple_conversation_get_features(PURPLE_CONVERSATION(im));
 
   if(mwConversation_isOpen(conv)) {
     if(mwConversation_supports(conv, mwImSend_HTML)) {
@@ -2538,7 +2549,7 @@ static void convo_features(struct mwConversation *conv) {
     }
 
     DEBUG_INFO("conversation features set to 0x%04x\n", feat);
-    purple_conversation_set_features(gconv, feat);
+    purple_conversation_set_features(PURPLE_CONVERSATION(im), feat);
 
   } else {
     convo_nofeatures(conv);
@@ -2566,7 +2577,7 @@ static void mw_conversation_opened(struct mwConversation *conv) {
   if(cd) {
     convo_queue_send(conv);
 
-    if(! convo_get_gconv(conv)) {
+    if(! convo_get_im(conv)) {
       mwConversation_free(conv);
       return;
     }
@@ -2582,7 +2593,7 @@ static void mw_conversation_opened(struct mwConversation *conv) {
 
     buddy = purple_find_buddy(acct, info->user_id);
     if(buddy) {
-      purple_blist_node_set_int((PurpleBlistNode *) buddy,
+      purple_blist_node_set_int((PurpleBListNode *) buddy,
 			      BUDDY_KEY_CLIENT, info->type);
     }
   }
@@ -2652,7 +2663,7 @@ static void im_recv_typing(struct mwConversation *conv,
   idb = mwConversation_getTarget(conv);
 
   serv_got_typing(pd->gc, idb->user, 0,
-		  typing? PURPLE_TYPING: PURPLE_NOT_TYPING);
+		  typing? PURPLE_IM_TYPING: PURPLE_IM_NOT_TYPING);
 }
 
 
@@ -2937,7 +2948,7 @@ static struct mwServiceIm *mw_srvc_im_new(struct mwSession *s) {
 }
 
 
-/* The following helps us relate a mwPlace to a PurpleConvChat in the
+/* The following helps us relate a mwPlace to a PurpleChatConversation in the
    various forms by which either may be indicated. Uses some of
    the similar macros from the conference service above */
 
@@ -2957,7 +2968,7 @@ place_find_by_id(struct mwPurplePluginData *pd, int id) {
   l = (GList *) mwServicePlace_getPlaces(srvc);
   for(; l; l = l->next) {
     struct mwPlace *p = l->data;
-    PurpleConvChat *h = PURPLE_CONV_CHAT(mwPlace_getClientData(p));
+    PurpleChatConversation *h = mwPlace_getClientData(p);
 
     if(CHAT_TO_ID(h) == id) {
       place = p;
@@ -2974,7 +2985,7 @@ static void mw_place_opened(struct mwPlace *place) {
   struct mwSession *session;
   struct mwPurplePluginData *pd;
   PurpleConnection *gc;
-  PurpleConversation *gconf;
+  PurpleChatConversation *gconf;
 
   GList *members, *l;
 
@@ -2998,8 +3009,8 @@ static void mw_place_opened(struct mwPlace *place) {
 
   for(l = members; l; l = l->next) {
     struct mwIdBlock *idb = l->data;
-    purple_conv_chat_add_user(PURPLE_CONV_CHAT(gconf), idb->user,
-			    NULL, PURPLE_CBFLAGS_NONE, FALSE);
+    purple_chat_conversation_add_user(gconf, idb->user,
+			    NULL, PURPLE_CHAT_USER_NONE, FALSE);
   }
   g_list_free(members);
 }
@@ -3030,7 +3041,7 @@ static void mw_place_closed(struct mwPlace *place, guint32 code) {
 
 static void mw_place_peerJoined(struct mwPlace *place,
 				const struct mwIdBlock *peer) {
-  PurpleConversation *gconf;
+  PurpleChatConversation *gconf;
 
   const char *n = mwPlace_getName(place);
 
@@ -3039,14 +3050,14 @@ static void mw_place_peerJoined(struct mwPlace *place,
   gconf = mwPlace_getClientData(place);
   g_return_if_fail(gconf != NULL);
 
-  purple_conv_chat_add_user(PURPLE_CONV_CHAT(gconf), peer->user,
-			  NULL, PURPLE_CBFLAGS_NONE, TRUE);
+  purple_chat_conversation_add_user(gconf, peer->user,
+			  NULL, PURPLE_CHAT_USER_NONE, TRUE);
 }
 
 
 static void mw_place_peerParted(struct mwPlace *place,
 				const struct mwIdBlock *peer) {
-  PurpleConversation *gconf;
+  PurpleChatConversation *gconf;
 
   const char *n = mwPlace_getName(place);
 
@@ -3055,7 +3066,7 @@ static void mw_place_peerParted(struct mwPlace *place,
   gconf = mwPlace_getClientData(place);
   g_return_if_fail(gconf != NULL);
 
-  purple_conv_chat_remove_user(PURPLE_CONV_CHAT(gconf), peer->user, NULL);
+  purple_chat_conversation_remove_user(gconf, peer->user, NULL);
 }
 
 
@@ -3150,7 +3161,7 @@ static struct mwPurplePluginData *mwPurplePluginData_new(PurpleConnection *gc) {
   pd->srvc_resolve = mw_srvc_resolve_new(pd->session);
   pd->srvc_store = mw_srvc_store_new(pd->session);
   pd->group_list_map = g_hash_table_new(g_direct_hash, g_direct_equal);
-  pd->sock_buf = purple_circ_buffer_new(0);
+  pd->sock_buf = purple_circular_buffer_new(0);
 
   mwSession_addService(pd->session, MW_SERVICE(pd->srvc_aware));
   mwSession_addService(pd->session, MW_SERVICE(pd->srvc_conf));
@@ -3197,7 +3208,7 @@ static void mwPurplePluginData_free(struct mwPurplePluginData *pd) {
   mwSession_free(pd->session);
 
   g_hash_table_destroy(pd->group_list_map);
-  purple_circ_buffer_destroy(pd->sock_buf);
+  g_object_unref(G_OBJECT(pd->sock_buf));
 
   g_free(pd);
 }
@@ -3525,7 +3536,7 @@ static void blist_menu_conf_list(PurpleBuddy *buddy,
 }
 
 
-static void blist_menu_conf(PurpleBlistNode *node, gpointer data) {
+static void blist_menu_conf(PurpleBListNode *node, gpointer data) {
   PurpleBuddy *buddy = (PurpleBuddy *) node;
   PurpleAccount *acct;
   PurpleConnection *gc;
@@ -3533,7 +3544,7 @@ static void blist_menu_conf(PurpleBlistNode *node, gpointer data) {
   GList *l;
 
   g_return_if_fail(node != NULL);
-  g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+  g_return_if_fail(PURPLE_IS_BUDDY(node));
 
   acct = purple_buddy_get_account(buddy);
   g_return_if_fail(acct != NULL);
@@ -3562,7 +3573,7 @@ static void blist_menu_conf(PurpleBlistNode *node, gpointer data) {
 
 
 #if 0
-static void blist_menu_announce(PurpleBlistNode *node, gpointer data) {
+static void blist_menu_announce(PurpleBListNode *node, gpointer data) {
   PurpleBuddy *buddy = (PurpleBuddy *) node;
   PurpleAccount *acct;
   PurpleConnection *gc;
@@ -3572,7 +3583,7 @@ static void blist_menu_announce(PurpleBlistNode *node, gpointer data) {
   GList *rcpt;
 
   g_return_if_fail(node != NULL);
-  g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+  g_return_if_fail(PURPLE_IS_BUDDY(node));
 
   acct = buddy->account;
   g_return_if_fail(acct != NULL);
@@ -3597,11 +3608,11 @@ static void blist_menu_announce(PurpleBlistNode *node, gpointer data) {
 #endif
 
 
-static GList *mw_prpl_blist_node_menu(PurpleBlistNode *node) {
+static GList *mw_prpl_blist_node_menu(PurpleBListNode *node) {
   GList *l = NULL;
   PurpleMenuAction *act;
 
-  if(! PURPLE_BLIST_NODE_IS_BUDDY(node))
+  if(! PURPLE_IS_BUDDY(node))
     return l;
 
   l = g_list_append(l, NULL);
@@ -4015,7 +4026,7 @@ static int mw_prpl_send_im(PurpleConnection *gc,
 
 static unsigned int mw_prpl_send_typing(PurpleConnection *gc,
 					const char *name,
-					PurpleTypingState state) {
+					PurpleIMTypingState state) {
 
   struct mwPurplePluginData *pd;
   struct mwIdBlock who = { (char *) name, NULL };
@@ -4033,7 +4044,7 @@ static unsigned int mw_prpl_send_typing(PurpleConnection *gc,
   if(mwConversation_isOpen(conv)) {
     mwConversation_send(conv, mwImSend_TYPING, t);
 
-  } else if((state == PURPLE_TYPING) || (state == PURPLE_TYPED)) {
+  } else if((state == PURPLE_IM_TYPING) || (state == PURPLE_IM_TYPED)) {
     /* only open a channel for sending typing notification, not for
        when typing has stopped. There's no point in re-opening a
        channel just to tell someone that this side isn't typing. */
@@ -4141,7 +4152,7 @@ static void mw_prpl_get_info(PurpleConnection *gc, const char *who) {
 		purple_notify_user_info_add_pair_html(user_info, _("Full Name"), purple_buddy_get_server_alias(b));
     }
 
-    type = purple_blist_node_get_int((PurpleBlistNode *) b, BUDDY_KEY_CLIENT);
+    type = purple_blist_node_get_int((PurpleBListNode *) b, BUDDY_KEY_CLIENT);
     if(type) {
 	  tmp2 = mw_client_name(type);
 	  if (tmp2) {
@@ -4266,14 +4277,14 @@ static void mw_prpl_set_idle(PurpleConnection *gc, int t) {
 
 static void notify_im(PurpleConnection *gc, GList *row, void *user_data) {
   PurpleAccount *acct;
-  PurpleConversation *conv;
+  PurpleIMConversation *im;
   char *id;
 
   acct = purple_connection_get_account(gc);
   id = g_list_nth_data(row, 1);
-  conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, id, acct);
-  if(! conv) conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, id);
-  purple_conversation_present(conv);
+  im = purple_conversations_find_im_with_account(id, acct);
+  if(! im) im = purple_im_conversation_new(acct, id);
+  purple_conversation_present(PURPLE_CONVERSATION(im));
 }
 
 
@@ -4386,7 +4397,7 @@ static void add_buddy_resolved(struct mwServiceResolve *srvc,
 
 	/* same person, set the server alias */
 	purple_blist_server_alias_buddy(buddy, match->name);
-	purple_blist_node_set_string((PurpleBlistNode *) buddy,
+	purple_blist_node_set_string((PurpleBListNode *) buddy,
 				   BUDDY_KEY_NAME, match->name);
 
 	/* subscribe to awareness */
@@ -4515,7 +4526,7 @@ static void mw_prpl_add_buddies(PurpleConnection *gc,
     GList *l;
 
     /* nab the saved server alias and stick it on the buddy */
-    fn = purple_blist_node_get_string((PurpleBlistNode *) b, BUDDY_KEY_NAME);
+    fn = purple_blist_node_get_string((PurpleBListNode *) b, BUDDY_KEY_NAME);
     purple_blist_server_alias_buddy(b, fn);
 
     /* convert PurpleBuddy into a mwAwareIdBlock */
@@ -4604,25 +4615,25 @@ static void mw_prpl_set_permit_deny(PurpleConnection *gc) {
   g_return_if_fail(session != NULL);
 
   switch(purple_account_get_privacy_type(acct)) {
-  case PURPLE_PRIVACY_DENY_USERS:
-    DEBUG_INFO("PURPLE_PRIVACY_DENY_USERS\n");
-    privacy_fill(&privacy, acct->deny);
+  case PURPLE_ACCOUNT_PRIVACY_DENY_USERS:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_DENY_USERS\n");
+    privacy_fill(&privacy, purple_account_privacy_get_denied(acct));
     privacy.deny = TRUE;
     break;
 
-  case PURPLE_PRIVACY_ALLOW_ALL:
-    DEBUG_INFO("PURPLE_PRIVACY_ALLOW_ALL\n");
+  case PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL\n");
     privacy.deny = TRUE;
     break;
 
-  case PURPLE_PRIVACY_ALLOW_USERS:
-    DEBUG_INFO("PURPLE_PRIVACY_ALLOW_USERS\n");
-    privacy_fill(&privacy, acct->permit);
+  case PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS\n");
+    privacy_fill(&privacy, purple_account_privacy_get_permitted(acct));
     privacy.deny = FALSE;
     break;
 
-  case PURPLE_PRIVACY_DENY_ALL:
-    DEBUG_INFO("PURPLE_PRIVACY_DENY_ALL\n");
+  case PURPLE_ACCOUNT_PRIVACY_DENY_ALL:
+    DEBUG_INFO("PURPLE_ACCOUNT_PRIVACY_DENY_ALL\n");
     privacy.deny = FALSE;
     break;
 
@@ -5319,7 +5330,7 @@ static void remote_group_done(struct mwPurplePluginData *pd,
   PurpleConnection *gc;
   PurpleAccount *acct;
   PurpleGroup *group;
-  PurpleBlistNode *gn;
+  PurpleBListNode *gn;
   const char *owner;
 
   g_return_if_fail(pd != NULL);
@@ -5345,7 +5356,7 @@ static void remote_group_done(struct mwPurplePluginData *pd,
   }
 
   group = purple_group_new(name);
-  gn = (PurpleBlistNode *) group;
+  gn = (PurpleBListNode *) group;
 
   owner = purple_account_get_username(acct);
 

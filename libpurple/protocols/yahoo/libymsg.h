@@ -25,7 +25,7 @@
 #ifndef _LIBYMSG_H_
 #define _LIBYMSG_H_
 
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "cmds.h"
 #include "prpl.h"
 #include "network.h"
@@ -192,7 +192,7 @@ typedef struct {
 	guint inpa;
 	guchar *rxqueue;
 	int rxlen;
-	PurpleCircBuffer *txbuf;
+	PurpleCircularBuffer *txbuf;
 	guint txhandler;
 	GHashTable *friends;
 
@@ -370,11 +370,11 @@ const char *yahoo_list_emblem(PurpleBuddy *b);
 char *yahoo_status_text(PurpleBuddy *b);
 void yahoo_tooltip_text(PurpleBuddy *b, PurpleNotifyUserInfo *user_info, gboolean full);
 GList *yahoo_status_types(PurpleAccount *account);
-GList *yahoo_blist_node_menu(PurpleBlistNode *node);
+GList *yahoo_blist_node_menu(PurpleBListNode *node);
 void yahoo_login(PurpleAccount *account);
 void yahoo_close(PurpleConnection *gc);
 int yahoo_send_im(PurpleConnection *gc, const char *who, const char *what, PurpleMessageFlags flags);
-unsigned int yahoo_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state);
+unsigned int yahoo_send_typing(PurpleConnection *gc, const char *who, PurpleIMTypingState state);
 void yahoo_set_status(PurpleAccount *account, PurpleStatus *status);
 void yahoo_set_idle(PurpleConnection *gc, int idle);
 void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *g, const char *message);

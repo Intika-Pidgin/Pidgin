@@ -30,7 +30,7 @@
 #define _OSCAR_H_
 
 #include "internal.h"
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "debug.h"
 #include "eventloop.h"
 #include "proxy.h"
@@ -280,7 +280,7 @@ struct _FlapConnection
 	guint8 header[6];
 	gssize header_received;
 	FlapFrame buffer_incoming;
-	PurpleCircBuffer *buffer_outgoing;
+	PurpleCircularBuffer *buffer_outgoing;
 	guint watcher_incoming;
 	guint watcher_outgoing;
 
@@ -602,7 +602,7 @@ struct chat_connection
 	FlapConnection *conn;
 	int id;
 	PurpleConnection *gc;
-	PurpleConversation *conv;
+	PurpleChatConversation *conv;
 	int maxlen;
 	int maxvis;
 };
@@ -1320,7 +1320,7 @@ void oscar_user_info_display_aim(OscarData *od, aim_userinfo_t *userinfo);
 
 /* authorization.c - OSCAR authorization requests */
 void oscar_auth_sendrequest(PurpleConnection *gc, const char *name, const char *msg);
-void oscar_auth_sendrequest_menu(PurpleBlistNode *node, gpointer ignored);
+void oscar_auth_sendrequest_menu(PurpleBListNode *node, gpointer ignored);
 void oscar_auth_recvrequest(PurpleConnection *gc, gchar *name, gchar *nick, gchar *reason);
 
 void oscar_set_aim_permdeny(PurpleConnection *gc);
