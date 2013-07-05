@@ -430,14 +430,14 @@ pounce_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 
 	if (target == gdk_atom_intern("PURPLE_BLIST_NODE", FALSE))
 	{
-		PurpleBlistNode *node = NULL;
+		PurpleBListNode *node = NULL;
 		PurpleBuddy *buddy;
 
 		memcpy(&node, sd_data, sizeof(node));
 
-		if (PURPLE_BLIST_NODE_IS_CONTACT(node))
+		if (PURPLE_IS_CONTACT(node))
 			buddy = purple_contact_get_priority_buddy((PurpleContact *)node);
-		else if (PURPLE_BLIST_NODE_IS_BUDDY(node))
+		else if (PURPLE_IS_BUDDY(node))
 			buddy = (PurpleBuddy *)node;
 		else
 			return;
@@ -984,7 +984,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 		}
 		else
 		{
-			if (!PURPLE_BUDDY_IS_ONLINE(buddy))
+			if (!PURPLE_IS_BUDDY_ONLINE(buddy))
 			{
 				gtk_toggle_button_set_active(
 					GTK_TOGGLE_BUTTON(dialog->signon), TRUE);
@@ -1412,7 +1412,7 @@ pidgin_pounces_manager_hide(void)
 static void
 pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 {
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	PurpleAccount *account;
 	PurpleBuddy *buddy;
 	const char *pouncee;
@@ -1433,8 +1433,8 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 
 	if (purple_pounce_action_is_enabled(pounce, "open-window"))
 	{
-		if (!purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, pouncee, account))
-			purple_conversation_new(PURPLE_CONV_TYPE_IM, account, pouncee);
+		if (!purple_conversations_find_im_with_account(pouncee, account))
+			purple_im_conversation_new(account, pouncee);
 	}
 
 	if (purple_pounce_action_is_enabled(pounce, "popup-notify"))
@@ -1487,12 +1487,12 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 
 		if (message != NULL)
 		{
-			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, pouncee, account);
+			im = purple_conversations_find_im_with_account(pouncee, account);
 
-			if (conv == NULL)
-				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, pouncee);
+			if (im == NULL)
+				im = purple_im_conversation_new(account, pouncee);
 
-			purple_conversation_write(conv, NULL, message,
+			purple_conversation_write(PURPLE_CONVERSATION(im), NULL, message,
 									PURPLE_MESSAGE_SEND, time(NULL));
 
 			serv_send_im(purple_account_get_connection(account), (char *)pouncee, (char *)message, 0);

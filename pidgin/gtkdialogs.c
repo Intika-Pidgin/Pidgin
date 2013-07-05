@@ -952,18 +952,18 @@ pidgin_dialogs_im(void)
 void
 pidgin_dialogs_im_with_user(PurpleAccount *account, const char *username)
 {
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(username != NULL);
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, username, account);
+	im = purple_conversations_find_im_with_account(username, account);
 
-	if (conv == NULL)
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, username);
+	if (im == NULL)
+		im = purple_im_conversation_new(account, username);
 
-	pidgin_conv_attach_to_conversation(conv);
-	purple_conversation_present(conv);
+	pidgin_conv_attach_to_conversation(PURPLE_CONVERSATION(im));
+	purple_conversation_present(PURPLE_CONVERSATION(im));
 }
 
 static gboolean
@@ -1111,7 +1111,7 @@ pidgin_dialogs_log_cb(gpointer data, PurpleRequestFields *fields)
 		buddies = purple_find_buddies(account, username);
 		for (cur = buddies; cur != NULL; cur = cur->next)
 		{
-			PurpleBlistNode *node = cur->data;
+			PurpleBListNode *node = cur->data;
 			if ((node != NULL) && ((node->prev != NULL) || (node->next != NULL)))
 			{
 				pidgin_log_show_contact((PurpleContact *)node->parent);
@@ -1230,10 +1230,10 @@ pidgin_dialogs_alias_chat(PurpleChat *chat)
 static void
 pidgin_dialogs_remove_contact_cb(PurpleContact *contact)
 {
-	PurpleBlistNode *bnode, *cnode;
+	PurpleBListNode *bnode, *cnode;
 	PurpleGroup *group;
 
-	cnode = (PurpleBlistNode *)contact;
+	cnode = (PurpleBListNode *)contact;
 	group = (PurpleGroup*)cnode->parent;
 	for (bnode = cnode->child; bnode; bnode = bnode->next) {
 		PurpleBuddy *buddy = (PurpleBuddy*)bnode;
@@ -1319,17 +1319,17 @@ pidgin_dialogs_merge_groups(PurpleGroup *source, const char *new_name)
 static void
 pidgin_dialogs_remove_group_cb(PurpleGroup *group)
 {
-	PurpleBlistNode *cnode, *bnode;
+	PurpleBListNode *cnode, *bnode;
 
-	cnode = ((PurpleBlistNode*)group)->child;
+	cnode = ((PurpleBListNode*)group)->child;
 
 	while (cnode) {
-		if (PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
+		if (PURPLE_IS_CONTACT(cnode)) {
 			bnode = cnode->child;
 			cnode = cnode->next;
 			while (bnode) {
 				PurpleBuddy *buddy;
-				if (PURPLE_BLIST_NODE_IS_BUDDY(bnode)) {
+				if (PURPLE_IS_BUDDY(bnode)) {
 					buddy = (PurpleBuddy*)bnode;
 					bnode = bnode->next;
 					if (purple_account_is_connected(purple_buddy_get_account(buddy))) {
@@ -1340,7 +1340,7 @@ pidgin_dialogs_remove_group_cb(PurpleGroup *group)
 					bnode = bnode->next;
 				}
 			}
-		} else if (PURPLE_BLIST_NODE_IS_CHAT(cnode)) {
+		} else if (PURPLE_IS_CHAT(cnode)) {
 			PurpleChat *chat = (PurpleChat *)cnode;
 			cnode = cnode->next;
 			if (purple_account_is_connected(purple_chat_get_account(chat)))

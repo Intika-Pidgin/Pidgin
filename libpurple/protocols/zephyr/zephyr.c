@@ -35,7 +35,6 @@
 #include "server.h"
 #include "util.h"
 #include "cmds.h"
-#include "privacy.h"
 #include "version.h"
 
 #include "internal.h"
@@ -825,8 +824,7 @@ static void handle_message(PurpleConnection *gc,ZNotice_t notice)
 	} else {
 		char *buf, *buf2, *buf3;
 		char *send_inst;
-		PurpleConversation *gconv1;
-		PurpleConvChat *gcc;
+		PurpleChatConversation *gcc;
 		char *ptr = (char *) notice.z_message + (strlen(notice.z_message) + 1);
 		int len;
 		char *stripped_sender;
@@ -864,7 +862,7 @@ static void handle_message(PurpleConnection *gc,ZNotice_t notice)
 				flags |= PURPLE_MESSAGE_AUTO_RESP;
 
 			if (!g_ascii_strcasecmp(notice.z_opcode,"PING"))
-				serv_got_typing(gc,stripped_sender,ZEPHYR_TYPING_RECV_TIMEOUT, PURPLE_TYPING);
+				serv_got_typing(gc,stripped_sender,ZEPHYR_TYPING_RECV_TIMEOUT, PURPLE_IM_TYPING);
 			else
 				serv_got_im(gc, stripped_sender, buf3, flags, time(NULL));
 
@@ -898,20 +896,19 @@ static void handle_message(PurpleConnection *gc,ZNotice_t notice)
 				}
 			}
 
-			gconv1 = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+			gcc = purple_conversations_find_chat_with_account(
 														 zt2->name, purple_connection_get_account(gc));
-			gcc = purple_conversation_get_chat_data(gconv1);
 #ifndef INET_ADDRSTRLEN
 #define INET_ADDRSTRLEN 16
 #endif
-			if (!purple_conv_chat_find_user(gcc, stripped_sender)) {
+			if (!purple_chat_conversation_has_user(gcc, stripped_sender)) {
 				gchar ipaddr[INET_ADDRSTRLEN];
 #ifdef HAVE_INET_NTOP
 				inet_ntop(AF_INET, &notice.z_sender_addr.s_addr, ipaddr, sizeof(ipaddr));
 #else
 				memcpy(ipaddr,inet_ntoa(notice.z_sender_addr),sizeof(ipaddr));
 #endif
-				purple_conv_chat_add_user(gcc, stripped_sender, ipaddr, PURPLE_CBFLAGS_NONE, TRUE);
+				purple_chat_conversation_add_user(gcc, stripped_sender, ipaddr, PURPLE_CHAT_USER_NONE, TRUE);
 			}
 			serv_got_chat_in(gc, zt2->id, send_inst_utf8, 0, buf3, time(NULL));
 			g_free(send_inst_utf8);
@@ -2041,8 +2038,7 @@ static int zephyr_chat_send(PurpleConnection * gc, int id, const char *im, Purpl
 {
 	zephyr_triple *zt;
 	const char *sig;
-	PurpleConversation *gconv1;
-	PurpleConvChat *gcc;
+	PurpleChatConversation *gcc;
 	char *inst;
 	char *recipient;
 	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
@@ -2054,11 +2050,10 @@ static int zephyr_chat_send(PurpleConnection * gc, int id, const char *im, Purpl
 
 	sig = zephyr_get_signature();
 
-	gconv1 = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, zt->name,
+	gcc = purple_conversations_find_chat_with_account(zt->name,
 												 purple_connection_get_account(gc));
-	gcc = purple_conversation_get_chat_data(gconv1);
 
-	if (!(inst = (char *)purple_conv_chat_get_topic(gcc)))
+	if (!(inst = (char *)purple_chat_conversation_get_topic(gcc)))
 		inst = g_strdup("PERSONAL");
 
 	if (!g_ascii_strcasecmp(zt->recipient, "*"))
@@ -2499,7 +2494,7 @@ static void zephyr_chat_leave(PurpleConnection * gc, int id)
 
 static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *name)
 {
-	PurpleBlistNode *gnode, *cnode;
+	PurpleBListNode *gnode, *cnode;
 
 	/* XXX needs to be %host%,%canon%, and %me% clean */
 	for(gnode = purple_blist_get_root(); gnode;
@@ -2511,7 +2506,7 @@ static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *na
 			char *zclass, *inst, *recip;
 			char** triple;
 			GHashTable *components;
-			if(!PURPLE_BLIST_NODE_IS_CHAT(cnode))
+			if(!PURPLE_IS_CHAT(cnode))
 				continue;
 			if(purple_chat_get_account(chat) != account)
 				continue;
@@ -2536,13 +2531,13 @@ static const char *zephyr_list_icon(PurpleAccount * a, PurpleBuddy * b)
 	return "zephyr";
 }
 
-static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state) {
+static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, PurpleIMTypingState state) {
 	gchar *recipient;
 	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if (use_tzc(zephyr))
 		return 0;
 
-	if (state == PURPLE_NOT_TYPING)
+	if (state == PURPLE_IM_NOT_TYPING)
 		return 0;
 
 	/* XXX We probably should care if this fails. Or maybe we don't want to */
@@ -2566,7 +2561,7 @@ static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, Pu
 
 	/*
 	 * TODO: Is this correct?  It means we will call
-	 *       serv_send_typing(gc, who, PURPLE_TYPING) once every 15 seconds
+	 *       serv_send_typing(gc, who, PURPLE_IM_TYPING) once every 15 seconds
 	 *       until the Purple user stops typing.
 	 */
 	return ZEPHYR_TYPING_SEND_TIMEOUT;
@@ -2577,8 +2572,7 @@ static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, Pu
 static void zephyr_chat_set_topic(PurpleConnection * gc, int id, const char *topic)
 {
 	zephyr_triple *zt;
-	PurpleConversation *gconv;
-	PurpleConvChat *gcc;
+	PurpleChatConversation *gcc;
 	gchar *topic_utf8;
 	zephyr_account* zephyr = purple_connection_get_protocol_data(gc);
 	char *sender = (char *)zephyr->username;
@@ -2587,12 +2581,11 @@ static void zephyr_chat_set_topic(PurpleConnection * gc, int id, const char *top
 	/* find_sub_by_id can return NULL */
 	if (!zt)
 		return;
-	gconv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, zt->name,
+	gcc = purple_conversations_find_chat_with_account(zt->name,
 												purple_connection_get_account(gc));
-	gcc = purple_conversation_get_chat_data(gconv);
 
 	topic_utf8 = zephyr_recv_convert(gc,(gchar *)topic);
-	purple_conv_chat_set_topic(gcc,sender,topic_utf8);
+	purple_chat_conversation_set_topic(gcc,sender,topic_utf8);
 	g_free(topic_utf8);
 	return;
 }
@@ -2638,9 +2631,9 @@ static PurpleCmdRet zephyr_purple_cmd_instance(PurpleConversation *conv,
 	 * all. This might not be the best thing to do, though having
 	 * one word isn't ideal either.	 */
 
-	PurpleConvChat *gcc = purple_conversation_get_chat_data(conv);
 	const char* instance = args[0];
-	zephyr_chat_set_topic(purple_conversation_get_connection(conv),purple_conv_chat_get_id(gcc),instance);
+	zephyr_chat_set_topic(purple_conversation_get_connection(conv),
+			purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(conv)),instance);
 	return PURPLE_CMD_RET_OK;
 }
 

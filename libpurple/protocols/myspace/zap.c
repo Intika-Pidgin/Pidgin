@@ -155,7 +155,7 @@ msim_send_attention(PurpleConnection *gc, const gchar *username, guint code)
 
 /** Zap someone. Callback from msim_blist_node_menu zap menu. */
 static void
-msim_send_zap_from_menu(PurpleBlistNode *node, gpointer zap_num_ptr)
+msim_send_zap_from_menu(PurpleBListNode *node, gpointer zap_num_ptr)
 {
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
@@ -163,12 +163,12 @@ msim_send_zap_from_menu(PurpleBlistNode *node, gpointer zap_num_ptr)
 	MsimSession *session;
 	guint zap;
 
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+	if (!PURPLE_IS_BUDDY(node)) {
 		/* Only know about buddies for now. */
 		return;
 	}
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *)node;
 
@@ -184,14 +184,14 @@ msim_send_zap_from_menu(PurpleBlistNode *node, gpointer zap_num_ptr)
 
 /** Return menu, if any, for a buddy list node. */
 GList *
-msim_blist_node_menu(PurpleBlistNode *node)
+msim_blist_node_menu(PurpleBListNode *node)
 {
 	GList *menu, *zap_menu;
 	GList *types;
 	PurpleMenuAction *act;
 	guint i;
 
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+	if (!PURPLE_IS_BUDDY(node)) {
 		/* Only know about buddies for now. */
 		return NULL;
 	}

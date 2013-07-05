@@ -31,65 +31,89 @@
 
 #include <glib.h>
 
-/** @copydoc _PurpleBuddyList */
-typedef struct _PurpleBuddyList PurpleBuddyList;
-/** @copydoc _PurpleBlistUiOps */
-typedef struct _PurpleBlistUiOps PurpleBlistUiOps;
-/** @copydoc _PurpleBlistNode */
-typedef struct _PurpleBlistNode PurpleBlistNode;
+#define PURPLE_TYPE_BLIST_NODE             (purple_blist_node_get_type())
+#define PURPLE_BLIST_NODE(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_BLIST_NODE, PurpleBListNode))
+#define PURPLE_BLIST_NODE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_BLIST_NODE, PurpleBListNodeClass))
+#define PURPLE_IS_BLIST_NODE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_BLIST_NODE))
+#define PURPLE_IS_BLIST_NODE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_BLIST_NODE))
+#define PURPLE_BLIST_NODE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_BLIST_NODE, PurpleBListNodeClass))
+
+/** @copydoc _PurpleBListNode */
+typedef struct _PurpleBListNode PurpleBListNode;
+/** @copydoc _PurpleBListNodeClass */
+typedef struct _PurpleBListNodeClass PurpleBListNodeClass;
+
+#define PURPLE_TYPE_BUDDY             (purple_buddy_get_type())
+#define PURPLE_BUDDY(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_BUDDY, PurpleBuddy))
+#define PURPLE_BUDDY_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_BUDDY, PurpleBuddyClass))
+#define PURPLE_IS_BUDDY(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_BUDDY))
+#define PURPLE_IS_BUDDY_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_BUDDY))
+#define PURPLE_BUDDY_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_BUDDY, PurpleBuddyClass))
+
+/** @copydoc _PurpleBuddy */
+typedef struct _PurpleBuddy PurpleBuddy;
+/** @copydoc _PurpleBuddyClass */
+typedef struct _PurpleBuddyClass PurpleBuddyClass;
+
+#define PURPLE_TYPE_CONTACT             (purple_contact_get_type())
+#define PURPLE_CONTACT(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_CONTACT, PurpleContact))
+#define PURPLE_CONTACT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_CONTACT, PurpleContactClass))
+#define PURPLE_IS_CONTACT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_CONTACT))
+#define PURPLE_IS_CONTACT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_CONTACT))
+#define PURPLE_CONTACT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_CONTACT, PurpleContactClass))
+
+/** @copydoc _PurpleContact */
+typedef struct _PurpleContact PurpleContact;
+/** @copydoc _PurpleContactClass */
+typedef struct _PurpleContactClass PurpleContactClass;
+
+#define PURPLE_TYPE_GROUP             (purple_group_get_type())
+#define PURPLE_GROUP(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_GROUP, PurpleGroup))
+#define PURPLE_GROUP_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_GROUP, PurpleGroupClass))
+#define PURPLE_IS_GROUP(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_GROUP))
+#define PURPLE_IS_GROUP_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_GROUP))
+#define PURPLE_GROUP_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_GROUP, PurpleGroupClass))
+
+/** @copydoc _PurpleGroup */
+typedef struct _PurpleGroup PurpleGroup;
+/** @copydoc _PurpleGroupClass */
+typedef struct _PurpleGroupClass PurpleGroupClass;
+
+#define PURPLE_TYPE_CHAT             (purple_chat_get_type())
+#define PURPLE_CHAT(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_CHAT, PurpleChat))
+#define PURPLE_CHAT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_CHAT, PurpleChatClass))
+#define PURPLE_IS_CHAT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_CHAT))
+#define PURPLE_IS_CHAT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_CHAT))
+#define PURPLE_CHAT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_CHAT, PurpleChatClass))
 
 /** @copydoc _PurpleChat */
 typedef struct _PurpleChat PurpleChat;
-/** @copydoc _PurpleGroup */
-typedef struct _PurpleGroup PurpleGroup;
-/** @copydoc _PurpleContact */
-typedef struct _PurpleContact PurpleContact;
-/** @copydoc _PurpleBuddy */
-typedef struct _PurpleBuddy PurpleBuddy;
+/** @copydoc _PurpleChatClass */
+typedef struct _PurpleChatClass PurpleChatClass;
 
-/**************************************************************************/
-/* Enumerations                                                           */
-/**************************************************************************/
-typedef enum
-{
-	PURPLE_BLIST_GROUP_NODE,
-	PURPLE_BLIST_CONTACT_NODE,
-	PURPLE_BLIST_BUDDY_NODE,
-	PURPLE_BLIST_CHAT_NODE,
-	PURPLE_BLIST_OTHER_NODE
+#define PURPLE_TYPE_BUDDY_LIST             (purple_buddy_list_get_type())
+#define PURPLE_BUDDY_LIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_BUDDY_LIST, PurpleBuddyList))
+#define PURPLE_BUDDY_LIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_BUDDY_LIST, PurpleBuddyListClass))
+#define PURPLE_IS_BUDDY_LIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_BUDDY_LIST))
+#define PURPLE_IS_BUDDY_LIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_BUDDY_LIST))
+#define PURPLE_BUDDY_LIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_BUDDY_LIST, PurpleBuddyListClass))
 
-} PurpleBlistNodeType;
+/** @copydoc _PurpleBuddyList */
+typedef struct _PurpleBuddyList PurpleBuddyList;
+/** @copydoc _PurpleBuddyListClass */
+typedef struct _PurpleBuddyListClass PurpleBuddyListClass;
 
-#define PURPLE_BLIST_NODE_IS_CHAT(n)    (purple_blist_node_get_type(n) == PURPLE_BLIST_CHAT_NODE)
-#define PURPLE_BLIST_NODE_IS_BUDDY(n)   (purple_blist_node_get_type(n) == PURPLE_BLIST_BUDDY_NODE)
-#define PURPLE_BLIST_NODE_IS_CONTACT(n) (purple_blist_node_get_type(n) == PURPLE_BLIST_CONTACT_NODE)
-#define PURPLE_BLIST_NODE_IS_GROUP(n)   (purple_blist_node_get_type(n) == PURPLE_BLIST_GROUP_NODE)
+/** @copydoc _PurpleBlistUiOps */
+typedef struct _PurpleBlistUiOps PurpleBlistUiOps;
 
-#define PURPLE_BUDDY_IS_ONLINE(b) \
-	((b) != NULL && purple_account_is_connected(purple_buddy_get_account(b)) && \
-	 purple_presence_is_online(purple_buddy_get_presence(b)))
+#define PURPLE_IS_BUDDY_ONLINE(b) \
+	(PURPLE_IS_BUDDY(b) \
+	&& purple_account_is_connected(purple_buddy_get_account(PURPLE_BUDDY(b))) \
+	&& purple_presence_is_online(purple_buddy_get_presence(PURPLE_BUDDY(b))))
 
-typedef enum
-{
-	PURPLE_BLIST_NODE_FLAG_NO_SAVE      = 1 << 0 /**< node should not be saved with the buddy list */
-
-} PurpleBlistNodeFlags;
-
-#define PURPLE_BLIST_NODE(obj) ((PurpleBlistNode *)(obj))
-
-#define PURPLE_BLIST_NODE_HAS_FLAG(b, f) (purple_blist_node_get_flags((PurpleBlistNode*)(b)) & (f))
-#define PURPLE_BLIST_NODE_SHOULD_SAVE(b) (! PURPLE_BLIST_NODE_HAS_FLAG(b, PURPLE_BLIST_NODE_FLAG_NO_SAVE))
-
-#define PURPLE_BLIST_NODE_NAME(n) (purple_blist_node_get_type(n) == PURPLE_BLIST_CHAT_NODE  ? purple_chat_get_name((PurpleChat*)n) :        \
-				     purple_blist_node_get_type(n) == PURPLE_BLIST_BUDDY_NODE ? purple_buddy_get_name((PurpleBuddy*)n) : NULL)
-
-#define PURPLE_GROUP(obj) ((PurpleGroup *)(obj))
-
-#define PURPLE_CONTACT(obj) ((PurpleContact *)(obj))
-
-#define PURPLE_BUDDY(obj) ((PurpleBuddy *)(obj))
-
-#define PURPLE_CHAT(obj) ((PurpleChat *)(obj))
+#define PURPLE_BLIST_NODE_NAME(n) \
+	(PURPLE_IS_CHAT(n) ? purple_chat_get_name(PURPLE_CHAT(n)) : \
+	PURPLE_IS_BUDDY(n) ? purple_buddy_get_name(PURPLE_BUDDY(n)) : NULL)
 
 #include "account.h"
 #include "buddyicon.h"
@@ -106,55 +130,90 @@ typedef enum
  * A Buddy list node.  This can represent a group, a buddy, or anything else.
  * This is a base class for PurpleBuddy, PurpleContact, PurpleGroup, and for
  * anything else that wants to put itself in the buddy list. */
-struct _PurpleBlistNode {
-	PurpleBlistNodeType type;             /**< The type of node this is       */
-	PurpleBlistNode *prev;                /**< The sibling before this buddy. */
-	PurpleBlistNode *next;                /**< The sibling after this buddy.  */
-	PurpleBlistNode *parent;              /**< The parent of this node        */
-	PurpleBlistNode *child;               /**< The child of this node         */
-	GHashTable *settings;               /**< per-node settings              */
-	void          *ui_data;             /**< The UI can put data here.      */
-	PurpleBlistNodeFlags flags;           /**< The buddy flags                */
+struct _PurpleBListNode {
+	/*< private >*/
+	GObject gparent;
+
+	/** The UI data associated with this node. This is a convenience
+	 *  field provided to the UIs -- it is not used by the libpurple core.
+	 */
+	gpointer ui_data;
+
+	PurpleBListNode *prev;    /**< The sibling before this buddy. */
+	PurpleBListNode *next;    /**< The sibling after this buddy.  */
+	PurpleBListNode *parent;  /**< The parent of this node        */
+	PurpleBListNode *child;   /**< The child of this node         */
+};
+
+/** The base class for all #PurpleBListNode's. */
+struct _PurpleBListNodeClass {
+	/*< private >*/
+	GObjectClass gparent_class;
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
 };
 
 /**
- * A buddy.  This contains everything Purple will ever need to know about someone on the buddy list.  Everything.
+ * A buddy.  This contains everything Purple will ever need to know about
+ * someone on the buddy list.  Everything.
  */
 struct _PurpleBuddy {
-	PurpleBlistNode node;                     /**< The node that this buddy inherits from */
-	char *name;                             /**< The name of the buddy. */
-	char *alias;                            /**< The user-set alias of the buddy */
-	char *server_alias;                     /**< The server-specified alias of the buddy.  (i.e. MSN "Friendly Names") */
-	void *proto_data;                       /**< This allows the prpl to associate whatever data it wants with a buddy */
-	PurpleBuddyIcon *icon;                    /**< The buddy icon. */
-	PurpleAccount *account;					/**< the account this buddy belongs to */
-	PurplePresence *presence;
-	PurpleMediaCaps media_caps;		/**< The media capabilities of the buddy. */
+	/** The node that this buddy inherits from */
+	PurpleBListNode node;
+};
+
+/** The base class for all #PurpleBuddy's. */
+struct _PurpleBuddyClass {
+	/*< private >*/
+	PurpleBListNodeClass node_class;
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
 };
 
 /**
- * A contact.  This contains everything Purple will ever need to know about a contact.
+ * A contact.  This contains everything Purple will ever need to know about a
+ * contact.
  */
 struct _PurpleContact {
-	PurpleBlistNode node;		/**< The node that this contact inherits from. */
-	char *alias;            /**< The user-set alias of the contact */
-	int totalsize;		    /**< The number of buddies in this contact */
-	int currentsize;	    /**< The number of buddies in this contact corresponding to online accounts */
-	int online;			    /**< The number of buddies in this contact who are currently online */
-	PurpleBuddy *priority;    /**< The "top" buddy for this contact */
-	gboolean priority_valid; /**< Is priority valid? */
+	/** The node that this contact inherits from */
+	PurpleBListNode node;
 };
 
+/** The base class for all #PurpleContact's. */
+struct _PurpleContactClass {
+	/*< private >*/
+	PurpleBListNodeClass node_class;
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
+};
 
 /**
- * A group.  This contains everything Purple will ever need to know about a group.
+ * A group.  This contains everything Purple will ever need to know about a
+ * group.
  */
 struct _PurpleGroup {
-	PurpleBlistNode node;                    /**< The node that this group inherits from */
-	char *name;                            /**< The name of this group. */
-	int totalsize;			       /**< The number of chats and contacts in this group */
-	int currentsize;		       /**< The number of chats and contacts in this group corresponding to online accounts */
-	int online;			       /**< The number of chats and contacts in this group who are currently online */
+	/** The node that this group inherits from */
+	PurpleBListNode node;
+};
+
+/** The base class for all #PurpleGroup's. */
+struct _PurpleGroupClass {
+	/*< private >*/
+	PurpleBListNodeClass node_class;
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
 };
 
 /**
@@ -162,19 +221,46 @@ struct _PurpleGroup {
  * buddy list.
  */
 struct _PurpleChat {
-	PurpleBlistNode node;      /**< The node that this chat inherits from */
-	char *alias;             /**< The display name of this chat. */
-	GHashTable *components;  /**< the stuff the protocol needs to know to join the chat */
-	PurpleAccount *account; /**< The account this chat is attached to */
+	/** The node that this chat inherits from */
+	PurpleBListNode node;
+};
+
+/** The base class for all #PurpleChat's. */
+struct _PurpleChatClass {
+	/*< private >*/
+	PurpleBListNodeClass node_class;
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
 };
 
 /**
  * The Buddy List
  */
 struct _PurpleBuddyList {
-	PurpleBlistNode *root;          /**< The first node in the buddy list */
-	GHashTable *buddies;          /**< Every buddy in this list */
-	void *ui_data;                /**< UI-specific data. */
+	/*< private >*/
+	GObject gparent;
+
+	/** The UI data associated with the buddy list. This is a convenience
+	 *  field provided to the UIs -- it is not used by the libpurple core.
+	 */
+	gpointer ui_data;
+
+	/** The first node in the buddy list */
+	PurpleBListNode *root;
+};
+
+/** The base class for all #PurpleBuddyList's. */
+struct _PurpleBuddyListClass {
+	/*< private >*/
+	GObjectClass gparent_class;
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
 };
 
 #endif /* PURPLE_HIDE_STRUCTS && PURPLE_BLIST_STRUCTS */
@@ -188,12 +274,12 @@ struct _PurpleBuddyList {
 struct _PurpleBlistUiOps
 {
 	void (*new_list)(PurpleBuddyList *list); /**< Sets UI-specific data on a buddy list. */
-	void (*new_node)(PurpleBlistNode *node); /**< Sets UI-specific data on a node. */
+	void (*new_node)(PurpleBListNode *node); /**< Sets UI-specific data on a node. */
 	void (*show)(PurpleBuddyList *list);     /**< The core will call this when it's finished doing its core stuff */
 	void (*update)(PurpleBuddyList *list,
-		       PurpleBlistNode *node);       /**< This will update a node in the buddy list. */
+		       PurpleBListNode *node);       /**< This will update a node in the buddy list. */
 	void (*remove)(PurpleBuddyList *list,
-		       PurpleBlistNode *node);       /**< This removes a node from the list */
+		       PurpleBListNode *node);       /**< This removes a node from the list */
 	void (*destroy)(PurpleBuddyList *list);  /**< When the list is destroyed, this is called to destroy the UI. */
 	void (*set_visible)(PurpleBuddyList *list,
 			    gboolean show);            /**< Hides or unhides the buddy list */
@@ -212,7 +298,7 @@ struct _PurpleBlistUiOps
 	 *
 	 * @param node    The node which has been modified.
 	 */
-	void (*save_node)(PurpleBlistNode *node);
+	void (*save_node)(PurpleBListNode *node);
 
 	/**
 	 * Called when a node is about to be removed from the buddy list.
@@ -225,7 +311,7 @@ struct _PurpleBlistUiOps
 	 *
 	 * @param node  The node which has been modified.
 	 */
-	void (*remove_node)(PurpleBlistNode *node);
+	void (*remove_node)(PurpleBListNode *node);
 
 	/**
 	 * Called to save all the data for an account. If the UI sets this,
@@ -246,6 +332,14 @@ struct _PurpleBlistUiOps
 
 G_BEGIN_DECLS
 
+/* TODO move */
+GType purple_blist_node_get_type(void);
+GType purple_buddy_get_type(void);
+GType purple_contact_get_type(void);
+GType purple_group_get_type(void);
+GType purple_chat_get_type(void);
+GType purple_buddy_list_get_type(void);
+
 /**************************************************************************/
 /** @name Buddy List API                                                  */
 /**************************************************************************/
@@ -263,7 +357,7 @@ PurpleBuddyList *purple_get_blist(void);
  *
  * @return The root node.
  */
-PurpleBlistNode *purple_blist_get_root(void);
+PurpleBListNode *purple_blist_get_root(void);
 
 /**
  * Returns a list of every buddy in the list.  Use of this function is
@@ -303,7 +397,7 @@ void purple_blist_set_ui_data(gpointer ui_data);
  * @see purple_blist_node_get_sibling_next
  * @see purple_blist_node_get_sibling_prev
  */
-PurpleBlistNode *purple_blist_node_next(PurpleBlistNode *node, gboolean offline);
+PurpleBListNode *purple_blist_node_next(PurpleBListNode *node, gboolean offline);
 
 /**
  * Returns the parent node of a given node.
@@ -316,7 +410,7 @@ PurpleBlistNode *purple_blist_node_next(PurpleBlistNode *node, gboolean offline)
  * @see purple_blist_node_get_sibling_prev
  * @see purple_blist_node_next
  */
-PurpleBlistNode *purple_blist_node_get_parent(PurpleBlistNode *node);
+PurpleBListNode *purple_blist_node_get_parent(PurpleBListNode *node);
 
 /**
  * Returns the the first child node of a given node.
@@ -329,7 +423,7 @@ PurpleBlistNode *purple_blist_node_get_parent(PurpleBlistNode *node);
  * @see purple_blist_node_get_sibling_prev
  * @see purple_blist_node_next
  */
-PurpleBlistNode *purple_blist_node_get_first_child(PurpleBlistNode *node);
+PurpleBListNode *purple_blist_node_get_first_child(PurpleBListNode *node);
 
 /**
  * Returns the sibling node of a given node.
@@ -342,7 +436,7 @@ PurpleBlistNode *purple_blist_node_get_first_child(PurpleBlistNode *node);
  * @see purple_blist_node_get_sibling_prev
  * @see purple_blist_node_next
  */
-PurpleBlistNode *purple_blist_node_get_sibling_next(PurpleBlistNode *node);
+PurpleBListNode *purple_blist_node_get_sibling_next(PurpleBListNode *node);
 
 /**
  * Returns the previous sibling node of a given node.
@@ -355,7 +449,7 @@ PurpleBlistNode *purple_blist_node_get_sibling_next(PurpleBlistNode *node);
  * @see purple_blist_node_get_sibling_next
  * @see purple_blist_node_next
  */
-PurpleBlistNode *purple_blist_node_get_sibling_prev(PurpleBlistNode *node);
+PurpleBListNode *purple_blist_node_get_sibling_prev(PurpleBListNode *node);
 
 /**
  * Returns the UI data of a given node.
@@ -363,7 +457,7 @@ PurpleBlistNode *purple_blist_node_get_sibling_prev(PurpleBlistNode *node);
  * @param node The node.
  * @return The UI data.
  */
-gpointer purple_blist_node_get_ui_data(const PurpleBlistNode *node);
+gpointer purple_blist_node_get_ui_data(const PurpleBListNode *node);
 
 /**
  * Sets the UI data of a given node.
@@ -371,22 +465,12 @@ gpointer purple_blist_node_get_ui_data(const PurpleBlistNode *node);
  * @param node The node.
  * @param ui_data The UI data.
  */
-void purple_blist_node_set_ui_data(PurpleBlistNode *node, gpointer ui_data);
+void purple_blist_node_set_ui_data(PurpleBListNode *node, gpointer ui_data);
 
 /**
  * Shows the buddy list, creating a new one if necessary.
  */
 void purple_blist_show(void);
-
-
-/**
- * Destroys the buddy list window.
- *
- * @deprecated The UI is responsible for cleaning up the
- *             PurpleBuddyList->ui_data. purple_blist_uninit() will free the
- *             PurpleBuddyList* itself.
- */
-void purple_blist_destroy(void);
 
 /**
  * Hides or unhides the buddy list.
@@ -408,9 +492,9 @@ void purple_blist_update_buddy_status(PurpleBuddy *buddy, PurpleStatus *old_stat
 /**
  * Updates a node's custom icon.
  *
- * @param node  The PurpleBlistNode whose custom icon has changed.
+ * @param node  The PurpleBListNode whose custom icon has changed.
  */
-void purple_blist_update_node_icon(PurpleBlistNode *node);
+void purple_blist_update_node_icon(PurpleBListNode *node);
 
 /**
  * Renames a buddy in the buddy list.
@@ -474,13 +558,6 @@ void purple_blist_rename_group(PurpleGroup *group, const char *name);
 PurpleChat *purple_chat_new(PurpleAccount *account, const char *alias, GHashTable *components);
 
 /**
- * Destroys a chat
- *
- * @param chat       The chat to destroy
- */
-void purple_chat_destroy(PurpleChat *chat);
-
-/**
  * Adds a new chat to the buddy list.
  *
  * The chat will be inserted right after node or appended to the end
@@ -491,7 +568,7 @@ void purple_chat_destroy(PurpleChat *chat);
  * @param group  The group to add the new chat to.
  * @param node   The insertion point
  */
-void purple_blist_add_chat(PurpleChat *chat, PurpleGroup *group, PurpleBlistNode *node);
+void purple_blist_add_chat(PurpleChat *chat, PurpleGroup *group, PurpleBListNode *node);
 
 /**
  * Creates a new buddy.
@@ -509,13 +586,6 @@ void purple_blist_add_chat(PurpleChat *chat, PurpleGroup *group, PurpleBlistNode
  * @see purple_blist_add_buddy
  */
 PurpleBuddy *purple_buddy_new(PurpleAccount *account, const char *name, const char *alias);
-
-/**
- * Destroys a buddy
- *
- * @param buddy     The buddy to destroy
- */
-void purple_buddy_destroy(PurpleBuddy *buddy);
 
 /**
  * Sets a buddy's icon.
@@ -628,7 +698,7 @@ void purple_buddy_set_media_caps(PurpleBuddy *buddy, PurpleMediaCaps media_caps)
  * @param node    The insertion point.  Pass in NULL to add the node as
  *                the first child in the given group.
  */
-void purple_blist_add_buddy(PurpleBuddy *buddy, PurpleContact *contact, PurpleGroup *group, PurpleBlistNode *node);
+void purple_blist_add_buddy(PurpleBuddy *buddy, PurpleContact *contact, PurpleGroup *group, PurpleBListNode *node);
 
 /**
  * Creates a new group
@@ -642,13 +712,6 @@ void purple_blist_add_buddy(PurpleBuddy *buddy, PurpleContact *contact, PurpleGr
 PurpleGroup *purple_group_new(const char *name);
 
 /**
- * Destroys a group
- *
- * @param group  The group to destroy
-*/
-void purple_group_destroy(PurpleGroup *group);
-
-/**
  * Adds a new group to the buddy list.
  *
  * The new group will be inserted after insert or prepended to the list if
@@ -657,7 +720,7 @@ void purple_group_destroy(PurpleGroup *group);
  * @param group  The group
  * @param node   The insertion point
  */
-void purple_blist_add_group(PurpleGroup *group, PurpleBlistNode *node);
+void purple_blist_add_group(PurpleGroup *group, PurpleBListNode *node);
 
 /**
  * Creates a new contact
@@ -665,13 +728,6 @@ void purple_blist_add_group(PurpleGroup *group, PurpleBlistNode *node);
  * @return       A new contact struct
  */
 PurpleContact *purple_contact_new(void);
-
-/**
- * Destroys a contact
- *
- * @param contact  The contact to destroy
- */
-void purple_contact_destroy(PurpleContact *contact);
 
 /**
  * Gets the PurpleGroup from a PurpleContact
@@ -691,7 +747,7 @@ PurpleGroup *purple_contact_get_group(const PurpleContact *contact);
  * @param group   The group to add the contact to
  * @param node    The insertion point
  */
-void purple_blist_add_contact(PurpleContact *contact, PurpleGroup *group, PurpleBlistNode *node);
+void purple_blist_add_contact(PurpleContact *contact, PurpleGroup *group, PurpleBListNode *node);
 
 /**
  * Merges two contacts
@@ -701,7 +757,7 @@ void purple_blist_add_contact(PurpleContact *contact, PurpleGroup *group, Purple
  * @param source  The contact to merge
  * @param node    The place to merge to (a buddy or contact)
  */
-void purple_blist_merge_contact(PurpleContact *source, PurpleBlistNode *node);
+void purple_blist_merge_contact(PurpleContact *source, PurpleBListNode *node);
 
 /**
  * Returns the highest priority buddy for a given contact.
@@ -971,7 +1027,7 @@ void purple_blist_add_account(PurpleAccount *account);
 void purple_blist_remove_account(PurpleAccount *account);
 
 
-/**
+/** TODO move to group
  * Determines the total size of a group
  *
  * @param group  The group
@@ -980,7 +1036,7 @@ void purple_blist_remove_account(PurpleAccount *account);
  */
 int purple_blist_get_group_size(PurpleGroup *group, gboolean offline);
 
-/**
+/** TODO move to group
  * Determines the number of online buddies in a group
  *
  * @param group The group
@@ -1041,7 +1097,7 @@ void purple_blist_request_add_group(void);
  *
  * @return TRUE if a value exists, or FALSE if there is no setting
  */
-gboolean purple_blist_node_has_setting(PurpleBlistNode *node, const char *key);
+gboolean purple_blist_node_has_setting(PurpleBListNode *node, const char *key);
 
 /**
  * Associates a boolean with a node in the buddy list
@@ -1050,7 +1106,7 @@ gboolean purple_blist_node_has_setting(PurpleBlistNode *node, const char *key);
  * @param key   The identifier for the data
  * @param value The value to set
  */
-void purple_blist_node_set_bool(PurpleBlistNode *node, const char *key, gboolean value);
+void purple_blist_node_set_bool(PurpleBListNode *node, const char *key, gboolean value);
 
 /**
  * Retrieves a named boolean setting from a node in the buddy list
@@ -1060,7 +1116,7 @@ void purple_blist_node_set_bool(PurpleBlistNode *node, const char *key, gboolean
  *
  * @return The value, or FALSE if there is no setting
  */
-gboolean purple_blist_node_get_bool(PurpleBlistNode *node, const char *key);
+gboolean purple_blist_node_get_bool(PurpleBListNode *node, const char *key);
 
 /**
  * Associates an integer with a node in the buddy list
@@ -1069,7 +1125,7 @@ gboolean purple_blist_node_get_bool(PurpleBlistNode *node, const char *key);
  * @param key   The identifier for the data
  * @param value The value to set
  */
-void purple_blist_node_set_int(PurpleBlistNode *node, const char *key, int value);
+void purple_blist_node_set_int(PurpleBListNode *node, const char *key, int value);
 
 /**
  * Retrieves a named integer setting from a node in the buddy list
@@ -1079,7 +1135,7 @@ void purple_blist_node_set_int(PurpleBlistNode *node, const char *key, int value
  *
  * @return The value, or 0 if there is no setting
  */
-int purple_blist_node_get_int(PurpleBlistNode *node, const char *key);
+int purple_blist_node_get_int(PurpleBListNode *node, const char *key);
 
 /**
  * Associates a string with a node in the buddy list
@@ -1088,7 +1144,7 @@ int purple_blist_node_get_int(PurpleBlistNode *node, const char *key);
  * @param key   The identifier for the data
  * @param value The value to set
  */
-void purple_blist_node_set_string(PurpleBlistNode *node, const char *key,
+void purple_blist_node_set_string(PurpleBListNode *node, const char *key,
 		const char *value);
 
 /**
@@ -1099,7 +1155,7 @@ void purple_blist_node_set_string(PurpleBlistNode *node, const char *key,
  *
  * @return The value, or NULL if there is no setting
  */
-const char *purple_blist_node_get_string(PurpleBlistNode *node, const char *key);
+const char *purple_blist_node_get_string(PurpleBListNode *node, const char *key);
 
 /**
  * Removes a named setting from a blist node
@@ -1107,35 +1163,25 @@ const char *purple_blist_node_get_string(PurpleBlistNode *node, const char *key)
  * @param node  The node from which to remove the setting
  * @param key   The name of the setting
  */
-void purple_blist_node_remove_setting(PurpleBlistNode *node, const char *key);
+void purple_blist_node_remove_setting(PurpleBListNode *node, const char *key);
 
 /**
- * Set the flags for the given node.  Setting a node's flags will overwrite
- * the old flags, so if you want to save them, you must first call
- * purple_blist_node_get_flags and modify that appropriately.
+ * Sets whether the node should be saved with the buddy list or not
  *
- * @param node  The node on which to set the flags.
- * @param flags The flags to set.  This is a bitmask.
+ * @param node  The node
+ * @param dont_save TRUE if the node should NOT be saved, FALSE if node should
+ *                  be saved
  */
-void purple_blist_node_set_flags(PurpleBlistNode *node, PurpleBlistNodeFlags flags);
+void purple_blist_node_set_dont_save(PurpleBListNode *node, gboolean dont_save);
 
 /**
- * Get the current flags on a given node.
+ * Gets whether the node should be saved with the buddy list or not
  *
- * @param node The node from which to get the flags.
+ * @param node  The node
  *
- * @return The flags on the node.  This is a bitmask.
+ * @return TRUE if the node should NOT be saved, FALSE if node should be saved
  */
-PurpleBlistNodeFlags purple_blist_node_get_flags(PurpleBlistNode *node);
-
-/**
- * Get the type of a given node.
- *
- * @param node The node.
- *
- * @return The type of the node.
- */
-PurpleBlistNodeType purple_blist_node_get_type(PurpleBlistNode *node);
+gboolean purple_blist_node_get_dont_save(PurpleBListNode *node);
 
 /*@}*/
 
@@ -1145,7 +1191,7 @@ PurpleBlistNodeType purple_blist_node_get_type(PurpleBlistNode *node);
  * @return  A list of PurpleMenuAction items, as harvested by the
  *          blist-node-extended-menu signal.
  */
-GList *purple_blist_node_get_extended_menu(PurpleBlistNode *n);
+GList *purple_blist_node_get_extended_menu(PurpleBListNode *n);
 
 /**************************************************************************/
 /** @name UI Registration Functions                                       */

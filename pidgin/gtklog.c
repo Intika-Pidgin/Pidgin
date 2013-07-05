@@ -740,7 +740,7 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 
 void pidgin_log_show_contact(PurpleContact *contact) {
 	struct log_viewer_hash_t *ht;
-	PurpleBlistNode *child;
+	PurpleBListNode *child;
 	PidginLogViewer *lv = NULL;
 	GList *logs = NULL;
 	GdkPixbuf *pixbuf;
@@ -763,13 +763,13 @@ void pidgin_log_show_contact(PurpleContact *contact) {
 		return;
 	}
 
-	for (child = purple_blist_node_get_first_child((PurpleBlistNode*)contact) ;
+	for (child = purple_blist_node_get_first_child((PurpleBListNode*)contact) ;
 	     child != NULL ;
 	     child = purple_blist_node_get_sibling_next(child)) {
 		const char *buddy_name;
 		PurpleAccount *account;
 
-		if (!PURPLE_BLIST_NODE_IS_BUDDY(child))
+		if (!PURPLE_IS_BUDDY(child))
 			continue;
 
 		buddy_name = purple_buddy_get_name((PurpleBuddy *)child);
@@ -799,7 +799,7 @@ void pidgin_log_show_contact(PurpleContact *contact) {
 	 * and none of the contact's buddies are online.
 	 * There is probably a better way to deal with this. */
 	if (name == NULL) {
-		if (contact->node.child != NULL && PURPLE_BLIST_NODE_IS_BUDDY(contact->node.child))
+		if (contact->node.child != NULL && PURPLE_IS_BUDDY(contact->node.child))
 			name = purple_buddy_get_contact_alias((PurpleBuddy *) contact->node.child);
 		if (name == NULL)
 			name = "";
