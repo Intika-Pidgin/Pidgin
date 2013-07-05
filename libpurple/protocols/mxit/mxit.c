@@ -180,7 +180,7 @@ static void mxit_cb_chat_created( PurpleConversation* conv, struct MXitSession* 
 		/* not our conversation */
 		return;
 	}
-	else if ( purple_conversation_get_type( conv ) != PURPLE_CONV_TYPE_IM ) {
+	else if ( PURPLE_IS_CHAT_CONVERSATION( conv ) ) {
 		/* wrong type of conversation */
 		return;
 	}
@@ -607,7 +607,7 @@ static GHashTable* mxit_get_text_table( PurpleAccount* acc )
  *  @param node		The entry in the buddy list.
  *  @param ignored	(not used)
  */
-static void mxit_reinvite( PurpleBlistNode *node, gpointer ignored )
+static void mxit_reinvite( PurpleBListNode *node, gpointer ignored )
 {
 	PurpleBuddy*		buddy		= (PurpleBuddy *) node;
 	PurpleConnection*	gc			= purple_account_get_connection( purple_buddy_get_account( buddy ) );
@@ -628,14 +628,14 @@ static void mxit_reinvite( PurpleBlistNode *node, gpointer ignored )
  *
  *  @param node		The entry in the buddy list.
  */
-static GList* mxit_blist_menu( PurpleBlistNode *node )
+static GList* mxit_blist_menu( PurpleBListNode *node )
 {
 	PurpleBuddy*		buddy;
 	struct contact*		contact;
 	GList*				m = NULL;
 	PurpleMenuAction*	act;
 
-	if ( !PURPLE_BLIST_NODE_IS_BUDDY( node ) )
+	if ( !PURPLE_IS_BUDDY( node ) )
 		return NULL;
 
 	buddy = (PurpleBuddy *) node;
@@ -671,7 +671,7 @@ static GHashTable *mxit_chat_info_defaults( PurpleConnection *gc, const char *ch
  *  @param name		The username of the contact
  *  @param state	The typing state to be reported.
  */
-static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, PurpleTypingState state )
+static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, PurpleIMTypingState state )
 {
 	PurpleAccount*		account		= purple_connection_get_account( gc );
 	struct MXitSession*	session		= purple_connection_get_protocol_data( gc );
@@ -697,12 +697,12 @@ static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, Pu
 	messageId = purple_uuid_random();		/* generate a unique message id */
 
 	switch ( state ) {
-		case PURPLE_TYPING :		/* currently typing */
+		case PURPLE_IM_TYPING :		/* currently typing */
 			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_TYPING );
 			break;
 
-		case PURPLE_TYPED :			/* stopped typing */
-		case PURPLE_NOT_TYPING :	/* not typing / erased all text */
+		case PURPLE_IM_TYPED :			/* stopped typing */
+		case PURPLE_IM_NOT_TYPING :	/* not typing / erased all text */
 			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_STOPPED );
 			break;
 

@@ -59,20 +59,20 @@ static void
 bonjour_removeallfromlocal(PurpleConnection *conn, PurpleGroup *bonjour_group)
 {
 	PurpleAccount *account = purple_connection_get_account(conn);
-	PurpleBlistNode *cnode, *cnodenext, *bnode, *bnodenext;
+	PurpleBListNode *cnode, *cnodenext, *bnode, *bnodenext;
 	PurpleBuddy *buddy;
 
 	if (bonjour_group == NULL)
 		return;
 
 	/* Go through and remove all buddies that belong to this account */
-	for (cnode = purple_blist_node_get_first_child((PurpleBlistNode *) bonjour_group); cnode; cnode = cnodenext) {
+	for (cnode = purple_blist_node_get_first_child((PurpleBListNode *) bonjour_group); cnode; cnode = cnodenext) {
 		cnodenext = purple_blist_node_get_sibling_next(cnode);
-		if (!PURPLE_BLIST_NODE_IS_CONTACT(cnode))
+		if (!PURPLE_IS_CONTACT(cnode))
 			continue;
 		for (bnode = purple_blist_node_get_first_child(cnode); bnode; bnode = bnodenext) {
 			bnodenext = purple_blist_node_get_sibling_next(bnode);
-			if (!PURPLE_BLIST_NODE_IS_BUDDY(bnode))
+			if (!PURPLE_IS_BUDDY(bnode))
 				continue;
 			buddy = (PurpleBuddy *) bnode;
 			if (purple_buddy_get_account(buddy) != account)
@@ -421,19 +421,17 @@ bonjour_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboole
 }
 
 static void
-bonjour_do_group_change(PurpleBuddy *buddy, const char *new_group) {
-	PurpleBlistNodeFlags oldflags;
-
+bonjour_do_group_change(PurpleBuddy *buddy, const char *new_group)
+{
 	if (buddy == NULL)
 		return;
 
-	oldflags = purple_blist_node_get_flags((PurpleBlistNode *)buddy);
-
 	/* If we're moving them out of the bonjour group, make them persistent */
 	if (purple_strequal(new_group, BONJOUR_GROUP_NAME))
-		purple_blist_node_set_flags((PurpleBlistNode *)buddy, oldflags | PURPLE_BLIST_NODE_FLAG_NO_SAVE);
+		purple_blist_node_set_dont_save(PURPLE_BLIST_NODE(buddy), TRUE);
 	else
-		purple_blist_node_set_flags((PurpleBlistNode *)buddy, oldflags ^ PURPLE_BLIST_NODE_FLAG_NO_SAVE);
+		purple_blist_node_set_dont_save(PURPLE_BLIST_NODE(buddy),
+				!purple_blist_node_get_dont_save(PURPLE_BLIST_NODE(buddy)));
 
 }
 
