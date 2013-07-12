@@ -466,6 +466,10 @@ void mxit_chat_join(PurpleConnection *gc, GHashTable *components)
 	roomname = g_hash_table_lookup(components, "room");
 	multimx = find_room_by_alias(session, roomname);
 
+	/* no roomname - this occurs during a re-connect. */
+	if (!roomname)
+		return;
+
 	if (multimx != NULL) {
 		/* The room information already exists */
 
