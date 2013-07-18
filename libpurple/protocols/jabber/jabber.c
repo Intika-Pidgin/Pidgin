@@ -24,7 +24,7 @@
 
 #include "account.h"
 #include "accountopt.h"
-#include "blist.h"
+#include "buddylist.h"
 #include "core.h"
 #include "cmds.h"
 #include "connection.h"
@@ -36,7 +36,6 @@
 #include "message.h"
 #include "notify.h"
 #include "pluginpref.h"
-#include "privacy.h"
 #include "proxy.h"
 #include "prpl.h"
 #include "request.h"
@@ -392,8 +391,11 @@ static int jabber_do_send(JabberStream *js, const char *data, int len)
 static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	JabberStream *js = data;
+	const gchar *output = NULL;
 	int ret, writelen;
-	writelen = purple_circ_buffer_get_max_read(js->write_buffer);
+
+	writelen = purple_circular_buffer_get_max_read(js->write_buffer);
+	output = purple_circular_buffer_get_output(js->write_buffer);
 
 	if (writelen == 0) {
 		purple_input_remove(js->writeh);
@@ -401,7 +403,7 @@ static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond
 		return;
 	}
 
-	ret = jabber_do_send(js, js->write_buffer->outptr, writelen);
+	ret = jabber_do_send(js, output, writelen);
 
 	if (ret < 0 && errno == EAGAIN)
 		return;
@@ -414,7 +416,7 @@ static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond
 		return;
 	}
 
-	purple_circ_buffer_mark_read(js->write_buffer, ret);
+	purple_circular_buffer_mark_read(js->write_buffer, ret);
 }
 
 static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
@@ -457,7 +459,7 @@ static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
 			js->writeh = purple_input_add(
 				js->gsc ? js->gsc->fd : js->fd,
 				PURPLE_INPUT_WRITE, jabber_send_cb, js);
-		purple_circ_buffer_append(js->write_buffer,
+		purple_circular_buffer_append(js->write_buffer,
 			data + ret, len - ret);
 	}
 
@@ -994,7 +996,7 @@ jabber_stream_new(PurpleAccount *account)
 	js->chats = g_hash_table_new_full(g_str_hash, g_str_equal,
 			g_free, (GDestroyNotify)jabber_chat_free);
 	js->next_id = g_random_int();
-	js->write_buffer = purple_circ_buffer_new(512);
+	js->write_buffer = purple_circular_buffer_new(512);
 	js->old_length = 0;
 	js->keepalive_timeout = 0;
 	js->max_inactivity = DEFAULT_INACTIVITY_TIME;
@@ -1086,7 +1088,7 @@ jabber_login(PurpleAccount *account)
 	JabberStream *js;
 	PurpleStoredImage *image;
 
-	purple_connection_set_flags(gc, PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY);
+	purple_connection_set_flags(gc, PURPLE_CONNECTION_FLAG_HTML | PURPLE_CONNECTION_FLAG_ALLOW_CUSTOM_SMILEY);
 	js = jabber_stream_new(account);
 	if (js == NULL)
 		return;
@@ -1346,7 +1348,7 @@ void jabber_register_parse(JabberStream *js, const char *from, JabberIqType type
 
 	if(js->registration) {
 		/* get rid of the login thingy */
-		purple_connection_set_state(js->gc, PURPLE_CONNECTED);
+		purple_connection_set_state(js->gc, PURPLE_CONNECTION_CONNECTED);
 	}
 
 	if(xmlnode_get_child(query, "registered")) {
@@ -1375,7 +1377,7 @@ void jabber_register_parse(JabberStream *js, const char *from, JabberIqType type
 				g_free(href);
 
 				if(js->registration) {
-					js->gc->wants_to_die = TRUE;
+					purple_connection_disable_reconnection(js->gc);
 					/* succeeded, but we have no login info */
 					purple_account_register_completed(account, TRUE);
 					jabber_connection_schedule_close(js);
@@ -1418,7 +1420,7 @@ void jabber_register_parse(JabberStream *js, const char *from, JabberIqType type
 	if((node = xmlnode_get_child(query, "name"))) {
 		if(js->registration)
 			field = purple_request_field_string_new("name", _("Name"),
-													purple_account_get_alias(purple_connection_get_account(js->gc)), FALSE);
+													purple_account_get_private_alias(purple_connection_get_account(js->gc)), FALSE);
 		else {
 			char *data = xmlnode_get_data(node);
 			field = purple_request_field_string_new("name", _("Name"), data, FALSE);
@@ -1552,8 +1554,8 @@ void jabber_unregister_account(PurpleAccount *account, PurpleAccountUnregistrati
 	PurpleConnection *gc = purple_account_get_connection(account);
 	JabberStream *js;
 
-	if (purple_connection_get_state(gc) != PURPLE_CONNECTED) {
-		if (purple_connection_get_state(gc) != PURPLE_CONNECTING)
+	if (purple_connection_get_state(gc) != PURPLE_CONNECTION_CONNECTED) {
+		if (purple_connection_get_state(gc) != PURPLE_CONNECTION_CONNECTING)
 			jabber_login(account);
 		js = purple_connection_get_protocol_data(gc);
 		js->unregistration = TRUE;
@@ -1652,7 +1654,7 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->caps_hash);
 
 	if (js->write_buffer)
-		purple_circ_buffer_destroy(js->write_buffer);
+		g_object_unref(G_OBJECT(js->write_buffer));
 	if(js->writeh)
 		purple_input_remove(js->writeh);
 	if (js->auth_mech && js->auth_mech->dispose)
@@ -1752,7 +1754,7 @@ void jabber_stream_set_state(JabberStream *js, JabberStreamState state)
 			/* Start up the inactivity timer */
 			jabber_stream_restart_inactivity_timer(js);
 
-			purple_connection_set_state(js->gc, PURPLE_CONNECTED);
+			purple_connection_set_state(js->gc, PURPLE_CONNECTION_CONNECTED);
 			break;
 	}
 
@@ -1784,6 +1786,7 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 	xmlnode *item;
 	PurpleAccount *account;
 	gboolean is_block;
+	GSList *deny;
 
 	if (!jabber_is_own_account(js, from)) {
 		xmlnode *error, *x;
@@ -1809,8 +1812,8 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 		/* Unblock everyone */
 		purple_debug_info("jabber", "Received unblock push. Unblocking everyone.\n");
 
-		while (account->deny != NULL) {
-			purple_privacy_deny_remove(account, account->deny->data, TRUE);
+		while ((deny = purple_account_privacy_get_denied(account)) != NULL) {
+			purple_account_privacy_deny_remove(account, deny->data, TRUE);
 		}
 	} else if (item == NULL) {
 		/* An empty <block/> is bogus */
@@ -1832,9 +1835,9 @@ void jabber_blocklist_parse_push(JabberStream *js, const char *from,
 				continue;
 
 			if (is_block)
-				purple_privacy_deny_add(account, jid, TRUE);
+				purple_account_privacy_deny_add(account, jid, TRUE);
 			else
-				purple_privacy_deny_remove(account, jid, TRUE);
+				purple_account_privacy_deny_remove(account, jid, TRUE);
 		}
 	}
 
@@ -1849,6 +1852,7 @@ static void jabber_blocklist_parse(JabberStream *js, const char *from,
 {
 	xmlnode *blocklist, *item;
 	PurpleAccount *account;
+	GSList *deny;
 
 	blocklist = xmlnode_get_child_with_namespace(packet,
 			"blocklist", NS_SIMPLE_BLOCKING);
@@ -1858,19 +1862,19 @@ static void jabber_blocklist_parse(JabberStream *js, const char *from,
 		return;
 
 	/* This is the only privacy method supported by XEP-0191 */
-	purple_account_set_privacy_type(account, PURPLE_PRIVACY_DENY_USERS);
+	purple_account_set_privacy_type(account, PURPLE_ACCOUNT_PRIVACY_DENY_USERS);
 
 	/*
 	 * TODO: When account->deny is something more than a hash table, this can
 	 * be re-written to find the set intersection and difference.
 	 */
-	while (account->deny)
-		purple_privacy_deny_remove(account, account->deny->data, TRUE);
+	while ((deny = purple_account_privacy_get_denied(account)))
+		purple_account_privacy_deny_remove(account, deny->data, TRUE);
 
 	item = xmlnode_get_child(blocklist, "item");
 	while (item != NULL) {
 		const char *jid = xmlnode_get_attrib(item, "jid");
-		purple_privacy_deny_add(account, jid, TRUE);
+		purple_account_privacy_deny_add(account, jid, TRUE);
 		item = xmlnode_get_next_twin(item);
 	}
 }
@@ -2347,21 +2351,21 @@ GList *jabber_status_types(PurpleAccount *account)
 {
 	PurpleStatusType *type;
 	GList *types = NULL;
-	PurpleValue *priority_value;
-	PurpleValue *buzz_enabled;
+	GValue *priority_value;
+	GValue *buzz_enabled;
 
-	priority_value = purple_value_new(PURPLE_TYPE_INT);
-	purple_value_set_int(priority_value, 1);
-	buzz_enabled = purple_value_new(PURPLE_TYPE_BOOLEAN);
-	purple_value_set_boolean(buzz_enabled, TRUE);
+	priority_value = purple_g_value_new(G_TYPE_INT);
+	g_value_set_int(priority_value, 1);
+	buzz_enabled = purple_g_value_new(G_TYPE_BOOLEAN);
+	g_value_set_boolean(buzz_enabled, TRUE);
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE,
 			jabber_buddy_state_get_status_id(JABBER_BUDDY_STATE_ONLINE),
 			NULL, TRUE, TRUE, FALSE,
 			"priority", _("Priority"), priority_value,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			"mood", _("Mood"), purple_value_new(PURPLE_TYPE_STRING),
-			"moodtext", _("Mood Text"), purple_value_new(PURPLE_TYPE_STRING),
-			"nick", _("Nickname"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
+			"mood", _("Mood"), purple_g_value_new(G_TYPE_STRING),
+			"moodtext", _("Mood Text"), purple_g_value_new(G_TYPE_STRING),
+			"nick", _("Nickname"), purple_g_value_new(G_TYPE_STRING),
 			"buzz", _("Allow Buzz"), buzz_enabled,
 			NULL);
 	types = g_list_prepend(types, type);
@@ -2369,69 +2373,69 @@ GList *jabber_status_types(PurpleAccount *account)
 
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_MOOD,
 	    "mood", NULL, TRUE, TRUE, TRUE,
-			PURPLE_MOOD_NAME, _("Mood Name"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_MOOD_COMMENT, _("Mood Comment"), purple_value_new(PURPLE_TYPE_STRING),
+			PURPLE_MOOD_NAME, _("Mood Name"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_MOOD_COMMENT, _("Mood Comment"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_prepend(types, type);
 
-	priority_value = purple_value_new(PURPLE_TYPE_INT);
-	purple_value_set_int(priority_value, 1);
-	buzz_enabled = purple_value_new(PURPLE_TYPE_BOOLEAN);
-	purple_value_set_boolean(buzz_enabled, TRUE);
+	priority_value = purple_g_value_new(G_TYPE_INT);
+	g_value_set_int(priority_value, 1);
+	buzz_enabled = purple_g_value_new(G_TYPE_BOOLEAN);
+	g_value_set_boolean(buzz_enabled, TRUE);
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE,
 			jabber_buddy_state_get_status_id(JABBER_BUDDY_STATE_CHAT),
 			_("Chatty"), TRUE, TRUE, FALSE,
 			"priority", _("Priority"), priority_value,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			"mood", _("Mood"), purple_value_new(PURPLE_TYPE_STRING),
-			"moodtext", _("Mood Text"), purple_value_new(PURPLE_TYPE_STRING),
-			"nick", _("Nickname"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
+			"mood", _("Mood"), purple_g_value_new(G_TYPE_STRING),
+			"moodtext", _("Mood Text"), purple_g_value_new(G_TYPE_STRING),
+			"nick", _("Nickname"), purple_g_value_new(G_TYPE_STRING),
 			"buzz", _("Allow Buzz"), buzz_enabled,
 			NULL);
 	types = g_list_prepend(types, type);
 
-	priority_value = purple_value_new(PURPLE_TYPE_INT);
-	purple_value_set_int(priority_value, 0);
-	buzz_enabled = purple_value_new(PURPLE_TYPE_BOOLEAN);
-	purple_value_set_boolean(buzz_enabled, TRUE);
+	priority_value = purple_g_value_new(G_TYPE_INT);
+	g_value_set_int(priority_value, 0);
+	buzz_enabled = purple_g_value_new(G_TYPE_BOOLEAN);
+	g_value_set_boolean(buzz_enabled, TRUE);
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_AWAY,
 			jabber_buddy_state_get_status_id(JABBER_BUDDY_STATE_AWAY),
 			NULL, TRUE, TRUE, FALSE,
 			"priority", _("Priority"), priority_value,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			"mood", _("Mood"), purple_value_new(PURPLE_TYPE_STRING),
-			"moodtext", _("Mood Text"), purple_value_new(PURPLE_TYPE_STRING),
-			"nick", _("Nickname"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
+			"mood", _("Mood"), purple_g_value_new(G_TYPE_STRING),
+			"moodtext", _("Mood Text"), purple_g_value_new(G_TYPE_STRING),
+			"nick", _("Nickname"), purple_g_value_new(G_TYPE_STRING),
 			"buzz", _("Allow Buzz"), buzz_enabled,
 			NULL);
 	types = g_list_prepend(types, type);
 
-	priority_value = purple_value_new(PURPLE_TYPE_INT);
-	purple_value_set_int(priority_value, 0);
-	buzz_enabled = purple_value_new(PURPLE_TYPE_BOOLEAN);
-	purple_value_set_boolean(buzz_enabled, TRUE);
+	priority_value = purple_g_value_new(G_TYPE_INT);
+	g_value_set_int(priority_value, 0);
+	buzz_enabled = purple_g_value_new(G_TYPE_BOOLEAN);
+	g_value_set_boolean(buzz_enabled, TRUE);
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_EXTENDED_AWAY,
 			jabber_buddy_state_get_status_id(JABBER_BUDDY_STATE_XA),
 			NULL, TRUE, TRUE, FALSE,
 			"priority", _("Priority"), priority_value,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			"mood", _("Mood"), purple_value_new(PURPLE_TYPE_STRING),
-			"moodtext", _("Mood Text"), purple_value_new(PURPLE_TYPE_STRING),
-			"nick", _("Nickname"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
+			"mood", _("Mood"), purple_g_value_new(G_TYPE_STRING),
+			"moodtext", _("Mood Text"), purple_g_value_new(G_TYPE_STRING),
+			"nick", _("Nickname"), purple_g_value_new(G_TYPE_STRING),
 			"buzz", _("Allow Buzz"), buzz_enabled,
 			NULL);
 	types = g_list_prepend(types, type);
 
-	priority_value = purple_value_new(PURPLE_TYPE_INT);
-	purple_value_set_int(priority_value, 0);
+	priority_value = purple_g_value_new(G_TYPE_INT);
+	g_value_set_int(priority_value, 0);
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_UNAVAILABLE,
 			jabber_buddy_state_get_status_id(JABBER_BUDDY_STATE_DND),
 			_("Do Not Disturb"), TRUE, TRUE, FALSE,
 			"priority", _("Priority"), priority_value,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
-			"mood", _("Mood"), purple_value_new(PURPLE_TYPE_STRING),
-			"moodtext", _("Mood Text"), purple_value_new(PURPLE_TYPE_STRING),
-			"nick", _("Nickname"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
+			"mood", _("Mood"), purple_g_value_new(G_TYPE_STRING),
+			"moodtext", _("Mood Text"), purple_g_value_new(G_TYPE_STRING),
+			"nick", _("Nickname"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_prepend(types, type);
 
@@ -2443,21 +2447,21 @@ GList *jabber_status_types(PurpleAccount *account)
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_OFFLINE,
 			jabber_buddy_state_get_status_id(JABBER_BUDDY_STATE_UNAVAILABLE),
 			NULL, TRUE, TRUE, FALSE,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_prepend(types, type);
 
 	type = purple_status_type_new_with_attrs(PURPLE_STATUS_TUNE,
 			"tune", NULL, FALSE, TRUE, TRUE,
-			PURPLE_TUNE_ARTIST, _("Tune Artist"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_TITLE, _("Tune Title"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_ALBUM, _("Tune Album"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_GENRE, _("Tune Genre"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_COMMENT, _("Tune Comment"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_TRACK, _("Tune Track"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_TIME, _("Tune Time"), purple_value_new(PURPLE_TYPE_INT),
-			PURPLE_TUNE_YEAR, _("Tune Year"), purple_value_new(PURPLE_TYPE_INT),
-			PURPLE_TUNE_URL, _("Tune URL"), purple_value_new(PURPLE_TYPE_STRING),
+			PURPLE_TUNE_ARTIST, _("Tune Artist"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_TITLE, _("Tune Title"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_ALBUM, _("Tune Album"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_GENRE, _("Tune Genre"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_COMMENT, _("Tune Comment"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_TRACK, _("Tune Track"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_TIME, _("Tune Time"), purple_g_value_new(G_TYPE_INT),
+			PURPLE_TUNE_YEAR, _("Tune Year"), purple_g_value_new(G_TYPE_INT),
+			PURPLE_TUNE_URL, _("Tune URL"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_prepend(types, type);
 
@@ -2583,7 +2587,7 @@ GList *jabber_actions(PurplePlugin *plugin, gpointer context)
 
 PurpleChat *jabber_find_blist_chat(PurpleAccount *account, const char *name)
 {
-	PurpleBlistNode *gnode, *cnode;
+	PurpleBListNode *gnode, *cnode;
 	JabberID *jid;
 
 	if(!(jid = jabber_id_new(name)))
@@ -2597,7 +2601,7 @@ PurpleChat *jabber_find_blist_chat(PurpleAccount *account, const char *name)
 			PurpleChat *chat = (PurpleChat*)cnode;
 			const char *room, *server;
 			GHashTable *components;
-			if(!PURPLE_BLIST_NODE_IS_CHAT(cnode))
+			if(!PURPLE_IS_CHAT(cnode))
 				continue;
 
 			if (purple_chat_get_account(chat) != account)
@@ -2811,7 +2815,7 @@ char *jabber_parse_error(JabberStream *js,
 static PurpleCmdRet jabber_cmd_chat_config(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if (!chat)
 		return PURPLE_CMD_RET_FAILED;
@@ -2823,7 +2827,7 @@ static PurpleCmdRet jabber_cmd_chat_config(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_register(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if (!chat)
 		return PURPLE_CMD_RET_FAILED;
@@ -2835,7 +2839,7 @@ static PurpleCmdRet jabber_cmd_chat_register(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_topic(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if (!chat)
 		return PURPLE_CMD_RET_FAILED;
@@ -2843,7 +2847,7 @@ static PurpleCmdRet jabber_cmd_chat_topic(PurpleConversation *conv,
 	if (args && args[0] && *args[0])
 		jabber_chat_change_topic(chat, args[0]);
 	else {
-		const char *cur = purple_conv_chat_get_topic(PURPLE_CONV_CHAT(conv));
+		const char *cur = purple_chat_conversation_get_topic(PURPLE_CHAT_CONVERSATION(conv));
 		char *buf, *tmp, *tmp2;
 
 		if (cur) {
@@ -2854,7 +2858,7 @@ static PurpleCmdRet jabber_cmd_chat_topic(PurpleConversation *conv,
 			g_free(tmp2);
 		} else
 			buf = g_strdup(_("No topic is set"));
-		purple_conv_chat_write(PURPLE_CONV_CHAT(conv), "", buf,
+		purple_conversation_write_message(conv, "", buf,
 				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG, time(NULL));
 		g_free(buf);
 	}
@@ -2865,7 +2869,7 @@ static PurpleCmdRet jabber_cmd_chat_topic(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_nick(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if(!chat || !args || !args[0])
 		return PURPLE_CMD_RET_FAILED;
@@ -2884,7 +2888,7 @@ static PurpleCmdRet jabber_cmd_chat_nick(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_part(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if (!chat)
 		return PURPLE_CMD_RET_FAILED;
@@ -2896,7 +2900,7 @@ static PurpleCmdRet jabber_cmd_chat_part(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_ban(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if(!chat || !args || !args[0])
 		return PURPLE_CMD_RET_FAILED;
@@ -2912,7 +2916,7 @@ static PurpleCmdRet jabber_cmd_chat_ban(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_affiliate(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if (!chat || !args || !args[0])
 		return PURPLE_CMD_RET_FAILED;
@@ -2948,7 +2952,7 @@ static PurpleCmdRet jabber_cmd_chat_affiliate(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_role(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if (!chat || !args || !args[0])
 		return PURPLE_CMD_RET_FAILED;
@@ -2987,7 +2991,7 @@ static PurpleCmdRet jabber_cmd_chat_invite(PurpleConversation *conv,
 		return PURPLE_CMD_RET_FAILED;
 
 	jabber_chat_invite(purple_conversation_get_connection(conv),
-			purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv)), args[1] ? args[1] : "",
+			purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(conv)), args[1] ? args[1] : "",
 			args[0]);
 
 	return PURPLE_CMD_RET_OK;
@@ -2996,7 +3000,7 @@ static PurpleCmdRet jabber_cmd_chat_invite(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_join(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 	GHashTable *components;
 	JabberID *jid = NULL;
 	const char *room = NULL, *server = NULL, *handle = NULL;
@@ -3043,7 +3047,7 @@ static PurpleCmdRet jabber_cmd_chat_join(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_kick(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 
 	if(!chat || !args || !args[0])
 		return PURPLE_CMD_RET_FAILED;
@@ -3059,7 +3063,7 @@ static PurpleCmdRet jabber_cmd_chat_kick(PurpleConversation *conv,
 static PurpleCmdRet jabber_cmd_chat_msg(PurpleConversation *conv,
 		const char *cmd, char **args, char **error, void *data)
 {
-	JabberChat *chat = jabber_chat_find_by_conv(conv);
+	JabberChat *chat = jabber_chat_find_by_conv(PURPLE_CHAT_CONVERSATION(conv));
 	char *who;
 
 	if (!chat)
@@ -3099,7 +3103,7 @@ static gboolean _jabber_send_buzz(JabberStream *js, const char *username, char *
 	JabberBuddyResource *jbr;
 	PurpleConnection *gc = js->gc;
 	PurpleBuddy *buddy =
-		purple_find_buddy(purple_connection_get_account(gc), username);
+		purple_blist_find_buddy(purple_connection_get_account(gc), username);
 	const gchar *alias =
 		buddy ? purple_buddy_get_contact_alias(buddy) : username;
 
@@ -3159,7 +3163,7 @@ static PurpleCmdRet jabber_cmd_buzz(PurpleConversation *conv,
 
 	if (!args || !args[0]) {
 		/* use the buddy from conversation, if it's a one-to-one conversation */
-		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) {
+		if (PURPLE_IS_IM_CONVERSATION(conv)) {
 			who = purple_conversation_get_name(conv);
 		} else {
 			return PURPLE_CMD_RET_FAILED;
@@ -3168,7 +3172,7 @@ static PurpleCmdRet jabber_cmd_buzz(PurpleConversation *conv,
 		who = args[0];
 	}
 
-	buddy = purple_find_buddy(account, who);
+	buddy = purple_blist_find_buddy(account, who);
 	if (buddy != NULL)
 		alias = purple_buddy_get_contact_alias(buddy);
 	else
@@ -3202,7 +3206,7 @@ gboolean jabber_send_attention(PurpleConnection *gc, const char *username, guint
 	if (!_jabber_send_buzz(js, username, &error)) {
 		PurpleAccount *account = purple_connection_get_account(gc);
 		PurpleConversation *conv =
-			purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, username, account);
+			purple_conversations_find_with_account(username, account);
 		purple_debug_error("jabber", "jabber_send_attention: jabber_cmd_buzz failed with error: %s\n", error ? error : "(NULL)");
 
 		if (conv) {
@@ -3946,41 +3950,38 @@ void jabber_plugin_init(PurplePlugin *plugin)
 	/* IPC functions */
 	purple_plugin_ipc_register(plugin, "contact_has_feature", PURPLE_CALLBACK(jabber_ipc_contact_has_feature),
 							 purple_marshal_BOOLEAN__POINTER_POINTER_POINTER,
-							 purple_value_new(PURPLE_TYPE_BOOLEAN), 3,
-							 purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT),
-							 purple_value_new(PURPLE_TYPE_STRING),
-							 purple_value_new(PURPLE_TYPE_STRING));
+							 G_TYPE_BOOLEAN, 3,
+							 PURPLE_TYPE_ACCOUNT, G_TYPE_STRING, G_TYPE_STRING);
 
 	purple_plugin_ipc_register(plugin, "add_feature", PURPLE_CALLBACK(jabber_ipc_add_feature),
 							 purple_marshal_VOID__POINTER,
-							 NULL, 1,
-							 purple_value_new(PURPLE_TYPE_STRING));
+							 G_TYPE_NONE, 1, G_TYPE_STRING);
 
 	purple_plugin_ipc_register(plugin, "register_namespace_watcher",
 	                           PURPLE_CALLBACK(jabber_iq_signal_register),
 	                           purple_marshal_VOID__POINTER_POINTER,
-	                           NULL, 2,
-	                           purple_value_new(PURPLE_TYPE_STRING),  /* node */
-	                           purple_value_new(PURPLE_TYPE_STRING)); /* namespace */
+	                           G_TYPE_NONE, 2,
+	                           G_TYPE_STRING,  /* node */
+	                           G_TYPE_STRING); /* namespace */
 
 	purple_plugin_ipc_register(plugin, "unregister_namespace_watcher",
 	                           PURPLE_CALLBACK(jabber_iq_signal_unregister),
 	                           purple_marshal_VOID__POINTER_POINTER,
-	                           NULL, 2,
-	                           purple_value_new(PURPLE_TYPE_STRING),  /* node */
-	                           purple_value_new(PURPLE_TYPE_STRING)); /* namespace */
+	                           G_TYPE_NONE, 2,
+	                           G_TYPE_STRING,  /* node */
+	                           G_TYPE_STRING); /* namespace */
 
 	purple_signal_register(plugin, "jabber-register-namespace-watcher",
 			purple_marshal_VOID__POINTER_POINTER,
-			NULL, 2,
-			purple_value_new(PURPLE_TYPE_STRING),  /* node */
-			purple_value_new(PURPLE_TYPE_STRING)); /* namespace */
+			G_TYPE_NONE, 2,
+			G_TYPE_STRING,  /* node */
+			G_TYPE_STRING); /* namespace */
 
 	purple_signal_register(plugin, "jabber-unregister-namespace-watcher",
 			purple_marshal_VOID__POINTER_POINTER,
-			NULL, 2,
-			purple_value_new(PURPLE_TYPE_STRING),  /* node */
-			purple_value_new(PURPLE_TYPE_STRING)); /* namespace */
+			G_TYPE_NONE, 2,
+			G_TYPE_STRING,  /* node */
+			G_TYPE_STRING); /* namespace */
 
 	purple_signal_connect(plugin, "jabber-register-namespace-watcher",
 			plugin, PURPLE_CALLBACK(jabber_iq_signal_register), NULL);
@@ -3989,14 +3990,14 @@ void jabber_plugin_init(PurplePlugin *plugin)
 
 
 	purple_signal_register(plugin, "jabber-receiving-xmlnode",
-			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			purple_value_new_outgoing(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_XMLNODE));
+			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
+			PURPLE_TYPE_CONNECTION,
+			G_TYPE_POINTER); /* modifiable xmlnode */
 
 	purple_signal_register(plugin, "jabber-sending-xmlnode",
-			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			purple_value_new_outgoing(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_XMLNODE));
+			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
+			PURPLE_TYPE_CONNECTION,
+			G_TYPE_POINTER); /* modifiable xmlnode */
 
 	/*
 	 * Do not remove this or the plugin will fail. Completely. You have been
@@ -4007,45 +4008,45 @@ void jabber_plugin_init(PurplePlugin *plugin)
 			NULL, PURPLE_SIGNAL_PRIORITY_HIGHEST);
 
 	purple_signal_register(plugin, "jabber-sending-text",
-			     purple_marshal_VOID__POINTER_POINTER, NULL, 2,
-			     purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			     purple_value_new_outgoing(PURPLE_TYPE_STRING));
+			     purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
+			     PURPLE_TYPE_CONNECTION,
+			     G_TYPE_POINTER); /* pointer to a string */
 
 	purple_signal_register(plugin, "jabber-receiving-message",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_POINTER_POINTER,
-			purple_value_new(PURPLE_TYPE_BOOLEAN), 6,
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			purple_value_new(PURPLE_TYPE_STRING), /* type */
-			purple_value_new(PURPLE_TYPE_STRING), /* id */
-			purple_value_new(PURPLE_TYPE_STRING), /* from */
-			purple_value_new(PURPLE_TYPE_STRING), /* to */
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_XMLNODE));
+			G_TYPE_BOOLEAN, 6,
+			PURPLE_TYPE_CONNECTION,
+			G_TYPE_STRING, /* type */
+			G_TYPE_STRING, /* id */
+			G_TYPE_STRING, /* from */
+			G_TYPE_STRING, /* to */
+			PURPLE_TYPE_XMLNODE);
 
 	purple_signal_register(plugin, "jabber-receiving-iq",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_POINTER,
-			purple_value_new(PURPLE_TYPE_BOOLEAN), 5,
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			purple_value_new(PURPLE_TYPE_STRING), /* type */
-			purple_value_new(PURPLE_TYPE_STRING), /* id */
-			purple_value_new(PURPLE_TYPE_STRING), /* from */
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_XMLNODE));
+			G_TYPE_BOOLEAN, 5,
+			PURPLE_TYPE_CONNECTION,
+			G_TYPE_STRING, /* type */
+			G_TYPE_STRING, /* id */
+			G_TYPE_STRING, /* from */
+			PURPLE_TYPE_XMLNODE);
 
 	purple_signal_register(plugin, "jabber-watched-iq",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_POINTER,
-			purple_value_new(PURPLE_TYPE_BOOLEAN), 5,
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			purple_value_new(PURPLE_TYPE_STRING), /* type */
-			purple_value_new(PURPLE_TYPE_STRING), /* id */
-			purple_value_new(PURPLE_TYPE_STRING), /* from */
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_XMLNODE)); /* child */
+			G_TYPE_BOOLEAN, 5,
+			PURPLE_TYPE_CONNECTION,
+			G_TYPE_STRING, /* type */
+			G_TYPE_STRING, /* id */
+			G_TYPE_STRING, /* from */
+			PURPLE_TYPE_XMLNODE); /* child */
 
 	purple_signal_register(plugin, "jabber-receiving-presence",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER,
-			purple_value_new(PURPLE_TYPE_BOOLEAN), 4,
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			purple_value_new(PURPLE_TYPE_STRING), /* type */
-			purple_value_new(PURPLE_TYPE_STRING), /* from */
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_XMLNODE));
+			G_TYPE_BOOLEAN, 4,
+			PURPLE_TYPE_CONNECTION,
+			G_TYPE_STRING, /* type */
+			G_TYPE_STRING, /* from */
+			PURPLE_TYPE_XMLNODE);
 }
 
 void jabber_plugin_uninit(PurplePlugin *plugin)

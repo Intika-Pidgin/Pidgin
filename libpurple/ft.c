@@ -278,7 +278,7 @@ static void
 purple_xfer_conversation_write_internal(PurpleXfer *xfer,
 	const char *message, gboolean is_error, gboolean print_thumbnail)
 {
-	PurpleConversation *conv = NULL;
+	PurpleIMConversation *im = NULL;
 	PurpleMessageFlags flags = PURPLE_MESSAGE_SYSTEM;
 	char *escaped;
 	gconstpointer thumbnail_data;
@@ -289,10 +289,10 @@ purple_xfer_conversation_write_internal(PurpleXfer *xfer,
 
 	thumbnail_data = purple_xfer_get_thumbnail(xfer, &size);
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, xfer->who,
+	im = purple_conversations_find_im_with_account(xfer->who,
 											   purple_xfer_get_account(xfer));
 
-	if (conv == NULL)
+	if (im == NULL)
 		return;
 
 	escaped = g_markup_escape_text(message, -1);
@@ -308,12 +308,13 @@ purple_xfer_conversation_write_internal(PurpleXfer *xfer,
 		message_with_img =
 			g_strdup_printf("<img src='" PURPLE_STORED_IMAGE_PROTOCOL "%d'> %s",
 			                id, escaped);
-		purple_conversation_write(conv, NULL, message_with_img, flags,
-			time(NULL));
+		purple_conversation_write(PURPLE_CONVERSATION(im), NULL,
+			message_with_img, flags, time(NULL));
 		purple_imgstore_unref_by_id(id);
 		g_free(message_with_img);
 	} else {
-		purple_conversation_write(conv, NULL, escaped, flags, time(NULL));
+		purple_conversation_write(PURPLE_CONVERSATION(im), NULL, escaped, flags,
+			time(NULL));
 	}
 	g_free(escaped);
 }
@@ -498,7 +499,7 @@ purple_xfer_ask_recv(PurpleXfer *xfer)
 	/* If we have already accepted the request, ask the destination file
 	   name directly */
 	if (purple_xfer_get_status(xfer) != PURPLE_XFER_STATUS_ACCEPTED) {
-		PurpleBuddy *buddy = purple_find_buddy(xfer->account, xfer->who);
+		PurpleBuddy *buddy = purple_blist_find_buddy(xfer->account, xfer->who);
 
 		if (purple_xfer_get_filename(xfer) != NULL)
 		{
@@ -558,7 +559,7 @@ static void
 purple_xfer_ask_accept(PurpleXfer *xfer)
 {
 	char *buf, *buf2 = NULL;
-	PurpleBuddy *buddy = purple_find_buddy(xfer->account, xfer->who);
+	PurpleBuddy *buddy = purple_blist_find_buddy(xfer->account, xfer->who);
 
 	buf = g_strdup_printf(_("Accept file transfer request from %s?"),
 				  buddy ? purple_buddy_get_alias(buddy) : xfer->who);
@@ -598,7 +599,7 @@ purple_xfer_request(PurpleXfer *xfer)
 		           purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_ACCEPTED)
 		{
 			gchar* message = NULL;
-			PurpleBuddy *buddy = purple_find_buddy(xfer->account, xfer->who);
+			PurpleBuddy *buddy = purple_blist_find_buddy(xfer->account, xfer->who);
 
 			message = g_strdup_printf(_("%s is offering to send file %s"),
 				buddy ? purple_buddy_get_alias(buddy) : xfer->who, purple_xfer_get_filename(xfer));
@@ -643,7 +644,7 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const char *filename)
 		return;
 	}
 
-	buddy = purple_find_buddy(account, xfer->who);
+	buddy = purple_blist_find_buddy(account, xfer->who);
 
 	if (type == PURPLE_XFER_SEND) {
 		/* Sending a file */
@@ -901,7 +902,7 @@ purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 
 	if (completed == TRUE) {
 		char *msg = NULL;
-		PurpleConversation *conv;
+		PurpleIMConversation *im;
 
 		purple_xfer_set_status(xfer, PURPLE_XFER_STATUS_DONE);
 
@@ -924,11 +925,12 @@ purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 		else
 			msg = g_strdup(_("File transfer complete"));
 
-		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, xfer->who,
+		im = purple_conversations_find_im_with_account(xfer->who,
 		                                             purple_xfer_get_account(xfer));
 
-		if (conv != NULL)
-			purple_conversation_write(conv, NULL, msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
+		if (im != NULL)
+			purple_conversation_write(PURPLE_CONVERSATION(im), NULL, msg,
+					PURPLE_MESSAGE_SYSTEM, time(NULL));
 		g_free(msg);
 	}
 
@@ -1596,7 +1598,7 @@ purple_xfer_cancel_remote(PurpleXfer *xfer)
 	xfer->end_time = time(NULL);
 
 	account = purple_xfer_get_account(xfer);
-	buddy = purple_find_buddy(account, xfer->who);
+	buddy = purple_blist_find_buddy(account, xfer->who);
 
 	if (purple_xfer_get_filename(xfer) != NULL)
 	{
@@ -1656,7 +1658,7 @@ purple_xfer_error(PurpleXferType type, PurpleAccount *account, const char *who, 
 
 	if (account) {
 		PurpleBuddy *buddy;
-		buddy = purple_find_buddy(account, who);
+		buddy = purple_blist_find_buddy(account, who);
 		if (buddy)
 			who = purple_buddy_get_alias(buddy);
 	}
@@ -1760,6 +1762,33 @@ gpointer purple_xfer_get_ui_data(const PurpleXfer *xfer)
 	return xfer->ui_data;
 }
 
+static PurpleXfer *
+purple_xfer_copy(PurpleXfer *xfer)
+{
+	PurpleXfer *xfer_copy;
+
+	g_return_val_if_fail(xfer != NULL, NULL);
+
+	xfer_copy = g_new(PurpleXfer, 1);
+	*xfer_copy = *xfer;
+
+	return xfer_copy;
+}
+
+GType
+purple_xfer_get_g_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleXfer",
+				(GBoxedCopyFunc)purple_xfer_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
 
 /**************************************************************************
  * File Transfer Subsystem API
@@ -1780,41 +1809,32 @@ purple_xfers_init(void) {
 
 	/* register signals */
 	purple_signal_register(handle, "file-recv-accept",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-send-accept",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-recv-start",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-send-start",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-send-cancel",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-recv-cancel",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-send-complete",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-recv-complete",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-recv-request",
-	                     purple_marshal_VOID__POINTER, NULL, 1,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_XFER));
+	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+	                     PURPLE_TYPE_XFER);
 }
 
 void
