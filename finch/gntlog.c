@@ -407,7 +407,7 @@ void finch_log_show(PurpleLogType type, const char *username, PurpleAccount *acc
 		PurpleBuddy *buddy;
 
 		if (username) {
-			buddy = purple_find_buddy(account, username);
+			buddy = purple_blist_find_buddy(account, username);
 			if (buddy != NULL)
 				name = purple_buddy_get_contact_alias(buddy);
 			title = g_strdup_printf(_("Conversations with %s"), name);
@@ -436,7 +436,7 @@ void finch_log_show(PurpleLogType type, const char *username, PurpleAccount *acc
 void finch_log_show_contact(PurpleContact *contact)
 {
 	struct log_viewer_hash_t *ht;
-	PurpleBlistNode *child;
+	PurpleBListNode *child;
 	FinchLogViewer *lv = NULL;
 	GList *logs = NULL;
 	const char *name = NULL;
@@ -457,11 +457,11 @@ void finch_log_show_contact(PurpleContact *contact)
 		return;
 	}
 
-	for (child = purple_blist_node_get_first_child((PurpleBlistNode*)contact); child;
+	for (child = purple_blist_node_get_first_child((PurpleBListNode*)contact); child;
 			child = purple_blist_node_get_sibling_next(child)) {
 		const char *name;
 		PurpleAccount *account;
-		if (!PURPLE_BLIST_NODE_IS_BUDDY(child))
+		if (!PURPLE_IS_BUDDY(child))
 			continue;
 
 		name = purple_buddy_get_name((PurpleBuddy *)child);
@@ -480,8 +480,8 @@ void finch_log_show_contact(PurpleContact *contact)
 	 * and none of the contact's buddies are online.
 	 * There is probably a better way to deal with this. */
 	if (name == NULL) {
-		child = purple_blist_node_get_first_child((PurpleBlistNode*)contact);
-		if (child != NULL && PURPLE_BLIST_NODE_IS_BUDDY(child))
+		child = purple_blist_node_get_first_child((PurpleBListNode*)contact);
+		if (child != NULL && PURPLE_IS_BUDDY(child))
 			name = purple_buddy_get_contact_alias((PurpleBuddy *)child);
 		if (name == NULL)
 			name = "";
@@ -533,11 +533,9 @@ void finch_log_init(void)
 
 	purple_signal_register(handle, "log-displaying",
 	                     purple_marshal_VOID__POINTER_POINTER,
-	                     NULL, 2,
-	                     purple_value_new(PURPLE_TYPE_BOXED,
-	                                    "FinchLogViewer *"),
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_LOG));
+	                     G_TYPE_NONE, 2,
+	                     G_TYPE_POINTER, /* (FinchLogViewer *) */
+	                     PURPLE_TYPE_LOG);
 }
 
 void

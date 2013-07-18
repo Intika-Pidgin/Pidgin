@@ -44,16 +44,16 @@
 
 @PLUGINS_DEFINE@
 
-#include <account.h>
+#include <accounts.h>
 #include <accountopt.h>
-#include <blist.h>
+#include <buddylist.h>
 #include <buddyicon.h>
 #include <certificate.h>
 #include <cipher.h>
-#include <circbuffer.h>
+#include <circularbuffer.h>
 #include <cmds.h>
 #include <connection.h>
-#include <conversation.h>
+#include <conversations.h>
 #include <core.h>
 #include <debug.h>
 #include <desktopitem.h>
@@ -75,7 +75,6 @@
 #include <pluginpref.h>
 #include <pounce.h>
 #include <prefs.h>
-#include <privacy.h>
 #include <proxy.h>
 #include <prpl.h>
 #include <request.h>
@@ -96,7 +95,6 @@
 #include <theme-manager.h>
 #include <upnp.h>
 #include <util.h>
-#include <value.h>
 #include <version.h>
 #include <whiteboard.h>
 #include <xmlnode.h>

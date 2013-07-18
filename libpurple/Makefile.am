@@ -38,20 +38,26 @@ SUBDIRS = $(GCONF_DIR) plugins protocols ciphers . tests example
 
 purple_coresources = \
 	account.c \
+	accounts.c \
 	accountopt.c \
-	blist.c \
+	blistnodes.c \
+	blistnodetypes.c \
+	buddylist.c \
 	buddyicon.c \
 	certificate.c \
 	cipher.c \
-	circbuffer.c \
+	circularbuffer.c \
 	cmds.c \
 	connection.c \
 	conversation.c \
+	conversationtypes.c \
+	conversations.c \
 	core.c \
 	debug.c \
 	desktopitem.c \
 	eventloop.c \
 	ft.c \
+	hash.c \
 	http.c \
 	idle.c \
 	imgstore.c \
@@ -73,7 +79,6 @@ purple_coresources = \
 	pluginpref.c \
 	pounce.c \
 	prefs.c \
-	privacy.c \
 	proxy.c \
 	prpl.c \
 	request.c \
@@ -96,31 +101,37 @@ purple_coresources = \
 	theme-manager.c \
 	upnp.c \
 	util.c \
-	value.c \
 	version.c \
 	xmlnode.c \
 	whiteboard.c
 
 purple_builtsources = \
+	enums.c \
 	marshallers.c
 
 purple_coreheaders = \
 	account.h \
+	accounts.h \
 	accountopt.h \
-	blist.h \
+	blistnodes.h \
+	blistnodetypes.h \
+	buddylist.h \
 	buddyicon.h \
 	certificate.h \
 	cipher.h \
-	circbuffer.h \
+	circularbuffer.h \
 	cmds.h \
 	connection.h \
 	conversation.h \
+	conversationtypes.h \
+	conversations.h \
 	core.h \
 	dbus-maybe.h \
 	debug.h \
 	desktopitem.h \
 	eventloop.h \
 	ft.h \
+	hash.h \
 	http.h \
 	idle.h \
 	imgstore.h \
@@ -138,7 +149,6 @@ purple_coreheaders = \
 	pluginpref.h \
 	pounce.h \
 	prefs.h \
-	privacy.h \
 	proxy.h \
 	prpl.h \
 	request.h \
@@ -161,7 +171,6 @@ purple_coreheaders = \
 	theme-manager.h \
 	upnp.h \
 	util.h \
-	value.h \
 	xmlnode.h \
 	whiteboard.h
 
@@ -171,7 +180,14 @@ purple_mediaheaders = \
 	codec.h \
 	enum-types.h
 
-purple_builtheaders = purple.h version.h marshallers.h
+purple_builtheaders = purple.h version.h enums.h marshallers.h
+
+purple_enumheaders = \
+	account.h \
+	cipher.h \
+	connection.h \
+	conversation.h \
+	conversationtypes.h
 
 marshallers.h: marshallers.list
 	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=purple_smarshal $(srcdir)/marshallers.list --header > marshallers.h
@@ -179,6 +195,12 @@ marshallers.h: marshallers.list
 marshallers.c: marshallers.list marshallers.h
 	$(AM_V_GEN)echo "#include \"marshallers.h\"" > marshallers.c
 	$(AM_V_at)$(GLIB_GENMARSHAL) --prefix=purple_smarshal $(srcdir)/marshallers.list --body >> marshallers.c
+
+enums.h: enums.h.template $(purple_enumheaders)
+	$(AM_V_GEN)$(GLIB_MKENUMS) --template enums.h.template $(purple_enumheaders) > $@
+
+enums.c: enums.c.template $(purple_enumheaders)
+	$(AM_V_GEN)$(GLIB_MKENUMS) --template enums.c.template $(purple_enumheaders) > $@
 
 if ENABLE_DBUS
 
@@ -189,6 +211,8 @@ CLEANFILES = \
 	dbus-signals.c \
 	dbus-types.c \
 	dbus-types.h \
+	enums.c \
+	enums.h \
 	marshallers.c \
 	marshallers.h \
 	purple-client-bindings.c \
@@ -200,9 +224,11 @@ CLEANFILES = \
 dbus_sources  = dbus-server.c dbus-useful.c
 dbus_headers  = dbus-bindings.h dbus-purple.h dbus-server.h dbus-useful.h dbus-define-api.h dbus-types.h
 
-dbus_exported = dbus-useful.h dbus-define-api.h account.h blist.h buddyicon.h \
-                connection.h conversation.h core.h ft.h log.h notify.h prefs.h roomlist.h \
-                savedstatuses.h smiley.h status.h server.h util.h xmlnode.h prpl.h
+dbus_exported = dbus-useful.h dbus-define-api.h account.h accounts.h blistnodes.h \
+                blistnodetypes.h buddylist.h buddyicon.h connection.h conversation.h \
+                conversationtypes.h conversations.h core.h ft.h log.h notify.h \
+                prefs.h roomlist.h savedstatuses.h smiley.h status.h server.h util.h \
+                xmlnode.h prpl.h
 
 purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders)) \
 		$(addprefix $(srcdir)/media/, $(purple_mediaheaders)) \
@@ -302,7 +328,10 @@ mediaincludedir=$(includedir)/libpurple/media
 mediainclude_HEADERS = \
 	$(addprefix $(srcdir)/media/, $(purple_mediaheaders))
 
-libpurple_la_DEPENDENCIES = $(STATIC_LINK_LIBS)
+libpurple_la_DEPENDENCIES = \
+	$(STATIC_LINK_LIBS) \
+	ciphers/libpurple-ciphers.la
+
 libpurple_la_LDFLAGS = -export-dynamic -version-info $(PURPLE_LT_VERSION_INFO) -no-undefined
 libpurple_la_LIBADD = \
 	$(STATIC_LINK_LIBS) \

@@ -156,7 +156,7 @@
 
 /* INTERNAL FUNCTIONS */
 
-#include "account.h"
+#include "accounts.h"
 #include "connection.h"
 
 /* This is for the accounts code to notify the buddy icon code that
@@ -203,14 +203,36 @@ void _purple_connection_new(PurpleAccount *account, gboolean regist,
 void _purple_connection_new_unregister(PurpleAccount *account, const char *password,
                                        PurpleAccountUnregistrationCb cb, void *user_data);
 /**
- * Disconnects and destroys a PurpleConnection.
+ * Checks if a connection is disconnecting, and should not attempt to reconnect.
  *
- * @note This function should only be called by purple_account_disconnect()
- *        in account.c.  If you're trying to sign off an account, use that
- *        function instead.
+ * @note This function should only be called by purple_account_set_enabled()
+ *       in account.c.
  *
- * @param gc The purple connection to destroy.
+ * @param gc  The connection to check
  */
-void _purple_connection_destroy(PurpleConnection *gc);
+gboolean _purple_connection_wants_to_die(const PurpleConnection *gc);
+
+/**
+ * Adds a chat to the active chats list of a connection
+ *
+ * @note This function should only be called by serv_got_joined_chat()
+ *       in server.c.
+ *
+ * @param gc    The connection
+ * @param chat  The chat conversation to add
+ */
+void _purple_connection_add_active_chat(PurpleConnection *gc,
+                                        PurpleChatConversation *chat);
+/**
+ * Removes a chat from the active chats list of a connection
+ *
+ * @note This function should only be called by serv_got_chat_left()
+ *       in server.c.
+ *
+ * @param gc    The connection
+ * @param chat  The chat conversation to remove
+ */
+void _purple_connection_remove_active_chat(PurpleConnection *gc,
+                                           PurpleChatConversation *chat);
 
 #endif /* _PURPLE_INTERNAL_H_ */
