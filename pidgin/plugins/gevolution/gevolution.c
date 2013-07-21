@@ -67,8 +67,8 @@ enum
 	NUM_COLUMNS
 };
 
-static PurpleBlistUiOps *backup_blist_ui_ops = NULL;
-static PurpleBlistUiOps *blist_ui_ops = NULL;
+static PurpleBListUiOps *backup_blist_ui_ops = NULL;
+static PurpleBListUiOps *blist_ui_ops = NULL;
 static EBook *book = NULL;
 static gulong timer = 0;
 static gulong book_view_tag = 0;
@@ -99,7 +99,7 @@ update_ims_from_contact(EContact *contact, const char *name,
 		me = g_strdup(purple_normalize(account, purple_account_get_username(account)));
 		for (l2 = ims; l2 != NULL; l2 = l2->next)
 		{
-			if (purple_find_buddy(account, l2->data) != NULL ||
+			if (purple_blist_find_buddy(account, l2->data) != NULL ||
 				!strcmp(me, purple_normalize(account, l2->data)))
 				continue;
 
@@ -218,16 +218,16 @@ signed_on_cb(PurpleConnection *gc)
 }
 
 static void
-menu_item_activate_cb(PurpleBlistNode *node, gpointer user_data)
+menu_item_activate_cb(PurpleBListNode *node, gpointer user_data)
 {
-	PurpleBuddy *buddy = (PurpleBuddy *)node;
+	PurpleBuddy *buddy = PURPLE_BUDDY(node);
 	gevo_associate_buddy_dialog_new(buddy);
 }
 
 static void
-menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
+menu_item_send_mail_activate_cb(PurpleBListNode *node, gpointer user_data)
 {
-	PurpleBuddy *buddy = (PurpleBuddy *)node;
+	PurpleBuddy *buddy = PURPLE_BUDDY(node);
 	char *mail = NULL;
 
 	mail = gevo_get_email_for_buddy(buddy);
@@ -260,7 +260,7 @@ menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
 }
 
 static void
-blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
+blist_node_extended_menu_cb(PurpleBListNode *node, GList **menu)
 {
 	PurpleMenuAction *act;
 	PurpleBuddy *buddy;
@@ -268,10 +268,10 @@ blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
 	EContact *contact;
 	char *mail;
 
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+	if (!PURPLE_IS_BUDDY(node))
 		return;
 
-	buddy = (PurpleBuddy *)node;
+	buddy = PURPLE_BUDDY(node);
 	account = purple_buddy_get_account(buddy);
 
 	if (!gevo_prpl_is_supported(account, buddy))
@@ -342,7 +342,7 @@ plugin_load(PurplePlugin *plugin)
 
 	backup_blist_ui_ops = purple_blist_get_ui_ops();
 
-	blist_ui_ops = g_memdup(backup_blist_ui_ops, sizeof(PurpleBlistUiOps));
+	blist_ui_ops = g_memdup(backup_blist_ui_ops, sizeof(PurpleBListUiOps));
 	blist_ui_ops->request_add_buddy = request_add_buddy;
 
 	purple_blist_set_ui_ops(blist_ui_ops);
