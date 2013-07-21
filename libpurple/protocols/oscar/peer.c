@@ -115,7 +115,7 @@ peer_connection_new(OscarData *od, guint64 type, const char *bn)
 	conn->od = od;
 	conn->type = type;
 	conn->bn = g_strdup(bn);
-	conn->buffer_outgoing = purple_circ_buffer_new(0);
+	conn->buffer_outgoing = purple_circular_buffer_new(0);
 	conn->listenerfd = -1;
 	conn->fd = -1;
 	conn->lastactivity = time(NULL);
@@ -189,8 +189,8 @@ peer_connection_close(PeerConnection *conn)
 	conn->buffer_incoming.len = 0;
 	conn->buffer_incoming.offset = 0;
 
-	purple_circ_buffer_destroy(conn->buffer_outgoing);
-	conn->buffer_outgoing = purple_circ_buffer_new(0);
+	g_object_unref(G_OBJECT(conn->buffer_outgoing));
+	conn->buffer_outgoing = purple_circular_buffer_new(0);
 
 	conn->flags &= ~PEER_CONNECTION_FLAG_IS_INCOMING;
 }
@@ -234,7 +234,7 @@ peer_connection_destroy_cb(gpointer data)
 	g_free(conn->clientip);
 	g_free(conn->verifiedip);
 	g_free(conn->xferdata.name);
-	purple_circ_buffer_destroy(conn->buffer_outgoing);
+	g_object_unref(G_OBJECT(conn->buffer_outgoing));
 
 	conn->od->peer_connections = g_slist_remove(conn->od->peer_connections, conn);
 
@@ -408,9 +408,10 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 	PeerConnection *conn;
 	gsize writelen;
 	gssize wrotelen;
+	const gchar *output = NULL;
 
 	conn = data;
-	writelen = purple_circ_buffer_get_max_read(conn->buffer_outgoing);
+	writelen = purple_circular_buffer_get_max_read(conn->buffer_outgoing);
 
 	if (writelen == 0)
 	{
@@ -433,12 +434,13 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		 * file transfer.  Somebody should teach those guys how to
 		 * write good TCP code.
 		 */
-		conn->buffer_outgoing->inptr = conn->buffer_outgoing->buffer;
-		conn->buffer_outgoing->outptr = conn->buffer_outgoing->buffer;
+		purple_circular_buffer_reset(conn->buffer_outgoing);
 		return;
 	}
 
-	wrotelen = send(conn->fd, conn->buffer_outgoing->outptr, writelen, 0);
+	output = purple_circular_buffer_get_output(conn->buffer_outgoing);
+
+	wrotelen = send(conn->fd, output, writelen, 0);
 	if (wrotelen <= 0)
 	{
 		if (wrotelen < 0 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
@@ -465,7 +467,7 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	purple_circ_buffer_mark_read(conn->buffer_outgoing, wrotelen);
+	purple_circular_buffer_mark_read(conn->buffer_outgoing, wrotelen);
 	conn->lastactivity = time(NULL);
 }
 
@@ -478,7 +480,7 @@ void
 peer_connection_send(PeerConnection *conn, ByteStream *bs)
 {
 	/* Add everything to our outgoing buffer */
-	purple_circ_buffer_append(conn->buffer_outgoing, bs->data, bs->len);
+	purple_circular_buffer_append(conn->buffer_outgoing, bs->data, bs->len);
 
 	/* If we haven't already started writing stuff, then start the cycle */
 	if ((conn->watcher_outgoing == 0) && (conn->fd >= 0))
@@ -686,7 +688,7 @@ peer_connection_establish_listener_cb(int listenerfd, gpointer data)
 	OscarData *od;
 	PurpleConnection *gc;
 	PurpleAccount *account;
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	char *tmp;
 	FlapConnection *bos_conn;
 	const char *listener_ip;
@@ -750,10 +752,11 @@ peer_connection_establish_listener_cb(int listenerfd, gpointer data)
 				listener_port, ++conn->lastrequestnumber);
 
 		/* Print a message to a local conversation window */
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
+		im = purple_im_conversation_new(account, conn->bn);
 		tmp = g_strdup_printf(_("Asking %s to connect to us at %s:%hu for "
 				"Direct IM."), conn->bn, listener_ip, listener_port);
-		purple_conversation_write(conv, NULL, tmp, PURPLE_MESSAGE_SYSTEM, time(NULL));
+		purple_conversation_write(PURPLE_CONVERSATION(im), NULL, tmp,
+				PURPLE_MESSAGE_SYSTEM, time(NULL));
 		g_free(tmp);
 	}
 	else if (conn->type == OSCAR_CAPABILITY_SENDFILE)
@@ -835,11 +838,11 @@ peer_connection_trynext(PeerConnection *conn)
 		if (conn->type == OSCAR_CAPABILITY_DIRECTIM)
 		{
 			gchar *tmp;
-			PurpleConversation *conv;
+			PurpleIMConversation *im;
 			tmp = g_strdup_printf(_("Attempting to connect to %s:%hu."),
 					conn->verifiedip, conn->port);
-			conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
-			purple_conversation_write(conv, NULL, tmp,
+			im = purple_im_conversation_new(account, conn->bn);
+			purple_conversation_write(PURPLE_CONVERSATION(im), NULL, tmp,
 					PURPLE_MESSAGE_SYSTEM, time(NULL));
 			g_free(tmp);
 		}
@@ -909,10 +912,10 @@ peer_connection_trynext(PeerConnection *conn)
 		if (conn->type == OSCAR_CAPABILITY_DIRECTIM)
 		{
 			gchar *tmp;
-			PurpleConversation *conv;
+			PurpleIMConversation *im;
 			tmp = g_strdup(_("Attempting to connect via proxy server."));
-			conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
-			purple_conversation_write(conv, NULL, tmp,
+			im = purple_im_conversation_new(account, conn->bn);
+			purple_conversation_write(PURPLE_CONVERSATION(im), NULL, tmp,
 					PURPLE_MESSAGE_SYSTEM, time(NULL));
 			g_free(tmp);
 		}
@@ -950,15 +953,14 @@ peer_connection_propose(OscarData *od, guint64 type, const char *bn)
 			if (conn->ready)
 			{
 				PurpleAccount *account;
-				PurpleConversation *conv;
+				PurpleIMConversation *im;
 
 				purple_debug_info("oscar", "Already have a direct IM "
 						"session with %s.\n", bn);
 				account = purple_connection_get_account(od->gc);
-				conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-						bn, account);
-				if (conv != NULL)
-					purple_conversation_present(conv);
+				im = purple_conversations_find_im_with_account(bn, account);
+				if (im != NULL)
+					purple_conversation_present(PURPLE_CONVERSATION(im));
 				return;
 			}
 

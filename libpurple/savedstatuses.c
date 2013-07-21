@@ -1172,6 +1172,33 @@ purple_savedstatus_activate_for_account(const PurpleSavedStatus *saved_status,
 	}
 }
 
+static PurpleSavedStatus *
+purple_savedstatus_copy(PurpleSavedStatus *savedstatus)
+{
+	PurpleSavedStatus *savedstatus_copy;
+
+	g_return_val_if_fail(savedstatus != NULL, NULL);
+
+	savedstatus_copy = g_new(PurpleSavedStatus, 1);
+	*savedstatus_copy = *savedstatus;
+
+	return savedstatus_copy;
+}
+
+GType
+purple_savedstatus_get_g_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleSavedStatus",
+				(GBoxedCopyFunc)purple_savedstatus_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
 void *
 purple_savedstatuses_get_handle(void)
 {
@@ -1204,26 +1231,20 @@ purple_savedstatuses_init(void)
 	load_statuses();
 
 	purple_signal_register(handle, "savedstatus-changed",
-					 purple_marshal_VOID__POINTER_POINTER, NULL, 2,
-					 purple_value_new(PURPLE_TYPE_SUBTYPE,
-									PURPLE_SUBTYPE_SAVEDSTATUS),
-					 purple_value_new(PURPLE_TYPE_SUBTYPE,
-									PURPLE_SUBTYPE_SAVEDSTATUS));
+					 purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
+					 PURPLE_TYPE_SAVEDSTATUS, PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_register(handle, "savedstatus-added",
-		purple_marshal_VOID__POINTER, NULL, 1,
-		purple_value_new(PURPLE_TYPE_SUBTYPE,
-			PURPLE_SUBTYPE_SAVEDSTATUS));
+		purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+		PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_register(handle, "savedstatus-deleted",
-		purple_marshal_VOID__POINTER, NULL, 1,
-		purple_value_new(PURPLE_TYPE_SUBTYPE,
-			PURPLE_SUBTYPE_SAVEDSTATUS));
+		purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+		PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_register(handle, "savedstatus-modified",
-		purple_marshal_VOID__POINTER, NULL, 1,
-		purple_value_new(PURPLE_TYPE_SUBTYPE,
-			PURPLE_SUBTYPE_SAVEDSTATUS));
+		purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+		PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_connect(purple_accounts_get_handle(), "account-removed",
 			handle,
