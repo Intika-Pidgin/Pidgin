@@ -32,7 +32,7 @@
 #include "gtkplugin.h"
 #include "gtkutils.h"
 
-#include "blist.h"
+#include "buddylist.h"
 #include "notify.h"
 #include "version.h"
 #include "debug.h"
@@ -99,7 +99,7 @@ static void buddy_signed_on(PurpleBuddy *buddy);
 /* buddy-signed-off */
 static void buddy_signed_off(PurpleBuddy *buddy);
 /* drawing-tooltip */
-static void drawing_tooltip(PurpleBlistNode *node, GString *text, gboolean full);
+static void drawing_tooltip(PurpleBListNode *node, GString *text, gboolean full);
 /* signed-on */
 static void signed_on(PurpleConnection *gc);
 /* signed-off */

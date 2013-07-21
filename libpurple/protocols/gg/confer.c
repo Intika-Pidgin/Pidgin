@@ -27,12 +27,12 @@
 #include "confer.h"
 
 /* PurpleConversation *ggp_confer_find_by_name(PurpleConnection *gc, const gchar *name) {{{ */
-PurpleConversation *ggp_confer_find_by_name(PurpleConnection *gc, const gchar *name)
+PurpleChatConversation *ggp_confer_find_by_name(PurpleConnection *gc, const gchar *name)
 {
 	g_return_val_if_fail(gc   != NULL, NULL);
 	g_return_val_if_fail(name != NULL, NULL);
 
-	return purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, name,
+	return purple_conversations_find_chat_with_account(name,
 			purple_connection_get_account(gc));
 }
 /* }}} */
@@ -41,7 +41,7 @@ PurpleConversation *ggp_confer_find_by_name(PurpleConnection *gc, const gchar *n
 void ggp_confer_participants_add_uin(PurpleConnection *gc, const gchar *chat_name,
 							 const uin_t uin)
 {
-	PurpleConversation *conv;
+	PurpleChatConversation *conv;
 	GGPInfo *info = purple_connection_get_protocol_data(gc);
 	GGPChat *chat;
 	GList *l;
@@ -59,8 +59,8 @@ void ggp_confer_participants_add_uin(PurpleConnection *gc, const gchar *chat_nam
 
 			str_uin = g_strdup_printf("%lu", (unsigned long int)uin);
 			conv = ggp_confer_find_by_name(gc, chat_name);
-			purple_conv_chat_add_user(PURPLE_CONV_CHAT(conv), str_uin, NULL,
-						PURPLE_CBFLAGS_NONE, TRUE);
+			purple_chat_conversation_add_user(conv, str_uin, NULL,
+						PURPLE_CHAT_USER_NONE, TRUE);
 
 			g_free(str_uin);
 		}
@@ -85,7 +85,7 @@ void ggp_confer_participants_add(PurpleConnection *gc, const gchar *chat_name,
 			continue;
 
 		for (i = 0; i < count; i++) {
-			PurpleConversation *conv;
+			PurpleChatConversation *conv;
 
 			if (g_list_find(chat->participants,
 					GINT_TO_POINTER(recipients[i])) != NULL) {
@@ -97,9 +97,8 @@ void ggp_confer_participants_add(PurpleConnection *gc, const gchar *chat_name,
 
 			str_uin = g_strdup_printf("%lu", (unsigned long int)recipients[i]);
 			conv = ggp_confer_find_by_name(gc, chat_name);
-			purple_conv_chat_add_user(PURPLE_CONV_CHAT(conv),
-						str_uin, NULL,
-						PURPLE_CBFLAGS_NONE, TRUE);
+			purple_chat_conversation_add_user(conv, str_uin, NULL,
+						PURPLE_CHAT_USER_NONE, TRUE);
 			g_free(str_uin);
 		}
 		break;

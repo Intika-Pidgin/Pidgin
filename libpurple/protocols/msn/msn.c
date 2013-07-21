@@ -770,7 +770,7 @@ msn_show_hotmail_inbox(PurplePluginAction *action)
 }
 
 static void
-show_send_to_mobile_cb(PurpleBlistNode *node, gpointer ignored)
+show_send_to_mobile_cb(PurpleBListNode *node, gpointer ignored)
 {
 	PurpleBuddy *buddy;
 	PurpleConnection *gc;
@@ -778,7 +778,7 @@ show_send_to_mobile_cb(PurpleBlistNode *node, gpointer ignored)
 	PurpleAccount *account;
 	const char *name;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	account = purple_buddy_get_account(buddy);
@@ -814,8 +814,8 @@ msn_send_privacy(PurpleConnection *gc)
 	session = purple_connection_get_protocol_data(gc);
 	cmdproc = session->notification->cmdproc;
 
-	if (purple_account_get_privacy_type(account) == PURPLE_PRIVACY_ALLOW_ALL ||
-	    purple_account_get_privacy_type(account) == PURPLE_PRIVACY_DENY_USERS)
+	if (purple_account_get_privacy_type(account) == PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL ||
+	    purple_account_get_privacy_type(account) == PURPLE_ACCOUNT_PRIVACY_DENY_USERS)
 		trans = msn_transaction_new(cmdproc, "BLP", "%s", "AL");
 	else
 		trans = msn_transaction_new(cmdproc, "BLP", "%s", "BL");
@@ -824,7 +824,7 @@ msn_send_privacy(PurpleConnection *gc)
 }
 
 static void
-initiate_chat_cb(PurpleBlistNode *node, gpointer data)
+initiate_chat_cb(PurpleBListNode *node, gpointer data)
 {
 	PurpleBuddy *buddy;
 	PurpleConnection *gc;
@@ -835,7 +835,7 @@ initiate_chat_cb(PurpleBlistNode *node, gpointer data)
 
 	const char *alias;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	account = purple_buddy_get_account(buddy);
@@ -849,16 +849,17 @@ initiate_chat_cb(PurpleBlistNode *node, gpointer data)
 
 	/* TODO: This might move somewhere else, after USR might be */
 	swboard->chat_id = msn_switchboard_get_chat_id();
-	swboard->conv = serv_got_joined_chat(gc, swboard->chat_id, "MSN Chat");
+	swboard->conv = PURPLE_CONVERSATION(serv_got_joined_chat(gc,
+			swboard->chat_id, "MSN Chat"));
 	swboard->flag = MSN_SB_FLAG_IM;
 
 	/* Local alias > Display name > Username */
-	if ((alias = purple_account_get_alias(account)) == NULL)
+	if ((alias = purple_account_get_private_alias(account)) == NULL)
 		if ((alias = purple_connection_get_display_name(gc)) == NULL)
 			alias = purple_account_get_username(account);
 
-	purple_conv_chat_add_user(PURPLE_CONV_CHAT(swboard->conv),
-	                          alias, NULL, PURPLE_CBFLAGS_NONE, TRUE);
+	purple_chat_conversation_add_user(PURPLE_CHAT_CONVERSATION(swboard->conv),
+	                          alias, NULL, PURPLE_CHAT_USER_NONE, TRUE);
 }
 
 static void
@@ -1151,35 +1152,35 @@ msn_status_types(PurpleAccount *account)
 
 	status = purple_status_type_new_with_attrs(
 				PURPLE_STATUS_AVAILABLE, NULL, NULL, TRUE, TRUE, FALSE,
-				"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+				"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
 				NULL);
 	types = g_list_append(types, status);
 
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_AWAY, NULL, NULL, TRUE, TRUE, FALSE,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_AWAY, "brb", _("Be Right Back"), TRUE, TRUE, FALSE,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_UNAVAILABLE, "busy", _("Busy"), TRUE, TRUE, FALSE,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_UNAVAILABLE, "phone", _("On the Phone"), TRUE, TRUE, FALSE,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 	status = purple_status_type_new_with_attrs(
 			PURPLE_STATUS_AWAY, "lunch", _("Out to Lunch"), TRUE, TRUE, FALSE,
-			"message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+			"message", _("Message"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 
@@ -1197,11 +1198,11 @@ msn_status_types(PurpleAccount *account)
 
 	status = purple_status_type_new_with_attrs(PURPLE_STATUS_TUNE,
 			"tune", NULL, FALSE, TRUE, TRUE,
-			PURPLE_TUNE_ARTIST, _("Tune Artist"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_ALBUM, _("Tune Album"), purple_value_new(PURPLE_TYPE_STRING),
-			PURPLE_TUNE_TITLE, _("Tune Title"), purple_value_new(PURPLE_TYPE_STRING),
-			"game", _("Game Title"), purple_value_new(PURPLE_TYPE_STRING),
-			"office", _("Office Title"), purple_value_new(PURPLE_TYPE_STRING),
+			PURPLE_TUNE_ARTIST, _("Tune Artist"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_ALBUM, _("Tune Album"), purple_g_value_new(G_TYPE_STRING),
+			PURPLE_TUNE_TITLE, _("Tune Title"), purple_g_value_new(G_TYPE_STRING),
+			"game", _("Game Title"), purple_g_value_new(G_TYPE_STRING),
+			"office", _("Office Title"), purple_g_value_new(G_TYPE_STRING),
 			NULL);
 	types = g_list_append(types, status);
 
@@ -1311,9 +1312,9 @@ msn_buddy_menu(PurpleBuddy *buddy)
 }
 
 static GList *
-msn_blist_node_menu(PurpleBlistNode *node)
+msn_blist_node_menu(PurpleBListNode *node)
 {
-	if(PURPLE_BLIST_NODE_IS_BUDDY(node))
+	if(PURPLE_IS_BUDDY(node))
 	{
 		return msn_buddy_menu((PurpleBuddy *) node);
 	}
@@ -1356,8 +1357,8 @@ msn_login(PurpleAccount *account)
 
 	purple_connection_set_protocol_data(gc, session);
 	purple_connection_set_flags(gc, 
-		PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_FORMATTING_WBFO | PURPLE_CONNECTION_NO_BGCOLOR |
-		PURPLE_CONNECTION_NO_FONTSIZE | PURPLE_CONNECTION_NO_URLDESC | PURPLE_CONNECTION_ALLOW_CUSTOM_SMILEY);
+		PURPLE_CONNECTION_FLAG_HTML | PURPLE_CONNECTION_FLAG_FORMATTING_WBFO | PURPLE_CONNECTION_FLAG_NO_BGCOLOR |
+		PURPLE_CONNECTION_FLAG_NO_FONTSIZE | PURPLE_CONNECTION_FLAG_NO_URLDESC | PURPLE_CONNECTION_FLAG_ALLOW_CUSTOM_SMILEY);
 
 	msn_session_set_login_step(session, MSN_LOGIN_STEP_START);
 
@@ -1528,7 +1529,7 @@ msn_send_im(PurpleConnection *gc, const char *who, const char *message,
 			PurpleMessageFlags flags)
 {
 	PurpleAccount *account;
-	PurpleBuddy *buddy = purple_find_buddy(purple_connection_get_account(gc), who);
+	PurpleBuddy *buddy = purple_blist_find_buddy(purple_connection_get_account(gc), who);
 	MsnSession *session;
 	MsnSwitchBoard *swboard;
 	MsnMessage *msg;
@@ -1639,7 +1640,7 @@ msn_send_im(PurpleConnection *gc, const char *who, const char *message,
 }
 
 static unsigned int
-msn_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state)
+msn_send_typing(PurpleConnection *gc, const char *who, PurpleIMTypingState state)
 {
 	PurpleAccount *account;
 	MsnSession *session;
@@ -1650,17 +1651,17 @@ msn_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state)
 	session = purple_connection_get_protocol_data(gc);
 
 	/*
-	 * TODO: I feel like this should be "if (state != PURPLE_TYPING)"
+	 * TODO: I feel like this should be "if (state != PURPLE_IM_TYPING)"
 	 *       but this is how it was before, and I don't want to break
 	 *       anything. --KingAnt
 	 */
-	if (state == PURPLE_NOT_TYPING)
+	if (state == PURPLE_IM_NOT_TYPING)
 		return 0;
 
 	if (!g_ascii_strcasecmp(who, purple_account_get_username(account)))
 	{
 		/* We'll just fake it, since we're sending to ourself. */
-		serv_got_typing(gc, who, MSN_TYPING_RECV_TIMEOUT, PURPLE_TYPING);
+		serv_got_typing(gc, who, MSN_TYPING_RECV_TIMEOUT, PURPLE_IM_TYPING);
 
 		return MSN_TYPING_SEND_TIMEOUT;
 	}
@@ -1785,7 +1786,7 @@ msn_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group, cons
 	if (!msn_email_is_valid(bname)) {
 		gchar *buf;
 		buf = g_strdup_printf(_("Unable to add the buddy %s because the username is invalid.  Usernames must be valid email addresses."), bname);
-		if (!purple_conv_present_error(bname, account, buf))
+		if (!purple_conversation_helper_present_error(bname, account, buf))
 			purple_notify_error(pc, NULL, _("Unable to Add"), buf);
 		g_free(buf);
 
@@ -1796,7 +1797,7 @@ msn_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group, cons
 	}
 
 	/* Make sure name is normalized */
-	purple_blist_rename_buddy(buddy, bname);
+	purple_buddy_set_name(buddy, bname);
 
 	userlist = session->userlist;
 	user = msn_userlist_find_user(userlist, bname);
@@ -1970,7 +1971,7 @@ msn_chat_invite(PurpleConnection *gc, int id, const char *msg,
 		swboard = msn_switchboard_new(session);
 		msn_switchboard_request(swboard);
 		swboard->chat_id = id;
-		swboard->conv = purple_find_chat(gc, id);
+		swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_chat(gc, id));
 	}
 
 	swboard->flag |= MSN_SB_FLAG_IM;
@@ -2052,14 +2053,14 @@ msn_chat_send(PurpleConnection *gc, int id, const char *message, PurpleMessageFl
 	while (smileys) {
 		smile = (MsnEmoticon *)smileys->data;
 		emoticons = msn_msg_emoticon_add(emoticons, smile);
-		if (purple_conv_custom_smiley_add(swboard->conv, smile->smile,
+		if (purple_conversation_custom_smiley_add(swboard->conv, smile->smile,
 		                                  "sha1", purple_smiley_get_checksum(smile->ps),
 		                                  FALSE)) {
 			gconstpointer data;
 			size_t len;
 			data = purple_smiley_get_data(smile->ps, &len);
-			purple_conv_custom_smiley_write(swboard->conv, smile->smile, data, len);
-			purple_conv_custom_smiley_close(swboard->conv, smile->smile);
+			purple_conversation_custom_smiley_write(swboard->conv, smile->smile, data, len);
+			purple_conversation_custom_smiley_close(swboard->conv, smile->smile);
 		}
 		msn_emoticon_destroy(smile);
 		smileys = g_slist_delete_link(smileys, smileys);
@@ -2228,7 +2229,7 @@ msn_tooltip_extract_info_text(PurpleNotifyUserInfo *user_info, MsnGetInfoData *i
 {
 	PurpleBuddy *b;
 
-	b = purple_find_buddy(purple_connection_get_account(info_data->gc),
+	b = purple_blist_find_buddy(purple_connection_get_account(info_data->gc),
 						info_data->name);
 
 	if (b)
@@ -2236,7 +2237,7 @@ msn_tooltip_extract_info_text(PurpleNotifyUserInfo *user_info, MsnGetInfoData *i
 		char *tmp;
 		const char *alias;
 
-		alias = purple_buddy_get_local_buddy_alias(b);
+		alias = purple_buddy_get_local_alias(b);
 		if (alias && alias[0])
 		{
 			purple_notify_user_info_add_pair_plaintext(user_info, _("Alias"), alias);
@@ -2689,7 +2690,7 @@ msn_got_info(PurpleHttpConnection *http_conn,
 		char *p = strstr(url_buffer, "form id=\"SpacesSearch\" name=\"SpacesSearch\"");
 		 * Let's see how long this one holds out for ... */
 		char *p = strstr(url_buffer, "<form id=\"profile_form\" name=\"profile_form\" action=\"http&#58;&#47;&#47;spaces.live.com&#47;profile.aspx&#63;cid&#61;0\"");
-		PurpleBuddy *b = purple_find_buddy
+		PurpleBuddy *b = purple_blist_find_buddy
 				(purple_connection_get_account(info_data->gc), info_data->name);
 		purple_notify_user_info_add_pair_html(user_info,
 				_("Error retrieving profile"), NULL);
@@ -2867,11 +2868,11 @@ static gboolean msn_uri_handler(const char *proto, const char *cmd, GHashTable *
 	if (!g_ascii_strcasecmp(cmd, "Chat")) {
 		char *sname = g_hash_table_lookup(params, "contact");
 		if (sname) {
-			PurpleConversation *conv = purple_find_conversation_with_account(
-				PURPLE_CONV_TYPE_IM, sname, acct);
-			if (conv == NULL)
-				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, sname);
-			purple_conversation_present(conv);
+			PurpleIMConversation *im = purple_conversations_find_im_with_account(
+				sname, acct);
+			if (im == NULL)
+				im = purple_im_conversation_new(acct, sname);
+			purple_conversation_present(PURPLE_CONVERSATION(im));
 		}
 		/*else
 			**If pidgindialogs_im() was in the core, we could use it here.

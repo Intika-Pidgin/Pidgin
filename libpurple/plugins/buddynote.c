@@ -26,18 +26,18 @@
 #include <version.h>
 
 static void
-dont_do_it_cb(PurpleBlistNode *node, const char *note)
+dont_do_it_cb(PurpleBListNode *node, const char *note)
 {
 }
 
 static void
-do_it_cb(PurpleBlistNode *node, const char *note)
+do_it_cb(PurpleBListNode *node, const char *note)
 {
 	purple_blist_node_set_string(node, "notes", note);
 }
 
 static void
-buddynote_edit_cb(PurpleBlistNode *node, gpointer data)
+buddynote_edit_cb(PurpleBListNode *node, gpointer data)
 {
 	const char *note;
 
@@ -54,11 +54,11 @@ buddynote_edit_cb(PurpleBlistNode *node, gpointer data)
 }
 
 static void
-buddynote_extended_menu_cb(PurpleBlistNode *node, GList **m)
+buddynote_extended_menu_cb(PurpleBListNode *node, GList **m)
 {
 	PurpleMenuAction *bna = NULL;
 
-	if (purple_blist_node_get_flags(node) & PURPLE_BLIST_NODE_FLAG_NO_SAVE)
+	if (purple_blist_node_get_dont_save(node))
 		return;
 
 	*m = g_list_append(*m, bna);
