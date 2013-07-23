@@ -14,7 +14,6 @@
 #include <string.h>
 #include "mono-helper.h"
 #include "mono-glue.h"
-#include "value.h"
 #include "debug.h"
 
 static gboolean _runtime_active = FALSE;
