@@ -55,7 +55,7 @@ is_buddy_on_list(OscarData *od, const char *bname)
 }
 
 static void
-visibility_cb(PurpleBlistNode *node, gpointer whatever)
+visibility_cb(PurpleBListNode *node, gpointer whatever)
 {
 	PurpleBuddy *buddy = PURPLE_BUDDY(node);
 	const char* bname = purple_buddy_get_name(buddy);
@@ -94,7 +94,7 @@ show_private_list(PurplePluginAction *action, guint16 list_type, const gchar *ti
 	GSList *buddies, *filtered_buddies, *cur;
 	gchar *text, *secondary;
 
-	buddies = purple_find_buddies(account, NULL);
+	buddies = purple_blist_find_buddies(account, NULL);
 	filtered_buddies = NULL;
 	for (cur = buddies; cur != NULL; cur = cur->next) {
 		PurpleBuddy *buddy;

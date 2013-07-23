@@ -21,7 +21,7 @@
  *
  */
 #include "internal.h"
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "core.h"
 #include "cipher.h"
 #include "debug.h"
@@ -56,7 +56,7 @@ struct _PurpleBOSHConnection {
 	JabberStream *js;
 	PurpleHTTPConnection *connections[NUM_HTTP_CONNECTIONS];
 
-	PurpleCircBuffer *pending;
+	PurpleCircularBuffer *pending;
 	PurpleBOSHConnectionConnectFunction connect_cb;
 	PurpleBOSHConnectionReceiveFunction receive_cb;
 
@@ -91,7 +91,7 @@ struct _PurpleHTTPConnection {
 	PurpleBOSHConnection *bosh;
 	PurpleSslConnection *psc;
 
-	PurpleCircBuffer *write_buf;
+	PurpleCircularBuffer *write_buf;
 	GString *read_buf;
 
 	gsize handled_len;
@@ -169,7 +169,7 @@ jabber_bosh_http_connection_init(PurpleBOSHConnection *bosh)
 	conn->fd = -1;
 	conn->state = HTTP_CONN_OFFLINE;
 
-	conn->write_buf = purple_circ_buffer_new(0 /* default grow size */);
+	conn->write_buf = purple_circular_buffer_new(0 /* default grow size */);
 
 	return conn;
 }
@@ -181,7 +181,7 @@ jabber_bosh_http_connection_destroy(PurpleHTTPConnection *conn)
 		g_string_free(conn->read_buf, TRUE);
 
 	if (conn->write_buf)
-		purple_circ_buffer_destroy(conn->write_buf);
+		g_object_unref(G_OBJECT(conn->write_buf));
 	if (conn->readh)
 		purple_input_remove(conn->readh);
 	if (conn->writeh)
@@ -239,7 +239,7 @@ jabber_bosh_connection_init(JabberStream *js, const char *url)
 	conn->rid = ((guint64)g_random_int() << 32) | g_random_int();
 	conn->rid &= 0xFFFFFFFFFFFFFLL;
 
-	conn->pending = purple_circ_buffer_new(0 /* default grow size */);
+	conn->pending = purple_circular_buffer_new(0 /* default grow size */);
 
 	conn->state = BOSH_CONN_OFFLINE;
 	if (purple_strcasestr(url, "https://") != NULL)
@@ -263,7 +263,7 @@ jabber_bosh_connection_destroy(PurpleBOSHConnection *conn)
 	if (conn->send_timer)
 		purple_timeout_remove(conn->send_timer);
 
-	purple_circ_buffer_destroy(conn->pending);
+	g_object_unref(G_OBJECT(conn->pending));
 
 	for (i = 0; i < NUM_HTTP_CONNECTIONS; ++i) {
 		if (conn->connections[i])
@@ -350,11 +350,14 @@ jabber_bosh_connection_send(PurpleBOSHConnection *conn,
 		 * the buffer.
 		 */
 		if (data)
-			purple_circ_buffer_append(conn->pending, data, strlen(data));
+			purple_circular_buffer_append(conn->pending, data, strlen(data));
 
-		if (purple_debug_is_verbose())
+		if (purple_debug_is_verbose()) {
+			gsize bufused = purple_circular_buffer_get_used(conn->pending);
 			purple_debug_misc("jabber", "bosh: %p has %" G_GSIZE_FORMAT " bytes in "
-			                  "the buffer.\n", conn, conn->pending->bufused);
+			                  "the buffer.\n", conn, bufused);
+		}
+
 		if (conn->send_timer == 0)
 			conn->send_timer = purple_timeout_add_seconds(BUFFER_SEND_IN_SECS,
 					send_timer_cb, conn);
@@ -409,9 +412,10 @@ jabber_bosh_connection_send(PurpleBOSHConnection *conn,
 
 		packet = g_string_append_c(packet, '>');
 
-		while ((read_amt = purple_circ_buffer_get_max_read(conn->pending)) > 0) {
-			packet = g_string_append_len(packet, conn->pending->outptr, read_amt);
-			purple_circ_buffer_mark_read(conn->pending, read_amt);
+		while ((read_amt = purple_circular_buffer_get_max_read(conn->pending)) > 0) {
+			const gchar *output = purple_circular_buffer_get_output(conn->pending);
+			packet = g_string_append_len(packet, output, read_amt);
+			purple_circular_buffer_mark_read(conn->pending, read_amt);
 		}
 
 		if (data)
@@ -678,7 +682,7 @@ connection_common_established_cb(PurpleHTTPConnection *conn)
 		jabber_bosh_connection_send(conn->bosh, PACKET_NORMAL, NULL);
 	else if (conn->bosh->state == BOSH_CONN_ONLINE) {
 		purple_debug_info("jabber", "BOSH session already exists. Trying to reuse it.\n");
-		if (conn->bosh->requests == 0 || conn->bosh->pending->bufused > 0) {
+		if (conn->bosh->requests == 0 || purple_circular_buffer_get_used(conn->bosh->pending) > 0) {
 			/* Send the pending data */
 			jabber_bosh_connection_send(conn->bosh, PACKET_FLUSH, NULL);
 		}
@@ -832,7 +836,9 @@ jabber_bosh_http_connection_process(PurpleHTTPConnection *conn)
 	}
 
 	if (conn->bosh->state == BOSH_CONN_ONLINE &&
-			(conn->bosh->requests == 0 || conn->bosh->pending->bufused > 0)) {
+			(conn->bosh->requests == 0 ||
+			purple_circular_buffer_get_used(conn->bosh->pending) > 0))
+	{
 		purple_debug_misc("jabber", "BOSH: Sending an empty request\n");
 		jabber_bosh_connection_send(conn->bosh, PACKET_NORMAL, NULL);
 	}
@@ -1001,8 +1007,9 @@ static void
 http_connection_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	PurpleHTTPConnection *conn = data;
+	const gchar *output = NULL;
 	int ret;
-	int writelen = purple_circ_buffer_get_max_read(conn->write_buf);
+	int writelen = purple_circular_buffer_get_max_read(conn->write_buf);
 
 	if (writelen == 0) {
 		purple_input_remove(conn->writeh);
@@ -1010,7 +1017,8 @@ http_connection_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	ret = http_connection_do_send(conn, conn->write_buf->outptr, writelen);
+	output = purple_circular_buffer_get_output(conn->write_buf);
+	ret = http_connection_do_send(conn, output, writelen);
 
 	if (ret < 0 && errno == EAGAIN)
 		return;
@@ -1029,7 +1037,7 @@ http_connection_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	purple_circ_buffer_mark_read(conn->write_buf, ret);
+	purple_circular_buffer_mark_read(conn->write_buf, ret);
 }
 
 static void
@@ -1089,7 +1097,7 @@ http_connection_send_request(PurpleHTTPConnection *conn, const GString *req)
 		if (conn->writeh == 0)
 			conn->writeh = purple_input_add(conn->psc ? conn->psc->fd : conn->fd,
 					PURPLE_INPUT_WRITE, http_connection_send_cb, conn);
-		purple_circ_buffer_append(conn->write_buf, data + ret, len - ret);
+		purple_circular_buffer_append(conn->write_buf, data + ret, len - ret);
 	}
 }
 
