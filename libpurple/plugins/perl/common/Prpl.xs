@@ -4,7 +4,7 @@ MODULE = Purple::Prpl  PACKAGE = Purple::Find  PREFIX = purple_find_
 PROTOTYPES: ENABLE
 
 Purple::Plugin
-purple_find_prpl(id)
+purple_find_protocol_info(id)
 	const char *id
 
 MODULE = Purple::Prpl  PACKAGE = Purple::Prpl  PREFIX = purple_prpl_
@@ -65,7 +65,7 @@ CODE:
 	if (!gc)
 		RETVAL = 0;
 	else {
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_protocol_info(gc));
 		if (prpl_info && prpl_info->send_raw != NULL) {
 			RETVAL = prpl_info->send_raw(gc, str, strlen(str));
 		} else {
