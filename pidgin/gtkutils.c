@@ -921,7 +921,7 @@ void pidgin_retrieve_user_info_in_chat(PurpleConnection *conn, const char *name,
 		return;
 	}
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(conn));
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_protocol_info(conn));
 	if (prpl_info != NULL && prpl_info->get_cb_real_name)
 		who = prpl_info->get_cb_real_name(conn, chat, name);
 	if (prpl_info == NULL || prpl_info->get_cb_info == NULL) {
@@ -1047,7 +1047,7 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 					gc = (PurpleConnection *)l->data;
 					account = purple_connection_get_account(gc);
 
-					prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+					prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_protocol_info(gc));
 				}
 
 				protoname = prpl_info->list_icon(account, NULL);
@@ -1089,7 +1089,7 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 						gc = (PurpleConnection *)l->data;
 						account = purple_connection_get_account(gc);
 
-						prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+						prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_protocol_info(gc));
 					}
 
 					protoname = prpl_info->list_icon(account, NULL);
@@ -1498,7 +1498,7 @@ pidgin_dnd_file_manage(GtkSelectionData *sd, PurpleAccount *account, const char 
 			data->account = account;
 
 			if (gc)
-				prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+				prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_protocol_info(gc));
 
 			if (prpl_info && prpl_info->options & OPT_PROTO_IM_IMAGE)
 				im = TRUE;
@@ -1703,7 +1703,7 @@ pidgin_create_prpl_icon(PurpleAccount *account, PidginPrplIconSize size)
 
 	g_return_val_if_fail(account != NULL, NULL);
 
-	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	prpl = purple_find_protocol_info(purple_account_get_protocol_id(account));
 	if (prpl == NULL)
 		return NULL;
 	return pidgin_create_prpl_icon_from_prpl(prpl, size, account);
@@ -2269,9 +2269,8 @@ str_array_match(char **a, char **b)
 }
 
 gpointer
-pidgin_convert_buddy_icon(PurplePlugin *plugin, const char *path, size_t *len)
+pidgin_convert_buddy_icon(PurplePluginProtocolInfo *prpl_info, const char *path, size_t *len)
 {
-	PurplePluginProtocolInfo *prpl_info;
 	PurpleBuddyIconSpec *spec;
 	int orig_width, orig_height, new_width, new_height;
 	GdkPixbufFormat *format;
@@ -2285,7 +2284,6 @@ pidgin_convert_buddy_icon(PurplePlugin *plugin, const char *path, size_t *len)
 	int i;
 	gchar *tmp;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
 	spec = &prpl_info->icon_spec;
 	g_return_val_if_fail(spec->format != NULL, NULL);
 
@@ -2432,7 +2430,7 @@ pidgin_convert_buddy_icon(PurplePlugin *plugin, const char *path, size_t *len)
 	g_object_unref(G_OBJECT(original));
 
 	tmp = g_strdup_printf(_("The file '%s' is too large for %s.  Please try a smaller image.\n"),
-			path, plugin->info->name);
+			path, prpl_info->name);
 	purple_notify_error(NULL, _("Icon Error"), _("Could not set icon"), tmp);
 	g_free(tmp);
 
