@@ -49,9 +49,9 @@ static void
 bud(PurpleBuddy *who)
 {
 	PurpleAccount *acct = who->account;
-	PurpleConversation *conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, who->name);
+	PurpleConversation *conv = purple_im_conversation_new(acct, who->name);
 
-	purple_conv_im_send(PURPLE_CONV_IM(conv), "Hello!");
+	purple_im_conversation_send(PURPLE_CONV_IM(conv), "Hello!");
 }
 
 /*
