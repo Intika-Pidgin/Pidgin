@@ -32,6 +32,10 @@
 
 typedef struct _PurplePluginProtocolInfo PurplePluginProtocolInfo;
 
+typedef struct _PurpleProtocolAction PurpleProtocolAction;
+
+typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *);
+
 /** Represents "nudges" and "buzzes" that you may send to a buddy to attract
  *  their attention (or vice-versa).
  */
@@ -78,7 +82,7 @@ typedef struct _PurpleThumbnailSpec PurpleThumbnailSpec;
 #include "media.h"
 #include "notify.h"
 #include "proxy.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "roomlist.h"
 #include "status.h"
 #include "whiteboard.h"
@@ -210,6 +214,16 @@ typedef enum
 } PurpleProtocolOptions;
 
 /**
+ * Represents an action that the protocol can perform. This shows up in the
+ * Accounts menu, under a submenu with the name of the account.
+ */
+struct _PurpleProtocolAction {
+	char *label;
+	PurpleProtocolActionCallback callback;
+	PurpleConnection *connection;
+};
+
+/**
  * A protocol plugin information structure.
  *
  * Every protocol plugin initializes this structure. It is the gateway
@@ -218,6 +232,9 @@ typedef enum
  */
 struct _PurplePluginProtocolInfo
 {
+	const char *id;
+	const char *name;
+
 	/**
 	 * The size of the PurplePluginProtocolInfo. This should always be sizeof(PurplePluginProtocolInfo).
 	 * This allows adding more functions to this struct without requiring a major version bump.
@@ -243,6 +260,11 @@ struct _PurplePluginProtocolInfo
 
 	GList *user_splits;      /**< A GList of PurpleAccountUserSplit */
 	GList *protocol_options; /**< A GList of PurpleAccountOption    */
+
+	/**
+	 * Actions that the protocol can perform
+	 */
+	GList *actions;
 
 	PurpleBuddyIconSpec icon_spec; /**< The icon spec. */
 
@@ -634,13 +656,6 @@ struct _PurplePluginProtocolInfo
 	(G_STRUCT_OFFSET(PurplePluginProtocolInfo, member) < prpl->struct_size && \
 	 prpl->member != NULL)
 
-
-#define PURPLE_IS_PROTOCOL_PLUGIN(plugin) \
-	((plugin)->info->type == PURPLE_PLUGIN_PROTOCOL)
-
-#define PURPLE_PLUGIN_PROTOCOL_INFO(plugin) \
-	((PurplePluginProtocolInfo *)(plugin)->info->extra_info)
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -953,19 +968,76 @@ gboolean purple_prpl_initiate_media(PurpleAccount *account,
  */
 void purple_prpl_got_media_caps(PurpleAccount *account, const char *who);
 
-/*@}*/
+/** TODO A sanity check is needed
+ * Adds a new action to a protocol.
+ *
+ * @param prpl_info The protocol to add the action to.
+ * @param label     The description of the action to show to the user.
+ * @param callback  The callback to call when the user selects this action.
+ */
+void purple_protocol_add_action(PurplePluginProtocolInfo *prpl_info,
+		const char* label, PurpleProtocolActionCallback callback);
 
 /**************************************************************************/
-/** @name Protocol Plugin Subsystem API                                   */
+/** @name Protocols API                                                   */
 /**************************************************************************/
 /*@{*/
 
 /**
- * Finds a protocol plugin structure of the specified type.
+ * Finds a protocol plugin info structure by ID.
  *
- * @param id The protocol plugin;
+ * @param id The protocol's ID.
  */
-PurplePlugin *purple_find_prpl(const char *id);
+PurplePluginProtocolInfo *purple_find_protocol_info(const char *id);
+
+/** TODO A sanity check is needed
+ * Adds a protocol to the list of protocols.
+ *
+ * @param prpl_info  The protocol to add.
+ *
+ * @return TRUE if the protocol was added, else FALSE.
+ */
+gboolean purple_protocols_add(PurplePluginProtocolInfo *prpl_info);
+
+/** TODO A sanity check is needed
+ * Removes a protocol from the list of protocols.
+ *
+ * @param prpl_info  The protocol to remove.
+ *
+ * @return TRUE if the protocol was removed, else FALSE.
+ */
+gboolean purple_protocols_remove(PurplePluginProtocolInfo *prpl_info);
+
+/** TODO A sanity check is needed
+ * Returns a list of all loaded protocols.
+ *
+ * @constreturn A list of all loaded protocols.
+ */
+GList *purple_protocols_get_all(void);
+
+/*@}*/
+
+/**************************************************************************/
+/** @name Protocols Subsytem API                                          */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Initializes the protocols subsystem.
+ */
+void purple_protocols_init(void);
+
+/** TODO Make protocols use this handle, instead of plugins handle
+ * Returns the protocols subsystem handle.
+ *
+ * @return The protocols subsystem handle.
+ */
+void *purple_protocols_get_handle(void);
+
+/**
+ * Uninitializes the protocols subsystem.
+ */
+void purple_protocols_uninit(void);
 
 /*@}*/
 
