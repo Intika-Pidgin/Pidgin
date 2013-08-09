@@ -44,7 +44,7 @@ ssl_init(void)
 	if (_ssl_initialized)
 		return FALSE;
 
-	plugin = purple_plugins_find_with_id("core-ssl");
+	plugin = purple_plugins_find_plugin("core-ssl");
 
 	if (plugin != NULL && !purple_plugin_is_loaded(plugin))
 		purple_plugin_load(plugin);
