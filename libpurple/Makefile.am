@@ -75,7 +75,7 @@ purple_coresources = \
 	network.c \
 	ntlm.c \
 	notify.c \
-	plugin.c \
+	plugins.c \
 	pluginpref.c \
 	pounce.c \
 	prefs.c \
@@ -146,7 +146,7 @@ purple_coreheaders = \
 	network.h \
 	notify.h \
 	ntlm.h \
-	plugin.h \
+	plugins.h \
 	pluginpref.h \
 	pounce.h \
 	prefs.h \
@@ -340,6 +340,7 @@ libpurple_la_LIBADD = \
 	$(STATIC_LINK_LIBS) \
 	$(DBUS_LIBS) \
 	$(GLIB_LIBS) \
+	$(GPLUGIN_LIBS) \
 	$(LIBXML_LIBS) \
 	$(NETWORKMANAGER_LIBS) \
 	$(INTLLIBS) \
@@ -360,6 +361,7 @@ AM_CPPFLAGS = \
 	-DLOCALEDIR=\"$(datadir)/locale\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \
