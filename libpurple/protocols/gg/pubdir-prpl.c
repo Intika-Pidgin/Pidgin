@@ -389,7 +389,7 @@ static void ggp_pubdir_get_info_prpl_got(PurpleConnection *gc,
 	g_assert(uin == record->uin);
 	g_assert(records_count == 1);
 	
-	buddy = purple_find_buddy(purple_connection_get_account(gc),
+	buddy = purple_blist_find_buddy(purple_connection_get_account(gc),
 		ggp_uin_to_str(uin));
 	if (buddy)
 	{
@@ -778,8 +778,8 @@ static void ggp_pubdir_search_results_add(PurpleConnection *gc, GList *row,
 static void ggp_pubdir_search_results_im(PurpleConnection *gc, GList *row,
 	gpointer _form)
 {
-	purple_conversation_present(purple_conversation_new(PURPLE_CONV_TYPE_IM,
-		purple_connection_get_account(gc), g_list_nth_data(row, 0)));
+	purple_conversation_present(PURPLE_CONVERSATION(purple_im_conversation_new(
+		purple_connection_get_account(gc), g_list_nth_data(row, 0))));
 }
 
 static void ggp_pubdir_search_results_info(PurpleConnection *gc, GList *row,
