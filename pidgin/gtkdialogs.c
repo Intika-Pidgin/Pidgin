@@ -31,7 +31,7 @@
 
 #include "debug.h"
 #include "notify.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "prpl.h"
 #include "request.h"
 #include "util.h"
@@ -686,12 +686,12 @@ void pidgin_dialogs_buildinfo(void)
 	g_string_append(str, "<dt>Network Security Services (NSS):</dt><dd>Disabled</dd>");
 #endif
 
-	if (purple_plugins_find_with_id("core-perl") != NULL)
+	if (purple_plugins_find_plugin("core-perl") != NULL)
 		g_string_append(str, "<dt>Perl:</dt><dd>Enabled</dd>");
 	else
 		g_string_append(str, "<dt>Perl:</dt><dd>Disabled</dd>");
 
-	if (purple_plugins_find_with_id("core-tcl") != NULL) {
+	if (purple_plugins_find_plugin("core-tcl") != NULL) {
 		g_string_append(str, "<dt>Tcl:</dt><dd>Enabled</dd>");
 #ifdef HAVE_TK
 		g_string_append(str, "<dt>Tk:</dt><dd>Enabled</dd>");
@@ -828,47 +828,58 @@ void pidgin_dialogs_translators(void)
 void pidgin_dialogs_plugins_info(void)
 {
 	GString *str;
-	GList *l = NULL;
+	GList *plugins, *l = NULL;
 	PurplePlugin *plugin = NULL;
+	PurplePluginInfo *info;
 	char *title = g_strdup_printf(_("%s Plugin Information"), PIDGIN_NAME);
 	char *pname = NULL, *pauthor = NULL;
-	const char *pver, *pwebsite, *pid;
-	gboolean ploaded, punloadable;
+	const char *pver, *plicense, *pwebsite, *pid;
+	gboolean ploaded, ploadable;
 	static GtkWidget *plugins_info = NULL;
 
 	str = g_string_sized_new(4096);
 
 	g_string_append_printf(str, "<h2>%s</h2><dl>", _("Plugin Information"));
 
-	for(l = purple_plugins_get_all(); l; l = l->next) {
-		plugin = (PurplePlugin *)l->data;
+	plugins = purple_plugins_find_all();
 
-		pname = g_markup_escape_text(purple_plugin_get_name(plugin), -1);
-		if ((pauthor = (char *)purple_plugin_get_author(plugin)) != NULL)
+	for(l = plugins; l; l = l->next) {
+		plugin = PURPLE_PLUGIN(l->data);
+		info = purple_plugin_get_info(plugin);
+
+		pname = g_markup_escape_text(purple_plugin_info_get_name(info), -1);
+		if ((pauthor = (char *)purple_plugin_info_get_author(info)) != NULL)
 			pauthor = g_markup_escape_text(pauthor, -1);
-		pver = purple_plugin_get_version(plugin);
-		pwebsite = purple_plugin_get_homepage(plugin);
-		pid = purple_plugin_get_id(plugin);
-		punloadable = purple_plugin_is_unloadable(plugin);
+		pver = purple_plugin_info_get_version(info);
+		plicense = purple_plugin_info_get_license(info);
+		pwebsite = purple_plugin_info_get_website(info);
+		pid = purple_plugin_info_get_id(info);
+		ploadable = !purple_plugin_info_get_error(info);
 		ploaded = purple_plugin_is_loaded(plugin);
 
 		g_string_append_printf(str,
 				"<dt>%s</dt><dd>"
 				"<b>Author:</b> %s<br/>"
 				"<b>Version:</b> %s<br/>"
+				"<b>License:</b> %s<br/>"
 				"<b>Website:</b> %s<br/>"
 				"<b>ID String:</b> %s<br/>"
 				"<b>Loadable:</b> %s<br/>"
 				"<b>Loaded:</b> %s"
 				"</dd><br/>",
-				pname, pauthor ? pauthor : "(null)",
-				pver, pwebsite, pid,
-				punloadable ? "<span style=\"color: #FF0000;\"><b>No</b></span>" : "Yes",
-				ploaded ? "Yes" : "No");
+				pname    ? pname    : "",
+				pauthor  ? pauthor  : "",
+				pver     ? pver     : "",
+				plicense ? plicense : "",
+				pwebsite ? pwebsite : "",
+				pid,
+				ploadable ? "Yes" : "<span style=\"color: #FF0000;\"><b>No</b></span>",
+				ploaded   ? "Yes" : "No");
 
 		g_free(pname);
 		g_free(pauthor);
 	}
+	g_list_free(plugins);
 
 	g_string_append(str, "</dl>");
 
@@ -896,15 +907,15 @@ pidgin_dialogs_im_name_validator(PurpleRequestField *field, gchar **errmsg,
 {
 	PurpleRequestFields *fields = _fields;
 	PurpleAccount *account;
-	PurplePlugin *prpl;
+	PurplePluginProtocolInfo *prpl_info;
 	const char *username;
 	gboolean valid;
 
 	account = purple_request_fields_get_account(fields, "account");
-	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	prpl_info = purple_find_protocol_info(purple_account_get_protocol_id(account));
 	username = purple_request_fields_get_string(fields, "screenname");
 
-	valid = purple_validate(prpl, username);
+	valid = purple_validate(prpl_info, username);
 
 	if (errmsg && !valid)
 		*errmsg = g_strdup(_("Invalid username"));
