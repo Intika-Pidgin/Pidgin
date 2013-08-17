@@ -81,7 +81,7 @@
 GList *jabber_features = NULL;
 GList *jabber_identities = NULL;
 
-static GHashTable *jabber_cmds = NULL; /* PurplePlugin * => GSList of ids */
+static GHashTable *jabber_cmds = NULL; /* PurplePluginProtocolInfo * => GSList of ids */
 
 static gint plugin_ref = 0;
 
@@ -332,7 +332,7 @@ void jabber_process_packet(JabberStream *js, xmlnode **packet)
 	const char *name;
 	const char *xmlns;
 
-	purple_signal_emit(purple_connection_get_prpl(js->gc), "jabber-receiving-xmlnode", js->gc, packet);
+	purple_signal_emit(purple_connection_get_protocol_info(js->gc), "jabber-receiving-xmlnode", js->gc, packet);
 
 	/* if the signal leaves us with a null packet, we're done */
 	if(NULL == *packet)
@@ -514,7 +514,7 @@ void jabber_send_raw(JabberStream *js, const char *data, int len)
 		g_free(text);
 	}
 
-	purple_signal_emit(purple_connection_get_prpl(gc), "jabber-sending-text", gc, &data);
+	purple_signal_emit(purple_connection_get_protocol_info(gc), "jabber-sending-text", gc, &data);
 	if (data == NULL)
 		return;
 
@@ -614,7 +614,7 @@ void jabber_send_signal_cb(PurpleConnection *pc, xmlnode **packet,
 
 void jabber_send(JabberStream *js, xmlnode *packet)
 {
-	purple_signal_emit(purple_connection_get_prpl(js->gc), "jabber-sending-xmlnode", js->gc, &packet);
+	purple_signal_emit(purple_connection_get_protocol_info(js->gc), "jabber-sending-xmlnode", js->gc, &packet);
 }
 
 static gboolean jabber_keepalive_timeout(PurpleConnection *gc)
@@ -2513,10 +2513,10 @@ static void jabber_password_change_cb(JabberStream *js,
 	jabber_iq_send(iq);
 }
 
-static void jabber_password_change(PurplePluginAction *action)
+static void jabber_password_change(PurpleProtocolAction *action)
 {
 
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = (PurpleConnection *) action->connection;
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 	PurpleRequestFields *fields;
 	PurpleRequestFieldGroup *group;
@@ -2546,28 +2546,27 @@ static void jabber_password_change(PurplePluginAction *action)
 			js);
 }
 
-GList *jabber_actions(PurplePlugin *plugin, gpointer context)
+GList *jabber_get_actions(PurpleConnection *gc)
 {
-	PurpleConnection *gc = (PurpleConnection *) context;
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 	GList *m = NULL;
-	PurplePluginAction *act;
+	PurpleProtocolAction *act;
 
-	act = purple_plugin_action_new(_("Set User Info..."),
+	act = purple_protocol_action_new(_("Set User Info..."),
 	                             jabber_setup_set_info);
 	m = g_list_append(m, act);
 
 	/* if (js->protocol_options & CHANGE_PASSWORD) { */
-		act = purple_plugin_action_new(_("Change Password..."),
+		act = purple_protocol_action_new(_("Change Password..."),
 		                             jabber_password_change);
 		m = g_list_append(m, act);
 	/* } */
 
-	act = purple_plugin_action_new(_("Search for Users..."),
+	act = purple_protocol_action_new(_("Search for Users..."),
 	                             jabber_user_search_begin);
 	m = g_list_append(m, act);
 
-	purple_debug_info("jabber", "jabber_actions: have pep: %s\n", js->pep?"YES":"NO");
+	purple_debug_info("jabber", "jabber_get_actions: have pep: %s\n", js->pep?"YES":"NO");
 
 	if(js->pep)
 		jabber_pep_init_actions(&m);
@@ -3597,7 +3596,7 @@ jabber_cmd_mood(PurpleConversation *conv,
 	}
 }
 
-static void jabber_register_commands(PurplePlugin *plugin)
+static void jabber_register_commands(PurplePluginProtocolInfo *prpl_info)
 {
 	GSList *commands = NULL;
 	PurpleCmdId id;
@@ -3719,7 +3718,7 @@ static void jabber_register_commands(PurplePlugin *plugin)
 	    			  _("mood &lt;mood&gt; [text]: Set current user mood"), NULL);
 	commands = g_slist_prepend(commands, GUINT_TO_POINTER(id));
 
-	g_hash_table_insert(jabber_cmds, plugin, commands);
+	g_hash_table_insert(jabber_cmds, prpl_info, commands);
 }
 
 static void cmds_free_func(gpointer value)
@@ -3731,11 +3730,12 @@ static void cmds_free_func(gpointer value)
 	}
 }
 
-static void jabber_unregister_commands(PurplePlugin *plugin)
+static void jabber_unregister_commands(PurplePluginProtocolInfo *prpl_info)
 {
-	g_hash_table_remove(jabber_cmds, plugin);
+	g_hash_table_remove(jabber_cmds, prpl_info);
 }
 
+#if 0
 /* IPC functions */
 
 /**
@@ -3783,6 +3783,7 @@ jabber_ipc_add_feature(const gchar *feature)
 	/* send presence with new caps info for all connected accounts */
 	jabber_caps_broadcast_change();
 }
+#endif
 
 static void
 jabber_do_init(void)
@@ -3931,15 +3932,16 @@ jabber_do_uninit(void)
 	jabber_cmds = NULL;
 }
 
-void jabber_plugin_init(PurplePlugin *plugin)
+void jabber_plugin_init(PurplePluginProtocolInfo *prpl_info)
 {
 	++plugin_ref;
 
 	if (plugin_ref == 1)
 		jabber_do_init();
 
-	jabber_register_commands(plugin);
+	jabber_register_commands(prpl_info);
 
+#if 0
 	/* IPC functions */
 	purple_plugin_ipc_register(plugin, "contact_has_feature", PURPLE_CALLBACK(jabber_ipc_contact_has_feature),
 							 purple_marshal_BOOLEAN__POINTER_POINTER_POINTER,
@@ -3963,31 +3965,32 @@ void jabber_plugin_init(PurplePlugin *plugin)
 	                           G_TYPE_NONE, 2,
 	                           G_TYPE_STRING,  /* node */
 	                           G_TYPE_STRING); /* namespace */
+#endif
 
-	purple_signal_register(plugin, "jabber-register-namespace-watcher",
+	purple_signal_register(prpl_info, "jabber-register-namespace-watcher",
 			purple_marshal_VOID__POINTER_POINTER,
 			G_TYPE_NONE, 2,
 			G_TYPE_STRING,  /* node */
 			G_TYPE_STRING); /* namespace */
 
-	purple_signal_register(plugin, "jabber-unregister-namespace-watcher",
+	purple_signal_register(prpl_info, "jabber-unregister-namespace-watcher",
 			purple_marshal_VOID__POINTER_POINTER,
 			G_TYPE_NONE, 2,
 			G_TYPE_STRING,  /* node */
 			G_TYPE_STRING); /* namespace */
 
-	purple_signal_connect(plugin, "jabber-register-namespace-watcher",
-			plugin, PURPLE_CALLBACK(jabber_iq_signal_register), NULL);
-	purple_signal_connect(plugin, "jabber-unregister-namespace-watcher",
-			plugin, PURPLE_CALLBACK(jabber_iq_signal_unregister), NULL);
+	purple_signal_connect(prpl_info, "jabber-register-namespace-watcher",
+			prpl_info, PURPLE_CALLBACK(jabber_iq_signal_register), NULL);
+	purple_signal_connect(prpl_info, "jabber-unregister-namespace-watcher",
+			prpl_info, PURPLE_CALLBACK(jabber_iq_signal_unregister), NULL);
 
 
-	purple_signal_register(plugin, "jabber-receiving-xmlnode",
+	purple_signal_register(prpl_info, "jabber-receiving-xmlnode",
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
 			G_TYPE_POINTER); /* modifiable xmlnode */
 
-	purple_signal_register(plugin, "jabber-sending-xmlnode",
+	purple_signal_register(prpl_info, "jabber-sending-xmlnode",
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
 			G_TYPE_POINTER); /* modifiable xmlnode */
@@ -3996,16 +3999,16 @@ void jabber_plugin_init(PurplePlugin *plugin)
 	 * Do not remove this or the plugin will fail. Completely. You have been
 	 * warned!
 	 */
-	purple_signal_connect_priority(plugin, "jabber-sending-xmlnode",
-			plugin, PURPLE_CALLBACK(jabber_send_signal_cb),
+	purple_signal_connect_priority(prpl_info, "jabber-sending-xmlnode",
+			prpl_info, PURPLE_CALLBACK(jabber_send_signal_cb),
 			NULL, PURPLE_SIGNAL_PRIORITY_HIGHEST);
 
-	purple_signal_register(plugin, "jabber-sending-text",
+	purple_signal_register(prpl_info, "jabber-sending-text",
 			     purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			     PURPLE_TYPE_CONNECTION,
 			     G_TYPE_POINTER); /* pointer to a string */
 
-	purple_signal_register(plugin, "jabber-receiving-message",
+	purple_signal_register(prpl_info, "jabber-receiving-message",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_POINTER_POINTER,
 			G_TYPE_BOOLEAN, 6,
 			PURPLE_TYPE_CONNECTION,
@@ -4015,7 +4018,7 @@ void jabber_plugin_init(PurplePlugin *plugin)
 			G_TYPE_STRING, /* to */
 			PURPLE_TYPE_XMLNODE);
 
-	purple_signal_register(plugin, "jabber-receiving-iq",
+	purple_signal_register(prpl_info, "jabber-receiving-iq",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_POINTER,
 			G_TYPE_BOOLEAN, 5,
 			PURPLE_TYPE_CONNECTION,
@@ -4024,7 +4027,7 @@ void jabber_plugin_init(PurplePlugin *plugin)
 			G_TYPE_STRING, /* from */
 			PURPLE_TYPE_XMLNODE);
 
-	purple_signal_register(plugin, "jabber-watched-iq",
+	purple_signal_register(prpl_info, "jabber-watched-iq",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER_POINTER,
 			G_TYPE_BOOLEAN, 5,
 			PURPLE_TYPE_CONNECTION,
@@ -4033,7 +4036,7 @@ void jabber_plugin_init(PurplePlugin *plugin)
 			G_TYPE_STRING, /* from */
 			PURPLE_TYPE_XMLNODE); /* child */
 
-	purple_signal_register(plugin, "jabber-receiving-presence",
+	purple_signal_register(prpl_info, "jabber-receiving-presence",
 			purple_marshal_BOOLEAN__POINTER_POINTER_POINTER_POINTER,
 			G_TYPE_BOOLEAN, 4,
 			PURPLE_TYPE_CONNECTION,
@@ -4042,14 +4045,15 @@ void jabber_plugin_init(PurplePlugin *plugin)
 			PURPLE_TYPE_XMLNODE);
 }
 
-void jabber_plugin_uninit(PurplePlugin *plugin)
+void jabber_plugin_uninit(PurplePluginProtocolInfo *prpl_info)
 {
 	g_return_if_fail(plugin_ref > 0);
 
-	purple_signals_unregister_by_instance(plugin);
+	purple_signals_unregister_by_instance(prpl_info);
+#if 0
 	purple_plugin_ipc_unregister_all(plugin);
-
-	jabber_unregister_commands(plugin);
+#endif
+	jabber_unregister_commands(prpl_info);
 
 	--plugin_ref;
 	if (plugin_ref == 0)
