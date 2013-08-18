@@ -1,5 +1,5 @@
 /**
- * @file prpl.h Protocol Plugin functions
+ * @file protocol.h Protocol API
  * @ingroup core
  */
 
@@ -24,13 +24,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-/* this file should be all that prpls need to include. therefore, by including
- * this file, they should get glib, proxy, purple_connection, prpl, etc. */
+#ifndef _PURPLE_PROTOCOL_H_
+#define _PURPLE_PROTOCOL_H_
 
-#ifndef _PURPLE_PRPL_H_
-#define _PURPLE_PRPL_H_
+/** @copydoc _PurpleProtocol */
+typedef struct _PurpleProtocol PurpleProtocol;
+/** @copydoc _PurpleProtocolClass */
+typedef struct _PurpleProtocolClass PurpleProtocolClass;
 
-typedef struct _PurplePluginProtocolInfo PurplePluginProtocolInfo;
+/** @copydoc _PurpleProtocolInterface */
+typedef struct _PurpleProtocolInterface PurpleProtocolInterface;
+
+/** @copydoc _PurpleProtocolAction */
+typedef struct _PurpleProtocolAction PurpleProtocolAction;
+typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *);
 
 /** Represents "nudges" and "buzzes" that you may send to a buddy to attract
  *  their attention (or vice-versa).
@@ -45,7 +52,6 @@ typedef enum {
 	PURPLE_ICON_SCALE_DISPLAY = 0x01,		/**< We scale the icon when we display it */
 	PURPLE_ICON_SCALE_SEND = 0x02			/**< We scale the icon before we send it to the server */
 } PurpleIconScaleRules;
-
 
 /**
  * A description of a Buddy Icon specification.  This tells Purple what kind of image file
@@ -78,7 +84,6 @@ typedef struct _PurpleThumbnailSpec PurpleThumbnailSpec;
 #include "media.h"
 #include "notify.h"
 #include "proxy.h"
-#include "plugin.h"
 #include "roomlist.h"
 #include "status.h"
 #include "whiteboard.h"
@@ -117,7 +122,7 @@ struct proto_chat_entry {
 /**
  * Protocol options
  *
- * These should all be stuff that some plugins can do and others can't.
+ * These should all be stuff that some protocols can do and others can't.
  */
 typedef enum
 {
@@ -210,41 +215,70 @@ typedef enum
 } PurpleProtocolOptions;
 
 /**
- * A protocol plugin information structure.
- *
- * Every protocol plugin initializes this structure. It is the gateway
- * between purple and the protocol plugin.  Many of these callbacks can be
- * NULL.  If a callback must be implemented, it has a comment indicating so.
+ * Represents an action that the protocol can perform. This shows up in the
+ * Accounts menu, under a submenu with the name of the account.
  */
-struct _PurplePluginProtocolInfo
+struct _PurpleProtocolAction {
+	char *label;
+	PurpleProtocolActionCallback callback;
+	PurpleConnection *connection;
+	gpointer user_data;
+};
+
+/**
+ * Represents an instance of a protocol registered with the protocols
+ * subsystem.
+ */
+struct _PurpleProtocol
 {
+	/*< private >*/
+	GObject gparent;
+};
+
+/**
+ * The base class for all protocols.
+ *
+ * Protocols must set the members of this class to appropriate values upon
+ * class initialization.
+ */
+struct _PurpleProtocolClass
+{
+	/*< private >*/
+	GObjectClass parent_class;
+
+	const char *id;                 /**< Protocol ID */
+	const char *name;               /**< Translated name of the protocol */
+
+	PurpleProtocolOptions options;  /**< Protocol options */
+
+	GList *user_splits;             /**< A GList of PurpleAccountUserSplit */
+	GList *protocol_options;        /**< A GList of PurpleAccountOption */
+
+	PurpleBuddyIconSpec icon_spec;  /**< The icon spec. */
+
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
+};
+
+/**
+ * The protocol interface.
+ *
+ * Every protocol implements this interface. It is the gateway between purple
+ * and the protocol's functions. Many of these callbacks can be NULL. If a
+ * callback must be implemented, it has a comment indicating so.
+ */
+struct _PurpleProtocolInterface
+{
+	/*< private >*/
+	GTypeInterface parent_iface;
+
 	/**
-	 * The size of the PurplePluginProtocolInfo. This should always be sizeof(PurplePluginProtocolInfo).
-	 * This allows adding more functions to this struct without requiring a major version bump.
+	 * Returns the actions the protocol can perform. These will show up in the
+	 * Accounts menu, under a submenu with the name of the account.
 	 */
-	unsigned long struct_size;
-
-	/* NOTE:
-	 * If more functions are added, they should accessed using the following syntax:
-	 *
-	 *		if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl, new_function))
-	 *			prpl->new_function(...);
-	 *
-	 * instead of
-	 *
-	 *		if (prpl->new_function != NULL)
-	 *			prpl->new_function(...);
-	 *
-	 * The PURPLE_PROTOCOL_PLUGIN_HAS_FUNC macro can be used for the older member
-	 * functions (e.g. login, send_im etc.) too.
-	 */
-
-	PurpleProtocolOptions options;  /**< Protocol options.          */
-
-	GList *user_splits;      /**< A GList of PurpleAccountUserSplit */
-	GList *protocol_options; /**< A GList of PurpleAccountOption    */
-
-	PurpleBuddyIconSpec icon_spec; /**< The icon spec. */
+	GList *(*get_actions)(PurpleConnection *);
 
 	/**
 	 * Returns the base icon name for the given buddy and account.
@@ -457,7 +491,7 @@ struct _PurplePluginProtocolInfo
 	void (*register_user)(PurpleAccount *);
 
 	/**
-	 * @deprecated Use #PurplePluginProtocolInfo.get_info instead.
+	 * @deprecated Use #PurpleProtocol.get_info instead.
 	 */
 	void (*get_cb_info)(PurpleConnection *, int, const char *who);
 
@@ -533,7 +567,7 @@ struct _PurplePluginProtocolInfo
 	 */
 	gboolean (*offline_message)(const PurpleBuddy *buddy);
 
-	PurpleWhiteboardPrplOps *whiteboard_prpl_ops;
+	PurpleWhiteboardPrplOps *whiteboard_protocol_ops;
 
 	/** For use in plugins that may understand the underlying protocol */
 	int (*send_raw)(PurpleConnection *gc, const char *buf, int len);
@@ -595,7 +629,7 @@ struct _PurplePluginProtocolInfo
 	/**
 	 * Set the user's "friendly name" (or alias or nickname or
 	 * whatever term you want to call it) on the server.  The
-	 * protocol plugin should call success_cb or failure_cb
+	 * protocol should call success_cb or failure_cb
 	 * *asynchronously* (if it knows immediately that the set will fail,
 	 * call one of the callbacks from an idle/0-second timeout) depending
 	 * on if the nickname is set successfully.
@@ -614,7 +648,7 @@ struct _PurplePluginProtocolInfo
 	                         PurpleSetPublicAliasFailureCallback failure_cb);
 	/**
 	 * Retrieve the user's "friendly name" as set on the server.
-	 * The protocol plugin should call success_cb or failure_cb
+	 * The protocol should call success_cb or failure_cb
 	 * *asynchronously* (even if it knows immediately that the get will fail,
 	 * call one of the callbacks from an idle/0-second timeout) depending
 	 * on if the nickname is retrieved.
@@ -629,17 +663,6 @@ struct _PurplePluginProtocolInfo
 	                         PurpleGetPublicAliasSuccessCallback success_cb,
 	                         PurpleGetPublicAliasFailureCallback failure_cb);
 };
-
-#define PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl, member) \
-	(G_STRUCT_OFFSET(PurplePluginProtocolInfo, member) < prpl->struct_size && \
-	 prpl->member != NULL)
-
-
-#define PURPLE_IS_PROTOCOL_PLUGIN(plugin) \
-	((plugin)->info->type == PURPLE_PLUGIN_PROTOCOL)
-
-#define PURPLE_PLUGIN_PROTOCOL_INFO(plugin) \
-	((PurplePluginProtocolInfo *)(plugin)->info->extra_info)
 
 G_BEGIN_DECLS
 
@@ -756,43 +779,43 @@ const char *purple_attention_type_get_unlocalized_name(const PurpleAttentionType
 /*@}*/
 
 /**************************************************************************/
-/** @name Protocol Plugin API                                             */
+/** @name Protocol        API                                             */
 /**************************************************************************/
 /*@{*/
 
 /**
  * Notifies Purple that our account's idle state and time have changed.
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account   The account.
  * @param idle      The user's idle state.
  * @param idle_time The user's idle time.
  */
-void purple_prpl_got_account_idle(PurpleAccount *account, gboolean idle,
+void purple_protocol_got_account_idle(PurpleAccount *account, gboolean idle,
 								time_t idle_time);
 
 /**
  * Notifies Purple of our account's log-in time.
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account    The account the user is on.
  * @param login_time The user's log-in time.
  */
-void purple_prpl_got_account_login_time(PurpleAccount *account, time_t login_time);
+void purple_protocol_got_account_login_time(PurpleAccount *account, time_t login_time);
 
 /**
  * Notifies Purple that our account's status has changed.
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account   The account the user is on.
  * @param status_id The status ID.
  * @param ...       A NULL-terminated list of attribute IDs and values,
  *                  beginning with the value for @a attr_id.
  */
-void purple_prpl_got_account_status(PurpleAccount *account,
+void purple_protocol_got_account_status(PurpleAccount *account,
 								  const char *status_id, ...) G_GNUC_NULL_TERMINATED;
 
 /**
@@ -800,18 +823,18 @@ void purple_prpl_got_account_status(PurpleAccount *account,
  * called after the initial connection. Emits the account-actions-changed
  * signal.
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account   The account.
  *
  * @see account-actions-changed
  */
-void purple_prpl_got_account_actions(PurpleAccount *account);
+void purple_protocol_got_account_actions(PurpleAccount *account);
 
 /**
  * Notifies Purple that a buddy's idle state and time have changed.
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account   The account the user is on.
  * @param name      The name of the buddy.
@@ -821,25 +844,25 @@ void purple_prpl_got_account_actions(PurpleAccount *account);
  *                  the epoch.  If the PRPL does not know this value
  *                  then it should pass 0.
  */
-void purple_prpl_got_user_idle(PurpleAccount *account, const char *name,
+void purple_protocol_got_user_idle(PurpleAccount *account, const char *name,
 							 gboolean idle, time_t idle_time);
 
 /**
  * Notifies Purple of a buddy's log-in time.
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account    The account the user is on.
  * @param name       The name of the buddy.
  * @param login_time The user's log-in time.
  */
-void purple_prpl_got_user_login_time(PurpleAccount *account, const char *name,
+void purple_protocol_got_user_login_time(PurpleAccount *account, const char *name,
 								   time_t login_time);
 
 /**
  * Notifies Purple that a buddy's status has been activated.
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account   The account the user is on.
  * @param name      The name of the buddy.
@@ -847,19 +870,19 @@ void purple_prpl_got_user_login_time(PurpleAccount *account, const char *name,
  * @param ...       A NULL-terminated list of attribute IDs and values,
  *                  beginning with the value for @a attr_id.
  */
-void purple_prpl_got_user_status(PurpleAccount *account, const char *name,
+void purple_protocol_got_user_status(PurpleAccount *account, const char *name,
 							   const char *status_id, ...) G_GNUC_NULL_TERMINATED;
 
 /**
  * Notifies libpurple that a buddy's status has been deactivated
  *
- * This is meant to be called from protocol plugins.
+ * This is meant to be called from protocols.
  *
  * @param account   The account the user is on.
  * @param name      The name of the buddy.
  * @param status_id The status ID.
  */
-void purple_prpl_got_user_status_deactive(PurpleAccount *account, const char *name,
+void purple_protocol_got_user_status_deactive(PurpleAccount *account, const char *name,
 					const char *status_id);
 
 /**
@@ -870,7 +893,7 @@ void purple_prpl_got_user_status_deactive(PurpleAccount *account, const char *na
  * @param new_status The status that was activated, or deactivated
  *                   (in the case of independent statuses).
  */
-void purple_prpl_change_account_status(PurpleAccount *account,
+void purple_protocol_change_account_status(PurpleAccount *account,
 									 PurpleStatus *old_status,
 									 PurpleStatus *new_status);
 
@@ -882,7 +905,7 @@ void purple_prpl_change_account_status(PurpleAccount *account,
  *
  * @return List of statuses
  */
-GList *purple_prpl_get_statuses(PurpleAccount *account, PurplePresence *presence);
+GList *purple_protocol_get_statuses(PurpleAccount *account, PurplePresence *presence);
 
 /**
  * Send an attention request message.
@@ -896,7 +919,7 @@ GList *purple_prpl_get_statuses(PurpleAccount *account, PurplePresence *presence
  * Note that you can't send arbitrary PurpleAttentionType's, because there is
  * only a fixed set of attention commands.
  */
-void purple_prpl_send_attention(PurpleConnection *gc, const char *who, guint type_code);
+void purple_protocol_send_attention(PurpleConnection *gc, const char *who, guint type_code);
 
 /**
  * Process an incoming attention message.
@@ -906,7 +929,7 @@ void purple_prpl_send_attention(PurpleConnection *gc, const char *who, guint typ
  * @param type_code An index into the prpl's attention_types list determining the type
  *        of the attention request command to send.
  */
-void purple_prpl_got_attention(PurpleConnection *gc, const char *who, guint type_code);
+void purple_protocol_got_attention(PurpleConnection *gc, const char *who, guint type_code);
 
 /**
  * Process an incoming attention message in a chat.
@@ -917,7 +940,7 @@ void purple_prpl_got_attention(PurpleConnection *gc, const char *who, guint type
  * @param type_code An index into the prpl's attention_types list determining the type
  *        of the attention request command to send.
  */
-void purple_prpl_got_attention_in_chat(PurpleConnection *gc, int id, const char *who, guint type_code);
+void purple_protocol_got_attention_in_chat(PurpleConnection *gc, int id, const char *who, guint type_code);
 
 /**
  * Determines if the contact supports the given media session type.
@@ -927,7 +950,7 @@ void purple_prpl_got_attention_in_chat(PurpleConnection *gc, int id, const char 
  *
  * @return The media caps the contact supports.
  */
-PurpleMediaCaps purple_prpl_get_media_caps(PurpleAccount *account,
+PurpleMediaCaps purple_protocol_get_media_caps(PurpleAccount *account,
 				  const char *who);
 
 /**
@@ -939,7 +962,7 @@ PurpleMediaCaps purple_prpl_get_media_caps(PurpleAccount *account,
  *
  * @return TRUE if the call succeeded else FALSE. (Doesn't imply the media session or stream will be successfully created)
  */
-gboolean purple_prpl_initiate_media(PurpleAccount *account,
+gboolean purple_protocol_initiate_media(PurpleAccount *account,
 					const char *who,
 					PurpleMediaSessionType type);
 
@@ -951,24 +974,90 @@ gboolean purple_prpl_initiate_media(PurpleAccount *account,
  * @param account The account the user is on.
  * @param who The name of the contact for which capabilities have been received.
  */
-void purple_prpl_got_media_caps(PurpleAccount *account, const char *who);
+void purple_protocol_got_media_caps(PurpleAccount *account, const char *who);
 
-/*@}*/
+/** TODO A sanity check is needed
+ * Allocates and returns a new PurpleProtocolAction. Use this to add actions in
+ * a list in the get_actions function of the protocol.
+ *
+ * @param label    The description of the action to show to the user.
+ * @param callback The callback to call when the user selects this action.
+ */
+PurpleProtocolAction *purple_protocol_action_new(const char* label,
+		PurpleProtocolActionCallback callback);
+
+/** TODO A sanity check is needed
+ * Frees a PurpleProtocolAction
+ *
+ * @param action The PurpleProtocolAction to free.
+ */
+void purple_protocol_action_free(PurpleProtocolAction *action);
 
 /**************************************************************************/
-/** @name Protocol Plugin Subsystem API                                   */
+/** @name Protocols API                                                   */
 /**************************************************************************/
 /*@{*/
 
 /**
- * Finds a protocol plugin structure of the specified type.
+ * Finds a protocol by ID.
  *
- * @param id The protocol plugin;
+ * @param id The protocol's ID.
  */
-PurplePlugin *purple_find_prpl(const char *id);
+PurpleProtocol *purple_find_protocol_info(const char *id);
+
+/** TODO A sanity check is needed
+ * Adds a protocol to the list of protocols.
+ *
+ * @param protocol  The protocol to add.
+ *
+ * @return TRUE if the protocol was added, else FALSE.
+ */
+gboolean purple_protocols_add(PurpleProtocol *protocol);
+
+/** TODO A sanity check is needed
+ * Removes a protocol from the list of protocols. This will disconnect all
+ * connected accounts using this protocol, and free the protocol's user splits
+ * and protocol options.
+ *
+ * @param protocol  The protocol to remove.
+ *
+ * @return TRUE if the protocol was removed, else FALSE.
+ */
+gboolean purple_protocols_remove(PurpleProtocol *protocol);
+
+/** TODO A sanity check is needed
+ * Returns a list of all loaded protocols.
+ *
+ * @constreturn A list of all loaded protocols.
+ */
+GList *purple_protocols_get_all(void);
+
+/*@}*/
+
+/**************************************************************************/
+/** @name Protocols Subsytem API                                          */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Initializes the protocols subsystem.
+ */
+void purple_protocols_init(void);
+
+/** TODO Make protocols use this handle, instead of plugins handle
+ * Returns the protocols subsystem handle.
+ *
+ * @return The protocols subsystem handle.
+ */
+void *purple_protocols_get_handle(void);
+
+/**
+ * Uninitializes the protocols subsystem.
+ */
+void purple_protocols_uninit(void);
 
 /*@}*/
 
 G_END_DECLS
 
-#endif /* _PRPL_H_ */
+#endif /* _PROTOCOL_H_ */

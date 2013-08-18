@@ -60,15 +60,15 @@
 #include "connection.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
+#include "plugins.h"
+#include "protocol.h"
 #include "roomlist.h"
 #include "status.h"
 #include "util.h"
 #include "version.h"
 
-
 #define NULLPRPL_ID "prpl-null"
-static PurplePlugin *_null_protocol = NULL;
+static PurpleProtocol *_null_protocol = NULL;
 
 #define NULL_STATUS_ONLINE   "online"
 #define NULL_STATUS_AWAY     "away"
@@ -86,7 +86,7 @@ typedef struct {
 
 /*
  * stores offline messages that haven't been delivered yet. maps username
- * (char *) to GList * of GOfflineMessages. initialized in nullprpl_init.
+ * (char *) to GList * of GOfflineMessages. initialized in plugin_load.
  */
 GHashTable* goffline_messages = NULL;
 
@@ -171,7 +171,7 @@ static void discover_status(PurpleConnection *from, PurpleConnection *to,
         !strcmp(status_id, NULL_STATUS_OFFLINE)) {
       purple_debug_info("nullprpl", "%s sees that %s is %s: %s\n",
                         from_username, to_username, status_id, message);
-      purple_prpl_got_user_status(purple_connection_get_account(from), to_username, status_id,
+      purple_protocol_got_user_status(purple_connection_get_account(from), to_username, status_id,
                                   (message) ? "message" : NULL, message, NULL);
     } else {
       purple_debug_error("nullprpl",
@@ -192,9 +192,9 @@ static void report_status_change(PurpleConnection *from, PurpleConnection *to,
 /*
  * UI callbacks
  */
-static void nullprpl_input_user_info(PurplePluginAction *action)
+static void nullprpl_input_user_info(PurpleProtocolAction *action)
 {
-  PurpleConnection *gc = (PurpleConnection *)action->context;
+  PurpleConnection *gc = action->connection;
   PurpleAccount *acct = purple_connection_get_account(gc);
   purple_debug_info("nullprpl", "showing 'Set User Info' dialog for %s\n",
                     purple_account_get_username(acct));
@@ -202,20 +202,16 @@ static void nullprpl_input_user_info(PurplePluginAction *action)
   purple_account_request_change_user_info(acct);
 }
 
-/* this is set to the actions member of the PurplePluginInfo struct at the
- * bottom.
+/*
+ * prpl functions
  */
-static GList *nullprpl_actions(PurplePlugin *plugin, gpointer context)
+static GList *nullprpl_get_actions(PurpleConnection *gc)
 {
-  PurplePluginAction *action = purple_plugin_action_new(
+  PurpleProtocolAction *action = purple_protocol_action_new(
     _("Set User Info..."), nullprpl_input_user_info);
   return g_list_append(NULL, action);
 }
 
-
-/*
- * prpl functions
- */
 static const char *nullprpl_list_icon(PurpleAccount *acct, PurpleBuddy *buddy)
 {
   return "null";
@@ -337,7 +333,7 @@ static GList *nullprpl_blist_node_menu(PurpleBlistNode *node) {
 }
 
 static GList *nullprpl_chat_info(PurpleConnection *gc) {
-  struct proto_chat_entry *pce; /* defined in prpl.h */
+  struct proto_chat_entry *pce; /* defined in protocol.h */
 
   purple_debug_info("nullprpl", "returning chat setting 'room'\n");
 
@@ -1054,15 +1050,17 @@ static gboolean nullprpl_offline_message(const PurpleBuddy *buddy) {
 
 
 /*
- * prpl stuff. see prpl.h for more information.
+ * Protocol stuff. see protocol.h for more information.
  */
 
-static PurplePluginProtocolInfo prpl_info =
+static PurpleProtocol protocol =
 {
-  sizeof(PurplePluginProtocolInfo),    /* struct_size */
+  NULLPRPL_ID,                         /* id */
+  "Null - Testing protocol",           /* name */
+  sizeof(PurpleProtocol),    /* struct_size */
   OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC,  /* options */
-  NULL,               /* user_splits, initialized in nullprpl_init() */
-  NULL,               /* protocol_options, initialized in nullprpl_init() */
+  NULL,               /* user_splits, initialized in plugin_load() */
+  NULL,               /* protocol_options, initialized in plugin_load() */
   {   /* icon_spec, a PurpleBuddyIconSpec */
       "png,jpg,gif",                   /* format */
       0,                               /* min_width */
@@ -1072,6 +1070,7 @@ static PurplePluginProtocolInfo prpl_info =
       10000,                           /* max_filesize */
       PURPLE_ICON_SCALE_DISPLAY,       /* scale_rules */
   },
+  nullprpl_get_actions,                /* get_actions */
   nullprpl_list_icon,                  /* list_icon */
   NULL,                                /* list_emblem */
   nullprpl_status_text,                /* status_text */
@@ -1126,7 +1125,7 @@ static PurplePluginProtocolInfo prpl_info =
   NULL,                                /* send_file */
   NULL,                                /* new_xfer */
   nullprpl_offline_message,            /* offline_message */
-  NULL,                                /* whiteboard_prpl_ops */
+  NULL,                                /* whiteboard_protocol_ops */
   NULL,                                /* send_raw */
   NULL,                                /* roomlist_room_serialize */
   NULL,                                /* unregister_user */
@@ -1140,7 +1139,29 @@ static PurplePluginProtocolInfo prpl_info =
   NULL                                 /* get_public_alias */
 };
 
-static void nullprpl_init(PurplePlugin *plugin)
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+  return purple_plugin_info_new(
+    "id",           NULLPRPL_ID,
+    "name",         "Null - Testing Plugin",
+    "version",      DISPLAY_VERSION,
+    "category",     N_("Protocol"),
+    "summary",      N_("Null Protocol Plugin"),
+    "description",  N_("Null Protocol Plugin"),
+    "website",      PURPLE_WEBSITE,
+    "abi-version",  PURPLE_ABI_VERSION,
+
+    /* If you're using this as the basis of a protocol plugin that will be
+     * distributed separately from libpurple, do not include these flags.*/
+    "flags",        GPLUGIN_PLUGIN_INFO_FLAGS_INTERNAL |
+                    GPLUGIN_PLUGIN_INFO_FLAGS_LOAD_ON_QUERY,
+    NULL
+  );
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
   /* see accountopt.h for information about user splits and protocol options */
   PurpleAccountUserSplit *split = purple_account_user_split_new(
@@ -1154,8 +1175,8 @@ static void nullprpl_init(PurplePlugin *plugin)
 
   purple_debug_info("nullprpl", "starting up\n");
 
-  prpl_info.user_splits = g_list_append(NULL, split);
-  prpl_info.protocol_options = g_list_append(NULL, option);
+  protocol.user_splits = g_list_append(NULL, split);
+  protocol.protocol_options = g_list_append(NULL, option);
 
   /* register whisper chat command, /msg */
   purple_cmd_register("msg",
@@ -1173,42 +1194,20 @@ static void nullprpl_init(PurplePlugin *plugin)
                                             g_free,      /* key free fn */
                                             NULL);       /* value free fn */
 
-  _null_protocol = plugin;
+  _null_protocol = &protocol;
+  purple_protocols_add(_null_protocol);
+
+  return TRUE;
 }
 
-static void nullprpl_destroy(PurplePlugin *plugin) {
-  purple_debug_info("nullprpl", "shutting down\n");
-}
-
-
-static PurplePluginInfo info =
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
-  PURPLE_PLUGIN_MAGIC,                                     /* magic */
-  PURPLE_MAJOR_VERSION,                                    /* major_version */
-  PURPLE_MINOR_VERSION,                                    /* minor_version */
-  PURPLE_PLUGIN_PROTOCOL,                                  /* type */
-  NULL,                                                    /* ui_requirement */
-  0,                                                       /* flags */
-  NULL,                                                    /* dependencies */
-  PURPLE_PRIORITY_DEFAULT,                                 /* priority */
-  NULLPRPL_ID,                                             /* id */
-  "Null - Testing Plugin",                                 /* name */
-  DISPLAY_VERSION,                                         /* version */
-  N_("Null Protocol Plugin"),                              /* summary */
-  N_("Null Protocol Plugin"),                              /* description */
-  NULL,                                                    /* author */
-  PURPLE_WEBSITE,                                          /* homepage */
-  NULL,                                                    /* load */
-  NULL,                                                    /* unload */
-  nullprpl_destroy,                                        /* destroy */
-  NULL,                                                    /* ui_info */
-  &prpl_info,                                              /* extra_info */
-  NULL,                                                    /* prefs_info */
-  nullprpl_actions,                                        /* actions */
-  NULL,                                                    /* padding... */
-  NULL,
-  NULL,
-  NULL,
-};
+  purple_debug_info("nullprpl", "shutting down\n");
 
-PURPLE_INIT_PLUGIN(null, nullprpl_init, info);
+  purple_protocols_remove(_null_protocol);
+
+  return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(null, plugin_query, plugin_load, plugin_unload);

@@ -41,7 +41,7 @@
 #include "imgstore.h"
 #include "network.h"
 #include "notify.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "proxy.h"
 #include "request.h"
 #include "util.h"
@@ -745,8 +745,8 @@ oscar_login(PurpleAccount *account)
 	od->use_ssl = purple_ssl_is_supported() && strcmp(encryption_type, OSCAR_NO_ENCRYPTION) != 0;
 
 	/* Connect to core Purple signals */
-	purple_prefs_connect_callback(gc, "/purple/away/idle_reporting", idle_reporting_pref_cb, gc);
-	purple_prefs_connect_callback(gc, "/plugins/prpl/oscar/recent_buddies", recent_buddies_pref_cb, gc);
+	purple_prefs_connect_callback(purple_connection_get_protocol_info(gc), "/purple/away/idle_reporting", idle_reporting_pref_cb, gc);
+	purple_prefs_connect_callback(purple_connection_get_protocol_info(gc), "/plugins/prpl/oscar/recent_buddies", recent_buddies_pref_cb, gc);
 
 	/*
 	 * On 2008-03-05 AOL released some documentation on the OSCAR protocol
@@ -1244,9 +1244,9 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 	}
 
 	if (info->flags & AIM_FLAG_WIRELESS) {
-		purple_prpl_got_user_status(account, info->bn, OSCAR_STATUS_ID_MOBILE, NULL);
+		purple_protocol_got_user_status(account, info->bn, OSCAR_STATUS_ID_MOBILE, NULL);
 	} else {
-		purple_prpl_got_user_status_deactive(account, info->bn, OSCAR_STATUS_ID_MOBILE);
+		purple_protocol_got_user_status_deactive(account, info->bn, OSCAR_STATUS_ID_MOBILE);
 	}
 
 	message = (info->status && info->status_len > 0)
@@ -1262,10 +1262,10 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 			itmsurl = g_strdup(purple_status_get_attr_string(previous_status, "itmsurl"));
 		}
 		purple_debug_info("oscar", "Activating status '%s' for buddy %s, message = '%s', itmsurl = '%s'\n", status_id, info->bn, message ? message : "(null)", itmsurl ? itmsurl : "(null)");
-		purple_prpl_got_user_status(account, info->bn, status_id, "message", message, "itmsurl", itmsurl, NULL);
+		purple_protocol_got_user_status(account, info->bn, status_id, "message", message, "itmsurl", itmsurl, NULL);
 	} else {
 		purple_debug_info("oscar", "Activating status '%s' for buddy %s, message = '%s'\n", status_id, info->bn, message ? message : "(null)");
-		purple_prpl_got_user_status(account, info->bn, status_id, "message", message, NULL);
+		purple_protocol_got_user_status(account, info->bn, status_id, "message", message, NULL);
 	}
 
 	g_free(message);
@@ -1276,7 +1276,7 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 		signon = info->onlinesince;
 	else if (info->present & AIM_USERINFO_PRESENT_SESSIONLEN)
 		signon = time(NULL) - info->sessionlen;
-	purple_prpl_got_user_login_time(account, info->bn, signon);
+	purple_protocol_got_user_login_time(account, info->bn, signon);
 
 	/* Idle time stuff */
 	/* info->idletime is the number of minutes that this user has been idle */
@@ -1284,9 +1284,9 @@ static int purple_parse_oncoming(OscarData *od, FlapConnection *conn, FlapFrame 
 		time_idle = time(NULL) - info->idletime * 60;
 
 	if (time_idle > 0)
-		purple_prpl_got_user_idle(account, info->bn, TRUE, time_idle);
+		purple_protocol_got_user_idle(account, info->bn, TRUE, time_idle);
 	else
-		purple_prpl_got_user_idle(account, info->bn, FALSE, 0);
+		purple_protocol_got_user_idle(account, info->bn, FALSE, 0);
 
 	/* Server stored icon stuff */
 	bi = g_hash_table_lookup(od->buddyinfo, purple_normalize(account, info->bn));
@@ -1337,8 +1337,8 @@ static int purple_parse_offgoing(OscarData *od, FlapConnection *conn, FlapFrame 
 	info = va_arg(ap, aim_userinfo_t *);
 	va_end(ap);
 
-	purple_prpl_got_user_status(account, info->bn, OSCAR_STATUS_ID_OFFLINE, NULL);
-	purple_prpl_got_user_status_deactive(account, info->bn, OSCAR_STATUS_ID_MOBILE);
+	purple_protocol_got_user_status(account, info->bn, OSCAR_STATUS_ID_OFFLINE, NULL);
+	purple_protocol_got_user_status_deactive(account, info->bn, OSCAR_STATUS_ID_MOBILE);
 	g_hash_table_remove(od->buddyinfo, purple_normalize(purple_connection_get_account(gc), info->bn));
 
 	return 1;
@@ -3516,9 +3516,9 @@ oscar_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, co
 
 			/* Mobile users should always be online */
 			if (bname[0] == '+') {
-				purple_prpl_got_user_status(account, bname,
+				purple_protocol_got_user_status(account, bname,
 						OSCAR_STATUS_ID_AVAILABLE, NULL);
-				purple_prpl_got_user_status(account, bname,
+				purple_protocol_got_user_status(account, bname,
 						OSCAR_STATUS_ID_MOBILE, NULL);
 			}
 		} else if (aim_ssi_waitingforauth(&od->ssi.local,
@@ -3835,10 +3835,10 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 
 					/* Mobile users should always be online */
 					if (curitem->name[0] == '+') {
-						purple_prpl_got_user_status(account,
+						purple_protocol_got_user_status(account,
 								purple_buddy_get_name(b),
 								OSCAR_STATUS_ID_AVAILABLE, NULL);
-						purple_prpl_got_user_status(account,
+						purple_protocol_got_user_status(account,
 								purple_buddy_get_name(b),
 								OSCAR_STATUS_ID_MOBILE, NULL);
 					}
@@ -4049,9 +4049,9 @@ purple_ssi_parseaddmod(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 
 		/* Mobile users should always be online */
 		if (name[0] == '+') {
-			purple_prpl_got_user_status(account,
+			purple_protocol_got_user_status(account,
 					name, OSCAR_STATUS_ID_AVAILABLE, NULL);
-			purple_prpl_got_user_status(account,
+			purple_protocol_got_user_status(account,
 					name, OSCAR_STATUS_ID_MOBILE, NULL);
 		}
 
@@ -4989,9 +4989,9 @@ oscar_icq_privacy_opts(PurpleConnection *gc, PurpleRequestFields *fields)
 }
 
 static void
-oscar_show_icq_privacy_opts(PurplePluginAction *action)
+oscar_show_icq_privacy_opts(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	PurpleAccount *account = purple_connection_get_account(gc);
 	PurpleRequestFields *fields;
 	PurpleRequestFieldGroup *g;
@@ -5021,13 +5021,13 @@ oscar_show_icq_privacy_opts(PurplePluginAction *action)
 						gc);
 }
 
-static void oscar_confirm_account(PurplePluginAction *action)
+static void oscar_confirm_account(PurpleProtocolAction *action)
 {
 	PurpleConnection *gc;
 	OscarData *od;
 	FlapConnection *conn;
 
-	gc = (PurpleConnection *)action->context;
+	gc = action->connection;
 	od = purple_connection_get_protocol_data(gc);
 
 	conn = flap_connection_getbytype(od, SNAC_FAMILY_ADMIN);
@@ -5039,9 +5039,9 @@ static void oscar_confirm_account(PurplePluginAction *action)
 	}
 }
 
-static void oscar_show_email(PurplePluginAction *action)
+static void oscar_show_email(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	OscarData *od = purple_connection_get_protocol_data(gc);
 	FlapConnection *conn = flap_connection_getbytype(od, SNAC_FAMILY_ADMIN);
 
@@ -5067,9 +5067,9 @@ static void oscar_change_email(PurpleConnection *gc, const char *email)
 	}
 }
 
-static void oscar_show_change_email(PurplePluginAction *action)
+static void oscar_show_change_email(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	purple_request_input(gc, NULL, _("Change Address To:"), NULL, NULL,
 					   FALSE, FALSE, NULL,
 					   _("_OK"), G_CALLBACK(oscar_change_email),
@@ -5078,9 +5078,9 @@ static void oscar_show_change_email(PurplePluginAction *action)
 					   gc);
 }
 
-static void oscar_show_awaitingauth(PurplePluginAction *action)
+static void oscar_show_awaitingauth(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	OscarData *od = purple_connection_get_protocol_data(gc);
 	PurpleAccount *account = purple_connection_get_account(gc);
 	GSList *buddies, *filtered_buddies, *cur;
@@ -5121,9 +5121,9 @@ static void search_by_email_cb(PurpleConnection *gc, const char *email)
 	aim_search_address(od, email);
 }
 
-static void oscar_show_find_email(PurplePluginAction *action)
+static void oscar_show_find_email(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	purple_request_input(gc, _("Find Buddy by Email"),
 					   _("Search for a buddy by email address"),
 					   _("Type the email address of the buddy you are "
@@ -5135,39 +5135,39 @@ static void oscar_show_find_email(PurplePluginAction *action)
 					   gc);
 }
 
-static void oscar_show_set_info(PurplePluginAction *action)
+static void oscar_show_set_info(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	purple_account_request_change_user_info(purple_connection_get_account(gc));
 }
 
-static void oscar_show_set_info_icqurl(PurplePluginAction *action)
+static void oscar_show_set_info_icqurl(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	purple_notify_uri(gc, "http://www.icq.com/whitepages/user_details.php");
 }
 
-static void oscar_change_pass(PurplePluginAction *action)
+static void oscar_change_pass(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	purple_account_request_change_password(purple_connection_get_account(gc));
 }
 
 /**
  * Only used when connecting with the old-style BUCP login.
  */
-static void oscar_show_chpassurl(PurplePluginAction *action)
+static void oscar_show_chpassurl(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	OscarData *od = purple_connection_get_protocol_data(gc);
 	gchar *substituted = purple_strreplace(od->authinfo->chpassurl, "%s", purple_account_get_username(purple_connection_get_account(gc)));
 	purple_notify_uri(gc, substituted);
 	g_free(substituted);
 }
 
-static void oscar_show_imforwardingurl(PurplePluginAction *action)
+static void oscar_show_imforwardingurl(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	purple_notify_uri(gc, "http://mymobile.aol.com/dbreg/register?action=imf&clientID=1");
 }
 
@@ -5274,39 +5274,38 @@ oscar_send_file(PurpleConnection *gc, const char *who, const char *file)
 }
 
 GList *
-oscar_actions(PurplePlugin *plugin, gpointer context)
+oscar_get_actions(PurpleConnection *gc)
 {
-	PurpleConnection *gc = (PurpleConnection *) context;
 	OscarData *od = purple_connection_get_protocol_data(gc);
 	GList *menu = NULL;
-	PurplePluginAction *act;
+	PurpleProtocolAction *act;
 
-	act = purple_plugin_action_new(_("Set User Info..."),
+	act = purple_protocol_action_new(_("Set User Info..."),
 			oscar_show_set_info);
 	menu = g_list_prepend(menu, act);
 
 	if (od->icq)
 	{
-		act = purple_plugin_action_new(_("Set User Info (web)..."),
+		act = purple_protocol_action_new(_("Set User Info (web)..."),
 				oscar_show_set_info_icqurl);
 		menu = g_list_prepend(menu, act);
 	}
 
-	act = purple_plugin_action_new(_("Change Password..."),
+	act = purple_protocol_action_new(_("Change Password..."),
 			oscar_change_pass);
 	menu = g_list_prepend(menu, act);
 
 	if (od->authinfo != NULL && od->authinfo->chpassurl != NULL)
 	{
 		/* This only happens when connecting with the old-style BUCP login */
-		act = purple_plugin_action_new(_("Change Password (web)"),
+		act = purple_protocol_action_new(_("Change Password (web)"),
 				oscar_show_chpassurl);
 		menu = g_list_prepend(menu, act);
 	}
 
 	if (!od->icq)
 	{
-		act = purple_plugin_action_new(_("Configure IM Forwarding (web)"),
+		act = purple_protocol_action_new(_("Configure IM Forwarding (web)"),
 				oscar_show_imforwardingurl);
 		menu = g_list_prepend(menu, act);
 	}
@@ -5316,41 +5315,41 @@ oscar_actions(PurplePlugin *plugin, gpointer context)
 	if (od->icq)
 	{
 		/* ICQ actions */
-		act = purple_plugin_action_new(_("Set Privacy Options..."),
+		act = purple_protocol_action_new(_("Set Privacy Options..."),
 				oscar_show_icq_privacy_opts);
 		menu = g_list_prepend(menu, act);
 
-		act = purple_plugin_action_new(_("Show Visible List"), oscar_show_visible_list);
+		act = purple_protocol_action_new(_("Show Visible List"), oscar_show_visible_list);
 		menu = g_list_prepend(menu, act);
 
-		act = purple_plugin_action_new(_("Show Invisible List"), oscar_show_invisible_list);
+		act = purple_protocol_action_new(_("Show Invisible List"), oscar_show_invisible_list);
 		menu = g_list_prepend(menu, act);
 	}
 	else
 	{
 		/* AIM actions */
-		act = purple_plugin_action_new(_("Confirm Account"),
+		act = purple_protocol_action_new(_("Confirm Account"),
 				oscar_confirm_account);
 		menu = g_list_prepend(menu, act);
 
-		act = purple_plugin_action_new(_("Display Currently Registered Email Address"),
+		act = purple_protocol_action_new(_("Display Currently Registered Email Address"),
 				oscar_show_email);
 		menu = g_list_prepend(menu, act);
 
-		act = purple_plugin_action_new(_("Change Currently Registered Email Address..."),
+		act = purple_protocol_action_new(_("Change Currently Registered Email Address..."),
 				oscar_show_change_email);
 		menu = g_list_prepend(menu, act);
 	}
 
 	menu = g_list_prepend(menu, NULL);
 
-	act = purple_plugin_action_new(_("Show Buddies Awaiting Authorization"),
+	act = purple_protocol_action_new(_("Show Buddies Awaiting Authorization"),
 			oscar_show_awaitingauth);
 	menu = g_list_prepend(menu, act);
 
 	menu = g_list_prepend(menu, NULL);
 
-	act = purple_plugin_action_new(_("Search for Buddy by Email Address..."),
+	act = purple_protocol_action_new(_("Search for Buddy by Email Address..."),
 			oscar_show_find_email);
 	menu = g_list_prepend(menu, act);
 
@@ -5530,9 +5529,8 @@ static gboolean oscar_uri_handler(const char *proto, const char *cmd, GHashTable
 	return FALSE;
 }
 
-void oscar_init(PurplePlugin *plugin, gboolean is_icq)
+void oscar_init(PurpleProtocol *protocol, gboolean is_icq)
 {
-	PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
 	PurpleAccountOption *option;
 	static gboolean init = FALSE;
 	static const gchar *encryption_keys[] = {
@@ -5551,10 +5549,10 @@ void oscar_init(PurplePlugin *plugin, gboolean is_icq)
 	int i;
 
 	option = purple_account_option_string_new(_("Server"), "server", get_login_server(is_icq, TRUE));
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	protocol->protocol_options = g_list_append(protocol->protocol_options, option);
 
 	option = purple_account_option_int_new(_("Port"), "port", OSCAR_DEFAULT_LOGIN_PORT);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	protocol->protocol_options = g_list_append(protocol->protocol_options, option);
 
 	for (i = 0; encryption_keys[i]; i++) {
 		PurpleKeyValuePair *kvp = g_new0(PurpleKeyValuePair, 1);
@@ -5563,21 +5561,21 @@ void oscar_init(PurplePlugin *plugin, gboolean is_icq)
 		encryption_options = g_list_append(encryption_options, kvp);
 	}
 	option = purple_account_option_list_new(_("Connection security"), "encryption", encryption_options);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	protocol->protocol_options = g_list_append(protocol->protocol_options, option);
 
 	option = purple_account_option_bool_new(_("Use clientLogin"), "use_clientlogin",
 			OSCAR_DEFAULT_USE_CLIENTLOGIN);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	protocol->protocol_options = g_list_append(protocol->protocol_options, option);
 
 	option = purple_account_option_bool_new(
 		_("Always use AIM/ICQ proxy server for\nfile transfers and direct IM (slower,\nbut does not reveal your IP address)"), "always_use_rv_proxy",
 		OSCAR_DEFAULT_ALWAYS_USE_RV_PROXY);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	protocol->protocol_options = g_list_append(protocol->protocol_options, option);
 
-	if (g_str_equal(purple_plugin_get_id(plugin), "prpl-aim")) {
+	if (g_str_equal(protocol->id, "prpl-aim")) {
 		option = purple_account_option_bool_new(_("Allow multiple simultaneous logins"), "allow_multiple_logins",
 												OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS);
-		prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+		protocol->protocol_options = g_list_append(protocol->protocol_options, option);
 	}
 
 	if (init)
@@ -5593,7 +5591,7 @@ void oscar_init(PurplePlugin *plugin, gboolean is_icq)
 
 	/* protocol handler */
 	/* TODO: figure out a good instance to use here */
-	purple_signal_connect(purple_get_core(), "uri-handler", &init,
+	purple_signal_connect(purple_get_core(), "uri-handler", protocol,
 		PURPLE_CALLBACK(oscar_uri_handler), NULL);
 }
 
