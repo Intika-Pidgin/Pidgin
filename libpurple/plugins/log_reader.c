@@ -4,7 +4,7 @@
 
 #include "debug.h"
 #include "log.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "pluginpref.h"
 #include "prefs.h"
 #include "stringref.h"
@@ -67,8 +67,8 @@ static GList *adium_logger_list(PurpleLogType type, const char *sn, PurpleAccoun
 	GList *list = NULL;
 	const char *logdir;
 	PurplePlugin *plugin;
-	PurplePluginProtocolInfo *prpl_info;
-	char *prpl_name;
+	PurpleProtocol *protocol;
+	char *protocol_name;
 	char *temp;
 	char *path;
 	GDir *dir;
@@ -82,17 +82,17 @@ static GList *adium_logger_list(PurpleLogType type, const char *sn, PurpleAccoun
 	if (!logdir || !*logdir)
 		return NULL;
 
-	plugin = purple_find_prpl(purple_account_get_protocol_id(account));
+	plugin = purple_find_protocol_info(purple_account_get_protocol_id(account));
 	if (!plugin)
 		return NULL;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
-	if (!prpl_info->list_icon)
+	protocol = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
+	if (!protocol->list_icon)
 		return NULL;
 
-	prpl_name = g_ascii_strup(prpl_info->list_icon(account, NULL), -1);
+	protocol_name = g_ascii_strup(protocol->list_icon(account, NULL), -1);
 
-	temp = g_strdup_printf("%s.%s", prpl_name, purple_account_get_username(account));
+	temp = g_strdup_printf("%s.%s", protocol_name, purple_account_get_username(account));
 	path = g_build_filename(logdir, temp, sn, NULL);
 	g_free(temp);
 
@@ -227,7 +227,7 @@ static GList *adium_logger_list(PurpleLogType type, const char *sn, PurpleAccoun
 		g_dir_close(dir);
 	}
 
-	g_free(prpl_name);
+	g_free(protocol_name);
 	g_free(path);
 
 	return list;
@@ -1206,8 +1206,8 @@ static GList *trillian_logger_list(PurpleLogType type, const char *sn, PurpleAcc
 	GList *list = NULL;
 	const char *logdir;
 	PurplePlugin *plugin;
-	PurplePluginProtocolInfo *prpl_info;
-	char *prpl_name;
+	PurpleProtocol *protocol;
+	char *protocol_name;
 	const char *buddy_name;
 	char *filename;
 	char *path;
@@ -1226,21 +1226,21 @@ static GList *trillian_logger_list(PurpleLogType type, const char *sn, PurpleAcc
 	if (!logdir || !*logdir)
 		return NULL;
 
-	plugin = purple_find_prpl(purple_account_get_protocol_id(account));
+	plugin = purple_find_protocol_info(purple_account_get_protocol_id(account));
 	if (!plugin)
 		return NULL;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
-	if (!prpl_info->list_icon)
+	protocol = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
+	if (!protocol->list_icon)
 		return NULL;
 
-	prpl_name = g_ascii_strup(prpl_info->list_icon(account, NULL), -1);
+	protocol_name = g_ascii_strup(protocol->list_icon(account, NULL), -1);
 
 	buddy_name = purple_normalize(account, sn);
 
 	filename = g_strdup_printf("%s.log", buddy_name);
 	path = g_build_filename(
-		logdir, prpl_name, filename, NULL);
+		logdir, protocol_name, filename, NULL);
 
 	purple_debug_info("Trillian log list", "Reading %s\n", path);
 	/* FIXME: There's really no need to read the entire file at once.
@@ -1254,7 +1254,7 @@ static GList *trillian_logger_list(PurpleLogType type, const char *sn, PurpleAcc
 		g_free(path);
 
 		path = g_build_filename(
-			logdir, prpl_name, "Query", filename, NULL);
+			logdir, protocol_name, "Query", filename, NULL);
 		purple_debug_info("Trillian log list", "Reading %s\n", path);
 		if (!g_file_get_contents(path, &contents, &length, &error)) {
 			if (error)
@@ -1390,7 +1390,7 @@ static GList *trillian_logger_list(PurpleLogType type, const char *sn, PurpleAcc
 	}
 	g_free(path);
 
-	g_free(prpl_name);
+	g_free(protocol_name);
 
 	return g_list_reverse(list);
 }
@@ -1757,7 +1757,7 @@ static GList *qip_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	GList *list = NULL;
 	const char *logdir;
 	PurplePlugin *plugin;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	char *username;
 	char *filename;
 	char *path;
@@ -1786,12 +1786,12 @@ static GList *qip_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	if (!logdir || !*logdir)
 		return NULL;
 
-	plugin = purple_find_prpl(purple_account_get_protocol_id(account));
+	plugin = purple_find_protocol_info(purple_account_get_protocol_id(account));
 	if (!plugin)
 		return NULL;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
-	if (!prpl_info->list_icon)
+	protocol = PURPLE_PLUGIN_PROTOCOL_INFO(plugin);
+	if (!protocol->list_icon)
 		return NULL;
 
 	username = g_strdup(purple_normalize(account, purple_account_get_username(account)));
