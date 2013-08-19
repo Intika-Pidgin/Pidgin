@@ -25,6 +25,7 @@
 
 #include <account.h>
 #include <core.h>
+#include <plugins.h>
 
 #include "libymsg.h"
 #include "yahoochat.h"
@@ -33,26 +34,26 @@
 #include "yahoo_filexfer.h"
 #include "yahoo_picture.h"
 
-static PurplePlugin *my_protocol = NULL;
+static PurpleProtocol *my_protocol = NULL;
 
 static void yahoo_register_commands(void)
 {
-	purple_cmd_register("join", "s", PURPLE_CMD_P_PRPL,
+	purple_cmd_register("join", "s", PURPLE_CMD_P_PROTOCOL,
 	                  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT |
-	                  PURPLE_CMD_FLAG_PRPL_ONLY,
+	                  PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 	                  "prpl-yahoo", yahoopurple_cmd_chat_join,
 	                  _("join &lt;room&gt;:  Join a chat room on the Yahoo network"), NULL);
-	purple_cmd_register("list", "", PURPLE_CMD_P_PRPL,
+	purple_cmd_register("list", "", PURPLE_CMD_P_PROTOCOL,
 	                  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT |
-	                  PURPLE_CMD_FLAG_PRPL_ONLY,
+	                  PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 	                  "prpl-yahoo", yahoopurple_cmd_chat_list,
 	                  _("list: List rooms on the Yahoo network"), NULL);
-	purple_cmd_register("buzz", "", PURPLE_CMD_P_PRPL,
-	                  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PRPL_ONLY,
+	purple_cmd_register("buzz", "", PURPLE_CMD_P_PROTOCOL,
+	                  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 	                  "prpl-yahoo", yahoopurple_cmd_buzz,
 	                  _("buzz: Buzz a user to get their attention"), NULL);
-	purple_cmd_register("doodle", "", PURPLE_CMD_P_PRPL,
-	                  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PRPL_ONLY,
+	purple_cmd_register("doodle", "", PURPLE_CMD_P_PROTOCOL,
+	                  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 	                  "prpl-yahoo", yahoo_doodle_purple_cmd_start,
 	                 _("doodle: Request user to start a Doodle session"), NULL);
 }
@@ -100,7 +101,7 @@ static gboolean yahoo_uri_handler(const char *proto, const char *cmd, GHashTable
 	if (g_ascii_strcasecmp(proto, "ymsgr"))
 		return FALSE;
 
-	acct = find_acct(purple_plugin_get_id(my_protocol), acct_id);
+	acct = find_acct(my_protocol->id, acct_id);
 
 	if (!acct)
 		return FALSE;
@@ -167,14 +168,7 @@ yahoo_get_account_text_table(PurpleAccount *account)
 	return table;
 }
 
-static gboolean yahoo_unload_plugin(PurplePlugin *plugin)
-{
-	yahoo_dest_colorht();
-
-	return TRUE;
-}
-
-static PurpleWhiteboardPrplOps yahoo_whiteboard_prpl_ops =
+static PurpleWhiteboardPrplOps yahoo_whiteboard_protocol_ops =
 {
 	yahoo_doodle_start,
 	yahoo_doodle_end,
@@ -192,13 +186,16 @@ static PurpleWhiteboardPrplOps yahoo_whiteboard_prpl_ops =
 	NULL
 };
 
-static PurplePluginProtocolInfo prpl_info =
+static PurpleProtocol protocol =
 {
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	"prpl-yahoo",
+	"Yahoo",
+	sizeof(PurpleProtocol),       /* struct_size */
 	OPT_PROTO_MAIL_CHECK | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE,
 	NULL, /* user_splits */
 	NULL, /* protocol_options */
 	{"png,gif,jpeg", 96, 96, 96, 96, 0, PURPLE_ICON_SCALE_SEND},
+	yahoo_get_actions,
 	yahoo_list_icon,
 	yahoo_list_emblem,
 	yahoo_status_text,
@@ -253,7 +250,7 @@ static PurplePluginProtocolInfo prpl_info =
 	yahoo_send_file,
 	yahoo_new_xfer,
 	yahoo_offline_message, /* offline_message */
-	&yahoo_whiteboard_prpl_ops,
+	&yahoo_whiteboard_protocol_ops,
 	NULL, /* send_raw */
 	NULL, /* roomlist_room_serialize */
 	NULL, /* unregister_user */
@@ -267,74 +264,71 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL   /* get_public_alias */
 };
 
-static PurplePluginInfo info =
+static PurplePluginInfo *
+plugin_query(GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
-	"prpl-yahoo",                                     /**< id             */
-	"Yahoo",	                                      /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	N_("Yahoo! Protocol Plugin"),
-	                                                  /**  description    */
-	N_("Yahoo! Protocol Plugin"),
-	NULL,                                             /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
-	NULL,                                             /**< load           */
-	yahoo_unload_plugin,                              /**< unload         */
-	NULL,                                             /**< destroy        */
-	NULL,                                             /**< ui_info        */
-	&prpl_info,                                       /**< extra_info     */
-	NULL,
-	yahoo_actions,
+	return purple_plugin_info_new(
+		"id",           "prpl-yahoo",
+		"name",         "Yahoo",
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Protocol"),
+		"summary",      N_("Yahoo! Protocol Plugin"),
+		"description",  N_("Yahoo! Protocol Plugin"),
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        GPLUGIN_PLUGIN_INFO_FLAGS_INTERNAL |
+		                GPLUGIN_PLUGIN_INFO_FLAGS_LOAD_ON_QUERY,
+		NULL
+	);
+}
 
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	PurpleAccountOption *option;
 
 	option = purple_account_option_int_new(_("Pager port"), "port", YAHOO_PAGER_PORT);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_string_new(_("File transfer server"), "xfer_host", YAHOO_XFER_HOST);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_string_new(_("Chat room locale"), "room_list_locale", YAHOO_ROOMLIST_LOCALE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_string_new(_("Encoding"), "local_charset", "UTF-8");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_bool_new(_("Ignore conference and chatroom invitations"), "ignore_invites", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 #if 0
 	option = purple_account_option_bool_new(_("Use account proxy for HTTP and HTTPS connections"), "proxy_ssl", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_string_new(_("Chat room list URL"), "room_list", YAHOO_ROOMLIST_URL);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 #endif
 
-	my_protocol = plugin;
+	my_protocol = &protocol;
 	yahoo_register_commands();
 	yahoo_init_colorht();
 
-	purple_signal_connect(purple_get_core(), "uri-handler", plugin,
+	purple_signal_connect(purple_get_core(), "uri-handler", my_protocol,
 		PURPLE_CALLBACK(yahoo_uri_handler), NULL);
+
+	purple_protocols_add(my_protocol);
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(yahoo, init_plugin, info);
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	yahoo_dest_colorht();
+	purple_protocols_remove(my_protocol);
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(yahoo, plugin_query, plugin_load, plugin_unload);
