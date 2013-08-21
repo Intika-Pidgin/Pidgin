@@ -28,7 +28,7 @@
 
 #include "gtkconv.h"
 #include "pidgin.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "util.h"
 
 typedef enum
@@ -49,9 +49,9 @@ typedef enum
 
 typedef enum
 {
-	PIDGIN_PRPL_ICON_SMALL,
-	PIDGIN_PRPL_ICON_MEDIUM,
-	PIDGIN_PRPL_ICON_LARGE
+	PIDGIN_PROTOCOL_ICON_SMALL,
+	PIDGIN_PROTOCOL_ICON_MEDIUM,
+	PIDGIN_PROTOCOL_ICON_LARGE
 } PidginPrplIconSize;
 
 #ifndef _WIN32
@@ -514,7 +514,7 @@ void pidgin_buddy_icon_get_scale_size(GdkPixbuf *buf, PurpleBuddyIconSpec *spec,
  *         to allocate the image buffer, or the image file
  *         contained invalid data.
  */
-GdkPixbuf *pidgin_create_prpl_icon(PurpleAccount *account, PidginPrplIconSize size);
+GdkPixbuf *pidgin_create_protocol_icon(PurpleAccount *account, PidginPrplIconSize size);
 
 /**
  * Creates a status icon for a given primitve
@@ -593,13 +593,13 @@ GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(cons
 /**
  * Converts a buddy icon to the required size and format
  *
- * @param plugin     The prpl to convert the icon
+ * @param protocol  The prpl to convert the icon
  * @param path       The path of a file to convert
  * @param len        If not @c NULL, the length of the returned data will be set here.
  *
  * @return           The converted image data, or @c NULL if an error occurred.
  */
-gpointer pidgin_convert_buddy_icon(PurplePlugin *plugin, const char *path, size_t *len);
+gpointer pidgin_convert_buddy_icon(PurpleProtocol *protocol, const char *path, size_t *len);
 
 /**
  * Converts "->" and "<-" in strings to Unicode arrow characters, for use in referencing

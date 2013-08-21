@@ -155,7 +155,7 @@ typedef struct
 #include <time.h>
 
 #include "account.h"
-#include "plugin.h"
+#include "protocol.h"
 #include "status.h"
 #include "sslconn.h"
 
@@ -358,7 +358,7 @@ PurpleAccount *purple_connection_get_account(const PurpleConnection *gc);
  *
  * @return The protocol plugin.
  */
-PurplePlugin * purple_connection_get_prpl(const PurpleConnection *gc);
+PurpleProtocol *purple_connection_get_protocol_info(const PurpleConnection *gc);
 
 /**
  * Returns the connection's password.

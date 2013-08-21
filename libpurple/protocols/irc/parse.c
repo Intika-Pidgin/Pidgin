@@ -44,7 +44,7 @@ static char *irc_mirc_colors[16] = {
 		"orange", "yellow", "green", "teal", "cyan", "light blue",
 		"pink", "grey", "light grey" };
 
-extern PurplePlugin *_irc_plugin;
+extern PurpleProtocol *_irc_protocol;
 
 /*typedef void (*IRCMsgCallback)(struct irc_conn *irc, char *from, char *name, char **args);*/
 static struct _irc_msg {
@@ -200,7 +200,7 @@ static void irc_register_command(struct _irc_user_cmd *c)
 	char *format;
 	size_t i;
 
-	f = PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PRPL_ONLY
+	f = PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PROTOCOL_ONLY
 	    | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS;
 
 	format = c->format;
@@ -221,7 +221,7 @@ static void irc_register_command(struct _irc_user_cmd *c)
 
 	args[i] = '\0';
 
-	purple_cmd_register(c->name, args, PURPLE_CMD_P_PRPL, f, "prpl-irc",
+	purple_cmd_register(c->name, args, PURPLE_CMD_P_PROTOCOL, f, "prpl-irc",
 	                  irc_parse_purple_cmd, _(c->help), NULL);
 }
 
@@ -670,7 +670,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	 * TODO: It should be passed as an array of bytes and a length
 	 * instead of a null terminated string.
 	 */
-	purple_signal_emit(_irc_plugin, "irc-receiving-text", gc, &input);
+	purple_signal_emit(_irc_protocol, "irc-receiving-text", gc, &input);
 
 	if (!strncmp(input, "PING ", 5)) {
 		msg = irc_format(irc, "vv", "PONG", input + 5);
