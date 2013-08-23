@@ -32,9 +32,9 @@
 #include "core.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "prefs.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "request.h"
 #include "signals.h"
 #include "pidginstock.h"
@@ -322,7 +322,7 @@ static void gtk_blist_menu_im_cb(GtkWidget *w, PurpleBuddy *b)
 #ifdef USE_VV
 static void gtk_blist_menu_audio_call_cb(GtkWidget *w, PurpleBuddy *b)
 {
-	purple_prpl_initiate_media(purple_buddy_get_account(b),
+	purple_protocol_initiate_media(purple_buddy_get_account(b),
 		purple_buddy_get_name(b), PURPLE_MEDIA_AUDIO);
 }
 
@@ -330,13 +330,13 @@ static void gtk_blist_menu_video_call_cb(GtkWidget *w, PurpleBuddy *b)
 {
 	/* if the buddy supports both audio and video, start a combined call,
 	 otherwise start a pure video session */
-	if (purple_prpl_get_media_caps(purple_buddy_get_account(b),
+	if (purple_protocol_get_media_caps(purple_buddy_get_account(b),
 			purple_buddy_get_name(b)) &
 			PURPLE_MEDIA_CAPS_AUDIO_VIDEO) {
-		purple_prpl_initiate_media(purple_buddy_get_account(b),
+		purple_protocol_initiate_media(purple_buddy_get_account(b),
 			purple_buddy_get_name(b), PURPLE_MEDIA_AUDIO | PURPLE_MEDIA_VIDEO);
 	} else {
-		purple_prpl_initiate_media(purple_buddy_get_account(b),
+		purple_protocol_initiate_media(purple_buddy_get_account(b),
 			purple_buddy_get_name(b), PURPLE_MEDIA_VIDEO);
 	}
 }
@@ -384,18 +384,18 @@ static void gtk_blist_join_chat(PurpleChat *chat)
 {
 	PurpleAccount *account;
 	PurpleConversation *conv;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	GHashTable *components;
 	const char *name;
 	char *chat_name;
 
 	account = purple_chat_get_account(chat);
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_find_prpl(purple_account_get_protocol_id(account)));
+	protocol = purple_find_protocol_info(purple_account_get_protocol_id(account));
 
 	components = purple_chat_get_components(chat);
 
-	if (prpl_info && prpl_info->get_chat_name)
-		chat_name = prpl_info->get_chat_name(components);
+	if (protocol && protocol->get_chat_name)
+		chat_name = protocol->get_chat_name(components);
 	else
 		chat_name = NULL;
 
@@ -664,14 +664,14 @@ static void chat_components_edit(GtkWidget *w, PurpleBlistNode *node)
 	PurpleRequestFieldGroup *group = purple_request_field_group_new(NULL);
 	PurpleRequestField *field;
 	GList *parts, *iter;
-	struct proto_chat_entry *pce;
+	PurpleProtocolChatEntry *pce;
 	PurpleConnection *gc;
 	PurpleChat *chat = (PurpleChat*)node;
 
 	purple_request_fields_add_group(fields, group);
 
 	gc = purple_account_get_connection(purple_chat_get_account(chat));
-	parts = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc))->chat_info(gc);
+	parts = purple_connection_get_protocol_info(gc)->chat_info(gc);
 
 	for (iter = parts; iter; iter = iter->next) {
 		pce = iter->data;
@@ -748,12 +748,12 @@ static void gtk_blist_menu_showlog_cb(GtkWidget *w, PurpleBlistNode *node)
 		account = purple_buddy_get_account(b);
 	} else if (PURPLE_IS_CHAT(node)) {
 		PurpleChat *c = PURPLE_CHAT(node);
-		PurplePluginProtocolInfo *prpl_info = NULL;
+		PurpleProtocol *protocol = NULL;
 		type = PURPLE_LOG_CHAT;
 		account = purple_chat_get_account(c);
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_find_prpl(purple_account_get_protocol_id(account)));
-		if (prpl_info && prpl_info->get_chat_name) {
-			name = prpl_info->get_chat_name(purple_chat_get_components(c));
+		protocol = purple_find_protocol_info(purple_account_get_protocol_id(account));
+		if (protocol && protocol->get_chat_name) {
+			name = protocol->get_chat_name(purple_chat_get_components(c));
 		}
 	} else if (PURPLE_IS_CONTACT(node)) {
 		pidgin_log_show_contact(PURPLE_CONTACT(node));
@@ -888,7 +888,7 @@ do_joinchat(GtkWidget *dialog, int id, PidginChatData *info)
 static void
 set_sensitive_if_input_chat_cb(GtkWidget *entry, gpointer user_data)
 {
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	PurpleConnection *gc;
 	PidginChatData *data;
 	GList *tmp;
@@ -912,8 +912,8 @@ set_sensitive_if_input_chat_cb(GtkWidget *entry, gpointer user_data)
 	gtk_dialog_set_response_sensitive(GTK_DIALOG(data->rq_data.window), GTK_RESPONSE_OK, sensitive);
 
 	gc = purple_account_get_connection(data->rq_data.account);
-	prpl_info = (gc != NULL) ? PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc)) : NULL;
-	sensitive = (prpl_info != NULL && prpl_info->roomlist_get_list != NULL);
+	protocol = (gc != NULL) ? purple_connection_get_protocol_info(gc) : NULL;
+	sensitive = (protocol != NULL && protocol->roomlist_get_list != NULL);
 
 	gtk_dialog_set_response_sensitive(GTK_DIALOG(data->rq_data.window), 1, sensitive);
 }
@@ -921,16 +921,16 @@ set_sensitive_if_input_chat_cb(GtkWidget *entry, gpointer user_data)
 static void
 set_sensitive_if_input_buddy_cb(GtkWidget *entry, gpointer user_data)
 {
-	PurplePlugin *prpl;
+	PurpleProtocol *protocol;
 	PidginAddBuddyData *data = user_data;
 	const char *text;
 
-	prpl = purple_find_prpl(purple_account_get_protocol_id(
+	protocol = purple_find_protocol_info(purple_account_get_protocol_id(
 		data->rq_data.account));
 	text = gtk_entry_get_text(GTK_ENTRY(entry));
 
 	gtk_dialog_set_response_sensitive(GTK_DIALOG(data->rq_data.window),
-		GTK_RESPONSE_OK, purple_validate(prpl, text));
+		GTK_RESPONSE_OK, purple_validate(protocol, text));
 }
 
 static void
@@ -946,14 +946,14 @@ static gboolean
 chat_account_filter_func(PurpleAccount *account)
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 
 	if (gc == NULL)
 		return FALSE;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+	protocol = purple_connection_get_protocol_info(gc);
 
-	return (prpl_info->chat_info != NULL);
+	return (protocol->chat_info != NULL);
 }
 
 gboolean
@@ -1042,27 +1042,27 @@ static void
 rebuild_chat_entries(PidginChatData *data, const char *default_chat_name)
 {
 	PurpleConnection *gc;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	GList *list = NULL, *tmp;
 	GHashTable *defaults = NULL;
-	struct proto_chat_entry *pce;
+	PurpleProtocolChatEntry *pce;
 	gboolean focus = TRUE;
 
 	g_return_if_fail(data->rq_data.account != NULL);
 
 	gc = purple_account_get_connection(data->rq_data.account);
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+	protocol = purple_connection_get_protocol_info(gc);
 
 	gtk_container_foreach(GTK_CONTAINER(data->rq_data.vbox), (GtkCallback)gtk_widget_destroy, NULL);
 
 	g_list_free(data->entries);
 	data->entries = NULL;
 
-	if (prpl_info->chat_info != NULL)
-		list = prpl_info->chat_info(gc);
+	if (protocol->chat_info != NULL)
+		list = protocol->chat_info(gc);
 
-	if (prpl_info->chat_info_defaults != NULL)
-		defaults = prpl_info->chat_info_defaults(gc, default_chat_name);
+	if (protocol->chat_info_defaults != NULL)
+		defaults = protocol->chat_info_defaults(gc, default_chat_name);
 
 	for (tmp = list; tmp; tmp = tmp->next)
 	{
@@ -1426,12 +1426,12 @@ pidgin_append_blist_node_proto_menu(GtkWidget *menu, PurpleConnection *gc,
                                       PurpleBlistNode *node)
 {
 	GList *l, *ll;
-	PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+	PurpleProtocol *protocol = purple_connection_get_protocol_info(gc);
 
-	if(!prpl_info || !prpl_info->blist_node_menu)
+	if(!protocol || !protocol->blist_node_menu)
 		return;
 
-	for(l = ll = prpl_info->blist_node_menu(node); l; l = l->next) {
+	for(l = ll = protocol->blist_node_menu(node); l; l = l->next) {
 		PurpleMenuAction *act = (PurpleMenuAction *) l->data;
 		pidgin_append_menu_action(menu, act, node);
 	}
@@ -1482,7 +1482,7 @@ void
 pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) {
 	PurpleAccount *account = NULL;
 	PurpleConnection *pc = NULL;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	PurpleContact *contact;
 	PurpleBlistNode *node;
 	gboolean contact_expanded = FALSE;
@@ -1492,7 +1492,7 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 
 	account = purple_buddy_get_account(buddy);
 	pc = purple_account_get_connection(account);
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(pc));
+	protocol = purple_connection_get_protocol_info(pc);
 
 	node = PURPLE_BLIST_NODE(buddy);
 
@@ -1502,7 +1502,7 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 		contact_expanded = node->contact_expanded;
 	}
 
-	if (prpl_info && prpl_info->get_info) {
+	if (protocol && protocol->get_info) {
 		pidgin_new_item_from_stock(menu, _("Get _Info"), PIDGIN_STOCK_TOOLBAR_USER_INFO,
 				G_CALLBACK(gtk_blist_menu_info_cb), buddy, 0, 0, NULL);
 	}
@@ -1510,10 +1510,10 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 			G_CALLBACK(gtk_blist_menu_im_cb), buddy, 0, 0, NULL);
 
 #ifdef USE_VV
-	if (prpl_info && prpl_info->get_media_caps) {
+	if (protocol && protocol->get_media_caps) {
 		PurpleAccount *account = purple_buddy_get_account(buddy);
 		const gchar *who = purple_buddy_get_name(buddy);
-		PurpleMediaCaps caps = purple_prpl_get_media_caps(account, who);
+		PurpleMediaCaps caps = purple_protocol_get_media_caps(account, who);
 		if (caps & PURPLE_MEDIA_CAPS_AUDIO) {
 			pidgin_new_item_from_stock(menu, _("_Audio Call"),
 				PIDGIN_STOCK_TOOLBAR_AUDIO_CALL,
@@ -1532,9 +1532,9 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 
 #endif
 
-	if (prpl_info && prpl_info->send_file) {
-		if (!prpl_info->can_receive_file ||
-			prpl_info->can_receive_file(purple_account_get_connection(purple_buddy_get_account(buddy)), purple_buddy_get_name(buddy)))
+	if (protocol && protocol->send_file) {
+		if (!protocol->can_receive_file ||
+			protocol->can_receive_file(purple_account_get_connection(purple_buddy_get_account(buddy)), purple_buddy_get_name(buddy)))
 		{
 			pidgin_new_item_from_stock(menu, _("_Send File..."),
 									 PIDGIN_STOCK_TOOLBAR_SEND_FILE,
@@ -1859,7 +1859,7 @@ create_buddy_menu(PurpleBlistNode *node, PurpleBuddy *b)
 					continue;
 
 				menuitem = gtk_image_menu_item_new_with_label(purple_buddy_get_name(buddy));
-				buf = pidgin_create_prpl_icon(purple_buddy_get_account(buddy), PIDGIN_PRPL_ICON_SMALL);
+				buf = pidgin_create_protocol_icon(purple_buddy_get_account(buddy), PIDGIN_PROTOCOL_ICON_SMALL);
 				image = gtk_image_new_from_pixbuf(buf);
 				g_object_unref(G_OBJECT(buf));
 				gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menuitem),
@@ -1941,8 +1941,7 @@ gtk_blist_button_press_cb(GtkWidget *tv, GdkEventButton *event, gpointer user_da
 	PurpleBlistNode *node;
 	GtkTreeIter iter;
 	GtkTreeSelection *sel;
-	PurplePlugin *prpl = NULL;
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	struct _pidgin_blist_node *gtknode;
 	gboolean handled = FALSE;
 
@@ -1975,11 +1974,9 @@ gtk_blist_button_press_cb(GtkWidget *tv, GdkEventButton *event, gpointer user_da
 		else
 			b = (PurpleBuddy *)node;
 
-		prpl = purple_find_prpl(purple_account_get_protocol_id(purple_buddy_get_account(b)));
-		if (prpl != NULL)
-			prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+		protocol = purple_find_protocol_info(purple_account_get_protocol_id(purple_buddy_get_account(b)));
 
-		if (prpl && prpl_info->get_info)
+		if (protocol && protocol->get_info)
 			pidgin_retrieve_user_info(purple_account_get_connection(purple_buddy_get_account(b)), purple_buddy_get_name(b));
 		handled = TRUE;
 	}
@@ -2104,7 +2101,7 @@ pidgin_blist_sound_method_pref_cb(const char *name, PurplePrefType type,
 }
 
 static void
-add_buddies_from_vcard(const char *prpl_id, PurpleGroup *group, GList *list,
+add_buddies_from_vcard(const char *protocol_id, PurpleGroup *group, GList *list,
 					   const char *alias)
 {
 	GList *l;
@@ -2119,7 +2116,7 @@ add_buddies_from_vcard(const char *prpl_id, PurpleGroup *group, GList *list,
 		gc = (PurpleConnection *)l->data;
 		account = purple_connection_get_account(gc);
 
-		if (!strcmp(purple_account_get_protocol_id(account), prpl_id))
+		if (!strcmp(purple_account_get_protocol_id(account), protocol_id))
 			break;
 
 		account = NULL;
@@ -2318,7 +2315,7 @@ static void pidgin_blist_drag_data_get_cb(GtkWidget *widget,
 		}
 
 		protocol =
-			PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc))->list_icon(purple_buddy_get_account(buddy),
+			purple_connection_get_protocol_info(gc)->list_icon(purple_buddy_get_account(buddy),
 														   buddy);
 
 		str = g_string_new(NULL);
@@ -2672,7 +2669,7 @@ static GdkPixbuf *pidgin_blist_get_buddy_icon(PurpleBlistNode *node,
 	PurpleAccount *account = NULL;
 	PurpleContact *contact = NULL;
 	PurpleStoredImage *custom_img;
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	gint orig_width, orig_height, scale_width, scale_height;
 
 	if (PURPLE_IS_CONTACT(node)) {
@@ -2695,7 +2692,7 @@ static GdkPixbuf *pidgin_blist_get_buddy_icon(PurpleBlistNode *node,
 	}
 
 	if(account && purple_account_get_connection(account)) {
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(purple_account_get_connection(account)));
+		protocol = purple_connection_get_protocol_info(purple_account_get_connection(account));
 	}
 
 #if 0
@@ -2771,8 +2768,8 @@ static GdkPixbuf *pidgin_blist_get_buddy_icon(PurpleBlistNode *node,
 	scale_width = orig_width = gdk_pixbuf_get_width(buf);
 	scale_height = orig_height = gdk_pixbuf_get_height(buf);
 
-	if (prpl_info && prpl_info->icon_spec.scale_rules & PURPLE_ICON_SCALE_DISPLAY)
-		purple_buddy_icon_get_scale_size(&prpl_info->icon_spec, &scale_width, &scale_height);
+	if (protocol && protocol->icon_spec.scale_rules & PURPLE_ICON_SCALE_DISPLAY)
+		purple_buddy_icon_get_scale_size(&protocol->icon_spec, &scale_width, &scale_height);
 
 	if (scaled || scale_height > 200 || scale_width > 200) {
 		GdkPixbuf *tmpbuf;
@@ -2837,14 +2834,14 @@ static GdkPixbuf *pidgin_blist_get_buddy_icon(PurpleBlistNode *node,
 #define TOOLTIP_BORDER 12
 #define SMALL_SPACE 6
 #define LARGE_SPACE 12
-#define PRPL_SIZE 16
+#define PROTOCOL_SIZE 16
 struct tooltip_data {
 	PangoLayout *layout;
 	PangoLayout *name_layout;
-	GdkPixbuf *prpl_icon;
+	GdkPixbuf *protocol_icon;
 	GdkPixbuf *status_icon;
 	GdkPixbuf *avatar;
-	gboolean avatar_is_prpl_icon;
+	gboolean avatar_is_protocol_icon;
 	int avatar_width;
 	int avatar_height;
 	int name_height;
@@ -2875,8 +2872,8 @@ static PangoLayout * create_pango_layout(const char *markup, int *width, int *he
 static struct tooltip_data * create_tip_for_account(PurpleAccount *account)
 {
 	struct tooltip_data *td = g_new0(struct tooltip_data, 1);
-	td->status_icon = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
-		/* Yes, status_icon, not prpl_icon */
+	td->status_icon = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
+		/* Yes, status_icon, not protocol_icon */
 	if (purple_account_is_disconnected(account))
 		gdk_pixbuf_saturate_and_pixelate(td->status_icon, td->status_icon, 0.0, FALSE);
 	td->layout = create_pango_layout(purple_account_get_username(account), &td->width, &td->height);
@@ -2900,7 +2897,7 @@ static struct tooltip_data * create_tip_for_node(PurpleBlistNode *node, gboolean
 	td->status_icon = pidgin_blist_get_status_icon(node, PIDGIN_STATUS_ICON_LARGE);
 	td->avatar = pidgin_blist_get_buddy_icon(node, !full, FALSE);
 	if (account != NULL) {
-		td->prpl_icon = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+		td->protocol_icon = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 	}
 	tooltip_text = pidgin_get_tooltip_text(node, full);
 	if (tooltip_text && *tooltip_text) {
@@ -2924,12 +2921,12 @@ static struct tooltip_data * create_tip_for_node(PurpleBlistNode *node, gboolean
 	g_free(tmp);
 
 	td->name_layout = create_pango_layout(node_name, &td->name_width, &td->name_height);
-	td->name_width += SMALL_SPACE + PRPL_SIZE;
-	td->name_height = MAX(td->name_height, PRPL_SIZE + SMALL_SPACE);
+	td->name_width += SMALL_SPACE + PROTOCOL_SIZE;
+	td->name_height = MAX(td->name_height, PROTOCOL_SIZE + SMALL_SPACE);
 #if 0  /* PRPL Icon as avatar */
 	if(!td->avatar && full) {
-		td->avatar = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_LARGE);
-		td->avatar_is_prpl_icon = TRUE;
+		td->avatar = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_LARGE);
+		td->avatar_is_protocol_icon = TRUE;
 	}
 #endif
 
@@ -2955,7 +2952,7 @@ pidgin_blist_paint_tip(GtkWidget *widget, cairo_t *cr, gpointer null)
 	int max_text_width;
 	int max_avatar_width;
 	GList *l;
-	int prpl_col = 0;
+	int protocol_col = 0;
 	GtkTextDirection dir = gtk_widget_get_direction(widget);
 	int status_size = 0;
 
@@ -2985,9 +2982,9 @@ pidgin_blist_paint_tip(GtkWidget *widget, cairo_t *cr, gpointer null)
 
 	max_width = TOOLTIP_BORDER + status_size + SMALL_SPACE + max_text_width + SMALL_SPACE + max_avatar_width + TOOLTIP_BORDER;
 	if (dir == GTK_TEXT_DIR_RTL)
-		prpl_col = TOOLTIP_BORDER + max_avatar_width + SMALL_SPACE;
+		protocol_col = TOOLTIP_BORDER + max_avatar_width + SMALL_SPACE;
 	else
-		prpl_col = TOOLTIP_BORDER + status_size + SMALL_SPACE + max_text_width - PRPL_SIZE;
+		protocol_col = TOOLTIP_BORDER + status_size + SMALL_SPACE + max_text_width - PROTOCOL_SIZE;
 
 	current_height = 12;
 	for(l = gtkblist->tooltipdata; l; l = l->next)
@@ -3054,10 +3051,10 @@ pidgin_blist_paint_tip(GtkWidget *widget, cairo_t *cr, gpointer null)
 			}
 		}
 
-		if (!td->avatar_is_prpl_icon && td->prpl_icon) {
-			gdk_cairo_set_source_pixbuf(cr, td->prpl_icon, prpl_col,
+		if (!td->avatar_is_protocol_icon && td->protocol_icon) {
+			gdk_cairo_set_source_pixbuf(cr, td->protocol_icon, protocol_col,
 			                            current_height +
-			                               (td->name_height - PRPL_SIZE) / 2);
+			                               (td->name_height - PROTOCOL_SIZE) / 2);
 			cairo_paint(cr);
 		}
 
@@ -3131,8 +3128,8 @@ pidgin_blist_destroy_tooltip_data(void)
 			g_object_unref(td->avatar);
 		if(td->status_icon)
 			g_object_unref(td->status_icon);
-		if(td->prpl_icon)
-			g_object_unref(td->prpl_icon);
+		if(td->protocol_icon)
+			g_object_unref(td->protocol_icon);
 		if (td->layout)
 			g_object_unref(td->layout);
 		if (td->name_layout)
@@ -3521,14 +3518,13 @@ get_global_moods(void)
 			PurpleConnection *gc = purple_account_get_connection(account);
 
 			if (purple_connection_get_flags(gc) & PURPLE_CONNECTION_FLAG_SUPPORT_MOODS) {
-				PurplePluginProtocolInfo *prpl_info =
-					PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+				PurpleProtocol *protocol = purple_connection_get_protocol_info(gc);
 				PurpleMood *mood = NULL;
 
 				/* PURPLE_CONNECTION_FLAG_SUPPORT_MOODS would not be set if the prpl doesn't
 				 * have get_moods, so using PURPLE_PROTOCOL_PLUGIN_HAS_FUNC isn't necessary
 				 * here */
-				for (mood = prpl_info->get_moods(account) ;
+				for (mood = protocol->get_moods(account) ;
 				    mood->mood != NULL ; mood++) {
 					int mood_count =
 							GPOINTER_TO_INT(g_hash_table_lookup(mood_counts, mood->mood));
@@ -3607,7 +3603,7 @@ set_mood_cb(GtkWidget *widget, PurpleAccount *account)
 	PurpleRequestFieldGroup *g;
 	PurpleRequestField *f;
 	PurpleConnection *gc = NULL;
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	PurpleMood *mood;
 	PurpleMood *global_moods = get_global_moods();
 
@@ -3615,8 +3611,8 @@ set_mood_cb(GtkWidget *widget, PurpleAccount *account)
 		PurplePresence *presence = purple_account_get_presence(account);
 		PurpleStatus *status = purple_presence_get_status(presence, "mood");
 		gc = purple_account_get_connection(account);
-		g_return_if_fail(purple_connection_get_prpl(gc) != NULL);
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+		g_return_if_fail(purple_connection_get_protocol_info(gc) != NULL);
+		protocol = purple_connection_get_protocol_info(gc);
 		current_mood = purple_status_get_attr_string(status, PURPLE_MOOD_NAME);
 	} else {
 		current_mood = get_global_mood_status();
@@ -3632,8 +3628,8 @@ set_mood_cb(GtkWidget *widget, PurpleAccount *account)
 
 	/* TODO: rlaager wants this sorted. */
 	/* TODO: darkrain wants it sorted post-translation */
-	if (account && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_moods))
-		mood = prpl_info->get_moods(account);
+	if (account && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(protocol, get_moods))
+		mood = protocol->get_moods(account);
 	else
 		mood = global_moods;
 	for ( ; mood->mood != NULL ; mood++) {
@@ -3804,8 +3800,7 @@ static const char *blist_menu =
 static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 {
 	GString *str = g_string_new("");
-	PurplePlugin *prpl;
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	char *tmp;
 
 	if (PURPLE_IS_CHAT(node))
@@ -3813,14 +3808,13 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 		PurpleChat *chat;
 		GList *connections;
 		GList *cur;
-		struct proto_chat_entry *pce;
+		PurpleProtocolChatEntry *pce;
 		char *name, *value;
 		PurpleChatConversation *conv;
 		PidginBlistNode *bnode = purple_blist_node_get_ui_data(node);
 
 		chat = (PurpleChat *)node;
-		prpl = purple_find_prpl(purple_account_get_protocol_id(purple_chat_get_account(chat)));
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+		protocol = purple_find_protocol_info(purple_account_get_protocol_id(purple_chat_get_account(chat)));
 
 		connections = purple_connections_get_all();
 		if (connections && connections->next)
@@ -3834,8 +3828,8 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 			conv = PURPLE_CHAT_CONVERSATION(bnode->conv.conv);
 		} else {
 			char *chat_name;
-			if (prpl_info && prpl_info->get_chat_name)
-				chat_name = prpl_info->get_chat_name(purple_chat_get_components(chat));
+			if (protocol && protocol->get_chat_name)
+				chat_name = protocol->get_chat_name(purple_chat_get_components(chat));
 			else
 				chat_name = g_strdup(purple_chat_get_name(chat));
 
@@ -3848,7 +3842,7 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 			g_string_append_printf(str, _("\n<b>Occupants:</b> %d"),
 					g_list_length(purple_chat_conversation_get_users(conv)));
 
-			if (prpl_info && (prpl_info->options & OPT_PROTO_CHAT_TOPIC)) {
+			if (protocol && (protocol->options & OPT_PROTO_CHAT_TOPIC)) {
 				const char *chattopic = purple_chat_conversation_get_topic(conv);
 				char *topic = chattopic ? g_markup_escape_text(chattopic, -1) : NULL;
 				g_string_append_printf(str, _("\n<b>Topic:</b> %s"), topic ? topic : _("(no topic set)"));
@@ -3856,8 +3850,8 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 			}
 		}
 
-		if (prpl_info && prpl_info->chat_info != NULL)
-			cur = prpl_info->chat_info(purple_account_get_connection(purple_chat_get_account(chat)));
+		if (protocol && protocol->chat_info != NULL)
+			cur = protocol->chat_info(purple_account_get_connection(purple_chat_get_account(chat)));
 		else
 			cur = NULL;
 
@@ -3908,8 +3902,7 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 			c = purple_buddy_get_contact(b);
 		}
 
-		prpl = purple_find_prpl(purple_account_get_protocol_id(purple_buddy_get_account(b)));
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+		protocol = purple_find_protocol_info(purple_account_get_protocol_id(purple_buddy_get_account(b)));
 
 		presence = purple_buddy_get_presence(b);
 		user_info = purple_notify_user_info_new();
@@ -4018,10 +4011,10 @@ static char *pidgin_get_tooltip_text(PurpleBlistNode *node, gboolean full)
 		}
 
 		if (purple_account_is_connected(purple_buddy_get_account(b)) &&
-				prpl_info && prpl_info->tooltip_text)
+				protocol && protocol->tooltip_text)
 		{
 			/* Additional text from the PRPL */
-			prpl_info->tooltip_text(b, user_info, full);
+			protocol->tooltip_text(b, user_info, full);
 		}
 
 		/* These are Easter Eggs.  Patches to remove them will be rejected. */
@@ -4108,8 +4101,7 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 {
 	PurpleBuddy *buddy = NULL;
 	struct _pidgin_blist_node *gtknode = purple_blist_node_get_ui_data(node);
-	PurplePlugin *prpl;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	const char *name = NULL;
 	char *filename, *path;
 	PurplePresence *p = NULL;
@@ -4133,7 +4125,7 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 		if (((struct _pidgin_blist_node*)purple_blist_node_get_ui_data(node->parent))->contact_expanded) {
 			if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/show_protocol_icons"))
 				return NULL;
-			return pidgin_create_prpl_icon(purple_buddy_get_account((PurpleBuddy*)node), PIDGIN_PRPL_ICON_SMALL);
+			return pidgin_create_protocol_icon(purple_buddy_get_account((PurpleBuddy*)node), PIDGIN_PROTOCOL_ICON_SMALL);
 		}
 	} else {
 		return NULL;
@@ -4177,13 +4169,12 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 		return _pidgin_blist_get_cached_emblem(path);
 	}
 
-	prpl = purple_find_prpl(purple_account_get_protocol_id(purple_buddy_get_account(buddy)));
-	if (!prpl)
+	protocol = purple_find_protocol_info(purple_account_get_protocol_id(purple_buddy_get_account(buddy)));
+	if (!protocol)
 		return NULL;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-	if (prpl_info && prpl_info->list_emblem)
-		name = prpl_info->list_emblem(buddy);
+	if (protocol->list_emblem)
+		name = protocol->list_emblem(buddy);
 
 	if (name == NULL) {
 		PurpleStatus *status;
@@ -4238,15 +4229,15 @@ pidgin_blist_get_status_icon(PurpleBlistNode *node, PidginStatusIconSize size)
 
 	if(buddy || chat) {
 		PurpleAccount *account;
-		PurplePlugin *prpl;
+		PurpleProtocol *protocol;
 
 		if(buddy)
 			account = purple_buddy_get_account(buddy);
 		else
 			account = purple_chat_get_account(chat);
 
-		prpl = purple_find_prpl(purple_account_get_protocol_id(account));
-		if(!prpl)
+		protocol = purple_find_protocol_info(purple_account_get_protocol_id(account));
+		if(!protocol)
 			return NULL;
 	}
 
@@ -4329,8 +4320,7 @@ pidgin_blist_get_name_markup(PurpleBuddy *b, gboolean selected, gboolean aliased
 {
 	const char *name, *name_color, *name_font, *status_color, *status_font;
 	char *text = NULL;
-	PurplePlugin *prpl;
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	PurpleContact *contact;
 	PurplePresence *presence;
 	struct _pidgin_blist_node *gtkcontactnode = NULL;
@@ -4379,13 +4369,10 @@ pidgin_blist_get_name_markup(PurpleBuddy *b, gboolean selected, gboolean aliased
 	if (!aliased || biglist) {
 
 		/* Status Info */
-		prpl = purple_find_prpl(purple_account_get_protocol_id(purple_buddy_get_account(b)));
+		protocol = purple_find_protocol_info(purple_account_get_protocol_id(purple_buddy_get_account(b)));
 
-		if (prpl != NULL)
-			prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-
-		if (prpl_info && prpl_info->status_text && purple_account_get_connection(purple_buddy_get_account(b))) {
-			char *tmp = prpl_info->status_text(b);
+		if (protocol && protocol->status_text && purple_account_get_connection(purple_buddy_get_account(b))) {
+			char *tmp = protocol->status_text(b);
 			const char *end;
 
 			if(tmp && !g_utf8_validate(tmp, -1, &end)) {
@@ -5183,13 +5170,13 @@ find_account_widget(GObject *widget,
 }
 
 static void
-pack_prpl_icon_start(GtkWidget *box,
+pack_protocol_icon_start(GtkWidget *box,
                      PurpleAccount *account)
 {
 	GdkPixbuf *pixbuf;
 	GtkWidget *image;
 
-	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+	pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 	if (pixbuf != NULL) {
 		image = gtk_image_new_from_pixbuf(pixbuf);
 		g_object_unref(pixbuf);
@@ -5449,7 +5436,7 @@ create_account_label(PurpleAccount *account)
 	hbox = gtk_hbox_new(FALSE, 6);
 	g_object_set_data(G_OBJECT(hbox), OBJECT_DATA_KEY_ACCOUNT, account);
 
-	pack_prpl_icon_start(hbox, account);
+	pack_protocol_icon_start(hbox, account);
 
 	label = gtk_label_new(NULL);
 	markup = g_strdup_printf("<span size=\"smaller\">%s</span>", username);
@@ -6689,7 +6676,7 @@ static char *pidgin_get_group_title(PurpleBlistNode *gnode, gboolean expanded)
 static void buddy_node(PurpleBuddy *buddy, GtkTreeIter *iter, PurpleBlistNode *node)
 {
 	PurplePresence *presence = purple_buddy_get_presence(buddy);
-	GdkPixbuf *status, *avatar, *emblem, *prpl_icon;
+	GdkPixbuf *status, *avatar, *emblem, *protocol_icon;
 	GdkColor *color = NULL;
 	char *mark;
 	char *idle = NULL;
@@ -6758,7 +6745,7 @@ static void buddy_node(PurpleBuddy *buddy, GtkTreeIter *iter, PurpleBlistNode *n
 		}
 	}
 
-	prpl_icon = pidgin_create_prpl_icon(purple_buddy_get_account(buddy), PIDGIN_PRPL_ICON_SMALL);
+	protocol_icon = pidgin_create_protocol_icon(purple_buddy_get_account(buddy), PIDGIN_PROTOCOL_ICON_SMALL);
 
 	if (theme != NULL)
 		color = pidgin_blist_theme_get_contact_color(theme);
@@ -6773,7 +6760,7 @@ static void buddy_node(PurpleBuddy *buddy, GtkTreeIter *iter, PurpleBlistNode *n
 			   BUDDY_ICON_VISIBLE_COLUMN, biglist,
 			   EMBLEM_COLUMN, emblem,
 			   EMBLEM_VISIBLE_COLUMN, (emblem != NULL),
-			   PROTOCOL_ICON_COLUMN, prpl_icon,
+			   PROTOCOL_ICON_COLUMN, protocol_icon,
 			   PROTOCOL_ICON_VISIBLE_COLUMN, purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/show_protocol_icons"),
 			   BGCOLOR_COLUMN, color,
 			   CONTACT_EXPANDER_COLUMN, NULL,
@@ -6789,8 +6776,8 @@ static void buddy_node(PurpleBuddy *buddy, GtkTreeIter *iter, PurpleBlistNode *n
 		g_object_unref(status);
 	if(avatar)
 		g_object_unref(avatar);
-	if(prpl_icon)
-		g_object_unref(prpl_icon);
+	if(protocol_icon)
+		g_object_unref(protocol_icon);
 }
 
 /* This is a variation on the original gtk_blist_update_contact. Here we
@@ -6939,7 +6926,7 @@ static void pidgin_blist_update_chat(PurpleBuddyList *list, PurpleBlistNode *nod
 
 	if(purple_account_is_connected(purple_chat_get_account(chat))) {
 		GtkTreeIter iter;
-		GdkPixbuf *status, *avatar, *emblem, *prpl_icon;
+		GdkPixbuf *status, *avatar, *emblem, *protocol_icon;
 		const gchar *color, *font;
 		gchar *mark, *tmp;
 		gboolean showicons = purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/show_buddy_icons");
@@ -7001,7 +6988,7 @@ static void pidgin_blist_update_chat(PurpleBuddyList *list, PurpleBlistNode *nod
 		g_free(mark);
 		mark = tmp;
 
-		prpl_icon = pidgin_create_prpl_icon(purple_chat_get_account(chat), PIDGIN_PRPL_ICON_SMALL);
+		protocol_icon = pidgin_create_protocol_icon(purple_chat_get_account(chat), PIDGIN_PROTOCOL_ICON_SMALL);
 
 		if (theme != NULL)
 			bgcolor = pidgin_blist_theme_get_contact_color(theme);
@@ -7013,7 +7000,7 @@ static void pidgin_blist_update_chat(PurpleBuddyList *list, PurpleBlistNode *nod
 				BUDDY_ICON_VISIBLE_COLUMN, showicons,
 				EMBLEM_COLUMN, emblem,
 				EMBLEM_VISIBLE_COLUMN, emblem != NULL,
-				PROTOCOL_ICON_COLUMN, prpl_icon,
+				PROTOCOL_ICON_COLUMN, protocol_icon,
 				PROTOCOL_ICON_VISIBLE_COLUMN, purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/show_protocol_icons"),
 				NAME_COLUMN, mark,
 				BGCOLOR_COLUMN, bgcolor,
@@ -7027,8 +7014,8 @@ static void pidgin_blist_update_chat(PurpleBuddyList *list, PurpleBlistNode *nod
 			g_object_unref(status);
 		if(avatar)
 			g_object_unref(avatar);
-		if(prpl_icon)
-			g_object_unref(prpl_icon);
+		if(protocol_icon)
+			g_object_unref(protocol_icon);
 
 	} else {
 		pidgin_blist_hide_node(list, node, TRUE);
@@ -7166,8 +7153,7 @@ add_buddy_select_account_cb(GObject *w, PurpleAccount *account,
 							PidginAddBuddyData *data)
 {
 	PurpleConnection *pc = NULL;
-	PurplePlugin *prpl = NULL;
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	gboolean invite_enabled = TRUE;
 
 	/* Save our account */
@@ -7176,10 +7162,8 @@ add_buddy_select_account_cb(GObject *w, PurpleAccount *account,
 	if (account)
 		pc = purple_account_get_connection(account);
 	if (pc)
-		prpl = purple_connection_get_prpl(pc);
-	if (prpl)
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-	if (prpl_info && !(prpl_info->options & OPT_PROTO_INVITE_MESSAGE))
+		protocol = purple_connection_get_protocol_info(pc);
+	if (protocol && !(protocol->options & OPT_PROTO_INVITE_MESSAGE))
 		invite_enabled = FALSE;
 
 	gtk_widget_set_sensitive(data->entry_for_invite, invite_enabled);
@@ -7429,13 +7413,13 @@ pidgin_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
 	GList *l;
 	PurpleConnection *gc;
 	GtkBox *vbox;
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 
 	if (account != NULL) {
 		gc = purple_account_get_connection(account);
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+		protocol = purple_connection_get_protocol_info(gc);
 
-		if (prpl_info->join_chat == NULL) {
+		if (protocol->join_chat == NULL) {
 			purple_notify_error(gc, NULL, _("This protocol does not support chat rooms."), NULL);
 			return;
 		}
@@ -7443,9 +7427,9 @@ pidgin_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
 		/* Find an account with chat capabilities */
 		for (l = purple_connections_get_all(); l != NULL; l = l->next) {
 			gc = (PurpleConnection *)l->data;
-			prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+			protocol = purple_connection_get_protocol_info(gc);
 
-			if (prpl_info->join_chat != NULL) {
+			if (protocol->join_chat != NULL) {
 				account = purple_connection_get_account(gc);
 				break;
 			}
@@ -8124,21 +8108,24 @@ plugin_act(GtkWidget *obj, PurplePluginAction *pam)
 
 static void
 build_plugin_actions(GtkActionGroup *action_group, GString *ui, char *parent,
-		PurplePlugin *plugin, gpointer context)
+		PurplePlugin *plugin)
 {
 	GtkAction *menuaction;
+	PurplePluginGetActionsCallback get_actions;
 	PurplePluginAction *action = NULL;
 	GList *actions, *l;
 	char *name;
 	int count = 0;
 
-	actions = PURPLE_PLUGIN_ACTIONS(plugin, context);
+	get_actions =
+		purple_plugin_info_get_actions_callback(purple_plugin_get_info(plugin));
+
+	actions = get_actions(plugin);
 
 	for (l = actions; l != NULL; l = l->next) {
 		if (l->data) {
 			action = (PurplePluginAction *)l->data;
 			action->plugin = plugin;
-			action->context = context;
 
 			name = g_strdup_printf("%s-action-%d", parent, count++);
 			menuaction = gtk_action_new(name, action->label, NULL, NULL);
@@ -8184,6 +8171,13 @@ disable_account_cb(GtkCheckMenuItem *widget, gpointer data)
 	PurpleAccount *account = data;
 
 	purple_account_set_enabled(account, PIDGIN_UI, FALSE);
+}
+
+static void
+protocol_act(GtkWidget *obj, PurpleProtocolAction *pam)
+{
+	if (pam && pam->callback)
+		pam->callback(pam);
 }
 
 void
@@ -8234,7 +8228,7 @@ pidgin_blist_update_accounts_menu(void)
 			menuitem = gtk_image_menu_item_new_with_label(buf);
 			g_free(buf);
 
-			pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+			pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 			if (pixbuf != NULL) {
 				if (!purple_account_is_connected(account))
 					gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
@@ -8267,8 +8261,7 @@ pidgin_blist_update_accounts_menu(void)
 		PurpleConnection *gc = NULL;
 		PurpleAccount *account = NULL;
 		GdkPixbuf *pixbuf = NULL;
-		PurplePlugin *plugin = NULL;
-		PurplePluginProtocolInfo *prpl_info;
+		PurpleProtocol *protocol;
 
 		account = accounts->data;
 
@@ -8281,7 +8274,7 @@ pidgin_blist_update_accounts_menu(void)
 		accel_path_buf = g_strconcat("<Actions>/AccountActions/", buf, NULL);
 		g_free(buf);
 
-		pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+		pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 		if (pixbuf != NULL) {
 			if (!purple_account_is_connected(account))
 				gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf,
@@ -8308,13 +8301,13 @@ pidgin_blist_update_accounts_menu(void)
 		pidgin_separator(submenu);
 
 		gc = purple_account_get_connection(account);
-		plugin = gc && PURPLE_CONNECTION_IS_CONNECTED(gc) ? purple_connection_get_prpl(gc) : NULL;
-		prpl_info = plugin ? PURPLE_PLUGIN_PROTOCOL_INFO(plugin) : NULL;
+		protocol = gc && PURPLE_CONNECTION_IS_CONNECTED(gc) ?
+				purple_connection_get_protocol_info(gc) : NULL;
 
-		if (prpl_info &&
-		    (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_moods) ||
-			 PURPLE_PLUGIN_HAS_ACTIONS(plugin))) {
-			if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_moods) &&
+		if (protocol &&
+		    (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(protocol, get_moods) ||
+			 PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(protocol, get_actions))) {
+			if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(protocol, get_moods) &&
 			    (purple_connection_get_flags(gc) & PURPLE_CONNECTION_FLAG_SUPPORT_MOODS)) {
 
 				if (purple_account_get_status(account, "mood")) {
@@ -8325,29 +8318,28 @@ pidgin_blist_update_accounts_menu(void)
 				}
 			}
 
-			if (PURPLE_PLUGIN_HAS_ACTIONS(plugin)) {
+			if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(protocol, get_actions)) {
 				GtkWidget *menuitem;
-				PurplePluginAction *action = NULL;
+				PurpleProtocolAction *action = NULL;
 				GList *actions, *l;
 
-				actions = PURPLE_PLUGIN_ACTIONS(plugin, gc);
+				actions = protocol->get_actions(gc);
 
 				for (l = actions; l != NULL; l = l->next)
 				{
 					if (l->data)
 					{
-						action = (PurplePluginAction *) l->data;
-						action->plugin = plugin;
-						action->context = gc;
+						action = (PurpleProtocolAction *) l->data;
+						action->connection = gc;
 
 						menuitem = gtk_menu_item_new_with_label(action->label);
 						gtk_menu_shell_append(GTK_MENU_SHELL(submenu), menuitem);
 
 						g_signal_connect(G_OBJECT(menuitem), "activate",
-								G_CALLBACK(plugin_act), action);
-						g_object_set_data_full(G_OBJECT(menuitem), "plugin_action",
+								G_CALLBACK(protocol_act), action);
+						g_object_set_data_full(G_OBJECT(menuitem), "protocol_action",
 											   action,
-											   (GDestroyNotify)purple_plugin_action_free);
+											   (GDestroyNotify)purple_protocol_action_free);
 						gtk_widget_show(menuitem);
 					}
 					else
@@ -8380,6 +8372,7 @@ void
 pidgin_blist_update_plugin_actions(void)
 {
 	PurplePlugin *plugin = NULL;
+	PurplePluginInfo *info;
 	GList *l;
 
 	GtkAction *action;
@@ -8408,19 +8401,17 @@ pidgin_blist_update_plugin_actions(void)
 		char *name;
 
 		plugin = (PurplePlugin *)l->data;
+		info = purple_plugin_get_info(plugin);
 
-		if (PURPLE_IS_PROTOCOL_PLUGIN(plugin))
-			continue;
-
-		if (!PURPLE_PLUGIN_HAS_ACTIONS(plugin))
+		if (!purple_plugin_info_get_actions_callback(info))
 			continue;
 
 		name = g_strdup_printf("plugin%d", count);
-		action = gtk_action_new(name, plugin->info->name, NULL, NULL);
+		action = gtk_action_new(name, purple_plugin_info_get_name(info), NULL, NULL);
 		gtk_action_group_add_action(plugins_action_group, action);
 		g_string_append_printf(plugins_ui, "<menu action='%s'>", name);
 
-		build_plugin_actions(plugins_action_group, plugins_ui, name, plugin, NULL);
+		build_plugin_actions(plugins_action_group, plugins_ui, name, plugin);
 
 		g_string_append(plugins_ui, "</menu>");
 		count++;
