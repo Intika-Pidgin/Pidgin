@@ -40,6 +40,7 @@
 #include "roster.h"
 #include "si.h"
 #include "message.h"
+#include "plugins.h"
 #include "presence.h"
 #include "google/google.h"
 #include "pep.h"
@@ -55,11 +56,13 @@ facebook_list_icon(PurpleAccount *a, PurpleBuddy *b)
 	return "facebook";
 }
 
-static PurplePlugin *my_protocol = NULL;
+static PurpleProtocol *my_protocol = NULL;
 
-static PurplePluginProtocolInfo prpl_info =
+static PurpleProtocol protocol =
 {
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	"prpl-facebook-xmpp",                   /* id */
+	"Facebook (XMPP)",                      /* name */
+	sizeof(PurpleProtocol),       /* struct_size */
 	OPT_PROTO_CHAT_TOPIC | OPT_PROTO_UNIQUE_CHATNAME | OPT_PROTO_MAIL_CHECK |
 #ifdef HAVE_CYRUS_SASL
 	OPT_PROTO_PASSWORD_OPTIONAL |
@@ -68,6 +71,7 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,							/* user_splits */
 	NULL,							/* protocol_options */
 	{"png", 32, 32, 96, 96, 0, PURPLE_ICON_SCALE_SEND | PURPLE_ICON_SCALE_DISPLAY}, /* icon_spec */
+	jabber_get_actions,				/* get_actions */
 	facebook_list_icon,				/* list_icon */
 	jabber_list_emblem,			/* list_emblems */
 	jabber_status_text,				/* status_text */
@@ -122,8 +126,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,							/* send_file */
 	NULL,							/* new_xfer */
 	jabber_offline_message,			/* offline_message */
-	NULL,							/* whiteboard_prpl_ops */
-	jabber_prpl_send_raw,			/* send_raw */
+	NULL,							/* whiteboard_protocol_ops */
+	jabber_protocol_send_raw,			/* send_raw */
 	jabber_roomlist_room_serialize, /* roomlist_room_serialize */
 	NULL,							/* unregister_user */
 	NULL,							/* send_attention */
@@ -134,57 +138,6 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,							/* get_moods */
 	NULL, /* set_public_alias */
 	NULL  /* get_public_alias */
-};
-
-static gboolean load_plugin(PurplePlugin *plugin)
-{
-	jabber_plugin_init(plugin);
-
-	return TRUE;
-}
-
-static gboolean unload_plugin(PurplePlugin *plugin)
-{
-	jabber_plugin_uninit(plugin);
-
-	return TRUE;
-}
-
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,                         /**< type           */
-	NULL,                                           /**< ui_requirement */
-	0,                                              /**< flags          */
-	NULL,                                           /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                        /**< priority       */
-
-	"prpl-facebook-xmpp",                           /**< id             */
-	"Facebook (XMPP)",                              /**< name           */
-	DISPLAY_VERSION,                                /**< version        */
-	                                                /**  summary        */
-	N_("Facebook XMPP Protocol Plugin"),
-	                                                /**  description    */
-	N_("Facebook XMPP Protocol Plugin"),
-	NULL,                                           /**< author         */
-	PURPLE_WEBSITE,                                 /**< homepage       */
-
-	load_plugin,                                    /**< load           */
-	unload_plugin,                                  /**< unload         */
-	NULL,                                           /**< destroy        */
-
-	NULL,                                           /**< ui_info        */
-	&prpl_info,                                     /**< extra_info     */
-	NULL,                                           /**< prefs_info     */
-	jabber_actions,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
 };
 
 static PurpleAccount *find_acct(const char *prpl, const char *acct_id)
@@ -219,7 +172,7 @@ static gboolean xmpp_uri_handler(const char *proto, const char *user, GHashTable
 	if (g_ascii_strcasecmp(proto, "xmpp"))
 		return FALSE;
 
-	acct = find_acct(purple_plugin_get_id(my_protocol), acct_id);
+	acct = find_acct(my_protocol->id, acct_id);
 
 	if (!acct)
 		return FALSE;
@@ -251,9 +204,26 @@ static gboolean xmpp_uri_handler(const char *proto, const char *user, GHashTable
 	return FALSE;
 }
 
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	return purple_plugin_info_new(
+		"id",           "prpl-facebook-xmpp",
+		"name",         "Facebook (XMPP)",
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Protocol"),
+		"summary",      N_("Facebook XMPP Protocol Plugin"),
+		"description",  N_("Facebook XMPP Protocol Plugin"),
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        GPLUGIN_PLUGIN_INFO_FLAGS_INTERNAL |
+		                GPLUGIN_PLUGIN_INFO_FLAGS_LOAD_ON_QUERY,
+		NULL
+	);
+}
 
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
@@ -262,11 +232,11 @@ init_plugin(PurplePlugin *plugin)
 	/* Translators: 'domain' is used here in the context of Internet domains, e.g. pidgin.im */
 	split = purple_account_user_split_new(_("Domain"), "chat.facebook.com", '@');
 	purple_account_user_split_set_reverse(split, FALSE);
-	prpl_info.user_splits = g_list_append(prpl_info.user_splits, split);
+	protocol.user_splits = g_list_append(protocol.user_splits, split);
 
 	split = purple_account_user_split_new(_("Resource"), "", '/');
 	purple_account_user_split_set_reverse(split, FALSE);
-	prpl_info.user_splits = g_list_append(prpl_info.user_splits, split);
+	protocol.user_splits = g_list_append(protocol.user_splits, split);
 
 #define ADD_VALUE(list, desc, v) { \
 	PurpleKeyValuePair *kvp = g_new0(PurpleKeyValuePair, 1); \
@@ -286,41 +256,55 @@ init_plugin(PurplePlugin *plugin)
 #undef ADD_VALUE
 
 	option = purple_account_option_list_new(_("Connection security"), "connection_security", encryption_values);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol.protocol_options = g_list_append(protocol.protocol_options,
 						   option);
 
 	option = purple_account_option_bool_new(
 						_("Allow plaintext auth over unencrypted streams"),
 						"auth_plain_in_clear", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol.protocol_options = g_list_append(protocol.protocol_options,
 						   option);
 
 	option = purple_account_option_int_new(_("Connect port"), "port", 5222);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol.protocol_options = g_list_append(protocol.protocol_options,
 						   option);
 
 	option = purple_account_option_string_new(_("Connect server"),
 						  "connect_server", NULL);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol.protocol_options = g_list_append(protocol.protocol_options,
 						  option);
 
 	option = purple_account_option_string_new(_("BOSH URL"),
 						  "bosh_url", NULL);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol.protocol_options = g_list_append(protocol.protocol_options,
 						  option);
 
 	/* this should probably be part of global smiley theme settings later on,
 	  shared with MSN */
 	option = purple_account_option_bool_new(_("Show Custom Smileys"),
 		"custom_smileys", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol.protocol_options = g_list_append(protocol.protocol_options,
 		option);
 
-	my_protocol = plugin;
+	my_protocol = &protocol;
 
-	purple_signal_connect(purple_get_core(), "uri-handler", plugin,
+	purple_signal_connect(purple_get_core(), "uri-handler", my_protocol,
 		PURPLE_CALLBACK(xmpp_uri_handler), NULL);
+
+	purple_protocols_add(my_protocol);
+	jabber_plugin_init(my_protocol);
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(facebookxmpp, init_plugin, info);
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	jabber_plugin_uninit(my_protocol);
+	purple_protocols_remove(my_protocol);
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(facebookxmpp, plugin_query, plugin_load, plugin_unload);
 

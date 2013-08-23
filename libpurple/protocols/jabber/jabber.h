@@ -402,8 +402,8 @@ GList *jabber_attention_types(PurpleAccount *account);
 void jabber_convo_closed(PurpleConnection *gc, const char *who);
 PurpleChat *jabber_find_blist_chat(PurpleAccount *account, const char *name);
 gboolean jabber_offline_message(const PurpleBuddy *buddy);
-int jabber_prpl_send_raw(PurpleConnection *gc, const char *buf, int len);
-GList *jabber_actions(PurplePlugin *plugin, gpointer context);
+int jabber_protocol_send_raw(PurpleConnection *gc, const char *buf, int len);
+GList *jabber_get_actions(PurpleConnection *gc);
 
 gboolean jabber_audio_enabled(JabberStream *js, const char *unused);
 gboolean jabber_video_enabled(JabberStream *js, const char *unused);
@@ -412,7 +412,7 @@ gboolean jabber_initiate_media(PurpleAccount *account, const char *who,
 PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who);
 gboolean jabber_can_receive_file(PurpleConnection *gc, const gchar *who);
 
-void jabber_plugin_init(PurplePlugin *plugin);
-void jabber_plugin_uninit(PurplePlugin *plugin);
+void jabber_plugin_init(PurpleProtocol *protocol);
+void jabber_plugin_uninit(PurpleProtocol *protocol);
 
 #endif /* PURPLE_JABBER_H_ */
