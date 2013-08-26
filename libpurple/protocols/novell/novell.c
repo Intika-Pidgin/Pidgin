@@ -21,7 +21,8 @@
 #include "internal.h"
 #include "accountopt.h"
 #include "debug.h"
-#include "prpl.h"
+#include "plugins.h"
+#include "protocol.h"
 #include "server.h"
 #include "nmuser.h"
 #include "notify.h"
@@ -43,7 +44,7 @@
 #define NOVELL_STATUS_TYPE_IDLE "idle"
 #define NOVELL_STATUS_TYPE_APPEAR_OFFLINE "appearoffline"
 
-static PurplePlugin *my_protocol = NULL;
+static PurpleProtocol *my_protocol = NULL;
 
 static gboolean
 _is_disconnect_error(NMERR_T err);
@@ -1216,9 +1217,9 @@ _update_buddy_status(NMUser *user, PurpleBuddy * buddy, int novellstatus, int gm
 		}
 	}
 
-	purple_prpl_got_user_status(account, name, status_id,
+	purple_protocol_got_user_status(account, name, status_id,
 							  "message", text, NULL);
-	purple_prpl_got_user_idle(account, name,
+	purple_protocol_got_user_idle(account, name,
 							(novellstatus == NM_STATUS_AWAY_IDLE), idle);
 }
 
@@ -3482,14 +3483,17 @@ novell_get_max_message_size(PurpleConnection *gc)
 	return 1792;
 }
 
-static PurplePluginProtocolInfo prpl_info = {
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+static PurpleProtocol protocol = {
+	"prpl-novell",				/* id */
+	"GroupWise",				/* name */
+	sizeof(PurpleProtocol),       /* struct_size */
 	0,
 	NULL,						/* user_splits */
 	NULL,						/* protocol_options */
 	NO_BUDDY_ICONS,				/* icon_spec */
+	NULL,						/* get_actions */
 	novell_list_icon,			/* list_icon */
-	NULL,				/* list_emblems */
+	NULL,						/* list_emblems */
 	novell_status_text,			/* status_text */
 	novell_tooltip_text,		/* tooltip_text */
 	novell_status_types,		/* status_types */
@@ -3542,7 +3546,7 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,						/* send_file */
 	NULL,						/* new_xfer */
 	NULL,						/* offline_message */
-	NULL,						/* whiteboard_prpl_ops */
+	NULL,						/* whiteboard_protocol_ops */
 	NULL,						/* send_raw */
 	NULL,						/* roomlist_room_serialize */
 	NULL,						/* unregister_user */
@@ -3557,55 +3561,49 @@ static PurplePluginProtocolInfo prpl_info = {
 	novell_get_max_message_size			/* get_max_message_size */
 };
 
-static PurplePluginInfo info = {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,			/**< type           */
-	NULL,					/**< ui_requirement */
-	0,					/**< flags          */
-	NULL,					/**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,			/**< priority       */
-	"prpl-novell",				/**< id             */
-	"GroupWise",				/**< name           */
-	DISPLAY_VERSION,			/**< version        */
-	/**  summary        */
-	N_("Novell GroupWise Messenger Protocol Plugin"),
-	/**  description    */
-	N_("Novell GroupWise Messenger Protocol Plugin"),
-	NULL,					/**< author         */
-	PURPLE_WEBSITE,				/**< homepage       */
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	return purple_plugin_info_new(
+		"id",           "prpl-novell",
+		"name",         "GroupWise",
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Protocol"),
+		"summary",      N_("Novell GroupWise Messenger Protocol Plugin"),
+		"description",  N_("Novell GroupWise Messenger Protocol Plugin"),
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        GPLUGIN_PLUGIN_INFO_FLAGS_INTERNAL |
+		                GPLUGIN_PLUGIN_INFO_FLAGS_LOAD_ON_QUERY,
+		NULL
+	);
+}
 
-	NULL,					/**< load           */
-	NULL,					/**< unload         */
-	NULL,					/**< destroy        */
-
-	NULL,					/**< ui_info        */
-	&prpl_info,				/**< extra_info     */
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin * plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	PurpleAccountOption *option;
 
 	option = purple_account_option_string_new(_("Server address"), "server", NULL);
-	prpl_info.protocol_options =
-		g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options =
+		g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_int_new(_("Server port"), "port", DEFAULT_PORT);
-	prpl_info.protocol_options =
-		g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options =
+		g_list_append(protocol.protocol_options, option);
 
-	my_protocol = plugin;
+	my_protocol = &protocol;
+	purple_protocols_add(my_protocol);
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(novell, init_plugin, info);
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	purple_protocols_remove(my_protocol);
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(novell, plugin_query, plugin_load, plugin_unload);
