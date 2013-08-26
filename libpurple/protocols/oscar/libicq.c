@@ -24,6 +24,7 @@
  * which contains all the shared implementation code with libaim
  */
 
+#include "plugins.h"
 
 #include "oscarcommon.h"
 
@@ -43,14 +44,17 @@ icq_get_max_message_size(PurpleConnection *gc)
 	return 2346;
 }
 
-static PurplePluginProtocolInfo prpl_info =
+static PurpleProtocol protocol =
 {
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	"prpl-icq",				/* id */
+	"ICQ",					/* name */
+	sizeof(PurpleProtocol),       /* struct_size */
 	OPT_PROTO_MAIL_CHECK | OPT_PROTO_IM_IMAGE | OPT_PROTO_INVITE_MESSAGE | OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE,
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
 	{"gif,jpeg,bmp,ico", 0, 0, 64, 64, 7168, PURPLE_ICON_SCALE_SEND | PURPLE_ICON_SCALE_DISPLAY}, /* icon_spec */
-	oscar_list_icon_icq,		/* list_icon */
+	oscar_get_actions,		/* get_actions */
+	oscar_list_icon_icq,	/* list_icon */
 	oscar_list_emblem,		/* list_emblems */
 	oscar_status_text,		/* status_text */
 	oscar_tooltip_text,		/* tooltip_text */
@@ -104,7 +108,7 @@ static PurplePluginProtocolInfo prpl_info =
 	oscar_send_file,		/* send_file */
 	oscar_new_xfer,			/* new_xfer */
 	oscar_offline_message,	/* offline_message */
-	NULL,					/* whiteboard_prpl_ops */
+	NULL,					/* whiteboard_protocol_ops */
 	NULL,					/* send_raw */
 	NULL,					/* roomlist_room_serialize */
 	NULL,					/* unregister_user */
@@ -119,52 +123,45 @@ static PurplePluginProtocolInfo prpl_info =
 	icq_get_max_message_size		/* get_max_message_size */
 };
 
-static PurplePluginInfo info =
+static PurplePluginInfo *
+plugin_query(GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
+	return purple_plugin_info_new(
+		"id",           "prpl-icq",
+		"name",         "ICQ",
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Protocol"),
+		"summary",      N_("ICQ Protocol Plugin"),
+		"description",  N_("ICQ Protocol Plugin"),
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        GPLUGIN_PLUGIN_INFO_FLAGS_INTERNAL |
+		                GPLUGIN_PLUGIN_INFO_FLAGS_LOAD_ON_QUERY,
+		NULL
+	);
+}
 
-	"prpl-icq",                                     /**< id             */
-	"ICQ",                                        /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	N_("ICQ Protocol Plugin"),
-	                                                  /**  description    */
-	N_("ICQ Protocol Plugin"),
-	NULL,                                             /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
-
-	NULL,                                             /**< load           */
-	NULL,                                             /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	&prpl_info,                                       /**< extra_info     */
-	NULL,
-	oscar_actions,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	PurpleAccountOption *option;
 
-	oscar_init(plugin, TRUE);
+	oscar_init(&protocol, TRUE);
 
 	option = purple_account_option_string_new(_("Encoding"), "encoding", OSCAR_DEFAULT_CUSTOM_ENCODING);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
+
+	purple_protocols_add(&protocol);
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(icq, init_plugin, info);
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	purple_protocols_remove(&protocol);
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(icq, plugin_query, plugin_load, plugin_unload);

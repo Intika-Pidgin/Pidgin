@@ -32,8 +32,8 @@
 #include "dnsquery.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
-#include "plugin.h"
+#include "protocol.h"
+#include "plugins.h"
 #include "util.h"
 #include "version.h"
 #include "network.h"
@@ -820,7 +820,7 @@ static gboolean process_subscribe_response(struct simple_account_data *sip, stru
 
 	/* we can not subscribe -> user is offline (TODO unknown status?) */
 
-	purple_prpl_got_user_status(sip->account, to, "offline", NULL);
+	purple_protocol_got_user_status(sip->account, to, "offline", NULL);
 	g_free(to);
 	return TRUE;
 }
@@ -1239,7 +1239,7 @@ static void process_incoming_notify(struct simple_account_data *sip, struct sipm
 						b->dialog = NULL;
 					}
 
-					purple_prpl_got_user_status(sip->account, from, "offline", NULL);
+					purple_protocol_got_user_status(sip->account, from, "offline", NULL);
 					break;
 				}
 				i++;
@@ -1276,9 +1276,9 @@ static void process_incoming_notify(struct simple_account_data *sip, struct sipm
 
 
 	if(isonline)
-		purple_prpl_got_user_status(sip->account, from, "available", NULL);
+		purple_protocol_got_user_status(sip->account, from, "available", NULL);
 	else
-		purple_prpl_got_user_status(sip->account, from, "offline", NULL);
+		purple_protocol_got_user_status(sip->account, from, "offline", NULL);
 
 	xmlnode_free(pidf);
 	g_free(from);
@@ -2046,13 +2046,16 @@ static void simple_close(PurpleConnection *gc)
 	purple_connection_set_protocol_data(gc, NULL);
 }
 
-static PurplePluginProtocolInfo prpl_info =
+static PurpleProtocol protocol =
 {
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	"prpl-simple",			/* id */
+	"SIMPLE",				/* name */
+	sizeof(PurpleProtocol),       /* struct_size */
 	0,
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
 	NO_BUDDY_ICONS,			/* icon_spec */
+	NULL,					/* get_actions */
 	simple_list_icon,		/* list_icon */
 	NULL,					/* list_emblems */
 	NULL,					/* status_text */
@@ -2107,7 +2110,7 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* send_file */
 	NULL,					/* new_xfer */
 	NULL,					/* offline_message */
-	NULL,					/* whiteboard_prpl_ops */
+	NULL,					/* whiteboard_protocol_ops */
 	simple_send_raw,		/* send_raw */
 	NULL,					/* roomlist_room_serialize */
 	NULL,					/* unregister_user */
@@ -2122,66 +2125,58 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL					/* get_max_message_size */
 };
 
-
-static PurplePluginInfo info =
+static PurplePluginInfo *
+plugin_query(GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
+	return purple_plugin_info_new(
+		"id",			"prpl-simple",
+		"name",			"SIMPLE",
+		"version",		DISPLAY_VERSION,
+		"category",		N_("Protocol"),
+		"summary",		N_("SIP/SIMPLE Protocol Plugin"),
+		"description",	N_("The SIP/SIMPLE Protocol Plugin"),
+		"author",		"Thomas Butter <butter@uni-mannheim.de>",
+		"website",		PURPLE_WEBSITE,
+		"abi-version",	PURPLE_ABI_VERSION,
+		"flags",        GPLUGIN_PLUGIN_INFO_FLAGS_INTERNAL |
+		                GPLUGIN_PLUGIN_INFO_FLAGS_LOAD_ON_QUERY,
+		NULL
+	);
+}
 
-	"prpl-simple",                                    /**< id             */
-	"SIMPLE",                                         /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	N_("SIP/SIMPLE Protocol Plugin"),                 /**  summary        */
-	N_("The SIP/SIMPLE Protocol Plugin"),             /**  description    */
-	"Thomas Butter <butter@uni-mannheim.de>",         /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
-
-	NULL,                                             /**< load           */
-	NULL,                                             /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	&prpl_info,                                       /**< extra_info     */
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void _init_plugin(PurplePlugin *plugin)
+static gboolean plugin_load(PurplePlugin *plugin, GError **error)
 {
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
 
 	split = purple_account_user_split_new(_("Server"), "", '@');
-	prpl_info.user_splits = g_list_append(prpl_info.user_splits, split);
+	protocol.user_splits = g_list_append(protocol.user_splits, split);
 
 	option = purple_account_option_bool_new(_("Publish status (note: everyone may watch you)"), "dopublish", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_int_new(_("Connect port"), "port", 0);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 
 	option = purple_account_option_bool_new(_("Use UDP"), "udp", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 	option = purple_account_option_bool_new(_("Use proxy"), "useproxy", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 	option = purple_account_option_string_new(_("Proxy"), "proxy", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 	option = purple_account_option_string_new(_("Auth User"), "authuser", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
 	option = purple_account_option_string_new(_("Auth Domain"), "authdomain", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol.protocol_options = g_list_append(protocol.protocol_options, option);
+
+	purple_protocols_add(&protocol);
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(simple, _init_plugin, info);
+static gboolean plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	purple_protocols_remove(&protocol);
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(simple, plugin_query, plugin_load, plugin_unload);
