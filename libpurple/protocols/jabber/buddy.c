@@ -1225,7 +1225,7 @@ static void jabber_vcard_parse(JabberStream *js, const char *from,
 		PurpleBuddy *b;
 		/* If we found a serverside alias, set it and tell the core */
 		serv_got_alias(js->gc, bare_jid, serverside_alias);
-		b = purple_find_buddy(account, bare_jid);
+		b = purple_blist_find_buddy(account, bare_jid);
 		if (b) {
 			purple_blist_node_set_string((PurpleBlistNode*)b, "servernick", serverside_alias);
 		}
@@ -1698,7 +1698,7 @@ static void jabber_buddy_make_invisible(PurpleBlistNode *node, gpointer data)
 	PurpleConnection *gc;
 	JabberStream *js;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -1713,7 +1713,7 @@ static void jabber_buddy_make_visible(PurpleBlistNode *node, gpointer data)
 	PurpleConnection *gc;
 	JabberStream *js;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -1745,7 +1745,7 @@ jabber_buddy_cancel_presence_notification(PurpleBlistNode *node,
 	const gchar *name;
 	char *msg;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	name = purple_buddy_get_name(buddy);
@@ -1766,7 +1766,7 @@ static void jabber_buddy_rerequest_auth(PurpleBlistNode *node, gpointer data)
 	PurpleConnection *gc;
 	JabberStream *js;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -1782,7 +1782,7 @@ static void jabber_buddy_unsubscribe(PurpleBlistNode *node, gpointer data)
 	PurpleConnection *gc;
 	JabberStream *js;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -1792,7 +1792,7 @@ static void jabber_buddy_unsubscribe(PurpleBlistNode *node, gpointer data)
 }
 
 static void jabber_buddy_login(PurpleBlistNode *node, gpointer data) {
-	if(PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+	if(PURPLE_IS_BUDDY(node)) {
 		/* simply create a directed presence of the current status */
 		PurpleBuddy *buddy = (PurpleBuddy *) node;
 		PurpleConnection *gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -1818,7 +1818,7 @@ static void jabber_buddy_login(PurpleBlistNode *node, gpointer data) {
 }
 
 static void jabber_buddy_logout(PurpleBlistNode *node, gpointer data) {
-	if(PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+	if(PURPLE_IS_BUDDY(node)) {
 		/* simply create a directed unavailable presence */
 		PurpleBuddy *buddy = (PurpleBuddy *) node;
 		PurpleConnection *gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -1932,7 +1932,7 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 GList *
 jabber_blist_node_menu(PurpleBlistNode *node)
 {
-	if(PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+	if(PURPLE_IS_BUDDY(node)) {
 		return jabber_buddy_menu((PurpleBuddy *) node);
 	} else {
 		return NULL;
