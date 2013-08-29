@@ -28,7 +28,7 @@
 #include "core.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "prefs.h"
 #include "util.h"
 
@@ -3389,15 +3389,11 @@ purple_normalize(const PurpleAccount *account, const char *str)
 
 	if (account != NULL)
 	{
-		PurplePlugin *prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+		PurpleProtocol *protocol =
+				purple_find_protocol_info(purple_account_get_protocol_id(account));
 
-		if (prpl != NULL)
-		{
-			PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-
-			if (prpl_info->normalize)
-				ret = prpl_info->normalize(account, str);
-		}
+		if (protocol != NULL && protocol->normalize)
+			ret = protocol->normalize(account, str);
 	}
 
 	if (ret == NULL)
@@ -3437,23 +3433,20 @@ purple_normalize_nocase(const PurpleAccount *account, const char *str)
 }
 
 gboolean
-purple_validate(const PurplePlugin *prpl, const char *str)
+purple_validate(const PurpleProtocol *protocol, const char *str)
 {
-	PurplePluginProtocolInfo *prpl_info;
 	const char *normalized;
 
-	g_return_val_if_fail(prpl != NULL, FALSE);
+	g_return_val_if_fail(protocol != NULL, FALSE);
 	g_return_val_if_fail(str != NULL, FALSE);
 
 	if (str[0] == '\0')
 		return FALSE;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-
-	if (!prpl_info->normalize)
+	if (!protocol->normalize)
 		return TRUE;
 
-	normalized = prpl_info->normalize(NULL, str);
+	normalized = protocol->normalize(NULL, str);
 
 	return (NULL != normalized);
 }

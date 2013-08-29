@@ -55,7 +55,7 @@ typedef struct _PurpleXferPrivData {
 	enum {
 		PURPLE_XFER_READY_NONE = 0x0,
 		PURPLE_XFER_READY_UI   = 0x1,
-		PURPLE_XFER_READY_PRPL = 0x2,
+		PURPLE_XFER_READY_PROTOCOL = 0x2,
 	} ready;
 
 	/* TODO: Should really use a PurpleCircBuffer for this. */
@@ -1309,7 +1309,7 @@ do_transfer(PurpleXfer *xfer)
 				}
 
 				/* Need to indicate the prpl is still ready... */
-				priv->ready |= PURPLE_XFER_READY_PRPL;
+				priv->ready |= PURPLE_XFER_READY_PROTOCOL;
 
 				g_return_if_reached();
 			}
@@ -1385,7 +1385,7 @@ transfer_cb(gpointer data, gint source, PurpleInputCondition condition)
 		/* The UI is moderating its side manually */
 		PurpleXferPrivData *priv = g_hash_table_lookup(xfers_data, xfer);
 		if (0 == (priv->ready & PURPLE_XFER_READY_UI)) {
-			priv->ready |= PURPLE_XFER_READY_PRPL;
+			priv->ready |= PURPLE_XFER_READY_PROTOCOL;
 
 			purple_input_remove(xfer->watcher);
 			xfer->watcher = 0;
@@ -1460,7 +1460,7 @@ purple_xfer_ui_ready(PurpleXfer *xfer)
 	priv = g_hash_table_lookup(xfers_data, xfer);
 	priv->ready |= PURPLE_XFER_READY_UI;
 
-	if (0 == (priv->ready & PURPLE_XFER_READY_PRPL)) {
+	if (0 == (priv->ready & PURPLE_XFER_READY_PROTOCOL)) {
 		purple_debug_misc("xfer", "UI is ready on ft %p, waiting for prpl\n", xfer);
 		return;
 	}
@@ -1482,14 +1482,14 @@ purple_xfer_ui_ready(PurpleXfer *xfer)
 }
 
 void
-purple_xfer_prpl_ready(PurpleXfer *xfer)
+purple_xfer_protocol_ready(PurpleXfer *xfer)
 {
 	PurpleXferPrivData *priv;
 
 	g_return_if_fail(xfer != NULL);
 
 	priv = g_hash_table_lookup(xfers_data, xfer);
-	priv->ready |= PURPLE_XFER_READY_PRPL;
+	priv->ready |= PURPLE_XFER_READY_PROTOCOL;
 
 	/* I don't think fwrite/fread are ever *not* ready */
 	if (xfer->dest_fp == NULL && 0 == (priv->ready & PURPLE_XFER_READY_UI)) {

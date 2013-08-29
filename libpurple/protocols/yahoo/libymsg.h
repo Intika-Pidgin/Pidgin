@@ -28,7 +28,7 @@
 #include "circularbuffer.h"
 #include "cmds.h"
 #include "http.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "network.h"
 
 #define YAHOO_PAGER_HOST_REQ_URL "http://vcs1.msg.yahoo.com/capacity"
@@ -382,7 +382,7 @@ gboolean yahoo_offline_message(const PurpleBuddy *buddy);
 gboolean yahoo_send_attention(PurpleConnection *gc, const char *username, guint type);
 GList *yahoo_attention_types(PurpleAccount *account);
 
-GList *yahoo_actions(PurplePlugin *plugin, gpointer context);
+GList *yahoo_get_actions(PurpleConnection *gc);
 void yahoopurple_register_commands(void);
 gsize yahoo_get_max_message_size(PurpleConnection *gc);
 
