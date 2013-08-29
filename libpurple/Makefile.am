@@ -75,13 +75,14 @@ purple_coresources = \
 	network.c \
 	ntlm.c \
 	notify.c \
-	plugin.c \
+	plugins.c \
 	pluginpref.c \
 	pounce.c \
 	prefs.c \
 	presence.c \
 	proxy.c \
-	prpl.c \
+	protocol.c \
+	protocols.c \
 	purple-socket.c \
 	request.c \
 	roomlist.c \
@@ -147,13 +148,14 @@ purple_coreheaders = \
 	network.h \
 	notify.h \
 	ntlm.h \
-	plugin.h \
+	plugins.h \
 	pluginpref.h \
 	pounce.h \
 	prefs.h \
 	presence.h \
 	proxy.h \
-	prpl.h \
+	protocol.h \
+	protocols.h \
 	purple-socket.h \
 	request.h \
 	roomlist.h \
@@ -192,6 +194,7 @@ purple_enumheaders = \
 	connection.h \
 	conversation.h \
 	conversationtypes.h \
+	protocols.h \
 	status.h
 
 marshallers.h: marshallers.list
@@ -233,7 +236,7 @@ dbus_exported = dbus-useful.h dbus-define-api.h account.h accounts.h blistnode.h
                 blistnodetypes.h buddylist.h buddyicon.h connection.h conversation.h \
                 conversationtypes.h conversations.h core.h ft.h log.h notify.h \
                 prefs.h presence.h roomlist.h savedstatuses.h smiley.h status.h \
-                server.h util.h xmlnode.h prpl.h
+                server.h util.h xmlnode.h protocol.h protocols.h
 
 purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders)) \
 		$(addprefix $(srcdir)/media/, $(purple_mediaheaders)) \
@@ -342,6 +345,7 @@ libpurple_la_LIBADD = \
 	$(STATIC_LINK_LIBS) \
 	$(DBUS_LIBS) \
 	$(GLIB_LIBS) \
+	$(GPLUGIN_LIBS) \
 	$(LIBXML_LIBS) \
 	$(NETWORKMANAGER_LIBS) \
 	$(INTLLIBS) \
@@ -362,6 +366,7 @@ AM_CPPFLAGS = \
 	-DLOCALEDIR=\"$(datadir)/locale\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \

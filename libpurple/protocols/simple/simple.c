@@ -32,8 +32,8 @@
 #include "dnsquery.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
-#include "plugin.h"
+#include "protocol.h"
+#include "plugins.h"
 #include "util.h"
 #include "version.h"
 #include "network.h"
@@ -43,6 +43,8 @@
 #include "sipmsg.h"
 #include "dnssrv.h"
 #include "ntlm.h"
+
+static PurpleProtocol *my_protocol = NULL;
 
 static char *gentag(void) {
 	return g_strdup_printf("%04d%04d", rand() & 0xFFFF, rand() & 0xFFFF);
@@ -820,7 +822,7 @@ static gboolean process_subscribe_response(struct simple_account_data *sip, stru
 
 	/* we can not subscribe -> user is offline (TODO unknown status?) */
 
-	purple_prpl_got_user_status(sip->account, to, "offline", NULL);
+	purple_protocol_got_user_status(sip->account, to, "offline", NULL);
 	g_free(to);
 	return TRUE;
 }
@@ -1239,7 +1241,7 @@ static void process_incoming_notify(struct simple_account_data *sip, struct sipm
 						b->dialog = NULL;
 					}
 
-					purple_prpl_got_user_status(sip->account, from, "offline", NULL);
+					purple_protocol_got_user_status(sip->account, from, "offline", NULL);
 					break;
 				}
 				i++;
@@ -1276,9 +1278,9 @@ static void process_incoming_notify(struct simple_account_data *sip, struct sipm
 
 
 	if(isonline)
-		purple_prpl_got_user_status(sip->account, from, "available", NULL);
+		purple_protocol_got_user_status(sip->account, from, "available", NULL);
 	else
-		purple_prpl_got_user_status(sip->account, from, "offline", NULL);
+		purple_protocol_got_user_status(sip->account, from, "offline", NULL);
 
 	xmlnode_free(pidf);
 	g_free(from);
@@ -2046,142 +2048,97 @@ static void simple_close(PurpleConnection *gc)
 	purple_connection_set_protocol_data(gc, NULL);
 }
 
-static PurplePluginProtocolInfo prpl_info =
+static void
+simple_protocol_base_init(SIMPLEProtocolClass *klass)
 {
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
-	0,
-	NULL,					/* user_splits */
-	NULL,					/* protocol_options */
-	NO_BUDDY_ICONS,			/* icon_spec */
-	simple_list_icon,		/* list_icon */
-	NULL,					/* list_emblems */
-	NULL,					/* status_text */
-	NULL,					/* tooltip_text */
-	simple_status_types,	/* away_states */
-	NULL,					/* blist_node_menu */
-	NULL,					/* chat_info */
-	NULL,					/* chat_info_defaults */
-	simple_login,			/* login */
-	simple_close,			/* close */
-	simple_im_send,			/* send_im */
-	NULL,					/* set_info */
-	simple_typing,			/* send_typing */
-	NULL,					/* get_info */
-	simple_set_status,		/* set_status */
-	NULL,					/* set_idle */
-	NULL,					/* change_passwd */
-	simple_add_buddy,		/* add_buddy */
-	NULL,					/* add_buddies */
-	simple_remove_buddy,	/* remove_buddy */
-	NULL,					/* remove_buddies */
-	NULL,					/* add_permit */
-	NULL,					/* add_deny */
-	NULL,					/* rem_permit */
-	NULL,					/* rem_deny */
-	NULL,					/* set_permit_deny */
-	NULL,					/* join_chat */
-	NULL,					/* reject_chat */
-	NULL,					/* get_chat_name */
-	NULL,					/* chat_invite */
-	NULL,					/* chat_leave */
-	NULL,					/* chat_whisper */
-	NULL,					/* chat_send */
-	simple_keep_alive,		/* keepalive */
-	NULL,					/* register_user */
-	NULL,					/* get_cb_info */
-	NULL,					/* alias_buddy */
-	NULL,					/* group_buddy */
-	NULL,					/* rename_group */
-	NULL,					/* buddy_free */
-	NULL,					/* convo_closed */
-	NULL,					/* normalize */
-	NULL,					/* set_buddy_icon */
-	NULL,					/* remove_group */
-	NULL,					/* get_cb_real_name */
-	NULL,					/* set_chat_topic */
-	NULL,					/* find_blist_chat */
-	NULL,					/* roomlist_get_list */
-	NULL,					/* roomlist_cancel */
-	NULL,					/* roomlist_expand_category */
-	NULL,					/* can_receive_file */
-	NULL,					/* send_file */
-	NULL,					/* new_xfer */
-	NULL,					/* offline_message */
-	NULL,					/* whiteboard_prpl_ops */
-	simple_send_raw,		/* send_raw */
-	NULL,					/* roomlist_room_serialize */
-	NULL,					/* unregister_user */
-	NULL,					/* send_attention */
-	NULL,					/* get_attention_types */
-	NULL,					/* get_account_text_table */
-	NULL,					/* initiate_media */
-	NULL,					/* get_media_caps */
-	NULL,					/* get_moods */
-	NULL,					/* set_public_alias */
-	NULL,					/* get_public_alias */
-	NULL					/* get_max_message_size */
-};
-
-
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
-
-	"prpl-simple",                                    /**< id             */
-	"SIMPLE",                                         /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	N_("SIP/SIMPLE Protocol Plugin"),                 /**  summary        */
-	N_("The SIP/SIMPLE Protocol Plugin"),             /**  description    */
-	"Thomas Butter <butter@uni-mannheim.de>",         /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
-
-	NULL,                                             /**< load           */
-	NULL,                                             /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	&prpl_info,                                       /**< extra_info     */
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void _init_plugin(PurplePlugin *plugin)
-{
+	PurpleProtocolClass *proto_class = PURPLE_PROTOCOL_CLASS(klass);
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
 
+	proto_class->id        = SIMPLE_ID;
+	proto_class->name      = SIMPLE_NAME;
+
 	split = purple_account_user_split_new(_("Server"), "", '@');
-	prpl_info.user_splits = g_list_append(prpl_info.user_splits, split);
+	proto_class->user_splits = g_list_append(proto_class->user_splits, split);
 
 	option = purple_account_option_bool_new(_("Publish status (note: everyone may watch you)"), "dopublish", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	proto_class->protocol_options = g_list_append(proto_class->protocol_options, option);
 
 	option = purple_account_option_int_new(_("Connect port"), "port", 0);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	proto_class->protocol_options = g_list_append(proto_class->protocol_options, option);
 
 	option = purple_account_option_bool_new(_("Use UDP"), "udp", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	proto_class->protocol_options = g_list_append(proto_class->protocol_options, option);
 	option = purple_account_option_bool_new(_("Use proxy"), "useproxy", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	proto_class->protocol_options = g_list_append(proto_class->protocol_options, option);
 	option = purple_account_option_string_new(_("Proxy"), "proxy", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	proto_class->protocol_options = g_list_append(proto_class->protocol_options, option);
 	option = purple_account_option_string_new(_("Auth User"), "authuser", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	proto_class->protocol_options = g_list_append(proto_class->protocol_options, option);
 	option = purple_account_option_string_new(_("Auth Domain"), "authdomain", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	proto_class->protocol_options = g_list_append(proto_class->protocol_options, option);
 }
 
-PURPLE_INIT_PLUGIN(simple, _init_plugin, info);
+static void
+simple_protocol_interface_init(PurpleProtocolInterface *iface)
+{
+	iface->list_icon    = simple_list_icon;
+	iface->status_types = simple_status_types;
+	iface->login        = simple_login;
+	iface->close        = simple_close;
+	iface->send_im      = simple_im_send;
+	iface->send_typing  = simple_typing;
+	iface->set_status   = simple_set_status;
+	iface->add_buddy    = simple_add_buddy;
+	iface->remove_buddy = simple_remove_buddy;
+	iface->keepalive    = simple_keep_alive;
+	iface->send_raw     = simple_send_raw;
+}
+
+static void simple_protocol_base_finalize(SIMPLEProtocolClass *klass) { }
+
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	return purple_plugin_info_new(
+		"id",           SIMPLE_ID,
+		"name",         SIMPLE_NAME,
+		"version",		DISPLAY_VERSION,
+		"category",		N_("Protocol"),
+		"summary",		N_("SIP/SIMPLE Protocol Plugin"),
+		"description",	N_("The SIP/SIMPLE Protocol Plugin"),
+		"author",		"Thomas Butter <butter@uni-mannheim.de>",
+		"website",		PURPLE_WEBSITE,
+		"abi-version",	PURPLE_ABI_VERSION,
+		"flags",        GPLUGIN_PLUGIN_INFO_FLAGS_INTERNAL |
+		                GPLUGIN_PLUGIN_INFO_FLAGS_LOAD_ON_QUERY,
+		NULL
+	);
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	my_protocol = purple_protocols_add(SIMPLE_TYPE_PROTOCOL);
+
+	if (!my_protocol) {
+		g_set_error(error, SIMPLE_DOMAIN, 0, _("Failed to add simple protocol"));
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	if (!purple_protocols_remove(my_protocol)) {
+		g_set_error(error, SIMPLE_DOMAIN, 0, _("Failed to remove simple protocol"));
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+PURPLE_PROTOCOL_DEFINE (SIMPLEProtocol, simple_protocol);
+PURPLE_PLUGIN_INIT     (simple, plugin_query, plugin_load, plugin_unload);
