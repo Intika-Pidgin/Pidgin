@@ -28,7 +28,7 @@
 void jabber_google_roster_outgoing(JabberStream *js, xmlnode *query, xmlnode *item)
 {
 	PurpleAccount *account = purple_connection_get_account(js->gc);
-	GSList *list = account->deny;
+	GSList *list = purple_account_privacy_get_denied(account);
 	const char *jid = xmlnode_get_attrib(item, "jid");
 	char *jid_norm = (char *)jabber_normalize(account, jid);
 
@@ -64,12 +64,12 @@ gboolean jabber_google_roster_incoming(JabberStream *js, xmlnode *item)
 
 	jid_norm = g_strdup(jabber_normalize(account, jid));
 
-	on_block_list = NULL != g_slist_find_custom(account->deny, jid_norm,
-	                                            (GCompareFunc)strcmp);
+	on_block_list = NULL != g_slist_find_custom(purple_account_privacy_get_denied(account),
+	                                            jid_norm, (GCompareFunc)strcmp);
 
 	if (grt && (*grt == 'H' || *grt == 'h')) {
 		/* Hidden; don't show this buddy. */
-		GSList *buddies = purple_find_buddies(account, jid_norm);
+		GSList *buddies = purple_blist_find_buddies(account, jid_norm);
 		if (buddies) {
 			purple_debug_info("jabber", "Removing %s from local buddy list\n",
 			                  jid_norm);
@@ -86,10 +86,10 @@ gboolean jabber_google_roster_incoming(JabberStream *js, xmlnode *item)
 
 	if (!on_block_list && (grt && (*grt == 'B' || *grt == 'b'))) {
 		purple_debug_info("jabber", "Blocking %s\n", jid_norm);
-		purple_privacy_deny_add(account, jid_norm, TRUE);
+		purple_account_privacy_deny_add(account, jid_norm, TRUE);
 	} else if (on_block_list && (!grt || (*grt != 'B' && *grt != 'b' ))){
 		purple_debug_info("jabber", "Unblocking %s\n", jid_norm);
-		purple_privacy_deny_remove(account, jid_norm, TRUE);
+		purple_account_privacy_deny_remove(account, jid_norm, TRUE);
 	}
 
 	g_free(jid_norm);
@@ -111,7 +111,7 @@ void jabber_google_roster_add_deny(JabberStream *js, const char *who)
 	jb = jabber_buddy_find(js, who, TRUE);
 
 	account = purple_connection_get_account(js->gc);
-	buddies = purple_find_buddies(account, who);
+	buddies = purple_blist_find_buddies(account, who);
 	if(!buddies)
 		return;
 
@@ -132,7 +132,7 @@ void jabber_google_roster_add_deny(JabberStream *js, const char *who)
 		buddies = g_slist_delete_link(buddies, buddies);
 	} while (buddies);
 
-	balias = purple_buddy_get_local_buddy_alias(b);
+	balias = purple_buddy_get_local_alias(b);
 	xmlnode_set_attrib(item, "jid", who);
 	xmlnode_set_attrib(item, "name", balias ? balias : "");
 	xmlnode_set_attrib(item, "gr:t", "B");
@@ -169,7 +169,7 @@ void jabber_google_roster_rem_deny(JabberStream *js, const char *who)
 	PurpleBuddy *b;
 	const char *balias;
 
-	buddies = purple_find_buddies(purple_connection_get_account(js->gc), who);
+	buddies = purple_blist_find_buddies(purple_connection_get_account(js->gc), who);
 	if(!buddies)
 		return;
 
@@ -190,7 +190,7 @@ void jabber_google_roster_rem_deny(JabberStream *js, const char *who)
 		buddies = g_slist_delete_link(buddies, buddies);
 	} while (buddies);
 
-	balias = purple_buddy_get_local_buddy_alias(b);
+	balias = purple_buddy_get_local_alias(b);
 	xmlnode_set_attrib(item, "jid", who);
 	xmlnode_set_attrib(item, "name", balias ? balias : "");
 	xmlnode_set_attrib(query, "xmlns:gr", NS_GOOGLE_ROSTER);
