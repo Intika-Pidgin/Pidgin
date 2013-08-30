@@ -265,7 +265,6 @@ pidgin_ui_init(void)
 	purple_xfers_set_ui_ops(pidgin_xfers_get_ui_ops());
 	purple_blist_set_ui_ops(pidgin_blist_get_ui_ops());
 	purple_notify_set_ui_ops(pidgin_notify_get_ui_ops());
-	purple_privacy_set_ui_ops(pidgin_privacy_get_ui_ops());
 	purple_request_set_ui_ops(pidgin_request_get_ui_ops());
 	purple_sound_set_ui_ops(pidgin_sound_get_ui_ops());
 	purple_connections_set_ui_ops(pidgin_connections_get_ui_ops());
@@ -274,7 +273,7 @@ pidgin_ui_init(void)
 	purple_idle_set_ui_ops(pidgin_idle_get_ui_ops());
 #endif
 
-	pidgin_account_init();
+	pidgin_accounts_init();
 	pidgin_connection_init();
 	pidgin_blist_init();
 	pidgin_status_init();
@@ -310,7 +309,7 @@ pidgin_quit(void)
 	pidgin_docklet_uninit();
 	pidgin_blist_uninit();
 	pidgin_connection_uninit();
-	pidgin_account_uninit();
+	pidgin_accounts_uninit();
 	pidgin_xfers_uninit();
 	pidgin_debug_uninit();
 
