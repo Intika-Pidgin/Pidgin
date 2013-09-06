@@ -335,10 +335,7 @@ AM_CONDITIONAL(INSTALL_I18N, test "x$enable_i18n" = "xyes")
 dnl #######################################################################
 dnl # Check for GLib 2.20 (required)
 dnl #######################################################################
-# TODO: gmodule-2.0 is only needed if enable_plugins is 'yes'.  It
-#       might be nice to change this check so that it's not required
-#       if enable_plugins is 'no'.
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.20.0 gobject-2.0 gmodule-2.0 gthread-2.0], , [
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.20.0 gobject-2.0 gthread-2.0], , [
 	AC_MSG_RESULT(no)
 	AC_MSG_ERROR([
 
@@ -1301,32 +1298,22 @@ if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
 fi
 AC_SUBST(STATIC_PRPLS)
 STATIC_LINK_LIBS=
-extern_init=
+extern_load=
 load_proto=
+extern_unload=
+unload_proto=
 for i in $STATIC_PRPLS ; do
 	dnl Ugly special case for "libsilcpurple.la":
-	dnl ... and Ugly special case for multi-protocol oscar and yahoo
-	if test \( "x$i" = "xoscar" -o "x$i" = "xaim" -o "x$i" = "xicq" \) -a "x$static_oscar" != "xyes"; then
-		STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/oscar/liboscar.la"
-		extern_init="$extern_init extern gboolean purple_init_aim_plugin();"
-		extern_init="$extern_init extern gboolean purple_init_icq_plugin();"
-		load_proto="$load_proto purple_init_aim_plugin();"
-		load_proto="$load_proto purple_init_icq_plugin();"
-	elif test "x$i" = "xyahoo"; then
-		STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/yahoo/libymsg.la"
-		extern_init="$extern_init extern gboolean purple_init_yahoo_plugin();"
-		extern_init="$extern_init extern gboolean purple_init_yahoojp_plugin();"
-		load_proto="$load_proto purple_init_yahoo_plugin();"
-		load_proto="$load_proto purple_init_yahoojp_plugin();"
+	if test "x$i" = "xsilc"; then
+		STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib${i}purple.la"
 	else
-		if test "x$i" = "xsilc"; then
-			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib${i}purple.la"
-		else
-			STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib$i.la"
-		fi
-		extern_init="$extern_init extern gboolean purple_init_${i}_plugin();"
-		load_proto="$load_proto purple_init_${i}_plugin();"
+		STATIC_LINK_LIBS="$STATIC_LINK_LIBS \$(top_builddir)/libpurple/protocols/$i/lib$i.la"
 	fi
+	extern_load="$extern_load extern gboolean ${i}_plugin_load();"
+	load_proto="$load_proto ${i}_plugin_load();"
+	extern_unload="$extern_unload extern gboolean ${i}_plugin_unload();"
+	unload_proto="$unload_proto ${i}_plugin_unload();"
+
 	case $i in
 		bonjour)	static_bonjour=yes ;;
 		gg)			static_gg=yes ;;
@@ -1362,8 +1349,10 @@ AM_CONDITIONAL(STATIC_SIMPLE, test "x$static_simple" = "xyes")
 AM_CONDITIONAL(STATIC_YAHOO, test "x$static_yahoo" = "xyes")
 AM_CONDITIONAL(STATIC_ZEPHYR, test "x$static_zephyr" = "xyes")
 AC_SUBST(STATIC_LINK_LIBS)
-AC_DEFINE_UNQUOTED(STATIC_PROTO_INIT, $extern_init static void static_proto_init(void) { $load_proto },
-	[Loads static protocol plugin module initialization functions.])
+AC_DEFINE_UNQUOTED(STATIC_PROTO_LOAD, $extern_load static void static_proto_load(void) { $load_proto },
+	[Loads protocols from static protocol plugin modules.])
+AC_DEFINE_UNQUOTED(STATIC_PROTO_UNLOAD, $extern_unload static void static_proto_unload(void) { $unload_proto },
+	[Unloads protocols from static protocol plugin modules.])
 
 AC_ARG_WITH(dynamic_prpls, [AS_HELP_STRING([--with-dynamic-prpls], [specify which protocols to build dynamically])], [DYNAMIC_PRPLS=`echo $withval | $sedpath 's/,/ /g'`])
 if test "x$DYNAMIC_PRPLS" = "xall" ; then
@@ -1698,6 +1687,21 @@ AC_SUBST(KWALLET_CXXFLAGS)
 AC_SUBST(KWALLET_LIBS)
 
 AM_CONDITIONAL(ENABLE_KWALLET, test "x$enable_kwallet" = "xyes")
+
+dnl #######################################################################
+dnl # Check for GPlugin 0.0.8
+dnl #######################################################################
+if test "x$enable_plugins" = "xyes" ; then
+	PKG_CHECK_MODULES(GPLUGIN, [gplugin >= 0.0.8 gmodule-2.0], , [
+		AC_MSG_RESULT(no)
+		AC_MSG_ERROR([
+	GPlugin 0.0.8 development headers not found, which are required if you wish to
+	enable plugins.
+	Use --disable-plugins if you want to disable plugins.
+	])])
+	AC_SUBST(GPLUGIN_CFLAGS)
+	AC_SUBST(GPLUGIN_LIBS)
+fi
 
 dnl #######################################################################
 dnl # Check for Python
@@ -2604,11 +2608,13 @@ if test "x$enable_plugins" = "xyes" ; then
 	AC_DEFINE(PURPLE_PLUGINS, 1, [Define if plugins are enabled.])
 	AM_CONDITIONAL(PLUGINS, true)
 	PLUGINS_DEFINE="#define PURPLE_PLUGINS 1"
+	PLUGINS_MACRO="PURPLE_PLUGINS"
 else
 	AM_CONDITIONAL(PLUGINS, false)
 	PLUGINS_DEFINE="#undef PURPLE_PLUGINS"
 fi
 AC_SUBST(PLUGINS_DEFINE)
+AC_SUBST(PLUGINS_MACRO)
 
 dnl #######################################################################
 dnl # Check for Cyrus-SASL (for xmpp/irc)
