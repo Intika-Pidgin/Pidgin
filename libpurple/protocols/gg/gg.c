@@ -28,7 +28,7 @@
 
 #include <internal.h>
 
-#include "plugin.h"
+#include "plugins.h"
 #include "version.h"
 #include "notify.h"
 #include "buddylist.h"
@@ -52,6 +52,10 @@
 #include "status.h"
 #include "servconn.h"
 #include "pubdir-prpl.h"
+
+/* ---------------------------------------------------------------------- */
+static PurpleProtocol *my_protocol = NULL;
+static PurpleAccountOption *ggp_server_option;
 
 /* ---------------------------------------------------------------------- */
 
@@ -146,19 +150,19 @@ static void ggp_callback_buddylist_load_ok(PurpleConnection *gc, gchar *file)
 
 /*
  */
-/* static void ggp_action_buddylist_save(PurplePluginAction *action) {{{ */
-static void ggp_action_buddylist_save(PurplePluginAction *action)
+/* static void ggp_action_buddylist_save(PurpleProtocolAction *action) {{{ */
+static void ggp_action_buddylist_save(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *)action->context;
+	PurpleConnection *gc = action->connection;
 
 	purple_request_file(action, _("Save buddylist..."), NULL, TRUE,
 		G_CALLBACK(ggp_callback_buddylist_save_ok), NULL,
 		purple_request_cpar_from_connection(gc), gc);
 }
 
-static void ggp_action_buddylist_load(PurplePluginAction *action)
+static void ggp_action_buddylist_load(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *)action->context;
+	PurpleConnection *gc = action->connection;
 
 	purple_request_file(action, _("Load buddylist from file..."), NULL,
 		FALSE, G_CALLBACK(ggp_callback_buddylist_load_ok), NULL,
@@ -773,7 +777,7 @@ static void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition 
 }
 
 /* ---------------------------------------------------------------------- */
-/* ----- PurplePluginProtocolInfo ----------------------------------------- */
+/* ----- PurpleProtocol ----------------------------------------- */
 /* ---------------------------------------------------------------------- */
 
 static const char *ggp_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
@@ -852,9 +856,9 @@ static GList *ggp_blist_node_menu(PurpleBlistNode *node)
 static GList *ggp_chat_info(PurpleConnection *gc)
 {
 	GList *m = NULL;
-	struct proto_chat_entry *pce;
+	PurpleProtocolChatEntry *pce;
 
-	pce = g_new0(struct proto_chat_entry, 1);
+	pce = g_new0(PurpleProtocolChatEntry, 1);
 	pce->label = _("Chat _name:");
 	pce->identifier = "name";
 	pce->required = TRUE;
@@ -1285,56 +1289,56 @@ static void ggp_keepalive(PurpleConnection *gc)
 	}
 }
 
-static void ggp_action_chpass(PurplePluginAction *action)
+static void ggp_action_chpass(PurpleProtocolAction *action)
 {
-	ggp_account_chpass((PurpleConnection *)action->context);
+	ggp_account_chpass(action->connection);
 }
 
-static void ggp_action_status_broadcasting(PurplePluginAction *action)
+static void ggp_action_status_broadcasting(PurpleProtocolAction *action)
 {
-	ggp_status_broadcasting_dialog((PurpleConnection *)action->context);
+	ggp_status_broadcasting_dialog(action->connection);
 }
 
-static void ggp_action_search(PurplePluginAction *action)
+static void ggp_action_search(PurpleProtocolAction *action)
 {
-	ggp_pubdir_search((PurpleConnection *)action->context, NULL);
+	ggp_pubdir_search(action->connection, NULL);
 }
 
-static void ggp_action_set_info(PurplePluginAction *action)
+static void ggp_action_set_info(PurpleProtocolAction *action)
 {
-	ggp_pubdir_set_info((PurpleConnection *)action->context);
+	ggp_pubdir_set_info(action->connection);
 }
 
-static GList *ggp_actions(PurplePlugin *plugin, gpointer context)
+static GList *ggp_get_actions(PurpleConnection *gc)
 {
 	GList *m = NULL;
-	PurplePluginAction *act;
+	PurpleProtocolAction *act;
 
-	act = purple_plugin_action_new(_("Change password..."),
+	act = purple_protocol_action_new(_("Change password..."),
 		ggp_action_chpass);
 	m = g_list_append(m, act);
 
-	act = purple_plugin_action_new(_("Show status only for buddies"),
+	act = purple_protocol_action_new(_("Show status only for buddies"),
 		ggp_action_status_broadcasting);
 	m = g_list_append(m, act);
 
 	m = g_list_append(m, NULL);
 
-	act = purple_plugin_action_new(_("Find buddies..."),
+	act = purple_protocol_action_new(_("Find buddies..."),
 		ggp_action_search);
 	m = g_list_append(m, act);
 
-	act = purple_plugin_action_new(_("Set User Info"),
+	act = purple_protocol_action_new(_("Set User Info"),
 		ggp_action_set_info);
 	m = g_list_append(m, act);
 
 	m = g_list_append(m, NULL);
 
-	act = purple_plugin_action_new(_("Save buddylist to file..."),
+	act = purple_protocol_action_new(_("Save buddylist to file..."),
 				     ggp_action_buddylist_save);
 	m = g_list_append(m, act);
 
-	act = purple_plugin_action_new(_("Load buddylist from file..."),
+	act = purple_protocol_action_new(_("Load buddylist from file..."),
 				     ggp_action_buddylist_load);
 	m = g_list_append(m, act);
 
@@ -1371,120 +1375,6 @@ ggp_get_max_message_size(PurpleConversation *conv)
 	return 1232;
 }
 
-static PurplePluginProtocolInfo prpl_info =
-{
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
-	OPT_PROTO_REGISTER_NOSCREENNAME | OPT_PROTO_IM_IMAGE,
-	NULL,				/* user_splits */
-	NULL,				/* protocol_options */
-	{"png", 1, 1, 200, 200, 0, PURPLE_ICON_SCALE_DISPLAY | PURPLE_ICON_SCALE_SEND},	/* icon_spec */
-	ggp_list_icon,			/* list_icon */
-	ggp_list_emblem,		/* list_emblem */
-	ggp_status_buddy_text,		/* status_text */
-	ggp_tooltip_text,		/* tooltip_text */
-	ggp_status_types,		/* status_types */
-	ggp_blist_node_menu,		/* blist_node_menu */
-	ggp_chat_info,			/* chat_info */
-	NULL,				/* chat_info_defaults */
-	ggp_login,			/* login */
-	ggp_close,			/* close */
-	ggp_send_im,			/* send_im */
-	NULL,				/* set_info */
-	ggp_send_typing,		/* send_typing */
-	ggp_pubdir_get_info_prpl,	/* get_info */
-	ggp_status_set_purplestatus,	/* set_away */
-	NULL,				/* set_idle */
-	NULL,				/* change_passwd */
-	ggp_add_buddy,			/* add_buddy */
-	NULL,				/* add_buddies */
-	ggp_remove_buddy,		/* remove_buddy */
-	NULL,				/* remove_buddies */
-	NULL,				/* add_permit */
-	ggp_add_deny,			/* add_deny */
-	NULL,				/* rem_permit */
-	ggp_rem_deny,			/* rem_deny */
-	NULL,				/* set_permit_deny */
-	ggp_join_chat,			/* join_chat */
-	NULL,				/* reject_chat */
-	ggp_get_chat_name,		/* get_chat_name */
-	NULL,				/* chat_invite */
-	NULL,				/* chat_leave */
-	NULL,				/* chat_whisper */
-	ggp_chat_send,			/* chat_send */
-	ggp_keepalive,			/* keepalive */
-	ggp_account_register,		/* register_user */
-	NULL,				/* get_cb_info */
-	ggp_roster_alias_buddy,		/* alias_buddy */
-	ggp_roster_group_buddy,		/* group_buddy */
-	ggp_roster_rename_group,	/* rename_group */
-	ggp_buddy_free,			/* buddy_free */
-	NULL,				/* convo_closed */
-	ggp_normalize,			/* normalize */
-	ggp_avatar_own_set,		/* set_buddy_icon */
-	NULL,				/* remove_group */
-	NULL,				/* get_cb_real_name */
-	NULL,				/* set_chat_topic */
-	NULL,				/* find_blist_chat */
-	NULL,				/* roomlist_get_list */
-	NULL,				/* roomlist_cancel */
-	NULL,				/* roomlist_expand_category */
-	NULL,				/* can_receive_file */
-	NULL,				/* send_file */
-	NULL,				/* new_xfer */
-	ggp_offline_message,		/* offline_message */
-	NULL,				/* whiteboard_prpl_ops */
-	NULL,				/* send_raw */
-	NULL,				/* roomlist_room_serialize */
-	NULL,				/* unregister_user */
-	NULL,				/* send_attention */
-	NULL,				/* get_attention_types */
-	ggp_get_account_text_table,	/* get_account_text_table */
-	NULL,				/* initiate_media */
-	NULL,				/* can_do_media */
-	NULL,				/* get_moods */
-	NULL,				/* set_public_alias */
-	NULL,				/* get_public_alias */
-	ggp_get_max_message_size	/* get_max_message_size */
-};
-
-static gboolean ggp_load(PurplePlugin *plugin);
-static gboolean ggp_unload(PurplePlugin *plugin);
-
-static PurplePluginInfo info = {
-	PURPLE_PLUGIN_MAGIC,			/* magic */
-	PURPLE_MAJOR_VERSION,			/* major_version */
-	PURPLE_MINOR_VERSION,			/* minor_version */
-	PURPLE_PLUGIN_PROTOCOL,			/* plugin type */
-	NULL,					/* ui_requirement */
-	0,					/* flags */
-	NULL,					/* dependencies */
-	PURPLE_PRIORITY_DEFAULT,		/* priority */
-
-	"prpl-gg",				/* id */
-	"Gadu-Gadu",				/* name */
-	DISPLAY_VERSION,			/* version */
-
-	N_("Gadu-Gadu Protocol Plugin"),	/* summary */
-	N_("Polish popular IM"),		/* description */
-	"boler@sourceforge.net",		/* author */
-	PURPLE_WEBSITE,				/* homepage */
-
-	ggp_load,				/* load */
-	ggp_unload,				/* unload */
-	NULL,					/* destroy */
-
-	NULL,					/* ui_info */
-	&prpl_info,				/* extra_info */
-	NULL,					/* prefs_info */
-	ggp_actions,				/* actions */
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
 static void purple_gg_debug_handler(int level, const char * format, va_list args) {
 	PurpleDebugLevel purple_level;
 	char *msg = g_strdup_vprintf(format, args);
@@ -1508,18 +1398,24 @@ static void purple_gg_debug_handler(int level, const char * format, va_list args
 	g_free(msg);
 }
 
-static PurpleAccountOption *ggp_server_option;
-
-static void init_plugin(PurplePlugin *plugin)
+static void
+ggp_protocol_init(PurpleProtocol *protocol)
 {
 	PurpleAccountOption *option;
 	GList *encryption_options = NULL;
 
-	purple_prefs_add_none("/plugins/prpl/gg");
+	protocol->id        = "gg";
+	protocol->name      = "Gadu-Gadu";
+	protocol->options   = OPT_PROTO_REGISTER_NOSCREENNAME |
+	                      OPT_PROTO_IM_IMAGE;
+	protocol->icon_spec = purple_buddy_icon_spec_new("png",
+	                                                 1, 1, 200, 200, 0,
+	                                                 PURPLE_ICON_SCALE_DISPLAY |
+	                                                 PURPLE_ICON_SCALE_SEND);
 
 	option = purple_account_option_string_new(_("GG server"),
 			"gg_server", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol->protocol_options = g_list_append(protocol->protocol_options,
 			option);
 	ggp_server_option = option;
 
@@ -1537,34 +1433,114 @@ static void init_plugin(PurplePlugin *plugin)
 
 	option = purple_account_option_list_new(_("Connection security"),
 		"encryption", encryption_options);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol->protocol_options = g_list_append(protocol->protocol_options,
 		option);
 
 	option = purple_account_option_bool_new(_("Show links from strangers"),
 		"show_links_from_strangers", 1);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+	protocol->protocol_options = g_list_append(protocol->protocol_options,
 		option);
-
-	gg_debug_handler = purple_gg_debug_handler;
 }
 
-static gboolean ggp_load(PurplePlugin *plugin)
+static void
+ggp_protocol_class_init(PurpleProtocolClass *klass)
 {
+}
+
+static void
+ggp_protocol_interface_init(PurpleProtocolInterface *iface)
+{
+	iface->get_actions            = ggp_get_actions;
+	iface->list_icon              = ggp_list_icon;
+	iface->list_emblem            = ggp_list_emblem;
+	iface->status_text            = ggp_status_buddy_text;
+	iface->tooltip_text           = ggp_tooltip_text;
+	iface->status_types           = ggp_status_types;
+	iface->blist_node_menu        = ggp_blist_node_menu;
+	iface->chat_info              = ggp_chat_info;
+	iface->login                  = ggp_login;
+	iface->close                  = ggp_close;
+	iface->send_im                = ggp_send_im;
+	iface->send_typing            = ggp_send_typing;
+	iface->get_info               = ggp_pubdir_get_info_protocol;
+	iface->set_status             = ggp_status_set_purplestatus;
+	iface->add_buddy              = ggp_add_buddy;
+	iface->remove_buddy           = ggp_remove_buddy;
+	iface->add_deny               = ggp_add_deny;
+	iface->rem_deny               = ggp_rem_deny;
+	iface->join_chat              = ggp_join_chat;
+	iface->get_chat_name          = ggp_get_chat_name;
+	iface->chat_send              = ggp_chat_send;
+	iface->keepalive              = ggp_keepalive;
+	iface->register_user          = ggp_account_register;
+	iface->alias_buddy            = ggp_roster_alias_buddy;
+	iface->group_buddy            = ggp_roster_group_buddy;
+	iface->rename_group           = ggp_roster_rename_group;
+	iface->buddy_free             = ggp_buddy_free;
+	iface->normalize              = ggp_normalize;
+	iface->set_buddy_icon         = ggp_avatar_own_set;
+	iface->offline_message        = ggp_offline_message;
+	iface->get_account_text_table = ggp_get_account_text_table;
+	iface->get_max_message_size   = ggp_get_max_message_size;
+}
+
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"boler@sourceforge.net",
+		NULL
+	};
+
+	return purple_plugin_info_new(
+		"id",           "protocol-gg",
+		"name",         "Gadu-Gadu Protocol",
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Protocol"),
+		"summary",      N_("Gadu-Gadu Protocol Plugin"),
+		"description",  N_("Polish popular IM"),
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
+		                PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
+		NULL
+	);
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	my_protocol = purple_protocols_add(GGP_TYPE_PROTOCOL, error);
+	if (!my_protocol)
+		return FALSE;
+
+	purple_prefs_add_none("/protocols/gg");
+
+	gg_debug_handler = purple_gg_debug_handler;
+
 	purple_debug_info("gg", "Loading Gadu-Gadu protocol plugin with "
 		"libgadu %s...\n", gg_libgadu_version());
 
 	ggp_resolver_purple_setup();
 	ggp_servconn_setup(ggp_server_option);
-	
+
 	return TRUE;
 }
 
-static gboolean ggp_unload(PurplePlugin *plugin)
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	ggp_servconn_cleanup();
+
+	if (!purple_protocols_remove(my_protocol, error))
+		return FALSE;
+
 	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(gg, init_plugin, info);
+static PurplePlugin *my_plugin;
+PURPLE_PROTOCOL_DEFINE(my_plugin, GGPProtocol, ggp_protocol);
+PURPLE_PLUGIN_INIT_VAL(my_plugin, gg, plugin_query, plugin_load, plugin_unload);
 
 /* vim: set ts=8 sts=0 sw=8 noet: */

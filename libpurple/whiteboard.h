@@ -38,9 +38,9 @@ typedef struct _PurpleWhiteboard PurpleWhiteboard;
 typedef struct _PurpleWhiteboardClass PurpleWhiteboardClass;
 
 /**
- * Whiteboard PRPL Operations
+ * Whiteboard protocol operations
  */
-typedef struct _PurpleWhiteboardPrplOps PurpleWhiteboardPrplOps;
+typedef struct _PurpleWhiteboardOps PurpleWhiteboardOps;
 
 #include "account.h"
 
@@ -67,9 +67,9 @@ typedef struct _PurpleWhiteboardUiOps
 } PurpleWhiteboardUiOps;
 
 /**
- * PurpleWhiteboard PRPL Operations
+ * PurpleWhiteboard Protocol Operations
  */
-struct _PurpleWhiteboardPrplOps
+struct _PurpleWhiteboardOps
 {
 	void (*start)(PurpleWhiteboard *wb);                                   /**< start function */
 	void (*end)(PurpleWhiteboard *wb);                                     /**< end function */
@@ -131,23 +131,22 @@ GType purple_whiteboard_get_type(void);
 void purple_whiteboard_set_ui_ops(PurpleWhiteboardUiOps *ops);
 
 /**
- * Sets the prpl operations for a whiteboard
+ * Sets the protocol operations for a whiteboard
  *
- * @param wb  The whiteboard for which to set the prpl operations
- * @param ops The prpl operations to set
+ * @param wb  The whiteboard for which to set the protocol operations
+ * @param ops The protocol operations to set
  */
-void purple_whiteboard_set_prpl_ops(PurpleWhiteboard *wb, PurpleWhiteboardPrplOps *ops);
+void purple_whiteboard_set_protocol_ops(PurpleWhiteboard *wb, PurpleWhiteboardOps *ops);
 
 /**
  * Creates a new whiteboard
  *
  * @param account The account.
  * @param who     Who you're drawing with.
- * @param state   The state.
  *
  * @return The new whiteboard
  */
-PurpleWhiteboard *purple_whiteboard_new(PurpleAccount *account, const char *who, int state);
+PurpleWhiteboard *purple_whiteboard_new(PurpleAccount *account, const char *who);
 
 /**
  * Returns the whiteboard's account.
@@ -166,23 +165,6 @@ PurpleAccount *purple_whiteboard_get_account(const PurpleWhiteboard *wb);
  * @return Who you're drawing with.
  */
 const char *purple_whiteboard_get_who(const PurpleWhiteboard *wb);
-
-/**
- * Set the state of the whiteboard.
- *
- * @param wb		The whiteboard.
- * @param state		The state
- */
-void purple_whiteboard_set_state(PurpleWhiteboard *wb, int state);
-
-/**
- * Return the state of the whiteboard.
- *
- * @param wb		The whiteboard.
- *
- * @return The state of the whiteboard.
- */
-int purple_whiteboard_get_state(const PurpleWhiteboard *wb);
 
 /**
  * Starts a whiteboard
@@ -319,23 +301,6 @@ GList *purple_whiteboard_get_draw_list(const PurpleWhiteboard *wb);
  * @param draw_list		The drawing list.
  */
 void purple_whiteboard_set_draw_list(PurpleWhiteboard *wb, GList* draw_list);
-
-/**
- * Sets the protocol data for a whiteboard.
- *
- * @param wb			The whiteboard.
- * @param proto_data	The protocol data to set for the whiteboard.
- */
-void purple_whiteboard_set_protocol_data(PurpleWhiteboard *wb, gpointer proto_data);
-
-/**
- * Gets the protocol data for a whiteboard.
- *
- * @param wb			The whiteboard.
- *
- * @return The protocol data for the whiteboard.
- */
-gpointer purple_whiteboard_get_protocol_data(const PurpleWhiteboard *wb);
 
 /**
  * Set the UI data associated with this whiteboard.

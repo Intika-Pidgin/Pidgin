@@ -53,7 +53,7 @@ typedef struct _PurpleConnectionPrivate  PurpleConnectionPrivate;
 /** Private data for a connection */
 struct _PurpleConnectionPrivate
 {
-	PurplePlugin *prpl;           /**< The protocol plugin.              */
+	PurpleProtocol *protocol;     /**< The protocol.                     */
 	PurpleConnectionFlags flags;  /**< Connection flags.                 */
 
 	PurpleConnectionState state;  /**< The connection state.             */
@@ -63,16 +63,13 @@ struct _PurpleConnectionPrivate
 
 	GSList *active_chats;         /**< A list of active chats
 	                                  (#PurpleChatConversation structs). */
-	void *proto_data;             /**< Protocol-specific data.            
-	                                  TODO Remove this, and use
-	                                       protocol-specific subclasses  */
 
 	char *display_name;           /**< How you appear to other people.   */
 	guint keepalive;              /**< Keep-alive.                       */
 
 	/** Wants to Die state.  This is set when the user chooses to log out, or
 	 * when the protocol is disconnected and should not be automatically
-	 * reconnected (incorrect password, etc.).  prpls should rely on
+	 * reconnected (incorrect password, etc.).  Protocols should rely on
 	 * purple_connection_error() to set this for them rather than
 	 * setting it themselves.
 	 * @see purple_connection_error_is_fatal
@@ -81,14 +78,14 @@ struct _PurpleConnectionPrivate
 
 	guint disconnect_timeout;  /**< Timer used for nasty stack tricks         */
 	time_t last_received;      /**< When we last received a packet. Set by the
-	                                prpl to avoid sending unneeded keepalives */
+	                                protocols to avoid sending unneeded keepalives */
 };
 
 /* GObject property enums */
 enum
 {
 	PROP_0,
-	PROP_PRPL,
+	PROP_PROTOCOL,
 	PROP_FLAGS,
 	PROP_STATE,
 	PROP_ACCOUNT,
@@ -112,7 +109,6 @@ static gboolean
 send_keepalive(gpointer data)
 {
 	PurpleConnection *gc = data;
-	PurplePluginProtocolInfo *prpl_info;
 	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
 
 	/* Only send keep-alives if we haven't heard from the
@@ -121,9 +117,7 @@ send_keepalive(gpointer data)
 	if ((time(NULL) - priv->last_received) < KEEPALIVE_INTERVAL)
 		return TRUE;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(priv->prpl);
-	if (prpl_info->keepalive)
-		prpl_info->keepalive(gc);
+	purple_protocol_iface_keepalive(priv->protocol, gc);
 
 	return TRUE;
 }
@@ -131,13 +125,11 @@ send_keepalive(gpointer data)
 static void
 update_keepalive(PurpleConnection *gc, gboolean on)
 {
-	PurplePluginProtocolInfo *prpl_info = NULL;
 	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
 
-	if (priv != NULL && priv->prpl != NULL)
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(priv->prpl);
+	g_return_if_fail(priv != NULL);
 
-	if (!prpl_info || !prpl_info->keepalive)
+	if (!PURPLE_PROTOCOL_IMPLEMENTS(priv->protocol, keepalive))
 		return;
 
 	if (on && !priv->keepalive)
@@ -280,16 +272,6 @@ purple_connection_set_display_name(PurpleConnection *gc, const char *name)
 	priv->display_name = g_strdup(name);
 }
 
-void
-purple_connection_set_protocol_data(PurpleConnection *gc, void *proto_data)
-{
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
-
-	g_return_if_fail(priv != NULL);
-
-	priv->proto_data = proto_data;
-}
-
 PurpleConnectionState
 purple_connection_get_state(const PurpleConnection *gc)
 {
@@ -320,14 +302,14 @@ purple_connection_get_account(const PurpleConnection *gc)
 	return priv->account;
 }
 
-PurplePlugin *
-purple_connection_get_prpl(const PurpleConnection *gc)
+PurpleProtocol *
+purple_connection_get_protocol(const PurpleConnection *gc)
 {
 	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
-	return priv->prpl;
+	return priv->protocol;
 }
 
 const char *
@@ -358,16 +340,6 @@ purple_connection_get_display_name(const PurpleConnection *gc)
 	g_return_val_if_fail(priv != NULL, NULL);
 
 	return priv->display_name;
-}
-
-void *
-purple_connection_get_protocol_data(const PurpleConnection *gc)
-{
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
-
-	g_return_val_if_fail(priv != NULL, NULL);
-
-	return priv->proto_data;
 }
 
 void
@@ -604,7 +576,7 @@ purple_connection_error_info_get_type(void)
  * GObject code
  **************************************************************************/
 /* GObject Property names */
-#define PROP_PRPL_S          "prpl"
+#define PROP_PROTOCOL_S      "protocol"
 #define PROP_FLAGS_S         "flags"
 #define PROP_STATE_S         "state"
 #define PROP_ACCOUNT_S       "account"
@@ -620,9 +592,8 @@ purple_connection_set_property(GObject *obj, guint param_id, const GValue *value
 	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
 
 	switch (param_id) {
-		case PROP_PRPL:
-#warning TODO: change get_pointer to get_object when prpl is a GObject
-			priv->prpl = g_value_get_pointer(value);
+		case PROP_PROTOCOL:
+			priv->protocol = g_value_get_object(value);
 			break;
 		case PROP_FLAGS:
 			purple_connection_set_flags(gc, g_value_get_flags(value));
@@ -654,9 +625,8 @@ purple_connection_get_property(GObject *obj, guint param_id, GValue *value,
 	PurpleConnection *gc = PURPLE_CONNECTION(obj);
 
 	switch (param_id) {
-		case PROP_PRPL:
-#warning TODO: change set_pointer to set_object when prpl is a GObject
-			g_value_set_pointer(value, purple_connection_get_prpl(gc));
+		case PROP_PROTOCOL:
+			g_value_set_object(value, purple_connection_get_protocol(gc));
 			break;
 		case PROP_FLAGS:
 			g_value_set_flags(value, purple_connection_get_flags(gc));
@@ -715,7 +685,6 @@ purple_connection_dispose(GObject *object)
 	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
 	PurpleAccount *account;
 	GSList *buddies;
-	PurplePluginProtocolInfo *prpl_info = NULL;
 	gboolean remove = FALSE;
 
 	account = purple_connection_get_account(gc);
@@ -740,11 +709,9 @@ purple_connection_dispose(GObject *object)
 	purple_http_conn_cancel_all(gc);
 	purple_proxy_connect_cancel_with_handle(gc);
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(priv->prpl);
-	if (prpl_info->close)
-		(prpl_info->close)(gc);
+	purple_protocol_iface_close(priv->protocol, gc);
 
-	/* Clear out the proto data that was freed in the prpl close method*/
+	/* Clear out the proto data that was freed in the protocol's close method */
 	buddies = purple_blist_find_buddies(account, NULL);
 	while (buddies != NULL) {
 		PurpleBuddy *buddy = buddies->data;
@@ -804,10 +771,10 @@ static void purple_connection_class_init(PurpleConnectionClass *klass)
 	obj_class->get_property = purple_connection_get_property;
 	obj_class->set_property = purple_connection_set_property;
 
-#warning TODO: change spec_pointer to spec_object when prpl is a GObject
-	g_object_class_install_property(obj_class, PROP_PRPL,
-			g_param_spec_pointer(PROP_PRPL_S, _("Protocol plugin"),
-				_("The prpl that is using the connection."),
+	g_object_class_install_property(obj_class, PROP_PROTOCOL,
+			g_param_spec_object(PROP_PROTOCOL_S, _("Protocol"),
+				_("The protocol that the connection is using."),
+				PURPLE_TYPE_PROTOCOL,
 				G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)
 			);
 
@@ -876,22 +843,19 @@ void
 _purple_connection_new(PurpleAccount *account, gboolean regist, const char *password)
 {
 	PurpleConnection *gc;
-	PurplePlugin *prpl;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 
 	g_return_if_fail(account != NULL);
 
 	if (!purple_account_is_disconnected(account))
 		return;
 
-	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
 
-	if (prpl != NULL)
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-	else {
+	if (protocol == NULL) {
 		gchar *message;
 
-		message = g_strdup_printf(_("Missing protocol plugin for %s"),
+		message = g_strdup_printf(_("Missing protocol for %s"),
 			purple_account_get_username(account));
 		purple_notify_error(NULL, regist ? _("Registration Error") :
 						  _("Connection Error"), message, NULL);
@@ -901,14 +865,14 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 
 	if (regist)
 	{
-		if (prpl_info->register_user == NULL)
+		if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, register_user))
 			return;
 	}
 	else
 	{
 		if (((password == NULL) || (*password == '\0')) &&
-			!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
-			!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
+			!(purple_protocol_get_options(protocol) & OPT_PROTO_NO_PASSWORD) &&
+			!(purple_protocol_get_options(protocol) & OPT_PROTO_PASSWORD_OPTIONAL))
 		{
 			purple_debug_error("connection", "Cannot connect to account %s without "
 							 "a password.\n", purple_account_get_username(account));
@@ -916,11 +880,16 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 		}
 	}
 
-	gc = g_object_new(PURPLE_TYPE_CONNECTION,
-			PROP_PRPL_S,      prpl,
-			PROP_PASSWORD_S,  password,
-			PROP_ACCOUNT_S,   account,
-			NULL);
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, connection_new))
+		gc = purple_protocol_iface_connection_new(protocol, account, password);
+	else
+		gc = g_object_new(PURPLE_TYPE_CONNECTION,
+				PROP_PROTOCOL_S,  protocol,
+				PROP_ACCOUNT_S,   account,
+				PROP_PASSWORD_S,  password,
+				NULL);
+
+	g_return_if_fail(gc != NULL);
 
 	if (regist)
 	{
@@ -929,14 +898,14 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 		/* set this so we don't auto-reconnect after registering */
 		PURPLE_CONNECTION_GET_PRIVATE(gc)->wants_to_die = TRUE;
 
-		prpl_info->register_user(account);
+		purple_protocol_iface_register_user(protocol, account);
 	}
 	else
 	{
 		purple_debug_info("connection", "Connecting. gc = %p\n", gc);
 
 		purple_signal_emit(purple_accounts_get_handle(), "account-connecting", account);
-		prpl_info->login(account);
+		purple_protocol_iface_login(protocol, account);
 	}
 }
 
@@ -946,19 +915,16 @@ _purple_connection_new_unregister(PurpleAccount *account, const char *password,
 {
 	/* Lots of copy/pasted code to avoid API changes. You might want to integrate that into the previous function when posssible. */
 	PurpleConnection *gc;
-	PurplePlugin *prpl;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 
 	g_return_if_fail(account != NULL);
 
-	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
 
-	if (prpl != NULL)
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-	else {
+	if (protocol == NULL) {
 		gchar *message;
 
-		message = g_strdup_printf(_("Missing protocol plugin for %s"),
+		message = g_strdup_printf(_("Missing protocol for %s"),
 								  purple_account_get_username(account));
 		purple_notify_error(NULL, _("Unregistration Error"), message, NULL);
 		g_free(message);
@@ -966,28 +932,33 @@ _purple_connection_new_unregister(PurpleAccount *account, const char *password,
 	}
 
 	if (!purple_account_is_disconnected(account)) {
-		prpl_info->unregister_user(account, cb, user_data);
+		purple_protocol_iface_unregister_user(protocol, account, cb, user_data);
 		return;
 	}
 
 	if (((password == NULL) || (*password == '\0')) &&
-		!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
-		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
+		!(purple_protocol_get_options(protocol) & OPT_PROTO_NO_PASSWORD) &&
+		!(purple_protocol_get_options(protocol) & OPT_PROTO_PASSWORD_OPTIONAL))
 	{
 		purple_debug_error("connection", "Cannot connect to account %s without "
 						   "a password.\n", purple_account_get_username(account));
 		return;
 	}
 
-	gc = g_object_new(PURPLE_TYPE_CONNECTION,
-			PROP_PRPL_S,      prpl,
-			PROP_PASSWORD_S,  password,
-			PROP_ACCOUNT_S,   account,
-			NULL);
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, connection_new))
+		gc = purple_protocol_iface_connection_new(protocol, account, password);
+	else
+		gc = g_object_new(PURPLE_TYPE_CONNECTION,
+				PROP_PROTOCOL_S,  protocol,
+				PROP_ACCOUNT_S,   account,
+				PROP_PASSWORD_S,  password,
+				NULL);
+
+	g_return_if_fail(gc != NULL);
 
 	purple_debug_info("connection", "Unregistering.  gc = %p\n", gc);
 
-	prpl_info->unregister_user(account, cb, user_data);
+	purple_protocol_iface_unregister_user(protocol, account, cb, user_data);
 }
 
 /**************************************************************************
