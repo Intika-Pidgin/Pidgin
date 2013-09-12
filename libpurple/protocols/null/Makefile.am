@@ -4,7 +4,9 @@ EXTRA_DIST = \
 
 pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
-NULLSOURCES = nullprpl.c
+NULLSOURCES = \
+	nullprotocol.h \
+	nullprotocol.c
 
 AM_CFLAGS = $(st)
 
@@ -20,4 +22,5 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS)

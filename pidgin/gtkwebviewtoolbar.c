@@ -590,7 +590,7 @@ do_insert_image_cb(GtkWidget *widget, int response, GtkWebViewToolbar *toolbar)
 	g_free(filename);
 
 	gtk_webview_insert_image(GTK_WEBVIEW(toolbar->webview), id);
-	/* TODO: do it after passing an image to prpl, not before
+	/* TODO: do it after passing an image to protocol, not before
 	 * purple_imgstore_unref_by_id(id);
 	 */
 }
@@ -975,7 +975,7 @@ send_attention_cb(GtkAction *attention, GtkWebViewToolbar *toolbar)
 	const gchar *who = purple_conversation_get_name(conv);
 	PurpleConnection *gc = purple_conversation_get_connection(conv);
 
-	purple_prpl_send_attention(gc, who, 0);
+	purple_protocol_send_attention(gc, who, 0);
 	gtk_widget_grab_focus(toolbar->webview);
 }
 
@@ -1621,15 +1621,15 @@ gtk_webviewtoolbar_switch_active_conversation(GtkWebViewToolbar *toolbar,
 {
 	GtkWebViewToolbarPriv *priv = GTK_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
 	PurpleConnection *gc = purple_conversation_get_connection(conv);
-	PurplePlugin *prpl = purple_connection_get_prpl(gc);
+	PurpleProtocol *protocol = purple_connection_get_protocol(gc);
 
 	priv->active_conv = conv;
 
 	/* gray out attention button on protocols that don't support it
 	 for the time being it is always disabled for chats */
 	gtk_action_set_sensitive(priv->attention,
-		conv && prpl && PURPLE_IS_IM_CONVERSATION(conv) &&
-		PURPLE_PLUGIN_PROTOCOL_INFO(prpl)->send_attention != NULL);
+		conv && protocol && PURPLE_IS_IM_CONVERSATION(conv) &&
+		PURPLE_PROTOCOL_IMPLEMENTS(protocol, send_attention));
 
 	gtk_action_set_sensitive(priv->smiley,
 		(gboolean)pidgin_themes_get_proto_smileys(priv->sml));
