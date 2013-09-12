@@ -676,13 +676,13 @@ jabber_watched_iq(PurpleConnection *pc, const char *type, const char *id,
 		purple_xmlnode_set_attrib(iq, "id", id);
 		purple_xmlnode_set_attrib(iq, "type", "result");
 
-		purple_signal_emit(purple_connection_get_prpl(pc),
+		purple_signal_emit(purple_connection_get_protocol(pc),
 		                   "jabber-sending-xmlnode", pc, &iq);
 		if (iq != NULL)
 			purple_xmlnode_free(iq);
 	}
 
-	/* Cookie monster eats IQ stanzas; the prpl shouldn't keep processing */
+	/* Cookie monster eats IQ stanzas; the protocol shouldn't keep processing */
 	return TRUE;
 }
 
@@ -700,7 +700,7 @@ plugin_load(PurplePlugin *plugin)
 	void *ft_handle       = purple_xfers_get_handle();
 	void *sound_handle    = purple_sounds_get_handle();
 	void *notify_handle   = purple_notify_get_handle();
-	void *jabber_handle   = purple_plugins_find_with_id("prpl-jabber");
+	void *jabber_handle   = purple_protocols_find("jabber");
 
 	/* Accounts subsystem signals */
 	purple_signal_connect(accounts_handle, "account-connecting",
@@ -868,7 +868,7 @@ plugin_load(PurplePlugin *plugin)
 static gboolean
 plugin_unload(PurplePlugin *plugin)
 {
-	void *jabber_handle = purple_plugins_find_with_id("prpl-jabber");
+	void *jabber_handle = purple_protocols_find("jabber");
 
 	purple_signals_disconnect_by_handle(plugin);
 

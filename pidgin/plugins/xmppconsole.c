@@ -22,7 +22,7 @@
 #include "internal.h"
 #include "gtkplugin.h"
 #include "version.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "xmlnode.h"
 
 #include "gtkimhtml.h"
@@ -194,7 +194,7 @@ purple_xmlnode_sent_cb(PurpleConnection *gc, char **packet, gpointer null)
 static gboolean
 message_send_cb(GtkWidget *widget, GdkEventKey *event, gpointer p)
 {
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	PurpleConnection *gc;
 	gchar *text;
 
@@ -204,12 +204,12 @@ message_send_cb(GtkWidget *widget, GdkEventKey *event, gpointer p)
 	gc = console->gc;
 
 	if (gc)
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+		protocol = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_protocol(gc));
 
 	text = gtk_webview_get_body_text(GTK_WEBVIEW(widget));
 
-	if (prpl_info && prpl_info->send_raw != NULL)
-		prpl_info->send_raw(gc, text, strlen(text));
+	if (protocol)
+		purple_protocol_iface_send_raw(protocol, gc, text, strlen(text));
 
 	g_free(text);
 	gtk_webview_load_html_string(GTK_WEBVIEW(console->entry), "");
@@ -656,7 +656,7 @@ signing_on_cb(PurpleConnection *gc)
 		return;
 
 	account = purple_connection_get_account(gc);
-	if (strcmp(purple_account_get_protocol_id(account), "prpl-jabber"))
+	if (strcmp(purple_account_get_protocol_id(account), "jabber"))
 		return;
 
 	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(console->dropdown),
@@ -711,7 +711,7 @@ plugin_load(PurplePlugin *plugin)
 {
 	PurplePlugin *jabber;
 
-	jabber = purple_find_prpl("prpl-jabber");
+	jabber = purple_protocols_find("jabber");
 	if (!jabber)
 		return FALSE;
 
@@ -783,7 +783,7 @@ create_console(PurplePluginAction *action)
 	console->dropdown = gtk_combo_box_text_new();
 	for (connections = purple_connections_get_all(); connections; connections = connections->next) {
 		PurpleConnection *gc = connections->data;
-		if (!strcmp(purple_account_get_protocol_id(purple_connection_get_account(gc)), "prpl-jabber")) {
+		if (!strcmp(purple_account_get_protocol_id(purple_connection_get_account(gc)), "jabber")) {
 			console->count++;
 			console->accounts = g_list_append(console->accounts, gc);
 			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(console->dropdown),

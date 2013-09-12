@@ -88,7 +88,7 @@ typedef struct
 	void (*cancel_remote)(PurpleXfer *xfer);
 
 	/**
-	 * UI op to write data received from the prpl. The UI must deal with the
+	 * UI op to write data received from the protocol. The UI must deal with the
 	 * entire buffer and return size, or it is treated as an error.
 	 *
 	 * @param xfer    The file transfer structure
@@ -101,7 +101,7 @@ typedef struct
 	gssize (*ui_write)(PurpleXfer *xfer, const guchar *buffer, gssize size);
 
 	/**
-	 * UI op to read data to send to the prpl for a file transfer.
+	 * UI op to read data to send to the protocol for a file transfer.
 	 *
 	 * @param xfer    The file transfer structure
 	 * @param buffer  A pointer to a buffer. The UI must allocate this buffer.
@@ -174,7 +174,7 @@ GType purple_xfer_get_type(void);
 
 /**
  * Creates a new file transfer handle.
- * This is called by prpls.
+ * This is called by protocols.
  *
  * @param account The account sending or receiving the file.
  * @param type    The type of file transfer.
@@ -528,7 +528,7 @@ void purple_xfer_set_ack_fnc(PurpleXfer *xfer,
  * Sets the function to be called if the request is denied.
  *
  * @param xfer The file transfer.
- * @param fnc The request denied prpl callback.
+ * @param fnc The request denied protocol callback.
  */
 void purple_xfer_set_request_denied_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *));
 
@@ -630,7 +630,7 @@ purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size);
  * @a ip and @a port are ignored.
  *
  * Passing @a fd as '-1' is a special-case and indicates to the
- * protocol plugin to facilitate the file transfer itself.
+ * protocol to facilitate the file transfer itself.
  *
  * @param xfer The file transfer.
  * @param fd   The file descriptor for the socket.
@@ -711,13 +711,13 @@ void purple_xfer_conversation_write(PurpleXfer *xfer, const gchar *message, gboo
 void purple_xfer_ui_ready(PurpleXfer *xfer);
 
 /**
- * Allows the prpl to signal it's ready to send/receive data (depending on
- * the direction of the file transfer. Used when the prpl provides read/write
+ * Allows the protocol to signal it's ready to send/receive data (depending on
+ * the direction of the file transfer. Used when the protocol provides read/write
  * ops and cannot/does not provide a raw fd to the core.
  *
  * @param xfer The file transfer which is ready.
  */
-void purple_xfer_prpl_ready(PurpleXfer *xfer);
+void purple_xfer_protocol_ready(PurpleXfer *xfer);
 
 /**
  * Gets the thumbnail data for a transfer
@@ -758,23 +758,6 @@ void purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
  *	 	  the protocols can use for thumbnails.
  */
 void purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats);
-
-/**
- * Sets the protocol data for a file transfer.
- *
- * @param xfer			The file transfer.
- * @param proto_data	The protocol data to set for the file transfer.
- */
-void purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data);
- 
-/**
- * Gets the protocol data for a file transfer.
- *
- * @param xfer			The file transfer.
- *
- * @return The protocol data for the file transfer.
- */
-gpointer purple_xfer_get_protocol_data(const PurpleXfer *xfer);
 
 /**
  * Set the UI data associated with this file transfer.
