@@ -1,24 +1,23 @@
 noinst_LTLIBRARIES=libpurple-ciphers.la
-# XXX: cipher.lo won't be updated after a change in cipher files
 
 if USE_NSS
-AES_SOURCE = aes.c
+AES_SOURCE = aescipher.c
 endif
 if USE_GNUTLS
-AES_SOURCE = aes.c
+AES_SOURCE = aescipher.c
 endif
 
 libpurple_ciphers_la_SOURCES=\
 	$(AES_SOURCE) \
-	des.c \
-	gchecksum.c \
-	hmac.c \
-	md4.c \
-	pbkdf2.c \
-	rc4.c
-
-noinst_HEADERS =\
-	ciphers.h
+	descipher.c \
+	des3cipher.c \
+	hmaccipher.c \
+	md4hash.c \
+	md5hash.c \
+	pbkdf2cipher.c \
+	rc4cipher.c \
+	sha1hash.c \
+	sha256hash.c
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
