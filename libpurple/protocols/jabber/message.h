@@ -68,12 +68,12 @@ void jabber_message_free(JabberMessage *jm);
 
 void jabber_message_send(JabberMessage *jm);
 
-void jabber_message_parse(JabberStream *js, xmlnode *packet);
+void jabber_message_parse(JabberStream *js, PurpleXmlNode *packet);
 int jabber_message_send_im(PurpleConnection *gc, const char *who, const char *msg,
 		PurpleMessageFlags flags);
 int jabber_message_send_chat(PurpleConnection *gc, int id, const char *message, PurpleMessageFlags flags);
 
-unsigned int jabber_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state);
+unsigned int jabber_send_typing(PurpleConnection *gc, const char *who, PurpleIMTypingState state);
 
 gboolean jabber_buzz_isenabled(JabberStream *js, const gchar *namespace);
 
