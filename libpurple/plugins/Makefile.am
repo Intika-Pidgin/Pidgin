@@ -27,6 +27,8 @@ plugindir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
 autoaccept_la_LDFLAGS       = -module -avoid-version
 buddynote_la_LDFLAGS        = -module -avoid-version
+caesarcipher_la_LDFLAGS     = -module -avoid-version
+caesarcipher_consumer_la_LDFLAGS = -module -avoid-version
 ciphertest_la_LDFLAGS		= -module -avoid-version
 codeinline_la_LDFLAGS		= -module -avoid-version
 debug_example_la_LDFLAGS    = -module -avoid-version
@@ -62,6 +64,8 @@ plugin_LTLIBRARIES = \
 	$(DBUS_LTLIB)
 
 noinst_LTLIBRARIES = \
+	caesarcipher.la \
+	caesarcipher_consumer.la \
 	ciphertest.la \
 	codeinline.la \
 	debug_example.la \
@@ -74,6 +78,8 @@ noinst_LTLIBRARIES = \
 
 autoaccept_la_SOURCES       = autoaccept.c
 buddynote_la_SOURCES        = buddynote.c
+caesarcipher_la_SOURCES     = caesarcipher.c caesarcipher.h
+caesarcipher_consumer_la_SOURCES = caesarcipher_consumer.c
 ciphertest_la_SOURCES		= ciphertest.c
 codeinline_la_SOURCES		= codeinline.c
 debug_example_la_SOURCES = debug_example.c
@@ -93,6 +99,8 @@ statenotify_la_SOURCES      = statenotify.c
 
 autoaccept_la_LIBADD        = $(GLIB_LIBS)
 buddynote_la_LIBADD         = $(GLIB_LIBS)
+caesarcipher_la_LIBADD      = $(GLIB_LIBS)
+caesarcipher_consumer_la_LIBADD = $(GLIB_LIBS)
 ciphertest_la_LIBADD		= $(GLIB_LIBS)
 codeinline_la_LIBADD		= $(GLIB_LIBS)
 idle_la_LIBADD              = $(GLIB_LIBS)
@@ -136,8 +144,6 @@ EXTRA_DIST = \
 	dbus-buddyicons-example.py \
 	filectl.c \
 	fortuneprofile.pl \
-	ipc-test-client.c \
-	ipc-test-server.c \
 	startup.py
 
 AM_CPPFLAGS = \
@@ -146,6 +152,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/libpurple \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(PLUGIN_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(NSS_CFLAGS)
