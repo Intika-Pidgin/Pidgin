@@ -104,13 +104,13 @@ struct _PurpleXferPrivate {
 
 	/*
 	 * Used to moderate the file transfer when either the read/write ui_ops are
-	 * set or fd is not set. In those cases, the UI/prpl call the respective
+	 * set or fd is not set. In those cases, the UI/protocol call the respective
 	 * function, which is somewhat akin to a fd watch being triggered.
 	 */
 	enum {
 		PURPLE_XFER_READY_NONE = 0x0,
 		PURPLE_XFER_READY_UI   = 0x1,
-		PURPLE_XFER_READY_PRPL = 0x2,
+		PURPLE_XFER_READY_PROTOCOL = 0x2,
 	} ready;
 
 	/* TODO: Should really use a PurpleCircBuffer for this. */
@@ -1341,7 +1341,7 @@ do_transfer(PurpleXfer *xfer)
 		size_t s = MIN(purple_xfer_get_bytes_remaining(xfer), priv->current_buffer_size);
 		gboolean read = TRUE;
 
-		/* this is so the prpl can keep the connection open
+		/* this is so the protocol can keep the connection open
 		   if it needs to for some odd reason. */
 		if (s == 0) {
 			if (priv->watcher) {
@@ -1374,8 +1374,8 @@ do_transfer(PurpleXfer *xfer)
 					priv->watcher = 0;
 				}
 
-				/* Need to indicate the prpl is still ready... */
-				priv->ready |= PURPLE_XFER_READY_PRPL;
+				/* Need to indicate the protocol is still ready... */
+				priv->ready |= PURPLE_XFER_READY_PROTOCOL;
 
 				g_return_if_reached();
 			}
@@ -1451,12 +1451,12 @@ transfer_cb(gpointer data, gint source, PurpleInputCondition condition)
 	if (priv->dest_fp == NULL) {
 		/* The UI is moderating its side manually */
 		if (0 == (priv->ready & PURPLE_XFER_READY_UI)) {
-			priv->ready |= PURPLE_XFER_READY_PRPL;
+			priv->ready |= PURPLE_XFER_READY_PROTOCOL;
 
 			purple_input_remove(priv->watcher);
 			priv->watcher = 0;
 
-			purple_debug_misc("xfer", "prpl is ready on ft %p, waiting for UI\n", xfer);
+			purple_debug_misc("xfer", "Protocol is ready on ft %p, waiting for UI\n", xfer);
 			return;
 		}
 
@@ -1527,12 +1527,12 @@ purple_xfer_ui_ready(PurpleXfer *xfer)
 
 	priv->ready |= PURPLE_XFER_READY_UI;
 
-	if (0 == (priv->ready & PURPLE_XFER_READY_PRPL)) {
-		purple_debug_misc("xfer", "UI is ready on ft %p, waiting for prpl\n", xfer);
+	if (0 == (priv->ready & PURPLE_XFER_READY_PROTOCOL)) {
+		purple_debug_misc("xfer", "UI is ready on ft %p, waiting for protocol\n", xfer);
 		return;
 	}
 
-	purple_debug_misc("xfer", "UI (and prpl) ready on ft %p, so proceeding\n", xfer);
+	purple_debug_misc("xfer", "UI (and protocol) ready on ft %p, so proceeding\n", xfer);
 
 	type = purple_xfer_get_xfer_type(xfer);
 	if (type == PURPLE_XFER_TYPE_SEND)
@@ -1549,21 +1549,21 @@ purple_xfer_ui_ready(PurpleXfer *xfer)
 }
 
 void
-purple_xfer_prpl_ready(PurpleXfer *xfer)
+purple_xfer_protocol_ready(PurpleXfer *xfer)
 {
 	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
 
 	g_return_if_fail(priv != NULL);
 
-	priv->ready |= PURPLE_XFER_READY_PRPL;
+	priv->ready |= PURPLE_XFER_READY_PROTOCOL;
 
 	/* I don't think fwrite/fread are ever *not* ready */
 	if (priv->dest_fp == NULL && 0 == (priv->ready & PURPLE_XFER_READY_UI)) {
-		purple_debug_misc("xfer", "prpl is ready on ft %p, waiting for UI\n", xfer);
+		purple_debug_misc("xfer", "Protocol is ready on ft %p, waiting for UI\n", xfer);
 		return;
 	}
 
-	purple_debug_misc("xfer", "Prpl (and UI) ready on ft %p, so proceeding\n", xfer);
+	purple_debug_misc("xfer", "Protocol (and UI) ready on ft %p, so proceeding\n", xfer);
 
 	priv->ready = PURPLE_XFER_READY_NONE;
 
@@ -2337,16 +2337,31 @@ purple_xfer_get_type(void)
 PurpleXfer *
 purple_xfer_new(PurpleAccount *account, PurpleXferType type, const char *who)
 {
-	g_return_val_if_fail(type    != PURPLE_XFER_TYPE_UNKNOWN, NULL);
-	g_return_val_if_fail(account != NULL,                NULL);
-	g_return_val_if_fail(who     != NULL,                NULL);
+	PurpleXfer *xfer;
+	PurpleProtocol *protocol;
 
-	return g_object_new(PURPLE_TYPE_XFER,
-		PROP_TYPE_S,        type,
-		PROP_ACCOUNT_S,     account,
-		PROP_REMOTE_USER_S, who,
-		NULL
-	);
+	g_return_val_if_fail(type    != PURPLE_XFER_TYPE_UNKNOWN, NULL);
+	g_return_val_if_fail(account != NULL, NULL);
+	g_return_val_if_fail(who     != NULL, NULL);
+
+	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
+
+	g_return_val_if_fail(protocol != NULL, NULL);
+
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY_IFACE, xfer_new))
+		xfer = purple_protocol_factory_iface_xfer_new(protocol, account, type,
+				who);
+	else
+		xfer = g_object_new(PURPLE_TYPE_XFER,
+			PROP_ACCOUNT_S,     account,
+			PROP_TYPE_S,        type,
+			PROP_REMOTE_USER_S, who,
+			NULL
+		);
+
+	g_return_val_if_fail(xfer != NULL, NULL);
+
+	return xfer;
 }
 
 /**************************************************************************
