@@ -35,7 +35,7 @@
 #include "network.h"
 #include "notify.h"
 #include "prefs.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "pounce.h"
 #include "sound.h"
 #include "status.h"
@@ -341,16 +341,16 @@ static GHashTable *pidgin_ui_get_info(void)
 		 * possible it has been re-added).  AOL's old key management
 		 * page is http://developer.aim.com/manageKeys.jsp
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma1cSASNCKFtrdv9");
-		g_hash_table_insert(ui_info, "prpl-icq-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "protocol-aim-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "protocol-icq-clientkey", "ma1cSASNCKFtrdv9");
 
 		/*
 		 * This is the distid for Pidgin, given to us by AOL.  Please
 		 * don't use this for other applications.  You can just not
 		 * specify a distid and libpurple will use a default.
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1550));
-		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1550));
+		g_hash_table_insert(ui_info, "protocol-aim-distid", GINT_TO_POINTER(1550));
+		g_hash_table_insert(ui_info, "protocol-icq-distid", GINT_TO_POINTER(1550));
 	}
 
 	return ui_info;
@@ -757,17 +757,6 @@ int main(int argc, char *argv[])
 	purple_core_set_ui_ops(pidgin_core_get_ui_ops());
 	purple_eventloop_set_ui_ops(pidgin_eventloop_get_ui_ops());
 
-	/*
-	 * Set plugin search directories. Give priority to the plugins
-	 * in user's home directory.
-	 */
-	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
-	if (!g_stat(search_path, &st))
-		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
-	purple_plugins_add_search_path(search_path);
-	g_free(search_path);
-	purple_plugins_add_search_path(LIBDIR);
-
 	if (!purple_core_init(PIDGIN_UI)) {
 		fprintf(stderr,
 				"Initialization of the libpurple core failed. Dumping core.\n"
@@ -777,6 +766,15 @@ int main(int argc, char *argv[])
 #endif
 		abort();
 	}
+
+	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
+	if (!g_stat(search_path, &st))
+		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
+	purple_plugins_add_search_path(search_path);
+	g_free(search_path);
+
+	purple_plugins_add_search_path(LIBDIR);
+	purple_plugins_refresh();
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
 #ifdef HAVE_DBUS
