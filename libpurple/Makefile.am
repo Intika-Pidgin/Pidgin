@@ -93,13 +93,14 @@ purple_coresources = \
 	network.c \
 	ntlm.c \
 	notify.c \
-	plugin.c \
+	plugins.c \
 	pluginpref.c \
 	pounce.c \
 	prefs.c \
 	presence.c \
 	proxy.c \
-	prpl.c \
+	protocol.c \
+	protocols.c \
 	purple-socket.c \
 	request.c \
 	roomlist.c \
@@ -165,13 +166,14 @@ purple_coreheaders = \
 	network.h \
 	notify.h \
 	ntlm.h \
-	plugin.h \
+	plugins.h \
 	pluginpref.h \
 	pounce.h \
 	prefs.h \
 	presence.h \
 	proxy.h \
-	prpl.h \
+	protocol.h \
+	protocols.h \
 	purple-socket.h \
 	request.h \
 	roomlist.h \
@@ -223,6 +225,9 @@ purple_enumheaders = \
 	connection.h \
 	conversation.h \
 	conversationtypes.h \
+	plugins.h \
+	protocol.h \
+	protocols.h \
 	roomlist.h \
 	status.h \
 	xfer.h
@@ -268,7 +273,7 @@ dbus_exported = dbus-useful.h dbus-define-api.h account.h accounts.h blistnode.h
                 blistnodetypes.h buddylist.h buddyicon.h connection.h conversation.h \
                 conversationtypes.h conversations.h core.h xfer.h log.h notify.h \
                 prefs.h presence.h roomlist.h savedstatuses.h smiley.h status.h \
-                server.h util.h xmlnode.h prpl.h
+                server.h util.h xmlnode.h protocol.h protocols.h
 
 purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders)) \
 		$(addprefix $(srcdir)/ciphers/, $(purple_cipherheaders)) \
@@ -278,7 +283,7 @@ dbus_build_exported = $(addprefix $(srcdir)/, $(dbus_exported))
 # We should probably make this better
 dbus_signals = $(addprefix $(srcdir)/, $(purple_coresources)) \
 	$(srcdir)/protocols/irc/irc.c \
-	$(srcdir)/protocols/jabber/libxmpp.c
+	$(srcdir)/protocols/jabber/jabber.c
 
 dbus-types.c: dbus-analyze-types.py $(purple_build_coreheaders)
 	$(AM_V_GEN)cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DEFINE_TYPE\(%s\) > $@
@@ -381,6 +386,7 @@ libpurple_la_LIBADD = \
 	$(STATIC_LINK_LIBS) \
 	$(DBUS_LIBS) \
 	$(GLIB_LIBS) \
+	$(GPLUGIN_LIBS) \
 	$(LIBXML_LIBS) \
 	$(NETWORKMANAGER_LIBS) \
 	$(INTLLIBS) \
@@ -400,6 +406,7 @@ AM_CPPFLAGS = \
 	-DLOCALEDIR=\"$(datadir)/locale\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \
@@ -417,4 +424,32 @@ AM_CPPFLAGS = \
 # We want to use SSL_CERTIFICATES_DIR when it's not empty.
 if ! INSTALL_SSL_CERTIFICATES
 AM_CPPFLAGS += -DSSL_CERTIFICATES_DIR=\"$(SSL_CERTIFICATES_DIR)\"
+endif
+
+if PLUGINS
+-include $(INTROSPECTION_MAKEFILE)
+INTROSPECTION_GIRS =
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir)
+INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
+
+if HAVE_INTROSPECTION
+introspection_sources = $(purple_coreheaders) $(purple_builtheaders)
+
+Purple.gir: libpurple.la
+Purple_gir_INCLUDES = GObject-2.0
+Purple_gir_CFLAGS = $(INCLUDES) $(AM_CPPFLAGS)
+Purple_gir_LIBS = libpurple.la
+Purple_gir_FILES = $(introspection_sources)
+Purple_gir_NAMESPACE = Purple
+Purple_gir_VERSION = $(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION)
+INTROSPECTION_GIRS += Purple.gir
+
+girdir = $(datadir)/gir-1.0
+gir_DATA = $(INTROSPECTION_GIRS)
+
+typelibdir = $(libdir)/girepository-1.0
+typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
+
+CLEANFILES += $(gir_DATA) $(typelib_DATA)
+endif
 endif
