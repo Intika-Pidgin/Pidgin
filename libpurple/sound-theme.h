@@ -50,12 +50,19 @@ typedef struct _PurpleSoundThemeClass   PurpleSoundThemeClass;
 
 struct _PurpleSoundTheme
 {
+	/*< private >*/
 	PurpleTheme parent;
 };
 
 struct _PurpleSoundThemeClass
 {
+	/*< private >*/
 	PurpleThemeClass parent_class;
+
+	void (*purple_reserved1)(void);
+	void (*purple_reserved2)(void);
+	void (*purple_reserved3)(void);
+	void (*purple_reserved4)(void);
 };
 
 /**************************************************************************/
