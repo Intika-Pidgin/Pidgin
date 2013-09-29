@@ -26,7 +26,7 @@
 #ifndef _GNT_BLIST_H
 #define _GNT_BLIST_H
 
-#include "blist.h"
+#include "buddylist.h"
 #include "gnttree.h"
 
 /**********************************************************************
