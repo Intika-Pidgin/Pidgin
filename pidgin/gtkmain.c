@@ -35,7 +35,7 @@
 #include "network.h"
 #include "notify.h"
 #include "prefs.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "pounce.h"
 #include "sound.h"
 #include "status.h"
@@ -72,6 +72,10 @@
 
 #ifdef HAVE_SIGNAL_H
 # include <signal.h>
+#endif
+
+#ifdef ENABLE_INTROSPECTION
+# include <girepository.h>
 #endif
 
 #include <getopt.h>
@@ -341,16 +345,16 @@ static GHashTable *pidgin_ui_get_info(void)
 		 * possible it has been re-added).  AOL's old key management
 		 * page is http://developer.aim.com/manageKeys.jsp
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma1cSASNCKFtrdv9");
-		g_hash_table_insert(ui_info, "prpl-icq-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "protocol-aim-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "protocol-icq-clientkey", "ma1cSASNCKFtrdv9");
 
 		/*
 		 * This is the distid for Pidgin, given to us by AOL.  Please
 		 * don't use this for other applications.  You can just not
 		 * specify a distid and libpurple will use a default.
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1550));
-		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1550));
+		g_hash_table_insert(ui_info, "protocol-aim-distid", GINT_TO_POINTER(1550));
+		g_hash_table_insert(ui_info, "protocol-icq-distid", GINT_TO_POINTER(1550));
 	}
 
 	return ui_info;
@@ -462,17 +466,20 @@ int main(int argc, char *argv[])
 	GStatBuf st;
 
 	struct option long_options[] = {
-		{"config",       required_argument, NULL, 'c'},
-		{"debug",        optional_argument, NULL, 'd'},
-		{"force-online", no_argument,       NULL, 'f'},
-		{"help",         no_argument,       NULL, 'h'},
-		{"login",        optional_argument, NULL, 'l'},
-		{"multiple",     no_argument,       NULL, 'm'},
-		{"nologin",      no_argument,       NULL, 'n'},
-		{"session",      required_argument, NULL, 's'},
-		{"version",      no_argument,       NULL, 'v'},
-		{"display",      required_argument, NULL, 'D'},
-		{"sync",         no_argument,       NULL, 'S'},
+		{"config",          required_argument, NULL, 'c'},
+		{"debug",           optional_argument, NULL, 'd'},
+		{"force-online",    no_argument,       NULL, 'f'},
+		{"help",            no_argument,       NULL, 'h'},
+		{"login",           optional_argument, NULL, 'l'},
+		{"multiple",        no_argument,       NULL, 'm'},
+		{"nologin",         no_argument,       NULL, 'n'},
+		{"session",         required_argument, NULL, 's'},
+		{"version",         no_argument,       NULL, 'v'},
+		{"display",         required_argument, NULL, 'D'},
+		{"sync",            no_argument,       NULL, 'S'},
+#ifdef ENABLE_INTROSPECTION
+		{"introspect-dump", required_argument, NULL, 'i'},
+#endif
 		{0, 0, 0, 0}
 	};
 
@@ -612,9 +619,9 @@ int main(int argc, char *argv[])
 	opterr = 1;
 	while ((opt = getopt_long(argc, argv,
 #ifndef _WIN32
-				  "c:dfhmnl::s:v",
+				  "c:dfhmnl::s:vi:",
 #else
-				  "c:dfhmnl::v",
+				  "c:dfhmnl::vi:",
 #endif
 				  long_options, NULL)) != -1) {
 		switch (opt) {
@@ -656,6 +663,12 @@ int main(int argc, char *argv[])
 		case 'S':   /* --sync */
 			/* handled by gtk_init_check below */
 			break;
+#ifdef ENABLE_INTROSPECTION
+		case 'i':	/* introspection */
+			g_irepository_dump(optarg, NULL);
+			return 0;
+			break;
+#endif
 		case '?':	/* show terse help */
 		default:
 			show_usage(argv[0], TRUE);
@@ -757,17 +770,6 @@ int main(int argc, char *argv[])
 	purple_core_set_ui_ops(pidgin_core_get_ui_ops());
 	purple_eventloop_set_ui_ops(pidgin_eventloop_get_ui_ops());
 
-	/*
-	 * Set plugin search directories. Give priority to the plugins
-	 * in user's home directory.
-	 */
-	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
-	if (!g_stat(search_path, &st))
-		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
-	purple_plugins_add_search_path(search_path);
-	g_free(search_path);
-	purple_plugins_add_search_path(LIBDIR);
-
 	if (!purple_core_init(PIDGIN_UI)) {
 		fprintf(stderr,
 				"Initialization of the libpurple core failed. Dumping core.\n"
@@ -777,6 +779,15 @@ int main(int argc, char *argv[])
 #endif
 		abort();
 	}
+
+	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
+	if (!g_stat(search_path, &st))
+		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
+	purple_plugins_add_search_path(search_path);
+	g_free(search_path);
+
+	purple_plugins_add_search_path(LIBDIR);
+	purple_plugins_refresh();
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
 #ifdef HAVE_DBUS

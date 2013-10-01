@@ -30,8 +30,8 @@
 #include "xfer.h"
 #include "log.h"
 #include "notify.h"
-#include "prefs.h"
-#include "prpl.h"
+#include "plugins.h"
+#include "protocol.h"
 #include "pounce.h"
 #include "savedstatuses.h"
 #include "sound.h"
@@ -49,6 +49,10 @@
 
 #include "config.h"
 #include "package_revision.h"
+
+#ifdef ENABLE_INTROSPECTION
+# include <girepository.h>
+#endif
 
 static void
 debug_init(void)
@@ -79,7 +83,7 @@ static GHashTable *finch_ui_get_info(void)
 		 * possible it has been re-added).  AOL's old key management
 		 * page is http://developer.aim.com/manageKeys.jsp
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma19sqWV9ymU6UYc");
+		g_hash_table_insert(ui_info, "protocol-aim-clientkey", "ma19sqWV9ymU6UYc");
 
 		/*
 		 * This is the client key for "Pidgin."  It is owned by the AIM
@@ -95,15 +99,15 @@ static GHashTable *finch_ui_get_info(void)
 		 * (ma19sqWV9ymU6UYc), but it stopped working, so we switched
 		 * to this one.
 		 */
-		g_hash_table_insert(ui_info, "prpl-icq-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "protocol-icq-clientkey", "ma1cSASNCKFtrdv9");
 
 		/*
 		 * This is the distid for Finch, given to us by AOL.  Please
 		 * don't use this for other applications.  You can just not
 		 * specify a distid and libpurple will use a default.
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1552));
-		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1552));
+		g_hash_table_insert(ui_info, "protocol-aim-distid", GINT_TO_POINTER(1552));
+		g_hash_table_insert(ui_info, "protocol-icq-distid", GINT_TO_POINTER(1552));
 	}
 
 	return ui_info;
@@ -268,11 +272,14 @@ init_libpurple(int argc, char **argv)
 	GStatBuf st;
 
 	struct option long_options[] = {
-		{"config",   required_argument, NULL, 'c'},
-		{"debug",    no_argument,       NULL, 'd'},
-		{"help",     no_argument,       NULL, 'h'},
-		{"nologin",  no_argument,       NULL, 'n'},
-		{"version",  no_argument,       NULL, 'v'},
+		{"config",          required_argument, NULL, 'c'},
+		{"debug",           no_argument,       NULL, 'd'},
+		{"help",            no_argument,       NULL, 'h'},
+		{"nologin",         no_argument,       NULL, 'n'},
+		{"version",         no_argument,       NULL, 'v'},
+#ifdef ENABLE_INTROSPECTION
+		{"introspect-dump", required_argument, NULL, 'i'},
+#endif
 		{0, 0, 0, 0}
 	};
 
@@ -288,12 +295,7 @@ init_libpurple(int argc, char **argv)
 
 	/* scan command-line options */
 	opterr = 1;
-	while ((opt = getopt_long(argc, argv,
-#ifndef _WIN32
-				  "c:dhn::v",
-#else
-				  "c:dhn::v",
-#endif
+	while ((opt = getopt_long(argc, argv, "c:dhn::vi:",
 				  long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'c':	/* config dir */
@@ -312,6 +314,12 @@ init_libpurple(int argc, char **argv)
 		case 'v':	/* version */
 			opt_version = TRUE;
 			break;
+#ifdef ENABLE_INTROSPECTION
+		case 'i':	/* introspection */
+			g_irepository_dump(optarg, NULL);
+			return 0;
+			break;
+#endif
 		case '?':	/* show terse help */
 		default:
 			show_usage(argv[0], TRUE);
@@ -361,14 +369,6 @@ init_libpurple(int argc, char **argv)
 	purple_eventloop_set_ui_ops(gnt_eventloop_get_ui_ops());
 	purple_idle_set_ui_ops(finch_idle_get_ui_ops());
 
-	path = g_build_filename(purple_user_dir(), "plugins", NULL);
-	if (!g_stat(path, &st))
-		g_mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR);
-	purple_plugins_add_search_path(path);
-	g_free(path);
-
-	purple_plugins_add_search_path(LIBDIR);
-
 	if (!purple_core_init(FINCH_UI))
 	{
 		fprintf(stderr,
@@ -376,6 +376,15 @@ init_libpurple(int argc, char **argv)
 				"Please report this!\n");
 		abort();
 	}
+
+	path = g_build_filename(purple_user_dir(), "plugins", NULL);
+	if (!g_stat(path, &st))
+		g_mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR);
+	purple_plugins_add_search_path(path);
+	g_free(path);
+
+	purple_plugins_add_search_path(LIBDIR);
+	purple_plugins_refresh();
 
 	/* TODO: should this be moved into finch_prefs_init() ? */
 	finch_prefs_update_old();
