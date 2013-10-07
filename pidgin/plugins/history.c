@@ -136,8 +136,11 @@ static void historize(PurpleConversation *c)
 			purple_account_get_protocol_name(((PurpleLog*)logs->data)->account));
 #endif
 
+#if 0
+	/* TODO WebKit: Do this properly... */
 	if (!gtk_webview_is_empty(GTK_WEBVIEW(gtkconv->webview)))
 		gtk_webview_append_html(GTK_WEBVIEW(gtkconv->webview), "<BR>");
+#endif
 
 	escaped_alias = g_markup_escape_text(alias, -1);
 
@@ -179,7 +182,7 @@ history_prefs_check(PurplePlugin *plugin)
 		purple_notify_warning(plugin, NULL, _("History Plugin Requires Logging"),
 							_("Logging can be enabled from Tools -> Preferences -> Logging.\n\n"
 							  "Enabling logs for instant messages and/or chats will activate "
-							  "history for the same conversation type(s)."));
+							  "history for the same conversation type(s)."), NULL);
 	}
 }
 

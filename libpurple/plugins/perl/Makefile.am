@@ -92,14 +92,14 @@ EXTRA_DIST = \
 	$(perl_scripts)
 
 common/Makefile: common/Makefile.PL
-	@if test "x${top_srcdir}" != "x${top_builddir}"; then \
+	$(AM_V_GEN)if test "x${top_srcdir}" != "x${top_builddir}"; then \
 		for f in ${common_sources}; do \
 			srcloc=${srcdir}; \
 			case $$srcloc in /*) ;; *) srcloc=../${srcdir} ;; esac; \
 			${LN_S} -f $$srcloc/$$f $$f; \
 		done; \
 	fi
-	@cd common && $(perlpath) Makefile.PL
+	$(AM_V_at)cd common && $(perlpath) Makefile.PL > /dev/null
 
 common/Makefile.PL: common/Makefile.PL.in $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)
@@ -110,8 +110,8 @@ all-local: common/Makefile
 		if [ ! -f Makefile ]; then \
 			$(perlpath) Makefile.PL; \
 		fi && \
-		($(MAKE) CC="$(CC)" CCFLAGS="$(PERL_CFLAGS) $(CFLAGS)" $(PERL_EXTRA_OPTS) || \
-		 $(MAKE) CC="$(CC)" CCFLAGS="$(PERL_CFLAGS) $(CFLAGS)" $(PERL_EXTRA_OPTS)) && \
+		($(MAKE) CC="@$(abs_top_srcdir)/libpurple/tag.sh CC $(CC)" LD="@$(abs_top_srcdir)/libpurple/tag.sh LD $(CC)" PERLRUN="@$(abs_top_srcdir)/libpurple/tag.sh PERL $(PERL)" CCFLAGS="$(PERL_CFLAGS) $(CFLAGS)" CP="@cp" RM_F="@rm -f" CHMOD="@chmod" $(PERL_EXTRA_OPTS) || \
+		 $(MAKE) CC="@$(abs_top_srcdir)/libpurple/tag.sh CC $(CC)" LD="@$(abs_top_srcdir)/libpurple/tag.sh LD $(CC)" PERLRUN="@$(abs_top_srcdir)/libpurple/tag.sh PERL $(PERL)" CCFLAGS="$(PERL_CFLAGS) $(CFLAGS)" CP="@cp" RM_F="@rm -f" CHMOD="@chmod" $(PERL_EXTRA_OPTS)) && \
 		cd ..; \
 	done
 
@@ -168,4 +168,5 @@ AM_CPPFLAGS = \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(PLUGIN_CFLAGS) \
-	$(PERL_CFLAGS)
+	$(PERL_CFLAGS) \
+	-Wno-float-equal

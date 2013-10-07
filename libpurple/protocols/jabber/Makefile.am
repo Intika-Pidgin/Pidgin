@@ -31,6 +31,8 @@ JABBERSOURCES = \
 			  google/gmail.h \
 			  google/google.c \
 			  google/google.h \
+			  google/google_p2p.c \
+			  google/google_p2p.h \
 			  google/google_presence.c \
 			  google/google_presence.h \
 			  google/google_roster.c \
@@ -112,9 +114,8 @@ st =
 pkg_LTLIBRARIES      = libjabber.la libfacebook.la libgtalk.la libxmpp.la
 libjabber_la_SOURCES = $(JABBERSOURCES)
 libjabber_la_LIBADD  = $(GLIB_LIBS) $(SASL_LIBS) $(LIBXML_LIBS) $(IDN_LIBS)\
-	$(FARSIGHT_LIBS) \
-	$(GSTREAMER_LIBS) \
-	$(GSTINTERFACES_LIBS)
+	$(FARSTREAM_LIBS) \
+	$(GSTREAMER_LIBS)
 
 libfacebook_la_SOURCES = libfacebook.c
 libfacebook_la_LIBADD = libjabber.la
@@ -134,6 +135,5 @@ AM_CPPFLAGS = \
 	$(GLIB_CFLAGS) \
 	$(IDN_CFLAGS) \
 	$(LIBXML_CFLAGS) \
-	$(FARSIGHT_CFLAGS) \
-	$(GSTREAMER_CFLAGS) \
-	$(GSTINTERFACES_CFLAGS)
+	$(FARSTREAM_CFLAGS) \
+	$(GSTREAMER_CFLAGS)

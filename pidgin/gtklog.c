@@ -39,6 +39,8 @@
 #include "gtkutils.h"
 #include "gtkwebview.h"
 
+#include "gtk3compat.h"
+
 static GHashTable *log_viewers = NULL;
 static void populate_log_tree(PidginLogViewer *lv);
 static PidginLogViewer *syslog_viewer = NULL;
@@ -243,7 +245,7 @@ static void delete_log_cb(gpointer *data)
 	if (!purple_log_delete((PurpleLog *)data[2]))
 	{
 		purple_notify_error(NULL, NULL, _("Log Deletion Failed"),
-		                  _("Check permissions and try again."));
+		                  _("Check permissions and try again."), NULL);
 	}
 	else
 	{
@@ -318,7 +320,7 @@ static void log_delete_log_cb(GtkWidget *menuitem, gpointer *data)
 	data2[1] = data[3]; /* iter */
 	data2[2] = log;
 	purple_request_action(lv, NULL, _("Delete Log?"), tmp, 0,
-						NULL, NULL, NULL,
+						NULL,
 						data2, 2,
 						_("Delete"), delete_log_cb,
 						_("Cancel"), delete_log_cleanup_cb);
@@ -512,7 +514,7 @@ static void populate_log_tree(PidginLogViewer *lv)
 			gtk_tree_store_append(lv->treestore, &toplevel, NULL);
 			gtk_tree_store_set(lv->treestore, &toplevel, 0, month, 1, NULL, -1);
 
-			strncpy(prev_top_month, month, sizeof(prev_top_month));
+			g_strlcpy(prev_top_month, month, sizeof(prev_top_month));
 		}
 
 		/* sub */
@@ -565,7 +567,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		if(icon != NULL)
 			gtk_widget_destroy(icon);
 
-		purple_notify_info(NULL, title, _("No logs were found"), log_preferences);
+		purple_notify_info(NULL, title, _("No logs were found"), log_preferences, NULL);
 		return NULL;
 	}
 
@@ -583,10 +585,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	gtk_dialog_add_button(GTK_DIALOG(lv->window), _("_Browse logs folder"), GTK_RESPONSE_HELP);
 #endif
 	gtk_container_set_border_width (GTK_CONTAINER(lv->window), PIDGIN_HIG_BOX_SPACE);
-#if !GTK_CHECK_VERSION(2,22,0)
-	gtk_dialog_set_has_separator(GTK_DIALOG(lv->window), FALSE);
-#endif
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(lv->window)->vbox), 0);
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))), 0);
 	g_signal_connect(G_OBJECT(lv->window), "response",
 					 G_CALLBACK(destroy_cb), ht);
 	gtk_window_set_role(GTK_WINDOW(lv->window), "log_viewer");
@@ -595,11 +594,12 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	if (icon != NULL) {
 		title_box = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 		gtk_container_set_border_width(GTK_CONTAINER(title_box), PIDGIN_HIG_BOX_SPACE);
-		gtk_box_pack_start(GTK_BOX(GTK_DIALOG(lv->window)->vbox), title_box, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+		                   title_box, FALSE, FALSE, 0);
 
 		gtk_box_pack_start(GTK_BOX(title_box), icon, FALSE, FALSE, 0);
 	} else
-		title_box = GTK_DIALOG(lv->window)->vbox;
+		title_box = gtk_dialog_get_content_area(GTK_DIALOG(lv->window));
 
 	/* Label ************/
 	lv->label = gtk_label_new(NULL);
@@ -614,7 +614,8 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	/* Pane *************/
 	pane = gtk_hpaned_new();
 	gtk_container_set_border_width(GTK_CONTAINER(pane), PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(lv->window)->vbox), pane, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+	                   pane, TRUE, TRUE, 0);
 
 	/* List *************/
 	lv->treestore = gtk_tree_store_new (2, G_TYPE_STRING, G_TYPE_POINTER);
@@ -649,7 +650,8 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		gtk_label_set_markup(GTK_LABEL(size_label), text);
 		/*		gtk_paned_add1(GTK_PANED(pane), size_label); */
 		gtk_misc_set_alignment(GTK_MISC(size_label), 0, 0);
-		gtk_box_pack_end(GTK_BOX(GTK_DIALOG(lv->window)->vbox), size_label, FALSE, FALSE, 0);
+		gtk_box_pack_end(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+		                 size_label, FALSE, FALSE, 0);
 		g_free(sz_txt);
 		g_free(text);
 	}
@@ -659,7 +661,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	gtk_paned_add2(GTK_PANED(pane), vbox);
 
 	/* Viewer ************/
-	frame = pidgin_create_webview(FALSE, &lv->web_view, NULL, NULL);
+	frame = pidgin_create_webview(FALSE, &lv->web_view, NULL);
 	gtk_widget_set_name(lv->web_view, "pidgin_log_web_view");
 	gtk_widget_set_size_request(lv->web_view, 320, 200);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);

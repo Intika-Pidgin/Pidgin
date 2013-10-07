@@ -82,6 +82,7 @@
 /* MXit presence flags */
 #define		MXIT_PFLAG_VOICE			0x1
 #define		MXIT_PFLAG_VIDEO			0x2
+#define		MXIT_PFLAG_TYPING			0x4
 
 
 /* Subscription types */
@@ -152,7 +153,7 @@ void mxit_remove_buddy( PurpleConnection* gc, PurpleBuddy* buddy, PurpleGroup* g
 void mxit_buddy_alias( PurpleConnection* gc, const char* who, const char* alias );
 void mxit_buddy_group( PurpleConnection* gc, const char* who, const char* old_group, const char* new_group );
 void mxit_rename_group( PurpleConnection* gc, const char* old_name, PurpleGroup* group, GList* moved_buddies );
-PurpleMood* mxit_get_moods(PurpleAccount *account);
+PurpleMood* mxit_get_moods( PurpleAccount *account );
 
 
 #endif		/* _MXIT_ROSTER_H_ */

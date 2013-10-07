@@ -29,7 +29,15 @@
 
 #define SSL_NSS_PLUGIN_ID "ssl-nss"
 
+#ifdef _WIN32
+# ifndef HAVE_LONG_LONG
+#define HAVE_LONG_LONG
+# endif
+#else
+/* TODO: Why is this done?
+ * This is probably being overridden by <nspr.h> (prcpucfg.h) on *nix OSes */
 #undef HAVE_LONG_LONG /* Make Mozilla less angry. If angry, Mozilla SMASH! */
+#endif
 
 #include <nspr.h>
 #include <nss.h>
@@ -125,18 +133,8 @@ static gchar *get_error_text(void)
 static void
 ssl_nss_init_nss(void)
 {
-	char *lib;
 	PR_Init(PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 	NSS_NoDB_Init(".");
-
-	/* TODO: Fix this so autoconf does the work trying to find this lib. */
-#ifndef _WIN32
-	lib = g_strdup(LIBDIR "/libnssckbi.so");
-#else
-	lib = g_strdup("nssckbi.dll");
-#endif
-	SECMOD_AddNewModule("Builtins", lib, 0, 0);
-	g_free(lib);
 	NSS_SetDomesticPolicy();
 
 	SSL_CipherPrefSetDefault(TLS_DHE_RSA_WITH_AES_256_CBC_SHA, 1);
@@ -483,7 +481,7 @@ ssl_nss_close(PurpleSslConnection *gsc)
 static size_t
 ssl_nss_read(PurpleSslConnection *gsc, void *data, size_t len)
 {
-	ssize_t ret;
+	PRInt32 ret;
 	PurpleSslNssData *nss_data = PURPLE_SSL_NSS_DATA(gsc);
 
 	ret = PR_Read(nss_data->in, data, len);
@@ -497,7 +495,7 @@ ssl_nss_read(PurpleSslConnection *gsc, void *data, size_t len)
 static size_t
 ssl_nss_write(PurpleSslConnection *gsc, const void *data, size_t len)
 {
-	ssize_t ret;
+	PRInt32 ret;
 	PurpleSslNssData *nss_data = PURPLE_SSL_NSS_DATA(gsc);
 
 	if(!nss_data)
@@ -766,7 +764,7 @@ x509_signed_by(PurpleCertificate * crt,
 	subjectCert = X509_NSS_DATA(crt);
 	g_return_val_if_fail(subjectCert, FALSE);
 
-	if (subjectCert->issuerName == NULL
+	if (subjectCert->issuerName == NULL || issuerCert->subjectName == NULL
 			|| PORT_Strcmp(subjectCert->issuerName, issuerCert->subjectName) != 0)
 		return FALSE;
 	st = CERT_VerifySignedData(&subjectCert->signatureWrap, issuerCert, PR_Now(), NULL);
@@ -899,7 +897,7 @@ x509_check_name (PurpleCertificate *crt, const gchar *name)
 }
 
 static gboolean
-x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
+x509_times (PurpleCertificate *crt, gint64 *activation, gint64 *expiration)
 {
 	CERTCertificate *crt_dat;
 	PRTime nss_activ, nss_expir;
@@ -920,11 +918,14 @@ x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 	/* NSS's native PRTime type *almost* corresponds to time_t; however,
 	   it measures *microseconds* since the epoch, not seconds. Hence
 	   the funny conversion. */
+	nss_activ = nss_activ / 1000000;
+	nss_expir = nss_expir / 1000000;
+
 	if (activation) {
-		*activation = nss_activ / 1000000;
+		*activation = nss_activ;
 	}
 	if (expiration) {
-		*expiration = nss_expir / 1000000;
+		*expiration = nss_expir;
 	}
 
 	return TRUE;
@@ -959,9 +960,12 @@ x509_display_string(PurpleCertificate *crt)
 	gchar *sha_asc;
 	GByteArray *sha_bin;
 	gchar *cn;
-	time_t activation, expiration;
+	gint64 activation, expiration;
 	gchar *activ_str, *expir_str;
 	gchar *text;
+#if GLIB_CHECK_VERSION(2,26,0)
+	GDateTime *act_dt, *exp_dt;
+#endif
 
 	/* Pull out the SHA1 checksum */
 	sha_bin = x509_sha1sum(crt);
@@ -979,8 +983,18 @@ x509_display_string(PurpleCertificate *crt)
 				   "Failed to get certificate times!\n");
 		activation = expiration = 0;
 	}
+#if GLIB_CHECK_VERSION(2,26,0)
+	act_dt = g_date_time_new_from_unix_local(activation);
+	activ_str = g_date_time_format(act_dt, "%c");
+	g_date_time_unref(act_dt);
+
+	exp_dt = g_date_time_new_from_unix_local(expiration);
+	expir_str = g_date_time_format(exp_dt, "%c");
+	g_date_time_unref(exp_dt);
+#else
 	activ_str = g_strdup(ctime(&activation));
 	expir_str = g_strdup(ctime(&expiration));
+#endif
 
 	/* Make messages */
 	text = g_strdup_printf(_("Common name: %s\n\n"

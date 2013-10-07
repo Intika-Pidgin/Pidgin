@@ -158,7 +158,7 @@ get_xfer_info_strings(PurpleXfer *xfer, char **kbsec, char **time_elapsed,
 		else if (purple_xfer_is_cancelled(xfer)) {
 			*time_remaining = g_strdup(_("Cancelled"));
 		}
-		else if (purple_xfer_get_size(xfer) == 0 || (kb_sent > 0 && kbps == 0)) {
+		else if (purple_xfer_get_size(xfer) == 0 || (kb_sent > 0 && kbps < 0.001)) {
 			*time_remaining = g_strdup(_("Unknown"));
 		}
 		else if (kb_sent <= 0) {
@@ -516,7 +516,7 @@ open_button_cb(GtkButton *button, PidginXferDialog *dialog)
 			tmp = g_strdup_printf(_("Error launching %s: %s"),
 							purple_xfer_get_local_filename(dialog->selected_xfer),
 							error->message);
-			purple_notify_error(dialog, NULL, _("Unable to open file."), tmp);
+			purple_notify_error(dialog, NULL, _("Unable to open file."), tmp, NULL);
 			g_free(tmp);
 			g_error_free(error);
 		}
@@ -525,7 +525,7 @@ open_button_cb(GtkButton *button, PidginXferDialog *dialog)
 			char *primary = g_strdup_printf(_("Error running %s"), command);
 			char *secondary = g_strdup_printf(_("Process returned error code %d"),
 									exit_status);
-			purple_notify_error(dialog, NULL, primary, secondary);
+			purple_notify_error(dialog, NULL, primary, secondary, NULL);
 			g_free(tmp);
 		}
 	}
@@ -636,7 +636,7 @@ make_info_table(PidginXferDialog *dialog)
 {
 	GtkWidget *table;
 	GtkWidget *label;
-	int i;
+	gsize i;
 
 	struct
 	{
@@ -701,7 +701,7 @@ pidgin_xfer_dialog_new(void)
 {
 	PidginXferDialog *dialog;
 	GtkWidget *window;
-	GtkWidget *vbox1, *vbox2;
+	GtkWidget *vbox;
 	GtkWidget *expander;
 	GtkWidget *alignment;
 	GtkWidget *table;
@@ -715,24 +715,21 @@ pidgin_xfer_dialog_new(void)
 		purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/filetransfer/clear_finished");
 
 	/* Create the window. */
-	dialog->window = window = pidgin_create_window(_("File Transfers"), PIDGIN_HIG_BORDER, "file transfer", TRUE);
+#if GTK_CHECK_VERSION(3,0,0)
+	dialog->window = window = pidgin_create_dialog(_("File Transfers"), 0, "file transfer", TRUE);
+#else
+	dialog->window = window = pidgin_create_dialog(_("File Transfers"), PIDGIN_HIG_BORDER, "file transfer", TRUE);
+#endif
 	gtk_window_set_default_size(GTK_WINDOW(window), 450, 250);
 
 	g_signal_connect(G_OBJECT(window), "delete_event",
 					 G_CALLBACK(delete_win_cb), dialog);
 
-	/* Create the parent vbox for everything. */
-	vbox1 = gtk_vbox_new(FALSE, 0);
-	gtk_widget_show(vbox1);
-	gtk_container_add(GTK_CONTAINER(window), vbox1);
-
 	/* Create the main vbox for top half of the window. */
-	vbox2 = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox1), vbox2, TRUE, TRUE, 0);
-	gtk_widget_show(vbox2);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(window), FALSE, PIDGIN_HIG_BORDER);
 
 	/* Setup the listbox */
-	gtk_box_pack_start(GTK_BOX(vbox2),
+	gtk_box_pack_start(GTK_BOX(vbox),
 		pidgin_make_scrollable(setup_tree(dialog), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, 140),
 		TRUE, TRUE, 0);
 
@@ -743,7 +740,7 @@ pidgin_xfer_dialog_new(void)
 								 !dialog->keep_open);
 	g_signal_connect(G_OBJECT(checkbox), "toggled",
 					 G_CALLBACK(toggle_keep_open_cb), dialog);
-	gtk_box_pack_start(GTK_BOX(vbox2), checkbox, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), checkbox, FALSE, FALSE, 0);
 	gtk_widget_show(checkbox);
 
 	/* "Clear finished transfers" */
@@ -753,13 +750,13 @@ pidgin_xfer_dialog_new(void)
 								 dialog->auto_clear);
 	g_signal_connect(G_OBJECT(checkbox), "toggled",
 					 G_CALLBACK(toggle_clear_finished_cb), dialog);
-	gtk_box_pack_start(GTK_BOX(vbox2), checkbox, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), checkbox, FALSE, FALSE, 0);
 	gtk_widget_show(checkbox);
 
 	/* "Download Details" arrow */
 	expander = gtk_expander_new_with_mnemonic(_("File transfer _details"));
 	dialog->expander = expander;
-	gtk_box_pack_start(GTK_BOX(vbox2), expander, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), expander, FALSE, FALSE, 0);
 	gtk_widget_show(expander);
 
 	gtk_widget_set_sensitive(expander, FALSE);
@@ -775,11 +772,7 @@ pidgin_xfer_dialog_new(void)
 	gtk_container_add(GTK_CONTAINER(alignment), table);
 	gtk_widget_show(table);
 
-	bbox = gtk_hbutton_box_new();
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_end(GTK_BOX(vbox1), bbox, FALSE, TRUE, 0);
-	gtk_widget_show(bbox);
+	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(window));
 
 #define ADD_BUTTON(b, label, callback, callbackdata) do { \
 		GtkWidget *button = gtk_button_new_from_stock(label); \

@@ -319,13 +319,11 @@ pidgin_sound_init(void)
 
 #ifdef USE_GSTREAMER
 	purple_debug_info("sound", "Initializing sound output drivers.\n");
-#ifdef GST_CAN_DISABLE_FORKING
-	gst_registry_fork_set_enabled (FALSE);
-#endif
+	gst_registry_fork_set_enabled(FALSE);
 	if ((gst_init_failed = !gst_init_check(NULL, NULL, &error))) {
 		purple_notify_error(NULL, _("GStreamer Failure"),
 					_("GStreamer failed to initialize."),
-					error ? error->message : "");
+					error ? error->message : "", NULL);
 		if (error) {
 			g_error_free(error);
 			error = NULL;
@@ -427,6 +425,18 @@ expire_old_child(gpointer data)
 }
 #endif
 
+#ifdef _WIN32
+static void
+pidgin_sound_play_file_win32(const char *filename)
+{
+	wchar_t *wc_filename = g_utf8_to_utf16(filename,
+			-1, NULL, NULL, NULL);
+	if (!PlaySoundW(wc_filename, NULL, SND_ASYNC | SND_FILENAME))
+		purple_debug(PURPLE_DEBUG_ERROR, "sound", "Error playing sound.\n");
+	g_free(wc_filename);
+}
+#endif /* _WIN32 */
+
 static void
 pidgin_sound_play_file(const char *filename)
 {
@@ -450,6 +460,12 @@ pidgin_sound_play_file(const char *filename)
 		gdk_beep();
 		return;
 	}
+#ifdef _WIN32
+	else if (!strcmp(method, "playsoundw")) {
+		pidgin_sound_play_file_win32(filename);
+		return;
+	}
+#endif /* _WIN32 */
 
 	if (!g_file_test(filename, G_FILE_TEST_EXISTS)) {
 		purple_debug_error("gtksound", "sound file (%s) does not exist.\n", filename);
@@ -510,11 +526,22 @@ pidgin_sound_play_file(const char *filename)
 	if (gst_init_failed)  /* Perhaps do gdk_beep instead? */
 		return;
 	volume = (float)(CLAMP(purple_prefs_get_int(PIDGIN_PREFS_ROOT "/sound/volume"),0,100)) / 50;
+#ifdef _WIN32
+	if (!strcmp(method, "automatic")) {
+		sink = gst_element_factory_make("directsoundsink", "sink");
+		if (sink == NULL)
+			sink = gst_element_factory_make("waveformsink", "sink");
+		if (sink == NULL)
+			sink = gst_element_factory_make("gconfaudiosink", "sink");
+	} else if (!strcmp(method, "directsound")) {
+		sink = gst_element_factory_make("directsoundsink", "sink");
+	} else if (!strcmp(method, "waveform")) {
+		sink = gst_element_factory_make("waveformsink", "sink");
+	}
+#else
 	if (!strcmp(method, "automatic")) {
 		sink = gst_element_factory_make("gconfaudiosink", "sink");
-	}
-#ifndef _WIN32
-	else if (!strcmp(method, "esd")) {
+	} else if (!strcmp(method, "esd")) {
 		sink = gst_element_factory_make("esdsink", "sink");
 	} else if (!strcmp(method, "alsa")) {
 		sink = gst_element_factory_make("alsasink", "sink");
@@ -530,13 +557,22 @@ pidgin_sound_play_file(const char *filename)
 		return;
 	}
 
+#if GST_CHECK_VERSION(1,0,0)
 	play = gst_element_factory_make("playbin", "play");
+#else
+	play = gst_element_factory_make("playbin2", "play");
+#endif
 
 	if (play == NULL) {
 		return;
 	}
 
+#ifdef _WIN32
+	uri = g_strdup_printf("file:///%s", filename);
+	g_strdelimit(uri, "\\", '/');
+#else
 	uri = g_strdup_printf("file://%s", filename);
+#endif
 
 	g_object_set(G_OBJECT(play), "uri", uri,
 		                     "volume", volume,
@@ -555,15 +591,7 @@ pidgin_sound_play_file(const char *filename)
 #ifndef _WIN32
 	gdk_beep();
 #else /* _WIN32 */
-	purple_debug_info("sound", "Playing %s\n", filename);
-
-	{
-		wchar_t *wc_filename = g_utf8_to_utf16(filename,
-				-1, NULL, NULL, NULL);
-		if (!PlaySoundW(wc_filename, NULL, SND_ASYNC | SND_FILENAME))
-			purple_debug(PURPLE_DEBUG_ERROR, "sound", "Error playing sound.\n");
-		g_free(wc_filename);
-	}
+	pidgin_sound_play_file_win32(filename);
 #endif /* _WIN32 */
 
 #endif /* USE_GSTREAMER */

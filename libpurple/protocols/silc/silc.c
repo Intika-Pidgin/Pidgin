@@ -472,7 +472,9 @@ static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields
 
 	if (!password || !*password)
 	{
-		purple_notify_error(gc, NULL, _("Password is required to sign on."), NULL);
+		purple_notify_error(gc, NULL,
+			_("Password is required to sign on."), NULL,
+			purple_request_cpar_from_connection(gc));
 		purple_connection_set_protocol_data(gc, NULL);
 		silc_free(sg);
 		return;
@@ -481,7 +483,7 @@ static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields
 	if (remember)
 		purple_account_set_remember_password(account, TRUE);
 
-	purple_account_set_password(account, password);
+	purple_account_set_password(account, password, NULL, NULL);
 
 	/* Load SILC key pair */
 	g_snprintf(pkd, sizeof(pkd), "%s" G_DIR_SEPARATOR_S "public_key.pub", silcpurple_silcdir());
@@ -530,7 +532,7 @@ static void silcpurple_running(SilcClient client, void *context)
 				(char *)purple_account_get_string(account, "private-key", prd),
 				(purple_connection_get_password(gc) == NULL) ? "" : purple_connection_get_password(gc),
 				&sg->public_key, &sg->private_key)) {
-		if (!purple_account_get_password(account)) {
+		if (!purple_connection_get_password(gc)) {
 			purple_account_request_password(account, G_CALLBACK(silcpurple_got_password_cb),
 											G_CALLBACK(silcpurple_no_password_cb), gc);
 			return;
@@ -919,7 +921,9 @@ silcpurple_attrs(PurplePluginAction *action)
 		mbored = FALSE, mexcited = FALSE, manxious = FALSE;
 	gboolean cemail = FALSE, ccall = FALSE, csms = FALSE,
 		cmms = FALSE, cchat = TRUE, cvideo = FALSE;
+#ifdef HAVE_SYS_UTSNAME_H
 	gboolean device = TRUE;
+#endif
 	char status[1024], tz[16];
 
 	sg = purple_connection_get_protocol_data(gc);
@@ -967,10 +971,12 @@ silcpurple_attrs(PurplePluginAction *action)
 					 NULL, (void *)&attr))
 			silc_attribute_get_object(attr, &status, sizeof(status));
 
+#ifdef HAVE_SYS_UTSNAME_H
 		if (!silc_hash_table_find(attrs,
 					  SILC_32_TO_PTR(SILC_ATTRIBUTE_DEVICE_INFO),
 					  NULL, (void *)&attr))
 			device = FALSE;
+#endif
 	}
 
 	fields = purple_request_fields_new();
@@ -1061,7 +1067,7 @@ silcpurple_attrs(PurplePluginAction *action)
 			    fields,
 			    _("OK"), G_CALLBACK(silcpurple_attrs_cb),
 			    _("Cancel"), G_CALLBACK(silcpurple_attrs_cancel),
-				purple_connection_get_account(gc), NULL, NULL, gc);
+			    purple_request_cpar_from_connection(gc), gc);
 }
 
 static void
@@ -1095,9 +1101,10 @@ silcpurple_view_motd(PurplePluginAction *action)
 		return;
 
 	if (!sg->motd) {
-		purple_notify_error(
-		     gc, _("Message of the Day"), _("No Message of the Day available"),
-		     _("There is no Message of the Day associated with this connection"));
+		purple_notify_error(gc, _("Message of the Day"), _("No Message "
+			"of the Day available"), _("There is no Message of the "
+			"Day associated with this connection"),
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 
@@ -1147,8 +1154,9 @@ silcpurple_create_keypair_cb(PurpleConnection *gc, PurpleRequestFields *fields)
 		pass2 = "";
 
 	if (strcmp(pass1, pass2)) {
-		purple_notify_error(
-		     gc, _("Create New SILC Key Pair"), _("Passphrases do not match"), NULL);
+		purple_notify_error(gc, _("Create New SILC Key Pair"),
+			_("Passphrases do not match"), NULL,
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 
@@ -1193,8 +1201,9 @@ silcpurple_create_keypair_cb(PurpleConnection *gc, PurpleRequestFields *fields)
 	if (!silc_create_key_pair(SILCPURPLE_DEF_PKCS, keylen, pkfile, prfile,
 				  identifier, pass1, &public_key, NULL,
 				  FALSE)) {
-		purple_notify_error(
-		     gc, _("Create New SILC Key Pair"), _("Key Pair Generation failed"), NULL);
+		purple_notify_error(gc, _("Create New SILC Key Pair"),
+			_("Key Pair Generation failed"), NULL,
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 
@@ -1269,7 +1278,7 @@ silcpurple_create_keypair(PurplePluginAction *action)
 			      _("Create New SILC Key Pair"), NULL, fields,
 			      _("Generate Key Pair"), G_CALLBACK(silcpurple_create_keypair_cb),
 			      _("Cancel"), G_CALLBACK(silcpurple_create_keypair_cancel),
-			      purple_connection_get_account(gc), NULL, NULL, gc);
+			      purple_request_cpar_from_connection(gc), gc);
 
 	g_strfreev(u);
 	silc_free(hostname);
@@ -1388,8 +1397,7 @@ silcpurple_send_im_resolved(SilcClient client,
 
 	/* Check for images */
 	if (im->gflags & PURPLE_MESSAGE_IMAGES) {
-		list = silcpurple_image_message(im->message,
-						(SilcUInt32 *)(void *)&im->flags);
+		list = silcpurple_image_message(im->message, &im->flags);
 		if (list) {
 			/* Send one or more MIME message.  If more than one, they
 			   are MIME fragments due to over large message */
@@ -1438,7 +1446,7 @@ silcpurple_send_im(PurpleConnection *gc, const char *who, const char *message,
 	SilcClientConnection conn = sg->conn;
 	SilcDList clients;
 	SilcClientEntry client_entry;
-	SilcUInt32 mflags;
+	SilcMessageFlags mflags;
 	char *msg, *tmp;
 	int ret = 0;
 	gboolean sign = purple_account_get_bool(sg->account, "sign-verify", FALSE);
@@ -1462,7 +1470,8 @@ silcpurple_send_im(PurpleConnection *gc, const char *who, const char *message,
 		if (!silc_client_command_call(client, conn, msg + 1))
 			purple_notify_error(gc, _("Call Command"),
 					    _("Cannot call command"),
-					    _("Unknown command"));
+					    _("Unknown command"),
+					    purple_request_cpar_from_connection(gc));
 		g_free(tmp);
 		return 0;
 	}
@@ -1799,7 +1808,7 @@ static PurpleCmdRet silcpurple_cmd_cmode(PurpleConversation *conv,
 	}
 
 	silcargs = g_strjoinv(" ", args);
-	silccmd = g_strconcat(cmd, " ", args ? silcargs : NULL, NULL);
+	silccmd = g_strconcat(cmd, " ", silcargs, NULL);
 	g_free(silcargs);
 	if (!silc_client_command_call(sg->client, sg->conn, silccmd)) {
 		g_free(silccmd);
@@ -2122,7 +2131,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,				        /* get_media_caps */
 	NULL,				        /* get_moods */
 	NULL,				        /* set_public_alias */
-	NULL				        /* get_public_alias */
+	NULL,				        /* get_public_alias */
+	NULL					/* get_max_message_size */
 };
 
 static PurplePluginInfo info =

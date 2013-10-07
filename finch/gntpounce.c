@@ -192,7 +192,7 @@ save_pounce_cb(GntWidget *w, PurpleGntPounceDialog *dialog)
 	if (*name == '\0')
 	{
 		purple_notify_error(NULL, NULL,
-						  _("Please enter a buddy to pounce."), NULL);
+						  _("Please enter a buddy to pounce."), NULL, NULL);
 		return;
 	}
 
@@ -631,7 +631,7 @@ pounces_manager_add_cb(GntButton *button, gpointer user_data)
 	if (purple_accounts_get_all() == NULL) {
 		purple_notify_error(NULL, _("Cannot create pounce"),
 				_("You do not have any accounts."),
-				_("You must create an account first before you can create a pounce."));
+				_("You must create an account first before you can create a pounce."), NULL);
 		return;
 	}
 	finch_pounce_editor_show(NULL, NULL, NULL);
@@ -675,8 +675,7 @@ pounces_manager_delete_cb(GntButton *button, gpointer user_data)
 	pouncee = purple_pounce_get_pouncee(pounce);
 	buf = g_strdup_printf(_("Are you sure you want to delete the pounce on %s for %s?"), pouncee, pouncer);
 	purple_request_action(pounce, NULL, buf, NULL, 0,
-						account, pouncee, NULL,
-						pounce, 2,
+		purple_request_cpar_from_account(account), pounce, 2,
 						_("Delete"), pounces_manager_delete_confirm_cb,
 						_("Cancel"), NULL);
 	g_free(buf);
@@ -801,10 +800,8 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 
 	if (purple_pounce_action_is_enabled(pounce, "open-window"))
 	{
-		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, pouncee, account);
-
-		if (conv == NULL)
-			conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, pouncee);
+		if (!purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, pouncee, account))
+			purple_conversation_new(PURPLE_CONV_TYPE_IM, account, pouncee);
 	}
 
 	if (purple_pounce_action_is_enabled(pounce, "popup-notify"))
@@ -856,12 +853,12 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 
 		if (reason == NULL)
 		{
-			purple_notify_info(NULL, name_shown, tmp, purple_date_format_full(NULL));
+			purple_notify_info(NULL, name_shown, tmp, purple_date_format_full(NULL), NULL);
 		}
 		else
 		{
 			char *tmp2 = g_strdup_printf("%s\n\n%s", reason, purple_date_format_full(NULL));
-			purple_notify_info(NULL, name_shown, tmp, tmp2);
+			purple_notify_info(NULL, name_shown, tmp, tmp2, NULL);
 			g_free(tmp2);
 		}
 		g_free(tmp);

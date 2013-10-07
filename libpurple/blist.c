@@ -597,9 +597,8 @@ parse_group(xmlnode *groupnode)
 	}
 }
 
-/* TODO: Make static and rename to load_blist */
-void
-purple_blist_load()
+static void
+load_blist(void)
 {
 	xmlnode *purple, *blist, *privacy;
 
@@ -721,7 +720,8 @@ purple_contact_compute_priority_buddy(PurpleContact *contact)
  * Public API functions                                                      *
  *****************************************************************************/
 
-PurpleBuddyList *purple_blist_new()
+void
+purple_blist_boot(void)
 {
 	PurpleBlistUiOps *ui_ops;
 	GList *account;
@@ -749,13 +749,9 @@ PurpleBuddyList *purple_blist_new()
 	if (ui_ops != NULL && ui_ops->new_list != NULL)
 		ui_ops->new_list(gbl);
 
-	return gbl;
-}
+	purplebuddylist = gbl;
 
-void
-purple_set_blist(PurpleBuddyList *list)
-{
-	purplebuddylist = list;
+	load_blist();
 }
 
 PurpleBuddyList *
@@ -2068,11 +2064,13 @@ void purple_blist_remove_contact(PurpleContact *contact)
 {
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleBlistNode *node, *gnode;
+	PurpleGroup *group;
 
 	g_return_if_fail(contact != NULL);
 
 	node = (PurpleBlistNode *)contact;
 	gnode = node->parent;
+	group = PURPLE_GROUP(gnode);
 
 	if (node->child) {
 		/*
@@ -2097,6 +2095,7 @@ void purple_blist_remove_contact(PurpleContact *contact)
 			node->prev->next = node->next;
 		if (node->next)
 			node->next->prev = node->prev;
+		group->totalsize--;
 
 		/* Update the UI */
 		if (ops && ops->remove)

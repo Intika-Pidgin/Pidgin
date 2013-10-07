@@ -83,7 +83,7 @@ plugin_toggled_cb(GntWidget *tree, PurplePlugin *plugin, gpointer null)
 	if (gnt_tree_get_choice(GNT_TREE(tree), plugin))
 	{
 		if (!purple_plugin_load(plugin)) {
-			purple_notify_error(NULL, _("ERROR"), _("loading plugin failed"), NULL);
+			purple_notify_error(NULL, _("ERROR"), _("loading plugin failed"), NULL, NULL);
 			gnt_tree_set_choice(GNT_TREE(tree), plugin, FALSE);
 		}
 	}
@@ -92,7 +92,7 @@ plugin_toggled_cb(GntWidget *tree, PurplePlugin *plugin, gpointer null)
 		GntWidget *win;
 
 		if (!purple_plugin_unload(plugin)) {
-			purple_notify_error(NULL, _("ERROR"), _("unloading plugin failed"), NULL);
+			purple_notify_error(NULL, _("ERROR"), _("unloading plugin failed"), NULL, NULL);
 			purple_plugin_disable(plugin);
 			gnt_tree_set_choice(GNT_TREE(tree), plugin, TRUE);
 		}
@@ -196,7 +196,7 @@ configure_plugin_cb(GntWidget *button, gpointer null)
 	if (!purple_plugin_is_loaded(plugin))
 	{
 		purple_notify_error(plugin, _("Error"),
-			_("Plugin need to be loaded before you can configure it."), NULL);
+			_("Plugin need to be loaded before you can configure it."), NULL, NULL);
 		return;
 	}
 
@@ -244,7 +244,7 @@ configure_plugin_cb(GntWidget *button, gpointer null)
 	else
 	{
 		purple_notify_info(plugin, _("Error"),
-			_("No configuration options for this plugin."), NULL);
+			_("No configuration options for this plugin."), NULL, NULL);
 		return;
 	}
 }
@@ -267,7 +267,7 @@ install_selected_file_cb(gpointer handle, const char *filename)
 	if (!plugin) {
 		purple_notify_error(handle, _("Error loading plugin"),
 				_("The selected file is not a valid plugin."),
-				_("Please open the debug window and try again to see the exact error message."));
+				_("Please open the debug window and try again to see the exact error message."), NULL);
 		return;
 	}
 	if (g_list_find(gnt_tree_get_rows(GNT_TREE(plugins.tree)), plugin)) {
@@ -332,7 +332,7 @@ install_plugin_cb(GntWidget *w, gpointer null)
 	purple_request_close_with_handle(&handle);
 	purple_request_file(&handle, _("Select plugin to install"), NULL,
 			FALSE, G_CALLBACK(install_selected_file_cb), NULL,
-			NULL, NULL, NULL, &handle);
+			NULL, &handle);
 	g_signal_connect_swapped(G_OBJECT(w), "destroy", G_CALLBACK(purple_request_close_with_handle), &handle);
 }
 
@@ -510,7 +510,7 @@ process_pref_frame(PurplePluginPrefFrame *frame)
 					field = purple_request_field_bool_new(name, label, purple_prefs_get_bool(name));
 					break;
 				case PURPLE_PREF_INT:
-					field = purple_request_field_int_new(name, label, purple_prefs_get_int(name));
+					field = purple_request_field_int_new(name, label, purple_prefs_get_int(name), INT_MIN, INT_MAX);
 					break;
 				case PURPLE_PREF_STRING:
 					field = purple_request_field_string_new(name, label, purple_prefs_get_string(name),
@@ -532,8 +532,7 @@ process_pref_frame(PurplePluginPrefFrame *frame)
 
 	ret = purple_request_fields(NULL, _("Preferences"), NULL, NULL, fields,
 			_("Save"), G_CALLBACK(finch_request_save_in_prefs), _("Cancel"), NULL,
-			NULL, NULL, NULL,
-			NULL);
+			NULL, NULL);
 	g_signal_connect_swapped(G_OBJECT(ret), "destroy", G_CALLBACK(free_stringlist), stringlist);
 	return ret;
 }

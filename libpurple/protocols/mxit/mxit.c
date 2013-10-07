@@ -23,10 +23,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include    "internal.h"
-#include	"purple.h"
-#include	"notify.h"
-#include	"plugin.h"
+#include	"internal.h"
+#include	"debug.h"
+#include	"accountopt.h"
 #include	"version.h"
 
 #include	"mxit.h"
@@ -427,7 +426,7 @@ static void mxit_set_status( PurpleAccount* account, PurpleStatus* status )
 	char*					statusmsg2;
 
 	/* Handle mood changes */
-	if ( purple_status_type_get_primitive(purple_status_get_type( status ) ) == PURPLE_STATUS_MOOD ) {
+	if ( purple_status_type_get_primitive( purple_status_get_type( status ) ) == PURPLE_STATUS_MOOD ) {
 		const char* moodid = purple_status_get_attr_string( status, PURPLE_MOOD_NAME );
 		int mood;
 
@@ -487,8 +486,6 @@ static gboolean mxit_offline_message( const PurpleBuddy *buddy )
 static void mxit_free_buddy( PurpleBuddy* buddy )
 {
 	struct contact*		contact;
-
-	purple_debug_info( MXIT_PLUGIN_ID, "mxit_free_buddy\n" );
 
 	contact = purple_buddy_get_protocol_data( buddy );
 	if ( contact ) {
@@ -563,7 +560,7 @@ static void mxit_get_info( PurpleConnection *gc, const char *who )
 	struct MXitSession*		session			= purple_connection_get_protocol_data( gc );
 	const char*				profilelist[]	= { CP_PROFILE_BIRTHDATE, CP_PROFILE_GENDER, CP_PROFILE_FULLNAME,
 												CP_PROFILE_FIRSTNAME, CP_PROFILE_LASTNAME, CP_PROFILE_REGCOUNTRY, CP_PROFILE_LASTSEEN,
-												CP_PROFILE_STATUS, CP_PROFILE_AVATAR, CP_PROFILE_WHEREAMI, CP_PROFILE_ABOUTME };
+												CP_PROFILE_STATUS, CP_PROFILE_AVATAR, CP_PROFILE_WHEREAMI, CP_PROFILE_ABOUTME, CP_PROFILE_RELATIONSHIP };
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_get_info: '%s'\n", who );
 
@@ -665,19 +662,70 @@ static GHashTable *mxit_chat_info_defaults( PurpleConnection *gc, const char *ch
 }
 
 
+/*------------------------------------------------------------------------
+ * Send a typing indicator event.
+ *
+ *  @param gc		The connection object
+ *  @param name		The username of the contact
+ *  @param state	The typing state to be reported.
+ */
+static unsigned int mxit_send_typing( PurpleConnection *gc, const char *name, PurpleTypingState state )
+{
+	PurpleAccount*		account		= purple_connection_get_account( gc );
+	struct MXitSession*	session		= purple_connection_get_protocol_data( gc );
+	PurpleBuddy*		buddy;
+	struct contact*		contact;
+	gchar*				messageId	= NULL;
+
+	/* find the buddy information for this contact (reference: "libpurple/blist.h") */
+	buddy = purple_find_buddy( account, name );
+	if ( !buddy ) {
+		purple_debug_warning( MXIT_PLUGIN_ID, "mxit_send_typing: unable to find the buddy '%s'\n", name );
+		return 0;
+	}
+
+	contact = purple_buddy_get_protocol_data( buddy );
+	if ( !contact )
+		return 0;
+
+	/* does this contact support and want typing notification? */
+	if ( ! ( contact->capabilities & MXIT_PFLAG_TYPING ) )
+		return 0;
+
+	messageId = purple_uuid_random();		/* generate a unique message id */
+
+	switch ( state ) {
+		case PURPLE_TYPING :		/* currently typing */
+			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_TYPING );
+			break;
+
+		case PURPLE_TYPED :			/* stopped typing */
+		case PURPLE_NOT_TYPING :	/* not typing / erased all text */
+			mxit_send_msgevent( session, name, messageId, CP_MSGEVENT_STOPPED );
+			break;
+
+		default:
+			break;
+	}
+
+	g_free( messageId );
+
+	return 0;
+}
+
+
 /*========================================================================================================================*/
 
 static PurplePluginProtocolInfo proto_info = {
 	sizeof( PurplePluginProtocolInfo ),		/* struct_size */
-	OPT_PROTO_REGISTER_NOSCREENNAME | OPT_PROTO_UNIQUE_CHATNAME | OPT_PROTO_IM_IMAGE | OPT_PROTO_INVITE_MESSAGE,			/* options */
+	OPT_PROTO_REGISTER_NOSCREENNAME | OPT_PROTO_UNIQUE_CHATNAME | OPT_PROTO_IM_IMAGE | OPT_PROTO_INVITE_MESSAGE | OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE,	/* options */
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
 	{						/* icon_spec */
-		"png",												/* format */
+		"png,jpeg,bmp",										/* supported formats */
 		32, 32,												/* min width & height */
-		MXIT_AVATAR_SIZE,									/* max width */
-		MXIT_AVATAR_SIZE,									/* max height */
-		100000,												/* max filesize */
+		800, 800,											/* max width & height */
+		CP_MAX_FILESIZE,									/* max filesize */
 		PURPLE_ICON_SCALE_SEND | PURPLE_ICON_SCALE_DISPLAY	/* scaling rules */
 	},
 	mxit_list_icon,			/* list_icon */
@@ -692,7 +740,7 @@ static PurplePluginProtocolInfo proto_info = {
 	mxit_close,				/* close */
 	mxit_send_im,			/* send_im */
 	NULL,					/* set_info */
-	NULL,					/* send_typing */
+	mxit_send_typing,		/* send_typing */
 	mxit_get_info,			/* get_info */
 	mxit_set_status,		/* set_status */
 	NULL,					/* set_idle */
@@ -745,7 +793,8 @@ static PurplePluginProtocolInfo proto_info = {
 	mxit_media_caps,		/* get_media_caps */
 	mxit_get_moods,			/* get_moods */
 	NULL,					/* set_public_alias */
-	NULL					/* get_public_alias */
+	NULL,					/* get_public_alias */
+	NULL					/* get_max_message_size */
 };
 
 
@@ -793,8 +842,6 @@ static PurplePluginInfo plugin_info = {
 static void init_plugin( PurplePlugin* plugin )
 {
 	PurpleAccountOption*	option;
-
-	purple_debug_info( MXIT_PLUGIN_ID, "Loading MXit libPurple plugin...\n" );
 
 	/* Configuration options */
 

@@ -265,7 +265,7 @@ disco_type_from_string(const gchar *str)
 	g_return_val_if_fail(str != NULL, "");
 
 	for ( ; disco_type_mappings[i].from; ++i) {
-		if (!strcasecmp(str, disco_type_mappings[i].from))
+		if (!g_ascii_strcasecmp(str, disco_type_mappings[i].from))
 			return disco_type_mappings[i].to;
 	}
 
@@ -513,12 +513,12 @@ server_info_cb(PurpleConnection *pc, const char *type, const char *id,
 		 || xmlnode_get_child(error, "jid-malformed")) {
 			purple_notify_error(my_plugin, _("Error"),
 			                    _("Server does not exist"),
- 			                    NULL);
+ 			                    NULL, NULL);
 		}
 		else {
 			purple_notify_error(my_plugin, _("Error"),
 			                    _("Server does not support service discovery"),
-			                    NULL);
+			                    NULL, NULL);
 		}
 		pidgin_disco_list_set_in_progress(list, FALSE);
 		g_free(cb_data);

@@ -38,7 +38,7 @@ yahoo_account_use_http_proxy(PurpleConnection *pc)
 	PurpleAccount *account = purple_connection_get_account(pc);
 	PurpleProxyInfo *ppi = NULL;
 	PurpleProxyType type = PURPLE_PROXY_NONE;
-	gboolean proxy_ssl = purple_account_get_bool(account, "proxy_ssl", FALSE);
+	gboolean proxy_ssl = TRUE; /*purple_account_get_bool(account, "proxy_ssl", FALSE);*/
 
 	if(proxy_ssl)
 		ppi = purple_proxy_get_setup(account);
@@ -522,7 +522,7 @@ char *yahoo_codes_to_html(const char *x)
 	size_t x_len;
 	xmlnode *html, *cur;
 	GString *cdata = g_string_new(NULL);
-	int i, j;
+	guint i, j;
 	gboolean no_more_gt_brackets = FALSE;
 	const char *match;
 	gchar *xmlstr1, *xmlstr2, *esc;
@@ -778,7 +778,7 @@ char *yahoo_html_to_codes(const char *src)
 	GSList *tags = NULL;
 
 	size_t src_len;
-	int i, j;
+	guint i, j;
 	GString *dest;
 	char *esc;
 	gboolean no_more_gt_brackets = FALSE;
@@ -830,9 +830,9 @@ char *yahoo_html_to_codes(const char *src)
 
 					/*
 					 * TODO: Ideally we would replace this:
-					 * <a href="http://pidgin.im/">Pidgin</a>
+					 * <a href="https://pidgin.im/">Pidgin</a>
 					 * with this:
-					 * Pidgin (http://pidgin.im/)
+					 * Pidgin (https://pidgin.im/)
 					 *
 					 * Currently we drop the text within the <a> tag and
 					 * just show the URL.  Doing it the fancy way is

@@ -80,7 +80,8 @@ silcpurple_chat_getinfo_res(SilcClient client,
 		g_snprintf(tmp, sizeof(tmp),
 			   _("Channel %s does not exist in the network"), chname);
 		purple_notify_error(gc, _("Channel Information"),
-				  _("Cannot get channel information"), tmp);
+			_("Cannot get channel information"), tmp,
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 
@@ -151,7 +152,7 @@ silcpurple_chat_getinfo(PurpleConnection *gc, GHashTable *components)
 	}
 
 	if (channel->mode) {
-		g_string_append_printf(s, _("<br><b>Channel Modes:</b> "));
+		g_string_append(s, _("<br><b>Channel Modes:</b> "));
 		silcpurple_get_chmode_string(channel->mode, tmp, sizeof(tmp));
 		g_string_append(s, tmp);
 	}
@@ -238,7 +239,7 @@ silcpurple_chat_chpk_add(void *user_data, const char *name)
 		silc_free(sgc);
 		purple_notify_error(client->application,
 				    _("Add Channel Public Key"),
-				    _("Could not load public key"), NULL);
+				    _("Could not load public key"), NULL, NULL);
 		return;
 	}
 
@@ -308,7 +309,7 @@ silcpurple_chat_chpk_cb(SilcPurpleChauth sgc, PurpleRequestFields *fields)
 		purple_request_file(sg->gc, _("Open Public Key..."), NULL, FALSE,
 				    G_CALLBACK(silcpurple_chat_chpk_add),
 				    G_CALLBACK(silcpurple_chat_chpk_cancel),
-				    purple_connection_get_account(sg->gc), NULL, NULL, sgc);
+				    purple_request_cpar_from_connection(sg->gc), sgc);
 		return;
 	}
 
@@ -449,7 +450,7 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 				      _("Channel Authentication"), t, fields,
 				      _("Add / Remove"), G_CALLBACK(silcpurple_chat_chpk_cb),
 				      _("OK"), G_CALLBACK(silcpurple_chat_chauth_ok),
-				      purple_connection_get_account(sg->gc), NULL, NULL, sgc);
+				      purple_request_cpar_from_connection(sg->gc), sgc);
 		if (channel_pubkeys)
 		  silc_dlist_uninit(channel_pubkeys);
 		return;
@@ -486,7 +487,7 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 			      _("Channel Authentication"), t, fields,
 			      _("Add / Remove"), G_CALLBACK(silcpurple_chat_chpk_cb),
 			      _("OK"), G_CALLBACK(silcpurple_chat_chauth_ok),
-			      purple_connection_get_account(sg->gc), NULL, NULL, sgc);
+			      purple_request_cpar_from_connection(sg->gc), sgc);
 }
 
 static void
@@ -620,7 +621,7 @@ silcpurple_chat_prv(PurpleBlistNode *node, gpointer data)
 	purple_request_fields(gc, _("Add Channel Private Group"), NULL, tmp, fields,
 			      _("Add"), G_CALLBACK(silcpurple_chat_prv_add),
 			      _("Cancel"), G_CALLBACK(silcpurple_chat_prv_cancel),
-			      purple_connection_get_account(gc), NULL, NULL, p);
+			      purple_request_cpar_from_connection(gc), p);
 }
 
 
@@ -680,14 +681,14 @@ static void
 silcpurple_chat_ulimit_cb(SilcPurpleChatInput s, const char *limit)
 {
 	SilcChannelEntry channel;
-	int ulimit = 0;
+	guint ulimit = 0;
 
 	channel = silc_client_get_channel(s->sg->client, s->sg->conn,
 					  (char *)s->channel);
 	if (!channel)
 		return;
 	if (limit)
-		ulimit = atoi(limit);
+		ulimit = strtoul(limit, NULL, 10);
 
 	if (!limit || !(*limit) || *limit == '0') {
 		if (limit && ulimit == channel->user_limit) {
@@ -754,7 +755,7 @@ silcpurple_chat_ulimit(PurpleBlistNode *node, gpointer data)
 			   tmp, FALSE, FALSE, NULL,
 			   _("OK"), G_CALLBACK(silcpurple_chat_ulimit_cb),
 			   _("Cancel"), G_CALLBACK(silcpurple_chat_ulimit_cb),
-			   purple_connection_get_account(gc), NULL, NULL, s);
+			   purple_request_cpar_from_connection(gc), s);
 }
 
 static void
@@ -1053,7 +1054,8 @@ void silcpurple_chat_join(PurpleConnection *gc, GHashTable *data)
 				   _("You have to join the %s channel before you are "
 				     "able to join the private group"), parentch);
 			purple_notify_error(gc, _("Join Private Group"),
-					  _("Cannot join private group"), tmp);
+				_("Cannot join private group"), tmp,
+				purple_request_cpar_from_connection(gc));
 			return;
 		}
 
@@ -1120,7 +1122,7 @@ void silcpurple_chat_invite(PurpleConnection *gc, int id, const char *msg,
 		SilcPurplePrvgrp prv;
 
 		for (l = sg->grps; l; l = l->next)
-			if (((SilcPurplePrvgrp)l->data)->id == id)
+			if (((SilcPurplePrvgrp)l->data)->id == (gulong)id)
 				break;
 		if (!l)
 			return;
@@ -1131,7 +1133,7 @@ void silcpurple_chat_invite(PurpleConnection *gc, int id, const char *msg,
 	/* Find channel by id */
 	silc_hash_table_list(conn->local_entry->channels, &htl);
 	while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-		if (SILC_PTR_TO_32(chu->channel->context) == id ) {
+		if (SILC_PTR_TO_32(chu->channel->context) == (gulong)id ) {
 			found = TRUE;
 			break;
 		}
@@ -1165,7 +1167,7 @@ void silcpurple_chat_leave(PurpleConnection *gc, int id)
 		SilcChannelEntry channel;
 
 		for (l = sg->grps; l; l = l->next)
-			if (((SilcPurplePrvgrp)l->data)->id == id)
+			if (((SilcPurplePrvgrp)l->data)->id == (gulong)id)
 				break;
 		if (!l)
 			return;
@@ -1185,7 +1187,7 @@ void silcpurple_chat_leave(PurpleConnection *gc, int id)
 	/* Find channel by id */
 	silc_hash_table_list(conn->local_entry->channels, &htl);
 	while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-		if (SILC_PTR_TO_32(chu->channel->context) == id ) {
+		if (SILC_PTR_TO_32(chu->channel->context) == (gulong)id ) {
 			found = TRUE;
 			break;
 		}
@@ -1202,7 +1204,7 @@ void silcpurple_chat_leave(PurpleConnection *gc, int id)
 
 	/* Leave from private groups on this channel as well */
 	for (l = sg->grps; l; l = l->next)
-		if (((SilcPurplePrvgrp)l->data)->chid == id) {
+		if (((SilcPurplePrvgrp)l->data)->chid == (gulong)id) {
 			prv = l->data;
 			silc_client_del_channel_private_key(client, conn,
 							    chu->channel,
@@ -1225,7 +1227,7 @@ int silcpurple_chat_send(PurpleConnection *gc, int id, const char *msg,
 	SilcChannelUser chu;
 	SilcChannelEntry channel = NULL;
 	SilcChannelPrivateKey key = NULL;
-	SilcUInt32 flags;
+	SilcMessageFlags flags;
 	int ret = 0;
 	char *msg2, *tmp;
 	gboolean found = FALSE;
@@ -1248,9 +1250,11 @@ int silcpurple_chat_send(PurpleConnection *gc, int id, const char *msg,
 		}
 		flags |= SILC_MESSAGE_FLAG_ACTION;
 	} else if (strlen(msg) > 1 && msg[0] == '/') {
-		if (!silc_client_command_call(client, conn, msg + 1))
-			purple_notify_error(gc, _("Call Command"), _("Cannot call command"),
-					    _("Unknown command"));
+		if (!silc_client_command_call(client, conn, msg + 1)) {
+			purple_notify_error(gc, _("Call Command"),
+				_("Cannot call command"), _("Unknown command"),
+				purple_request_cpar_from_connection(gc));
+		}
 		g_free(tmp);
 		return 0;
 	}
@@ -1266,7 +1270,7 @@ int silcpurple_chat_send(PurpleConnection *gc, int id, const char *msg,
 		SilcPurplePrvgrp prv;
 
 		for (l = sg->grps; l; l = l->next)
-			if (((SilcPurplePrvgrp)l->data)->id == id)
+			if (((SilcPurplePrvgrp)l->data)->id == (gulong)id)
 				break;
 		if (!l) {
 			g_free(tmp);
@@ -1286,7 +1290,7 @@ int silcpurple_chat_send(PurpleConnection *gc, int id, const char *msg,
 		/* Find channel by id */
 		silc_hash_table_list(conn->local_entry->channels, &htl);
 		while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-			if (SILC_PTR_TO_32(chu->channel->context) == id ) {
+			if (SILC_PTR_TO_32(chu->channel->context) == (gulong)id ) {
 				found = TRUE;
 				break;
 			}
@@ -1357,7 +1361,7 @@ void silcpurple_chat_set_topic(PurpleConnection *gc, int id, const char *topic)
 		SilcPurplePrvgrp prv;
 
 		for (l = sg->grps; l; l = l->next)
-			if (((SilcPurplePrvgrp)l->data)->id == id)
+			if (((SilcPurplePrvgrp)l->data)->id == (gulong)id)
 				break;
 		if (!l)
 			return;
@@ -1368,7 +1372,7 @@ void silcpurple_chat_set_topic(PurpleConnection *gc, int id, const char *topic)
 	/* Find channel by id */
 	silc_hash_table_list(conn->local_entry->channels, &htl);
 	while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-		if (SILC_PTR_TO_32(chu->channel->context) == id ) {
+		if (SILC_PTR_TO_32(chu->channel->context) == (gulong)id ) {
 			found = TRUE;
 			break;
 		}

@@ -23,7 +23,7 @@ Version:    %pidginver
 Release:    0%{?beta:.beta%{beta}}
 License:    GPL
 Group:      Applications/Internet
-URL:        http://pidgin.im/
+URL:        https://pidgin.im/
 Source:     %{name}-@VERSION@.tar.bz2
 BuildRoot:  %{_tmppath}/%{name}-%{version}-root
 
@@ -368,7 +368,7 @@ fi
 %doc ChangeLog
 %doc NEWS
 %doc README
-%doc README.MTN
+%doc README.hg
 %doc doc/the_penguin.txt
 %doc %{_mandir}/man1/pidgin.*
 %doc %{_mandir}/man3*/*

@@ -97,7 +97,8 @@ bonjour_login(PurpleAccount *account)
 		purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 				_("Unable to find Apple's \"Bonjour for Windows\" toolkit, see "
-				  "http://d.pidgin.im/BonjourWindows for more information."));
+				  "https://developer.pidgin.im/BonjourWindows for more "
+				  "information."));
 		return;
 	}
 #endif /* _WIN32 */
@@ -469,6 +470,12 @@ bonjour_can_receive_file(PurpleConnection *connection, const char *who)
 	return (buddy != NULL && purple_buddy_get_protocol_data(buddy) != NULL);
 }
 
+static gssize
+bonjour_get_max_message_size(PurpleConversation *conv)
+{
+	return -1; /* 5MB successfully tested. */
+}
+
 static gboolean
 plugin_unload(PurplePlugin *plugin)
 {
@@ -554,7 +561,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,                                                    /* get_media_caps */
 	NULL,                                                    /* get_moods */
 	NULL,                                                    /* set_public_alias */
-	NULL                                                     /* get_public_alias */
+	NULL,                                                    /* get_public_alias */
+	bonjour_get_max_message_size                             /* get_max_message_size */
 };
 
 static PurplePluginInfo info =
@@ -690,6 +698,8 @@ initialize_default_account_values(void)
 {
 #ifndef _WIN32
 	struct passwd *info;
+#else
+	GThread *lookup_thread;
 #endif
 	const char *fullname = NULL, *splitpoint, *tmp;
 	gchar *conv = NULL;
@@ -705,7 +715,11 @@ initialize_default_account_values(void)
 		fullname = NULL;
 #else
 	/* The Win32 username lookup functions are synchronous so we do it in a thread */
-	g_thread_create(_win32_name_lookup_thread, NULL, FALSE, NULL);
+	lookup_thread = g_thread_try_new("bonjour dns thread", _win32_name_lookup_thread, NULL, NULL);
+	if (lookup_thread)
+		g_thread_unref(lookup_thread);
+	else
+		purple_debug_fatal("bonjour", "failed to create lookup thread\n");
 #endif
 
 	/* Make sure fullname is valid UTF-8.  If not, try to convert it. */

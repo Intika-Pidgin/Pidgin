@@ -20,6 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
+#include "internal.h"
+
 #include "gtkconv-theme.h"
 
 #include "conversation.h"
@@ -28,7 +30,6 @@
 #include "xmlnode.h"
 
 #include "pidgin.h"
-#include "internal.h"
 #include "gtkconv.h"
 #include "gtkwebview.h"
 
@@ -66,6 +67,8 @@ typedef struct {
 	char    *incoming_next_context_html;
 	char    *outgoing_next_context_html;
 	char    *basestyle_css;
+
+	GArray  *nick_colors;
 } PidginConvThemePrivate;
 
 /******************************************************************************
@@ -123,7 +126,11 @@ get_template_path(const char *dir)
 
 	if (!g_file_test(file, G_FILE_TEST_EXISTS)) {
 		g_free(file);
+#ifdef _WIN32
+		file = g_build_filename(DATADIR, "theme", "Template.html", NULL);
+#else
 		file = g_build_filename(DATADIR, "pidgin", "theme", "Template.html", NULL);
+#endif
 	}
 
 	return file;
@@ -459,9 +466,11 @@ static void
 pidgin_conv_theme_init(GTypeInstance *instance,
 		gpointer klass)
 {
+#if 0
 	PidginConvThemePrivate *priv;
 
 	priv = PIDGIN_CONV_THEME_GET_PRIVATE(instance);
+#endif
 }
 
 static void
@@ -497,6 +506,9 @@ pidgin_conv_theme_finalize(GObject *obj)
 		list = g_list_delete_link(list, list);
 	}
 	g_free(priv->variant);
+
+	if (priv->nick_colors)
+		g_array_unref(priv->nick_colors);
 
 	parent_class->finalize(obj);
 }
@@ -747,5 +759,46 @@ pidgin_conversation_theme_get_css_path(PidginConvTheme *theme)
 		g_free(file);
 		return ret;
 	}
+}
+
+GArray *
+pidgin_conversation_theme_get_nick_colors(PidginConvTheme *theme)
+{
+	PidginConvThemePrivate *priv;
+	const char *dir;
+
+	g_return_val_if_fail(theme != NULL, NULL);
+
+	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+
+	dir = purple_theme_get_dir(PURPLE_THEME(theme));
+	if (NULL == priv->nick_colors)
+	{
+		char *file = g_build_filename(dir, "Contents", "Resources", "Incoming", "SenderColors.txt", NULL);
+		char *contents;
+		priv->nick_colors = g_array_new(FALSE, FALSE, sizeof(GdkColor));
+		if (g_file_get_contents(file, &contents, NULL, NULL)) {
+			int i;
+			gchar ** color_strings = g_strsplit_set(contents, "\r\n:", -1);
+
+			for(i=0; color_strings[i]; i++)
+			{
+				GdkColor color;
+				if(gdk_color_parse(color_strings[i], &color))
+				{
+					g_array_append_val(priv->nick_colors, color);
+				}
+			}
+
+			g_strfreev(color_strings);
+			g_free(contents);
+		}
+		g_free(file);
+	}
+
+	if(priv->nick_colors->len)
+		return g_array_ref(priv->nick_colors);
+	else
+		return NULL;
 }
 

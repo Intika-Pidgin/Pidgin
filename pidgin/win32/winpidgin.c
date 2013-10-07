@@ -25,10 +25,8 @@
  *
  */
 
-/* This is for ATTACH_PARENT_PROCESS */
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x501
-#endif
+#include "config.h"
+
 #include <windows.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -36,11 +34,11 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "config.h"
 
-typedef int (CALLBACK* LPFNPIDGINMAIN)(HINSTANCE, int, char**);
-typedef void (CALLBACK* LPFNSETDLLDIRECTORY)(LPCWSTR);
-typedef BOOL (CALLBACK* LPFNATTACHCONSOLE)(DWORD);
+typedef int (__cdecl* LPFNPIDGINMAIN)(HINSTANCE, int, char**);
+typedef void (WINAPI* LPFNSETDLLDIRECTORY)(LPCWSTR);
+typedef BOOL (WINAPI* LPFNATTACHCONSOLE)(DWORD);
+typedef BOOL (WINAPI* LPFNSETPROCESSDEPPOLICY)(DWORD);
 
 static BOOL portable_mode = FALSE;
 
@@ -60,6 +58,44 @@ static const wchar_t *get_win32_error_message(DWORD err) {
 		(LPWSTR) &err_msg, sizeof(err_msg) / sizeof(wchar_t), NULL);
 
 	return err_msg;
+}
+
+static BOOL reg_value_exists(HKEY key, wchar_t *sub_key, wchar_t *val_name) {
+	HKEY hkey;
+	LONG retv;
+	DWORD index;
+	wchar_t name_buffer[100];
+	BOOL exists = FALSE;
+
+	if (sub_key == NULL || val_name == NULL)
+		return FALSE;
+
+	retv = RegOpenKeyExW(key, sub_key, 0, KEY_ENUMERATE_SUB_KEYS, &hkey);
+	if (retv != ERROR_SUCCESS)
+		return FALSE;
+
+	if (val_name[0] == L'\0') {
+		RegCloseKey(hkey);
+		return TRUE;
+	}
+
+	index = 0;
+	while (TRUE)
+	{
+		DWORD name_size = sizeof(name_buffer);
+		retv = RegEnumValueW(hkey, index++, name_buffer, &name_size,
+			NULL, NULL, NULL, NULL);
+		if (retv != ERROR_SUCCESS)
+			break;
+		name_size /= sizeof(wchar_t);
+		if (wcsncmp(name_buffer, val_name, name_size) == 0) {
+			exists = TRUE;
+			break;
+		}
+	}
+
+	RegCloseKey(hkey);
+	return exists;
 }
 
 static BOOL read_reg_string(HKEY key, wchar_t *sub_key, wchar_t *val_name, LPBYTE data, LPDWORD data_len) {
@@ -94,9 +130,7 @@ static BOOL read_reg_string(HKEY key, wchar_t *sub_key, wchar_t *val_name, LPBYT
 	return ret;
 }
 
-static BOOL common_dll_prep(const wchar_t *path) {
-	HMODULE hmod;
-	HKEY hkey;
+static BOOL check_for_gtk(const wchar_t *path) {
 	struct _stat stat_buf;
 	wchar_t test_path[MAX_PATH + 1];
 
@@ -104,14 +138,72 @@ static BOOL common_dll_prep(const wchar_t *path) {
 		L"%s\\libgtk-win32-2.0-0.dll", path);
 	test_path[sizeof(test_path) / sizeof(wchar_t) - 1] = L'\0';
 
-	if (_wstat(test_path, &stat_buf) != 0) {
-		printf("Unable to determine GTK+ path. \n"
-			"Assuming GTK+ is in the PATH.\n");
-		return FALSE;
+	return (_wstat(test_path, &stat_buf) == 0);
+}
+
+static void common_dll_prep(const wchar_t *path) {
+	HMODULE hmod;
+	HKEY hkey;
+	wchar_t alt_path_buff[MAX_PATH + 1];
+	wchar_t tmp_path[MAX_PATH + 1];
+	/* Hold strlen("FS_PLUGIN_PATH=" or "GST_PLUGIN_SYSTEM_PATH") +
+	 * MAX_PATH + 1
+	 */
+	wchar_t set_path[MAX_PATH + 24];
+
+	if (!check_for_gtk(path)) {
+		const wchar_t *winpath = _wgetenv(L"PATH");
+		wchar_t *delim;
+
+		if (winpath == NULL) {
+			printf("Unable to determine GTK+ path (and PATH is not set).\n");
+			exit(-1);
+		}
+
+		path = NULL;
+		do
+		{
+			wcsncpy(alt_path_buff, winpath, MAX_PATH);
+			alt_path_buff[MAX_PATH] = L'\0';
+			delim = wcschr(alt_path_buff, L';');
+			if (delim != NULL) {
+				delim[0] = L'\0';
+				winpath = wcschr(winpath, L';') + 1;
+			}
+			if (check_for_gtk(alt_path_buff)) {
+				path = alt_path_buff;
+				break;
+			}
+		}
+		while (delim != NULL);
+
+		if (path == NULL) {
+			printf("Unable to determine GTK+ path.\n");
+			exit(-1);
+		}
 	}
 
-
 	wprintf(L"GTK+ path found: %s\n", path);
+
+	wcsncpy(tmp_path, path, MAX_PATH);
+	tmp_path[MAX_PATH] = L'\0';
+	wcsrchr(tmp_path, L'\\')[0] = L'\0';
+	/* tmp_path now contains \path\to\Pidgin\Gtk */
+
+	_snwprintf(set_path, sizeof(set_path) / sizeof(wchar_t),
+		L"FS_PLUGIN_PATH=%s\\lib\\farstream-0.1", tmp_path);
+	set_path[sizeof(set_path) / sizeof(wchar_t) - 1] = L'\0';
+	_wputenv(set_path);
+
+	_snwprintf(set_path, sizeof(set_path) / sizeof(wchar_t),
+		L"GST_PLUGIN_SYSTEM_PATH=%s\\lib\\gstreamer-0.10", tmp_path);
+	set_path[sizeof(set_path) / sizeof(wchar_t) - 1] = L'\0';
+	_wputenv(set_path);
+
+	_snwprintf(set_path, sizeof(set_path) / sizeof(wchar_t),
+		L"GST_PLUGIN_PATH=%s\\lib\\gstreamer-0.10", tmp_path);
+	set_path[sizeof(set_path) / sizeof(wchar_t) - 1] = L'\0';
+	_wputenv(set_path);
 
 	if ((hmod = GetModuleHandleW(L"kernel32.dll"))) {
 		MySetDllDirectory = (LPFNSETDLLDIRECTORY) GetProcAddress(
@@ -123,7 +215,6 @@ static BOOL common_dll_prep(const wchar_t *path) {
 
 	/* For Windows XP SP1+ / Server 2003 we use SetDllDirectory to avoid dll hell */
 	if (MySetDllDirectory) {
-		printf("Using SetDllDirectory\n");
 		MySetDllDirectory(path);
 	}
 
@@ -181,11 +272,9 @@ static BOOL common_dll_prep(const wchar_t *path) {
 				printf("SafeDllSearchMode is set to 0\n");
 		}/*end else*/
 	}
-
-	return TRUE;
 }
 
-static BOOL dll_prep(const wchar_t *pidgin_dir) {
+static void dll_prep(const wchar_t *pidgin_dir) {
 	wchar_t path[MAX_PATH + 1];
 	path[0] = L'\0';
 
@@ -194,7 +283,7 @@ static BOOL dll_prep(const wchar_t *pidgin_dir) {
 		path[sizeof(path) / sizeof(wchar_t) - 1] = L'\0';
 	}
 
-	return common_dll_prep(path);
+	common_dll_prep(path);
 }
 
 static void portable_mode_dll_prep(const wchar_t *pidgin_dir) {
@@ -216,8 +305,8 @@ static void portable_mode_dll_prep(const wchar_t *pidgin_dir) {
 		path[cnt] = L'\0';
 	} else {
 		printf("Unable to determine current executable path. \n"
-			"This will prevent the settings dir from being set.\n"
-			"Assuming GTK+ is in the PATH.\n");
+			"This will prevent the settings dir from being set.\n");
+		common_dll_prep(L'\0');
 		return;
 	}
 
@@ -231,7 +320,12 @@ static void portable_mode_dll_prep(const wchar_t *pidgin_dir) {
 	wprintf(L"Setting settings dir: %s\n", path2);
 	_wputenv(path2);
 
-	if (!dll_prep(pidgin_dir)) {
+	_snwprintf(path2, sizeof(path2) / sizeof(wchar_t), L"%s\\Gtk\\bin",
+		pidgin_dir);
+	path2[sizeof(path2) / sizeof(wchar_t) - 1] = L'\0';
+	if (check_for_gtk(path2))
+		common_dll_prep(path2);
+	else {
 		/* set the GTK+ path to be \\path\to\GTK\bin */
 		wcscat(path, L"\\GTK\\bin");
 		common_dll_prep(path);
@@ -430,7 +524,8 @@ static void winpidgin_add_stuff_to_path() {
 	printf("%s", "Looking for Perl... ");
 
 	plen = sizeof(perl_path) / sizeof(wchar_t);
-	if (read_reg_string(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Perl", L"",
+	if (reg_value_exists(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Perl", L"") &&
+		read_reg_string(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Perl", L"",
 			    (LPBYTE) &perl_path, &plen)) {
 		/* We *could* check for perl510.dll, but it seems unnecessary. */
 		wprintf(L"found in '%s'.\n", perl_path);
@@ -446,7 +541,8 @@ static void winpidgin_add_stuff_to_path() {
 	printf("%s", "Looking for MIT Kerberos... ");
 
 	plen = sizeof(mit_kerberos_path) / sizeof(wchar_t);
-	if (read_reg_string(HKEY_LOCAL_MACHINE, L"SOFTWARE\\MIT\\Kerberos", L"InstallDir",
+	if (reg_value_exists(HKEY_LOCAL_MACHINE, L"SOFTWARE\\MIT\\Kerberos", L"InstallDir") &&
+		read_reg_string(HKEY_LOCAL_MACHINE, L"SOFTWARE\\MIT\\Kerberos", L"InstallDir",
 			    (LPBYTE) &mit_kerberos_path, &plen)) {
 		/* We *could* check for gssapi32.dll */
 		wprintf(L"found in '%s'.\n", mit_kerberos_path);
@@ -556,7 +652,7 @@ static void handle_protocol(wchar_t *cmd) {
 	len = WideCharToMultiByte(CP_UTF8, 0, tmp1,
 			wlen, NULL, 0, NULL, NULL);
 	if (len) {
-		utf8msg = malloc(len * sizeof(char));
+		utf8msg = malloc(len);
 		len = WideCharToMultiByte(CP_UTF8, 0, tmp1,
 			wlen, utf8msg, len, NULL, NULL);
 	}
@@ -642,16 +738,24 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		}
 	}
 
+	/* Permanently enable DEP if the OS supports it */
+	if ((hmod = GetModuleHandleW(L"kernel32.dll"))) {
+		LPFNSETPROCESSDEPPOLICY MySetProcessDEPPolicy =
+			(LPFNSETPROCESSDEPPOLICY)
+			GetProcAddress(hmod, "SetProcessDEPPolicy");
+		if (MySetProcessDEPPolicy)
+			MySetProcessDEPPolicy(1); //PROCESS_DEP_ENABLE
+	}
+
 	if (debug || help || version) {
 		/* If stdout hasn't been redirected to a file, alloc a console
 		 *  (_istty() doesn't work for stuff using the GUI subsystem) */
 		if (_fileno(stdout) == -1 || _fileno(stdout) == -2) {
 			LPFNATTACHCONSOLE MyAttachConsole = NULL;
-			if ((hmod = GetModuleHandleW(L"kernel32.dll"))) {
+			if (hmod)
 				MyAttachConsole =
 					(LPFNATTACHCONSOLE)
 					GetProcAddress(hmod, "AttachConsole");
-			}
 			if ((MyAttachConsole && MyAttachConsole(ATTACH_PARENT_PROCESS))
 					|| AllocConsole()) {
 				freopen("CONOUT$", "w", stdout);
@@ -683,31 +787,34 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 
 			wcscat(pidgin_dir, L"\\exchndl.dll");
 			if ((hmod = LoadLibraryW(pidgin_dir))) {
-				FARPROC proc;
+				typedef void (__cdecl* LPFNSETLOGFILE)(const LPCSTR);
+				LPFNSETLOGFILE MySetLogFile;
 				/* exchndl.dll is built without UNICODE */
 				char debug_dir[MAX_PATH];
 				printf("Loaded exchndl.dll\n");
 				/* Temporarily override exchndl.dll's logfile
 				 * to something sane (Pidgin will override it
 				 * again when it initializes) */
-				proc = GetProcAddress(hmod, "SetLogFile");
-				if (proc) {
-					if (GetTempPathA(sizeof(debug_dir) * sizeof(char), debug_dir) != 0) {
+				MySetLogFile = (LPFNSETLOGFILE) GetProcAddress(hmod, "SetLogFile");
+				if (MySetLogFile) {
+					if (GetTempPathA(sizeof(debug_dir), debug_dir) != 0) {
 						strcat(debug_dir, "pidgin.RPT");
 						printf(" Setting exchndl.dll LogFile to %s\n",
 							debug_dir);
-						(proc)(debug_dir);
+						MySetLogFile(debug_dir);
 					}
 				}
-				proc = GetProcAddress(hmod, "SetDebugInfoDir");
-				if (proc) {
+				/* The function signature for SetDebugInfoDir is the same as SetLogFile,
+				 * so we can reuse the variable */
+				MySetLogFile = (LPFNSETLOGFILE) GetProcAddress(hmod, "SetDebugInfoDir");
+				if (MySetLogFile) {
 					char *pidgin_dir_ansi = NULL;
 					/* Restore pidgin_dir to point to where the executable is */
 					pidgin_dir_start[0] = L'\0';
 					i = WideCharToMultiByte(CP_ACP, 0, pidgin_dir,
 						-1, NULL, 0, NULL, NULL);
 					if (i != 0) {
-						pidgin_dir_ansi = malloc(i * sizeof(char));
+						pidgin_dir_ansi = malloc(i);
 						i = WideCharToMultiByte(CP_ACP, 0, pidgin_dir,
 							-1, pidgin_dir_ansi, i, NULL, NULL);
 						if (i == 0) {
@@ -716,13 +823,13 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 						}
 					}
 					if (pidgin_dir_ansi != NULL) {
-						_snprintf(debug_dir, sizeof(debug_dir) / sizeof(char),
+						_snprintf(debug_dir, sizeof(debug_dir),
 							"%s\\pidgin-%s-dbgsym",
 							pidgin_dir_ansi,  VERSION);
-						debug_dir[sizeof(debug_dir) / sizeof(char) - 1] = '\0';
+						debug_dir[sizeof(debug_dir) - 1] = '\0';
 						printf(" Setting exchndl.dll DebugInfoDir to %s\n",
 							debug_dir);
-						(proc)(debug_dir);
+						MySetLogFile(debug_dir);
 						free(pidgin_dir_ansi);
 					}
 				}
@@ -800,7 +907,7 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 			int len = WideCharToMultiByte(CP_UTF8, 0, szArglist[i],
 				-1, NULL, 0, NULL, NULL);
 			if (len != 0) {
-				char *arg = malloc(len * sizeof(char));
+				char *arg = malloc(len);
 				len = WideCharToMultiByte(CP_UTF8, 0, szArglist[i],
 					-1, arg, len, NULL, NULL);
 				if (len != 0) {

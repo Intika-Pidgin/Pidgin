@@ -23,8 +23,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include    "internal.h"
-#include	"purple.h"
+#include	"internal.h"
+#include	"debug.h"
+#include	"request.h"
 
 #include	"protocol.h"
 #include	"mxit.h"
@@ -43,11 +44,12 @@
  */
 static void mxit_profile_cb( PurpleConnection* gc, PurpleRequestFields* fields )
 {
-	struct MXitSession*		session	= purple_connection_get_protocol_data( gc ) ;
+	struct MXitSession*		session	= purple_connection_get_protocol_data( gc );
 	PurpleRequestField*		field	= NULL;
 	const char*				name	= NULL;
 	const char*				bday	= NULL;
 	const char*				err		= NULL;
+	GList*					entry	= NULL;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_profile_cb\n" );
 
@@ -166,6 +168,14 @@ out:
 		g_string_append( attributes, attrib );
 		acount++;
 
+		/* relationship status */
+		field = purple_request_fields_get_field( fields, "relationship" );
+		entry = g_list_first( purple_request_field_list_get_selected( field ) );
+		profile->relationship = atoi( purple_request_field_list_get_data( field, entry->data ) );
+		g_snprintf( attrib, sizeof( attrib ), "\01%s\01%i\01%i", CP_PROFILE_RELATIONSHIP, CP_PROFILE_TYPE_SHORT, profile->relationship );
+		g_string_append( attributes, attrib );
+		acount++;
+
 		/* update flags */
 		field = purple_request_fields_get_field( fields, "searchable" );
 		if ( purple_request_field_bool_get_value( field ) )		/* is searchable -> clear not-searchable flag */
@@ -177,7 +187,7 @@ out:
 			profile->flags &= ~CP_PROF_NOT_SUGGESTABLE;
 		else
 			profile->flags |= CP_PROF_NOT_SUGGESTABLE;
-		g_snprintf( attrib, sizeof( attrib ), "\01%s\01%i\01%i", CP_PROFILE_FLAGS, CP_PROFILE_TYPE_LONG, profile->flags);
+		g_snprintf( attrib, sizeof( attrib ), "\01%s\01%i\01%" G_GINT64_FORMAT, CP_PROFILE_FLAGS, CP_PROFILE_TYPE_LONG, profile->flags);
 		g_string_append( attributes, attrib );
 		acount++;
 
@@ -232,9 +242,9 @@ static void mxit_profile_action( PurplePluginAction* action )
 			purple_request_field_string_set_editable( field, FALSE );
 
 		/* gender */
-		field = purple_request_field_choice_new( "male", _( "Gender" ), ( profile->male ) ? 1 : 0 );
-		purple_request_field_choice_add( field, _( "Female" ) );		/* 0 */
-		purple_request_field_choice_add( field, _( "Male" ) );			/* 1 */
+		field = purple_request_field_choice_new( "male", _( "Gender" ), GINT_TO_POINTER(profile->male ? 1 : 0));
+		purple_request_field_choice_add( field, _( "Female" ), GINT_TO_POINTER(0));
+		purple_request_field_choice_add( field, _( "Male" ), GINT_TO_POINTER(1));
 		purple_request_field_group_add_field( public_group, field );
 
 		/* first name */
@@ -251,6 +261,22 @@ static void mxit_profile_action( PurplePluginAction* action )
 
 		/* where I live */
 		field = purple_request_field_string_new( "whereami", _( "Where I Live" ), profile->whereami, FALSE);
+		purple_request_field_group_add_field( public_group, field );
+
+		/* relationship status */
+		field = purple_request_field_list_new( "relationship", _( "Relationship Status" ) );
+		purple_request_field_list_set_multi_select( field, FALSE );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_UNKNOWN ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_UNKNOWN ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_DONTSAY ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_DONTSAY ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_SINGLE ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_SINGLE ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_INVOLVED ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_INVOLVED ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_ENGAGED ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_ENGAGED ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_MARRIED ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_MARRIED ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_COMPLICATED ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_COMPLICATED ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_WIDOWED ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_WIDOWED ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_SEPARATED ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_SEPARATED ) );
+		purple_request_field_list_add_icon( field, mxit_relationship_to_name( MXIT_RELATIONSHIP_DIVORCED ), NULL, g_strdup_printf( "%i", MXIT_RELATIONSHIP_DIVORCED ) );
+		purple_request_field_list_add_selected( field, mxit_relationship_to_name( profile->relationship ) );
 		purple_request_field_group_add_field( public_group, field );
 
 		purple_request_fields_add_group( fields, public_group );
@@ -285,7 +311,7 @@ static void mxit_profile_action( PurplePluginAction* action )
 
 	/* (reference: "libpurple/request.h") */
 	purple_request_fields( gc, _( "Profile" ), _( "Update your MXit Profile" ), NULL, fields, _( "Set" ),
-			G_CALLBACK( mxit_profile_cb ), _( "Cancel" ), NULL, purple_connection_get_account( gc ), NULL, NULL, gc );
+			G_CALLBACK( mxit_profile_cb ), _( "Cancel" ), NULL, purple_request_cpar_from_connection(gc), gc );
 }
 
 
@@ -335,7 +361,7 @@ static void mxit_change_pin_cb( PurpleConnection* gc, PurpleRequestFields* field
 out:
 	if ( !err ) {
 		/* update PIN in account */
-		purple_account_set_password( session->acc, pin );
+		purple_account_set_password( session->acc, pin, NULL, NULL );
 
 		/* update session object */
 		g_free( session->encpwd );
@@ -359,7 +385,6 @@ out:
 static void mxit_change_pin_action( PurplePluginAction* action )
 {
 	PurpleConnection*			gc		= (PurpleConnection*) action->context;
-	struct MXitSession*			session	= purple_connection_get_protocol_data( gc );
 
 	PurpleRequestFields*		fields	= NULL;
 	PurpleRequestFieldGroup*	group	= NULL;
@@ -372,18 +397,18 @@ static void mxit_change_pin_action( PurplePluginAction* action )
 	purple_request_fields_add_group( fields, group );
 
 	/* pin */
-	field = purple_request_field_string_new( "pin", _( "PIN" ), purple_account_get_password( session->acc ), FALSE );
+	field = purple_request_field_string_new( "pin", _( "PIN" ), purple_connection_get_password( gc ), FALSE );
 	purple_request_field_string_set_masked( field, TRUE );
 	purple_request_field_group_add_field( group, field );
 
 	/* verify pin */
-	field = purple_request_field_string_new( "pin2", _( "Verify PIN" ), purple_account_get_password( session->acc ), FALSE );
+	field = purple_request_field_string_new( "pin2", _( "Verify PIN" ), purple_connection_get_password( gc ), FALSE );
 	purple_request_field_string_set_masked( field, TRUE );
 	purple_request_field_group_add_field( group, field );
 
 	/* (reference: "libpurple/request.h") */
 	purple_request_fields( gc, _( "Change PIN" ), _( "Change MXit PIN" ), NULL, fields, _( "Set" ),
-			G_CALLBACK( mxit_change_pin_cb ), _( "Cancel" ), NULL, purple_connection_get_account( gc ), NULL, NULL, gc );
+			G_CALLBACK( mxit_change_pin_cb ), _( "Cancel" ), NULL, purple_request_cpar_from_connection(gc), gc );
 }
 
 
@@ -474,7 +499,7 @@ static void mxit_user_search_action( PurplePluginAction* action )
 		NULL, FALSE, FALSE, NULL,
 		_( "_Search" ), G_CALLBACK( mxit_user_search_cb ),
 		_( "_Cancel" ), NULL,
-		purple_connection_get_account( gc ), NULL, NULL,
+		purple_request_cpar_from_connection(gc),
 		gc );
 }
 

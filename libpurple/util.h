@@ -32,12 +32,6 @@
 #include <stdio.h>
 
 /**
-  * An opaque structure representing a URL request. Can be used to cancel
-  * the request.
-  */
-typedef struct _PurpleUtilFetchUrlData PurpleUtilFetchUrlData;
-
-/**
  * A generic structure that contains information about an "action."  One
  * place this is is used is by PRPLs to tell the core the list of available
  * right-click actions for a buddy list row.
@@ -56,6 +50,7 @@ typedef struct _PurpleKeyValuePair PurpleKeyValuePair;
 #include "signals.h"
 #include "xmlnode.h"
 #include "notify.h"
+#include "plugin.h"
 
 
 typedef char *(*PurpleInfoFieldFormatCallback)(const char *field, size_t len);
@@ -388,7 +383,8 @@ const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The date, formatted as per the user's settings.
+ * @return The date, formatted as per the user's settings.  In the USA this
+ *         is something like "02/18/13"
  */
 const char *purple_date_format_short(const struct tm *tm);
 
@@ -400,7 +396,8 @@ const char *purple_date_format_short(const struct tm *tm);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The timestamp, formatted as per the user's settings.
+ * @return The timestamp, formatted as per the user's settings.  In the USA
+ *         this is something like "02/18/13 15:26:44"
  */
 const char *purple_date_format_long(const struct tm *tm);
 
@@ -412,7 +409,8 @@ const char *purple_date_format_long(const struct tm *tm);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The date and time, formatted as per the user's settings.
+ * @return The date and time, formatted as per the user's settings.  In the
+ *         USA this is something like "Mon Feb 18 15:26:44 2013"
  */
 const char *purple_date_format_full(const struct tm *tm);
 
@@ -424,7 +422,8 @@ const char *purple_date_format_full(const struct tm *tm);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The time, formatted as per the user's settings.
+ * @return The time, formatted as per the user's settings.  In the USA this
+ *         is something like "15:26:44"
  */
 const char *purple_time_format(const struct tm *tm);
 
@@ -824,11 +823,6 @@ const char *
 purple_util_get_image_extension(gconstpointer data, size_t len);
 
 /**
- * Returns a SHA-1 hash string of the data passed in.
- */
-char *purple_util_get_image_checksum(gconstpointer image_data, size_t image_len);
-
-/**
  * @return A hex encoded version of the SHA-1 hash of the data passed
  *         in with the correct file extention appended.  The file
  *         extension is determined by calling
@@ -958,6 +952,16 @@ const char *purple_normalize(const PurpleAccount *account, const char *str);
  * @return A pointer to the normalized version stored in a static buffer.
  */
 const char *purple_normalize_nocase(const PurpleAccount *account, const char *str);
+
+/**
+ * Checks, if a string is valid.
+ *
+ * @param prpl     The protocol plugin the string belongs to.
+ * @param str      The string to validate.
+ *
+ * @return TRUE, if string is valid, otherwise FALSE.
+ */
+gboolean purple_validate(const PurplePlugin *prpl, const char *str);
 
 /**
  * Compares two strings to see if the first contains the second as
@@ -1128,6 +1132,33 @@ char *purple_str_seconds_to_string(guint sec);
  * @return A newly allocated ASCIIZ string.
  */
 char *purple_str_binary_to_ascii(const unsigned char *binary, guint len);
+
+/**
+ * Calculates UTF-16 string size (in bytes).
+ *
+ * @param str String to check.
+ * @return    Number of bytes (including NUL character) that string occupies.
+ */
+size_t purple_utf16_size(const gunichar2 *str);
+
+/**
+ * Fills a NUL-terminated string with zeros and frees it.
+ *
+ * It should be used to free sensitive data, like passwords.
+ *
+ * @param str A NUL-terminated string to free, or a NULL-pointer.
+ */
+void purple_str_wipe(gchar *str);
+
+/**
+ * Fills a NUL-terminated UTF-16 string with zeros and frees it.
+ *
+ * It should be used to free sensitive data, like passwords.
+ *
+ * @param str A NUL-terminated string to free, or a NULL-pointer.
+ */
+void purple_utf16_wipe(gunichar2 *str);
+
 /*@}*/
 
 
@@ -1137,85 +1168,6 @@ char *purple_str_binary_to_ascii(const unsigned char *binary, guint len);
 /*@{*/
 
 void purple_got_protocol_handler_uri(const char *uri);
-
-/**
- * Parses a URL, returning its host, port, file path, username and password.
- *
- * The returned data must be freed.
- *
- * @param url      The URL to parse.
- * @param ret_host The returned host.
- * @param ret_port The returned port.
- * @param ret_path The returned path.
- * @param ret_user The returned username.
- * @param ret_passwd The returned password.
- */
-gboolean purple_url_parse(const char *url, char **ret_host, int *ret_port,
-						char **ret_path, char **ret_user, char **ret_passwd);
-
-/**
- * This is the signature used for functions that act as the callback
- * to purple_util_fetch_url() or purple_util_fetch_url_request().
- *
- * @param url_data      The same value that was returned when you called
- *                      purple_fetch_url() or purple_fetch_url_request().
- * @param user_data     The user data that your code passed into either
- *                      purple_util_fetch_url() or purple_util_fetch_url_request().
- * @param url_text      This will be NULL on error.  Otherwise this
- *                      will contain the contents of the URL.
- * @param len           0 on error, otherwise this is the length of buf.
- * @param error_message If something went wrong then this will contain
- *                      a descriptive error message, and buf will be
- *                      NULL and len will be 0.
- */
-typedef void (*PurpleUtilFetchUrlCallback)(PurpleUtilFetchUrlData *url_data, gpointer user_data, const gchar *url_text, gsize len, const gchar *error_message);
-
-/**
- * Fetches the data from a URL, and passes it to a callback function.
- *
- * @param url        The URL.
- * @param full       TRUE if this is the full URL, or FALSE if it's a
- *                   partial URL.
- * @param user_agent The user agent field to use, or NULL.
- * @param http11     TRUE if HTTP/1.1 should be used to download the file.
- * @param max_len    The maximum number of bytes to retrieve (-1 for unlimited)
- * @param cb         The callback function.
- * @param data       The user data to pass to the callback function.
- */
-#define purple_util_fetch_url(url, full, user_agent, http11, max_len, cb, data) \
-	purple_util_fetch_url_request(NULL, url, full, user_agent, http11, NULL, \
-		FALSE, max_len, cb, data);
-
-/**
- * Fetches the data from a URL, and passes it to a callback function.
- *
- * @param account    The account for which the request is needed, or NULL.
- * @param url        The URL.
- * @param full       TRUE if this is the full URL, or FALSE if it's a
- *                   partial URL.
- * @param user_agent The user agent field to use, or NULL.
- * @param http11     TRUE if HTTP/1.1 should be used to download the file.
- * @param request    A HTTP request to send to the server instead of the
- *                   standard GET
- * @param include_headers
- *                   If TRUE, include the HTTP headers in the response.
- * @param max_len    The maximum number of bytes to retrieve (-1 for unlimited)
- * @param callback   The callback function.
- * @param data       The user data to pass to the callback function.
- */
-PurpleUtilFetchUrlData *purple_util_fetch_url_request(
-		PurpleAccount *account, const gchar *url,
-		gboolean full, const gchar *user_agent, gboolean http11,
-		const gchar *request, gboolean include_headers, gssize max_len,
-		PurpleUtilFetchUrlCallback callback, gpointer data);
-
-/**
- * Cancel a pending URL request started with either
- * purple_util_fetch_url_request() or purple_util_fetch_url().
- *
- * @param url_data The data returned when you initiated the URL fetch.
- */
-void purple_util_fetch_url_cancel(PurpleUtilFetchUrlData *url_data);
 
 /**
  * Decodes a URL into a plain string.
@@ -1447,6 +1399,15 @@ const char *purple_unescape_filename(const char *str);
  * @return The resulting string.
  */
 const char *purple_escape_filename(const char *str);
+
+/**
+ * Escapes javascript-unfriendly substrings from a string.
+ *
+ * @param str The string to escape.
+ *
+ * @return The javascript-safe string (must be g_free'd after use).
+ */
+gchar * purple_escape_js(const gchar *str);
 
 /**
  * Restore default signal handlers for signals which might reasonably have

@@ -532,7 +532,7 @@ purple_plugin_load(PurplePlugin *plugin)
 			                      dep_name);
 
 			purple_notify_error(NULL, NULL,
-			                  _("Unable to load the plugin"), tmp);
+			                  _("Unable to load the plugin"), tmp, NULL);
 			g_free(tmp);
 
 			g_list_free(dep_list);
@@ -558,7 +558,7 @@ purple_plugin_load(PurplePlugin *plugin)
 				                      plugin->info->name);
 
 				purple_notify_error(NULL, NULL,
-				                 _("Unable to load your plugin."), tmp);
+				                 _("Unable to load your plugin."), tmp, NULL);
 				g_free(tmp);
 
 				g_list_free(dep_list);
@@ -573,18 +573,15 @@ purple_plugin_load(PurplePlugin *plugin)
 	for (l = dep_list; l != NULL; l = l->next)
 	{
 		PurplePlugin *dep_plugin = (PurplePlugin *)l->data;
-		dep_plugin->dependent_plugins = g_list_prepend(dep_plugin->dependent_plugins, plugin->info->id);
+		dep_plugin->dependent_plugins = g_list_prepend(dep_plugin->dependent_plugins, (gpointer)plugin->info->id);
 	}
 
 	g_list_free(dep_list);
 
 	if (plugin->native_plugin)
 	{
-		if (plugin->info != NULL && plugin->info->load != NULL)
-		{
-			if (!plugin->info->load(plugin))
-				return FALSE;
-		}
+		if (plugin->info->load != NULL && !plugin->info->load(plugin))
+			return FALSE;
 	}
 	else {
 		PurplePlugin *loader;
@@ -1365,7 +1362,7 @@ purple_plugins_probe(const char *ext)
 				path = g_build_filename(search_path, file, NULL);
 
 				if (ext == NULL || has_file_extension(file, ext))
-					plugin = purple_plugin_probe(path);
+					purple_plugin_probe(path);
 
 				g_free(path);
 			}

@@ -34,7 +34,7 @@ static const JabberScramHash hashes[] = {
 
 static const JabberScramHash *mech_to_hash(const char *mech)
 {
-	int i;
+	gsize i;
 
 	g_return_val_if_fail(mech != NULL && *mech != '\0', NULL);
 
@@ -98,9 +98,9 @@ guchar *jabber_scram_hi(const JabberScramHash *hash, const GString *str,
 
 	/* Compute U0 */
 	purple_cipher_context_set_option(context, "hash", (gpointer)hash->name);
-	purple_cipher_context_set_key_with_len(context, (guchar *)str->str, str->len);
+	purple_cipher_context_set_key(context, (guchar *)str->str, str->len);
 	purple_cipher_context_append(context, (guchar *)salt->str, salt->len);
-	purple_cipher_context_digest(context, hash->size, result, NULL);
+	purple_cipher_context_digest(context, result, hash->size);
 
 	memcpy(prev, result, hash->size);
 
@@ -108,9 +108,9 @@ guchar *jabber_scram_hi(const JabberScramHash *hash, const GString *str,
 	for (i = 1; i < iterations; ++i) {
 		guint j;
 		purple_cipher_context_set_option(context, "hash", (gpointer)hash->name);
-		purple_cipher_context_set_key_with_len(context, (guchar *)str->str, str->len);
+		purple_cipher_context_set_key(context, (guchar *)str->str, str->len);
 		purple_cipher_context_append(context, prev, hash->size);
-		purple_cipher_context_digest(context, hash->size, tmp, NULL);
+		purple_cipher_context_digest(context, tmp, hash->size);
 
 		for (j = 0; j < hash->size; ++j)
 			result[j] ^= tmp[j];
@@ -140,9 +140,9 @@ hmac(const JabberScramHash *hash, guchar *out, const guchar *key, const gchar *s
 
 	context = purple_cipher_context_new_by_name("hmac", NULL);
 	purple_cipher_context_set_option(context, "hash", (gpointer)hash->name);
-	purple_cipher_context_set_key_with_len(context, key, hash->size);
+	purple_cipher_context_set_key(context, key, hash->size);
 	purple_cipher_context_append(context, (guchar *)str, strlen(str));
-	purple_cipher_context_digest(context, hash->size, out, NULL);
+	purple_cipher_context_digest(context, out, hash->size);
 	purple_cipher_context_destroy(context);
 }
 
@@ -153,7 +153,7 @@ hash(const JabberScramHash *hash, guchar *out, const guchar *data)
 
 	context = purple_cipher_context_new_by_name(hash->name, NULL);
 	purple_cipher_context_append(context, data, hash->size);
-	purple_cipher_context_digest(context, hash->size, out, NULL);
+	purple_cipher_context_digest(context, out, hash->size);
 	purple_cipher_context_destroy(context);
 }
 
@@ -168,11 +168,6 @@ jabber_scram_calc_proofs(JabberScramData *data, GString *salt, guint iterations)
 	guchar *salted_password;
 	guchar *client_key, *stored_key, *client_signature, *server_key;
 
-	client_key = g_new0(guchar, hash_len);
-	stored_key = g_new0(guchar, hash_len);
-	client_signature = g_new0(guchar, hash_len);
-	server_key = g_new0(guchar, hash_len);
-
 	data->client_proof = g_string_sized_new(hash_len);
 	data->client_proof->len = hash_len;
 	data->server_signature = g_string_sized_new(hash_len);
@@ -185,6 +180,11 @@ jabber_scram_calc_proofs(JabberScramData *data, GString *salt, guint iterations)
 
 	if (!salted_password)
 		return FALSE;
+
+	client_key = g_new0(guchar, hash_len);
+	stored_key = g_new0(guchar, hash_len);
+	client_signature = g_new0(guchar, hash_len);
+	server_key = g_new0(guchar, hash_len);
 
 	/* client_key = HMAC(salted_password, "Client Key") */
 	hmac(data->hash, client_key, salted_password, "Client Key");

@@ -25,9 +25,11 @@
  *
  */
 #include "internal.h"
+#include "glibcompat.h"
 #include "pidgin.h"
 
 #include "debug.h"
+#include "http.h"
 #include "nat-pmp.h"
 #include "notify.h"
 #include "prefs.h"
@@ -42,6 +44,7 @@
 #include "upnp.h"
 #include "util.h"
 #include "network.h"
+#include "keyring.h"
 
 #include "gtkblist.h"
 #include "gtkconv.h"
@@ -55,8 +58,27 @@
 #include "gtkthemes.h"
 #include "gtkutils.h"
 #include "gtkwebview.h"
-#include "gtkwebviewtoolbar.h"
 #include "pidginstock.h"
+#ifdef USE_VV
+#include "media-gst.h"
+#if GST_CHECK_VERSION(1,0,0)
+#include <gst/video/videooverlay.h>
+#else
+#include <gst/interfaces/xoverlay.h>
+#include <gst/interfaces/propertyprobe.h>
+#endif
+#ifdef GDK_WINDOWING_WIN32
+#include <gdk/gdkwin32.h>
+#endif
+#ifdef GDK_WINDOWING_X11
+#include <gdk/gdkx.h>
+#endif
+#ifdef GDK_WINDOWING_QUARTZ
+#include <gdk/gdkquartz.h>
+#endif
+#endif
+
+#include "gtk3compat.h"
 
 #define PROXYHOST 0
 #define PROXYPORT 1
@@ -64,6 +86,9 @@
 #define PROXYPASS 3
 
 #define PREFS_OPTIMAL_ICON_SIZE 32
+
+/* 25MB */
+#define PREFS_MAX_DOWNLOADED_THEME_SIZE 26214400
 
 struct theme_info {
 	gchar *type;
@@ -88,6 +113,15 @@ static GtkWidget *prefs_conv_themes_combo_box;
 static GtkWidget *prefs_conv_variants_combo_box;
 static GtkWidget *prefs_status_themes_combo_box;
 static GtkWidget *prefs_smiley_themes_combo_box;
+static PurpleHttpConnection *prefs_conv_themes_running_request = NULL;
+
+/* Keyrings page */
+static GtkWidget *keyring_page_instance = NULL;
+static GtkComboBox *keyring_combo = NULL;
+static GtkBox *keyring_vbox = NULL;
+static PurpleRequestFields *keyring_settings = NULL;
+static GList *keyring_settings_fields = NULL;
+static GtkWidget *keyring_apply = NULL;
 
 /* Sound theme specific */
 static GtkWidget *sound_entry = NULL;
@@ -101,6 +135,65 @@ static GtkListStore *prefs_conv_themes;
 static GtkListStore *prefs_conv_variants;
 static GtkListStore *prefs_status_icon_themes;
 static GtkListStore *prefs_smiley_themes;
+
+#ifdef USE_VV
+
+static const gchar *AUDIO_SRC_PLUGINS[] = {
+	"alsasrc",	"ALSA",
+	"directsoundsrc", "DirectSound",
+	/* "esdmon",	"ESD", ? */
+	"osssrc",	"OSS",
+	"pulsesrc",	"PulseAudio",
+	"sndiosrc",	"sndio",
+	/* "audiotestsrc wave=silence", "Silence", */
+	"audiotestsrc",	N_("Test Sound"),
+	NULL
+};
+
+static const gchar *AUDIO_SINK_PLUGINS[] = {
+	"alsasink",	"ALSA",
+	"directsoundsink", "DirectSound",
+	/* "gconfaudiosink", "GConf", */
+	"artsdsink",	"aRts",
+	"esdsink",	"ESD",
+	"osssink",	"OSS",
+	"pulsesink",	"PulseAudio",
+	"sndiosink",	"sndio",
+	NULL
+};
+
+static const gchar *VIDEO_SRC_PLUGINS[] = {
+	"videodisabledsrc",	N_("Disabled"),
+	"videotestsrc",	N_("Test Input"),
+	"dshowvideosrc","DirectDraw",
+	"ksvideosrc",	"KS Video",
+	"qcamsrc",	"Quickcam",
+	"v4lsrc",	"Video4Linux",
+	"v4l2src",	"Video4Linux2",
+	"v4lmjpegsrc",	"Video4Linux MJPEG",
+	NULL
+};
+
+static const gchar *VIDEO_SINK_PLUGINS[] = {
+	/* "aasink",	"AALib", Didn't work for me */
+	"directdrawsink", "DirectDraw",
+	/* "gconfvideosink", "GConf", */
+	"glimagesink",	"OpenGL",
+	"ximagesink",	"X Window System",
+	"xvimagesink",	"X Window System (Xv)",
+	NULL
+};
+
+typedef struct {
+	GtkWidget *level;
+	GtkWidget *threshold;
+	GtkWidget *volume;
+} BusCbCtx;
+
+static GstElement *voice_pipeline;
+static GstElement *video_pipeline;
+
+#endif
 
 /*
  * PROTOTYPES
@@ -123,13 +216,13 @@ pidgin_prefs_labeled_spin_button(GtkWidget *box, const gchar *title,
 		const char *key, int min, int max, GtkSizeGroup *sg)
 {
 	GtkWidget *spin;
-	GtkObject *adjust;
+	GtkAdjustment *adjust;
 	int val;
 
 	val = purple_prefs_get_int(key);
 
-	adjust = gtk_adjustment_new(val, min, max, 1, 1, 0);
-	spin = gtk_spin_button_new(GTK_ADJUSTMENT(adjust), 1, 0);
+	adjust = GTK_ADJUSTMENT(gtk_adjustment_new(val, min, max, 1, 1, 0));
+	spin = gtk_spin_button_new(adjust, 1, 0);
 	g_object_set_data(G_OBJECT(spin), "val", (char *)key);
 	if (max < 10000)
 		gtk_widget_set_size_request(spin, 50, -1);
@@ -194,83 +287,105 @@ enum {
 	PREF_DROPDOWN_COUNT
 };
 
-static void
-dropdown_set(GObject *w, const char *key)
+typedef struct
 {
-	const char *str_value;
-	int int_value;
-	gboolean bool_value;
 	PurplePrefType type;
+	union {
+		const char *string;
+		int integer;
+		gboolean boolean;
+	} value;
+} PidginPrefValue;
+
+typedef void (*PidginPrefsDropdownCallback)(GtkComboBox *combo_box,
+	PidginPrefValue value);
+
+static void
+dropdown_set(GtkComboBox *combo_box, gpointer _cb)
+{
+	PidginPrefsDropdownCallback cb = _cb;
 	GtkTreeIter iter;
 	GtkTreeModel *tree_model;
+	PidginPrefValue active;
 
-	tree_model = gtk_combo_box_get_model(GTK_COMBO_BOX(w));
-	if (!gtk_combo_box_get_active_iter(GTK_COMBO_BOX(w), &iter))
+	tree_model = gtk_combo_box_get_model(combo_box);
+	if (!gtk_combo_box_get_active_iter(combo_box, &iter))
 		return;
+	active.type = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(combo_box),
+		"type"));
 
-	type = GPOINTER_TO_INT(g_object_get_data(w, "type"));
+	g_object_set_data(G_OBJECT(combo_box), "previously_active",
+		g_object_get_data(G_OBJECT(combo_box), "current_active"));
+	g_object_set_data(G_OBJECT(combo_box), "current_active",
+		GINT_TO_POINTER(gtk_combo_box_get_active(combo_box)));
 
-	if (type == PURPLE_PREF_INT) {
-		gtk_tree_model_get(tree_model, &iter,
-		                   PREF_DROPDOWN_VALUE, &int_value,
-		                   -1);
-
-		purple_prefs_set_int(key, int_value);
+	if (active.type == PURPLE_PREF_INT) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&active.value.integer, -1);
 	}
-	else if (type == PURPLE_PREF_STRING) {
-		gtk_tree_model_get(tree_model, &iter,
-		                   PREF_DROPDOWN_VALUE, &str_value,
-		                   -1);
-
-		purple_prefs_set_string(key, str_value);
+	else if (active.type == PURPLE_PREF_STRING) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&active.value.string, -1);
 	}
-	else if (type == PURPLE_PREF_BOOLEAN) {
-		gtk_tree_model_get(tree_model, &iter,
-		                   PREF_DROPDOWN_VALUE, &bool_value,
-		                   -1);
-
-		purple_prefs_set_bool(key, bool_value);
+	else if (active.type == PURPLE_PREF_BOOLEAN) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&active.value.boolean, -1);
 	}
+
+	cb(combo_box, active);
 }
 
-GtkWidget *
-pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
-		PurplePrefType type, const char *key, GList *menuitems)
+static void pidgin_prefs_dropdown_revert_active(GtkComboBox *combo_box)
 {
-	GtkWidget  *dropdown;
-	GtkWidget  *label = NULL;
-	gchar      *text;
-	const char *stored_str = NULL;
-	int         stored_int = 0;
-	gboolean    stored_bool = FALSE;
-	int         int_value  = 0;
-	const char *str_value  = NULL;
-	gboolean    bool_value = FALSE;
+	gint previously_active;
+
+	g_return_if_fail(combo_box != NULL);
+
+	previously_active = GPOINTER_TO_INT(g_object_get_data(
+		G_OBJECT(combo_box), "previously_active"));
+	g_object_set_data(G_OBJECT(combo_box), "current_active",
+		GINT_TO_POINTER(previously_active));
+
+	gtk_combo_box_set_active(combo_box, previously_active);
+}
+
+static GtkWidget *
+pidgin_prefs_dropdown_from_list_with_cb(GtkWidget *box, const gchar *title,
+	GtkComboBox **dropdown_out, GList *menuitems,
+	PidginPrefValue initial, PidginPrefsDropdownCallback cb)
+{
+	GtkWidget *dropdown;
+	GtkWidget *label = NULL;
+	gchar *text;
 	GtkListStore *store = NULL;
 	GtkTreeIter iter;
 	GtkTreeIter active;
 	GtkCellRenderer *renderer;
+	gpointer current_active;
 
 	g_return_val_if_fail(menuitems != NULL, NULL);
 
-	if (type == PURPLE_PREF_INT) {
+	if (initial.type == PURPLE_PREF_INT) {
 		store = gtk_list_store_new(PREF_DROPDOWN_COUNT, G_TYPE_STRING, G_TYPE_INT);
-		stored_int = purple_prefs_get_int(key);
-	} else if (type == PURPLE_PREF_STRING) {
+	} else if (initial.type == PURPLE_PREF_STRING) {
 		store = gtk_list_store_new(PREF_DROPDOWN_COUNT, G_TYPE_STRING, G_TYPE_STRING);
-		stored_str = purple_prefs_get_string(key);
-	} else if (type == PURPLE_PREF_BOOLEAN) {
+	} else if (initial.type == PURPLE_PREF_BOOLEAN) {
 		store = gtk_list_store_new(PREF_DROPDOWN_COUNT, G_TYPE_STRING, G_TYPE_BOOLEAN);
-		stored_bool = purple_prefs_get_bool(key);
 	} else {
 		g_warn_if_reached();
 		return NULL;
 	}
 
 	dropdown = gtk_combo_box_new_with_model(GTK_TREE_MODEL(store));
-	g_object_set_data(G_OBJECT(dropdown), "type", GINT_TO_POINTER(type));
+	if (dropdown_out != NULL)
+		*dropdown_out = GTK_COMBO_BOX(dropdown);
+	g_object_set_data(G_OBJECT(dropdown), "type", GINT_TO_POINTER(initial.type));
 
 	while (menuitems != NULL && (text = (char *)menuitems->data) != NULL) {
+		int int_value  = 0;
+		const char *str_value  = NULL;
+		gboolean bool_value = FALSE;
+
 		menuitems = g_list_next(menuitems);
 		g_return_val_if_fail(menuitems != NULL, NULL);
 
@@ -279,30 +394,31 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 		                   PREF_DROPDOWN_TEXT, text,
 		                   -1);
 
-		if (type == PURPLE_PREF_INT) {
+		if (initial.type == PURPLE_PREF_INT) {
 			int_value = GPOINTER_TO_INT(menuitems->data);
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, int_value,
 			                   -1);
 		}
-		else if (type == PURPLE_PREF_STRING) {
+		else if (initial.type == PURPLE_PREF_STRING) {
 			str_value = (const char *)menuitems->data;
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, str_value,
 			                   -1);
 		}
-		else if (type == PURPLE_PREF_BOOLEAN) {
+		else if (initial.type == PURPLE_PREF_BOOLEAN) {
 			bool_value = (gboolean)GPOINTER_TO_INT(menuitems->data);
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, bool_value,
 			                   -1);
 		}
 
-		if ((type == PURPLE_PREF_INT && stored_int == int_value) ||
-			(type == PURPLE_PREF_STRING && stored_str != NULL &&
-			 !strcmp(stored_str, str_value)) ||
-			(type == PURPLE_PREF_BOOLEAN &&
-			 (stored_bool == bool_value))) {
+		if ((initial.type == PURPLE_PREF_INT &&
+			initial.value.integer == int_value) ||
+			(initial.type == PURPLE_PREF_STRING &&
+			!g_strcmp0(initial.value.string, str_value)) ||
+			(initial.type == PURPLE_PREF_BOOLEAN &&
+			(initial.value.boolean == bool_value))) {
 
 			active = iter;
 		}
@@ -317,11 +433,61 @@ pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
 	                               NULL);
 
 	gtk_combo_box_set_active_iter(GTK_COMBO_BOX(dropdown), &active);
+	current_active = GINT_TO_POINTER(gtk_combo_box_get_active(GTK_COMBO_BOX(
+		dropdown)));
+	g_object_set_data(G_OBJECT(dropdown), "current_active", current_active);
+	g_object_set_data(G_OBJECT(dropdown), "previously_active", current_active);
 
 	g_signal_connect(G_OBJECT(dropdown), "changed",
-	                 G_CALLBACK(dropdown_set), (char *)key);
+		G_CALLBACK(dropdown_set), cb);
 
 	pidgin_add_widget_to_vbox(GTK_BOX(box), title, NULL, dropdown, FALSE, &label);
+
+	return label;
+}
+
+static void
+pidgin_prefs_dropdown_from_list_cb(GtkComboBox *combo_box,
+	PidginPrefValue value)
+{
+	const char *key;
+
+	key = g_object_get_data(G_OBJECT(combo_box), "key");
+
+	if (value.type == PURPLE_PREF_INT) {
+		purple_prefs_set_int(key, value.value.integer);
+	} else if (value.type == PURPLE_PREF_STRING) {
+		purple_prefs_set_string(key, value.value.string);
+	} else if (value.type == PURPLE_PREF_BOOLEAN) {
+		purple_prefs_set_bool(key, value.value.boolean);
+	} else {
+		g_return_if_reached();
+	}
+}
+
+GtkWidget *
+pidgin_prefs_dropdown_from_list(GtkWidget *box, const gchar *title,
+		PurplePrefType type, const char *key, GList *menuitems)
+{
+	PidginPrefValue initial;
+	GtkComboBox *dropdown = NULL;
+	GtkWidget *label;
+
+	initial.type = type;
+	if (type == PURPLE_PREF_INT) {
+		initial.value.integer = purple_prefs_get_int(key);
+	} else if (type == PURPLE_PREF_STRING) {
+		initial.value.string = purple_prefs_get_string(key);
+	} else if (type == PURPLE_PREF_BOOLEAN) {
+		initial.value.boolean = purple_prefs_get_bool(key);
+	} else {
+		g_return_val_if_reached(NULL);
+	}
+
+	label = pidgin_prefs_dropdown_from_list_with_cb(box, title, &dropdown,
+		menuitems, initial, pidgin_prefs_dropdown_from_list_cb);
+
+	g_object_set_data(G_OBJECT(dropdown), "key", (gpointer)key);
 
 	return label;
 }
@@ -368,11 +534,19 @@ pidgin_prefs_dropdown(GtkWidget *box, const gchar *title, PurplePrefType type,
 	return dropdown;
 }
 
+static void keyring_page_cleanup(void);
+
 static void
 delete_prefs(GtkWidget *asdf, void *gdsa)
 {
+	/* Cancel HTTP requests */
+	purple_http_conn_cancel(prefs_conv_themes_running_request);
+	prefs_conv_themes_running_request = NULL;
+
 	/* Close any "select sound" request dialogs */
 	purple_request_close_with_handle(prefs);
+
+	purple_notify_close_with_handle(prefs);
 
 	/* Unregister callbacks. */
 	purple_prefs_disconnect_by_handle(prefs);
@@ -388,6 +562,8 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	prefs_conv_variants_combo_box = NULL;
 	prefs_status_themes_combo_box = NULL;
 	prefs_smiley_themes_combo_box = NULL;
+
+	keyring_page_cleanup();
 
 	sample_webview = NULL;
 
@@ -658,6 +834,19 @@ prefs_themes_init(void)
 	prefs_smiley_themes = gtk_list_store_new(3, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING);
 }
 
+/**
+ * Attempt to load the given directory as a theme.  If we are unable to
+ * open the path as a theme then we recurse into path and attempt to
+ * load each subdirectory that we encounter.
+ *
+ * @param path A directory containing a theme.  The theme could be at the
+ *        top level of this directory or in any subdirectory thereof.
+ * @param type The type of theme to load.  The loader for this theme type
+ *        will be used and this loader will determine what constitutes a
+ *        "theme."
+ *
+ * @return A new reference to a PurpleTheme.
+ */
 static PurpleTheme *
 prefs_theme_find_theme(const gchar *path, const gchar *type)
 {
@@ -763,7 +952,7 @@ theme_install_theme(char *path, struct theme_info *info)
 
 		/* Fire! */
 		if (system(command)) {
-			purple_notify_error(NULL, NULL, _("Theme failed to unpack."), NULL);
+			purple_notify_error(NULL, NULL, _("Theme failed to unpack."), NULL, NULL);
 			g_free(command);
 			g_free(destdir);
 			free_theme_info(info);
@@ -771,7 +960,7 @@ theme_install_theme(char *path, struct theme_info *info)
 		}
 #else
 		if (!winpidgin_gz_untar(path, destdir)) {
-			purple_notify_error(NULL, NULL, _("Theme failed to unpack."), NULL);
+			purple_notify_error(NULL, NULL, _("Theme failed to unpack."), NULL, NULL);
 			g_free(destdir);
 			free_theme_info(info);
 			return;
@@ -801,7 +990,11 @@ theme_install_theme(char *path, struct theme_info *info)
 						 "purple", info->type, NULL);
 
 			/* move the entire directory to new location */
-			g_rename(purple_theme_get_dir(theme), theme_dest);
+			if (g_rename(purple_theme_get_dir(theme), theme_dest)) {
+				purple_debug_error("gtkprefs", "Error renaming %s to %s: "
+						"%s\n", purple_theme_get_dir(theme), theme_dest,
+						g_strerror(errno));
+			}
 
 			g_free(theme_dest);
 			g_remove(destdir);
@@ -812,7 +1005,7 @@ theme_install_theme(char *path, struct theme_info *info)
 		} else {
 			/* something was wrong with the theme archive */
 			g_unlink(destdir);
-			purple_notify_error(NULL, NULL, _("Theme failed to load."), NULL);
+			purple_notify_error(NULL, NULL, _("Theme failed to load."), NULL, NULL);
 		}
 
 	} else { /* just a single file so copy it to a new temp directory and attempt to load it*/
@@ -845,18 +1038,25 @@ theme_install_theme(char *path, struct theme_info *info)
 				if(!g_file_test(theme_dest, G_FILE_TEST_IS_DIR))
 					purple_build_dir(theme_dest, S_IRUSR | S_IWUSR | S_IXUSR);
 
-				g_rename(purple_theme_get_dir(theme), theme_dest);
+				if (g_rename(purple_theme_get_dir(theme), theme_dest)) {
+					purple_debug_error("gtkprefs", "Error renaming %s to %s: "
+							"%s\n", purple_theme_get_dir(theme), theme_dest,
+							g_strerror(errno));
+				}
 
 				g_free(theme_dest);
 				g_object_unref(theme);
 
 				prefs_themes_refresh();
 			} else {
-				g_remove(temp_path);
-				purple_notify_error(NULL, NULL, _("Theme failed to load."), NULL);
+				if (g_remove(temp_path)) {
+					purple_debug_error("gtkprefs", "Error removing %s: %s\n",
+							temp_path, g_strerror(errno));
+				}
+				purple_notify_error(NULL, NULL, _("Theme failed to load."), NULL, NULL);
 			}
 		} else {
-			purple_notify_error(NULL, NULL, _("Theme failed to copy."), NULL);
+			purple_notify_error(NULL, NULL, _("Theme failed to copy."), NULL, NULL);
 		}
 
 		g_free(temp_file);
@@ -868,17 +1068,25 @@ theme_install_theme(char *path, struct theme_info *info)
 }
 
 static void
-theme_got_url(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *themedata, size_t len, const gchar *error_message)
+theme_got_url(PurpleHttpConnection *http_conn, PurpleHttpResponse *response,
+	gpointer _info)
 {
+	struct theme_info *info = _info;
+	const gchar *themedata;
+	size_t len;
 	FILE *f;
 	gchar *path;
 	size_t wc;
 
-	if ((error_message != NULL) || (len == 0)) {
-		free_theme_info(user_data);
+	g_assert(http_conn == prefs_conv_themes_running_request);
+	prefs_conv_themes_running_request = NULL;
+
+	if (!purple_http_response_is_successful(response)) {
+		free_theme_info(info);
 		return;
 	}
+
+	themedata = purple_http_response_get_data(response, &len);
 
 	f = purple_mkstemp(&path, TRUE);
 	wc = fwrite(themedata, len, 1, f);
@@ -887,12 +1095,12 @@ theme_got_url(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 		fclose(f);
 		g_unlink(path);
 		g_free(path);
-		free_theme_info(user_data);
+		free_theme_info(info);
 		return;
 	}
 	fclose(f);
 
-	theme_install_theme(path, user_data);
+	theme_install_theme(path, info);
 
 	g_unlink(path);
 	g_free(path);
@@ -902,9 +1110,10 @@ static void
 theme_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 		GtkSelectionData *sd, guint info, guint t, gpointer user_data)
 {
-	gchar *name = g_strchomp((gchar *)sd->data);
+	gchar *name = g_strchomp((gchar *)gtk_selection_data_get_data(sd));
 
-	if ((sd->length >= 0) && (sd->format == 8)) {
+	if ((gtk_selection_data_get_length(sd) >= 0)
+	 && (gtk_selection_data_get_format(sd) == 8)) {
 		/* Well, it looks like the drag event was cool.
 		 * Let's do something with it */
 		gchar *temp;
@@ -928,22 +1137,19 @@ theme_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 			}
 			theme_install_theme(tmp, info);
 			g_free(tmp);
-		} else if (!g_ascii_strncasecmp(name, "http://", 7)) {
+		} else if (!g_ascii_strncasecmp(name, "http://", 7) ||
+			!g_ascii_strncasecmp(name, "https://", 8)) {
 			/* Oo, a web drag and drop. This is where things
 			 * will start to get interesting */
-			purple_util_fetch_url(name, TRUE, NULL, FALSE, -1, theme_got_url, info);
-		} else if (!g_ascii_strncasecmp(name, "https://", 8)) {
-			/* purple_util_fetch_url() doesn't support HTTPS, but we want users
-			 * to be able to drag and drop links from the SF trackers, so
-			 * we'll try it as an HTTP URL. */
-			char *tmp = g_strdup(name + 1);
-			tmp[0] = 'h';
-			tmp[1] = 't';
-			tmp[2] = 't';
-			tmp[3] = 'p';
+			PurpleHttpRequest *hr;
+			purple_http_conn_cancel(prefs_conv_themes_running_request);
 
-			purple_util_fetch_url(tmp, TRUE, NULL, FALSE, -1, theme_got_url, info);
-			g_free(tmp);
+			hr = purple_http_request_new(name);
+			purple_http_request_set_max_len(hr,
+				PREFS_MAX_DOWNLOADED_THEME_SIZE);
+			prefs_conv_themes_running_request = purple_http_request(
+				NULL, hr, theme_got_url, info);
+			purple_http_request_unref(hr);
 		} else
 			free_theme_info(info);
 
@@ -1331,7 +1537,7 @@ theme_page(void)
 }
 
 static void
-formatting_toggle_cb(GtkWebView *webview, GtkWebViewButtons buttons, void *toolbar)
+formatting_toggle_cb(GtkWebView *webview, GtkWebViewButtons buttons, void *data)
 {
 	gboolean bold, italic, uline, strike;
 
@@ -1415,7 +1621,7 @@ conversation_usetabs_cb(const char *name, PurplePrefType type,
 }
 
 
-#define CONVERSATION_CLOSE_ACCEL_PATH "<main>/Conversation/Close"
+#define CONVERSATION_CLOSE_ACCEL_PATH "<Actions>/ConversationActions/Close"
 
 /* Filled in in keyboard_shortcuts(). */
 static GtkAccelKey ctrl_w = { 0, 0, 0 };
@@ -1630,7 +1836,6 @@ conv_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
-	GtkWidget *toolbar;
 	GtkWidget *iconpref1;
 	GtkWidget *iconpref2;
 	GtkWidget *webview;
@@ -1643,6 +1848,13 @@ conv_page(void)
 	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 
 	vbox = pidgin_make_frame(ret, _("Conversations"));
+
+	pidgin_prefs_dropdown(vbox, _("Chat notification:"),
+		PURPLE_PREF_INT, PIDGIN_PREFS_ROOT "/conversations/notification_chat",
+		_("On unseen events"), PIDGIN_UNSEEN_EVENT,
+		_("On unseen text"), PIDGIN_UNSEEN_TEXT,
+		_("On unseen text and the nick was said"), PIDGIN_UNSEEN_NICK,
+		NULL);
 
 	pidgin_prefs_checkbox(_("Show _formatting on incoming messages"),
 				PIDGIN_PREFS_ROOT "/conversations/show_incoming_formatting", vbox);
@@ -1660,10 +1872,8 @@ conv_page(void)
 
 	pidgin_prefs_checkbox(_("_Notify buddies that you are typing to them"),
 			"/purple/conversations/im/send_typing", vbox);
-#ifdef USE_GTKSPELL
 	pidgin_prefs_checkbox(_("Highlight _misspelled words"),
 			PIDGIN_PREFS_ROOT "/conversations/spellcheck", vbox);
-#endif
 
 	pidgin_prefs_checkbox(_("Use smooth-scrolling"), PIDGIN_PREFS_ROOT "/conversations/use_smooth_scrolling", vbox);
 
@@ -1723,7 +1933,7 @@ conv_page(void)
 
 	vbox = pidgin_make_frame(ret, _("Default Formatting"));
 
-	frame = pidgin_create_webview(TRUE, &webview, &toolbar, NULL);
+	frame = pidgin_create_webview(TRUE, &webview, NULL);
 	gtk_widget_show(frame);
 	gtk_widget_set_name(webview, "pidgin_prefs_font_webview");
 	gtk_widget_set_size_request(frame, 450, -1);
@@ -1751,7 +1961,7 @@ conv_page(void)
 	                        PURPLE_CONNECTION_FORMATTING_WBFO);
 
 	g_signal_connect_after(G_OBJECT(webview), "format-toggled",
-	                       G_CALLBACK(formatting_toggle_cb), toolbar);
+	                       G_CALLBACK(formatting_toggle_cb), NULL);
 	g_signal_connect_after(G_OBJECT(webview), "format-cleared",
 	                       G_CALLBACK(formatting_clear_cb), NULL);
 	sample_webview = webview;
@@ -1764,6 +1974,26 @@ conv_page(void)
 static void
 network_ip_changed(GtkEntry *entry, gpointer data)
 {
+#if GTK_CHECK_VERSION(3,0,0)
+	const gchar *text = gtk_entry_get_text(entry);
+	GtkStyleContext *context = gtk_widget_get_style_context(GTK_WIDGET(entry));
+
+	if (text && *text) {
+		if (purple_ip_address_is_valid(text)) {
+			purple_network_set_public_ip(text);
+			gtk_style_context_add_class(context, "good-ip");
+			gtk_style_context_remove_class(context, "bad-ip");
+		} else {
+			gtk_style_context_add_class(context, "bad-ip");
+			gtk_style_context_remove_class(context, "good-ip");
+		}
+
+	} else {
+		purple_network_set_public_ip("");
+		gtk_style_context_remove_class(context, "bad-ip");
+		gtk_style_context_remove_class(context, "good-ip");
+	}
+#else
 	const gchar *text = gtk_entry_get_text(entry);
 	GdkColor color;
 
@@ -1786,6 +2016,7 @@ network_ip_changed(GtkEntry *entry, gpointer data)
 		purple_network_set_public_ip("");
 		gtk_widget_modify_base(GTK_WIDGET(entry), GTK_STATE_NORMAL, NULL);
 	}
+#endif
 }
 
 static gboolean
@@ -1846,7 +2077,7 @@ proxy_button_clicked_cb(GtkWidget *button, gchar *program)
 	if (g_spawn_command_line_async(program, &err))
 		return;
 
-	purple_notify_error(NULL, NULL, _("Cannot start proxy configuration program."), err->message);
+	purple_notify_error(NULL, NULL, _("Cannot start proxy configuration program."), err->message, NULL);
 	g_error_free(err);
 }
 
@@ -1859,7 +2090,7 @@ browser_button_clicked_cb(GtkWidget *button, gchar *path)
 	if (g_spawn_command_line_async(path, &err))
 		return;
 
-	purple_notify_error(NULL, NULL, _("Cannot start browser configuration program."), err->message);
+	purple_notify_error(NULL, NULL, _("Cannot start browser configuration program."), err->message, NULL);
 	g_error_free(err);
 }
 #endif
@@ -1908,6 +2139,23 @@ network_page(void)
 	GtkWidget *vbox, *hbox, *entry;
 	GtkWidget *label, *auto_ip_checkbox, *ports_checkbox, *spin_button;
 	GtkSizeGroup *sg;
+#if GTK_CHECK_VERSION(3,0,0)
+	GtkStyleContext *context;
+	GtkCssProvider *ip_css;
+	const gchar ip_style[] =
+		".bad-ip {"
+			"color: @error_fg_color;"
+			"text-shadow: 0 1px @error_text_shadow;"
+			"background-image: none;"
+			"background-color: @error_bg_color;"
+		"}"
+		".good-ip {"
+			"color: @question_fg_color;"
+			"text-shadow: 0 1px @question_text_shadow;"
+			"background-image: none;"
+			"background-color: @success_color;"
+		"}";
+#endif
 
 	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
@@ -1948,6 +2196,15 @@ network_page(void)
 	gtk_entry_set_text(GTK_ENTRY(entry), purple_network_get_public_ip());
 	g_signal_connect(G_OBJECT(entry), "changed",
 					 G_CALLBACK(network_ip_changed), NULL);
+
+#if GTK_CHECK_VERSION(3,0,0)
+	ip_css = gtk_css_provider_new();
+	gtk_css_provider_load_from_data(ip_css, ip_style, -1, NULL);
+	context = gtk_widget_get_style_context(entry);
+	gtk_style_context_add_provider(context,
+	                               GTK_STYLE_PROVIDER(ip_css),
+	                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+#endif
 
 	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Public _IP:"),
 			sg, entry, TRUE, NULL);
@@ -2354,10 +2611,6 @@ proxy_page(void)
 		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
 		gtk_table_attach(GTK_TABLE(table), entry, 3, 4, 1, 2, GTK_FILL , 0, 0, 0);
 		gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
-#if !GTK_CHECK_VERSION(2,16,0)
-		if (gtk_entry_get_invisible_char(GTK_ENTRY(entry)) == '*')
-			gtk_entry_set_invisible_char(GTK_ENTRY(entry), PIDGIN_INVISIBLE_CHAR);
-#endif /* Less than GTK+ 2.16 */
 		g_signal_connect(G_OBJECT(entry), "changed",
 				 G_CALLBACK(proxy_print_option), (void *)PROXYPASS);
 
@@ -2406,7 +2659,262 @@ logging_page(void)
 	return ret;
 }
 
-#ifndef _WIN32
+/*** keyring page *******************************************************/
+
+static void
+keyring_page_settings_changed(GtkWidget *widget, gpointer _setting)
+{
+	PurpleRequestField *setting = _setting;
+	PurpleRequestFieldType field_type;
+
+	gtk_widget_set_sensitive(keyring_apply, TRUE);
+
+	field_type = purple_request_field_get_type(setting);
+
+	if (field_type == PURPLE_REQUEST_FIELD_BOOLEAN) {
+		purple_request_field_bool_set_value(setting,
+			gtk_toggle_button_get_active(
+				GTK_TOGGLE_BUTTON(widget)));
+	} else if (field_type == PURPLE_REQUEST_FIELD_STRING) {
+		purple_request_field_string_set_value(setting,
+			gtk_entry_get_text(GTK_ENTRY(widget)));
+	} else if (field_type == PURPLE_REQUEST_FIELD_INTEGER) {
+		purple_request_field_int_set_value(setting,
+			gtk_spin_button_get_value_as_int(
+				GTK_SPIN_BUTTON(widget)));
+	} else
+		g_return_if_reached();
+}
+
+static GtkWidget *
+keyring_page_add_settings_field(GtkBox *vbox, PurpleRequestField *setting,
+	GtkSizeGroup *sg)
+{
+	GtkWidget *widget, *hbox;
+	PurpleRequestFieldType field_type;
+	const gchar *label;
+
+	label = purple_request_field_get_label(setting);
+
+	field_type = purple_request_field_get_type(setting);
+	if (field_type == PURPLE_REQUEST_FIELD_BOOLEAN) {
+		widget = gtk_check_button_new_with_label(label);
+		label = NULL;
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),
+			purple_request_field_bool_get_value(setting));
+		g_signal_connect(G_OBJECT(widget), "toggled",
+			G_CALLBACK(keyring_page_settings_changed), setting);
+	} else if (field_type == PURPLE_REQUEST_FIELD_STRING) {
+		widget = gtk_entry_new();
+		gtk_entry_set_text(GTK_ENTRY(widget),
+			purple_request_field_string_get_value(setting));
+		if (purple_request_field_string_is_masked(setting))
+			gtk_entry_set_visibility(GTK_ENTRY(widget), FALSE);
+		g_signal_connect(G_OBJECT(widget), "changed",
+			G_CALLBACK(keyring_page_settings_changed), setting);
+	} else if (field_type == PURPLE_REQUEST_FIELD_INTEGER) {
+		widget = gtk_spin_button_new_with_range(
+			purple_request_field_int_get_lower_bound(setting),
+			purple_request_field_int_get_upper_bound(setting), 1);
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(widget),
+			purple_request_field_int_get_value(setting));
+		g_signal_connect(G_OBJECT(widget), "value-changed",
+			G_CALLBACK(keyring_page_settings_changed), setting);
+	} else {
+		purple_debug_error("gtkprefs", "Unsupported field type\n");
+		return NULL;
+	}
+
+	hbox = pidgin_add_widget_to_vbox(vbox, label, sg, widget,
+		FALSE, NULL);
+	return ((void*)hbox == (void*)vbox) ? widget : hbox;
+}
+
+/* XXX: it could be available for all plugins, not keyrings only */
+static GList *
+keyring_page_add_settings(PurpleRequestFields *settings)
+{
+	GList *it, *groups, *added_fields;
+	GtkSizeGroup *sg;
+
+	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+
+	added_fields = NULL;
+	groups = purple_request_fields_get_groups(settings);
+	for (it = g_list_first(groups); it != NULL; it = g_list_next(it)) {
+		GList *it2, *fields;
+		GtkBox *vbox;
+		PurpleRequestFieldGroup *group;
+		const gchar *group_title;
+
+		group = it->data;
+		group_title = purple_request_field_group_get_title(group);
+		if (group_title) {
+			vbox = GTK_BOX(pidgin_make_frame(
+				GTK_WIDGET(keyring_vbox), group_title));
+			added_fields = g_list_prepend(added_fields,
+				g_object_get_data(G_OBJECT(vbox), "main-vbox"));
+		} else
+			vbox = keyring_vbox;
+
+		fields = purple_request_field_group_get_fields(group);
+		for (it2 = g_list_first(fields); it2 != NULL;
+			it2 = g_list_next(it2)) {
+			GtkWidget *added = keyring_page_add_settings_field(vbox,
+				it2->data, sg);
+			if (added == NULL || vbox != keyring_vbox)
+				continue;
+			added_fields = g_list_prepend(added_fields, added);
+		}
+	}
+
+	g_object_unref(sg);
+
+	return added_fields;
+}
+
+static void
+keyring_page_settings_apply(GtkButton *button, gpointer _unused)
+{
+	if (!purple_keyring_apply_settings(prefs, keyring_settings))
+		return;
+
+	gtk_widget_set_sensitive(keyring_apply, FALSE);
+}
+
+static void
+keyring_page_update_settings()
+{
+	if (keyring_settings != NULL)
+		purple_request_fields_destroy(keyring_settings);
+	keyring_settings = purple_keyring_read_settings();
+	if (!keyring_settings)
+		return;
+
+	keyring_settings_fields = keyring_page_add_settings(keyring_settings);
+
+	keyring_apply = gtk_button_new_with_mnemonic(_("_Apply"));
+	gtk_box_pack_start(keyring_vbox, keyring_apply, FALSE, FALSE, 1);
+	gtk_widget_set_sensitive(keyring_apply, FALSE);
+	keyring_settings_fields = g_list_prepend(keyring_settings_fields,
+		keyring_apply);
+	g_signal_connect(G_OBJECT(keyring_apply), "clicked",
+		G_CALLBACK(keyring_page_settings_apply), NULL);
+
+	gtk_widget_show_all(keyring_page_instance);
+}
+
+static void
+keyring_page_pref_set_inuse(GError *error, gpointer _keyring_page_instance)
+{
+	PurpleKeyring *in_use = purple_keyring_get_inuse();
+
+	if (_keyring_page_instance != keyring_page_instance) {
+		purple_debug_info("gtkprefs", "pref window already closed\n");
+		return;
+	}
+
+	gtk_widget_set_sensitive(GTK_WIDGET(keyring_combo), TRUE);
+
+	if (error != NULL) {
+		pidgin_prefs_dropdown_revert_active(keyring_combo);
+		purple_notify_error(NULL, _("Keyring"),
+			_("Failed to set new keyring"), error->message, NULL);
+		return;
+	}
+
+	g_return_if_fail(in_use != NULL);
+	purple_prefs_set_string("/purple/keyring/active",
+		purple_keyring_get_id(in_use));
+
+	keyring_page_update_settings();
+}
+
+static void
+keyring_page_pref_changed(GtkComboBox *combo_box, PidginPrefValue value)
+{
+	const char *keyring_id;
+	PurpleKeyring *keyring;
+	GList *it;
+
+	g_return_if_fail(combo_box != NULL);
+	g_return_if_fail(value.type == PURPLE_PREF_STRING);
+
+	keyring_id = value.value.string;
+	keyring = purple_keyring_find_keyring_by_id(keyring_id);
+	if (keyring == NULL) {
+		pidgin_prefs_dropdown_revert_active(keyring_combo);
+		purple_notify_error(NULL, _("Keyring"),
+			_("Selected keyring is disabled"), NULL, NULL);
+		return;
+	}
+
+	gtk_widget_set_sensitive(GTK_WIDGET(combo_box), FALSE);
+
+	for (it = keyring_settings_fields; it != NULL; it = g_list_next(it))
+	{
+		GtkWidget *widget = it->data;
+		gtk_container_remove(
+			GTK_CONTAINER(gtk_widget_get_parent(widget)), widget);
+	}
+	gtk_widget_show_all(keyring_page_instance);
+	g_list_free(keyring_settings_fields);
+	keyring_settings_fields = NULL;
+	if (keyring_settings)
+		purple_request_fields_destroy(keyring_settings);
+	keyring_settings = NULL;
+
+	purple_keyring_set_inuse(keyring, FALSE, keyring_page_pref_set_inuse,
+		keyring_page_instance);
+}
+
+static void
+keyring_page_cleanup(void)
+{
+	keyring_page_instance = NULL;
+	keyring_combo = NULL;
+	keyring_vbox = NULL;
+	g_list_free(keyring_settings_fields);
+	keyring_settings_fields = NULL;
+	if (keyring_settings)
+		purple_request_fields_destroy(keyring_settings);
+	keyring_settings = NULL;
+	keyring_apply = NULL;
+}
+
+static GtkWidget *
+keyring_page(void)
+{
+	GList *names;
+	PidginPrefValue initial;
+
+	g_return_val_if_fail(keyring_page_instance == NULL,
+		keyring_page_instance);
+
+	keyring_page_instance = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	gtk_container_set_border_width(GTK_CONTAINER(keyring_page_instance),
+		PIDGIN_HIG_BORDER);
+
+	/* Keyring selection */
+	keyring_vbox = GTK_BOX(pidgin_make_frame(keyring_page_instance,
+		_("Keyring")));
+	names = purple_keyring_get_options();
+	initial.type = PURPLE_PREF_STRING;
+	initial.value.string = purple_prefs_get_string("/purple/keyring/active");
+	pidgin_prefs_dropdown_from_list_with_cb(GTK_WIDGET(keyring_vbox),
+		_("Keyring:"), &keyring_combo, names, initial,
+		keyring_page_pref_changed);
+	g_list_free(names);
+
+	keyring_page_update_settings();
+
+	gtk_widget_show_all(keyring_page_instance);
+
+	return keyring_page_instance;
+}
+
+/*** keyring page - end *************************************************/
+
 static gint
 sound_cmd_yeah(GtkEntry *entry, gpointer d)
 {
@@ -2434,7 +2942,6 @@ sound_changed2_cb(const char *name, PurplePrefType type,
 
 	gtk_widget_set_sensitive(vbox, strcmp(method, "none"));
 }
-#endif /* !_WIN32 */
 
 #ifdef USE_GSTREAMER
 static void
@@ -2447,7 +2954,9 @@ sound_changed3_cb(const char *name, PurplePrefType type,
 	gtk_widget_set_sensitive(hbox,
 			!strcmp(method, "automatic") ||
 			!strcmp(method, "alsa") ||
-			!strcmp(method, "esd"));
+			!strcmp(method, "esd") ||
+			!strcmp(method, "waveform") ||
+			!strcmp(method, "directsound"));
 }
 #endif /* USE_GSTREAMER */
 
@@ -2556,9 +3065,8 @@ select_sound(GtkWidget *button, gpointer being_NULL_is_fun)
 		filename = NULL;
 
 	purple_request_file(prefs, _("Sound Selection"), filename, FALSE,
-					  G_CALLBACK(sound_chosen_cb), NULL,
-					  NULL, NULL, NULL,
-					  GINT_TO_POINTER(sound_row_sel));
+		G_CALLBACK(sound_chosen_cb), NULL, NULL,
+		GINT_TO_POINTER(sound_row_sel));
 }
 
 #ifdef USE_GSTREAMER
@@ -2639,7 +3147,10 @@ static GtkWidget *
 sound_page(void)
 {
 	GtkWidget *ret;
-	GtkWidget *vbox, *vbox2, *sw, *button;
+	GtkWidget *vbox, *vbox2, *button, *parent, *parent_parent, *parent_parent_parent;
+#ifdef USE_GSTREAMER
+	GtkWidget *sw;
+#endif
 	GtkSizeGroup *sg;
 	GtkTreeIter iter;
 	GtkWidget *event_view;
@@ -2652,11 +3163,9 @@ sound_page(void)
 	int j;
 	const char *file;
 	char *pref;
-#ifndef _WIN32
 	GtkWidget *dd;
 	GtkWidget *entry;
 	const char *cmd;
-#endif
 
 	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
@@ -2668,16 +3177,24 @@ sound_page(void)
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox2), vbox, FALSE, FALSE, 0);
 
-#ifndef _WIN32
 	dd = pidgin_prefs_dropdown(vbox2, _("_Method:"), PURPLE_PREF_STRING,
 			PIDGIN_PREFS_ROOT "/sound/method",
-			_("Console beep"), "beep",
-#ifdef USE_GSTREAMER
 			_("Automatic"), "automatic",
+#ifdef USE_GSTREAMER
+#ifdef _WIN32
+/*			"WaveForm", "waveform", */
+			"DirectSound", "directsound",
+#else
 			"ESD", "esd",
 			"ALSA", "alsa",
-#endif
+#endif /* _WIN32 */
+#endif /* USE_GSTREAMER */
+#ifdef _WIN32
+			"PlaySound", "playsoundw",
+#else
+			_("Console beep"), "beep",
 			_("Command"), "custom",
+#endif /* _WIN32 */
 			_("No sounds"), "none",
 			NULL);
 	gtk_size_group_add_widget(sg, dd);
@@ -2697,7 +3214,6 @@ sound_page(void)
 	gtk_widget_set_sensitive(hbox,
 			!strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"),
 					"custom"));
-#endif /* _WIN32 */
 
 	button = pidgin_prefs_checkbox(_("M_ute sounds"), PIDGIN_PREFS_ROOT "/sound/mute", vbox);
 	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/mute", mute_changed_cb, button);
@@ -2729,22 +3245,23 @@ sound_page(void)
 			  purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"), hbox);
 #endif
 
-#ifndef _WIN32
 	gtk_widget_set_sensitive(vbox,
 			strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"), "none"));
 	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/method",
 								sound_changed2_cb, vbox);
-#endif
 	vbox = pidgin_make_frame(ret, _("Sound Events"));
 
 	/* The following is an ugly hack to make the frame expand so the
 	 * sound events list is big enough to be usable */
-	gtk_box_set_child_packing(GTK_BOX(vbox->parent), vbox, TRUE, TRUE, 0,
+	parent = gtk_widget_get_parent(vbox);
+	parent_parent = gtk_widget_get_parent(parent);
+	parent_parent_parent = gtk_widget_get_parent(parent_parent);
+	gtk_box_set_child_packing(GTK_BOX(parent), vbox, TRUE, TRUE, 0,
 			GTK_PACK_START);
-	gtk_box_set_child_packing(GTK_BOX(vbox->parent->parent), vbox->parent, TRUE,
-			TRUE, 0, GTK_PACK_START);
-	gtk_box_set_child_packing(GTK_BOX(vbox->parent->parent->parent),
-			vbox->parent->parent, TRUE, TRUE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(parent_parent),
+			parent, TRUE, TRUE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(parent_parent_parent),
+			parent_parent, TRUE, TRUE, 0, GTK_PACK_START);
 
 	/* SOUND SELECTION */
 	event_store = gtk_list_store_new (4, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_UINT);
@@ -2850,7 +3367,6 @@ away_page(void)
 	GtkWidget *dd;
 	GtkWidget *label;
 	GtkWidget *button;
-	GtkWidget *select;
 	GtkWidget *menu;
 	GtkSizeGroup *sg;
 
@@ -2873,7 +3389,7 @@ away_page(void)
 	gtk_size_group_add_widget(sg, dd);
 	gtk_misc_set_alignment(GTK_MISC(dd), 0, 0.5);
 
-	select = pidgin_prefs_labeled_spin_button(vbox,
+	pidgin_prefs_labeled_spin_button(vbox,
 			_("_Minutes before becoming idle:"), "/purple/away/mins_before_away",
 			1, 24 * 60, sg);
 
@@ -2934,6 +3450,653 @@ away_page(void)
 	return ret;
 }
 
+#ifdef USE_VV
+static GList *
+get_vv_element_devices(const gchar *element_name)
+{
+	GList *ret = NULL;
+	GstElement *element;
+	GObjectClass *klass;
+#if !GST_CHECK_VERSION(1,0,0)
+	GstPropertyProbe *probe;
+	const GParamSpec *pspec;
+	guint i;
+	GValueArray *array;
+	enum {
+		PROBE_NONE,
+		PROBE_DEVICE,
+		PROBE_NAME
+	} probe_attr;
+#endif
+
+	ret = g_list_prepend(ret, g_strdup(_("Default")));
+	ret = g_list_prepend(ret, g_strdup(""));
+
+	if (!strcmp(element_name, "<custom>") || (*element_name == '\0')) {
+		return g_list_reverse(ret);
+	}
+
+	if (g_strcmp0(element_name, "videodisabledsrc") == 0) {
+		ret = g_list_prepend(ret, g_strdup(_("Random noise")));
+		ret = g_list_prepend(ret, g_strdup("snow"));
+
+		return g_list_reverse(ret);
+	}
+
+	element = gst_element_factory_make(element_name, "test");
+	if (!element) {
+		purple_debug_info("vvconfig", "'%s' - unable to find element\n",
+			element_name);
+		return g_list_reverse(ret);
+	}
+
+	klass = G_OBJECT_GET_CLASS (element);
+	if (!klass) {
+		purple_debug_info("vvconfig", "'%s' - unable to find GObject "
+			"Class\n", element_name);
+		return g_list_reverse(ret);
+	}
+
+#if GST_CHECK_VERSION(1,0,0)
+	purple_debug_info("vvconfig", "'%s' - gstreamer-1.0 doesn't suport "
+		"property probing\n", element_name);
+#else
+	if (g_object_class_find_property(klass, "device"))
+		probe_attr = PROBE_DEVICE;
+	else if (g_object_class_find_property(klass, "device-index") &&
+		g_object_class_find_property(klass, "device-name"))
+		probe_attr = PROBE_NAME;
+	else
+		probe_attr = PROBE_NONE;
+	
+	if (!GST_IS_PROPERTY_PROBE(element))
+		probe_attr = PROBE_NONE;
+	
+	if (probe_attr == PROBE_NONE)
+	{
+		purple_debug_info("vvconfig", "'%s' - no possibility to probe "
+			"for devices\n", element_name);
+		gst_object_unref(element);
+		return g_list_reverse(ret);
+	}
+
+	probe = GST_PROPERTY_PROBE(element);
+
+	if (probe_attr == PROBE_DEVICE)
+		pspec = gst_property_probe_get_property(probe, "device");
+	else /* probe_attr == PROBE_NAME */
+		pspec = gst_property_probe_get_property(probe, "device-name");
+
+	if (!pspec) {
+		purple_debug_info("vvconfig", "'%s' - creating probe failed\n",
+			element_name);
+		gst_object_unref(element);
+		return g_list_reverse(ret);
+	}
+
+	/* Set autoprobe[-fps] to FALSE to avoid delays when probing. */
+	if (g_object_class_find_property(klass, "autoprobe"))
+		g_object_set(G_OBJECT(element), "autoprobe", FALSE, NULL);
+	if (g_object_class_find_property(klass, "autoprobe-fps"))
+		g_object_set(G_OBJECT(element), "autoprobe-fps", FALSE, NULL);
+
+	array = gst_property_probe_probe_and_get_values(probe, pspec);
+	if (array == NULL) {
+		purple_debug_info("vvconfig", "'%s' has no devices\n",
+			element_name);
+		gst_object_unref(element);
+		return g_list_reverse(ret);
+	}
+
+	for (i = 0; i < array->n_values; i++) {
+		GValue *device;
+		const gchar *name;
+		const gchar *device_name;
+
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+		/* GValueArray is in gstreamer-0.10 API */
+		device = g_value_array_get_nth(array, i);
+G_GNUC_END_IGNORE_DEPRECATIONS
+
+		if (probe_attr == PROBE_DEVICE) {
+			g_object_set_property(G_OBJECT(element), "device",
+				device);
+			if (gst_element_set_state(element, GST_STATE_READY)
+				!= GST_STATE_CHANGE_SUCCESS)
+			{
+				purple_debug_warning("vvconfig", "Error "
+					"changing state of %s\n", element_name);
+				continue;
+			}
+
+			g_object_get(G_OBJECT(element), "device-name", &name,
+				NULL);
+			device_name = g_strdup(g_value_get_string(device));
+		} else /* probe_attr == PROBE_NAME */ {
+			name = g_strdup(g_value_get_string(device));
+			device_name = g_strdup_printf("%d", i);
+		}
+
+		if (name == NULL)
+			name = _("Unknown");
+		purple_debug_info("vvconfig", "Found device %s: %s for %s\n",
+			device_name, name, element_name);
+		ret = g_list_prepend(ret, (gpointer)name);
+		ret = g_list_prepend(ret, (gpointer)device_name);
+		gst_element_set_state(element, GST_STATE_NULL);
+	}
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+	/* GValueArray is in gstreamer-0.10 API */
+	g_value_array_free(array);
+G_GNUC_END_IGNORE_DEPRECATIONS
+#endif
+
+	gst_object_unref(element);
+	return g_list_reverse(ret);
+}
+
+static GList *
+get_vv_element_plugins(const gchar **plugins)
+{
+	GList *ret = NULL;
+
+	ret = g_list_prepend(ret, (gpointer)_("Default"));
+	ret = g_list_prepend(ret, "");
+	for (; plugins[0] && plugins[1]; plugins += 2) {
+#if GST_CHECK_VERSION(1,0,0)
+		if (gst_registry_check_feature_version(gst_registry_get(),
+			plugins[0], 0, 0, 0)
+#else
+		if (gst_default_registry_check_feature_version(plugins[0], 0, 0, 0)
+#endif
+			|| g_strcmp0(plugins[0], "videodisabledsrc") == 0)
+		{
+			ret = g_list_prepend(ret, (gpointer)_(plugins[1]));
+			ret = g_list_prepend(ret, (gpointer)plugins[0]);
+		}
+	}
+
+	return g_list_reverse(ret);
+}
+
+static void
+vv_plugin_changed_cb(const gchar *name, PurplePrefType type,
+                     gconstpointer value, gpointer data)
+{
+	GtkWidget *vbox = data;
+	GtkSizeGroup *sg;
+	GtkWidget *widget;
+	gchar *pref;
+	GList *devices;
+
+	sg = g_object_get_data(G_OBJECT(vbox), "size-group");
+	widget = g_object_get_data(G_OBJECT(vbox), "device-hbox");
+	gtk_widget_destroy(widget);
+
+	pref = g_strdup(name);
+	strcpy(pref + strlen(pref) - strlen("plugin"), "device");
+	devices = get_vv_element_devices(value);
+	if (g_list_find_custom(devices, purple_prefs_get_string(pref),
+	                       (GCompareFunc)strcmp) == NULL)
+		purple_prefs_set_string(pref, g_list_next(devices)->data);
+	widget = pidgin_prefs_dropdown_from_list(vbox, _("_Device"),
+	                                         PURPLE_PREF_STRING, pref, devices);
+	g_list_free_full(devices, g_free);
+	gtk_size_group_add_widget(sg, widget);
+	gtk_misc_set_alignment(GTK_MISC(widget), 0, 0.5);
+
+	g_object_set_data(G_OBJECT(vbox), "device-hbox",
+	                  gtk_widget_get_parent(widget));
+	g_signal_connect_swapped(widget, "destroy", G_CALLBACK(g_free), pref);
+}
+
+static void
+make_vv_frame(GtkWidget *parent, GtkSizeGroup *sg,
+              const gchar *name, const gchar **plugin_strs,
+              const gchar *plugin_pref, const gchar *device_pref)
+{
+	GtkWidget *vbox, *widget;
+	GList *plugins, *devices;
+
+	vbox = pidgin_make_frame(parent, name);
+
+	/* Setup plugin preference */
+	plugins = get_vv_element_plugins(plugin_strs);
+	widget = pidgin_prefs_dropdown_from_list(vbox, _("_Plugin"),
+	                                         PURPLE_PREF_STRING, plugin_pref,
+	                                         plugins);
+	g_list_free(plugins);
+	gtk_size_group_add_widget(sg, widget);
+	gtk_misc_set_alignment(GTK_MISC(widget), 0, 0.5);
+
+	/* Setup device preference */
+	devices = get_vv_element_devices(purple_prefs_get_string(plugin_pref));
+	if (g_list_find_custom(devices, purple_prefs_get_string(device_pref),
+	                       (GCompareFunc)strcmp) == NULL)
+		purple_prefs_set_string(device_pref, g_list_next(devices)->data);
+	widget = pidgin_prefs_dropdown_from_list(vbox, _("_Device"),
+	                                         PURPLE_PREF_STRING, device_pref,
+	                                         devices);
+	g_list_free_full(devices, g_free);
+	gtk_size_group_add_widget(sg, widget);
+	gtk_misc_set_alignment(GTK_MISC(widget), 0, 0.5);
+
+	widget = gtk_widget_get_parent(widget);
+	g_object_set_data(G_OBJECT(vbox), "size-group", sg);
+	g_object_set_data(G_OBJECT(vbox), "device-hbox", widget);
+	purple_prefs_connect_callback(vbox, plugin_pref, vv_plugin_changed_cb,
+	                              vbox);
+	g_signal_connect_swapped(vbox, "destroy",
+	                         G_CALLBACK(purple_prefs_disconnect_by_handle), vbox);
+}
+
+static GstElement *
+create_test_element(PurpleMediaElementType type)
+{
+	PurpleMediaElementInfo *element_info;
+
+	element_info = purple_media_manager_get_active_element(purple_media_manager_get(), type);
+
+	g_return_val_if_fail(element_info, NULL);
+
+	return purple_media_element_info_call_create(element_info,
+		NULL, NULL, NULL);
+}
+
+static void
+vv_test_switch_page_cb(GtkNotebook *notebook, GtkWidget *page, guint num, gpointer data)
+{
+	GtkWidget *test = data;
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(test), FALSE);
+}
+
+static GstElement *
+create_voice_pipeline(void)
+{
+	GstElement *pipeline;
+	GstElement *src, *sink;
+	GstElement *volume;
+	GstElement *level;
+	GstElement *valve;
+
+	pipeline = gst_pipeline_new("voicetest");
+
+	src = create_test_element(PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SRC);
+	sink = create_test_element(PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SINK);
+	volume = gst_element_factory_make("volume", "volume");
+	level = gst_element_factory_make("level", "level");
+	valve = gst_element_factory_make("valve", "valve");
+
+	gst_bin_add_many(GST_BIN(pipeline), src, volume, level, valve, sink, NULL);
+	gst_element_link_many(src, volume, level, valve, sink, NULL);
+
+	purple_debug_info("gtkprefs", "create_voice_pipeline: setting pipeline "
+		"state to GST_STATE_PLAYING - it may hang here on win32\n");
+	gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+	purple_debug_info("gtkprefs", "create_voice_pipeline: state is set\n");
+
+	return pipeline;
+}
+
+static void
+on_volume_change_cb(GtkWidget *w, gdouble value, GstBin *pipeline)
+{
+	GstElement *volume;
+
+	g_return_if_fail(pipeline != NULL);
+
+	volume = gst_bin_get_by_name(pipeline, "volume");
+	g_object_set(volume, "volume",
+	             gtk_scale_button_get_value(GTK_SCALE_BUTTON(w)) * 10.0, NULL);
+}
+
+static gdouble
+gst_msg_db_to_percent(GstMessage *msg, gchar *value_name)
+{
+	const GValue *list;
+	const GValue *value;
+	gdouble value_db;
+	gdouble percent;
+
+	list = gst_structure_get_value(gst_message_get_structure(msg), value_name);
+#if GST_CHECK_VERSION(1,0,0)
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+	value = g_value_array_get_nth(g_value_get_boxed(list), 0);
+G_GNUC_END_IGNORE_DEPRECATIONS
+#else
+	value = gst_value_list_get_value(list, 0);
+#endif
+	value_db = g_value_get_double(value);
+	percent = pow(10, value_db / 20);
+	return (percent > 1.0) ? 1.0 : percent;
+}
+
+static gboolean
+gst_bus_cb(GstBus *bus, GstMessage *msg, BusCbCtx *ctx)
+{
+	if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ELEMENT &&
+		gst_structure_has_name(gst_message_get_structure(msg), "level")) {
+
+		GstElement *src = GST_ELEMENT(GST_MESSAGE_SRC(msg));
+		gchar *name = gst_element_get_name(src);
+
+		if (!strcmp(name, "level")) {
+			gdouble percent;
+			gdouble threshold;
+			GstElement *valve;
+
+			percent = gst_msg_db_to_percent(msg, "rms");
+			gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ctx->level), percent);
+
+			percent = gst_msg_db_to_percent(msg, "decay");
+			threshold = gtk_range_get_value(GTK_RANGE(ctx->threshold)) / 100.0;
+			valve = gst_bin_get_by_name(GST_BIN(GST_ELEMENT_PARENT(src)), "valve");
+			g_object_set(valve, "drop", (percent < threshold), NULL);
+			g_object_set(ctx->level, "text",
+			             (percent < threshold) ? _("DROP") : " ", NULL);
+		}
+
+		g_free(name);
+	}
+
+	return TRUE;
+}
+
+static void
+voice_test_destroy_cb(GtkWidget *w, gpointer data)
+{
+	if (!voice_pipeline)
+		return;
+
+	gst_element_set_state(voice_pipeline, GST_STATE_NULL);
+	gst_object_unref(voice_pipeline);
+	voice_pipeline = NULL;
+}
+
+static void
+toggle_voice_test_cb(GtkToggleButton *test, gpointer data)
+{
+	BusCbCtx *ctx = data;
+	GstBus *bus;
+
+	if (gtk_toggle_button_get_active(test)) {
+		gtk_widget_set_sensitive(ctx->level, TRUE);
+		voice_pipeline = create_voice_pipeline();
+		bus = gst_pipeline_get_bus(GST_PIPELINE(voice_pipeline));
+		gst_bus_add_signal_watch(bus);
+		g_signal_connect(bus, "message", G_CALLBACK(gst_bus_cb), ctx);
+		gst_object_unref(bus);
+
+		g_signal_connect(ctx->volume, "value-changed",
+		                 G_CALLBACK(on_volume_change_cb), voice_pipeline);
+		g_signal_connect(test, "destroy",
+		                 G_CALLBACK(voice_test_destroy_cb), NULL);
+		g_signal_connect(prefsnotebook, "switch-page",
+		                 G_CALLBACK(vv_test_switch_page_cb), test);
+	} else {
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(ctx->level), 0.0);
+		gtk_widget_set_sensitive(ctx->level, FALSE);
+		g_object_disconnect(ctx->volume, "any-signal::value-changed",
+		                    G_CALLBACK(on_volume_change_cb), voice_pipeline,
+		                    NULL);
+		g_object_disconnect(test, "any-signal::destroy",
+		                    G_CALLBACK(voice_test_destroy_cb), NULL,
+		                    NULL);
+		g_object_disconnect(prefsnotebook, "any-signal::switch-page",
+		                    G_CALLBACK(vv_test_switch_page_cb), test,
+		                    NULL);
+		voice_test_destroy_cb(NULL, NULL);
+	}
+}
+
+static void
+volume_changed_cb(GtkScaleButton *button, gdouble value, gpointer data)
+{
+	purple_prefs_set_int("/purple/media/audio/volume/input", value * 100);
+}
+
+static void
+threshold_value_changed_cb(GtkScale *scale, GtkWidget *label)
+{
+	int value;
+	char *tmp;
+
+	value = (int)gtk_range_get_value(GTK_RANGE(scale));
+	tmp = g_strdup_printf(_("Silence threshold: %d%%"), value);
+	gtk_label_set_label(GTK_LABEL(label), tmp);
+	g_free(tmp);
+
+	purple_prefs_set_int("/purple/media/audio/silence_threshold", value);
+}
+
+static void
+make_voice_test(GtkWidget *vbox)
+{
+	GtkWidget *test;
+	GtkWidget *hbox;
+	GtkWidget *label;
+	GtkWidget *level;
+	GtkWidget *volume;
+	GtkWidget *threshold;
+	BusCbCtx *ctx;
+	char *tmp;
+
+	label = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, TRUE, 0);
+
+	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	label = gtk_label_new(_("Volume:"));
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+	volume = gtk_volume_button_new();
+	gtk_box_pack_start(GTK_BOX(hbox), volume, TRUE, TRUE, 0);
+	gtk_scale_button_set_value(GTK_SCALE_BUTTON(volume),
+			purple_prefs_get_int("/purple/media/audio/volume/input") / 100.0);
+	g_signal_connect(volume, "value-changed",
+	                 G_CALLBACK(volume_changed_cb), NULL);
+
+	tmp = g_strdup_printf(_("Silence threshold: %d%%"),
+	                      purple_prefs_get_int("/purple/media/audio/silence_threshold"));
+	label = gtk_label_new(tmp);
+	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
+	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+	g_free(tmp);
+	threshold = gtk_hscale_new_with_range(0, 100, 1);
+	gtk_box_pack_start(GTK_BOX(vbox), threshold, FALSE, FALSE, 0);
+	gtk_range_set_value(GTK_RANGE(threshold),
+			purple_prefs_get_int("/purple/media/audio/silence_threshold"));
+	gtk_scale_set_draw_value(GTK_SCALE(threshold), FALSE);
+	g_signal_connect(threshold, "value-changed",
+	                 G_CALLBACK(threshold_value_changed_cb), label);
+
+	test = gtk_toggle_button_new_with_label(_("Test Audio"));
+	gtk_box_pack_start(GTK_BOX(vbox), test, FALSE, FALSE, 0);
+
+	level = gtk_progress_bar_new();
+	gtk_box_pack_start(GTK_BOX(vbox), level, FALSE, FALSE, 0);
+	gtk_widget_set_sensitive(level, FALSE);
+
+	ctx = g_new(BusCbCtx, 1);
+	ctx->volume = volume;
+	ctx->level = level;
+	ctx->threshold = threshold;
+	g_signal_connect(test, "toggled",
+	                 G_CALLBACK(toggle_voice_test_cb), ctx);
+}
+
+static GstElement *
+create_video_pipeline(void)
+{
+	GstElement *pipeline;
+	GstElement *src, *sink;
+
+	pipeline = gst_pipeline_new("videotest");
+	src = create_test_element(PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC);
+	sink = create_test_element(PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SINK);
+
+	g_object_set_data(G_OBJECT(pipeline), "sink", sink);
+
+	gst_bin_add_many(GST_BIN(pipeline), src, sink, NULL);
+	gst_element_link_many(src, sink, NULL);
+
+	return pipeline;
+}
+
+static void
+video_test_destroy_cb(GtkWidget *w, gpointer data)
+{
+	if (!video_pipeline)
+		return;
+
+	gst_element_set_state(video_pipeline, GST_STATE_NULL);
+	gst_object_unref(video_pipeline);
+	video_pipeline = NULL;
+}
+
+static void
+window_id_cb(GstBus *bus, GstMessage *msg, gulong window_id)
+{
+	if (GST_MESSAGE_TYPE(msg) != GST_MESSAGE_ELEMENT
+#if GST_CHECK_VERSION(1,0,0)
+	 || !gst_is_video_overlay_prepare_window_handle_message(msg))
+#else
+	/* there may be have-xwindow-id also, in case something went wrong */
+	 || !gst_structure_has_name(msg->structure, "prepare-xwindow-id"))
+#endif
+		return;
+
+	g_signal_handlers_disconnect_matched(bus,
+	                                     G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA,
+	                                     0, 0, NULL, window_id_cb,
+	                                     (gpointer)window_id);
+
+#if GST_CHECK_VERSION(1,0,0)
+	gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(GST_MESSAGE_SRC(msg)),
+	                                    window_id);
+#elif GST_CHECK_VERSION(0,10,31)
+	gst_x_overlay_set_window_handle(GST_X_OVERLAY(GST_MESSAGE_SRC(msg)),
+	                                window_id);
+#else
+	gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(GST_MESSAGE_SRC(msg)),
+	                             window_id);
+#endif
+}
+
+static void
+toggle_video_test_cb(GtkToggleButton *test, gpointer data)
+{
+	GtkWidget *video = data;
+	GstBus *bus;
+
+	if (gtk_toggle_button_get_active(test)) {
+		GdkWindow *window = gtk_widget_get_window(video);
+		gulong window_id = 0;
+
+#ifdef GDK_WINDOWING_WIN32
+		if (GDK_IS_WIN32_WINDOW(window))
+			window_id = GPOINTER_TO_UINT(GDK_WINDOW_HWND(window));
+		else
+#endif
+#ifdef GDK_WINDOWING_X11
+		if (GDK_IS_X11_WINDOW(window))
+			window_id = gdk_x11_window_get_xid(window);
+		else
+#endif
+#ifdef GDK_WINDOWING_QUARTZ
+		if (GDK_IS_QUARTZ_WINDOW(window))
+			window_id = (gulong)gdk_quartz_window_get_nsview(window);
+		else
+#endif
+			g_warning("Unsupported GDK backend");
+#if !(defined(GDK_WINDOWING_WIN32) \
+   || defined(GDK_WINDOWING_X11) \
+   || defined(GDK_WINDOWING_QUARTZ))
+#		error "Unsupported GDK windowing system"
+#endif
+
+		video_pipeline = create_video_pipeline();
+		bus = gst_pipeline_get_bus(GST_PIPELINE(video_pipeline));
+#if GST_CHECK_VERSION(1,0,0)
+		gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL, NULL);
+#else
+		gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL);
+#endif
+		g_signal_connect(bus, "sync-message::element",
+		                 G_CALLBACK(window_id_cb), (gpointer)window_id);
+		gst_object_unref(bus);
+
+		gst_element_set_state(GST_ELEMENT(video_pipeline), GST_STATE_PLAYING);
+
+		g_signal_connect(test, "destroy",
+		                 G_CALLBACK(video_test_destroy_cb), NULL);
+		g_signal_connect(prefsnotebook, "switch-page",
+		                 G_CALLBACK(vv_test_switch_page_cb), test);
+	} else {
+		g_object_disconnect(test, "any-signal::destroy",
+		                    G_CALLBACK(video_test_destroy_cb), NULL,
+		                    NULL);
+		g_object_disconnect(prefsnotebook, "any-signal::switch-page",
+		                    G_CALLBACK(vv_test_switch_page_cb), test,
+		                    NULL);
+		video_test_destroy_cb(NULL, NULL);
+	}
+}
+
+static void
+make_video_test(GtkWidget *vbox)
+{
+	GtkWidget *test;
+	GtkWidget *video;
+	GdkColor color = {0, 0, 0, 0};
+
+	video = gtk_drawing_area_new();
+	gtk_box_pack_start(GTK_BOX(vbox), video, TRUE, TRUE, 0);
+	gtk_widget_modify_bg(video, GTK_STATE_NORMAL, &color);
+	gtk_widget_set_size_request(GTK_WIDGET(video), 240, 180);
+
+	test = gtk_toggle_button_new_with_label(_("Test Video"));
+	gtk_box_pack_start(GTK_BOX(vbox), test, FALSE, FALSE, 0);
+
+	g_signal_connect(test, "toggled",
+	                 G_CALLBACK(toggle_video_test_cb), video);
+}
+
+static GtkWidget *
+vv_page(void)
+{
+	GtkWidget *ret;
+	GtkWidget *vbox;
+	GtkSizeGroup *sg;
+
+	ret = gtk_hbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
+
+	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+
+	vbox = pidgin_make_frame(ret, _("Audio"));
+	make_vv_frame(vbox, sg, _("Input"), AUDIO_SRC_PLUGINS,
+	              PIDGIN_PREFS_ROOT "/vvconfig/audio/src/plugin",
+	              PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device");
+	make_vv_frame(vbox, sg, _("Output"), AUDIO_SINK_PLUGINS,
+	              PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/plugin",
+	              PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device");
+	make_voice_test(vbox);
+
+	vbox = pidgin_make_frame(ret, _("Video"));
+	make_vv_frame(vbox, sg, _("Input"), VIDEO_SRC_PLUGINS,
+	              PIDGIN_PREFS_ROOT "/vvconfig/video/src/plugin",
+	              PIDGIN_PREFS_ROOT "/vvconfig/video/src/device");
+	make_vv_frame(vbox, sg, _("Output"), VIDEO_SINK_PLUGINS,
+	              PIDGIN_PREFS_ROOT "/vvconfig/video/sink/plugin",
+	              PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device");
+	make_video_test(vbox);
+
+	gtk_widget_show_all(ret);
+
+	return ret;
+}
+#endif
+
 static int
 prefs_notebook_add_page(const char *text, GtkWidget *page, int ind)
 {
@@ -2956,10 +4119,14 @@ prefs_notebook_init(void)
 	prefs_notebook_add_page(_("Logging"), logging_page(), notebook_page++);
 	prefs_notebook_add_page(_("Network"), network_page(), notebook_page++);
 	prefs_notebook_add_page(_("Proxy"), proxy_page(), notebook_page++);
+	prefs_notebook_add_page(_("Password Storage"), keyring_page(), notebook_page++);
 
 	prefs_notebook_add_page(_("Sounds"), sound_page(), notebook_page++);
 	prefs_notebook_add_page(_("Status / Idle"), away_page(), notebook_page++);
 	prefs_notebook_add_page(_("Themes"), theme_page(), notebook_page++);
+#ifdef USE_VV
+	prefs_notebook_add_page(_("Voice/Video"), vv_page(), notebook_page++);
+#endif
 }
 
 void
@@ -2981,7 +4148,11 @@ pidgin_prefs_show(void)
 	/* Back to instant-apply! I win!  BU-HAHAHA! */
 
 	/* Create the window */
+#if GTK_CHECK_VERSION(3,0,0)
+	prefs = pidgin_create_dialog(_("Preferences"), 0, "preferences", FALSE);
+#else
 	prefs = pidgin_create_dialog(_("Preferences"), PIDGIN_HIG_BORDER, "preferences", FALSE);
+#endif
 	g_signal_connect(G_OBJECT(prefs), "destroy",
 					 G_CALLBACK(delete_prefs), NULL);
 
@@ -3087,14 +4258,32 @@ pidgin_prefs_init(void)
 	purple_prefs_connect_callback(&prefs, PIDGIN_PREFS_ROOT "/smileys/theme",
 								smiley_theme_pref_cb, NULL);
 
+#ifdef USE_VV
+	/* Voice/Video */
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio/src");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/plugin", "");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device", "");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/plugin", "");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device", "");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video/src");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/plugin", "");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/device", "");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video");
+	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video/sink");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/plugin", "");
+	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device", "");
+#endif
+
 	pidgin_prefs_update_old();
 }
 
 void
 pidgin_prefs_update_old(void)
 {
-	const char *str = NULL;
-
 	/* Rename some old prefs */
 	purple_prefs_rename(PIDGIN_PREFS_ROOT "/logging/log_ims", "/purple/logging/log_ims");
 	purple_prefs_rename(PIDGIN_PREFS_ROOT "/logging/log_chats", "/purple/logging/log_chats");
@@ -3107,13 +4296,19 @@ pidgin_prefs_update_old(void)
 									 PIDGIN_PREFS_ROOT "/conversations/show_incoming_formatting");
 
 	/*
-	 * this path pref changed to a string, so migrate.  I know this will break
-	 * things for and confuse users that use multiple versions with the same
-	 * config directory, but I'm not inclined to want to deal with that at the
-	 * moment. -- rekkanoryo
+	 * This path pref changed to a string, so migrate. I know this will
+	 * break things for and confuse users that use multiple versions with
+	 * the same config directory, but I'm not inclined to want to deal with
+	 * that at the moment. -- rekkanoryo
 	 */
-	if((str = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/browsers/command")) != NULL) {
-		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/browsers/manual_command", str);
+	if (purple_prefs_exists(PIDGIN_PREFS_ROOT "/browsers/command") &&
+		purple_prefs_get_type(PIDGIN_PREFS_ROOT "/browsers/command") ==
+			PURPLE_PREF_PATH)
+	{
+		const char *str = purple_prefs_get_path(
+			PIDGIN_PREFS_ROOT "/browsers/command");
+		purple_prefs_set_string(
+			PIDGIN_PREFS_ROOT "/browsers/manual_command", str);
 		purple_prefs_remove(PIDGIN_PREFS_ROOT "/browsers/command");
 	}
 
@@ -3124,6 +4319,7 @@ pidgin_prefs_update_old(void)
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/raise_on_events");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_group_count");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_warning_level");
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/tooltip_delay");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/button_type");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/ctrl_enter_sends");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/enter_sends");
@@ -3175,4 +4371,42 @@ pidgin_prefs_update_old(void)
 			PIDGIN_PREFS_ROOT "/conversations/im/x");
 	purple_prefs_rename(PIDGIN_PREFS_ROOT "/conversations/y",
 			PIDGIN_PREFS_ROOT "/conversations/im/y");
+
+	/* Fixup vvconfig plugin prefs */
+	if (purple_prefs_exists("/plugins/core/vvconfig/audio/src/plugin")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/plugin",
+				purple_prefs_get_string("/plugins/core/vvconfig/audio/src/plugin"));
+	}
+	if (purple_prefs_exists("/plugins/core/vvconfig/audio/src/device")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device",
+				purple_prefs_get_string("/plugins/core/vvconfig/audio/src/device"));
+	}
+	if (purple_prefs_exists("/plugins/core/vvconfig/audio/sink/plugin")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/plugin",
+				purple_prefs_get_string("/plugins/core/vvconfig/audio/sink/plugin"));
+	}
+	if (purple_prefs_exists("/plugins/core/vvconfig/audio/sink/device")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device",
+				purple_prefs_get_string("/plugins/core/vvconfig/audio/sink/device"));
+	}
+	if (purple_prefs_exists("/plugins/core/vvconfig/video/src/plugin")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/plugin",
+				purple_prefs_get_string("/plugins/core/vvconfig/video/src/plugin"));
+	}
+	if (purple_prefs_exists("/plugins/core/vvconfig/video/src/device")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/device",
+				purple_prefs_get_string("/plugins/core/vvconfig/video/src/device"));
+	}
+	if (purple_prefs_exists("/plugins/gtk/vvconfig/video/sink/plugin")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/plugin",
+				purple_prefs_get_string("/plugins/gtk/vvconfig/video/sink/plugin"));
+	}
+	if (purple_prefs_exists("/plugins/gtk/vvconfig/video/sink/device")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device",
+				purple_prefs_get_string("/plugins/gtk/vvconfig/video/sink/device"));
+	}
+
+	purple_prefs_remove("/plugins/core/vvconfig");
+	purple_prefs_remove("/plugins/gtk/vvconfig");
 }
+

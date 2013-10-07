@@ -193,7 +193,19 @@ typedef enum
 	 * Indicates that this protocol supports sending a user-supplied message
 	 * along with an invitation.
 	 */
-	OPT_PROTO_INVITE_MESSAGE = 0x00000800
+	OPT_PROTO_INVITE_MESSAGE = 0x00000800,
+
+	/**
+	 * Indicates that this protocol supports sending a user-supplied message
+	 * along with an authorization acceptance.
+	 */
+	OPT_PROTO_AUTHORIZATION_GRANTED_MESSAGE = 0x00001000,
+
+	/**
+	 * Indicates that this protocol supports sending a user-supplied message
+	 * along with an authorization denial.
+	 */
+	OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE = 0x00002000
 
 } PurpleProtocolOptions;
 
@@ -422,14 +434,13 @@ struct _PurplePluginProtocolInfo
 	 * the account is not connected, return -ENOTCONN.  If the
 	 * PRPL is unable to send the message for another reason, return
 	 * some other negative value.  You can use one of the valid
-	 * errno values, or just big something.  If the message should
-	 * not be echoed to the conversation window, return 0.
+	 * errno values, or just big something.
 	 *
 	 * @param id      The id of the chat to send the message to.
 	 * @param message The message to send to the chat.
 	 * @param flags   A bitwise OR of #PurpleMessageFlags representing
 	 *                message flags.
-	 * @return 	  A positive number or 0 in case of succes,
+	 * @return 	  A positive number or 0 in case of success,
 	 *                a negative error number in case of failure.
 	 */
 	int  (*chat_send)(PurpleConnection *, int id, const char *message, PurpleMessageFlags flags);
@@ -467,11 +478,20 @@ struct _PurplePluginProtocolInfo
 	void (*convo_closed)(PurpleConnection *, const char *who);
 
 	/**
-	 *  Convert the username @a who to its canonical form.  (For example,
-	 *  AIM treats "fOo BaR" and "foobar" as the same user; this function
-	 *  should return the same normalized string for both of those.)
+	 * Convert the username @a who to its canonical form. Also checks for
+	 * validity.
+	 *
+	 * For example, AIM treats "fOo BaR" and "foobar" as the same user; this
+	 * function should return the same normalized string for both of those.
+	 * On the other hand, both of these are invalid for protocols with
+	 * number-based usernames, so function should return NULL in such case.
+	 *
+	 * @param account  The account the username is related to. Can
+	 *                 be NULL.
+	 * @param who      The username to convert.
+	 * @return         Normalized username, or NULL, if it's invalid.
 	 */
-	const char *(*normalize)(const PurpleAccount *, const char *who);
+	const char *(*normalize)(const PurpleAccount *account, const char *who);
 
 	/**
 	 * Set the buddy icon for the given connection to @a img.  The prpl
@@ -608,6 +628,25 @@ struct _PurplePluginProtocolInfo
 	void (*get_public_alias)(PurpleConnection *gc,
 	                         PurpleGetPublicAliasSuccessCallback success_cb,
 	                         PurpleGetPublicAliasFailureCallback failure_cb);
+
+	/**
+	 * Gets the maximum message size in bytes for the conversation.
+	 *
+	 * It may depend on connection-specific or conversation-specific
+	 * variables, like channel or buddy's name length.
+	 *
+	 * This value is intended for plaintext message, the exact value may be
+	 * lower because of:
+	 *  - used newlines (some protocols count them as more than one byte),
+	 *  - formatting,
+	 *  - used special characters.
+	 *
+	 * @param conv The conversation to query, or NULL to get safe minimum
+	 *             for the protocol.
+	 *
+	 * @return     Maximum message size, 0 if unspecified, -1 for infinite.
+	 */
+	gssize (*get_max_message_size)(PurpleConversation *conv);
 };
 
 #define PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl, member) \
@@ -932,6 +971,18 @@ gboolean purple_prpl_initiate_media(PurpleAccount *account,
  * @param who The name of the contact for which capabilities have been received.
  */
 void purple_prpl_got_media_caps(PurpleAccount *account, const char *who);
+
+/**
+ * Gets the safe maximum message size in bytes for the protocol plugin.
+ *
+ * @see PurplePluginProtocolInfo#get_max_message_size
+ *
+ * @param prpl The protocol plugin to query.
+ *
+ * @return Maximum message size, 0 if unspecified, -1 for infinite.
+ */
+gssize
+purple_prpl_get_max_message_size(PurplePlugin *prpl);
 
 /*@}*/
 

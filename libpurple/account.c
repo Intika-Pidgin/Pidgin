@@ -28,6 +28,7 @@
 #include "core.h"
 #include "dbus-maybe.h"
 #include "debug.h"
+#include "keyring.h"
 #include "network.h"
 #include "notify.h"
 #include "pounce.h"
@@ -69,6 +70,12 @@ typedef struct
 	PurpleAccountRequestAuthorizationCb deny_cb;
 	guint ref;
 } PurpleAccountRequestInfo;
+
+typedef struct
+{
+	PurpleCallback cb;
+	gpointer data;
+} PurpleCallbackBundle;
 
 static PurpleAccountUiOps *account_ui_ops = NULL;
 
@@ -366,11 +373,33 @@ account_to_xmlnode(PurpleAccount *account)
 	child = xmlnode_new_child(node, "name");
 	xmlnode_insert_data(child, purple_account_get_username(account), -1);
 
-	if (purple_account_get_remember_password(account) &&
-		((tmp = purple_account_get_password(account)) != NULL))
+	if (purple_account_get_remember_password(account))
 	{
-		child = xmlnode_new_child(node, "password");
-		xmlnode_insert_data(child, tmp, -1);
+		const char *keyring_id = NULL;
+		const char *mode = NULL;
+		char *data = NULL;
+		GError *error = NULL;
+		GDestroyNotify destroy = NULL;
+		gboolean exported = purple_keyring_export_password(account,
+			&keyring_id, &mode, &data, &error, &destroy);
+
+		if (error != NULL) {
+			purple_debug_error("account",
+				"Failed to export password for account %s: %s.\n",
+				purple_account_get_username(account),
+				error->message);
+		} else if (exported) {
+			child = xmlnode_new_child(node, "password");
+			if (keyring_id != NULL)
+				xmlnode_set_attrib(child, "keyring_id", keyring_id);
+			if (mode != NULL)
+				xmlnode_set_attrib(child, "mode", mode);
+			if (data != NULL)
+				xmlnode_insert_data(child, data, -1);
+
+			if (destroy != NULL)
+				destroy(data);
+		}
 	}
 
 	if ((tmp = purple_account_get_alias(account)) != NULL)
@@ -868,15 +897,6 @@ parse_account(xmlnode *node)
 	g_free(name);
 	g_free(protocol_id);
 
-	/* Read the password */
-	child = xmlnode_get_child(node, "password");
-	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
-	{
-		purple_account_set_remember_password(ret, TRUE);
-		purple_account_set_password(ret, data);
-		g_free(data);
-	}
-
 	/* Read the alias */
 	child = xmlnode_get_child(node, "alias");
 	if ((child != NULL) && ((data = xmlnode_get_data(child)) != NULL))
@@ -938,6 +958,25 @@ parse_account(xmlnode *node)
 	if (child != NULL)
 	{
 		parse_current_error(child, ret);
+	}
+
+	/* Read the password */
+	child = xmlnode_get_child(node, "password");
+	if (child != NULL)
+	{
+		const char *keyring_id = xmlnode_get_attrib(child, "keyring_id");
+		const char *mode = xmlnode_get_attrib(child, "mode");
+		gboolean result;
+
+		data = xmlnode_get_data(child);
+		result = purple_keyring_import_password(ret, keyring_id, mode, data, NULL);
+
+		if (result == TRUE || purple_keyring_get_inuse() == NULL) {
+			purple_account_set_remember_password(ret, TRUE);
+		} else {
+			purple_debug_error("account", "Failed to import password.\n");
+		} 
+		purple_str_wipe(data);
 	}
 
 	return ret;
@@ -1059,7 +1098,7 @@ purple_account_destroy(PurpleAccount *account)
 
 	g_free(account->username);
 	g_free(account->alias);
-	g_free(account->password);
+	purple_str_wipe(account->password);
 	g_free(account->user_info);
 	g_free(account->buddy_icon_path);
 	g_free(account->protocol_id);
@@ -1107,6 +1146,15 @@ purple_account_set_register_callback(PurpleAccount *account, PurpleAccountRegist
 	account->registration_cb_user_data = user_data;
 }
 
+static void
+purple_account_register_got_password_cb(PurpleAccount *account,
+	const gchar *password, GError *error, gpointer data)
+{
+	g_return_if_fail(account != NULL);
+
+	_purple_connection_new(account, TRUE, password);
+}
+
 void
 purple_account_register(PurpleAccount *account)
 {
@@ -1115,7 +1163,21 @@ purple_account_register(PurpleAccount *account)
 	purple_debug_info("account", "Registering account %s\n",
 					purple_account_get_username(account));
 
-	_purple_connection_new(account, TRUE, purple_account_get_password(account));
+	purple_keyring_get_password(account,
+		purple_account_register_got_password_cb, NULL);
+}
+
+static void
+purple_account_unregister_got_password_cb(PurpleAccount *account,
+	const gchar *password, GError *error, gpointer data)
+{
+	PurpleCallbackBundle *cbb = data;
+	PurpleAccountUnregistrationCb cb;
+
+	cb = (PurpleAccountUnregistrationCb)cbb->cb;
+	_purple_connection_new_unregister(account, password, cb, cbb->data);
+
+	g_free(cbb);
 }
 
 void
@@ -1130,12 +1192,19 @@ purple_account_register_completed(PurpleAccount *account, gboolean succeeded)
 void
 purple_account_unregister(PurpleAccount *account, PurpleAccountUnregistrationCb cb, void *user_data)
 {
+	PurpleCallbackBundle *cbb;
+
 	g_return_if_fail(account != NULL);
 
 	purple_debug_info("account", "Unregistering account %s\n",
 					  purple_account_get_username(account));
 
-	_purple_connection_new_unregister(account, purple_account_get_password(account), cb, user_data);
+	cbb = g_new0(PurpleCallbackBundle, 1);
+	cbb->cb = PURPLE_CALLBACK(cb);
+	cbb->data = user_data;
+
+	purple_keyring_get_password(account,
+		purple_account_unregister_got_password_cb, cbb);
 }
 
 static void
@@ -1149,15 +1218,15 @@ request_password_ok_cb(PurpleAccount *account, PurpleRequestFields *fields)
 
 	if (!entry || !*entry)
 	{
-		purple_notify_error(account, NULL, _("Password is required to sign on."), NULL);
+		purple_notify_error(account, NULL,
+			_("Password is required to sign on."), NULL,
+			purple_request_cpar_from_account(account));
 		return;
 	}
 
-	if(remember)
-		purple_account_set_remember_password(account, TRUE);
+	purple_account_set_remember_password(account, remember);
 
-	purple_account_set_password(account, entry);
-
+	purple_account_set_password(account, entry, NULL, NULL);
 	_purple_connection_new(account, FALSE, entry);
 }
 
@@ -1198,23 +1267,33 @@ purple_account_request_password(PurpleAccount *account, GCallback ok_cb,
 	field = purple_request_field_bool_new("remember", _("Save password"), FALSE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(account,
-                        NULL,
-                        primary,
-                        NULL,
-                        fields,
-                        _("OK"), ok_cb,
-                        _("Cancel"), cancel_cb,
-						account, NULL, NULL,
-                        user_data);
+	purple_request_fields(account, NULL, primary, NULL, fields, _("OK"),
+		ok_cb, _("Cancel"), cancel_cb,
+		purple_request_cpar_from_account(account), user_data);
 	g_free(primary);
+}
+
+static void
+purple_account_connect_got_password_cb(PurpleAccount *account,
+	const gchar *password, GError *error, gpointer data)
+{
+	PurplePluginProtocolInfo *prpl_info = data;
+
+	if ((password == NULL || *password == '\0') &&
+		!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
+		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
+		purple_account_request_password(account,
+			G_CALLBACK(request_password_ok_cb),
+			G_CALLBACK(request_password_cancel_cb), account);
+	else
+		_purple_connection_new(account, FALSE, password);
 }
 
 void
 purple_account_connect(PurpleAccount *account)
 {
 	PurplePlugin *prpl;
-	const char *password, *username;
+	const char *username;
 	PurplePluginProtocolInfo *prpl_info;
 
 	g_return_if_fail(account != NULL);
@@ -1233,7 +1312,8 @@ purple_account_connect(PurpleAccount *account)
 		gchar *message;
 
 		message = g_strdup_printf(_("Missing protocol plugin for %s"), username);
-		purple_notify_error(account, _("Connection Error"), message, NULL);
+		purple_notify_error(account, _("Connection Error"), message,
+			NULL, purple_request_cpar_from_account(account));
 		g_free(message);
 		return;
 	}
@@ -1241,13 +1321,13 @@ purple_account_connect(PurpleAccount *account)
 	purple_debug_info("account", "Connecting to account %s.\n", username);
 
 	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-	password = purple_account_get_password(account);
-	if ((password == NULL) &&
-		!(prpl_info->options & OPT_PROTO_NO_PASSWORD) &&
-		!(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
-		purple_account_request_password(account, G_CALLBACK(request_password_ok_cb), G_CALLBACK(request_password_cancel_cb), account);
-	else
-		_purple_connection_new(account, FALSE, password);
+	if (account->password != NULL) {
+		purple_account_connect_got_password_cb(account,
+			account->password, NULL, prpl_info);
+	} else {
+		purple_keyring_get_password(account,
+			purple_account_connect_got_password_cb, prpl_info);
+	}
 }
 
 void
@@ -1267,8 +1347,6 @@ purple_account_disconnect(PurpleAccount *account)
 
 	gc = purple_account_get_connection(account);
 	_purple_connection_destroy(gc);
-	if (!purple_account_get_remember_password(account))
-		purple_account_set_password(account, NULL);
 	purple_account_set_connection(account, NULL);
 
 	account->disconnecting = FALSE;
@@ -1378,33 +1456,33 @@ purple_account_request_close(void *ui_handle)
 }
 
 static void
-request_auth_cb(void *data)
+request_auth_cb(const char *message, void *data)
 {
 	PurpleAccountRequestInfo *info = data;
 
 	handles = g_list_remove(handles, info);
 
 	if (info->auth_cb != NULL)
-		info->auth_cb(info->userdata);
+		info->auth_cb(message, info->userdata);
 
 	purple_signal_emit(purple_accounts_get_handle(),
-			"account-authorization-granted", info->account, info->user);
+			"account-authorization-granted", info->account, info->user, message);
 
 	purple_account_request_info_unref(info);
 }
 
 static void
-request_deny_cb(void *data)
+request_deny_cb(const char *message, void *data)
 {
 	PurpleAccountRequestInfo *info = data;
 
 	handles = g_list_remove(handles, info);
 
 	if (info->deny_cb != NULL)
-		info->deny_cb(info->userdata);
+		info->deny_cb(message, info->userdata);
 
 	purple_signal_emit(purple_accounts_get_handle(),
-			"account-authorization-denied", info->account, info->user);
+			"account-authorization-denied", info->account, info->user, message);
 
 	purple_account_request_info_unref(info);
 }
@@ -1417,6 +1495,7 @@ purple_account_request_authorization(PurpleAccount *account, const char *remote_
 	PurpleAccountUiOps *ui_ops;
 	PurpleAccountRequestInfo *info;
 	int plugin_return;
+	char *response = NULL;
 
 	g_return_val_if_fail(account     != NULL, NULL);
 	g_return_val_if_fail(remote_user != NULL, NULL);
@@ -1424,39 +1503,30 @@ purple_account_request_authorization(PurpleAccount *account, const char *remote_
 	ui_ops = purple_accounts_get_ui_ops();
 
 	plugin_return = GPOINTER_TO_INT(
-			purple_signal_emit_return_1(purple_accounts_get_handle(),
-				"account-authorization-requested", account, remote_user));
-
-	if (plugin_return > 0) {
-		if (auth_cb != NULL)
-			auth_cb(user_data);
-		return NULL;
-	} else if (plugin_return < 0) {
-		if (deny_cb != NULL)
-			deny_cb(user_data);
-		return NULL;
-	}
-
-	plugin_return = GPOINTER_TO_INT(
 			purple_signal_emit_return_1(
 				purple_accounts_get_handle(),
-				"account-authorization-requested-with-message",
-				account, remote_user, message
+				"account-authorization-requested",
+				account, remote_user, message, &response
 			));
 
 	switch (plugin_return)
 	{
 		case PURPLE_ACCOUNT_RESPONSE_IGNORE:
+			g_free(response);
 			return NULL;
 		case PURPLE_ACCOUNT_RESPONSE_ACCEPT:
 			if (auth_cb != NULL)
-				auth_cb(user_data);
+				auth_cb(response, user_data);
+			g_free(response);
 			return NULL;
 		case PURPLE_ACCOUNT_RESPONSE_DENY:
 			if (deny_cb != NULL)
-				deny_cb(user_data);
+				deny_cb(response, user_data);
+			g_free(response);
 			return NULL;
 	}
+
+	g_free(response);
 
 	if (ui_ops != NULL && ui_ops->request_authorize != NULL) {
 		info            = g_new0(PurpleAccountRequestInfo, 1);
@@ -1495,7 +1565,8 @@ change_password_cb(PurpleAccount *account, PurpleRequestFields *fields)
 	if (g_utf8_collate(new_pass_1, new_pass_2))
 	{
 		purple_notify_error(account, NULL,
-						  _("New passwords do not match."), NULL);
+			_("New passwords do not match."), NULL,
+			purple_request_cpar_from_account(account));
 
 		return;
 	}
@@ -1508,7 +1579,8 @@ change_password_cb(PurpleAccount *account, PurpleRequestFields *fields)
 			(new_pass_2 == NULL || *new_pass_2 == '\0')))
 	{
 		purple_notify_error(account, NULL,
-						  _("Fill out all fields completely."), NULL);
+			_("Fill out all fields completely."), NULL,
+			purple_request_cpar_from_account(account));
 		return;
 	}
 
@@ -1543,7 +1615,7 @@ purple_account_request_change_password(PurpleAccount *account)
 	field = purple_request_field_string_new("password", _("Original password"),
 										  NULL, FALSE);
 	purple_request_field_string_set_masked(field, TRUE);
-	if (!(prpl_info && (prpl_info->options | OPT_PROTO_PASSWORD_OPTIONAL)))
+	if (!prpl_info || !(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
 		purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
@@ -1551,7 +1623,7 @@ purple_account_request_change_password(PurpleAccount *account)
 										  _("New password"),
 										  NULL, FALSE);
 	purple_request_field_string_set_masked(field, TRUE);
-	if (!(prpl_info && (prpl_info->options | OPT_PROTO_PASSWORD_OPTIONAL)))
+	if (!prpl_info || !(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
 		purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
@@ -1559,7 +1631,7 @@ purple_account_request_change_password(PurpleAccount *account)
 										  _("New password (again)"),
 										  NULL, FALSE);
 	purple_request_field_string_set_masked(field, TRUE);
-	if (!(prpl_info && (prpl_info->options | OPT_PROTO_PASSWORD_OPTIONAL)))
+	if (!prpl_info || !(prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
 		purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
@@ -1568,16 +1640,11 @@ purple_account_request_change_password(PurpleAccount *account)
 
 	/* I'm sticking this somewhere in the code: bologna */
 
-	purple_request_fields(purple_account_get_connection(account),
-						NULL,
-						primary,
-						_("Please enter your current password and your "
-						  "new password."),
-						fields,
-						_("OK"), G_CALLBACK(change_password_cb),
-						_("Cancel"), NULL,
-						account, NULL, NULL,
-						account);
+	purple_request_fields(purple_account_get_connection(account), NULL,
+		primary, _("Please enter your current password and your new "
+		"password."), fields, _("OK"), G_CALLBACK(change_password_cb),
+		_("Cancel"), NULL, purple_request_cpar_from_account(account),
+		account);
 }
 
 static void
@@ -1611,7 +1678,7 @@ purple_account_request_change_user_info(PurpleAccount *account)
 					   (purple_connection_get_flags(gc) & PURPLE_CONNECTION_HTML) ? "html" : NULL),
 					   _("Save"), G_CALLBACK(set_user_info_cb),
 					   _("Cancel"), NULL,
-					   account, NULL, NULL,
+					   purple_request_cpar_from_account(account),
 					   account);
 }
 
@@ -1634,15 +1701,27 @@ purple_account_set_username(PurpleAccount *account, const char *username)
 		blist_ops->save_account(account);
 }
 
-void
-purple_account_set_password(PurpleAccount *account, const char *password)
+void 
+purple_account_set_password(PurpleAccount *account, const gchar *password,
+	PurpleKeyringSaveCallback cb, gpointer data)
 {
 	g_return_if_fail(account != NULL);
 
-	g_free(account->password);
+	purple_str_wipe(account->password);
 	account->password = g_strdup(password);
 
 	schedule_accounts_save();
+
+	if (!purple_account_get_remember_password(account)) {
+		purple_debug_info("account",
+			"Password for %s set, not sent to keyring.\n",
+			purple_account_get_username(account));
+
+		if (cb != NULL)
+			cb(account, NULL, data);
+	} else {
+		purple_keyring_set_password(account, password, cb, data);
+	}
 }
 
 void
@@ -2149,12 +2228,52 @@ purple_account_get_username(const PurpleAccount *account)
 	return account->username;
 }
 
-const char *
-purple_account_get_password(const PurpleAccount *account)
+static void
+purple_account_get_password_got(PurpleAccount *account,
+	const gchar *password, GError *error, gpointer data)
 {
-	g_return_val_if_fail(account != NULL, NULL);
+	PurpleCallbackBundle *cbb = data;
+	PurpleKeyringReadCallback cb;
 
-	return account->password;
+	purple_debug_info("account",
+		"Read password for account %s from async keyring.\n",
+		purple_account_get_username(account));
+
+	purple_str_wipe(account->password);
+	account->password = g_strdup(password);
+
+	cb = (PurpleKeyringReadCallback)cbb->cb;
+	if (cb != NULL)
+		cb(account, password, error, cbb->data);
+
+	g_free(cbb);
+}
+
+void
+purple_account_get_password(PurpleAccount *account,
+	PurpleKeyringReadCallback cb, gpointer data)
+{
+	if (account == NULL) {
+		cb(NULL, NULL, NULL, data);
+		return;
+	}
+
+	if (account->password != NULL) {
+		purple_debug_info("account",
+			"Reading password for account %s from cache.\n",
+			purple_account_get_username(account));
+		cb(account, account->password, NULL, data);
+	} else {
+		PurpleCallbackBundle *cbb = g_new0(PurpleCallbackBundle, 1);
+		cbb->cb = PURPLE_CALLBACK(cb);
+		cbb->data = data;
+
+		purple_debug_info("account",
+			"Reading password for account %s from async keyring.\n",
+			purple_account_get_username(account));
+		purple_keyring_get_password(account, 
+			purple_account_get_password_got, cbb);
+	}
 }
 
 const char *
@@ -2669,7 +2788,7 @@ purple_account_change_password(PurpleAccount *account, const char *orig_pw,
 	PurpleConnection *gc = purple_account_get_connection(account);
 	PurplePlugin *prpl = NULL;
 
-	purple_account_set_password(account, new_pw);
+	purple_account_set_password(account, new_pw, NULL, NULL);
 
 	if (gc != NULL)
 		prpl = purple_connection_get_prpl(gc);
@@ -2776,6 +2895,14 @@ connection_error_cb(PurpleConnection *gc,
 	                   account, type, description);
 }
 
+static void
+password_migration_cb(PurpleAccount *account)
+{
+	/* account may be NULL (means: all) */
+
+	schedule_accounts_save();
+}
+
 const PurpleConnectionErrorInfo *
 purple_account_get_current_error(PurpleAccount *account)
 {
@@ -2818,6 +2945,12 @@ purple_accounts_remove(PurpleAccount *account)
 	 */
 	purple_account_clear_current_error(account);
 	purple_signal_emit(purple_accounts_get_handle(), "account-removed", account);
+}
+
+static void
+purple_accounts_delete_set(PurpleAccount *account, GError *error, gpointer data)
+{
+	purple_account_destroy(account);
 }
 
 void
@@ -2890,11 +3023,15 @@ purple_accounts_delete(PurpleAccount *account)
 	/* This will cause the deletion of an old buddy icon. */
 	purple_buddy_icons_set_account_icon(account, NULL, 0);
 
-	purple_account_destroy(account);
+	/* This is async because we do not want the
+	 * account being overwritten before we are done.
+	 */
+	purple_keyring_set_password(account, NULL,
+		purple_accounts_delete_set, NULL);
 }
 
 void
-purple_accounts_reorder(PurpleAccount *account, gint new_index)
+purple_accounts_reorder(PurpleAccount *account, guint new_index)
 {
 	gint index;
 	GList *l;
@@ -2904,7 +3041,7 @@ purple_accounts_reorder(PurpleAccount *account, gint new_index)
 
 	index = g_list_index(accounts, account);
 
-	if (index == -1) {
+	if (index < 0) {
 		purple_debug_error("account",
 				   "Unregistered account (%s) discovered during reorder!\n",
 				   purple_account_get_username(account));
@@ -2913,7 +3050,7 @@ purple_accounts_reorder(PurpleAccount *account, gint new_index)
 
 	l = g_list_nth(accounts, index);
 
-	if (new_index > index)
+	if (new_index > (guint)index)
 		new_index--;
 
 	/* Remove the old one. */
@@ -3088,29 +3225,26 @@ purple_accounts_init(void)
 						 purple_value_new(PURPLE_TYPE_STRING));
 
 	purple_signal_register(handle, "account-authorization-requested",
-						purple_marshal_INT__POINTER_POINTER,
-						purple_value_new(PURPLE_TYPE_INT), 2,
+						purple_marshal_INT__POINTER_POINTER_POINTER,
+						purple_value_new(PURPLE_TYPE_INT), 4,
 						purple_value_new(PURPLE_TYPE_SUBTYPE,
 										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING),
+						purple_value_new(PURPLE_TYPE_STRING),
 						purple_value_new(PURPLE_TYPE_STRING));
 
-	purple_signal_register(handle, "account-authorization-requested-with-message",
-						purple_marshal_INT__POINTER_POINTER_POINTER,
-						purple_value_new(PURPLE_TYPE_INT), 3,
+	purple_signal_register(handle, "account-authorization-denied",
+						purple_marshal_VOID__POINTER_POINTER, NULL, 3,
 						purple_value_new(PURPLE_TYPE_SUBTYPE,
 										PURPLE_SUBTYPE_ACCOUNT),
 						purple_value_new(PURPLE_TYPE_STRING),
 						purple_value_new(PURPLE_TYPE_STRING));
-	purple_signal_register(handle, "account-authorization-denied",
-						purple_marshal_VOID__POINTER_POINTER, NULL, 2,
-						purple_value_new(PURPLE_TYPE_SUBTYPE,
-										PURPLE_SUBTYPE_ACCOUNT),
-						purple_value_new(PURPLE_TYPE_STRING));
 
 	purple_signal_register(handle, "account-authorization-granted",
-						purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+						purple_marshal_VOID__POINTER_POINTER, NULL, 3,
 						purple_value_new(PURPLE_TYPE_SUBTYPE,
 										PURPLE_SUBTYPE_ACCOUNT),
+						purple_value_new(PURPLE_TYPE_STRING),
 						purple_value_new(PURPLE_TYPE_STRING));
 
 	purple_signal_register(handle, "account-error-changed",
@@ -3144,6 +3278,8 @@ purple_accounts_init(void)
 	                      PURPLE_CALLBACK(signed_off_cb), NULL);
 	purple_signal_connect(conn_handle, "connection-error", handle,
 	                      PURPLE_CALLBACK(connection_error_cb), NULL);
+	purple_signal_connect(purple_keyring_get_handle(), "password-migration", handle,
+	                      PURPLE_CALLBACK(password_migration_cb), NULL);
 
 	load_accounts();
 

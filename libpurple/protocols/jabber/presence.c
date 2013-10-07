@@ -63,7 +63,7 @@ static const struct {
 static JabberPresenceType
 str_to_presence_type(const char *type)
 {
-	int i;
+	gsize i;
 
 	if (type == NULL)
 		return JABBER_PRESENCE_AVAILABLE;
@@ -384,7 +384,7 @@ struct _jabber_add_permit {
 	char *who;
 };
 
-static void authorize_add_cb(gpointer data)
+static void authorize_add_cb(const char *message, gpointer data)
 {
 	struct _jabber_add_permit *jap = data;
 	if(PURPLE_CONNECTION_IS_VALID(jap->gc))
@@ -394,7 +394,7 @@ static void authorize_add_cb(gpointer data)
 	g_free(jap);
 }
 
-static void deny_add_cb(gpointer data)
+static void deny_add_cb(const char *message, gpointer data)
 {
 	struct _jabber_add_permit *jap = data;
 	if(PURPLE_CONNECTION_IS_VALID(jap->gc))
@@ -554,7 +554,8 @@ handle_presence_chat(JabberStream *js, JabberPresence *presence, xmlnode *packet
 			if (g_hash_table_size(chat->members) == 0)
 				serv_got_chat_left(js->gc, chat->id);
 		}
-		purple_notify_error(js->gc, title, title, msg);
+		purple_notify_error(js->gc, title, title, msg,
+			purple_request_cpar_from_connection(js->gc));
 		g_free(title);
 		g_free(msg);
 
@@ -600,7 +601,7 @@ handle_presence_chat(JabberStream *js, JabberPresence *presence, xmlnode *packet
 							" you like to configure it, or"
 							" accept the default settings?"),
 						/* Default Action */ 1,
-						purple_connection_get_account(js->gc), NULL, chat->conv,
+						purple_request_cpar_from_conversation(chat->conv),
 						chat, 2,
 						_("_Configure Room"), G_CALLBACK(jabber_chat_request_room_configure),
 						_("_Accept Defaults"), G_CALLBACK(jabber_chat_create_instant_room));
@@ -1017,7 +1018,7 @@ void jabber_presence_parse(JabberStream *js, xmlnode *packet)
 			pih(js, &presence, child);
 	}
 
-	if (presence.delayed && presence.idle) {
+	if (presence.delayed && presence.idle && presence.adjust_idle_for_delay) {
 		/* Delayed and idle, so update idle time */
 		presence.idle = presence.idle + (time(NULL) - presence.sent);
 	}
@@ -1172,11 +1173,33 @@ parse_delay(JabberStream *js, JabberPresence *presence, xmlnode *delay)
 }
 
 static void
+parse_apple_idle(JabberStream *js, JabberPresence *presence, xmlnode *x)
+{
+	xmlnode *since = xmlnode_get_child(x, "idle-since");
+	if (since) {
+		char *stamp = xmlnode_get_data_unescaped(since);
+		if (stamp) {
+			time_t tstamp = purple_str_to_time(stamp, TRUE, NULL, NULL, NULL);
+			if (tstamp != 0) {
+				presence->idle = time(NULL) - tstamp;
+				presence->adjust_idle_for_delay = FALSE;
+				if(presence->idle < 0) {
+					purple_debug_warning("jabber", "Received bogus idle timestamp %s\n", stamp);
+					presence->idle = 0;
+				}
+			}
+		}
+		g_free(stamp);
+	}
+}
+
+static void
 parse_idle(JabberStream *js, JabberPresence *presence, xmlnode *query)
 {
 	const gchar *seconds = xmlnode_get_attrib(query, "seconds");
 	if (seconds) {
 		presence->idle = atoi(seconds);
+		presence->adjust_idle_for_delay = TRUE;
 		if (presence->idle < 0) {
 			purple_debug_warning("jabber", "Received bogus idle time %s\n", seconds);
 			presence->idle = 0;
@@ -1276,6 +1299,9 @@ void jabber_presence_init(void)
 	jabber_presence_register_handler("x", NS_DELAYED_DELIVERY_LEGACY, parse_delay);
 	jabber_presence_register_handler("x", "http://jabber.org/protocol/muc#user", parse_muc_user);
 	jabber_presence_register_handler("x", "vcard-temp:x:update", parse_vcard_avatar);
+
+	/* Apple idle */
+	jabber_presence_register_handler("x", NS_APPLE_IDLE, parse_apple_idle);
 }
 
 void jabber_presence_uninit(void)

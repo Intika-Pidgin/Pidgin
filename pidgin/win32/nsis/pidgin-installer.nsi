@@ -34,7 +34,6 @@ RequestExecutionLevel highest
 
 !include "MUI.nsh"
 !include "Sections.nsh"
-!include "WinVer.nsh"
 !include "LogicLib.nsh"
 !include "Memento.nsh"
 
@@ -71,7 +70,7 @@ RequestExecutionLevel highest
 !define PERL_REG_KEY				"SOFTWARE\Perl"
 !define PERL_DLL				"perl510.dll"
 
-!define DOWNLOADER_URL				"http://pidgin.im/win32/download_redir.php?version=${PIDGIN_VERSION}"
+!define DOWNLOADER_URL				"https://pidgin.im/win32/download_redir.php?version=${PIDGIN_VERSION}"
 
 !define MEMENTO_REGISTRY_ROOT			HKLM
 !define MEMENTO_REGISTRY_KEY			"${PIDGIN_UNINSTALL_KEY}"
@@ -93,6 +92,7 @@ VIAddVersionKey "FileDescription" "Pidgin Installer"
 ;Reserve files used in .onInit
 ;for faster start-up
 ReserveFile "${NSISDIR}\Plugins\System.dll"
+ReserveFile "${NSISDIR}\Plugins\UserInfo.dll"
 !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
 !insertmacro MUI_RESERVEFILE_LANGDLL
 
@@ -118,10 +118,10 @@ ReserveFile "${NSISDIR}\Plugins\System.dll"
 
   ;Finish Page config
   !define MUI_FINISHPAGE_NOAUTOCLOSE
-  !define MUI_FINISHPAGE_RUN			"$INSTDIR\pidgin.exe"
-  !define MUI_FINISHPAGE_RUN_NOTCHECKED
+  ;!define MUI_FINISHPAGE_RUN			"$INSTDIR\pidgin.exe"
+  ;!define MUI_FINISHPAGE_RUN_NOTCHECKED
   !define MUI_FINISHPAGE_LINK			$(PIDGINFINISHVISITWEBSITE)
-  !define MUI_FINISHPAGE_LINK_LOCATION		"http://pidgin.im"
+  !define MUI_FINISHPAGE_LINK_LOCATION		"https://pidgin.im"
 
 ;--------------------------------
 ;Pages
@@ -148,13 +148,6 @@ ReserveFile "${NSISDIR}\Plugins\System.dll"
   !include "${PIDGIN_NSIS_INCLUDE_PATH}\langmacros.nsh"
 
 ;--------------------------------
-;Reserve Files
-  ; Only need this if using bzip2 compression
-
-  !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
-  !insertmacro MUI_RESERVEFILE_LANGDLL
-  ReserveFile "${NSISDIR}\Plugins\UserInfo.dll"
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start Install Sections ;;
@@ -265,12 +258,21 @@ Section $(GTKSECTIONTITLE) SecGtk
   retry:
   StrCpy $R2 "${DOWNLOADER_URL}&gtk_version=${GTK_INSTALL_VERSION}&dl_pkg=gtk"
   DetailPrint "Downloading GTK+ Runtime ... ($R2)"
-  NSISdl::download /TIMEOUT=10000 $R2 $R1
+  NSISdl::download /TIMEOUT=10000 "$R2" "$R1"
   Pop $R0
   ;StrCmp $R0 "cancel" done
-  StrCmp $R0 "success" +2
+  StrCmp $R0 "success" 0 prompt_retry
+
+  Push "${GTK_SHA1SUM}"
+  Push "$R1" ; Filename
+  Call CheckSHA1Sum
+  Pop $R0
+
+  StrCmp "$R0" "0" extract
+    prompt_retry:
     MessageBox MB_RETRYCANCEL "$(PIDGINGTKDOWNLOADERROR)" /SD IDCANCEL IDRETRY retry IDCANCEL done
 
+  extract:
 !endif
 
   ;Delete the old Gtk directory
@@ -282,7 +284,9 @@ Section $(GTKSECTIONTITLE) SecGtk
   StrCmp $R0 "success" +2
     DetailPrint "$R0" ;print error message to log
 
+!ifndef OFFLINE_INSTALLER
   done:
+!endif
 SectionEnd ; end of GTK+ section
 
 ;--------------------------------
@@ -306,7 +310,7 @@ Section $(PIDGINSECTIONTITLE) SecPidgin
     WriteRegStr HKLM "${PIDGIN_UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\pidgin.exe"
     WriteRegStr HKLM "${PIDGIN_UNINSTALL_KEY}" "DisplayName" "Pidgin"
     WriteRegStr HKLM "${PIDGIN_UNINSTALL_KEY}" "DisplayVersion" "${PIDGIN_VERSION}"
-    WriteRegStr HKLM "${PIDGIN_UNINSTALL_KEY}" "HelpLink" "http://developer.pidgin.im/wiki/Using Pidgin"
+    WriteRegStr HKLM "${PIDGIN_UNINSTALL_KEY}" "HelpLink" "https://developer.pidgin.im/wiki/Using Pidgin"
     WriteRegDWORD HKLM "${PIDGIN_UNINSTALL_KEY}" "NoModify" 1
     WriteRegDWORD HKLM "${PIDGIN_UNINSTALL_KEY}" "NoRepair" 1
     WriteRegStr HKLM "${PIDGIN_UNINSTALL_KEY}" "UninstallString" "$INSTDIR\${PIDGIN_UNINST_EXE}"
@@ -320,7 +324,7 @@ Section $(PIDGINSECTIONTITLE) SecPidgin
     WriteRegStr HKCU "${PIDGIN_UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\pidgin.exe"
     WriteRegStr HKCU "${PIDGIN_UNINSTALL_KEY}" "DisplayName" "Pidgin"
     WriteRegStr HKCU "${PIDGIN_UNINSTALL_KEY}" "DisplayVersion" "${PIDGIN_VERSION}"
-    WriteRegStr HKCU "${PIDGIN_UNINSTALL_KEY}" "HelpLink" "http://developer.pidgin.im/wiki/Using Pidgin"
+    WriteRegStr HKCU "${PIDGIN_UNINSTALL_KEY}" "HelpLink" "https://developer.pidgin.im/wiki/Using Pidgin"
     WriteRegDWORD HKCU "${PIDGIN_UNINSTALL_KEY}" "NoModify" 1
     WriteRegDWORD HKCU "${PIDGIN_UNINSTALL_KEY}" "NoRepair" 1
     WriteRegStr HKCU "${PIDGIN_UNINSTALL_KEY}" "UninstallString" "$INSTDIR\${PIDGIN_UNINST_EXE}"
@@ -335,7 +339,7 @@ Section $(PIDGINSECTIONTITLE) SecPidgin
     Delete "$INSTDIR\plugins\liboscar.dll"
     Delete "$INSTDIR\plugins\libjabber.dll"
 
-    File /r /x locale ..\..\..\${PIDGIN_INSTALL_DIR}\*.*
+    File /r /x locale /x Gtk ..\..\..\${PIDGIN_INSTALL_DIR}\*.*
 
     ; Check if Perl is installed, if so add it to the AppPaths
     ReadRegStr $R2 HKLM ${PERL_REG_KEY} ""
@@ -350,21 +354,6 @@ Section $(PIDGINSECTIONTITLE) SecPidgin
           WriteRegStr HKLM "${HKLM_APP_PATHS_KEY}" "Path" "$R3;$R2\bin"
 
     perl_done:
-
-    ; If this is under NT4, delete the SILC support stuff
-    ; there is a bug that will prevent any account from connecting
-    ; See https://lists.silcnet.org/pipermail/silc-devel/2005-January/001588.html
-    ; Also, remove the GSSAPI SASL plugin and associated files as they aren't
-    ; compatible with NT4.
-    ${If} ${IsNT}
-    ${AndIf} ${IsWinNT4}
-      ;SILC
-      Delete "$INSTDIR\plugins\libsilc.dll"
-      Delete "$INSTDIR\libsilcclient-1-1-2.dll"
-      Delete "$INSTDIR\libsilc-1-1-2.dll"
-      ;GSSAPI
-      Delete "$INSTDIR\sasl2\saslGSSAPI.dll"
-    ${EndIf}
 
     SetOutPath "$INSTDIR"
 
@@ -464,12 +453,21 @@ Section /o $(DEBUGSYMBOLSSECTIONTITLE) SecDebugSymbols
   retry:
   StrCpy $R2 "${DOWNLOADER_URL}&dl_pkg=dbgsym"
   DetailPrint "Downloading Debug Symbols... ($R2)"
-  NSISdl::download /TIMEOUT=10000 $R2 $R1
+  NSISdl::download /TIMEOUT=10000 "$R2" "$R1"
   Pop $R0
   StrCmp $R0 "cancel" done
-  StrCmp $R0 "success" +2
+  StrCmp $R0 "success" 0 prompt_retry
+
+  Push "${DEBUG_SYMBOLS_SHA1SUM}"
+  Push "$R1" ; Filename
+  Call CheckSHA1Sum
+  Pop $R0
+
+  StrCmp "$R0" "0" extract
+    prompt_retry:
     MessageBox MB_RETRYCANCEL "$(PIDGINDEBUGSYMBOLSERROR)" /SD IDCANCEL IDRETRY retry IDCANCEL done
 
+  extract:
 !endif
 
   SetOutPath "$INSTDIR"
@@ -478,7 +476,9 @@ Section /o $(DEBUGSYMBOLSSECTIONTITLE) SecDebugSymbols
   StrCmp $R0 "success" +2
     DetailPrint "$R0" ;print error message to log
 
+!ifndef OFFLINE_INSTALLER
   done:
+!endif
 SectionEnd
 
 ;--------------------------------
@@ -532,10 +532,12 @@ Section Uninstall
     Delete "$INSTDIR\ca-certs\AddTrust_External_Root.pem"
     Delete "$INSTDIR\ca-certs\America_Online_Root_Certification_Authority_1.pem"
     Delete "$INSTDIR\ca-certs\AOL_Member_CA.pem"
+    Delete "$INSTDIR\ca-certs\Baltimore_CyberTrust_Root.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Class3.pem"
     Delete "$INSTDIR\ca-certs\CAcert_Root.pem"
     Delete "$INSTDIR\ca-certs\Deutsche_Telekom_Root_CA_2.pem"
     Delete "$INSTDIR\ca-certs\DigiCertHighAssuranceCA-3.pem"
+    Delete "$INSTDIR\ca-certs\DigiCertHighAssuranceEVRootCA.pem"
     Delete "$INSTDIR\ca-certs\Entrust.net_Secure_Server_CA.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_CA.pem"
     Delete "$INSTDIR\ca-certs\Equifax_Secure_Global_eBusiness_CA-1.pem"
@@ -549,7 +551,7 @@ Section Uninstall
     Delete "$INSTDIR\ca-certs\StartCom_Free_SSL_CA.pem"
     Delete "$INSTDIR\ca-certs\Thawte_Premium_Server_CA.pem"
     Delete "$INSTDIR\ca-certs\Thawte_Primary_Root_CA.pem"
-    Delete "$INSTDIR\ca-certs\ValiCert_Class_2_VA.crt"
+    Delete "$INSTDIR\ca-certs\ValiCert_Class_2_VA.pem"
     Delete "$INSTDIR\ca-certs\VeriSign_Class3_Extended_Validation_CA.pem"
     Delete "$INSTDIR\ca-certs\Verisign_Class3_Primary_CA.pem"
     Delete "$INSTDIR\ca-certs\VeriSign_Class_3_Public_Primary_Certification_Authority_-_G2.pem"
@@ -560,12 +562,19 @@ Section Uninstall
     RMDir "$INSTDIR\ca-certs"
     RMDir /r "$INSTDIR\locale"
     RMDir /r "$INSTDIR\pixmaps"
+	RMDir /r "$INSTDIR\theme"
     Delete "$INSTDIR\plugins\autoaccept.dll"
     Delete "$INSTDIR\plugins\buddynote.dll"
     Delete "$INSTDIR\plugins\convcolors.dll"
     Delete "$INSTDIR\plugins\extplacement.dll"
     Delete "$INSTDIR\plugins\gtkbuddynote.dll"
     Delete "$INSTDIR\plugins\history.dll"
+	Delete "$INSTDIR\plugins\internalkeyring.dll"
+	Delete "$INSTDIR\plugins\libfacebook.dll"
+	Delete "$INSTDIR\plugins\libgtalk.dll"
+	Delete "$INSTDIR\plugins\ssl-gnutls.dll"
+	Delete "$INSTDIR\plugins\webkit.dll"
+	Delete "$INSTDIR\plugins\wincred.dll"
     Delete "$INSTDIR\plugins\iconaway.dll"
     Delete "$INSTDIR\plugins\idle.dll"
     Delete "$INSTDIR\plugins\joinpart.dll"
@@ -637,12 +646,12 @@ Section Uninstall
     Delete "$INSTDIR\libpurple.dll"
     Delete "$INSTDIR\libsasl.dll"
     Delete "$INSTDIR\libsilc-1-1-2.dll"
-    Delete "$INSTDIR\libsilcclient-1-1-2.dll"
+    Delete "$INSTDIR\libsilcclient-1-1-3.dll"
+    Delete "$INSTDIR\libssp-0.dll"
     Delete "$INSTDIR\libxml2-2.dll"
     Delete "$INSTDIR\libymsg.dll"
     Delete "$INSTDIR\nss3.dll"
     Delete "$INSTDIR\nssutil3.dll"
-    Delete "$INSTDIR\nssckbi.dll"
     Delete "$INSTDIR\pidgin.dll"
     Delete "$INSTDIR\pidgin.exe"
     Delete "$INSTDIR\smime3.dll"
@@ -1300,3 +1309,42 @@ Function InstallDict
   Pop $R0
   Exch $R1
 FunctionEnd
+
+!ifndef OFFLINE_INSTALLER
+; Input Stack: Filename, SHA1sum
+; Output Return Code: 0=Match; 1=FileSum error; 2=Mismatch
+Function CheckSHA1Sum
+  Push $R0
+  Exch
+  Pop $R0 ;Filename
+  Push $R2
+  Exch 2
+  Pop $R2 ;SHA1sum
+  Push $R1
+
+  SHA1Plugin::FileSum "$R0"
+  Pop $R1
+  Pop $R0
+
+  StrCmp "$R1" "0" +4
+    DetailPrint "SHA1Sum calculation error: $R0"
+    IntOp $R1 0 + 1
+    Goto done
+
+  ; Compare the SHA1Sums
+  StrCmp $R2 $R0 +4
+    DetailPrint "SHA1Sum mismatch... Expected $R2; got $R0"
+    IntOp $R1 0 + 2
+    Goto done
+
+  IntOp $R1 0 + 0
+
+  done:
+  Exch $R1 ;$R1 has the return code
+  Exch
+  Pop $R2
+  Exch
+  Pop $R0
+FunctionEnd
+!endif
+

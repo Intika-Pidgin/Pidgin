@@ -127,7 +127,7 @@ generate_response_value(JabberID *jid, const char *passwd, const char *nonce,
 
 	x = g_strdup_printf("%s:%s:%s", convnode, realm, convpasswd ? convpasswd : "");
 	purple_cipher_context_append(context, (const guchar *)x, strlen(x));
-	purple_cipher_context_digest(context, sizeof(result), result, NULL);
+	purple_cipher_context_digest(context, result, sizeof(result));
 
 	a1 = g_strdup_printf("xxxxxxxxxxxxxxxx:%s:%s", nonce, cnonce);
 	a1len = strlen(a1);
@@ -135,13 +135,13 @@ generate_response_value(JabberID *jid, const char *passwd, const char *nonce,
 
 	purple_cipher_context_reset(context, NULL);
 	purple_cipher_context_append(context, (const guchar *)a1, a1len);
-	purple_cipher_context_digest(context, sizeof(result), result, NULL);
+	purple_cipher_context_digest(context, result, sizeof(result));
 
 	ha1 = purple_base16_encode(result, 16);
 
 	purple_cipher_context_reset(context, NULL);
 	purple_cipher_context_append(context, (const guchar *)a2, strlen(a2));
-	purple_cipher_context_digest(context, sizeof(result), result, NULL);
+	purple_cipher_context_digest(context, result, sizeof(result));
 
 	ha2 = purple_base16_encode(result, 16);
 
@@ -149,7 +149,7 @@ generate_response_value(JabberID *jid, const char *passwd, const char *nonce,
 
 	purple_cipher_context_reset(context, NULL);
 	purple_cipher_context_append(context, (const guchar *)kd, strlen(kd));
-	purple_cipher_context_digest(context, sizeof(result), result, NULL);
+	purple_cipher_context_digest(context, result, sizeof(result));
 	purple_cipher_context_destroy(context);
 
 	z = purple_base16_encode(result, 16);
@@ -184,8 +184,8 @@ digest_md5_handle_challenge(JabberStream *js, xmlnode *packet,
 	dec_in = (char *)purple_base64_decode(enc_in, NULL);
 	purple_debug_misc("jabber", "decoded challenge (%"
 			G_GSIZE_FORMAT "): %s\n",
-			dec_in != NULL ? strlen(dec_in) : 0,
-			dec_in != NULL  ? dec_in : "(null)");
+			strlen(dec_in),
+			dec_in);
 
 	parts = jabber_auth_digest_md5_parse(dec_in);
 

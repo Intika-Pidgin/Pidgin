@@ -38,13 +38,17 @@
 #ifdef USE_VV
 #include "media-gst.h"
 
-#ifdef _WIN32
+#ifdef GDK_WINDOWING_WIN32
 #include <gdk/gdkwin32.h>
-#elif defined(GDK_WINDOWING_QUARTZ)
+#endif
+#ifdef GDK_WINDOWING_X11
+#include <gdk/gdkx.h>
+#endif
+#ifdef GDK_WINDOWING_QUARTZ
 #include <gdk/gdkquartz.h>
 #endif
 
-#include <gst/interfaces/xoverlay.h>
+#include "gtk3compat.h"
 
 #define PIDGIN_TYPE_MEDIA            (pidgin_media_get_type())
 #define PIDGIN_MEDIA(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_MEDIA, PidginMedia))
@@ -441,7 +445,7 @@ pidgin_media_remove_widget(PidginMedia *gtkmedia,
 
 		gtk_widget_destroy(widget);
 
-		gtk_widget_size_request(GTK_WIDGET(gtkmedia), &req);
+		gtk_widget_get_preferred_size(GTK_WIDGET(gtkmedia), NULL, &req);
 		gtk_window_resize(GTK_WINDOW(gtkmedia), req.width, req.height);
 	}
 }
@@ -540,32 +544,36 @@ realize_cb_cb(PidginMediaRealizeData *data)
 	GdkWindow *window = NULL;
 
 	if (data->participant == NULL)
-#if GTK_CHECK_VERSION(2, 14, 0)
 		window = gtk_widget_get_window(priv->local_video);
-#else
-		window = (priv->local_video)->window;
-#endif
 	else {
 		GtkWidget *widget = pidgin_media_get_widget(data->gtkmedia,
 				data->session_id, data->participant);
 		if (widget)
-#if GTK_CHECK_VERSION(2, 14, 0)
 			window = gtk_widget_get_window(widget);
-#else
-			window = widget->window;
-#endif
 	}
 
 	if (window) {
-		gulong window_id;
-#ifdef _WIN32
-		window_id = GDK_WINDOW_HWND(window);
-#elif defined(HAVE_X11)
-		window_id = GDK_WINDOW_XWINDOW(window);
-#elif defined(GDK_WINDOWING_QUARTZ)
-		window_id = (gulong) gdk_quartz_window_get_nsview(window);
-#else
-#		error "Unsupported windowing system"
+		gulong window_id = 0;
+#ifdef GDK_WINDOWING_WIN32
+		if (GDK_IS_WIN32_WINDOW(window))
+			window_id = GPOINTER_TO_UINT(GDK_WINDOW_HWND(window));
+		else
+#endif
+#ifdef GDK_WINDOWING_X11
+		if (GDK_IS_X11_WINDOW(window))
+			window_id = gdk_x11_window_get_xid(window);
+		else
+#endif
+#ifdef GDK_WINDOWING_QUARTZ
+		if (GDK_IS_QUARTZ_WINDOW(window))
+			window_id = (gulong)gdk_quartz_window_get_nsview(window);
+		else
+#endif
+			g_warning("Unsupported GDK backend");
+#if !(defined(GDK_WINDOWING_WIN32) \
+   || defined(GDK_WINDOWING_X11) \
+   || defined(GDK_WINDOWING_QUARTZ))
+#		error "Unsupported GDK windowing system"
 #endif
 
 		purple_media_set_output_window(priv->media, data->session_id,
@@ -590,9 +598,14 @@ pidgin_media_error_cb(PidginMedia *media, const char *error, PidginMedia *gtkmed
 	PurpleConversation *conv = purple_find_conversation_with_account(
 			PURPLE_CONV_TYPE_ANY, gtkmedia->priv->screenname,
 			purple_media_get_account(gtkmedia->priv->media));
-	if (conv != NULL)
+	if (conv != NULL) {
 		purple_conversation_write(conv, NULL, error,
-				PURPLE_MESSAGE_ERROR, time(NULL));
+			PURPLE_MESSAGE_ERROR, time(NULL));
+	} else {
+		purple_notify_error(NULL, NULL, _("Media error"), error,
+			purple_request_cpar_from_conversation(conv));
+	}
+
 	gtk_statusbar_push(GTK_STATUSBAR(gtkmedia->priv->statusbar),
 			0, error);
 }
@@ -646,11 +659,10 @@ pidgin_request_timeout_cb(PidginMedia *gtkmedia)
 	gtkmedia->priv->request_type = PURPLE_MEDIA_NONE;
 	if (!purple_media_accepted(gtkmedia->priv->media, NULL, NULL)) {
 		purple_request_accept_cancel(gtkmedia, _("Incoming Call"),
-				message, NULL, PURPLE_DEFAULT_ACTION_NONE,
-				(void*)account, gtkmedia->priv->screenname,
-				NULL, gtkmedia->priv->media,
-				pidgin_media_accept_cb,
-				pidgin_media_reject_cb);
+			message, NULL, PURPLE_DEFAULT_ACTION_NONE,
+			purple_request_cpar_from_account(account),
+			gtkmedia->priv->media, pidgin_media_accept_cb,
+			pidgin_media_reject_cb);
 	}
 	pidgin_media_emit_message(gtkmedia, message);
 	g_free(message);
@@ -658,30 +670,18 @@ pidgin_request_timeout_cb(PidginMedia *gtkmedia)
 }
 
 static void
-#if GTK_CHECK_VERSION(2,12,0)
 pidgin_media_input_volume_changed(GtkScaleButton *range, double value,
 		PurpleMedia *media)
 {
 	double val = (double)value * 100.0;
-#else
-pidgin_media_input_volume_changed(GtkRange *range, PurpleMedia *media)
-{
-	double val = (double)gtk_range_get_value(GTK_RANGE(range));
-#endif
 	purple_media_set_input_volume(media, NULL, val);
 }
 
 static void
-#if GTK_CHECK_VERSION(2,12,0)
 pidgin_media_output_volume_changed(GtkScaleButton *range, double value,
 		PurpleMedia *media)
 {
 	double val = (double)value * 100.0;
-#else
-pidgin_media_output_volume_changed(GtkRange *range, PurpleMedia *media)
-{
-	double val = (double)gtk_range_get_value(GTK_RANGE(range));
-#endif
 	purple_media_set_output_volume(media, NULL, NULL, val);
 }
 
@@ -709,7 +709,6 @@ pidgin_media_add_audio_widget(PidginMedia *gtkmedia,
 	} else
 		g_return_val_if_reached(NULL);
 
-#if GTK_CHECK_VERSION(2,12,0)
 	/* Setup widget structure */
 	volume_widget = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
 	progress_parent = gtk_vbox_new(FALSE, 0);
@@ -721,19 +720,6 @@ pidgin_media_add_audio_widget(PidginMedia *gtkmedia,
 	gtk_scale_button_set_value(GTK_SCALE_BUTTON(volume), value/100.0);
 	gtk_box_pack_end(GTK_BOX(volume_widget),
 			volume, FALSE, FALSE, 0);
-#else
-	/* Setup widget structure */
-	volume_widget = gtk_vbox_new(FALSE, 0);
-	progress_parent = volume_widget;
-
-	/* Volume slider */
-	volume = gtk_hscale_new_with_range(0.0, 100.0, 5.0);
-	gtk_range_set_increments(GTK_RANGE(volume), 5.0, 25.0);
-	gtk_range_set_value(GTK_RANGE(volume), value);
-	gtk_scale_set_draw_value(GTK_SCALE(volume), FALSE);
-	gtk_box_pack_end(GTK_BOX(volume_widget),
-			volume, TRUE, FALSE, 0);
-#endif
 
 	/* Volume level indicator */
 	progress = gtk_progress_bar_new();
@@ -1072,6 +1058,96 @@ pidgin_media_new_cb(PurpleMediaManager *manager, PurpleMedia *media,
 }
 
 static GstElement *
+create_vv_element(const gchar *plugin, const gchar *device)
+{
+	GstElement *element, *source;
+
+	g_return_val_if_fail(plugin != NULL, NULL);
+	g_return_val_if_fail(plugin[0] != '\0', NULL);
+
+	if (device != NULL && device[0] == '\0')
+		device = NULL;
+
+	if (g_strcmp0(plugin, "videodisabledsrc") == 0) {
+		element = gst_element_factory_make("videotestsrc", NULL);
+		g_object_set(G_OBJECT(element), "is-live", TRUE, NULL);
+		if (g_strcmp0(device, "snow") == 0) {
+			/* GST_VIDEO_TEST_SRC_SNOW */
+			g_object_set(G_OBJECT(element), "pattern", 1, NULL);
+		} else {
+			/* GST_VIDEO_TEST_SRC_BLACK */
+			g_object_set(G_OBJECT(element), "pattern", 2, NULL);
+		}
+		return element;
+	}
+
+	if (g_strcmp0(plugin, "ksvideosrc") == 0) {
+		GstElement *ksv_bin, *ksv_src, *ksv_filter;
+		GstPad *ksv_pad, *ksv_ghost;
+
+		ksv_bin = gst_bin_new("ksvideofilteredsrc");
+		ksv_src = gst_element_factory_make("ksvideosrc", NULL);
+		ksv_filter = gst_element_factory_make("ffmpegcolorspace", NULL);
+
+		gst_bin_add_many(GST_BIN(ksv_bin), ksv_src, ksv_filter, NULL);
+
+		gst_element_link(ksv_src, ksv_filter);
+
+		ksv_pad = gst_element_get_static_pad(ksv_filter, "src");
+		ksv_ghost = gst_ghost_pad_new("src", ksv_pad);
+		gst_object_unref(ksv_pad);
+		gst_element_add_pad(ksv_bin, ksv_ghost);
+
+		element = ksv_bin;
+		source = ksv_src;
+	}
+	else
+		element = source = gst_element_factory_make(plugin, NULL);
+
+	if (element == NULL)
+		return NULL;
+
+	if (device != NULL) {
+		GObjectClass *klass = G_OBJECT_GET_CLASS(source);
+		if (g_object_class_find_property(klass, "device"))
+			g_object_set(G_OBJECT(source), "device", device, NULL);
+		else if (g_object_class_find_property(klass, "device-index"))
+			g_object_set(G_OBJECT(source), "device-index",
+				g_ascii_strtoull(device, NULL, 10), NULL);
+		else
+			purple_debug_warning("gtkmedia", "No possibility to "
+				"set device\n");
+	}
+
+	if (g_strcmp0(plugin, "videotestsrc") == 0)
+		g_object_set(G_OBJECT(element), "is-live", TRUE, NULL);
+
+	return element;
+}
+
+static GstElement *
+create_configured_vv_element(const gchar *type, const gchar *dir)
+{
+	gchar *tmp;
+	const gchar *plugin, *device;
+
+	tmp = g_strdup_printf(PIDGIN_PREFS_ROOT "/vvconfig/%s/%s/plugin",
+		type, dir);
+	plugin = purple_prefs_get_string(tmp);
+	g_free(tmp);
+
+	tmp = g_strdup_printf(PIDGIN_PREFS_ROOT "/vvconfig/%s/%s/device",
+		type, dir);
+	device = purple_prefs_get_string(tmp);
+	g_free(tmp);
+
+	if (plugin == NULL || plugin[0] == '\0')
+		return NULL;
+
+	return create_vv_element(plugin, device);
+}
+
+static GstElement *
 create_default_video_src(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
@@ -1079,26 +1155,32 @@ create_default_video_src(PurpleMedia *media,
 	GstPad *pad;
 	GstPad *ghost;
 
+	src = create_configured_vv_element("video", "src");
+
 #ifdef _WIN32
-	/* autovideosrc doesn't pick ksvideosrc for some reason */
-	src = gst_element_factory_make("ksvideosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("dshowvideosrc", NULL);
+		src = create_vv_element("ksvideosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("autovideosrc", NULL);
+		src = create_vv_element("dshowvideosrc", NULL);
+	if (src == NULL)
+		src = create_vv_element("autovideosrc", NULL);
 #elif defined(__APPLE__)
-	src = gst_element_factory_make("osxvideosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("autovideosrc", NULL);
+		src = create_vv_element("osxvideosrc", NULL);
+	if (src == NULL)
+		src = create_vv_element("autovideosrc", NULL);
 #else
-	src = gst_element_factory_make("gconfvideosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("autovideosrc", NULL);
+		src = create_vv_element("gconfvideosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("v4l2src", NULL);
+		src = create_vv_element("autovideosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("v4lsrc", NULL);
+		src = create_vv_element("v4l2src", NULL);
+	if (src == NULL)
+		src = create_vv_element("v4lsrc", NULL);
 #endif
+	if (src == NULL)
+		src = create_vv_element("videotestsrc", NULL);
 	if (src == NULL) {
 		purple_debug_error("gtkmedia", "Unable to find a suitable "
 				"element for the default video source.\n");
@@ -1121,9 +1203,16 @@ static GstElement *
 create_default_video_sink(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
-	GstElement *sink = gst_element_factory_make("gconfvideosink", NULL);
+	GstElement *sink;
+
+	sink = create_configured_vv_element("video", "sink");
+
 	if (sink == NULL)
-		sink = gst_element_factory_make("autovideosink", NULL);
+		sink = create_vv_element("directdrawsink", NULL);
+	if (sink == NULL)
+		sink = create_vv_element("gconfvideosink", NULL);
+	if (sink == NULL)
+		sink = create_vv_element("autovideosink", NULL);
 	if (sink == NULL)
 		purple_debug_error("gtkmedia", "Unable to find a suitable "
 				"element for the default video sink.\n");
@@ -1135,17 +1224,23 @@ create_default_audio_src(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
 	GstElement *src;
-	src = gst_element_factory_make("gconfaudiosrc", NULL);
+
+	src = create_configured_vv_element("audio", "src");
+
 	if (src == NULL)
-		src = gst_element_factory_make("autoaudiosrc", NULL);
+		src = create_vv_element("directsoundsrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("alsasrc", NULL);
+		src = create_vv_element("gconfaudiosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("osssrc", NULL);
+		src = create_vv_element("autoaudiosrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("dshowaudiosrc", NULL);
+		src = create_vv_element("alsasrc", NULL);
 	if (src == NULL)
-		src = gst_element_factory_make("osxaudiosrc", NULL);
+		src = create_vv_element("osssrc", NULL);
+	if (src == NULL)
+		src = create_vv_element("dshowaudiosrc", NULL);
+	if (src == NULL)
+		src = create_vv_element("osxaudiosrc", NULL);
 	if (src == NULL) {
 		purple_debug_error("gtkmedia", "Unable to find a suitable "
 				"element for the default audio source.\n");
@@ -1160,9 +1255,15 @@ create_default_audio_sink(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
 	GstElement *sink;
-	sink = gst_element_factory_make("gconfaudiosink", NULL);
+
+	sink = create_configured_vv_element("audio", "sink");
+
 	if (sink == NULL)
-		sink = gst_element_factory_make("autoaudiosink",NULL);
+		sink = create_vv_element("directsoundsink", NULL);
+	if (sink == NULL)
+		sink = create_vv_element("gconfaudiosink", NULL);
+	if (sink == NULL)
+		sink = create_vv_element("autoaudiosink",NULL);
 	if (sink == NULL) {
 		purple_debug_error("gtkmedia", "Unable to find a suitable "
 				"element for the default audio sink.\n");

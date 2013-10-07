@@ -72,9 +72,7 @@ void msim_user_free(MsimUser *user)
 	if (!user)
 		return;
 
-	if (user->url_data != NULL)
-		purple_util_fetch_url_cancel(user->url_data);
-
+	purple_http_conn_cancel(user->http_conn);
 	g_free(user->client_info);
 	g_free(user->gender);
 	g_free(user->location);
@@ -215,31 +213,33 @@ msim_append_user_info(MsimSession *session, PurpleNotifyUserInfo *user_info, Msi
  * Callback for when a buddy icon finished being downloaded.
  */
 static void
-msim_downloaded_buddy_icon(PurpleUtilFetchUrlData *url_data,
-		gpointer user_data,
-		const gchar *url_text,
-		gsize len,
-		const gchar *error_message)
+msim_downloaded_buddy_icon(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer _user)
 {
-	MsimUser *user = (MsimUser *)user_data;
+	MsimUser *user = _user;
 	const char *name = purple_buddy_get_name(user->buddy);
 	PurpleAccount *account;
+	const gchar *data;
+	size_t len;
 
-	user->url_data = NULL;
+	g_assert(user->http_conn == http_conn);
+	user->http_conn = NULL;
 
-	purple_debug_info("msim_downloaded_buddy_icon",
-			"Downloaded %" G_GSIZE_FORMAT " bytes\n", len);
-
-	if (!url_text) {
+	if (!purple_http_response_is_successful(response)) {
 		purple_debug_info("msim_downloaded_buddy_icon",
 				"failed to download icon for %s",
 				name);
 		return;
 	}
 
+	data = purple_http_response_get_data(response, &len);
+
+	purple_debug_info("msim_downloaded_buddy_icon",
+			"Downloaded %" G_GSIZE_FORMAT " bytes\n", len);
+
 	account = purple_buddy_get_account(user->buddy);
 	purple_buddy_icons_set_for_user(account, name,
-			g_memdup((gchar *)url_text, len), len,
+			g_memdup(data, len), len,
 			/* Use URL itself as buddy icon "checksum" (TODO: ETag) */
 			user->image_url);		/* checksum */
 }
@@ -382,9 +382,8 @@ msim_store_user_info_each(const gchar *key_str, gchar *value_str, MsimUser *user
 
 		/* Only download if URL changed */
 		if (!previous_url || !g_str_equal(previous_url, user->image_url)) {
-			if (user->url_data != NULL)
-				purple_util_fetch_url_cancel(user->url_data);
-			user->url_data = purple_util_fetch_url(user->image_url, TRUE, NULL, TRUE, -1, msim_downloaded_buddy_icon, (gpointer)user);
+			purple_http_conn_cancel(user->http_conn);
+			user->http_conn = purple_http_get(NULL, msim_downloaded_buddy_icon, user, user->image_url);
 		}
 	} else if (g_str_equal(key_str, "LastImageUpdated")) {
 		/* TODO: use somewhere */
@@ -629,15 +628,17 @@ static void msim_username_is_set_cb(MsimSession *session, const MsimMessage *use
 	const gchar *errmsg;
 	MsimMessage *body;
 
-	guint rid;
-	gint cmd,dsn,uid,lid,code;
+	guint rid, dsn, lid;
+	gint cmd, code;
 	/* \persistr\\cmd\258\dsn\9\uid\204084363\lid\14\rid\369\body\UserName=TheAlbinoRhino1.Code=0\final\ */
 
 	purple_debug_info("msim","username_is_set made\n");
 
 	cmd = msim_msg_get_integer(userinfo, "cmd");
 	dsn = msim_msg_get_integer(userinfo, "dsn");
-	uid = msim_msg_get_integer(userinfo, "uid");
+#if 0
+	gint uid = msim_msg_get_integer(userinfo, "uid");
+#endif
 	lid = msim_msg_get_integer(userinfo, "lid");
 	body = msim_msg_get_dictionary(userinfo, "body");
 	errmsg = _("An error occurred while trying to set the username.  "
@@ -655,7 +656,7 @@ static void msim_username_is_set_cb(MsimSession *session, const MsimMessage *use
 	msim_msg_free(body);
 
 	purple_debug_info("msim_username_is_set_cb",
-			"cmd = %d, dsn = %d, lid = %d, code = %d, username = %s\n",
+			"cmd = %d, dsn = %u, lid = %u, code = %d, username = %s\n",
 			cmd, dsn, lid, code, username);
 
 	if (cmd == (MSIM_CMD_BIT_REPLY | MSIM_CMD_PUT)
@@ -818,9 +819,7 @@ static void msim_username_is_available_cb(MsimSession *session, const MsimMessag
 			_("This username is available. Would you like to set it?"),
 			_("ONCE SET, THIS CANNOT BE CHANGED!"),
 			0,
-			session->account,
-			NULL,
-			NULL,
+			purple_request_cpar_from_account(session->account),
 			session->gc,
 			G_CALLBACK(msim_set_username_confirmed_cb),
 			G_CALLBACK(msim_do_not_set_username_cb));
@@ -833,9 +832,7 @@ static void msim_username_is_available_cb(MsimSession *session, const MsimMessag
 				"", FALSE, FALSE, NULL,
 				_("OK"), G_CALLBACK(msim_check_username_availability_cb),
 				_("Cancel"), G_CALLBACK(msim_do_not_set_username_cb),
-				session->account,
-				NULL,
-				NULL,
+				purple_request_cpar_from_connection(session->gc),
 				session->gc);
 	}
 }
@@ -894,8 +891,6 @@ void msim_set_username_cb(PurpleConnection *gc)
 			"", FALSE, FALSE, NULL,
 			_("OK"), G_CALLBACK(msim_check_username_availability_cb),
 			_("Cancel"), G_CALLBACK(msim_do_not_set_username_cb),
-			purple_connection_get_account(gc),
-			NULL,
-			NULL,
+			purple_request_cpar_from_connection(gc),
 			gc);
 }

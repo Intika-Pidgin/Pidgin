@@ -79,34 +79,6 @@ typedef gboolean (*PidginFilterBuddyCompletionEntryFunc) (const PidginBuddyCompl
 G_BEGIN_DECLS
 
 /**
- * Sets up a gtkimhtml widget, loads it with smileys, and sets the
- * default signal handlers.
- *
- * @param imhtml The gtkimhtml widget to setup.
- */
-void pidgin_setup_imhtml(GtkWidget *imhtml);
-
-/**
- * Create an GtkIMHtml widget and associated GtkIMHtmlToolbar widget.  This
- * functions puts both widgets in a nice GtkFrame.  They're separate by an
- * attractive GtkSeparator.
- *
- * @param editable @c TRUE if this imhtml should be editable.  If this is @c FALSE,
- *        then the toolbar will NOT be created.  If this imthml should be
- *        read-only at first, but may become editable later, then pass in
- *        @c TRUE here and then manually call gtk_imhtml_set_editable() later.
- * @param imhtml_ret A pointer to a pointer to a GtkWidget.  This pointer
- *        will be set to the imhtml when this function exits.
- * @param toolbar_ret A pointer to a pointer to a GtkWidget.  If editable is
- *        TRUE then this will be set to the toolbar when this function exits.
- *        Otherwise this will be set to @c NULL.
- * @param sw_ret This will be filled with a pointer to the scrolled window
- *        widget which contains the imhtml.
- * @return The GtkFrame containing the toolbar and imhtml.
- */
-GtkWidget *pidgin_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWidget **toolbar_ret, GtkWidget **sw_ret);
-
-/**
  * Sets up a gtkwebview widget, loads it with smileys, and sets the
  * default signal handlers.
  *
@@ -115,10 +87,9 @@ GtkWidget *pidgin_create_imhtml(gboolean editable, GtkWidget **imhtml_ret, GtkWi
 void pidgin_setup_webview(GtkWidget *webview);
 
 /**
- * Create an GtkWebView widget and associated GtkIMHtmlToolbar widget.  This
+ * Create an GtkWebView widget and associated GtkWebViewToolbar widget.  This
  * function puts both widgets in a nice GtkFrame.  They're separated by an
  * attractive GtkSeparator.
- * TODO WEBKIT: editable isn't supported yet
  *
  * @param editable @c TRUE if this webview should be editable.  If this is
  *        @c FALSE, then the toolbar will NOT be created.  If this webview
@@ -127,15 +98,12 @@ void pidgin_setup_webview(GtkWidget *webview);
  *        later.
  * @param webview_ret A pointer to a pointer to a GtkWidget.  This pointer
  *        will be set to the webview when this function exits.
- * @param toolbar_ret A pointer to a pointer to a GtkWidget.  If editable is
- *        TRUE then this will be set to the toolbar when this function exits.
- *        Otherwise this will be set to @c NULL.
  * @param sw_ret This will be filled with a pointer to the scrolled window
  *        widget which contains the webview.
  *
  * @return The GtkFrame containing the toolbar and webview.
  */
-GtkWidget *pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, GtkWidget **toolbar_ret, GtkWidget **sw_ret);
+GtkWidget *pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, GtkWidget **sw_ret);
 
 /**
  * Creates a small button
@@ -388,7 +356,7 @@ void pidgin_account_option_menu_set_selected(GtkWidget *optmenu, PurpleAccount *
  *                    should be shown. This can be @c NULL.
  * @param user_data  The data to be passed to the filter_func function.
  */
-void pidgin_setup_screenname_autocomplete_with_filter(GtkWidget *entry, GtkWidget *optmenu, PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data);
+void pidgin_setup_screenname_autocomplete(GtkWidget *entry, GtkWidget *optmenu, PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data);
 
 /**
  * The default filter function for username autocomplete.

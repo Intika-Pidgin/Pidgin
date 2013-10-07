@@ -240,7 +240,7 @@ ver_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	MsnTransaction *trans;
 	PurpleAccount *account;
 	gboolean protocol_supported = FALSE;
-	int proto_ver;
+	guint proto_ver;
 	size_t i;
 
 	session = cmdproc->session;
@@ -249,7 +249,7 @@ ver_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	session->protocol_ver = 0;
 	for (i = 1; i < cmd->param_count; i++)
 	{
-		if (sscanf(cmd->params[i], "MSNP%d", &proto_ver) == 1) {
+		if (sscanf(cmd->params[i], "MSNP%u", &proto_ver) == 1) {
 			if (proto_ver >= WLM_MIN_PROTOCOL
 			 && proto_ver <= WLM_MAX_PROTOCOL
 			 && proto_ver > session->protocol_ver) {
@@ -822,7 +822,7 @@ adl_error_parse(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload, size_t len)
 
 		purple_notify_error(gc, NULL,
 			_("The following users are missing from your addressbook"),
-			emails->str);
+			emails->str, purple_request_cpar_from_connection(gc));
 		g_string_free(emails, TRUE);
 		xmlnode_free(adl);
 	}
@@ -833,7 +833,8 @@ adl_error_parse(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload, size_t len)
 			error, adl);
 		g_free(adl);
 
-		purple_notify_error(gc, NULL, _("Unable to add user"), reason);
+		purple_notify_error(gc, NULL, _("Unable to add user"), reason,
+			purple_request_cpar_from_connection(gc));
 		g_free(reason);
 	}
 }
@@ -857,7 +858,8 @@ adl_error(MsnCmdProc *cmdproc, MsnTransaction *trans, int error)
 		cmd->payload_cbdata = GINT_TO_POINTER(error);
 	} else {
 		char *reason = g_strdup_printf(_("Unknown error (%d)"), error);
-		purple_notify_error(gc, NULL, _("Unable to add user"), reason);
+		purple_notify_error(gc, NULL, _("Unable to add user"), reason,
+			purple_request_cpar_from_connection(gc));
 		g_free(reason);
 	}
 }
@@ -880,7 +882,8 @@ rml_error_parse(MsnCmdProc *cmdproc, MsnCommand *cmd, char *payload, size_t len)
 		error, adl);
 	g_free(adl);
 
-	purple_notify_error(gc, NULL, _("Unable to remove user"), reason);
+	purple_notify_error(gc, NULL, _("Unable to remove user"), reason,
+		purple_request_cpar_from_connection(gc));
 	g_free(reason);
 }
 
@@ -903,7 +906,8 @@ rml_error(MsnCmdProc *cmdproc, MsnTransaction *trans, int error)
 		cmd->payload_cbdata = GINT_TO_POINTER(error);
 	} else {
 		char *reason = g_strdup_printf(_("Unknown error (%d)"), error);
-		purple_notify_error(gc, NULL, _("Unable to remove user"), reason);
+		purple_notify_error(gc, NULL, _("Unable to remove user"),
+			reason, purple_request_cpar_from_connection(gc));
 		g_free(reason);
 	}
 }
@@ -1417,7 +1421,7 @@ url_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 
 	cipher = purple_cipher_context_new_by_name("md5", NULL);
 	purple_cipher_context_append(cipher, (const guchar *)buf, strlen(buf));
-	purple_cipher_context_digest_to_str(cipher, sizeof(creds), creds, NULL);
+	purple_cipher_context_digest_to_str(cipher, creds, sizeof(creds));
 	purple_cipher_context_destroy(cipher);
 	g_free(buf);
 
@@ -1592,7 +1596,7 @@ parse_user_endpoints(MsnUser *user, xmlnode *payloadNode)
 		/* Disconnect others, if MPOP is disabled */
 		if (is_me
 		 && !session->enable_mpop
-		 && strncasecmp(id + 1, session->guid, 36) != 0) {
+		 && g_ascii_strncasecmp(id + 1, session->guid, 36) != 0) {
 			purple_debug_info("msn", "Disconnecting Endpoint %s\n", id);
 
 			tmp = g_strdup_printf("%s;%s", user->passport, id);
@@ -2249,7 +2253,10 @@ system_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		}
 
 		if (*buf != '\0')
-			purple_notify_info(purple_account_get_connection(cmdproc->session->account), NULL, buf, NULL);
+			purple_notify_info(purple_account_get_connection(
+				cmdproc->session->account),
+			NULL, buf, NULL, purple_request_cpar_from_account(
+				cmdproc->session->account));
 	}
 
 	g_hash_table_destroy(table);

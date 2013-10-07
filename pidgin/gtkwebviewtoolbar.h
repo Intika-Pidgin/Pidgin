@@ -90,6 +90,15 @@ void gtk_webviewtoolbar_associate_smileys(GtkWebViewToolbar *toolbar,
 void gtk_webviewtoolbar_switch_active_conversation(GtkWebViewToolbar *toolbar,
                                                    PurpleConversation *conv);
 
+/**
+ * Activate a GtkWebViewToolbar action
+ *
+ * @param toolbar The GtkWebViewToolbar object
+ * @param action  The GtkWebViewAction
+ */
+void gtk_webviewtoolbar_activate(GtkWebViewToolbar *toolbar,
+                                 GtkWebViewAction action);
+
 G_END_DECLS
 
 #endif /* _PIDGINWEBVIEWTOOLBAR_H_ */

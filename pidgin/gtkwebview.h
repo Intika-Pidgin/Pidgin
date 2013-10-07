@@ -58,8 +58,34 @@ typedef enum {
 	GTK_WEBVIEW_ALL           = -1
 } GtkWebViewButtons;
 
+typedef enum {
+	GTK_WEBVIEW_SMILEY_CUSTOM = 1 << 0
+} GtkWebViewSmileyFlags;
+
+typedef enum {
+	GTK_WEBVIEW_ACTION_BOLD,
+	GTK_WEBVIEW_ACTION_ITALIC,
+	GTK_WEBVIEW_ACTION_UNDERLINE,
+	GTK_WEBVIEW_ACTION_STRIKE,
+	GTK_WEBVIEW_ACTION_LARGER,
+#if 0
+	GTK_WEBVIEW_ACTION_NORMAL,
+#endif
+	GTK_WEBVIEW_ACTION_SMALLER,
+	GTK_WEBVIEW_ACTION_FONTFACE,
+	GTK_WEBVIEW_ACTION_FGCOLOR,
+	GTK_WEBVIEW_ACTION_BGCOLOR,
+	GTK_WEBVIEW_ACTION_CLEAR,
+	GTK_WEBVIEW_ACTION_IMAGE,
+	GTK_WEBVIEW_ACTION_LINK,
+	GTK_WEBVIEW_ACTION_HR,
+	GTK_WEBVIEW_ACTION_SMILEY,
+	GTK_WEBVIEW_ACTION_ATTENTION
+} GtkWebViewAction;
+
 typedef struct _GtkWebView GtkWebView;
 typedef struct _GtkWebViewClass GtkWebViewClass;
+typedef struct _GtkWebViewSmiley GtkWebViewSmiley;
 
 struct _GtkWebView
 {
@@ -70,11 +96,14 @@ struct _GtkWebViewClass
 {
 	WebKitWebViewClass parent;
 
+	GList *protocols;
+
 	void (*buttons_update)(GtkWebView *, GtkWebViewButtons);
 	void (*toggle_format)(GtkWebView *, GtkWebViewButtons);
 	void (*clear_format)(GtkWebView *);
 	void (*update_format)(GtkWebView *);
 	void (*changed)(GtkWebView *);
+	void (*html_appended)(GtkWebView *, WebKitDOMRange *);
 };
 
 G_BEGIN_DECLS
@@ -89,20 +118,11 @@ GType gtk_webview_get_type(void);
 /**
  * Create a new GtkWebView object
  *
+ * @param editable Whether this GtkWebView will be user-editable
+ *
  * @return A GtkWidget corresponding to the GtkWebView object
  */
-GtkWidget *gtk_webview_new(void);
-
-/**
- * TODO WEBKIT: Right now this just tests whether an append has been called
- * since the last clear or since the Widget was created.  So it does not
- * test for load_string's called in between.
- *
- * @param webview The GtkWebView object
- *
- * @return gboolean indicating whether the webview is empty
- */
-gboolean gtk_webview_is_empty(GtkWebView *webview);
+GtkWidget *gtk_webview_new(gboolean editable);
 
 /**
  * A very basic routine to append html, which can be considered
@@ -171,6 +191,25 @@ void gtk_webview_set_vadjustment(GtkWebView *webview, GtkAdjustment *vadj);
 void gtk_webview_scroll_to_end(GtkWebView *webview, gboolean smooth);
 
 /**
+ * Set whether the GtkWebView stays at its end when HTML content is appended. If
+ * not already at the end before appending, then scrolling will not occur.
+ *
+ * @param webview The GtkWebView object
+ * @param scroll  Whether to automatically scroll
+ */
+void gtk_webview_set_autoscroll(GtkWebView *webview, gboolean scroll);
+
+/**
+ * Set whether the GtkWebView stays at its end when HTML content is appended. If
+ * not already at the end before appending, then scrolling will not occur.
+ *
+ * @param webview The GtkWebView object
+ *
+ * @return Whether to automatically scroll
+ */
+gboolean gtk_webview_get_autoscroll(GtkWebView *webview);
+
+/**
  * Scrolls a GtkWebView up by one page.
  *
  * @param webview The GtkWebView.
@@ -183,14 +222,6 @@ void gtk_webview_page_up(GtkWebView *webview);
  * @param webview The GtkWebView.
  */
 void gtk_webview_page_down(GtkWebView *webview);
-
-/**
- * Enables or disables editing in a GtkWebView.
- *
- * @param webview  The GtkWebView
- * @param editable @c TRUE to make the widget editable, or @c FALSE otherwise.
- */
-void gtk_webview_set_editable(GtkWebView *webview, gboolean editable);
 
 /**
  * Setup formatting for a GtkWebView depending on the flags specified.
@@ -227,6 +258,36 @@ void gtk_webview_set_whole_buffer_formatting_only(GtkWebView *webview,
  */
 void gtk_webview_set_format_functions(GtkWebView *webview,
                                       GtkWebViewButtons buttons);
+
+/**
+ * Activates a WebKitDOMHTMLAnchorElement object. This triggers the navigation
+ * signals, and marks the link as visited (when possible).
+ *
+ * @param link   The WebKitDOMHTMLAnchorElement object
+ *
+ */
+void gtk_webview_activate_anchor(WebKitDOMHTMLAnchorElement *link);
+
+/**
+ * Register a protocol with the GtkWebView widget. Registering a protocol would
+ * allow certain text to be clickable.
+ *
+ * @param name      The name of the protocol (e.g. http://)
+ * @param activate  The callback to trigger when the protocol text is clicked.
+ *                  Removes any current protocol definition if @c NULL. The
+ *                  callback should return @c TRUE if the link was activated
+ *                  properly, @c FALSE otherwise.
+ * @param context_menu  The callback to trigger when the context menu is popped
+ *                      up on the protocol text. The callback should return
+ *                      @c TRUE if the request for context menu was processed
+ *                      successfully, @c FALSE otherwise.
+ *
+ * @return  @c TRUE if the protocol was successfully registered
+ *          (or unregistered, when \a activate is @c NULL)
+ */
+gboolean gtk_webview_class_register_protocol(const char *name,
+		gboolean (*activate)(GtkWebView *webview, const char *uri),
+		gboolean (*context_menu)(GtkWebView *webview, WebKitDOMHTMLAnchorElement *link, GtkWidget *menu));
 
 /**
  * Returns which formatting functions are enabled in a GtkWebView.
@@ -290,15 +351,6 @@ char *gtk_webview_get_current_backcolor(GtkWebView *webview);
  * @return The HTML font size.
  */
 gint gtk_webview_get_current_fontsize(GtkWebView *webview);
-
-/**
- * Checks whether a GtkWebView is marked as editable.
- *
- * @param webview The GtkWebView
- *
- * @return @c TRUE if the IM/HTML is editable, or @c FALSE otherwise.
- */
-gboolean gtk_webview_get_editable(GtkWebView *webview);
 
 /**
  * Gets the content of the head element of a GtkWebView as HTML.
@@ -453,6 +505,150 @@ void gtk_webview_insert_link(GtkWebView *webview, const char *url, const char *d
  * @param id      The PurpleStoredImage id
  */
 void gtk_webview_insert_image(GtkWebView *webview, int id);
+
+/**
+ * Gets the protocol name associated with this GtkWebView.
+ *
+ * @param webview The GtkWebView
+ */
+const char *gtk_webview_get_protocol_name(GtkWebView *webview);
+
+/**
+ * Associates a protocol name with a GtkWebView.
+ *
+ * @param webview       The GtkWebView
+ * @param protocol_name The protocol name to associate with the GtkWebView
+ */
+void gtk_webview_set_protocol_name(GtkWebView *webview, const char *protocol_name);
+
+/**
+ * Create a new GtkWebViewSmiley.
+ *
+ * @param file      The image file for the smiley
+ * @param shortcut  The key shortcut for the smiley
+ * @param hide      @c TRUE if the smiley should be hidden in the smiley dialog,
+ *                  @c FALSE otherwise
+ * @param flags     The smiley flags
+ *
+ * @return The newly created smiley
+ */
+GtkWebViewSmiley *gtk_webview_smiley_create(const char *file,
+                                            const char *shortcut,
+                                            gboolean hide,
+                                            GtkWebViewSmileyFlags flags);
+
+/**
+ * Reload the image data for the smiley.
+ *
+ * @param smiley    The smiley to reload
+ */
+void gtk_webview_smiley_reload(GtkWebViewSmiley *smiley);
+
+/**
+ * Destroy a GtkWebViewSmiley.
+ *
+ * @param smiley    The smiley to destroy
+ */
+void gtk_webview_smiley_destroy(GtkWebViewSmiley *smiley);
+
+/**
+ * Returns the text associated with a smiley.
+ *
+ * @param smiley    The smiley
+ *
+ * @return The text
+ */
+const char *gtk_webview_smiley_get_smile(const GtkWebViewSmiley *smiley);
+
+/**
+ * Returns the file associated with a smiley.
+ *
+ * @param smiley    The smiley
+ *
+ * @return The file
+ */
+const char *gtk_webview_smiley_get_file(const GtkWebViewSmiley *smiley);
+
+/**
+ * Returns the invisibility of a smiley.
+ *
+ * @param smiley    The smiley
+ *
+ * @return The hidden status
+ */
+gboolean gtk_webview_smiley_get_hidden(const GtkWebViewSmiley *smiley);
+
+/**
+ * Returns the flags associated with a smiley.
+ *
+ * @param smiley    The smiley
+ *
+ * @return The flags
+ */
+GtkWebViewSmileyFlags gtk_webview_smiley_get_flags(const GtkWebViewSmiley *smiley);
+
+/**
+ * Returns the smiley object associated with the text.
+ *
+ * @param webview The GtkWebView
+ * @param sml     The name of the smiley category
+ * @param text    The text associated with the smiley
+ */
+GtkWebViewSmiley *gtk_webview_smiley_find(GtkWebView *webview, const char *sml,
+                                          const char *text);
+
+/**
+ * Associates a smiley with a GtkWebView.
+ *
+ * @param webview The GtkWebView
+ * @param sml     The name of the smiley category
+ * @param smiley  The GtkWebViewSmiley to associate
+ */
+void gtk_webview_associate_smiley(GtkWebView *webview, const char *sml,
+                                  GtkWebViewSmiley *smiley);
+
+/**
+ * Removes all smileys associated with a GtkWebView.
+ *
+ * @param webview The GtkWebView.
+ */
+void gtk_webview_remove_smileys(GtkWebView *webview);
+
+/**
+ * Inserts a smiley at the current location or selection in a GtkWebView.
+ *
+ * @param webview The GtkWebView
+ * @param sml     The category of the smiley
+ * @param smiley  The text of the smiley to insert
+ */
+void gtk_webview_insert_smiley(GtkWebView *webview, const char *sml,
+                               const char *smiley);
+
+/**
+ * Makes the toolbar associated with a GtkWebView visible.
+ *
+ * @param webview The GtkWebView.
+ */
+void gtk_webview_show_toolbar(GtkWebView *webview);
+
+/**
+ * Makes the toolbar associated with a GtkWebView invisible.
+ *
+ * @param webview The GtkWebView.
+ */
+void gtk_webview_hide_toolbar(GtkWebView *webview);
+
+/**
+ * Activate an action on the toolbar associated with a GtkWebView.
+ *
+ * @param webview The GtkWebView
+ * @param action  The GtkWebViewAction
+ */
+void gtk_webview_activate_toolbar(GtkWebView *webview, GtkWebViewAction action);
+
+/* Do not use. */
+void
+gtk_webview_set_toolbar(GtkWebView *webview, GtkWidget *toolbar);
 
 G_END_DECLS
 

@@ -70,7 +70,8 @@ struct _PurpleRequestField
 		{
 			int default_value;
 			int value;
-
+			int lower_bound;
+			int upper_bound;
 		} integer;
 
 		struct
@@ -82,11 +83,11 @@ struct _PurpleRequestField
 
 		struct
 		{
-			int default_value;
-			int value;
+			gpointer default_value;
+			gpointer value;
 
-			GList *labels;
-
+			GList *elements;
+			GDestroyNotify data_destroy;
 		} choice;
 
 		struct
@@ -128,6 +129,9 @@ struct _PurpleRequestField
 
 	void *ui_data;
 	char *tooltip;
+
+	PurpleRequestFieldValidator validator;
+	void *validator_data;
 };
 
 struct _PurpleRequestFields
@@ -137,6 +141,8 @@ struct _PurpleRequestFields
 	GHashTable *fields;
 
 	GList *required_fields;
+
+	GList *validated_fields;
 
 	void *ui_data;
 };
@@ -149,6 +155,297 @@ struct _PurpleRequestFieldGroup
 
 	GList *fields;
 };
+
+struct _PurpleRequestCommonParameters
+{
+	int ref_count;
+
+	PurpleAccount *account;
+	PurpleConversation *conv;
+
+	PurpleRequestIconType icon_type;
+	gconstpointer icon_data;
+	gsize icon_size;
+
+	gboolean html;
+
+	gboolean compact;
+
+	PurpleRequestHelpCb help_cb;
+	gpointer help_data;
+
+	GSList *extra_actions;
+
+	gpointer parent_from;
+};
+
+PurpleRequestCommonParameters *
+purple_request_cpar_new(void)
+{
+	return g_new0(PurpleRequestCommonParameters, 1);
+}
+
+PurpleRequestCommonParameters *
+purple_request_cpar_from_connection(PurpleConnection *gc)
+{
+	if (gc == NULL)
+		return purple_request_cpar_new();
+	return purple_request_cpar_from_account(
+		purple_connection_get_account(gc));
+}
+
+PurpleRequestCommonParameters *
+purple_request_cpar_from_account(PurpleAccount *account)
+{
+	PurpleRequestCommonParameters *cpar;
+
+	cpar = purple_request_cpar_new();
+	purple_request_cpar_set_account(cpar, account);
+
+	return cpar;
+}
+
+PurpleRequestCommonParameters *
+purple_request_cpar_from_conversation(PurpleConversation *conv)
+{
+	PurpleRequestCommonParameters *cpar;
+	PurpleAccount *account = NULL;
+
+	if (conv != NULL) {
+		account = purple_connection_get_account(
+			purple_conversation_get_connection(conv));
+	}
+
+	cpar = purple_request_cpar_new();
+	purple_request_cpar_set_account(cpar, account);
+	purple_request_cpar_set_conversation(cpar, conv);
+
+	return cpar;
+}
+
+void
+purple_request_cpar_ref(PurpleRequestCommonParameters *cpar)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->ref_count++;
+}
+
+PurpleRequestCommonParameters *
+purple_request_cpar_unref(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return NULL;
+
+	if (--cpar->ref_count > 0)
+		return cpar;
+
+	purple_request_cpar_set_extra_actions(cpar, NULL);
+	g_free(cpar);
+	return NULL;
+}
+
+void
+purple_request_cpar_set_account(PurpleRequestCommonParameters *cpar,
+	PurpleAccount *account)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->account = account;
+}
+
+PurpleAccount *
+purple_request_cpar_get_account(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return NULL;
+
+	return cpar->account;
+}
+
+void
+purple_request_cpar_set_conversation(PurpleRequestCommonParameters *cpar,
+	PurpleConversation *conv)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->conv = conv;
+}
+
+PurpleConversation *
+purple_request_cpar_get_conversation(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return NULL;
+
+	return cpar->conv;
+}
+
+void
+purple_request_cpar_set_icon(PurpleRequestCommonParameters *cpar,
+	PurpleRequestIconType icon_type)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->icon_type = icon_type;
+}
+
+PurpleRequestIconType
+purple_request_cpar_get_icon(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return PURPLE_REQUEST_ICON_DEFAULT;
+
+	return cpar->icon_type;
+}
+
+void
+purple_request_cpar_set_custom_icon(PurpleRequestCommonParameters *cpar,
+	gconstpointer icon_data, gsize icon_size)
+{
+	g_return_if_fail(cpar != NULL);
+	g_return_if_fail((icon_data == NULL) == (icon_size == 0));
+
+	cpar->icon_data = icon_data;
+	cpar->icon_size = icon_size;
+}
+
+gconstpointer
+purple_request_cpar_get_custom_icon(PurpleRequestCommonParameters *cpar,
+	gsize *icon_size)
+{
+	if (cpar == NULL) {
+		if (icon_size != NULL)
+			*icon_size = 0;
+		return NULL;
+	}
+
+	if (icon_size != NULL)
+		*icon_size = cpar->icon_size;
+	return cpar->icon_data;
+}
+
+void
+purple_request_cpar_set_html(PurpleRequestCommonParameters *cpar,
+	gboolean enabled)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->html = enabled;
+}
+
+gboolean
+purple_request_cpar_is_html(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return FALSE;
+
+	return cpar->html;
+}
+
+void
+purple_request_cpar_set_compact(PurpleRequestCommonParameters *cpar,
+	gboolean compact)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->compact = compact;
+}
+
+gboolean
+purple_request_cpar_is_compact(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return FALSE;
+
+	return cpar->compact;
+}
+
+void
+purple_request_cpar_set_help_cb(PurpleRequestCommonParameters *cpar,
+	PurpleRequestHelpCb cb, gpointer user_data)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->help_cb = cb;
+	cpar->help_data = cb ? user_data : NULL;
+}
+
+PurpleRequestHelpCb
+purple_request_cpar_get_help_cb(PurpleRequestCommonParameters *cpar,
+	gpointer *user_data)
+{
+	if (cpar == NULL)
+		return NULL;
+
+	if (user_data != NULL)
+		*user_data = cpar->help_data;
+	return cpar->help_cb;
+}
+
+void
+purple_request_cpar_set_extra_actions(PurpleRequestCommonParameters *cpar, ...)
+{
+	va_list args;
+	GSList *extra = NULL, *it;
+
+	it = cpar->extra_actions;
+	while (it != NULL) {
+		gchar *label = it->data;
+
+		g_free(label);
+		it = g_slist_next(it);
+		if (it == NULL)
+			break;
+		it = g_slist_next(it);
+	}
+
+	va_start(args, cpar);
+
+	while (TRUE) {
+		const gchar *label;
+		PurpleRequestFieldsCb cb;
+
+		label = va_arg(args, const gchar*);
+		if (label == NULL)
+			break;
+		cb = va_arg(args, PurpleRequestFieldsCb);
+
+		extra = g_slist_append(extra, g_strdup(label));
+		extra = g_slist_append(extra, cb);
+	}
+
+	va_end(args);
+
+	cpar->extra_actions = extra;
+}
+
+GSList *
+purple_request_cpar_get_extra_actions(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return NULL;
+
+	return cpar->extra_actions;
+}
+
+void
+purple_request_cpar_set_parent_from(PurpleRequestCommonParameters *cpar,
+	gpointer ui_handle)
+{
+	g_return_if_fail(cpar != NULL);
+
+	cpar->parent_from = ui_handle;
+}
+
+gpointer
+purple_request_cpar_get_parent_from(PurpleRequestCommonParameters *cpar)
+{
+	if (cpar == NULL)
+		return NULL;
+
+	return cpar->parent_from;
+}
 
 PurpleRequestFields *
 purple_request_fields_new(void)
@@ -171,6 +468,7 @@ purple_request_fields_destroy(PurpleRequestFields *fields)
 	g_list_foreach(fields->groups, (GFunc)purple_request_field_group_destroy, NULL);
 	g_list_free(fields->groups);
 	g_list_free(fields->required_fields);
+	g_list_free(fields->validated_fields);
 	g_hash_table_destroy(fields->fields);
 	g_free(fields);
 }
@@ -203,6 +501,11 @@ purple_request_fields_add_group(PurpleRequestFields *fields,
 				g_list_append(fields->required_fields, field);
 		}
 
+		if (purple_request_field_is_validatable(field)) {
+			fields->validated_fields =
+				g_list_append(fields->validated_fields, field);
+		}
+
 	}
 }
 
@@ -223,12 +526,20 @@ purple_request_fields_exists(const PurpleRequestFields *fields, const char *id)
 	return (g_hash_table_lookup(fields->fields, id) != NULL);
 }
 
-GList *
+const GList *
 purple_request_fields_get_required(const PurpleRequestFields *fields)
 {
 	g_return_val_if_fail(fields != NULL, NULL);
 
 	return fields->required_fields;
+}
+
+const GList *
+purple_request_fields_get_validatable(const PurpleRequestFields *fields)
+{
+	g_return_val_if_fail(fields != NULL, NULL);
+
+	return fields->validated_fields;
 }
 
 gboolean
@@ -274,18 +585,26 @@ purple_request_fields_all_required_filled(const PurpleRequestFields *fields)
 	{
 		PurpleRequestField *field = (PurpleRequestField *)l->data;
 
-		switch (purple_request_field_get_type(field))
-		{
-			case PURPLE_REQUEST_FIELD_STRING:
-				if (purple_request_field_string_get_value(field) == NULL ||
-				    *(purple_request_field_string_get_value(field)) == '\0')
-					return FALSE;
+		if (!purple_request_field_is_filled(field))
+			return FALSE;
+	}
 
-				break;
+	return TRUE;
+}
 
-			default:
-				break;
-		}
+gboolean
+purple_request_fields_all_valid(const PurpleRequestFields *fields)
+{
+	GList *l;
+
+	g_return_val_if_fail(fields != NULL, FALSE);
+
+	for (l = fields->validated_fields; l != NULL; l = l->next)
+	{
+		PurpleRequestField *field = (PurpleRequestField *)l->data;
+
+		if (!purple_request_field_is_valid(field, NULL))
+			return FALSE;
 	}
 
 	return TRUE;
@@ -349,16 +668,17 @@ purple_request_fields_get_bool(const PurpleRequestFields *fields, const char *id
 	return purple_request_field_bool_get_value(field);
 }
 
-int
-purple_request_fields_get_choice(const PurpleRequestFields *fields, const char *id)
+gpointer
+purple_request_fields_get_choice(const PurpleRequestFields *fields,
+	const char *id)
 {
 	PurpleRequestField *field;
 
-	g_return_val_if_fail(fields != NULL, -1);
-	g_return_val_if_fail(id     != NULL, -1);
+	g_return_val_if_fail(fields != NULL, NULL);
+	g_return_val_if_fail(id != NULL, NULL);
 
 	if ((field = purple_request_fields_get_field(fields, id)) == NULL)
-		return -1;
+		return NULL;
 
 	return purple_request_field_choice_get_value(field);
 }
@@ -436,6 +756,12 @@ purple_request_field_group_add_field(PurpleRequestFieldGroup *group,
 			group->fields_list->required_fields =
 				g_list_append(group->fields_list->required_fields, field);
 		}
+		
+		if (purple_request_field_is_validatable(field))
+		{
+			group->fields_list->validated_fields =
+				g_list_append(group->fields_list->validated_fields, field);
+		}
 	}
 
 	field->group = group;
@@ -503,10 +829,19 @@ purple_request_field_destroy(PurpleRequestField *field)
 	}
 	else if (field->type == PURPLE_REQUEST_FIELD_CHOICE)
 	{
-		if (field->u.choice.labels != NULL)
+		if (field->u.choice.elements != NULL)
 		{
-			g_list_foreach(field->u.choice.labels, (GFunc)g_free, NULL);
-			g_list_free(field->u.choice.labels);
+			GList *it = field->u.choice.elements;
+			while (it != NULL) {
+				g_free(it->data);
+				it = g_list_next(it); /* value */
+				if (it->data && field->u.choice.data_destroy)
+					field->u.choice.data_destroy(it->data);
+				if (it == NULL)
+					break;
+				it = g_list_next(it); /* next label */
+			}
+			g_list_free(field->u.choice.elements);
 		}
 	}
 	else if (field->type == PURPLE_REQUEST_FIELD_LIST)
@@ -657,6 +992,73 @@ purple_request_field_is_required(const PurpleRequestField *field)
 	return field->required;
 }
 
+gboolean
+purple_request_field_is_filled(const PurpleRequestField *field)
+{
+	g_return_val_if_fail(field != NULL, FALSE);
+
+	switch (purple_request_field_get_type(field))
+	{
+		case PURPLE_REQUEST_FIELD_STRING:
+			return (purple_request_field_string_get_value(field) != NULL &&
+				*(purple_request_field_string_get_value(field)) != '\0');
+		default:
+			return TRUE;
+	}
+}
+
+void
+purple_request_field_set_validator(PurpleRequestField *field,
+	PurpleRequestFieldValidator validator, void *user_data)
+{
+	g_return_if_fail(field != NULL);
+
+	field->validator = validator;
+	field->validator_data = validator ? user_data : NULL;
+
+	if (field->group != NULL)
+	{
+		PurpleRequestFields *flist = field->group->fields_list;
+		flist->validated_fields = g_list_remove(flist->validated_fields,
+			field);
+		if (validator)
+		{
+			flist->validated_fields = g_list_append(
+				flist->validated_fields, field);
+		}
+	}
+}
+
+gboolean
+purple_request_field_is_validatable(PurpleRequestField *field)
+{
+	g_return_val_if_fail(field != NULL, FALSE);
+
+	return field->validator != NULL;
+}
+
+gboolean
+purple_request_field_is_valid(PurpleRequestField *field, gchar **errmsg)
+{
+	gboolean valid;
+
+	g_return_val_if_fail(field != NULL, FALSE);
+
+	if (!field->validator)
+		return TRUE;
+
+	if (!purple_request_field_is_required(field) &&
+		!purple_request_field_is_filled(field))
+		return TRUE;
+
+	valid = field->validator(field, errmsg, field->validator_data);
+
+	if (valid && errmsg)
+		*errmsg = NULL;
+
+	return valid;
+}
+
 PurpleRequestField *
 purple_request_field_string_new(const char *id, const char *text,
 							  const char *default_value, gboolean multiline)
@@ -764,7 +1166,7 @@ purple_request_field_string_is_editable(const PurpleRequestField *field)
 
 PurpleRequestField *
 purple_request_field_int_new(const char *id, const char *text,
-						   int default_value)
+	int default_value, int lower_bound, int upper_bound)
 {
 	PurpleRequestField *field;
 
@@ -773,6 +1175,8 @@ purple_request_field_int_new(const char *id, const char *text,
 
 	field = purple_request_field_new(id, text, PURPLE_REQUEST_FIELD_INTEGER);
 
+	purple_request_field_int_set_lower_bound(field, lower_bound);
+	purple_request_field_int_set_upper_bound(field, upper_bound);
 	purple_request_field_int_set_default_value(field, default_value);
 	purple_request_field_int_set_value(field, default_value);
 
@@ -790,10 +1194,36 @@ purple_request_field_int_set_default_value(PurpleRequestField *field,
 }
 
 void
+purple_request_field_int_set_lower_bound(PurpleRequestField *field,
+	int lower_bound)
+{
+	g_return_if_fail(field != NULL);
+	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_INTEGER);
+
+	field->u.integer.lower_bound = lower_bound;
+}
+
+void
+purple_request_field_int_set_upper_bound(PurpleRequestField *field,
+	int upper_bound)
+{
+	g_return_if_fail(field != NULL);
+	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_INTEGER);
+
+	field->u.integer.upper_bound = upper_bound;
+}
+
+void
 purple_request_field_int_set_value(PurpleRequestField *field, int value)
 {
 	g_return_if_fail(field != NULL);
 	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_INTEGER);
+
+	if (value < field->u.integer.lower_bound ||
+		value > field->u.integer.upper_bound) {
+		purple_debug_error("request", "Int value out of bounds\n");
+		return;
+	}
 
 	field->u.integer.value = value;
 }
@@ -805,6 +1235,24 @@ purple_request_field_int_get_default_value(const PurpleRequestField *field)
 	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_INTEGER, 0);
 
 	return field->u.integer.default_value;
+}
+
+int
+purple_request_field_int_get_lower_bound(const PurpleRequestField *field)
+{
+	g_return_val_if_fail(field != NULL, 0);
+	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_INTEGER, 0);
+
+	return field->u.integer.lower_bound;
+}
+
+int
+purple_request_field_int_get_upper_bound(const PurpleRequestField *field)
+{
+	g_return_val_if_fail(field != NULL, 0);
+	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_INTEGER, 0);
+
+	return field->u.integer.upper_bound;
 }
 
 int
@@ -872,7 +1320,7 @@ purple_request_field_bool_get_value(const PurpleRequestField *field)
 
 PurpleRequestField *
 purple_request_field_choice_new(const char *id, const char *text,
-							  int default_value)
+	gpointer default_value)
 {
 	PurpleRequestField *field;
 
@@ -888,19 +1336,22 @@ purple_request_field_choice_new(const char *id, const char *text,
 }
 
 void
-purple_request_field_choice_add(PurpleRequestField *field, const char *label)
+purple_request_field_choice_add(PurpleRequestField *field, const char *label,
+	gpointer value)
 {
 	g_return_if_fail(field != NULL);
 	g_return_if_fail(label != NULL);
 	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE);
 
-	field->u.choice.labels = g_list_append(field->u.choice.labels,
-											g_strdup(label));
+	field->u.choice.elements = g_list_append(field->u.choice.elements,
+		g_strdup(label));
+	field->u.choice.elements = g_list_append(field->u.choice.elements,
+		value);
 }
 
 void
 purple_request_field_choice_set_default_value(PurpleRequestField *field,
-											int default_value)
+	gpointer default_value)
 {
 	g_return_if_fail(field != NULL);
 	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE);
@@ -909,8 +1360,7 @@ purple_request_field_choice_set_default_value(PurpleRequestField *field,
 }
 
 void
-purple_request_field_choice_set_value(PurpleRequestField *field,
-											int value)
+purple_request_field_choice_set_value(PurpleRequestField *field, gpointer value)
 {
 	g_return_if_fail(field != NULL);
 	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE);
@@ -918,31 +1368,41 @@ purple_request_field_choice_set_value(PurpleRequestField *field,
 	field->u.choice.value = value;
 }
 
-int
+gpointer
 purple_request_field_choice_get_default_value(const PurpleRequestField *field)
 {
-	g_return_val_if_fail(field != NULL, -1);
-	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE, -1);
+	g_return_val_if_fail(field != NULL, NULL);
+	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE, NULL);
 
 	return field->u.choice.default_value;
 }
 
-int
+gpointer
 purple_request_field_choice_get_value(const PurpleRequestField *field)
 {
-	g_return_val_if_fail(field != NULL, -1);
-	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE, -1);
+	g_return_val_if_fail(field != NULL, NULL);
+	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE, NULL);
 
 	return field->u.choice.value;
 }
 
 GList *
-purple_request_field_choice_get_labels(const PurpleRequestField *field)
+purple_request_field_choice_get_elements(const PurpleRequestField *field)
 {
 	g_return_val_if_fail(field != NULL, NULL);
 	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE, NULL);
 
-	return field->u.choice.labels;
+	return field->u.choice.elements;
+}
+
+void
+purple_request_field_choice_set_data_destructor(PurpleRequestField *field,
+	GDestroyNotify destroy)
+{
+	g_return_if_fail(field != NULL);
+	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE);
+
+	field->u.choice.data_destroy = destroy;
 }
 
 PurpleRequestField *
@@ -1361,263 +1821,421 @@ purple_request_field_certificate_get_value(const PurpleRequestField *field)
 
 /* -- */
 
+gboolean
+purple_request_field_email_validator(PurpleRequestField *field, gchar **errmsg,
+	void *user_data)
+{
+	const char *value;
+
+	g_return_val_if_fail(field != NULL, FALSE);
+	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_STRING, FALSE);
+
+	value = purple_request_field_string_get_value(field);
+
+	if (value != NULL && purple_email_is_valid(value))
+		return TRUE;
+
+	if (errmsg)
+		*errmsg = g_strdup(_("Invalid email address"));
+	return FALSE;
+}
+
+gboolean
+purple_request_field_alphanumeric_validator(PurpleRequestField *field,
+	gchar **errmsg, void *allowed_characters)
+{
+	const char *value;
+	gchar invalid_char = '\0';
+
+	g_return_val_if_fail(field != NULL, FALSE);
+	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_STRING, FALSE);
+
+	value = purple_request_field_string_get_value(field);
+
+	g_return_val_if_fail(value != NULL, FALSE);
+
+	if (allowed_characters)
+	{
+		gchar *value_r = g_strdup(value);
+		g_strcanon(value_r, allowed_characters, '\0');
+		invalid_char = value[strlen(value_r)];
+		g_free(value_r);
+	}
+	else
+	{
+		while (value)
+		{
+			if (!g_ascii_isalnum(*value))
+			{
+				invalid_char = *value;
+				break;
+			}
+			value++;
+		}
+	}
+	if (!invalid_char)
+		return TRUE;
+
+	if (errmsg)
+		*errmsg = g_strdup_printf(_("Invalid character '%c'"),
+			invalid_char);
+	return FALSE;
+}
+
+/* -- */
+
+static gchar *
+purple_request_strip_html_custom(const gchar *html)
+{
+	gchar *tmp, *ret;
+
+	tmp = purple_strreplace(html, "\n", "<br>");
+	ret = purple_markup_strip_html(tmp);
+	g_free(tmp);
+
+	return ret;
+}
+
+static gchar **
+purple_request_strip_html(PurpleRequestCommonParameters *cpar,
+	const char **primary, const char **secondary)
+{
+	PurpleRequestUiOps *ops = purple_request_get_ui_ops();
+	gchar **ret;
+
+	if (!purple_request_cpar_is_html(cpar))
+		return NULL;
+	if (ops->features & PURPLE_REQUEST_FEATURE_HTML)
+		return NULL;
+
+	ret = g_new0(gchar*, 3);
+	*primary = ret[0] = purple_request_strip_html_custom(*primary);
+	*secondary = ret[1] = purple_request_strip_html_custom(*secondary);
+
+	return ret;
+}
+
 void *
 purple_request_input(void *handle, const char *title, const char *primary,
 				   const char *secondary, const char *default_value,
 				   gboolean multiline, gboolean masked, gchar *hint,
 				   const char *ok_text, GCallback ok_cb,
 				   const char *cancel_text, GCallback cancel_cb,
-				   PurpleAccount *account, const char *who, PurpleConversation *conv,
+				   PurpleRequestCommonParameters *cpar,
 				   void *user_data)
 {
 	PurpleRequestUiOps *ops;
 
-	g_return_val_if_fail(ok_text != NULL, NULL);
-	g_return_val_if_fail(ok_cb   != NULL, NULL);
+	if (G_UNLIKELY(ok_text == NULL || ok_cb == NULL)) {
+		purple_request_cpar_unref(cpar);
+		g_warn_if_fail(ok_text != NULL);
+		g_warn_if_fail(ok_cb != NULL);
+		g_return_val_if_reached(NULL);
+	}
 
 	ops = purple_request_get_ui_ops();
 
 	if (ops != NULL && ops->request_input != NULL) {
 		PurpleRequestInfo *info;
+		gchar **tmp;
+
+		tmp = purple_request_strip_html(cpar, &primary, &secondary);
 
 		info            = g_new0(PurpleRequestInfo, 1);
 		info->type      = PURPLE_REQUEST_INPUT;
 		info->handle    = handle;
 		info->ui_handle = ops->request_input(title, primary, secondary,
-											 default_value,
-											 multiline, masked, hint,
-											 ok_text, ok_cb,
-											 cancel_text, cancel_cb,
-											 account, who, conv,
-											 user_data);
+			default_value, multiline, masked, hint, ok_text, ok_cb,
+			cancel_text, cancel_cb, cpar, user_data);
 
 		handles = g_list_append(handles, info);
 
+		g_strfreev(tmp);
+		purple_request_cpar_unref(cpar);
 		return info->ui_handle;
 	}
 
+	purple_request_cpar_unref(cpar);
 	return NULL;
 }
 
 void *
 purple_request_choice(void *handle, const char *title, const char *primary,
-					const char *secondary, int default_value,
-					const char *ok_text, GCallback ok_cb,
-					const char *cancel_text, GCallback cancel_cb,
-					PurpleAccount *account, const char *who, PurpleConversation *conv,
-					void *user_data, ...)
+	const char *secondary, gpointer default_value, const char *ok_text,
+	GCallback ok_cb, const char *cancel_text, GCallback cancel_cb,
+	PurpleRequestCommonParameters *cpar, void *user_data, ...)
 {
 	void *ui_handle;
 	va_list args;
 
-	g_return_val_if_fail(ok_text != NULL,  NULL);
-	g_return_val_if_fail(ok_cb   != NULL,  NULL);
+	if (G_UNLIKELY(ok_text == NULL || ok_cb == NULL)) {
+		purple_request_cpar_unref(cpar);
+		g_warn_if_fail(ok_text != NULL);
+		g_warn_if_fail(ok_cb != NULL);
+		g_return_val_if_reached(NULL);
+	}
 
 	va_start(args, user_data);
 	ui_handle = purple_request_choice_varg(handle, title, primary, secondary,
 					     default_value, ok_text, ok_cb,
 					     cancel_text, cancel_cb,
-					     account, who, conv, user_data, args);
+					     cpar, user_data, args);
 	va_end(args);
 
 	return ui_handle;
 }
 
 void *
-purple_request_choice_varg(void *handle, const char *title,
-			 const char *primary, const char *secondary,
-			 int default_value,
-			 const char *ok_text, GCallback ok_cb,
-			 const char *cancel_text, GCallback cancel_cb,
-			 PurpleAccount *account, const char *who, PurpleConversation *conv,
-			 void *user_data, va_list choices)
+purple_request_choice_varg(void *handle, const char *title, const char *primary,
+	const char *secondary, gpointer default_value, const char *ok_text,
+	GCallback ok_cb, const char *cancel_text, GCallback cancel_cb,
+	PurpleRequestCommonParameters *cpar, void *user_data, va_list choices)
 {
 	PurpleRequestUiOps *ops;
 
-	g_return_val_if_fail(ok_text != NULL,  NULL);
-	g_return_val_if_fail(ok_cb   != NULL,  NULL);
-	g_return_val_if_fail(cancel_text != NULL,  NULL);
+	if (G_UNLIKELY(ok_text == NULL || ok_cb == NULL ||
+		cancel_text == NULL))
+	{
+		purple_request_cpar_unref(cpar);
+		g_warn_if_fail(ok_text != NULL);
+		g_warn_if_fail(ok_cb != NULL);
+		g_warn_if_fail(cancel_text != NULL);
+		g_return_val_if_reached(NULL);
+	}
 
 	ops = purple_request_get_ui_ops();
 
 	if (ops != NULL && ops->request_choice != NULL) {
 		PurpleRequestInfo *info;
+		gchar **tmp;
+
+		tmp = purple_request_strip_html(cpar, &primary, &secondary);
 
 		info            = g_new0(PurpleRequestInfo, 1);
 		info->type      = PURPLE_REQUEST_CHOICE;
 		info->handle    = handle;
 		info->ui_handle = ops->request_choice(title, primary, secondary,
-						      default_value,
-						      ok_text, ok_cb,
-						      cancel_text, cancel_cb,
-							  account, who, conv,
-						      user_data, choices);
+			default_value, ok_text, ok_cb, cancel_text, cancel_cb,
+			cpar, user_data, choices);
 
 		handles = g_list_append(handles, info);
 
+		g_strfreev(tmp);
+		purple_request_cpar_unref(cpar);
 		return info->ui_handle;
 	}
 
+	purple_request_cpar_unref(cpar);
 	return NULL;
 }
 
 void *
 purple_request_action(void *handle, const char *title, const char *primary,
-					const char *secondary, int default_action,
-					PurpleAccount *account, const char *who, PurpleConversation *conv,
-					void *user_data, size_t action_count, ...)
+	const char *secondary, int default_action,
+	PurpleRequestCommonParameters *cpar, void *user_data,
+	size_t action_count, ...)
 {
 	void *ui_handle;
 	va_list args;
 
-	g_return_val_if_fail(action_count > 0, NULL);
-
 	va_start(args, action_count);
-	ui_handle = purple_request_action_varg(handle, title, primary, secondary,
-										 default_action, account, who, conv,
-										 user_data, action_count, args);
+	ui_handle = purple_request_action_varg(handle, title, primary,
+		secondary, default_action, cpar, user_data, action_count, args);
 	va_end(args);
 
 	return ui_handle;
 }
 
 void *
-purple_request_action_with_icon(void *handle, const char *title,
-					const char *primary,
-					const char *secondary, int default_action,
-					PurpleAccount *account, const char *who,
-					PurpleConversation *conv, gconstpointer icon_data,
-					gsize icon_size, void *user_data, size_t action_count, ...)
-{
-	void *ui_handle;
-	va_list args;
-
-	g_return_val_if_fail(action_count > 0, NULL);
-
-	va_start(args, action_count);
-	ui_handle = purple_request_action_with_icon_varg(handle, title, primary,
-		secondary, default_action, account, who, conv, icon_data, icon_size,
-		user_data, action_count, args);
-	va_end(args);
-
-	return ui_handle;
-}
-
-
-void *
-purple_request_action_varg(void *handle, const char *title,
-						 const char *primary, const char *secondary,
-						 int default_action,
-						 PurpleAccount *account, const char *who, PurpleConversation *conv,
-						  void *user_data, size_t action_count, va_list actions)
+purple_request_action_varg(void *handle, const char *title, const char *primary,
+	const char *secondary, int default_action,
+	PurpleRequestCommonParameters *cpar, void *user_data,
+	size_t action_count, va_list actions)
 {
 	PurpleRequestUiOps *ops;
-
-	g_return_val_if_fail(action_count > 0, NULL);
 
 	ops = purple_request_get_ui_ops();
 
 	if (ops != NULL && ops->request_action != NULL) {
 		PurpleRequestInfo *info;
+		gchar **tmp;
+
+		tmp = purple_request_strip_html(cpar, &primary, &secondary);
 
 		info            = g_new0(PurpleRequestInfo, 1);
 		info->type      = PURPLE_REQUEST_ACTION;
 		info->handle    = handle;
 		info->ui_handle = ops->request_action(title, primary, secondary,
-											  default_action, account, who, conv,
-											  user_data, action_count, actions);
+			default_action, cpar, user_data, action_count, actions);
 
 		handles = g_list_append(handles, info);
 
+		g_strfreev(tmp);
+		purple_request_cpar_unref(cpar);
 		return info->ui_handle;
 	}
 
+	purple_request_cpar_unref(cpar);
 	return NULL;
 }
 
 void *
-purple_request_action_with_icon_varg(void *handle, const char *title,
-						 const char *primary, const char *secondary,
-						 int default_action,
-						 PurpleAccount *account, const char *who,
-						 PurpleConversation *conv, gconstpointer icon_data,
-						 gsize icon_size,
-						 void *user_data, size_t action_count, va_list actions)
+purple_request_wait(void *handle, const char *title, const char *primary,
+	const char *secondary, gboolean with_progress,
+	PurpleRequestCancelCb cancel_cb, PurpleRequestCommonParameters *cpar,
+	void *user_data)
 {
 	PurpleRequestUiOps *ops;
 
-	g_return_val_if_fail(action_count > 0, NULL);
+	if (primary == NULL)
+		primary = _("Please wait...");
 
 	ops = purple_request_get_ui_ops();
 
-	if (ops != NULL && ops->request_action_with_icon != NULL) {
+	if (ops != NULL && ops->request_wait != NULL) {
 		PurpleRequestInfo *info;
+		gchar **tmp;
+
+		tmp = purple_request_strip_html(cpar, &primary, &secondary);
 
 		info            = g_new0(PurpleRequestInfo, 1);
-		info->type      = PURPLE_REQUEST_ACTION;
+		info->type      = PURPLE_REQUEST_WAIT;
 		info->handle    = handle;
-		info->ui_handle = ops->request_action_with_icon(title, primary, secondary,
-											  default_action, account, who, conv,
-											  icon_data, icon_size,
-											  user_data, action_count, actions);
+		info->ui_handle = ops->request_wait(title, primary, secondary,
+			with_progress, cancel_cb, cpar, user_data);
 
 		handles = g_list_append(handles, info);
 
+		g_strfreev(tmp);
+		purple_request_cpar_unref(cpar);
 		return info->ui_handle;
-	} else {
-		/* Fall back on the non-icon request if the UI doesn't support icon
-		 requests */
-		return purple_request_action_varg(handle, title, primary, secondary,
-			default_action, account, who, conv, user_data, action_count, actions);
 	}
 
-	return NULL;
+	if (cpar == NULL)
+		cpar = purple_request_cpar_new();
+	if (purple_request_cpar_get_icon(cpar) == PURPLE_REQUEST_ICON_DEFAULT)
+		purple_request_cpar_set_icon(cpar, PURPLE_REQUEST_ICON_WAIT);
+
+	return purple_request_action(handle, title, primary, secondary,
+		PURPLE_DEFAULT_ACTION_NONE, cpar, user_data,
+		cancel_cb ? 1 : 0, _("Cancel"), cancel_cb);
 }
 
+void
+purple_request_wait_pulse(void *ui_handle)
+{
+	PurpleRequestUiOps *ops;
+
+	ops = purple_request_get_ui_ops();
+
+	if (ops == NULL || ops->request_wait_update == NULL)
+		return;
+
+	ops->request_wait_update(ui_handle, TRUE, 0.0);
+}
+
+void
+purple_request_wait_progress(void *ui_handle, gfloat fraction)
+{
+	PurpleRequestUiOps *ops;
+
+	ops = purple_request_get_ui_ops();
+
+	if (ops == NULL || ops->request_wait_update == NULL)
+		return;
+
+	if (fraction < 0.0 || fraction > 1.0) {
+		purple_debug_warning("request", "Fraction parameter out of "
+			"range: %f", fraction);
+		if (fraction < 0.0)
+			fraction = 0.0;
+		else /* if (fraction > 1.0) */
+			fraction = 1.0;
+	}
+
+	ops->request_wait_update(ui_handle, FALSE, fraction);
+}
+
+static void
+purple_request_fields_strip_html(PurpleRequestFields *fields)
+{
+	GList *itg;
+
+	for (itg = fields->groups; itg != NULL; itg = g_list_next(itg)) {
+		PurpleRequestFieldGroup *group = itg->data;
+		GList *itf;
+
+		for (itf = group->fields; itf != NULL; itf = g_list_next(itf)) {
+			PurpleRequestField *field = itf->data;
+			gchar *new_label;
+
+			new_label = purple_request_strip_html_custom(
+				field->label);
+			if (g_strcmp0(new_label, field->label) == 0) {
+				g_free(new_label);
+				continue;
+			}
+			g_free(field->label);
+			field->label = new_label;
+		}
+	}
+}
 
 void *
 purple_request_fields(void *handle, const char *title, const char *primary,
-					const char *secondary, PurpleRequestFields *fields,
-					const char *ok_text, GCallback ok_cb,
-					const char *cancel_text, GCallback cancel_cb,
-					PurpleAccount *account, const char *who, PurpleConversation *conv,
-					void *user_data)
+	const char *secondary, PurpleRequestFields *fields, const char *ok_text,
+	GCallback ok_cb, const char *cancel_text, GCallback cancel_cb,
+	PurpleRequestCommonParameters *cpar, void *user_data)
 {
 	PurpleRequestUiOps *ops;
 
-	g_return_val_if_fail(fields  != NULL, NULL);
-	g_return_val_if_fail(ok_text != NULL, NULL);
-	g_return_val_if_fail(ok_cb   != NULL, NULL);
-	g_return_val_if_fail(cancel_text != NULL, NULL);
+	if (G_UNLIKELY(fields == NULL || ok_text == NULL || ok_cb == NULL ||
+		cancel_text == NULL))
+	{
+		purple_request_cpar_unref(cpar);
+		g_warn_if_fail(fields != NULL);
+		g_warn_if_fail(ok_text != NULL);
+		g_warn_if_fail(ok_cb != NULL);
+		g_warn_if_fail(cancel_text != NULL);
+		g_return_val_if_reached(NULL);
+	}
 
 	ops = purple_request_get_ui_ops();
 
+	if (purple_request_cpar_is_html(cpar) &&
+		!((ops->features & PURPLE_REQUEST_FEATURE_HTML)))
+	{
+		purple_request_fields_strip_html(fields);
+	}
+
 	if (ops != NULL && ops->request_fields != NULL) {
 		PurpleRequestInfo *info;
+		gchar **tmp;
+
+		tmp = purple_request_strip_html(cpar, &primary, &secondary);
 
 		info            = g_new0(PurpleRequestInfo, 1);
 		info->type      = PURPLE_REQUEST_FIELDS;
 		info->handle    = handle;
 		info->ui_handle = ops->request_fields(title, primary, secondary,
-											  fields, ok_text, ok_cb,
-											  cancel_text, cancel_cb,
-											  account, who, conv,
-											  user_data);
+			fields, ok_text, ok_cb, cancel_text, cancel_cb,
+			cpar, user_data);
 
 		handles = g_list_append(handles, info);
 
+		g_strfreev(tmp);
+		purple_request_cpar_unref(cpar);
 		return info->ui_handle;
 	}
 
+	purple_request_cpar_unref(cpar);
 	return NULL;
 }
 
 void *
 purple_request_file(void *handle, const char *title, const char *filename,
-				  gboolean savedialog,
-				  GCallback ok_cb, GCallback cancel_cb,
-				  PurpleAccount *account, const char *who, PurpleConversation *conv,
-				  void *user_data)
+	gboolean savedialog, GCallback ok_cb, GCallback cancel_cb,
+	PurpleRequestCommonParameters *cpar, void *user_data)
 {
 	PurpleRequestUiOps *ops;
 
@@ -1630,20 +2248,21 @@ purple_request_file(void *handle, const char *title, const char *filename,
 		info->type      = PURPLE_REQUEST_FILE;
 		info->handle    = handle;
 		info->ui_handle = ops->request_file(title, filename, savedialog,
-											ok_cb, cancel_cb,
-											account, who, conv, user_data);
+			ok_cb, cancel_cb, cpar, user_data);
 		handles = g_list_append(handles, info);
+
+		purple_request_cpar_unref(cpar);
 		return info->ui_handle;
 	}
 
+	purple_request_cpar_unref(cpar);
 	return NULL;
 }
 
 void *
 purple_request_folder(void *handle, const char *title, const char *dirname,
-				  GCallback ok_cb, GCallback cancel_cb,
-				  PurpleAccount *account, const char *who, PurpleConversation *conv,
-				  void *user_data)
+	GCallback ok_cb, GCallback cancel_cb,
+	PurpleRequestCommonParameters *cpar, void *user_data)
 {
 	PurpleRequestUiOps *ops;
 
@@ -1655,14 +2274,15 @@ purple_request_folder(void *handle, const char *title, const char *dirname,
 		info            = g_new0(PurpleRequestInfo, 1);
 		info->type      = PURPLE_REQUEST_FOLDER;
 		info->handle    = handle;
-		info->ui_handle = ops->request_folder(title, dirname,
-											ok_cb, cancel_cb,
-											account, who, conv,
-											user_data);
+		info->ui_handle = ops->request_folder(title, dirname, ok_cb,
+			cancel_cb, cpar, user_data);
 		handles = g_list_append(handles, info);
+
+		purple_request_cpar_unref(cpar);
 		return info->ui_handle;
 	}
 
+	purple_request_cpar_unref(cpar);
 	return NULL;
 }
 
@@ -1686,7 +2306,29 @@ purple_request_certificate(void *handle, const char *title,
 
 	return purple_request_fields(handle, title, primary, secondary, fields,
 	                             ok_text, ok_cb, cancel_text, cancel_cb,
-	                             NULL, NULL, NULL, user_data);
+	                             NULL, user_data);
+}
+
+gboolean
+purple_request_is_valid_ui_handle(void *ui_handle, PurpleRequestType *type)
+{
+	GList *it;
+
+	if (ui_handle == NULL)
+		return FALSE;
+
+	for (it = handles; it != NULL; it = g_list_next(it)) {
+		PurpleRequestInfo *info = it->data;
+
+		if (info->ui_handle != ui_handle)
+			continue;
+
+		if (type != NULL)
+			*type = info->type;
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 static void

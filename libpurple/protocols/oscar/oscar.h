@@ -33,6 +33,7 @@
 #include "circbuffer.h"
 #include "debug.h"
 #include "eventloop.h"
+#include "http.h"
 #include "proxy.h"
 #include "sslconn.h"
 
@@ -322,7 +323,7 @@ struct aim_ssi_itemlist {
 struct _OscarData
 {
 	/** Only used when connecting with clientLogin */
-	PurpleUtilFetchUrlData *url_data;
+	PurpleHttpConnection *hc;
 
 	gboolean iconconnecting;
 	gboolean set_icon;
@@ -602,8 +603,8 @@ struct chat_connection
 	int id;
 	PurpleConnection *gc;
 	PurpleConversation *conv;
-	int maxlen;
-	int maxvis;
+	guint16 maxlen;
+	guint16 maxvis;
 };
 
 /*
@@ -811,11 +812,6 @@ typedef struct aim_userinfo_s
 
 	struct aim_userinfo_s *next;
 } aim_userinfo_t;
-
-#define AIM_SENDMEMBLOCK_FLAG_ISREQUEST  0
-#define AIM_SENDMEMBLOCK_FLAG_ISHASH     1
-
-int aim_sendmemblock(OscarData *od, FlapConnection *conn, guint32 offset, guint32 len, const guint8 *buf, guint8 flag);
 
 struct aim_invite_priv
 {
@@ -1077,7 +1073,7 @@ GSList *aim_tlvlist_readlen(ByteStream *bs, guint16 len);
 GSList *aim_tlvlist_copy(GSList *orig);
 
 int aim_tlvlist_count(GSList *list);
-int aim_tlvlist_size(GSList *list);
+size_t aim_tlvlist_size(GSList *list);
 int aim_tlvlist_cmp(GSList *one, GSList *two);
 int aim_tlvlist_write(ByteStream *bs, GSList **list);
 void aim_tlvlist_free(GSList *list);
@@ -1219,7 +1215,7 @@ void aim_genericreq_l(OscarData *od, FlapConnection *conn, guint16 family, guint
 int byte_stream_new(ByteStream *bs, size_t len);
 int byte_stream_init(ByteStream *bs, guint8 *data, size_t len);
 void byte_stream_destroy(ByteStream *bs);
-int byte_stream_bytes_left(ByteStream *bs);
+size_t byte_stream_bytes_left(ByteStream *bs);
 int byte_stream_curpos(ByteStream *bs);
 int byte_stream_setpos(ByteStream *bs, size_t off);
 void byte_stream_rewind(ByteStream *bs);

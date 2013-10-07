@@ -902,11 +902,11 @@ static gboolean simple_add_lcs_contacts(struct simple_account_data *sip, struct 
 
 		for(item = xmlnode_get_child(isc, "contact"); item; item = xmlnode_get_next_twin(item))
 		{
-			const char *uri, *name, *groups;
+			const char *uri;
 			char *buddy_name;
 			uri = xmlnode_get_attrib(item, "uri");
-			name = xmlnode_get_attrib(item, "name");
-			groups = xmlnode_get_attrib(item, "groups");
+			/*name = xmlnode_get_attrib(item, "name");
+			groups = xmlnode_get_attrib(item, "groups");*/
 			purple_debug_info("simple", "URI->%s\n", uri);
 
 			buddy_name = g_strdup_printf("sip:%s", uri);
@@ -1122,7 +1122,7 @@ gboolean process_register_response(struct simple_account_data *sip, struct sipms
 				purple_debug_info("simple", "REGISTER retries %d\n", sip->registrar.retries);
 				if(sip->registrar.retries > SIMPLE_REGISTER_RETRY_MAX) {
 					if (!purple_account_get_remember_password(purple_connection_get_account(sip->gc)))
-						purple_account_set_password(purple_connection_get_account(sip->gc), NULL);
+						purple_account_set_password(purple_connection_get_account(sip->gc), NULL, NULL, NULL);
 					purple_connection_error(sip->gc,
 						PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
 						_("Incorrect password"));
@@ -2116,7 +2116,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* get_media_caps */
 	NULL,					/* get_moods */
 	NULL,					/* set_public_alias */
-	NULL					/* get_public_alias */
+	NULL,					/* get_public_alias */
+	NULL					/* get_max_message_size */
 };
 
 

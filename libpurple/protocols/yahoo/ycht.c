@@ -454,7 +454,9 @@ void ycht_connection_close(YchtConn *ycht)
 static void ycht_connection_error(YchtConn *ycht, const gchar *error)
 {
 
-	purple_notify_info(ycht->gc, NULL, _("Connection problem with the YCHT server"), error);
+	purple_notify_info(ycht->gc, NULL,
+		_("Connection problem with the YCHT server"), error,
+		purple_request_cpar_from_connection(ycht->gc));
 	ycht_connection_close(ycht);
 }
 
@@ -490,7 +492,7 @@ static void ycht_pending(gpointer data, gint source, PurpleInputCondition cond)
 	while (1) {
 		YchtPkt *pkt;
 		int pos = 0;
-		int pktlen;
+		guint pktlen;
 		guint service;
 		guint version;
 		gint status;
