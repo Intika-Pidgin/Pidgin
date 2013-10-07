@@ -29,6 +29,7 @@
 
 #include "debug.h"
 #include "eventloop.h"
+#include "http.h"
 #include "network.h"
 #include "proxy.h"
 #include "signals.h"
@@ -69,13 +70,6 @@
 /******************************************************************
 ** Action Defines                                                 *
 *******************************************************************/
-#define HTTP_HEADER_ACTION \
-	"POST /%s HTTP/1.1\r\n" \
-	"HOST: %s:%d\r\n" \
-	"SOAPACTION: \"urn:schemas-upnp-org:service:%s#%s\"\r\n" \
-	"CONTENT-TYPE: text/xml ; charset=\"utf-8\"\r\n" \
-	"CONTENT-LENGTH: %" G_GSIZE_FORMAT "\r\n\r\n"
-
 #define SOAP_ACTION \
 	"<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n" \
 	"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" " \
@@ -144,7 +138,7 @@ struct _UPnPMappingAddRemove
 	gpointer cb_data;
 	gboolean success;
 	guint tima; /* purple_timeout_add handle */
-	PurpleUtilFetchUrlData *gfud;
+	PurpleHttpConnection *hc;
 };
 
 static PurpleUPnPControlInfo control_info = {
@@ -229,36 +223,24 @@ static gchar*
 purple_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	const gchar* httpURL, const gchar* serviceType)
 {
-	gchar *xmlRoot, *baseURL, *controlURL, *service;
+	gchar *baseURL, *controlURL, *service;
 	xmlnode *xmlRootNode, *serviceTypeNode, *controlURLNode, *baseURLNode;
 	char *tmp;
 
-	/* make sure we have a valid http response */
-	if(g_strstr_len(httpResponse, len, HTTP_OK) == NULL) {
-		purple_debug_error("upnp",
-			"parse_description_response(): Failed In HTTP_OK\n");
-		return NULL;
-	}
-
-	/* find the root of the xml document */
-	if((xmlRoot = g_strstr_len(httpResponse, len, "<root")) == NULL) {
-		purple_debug_error("upnp",
-			"parse_description_response(): Failed finding root\n");
-		return NULL;
-	}
-
 	/* create the xml root node */
-	if((xmlRootNode = xmlnode_from_str(xmlRoot,
-			len - (xmlRoot - httpResponse))) == NULL) {
+	if ((xmlRootNode = xmlnode_from_str(httpResponse, len)) == NULL) {
 		purple_debug_error("upnp",
 			"parse_description_response(): Could not parse xml root node\n");
 		return NULL;
 	}
 
 	/* get the baseURL of the device */
+	baseURL = NULL;
 	if((baseURLNode = xmlnode_get_child(xmlRootNode, "URLBase")) != NULL) {
 		baseURL = xmlnode_get_data(baseURLNode);
-	} else {
+	}
+	/* fixes upnp-descriptions with empty urlbase-element */
+	if(baseURL == NULL){
 		baseURL = g_strdup(httpURL);
 	}
 
@@ -369,7 +351,7 @@ purple_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 			const char *path, *start = strstr(baseURL, "://");
 			start = start ? start + 3 : baseURL;
 			path = strchr(start, '/');
-			length = path ? path - baseURL : strlen(baseURL);
+			length = path ? (gsize)(path - baseURL) : strlen(baseURL);
 			controlURL = g_strdup_printf("%.*s%s", (int)length, baseURL, tmp);
 		} else {
 			controlURL = g_strdup_printf("%s%s", baseURL, tmp);
@@ -385,15 +367,20 @@ purple_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 }
 
 static void
-upnp_parse_description_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *httpResponse, gsize len, const gchar *error_message)
+upnp_parse_description_cb(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer _dd)
 {
-	UPnPDiscoveryData *dd = user_data;
+	UPnPDiscoveryData *dd = _dd;
 	gchar *control_url = NULL;
 
-	if (len > 0)
+	if (response && purple_http_response_is_successful(response)) {
+		const gchar *got_data;
+		size_t got_len;
+
+		got_data = purple_http_response_get_data(response, &got_len);
 		control_url = purple_upnp_parse_description_response(
-			httpResponse, len, dd->full_url, dd->service_type);
+			got_data, got_len, dd->full_url, dd->service_type);
+	}
 
 	g_free(dd->full_url);
 
@@ -406,7 +393,7 @@ upnp_parse_description_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 		: PURPLE_UPNP_STATUS_UNABLE_TO_DISCOVER;
 	control_info.lookup_time = time(NULL);
 	control_info.control_url = control_url;
-	strncpy(control_info.service_type, dd->service_type,
+	g_strlcpy(control_info.service_type, dd->service_type,
 		sizeof(control_info.service_type));
 
 	fire_discovery_callbacks(control_url != NULL);
@@ -428,47 +415,31 @@ upnp_parse_description_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 static void
 purple_upnp_parse_description(const gchar* descriptionURL, UPnPDiscoveryData *dd)
 {
-	gchar* httpRequest;
-	gchar* descriptionXMLAddress;
-	gchar* descriptionAddress;
-	int port = 0;
-
-	/* parse the 4 above variables out of the descriptionURL
-	   example description URL: http://192.168.1.1:5678/rootDesc.xml */
-
-	/* parse the url into address, port, path variables */
-	if(!purple_url_parse(descriptionURL, &descriptionAddress,
-			&port, &descriptionXMLAddress, NULL, NULL)) {
-		return;
-	}
-	if(port == 0 || port == -1) {
-		port = DEFAULT_HTTP_PORT;
-	}
-
-	/* for example...
-	   GET /rootDesc.xml HTTP/1.1\r\nHost: 192.168.1.1:5678\r\n\r\n */
-	httpRequest = g_strdup_printf(
-		"GET /%s HTTP/1.1\r\n"
-		"Connection: close\r\n"
-		"Host: %s:%d\r\n\r\n",
-		descriptionXMLAddress, descriptionAddress, port);
-
-	g_free(descriptionXMLAddress);
-
-	dd->full_url = g_strdup_printf("http://%s:%d",
-			descriptionAddress, port);
-	g_free(descriptionAddress);
+	PurpleHttpRequest *req;
+	PurpleHttpURL *url;
 
 	/* Remove the timeout because everything it is waiting for has
 	 * successfully completed */
 	purple_timeout_remove(dd->tima);
 	dd->tima = 0;
 
-	purple_util_fetch_url_request(NULL, descriptionURL, TRUE, NULL, TRUE, httpRequest,
-			TRUE, MAX_UPNP_DOWNLOAD, upnp_parse_description_cb, dd);
+	/* Extract base url out of the descriptionURL.
+	 * Example description URL: http://192.168.1.1:5678/rootDesc.xml
+	 */
+	url = purple_http_url_parse(descriptionURL);
+	if (!url) {
+		upnp_parse_description_cb(NULL, NULL, dd);
+		return;
+	}
+	dd->full_url = g_strdup_printf("http://%s:%d",
+		purple_http_url_get_host(url),
+		purple_http_url_get_port(url));
+	purple_http_url_free(url);
 
-	g_free(httpRequest);
-
+	req = purple_http_request_new(descriptionURL);
+	purple_http_request_set_max_len(req, MAX_UPNP_DOWNLOAD);
+	purple_http_request(NULL, req, upnp_parse_description_cb, dd);
+	purple_http_request_unref(req);
 }
 
 static void
@@ -598,9 +569,9 @@ purple_upnp_discover_send_broadcast(UPnPDiscoveryData *dd)
 		sentSuccess = FALSE;
 
 		if((dd->retry_count % 2) == 0) {
-			strncpy(dd->service_type, WAN_IP_CONN_SERVICE, sizeof(dd->service_type));
+			g_strlcpy(dd->service_type, WAN_IP_CONN_SERVICE, sizeof(dd->service_type));
 		} else {
-			strncpy(dd->service_type, WAN_PPP_CONN_SERVICE, sizeof(dd->service_type));
+			g_strlcpy(dd->service_type, WAN_PPP_CONN_SERVICE, sizeof(dd->service_type));
 		}
 
 		sendMessage = g_strdup_printf(SEARCH_REQUEST_STRING, dd->service_type);
@@ -608,10 +579,10 @@ purple_upnp_discover_send_broadcast(UPnPDiscoveryData *dd)
 		totalSize = strlen(sendMessage);
 
 		do {
-			if(sendto(dd->fd, sendMessage, totalSize, 0,
-					(struct sockaddr*) &(dd->server),
-					sizeof(struct sockaddr_in)
-					) == totalSize) {
+			gssize sent = sendto(dd->fd, sendMessage, totalSize, 0,
+				(struct sockaddr*) &(dd->server),
+				sizeof(struct sockaddr_in));
+			if(sent >= 0 && (gsize)sent == totalSize) {
 				sentSuccess = TRUE;
 				break;
 			}
@@ -692,58 +663,40 @@ purple_upnp_discover(PurpleUPnPCallback cb, gpointer cb_data)
 	purple_upnp_discover_send_broadcast(dd);
 }
 
-static PurpleUtilFetchUrlData*
+static PurpleHttpConnection*
 purple_upnp_generate_action_message_and_send(const gchar* actionName,
-		const gchar* actionParams, PurpleUtilFetchUrlCallback cb,
+		const gchar* actionParams, PurpleHttpCallback cb,
 		gpointer cb_data)
 {
-	PurpleUtilFetchUrlData* gfud;
+	PurpleHttpConnection *hc;
+	PurpleHttpRequest *req;
 	gchar* soapMessage;
-	gchar* totalSendMessage;
-	gchar* pathOfControl;
-	gchar* addressOfControl;
-	int port = 0;
-
-	/* parse the url into address, port, path variables */
-	if(!purple_url_parse(control_info.control_url, &addressOfControl,
-			&port, &pathOfControl, NULL, NULL)) {
-		purple_debug_error("upnp",
-			"generate_action_message_and_send(): Failed In Parse URL\n");
-		/* XXX: This should probably be async */
-		if(cb)
-			cb(NULL, cb_data, NULL, 0, NULL);
-		return NULL;
-	}
-	if(port == 0 || port == -1) {
-		port = DEFAULT_HTTP_PORT;
-	}
 
 	/* set the soap message */
 	soapMessage = g_strdup_printf(SOAP_ACTION, actionName,
 		control_info.service_type, actionParams, actionName);
 
-	/* set the HTTP Header, and append the body to it */
-	totalSendMessage = g_strdup_printf(HTTP_HEADER_ACTION "%s",
-		pathOfControl, addressOfControl, port,
-		control_info.service_type, actionName,
-		strlen(soapMessage), soapMessage);
-	g_free(pathOfControl);
+	req = purple_http_request_new(control_info.control_url);
+	purple_http_request_set_max_len(req, MAX_UPNP_DOWNLOAD);
+	purple_http_request_set_method(req, "POST");
+	purple_http_request_header_set_printf(req, "SOAPAction",
+		"\"urn:schemas-upnp-org:service:%s#%s\"",
+		control_info.service_type, actionName);
+	purple_http_request_header_set(req, "Content-Type",
+		"text/xml; charset=utf-8");
+	purple_http_request_set_contents(req, soapMessage, -1);
+	hc = purple_http_request(NULL, req, cb, cb_data);
+	purple_http_request_unref(req);
+
 	g_free(soapMessage);
 
-	gfud = purple_util_fetch_url_request(NULL, control_info.control_url, FALSE, NULL, TRUE,
-				totalSendMessage, TRUE, MAX_UPNP_DOWNLOAD, cb, cb_data);
-
-	g_free(totalSendMessage);
-	g_free(addressOfControl);
-
-	return gfud;
+	return hc;
 }
 
 const gchar *
 purple_upnp_get_public_ip()
 {
 	if (control_info.status == PURPLE_UPNP_STATUS_DISCOVERED
-			&& control_info.publicip
 			&& *control_info.publicip)
 		return control_info.publicip;
 
@@ -757,34 +710,37 @@ purple_upnp_get_public_ip()
 }
 
 static void
-looked_up_public_ip_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *httpResponse, gsize len, const gchar *error_message)
+looked_up_public_ip_cb(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer user_data)
 {
 	gchar* temp, *temp2;
+	const gchar *got_data;
+	size_t got_len;
 
-	if ((error_message != NULL) || (httpResponse == NULL))
+	if (!purple_http_response_is_successful(response))
 		return;
 
 	/* extract the ip, or see if there is an error */
-	if((temp = g_strstr_len(httpResponse, len,
+	got_data = purple_http_response_get_data(response, &got_len);
+	if((temp = g_strstr_len(got_data, got_len,
 			"<NewExternalIPAddress")) == NULL) {
 		purple_debug_error("upnp",
 			"looked_up_public_ip_cb(): Failed Finding <NewExternalIPAddress\n");
 		return;
 	}
-	if(!(temp = g_strstr_len(temp, len - (temp - httpResponse), ">"))) {
+	if(!(temp = g_strstr_len(temp, got_len - (temp - got_data), ">"))) {
 		purple_debug_error("upnp",
 			"looked_up_public_ip_cb(): Failed In Finding >\n");
 		return;
 	}
-	if(!(temp2 = g_strstr_len(temp, len - (temp - httpResponse), "<"))) {
+	if(!(temp2 = g_strstr_len(temp, got_len - (temp - got_data), "<"))) {
 		purple_debug_error("upnp",
 			"looked_up_public_ip_cb(): Failed In Finding <\n");
 		return;
 	}
 	*temp2 = '\0';
 
-	strncpy(control_info.publicip, temp + 1,
+	g_strlcpy(control_info.publicip, temp + 1,
 			sizeof(control_info.publicip));
 
 	purple_debug_info("upnp", "NAT Returned IP: %s\n", control_info.publicip);
@@ -802,7 +758,6 @@ static const gchar *
 purple_upnp_get_internal_ip(void)
 {
 	if (control_info.status == PURPLE_UPNP_STATUS_DISCOVERED
-			&& control_info.internalip
 			&& *control_info.internalip)
 		return control_info.internalip;
 
@@ -819,7 +774,7 @@ static void
 looked_up_internal_ip_cb(gpointer data, gint source, const gchar *error_message)
 {
 	if (source != -1) {
-		strncpy(control_info.internalip,
+		g_strlcpy(control_info.internalip,
 			purple_network_get_local_system_ip(source),
 			sizeof(control_info.internalip));
 		purple_debug_info("upnp", "Local IP: %s\n",
@@ -833,44 +788,42 @@ looked_up_internal_ip_cb(gpointer data, gint source, const gchar *error_message)
 static void
 lookup_internal_ip()
 {
-	gchar* addressOfControl;
-	int port = 0;
+	PurpleHttpURL *url;
 
-	if(!purple_url_parse(control_info.control_url, &addressOfControl, &port,
-			NULL, NULL, NULL)) {
+	url = purple_http_url_parse(control_info.control_url);
+	if (!url) {
 		purple_debug_error("upnp",
 			"lookup_internal_ip(): Failed In Parse URL\n");
 		return;
 	}
-	if(port == 0 || port == -1) {
-		port = DEFAULT_HTTP_PORT;
-	}
 
-	if(purple_proxy_connect(NULL, NULL, addressOfControl, port,
-			looked_up_internal_ip_cb, NULL) == NULL)
+	if(purple_proxy_connect(NULL, NULL, purple_http_url_get_host(url),
+		purple_http_url_get_port(url), looked_up_internal_ip_cb,
+		NULL) == NULL)
 	{
-		purple_debug_error("upnp", "Get Local IP Connect Failed: Address: %s @@@ Port %d\n",
-			addressOfControl, port);
+		purple_debug_error("upnp", "Get Local IP Connect Failed: "
+			"Address: %s @@@ Port %d\n",
+			purple_http_url_get_host(url),
+			purple_http_url_get_port(url));
 	}
 
-	g_free(addressOfControl);
+	purple_http_url_free(url);
 }
 
 static void
-done_port_mapping_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *httpResponse, gsize len, const gchar *error_message)
+done_port_mapping_cb(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer user_data)
 {
 	UPnPMappingAddRemove *ar = user_data;
 
 	gboolean success = TRUE;
 
 	/* determine if port mapping was a success */
-	if ((error_message != NULL) || (httpResponse == NULL) ||
-		(g_strstr_len(httpResponse, len, HTTP_OK) == NULL))
+	if (!purple_http_response_is_successful(response))
 	{
 		purple_debug_error("upnp",
 			"purple_upnp_set_port_mapping(): Failed HTTP_OK\n%s\n",
-			httpResponse ? httpResponse : "(null)");
+			purple_http_response_get_error(response));
 		success =  FALSE;
 	} else
 		purple_debug_info("upnp", "Successfully completed port mapping operation\n");
@@ -910,8 +863,8 @@ do_port_mapping_cb(gboolean has_control_mapping, gpointer data)
 				ar->portmap, ar->protocol);
 		}
 
-		ar->gfud = purple_upnp_generate_action_message_and_send(action_name,
-						action_params, done_port_mapping_cb, ar);
+		ar->hc = purple_upnp_generate_action_message_and_send(
+			action_name, action_params, done_port_mapping_cb, ar);
 
 		g_free(action_params);
 		return;
@@ -955,8 +908,7 @@ void purple_upnp_cancel_port_mapping(UPnPMappingAddRemove *ar)
 	if (ar->tima > 0)
 		purple_timeout_remove(ar->tima);
 
-	if (ar->gfud)
-		purple_util_fetch_url_cancel(ar->gfud);
+	purple_http_conn_cancel(ar->hc);
 
 	g_free(ar);
 }
@@ -972,7 +924,7 @@ purple_upnp_set_port_mapping(unsigned short portmap, const gchar* protocol,
 	ar->cb_data = cb_data;
 	ar->add = TRUE;
 	ar->portmap = portmap;
-	strncpy(ar->protocol, protocol, sizeof(ar->protocol));
+	g_strlcpy(ar->protocol, protocol, sizeof(ar->protocol));
 
 	/* If we're waiting for a discovery, add to the callbacks list */
 	if(control_info.status == PURPLE_UPNP_STATUS_DISCOVERING) {
@@ -1019,7 +971,7 @@ purple_upnp_remove_port_mapping(unsigned short portmap, const char* protocol,
 	ar->cb_data = cb_data;
 	ar->add = FALSE;
 	ar->portmap = portmap;
-	strncpy(ar->protocol, protocol, sizeof(ar->protocol));
+	g_strlcpy(ar->protocol, protocol, sizeof(ar->protocol));
 
 	/* If we're waiting for a discovery, add to the callbacks list */
 	if(control_info.status == PURPLE_UPNP_STATUS_DISCOVERING) {

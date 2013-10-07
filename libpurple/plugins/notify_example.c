@@ -58,21 +58,21 @@ static void
 notify_error_cb(PurplePluginAction *action)
 {
 	purple_notify_error(notify_example, "Test Notification", "Test Notification",
-		"This is a test error notification");
+		"This is a test error notification", NULL);
 }
 
 static void
 notify_info_cb(PurplePluginAction *action)
 {
 	purple_notify_info(notify_example, "Test Notification", "Test Notification",
-		"This is a test informative notification");
+		"This is a test informative notification", NULL);
 }
 
 static void
 notify_warn_cb(PurplePluginAction *action)
 {
 	purple_notify_warning(notify_example, "Test Notification", "Test Notification",
-		"This is a test warning notification");
+		"This is a test warning notification", NULL);
 }
 
 static void
@@ -87,7 +87,7 @@ static void
 notify_uri_cb(PurplePluginAction *action)
 {
 	/* This one should open your web browser of choice. */
-	purple_notify_uri(notify_example, "http://www.pidgin.im/");
+	purple_notify_uri(notify_example, "https://www.pidgin.im/");
 }
 
 static GList *
@@ -139,7 +139,7 @@ static PurplePluginInfo info = {
 	"Notify API Example",       /* summary */
 	"Notify API Example",       /* description */
 	PLUGIN_AUTHOR,              /* author */
-	"http://pidgin.im",         /* homepage */
+	"https://pidgin.im",        /* homepage */
 
 	plugin_load,                /* load */
 	NULL,                       /* unload */

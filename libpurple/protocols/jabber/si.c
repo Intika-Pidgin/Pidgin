@@ -58,7 +58,7 @@ typedef struct _JabberSIXfer {
 		STREAM_METHOD_UNKNOWN     = 0,
 		STREAM_METHOD_BYTESTREAMS = 2 << 1,
 		STREAM_METHOD_IBB         = 2 << 2,
-		STREAM_METHOD_UNSUPPORTED = 2 << 31
+		STREAM_METHOD_UNSUPPORTED = 2 << 30
 	} stream_method;
 
 	GList *streamhosts;
@@ -266,7 +266,16 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 
 	streamhost = jsx->streamhosts->data;
 
-	jsx->connect_data = NULL;
+	if (jsx->connect_data) {
+		purple_debug_info("jabber",
+				"jabber_si_bytestreams_attempt_connect: "
+				"cancelling existing connection attempt and restarting\n");
+		purple_proxy_connect_cancel(jsx->connect_data);
+		jsx->connect_data = NULL;
+		if (jsx->connect_timeout > 0)
+			purple_timeout_remove(jsx->connect_timeout);
+		jsx->connect_timeout = 0;
+	}
 	if (jsx->gpi != NULL)
 		purple_proxy_info_destroy(jsx->gpi);
 	jsx->gpi = NULL;
@@ -440,7 +449,7 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 		close(source);
 		purple_xfer_cancel_remote(xfer);
 		return;
-	} else if(jsx->rxlen - 5 <  jsx->rxqueue[4] + 2) {
+	} else if(jsx->rxlen - 5 < (size_t)jsx->rxqueue[4] + 2) {
 		/* Upper-bound of 257 (jsx->rxlen = 5, jsx->rxqueue[4] = 0xFF) */
 		unsigned short to_read = jsx->rxqueue[4] + 2 - (jsx->rxlen - 5);
 		purple_debug_info("jabber", "reading %u bytes for DST.ADDR + port num (trying to read %hu now)\n",
@@ -459,7 +468,7 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 	}
 
 	/* Have we not read all of DST.ADDR and the following 2-byte port number? */
-	if(jsx->rxlen - 5 < jsx->rxqueue[4] + 2)
+	if(jsx->rxlen - 5 < (size_t)jsx->rxqueue[4] + 2)
 		return;
 
 	purple_input_remove(purple_xfer_get_watcher(xfer));
@@ -579,7 +588,7 @@ jabber_si_xfer_bytestreams_send_read_cb(gpointer data, gint source,
 		memcpy(jsx->rxqueue + jsx->rxlen, buffer, len);
 		jsx->rxlen += len;
 		return;
-	} else if(jsx->rxlen - 2 < jsx->rxqueue[1]) {
+	} else if(jsx->rxlen - 2 < (size_t)jsx->rxqueue[1]) {
 		/* Has a maximum value of 255 (jsx->rxlen = 2, jsx->rxqueue[1] = 0xFF) */
 		unsigned short to_read = jsx->rxqueue[1] - (jsx->rxlen - 2);
 		purple_debug_info("jabber", "reading %u bytes for auth methods (trying to read %hu now)\n",
@@ -597,7 +606,7 @@ jabber_si_xfer_bytestreams_send_read_cb(gpointer data, gint source,
 	}
 
 	/* Have we not read all the auth. method bytes? */
-	if(jsx->rxlen -2 < jsx->rxqueue[1])
+	if(jsx->rxlen -2 < (size_t)jsx->rxqueue[1])
 		return;
 
 	purple_debug_info("jabber", "checking to make sure we're socks FIVE\n");
@@ -607,11 +616,11 @@ jabber_si_xfer_bytestreams_send_read_cb(gpointer data, gint source,
 		return;
 	}
 
-	purple_debug_info("jabber", "going to test %hhu different methods\n", jsx->rxqueue[1]);
+	purple_debug_info("jabber", "going to test %u different methods\n", (guint)jsx->rxqueue[1]);
 
 	for(i=0; i<jsx->rxqueue[1]; i++) {
 
-		purple_debug_info("jabber", "testing %hhu\n", jsx->rxqueue[i+2]);
+		purple_debug_info("jabber", "testing %u\n", (guint)jsx->rxqueue[i+2]);
 		if(jsx->rxqueue[i+2] == 0x00) {
 			g_free(jsx->rxqueue);
 			jsx->rxlen = 0;
@@ -1424,7 +1433,8 @@ static void jabber_si_xfer_send_disco_cb(JabberStream *js, const char *who,
 	} else {
 		char *msg = g_strdup_printf(_("Unable to send file to %s, user does not support file transfers"), who);
 		purple_notify_error(js->gc, _("File Send Failed"),
-				_("File Send Failed"), msg);
+			_("File Send Failed"), msg,
+			purple_request_cpar_from_connection(js->gc));
 		g_free(msg);
 		purple_xfer_cancel_local(xfer);
 	}
@@ -1465,7 +1475,8 @@ static void do_transfer_send(PurpleXfer *xfer, const char *resource)
 
 		msg = g_strdup_printf(_("Unable to send file to %s, user does not support file transfers"), who);
 		purple_notify_error(jsx->js->gc, _("File Send Failed"),
-				_("File Send Failed"), msg);
+			_("File Send Failed"), msg,
+			purple_request_cpar_from_connection(jsx->js->gc));
 		g_free(msg);
 		purple_xfer_cancel_local(xfer);
 	} else {
@@ -1477,10 +1488,7 @@ static void do_transfer_send(PurpleXfer *xfer, const char *resource)
 static void resource_select_ok_cb(PurpleXfer *xfer, PurpleRequestFields *fields)
 {
 	PurpleRequestField *field = purple_request_fields_get_field(fields, "resource");
-	int selected_id = purple_request_field_choice_get_value(field);
-	GList *labels = purple_request_field_choice_get_labels(field);
-
-	const char *selected_label = g_list_nth_data(labels, selected_id);
+	const char *selected_label = purple_request_field_choice_get_value(field);
 
 	do_transfer_send(xfer, selected_label);
 }
@@ -1535,7 +1543,9 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 				msg = g_strdup_printf(_("Unable to send file to %s, not subscribed to user presence"), purple_xfer_get_remote_user(xfer));
 			}
 
-			purple_notify_error(jsx->js->gc, _("File Send Failed"), _("File Send Failed"), msg);
+			purple_notify_error(jsx->js->gc, _("File Send Failed"),
+				_("File Send Failed"), msg,
+				purple_request_cpar_from_connection(jsx->js->gc));
 			g_free(msg);
 		} else if (g_list_length(resources) == 1) {
 			/* only 1 resource online (probably our most common case)
@@ -1550,9 +1560,11 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 			PurpleRequestField *field = purple_request_field_choice_new("resource", _("Resource"), 0);
 			PurpleRequestFieldGroup *group = purple_request_field_group_new(NULL);
 
+			purple_request_field_choice_set_data_destructor(field, g_free);
+
 			for(l = resources; l; l = l->next) {
 				jbr = l->data;
-				purple_request_field_choice_add(field, jbr->name);
+				purple_request_field_choice_add(field, jbr->name, g_strdup(jbr->name));
 			}
 
 			purple_request_field_group_add_field(group, field);
@@ -1561,7 +1573,7 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 
 			purple_request_fields(jsx->js->gc, _("Select a Resource"), msg, NULL, fields,
 					_("Send File"), G_CALLBACK(resource_select_ok_cb), _("Cancel"), G_CALLBACK(resource_select_cancel_cb),
-					purple_connection_get_account(jsx->js->gc), purple_xfer_get_remote_user(xfer), NULL, xfer);
+					purple_request_cpar_from_connection(jsx->js->gc), xfer);
 
 			g_free(msg);
 		}

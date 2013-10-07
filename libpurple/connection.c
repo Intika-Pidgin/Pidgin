@@ -31,6 +31,7 @@
 #include "connection.h"
 #include "dbus-maybe.h"
 #include "debug.h"
+#include "http.h"
 #include "log.h"
 #include "notify.h"
 #include "prefs.h"
@@ -113,7 +114,8 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 		message = g_strdup_printf(_("Missing protocol plugin for %s"),
 			purple_account_get_username(account));
 		purple_notify_error(NULL, regist ? _("Registration Error") :
-						  _("Connection Error"), message, NULL);
+			_("Connection Error"), message, NULL,
+			purple_request_cpar_from_account(account));
 		g_free(message);
 		return;
 	}
@@ -185,7 +187,8 @@ _purple_connection_new_unregister(PurpleAccount *account, const char *password, 
 
 		message = g_strdup_printf(_("Missing protocol plugin for %s"),
 								  purple_account_get_username(account));
-		purple_notify_error(NULL, _("Unregistration Error"), message, NULL);
+		purple_notify_error(NULL, _("Unregistration Error"), message,
+			NULL, purple_request_cpar_from_account(account));
 		g_free(message);
 		return;
 	}
@@ -251,6 +254,7 @@ _purple_connection_destroy(PurpleConnection *gc)
 
 	update_keepalive(gc, FALSE);
 
+	purple_http_conn_cancel_all(gc);
 	purple_proxy_connect_cancel_with_handle(gc);
 
 	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
@@ -282,7 +286,7 @@ _purple_connection_destroy(PurpleConnection *gc)
 
 	purple_account_set_connection(account, NULL);
 
-	g_free(gc->password);
+	purple_str_wipe(gc->password);
 	g_free(gc->display_name);
 
 	if (gc->disconnect_timeout > 0)
@@ -456,7 +460,7 @@ purple_connection_get_password(const PurpleConnection *gc)
 {
 	g_return_val_if_fail(gc != NULL, NULL);
 
-	return gc->password ? gc->password : purple_account_get_password(gc->account);
+	return gc->password;
 }
 
 const char *
@@ -510,7 +514,6 @@ purple_connection_disconnect_cb(gpointer data)
 {
 	PurpleAccount *account;
 	PurpleConnection *gc;
-	char *password;
 
 	account = data;
 	gc = purple_account_get_connection(account);
@@ -518,11 +521,7 @@ purple_connection_disconnect_cb(gpointer data)
 	if (gc != NULL)
 		gc->disconnect_timeout = 0;
 
-	password = g_strdup(purple_account_get_password(account));
 	purple_account_disconnect(account);
-	purple_account_set_password(account, password);
-	g_free(password);
-
 	return FALSE;
 }
 

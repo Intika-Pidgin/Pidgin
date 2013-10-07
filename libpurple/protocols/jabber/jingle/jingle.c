@@ -24,11 +24,13 @@
  */
 
 #include "internal.h"
+#include "glibcompat.h"
 #include "network.h"
 
 #include "content.h"
 #include "debug.h"
 #include "jingle.h"
+#include "google/google_p2p.h"
 #include "session.h"
 #include "iceudp.h"
 #include "rawudp.h"
@@ -58,6 +60,8 @@ jingle_get_type(const gchar *type)
 #ifdef USE_VV
 	else if (!strcmp(type, JINGLE_APP_RTP))
 		return JINGLE_TYPE_RTP;
+	else if (!strcmp(type, NS_GOOGLE_TRANSPORT_P2P))
+		return JINGLE_TYPE_GOOGLE_P2P;
 #endif
 #if 0
 	else if (!strcmp(type, JINGLE_APP_FT))
@@ -429,18 +433,14 @@ jingle_parse(JabberStream *js, const char *from, JabberIqType type,
 	jingle_actions[action_type].handler(session, jingle);
 }
 
-static void
-jingle_terminate_sessions_gh(gpointer key, gpointer value, gpointer user_data)
-{
-	g_object_unref(value);
-}
-
 void
 jingle_terminate_sessions(JabberStream *js)
 {
-	if (js->sessions)
-		g_hash_table_foreach(js->sessions,
-				jingle_terminate_sessions_gh, NULL);
+	if (js->sessions) {
+		GList *list = g_hash_table_get_values(js->sessions);
+		for (; list; list = g_list_delete_link(list, list))
+			g_object_unref(list->data);
+	}
 }
 
 #ifdef USE_VV
@@ -456,13 +456,14 @@ jingle_create_relay_info(const gchar *ip, guint port, const gchar *username,
 		"password", G_TYPE_STRING, password,
 		"relay-type", G_TYPE_STRING, relay_type,
 		NULL);
-	purple_debug_info("jabber", "created gst_structure %" GST_PTR_FORMAT "\n",
-		turn_setup);
+	purple_debug_info("jabber", "created gst_structure %p\n", turn_setup);
 	if (turn_setup) {
 		memset(&value, 0, sizeof(GValue));
 		g_value_init(&value, GST_TYPE_STRUCTURE);
 		gst_value_set_structure(&value, turn_setup);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 		relay_info = g_value_array_append(relay_info, &value);
+G_GNUC_END_IGNORE_DEPRECATIONS
 		gst_structure_free(turn_setup);
 	}
 	return relay_info;
@@ -502,7 +503,9 @@ jingle_get_params(JabberStream *js, const gchar *relay_ip, guint relay_udp,
 		}
 
 		if (relay_ip) {
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 			GValueArray *relay_info = g_value_array_new(0);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 			if (relay_udp) {
 				relay_info =
@@ -520,9 +523,11 @@ jingle_get_params(JabberStream *js, const gchar *relay_ip, guint relay_udp,
 						relay_password, "tls", relay_info);
 			}
 			params[next_index].name = "relay-info";
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 			g_value_init(&params[next_index].value, G_TYPE_VALUE_ARRAY);
 			g_value_set_boxed(&params[next_index].value, relay_info);
 			g_value_array_free(relay_info);
+G_GNUC_END_IGNORE_DEPRECATIONS
 		}
 	}
 

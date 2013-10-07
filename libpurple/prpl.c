@@ -358,9 +358,10 @@ do_prpl_change_account_status(PurpleAccount *account,
 	{
 		if (!purple_account_is_disconnected(account))
 			purple_account_disconnect(account);
-		/* Clear out the unsaved password if we're already disconnected and we switch to offline status */
-		else if (!purple_account_get_remember_password(account))
-			purple_account_set_password(account, NULL);
+		/* Clear out the unsaved password if we switch to offline status */
+		if (!purple_account_get_remember_password(account))
+			purple_account_set_password(account, NULL, NULL, NULL);
+
 		return;
 	}
 
@@ -623,6 +624,23 @@ purple_prpl_got_media_caps(PurpleAccount *account, const char *name)
 				newcaps, oldcaps);
 	}
 #endif
+}
+
+gssize
+purple_prpl_get_max_message_size(PurplePlugin *prpl)
+{
+	PurplePluginProtocolInfo *prpl_info;
+
+	g_return_val_if_fail(prpl != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_PROTOCOL_PLUGIN(prpl), 0);
+
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	g_return_val_if_fail(prpl_info != NULL, 0);
+
+	if (!PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_max_message_size))
+		return 0;
+
+	return prpl_info->get_max_message_size(NULL);
 }
 
 /**************************************************************************

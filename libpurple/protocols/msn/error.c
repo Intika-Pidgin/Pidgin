@@ -273,8 +273,12 @@ msn_error_handle(MsnSession *session, unsigned int type)
 	                      msn_error_get_text(type, &debug));
 	if (debug)
 		purple_debug_warning("msn", "error %d: %s\n", type, buf);
-	else
-		purple_notify_error(purple_account_get_connection(session->account), NULL, buf, NULL);
+	else {
+		purple_notify_error(
+			purple_account_get_connection(session->account), NULL,
+			buf, NULL, purple_request_cpar_from_account(
+				session->account));
+	}
 	g_free(buf);
 }
 
@@ -373,7 +377,7 @@ msn_error_sync_issue(MsnSession *session, const char *passport,
 	}
 
 	purple_request_action(gc, NULL, msg, reason, PURPLE_DEFAULT_ACTION_NONE,
-						account, data->who, NULL,
+		purple_request_cpar_from_account(account),
 						data, 2,
 						_("Yes"), G_CALLBACK(msn_add_cb),
 						_("No"), G_CALLBACK(msn_rem_cb));

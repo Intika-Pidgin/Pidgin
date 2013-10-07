@@ -33,8 +33,11 @@
 #include "debug.h"
 #include "dnsquery.h"
 #include "ft.h"
+#include "glibcompat.h"
+#include "http.h"
 #include "idle.h"
 #include "imgstore.h"
+#include "keyring.h"
 #include "network.h"
 #include "notify.h"
 #include "plugin.h"
@@ -75,6 +78,29 @@ static PurpleCore      *_core = NULL;
 
 STATIC_PROTO_INIT
 
+static void
+purple_core_print_version(void)
+{
+	GHashTable *ui_info = purple_core_get_ui_info();
+	const gchar *ui_name;
+	const gchar *ui_version;
+	gchar *ui_full_name = NULL;
+
+	ui_name = ui_info ? g_hash_table_lookup(ui_info, "name") : NULL;
+	ui_version = ui_info ? g_hash_table_lookup(ui_info, "version") : NULL;
+
+	if (ui_name) {
+		ui_full_name = g_strdup_printf("%s%s%s", ui_name,
+			ui_version ? " " : "", ui_version);
+	}
+
+	purple_debug_info("main", "Launching %s%slibpurple %s",
+		ui_full_name ? ui_full_name : "",
+		ui_full_name ? " with " : "",
+		purple_core_get_version());
+
+}
+
 gboolean
 purple_core_init(const char *ui)
 {
@@ -91,7 +117,10 @@ purple_core_init(const char *ui)
 	wpurple_init();
 #endif
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+	/* GLib type system is automaticaly initialized since 2.36. */
 	g_type_init();
+#endif
 
 	_core = core = g_new0(PurpleCore, 1);
 	core->ui = g_strdup(ui);
@@ -112,6 +141,9 @@ purple_core_init(const char *ui)
 		purple_value_new(PURPLE_TYPE_BOXED, "GHashTable *")); /* Parameters */
 
 	purple_signal_register(core, "quitting", purple_marshal_VOID, NULL, 0);
+	purple_signal_register(core, "core-initialized", purple_marshal_VOID, NULL, 0);
+
+	purple_core_print_version();
 
 	/* The prefs subsystem needs to be initialized before static protocols
 	 * for protocol prefs to work. */
@@ -145,6 +177,7 @@ purple_core_init(const char *ui)
 
 	purple_plugins_probe(G_MODULE_SUFFIX);
 
+	purple_keyring_init(); /* before accounts */
 	purple_theme_manager_init();
 
 	/* The buddy icon code uses the imgstore, so init it early. */
@@ -174,6 +207,7 @@ purple_core_init(const char *ui)
 	purple_stun_init();
 	purple_xfers_init();
 	purple_idle_init();
+	purple_http_init();
 	purple_smileys_init();
 	/*
 	 * Call this early on to try to auto-detect our IP address and
@@ -186,6 +220,11 @@ purple_core_init(const char *ui)
 
 	/* The UI may have registered some theme types, so refresh them */
 	purple_theme_manager_refresh();
+
+	/* Load the buddy list after UI init */
+	purple_blist_boot();
+
+	purple_signal_emit(purple_get_core(), "core-initialized");
 
 	return TRUE;
 }
@@ -222,6 +261,7 @@ purple_core_quit(void)
 
 	/* Save .xml files, remove signals, etc. */
 	purple_smileys_uninit();
+	purple_http_uninit();
 	purple_idle_uninit();
 	purple_pounces_uninit();
 	purple_blist_uninit();
@@ -233,6 +273,7 @@ purple_core_quit(void)
 	purple_savedstatuses_uninit();
 	purple_status_uninit();
 	purple_accounts_uninit();
+	purple_keyring_uninit(); /* after accounts */
 	purple_sound_uninit();
 	purple_theme_manager_uninit();
 	purple_xfers_uninit();
@@ -258,9 +299,11 @@ purple_core_quit(void)
 #endif
 
 	purple_cmds_uninit();
-	/* Everything after util_uninit cannot try to write things to the confdir */
-	purple_util_uninit();
 	purple_log_uninit();
+	/* Everything after util_uninit cannot try to write things to the
+	 * confdir nor use purple_escape_js
+	 */
+	purple_util_uninit();
 
 	purple_signals_uninit();
 

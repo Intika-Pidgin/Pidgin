@@ -77,7 +77,9 @@ auto_accept_complete_cb(PurpleXfer *xfer, PurpleXfer *my)
 	{
 		char *message = g_strdup_printf(_("Autoaccepted file transfer of \"%s\" from \"%s\" completed."),
 					purple_xfer_get_filename(xfer), purple_xfer_get_remote_user(xfer));
-		purple_notify_info(NULL, _("Autoaccept complete"), message, NULL);
+		purple_notify_info(NULL, _("Autoaccept complete"), message,
+			NULL, purple_request_cpar_from_account(
+				purple_xfer_get_account(xfer)));
 		g_free(message);
 	}
 }
@@ -200,15 +202,13 @@ set_auto_accept_settings(PurpleBlistNode *node, gpointer plugin)
 	message = g_strdup_printf(_("When a file-transfer request arrives from %s"),
 					purple_contact_get_alias((PurpleContact *)node));
 	purple_request_choice(plugin, _("Set Autoaccept Setting"), message,
-						NULL, purple_blist_node_get_int(node, "autoaccept"),
+						NULL, GINT_TO_POINTER(purple_blist_node_get_int(node, "autoaccept")),
 						_("_Save"), G_CALLBACK(save_cb),
 						_("_Cancel"), NULL,
-						NULL, NULL, NULL,
-						node,
-						_("Ask"), FT_ASK,
-						_("Auto Accept"), FT_ACCEPT,
-						_("Auto Reject"), FT_REJECT,
-						NULL, purple_contact_get_alias((PurpleContact *)node), NULL,
+						NULL, node,
+						_("Ask"), GINT_TO_POINTER(FT_ASK),
+						_("Auto Accept"), GINT_TO_POINTER(FT_ACCEPT),
+						_("Auto Reject"), GINT_TO_POINTER(FT_REJECT),
 						NULL);
 	g_free(message);
 }
@@ -239,7 +239,7 @@ plugin_load(PurplePlugin *plugin)
 	 *                                             --Mark Doliner, 2011-01-03
 	 */
 	if (!purple_prefs_exists(PREF_STRANGER)) {
-		if (purple_prefs_get_bool(PREF_STRANGER_OLD))
+		if (purple_prefs_exists(PREF_STRANGER_OLD) && purple_prefs_get_bool(PREF_STRANGER_OLD))
 			purple_prefs_add_int(PREF_STRANGER, FT_REJECT);
 		else
 			purple_prefs_set_int(PREF_STRANGER, FT_ASK);

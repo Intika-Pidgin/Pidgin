@@ -248,7 +248,7 @@ static void populate_log_tree(FinchLogViewer *lv)
 									NULL);
 			gnt_tree_set_expanded(GNT_TREE(lv->tree), month, FALSE);
 
-			strncpy(prev_top_month, month, sizeof(prev_top_month));
+			g_strlcpy(prev_top_month, month, sizeof(prev_top_month));
 		}
 
 		/* sub */
@@ -289,7 +289,7 @@ static FinchLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *l
 			g_free(ht);
 		}
 
-		purple_notify_info(NULL, title, _("No logs were found"), log_preferences);
+		purple_notify_info(NULL, title, _("No logs were found"), log_preferences, NULL);
 		return NULL;
 	}
 

@@ -89,9 +89,6 @@ static const int catch_sig_list[] = {
 	SIGTERM,
 	SIGQUIT,
 	SIGCHLD,
-#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
-	SIGALRM,
-#endif
 	-1
 };
 
@@ -135,29 +132,6 @@ static char *segfault_message;
 static int signal_sockets[2];
 
 static void sighandler(int sig);
-
-/*
- * This child process reaping stuff is currently only used for processes that
- * were forked to play sounds.  It's not needed for forked DNS child, which
- * have their own waitpid() call.  It might be wise to move this code into
- * gtksound.c.
- */
-static void
-clean_pid(void)
-{
-	int status;
-	pid_t pid;
-
-	do {
-		pid = waitpid(-1, &status, WNOHANG);
-	} while (pid != 0 && pid != (pid_t)-1);
-
-	if ((pid == (pid_t) - 1) && (errno != ECHILD)) {
-		char errmsg[BUFSIZ];
-		snprintf(errmsg, sizeof(errmsg), "Warning: waitpid() returned %d", pid);
-		perror(errmsg);
-	}
-}
 
 static void sighandler(int sig)
 {
@@ -210,31 +184,13 @@ mainloop_sighandler(GIOChannel *source, GIOCondition cond, gpointer data)
 	}
 
 	switch (sig) {
-#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
-/* By default, gstreamer forks when you initialize it, and waitpids for the
- * child.  But if libpurple reaps the child rather than leaving it to
- * gstreamer, gstreamer's initialization fails.  So, we wait a second before
- * reaping child processes, to give gst a chance to reap it if it wants to.
- *
- * This is not needed in later gstreamers, which let us disable the forking.
- * And, it breaks the world on some Real Unices.
- */
-	case SIGCHLD:
-		/* Restore signal catching */
-		signal(SIGCHLD, sighandler);
-		alarm(1);
-		break;
-	case SIGALRM:
-#else
-	case SIGCHLD:
-#endif
-		clean_pid();
-		/* Restore signal catching */
-		signal(SIGCHLD, sighandler);
-		break;
-	default:
-		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_core_quit();
+		case SIGCHLD:
+			/* Restore signal catching */
+			signal(SIGCHLD, sighandler);
+			break;
+		default:
+			purple_debug_warning("sighandler", "Caught signal %d\n", sig);
+			purple_core_quit();
 	}
 
 	return TRUE;
@@ -248,7 +204,7 @@ ui_main(void)
 	GList *icons = NULL;
 	GdkPixbuf *icon = NULL;
 	char *icon_path;
-	int i;
+	gsize i;
 	struct {
 		const char *dir;
 		const char *filename;
@@ -372,8 +328,8 @@ static GHashTable *pidgin_ui_get_info(void)
 
 		g_hash_table_insert(ui_info, "name", (char*)PIDGIN_NAME);
 		g_hash_table_insert(ui_info, "version", VERSION);
-		g_hash_table_insert(ui_info, "website", "http://pidgin.im");
-		g_hash_table_insert(ui_info, "dev_website", "http://developer.pidgin.im");
+		g_hash_table_insert(ui_info, "website", "https://pidgin.im");
+		g_hash_table_insert(ui_info, "dev_website", "https://developer.pidgin.im");
 		g_hash_table_insert(ui_info, "client_type", "pc");
 
 		/*
@@ -432,7 +388,7 @@ show_usage(const char *name, gboolean terse)
 		g_string_append_printf(str, _("Usage: %s [OPTION]...\n\n"), name);
 		g_string_append_printf(str, "  -c, --config=%s    %s\n",
 				_("DIR"), _("use DIR for config files"));
-		g_string_append_printf(str, "  -d, --debug         %s\n",
+		g_string_append_printf(str, "  -d, --debug[=colored] %s\n",
 				_("print debugging messages to stdout"));
 		g_string_append_printf(str, "  -f, --force-online  %s\n",
 				_("force online, regardless of network status"));
@@ -465,8 +421,8 @@ show_usage(const char *name, gboolean terse)
 /* FUCKING GET ME A TOWEL! */
 #ifdef _WIN32
 /* suppress gcc "no previous prototype" warning */
-int pidgin_main(HINSTANCE hint, int argc, char *argv[]);
-int pidgin_main(HINSTANCE hint, int argc, char *argv[])
+int __cdecl pidgin_main(HINSTANCE hint, int argc, char *argv[]);
+int __cdecl pidgin_main(HINSTANCE hint, int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 #endif
@@ -481,11 +437,14 @@ int main(int argc, char *argv[])
 	char *opt_login_arg = NULL;
 	char *opt_session_arg = NULL;
 	char *search_path;
+#if GTK_CHECK_VERSION(3,0,0)
+	GtkCssProvider *provider;
+	GdkScreen *screen;
+#endif
 	GList *accounts;
 #ifdef HAVE_SIGNAL_H
 	int sig_indx;	/* for setting up signal catching */
 	sigset_t sigset;
-	RETSIGTYPE (*prev_sig_disp)(int);
 	char errmsg[BUFSIZ];
 	GIOChannel *signal_channel;
 	GIOStatus signal_status;
@@ -493,17 +452,19 @@ int main(int argc, char *argv[])
 #ifndef DEBUG
 	char *segfault_message_tmp;
 #endif
+#endif
+#if defined(HAVE_SIGNAL_H) || GTK_CHECK_VERSION(3,0,0)
 	GError *error;
 #endif
 	int opt;
 	gboolean gui_check;
-	gboolean debug_enabled;
+	gboolean debug_enabled, debug_colored;
 	GList *active_accounts;
-	struct stat st;
+	GStatBuf st;
 
 	struct option long_options[] = {
 		{"config",       required_argument, NULL, 'c'},
-		{"debug",        no_argument,       NULL, 'd'},
+		{"debug",        optional_argument, NULL, 'd'},
 		{"force-online", no_argument,       NULL, 'f'},
 		{"help",         no_argument,       NULL, 'h'},
 		{"login",        optional_argument, NULL, 'l'},
@@ -516,14 +477,20 @@ int main(int argc, char *argv[])
 		{0, 0, 0, 0}
 	};
 
+	debug_colored = FALSE;
 #ifdef DEBUG
 	debug_enabled = TRUE;
 #else
 	debug_enabled = FALSE;
 #endif
 
-	/* Initialize GThread before calling any Glib or GTK+ functions. */
+#if !GLIB_CHECK_VERSION(2, 32, 0)
+	/* GLib threading system is automaticaly initialized since 2.32.
+	 * For earlier versions, it have to be initialized before calling any
+	 * Glib or GTK+ functions.
+	 */
 	g_thread_init(NULL);
+#endif
 
 	g_set_prgname("Pidgin");
 
@@ -617,7 +584,7 @@ int main(int argc, char *argv[])
 		perror(errmsg);
 	}
 	for(sig_indx = 0; catch_sig_list[sig_indx] != -1; ++sig_indx) {
-		if((prev_sig_disp = signal(catch_sig_list[sig_indx], sighandler)) == SIG_ERR) {
+		if(signal(catch_sig_list[sig_indx], sighandler) == SIG_ERR) {
 			snprintf(errmsg, sizeof(errmsg), "Warning: couldn't set signal %d for catching",
 				catch_sig_list[sig_indx]);
 			perror(errmsg);
@@ -629,7 +596,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	for(sig_indx = 0; ignore_sig_list[sig_indx] != -1; ++sig_indx) {
-		if((prev_sig_disp = signal(ignore_sig_list[sig_indx], SIG_IGN)) == SIG_ERR) {
+		if(signal(ignore_sig_list[sig_indx], SIG_IGN) == SIG_ERR) {
 			snprintf(errmsg, sizeof(errmsg), "Warning: couldn't set signal %d to ignore",
 				ignore_sig_list[sig_indx]);
 			perror(errmsg);
@@ -658,6 +625,8 @@ int main(int argc, char *argv[])
 			break;
 		case 'd':	/* debug */
 			debug_enabled = TRUE;
+			if (g_strcmp0(optarg, "colored") == 0)
+				debug_colored = TRUE;
 			break;
 		case 'f':	/* force-online */
 			opt_force_online = TRUE;
@@ -737,10 +706,13 @@ int main(int argc, char *argv[])
 	 */
 
 	purple_debug_set_enabled(debug_enabled);
+	purple_debug_set_colored(debug_colored);
 
+#if !GTK_CHECK_VERSION(3,0,0)
 	search_path = g_build_filename(purple_user_dir(), "gtkrc-2.0", NULL);
 	gtk_rc_add_default_file(search_path);
 	g_free(search_path);
+#endif
 
 	gui_check = gtk_init_check(&argc, &argv);
 	if (!gui_check) {
@@ -756,6 +728,26 @@ int main(int argc, char *argv[])
 
 		return 1;
 	}
+
+#if GTK_CHECK_VERSION(3,0,0)
+	search_path = g_build_filename(purple_user_dir(), "gtk-3.0.css", NULL);
+
+	error = NULL;
+	provider = gtk_css_provider_new();
+	gui_check = gtk_css_provider_load_from_path(provider, search_path, &error);
+
+	if (gui_check && !error) {
+		screen = gdk_screen_get_default();
+		gtk_style_context_add_provider_for_screen(screen,
+		                                          GTK_STYLE_PROVIDER(provider),
+		                                          GTK_STYLE_PROVIDER_PRIORITY_USER);
+	} else {
+		purple_debug_error("gtk", "Unable to load custom gtk-3.0.css: %s\n",
+		                   error ? error->message : "(unknown error)");
+	}
+
+	g_free(search_path);
+#endif
 
 	g_set_application_name(PIDGIN_NAME);
 
@@ -806,15 +798,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	/* TODO: Move blist loading into purple_blist_init() */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved(PIDGIN_PREFS_ROOT "/plugins/loaded");
-
-	/* TODO: Move pounces loading into purple_pounces_init() */
-	purple_pounces_load();
 
 	ui_main();
 

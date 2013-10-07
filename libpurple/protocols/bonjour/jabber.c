@@ -149,7 +149,6 @@ _jabber_parse_and_write_message_to_ui(xmlnode *message_node, PurpleBuddy *pb)
 	xmlnode *body_node, *html_node, *events_node;
 	PurpleConnection *gc = purple_account_get_connection(purple_buddy_get_account(pb));
 	gchar *body = NULL;
-	gboolean composing_event = FALSE;
 
 	body_node = xmlnode_get_child(message_node, "body");
 	html_node = xmlnode_get_child(message_node, "html");
@@ -161,8 +160,10 @@ _jabber_parse_and_write_message_to_ui(xmlnode *message_node, PurpleBuddy *pb)
 
 	events_node = xmlnode_get_child_with_namespace(message_node, "x", "jabber:x:event");
 	if (events_node != NULL) {
+#if 0
 		if (xmlnode_get_child(events_node, "composing") != NULL)
 			composing_event = TRUE;
+#endif
 		if (xmlnode_get_child(events_node, "id") != NULL) {
 			/* The user is just typing */
 			/* TODO: Deal with typing notification */
@@ -413,16 +414,18 @@ static void
 _client_socket_handler(gpointer data, gint socket, PurpleInputCondition condition)
 {
 	BonjourJabberConversation *bconv = data;
-	gint len, message_length;
+	gssize len;
 	static char message[4096];
 
 	/* Read the data from the socket */
-	if ((len = recv(socket, message, sizeof(message) - 1, 0)) == -1) {
+	if ((len = recv(socket, message, sizeof(message) - 1, 0)) < 0) {
 		/* There have been an error reading from the socket */
-		if (errno != EAGAIN) {
+		if (len != -1 || errno != EAGAIN) {
 			const char *err = g_strerror(errno);
 
-			purple_debug_warning("bonjour", "receive error: %s\n", err ? err : "(null)");
+			purple_debug_warning("bonjour",
+					"receive of %" G_GSSIZE_FORMAT " error: %s\n",
+					len, err ? err : "(null)");
 
 			bonjour_jabber_close_conversation(bconv);
 			if (bconv->pb != NULL) {
@@ -441,19 +444,12 @@ _client_socket_handler(gpointer data, gint socket, PurpleInputCondition conditio
 		purple_debug_warning("bonjour", "Connection closed (without stream end) by %s.\n", (name) ? name : "(unknown)");
 		bonjour_jabber_stream_ended(bconv);
 		return;
-	} else {
-		message_length = len;
-		message[message_length] = '\0';
-
-		while (message_length > 0 && g_ascii_iscntrl(message[message_length - 1])) {
-			message[message_length - 1] = '\0';
-			message_length--;
-		}
 	}
 
-	purple_debug_info("bonjour", "Receive: -%s- %d bytes\n", message, len);
+	message[len] = '\0';
 
-	bonjour_parser_process(bconv, message, message_length);
+	purple_debug_info("bonjour", "Receive: -%s- %" G_GSSIZE_FORMAT " bytes\n", message, len);
+	bonjour_parser_process(bconv, message, len);
 }
 
 struct _stream_start_data {

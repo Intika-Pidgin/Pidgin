@@ -30,6 +30,8 @@
 #include <glib-object.h>
 #include <glib.h>
 
+#include "certificate.h"
+
 /**
  * A request field.
  */
@@ -45,6 +47,11 @@ typedef struct _PurpleRequestFields PurpleRequestFields;
  */
 typedef struct _PurpleRequestFieldGroup PurpleRequestFieldGroup;
 
+/**
+ * Common parameters for UI operations.
+ */
+typedef struct _PurpleRequestCommonParameters PurpleRequestCommonParameters;
+
 #include "account.h"
 
 #define PURPLE_DEFAULT_ACTION_NONE	-1
@@ -57,6 +64,7 @@ typedef enum
 	PURPLE_REQUEST_INPUT = 0,  /**< Text input request.        */
 	PURPLE_REQUEST_CHOICE,     /**< Multiple-choice request.   */
 	PURPLE_REQUEST_ACTION,     /**< Action request.            */
+	PURPLE_REQUEST_WAIT,       /**< Please wait dialog.        */
 	PURPLE_REQUEST_FIELDS,     /**< Multiple fields request.   */
 	PURPLE_REQUEST_FILE,       /**< File open or save request. */
 	PURPLE_REQUEST_FOLDER      /**< Folder selection request.  */
@@ -81,85 +89,362 @@ typedef enum
 
 } PurpleRequestFieldType;
 
+typedef enum
+{
+	PURPLE_REQUEST_FEATURE_HTML = 0x00000001
+} PurpleRequestFeature;
+
+typedef enum
+{
+	PURPLE_REQUEST_ICON_DEFAULT = 0,
+	PURPLE_REQUEST_ICON_REQUEST,
+	PURPLE_REQUEST_ICON_DIALOG,
+	PURPLE_REQUEST_ICON_WAIT,
+	PURPLE_REQUEST_ICON_INFO,
+	PURPLE_REQUEST_ICON_WARNING,
+	PURPLE_REQUEST_ICON_ERROR
+} PurpleRequestIconType;
+
+typedef void (*PurpleRequestCancelCb)(gpointer);
+
 /**
  * Request UI operations.
  */
 typedef struct
 {
+	PurpleRequestFeature features;
+
 	/** @see purple_request_input(). */
 	void *(*request_input)(const char *title, const char *primary,
-	                       const char *secondary, const char *default_value,
-	                       gboolean multiline, gboolean masked, gchar *hint,
-	                       const char *ok_text, GCallback ok_cb,
-	                       const char *cancel_text, GCallback cancel_cb,
-	                       PurpleAccount *account, const char *who,
-	                       PurpleConversation *conv, void *user_data);
+		const char *secondary, const char *default_value,
+		gboolean multiline, gboolean masked, gchar *hint,
+		const char *ok_text, GCallback ok_cb,
+		const char *cancel_text, GCallback cancel_cb,
+		PurpleRequestCommonParameters *cpar, void *user_data);
 
 	/** @see purple_request_choice_varg(). */
 	void *(*request_choice)(const char *title, const char *primary,
-	                        const char *secondary, int default_value,
-	                        const char *ok_text, GCallback ok_cb,
-	                        const char *cancel_text, GCallback cancel_cb,
-	                        PurpleAccount *account, const char *who,
-	                        PurpleConversation *conv, void *user_data,
-	                        va_list choices);
+		const char *secondary, gpointer default_value,
+		const char *ok_text, GCallback ok_cb, const char *cancel_text,
+		GCallback cancel_cb, PurpleRequestCommonParameters *cpar,
+		void *user_data, va_list choices);
 
 	/** @see purple_request_action_varg(). */
 	void *(*request_action)(const char *title, const char *primary,
-	                        const char *secondary, int default_action,
-	                        PurpleAccount *account, const char *who,
-	                        PurpleConversation *conv, void *user_data,
-	                        size_t action_count, va_list actions);
+		const char *secondary, int default_action,
+		PurpleRequestCommonParameters *cpar, void *user_data,
+		size_t action_count, va_list actions);
+
+	/** @see purple_request_wait(). */
+	void *(*request_wait)(const char *title, const char *primary,
+		const char *secondary, gboolean with_progress,
+		PurpleRequestCancelCb cancel_cb,
+		PurpleRequestCommonParameters *cpar, void *user_data);
+
+	/**
+	 * @see purple_request_wait_pulse().
+	 * @see purple_request_wait_progress().
+	 */
+	void (*request_wait_update)(void *ui_handle, gboolean pulse,
+		gfloat fraction);
 
 	/** @see purple_request_fields(). */
 	void *(*request_fields)(const char *title, const char *primary,
-	                        const char *secondary, PurpleRequestFields *fields,
-	                        const char *ok_text, GCallback ok_cb,
-	                        const char *cancel_text, GCallback cancel_cb,
-	                        PurpleAccount *account, const char *who,
-	                        PurpleConversation *conv, void *user_data);
+		const char *secondary, PurpleRequestFields *fields,
+		const char *ok_text, GCallback ok_cb,
+		const char *cancel_text, GCallback cancel_cb,
+		PurpleRequestCommonParameters *cpar, void *user_data);
 
 	/** @see purple_request_file(). */
 	void *(*request_file)(const char *title, const char *filename,
-	                      gboolean savedialog, GCallback ok_cb,
-	                      GCallback cancel_cb, PurpleAccount *account,
-	                      const char *who, PurpleConversation *conv,
-	                      void *user_data);
-
-	void (*close_request)(PurpleRequestType type, void *ui_handle);
+		gboolean savedialog, GCallback ok_cb, GCallback cancel_cb,
+		PurpleRequestCommonParameters *cpar, void *user_data);
 
 	/** @see purple_request_folder(). */
 	void *(*request_folder)(const char *title, const char *dirname,
-	                        GCallback ok_cb, GCallback cancel_cb,
-	                        PurpleAccount *account, const char *who,
-	                        PurpleConversation *conv, void *user_data);
+		GCallback ok_cb, GCallback cancel_cb,
+		PurpleRequestCommonParameters *cpar, void *user_data);
 
-	/** @see purple_request_action_with_icon_varg(). */
-	void *(*request_action_with_icon)(const char *title, const char *primary,
-	                        const char *secondary, int default_action,
-	                        PurpleAccount *account, const char *who,
-	                        PurpleConversation *conv,
-	                        gconstpointer icon_data, gsize icon_size,
-	                        void *user_data,
-	                        size_t action_count, va_list actions);
+	void (*close_request)(PurpleRequestType type, void *ui_handle);
 
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
 } PurpleRequestUiOps;
 
 typedef void (*PurpleRequestInputCb)(void *, const char *);
+
+typedef gboolean (*PurpleRequestFieldValidator)(PurpleRequestField *field,
+	gchar **errmsg, gpointer user_data);
 
 /** The type of callbacks passed to purple_request_action().  The first
  *  argument is the @a user_data parameter; the second is the index in the list
  *  of actions of the one chosen.
  */
 typedef void (*PurpleRequestActionCb)(void *, int);
-typedef void (*PurpleRequestChoiceCb)(void *, int);
+typedef void (*PurpleRequestChoiceCb)(void *, gpointer);
 typedef void (*PurpleRequestFieldsCb)(void *, PurpleRequestFields *fields);
 typedef void (*PurpleRequestFileCb)(void *, const char *filename);
+typedef void (*PurpleRequestHelpCb)(gpointer);
 
 G_BEGIN_DECLS
+
+/**************************************************************************/
+/** @name Common parameters API                                           */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Creates new parameters set for the request, which may or may not be used by
+ * the UI to display the request.
+ *
+ * @return The new parameters set.
+ */
+PurpleRequestCommonParameters *
+purple_request_cpar_new(void);
+
+/**
+ * Creates new parameters set initially bound with the #PurpleConnection.
+ *
+ * @return The new parameters set.
+ */
+PurpleRequestCommonParameters *
+purple_request_cpar_from_connection(PurpleConnection *gc);
+
+/**
+ * Creates new parameters set initially bound with the #PurpleAccount.
+ *
+ * @return The new parameters set.
+ */
+PurpleRequestCommonParameters *
+purple_request_cpar_from_account(PurpleAccount *account);
+
+/**
+ * Creates new parameters set initially bound with the #PurpleConversation.
+ *
+ * @return The new parameters set.
+ */
+PurpleRequestCommonParameters *
+purple_request_cpar_from_conversation(PurpleConversation *conv);
+
+/*
+ * Increases the reference count on the parameters set.
+ *
+ * @param cpar The object to ref.
+ */
+void
+purple_request_cpar_ref(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Decreases the reference count on the parameters set.
+ *
+ * The object will be destroyed when this reaches 0.
+ *
+ * @param cpar The parameters set object to unref and possibly destroy.
+ *
+ * @return The NULL, if object was destroyed, cpar otherwise.
+ */
+PurpleRequestCommonParameters *
+purple_request_cpar_unref(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Sets the #PurpleAccount associated with the request, or @c NULL, if none is.
+ *
+ * @param cpar    The parameters set.
+ * @param account The #PurpleAccount to associate.
+ */
+void
+purple_request_cpar_set_account(PurpleRequestCommonParameters *cpar,
+	PurpleAccount *account);
+
+/**
+ * Gets the #PurpleAccount associated with the request.
+ *
+ * @param cpar The parameters set (may be @c NULL).
+ *
+ * @return The associated #PurpleAccount, or NULL if none is.
+ */
+PurpleAccount *
+purple_request_cpar_get_account(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Sets the #PurpleConversation associated with the request, or @c NULL, if
+ * none is.
+ *
+ * @param cpar The parameters set.
+ * @param conv The #PurpleConversation to associate.
+ */
+void
+purple_request_cpar_set_conversation(PurpleRequestCommonParameters *cpar,
+	PurpleConversation *conv);
+
+/**
+ * Gets the #PurpleConversation associated with the request.
+ *
+ * @param cpar The parameters set (may be @c NULL).
+ *
+ * @return The associated #PurpleConversation, or NULL if none is.
+ */
+PurpleConversation *
+purple_request_cpar_get_conversation(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Sets the icon associated with the request.
+ *
+ * @param cpar      The parameters set.
+ * @param icon_type The icon type.
+ */
+void
+purple_request_cpar_set_icon(PurpleRequestCommonParameters *cpar,
+	PurpleRequestIconType icon_type);
+
+/**
+ * Gets the icon associated with the request.
+ *
+ * @param cpar The parameters set.
+ *
+ * @returns icon_type The icon type.
+ */
+PurpleRequestIconType
+purple_request_cpar_get_icon(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Sets the custom icon associated with the request.
+ *
+ * @param cpar      The parameters set.
+ * @param icon_data The icon image contents (@c NULL to reset).
+ * @param icon_size The icon image size.
+ */
+void
+purple_request_cpar_set_custom_icon(PurpleRequestCommonParameters *cpar,
+	gconstpointer icon_data, gsize icon_size);
+
+/**
+ * Gets the custom icon associated with the request.
+ *
+ * @param cpar      The parameters set (may be @c NULL).
+ * @param icon_size The pointer to variable, where icon size should be stored
+ *                  (may be @c NULL).
+ *
+ * @return The icon image contents.
+ */
+gconstpointer
+purple_request_cpar_get_custom_icon(PurpleRequestCommonParameters *cpar,
+	gsize *icon_size);
+
+/**
+ * Switches the request text to be HTML or not.
+ *
+ * @param cpar    The parameters set.
+ * @param enabled 1, if the text passed with the request contains HTML,
+ *                0 otherwise. Don't use any other values, as they may be
+ *                redefined in the future.
+ */
+void
+purple_request_cpar_set_html(PurpleRequestCommonParameters *cpar,
+	gboolean enabled);
+
+/**
+ * Checks, if the text passed to the request is HTML.
+ *
+ * @param cpar The parameters set (may be @c NULL).
+ *
+ * @return @c TRUE, if the text is HTML, @c FALSE otherwise.
+ */
+gboolean
+purple_request_cpar_is_html(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Sets dialog display mode to compact or default.
+ *
+ * @param cpar    The parameters set.
+ * @param compact TRUE for compact, FALSE otherwise.
+ */
+void
+purple_request_cpar_set_compact(PurpleRequestCommonParameters *cpar,
+	gboolean compact);
+
+/**
+ * Gets dialog display mode.
+ *
+ * @param cpar The parameters set (may be @c NULL).
+ *
+ * @return TRUE for compact, FALSE for default.
+ */
+gboolean
+purple_request_cpar_is_compact(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Sets the callback for the Help button.
+ *
+ * @param cpar      The parameters set.
+ * @param cb        The callback.
+ * @param user_data The data to be passed to the callback.
+ */
+void
+purple_request_cpar_set_help_cb(PurpleRequestCommonParameters *cpar,
+	PurpleRequestHelpCb cb, gpointer user_data);
+
+/**
+ * Gets the callback for the Help button.
+ *
+ * @param cpar      The parameters set (may be @c NULL).
+ * @param user_data The pointer to the variable, where user data (to be passed
+ *                  to callback function) should be stored.
+ *
+ * @return The callback.
+ */
+PurpleRequestHelpCb
+purple_request_cpar_get_help_cb(PurpleRequestCommonParameters *cpar,
+	gpointer *user_data);
+
+/**
+ * Sets extra actions for the PurpleRequestFields dialog.
+ *
+ * @param cpar The parameters set.
+ * @param ...  A list of actions. These are pairs of arguments. The first of
+ *             each pair is the <tt>char *</tt> label that appears on the
+ *             button. It should have an underscore before the letter you want
+ *             to use as the accelerator key for the button. The second of each
+ *             pair is the #PurpleRequestFieldsCb function to use when the
+ *             button is clicked. Should be terminated with the NULL label.
+ */
+void
+purple_request_cpar_set_extra_actions(PurpleRequestCommonParameters *cpar, ...);
+
+/**
+ * Gets extra actions for the PurpleRequestFields dialog.
+ *
+ * @param cpar The parameters set (may be @c NULL).
+ *
+ * @return A list of actions (pairs of arguments, as in setter).
+ */
+GSList *
+purple_request_cpar_get_extra_actions(PurpleRequestCommonParameters *cpar);
+
+/**
+ * Sets the same parent window for this dialog, as the parent of specified
+ * Notify API or Request API dialog UI handle.
+ *
+ * @param cpar      The parameters set.
+ * @param ui_handle The UI handle.
+ */
+void
+purple_request_cpar_set_parent_from(PurpleRequestCommonParameters *cpar,
+	gpointer ui_handle);
+
+/**
+ * Gets the parent "donor" for this dialog.
+ *
+ * @param cpar The parameters set (may be @c NULL).
+ *
+ * @return The donors UI handle.
+ */
+gpointer
+purple_request_cpar_get_parent_from(PurpleRequestCommonParameters *cpar);
+
+/*@}*/
 
 /**************************************************************************/
 /** @name Field List API                                                  */
@@ -216,7 +501,18 @@ gboolean purple_request_fields_exists(const PurpleRequestFields *fields,
  *
  * @constreturn The list of required fields.
  */
-GList *purple_request_fields_get_required(const PurpleRequestFields *fields);
+const GList *purple_request_fields_get_required(
+	const PurpleRequestFields *fields);
+
+/**
+ * Returns a list of all validated fields.
+ *
+ * @param fields The fields list.
+ *
+ * @constreturn The list of validated fields.
+ */
+const GList *purple_request_fields_get_validatable(
+	const PurpleRequestFields *fields);
 
 /**
  * Returns whether or not a field with the specified ID is required.
@@ -238,6 +534,15 @@ gboolean purple_request_fields_is_field_required(const PurpleRequestFields *fiel
  */
 gboolean purple_request_fields_all_required_filled(
 	const PurpleRequestFields *fields);
+
+/**
+ * Returns whether or not all fields are valid.
+ *
+ * @param fields The fields list.
+ *
+ * @return TRUE if all fields are valid, or FALSE.
+ */
+gboolean purple_request_fields_all_valid(const PurpleRequestFields *fields);
 
 /**
  * Return the field with the specified ID.
@@ -289,10 +594,11 @@ gboolean purple_request_fields_get_bool(const PurpleRequestFields *fields,
  * @param fields The fields list.
  * @param id     The ID of the field.
  *
- * @return The choice index, if found, or -1 otherwise.
+ * @return The choice value, if found, or NULL otherwise.
  */
-int purple_request_fields_get_choice(const PurpleRequestFields *fields,
-								   const char *id);
+gpointer
+purple_request_fields_get_choice(const PurpleRequestFields *fields,
+	const char *id);
 
 /**
  * Returns the account of a field with the specified ID.
@@ -534,6 +840,51 @@ const char *purple_request_field_get_tooltip(const PurpleRequestField *field);
 gboolean purple_request_field_is_required(const PurpleRequestField *field);
 
 /**
+ * Checks, if specified field has value.
+ *
+ * @param field The field.
+ *
+ * @return TRUE if the field has value, or FALSE.
+ */
+gboolean purple_request_field_is_filled(const PurpleRequestField *field);
+
+/**
+ * Sets validator for a single field.
+ *
+ * @param field The field.
+ * @param validator The validator callback, NULL to disable validation.
+ * @param user_data The data to pass to the callback.
+ */
+void purple_request_field_set_validator(PurpleRequestField *field,
+	PurpleRequestFieldValidator validator, void *user_data);
+
+/**
+ * Returns whether or not field has validator set.
+ *
+ * @param field The field.
+ *
+ * @return TRUE if the field has validator, or FALSE.
+ */
+gboolean purple_request_field_is_validatable(PurpleRequestField *field);
+
+/**
+ * Checks, if specified field is valid.
+ *
+ * If detailed message about failure reason is needed, there is an option to
+ * return (via errmsg argument) pointer to newly allocated error message.
+ * It must be freed with g_free after use.
+ *
+ * Note: empty, not required fields are valid.
+ *
+ * @param field The field.
+ * @param errmsg If non-NULL, the memory area, where the pointer to validation
+ *        failure message will be set.
+ *
+ * @return TRUE, if the field is valid, FALSE otherwise.
+ */
+gboolean purple_request_field_is_valid(PurpleRequestField *field, gchar **errmsg);
+
+/**
  * Returns the ui_data for a field.
  *
  * @param field The field.
@@ -671,12 +1022,13 @@ gboolean purple_request_field_string_is_editable(const PurpleRequestField *field
  * @param id            The field ID.
  * @param text          The text label of the field.
  * @param default_value The default value.
+ * @param lower_bound   The lower bound.
+ * @param upper_bound   The upper bound.
  *
  * @return The new field.
  */
 PurpleRequestField *purple_request_field_int_new(const char *id,
-											 const char *text,
-											 int default_value);
+	const char *text, int default_value, int lower_bound, int upper_bound);
 
 /**
  * Sets the default value in an integer field.
@@ -686,6 +1038,22 @@ PurpleRequestField *purple_request_field_int_new(const char *id,
  */
 void purple_request_field_int_set_default_value(PurpleRequestField *field,
 											  int default_value);
+
+/**
+ * Sets the lower bound in an integer field.
+ *
+ * @param field       The field.
+ * @param lower_bound The lower bound.
+ */
+void purple_request_field_int_set_lower_bound(PurpleRequestField *field, int lower_bound);
+
+/**
+ * Sets the upper bound in an integer field.
+ *
+ * @param field       The field.
+ * @param upper_bound The upper bound.
+ */
+void purple_request_field_int_set_upper_bound(PurpleRequestField *field, int lower_bound);
 
 /**
  * Sets the value in an integer field.
@@ -703,6 +1071,24 @@ void purple_request_field_int_set_value(PurpleRequestField *field, int value);
  * @return The default value.
  */
 int purple_request_field_int_get_default_value(const PurpleRequestField *field);
+
+/**
+ * Returns the lower bound in an integer field.
+ *
+ * @param field The field.
+ *
+ * @return The lower bound.
+ */
+int purple_request_field_int_get_lower_bound(const PurpleRequestField *field);
+
+/**
+ * Returns the upper bound in an integer field.
+ *
+ * @param field The field.
+ *
+ * @return The upper bound.
+ */
+int purple_request_field_int_get_upper_bound(const PurpleRequestField *field);
 
 /**
  * Returns the user-entered value in an integer field.
@@ -790,18 +1176,20 @@ gboolean purple_request_field_bool_get_value(const PurpleRequestField *field);
  *
  * @return The new field.
  */
-PurpleRequestField *purple_request_field_choice_new(const char *id,
-												const char *text,
-												int default_value);
+PurpleRequestField *
+purple_request_field_choice_new(const char *id, const char *text,
+	gpointer default_value);
 
 /**
  * Adds a choice to a multiple choice field.
  *
  * @param field The choice field.
  * @param label The choice label.
+ * @param data  The choice value.
  */
-void purple_request_field_choice_add(PurpleRequestField *field,
-								   const char *label);
+void
+purple_request_field_choice_add(PurpleRequestField *field, const char *label,
+	gpointer data);
 
 /**
  * Sets the default value in an choice field.
@@ -809,8 +1197,9 @@ void purple_request_field_choice_add(PurpleRequestField *field,
  * @param field         The field.
  * @param default_value The default value.
  */
-void purple_request_field_choice_set_default_value(PurpleRequestField *field,
-												 int default_value);
+void
+purple_request_field_choice_set_default_value(PurpleRequestField *field,
+	gpointer default_value);
 
 /**
  * Sets the value in an choice field.
@@ -818,7 +1207,9 @@ void purple_request_field_choice_set_default_value(PurpleRequestField *field,
  * @param field The field.
  * @param value The value.
  */
-void purple_request_field_choice_set_value(PurpleRequestField *field, int value);
+void
+purple_request_field_choice_set_value(PurpleRequestField *field,
+	gpointer value);
 
 /**
  * Returns the default value in an choice field.
@@ -827,7 +1218,8 @@ void purple_request_field_choice_set_value(PurpleRequestField *field, int value)
  *
  * @return The default value.
  */
-int purple_request_field_choice_get_default_value(const PurpleRequestField *field);
+gpointer
+purple_request_field_choice_get_default_value(const PurpleRequestField *field);
 
 /**
  * Returns the user-entered value in an choice field.
@@ -836,16 +1228,28 @@ int purple_request_field_choice_get_default_value(const PurpleRequestField *fiel
  *
  * @return The value.
  */
-int purple_request_field_choice_get_value(const PurpleRequestField *field);
+gpointer
+purple_request_field_choice_get_value(const PurpleRequestField *field);
 
 /**
- * Returns a list of labels in a choice field.
+ * Returns a list of elements in a choice field.
  *
  * @param field The field.
  *
- * @constreturn The list of labels.
+ * @constreturn The list of pairs <label, value>.
  */
-GList *purple_request_field_choice_get_labels(const PurpleRequestField *field);
+GList *
+purple_request_field_choice_get_elements(const PurpleRequestField *field);
+
+/**
+ * Sets the destructor for field values.
+ *
+ * @param field   The field.
+ * @param destroy The destroy function.
+ */
+void
+purple_request_field_choice_set_data_destructor(PurpleRequestField *field,
+	GDestroyNotify destroy);
 
 /*@}*/
 
@@ -1201,6 +1605,41 @@ PurpleCertificate *purple_request_field_certificate_get_value(
 /*@}*/
 
 /**************************************************************************/
+/** @name Validators for request fields.                                  */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Validates a field which should contain an email address.
+ *
+ * @see purple_request_field_set_validator
+ *
+ * @param field The field.
+ * @param errmsg (Optional) destination for error message.
+ * @param user_data Ignored.
+ *
+ * @return TRUE, if field contains valid email address.
+ */
+gboolean purple_request_field_email_validator(PurpleRequestField *field,
+	gchar **errmsg, void *user_data);
+
+/**
+ * Validates a field which should contain alphanumeric content.
+ *
+ * @see purple_request_field_set_validator
+ *
+ * @param field The field.
+ * @param errmsg (Optional) destination for error message.
+ * @param user_data (Optional) allowed character list (NULL-terminated string).
+ *
+ * @return TRUE, if field contains only alphanumeric characters.
+ */
+gboolean purple_request_field_alphanumeric_validator(PurpleRequestField *field,
+	gchar **errmsg, void *allowed_characters);
+
+/*@}*/
+
+/**************************************************************************/
 /** @name Request API                                                     */
 /**************************************************************************/
 /*@{*/
@@ -1241,12 +1680,8 @@ PurpleCertificate *purple_request_field_certificate_get_value(
  *                      NULL.
  * @param cancel_cb     The callback for the @c Cancel button, which may be
  *                      @c NULL.
- * @param account       The #PurpleAccount associated with this request, or @c
- *                      NULL if none is.
- * @param who           The username of the buddy associated with this request,
- *                      or @c NULL if none is.
- * @param conv          The #PurpleConversation associated with this request, or
- *                      @c NULL if none is.
+ * @param cpar          The #PurpleRequestCommonParameters object, which gets
+ *                      unref'ed after this call.
  * @param user_data     The data to pass to the callback.
  *
  * @return A UI-specific handle.
@@ -1256,7 +1691,7 @@ void *purple_request_input(void *handle, const char *title, const char *primary,
 	gboolean masked, gchar *hint,
 	const char *ok_text, GCallback ok_cb,
 	const char *cancel_text, GCallback cancel_cb,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
+	PurpleRequestCommonParameters *cpar,
 	void *user_data);
 
 /**
@@ -1279,12 +1714,8 @@ void *purple_request_input(void *handle, const char *title, const char *primary,
  *                      NULL.
  * @param cancel_cb     The callback for the @c Cancel button, or @c NULL to
  *                      do nothing.
- * @param account       The #PurpleAccount associated with this request, or @c
- *                      NULL if none is.
- * @param who           The username of the buddy associated with this request,
- *                      or @c NULL if none is.
- * @param conv          The #PurpleConversation associated with this request, or
- *                      @c NULL if none is.
+ * @param cpar          The #PurpleRequestCommonParameters object, which gets
+ *                      unref'ed after this call.
  * @param user_data     The data to pass to the callback.
  * @param ...           The choices, which should be pairs of <tt>char *</tt>
  *                      descriptions and <tt>int</tt> values, terminated with a
@@ -1293,20 +1724,20 @@ void *purple_request_input(void *handle, const char *title, const char *primary,
  * @return A UI-specific handle.
  */
 void *purple_request_choice(void *handle, const char *title, const char *primary,
-	const char *secondary, int default_value,
+	const char *secondary, gpointer default_value,
 	const char *ok_text, GCallback ok_cb,
 	const char *cancel_text, GCallback cancel_cb,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
+	PurpleRequestCommonParameters *cpar,
 	void *user_data, ...) G_GNUC_NULL_TERMINATED;
 
 /**
  * <tt>va_list</tt> version of purple_request_choice(); see its documentation.
  */
 void *purple_request_choice_varg(void *handle, const char *title,
-	const char *primary, const char *secondary, int default_value,
+	const char *primary, const char *secondary, gpointer default_value,
 	const char *ok_text, GCallback ok_cb,
 	const char *cancel_text, GCallback cancel_cb,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
+	PurpleRequestCommonParameters *cpar,
 	void *user_data, va_list choices);
 
 /**
@@ -1326,12 +1757,8 @@ void *purple_request_choice_varg(void *handle, const char *title,
  *                       supplied should be the default, supply <tt>2</tt>.
  *                       The should be the action that users are most likely
  *                       to select.
- * @param account        The #PurpleAccount associated with this request, or @c
- *                       NULL if none is.
- * @param who            The username of the buddy associated with this request,
- *                       or @c NULL if none is.
- * @param conv           The #PurpleConversation associated with this request, or
- *                       @c NULL if none is.
+ * @param cpar           The #PurpleRequestCommonParameters object, which gets
+ *                       unref'ed after this call.
  * @param user_data      The data to pass to the callback.
  * @param action_count   The number of actions.
  * @param ...            A list of actions.  These are pairs of
@@ -1344,39 +1771,66 @@ void *purple_request_choice_varg(void *handle, const char *title,
  *
  * @return A UI-specific handle.
  */
-void *purple_request_action(void *handle, const char *title, const char *primary,
-	const char *secondary, int default_action, PurpleAccount *account,
-	const char *who, PurpleConversation *conv, void *user_data,
+void *
+purple_request_action(void *handle, const char *title, const char *primary,
+	const char *secondary, int default_action,
+	PurpleRequestCommonParameters *cpar, void *user_data,
 	size_t action_count, ...);
 
 /**
  * <tt>va_list</tt> version of purple_request_action(); see its documentation.
  */
-void *purple_request_action_varg(void *handle, const char *title,
-	const char *primary, const char *secondary, int default_action,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
-	void *user_data, size_t action_count, va_list actions);
+void *
+purple_request_action_varg(void *handle, const char *title, const char *primary,
+	const char *secondary, int default_action,
+	PurpleRequestCommonParameters *cpar, void *user_data,
+	size_t action_count, va_list actions);
 
 /**
- * Version of purple_request_action() supplying an image for the UI to
- * optionally display as an icon in the dialog; see its documentation.
+ * Displays a "please wait" dialog.
+ *
+ * @param handle        The plugin or connection handle.  For some things this
+ *                      is <em>extremely</em> important.  See the comments on
+ *                      purple_request_input().
+ * @param title         The title of the message, or @c NULL if it should have
+ *                      default title.
+ * @param primary       The main point of the message, or @c NULL if you're
+ *                      feeling enigmatic.
+ * @param secondary     Secondary information, or @c NULL if there is none.
+ * @param with_progress @c TRUE, if we want to display progress bar, @c FALSE
+ *                      otherwise
+ * @param cancel_cb     The callback for the @c Cancel button, which may be
+ *                      @c NULL.
+ * @param cpar          The #PurpleRequestCommonParameters object, which gets
+ *                      unref'ed after this call.
+ * @param user_data     The data to pass to the callback.
+ *
+ * @return A UI-specific handle.
  */
-void *purple_request_action_with_icon(void *handle, const char *title,
-	const char *primary, const char *secondary, int default_action,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
-	gconstpointer icon_data, gsize icon_size, void *user_data,
-	size_t action_count, ...);
+void *
+purple_request_wait(void *handle, const char *title, const char *primary,
+	const char *secondary, gboolean with_progress,
+	PurpleRequestCancelCb cancel_cb, PurpleRequestCommonParameters *cpar,
+	void *user_data);
 
 /**
- * <tt>va_list</tt> version of purple_request_action_with_icon();
- * see its documentation.
+ * Notifies the "please wait" dialog that some progress has been made, but you
+ * don't know how much.
+ *
+ * @param ui_handle The request UI handle.
  */
-void *purple_request_action_with_icon_varg(void *handle, const char *title,
-	const char *primary, const char *secondary, int default_action,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
-	gconstpointer icon_data, gsize icon_size,
-	void *user_data, size_t action_count, va_list actions);
+void
+purple_request_wait_pulse(void *ui_handle);
 
+/**
+ * Notifies the "please wait" dialog about progress has been made.
+ *
+ * @param ui_handle The request UI handle.
+ * @param fraction  The part of task that is done (between 0.0 and 1.0,
+ *                  inclusive).
+ */
+void
+purple_request_wait_progress(void *ui_handle, gfloat fraction);
 
 /**
  * Displays groups of fields for the user to fill in.
@@ -1397,22 +1851,31 @@ void *purple_request_action_with_icon_varg(void *handle, const char *title,
  *                    NULL.
  * @param cancel_cb   The callback for the @c Cancel button, which may be
  *                    @c NULL.
- * @param account     The #PurpleAccount associated with this request, or @c
- *                    NULL if none is
- * @param who         The username of the buddy associated with this request,
- *                    or @c NULL if none is
- * @param conv        The #PurpleConversation associated with this request, or
- *                    @c NULL if none is
+ * @param cpar        The #PurpleRequestCommonParameters object, which gets
+ *                    unref'ed after this call.
  * @param user_data   The data to pass to the callback.
  *
  * @return A UI-specific handle.
  */
-void *purple_request_fields(void *handle, const char *title, const char *primary,
+void *
+purple_request_fields(void *handle, const char *title, const char *primary,
 	const char *secondary, PurpleRequestFields *fields,
 	const char *ok_text, GCallback ok_cb,
 	const char *cancel_text, GCallback cancel_cb,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
+	PurpleRequestCommonParameters *cpar,
 	void *user_data);
+
+/**
+ * Checks, if passed UI handle is valid.
+ *
+ * @param ui_handle The UI handle.
+ * @param type      The pointer to variable, where request type may be stored
+ *                  (may be @c NULL).
+ *
+ * @return TRUE, if handle is valid, FALSE otherwise.
+ */
+gboolean
+purple_request_is_valid_ui_handle(void *ui_handle, PurpleRequestType *type);
 
 /**
  * Closes a request.
@@ -1436,44 +1899,28 @@ void purple_request_close_with_handle(void *handle);
  * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
  */
 #define purple_request_yes_no(handle, title, primary, secondary, \
-							default_action, account, who, conv, \
-							user_data, yes_cb, no_cb) \
+	default_action, cpar, user_data, yes_cb, no_cb) \
 	purple_request_action((handle), (title), (primary), (secondary), \
-						(default_action), account, who, conv, (user_data), 2, \
-						_("_Yes"), (yes_cb), _("_No"), (no_cb))
+		(default_action), (cpar), (user_data), 2, _("_Yes"), (yes_cb), \
+		_("_No"), (no_cb))
 
 /**
  * A wrapper for purple_request_action() that uses @c OK and @c Cancel buttons.
  */
 #define purple_request_ok_cancel(handle, title, primary, secondary, \
-							default_action, account, who, conv, \
-						    user_data, ok_cb, cancel_cb) \
+	default_action, cpar, user_data, ok_cb, cancel_cb) \
 	purple_request_action((handle), (title), (primary), (secondary), \
-						(default_action), account, who, conv, (user_data), 2, \
-						_("_OK"), (ok_cb), _("_Cancel"), (cancel_cb))
+		(default_action), (cpar), (user_data), 2, _("_OK"), (ok_cb), \
+		_("_Cancel"), (cancel_cb))
 
 /**
  * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
  */
 #define purple_request_accept_cancel(handle, title, primary, secondary, \
-								   default_action, account, who, conv, \
-								   user_data, accept_cb, cancel_cb) \
+	default_action, cpar, user_data, accept_cb, cancel_cb) \
 	purple_request_action((handle), (title), (primary), (secondary), \
-						(default_action), account, who, conv, (user_data), 2, \
-						_("_Accept"), (accept_cb), _("_Cancel"), (cancel_cb))
-
-/**
- * A wrapper for purple_request_action_with_icon() that uses Accept and Cancel
- * buttons.
- */
-#define purple_request_accept_cancel_with_icon(handle, title, primary, secondary, \
-								   default_action, account, who, conv, \
-								   icon_data, icon_size, \
-								   user_data, accept_cb, cancel_cb) \
-	purple_request_action_with_icon((handle), (title), (primary), (secondary), \
-						(default_action), account, who, conv, icon_data, icon_size, \
-						(user_data), 2, \
-						_("_Accept"), (accept_cb), _("_Cancel"), (cancel_cb))
+		(default_action), (cpar), (user_data), 2, _("_Accept"), \
+		(accept_cb), _("_Cancel"), (cancel_cb))
 
 /**
  * Displays a file selector request dialog.  Returns the selected filename to
@@ -1489,20 +1936,16 @@ void purple_request_close_with_handle(void *handle);
  *                    False if it is being used to open a file.
  * @param ok_cb       The callback for the @c OK button.
  * @param cancel_cb   The callback for the @c Cancel button, which may be @c NULL.
- * @param account     The #PurpleAccount associated with this request, or @c
- *                    NULL if none is
- * @param who         The username of the buddy associated with this request,
- *                    or @c NULL if none is
- * @param conv        The #PurpleConversation associated with this request, or
- *                    @c NULL if none is
+ * @param cpar        The #PurpleRequestCommonParameters object, which gets
+ *                    unref'ed after this call.
  * @param user_data   The data to pass to the callback.
  *
  * @return A UI-specific handle.
  */
-void *purple_request_file(void *handle, const char *title, const char *filename,
+void *
+purple_request_file(void *handle, const char *title, const char *filename,
 	gboolean savedialog, GCallback ok_cb, GCallback cancel_cb,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
-	void *user_data);
+	PurpleRequestCommonParameters *cpar, void *user_data);
 
 /**
  * Displays a folder select dialog. Returns the selected filename to
@@ -1516,20 +1959,16 @@ void *purple_request_file(void *handle, const char *title, const char *filename,
  * @param dirname     The default directory name (may be @c NULL)
  * @param ok_cb       The callback for the @c OK button.
  * @param cancel_cb   The callback for the @c Cancel button, which may be @c NULL.
- * @param account     The #PurpleAccount associated with this request, or @c
- *                    NULL if none is
- * @param who         The username of the buddy associated with this request,
- *                    or @c NULL if none is
- * @param conv        The #PurpleConversation associated with this request, or
- *                    @c NULL if none is
+ * @param cpar        The #PurpleRequestCommonParameters object, which gets
+ *                    unref'ed after this call.
  * @param user_data   The data to pass to the callback.
  *
  * @return A UI-specific handle.
  */
-void *purple_request_folder(void *handle, const char *title, const char *dirname,
+void *
+purple_request_folder(void *handle, const char *title, const char *dirname,
 	GCallback ok_cb, GCallback cancel_cb,
-	PurpleAccount *account, const char *who, PurpleConversation *conv,
-	void *user_data);
+	PurpleRequestCommonParameters *cpar, void *user_data);
 
 /**
  * Prompts the user for action over a certificate.

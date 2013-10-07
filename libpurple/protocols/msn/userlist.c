@@ -46,7 +46,7 @@ typedef struct
  * Callbacks
  **************************************************************************/
 static void
-msn_accept_add_cb(gpointer data)
+msn_accept_add_cb(const char *message, gpointer data)
 {
 	MsnPermitAdd *pa = data;
 
@@ -71,7 +71,7 @@ msn_accept_add_cb(gpointer data)
 }
 
 static void
-msn_cancel_add_cb(gpointer data)
+msn_cancel_add_cb(const char *message, gpointer data)
 {
 	MsnPermitAdd *pa = data;
 
@@ -263,6 +263,7 @@ void
 msn_userlist_remove_user(MsnUserList *userlist, MsnUser *user)
 {
 	userlist->users = g_list_remove(userlist->users, user);
+	g_queue_remove(userlist->buddy_icon_requests, user);
 	msn_user_unref(user);
 }
 
@@ -467,8 +468,7 @@ msn_userlist_rem_buddy(MsnUserList *userlist, const char *who)
 			purple_request_yes_no(userlist->session->account,
 				_("Delete Buddy from Address Book?"),
 				_("Do you want to delete this buddy from your address book as well?"),
-				user->passport, 0, userlist->session->account, user->passport,
-				NULL, ab,
+				user->passport, 0, purple_request_cpar_from_account(userlist->session->account), ab,
 				G_CALLBACK(userlist_ab_delete_cb), G_CALLBACK(userlist_ab_delete_cb));
 		} else
 			msn_delete_contact(userlist->session, user);
@@ -521,8 +521,9 @@ msn_userlist_add_buddy(MsnUserList *userlist, const char *who, const char *group
 
 		char *str = g_strdup_printf(_("Unable to add \"%s\"."), who);
 
-		purple_notify_error(NULL, NULL, str,
-				  _("The username specified is invalid."));
+		purple_notify_error(NULL, NULL, str, _("The username specified "
+			"is invalid."), purple_request_cpar_from_account(
+				userlist->session->account));
 		g_free(str);
 
 		return;

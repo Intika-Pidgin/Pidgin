@@ -65,8 +65,8 @@ static GHashTable *finch_ui_get_info(void)
 
 		g_hash_table_insert(ui_info, "name", (char*)_("Finch"));
 		g_hash_table_insert(ui_info, "version", VERSION);
-		g_hash_table_insert(ui_info, "website", "http://pidgin.im");
-		g_hash_table_insert(ui_info, "dev_website", "http://developer.pidgin.im");
+		g_hash_table_insert(ui_info, "website", "https://pidgin.im");
+		g_hash_table_insert(ui_info, "dev_website", "https://developer.pidgin.im");
 		g_hash_table_insert(ui_info, "client_type", "console");
 
 		/*
@@ -219,11 +219,7 @@ static PurpleEventLoopUiOps eventloop_ops =
 	gnt_input_add,
 	g_source_remove,
 	NULL, /* input_get_error */
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
 
 	/* padding */
 	NULL,
@@ -269,7 +265,7 @@ init_libpurple(int argc, char **argv)
 	gboolean opt_version = FALSE;
 	char *opt_config_dir_arg = NULL;
 	gboolean debug_enabled = FALSE;
-	struct stat st;
+	GStatBuf st;
 
 	struct option long_options[] = {
 		{"config",   required_argument, NULL, 'c'},
@@ -381,18 +377,11 @@ init_libpurple(int argc, char **argv)
 		abort();
 	}
 
-	/* TODO: Move blist loading into purple_blist_init() */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* TODO: should this be moved into finch_prefs_init() ? */
 	finch_prefs_update_old();
 
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved("/finch/plugins/loaded");
-
-	/* TODO: Move pounces loading into purple_pounces_init() */
-	purple_pounces_load();
 
 	if (opt_nologin)
 	{
@@ -435,7 +424,13 @@ int main(int argc, char *argv[])
 {
 	signal(SIGPIPE, SIG_IGN);
 
+#if !GLIB_CHECK_VERSION(2, 32, 0)
+	/* GLib threading system is automaticaly initialized since 2.32.
+	 * For earlier versions, it have to be initialized before calling any
+	 * Glib or GTK+ functions.
+	 */
 	g_thread_init(NULL);
+#endif
 
 	g_set_prgname("Finch");
 	g_set_application_name(_("Finch"));

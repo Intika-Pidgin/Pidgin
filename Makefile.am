@@ -6,7 +6,7 @@ EXTRA_DIST = \
 		HACKING \
 		Makefile.mingw \
 		PLUGIN_HOWTO \
-		README.MTN \
+		README.hg \
 		README.mingw \
 		config.h.mingw \
 		doxy2devhelp.xsl \
@@ -54,13 +54,13 @@ version-check:
 # ... and have no changes in the working copy. (this isn't really necessary with hg because hg id appends a "+")
 	test "x`hg st -mard`" = x
 
-packages:
+sign-packages: dist
 	gpg -ab pidgin-$(PACKAGE_VERSION).tar.gz
 	gpg -ab pidgin-$(PACKAGE_VERSION).tar.bz2
 	gpg --verify pidgin-$(PACKAGE_VERSION).tar.gz.asc pidgin-$(PACKAGE_VERSION).tar.gz
 	gpg --verify pidgin-$(PACKAGE_VERSION).tar.bz2.asc pidgin-$(PACKAGE_VERSION).tar.bz2
 
-release: commit-check version-check distcheck packages
+release: commit-check version-check distcheck sign-packages
 
 if INSTALL_I18N
 PO_DIR=po
@@ -70,7 +70,11 @@ if ENABLE_GTK
 appsdir = $(datadir)/applications
 apps_in_files = pidgin.desktop.in
 apps_DATA = $(apps_in_files:.desktop.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+# silenced INTLTOOL_DESKTOP_RULE
+%.desktop: %.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po)
+	$(AM_V_GEN) LC_ALL=C $(INTLTOOL_MERGE) -d -u -c $(top_builddir)/po/.intltool-merge-cache $(top_srcdir)/po $< $@ > /dev/null
+
 endif #ENABLE_GTK
 
 endif #INSTALL_I18N

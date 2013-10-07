@@ -107,7 +107,7 @@ aim_ssi_type_to_string(guint16 type)
 		{ 0x0020, "ICQ-MDir" },
 		{ 0x0029, "Facebook" },
 	};
-	int i;
+	size_t i;
 	for (i = 0; i < G_N_ELEMENTS(type_strings); i++) {
 		if (type_strings[i].type == type) {
 			return type_strings[i].string;
@@ -605,9 +605,10 @@ static int aim_ssi_sync(OscarData *od)
 				if (od->ssi.pending) {
 					for (cur=od->ssi.pending; cur->next; cur=cur->next);
 					cur->next = new;
-				} else
+				} else {
 					od->ssi.pending = new;
-					aim_ssi_item_debug_append(debugstr, "Deleting item ", cur1);
+				}
+				aim_ssi_item_debug_append(debugstr, "Deleting item ", cur1);
 			}
 		}
 	}
@@ -626,9 +627,10 @@ static int aim_ssi_sync(OscarData *od)
 				if (od->ssi.pending) {
 					for (cur=od->ssi.pending; cur->next; cur=cur->next);
 					cur->next = new;
-				} else
+				} else {
 					od->ssi.pending = new;
-					aim_ssi_item_debug_append(debugstr, "Adding item ", cur1);
+				}
+				aim_ssi_item_debug_append(debugstr, "Adding item ", cur1);
 			}
 		}
 	}
@@ -648,20 +650,23 @@ static int aim_ssi_sync(OscarData *od)
 				if (od->ssi.pending) {
 					for (cur=od->ssi.pending; cur->next; cur=cur->next);
 					cur->next = new;
-				} else
+				} else {
 					od->ssi.pending = new;
-					aim_ssi_item_debug_append(debugstr, "Modifying item ", cur1);
+				}
+				aim_ssi_item_debug_append(debugstr, "Modifying item ", cur1);
 			}
 		}
 	}
 	if (debugstr->len > 0) {
 		purple_debug_info("oscar", "%s", debugstr->str);
 		if (purple_debug_is_verbose()) {
+			PurpleAccount *account = purple_connection_get_account(od->gc);
 			g_string_truncate(debugstr, 0);
-			for (cur1 = od->ssi.local.data; cur1; cur1 = cur1->next)
+			for (cur1 = od->ssi.local.data; cur1; cur1 = cur1->next) {
 				aim_ssi_item_debug_append(debugstr, "\t", cur1);
+			}
 			purple_debug_misc("oscar", "Dumping item list of account %s:\n%s",
-				purple_account_get_username(purple_connection_get_account(od->gc)), debugstr->str);
+					purple_account_get_username(account), debugstr->str);
 		}
 	}
 	g_string_free(debugstr, TRUE);
@@ -1156,8 +1161,8 @@ int aim_ssi_seticon(OscarData *od, const guint8 *iconsum, guint8 iconsumlen)
 
 	/* Need to add the 0x00d5 TLV to the TLV chain */
 	csumdata = (guint8 *)g_malloc((iconsumlen+2)*sizeof(guint8));
-	aimutil_put8(&csumdata[0], 0x00);
-	aimutil_put8(&csumdata[1], iconsumlen);
+	(void)aimutil_put8(&csumdata[0], 0x00);
+	(void)aimutil_put8(&csumdata[1], iconsumlen);
 	memcpy(&csumdata[2], iconsum, iconsumlen);
 	aim_tlvlist_replace_raw(&tmp->data, 0x00d5, (iconsumlen+2) * sizeof(guint8), csumdata);
 	g_free(csumdata);

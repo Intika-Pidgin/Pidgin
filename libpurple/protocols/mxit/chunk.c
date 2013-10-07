@@ -23,8 +23,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include    "internal.h"
-#include	"purple.h"
+#include	"internal.h"
+#include	"debug.h"
+
 #include	"protocol.h"
 #include	"mxit.h"
 #include	"chunk.h"
@@ -381,7 +382,7 @@ int mxit_chunk_create_senddirect( char* chunkdata, const char* username, const c
  */
 int mxit_chunk_create_set_avatar( char* chunkdata, const unsigned char* data, int datalen )
 {
-	const char	fileid[MXIT_CHUNK_FILEID_LEN];
+	char	fileid[MXIT_CHUNK_FILEID_LEN];
 	int			pos = 0;
 
 	/* id [8 bytes] */

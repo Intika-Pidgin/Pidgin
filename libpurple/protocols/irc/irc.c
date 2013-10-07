@@ -74,8 +74,10 @@ static void irc_view_motd(PurplePluginAction *action)
 	}
 	irc = purple_connection_get_protocol_data(gc);
 	if (irc->motd == NULL) {
-		purple_notify_error(gc, _("Error displaying MOTD"), _("No MOTD available"),
-				  _("There is no MOTD associated with this connection."));
+		purple_notify_error(gc, _("Error displaying MOTD"),
+			_("No MOTD available"),
+			_("There is no MOTD associated with this connection."),
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 	title = g_strdup_printf(_("MOTD for %s"), irc->server);
@@ -155,6 +157,7 @@ int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
  	char *tosend= g_strdup(buf);
 
 	purple_signal_emit(_irc_plugin, "irc-sending-text", purple_account_get_connection(irc->account), &tosend);
+	
 	if (tosend == NULL)
 		return 0;
 
@@ -393,9 +396,17 @@ static gboolean do_login(PurpleConnection *gc) {
 	const char *username, *realname;
 	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	const char *pass = purple_connection_get_password(gc);
+#ifdef HAVE_CYRUS_SASL
+	const gboolean use_sasl = purple_account_get_bool(irc->account, "sasl", FALSE);
+#endif
 
 	if (pass && *pass) {
-		buf = irc_format(irc, "v:", "PASS", pass);
+#ifdef HAVE_CYRUS_SASL
+		if (use_sasl)
+			buf = irc_format(irc, "vv:", "CAP", "REQ", "sasl");
+		else /* intended to fall through */
+#endif
+			buf = irc_format(irc, "v:", "PASS", pass);
 		if (irc_send(irc, buf) < 0) {
 			g_free(buf);
 			return FALSE;
@@ -528,6 +539,17 @@ static void irc_close(PurpleConnection *gc)
 
 	g_free(irc->mode_chars);
 	g_free(irc->reqnick);
+
+#ifdef HAVE_CYRUS_SASL
+	if (irc->sasl_conn) {
+		sasl_dispose(&irc->sasl_conn);
+		irc->sasl_conn = NULL;
+	}
+	g_free(irc->sasl_cb);
+	if(irc->sasl_mechs)
+		g_string_free(irc->sasl_mechs, TRUE);
+#endif
+
 
 	g_free(irc);
 }
@@ -891,6 +913,14 @@ static void irc_keepalive(PurpleConnection *gc)
 		irc_cmd_ping(irc, NULL, NULL, NULL);
 }
 
+static gssize
+irc_get_max_message_size(PurpleConversation *conv)
+{
+	/* TODO: this static value is got from pidgin-otr, but it depends on
+	 * some factors, for example IRC channel name. */
+	return 417;
+}
+
 static PurplePluginProtocolInfo prpl_info =
 {
 	sizeof(PurplePluginProtocolInfo),    /* struct_size */
@@ -964,7 +994,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					 /* get_media_caps */
 	NULL,					 /* get_moods */
 	NULL,					 /* set_public_alias */
-	NULL					 /* get_public_alias */
+	NULL,					 /* get_public_alias */
+	irc_get_max_message_size		/* get_max_message_size */
 };
 
 static gboolean load_plugin (PurplePlugin *plugin) {
@@ -1046,6 +1077,16 @@ static void _init_plugin(PurplePlugin *plugin)
 
 	option = purple_account_option_bool_new(_("Use SSL"), "ssl", FALSE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+
+#ifdef HAVE_CYRUS_SASL
+	option = purple_account_option_bool_new(_("Authenticate with SASL"), "sasl", FALSE);
+	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+
+	option = purple_account_option_bool_new(
+						_("Allow plaintext SASL auth over unencrypted connection"),
+						"auth_plain_in_clear", FALSE);
+	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+#endif
 
 	_irc_plugin = plugin;
 

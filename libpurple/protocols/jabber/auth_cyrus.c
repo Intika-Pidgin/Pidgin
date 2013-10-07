@@ -91,12 +91,10 @@ static int jabber_sasl_cb_simple(void *ctx, int id, const char **res, unsigned *
 static int jabber_sasl_cb_secret(sasl_conn_t *conn, void *ctx, int id, sasl_secret_t **secret)
 {
 	JabberStream *js = ctx;
-	PurpleAccount *account;
 	const char *pw;
 	size_t len;
 
-	account = purple_connection_get_account(js->gc);
-	pw = purple_account_get_password(account);
+	pw = purple_connection_get_password(js->gc);
 
 	if (!conn || !secret || id != SASL_CB_PASS)
 		return SASL_BADPARAM;
@@ -154,7 +152,7 @@ static void auth_pass_cb(PurpleConnection *gc, PurpleRequestFields *fields)
 	if (remember)
 		purple_account_set_remember_password(account, TRUE);
 
-	purple_account_set_password(account, entry);
+	purple_account_set_password(account, entry, NULL, NULL);
 
 	/* Rebuild our callbacks as we now have a password to offer */
 	jabber_sasl_build_callbacks(js);
@@ -176,6 +174,25 @@ auth_no_pass_cb(PurpleConnection *gc, PurpleRequestFields *fields)
 
 	/* Disable the account as the user has cancelled connecting */
 	purple_account_set_enabled(account, purple_core_get_ui(), FALSE);
+}
+
+static gboolean remove_current_mech(JabberStream *js) {
+	char *pos;
+	if ((pos = strstr(js->sasl_mechs->str, js->current_mech))) {
+		int len = strlen(js->current_mech);
+		/* Clean up space that separated this Mech from the one before or after it */
+		if (pos > js->sasl_mechs->str && *(pos - 1) == ' ') {
+			/* Handle removing space before when current_mech isn't the first mech in the list */
+			pos--;
+			len++;
+		} else if (strlen(pos) > len && *(pos + len) == ' ') {
+			/* Handle removing space after */
+			len++;
+		}
+		g_string_erase(js->sasl_mechs, pos - js->sasl_mechs->str, len);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 static JabberSaslState
@@ -230,7 +247,7 @@ jabber_auth_start_cyrus(JabberStream *js, xmlnode **reply, char **error)
 				 * to get one
 				 */
 
-				if (!purple_account_get_password(account)) {
+				if (!purple_connection_get_password(js->gc)) {
 					purple_account_request_password(account, G_CALLBACK(auth_pass_cb), G_CALLBACK(auth_no_pass_cb), js->gc);
 					return JABBER_SASL_STATE_CONTINUE;
 
@@ -245,7 +262,7 @@ jabber_auth_start_cyrus(JabberStream *js, xmlnode **reply, char **error)
 					purple_request_yes_no(js->gc, _("Plaintext Authentication"),
 							_("Plaintext Authentication"),
 							msg,
-							1, account, NULL, NULL, account,
+							1, purple_request_cpar_from_account(account), account,
 							allow_cyrus_plaintext_auth,
 							disallow_plaintext_auth);
 					g_free(msg);
@@ -299,14 +316,8 @@ jabber_auth_start_cyrus(JabberStream *js, xmlnode **reply, char **error)
 				 * supported mechanisms. This code handles that case
 				 */
 				if (js->current_mech && *js->current_mech) {
-					char *pos;
-					if ((pos = strstr(js->sasl_mechs->str, js->current_mech))) {
-						g_string_erase(js->sasl_mechs, pos-js->sasl_mechs->str, strlen(js->current_mech));
-					}
-					/* Remove space which separated this mech from the next */
-					if ((js->sasl_mechs->str)[0] == ' ') {
-						g_string_erase(js->sasl_mechs, 0, 1);
-					}
+					remove_current_mech(js);
+					/* Should we only try again if we've removed the mech? */
 					again = TRUE;
 				}
 
@@ -351,7 +362,6 @@ jabber_sasl_cb_log(void *context, int level, const char *message)
 static void
 jabber_sasl_build_callbacks(JabberStream *js)
 {
-	PurpleAccount *account;
 	int id;
 
 	/* Set up our callbacks structure */
@@ -374,8 +384,7 @@ jabber_sasl_build_callbacks(JabberStream *js)
 	js->sasl_cb[id].context = (void *)js;
 	id++;
 
-	account = purple_connection_get_account(js->gc);
-	if (purple_account_get_password(account) != NULL ) {
+	if (purple_connection_get_password(js->gc) != NULL) {
 		js->sasl_cb[id].id = SASL_CB_PASS;
 		js->sasl_cb[id].proc = (void *)jabber_sasl_cb_secret;
 		js->sasl_cb[id].context = (void *)js;
@@ -545,15 +554,10 @@ jabber_cyrus_handle_failure(JabberStream *js, xmlnode *packet,
 {
 	if (js->auth_fail_count++ < 5) {
 		if (js->current_mech && *js->current_mech) {
-			char *pos;
-			if ((pos = strstr(js->sasl_mechs->str, js->current_mech))) {
-				g_string_erase(js->sasl_mechs, pos-js->sasl_mechs->str, strlen(js->current_mech));
-			}
-			/* Remove space which separated this mech from the next */
-			if ((js->sasl_mechs->str)[0] == ' ') {
-				g_string_erase(js->sasl_mechs, 0, 1);
-			}
+			remove_current_mech(js);
 		}
+
+		/* Should we only try again if we've actually removed a mech? */
 		if (*js->sasl_mechs->str) {
 			/* If we have remaining mechs to try, do so */
 			sasl_dispose(&js->sasl);

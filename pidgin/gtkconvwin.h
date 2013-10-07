@@ -42,6 +42,8 @@ struct _PidginWindow
 {
 	GtkWidget *window;           /**< The window.                      */
 	GtkWidget *notebook;         /**< The notebook of conversations.   */
+	GtkWidget *notebook_menu;    /**< The menu on the notebook.        */
+	PidginConversation *clicked_tab; /**< The menu currently clicked.      */
 	GList *gtkconvs;
 
 	struct
@@ -117,7 +119,7 @@ PidginConversation *pidgin_conv_window_get_active_gtkconv(const PidginWindow *wi
 PurpleConversation *pidgin_conv_window_get_active_conversation(const PidginWindow *win);
 gboolean pidgin_conv_window_is_active_conversation(const PurpleConversation *conv);
 gboolean pidgin_conv_window_has_focus(PidginWindow *win);
-PidginWindow *pidgin_conv_window_get_at_xy(int x, int y);
+PidginWindow *pidgin_conv_window_get_at_event(GdkEvent *event);
 GList *pidgin_conv_window_get_gtkconvs(PidginWindow *win);
 guint pidgin_conv_window_get_gtkconv_count(PidginWindow *win);
 

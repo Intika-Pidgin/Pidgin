@@ -1,4 +1,4 @@
-DIST_SUBDIRS = mono perl ssl tcl
+DIST_SUBDIRS = mono perl ssl tcl keyrings
 
 if USE_PERL
 PERL_DIR = perl
@@ -20,7 +20,8 @@ SUBDIRS = \
 	$(MONO_DIR) \
 	$(PERL_DIR) \
 	ssl \
-	$(TCL_DIR)
+	$(TCL_DIR) \
+	keyrings
 
 plugindir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
@@ -117,10 +118,10 @@ dbus_example_la_LIBADD      = $(GLIB_LIBS) $(DBUS_LIBS)
 .PHONY: always
 
 $(top_builddir)/libpurple/dbus-types.h: always
-	cd $(@D) && $(MAKE) $(AM_MAKEFLAGS) $(@F)
+	$(AM_V_GEN)cd $(@D) && $(MAKE) $(AM_MAKEFLAGS) $(@F)
 
 dbus-example-bindings.c: $(top_srcdir)/libpurple/dbus-analyze-functions.py $(dbus_example_la_SOURCES)
-	cat $(srcdir)/$(dbus_example_la_SOURCES) | \
+	$(AM_V_GEN)cat $(srcdir)/$(dbus_example_la_SOURCES) | \
 	$(PYTHON) $(top_srcdir)/libpurple/dbus-analyze-functions.py --export-only > $@
 
 $(dbus_example_la_OBJECTS) dbus-example.so: dbus-example-bindings.c $(top_builddir)/libpurple/dbus-types.h
@@ -146,7 +147,11 @@ AM_CPPFLAGS = \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(PLUGIN_CFLAGS) \
-	$(DBUS_CFLAGS)
+	$(DBUS_CFLAGS) \
+	$(NSS_CFLAGS)
+
+PLUGIN_LIBS = \
+	$(NSS_LIBS)
 
 #
 # This part allows people to build their own plugins in here.

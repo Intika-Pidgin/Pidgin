@@ -315,7 +315,6 @@ get_current_encoding(NMRtfContext *ctx)
 			purple_debug_info("novell", "Unhandled font charset %d\n", font->charset);
 			return "CP1252";
 	}
-	return "CP1252";
 }
 
 
@@ -508,7 +507,7 @@ rtf_parse_keyword(NMRtfContext *ctx)
     int param = 0;
     char keyword[30];
     char parameter[20];
-	int i;
+	gsize i;
 
     keyword[0] = '\0';
     parameter[0] = '\0';

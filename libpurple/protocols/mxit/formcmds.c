@@ -25,9 +25,8 @@
 
 
 #include "internal.h"
-#include <glib.h>
-
-#include "purple.h"
+#include "debug.h"
+#include "http.h"
 
 #include "protocol.h"
 #include "mxit.h"
@@ -76,24 +75,22 @@ struct ii_url_request
 
 /*------------------------------------------------------------------------
  * Callback function invoked when an inline image request to a web site completes.
- *
- *  @param url_data
- *  @param user_data		The Markup message object
- *  @param url_text			The data returned from the WAP site
- *  @param len				The length of the data returned
- *  @param error_message	Descriptive error message
  */
-static void mxit_cb_ii_returned(PurpleUtilFetchUrlData* url_data, gpointer user_data, const gchar* url_text, gsize len, const gchar* error_message)
+static void
+mxit_cb_ii_returned(PurpleHttpConnection *http_conn, PurpleHttpResponse *response,
+	gpointer _iireq)
 {
-	struct ii_url_request*	iireq		= (struct ii_url_request*) user_data;
+	struct ii_url_request*	iireq		= _iireq;
 	int*					intptr		= NULL;
 	int						id;
+	const gchar* data;
+	size_t len;
 
 #ifdef	MXIT_DEBUG_COMMANDS
 	purple_debug_info(MXIT_PLUGIN_ID, "Inline Image returned from %s\n", iireq->url);
 #endif
 
-	if (!url_text) {
+	if (!purple_http_response_is_successful(response)) {
 		/* no reply from the WAP site */
 		purple_debug_error(MXIT_PLUGIN_ID, "Error downloading Inline Image from %s.\n", iireq->url);
 		goto done;
@@ -106,7 +103,8 @@ static void mxit_cb_ii_returned(PurpleUtilFetchUrlData* url_data, gpointer user_
 	}
 
 	/* we now have the inline image, store a copy in the imagestore */
-	id = purple_imgstore_add_with_id(g_memdup(url_text, len), len, NULL);
+	data = purple_http_response_get_data(response, &len);
+	id = purple_imgstore_new_with_id(g_memdup(data, len), len, NULL);
 
 	/* map the inline image id to purple image id */
 	intptr = g_malloc(sizeof(int));
@@ -334,7 +332,7 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 	if (img) {
 		rawimg = purple_base64_decode(img, &rawimglen);
 		//purple_util_write_data_to_file_absolute("/tmp/mxitinline.png", (char*) rawimg, rawimglen);
-		imgid = purple_imgstore_add_with_id(rawimg, rawimglen, NULL);
+		imgid = purple_imgstore_new_with_id(rawimg, rawimglen, NULL);
 		g_string_append_printf(msg,
 		                       "<img src=\"" PURPLE_STORED_IMAGE_PROTOCOL "%i\">",
 		                       imgid);
@@ -361,8 +359,7 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 				/* send the request for the inline image */
 				purple_debug_info(MXIT_PLUGIN_ID, "sending request for inline image '%s'\n", iireq->url);
 
-				/* request the image (reference: "libpurple/util.h") */
-				purple_util_fetch_url(iireq->url, TRUE, NULL, TRUE, -1, mxit_cb_ii_returned, iireq);
+				purple_http_get(mx->session->con, mxit_cb_ii_returned, iireq, iireq->url);
 				mx->img_count++;
 			}
 		}
@@ -372,7 +369,7 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 	reply = g_hash_table_lookup(hash, "replymsg");
 	if (reply) {
 		g_string_append_printf(msg, "\n");
-		mxit_add_html_link(mx, reply, FALSE, _( "click here" ));
+		mxit_add_html_link(mx, purple_url_decode(reply), FALSE, _( "click here" ));
 	}
 }
 
@@ -405,19 +402,31 @@ static void command_imagestrip(struct MXitSession* session, const char* from, GH
 		guchar*		rawimg;
 		gsize		rawimglen;
 		char*		dir;
+		char*		escfrom;
+		char*		escname;
+		char*		escvalidator;
 		char*		filename;
 
 		/* base64 decode the image data */
 		rawimg = purple_base64_decode(tmp, &rawimglen);
+		if (!rawimg)
+			return;
 
 		/* save it to a file */
-		dir = g_strdup_printf("%s/mxit/imagestrips", purple_user_dir());
+		dir = g_build_filename(purple_user_dir(), "mxit", "imagestrips", NULL);
 		purple_build_dir(dir, S_IRUSR | S_IWUSR | S_IXUSR);		/* ensure directory exists */
 
-		filename = g_strdup_printf("%s/%s-%s-%s.png", dir, from, name, validator);
+		escfrom = g_strdup(purple_escape_filename(from));
+		escname = g_strdup(purple_escape_filename(name));
+		escvalidator = g_strdup(purple_escape_filename(validator));
+		filename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s-%s-%s.png", dir, escfrom, escname, escvalidator);
+
 		purple_util_write_data_to_file_absolute(filename, (char*) rawimg, rawimglen);
 
 		g_free(dir);
+		g_free(escfrom);
+		g_free(escname);
+		g_free(escvalidator);
 		g_free(filename);
 	}
 
@@ -465,7 +474,7 @@ static void command_screeninfo(struct MXitSession* session, const char* from)
  *   menu ::= <menuitem> { ";" <menuitem> }
  *     menuitem ::= { type "," <text> "," <name> "," <meta> }
  *   colors ::= <color> { ";" <color> }
- *     color ::= <colorid> "," <ARGB hex color>   
+ *     color ::= <colorid> "," <ARGB hex color>
  *
  *  @param session		The MXit session object
  *  @param from			The sender of the message.
@@ -520,7 +529,7 @@ static void command_table(struct RXMsgData* mx, GHashTable* hash)
 
 	/* number of columns */
 	tmp = g_hash_table_lookup(hash, "col");
-	nr_columns = atoi(tmp);	
+	nr_columns = atoi(tmp);
 
 	/* number of rows */
 	tmp = g_hash_table_lookup(hash, "row");

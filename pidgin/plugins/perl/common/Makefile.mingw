@@ -28,11 +28,15 @@ INCLUDE_PATHS =		-I. \
 			-I$(GTK_TOP)/include/glib-2.0 \
 			-I$(GTK_TOP)/include/gtk-2.0 \
 			-I$(GTK_TOP)/include/pango-1.0 \
+			-I$(GTK_TOP)/include/gdk-pixbuf-2.0 \
 			-I$(GTK_TOP)/lib/glib-2.0/include \
 			-I$(GTK_TOP)/lib/gtk-2.0/include \
-			-I$(PERL_LIB_TOP)/CORE
+			-I$(LIBSOUP_TOP)/include/libsoup-2.4 \
+			-I$(WEBKITGTK_TOP)/include/webkitgtk-1.0 \
+			-I$(PERL_LIB_TOP)/include
 
-LIB_PATHS += 		-L$(PERL_LIB_TOP) \
+LIB_PATHS += \
+			-L$(PERL_LIB_TOP)/lib \
 			-L$(PURPLE_TOP) \
 			-L$(PIDGIN_TOP) \
 			-L$(PURPLE_PERL_TOP) \
@@ -102,7 +106,7 @@ install: all $(PURPLE_INSTALL_PERL_DIR)/Purple.pm
 $(C_FILES): $(PIDGIN_CONFIG_H)
 
 $(TARGET).dll: $(PIDGIN_DLL).a $(PURPLE_PERL_DLL).a $(OBJECTS)
-	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) -o $(TARGET).dll
+	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(DLL_LD_FLAGS) $(LIBS) -o $(TARGET).dll
 
 ##
 ## CLEAN

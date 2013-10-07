@@ -691,7 +691,7 @@ void jabber_setup_set_info(PurplePluginAction *action)
 						fields,
 						_("Save"), G_CALLBACK(jabber_format_info),
 						_("Cancel"), NULL,
-						purple_connection_get_account(gc), NULL, NULL,
+						purple_request_cpar_from_connection(gc),
 						gc);
 }
 
@@ -1203,7 +1203,7 @@ static void jabber_vcard_parse(JabberStream *js, const char *from,
 						char *img_text;
 						char *hash;
 
-						jbi->vcard_imgids = g_slist_prepend(jbi->vcard_imgids, GINT_TO_POINTER(purple_imgstore_add_with_id(g_memdup(data, size), size, "logo.png")));
+						jbi->vcard_imgids = g_slist_prepend(jbi->vcard_imgids, GINT_TO_POINTER(purple_imgstore_new_with_id(g_memdup(data, size), size, "logo.png")));
 						img_text = g_strdup_printf("<img src='" PURPLE_STORED_IMAGE_PROTOCOL "%d'>",
 						                           GPOINTER_TO_INT(jbi->vcard_imgids->data));
 
@@ -1755,7 +1755,7 @@ jabber_buddy_cancel_presence_notification(PurpleBlistNode *node,
 	msg = g_strdup_printf(_("%s will no longer be able to see your status "
 	                        "updates.  Do you want to continue?"), name);
 	purple_request_yes_no(gc, NULL, _("Cancel Presence Notification"),
-	                      msg, 0 /* Yes */, account, name, NULL, buddy,
+	                      msg, 0 /* Yes */, purple_request_cpar_from_account(account), buddy,
 	                      cancel_presence_notification, NULL /* Do nothing */);
 	g_free(msg);
 }
@@ -2161,7 +2161,8 @@ static void user_search_fields_result_cb(JabberStream *js, const char *from,
 			msg = g_strdup(_("Unknown error"));
 
 		purple_notify_error(js->gc, _("Directory Query Failed"),
-				  _("Could not query the directory server."), msg);
+			_("Could not query the directory server."), msg,
+			purple_request_cpar_from_connection(js->gc));
 		g_free(msg);
 
 		return;
@@ -2235,7 +2236,7 @@ static void user_search_fields_result_cb(JabberStream *js, const char *from,
 				_("Search for XMPP users"), instructions, fields,
 				_("Search"), G_CALLBACK(user_search_cb),
 				_("Cancel"), G_CALLBACK(user_search_cancel_cb),
-				purple_connection_get_account(js->gc), NULL, NULL,
+				purple_request_cpar_from_connection(js->gc),
 				usi);
 
 		g_free(instructions);
@@ -2248,7 +2249,9 @@ void jabber_user_search(JabberStream *js, const char *directory)
 
 	/* XXX: should probably better validate the directory we're given */
 	if(!directory || !*directory) {
-		purple_notify_error(js->gc, _("Invalid Directory"), _("Invalid Directory"), NULL);
+		purple_notify_error(js->gc, _("Invalid Directory"),
+			_("Invalid Directory"), NULL,
+			purple_request_cpar_from_connection(js->gc));
 		return;
 	}
 
@@ -2284,8 +2287,7 @@ void jabber_user_search_begin(PurplePluginAction *action)
 			FALSE, FALSE, NULL,
 			_("Search Directory"), PURPLE_CALLBACK(jabber_user_search),
 			_("Cancel"), NULL,
-			NULL, NULL, NULL,
-			js);
+			NULL, js);
 }
 
 gboolean

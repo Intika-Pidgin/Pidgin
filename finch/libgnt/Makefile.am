@@ -73,18 +73,18 @@ CLEANFILES = \
 	gntmarshal.c
 
 gntmarshal.c: $(srcdir)/genmarshal gntmarshal.h
-	echo "#include \"gntmarshal.h\"" > $@
-	glib-genmarshal --prefix=gnt_closure_marshal --body $(srcdir)/genmarshal >> $@
+	$(AM_V_GEN)echo "#include \"gntmarshal.h\"" > $@
+	$(AM_V_at)glib-genmarshal --prefix=gnt_closure_marshal --body $(srcdir)/genmarshal >> $@
 
 gntmarshal.h: $(srcdir)/genmarshal
-	glib-genmarshal --prefix=gnt_closure_marshal --header $(srcdir)/genmarshal > $@
+	$(AM_V_GEN)glib-genmarshal --prefix=gnt_closure_marshal --header $(srcdir)/genmarshal > $@
 
 libgnt_laincludedir=$(includedir)/gnt
 libgnt_lainclude_HEADERS = \
 	$(libgnt_la_headers)
 
 libgnt_la_DEPENDENCIES = 
-libgnt_la_LDFLAGS = -export-dynamic -version_info $(GNT_LT_VERSION_INFO) -no-undefined
+libgnt_la_LDFLAGS = -export-dynamic -version-info $(GNT_LT_VERSION_INFO) -no-undefined
 libgnt_la_LIBADD = \
 	$(GLIB_LIBS) \
 	$(GNT_LIBS) \

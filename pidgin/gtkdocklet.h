@@ -27,6 +27,18 @@
 
 G_BEGIN_DECLS
 
+typedef enum
+{
+	PIDGIN_DOCKLET_CONNECTING 	= 0x1,
+	PIDGIN_DOCKLET_CONV_PENDING 	= 0x2,
+	PIDGIN_DOCKLET_EMAIL_PENDING 	= 0x4
+} PidginDockletFlag;
+
+/**
+ * Returns the GtkStatusIcon used for the docklet.
+ */
+GtkStatusIcon *pidgin_docklet_get_status_icon(void);
+
 void pidgin_docklet_init(void);
 void pidgin_docklet_uninit(void);
 void*pidgin_docklet_get_handle(void);

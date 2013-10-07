@@ -6,7 +6,8 @@ static void
 chat_components_foreach(gpointer key, gpointer value, gpointer user_data)
 {
 	HV *hv = user_data;
-	hv_store(hv, key, strlen(key), newSVpv(value, 0), 0);
+	if (hv_store(hv, key, strlen(key), newSVpv(value, 0), 0) == NULL)
+		purple_debug_error("perl", "hv_store failed\n");
 }
 
 MODULE = Purple::BuddyList  PACKAGE = Purple  PREFIX = purple_
@@ -34,10 +35,6 @@ BOOT:
 
 Purple::BuddyList
 purple_get_blist()
-
-void
-purple_set_blist(blist)
-	Purple::BuddyList blist
 
 MODULE = Purple::BuddyList  PACKAGE = Purple::Find  PREFIX = purple_find_
 PROTOTYPES: ENABLE
@@ -176,9 +173,6 @@ purple_blist_add_chat(chat, group, node)
 	Purple::BuddyList::Group  group
 	Purple::BuddyList::Node node
 
-Purple::BuddyList
-purple_blist_new()
-
 void
 purple_blist_show()
 
@@ -235,9 +229,6 @@ purple_blist_get_group_size(group, offline)
 int
 purple_blist_get_group_online_count(group)
 	Purple::BuddyList::Group  group
-
-void
-purple_blist_load()
 
 void
 purple_blist_schedule_save()

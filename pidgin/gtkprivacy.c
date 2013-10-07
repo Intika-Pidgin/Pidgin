@@ -36,6 +36,8 @@
 #include "gtkprivacy.h"
 #include "gtkutils.h"
 
+#include "gtk3compat.h"
+
 typedef struct
 {
 	GtkWidget *win;
@@ -74,7 +76,7 @@ typedef struct
 static struct
 {
 	const char *text;
-	int num;
+	PurplePrivacyType type;
 
 } const menu_entries[] =
 {
@@ -206,12 +208,12 @@ static void
 select_account_cb(GtkWidget *dropdown, PurpleAccount *account,
 				  PidginPrivacyDialog *dialog)
 {
-	int i;
+	gsize i;
 
 	dialog->account = account;
 
 	for (i = 0; i < menu_entry_count; i++) {
-		if (menu_entries[i].num == purple_account_get_privacy_type(account)) {
+		if (menu_entries[i].type == purple_account_get_privacy_type(account)) {
 			gtk_combo_box_set_active(GTK_COMBO_BOX(dialog->type_menu), i);
 			break;
 		}
@@ -228,14 +230,15 @@ select_account_cb(GtkWidget *dropdown, PurpleAccount *account,
 static void
 type_changed_cb(GtkComboBox *combo, PidginPrivacyDialog *dialog)
 {
-	int new_type = menu_entries[gtk_combo_box_get_active(combo)].num;
+	PurplePrivacyType new_type =
+		menu_entries[gtk_combo_box_get_active(combo)].type;
 
 	purple_account_set_privacy_type(dialog->account, new_type);
 	serv_set_permit_deny(purple_account_get_connection(dialog->account));
 
 	gtk_widget_hide(dialog->allow_widget);
 	gtk_widget_hide(dialog->block_widget);
-	gtk_widget_hide_all(dialog->button_box);
+	gtk_widget_hide(dialog->button_box);
 
 	if (new_type == PURPLE_PRIVACY_ALLOW_USERS) {
 		gtk_widget_show(dialog->allow_widget);
@@ -335,8 +338,8 @@ privacy_dialog_new(void)
 	GtkWidget *button;
 	GtkWidget *dropdown;
 	GtkWidget *label;
-	int selected = -1;
-	int i;
+	gssize selected = -1;
+	gsize i;
 
 	dialog = g_new0(PidginPrivacyDialog, 1);
 
@@ -363,15 +366,15 @@ privacy_dialog_new(void)
 	dialog->account = pidgin_account_option_menu_get_selected(dropdown);
 
 	/* Add the drop-down list with the allow/block types. */
-	dialog->type_menu = gtk_combo_box_new_text();
+	dialog->type_menu = gtk_combo_box_text_new();
 	gtk_box_pack_start(GTK_BOX(vbox), dialog->type_menu, FALSE, FALSE, 0);
 	gtk_widget_show(dialog->type_menu);
 
 	for (i = 0; i < menu_entry_count; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(dialog->type_menu),
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(dialog->type_menu),
 		                          _(menu_entries[i].text));
 
-		if (menu_entries[i].num == purple_account_get_privacy_type(dialog->account))
+		if (menu_entries[i].type == purple_account_get_privacy_type(dialog->account))
 			selected = i;
 	}
 
@@ -434,7 +437,7 @@ pidgin_privacy_dialog_show(void)
 		privacy_dialog = privacy_dialog_new();
 
 	gtk_widget_show(privacy_dialog->win);
-	gdk_window_raise(privacy_dialog->win->window);
+	gdk_window_raise(gtk_widget_get_window(privacy_dialog->win));
 }
 
 void
@@ -495,7 +498,7 @@ pidgin_request_add_permit(PurpleAccount *account, const char *name)
 			NULL, FALSE, FALSE, NULL,
 			_("_Permit"), G_CALLBACK(add_permit_block_cb),
 			_("Cancel"), G_CALLBACK(destroy_request_data),
-			account, name, NULL,
+			purple_request_cpar_from_account(account),
 			data);
 	}
 	else {
@@ -505,12 +508,11 @@ pidgin_request_add_permit(PurpleAccount *account, const char *name)
 							  "%s to contact you?"), name);
 
 
-		purple_request_action(account, _("Permit User"), primary, secondary,
-							0,
-							account, name, NULL,
-							data, 2,
-							_("_Permit"), G_CALLBACK(confirm_permit_block_cb),
-							_("Cancel"), G_CALLBACK(destroy_request_data));
+		purple_request_action(account, _("Permit User"), primary,
+			secondary, 0, purple_request_cpar_from_account(account),
+			data, 2,
+			_("_Permit"), G_CALLBACK(confirm_permit_block_cb),
+			_("Cancel"), G_CALLBACK(destroy_request_data));
 
 		g_free(primary);
 		g_free(secondary);
@@ -536,7 +538,7 @@ pidgin_request_add_block(PurpleAccount *account, const char *name)
 			NULL, FALSE, FALSE, NULL,
 			_("_Block"), G_CALLBACK(add_permit_block_cb),
 			_("Cancel"), G_CALLBACK(destroy_request_data),
-			account, name, NULL,
+			purple_request_cpar_from_account(account),
 			data);
 	}
 	else {
@@ -544,12 +546,11 @@ pidgin_request_add_block(PurpleAccount *account, const char *name)
 		char *secondary =
 			g_strdup_printf(_("Are you sure you want to block %s?"), name);
 
-		purple_request_action(account, _("Block User"), primary, secondary,
-							0,
-							account, name, NULL,
-							data, 2,
-							_("_Block"), G_CALLBACK(confirm_permit_block_cb),
-							_("Cancel"), G_CALLBACK(destroy_request_data));
+		purple_request_action(account, _("Block User"), primary,
+			secondary, 0, purple_request_cpar_from_account(account),
+			data, 2,
+			_("_Block"), G_CALLBACK(confirm_permit_block_cb),
+			_("Cancel"), G_CALLBACK(destroy_request_data));
 
 		g_free(primary);
 		g_free(secondary);

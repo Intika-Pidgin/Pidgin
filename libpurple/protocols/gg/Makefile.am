@@ -1,45 +1,23 @@
-EXTRA_DIST = \
-	Makefile.mingw \
-	win32-resolver.c \
-	win32-resolver.h \
-	lib/common.c \
-	lib/compat.h \
-	lib/COPYING \
-	lib/dcc.c \
-	lib/dcc7.c \
-	lib/debug.c \
-	lib/deflate.c \
-	lib/deflate.h \
-	lib/encoding.c \
-	lib/encoding.h \
-	lib/events.c \
-	lib/handlers.c \
-	lib/http.c \
-	lib/libgadu.h \
-	lib/libgadu.c \
-	lib/libgadu-config.h \
-	lib/libgadu-debug.h \
-	lib/libgadu-internal.h \
-	lib/message.c \
-	lib/message.h \
-	lib/obsolete.c \
-	lib/protocol.h \
-	lib/pubdir.c \
-	lib/pubdir50.c \
-	lib/resolver.c \
-	lib/resolver.h \
-	lib/session.h \
-	lib/sha1.c
+#V=0
+#CFLAGS = -g -O0
+GADU_EXTRA =
+#GADU_EXTRA += -Werror
 
 pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+
+EXTRA_DIST = \
+	Makefile.mingw \
+	lib/COPYING
 
 if USE_INTERNAL_LIBGADU
 INTGGSOURCES = \
 	lib/common.c \
 	lib/compat.h \
+	lib/config.h \
 	lib/dcc.c \
 	lib/dcc7.c \
 	lib/debug.c \
+	lib/debug.h \
 	lib/deflate.c \
 	lib/deflate.h \
 	lib/encoding.c \
@@ -47,10 +25,9 @@ INTGGSOURCES = \
 	lib/events.c \
 	lib/handlers.c \
 	lib/http.c \
-	lib/libgadu.h \
+	lib/internal.h \
 	lib/libgadu.c \
-	lib/libgadu-config.h \
-	lib/libgadu-internal.h \
+	lib/libgadu.h \
 	lib/message.c \
 	lib/message.h \
 	lib/obsolete.c \
@@ -62,7 +39,11 @@ INTGGSOURCES = \
 	lib/session.h \
 	lib/sha1.c
 
-INTGG_CFLAGS = -I$(top_srcdir)/libpurple/protocols/gg/lib -DGG_IGNORE_DEPRECATED -DUSE_INTERNAL_LIBGADU
+INTGG_CFLAGS = -I$(top_srcdir)/libpurple/protocols/gg/lib \
+	$(ZLIB_CFLAGS) \
+	-DGG_IGNORE_DEPRECATED \
+	-DGG_INTERNAL_LIBGADU_VERSION=$(GADU_LIBGADU_VERSION)
+GADU_LIBS += $(ZLIB_LIBS)
 endif
 
 if USE_GNUTLS
@@ -70,18 +51,62 @@ GADU_LIBS += $(GNUTLS_LIBS)
 GADU_CFLAGS += $(GNUTLS_CFLAGS)
 endif
 
+GADU_LIBS += $(JSON_LIBS)
+
 GGSOURCES = \
 	$(INTGGSOURCES) \
-	gg-utils.h \
-	gg-utils.c \
-	confer.h \
-	confer.c \
-	search.h \
-	search.c \
-	buddylist.h \
+	account.c \
+	account.h \
+	avatar.c \
+	avatar.h \
 	buddylist.c \
+	buddylist.h \
+	chat.c \
+	chat.h \
+	deprecated.c \
+	deprecated.h \
+	edisc.c \
+	edisc.h \
+	gg.c \
 	gg.h \
-	gg.c
+	html.c \
+	html.h \
+	image.c \
+	image.h \
+	libgadu-events.c \
+	libgadu-events.h \
+	libgaduw.c \
+	libgaduw.h \
+	message-prpl.c \
+	message-prpl.h \
+	multilogon.c \
+	multilogon.h \
+	pubdir-prpl.c \
+	pubdir-prpl.h \
+	purplew.c \
+	purplew.h \
+	resolver-purple.c \
+	resolver-purple.h \
+	roster.c \
+	roster.h \
+	servconn.c \
+	servconn.h \
+	status.c \
+	status.h \
+	tcpsocket.c \
+	tcpsocket.h \
+	utils.c \
+	utils.h \
+	validator.c \
+	validator.h \
+	xml.c \
+	xml.h \
+	oauth/oauth.c \
+	oauth/oauth.h \
+	oauth/oauth-parameter.c \
+	oauth/oauth-parameter.h \
+	oauth/oauth-purple.c \
+	oauth/oauth-purple.h
 
 AM_CFLAGS = $(st)
 
@@ -109,5 +134,6 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/libpurple \
 	$(INTGG_CFLAGS) \
 	$(GLIB_CFLAGS) \
-	$(DEBUG_CFLAGS)
-
+	$(JSON_CFLAGS) \
+	$(DEBUG_CFLAGS) \
+	$(GADU_EXTRA)

@@ -673,7 +673,7 @@ static const struct {
 const char *
 jabber_buddy_state_get_name(const JabberBuddyState state)
 {
-	int i;
+	gsize i;
 	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
 		if (jabber_statuses[i].state == state)
 			return _(jabber_statuses[i].readable);
@@ -684,7 +684,7 @@ jabber_buddy_state_get_name(const JabberBuddyState state)
 JabberBuddyState
 jabber_buddy_status_id_get_state(const char *id)
 {
-	int i;
+	gsize i;
 	if (!id)
 		return JABBER_BUDDY_STATE_UNKNOWN;
 
@@ -697,7 +697,7 @@ jabber_buddy_status_id_get_state(const char *id)
 
 JabberBuddyState jabber_buddy_show_get_state(const char *id)
 {
-	int i;
+	gsize i;
 
 	g_return_val_if_fail(id != NULL, JABBER_BUDDY_STATE_UNKNOWN);
 
@@ -713,7 +713,7 @@ JabberBuddyState jabber_buddy_show_get_state(const char *id)
 const char *
 jabber_buddy_state_get_show(JabberBuddyState state)
 {
-	int i;
+	gsize i;
 	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
 		if (state == jabber_statuses[i].state)
 			return jabber_statuses[i].show;
@@ -724,7 +724,7 @@ jabber_buddy_state_get_show(JabberBuddyState state)
 const char *
 jabber_buddy_state_get_status_id(JabberBuddyState state)
 {
-	int i;
+	gsize i;
 	for (i = 0; i < G_N_ELEMENTS(jabber_statuses); ++i)
 		if (state == jabber_statuses[i].state)
 			return jabber_statuses[i].status_id;
@@ -748,7 +748,7 @@ jabber_calculate_data_hash(gconstpointer data, size_t len,
 
 	/* Hash the data */
 	purple_cipher_context_append(context, data, len);
-	if (!purple_cipher_context_digest_to_str(context, sizeof(digest), digest, NULL))
+	if (!purple_cipher_context_digest_to_str(context, digest, sizeof(digest)))
 	{
 		purple_debug_error("jabber", "Failed to get digest for %s cipher.\n",
 		    hash_algo);

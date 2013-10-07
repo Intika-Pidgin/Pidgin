@@ -46,7 +46,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #define SPELLCHECK_PLUGIN_ID "gtk-spellcheck"
 #define SPELLCHK_OBJECT_KEY "spellchk"
@@ -126,7 +125,8 @@ make_word_proper(const gchar *word)
 	gchar *ret;
 
 	bytes = g_unichar_to_utf8(g_unichar_toupper(g_utf8_get_char(word)), buf);
-	buf[MIN(bytes, sizeof(buf) - 1)] = '\0';
+	g_assert(bytes >= 0);
+	buf[MIN((gsize)bytes, sizeof(buf) - 1)] = '\0';
 
 	ret = g_strconcat(buf, g_utf8_offset_to_pointer(lower, 1), NULL);
 	g_free(lower);
@@ -318,6 +318,10 @@ spellchk_inside_word(GtkTextIter *iter)
 	 *
 	 * Part 1 of 2: This marks . as being an inside-word character. */
 	if (c == '.')
+		return TRUE;
+	if (c == '+')
+		return TRUE;
+	if (c == '-')
 		return TRUE;
 
 	/* Avoid problems with \r, for example (SF #1289031). */
@@ -675,10 +679,10 @@ spellchk_new_attach(PurpleConversation *conv)
 	return;
 }
 
-static int buf_get_line(char *ibuf, char **buf, int *position, gsize len)
+static int buf_get_line(char *ibuf, char **buf, gsize *position, gsize len)
 {
-	int pos = *position;
-	int spos = pos;
+	gsize pos = *position;
+	gsize spos = pos;
 
 	if (pos == len)
 		return 0;
@@ -1775,7 +1779,7 @@ static void load_conf(void)
 	GHashTable *hashes;
 	char bad[82] = "";
 	char good[256] = "";
-	int pnt = 0;
+	gsize pnt = 0;
 	gsize size;
 	gboolean complete = TRUE;
 	gboolean case_sensitive = FALSE;
@@ -1970,7 +1974,7 @@ static void list_add_new(void)
 
 				purple_notify_error(NULL, _("Duplicate Correction"),
 					_("The specified word already exists in the correction list."),
-					gtk_entry_get_text(GTK_ENTRY(bad_entry)));
+					gtk_entry_get_text(GTK_ENTRY(bad_entry)), NULL);
 				return;
 			}
 

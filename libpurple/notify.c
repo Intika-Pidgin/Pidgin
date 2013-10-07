@@ -67,9 +67,10 @@ struct _PurpleNotifySearchColumn
 };
 
 void *
-purple_notify_message(void *handle, PurpleNotifyMsgType type,
-					const char *title, const char *primary,
-					const char *secondary, PurpleNotifyCloseCallback cb, gpointer user_data)
+purple_notify_message(void *handle, PurpleNotifyMsgType type, const char *title,
+	const char *primary, const char *secondary,
+	PurpleRequestCommonParameters *cpar, PurpleNotifyCloseCallback cb,
+	gpointer user_data)
 {
 	PurpleNotifyUiOps *ops;
 
@@ -79,7 +80,7 @@ purple_notify_message(void *handle, PurpleNotifyMsgType type,
 
 	if (ops != NULL && ops->notify_message != NULL) {
 		void *ui_handle = ops->notify_message(type, title, primary,
-											  secondary);
+			secondary, cpar);
 		if (ui_handle != NULL) {
 
 			PurpleNotifyInfo *info = g_new0(PurpleNotifyInfo, 1);
@@ -721,6 +722,28 @@ purple_notify_uri(void *handle, const char *uri)
 	return NULL;
 }
 
+gboolean
+purple_notify_is_valid_ui_handle(void *ui_handle, PurpleNotifyType *type)
+{
+	GList *it;
+
+	if (ui_handle == NULL)
+		return FALSE;
+
+	for (it = handles; it != NULL; it = g_list_next(it)) {
+		PurpleNotifyInfo *info = it->data;
+
+		if (info->ui_handle != ui_handle)
+			continue;
+
+		if (type != NULL)
+			*type = info->type;
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 void
 purple_notify_close(PurpleNotifyType type, void *ui_handle)
 {
@@ -817,6 +840,9 @@ purple_notify_init(void)
 						 purple_value_new(PURPLE_TYPE_POINTER),
 						 purple_value_new(PURPLE_TYPE_POINTER),
 						 purple_value_new(PURPLE_TYPE_UINT));
+
+	purple_signal_register(handle, "displaying-emails-clear",
+						 purple_marshal_VOID, NULL, 0);
 
 	purple_signal_register(handle, "displaying-userinfo",
 						 purple_marshal_VOID__POINTER_POINTER_POINTER, NULL, 3,

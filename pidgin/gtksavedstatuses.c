@@ -35,11 +35,12 @@
 
 #include "gtkblist.h"
 #include "pidgin.h"
-#include "gtkimhtml.h"
-#include "gtkimhtmltoolbar.h"
 #include "gtksavedstatuses.h"
 #include "pidginstock.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
+
+#include "gtk3compat.h"
 
 /*
  * TODO: Should attach to the account-deleted and account-added signals
@@ -118,7 +119,7 @@ typedef struct
 	gchar *original_title;
 	GtkEntry *title;
 	GtkComboBox *type;
-	GtkIMHtml *message;
+	GtkWebView *message;
 } StatusEditor;
 
 typedef struct
@@ -129,8 +130,7 @@ typedef struct
 	GtkWidget *window;
 	GtkListStore *model;
 	GtkComboBox *box;
-	GtkIMHtml *message;
-	GtkIMHtmlToolbar *toolbar;
+	GtkWebView *message;
 } SubStatusEditor;
 
 static StatusWindow *status_window = NULL;
@@ -311,7 +311,7 @@ status_window_delete_cb(GtkButton *button, gpointer user_data)
 	}
 
 	purple_request_action(handle, NULL, title, NULL, 0,
-		 NULL, NULL, NULL,
+		 NULL,
 		 sel_titles, 2,
 		_("Delete"), status_window_delete_confirm_cb,
 		_("Cancel"), status_window_delete_cancel_cb);
@@ -524,11 +524,7 @@ create_saved_status_list(StatusWindow *dialog)
 static gboolean
 configure_cb(GtkWidget *widget, GdkEventConfigure *event, StatusWindow *dialog)
 {
-#if GTK_CHECK_VERSION(2,18,0)
 	if (gtk_widget_get_visible(widget))
-#else
-	if (GTK_WIDGET_VISIBLE(widget))
-#endif
 	{
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/status/dialog/width",  event->width);
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/status/dialog/height", event->height);
@@ -730,12 +726,12 @@ status_editor_ok_cb(GtkButton *button, gpointer user_data)
 		((dialog->original_title == NULL) || (strcmp(title, dialog->original_title))))
 	{
 		purple_notify_error(status_window, NULL, _("Title already in use.  You must "
-						  "choose a unique title."), NULL);
+						  "choose a unique title."), NULL, NULL);
 		return;
 	}
 
 	type = gtk_combo_box_get_active(dialog->type) + (PURPLE_STATUS_UNSET + 1);
-	message = gtk_imhtml_get_markup(dialog->message);
+	message = gtk_webview_get_body_html(dialog->message);
 	unformatted = purple_markup_strip_html(message);
 
 	/*
@@ -1086,7 +1082,6 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	GtkWidget *frame;
 	GtkWidget *hbox;
 	GtkWidget *text;
-	GtkWidget *toolbar;
 	GtkWidget *vbox;
 	GtkWidget *win;
 	GList *focus_chain = NULL;
@@ -1151,19 +1146,17 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Status:"), sg, dropdown, TRUE, NULL);
 
 	/* Status message */
-	frame = pidgin_create_imhtml(TRUE, &text, &toolbar, NULL);
-	dialog->message = GTK_IMHTML(text);
+	frame = pidgin_create_webview(TRUE, &text, NULL);
+	dialog->message = GTK_WEBVIEW(text);
 	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Message:"), sg, frame, TRUE, NULL);
 	gtk_container_child_set(GTK_CONTAINER(vbox), hbox, "expand", TRUE, "fill", TRUE, NULL);
 	focus_chain = g_list_prepend(focus_chain, dialog->message);
 	gtk_container_set_focus_chain(GTK_CONTAINER(hbox), focus_chain);
 	g_list_free(focus_chain);
 
-	gtk_imhtml_set_return_inserts_newline(dialog->message);
-
 	if ((saved_status != NULL) && (purple_savedstatus_get_message(saved_status) != NULL))
-		gtk_imhtml_append_text(GTK_IMHTML(text),
-							   purple_savedstatus_get_message(saved_status), 0);
+		gtk_webview_append_html(GTK_WEBVIEW(text),
+		                        purple_savedstatus_get_message(saved_status));
 
 	/* Different status message expander */
 	expander = gtk_expander_new_with_mnemonic(_("Use a _different status for some accounts"));
@@ -1264,12 +1257,10 @@ substatus_selection_changed_cb(GtkComboBox *box, gpointer user_data)
 	if (purple_status_type_get_attr(type, "message") == NULL)
 	{
 		gtk_widget_set_sensitive(GTK_WIDGET(select->message), FALSE);
-		gtk_widget_set_sensitive(GTK_WIDGET(select->toolbar), FALSE);
 	}
 	else
 	{
 		gtk_widget_set_sensitive(GTK_WIDGET(select->message), TRUE);
-		gtk_widget_set_sensitive(GTK_WIDGET(select->toolbar), TRUE);
 	}
 }
 
@@ -1351,7 +1342,7 @@ substatus_editor_ok_cb(GtkButton *button, gpointer user_data)
 					   -1);
 	type = purple_account_get_status_type(dialog->account, id);
 	if (purple_status_type_get_attr(type, "message") != NULL)
-		message = gtk_imhtml_get_markup(GTK_IMHTML(dialog->message));
+		message = gtk_webview_get_body_html(GTK_WEBVIEW(dialog->message));
 	name = purple_status_type_get_name(type);
 	stock = get_stock_icon_from_primitive(purple_status_type_get_primitive(type));
 
@@ -1385,7 +1376,6 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	GtkWidget *frame;
 	GtkWidget *label;
 	GtkWidget *text;
-	GtkWidget *toolbar;
 	GtkWidget *vbox;
 	GtkWidget *win;
 	GtkTreeIter iter;
@@ -1471,9 +1461,8 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_size_group_add_widget(sg, label);
 
-	frame = pidgin_create_imhtml(TRUE, &text, &toolbar, NULL);
-	dialog->message = GTK_IMHTML(text);
-	dialog->toolbar = GTK_IMHTMLTOOLBAR(toolbar);
+	frame = pidgin_create_webview(TRUE, &text, NULL);
+	dialog->message = GTK_WEBVIEW(text);
 	gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
 
 	/* Cancel button */
@@ -1507,7 +1496,7 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	/* TODO: Else get the generic status type from our parent */
 
 	if (message)
-		gtk_imhtml_append_text(dialog->message, message, 0);
+		gtk_webview_append_html(dialog->message, message);
 
 	for (list = purple_account_get_status_types(account); list; list = list->next)
 	{

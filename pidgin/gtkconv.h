@@ -83,6 +83,7 @@ enum {
 struct _PidginConversation
 {
 	PurpleConversation *active_conv;
+	PurpleConversation *last_conversed;
 	GList *convs;
 	GList *send_history;
 
@@ -90,20 +91,16 @@ struct _PidginConversation
 
 	gboolean make_sound;
 
-#if GTK_CHECK_VERSION(2,12,0)
 	gpointer depr2;
-#else
-	GtkTooltips *tooltips;
-#endif
 
 	GtkWidget *tab_cont;
 	GtkWidget *tabby;
 	GtkWidget *menu_tabby;
 
 	PidginConvTheme *theme;
+	GArray *nick_colors;
 	PurpleMessageFlags last_flags;
 	GtkWidget *webview;
-	GtkTextBuffer *entry_buffer;
 	GtkWidget *entry;
 	gboolean auto_resize;   /* this is set to TRUE if the conversation
 				 * is being resized by a non-user-initiated
@@ -120,8 +117,6 @@ struct _PidginConversation
 	GtkWidget *menu_label;
 
 	GtkWidget *lower_hbox;
-
-	GtkWidget *toolbar;
 
 	PidginUnseenState unseen_state;
 	guint unseen_count;

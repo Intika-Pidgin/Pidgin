@@ -835,7 +835,10 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 						fclose(image_file);
 
 						/* Attempt to not leave half-written files around. */
-						unlink(path);
+						if (g_unlink(path)) {
+							purple_debug_error("log", "Error deleting partial "
+									"file %s: %s\n", path, g_strerror(errno));
+						}
 					}
 					else
 					{
@@ -1014,7 +1017,7 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 		    strlen(filename) >= (17 + strlen(ext)))
 		{
 			char *tmp = g_build_filename(path, filename, NULL);
-			struct stat st;
+			GStatBuf st;
 			if (g_stat(tmp, &st))
 			{
 				purple_debug_error("log", "Error stating log file: %s\n", tmp);
@@ -1032,7 +1035,7 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 
 int purple_log_common_sizer(PurpleLog *log)
 {
-	struct stat st;
+	GStatBuf st;
 	PurpleLogCommonLoggerData *data = log->logger_data;
 
 	g_return_val_if_fail(data != NULL, 0);
@@ -1146,7 +1149,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 				}
 
 				/* Determine if this (account, name) combination exists as a buddy. */
-				if (account != NULL && name != NULL && *name != '\0')
+				if (account != NULL && *name != '\0')
 					set->buddy = (purple_find_buddy(account, name) != NULL);
 				else
 					set->buddy = FALSE;
@@ -1672,7 +1675,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, sn));
 	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
 	PurpleStringref *pathref = purple_stringref_new(pathstr);
-	struct stat st;
+	GStatBuf st;
 	time_t log_last_modified;
 	FILE *index;
 	FILE *file;
@@ -1763,7 +1766,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	index_tmp = g_strdup_printf("%s.XXXXXX", pathstr);
 	if ((index_fd = g_mkstemp(index_tmp)) == -1) {
 		purple_debug_error("log", "Failed to open index temp file: %s\n",
-		                 g_strerror(errno));
+		                   g_strerror(errno));
 		g_free(pathstr);
 		g_free(index_tmp);
 		index = NULL;
@@ -1771,7 +1774,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 		if ((index = fdopen(index_fd, "wb")) == NULL)
 		{
 			purple_debug_error("log", "Failed to fdopen() index temp file: %s\n",
-			                 g_strerror(errno));
+			                   g_strerror(errno));
 			close(index_fd);
 			if (index_tmp != NULL)
 			{
@@ -1827,7 +1830,6 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 					log->logger_data = data;
 					list = g_list_prepend(list, log);
 
-					/* XXX: There is apparently Is there a proper way to print a time_t? */
 					if (index != NULL)
 						fprintf(index, "%d\t%d\t%lu\n", data->offset, data->length, (unsigned long)log->time);
 				}
@@ -1887,9 +1889,8 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 			log->logger_data = data;
 			list = g_list_prepend(list, log);
 
-			/* XXX: Is there a proper way to print a time_t? */
 			if (index != NULL)
-				fprintf(index, "%d\t%d\t%d\n", data->offset, data->length, (int)log->time);
+				fprintf(index, "%d\t%d\t%lu\n", data->offset, data->length, (unsigned long)log->time);
 		}
 	}
 
@@ -1925,7 +1926,7 @@ static int old_logger_total_size(PurpleLogType type, const char *name, PurpleAcc
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, name));
 	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
 	int size;
-	struct stat st;
+	GStatBuf st;
 
 	if (g_stat(pathstr, &st))
 		size = 0;
@@ -2022,7 +2023,7 @@ static void old_logger_get_log_sets(PurpleLogSetCallback cb, GHashTable *sets)
 		/* Search the buddy list to find the account and to determine if this is a buddy. */
 		for (gnode = purple_blist_get_root();
 		     !found && gnode != NULL;
-			 gnode = purple_blist_node_get_sibling_next(gnode))
+		     gnode = purple_blist_node_get_sibling_next(gnode))
 		{
 			if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
 				continue;
@@ -2036,7 +2037,7 @@ static void old_logger_get_log_sets(PurpleLogSetCallback cb, GHashTable *sets)
 
 				for (bnode = purple_blist_node_get_first_child(cnode);
 				     !found && bnode != NULL;
-					 bnode = purple_blist_node_get_sibling_next(bnode))
+				     bnode = purple_blist_node_get_sibling_next(bnode))
 				{
 					PurpleBuddy *buddy = (PurpleBuddy *)bnode;
 

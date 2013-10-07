@@ -753,10 +753,13 @@ static void message_failed(PurpleConnection *gc, ZNotice_t notice, struct sockad
 {
 	if (g_ascii_strcasecmp(notice.z_class, "message")) {
 		gchar* chat_failed = g_strdup_printf(_("Unable to send to chat %s,%s,%s"),notice.z_class,notice.z_class_inst,notice.z_recipient);
-		purple_notify_error(gc,"",chat_failed,NULL);
+		purple_notify_error(gc,"",chat_failed,NULL,
+			purple_request_cpar_from_connection(gc));
 		g_free(chat_failed);
 	} else {
-		purple_notify_error(gc, notice.z_recipient, _("User is offline"), NULL);
+		purple_notify_error(gc, notice.z_recipient,
+			_("User is offline"), NULL,
+			purple_request_cpar_from_connection(gc));
 	}
 }
 
@@ -831,14 +834,13 @@ static void handle_message(PurpleConnection *gc,ZNotice_t notice)
 		int len;
 		char *stripped_sender;
 		int signature_length = strlen(notice.z_message);
-		int message_has_no_body = 0;
 		PurpleMessageFlags flags = 0;
 		gchar *tmpescape;
 
 		/* Need to deal with 0 length  messages to handle typing notification (OPCODE) ping messages */
 		/* One field zephyrs would have caused purple to crash */
 		if ( (notice.z_message_len == 0) || (signature_length >= notice.z_message_len - 1)) {
-			message_has_no_body = 1;
+			/* message has no body */
 			len = 0;
 			purple_debug_info("zephyr","message_size %d %d %d\n",len,notice.z_message_len,signature_length);
 			buf3 = g_strdup("");
@@ -930,12 +932,10 @@ static int  free_parse_tree(parse_tree* tree) {
 	}
 	else {
 		int i;
-		if (tree->children) {
-			for(i=0;i<tree->num_children;i++){
-				if (tree->children[i]) {
-					free_parse_tree(tree->children[i]);
-					g_free(tree->children[i]);
-				}
+		for(i=0;i<tree->num_children;i++){
+			if (tree->children[i]) {
+				free_parse_tree(tree->children[i]);
+				g_free(tree->children[i]);
 			}
 		}
 		if ((tree != &null_parse_tree) && (tree->contents != NULL))
@@ -1085,7 +1085,12 @@ static parse_tree  *read_from_tzc(zephyr_account* zephyr){
 
 	while (select(zephyr->fromtzc[ZEPHYR_FD_READ] + 1, &rfds, NULL, NULL, &tv)) {
 		selected = 1;
-		read(zephyr->fromtzc[ZEPHYR_FD_READ], bufcur, 1);
+		if (read(zephyr->fromtzc[ZEPHYR_FD_READ], bufcur, 1) != 1) {
+			purple_debug_error("zephyr", "couldn't read\n");
+			purple_connection_error(purple_account_get_connection(zephyr->account), PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "couldn't read");
+			free(buf);
+			return NULL;
+		}
 		bufcur++;
 		if ((bufcur - buf) > (bufsize - 1)) {
 			if ((buf = realloc(buf, bufsize * 2)) == NULL) {
@@ -1501,6 +1506,7 @@ static void process_zsubs(zephyr_account *zephyr)
 		}
 		fclose(f);
 	}
+	g_free(fname);
 }
 
 static void process_anyone(PurpleConnection *gc)
@@ -1521,10 +1527,10 @@ static void process_anyone(PurpleConnection *gc)
 		while (fgets(buff, BUFSIZ, fd)) {
 			strip_comments(buff);
 			if (buff[0]) {
-				if (!(b = purple_find_buddy(purple_connection_get_account(gc), buff))) {
+				if (!purple_find_buddy(purple_connection_get_account(gc), buff)) {
 					char *stripped_user = zephyr_strip_local_realm(zephyr,buff);
 					purple_debug_info("zephyr","stripped_user %s\n",stripped_user);
-					if (!(b = purple_find_buddy(purple_connection_get_account(gc),stripped_user))){
+					if (!purple_find_buddy(purple_connection_get_account(gc),stripped_user)) {
 						b = purple_buddy_new(purple_connection_get_account(gc), stripped_user, NULL);
 						purple_blist_add_buddy(b, NULL, g, NULL);
 					}
@@ -1688,7 +1694,12 @@ static void zephyr_login(PurpleAccount * account)
 			FD_SET(zephyr->fromtzc[ZEPHYR_FD_READ], &rfds);
 			while (select_status > 0 &&
 			       select(zephyr->fromtzc[ZEPHYR_FD_READ] + 1, &rfds, NULL, NULL, &tv) > 0) {
-				read(zephyr->fromtzc[ZEPHYR_FD_READ], bufcur, 1);
+				if (read(zephyr->fromtzc[ZEPHYR_FD_READ], bufcur, 1) != 1) {
+					purple_debug_error("zephyr", "couldn't read\n");
+					purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "couldn't read");
+					free(buf);
+					return;
+				}
 				bufcur++;
 				if ((bufcur - buf) > (bufsize - 1)) {
 					if ((buf = realloc(buf, bufsize * 2)) == NULL) {
@@ -1843,7 +1854,8 @@ static void zephyr_login(PurpleAccount * account)
 		/* XXX don't translate this yet. It could be written better */
 		/* XXX error messages could be handled with more detail */
 		purple_notify_error(purple_account_get_connection(account), NULL,
-				  "Unable to subscribe to messages", "Unable to subscribe to initial messages");
+			"Unable to subscribe to messages", "Unable to subscribe to initial messages",
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 
@@ -2082,8 +2094,7 @@ static int zephyr_send_im(PurpleConnection * gc, const char *who, const char *im
 
 static char* zephyr_tzc_escape_msg(const char *message)
 {
-	int pos = 0;
-	int pos2 = 0;
+	gsize pos = 0, pos2 = 0;
 	char *newmsg;
 
 	if (message && *message) {
@@ -2114,8 +2125,7 @@ static char* zephyr_tzc_escape_msg(const char *message)
 
 char* zephyr_tzc_deescape_str(const char *message)
 {
-	int pos = 0;
-	int pos2 = 0;
+	gsize pos = 0, pos2 = 0;
 	char *newmsg;
 
 	if (message && *message) {
@@ -2166,11 +2176,15 @@ static int zephyr_send_message(zephyr_account *zephyr,char* zclass, char* instan
 		len = strlen(zsendstr);
 		result = write(zephyr->totzc[ZEPHYR_FD_WRITE], zsendstr, len);
 		if (result != len) {
+			g_free(tzc_sig);
+			g_free(tzc_body);
 			g_free(zsendstr);
 			g_free(html_buf2);
 			g_free(html_buf);
 			return errno;
 		}
+		g_free(tzc_sig);
+		g_free(tzc_body);
 		g_free(zsendstr);
 	} else if (use_zeph02(zephyr)) {
 		ZNotice_t notice;
@@ -2388,7 +2402,7 @@ static GList *zephyr_chat_info(PurpleConnection * gc)
 static void zephyr_subscribe_failed(PurpleConnection *gc,char * z_class, char *z_instance, char * z_recipient, char* z_galaxy)
 {
 	gchar* subscribe_failed = g_strdup_printf(_("Attempt to subscribe to %s,%s,%s failed"), z_class, z_instance,z_recipient);
-	purple_notify_error(gc,"", subscribe_failed, NULL);
+	purple_notify_error(gc,"", subscribe_failed, NULL, purple_request_cpar_from_connection(gc));
 	g_free(subscribe_failed);
 }
 
@@ -2591,6 +2605,7 @@ static PurpleCmdRet zephyr_purple_cmd_msg(PurpleConversation *conv,
 				      const char *cmd, char **args, char **error, void *data)
 {
 	char *recipient;
+	PurpleCmdRet ret;
 	PurpleConnection *gc = purple_conversation_get_connection(conv);
 	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);;
 	if (!g_ascii_strcasecmp(args[0],"*"))
@@ -2598,13 +2613,17 @@ static PurpleCmdRet zephyr_purple_cmd_msg(PurpleConversation *conv,
 	else
 		recipient = local_zephyr_normalize(zephyr,args[0]);
 
-	if (strlen(recipient) < 1)
+	if (strlen(recipient) < 1) {
+		g_free(recipient);
 		return PURPLE_CMD_RET_FAILED; /* a null recipient is a chat message, not an IM */
+	}
 
 	if (zephyr_send_message(zephyr,"MESSAGE","PERSONAL",recipient,args[1],zephyr_get_signature(),""))
-		return PURPLE_CMD_RET_OK;
+		ret = PURPLE_CMD_RET_OK;
 	else
-		return PURPLE_CMD_RET_FAILED;
+		ret = PURPLE_CMD_RET_FAILED;
+	g_free(recipient);
+	return ret;
 }
 
 static PurpleCmdRet zephyr_purple_cmd_zlocate(PurpleConversation *conv,
@@ -2808,10 +2827,12 @@ static void zephyr_action_get_subs_from_server(PurplePluginAction *action)
 		title = g_strdup_printf("Server subscriptions for %s", zephyr->username);
 
 		if (zephyr->port == 0) {
+			g_free(title);
 			purple_debug_error("zephyr", "error while retrieving port\n");
 			return;
 		}
 		if ((retval = ZRetrieveSubscriptions(zephyr->port,&nsubs)) != ZERR_NONE) {
+			g_free(title);
 			/* XXX better error handling */
 			purple_debug_error("zephyr", "error while retrieving subscriptions from server\n");
 			return;
@@ -2820,6 +2841,7 @@ static void zephyr_action_get_subs_from_server(PurplePluginAction *action)
 			one = 1;
 			if ((retval = ZGetSubscriptions(&subs,&one)) != ZERR_NONE) {
 				/* XXX better error handling */
+				g_free(title);
 				purple_debug_error("zephyr", "error while retrieving individual subscription\n");
 				return;
 			}
@@ -2828,9 +2850,12 @@ static void zephyr_action_get_subs_from_server(PurplePluginAction *action)
 					       subs.zsub_recipient);
 		}
 		purple_notify_formatted(gc, title, title, NULL,  subout->str, NULL, NULL);
+		g_free(title);
+		g_string_free(subout, TRUE);
 	} else {
 		/* XXX fix */
-		purple_notify_error(gc,"","tzc doesn't support this action",NULL);
+		purple_notify_error(gc, "", "tzc doesn't support this action",
+			NULL, purple_request_cpar_from_connection(gc));
 	}
 }
 
@@ -2923,7 +2948,8 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,					/* get_media_caps */
 	NULL,					/* get_moods */
 	NULL,					/* set_public_alias */
-	NULL					/* get_public_alias */
+	NULL,					/* get_public_alias */
+	NULL					/* get_max_message_size */
 };
 
 static PurplePluginInfo info = {

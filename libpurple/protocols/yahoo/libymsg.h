@@ -27,6 +27,7 @@
 
 #include "circbuffer.h"
 #include "cmds.h"
+#include "http.h"
 #include "prpl.h"
 #include "network.h"
 
@@ -41,7 +42,6 @@
 #define YAHOO_PROFILE_URL "http://profiles.yahoo.com/"
 #define YAHOO_MAIL_URL "http://rd.yahoo.com/messenger/client/?http://mail.yahoo.com/"
 #define YAHOO_XFER_HOST "filetransfer.msg.yahoo.com"
-#define YAHOO_XFER_PORT 80
 #define YAHOO_XFER_RELAY_HOST "relay.msg.yahoo.com"
 #define YAHOO_XFER_RELAY_PORT 80
 #define YAHOO_ROOMLIST_URL "http://insider.msg.yahoo.com/ycontent/"
@@ -61,7 +61,7 @@
 #define YAHOOJP_ROOMLIST_URL "http://insider.msg.yahoo.co.jp/ycontent/"
 #define YAHOOJP_ROOMLIST_LOCALE "ja"
 
-#define YAHOO_AUDIBLE_URL "http://us.dl1.yimg.com/download.yahoo.com/dl/aud"
+#define YAHOO_AUDIBLE_URL "http://l.yimg.com/pu/dl/aud"
 
 #define WEBMESSENGER_URL "http://login.yahoo.com/config/login?.src=pg"
 
@@ -96,6 +96,7 @@
 #define YAHOOJP_CLIENT_VERSION "9.0.0.1727"
 
 #define YAHOO_CLIENT_USERAGENT "Mozilla/5.0"
+#define YAHOO_CLIENT_USERAGENT_ALIAS "Mozilla/4.0 (compatible; MSIE 5.5)"
 
 /* Index into attention types list. */
 #define YAHOO_BUZZ 0
@@ -128,7 +129,7 @@ enum yahoo_status {
 	YAHOO_STATUS_WEBLOGIN = 0x5a55aa55,
 	YAHOO_STATUS_OFFLINE = 0x5a55aa56, /* don't ask */
 	YAHOO_STATUS_TYPING = 0x16,
-	YAHOO_STATUS_DISCONNECTED = 0xffffffff /* in ymsg 15. doesnt mean the normal sense of 'disconnected' */
+	YAHOO_STATUS_DISCONNECTED = -1 /* 0xffffffff; in ymsg 15. doesnt mean the normal sense of 'disconnected' */
 };
 
 /*
@@ -148,11 +149,8 @@ typedef enum {
 
 struct yahoo_buddy_icon_upload_data {
 	PurpleConnection *gc;
-	GString *str;
 	char *filename;
-	int pos;
-	int fd;
-	guint watcher;
+	GString *picture_data;
 };
 
 struct yahoo_p2p_data	{
@@ -220,7 +218,6 @@ typedef struct {
 	char *pending_chat_topic;
 	char *pending_chat_goto;
 	char *auth;
-	gsize auth_written;
 	char *cookie_y;
 	char *cookie_t;
 	char *cookie_b;
@@ -234,15 +231,16 @@ typedef struct {
 	/* ew. we have to check the icon before we connect,
 	 * but can't upload it til we're connected. */
 	struct yahoo_buddy_icon_upload_data *picture_upload_todo;
-	PurpleProxyConnectData *buddy_icon_connect_data;
+	PurpleHttpConnection *picture_upload_hc;
 
 	struct _YchtConn *ycht;
 
 	/**
-	 * This linked list contains PurpleUtilFetchUrlData structs
+	 * This set contains HTTP connections
 	 * for when we lookup people profile or photo information.
 	 */
-	GSList *url_datas;
+	PurpleHttpConnectionSet *http_reqs;
+
 	GHashTable *xfer_peer_idstring_map;/* Hey, i dont know, but putting this HashTable next to friends gives a run time fault... */
 	GSList *cookies;/* contains all cookies, including _y and _t */
 	PurpleNetworkListenData *listen_data;
@@ -386,6 +384,7 @@ GList *yahoo_attention_types(PurpleAccount *account);
 
 GList *yahoo_actions(PurplePlugin *plugin, gpointer context);
 void yahoopurple_register_commands(void);
+gssize yahoo_get_max_message_size(PurpleConversation *conv);
 
 PurpleCmdRet yahoopurple_cmd_buzz(PurpleConversation *c, const gchar *cmd, gchar **args, gchar **error, void *data);
 PurpleCmdRet yahoopurple_cmd_chat_join(PurpleConversation *conv, const char *cmd, char **args, char **error, void *data);

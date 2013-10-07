@@ -43,8 +43,20 @@ BOOT:
 
 	static const constiv *civ, const_iv[] = {
 #define const_iv(name) {#name, (IV)PURPLE_CERTIFICATE_##name}
-		const_iv(INVALID),
+		const_iv(UNKNOWN_ERROR),
 		const_iv(VALID),
+		const_iv(NON_FATALS_MASK),
+		const_iv(SELF_SIGNED),
+		const_iv(CA_UNKNOWN),
+		const_iv(NOT_ACTIVATED),
+		const_iv(EXPIRED),
+		const_iv(NAME_MISMATCH),
+		const_iv(NO_CA_POOL),
+		const_iv(FATALS_MASK),
+		const_iv(INVALID_CHAIN),
+		const_iv(REVOKED),
+		const_iv(REJECTED),
+		const_iv(LAST),
 	};
 
 	for (civ = const_iv + sizeof(const_iv) / sizeof(const_iv[0]); civ-- > const_iv; )
@@ -145,7 +157,7 @@ purple_certificate_verify_complete(vrq, st)
 	Purple::Certificate::VerificationStatus st
 
 gboolean
-purple_certificate_get_times(crt, OUTLIST time_t activation, OUTLIST time_t expiration)
+purple_certificate_get_times(crt, OUTLIST gint64 activation, OUTLIST gint64 expiration)
 	Purple::Certificate crt
 	PROTOTYPE: $
 
@@ -220,7 +232,6 @@ purple_certificate_verify(verifier, subject_name, cert_chain, cb, cb_data)
 	Purple::Certificate::Verifier verifier
 	const gchar* subject_name
 	AV* cert_chain
-	CV *cb
 	SV *cb_data
 	PREINIT:
 		GList *l = NULL;

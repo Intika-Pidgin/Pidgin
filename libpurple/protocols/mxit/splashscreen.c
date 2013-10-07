@@ -24,9 +24,9 @@
  */
 
 #include "internal.h"
-
-#include "purple.h"
+#include "debug.h"
 #include "imgstore.h"
+#include "request.h"
 
 #include "protocol.h"
 #include "mxit.h"
@@ -93,7 +93,7 @@ void splash_remove(struct MXitSession* session)
 		purple_debug_info(MXIT_PLUGIN_ID, "Removing splashId: '%s'\n", splashId);
 
 		/* Delete stored splash image */
-		filename = g_strdup_printf("%s/mxit/%s.png", purple_user_dir(), splashId);
+		filename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "mxit" G_DIR_SEPARATOR_S "%s.png", purple_user_dir(), splashId);
 		g_unlink(filename);
 		g_free(filename);
 
@@ -121,10 +121,10 @@ void splash_update(struct MXitSession* session, const char* splashId, const char
 	splash_remove(session);
 
 	/* Save the new splash image */
-	dir = g_strdup_printf("%s/mxit",  purple_user_dir());
+	dir = g_strdup_printf("%s" G_DIR_SEPARATOR_S "mxit", purple_user_dir());
 	purple_build_dir(dir, S_IRUSR | S_IWUSR | S_IXUSR);		/* ensure directory exists */
 
-	filename = g_strdup_printf("%s/%s.png", dir, splashId);
+	filename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s.png", dir, purple_escape_filename(splashId));
 	if (purple_util_write_data_to_file_absolute(filename, data, datalen)) {
 		/* Store new splash-screen ID to settings */
 		purple_account_set_string(session->acc, MXIT_CONFIG_SPLASHID, splashId);
@@ -179,12 +179,12 @@ void splash_display(struct MXitSession* session)
 	purple_debug_info(MXIT_PLUGIN_ID, "Display Splash: '%s'\n", splashId);
 
 	/* Load splash-screen image from file */
-	filename = g_strdup_printf("%s/mxit/%s.png", purple_user_dir(), splashId);
+	filename = g_strdup_printf("%s" G_DIR_SEPARATOR_S "mxit" G_DIR_SEPARATOR_S "%s.png", purple_user_dir(), splashId);
 	if (g_file_get_contents(filename, &imgdata, &imglen, NULL)) {
 		char buf[128];
 
 		/* Add splash-image to imagestore */
-		imgid = purple_imgstore_add_with_id(g_memdup(imgdata, imglen), imglen, NULL);
+		imgid = purple_imgstore_new_with_id(g_memdup(imgdata, imglen), imglen, NULL);
 
 		/* Generate and display message */
 		g_snprintf(buf, sizeof(buf),
@@ -205,11 +205,11 @@ void splash_display(struct MXitSession* session)
 
 			if (splash_clickable(session)) {
 				purple_request_fields(session->con, _("MXit Advertising"), NULL, NULL, fields,
-					_("More Information"), G_CALLBACK(splash_click_ok), _("Close"), NULL, session->acc, NULL, NULL, session->con);
+					_("More Information"), G_CALLBACK(splash_click_ok), _("Close"), NULL, purple_request_cpar_from_account(session->acc), session->con);
 			}
 			else {
 				purple_request_fields(session->con, _("MXit Advertising"), NULL, NULL, fields,
-					_("Continue"), G_CALLBACK(splash_click_ok), _("Close"), NULL, session->acc, NULL, NULL, session->con);
+					_("Continue"), G_CALLBACK(splash_click_ok), _("Close"), NULL, purple_request_cpar_from_account(session->acc), session->con);
 			}
 		}
 
