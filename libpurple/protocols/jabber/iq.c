@@ -225,7 +225,7 @@ static void jabber_iq_version_parse(JabberStream *js, const char *from,
 		const char *ui_name = NULL, *ui_version = NULL;
 #if 0
 		char *os = NULL;
-		if(!purple_prefs_get_bool("/plugins/prpl/jabber/hide_os")) {
+		if(!purple_prefs_get_bool("/protocols/jabber/hide_os")) {
 			struct utsname osinfo;
 
 			uname(&osinfo);
@@ -345,7 +345,7 @@ void jabber_iq_parse(JabberStream *js, PurpleXmlNode *packet)
 		return;
 	}
 
-	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_prpl(js->gc),
+	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_protocol(js->gc),
 			"jabber-receiving-iq", js->gc, iq_type, id, from, packet));
 	if (signal_return)
 		return;
@@ -370,7 +370,7 @@ void jabber_iq_parse(JabberStream *js, PurpleXmlNode *packet)
 		g_free(key);
 
 		if (signal_ref > 0) {
-			signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_prpl(js->gc), "jabber-watched-iq",
+			signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_protocol(js->gc), "jabber-watched-iq",
 					js->gc, iq_type, id, from, child));
 			if (signal_return)
 				return;
