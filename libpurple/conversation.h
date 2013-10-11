@@ -73,6 +73,8 @@ typedef enum
 	PURPLE_CONV_UPDATE_LOGGING, /**< Logging for this conversation was
 	                               enabled or disabled. */
 	PURPLE_CONV_UPDATE_TOPIC,   /**< The topic for a chat was updated. */
+	PURPLE_CONV_UPDATE_E2EE,    /**< The End-to-end encryption state was
+	                               updated. */
 	/*
 	 * XXX These need to go when we implement a more generic core/UI event
 	 * system.
@@ -146,6 +148,7 @@ typedef enum
 
 #include "account.h"
 #include "buddyicon.h"
+#include "e2ee.h"
 #include "log.h"
 #include "server.h"
 
@@ -403,6 +406,13 @@ void purple_conversation_set_name(PurpleConversation *conv, const char *name);
  *         then it's the name of the PurpleBuddy.
  */
 const char *purple_conversation_get_name(const PurpleConversation *conv);
+
+void
+purple_conversation_set_e2ee_state(PurpleConversation *conv,
+	PurpleE2eeState *state);
+
+PurpleE2eeState *
+purple_conversation_get_e2ee_state(PurpleConversation *conv);
 
 /**
  * Get an attribute of a chat buddy

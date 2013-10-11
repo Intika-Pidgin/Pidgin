@@ -144,6 +144,8 @@ struct _PurpleConversation
 
 	PurpleConnectionFlags features; /**< The supported features */
 	GList *message_history;         /**< Message history, as a GList of PurpleConvMessage's */
+
+	PurpleE2eeState *e2ee_state;
 };
 
 /**
@@ -600,6 +602,9 @@ purple_conversation_destroy(PurpleConversation *conv)
 	gc   = purple_conversation_get_connection(conv);
 	name = purple_conversation_get_name(conv);
 
+	purple_e2ee_state_unref(conv->e2ee_state);
+	conv->e2ee_state = NULL;
+
 	if (gc != NULL)
 	{
 		/* Still connected */
@@ -926,6 +931,52 @@ purple_conversation_get_name(const PurpleConversation *conv)
 	g_return_val_if_fail(conv != NULL, NULL);
 
 	return conv->name;
+}
+
+void
+purple_conversation_set_e2ee_state(PurpleConversation *conv,
+	PurpleE2eeState *state)
+{
+	g_return_if_fail(conv != NULL);
+
+	if (state != NULL && purple_e2ee_state_get_provider(state) !=
+		purple_e2ee_provider_get_main())
+	{
+		purple_debug_error("conversation",
+			"This is not the main e2ee provider");
+
+		return;
+	}
+
+	if (state)
+		purple_e2ee_state_ref(state);
+	purple_e2ee_state_unref(conv->e2ee_state);
+	conv->e2ee_state = state;
+
+	purple_conversation_update(conv, PURPLE_CONV_UPDATE_E2EE);
+}
+
+PurpleE2eeState *
+purple_conversation_get_e2ee_state(PurpleConversation *conv)
+{
+	PurpleE2eeProvider *provider;
+
+	g_return_val_if_fail(conv != NULL, NULL);
+
+	if (conv->e2ee_state == NULL)
+		return NULL;
+
+	provider = purple_e2ee_provider_get_main();
+	if (provider == NULL)
+		return NULL;
+
+	if (purple_e2ee_state_get_provider(conv->e2ee_state) != provider) {
+		purple_debug_warning("conversation",
+			"e2ee state has invalid provider set");
+		return NULL;
+	}
+
+	return conv->e2ee_state;
 }
 
 void
