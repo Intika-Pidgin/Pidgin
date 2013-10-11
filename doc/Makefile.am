@@ -1,3 +1,7 @@
+if ENABLE_GTK_DOC
+SUBDIRS = reference
+endif
+
 man_MANS =
 
 if ENABLE_GTK
@@ -38,6 +42,7 @@ EXTRA_DIST = \
 	plugin-i18n.dox \
 	plugin-ids.dox \
 	plugin-signals.dox \
+	protocol-signals.dox \
 	savedstatus-signals.dox \
 	sound-signals.dox \
 	the_penguin.txt \
