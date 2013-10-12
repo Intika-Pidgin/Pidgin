@@ -35,7 +35,7 @@
 #include "network.h"
 #include "notify.h"
 #include "prefs.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "pounce.h"
 #include "sound.h"
 #include "status.h"
@@ -341,16 +341,16 @@ static GHashTable *pidgin_ui_get_info(void)
 		 * possible it has been re-added).  AOL's old key management
 		 * page is http://developer.aim.com/manageKeys.jsp
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma1cSASNCKFtrdv9");
-		g_hash_table_insert(ui_info, "prpl-icq-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "protocol-aim-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "protocol-icq-clientkey", "ma1cSASNCKFtrdv9");
 
 		/*
 		 * This is the distid for Pidgin, given to us by AOL.  Please
 		 * don't use this for other applications.  You can just not
 		 * specify a distid and libpurple will use a default.
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1550));
-		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1550));
+		g_hash_table_insert(ui_info, "protocol-aim-distid", GINT_TO_POINTER(1550));
+		g_hash_table_insert(ui_info, "protocol-icq-distid", GINT_TO_POINTER(1550));
 	}
 
 	return ui_info;
@@ -418,14 +418,7 @@ show_usage(const char *name, gboolean terse)
 	g_free(text);
 }
 
-/* FUCKING GET ME A TOWEL! */
-#ifdef _WIN32
-/* suppress gcc "no previous prototype" warning */
-int __cdecl pidgin_main(HINSTANCE hint, int argc, char *argv[]);
-int __cdecl pidgin_main(HINSTANCE hint, int argc, char *argv[])
-#else
-int main(int argc, char *argv[])
-#endif
+int pidgin_start(int argc, char *argv[])
 {
 	gboolean opt_force_online = FALSE;
 	gboolean opt_help = FALSE;
@@ -483,16 +476,6 @@ int main(int argc, char *argv[])
 #else
 	debug_enabled = FALSE;
 #endif
-
-#if !GLIB_CHECK_VERSION(2, 32, 0)
-	/* GLib threading system is automaticaly initialized since 2.32.
-	 * For earlier versions, it have to be initialized before calling any
-	 * Glib or GTK+ functions.
-	 */
-	g_thread_init(NULL);
-#endif
-
-	g_set_prgname("Pidgin");
 
 #ifdef ENABLE_NLS
 	bindtextdomain(PACKAGE, LOCALEDIR);
@@ -749,25 +732,12 @@ int main(int argc, char *argv[])
 	g_free(search_path);
 #endif
 
-	g_set_application_name(PIDGIN_NAME);
-
 #ifdef _WIN32
 	winpidgin_init(hint);
 #endif
 
 	purple_core_set_ui_ops(pidgin_core_get_ui_ops());
 	purple_eventloop_set_ui_ops(pidgin_eventloop_get_ui_ops());
-
-	/*
-	 * Set plugin search directories. Give priority to the plugins
-	 * in user's home directory.
-	 */
-	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
-	if (!g_stat(search_path, &st))
-		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
-	purple_plugins_add_search_path(search_path);
-	g_free(search_path);
-	purple_plugins_add_search_path(LIBDIR);
 
 	if (!purple_core_init(PIDGIN_UI)) {
 		fprintf(stderr,
@@ -778,6 +748,15 @@ int main(int argc, char *argv[])
 #endif
 		abort();
 	}
+
+	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
+	if (!g_stat(search_path, &st))
+		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
+	purple_plugins_add_search_path(search_path);
+	g_free(search_path);
+
+	purple_plugins_add_search_path(LIBDIR);
+	purple_plugins_refresh();
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
 #ifdef HAVE_DBUS
