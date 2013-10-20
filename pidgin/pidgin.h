@@ -36,8 +36,7 @@
 /**
  * Our UI's identifier.
  */
-/* leave this as gtk-gaim until we have a decent way to migrate UI-prefs */
-#define PIDGIN_UI "gtk-gaim"
+#define PIDGIN_UI "gtk-pidgin"
 
 /* change this only when we have a sane upgrade path for old prefs */
 #define PIDGIN_PREFS_ROOT "/pidgin"
@@ -59,6 +58,11 @@
 #define PIDGIN_HIG_CAT_SPACE     18
 #define PIDGIN_HIG_BORDER        12
 #define PIDGIN_HIG_BOX_SPACE      6
+
+/**
+ * Start pidgin with the given command line arguments.
+ */
+int pidgin_start(int argc, char *argv[]);
 
 #endif /* _PIDGIN_H_ */
 

@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+               "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+]>
+<chapter id="chapter-signals-gtklog">
+  <title>Log signals</title>
+
+  <programlisting>
+ @signals
+  @signal log-displaying
+ @endsignals
+
+ @see gtklog.h
+
+ @signaldef log-displaying
+  @signalproto
+void (*log_displaying)(PidginLogViewer *viewer, PurpleLog *log);
+  @endsignalproto
+  @signaldesc
+   Emitted when a log is being displayed.
+  @param viewer The log viewer
+  @param log The log being displayed
+ @endsignaldef
+
+  </programlisting>
+</chapter>
