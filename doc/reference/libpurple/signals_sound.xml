@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+               "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+]>
+<chapter id="chapter-signals-sound">
+  <title>Sound signals</title>
+
+  <programlisting>
+ @signals
+  @signal playing-sound-event
+ @endsignals
+
+ @see sound.h
+
+ @signaldef playing-sound-event
+  @signalproto
+gboolean (*playing_sound_event)(PurpleSoundEventID event, PurpleAccount *account);
+  @endsignalproto
+  @signaldesc
+   Emitted when libpurple is going to play a sound event. This can be used to cancel playing sound by returning TRUE.
+  @param event   The event this sound represents.
+  @param account The account the sound is being played for.
+  @return @c TRUE if the sound should not be played, or @c FALSE otherwise.
+ @endsignaldef
+
+  </programlisting>
+</chapter>

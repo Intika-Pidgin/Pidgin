@@ -32,7 +32,7 @@
 enum
 {
 	COLUMN_NAME,
-	COLUMN_PRPL_ICON,
+	COLUMN_PROTOCOL_ICON,
 	COLUMN_USERNAME,
 	COLUMN_DATA,
 	NUM_COLUMNS
@@ -147,7 +147,7 @@ add_columns(GevoAddBuddyDialog *dialog)
 	renderer = gtk_cell_renderer_pixbuf_new();
 	gtk_tree_view_column_pack_start(column, renderer, FALSE);
 	gtk_tree_view_column_add_attribute(column, renderer,
-									   "pixbuf", COLUMN_PRPL_ICON);
+									   "pixbuf", COLUMN_PROTOCOL_ICON);
 
 	/* Account name */
 	renderer = gtk_cell_renderer_text_new();
@@ -183,7 +183,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 	if (account == NULL)
 		return;
 
-	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+	pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 
 	for (l = list; l != NULL; l = l->next)
 	{
@@ -199,7 +199,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 
 		gtk_list_store_set(dialog->model, &iter,
 						   COLUMN_NAME, name,
-						   COLUMN_PRPL_ICON, pixbuf,
+						   COLUMN_PROTOCOL_ICON, pixbuf,
 						   COLUMN_USERNAME, account_name,
 						   COLUMN_DATA, contact,
 						   -1);
@@ -315,13 +315,13 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 		}
 		else
 		{
-			add_ims(dialog, contact, name, aims,    "prpl-aim");
-			add_ims(dialog, contact, name, jabbers, "prpl-jabber");
-			add_ims(dialog, contact, name, yahoos,  "prpl-yahoo");
-			add_ims(dialog, contact, name, msns,    "prpl-msn");
-			add_ims(dialog, contact, name, icqs,    "prpl-icq");
-			add_ims(dialog, contact, name, novells, "prpl-novell");
-			add_ims(dialog, contact, name, ggs,     "prpl-gg");
+			add_ims(dialog, contact, name, aims,    "aim");
+			add_ims(dialog, contact, name, jabbers, "jabber");
+			add_ims(dialog, contact, name, yahoos,  "yahoo");
+			add_ims(dialog, contact, name, msns,    "msn");
+			add_ims(dialog, contact, name, icqs,    "icq");
+			add_ims(dialog, contact, name, novells, "novell");
+			add_ims(dialog, contact, name, ggs,     "gg");
 		}
 	}
 
@@ -400,13 +400,13 @@ search_changed_cb(GtkEntry *entry, GevoAddBuddyDialog *dialog)
 		}
 		else
 		{
-			add_ims(dialog, contact, name, aims,    "prpl-aim");
-			add_ims(dialog, contact, name, jabbers, "prpl-jabber");
-			add_ims(dialog, contact, name, yahoos,  "prpl-yahoo");
-			add_ims(dialog, contact, name, msns,    "prpl-msn");
-			add_ims(dialog, contact, name, icqs,    "prpl-icq");
-			add_ims(dialog, contact, name, novells, "prpl-novell");
-			add_ims(dialog, contact, name, ggs,     "prpl-gg");
+			add_ims(dialog, contact, name, aims,    "aim");
+			add_ims(dialog, contact, name, jabbers, "jabber");
+			add_ims(dialog, contact, name, yahoos,  "yahoo");
+			add_ims(dialog, contact, name, msns,    "msn");
+			add_ims(dialog, contact, name, icqs,    "icq");
+			add_ims(dialog, contact, name, novells, "novell");
+			add_ims(dialog, contact, name, ggs,     "gg");
 		}
 	}
 }
@@ -602,13 +602,13 @@ gevo_add_buddy_dialog_add_person(GevoAddBuddyDialog *dialog,
 	GdkPixbuf *pixbuf;
 	GtkTreeIter iter;
 
-	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+	pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 
 	gtk_list_store_append(dialog->model, &iter);
 
 	gtk_list_store_set(dialog->model, &iter,
 					   COLUMN_NAME, name,
-					   COLUMN_PRPL_ICON, pixbuf,
+					   COLUMN_PROTOCOL_ICON, pixbuf,
 					   COLUMN_DATA, contact,
 					   COLUMN_USERNAME, screenname,
 					   -1);
