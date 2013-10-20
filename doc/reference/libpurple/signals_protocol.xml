@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+               "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+]>
+<chapter id="chapter-signals-protocol">
+  <title>Protocol signals</title>
+
+  <programlisting>
+ @signals
+  @signal protocol-added
+  @signal protocol-removed
+ @endsignals
+
+ @see protocols.h
+
+ @signaldef protocol-added
+  @signalproto
+void (*protocol_added)(PurpleProtocol *protocol);
+  @endsignalproto
+  @signaldesc
+   Emitted when a protocol is added.
+  @param protocol The protocol that was added.
+ @endsignaldef
+
+ @signaldef protocol-removed
+  @signalproto
+void (*protocol_removed)(PurpleProtocol *protocol);
+  @endsignalproto
+  @signaldesc
+   Emitted when a protocol is removed.
+  @param protocol The protocol that was removed.
+ @endsignaldef
+
+  </programlisting>
+</chapter>
