@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+               "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+]>
+<chapter id="chapter-signals-gtkimhtml">
+  <title>IMHtml signals</title>
+
+  <programlisting>
+ @signals
+  @signal url_clicked
+  @signal format_buttons_update
+  @signal format_function_clear
+  @signal format_function_toggle
+  @signal format_function_update
+  @signal paste
+ @endsignals
+
+ @see gtkimhtml.h
+
+ @signaldef url_clicked
+  @signalproto
+void (*url_clicked)(GtkIMHtml *imhtml, char *uri);
+  @endsignalproto
+  @signaldesc Emitted when a link is clicked
+  @param imhtml The GtkIMHtml emitting the signal.
+  @param url The uri.
+ @endsignaldef
+
+ @signaldef format_buttons_update
+  @signalproto
+void (*format_buttons_update)(GtkIMHtml *imhtml, GtkIMHtmlButtons buttons, gpointer data);
+  @endsignalproto
+  @signaldesc Emitted when allowed formatting has changed.
+  @param imhtml  The GtkIMHtml emitting the signal.
+  @param buttons GtkIMHtmlButtons for the GtkIMHtml.
+  @param data    User defined data.
+ @endsignaldef
+
+ @signaldef format_function_clear
+  @signalproto
+void (*format_function_clear)(GtkIMHtml *imhtml, gpointer data);
+  @endsignalproto
+  @signaldesc Emitted when clearing the formatting for the GtkIMHtml.
+  @param imhtml The GtkIMHtml emitting the signal.
+  @param data   User defined data.
+ @endsignaldef
+
+ @signaldef format_function_toggle
+  @signalproto
+void (*format_function_toggle)(GtkIMHtml *imhtml, GtkIMHtmlButtons buttons, gpointer data);
+  @endsignalproto
+  @signaldesc Emitted when a format has been toggled.
+  @param imhtml  The GtkIMHtml emitting the signal.
+  @param buttons GtkIMHtmlButtons for the GtkIMHtml.
+  @param data    User defined data.
+ @endsignaldef
+
+ @signaldef format_function_update
+  @signalproto
+void (*format_function_update)(GtkIMHtml *imhtml, gpointer data);
+  @endsignalproto
+  @signaldesc Emitted when the cursor has moved and formatting has changed
+  @param imhtml The GtkIMHtml emitting the signal.
+  @param data   User defined data.
+ @endsignaldef
+
+ @signaldef paste
+ 	@signalproto
+void (*paste) (GtkIMHtml *imhtml, char *format)
+	@endsignalproto
+	@signaldesc Emitted when paste from the clipboard is requested.
+	@param imhtml  The GtkIMHtml emitting the signal.
+	@param format  If 'text', then the formatting of the clipboard content
+	               will be removed before pasting. If empty or 'html', then
+		       the formatting will not be removed. Any other value for
+		       this parameter is ignored and nothing is pasted.
+ @endsignaldef
+
+  </programlisting>
+</chapter>

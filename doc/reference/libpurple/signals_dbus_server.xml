@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+               "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+]>
+<chapter id="chapter-signals-dbus-server">
+  <title>D-Bus Server signals</title>
+
+  <programlisting>
+ @signals
+  @signal dbus-method-called
+  @signal dbus-introspect
+ @endsignals
+
+ @see dbus-server.h
+
+ @signaldef dbus-method-called
+  @signalproto
+gboolean (*dbus_method_called)(DBusConnection *connection,
+                               DBusMessage *message);
+  @endsignalproto
+  @signaldesc
+   Emitted when a dbus method is going to be called.
+  @param connection The DBus connection.
+  @param message The DBus message.
+  @return TRUE if signal handler handled the method. ???
+ @endsignaldef
+
+ @signaldef dbus-introspect
+  @signalproto
+void (*dbus_introspect)(GList **bidings_list);
+  @endsignalproto
+  @signaldesc
+   ???
+  @param bindings_list ???
+ @endsignaldef
+
+  </programlisting>
+</chapter>
