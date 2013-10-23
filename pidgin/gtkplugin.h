@@ -27,16 +27,36 @@
 #define _PIDGINPLUGIN_H_
 
 #include "pidgin.h"
-#include "plugin.h"
+#include "plugins.h"
 
-typedef struct _PidginPluginUiInfo PidginPluginUiInfo;
+#define PIDGIN_TYPE_PLUGIN_INFO             (pidgin_plugin_info_get_type())
+#define PIDGIN_PLUGIN_INFO(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_PLUGIN_INFO, PidginPluginInfo))
+#define PIDGIN_PLUGIN_INFO_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PIDGIN_TYPE_PLUGIN_INFO, PidginPluginInfoClass))
+#define PIDGIN_IS_PLUGIN_INFO(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PIDGIN_TYPE_PLUGIN_INFO))
+#define PIDGIN_IS_PLUGIN_INFO_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PIDGIN_TYPE_PLUGIN_INFO))
+#define PIDGIN_PLUGIN_INFO_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PIDGIN_TYPE_PLUGIN_INFO, PidginPluginInfoClass))
+
+/** @copydoc _PidginPluginInfo */
+typedef struct _PidginPluginInfo PidginPluginInfo;
+/** @copydoc _PidginPluginInfoClass */
+typedef struct _PidginPluginInfoClass PidginPluginInfoClass;
+
+typedef GtkWidget *(*PidginPluginConfigFrame)(PurplePlugin *);
 
 /**
- * A GTK+ UI structure for plugins.
+ * Extends #PurplePluginInfo to hold UI information for pidgin.
  */
-struct _PidginPluginUiInfo
-{
-	GtkWidget *(*get_config_frame)(PurplePlugin *plugin);
+struct _PidginPluginInfo {
+	PurplePluginInfo parent;
+};
+
+/**
+ * PidginPluginInfoClass:
+ *
+ * The base class for all #PidginPluginInfo's.
+ */
+struct _PidginPluginInfoClass {
+	PurplePluginInfoClass parent_class;
 
 	/*< private >*/
 	void (*_pidgin_reserved1)(void);
@@ -45,16 +65,33 @@ struct _PidginPluginUiInfo
 	void (*_pidgin_reserved4)(void);
 };
 
-#define PIDGIN_PLUGIN_TYPE PIDGIN_UI
-
-#define PIDGIN_IS_PIDGIN_PLUGIN(plugin) \
-	((plugin)->info != NULL && (plugin)->info->ui_info != NULL && \
-	 !strcmp((plugin)->info->ui_requirement, PIDGIN_PLUGIN_TYPE))
-
-#define PIDGIN_PLUGIN_UI_INFO(plugin) \
-	((PidginPluginUiInfo *)(plugin)->info->ui_info)
-
 G_BEGIN_DECLS
+
+/**
+ * Returns the GType for the PidginPluginInfo object.
+ */
+GType pidgin_plugin_info_get_type(void);
+
+/**
+ * Creates a new #PidginPluginInfo instance to be returned from
+ * gplugin_plugin_query() of a pidgin plugin, using the provided name/value
+ * pairs.
+ *
+ * See purple_plugin_info_new() for a list of available property names.
+ * Additionally, you can provide the property "pidgin-config-frame",
+ * which should be a callback that returns a GtkWidget for the plugin's
+ * configuration (see PidginPluginConfigFrame).
+ *
+ * @param first_property  The first property name
+ * @param ...  The value of the first property, followed optionally by more
+ *             name/value pairs, followed by @c NULL
+ *
+ * @return A new #PidginPluginInfo instance.
+ *
+ * @see purple_plugin_info_new()
+ */
+PidginPluginInfo *pidgin_plugin_info_new(const char *first_property, ...)
+                  G_GNUC_NULL_TERMINATED;
 
 /**
  * Returns the configuration frame widget for a GTK+ plugin, if one
