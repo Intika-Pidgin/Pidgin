@@ -37,7 +37,7 @@ typedef enum {
 	PURPLE_CMD_STATUS_FAILED,
 	PURPLE_CMD_STATUS_NOT_FOUND,
 	PURPLE_CMD_STATUS_WRONG_ARGS,
-	PURPLE_CMD_STATUS_WRONG_PRPL,
+	PURPLE_CMD_STATUS_WRONG_PROTOCOL,
 	PURPLE_CMD_STATUS_WRONG_TYPE
 } PurpleCmdStatus;
 
@@ -72,7 +72,7 @@ typedef enum {
 	PURPLE_CMD_P_VERY_LOW  = -1000,
 	PURPLE_CMD_P_LOW       =     0,
 	PURPLE_CMD_P_DEFAULT   =  1000,
-	PURPLE_CMD_P_PRPL      =  2000,
+	PURPLE_CMD_P_PROTOCOL      =  2000,
 	PURPLE_CMD_P_PLUGIN    =  3000,
 	PURPLE_CMD_P_ALIAS     =  4000,
 	PURPLE_CMD_P_HIGH      =  5000,
@@ -90,8 +90,8 @@ typedef enum {
 	PURPLE_CMD_FLAG_IM               = 0x01,
 	/** Command is usable in multi-user chats. */
 	PURPLE_CMD_FLAG_CHAT             = 0x02,
-	/** Command is usable only for a particular prpl. */
-	PURPLE_CMD_FLAG_PRPL_ONLY        = 0x04,
+	/** Command is usable only for a particular protocol. */
+	PURPLE_CMD_FLAG_PROTOCOL_ONLY        = 0x04,
 	/** Incorrect arguments to this command should be accepted anyway. */
 	PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS = 0x08
 } PurpleCmdFlag;
@@ -139,9 +139,9 @@ G_BEGIN_DECLS
  *          <tt>|</tt> (bitwise OR). You need to at least pass one of
  *          #PURPLE_CMD_FLAG_IM or #PURPLE_CMD_FLAG_CHAT (you may pass both) in
  *          order for the command to ever actually be called.
- * @param prpl_id If the #PURPLE_CMD_FLAG_PRPL_ONLY flag is set, this is the id
- *                of the prpl to which the command applies (such as
- *                <tt>"prpl-msn"</tt>). If the flag is not set, this parameter
+ * @param protocol_id If the #PURPLE_CMD_FLAG_PROTOCOL_ONLY flag is set, this is the id
+ *                of the protocol to which the command applies (such as
+ *                <tt>"msn"</tt>). If the flag is not set, this parameter
  *                is ignored; pass @c NULL (or a humourous string of your
  *                choice!).
  * @param func This is the function to call when someone enters this command.
@@ -157,7 +157,7 @@ G_BEGIN_DECLS
  *         #purple_cmd_unregister, or @a 0 on failure.
  */
 PurpleCmdId purple_cmd_register(const gchar *cmd, const gchar *args, PurpleCmdPriority p, PurpleCmdFlag f,
-                             const gchar *prpl_id, PurpleCmdFunc func, const gchar *helpstr, void *data);
+                             const gchar *protocol_id, PurpleCmdFunc func, const gchar *helpstr, void *data);
 
 /**
  * Unregister a command with the core.
