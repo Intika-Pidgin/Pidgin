@@ -466,6 +466,10 @@ void mxit_chat_join(PurpleConnection *gc, GHashTable *components)
 	roomname = g_hash_table_lookup(components, "room");
 	multimx = find_room_by_alias(session, roomname);
 
+	/* no roomname - this occurs during a re-connect. */
+	if (!roomname)
+		return;
+
 	if (multimx != NULL) {
 		/* The room information already exists */
 
@@ -639,6 +643,9 @@ int mxit_chat_send(PurpleConnection *gc, int id, const char *message, PurpleMess
 		nickname = multimx->nickname;
 	else
 		nickname = purple_account_get_alias(purple_connection_get_account(gc));		/* local alias */
+
+	if (!nickname)
+		nickname = _("You");
 
 	/* Display message in chat window */
 	serv_got_chat_in(gc, id, nickname, flags, message, time(NULL));
