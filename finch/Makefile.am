@@ -11,18 +11,18 @@ SUBDIRS = libgnt plugins
 
 if ENABLE_GNT
 
+noinst_LTLIBRARIES = libfinch.la
 bin_PROGRAMS = finch
 
 endif
 
-finch_SOURCES = \
+libfinch_la_SOURCES = \
 	gntaccount.c \
 	gntblist.c \
 	gntcertmgr.c \
 	gntconn.c \
 	gntconv.c \
 	gntdebug.c \
-	finch.c \
 	gntidle.c \
 	gntlog.c \
 	gntmedia.c \
@@ -36,9 +36,10 @@ finch_SOURCES = \
 	gntsound.c \
 	gntstatus.c \
 	gntui.c \
-	gntxfer.c
+	gntxfer.c \
+	libfinch.c
 
-finch_headers = \
+libfinch_la_headers = \
 	gntaccount.h \
 	gntblist.h \
 	gntcertmgr.h \
@@ -61,22 +62,31 @@ finch_headers = \
 	gntui.h \
 	gntxfer.h
 
-finchincludedir=$(includedir)/finch
-finchinclude_HEADERS = \
-	$(finch_headers)
+finch_SOURCES = \
+	finch.c
 
-finch_DEPENDENCIES = @LIBOBJS@
-finch_LDFLAGS = -export-dynamic
-finch_LDADD = \
+libfinchincludedir=$(includedir)/finch
+libfinchinclude_HEADERS = \
+	$(libfinch_la_headers)
+
+libfinch_la_DEPENDENCIES = @LIBOBJS@
+libfinch_la_LDFLAGS = -export-dynamic
+libfinch_la_LIBADD = \
 	@LIBOBJS@ \
 	$(DBUS_LIBS) \
 	$(INTLLIBS) \
 	$(GLIB_LIBS) \
+	$(GPLUGIN_LIBS) \
 	$(LIBXML_LIBS) \
 	$(GNT_LIBS) \
 	$(GSTREAMER_LIBS) \
+	$(INTROSPECTION_LIBS) \
 	./libgnt/libgnt.la \
 	$(top_builddir)/libpurple/libpurple.la
+
+finch_DEPENDENCIES = $(builddir)/libfinch.la
+finch_LDFLAGS = -export-dynamic
+finch_LDADD = $(builddir)/libfinch.la $(libfinch_la_LIBADD)
 
 AM_CPPFLAGS = \
 	-DSTANDALONE \
@@ -89,7 +99,36 @@ AM_CPPFLAGS = \
 	-I$(srcdir)/libgnt/ \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
+	$(INTROSPECTION_CFLAGS) \
 	$(GNT_CFLAGS)
+
+if ENABLE_GNT
+-include $(INTROSPECTION_MAKEFILE)
+INTROSPECTION_GIRS =
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(builddir) --add-include-path=$(top_builddir)/libpurple
+INTROSPECTION_COMPILER_ARGS = --includedir=$(top_builddir)/libpurple
+
+if HAVE_INTROSPECTION
+introspection_sources = $(libfinchinclude_HEADERS)
+
+Finch-$(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION).gir: $(builddir)/libfinch.la
+Finch_3_0_gir_INCLUDES = GObject-2.0 Purple-$(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION)
+Finch_3_0_gir_CFLAGS = $(INCLUDES) $(AM_CPPFLAGS)
+Finch_3_0_gir_LIBS = $(builddir)/libfinch.la
+Finch_3_0_gir_FILES = $(introspection_sources)
+INTROSPECTION_GIRS += Finch-$(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION).gir
+
+girdir = $(datadir)/gir-1.0
+gir_DATA = $(INTROSPECTION_GIRS)
+
+typelibdir = $(libdir)/girepository-1.0
+typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
+
+CLEANFILES = $(gir_DATA) $(typelib_DATA)
+endif
+
+endif # ENABLE_GNT
