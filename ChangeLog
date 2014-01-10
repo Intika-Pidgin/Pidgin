@@ -7,6 +7,10 @@ version 2.10.8:
 	General:
 	* Add support for Python3 in build scripts. (Ashish Gupta) (#15624)
 
+	AIM and ICQ:
+	* Fix a possible crash when receiving a malformed message in a Direct IM
+	  session.
+
 	Gadu-Gadu:
 	* Disabled buddy list import/export from/to server (it didn't worked
 	  anymore). Buddy list synchronization will be implemented in 3.0.0.
