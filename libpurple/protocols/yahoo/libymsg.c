@@ -1717,6 +1717,8 @@ static void yahoo_auth16_stage3(PurpleConnection *gc, const char *crypt)
 
 	purple_debug_info("yahoo","Authentication: In yahoo_auth16_stage3\n");
 
+	g_return_if_fail(crypt != NULL);
+
 	md5_cipher = purple_ciphers_find_cipher("md5");
 	md5_ctx = purple_cipher_context_new(md5_cipher, NULL);
 	purple_cipher_context_append(md5_ctx, (guchar *)crypt, strlen(crypt));
@@ -1857,6 +1859,9 @@ static void yahoo_auth16_stage2(PurpleUtilFetchUrlData *url_data, gpointer user_
 
 		g_strfreev(splits);
 		g_strfreev(split_data);
+
+		if (crumb == NULL)
+			response_no = -1;
 
 		if(response_no != 0) {
 			/* Some error in the login process */
@@ -2536,7 +2541,7 @@ static void yahoo_p2p_read_pkt_cb(gpointer data, gint source, PurpleInputConditi
 	int pos = 0;
 	int pktlen;
 	struct yahoo_packet *pkt;
-	guchar *start = NULL;
+	guchar *start;
 	struct yahoo_p2p_data *p2p_data;
 	YahooData *yd;
 
@@ -2558,19 +2563,29 @@ static void yahoo_p2p_read_pkt_cb(gpointer data, gint source, PurpleInputConditi
 		return;
 	}
 
+	/* TODO: It looks like there's a bug here (and above) where an incorrect
+	 * assumtion is being made that the buffer will be added to when this
+	 * is next called, but that's not really the case! */
 	if(len < YAHOO_PACKET_HDRLEN)
 		return;
 
-	if(strncmp((char *)buf, "YMSG", MIN(4, len)) != 0) {
+	if(strncmp((char *)buf, "YMSG", 4) != 0) {
 		/* Not a YMSG packet */
+		purple_debug_warning("yahoo", "p2p: Got something other than YMSG packet\n");
+
+		start = (guchar *) g_strstr_len((char *) buf + 1, len - 1 ,"YMSG");
+		if (start == NULL) {
+			/* remove from p2p connection lists, also calls yahoo_p2p_disconnect_destroy_data */
+			if (g_hash_table_lookup(yd->peers, p2p_data->host_username))
+				g_hash_table_remove(yd->peers, p2p_data->host_username);
+			else
+				yahoo_p2p_disconnect_destroy_data(data);
+			return;
+		}
 		purple_debug_warning("yahoo","p2p: Got something other than YMSG packet\n");
 
-		start = memchr(buf + 1, 'Y', len - 1);
-		if (start == NULL)
-			return;
-
-		g_memmove(buf, start, len - (start - buf));
-		len -= start - buf;
+		len -= (start - buf);
+		g_memmove(buf, start, len);
 	}
 
 	pos += 4;	/* YMSG */
@@ -2578,7 +2593,17 @@ static void yahoo_p2p_read_pkt_cb(gpointer data, gint source, PurpleInputConditi
 	pos += 2;
 
 	pktlen = yahoo_get16(buf + pos); pos += 2;
-	purple_debug_misc("yahoo", "p2p: %d bytes to read\n", len);
+	if (len < (YAHOO_PACKET_HDRLEN + pktlen)) {
+		purple_debug_error("yahoo", "p2p: packet length(%d) > buffer length(%d)\n",
+				pktlen, (len - pos)); 
+		/* remove from p2p connection lists, also calls yahoo_p2p_disconnect_destroy_data */
+		if (g_hash_table_lookup(yd->peers, p2p_data->host_username))
+			g_hash_table_remove(yd->peers, p2p_data->host_username);
+		else
+			yahoo_p2p_disconnect_destroy_data(data);
+		return;
+	} else
+		purple_debug_misc("yahoo", "p2p: %d bytes to read\n", pktlen);
 
 	pkt = yahoo_packet_new(0, 0, 0);
 	pkt->service = yahoo_get16(buf + pos); pos += 2;
