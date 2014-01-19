@@ -28,7 +28,7 @@
 #include "core.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "prefs.h"
 #include "util.h"
 
@@ -3406,15 +3406,11 @@ purple_normalize(const PurpleAccount *account, const char *str)
 
 	if (account != NULL)
 	{
-		PurplePlugin *prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+		PurpleProtocol *protocol =
+				purple_protocols_find(purple_account_get_protocol_id(account));
 
-		if (prpl != NULL)
-		{
-			PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-
-			if (prpl_info->normalize)
-				ret = prpl_info->normalize(account, str);
-		}
+		if (protocol != NULL)
+			ret = purple_protocol_client_iface_normalize(protocol, account, str);
 	}
 
 	if (ret == NULL)
@@ -3433,7 +3429,7 @@ purple_normalize(const PurpleAccount *account, const char *str)
 
 /*
  * You probably don't want to call this directly, it is
- * mainly for use as a PRPL callback function.  See the
+ * mainly for use as a protocol callback function.  See the
  * comments in util.h.
  */
 const char *
@@ -3454,23 +3450,21 @@ purple_normalize_nocase(const PurpleAccount *account, const char *str)
 }
 
 gboolean
-purple_validate(const PurplePlugin *prpl, const char *str)
+purple_validate(const PurpleProtocol *protocol, const char *str)
 {
-	PurplePluginProtocolInfo *prpl_info;
 	const char *normalized;
 
-	g_return_val_if_fail(prpl != NULL, FALSE);
+	g_return_val_if_fail(protocol != NULL, FALSE);
 	g_return_val_if_fail(str != NULL, FALSE);
 
 	if (str[0] == '\0')
 		return FALSE;
 
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-
-	if (!prpl_info->normalize)
+	if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT_IFACE, normalize))
 		return TRUE;
 
-	normalized = prpl_info->normalize(NULL, str);
+	normalized = purple_protocol_client_iface_normalize(PURPLE_PROTOCOL(protocol),
+			NULL, str);
 
 	return (NULL != normalized);
 }
@@ -3815,6 +3809,52 @@ purple_utf16_wipe(gunichar2 *str)
 		return;
 	memset(str, 0, purple_utf16_size(str));
 	g_free(str);
+}
+
+gint
+purple_version_strcmp(const gchar *v1, const gchar *v2)
+{
+	gchar **version[2];
+	gint major[2] = {0}, minor[2] = {0}, micro[2] = {0};
+	gint i, t;
+
+	if (!v1 && v2)
+		return -1;
+	else if (v1 && !v2)
+		return 1;
+	else if (!v1 && !v2)
+		return 0;
+
+	version[0] = g_strsplit(v1, ".", 3);
+	version[1] = g_strsplit(v2, ".", 3);
+
+	for (i = 0; i < 2; ++i) {
+		major[i] = atoi(version[i][0]);
+
+		if (version[i][1]) {
+			minor[i] = atoi(version[i][1]);
+
+			if (version[i][2])
+				micro[i] = atoi(version[i][2]);
+		}
+
+		g_strfreev(version[i]);
+	}
+
+	t = major[0] - major[1];
+	if (t != 0)
+		return t < 0 ? -1 : 1;
+
+	t = minor[0] - minor[1];
+	if (t != 0)
+		return t < 0 ? -1 : 1;
+
+	t = micro[0] - micro[1];
+
+	if (t != 0)
+		return t < 0 ? -1 : 1;
+	else
+		return 0;
 }
 
 /**************************************************************************
