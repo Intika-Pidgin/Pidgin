@@ -32,6 +32,8 @@
 #include "network.h"
 #include "pounce.h"
 
+#define ACCOUNTS_XML_VERSION "1.1"
+
 static PurpleAccountUiOps *account_ui_ops = NULL;
 
 static GList   *accounts = NULL;
@@ -48,11 +50,11 @@ accounts_to_xmlnode(void)
 	GList *cur;
 
 	node = purple_xmlnode_new("account");
-	purple_xmlnode_set_attrib(node, "version", "1.0");
+	purple_xmlnode_set_attrib(node, "version", ACCOUNTS_XML_VERSION);
 
 	for (cur = purple_accounts_get_all(); cur != NULL; cur = cur->next)
 	{
-		child = purple_account_to_xmlnode(cur->data);
+		child = _purple_account_to_xmlnode(cur->data);
 		purple_xmlnode_insert_child(node, child);
 	}
 
@@ -101,10 +103,10 @@ static void
 migrate_yahoo_japan(PurpleAccount *account)
 {
 	/* detect a Yahoo! JAPAN account that existed prior to 2.6.0 and convert it
-	 * to use the new prpl-yahoojp.  Also remove the account-specific settings
+	 * to use the new yahoojp protocol.  Also remove the account-specific settings
 	 * we no longer need */
 
-	if(purple_strequal(purple_account_get_protocol_id(account), "prpl-yahoo")) {
+	if(purple_strequal(purple_account_get_protocol_id(account), "yahoo")) {
 		if(purple_account_get_bool(account, "yahoojp", FALSE)) {
 			const char *serverjp = purple_account_get_string(account, "serverjp", NULL);
 			const char *xferjp_host = purple_account_get_string(account, "xferjp_host", NULL);
@@ -115,7 +117,7 @@ migrate_yahoo_japan(PurpleAccount *account)
 			purple_account_set_string(account, "server", serverjp);
 			purple_account_set_string(account, "xfer_host", xferjp_host);
 
-			purple_account_set_protocol_id(account, "prpl-yahoojp");
+			purple_account_set_protocol_id(account, "yahoojp");
 		}
 
 		/* these should always be nuked */
@@ -133,7 +135,7 @@ migrate_icq_server(PurpleAccount *account)
 	 * 'mtn log --last 1 --no-graph --from b6d7712e90b68610df3bd2d8cbaf46d94c8b3794'
 	 * for details on the change. */
 
-	if(purple_strequal(purple_account_get_protocol_id(account), "prpl-icq")) {
+	if(purple_strequal(purple_account_get_protocol_id(account), "icq")) {
 		const char *tmp = purple_account_get_string(account, "server", NULL);
 
 		/* Non-secure server */
@@ -151,7 +153,7 @@ static void
 migrate_xmpp_encryption(PurpleAccount *account)
 {
 	/* When this is removed, nuke the "old_ssl" and "require_tls" settings */
-	if (g_str_equal(purple_account_get_protocol_id(account), "prpl-jabber")) {
+	if (g_str_equal(purple_account_get_protocol_id(account), "jabber")) {
 		const char *sec = purple_account_get_string(account, "connection_security", "");
 
 		if (g_str_equal("", sec)) {
@@ -582,6 +584,7 @@ static void
 load_accounts(void)
 {
 	PurpleXmlNode *node, *child;
+	const char *version;
 
 	accounts_loaded = TRUE;
 
@@ -589,6 +592,11 @@ load_accounts(void)
 
 	if (node == NULL)
 		return;
+
+	version = purple_xmlnode_get_attrib(node, "version");
+	if (purple_version_strcmp(version, ACCOUNTS_XML_VERSION) > 0)
+		purple_debug_warning("accounts", "accounts.xml on disk is for a newer "
+				"version of libpurple");
 
 	for (child = purple_xmlnode_get_child(node, "account"); child != NULL;
 			child = purple_xmlnode_get_next_twin(child))

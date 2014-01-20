@@ -28,11 +28,13 @@
 #include "notify.h"
 #include "pounce.h"
 #include "prefs.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "server.h"
 #include "signals.h"
 #include "util.h"
 #include "xmlnode.h"
+
+#define BLIST_XML_VERSION "1.1"
 
 #define PURPLE_BUDDY_LIST_GET_PRIVATE(obj) \
 	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_BUDDY_LIST, PurpleBuddyListPrivate))
@@ -348,7 +350,7 @@ blist_to_xmlnode(void)
 	GList *cur;
 
 	node = purple_xmlnode_new("purple");
-	purple_xmlnode_set_attrib(node, "version", "1.0");
+	purple_xmlnode_set_attrib(node, "version", BLIST_XML_VERSION);
 
 	/* Write groups */
 	child = purple_xmlnode_new_child(node, "blist");
@@ -608,6 +610,7 @@ static void
 load_blist(void)
 {
 	PurpleXmlNode *purple, *blist, *privacy;
+	const char *version;
 
 	blist_loaded = TRUE;
 
@@ -615,6 +618,11 @@ load_blist(void)
 
 	if (purple == NULL)
 		return;
+
+	version = purple_xmlnode_get_attrib(purple, "version");
+	if (purple_version_strcmp(version, BLIST_XML_VERSION) > 0)
+		purple_debug_warning("buddylist", "blist.xml on disk is for a newer "
+				"version of libpurple");
 
 	blist = purple_xmlnode_get_child(purple, "blist");
 	if (blist) {
@@ -1614,9 +1622,8 @@ purple_blist_find_chat(PurpleAccount *account, const char *name)
 {
 	char *chat_name;
 	PurpleChat *chat;
-	PurplePlugin *prpl;
-	PurplePluginProtocolInfo *prpl_info = NULL;
-	struct proto_chat_entry *pce;
+	PurpleProtocol *protocol = NULL;
+	PurpleProtocolChatEntry *pce;
 	PurpleBlistNode *node, *group;
 	GList *parts;
 	char *normname;
@@ -1627,11 +1634,10 @@ purple_blist_find_chat(PurpleAccount *account, const char *name)
 	if (!purple_account_is_connected(account))
 		return NULL;
 
-	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
+	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
 
-	if (prpl_info->find_blist_chat != NULL)
-		return prpl_info->find_blist_chat(account, name);
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT_IFACE, find_blist_chat))
+		return purple_protocol_client_iface_find_blist_chat(protocol, account, name);
 
 	normname = g_strdup(purple_normalize(account, name));
 	for (group = purplebuddylist->root; group != NULL; group = group->next) {
@@ -1643,7 +1649,7 @@ purple_blist_find_chat(PurpleAccount *account, const char *name)
 				if (account != purple_chat_get_account(chat))
 					continue;
 
-				parts = prpl_info->chat_info(
+				parts = purple_protocol_chat_iface_info(protocol, 
 					purple_account_get_connection(purple_chat_get_account(chat)));
 
 				pce = parts->data;
