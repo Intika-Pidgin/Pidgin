@@ -35,6 +35,8 @@
 #include "util.h"
 #include "xmlnode.h"
 
+#define STATUS_XML_VERSION "1.1"
+
 /**
  * The maximum number of transient statuses to save.  This
  * is used during the shutdown process to clean out old
@@ -319,7 +321,7 @@ statuses_to_xmlnode(void)
 	GList *cur;
 
 	node = purple_xmlnode_new("statuses");
-	purple_xmlnode_set_attrib(node, "version", "1.0");
+	purple_xmlnode_set_attrib(node, "version", STATUS_XML_VERSION);
 
 	for (cur = saved_statuses; cur != NULL; cur = cur->next)
 	{
@@ -435,12 +437,12 @@ parse_substatus(PurpleXmlNode *substatus)
  *   And I can always make them smile
  *   From White Castle to the Nile</message>
  *       <substatus>
- *           <account protocol='prpl-aim'>markdoliner</account>
+ *           <account protocol='aim'>markdoliner</account>
  *           <state>available</state>
  *           <message>The ladies man is here to answer your queries.</message>
  *       </substatus>
  *       <substatus>
- *           <account protocol='prpl-aim'>giantgraypanda</account>
+ *           <account protocol='aim'>giantgraypanda</account>
  *           <state>away</state>
  *           <message>A.C. ain't in charge no more.</message>
  *       </substatus>
@@ -530,6 +532,7 @@ static void
 load_statuses(void)
 {
 	PurpleXmlNode *statuses, *status;
+	const char *version;
 
 	statuses_loaded = TRUE;
 
@@ -537,6 +540,11 @@ load_statuses(void)
 
 	if (statuses == NULL)
 		return;
+
+	version = purple_xmlnode_get_attrib(statuses, "version");
+	if (purple_version_strcmp(version, STATUS_XML_VERSION) > 0)
+		purple_debug_warning("savedstatuses", "status.xml on disk is for a "
+				"newer version of libpurple");
 
 	for (status = purple_xmlnode_get_child(statuses, "status"); status != NULL;
 			status = purple_xmlnode_get_next_twin(status))
