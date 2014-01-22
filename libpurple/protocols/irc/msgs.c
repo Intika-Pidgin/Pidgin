@@ -20,6 +20,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
+/*
+ * Note: If you change any of these functions to use additional args you
+ * MUST ensure the arg count is correct in parse.c. Otherwise it may be
+ * possible for a malicious server or man-in-the-middle to trigger a crash.
+ */
+
 #include "internal.h"
 
 #include "conversation.h"
@@ -203,9 +209,6 @@ void irc_msg_features(struct irc_conn *irc, const char *name, const char *from, 
 	gchar **features;
 	int i;
 
-	if (!args || !args[0] || !args[1])
-		return;
-
 	features = g_strsplit(args[1], " ", -1);
 	for (i = 0; features[i]; i++) {
 		char *val;
@@ -220,9 +223,6 @@ void irc_msg_features(struct irc_conn *irc, const char *name, const char *from, 
 
 void irc_msg_luser(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
-	if (!args || !args[0])
-		return;
-
 	if (!strcmp(name, "251")) {
 		/* 251 is required, so we pluck our nick from here and
 		 * finalize connection */
@@ -237,9 +237,6 @@ void irc_msg_away(struct irc_conn *irc, const char *name, const char *from, char
 {
 	PurpleConnection *gc;
 	char *msg;
-
-	if (!args || !args[1])
-		return;
 
 	if (irc->whois.nick && !purple_utf8_strcasecmp(irc->whois.nick, args[1])) {
 		/* We're doing a whois, show this in the whois dialog */
@@ -259,8 +256,7 @@ void irc_msg_badmode(struct irc_conn *irc, const char *name, const char *from, c
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
-	if (!args || !args[1] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	purple_notify_error(gc, NULL, _("Bad mode"), args[1]);
 }
@@ -269,17 +265,12 @@ void irc_msg_ban(struct irc_conn *irc, const char *name, const char *from, char 
 {
 	PurpleConversation *convo;
 
-	if (!args || !args[0] || !args[1])
-		return;
-
 	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
 						      args[1], irc->account);
 
 	if (!strcmp(name, "367")) {
 		char *msg = NULL;
 		/* Ban list entry */
-		if (!args[2])
-			return;
 		if (args[3] && args[4]) {
 			/* This is an extended syntax, not in RFC 1459 */
 			int t1 = atoi(args[4]);
@@ -315,8 +306,7 @@ void irc_msg_banned(struct irc_conn *irc, const char *name, const char *from, ch
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	char *buf;
 
-	if (!args || !args[1] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	buf = g_strdup_printf(_("You are banned from %s."), args[1]);
 	purple_notify_error(gc, _("Banned"), _("Banned"), buf);
@@ -327,9 +317,6 @@ void irc_msg_banfull(struct irc_conn *irc, const char *name, const char *from, c
 {
 	PurpleConversation *convo;
 	char *buf, *nick;
-
-	if (!args || !args[0] || !args[1] || !args[2])
-		return;
 
 	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[1], irc->account);
 	if (!convo)
@@ -348,9 +335,6 @@ void irc_msg_chanmode(struct irc_conn *irc, const char *name, const char *from, 
 {
 	PurpleConversation *convo;
 	char *buf, *escaped;
-
-	if (!args || !args[1] || !args[2])
-		return;
 
 	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[1], irc->account);
 	if (!convo)	/* XXX punt on channels we are not in for now */
@@ -489,13 +473,6 @@ void irc_msg_who(struct irc_conn *irc, const char *name, const char *from, char 
 		PurpleConvChatBuddyFlags flags;
 		GList *keys = NULL, *values = NULL;
 
-		if (!args || !args[0] || !args[1] || !args[2] || !args[3]
-		    || !args[4] || !args[5] || !args[6] || !args[7]) {
-			purple_debug(PURPLE_DEBUG_ERROR, "irc",
-				     "Got a WHO response with not enough arguments\n");
-			return;
-		}
-
 		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[1], irc->account);
 		if (!conv) {
 			purple_debug(PURPLE_DEBUG_ERROR, "irc","Got a WHO response for %s, which doesn't exist\n", args[1]);
@@ -571,9 +548,6 @@ void irc_msg_list(struct irc_conn *irc, const char *name, const char *from, char
 		PurpleRoomlistRoom *room;
 		char *topic;
 
-		if (!args[0] || !args[1] || !args[2] || !args[3])
-			return;
-
 		if (!purple_roomlist_get_in_progress(irc->roomlist)) {
 			purple_debug_warning("irc", "Buggy server didn't send RPL_LISTSTART.\n");
 			purple_roomlist_set_in_progress(irc->roomlist, TRUE);
@@ -595,13 +569,9 @@ void irc_msg_topic(struct irc_conn *irc, const char *name, const char *from, cha
 	PurpleConversation *convo;
 
 	if (!strcmp(name, "topic")) {
-		if (!args[0] || !args[1])
-			return;
 		chan = args[0];
 		topic = irc_mirc2txt (args[1]);
 	} else {
-		if (!args[0] || !args[1] || !args[2])
-			return;
 		chan = args[1];
 		topic = irc_mirc2txt (args[2]);
 	}
@@ -652,9 +622,6 @@ void irc_msg_topicinfo(struct irc_conn *irc, const char *name, const char *from,
 	struct tm *tm;
 	time_t t;
 	char *msg, *timestamp, *datestamp;
-	
-	if (!args || !args[1] || !args[2] || !args[3])
-		return;
 
 	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[1], irc->account);
 	if (!convo) {
@@ -683,8 +650,7 @@ void irc_msg_unknown(struct irc_conn *irc, const char *name, const char *from, c
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	char *buf;
 
-	if (!args || !args[1] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	buf = g_strdup_printf(_("Unknown message '%s'"), args[1]);
 	purple_notify_error(gc, _("Unknown message"), buf, _("The IRC server received a message it did not understand."));
@@ -776,9 +742,6 @@ void irc_msg_motd(struct irc_conn *irc, const char *name, const char *from, char
 {
 	char *escaped;
 
-	if (!args || !args[0])
-		return;
-
 	if (!strcmp(name, "375")) {
 		if (irc->motd)
 			g_string_free(irc->motd, TRUE);
@@ -815,11 +778,9 @@ void irc_msg_motd(struct irc_conn *irc, const char *name, const char *from, char
 
 void irc_msg_time(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
-	PurpleConnection *gc;
+	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
-	gc = purple_account_get_connection(irc->account);
-	if (gc == NULL || args == NULL || args[2] == NULL)
-		return;
+	g_return_if_fail(gc);
 
 	purple_notify_message(gc, PURPLE_NOTIFY_MSG_INFO, _("Time Response"),
 			    _("The IRC server's local time is:"),
@@ -830,8 +791,7 @@ void irc_msg_nochan(struct irc_conn *irc, const char *name, const char *from, ch
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
-	if (gc == NULL || args == NULL || args[1] == NULL)
-		return;
+	g_return_if_fail(gc);
 
 	purple_notify_error(gc, NULL, _("No such channel"), args[1]);
 }
@@ -892,9 +852,6 @@ void irc_msg_notop(struct irc_conn *irc, const char *name, const char *from, cha
 {
 	PurpleConversation *convo;
 
-	if (!args || !args[1] || !args[2])
-		return;
-
 	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[1], irc->account);
 	if (!convo)
 		return;
@@ -908,8 +865,7 @@ void irc_msg_invite(struct irc_conn *irc, const char *name, const char *from, ch
 	GHashTable *components;
 	gchar *nick;
 
-	if (!args || !args[1] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	components = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	nick = irc_mask_nick(from);
@@ -925,8 +881,7 @@ void irc_msg_inviteonly(struct irc_conn *irc, const char *name, const char *from
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	char *buf;
 
-	if (!args || !args[1] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	buf = g_strdup_printf(_("Joining %s requires an invitation."), args[1]);
 	purple_notify_error(gc, _("Invitation only"), _("Invitation only"), buf);
@@ -938,9 +893,6 @@ void irc_msg_ison(struct irc_conn *irc, const char *name, const char *from, char
 	char **nicks;
 	struct irc_buddy *ib;
 	int i;
-
-	if (!args || !args[1])
-		return;
 
 	nicks = g_strsplit(args[1], " ", -1);
 	for (i = 0; nicks[i]; i++) {
@@ -982,14 +934,13 @@ void irc_msg_join(struct irc_conn *irc, const char *name, const char *from, char
 	PurpleConvChat *chat;
 	PurpleConvChatBuddy *cb;
 
-	char *nick = irc_mask_nick(from), *userhost, *buf;
+	char *nick, *userhost, *buf;
 	struct irc_buddy *ib;
 	static int id = 1;
 
-	if (!gc) {
-		g_free(nick);
-		return;
-	}
+	g_return_if_fail(gc);
+
+	nick = irc_mask_nick(from);
 
 	if (!purple_utf8_strcasecmp(nick, purple_connection_get_display_name(gc))) {
 		/* We are joining a channel for the first time */
@@ -1049,12 +1000,11 @@ void irc_msg_kick(struct irc_conn *irc, const char *name, const char *from, char
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	PurpleConversation *convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[0], irc->account);
-	char *nick = irc_mask_nick(from), *buf;
+	char *nick, *buf;
 
-	if (!gc) {
-		g_free(nick);
-		return;
-	}
+	g_return_if_fail(gc);
+
+	nick = irc_mask_nick(from);
 
 	if (!convo) {
 		purple_debug(PURPLE_DEBUG_ERROR, "irc", "Received a KICK for unknown channel %s\n", args[0]);
@@ -1197,9 +1147,6 @@ void irc_msg_nickused(struct irc_conn *irc, const char *name, const char *from, 
 	char *newnick, *buf, *end;
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
-	if (!args || !args[1])
-		return;
-
 	if (gc && purple_connection_get_state(gc) == PURPLE_CONNECTED) {
 		/* We only want to do the following dance if the connection
 		   has not been successfully completed.  If it has, just
@@ -1238,9 +1185,6 @@ void irc_msg_nickused(struct irc_conn *irc, const char *name, const char *from, 
 
 void irc_msg_notice(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
-	if (!args || !args[0] || !args[1])
-		return;
-
 	irc_msg_handle_privmsg(irc, name, from, args[0], args[1], TRUE);
 }
 
@@ -1248,8 +1192,7 @@ void irc_msg_nochangenick(struct irc_conn *irc, const char *name, const char *fr
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
-	if (!args || !args[2] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	purple_notify_error(gc, _("Cannot change nick"), _("Could not change nick"), args[2]);
 }
@@ -1260,8 +1203,7 @@ void irc_msg_part(struct irc_conn *irc, const char *name, const char *from, char
 	PurpleConversation *convo;
 	char *nick, *msg, *channel;
 
-	if (!args || !args[0] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	/* Undernet likes to :-quote the channel name, for no good reason
 	 * that I can see.  This catches that. */
@@ -1294,8 +1236,6 @@ void irc_msg_part(struct irc_conn *irc, const char *name, const char *from, char
 void irc_msg_ping(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
 	char *buf;
-	if (!args || !args[0])
-		return;
 
 	buf = irc_format(irc, "v:", "PONG", args[0]);
 	irc_send(irc, buf);
@@ -1308,9 +1248,6 @@ void irc_msg_pong(struct irc_conn *irc, const char *name, const char *from, char
 	PurpleConnection *gc;
 	char **parts, *msg;
 	time_t oldstamp;
-
-	if (!args || !args[1])
-		return;
 
 	parts = g_strsplit(args[1], " ", 2);
 
@@ -1345,9 +1282,6 @@ void irc_msg_pong(struct irc_conn *irc, const char *name, const char *from, char
 
 void irc_msg_privmsg(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
-	if (!args || !args[0] || !args[1])
-		return;
-
 	irc_msg_handle_privmsg(irc, name, from, args[0], args[1], FALSE);
 }
 
@@ -1401,8 +1335,7 @@ void irc_msg_regonly(struct irc_conn *irc, const char *name, const char *from, c
 	PurpleConversation *convo;
 	char *msg;
 
-	if (!args || !args[1] || !args[2] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, args[1], irc->account);
 	if (convo) {
@@ -1424,8 +1357,7 @@ void irc_msg_quit(struct irc_conn *irc, const char *name, const char *from, char
 	struct irc_buddy *ib;
 	char *data[2];
 
-	if (!args || !args[0] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	data[0] = irc_mask_nick(from);
 	data[1] = args[0];
@@ -1445,9 +1377,6 @@ void irc_msg_unavailable(struct irc_conn *irc, const char *name, const char *fro
 {
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
-	if (!args || !args[1])
-		return;
-
 	purple_notify_error(gc, NULL, _("Nick or channel is temporarily unavailable."), args[1]);
 }
 
@@ -1456,8 +1385,7 @@ void irc_msg_wallops(struct irc_conn *irc, const char *name, const char *from, c
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	char *nick, *msg;
 
-	if (!args || !args[0] || !gc)
-		return;
+	g_return_if_fail(gc);
 
 	nick = irc_mask_nick(from);
 	msg = g_strdup_printf (_("Wallops from %s"), nick);
@@ -1633,7 +1561,7 @@ irc_msg_cap(struct irc_conn *irc, const char *name, const char *from, char **arg
 	PurpleConnection *gc = purple_account_get_connection(irc->account);
 	const char *mech_list = NULL;
 
-	if (!args[1] || !args[2] || strncmp(args[2], "sasl ", 6))
+	if (strncmp(args[2], "sasl ", 6))
 		return;
 	if (strncmp(args[1], "ACK", 4)) {
 		const char *tmp = _("SASL authentication failed: Server does not support SASL authentication.");
