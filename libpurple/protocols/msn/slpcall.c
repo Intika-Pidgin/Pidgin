@@ -31,7 +31,7 @@
 
 #include "slp.h"
 #include "p2p.h"
-#include "xfer.h"
+#include "ft.h"
 
 /**************************************************************************
  * Main
@@ -111,10 +111,10 @@ msn_slpcall_destroy(MsnSlpCall *slpcall)
 		slpcall->end_cb(slpcall, slpcall->slplink->session);
 
 	if (slpcall->xfer != NULL) {
-		if (purple_xfer_get_type(slpcall->xfer) == PURPLE_XFER_RECEIVE)
+		if (purple_xfer_get_xfer_type(slpcall->xfer) == PURPLE_XFER_TYPE_RECEIVE)
 			g_byte_array_free(slpcall->u.incoming_data, TRUE);
-		slpcall->xfer->data = NULL;
-		purple_xfer_unref(slpcall->xfer);
+		purple_xfer_set_protocol_data(slpcall->xfer, NULL);
+		g_object_unref(slpcall->xfer);
 	}
 
 
@@ -485,7 +485,7 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 			if (img)
 				purple_imgstore_ref(img);
 		}
-		msn_object_destroy(obj);
+		msn_object_destroy(obj, FALSE);
 
 		if (img != NULL) {
 			/* DATA PREP */
@@ -512,7 +512,6 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 		MsnFileContext *file_context;
 		char *buf;
 		gsize bin_len;
-		guint32 file_size;
 		char *file_name;
 
 		account = slpcall->slplink->session->account;
@@ -522,15 +521,13 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 
 		slpcall->pending = TRUE;
 
-		xfer = purple_xfer_new(account, PURPLE_XFER_RECEIVE,
+		xfer = purple_xfer_new(account, PURPLE_XFER_TYPE_RECEIVE,
 							 slpcall->slplink->remote_user);
 
 		buf = (char *)purple_base64_decode(context, &bin_len);
 		file_context = msn_file_context_from_wire(buf, bin_len);
 
 		if (file_context != NULL) {
-			file_size = file_context->file_size;
-
 			file_name = g_convert((const gchar *)&file_context->file_name,
 			                      MAX_FILE_NAME_LEN * 2,
 			                      "UTF-8", "UTF-16LE",
@@ -538,7 +535,7 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 
 			purple_xfer_set_filename(xfer, file_name ? file_name : "");
 			g_free(file_name);
-			purple_xfer_set_size(xfer, file_size);
+			purple_xfer_set_size(xfer, file_context->file_size);
 			purple_xfer_set_init_fnc(xfer, msn_xfer_init);
 			purple_xfer_set_request_denied_fnc(xfer, msn_xfer_cancel);
 			purple_xfer_set_cancel_recv_fnc(xfer, msn_xfer_cancel);
@@ -548,9 +545,9 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 			slpcall->u.incoming_data = g_byte_array_new();
 
 			slpcall->xfer = xfer;
-			purple_xfer_ref(slpcall->xfer);
+			g_object_ref(slpcall->xfer);
 
-			xfer->data = slpcall;
+			purple_xfer_set_protocol_data(xfer, slpcall);
 
 			if (file_context->preview) {
 				purple_xfer_set_thumbnail(xfer, file_context->preview,
@@ -569,18 +566,17 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 	} else if (!strcmp(euf_guid, MSN_CAM_REQUEST_GUID)) {
 		purple_debug_info("msn", "Cam request.\n");
 		if (slpcall->slplink && slpcall->slplink->session) {
-			PurpleConversation *conv;
+			PurpleIMConversation *im;
 			gchar *from = slpcall->slplink->remote_user;
-			conv = purple_find_conversation_with_account(
-					PURPLE_CONV_TYPE_IM, from,
-					slpcall->slplink->session->account);
-			if (conv) {
+			im = purple_conversations_find_im_with_account(
+					from, slpcall->slplink->session->account);
+			if (im) {
 				char *buf;
 				buf = g_strdup_printf(
 						_("%s requests to view your "
 						"webcam, but this request is "
 						"not yet supported."), from);
-				purple_conversation_write(conv, NULL, buf,
+				purple_conversation_write(PURPLE_CONVERSATION(im), NULL, buf,
 						PURPLE_MESSAGE_SYSTEM |
 						PURPLE_MESSAGE_NOTIFY,
 						time(NULL));
@@ -591,17 +587,16 @@ got_sessionreq(MsnSlpCall *slpcall, const char *branch,
 	} else if (!strcmp(euf_guid, MSN_CAM_GUID)) {
 		purple_debug_info("msn", "Cam invite.\n");
 		if (slpcall->slplink && slpcall->slplink->session) {
-			PurpleConversation *conv;
+			PurpleIMConversation *im;
 			gchar *from = slpcall->slplink->remote_user;
-			conv = purple_find_conversation_with_account(
-					PURPLE_CONV_TYPE_IM, from,
-					slpcall->slplink->session->account);
-			if (conv) {
+			im = purple_conversations_find_im_with_account(
+					from, slpcall->slplink->session->account);
+			if (im) {
 				char *buf;
 				buf = g_strdup_printf(
 						_("%s invited you to view his/her webcam, but "
 						"this is not yet supported."), from);
-				purple_conversation_write(conv, NULL, buf,
+				purple_conversation_write(PURPLE_CONVERSATION(im), NULL, buf,
 						PURPLE_MESSAGE_SYSTEM |
 						PURPLE_MESSAGE_NOTIFY,
 						time(NULL));
@@ -731,7 +726,9 @@ got_invite(MsnSlpCall *slpcall,
 
 			dc->listen_data = purple_network_listen_range(
 				0, 0,
+				AF_UNSPEC,
 				SOCK_STREAM,
+				TRUE,
 				msn_dc_listen_socket_created_cb,
 				dc
 			);
@@ -832,7 +829,9 @@ got_ok(MsnSlpCall *slpcall,
 
 		dc->listen_data = purple_network_listen_range(
 			0, 0,
+			AF_UNSPEC,
 			SOCK_STREAM,
+			TRUE,
 			msn_dc_listen_socket_created_cb,
 			dc
 		);
@@ -1141,8 +1140,6 @@ msn_slp_process_msg(MsnSlpLink *slplink, MsnSlpMessage *slpmsg)
 
 			if (slpcall->cb)
 				slpcall->cb(slpcall, body, body_len);
-
-			slpcall->wasted = TRUE;
 		}
 	}
 	else if (msn_p2p_info_is_ack(slpmsg->p2p_info))

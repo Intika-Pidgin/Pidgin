@@ -194,7 +194,7 @@ tls_peers_mgmt_import_ok_cb(gpointer data, const char *filename)
 				     G_CALLBACK(tls_peers_mgmt_import_ok2_cb),
 				     _("Cancel"),
 				     G_CALLBACK(tls_peers_mgmt_import_cancel2_cb),
-				     NULL, NULL, NULL, /* No account/who/conv*/
+				     NULL,  /* No additional parameters */
 				     crt    /* Pass cert instance to callback*/
 				     );
 
@@ -209,7 +209,7 @@ tls_peers_mgmt_import_ok_cb(gpointer data, const char *filename)
 		purple_notify_error(NULL,
 				    _("Certificate Import Error"),
 				    _("X.509 certificate import failed"),
-				    secondary);
+				    secondary, NULL);
 		g_free(secondary);
 	}
 }
@@ -224,7 +224,7 @@ tls_peers_mgmt_import_cb(GtkWidget *button, gpointer data)
 			    FALSE, /* Not a save dialog */
 			    G_CALLBACK(tls_peers_mgmt_import_ok_cb),
 			    NULL,  /* Do nothing if cancelled */
-			    NULL, NULL, NULL, NULL );/* No account,conv,etc. */
+			    NULL, NULL); /* No extra parameters */
 }
 
 static void
@@ -244,7 +244,7 @@ tls_peers_mgmt_export_ok_cb(gpointer data, const char *filename)
 		purple_notify_error(NULL,
 				    _("Certificate Export Error"),
 				    _("X.509 certificate export failed"),
-				    secondary);
+				    secondary, NULL);
 		g_free(secondary);
 	}
 
@@ -298,7 +298,7 @@ tls_peers_mgmt_export_cb(GtkWidget *button, gpointer data)
 			    TRUE, /* Is a save dialog */
 			    G_CALLBACK(tls_peers_mgmt_export_ok_cb),
 			    G_CALLBACK(tls_peers_mgmt_export_cancel_cb),
-			    NULL, NULL, NULL, /* No account,conv,etc. */
+			    NULL, /* No extra parameters */
 			    crt); /* Pass the certificate on to the callback */
 }
 
@@ -310,6 +310,7 @@ tls_peers_mgmt_info_cb(GtkWidget *button, gpointer data)
 	GtkTreeModel *model;
 	gchar *id;
 	PurpleCertificate *crt;
+	char *title;
 
 	/* See if things are selected */
 	if (!gtk_tree_selection_get_selected(select, &model, &iter)) {
@@ -326,10 +327,20 @@ tls_peers_mgmt_info_cb(GtkWidget *button, gpointer data)
 	g_return_if_fail(crt);
 
 	/* Fire the notification */
-	purple_certificate_display_x509(crt);
+	title = g_strdup_printf(_("Certificate Information for %s"), id);
+	purple_request_certificate(tpm_dat, title, NULL, NULL, crt,
+	                           _("OK"), G_CALLBACK(purple_certificate_destroy),
+	                           _("Cancel"), G_CALLBACK(purple_certificate_destroy),
+	                           crt);
 
 	g_free(id);
-	purple_certificate_destroy(crt);
+	g_free(title);
+}
+
+static void
+tls_peers_mgmt_activated_cb(GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *column, gpointer data)
+{
+	tls_peers_mgmt_info_cb(NULL, NULL);
 }
 
 static void
@@ -371,7 +382,7 @@ tls_peers_mgmt_delete_cb(GtkWidget *button, gpointer data)
 		purple_request_yes_no(tpm_dat, _("Confirm certificate delete"),
 				      primary, NULL, /* Can this be NULL? */
 				      0, /* "yes" is the default action */
-				      NULL, NULL, NULL,
+				      NULL,
 				      id, /* id ownership passed to callback */
 				      tls_peers_mgmt_delete_confirm_cb,
 				      tls_peers_mgmt_delete_confirm_cb );
@@ -452,6 +463,9 @@ tls_peers_mgmt_build(void)
 	g_signal_connect(G_OBJECT(select), "changed",
 			 G_CALLBACK(tls_peers_mgmt_select_chg_cb), NULL);
 
+	g_signal_connect(G_OBJECT(listview), "row-activated",
+			 G_CALLBACK(tls_peers_mgmt_activated_cb), NULL);
+
 	gtk_box_pack_start(GTK_BOX(mgmt_widget), 
 			pidgin_make_scrollable(GTK_WIDGET(listview), GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),
 			TRUE, TRUE, /* Take up lots of space */
@@ -471,9 +485,8 @@ tls_peers_mgmt_build(void)
 	gtk_widget_show(bbox);
 
 	/* Import button */
-	/* TODO: This is the wrong stock button */
 	tpm_dat->importbutton = importbutton =
-		gtk_button_new_from_stock(GTK_STOCK_ADD);
+		gtk_button_new_from_stock(GTK_STOCK_OPEN);
 	gtk_box_pack_start(GTK_BOX(bbox), importbutton, FALSE, FALSE, 0);
 	gtk_widget_show(importbutton);
 	g_signal_connect(G_OBJECT(importbutton), "clicked",
@@ -481,9 +494,8 @@ tls_peers_mgmt_build(void)
 
 
 	/* Export button */
-	/* TODO: This is the wrong stock button */
 	tpm_dat->exportbutton = exportbutton =
-		gtk_button_new_from_stock(GTK_STOCK_SAVE);
+		gtk_button_new_from_stock(GTK_STOCK_SAVE_AS);
 	gtk_box_pack_start(GTK_BOX(bbox), exportbutton, FALSE, FALSE, 0);
 	gtk_widget_show(exportbutton);
 	g_signal_connect(G_OBJECT(exportbutton), "clicked",
@@ -601,7 +613,11 @@ pidgin_certmgr_show(void)
 
 	win = dlg->window =
 		pidgin_create_dialog(_("Certificate Manager"),/* Title */
+#if GTK_CHECK_VERSION(3,0,0)
+				     0, /*Window border*/
+#else
 				     PIDGIN_HIG_BORDER, /*Window border*/
+#endif
 				     "certmgr",         /* Role */
 				     TRUE); /* Allow resizing */
 	g_signal_connect(G_OBJECT(win), "delete_event",

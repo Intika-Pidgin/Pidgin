@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 
+#define PURPLE_TYPE_LOG  (purple_log_get_type())
 
 /********************************************************
  * DATA STRUCTURES **************************************
@@ -112,6 +113,7 @@ struct _PurpleLogLogger {
 	/* Tests whether a log is deletable */
 	gboolean (*is_deletable)(PurpleLog *log);
 
+	/*< private >*/
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
@@ -181,14 +183,19 @@ struct _PurpleLogSet {
 	 * IMPORTANT: Update that code if you add members here. */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /***************************************/
 /** @name Log Functions                */
 /***************************************/
 /*@{*/
+
+/**
+ * Returns the GType for the PurpleLog boxed structure.
+ * TODO Boxing of PurpleLog is a temporary solution to having a GType for
+ *      logs. This should rather be a GObject instead of a GBoxed.
+ */
+GType purple_log_get_type(void);
 
 /**
  * Creates a new log
@@ -301,8 +308,6 @@ int purple_log_get_total_size(PurpleLogType type, const char *name, PurpleAccoun
  * @param name                The name of the log
  * @param account             The account
  * @return                    The activity score
- *
- * @since 2.6.0
  */
 int purple_log_get_activity_score(PurpleLogType type, const char *name, PurpleAccount *account);
 
@@ -576,8 +581,6 @@ void purple_log_uninit(void);
 /*@}*/
 
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_LOG_H_ */

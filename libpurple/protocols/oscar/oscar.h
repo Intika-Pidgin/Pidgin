@@ -30,9 +30,10 @@
 #define _OSCAR_H_
 
 #include "internal.h"
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "debug.h"
 #include "eventloop.h"
+#include "http.h"
 #include "proxy.h"
 #include "sslconn.h"
 
@@ -113,6 +114,8 @@ extern "C" {
 #define MAXICQPASSLEN 8
 
 #define AIM_MD5_STRING "AOL Instant Messenger (SM)"
+
+#define OSCAR_CONNECT_STEPS 6
 
 /*
  * Client info.  Filled in by the client and passed in to
@@ -277,7 +280,7 @@ struct _FlapConnection
 	guint8 header[6];
 	gssize header_received;
 	FlapFrame buffer_incoming;
-	PurpleCircBuffer *buffer_outgoing;
+	PurpleCircularBuffer *buffer_outgoing;
 	guint watcher_incoming;
 	guint watcher_outgoing;
 
@@ -308,14 +311,19 @@ struct _IcbmCookie
 
 #include "peer.h"
 
-/*
- * AIM Session: The main client-data interface.
- *
+struct aim_ssi_itemlist {
+	struct aim_ssi_item *data;
+	GHashTable *idx_gid_bid;
+	GHashTable *idx_all_named_items;
+};
+
+/**
+ * The main client-data interface.
  */
 struct _OscarData
 {
 	/** Only used when connecting with clientLogin */
-	PurpleUtilFetchUrlData *url_data;
+	PurpleHttpConnection *hc;
 
 	gboolean iconconnecting;
 	gboolean set_icon;
@@ -387,8 +395,8 @@ struct _OscarData
 	struct {
 		gboolean received_data;
 		guint16 numitems;
-		struct aim_ssi_item *official;
-		struct aim_ssi_item *local;
+		struct aim_ssi_itemlist official;
+		struct aim_ssi_itemlist local;
 		struct aim_ssi_tmp *pending;
 		time_t timestamp;
 		gboolean waiting_for_ack;
@@ -594,9 +602,9 @@ struct chat_connection
 	FlapConnection *conn;
 	int id;
 	PurpleConnection *gc;
-	PurpleConversation *conv;
-	int maxlen;
-	int maxvis;
+	PurpleChatConversation *conv;
+	guint16 maxlen;
+	guint16 maxvis;
 };
 
 /*
@@ -805,11 +813,6 @@ typedef struct aim_userinfo_s
 	struct aim_userinfo_s *next;
 } aim_userinfo_t;
 
-#define AIM_SENDMEMBLOCK_FLAG_ISREQUEST  0
-#define AIM_SENDMEMBLOCK_FLAG_ISHASH     1
-
-int aim_sendmemblock(OscarData *od, FlapConnection *conn, guint32 offset, guint32 len, const guint8 *buf, guint8 flag);
-
 struct aim_invite_priv
 {
 	char *bn;
@@ -916,15 +919,16 @@ struct aim_ssi_tmp
 /* 0x001a */ int aim_ssi_sendauthreply(OscarData *od, const char *bn, guint8 reply, const char *msg);
 
 /* Client functions for retrieving SSI data */
-struct aim_ssi_item *aim_ssi_itemlist_find(struct aim_ssi_item *list, guint16 gid, guint16 bid);
-struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *list, const char *gn, const char *bn, guint16 type);
-struct aim_ssi_item *aim_ssi_itemlist_exists(struct aim_ssi_item *list, const char *bn);
-char *aim_ssi_itemlist_findparentname(struct aim_ssi_item *list, const char *bn);
-int aim_ssi_getpermdeny(struct aim_ssi_item *list);
-guint32 aim_ssi_getpresence(struct aim_ssi_item *list);
-char *aim_ssi_getalias(struct aim_ssi_item *list, const char *gn, const char *bn);
-char *aim_ssi_getcomment(struct aim_ssi_item *list, const char *gn, const char *bn);
-gboolean aim_ssi_waitingforauth(struct aim_ssi_item *list, const char *gn, const char *bn);
+struct aim_ssi_item *aim_ssi_itemlist_find(struct aim_ssi_itemlist *list, guint16 gid, guint16 bid);
+struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_itemlist *list, const char *gn, const char *bn, guint16 type);
+struct aim_ssi_item *aim_ssi_itemlist_exists(struct aim_ssi_itemlist *list, const char *bn);
+char *aim_ssi_itemlist_findparentname(struct aim_ssi_itemlist *list, const char *bn);
+int aim_ssi_getpermdeny(struct aim_ssi_itemlist *list);
+guint32 aim_ssi_getpresence(struct aim_ssi_itemlist *list);
+char *aim_ssi_getalias(struct aim_ssi_itemlist *list, const char *gn, const char *bn);
+char *aim_ssi_getalias_from_item(struct aim_ssi_item *item);
+char *aim_ssi_getcomment(struct aim_ssi_itemlist *list, const char *gn, const char *bn);
+gboolean aim_ssi_waitingforauth(struct aim_ssi_itemlist *list, const char *gn, const char *bn);
 
 /* Client functions for changing SSI data */
 int aim_ssi_addbuddy(OscarData *od, const char *name, const char *group, GSList *tlvlist, const char *alias, const char *comment, const char *smsnum, gboolean needauth);
@@ -934,7 +938,6 @@ int aim_ssi_movebuddy(OscarData *od, const char *oldgn, const char *newgn, const
 int aim_ssi_aliasbuddy(OscarData *od, const char *gn, const char *bn, const char *alias);
 int aim_ssi_editcomment(OscarData *od, const char *gn, const char *bn, const char *alias);
 int aim_ssi_rename_group(OscarData *od, const char *oldgn, const char *newgn);
-int aim_ssi_cleanlist(OscarData *od);
 int aim_ssi_deletelist(OscarData *od);
 int aim_ssi_setpermdeny(OscarData *od, guint8 permdeny);
 int aim_ssi_setpresence(OscarData *od, guint32 presence);
@@ -1070,7 +1073,7 @@ GSList *aim_tlvlist_readlen(ByteStream *bs, guint16 len);
 GSList *aim_tlvlist_copy(GSList *orig);
 
 int aim_tlvlist_count(GSList *list);
-int aim_tlvlist_size(GSList *list);
+size_t aim_tlvlist_size(GSList *list);
 int aim_tlvlist_cmp(GSList *one, GSList *two);
 int aim_tlvlist_write(ByteStream *bs, GSList **list);
 void aim_tlvlist_free(GSList *list);
@@ -1212,7 +1215,7 @@ void aim_genericreq_l(OscarData *od, FlapConnection *conn, guint16 family, guint
 int byte_stream_new(ByteStream *bs, size_t len);
 int byte_stream_init(ByteStream *bs, guint8 *data, size_t len);
 void byte_stream_destroy(ByteStream *bs);
-int byte_stream_bytes_left(ByteStream *bs);
+size_t byte_stream_bytes_left(ByteStream *bs);
 int byte_stream_curpos(ByteStream *bs);
 int byte_stream_setpos(ByteStream *bs, size_t off);
 void byte_stream_rewind(ByteStream *bs);

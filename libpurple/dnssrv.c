@@ -543,7 +543,7 @@ resolved(gpointer data, gint source, PurpleInputCondition cond)
 						res->content = g_new0(gchar, len);
 
 						red = read(source, res->content, len);
-						if (red != len) {
+						if (red < 0 || (gsize)red != len) {
 							purple_debug_error("dnssrv","unable to read txt "
 									"response: %s\n", g_strerror(errno));
 							size = 0;
@@ -718,15 +718,7 @@ res_thread(gpointer data)
 #endif
 
 PurpleSrvTxtQueryData *
-purple_srv_resolve(const char *protocol, const char *transport,
-	const char *domain, PurpleSrvCallback cb, gpointer extradata)
-{
-	return purple_srv_resolve_account(NULL, protocol, transport, domain,
-			cb, extradata);
-}
-
-PurpleSrvTxtQueryData *
-purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
+purple_srv_resolve(PurpleAccount *account, const char *protocol,
 	const char *transport, const char *domain, PurpleSrvCallback cb,
 	gpointer extradata)
 {
@@ -790,6 +782,12 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 		return NULL;
 	}
 
+	/*
+	 * TODO: We should put a cap on the number of forked processes that we
+	 *       allow at any given time.  If we get too many requests they
+	 *       should be put into a queue and handled later.  (This is what
+	 *       we do for A record lookups.)
+	 */
 	pid = fork();
 	if (pid == -1) {
 		purple_debug_error("dnssrv", "Could not create process!\n");
@@ -828,11 +826,13 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 
 	return query_data;
 #else
-	query_data->resolver = g_thread_create(res_thread, query_data, FALSE, &err);
+	query_data->resolver = g_thread_try_new("dnssrv srv resolver", res_thread, query_data, &err);
 	if (query_data->resolver == NULL) {
 		query_data->error_message = g_strdup_printf("SRV thread create failure: %s\n", (err && err->message) ? err->message : "");
 		g_error_free(err);
 	}
+	else
+		g_thread_unref(query_data->resolver);
 
 	/* The query isn't going to happen, so finish the SRV lookup now.
 	 * Asynchronously call the callback since stuff may not expect
@@ -844,13 +844,7 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 #endif
 }
 
-PurpleSrvTxtQueryData *purple_txt_resolve(const char *owner,
-	const char *domain, PurpleTxtCallback cb, gpointer extradata)
-{
-	return purple_txt_resolve_account(NULL, owner, domain, cb, extradata);
-}
-
-PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
+PurpleSrvTxtQueryData *purple_txt_resolve(PurpleAccount *account,
 	const char *owner, const char *domain, PurpleTxtCallback cb,
 	gpointer extradata)
 {
@@ -909,6 +903,12 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 		return NULL;
 	}
 
+	/*
+	 * TODO: We should put a cap on the number of forked processes that we
+	 *       allow at any given time.  If we get too many requests they
+	 *       should be put into a queue and handled later.  (This is what
+	 *       we do for A record lookups.)
+	 */
 	pid = fork();
 	if (pid == -1) {
 		purple_debug_error("dnssrv", "Could not create process!\n");
@@ -947,11 +947,13 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 
 	return query_data;
 #else
-	query_data->resolver = g_thread_create(res_thread, query_data, FALSE, &err);
+	query_data->resolver = g_thread_try_new("dnssrv srv resolver", res_thread, query_data, &err);
 	if (query_data->resolver == NULL) {
 		query_data->error_message = g_strdup_printf("TXT thread create failure: %s\n", (err && err->message) ? err->message : "");
 		g_error_free(err);
 	}
+	else
+		g_thread_unref(query_data->resolver);
 
 	/* The query isn't going to happen, so finish the TXT lookup now.
 	 * Asynchronously call the callback since stuff may not expect
@@ -961,18 +963,6 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 
 	return query_data;
 #endif
-}
-
-void
-purple_txt_cancel(PurpleSrvTxtQueryData *query_data)
-{
-	purple_srv_txt_query_destroy(query_data);
-}
-
-void
-purple_srv_cancel(PurpleSrvTxtQueryData *query_data)
-{
-	purple_srv_txt_query_destroy(query_data);
 }
 
 const gchar *

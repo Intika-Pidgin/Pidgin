@@ -63,7 +63,9 @@ error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 				"Could not join room, error=0x%04hx, chatnav_error=0x%04hx\n",
 				error, chatnav_error);
 		purple_notify_error(od->gc, NULL, _("Could not join chat room"),
-				chatnav_error == 0x0033 ? _("Invalid chat room name") : _("Unknown error"));
+			chatnav_error == 0x0033 ? _("Invalid chat room name") :
+				_("Unknown error"),
+			purple_request_cpar_from_connection(od->gc));
 
 		ret = 1;
 	}
@@ -224,11 +226,8 @@ parseinfo_perms(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFram
 		 * 2  Exchange creation allowed
 		 *
 		 */
-		if (aim_tlv_gettlv(innerlist, 0x00d5, 1)) {
-			guint8 createperms;
-
-			createperms = aim_tlv_get8(innerlist, 0x00d5, 1);
-		}
+		if (aim_tlv_gettlv(innerlist, 0x00d5, 1))
+			aim_tlv_get8(innerlist, 0x00d5, 1); /* createperms */
 
 		/*
 		 * Type 0x00d6: Character Set (First Time)

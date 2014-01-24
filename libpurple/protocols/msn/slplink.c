@@ -289,7 +289,7 @@ msn_slplink_send_msgpart(MsnSlpLink *slplink, MsnSlpMessage *slpmsg)
 {
 	MsnSlpMessagePart *part;
 	MsnP2PInfo *info;
-	long long real_size;
+	gsize real_size;
 	size_t len = 0;
 	guint64 offset;
 
@@ -304,7 +304,7 @@ msn_slplink_send_msgpart(MsnSlpLink *slplink, MsnSlpMessage *slpmsg)
 	offset = msn_p2p_info_get_offset(info);
 	if (offset < real_size)
 	{
-		if (slpmsg->slpcall && slpmsg->slpcall->xfer && purple_xfer_get_type(slpmsg->slpcall->xfer) == PURPLE_XFER_SEND &&
+		if (slpmsg->slpcall && slpmsg->slpcall->xfer && purple_xfer_get_xfer_type(slpmsg->slpcall->xfer) == PURPLE_XFER_TYPE_SEND &&
 				purple_xfer_get_status(slpmsg->slpcall->xfer) == PURPLE_XFER_STATUS_STARTED)
 		{
 			len = MIN(MSN_SBCONN_MAX_SIZE, slpmsg->slpcall->u.outgoing.len);
@@ -422,7 +422,7 @@ msn_slplink_send_ack(MsnSlpLink *slplink, MsnP2PInfo *info)
 }
 
 static MsnSlpMessage *
-msn_slplink_message_find(MsnSlpLink *slplink, long session_id, long id)
+msn_slplink_message_find(MsnSlpLink *slplink, guint32 session_id, long id)
 {
 	GList *e;
 
@@ -462,15 +462,15 @@ init_first_msg(MsnSlpLink *slplink, MsnP2PInfo *info)
 					slpmsg->ft = TRUE;
 					slpmsg->slpcall->xfer_msg = slpmsg;
 
-					purple_xfer_ref(xfer);
+					g_object_ref(xfer);
 					purple_xfer_start(xfer,	-1, NULL, 0);
 
-					if (xfer->data == NULL) {
-						purple_xfer_unref(xfer);
+					if (purple_xfer_get_protocol_data(xfer) == NULL) {
+						g_object_unref(xfer);
 						msn_slpmsg_destroy(slpmsg);
 						g_return_val_if_reached(NULL);
 					} else {
-						purple_xfer_unref(xfer);
+						g_object_unref(xfer);
 					}
 				}
 			}
@@ -546,8 +546,8 @@ slpmsg_add_part(MsnSlpMessage *slpmsg, MsnSlpMessagePart *part)
 				|| (offset + part->size) > slpmsg->size
 				|| msn_p2p_info_get_offset(slpmsg->p2p_info) != offset) {
 			purple_debug_error("msn",
-				"Oversized slpmsg - msgsize=%lld offset=%" G_GUINT64_FORMAT " len=%" G_GSIZE_FORMAT "\n",
-				slpmsg->size, offset, part->size);
+				"Oversized slpmsg - msgsize=%" G_GSIZE_FORMAT " offset=%" G_GUINT64_FORMAT " len=%" G_GSIZE_FORMAT "\n",
+				(gsize)slpmsg->size, offset, (gsize)part->size);
 			g_return_if_reached();
 		} else {
 			memcpy(slpmsg->buffer + offset, part->buffer, part->size);

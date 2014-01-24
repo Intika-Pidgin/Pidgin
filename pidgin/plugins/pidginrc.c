@@ -31,6 +31,8 @@
 #include "util.h"
 #include "version.h"
 
+#include "gtk3compat.h"
+
 static guint pref_callback;
 
 static const gchar *color_prefs[] = {
@@ -106,7 +108,7 @@ static GtkWidget *widget_bool_widgets[G_N_ELEMENTS(widget_bool_prefs)];
 static GString *
 make_gtkrc_string(void)
 {
-	gint i;
+	gsize i;
 	gchar *prefbase = NULL;
 	GString *style_string = g_string_new("");
 
@@ -214,7 +216,7 @@ static void
 purplerc_write(GtkWidget *widget, gpointer data)
 {
 	GString *str = make_gtkrc_string();
-	str = g_string_prepend(str, "# This file automatically written by the Pidgin GTK+ Theme Control plugin.\n# Any changes to this file will be overwritten by the plugin when told to\n# write the settings again.\n# The FAQ (http://developer.pidgin.im/wiki/FAQ) contains some further examples\n# of possible pidgin gtkrc settings.\n");
+	str = g_string_prepend(str, "# This file automatically written by the Pidgin GTK+ Theme Control plugin.\n# Any changes to this file will be overwritten by the plugin when told to\n# write the settings again.\n# The FAQ (https://developer.pidgin.im/wiki/FAQ) contains some further examples\n# of possible pidgin gtkrc settings.\n");
 	purple_util_write_data_to_file("gtkrc-2.0", str->str, -1);
 	g_string_free(str, TRUE);
 }
@@ -242,12 +244,8 @@ purplerc_color_response(GtkDialog *color_dialog, gint response, gpointer data)
 	if (response == GTK_RESPONSE_OK) {
 		GdkColor color;
 		gchar colorstr[8];
-#if GTK_CHECK_VERSION(2,14,0)
 		GtkWidget *colorsel =
 			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog));
-#else
-		GtkWidget *colorsel = GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel;
-#endif
 
 		gtk_color_selection_get_current_color(GTK_COLOR_SELECTION(colorsel), &color);
 
@@ -278,13 +276,9 @@ purplerc_set_color(GtkWidget *widget, gpointer data)
 
 	if (pref != NULL && strcmp(pref, "")) {
 		if (gdk_color_parse(pref, &color)) {
-#if GTK_CHECK_VERSION(2,14,0)
 			gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(
 				gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_dialog))),
 				&color);
-#else
-			gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(GTK_COLOR_SELECTION_DIALOG(color_dialog)->colorsel), &color);
-#endif
 		}
 	}
 
@@ -306,7 +300,7 @@ purplerc_font_response(GtkDialog *font_dialog, gint response, gpointer data)
 			prefpath = font_prefs[subscript];
 		}
 
-		fontname = gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(font_dialog));
+		fontname = gtk_font_chooser_get_font(GTK_FONT_CHOOSER(font_dialog));
 
 		purple_prefs_set_string(prefpath, fontname);
 		g_free(fontname);
@@ -318,6 +312,7 @@ static void
 purplerc_set_font(GtkWidget *widget, gpointer data)
 {
 	gchar title[128];
+	GtkWindow *window;
 	GtkWidget *font_dialog = NULL;
 	gint subscript = GPOINTER_TO_INT(data);
 	const gchar *pref = NULL, *prefpath = NULL;
@@ -331,14 +326,15 @@ purplerc_set_font(GtkWidget *widget, gpointer data)
 		prefpath = font_prefs[subscript];
 	}
 
-	font_dialog = gtk_font_selection_dialog_new(title);
+	window = GTK_WINDOW(gtk_widget_get_toplevel(widget));
+	font_dialog = gtk_font_chooser_dialog_new(title, window);
 	g_signal_connect(G_OBJECT(font_dialog), "response",
 	                 G_CALLBACK(purplerc_font_response), data);
 
 	pref = purple_prefs_get_string(prefpath);
 
 	if (pref != NULL && strcmp(pref, "")) {
-		gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(font_dialog), pref);
+		gtk_font_chooser_set_font(GTK_FONT_CHOOSER(font_dialog), pref);
 	}
 
 	gtk_window_present(GTK_WINDOW(font_dialog));
@@ -370,7 +366,7 @@ purplerc_make_interface_vbox(void)
 {
 	GtkWidget *vbox = NULL, *hbox = NULL, *check = NULL;
 	GtkSizeGroup *labelsg = NULL;
-	gint i;
+	gsize i;
 
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	labelsg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
@@ -409,7 +405,7 @@ purplerc_make_fonts_vbox(void)
 {
 	GtkWidget *vbox = NULL, *hbox = NULL, *check = NULL, *widget = NULL;
 	GtkSizeGroup *labelsg = NULL;
-	int i;
+	gsize i;
 
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	labelsg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
@@ -469,7 +465,7 @@ purplerc_make_misc_vbox(void)
 	 * the size group not the whole thing, which isn't what I want. */
 	GtkWidget *vbox = NULL, *hbox = NULL, *check = NULL, *widget = NULL;
 	GtkSizeGroup *labelsg = NULL;
-	int i;
+	gsize i;
 
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
 	labelsg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
@@ -604,7 +600,6 @@ purplerc_get_config_frame(PurplePlugin *plugin)
 static PidginPluginUiInfo purplerc_ui_info =
 {
 	purplerc_get_config_frame,
-	0, /* page_num (Reserved) */
 
 	/* padding */
 	NULL,
@@ -648,7 +643,7 @@ static PurplePluginInfo purplerc_info =
 static void
 purplerc_init(PurplePlugin *plugin)
 {
-	gint i;
+	gsize i;
 
 	purple_prefs_add_none("/plugins");
 	purple_prefs_add_none("/plugins/gtk");

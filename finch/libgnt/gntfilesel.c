@@ -37,6 +37,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <glib/gstdio.h>
+
 #if 0
 #include <glob.h>
 #endif
@@ -65,106 +67,6 @@ gnt_file_sel_destroy(GntWidget *widget)
 		g_list_free(sel->tags);
 	}
 }
-
-#if !GLIB_CHECK_VERSION(2,8,0)
-/* ripped from glib/gfileutils.c */
-static gchar *
-g_build_path_va (const gchar  *separator,
-		gchar       **str_array)
-{
-	GString *result;
-	gint separator_len = strlen (separator);
-	gboolean is_first = TRUE;
-	gboolean have_leading = FALSE;
-	const gchar *single_element = NULL;
-	const gchar *next_element;
-	const gchar *last_trailing = NULL;
-	gint i = 0;
-
-	result = g_string_new (NULL);
-
-	next_element = str_array[i++];
-
-	while (TRUE) {
-		const gchar *element;
-		const gchar *start;
-		const gchar *end;
-
-		if (next_element) {
-			element = next_element;
-			next_element = str_array[i++];
-		} else
-			break;
-
-		/* Ignore empty elements */
-		if (!*element)
-			continue;
-
-		start = element;
-
-		if (separator_len) {
-			while (start &&
-					strncmp (start, separator, separator_len) == 0)
-				start += separator_len;
-		}
-
-		end = start + strlen (start);
-
-		if (separator_len) {
-			while (end >= start + separator_len &&
-					strncmp (end - separator_len, separator, separator_len) == 0)
-				end -= separator_len;
-
-			last_trailing = end;
-			while (last_trailing >= element + separator_len &&
-					strncmp (last_trailing - separator_len, separator, separator_len) == 0)
-				last_trailing -= separator_len;
-
-			if (!have_leading) {
-				/* If the leading and trailing separator strings are in the
-				 * same element and overlap, the result is exactly that element
-				 */
-				if (last_trailing <= start)
-					single_element = element;
-
-				g_string_append_len (result, element, start - element);
-				have_leading = TRUE;
-			} else
-				single_element = NULL;
-		}
-
-		if (end == start)
-			continue;
-
-		if (!is_first)
-			g_string_append (result, separator);
-
-		g_string_append_len (result, start, end - start);
-		is_first = FALSE;
-	}
-
-	if (single_element) {
-		g_string_free (result, TRUE);
-		return g_strdup (single_element);
-	} else {
-		if (last_trailing)
-			g_string_append (result, last_trailing);
-
-		return g_string_free (result, FALSE);
-	}
-}
-
-static gchar *
-g_build_pathv (const gchar  *separator,
-		gchar       **args)
-{
-	if (!args)
-		return NULL;
-
-	return g_build_path_va (separator, args);
-}
-
-#endif
 
 static char *
 process_path(const char *path)
@@ -259,9 +161,9 @@ local_read_fn(const char *path, GList **files, GError **error)
 
 	while ((str = g_dir_read_name(dir)) != NULL) {
 		char *fp = g_build_filename(path, str, NULL);
-		struct stat st;
+		GStatBuf st;
 
-		if (stat(fp, &st)) {
+		if (g_stat(fp, &st)) {
 			gnt_warning("Error stating location %s", fp);
 		} else {
 			if (S_ISDIR(st.st_mode)) {
@@ -381,7 +283,7 @@ location_key_pressed(GntTree *tree, const char *key, GntFileSel *sel)
 #if 0
 	int count;
 	glob_t gl;
-	struct stat st;
+	GStatBuf st;
 	int glob_ret;
 #endif
 	if (strcmp(key, "\r") && strcmp(key, "\n"))
@@ -413,7 +315,7 @@ location_key_pressed(GntTree *tree, const char *key, GntFileSel *sel)
 	if (!glob_ret) {  /* XXX: do something with the return value */
 		char *loc = g_path_get_dirname(gl.gl_pathv[0]);
 
-		stat(gl.gl_pathv[0], &st);
+		g_stat(gl.gl_pathv[0], &st);
 		gnt_file_sel_set_current_location(sel, loc);  /* XXX: check the return value */
 		g_free(loc);
 		if (!S_ISDIR(st.st_mode) && !sel->dirsonly) {

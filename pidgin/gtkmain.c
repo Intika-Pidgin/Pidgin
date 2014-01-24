@@ -30,7 +30,7 @@
 #include "dbus-maybe.h"
 #include "debug.h"
 #include "eventloop.h"
-#include "ft.h"
+#include "xfer.h"
 #include "log.h"
 #include "network.h"
 #include "notify.h"
@@ -50,7 +50,7 @@
 #include "gtkdialogs.h"
 #include "gtkdocklet.h"
 #include "gtkeventloop.h"
-#include "gtkft.h"
+#include "gtkxfer.h"
 #include "gtkidle.h"
 #include "gtklog.h"
 #include "gtkmedia.h"
@@ -89,9 +89,6 @@ static const int catch_sig_list[] = {
 	SIGTERM,
 	SIGQUIT,
 	SIGCHLD,
-#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
-	SIGALRM,
-#endif
 	-1
 };
 
@@ -135,29 +132,6 @@ static char *segfault_message;
 static int signal_sockets[2];
 
 static void sighandler(int sig);
-
-/*
- * This child process reaping stuff is currently only used for processes that
- * were forked to play sounds.  It's not needed for forked DNS child, which
- * have their own waitpid() call.  It might be wise to move this code into
- * gtksound.c.
- */
-static void
-clean_pid(void)
-{
-	int status;
-	pid_t pid;
-
-	do {
-		pid = waitpid(-1, &status, WNOHANG);
-	} while (pid != 0 && pid != (pid_t)-1);
-
-	if ((pid == (pid_t) - 1) && (errno != ECHILD)) {
-		char errmsg[BUFSIZ];
-		snprintf(errmsg, sizeof(errmsg), "Warning: waitpid() returned %d", pid);
-		perror(errmsg);
-	}
-}
 
 static void sighandler(int sig)
 {
@@ -210,31 +184,13 @@ mainloop_sighandler(GIOChannel *source, GIOCondition cond, gpointer data)
 	}
 
 	switch (sig) {
-#if defined(USE_GSTREAMER) && !defined(GST_CAN_DISABLE_FORKING)
-/* By default, gstreamer forks when you initialize it, and waitpids for the
- * child.  But if libpurple reaps the child rather than leaving it to
- * gstreamer, gstreamer's initialization fails.  So, we wait a second before
- * reaping child processes, to give gst a chance to reap it if it wants to.
- *
- * This is not needed in later gstreamers, which let us disable the forking.
- * And, it breaks the world on some Real Unices.
- */
-	case SIGCHLD:
-		/* Restore signal catching */
-		signal(SIGCHLD, sighandler);
-		alarm(1);
-		break;
-	case SIGALRM:
-#else
-	case SIGCHLD:
-#endif
-		clean_pid();
-		/* Restore signal catching */
-		signal(SIGCHLD, sighandler);
-		break;
-	default:
-		purple_debug_warning("sighandler", "Caught signal %d\n", sig);
-		purple_core_quit();
+		case SIGCHLD:
+			/* Restore signal catching */
+			signal(SIGCHLD, sighandler);
+			break;
+		default:
+			purple_debug_warning("sighandler", "Caught signal %d\n", sig);
+			purple_core_quit();
 	}
 
 	return TRUE;
@@ -248,7 +204,7 @@ ui_main(void)
 	GList *icons = NULL;
 	GdkPixbuf *icon = NULL;
 	char *icon_path;
-	int i;
+	gsize i;
 	struct {
 		const char *dir;
 		const char *filename;
@@ -309,7 +265,6 @@ pidgin_ui_init(void)
 	purple_xfers_set_ui_ops(pidgin_xfers_get_ui_ops());
 	purple_blist_set_ui_ops(pidgin_blist_get_ui_ops());
 	purple_notify_set_ui_ops(pidgin_notify_get_ui_ops());
-	purple_privacy_set_ui_ops(pidgin_privacy_get_ui_ops());
 	purple_request_set_ui_ops(pidgin_request_get_ui_ops());
 	purple_sound_set_ui_ops(pidgin_sound_get_ui_ops());
 	purple_connections_set_ui_ops(pidgin_connections_get_ui_ops());
@@ -318,8 +273,9 @@ pidgin_ui_init(void)
 	purple_idle_set_ui_ops(pidgin_idle_get_ui_ops());
 #endif
 
-	pidgin_account_init();
+	pidgin_accounts_init();
 	pidgin_connection_init();
+	pidgin_request_init();
 	pidgin_blist_init();
 	pidgin_status_init();
 	pidgin_conversations_init();
@@ -353,8 +309,9 @@ pidgin_quit(void)
 	pidgin_status_uninit();
 	pidgin_docklet_uninit();
 	pidgin_blist_uninit();
+	pidgin_request_uninit();
 	pidgin_connection_uninit();
-	pidgin_account_uninit();
+	pidgin_accounts_uninit();
 	pidgin_xfers_uninit();
 	pidgin_debug_uninit();
 
@@ -372,8 +329,8 @@ static GHashTable *pidgin_ui_get_info(void)
 
 		g_hash_table_insert(ui_info, "name", (char*)PIDGIN_NAME);
 		g_hash_table_insert(ui_info, "version", VERSION);
-		g_hash_table_insert(ui_info, "website", "http://pidgin.im");
-		g_hash_table_insert(ui_info, "dev_website", "http://developer.pidgin.im");
+		g_hash_table_insert(ui_info, "website", "https://pidgin.im");
+		g_hash_table_insert(ui_info, "dev_website", "https://developer.pidgin.im");
 		g_hash_table_insert(ui_info, "client_type", "pc");
 
 		/*
@@ -410,6 +367,7 @@ static PurpleCoreUiOps core_ops =
 	pidgin_ui_get_info,
 	NULL,
 	NULL,
+	NULL,
 	NULL
 };
 
@@ -432,7 +390,7 @@ show_usage(const char *name, gboolean terse)
 		g_string_append_printf(str, _("Usage: %s [OPTION]...\n\n"), name);
 		g_string_append_printf(str, "  -c, --config=%s    %s\n",
 				_("DIR"), _("use DIR for config files"));
-		g_string_append_printf(str, "  -d, --debug         %s\n",
+		g_string_append_printf(str, "  -d, --debug[=colored] %s\n",
 				_("print debugging messages to stdout"));
 		g_string_append_printf(str, "  -f, --force-online  %s\n",
 				_("force online, regardless of network status"));
@@ -481,6 +439,10 @@ int main(int argc, char *argv[])
 	char *opt_login_arg = NULL;
 	char *opt_session_arg = NULL;
 	char *search_path;
+#if GTK_CHECK_VERSION(3,0,0)
+	GtkCssProvider *provider;
+	GdkScreen *screen;
+#endif
 	GList *accounts;
 #ifdef HAVE_SIGNAL_H
 	int sig_indx;	/* for setting up signal catching */
@@ -492,18 +454,19 @@ int main(int argc, char *argv[])
 #ifndef DEBUG
 	char *segfault_message_tmp;
 #endif
+#endif
+#if defined(HAVE_SIGNAL_H) || GTK_CHECK_VERSION(3,0,0)
 	GError *error;
 #endif
 	int opt;
 	gboolean gui_check;
-	gboolean debug_enabled;
-	gboolean migration_failed = FALSE;
+	gboolean debug_enabled, debug_colored;
 	GList *active_accounts;
-	struct stat st;
+	GStatBuf st;
 
 	struct option long_options[] = {
 		{"config",       required_argument, NULL, 'c'},
-		{"debug",        no_argument,       NULL, 'd'},
+		{"debug",        optional_argument, NULL, 'd'},
 		{"force-online", no_argument,       NULL, 'f'},
 		{"help",         no_argument,       NULL, 'h'},
 		{"login",        optional_argument, NULL, 'l'},
@@ -516,14 +479,20 @@ int main(int argc, char *argv[])
 		{0, 0, 0, 0}
 	};
 
+	debug_colored = FALSE;
 #ifdef DEBUG
 	debug_enabled = TRUE;
 #else
 	debug_enabled = FALSE;
 #endif
 
-	/* Initialize GThread before calling any Glib or GTK+ functions. */
+#if !GLIB_CHECK_VERSION(2, 32, 0)
+	/* GLib threading system is automaticaly initialized since 2.32.
+	 * For earlier versions, it have to be initialized before calling any
+	 * Glib or GTK+ functions.
+	 */
 	g_thread_init(NULL);
+#endif
 
 	g_set_prgname("Pidgin");
 
@@ -658,6 +627,8 @@ int main(int argc, char *argv[])
 			break;
 		case 'd':	/* debug */
 			debug_enabled = TRUE;
+			if (g_strcmp0(optarg, "colored") == 0)
+				debug_colored = TRUE;
 			break;
 		case 'f':	/* force-online */
 			opt_force_online = TRUE;
@@ -719,7 +690,16 @@ int main(int argc, char *argv[])
 
 	/* set a user-specified config directory */
 	if (opt_config_dir_arg != NULL) {
-		purple_util_set_user_dir(opt_config_dir_arg);
+		if (g_path_is_absolute(opt_config_dir_arg)) {
+			purple_util_set_user_dir(opt_config_dir_arg);
+		} else {
+			/* Make an absolute (if not canonical) path */
+			char *cwd = g_get_current_dir();
+			char *path = g_build_path(G_DIR_SEPARATOR_S, cwd, opt_config_dir_arg, NULL);
+			purple_util_set_user_dir(path);
+			g_free(path);
+			g_free(cwd);
+		}
 	}
 
 	/*
@@ -728,20 +708,13 @@ int main(int argc, char *argv[])
 	 */
 
 	purple_debug_set_enabled(debug_enabled);
+	purple_debug_set_colored(debug_colored);
 
-	/* If we're using a custom configuration directory, we
-	 * do NOT want to migrate, or weird things will happen. */
-	if (opt_config_dir_arg == NULL)
-	{
-		if (!purple_core_migrate())
-		{
-			migration_failed = TRUE;
-		}
-	}
-
+#if !GTK_CHECK_VERSION(3,0,0)
 	search_path = g_build_filename(purple_user_dir(), "gtkrc-2.0", NULL);
 	gtk_rc_add_default_file(search_path);
 	g_free(search_path);
+#endif
 
 	gui_check = gtk_init_check(&argc, &argv);
 	if (!gui_check) {
@@ -758,42 +731,31 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+#if GTK_CHECK_VERSION(3,0,0)
+	search_path = g_build_filename(purple_user_dir(), "gtk-3.0.css", NULL);
+
+	error = NULL;
+	provider = gtk_css_provider_new();
+	gui_check = gtk_css_provider_load_from_path(provider, search_path, &error);
+
+	if (gui_check && !error) {
+		screen = gdk_screen_get_default();
+		gtk_style_context_add_provider_for_screen(screen,
+		                                          GTK_STYLE_PROVIDER(provider),
+		                                          GTK_STYLE_PROVIDER_PRIORITY_USER);
+	} else {
+		purple_debug_error("gtk", "Unable to load custom gtk-3.0.css: %s\n",
+		                   error ? error->message : "(unknown error)");
+	}
+
+	g_free(search_path);
+#endif
+
 	g_set_application_name(PIDGIN_NAME);
 
 #ifdef _WIN32
 	winpidgin_init(hint);
 #endif
-
-	if (migration_failed)
-	{
-		char *old = g_strconcat(purple_home_dir(),
-		                        G_DIR_SEPARATOR_S ".gaim", NULL);
-		const char *text = _(
-			"%s encountered errors migrating your settings "
-			"from %s to %s. Please investigate and complete the "
-			"migration by hand. Please report this error at http://developer.pidgin.im");
-		GtkWidget *dialog;
-
-		dialog = gtk_message_dialog_new(NULL,
-		                                0,
-		                                GTK_MESSAGE_ERROR,
-		                                GTK_BUTTONS_CLOSE,
-		                                text, PIDGIN_NAME,
-		                                old, purple_user_dir());
-		g_free(old);
-
-		g_signal_connect_swapped(dialog, "response",
-		                         G_CALLBACK(gtk_main_quit), NULL);
-
-		gtk_widget_show_all(dialog);
-
-		gtk_main();
-
-#ifdef HAVE_SIGNAL_H
-		g_free(segfault_message);
-#endif
-		return 0;
-	}
 
 	purple_core_set_ui_ops(pidgin_core_get_ui_ops());
 	purple_eventloop_set_ui_ops(pidgin_eventloop_get_ui_ops());
@@ -838,15 +800,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	/* TODO: Move blist loading into purple_blist_init() */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved(PIDGIN_PREFS_ROOT "/plugins/loaded");
-
-	/* TODO: Move pounces loading into purple_pounces_init() */
-	purple_pounces_load();
 
 	ui_main();
 

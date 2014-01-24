@@ -72,11 +72,11 @@ PurpleMediaCaps mxit_media_caps(PurpleAccount *account, const char *who)
 	purple_debug_info(MXIT_PLUGIN_ID, "mxit_media_caps: buddy '%s'\n", who);
 
 	/* We need to have a voice/video server */
-	if (strlen(session->voip_server) == 0)
+	if (!*session->voip_server)
 		return PURPLE_MEDIA_CAPS_NONE;
 
-	/* find the buddy information for this contact (reference: "libpurple/blist.h") */
-	buddy = purple_find_buddy(account, who);
+	/* find the buddy information for this contact (reference: "libpurple/buddylist.h") */
+	buddy = purple_blist_find_buddy(account, who);
 	if (!buddy) {
 		purple_debug_warning(MXIT_PLUGIN_ID, "mxit_media_caps: unable to find the buddy '%s'\n", who);
 		return PURPLE_MEDIA_CAPS_NONE;
