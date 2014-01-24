@@ -27,9 +27,26 @@
 #ifndef _PURPLE_ROOMLIST_H_
 #define _PURPLE_ROOMLIST_H_
 
+#define PURPLE_TYPE_ROOMLIST             (purple_roomlist_get_type())
+#define PURPLE_ROOMLIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_ROOMLIST, PurpleRoomlist))
+#define PURPLE_ROOMLIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_ROOMLIST, PurpleRoomlistClass))
+#define PURPLE_IS_ROOMLIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_ROOMLIST))
+#define PURPLE_IS_ROOMLIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_ROOMLIST))
+#define PURPLE_ROOMLIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_ROOMLIST, PurpleRoomlistClass))
+
+/** @copydoc _PurpleRoomlist */
 typedef struct _PurpleRoomlist PurpleRoomlist;
+/** @copydoc _PurpleRoomlistClass */
+typedef struct _PurpleRoomlistClass PurpleRoomlistClass;
+
+#define PURPLE_TYPE_ROOMLIST_ROOM        (purple_roomlist_room_get_type())
+
 typedef struct _PurpleRoomlistRoom PurpleRoomlistRoom;
+
+#define PURPLE_TYPE_ROOMLIST_FIELD       (purple_roomlist_field_get_type())
+
 typedef struct _PurpleRoomlistField PurpleRoomlistField;
+
 /** @copydoc _PurpleRoomlistUiOps */
 typedef struct _PurpleRoomlistUiOps PurpleRoomlistUiOps;
 
@@ -38,7 +55,7 @@ typedef struct _PurpleRoomlistUiOps PurpleRoomlistUiOps;
  *
  * These are ORable flags.
  */
-typedef enum
+typedef enum /*< flags >*/
 {
 	PURPLE_ROOMLIST_ROOMTYPE_CATEGORY = 0x01, /**< It's a category, but not a room you can join. */
 	PURPLE_ROOMLIST_ROOMTYPE_ROOM = 0x02      /**< It's a room, like the kind you can join. */
@@ -64,40 +81,6 @@ typedef enum
 /**************************************************************************/
 
 /**
- * Represents a list of rooms for a given connection on a given protocol.
- */
-struct _PurpleRoomlist {
-	PurpleAccount *account; /**< The account this list belongs to. */
-	GList *fields; /**< The fields. */
-	GList *rooms; /**< The list of rooms. */
-	gboolean in_progress; /**< The listing is in progress. */
-	gpointer ui_data; /**< UI private data. */
-	gpointer proto_data; /** Prpl private data. */
-	guint ref; /**< The reference count. */
-};
-
-/**
- * Represents a room.
- */
-struct _PurpleRoomlistRoom {
-	PurpleRoomlistRoomType type; /**< The type of room. */
-	gchar *name; /**< The name of the room. */
-	GList *fields; /**< Other fields. */
-	PurpleRoomlistRoom *parent; /**< The parent room, or NULL. */
-	gboolean expanded_once; /**< A flag the UI uses to avoid multiple expand prpl cbs. */
-};
-
-/**
- * A field a room might have.
- */
-struct _PurpleRoomlistField {
-	PurpleRoomlistFieldType type; /**< The type of field. */
-	gchar *label; /**< The i18n user displayed name of the field. */
-	gchar *name; /**< The internal name of the field. */
-	gboolean hidden; /**< Hidden? */
-};
-
-/**
  * The room list ops to be filled out by the UI.
  */
 struct _PurpleRoomlistUiOps {
@@ -108,21 +91,47 @@ struct _PurpleRoomlistUiOps {
 	void (*in_progress)(PurpleRoomlist *list, gboolean flag); /**< Are we fetching stuff still? */
 	void (*destroy)(PurpleRoomlist *list); /**< We're destroying list. */
 
+	/*< private >*/
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
 	void (*_purple_reserved4)(void);
 };
 
+/**
+ * Represents a list of rooms for a given connection on a given protocol.
+ */
+struct _PurpleRoomlist {
+	GObject gparent;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	/** The UI data associated with this room list. This is a convenience
+	 *  field provided to the UIs -- it is not used by the libpurple core.
+	 */
+	gpointer ui_data;
+};
+
+/** Base class for all #PurpleRoomlist's */
+struct _PurpleRoomlistClass {
+	GObjectClass parent_class;
+
+	/*< private >*/
+	void (*_purple_reserved1)(void);
+	void (*_purple_reserved2)(void);
+	void (*_purple_reserved3)(void);
+	void (*_purple_reserved4)(void);
+};
+
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Room List API                                                   */
 /**************************************************************************/
 /*@{*/
+
+/**
+ * Returns the GType for the Room List object.
+ */
+GType purple_roomlist_get_type(void);
 
 /**
  * This is used to get the room list on an account, asking the UI
@@ -138,29 +147,18 @@ void purple_roomlist_show_with_account(PurpleAccount *account);
 /**
  * Returns a newly created room list object.
  *
- * It has an initial reference count of 1.
- *
  * @param account The account that's listing rooms.
  * @return The new room list handle.
  */
 PurpleRoomlist *purple_roomlist_new(PurpleAccount *account);
 
 /**
- * Increases the reference count on the room list.
+ * Retrieve the PurpleAccount that was given when the room list was
+ * created.
  *
- * @param list The object to ref.
+ * @return The PurpleAccount tied to this room list.
  */
-void purple_roomlist_ref(PurpleRoomlist *list);
-
-/**
- * Decreases the reference count on the room list.
- *
- * The room list will be destroyed when this reaches 0.
- *
- * @param list The room list object to unref and possibly
- *             destroy.
- */
-void purple_roomlist_unref(PurpleRoomlist *list);
+PurpleAccount *purple_roomlist_get_account(PurpleRoomlist *list);
 
 /**
  * Set the different field types and their names for this protocol.
@@ -241,11 +239,48 @@ void purple_roomlist_expand_category(PurpleRoomlist *list, PurpleRoomlistRoom *c
 /**
  * Get the list of fields for a roomlist.
  *
- * @param roomlist  The roomlist, which must not be @c NULL.
+ * @param roomlist The roomlist, which must not be @c NULL.
  * @constreturn A list of fields
- * @since 2.4.0
  */
-GList * purple_roomlist_get_fields(PurpleRoomlist *roomlist);
+GList *purple_roomlist_get_fields(PurpleRoomlist *roomlist);
+
+/**
+ * Get the protocol data associated with this room list.
+ *
+ * @param list The roomlist, which must not be @c NULL.
+ *
+ * @return The protocol data associated with this room list.  This is a
+ *         convenience field provided to the protocol plugin--it is not
+ *         used the libpurple core.
+ */
+gpointer purple_roomlist_get_protocol_data(PurpleRoomlist *list);
+
+/**
+ * Set the protocol data associated with this room list.
+ *
+ * @param list The roomlist, which must not be @c NULL.
+ * @param proto_data A pointer to associate with this room list.
+ */
+void purple_roomlist_set_protocol_data(PurpleRoomlist *list, gpointer proto_data);
+
+/**
+ * Get the UI data associated with this room list.
+ *
+ * @param list The roomlist, which must not be @c NULL.
+ *
+ * @return The UI data associated with this room list.  This is a
+ *         convenience field provided to the UIs--it is not
+ *         used by the libpurple core.
+ */
+gpointer purple_roomlist_get_ui_data(PurpleRoomlist *list);
+
+/**
+ * Set the UI data associated with this room list.
+ *
+ * @param list The roomlist, which must not be @c NULL.
+ * @param ui_data A pointer to associate with this room list.
+ */
+void purple_roomlist_set_ui_data(PurpleRoomlist *list, gpointer ui_data);
 
 /*@}*/
 
@@ -253,6 +288,11 @@ GList * purple_roomlist_get_fields(PurpleRoomlist *roomlist);
 /** @name Room API                                                        */
 /**************************************************************************/
 /*@{*/
+
+/**
+ * Returns the GType for the PurpleRoomlistRoom boxed structure.
+ */
+GType purple_roomlist_room_get_type(void);
 
 /**
  * Creates a new room, to be added to the list.
@@ -287,15 +327,13 @@ void purple_roomlist_room_join(PurpleRoomlist *list, PurpleRoomlistRoom *room);
  * Get the type of a room.
  * @param room  The room, which must not be @c NULL.
  * @return The type of the room.
- * @since 2.4.0
  */
-PurpleRoomlistRoomType purple_roomlist_room_get_type(PurpleRoomlistRoom *room);
+PurpleRoomlistRoomType purple_roomlist_room_get_room_type(PurpleRoomlistRoom *room);
 
 /**
  * Get the name of a room.
  * @param room  The room, which must not be @c NULL.
  * @return The name of the room.
- * @since 2.4.0
  */
 const char * purple_roomlist_room_get_name(PurpleRoomlistRoom *room);
 
@@ -303,16 +341,31 @@ const char * purple_roomlist_room_get_name(PurpleRoomlistRoom *room);
  * Get the parent of a room.
  * @param room  The room, which must not be @c NULL.
  * @return The parent of the room, which can be @c NULL.
- * @since 2.4.0
  */
 PurpleRoomlistRoom * purple_roomlist_room_get_parent(PurpleRoomlistRoom *room);
+
+/**
+ * Get the value of the expanded_once flag.
+ *
+ * @param room  The room, which must not be @c NULL.
+ *
+ * @return The value of the expanded_once flag.
+ */
+gboolean purple_roomlist_room_get_expanded_once(PurpleRoomlistRoom *room);
+
+/**
+ * Set the expanded_once flag.
+ *
+ * @param room The room, which must not be @c NULL.
+ * @param expanded_once The new value of the expanded_once flag.
+ */
+void purple_roomlist_room_set_expanded_once(PurpleRoomlistRoom *room, gboolean expanded_once);
 
 /**
  * Get the list of fields for a room.
  *
  * @param room  The room, which must not be @c NULL.
  * @constreturn A list of fields
- * @since 2.4.0
  */
 GList * purple_roomlist_room_get_fields(PurpleRoomlistRoom *room);
 
@@ -322,6 +375,11 @@ GList * purple_roomlist_room_get_fields(PurpleRoomlistRoom *room);
 /** @name Room Field API                                                  */
 /**************************************************************************/
 /*@{*/
+
+/**
+ * Returns the GType for the PurpleRoomlistField boxed structure.
+ */
+GType purple_roomlist_field_get_type(void);
 
 /**
  * Creates a new field.
@@ -344,9 +402,8 @@ PurpleRoomlistField *purple_roomlist_field_new(PurpleRoomlistFieldType type,
  * @param field  A PurpleRoomlistField, which must not be @c NULL.
  *
  * @return  The type of the field.
- * @since 2.4.0
  */
-PurpleRoomlistFieldType purple_roomlist_field_get_type(PurpleRoomlistField *field);
+PurpleRoomlistFieldType purple_roomlist_field_get_field_type(PurpleRoomlistField *field);
 
 /**
  * Get the label of a field.
@@ -354,7 +411,6 @@ PurpleRoomlistFieldType purple_roomlist_field_get_type(PurpleRoomlistField *fiel
  * @param field  A PurpleRoomlistField, which must not be @c NULL.
  *
  * @return  The label of the field.
- * @since 2.4.0
  */
 const char * purple_roomlist_field_get_label(PurpleRoomlistField *field);
 
@@ -363,7 +419,6 @@ const char * purple_roomlist_field_get_label(PurpleRoomlistField *field);
  * @param field  A PurpleRoomlistField, which must not be @c NULL.
  *
  * @return  @c TRUE if the field is hidden, @c FALSE otherwise.
- * @since 2.4.0
  */
 gboolean purple_roomlist_field_get_hidden(PurpleRoomlistField *field);
 
@@ -391,8 +446,6 @@ PurpleRoomlistUiOps *purple_roomlist_get_ui_ops(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_ROOMLIST_H_ */

@@ -103,13 +103,10 @@ static PurpleEventLoopUiOps glib_eventloops =
 	glib_input_add,
 	g_source_remove,
 	NULL,
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -178,6 +175,7 @@ static PurpleCoreUiOps null_core_uiops =
 	NULL,
 	NULL,
 	NULL,
+	NULL,
 	NULL
 };
 
@@ -218,26 +216,19 @@ init_libpurple(void)
 		abort();
 	}
 
-	/* Create and load the buddylist. */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* Load the preferences. */
 	purple_prefs_load();
 
 	/* Load the desired plugins. The client should save the list of loaded plugins in
 	 * the preferences using purple_plugins_save_loaded(PLUGIN_SAVE_PREF) */
 	purple_plugins_load_saved(PLUGIN_SAVE_PREF);
-
-	/* Load the pounces. */
-	purple_pounces_load();
 }
 
 static void
 signed_on(PurpleConnection *gc, gpointer null)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
-	printf("Account connected: %s %s\n", account->username, account->protocol_id);
+	printf("Account connected: %s %s\n", purple_account_get_username(account), purple_account_get_protocol_id(account));
 }
 
 static void
@@ -280,7 +271,7 @@ int main(int argc, char *argv[])
 		PurplePluginInfo *info = plugin->info;
 		if (info && info->name) {
 			printf("\t%d: %s\n", i++, info->name);
-			names = g_list_append(names, info->id);
+			names = g_list_append(names, (gpointer)info->id);
 		}
 	}
 	printf("Select the protocol [0-%d]: ", i-1);
@@ -309,7 +300,7 @@ int main(int argc, char *argv[])
 
 	/* Get the password for the account */
 	password = getpass("Password: ");
-	purple_account_set_password(account, password);
+	purple_account_set_password(account, password, NULL, NULL);
 
 	/* It's necessary to enable the account first. */
 	purple_account_set_enabled(account, UI_ID, TRUE);

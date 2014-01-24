@@ -31,9 +31,9 @@ static gboolean
 addnewline_msg_cb(PurpleAccount *account, char *sender, char **message,
 					 PurpleConversation *conv, int *flags, void *data)
 {
-	if (((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) &&
+	if ((PURPLE_IS_IM_CONVERSATION(conv) &&
 		 !purple_prefs_get_bool("/plugins/core/newline/im")) ||
-		((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) &&
+		(PURPLE_IS_CHAT_CONVERSATION(conv) &&
 		 !purple_prefs_get_bool("/plugins/core/newline/chat")))
 		return FALSE;
 
@@ -80,8 +80,8 @@ plugin_load(PurplePlugin *plugin)
 
 static PurplePluginUiInfo prefs_info = {
 	get_plugin_pref_frame,
-	0,   /* page_num (Reserved) */
-	NULL, /* frame (Reserved) */
+	NULL,
+
 	/* Padding */
 	NULL,
 	NULL,

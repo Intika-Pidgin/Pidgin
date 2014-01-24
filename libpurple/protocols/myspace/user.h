@@ -20,6 +20,8 @@
 #ifndef _MYSPACE_USER_H
 #define _MYSPACE_USER_H
 
+#include "http.h"
+
 /* Hold ephemeral information about buddies, for proto_data of PurpleBuddy. */
 /* GHashTable? */
 typedef struct _MsimUser
@@ -40,7 +42,7 @@ typedef struct _MsimUser
 	gchar *image_url;
 	guint last_image_updated;
 	gboolean temporary_user;
-	PurpleUtilFetchUrlData *url_data;
+	PurpleHttpConnection *http_conn;
 } MsimUser;
 
 /* Callback function pointer type for when a user's information is received,

@@ -847,7 +847,7 @@ x509_check_name (PurpleCertificate *crt, const gchar *name)
 }
 
 static gboolean
-x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
+x509_times (PurpleCertificate *crt, gint64 *activation, gint64 *expiration)
 {
 	CERTCertificate *crt_dat;
 	PRTime nss_activ, nss_expir;
@@ -873,47 +873,97 @@ x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 
 	if (activation) {
 		*activation = nss_activ;
-#if SIZEOF_TIME_T == 4
-		/** Hack to deal with dates past the 32-bit barrier.
-		    Handling is different for signed vs unsigned 32-bit types.
-		 */
-		if (*activation != nss_activ) {
-		       	if (nss_activ < 0) {
-				purple_debug_warning("nss",
-					"Setting Activation Date to epoch to handle pre-epoch value\n");
-				*activation = 0;
-			} else {
-				purple_debug_error("nss",
-					"Activation date past 32-bit barrier, forcing invalidity\n");
-				return FALSE;
-			}
-		}
-#endif
 	}
 	if (expiration) {
 		*expiration = nss_expir;
-#if SIZEOF_TIME_T == 4
-		if (*expiration != nss_expir) {
-			if (*expiration < nss_expir) {
-				if (*expiration < 0) {
-					purple_debug_warning("nss",
-						"Setting Expiration Date to 32-bit signed max\n");
-					*expiration = PR_INT32_MAX;
-				} else {
-					purple_debug_warning("nss",
-						"Setting Expiration Date to 32-bit unsigned max\n");
-					*expiration = PR_UINT32_MAX;
-				}
-			} else {
-				purple_debug_error("nss",
-					"Expiration date prior to unix epoch, forcing invalidity\n");
-				return FALSE;
-			}
-		}
-#endif
 	}
 
 	return TRUE;
+}
+
+static GByteArray *
+x509_get_der_data(PurpleCertificate *crt)
+{
+	CERTCertificate *crt_dat;
+	SECItem *dercrt;
+	GByteArray *data;
+
+	crt_dat = X509_NSS_DATA(crt);
+	g_return_val_if_fail(crt_dat, NULL);
+
+	dercrt = SEC_ASN1EncodeItem(NULL, NULL, crt_dat,
+	                            SEC_ASN1_GET(SEC_SignedCertificateTemplate));
+	g_return_val_if_fail(dercrt != NULL, FALSE);
+
+	data = g_byte_array_sized_new(dercrt->len);
+	memcpy(data->data, dercrt->data, dercrt->len);
+	data->len = dercrt->len;
+
+	SECITEM_FreeItem(dercrt, PR_TRUE);
+
+	return data;
+}
+
+static gchar *
+x509_display_string(PurpleCertificate *crt)
+{
+	gchar *sha_asc;
+	GByteArray *sha_bin;
+	gchar *cn;
+	gint64 activation, expiration;
+	gchar *activ_str, *expir_str;
+	gchar *text;
+#if GLIB_CHECK_VERSION(2,26,0)
+	GDateTime *act_dt, *exp_dt;
+#endif
+
+	/* Pull out the SHA1 checksum */
+	sha_bin = x509_sha1sum(crt);
+	sha_asc = purple_base16_encode_chunked(sha_bin->data, sha_bin->len);
+
+	/* Get the cert Common Name */
+	/* TODO: Will break on CA certs */
+	cn = x509_common_name(crt);
+
+	/* Get the certificate times */
+	/* TODO: Check the times against localtime */
+	/* TODO: errorcheck? */
+	if (!x509_times(crt, &activation, &expiration)) {
+		purple_debug_error("certificate",
+				   "Failed to get certificate times!\n");
+		activation = expiration = 0;
+	}
+#if GLIB_CHECK_VERSION(2,26,0)
+	act_dt = g_date_time_new_from_unix_local(activation);
+	activ_str = g_date_time_format(act_dt, "%c");
+	g_date_time_unref(act_dt);
+
+	exp_dt = g_date_time_new_from_unix_local(expiration);
+	expir_str = g_date_time_format(exp_dt, "%c");
+	g_date_time_unref(exp_dt);
+#else
+	activ_str = g_strdup(ctime(&activation));
+	expir_str = g_strdup(ctime(&expiration));
+#endif
+
+	/* Make messages */
+	text = g_strdup_printf(_("Common name: %s\n\n"
+	                         "Fingerprint (SHA1): %s\n\n"
+	                         "Activation date: %s\n"
+	                         "Expiration date: %s\n"),
+	                       cn ? cn : "(null)",
+	                       sha_asc ? sha_asc : "(null)",
+	                       activ_str ? activ_str : "(null)",
+	                       expir_str ? expir_str : "(null)");
+
+	/* Cleanup */
+	g_free(cn);
+	g_free(sha_asc);
+	g_free(activ_str);
+	g_free(expir_str);
+	g_byte_array_free(sha_bin, TRUE);
+
+	return text;
 }
 
 static PurpleCertificateScheme x509_nss = {
@@ -931,9 +981,9 @@ static PurpleCertificateScheme x509_nss = {
 	x509_check_name,                 /* Check subject name */
 	x509_times,                      /* Activation/Expiration time */
 	x509_importcerts_from_file,      /* Multiple certificate import function */
+	x509_get_der_data,               /* Binary DER data */
+	x509_display_string,             /* Display representation */
 
-	NULL,
-	NULL,
 	NULL
 };
 
@@ -948,6 +998,7 @@ static PurpleSslOps ssl_ops =
 	ssl_nss_peer_certs,
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL

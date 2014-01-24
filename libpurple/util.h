@@ -32,34 +32,11 @@
 #include <stdio.h>
 
 /**
-  * An opaque structure representing a URL request. Can be used to cancel
-  * the request.
-  */
-typedef struct _PurpleUtilFetchUrlData PurpleUtilFetchUrlData;
-/** @copydoc _PurpleMenuAction */
+ * A generic structure that contains information about an "action."  One
+ * place this is is used is by PRPLs to tell the core the list of available
+ * right-click actions for a buddy list row.
+ */
 typedef struct _PurpleMenuAction PurpleMenuAction;
-/** @copydoc _PurpleKeyValuePair */
-typedef struct _PurpleKeyValuePair PurpleKeyValuePair;
-
-#include "account.h"
-#include "signals.h"
-#include "xmlnode.h"
-#include "notify.h"
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct _PurpleMenuAction
-{
-	char *label;
-	PurpleCallback callback;
-	gpointer data;
-	GList *children;
-};
-
-typedef char *(*PurpleInfoFieldFormatCallback)(const char *field, size_t len);
 
 /**
  * A key-value pair.
@@ -67,12 +44,25 @@ typedef char *(*PurpleInfoFieldFormatCallback)(const char *field, size_t len);
  * This is used by, among other things, purple_gtk_combo* functions to pass in a
  * list of key-value pairs so it can display a user-friendly value.
  */
+typedef struct _PurpleKeyValuePair PurpleKeyValuePair;
+
+#include "account.h"
+#include "signals.h"
+#include "xmlnode.h"
+#include "notify.h"
+#include "plugin.h"
+
+
+typedef char *(*PurpleInfoFieldFormatCallback)(const char *field, size_t len);
+
 struct _PurpleKeyValuePair
 {
 	gchar *key;
 	void *value;
 
 };
+
+G_BEGIN_DECLS
 
 /**
  * Creates a new PurpleMenuAction.
@@ -96,12 +86,98 @@ PurpleMenuAction *purple_menu_action_new(const char *label, PurpleCallback callb
 void purple_menu_action_free(PurpleMenuAction *act);
 
 /**
+ * Returns the label of the PurpleMenuAction.
+ *
+ * @param act	The PurpleMenuAction.
+ *
+ * @return The label string.
+ */
+char * purple_menu_action_get_label(const PurpleMenuAction *act);
+
+/**
+ * Returns the callback of the PurpleMenuAction.
+ *
+ * @param act	The PurpleMenuAction.
+ *
+ * @return The callback function.
+ */
+PurpleCallback purple_menu_action_get_callback(const PurpleMenuAction *act);
+
+/**
+ * Returns the data stored in the PurpleMenuAction.
+ *
+ * @param act	The PurpleMenuAction.
+ *
+ * @return The data.
+ */
+gpointer purple_menu_action_get_data(const PurpleMenuAction *act);
+
+/**
+ * Returns the children of the PurpleMenuAction.
+ *
+ * @param act	The PurpleMenuAction.
+ *
+ * @return The  GList of children.
+ */
+GList* purple_menu_action_get_children(const PurpleMenuAction *act);
+
+/**
+ * Set the label to the PurpleMenuAction.
+ *
+ * @param act   The menu action.
+ * @param label The label for the menu action.
+ */
+void purple_menu_action_set_label(PurpleMenuAction *act, char *label);
+
+/**
+ * Set the callback that will be used by the PurpleMenuAction.
+ *
+ * @param act        The menu action.
+ * @param callback   The callback.
+ */
+void purple_menu_action_set_callback(PurpleMenuAction *act, PurpleCallback callback);
+
+/**
+ * Set the label to the PurpleMenuAction.
+ *
+ * @param act   The menu action.
+ * @param data  The data used by this PurpleMenuAction
+ */
+void purple_menu_action_set_data(PurpleMenuAction *act, gpointer data);
+
+/**
+ * Set the children of the PurpleMenuAction.
+ *
+ * @param act       The menu action.
+ * @param children  The PurpleMenuAtion children
+ */
+void purple_menu_action_set_children(PurpleMenuAction *act, GList *children);
+
+/**
+ * Sets the icon for the PurpleMenuAction.
+ *
+ * @param act    The menu action.
+ * @param strock The stock icon identifier.
+ */
+void purple_menu_action_set_stock_icon(PurpleMenuAction *act,
+	const gchar *stock);
+
+/**
+ * Gets the stock icon of the PurpleMenuAction.
+ *
+ * @param act The menu action.
+ *
+ * @return The stock icon identifier.
+ */
+const gchar *
+purple_menu_action_get_stock_icon(PurpleMenuAction *act);
+
+/**
  * Set the appropriate presence values for the currently playing song.
  *
  * @param title     The title of the song, @c NULL to unset the value.
  * @param artist    The artist of the song, can be @c NULL.
  * @param album     The album of the song, can be @c NULL.
- * @since 2.4.0
  */
 void purple_util_set_current_song(const char *title, const char *artist,
 		const char *album);
@@ -115,7 +191,6 @@ void purple_util_set_current_song(const char *title, const char *artist,
  * @param unused    Currently unused, must be @c NULL.
  *
  * @return   The formatted string. The caller must g_free the returned string.
- * @since 2.4.0
  */
 char * purple_util_format_song_info(const char *title, const char *artist,
 		const char *album, gpointer unused);
@@ -127,15 +202,11 @@ char * purple_util_format_song_info(const char *title, const char *artist,
 
 /**
  * Initializes the utility subsystem.
- *
- * @since 2.3.0
  */
 void purple_util_init(void);
 
 /**
  * Uninitializes the util subsystem.
- *
- * @since 2.3.0
  */
 void purple_util_uninit(void);
 
@@ -331,7 +402,8 @@ const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The date, formatted as per the user's settings.
+ * @return The date, formatted as per the user's settings.  In the USA this
+ *         is something like "02/18/13"
  */
 const char *purple_date_format_short(const struct tm *tm);
 
@@ -343,7 +415,8 @@ const char *purple_date_format_short(const struct tm *tm);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The timestamp, formatted as per the user's settings.
+ * @return The timestamp, formatted as per the user's settings.  In the USA
+ *         this is something like "02/18/13 15:26:44"
  */
 const char *purple_date_format_long(const struct tm *tm);
 
@@ -355,7 +428,8 @@ const char *purple_date_format_long(const struct tm *tm);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The date and time, formatted as per the user's settings.
+ * @return The date and time, formatted as per the user's settings.  In the
+ *         USA this is something like "Mon Feb 18 15:26:44 2013"
  */
 const char *purple_date_format_full(const struct tm *tm);
 
@@ -367,7 +441,8 @@ const char *purple_date_format_full(const struct tm *tm);
  *
  * @param tm The time to format, or @c NULL to use the current local time
  *
- * @return The time, formatted as per the user's settings.
+ * @return The time, formatted as per the user's settings.  In the USA this
+ *         is something like "15:26:44"
  */
 const char *purple_time_format(const struct tm *tm);
 
@@ -413,6 +488,19 @@ time_t purple_time_build(int year, int month, int day, int hour,
 time_t purple_str_to_time(const char *timestamp, gboolean utc,
                         struct tm *tm, long *tz_off, const char **rest);
 
+/**
+ * Formats a datetime according to a UTS-35 Date Format Pattern.
+ *
+ * @param format The formatting string, according to UTS #35
+ *               See http://unicode.org/reports/tr35/
+ *               (NOTE: not all formats are supported)
+ * @param len    The length of the formatting string
+ * @param tm     The time to format, or @c NULL to use the current local time
+ *
+ * @return The time, formatted as per the user's settings.
+ */
+char *purple_uts35_to_str(const char *format, size_t len, struct tm *tm);
+
 /*@}*/
 
 
@@ -429,8 +517,6 @@ time_t purple_str_to_time(const char *timestamp, gboolean utc,
  * This is exactly the same as g_markup_escape_text(), except that it
  * does not change ' to &apos; because &apos; is not a valid HTML 4 entity,
  * and is displayed literally in IE7.
- *
- * @since 2.6.0
  */
 gchar *purple_markup_escape_text(const gchar *text, gssize length);
 
@@ -531,7 +617,6 @@ char *purple_markup_linkify(const char *str);
  *         this string when finished with it.
  *
  * @see purple_unescape_html()
- * @since 2.7.0
  */
 char *purple_unescape_text(const char *text);
 
@@ -624,8 +709,6 @@ char * purple_markup_get_css_property(const gchar *style, const gchar *opt);
  * @param html  The HTML text.
  *
  * @return  TRUE if the text contains RTL text, FALSE otherwise.
- *
- * @since 2.6.0
  */
 gboolean purple_markup_is_rtl(const char *html);
 
@@ -679,7 +762,7 @@ int purple_build_dir(const char *path, int mode);
  * user directory ($HOME/.purple by default).  The data is typically
  * a serialized version of one of Purple's config files, such as
  * prefs.xml, accounts.xml, etc.  And the string is typically
- * obtained using xmlnode_to_formatted_str.  However, this function
+ * obtained using purple_xmlnode_to_formatted_str.  However, this function
  * should work fine for saving binary files as well.
  *
  * @param filename The basename of the file to write in the purple_user_dir.
@@ -714,7 +797,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 
 /**
  * Read the contents of a given file and parse the results into an
- * xmlnode tree structure.  This is intended to be used to read
+ * PurpleXmlNode tree structure.  This is intended to be used to read
  * Purple's configuration xml files (prefs.xml, pounces.xml, etc.)
  *
  * @param filename    The basename of the file to open in the purple_user_dir.
@@ -723,10 +806,10 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
  *                    user when the file can not be opened.  For example,
  *                    "preferences," or "buddy pounces."
  *
- * @return An xmlnode tree of the contents of the given file.  Or NULL, if
+ * @return An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
  *         the file does not exist or there was an error reading the file.
  */
-xmlnode *purple_util_read_xml_from_file(const char *filename,
+PurpleXmlNode *purple_util_read_xml_from_file(const char *filename,
 									  const char *description);
 
 /**
@@ -757,11 +840,6 @@ FILE *purple_mkstemp(char **path, gboolean binary);
  */
 const char *
 purple_util_get_image_extension(gconstpointer data, size_t len);
-
-/**
- * Returns a SHA-1 hash string of the data passed in.
- */
-char *purple_util_get_image_checksum(gconstpointer image_data, size_t image_len);
 
 /**
  * @return A hex encoded version of the SHA-1 hash of the data passed
@@ -826,7 +904,6 @@ char *purple_fd_get_ip(int fd);
  *
  * @return The address family of the socket (AF_INET, AF_INET6, etc) or -1
  *         on error.
- * @since 2.7.0
  */
 int purple_socket_get_family(int fd);
 
@@ -838,7 +915,6 @@ int purple_socket_get_family(int fd);
  *
  * @param fd The socket file descriptor
  * @return TRUE if a socket can speak IPv4.
- * @since 2.7.0
  */
 gboolean purple_socket_speaks_ipv4(int fd);
 
@@ -860,8 +936,6 @@ gboolean purple_socket_speaks_ipv4(int fd);
  * @param right A string to compare with left
  *
  * @return @c TRUE if the strings are the same, else @c FALSE.
- *
- * @since 2.6.0
  */
 gboolean purple_strequal(const gchar *left, const gchar *right);
 
@@ -897,6 +971,16 @@ const char *purple_normalize(const PurpleAccount *account, const char *str);
  * @return A pointer to the normalized version stored in a static buffer.
  */
 const char *purple_normalize_nocase(const PurpleAccount *account, const char *str);
+
+/**
+ * Checks, if a string is valid.
+ *
+ * @param prpl     The protocol plugin the string belongs to.
+ * @param str      The string to validate.
+ *
+ * @return TRUE, if string is valid, otherwise FALSE.
+ */
+gboolean purple_validate(const PurplePlugin *prpl, const char *str);
 
 /**
  * Compares two strings to see if the first contains the second as
@@ -1041,7 +1125,7 @@ const char *purple_strcasestr(const char *haystack, const char *needle);
  *
  * @return The string in units form. This must be freed.
  */
-char *purple_str_size_to_units(size_t size);
+char *purple_str_size_to_units(goffset size);
 
 /**
  * Converts seconds into a human-readable form.
@@ -1067,6 +1151,33 @@ char *purple_str_seconds_to_string(guint sec);
  * @return A newly allocated ASCIIZ string.
  */
 char *purple_str_binary_to_ascii(const unsigned char *binary, guint len);
+
+/**
+ * Calculates UTF-16 string size (in bytes).
+ *
+ * @param str String to check.
+ * @return    Number of bytes (including NUL character) that string occupies.
+ */
+size_t purple_utf16_size(const gunichar2 *str);
+
+/**
+ * Fills a NUL-terminated string with zeros and frees it.
+ *
+ * It should be used to free sensitive data, like passwords.
+ *
+ * @param str A NUL-terminated string to free, or a NULL-pointer.
+ */
+void purple_str_wipe(gchar *str);
+
+/**
+ * Fills a NUL-terminated UTF-16 string with zeros and frees it.
+ *
+ * It should be used to free sensitive data, like passwords.
+ *
+ * @param str A NUL-terminated string to free, or a NULL-pointer.
+ */
+void purple_utf16_wipe(gunichar2 *str);
+
 /*@}*/
 
 
@@ -1076,145 +1187,6 @@ char *purple_str_binary_to_ascii(const unsigned char *binary, guint len);
 /*@{*/
 
 void purple_got_protocol_handler_uri(const char *uri);
-
-/**
- * Parses a URL, returning its host, port, file path, username and password.
- *
- * The returned data must be freed.
- *
- * @param url      The URL to parse.
- * @param ret_host The returned host.
- * @param ret_port The returned port.
- * @param ret_path The returned path.
- * @param ret_user The returned username.
- * @param ret_passwd The returned password.
- */
-gboolean purple_url_parse(const char *url, char **ret_host, int *ret_port,
-						char **ret_path, char **ret_user, char **ret_passwd);
-
-/**
- * This is the signature used for functions that act as the callback
- * to purple_util_fetch_url() or purple_util_fetch_url_request().
- *
- * @param url_data      The same value that was returned when you called
- *                      purple_fetch_url() or purple_fetch_url_request().
- * @param user_data     The user data that your code passed into either
- *                      purple_util_fetch_url() or purple_util_fetch_url_request().
- * @param url_text      This will be NULL on error.  Otherwise this
- *                      will contain the contents of the URL.
- * @param len           0 on error, otherwise this is the length of buf.
- * @param error_message If something went wrong then this will contain
- *                      a descriptive error message, and buf will be
- *                      NULL and len will be 0.
- */
-typedef void (*PurpleUtilFetchUrlCallback)(PurpleUtilFetchUrlData *url_data, gpointer user_data, const gchar *url_text, gsize len, const gchar *error_message);
-
-/**
- * Fetches the data from a URL, and passes it to a callback function.
- *
- * @param url        The URL.
- * @param full       TRUE if this is the full URL, or FALSE if it's a
- *                   partial URL.
- * @param user_agent The user agent field to use, or NULL.
- * @param http11     TRUE if HTTP/1.1 should be used to download the file.
- * @param cb         The callback function.
- * @param data       The user data to pass to the callback function.
- */
-#define purple_util_fetch_url(url, full, user_agent, http11, cb, data) \
-	purple_util_fetch_url_request(url, full, user_agent, http11, NULL, \
-		FALSE, cb, data);
-
-/**
- * Fetches the data from a URL, and passes it to a callback function.
- *
- * @param url        The URL.
- * @param full       TRUE if this is the full URL, or FALSE if it's a
- *                   partial URL.
- * @param user_agent The user agent field to use, or NULL.
- * @param http11     TRUE if HTTP/1.1 should be used to download the file.
- * @param max_len    The maximum number of bytes to retrieve (-1 for unlimited)
- * @param cb         The callback function.
- * @param data       The user data to pass to the callback function.
- * @deprecated       In 3.0.0, we'll rename this to "purple_util_fetch_url" and get rid of the old one
- */
-#define purple_util_fetch_url_len(url, full, user_agent, http11, max_len, cb, data) \
-	purple_util_fetch_url_request_len(url, full, user_agent, http11, NULL, \
-		FALSE, max_len, cb, data);
-
-/**
- * Fetches the data from a URL, and passes it to a callback function.
- *
- * @param url        The URL.
- * @param full       TRUE if this is the full URL, or FALSE if it's a
- *                   partial URL.
- * @param user_agent The user agent field to use, or NULL.
- * @param http11     TRUE if HTTP/1.1 should be used to download the file.
- * @param request    A HTTP request to send to the server instead of the
- *                   standard GET
- * @param include_headers
- *                   If TRUE, include the HTTP headers in the response.
- * @param callback   The callback function.
- * @param data       The user data to pass to the callback function.
- */
-PurpleUtilFetchUrlData *purple_util_fetch_url_request(const gchar *url,
-		gboolean full, const gchar *user_agent, gboolean http11,
-		const gchar *request, gboolean include_headers,
-		PurpleUtilFetchUrlCallback callback, gpointer data);
-
-/**
- * Fetches the data from a URL, and passes it to a callback function.
- *
- * @param url        The URL.
- * @param full       TRUE if this is the full URL, or FALSE if it's a
- *                   partial URL.
- * @param user_agent The user agent field to use, or NULL.
- * @param http11     TRUE if HTTP/1.1 should be used to download the file.
- * @param request    A HTTP request to send to the server instead of the
- *                   standard GET
- * @param include_headers
- *                   If TRUE, include the HTTP headers in the response.
- * @param max_len    The maximum number of bytes to retrieve (-1 for unlimited)
- * @param callback   The callback function.
- * @param data       The user data to pass to the callback function.
- * @deprecated       In 3.0.0, this will go away.
- */
-PurpleUtilFetchUrlData *purple_util_fetch_url_request_len(const gchar *url,
-		gboolean full, const gchar *user_agent, gboolean http11,
-		const gchar *request, gboolean include_headers, gssize max_len,
-		PurpleUtilFetchUrlCallback callback, gpointer data);
-
-/**
- * Fetches the data from a URL, and passes it to a callback function.
- *
- * @param account    The account for which the request is needed, or NULL.
- * @param url        The URL.
- * @param full       TRUE if this is the full URL, or FALSE if it's a
- *                   partial URL.
- * @param user_agent The user agent field to use, or NULL.
- * @param http11     TRUE if HTTP/1.1 should be used to download the file.
- * @param request    A HTTP request to send to the server instead of the
- *                   standard GET
- * @param include_headers
- *                   If TRUE, include the HTTP headers in the response.
- * @param max_len    The maximum number of bytes to retrieve, or a negative
- *                   number to use the default max of 512 KiB.
- * @param callback   The callback function.
- * @param data       The user data to pass to the callback function.
- * @deprecated       In 3.0.0, we'll rename this to "purple_util_fetch_url_request" and get rid of the old one
- */
-PurpleUtilFetchUrlData *purple_util_fetch_url_request_len_with_account(
-		PurpleAccount *account, const gchar *url,
-		gboolean full, const gchar *user_agent, gboolean http11,
-		const gchar *request, gboolean include_headers, gssize max_len,
-		PurpleUtilFetchUrlCallback callback, gpointer data);
-
-/**
- * Cancel a pending URL request started with either
- * purple_util_fetch_url_request() or purple_util_fetch_url().
- *
- * @param url_data The data returned when you initiated the URL fetch.
- */
-void purple_util_fetch_url_cancel(PurpleUtilFetchUrlData *url_data);
 
 /**
  * Decodes a URL into a plain string.
@@ -1248,14 +1220,15 @@ const char *purple_url_encode(const char *str);
 gboolean purple_email_is_valid(const char *address);
 
 /**
- * Checks if the given IP address is a syntactically valid IPv4 address.
+ * Checks if the given IP address is a syntactically valid IPv4 or
+ * IPv6 address.
+ * If you specifically want to check for an IPv4 address use
+ * purple_ipv4_address_is_valid(), or for an IPv6 address use
+ * purple_ipv6_address_is_valid().
  *
  * @param ip The IP address to validate.
  *
  * @return True if the IP address is syntactically correct.
- * @deprecated This function will be replaced with one that validates
- *             as either IPv4 or IPv6 in 3.0.0. If you don't want this,
- *             behavior, use one of the more specific functions.
  */
 gboolean purple_ip_address_is_valid(const char *ip);
 
@@ -1265,7 +1238,6 @@ gboolean purple_ip_address_is_valid(const char *ip);
  * @param ip The IP address to validate.
  *
  * @return True if the IP address is syntactically correct.
- * @since 2.6.0
  */
 gboolean purple_ipv4_address_is_valid(const char *ip);
 
@@ -1275,7 +1247,6 @@ gboolean purple_ipv4_address_is_valid(const char *ip);
  * @param ip The IP address to validate.
  *
  * @return True if the IP address is syntactically correct.
- * @since 2.6.0
  */
 gboolean purple_ipv6_address_is_valid(const char *ip);
 
@@ -1343,7 +1314,6 @@ gchar *purple_utf8_salvage(const char *str);
  * @param str A valid UTF-8 string.
  *
  * @return A newly allocated UTF-8 string without the unprintable characters.
- * @since 2.6.0
  */
 gchar *purple_utf8_strip_unprintables(const gchar *str);
 
@@ -1355,9 +1325,8 @@ gchar *purple_utf8_strip_unprintables(const gchar *str);
  * @param errnum The error code.
  *
  * @return The UTF-8 error message.
- * @since 2.4.0
  */
-G_CONST_RETURN gchar *purple_gai_strerror(gint errnum);
+const gchar *purple_gai_strerror(gint errnum);
 
 /**
  * Compares two UTF-8 strings case-insensitively.  This comparison is
@@ -1368,9 +1337,9 @@ G_CONST_RETURN gchar *purple_gai_strerror(gint errnum);
  * @param a The first string.
  * @param b The second string.
  *
- * @return -1 if @a is less than @a b.
- *          0 if @a is equal to @a b.
- *          1 if @a is greater than @a b.
+ * @return -1 if @a a is less than @a b.
+ *          0 if @a a is equal to @a b.
+ *          1 if @a a is greater than @a b.
  */
 int purple_utf8_strcasecmp(const char *a, const char *b);
 
@@ -1451,14 +1420,13 @@ const char *purple_unescape_filename(const char *str);
 const char *purple_escape_filename(const char *str);
 
 /**
- * This is added temporarily to assist the split of oscar into aim and icq.
- * This should not be used by plugins.
+ * Escapes javascript-unfriendly substrings from a string.
  *
- * @deprecated This function should not be used in new code and should be
- *             removed in 3.0.0.  The aim/icq prpl split happened a long
- *             time ago, and we don't need to keep migrating old data.
+ * @param str The string to escape.
+ *
+ * @return The javascript-safe string (must be g_free'd after use).
  */
-const char *_purple_oscar_convert(const char *act, const char *protocol);
+gchar * purple_escape_js(const gchar *str);
 
 /**
  * Restore default signal handlers for signals which might reasonably have
@@ -1479,12 +1447,85 @@ const gchar *purple_get_host_name(void);
  * Returns a type 4 (random) UUID
  *
  * @return A UUID, caller is responsible for freeing it
- * @since 2.7.0
  */
 gchar *purple_uuid_random(void);
 
-#ifdef __cplusplus
-}
-#endif
+/**
+ * Sets given pointer to NULL.
+ *
+ * Function designed to be used as a GDestroyNotify callback.
+ *
+ * @param data A pointer to variable, which should be set to NULL.
+ */
+void purple_callback_set_zero(gpointer data);
+
+/**
+ * Creates a new GValue of the specified type.
+ *
+ * @param type  The type of data to be held by the GValue
+ *
+ * @return  The created GValue
+ */
+GValue *purple_value_new(GType type);
+
+/**
+ * Duplicates a GValue.
+ *
+ * @param value  The GValue to duplicate
+ *
+ * @return  The duplicated GValue
+ */
+GValue *purple_value_dup(GValue *value);
+
+/**
+ * Frees a GValue.
+ *
+ * @param value  The GValue to free.
+ */
+void purple_value_free(GValue *value);
+
+/**
+ * Calculates a session key for HTTP Digest authentation
+ *
+ * See RFC 2617 for more information.
+ *
+ * @param algorithm    The hash algorithm to use
+ * @param username     The username provided by the user
+ * @param realm        The authentication realm provided by the server
+ * @param password     The password provided by the user
+ * @param nonce        The nonce provided by the server
+ * @param client_nonce The nonce provided by the client
+ *
+ * @return The session key, or @c NULL if an error occurred.
+ */
+gchar *purple_http_digest_calculate_session_key(
+		const gchar *algorithm, const gchar *username,
+		const gchar *realm, const gchar *password,
+		const gchar *nonce, const gchar *client_nonce);
+
+/** Calculate a response for HTTP Digest authentication
+ *
+ * See RFC 2617 for more information.
+ *
+ * @param algorithm         The hash algorithm to use
+ * @param method            The HTTP method in use
+ * @param digest_uri        The URI from the initial request
+ * @param qop               The "quality of protection"
+ * @param entity            The entity body
+ * @param nonce             The nonce provided by the server
+ * @param nonce_count       The nonce count
+ * @param client_nonce      The nonce provided by the client
+ * @param session_key       The session key from purple_cipher_http_digest_calculate_session_key()
+ *
+ * @return The hashed response, or @c NULL if an error occurred.
+ */
+gchar *purple_http_digest_calculate_response(
+		const gchar *algorithm, const gchar *method,
+		const gchar *digest_uri, const gchar *qop,
+		const gchar *entity, const gchar *nonce,
+		const gchar *nonce_count, const gchar *client_nonce,
+		const gchar *session_key);
+
+G_END_DECLS
 
 #endif /* _PURPLE_UTIL_H_ */

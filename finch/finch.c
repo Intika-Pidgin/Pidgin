@@ -27,7 +27,7 @@
 #include "core.h"
 #include "debug.h"
 #include "eventloop.h"
-#include "ft.h"
+#include "xfer.h"
 #include "log.h"
 #include "notify.h"
 #include "prefs.h"
@@ -65,8 +65,8 @@ static GHashTable *finch_ui_get_info(void)
 
 		g_hash_table_insert(ui_info, "name", (char*)_("Finch"));
 		g_hash_table_insert(ui_info, "version", VERSION);
-		g_hash_table_insert(ui_info, "website", "http://pidgin.im");
-		g_hash_table_insert(ui_info, "dev_website", "http://developer.pidgin.im");
+		g_hash_table_insert(ui_info, "website", "https://pidgin.im");
+		g_hash_table_insert(ui_info, "dev_website", "https://developer.pidgin.im");
 		g_hash_table_insert(ui_info, "client_type", "console");
 
 		/*
@@ -126,6 +126,7 @@ static PurpleCoreUiOps core_ops =
 	finch_ui_get_info,
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -219,13 +220,10 @@ static PurpleEventLoopUiOps eventloop_ops =
 	gnt_input_add,
 	g_source_remove,
 	NULL, /* input_get_error */
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -269,7 +267,7 @@ init_libpurple(int argc, char **argv)
 	gboolean opt_version = FALSE;
 	char *opt_config_dir_arg = NULL;
 	gboolean debug_enabled = FALSE;
-	struct stat st;
+	GStatBuf st;
 
 	struct option long_options[] = {
 		{"config",   required_argument, NULL, 'c'},
@@ -339,7 +337,17 @@ init_libpurple(int argc, char **argv)
 
 	/* set a user-specified config directory */
 	if (opt_config_dir_arg != NULL) {
-		purple_util_set_user_dir(opt_config_dir_arg);
+		if (g_path_is_absolute(opt_config_dir_arg)) {
+			purple_util_set_user_dir(opt_config_dir_arg);
+		} else {
+			/* Make an absolute (if not canonical) path */
+			char *cwd = g_get_current_dir();
+			char *path = g_build_path(G_DIR_SEPARATOR_S, cwd, opt_config_dir_arg, NULL);
+			purple_util_set_user_dir(path);
+			g_free(path);
+			g_free(cwd);
+		}
+
 		g_free(opt_config_dir_arg);
 	}
 
@@ -350,29 +358,6 @@ init_libpurple(int argc, char **argv)
 
 	/* We don't want debug-messages to show up and corrupt the display */
 	purple_debug_set_enabled(debug_enabled);
-
-	/* If we're using a custom configuration directory, we
-	 * do NOT want to migrate, or weird things will happen. */
-	if (opt_config_dir_arg == NULL)
-	{
-		if (!purple_core_migrate())
-		{
-			char *old = g_strconcat(purple_home_dir(),
-			                        G_DIR_SEPARATOR_S ".gaim", NULL);
-			char *text = g_strdup_printf(_(
-				"%s encountered errors migrating your settings "
-				"from %s to %s. Please investigate and complete the "
-				"migration by hand. Please report this error at http://developer.pidgin.im"), _("Finch"),
-				old, purple_user_dir());
-
-			g_free(old);
-
-			purple_print_utf8_to_console(stderr, text);
-			g_free(text);
-
-			return 0;
-		}
-	}
 
 	purple_core_set_ui_ops(gnt_core_get_ui_ops());
 	purple_eventloop_set_ui_ops(gnt_eventloop_get_ui_ops());
@@ -394,18 +379,11 @@ init_libpurple(int argc, char **argv)
 		abort();
 	}
 
-	/* TODO: Move blist loading into purple_blist_init() */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* TODO: should this be moved into finch_prefs_init() ? */
 	finch_prefs_update_old();
 
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved("/finch/plugins/loaded");
-
-	/* TODO: Move pounces loading into purple_pounces_init() */
-	purple_pounces_load();
 
 	if (opt_nologin)
 	{
@@ -448,7 +426,13 @@ int main(int argc, char *argv[])
 {
 	signal(SIGPIPE, SIG_IGN);
 
+#if !GLIB_CHECK_VERSION(2, 32, 0)
+	/* GLib threading system is automaticaly initialized since 2.32.
+	 * For earlier versions, it have to be initialized before calling any
+	 * Glib or GTK+ functions.
+	 */
 	g_thread_init(NULL);
+#endif
 
 	g_set_prgname("Finch");
 	g_set_application_name(_("Finch"));

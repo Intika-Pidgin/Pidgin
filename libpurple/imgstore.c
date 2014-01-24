@@ -36,7 +36,7 @@ static GHashTable *imgstore;
 static unsigned int nextid = 0;
 
 /*
- * NOTE: purple_imgstore_add() creates these without zeroing the memory, so
+ * NOTE: purple_imgstore_new() creates these without zeroing the memory, so
  * NOTE: make sure to update that function when adding members.
  */
 struct _PurpleStoredImage
@@ -49,7 +49,7 @@ struct _PurpleStoredImage
 };
 
 PurpleStoredImage *
-purple_imgstore_add(gpointer data, size_t size, const char *filename)
+purple_imgstore_new(gpointer data, size_t size, const char *filename)
 {
 	PurpleStoredImage *img;
 
@@ -82,13 +82,13 @@ purple_imgstore_new_from_file(const char *path)
 		g_error_free(err);
 		return NULL;
 	}
-	return purple_imgstore_add(data, len, path);
+	return purple_imgstore_new(data, len, path);
 }
 
 int
-purple_imgstore_add_with_id(gpointer data, size_t size, const char *filename)
+purple_imgstore_new_with_id(gpointer data, size_t size, const char *filename)
 {
-	PurpleStoredImage *img = purple_imgstore_add(data, size, filename);
+	PurpleStoredImage *img = purple_imgstore_new(data, size, filename);
 	if (!img) {
 		return 0;
 	}
@@ -214,10 +214,8 @@ purple_imgstore_init()
 	void *handle = purple_imgstore_get_handle();
 
 	purple_signal_register(handle, "image-deleting",
-	                       purple_marshal_VOID__POINTER, NULL,
-	                       1,
-	                       purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                        PURPLE_SUBTYPE_STORED_IMAGE));
+	                       purple_marshal_VOID__POINTER, G_TYPE_NONE,
+	                       1, PURPLE_TYPE_STORED_IMAGE);
 
 	imgstore = g_hash_table_new(g_int_hash, g_int_equal);
 }
@@ -228,4 +226,31 @@ purple_imgstore_uninit()
 	g_hash_table_destroy(imgstore);
 
 	purple_signals_unregister_by_instance(purple_imgstore_get_handle());
+}
+
+static PurpleStoredImage *
+purple_imgstore_copy(PurpleStoredImage *img)
+{
+	PurpleStoredImage *img_copy;
+
+	g_return_val_if_fail(img != NULL, NULL);
+
+	img_copy = g_new(PurpleStoredImage, 1);
+	*img_copy = *img;
+
+	return img_copy;
+}
+
+GType
+purple_imgstore_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleStoredImage",
+				(GBoxedCopyFunc)purple_imgstore_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }

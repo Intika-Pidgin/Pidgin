@@ -53,7 +53,7 @@ msn_servconn_new(MsnSession *session, MsnServConnType type)
 
 	servconn->num = session->servconns_count++;
 
-	servconn->tx_buf = purple_circ_buffer_new(MSN_BUF_LEN);
+	servconn->tx_buf = purple_circular_buffer_new(MSN_BUF_LEN);
 	servconn->tx_handler = 0;
 	servconn->timeout_sec = 0;
 	servconn->timeout_handle = 0;
@@ -84,7 +84,7 @@ msn_servconn_destroy(MsnServConn *servconn)
 
 	g_free(servconn->host);
 
-	purple_circ_buffer_destroy(servconn->tx_buf);
+	g_object_unref(G_OBJECT(servconn->tx_buf));
 	if (servconn->tx_handler > 0)
 		purple_input_remove(servconn->tx_handler);
 	if (servconn->timeout_handle > 0)
@@ -225,12 +225,9 @@ msn_servconn_connect(MsnServConn *servconn, const char *host, int port, gboolean
 	{
 		/* HTTP Connection. */
 
-		if (!servconn->httpconn->connected || force)
-			if (!msn_httpconn_connect(servconn->httpconn, host, port))
-				return FALSE;
+		msn_httpconn_connect(servconn->httpconn, host, port);
 
 		servconn->connected = TRUE;
-		servconn->httpconn->virgin = TRUE;
 		servconn_timeout_renew(servconn);
 
 		/* Someone wants to know we connected. */
@@ -334,8 +331,10 @@ servconn_write_cb(gpointer data, gint source, PurpleInputCondition cond)
 	MsnServConn *servconn = data;
 	gssize ret;
 	int writelen;
+	const gchar *output = NULL;
 
-	writelen = purple_circ_buffer_get_max_read(servconn->tx_buf);
+	writelen = purple_circular_buffer_get_max_read(servconn->tx_buf);
+	output = purple_circular_buffer_get_output(servconn->tx_buf);
 
 	if (writelen == 0) {
 		purple_input_remove(servconn->tx_handler);
@@ -343,7 +342,7 @@ servconn_write_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	ret = write(servconn->fd, servconn->tx_buf->outptr, writelen);
+	ret = write(servconn->fd, output, writelen);
 
 	if (ret < 0 && errno == EAGAIN)
 		return;
@@ -352,7 +351,7 @@ servconn_write_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	purple_circ_buffer_mark_read(servconn->tx_buf, ret);
+	purple_circular_buffer_mark_read(servconn->tx_buf, ret);
 	servconn_timeout_renew(servconn);
 }
 
@@ -389,12 +388,12 @@ msn_servconn_write(MsnServConn *servconn, const char *buf, size_t len)
 
 		if (ret < 0 && errno == EAGAIN)
 			ret = 0;
-		if (ret >= 0 && ret < len) {
+		if (ret >= 0 && (size_t)ret < len) {
 			if (servconn->tx_handler == 0)
 				servconn->tx_handler = purple_input_add(
 					servconn->fd, PURPLE_INPUT_WRITE,
 					servconn_write_cb, servconn);
-			purple_circ_buffer_append(servconn->tx_buf, buf + ret,
+			purple_circular_buffer_append(servconn->tx_buf, buf + ret,
 				len - ret);
 		}
 	}
@@ -421,8 +420,10 @@ read_cb(gpointer data, gint source, PurpleInputCondition cond)
 
 	servconn = data;
 
-	if (servconn->type == MSN_SERVCONN_NS)
-		servconn->session->account->gc->last_received = time(NULL);
+	if (servconn->type == MSN_SERVCONN_NS) {
+		PurpleConnection *gc = purple_account_get_connection(servconn->session->account);
+		purple_connection_update_last_received(gc);
+	}
 
 	len = read(servconn->fd, buf, sizeof(buf) - 1);
 	if (len < 0 && errno == EAGAIN)
@@ -462,9 +463,12 @@ MsnServConn *msn_servconn_process_data(MsnServConn *servconn)
 
 		if (servconn->payload_len)
 		{
-			if (servconn->payload_len > servconn->rx_len)
+			if (servconn->rx_len < 0 || servconn->payload_len >
+				(gsize)servconn->rx_len)
+			{
 				/* The payload is still not complete. */
 				break;
+			}
 
 			cur_len = servconn->payload_len;
 			end += cur_len;

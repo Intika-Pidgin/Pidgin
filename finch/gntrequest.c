@@ -41,12 +41,6 @@
 #include "debug.h"
 #include "util.h"
 
-/* XXX: Until gobjectification ... */
-#undef FINCH_GET_DATA
-#undef FINCH_SET_DATA
-#define FINCH_GET_DATA(obj)  purple_request_field_get_ui_data(obj)
-#define FINCH_SET_DATA(obj, data)  purple_request_field_set_ui_data(obj, data)
-
 typedef struct
 {
 	void *user_data;
@@ -162,7 +156,7 @@ finch_request_input(const char *title, const char *primary,
 		gboolean multiline, gboolean masked, gchar *hint,
 		const char *ok_text, GCallback ok_cb,
 		const char *cancel_text, GCallback cancel_cb,
-		PurpleAccount *account, const char *who, PurpleConversation *conv,
+		PurpleRequestCommonParameters *cpar,
 		void *user_data)
 {
 	GntWidget *window, *box, *entry;
@@ -203,7 +197,7 @@ request_choice_cb(GntWidget *button, GntComboBox *combo)
 {
 	PurpleRequestChoiceCb callback = g_object_get_data(G_OBJECT(button), "activate-callback");
 	gpointer data = g_object_get_data(G_OBJECT(button), "activate-userdata");
-	int choice = GPOINTER_TO_INT(gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo))) - 1;
+	gpointer choice = gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo));
 
 	if (callback)
 		callback(data, choice);
@@ -216,10 +210,10 @@ request_choice_cb(GntWidget *button, GntComboBox *combo)
 
 static void *
 finch_request_choice(const char *title, const char *primary,
-		const char *secondary, int default_value,
+		const char *secondary, gpointer default_value,
 		const char *ok_text, GCallback ok_cb,
 		const char *cancel_text, GCallback cancel_cb,
-		PurpleAccount *account, const char *who, PurpleConversation *conv,
+		PurpleRequestCommonParameters *cpar,
 		void *user_data, va_list choices)
 {
 	GntWidget *window, *combo, *box;
@@ -235,7 +229,7 @@ finch_request_choice(const char *title, const char *primary,
 		val = va_arg(choices, int);
 		gnt_combo_box_add_data(GNT_COMBO_BOX(combo), GINT_TO_POINTER(val + 1), text);
 	}
-	gnt_combo_box_set_selected(GNT_COMBO_BOX(combo), GINT_TO_POINTER(default_value + 1));
+	gnt_combo_box_set_selected(GNT_COMBO_BOX(combo), default_value);
 
 	box = setup_button_box(window, user_data, request_choice_cb, combo,
 			ok_text, ok_cb, cancel_text, cancel_cb, NULL);
@@ -263,12 +257,12 @@ request_action_cb(GntWidget *button, GntWidget *window)
 static void*
 finch_request_action(const char *title, const char *primary,
 		const char *secondary, int default_value,
-		PurpleAccount *account, const char *who, PurpleConversation *conv,
+		PurpleRequestCommonParameters *cpar,
 		void *user_data, size_t actioncount,
 		va_list actions)
 {
 	GntWidget *window, *box, *button, *focus = NULL;
-	int i;
+	gsize i;
 
 	window = setup_request_window(title, primary, secondary, PURPLE_REQUEST_ACTION);
 
@@ -287,7 +281,7 @@ finch_request_action(const char *title, const char *primary,
 		g_object_set_data(G_OBJECT(button), "activate-id", GINT_TO_POINTER(i));
 		g_signal_connect(G_OBJECT(button), "activate", G_CALLBACK(request_action_cb), window);
 
-		if (i == default_value)
+		if (default_value >= 0 && i == (gsize)default_value)
 			focus = button;
 	}
 
@@ -323,36 +317,35 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 				continue;
 			if (type == PURPLE_REQUEST_FIELD_BOOLEAN)
 			{
-				GntWidget *check = FINCH_GET_DATA(field);
+				GntWidget *check = purple_request_field_get_ui_data(field);
 				gboolean value = gnt_check_box_get_checked(GNT_CHECK_BOX(check));
 				purple_request_field_bool_set_value(field, value);
 			}
 			else if (type == PURPLE_REQUEST_FIELD_STRING)
 			{
-				GntWidget *entry = FINCH_GET_DATA(field);
+				GntWidget *entry = purple_request_field_get_ui_data(field);
 				const char *text = gnt_entry_get_text(GNT_ENTRY(entry));
 				purple_request_field_string_set_value(field, (text && *text) ? text : NULL);
 			}
 			else if (type == PURPLE_REQUEST_FIELD_INTEGER)
 			{
-				GntWidget *entry = FINCH_GET_DATA(field);
+				GntWidget *entry = purple_request_field_get_ui_data(field);
 				const char *text = gnt_entry_get_text(GNT_ENTRY(entry));
 				int value = (text && *text) ? atoi(text) : 0;
 				purple_request_field_int_set_value(field, value);
 			}
 			else if (type == PURPLE_REQUEST_FIELD_CHOICE)
 			{
-				GntWidget *combo = FINCH_GET_DATA(field);
-				int id;
-				id = GPOINTER_TO_INT(gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo)));
-				purple_request_field_choice_set_value(field, id);
+				GntWidget *combo = purple_request_field_get_ui_data(field);
+				gpointer value = gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo));
+				purple_request_field_choice_set_value(field, value);
 			}
 			else if (type == PURPLE_REQUEST_FIELD_LIST)
 			{
 				GList *list = NULL, *iter;
 				if (purple_request_field_list_get_multi_select(field))
 				{
-					GntWidget *tree = FINCH_GET_DATA(field);
+					GntWidget *tree = purple_request_field_get_ui_data(field);
 
 					iter = purple_request_field_list_get_items(field);
 					for (; iter; iter = iter->next)
@@ -365,7 +358,7 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 				}
 				else
 				{
-					GntWidget *combo = FINCH_GET_DATA(field);
+					GntWidget *combo = purple_request_field_get_ui_data(field);
 					gpointer data = gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo));
 
 					iter = purple_request_field_list_get_items(field);
@@ -384,7 +377,7 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 			}
 			else if (type == PURPLE_REQUEST_FIELD_ACCOUNT)
 			{
-				GntWidget *combo = FINCH_GET_DATA(field);
+				GntWidget *combo = purple_request_field_get_ui_data(field);
 				PurpleAccount *acc = gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo));
 				purple_request_field_account_set_value(field, acc);
 			}
@@ -394,10 +387,11 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 	purple_notify_close_with_handle(button);
 
 	if (!g_object_get_data(G_OBJECT(button), "cancellation-function") &&
-			!purple_request_fields_all_required_filled(fields)) {
+			(!purple_request_fields_all_required_filled(fields) ||
+			!purple_request_fields_all_valid(fields))) {
 		purple_notify_error(button, _("Error"),
-				_("You must fill all the required fields."),
-				_("The required fields are underlined."));
+			_("You must properly fill all the required fields."),
+			_("The required fields are underlined."), NULL);
 		return;
 	}
 
@@ -417,7 +411,7 @@ update_selected_account(GntEntry *username, const char *start, const char *end,
 	GList *accounts = gnt_tree_get_rows(GNT_TREE(accountlist->dropdown));
 	const char *name = gnt_entry_get_text(username);
 	while (accounts) {
-		if (purple_find_buddy(accounts->data, name)) {
+		if (purple_blist_find_buddy(accounts->data, name)) {
 			gnt_combo_box_set_selected(accountlist, accounts->data);
 			gnt_widget_draw(GNT_WIDGET(accountlist));
 			break;
@@ -448,7 +442,7 @@ create_string_field(PurpleRequestField *field, GntWidget **username)
 		PurpleBlistNode *node = purple_blist_get_root();
 		gboolean offline = purple_str_has_suffix(hint, "all");
 		for (; node; node = purple_blist_node_next(node, offline)) {
-			if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+			if (!PURPLE_IS_BUDDY(node))
 				continue;
 			gnt_entry_add_suggest(GNT_ENTRY(entry), purple_buddy_get_name((PurpleBuddy*)node));
 		}
@@ -459,7 +453,7 @@ create_string_field(PurpleRequestField *field, GntWidget **username)
 		PurpleBlistNode *node;
 		for (node = purple_blist_get_root(); node;
 				node = purple_blist_node_get_sibling_next(node)) {
-			if (PURPLE_BLIST_NODE_IS_GROUP(node))
+			if (PURPLE_IS_GROUP(node))
 				gnt_entry_add_suggest(GNT_ENTRY(entry), purple_group_get_name((PurpleGroup *)node));
 		}
 	}
@@ -482,18 +476,25 @@ create_integer_field(PurpleRequestField *field)
 static GntWidget*
 create_choice_field(PurpleRequestField *field)
 {
-	int id;
-	GList *list;
+	GList *it;
 	GntWidget *combo = gnt_combo_box_new();
 
-	list = purple_request_field_choice_get_labels(field);
-	for (id = 1; list; list = list->next, id++)
+	it = purple_request_field_choice_get_elements(field);
+	while (it != NULL)
 	{
-		gnt_combo_box_add_data(GNT_COMBO_BOX(combo),
-				GINT_TO_POINTER(id), list->data);
+		const gchar *text;
+		gpointer value;
+
+		text = it->data;
+		it = g_list_next(it);
+		g_assert(it != NULL);
+		value = it->data;
+		it = g_list_next(it);
+
+		gnt_combo_box_add_data(GNT_COMBO_BOX(combo), value, text);
 	}
 	gnt_combo_box_set_selected(GNT_COMBO_BOX(combo),
-			GINT_TO_POINTER(purple_request_field_choice_get_default_value(field)));
+		purple_request_field_choice_get_default_value(field));
 	return combo;
 }
 
@@ -577,12 +578,28 @@ create_account_field(PurpleRequestField *field)
 	return combo;
 }
 
+static GntWidget*
+create_certificate_field(PurpleRequestField *field)
+{
+	GntWidget *w;
+	PurpleCertificate *cert;
+	char *str;
+
+	cert = purple_request_field_certificate_get_value(field);
+	str = purple_certificate_get_display_string(cert);
+	w = gnt_label_new(str);
+
+	g_free(str);
+
+	return w;
+}
+
 static void *
 finch_request_fields(const char *title, const char *primary,
 		const char *secondary, PurpleRequestFields *allfields,
 		const char *ok, GCallback ok_cb,
 		const char *cancel, GCallback cancel_cb,
-		PurpleAccount *account, const char *who, PurpleConversation *conv,
+		PurpleRequestCommonParameters *cpar,
 		void *userdata)
 {
 	GntWidget *window, *box;
@@ -633,36 +650,40 @@ finch_request_fields(const char *title, const char *primary,
 
 			if (type == PURPLE_REQUEST_FIELD_BOOLEAN)
 			{
-				FINCH_SET_DATA(field, create_boolean_field(field));
+				purple_request_field_set_ui_data(field, create_boolean_field(field));
 			}
 			else if (type == PURPLE_REQUEST_FIELD_STRING)
 			{
-				FINCH_SET_DATA(field, create_string_field(field, &username));
+				purple_request_field_set_ui_data(field, create_string_field(field, &username));
 			}
 			else if (type == PURPLE_REQUEST_FIELD_INTEGER)
 			{
-				FINCH_SET_DATA(field, create_integer_field(field));
+				purple_request_field_set_ui_data(field, create_integer_field(field));
 			}
 			else if (type == PURPLE_REQUEST_FIELD_CHOICE)
 			{
-				FINCH_SET_DATA(field, create_choice_field(field));
+				purple_request_field_set_ui_data(field, create_choice_field(field));
 			}
 			else if (type == PURPLE_REQUEST_FIELD_LIST)
 			{
-				FINCH_SET_DATA(field, create_list_field(field));
+				purple_request_field_set_ui_data(field, create_list_field(field));
 			}
 			else if (type == PURPLE_REQUEST_FIELD_ACCOUNT)
 			{
 				accountlist = create_account_field(field);
-				FINCH_SET_DATA(field, accountlist);
+				purple_request_field_set_ui_data(field, accountlist);
+			}
+			else if (type == PURPLE_REQUEST_FIELD_CERTIFICATE)
+			{
+				purple_request_field_set_ui_data(field, create_certificate_field(field));
 			}
 			else
 			{
-				FINCH_SET_DATA(field, gnt_label_new_with_format(_("Not implemented yet."),
+				purple_request_field_set_ui_data(field, gnt_label_new_with_format(_("Not implemented yet."),
 						GNT_TEXT_FLAG_BOLD));
 			}
 			gnt_box_set_alignment(GNT_BOX(hbox), GNT_ALIGN_MID);
-			gnt_box_add_widget(GNT_BOX(hbox), GNT_WIDGET(FINCH_GET_DATA(field)));
+			gnt_box_add_widget(GNT_BOX(hbox), GNT_WIDGET(purple_request_field_get_ui_data(field)));
 		}
 		if (grlist->next)
 			gnt_box_add_widget(GNT_BOX(box), gnt_hline_new());
@@ -753,11 +774,9 @@ finch_file_request_window(const char *title, const char *path,
 }
 
 static void *
-finch_request_file(const char *title, const char *filename,
-				gboolean savedialog,
-				GCallback ok_cb, GCallback cancel_cb,
-				PurpleAccount *account, const char *who, PurpleConversation *conv,
-				void *user_data)
+finch_request_file(const char *title, const char *filename, gboolean savedialog,
+	GCallback ok_cb, GCallback cancel_cb,
+	PurpleRequestCommonParameters *cpar, void *user_data)
 {
 	FinchFileRequest *data;
 	const char *path;
@@ -775,8 +794,8 @@ finch_request_file(const char *title, const char *filename,
 
 static void *
 finch_request_folder(const char *title, const char *dirname, GCallback ok_cb,
-		GCallback cancel_cb, PurpleAccount *account, const char *who, PurpleConversation *conv,
-		void *user_data)
+	GCallback cancel_cb, PurpleRequestCommonParameters *cpar,
+	void *user_data)
 {
 	FinchFileRequest *data;
 
@@ -791,13 +810,16 @@ finch_request_folder(const char *title, const char *dirname, GCallback ok_cb,
 
 static PurpleRequestUiOps uiops =
 {
+	0,
 	finch_request_input,
 	finch_request_choice,
 	finch_request_action,
+	NULL,
+	NULL,
 	finch_request_fields,
 	finch_request_file,
-	finch_close_request,
 	finch_request_folder,
+	finch_close_request,
 	NULL,
 	NULL,
 	NULL,

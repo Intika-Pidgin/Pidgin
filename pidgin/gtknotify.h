@@ -29,6 +29,8 @@
 #include "notify.h"
 #include "pounce.h"
 
+G_BEGIN_DECLS
+
 /**
  * Adds a buddy pounce to the buddy pounce dialog
  *
@@ -58,5 +60,21 @@ void pidgin_notify_init(void);
  * Uninitialized the GTK+ notifications subsystem.
  */
 void pidgin_notify_uninit(void);
+
+G_END_DECLS
+
+/**
+ * Returns TRUE if there are unseen emails, FALSE otherwise.
+ *
+ * @return TRUE if there are unseen emails, FALSE otherwise.
+ */
+gboolean pidgin_notify_emails_pending(void);
+
+/**
+ * Presents mail dialog to the user.
+ *
+ * @return void.
+ */
+void pidgin_notify_emails_present(void *data);
 
 #endif /* _PIDGINNOTIFY_H_ */

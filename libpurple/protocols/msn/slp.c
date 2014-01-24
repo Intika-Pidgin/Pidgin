@@ -24,6 +24,7 @@
 
 #include "internal.h"
 #include "debug.h"
+#include "http.h"
 
 #include "slp.h"
 #include "slpcall.h"
@@ -35,7 +36,7 @@
 #include "sbconn.h"
 #include "directconn.h"
 #include "p2p.h"
-#include "xfer.h"
+#include "ft.h"
 
 /* seconds to delay between sending buddy icon requests to the server. */
 #define BUDDY_ICON_DELAY 20
@@ -170,23 +171,25 @@ end_user_display(MsnSlpCall *slpcall, MsnSession *session)
 }
 
 static void
-fetched_user_display(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-	const gchar *url_text, gsize len, const gchar *error_message)
+fetched_user_display(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer _data)
 {
-	MsnFetchUserDisplayData *data = user_data;
+	MsnFetchUserDisplayData *data = _data;
 	MsnSession *session = data->session;
 
-	session->url_datas = g_slist_remove(session->url_datas, url_data);
+	if (purple_http_response_is_successful(response)) {
+		size_t len;
+		const gchar *icon_data;
 
-	if (url_text) {
-		purple_buddy_icons_set_for_user(session->account, data->remote_user,
-		                                g_memdup(url_text, len), len,
-		                                data->sha1);
+		icon_data = purple_http_response_get_data(response, &len);
+		purple_buddy_icons_set_for_user(session->account,
+			data->remote_user, g_memdup(icon_data, len), len,
+			data->sha1);
 	}
 
 	end_user_display(NULL, session);
 
-	g_free(user_data);
+	g_free(data);
 }
 
 static void
@@ -248,14 +251,18 @@ msn_request_user_display(MsnUser *user)
 	{
 		const char *url = msn_object_get_url1(obj);
 		if (url) {
+			PurpleHttpRequest *req;
 			MsnFetchUserDisplayData *data = g_new0(MsnFetchUserDisplayData, 1);
-			PurpleUtilFetchUrlData *url_data;
 			data->session = session;
 			data->remote_user = user->passport;
 			data->sha1 = info;
-			url_data = purple_util_fetch_url_len(url, TRUE, NULL, TRUE, 200*1024,
-			                                     fetched_user_display, data);
-			session->url_datas = g_slist_prepend(session->url_datas, url_data);
+
+			req = purple_http_request_new(url);
+			purple_http_request_set_max_len(req, 200*1024);
+			purple_http_connection_set_add(session->http_reqs,
+				purple_http_request(NULL, req,
+					fetched_user_display, data));
+			purple_http_request_unref(req);
 		} else {
 			msn_slplink_request_object(slplink, info, got_user_display,
 			                           end_user_display, obj);
@@ -275,13 +282,13 @@ send_file_cb(MsnSlpCall *slpcall)
 	if (purple_xfer_get_status(xfer) >= PURPLE_XFER_STATUS_STARTED)
 		return;
 
-	purple_xfer_ref(xfer);
+	g_object_ref(xfer);
 	purple_xfer_start(xfer, -1, NULL, 0);
 	if (purple_xfer_get_status(xfer) != PURPLE_XFER_STATUS_STARTED) {
-		purple_xfer_unref(xfer);
+		g_object_unref(xfer);
 		return;
 	}
-	purple_xfer_unref(xfer);
+	g_object_unref(xfer);
 
 	slpmsg = msn_slpmsg_file_new(slpcall, purple_xfer_get_size(xfer));
 
@@ -291,7 +298,7 @@ send_file_cb(MsnSlpCall *slpcall)
 static gchar *
 gen_context(PurpleXfer *xfer, const char *file_name, const char *file_path)
 {
-	gsize size = 0;
+	goffset size = 0;
 	MsnFileContext context;
 	gchar *u8 = NULL;
 	gchar *ret;
@@ -322,7 +329,7 @@ gen_context(PurpleXfer *xfer, const char *file_name, const char *file_path)
 
 	preview = purple_xfer_get_thumbnail(xfer, &preview_len);
 
-	context.length = MSN_FILE_CONTEXT_SIZE;
+	context.length = MSN_FILE_CONTEXT_SIZE_V2;
 	context.version = 2; /* V.3 contains additional unnecessary data */
 	context.file_size = size;
 	if (preview)
@@ -336,15 +343,17 @@ gen_context(PurpleXfer *xfer, const char *file_name, const char *file_path)
 	}
 	memset(&context.file_name[currentChar], 0x00, (MAX_FILE_NAME_LEN - currentChar) * 2);
 
+#if 0
 	memset(&context.unknown1, 0, sizeof(context.unknown1));
 	context.unknown2 = 0xffffffff;
+#endif
 
 	/* Mind the cast, as in, don't free it after! */
 	context.preview = (char *)preview;
 	context.preview_len = preview_len;
 
 	u8 = msn_file_context_to_wire(&context);
-	ret = purple_base64_encode((const guchar *)u8, MSN_FILE_CONTEXT_SIZE + preview_len);
+	ret = purple_base64_encode((const guchar *)u8, MSN_FILE_CONTEXT_SIZE_V2 + preview_len);
 
 	g_free(uni);
 	g_free(u8);
@@ -364,7 +373,7 @@ msn_request_ft(PurpleXfer *xfer)
 	fn = purple_xfer_get_filename(xfer);
 	fp = purple_xfer_get_local_filename(xfer);
 
-	slplink = xfer->data;
+	slplink = purple_xfer_get_protocol_data(xfer);
 
 	g_return_if_fail(slplink != NULL);
 	g_return_if_fail(fp != NULL);
@@ -376,7 +385,7 @@ msn_request_ft(PurpleXfer *xfer)
 	slpcall->end_cb = msn_xfer_end_cb;
 	slpcall->cb = msn_xfer_completed_cb;
 	slpcall->xfer = xfer;
-	purple_xfer_ref(slpcall->xfer);
+	g_object_ref(slpcall->xfer);
 
 	slpcall->pending = TRUE;
 
@@ -384,7 +393,7 @@ msn_request_ft(PurpleXfer *xfer)
 	purple_xfer_set_read_fnc(xfer, msn_xfer_read);
 	purple_xfer_set_write_fnc(xfer, msn_xfer_write);
 
-	xfer->data = slpcall;
+	purple_xfer_set_protocol_data(xfer, slpcall);
 
 	context = gen_context(xfer, fn, fp);
 

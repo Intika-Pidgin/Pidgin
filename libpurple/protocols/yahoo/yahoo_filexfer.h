@@ -22,17 +22,12 @@
 #ifndef _YAHOO_FILEXFER_H_
 #define _YAHOO_FILEXFER_H_
 
-#include "ft.h"
+#include "xfer.h"
 
 /**
  * Process ymsg events, particular IMViroments like Doodle
  */
 void yahoo_process_p2pfilexfer( PurpleConnection *gc, struct yahoo_packet *pkt );
-
-/**
- * Process ymsg file receive invites.
- */
-void yahoo_process_filetransfer(PurpleConnection *gc, struct yahoo_packet *pkt);
 
 /**
  * Create a new PurpleXfer

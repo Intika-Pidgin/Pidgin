@@ -21,11 +21,12 @@
  */
 
 #include "internal.h"
+#include "glibcompat.h"
 #include "theme.h"
 #include "util.h"
 
 #define PURPLE_THEME_GET_PRIVATE(PurpleTheme) \
-	((PurpleThemePrivate *) ((PurpleTheme)->priv))
+	(G_TYPE_INSTANCE_GET_PRIVATE((PurpleTheme), PURPLE_TYPE_THEME, PurpleThemePrivate))
 
 void purple_theme_set_type_string(PurpleTheme *theme, const gchar *type);
 
@@ -43,12 +44,6 @@ typedef struct {
 } PurpleThemePrivate;
 
 /******************************************************************************
- * Globals
- *****************************************************************************/
-
-static GObjectClass *parent_class = NULL;
-
-/******************************************************************************
  * Enums
  *****************************************************************************/
 
@@ -59,8 +54,16 @@ enum {
 	PROP_AUTHOR,
 	PROP_TYPE,
 	PROP_DIR,
-	PROP_IMAGE
+	PROP_IMAGE,
+	PROP_LAST
 };
+
+/******************************************************************************
+ * Globals
+ *****************************************************************************/
+
+static GObjectClass *parent_class = NULL;
+static GParamSpec *properties[PROP_LAST];
 
 /******************************************************************************
  * GObject Stuff
@@ -129,14 +132,6 @@ purple_theme_set_property(GObject *obj, guint param_id, const GValue *value,
 }
 
 static void
-purple_theme_init(GTypeInstance *instance,
-		gpointer klass)
-{
-	PurpleTheme *theme = PURPLE_THEME(instance);
-	theme->priv = g_new0(PurpleThemePrivate, 1);
-}
-
-static void
 purple_theme_finalize(GObject *obj)
 {
 	PurpleTheme *theme = PURPLE_THEME(obj);
@@ -156,55 +151,54 @@ static void
 purple_theme_class_init(PurpleThemeClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-	GParamSpec *pspec;
 
 	parent_class = g_type_class_peek_parent(klass);
+
+	g_type_class_add_private(klass, sizeof(PurpleThemePrivate));
 
 	obj_class->get_property = purple_theme_get_property;
 	obj_class->set_property = purple_theme_set_property;
 	obj_class->finalize = purple_theme_finalize;
 
 	/* NAME */
-	pspec = g_param_spec_string("name", "Name",
+	properties[PROP_NAME] = g_param_spec_string("name", "Name",
 			"The name of the theme",
 			NULL,
-			G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
-	g_object_class_install_property(obj_class, PROP_NAME, pspec);
+			G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
 	/* DESCRIPTION */
-	pspec = g_param_spec_string("description", "Description",
+	properties[PROP_DESCRIPTION] = g_param_spec_string("description",
+			"Description",
 			"The description of the theme",
 			NULL,
-			G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
-	g_object_class_install_property(obj_class, PROP_DESCRIPTION, pspec);
+			G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
 	/* AUTHOR */
-	pspec = g_param_spec_string("author", "Author",
+	properties[PROP_AUTHOR] = g_param_spec_string("author", "Author",
 			"The author of the theme",
 			NULL,
-			G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
-	g_object_class_install_property(obj_class, PROP_AUTHOR, pspec);
+			G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
 	/* TYPE STRING (read only) */
-	pspec = g_param_spec_string("type", "Type",
+	properties[PROP_TYPE] = g_param_spec_string("type", "Type",
 			"The string representing the type of the theme",
 			NULL,
-			G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
-	g_object_class_install_property(obj_class, PROP_TYPE, pspec);
+			G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
+			G_PARAM_STATIC_STRINGS);
 
 	/* DIRECTORY */
-	pspec = g_param_spec_string("directory", "Directory",
+	properties[PROP_DIR] = g_param_spec_string("directory", "Directory",
 			"The directory that contains the theme and all its files",
 			NULL,
-			G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
-	g_object_class_install_property(obj_class, PROP_DIR, pspec);
+			G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
 	/* PREVIEW IMAGE */
-	pspec = g_param_spec_string("image", "Image",
+	properties[PROP_IMAGE] = g_param_spec_string("image", "Image",
 			"A preview image of the theme",
 			NULL,
-			G_PARAM_READWRITE);
-	g_object_class_install_property(obj_class, PROP_IMAGE, pspec);
+			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties(obj_class, PROP_LAST, properties);
 }
 
 
@@ -222,7 +216,7 @@ purple_theme_get_type(void)
 			NULL, /* class_data */
 			sizeof(PurpleTheme),
 			0, /* n_preallocs */
-			purple_theme_init, /* instance_init */
+			NULL, /* instance_init */
 			NULL, /* value table */
 		};
 		type = g_type_register_static (G_TYPE_OBJECT,
@@ -273,6 +267,8 @@ purple_theme_set_name(PurpleTheme *theme, const gchar *name)
 
 	g_free(priv->name);
 	priv->name = theme_clean_text(name);
+
+	g_object_notify_by_pspec(G_OBJECT(theme), properties[PROP_NAME]);
 }
 
 const gchar *
@@ -297,6 +293,8 @@ purple_theme_set_description(PurpleTheme *theme, const gchar *description)
 
 	g_free(priv->description);
 	priv->description = theme_clean_text(description);
+
+	g_object_notify_by_pspec(G_OBJECT(theme), properties[PROP_DESCRIPTION]);
 }
 
 const gchar *
@@ -321,6 +319,8 @@ purple_theme_set_author(PurpleTheme *theme, const gchar *author)
 
 	g_free(priv->author);
 	priv->author = theme_clean_text(author);
+
+	g_object_notify_by_pspec(G_OBJECT(theme), properties[PROP_AUTHOR]);
 }
 
 const gchar *
@@ -346,6 +346,8 @@ purple_theme_set_type_string(PurpleTheme *theme, const gchar *type)
 
 	g_free(priv->type);
 	priv->type = g_strdup(type);
+
+	g_object_notify_by_pspec(G_OBJECT(theme), properties[PROP_TYPE]);
 }
 
 const gchar *
@@ -370,6 +372,8 @@ purple_theme_set_dir(PurpleTheme *theme, const gchar *dir)
 
 	g_free(priv->dir);
 	priv->dir = g_strdup(dir);
+
+	g_object_notify_by_pspec(G_OBJECT(theme), properties[PROP_DIR]);
 }
 
 const gchar *
@@ -406,4 +410,6 @@ purple_theme_set_image(PurpleTheme *theme, const gchar *img)
 
 	g_free(priv->img);
 	priv->img = g_strdup(img);
+
+	g_object_notify_by_pspec(G_OBJECT(theme), properties[PROP_IMAGE]);
 }

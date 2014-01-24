@@ -29,7 +29,6 @@
 #define _PURPLE_DBUS_SERVER_H_
 
 #include "dbus-purple.h"
-#include "value.h"
 
 G_BEGIN_DECLS
 
@@ -84,7 +83,7 @@ struct _PurpleDBusType {
 		title = g_strdup_printf("Unable to Load %s Plugin", plugin->info->name); \
 		purple_notify_error(NULL, title, \
 				_("Purple's D-BUS server is not running for the reason listed below"), \
-				_(purple_dbus_get_init_error())); \
+				_(purple_dbus_get_init_error()), NULL); \
 		g_free(title); \
 		return FALSE; \
 	}
@@ -141,12 +140,11 @@ void purple_dbus_unregister_pointer(gpointer node);
 
     @param name        The name of the signal ("bla-bla-blaa")
     @param num_values  The number of parameters.
-    @param values      Array of pointers to #PurpleValue objects representing
-                       the types of the parameters.
+    @param types       Array of GTypes representing the types of the parameters.
     @param vargs       A va_list containing the actual parameters.
   */
 void purple_dbus_signal_emit_purple(const char *name, int num_values,
-				PurpleValue **values, va_list vargs);
+				GType *types, va_list vargs);
 
 /**
  * Returns whether Purple's D-BUS subsystem is up and running.  If it's
@@ -173,8 +171,6 @@ void *purple_dbus_get_handle(void);
 
 /**
  * Determines whether this instance owns the DBus service name
- *
- * @since 2.1.0
  */
 gboolean purple_dbus_is_owner(void);
 

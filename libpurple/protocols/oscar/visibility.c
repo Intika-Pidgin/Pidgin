@@ -51,7 +51,7 @@ get_buddy_list_type(OscarData *od)
 static gboolean
 is_buddy_on_list(OscarData *od, const char *bname)
 {
-	return aim_ssi_itemlist_finditem(od->ssi.local, NULL, bname, get_buddy_list_type(od)) != NULL;
+	return aim_ssi_itemlist_finditem(&od->ssi.local, NULL, bname, get_buddy_list_type(od)) != NULL;
 }
 
 static void
@@ -94,7 +94,7 @@ show_private_list(PurplePluginAction *action, guint16 list_type, const gchar *ti
 	GSList *buddies, *filtered_buddies, *cur;
 	gchar *text, *secondary;
 
-	buddies = purple_find_buddies(account, NULL);
+	buddies = purple_blist_find_buddies(account, NULL);
 	filtered_buddies = NULL;
 	for (cur = buddies; cur != NULL; cur = cur->next) {
 		PurpleBuddy *buddy;
@@ -102,7 +102,7 @@ show_private_list(PurplePluginAction *action, guint16 list_type, const gchar *ti
 
 		buddy = cur->data;
 		bname = purple_buddy_get_name(buddy);
-		if (aim_ssi_itemlist_finditem(od->ssi.local, NULL, bname, list_type)) {
+		if (aim_ssi_itemlist_finditem(&od->ssi.local, NULL, bname, list_type)) {
 			filtered_buddies = g_slist_prepend(filtered_buddies, buddy);
 		}
 	}

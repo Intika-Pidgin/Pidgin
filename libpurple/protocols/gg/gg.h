@@ -24,49 +24,59 @@
 #ifndef _PURPLE_GG_H
 #define _PURPLE_GG_H
 
+#define GGP_UIN_LEN_MAX 10
+
+#ifdef _WIN32
+#define GGP_ENABLE_GG11 1
+#else
+#define GGP_ENABLE_GG11 0
+#endif
+
 #include <libgadu.h>
+
 #include "internal.h"
 #include "search.h"
 #include "connection.h"
 
-
-#define PUBDIR_RESULTS_MAX 20
-
-
-typedef struct
-{
-	char *name;
-	GList *participants;
-
-} GGPChat;
-
-typedef void (*GGPTokenCallback)(PurpleConnection *);
-
-typedef struct
-{
-	char *id;
-	char *data;
-	unsigned int size;
-
-	struct gg_http *req;
-	guint inpa;
-
-	GGPTokenCallback cb;
-
-} GGPToken;
+#include "image.h"
+#include "avatar.h"
+#include "account.h"
+#include "roster.h"
+#include "multilogon.h"
+#include "status.h"
+#include "chat.h"
+#include "message-prpl.h"
+#include "edisc.h"
 
 typedef struct {
-
 	struct gg_session *session;
-	GGPToken *token;
-	GList *chats;
-	GGPSearches *searches;
-	int chats_count;
-	GList *pending_richtext_messages;
-	GHashTable *pending_images;
-	gboolean status_broadcasting; //When TRUE status is visible to all, when FALSE status is visible only to friends.
+	guint inpa;
+
+	gchar *imtoken;
+	gboolean imtoken_warned;
+
+	ggp_image_session_data *image_data;
+	ggp_avatar_session_data avatar_data;
+	ggp_roster_session_data roster_data;
+	ggp_multilogon_session_data *multilogon_data;
+	ggp_status_session_data *status_data;
+	ggp_chat_session_data *chat_data;
+	ggp_message_session_data *message_data;
+	ggp_edisc_session_data *edisc_data;
 } GGPInfo;
 
-#endif /* _PURPLE_GG_H */
+typedef struct
+{
+	gboolean blocked;
+	gboolean not_a_friend;
+} ggp_buddy_data;
 
-/* vim: set ts=8 sts=0 sw=8 noet: */
+ggp_buddy_data * ggp_buddy_get_data(PurpleBuddy *buddy);
+
+const gchar * ggp_get_imtoken(PurpleConnection *gc);
+
+uin_t ggp_own_uin(PurpleConnection *gc);
+
+void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond);
+
+#endif /* _PURPLE_GG_H */

@@ -32,9 +32,16 @@
 #include <glib.h>
 
 typedef struct _PurpleNotifyUserInfoEntry	PurpleNotifyUserInfoEntry;
-typedef struct _PurpleNotifyUserInfo	PurpleNotifyUserInfo;
+
+#define  PURPLE_TYPE_NOTIFY_USER_INFO  (purple_notify_user_info_get_type())
+typedef struct _PurpleNotifyUserInfo		PurpleNotifyUserInfo;
+
+/** @copydoc _PurpleNotifySearchColumn */
+typedef struct _PurpleNotifySearchColumn	PurpleNotifySearchColumn;
 
 #include "connection.h"
+#include "request.h"
+
 
 /**
  * Notification close callbacks.
@@ -106,14 +113,6 @@ typedef enum
 	PURPLE_NOTIFY_USER_INFO_ENTRY_SECTION_HEADER
 } PurpleNotifyUserInfoEntryType;
 
-/**
- * Single column of a search result.
- */
-typedef struct
-{
-	char *title; /**< Title of the column. */
-
-} PurpleNotifySearchColumn;
 
 
 /**
@@ -144,7 +143,8 @@ typedef struct
 typedef struct
 {
 	void *(*notify_message)(PurpleNotifyMsgType type, const char *title,
-	                        const char *primary, const char *secondary);
+		const char *primary, const char *secondary,
+		PurpleRequestCommonParameters *cpar);
 
 	void *(*notify_email)(PurpleConnection *gc,
 	                      const char *subject, const char *from,
@@ -173,6 +173,7 @@ typedef struct
 
 	void (*close_notify)(PurpleNotifyType type, void *ui_handle);
 
+	/*< private >*/
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
@@ -180,9 +181,7 @@ typedef struct
 } PurpleNotifyUiOps;
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 
 /**************************************************************************/
@@ -266,13 +265,40 @@ void purple_notify_searchresults_button_add_labeled(PurpleNotifySearchResults *r
 PurpleNotifySearchResults *purple_notify_searchresults_new(void);
 
 /**
- * Returns a newly created search result column object.
+ * Returns a newly created search result column object.  The column defaults
+ * to being visible.
  *
  * @param title Title of the column. NOTE: Title will get g_strdup()ed.
  *
  * @return The new search column object.
  */
 PurpleNotifySearchColumn *purple_notify_searchresults_column_new(const char *title);
+
+/**
+ * Returns the title of the column
+ *
+ * @param column The search column object.
+ *
+ * @return The title of the column
+ */
+const char *purple_notify_searchresult_column_get_title(const PurpleNotifySearchColumn *column);
+
+/**
+ * Sets whether or not a search result column is visible.
+ *
+ * @param column  The search column object.
+ * @param visible TRUE if visible, or FALSE if not.
+ */
+void purple_notify_searchresult_column_set_visible(PurpleNotifySearchColumn *column, gboolean visible);
+
+/**
+ * Returns whether or not a search result column is visible.
+ *
+ * @param column The search column object.
+ *
+ * @return TRUE if the search result column is visible. FALSE otherwise.
+ */
+gboolean purple_notify_searchresult_column_is_visible(const PurpleNotifySearchColumn *column);
 
 /**
  * Adds a new column to the search result object.
@@ -292,92 +318,6 @@ void purple_notify_searchresults_column_add(PurpleNotifySearchResults *results,
 void purple_notify_searchresults_row_add(PurpleNotifySearchResults *results,
 									   GList *row);
 
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_NOTIFY_C_)
-/**
- * Returns a number of the rows in the search results object.
- *
- * @deprecated This function will be removed in Pidgin 3.0.0 unless
- *             there is sufficient demand to keep it.  Using this
- *             function encourages looping through the results
- *             inefficiently.  Instead of using this function you
- *             should iterate through the results using a loop
- *             similar to this:
- *                for (l = results->rows; l != NULL; l = l->next)
- *             If you really need to get the number of rows you
- *             can use g_list_length(results->rows).
- *
- * @param results The search results object.
- *
- * @return Number of the result rows.
- */
-guint purple_notify_searchresults_get_rows_count(PurpleNotifySearchResults *results);
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_NOTIFY_C_)
-/**
- * Returns a number of the columns in the search results object.
- *
- * @deprecated This function will be removed in Pidgin 3.0.0 unless
- *             there is sufficient demand to keep it.  Using this
- *             function encourages looping through the columns
- *             inefficiently.  Instead of using this function you
- *             should iterate through the columns using a loop
- *             similar to this:
- *                for (l = results->columns; l != NULL; l = l->next)
- *             If you really need to get the number of columns you
- *             can use g_list_length(results->columns).
- *
- * @param results The search results object.
- *
- * @return Number of the columns.
- */
-guint purple_notify_searchresults_get_columns_count(PurpleNotifySearchResults *results);
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_NOTIFY_C_)
-/**
- * Returns a row of the results from the search results object.
- *
- * @deprecated This function will be removed in Pidgin 3.0.0 unless
- *             there is sufficient demand to keep it.  Using this
- *             function encourages looping through the results
- *             inefficiently.  Instead of using this function you
- *             should iterate through the results using a loop
- *             similar to this:
- *                for (l = results->rows; l != NULL; l = l->next)
- *             If you really need to get the data for a particular
- *             row you can use g_list_nth_data(results->rows, row_id).
- *
- * @param results The search results object.
- * @param row_id  Index of the row to be returned.
- *
- * @return Row of the results.
- */
-GList *purple_notify_searchresults_row_get(PurpleNotifySearchResults *results,
-										 unsigned int row_id);
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_NOTIFY_C_)
-/**
- * Returns a title of the search results object's column.
- *
- * @deprecated This function will be removed in Pidgin 3.0.0 unless
- *             there is sufficient demand to keep it.  Using this
- *             function encourages looping through the columns
- *             inefficiently.  Instead of using this function you
- *             should iterate through the name of a particular
- *             column you can use
- *             g_list_nth_data(results->columns, row_id).
- *
- * @param results   The search results object.
- * @param column_id Index of the column.
- *
- * @return Title of the column.
- */
-char *purple_notify_searchresults_column_get_title(PurpleNotifySearchResults *results,
-												 unsigned int column_id);
-#endif
-
 /*@}*/
 
 /**************************************************************************/
@@ -393,6 +333,8 @@ char *purple_notify_searchresults_column_get_title(PurpleNotifySearchResults *re
  * @param title     The title of the message.
  * @param primary   The main point of the message.
  * @param secondary The secondary information.
+ * @param cpar      The #PurpleRequestCommonParameters associated with this
+ *                  request, or @c NULL if none is.
  * @param cb        The callback to call when the user closes
  *                  the notification.
  * @param user_data The data to pass to the callback.
@@ -400,9 +342,9 @@ char *purple_notify_searchresults_column_get_title(PurpleNotifySearchResults *re
  * @return A UI-specific handle.
  */
 void *purple_notify_message(void *handle, PurpleNotifyMsgType type,
-						  const char *title, const char *primary,
-						  const char *secondary, PurpleNotifyCloseCallback cb,
-						  gpointer user_data);
+	const char *title, const char *primary, const char *secondary,
+	PurpleRequestCommonParameters *cpar, PurpleNotifyCloseCallback cb,
+	gpointer user_data);
 
 /**
  * Displays a single email notification to the user.
@@ -488,6 +430,11 @@ void *purple_notify_userinfo(PurpleConnection *gc, const char *who,
 						   gpointer user_data);
 
 /**
+ * Returns the GType for the PurpleNotifyUserInfo boxed structure.
+ */
+GType purple_notify_user_info_get_type(void);
+
+/**
  * Create a new PurpleNotifyUserInfo which is suitable for passing to
  * purple_notify_userinfo()
  *
@@ -506,20 +453,20 @@ void purple_notify_user_info_destroy(PurpleNotifyUserInfo *user_info);
  * Retrieve the array of PurpleNotifyUserInfoEntry objects from a
  * PurpleNotifyUserInfo
  *
- * This GList may be manipulated directly with normal GList functions such
- * as g_list_insert(). Only PurpleNotifyUserInfoEntry are allowed in the
- * list.  If a PurpleNotifyUserInfoEntry item is added to the list, it
- * should not be g_free()'d by the caller; PurpleNotifyUserInfo will g_free
- * it when destroyed.
+ * This GQueue may be manipulated directly with normal GQueue functions such
+ * as g_queue_push_tail(). Only PurpleNotifyUserInfoEntry are allowed in the
+ * queue.  If a PurpleNotifyUserInfoEntry item is added to the queue, it
+ * should not be freed by the caller; PurpleNotifyUserInfo will free it when
+ * destroyed.
  *
  * To remove a PurpleNotifyUserInfoEntry, use
- * purple_notify_user_info_remove_entry(). Do not use the GList directly.
+ * purple_notify_user_info_remove_entry(). Do not use the GQueue directly.
  *
  * @param user_info  The PurpleNotifyUserInfo
  *
- * @constreturn A GList of PurpleNotifyUserInfoEntry objects
+ * @constreturn A GQueue of PurpleNotifyUserInfoEntry objects.
  */
-GList *purple_notify_user_info_get_entries(PurpleNotifyUserInfo *user_info);
+GQueue *purple_notify_user_info_get_entries(PurpleNotifyUserInfo *user_info);
 
 /**
  * Create a textual representation of a PurpleNotifyUserInfo, separating
@@ -547,59 +494,45 @@ char *purple_notify_user_info_get_text_with_newline(PurpleNotifyUserInfo *user_i
  *                   the UI should treat label as independent and not
  *                   include a colon if it would otherwise.
  */
-/*
- * TODO: In 3.0.0 this function should be renamed to
- *       purple_notify_user_info_add_pair_html().  And optionally
- *       purple_notify_user_info_add_pair_plaintext() could be renamed to
- *       purple_notify_user_info_add_pair().
- */
-void purple_notify_user_info_add_pair(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
+void purple_notify_user_info_add_pair_html(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 /**
- * Like purple_notify_user_info_add_pair, but value should be plaintext
+ * Like purple_notify_user_info_add_pair_html, but value should be plaintext
  * and will be escaped using g_markup_escape_text().
  */
 void purple_notify_user_info_add_pair_plaintext(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 /**
- * Prepend a label/value pair to a PurpleNotifyUserInfo object
- *
- * @param user_info  The PurpleNotifyUserInfo
- * @param label      A label, which for example might be displayed by a
- *                   UI with a colon after it ("Status:"). Do not include
- *                   a colon.  If NULL, value will be displayed without a
- *                   label.
- * @param value      The value, which might be displayed by a UI after
- *                   the label.  If NULL, label will still be displayed;
- *                   the UI should then treat label as independent and not
- *                   include a colon if it would otherwise.
+ * Like purple_notify_user_info_add_pair_html, but the pair is inserted
+ * at the beginning of the list.
  */
-void purple_notify_user_info_prepend_pair(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
+void purple_notify_user_info_prepend_pair_html(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_NOTIFY_C_)
+/**
+ * Like purple_notify_user_info_prepend_pair_html, but value should be plaintext
+ * and will be escaped using g_markup_escape_text().
+ */
+void purple_notify_user_info_prepend_pair_plaintext(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
+
 /**
  * Remove a PurpleNotifyUserInfoEntry from a PurpleNotifyUserInfo object
  * without freeing the entry.
  *
  * @param user_info        The PurpleNotifyUserInfo
  * @param user_info_entry  The PurpleNotifyUserInfoEntry
- *
- * @deprecated Nothing is using this function and it should be removed
- *             in 3.0.0.  Or, if we decide we want to keep it in 3.0.0
- *             then we should make purple_notify_user_info_entry_destroy
- *             public so that entries can be free'd after they're removed.
  */
 void purple_notify_user_info_remove_entry(PurpleNotifyUserInfo *user_info, PurpleNotifyUserInfoEntry *user_info_entry);
-#endif
 
 /**
  * Create a new PurpleNotifyUserInfoEntry
  *
  * If added to a PurpleNotifyUserInfo object, this should not be free()'d,
  * as PurpleNotifyUserInfo will do so when destroyed.
- * purple_notify_user_info_add_pair() and
- * purple_notify_user_info_prepend_pair() are convenience methods for
- * creating entries and adding them to a PurpleNotifyUserInfo.
+ * purple_notify_user_info_add_pair_html(),
+ * purple_notify_user_info_add_pair_plaintext(),
+ * purple_notify_user_info_prepend_pair_html() and
+ * purple_notify_user_info_prepend_pair_plaintext() are convenience
+ * methods for creating entries and adding them to a PurpleNotifyUserInfo.
  *
  * @param label  A label, which for example might be displayed by a UI
  *               with a colon after it ("Status:"). Do not include a
@@ -614,6 +547,13 @@ void purple_notify_user_info_remove_entry(PurpleNotifyUserInfo *user_info, Purpl
 PurpleNotifyUserInfoEntry *purple_notify_user_info_entry_new(const char *label, const char *value);
 
 /**
+ * Destroy a PurpleNotifyUserInfoEntry
+ *
+ * @param user_info_entry  The PurpleNotifyUserInfoEntry
+ */
+void purple_notify_user_info_entry_destroy(PurpleNotifyUserInfoEntry *user_info_entry);
+
+/**
  * Add a section break.  A UI might display this as a horizontal line.
  *
  * @param user_info  The PurpleNotifyUserInfo
@@ -624,7 +564,6 @@ void purple_notify_user_info_add_section_break(PurpleNotifyUserInfo *user_info);
  * Prepend a section break.  A UI might display this as a horizontal line.
  *
  * @param user_info  The PurpleNotifyUserInfo
- * @since 2.5.0
  */
 void purple_notify_user_info_prepend_section_break(PurpleNotifyUserInfo *user_info);
 
@@ -643,7 +582,6 @@ void purple_notify_user_info_add_section_header(PurpleNotifyUserInfo *user_info,
  *
  * @param user_info  The PurpleNotifyUserInfo
  * @param label      The name of the section
- * @since 2.5.0
  */
 void purple_notify_user_info_prepend_section_header(PurpleNotifyUserInfo *user_info, const char *label);
 
@@ -719,6 +657,18 @@ void purple_notify_user_info_entry_set_type(PurpleNotifyUserInfoEntry *user_info
 void *purple_notify_uri(void *handle, const char *uri);
 
 /**
+ * Checks, if passed UI handle is valid.
+ *
+ * @param ui_handle The UI handle.
+ * @param type      The pointer to variable, where request type may be stored
+ *                  (may be @c NULL).
+ *
+ * @return TRUE, if handle is valid, FALSE otherwise.
+ */
+gboolean
+purple_notify_is_valid_ui_handle(void *ui_handle, PurpleNotifyType *type);
+
+/**
  * Closes a notification.
  *
  * This should be used only by the UI operation functions and part of the
@@ -739,23 +689,23 @@ void purple_notify_close_with_handle(void *handle);
 /**
  * A wrapper for purple_notify_message that displays an information message.
  */
-#define purple_notify_info(handle, title, primary, secondary) \
+#define purple_notify_info(handle, title, primary, secondary, cpar) \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_INFO, (title), \
-						(primary), (secondary), NULL, NULL)
+		(primary), (secondary), (cpar), NULL, NULL)
 
 /**
  * A wrapper for purple_notify_message that displays a warning message.
  */
-#define purple_notify_warning(handle, title, primary, secondary) \
+#define purple_notify_warning(handle, title, primary, secondary, cpar) \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_WARNING, (title), \
-						(primary), (secondary), NULL, NULL)
+		(primary), (secondary), (cpar), NULL, NULL)
 
 /**
  * A wrapper for purple_notify_message that displays an error message.
  */
-#define purple_notify_error(handle, title, primary, secondary) \
+#define purple_notify_error(handle, title, primary, secondary, cpar) \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_ERROR, (title), \
-						(primary), (secondary), NULL, NULL)
+		(primary), (secondary), (cpar), NULL, NULL)
 
 /*@}*/
 
@@ -807,8 +757,6 @@ void purple_notify_uninit(void);
 /*@}*/
 
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_NOTIFY_H_ */

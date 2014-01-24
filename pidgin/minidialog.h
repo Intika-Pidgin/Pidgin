@@ -84,6 +84,7 @@ typedef struct {
 	 */
 	GtkBox *contents;
 
+	/*< private >*/
 	gpointer priv;
 } PidginMiniDialog;
 
@@ -91,6 +92,7 @@ typedef struct {
 typedef struct {
 	GtkBoxClass parent_class;
 
+	/*< private >*/
 	void (*_purple_reserved1) (void);
 	void (*_purple_reserved2) (void);
 	void (*_purple_reserved3) (void);
@@ -143,11 +145,6 @@ void pidgin_mini_dialog_set_description(PidginMiniDialog *mini_dialog,
  *  @param mini_dialog a mini-dialog
  */
 void pidgin_mini_dialog_enable_description_markup(PidginMiniDialog *mini_dialog);
-
-/** Mini-dialogs support hyperlinks in their description
- *  (you should first call pidgin_mini_dialog_enable_description_markup() on a given
- *  dialog to enable them). */
-gboolean pidgin_mini_dialog_links_supported(void);
 
 /** Sets a callback which gets invoked when a hyperlink in the dialog's description is clicked on.
  *  @param mini_dialog a mini-dialog
