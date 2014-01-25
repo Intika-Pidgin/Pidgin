@@ -927,7 +927,7 @@ static void send_attention_cb(GtkWidget *attention, GtkIMHtmlToolbar *toolbar)
 	PurpleConnection *gc = purple_conversation_get_connection(conv);
 
 	toggle_button_set_active_block(GTK_TOGGLE_BUTTON(attention), FALSE, toolbar);
-	purple_prpl_send_attention(gc, who, 0);
+	purple_protocol_send_attention(gc, who, 0);
 	gtk_widget_grab_focus(toolbar->imhtml);
 }
 
@@ -1593,14 +1593,14 @@ void gtk_imhtmltoolbar_switch_active_conversation(GtkIMHtmlToolbar *toolbar,
 	PurpleConversation *conv)
 {
 	PurpleConnection *gc = purple_conversation_get_connection(conv);
-	PurplePlugin *prpl = purple_connection_get_prpl(gc);
+	PurpleProtocol *protocol = purple_connection_get_protocol(gc);
 
 	g_object_set_data(G_OBJECT(toolbar), "active_conv", conv);
 
 	/* gray out attention button on protocols that don't support it
 	 for the time being it is always disabled for chats */
 	gtk_widget_set_sensitive(toolbar->attention,
-		conv && prpl && PURPLE_IS_IM_CONVERSATION(conv) &&
-		PURPLE_PLUGIN_PROTOCOL_INFO(prpl)->send_attention != NULL);
+		conv && protocol && PURPLE_IS_IM_CONVERSATION(conv) &&
+		PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, send));
 }
 
