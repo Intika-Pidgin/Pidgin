@@ -155,7 +155,7 @@ typedef struct
 #include <time.h>
 
 #include "account.h"
-#include "plugin.h"
+#include "protocol.h"
 #include "status.h"
 #include "sslconn.h"
 
@@ -273,10 +273,10 @@ GType purple_connection_get_type(void);
 GType purple_connection_error_info_get_type(void);
 
 /**
- * Sets the connection state.  PRPLs should call this and pass in
+ * Sets the connection state.  Protocols should call this and pass in
  * the state #PURPLE_CONNECTION_CONNECTED when the account is completely
  * signed on.  What does it mean to be completely signed on?  If
- * the core can call prpl->set_status, and it successfully changes
+ * the core can call protocol's set_status, and it successfully changes
  * your status, then the account is online.
  *
  * @gc:    The connection.
@@ -344,13 +344,13 @@ PurpleConnectionFlags purple_connection_get_flags(const PurpleConnection *gc);
 PurpleAccount *purple_connection_get_account(const PurpleConnection *gc);
 
 /**
- * Returns the protocol plugin managing a connection.
+ * Returns the protocol managing a connection.
  *
  * @gc: The connection.
  *
- * Returns: The protocol plugin.
+ * Returns: The protocol.
  */
-PurplePlugin * purple_connection_get_prpl(const PurpleConnection *gc);
+PurpleProtocol *purple_connection_get_protocol(const PurpleConnection *gc);
 
 /**
  * Returns the connection's password.
@@ -462,7 +462,7 @@ purple_connection_error_is_fatal (PurpleConnectionError reason);
 
 /**
  * Indicate that a packet was received on the connection.
- * Set by the prpl to avoid sending unneeded keepalives.
+ * Set by the protocol to avoid sending unneeded keepalives.
  *
  * @gc:   The connection.
  */
