@@ -31,36 +31,48 @@
 G_BEGIN_DECLS
 
 /**
+ * pidgin_debug_init:
+ *
  * Initializes the GTK+ debug system.
  */
 void pidgin_debug_init(void);
 
 /**
+ * pidgin_debug_uninit:
+ *
  * Uninitialized the GTK+ debug system.
  */
 void pidgin_debug_uninit(void);
 
 /**
+ * pidgin_debug_get_handle:
+ *
  * Get the handle for the GTK+ debug system.
  *
- * @return the handle to the debug system
+ * Returns: the handle to the debug system
  */
 void *pidgin_debug_get_handle(void);
 
 /**
+ * pidgin_debug_window_show:
+ *
  * Shows the debug window.
  */
 void pidgin_debug_window_show(void);
 
 /**
+ * pidgin_debug_window_hide:
+ *
  * Hides the debug window.
  */
 void pidgin_debug_window_hide(void);
 
 /**
+ * pidgin_debug_get_ui_ops:
+ *
  * Returns the UI operations structure for GTK+ debug output.
  *
- * @return The GTK+ UI debug operations structure.
+ * Returns: The GTK+ UI debug operations structure.
  */
 PurpleDebugUiOps *pidgin_debug_get_ui_ops(void);
 

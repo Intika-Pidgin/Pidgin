@@ -32,8 +32,11 @@
 
 typedef struct _PurplePluginProtocolInfo PurplePluginProtocolInfo;
 
-/** Represents "nudges" and "buzzes" that you may send to a buddy to attract
- *  their attention (or vice-versa).
+/**
+ * PurpleAttentionType:
+ *
+ * Represents "nudges" and "buzzes" that you may send to a buddy to attract
+ * their attention (or vice-versa).
  */
 typedef struct _PurpleAttentionType PurpleAttentionType;
 
@@ -41,20 +44,22 @@ typedef struct _PurpleAttentionType PurpleAttentionType;
 /** @name Basic Protocol Information                                      */
 /**************************************************************************/
 
+/**
+ * PurpleIconScaleRules:
+ * @PURPLE_ICON_SCALE_DISPLAY: We scale the icon when we display it
+ * @PURPLE_ICON_SCALE_SEND:    We scale the icon before we send it to the server
+ */
 typedef enum {
-	PURPLE_ICON_SCALE_DISPLAY = 0x01,		/**< We scale the icon when we display it */
-	PURPLE_ICON_SCALE_SEND = 0x02			/**< We scale the icon before we send it to the server */
+	PURPLE_ICON_SCALE_DISPLAY = 0x01,
+	PURPLE_ICON_SCALE_SEND    = 0x02
 } PurpleIconScaleRules;
 
 
-/**
- * A description of a Buddy Icon specification.  This tells Purple what kind of image file
- * it should give this prpl, and what kind of image file it should expect back.
- * Dimensions less than 1 should be ignored and the image not scaled.
- */
 typedef struct _PurpleBuddyIconSpec PurpleBuddyIconSpec;
 
 /**
+ * PurpleThumbnailSpec:
+ *
  * A description of a file transfer thumbnail specification.
  * This tells the UI if and what image formats the prpl support for file
  * transfer thumbnails.
@@ -62,6 +67,8 @@ typedef struct _PurpleBuddyIconSpec PurpleBuddyIconSpec;
 typedef struct _PurpleThumbnailSpec PurpleThumbnailSpec;
 
 /**
+ * NO_BUDDY_ICONS:
+ *
  * This \#define exists just to make it easier to fill out the buddy icon
  * field in the prpl info struct for protocols that couldn't care less.
  */
@@ -84,132 +91,120 @@ typedef struct _PurpleThumbnailSpec PurpleThumbnailSpec;
 #include "whiteboard.h"
 
 
-/** @copydoc PurpleBuddyIconSpec */
-struct _PurpleBuddyIconSpec {
-	/** This is a comma-delimited list of image formats or @c NULL if icons
-	 *  are not supported.  Neither the core nor the prpl will actually
-	 *  check to see if the data it's given matches this; it's entirely up
-	 *  to the UI to do what it wants
-	 */
-	char *format;
-
-	int min_width;                     /**< Minimum width of this icon  */
-	int min_height;                    /**< Minimum height of this icon */
-	int max_width;                     /**< Maximum width of this icon  */
-	int max_height;                    /**< Maximum height of this icon */
-	size_t max_filesize;               /**< Maximum size in bytes */
-	PurpleIconScaleRules scale_rules;  /**< How to stretch this icon */
-};
-
-/** Represents an entry containing information that must be supplied by the
- *  user when joining a chat.
+/**
+ * PurpleBuddyIconSpec:
+ * @format:       This is a comma-delimited list of image formats or %NULL if
+ *                icons are not supported.  Neither the core nor the prpl will
+ *                actually check to see if the data it's given matches this;
+ *                it's entirely up to the UI to do what it wants
+ * @min_width:    Minimum width of this icon
+ * @min_height:   Minimum height of this icon
+ * @max_width:    Maximum width of this icon
+ * @max_height:   Maximum height of this icon
+ * @max_filesize: Maximum size in bytes
+ * @scale_rules:  How to stretch this icon
+ *
+ * A description of a Buddy Icon specification.  This tells Purple what kind of
+ * image file it should give this prpl, and what kind of image file it should
+ * expect back. Dimensions less than 1 should be ignored and the image not
+ * scaled.
  */
-struct proto_chat_entry {
-	const char *label;       /**< User-friendly name of the entry */
-	const char *identifier;  /**< Used by the PRPL to identify the option */
-	gboolean required;       /**< True if it's required */
-	gboolean is_int;         /**< True if the entry expects an integer */
-	int min;                 /**< Minimum value in case of integer */
-	int max;                 /**< Maximum value in case of integer */
-	gboolean secret;         /**< True if the entry is secret (password) */
+struct _PurpleBuddyIconSpec {
+	char *format;
+	int min_width;
+	int min_height;
+	int max_width;
+	int max_height;
+	size_t max_filesize;
+	PurpleIconScaleRules scale_rules;
 };
 
 /**
+ * proto_chat_entry:
+ * @label:      User-friendly name of the entry
+ * @identifier: Used by the PRPL to identify the option
+ * @required:   True if it's required
+ * @is_int:     True if the entry expects an integer
+ * @min:        Minimum value in case of integer
+ * @max:        Maximum value in case of integer
+ * @secret:     True if the entry is secret (password)
+ *
+ * Represents an entry containing information that must be supplied by the
+ * user when joining a chat.
+ */
+struct proto_chat_entry {
+	const char *label;
+	const char *identifier;
+	gboolean required;
+	gboolean is_int;
+	int min;
+	int max;
+	gboolean secret;
+};
+
+/**
+ * PurpleProtocolOptions:
+ * @OPT_PROTO_UNIQUE_CHATNAME: User names are unique to a chat and are not
+ *           shared between rooms.<br/>
+ *           XMPP lets you choose what name you want in chats, so it shouldn't
+ *           be pulling the aliases from the buddy list for the chat list; it
+ *           gets annoying.
+ * @OPT_PROTO_CHAT_TOPIC: Chat rooms have topics.<br/>
+ *           IRC and XMPP support this.
+ * @OPT_PROTO_NO_PASSWORD: Don't require passwords for sign-in.<br/>
+ *           Zephyr doesn't require passwords, so there's no need for a
+ *           password prompt.
+ * @OPT_PROTO_MAIL_CHECK: Notify on new mail.<br/>
+ *           MSN and Yahoo notify you when you have new mail.
+ * @OPT_PROTO_IM_IMAGE: Images in IMs.<br/>
+ *           Oscar lets you send images in direct IMs.
+ * @OPT_PROTO_PASSWORD_OPTIONAL: Allow passwords to be optional.<br/>
+ *           Passwords in IRC are optional, and are needed for certain
+ *           functionality.
+ * @OPT_PROTO_USE_POINTSIZE: Allows font size to be specified in sane point
+ *           size.<br/>
+ *           Probably just XMPP and Y!M
+ * @OPT_PROTO_REGISTER_NOSCREENNAME: Set the Register button active even when
+ *           the username has not been specified.<br/>
+ *           Gadu-Gadu doesn't need a username to register new account (because
+ *           usernames are assigned by the server).
+ * @OPT_PROTO_SLASH_COMMANDS_NATIVE: Indicates that slash commands are native
+ *           to this protocol.<br/>
+ *           Used as a hint that unknown commands should not be sent as
+ *           messages.
+ * @OPT_PROTO_INVITE_MESSAGE: Indicates that this protocol supports sending a
+ *           user-supplied message along with an invitation.
+ * @OPT_PROTO_AUTHORIZATION_GRANTED_MESSAGE: Indicates that this protocol
+ *           supports sending a user-supplied message along with an
+ *           authorization acceptance.
+ * @OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE: Indicates that this protocol
+ *           supports sending a user-supplied message along with an
+ *           authorization denial.
+ *
  * Protocol options
  *
- * These should all be stuff that some plugins can do and others can't.
+ * These should all be stuff that some protocols can do and others can't.
  */
-typedef enum
+typedef enum  /*< flags >*/
 {
-	/**
-	 * User names are unique to a chat and are not shared between rooms.
-	 *
-	 * XMPP lets you choose what name you want in chats, so it shouldn't
-	 * be pulling the aliases from the buddy list for the chat list;
-	 * it gets annoying.
-	 */
-	OPT_PROTO_UNIQUE_CHATNAME = 0x00000004,
-
-	/**
-	 * Chat rooms have topics.
-	 *
-	 * IRC and XMPP support this.
-	 */
-	OPT_PROTO_CHAT_TOPIC = 0x00000008,
-
-	/**
-	 * Don't require passwords for sign-in.
-	 *
-	 * Zephyr doesn't require passwords, so there's no
-	 * need for a password prompt.
-	 */
-	OPT_PROTO_NO_PASSWORD = 0x00000010,
-
-	/**
-	 * Notify on new mail.
-	 *
-	 * MSN and Yahoo notify you when you have new mail.
-	 */
-	OPT_PROTO_MAIL_CHECK = 0x00000020,
-
-	/**
-	 * Images in IMs.
-	 *
-	 * Oscar lets you send images in direct IMs.
-	 */
-	OPT_PROTO_IM_IMAGE = 0x00000040,
-
-	/**
-	 * Allow passwords to be optional.
-	 *
-	 * Passwords in IRC are optional, and are needed for certain
-	 * functionality.
-	 */
-	OPT_PROTO_PASSWORD_OPTIONAL = 0x00000080,
-
-	/**
-	 * Allows font size to be specified in sane point size
-	 *
-	 * Probably just XMPP and Y!M
-	 */
-	OPT_PROTO_USE_POINTSIZE = 0x00000100,
-
-	/**
-	 * Set the Register button active even when the username has not
-	 * been specified.
-	 *
-	 * Gadu-Gadu doesn't need a username to register new account (because
-	 * usernames are assigned by the server).
-	 */
-	OPT_PROTO_REGISTER_NOSCREENNAME = 0x00000200,
-
-	/**
-	 * Indicates that slash commands are native to this protocol.
-	 * Used as a hint that unknown commands should not be sent as messages.
-	 */
-	OPT_PROTO_SLASH_COMMANDS_NATIVE = 0x00000400,
-
-	/**
-	 * Indicates that this protocol supports sending a user-supplied message
-	 * along with an invitation.
-	 */
-	OPT_PROTO_INVITE_MESSAGE = 0x00000800,
-
-	/**
-	 * Indicates that this protocol supports sending a user-supplied message
-	 * along with an authorization acceptance.
-	 */
+	OPT_PROTO_UNIQUE_CHATNAME               = 0x00000004,
+	OPT_PROTO_CHAT_TOPIC                    = 0x00000008,
+	OPT_PROTO_NO_PASSWORD                   = 0x00000010,
+	OPT_PROTO_MAIL_CHECK                    = 0x00000020,
+	OPT_PROTO_IM_IMAGE                      = 0x00000040,
+	OPT_PROTO_PASSWORD_OPTIONAL             = 0x00000080,
+	OPT_PROTO_USE_POINTSIZE                 = 0x00000100,
+	OPT_PROTO_REGISTER_NOSCREENNAME         = 0x00000200,
+	OPT_PROTO_SLASH_COMMANDS_NATIVE         = 0x00000400,
+	OPT_PROTO_INVITE_MESSAGE                = 0x00000800,
 	OPT_PROTO_AUTHORIZATION_GRANTED_MESSAGE = 0x00001000,
-
-	/**
-	 * Indicates that this protocol supports sending a user-supplied message
-	 * along with an authorization denial.
-	 */
-	OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE = 0x00002000
+	OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE  = 0x00002000
 
 } PurpleProtocolOptions;
 
 /**
+ * PurplePluginProtocolInfo:
+ *
  * A protocol plugin information structure.
  *
  * Every protocol plugin initializes this structure. It is the gateway
@@ -282,8 +277,7 @@ struct _PurplePluginProtocolInfo
 
 	/**
 	 * Returns a list of #PurpleMenuAction structs, which represent extra
-	 * actions to be shown in (for example) the right-click menu for @a
-	 * node.
+	 * actions to be shown in (for example) the right-click menu for @node.
 	 */
 	GList *(*blist_node_menu)(PurpleBlistNode *node);
 
@@ -292,7 +286,7 @@ struct _PurplePluginProtocolInfo
 	 * information required by the PRPL to join a chat. libpurple will
 	 * call join_chat along with the information filled by the user.
 	 *
-	 * @return A list of #proto_chat_entry structs
+	 * Returns: A list of #proto_chat_entry structs
 	 */
 	GList *(*chat_info)(PurpleConnection *);
 
@@ -303,8 +297,8 @@ struct _PurplePluginProtocolInfo
 	 * g_str_equal, NULL, g_free);. Use #get_chat_name if you instead need
 	 * to extract a chat name from a hashtable.
 	 *
-	 * @param chat_name The chat name to be turned into components
-	 * @return Hashtable containing the information extracted from chat_name
+	 * @chat_name: The chat name to be turned into components
+	 * Returns: Hashtable containing the information extracted from chat_name
 	 */
 	GHashTable *(*chat_info_defaults)(PurpleConnection *, const char *chat_name);
 
@@ -332,7 +326,7 @@ struct _PurplePluginProtocolInfo
 	void (*set_info)(PurpleConnection *, const char *info);
 
 	/**
-	 * @return If this protocol requires the PURPLE_IM_TYPING message to
+	 * Returns: If this protocol requires the PURPLE_IM_TYPING message to
 	 *         be sent repeatedly to signify that the user is still
 	 *         typing, then the PRPL should return the number of
 	 *         seconds to wait before sending a subsequent notification.
@@ -342,7 +336,7 @@ struct _PurplePluginProtocolInfo
 
 	/**
 	 * Should arrange for purple_notify_userinfo() to be called with
-	 * @a who's user info.
+	 * @who 's user info.
 	 */
 	void (*get_info)(PurpleConnection *, const char *who);
 	void (*set_status)(PurpleAccount *account, PurpleStatus *status);
@@ -375,7 +369,7 @@ struct _PurplePluginProtocolInfo
 	 * Called when the user requests joining a chat. Should arrange for
 	 * #serv_got_joined_chat to be called.
 	 *
-	 * @param components A hashtable containing information required to
+	 * @components: A hashtable containing information required to
 	 *                   join the chat as described by the entries returned
 	 *                   by #chat_info. It may also be called when accepting
 	 *                   an invitation, in which case this matches the
@@ -386,7 +380,7 @@ struct _PurplePluginProtocolInfo
 	/**
 	 * Called when the user refuses a chat invitation.
 	 *
-	 * @param components A hashtable containing information required to
+	 * @components: A hashtable containing information required to
 	 *                   join the chat as passed to #serv_got_chat_invite.
 	 */
 	void (*reject_chat)(PurpleConnection *, GHashTable *components);
@@ -396,33 +390,33 @@ struct _PurplePluginProtocolInfo
 	 * #chat_info_defaults if you instead need to generate a hashtable
 	 * from a chat name.
 	 *
-	 * @param components A hashtable containing information about the chat.
+	 * @components: A hashtable containing information about the chat.
 	 */
 	char *(*get_chat_name)(GHashTable *components);
 
 	/**
 	 * Invite a user to join a chat.
 	 *
-	 * @param id      The id of the chat to invite the user to.
-	 * @param message A message displayed to the user when the invitation
+	 * @id:      The id of the chat to invite the user to.
+	 * @message: A message displayed to the user when the invitation
 	 *                is received.
-	 * @param who     The name of the user to send the invation to.
+	 * @who:     The name of the user to send the invation to.
 	 */
 	void (*chat_invite)(PurpleConnection *, int id,
 						const char *message, const char *who);
 	/**
 	 * Called when the user requests leaving a chat.
 	 *
-	 * @param id The id of the chat to leave
+	 * @id: The id of the chat to leave
 	 */
 	void (*chat_leave)(PurpleConnection *, int id);
 
 	/**
 	 * Send a whisper to a user in a chat.
 	 *
-	 * @param id      The id of the chat.
-	 * @param who     The name of the user to send the whisper to.
-	 * @param message The message of the whisper.
+	 * @id:      The id of the chat.
+	 * @who:     The name of the user to send the whisper to.
+	 * @message: The message of the whisper.
 	 */
 	void (*chat_whisper)(PurpleConnection *, int id,
 						 const char *who, const char *message);
@@ -436,11 +430,11 @@ struct _PurplePluginProtocolInfo
 	 * some other negative value.  You can use one of the valid
 	 * errno values, or just big something.
 	 *
-	 * @param id      The id of the chat to send the message to.
-	 * @param message The message to send to the chat.
-	 * @param flags   A bitwise OR of #PurpleMessageFlags representing
+	 * @id:      The id of the chat to send the message to.
+	 * @message: The message to send to the chat.
+	 * @flags:   A bitwise OR of #PurpleMessageFlags representing
 	 *                message flags.
-	 * @return 	  A positive number or 0 in case of success,
+	 * Returns: 	  A positive number or 0 in case of success,
 	 *                a negative error number in case of failure.
 	 */
 	int  (*chat_send)(PurpleConnection *, int id, const char *message, PurpleMessageFlags flags);
@@ -449,7 +443,8 @@ struct _PurplePluginProtocolInfo
 	 *  active connections.  You'd want to do this if you need to repeatedly
 	 *  send some kind of keepalive packet to the server to avoid being
 	 *  disconnected.  ("Regularly" is defined by
-	 *  <code>KEEPALIVE_INTERVAL</code> in <tt>libpurple/connection.c</tt>.)
+	 *  <literal>KEEPALIVE_INTERVAL</literal> in
+	 *  <filename>libpurple/connection.c</filename>.)
 	 */
 	void (*keepalive)(PurpleConnection *);
 
@@ -478,7 +473,7 @@ struct _PurplePluginProtocolInfo
 	void (*convo_closed)(PurpleConnection *, const char *who);
 
 	/**
-	 * Convert the username @a who to its canonical form. Also checks for
+	 * Convert the username @who to its canonical form. Also checks for
 	 * validity.
 	 *
 	 * For example, AIM treats "fOo BaR" and "foobar" as the same user; this
@@ -486,29 +481,29 @@ struct _PurplePluginProtocolInfo
 	 * On the other hand, both of these are invalid for protocols with
 	 * number-based usernames, so function should return NULL in such case.
 	 *
-	 * @param account  The account the username is related to. Can
+	 * @account:  The account the username is related to. Can
 	 *                 be NULL.
-	 * @param who      The username to convert.
-	 * @return         Normalized username, or NULL, if it's invalid.
+	 * @who:      The username to convert.
+	 * Returns:         Normalized username, or NULL, if it's invalid.
 	 */
 	const char *(*normalize)(const PurpleAccount *account, const char *who);
 
 	/**
-	 * Set the buddy icon for the given connection to @a img.  The prpl
-	 * does NOT own a reference to @a img; if it needs one, it must
-	 * #purple_imgstore_ref(@a img) itself.
+	 * Set the buddy icon for the given connection to @img.  The prpl
+	 * does NOT own a reference to @img; if it needs one, it must
+	 * #purple_imgstore_ref(@img) itself.
 	 */
 	void (*set_buddy_icon)(PurpleConnection *, PurpleStoredImage *img);
 
 	void (*remove_group)(PurpleConnection *gc, PurpleGroup *group);
 
 	/** Gets the real name of a participant in a chat.  For example, on
-	 *  XMPP this turns a chat room nick <tt>foo</tt> into
-	 *  <tt>room\@server/foo</tt>
-	 *  @param gc  the connection on which the room is.
-	 *  @param id  the ID of the chat room.
-	 *  @param who the nickname of the chat participant.
-	 *  @return    the real name of the participant.  This string must be
+	 *  XMPP this turns a chat room nick <literal>foo</literal> into
+	 *  <literal>room\@server/foo</literal>
+	 *  @gc:  the connection on which the room is.
+	 *  @id:  the ID of the chat room.
+	 *  @who: the nickname of the chat participant.
+	 *  Returns:    the real name of the participant.  This string must be
 	 *             freed by the caller.
 	 */
 	char *(*get_cb_real_name)(PurpleConnection *gc, int id, const char *who);
@@ -527,9 +522,9 @@ struct _PurplePluginProtocolInfo
 	void (*send_file)(PurpleConnection *, const char *who, const char *filename);
 	PurpleXfer *(*new_xfer)(PurpleConnection *, const char *who);
 
-	/** Checks whether offline messages to @a buddy are supported.
-	 *  @return @c TRUE if @a buddy can be sent messages while they are
-	 *          offline, or @c FALSE if not.
+	/** Checks whether offline messages to @buddy are supported.
+	 *  Returns: %TRUE if @buddy can be sent messages while they are
+	 *          offline, or %FALSE if not.
 	 */
 	gboolean (*offline_message)(const PurpleBuddy *buddy);
 
@@ -559,8 +554,8 @@ struct _PurplePluginProtocolInfo
 	 * table instead of expanding the struct for every addition.  This hash
 	 * table is allocated every call and MUST be unrefed by the caller.
 	 *
-	 * @param account The account to specify.  This can be NULL.
-	 * @return The protocol's string hash table. The hash table should be
+	 * @account: The account to specify.  This can be NULL.
+	 * Returns: The protocol's string hash table. The hash table should be
 	 *         destroyed by the caller when it's no longer needed.
 	 */
 	GHashTable *(*get_account_text_table)(PurpleAccount *account);
@@ -568,10 +563,10 @@ struct _PurplePluginProtocolInfo
 	/**
 	 * Initiate a media session with the given contact.
 	 *
-	 * @param account The account to initiate the media session on.
-	 * @param who The remote user to initiate the session with.
-	 * @param type The type of media session to initiate.
-	 * @return TRUE if the call succeeded else FALSE. (Doesn't imply the media session or stream will be successfully created)
+	 * @account: The account to initiate the media session on.
+	 * @who: The remote user to initiate the session with.
+	 * @type: The type of media session to initiate.
+	 * Returns: TRUE if the call succeeded else FALSE. (Doesn't imply the media session or stream will be successfully created)
 	 */
 	gboolean (*initiate_media)(PurpleAccount *account, const char *who,
 					PurpleMediaSessionType type);
@@ -579,16 +574,16 @@ struct _PurplePluginProtocolInfo
 	/**
 	 * Checks to see if the given contact supports the given type of media session.
 	 *
-	 * @param account The account the contact is on.
-	 * @param who The remote user to check for media capability with.
-	 * @return The media caps the contact supports.
+	 * @account: The account the contact is on.
+	 * @who: The remote user to check for media capability with.
+	 * Returns: The media caps the contact supports.
 	 */
 	PurpleMediaCaps (*get_media_caps)(PurpleAccount *account,
 					  const char *who);
 
 	/**
 	 * Returns an array of "PurpleMood"s, with the last one having
-	 * "mood" set to @c NULL.
+	 * "mood" set to %NULL.
 	 */
 	PurpleMood *(*get_moods)(PurpleAccount *account);
 
@@ -600,12 +595,12 @@ struct _PurplePluginProtocolInfo
 	 * call one of the callbacks from an idle/0-second timeout) depending
 	 * on if the nickname is set successfully.
 	 *
-	 * @param gc    The connection for which to set an alias
-	 * @param alias The new server-side alias/nickname for this account,
+	 * @gc:    The connection for which to set an alias
+	 * @alias: The new server-side alias/nickname for this account,
 	 *              or NULL to unset the alias/nickname (or return it to
 	 *              a protocol-specific "default").
-	 * @param success_cb Callback to be called if the public alias is set
-	 * @param failure_cb Callback to be called if setting the public alias
+	 * @success_cb: Callback to be called if the public alias is set
+	 * @failure_cb: Callback to be called if setting the public alias
 	 *                   fails
 	 * @see purple_account_set_public_alias
 	 */
@@ -619,9 +614,9 @@ struct _PurplePluginProtocolInfo
 	 * call one of the callbacks from an idle/0-second timeout) depending
 	 * on if the nickname is retrieved.
 	 *
-	 * @param gc    The connection for which to retireve the alias
-	 * @param success_cb Callback to be called with the retrieved alias
-	 * @param failure_cb Callback to be called if the prpl is unable to
+	 * @gc:    The connection for which to retireve the alias
+	 * @success_cb: Callback to be called with the retrieved alias
+	 * @failure_cb: Callback to be called if the prpl is unable to
 	 *                   retrieve the alias
 	 * @see purple_account_get_public_alias
 	 */
@@ -641,10 +636,10 @@ struct _PurplePluginProtocolInfo
 	 *  - formatting,
 	 *  - used special characters.
 	 *
-	 * @param conv The conversation to query, or NULL to get safe minimum
+	 * @conv: The conversation to query, or NULL to get safe minimum
 	 *             for the protocol.
 	 *
-	 * @return     Maximum message size, 0 if unspecified, -1 for infinite.
+	 * Returns:     Maximum message size, 0 if unspecified, -1 for infinite.
 	 */
 	gssize (*get_max_message_size)(PurpleConversation *conv);
 };
@@ -668,107 +663,124 @@ G_BEGIN_DECLS
 /*@{*/
 
 /**
+ * purple_attention_type_new:
+ * @ulname: A non-localized string that can be used by UIs in need of such
+ *               non-localized strings.  This should be the same as @name,
+ *               without localization.
+ * @name: A localized string that the UI may display for the event. This
+ *             should be the same string as @ulname, with localization.
+ * @inc_desc: A localized description shown when the event is received.
+ * @out_desc: A localized description shown when the event is sent.
+ *
  * Creates a new #PurpleAttentionType object and sets its mandatory parameters.
  *
- * @param ulname A non-localized string that can be used by UIs in need of such
- *               non-localized strings.  This should be the same as @a name,
- *               without localization.
- * @param name A localized string that the UI may display for the event. This
- *             should be the same string as @a ulname, with localization.
- * @param inc_desc A localized description shown when the event is received.
- * @param out_desc A localized description shown when the event is sent.
- *
- * @return A pointer to the new object.
+ * Returns: A pointer to the new object.
  */
 PurpleAttentionType *purple_attention_type_new(const char *ulname, const char *name,
 								const char *inc_desc, const char *out_desc);
 
 /**
- * Sets the displayed name of the attention-demanding event.
- *
- * @param type The attention type.
- * @param name The localized name that will be displayed by UIs. This should be
+ * purple_attention_type_set_name:
+ * @type: The attention type.
+ * @name: The localized name that will be displayed by UIs. This should be
  *             the same string given as the unlocalized name, but with
  *             localization.
+ *
+ * Sets the displayed name of the attention-demanding event.
  */
 void purple_attention_type_set_name(PurpleAttentionType *type, const char *name);
 
 /**
+ * purple_attention_type_set_incoming_desc:
+ * @type: The attention type.
+ * @desc: The localized description for incoming events.
+ *
  * Sets the description of the attention-demanding event shown in  conversations
  * when the event is received.
- *
- * @param type The attention type.
- * @param desc The localized description for incoming events.
  */
 void purple_attention_type_set_incoming_desc(PurpleAttentionType *type, const char *desc);
 
 /**
+ * purple_attention_type_set_outgoing_desc:
+ * @type: The attention type.
+ * @desc: The localized description for outgoing events.
+ *
  * Sets the description of the attention-demanding event shown in conversations
  * when the event is sent.
- *
- * @param type The attention type.
- * @param desc The localized description for outgoing events.
  */
 void purple_attention_type_set_outgoing_desc(PurpleAttentionType *type, const char *desc);
 
 /**
+ * purple_attention_type_set_icon_name:
+ * @type: The attention type.
+ * @name: The icon's name.
+ *
  * Sets the name of the icon to display for the attention event; this is optional.
  *
- * @param type The attention type.
- * @param name The icon's name.
- * @note Icons are optional for attention events.
+ * Note: Icons are optional for attention events.
  */
 void purple_attention_type_set_icon_name(PurpleAttentionType *type, const char *name);
 
 /**
+ * purple_attention_type_set_unlocalized_name:
+ * @type: The attention type.
+ * @ulname: The unlocalized name.  This should be the same string given as
+ *               the localized name, but without localization.
+ *
  * Sets the unlocalized name of the attention event; some UIs may need this,
  * thus it is required.
- *
- * @param type The attention type.
- * @param ulname The unlocalized name.  This should be the same string given as
- *               the localized name, but without localization.
  */
 void purple_attention_type_set_unlocalized_name(PurpleAttentionType *type, const char *ulname);
 
 /**
+ * purple_attention_type_get_name:
+ * @type: The attention type.
+ *
  * Get the attention type's name as displayed by the UI.
  *
- * @param type The attention type.
- *
- * @return The name.
+ * Returns: The name.
  */
 const char *purple_attention_type_get_name(const PurpleAttentionType *type);
 
 /**
+ * purple_attention_type_get_incoming_desc:
+ * @type: The attention type.
+ *
  * Get the attention type's description shown when the event is received.
  *
- * @param type The attention type.
- * @return The description.
+ * Returns: The description.
  */
 const char *purple_attention_type_get_incoming_desc(const PurpleAttentionType *type);
 
 /**
+ * purple_attention_type_get_outgoing_desc:
+ * @type: The attention type.
+ *
  * Get the attention type's description shown when the event is sent.
  *
- * @param type The attention type.
- * @return The description.
+ * Returns: The description.
  */
 const char *purple_attention_type_get_outgoing_desc(const PurpleAttentionType *type);
 
 /**
+ * purple_attention_type_get_icon_name:
+ * @type: The attention type.
+ *
  * Get the attention type's icon name.
  *
- * @param type The attention type.
- * @return The icon name or @c NULL if unset/empty.
- * @note Icons are optional for attention events.
+ * Note: Icons are optional for attention events.
+ *
+ * Returns: The icon name or %NULL if unset/empty.
  */
 const char *purple_attention_type_get_icon_name(const PurpleAttentionType *type);
 
 /**
+ * purple_attention_type_get_unlocalized_name:
+ * @type: The attention type
+ *
  * Get the attention type's unlocalized name; this is useful for some UIs.
  *
- * @param type The attention type
- * @return The unlocalized name.
+ * Returns: The unlocalized name.
  */
 const char *purple_attention_type_get_unlocalized_name(const PurpleAttentionType *type);
 
@@ -780,137 +792,148 @@ const char *purple_attention_type_get_unlocalized_name(const PurpleAttentionType
 /*@{*/
 
 /**
+ * purple_prpl_got_account_idle:
+ * @account:   The account.
+ * @idle:      The user's idle state.
+ * @idle_time: The user's idle time.
+ *
  * Notifies Purple that our account's idle state and time have changed.
  *
  * This is meant to be called from protocol plugins.
- *
- * @param account   The account.
- * @param idle      The user's idle state.
- * @param idle_time The user's idle time.
  */
 void purple_prpl_got_account_idle(PurpleAccount *account, gboolean idle,
 								time_t idle_time);
 
 /**
+ * purple_prpl_got_account_login_time:
+ * @account:    The account the user is on.
+ * @login_time: The user's log-in time.
+ *
  * Notifies Purple of our account's log-in time.
  *
  * This is meant to be called from protocol plugins.
- *
- * @param account    The account the user is on.
- * @param login_time The user's log-in time.
  */
 void purple_prpl_got_account_login_time(PurpleAccount *account, time_t login_time);
 
 /**
+ * purple_prpl_got_account_status:
+ * @account:   The account the user is on.
+ * @status_id: The status ID.
+ * @...:       A NULL-terminated list of attribute IDs and values,
+ *                  beginning with the value for @attr_id.
+ *
  * Notifies Purple that our account's status has changed.
  *
  * This is meant to be called from protocol plugins.
- *
- * @param account   The account the user is on.
- * @param status_id The status ID.
- * @param ...       A NULL-terminated list of attribute IDs and values,
- *                  beginning with the value for @a attr_id.
  */
 void purple_prpl_got_account_status(PurpleAccount *account,
 								  const char *status_id, ...) G_GNUC_NULL_TERMINATED;
 
 /**
+ * purple_prpl_got_account_actions:
+ * @account:   The account.
+ *
  * Notifies Purple that our account's actions have changed. This is only
  * called after the initial connection. Emits the account-actions-changed
  * signal.
  *
  * This is meant to be called from protocol plugins.
  *
- * @param account   The account.
- *
  * @see account-actions-changed
  */
 void purple_prpl_got_account_actions(PurpleAccount *account);
 
 /**
- * Notifies Purple that a buddy's idle state and time have changed.
- *
- * This is meant to be called from protocol plugins.
- *
- * @param account   The account the user is on.
- * @param name      The name of the buddy.
- * @param idle      The user's idle state.
- * @param idle_time The user's idle time.  This is the time at
+ * purple_prpl_got_user_idle:
+ * @account:   The account the user is on.
+ * @name:      The name of the buddy.
+ * @idle:      The user's idle state.
+ * @idle_time: The user's idle time.  This is the time at
  *                  which the user became idle, in seconds since
  *                  the epoch.  If the PRPL does not know this value
  *                  then it should pass 0.
+ *
+ * Notifies Purple that a buddy's idle state and time have changed.
+ *
+ * This is meant to be called from protocol plugins.
  */
 void purple_prpl_got_user_idle(PurpleAccount *account, const char *name,
 							 gboolean idle, time_t idle_time);
 
 /**
+ * purple_prpl_got_user_login_time:
+ * @account:    The account the user is on.
+ * @name:       The name of the buddy.
+ * @login_time: The user's log-in time.
+ *
  * Notifies Purple of a buddy's log-in time.
  *
  * This is meant to be called from protocol plugins.
- *
- * @param account    The account the user is on.
- * @param name       The name of the buddy.
- * @param login_time The user's log-in time.
  */
 void purple_prpl_got_user_login_time(PurpleAccount *account, const char *name,
 								   time_t login_time);
 
 /**
+ * purple_prpl_got_user_status:
+ * @account:   The account the user is on.
+ * @name:      The name of the buddy.
+ * @status_id: The status ID.
+ * @...:       A NULL-terminated list of attribute IDs and values,
+ *                  beginning with the value for @attr_id.
+ *
  * Notifies Purple that a buddy's status has been activated.
  *
  * This is meant to be called from protocol plugins.
- *
- * @param account   The account the user is on.
- * @param name      The name of the buddy.
- * @param status_id The status ID.
- * @param ...       A NULL-terminated list of attribute IDs and values,
- *                  beginning with the value for @a attr_id.
  */
 void purple_prpl_got_user_status(PurpleAccount *account, const char *name,
 							   const char *status_id, ...) G_GNUC_NULL_TERMINATED;
 
 /**
+ * purple_prpl_got_user_status_deactive:
+ * @account:   The account the user is on.
+ * @name:      The name of the buddy.
+ * @status_id: The status ID.
+ *
  * Notifies libpurple that a buddy's status has been deactivated
  *
  * This is meant to be called from protocol plugins.
- *
- * @param account   The account the user is on.
- * @param name      The name of the buddy.
- * @param status_id The status ID.
  */
 void purple_prpl_got_user_status_deactive(PurpleAccount *account, const char *name,
 					const char *status_id);
 
 /**
- * Informs the server that our account's status changed.
- *
- * @param account    The account the user is on.
- * @param old_status The previous status.
- * @param new_status The status that was activated, or deactivated
+ * purple_prpl_change_account_status:
+ * @account:    The account the user is on.
+ * @old_status: The previous status.
+ * @new_status: The status that was activated, or deactivated
  *                   (in the case of independent statuses).
+ *
+ * Informs the server that our account's status changed.
  */
 void purple_prpl_change_account_status(PurpleAccount *account,
 									 PurpleStatus *old_status,
 									 PurpleStatus *new_status);
 
 /**
+ * purple_prpl_get_statuses:
+ * @account: The account the user is on.
+ * @presence: The presence for which we're going to get statuses
+ *
  * Retrieves the list of stock status types from a prpl.
  *
- * @param account The account the user is on.
- * @param presence The presence for which we're going to get statuses
- *
- * @return List of statuses
+ * Returns: List of statuses
  */
 GList *purple_prpl_get_statuses(PurpleAccount *account, PurplePresence *presence);
 
 /**
- * Send an attention request message.
- *
- * @param gc The connection to send the message on.
- * @param who Whose attention to request.
- * @param type_code An index into the prpl's attention_types list determining the type
+ * purple_prpl_send_attention:
+ * @gc: The connection to send the message on.
+ * @who: Whose attention to request.
+ * @type_code: An index into the prpl's attention_types list determining the type
  *        of the attention request command to send. 0 if prpl only defines one
  *        (for example, Yahoo and MSN), but some protocols define more (MySpaceIM).
+ *
+ * Send an attention request message.
  *
  * Note that you can't send arbitrary PurpleAttentionType's, because there is
  * only a fixed set of attention commands.
@@ -918,68 +941,75 @@ GList *purple_prpl_get_statuses(PurpleAccount *account, PurplePresence *presence
 void purple_prpl_send_attention(PurpleConnection *gc, const char *who, guint type_code);
 
 /**
- * Process an incoming attention message.
- *
- * @param gc The connection that received the attention message.
- * @param who Who requested your attention.
- * @param type_code An index into the prpl's attention_types list determining the type
+ * purple_prpl_got_attention:
+ * @gc: The connection that received the attention message.
+ * @who: Who requested your attention.
+ * @type_code: An index into the prpl's attention_types list determining the type
  *        of the attention request command to send.
+ *
+ * Process an incoming attention message.
  */
 void purple_prpl_got_attention(PurpleConnection *gc, const char *who, guint type_code);
 
 /**
- * Process an incoming attention message in a chat.
- *
- * @param gc The connection that received the attention message.
- * @param id The chat id.
- * @param who Who requested your attention.
- * @param type_code An index into the prpl's attention_types list determining the type
+ * purple_prpl_got_attention_in_chat:
+ * @gc: The connection that received the attention message.
+ * @id: The chat id.
+ * @who: Who requested your attention.
+ * @type_code: An index into the prpl's attention_types list determining the type
  *        of the attention request command to send.
+ *
+ * Process an incoming attention message in a chat.
  */
 void purple_prpl_got_attention_in_chat(PurpleConnection *gc, int id, const char *who, guint type_code);
 
 /**
+ * purple_prpl_get_media_caps:
+ * @account: The account the user is on.
+ * @who: The name of the contact to check capabilities for.
+ *
  * Determines if the contact supports the given media session type.
  *
- * @param account The account the user is on.
- * @param who The name of the contact to check capabilities for.
- *
- * @return The media caps the contact supports.
+ * Returns: The media caps the contact supports.
  */
 PurpleMediaCaps purple_prpl_get_media_caps(PurpleAccount *account,
 				  const char *who);
 
 /**
+ * purple_prpl_initiate_media:
+ * @account: The account the user is on.
+ * @who: The name of the contact to start a session with.
+ * @type: The type of media session to start.
+ *
  * Initiates a media session with the given contact.
  *
- * @param account The account the user is on.
- * @param who The name of the contact to start a session with.
- * @param type The type of media session to start.
- *
- * @return TRUE if the call succeeded else FALSE. (Doesn't imply the media session or stream will be successfully created)
+ * Returns: TRUE if the call succeeded else FALSE. (Doesn't imply the media
+ *          session or stream will be successfully created)
  */
 gboolean purple_prpl_initiate_media(PurpleAccount *account,
 					const char *who,
 					PurpleMediaSessionType type);
 
 /**
+ * purple_prpl_got_media_caps:
+ * @account: The account the user is on.
+ * @who: The name of the contact for which capabilities have been received.
+ *
  * Signals that the prpl received capabilities for the given contact.
  *
  * This function is intended to be used only by prpls.
- *
- * @param account The account the user is on.
- * @param who The name of the contact for which capabilities have been received.
  */
 void purple_prpl_got_media_caps(PurpleAccount *account, const char *who);
 
 /**
+ * purple_prpl_get_max_message_size:
+ * @prpl: The protocol plugin to query.
+ *
  * Gets the safe maximum message size in bytes for the protocol plugin.
  *
  * @see PurplePluginProtocolInfo#get_max_message_size
  *
- * @param prpl The protocol plugin to query.
- *
- * @return Maximum message size, 0 if unspecified, -1 for infinite.
+ * Returns: Maximum message size, 0 if unspecified, -1 for infinite.
  */
 gssize
 purple_prpl_get_max_message_size(PurplePlugin *prpl);
@@ -992,9 +1022,10 @@ purple_prpl_get_max_message_size(PurplePlugin *prpl);
 /*@{*/
 
 /**
- * Finds a protocol plugin structure of the specified type.
+ * purple_find_prpl:
+ * @id: The protocol plugin;
  *
- * @param id The protocol plugin;
+ * Finds a protocol plugin structure of the specified type.
  */
 PurplePlugin *purple_find_prpl(const char *id);
 

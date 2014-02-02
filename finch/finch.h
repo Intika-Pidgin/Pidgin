@@ -22,6 +22,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#ifndef _FINCH_H_
+#define _FINCH_H_
+
 #include <glib.h>
 
 #define FINCH_UI "gnt-purple"
@@ -31,3 +34,11 @@
 #define FINCH_GET_DATA(obj)        (obj)->ui_data
 #define FINCH_SET_DATA(obj, data)  (obj)->ui_data = data
 
+/**
+ * gnt_start:
+ *
+ * Start finch with the given command line arguments.
+ */
+gboolean gnt_start(int *argc, char ***argv);
+
+#endif
