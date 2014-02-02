@@ -34,18 +34,21 @@ G_BEGIN_DECLS
 /*@{*/
 
 /**
+ * pidgin_session_init:
+ * @argv0:       The first argument passed into the program.  This
+ *                    will be the name of the executable, e.g. 'purple'
+ * @previous_id: An optional session ID to use.  This can be NULL.
+ * @config_dir:  The path to the configuration directory used by
+ *                    this instance of this program, e.g. '/home/user/.purple'
+ *
  * Register this instance of Pidgin with the user's current session
  * manager.
- *
- * @param argv0       The first argument passed into the program.  This
- *                    will be the name of the executable, e.g. 'purple'
- * @param previous_id An optional session ID to use.  This can be NULL.
- * @param config_dir  The path to the configuration directory used by
- *                    this instance of this program, e.g. '/home/user/.purple'
  */
 void pidgin_session_init(gchar *argv0, gchar *previous_id, gchar *config_dir);
 
 /**
+ * pidgin_session_end:
+ *
  * Unregister this instance of Pidgin with the user's current session
  * manager.
  */

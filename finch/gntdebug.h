@@ -34,23 +34,31 @@
 /*@{*/
 
 /**
+ * finch_debug_get_ui_ops:
+ *
  * Get the ui-functions.
  *
- * @return The PurpleDebugUiOps structure populated with the appropriate functions.
+ * Returns: The PurpleDebugUiOps structure populated with the appropriate functions.
  */
 PurpleDebugUiOps *finch_debug_get_ui_ops(void);
 
 /**
+ * finch_debug_init:
+ *
  * Perform necessary initializations.
  */
 void finch_debug_init(void);
 
 /**
+ * finch_debug_uninit:
+ *
  * Perform necessary uninitializations.
  */
 void finch_debug_uninit(void);
 
 /**
+ * finch_debug_window_show:
+ *
  * Show the debug window.
  */
 void finch_debug_window_show(void);
