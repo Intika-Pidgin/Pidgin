@@ -36,39 +36,49 @@ G_BEGIN_DECLS
 /*@{*/
 
 /**
+ * pidgin_sound_get_event_option:
+ * @event: The event.
+ *
  * Get the prefs option for an event.
  *
- * @param event The event.
- * @return The option.
+ * Returns: The option.
  */
 const char *pidgin_sound_get_event_option(PurpleSoundEventID event);
 
 /**
+ * pidgin_sound_get_event_label:
+ * @event: The event.
+ *
  * Get the label for an event.
  *
- * @param event The event.
- * @return The label.
+ * Returns: The label.
  */
 const char *pidgin_sound_get_event_label(PurpleSoundEventID event);
 
 /**
+ * pidgin_sound_get_ui_ops:
+ *
  * Gets GTK+ sound UI ops.
  *
- * @return The UI operations structure.
+ * Returns: The UI operations structure.
  */
 PurpleSoundUiOps *pidgin_sound_get_ui_ops(void);
 
 /**
+ * pidgin_sound_get_handle:
+ *
  * Get the handle for the GTK+ sound system.
  *
- * @return The handle to the sound system
+ * Returns: The handle to the sound system
  */
 void *pidgin_sound_get_handle(void);
 
 /**
+ * pidgin_sound_is_customized:
+ *
  * Returns true Pidgin is using customized sounds
  *
- * @return TRUE if non default sounds are used.
+ * Returns: TRUE if non default sounds are used.
  */
 gboolean pidgin_sound_is_customized(void);
 

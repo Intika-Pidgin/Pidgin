@@ -1,8 +1,3 @@
-/**
- * @file gntidle.h GNT Idle API
- * @ingroup finch
- */
-
 /* finch
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -23,6 +18,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+/**
+ * SECTION:gntidle
+ * @section_id: finch-gntidle
+ * @short_description: <filename>gntidle.h</filename>
+ * @title: Idle API
+ */
+
 #ifndef _GNT_IDLE_H_
 #define _GNT_IDLE_H_
 
@@ -34,9 +36,11 @@
 /*@{*/
 
 /**
+ * finch_idle_get_ui_ops:
+ *
  * Returns the GNT idle UI ops.
  *
- * @return The UI operations structure.
+ * Returns: The UI operations structure.
  */
 PurpleIdleUiOps *finch_idle_get_ui_ops(void);
 

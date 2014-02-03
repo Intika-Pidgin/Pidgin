@@ -34,10 +34,12 @@
 G_BEGIN_DECLS
 
 /**
+ * pidgin_plugin_pref_create_frame:
+ * @frame: PurplePluginPrefFrame
+ *
  * Creates a Gtk Preference frame for a PurplePluginPrefFrame
  *
- * @param frame PurplePluginPrefFrame
- * @return The gtk preference frame
+ * Returns: The gtk preference frame
  */
 GtkWidget *pidgin_plugin_pref_create_frame(PurplePluginPrefFrame *frame);
 
