@@ -1,7 +1,3 @@
-/**
- * @file gtkicon-theme-loader.h  Pidgin Icon Theme Loader Class API
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -22,6 +18,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+/**
+ * SECTION:gtkicon-theme-loader
+ * @section_id: pidgin-gtkicon-theme-loader
+ * @short_description: <filename>gtkicon-theme-loader.h</filename>
+ * @title: Pidgin Icon Theme Loader Class
+ */
 
 #ifndef PIDGIN_ICON_THEME_LOADER_H
 #define PIDGIN_ICON_THEME_LOADER_H
@@ -30,12 +32,6 @@
 #include <glib-object.h>
 #include "theme-loader.h"
 
-/**
- * A pidgin icon theme loader. Extends PurpleThemeLoader (theme-loader.h)
- * This is a class designed to build icon themes
- *
- * PidginIconThemeLoader is a GObject.
- */
 typedef struct _PidginIconThemeLoader       PidginIconThemeLoader;
 typedef struct _PidginIconThemeLoaderClass  PidginIconThemeLoaderClass;
 
@@ -46,6 +42,12 @@ typedef struct _PidginIconThemeLoaderClass  PidginIconThemeLoaderClass;
 #define PIDGIN_IS_ICON_THEME_LOADER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_ICON_THEME_LOADER))
 #define PIDGIN_ICON_THEME_LOADER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_ICON_THEME_LOADER, PidginIconThemeLoaderClass))
 
+/**
+ * PidginIconThemeLoader:
+ *
+ * A pidgin icon theme loader. Extends PurpleThemeLoader (theme-loader.h)
+ * This is a class designed to build icon themes
+ */
 struct _PidginIconThemeLoader
 {
 	PurpleThemeLoader parent;
@@ -62,10 +64,13 @@ struct _PidginIconThemeLoaderClass
 G_BEGIN_DECLS
 
 /**
+ * pidgin_icon_theme_loader_get_type:
+ *
  * GObject foo.
  * @internal.
  */
 GType pidgin_icon_theme_loader_get_type(void);
 
 G_END_DECLS
+
 #endif /* PIDGIN_ICON_THEME_LOADER_H */

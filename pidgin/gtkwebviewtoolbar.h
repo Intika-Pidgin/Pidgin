@@ -20,6 +20,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+/**
+ * SECTION:gtkwebviewtoolbar
+ * @section_id: pidgin-gtkwebviewtoolbar
+ * @short_description: <filename>gtkwebviewtoolbar.h</filename>
+ * @title: WebView Toolbar
+ */
+
 #ifndef _PIDGINWEBVIEWTOOLBAR_H_
 #define _PIDGINWEBVIEWTOOLBAR_H_
 
@@ -51,50 +58,58 @@ struct _GtkWebViewToolbarClass {
 G_BEGIN_DECLS
 
 /**
+ * gtk_webviewtoolbar_get_type:
+ *
  * Returns the GType for a GtkWebViewToolbar widget
  *
- * @return The GType for GtkWebViewToolbar widget
+ * Returns: The GType for GtkWebViewToolbar widget
  */
 GType gtk_webviewtoolbar_get_type(void);
 
 /**
+ * gtk_webviewtoolbar_new:
+ *
  * Create a new GtkWebViewToolbar object
  *
- * @return A GtkWidget corresponding to the GtkWebViewToolbar object
+ * Returns: A GtkWidget corresponding to the GtkWebViewToolbar object
  */
 GtkWidget *gtk_webviewtoolbar_new(void);
 
 /**
- * Attach a GtkWebViewToolbar object to a GtkWebView
+ * gtk_webviewtoolbar_attach:
+ * @toolbar: The GtkWebViewToolbar object
+ * @webview: The GtkWebView object
  *
- * @param toolbar The GtkWebViewToolbar object
- * @param webview The GtkWebView object
+ * Attach a GtkWebViewToolbar object to a GtkWebView
  */
 void gtk_webviewtoolbar_attach(GtkWebViewToolbar *toolbar, GtkWidget *webview);
 
 /**
- * Associate the smileys from a protocol to a GtkWebViewToolbar object
+ * gtk_webviewtoolbar_associate_smileys:
+ * @toolbar:  The GtkWebViewToolbar object
+ * @proto_id: The ID of the protocol from which smileys are associated
  *
- * @param toolbar  The GtkWebViewToolbar object
- * @param proto_id The ID of the protocol from which smileys are associated
+ * Associate the smileys from a protocol to a GtkWebViewToolbar object
  */
 void gtk_webviewtoolbar_associate_smileys(GtkWebViewToolbar *toolbar,
                                           const char *proto_id);
 
 /**
- * Switch the active conversation for a GtkWebViewToolbar object
+ * gtk_webviewtoolbar_switch_active_conversation:
+ * @toolbar: The GtkWebViewToolbar object
+ * @conv:    The new conversation
  *
- * @param toolbar The GtkWebViewToolbar object
- * @param conv    The new conversation
+ * Switch the active conversation for a GtkWebViewToolbar object
  */
 void gtk_webviewtoolbar_switch_active_conversation(GtkWebViewToolbar *toolbar,
                                                    PurpleConversation *conv);
 
 /**
- * Activate a GtkWebViewToolbar action
+ * gtk_webviewtoolbar_activate:
+ * @toolbar: The GtkWebViewToolbar object
+ * @action:  The GtkWebViewAction
  *
- * @param toolbar The GtkWebViewToolbar object
- * @param action  The GtkWebViewAction
+ * Activate a GtkWebViewToolbar action
  */
 void gtk_webviewtoolbar_activate(GtkWebViewToolbar *toolbar,
                                  GtkWebViewAction action);
