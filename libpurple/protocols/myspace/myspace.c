@@ -32,9 +32,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#define PURPLE_PLUGIN
-
 #include "myspace.h"
+#include "plugins.h"
+
+static PurpleProtocol *my_protocol = NULL;
 
 static void msim_set_status(PurpleAccount *account, PurpleStatus *status);
 static void msim_set_idle(PurpleConnection *gc, int time);
@@ -1303,7 +1304,7 @@ msim_send_unofficial_client(MsimSession *session, gchar *username)
 			PURPLE_MAJOR_VERSION,
 			PURPLE_MINOR_VERSION,
 			PURPLE_MICRO_VERSION,
-			MSIM_PRPL_VERSION_STRING);
+			MSIM_PROTOCOL_VERSION_STRING);
 
 	ret = msim_send_bm(session, username, our_info, MSIM_BM_UNOFFICIAL_CLIENT);
 
@@ -1442,14 +1443,14 @@ msim_incoming_status(MsimSession *session, MsimMessage *msg)
 			g_free(unrecognized_msg);
 	}
 
-	purple_prpl_got_user_status(session->account, username, purple_primitive_get_id_from_type(purple_status_code), NULL);
+	purple_protocol_got_user_status(session->account, username, purple_primitive_get_id_from_type(purple_status_code), NULL);
 
 	if (status_code == MSIM_STATUS_CODE_IDLE) {
 		purple_debug_info("msim", "msim_status: got idle: %s\n", username);
-		purple_prpl_got_user_idle(session->account, username, TRUE, 0);
+		purple_protocol_got_user_idle(session->account, username, TRUE, 0);
 	} else {
 		/* All other statuses indicate going back to non-idle. */
-		purple_prpl_got_user_idle(session->account, username, FALSE, 0);
+		purple_protocol_got_user_idle(session->account, username, FALSE, 0);
 	}
 
 #ifdef MSIM_SEND_CLIENT_VERSION
@@ -2247,7 +2248,7 @@ msim_close(PurpleConnection *gc)
 
 	/*
 	 * Free our protocol-specific buddy data.  It almost seems like libpurple
-	 * should call our buddy_free prpl callback so that we don't need to do
+	 * should call our buddy_free protocol callback so that we don't need to do
 	 * this... but it doesn't, so we do.
 	 */
 	buddies = purple_blist_find_buddies(purple_connection_get_account(gc), NULL);
@@ -2932,8 +2933,8 @@ msim_offline_message(const PurpleBuddy *buddy)
 /**
  * Send raw data to the server, possibly with embedded NULs.
  *
- * Used in prpl_info struct, so that plugins can have the most possible
- * control of what is sent over the connection. Inside this prpl,
+ * Used in protocol struct, so that plugins can have the most possible
+ * control of what is sent over the connection. Inside this protocol,
  * msim_send_raw() is used, since it sends NUL-terminated strings (easier).
  *
  * @param gc PurpleConnection
@@ -3015,97 +3016,6 @@ msim_get_account_text_table(PurpleAccount *unused)
 }
 
 /**
- * Callbacks called by Purple, to access this plugin.
- */
-static PurplePluginProtocolInfo prpl_info = {
-	sizeof(PurplePluginProtocolInfo), /* struct_size */
-	/* options */
-	  OPT_PROTO_USE_POINTSIZE        /* specify font size in sane point size */
-	| OPT_PROTO_MAIL_CHECK,
-
-	/* | OPT_PROTO_IM_IMAGE - TODO: direct images. */
-	NULL,              /* user_splits */
-	NULL,              /* protocol_options */
-	NO_BUDDY_ICONS,    /* icon_spec - TODO: eventually should add this */
-	msim_list_icon,    /* list_icon */
-	NULL,              /* list_emblems */
-	msim_status_text,  /* status_text */
-	msim_tooltip_text, /* tooltip_text */
-	msim_status_types, /* status_types */
-	msim_blist_node_menu,  /* blist_node_menu */
-	NULL,              /* chat_info */
-	NULL,              /* chat_info_defaults */
-	msim_login,        /* login */
-	msim_close,        /* close */
-	msim_send_im,      /* send_im */
-	NULL,              /* set_info */
-	msim_send_typing,  /* send_typing */
-	msim_get_info,     /* get_info */
-	msim_set_status,   /* set_status */
-	msim_set_idle,     /* set_idle */
-	NULL,              /* change_passwd */
-	msim_add_buddy,    /* add_buddy */
-	NULL,              /* add_buddies */
-	msim_remove_buddy, /* remove_buddy */
-	NULL,              /* remove_buddies */
-	NULL,              /* add_permit */
-	msim_add_deny,     /* add_deny */
-	NULL,              /* rem_permit */
-	msim_rem_deny,     /* rem_deny */
-	NULL,              /* set_permit_deny */
-	NULL,              /* join_chat */
-	NULL,              /* reject chat invite */
-	NULL,              /* get_chat_name */
-	NULL,              /* chat_invite */
-	NULL,              /* chat_leave */
-	NULL,              /* chat_whisper */
-	NULL,              /* chat_send */
-	NULL,              /* keepalive */
-	NULL,              /* register_user */
-	NULL,              /* get_cb_info */
-	NULL,              /* alias_buddy */
-	NULL,              /* group_buddy */
-	NULL,              /* rename_group */
-	msim_buddy_free,   /* buddy_free */
-	NULL,              /* convo_closed */
-	msim_normalize,    /* normalize */
-	NULL,              /* set_buddy_icon */
-	NULL,              /* remove_group */
-	NULL,              /* get_cb_real_name */
-	NULL,              /* set_chat_topic */
-	NULL,              /* find_blist_chat */
-	NULL,              /* roomlist_get_list */
-	NULL,              /* roomlist_cancel */
-	NULL,              /* roomlist_expand_category */
-	NULL,              /* can_receive_file */
-	NULL,              /* send_file */
-	NULL,              /* new_xfer */
-	msim_offline_message,  /* offline_message */
-	NULL,              /* whiteboard_prpl_ops */
-	msim_send_really_raw,  /* send_raw */
-	NULL,                  /* roomlist_room_serialize */
-	NULL,                  /* unregister_user */
-	msim_send_attention,   /* send_attention */
-	msim_attention_types,  /* attention_types */
-	msim_get_account_text_table,              /* get_account_text_table */
-	NULL,                   /* initiate_media */
-	NULL,                   /* get_media_caps */
-	NULL,                   /* get_moods */
-	NULL,                   /* set_public_alias */
-	NULL,                   /* get_public_alias */
-	NULL                    /* get_max_message_size */
-};
-
-/**
- * Load the plugin.
- */
-static gboolean
-msim_load(PurplePlugin *plugin)
-{
-	return TRUE;
-}
-
-/**
  * Called when friends have been imported to buddy list on server.
  */
 static void
@@ -3143,13 +3053,13 @@ msim_import_friends_cb(MsimSession *session, const MsimMessage *reply, gpointer 
 /**
  * Import friends from myspace.com.
  */
-static void msim_import_friends(PurplePluginAction *action)
+static void msim_import_friends(PurpleProtocolAction *action)
 {
 	PurpleConnection *gc;
 	MsimSession *session;
 	gchar *group_name;
 
-	gc = (PurpleConnection *)action->context;
+	gc = action->connection;
 	session = purple_connection_get_protocol_data(gc);
 
 	group_name = "MySpace Friends";
@@ -3172,63 +3082,27 @@ static void msim_import_friends(PurplePluginAction *action)
  * Actions menu for account.
  */
 static GList *
-msim_actions(PurplePlugin *plugin, gpointer context /* PurpleConnection* */)
+msim_get_actions(PurpleConnection *gc)
 {
 	GList *menu;
-	PurplePluginAction *act;
+	PurpleProtocolAction *act;
 
 	menu = NULL;
 
 #if 0
 	/* TODO: find out how */
-	act = purple_plugin_action_new(_("Find people..."), msim_);
+	act = purple_protocol_action_new(_("Find people..."), msim_);
 	menu = g_list_append(menu, act);
 
-	act = purple_plugin_action_new(_("Change IM name..."), NULL);
+	act = purple_protocol_action_new(_("Change IM name..."), NULL);
 	menu = g_list_append(menu, act);
 #endif
 
-	act = purple_plugin_action_new(_("Add friends from MySpace.com"), msim_import_friends);
+	act = purple_protocol_action_new(_("Add friends from MySpace.com"), msim_import_friends);
 	menu = g_list_append(menu, act);
 
 	return menu;
 }
-
-/**
- * Based on MSN's plugin info comments.
- */
-static PurplePluginInfo info = {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,                           /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                          /**< priority       */
-
-	"prpl-myspace",                                   /**< id             */
-	"MySpaceIM",                                      /**< name           */
-	MSIM_PRPL_VERSION_STRING,                         /**< version        */
-	                                                  /**  summary        */
-	"MySpaceIM Protocol Plugin",
-	                                                  /**  description    */
-	"MySpaceIM Protocol Plugin",
-	"Jeff Connelly <jeff2@soc.pidgin.im>",            /**< author         */
-	"https://developer.pidgin.im/wiki/MySpaceIM/",    /**< homepage       */
-
-	msim_load,                                        /**< load           */
-	NULL,                                             /**< unload         */
-	NULL,                                             /**< destroy        */
-	NULL,                                             /**< ui_info        */
-	&prpl_info,                                       /**< extra_info     */
-	NULL,                                             /**< prefs_info     */
-	msim_actions,                                     /**< msim_actions   */
-	NULL,                                             /**< reserved1      */
-	NULL,                                             /**< reserved2      */
-	NULL,                                             /**< reserved3      */
-	NULL                                              /**< reserved4      */
-};
 
 #ifdef MSIM_SELF_TEST
 /*
@@ -3519,56 +3393,188 @@ msim_uri_handler(const gchar *proto, const gchar *cmd, GHashTable *params)
 }
 
 /**
- * Initialize plugin.
+ * Protocol attributes and options.
  */
 static void
-init_plugin(PurplePlugin *plugin)
+msim_protocol_init(PurpleProtocol *protocol)
 {
-#ifdef MSIM_SELF_TEST
-	msim_test_all();
-	exit(0);
-#endif /* MSIM_SELF_TEST */
-
 	PurpleAccountOption *option;
-	static gboolean initialized = FALSE;
+
+	protocol->id        = "prpl-myspace";
+	protocol->name      = "MySpaceIM";
+	protocol->options   = OPT_PROTO_USE_POINTSIZE /* specify font size in sane point size */
+	                      | OPT_PROTO_MAIL_CHECK;
+	                   /* | OPT_PROTO_IM_IMAGE - TODO: direct images. */
+	/* TODO: eventually should add icon_spec */
 
 	/* TODO: default to automatically try different ports. Make the user be
 	 * able to set the first port to try (like LastConnectedPort in Windows client).  */
 	option = purple_account_option_string_new(_("Connect server"), "server", MSIM_SERVER);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_int_new(_("Connect port"), "port", MSIM_PORT);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 #ifdef MSIM_USER_WANTS_TO_CONFIGURE_STATUS_TEXT
 	option = purple_account_option_bool_new(_("Show display name in status text"), "show_display_name", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_bool_new(_("Show headline in status text"), "show_headline", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 #endif
 
 #ifdef MSIM_USER_WANTS_TO_DISABLE_EMOTICONS
 	option = purple_account_option_bool_new(_("Send emoticons"), "emoticons", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 #endif
 
 #ifdef MSIM_USER_REALLY_CARES_ABOUT_PRECISE_FONT_SIZES
 	option = purple_account_option_int_new(_("Screen resolution (dots per inch)"), "dpi", MSIM_DEFAULT_DPI);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_int_new(_("Base font size (points)"), "base_font_size", MSIM_BASE_FONT_POINT_SIZE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 #endif
-
-	/* Code below only runs once. Based on oscar.c's oscar_init(). */
-	if (initialized)
-		return;
-
-	initialized = TRUE;
-
-	purple_signal_connect(purple_get_core(), "uri-handler", &initialized,
-			PURPLE_CALLBACK(msim_uri_handler), NULL);
 }
 
-PURPLE_INIT_PLUGIN(myspace, init_plugin, info);
+/**
+ * Protocol class and interfaces initialization.
+ */
+
+static void
+msim_protocol_class_init(PurpleProtocolClass *klass)
+{
+	klass->login        = msim_login;
+	klass->close        = msim_close;
+	klass->status_types = msim_status_types;
+	klass->list_icon    = msim_list_icon;
+}
+
+static void
+msim_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+{
+	client_iface->get_actions            = msim_get_actions;
+	client_iface->status_text            = msim_status_text;
+	client_iface->tooltip_text           = msim_tooltip_text;
+	client_iface->blist_node_menu        = msim_blist_node_menu;
+	client_iface->buddy_free             = msim_buddy_free;
+	client_iface->normalize              = msim_normalize;
+	client_iface->offline_message        = msim_offline_message;
+	client_iface->get_account_text_table = msim_get_account_text_table;
+}
+
+static void
+msim_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+{
+	server_iface->get_info     = msim_get_info;
+	server_iface->set_status   = msim_set_status;
+	server_iface->set_idle     = msim_set_idle;
+	server_iface->add_buddy    = msim_add_buddy;
+	server_iface->remove_buddy = msim_remove_buddy;
+	server_iface->send_raw     = msim_send_really_raw;
+}
+
+static void
+msim_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+{
+	im_iface->send        = msim_send_im;
+	im_iface->send_typing = msim_send_typing;
+}
+
+static void
+msim_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+{
+	privacy_iface->add_deny = msim_add_deny;
+	privacy_iface->rem_deny = msim_rem_deny;
+}
+
+static void
+msim_protocol_attention_iface_init(PurpleProtocolAttentionIface *attention_iface)
+{
+	attention_iface->send      = msim_send_attention;
+	attention_iface->get_types = msim_attention_types;
+}
+
+PURPLE_DEFINE_TYPE_EXTENDED(
+	MsimProtocol, msim_protocol, PURPLE_TYPE_PROTOCOL, 0,
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
+	                                  msim_protocol_client_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
+	                                  msim_protocol_server_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
+	                                  msim_protocol_im_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
+	                                  msim_protocol_privacy_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE,
+	                                  msim_protocol_attention_iface_init)
+);
+
+/**
+ * Query the plugin
+ */
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Jeff Connelly <jeff2@soc.pidgin.im>",
+		NULL
+	};
+
+	return purple_plugin_info_new(
+		"id",           "prpl-myspace",
+		"name",         "MySpaceIM Protocol",
+		"version",      MSIM_PROTOCOL_VERSION_STRING,
+		"category",     "Protocol",
+		"summary",      "MySpaceIM Protocol Plugin",
+		"description",  "MySpaceIM Protocol Plugin",
+		"authors",      authors,
+		"website",      "https://developer.pidgin.im/wiki/MySpaceIM/",
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
+		                PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
+		NULL
+	);
+}
+
+/**
+ * Load the plugin.
+ */
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	msim_protocol_register_type(plugin);
+
+#ifdef MSIM_SELF_TEST
+	msim_test_all();
+	g_set_error(error, MSIM_DOMAIN, 0, _("Finished MySpaceIM self test"));
+	return FALSE;
+#endif /* MSIM_SELF_TEST */
+
+	my_protocol = purple_protocols_add(MSIM_TYPE_PROTOCOL, error);
+	if (!my_protocol)
+		return FALSE;
+
+	purple_signal_connect(purple_get_core(), "uri-handler", my_protocol,
+			PURPLE_CALLBACK(msim_uri_handler), NULL);
+
+	return TRUE;
+}
+
+/**
+ * Unload the plugin.
+ */
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	if (!purple_protocols_remove(my_protocol, error))
+		return FALSE;
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(myspace, plugin_query, plugin_load, plugin_unload);
