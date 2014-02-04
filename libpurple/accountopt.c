@@ -1,8 +1,3 @@
-/**
- * @file accountopt.c Account Options API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -29,7 +24,7 @@
 #include "util.h"
 #include "glibcompat.h"
 
-/**
+/*
  * An option for an account.
  *
  * This is set by protocol plugins, and appears in the account settings
@@ -64,7 +59,7 @@ struct _PurpleAccountOption
 	} params;
 };
 
-/**
+/*
  * A username split.
  *
  * This is used by some protocols to separate the fields of the username

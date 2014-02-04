@@ -21,6 +21,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02111-1301, USA.
  */
+/**
+ * SECTION:gtkdocklet
+ * @section_id: pidgin-gtkdocklet
+ * @short_description: <filename>gtkdocklet.h</filename>
+ * @title: Docklet
+ *
+ * This file provides the System tray icon (aka docklet) implementation.
+ */
 
 #ifndef _GTKDOCKLET_H_
 #define _GTKDOCKLET_H_
@@ -35,7 +43,9 @@ typedef enum
 } PidginDockletFlag;
 
 /**
- * Returns the GtkStatusIcon used for the docklet.
+ * pidgin_docklet_get_status_icon:
+ *
+ * Returns: The #GtkStatusIcon used for the docklet.
  */
 GtkStatusIcon *pidgin_docklet_get_status_icon(void);
 

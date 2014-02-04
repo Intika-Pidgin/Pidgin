@@ -1,8 +1,3 @@
-/**
- * @file account.c Account API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -1785,7 +1780,7 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 	return TRUE;
 }
 
-/**
+/*
  * This makes sure your permit list contains all buddies from your
  * buddy list and ONLY buddies from your buddy list.
  */
