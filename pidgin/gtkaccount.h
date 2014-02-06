@@ -27,7 +27,7 @@
 #ifndef _PIDGINACCOUNT_H_
 #define _PIDGINACCOUNT_H_
 
-#include "account.h"
+#include "accounts.h"
 
 typedef enum
 {
@@ -36,6 +36,8 @@ typedef enum
 
 } PidginAccountDialogType;
 
+
+G_BEGIN_DECLS
 
 /**
  * Shows the accounts window.
@@ -68,16 +70,18 @@ PurpleAccountUiOps *pidgin_accounts_get_ui_ops(void);
  *
  * @return The handle to the GTK+ account system
  */
-void *pidgin_account_get_handle(void);
+void *pidgin_accounts_get_handle(void);
 
 /**
  * Initializes the GTK+ account system
  */
-void pidgin_account_init(void);
+void pidgin_accounts_init(void);
 
 /**
  * Uninitializes the GTK+ account system
  */
-void pidgin_account_uninit(void);
+void pidgin_accounts_uninit(void);
+
+G_END_DECLS
 
 #endif /* _PIDGINACCOUNT_H_ */

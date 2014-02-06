@@ -48,6 +48,7 @@
 #ifdef ENABLE_NLS
 #  include <locale.h>
 #  include <libintl.h>
+#  undef printf
 #  define _(String) ((const char *)dgettext(PACKAGE, String))
 #  ifdef gettext_noop
 #    define N_(String) gettext_noop (String)
@@ -75,7 +76,6 @@
 #define BUF_LEN MSG_LEN
 #define BUF_LONG BUF_LEN * 2
 
-#include <sys/stat.h>
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/time.h>
@@ -151,20 +151,41 @@
 
 #include <glib-object.h>
 
-/* Safer ways to work with static buffers. When using non-static
- * buffers, either use g_strdup_* functions (preferred) or use
- * g_strlcpy/g_strlcpy directly. */
-#define purple_strlcpy(dest, src) g_strlcpy(dest, src, sizeof(dest))
-#define purple_strlcat(dest, src) g_strlcat(dest, src, sizeof(dest))
-
-#define PURPLE_WEBSITE "http://pidgin.im/"
-#define PURPLE_DEVEL_WEBSITE "http://developer.pidgin.im/"
+#define PURPLE_WEBSITE "https://pidgin.im/"
+#define PURPLE_DEVEL_WEBSITE "https://developer.pidgin.im/"
 
 
 /* INTERNAL FUNCTIONS */
 
-#include "account.h"
+#include "accounts.h"
 #include "connection.h"
+
+/**
+ * Sets an error for an account.
+ *
+ * @param account  The account to set the error for.
+ * @param new_err  The #PurpleConnectionErrorInfo instance representing the
+ *                 error.
+ */
+void _purple_account_set_current_error(PurpleAccount *account,
+                                       PurpleConnectionErrorInfo *new_err);
+
+/**
+ * Get an XML description of an account.
+ *
+ * @param account  The account
+ * @return  The XML description of the account.
+ */
+PurpleXmlNode *_purple_account_to_xmlnode(PurpleAccount *account);
+
+/**
+ * Returns the last child of a particular node.
+ *
+ * @param node  The node whose last child is to be retrieved.
+ *
+ * @return The last child of the node.
+ */
+PurpleBlistNode *_purple_blist_get_last_child(PurpleBlistNode *node);
 
 /* This is for the accounts code to notify the buddy icon code that
  * it's done loading.  We may want to replace this with a signal. */
@@ -175,12 +196,6 @@ _purple_buddy_icons_account_loaded_cb(void);
  * it's done loading.  We may want to replace this with a signal. */
 void
 _purple_buddy_icons_blist_loaded_cb(void);
-
-/* This is for the purple_core_migrate() code to tell the buddy
- * icon subsystem about the old icons directory so it can
- * migrate any icons in use. */
-void
-_purple_buddy_icon_set_old_icons_dir(const char *dirname);
 
 /**
  * Creates a connection to the specified account and either connects
@@ -216,14 +231,59 @@ void _purple_connection_new(PurpleAccount *account, gboolean regist,
 void _purple_connection_new_unregister(PurpleAccount *account, const char *password,
                                        PurpleAccountUnregistrationCb cb, void *user_data);
 /**
- * Disconnects and destroys a PurpleConnection.
+ * Checks if a connection is disconnecting, and should not attempt to reconnect.
  *
- * @note This function should only be called by purple_account_disconnect()
- *        in account.c.  If you're trying to sign off an account, use that
- *        function instead.
+ * @note This function should only be called by purple_account_set_enabled()
+ *       in account.c.
  *
- * @param gc The purple connection to destroy.
+ * @param gc  The connection to check
  */
-void _purple_connection_destroy(PurpleConnection *gc);
+gboolean _purple_connection_wants_to_die(const PurpleConnection *gc);
+
+/**
+ * Adds a chat to the active chats list of a connection
+ *
+ * @note This function should only be called by serv_got_joined_chat()
+ *       in server.c.
+ *
+ * @param gc    The connection
+ * @param chat  The chat conversation to add
+ */
+void _purple_connection_add_active_chat(PurpleConnection *gc,
+                                        PurpleChatConversation *chat);
+/**
+ * Removes a chat from the active chats list of a connection
+ *
+ * @note This function should only be called by serv_got_chat_left()
+ *       in server.c.
+ *
+ * @param gc    The connection
+ * @param chat  The chat conversation to remove
+ */
+void _purple_connection_remove_active_chat(PurpleConnection *gc,
+                                           PurpleChatConversation *chat);
+
+/**
+ * Updates the conversation cache to use a new conversation name and/or
+ * account. This function only updates the conversation cache. It is the
+ * caller's responsibility to actually update the conversation.
+ *
+ * @note This function should only be called by purple_conversation_set_name()
+ *       and purple_conversation_set_account() in conversation.c.
+ *
+ * @param conv    The conversation.
+ * @param name    The new name. If no change, use @c NULL.
+ * @param account The new account. If no change, use @c NULL.
+ */
+void _purple_conversations_update_cache(PurpleConversation *conv,
+		const char *name, PurpleAccount *account);
+
+/**
+ * Returns the primitive scores array from status.c.
+ *
+ * @note This function should only be called by
+ *       purple_buddy_presence_compute_score() in presence.c.
+ */
+int *_purple_statuses_get_primitive_scores(void);
 
 #endif /* _PURPLE_INTERNAL_H_ */

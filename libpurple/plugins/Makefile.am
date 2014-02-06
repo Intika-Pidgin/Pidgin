@@ -1,4 +1,4 @@
-DIST_SUBDIRS = mono perl ssl tcl
+DIST_SUBDIRS = mono perl ssl tcl keyrings
 
 if USE_PERL
 PERL_DIR = perl
@@ -20,7 +20,8 @@ SUBDIRS = \
 	$(MONO_DIR) \
 	$(PERL_DIR) \
 	ssl \
-	$(TCL_DIR)
+	$(TCL_DIR) \
+	keyrings
 
 plugindir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 
@@ -33,7 +34,6 @@ helloworld_la_LDFLAGS       = -module -avoid-version
 idle_la_LDFLAGS             = -module -avoid-version
 joinpart_la_LDFLAGS         = -module -avoid-version
 log_reader_la_LDFLAGS       = -module -avoid-version
-newline_la_LDFLAGS          = -module -avoid-version
 notify_example_la_LDFLAGS   = -module -avoid-version
 offlinemsg_la_LDFLAGS       = -module -avoid-version
 one_time_password_la_LDFLAGS	= -module -avoid-version
@@ -54,7 +54,6 @@ plugin_LTLIBRARIES = \
 	idle.la             \
 	joinpart.la         \
 	log_reader.la       \
-	newline.la          \
 	offlinemsg.la       \
 	psychic.la          \
 	statenotify.la      \
@@ -80,7 +79,6 @@ helloworld_la_SOURCES       = helloworld.c
 idle_la_SOURCES             = idle.c
 joinpart_la_SOURCES         = joinpart.c
 log_reader_la_SOURCES       = log_reader.c
-newline_la_SOURCES          = newline.c
 notify_example_la_SOURCES   = notify_example.c
 offlinemsg_la_SOURCES       = offlinemsg.c
 one_time_password_la_SOURCES	= one_time_password.c
@@ -97,7 +95,6 @@ codeinline_la_LIBADD		= $(GLIB_LIBS)
 idle_la_LIBADD              = $(GLIB_LIBS)
 joinpart_la_LIBADD          = $(GLIB_LIBS)
 log_reader_la_LIBADD        = $(GLIB_LIBS)
-newline_la_LIBADD           = $(GLIB_LIBS)
 notify_example_la_LIBADD    = $(GLIB_LIBS)
 offlinemsg_la_LIBADD        = $(GLIB_LIBS)
 one_time_password_la_LIBADD = $(GLIB_LIBS)
@@ -117,10 +114,10 @@ dbus_example_la_LIBADD      = $(GLIB_LIBS) $(DBUS_LIBS)
 .PHONY: always
 
 $(top_builddir)/libpurple/dbus-types.h: always
-	cd $(@D) && $(MAKE) $(AM_MAKEFLAGS) $(@F)
+	$(AM_V_GEN)cd $(@D) && $(MAKE) $(AM_MAKEFLAGS) $(@F)
 
 dbus-example-bindings.c: $(top_srcdir)/libpurple/dbus-analyze-functions.py $(dbus_example_la_SOURCES)
-	cat $(srcdir)/$(dbus_example_la_SOURCES) | \
+	$(AM_V_GEN)cat $(srcdir)/$(dbus_example_la_SOURCES) | \
 	$(PYTHON) $(top_srcdir)/libpurple/dbus-analyze-functions.py --export-only > $@
 
 $(dbus_example_la_OBJECTS) dbus-example.so: dbus-example-bindings.c $(top_builddir)/libpurple/dbus-types.h
@@ -146,7 +143,11 @@ AM_CPPFLAGS = \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(PLUGIN_CFLAGS) \
-	$(DBUS_CFLAGS)
+	$(DBUS_CFLAGS) \
+	$(NSS_CFLAGS)
+
+PLUGIN_LIBS = \
+	$(NSS_LIBS)
 
 #
 # This part allows people to build their own plugins in here.

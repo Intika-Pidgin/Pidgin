@@ -28,6 +28,7 @@
 
 
 #include "internal.h"
+#include "http.h"
 
 
 #if defined( __APPLE__ )
@@ -160,6 +161,7 @@ struct MXitSession {
 	/* libpurple */
 	PurpleAccount*		acc;						/* pointer to the libpurple internal account struct */
 	PurpleConnection*	con;						/* pointer to the libpurple internal connection struct */
+	guint				inpa;						/* the input watcher */
 
 	/* transmit */
 	struct tx_queue		queue;						/* transmit packet queue (FIFO mode) */
@@ -167,7 +169,7 @@ struct MXitSession {
 	int					outack;						/* outstanding ack packet */
 	guint				q_slow_timer_id;			/* timer handle for slow tx queue */
 	guint				q_fast_timer_id;			/* timer handle for fast tx queue */
-	GSList*				async_calls;				/* list of current outstanding async calls */
+	PurpleHttpConnectionSet*	async_http_reqs;			/* list of current outstanding async http requests */
 
 	/* receive */
 	char				rx_lbuf[16];				/* receive byte buffer (socket packet length) */

@@ -132,8 +132,7 @@ finch_connection_report_disconnect(PurpleConnection *gc, PurpleConnectionError r
 				"correct the error and re-enable the account."), text);
 
 		purple_request_action(account, NULL, primary, secondary, 2,
-							account, NULL, NULL,
-							account, 3,
+			purple_request_cpar_from_account(account), account, 3,
 							_("OK"), NULL,
 							_("Modify Account"), PURPLE_CALLBACK(ce_modify_account_cb),
 							_("Re-enable Account"), PURPLE_CALLBACK(ce_enable_account_cb));
@@ -165,10 +164,10 @@ static PurpleConnectionUiOps ops =
 	NULL, /* connected */
 	NULL, /* disconnected */
 	NULL, /* notice */
-	NULL,
 	NULL, /* network_connected */
 	NULL, /* network_disconnected */
 	finch_connection_report_disconnect,
+	NULL,
 	NULL,
 	NULL,
 	NULL

@@ -11,22 +11,18 @@ EXTRA_DIST = \
 		config.h.mingw \
 		doxy2devhelp.xsl \
 		fix-casts.sh \
-		gaim.pc.in \
-		gaim-uninstalled.pc.in \
 		intltool-extract.in \
 		intltool-merge.in \
 		intltool-update.in \
 		package_revision.h \
 		pidgin.apspec.in \
-		pidgin.spec.in \
 		pidgin.desktop.in \
 		po/Makefile.mingw \
 		valgrind-suppressions
 
 noinst_HEADERS = config.h package_revision.h
 
-dist-hook: pidgin.spec
-	cp pidgin.spec $(distdir)
+dist-hook:
 	rm $(distdir)/config.h
 
 distcheck-hook: libpurple/plugins/perl/common/Purple.pm pidgin/plugins/perl/common/Pidgin.pm
@@ -71,7 +67,11 @@ if ENABLE_GTK
 appsdir = $(datadir)/applications
 apps_in_files = pidgin.desktop.in
 apps_DATA = $(apps_in_files:.desktop.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+# silenced INTLTOOL_DESKTOP_RULE
+%.desktop: %.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po)
+	$(AM_V_GEN) LC_ALL=C $(INTLTOOL_MERGE) -d -u -c $(top_builddir)/po/.intltool-merge-cache $(top_srcdir)/po $< $@ > /dev/null
+
 endif #ENABLE_GTK
 
 endif #INSTALL_I18N

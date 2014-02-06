@@ -32,7 +32,9 @@
 #include <glib.h>
 #include <gmodule.h>
 #include "signals.h"
-#include "value.h"
+
+/** Returns the GType for the PurplePlugin boxed structure */
+#define PURPLE_TYPE_PLUGIN  (purple_plugin_get_type())
 
 /** @copydoc _PurplePlugin */
 typedef struct _PurplePlugin           PurplePlugin;
@@ -86,13 +88,13 @@ struct _PurplePluginInfo
 	GList *dependencies;
 	PurplePluginPriority priority;
 
-	char *id;
-	char *name;
-	char *version;
-	char *summary;
-	char *description;
-	char *author;
-	char *homepage;
+	const char *id;
+	const char *name;
+	const char *version;
+	const char *summary;
+	const char *description;
+	const char *author;
+	const char *homepage;
 
 	/**
 	 * If a plugin defines a 'load' function, and it returns FALSE,
@@ -160,6 +162,7 @@ struct _PurplePlugin
 	void *extra;                           /**< Plugin-specific data.     */
 	gboolean unloadable;                   /**< Unloadable                */
 	GList *dependent_plugins;              /**< Plugins depending on this */
+	gpointer ui_data;                      /**< The UI data. */
 
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
@@ -172,9 +175,7 @@ struct _PurplePlugin
 
 struct _PurplePluginUiInfo {
 	PurplePluginPrefFrame *(*get_plugin_pref_frame)(PurplePlugin *plugin);
-
-	int page_num;                                         /**< Reserved */
-	PurplePluginPrefFrame *frame;                           /**< Reserved */
+	gpointer (*get_plugin_pref_request)(PurplePlugin *plugin);
 
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
@@ -239,14 +240,19 @@ struct _PurplePluginAction {
 #endif
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Plugin API                                                      */
 /**************************************************************************/
 /*@{*/
+
+/**
+ * Returns the GType for the PurplePlugin boxed structure.
+ * TODO Boxing of PurplePlugin is a temporary solution to having a GType for
+ *      plugins. This should rather be a GObject instead of a GBoxed.
+ */
+GType purple_plugin_get_type(void);
 
 /**
  * Creates a new plugin structure.
@@ -317,8 +323,6 @@ gboolean purple_plugin_unload(PurplePlugin *plugin);
  * startup" by excluding said plugins from the list of plugins to save.  The
  * UI needs to call purple_plugins_save_loaded() after calling this for it
  * to have any effect.
- *
- * @since 2.3.0
  */
 void purple_plugin_disable(PurplePlugin *plugin);
 
@@ -441,7 +445,7 @@ const gchar *purple_plugin_get_homepage(const PurplePlugin *plugin);
  * @param command    The name of the command.
  * @param func       The function to execute.
  * @param marshal    The marshalling function.
- * @param ret_value  The return value type.
+ * @param ret_type   The return type.
  * @param num_params The number of parameters.
  * @param ...        The parameter types.
  *
@@ -451,7 +455,7 @@ const gchar *purple_plugin_get_homepage(const PurplePlugin *plugin);
 gboolean purple_plugin_ipc_register(PurplePlugin *plugin, const char *command,
 								  PurpleCallback func,
 								  PurpleSignalMarshalFunc marshal,
-								  PurpleValue *ret_value, int num_params, ...);
+								  GType ret_type, int num_params, ...);
 
 /**
  * Unregisters an IPC command in a plugin.
@@ -471,17 +475,17 @@ void purple_plugin_ipc_unregister_all(PurplePlugin *plugin);
 /**
  * Returns a list of value types used for an IPC command.
  *
- * @param plugin     The plugin.
- * @param command    The name of the command.
- * @param ret_value  The returned return value.
- * @param num_params The returned number of parameters.
- * @param params     The returned list of parameters.
+ * @param plugin      The plugin.
+ * @param command     The name of the command.
+ * @param ret_type    The returned return type.
+ * @param num_params  The returned number of parameters.
+ * @param param_types The returned list of parameter types.
  *
  * @return TRUE if the command was found, or FALSE otherwise.
  */
-gboolean purple_plugin_ipc_get_params(PurplePlugin *plugin, const char *command,
-									PurpleValue **ret_value, int *num_params,
-									PurpleValue ***params);
+gboolean purple_plugin_ipc_get_types(PurplePlugin *plugin, const char *command,
+									GType *ret_type, int *num_params,
+									GType **param_types);
 
 /**
  * Executes an IPC command.
@@ -515,8 +519,6 @@ void purple_plugins_add_search_path(const char *path);
  * Returns a list of plugin search paths.
  *
  * @constreturn A list of searched paths.
- *
- * @since 2.6.0
  */
 GList *purple_plugins_get_search_paths(void);
 
@@ -565,72 +567,6 @@ void purple_plugins_probe(const char *ext);
  * @return TRUE if plugin support is enabled, or FALSE otherwise.
  */
 gboolean purple_plugins_enabled(void);
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_PLUGIN_C_)
-/**
- * Registers a function that will be called when probing is finished.
- *
- * @param func The callback function.
- * @param data Data to pass to the callback.
- * @deprecated If you need this, ask for a plugin-probe signal to be added.
- */
-void purple_plugins_register_probe_notify_cb(void (*func)(void *), void *data);
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_PLUGIN_C_)
-/**
- * Unregisters a function that would be called when probing is finished.
- *
- * @param func The callback function.
- * @deprecated If you need this, ask for a plugin-probe signal to be added.
- */
-void purple_plugins_unregister_probe_notify_cb(void (*func)(void *));
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_PLUGIN_C_)
-/**
- * Registers a function that will be called when a plugin is loaded.
- *
- * @param func The callback function.
- * @param data Data to pass to the callback.
- * @deprecated Use the plugin-load signal instead.
- */
-void purple_plugins_register_load_notify_cb(void (*func)(PurplePlugin *, void *),
-										  void *data);
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_PLUGIN_C_)
-/**
- * Unregisters a function that would be called when a plugin is loaded.
- *
- * @param func The callback function.
- * @deprecated Use the plugin-load signal instead.
- */
-void purple_plugins_unregister_load_notify_cb(void (*func)(PurplePlugin *, void *));
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_PLUGIN_C_)
-/**
- * Registers a function that will be called when a plugin is unloaded.
- *
- * @param func The callback function.
- * @param data Data to pass to the callback.
- * @deprecated Use the plugin-unload signal instead.
- */
-void purple_plugins_register_unload_notify_cb(void (*func)(PurplePlugin *, void *),
-											void *data);
-#endif
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_PLUGIN_C_)
-/**
- * Unregisters a function that would be called when a plugin is unloaded.
- *
- * @param func The callback function.
- * @deprecated Use the plugin-unload signal instead.
- */
-void purple_plugins_unregister_unload_notify_cb(void (*func)(PurplePlugin *,
-														   void *));
-#endif
 
 /**
  * Finds a plugin with the specified name.
@@ -733,8 +669,6 @@ PurplePluginAction *purple_plugin_action_new(const char* label, void (*callback)
  */
 void purple_plugin_action_free(PurplePluginAction *action);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_PLUGIN_H_ */

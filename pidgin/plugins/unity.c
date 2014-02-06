@@ -61,10 +61,10 @@ update_launcher()
 		return;
 
 	if (launcher_count == LAUNCHER_COUNT_MESSAGES) {
-		for (convs = purple_get_conversations(); convs != NULL; convs = convs->next) {
+		for (convs = purple_conversations_get_all(); convs != NULL; convs = convs->next) {
 			PurpleConversation *conv = convs->data;
-			count += GPOINTER_TO_INT(purple_conversation_get_data(conv,
-			                         "unity-message-count"));
+			count += GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv),
+					"unity-message-count"));
 		}
 	} else {
 		count = n_sources;
@@ -82,15 +82,13 @@ update_launcher()
 static gchar *
 conversation_id(PurpleConversation *conv)
 {
-	PurpleConversationType conv_type = purple_conversation_get_type(conv);
 	PurpleAccount *account = purple_conversation_get_account(conv);
-	char type[2] = "0";
-	type[0] += conv_type;
 
-	return g_strconcat(type, ":",
-	                   purple_conversation_get_name(conv), ":",
-	                   purple_account_get_username(account), ":",
-	                   purple_account_get_protocol_id(account), NULL);
+	return g_strconcat((PURPLE_IS_IM_CONVERSATION(conv) ? "im" :
+				PURPLE_IS_CHAT_CONVERSATION(conv) ? "chat" : "misc"), ":",
+			purple_conversation_get_name(conv), ":",
+			purple_account_get_username(account), ":",
+			purple_account_get_protocol_id(account), NULL);
 }
 
 static void
@@ -104,7 +102,7 @@ messaging_menu_add_conversation(PurpleConversation *conv, gint count)
 	   icon data for IMs */
 	if (!messaging_menu_app_has_source(mmapp, id))
 		messaging_menu_app_append_source(mmapp, id, NULL,
-		                                 purple_conversation_get_title(conv));
+				purple_conversation_get_title(conv));
 
 	if (messaging_menu_text == MESSAGING_MENU_TIME)
 		messaging_menu_app_set_source_time(mmapp, id, g_get_real_time());
@@ -129,10 +127,11 @@ refill_messaging_menu()
 {
 	GList *convs;
 
-	for (convs = purple_get_conversations(); convs != NULL; convs = convs->next) {
+	for (convs = purple_conversations_get_all(); convs != NULL; convs = convs->next) {
 		PurpleConversation *conv = convs->data;
 		messaging_menu_add_conversation(conv,
-			GPOINTER_TO_INT(purple_conversation_get_data(conv, "unity-message-count")));
+			GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv),
+			"unity-message-count")));
 	}
 }
 
@@ -149,13 +148,13 @@ alert(PurpleConversation *conv)
 	if (!pidgin_conv_window_has_focus(purplewin) ||
 		!pidgin_conv_window_is_active_conversation(conv))
 	{
-		count = GPOINTER_TO_INT(purple_conversation_get_data(conv,
-		                        "unity-message-count"));
+		count = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv),
+				"unity-message-count"));
 		if (!count++)
 			++n_sources;
 
-		purple_conversation_set_data(conv, "unity-message-count",
-		                             GINT_TO_POINTER(count));
+		g_object_set_data(G_OBJECT(conv), "unity-message-count",
+				GINT_TO_POINTER(count));
 		messaging_menu_add_conversation(conv, count);
 		update_launcher();
 	}
@@ -166,10 +165,11 @@ alert(PurpleConversation *conv)
 static void
 unalert(PurpleConversation *conv)
 {
-	if (GPOINTER_TO_INT(purple_conversation_get_data(conv, "unity-message-count")) > 0)
+	if (GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "unity-message-count")) > 0)
 		--n_sources;
-	purple_conversation_set_data(conv, "unity-message-count",
-	                             GINT_TO_POINTER(0));
+
+	g_object_set_data(G_OBJECT(conv), "unity-message-count",
+			GINT_TO_POINTER(0));
 	messaging_menu_remove_conversation(conv);
 	update_launcher();
 }
@@ -183,10 +183,10 @@ unalert_cb(GtkWidget *widget, gpointer data, PurpleConversation *conv)
 
 static gboolean
 message_displayed_cb(PurpleAccount *account, const char *who, char *message,
-                     PurpleConversation *conv, PurpleMessageFlags flags)
+		PurpleConversation *conv, PurpleMessageFlags flags)
 {
-	if ((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
-	     alert_chat_nick && !(flags & PURPLE_MESSAGE_NICK)))
+	if ((PURPLE_IS_CHAT_CONVERSATION(conv) && alert_chat_nick &&
+			!(flags & PURPLE_MESSAGE_NICK)))
 		return FALSE;
 
 	if ((flags & PURPLE_MESSAGE_RECV) && !(flags & PURPLE_MESSAGE_DELAYED))
@@ -198,25 +198,24 @@ message_displayed_cb(PurpleAccount *account, const char *who, char *message,
 static void
 im_sent_im(PurpleAccount *account, const char *receiver, const char *message)
 {
-	PurpleConversation *conv = NULL;
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, receiver,
-	                                             account);
-	unalert(conv);
+	PurpleIMConversation *im = NULL;
+	im = purple_conversations_find_im_with_account(receiver, account);
+	unalert(PURPLE_CONVERSATION(im));
 }
 
 static void
 chat_sent_im(PurpleAccount *account, const char *message, int id)
 {
-	PurpleConversation *conv = NULL;
-	conv = purple_find_chat(purple_account_get_connection(account), id);
-	unalert(conv);
+	PurpleChatConversation *chat = NULL;
+	chat = purple_conversations_find_chat(purple_account_get_connection(account), id);
+	unalert(PURPLE_CONVERSATION(chat));
 }
 
 static void
 conv_created(PurpleConversation *conv)
 {
-	purple_conversation_set_data(conv, "unity-message-count",
-	                             GINT_TO_POINTER(0));
+	g_object_set_data(G_OBJECT(conv), "unity-message-count",
+			GINT_TO_POINTER(0));
 	attach_signals(conv);
 }
 
@@ -229,22 +228,26 @@ deleting_conv(PurpleConversation *conv)
 
 static void
 message_source_activated(MessagingMenuApp *app, const gchar *id,
-                         gpointer user_data)
+		gpointer user_data)
 {
 	gchar **sections = g_strsplit(id, ":", 0);
 	PurpleConversation *conv = NULL;
 	PurpleAccount *account;
 	PidginWindow *purplewin = NULL;
-	PurpleConversationType conv_type;
 
 	char *type     = sections[0];
 	char *cname    = sections[1];
 	char *aname    = sections[2];
 	char *protocol = sections[3];
 
-	conv_type = type[0] - '0';
 	account = purple_accounts_find(aname, protocol);
-	conv = purple_find_conversation_with_account(conv_type, cname, account);
+
+	if (g_strcmp0(type, "im") == 0)
+		conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(cname, account));
+	else if (g_strcmp0(type, "chat") == 0)
+		conv = PURPLE_CONVERSATION(purple_conversations_find_chat_with_account(cname, account));
+	else
+		conv = purple_conversations_find_with_account(cname, account);
 
 	if (conv) {
 		unalert(conv);
@@ -311,7 +314,7 @@ status_changed_cb(PurpleSavedStatus *saved_status)
 
 static void
 messaging_menu_status_changed(MessagingMenuApp *mmapp,
-                              MessagingMenuStatus mm_status, gpointer user_data)
+		MessagingMenuStatus mm_status, gpointer user_data)
 {
 	PurpleSavedStatus *saved_status;
 	PurpleStatusPrimitive primitive = PURPLE_STATUS_UNSET;
@@ -393,12 +396,12 @@ attach_signals(PurpleConversation *conv)
 		return 0;
 
 	id = g_signal_connect(G_OBJECT(gtkconv->entry), "focus-in-event",
-	                      G_CALLBACK(unalert_cb), conv);
-	purple_conversation_set_data(conv, "unity-entry-signal", GUINT_TO_POINTER(id));
+			G_CALLBACK(unalert_cb), conv);
+	g_object_set_data(G_OBJECT(conv), "unity-entry-signal", GUINT_TO_POINTER(id));
 
-	id = g_signal_connect(G_OBJECT(gtkconv->imhtml), "focus-in-event",
-	                      G_CALLBACK(unalert_cb), conv);
-	purple_conversation_set_data(conv, "unity-imhtml-signal", GUINT_TO_POINTER(id));
+	id = g_signal_connect(G_OBJECT(gtkconv->webview), "focus-in-event",
+			G_CALLBACK(unalert_cb), conv);
+	g_object_set_data(G_OBJECT(conv), "unity-webview-signal", GUINT_TO_POINTER(id));
 
 	return 0;
 }
@@ -412,14 +415,14 @@ detach_signals(PurpleConversation *conv)
 	if (!gtkconv)
 		return;
 
-	id = GPOINTER_TO_INT(purple_conversation_get_data(conv, "unity-imhtml-signal"));
-	g_signal_handler_disconnect(gtkconv->imhtml, id);
+	id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "unity-webview-signal"));
+	g_signal_handler_disconnect(gtkconv->webview, id);
 
-	id = GPOINTER_TO_INT(purple_conversation_get_data(conv, "unity-entry-signal"));
+	id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "unity-entry-signal"));
 	g_signal_handler_disconnect(gtkconv->entry, id);
 
-	purple_conversation_set_data(conv, "unity-message-count",
-	                             GINT_TO_POINTER(0));
+	g_object_set_data(G_OBJECT(conv), "unity-message-count",
+			GINT_TO_POINTER(0));
 }
 
 static GtkWidget *
@@ -440,9 +443,9 @@ get_config_frame(PurplePlugin *plugin)
 	toggle = gtk_check_button_new_with_mnemonic(_("Chatroom message alerts _only where someone says your username"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
-	                             purple_prefs_get_bool("/plugins/gtk/unity/alert_chat_nick"));
+			purple_prefs_get_bool("/plugins/gtk/unity/alert_chat_nick"));
 	g_signal_connect(G_OBJECT(toggle), "toggled",
-	                 G_CALLBACK(alert_config_cb), NULL);
+			G_CALLBACK(alert_config_cb), NULL);
 
 	/* Launcher integration */
 
@@ -455,23 +458,23 @@ get_config_frame(PurplePlugin *plugin)
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
 		purple_prefs_get_int("/plugins/gtk/unity/launcher_count") == LAUNCHER_COUNT_DISABLE);
 	g_signal_connect(G_OBJECT(toggle), "toggled",
-	                 G_CALLBACK(launcher_config_cb), GUINT_TO_POINTER(LAUNCHER_COUNT_DISABLE));
+			G_CALLBACK(launcher_config_cb), GUINT_TO_POINTER(LAUNCHER_COUNT_DISABLE));
 
 	toggle = gtk_radio_button_new_with_mnemonic_from_widget(GTK_RADIO_BUTTON(toggle),
-	                                                        _("Show number of unread _messages on launcher icon"));
+			_("Show number of unread _messages on launcher icon"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
 		purple_prefs_get_int("/plugins/gtk/unity/launcher_count") == LAUNCHER_COUNT_MESSAGES);
 	g_signal_connect(G_OBJECT(toggle), "toggled",
-	                 G_CALLBACK(launcher_config_cb), GUINT_TO_POINTER(LAUNCHER_COUNT_MESSAGES));
+			G_CALLBACK(launcher_config_cb), GUINT_TO_POINTER(LAUNCHER_COUNT_MESSAGES));
 
 	toggle = gtk_radio_button_new_with_mnemonic_from_widget(GTK_RADIO_BUTTON(toggle),
-	                                                        _("Show number of unread co_nversations on launcher icon"));
+			_("Show number of unread co_nversations on launcher icon"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
 		purple_prefs_get_int("/plugins/gtk/unity/launcher_count") == LAUNCHER_COUNT_SOURCES);
 	g_signal_connect(G_OBJECT(toggle), "toggled",
-	                 G_CALLBACK(launcher_config_cb), GUINT_TO_POINTER(LAUNCHER_COUNT_SOURCES));
+			G_CALLBACK(launcher_config_cb), GUINT_TO_POINTER(LAUNCHER_COUNT_SOURCES));
 
 	/* Messaging menu integration */
 
@@ -480,20 +483,20 @@ get_config_frame(PurplePlugin *plugin)
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 
 	toggle = gtk_radio_button_new_with_mnemonic(NULL,
-	                                                        _("Show number of _unread messages for conversations in messaging menu"));
+			_("Show number of _unread messages for conversations in messaging menu"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
 		purple_prefs_get_int("/plugins/gtk/unity/messaging_menu_text") == MESSAGING_MENU_COUNT);
 	g_signal_connect(G_OBJECT(toggle), "toggled",
-	                 G_CALLBACK(messaging_menu_config_cb), GUINT_TO_POINTER(MESSAGING_MENU_COUNT));
+			G_CALLBACK(messaging_menu_config_cb), GUINT_TO_POINTER(MESSAGING_MENU_COUNT));
 
 	toggle = gtk_radio_button_new_with_mnemonic_from_widget(GTK_RADIO_BUTTON(toggle),
-	                                                        _("Show _elapsed time for unread conversations in messaging menu"));
+			_("Show _elapsed time for unread conversations in messaging menu"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
 		purple_prefs_get_int("/plugins/gtk/unity/messaging_menu_text") == MESSAGING_MENU_TIME);
 	g_signal_connect(G_OBJECT(toggle), "toggled",
-	                 G_CALLBACK(messaging_menu_config_cb), GUINT_TO_POINTER(MESSAGING_MENU_TIME));
+			G_CALLBACK(messaging_menu_config_cb), GUINT_TO_POINTER(MESSAGING_MENU_TIME));
 
 	gtk_widget_show_all(ret);
 	return ret;
@@ -502,7 +505,7 @@ get_config_frame(PurplePlugin *plugin)
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get_all();
 	PurpleSavedStatus *saved_status;
 	void *conv_handle = purple_conversations_get_handle();
 	void *gtk_conv_handle = pidgin_conversations_get_handle();
@@ -516,32 +519,32 @@ plugin_load(PurplePlugin *plugin)
 	messaging_menu_text = purple_prefs_get_int("/plugins/gtk/unity/messaging_menu_text");
 
 	g_signal_connect(mmapp, "activate-source",
-	                 G_CALLBACK(message_source_activated), NULL);
+			G_CALLBACK(message_source_activated), NULL);
 	g_signal_connect(mmapp, "status-changed",
-	                 G_CALLBACK(messaging_menu_status_changed), NULL);
+			G_CALLBACK(messaging_menu_status_changed), NULL);
 
 	saved_status = purple_savedstatus_get_current();
 	status_changed_cb(saved_status);
 
 	purple_signal_connect(savedstat_handle, "savedstatus-changed", plugin,
-	                    PURPLE_CALLBACK(status_changed_cb), NULL);
+			PURPLE_CALLBACK(status_changed_cb), NULL);
 
 	launcher = unity_launcher_entry_get_for_desktop_id("pidgin.desktop");
 	g_object_ref(launcher);
 	launcher_count = purple_prefs_get_int("/plugins/gtk/unity/launcher_count");
 
 	purple_signal_connect(gtk_conv_handle, "displayed-im-msg", plugin,
-	                    PURPLE_CALLBACK(message_displayed_cb), NULL);
+			PURPLE_CALLBACK(message_displayed_cb), NULL);
 	purple_signal_connect(gtk_conv_handle, "displayed-chat-msg", plugin,
-	                    PURPLE_CALLBACK(message_displayed_cb), NULL);
+			PURPLE_CALLBACK(message_displayed_cb), NULL);
 	purple_signal_connect(conv_handle, "sent-im-msg", plugin,
-	                    PURPLE_CALLBACK(im_sent_im), NULL);
+			PURPLE_CALLBACK(im_sent_im), NULL);
 	purple_signal_connect(conv_handle, "sent-chat-msg", plugin,
-	                    PURPLE_CALLBACK(chat_sent_im), NULL);
+			PURPLE_CALLBACK(chat_sent_im), NULL);
 	purple_signal_connect(conv_handle, "conversation-created", plugin,
-	                    PURPLE_CALLBACK(conv_created), NULL);
+			PURPLE_CALLBACK(conv_created), NULL);
 	purple_signal_connect(conv_handle, "deleting-conversation", plugin,
-	                    PURPLE_CALLBACK(deleting_conv), NULL);
+			PURPLE_CALLBACK(deleting_conv), NULL);
 
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
@@ -555,14 +558,14 @@ plugin_load(PurplePlugin *plugin)
 static gboolean
 plugin_unload(PurplePlugin *plugin)
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get_all();
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
 		unalert(conv);
 		detach_signals(conv);
 		convs = convs->next;
 	}
-
+	
 	unity_launcher_entry_set_count_visible(launcher, FALSE);
 	messaging_menu_app_unregister(mmapp);
 
@@ -574,7 +577,6 @@ plugin_unload(PurplePlugin *plugin)
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0, /* page_num (Reserved) */
 
 	/* padding */
 	NULL,

@@ -29,8 +29,8 @@
 #include <sasl/sasl.h>
 #endif
 
-#include "circbuffer.h"
-#include "ft.h"
+#include "circularbuffer.h"
+#include "xfer.h"
 #include "roomlist.h"
 #include "sslconn.h"
 
@@ -58,6 +58,7 @@ struct irc_conn {
 	GHashTable *cmds;
 	char *server;
 	int fd;
+	guint inpa;
 	guint timer;
 	GHashTable *buddies;
 
@@ -90,7 +91,7 @@ struct irc_conn {
 
 	gboolean quitting;
 
-	PurpleCircBuffer *outbuf;
+	PurpleCircularBuffer *outbuf;
 	guint writeh;
 
 	time_t recv_time;
@@ -188,8 +189,6 @@ void irc_msg_authok(struct irc_conn *irc, const char *name, const char *from, ch
 void irc_msg_authtryagain(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_authfail(struct irc_conn *irc, const char *name, const char *from, char **args);
 #endif
-
-void irc_msg_ignore(struct irc_conn *irc, const char *name, const char *from, char **args);
 
 void irc_cmd_table_build(struct irc_conn *irc);
 

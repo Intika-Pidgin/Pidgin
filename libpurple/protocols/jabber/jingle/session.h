@@ -62,10 +62,6 @@ struct _JingleSession
 
 struct _JingleContent;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * Gets the session class's GType
  *
@@ -89,11 +85,11 @@ GList *jingle_session_get_pending_contents(JingleSession *session);
 JingleSession *jingle_session_find_by_sid(JabberStream *js, const gchar *sid);
 JingleSession *jingle_session_find_by_jid(JabberStream *js, const gchar *jid);
 
-JabberIq *jingle_session_create_ack(JingleSession *session, const xmlnode *jingle);
-xmlnode *jingle_session_to_xml(JingleSession *session, xmlnode *parent, JingleActionType action);
+JabberIq *jingle_session_create_ack(JingleSession *session, const PurpleXmlNode *jingle);
+PurpleXmlNode *jingle_session_to_xml(JingleSession *session, PurpleXmlNode *parent, JingleActionType action);
 JabberIq *jingle_session_to_packet(JingleSession *session, JingleActionType action);
 
-void jingle_session_handle_action(JingleSession *session, xmlnode *jingle, JingleActionType action);
+void jingle_session_handle_action(JingleSession *session, PurpleXmlNode *jingle, JingleActionType action);
 
 struct _JingleContent *jingle_session_find_content(JingleSession *session,
 					const gchar *name, const gchar *creator);
@@ -108,10 +104,6 @@ void jingle_session_accept_content(JingleSession *session, const gchar *name, co
 void jingle_session_accept_session(JingleSession *session);
 JabberIq *jingle_session_terminate_packet(JingleSession *session, const gchar *reason);
 JabberIq *jingle_session_redirect_packet(JingleSession *session, const gchar *sid);
-
-#ifdef __cplusplus
-}
-#endif
 
 G_END_DECLS
 

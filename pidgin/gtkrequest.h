@@ -28,11 +28,49 @@
 
 #include "request.h"
 
+G_BEGIN_DECLS
+
 /**
  * Returns the UI operations structure for GTK+ request functions.
  *
  * @return The GTK+ UI request operations structure.
  */
 PurpleRequestUiOps *pidgin_request_get_ui_ops(void);
+
+/**
+ * Gets dialog window for specified libpurple request.
+ *
+ * @param ui_handle The UI handle.
+ *
+ * @return The dialog window.
+ */
+GtkWindow *
+pidgin_request_get_dialog_window(void *ui_handle);
+
+/**************************************************************************/
+/** @name GTK+ Requests Subsystem                                         */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Returns the gtk requests subsystem handle.
+ *
+ * @return The requests subsystem handle.
+ */
+void *pidgin_request_get_handle(void);
+
+/**
+ * Initializes the GTK+ requests subsystem.
+ */
+void pidgin_request_init(void);
+
+/**
+ * Uninitializes the GTK+ requests subsystem.
+ */
+void pidgin_request_uninit(void);
+
+/*@}*/
+
+G_END_DECLS
 
 #endif /* _PIDGINREQUEST_H_ */

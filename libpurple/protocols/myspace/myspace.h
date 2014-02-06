@@ -42,13 +42,16 @@
 #include "plugin.h"
 #include "accountopt.h"
 #include "version.h"
-#include "cipher.h"     /* for SHA-1 */
 #include "util.h"       /* for base64 */
 #include "debug.h"      /* for purple_debug_info */
 #include "request.h"    /* For dialogs used in setting the username */
 #include "xmlnode.h"
 #include "core.h"
 #include "conversation.h" /* For late normalization */
+
+/* Ciphers */
+#include "ciphers/rc4cipher.h"
+#include "ciphers/sha1hash.h"
 
 /* MySpaceIM includes */
 #include "persist.h"
@@ -94,10 +97,6 @@
 
 /* Build version of MySpaceIM to report to servers (1.0.xxx.0) */
 #define MSIM_CLIENT_VERSION         697
-
-/* Check for a newer official MySpaceIM client on startup?
- * (Mostly useful for developers) */
-/*#define MSIM_CHECK_NEWER_VERSION*/
 
 /* Language codes from http://www.microsoft.com/globaldev/reference/oslocversion.mspx */
 #define MSIM_LANGUAGE_ID_ENGLISH    1033

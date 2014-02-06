@@ -54,11 +54,15 @@ typedef struct {
  **/
 /* Windows helper functions */
 FARPROC wpurple_find_and_loadproc(const char *dllname, const char *procedure);
+gboolean wpurple_reg_val_exists(HKEY rootkey, const char *subkey, const char *valname);
 gboolean wpurple_read_reg_dword(HKEY rootkey, const char *subkey, const char *valname, LPDWORD result);
 char *wpurple_read_reg_string(HKEY rootkey, const char *subkey, const char *valname); /* needs to be g_free'd */
 gboolean wpurple_write_reg_string(HKEY rootkey, const char *subkey, const char *valname, const char *value);
 char *wpurple_escape_dirsep(const char *filename); /* needs to be g_free'd */
 GIOChannel *wpurple_g_io_channel_win32_new_socket(int socket); /* Until we get the post-2.8 glib win32 giochannel implementation working, use the thread-based one */
+
+/* Simulate unix pipes by creating a pair of connected sockets */
+int wpurple_input_pipe(int pipefd[2]);
 
 /* Determine Purple paths */
 gchar *wpurple_get_special_folder(int folder_type); /* needs to be g_free'd */

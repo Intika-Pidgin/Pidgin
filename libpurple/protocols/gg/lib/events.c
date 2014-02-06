@@ -1,4 +1,4 @@
-/* $Id: events.c 1105 2011-05-25 21:34:50Z wojtekka $ */
+/* $Id: events.c 1144 2011-07-09 15:43:00Z wojtekka $ */
 
 /*
  *  (C) Copyright 2001-2006 Wojtek Kaniewski <wojtekka@irc.pl>
@@ -28,21 +28,14 @@
  */
 
 #include <sys/types.h>
-#ifndef _WIN32
-#  include <sys/ioctl.h>
-#  include <sys/socket.h>
-#  include <netinet/in.h>
-#  include <arpa/inet.h>
-#endif
 #include <ctype.h>
 
 #include "compat.h"
 #include "libgadu.h"
-#include "libgadu-config.h"
 #include "protocol.h"
-#include "libgadu-internal.h"
+#include "internal.h"
 #include "encoding.h"
-#include "libgadu-debug.h"
+#include "debug.h"
 #include "session.h"
 
 #include <errno.h>
@@ -742,7 +735,7 @@ struct gg_event *gg_watch_fd(struct gg_session *sess)
 #if defined(GG_CONFIG_HAVE_GNUTLS) || defined(GG_CONFIG_HAVE_OPENSSL)
 			if (sess->ssl != NULL) {
 #ifdef GG_CONFIG_HAVE_GNUTLS
-				gnutls_transport_set_ptr(GG_SESSION_GNUTLS(sess), (gnutls_transport_ptr_t) sess->fd);
+				gnutls_transport_set_ptr(GG_SESSION_GNUTLS(sess), (gnutls_transport_ptr_t)(long)sess->fd);
 #endif
 #ifdef GG_CONFIG_HAVE_OPENSSL
 				SSL_set_fd(sess->ssl, sess->fd);
@@ -813,14 +806,14 @@ gnutls_handshake_repeat:
 				const gnutls_datum_t *peers;
 				gnutls_x509_crt_t cert;
 
-				if (gnutls_x509_crt_init(&cert) >= 0) {
+				if (gnutls_x509_crt_init(&cert) == 0) {
 					peers = gnutls_certificate_get_peers(GG_SESSION_GNUTLS(sess), &peer_count);
 
 					if (peers != NULL) {
 						char buf[256];
 						size_t size;
 
-						if (gnutls_x509_crt_import(cert, &peers[0], GNUTLS_X509_FMT_DER) >= 0) {
+						if (gnutls_x509_crt_import(cert, &peers[0], GNUTLS_X509_FMT_DER) == 0) {
 							size = sizeof(buf);
 							gnutls_x509_crt_get_dn(cert, buf, &size);
 							gg_debug_session(sess, GG_DEBUG_MISC, "//   cert subject: %s\n", buf);
@@ -829,6 +822,8 @@ gnutls_handshake_repeat:
 							gg_debug_session(sess, GG_DEBUG_MISC, "//   cert issuer: %s\n", buf);
 						}
 					}
+
+					gnutls_x509_crt_deinit(cert);
 				}
 			}
 

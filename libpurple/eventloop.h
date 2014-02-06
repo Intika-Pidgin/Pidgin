@@ -28,10 +28,6 @@
 
 #include <glib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * An input condition.
  */
@@ -145,15 +141,18 @@ struct _PurpleEventLoopUiOps
 	 * #timeout_add.
 	 *
 	 * @see purple_timeout_add_seconds()
-	 * @since 2.1.0
 	 **/
 	guint (*timeout_add_seconds)(guint interval, GSourceFunc function,
 	                             gpointer data);
 
+	/*< private >*/
+	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
 	void (*_purple_reserved4)(void);
 };
+
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Event Loop API                                                  */
@@ -192,8 +191,6 @@ guint purple_timeout_add(guint interval, GSourceFunc function, gpointer data);
  * @param data		data to pass to @a function.
  * @return A handle to the timer which can be passed to
  *         purple_timeout_remove() to remove the timer.
- *
- * @since 2.1.0
  */
 guint purple_timeout_add_seconds(guint interval, GSourceFunc function, gpointer data);
 
@@ -245,6 +242,24 @@ gboolean purple_input_remove(guint handle);
 int
 purple_input_get_error(int fd, int *error);
 
+/**
+ * Creates a pipe - an unidirectional data channel that can be used for
+ * interprocess communication.
+ *
+ * File descriptors for both ends of pipe will be written into provided array.
+ * The first one (pipefd[0]) can be used for reading, the second one (pipefd[1])
+ * for writing.
+ *
+ * On Windows it's simulated by creating a pair of connected sockets, on other
+ * systems pipe() is used.
+ *
+ * @param pipefd Array used to return file descriptors for both ends of pipe.
+ *
+ * @return @c 0 on success, @c -1 on error.
+ */
+int
+purple_input_pipe(int pipefd[2]);
+
 
 /*@}*/
 
@@ -269,8 +284,6 @@ PurpleEventLoopUiOps *purple_eventloop_get_ui_ops(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_EVENTLOOP_H_ */

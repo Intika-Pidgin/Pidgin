@@ -162,10 +162,21 @@ purple_ssl_input_add(PurpleSslConnection *gsc, PurpleSslInputFunction func,
 	g_return_if_fail(func != NULL);
 	g_return_if_fail(purple_ssl_is_supported());
 
+	purple_ssl_input_remove(gsc);
+
 	gsc->recv_cb_data = data;
 	gsc->recv_cb      = func;
 
 	gsc->inpa = purple_input_add(gsc->fd, PURPLE_INPUT_READ, recv_cb, gsc);
+}
+
+void
+purple_ssl_input_remove(PurpleSslConnection *gsc)
+{
+	if (gsc->inpa > 0) {
+		purple_input_remove(gsc->inpa);
+		gsc->inpa = 0;
+	}
 }
 
 const gchar *
@@ -182,15 +193,6 @@ purple_ssl_strerror(PurpleSslErrorType error)
 			purple_debug_warning("sslconn", "Unknown SSL error code %d\n", error);
 			return _("Unknown SSL error");
 	}
-}
-
-PurpleSslConnection *
-purple_ssl_connect_fd(PurpleAccount *account, int fd,
-					PurpleSslInputFunction func,
-					PurpleSslErrorFunction error_func,
-                    void *data)
-{
-    return purple_ssl_connect_with_host_fd(account, fd, func, error_func, NULL, data);
 }
 
 PurpleSslConnection *

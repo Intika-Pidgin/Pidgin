@@ -102,6 +102,10 @@ purple_notify_message(handle, type, title, primary, secondary, cb, user_data)
 	const char *secondary
 	Purple::NotifyCloseCallback cb
 	gpointer user_data
+CODE:
+	RETVAL = purple_notify_message(handle, type, title, primary, secondary, NULL, cb, user_data);
+OUTPUT:
+	RETVAL
 
 void *
 purple_notify_searchresults(gc, title, primary, secondary, results, cb, user_data)
@@ -135,7 +139,7 @@ purple_notify_user_info_get_entries(user_info)
 PREINIT:
 	GList *l;
 PPCODE:
-	l = purple_notify_user_info_get_entries(user_info);
+	l = purple_notify_user_info_get_entries(user_info)->head;
 	for (; l != NULL; l = l->next) {
 		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::NotifyUserInfoEntry")));
 	}
@@ -145,12 +149,12 @@ purple_notify_user_info_get_text_with_newline(user_info, newline)
 	Purple::NotifyUserInfo user_info
 	const char *newline
 
-void purple_notify_user_info_add_pair(user_info, label, value)
+void purple_notify_user_info_add_pair_html(user_info, label, value)
 	Purple::NotifyUserInfo user_info
 	const char *label
 	const char *value
 
-void purple_notify_user_info_prepend_pair(user_info, label, value)
+void purple_notify_user_info_prepend_pair_html(user_info, label, value)
 	Purple::NotifyUserInfo user_info
 	const char *label
 	const char *value

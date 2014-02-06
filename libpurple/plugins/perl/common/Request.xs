@@ -144,7 +144,7 @@ CODE:
 	gpr->cancel_fun = purple_perl_sv_from_fun(handle, cancel_cb);
 	g_free(basename);
 
-	RETVAL = purple_request_input(handle, title, primary, secondary, default_value, multiline, masked, hint, ok_text, G_CALLBACK(purple_perl_request_ok_cb), cancel_text, G_CALLBACK(purple_perl_request_cancel_cb), NULL, NULL, NULL, gpr);
+	RETVAL = purple_request_input(handle, title, primary, secondary, default_value, multiline, masked, hint, ok_text, G_CALLBACK(purple_perl_request_ok_cb), cancel_text, G_CALLBACK(purple_perl_request_cancel_cb), NULL, gpr);
 OUTPUT:
 	RETVAL
 
@@ -167,7 +167,7 @@ CODE:
 	gpr->cancel_fun = purple_perl_sv_from_fun(handle, cancel_cb);
 	g_free(basename);
 
-	RETVAL = purple_request_file(handle, title, filename, savedialog, G_CALLBACK(purple_perl_request_ok_cb), G_CALLBACK(purple_perl_request_cancel_cb), NULL, NULL, NULL, gpr);
+	RETVAL = purple_request_file(handle, title, filename, savedialog, G_CALLBACK(purple_perl_request_ok_cb), G_CALLBACK(purple_perl_request_cancel_cb), NULL, gpr);
 OUTPUT:
 	RETVAL
 
@@ -193,7 +193,7 @@ CODE:
 	gpr->cancel_fun = purple_perl_sv_from_fun(handle, cancel_cb);
 	g_free(basename);
 
-	RETVAL = purple_request_fields(handle, title, primary, secondary, fields, ok_text, G_CALLBACK(purple_perl_request_ok_cb), cancel_text, G_CALLBACK(purple_perl_request_cancel_cb), NULL, NULL, NULL, gpr);
+	RETVAL = purple_request_fields(handle, title, primary, secondary, fields, ok_text, G_CALLBACK(purple_perl_request_ok_cb), cancel_text, G_CALLBACK(purple_perl_request_cancel_cb), NULL, gpr);
 OUTPUT:
 	RETVAL
 
@@ -287,51 +287,60 @@ Purple::Request::Field
 purple_request_field_choice_new(class, id, text, default_value = 0)
 	const char *id
 	const char *text
-	int default_value
+	gpointer default_value
 	C_ARGS: id, text, default_value
 
 void
-purple_request_field_choice_add(field, label)
+purple_request_field_choice_add(field, label, value)
 	Purple::Request::Field field
 	const char *label
+	gpointer value
 
-int
+gpointer
 purple_request_field_choice_get_default_value(field)
 	Purple::Request::Field field
 
-void
-purple_request_field_choice_get_labels(field)
-	Purple::Request::Field field
-PREINIT:
-	GList *l;
-PPCODE:
-	for (l = purple_request_field_choice_get_labels(field); l != NULL; l = l->next) {
-		XPUSHs(sv_2mortal(newSVpv(l->data, 0)));
-	}
+ # I'm not sure, if this is the correct implementation - if anyone will need it,
+ # he will add this back to API.
+ #void
+ #purple_request_field_choice_get_elements(field)
+ #	Purple::Request::Field field
+ #PREINIT:
+ #	GList *l;
+ #PPCODE:
+ #	for (l = purple_request_field_choice_get_elements(field); l != NULL; l = l->next) {
+ #		XPUSHs(sv_2mortal(newSVpv(l->data, 0)));
+ #		l = l->next;
+ #		if (l == NULL)
+ #			break;
+ #		XPUSHs(l->data);
+ #	}
 
-int
+gpointer
 purple_request_field_choice_get_value(field)
 	Purple::Request::Field field
 
 void
 purple_request_field_choice_set_default_value(field, default_value)
 	Purple::Request::Field field
-	int default_value
+	gpointer default_value
 
 void
 purple_request_field_choice_set_value(field, value)
 	Purple::Request::Field field
-	int value
+	gpointer value
 
 MODULE = Purple::Request  PACKAGE = Purple::Request::Field  PREFIX = purple_request_field_
 PROTOTYPES: ENABLE
 
 Purple::Request::Field
-purple_request_field_int_new(clas, id, text, default_value = 0)
+purple_request_field_int_new(clas, id, text, default_value = 0, lower_bound = INT_MIN, upper_bound = INT_MAX)
 	const char *id
 	const char *text
 	int default_value
-	C_ARGS: id, text, default_value
+	int lower_bound
+	int upper_bound
+	C_ARGS: id, text, default_value, lower_bound, upper_bound
 
 int
 purple_request_field_int_get_default_value(field)
@@ -372,12 +381,6 @@ purple_request_field_list_new(class, id, text)
 	const char *id
 	const char *text
 	C_ARGS: id, text
-
-void
-purple_request_field_list_add(field, item, data)
-	Purple::Request::Field field
-	const char *item
-	void * data
 
 void
 purple_request_field_list_add_icon(field, item, icon_path, data)
@@ -484,10 +487,6 @@ purple_request_field_string_get_value(field)
 	Purple::Request::Field field
 
 gboolean
-purple_request_field_string_is_editable(field)
-	Purple::Request::Field field
-
-gboolean
 purple_request_field_string_is_masked(field)
 	Purple::Request::Field field
 
@@ -499,11 +498,6 @@ void
 purple_request_field_string_set_default_value(field, default_value)
 	Purple::Request::Field field
 	const char *default_value
-
-void
-purple_request_field_string_set_editable(field, editable)
-	Purple::Request::Field field
-	gboolean editable
 
 void
 purple_request_field_string_set_masked(field, masked)
@@ -608,7 +602,7 @@ purple_request_fields_get_bool(fields, id)
 	Purple::Request::Fields fields
 	const char *id
 
-int
+gpointer
 purple_request_fields_get_choice(fields, id)
 	Purple::Request::Fields fields
 	const char *id
@@ -637,7 +631,7 @@ void
 purple_request_fields_get_required(fields)
 	Purple::Request::Fields fields
 PREINIT:
-	GList *l;
+	const GList *l;
 PPCODE:
 	for (l = purple_request_fields_get_required(fields); l != NULL; l = l->next) {
 		XPUSHs(sv_2mortal(purple_perl_bless_object(l->data, "Purple::Request::Field")));

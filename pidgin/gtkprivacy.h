@@ -26,7 +26,9 @@
 #ifndef _PIDGINPRIVACY_H_
 #define _PIDGINPRIVACY_H_
 
-#include "privacy.h"
+#include "account.h"
+
+G_BEGIN_DECLS
 
 /**
  * Initializes the GTK+ privacy subsystem.
@@ -65,11 +67,6 @@ void pidgin_request_add_permit(PurpleAccount *account, const char *name);
  */
 void pidgin_request_add_block(PurpleAccount *account, const char *name);
 
-/**
- * Returns the UI operations structure for the GTK+ privacy subsystem.
- *
- * @return The GTK+ UI privacy operations structure.
- */
-PurplePrivacyUiOps *pidgin_privacy_get_ui_ops(void);
+G_END_DECLS
 
 #endif /* _PIDGINPRIVACY_H_ */

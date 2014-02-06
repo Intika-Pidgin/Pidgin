@@ -336,7 +336,7 @@ flap_connection_new(OscarData *od, int type)
 
 	conn = g_new0(FlapConnection, 1);
 	conn->od = od;
-	conn->buffer_outgoing = purple_circ_buffer_new(0);
+	conn->buffer_outgoing = purple_circular_buffer_new(0);
 	conn->fd = -1;
 	conn->subtype = -1;
 	conn->type = type;
@@ -410,7 +410,7 @@ flap_connection_close(OscarData *od, FlapConnection *conn)
 	g_free(conn->buffer_incoming.data.data);
 	conn->buffer_incoming.data.data = NULL;
 
-	purple_circ_buffer_destroy(conn->buffer_outgoing);
+	g_object_unref(G_OBJECT(conn->buffer_outgoing));
 	conn->buffer_outgoing = NULL;
 }
 
@@ -456,7 +456,7 @@ flap_connection_destroy_cb(gpointer data)
 	 * TODO: If we don't have a SNAC_FAMILY_LOCATE connection then
 	 * we should try to request one instead of disconnecting.
 	 */
-	if (!account->disconnecting && ((od->oscar_connections == NULL)
+	if (!purple_account_is_disconnecting(account) && ((od->oscar_connections == NULL)
 			|| (!flap_connection_getbytype(od, SNAC_FAMILY_LOCATE))))
 	{
 		/* No more FLAP connections!  Sign off this PurpleConnection! */
@@ -467,7 +467,7 @@ flap_connection_destroy_cb(gpointer data)
 			reason = PURPLE_CONNECTION_ERROR_NAME_IN_USE;
 			tmp = g_strdup(_("You have signed on from another location"));
 			if (!purple_account_get_remember_password(account))
-				purple_account_set_password(account, NULL);
+				purple_account_set_password(account, NULL, NULL, NULL);
 		} else if (conn->disconnect_reason == OSCAR_DISCONNECT_REMOTE_CLOSED)
 			tmp = g_strdup(_("Server closed the connection"));
 		else if (conn->disconnect_reason == OSCAR_DISCONNECT_LOST_CONNECTION)
@@ -487,7 +487,7 @@ flap_connection_destroy_cb(gpointer data)
 
 		if (tmp != NULL)
 		{
-			purple_connection_error_reason(od->gc, reason, tmp);
+			purple_connection_error(od->gc, reason, tmp);
 			g_free(tmp);
 		}
 	}
@@ -921,7 +921,7 @@ flap_connection_recv(FlapConnection *conn)
 						OSCAR_DISCONNECT_LOST_CONNECTION, g_strerror(errno));
 				break;
 			}
-			conn->od->gc->last_received = time(NULL);
+			purple_connection_update_last_received(conn->od->gc);
 
 			/* If we don't even have a complete FLAP header then do nothing */
 			conn->header_received += read;
@@ -1020,9 +1020,11 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	FlapConnection *conn;
 	int writelen, ret;
+	const gchar *output = NULL;
 
 	conn = data;
-	writelen = purple_circ_buffer_get_max_read(conn->buffer_outgoing);
+	writelen = purple_circular_buffer_get_max_read(conn->buffer_outgoing);
+	output = purple_circular_buffer_get_output(conn->buffer_outgoing);
 
 	if (writelen == 0)
 	{
@@ -1032,10 +1034,9 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 	}
 
 	if (conn->gsc)
-		ret = purple_ssl_write(conn->gsc, conn->buffer_outgoing->outptr,
-				writelen);
+		ret = purple_ssl_write(conn->gsc, output, writelen);
 	else
-		ret = send(conn->fd, conn->buffer_outgoing->outptr, writelen, 0);
+		ret = send(conn->fd, output, writelen, 0);
 	if (ret <= 0)
 	{
 		if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
@@ -1057,7 +1058,7 @@ send_cb(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 
-	purple_circ_buffer_mark_read(conn->buffer_outgoing, ret);
+	purple_circular_buffer_mark_read(conn->buffer_outgoing, ret);
 }
 
 static void
@@ -1074,7 +1075,7 @@ flap_connection_send_byte_stream(ByteStream *bs, FlapConnection *conn, size_t co
 		return;
 
 	/* Add everything to our outgoing buffer */
-	purple_circ_buffer_append(conn->buffer_outgoing, bs->data, count);
+	purple_circular_buffer_append(conn->buffer_outgoing, bs->data, count);
 
 	/* If we haven't already started writing stuff, then start the cycle */
 	if (conn->watcher_outgoing == 0)

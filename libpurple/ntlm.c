@@ -28,8 +28,11 @@
 
 #include "util.h"
 #include "ntlm.h"
-#include "cipher.h"
 #include "debug.h"
+
+#include "ciphers/descipher.h"
+#include "ciphers/md4hash.h"
+
 #include <string.h>
 
 #define NTLM_NEGOTIATE_NTLM2_KEY 0x00080000
@@ -191,14 +194,11 @@ static void
 des_ecb_encrypt(const guint8 *plaintext, guint8 *result, const guint8 *key)
 {
 	PurpleCipher *cipher;
-	PurpleCipherContext *context;
-	size_t outlen;
 
-	cipher = purple_ciphers_find_cipher("des");
-	context = purple_cipher_context_new(cipher, NULL);
-	purple_cipher_context_set_key(context, key);
-	purple_cipher_context_encrypt(context, plaintext, 8, result, &outlen);
-	purple_cipher_context_destroy(context);
+	cipher = purple_des_cipher_new();
+	purple_cipher_set_key(cipher, key, 8);
+	purple_cipher_encrypt(cipher, plaintext, 8, result, 8);
+	g_object_unref(cipher);
 }
 
 /*
@@ -220,16 +220,40 @@ calc_resp(guint8 *keys, const guint8 *plaintext, unsigned char *results)
 	des_ecb_encrypt(plaintext, results + 16, key);
 }
 
+/*
+ * TODO: We think we should be using cryptographically secure random numbers
+ *       here.  We think the rand() function is probably bad.  We think
+ *       /dev/urandom is a step up, but using a random function from an SSL
+ *       library would probably be best.  In Windows we could possibly also
+ *       use CryptGenRandom.
+ */
 static void
-gensesskey(char *buffer, const char *oldkey)
+gensesskey(char *buffer)
 {
-	int i = 0;
-	if(oldkey == NULL) {
-		for(i=0; i<16; i++) {
-			buffer[i] = (char)(rand() & 0xff);
+	int fd;
+	int i;
+	ssize_t red = 0;
+
+	fd = open("/dev/urandom", O_RDONLY);
+	if (fd >= 0) {
+		red = read(fd, buffer, 16);
+		if (red < 0) {
+			purple_debug_warning("ntlm", "Error reading from /dev/urandom: %s."
+					"  Falling back to inferior method.\n", g_strerror(errno));
+			red = 0;
+		} else if (red < 16) {
+			purple_debug_warning("ntlm", "Tried reading 16 bytes from "
+					"/dev/urandom but only got %"
+					G_GSSIZE_FORMAT ".  Falling back to "
+					"inferior method\n", (gssize)red);
 		}
 	} else {
-		memcpy(buffer, oldkey, 16);
+		purple_debug_warning("ntlm", "Error opening /dev/urandom: %s."
+				"  Falling back to inferior method.\n", g_strerror(errno));
+	}
+
+	for (i = red; i < 16; i++) {
+		buffer[i] = (char)(rand() & 0xff);
 	}
 }
 
@@ -250,8 +274,7 @@ purple_ntlm_gen_type3(const gchar *username, const gchar *passw, const gchar *ho
 	unsigned char magic[] = { 0x4B, 0x47, 0x53, 0x21, 0x40, 0x23, 0x24, 0x25 };
 	unsigned char nt_hpw[21];
 	char nt_pw[128];
-	PurpleCipher *cipher;
-	PurpleCipherContext *context;
+	PurpleHash *hash;
 	char *tmp;
 	int idx;
 	gchar *ucs2le;
@@ -352,11 +375,10 @@ purple_ntlm_gen_type3(const gchar *username, const gchar *passw, const gchar *ho
 		nt_pw[2 * idx + 1] = 0;
 	}
 
-	cipher = purple_ciphers_find_cipher("md4");
-	context = purple_cipher_context_new(cipher, NULL);
-	purple_cipher_context_append(context, (guint8 *)nt_pw, 2 * lennt);
-	purple_cipher_context_digest(context, 21, nt_hpw, NULL);
-	purple_cipher_context_destroy(context);
+	hash = purple_md4_hash_new();
+	purple_hash_append(hash, (guint8 *)nt_pw, 2 * lennt);
+	purple_hash_digest(hash, nt_hpw, sizeof(nt_hpw));
+	g_object_unref(hash);
 
 	memset(nt_hpw + 16, 0, 5);
 	calc_resp(nt_hpw, nonce, nt_resp);
@@ -366,7 +388,7 @@ purple_ntlm_gen_type3(const gchar *username, const gchar *passw, const gchar *ho
 	/* LCS Stuff */
 	if (flags) {
 		tmsg->flags = GUINT32_TO_LE(0x409082d4);
-		gensesskey(sesskey, NULL);
+		gensesskey(sesskey);
 		memcpy(tmp, sesskey, 0x10);
 	}
 
