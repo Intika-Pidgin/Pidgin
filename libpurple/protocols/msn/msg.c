@@ -323,37 +323,30 @@ msn_message_new_from_cmd(MsnSession *session, MsnCommand *cmd)
 char *
 msn_message_gen_payload(MsnMessage *msg, size_t *ret_size)
 {
+	GString *payload;
 	GList *l;
-	char *n, *base, *end;
-	int len;
-	size_t body_len = 0;
+	size_t body_len;
 	const void *body;
 
 	g_return_val_if_fail(msg != NULL, NULL);
 
-	len = MSN_BUF_LEN;
+	/* 8192 is a reasonable guess at a large enough buffer to avoid realloc */
+	payload = g_string_sized_new(8192);
 
-	base = n = end = g_malloc(len + 1);
-	end += len;
-
-	/* Standard header. */
-	if (msg->charset == NULL)
-	{
-		g_snprintf(n, len,
-				   "MIME-Version: 1.0\r\n"
-				   "Content-Type: %s\r\n",
-				   msg->content_type);
-	}
-	else
-	{
-		g_snprintf(n, len,
-				   "MIME-Version: 1.0\r\n"
-				   "Content-Type: %s; charset=%s\r\n",
-				   msg->content_type, msg->charset);
+	/* Standard header */
+	if (msg->charset == NULL) {
+		g_string_append_printf(payload,
+				"MIME-Version: 1.0\r\n"
+				"Content-Type: %s\r\n",
+				msg->content_type);
+	} else {
+		g_string_append_printf(payload,
+				"MIME-Version: 1.0\r\n"
+				"Content-Type: %s; charset=%s\r\n",
+				msg->content_type, msg->charset);
 	}
 
-	n += strlen(n);
-
+	/* Headers */
 	for (l = msg->header_list; l != NULL; l = l->next)
 	{
 		const char *key;
@@ -362,31 +355,25 @@ msn_message_gen_payload(MsnMessage *msg, size_t *ret_size)
 		key = l->data;
 		value = msn_message_get_header_value(msg, key);
 
-		g_snprintf(n, end - n, "%s: %s\r\n", key, value);
-		n += strlen(n);
+		g_string_append_printf(payload, "%s: %s\r\n", key, value);
 	}
 
-	if ((end - n) > 2)
-		n += g_strlcpy(n, "\r\n", end - n);
+	/* End of headers */
+	g_string_append(payload, "\r\n");
 
+	/* Body */
 	body = msn_message_get_bin_data(msg, &body_len);
-
-	if (body != NULL && (end - n) > body_len)
-	{
-		memcpy(n, body, body_len);
-		n += body_len;
-		*n = '\0';
+	if (body != NULL) {
+		g_string_append_len(payload, body, body_len);
 	}
 
-	if (ret_size != NULL)
-	{
-		*ret_size = n - base;
-
-		if (*ret_size > 1664)
-			*ret_size = 1664;
+	if (ret_size != NULL) {
+		/* Use MIN to truncate the payload to 1664 bytes? Why do we do this?
+		   It seems like it will lead to brokenness. */
+		*ret_size = MIN(payload->len, 1664);
 	}
 
-	return base;
+	return g_string_free(payload, FALSE);
 }
 
 void
@@ -415,8 +402,7 @@ msn_message_set_bin_data(MsnMessage *msg, const void *data, size_t len)
 	if (len > 1664)
 		len = 1664;
 
-	if (msg->body != NULL)
-		g_free(msg->body);
+	g_free(msg->body);
 
 	if (data != NULL && len > 0)
 	{
@@ -663,7 +649,7 @@ msn_plain_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 	const char *passport;
 	const char *value;
 
-	gc = cmdproc->session->account->gc;
+	gc = purple_account_get_connection(cmdproc->session->account);
 
 	body = msn_message_get_bin_data(msg, &body_len);
 	body_enc = g_markup_escape_text(body, body_len);
@@ -708,7 +694,7 @@ msn_plain_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 
 		if (swboard->current_users > 1 ||
 			((swboard->conv != NULL) &&
-			 purple_conversation_get_type(swboard->conv) == PURPLE_CONV_TYPE_CHAT))
+			 PURPLE_IS_CHAT_CONVERSATION(swboard->conv)))
 		{
 			/* If current_users is always ok as it should then there is no need to
 			 * check if this is a chat. */
@@ -720,18 +706,18 @@ msn_plain_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 							 time(NULL));
 			if (swboard->conv == NULL)
 			{
-				swboard->conv = purple_find_chat(gc, swboard->chat_id);
+				swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_chat(gc, swboard->chat_id));
 				swboard->flag |= MSN_SB_FLAG_IM;
 			}
 		}
-		else if (!g_str_equal(passport, purple_account_get_username(gc->account)))
+		else if (!g_str_equal(passport, purple_account_get_username(purple_connection_get_account(gc))))
 		{
 			/* Don't im ourselves ... */
 			serv_got_im(gc, passport, body_final, 0, time(NULL));
 			if (swboard->conv == NULL)
 			{
-				swboard->conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-										passport, purple_connection_get_account(gc));
+				swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(
+										passport, purple_connection_get_account(gc)));
 				swboard->flag |= MSN_SB_FLAG_IM;
 			}
 		}
@@ -749,7 +735,7 @@ msn_control_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 	PurpleConnection *gc;
 	char *passport;
 
-	gc = cmdproc->session->account->gc;
+  	gc = purple_account_get_connection(cmdproc->session->account);
 	passport = msg->remote_user;
 
 	if (msn_message_get_header_value(msg, "TypingUser") == NULL)
@@ -761,12 +747,12 @@ msn_control_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		if (swboard->current_users == 1)
 		{
 			serv_got_typing(gc, passport, MSN_TYPING_RECV_TIMEOUT,
-							PURPLE_TYPING);
+							PURPLE_IM_TYPING);
 		}
 
 	} else {
 		serv_got_typing(gc, passport, MSN_TYPING_RECV_TIMEOUT,
-						PURPLE_TYPING);
+						PURPLE_IM_TYPING);
 	}
 }
 
@@ -783,7 +769,7 @@ datacast_inform_user(MsnSwitchBoard *swboard, const char *who,
 	account = swboard->session->account;
 	pc = purple_account_get_connection(account);
 
-	if ((b = purple_find_buddy(account, who)) != NULL)
+	if ((b = purple_blist_find_buddy(account, who)) != NULL)
 		username = g_markup_escape_text(purple_buddy_get_alias(b), -1);
 	else
 		username = g_markup_escape_text(who, -1);
@@ -798,18 +784,19 @@ datacast_inform_user(MsnSwitchBoard *swboard, const char *who,
 
 	if (swboard->conv == NULL) {
 		if (chat)
-			swboard->conv = purple_find_chat(account->gc, swboard->chat_id);
+			swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_chat(
+					purple_account_get_connection(account), swboard->chat_id));
 		else {
-			swboard->conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-									who, account);
+			swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(
+									who, account));
 			if (swboard->conv == NULL)
-				swboard->conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, who);
+				swboard->conv = PURPLE_CONVERSATION(purple_im_conversation_new(account, who));
 		}
 	}
 
 	if (chat)
 		serv_got_chat_in(pc,
-		                 purple_conv_chat_get_id(PURPLE_CONV_CHAT(swboard->conv)),
+		                 purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(swboard->conv)),
 		                 who, PURPLE_MESSAGE_RECV|PURPLE_MESSAGE_SYSTEM, str,
 		                 time(NULL));
 	else
@@ -924,8 +911,8 @@ got_emoticon(MsnSlpCall *slpcall,
 		   instead of all at once, calling write multiple times and
 		   close once at the very end
 		 */
-		purple_conv_custom_smiley_write(conv, slpcall->data_info, data, size);
-		purple_conv_custom_smiley_close(conv, slpcall->data_info );
+		purple_conversation_custom_smiley_write(conv, slpcall->data_info, data, size);
+		purple_conversation_custom_smiley_close(conv, slpcall->data_info );
 	}
 	if (purple_debug_is_verbose())
 		purple_debug_info("msn", "Got smiley: %s\n", slpcall->data_info);
@@ -999,14 +986,14 @@ void msn_emoticon_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		 * the conversation doesn't exist then we cannot associate the new
 		 * smiley with its GtkIMHtml widget. */
 		if (!conv) {
-			conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, session->account, who);
+			conv = PURPLE_CONVERSATION(purple_im_conversation_new(session->account, who));
 		}
 
-		if (purple_conv_custom_smiley_add(conv, smile, "sha1", sha1, TRUE)) {
+		if (purple_conversation_custom_smiley_add(conv, smile, "sha1", sha1, TRUE)) {
 			msn_slplink_request_object(slplink, smile, got_emoticon, NULL, obj);
 		}
 
-		msn_object_destroy(obj);
+		msn_object_destroy(obj, FALSE);
 		obj =   NULL;
 		who =   NULL;
 		sha1 = NULL;
@@ -1027,21 +1014,23 @@ msn_datacast_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		/* Nudge */
 		PurpleAccount *account;
 		const char *user;
+		PurpleConnection *gc;
 
 		account = cmdproc->session->account;
 		user = msg->remote_user;
+		gc = purple_account_get_connection(account);
 
 		if (cmdproc->servconn->type == MSN_SERVCONN_SB) {
 			MsnSwitchBoard *swboard = cmdproc->data;
 			if (swboard->current_users > 1 ||
 				((swboard->conv != NULL) &&
-				 purple_conversation_get_type(swboard->conv) == PURPLE_CONV_TYPE_CHAT))
-				purple_prpl_got_attention_in_chat(account->gc, swboard->chat_id, user, MSN_NUDGE);
+				 PURPLE_IS_CHAT_CONVERSATION(swboard->conv)))
+				purple_prpl_got_attention_in_chat(gc, swboard->chat_id, user, MSN_NUDGE);
 
 			else
-				purple_prpl_got_attention(account->gc, user, MSN_NUDGE);
+				purple_prpl_got_attention(gc, user, MSN_NUDGE);
 		} else {
-			purple_prpl_got_attention(account->gc, user, MSN_NUDGE);
+			purple_prpl_got_attention(gc, user, MSN_NUDGE);
 		}
 
 	} else if (!strcmp(id, "2")) {
@@ -1061,7 +1050,7 @@ msn_datacast_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		slplink = msn_session_get_slplink(session, who);
 		msn_slplink_request_object(slplink, data, got_wink_cb, NULL, obj);
 
-		msn_object_destroy(obj);
+		msn_object_destroy(obj, FALSE);
 
 
 	} else if (!strcmp(id, "3")) {
@@ -1081,7 +1070,7 @@ msn_datacast_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		slplink = msn_session_get_slplink(session, who);
 		msn_slplink_request_object(slplink, data, got_voiceclip_cb, NULL, obj);
 
-		msn_object_destroy(obj);
+		msn_object_destroy(obj, FALSE);
 
 	} else if (!strcmp(id, "4")) {
 		/* Action */
@@ -1141,21 +1130,20 @@ msn_invite_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 			purple_debug_info("msn", "Computer call\n");
 
 			if (cmdproc->session) {
-				PurpleConversation *conv = NULL;
+				PurpleIMConversation *im = NULL;
 				gchar *from = msg->remote_user;
 				gchar *buf = NULL;
 
 				if (from)
-					conv = purple_find_conversation_with_account(
-							PURPLE_CONV_TYPE_IM, from,
-							cmdproc->session->account);
-				if (conv)
+					im = purple_conversations_find_im_with_account(
+							from, cmdproc->session->account);
+				if (im)
 					buf = g_strdup_printf(
 							_("%s sent you a voice chat "
 							"invite, which is not yet "
 							"supported."), from);
 				if (buf) {
-					purple_conversation_write(conv, NULL, buf,
+					purple_conversation_write(PURPLE_CONVERSATION(im), NULL, buf,
 							PURPLE_MESSAGE_SYSTEM |
 							PURPLE_MESSAGE_NOTIFY,
 							time(NULL));

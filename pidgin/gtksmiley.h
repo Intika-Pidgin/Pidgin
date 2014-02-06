@@ -1,7 +1,6 @@
 /**
  * @file gtksmiley.h GTK+ Custom Smiley API
  * @ingroup pidgin
- * @since 2.5.0
  */
 
 /* pidgin
@@ -32,8 +31,10 @@
 
 typedef struct _PidginSmiley PidginSmiley;
 
+G_BEGIN_DECLS
+
 /**
- * Add a PurpleSmiley to the GtkIMHtmlSmiley's list to be able to use it
+ * Add a PurpleSmiley to the GtkWebViewSmiley's list to be able to use it
  * in pidgin
  *
  * @param smiley	The smiley to be added.
@@ -41,26 +42,26 @@ typedef struct _PidginSmiley PidginSmiley;
 void pidgin_smiley_add_to_list(PurpleSmiley *smiley);
 
 /**
- * Delete a PurpleSmiley from the GtkIMHtmlSmiley's list
+ * Delete a PurpleSmiley from the GtkWebViewSmiley's list
  *
  * @param smiley	The smiley to be deleted.
  */
 void pidgin_smiley_del_from_list(PurpleSmiley *smiley);
 
 /**
- * Load the GtkIMHtml list
+ * Load the GtkWebViewSmiley list
  */
 void pidgin_smileys_init(void);
 
 /**
- * Uninit the GtkIMHtml list
+ * Uninit the GtkWebViewSmiley list
  */
 void pidgin_smileys_uninit(void);
 
 /**
- * Returns a GSList with the GtkIMHtmlSmiley of each custom smiley
+ * Returns a GSList with the GtkWebViewSmiley of each custom smiley
  *
- * @constreturn A GtkIMHmlSmiley list
+ * @constreturn A GtkWebViewSmiley list
  */
 GSList *pidgin_smileys_get_all(void);
 
@@ -106,9 +107,9 @@ void pidgin_smiley_editor_set_image(PidginSmiley *editor, GdkPixbuf *image);
  * @param editor A smiley editor dialog
  * @param data A pointer to smiley's data
  * @param datasize The size of smiley's data
- *
- * @since 2.6.0
  */
 void pidgin_smiley_editor_set_data(PidginSmiley *editor, gpointer data, gsize datasize);
+
+G_END_DECLS
 
 #endif /* PIDGIN_GTKSMILEY_H */

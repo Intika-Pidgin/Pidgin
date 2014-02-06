@@ -38,7 +38,7 @@ yahoo_account_use_http_proxy(PurpleConnection *pc)
 	PurpleAccount *account = purple_connection_get_account(pc);
 	PurpleProxyInfo *ppi = NULL;
 	PurpleProxyType type = PURPLE_PROXY_NONE;
-	gboolean proxy_ssl = purple_account_get_bool(account, "proxy_ssl", FALSE);
+	gboolean proxy_ssl = TRUE; /*purple_account_get_bool(account, "proxy_ssl", FALSE);*/
 
 	if(proxy_ssl)
 		ppi = purple_proxy_get_setup(account);
@@ -63,8 +63,9 @@ gchar* yahoo_get_cookies(PurpleConnection *gc)
 	char firstflag = 1;
 	gchar *t1,*t2,*t3;
 	GSList *tmp;
-	GSList *cookies;
-	cookies = ((YahooData*)(gc->proto_data))->cookies;
+	YahooData *yd = purple_connection_get_protocol_data(gc);
+	GSList *cookies = yd->cookies;
+
 	tmp = cookies;
 	while(tmp)
 	{
@@ -115,21 +116,9 @@ gchar* yahoo_get_cookies(PurpleConnection *gc)
 	return ans;
 }
 
-/**
- * Encode some text to send to the yahoo server.
- *
- * @param gc The connection handle.
- * @param str The null terminated utf8 string to encode.
- * @param utf8 If not @c NULL, whether utf8 is okay or not.
- *             Even if it is okay, we may not use it. If we
- *             used it, we set this to @c TRUE, else to
- *             @c FALSE. If @c NULL, false is assumed, and
- *             it is not dereferenced.
- * @return The g_malloced string in the appropriate encoding.
- */
-char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8)
+char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean utf8)
 {
-	YahooData *yd = gc->proto_data;
+	YahooData *yd = purple_connection_get_protocol_data(gc);
 	char *ret;
 	const char *to_codeset;
 	GError *error = NULL;
@@ -137,7 +126,7 @@ char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8)
 	if (yd->jp)
 		return g_strdup(str);
 
-	if (utf8 && *utf8) /* FIXME: maybe don't use utf8 if it'll fit in latin1 */
+	if (utf8) /* FIXME: maybe don't use utf8 if it'll fit in latin1 */
 		return g_strdup(str);
 
 	to_codeset = purple_account_get_string(purple_connection_get_account(gc), "local_charset",  "ISO-8859-1");
@@ -169,7 +158,7 @@ char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8)
  */
 char *yahoo_string_decode(PurpleConnection *gc, const char *str, gboolean utf8)
 {
-	YahooData *yd = gc->proto_data;
+	YahooData *yd = purple_connection_get_protocol_data(gc);
 	char *ret;
 	const char *from_codeset;
 	GError *error = NULL;
@@ -403,13 +392,13 @@ static void append_attrs_datalist_foreach_cb(GQuark key_id, gpointer data, gpoin
 {
 	const char *key;
 	const char *value;
-	xmlnode *cur;
+	PurpleXmlNode *cur;
 
 	key = g_quark_to_string(key_id);
 	value = data;
 	cur = user_data;
 
-	xmlnode_set_attrib(cur, key, value);
+	purple_xmlnode_set_attrib(cur, key, value);
 }
 
 /**
@@ -417,14 +406,14 @@ static void append_attrs_datalist_foreach_cb(GQuark key_id, gpointer data, gpoin
  *        currently building.  This will be modified when opening a tag
  *        or closing an existing tag.
  */
-static void yahoo_codes_to_html_add_tag(xmlnode **cur, const char *tag, gboolean is_closing_tag, const gchar *tag_name, gboolean is_font_tag)
+static void yahoo_codes_to_html_add_tag(PurpleXmlNode **cur, const char *tag, gboolean is_closing_tag, const gchar *tag_name, gboolean is_font_tag)
 {
 	if (is_closing_tag) {
-		xmlnode *tmp;
+		PurpleXmlNode *tmp;
 		GSList *dangling_tags = NULL;
 
 		/* Move up the DOM until we find the opening tag */
-		for (tmp = *cur; tmp != NULL; tmp = xmlnode_get_parent(tmp)) {
+		for (tmp = *cur; tmp != NULL; tmp = purple_xmlnode_get_parent(tmp)) {
 			/* Add one to tag_name when doing this comparison because it starts with a / */
 			if (g_str_equal(tmp->name, tag_name + 1))
 				/* Found */
@@ -439,7 +428,7 @@ static void yahoo_codes_to_html_add_tag(xmlnode **cur, const char *tag, gboolean
 		}
 
 		/* Move our current position up, now that we've closed a tag */
-		*cur = xmlnode_get_parent(tmp);
+		*cur = purple_xmlnode_get_parent(tmp);
 
 		/* Re-open any tags that were nested below the tag we just closed */
 		while (dangling_tags != NULL) {
@@ -448,10 +437,10 @@ static void yahoo_codes_to_html_add_tag(xmlnode **cur, const char *tag, gboolean
 
 			/* Create a copy of this tag+attributes (but not child tags or
 			 * data) at our new location */
-			*cur = xmlnode_new_child(*cur, tmp->name);
+			*cur = purple_xmlnode_new_child(*cur, tmp->name);
 			for (tmp = tmp->child; tmp != NULL; tmp = tmp->next)
-				if (tmp->type == XMLNODE_TYPE_ATTRIB)
-					xmlnode_set_attrib_full(*cur, tmp->name,
+				if (tmp->type == PURPLE_XMLNODE_TYPE_ATTRIB)
+					purple_xmlnode_set_attrib_full(*cur, tmp->name,
 							tmp->xmlns, tmp->prefix, tmp->data);
 		}
 	} else {
@@ -461,7 +450,7 @@ static void yahoo_codes_to_html_add_tag(xmlnode **cur, const char *tag, gboolean
 		char *fontsize = NULL;
 
 		purple_markup_find_tag(tag_name, tag, &start, &end, &attributes);
-		*cur = xmlnode_new_child(*cur, tag_name);
+		*cur = purple_xmlnode_new_child(*cur, tag_name);
 
 		if (is_font_tag) {
 			/* Special case for the font size attribute */
@@ -483,8 +472,8 @@ static void yahoo_codes_to_html_add_tag(xmlnode **cur, const char *tag, gboolean
 			 * style on a span tag.
 			 */
 			gchar *tmp = g_strdup_printf("font-size: %spt", fontsize);
-			*cur = xmlnode_new_child(*cur, "span");
-			xmlnode_set_attrib(*cur, "style", tmp);
+			*cur = purple_xmlnode_new_child(*cur, "span");
+			purple_xmlnode_set_attrib(*cur, "style", tmp);
 			g_free(tmp);
 #else
 			/*
@@ -501,8 +490,8 @@ static void yahoo_codes_to_html_add_tag(xmlnode **cur, const char *tag, gboolean
 			size = strtol(fontsize, NULL, 10);
 			htmlsize = point_to_html(size);
 			sprintf(tmp, "%u", htmlsize);
-			xmlnode_set_attrib(*cur, "size", tmp);
-			xmlnode_set_attrib(*cur, "absz", fontsize);
+			purple_xmlnode_set_attrib(*cur, "size", tmp);
+			purple_xmlnode_set_attrib(*cur, "absz", fontsize);
 #endif /* !USE_CSS_FORMATTING */
 			g_free(fontsize);
 		}
@@ -538,20 +527,20 @@ static gchar *yahoo_markup_get_tag_name(const char *tag, gboolean *is_closing_ta
  * Example: <font size="8">size 8 <font size="16">size 16 <font size="8">size 8 again
  *
  * But we want to send well-formed HTML to the core, so we step through
- * the input string and build an xmlnode tree containing sanitized HTML.
+ * the input string and build an PurpleXmlNode tree containing sanitized HTML.
  */
 char *yahoo_codes_to_html(const char *x)
 {
 	size_t x_len;
-	xmlnode *html, *cur;
+	PurpleXmlNode *html, *cur;
 	GString *cdata = g_string_new(NULL);
-	int i, j;
+	guint i, j;
 	gboolean no_more_gt_brackets = FALSE;
 	const char *match;
 	gchar *xmlstr1, *xmlstr2, *esc;
 
 	x_len = strlen(x);
-	html = xmlnode_new("html");
+	html = purple_xmlnode_new("html");
 
 	cur = html;
 	for (i = 0; i < x_len; i++) {
@@ -571,7 +560,7 @@ char *yahoo_codes_to_html(const char *x)
 
 				/* Append any character data that belongs in the current node */
 				if (cdata->len > 0) {
-					xmlnode_insert_data(cur, cdata->str, cdata->len);
+					purple_xmlnode_insert_data(cur, cdata->str, cdata->len);
 					g_string_truncate(cdata, 0);
 				}
 
@@ -579,12 +568,12 @@ char *yahoo_codes_to_html(const char *x)
 				if (code[0] == '#') {
 #ifdef USE_CSS_FORMATTING
 					gchar *tmp = g_strdup_printf("color: %s", code);
-					cur = xmlnode_new_child(cur, "span");
-					xmlnode_set_attrib(cur, "style", tmp);
+					cur = purple_xmlnode_new_child(cur, "span");
+					purple_xmlnode_set_attrib(cur, "style", tmp);
 					g_free(tmp);
 #else
-					cur = xmlnode_new_child(cur, "font");
-					xmlnode_set_attrib(cur, "color", code);
+					cur = purple_xmlnode_new_child(cur, "font");
+					purple_xmlnode_set_attrib(cur, "color", code);
 #endif /* !USE_CSS_FORMATTING */
 
 				} else if ((match = g_hash_table_lookup(esc_codes_ht, code))) {
@@ -656,7 +645,7 @@ char *yahoo_codes_to_html(const char *x)
 				if (match[0] != '\0') {
 					/* Append any character data that belongs in the current node */
 					if (cdata->len > 0) {
-						xmlnode_insert_data(cur, cdata->str, cdata->len);
+						purple_xmlnode_insert_data(cur, cdata->str, cdata->len);
 						g_string_truncate(cdata, 0);
 					}
 					if (g_str_equal(tag_name, "font"))
@@ -681,12 +670,12 @@ char *yahoo_codes_to_html(const char *x)
 
 	/* Append any remaining character data */
 	if (cdata->len > 0)
-		xmlnode_insert_data(cur, cdata->str, cdata->len);
+		purple_xmlnode_insert_data(cur, cdata->str, cdata->len);
 	g_string_free(cdata, TRUE);
 
 	/* Serialize our HTML */
-	xmlstr1 = xmlnode_to_str(html, NULL);
-	xmlnode_free(html);
+	xmlstr1 = purple_xmlnode_to_str(html, NULL);
+	purple_xmlnode_free(html);
 
 	/* Strip off the outter HTML node */
 	/* This probably isn't necessary, especially if we made the outter HTML
@@ -801,7 +790,7 @@ char *yahoo_html_to_codes(const char *src)
 	GSList *tags = NULL;
 
 	size_t src_len;
-	int i, j;
+	guint i, j;
 	GString *dest;
 	char *esc;
 	gboolean no_more_gt_brackets = FALSE;
@@ -853,9 +842,9 @@ char *yahoo_html_to_codes(const char *src)
 
 					/*
 					 * TODO: Ideally we would replace this:
-					 * <a href="http://pidgin.im/">Pidgin</a>
+					 * <a href="https://pidgin.im/">Pidgin</a>
 					 * with this:
-					 * Pidgin (http://pidgin.im/)
+					 * Pidgin (https://pidgin.im/)
 					 *
 					 * Currently we drop the text within the <a> tag and
 					 * just show the URL.  Doing it the fancy way is

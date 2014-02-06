@@ -5,8 +5,6 @@ use strict;
 use warnings;
 use Carp;
 
-our $VERSION = '0.01';
-
 use Purple;
 
 require XSLoader;
@@ -36,7 +34,7 @@ write perl scripts that can be loaded in Pidgin as plugins. The script can
 interact with IMs, chats, accounts, the buddy list, pidgin signals, and more.
 
 The API for the perl interface is very similar to that of the Pidgin C API,
-which can be viewed at http://developer.pidgin.im/doxygen/ or in the header files
+which can be viewed at https://developer.pidgin.im/doxygen/ or in the header files
 in the Pidgin source tree.
 
 =head1 FUNCTIONS
@@ -46,11 +44,11 @@ in the Pidgin source tree.
 =back
 
 =head1 SEE ALSO
-Pidgin C API documentation - http://developer.pidgin.im/doxygen/
+Pidgin C API documentation - https://developer.pidgin.im/doxygen/
 
 The Pidgin perl module.
 
-Pidgin website - http://pidgin.im/
+Pidgin website - https://pidgin.im/
 
 =head1 AUTHOR
 

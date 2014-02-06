@@ -135,14 +135,14 @@ typedef struct
 	 */
 	GList * (* get_peer_certificates)(PurpleSslConnection * gsc);
 
+	/*< private >*/
+	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
 	void (*_purple_reserved4)(void);
 } PurpleSslOps;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name SSL API                                                         */
@@ -203,33 +203,12 @@ PurpleSslConnection *purple_ssl_connect(PurpleAccount *account, const char *host
  * @param data       User-defined data.
  *
  * @return The SSL connection handle.
- * @since 2.6.0
  */
 PurpleSslConnection *purple_ssl_connect_with_ssl_cn(PurpleAccount *account, const char *host,
 									int port, PurpleSslInputFunction func,
 									PurpleSslErrorFunction error_func,
 									const char *ssl_host,
 									void *data);
-
-#if !(defined PURPLE_DISABLE_DEPRECATED) || (defined _PURPLE_SSLCONN_C_)
-/**
- * Makes a SSL connection using an already open file descriptor.
- *
- * @deprecated Use purple_ssl_connect_with_host_fd() instead.
- *
- * @param account    The account making the connection.
- * @param fd         The file descriptor.
- * @param func       The SSL input handler function.
- * @param error_func The SSL error handler function.
- * @param data       User-defined data.
- *
- * @return The SSL connection handle.
- */
-PurpleSslConnection *purple_ssl_connect_fd(PurpleAccount *account, int fd,
-									   PurpleSslInputFunction func,
-									   PurpleSslErrorFunction error_func,
- 									   void *data);
-#endif
 
 /**
  * Makes a SSL connection using an already open file descriptor.
@@ -242,8 +221,6 @@ PurpleSslConnection *purple_ssl_connect_fd(PurpleAccount *account, int fd,
  * @param data       User-defined data.
  *
  * @return The SSL connection handle.
- *
- * @since 2.2.0
  */
 PurpleSslConnection *purple_ssl_connect_with_host_fd(PurpleAccount *account, int fd,
                                            PurpleSslInputFunction func,
@@ -261,6 +238,16 @@ PurpleSslConnection *purple_ssl_connect_with_host_fd(PurpleAccount *account, int
  */
 void purple_ssl_input_add(PurpleSslConnection *gsc, PurpleSslInputFunction func,
 						void *data);
+
+/**
+ * Removes an input watcher, added with purple_ssl_input_add().
+ *
+ * If there is no input watcher set, does nothing.
+ *
+ * @param gsc The SSL connection handle.
+ */
+void
+purple_ssl_input_remove(PurpleSslConnection *gsc);
 
 /**
  * Closes a SSL connection.
@@ -298,8 +285,6 @@ size_t purple_ssl_write(PurpleSslConnection *gsc, const void *buffer, size_t len
  *
  * @return The peer certificate chain, in the order of certificate, issuer,
  *         issuer's issuer, etc. @a NULL if no certificates have been provided,
- *
- * @since 2.2.0
  */
 GList * purple_ssl_get_peer_certificates(PurpleSslConnection *gsc);
 
@@ -336,8 +321,6 @@ void purple_ssl_uninit(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_SSLCONN_H_ */

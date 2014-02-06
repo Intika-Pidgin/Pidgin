@@ -132,10 +132,10 @@ msim_send_attention(PurpleConnection *gc, const gchar *username, guint code)
 	PurpleAttentionType *attn;
 	PurpleBuddy *buddy;
 
-	session = (MsimSession *)gc->proto_data;
+	session = purple_connection_get_protocol_data(gc);
 
 	/* Look for this attention type, by the code index given. */
-	types = msim_attention_types(gc->account);
+	types = msim_attention_types(purple_connection_get_account(gc));
 	attn = (PurpleAttentionType *)g_list_nth_data(types, code);
 
 	if (!attn) {
@@ -143,7 +143,7 @@ msim_send_attention(PurpleConnection *gc, const gchar *username, guint code)
 		return FALSE;
 	}
 
-	buddy = purple_find_buddy(session->account, username);
+	buddy = purple_blist_find_buddy(session->account, username);
 	if (!buddy) {
 		return FALSE;
 	}
@@ -163,19 +163,19 @@ msim_send_zap_from_menu(PurpleBlistNode *node, gpointer zap_num_ptr)
 	MsimSession *session;
 	guint zap;
 
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+	if (!PURPLE_IS_BUDDY(node)) {
 		/* Only know about buddies for now. */
 		return;
 	}
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *)node;
 
 	/* Find the session */
 	account = purple_buddy_get_account(buddy);
 	gc = purple_account_get_connection(account);
-	session = (MsimSession *)gc->proto_data;
+	session = purple_connection_get_protocol_data(gc);
 
 	zap = GPOINTER_TO_INT(zap_num_ptr);
 
@@ -191,7 +191,7 @@ msim_blist_node_menu(PurpleBlistNode *node)
 	PurpleMenuAction *act;
 	guint i;
 
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node)) {
+	if (!PURPLE_IS_BUDDY(node)) {
 		/* Only know about buddies for now. */
 		return NULL;
 	}

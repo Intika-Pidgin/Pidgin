@@ -38,9 +38,7 @@ struct _PidginPluginUiInfo
 {
 	GtkWidget *(*get_config_frame)(PurplePlugin *plugin);
 
-	int page_num;                                         /**< Reserved */
-
-	/* padding */
+	/*< private >*/
 	void (*_pidgin_reserved1)(void);
 	void (*_pidgin_reserved2)(void);
 	void (*_pidgin_reserved3)(void);
@@ -56,16 +54,7 @@ struct _PidginPluginUiInfo
 #define PIDGIN_PLUGIN_UI_INFO(plugin) \
 	((PidginPluginUiInfo *)(plugin)->info->ui_info)
 
-/**
- * Returns the configuration frame widget for a GTK+ plugin, if one
- * exists.
- *
- * @param plugin The plugin.
- *
- * @return The frame, if the plugin is a GTK+ plugin and provides a
- *         configuration frame.
- */
-GtkWidget *pidgin_plugin_get_config_frame(PurplePlugin *plugin);
+G_BEGIN_DECLS
 
 /**
  * Saves all loaded plugins.
@@ -76,5 +65,7 @@ void pidgin_plugins_save(void);
  * Shows the Plugins dialog
  */
 void pidgin_plugin_dialog_show(void);
+
+G_END_DECLS
 
 #endif /* _PIDGINPLUGIN_H_ */

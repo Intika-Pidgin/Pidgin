@@ -2,13 +2,16 @@ EXTRA_DIST = \
 		getopt.c \
 		getopt.h \
 		getopt1.c \
+		gtk3compat.h \
+		gtkdebug.html \
 		Makefile.mingw \
-		pidgin.pc.in \
-		pidgin-uninstalled.pc.in \
+		pidgin-3.pc.in \
+		pidgin-3-uninstalled.pc.in \
 		win32/MinimizeToTray.h \
 		win32/MinimizeToTray.c \
 		win32/pidgin_dll_rc.rc.in \
 		win32/pidgin_exe_rc.rc.in \
+		win32/prepare-workspace.sh \
 		win32/gtkdocklet-win32.c \
 		win32/gtkwin32dep.c \
 		win32/gtkwin32dep.h \
@@ -19,7 +22,6 @@ EXTRA_DIST = \
 		win32/wspell.c \
 		win32/wspell.h \
 		win32/nsis/generate_gtk_zip.sh \
-		win32/nsis/rpm2zip.sh \
 		win32/nsis/pixmaps/pidgin-header.bmp \
 		win32/nsis/pixmaps/pidgin-intro.bmp \
 		win32/nsis/pixmaps/pidgin-install.ico \
@@ -32,9 +34,9 @@ EXTRA_DIST = \
 if ENABLE_GTK
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = pidgin.pc
+pkgconfig_DATA = pidgin-3.pc
 
-SUBDIRS = pixmaps plugins
+SUBDIRS = pixmaps plugins themes
 
 bin_PROGRAMS = pidgin
 
@@ -48,18 +50,16 @@ pidgin_SOURCES = \
 	gtkcertmgr.c \
 	gtkconn.c \
 	gtkconv.c \
+	gtkconv-theme.c \
+	gtkconv-theme-loader.c \
 	gtkdebug.c \
 	gtkdialogs.c \
 	gtkdnd-hints.c \
 	gtkdocklet.c \
-	gtkdocklet-gtk.c \
 	gtkeventloop.c \
-	gtkft.c \
 	gtkicon-theme.c \
 	gtkicon-theme-loader.c \
 	gtkidle.c \
-	gtkimhtml.c \
-	gtkimhtmltoolbar.c \
 	gtklog.c \
 	gtkmain.c \
 	gtkmedia.c \
@@ -84,9 +84,13 @@ pidgin_SOURCES = \
 	gtkstatusbox.c \
 	gtkthemes.c \
 	gtkutils.c \
+	gtkwebview.c \
+	gtkwebviewtoolbar.c \
 	gtkwhiteboard.c \
+	gtkxfer.c \
 	minidialog.c \
-	pidgintooltip.c
+	pidgintooltip.c \
+	smileyparser.c
 
 pidgin_headers = \
 	gtkaccount.h \
@@ -98,18 +102,16 @@ pidgin_headers = \
 	gtkconn.h \
 	gtkconv.h \
 	gtkconvwin.h \
+	gtkconv-theme.h \
+	gtkconv-theme-loader.h \
 	gtkdebug.h \
 	gtkdialogs.h \
 	gtkdnd-hints.h \
 	gtkdocklet.h \
 	gtkeventloop.h \
-	gtkft.h \
 	gtkicon-theme.h \
 	gtkicon-theme-loader.h \
 	gtkidle.h \
-	gtkgaim-compat.h \
-	gtkimhtml.h \
-	gtkimhtmltoolbar.h \
 	gtklog.h \
 	gtkmedia.h \
 	gtkmenutray.h \
@@ -135,34 +137,47 @@ pidgin_headers = \
 	pidginstock.h \
 	gtkthemes.h \
 	gtkutils.h \
+	gtkwebview.h \
+	gtkwebviewtoolbar.h \
 	gtkwhiteboard.h \
+	gtkxfer.h \
 	minidialog.h \
 	pidgintooltip.h \
-	pidgin.h
+	pidgin.h \
+	smileyparser.h
 
 pidginincludedir=$(includedir)/pidgin
 pidgininclude_HEADERS = \
 	$(pidgin_headers)
 
+pidgin_builtheaders = gtkdebug.html.h
+
+BUILT_SOURCES = $(pidgin_builtheaders)
+
+%.html.h: %.html
+	$(AM_V_GEN)echo "static const char $*_html[] = {" > $@
+	$(AM_V_at)$(sedpath) -e 's/^[ 	]\+//g' -e 's/[ 	]\+/ /g' $< | $(xxdpath) -i | sed -e 's/\(0x[0-9a-f][0-9a-f]\)$$/\1, 0x00/' >> $@
+	$(AM_V_at)echo "};" >> $@
 
 pidgin_DEPENDENCIES = @LIBOBJS@
 pidgin_LDFLAGS = -export-dynamic
 pidgin_LDADD = \
 	@LIBOBJS@ \
 	$(GLIB_LIBS) \
+	$(GCR_LIBS) \
 	$(DBUS_LIBS) \
 	$(GSTREAMER_LIBS) \
+	$(GSTVIDEO_LIBS) \
+	$(GSTINTERFACES_LIBS) \
 	$(XSS_LIBS) \
 	$(SM_LIBS) \
 	$(INTLLIBS) \
 	$(GTKSPELL_LIBS) \
 	$(LIBXML_LIBS) \
+	$(WEBKIT_LIBS) \
 	$(GTK_LIBS) \
+	$(X11_LIBS) \
 	$(top_builddir)/libpurple/libpurple.la
-
-if USE_INTERNAL_LIBGADU
-INTGG_CFLAGS = -DUSE_INTERNAL_LIBGADU
-endif
 
 AM_CPPFLAGS = \
 	-DDATADIR=\"$(datadir)\" \
@@ -174,11 +189,16 @@ AM_CPPFLAGS = \
 	-I$(top_builddir) \
 	-I$(top_srcdir) \
 	$(GLIB_CFLAGS) \
+	$(GCR_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
+	$(GSTVIDEO_CFLAGS) \
+	$(GSTINTERFACES_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(X11_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(GTKSPELL_CFLAGS) \
 	$(LIBXML_CFLAGS) \
-	$(INTGG_CFLAGS)
+	$(WEBKIT_CFLAGS)
 endif  # ENABLE_GTK
+

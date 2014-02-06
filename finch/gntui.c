@@ -30,7 +30,7 @@
 #include "gntconn.h"
 #include "gntconv.h"
 #include "gntdebug.h"
-#include "gntft.h"
+#include "gntxfer.h"
 #include "gntlog.h"
 #include "gntmedia.h"
 #include "gntnotify.h"
@@ -106,6 +106,7 @@ void gnt_ui_init()
 	gnt_register_action(_("Room List"), finch_roomlist_show_all);
 	gnt_register_action(_("Sounds"), finch_sounds_show_all);
 	gnt_register_action(_("Preferences"), finch_prefs_show_all);
+	gnt_register_action(_("Keyring settings"), finch_prefs_show_keyring);
 	gnt_register_action(_("Statuses"), finch_savedstatus_show_all);
 
 #ifdef STANDALONE

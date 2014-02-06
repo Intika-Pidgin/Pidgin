@@ -21,9 +21,8 @@
  * 02111-1301, USA.
  *
  */
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
-#endif
+
+#include "config.h"
 #include <gdk/gdkwin32.h>
 #include "internal.h"
 
@@ -44,9 +43,9 @@
  */
 #define WINTRANS_PLUGIN_ID	"gtk-win-trans"
 
-#define blist	(purple_get_blist() \
-		? (PIDGIN_BLIST(purple_get_blist()) \
-			? ((PIDGIN_BLIST(purple_get_blist()))->window) \
+#define blist	(purple_blist_get_buddy_list() \
+		? (PIDGIN_BLIST(purple_blist_get_buddy_list()) \
+			? ((PIDGIN_BLIST(purple_blist_get_buddy_list()))->window) \
 			: NULL) \
 		: NULL)
 
@@ -387,11 +386,11 @@ static void update_convs_wintrans(GtkWidget *toggle_btn, const char *pref) {
 }
 
 static void
-conv_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type) {
+conv_updated_cb(PurpleConversation *conv, PurpleConversationUpdateType type) {
 	PidginConversation *pconv = PIDGIN_CONVERSATION(conv);
 	PidginWindow *win = pidgin_conv_get_window(pconv);
 
-	if (type == PURPLE_CONV_UPDATE_UNSEEN && !pidgin_conv_is_hidden(pconv)
+	if (type == PURPLE_CONVERSATION_UPDATE_UNSEEN && !pidgin_conv_is_hidden(pconv)
 			&& pconv->unseen_state == PIDGIN_UNSEEN_NONE
 			&& pidgin_conv_window_get_gtkconv_count(win) == 1) {
 		GtkWidget *window = win->window;
@@ -660,7 +659,6 @@ static GtkWidget *get_config_frame(PurplePlugin *plugin) {
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0, /* page_num (Reserved) */
 
 	/* padding */
 	NULL,

@@ -29,6 +29,7 @@
 
 
 #include <conversation.h>
+#include <http.h>
 #include <signals.h>
 
 #include <glib.h>
@@ -202,17 +203,26 @@ static GList *extract_urls(const char *text)
 	return ret;
 }
 
-static void url_fetched(PurpleUtilFetchUrlData *url_data, gpointer cb_data,
-				const gchar *url_text, gsize len, const gchar *error_message)
+
+
+static void url_fetched(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer _data)
 {
-	CbInfo *data = (CbInfo *)cb_data;
+	CbInfo *data = (CbInfo *)_data;
 	PurpleConversation *conv = data->conv;
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get_all();
+	const gchar *url;
+
+	if (purple_http_response_is_successful(response))
+		url = purple_http_response_get_data(response, NULL);
+	else
+		url = _("Error while querying TinyURL");
+
 	/* ensure the conversation still exists */
 	for (; convs; convs = convs->next) {
 		if ((PurpleConversation *)(convs->data) == conv) {
 			FinchConv *fconv = FINCH_CONV(conv);
-			gchar *str = g_strdup_printf("[%d] %s", data->num, url_text);
+			gchar *str = g_strdup_printf("[%d] %s", data->num, url);
 			GntTextView *tv = GNT_TEXT_VIEW(fconv->tv);
 			gnt_text_view_tag_change(tv, data->tag, str, FALSE);
 			g_free(str);
@@ -241,7 +251,7 @@ static gboolean writing_msg(PurpleAccount *account, char *sender, char **message
 	if ((flags & (PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_INVISIBLE)))
 		return FALSE;
 
-	urls = purple_conversation_get_data(conv, "TinyURLs");
+	urls = g_object_get_data(G_OBJECT(conv), "TinyURLs");
 	if (urls != NULL) /* message was cancelled somewhere? Reset. */
 		g_list_foreach(urls, free_urls, NULL);
 	g_list_free(urls);
@@ -277,8 +287,8 @@ static gboolean writing_msg(PurpleAccount *account, char *sender, char **message
 	*message = t->str;
 	g_string_free(t, FALSE);
 	if (conv == NULL)
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, sender);
-	purple_conversation_set_data(conv, "TinyURLs", urls);
+		conv = PURPLE_CONVERSATION(purple_im_conversation_new(account, sender));
+	g_object_set_data(G_OBJECT(conv), "TinyURLs", urls);
 	return FALSE;
 }
 
@@ -287,12 +297,12 @@ static void wrote_msg(PurpleAccount *account, char *sender, char *message,
 {
 	GList *urls;
 
-	urls = purple_conversation_get_data(conv, "TinyURLs");
+	urls = g_object_get_data(G_OBJECT(conv), "TinyURLs");
 	if ((flags & PURPLE_MESSAGE_SEND) || urls == NULL)
 		return;
 
 	process_urls(conv, urls);
-	purple_conversation_set_data(conv, "TinyURLs", NULL);
+	g_object_set_data(G_OBJECT(conv), "TinyURLs", NULL);
 }
 
 /* Frees 'urls' */
@@ -319,7 +329,7 @@ process_urls(PurpleConversation *conv, GList *urls)
 			url = g_strdup_printf("%s%s", purple_prefs_get_string(PREF_URL), purple_url_encode(tmp));
 		}
 		g_free(tmp);
-		purple_util_fetch_url(url, TRUE, "finch", FALSE, url_fetched, cbdata);
+		purple_http_get(NULL, url_fetched, cbdata, url);
 		i = gnt_text_view_get_lines_below(tv);
 		str = g_strdup_printf(_("\nFetching TinyURL..."));
 		gnt_text_view_append_text_with_tag((tv), str, GNT_TEXT_FLAG_DIM, cbdata->tag);
@@ -335,26 +345,33 @@ process_urls(PurpleConversation *conv, GList *urls)
 static void
 free_conv_urls(PurpleConversation *conv)
 {
-	GList *urls = purple_conversation_get_data(conv, "TinyURLs");
+	GList *urls = g_object_get_data(G_OBJECT(conv), "TinyURLs");
 	if (urls)
 		g_list_foreach(urls, free_urls, NULL);
 	g_list_free(urls);
 }
 
-static void tinyurl_notify_fetch_cb(PurpleUtilFetchUrlData *urldata, gpointer cbdata,
-		const gchar *urltext, gsize len, const gchar *error)
+static void
+tinyurl_notify_fetch_cb(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer _win)
 {
-	GntWidget *win = cbdata;
+	GntWidget *win = _win;
 	GntWidget *label = g_object_get_data(G_OBJECT(win), "info-widget");
 	char *message;
+	const gchar *url;
 
-	message = g_strdup_printf(_("TinyURL for above: %s"), urltext);
+	if (!purple_http_response_is_successful(response))
+		return;
+
+	url = purple_http_response_get_data(response, NULL);
+
+	message = g_strdup_printf(_("TinyURL for above: %s"), url);
 	gnt_label_set_text(GNT_LABEL(label), message);
 	g_free(message);
 
 	g_signal_handlers_disconnect_matched(G_OBJECT(win), G_SIGNAL_MATCH_FUNC,
 			0, 0, NULL,
-			G_CALLBACK(purple_util_fetch_url_cancel), NULL);
+			G_CALLBACK(purple_http_conn_cancel), NULL);
 }
 
 static void *
@@ -362,13 +379,13 @@ tinyurl_notify_uri(const char *uri)
 {
 	char *fullurl = NULL;
 	GntWidget *win;
-	PurpleUtilFetchUrlData *urlcb;
+	PurpleHttpConnection *hc;
 
 	/* XXX: The following expects that finch_notify_message gets called. This
 	 * may not always happen, e.g. when another plugin sets its own
 	 * notify_message. So tread carefully. */
-	win = purple_notify_message(NULL, PURPLE_NOTIFY_URI, _("URI"), uri,
-			_("Please wait while TinyURL fetches a shorter URL ..."), NULL, NULL);
+	win = purple_notify_message(NULL, PURPLE_NOTIFY_MSG_INFO, _("URI"), uri,
+			_("Please wait while TinyURL fetches a shorter URL ..."), NULL, NULL, NULL);
 	if (!GNT_IS_WINDOW(win) || !g_object_get_data(G_OBJECT(win), "info-widget"))
 		return win;
 
@@ -380,13 +397,14 @@ tinyurl_notify_uri(const char *uri)
 				purple_url_encode(uri));
 	}
 
-	/* Store the return value of _fetch_url and destroy that when win is
-	   destroyed, so that the callback for _fetch_url does not try to molest a
-	   non-existent window */
-	urlcb = purple_util_fetch_url(fullurl, TRUE, "finch", FALSE, tinyurl_notify_fetch_cb, win);
+	/* Store the return value of purple_http_get and destroy that when win
+	 * is destroyed, so that the callback for purple_http_get does not try
+	 * to molest a non-existent window
+	 */
+	hc = purple_http_get(NULL, tinyurl_notify_fetch_cb, win, fullurl);
 	g_free(fullurl);
 	g_signal_connect_swapped(G_OBJECT(win), "destroy",
-			G_CALLBACK(purple_util_fetch_url_cancel), urlcb);
+			G_CALLBACK(purple_http_conn_cancel), hc);
 
 	return win;
 }
@@ -447,8 +465,7 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 
 static PurplePluginUiInfo prefs_info = {
   get_plugin_pref_frame,
-  0,    /* page_num (Reserved) */
-  NULL, /* frame (Reserved) */
+  NULL,
 
   /* padding */
   NULL,

@@ -29,13 +29,16 @@
 #include "pidgin.h"
 
 #include "debug.h"
+#include "http.h"
 #include "notify.h"
 #include "smiley.h"
 
-#include "gtkimhtml.h"
 #include "gtksmiley.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
 #include "pidginstock.h"
+
+#include "gtk3compat.h"
 
 #define PIDGIN_RESPONSE_MODIFY 1000
 
@@ -47,9 +50,9 @@ struct _PidginSmiley
 	GtkWidget *smiley_image;
 	gchar *filename;
 	GdkPixbuf *custom_pixbuf;
-	gpointer data; /** @since 2.6.0 */
-	gsize datasize; /** @since 2.6.0 */
-	gint entry_len; /** @since 2.6.0 */
+	gpointer data;
+	gsize datasize;
+	gint entry_len;
 };
 
 typedef struct
@@ -58,6 +61,7 @@ typedef struct
 
 	GtkWidget *treeview;
 	GtkListStore *model;
+	PurpleHttpConnection *running_request;
 } SmileyManager;
 
 enum
@@ -84,38 +88,49 @@ pidgin_smiley_destroy(PidginSmiley *smiley)
 }
 
 /******************************************************************************
- * GtkIMHtmlSmileys stuff
+ * GtkWebViewSmileys stuff
  *****************************************************************************/
-/* Perhaps these should be in gtkimhtml.c instead. -- sadrul */
-static void add_gtkimhtml_to_list(GtkIMHtmlSmiley *gtksmiley)
+/* Perhaps these should be in gtkwebview.c instead. -- sadrul */
+static void add_gtkwebview_to_list(GtkWebViewSmiley *gtksmiley)
 {
 	gtk_smileys = g_slist_prepend(gtk_smileys, gtksmiley);
 
-	purple_debug_info("gtksmiley", "adding %s to gtk_smileys\n", gtksmiley->smile);
+	purple_debug_info("gtksmiley", "adding %s to gtk_smileys",
+		gtk_webview_smiley_get_smile(gtksmiley));
 }
 
 static void
-shortcut_changed_cb(PurpleSmiley *smiley, gpointer dontcare, GtkIMHtmlSmiley *gtksmiley)
+shortcut_changed_cb(PurpleSmiley *smiley, gpointer dontcare,
+	GtkWebViewSmiley *gtksmiley)
 {
+#if 0
 	g_free(gtksmiley->smile);
 	gtksmiley->smile = g_strdup(purple_smiley_get_shortcut(smiley));
+#else
+	purple_debug_fatal("gtksmiley", "shortcut_changed_cb not implemented");
+#endif
 }
 
 static void
-image_changed_cb(PurpleSmiley *smiley, gpointer dontcare, GtkIMHtmlSmiley *gtksmiley)
+image_changed_cb(PurpleSmiley *smiley, gpointer dontcare,
+	GtkWebViewSmiley *gtksmiley)
 {
+#if 0
 	const char *file;
 
 	g_free(gtksmiley->file);
 
 	file = purple_imgstore_get_filename(purple_smiley_get_stored_image(smiley));
 	gtksmiley->file = g_build_filename(purple_smileys_get_storing_dir(), file, NULL);
-	gtk_imhtml_smiley_reload(gtksmiley);
+	gtk_webview_smiley_reload(gtksmiley);
+#else
+	purple_debug_fatal("gtksmiley", "image_changed_cb not implemented");
+#endif
 }
 
-static GtkIMHtmlSmiley *smiley_purple_to_gtkimhtml(PurpleSmiley *smiley)
+static GtkWebViewSmiley *smiley_purple_to_gtkwebview(PurpleSmiley *smiley)
 {
-	GtkIMHtmlSmiley *gtksmiley;
+	GtkWebViewSmiley *gtksmiley;
 	gchar *filename;
 	const gchar *file;
 
@@ -123,11 +138,13 @@ static GtkIMHtmlSmiley *smiley_purple_to_gtkimhtml(PurpleSmiley *smiley)
 
 	filename = g_build_filename(purple_smileys_get_storing_dir(), file, NULL);
 
-	gtksmiley = gtk_imhtml_smiley_create(filename, purple_smiley_get_shortcut(smiley),
-			FALSE, GTK_IMHTML_SMILEY_CUSTOM);
+	gtksmiley = gtk_webview_smiley_create(filename,
+		purple_smiley_get_shortcut(smiley), FALSE,
+		GTK_WEBVIEW_SMILEY_CUSTOM);
 	g_free(filename);
 
-	/* Make sure the shortcut for the GtkIMHtmlSmiley is updated with the PurpleSmiley */
+	/* Make sure the shortcut for the GtkWebViewSmiley is updated with
+	 * the PurpleSmiley */
 	g_signal_connect(G_OBJECT(smiley), "notify::shortcut",
 			G_CALLBACK(shortcut_changed_cb), gtksmiley);
 
@@ -141,7 +158,7 @@ static GtkIMHtmlSmiley *smiley_purple_to_gtkimhtml(PurpleSmiley *smiley)
 void pidgin_smiley_del_from_list(PurpleSmiley *smiley)
 {
 	GSList *list = NULL;
-	GtkIMHtmlSmiley *gtksmiley;
+	GtkWebViewSmiley *gtksmiley;
 
 	if (gtk_smileys == NULL)
 		return;
@@ -149,12 +166,15 @@ void pidgin_smiley_del_from_list(PurpleSmiley *smiley)
 	list = gtk_smileys;
 
 	for (; list; list = list->next) {
-		gtksmiley = (GtkIMHtmlSmiley*)list->data;
+		gtksmiley = (GtkWebViewSmiley*)list->data;
 
-		if (strcmp(gtksmiley->smile, purple_smiley_get_shortcut(smiley)))
+		if (strcmp(gtk_webview_smiley_get_smile(gtksmiley),
+			purple_smiley_get_shortcut(smiley)))
+		{
 			continue;
+		}
 
-		gtk_imhtml_smiley_destroy(gtksmiley);
+		gtk_webview_smiley_destroy(gtksmiley);
 		g_signal_handlers_disconnect_matched(G_OBJECT(smiley), G_SIGNAL_MATCH_DATA,
 				0, 0, NULL, NULL, gtksmiley);
 		break;
@@ -166,10 +186,10 @@ void pidgin_smiley_del_from_list(PurpleSmiley *smiley)
 
 void pidgin_smiley_add_to_list(PurpleSmiley *smiley)
 {
-	GtkIMHtmlSmiley *gtksmiley;
+	GtkWebViewSmiley *gtksmiley;
 
-	gtksmiley = smiley_purple_to_gtkimhtml(smiley);
-	add_gtkimhtml_to_list(gtksmiley);
+	gtksmiley = smiley_purple_to_gtkwebview(smiley);
+	add_gtkwebview_to_list(gtksmiley);
 	g_signal_connect(G_OBJECT(smiley), "destroy", G_CALLBACK(pidgin_smiley_del_from_list), NULL);
 }
 
@@ -193,7 +213,7 @@ void pidgin_smileys_init(void)
 void pidgin_smileys_uninit(void)
 {
 	GSList *list;
-	GtkIMHtmlSmiley *gtksmiley;
+	GtkWebViewSmiley *gtksmiley;
 
 	list = gtk_smileys;
 
@@ -201,8 +221,8 @@ void pidgin_smileys_uninit(void)
 		return;
 
 	for (; list; list = g_slist_delete_link(list, list)) {
-		gtksmiley = (GtkIMHtmlSmiley*)list->data;
-		gtk_imhtml_smiley_destroy(gtksmiley);
+		gtksmiley = (GtkWebViewSmiley*)list->data;
+		gtk_webview_smiley_destroy(gtksmiley);
 	}
 
 	gtk_smileys = NULL;
@@ -236,7 +256,7 @@ static void do_add(GtkWidget *widget, PidginSmiley *s)
 		msg = g_strdup_printf(_("A custom smiley for '%s' already exists.  "
 				"Please use a different shortcut."), entry);
 		purple_notify_error(s->parent, _("Custom Smiley"),
-				_("Duplicate Shortcut"), msg);
+				_("Duplicate Shortcut"), msg, NULL);
 		g_free(msg);
 		return;
 	}
@@ -399,7 +419,7 @@ pidgin_smiley_edit(GtkWidget *widget, PurpleSmiley *smiley)
 
 	window = gtk_dialog_new_with_buttons(smiley ? _("Edit Smiley") : _("Add Smiley"),
 			widget ? GTK_WINDOW(widget) : NULL,
-			GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_NO_SEPARATOR,
+			GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 			smiley ? GTK_STOCK_SAVE : GTK_STOCK_ADD, GTK_RESPONSE_ACCEPT,
 			NULL);
@@ -407,26 +427,48 @@ pidgin_smiley_edit(GtkWidget *widget, PurpleSmiley *smiley)
 	if (smiley)
 		g_object_set_data(G_OBJECT(smiley), "edit-dialog", window);
 
+#if !GTK_CHECK_VERSION(3,0,0)
 	gtk_container_set_border_width(GTK_CONTAINER(window), PIDGIN_HIG_BORDER);
+#endif
 
 	gtk_dialog_set_default_response(GTK_DIALOG(window), GTK_RESPONSE_ACCEPT);
 	g_signal_connect(window, "response", G_CALLBACK(do_add_select_cb), s);
 
 	/* The vbox */
+#if GTK_CHECK_VERSION(3,0,0)
+	vbox = gtk_grid_new();
+	gtk_grid_set_row_spacing(GTK_GRID(vbox), PIDGIN_HIG_BORDER);
+#else
 	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(window)->vbox), vbox);
+#endif
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))),
+                    vbox);
 	gtk_widget_show(vbox);
 
 	/* The hbox */
+#if GTK_CHECK_VERSION(3,0,0)
+	hbox = gtk_grid_new();
+	gtk_grid_set_column_spacing(GTK_GRID(hbox), PIDGIN_HIG_BORDER);
+	gtk_grid_attach(GTK_GRID(vbox), hbox, 0, 0, 1, 1);
+#else
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(GTK_VBOX(vbox)), hbox);
+#endif
 
 	label = gtk_label_new_with_mnemonic(_("_Image:"));
+#if GTK_CHECK_VERSION(3,0,0)
+	gtk_grid_attach(GTK_GRID(hbox), label, 0, 0, 1, 1);
+#else
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+#endif
 	gtk_widget_show(label);
 
 	filech = gtk_button_new();
+#if GTK_CHECK_VERSION(3,0,0)
+	gtk_grid_attach_next_to(GTK_GRID(hbox), filech, NULL, GTK_POS_RIGHT, 1, 1);
+#else
 	gtk_box_pack_end(GTK_BOX(hbox), filech, FALSE, FALSE, 0);
+#endif
 	pidgin_set_accessible_label(filech, label);
 
 	s->smiley_image = gtk_image_new();
@@ -448,12 +490,23 @@ pidgin_smiley_edit(GtkWidget *widget, PurpleSmiley *smiley)
 	gtk_widget_show_all(hbox);
 
 	/* info */
+#if GTK_CHECK_VERSION(3,0,0)
+	hbox = gtk_grid_new();
+	gtk_grid_set_column_spacing(GTK_GRID(hbox), PIDGIN_HIG_BORDER);
+
+	gtk_grid_attach_next_to(GTK_GRID(vbox), hbox, NULL, GTK_POS_BOTTOM, 1, 1);
+#else
 	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(GTK_VBOX(vbox)),hbox);
+#endif
 
 	/* Shortcut text */
 	label = gtk_label_new_with_mnemonic(_("S_hortcut text:"));
+#if GTK_CHECK_VERSION(3,0,0)
+	gtk_grid_attach(GTK_GRID(hbox), label, 0, 0, 1, 1);
+#else
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+#endif
 	gtk_widget_show(label);
 
 	s->smile = gtk_entry_new();
@@ -471,7 +524,11 @@ pidgin_smiley_edit(GtkWidget *widget, PurpleSmiley *smiley)
 	g_signal_connect(G_OBJECT(s->smile), "insert-text", G_CALLBACK(smiley_name_insert_cb), s);
 	g_signal_connect(G_OBJECT(s->smile), "delete-text", G_CALLBACK(smiley_name_delete_cb), s);
 
+#if GTK_CHECK_VERSION(3,0,0)
+	gtk_grid_attach_next_to(GTK_GRID(hbox), s->smile, NULL, GTK_POS_RIGHT, 1, 1);
+#else
 	gtk_box_pack_end(GTK_BOX(hbox), s->smile, FALSE, FALSE, 0);
+#endif
 	gtk_widget_show(s->smile);
 
 	gtk_widget_show(hbox);
@@ -683,34 +740,23 @@ edit_selected_cb(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpoi
 }
 
 static void
-smiley_got_url(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *smileydata, size_t len, const gchar *error_message)
+smiley_got_url(PurpleHttpConnection *http_conn, PurpleHttpResponse *response,
+	gpointer _dialog)
 {
-	SmileyManager *dialog = user_data;
-	FILE *f;
-	gchar *path;
-	size_t wc;
+	SmileyManager *dialog = _dialog;
 	PidginSmiley *ps;
 	GdkPixbuf *image;
+	const gchar *smileydata;
+	size_t len;
 
-	if ((error_message != NULL) || (len == 0)) {
+	g_assert(http_conn == smiley_manager->running_request);
+	smiley_manager->running_request = NULL;
+
+	if (!purple_http_response_is_successful(response))
 		return;
-	}
 
-	f = purple_mkstemp(&path, TRUE);
-	wc = fwrite(smileydata, len, 1, f);
-	if (wc != 1) {
-		purple_debug_warning("smiley_got_url", "Unable to write smiley data.\n");
-		fclose(f);
-		g_unlink(path);
-		g_free(path);
-		return;
-	}
-	fclose(f);
-
-	image = pidgin_pixbuf_new_from_file(path);
-	g_unlink(path);
-	g_free(path);
+	smileydata = purple_http_response_get_data(response, &len);
+	image = pidgin_pixbuf_from_data((const guchar *)smileydata, len);
 	if (!image)
 		return;
 
@@ -724,9 +770,10 @@ smiley_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 		GtkSelectionData *sd, guint info, guint t, gpointer user_data)
 {
 	SmileyManager *dialog = user_data;
-	gchar *name = g_strchomp((gchar *)sd->data);
+	gchar *name = g_strchomp((gchar *) gtk_selection_data_get_data(sd));
 
-	if ((sd->length >= 0) && (sd->format == 8)) {
+	if ((gtk_selection_data_get_length(sd) >= 0)
+      && (gtk_selection_data_get_format(sd) == 8)) {
 		/* Well, it looks like the drag event was cool.
 		 * Let's do something with it */
 
@@ -747,20 +794,15 @@ smiley_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 			if (gtk_image_get_pixbuf(GTK_IMAGE(ps->smiley_image)) == NULL)
 				gtk_dialog_response(GTK_DIALOG(ps->parent), GTK_RESPONSE_CANCEL);
 			g_free(tmp);
-		} else if (!g_ascii_strncasecmp(name, "http://", 7)) {
+		} else if (!g_ascii_strncasecmp(name, "http://", 7) ||
+			!g_ascii_strncasecmp(name, "https://", 8))
+		{
 			/* Oo, a web drag and drop. This is where things
 			 * will start to get interesting */
-			purple_util_fetch_url(name, TRUE, NULL, FALSE, smiley_got_url, dialog);
-		} else if (!g_ascii_strncasecmp(name, "https://", 8)) {
-			/* purple_util_fetch_url() doesn't support HTTPS */
-			char *tmp = g_strdup(name + 1);
-			tmp[0] = 'h';
-			tmp[1] = 't';
-			tmp[2] = 't';
-			tmp[3] = 'p';
-
-			purple_util_fetch_url(tmp, TRUE, NULL, FALSE, smiley_got_url, dialog);
-			g_free(tmp);
+			purple_http_conn_cancel(smiley_manager->
+				running_request);
+			smiley_manager->running_request = purple_http_get(NULL,
+				smiley_got_url, dialog, name);
 		}
 
 		gtk_drag_finish(dc, TRUE, FALSE, t);
@@ -831,6 +873,7 @@ static void smiley_manager_select_cb(GtkWidget *widget, gint resp, SmileyManager
 		case GTK_RESPONSE_DELETE_EVENT:
 		case GTK_RESPONSE_CLOSE:
 			gtk_widget_destroy(dialog->window);
+			purple_http_conn_cancel(smiley_manager->running_request);
 			g_free(smiley_manager);
 			smiley_manager = NULL;
 			break;
@@ -872,7 +915,9 @@ void pidgin_smiley_manager_show(void)
 
 	gtk_window_set_default_size(GTK_WINDOW(win), 50, 400);
 	gtk_window_set_role(GTK_WINDOW(win), "custom_smiley_manager");
+#if !GTK_CHECK_VERSION(3,0,0)
 	gtk_container_set_border_width(GTK_CONTAINER(win),PIDGIN_HIG_BORDER);
+#endif
 	gtk_dialog_set_response_sensitive(GTK_DIALOG(win), GTK_RESPONSE_NO, FALSE);
 	gtk_dialog_set_response_sensitive(GTK_DIALOG(win),
 	                                  PIDGIN_RESPONSE_MODIFY, FALSE);
@@ -881,9 +926,7 @@ void pidgin_smiley_manager_show(void)
 			dialog);
 
 	/* The vbox */
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(win)->vbox), vbox);
-	gtk_widget_show(vbox);
+	vbox = gtk_dialog_get_content_area(GTK_DIALOG(win));
 
 	/* get the scrolled window with all stuff */
 	sw = smiley_list_create(dialog);
@@ -892,3 +935,4 @@ void pidgin_smiley_manager_show(void)
 
 	gtk_widget_show(win);
 }
+

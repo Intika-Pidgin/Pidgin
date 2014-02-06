@@ -22,6 +22,8 @@
 #include "pidgin.h"
 #include "version.h"
 
+#include "gtk3compat.h"
+
 #include "theme-manager.h"
 
 #include "gtkblist.h"
@@ -65,12 +67,8 @@ theme_color_selected(GtkDialog *dialog, gint response, const char *prop)
 		GdkColor color;
 		PidginBlistTheme *theme;
 
-#if GTK_CHECK_VERSION(2,14,0)
 		colorsel =
 			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(dialog));
-#else
-		colorsel = GTK_COLOR_SELECTION_DIALOG(dialog)->colorsel;
-#endif
 		gtk_color_selection_get_current_color(GTK_COLOR_SELECTION(colorsel), &color);
 
 		theme = pidgin_blist_get_theme();
@@ -98,9 +96,9 @@ static void
 theme_font_face_selected(GtkWidget *dialog, gint response, gpointer font)
 {
 	if (response == GTK_RESPONSE_OK || response == GTK_RESPONSE_APPLY) {
-		const char *fontname = gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(dialog));
+		const char *fontname = gtk_font_chooser_get_font(GTK_FONT_CHOOSER(dialog));
 		pidgin_theme_font_set_font_face(font, fontname);
-		pidgin_blist_refresh(purple_get_blist());
+		pidgin_blist_refresh(purple_blist_get_buddy_list());
 	}
 	gtk_widget_destroy(dialog);
 }
@@ -108,6 +106,7 @@ theme_font_face_selected(GtkWidget *dialog, gint response, gpointer font)
 static void
 theme_font_select_face(GtkWidget *widget, gpointer prop)
 {
+	GtkWindow *window;
 	GtkWidget *dialog;
 	PidginBlistTheme *theme;
 	PidginThemeFont *font = NULL;
@@ -124,10 +123,10 @@ theme_font_select_face(GtkWidget *widget, gpointer prop)
 	}
 
 	face = pidgin_theme_font_get_font_face(font);
-	dialog = gtk_font_selection_dialog_new(_("Select Font"));
+	window = GTK_WINDOW(gtk_widget_get_toplevel(widget));
+	dialog = gtk_font_chooser_dialog_new(_("Select Font"), window);
 	if (face && *face)
-		gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(dialog),
-				face);
+		gtk_font_chooser_set_font(GTK_FONT_CHOOSER(dialog), face);
 	g_signal_connect(G_OBJECT(dialog), "response", G_CALLBACK(theme_font_face_selected),
 			font);
 	gtk_widget_show_all(dialog);
@@ -152,16 +151,10 @@ theme_color_select(GtkWidget *widget, gpointer prop)
 	}
 
 	dialog = gtk_color_selection_dialog_new(_("Select Color"));
-#if GTK_CHECK_VERSION(2,14,0)
 	if (color)
 		gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(
 			gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(dialog))),
 			color);
-#else
-	if (color)
-		gtk_color_selection_set_current_color(GTK_COLOR_SELECTION(GTK_COLOR_SELECTION_DIALOG(dialog)->colorsel),
-				color);
-#endif
 	g_signal_connect(G_OBJECT(dialog), "response", G_CALLBACK(theme_color_selected),
 			prop);
 
@@ -181,9 +174,7 @@ pidgin_theme_create_color_selector(const char *text, const char *blurb, const ch
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
 	gtk_size_group_add_widget(sizegroup, label);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-#if GTK_CHECK_VERSION(2, 12, 0)
 	gtk_widget_set_tooltip_text(label, blurb);
-#endif
 
 	color = pidgin_pixbuf_button_from_stock("", GTK_STOCK_SELECT_COLOR,
 			PIDGIN_BUTTON_HORIZONTAL);
@@ -207,9 +198,7 @@ pidgin_theme_create_font_selector(const char *text, const char *blurb, const cha
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
 	gtk_size_group_add_widget(sizegroup, label);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-#if GTK_CHECK_VERSION(2, 12, 0)
 	gtk_widget_set_tooltip_text(label, blurb);
-#endif
 
 	font = pidgin_pixbuf_button_from_stock("", GTK_STOCK_SELECT_FONT,
 			PIDGIN_BUTTON_HORIZONTAL);
@@ -247,7 +236,7 @@ pidgin_blist_theme_edit(PurplePluginAction *unused)
 					"offline",
 					"idle",
 					"message",
-					"message_nick_said",
+					"message-nick-said",
 					"status",
 					NULL
 				}
@@ -306,7 +295,6 @@ pidgin_blist_theme_edit(PurplePluginAction *unused)
 		}
 	}
 
-	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), TRUE);
 #ifdef NOT_SADRUL
 	pidgin_dialog_add_button(GTK_DIALOG(dialog), GTK_STOCK_SAVE, G_CALLBACK(save_blist_theme), dialog);
 #endif

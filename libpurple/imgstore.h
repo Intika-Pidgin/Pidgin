@@ -1,5 +1,6 @@
 /**
- * @file imgstore.h IM Image Store API
+ * @file imgstore.h Utility functions for reference-counted in-memory
+ *       image data.
  * @ingroup core
  * @see @ref imgstore-signals
  */
@@ -29,23 +30,31 @@
 
 #include <glib.h>
 
-/**
- * A set of utility functions that provide a reference-counted immutable
- * wrapper around an image's data and filename.  These functions do not
- * cache any data to disk.
+#define PURPLE_STORED_IMAGE_PROTOCOL "purple-image:"
+#define PURPLE_STOCK_IMAGE_PROTOCOL "purple-stock-image:"
+
+/** A reference-counted immutable wrapper around an image's data and its
+ *  filename.
  */
 typedef struct _PurpleStoredImage PurpleStoredImage;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define PURPLE_TYPE_STORED_IMAGE  (purple_imgstore_get_type())
+
+G_BEGIN_DECLS
+
+/**
+ * Returns the GType for the PurpleStoredImage boxed structure.
+ * TODO Boxing of PurpleStoredImage is a temporary solution to having a GType
+ *      for stored images. This should rather be a GObject instead of a GBoxed.
+ */
+GType purple_imgstore_get_type(void);
 
 /**
  * Create a new PurpleStoredImage.
  *
- * Despite the name of this function, the image is NOT added to the image
- * store and no ID is assigned.  If you need to reference the image by an
- * ID, use purple_imgstore_add_with_id() instead.
+ * The image is not added to the image store and no ID is assigned.  If you
+ * need to reference the image by an ID, use purple_imgstore_new_with_id()
+ * instead.
  *
  * The caller owns a reference to this image and must dereference it with
  * purple_imgstore_unref() for it to be freed.
@@ -59,36 +68,41 @@ extern "C" {
  *                  image or, more commonly, the filename of the image
  *                  without any directory information.  It can also be
  *                  NULL, if you don't need to keep track of a filename.
+ *                  If you intend to use this filename to write the file to
+ *                  disk, make sure the filename is appropriately escaped.
+ *                  You may wish to use purple_escape_filename().
  *
- * @return The stored image, or NULL if the image was not added (because of
+ * @return The image, or NULL if the image could not be created (because of
  *         empty data or size).
  */
 PurpleStoredImage *
-purple_imgstore_add(gpointer data, size_t size, const char *filename);
+purple_imgstore_new(gpointer data, size_t size, const char *filename);
 
 /**
- * Create a PurpleStoredImage using purple_imgstore_add() by reading the
+ * Create a PurpleStoredImage using purple_imgstore_new() by reading the
  * given filename from disk.
  *
  * The image is not added to the image store and no ID is assigned.  If you
- * need to reference the image by an ID, use purple_imgstore_add_with_id()
+ * need to reference the image by an ID, use purple_imgstore_new_with_id()
  * instead.
+ *
+ * Make sure the filename is appropriately escaped.  You may wish to use
+ * purple_escape_filename().  The PurpleStoredImage's filename will be set
+ * to the given path.
  *
  * The caller owns a reference to this image and must dereference it with
  * purple_imgstore_unref() for it to be freed.
  *
- * @param path  The path to the image.
+ * @param path The path to the image.
  *
- * @return The stored image, or NULL if the image was not added (because of
+ * @return The image, or NULL if the image could not be created (because of
  *         empty data or size).
- *
- * @since 2.5.0
  */
 PurpleStoredImage *
 purple_imgstore_new_from_file(const char *path);
 
 /**
- * Create a PurpleStoredImage using purple_imgstore_add() and add the
+ * Create a PurpleStoredImage using purple_imgstore_new() and add the
  * image to the image store.  A unique ID will be assigned to the image.
  *
  * The caller owns a reference to the image and must dereference it with
@@ -104,12 +118,15 @@ purple_imgstore_new_from_file(const char *path);
  *                  image or, more commonly, the filename of the image
  *                  without any directory information.  It can also be
  *                  NULL, if you don't need to keep track of a filename.
+ *                  If you intend to use this filename to write the file to
+ *                  disk, make sure the filename is appropriately escaped.
+ *                  You may wish to use purple_escape_filename()
  *
  * @return ID for the image.  This is a unique number that can be used
  *         within libpurple to reference the image.  0 is returned if the
- *         image was not added (because of empty data or size).
+ *         image could not be created (because of empty data or size).
  */
-int purple_imgstore_add_with_id(gpointer data, size_t size, const char *filename);
+int purple_imgstore_new_with_id(gpointer data, size_t size, const char *filename);
 
 /**
  * Retrieve an image from the store. The caller does not own a
@@ -142,7 +159,10 @@ gconstpointer purple_imgstore_get_data(PurpleStoredImage *img);
 size_t purple_imgstore_get_size(PurpleStoredImage *img);
 
 /**
- * Retrieves a pointer to the image's filename.
+ * Retrieves a pointer to the image's filename.  If you intend to use this
+ * filename to write the file to disk, make sure the filename was
+ * appropriately escaped when you created the PurpleStoredImage.  You may
+ * wish to use purple_escape_filename().
  *
  * @param img The image.
  *
@@ -223,8 +243,6 @@ void purple_imgstore_init(void);
  */
 void purple_imgstore_uninit(void);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_IMGSTORE_H_ */

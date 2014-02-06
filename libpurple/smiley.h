@@ -1,7 +1,6 @@
 /**
  * @file smiley.h Smiley API
  * @ingroup core
- * @since 2.5.0
  */
 
 /* purple
@@ -51,9 +50,24 @@ typedef struct _PurpleSmileyClass   PurpleSmileyClass;
 #define PURPLE_IS_SMILEY_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), PURPLE_TYPE_SMILEY))
 #define PURPLE_SMILEY_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+struct _PurpleSmiley
+{
+	/*< private >*/
+	GObject parent;
+};
+
+struct _PurpleSmileyClass
+{
+	/*< private >*/
+	GObjectClass parent_class;
+
+	void (*purple_reserved1)(void);
+	void (*purple_reserved2)(void);
+	void (*purple_reserved3)(void);
+	void (*purple_reserved4)(void);
+};
+
+G_BEGIN_DECLS
 
 /**************************************************************************/
 /** @name Custom Smiley API                                               */
@@ -254,9 +268,7 @@ void purple_smileys_uninit(void);
 
 /*@}*/
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_SMILEY_H_ */
 
