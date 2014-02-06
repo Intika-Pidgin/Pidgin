@@ -1,8 +1,3 @@
-/*
- * @file gtkdnd-hints.c GTK+ Drag-and-Drop arrow hints
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -44,7 +39,7 @@ typedef struct
 
 } HintWindowInfo;
 
-/**
+/*
  * Info about each hint widget. See DndHintWindowId enum.
  */
 static HintWindowInfo hint_windows[] = {

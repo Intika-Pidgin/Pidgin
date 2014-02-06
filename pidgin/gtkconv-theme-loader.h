@@ -1,7 +1,3 @@
-/**
- * @file gtkconv-theme-loader.h  Pidgin Conversation Theme Loader Class API
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -22,6 +18,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+/**
+ * SECTION:gtkconv-theme-loader
+ * @section_id: pidgin-gtkconv-theme-loader
+ * @short_description: <filename>gtkconv-theme-loader.h</filename>
+ * @title: Conversation Theme Loader Class
+ */
 
 #ifndef PIDGIN_CONV_THEME_LOADER_H
 #define PIDGIN_CONV_THEME_LOADER_H
@@ -30,12 +32,6 @@
 #include <glib-object.h>
 #include "theme-loader.h"
 
-/**
- * A pidgin conversation theme loader. Extends PurpleThemeLoader (theme-loader.h)
- * This is a class designed to build conversation themes
- *
- * PidginConvThemeLoader is a GObject.
- */
 typedef struct _PidginConvThemeLoader       PidginConvThemeLoader;
 typedef struct _PidginConvThemeLoaderClass  PidginConvThemeLoaderClass;
 
@@ -46,6 +42,12 @@ typedef struct _PidginConvThemeLoaderClass  PidginConvThemeLoaderClass;
 #define PIDGIN_IS_CONV_THEME_LOADER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_CONV_THEME_LOADER))
 #define PIDGIN_CONV_THEME_LOADER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_CONV_THEME_LOADER, PidginConvThemeLoaderClass))
 
+/**
+ * PidginConvThemeLoader:
+ *
+ * A pidgin conversation theme loader. Extends PurpleThemeLoader (theme-loader.h)
+ * This is a class designed to build conversation themes
+ */
 struct _PidginConvThemeLoader
 {
 	PurpleThemeLoader parent;
@@ -62,6 +64,8 @@ struct _PidginConvThemeLoaderClass
 G_BEGIN_DECLS
 
 /**
+ * pidgin_conversation_theme_loader_get_type:
+ *
  * GObject foo.
  * @internal.
  */

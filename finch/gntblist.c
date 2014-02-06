@@ -1,8 +1,3 @@
-/**
- * @file gntblist.c GNT BuddyList API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -159,7 +154,7 @@ static int color_away;
 static int color_offline;
 static int color_idle;
 
-/**
+/*
  * Buddy List Manager functions.
  */
 

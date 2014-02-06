@@ -1,8 +1,3 @@
-/**
- * @file gtkrequest.h GTK+ Request API
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -23,6 +18,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+/**
+ * SECTION:gtkrequest
+ * @section_id: pidgin-gtkrequest
+ * @short_description: <filename>gtkrequest.h</filename>
+ * @title: Request API
+ */
+
 #ifndef _PIDGINREQUEST_H_
 #define _PIDGINREQUEST_H_
 
@@ -31,18 +33,21 @@
 G_BEGIN_DECLS
 
 /**
+ * pidgin_request_get_ui_ops:
+ *
  * Returns the UI operations structure for GTK+ request functions.
  *
- * @return The GTK+ UI request operations structure.
+ * Returns: The GTK+ UI request operations structure.
  */
 PurpleRequestUiOps *pidgin_request_get_ui_ops(void);
 
 /**
+ * pidgin_request_get_dialog_window:
+ * @ui_handle: The UI handle.
+ *
  * Gets dialog window for specified libpurple request.
  *
- * @param ui_handle The UI handle.
- *
- * @return The dialog window.
+ * Returns: The dialog window.
  */
 GtkWindow *
 pidgin_request_get_dialog_window(void *ui_handle);
@@ -53,18 +58,24 @@ pidgin_request_get_dialog_window(void *ui_handle);
 /*@{*/
 
 /**
+ * pidgin_request_get_handle:
+ *
  * Returns the gtk requests subsystem handle.
  *
- * @return The requests subsystem handle.
+ * Returns: The requests subsystem handle.
  */
 void *pidgin_request_get_handle(void);
 
 /**
+ * pidgin_request_init:
+ *
  * Initializes the GTK+ requests subsystem.
  */
 void pidgin_request_init(void);
 
 /**
+ * pidgin_request_uninit:
+ *
  * Uninitializes the GTK+ requests subsystem.
  */
 void pidgin_request_uninit(void);

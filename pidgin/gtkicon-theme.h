@@ -1,7 +1,3 @@
-/**
- * @file gtkicon-theme.h  Pidgin Icon Theme  Class API
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -22,6 +18,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+/**
+ * SECTION:gtkicon-theme
+ * @section_id: pidgin-gtkicon-theme
+ * @short_description: <filename>gtkicon-theme.h</filename>
+ * @title: Icon Theme Class
+ */
 
 #ifndef PIDGIN_ICON_THEME_H
 #define PIDGIN_ICON_THEME_H
@@ -30,13 +32,6 @@
 #include <glib-object.h>
 #include "theme.h"
 
-/**
- * extends PurpleTheme (theme.h)
- * A pidgin icon theme.
- * This object represents a Pidgin icon theme.
- *
- * PidginIconTheme is a PurpleTheme Object.
- */
 typedef struct _PidginIconTheme        PidginIconTheme;
 typedef struct _PidginIconThemeClass   PidginIconThemeClass;
 
@@ -47,6 +42,15 @@ typedef struct _PidginIconThemeClass   PidginIconThemeClass;
 #define PIDGIN_IS_ICON_THEME_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_ICON_THEME))
 #define PIDGIN_ICON_THEME_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_ICON_THEME, PidginIconThemeClass))
 
+/**
+ * PidginIconTheme:
+ *
+ * extends PurpleTheme (theme.h)
+ * A pidgin icon theme.
+ * This object represents a Pidgin icon theme.
+ *
+ * PidginIconTheme is a PurpleTheme Object.
+ */
 struct _PidginIconTheme
 {
 	PurpleTheme parent;
@@ -63,32 +67,37 @@ struct _PidginIconThemeClass
 G_BEGIN_DECLS
 
 /**
+ * pidgin_icon_theme_get_type:
+ *
  * GObject foo.
  * @internal.
  */
 GType pidgin_icon_theme_get_type(void);
 
 /**
+ * pidgin_icon_theme_get_icon:
+ * @theme:     the theme
+ * @event:		the pidgin icon event to look up
+ *
  * Returns a copy of the filename for the icon event or NULL if it is not set
  *
- * @param theme     the theme
- * @param event		the pidgin icon event to look up
- *
- * @returns the filename of the icon event
+ * Returns: the filename of the icon event
  */
 const gchar *pidgin_icon_theme_get_icon(PidginIconTheme *theme,
 		const gchar *event);
 
 /**
- * Sets the filename for a given icon id, setting the icon to NULL will remove the icon from the theme
+ * pidgin_icon_theme_set_icon:
+ * @theme:         the theme
+ * @icon_id:		a string representing what the icon is to be used for
+ * @filename:		the name of the file to be used for the given id
  *
- * @param theme         the theme
- * @param icon_id		a string representing what the icon is to be used for
- * @param filename		the name of the file to be used for the given id
+ * Sets the filename for a given icon id, setting the icon to NULL will remove the icon from the theme
  */
 void pidgin_icon_theme_set_icon(PidginIconTheme *theme,
 		const gchar *icon_id,
 		const gchar *filename);
 
 G_END_DECLS
+
 #endif /* PIDGIN_ICON_THEME_H */

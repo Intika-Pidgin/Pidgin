@@ -1,7 +1,3 @@
-/**
- * @file gtkblist-theme-loader.h  Pidgin Buddy List Theme Loader Class API
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -22,6 +18,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+/**
+ * SECTION:gtkblist-theme-loader
+ * @section_id: pidgin-gtkblist-theme-loader
+ * @short_description: <filename>gtkblist-theme-loader.h</filename>
+ * @title: Buddy List Theme Loader Class
+ */
 
 #ifndef PIDGIN_BLIST_THEME_LOADER_H
 #define PIDGIN_BLIST_THEME_LOADER_H
@@ -30,12 +32,6 @@
 #include <glib-object.h>
 #include "theme-loader.h"
 
-/**
- * A pidgin buddy list theme loader. extends PurpleThemeLoader (theme-loader.h)
- * This is a class designed to build sound themes
- *
- * PidginBlistThemeLoader is a GObject.
- */
 typedef struct _PidginBlistThemeLoader        PidginBlistThemeLoader;
 typedef struct _PidginBlistThemeLoaderClass   PidginBlistThemeLoaderClass;
 
@@ -46,6 +42,12 @@ typedef struct _PidginBlistThemeLoaderClass   PidginBlistThemeLoaderClass;
 #define PIDGIN_IS_BLIST_THEME_LOADER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_BLIST_THEME_LOADER))
 #define PIDGIN_BLIST_THEME_LOADER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_BLIST_THEME_LOADER, PidginBlistThemeLoaderClass))
 
+/**
+ * PidginBlistThemeLoader:
+ *
+ * A pidgin buddy list theme loader. extends PurpleThemeLoader (theme-loader.h)
+ * This is a class designed to build sound themes
+ */
 struct _PidginBlistThemeLoader
 {
 	PurpleThemeLoader parent;
@@ -62,6 +64,8 @@ struct _PidginBlistThemeLoaderClass
 G_BEGIN_DECLS
 
 /**
+ * pidgin_blist_theme_loader_get_type:
+ *
  * GObject foo.
  * @internal.
  */
