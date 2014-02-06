@@ -1,8 +1,3 @@
-/**
- * @file gtkpounce.c GTK+ Buddy Pounce API
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -46,7 +41,7 @@
 
 #include <gdk/gdkkeysyms.h>
 
-/**
+/*
  * These are used for the GtkTreeView when you're scrolling through
  * all your saved pounces.
  */

@@ -1,7 +1,3 @@
-/**
- * @file gntbutton.h Button API
- * @ingroup gnt
- */
 /*
  * GNT - The GLib Ncurses Toolkit
  *
@@ -22,6 +18,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
+ */
+/**
+ * SECTION:gntbutton
+ * @section_id: libgnt-gntbutton
+ * @short_description: <filename>gntbutton.h</filename>
+ * @title: Button
  */
 
 #ifndef GNT_BUTTON_H
@@ -54,6 +56,7 @@ struct _GntButton
 
 	GntButtonPriv *priv;
 
+	/*< private >*/
     void (*gnt_reserved1)(void);
     void (*gnt_reserved2)(void);
     void (*gnt_reserved3)(void);
@@ -64,6 +67,7 @@ struct _GntButtonClass
 {
 	GntWidgetClass parent;
 
+	/*< private >*/
 	void (*gnt_reserved1)(void);
 	void (*gnt_reserved2)(void);
 	void (*gnt_reserved3)(void);
@@ -73,16 +77,19 @@ struct _GntButtonClass
 G_BEGIN_DECLS
 
 /**
- * @return  GType for Gntbutton
+ * gnt_button_get_gtype:
+ *
+ * Returns:  GType for Gntbutton
  */
 GType gnt_button_get_gtype(void);
 
 /**
+ * gnt_button_new:
+ * @text:   The text for the button.
+ *
  * Create a new button.
  *
- * @param text   The text for the button.
- *
- * @return  The newly created button.
+ * Returns:  The newly created button.
  */
 GntWidget * gnt_button_new(const char *text);
 

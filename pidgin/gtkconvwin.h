@@ -1,8 +1,3 @@
-/**
- * @file gtkconvwin.h GTK+ Conversation Window API
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -23,6 +18,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+/**
+ * SECTION:gtkconvwin
+ * @section_id: pidgin-gtkconvwin
+ * @short_description: <filename>gtkconvwin.h</filename>
+ * @title: Conversation Window API
+ */
+
 #ifndef _PIDGIN_CONVERSATION_WINDOW_H_
 #define _PIDGIN_CONVERSATION_WINDOW_H_
 
@@ -74,15 +76,21 @@ struct _PidginWindowMenu
 };
 
 /**
+ * PidginWindow:
+ * @window:        The window.
+ * @notebook:      The notebook of conversations.
+ * @notebook_menu: The menu on the notebook.
+ * @clicked_tab:   The menu currently clicked.
+ *
  * A GTK+ representation of a graphical window containing one or more
  * conversations.
  */
 struct _PidginWindow
 {
-	GtkWidget *window;           /**< The window.                      */
-	GtkWidget *notebook;         /**< The notebook of conversations.   */
-	GtkWidget *notebook_menu;    /**< The menu on the notebook.        */
-	PidginConversation *clicked_tab; /**< The menu currently clicked.      */
+	GtkWidget *window;
+	GtkWidget *notebook;
+	GtkWidget *notebook_menu;
+	PidginConversation *clicked_tab;
 	GList *gtkconvs;
 
 	PidginWindowMenu *menu;
