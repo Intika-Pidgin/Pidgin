@@ -25,7 +25,7 @@
 
 #include "conversation.h"
 #include "debug.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "util.h"
 
 #include "gtkconv.h"
@@ -409,7 +409,7 @@ void pidgin_themes_smiley_theme_probe()
 }
 
 GSList *pidgin_themes_get_proto_smileys(const char *id) {
-	PurplePlugin *proto;
+	PurpleProtocol *protocol;
 	struct PidginSmileyList *list, *def;
 
 	if ((current_smiley_theme == NULL) || (current_smiley_theme->list == NULL))
@@ -420,12 +420,12 @@ GSList *pidgin_themes_get_proto_smileys(const char *id) {
 	if (id == NULL)
 		return def->smileys;
 
-	proto = purple_find_prpl(id);
+	protocol = purple_protocols_find(id);
 
 	while (list) {
 		if (!strcmp(list->sml, "default"))
 			def = list;
-		else if (proto && !strcmp(proto->info->name, list->sml))
+		else if (protocol && !strcmp(purple_protocol_get_name(protocol), list->sml))
 			break;
 
 		list = list->next;

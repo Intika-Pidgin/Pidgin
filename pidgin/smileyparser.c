@@ -138,9 +138,9 @@ pidgin_smiley_parse_markup(const char *markup, const char *proto_id)
 	const char *proto_name = "default";
 
 	if (proto_id != NULL) {
-		PurplePlugin *proto;
-		proto = purple_find_prpl(proto_id);
-		proto_name = proto->info->name;
+		PurpleProtocol *protocol;
+		protocol = purple_protocols_find(proto_id);
+		proto_name = purple_protocol_get_name(protocol);
 	}
 
 	/* unnecessarily slow, but lets manage for now. */
