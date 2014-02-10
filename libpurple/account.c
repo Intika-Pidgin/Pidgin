@@ -1,8 +1,3 @@
-/**
- * @file account.c Account API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -44,53 +39,52 @@
 
 typedef struct
 {
-	char *username;             /**< The username.                          */
-	char *alias;                /**< How you appear to yourself.            */
-	char *password;             /**< The account password.                  */
-	char *user_info;            /**< User information.                      */
+	char *username;             /* The username.                          */
+	char *alias;                /* How you appear to yourself.            */
+	char *password;             /* The account password.                  */
+	char *user_info;            /* User information.                      */
 
-	char *buddy_icon_path;      /**< The buddy icon's non-cached path.      */
+	char *buddy_icon_path;      /* The buddy icon's non-cached path.      */
 
-	gboolean remember_pass;     /**< Remember the password.                 */
+	gboolean remember_pass;     /* Remember the password.                 */
 
 	/*
 	 * TODO: After a GObject representing a protocol is ready, use it
 	 * here instead of the protocol ID.
 	 */
-	char *protocol_id;          /**< The ID of the protocol.                */
+	char *protocol_id;          /* The ID of the protocol.                */
 
-	PurpleConnection *gc;         /**< The connection handle.               */
-	gboolean disconnecting;     /**< The account is currently disconnecting */
+	PurpleConnection *gc;       /* The connection handle.               */
+	gboolean disconnecting;     /* The account is currently disconnecting */
 
-	GHashTable *settings;       /**< Protocol-specific settings.            */
-	GHashTable *ui_settings;    /**< UI-specific settings.                  */
+	GHashTable *settings;       /* Protocol-specific settings.            */
+	GHashTable *ui_settings;    /* UI-specific settings.                  */
 
-	PurpleProxyInfo *proxy_info;  /**< Proxy information.  This will be set */
+	PurpleProxyInfo *proxy_info;  /* Proxy information.  This will be set */
 								/*   to NULL when the account inherits      */
 								/*   proxy settings from global prefs.      */
 
 	/*
-	 * TODO: Supplementing the next two linked lists with hash tables
-	 * should help performance a lot when these lists are long.  This
-	 * matters quite a bit for protocols like MSN, where all your
-	 * buddies are added to your permit list.  Currently we have to
-	 * iterate through the entire list if we want to check if someone
-	 * is permitted or denied.  We should do this for 3.0.0.
-	 * Or maybe use a GTree.
+	 * TODO: Instead of linked lists for permit and deny, use a data
+	 * structure that allows fast lookups AND decent performance when
+	 * iterating through all items. Fast lookups should help performance
+	 * for protocols like MSN, where all your buddies exist in your permit
+	 * list therefore the permit list is large. Possibly GTree or
+	 * GHashTable.
 	 */
-	GSList *permit;             /**< Permit list.                           */
-	GSList *deny;               /**< Deny list.                             */
-	PurpleAccountPrivacyType privacy_type;  /**< The permit/deny setting.   */
+	GSList *permit;             /* Permit list.                           */
+	GSList *deny;               /* Deny list.                             */
+	PurpleAccountPrivacyType privacy_type;  /* The permit/deny setting.   */
 
-	GList *status_types;        /**< Status types.                          */
+	GList *status_types;        /* Status types.                          */
 
-	PurplePresence *presence;     /**< Presence.                            */
-	PurpleLog *system_log;        /**< The system log                       */
+	PurplePresence *presence;     /* Presence.                            */
+	PurpleLog *system_log;        /* The system log                       */
 
 	PurpleAccountRegistrationCb registration_cb;
 	void *registration_cb_user_data;
 
-	PurpleConnectionErrorInfo *current_error;	/**< Errors */
+	PurpleConnectionErrorInfo *current_error;	/* Errors */
 } PurpleAccountPrivate;
 
 typedef struct
@@ -701,7 +695,7 @@ set_user_info_cb(PurpleAccount *account, const char *user_info)
 
 	purple_account_set_user_info(account, user_info);
 	gc = purple_account_get_connection(account);
-	serv_set_info(gc, user_info);
+	purple_serv_set_info(gc, user_info);
 }
 
 void
@@ -909,7 +903,7 @@ purple_account_set_enabled(PurpleAccount *account, const char *ui,
 {
 	PurpleConnection *gc;
 	PurpleAccountPrivate *priv;
-	gboolean was_enabled = FALSE, wants_to_die = FALSE;
+	gboolean was_enabled = FALSE;
 
 	g_return_if_fail(PURPLE_IS_ACCOUNT(account));
 	g_return_if_fail(ui != NULL);
@@ -927,11 +921,11 @@ purple_account_set_enabled(PurpleAccount *account, const char *ui,
 	g_object_notify_by_pspec(G_OBJECT(account), properties[PROP_ENABLED]);
 
 	if ((gc != NULL) && (_purple_connection_wants_to_die(gc)))
-		wants_to_die = TRUE;
+		return;
 
 	priv = PURPLE_ACCOUNT_GET_PRIVATE(account);
 
-	if (!wants_to_die && value && purple_presence_is_online(priv->presence))
+	if (value && purple_presence_is_online(priv->presence))
 		purple_account_connect(account);
 	else if (!value && !purple_account_is_disconnected(account))
 		purple_account_disconnect(account);
@@ -1612,7 +1606,7 @@ purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 	priv->permit = g_slist_append(priv->permit, name);
 
 	if (!local_only && purple_account_is_connected(account))
-		serv_add_permit(purple_account_get_connection(account), who);
+		purple_serv_add_permit(purple_account_get_connection(account), who);
 
 	if (ui_ops != NULL && ui_ops->permit_added != NULL)
 		ui_ops->permit_added(account, who);
@@ -1665,7 +1659,7 @@ purple_account_privacy_permit_remove(PurpleAccount *account, const char *who,
 	priv->permit = g_slist_delete_link(priv->permit, l);
 
 	if (!local_only && purple_account_is_connected(account))
-		serv_rem_permit(purple_account_get_connection(account), who);
+		purple_serv_rem_permit(purple_account_get_connection(account), who);
 
 	if (ui_ops != NULL && ui_ops->permit_removed != NULL)
 		ui_ops->permit_removed(account, who);
@@ -1716,7 +1710,7 @@ purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 	priv->deny = g_slist_append(priv->deny, name);
 
 	if (!local_only && purple_account_is_connected(account))
-		serv_add_deny(purple_account_get_connection(account), who);
+		purple_serv_add_deny(purple_account_get_connection(account), who);
 
 	if (ui_ops != NULL && ui_ops->deny_added != NULL)
 		ui_ops->deny_added(account, who);
@@ -1767,7 +1761,7 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 	priv->deny = g_slist_delete_link(priv->deny, l);
 
 	if (!local_only && purple_account_is_connected(account))
-		serv_rem_deny(purple_account_get_connection(account), name);
+		purple_serv_rem_deny(purple_account_get_connection(account), name);
 
 	if (ui_ops != NULL && ui_ops->deny_removed != NULL)
 		ui_ops->deny_removed(account, who);
@@ -1786,7 +1780,7 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 	return TRUE;
 }
 
-/**
+/*
  * This makes sure your permit list contains all buddies from your
  * buddy list and ONLY buddies from your buddy list.
  */
@@ -1860,7 +1854,7 @@ purple_account_privacy_allow(PurpleAccount *account, const char *who)
 
 	/* Notify the server if the privacy setting was changed */
 	if (type != purple_account_get_privacy_type(account) && purple_account_is_connected(account))
-		serv_set_permit_deny(purple_account_get_connection(account));
+		purple_serv_set_permit_deny(purple_account_get_connection(account));
 }
 
 void
@@ -1906,7 +1900,7 @@ purple_account_privacy_deny(PurpleAccount *account, const char *who)
 
 	/* Notify the server if the privacy setting was changed */
 	if (type != purple_account_get_privacy_type(account) && purple_account_is_connected(account))
-		serv_set_permit_deny(purple_account_get_connection(account));
+		purple_serv_set_permit_deny(purple_account_get_connection(account));
 }
 
 GSList *
@@ -2610,7 +2604,7 @@ proxy_settings_to_xmlnode(PurpleProxyInfo *proxy_info)
 	int int_value;
 	char buf[21];
 
-	proxy_type = purple_proxy_info_get_type(proxy_info);
+	proxy_type = purple_proxy_info_get_proxy_type(proxy_info);
 
 	node = purple_xmlnode_new("proxy");
 
@@ -2736,7 +2730,7 @@ ui_setting_to_xmlnode(gpointer key, gpointer value, gpointer user_data)
 }
 
 PurpleXmlNode *
-purple_account_to_xmlnode(PurpleAccount *account)
+_purple_account_to_xmlnode(PurpleAccount *account)
 {
 	PurpleXmlNode *node, *child;
 	const char *tmp;
@@ -2986,7 +2980,11 @@ purple_account_constructed(GObject *object)
 static void
 purple_account_dispose(GObject *object)
 {
-	PurpleAccountPrivate *priv = PURPLE_ACCOUNT_GET_PRIVATE(object);
+	PurpleAccount *account = PURPLE_ACCOUNT(object);
+	PurpleAccountPrivate *priv = PURPLE_ACCOUNT_GET_PRIVATE(account);
+
+	if (!purple_account_is_disconnected(account))
+		purple_account_disconnect(account);
 
 	if (priv->presence) {
 		g_object_unref(priv->presence);

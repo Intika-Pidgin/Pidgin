@@ -29,24 +29,23 @@
 #define PURPLE_WHITEBOARD_GET_PRIVATE(obj) \
 	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_WHITEBOARD, PurpleWhiteboardPrivate))
 
-/** @copydoc _PurpleWhiteboardPrivate */
 typedef struct _PurpleWhiteboardPrivate  PurpleWhiteboardPrivate;
 
-/** Private data for a whiteboard */
+/* Private data for a whiteboard */
 struct _PurpleWhiteboardPrivate
 {
-	int state;                      /**< State of whiteboard session          */
+	int state;                      /* State of whiteboard session          */
 
-	PurpleAccount *account;         /**< Account associated with this session */
-	char *who;                      /**< Name of the remote user              */
+	PurpleAccount *account;         /* Account associated with this session */
+	char *who;                      /* Name of the remote user              */
 
-	void *proto_data;               /**< Protocol specific data
-	                                     TODO Remove this, and use
-	                                          protocol-specific subclasses    */
-	PurpleWhiteboardPrplOps *prpl_ops; /**< Protocol-plugin operations        */
+	/* TODO Remove this and use protocol-specific subclasses. */
+	void *proto_data;               /* Protocol specific data               */
 
-	GList *draw_list;               /**< List of drawing elements/deltas to
-	                                     send                                 */
+	PurpleWhiteboardPrplOps *prpl_ops; /* Protocol-plugin operations        */
+
+	GList *draw_list;               /* List of drawing elements/deltas to
+	                                   send                                 */
 };
 
 /* GObject Property enums */
@@ -69,7 +68,7 @@ static GParamSpec *properties[PROP_LAST];
 static PurpleWhiteboardUiOps *whiteboard_ui_ops = NULL;
 /* static PurpleWhiteboardPrplOps *whiteboard_prpl_ops = NULL; */
 
-static GList *wbList = NULL;
+static GList *wb_list = NULL;
 
 /*static gboolean auto_accept = TRUE; */
 
@@ -144,7 +143,7 @@ PurpleWhiteboard *purple_whiteboard_get_session(const PurpleAccount *account, co
 	PurpleWhiteboard *wb;
 	PurpleWhiteboardPrivate *priv;
 
-	GList *l = wbList;
+	GList *l = wb_list;
 
 	/* Look for a whiteboard session between the local user and the remote user
 	 */
@@ -397,7 +396,7 @@ purple_whiteboard_constructed(GObject *object)
 	if(priv->prpl_ops && priv->prpl_ops->start)
 		priv->prpl_ops->start(wb);
 
-	wbList = g_list_append(wbList, wb);
+	wb_list = g_list_append(wb_list, wb);
 }
 
 /* GObject finalize function */
@@ -418,7 +417,7 @@ purple_whiteboard_finalize(GObject *object)
 	if(priv->prpl_ops && priv->prpl_ops->end)
 		priv->prpl_ops->end(wb);
 
-	wbList = g_list_remove(wbList, wb);
+	wb_list = g_list_remove(wb_list, wb);
 
 	g_free(priv->who);
 

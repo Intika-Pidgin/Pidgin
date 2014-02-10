@@ -1,8 +1,3 @@
-/**
- * @file request.c Request API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -27,6 +22,7 @@
 
 #include "internal.h"
 
+#include "glibcompat.h"
 #include "notify.h"
 #include "request.h"
 #include "debug.h"
@@ -1061,7 +1057,7 @@ purple_request_field_set_required(PurpleRequestField *field, gboolean required)
 }
 
 PurpleRequestFieldType
-purple_request_field_get_type(const PurpleRequestField *field)
+purple_request_field_get_field_type(const PurpleRequestField *field)
 {
 	g_return_val_if_fail(field != NULL, PURPLE_REQUEST_FIELD_NONE);
 
@@ -1101,7 +1097,7 @@ purple_request_field_is_visible(const PurpleRequestField *field)
 }
 
 const char *
-purple_request_field_get_type_hint(const PurpleRequestField *field)
+purple_request_field_get_field_type_hint(const PurpleRequestField *field)
 {
 	g_return_val_if_fail(field != NULL, NULL);
 
@@ -1129,7 +1125,7 @@ purple_request_field_is_filled(const PurpleRequestField *field)
 {
 	g_return_val_if_fail(field != NULL, FALSE);
 
-	switch (purple_request_field_get_type(field))
+	switch (purple_request_field_get_field_type(field))
 	{
 		case PURPLE_REQUEST_FIELD_STRING:
 			return (purple_request_field_string_get_value(field) != NULL &&
@@ -2375,13 +2371,13 @@ purple_request_fields(void *handle, const char *title, const char *primary,
 {
 	PurpleRequestUiOps *ops;
 
-	if (G_UNLIKELY(fields == NULL || ok_text == NULL || ok_cb == NULL ||
+	if (G_UNLIKELY(fields == NULL ||
+		((ok_text == NULL) != (ok_cb == NULL)) ||
 		cancel_text == NULL))
 	{
 		purple_request_cpar_unref(cpar);
 		g_warn_if_fail(fields != NULL);
-		g_warn_if_fail(ok_text != NULL);
-		g_warn_if_fail(ok_cb != NULL);
+		g_warn_if_fail((ok_text == NULL) != (ok_cb == NULL));
 		g_warn_if_fail(cancel_text != NULL);
 		g_return_val_if_reached(NULL);
 	}

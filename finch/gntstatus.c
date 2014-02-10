@@ -1,8 +1,3 @@
-/**
- * @file gntstatus.c GNT Status API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -99,7 +94,7 @@ populate_statuses(GntTree *tree)
 			continue;
 
 		title = purple_savedstatus_get_title(saved);
-		type = purple_primitive_get_name_from_type(purple_savedstatus_get_type(saved));
+		type = purple_primitive_get_name_from_type(purple_savedstatus_get_primitive_type(saved));
 		message = purple_savedstatus_get_message(saved);  /* XXX: Strip possible markups */
 
 		gnt_tree_add_row_last(tree, saved,
@@ -327,7 +322,7 @@ save_savedstatus_cb(GntWidget *button, EditStatus *edit)
 	else
 	{
 		purple_savedstatus_set_title(edit->saved, title);
-		purple_savedstatus_set_type(edit->saved, prim);
+		purple_savedstatus_set_primitive_type(edit->saved, prim);
 		purple_savedstatus_set_message(edit->saved, message);
 		if (statuses.tree)
 		{
@@ -363,7 +358,7 @@ add_substatus(EditStatus *edit, PurpleAccount *account)
 
 	if (sub)
 	{
-		key->type = purple_savedstatus_substatus_get_type(sub);
+		key->type = purple_savedstatus_substatus_get_status_type(sub);
 		type = purple_status_type_get_name(key->type);
 		message = purple_savedstatus_substatus_get_message(sub);
 		key->message = g_strdup(message);
@@ -550,7 +545,7 @@ void finch_savedstatus_edit(PurpleSavedStatus *saved)
 
 	edit->type = combo = gnt_combo_box_new();
 	gnt_box_add_widget(GNT_BOX(box), combo);
-	current = saved ? purple_savedstatus_get_type(saved) : PURPLE_STATUS_UNSET;
+	current = saved ? purple_savedstatus_get_primitive_type(saved) : PURPLE_STATUS_UNSET;
 	for (i = 0; prims[i] != PURPLE_STATUS_UNSET; i++)
 	{
 		gnt_combo_box_add_data(GNT_COMBO_BOX(combo), GINT_TO_POINTER(prims[i]),

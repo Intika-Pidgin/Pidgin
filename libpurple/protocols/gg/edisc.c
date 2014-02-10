@@ -1,6 +1,34 @@
+/* purple
+ *
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here. Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
+ *
+ * Component written by Tomek Wasilczyk (http://www.wasilczyk.pl).
+ *
+ * This file is dual-licensed under the GPL2+ and the X11 (MIT) licences.
+ * As a recipient of this file you may choose, which license to receive the
+ * code under. As a contributor, you have to ensure the new code is
+ * compatible with both.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
+ */
 #include "edisc.h"
 
 #include <debug.h>
+#include <glibcompat.h>
 
 #include "gg.h"
 #include "libgaduw.h"
@@ -124,6 +152,8 @@ void ggp_edisc_cleanup(PurpleConnection *gc)
 {
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
 
+	g_return_if_fail(sdata != NULL);
+
 	purple_http_conn_cancel(sdata->auth_request);
 	g_list_free_full(sdata->auth_pending, g_free);
 	g_free(sdata->security_token);
@@ -196,6 +226,7 @@ static void ggp_edisc_xfer_free(PurpleXfer *xfer)
 	purple_http_conn_cancel(edisc_xfer->hc);
 
 	sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
+	g_return_if_fail(sdata != NULL);
 	if (edisc_xfer->ticket_id != NULL)
 		g_hash_table_remove(sdata->xfers_initialized,
 			edisc_xfer->ticket_id);
@@ -229,6 +260,8 @@ void ggp_edisc_xfer_ticket_changed(PurpleConnection *gc, const char *data)
 	const gchar *ticket_id, *send_status;
 	ggp_edisc_xfer_ack_status ack_status;
 	gboolean is_completed;
+
+	g_return_if_fail(sdata != NULL);
 
 	parser = ggp_json_parse(data);
 	ticket = json_node_get_object(json_parser_get_root(parser));
@@ -397,6 +430,8 @@ static void ggp_edisc_xfer_send_init_authenticated(PurpleConnection *gc,
 		return;
 	}
 
+	g_return_if_fail(sdata != NULL);
+
 	req = purple_http_request_new("https://drive.mpa.gg.pl/send_ticket");
 	purple_http_request_set_method(req, "PUT");
 
@@ -436,6 +471,8 @@ static void ggp_edisc_xfer_send_init_ticket_created(PurpleHttpConnection *hc,
 
 	if (purple_xfer_is_cancelled(xfer))
 		return;
+
+	g_return_if_fail(sdata != NULL);
 
 	edisc_xfer->hc = NULL;
 
@@ -558,6 +595,7 @@ static void ggp_edisc_xfer_send_start(PurpleXfer *xfer)
 	edisc_xfer = purple_xfer_get_protocol_data(xfer);
 	g_return_if_fail(edisc_xfer != NULL);
 	sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
+	g_return_if_fail(sdata != NULL);
 
 	filename_e = purple_strreplace(edisc_xfer->filename, " ", "%20");
 	upload_url = g_strdup_printf("https://drive.mpa.gg.pl/me/file/outbox/"
@@ -692,6 +730,8 @@ static void ggp_edisc_xfer_recv_ticket_got(PurpleConnection *gc,
 {
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
 
+	g_return_if_fail(sdata != NULL);
+
 	if (g_hash_table_lookup(sdata->xfers_history, ticket_id))
 		return;
 
@@ -705,6 +745,8 @@ static void ggp_edisc_xfer_recv_ticket_update_authenticated(
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
 	PurpleHttpRequest *req;
 	gchar *ticket = _ticket;
+
+	g_return_if_fail(sdata != NULL);
 
 	if (!success) {
 		purple_debug_warning("gg",
@@ -753,6 +795,7 @@ static void ggp_edisc_xfer_recv_ticket_update_got(PurpleHttpConnection *hc,
 	}
 
 	sdata = ggp_edisc_get_sdata(gc);
+	g_return_if_fail(sdata != NULL);
 
 	parser = ggp_json_parse(purple_http_response_get_data(response, NULL));
 	result = json_node_get_object(json_parser_get_root(parser));
@@ -869,6 +912,8 @@ static void ggp_edisc_xfer_recv_ack(PurpleXfer *xfer, gboolean accept)
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
 	PurpleHttpRequest *req;
 
+	g_return_if_fail(sdata != NULL);
+
 	edisc_xfer->allowed = accept;
 
 	req = purple_http_request_new(ggp_edisc_xfer_ticket_url(
@@ -936,6 +981,7 @@ static void ggp_edisc_xfer_recv_start(PurpleXfer *xfer)
 	edisc_xfer = purple_xfer_get_protocol_data(xfer);
 	g_return_if_fail(edisc_xfer != NULL);
 	sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
+	g_return_if_fail(sdata != NULL);
 
 	upload_url = g_strdup_printf("https://drive.mpa.gg.pl/me/file/inbox/"
 		"%s,%s?api_version=%s&security_token=%s",
@@ -1050,15 +1096,15 @@ static void ggp_ggdrive_auth(PurpleConnection *gc, ggp_ggdrive_auth_cb cb,
 	gchar *metadata;
 	PurpleHttpRequest *req;
 
+	g_return_if_fail(sdata != NULL);
+
 	imtoken = ggp_get_imtoken(gc);
-	if (!imtoken)
-	{
+	if (!imtoken) {
 		cb(gc, FALSE, user_data);
 		return;
 	}
 
-	if (sdata->auth_done)
-	{
+	if (sdata->auth_done) {
 		cb(gc, sdata->security_token != NULL, user_data);
 		return;
 	}
@@ -1109,6 +1155,8 @@ static void ggp_ggdrive_auth_results(PurpleConnection *gc, gboolean success)
 	purple_debug_info("gg", "ggp_ggdrive_auth_results(gc=%p): %d\n",
 		gc, success);
 
+	g_return_if_fail(sdata != NULL);
+
 	it = g_list_first(sdata->auth_pending);
 	while (it) {
 		ggp_edisc_auth_data *auth = it->data;
@@ -1130,6 +1178,8 @@ static void ggp_ggdrive_auth_done(PurpleHttpConnection *hc,
 	JsonParser *parser;
 	JsonObject *result;
 	int status = -1;
+
+	g_return_if_fail(sdata != NULL);
 
 	sdata->auth_request = NULL;
 

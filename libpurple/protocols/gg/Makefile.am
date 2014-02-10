@@ -55,8 +55,6 @@ GADU_LIBS += $(JSON_LIBS)
 
 GGSOURCES = \
 	$(INTGGSOURCES) \
-	account.c \
-	account.h \
 	avatar.c \
 	avatar.h \
 	blist.c \
@@ -73,6 +71,8 @@ GGSOURCES = \
 	html.h \
 	image.c \
 	image.h \
+	keymapper.c \
+	keymapper.h \
 	libgadu-events.c \
 	libgadu-events.h \
 	libgaduw.c \

@@ -1,8 +1,3 @@
-/**
- * @file gtkprefs.c GTK+ Preferences
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -596,7 +591,7 @@ smileys_refresh_theme_list(void)
 		return;
 
 	while (themes) {
-		struct smiley_theme *theme = themes->data;
+		struct PidginSmileyTheme *theme = themes->data;
 		char *description = get_theme_markup(_(theme->name), FALSE,
 		                                     _(theme->author), _(theme->desc));
 		gtk_list_store_append(prefs_smiley_themes, &iter);
@@ -834,18 +829,19 @@ prefs_themes_init(void)
 	prefs_smiley_themes = gtk_list_store_new(3, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING);
 }
 
-/**
+/*
+ * prefs_theme_find_theme:
+ * @path: A directory containing a theme.  The theme could be at the
+ *        top level of this directory or in any subdirectory thereof.
+ * @type: The type of theme to load.  The loader for this theme type
+ *        will be used and this loader will determine what constitutes a
+ *        "theme."
+ *
  * Attempt to load the given directory as a theme.  If we are unable to
  * open the path as a theme then we recurse into path and attempt to
  * load each subdirectory that we encounter.
  *
- * @param path A directory containing a theme.  The theme could be at the
- *        top level of this directory or in any subdirectory thereof.
- * @param type The type of theme to load.  The loader for this theme type
- *        will be used and this loader will determine what constitutes a
- *        "theme."
- *
- * @return A new reference to a PurpleTheme.
+ * Returns: A new reference to a #PurpleTheme.
  */
 static PurpleTheme *
 prefs_theme_find_theme(const gchar *path, const gchar *type)
@@ -1537,30 +1533,30 @@ theme_page(void)
 }
 
 static void
-formatting_toggle_cb(GtkWebView *webview, GtkWebViewButtons buttons, void *data)
+formatting_toggle_cb(PidginWebView *webview, PidginWebViewButtons buttons, void *data)
 {
 	gboolean bold, italic, uline, strike;
 
-	gtk_webview_get_current_format(webview, &bold, &italic, &uline, &strike);
+	pidgin_webview_get_current_format(webview, &bold, &italic, &uline, &strike);
 
-	if (buttons & GTK_WEBVIEW_BOLD)
+	if (buttons & PIDGIN_WEBVIEW_BOLD)
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_bold",
 		                      bold);
-	if (buttons & GTK_WEBVIEW_ITALIC)
+	if (buttons & PIDGIN_WEBVIEW_ITALIC)
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_italic",
 		                      italic);
-	if (buttons & GTK_WEBVIEW_UNDERLINE)
+	if (buttons & PIDGIN_WEBVIEW_UNDERLINE)
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_underline",
 		                      uline);
-	if (buttons & GTK_WEBVIEW_STRIKE)
+	if (buttons & PIDGIN_WEBVIEW_STRIKE)
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_strike",
 		                      strike);
 
-	if (buttons & GTK_WEBVIEW_GROW || buttons & GTK_WEBVIEW_SHRINK)
+	if (buttons & PIDGIN_WEBVIEW_GROW || buttons & PIDGIN_WEBVIEW_SHRINK)
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/font_size",
-		                     gtk_webview_get_current_fontsize(webview));
-	if (buttons & GTK_WEBVIEW_FACE) {
-		char *face = gtk_webview_get_current_fontface(webview);
+		                     pidgin_webview_get_current_fontsize(webview));
+	if (buttons & PIDGIN_WEBVIEW_FACE) {
+		char *face = pidgin_webview_get_current_fontface(webview);
 
 		if (face)
 			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/font_face", face);
@@ -1570,8 +1566,8 @@ formatting_toggle_cb(GtkWebView *webview, GtkWebViewButtons buttons, void *data)
 		g_free(face);
 	}
 
-	if (buttons & GTK_WEBVIEW_FORECOLOR) {
-		char *color = gtk_webview_get_current_forecolor(webview);
+	if (buttons & PIDGIN_WEBVIEW_FORECOLOR) {
+		char *color = pidgin_webview_get_current_forecolor(webview);
 
 		if (color)
 			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/fgcolor", color);
@@ -1581,8 +1577,8 @@ formatting_toggle_cb(GtkWebView *webview, GtkWebViewButtons buttons, void *data)
 		g_free(color);
 	}
 
-	if (buttons & GTK_WEBVIEW_BACKCOLOR) {
-		char *color = gtk_webview_get_current_backcolor(webview);
+	if (buttons & PIDGIN_WEBVIEW_BACKCOLOR) {
+		char *color = pidgin_webview_get_current_backcolor(webview);
 
 		if (color)
 			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/bgcolor", color);
@@ -1594,7 +1590,7 @@ formatting_toggle_cb(GtkWebView *webview, GtkWebViewButtons buttons, void *data)
 }
 
 static void
-formatting_clear_cb(GtkWebView *webview, void *data)
+formatting_clear_cb(PidginWebView *webview, void *data)
 {
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_bold", FALSE);
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_italic", FALSE);
@@ -1937,26 +1933,26 @@ conv_page(void)
 	gtk_widget_show(frame);
 	gtk_widget_set_name(webview, "pidgin_prefs_font_webview");
 	gtk_widget_set_size_request(frame, 450, -1);
-	gtk_webview_set_whole_buffer_formatting_only(GTK_WEBVIEW(webview), TRUE);
-	gtk_webview_set_format_functions(GTK_WEBVIEW(webview),
-	                                 GTK_WEBVIEW_BOLD |
-	                                 GTK_WEBVIEW_ITALIC |
-	                                 GTK_WEBVIEW_UNDERLINE |
-	                                 GTK_WEBVIEW_STRIKE |
-	                                 GTK_WEBVIEW_GROW |
-	                                 GTK_WEBVIEW_SHRINK |
-	                                 GTK_WEBVIEW_FACE |
-	                                 GTK_WEBVIEW_FORECOLOR |
-	                                 GTK_WEBVIEW_BACKCOLOR);
+	pidgin_webview_set_whole_buffer_formatting_only(PIDGIN_WEBVIEW(webview), TRUE);
+	pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(webview),
+	                                 PIDGIN_WEBVIEW_BOLD |
+	                                 PIDGIN_WEBVIEW_ITALIC |
+	                                 PIDGIN_WEBVIEW_UNDERLINE |
+	                                 PIDGIN_WEBVIEW_STRIKE |
+	                                 PIDGIN_WEBVIEW_GROW |
+	                                 PIDGIN_WEBVIEW_SHRINK |
+	                                 PIDGIN_WEBVIEW_FACE |
+	                                 PIDGIN_WEBVIEW_FORECOLOR |
+	                                 PIDGIN_WEBVIEW_BACKCOLOR);
 
-	gtk_webview_append_html(GTK_WEBVIEW(webview),
+	pidgin_webview_append_html(PIDGIN_WEBVIEW(webview),
 	                        _("This is how your outgoing message text will "
 	                          "appear when you use protocols that support "
 	                          "formatting."));
 
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 
-	gtk_webview_setup_entry(GTK_WEBVIEW(webview),
+	pidgin_webview_setup_entry(PIDGIN_WEBVIEW(webview),
 	                        PURPLE_CONNECTION_FLAG_HTML |
 	                        PURPLE_CONNECTION_FLAG_FORMATTING_WBFO);
 
@@ -2302,7 +2298,6 @@ get_available_browsers(void)
 	static const struct browser possible_browsers[] = {
 		{N_("Seamonkey"), "seamonkey"},
 		{N_("Opera"), "opera"},
-		{N_("Netscape"), "netscape"},
 		{N_("Mozilla"), "mozilla"},
 		{N_("Konqueror"), "kfmclient"},
 		{N_("Google Chrome"), "google-chrome"},
@@ -2434,7 +2429,6 @@ browser_page(void)
 			label = pidgin_prefs_dropdown(hbox, _("_Open link in:"), PURPLE_PREF_INT,
 				PIDGIN_PREFS_ROOT "/browsers/place",
 				_("Browser default"), PIDGIN_BROWSER_DEFAULT,
-				_("Existing window"), PIDGIN_BROWSER_CURRENT,
 				_("New window"), PIDGIN_BROWSER_NEW_WINDOW,
 				_("New tab"), PIDGIN_BROWSER_NEW_TAB,
 				NULL);
@@ -2669,7 +2663,7 @@ keyring_page_settings_changed(GtkWidget *widget, gpointer _setting)
 
 	gtk_widget_set_sensitive(keyring_apply, TRUE);
 
-	field_type = purple_request_field_get_type(setting);
+	field_type = purple_request_field_get_field_type(setting);
 
 	if (field_type == PURPLE_REQUEST_FIELD_BOOLEAN) {
 		purple_request_field_bool_set_value(setting,
@@ -2696,7 +2690,7 @@ keyring_page_add_settings_field(GtkBox *vbox, PurpleRequestField *setting,
 
 	label = purple_request_field_get_label(setting);
 
-	field_type = purple_request_field_get_type(setting);
+	field_type = purple_request_field_get_field_type(setting);
 	if (field_type == PURPLE_REQUEST_FIELD_BOOLEAN) {
 		widget = gtk_check_button_new_with_label(label);
 		label = NULL;
@@ -4047,11 +4041,19 @@ make_video_test(GtkWidget *vbox)
 {
 	GtkWidget *test;
 	GtkWidget *video;
+#if GTK_CHECK_VERSION(3,0,0)
+	GdkRGBA color = {0.0, 0.0, 0.0, 1.0};
+#else
 	GdkColor color = {0, 0, 0, 0};
+#endif
 
 	video = gtk_drawing_area_new();
 	gtk_box_pack_start(GTK_BOX(vbox), video, TRUE, TRUE, 0);
+#if GTK_CHECK_VERSION(3,0,0)
+	gtk_widget_override_background_color(video, GTK_STATE_FLAG_NORMAL, &color);
+#else
 	gtk_widget_modify_bg(video, GTK_STATE_NORMAL, &color);
+#endif
 	gtk_widget_set_size_request(GTK_WIDGET(video), 240, 180);
 
 	test = gtk_toggle_button_new_with_label(_("Test Video"));
@@ -4211,7 +4213,7 @@ smiley_theme_pref_cb(const char *name, PurplePrefType type,
 	GSList *themes;
 
 	for (themes = smiley_themes; themes; themes = themes->next) {
-		struct smiley_theme *smile = themes->data;
+		struct PidginSmileyTheme *smile = themes->data;
 		if (smile->name && strcmp(themename, smile->name) == 0) {
 			pidgin_themes_load_smiley_theme(smile->path, TRUE);
 			break;
@@ -4302,7 +4304,7 @@ pidgin_prefs_update_old(void)
 	 * that at the moment. -- rekkanoryo
 	 */
 	if (purple_prefs_exists(PIDGIN_PREFS_ROOT "/browsers/command") &&
-		purple_prefs_get_type(PIDGIN_PREFS_ROOT "/browsers/command") ==
+		purple_prefs_get_pref_type(PIDGIN_PREFS_ROOT "/browsers/command") ==
 			PURPLE_PREF_PATH)
 	{
 		const char *str = purple_prefs_get_path(
@@ -4408,5 +4410,22 @@ pidgin_prefs_update_old(void)
 
 	purple_prefs_remove("/plugins/core/vvconfig");
 	purple_prefs_remove("/plugins/gtk/vvconfig");
+
+#ifndef _WIN32
+	/* Added in 3.0.0. */
+	if (purple_prefs_get_int(PIDGIN_PREFS_ROOT "/browsers/place") == 1) {
+		/* If the "open link in" pref is set to the old value for "existing
+		   window" then change it to "default." */
+		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/browsers/place",
+				PIDGIN_BROWSER_DEFAULT);
+	}
+
+	/* Added in 3.0.0. */
+	if (g_str_equal(
+			purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/browser"),
+			"netscape")) {
+		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/browsers/browser", "xdg-open");
+	}
+#endif /* !_WIN32 */
 }
 

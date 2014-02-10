@@ -44,12 +44,21 @@ typedef enum {
 #include "jabber.h"
 
 JabberID* jabber_id_new(const char *str);
+
+/**
+ * Compare two JIDs for equality. In addition to the node and domain,
+ * the resources of the two JIDs must also be equal (or both absent).
+ */
+gboolean jabber_id_equal(const JabberID *jid1, const JabberID *jid2);
+
 void jabber_id_free(JabberID *jid);
 
 char *jabber_get_domain(const char *jid);
 char *jabber_get_resource(const char *jid);
 char *jabber_get_bare_jid(const char *jid);
 char *jabber_id_get_bare_jid(const JabberID *jid);
+char *jabber_id_get_full_jid(const JabberID *jid);
+JabberID *jabber_id_to_bare_jid(const JabberID *jid);
 
 gboolean jabber_jid_is_domain(const char *jid);
 

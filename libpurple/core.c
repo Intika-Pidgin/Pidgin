@@ -1,8 +1,3 @@
-/**
- * @file core.c Purple Core API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -263,9 +258,9 @@ purple_core_quit(void)
 	purple_http_uninit();
 	purple_idle_uninit();
 	purple_pounces_uninit();
+	purple_conversations_uninit();
 	purple_blist_uninit();
 	purple_notify_uninit();
-	purple_conversations_uninit();
 	purple_connections_uninit();
 	purple_buddy_icons_uninit();
 	purple_savedstatuses_uninit();
@@ -368,7 +363,7 @@ static char *purple_dbus_owner_user_dir(void)
 	if ((dbus_connection = purple_dbus_get_connection()) == NULL)
 		return NULL;
 
-	if ((msg = dbus_message_new_method_call(DBUS_SERVICE_PURPLE, DBUS_PATH_PURPLE, DBUS_INTERFACE_PURPLE, "PurpleUserDir")) == NULL)
+	if ((msg = dbus_message_new_method_call(PURPLE_DBUS_SERVICE, PURPLE_DBUS_PATH, PURPLE_DBUS_INTERFACE, "PurpleUserDir")) == NULL)
 		return NULL;
 
 	dbus_error_init(&dbus_error);

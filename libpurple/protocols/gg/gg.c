@@ -44,7 +44,6 @@
 #include "blist.h"
 #include "utils.h"
 #include "resolver-purple.h"
-#include "account.h"
 #include "deprecated.h"
 #include "purplew.h"
 #include "libgadu-events.h"
@@ -64,8 +63,8 @@ ggp_buddy_data * ggp_buddy_get_data(PurpleBuddy *buddy)
 	ggp_buddy_data *buddy_data = purple_buddy_get_protocol_data(buddy);
 	if (buddy_data)
 		return buddy_data;
-	
-	buddy_data = g_new0(ggp_buddy_data, 1); //TODO: leak
+
+	buddy_data = g_new0(ggp_buddy_data, 1); /* TODO: leak */
 	purple_buddy_set_protocol_data(buddy, buddy_data);
 	return buddy_data;
 }
@@ -107,7 +106,7 @@ uin_t ggp_own_uin(PurpleConnection *gc)
 }
 
 /* ---------------------------------------------------------------------- */
-// buddy list import/export from/to file
+/* buddy list import/export from/to file */
 
 static void ggp_callback_buddylist_save_ok(PurpleConnection *gc, const char *filename)
 {
@@ -125,7 +124,7 @@ static void ggp_callback_buddylist_save_ok(PurpleConnection *gc, const char *fil
 		return;
 	}
 
-	if(purple_util_write_data_to_file_absolute(filename, buddylist, -1)) {
+	if (purple_util_write_data_to_file_absolute(filename, buddylist, -1)) {
 		purple_notify_info(account, _("Save Buddylist..."),
 			_("Buddylist saved successfully!"), NULL,
 			purple_request_cpar_from_connection(gc));
@@ -200,9 +199,9 @@ static void ggp_add_deny(PurpleConnection *gc, const char *who)
 {
 	GGPInfo *info = purple_connection_get_protocol_data(gc);
 	uin_t uin = ggp_str_to_uin(who);
-	
+
 	purple_debug_info("gg", "ggp_add_deny: %u\n", uin);
-	
+
 	gg_remove_notify_ex(info->session, uin, GG_USER_NORMAL);
 	gg_add_notify_ex(info->session, uin, GG_USER_BLOCKED);
 }
@@ -211,9 +210,9 @@ static void ggp_rem_deny(PurpleConnection *gc, const char *who)
 {
 	GGPInfo *info = purple_connection_get_protocol_data(gc);
 	uin_t uin = ggp_str_to_uin(who);
-	
+
 	purple_debug_info("gg", "ggp_rem_deny: %u\n", uin);
-	
+
 	gg_remove_notify_ex(info->session, uin, GG_USER_BLOCKED);
 	gg_add_notify_ex(info->session, uin, GG_USER_NORMAL);
 }
@@ -227,9 +226,9 @@ static void ggp_typing_notification_handler(PurpleConnection *gc, uin_t uin, int
 
 	from = g_strdup_printf("%u", uin);
 	if (length)
-		serv_got_typing(gc, from, 0, PURPLE_IM_TYPING);
+		purple_serv_got_typing(gc, from, 0, PURPLE_IM_TYPING);
 	else
-		serv_got_typing_stopped(gc, from);
+		purple_serv_got_typing_stopped(gc, from);
 	g_free(from);
 }
 
@@ -248,28 +247,26 @@ static void ggp_xml_event_handler(PurpleConnection *gc, char *data)
 	PurpleXmlNode *xmlnode_next_event;
 
 	xml = purple_xmlnode_from_str(data, -1);
-	if (xml == NULL)
-	{
+	if (xml == NULL) {
 		purple_debug_error("gg", "ggp_xml_event_handler: "
 			"invalid xml: [%s]\n", data);
 		goto out;
 	}
 
 	xmlnode_next_event = purple_xmlnode_get_child(xml, "event");
-	while (xmlnode_next_event != NULL)
-	{
+	while (xmlnode_next_event != NULL) {
 		PurpleXmlNode *xmlnode_current_event = xmlnode_next_event;
-		
+
 		PurpleXmlNode *xmlnode_type;
 		char *event_type_raw;
 		int event_type = 0;
-		
+
 		PurpleXmlNode *xmlnode_sender;
 		char *event_sender_raw;
 		uin_t event_sender = 0;
 
 		xmlnode_next_event = purple_xmlnode_get_next_twin(xmlnode_next_event);
-		
+
 		xmlnode_type = purple_xmlnode_get_child(xmlnode_current_event, "type");
 		if (xmlnode_type == NULL)
 			continue;
@@ -277,16 +274,15 @@ static void ggp_xml_event_handler(PurpleConnection *gc, char *data)
 		if (event_type_raw != NULL)
 			event_type = atoi(event_type_raw);
 		g_free(event_type_raw);
-		
+
 		xmlnode_sender = purple_xmlnode_get_child(xmlnode_current_event, "sender");
-		if (xmlnode_sender != NULL)
-		{
+		if (xmlnode_sender != NULL) {
 			event_sender_raw = purple_xmlnode_get_data(xmlnode_sender);
 			if (event_sender_raw != NULL)
 				event_sender = ggp_str_to_uin(event_sender_raw);
 			g_free(event_sender_raw);
 		}
-		
+
 		switch (event_type)
 		{
 			case 28: /* avatar update */
@@ -300,7 +296,7 @@ static void ggp_xml_event_handler(PurpleConnection *gc, char *data)
 					event_type, event_sender);
 		}
 	}
-	
+
 	out:
 		if (xml)
 			purple_xmlnode_free(xml);
@@ -395,7 +391,8 @@ static void ggp_callback_recv(gpointer _gc, gint fd, PurpleInputCondition cond)
 			info->imtoken = g_strdup(ev->event.imtoken.imtoken);
 			break;
 		case GG_EVENT_PONG110:
-			purple_debug_info("gg", "gg11: got PONG110 %lu\n", ev->event.pong110.time);
+			purple_debug_info("gg", "gg11: got PONG110 %lu\n",
+				(long unsigned)ev->event.pong110.time);
 			break;
 		case GG_EVENT_CHAT_INFO:
 		case GG_EVENT_CHAT_INFO_GOT_ALL:
@@ -405,6 +402,9 @@ static void ggp_callback_recv(gpointer _gc, gint fd, PurpleInputCondition cond)
 			ggp_chat_got_event(gc, ev);
 			break;
 #endif
+		case GG_EVENT_DISCONNECT:
+			ggp_servconn_remote_disconnect(gc);
+			break;
 		default:
 			purple_debug_warning("gg",
 				"unsupported event type=%d\n", ev->type);
@@ -465,7 +465,7 @@ void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond)
 #endif
 		default:
 			purple_debug_error("gg", "unknown state = %d\n",
-					 info->session->state);
+				info->session->state);
 		break;
 	}
 
@@ -506,19 +506,18 @@ void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond)
 #endif
 				purple_input_remove(info->inpa);
 				info->inpa = purple_input_add(info->session->fd,
-							  PURPLE_INPUT_READ,
-							  ggp_callback_recv, gc);
+					PURPLE_INPUT_READ,
+					ggp_callback_recv, gc);
 
 				purple_connection_update_progress(gc, _("Connected"), 1, 2);
 				purple_connection_set_state(gc, PURPLE_CONNECTION_CONNECTED);
-				
+
 				ggp_buddylist_send(gc);
 				ggp_roster_request_update(gc);
 			}
 			break;
 		case GG_EVENT_CONN_FAILED:
-			if (info->inpa > 0)
-			{
+			if (info->inpa > 0) {
 				purple_input_remove(info->inpa);
 				info->inpa = 0;
 			}
@@ -581,20 +580,19 @@ void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond)
 			}
 			break;
 		case GG_EVENT_MSG:
-			if (ev->event.msg.sender == 0)
-			{
+			if (ev->event.msg.sender == 0) {
 				if (ev->event.msg.message == NULL)
 					break;
 
 				/* system messages are mostly ads */
 				purple_debug_info("gg", "System message:\n%s\n",
 					ev->event.msg.message);
-			}
-			else
+			} else {
 				purple_debug_warning("gg", "GG_EVENT_MSG: message from user %u "
 					"unexpected while connecting:\n%s\n",
 					ev->event.msg.sender,
 					ev->event.msg.message);
+			}
 			break;
 		default:
 			purple_debug_error("gg", "strange event: %d\n", ev->type);
@@ -720,7 +718,7 @@ static void ggp_login(PurpleAccount *account)
 		GG_FEATURE_USER_DATA);
 
 	glp->async = 1;
-	
+
 	encryption_type = purple_account_get_string(account, "encryption",
 		"opportunistic_tls");
 	purple_debug_info("gg", "Requested encryption type: %s\n",
@@ -799,8 +797,7 @@ static void ggp_close(PurpleConnection *gc)
 	purple_notify_close_with_handle(gc);
 
 	if (info) {
-		if (info->session != NULL)
-		{
+		if (info->session != NULL) {
 			ggp_status_set_disconnected(account);
 			gg_logoff(info->session);
 			gg_free_session(info->session);
@@ -829,22 +826,22 @@ static void ggp_close(PurpleConnection *gc)
 static unsigned int ggp_send_typing(PurpleConnection *gc, const char *name, PurpleIMTypingState state)
 {
 	GGPInfo *info = purple_connection_get_protocol_data(gc);
-	int dummy_length; // we don't send real length of typed message
-	
-	if (state == PURPLE_IM_TYPED) // not supported
+	int dummy_length; /* we don't send real length of typed message */
+
+	if (state == PURPLE_IM_TYPED) /* not supported */
 		return 1;
-	
+
 	if (state == PURPLE_IM_TYPING)
 		dummy_length = (int)g_random_int();
-	else // PURPLE_NOT_TYPING
+	else /* PURPLE_NOT_TYPING */
 		dummy_length = 0;
-	
+
 	gg_typing_notification(
 		info->session,
 		ggp_str_to_uin(name),
-		dummy_length); 
-	
-	return 1; // wait 1 second before another notification
+		dummy_length);
+
+	return 1; /* wait 1 second before another notification */
 }
 
 static void ggp_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, const char *message)
@@ -855,10 +852,10 @@ static void ggp_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup 
 
 	gg_add_notify(info->session, ggp_str_to_uin(name));
 
-	// gg server won't tell us our status here
+	/* gg server won't tell us our status here */
 	if (strcmp(purple_account_get_username(account), name) == 0)
 		ggp_status_fake_to_self(gc);
-	
+
 	ggp_roster_add_buddy(gc, buddy, group, message);
 	ggp_pubdir_request_buddy_alias(gc, buddy);
 }
@@ -887,9 +884,9 @@ static void ggp_keepalive(PurpleConnection *gc)
 	}
 }
 
-static void ggp_action_chpass(PurplePluginAction *action)
+static void ggp_action_multilogon(PurplePluginAction *action)
 {
-	ggp_account_chpass((PurpleConnection *)action->context);
+	ggp_multilogon_dialog((PurpleConnection *)action->context);
 }
 
 static void ggp_action_status_broadcasting(PurplePluginAction *action)
@@ -912,8 +909,8 @@ static GList *ggp_actions(PurplePlugin *plugin, gpointer context)
 	GList *m = NULL;
 	PurplePluginAction *act;
 
-	act = purple_plugin_action_new(_("Change password..."),
-		ggp_action_chpass);
+	act = purple_plugin_action_new(_("Show other sessions"),
+		ggp_action_multilogon);
 	m = g_list_append(m, act);
 
 	act = purple_plugin_action_new(_("Show status only for buddies"),
@@ -933,11 +930,11 @@ static GList *ggp_actions(PurplePlugin *plugin, gpointer context)
 	m = g_list_append(m, NULL);
 
 	act = purple_plugin_action_new(_("Save buddylist to file..."),
-				     ggp_action_buddylist_save);
+		ggp_action_buddylist_save);
 	m = g_list_append(m, act);
 
 	act = purple_plugin_action_new(_("Load buddylist from file..."),
-				     ggp_action_buddylist_load);
+		ggp_action_buddylist_load);
 	m = g_list_append(m, act);
 
 	return m;
@@ -978,7 +975,7 @@ ggp_get_max_message_size(PurpleConversation *conv)
 static PurplePluginProtocolInfo prpl_info =
 {
 	sizeof(PurplePluginProtocolInfo),       /* struct_size */
-	OPT_PROTO_REGISTER_NOSCREENNAME | OPT_PROTO_IM_IMAGE,
+	OPT_PROTO_IM_IMAGE,
 	NULL,				/* user_splits */
 	NULL,				/* protocol_options */
 	{"png", 1, 1, 200, 200, 0, PURPLE_ICON_SCALE_DISPLAY | PURPLE_ICON_SCALE_SEND},	/* icon_spec */
@@ -1024,7 +1021,7 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 #endif
 	ggp_keepalive,			/* keepalive */
-	ggp_account_register,		/* register_user */
+	NULL,				/* register_user */
 	NULL,				/* get_cb_info */
 	ggp_roster_alias_buddy,		/* alias_buddy */
 	ggp_roster_group_buddy,		/* group_buddy */
@@ -1044,7 +1041,7 @@ static PurplePluginProtocolInfo prpl_info =
 #endif
 	NULL,				/* roomlist_cancel */
 	NULL,				/* roomlist_expand_category */
-	ggp_edisc_xfer_can_receive_file,/* can_receive_file */
+	ggp_edisc_xfer_can_receive_file, /* can_receive_file */
 	ggp_edisc_xfer_send_file,	/* send_file */
 	ggp_edisc_xfer_send_new,	/* new_xfer */
 	ggp_offline_message,		/* offline_message */

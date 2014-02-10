@@ -1,8 +1,3 @@
-/**
- * @file gtkrequest.c GTK+ Request API
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -155,7 +150,7 @@ input_response_cb(GtkDialog *dialog, gint id, PidginRequestData *data)
 		gtk_text_buffer_get_end_iter(buffer, &end_iter);
 
 		if ((data->u.input.hint != NULL) && (!strcmp(data->u.input.hint, "html")))
-			multiline_value = gtk_webview_get_body_html(GTK_WEBVIEW(data->u.input.entry));
+			multiline_value = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(data->u.input.entry));
 		else
 			multiline_value = gtk_text_buffer_get_text(buffer, &start_iter, &end_iter,
 										 FALSE);
@@ -619,7 +614,7 @@ pidgin_request_input(const char *title, const char *primary,
 		gtk_widget_set_size_request(entry, 320, 130);
 		gtk_widget_set_name(entry, "pidgin_request_webview");
 		if (default_value != NULL)
-			gtk_webview_append_html(GTK_WEBVIEW(entry), default_value);
+			pidgin_webview_append_html(PIDGIN_WEBVIEW(entry), default_value);
 		gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 		gtk_widget_show(frame);
 	}
@@ -1044,7 +1039,7 @@ pidgin_request_wait_update(void *ui_handle, gboolean pulse, gfloat fraction)
 static void
 req_entry_field_changed_cb(GtkWidget *entry, PurpleRequestField *field)
 {
-	if (purple_request_field_get_type(field) == PURPLE_REQUEST_FIELD_INTEGER) {
+	if (purple_request_field_get_field_type(field) == PURPLE_REQUEST_FIELD_INTEGER) {
 		int value = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(entry));
 		purple_request_field_int_set_value(field, value);
 		return;
@@ -1113,7 +1108,7 @@ setup_entry_field(GtkWidget *entry, PurpleRequestField *field)
 	g_signal_connect(G_OBJECT(entry), "changed",
 		G_CALLBACK(req_field_changed_cb), field);
 
-	if ((type_hint = purple_request_field_get_type_hint(field)) != NULL)
+	if ((type_hint = purple_request_field_get_field_type_hint(field)) != NULL)
 	{
 		if (purple_str_has_prefix(type_hint, "screenname"))
 		{
@@ -1128,10 +1123,10 @@ setup_entry_field(GtkWidget *entry, PurpleRequestField *field)
 				PurpleRequestField *fld = fields->data;
 				fields = fields->next;
 
-				if (purple_request_field_get_type(fld) == PURPLE_REQUEST_FIELD_ACCOUNT &&
+				if (purple_request_field_get_field_type(fld) == PURPLE_REQUEST_FIELD_ACCOUNT &&
 						purple_request_field_is_visible(fld))
 				{
-					const char *type_hint = purple_request_field_get_type_hint(fld);
+					const char *type_hint = purple_request_field_get_field_type_hint(fld);
 					if (type_hint != NULL && strcmp(type_hint, "account") == 0)
 					{
 						optmenu = GTK_WIDGET(purple_request_field_get_ui_data(fld));
@@ -1991,6 +1986,7 @@ pidgin_request_fields(const char *title, const char *primary,
 	size_t extra_actions_count, i;
 	const gchar **tab_names;
 	guint tab_count;
+	gboolean ok_btn = (ok_text != NULL);
 
 	data            = g_new0(PidginRequestData, 1);
 	data->type      = PURPLE_REQUEST_FIELDS;
@@ -2007,7 +2003,6 @@ pidgin_request_fields(const char *title, const char *primary,
 
 	data->cbs[0] = ok_cb;
 	data->cbs[1] = cancel_cb;
-
 
 #ifdef _WIN32
 	data->dialog = win = pidgin_create_dialog(PIDGIN_ALERT_TITLE, PIDGIN_HIG_BORDER, "multifield", TRUE) ;
@@ -2047,10 +2042,14 @@ pidgin_request_fields(const char *title, const char *primary,
 	gtk_widget_set_can_default(button, TRUE);
 
 	/* OK button */
-	button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(ok_text), G_CALLBACK(multifield_ok_cb), data);
-	data->ok_button = button;
-	gtk_widget_set_can_default(button, TRUE);
-	gtk_window_set_default(GTK_WINDOW(win), button);
+	if (!ok_btn) {
+		gtk_window_set_default(GTK_WINDOW(win), button);
+	} else {
+		button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(ok_text), G_CALLBACK(multifield_ok_cb), data);
+		data->ok_button = button;
+		gtk_widget_set_can_default(button, TRUE);
+		gtk_window_set_default(GTK_WINDOW(win), button);
+	}
 
 	pidgin_widget_decorate_account(hbox,
 		purple_request_cpar_get_account(cpar));
@@ -2213,7 +2212,7 @@ pidgin_request_fields(const char *title, const char *primary,
 
 			field = (PurpleRequestField *)fl->data;
 
-			type = purple_request_field_get_type(field);
+			type = purple_request_field_get_field_type(field);
 
 			if (type == PURPLE_REQUEST_FIELD_DATASHEET)
 				contains_resizable = TRUE;
@@ -2274,7 +2273,7 @@ pidgin_request_fields(const char *title, const char *primary,
 					continue;
 				}
 
-				type = purple_request_field_get_type(field);
+				type = purple_request_field_get_field_type(field);
 				field_label = pidgin_request_escape(cpar,
 					purple_request_field_get_label(field));
 

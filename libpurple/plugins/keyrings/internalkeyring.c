@@ -261,6 +261,7 @@ intkeyring_encrypt(intkeyring_buff_t *key, const gchar *str)
 	plaintext_len += verify_len;
 
 	iv = intkeyring_gen_salt(purple_cipher_get_block_size(cipher));
+	g_return_val_if_fail(iv != NULL, NULL);
 	purple_cipher_set_iv(cipher, iv->data, iv->len);
 	purple_cipher_set_key(cipher, key->data, key->len);
 	purple_cipher_set_batch_mode(cipher,
@@ -417,8 +418,7 @@ intkeyring_process_queue(void)
 	requests = g_list_first(intkeyring_pending_requests);
 	intkeyring_pending_requests = NULL;
 
-	for (it = requests; it != NULL; it = g_list_next(it))
-	{
+	for (it = requests; it != NULL; it = g_list_next(it)) {
 		intkeyring_request *req = it->data;
 
 		if (open && req->type == INTKEYRING_REQUEST_READ) {
@@ -525,7 +525,8 @@ intkeyring_unlock_ok(gpointer _unused,
 	intkeyring_masterpw_uirequest = NULL;
 
 	if (g_strcmp0(purple_prefs_get_string(INTKEYRING_PREFS
-		"encryption_method"), INTKEYRING_ENCRYPTION_METHOD) != 0) {
+		"encryption_method"), INTKEYRING_ENCRYPTION_METHOD) != 0)
+	{
 		purple_notify_error(NULL,
 			_("Unlocking internal keyring"),
 			_("Selected encryption method is not supported."),

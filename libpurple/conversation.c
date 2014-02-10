@@ -39,31 +39,30 @@
 #define PURPLE_CONVERSATION_GET_PRIVATE(obj) \
 	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_CONVERSATION, PurpleConversationPrivate))
 
-/** @copydoc _PurpleConversationPrivate */
 typedef struct _PurpleConversationPrivate  PurpleConversationPrivate;
 
-/** General private data for a conversation */
+/* General private data for a conversation */
 struct _PurpleConversationPrivate
 {
-	PurpleAccount *account;           /**< The user using this conversation. */
+	PurpleAccount *account;           /* The user using this conversation. */
 
-	char *name;                       /**< The name of the conversation.     */
-	char *title;                      /**< The window title.                 */
+	char *name;                       /* The name of the conversation.     */
+	char *title;                      /* The window title.                 */
 
-	gboolean logging;                 /**< The status of logging.            */
+	gboolean logging;                 /* The status of logging.            */
 
-	GList *logs;                      /**< This conversation's logs          */
+	GList *logs;                      /* This conversation's logs          */
 
-	PurpleConversationUiOps *ui_ops;  /**< UI-specific operations.           */
+	PurpleConversationUiOps *ui_ops;  /* UI-specific operations.           */
 
-	PurpleConnectionFlags features;   /**< The supported features            */
-	GList *message_history;           /**< Message history, as a GList of
+	PurpleConnectionFlags features;   /* The supported features            */
+	GList *message_history;           /* Message history, as a GList of
 	                                       PurpleConversationMessage's       */
 
-	PurpleE2eeState *e2ee_state;      /**< End-to-end encryption state.      */
+	PurpleE2eeState *e2ee_state;      /* End-to-end encryption state.      */
 };
 
-/**
+/*
  * Description of a conversation message
  */
 struct _PurpleConversationMessage
@@ -135,7 +134,7 @@ common_send(PurpleConversation *conv, const char *message, PurpleMessageFlags ms
 
 		if (sent != NULL && sent[0] != '\0') {
 
-			err = serv_send_im(gc, purple_conversation_get_name(conv),
+			err = purple_serv_send_im(gc, purple_conversation_get_name(conv),
 			                   sent, msgflags);
 
 			if ((err > 0) && (displayed != NULL))
@@ -146,18 +145,16 @@ common_send(PurpleConversation *conv, const char *message, PurpleMessageFlags ms
 							 purple_conversation_get_name(conv), sent);
 		}
 	}
-	else {
-		PurpleChatConversation *chat = PURPLE_CHAT_CONVERSATION(conv);
+	else if (PURPLE_IS_CHAT_CONVERSATION(conv)) {
+		int id = purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(conv));
 		purple_signal_emit(purple_conversations_get_handle(), "sending-chat-msg",
-						 account, &sent,
-						 purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(conv)));
+						 account, &sent, id);
 
 		if (sent != NULL && sent[0] != '\0') {
-			err = serv_chat_send(gc, purple_chat_conversation_get_id(chat), sent, msgflags);
+			err = purple_serv_chat_send(gc, id, sent, msgflags);
 
 			purple_signal_emit(purple_conversations_get_handle(), "sent-chat-msg",
-							 account, sent,
-							 purple_chat_conversation_get_id(chat));
+							 account, sent, id);
 		}
 	}
 
@@ -337,7 +334,7 @@ purple_conversation_set_account(PurpleConversation *conv, PurpleAccount *account
 	if (account == purple_conversation_get_account(conv))
 		return;
 
-	purple_conversations_update_cache(conv, NULL, account);
+	_purple_conversations_update_cache(conv, NULL, account);
 	priv->account = account;
 
 	g_object_notify_by_pspec(G_OBJECT(conv), properties[PROP_ACCOUNT]);
@@ -430,7 +427,7 @@ purple_conversation_set_name(PurpleConversation *conv, const char *name)
 
 	g_return_if_fail(priv != NULL);
 
-	purple_conversations_update_cache(conv, name, NULL);
+	_purple_conversations_update_cache(conv, name, NULL);
 
 	g_free(priv->name);
 	priv->name = g_strdup(name);

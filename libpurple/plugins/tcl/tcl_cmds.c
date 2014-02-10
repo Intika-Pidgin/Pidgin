@@ -475,11 +475,11 @@ int tcl_cmd_buddy(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CONS
 			}
 			if ((account = tcl_validate_account(elems[2], interp)) == NULL)
 				return TCL_ERROR;
-			serv_get_info(purple_account_get_connection(account), Tcl_GetString(elems[1]));
+			purple_serv_get_info(purple_account_get_connection(account), Tcl_GetString(elems[1]));
 		} else {
 			if ((account = tcl_validate_account(objv[2], interp)) == NULL)
 				return TCL_ERROR;
-			serv_get_info(purple_account_get_connection(account), Tcl_GetString(objv[3]));
+			purple_serv_get_info(purple_account_get_connection(account), Tcl_GetString(objv[3]));
 		}
 		break;
 	case CMD_BUDDY_LIST:
@@ -1058,7 +1058,7 @@ int tcl_cmd_prefs(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CONS
 			Tcl_WrongNumArgs(interp, 1, objv, "path");
 			return TCL_ERROR;
 		}
-		preftype = purple_prefs_get_type(Tcl_GetString(objv[2]));
+		preftype = purple_prefs_get_pref_type(Tcl_GetString(objv[2]));
 		switch (preftype) {
 		case PURPLE_PREF_NONE:
 			Tcl_SetObjResult(interp,
@@ -1099,7 +1099,7 @@ int tcl_cmd_prefs(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CONS
 			Tcl_WrongNumArgs(interp, 1, objv, "path value");
 			return TCL_ERROR;
 		}
-		preftype = purple_prefs_get_type(Tcl_GetString(objv[2]));
+		preftype = purple_prefs_get_pref_type(Tcl_GetString(objv[2]));
 		switch (preftype) {
 		case PURPLE_PREF_NONE:
 			Tcl_SetObjResult(interp,
@@ -1139,7 +1139,7 @@ int tcl_cmd_prefs(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CONS
 			Tcl_WrongNumArgs(interp, 1, objv, "path");
 			return TCL_ERROR;
 		}
-		preftype = purple_prefs_get_type(Tcl_GetString(objv[2]));
+		preftype = purple_prefs_get_pref_type(Tcl_GetString(objv[2]));
 		switch (preftype) {
 		case PURPLE_PREF_NONE:
 			Tcl_SetObjResult(interp, Tcl_NewStringObj("none", -1));
@@ -1376,7 +1376,7 @@ int tcl_cmd_savedstatus(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj
 			return TCL_ERROR;
 		result = Tcl_NewListObj(0, NULL);
 		Tcl_ListObjAppendElement(interp, result, Tcl_NewStringObj(purple_savedstatus_get_title(saved_status), -1));
-		Tcl_ListObjAppendElement(interp, result, Tcl_NewIntObj(purple_savedstatus_get_type(saved_status)));
+		Tcl_ListObjAppendElement(interp, result, Tcl_NewIntObj(purple_savedstatus_get_primitive_type(saved_status)));
 		Tcl_ListObjAppendElement(interp, result, Tcl_NewStringObj(purple_savedstatus_get_message(saved_status), -1));
 		Tcl_SetObjResult(interp,result);
 		break;
@@ -1410,7 +1410,7 @@ int tcl_cmd_send_im(ClientData unused, Tcl_Interp *interp, int objc, Tcl_Obj *CO
 	who = Tcl_GetString(objv[2]);
 	text = Tcl_GetString(objv[3]);
 
-	serv_send_im(gc, who, text, 0);
+	purple_serv_send_im(gc, who, text, 0);
 
 	return TCL_OK;
 }

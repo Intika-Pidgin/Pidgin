@@ -1,6 +1,3 @@
-/**
- * @file xfer.c File Transfer API
- */
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -42,48 +39,47 @@
 #define PURPLE_XFER_GET_PRIVATE(obj) \
 	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_XFER, PurpleXferPrivate))
 
-/** @copydoc _PurpleXferPrivate */
 typedef struct _PurpleXferPrivate  PurpleXferPrivate;
 
 static PurpleXferUiOps *xfer_ui_ops = NULL;
 static GList *xfers;
 
-/** Private data for a file transfer */
+/* Private data for a file transfer */
 struct _PurpleXferPrivate {
-	PurpleXferType type;         /**< The type of transfer.               */
+	PurpleXferType type;         /* The type of transfer.               */
 
-	PurpleAccount *account;      /**< The account.                        */
+	PurpleAccount *account;      /* The account.                        */
 
-	char *who;                   /**< The person on the other end of the
-	                                  transfer.                           */
+	char *who;                   /* The person on the other end of the
+	                                transfer.                           */
 
-	char *message;               /**< A message sent with the request     */
-	char *filename;              /**< The name sent over the network.     */
-	char *local_filename;        /**< The name on the local hard drive.   */
-	goffset size;                /**< The size of the file.               */
+	char *message;               /* A message sent with the request     */
+	char *filename;              /* The name sent over the network.     */
+	char *local_filename;        /* The name on the local hard drive.   */
+	goffset size;                /* The size of the file.               */
 
-	FILE *dest_fp;               /**< The destination file pointer.       */
+	FILE *dest_fp;               /* The destination file pointer.       */
 
-	char *remote_ip;             /**< The remote IP address.              */
-	guint16 local_port;          /**< The local port.                     */
-	guint16 remote_port;         /**< The remote port.                    */
+	char *remote_ip;             /* The remote IP address.              */
+	guint16 local_port;          /* The local port.                     */
+	guint16 remote_port;         /* The remote port.                    */
 
-	int fd;                      /**< The socket file descriptor.         */
-	int watcher;                 /**< Watcher.                            */
+	int fd;                      /* The socket file descriptor.         */
+	int watcher;                 /* Watcher.                            */
 
-	goffset bytes_sent;          /**< The number of bytes sent.           */
-	goffset bytes_remaining;     /**< The number of bytes remaining.      */
-	time_t start_time;           /**< When the transfer of data began.    */
-	time_t end_time;             /**< When the transfer of data ended.    */
+	goffset bytes_sent;          /* The number of bytes sent.           */
+	goffset bytes_remaining;     /* The number of bytes remaining.      */
+	time_t start_time;           /* When the transfer of data began.    */
+	time_t end_time;             /* When the transfer of data ended.    */
 
-	size_t current_buffer_size;  /**< This gradually increases for fast
-	                                   network connections.               */
+	size_t current_buffer_size;  /* This gradually increases for fast
+	                                 network connections.               */
 
-	PurpleXferStatus status;     /**< File Transfer's status.             */
+	PurpleXferStatus status;     /* File Transfer's status.             */
 
-	/** I/O operations, which should be set by the prpl using
-	 *  purple_xfer_set_init_fnc() and friends.  Setting #init is
-	 *  mandatory; all others are optional.
+	/* I/O operations, which should be set by the prpl using
+	 * purple_xfer_set_init_fnc() and friends.  Setting #init is
+	 * mandatory; all others are optional.
 	 */
 	struct
 	{
@@ -93,16 +89,15 @@ struct _PurpleXferPrivate {
 		void (*end)(PurpleXfer *xfer);
 		void (*cancel_send)(PurpleXfer *xfer);
 		void (*cancel_recv)(PurpleXfer *xfer);
-		gssize (*read)(guchar **buffer, PurpleXfer *xfer);
+		gssize (*read)(guchar **buffer, size_t size, PurpleXfer *xfer);
 		gssize (*write)(const guchar *buffer, size_t size, PurpleXfer *xfer);
 		void (*ack)(PurpleXfer *xfer, const guchar *buffer, size_t size);
 	} ops;
 
-	PurpleXferUiOps *ui_ops;     /**< UI-specific operations.             */
+	PurpleXferUiOps *ui_ops;     /* UI-specific operations.             */
 
-	void *proto_data;            /**< prpl-specific data.
-	                                  TODO Remove this, and use
-	                                       protocol-specific subclasses   */
+	/* TODO Remove this and use protocol-specific subclasses. */
+	void *proto_data;            /* prpl-specific data.                 */
 
 	/*
 	 * Used to moderate the file transfer when either the read/write ui_ops are
@@ -118,7 +113,7 @@ struct _PurpleXferPrivate {
 	/* TODO: Should really use a PurpleCircBuffer for this. */
 	GByteArray *buffer;
 
-	gpointer thumbnail_data;     /**< thumbnail image */
+	gpointer thumbnail_data;     /* thumbnail image */
 	gsize thumbnail_size;
 	gchar *thumbnail_mimetype;
 };
@@ -489,7 +484,7 @@ purple_xfer_ask_recv(PurpleXfer *xfer)
 		}
 
 		if (priv->message != NULL)
-			serv_got_im(purple_account_get_connection(priv->account),
+			purple_serv_got_im(purple_account_get_connection(priv->account),
 								 priv->who, priv->message, 0, time(NULL));
 
 		cpar = purple_request_cpar_from_account(priv->account);
@@ -614,6 +609,8 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const char *filename)
 		purple_xfer_set_status(xfer, PURPLE_XFER_STATUS_ACCEPTED);
 		priv->ops.init(xfer);
 		return;
+	} else {
+		g_return_if_fail(filename != NULL);
 	}
 
 	buddy = purple_blist_find_buddy(account, priv->who);
@@ -1088,7 +1085,7 @@ void purple_xfer_set_request_denied_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer
 }
 
 void
-purple_xfer_set_read_fnc(PurpleXfer *xfer, gssize (*fnc)(guchar **, PurpleXfer *))
+purple_xfer_set_read_fnc(PurpleXfer *xfer, gssize (*fnc)(guchar **, size_t, PurpleXfer *))
 {
 	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
 
@@ -1183,7 +1180,7 @@ purple_xfer_read(PurpleXfer *xfer, guchar **buffer)
 		s = MIN((gssize)purple_xfer_get_bytes_remaining(xfer), (gssize)priv->current_buffer_size);
 
 	if (priv->ops.read != NULL)	{
-		r = (priv->ops.read)(buffer, xfer);
+		r = (priv->ops.read)(buffer, s, xfer);
 	}
 	else {
 		*buffer = g_malloc0(s);
@@ -1250,7 +1247,7 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 	fs_known = (purple_xfer_get_size(xfer) > 0);
 
 	if (fs_known && (goffset)size > purple_xfer_get_bytes_remaining(xfer)) {
-		purple_debug_warning("filetransfer",
+		purple_debug_warning("xfer",
 			"Got too much data (truncating at %" G_GOFFSET_FORMAT
 			").\n", purple_xfer_get_size(xfer));
 		size = purple_xfer_get_bytes_remaining(xfer);
@@ -1260,7 +1257,7 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 		wc = ui_ops->ui_write(xfer, buffer, size);
 	else {
 		if (priv->dest_fp == NULL) {
-			purple_debug_error("filetransfer",
+			purple_debug_error("xfer",
 				"File is not opened for writing\n");
 			purple_xfer_cancel_local(xfer);
 			return FALSE;
@@ -1269,7 +1266,7 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 	}
 
 	if (wc != size) {
-		purple_debug_error("filetransfer",
+		purple_debug_error("xfer",
 			"Unable to write whole buffer.\n");
 		purple_xfer_cancel_local(xfer);
 		return FALSE;
@@ -1300,7 +1297,7 @@ purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size)
 
 		if (got_len >= 0 && (gsize)got_len > size) {
 			g_free(buffer_got);
-			purple_debug_error("filetransfer",
+			purple_debug_error("xfer",
 				"Got too much data from UI.\n");
 			purple_xfer_cancel_local(xfer);
 			return -1;
@@ -1311,7 +1308,7 @@ purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size)
 		g_free(buffer_got);
 	} else {
 		if (priv->dest_fp == NULL) {
-			purple_debug_error("filetransfer",
+			purple_debug_error("xfer",
 				"File is not opened for reading\n");
 			purple_xfer_cancel_local(xfer);
 			return -1;
@@ -1320,7 +1317,7 @@ purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size)
 		if ((got_len < 0 || (gsize)got_len != size) &&
 			ferror(priv->dest_fp))
 		{
-			purple_debug_error("filetransfer",
+			purple_debug_error("xfer",
 				"Unable to read file.\n");
 			purple_xfer_cancel_local(xfer);
 			return -1;

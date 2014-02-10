@@ -204,7 +204,8 @@ static unsigned int asn_getlength( const gchar* data, int* size )
  */
 static int asn_getUtf8( const gchar* data, gchar type, char** utf8 )
 {
-	int		len;
+	unsigned int len;
+	gchar *out_str;
 
 	/* validate the field type [1 byte] */
 	if ( data[0] != type ) {
@@ -213,10 +214,12 @@ static int asn_getUtf8( const gchar* data, gchar type, char** utf8 )
 		return -1;
 	}
 
-	len = data[1];						/* length field [1 bytes] */
-	*utf8 = g_malloc( len + 1 );
-	memcpy( *utf8, &data[2], len );		/* data field */
-	(*utf8)[len] = '\0';
+	len = (uint8_t)data[1]; /* length field [1 byte] */
+	out_str = g_malloc(len + 1);
+	memcpy(out_str, &data[2], len); /* data field */
+	out_str[len] = '\0';
+
+	*utf8 = out_str;
 
 	return ( len + 2 );
 }
@@ -330,7 +333,7 @@ static void mxit_show_split_message( struct RXMsgData* mx )
 			}
 
 			/* push message to pidgin */
-			serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
+			purple_serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
 			g_string_free( msg, TRUE );
 			msg = NULL;
 
@@ -354,7 +357,7 @@ static void mxit_show_split_message( struct RXMsgData* mx )
 		ch[pos] = '\n';
 
 		/* push message to pidgin */
-		serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
+		purple_serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
 		g_string_free( msg, TRUE );
 		msg = NULL;
 	}
@@ -427,7 +430,7 @@ void mxit_show_message( struct RXMsgData* mx )
 	}
 	else {
 		/* this is a multimx message */
-		serv_got_chat_in( mx->session->con, mx->chatid, mx->from, mx->flags, mx->msg->str, mx->timestamp);
+		purple_serv_got_chat_in( mx->session->con, mx->chatid, mx->from, mx->flags, mx->msg->str, mx->timestamp);
 	}
 
 	/* freeup resource */
