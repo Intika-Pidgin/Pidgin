@@ -1,8 +1,3 @@
-/**
- * @file gtkaccount.c GTK+ Account Editor UI
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -539,7 +534,12 @@ account_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 static void
 update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 {
+#if GTK_CHECK_VERSION(3,0,0)
+	GtkStyleContext *style;
+	GdkRGBA color;
+#else
 	GtkStyle *style;
+#endif
 	gboolean set;
 	GList *l;
 
@@ -552,16 +552,36 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 	set = !(purple_account_is_connected(dialog->account) || purple_account_is_connecting(dialog->account));
 	gtk_widget_set_sensitive(dialog->protocol_menu, set);
 	gtk_editable_set_editable(GTK_EDITABLE(dialog->username_entry), set);
+#if GTK_CHECK_VERSION(3,0,0)
+	style = set ? NULL : gtk_widget_get_style_context(dialog->username_entry);
+	if (style) {
+		gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
+		gtk_widget_override_background_color(dialog->username_entry, GTK_STATE_FLAG_NORMAL, &color);
+	} else {
+		gtk_widget_override_background_color(dialog->username_entry, GTK_STATE_FLAG_NORMAL, NULL);
+	}
+#else
 	style = set ? NULL : gtk_widget_get_style(dialog->username_entry);
 	gtk_widget_modify_base(dialog->username_entry, GTK_STATE_NORMAL,
 			style ? &style->base[GTK_STATE_INSENSITIVE] : NULL);
+#endif
 
 	for (l = dialog->user_split_entries ; l != NULL ; l = l->next) {
 		if (GTK_IS_EDITABLE(l->data)) {
 			gtk_editable_set_editable(GTK_EDITABLE(l->data), set);
+#if GTK_CHECK_VERSION(3,0,0)
+			style = set ? NULL : gtk_widget_get_style_context(GTK_WIDGET(l->data));
+			if (style) {
+				gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
+				gtk_widget_override_background_color(GTK_WIDGET(l->data), GTK_STATE_FLAG_NORMAL, &color);
+			} else {
+				gtk_widget_override_background_color(GTK_WIDGET(l->data), GTK_STATE_FLAG_NORMAL, NULL);
+			}
+#else
 			style = set ? NULL : gtk_widget_get_style(GTK_WIDGET(l->data));
 			gtk_widget_modify_base(GTK_WIDGET(l->data), GTK_STATE_NORMAL,
 					style ? &style->base[GTK_STATE_INSENSITIVE] : NULL);
+#endif
 		} else {
 			gtk_widget_set_sensitive(GTK_WIDGET(l->data), set);
 		}
@@ -943,7 +963,7 @@ add_protocol_options(AccountPrefsDialog *dialog)
 		option = (PurpleAccountOption *)l->data;
 
 		opt_entry = g_new0(ProtocolOptEntry, 1);
-		opt_entry->type = purple_account_option_get_type(option);
+		opt_entry->type = purple_account_option_get_pref_type(option);
 		opt_entry->setting = g_strdup(purple_account_option_get_setting(option));
 
 		switch (opt_entry->type)
@@ -1278,7 +1298,7 @@ add_proxy_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		const char *value;
 		int int_val;
 
-		dialog->new_proxy_type = purple_proxy_info_get_type(proxy_info);
+		dialog->new_proxy_type = purple_proxy_info_get_proxy_type(proxy_info);
 
 		if ((value = purple_proxy_info_get_host(proxy_info)) != NULL)
 			gtk_entry_set_text(GTK_ENTRY(dialog->proxy_host_entry), value);
@@ -1613,7 +1633,7 @@ ok_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 	}
 
 	/* Set the proxy info type. */
-	purple_proxy_info_set_type(proxy_info, dialog->new_proxy_type);
+	purple_proxy_info_set_proxy_type(proxy_info, dialog->new_proxy_type);
 
 	/* Host */
 	value = gtk_entry_get_text(GTK_ENTRY(dialog->proxy_host_entry));
@@ -1648,7 +1668,7 @@ ok_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 		purple_proxy_info_set_password(proxy_info, NULL);
 
 	/* If there are no values set then proxy_info NULL */
-	if ((purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_USE_GLOBAL) &&
+	if ((purple_proxy_info_get_proxy_type(proxy_info) == PURPLE_PROXY_USE_GLOBAL) &&
 		(purple_proxy_info_get_host(proxy_info) == NULL) &&
 		(purple_proxy_info_get_port(proxy_info) == 0) &&
 		(purple_proxy_info_get_username(proxy_info) == NULL) &&

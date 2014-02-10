@@ -1,8 +1,3 @@
-/*
- * @file util.h Utility Functions
- * @ingroup core
- */
-
 /* Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -27,6 +22,7 @@
 #include "conversation.h"
 #include "core.h"
 #include "debug.h"
+#include "glibcompat.h"
 #include "notify.h"
 #include "prpl.h"
 #include "prefs.h"
@@ -911,7 +907,7 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		*tm = t;
 
 	if (tzoff != PURPLE_NO_TZ_OFF)
-		retval += tzoff;
+		retval -= tzoff;
 
 	if (tz_off != NULL)
 		*tz_off = tzoff;
@@ -3650,24 +3646,26 @@ purple_strcasereplace(const char *string, const char *delimiter,
 	return ret;
 }
 
-const char *
-purple_strcasestr(const char *haystack, const char *needle)
+/** TODO: Expose this when we can add API */
+static const char *
+purple_strcasestr_len(const char *haystack, gssize hlen, const char *needle, gssize nlen)
 {
-	size_t hlen, nlen;
 	const char *tmp, *ret;
 
 	g_return_val_if_fail(haystack != NULL, NULL);
 	g_return_val_if_fail(needle != NULL, NULL);
 
-	hlen = strlen(haystack);
-	nlen = strlen(needle);
+	if (hlen == -1)
+		hlen = strlen(haystack);
+	if (nlen == -1)
+		nlen = strlen(needle);
 	tmp = haystack,
 	ret = NULL;
 
 	g_return_val_if_fail(hlen > 0, NULL);
 	g_return_val_if_fail(nlen > 0, NULL);
 
-	while (*tmp && !ret) {
+	while (*tmp && !ret && (hlen - (tmp - haystack)) >= nlen) {
 		if (!g_ascii_strncasecmp(needle, tmp, nlen))
 			ret = tmp;
 		else
@@ -3675,6 +3673,12 @@ purple_strcasestr(const char *haystack, const char *needle)
 	}
 
 	return ret;
+}
+
+const char *
+purple_strcasestr(const char *haystack, const char *needle)
+{
+	return purple_strcasestr_len(haystack, -1, needle, -1);
 }
 
 char *
@@ -3722,7 +3726,7 @@ purple_str_seconds_to_string(guint secs)
 	hrs  = secs / (60 * 60);
 	secs = secs % (60 * 60);
 	mins = secs / 60;
-	secs = secs % 60;
+	/* secs = secs % 60; */
 
 	if (days > 0)
 	{
@@ -3861,8 +3865,12 @@ void purple_got_protocol_handler_uri(const char *uri)
 		while (*tmp || *pairstart) {
 			if (*tmp == delimiter || !(*tmp)) {
 				/* If there is no explicit value */
-				if (keyend == NULL)
+				if (keyend == NULL) {
 					keyend = tmp;
+				}
+				/* without these brackets, clang won't
+				 * recognize tmp as a non-NULL
+				 */
 
 				if (keyend && keyend != pairstart) {
 					char *p;

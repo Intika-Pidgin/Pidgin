@@ -1,8 +1,3 @@
-/**
- * @file log.c Logging API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -28,7 +23,7 @@
 #include "account.h"
 #include "dbus-maybe.h"
 #include "debug.h"
-#include "internal.h"
+#include "glibcompat.h"
 #include "log.h"
 #include "prefs.h"
 #include "util.h"
@@ -292,6 +287,10 @@ gint purple_log_get_activity_score(PurpleLogType type, const char *name, PurpleA
 
 				while (logs) {
 					PurpleLog *log = (PurpleLog*)(logs->data);
+					if (!log) {
+						g_warn_if_reached();
+						continue;
+					}
 					/* Activity score counts bytes in the log, exponentially
 					   decayed with a half-life of 14 days. */
 					score_double += purple_log_get_size(log) *
@@ -453,6 +452,8 @@ PurpleLogLogger *purple_log_logger_new(const char *id, const char *name, int fun
 
 void purple_log_logger_free(PurpleLogLogger *logger)
 {
+	if (!logger)
+		return;
 	g_free(logger->name);
 	g_free(logger->id);
 	g_free(logger);
@@ -779,7 +780,7 @@ static char *log_get_timestamp(PurpleLog *log, time_t when)
 {
 	gboolean show_date;
 	char *date;
-	struct tm tm;
+	struct tm *tm;
 
 	show_date = (log->type == PURPLE_LOG_SYSTEM) || (time(NULL) > when + 20*60);
 
@@ -789,11 +790,11 @@ static char *log_get_timestamp(PurpleLog *log, time_t when)
 	if (date != NULL)
 		return date;
 
-	tm = *(localtime(&when));
+	tm = localtime(&when);
 	if (show_date)
-		return g_strdup(purple_date_format_long(&tm));
+		return g_strdup(purple_date_format_long(tm));
 	else
-		return g_strdup(purple_time_format(&tm));
+		return g_strdup(purple_time_format(tm));
 }
 
 /* NOTE: This can return msg (which you may or may not want to g_free())
@@ -1579,7 +1580,7 @@ static gsize txt_logger_write(PurpleLog *log,
 		data = log->logger_data;
 
 		/* if we can't write to the file, give up before we hurt ourselves */
-		if(!data->file)
+		if(!data || !data->file)
 			return 0;
 
 		if (log->type == PURPLE_LOG_SYSTEM)

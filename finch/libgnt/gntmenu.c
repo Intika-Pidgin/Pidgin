@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -450,7 +450,7 @@ gnt_menu_init(GTypeInstance *instance, gpointer class)
  * GntMenu API
  *****************************************************************************/
 GType
-gnt_menu_get_gtype(void)
+gnt_menu_get_type(void)
 {
 	static GType type = 0;
 

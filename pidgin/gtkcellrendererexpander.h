@@ -1,4 +1,4 @@
-/* gtkxcellrendererexpander.h
+/*
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -18,17 +18,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+
 #ifndef _PIDGINCELLRENDEREREXPANDER_H_
 #define _PIDGINCELLRENDEREREXPANDER_H_
+/**
+ * SECTION:gtkcellrendererexpander
+ * @section_id: pidgin-gtkcellrendererexpander
+ * @short_description: <filename>gtkcellrendererexpander.h</filename>
+ * @title: Cell Renderer Expander
+ */
 
 #include <gtk/gtk.h>
 
-#define PIDGIN_TYPE_GTK_CELL_RENDERER_EXPANDER         (pidgin_cell_renderer_expander_get_type())
-#define PIDGIN_CELL_RENDERER_EXPANDER(obj)         (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_GTK_CELL_RENDERER_EXPANDER, PidginCellRendererExpander))
+#define PIDGIN_TYPE_CELL_RENDERER_EXPANDER         (pidgin_cell_renderer_expander_get_type())
+#define PIDGIN_CELL_RENDERER_EXPANDER(obj)         (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_CELL_RENDERER_EXPANDER, PidginCellRendererExpander))
 #define PIDGIN_CELL_RENDERER_EXPANDER_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST ((klass), PURPLE_TYPE_GTK_CELL_RENDERER_EXPANDER, PidginCellRendererExpanderClass))
-#define PIDGIN_IS_GTK_CELL_RENDERER_EXPANDER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), PIDGIN_TYPE_GTK_CELL_RENDERER_EXPANDER))
-#define PIDGIN_IS_GTK_CELL_RENDERER_EXPANDER_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_GTK_CELL_RENDERER_EXPANDER))
-#define PIDGIN_CELL_RENDERER_EXPANDER_GET_CLASS(obj)         (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_GTK_CELL_RENDERER_EXPANDER, PidginCellRendererExpanderClass))
+#define PIDGIN_IS_CELL_RENDERER_EXPANDER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), PIDGIN_TYPE_CELL_RENDERER_EXPANDER))
+#define PIDGIN_IS_CELL_RENDERER_EXPANDER_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_CELL_RENDERER_EXPANDER))
+#define PIDGIN_CELL_RENDERER_EXPANDER_GET_CLASS(obj)         (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_CELL_RENDERER_EXPANDER, PidginCellRendererExpanderClass))
 
 typedef struct _PidginCellRendererExpander PidginCellRendererExpander;
 typedef struct _PidginCellRendererExpanderClass PidginCellRendererExpanderClass;

@@ -1,8 +1,3 @@
-/**
- * @file gtkpluginpref.c GTK+ Plugin preferences
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -48,7 +43,7 @@ entry_cb(GtkWidget *entry, gpointer data) {
 
 
 static void
-webview_cb(GtkWebView *webview, gpointer data)
+webview_cb(PidginWebView *webview, gpointer data)
 {
 	char *pref;
 	char *text;
@@ -56,7 +51,7 @@ webview_cb(GtkWebView *webview, gpointer data)
 	pref = g_object_get_data(G_OBJECT(webview), "pref-key");
 	g_return_if_fail(pref);
 
-	text = gtk_webview_get_body_html(webview);
+	text = pidgin_webview_get_body_html(webview);
 	purple_prefs_set_string(pref, text);
 	g_free(text);
 }
@@ -72,7 +67,7 @@ make_string_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 	pref_label = purple_plugin_pref_get_label(pref);
 	format = purple_plugin_pref_get_format_type(pref);
 
-	switch(purple_plugin_pref_get_type(pref)) {
+	switch(purple_plugin_pref_get_pref_type(pref)) {
 		case PURPLE_PLUGIN_PREF_CHOICE:
 			gtk_label = pidgin_prefs_dropdown_from_list(parent, pref_label,
 											  PURPLE_PREF_STRING, pref_name,
@@ -132,15 +127,15 @@ make_string_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 					frame = pidgin_create_webview(TRUE, &webview, NULL);
 				} else {
 					frame = pidgin_create_webview(FALSE, &webview, NULL);
-					gtk_webview_set_format_functions(GTK_WEBVIEW(webview), 0);
+					pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(webview), 0);
 				}
 
 				if (format & PURPLE_STRING_FORMAT_TYPE_MULTILINE) {
 					gchar *tmp = purple_strreplace(purple_prefs_get_string(pref_name), "\n", "<br>");
-					gtk_webview_append_html(GTK_WEBVIEW(webview), tmp);
+					pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), tmp);
 					g_free(tmp);
 				} else
-					gtk_webview_append_html(GTK_WEBVIEW(webview), purple_prefs_get_string(pref_name));
+					pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), purple_prefs_get_string(pref_name));
 				gtk_label_set_mnemonic_widget(GTK_LABEL(gtk_label), webview);
 				gtk_widget_show_all(frame);
 				g_object_set_data(G_OBJECT(webview), "pref-key", (gpointer)pref_name);
@@ -165,7 +160,7 @@ make_int_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 	pref_name = purple_plugin_pref_get_name(pref);
 	pref_label = purple_plugin_pref_get_label(pref);
 
-	switch(purple_plugin_pref_get_type(pref)) {
+	switch(purple_plugin_pref_get_pref_type(pref)) {
 		case PURPLE_PLUGIN_PREF_CHOICE:
 			gtk_label = pidgin_prefs_dropdown_from_list(parent, pref_label,
 					PURPLE_PREF_INT, pref_name, purple_plugin_pref_get_choices(pref));
@@ -224,7 +219,7 @@ pidgin_plugin_pref_create_frame(PurplePluginPrefFrame *frame) {
 			if(label == NULL)
 				continue;
 
-			if(purple_plugin_pref_get_type(pref) == PURPLE_PLUGIN_PREF_INFO) {
+			if(purple_plugin_pref_get_pref_type(pref) == PURPLE_PLUGIN_PREF_INFO) {
 				make_info_pref(parent, pref);
 			} else {
 				parent = pidgin_make_frame(ret, label);
@@ -234,7 +229,7 @@ pidgin_plugin_pref_create_frame(PurplePluginPrefFrame *frame) {
 			continue;
 		}
 
-		switch(purple_prefs_get_type(name)) {
+		switch(purple_prefs_get_pref_type(name)) {
 			case PURPLE_PREF_BOOLEAN:
 				pidgin_prefs_checkbox(label, name, parent);
 				break;

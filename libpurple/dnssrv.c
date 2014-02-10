@@ -1,7 +1,3 @@
-/**
- * @file dnssrv.c
- */
-
 /* purple
  *
  * Copyright (C) 2005 Thomas Butter <butter@uni-mannheim.de>
@@ -95,7 +91,7 @@ typedef struct _PurpleSrvResponseContainer {
 
 static gboolean purple_srv_txt_query_ui_resolve(PurpleSrvTxtQueryData *query_data);
 
-/**
+/*
  * Sort by priority, then by weight.  Strictly numerically--no
  * randomness.  Technically we only need to sort by pref and then
  * make sure any records with weight 0 are at the beginning of
@@ -119,16 +115,17 @@ responsecompare(gconstpointer ar, gconstpointer br)
 	return 1;
 }
 
-/**
+/*
+ * select_random_response:
+ * @list: The list of PurpleSrvResponseContainer.  This function
+ *        removes a node from this list and returns the new list.
+ * @container_ptr: The PurpleSrvResponseContainer that was chosen
+ *        will be returned here.
+ *
  * Iterate over a list of PurpleSrvResponseContainer making the sum
  * the running total of the sums.  Select a random integer in the range
  * (1, sum+1), then find the first element greater than or equal to the
  * number selected.  From RFC 2782.
- *
- * @param list The list of PurpleSrvResponseContainer.  This function
- *        removes a node from this list and returns the new list.
- * @param container_ptr The PurpleSrvResponseContainer that was chosen
- *        will be returned here.
  */
 static GList *
 select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
@@ -136,6 +133,8 @@ select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
 	GList *cur;
 	size_t runningtotal;
 	int r;
+
+	g_return_val_if_fail(list != NULL, NULL);
 
 	runningtotal = 0;
 	cur = list;
@@ -157,6 +156,8 @@ select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
 	r = runningtotal ? g_random_int_range(1, runningtotal + 1) : 0;
 	cur = list;
 	while (r > ((PurpleSrvResponseContainer *)cur->data)->sum) {
+		if (G_UNLIKELY(!cur->next))
+			break;
 		cur = cur->next;
 	}
 
@@ -165,7 +166,7 @@ select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
 	return g_list_delete_link(list, cur);
 }
 
-/**
+/*
  * Reorder a GList of PurpleSrvResponses that have the same priority
  * (aka "pref").
  */
@@ -179,6 +180,8 @@ srv_reorder(GList *list, int num)
 	if (num < 2)
 		/* Nothing to sort */
 		return;
+
+	g_return_if_fail(list != NULL);
 
 	/* First build a list of container structs */
 	for (i = 0, cur = list; i < num; i++, cur = cur->next) {
@@ -198,15 +201,18 @@ srv_reorder(GList *list, int num)
 		cur->data = container->response;
 		g_free(container);
 		cur = cur->next;
+		g_return_if_fail(cur);
 	}
 }
 
-/**
+/*
+ * purple_srv_sort:
+ * @list: The original list, resorted
+ *
  * Sorts a GList of PurpleSrvResponses according to the
  * algorithm described in RFC 2782.
  *
- * @param response GList of PurpleSrvResponse's
- * @param The original list, resorted
+ * Returns: GList of PurpleSrvResponse's
  */
 static GList *
 purple_srv_sort(GList *list)
@@ -225,6 +231,9 @@ purple_srv_sort(GList *list)
 	count = 1;
 	while (cur) {
 		PurpleSrvResponse *next_response;
+
+		g_return_val_if_fail(cur->data, list);
+
 		pref = ((PurpleSrvResponse *)cur->data)->pref;
 		next_response = cur->next ? cur->next->data : NULL;
 		if (!next_response || next_response->pref != pref) {
@@ -571,7 +580,7 @@ resolved(gpointer data, gint source, PurpleInputCondition cond)
 
 #else /* _WIN32 */
 
-/** The Jabber Server code was inspiration for parts of this. */
+/* The Jabber Server code was inspiration for parts of this. */
 
 static gboolean
 res_main_thread_cb(gpointer data)
@@ -740,10 +749,10 @@ purple_srv_resolve(PurpleAccount *account, const char *protocol,
 		g_return_val_if_reached(NULL);
 	}
 
-	proxy_type = purple_proxy_info_get_type(
+	proxy_type = purple_proxy_info_get_proxy_type(
 		purple_proxy_get_setup(account));
 	if (proxy_type == PURPLE_PROXY_TOR) {
-		purple_debug_info("dnssrv", "Aborting SRV lookup in Tor Proxy mode.");
+		purple_debug_info("dnssrv", "Aborting SRV lookup in Tor Proxy mode.\n");
 		cb(NULL, 0, extradata);
 		return NULL;
 	}
@@ -860,10 +869,10 @@ PurpleSrvTxtQueryData *purple_txt_resolve(PurpleAccount *account,
 	GError* err = NULL;
 #endif
 
-	proxy_type = purple_proxy_info_get_type(
+	proxy_type = purple_proxy_info_get_proxy_type(
 		purple_proxy_get_setup(account));
 	if (proxy_type == PURPLE_PROXY_TOR) {
-		purple_debug_info("dnssrv", "Aborting TXT lookup in Tor Proxy mode.");
+		purple_debug_info("dnssrv", "Aborting TXT lookup in Tor Proxy mode.\n");
 		cb(NULL, extradata);
 		return NULL;
 	}
@@ -1095,7 +1104,7 @@ purple_srv_txt_query_get_query(PurpleSrvTxtQueryData *query_data)
 
 
 int
-purple_srv_txt_query_get_type(PurpleSrvTxtQueryData *query_data)
+purple_srv_txt_query_get_query_type(PurpleSrvTxtQueryData *query_data)
 {
 	g_return_val_if_fail(query_data != NULL, 0);
 

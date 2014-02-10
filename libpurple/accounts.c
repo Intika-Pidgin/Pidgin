@@ -1,8 +1,3 @@
-/**
- * @file accounts.c Accounts API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -52,7 +47,7 @@ accounts_to_xmlnode(void)
 
 	for (cur = purple_accounts_get_all(); cur != NULL; cur = cur->next)
 	{
-		child = purple_account_to_xmlnode(cur->data);
+		child = _purple_account_to_xmlnode(cur->data);
 		purple_xmlnode_insert_child(node, child);
 	}
 
@@ -67,7 +62,7 @@ sync_accounts(void)
 
 	if (!accounts_loaded)
 	{
-		purple_debug_error("account", "Attempted to save accounts before "
+		purple_debug_error("accounts", "Attempted to save accounts before "
 						 "they were read!\n");
 		return;
 	}
@@ -346,29 +341,29 @@ parse_proxy_info(PurpleXmlNode *node, PurpleAccount *account)
 	proxy_info = purple_proxy_info_new();
 
 	/* Use the global proxy settings, by default */
-	purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_USE_GLOBAL);
+	purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_USE_GLOBAL);
 
 	/* Read proxy type */
 	child = purple_xmlnode_get_child(node, "type");
 	if ((child != NULL) && ((data = purple_xmlnode_get_data(child)) != NULL))
 	{
 		if (purple_strequal(data, "global"))
-			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_USE_GLOBAL);
+			purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_USE_GLOBAL);
 		else if (purple_strequal(data, "none"))
-			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_NONE);
+			purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_NONE);
 		else if (purple_strequal(data, "http"))
-			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_HTTP);
+			purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_HTTP);
 		else if (purple_strequal(data, "socks4"))
-			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_SOCKS4);
+			purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_SOCKS4);
 		else if (purple_strequal(data, "socks5"))
-			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_SOCKS5);
+			purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_SOCKS5);
 		else if (purple_strequal(data, "tor"))
-			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_TOR);
+			purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_TOR);
 		else if (purple_strequal(data, "envvar"))
-			purple_proxy_info_set_type(proxy_info, PURPLE_PROXY_USE_ENVVAR);
+			purple_proxy_info_set_proxy_type(proxy_info, PURPLE_PROXY_USE_ENVVAR);
 		else
 		{
-			purple_debug_error("account", "Invalid proxy type found when "
+			purple_debug_error("accounts", "Invalid proxy type found when "
 							 "loading account information for %s\n",
 							 purple_account_get_username(account));
 		}
@@ -408,7 +403,7 @@ parse_proxy_info(PurpleXmlNode *node, PurpleAccount *account)
 	}
 
 	/* If there are no values set then proxy_info NULL */
-	if ((purple_proxy_info_get_type(proxy_info) == PURPLE_PROXY_USE_GLOBAL) &&
+	if ((purple_proxy_info_get_proxy_type(proxy_info) == PURPLE_PROXY_USE_GLOBAL) &&
 		(purple_proxy_info_get_host(proxy_info) == NULL) &&
 		(purple_proxy_info_get_port(proxy_info) == 0) &&
 		(purple_proxy_info_get_username(proxy_info) == NULL) &&
@@ -437,7 +432,7 @@ parse_current_error(PurpleXmlNode *node, PurpleAccount *account)
 
 	if (type > PURPLE_CONNECTION_ERROR_OTHER_ERROR)
 	{
-		purple_debug_error("account",
+		purple_debug_error("accounts",
 			"Invalid PurpleConnectionError value %d found when "
 			"loading account information for %s\n",
 			type, purple_account_get_username(account));
@@ -570,7 +565,7 @@ parse_account(PurpleXmlNode *node)
 		if (result == TRUE || purple_keyring_get_inuse() == NULL) {
 			purple_account_set_remember_password(ret, TRUE);
 		} else {
-			purple_debug_error("account", "Failed to import password.\n");
+			purple_debug_error("accounts", "Failed to import password.\n");
 		} 
 		purple_str_wipe(data);
 	}
@@ -730,7 +725,7 @@ purple_accounts_reorder(PurpleAccount *account, guint new_index)
 	index = g_list_index(accounts, account);
 
 	if (index < 0) {
-		purple_debug_error("account",
+		purple_debug_error("accounts",
 				   "Unregistered account (%s) discovered during reorder!\n",
 				   purple_account_get_username(account));
 		return;
@@ -810,7 +805,7 @@ purple_accounts_restore_current_statuses()
 	/* If we're not connected to the Internet right now, we bail on this */
 	if (!purple_network_is_available())
 	{
-		purple_debug_warning("account", "Network not connected; skipping reconnect\n");
+		purple_debug_warning("accounts", "Network not connected; skipping reconnect\n");
 		return;
 	}
 

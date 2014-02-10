@@ -80,7 +80,7 @@ AM_SILENT_RULES([yes])
 PURPLE_MAJOR_VERSION=purple_major_version
 PURPLE_MINOR_VERSION=purple_minor_version
 PURPLE_MICRO_VERSION=purple_micro_version
-PURPLE_VERSION=[purple_display_version]
+PURPLE_VERSION=purple_display_version
 AC_SUBST(PURPLE_MAJOR_VERSION)
 AC_SUBST(PURPLE_MINOR_VERSION)
 AC_SUBST(PURPLE_MICRO_VERSION)
@@ -92,7 +92,7 @@ AC_SUBST(PURPLE_LT_VERSION_INFO)
 GNT_MAJOR_VERSION=gnt_major_version
 GNT_MINOR_VERSION=gnt_minor_version
 GNT_MICRO_VERSION=gnt_micro_version
-GNT_VERSION=[gnt_display_version]
+GNT_VERSION=gnt_display_version
 AC_SUBST(GNT_MAJOR_VERSION)
 AC_SUBST(GNT_MINOR_VERSION)
 AC_SUBST(GNT_MICRO_VERSION)
@@ -305,7 +305,7 @@ if test x$enable_i18n = xyes; then
 	GETTEXT_PACKAGE=pidgin
 	AC_SUBST(GETTEXT_PACKAGE)
 
-	ALL_LINGUAS="af am ar az be@latin bg bn bn_IN bs ca ca@valencia cs da de dz el en_AU en_CA en_GB eo es et eu fa fi fr ga gl gu he hi hr hu hy id it ja ka km kn ko ku lo lt mai mhr mk mn mr ms_MY my_MM nb ne nl nn oc or pa pl pt_BR pt ps ro ru si sk sl sq sr sr@latin sv sw ta te th tr uk ur vi xh zh_CN zh_HK zh_TW"
+	ALL_LINGUAS="af am ar ast az be@latin bg bn bn_IN bs ca ca@valencia cs da de dz el en_AU en_CA en_GB eo es et eu fa fi fr ga gl gu he hi hr hu id it ja ka kk km kn ko ku lt mai mhr mk mn mr my_MM nb ne nl nn oc or pa pl pt_BR pt ps ro ru si sk sl sq sr sr@latin sv sw ta te th tr uk ur vi xh zh_CN zh_HK zh_TW"
 	AM_GLIB_GNU_GETTEXT
 
 	dnl If we don't have msgfmt, then po/ is going to fail -- ensure that
@@ -474,7 +474,7 @@ running configure.
 	PKG_CHECK_MODULES(PANGO, [pango >= 1.4.0],
 			AC_DEFINE(HAVE_PANGO14, 1, [Define if we have Pango 1.4 or newer.]),:)
 
-	WEBKIT_VERSION=1.1.1
+	WEBKIT_VERSION=1.3.7
 	if test "x$with_gtk" = "x3"; then
 		WEBKIT_PC_MODULE="webkitgtk-3.0"
 		PKG_CHECK_MODULES(WEBKIT, [$WEBKIT_PC_MODULE >= $WEBKIT_VERSION], , [
@@ -556,7 +556,7 @@ Use --without-x if you do not need X11 support.
 			else
 				if test "x$force_deps" = "xyes" ; then
 					AC_MSG_ERROR([
-XScreenSaver extension development headers not found.
+XScreenSaver extension development headers (libXScrnSaver-devel) not found.
 Use --disable-screensaver if you do not need XScreenSaver extension support,
 this is required for detecting idle time by mouse and keyboard usage.
 ])
@@ -1178,6 +1178,7 @@ fi
 dnl #######################################################################
 dnl # Check for Gadu-Gadu client includes and libraries
 dnl #######################################################################
+dnl TODO: we should get rid of manually entered dirs at some point
 AC_ARG_WITH(gadu-includes, [AS_HELP_STRING([--with-gadu-includes=DIR], [compile the Gadu-Gadu plugin against includes in DIR])], [ac_gadu_includes="$withval"], [ac_gadu_includes="no"])
 AC_ARG_WITH(gadu-libs, [AS_HELP_STRING([--with-gadu-libs=DIR], [compile the Gadu-Gadu plugin against the libs in DIR])], [ac_gadu_libs="$withval"], [ac_gadu_libs="no"])
 GADU_CFLAGS=""
@@ -1210,6 +1211,8 @@ else
 	GADU_LIBS="$GADU_LIBS -lgadu"
 	AC_CHECK_LIB(gadu, gg_libgadu_version, [gadu_libs=yes], , $GADU_LIBS)
 fi
+
+dnl TODO: it shouldn't be necessary with 1.12.0 and newer
 GADU_CFLAGS=`echo $GADU_CFLAGS |$sedpath 's/-Wall//'`
 
 if test "x$gadu_libs" = "xyes"; then
@@ -1240,6 +1243,7 @@ if test "x$gadu_libs" = "xyes"; then
 	CPPFLAGS="$CPPFLAGS_save"
 fi
 
+dnl TODO: this one shouldn't be necessary too
 if test "x$gadu_libs" = "xyes" -a "x$gadu_manual_check" = "xyes"; then
 	AC_MSG_CHECKING(for supplied libgadu compatibility)
 	CPPFLAGS_save="$CPPFLAGS"
@@ -1270,6 +1274,14 @@ fi
 
 AM_CONDITIONAL(HAVE_LIBGADU, test "x$gadu_libs" = "xyes")
 AM_CONDITIONAL(USE_INTERNAL_LIBGADU, test "x$gadu_libs" != "xyes")
+
+if test "x$gadu_libs" = "xyes"; then
+	AC_DEFINE(HAVE_LIBGADU, 1, [Linked with libgadu])
+fi
+
+if test "x$gadu_libs" != "xyes"; then
+	AC_DEFINE(USE_INTERNAL_LIBGADU, 1, [Using internal libgadu])
+fi
 
 if test "x$gadu_libs" = "x"; then
 	gadu_libs=no
@@ -1566,6 +1578,26 @@ else
 fi
 
 dnl #######################################################################
+dnl # Check for Unity and Messaging Menu
+dnl #######################################################################
+AC_ARG_ENABLE(unity, [AC_HELP_STRING([--enable-unity],
+	[compile with support for unity integration plugin])], enable_unity="$enableval", enable_unity="no")
+if test "$enable_unity" = yes; then
+	PKG_CHECK_MODULES(UNITY, [unity >= 6.8 messaging-menu >= 12.10], , [
+		AC_MSG_RESULT(no)
+		AC_MSG_ERROR([
+You must have libunity9 >= 6.8 and libmessaging-menu >= 12.10 to build the unity integration plugin.
+	])])
+	USES_MM_CHAT_SECTION="X-MessagingMenu-UsesChatSection=true"
+	AC_SUBST(UNITY_CFLAGS)
+	AC_SUBST(UNITY_LIBS)
+	AC_SUBST(USES_MM_CHAT_SECTION)
+else
+	enable_unity=no
+fi
+AM_CONDITIONAL(ENABLE_UNITY, [test "x$enable_unity" = "xyes"])
+
+dnl #######################################################################
 dnl # Check for Secret Service headers
 dnl #######################################################################
 
@@ -1677,7 +1709,7 @@ if test "x$enable_kwallet" = "xyes"; then
 	if test "$ac_kwallet_includes" != "no"; then
 		KWALLET_CXXFLAGS="-I$ac_kwallet_includes"
 	elif test "x$KDE4_CONFIG" != "xno"; then
-		KWALLET_CXXFLAGS="-I`$KDE4_CONFIG --path include`"
+		KWALLET_CXXFLAGS="$QT4_CFLAGS -I`$KDE4_CONFIG --path include`"
 	fi
 	CPPFLAGS="$CPPFLAGS $KWALLET_CXXFLAGS"
 	AC_CHECK_HEADER([kwallet.h], , [
@@ -2828,62 +2860,16 @@ AC_ARG_ENABLE(trayicon-compat, AS_HELP_STRING([--enable-trayicon-compat], [insta
 
 AM_CONDITIONAL(ENABLE_TRAYCOMPAT, test "x$enable_traycompat" = "xyes")
 
-dnl #######################################################################
-dnl # Check for Doxygen and dot (part of GraphViz)
-dnl #######################################################################
-AC_ARG_ENABLE(doxygen,
-	[AS_HELP_STRING([--disable-doxygen],
-		[disable documentation with doxygen])],
-	enable_doxygen="$enableval", enable_doxygen="yes")
-AC_ARG_ENABLE(dot,
-	[AS_HELP_STRING([--disable-dot],
-		[disable graphs in doxygen via 'dot'])],
-	enable_dot="$enableval", enable_dot="yes")
-AC_ARG_ENABLE(devhelp,
-	[AS_HELP_STRING([--disable-devhelp],
-		[disable building index for devhelp documentation browser])],
-	enable_devhelp="$enableval", enable_devhelp="yes")
+# check for gtk-doc
+m4_ifdef([GTK_DOC_CHECK], [
+GTK_DOC_CHECK([1.16],[--flavour no-tmpl])
+],[
+AM_CONDITIONAL([ENABLE_GTK_DOC], false)
+])
 
-if test "x$enable_doxygen" = xyes; then
-	AC_CHECK_PROG(DOXYGEN, doxygen, true, false)
-	if test $DOXYGEN = false; then
-		AC_MSG_WARN([*** Doxygen not found, docs will not be available])
-		enable_doxygen="no"
-	else
-		AC_DEFINE_UNQUOTED(HAVE_DOXYGEN, 1, [whether or not we have doxygen])
-
-		if test "x$enable_dot" = "xyes"; then
-			AC_CHECK_PROG(DOT, dot, true, false)
-
-			if test $DOT = false; then
-				enable_dot="no";
-				AC_MSG_WARN([*** GraphViz dot not found, docs will not have graphs])
-			else
-				AC_DEFINE_UNQUOTED(HAVE_DOT, 1, [whether or not we have dot])
-			fi
-		fi
-
-		if test "x$enable_devhelp" = "xyes"; then
-			AC_CHECK_PROG(XSLTPROC, xsltproc, true, false)
-
-			if test $XSLTPROC = false; then
-				enable_devhelp="no";
-				AC_MSG_WARN([*** xsltproc not found; devhelp index will not be created])
-			else
-				AC_DEFINE_UNQUOTED(HAVE_XSLTPROC, 1, [whether or not we have xsltproc for devhelp index])
-			fi
-		fi
-	fi
-else
-	enable_dot="no"
-	enable_devhelp="no"
+if test "x$enable_gtk_doc" = "x" ; then
+	enable_gtk_doc=no
 fi
-
-AC_SUBST(enable_doxygen)
-AC_SUBST(enable_dot)
-AC_SUBST(enable_devhelp)
-AM_CONDITIONAL(HAVE_DOXYGEN, test "x$enable_doxygen" = "xyes")
-AM_CONDITIONAL(HAVE_XSLTPROC, test "x$enable_devhelp" = "xyes")
 
 AC_ARG_ENABLE(debug, [AS_HELP_STRING([--enable-debug],
 	[compile with debugging support])], , enable_debug=no)
@@ -2895,10 +2881,16 @@ fi
 AM_CONDITIONAL(PURPLE_AVAILABLE, true)
 
 AC_CONFIG_FILES([Makefile
-		   Doxyfile
 		   doc/Makefile
 		   doc/pidgin.1
 		   doc/finch.1
+		   doc/reference/Makefile
+		   doc/reference/finch/Makefile
+		   doc/reference/finch/version.xml
+		   doc/reference/libpurple/Makefile
+		   doc/reference/libpurple/version.xml
+		   doc/reference/pidgin/Makefile
+		   doc/reference/pidgin/version.xml
 		   m4macros/Makefile
 		   pidgin.apspec
 		   pidgin/Makefile
@@ -2960,7 +2952,7 @@ AC_CONFIG_FILES([Makefile
 		   finch/libgnt/wms/Makefile
 		   finch/plugins/Makefile
 		   po/Makefile.in
-		   pidgin.spec
+		   pidgin.desktop.in
 		  ])
 AC_OUTPUT
 
@@ -3006,6 +2998,7 @@ echo Use X Session Management...... : $enable_sm
 echo Use startup notification...... : $enable_startup_notification
 echo Build with GtkSpell support... : $enable_gtkspell
 echo Build with GCR widgets........ : $enable_gcr
+echo Build Unity integration plugin.: $enable_unity
 echo
 echo Build with GNOME Keyring...... : $enable_gnome_keyring
 echo Build with KWallet............ : $enable_kwallet
@@ -3018,6 +3011,7 @@ echo Build with Tcl support........ : $enable_tcl
 echo Build with Tk support......... : $enable_tk
 echo
 echo Print debugging messages...... : $enable_debug
+echo Generate documentation........ : $enable_gtk_doc
 echo
 eval eval echo Pidgin will be installed in $bindir.
 if test "x$pidginpath" != "x" ; then

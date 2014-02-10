@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "glibcompat.h"
 #include "log.h"
 #include "plugin.h"
 #include "pluginpref.h"
@@ -921,7 +922,7 @@ static char * msn_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 		PurpleXmlNode *to;
 		enum name_guesses name_guessed = NAME_GUESS_UNKNOWN;
 		const char *their_name;
-		struct tm *tm;
+		struct tm *tm = NULL;
 		char *timestamp;
 		char *tmp;
 		const char *style;
@@ -1100,12 +1101,16 @@ static char * msn_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 			text = g_string_append(text, ";\">");
 		}
 
-		msn_logger_parse_timestamp(message, &tm);
-
-		timestamp = g_strdup_printf("<font size=\"2\">(%02u:%02u:%02u)</font> ",
+		if (msn_logger_parse_timestamp(message, &tm)) {
+			timestamp = g_strdup_printf(
+				"<font size=\"2\">(%02u:%02u:%02u)</font> ",
 				tm->tm_hour, tm->tm_min, tm->tm_sec);
-		text = g_string_append(text, timestamp);
-		g_free(timestamp);
+			text = g_string_append(text, timestamp);
+			g_free(timestamp);
+		} else {
+			text = g_string_append(text,
+				"<font size=\"2\">(00:00:00)</font> ");
+		}
 
 		if (from_name) {
 			text = g_string_append(text, "<b>");
@@ -2452,6 +2457,7 @@ init_plugin(PurplePlugin *plugin)
 static void log_reader_init_prefs(void) {
 	char *path;
 #ifdef _WIN32
+	const gchar *reg_key;
 	char *folder;
 	gboolean found = FALSE;
 #endif
@@ -2542,7 +2548,11 @@ static void log_reader_init_prefs(void) {
 	 */
 
 	path = NULL;
-	if ((folder = wpurple_read_reg_string(HKEY_CLASSES_ROOT, "Trillian.SkinZip\\shell\\Add\\command\\", NULL))) {
+	folder = NULL;
+	reg_key = "Trillian.SkinZip\\shell\\Add\\command\\";
+	if (wpurple_reg_val_exists(HKEY_CLASSES_ROOT, reg_key, NULL))
+		folder = wpurple_read_reg_string(HKEY_CLASSES_ROOT, reg_key, NULL);
+	if (folder) {
 		char *value = folder;
 		char *temp;
 
@@ -2610,15 +2620,21 @@ static void log_reader_init_prefs(void) {
 #else
 		gchar *contents = NULL;
 
-		purple_debug_info("Trillian talk.ini read",
-				  "Reading %s\n", path);
-		if (!g_file_get_contents(path, &contents, NULL, &error)) {
+		if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
+			purple_debug_info("Trillian talk.ini read",
+				"Reading %s\n", path);
+		} else {
+			g_free(path);
+			path = NULL;
+		}
+		
+		if (path && !g_file_get_contents(path, &contents, NULL, &error)) {
 			purple_debug_error("Trillian talk.ini read",
 					   "Error reading talk.ini: %s\n",
 					   (error && error->message) ? error->message : "Unknown error");
 			if (error)
 				g_error_free(error);
-		} else {
+		} else if (contents) {
 			char *cursor, *line;
 			line = cursor = contents;
 			while (*cursor) {

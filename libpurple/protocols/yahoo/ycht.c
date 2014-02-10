@@ -101,9 +101,9 @@ static void ycht_process_chatjoin(YchtConn *ycht, YchtPkt *pkt)
 		new_room = TRUE;
 
 	if (new_room && ycht->changing_rooms) {
-		serv_got_chat_left(gc, YAHOO_CHAT_ID);
+		purple_serv_got_chat_left(gc, YAHOO_CHAT_ID);
 		ycht->changing_rooms = FALSE;
-		c = serv_got_joined_chat(gc, YAHOO_CHAT_ID, room);
+		c = purple_serv_got_joined_chat(gc, YAHOO_CHAT_ID, room);
 	} else {
 		c = purple_conversations_find_chat(gc, YAHOO_CHAT_ID);
 	}
@@ -165,7 +165,7 @@ static void ycht_progress_chatmsg(YchtConn *ycht, YchtPkt *pkt)
 		what = tmp;
 	}
 
-	serv_got_chat_in(gc, YAHOO_CHAT_ID, who, 0, what, time(NULL));
+	purple_serv_got_chat_in(gc, YAHOO_CHAT_ID, who, 0, what, time(NULL));
 	g_free(what);
 }
 
@@ -415,13 +415,9 @@ static void ycht_packet_process(YchtConn *ycht, YchtPkt *pkt)
 
 static void ycht_packet_free(YchtPkt *pkt)
 {
-	GList *l;
-
 	g_return_if_fail(pkt != NULL);
 
-	for (l = pkt->data; l; l = l->next)
-		g_free(l->data);
-	g_list_free(pkt->data);
+	g_list_free_full(pkt->data, g_free);
 	g_free(pkt);
 }
 
@@ -626,7 +622,7 @@ int ycht_chat_send(YchtConn *ycht, const char *room, const char *what)
 	pkt = ycht_packet_new(YCHT_VERSION, YCHT_SERVICE_CHATMSG, 0);
 
 	msg1 = yahoo_html_to_codes(what);
-	msg2 = yahoo_string_encode(ycht->gc, msg1, NULL);
+	msg2 = yahoo_string_encode(ycht->gc, msg1, FALSE);
 	g_free(msg1);
 
 	buf = g_strdup_printf("%s\001%s", ycht->room, msg2);

@@ -152,7 +152,7 @@ yahoo_fetch_aliases_cb(PurpleHttpConnection *http_conn,
 
 					/* Finally, if we received an alias, we better update the buddy list */
 					if (alias != NULL) {
-						serv_got_alias(gc, yid, alias);
+						purple_serv_got_alias(gc, yid, alias);
 						purple_debug_info("yahoo", "Fetched alias '%s' (%s)\n", alias, id);
 					} else if (buddy_alias && *buddy_alias && !g_str_equal(buddy_alias, yid)) {
 					/* Or if we have an alias that Yahoo doesn't, send it up */
@@ -651,7 +651,7 @@ parse_contact_details(YahooData *yd, const char *who, const char *xml)
 		}
 
 		if (alias) {
-			serv_got_alias(yd->gc, yid, alias);
+			purple_serv_got_alias(yd->gc, yid, alias);
 			if (alias != ypd->names.nick)
 				g_free(alias);
 		}
@@ -673,8 +673,14 @@ void yahoo_process_contact_details(PurpleConnection *gc, struct yahoo_packet *pk
 		struct yahoo_pair *pair = l->data;
 		switch (pair->key) {
 			case 4:
-				who = pair->value;	/* This is the person who sent us the details.
-									   But not necessarily about himself. */
+				if (g_utf8_validate(pair->value, -1, NULL)) {
+					/* This is the person who sent us the details.
+					   But not necessarily about himself. */
+					who = pair->value;
+				} else {
+					purple_debug_warning("yahoo", "yahoo_process_contact_details "
+							"got non-UTF-8 string for key %d\n", pair->key);
+				}
 				break;
 			case 5:
 				break;
@@ -686,8 +692,13 @@ void yahoo_process_contact_details(PurpleConnection *gc, struct yahoo_packet *pk
 				   and look into the xml instead to see who the information is about. */
 				break;
 			case 280:
-				xml = pair->value;
-				parse_contact_details(yd, who, xml);
+				if (g_utf8_validate(pair->value, -1, NULL)) {
+					xml = pair->value;
+					parse_contact_details(yd, who, xml);
+				} else {
+					purple_debug_warning("yahoo", "yahoo_process_contact_details "
+							"got non-UTF-8 string for key %d\n", pair->key);
+				}
 				break;
 		}
 	}

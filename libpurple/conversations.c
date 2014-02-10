@@ -27,7 +27,7 @@ static GList *ims = NULL;
 static GList *chats = NULL;
 static PurpleConversationUiOps *default_ops = NULL;
 
-/**
+/*
  * A hash table used for efficient lookups of conversations by name.
  * struct _purple_hconv => PurpleConversation*
  */
@@ -115,7 +115,7 @@ purple_conversations_remove(PurpleConversation *conv)
 }
 
 void
-purple_conversations_update_cache(PurpleConversation *conv, const char *name,
+_purple_conversations_update_cache(PurpleConversation *conv, const char *name,
 		PurpleAccount *account)
 {
 	PurpleAccount *old_account;
@@ -137,7 +137,7 @@ purple_conversations_update_cache(PurpleConversation *conv, const char *name,
 	if (account)
 		hc->account = account;
 	if (name)
-		hc->name = g_strdup(purple_normalize(account, name));
+		hc->name = g_strdup(purple_normalize(hc->account, name));
 
 	g_hash_table_insert(conversation_cache, hc, conv);
 }

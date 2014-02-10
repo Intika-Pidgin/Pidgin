@@ -37,7 +37,7 @@
 #include "utils.h"
 #include "oauth/oauth-purple.h"
 
-// Common
+/* Common */
 
 static inline ggp_avatar_session_data *
 ggp_avatar_get_avdata(PurpleConnection *gc);
@@ -47,13 +47,13 @@ static gboolean ggp_avatar_timer_cb(gpointer _gc);
 #define GGP_AVATAR_USERAGENT "GG Client build 11.0.0.7562"
 #define GGP_AVATAR_SIZE_MAX 1048576
 
-// Buddy avatars updating
+/* Buddy avatars updating */
 
 typedef struct
 {
 	uin_t uin;
 	time_t timestamp;
-	
+
 	PurpleConnection *gc;
 	PurpleHttpConnection *request;
 } ggp_avatar_buddy_update_req;
@@ -64,7 +64,7 @@ static void ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
 
 #define GGP_AVATAR_BUDDY_URL "http://avatars.gg.pl/%u/s,big"
 
-// Own avatar setting
+/* Own avatar setting */
 
 typedef struct
 {
@@ -89,7 +89,7 @@ void ggp_avatar_setup(PurpleConnection *gc)
 	avdata->pending_updates = NULL;
 	avdata->current_update = NULL;
 	avdata->own_data = g_new0(ggp_avatar_own_data, 1);
-	
+
 	avdata->timer = purple_timeout_add_seconds(1, ggp_avatar_timer_cb, gc);
 }
 
@@ -99,16 +99,15 @@ void ggp_avatar_cleanup(PurpleConnection *gc)
 
 	purple_timeout_remove(avdata->timer);
 
-	if (avdata->current_update != NULL)
-	{
+	if (avdata->current_update != NULL) {
 		ggp_avatar_buddy_update_req *current_update =
 			avdata->current_update;
-		
+
 		purple_http_conn_cancel(current_update->request);
 		g_free(current_update);
 	}
 	avdata->current_update = NULL;
-	
+
 	g_free(avdata->own_data);
 
 	g_list_free_full(avdata->pending_updates, &g_free);
@@ -126,20 +125,20 @@ static gboolean ggp_avatar_timer_cb(gpointer _gc)
 {
 	PurpleConnection *gc = _gc;
 	ggp_avatar_session_data *avdata;
-	
+
 	g_return_val_if_fail(PURPLE_CONNECTION_IS_VALID(gc), FALSE);
-	
+
 	avdata = ggp_avatar_get_avdata(gc);
-	if (avdata->current_update != NULL)
-	{
-		//TODO: verbose mode
-		//purple_debug_misc("gg", "ggp_avatar_timer_cb(%p): there is "
-		//	"already an update running\n", gc);
+	if (avdata->current_update != NULL) {
+		if (purple_debug_is_verbose()) {
+			purple_debug_misc("gg", "ggp_avatar_timer_cb(%p): "
+				"there is already an update running\n", gc);
+		}
 		return TRUE;
 	}
-	
+
 	while (!ggp_avatar_buddy_update_next(gc));
-	
+
 	return TRUE;
 }
 
@@ -151,7 +150,7 @@ void ggp_avatar_buddy_update(PurpleConnection *gc, uin_t uin, time_t timestamp)
 {
 	ggp_avatar_session_data *avdata = ggp_avatar_get_avdata(gc);
 	ggp_avatar_buddy_update_req *pending_update =
-		g_new(ggp_avatar_buddy_update_req, 1); //TODO: leak?
+		g_new(ggp_avatar_buddy_update_req, 1); /* TODO: leak? */
 
 	if (purple_debug_is_verbose()) {
 		purple_debug_misc("gg", "ggp_avatar_buddy_update(%p, %u, %lu)\n", gc,
@@ -196,9 +195,8 @@ static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc)
 	avdata->pending_updates = g_list_remove(avdata->pending_updates,
 		pending_update);
 	buddy = purple_blist_find_buddy(account, ggp_uin_to_str(pending_update->uin));
-	
-	if (!buddy)
-	{
+
+	if (!buddy) {
 		if (ggp_str_to_uin(purple_account_get_username(account)) ==
 			pending_update->uin)
 		{
@@ -206,9 +204,7 @@ static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc)
 				"ggp_avatar_buddy_update_next(%p): own "
 				"avatar update requested, but we don't have "
 				"ourselves on buddy list\n", gc);
-		}
-		else
-		{
+		} else {
 			purple_debug_warning("gg",
 				"ggp_avatar_buddy_update_next(%p): "
 				"%u update requested, but he's not on buddy "
@@ -220,8 +216,7 @@ static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc)
 	old_timestamp_str = purple_buddy_icons_get_checksum_for_user(buddy);
 	old_timestamp = old_timestamp_str ? g_ascii_strtoull(
 		old_timestamp_str, NULL, 10) : 0;
-	if (old_timestamp == pending_update->timestamp)
-	{
+	if (old_timestamp == pending_update->timestamp) {
 		if (purple_debug_is_verbose()) {
 			purple_debug_misc("gg",
 				"ggp_avatar_buddy_update_next(%p): "
@@ -230,15 +225,14 @@ static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc)
 		}
 		return FALSE;
 	}
-	if (old_timestamp > pending_update->timestamp)
-	{
+	if (old_timestamp > pending_update->timestamp) {
 		purple_debug_warning("gg",
 			"ggp_avatar_buddy_update_next(%p): "
 			"saved timestamp for %u is newer than received "
 			"(%lu > %lu)\n", gc, pending_update->uin, old_timestamp,
 			pending_update->timestamp);
 	}
-	
+
 	purple_debug_info("gg",
 		"ggp_avatar_buddy_update_next(%p): "
 		"updating %u with ts=%lu...\n", gc, pending_update->uin,
@@ -271,8 +265,7 @@ static void ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
 	const gchar *got_data;
 	size_t got_len;
 
-	if (!PURPLE_CONNECTION_IS_VALID(gc))
-	{
+	if (!PURPLE_CONNECTION_IS_VALID(gc)) {
 		g_free(pending_update);
 		return;
 	}
@@ -281,8 +274,7 @@ static void ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
 	g_assert(pending_update == avdata->current_update);
 	avdata->current_update = NULL;
 
-	if (!purple_http_response_is_successful(response))
-	{
+	if (!purple_http_response_is_successful(response)) {
 		purple_debug_error("gg", "ggp_avatar_buddy_update_received: bad"
 			" response while getting avatar for %u: %s\n",
 			pending_update->uin,
@@ -294,8 +286,7 @@ static void ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
 	account = purple_connection_get_account(gc);
 	buddy = purple_blist_find_buddy(account, ggp_uin_to_str(pending_update->uin));
 
-	if (!buddy)
-	{
+	if (!buddy) {
 		purple_debug_warning("gg", "ggp_avatar_buddy_update_received: "
 			"buddy %u disappeared\n", pending_update->uin);
 		g_free(pending_update);
@@ -329,23 +320,22 @@ static void ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
 void ggp_avatar_own_set(PurpleConnection *gc, PurpleStoredImage *img)
 {
 	ggp_avatar_own_data *own_data;
-	
+
 	if (!PURPLE_CONNECTION_IS_VALID(gc) || !PURPLE_CONNECTION_IS_CONNECTED(gc))
 		return;
-	
+
 	purple_debug_info("gg", "ggp_avatar_own_set(%p, %p)", gc, img);
-	
+
 	own_data = ggp_avatar_get_avdata(gc)->own_data;
-	
-	if (img == NULL)
-	{
+
+	if (img == NULL) {
 		purple_debug_warning("gg", "ggp_avatar_own_set: avatar removing"
 			" is probably not possible within old protocol");
 		return;
 	}
-	
+
 	own_data->img = img;
-	
+
 	ggp_oauth_request(gc, ggp_avatar_own_got_token, img, NULL, NULL);
 }
 
@@ -358,8 +348,7 @@ static void ggp_avatar_own_got_token(PurpleConnection *gc, const gchar *token,
 	PurpleAccount *account = purple_connection_get_account(gc);
 	uin_t uin = ggp_str_to_uin(purple_account_get_username(account));
 
-	if (img != own_data->img)
-	{
+	if (img != own_data->img) {
 		purple_debug_warning("gg", "ggp_avatar_own_got_token: "
 			"avatar was changed in meantime\n");
 		return;

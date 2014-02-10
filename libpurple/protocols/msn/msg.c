@@ -178,6 +178,8 @@ msn_message_parse_payload(MsnMessage *msg,
 		g_free(tmp_base);
 		g_return_if_reached();
 	}
+
+	/* NUL-terminate the end of the headers - it'll get skipped over below */
 	*end = '\0';
 
 	/* Split the headers and parse each one */
@@ -195,10 +197,12 @@ msn_message_parse_payload(MsnMessage *msg,
 
 			/* The only one I care about is 'boundary' (which is folded from
 			   the key 'Content-Type'), so only process that. */
-			if (!strcmp(key, "boundary")) {
+			if (!strcmp(key, "boundary") && value) {
 				char *end = strchr(value, '\"');
-				*end = '\0';
-				msn_message_set_header(msg, key, value);
+				if (end) {
+					*end = '\0';
+					msn_message_set_header(msg, key, value);
+				}
 			}
 
 			g_strfreev(tokens);
@@ -210,18 +214,15 @@ msn_message_parse_payload(MsnMessage *msg,
 		key = tokens[0];
 		value = tokens[1];
 
-		/*if not MIME content ,then return*/
 		if (!strcmp(key, "MIME-Version"))
 		{
-			g_strfreev(tokens);
-			continue;
+			/* Ignore MIME-Version header */
 		}
-
-		if (!strcmp(key, "Content-Type"))
+		else if (!strcmp(key, "Content-Type"))
 		{
 			char *charset, *c;
 
-			if ((c = strchr(value, ';')) != NULL)
+			if (value && (c = strchr(value, ';')) != NULL)
 			{
 				if ((charset = strchr(c, '=')) != NULL)
 				{
@@ -322,37 +323,30 @@ msn_message_new_from_cmd(MsnSession *session, MsnCommand *cmd)
 char *
 msn_message_gen_payload(MsnMessage *msg, size_t *ret_size)
 {
+	GString *payload;
 	GList *l;
-	char *n, *base, *end;
-	int len;
-	size_t body_len = 0;
+	size_t body_len;
 	const void *body;
 
 	g_return_val_if_fail(msg != NULL, NULL);
 
-	len = MSN_BUF_LEN;
+	/* 8192 is a reasonable guess at a large enough buffer to avoid realloc */
+	payload = g_string_sized_new(8192);
 
-	base = n = end = g_malloc(len + 1);
-	end += len;
-
-	/* Standard header. */
-	if (msg->charset == NULL)
-	{
-		g_snprintf(n, len,
-				   "MIME-Version: 1.0\r\n"
-				   "Content-Type: %s\r\n",
-				   msg->content_type);
-	}
-	else
-	{
-		g_snprintf(n, len,
-				   "MIME-Version: 1.0\r\n"
-				   "Content-Type: %s; charset=%s\r\n",
-				   msg->content_type, msg->charset);
+	/* Standard header */
+	if (msg->charset == NULL) {
+		g_string_append_printf(payload,
+				"MIME-Version: 1.0\r\n"
+				"Content-Type: %s\r\n",
+				msg->content_type);
+	} else {
+		g_string_append_printf(payload,
+				"MIME-Version: 1.0\r\n"
+				"Content-Type: %s; charset=%s\r\n",
+				msg->content_type, msg->charset);
 	}
 
-	n += strlen(n);
-
+	/* Headers */
 	for (l = msg->header_list; l != NULL; l = l->next)
 	{
 		const char *key;
@@ -361,30 +355,25 @@ msn_message_gen_payload(MsnMessage *msg, size_t *ret_size)
 		key = l->data;
 		value = msn_message_get_header_value(msg, key);
 
-		g_snprintf(n, end - n, "%s: %s\r\n", key, value);
-		n += strlen(n);
+		g_string_append_printf(payload, "%s: %s\r\n", key, value);
 	}
 
-	n += g_strlcpy(n, "\r\n", end - n);
+	/* End of headers */
+	g_string_append(payload, "\r\n");
 
+	/* Body */
 	body = msn_message_get_bin_data(msg, &body_len);
-
-	if (body != NULL)
-	{
-		memcpy(n, body, body_len);
-		n += body_len;
-		*n = '\0';
+	if (body != NULL) {
+		g_string_append_len(payload, body, body_len);
 	}
 
-	if (ret_size != NULL)
-	{
-		*ret_size = n - base;
-
-		if (*ret_size > 1664)
-			*ret_size = 1664;
+	if (ret_size != NULL) {
+		/* Use MIN to truncate the payload to 1664 bytes? Why do we do this?
+		   It seems like it will lead to brokenness. */
+		*ret_size = MIN(payload->len, 1664);
 	}
 
-	return base;
+	return g_string_free(payload, FALSE);
 }
 
 void
@@ -713,7 +702,7 @@ msn_plain_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 				purple_debug_misc("msn", "plain_msg: current_users(%d)\n",
 								swboard->current_users);
 
-			serv_got_chat_in(gc, swboard->chat_id, passport, 0, body_final,
+			purple_serv_got_chat_in(gc, swboard->chat_id, passport, 0, body_final,
 							 time(NULL));
 			if (swboard->conv == NULL)
 			{
@@ -724,7 +713,7 @@ msn_plain_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		else if (!g_str_equal(passport, purple_account_get_username(purple_connection_get_account(gc))))
 		{
 			/* Don't im ourselves ... */
-			serv_got_im(gc, passport, body_final, 0, time(NULL));
+			purple_serv_got_im(gc, passport, body_final, 0, time(NULL));
 			if (swboard->conv == NULL)
 			{
 				swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(
@@ -734,7 +723,7 @@ msn_plain_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 		}
 
 	} else {
-		serv_got_im(gc, passport, body_final, 0, time(NULL));
+		purple_serv_got_im(gc, passport, body_final, 0, time(NULL));
 	}
 
 	g_free(body_final);
@@ -757,12 +746,12 @@ msn_control_msg(MsnCmdProc *cmdproc, MsnMessage *msg)
 
 		if (swboard->current_users == 1)
 		{
-			serv_got_typing(gc, passport, MSN_TYPING_RECV_TIMEOUT,
+			purple_serv_got_typing(gc, passport, MSN_TYPING_RECV_TIMEOUT,
 							PURPLE_IM_TYPING);
 		}
 
 	} else {
-		serv_got_typing(gc, passport, MSN_TYPING_RECV_TIMEOUT,
+		purple_serv_got_typing(gc, passport, MSN_TYPING_RECV_TIMEOUT,
 						PURPLE_IM_TYPING);
 	}
 }
@@ -806,12 +795,12 @@ datacast_inform_user(MsnSwitchBoard *swboard, const char *who,
 	}
 
 	if (chat)
-		serv_got_chat_in(pc,
+		purple_serv_got_chat_in(pc,
 		                 purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(swboard->conv)),
 		                 who, PURPLE_MESSAGE_RECV|PURPLE_MESSAGE_SYSTEM, str,
 		                 time(NULL));
 	else
-		serv_got_im(pc, who, str, PURPLE_MESSAGE_RECV|PURPLE_MESSAGE_SYSTEM,
+		purple_serv_got_im(pc, who, str, PURPLE_MESSAGE_RECV|PURPLE_MESSAGE_SYSTEM,
 		            time(NULL));
 	g_free(str);
 

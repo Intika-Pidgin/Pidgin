@@ -12,14 +12,14 @@
 WIN32_DEV_TOP ?= $(PIDGIN_TREE_TOP)/../win32-dev
 GTKSPELL_TOP ?= $(WIN32_DEV_TOP)/gtkspell-2.0
 ENCHANT_TOP ?= $(WIN32_DEV_TOP)/enchant-1.6
-GNUTLS_TOP ?= $(WIN32_DEV_TOP)/gnutls-2.12
+GNUTLS_TOP ?= $(WIN32_DEV_TOP)/gnutls-3.1
 GTK_TOP ?= $(WIN32_DEV_TOP)/gtk2-2.24
 GTK_BIN ?= $(GTK_TOP)/bin
 BONJOUR_TOP ?= $(WIN32_DEV_TOP)/bonjour-sdk
 JSON_GLIB_TOP ?= $(WIN32_DEV_TOP)/json-glib-0.14
 LIBXML2_TOP ?= $(WIN32_DEV_TOP)/libxml2-2.9
 MEANWHILE_TOP ?= $(WIN32_DEV_TOP)/meanwhile-1.0
-NSS_TOP ?= $(WIN32_DEV_TOP)/nss-3.14
+NSS_TOP ?= $(WIN32_DEV_TOP)/nss-3.15.4-nspr-4.10.2
 PERL_LIB_TOP ?= $(WIN32_DEV_TOP)/perl-5.10
 SILC_TOOLKIT ?= $(WIN32_DEV_TOP)/silc-toolkit-1.1
 TCL_LIB_TOP ?= $(WIN32_DEV_TOP)/tcl-8.5
@@ -30,6 +30,7 @@ WEBKITGTK_TOP ?= $(WIN32_DEV_TOP)/libwebkitgtk-1.10
 LIBSOUP_TOP ?= $(WIN32_DEV_TOP)/libsoup-2.42
 GETTEXT_TOP ?= $(WIN32_DEV_TOP)/gettext-0.18
 INTLTOOL_TOP ?= $(WIN32_DEV_TOP)/intltool-0.50
+LIBGADU_TOP ?= $(WIN32_DEV_TOP)/libgadu-1.12
 
 # Where we installing this stuff to?
 PIDGIN_INSTALL_DIR := $(PIDGIN_TREE_TOP)/win32-install-dir

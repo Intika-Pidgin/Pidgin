@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -1142,7 +1142,7 @@ gnt_tree_init(GTypeInstance *instance, gpointer class)
  * GntTree API
  *****************************************************************************/
 GType
-gnt_tree_get_gtype(void)
+gnt_tree_get_type(void)
 {
 	static GType type = 0;
 

@@ -1,8 +1,3 @@
-/**
- * @file proxy.c Proxy API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -44,12 +39,12 @@
 
 struct _PurpleProxyInfo
 {
-	PurpleProxyType type;   /**< The proxy type.  */
+	PurpleProxyType type; /* The proxy type.  */
 
-	char *host;           /**< The host.        */
-	int   port;           /**< The port number. */
-	char *username;       /**< The username.    */
-	char *password;       /**< The password.    */
+	char *host;           /* The host.        */
+	int   port;           /* The port number. */
+	char *username;       /* The username.    */
+	char *password;       /* The password.    */
 };
 
 struct _PurpleProxyConnectData {
@@ -64,7 +59,7 @@ struct _PurpleProxyConnectData {
 	PurpleProxyInfo *gpi;
 	PurpleDnsQueryData *query_data;
 
-	/**
+	/*
 	 * This contains alternating length/char* values.  The char*
 	 * values need to be freed when removed from the linked list.
 	 */
@@ -132,7 +127,7 @@ purple_proxy_info_destroy(PurpleProxyInfo *info)
 }
 
 void
-purple_proxy_info_set_type(PurpleProxyInfo *info, PurpleProxyType type)
+purple_proxy_info_set_proxy_type(PurpleProxyInfo *info, PurpleProxyType type)
 {
 	g_return_if_fail(info != NULL);
 
@@ -175,7 +170,7 @@ purple_proxy_info_set_password(PurpleProxyInfo *info, const char *password)
 }
 
 PurpleProxyType
-purple_proxy_info_get_type(const PurpleProxyInfo *info)
+purple_proxy_info_get_proxy_type(const PurpleProxyInfo *info)
 {
 	g_return_val_if_fail(info != NULL, PURPLE_PROXY_NONE);
 
@@ -258,14 +253,15 @@ static const char* gproxycmds[][2] = {
 	{ "gconftool-2 -g /system/http_proxy/authentication_password", "gsettings get org.gnome.system.proxy.http authentication-password" },
 };
 
-/**
+/*
+ * purple_gnome_proxy_get_parameter:
+ * @parameter:     One of the GNOME_PROXY_x constants defined above
+ * @gnome_version: GNOME2_CMDS or GNOME3_CMDS
+ *
  * This is a utility function used to retrieve proxy parameter values from
  * GNOME 2/3 environment.
  *
- * @param parameter	One of the GNOME_PROXY_x constants defined above
- * @param gnome_version GNOME2_CMDS or GNOME3_CMDS
- *
- * @return The value of requested proxy parameter
+ * Returns: The value of requested proxy parameter
  */
 static char *
 purple_gnome_proxy_get_parameter(guint8 parameter, guint8 gnome_version)
@@ -511,7 +507,7 @@ purple_win32_proxy_get_info(void)
 				} else
 					specific = proxy_list;
 
-				purple_proxy_info_set_type(&info, PURPLE_PROXY_HTTP);
+				purple_proxy_info_set_proxy_type(&info, PURPLE_PROXY_HTTP);
 				_proxy_fill_hostinfo(&info, specific, 80);
 				/* TODO: is there a way to set the username/password? */
 				purple_proxy_info_set_username(&info, NULL);
@@ -529,7 +525,7 @@ purple_win32_proxy_get_info(void)
 					*tmp = '\0';
 				/* specific now points the proxy server (and port) */
 
-				purple_proxy_info_set_type(&info, PURPLE_PROXY_SOCKS5);
+				purple_proxy_info_set_proxy_type(&info, PURPLE_PROXY_SOCKS5);
 				_proxy_fill_hostinfo(&info, specific, 1080);
 				/* TODO: is there a way to set the username/password? */
 				purple_proxy_info_set_username(&info, NULL);
@@ -543,7 +539,7 @@ purple_win32_proxy_get_info(void)
 
 				purple_debug_info("proxy", "Windows Proxy Settings: No supported proxy specified.\n");
 
-				purple_proxy_info_set_type(&info, PURPLE_PROXY_NONE);
+				purple_proxy_info_set_proxy_type(&info, PURPLE_PROXY_NONE);
 
 			}
 		}
@@ -553,7 +549,7 @@ purple_win32_proxy_get_info(void)
 		g_free(proxy_list);
 	} else {
 		purple_debug_info("proxy", "No Windows proxy set.\n");
-		purple_proxy_info_set_type(&info, PURPLE_PROXY_NONE);
+		purple_proxy_info_set_proxy_type(&info, PURPLE_PROXY_NONE);
 	}
 
 	if (ie_proxy_config.lpszAutoConfigUrl)
@@ -572,7 +568,7 @@ purple_win32_proxy_get_info(void)
  * Proxy API
  **************************************************************************/
 
-/**
+/*
  * Whoever calls this needs to have called
  * purple_proxy_connect_data_disconnect() beforehand.
  */
@@ -597,7 +593,13 @@ purple_proxy_connect_data_destroy(PurpleProxyConnectData *connect_data)
 	g_free(connect_data);
 }
 
-/**
+/*
+ * purple_proxy_connect_data_disconnect:
+ * @error_message: An error message explaining why the connection
+ *        failed.  This will be passed to the callback function
+ *        specified in the call to purple_proxy_connect().  If the
+ *        connection was successful then pass in null.
+ *
  * Free all information dealing with a connection attempt and
  * reset the connect_data to prepare for it to try to connect
  * to another IP address.
@@ -608,11 +610,6 @@ purple_proxy_connect_data_destroy(PurpleProxyConnectData *connect_data)
  * If the connection attempt failed and we have no more hosts
  * try try then we call the callback with the given error message,
  * then destroy the connect_data.
- *
- * @param error_message An error message explaining why the connection
- *        failed.  This will be passed to the callback function
- *        specified in the call to purple_proxy_connect().  If the
- *        connection was successful then pass in null.
  */
 static void
 purple_proxy_connect_data_disconnect(PurpleProxyConnectData *connect_data, const gchar *error_message)
@@ -656,7 +653,7 @@ purple_proxy_connect_data_disconnect(PurpleProxyConnectData *connect_data, const
 	}
 }
 
-/**
+/*
  * This calls purple_proxy_connect_data_disconnect(), but it lets you
  * specify the error_message using a printf()-like syntax.
  */
@@ -874,7 +871,7 @@ proxy_connect_none(PurpleProxyConnectData *connect_data, struct sockaddr *addr, 
 	}
 }
 
-/**
+/*
  * This is a utility function used by the HTTP, SOCKS4 and SOCKS5
  * connect functions.  It writes data from a buffer to a socket.
  * When all the data is written it sets up a watcher to read a
@@ -916,7 +913,7 @@ proxy_do_write(gpointer data, gint source, PurpleInputCondition cond)
 			PURPLE_INPUT_READ, connect_data->read_cb, connect_data);
 }
 
-/**
+/*
  * We're using an HTTP proxy for a non-port 80 tunnel.  Read the
  * response to the CONNECT request.
  */
@@ -994,22 +991,34 @@ http_canread(gpointer data, gint source, PurpleInputCondition cond)
 	p = g_strrstr((const gchar *)connect_data->read_buffer, "Content-Length: ");
 	if (p != NULL) {
 		gchar *tmp;
-		int len = 0;
+		gsize content_len;
 		char tmpc;
+
 		p += strlen("Content-Length: ");
 		tmp = strchr(p, '\r');
 		if(tmp)
 			*tmp = '\0';
-		len = atoi(p);
+		if (sscanf(p, "%" G_GSIZE_FORMAT, &content_len) != 1) {
+			/* Couldn't read content length */
+			purple_debug_error("proxy", "Couldn't read content length value "
+					"from %s\n", p);
+			if(tmp)
+				*tmp = '\r';
+			purple_proxy_connect_data_disconnect_formatted(connect_data,
+					_("Unable to parse response from HTTP proxy: %s"),
+					connect_data->read_buffer);
+			return;
+		}
 		if(tmp)
 			*tmp = '\r';
 
 		/* Compensate for what has already been read */
-		len -= connect_data->read_len - headers_len;
+		content_len -= connect_data->read_len - headers_len;
 		/* I'm assuming that we're doing this to prevent the server from
 		   complaining / breaking since we don't read the whole page */
-		while (len--) {
+		while (content_len--) {
 			/* TODO: deal with EAGAIN (and other errors) better */
+			/* TODO: Reading 1 byte at a time is horrible and stupid. */
 			if (read(connect_data->fd, &tmpc, 1) < 0 && errno != EAGAIN)
 				break;
 		}
@@ -2145,7 +2154,7 @@ proxy_connect_socks5(PurpleProxyConnectData *connect_data, struct sockaddr *addr
 	}
 }
 
-/**
+/*
  * This function attempts to connect to the next IP address in the list
  * of IP addresses returned to us by purple_dnsquery_a() and attempts
  * to connect to each one.  This is called after the hostname is
@@ -2185,7 +2194,7 @@ static void try_connect(PurpleProxyConnectData *connect_data)
 		return;
 	}
 
-	switch (purple_proxy_info_get_type(connect_data->gpi)) {
+	switch (purple_proxy_info_get_proxy_type(connect_data->gpi)) {
 		case PURPLE_PROXY_NONE:
 			proxy_connect_none(connect_data, addr, addrlen);
 			break;
@@ -2250,12 +2259,12 @@ purple_proxy_get_setup(PurpleAccount *account)
 	static PurpleProxyInfo *tmp_none_proxy_info = NULL;
 	if (!tmp_none_proxy_info) {
 		tmp_none_proxy_info = purple_proxy_info_new();
-		purple_proxy_info_set_type(tmp_none_proxy_info, PURPLE_PROXY_NONE);
+		purple_proxy_info_set_proxy_type(tmp_none_proxy_info, PURPLE_PROXY_NONE);
 	}
 
 	if (account && purple_account_get_proxy_info(account) != NULL) {
 		gpi = purple_account_get_proxy_info(account);
-		if (purple_proxy_info_get_type(gpi) == PURPLE_PROXY_USE_GLOBAL)
+		if (purple_proxy_info_get_proxy_type(gpi) == PURPLE_PROXY_USE_GLOBAL)
 			gpi = NULL;
 	}
 	if (gpi == NULL) {
@@ -2265,7 +2274,7 @@ purple_proxy_get_setup(PurpleAccount *account)
 			gpi = purple_global_proxy_get_info();
 	}
 
-	if (purple_proxy_info_get_type(gpi) == PURPLE_PROXY_USE_ENVVAR) {
+	if (purple_proxy_info_get_proxy_type(gpi) == PURPLE_PROXY_USE_ENVVAR) {
 		if ((tmp = g_getenv("HTTP_PROXY")) != NULL ||
 			(tmp = g_getenv("http_proxy")) != NULL ||
 			(tmp = g_getenv("HTTPPROXY")) != NULL)
@@ -2341,7 +2350,7 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 	connect_data->gpi = purple_proxy_get_setup(account);
 	connect_data->account = account;
 
-	if ((purple_proxy_info_get_type(connect_data->gpi) != PURPLE_PROXY_NONE) &&
+	if ((purple_proxy_info_get_proxy_type(connect_data->gpi) != PURPLE_PROXY_NONE) &&
 		(purple_proxy_info_get_host(connect_data->gpi) == NULL ||
 		 purple_proxy_info_get_port(connect_data->gpi) <= 0)) {
 
@@ -2353,7 +2362,7 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 		return NULL;
 	}
 
-	switch (purple_proxy_info_get_type(connect_data->gpi))
+	switch (purple_proxy_info_get_proxy_type(connect_data->gpi))
 	{
 		case PURPLE_PROXY_NONE:
 			break;
@@ -2369,7 +2378,7 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 
 		default:
 			purple_debug_error("proxy", "Invalid Proxy type (%d) specified.\n",
-							   purple_proxy_info_get_type(connect_data->gpi));
+							   purple_proxy_info_get_proxy_type(connect_data->gpi));
 			purple_proxy_connect_data_destroy(connect_data);
 			return NULL;
 	}
@@ -2412,7 +2421,7 @@ purple_proxy_connect_udp(void *handle, PurpleAccount *account,
 	connect_data->gpi = purple_proxy_get_setup(account);
 	connect_data->account = account;
 
-	if ((purple_proxy_info_get_type(connect_data->gpi) != PURPLE_PROXY_NONE) &&
+	if ((purple_proxy_info_get_proxy_type(connect_data->gpi) != PURPLE_PROXY_NONE) &&
 		(purple_proxy_info_get_host(connect_data->gpi) == NULL ||
 		 purple_proxy_info_get_port(connect_data->gpi) <= 0)) {
 
@@ -2424,7 +2433,7 @@ purple_proxy_connect_udp(void *handle, PurpleAccount *account,
 		return NULL;
 	}
 
-	switch (purple_proxy_info_get_type(connect_data->gpi))
+	switch (purple_proxy_info_get_proxy_type(connect_data->gpi))
 	{
 		case PURPLE_PROXY_NONE:
 			break;
@@ -2435,12 +2444,12 @@ purple_proxy_connect_udp(void *handle, PurpleAccount *account,
 		case PURPLE_PROXY_TOR:
 		case PURPLE_PROXY_USE_ENVVAR:
 			purple_debug_info("proxy", "Ignoring Proxy type (%d) for UDP.\n",
-			                  purple_proxy_info_get_type(connect_data->gpi));
+			                  purple_proxy_info_get_proxy_type(connect_data->gpi));
 			break;
 
 		default:
 			purple_debug_error("proxy", "Invalid Proxy type (%d) specified.\n",
-			                   purple_proxy_info_get_type(connect_data->gpi));
+			                   purple_proxy_info_get_proxy_type(connect_data->gpi));
 			purple_proxy_connect_data_destroy(connect_data);
 			return NULL;
 	}
@@ -2598,7 +2607,7 @@ proxy_pref_cb(const char *name, PurplePrefType type,
 		else
 			proxytype = -1;
 
-		purple_proxy_info_set_type(info, proxytype);
+		purple_proxy_info_set_proxy_type(info, proxytype);
 	} else if (purple_strequal(name, "/purple/proxy/host"))
 		purple_proxy_info_set_host(info, value);
 	else if (purple_strequal(name, "/purple/proxy/port"))

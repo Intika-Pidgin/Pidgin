@@ -991,7 +991,7 @@ jabber_stream_new(PurpleAccount *account)
 	js->user_jb->subscription |= JABBER_SUB_BOTH;
 
 	js->iq_callbacks = g_hash_table_new_full(g_str_hash, g_str_equal,
-			g_free, g_free);
+			g_free, (GDestroyNotify)jabber_iq_callbackdata_free);
 	js->chats = g_hash_table_new_full(g_str_hash, g_str_equal,
 			g_free, (GDestroyNotify)jabber_chat_free);
 	js->next_id = g_random_int();
@@ -4001,12 +4001,12 @@ void jabber_plugin_init(PurplePlugin *plugin)
 	purple_signal_register(plugin, "jabber-receiving-xmlnode",
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
-			G_TYPE_POINTER); /* modifiable PurpleXmlNode */
+			G_TYPE_POINTER); /* pointer to a PurpleXmlNode* */
 
 	purple_signal_register(plugin, "jabber-sending-xmlnode",
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
-			G_TYPE_POINTER); /* modifiable PurpleXmlNode */
+			G_TYPE_POINTER); /* pointer to a PurpleXmlNode* */
 
 	/*
 	 * Do not remove this or the plugin will fail. Completely. You have been

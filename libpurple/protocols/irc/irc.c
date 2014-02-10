@@ -396,7 +396,7 @@ static void irc_login(PurpleAccount *account)
 static gboolean do_login(PurpleConnection *gc) {
 	char *buf, *tmp = NULL;
 	char *server;
-	const char *username, *realname;
+	const char *nickname, *identname, *realname;
 	struct irc_conn *irc = purple_connection_get_protocol_data(gc);
 	const char *pass = purple_connection_get_password(gc);
 #ifdef HAVE_CYRUS_SASL
@@ -418,14 +418,14 @@ static gboolean do_login(PurpleConnection *gc) {
 	}
 
 	realname = purple_account_get_string(irc->account, "realname", "");
-	username = purple_account_get_string(irc->account, "username", "");
+	identname = purple_account_get_string(irc->account, "username", "");
 
-	if (username == NULL || *username == '\0') {
-		username = g_get_user_name();
+	if (identname == NULL || *identname == '\0') {
+		identname = g_get_user_name();
 	}
 
-	if (username != NULL && strchr(username, ' ') != NULL) {
-		tmp = g_strdup(username);
+	if (identname != NULL && strchr(identname, ' ') != NULL) {
+		tmp = g_strdup(identname);
 		while ((buf = strchr(tmp, ' ')) != NULL) {
 			*buf = '_';
 		}
@@ -438,7 +438,7 @@ static gboolean do_login(PurpleConnection *gc) {
 		server = g_strdup(irc->server);
 	}
 
-	buf = irc_format(irc, "vvvv:", "USER", tmp ? tmp : username, "*", server,
+	buf = irc_format(irc, "vvvv:", "USER", tmp ? tmp : identname, "*", server,
 	                 strlen(realname) ? realname : IRC_DEFAULT_ALIAS);
 	g_free(tmp);
 	g_free(server);
@@ -447,9 +447,9 @@ static gboolean do_login(PurpleConnection *gc) {
 		return FALSE;
 	}
 	g_free(buf);
-	username = purple_connection_get_display_name(gc);
-	buf = irc_format(irc, "vn", "NICK", username);
-	irc->reqnick = g_strdup(username);
+	nickname = purple_connection_get_display_name(gc);
+	buf = irc_format(irc, "vn", "NICK", nickname);
+	irc->reqnick = g_strdup(nickname);
 	irc->nickused = FALSE;
 	if (irc_send(irc, buf) < 0) {
 		g_free(buf);
@@ -788,7 +788,7 @@ static void irc_chat_leave (PurpleConnection *gc, int id)
 	args[0] = purple_conversation_get_name(convo);
 	args[1] = NULL;
 	irc_cmd_part(irc, "part", purple_conversation_get_name(convo), args);
-	serv_got_chat_left(gc, id);
+	purple_serv_got_chat_left(gc, id);
 }
 
 static int irc_chat_send(PurpleConnection *gc, int id, const char *what, PurpleMessageFlags flags)
@@ -813,7 +813,7 @@ static int irc_chat_send(PurpleConnection *gc, int id, const char *what, PurpleM
 
 	irc_cmd_privmsg(irc, "msg", NULL, args);
 
-	serv_got_chat_in(gc, id, purple_connection_get_display_name(gc), flags, what, time(NULL));
+	purple_serv_got_chat_in(gc, id, purple_connection_get_display_name(gc), flags, what, time(NULL));
 	g_free(tmp);
 	return 0;
 }
@@ -1068,7 +1068,7 @@ static void _init_plugin(PurplePlugin *plugin)
 	option = purple_account_option_bool_new(_("Auto-detect incoming UTF-8"), "autodetect_utf8", IRC_DEFAULT_AUTODETECT);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
-	option = purple_account_option_string_new(_("Username"), "username", "");
+	option = purple_account_option_string_new(_("Ident name"), "username", "");
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
 	option = purple_account_option_string_new(_("Real name"), "realname", "");

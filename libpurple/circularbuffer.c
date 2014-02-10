@@ -1,8 +1,3 @@
-/*
- * @file circbuffer.h Buffer Utility Functions
- * @ingroup core
- */
-
 /* Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -54,7 +49,7 @@ typedef struct {
 
 	/** A pointer to the next byte of buffered data that should be
 	 *  read by the consumer. */
-	gchar *output;	
+	gchar *output;
 } PurpleCircularBufferPrivate;
 
 /******************************************************************************
@@ -225,7 +220,7 @@ purple_circular_buffer_set_grow_size(PurpleCircularBuffer *buffer,
                                      gsize grow_size)
 {
 	PurpleCircularBufferPrivate *priv =
-		PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+			PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
 
 	priv->growsize = (grow_size != 0) ? grow_size : DEFAULT_BUF_SIZE;
 
@@ -249,7 +244,7 @@ purple_circular_buffer_get_input(const PurpleCircularBuffer *buffer) {
 static void
 purple_circular_buffer_finalize(GObject *obj) {
 	PurpleCircularBufferPrivate *priv =
-		PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(obj);
+			PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(obj);
 
 	g_free(priv->buffer);
 
