@@ -60,12 +60,12 @@ typedef struct group *Purple__Group;
 #include "imgstore.h"
 #include "network.h"
 #include "notify.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "pluginpref.h"
 #include "pounce.h"
 #include "prefs.h"
 #include "presence.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "proxy.h"
 #include "request.h"
 #include "roomlist.h"
@@ -206,7 +206,7 @@ typedef PurpleNotifyType			Purple__NotifyType;
 typedef PurpleNotifyUserInfo *	Purple__NotifyUserInfo;
 typedef PurpleNotifyUserInfoEntry *	Purple__NotifyUserInfoEntry;
 
-/* plugin.h */
+/* plugins.h */
 typedef PurplePlugin *			Purple__Plugin;
 typedef PurplePluginAction *		Purple__Plugin__Action;
 typedef PurplePluginInfo *		Purple__PluginInfo;
@@ -236,10 +236,10 @@ typedef PurpleBuddyPresence *		Purple__BuddyPresence;
 typedef PurpleProxyInfo *			Purple__ProxyInfo;
 typedef PurpleProxyType			Purple__ProxyType;
 
-/* prpl.h */
+/* protocol.h */
 typedef PurpleBuddyIconSpec *		Purple__Buddy__Icon__Spec;
 typedef PurpleIconScaleRules		Purple__IconScaleRules;
-typedef PurplePluginProtocolInfo *	Purple__PluginProtocolInfo;
+typedef PurpleProtocol *	Purple__PluginProtocolInfo;
 typedef PurpleProtocolOptions		Purple__ProtocolOptions;
 
 /* request.h */
