@@ -12,6 +12,7 @@ EXTRA_DIST = \
 		intltool-extract.in \
 		intltool-merge.in \
 		intltool-update.in \
+		m4macros/introspection.m4 \
 		package_revision.h \
 		pidgin.apspec.in \
 		pidgin.desktop.in \
@@ -123,6 +124,9 @@ package_revision.h: package_revision_raw.txt
 distcleancheck_listfiles = find . -type f -a ! -name package_revision.h
 
 DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc
+if PLUGINS
+DISTCHECK_CONFIGURE_FLAGS += --enable-introspection
+endif
 
 SUBDIRS = . m4macros libpurple $(GNT_DIR) $(GTK_DIR) $(PO_DIR) share/ca-certs share/sounds doc
 
