@@ -34,6 +34,7 @@
 #   AUTOMAKE_FLAGS - command line arguments to pass to automake flags
 #   CONFIGURE_FLAGS - command line arguments to pass to configure
 #   GLIB_GETTEXTIZE_FLAGS - command line arguments to pass to glib-gettextize
+#   GTKDOCIZE_FLAGS - command line arguments to pass to gtkdocize
 #   INTLTOOLIZE_FLAGS - command line arguments to pass to intltoolize
 #   LIBTOOLIZE_FLAGS - command line arguments to pass to libtoolize
 #
@@ -99,6 +100,22 @@ run_or_die () { # beotch
 	fi
 }
 
+check_gtkdoc() {
+	printf "checking for gtkdocize... "
+	GTKDOCIZE=`which gtkdocize 2>/dev/null`
+
+	if [ x"${GTKDOCIZE}" = x"" ] ; then
+		echo "not found."
+		echo "EXTRA_DIST =" > gtk-doc.make
+		echo "You don't have gtk-doc installed, and thus won't be able to
+generate the documentation.
+"
+	else
+		echo "${GTKDOCIZE}"
+		run_or_die ${GTKDOCIZE} ${GTKDOCIZE_FLAGS}
+	fi
+}
+
 cleanup () {
 	rm -f autogen-??????
 	echo
@@ -150,15 +167,21 @@ run_or_die ${LIBTOOLIZE} ${LIBTOOLIZE_FLAGS:-"-c -f --automake"}
 run_or_die ${GLIB_GETTEXTIZE} ${GLIB_GETTEXTIZE_FLAGS:-"--force --copy"}
 run_or_die ${INTLTOOLIZE} ${INTLTOOLIZE_FLAGS:-"-c -f --automake"}
 # This call to sed is needed to work around an annoying bug in intltool 0.40.6
-# See http://developer.pidgin.im/ticket/9520 for details
-run_or_die ${SED} -i.bak -e "s:'\^\$\$lang\$\$':\^\$\$lang\$\$:g" po/Makefile.in.in
+# See https://developer.pidgin.im/ticket/9520 for details
+run_or_die ${SED} -i -e "s:'\^\$\$lang\$\$':\^\$\$lang\$\$:g" po/Makefile.in.in
+# glib-gettextize doesn't seems to use AM_V_GEN macro
+${SED} -i -e "s:\\tfile=\`echo:\\t@echo -e \"  GEN\\\\t\$\@\"; file=\`echo:g" po/Makefile.in.in
 run_or_die ${ACLOCAL} ${ACLOCAL_FLAGS:-"-I m4macros"}
 run_or_die ${AUTOHEADER} ${AUTOHEADER_FLAGS}
+check_gtkdoc
 run_or_die ${AUTOMAKE} ${AUTOMAKE_FLAGS:-"-a -c --gnu"}
 run_or_die ${AUTOCONF} ${AUTOCONF_FLAGS}
 
 ###############################################################################
 # Run configure
 ###############################################################################
-echo "running ./configure ${CONFIGURE_FLAGS} $@"
-./configure ${CONFIGURE_FLAGS} $@
+if test -z "$NOCONFIGURE"; then
+	echo "running ./configure ${CONFIGURE_FLAGS} $@"
+	./configure ${CONFIGURE_FLAGS} $@
+fi
+

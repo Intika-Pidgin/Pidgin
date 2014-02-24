@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -70,6 +70,8 @@ struct _GntTreePriv
  * 		 ... Probably not */
 struct _GntTreeRow
 {
+	int box_count;
+
 	void *key;
 	void *data;		/* XXX: unused */
 
@@ -1009,7 +1011,6 @@ gnt_tree_set_property(GObject *obj, guint prop_id, const GValue *value,
 			if (tree->priv->expander_level == g_value_get_int(value))
 				break;
 			tree->priv->expander_level = g_value_get_int(value);
-			g_object_notify(obj, "expander-level");
 		default:
 			break;
 	}
@@ -1054,7 +1055,7 @@ gnt_tree_class_init(GntTreeClass *klass)
 			g_param_spec_int("columns", "Columns",
 				"Number of columns in the tree.",
 				1, G_MAXINT, 1,
-				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+				G_PARAM_READWRITE|G_PARAM_STATIC_STRINGS
 			)
 		);
 	g_object_class_install_property(gclass,
@@ -1062,7 +1063,7 @@ gnt_tree_class_init(GntTreeClass *klass)
 			g_param_spec_int("expander-level", "Expander level",
 				"Number of levels to show expander in the tree.",
 				0, G_MAXINT, 1,
-				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+				G_PARAM_READWRITE|G_PARAM_STATIC_STRINGS
 			)
 		);
 
@@ -1143,7 +1144,7 @@ gnt_tree_init(GTypeInstance *instance, gpointer class)
  * GntTree API
  *****************************************************************************/
 GType
-gnt_tree_get_gtype(void)
+gnt_tree_get_type(void)
 {
 	static GType type = 0;
 
@@ -1956,3 +1957,39 @@ GntTreeRow * gnt_tree_row_get_parent(GntTree *tree, GntTreeRow *row)
 	return row->parent;
 }
 
+/**************************************************************************
+ * GntTreeRow GBoxed API
+ **************************************************************************/
+static GntTreeRow *
+gnt_tree_row_ref(GntTreeRow *row)
+{
+	g_return_val_if_fail(row != NULL, NULL);
+
+	row->box_count++;
+
+	return row;
+}
+
+static void
+gnt_tree_row_unref(GntTreeRow *row)
+{
+	g_return_if_fail(row != NULL);
+	g_return_if_fail(row->box_count >= 0);
+
+	if (!row->box_count--)
+		free_tree_row(row);
+}
+
+GType
+gnt_tree_row_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("GntTreeRow",
+				(GBoxedCopyFunc)gnt_tree_row_ref,
+				(GBoxedFreeFunc)gnt_tree_row_unref);
+	}
+
+	return type;
+}

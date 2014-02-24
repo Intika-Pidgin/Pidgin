@@ -23,7 +23,7 @@
  */
 
 #include "internal.h"
-#include "cipher.h"
+#include "ciphers/sha1hash.h"
 #include "debug.h"
 
 #include "msn.h"
@@ -44,11 +44,10 @@ msn_dc_calculate_nonce_hash(MsnDirectConnNonceType type,
 	guchar digest[20];
 
 	if (type == DC_NONCE_SHA1) {
-		PurpleCipher *cipher = purple_ciphers_find_cipher("sha1");
-		PurpleCipherContext *context = purple_cipher_context_new(cipher, NULL);
-		purple_cipher_context_append(context, nonce, nonce_len);
-		purple_cipher_context_digest(context, sizeof(digest), digest, NULL);
-		purple_cipher_context_destroy(context);
+		PurpleHash *hash = purple_sha1_hash_new();
+		purple_hash_append(hash, nonce, nonce_len);
+		purple_hash_digest(hash, digest, sizeof(digest));
+		g_object_unref(hash);
 	} else if (type == DC_NONCE_PLAIN) {
 		memcpy(digest, nonce, nonce_len);
 	} else {
@@ -406,7 +405,7 @@ msn_dc_send_cb(gpointer data, gint fd, PurpleInputCondition cond)
 	dc->progress = TRUE;
 
 	dc->msg_pos += bytes_sent;
-	if (dc->msg_pos == p->length) {
+	if ((guint32)dc->msg_pos == p->length) {
 		if (p->sent_cb != NULL)
 			p->sent_cb(p);
 
@@ -671,7 +670,7 @@ msn_dc_recv_cb(gpointer data, gint fd, PurpleInputCondition cond)
 		}
 
 		/* Wait for the whole packet to arrive */
-		if (dc->in_pos < 4 + packet_length)
+		if ((guint32)dc->in_pos < 4 + packet_length)
 			return;
 
 		switch (msn_dc_process_packet(dc, packet_length)) {
@@ -685,7 +684,7 @@ msn_dc_recv_cb(gpointer data, gint fd, PurpleInputCondition cond)
 
 		}
 
-		if (dc->in_pos > packet_length + 4) {
+		if ((guint32)dc->in_pos > packet_length + 4) {
 			g_memmove(dc->in_buffer, dc->in_buffer + 4 + packet_length, dc->in_pos - packet_length - 4);
 		}
 

@@ -25,8 +25,9 @@
 #ifndef _LIBYMSG_H_
 #define _LIBYMSG_H_
 
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "cmds.h"
+#include "http.h"
 #include "prpl.h"
 #include "network.h"
 
@@ -41,7 +42,6 @@
 #define YAHOO_PROFILE_URL "http://profiles.yahoo.com/"
 #define YAHOO_MAIL_URL "http://rd.yahoo.com/messenger/client/?http://mail.yahoo.com/"
 #define YAHOO_XFER_HOST "filetransfer.msg.yahoo.com"
-#define YAHOO_XFER_PORT 80
 #define YAHOO_XFER_RELAY_HOST "relay.msg.yahoo.com"
 #define YAHOO_XFER_RELAY_PORT 80
 #define YAHOO_ROOMLIST_URL "http://insider.msg.yahoo.com/ycontent/"
@@ -129,7 +129,7 @@ enum yahoo_status {
 	YAHOO_STATUS_WEBLOGIN = 0x5a55aa55,
 	YAHOO_STATUS_OFFLINE = 0x5a55aa56, /* don't ask */
 	YAHOO_STATUS_TYPING = 0x16,
-	YAHOO_STATUS_DISCONNECTED = 0xffffffff /* in ymsg 15. doesnt mean the normal sense of 'disconnected' */
+	YAHOO_STATUS_DISCONNECTED = -1 /* 0xffffffff; in ymsg 15. doesnt mean the normal sense of 'disconnected' */
 };
 
 /*
@@ -149,11 +149,8 @@ typedef enum {
 
 struct yahoo_buddy_icon_upload_data {
 	PurpleConnection *gc;
-	GString *str;
 	char *filename;
-	int pos;
-	int fd;
-	guint watcher;
+	GString *picture_data;
 };
 
 struct yahoo_p2p_data	{
@@ -189,9 +186,10 @@ typedef struct _YahooPersonalDetails {
 typedef struct {
 	PurpleConnection *gc;
 	int fd;
+	guint inpa;
 	guchar *rxqueue;
 	int rxlen;
-	PurpleCircBuffer *txbuf;
+	PurpleCircularBuffer *txbuf;
 	guint txhandler;
 	GHashTable *friends;
 
@@ -220,7 +218,6 @@ typedef struct {
 	char *pending_chat_topic;
 	char *pending_chat_goto;
 	char *auth;
-	gsize auth_written;
 	char *cookie_y;
 	char *cookie_t;
 	char *cookie_b;
@@ -234,15 +231,16 @@ typedef struct {
 	/* ew. we have to check the icon before we connect,
 	 * but can't upload it til we're connected. */
 	struct yahoo_buddy_icon_upload_data *picture_upload_todo;
-	PurpleProxyConnectData *buddy_icon_connect_data;
+	PurpleHttpConnection *picture_upload_hc;
 
 	struct _YchtConn *ycht;
 
 	/**
-	 * This linked list contains PurpleUtilFetchUrlData structs
+	 * This set contains HTTP connections
 	 * for when we lookup people profile or photo information.
 	 */
-	GSList *url_datas;
+	PurpleHttpConnectionSet *http_reqs;
+
 	GHashTable *xfer_peer_idstring_map;/* Hey, i dont know, but putting this HashTable next to friends gives a run time fault... */
 	GSList *cookies;/* contains all cookies, including _y and _t */
 	PurpleNetworkListenData *listen_data;
@@ -332,14 +330,12 @@ yahoo_account_use_http_proxy(PurpleConnection *conn);
  *
  * @param gc The connection handle.
  * @param str The null terminated utf8 string to encode.
- * @param utf8 If not @c NULL, whether utf8 is okay or not.
- *             Even if it is okay, we may not use it. If we
- *             used it, we set this to @c TRUE, else to
- *             @c FALSE. If @c NULL, false is assumed, and
- *             it is not dereferenced.
- * @return The g_malloced string in the appropriate encoding.
+ * @param utf8 Whether to return a UTF-8 string.
+ * @return A g_malloc'ed string in the appropriate encoding. If jd->jp or
+ *         utf8 is true then the string is copied verbatim. Otherwise the
+ *         encoding from account settings is used.
  */
-char *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean *utf8);
+gchar *yahoo_string_encode(PurpleConnection *gc, const char *str, gboolean utf8);
 
 /**
  * Decode some text received from the server.
@@ -369,10 +365,10 @@ GList *yahoo_blist_node_menu(PurpleBlistNode *node);
 void yahoo_login(PurpleAccount *account);
 void yahoo_close(PurpleConnection *gc);
 int yahoo_send_im(PurpleConnection *gc, const char *who, const char *what, PurpleMessageFlags flags);
-unsigned int yahoo_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state);
+unsigned int yahoo_send_typing(PurpleConnection *gc, const char *who, PurpleIMTypingState state);
 void yahoo_set_status(PurpleAccount *account, PurpleStatus *status);
 void yahoo_set_idle(PurpleConnection *gc, int idle);
-void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *g);
+void yahoo_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *g, const char *message);
 void yahoo_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group);
 void yahoo_add_deny(PurpleConnection *gc, const char *who);
 void yahoo_rem_deny(PurpleConnection *gc, const char *who);
@@ -386,6 +382,7 @@ GList *yahoo_attention_types(PurpleAccount *account);
 
 GList *yahoo_actions(PurplePlugin *plugin, gpointer context);
 void yahoopurple_register_commands(void);
+gssize yahoo_get_max_message_size(PurpleConversation *conv);
 
 PurpleCmdRet yahoopurple_cmd_buzz(PurpleConversation *c, const gchar *cmd, gchar **args, gchar **error, void *data);
 PurpleCmdRet yahoopurple_cmd_chat_join(PurpleConversation *conv, const char *cmd, char **args, char **error, void *data);

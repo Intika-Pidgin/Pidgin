@@ -2,31 +2,25 @@ EXTRA_DIST = \
 		COPYRIGHT \
 		ChangeLog.API \
 		ChangeLog.win32 \
-		Doxyfile.in \
 		HACKING \
 		Makefile.mingw \
 		PLUGIN_HOWTO \
 		README.hg \
 		README.mingw \
 		config.h.mingw \
-		doxy2devhelp.xsl \
 		fix-casts.sh \
-		gaim.pc.in \
-		gaim-uninstalled.pc.in \
 		intltool-extract.in \
 		intltool-merge.in \
 		intltool-update.in \
 		package_revision.h \
 		pidgin.apspec.in \
-		pidgin.spec.in \
 		pidgin.desktop.in \
 		po/Makefile.mingw \
 		valgrind-suppressions
 
 noinst_HEADERS = config.h package_revision.h
 
-dist-hook: pidgin.spec
-	cp pidgin.spec $(distdir)
+dist-hook:
 	rm $(distdir)/config.h
 
 distcheck-hook: libpurple/plugins/perl/common/Purple.pm pidgin/plugins/perl/common/Pidgin.pm
@@ -71,7 +65,11 @@ if ENABLE_GTK
 appsdir = $(datadir)/applications
 apps_in_files = pidgin.desktop.in
 apps_DATA = $(apps_in_files:.desktop.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+# silenced INTLTOOL_DESKTOP_RULE
+%.desktop: %.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po)
+	$(AM_V_GEN) LC_ALL=C $(INTLTOOL_MERGE) -d -u -c $(top_builddir)/po/.intltool-merge-cache $(top_srcdir)/po $< $@ > /dev/null
+
 endif #ENABLE_GTK
 
 endif #INSTALL_I18N
@@ -84,17 +82,23 @@ if ENABLE_GNT
 GNT_DIR=finch
 endif
 
-# This is phony, so that we always try to rebuild it.  If it succeeds
-# in calculating changes, it produces its target; otherwise, its
-# target does not exist.
-.PHONY: package_revision_raw.txt
+# We always try to rebuild all objects that depends on this dummy target.
+.FORCE:
+
 # if both attempts fail, then we need to remove the empty file that >
 # creates, and also make sure that the shell command exits
 # successfully; the rm -f ensures both
-package_revision_raw.txt:
+package_revision_raw.txt: .FORCE
 	$(AM_V_GEN)REAL_BLDDIR=$$PWD/$(top_builddir); \
-	(hg --cwd $(srcdir) id -i --debug) 2>/dev/null >$@ \
-	|| rm -f $@
+	(hg --cwd $(srcdir) id -i --debug) 2>/dev/null >$@.new \
+	|| rm -f $@.new
+	$(AM_V_at)if test -f $@.new; then \
+		if ! diff $@ $@.new > /dev/null; then \
+			mv $@.new $@; \
+		else \
+			rm $@.new; \
+		fi \
+	fi
 package_revision.h: package_revision_raw.txt
 	$(AM_V_GEN)if test -f $<; then \
 	  echo "#define REVISION \"`cat $<`\"" > $@; \
@@ -118,23 +122,9 @@ package_revision.h: package_revision_raw.txt
 # line does is tell 'distcheck' to shut up and ignore those two files.
 distcleancheck_listfiles = find . -type f -a ! -name package_revision.h
 
-SUBDIRS = . libpurple doc $(GNT_DIR) $(GTK_DIR) m4macros $(PO_DIR) share/ca-certs share/sounds
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc
 
-docs: Doxyfile
-if HAVE_DOXYGEN
-	@echo "Running doxygen..."
-	@doxygen
-if HAVE_XSLTPROC
-	@echo "Generating devhelp index..."
-	@xsltproc $(top_srcdir)/doxy2devhelp.xsl doc/xml/index.xml > doc/html/pidgin.devhelp
-	@echo "(Symlink $$(pwd)/doc/html to ~/.local/share/gtk-doc/html/pidgin to make devhelp see the documentation)"
-else
-	@echo "Not generating devhelp index: xsltproc was not found by configure"
-endif
-else
-	@echo "doxygen was not found during configure.  Unable to build documentation."
-	@echo;
-endif
+SUBDIRS = . m4macros libpurple $(GNT_DIR) $(GTK_DIR) $(PO_DIR) share/ca-certs share/sounds doc
 
 # perl's MakeMaker uninstall foo doesn't work well with DESTDIR set, which
 # breaks "make distcheck" unless we ignore perl things

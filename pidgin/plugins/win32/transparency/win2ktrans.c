@@ -21,9 +21,8 @@
  * 02111-1301, USA.
  *
  */
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
-#endif
+
+#include "config.h"
 #include <gdk/gdkwin32.h>
 #include "internal.h"
 
@@ -31,6 +30,7 @@
 #include "prefs.h"
 #include "debug.h"
 
+#include "gtk3compat.h"
 #include "gtkconv.h"
 #include "gtkplugin.h"
 #include "gtkprefs.h"
@@ -44,9 +44,9 @@
  */
 #define WINTRANS_PLUGIN_ID	"gtk-win-trans"
 
-#define blist	(purple_get_blist() \
-		? (PIDGIN_BLIST(purple_get_blist()) \
-			? ((PIDGIN_BLIST(purple_get_blist()))->window) \
+#define blist	(purple_blist_get_buddy_list() \
+		? (PIDGIN_BLIST(purple_blist_get_buddy_list()) \
+			? ((PIDGIN_BLIST(purple_blist_get_buddy_list()))->window) \
 			: NULL) \
 		: NULL)
 
@@ -167,7 +167,7 @@ static GtkWidget *wintrans_slider(GtkWidget *win) {
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
 	gtk_widget_show(frame);
 
-	hbox = gtk_hbox_new(FALSE, 5);
+	hbox = gtk_hbox_new(GTK_ORIENTATION_HORIZONTAL, 5);
 	gtk_container_add(GTK_CONTAINER(frame), hbox);
 
 	label = gtk_label_new(_("Opacity:"));
@@ -387,11 +387,11 @@ static void update_convs_wintrans(GtkWidget *toggle_btn, const char *pref) {
 }
 
 static void
-conv_updated_cb(PurpleConversation *conv, PurpleConvUpdateType type) {
+conv_updated_cb(PurpleConversation *conv, PurpleConversationUpdateType type) {
 	PidginConversation *pconv = PIDGIN_CONVERSATION(conv);
 	PidginWindow *win = pidgin_conv_get_window(pconv);
 
-	if (type == PURPLE_CONV_UPDATE_UNSEEN && !pidgin_conv_is_hidden(pconv)
+	if (type == PURPLE_CONVERSATION_UPDATE_UNSEEN && !pidgin_conv_is_hidden(pconv)
 			&& pconv->unseen_state == PIDGIN_UNSEEN_NONE
 			&& pidgin_conv_window_get_gtkconv_count(win) == 1) {
 		GtkWidget *window = win->window;
@@ -583,7 +583,7 @@ static GtkWidget *get_config_frame(PurplePlugin *plugin) {
 	gtk_box_pack_start(GTK_BOX(imtransbox), trans_box, FALSE, FALSE, 5);
 
 	/* IM transparency slider */
-	hbox = gtk_hbox_new(FALSE, 5);
+	hbox = gtk_hbox_new(GTK_ORIENTATION_HORIZONTAL, 5);
 
 	label = gtk_label_new(_("Opacity:"));
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 5);
@@ -630,7 +630,7 @@ static GtkWidget *get_config_frame(PurplePlugin *plugin) {
 	gtk_box_pack_start(GTK_BOX(bltransbox), trans_box, FALSE, FALSE, 5);
 
 	/* IM transparency slider */
-	hbox = gtk_hbox_new(FALSE, 5);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
 
 	label = gtk_label_new(_("Opacity:"));
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 5);
@@ -660,7 +660,6 @@ static GtkWidget *get_config_frame(PurplePlugin *plugin) {
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0, /* page_num (Reserved) */
 
 	/* padding */
 	NULL,
