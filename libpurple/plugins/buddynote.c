@@ -49,8 +49,7 @@ buddynote_edit_cb(PurpleBlistNode *node, gpointer data)
 					   note, TRUE, FALSE, "html",
 					   _("Save"), G_CALLBACK(do_it_cb),
 					   _("Cancel"), G_CALLBACK(dont_do_it_cb),
-					   NULL, NULL, NULL,
-					   node);
+					   NULL, node);
 }
 
 static void
@@ -58,7 +57,7 @@ buddynote_extended_menu_cb(PurpleBlistNode *node, GList **m)
 {
 	PurpleMenuAction *bna = NULL;
 
-	if (purple_blist_node_get_flags(node) & PURPLE_BLIST_NODE_FLAG_NO_SAVE)
+	if (purple_blist_node_is_transient(node))
 		return;
 
 	*m = g_list_append(*m, bna);

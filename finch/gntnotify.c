@@ -1,8 +1,3 @@
-/**
- * @file gntnotify.c GNT Notify API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -47,19 +42,20 @@ static struct
 } emaildialog;
 
 static void
-notify_msg_window_destroy_cb(GntWidget *window, PurpleNotifyMsgType type)
+notify_msg_window_destroy_cb(GntWidget *window, PurpleNotifyType type)
 {
 	purple_notify_close(type, window);
 }
 
 static void *
-finch_notify_message(PurpleNotifyMsgType type, const char *title,
-		const char *primary, const char *secondary)
+finch_notify_common(PurpleNotifyType ntype, PurpleNotifyMsgType msgtype,
+	const char *title, const char *primary, const char *secondary,
+	PurpleRequestCommonParameters *cpar)
 {
 	GntWidget *window, *button;
 	GntTextFormatFlags pf = 0, sf = 0;
 
-	switch (type)
+	switch (msgtype)
 	{
 		case PURPLE_NOTIFY_MSG_ERROR:
 			sf |= GNT_TEXT_FLAG_BOLD;
@@ -84,24 +80,16 @@ finch_notify_message(PurpleNotifyMsgType type, const char *title,
 
 	if (secondary) {
 		GntWidget *msg;
-		/* XXX: This is broken.  type is PurpleNotifyMsgType, not
-		 * PurpleNotifyType.  Also, the if() followed by the
-		 * inner switch doesn't make much sense.
-		 */
-		if (type == PURPLE_NOTIFY_FORMATTED) {
+		if (ntype == PURPLE_NOTIFY_FORMATTED) {
 			int width = -1, height = -1;
 			char *plain = (char*)secondary;
 			msg = gnt_text_view_new();
 			gnt_text_view_set_flag(GNT_TEXT_VIEW(msg), GNT_TEXT_VIEW_TOP_ALIGN | GNT_TEXT_VIEW_NO_SCROLL);
-			switch (type) {
-				case PURPLE_NOTIFY_FORMATTED:
-					plain = purple_markup_strip_html(secondary);
-					if (gnt_util_parse_xhtml_to_textview(secondary, GNT_TEXT_VIEW(msg)))
-						break;
-					/* Fallthrough */
-				default:
-					gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(msg), plain, sf);
-			}
+
+			plain = purple_markup_strip_html(secondary);
+			if (!gnt_util_parse_xhtml_to_textview(secondary, GNT_TEXT_VIEW(msg)))
+				gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(msg), plain, sf);
+
 			gnt_text_view_attach_scroll_widget(GNT_TEXT_VIEW(msg), button);
 			gnt_util_get_text_bound(plain, &width, &height);
 			gnt_widget_set_size(msg, width + 3, height + 1);
@@ -118,7 +106,7 @@ finch_notify_message(PurpleNotifyMsgType type, const char *title,
 	g_signal_connect_swapped(G_OBJECT(button), "activate",
 			G_CALLBACK(gnt_widget_destroy), window);
 	g_signal_connect(G_OBJECT(window), "destroy",
-			G_CALLBACK(notify_msg_window_destroy_cb), GINT_TO_POINTER(type));
+			G_CALLBACK(notify_msg_window_destroy_cb), GINT_TO_POINTER(ntype));
 
 	gnt_widget_show(window);
 	return window;
@@ -145,6 +133,15 @@ static void finch_close_notify(PurpleNotifyType type, void *handle)
 	gnt_widget_destroy(widget);
 }
 
+static void *
+finch_notify_message(PurpleNotifyMsgType type, const char *title,
+	const char *primary, const char *secondary,
+	PurpleRequestCommonParameters *cpar)
+{
+	return finch_notify_common(PURPLE_NOTIFY_MESSAGE, type, title, primary,
+		secondary, cpar);
+}
+
 static void *finch_notify_formatted(const char *title, const char *primary,
 		const char *secondary, const char *text)
 {
@@ -156,7 +153,8 @@ static void *finch_notify_formatted(const char *title, const char *primary,
 	void *ret;
 
 	purple_markup_html_to_xhtml(t, &xhtml, NULL);
-	ret = finch_notify_message(PURPLE_NOTIFY_FORMATTED, title, primary, xhtml);
+	ret = finch_notify_common(PURPLE_NOTIFY_FORMATTED,
+		PURPLE_NOTIFY_MSG_INFO, title, primary, xhtml, NULL);
 
 	g_free(t);
 	g_free(xhtml);
@@ -249,7 +247,8 @@ finch_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		return NULL;
 	}
 
-	ret = finch_notify_message(PURPLE_NOTIFY_EMAIL, _("New Mail"), _("You have mail!"), message->str);
+	ret = finch_notify_common(PURPLE_NOTIFY_EMAIL, PURPLE_NOTIFY_MSG_INFO,
+		_("New Mail"), _("You have mail!"), message->str, NULL);
 	g_string_free(message, TRUE);
 	return ret;
 }
@@ -290,10 +289,10 @@ purple_notify_user_info_get_xhtml(PurpleNotifyUserInfo *user_info)
 
 	text = g_string_new("<span>");
 
-	for (l = purple_notify_user_info_get_entries(user_info); l != NULL;
+	for (l = purple_notify_user_info_get_entries(user_info)->head; l != NULL;
 			l = l->next) {
 		PurpleNotifyUserInfoEntry *user_info_entry = l->data;
-		PurpleNotifyUserInfoEntryType type = purple_notify_user_info_entry_get_type(user_info_entry);
+		PurpleNotifyUserInfoEntryType type = purple_notify_user_info_entry_get_entry_type(user_info_entry);
 		const char *label = purple_notify_user_info_entry_get_label(user_info_entry);
 		const char *value = purple_notify_user_info_entry_get_value(user_info_entry);
 
@@ -386,6 +385,7 @@ finch_notify_sr_new_rows(PurpleConnection *gc,
 {
 	GntTree *tree = GNT_TREE(data);
 	GList *o;
+	GntTreeRow *prev = NULL;
 
 	/* XXX: Do I need to empty the tree here? */
 
@@ -393,8 +393,15 @@ finch_notify_sr_new_rows(PurpleConnection *gc,
 	{
 		gnt_tree_add_row_after(GNT_TREE(tree), o->data,
 				gnt_tree_create_row_from_list(GNT_TREE(tree), o->data),
-				NULL, NULL);
+				NULL, prev);
+		prev = o->data;
 	}
+}
+
+static void
+notify_sr_destroy_cb(GntWidget *window, void *data)
+{
+	purple_notify_close(PURPLE_NOTIFY_SEARCHRESULTS, window);
 }
 
 static void *
@@ -429,7 +436,10 @@ finch_notify_searchresults(PurpleConnection *gc, const char *title,
 	for (iter = results->columns; iter; iter = iter->next)
 	{
 		PurpleNotifySearchColumn *column = iter->data;
-		gnt_tree_set_column_title(GNT_TREE(tree), i, column->title);
+		gnt_tree_set_column_title(GNT_TREE(tree), i, purple_notify_searchresult_column_get_title(column));
+
+		if (!purple_notify_searchresult_column_is_visible(column))
+			gnt_tree_set_column_visible(GNT_TREE(tree), i, FALSE);
 		i++;
 	}
 
@@ -478,6 +488,8 @@ finch_notify_searchresults(PurpleConnection *gc, const char *title,
 	}
 
 	gnt_box_add_widget(GNT_BOX(window), box);
+	g_signal_connect(G_OBJECT(tree), "destroy",
+			G_CALLBACK(notify_sr_destroy_cb), NULL);
 
 	finch_notify_sr_new_rows(gc, results, tree);
 
@@ -490,7 +502,8 @@ finch_notify_searchresults(PurpleConnection *gc, const char *title,
 static void *
 finch_notify_uri(const char *url)
 {
-	return finch_notify_message(PURPLE_NOTIFY_URI, _("URI"), url, NULL);
+	return finch_notify_common(PURPLE_NOTIFY_URI, PURPLE_NOTIFY_MSG_INFO,
+		_("URI"), url, NULL, NULL);
 }
 
 static PurpleNotifyUiOps ops =

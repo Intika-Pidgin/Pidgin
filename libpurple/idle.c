@@ -41,7 +41,7 @@ typedef enum
 
 static PurpleIdleUiOps *idle_ui_ops = NULL;
 
-/**
+/*
  * This is needed for the I'dle Mak'er plugin to work correctly.  We
  * use it to determine if we're the ones who set our accounts idle
  * or if someone else did it (the I'dle Mak'er plugin, for example).
@@ -114,7 +114,7 @@ static gint time_until_next_idle_event;
 static void
 check_idleness(void)
 {
-	time_t time_idle;
+	time_t time_idle = 0;
 	gboolean auto_away;
 	const gchar *idle_reporting;
 	gboolean report_idle = TRUE;
@@ -142,7 +142,6 @@ check_idleness(void)
 	else
 	{
 		/* Don't report idle time */
-		time_idle = 0;
 		report_idle = FALSE;
 
 		/* If we're not reporting idle, we can still do auto-away.
@@ -280,6 +279,33 @@ void
 purple_idle_set(time_t time)
 {
 	last_active_time = time;
+}
+
+static PurpleIdleUiOps *
+purple_idle_ui_ops_copy(PurpleIdleUiOps *ops)
+{
+	PurpleIdleUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleIdleUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_idle_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleIdleUiOps",
+				(GBoxedCopyFunc)purple_idle_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }
 
 void

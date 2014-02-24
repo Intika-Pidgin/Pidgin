@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -470,7 +470,7 @@ gnt_text_view_init(GTypeInstance *instance, gpointer class)
  * GntTextView API
  *****************************************************************************/
 GType
-gnt_text_view_get_gtype(void)
+gnt_text_view_get_type(void)
 {
 	static GType type = 0;
 
@@ -513,7 +513,7 @@ void gnt_text_view_append_text_with_tag(GntTextView *view, const char *text,
 			GntTextFormatFlags flags, const char *tagname)
 {
 	GntWidget *widget = GNT_WIDGET(view);
-	int fl = 0;
+	chtype fl = 0;
 	const char *start, *end;
 	GList *list = view->list;
 	GntTextLine *line;
@@ -720,7 +720,7 @@ int gnt_text_view_get_lines_above(GntTextView *view)
 	return above;
 }
 
-/**
+/*
  * XXX: There are quite possibly more than a few bugs here.
  */
 int gnt_text_view_tag_change(GntTextView *view, const char *name, const char *text, gboolean all)

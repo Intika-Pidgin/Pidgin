@@ -28,7 +28,6 @@
 #include "internal.h"
 #include "cmds.h"
 #include "plugin.h"
-#include "value.h"
 #include "stringref.h"
 
 struct tcl_signal_handler {
@@ -41,13 +40,13 @@ struct tcl_signal_handler {
 	Tcl_Obj *args;
 	Tcl_Obj *proc;
 
-	PurpleValue *returntype;
+	GType returntype;
 	int nargs;
-	PurpleValue **argtypes;
+	GType *argtypes;
 };
 
 struct tcl_cmd_handler {
-	int id;
+	PurpleCmdId id;
 	Tcl_Obj *cmd;
 	Tcl_Interp *interp;
 

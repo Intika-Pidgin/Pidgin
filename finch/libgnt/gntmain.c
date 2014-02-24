@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -61,11 +61,11 @@
 #include <ctype.h>
 #include <errno.h>
 
-/**
+/*
  * Notes: Interesting functions to look at:
- * 	scr_dump, scr_init, scr_restore: for workspaces
+ * scr_dump, scr_init, scr_restore: for workspaces
  *
- * 	Need to wattrset for colors to use with PDCurses.
+ * Need to wattrset for colors to use with PDCurses.
  */
 
 static GIOChannel *channel = NULL;
@@ -99,7 +99,10 @@ escape_timeout(gpointer data)
 }
 
 /**
+ * detect_mouse_action:
+ *
  * Mouse support:
+ *
  *  - bring a window on top if you click on its taskbar
  *  - click on the top-bar of the active window and drag+drop to move a window
  *  - click on a window to bring it to focus
@@ -508,7 +511,10 @@ void gnt_init()
 	signal(SIGINT, sighandler);
 	signal(SIGPIPE, SIG_IGN);
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+	/* GLib type system is automaticaly initialized since 2.36. */
 	g_type_init();
+#endif
 
 	init_wm();
 
@@ -675,7 +681,6 @@ gchar *gnt_get_clipboard_string()
 	return gnt_clipboard_get_string(clipboard);
 }
 
-#if GLIB_CHECK_VERSION(2,4,0)
 typedef struct
 {
 	void (*callback)(int status, gpointer data);
@@ -697,13 +702,11 @@ reap_child(GPid pid, gint status, gpointer data)
 	refresh();
 	refresh_screen();
 }
-#endif
 
 gboolean gnt_giveup_console(const char *wd, char **argv, char **envp,
 		gint *stin, gint *stout, gint *sterr,
 		void (*callback)(int status, gpointer data), gpointer data)
 {
-#if GLIB_CHECK_VERSION(2,4,0)
 	GPid pid = 0;
 	ChildProcess *cp = NULL;
 
@@ -721,18 +724,11 @@ gboolean gnt_giveup_console(const char *wd, char **argv, char **envp,
 	g_child_watch_add(pid, reap_child, cp);
 
 	return TRUE;
-#else
-	return FALSE;
-#endif
 }
 
 gboolean gnt_is_refugee()
 {
-#if GLIB_CHECK_VERSION(2,4,0)
 	return (wm && wm->mode == GNT_KP_MODE_WAIT_ON_CHILD);
-#else
-	return FALSE;
-#endif
 }
 
 const char *C_(const char *x)
