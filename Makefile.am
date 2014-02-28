@@ -12,6 +12,7 @@ EXTRA_DIST = \
 		intltool-extract.in \
 		intltool-merge.in \
 		intltool-update.in \
+		m4macros/introspection.m4 \
 		package_revision.h \
 		pidgin.apspec.in \
 		pidgin.desktop.in \
