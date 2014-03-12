@@ -43,7 +43,6 @@ C_SRC =			actions.c \
 			cipher.c \
 			filexfer.c \
 			formcmds.c \
-			http.c \
 			login.c \
 			markup.c \
 			multimx.c \
@@ -61,6 +60,7 @@ OBJECTS = $(C_SRC:%.c=%.o)
 ##
 LIBS =	\
 			-lglib-2.0 \
+			-lgobject-2.0 \
 			-lintl \
 			-lws2_32 \
 			-lpurple

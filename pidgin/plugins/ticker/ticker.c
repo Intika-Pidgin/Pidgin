@@ -27,13 +27,14 @@
 #include "internal.h"
 #include "pidgin.h"
 
-#include "blist.h"
+#include "buddylist.h"
 #include "conversation.h"
 #include "debug.h"
 #include "prpl.h"
 #include "signals.h"
 #include "version.h"
 
+#include "gtk3compat.h"
 #include "gtkblist.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
@@ -92,10 +93,9 @@ static gboolean buddy_click_cb(GtkWidget *widget, GdkEventButton *event, gpointe
 	PurpleContact *contact = user_data;
 	PurpleBuddy *b = purple_contact_get_priority_buddy(contact);
 
-	PurpleConversation *conv = purple_conversation_new(PURPLE_CONV_TYPE_IM,
-	                                purple_buddy_get_account(b),
-	                                purple_buddy_get_name(b));
-	purple_conversation_present(conv);
+	PurpleIMConversation *im = purple_im_conversation_new(purple_buddy_get_account(b),
+			purple_buddy_get_name(b));
+	purple_conversation_present(PURPLE_CONVERSATION(im));
 	return TRUE;
 }
 
@@ -167,7 +167,7 @@ static void buddy_ticker_add_buddy(PurpleBuddy *b) {
 
 	td->ebox = gtk_event_box_new();
 	gtk_ticker_add(GTK_TICKER(ticker), td->ebox);
-	hbox = gtk_hbox_new(FALSE, 0);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_container_add(GTK_CONTAINER(td->ebox), hbox);
 	buddy_ticker_set_pixmap(contact);
 	gtk_box_pack_start(GTK_BOX(hbox), td->icon, FALSE, FALSE, 0);
@@ -235,21 +235,21 @@ static void buddy_ticker_show(void)
 	    gnode;
 	    gnode = purple_blist_node_get_sibling_next(gnode))
 	{
-		if(!PURPLE_BLIST_NODE_IS_GROUP(gnode))
+		if(!PURPLE_IS_GROUP(gnode))
 			continue;
 		for(cnode = purple_blist_node_get_first_child(gnode);
 		    cnode;
 		    cnode = purple_blist_node_get_sibling_next(cnode))
 		{
-			if(!PURPLE_BLIST_NODE_IS_CONTACT(cnode))
+			if(!PURPLE_IS_CONTACT(cnode))
 				continue;
 			for(bnode = purple_blist_node_get_first_child(cnode);
 			    bnode;
 			    bnode = purple_blist_node_get_sibling_next(bnode))
 			{
-				if(!PURPLE_BLIST_NODE_IS_BUDDY(bnode))
+				if(!PURPLE_IS_BUDDY(bnode))
 					continue;
-				b = (PurpleBuddy *)bnode;
+				b = PURPLE_BUDDY(bnode);
 				if(PURPLE_BUDDY_IS_ONLINE(b))
 					buddy_ticker_add_buddy(b);
 			}

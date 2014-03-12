@@ -60,11 +60,12 @@ peer_odc_close(PeerConnection *conn)
 	if (tmp != NULL)
 	{
 		PurpleAccount *account;
-		PurpleConversation *conv;
+		PurpleIMConversation *im;
 
 		account = purple_connection_get_account(conn->od->gc);
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
-		purple_conversation_write(conv, NULL, tmp, PURPLE_MESSAGE_SYSTEM, time(NULL));
+		im = purple_im_conversation_new(account, conn->bn);
+		purple_conversation_write(PURPLE_CONVERSATION(im), NULL, tmp,
+				PURPLE_MESSAGE_SYSTEM, time(NULL));
 		g_free(tmp);
 	}
 
@@ -149,16 +150,16 @@ peer_odc_send_cookie(PeerConnection *conn)
  * Send client-to-client typing notification over an established direct connection.
  */
 void
-peer_odc_send_typing(PeerConnection *conn, PurpleTypingState typing)
+peer_odc_send_typing(PeerConnection *conn, PurpleIMTypingState typing)
 {
 	OdcFrame frame;
 
 	memset(&frame, 0, sizeof(OdcFrame));
 	frame.type = 0x0001;
 	frame.subtype = 0x0006;
-	if (typing == PURPLE_TYPING)
+	if (typing == PURPLE_IM_TYPING)
 		frame.flags = 0x0002 | 0x0008;
-	else if (typing == PURPLE_TYPED)
+	else if (typing == PURPLE_IM_TYPED)
 		frame.flags = 0x0002 | 0x0004;
 	else
 		frame.flags = 0x0002;
@@ -354,7 +355,13 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 
 			if ((embedded_data != NULL) && (embedded_data->size == size))
 			{
-				imgid = purple_imgstore_add_with_id(g_memdup(embedded_data->data, size), size, src);
+				char *basename;
+				char *escaped;
+				basename = g_path_get_basename(src);
+				escaped = g_strdup(purple_escape_filename(basename));
+				g_free(basename);
+				imgid = purple_imgstore_new_with_id(g_memdup(embedded_data->data, size), size, escaped);
+				g_free(escaped);
 
 				/* Record the image number */
 				images = g_slist_append(images, GINT_TO_POINTER(imgid));
@@ -374,7 +381,9 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 		if (imgid != 0)
 		{
 			/* Write the new image tag */
-			g_string_append_printf(newmsg, "<IMG ID=\"%d\">", imgid);
+			g_string_append_printf(newmsg,
+			                       "<IMG SRC=\"" PURPLE_STORED_IMAGE_PROTOCOL "%d\">",
+			                       imgid);
 		}
 
 		/* Continue from the end of the tag */
@@ -397,7 +406,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 		imflags |= PURPLE_MESSAGE_IMAGES;
 	if (autoreply)
 		imflags |= PURPLE_MESSAGE_AUTO_RESP;
-	serv_got_im(gc, conn->bn, newmsg->str, imflags, time(NULL));
+	purple_serv_got_im(gc, conn->bn, newmsg->str, imflags, time(NULL));
 	g_string_free(newmsg, TRUE);
 
 	/* unref any images we allocated */
@@ -518,7 +527,7 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 		 */
 
 		PurpleAccount *account;
-		PurpleConversation *conv;
+		PurpleIMConversation *im;
 
 		if (conn->flags & PEER_CONNECTION_FLAG_IS_INCOMING)
 		{
@@ -559,8 +568,8 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 
 		/* Tell the local user that we are connected */
 		account = purple_connection_get_account(gc);
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
-		purple_conversation_write(conv, NULL, _("Direct IM established"),
+		im = purple_im_conversation_new(account, conn->bn);
+		purple_conversation_write(PURPLE_CONVERSATION(im), NULL, _("Direct IM established"),
 				PURPLE_MESSAGE_SYSTEM, time(NULL));
 	}
 
@@ -578,15 +587,15 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 		purple_debug_info("oscar", "ohmigod! %s has started typing "
 			"(DirectIM). He's going to send you a message! "
 			"*squeal*\n", conn->bn);
-		serv_got_typing(gc, conn->bn, 0, PURPLE_TYPING);
+		purple_serv_got_typing(gc, conn->bn, 0, PURPLE_IM_TYPING);
 	}
 	else if (frame->flags & 0x0004)
 	{
-		serv_got_typing(gc, conn->bn, 0, PURPLE_TYPED);
+		purple_serv_got_typing(gc, conn->bn, 0, PURPLE_IM_TYPED);
 	}
 	else
 	{
-		serv_got_typing_stopped(gc, conn->bn);
+		purple_serv_got_typing_stopped(gc, conn->bn);
 	}
 
 	if (frame->payload.len > 0)
@@ -595,7 +604,7 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 		{
 			gchar *tmp, *size1, *size2;
 			PurpleAccount *account;
-			PurpleConversation *conv;
+			PurpleIMConversation *im;
 
 			size1 = purple_str_size_to_units(frame->payload.len);
 			size2 = purple_str_size_to_units(DIRECTIM_MAX_FILESIZE);
@@ -604,8 +613,8 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 			g_free(size2);
 
 			account = purple_connection_get_account(conn->od->gc);
-			conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, conn->bn);
-			purple_conversation_write(conv, NULL, tmp, PURPLE_MESSAGE_SYSTEM, time(NULL));
+			im = purple_im_conversation_new(account, conn->bn);
+			purple_conversation_write(PURPLE_CONVERSATION(im), NULL, tmp, PURPLE_MESSAGE_SYSTEM, time(NULL));
 			g_free(tmp);
 
 			peer_connection_destroy(conn, OSCAR_DISCONNECT_LOCAL_CLOSED, NULL);

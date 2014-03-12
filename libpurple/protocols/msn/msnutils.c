@@ -27,7 +27,7 @@
 #include "msn.h"
 #include "msnutils.h"
 
-#include "cipher.h"
+#include "ciphers/md5hash.h"
 
 /**************************************************************************
  * Util
@@ -124,8 +124,9 @@ msn_parse_format(const char *mime, char **pre_ret, char **post_ret)
 			}
 
 			g_snprintf(tag, sizeof(tag),
-					   "<FONT COLOR=\"#%02hhx%02hhx%02hhx\">",
-					   colors[0], colors[1], colors[2]);
+				"<FONT COLOR=\"#%02x%02x%02x\">",
+				colors[0] & 0xFF, colors[1] & 0xFF,
+				colors[2] & 0xFF);
 
 			pre = g_string_append(pre, tag);
 			post = g_string_prepend(post, "</FONT>");
@@ -535,14 +536,13 @@ msn_email_is_valid(const char *passport)
 /*
  * Handle MSN Challenge computation
  * This algorithm references
- *  http://imfreedom.org/wiki/index.php/MSN:NS/Challenges
+ *  https://imfreedom.org/wiki/MSN:NS/Challenges
  */
 #define BUFSIZE	256
 void
 msn_handle_chl(char *input, char *output)
 {
-	PurpleCipher *cipher;
-	PurpleCipherContext *context;
+	PurpleHash *hash;
 	const guchar productKey[] = MSNP15_WLM_PRODUCT_KEY;
 	const guchar productID[]  = MSNP15_WLM_PRODUCT_ID;
 	const char hexChars[]     = "0123456789abcdef";
@@ -559,13 +559,12 @@ msn_handle_chl(char *input, char *output)
 	int i;
 
 	/* Create the MD5 hash by using Purple MD5 algorithm */
-	cipher = purple_ciphers_find_cipher("md5");
-	context = purple_cipher_context_new(cipher, NULL);
+	hash = purple_md5_hash_new();
 
-	purple_cipher_context_append(context, (guchar *)input, strlen(input));
-	purple_cipher_context_append(context, productKey, sizeof(productKey) - 1);
-	purple_cipher_context_digest(context, sizeof(md5Hash), md5Hash, NULL);
-	purple_cipher_context_destroy(context);
+	purple_hash_append(hash, (guchar *)input, strlen(input));
+	purple_hash_append(hash, productKey, sizeof(productKey) - 1);
+	purple_hash_digest(hash, md5Hash, sizeof(md5Hash));
+	g_object_unref(hash);
 
 	/* Split it into four integers */
 	md5Parts = (unsigned int *)md5Hash;

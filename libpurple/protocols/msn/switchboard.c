@@ -288,18 +288,17 @@ msn_switchboard_add_user(MsnSwitchBoard *swboard, const char *user)
 		return;
 	}
 
-	if ((swboard->conv != NULL) &&
-		(purple_conversation_get_type(swboard->conv) == PURPLE_CONV_TYPE_CHAT))
+	if ((swboard->conv != NULL) && (PURPLE_IS_CHAT_CONVERSATION(swboard->conv)))
 	{
-		purple_conv_chat_add_user(PURPLE_CONV_CHAT(swboard->conv), msnuser->passport, NULL,
-								PURPLE_CBFLAGS_NONE, TRUE);
+		purple_chat_conversation_add_user(PURPLE_CHAT_CONVERSATION(swboard->conv),
+				msnuser->passport, NULL, PURPLE_CHAT_USER_NONE, TRUE);
 		msn_servconn_set_idle_timeout(swboard->servconn, 0);
 	}
 	else if (swboard->current_users > 1)
 	{
 		msn_servconn_set_idle_timeout(swboard->servconn, 0);
 		if (swboard->conv == NULL ||
-			purple_conversation_get_type(swboard->conv) != PURPLE_CONV_TYPE_CHAT)
+			!PURPLE_IS_CHAT_CONVERSATION(swboard->conv))
 		{
 			GList *l;
 
@@ -312,9 +311,9 @@ msn_switchboard_add_user(MsnSwitchBoard *swboard, const char *user)
 
 			swboard->chat_id = msn_switchboard_get_chat_id();
 			swboard->flag |= MSN_SB_FLAG_IM;
-			swboard->conv = serv_got_joined_chat(account->gc,
+			swboard->conv = PURPLE_CONVERSATION(purple_serv_got_joined_chat(purple_account_get_connection(account),
 												 swboard->chat_id,
-												 "MSN Chat");
+												 "MSN Chat"));
 
 			for (l = swboard->users; l != NULL; l = l->next)
 			{
@@ -322,13 +321,13 @@ msn_switchboard_add_user(MsnSwitchBoard *swboard, const char *user)
 
 				tmp_user = ((MsnUser*)l->data)->passport;
 
-				purple_conv_chat_add_user(PURPLE_CONV_CHAT(swboard->conv),
-										tmp_user, NULL, PURPLE_CBFLAGS_NONE, TRUE);
+				purple_chat_conversation_add_user(PURPLE_CHAT_CONVERSATION(swboard->conv),
+										tmp_user, NULL, PURPLE_CHAT_USER_NONE, TRUE);
 			}
 
-			purple_conv_chat_add_user(PURPLE_CONV_CHAT(swboard->conv),
+			purple_chat_conversation_add_user(PURPLE_CHAT_CONVERSATION(swboard->conv),
 									purple_account_get_username(account),
-									NULL, PURPLE_CBFLAGS_NONE, TRUE);
+									NULL, PURPLE_CHAT_USER_NONE, TRUE);
 
 			g_free(swboard->im_user);
 			swboard->im_user = NULL;
@@ -336,8 +335,8 @@ msn_switchboard_add_user(MsnSwitchBoard *swboard, const char *user)
 	}
 	else if (swboard->conv == NULL)
 	{
-		swboard->conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-															msnuser->passport, account);
+		swboard->conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(
+				msnuser->passport, account));
 	}
 	else
 	{
@@ -359,8 +358,8 @@ msn_switchboard_get_conv(MsnSwitchBoard *swboard)
 
 	account = swboard->session->account;
 
-	return (swboard->conv = purple_conversation_new(PURPLE_CONV_TYPE_IM,
-												  account, swboard->im_user));
+	return (swboard->conv = PURPLE_CONVERSATION(purple_im_conversation_new(
+												  account, swboard->im_user)));
 }
 
 static void
@@ -618,11 +617,11 @@ bye_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 		msn_switchboard_destroy(swboard);
 	}
 	else if ((swboard->current_users > 1) ||
-			 (purple_conversation_get_type(swboard->conv) == PURPLE_CONV_TYPE_CHAT))
+			 PURPLE_IS_CHAT_CONVERSATION(swboard->conv))
 	{
 		GList *passport;
 		/* This is a switchboard used for a chat */
-		purple_conv_chat_remove_user(PURPLE_CONV_CHAT(swboard->conv), user, NULL);
+		purple_chat_conversation_remove_user(PURPLE_CHAT_CONVERSATION(swboard->conv), user, NULL);
 
 		passport = g_list_find_custom(swboard->users, user, (GCompareFunc)strcmp);
 		if (passport)
@@ -747,11 +746,11 @@ out_cmd(MsnCmdProc *cmdproc, MsnCommand *cmd)
 	PurpleConnection *gc;
 	MsnSwitchBoard *swboard;
 
-	gc = cmdproc->session->account->gc;
+	gc = purple_account_get_connection(cmdproc->session->account);
 	swboard = cmdproc->data;
 
 	if (swboard->current_users > 1)
-		serv_got_chat_left(gc, swboard->chat_id);
+		purple_serv_got_chat_left(gc, swboard->chat_id);
 
 	msn_switchboard_disconnect(swboard);
 }
@@ -827,16 +826,17 @@ msn_switchboard_show_ink(MsnSwitchBoard *swboard, const char *passport,
 		return;
 	}
 
-	imgid = purple_imgstore_add_with_id(image_data, image_len, NULL);
-	image_msg = g_strdup_printf("<IMG ID='%d'>", imgid);
+	imgid = purple_imgstore_new_with_id(image_data, image_len, NULL);
+	image_msg = g_strdup_printf("<IMG SRC='" PURPLE_STORED_IMAGE_PROTOCOL "%d'>",
+	                            imgid);
 
 	if (swboard->current_users > 1 ||
 		((swboard->conv != NULL) &&
-		 purple_conversation_get_type(swboard->conv) == PURPLE_CONV_TYPE_CHAT))
-		serv_got_chat_in(gc, swboard->chat_id, passport, 0, image_msg,
+		 PURPLE_IS_CHAT_CONVERSATION(swboard->conv)))
+		purple_serv_got_chat_in(gc, swboard->chat_id, passport, 0, image_msg,
 						 time(NULL));
 	else
-		serv_got_im(gc, passport, image_msg, 0, time(NULL));
+		purple_serv_got_im(gc, passport, image_msg, 0, time(NULL));
 
 	purple_imgstore_unref_by_id(imgid);
 	g_free(image_msg);
