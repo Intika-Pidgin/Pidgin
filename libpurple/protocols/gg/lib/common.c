@@ -831,11 +831,11 @@ void gg_strarr_free(char **strarr)
 
 char ** gg_strarr_dup(char **strarr)
 {
-	size_t i, len, size;
-	char **it, **out;
-
 	if (strarr == NULL)
 		return NULL;
+
+	size_t i, len, size;
+	char **it, **out;
 
 	len = 0;
 	for (it = strarr; *it != NULL; it++)

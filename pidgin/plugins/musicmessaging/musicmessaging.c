@@ -24,6 +24,7 @@
 
 #include "conversation.h"
 
+#include "gtk3compat.h"
 #include "gtkconv.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
@@ -104,14 +105,14 @@ void music_messaging_change_request(const int session, const char *command, cons
 	{
 		if (mmconv->originator)
 		{
-			char *name = (mmconv->conv)->name;
+			const char *name = purple_conversation_get_name(mmconv->conv);
 			send_change_request (session, name, command, parameters);
 		} else
 		{
 			GString *to_send = g_string_new("");
 			g_string_append_printf(to_send, "##MM## request %s %s##MM##", command, parameters);
 
-			purple_conv_im_send(PURPLE_CONV_IM(mmconv->conv), to_send->str);
+			purple_conversation_send(mmconv->conv, to_send->str);
 
 			purple_debug_misc("musicmessaging", "Sent request: %s\n", to_send->str);
 		}
@@ -131,7 +132,7 @@ void music_messaging_change_confirmed(const int session, const char *command, co
 			GString *to_send = g_string_new("");
 			g_string_append_printf(to_send, "##MM## confirm %s %s##MM##", command, parameters);
 
-			purple_conv_im_send(PURPLE_CONV_IM(mmconv->conv), to_send->str);
+			purple_conversation_send(mmconv->conv, to_send->str);
 		} else
 		{
 			/* Do nothing. If they aren't the originator, then they can't confirm. */
@@ -145,7 +146,7 @@ void music_messaging_change_failed(const int session, const char *id, const char
 	MMConversation *mmconv = (MMConversation *)g_list_nth_data(conversations, session);
 
 	purple_notify_message(plugin_pointer, PURPLE_NOTIFY_MSG_INFO, command,
-                        parameters, NULL, NULL, NULL);
+                        parameters, NULL, NULL, NULL, NULL);
 
 	if (mmconv->started)
 	{
@@ -154,7 +155,7 @@ void music_messaging_change_failed(const int session, const char *id, const char
 			GString *to_send = g_string_new("");
 			g_string_append_printf(to_send, "##MM## failed %s %s %s##MM##", id, command, parameters);
 
-			purple_conv_im_send(PURPLE_CONV_IM(mmconv->conv), to_send->str);
+			purple_conversation_send(mmconv->conv, to_send->str);
 		} else
 		{
 			/* Do nothing. If they aren't the originator, then they can't confirm. */
@@ -167,7 +168,7 @@ void music_messaging_done_session(const int session)
 	MMConversation *mmconv = (MMConversation *)g_list_nth_data(conversations, session);
 
 	purple_notify_message(plugin_pointer, PURPLE_NOTIFY_MSG_INFO, "Session",
-						"Session Complete", NULL, NULL, NULL);
+						"Session Complete", NULL, NULL, NULL, NULL);
 
 	session_end(mmconv);
 }
@@ -183,7 +184,7 @@ static gboolean send_change_request (const int session, const char *id, const ch
 	DBusMessage *message;
 
 	/* Create the signal we need */
-	message = dbus_message_new_signal (DBUS_PATH_PURPLE, DBUS_INTERFACE_PURPLE, "GscoreChangeRequest");
+	message = dbus_message_new_signal (PURPLE_DBUS_PATH, PURPLE_DBUS_INTERFACE, "GscoreChangeRequest");
 
 	/* Append the string "Ping!" to the signal */
 	dbus_message_append_args (message,
@@ -210,7 +211,7 @@ static gboolean send_change_confirmed (const int session, const char *command, c
 	DBusMessage *message;
 
 	/* Create the signal we need */
-	message = dbus_message_new_signal (DBUS_PATH_PURPLE, DBUS_INTERFACE_PURPLE, "GscoreChangeConfirmed");
+	message = dbus_message_new_signal (PURPLE_DBUS_PATH, PURPLE_DBUS_INTERFACE, "GscoreChangeConfirmed");
 
 	/* Append the string "Ping!" to the signal */
 	dbus_message_append_args (message,
@@ -261,6 +262,7 @@ mmconv_from_conv(PurpleConversation *conv)
 static gboolean
 plugin_load(PurplePlugin *plugin) {
 	void *conv_list_handle;
+	GList *l;
 
 	PURPLE_DBUS_RETURN_FALSE_IF_DISABLED(plugin);
 
@@ -273,7 +275,8 @@ plugin_load(PurplePlugin *plugin) {
 	plugin_pointer = plugin;
 
 	/* Add the button to all the current conversations */
-	purple_conversation_foreach (init_conversation);
+	for (l = purple_conversations_get_all(); l != NULL; l = l->next)
+		init_conversation((PurpleConversation *)l->data);
 
 	/* Listen for any new conversations */
 	conv_list_handle = purple_conversations_get_handle();
@@ -376,7 +379,7 @@ intercept_received(PurpleAccount *account, char **sender, char **message, Purple
 				if (mmconv->originator)
 				{
 					int session = mmconv_from_conv_loc(conv);
-					char *id = (mmconv->conv)->name;
+					const char *id = purple_conversation_get_name(mmconv->conv);
 					char *command;
 					char *parameters;
 
@@ -424,11 +427,12 @@ intercept_received(PurpleAccount *account, char **sender, char **message, Purple
 				command = strtok(NULL, " ");
 				/* char *parameters = strtok(NULL, "#"); DONT NEED PARAMETERS */
 
-				if ((mmconv->conv)->name == id)
+				// TODO: Shouldn't this be strcmp() ?
+				if (purple_conversation_get_name(mmconv->conv) == id)
 				{
 					purple_notify_message(plugin_pointer, PURPLE_NOTIFY_MSG_ERROR,
 							    _("Music Messaging"),
-							    _("There was a conflict in running the command:"), command, NULL, NULL);
+							    _("There was a conflict in running the command:"), command, NULL, NULL, NULL);
 				}
 			}
 		}
@@ -465,16 +469,16 @@ intercept_received(PurpleAccount *account, char **sender, char **message, Purple
 
 static void send_request(MMConversation *mmconv)
 {
-	PurpleConnection *connection = purple_conversation_get_gc(mmconv->conv);
+	PurpleConnection *connection = purple_conversation_get_connection(mmconv->conv);
 	const char *convName = purple_conversation_get_name(mmconv->conv);
-	serv_send_im(connection, convName, MUSICMESSAGING_START_MSG, PURPLE_MESSAGE_SEND);
+	purple_serv_send_im(connection, convName, MUSICMESSAGING_START_MSG, PURPLE_MESSAGE_SEND);
 }
 
 static void send_request_confirmed(MMConversation *mmconv)
 {
-	PurpleConnection *connection = purple_conversation_get_gc(mmconv->conv);
+	PurpleConnection *connection = purple_conversation_get_connection(mmconv->conv);
 	const char *convName = purple_conversation_get_name(mmconv->conv);
-	serv_send_im(connection, convName, MUSICMESSAGING_CONFIRM_MSG, PURPLE_MESSAGE_SEND);
+	purple_serv_send_im(connection, convName, MUSICMESSAGING_CONFIRM_MSG, PURPLE_MESSAGE_SEND);
 }
 
 
@@ -537,7 +541,7 @@ static void run_editor (MMConversation *mmconv)
 	if (!(g_spawn_async (".", args, NULL, 4, NULL, NULL, &(mmconv->pid), &spawn_error)))
 	{
 		purple_notify_error(plugin_pointer, _("Error Running Editor"),
-				  _("The following error has occurred:"), spawn_error->message);
+				  _("The following error has occurred:"), spawn_error->message, NULL);
 		mmconv->started = FALSE;
 	}
 	else
@@ -585,7 +589,9 @@ static void conv_destroyed (PurpleConversation *conv)
 
 static void add_button (MMConversation *mmconv)
 {
+#if 0
 	PurpleConversation *conv = mmconv->conv;
+#endif
 
 	GtkWidget *button, *image, *sep;
 	gchar *file_path;
@@ -602,7 +608,7 @@ static void add_button (MMConversation *mmconv)
 
 	gtk_container_add((GtkContainer *)button, image);
 
-	sep = gtk_vseparator_new();
+	sep = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
 
 	mmconv->seperator = sep;
 	mmconv->button = button;
@@ -611,8 +617,10 @@ static void add_button (MMConversation *mmconv)
 	gtk_widget_show(image);
 	gtk_widget_show(button);
 
+#if 0
 	gtk_box_pack_start(GTK_BOX(PIDGIN_CONVERSATION(conv)->toolbar), sep, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(PIDGIN_CONVERSATION(conv)->toolbar), button, FALSE, FALSE, 0);
+#endif
 }
 
 static void remove_widget (GtkWidget *button)
@@ -632,7 +640,7 @@ get_config_frame(PurplePlugin *plugin)
 	GtkWidget *editor_path_button;
 
 	/* Outside container */
-	ret = gtk_vbox_new(FALSE, 18);
+	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
 	gtk_container_set_border_width(GTK_CONTAINER(ret), 10);
 
 	/* Configuration frame */
@@ -660,7 +668,6 @@ get_config_frame(PurplePlugin *plugin)
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0, /* page_num (reserved) */
 
 	/* padding */
 	NULL,

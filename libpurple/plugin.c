@@ -49,8 +49,8 @@ typedef struct
 	PurpleSignalMarshalFunc marshal;
 
 	int num_params;
-	PurpleValue **params;
-	PurpleValue *ret_value;
+	GType *param_types;
+	GType ret_type;
 
 } PurplePluginIpcCommand;
 
@@ -63,13 +63,6 @@ static GList *load_queue       = NULL;
 static GList *plugin_loaders   = NULL;
 static GList *plugins_to_disable = NULL;
 #endif
-
-static void (*probe_cb)(void *) = NULL;
-static void *probe_cb_data = NULL;
-static void (*load_cb)(PurplePlugin *, void *) = NULL;
-static void *load_cb_data = NULL;
-static void (*unload_cb)(PurplePlugin *, void *) = NULL;
-static void *unload_cb_data = NULL;
 
 #ifdef PURPLE_PLUGINS
 
@@ -163,7 +156,7 @@ find_loader_for_plugin(const PurplePlugin *plugin)
 
 #endif /* PURPLE_PLUGINS */
 
-/**
+/*
  * Negative if a before b, 0 if equal, positive if a after b.
  */
 static gint
@@ -539,7 +532,7 @@ purple_plugin_load(PurplePlugin *plugin)
 			                      dep_name);
 
 			purple_notify_error(NULL, NULL,
-			                  _("Unable to load the plugin"), tmp);
+			                  _("Unable to load the plugin"), tmp, NULL);
 			g_free(tmp);
 
 			g_list_free(dep_list);
@@ -565,7 +558,7 @@ purple_plugin_load(PurplePlugin *plugin)
 				                      plugin->info->name);
 
 				purple_notify_error(NULL, NULL,
-				                 _("Unable to load your plugin."), tmp);
+				                 _("Unable to load your plugin."), tmp, NULL);
 				g_free(tmp);
 
 				g_list_free(dep_list);
@@ -580,7 +573,7 @@ purple_plugin_load(PurplePlugin *plugin)
 	for (l = dep_list; l != NULL; l = l->next)
 	{
 		PurplePlugin *dep_plugin = (PurplePlugin *)l->data;
-		dep_plugin->dependent_plugins = g_list_prepend(dep_plugin->dependent_plugins, plugin->info->id);
+		dep_plugin->dependent_plugins = g_list_prepend(dep_plugin->dependent_plugins, (gpointer)plugin->info->id);
 	}
 
 	g_list_free(dep_list);
@@ -611,9 +604,6 @@ purple_plugin_load(PurplePlugin *plugin)
 	loaded_plugins = g_list_insert_sorted(loaded_plugins, plugin, compare_plugins);
 
 	plugin->loaded = TRUE;
-
-	if (load_cb != NULL)
-		load_cb(plugin, load_cb_data);
 
 	purple_signal_emit(purple_plugins_get_handle(), "plugin-load", plugin);
 
@@ -741,9 +731,6 @@ purple_plugin_unload(PurplePlugin *plugin)
 	 */
 	g_free(plugin->error);
 	plugin->error = NULL;
-
-	if (unload_cb != NULL)
-		unload_cb(plugin, unload_cb_data);
 
 	purple_signal_emit(purple_plugins_get_handle(), "plugin-unload", plugin);
 
@@ -975,26 +962,15 @@ static void
 destroy_ipc_info(void *data)
 {
 	PurplePluginIpcCommand *ipc_command = (PurplePluginIpcCommand *)data;
-	int i;
 
-	if (ipc_command->params != NULL)
-	{
-		for (i = 0; i < ipc_command->num_params; i++)
-			purple_value_destroy(ipc_command->params[i]);
-
-		g_free(ipc_command->params);
-	}
-
-	if (ipc_command->ret_value != NULL)
-		purple_value_destroy(ipc_command->ret_value);
-
+	g_free(ipc_command->param_types);
 	g_free(ipc_command);
 }
 
 gboolean
 purple_plugin_ipc_register(PurplePlugin *plugin, const char *command,
 						 PurpleCallback func, PurpleSignalMarshalFunc marshal,
-						 PurpleValue *ret_value, int num_params, ...)
+						 GType ret_type, int num_params, ...)
 {
 	PurplePluginIpcInfo *ipc_info;
 	PurplePluginIpcCommand *ipc_command;
@@ -1017,19 +993,19 @@ purple_plugin_ipc_register(PurplePlugin *plugin, const char *command,
 	ipc_command->func       = func;
 	ipc_command->marshal    = marshal;
 	ipc_command->num_params = num_params;
-	ipc_command->ret_value  = ret_value;
+	ipc_command->ret_type   = ret_type;
 
 	if (num_params > 0)
 	{
 		va_list args;
 		int i;
 
-		ipc_command->params = g_new0(PurpleValue *, num_params);
+		ipc_command->param_types = g_new0(GType, num_params);
 
 		va_start(args, num_params);
 
 		for (i = 0; i < num_params; i++)
-			ipc_command->params[i] = va_arg(args, PurpleValue *);
+			ipc_command->param_types[i] = va_arg(args, GType);
 
 		va_end(args);
 	}
@@ -1092,9 +1068,9 @@ purple_plugin_ipc_unregister_all(PurplePlugin *plugin)
 }
 
 gboolean
-purple_plugin_ipc_get_params(PurplePlugin *plugin, const char *command,
-						   PurpleValue **ret_value, int *num_params,
-						   PurpleValue ***params)
+purple_plugin_ipc_get_types(PurplePlugin *plugin, const char *command,
+						   GType *ret_type, int *num_params,
+						   GType **param_types)
 {
 	PurplePluginIpcInfo *ipc_info;
 	PurplePluginIpcCommand *ipc_command;
@@ -1118,11 +1094,11 @@ purple_plugin_ipc_get_params(PurplePlugin *plugin, const char *command,
 	if (num_params != NULL)
 		*num_params = ipc_command->num_params;
 
-	if (params != NULL)
-		*params = ipc_command->params;
+	if (param_types != NULL)
+		*param_types = ipc_command->param_types;
 
-	if (ret_value != NULL)
-		*ret_value = ipc_command->ret_value;
+	if (ret_type != NULL)
+		*ret_type = ipc_command->ret_type;
 
 	return TRUE;
 }
@@ -1183,14 +1159,10 @@ purple_plugins_init(void) {
 
 	purple_signal_register(handle, "plugin-load",
 						 purple_marshal_VOID__POINTER,
-						 NULL, 1,
-						 purple_value_new(PURPLE_TYPE_SUBTYPE,
-										PURPLE_SUBTYPE_PLUGIN));
+						 G_TYPE_NONE, 1, PURPLE_TYPE_PLUGIN);
 	purple_signal_register(handle, "plugin-unload",
 						 purple_marshal_VOID__POINTER,
-						 NULL, 1,
-						 purple_value_new(PURPLE_TYPE_SUBTYPE,
-										PURPLE_SUBTYPE_PLUGIN));
+						 G_TYPE_NONE, 1, PURPLE_TYPE_PLUGIN);
 }
 
 void
@@ -1436,10 +1408,6 @@ purple_plugins_probe(const char *ext)
 													(GCompareFunc)compare_prpl);
 		}
 	}
-
-	if (probe_cb != NULL)
-		probe_cb(probe_cb_data);
-
 #endif /* PURPLE_PLUGINS */
 }
 
@@ -1508,50 +1476,6 @@ purple_plugins_enabled(void)
 #else
 	return FALSE;
 #endif
-}
-
-void
-purple_plugins_register_probe_notify_cb(void (*func)(void *), void *data)
-{
-	probe_cb = func;
-	probe_cb_data = data;
-}
-
-void
-purple_plugins_unregister_probe_notify_cb(void (*func)(void *))
-{
-	probe_cb = NULL;
-	probe_cb_data = NULL;
-}
-
-void
-purple_plugins_register_load_notify_cb(void (*func)(PurplePlugin *, void *),
-									 void *data)
-{
-	load_cb = func;
-	load_cb_data = data;
-}
-
-void
-purple_plugins_unregister_load_notify_cb(void (*func)(PurplePlugin *, void *))
-{
-	load_cb = NULL;
-	load_cb_data = NULL;
-}
-
-void
-purple_plugins_register_unload_notify_cb(void (*func)(PurplePlugin *, void *),
-									   void *data)
-{
-	unload_cb = func;
-	unload_cb_data = data;
-}
-
-void
-purple_plugins_unregister_unload_notify_cb(void (*func)(PurplePlugin *, void *))
-{
-	unload_cb = NULL;
-	unload_cb_data = NULL;
 }
 
 PurplePlugin *
@@ -1672,4 +1596,31 @@ purple_plugin_action_free(PurplePluginAction *action)
 
 	g_free(action->label);
 	g_free(action);
+}
+
+static PurplePlugin *
+purple_plugin_copy(PurplePlugin *plugin)
+{
+	PurplePlugin *plugin_copy;
+
+	g_return_val_if_fail(plugin != NULL, NULL);
+
+	plugin_copy = g_new(PurplePlugin, 1);
+	*plugin_copy = *plugin;
+
+	return plugin_copy;
+}
+
+GType
+purple_plugin_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurplePlugin",
+				(GBoxedCopyFunc)purple_plugin_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }

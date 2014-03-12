@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -142,7 +142,6 @@ gnt_uninit_colors()
 		restore_colors();
 }
 
-#if GLIB_CHECK_VERSION(2,6,0)
 int
 gnt_colors_get_color(char *key)
 {
@@ -293,13 +292,11 @@ void gnt_color_pairs_parse(GKeyFile *kfile)
 	g_strfreev(keys);
 }
 
-#endif  /* GKeyFile */
-
 int gnt_color_pair(int pair)
 {
 	return (hascolors ? COLOR_PAIR(pair) :
 		((pair == GNT_COLOR_NORMAL || pair == GNT_COLOR_HIGHLIGHT_D ||
-		  pair == GNT_COLOR_TITLE_D || pair == GNT_COLOR_DISABLED) ? 0 : A_STANDOUT));
+		  pair == GNT_COLOR_TITLE_D || pair == GNT_COLOR_DISABLED) ? 0 : (int)A_STANDOUT));
 }
 
 int gnt_color_add_pair(int fg, int bg)

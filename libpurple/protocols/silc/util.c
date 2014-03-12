@@ -18,6 +18,7 @@
 */
 
 #include "internal.h"
+#include "glibcompat.h"
 #include "silc.h"
 #include "silcclient.h"
 #include "silcpurple.h"
@@ -64,6 +65,26 @@ gboolean silcpurple_ip_is_private(const char *ip)
 	return FALSE;
 }
 
+/* there is no fstat alternative for GStatBuf */
+static int g_fstat(int fd, GStatBuf *st)
+{
+	struct stat sst;
+	int ret;
+
+	g_return_val_if_fail(st != NULL, -1);
+
+	ret = fstat(fd, &sst);
+	if (ret != 0)
+		return ret;
+
+	memset(st, 0, sizeof(GStatBuf));
+	/* only these two are used here */
+	st->st_uid = sst.st_uid;
+	st->st_mode = sst.st_mode;
+
+	return 0;
+}
+
 /* This checks stats for various SILC files and directories. First it
    checks if ~/.silc directory exist and is owned by the correct user. If
    it doesn't exist, it will create the directory. After that it checks if
@@ -74,7 +95,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 	char filename[256], file_public_key[256], file_private_key[256];
 	char servfilename[256], clientfilename[256], friendsfilename[256];
 	char pkd[256], prd[256];
-	struct stat st;
+	GStatBuf st;
 	struct passwd *pw;
 	int fd;
 
@@ -198,9 +219,9 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 	g_snprintf(pkd, sizeof(pkd), "%s" G_DIR_SEPARATOR_S "public_key.pub", silcpurple_silcdir());
 	g_snprintf(prd, sizeof(prd), "%s" G_DIR_SEPARATOR_S "private_key.prv", silcpurple_silcdir());
 	g_snprintf(file_public_key, sizeof(file_public_key) - 1, "%s",
-		   purple_account_get_string(gc->account, "public-key", pkd));
+		   purple_account_get_string(purple_connection_get_account(gc), "public-key", pkd));
 	g_snprintf(file_private_key, sizeof(file_public_key) - 1, "%s",
-		   purple_account_get_string(gc->account, "private-key", prd));
+		   purple_account_get_string(purple_connection_get_account(gc), "private-key", prd));
 
 	if ((g_stat(file_public_key, &st)) == -1) {
 		/* If file doesn't exist */
@@ -210,10 +231,9 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 						  SILCPURPLE_DEF_PKCS_LEN,
 						  file_public_key,
 						  file_private_key, NULL,
-						  (gc->password == NULL)
-						  ? "" : gc->password,
+						  (purple_connection_get_password(gc) == NULL) ? "" : purple_connection_get_password(gc),
 						  NULL, NULL, FALSE)) {
-				purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 				                             _("Unable to create SILC key pair"));
 				return FALSE;
 			}
@@ -239,7 +259,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 #endif
 
 	if ((fd = g_open(file_private_key, O_RDONLY, 0)) != -1) {
-		if ((fstat(fd, &st)) == -1) {
+		if ((g_fstat(fd, &st)) == -1) {
 			purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
 					   file_private_key, g_strerror(errno));
 			close(fd);
@@ -253,16 +273,15 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 						  SILCPURPLE_DEF_PKCS_LEN,
 						  file_public_key,
 						  file_private_key, NULL,
-						  (gc->password == NULL)
-						  ? "" : gc->password,
+						  (purple_connection_get_password(gc) == NULL) ? "" : purple_connection_get_password(gc),
 						  NULL, NULL, FALSE)) {
-				purple_connection_error_reason(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 				                             _("Unable to create SILC key pair"));
 				return FALSE;
 			}
 
 			if ((fd = g_open(file_private_key, O_RDONLY, 0)) != -1) {
-				if ((fstat(fd, &st)) == -1) {
+				if ((g_fstat(fd, &st)) == -1) {
 					purple_debug_error("silc", "Couldn't stat '%s' private key, error: %s\n",
 							   file_private_key, g_strerror(errno));
 					close(fd);
@@ -310,6 +329,13 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 
 	if (fd != -1)
 		close(fd);
+
+#ifdef _WIN32
+	/* on win32, we calloc pw so pass it to free
+	 * (see the getpwuid code below)
+	 */
+	free(pw);
+#endif
 
 	return TRUE;
 }
@@ -382,8 +408,8 @@ void silcpurple_show_public_key(SilcPurple sg,
 
 	purple_request_action(sg->gc, _("Public Key Information"),
 			      _("Public Key Information"),
-			      s->str, 0, purple_connection_get_account(sg->gc),
-			      NULL, NULL, context, 1, _("Close"), callback);
+			      s->str, 0, purple_request_cpar_from_connection(sg->gc),
+			      context, 1, _("Close"), callback);
 
 	g_string_free(s, TRUE);
 	silc_free(fingerprint);
