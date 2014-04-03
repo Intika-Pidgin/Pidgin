@@ -1,6 +1,6 @@
-/* pidgin
+/* purple
  *
- * Pidgin is the legal property of its developers, whose names are too numerous
+ * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
  *
@@ -16,24 +16,28 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
- *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PIDGIN_SMILEYPARSER_H_
-#define _PIDGIN_SMILEYPARSER_H_
-/**
- * SECTION:smileyparser
- * @section_id: pidgin-smileyparser
- * @short_description: <filename>smileyparser.h</filename>
- * @title: Smiley Parser
- */
+#ifndef _PURPLE_SMILEY_CUSTOM_H_
+#define _PURPLE_SMILEY_CUSTOM_H_
 
-G_BEGIN_DECLS
+#include "smiley.h"
+#include "smiley-list.h"
 
-char *
-pidgin_smiley_parse_markup(const char *markup, const char *sml);
+PurpleSmiley *
+purple_smiley_custom_add(PurpleStoredImage *img, const gchar *shortcut);
 
-G_END_DECLS
+void
+purple_smiley_custom_remove(PurpleSmiley *smiley);
 
-#endif /* _PIDGIN_SMILEYPARSER_H_ */
+PurpleSmileyList *
+purple_smiley_custom_get_list(void);
+
+void
+purple_smiley_custom_init(void);
+
+void
+purple_smiley_custom_uninit(void);
+
+#endif /* _PURPLE_SMILEY_CUSTOM_H_ */
