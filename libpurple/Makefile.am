@@ -101,6 +101,10 @@ purple_coresources = \
 	savedstatuses.c \
 	server.c \
 	signals.c \
+	smiley-custom.c \
+	smiley-list.c \
+	smiley-parser.c \
+	smiley-theme.c \
 	smiley.c \
 	dnsquery.c \
 	dnssrv.c\
@@ -176,6 +180,10 @@ purple_coreheaders = \
 	savedstatuses.h \
 	server.h \
 	signals.h \
+	smiley-custom.h \
+	smiley-list.h \
+	smiley-parser.h \
+	smiley-theme.h \
 	smiley.h \
 	dnsquery.h \
 	dnssrv.h \
@@ -266,8 +274,8 @@ dbus_headers  = dbus-bindings.h dbus-purple.h dbus-server.h dbus-useful.h dbus-d
 dbus_exported = dbus-useful.h dbus-define-api.h account.h accounts.h blistnode.h \
                 blistnodetypes.h buddylist.h buddyicon.h connection.h conversation.h \
                 conversationtypes.h conversations.h core.h xfer.h log.h notify.h \
-                prefs.h presence.h roomlist.h savedstatuses.h smiley.h status.h \
-                server.h util.h xmlnode.h prpl.h
+                prefs.h presence.h roomlist.h savedstatuses.h smiley.h smiley-list.h \
+                status.h server.h util.h xmlnode.h prpl.h
 
 purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders)) \
 		$(addprefix $(srcdir)/ciphers/, $(purple_cipherheaders)) \

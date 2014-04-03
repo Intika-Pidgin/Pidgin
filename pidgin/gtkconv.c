@@ -41,6 +41,7 @@
 #include "notify.h"
 #include "prpl.h"
 #include "request.h"
+#include "smiley-parser.h"
 #include "theme-loader.h"
 #include "theme-manager.h"
 #include "util.h"
@@ -59,12 +60,10 @@
 #include "gtkpounce.h"
 #include "gtkprefs.h"
 #include "gtkprivacy.h"
-#include "gtkthemes.h"
 #include "gtkutils.h"
 #include "gtkwebview.h"
 #include "pidginstock.h"
 #include "pidgintooltip.h"
-#include "smileyparser.h"
 
 #include "gtknickcolors.h"
 
@@ -2369,13 +2368,15 @@ pidgin_conv_switch_active_conversation(PurpleConversation *conv)
 	purple_conversation_close_logs(old_conv);
 	gtkconv->active_conv = conv;
 
+	pidgin_webview_switch_active_conversation(
+		PIDGIN_WEBVIEW(gtkconv->entry), conv);
+	pidgin_webview_switch_active_conversation(
+		PIDGIN_WEBVIEW(gtkconv->webview), conv);
 	purple_conversation_set_logging(conv,
 		gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(gtkconv->win->menu->logging)));
 
 	entry = PIDGIN_WEBVIEW(gtkconv->entry);
 	protocol_name = purple_account_get_protocol_name(purple_conversation_get_account(conv));
-	pidgin_webview_set_protocol_name(entry, protocol_name);
-	pidgin_webview_set_protocol_name(PIDGIN_WEBVIEW(gtkconv->webview), protocol_name);
 
 	features = purple_conversation_get_features(conv);
 	if (!(features & PURPLE_CONNECTION_FLAG_HTML))
@@ -5713,8 +5714,6 @@ setup_common_pane(PidginConversation *gtkconv)
 
 	_pidgin_widget_set_accessible_name(frame, "Message Input");
 	gtk_widget_set_name(gtkconv->entry, "pidgin_conv_entry");
-	pidgin_webview_set_protocol_name(PIDGIN_WEBVIEW(gtkconv->entry),
-			purple_account_get_protocol_name(purple_conversation_get_account(conv)));
 
 	g_signal_connect(G_OBJECT(gtkconv->entry), "populate-popup",
 	                 G_CALLBACK(entry_popup_menu_cb), gtkconv);
@@ -6088,6 +6087,10 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		pidgin_webview_show_toolbar(PIDGIN_WEBVIEW(gtkconv->entry));
 	else
 		pidgin_webview_hide_toolbar(PIDGIN_WEBVIEW(gtkconv->entry));
+	pidgin_webview_switch_active_conversation(
+		PIDGIN_WEBVIEW(gtkconv->entry), conv);
+	pidgin_webview_switch_active_conversation(
+		PIDGIN_WEBVIEW(gtkconv->webview), conv);
 
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/im/show_buddy_icons"))
 		gtk_widget_show(gtkconv->infopane_hbox);
@@ -6113,8 +6116,10 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		gtkconv->nick_colors = g_array_ref(generated_nick_colors);
 	}
 
+#if 0
 	if (purple_conversation_get_features(conv) & PURPLE_CONNECTION_FLAG_ALLOW_CUSTOM_SMILEY)
 		pidgin_themes_smiley_themeize_custom(gtkconv->entry);
+#endif
 }
 
 static void
@@ -6711,7 +6716,8 @@ pidgin_conv_write_conv(PurpleConversation *conv, const char *name, const char *a
 	gtkconv->last_flags = flags;
 	gtkconv->last_conversed = conv;
 
-	smileyed = pidgin_smiley_parse_markup(displaying, purple_account_get_protocol_id(account));
+	smileyed = purple_smiley_parse(displaying,
+		(gpointer)purple_account_get_protocol_name(account));
 	msg = replace_message_tokens(message_html, conv, name, alias, smileyed, flags, mtime);
 	escape = pidgin_webview_quote_js_string(msg ? msg : "");
 	script = g_strdup_printf("%s(%s)", func, escape);
@@ -7203,6 +7209,7 @@ pidgin_conv_has_focus(PurpleConversation *conv)
 	return FALSE;
 }
 
+#if 0
 static gboolean
 add_custom_smiley_for_webview(PidginWebView *webview, const char *sml, const char *smile)
 {
@@ -7226,10 +7233,12 @@ add_custom_smiley_for_webview(PidginWebView *webview, const char *sml, const cha
 
 	return TRUE;
 }
+#endif
 
 static gboolean
 pidgin_conv_custom_smiley_add(PurpleConversation *conv, const char *smile, gboolean remote)
 {
+#if 0
 	PidginConversation *gtkconv;
 	struct PidginSmileyList *list;
 	const char *sml = NULL, *conv_sml;
@@ -7247,7 +7256,7 @@ pidgin_conv_custom_smiley_add(PurpleConversation *conv, const char *smile, gbool
 	conv_sml = purple_account_get_protocol_name(purple_conversation_get_account(conv));
 	gtkconv = PIDGIN_CONVERSATION(conv);
 
-	for (list = (struct PidginSmileyList *)current_smiley_theme->list; list; list = list->next) {
+	for (list = (struct PidginSmileyList *)((struct PidginSmileyThemeREMOVEIT *)current_smiley_theme)->list; list; list = list->next) {
 		if (!strcmp(list->sml, conv_sml)) {
 			sml = list->sml;
 			break;
@@ -7261,6 +7270,7 @@ pidgin_conv_custom_smiley_add(PurpleConversation *conv, const char *smile, gbool
 		if (!add_custom_smiley_for_webview(PIDGIN_WEBVIEW(gtkconv->entry), sml, smile))
 			return FALSE;
 
+#endif
 	return TRUE;
 }
 
@@ -7492,8 +7502,6 @@ gray_stuff_out(PidginConversation *gtkconv)
 			buttons &= ~PIDGIN_WEBVIEW_CUSTOM_SMILEY;
 
 		pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(gtkconv->entry), buttons);
-		if (account != NULL)
-			pidgin_webview_set_protocol_name(PIDGIN_WEBVIEW(gtkconv->entry), purple_account_get_protocol_id(account));
 
 		/* Deal with menu items */
 		gtk_action_set_sensitive(win->menu->view_log, TRUE);
