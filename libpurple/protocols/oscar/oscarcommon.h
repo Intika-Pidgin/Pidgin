@@ -20,7 +20,7 @@
  *
  */
 
-/* oscarcommon.h contains prototypes for the prpl functions used by libaim.c
+/* oscarcommon.h contains prototypes for the protocol functions used by libaim.c
  * and libicq.c
  */
 
@@ -29,7 +29,7 @@
 #include "imgstore.h" /* TODO: temp */
 
 #include "accountopt.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "version.h"
 #include "notify.h"
 #include "status.h"
@@ -105,5 +105,6 @@ void oscar_send_file(PurpleConnection *gc, const char *who, const char *file);
 PurpleXfer *oscar_new_xfer(PurpleConnection *gc, const char *who);
 gboolean oscar_offline_message(const PurpleBuddy *buddy);
 gssize oscar_get_max_message_size(PurpleConversation *conv);
-GList *oscar_actions(PurplePlugin *plugin, gpointer context);
-void oscar_init(PurplePlugin *plugin, gboolean is_icq);
+GList *oscar_get_actions(PurpleConnection *gc);
+const gchar *oscar_get_login_server(gboolean is_icq, gboolean use_ssl);
+gboolean oscar_uri_handler(const char *proto, const char *cmd, GHashTable *params);
