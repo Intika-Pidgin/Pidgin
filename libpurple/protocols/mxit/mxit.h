@@ -28,7 +28,7 @@
 
 
 #include "internal.h"
-
+#include "http.h"
 
 #if defined( __APPLE__ )
 /* apple architecture */
@@ -160,6 +160,7 @@ struct MXitSession {
 	/* libpurple */
 	PurpleAccount*		acc;						/* pointer to the libpurple internal account struct */
 	PurpleConnection*	con;						/* pointer to the libpurple internal connection struct */
+	guint				inpa;						/* the input watcher */
 
 	/* transmit */
 	struct tx_queue		queue;						/* transmit packet queue (FIFO mode) */
@@ -167,7 +168,7 @@ struct MXitSession {
 	int					outack;						/* outstanding ack packet */
 	guint				q_slow_timer_id;			/* timer handle for slow tx queue */
 	guint				q_fast_timer_id;			/* timer handle for fast tx queue */
-	GSList*				async_calls;				/* list of current outstanding async calls */
+	PurpleHttpConnectionSet*	async_http_reqs;			/* list of current outstanding async http requests */
 
 	/* receive */
 	char				rx_lbuf[16];				/* receive byte buffer (socket packet length) */
@@ -183,7 +184,7 @@ struct MXitSession {
 	GList*				rooms;						/* active groupchat rooms */
 
 	/* inline images */
-	GHashTable*			iimages;					/* table which maps inline images (including emoticons) to purple's imgstore id's */
+	GHashTable *inline_images; /* table which maps inline images (including emoticons) to PurpleImages */
 };
 
 

@@ -60,7 +60,7 @@ window_kpress_cb(GntWidget *wid, const char *key, GntTextView *view)
 static PurpleCmdRet
 lastlog_cb(PurpleConversation *conv, const char *cmd, char **args, char **error, gpointer null)
 {
-	FinchConv *ggconv = conv->ui_data;
+	FinchConv *ggconv = FINCH_CONV(conv);
 	char **strings = g_strsplit(GNT_TEXT_VIEW(ggconv->tv)->string->str, "\n", 0);
 	GntWidget *win, *tv;
 	int i, j;
@@ -88,7 +88,7 @@ lastlog_cb(PurpleConversation *conv, const char *cmd, char **args, char **error,
 
 	g_signal_connect(G_OBJECT(win), "key_pressed", G_CALLBACK(window_kpress_cb), tv);
 	g_strfreev(strings);
-	return PURPLE_CMD_STATUS_OK;
+	return PURPLE_CMD_RET_OK;
 }
 
 static gboolean

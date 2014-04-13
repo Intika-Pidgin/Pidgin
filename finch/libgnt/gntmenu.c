@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -79,7 +79,7 @@ gnt_menu_draw(GntWidget *widget)
 	GntMenu *menu = GNT_MENU(widget);
 	GList *iter;
 	chtype type;
-	int i;
+	guint i;
 
 	if (menu->type == GNT_MENU_TOPLEVEL) {
 		wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_HIGHLIGHT));
@@ -120,6 +120,8 @@ static void
 menu_tree_add(GntMenu *menu, GntMenuItem *item, GntMenuItem *parent)
 {
 	char trigger[4] = "\0 )\0";
+
+	g_return_if_fail(item != NULL);
 
 	if ((trigger[1] = gnt_menuitem_get_trigger(item)) && trigger[1] != ' ')
 		trigger[0] = '(';
@@ -277,7 +279,7 @@ static gboolean
 gnt_menu_key_pressed(GntWidget *widget, const char *text)
 {
 	GntMenu *menu = GNT_MENU(widget);
-	int current = menu->selected;
+	guint current = menu->selected;
 
 	if (menu->submenu) {
 		GntMenu *sub = menu;
@@ -304,9 +306,10 @@ gnt_menu_key_pressed(GntWidget *widget, const char *text)
 
 	if (menu->type == GNT_MENU_TOPLEVEL) {
 		if (strcmp(text, GNT_KEY_LEFT) == 0) {
-			menu->selected--;
-			if (menu->selected < 0)
+			if (menu->selected == 0)
 				menu->selected = g_list_length(menu->list) - 1;
+			else
+				menu->selected--;
 		} else if (strcmp(text, GNT_KEY_RIGHT) == 0) {
 			menu->selected++;
 			if (menu->selected >= g_list_length(menu->list))
@@ -449,7 +452,7 @@ gnt_menu_init(GTypeInstance *instance, gpointer class)
  * GntMenu API
  *****************************************************************************/
 GType
-gnt_menu_get_gtype(void)
+gnt_menu_get_type(void)
 {
 	static GType type = 0;
 

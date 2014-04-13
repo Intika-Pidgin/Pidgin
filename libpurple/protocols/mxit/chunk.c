@@ -170,9 +170,13 @@ static int get_int8( const char* chunkdata, char* value )
  */
 static int get_int16( const char* chunkdata, short* value )
 {
-	*value = ntohs( *( (const short*) chunkdata ) );	/* host byte-order */
+	gint16 value_v;
 
-	return sizeof( short );
+	memcpy(&value_v, chunkdata, sizeof(value_v));
+
+	*value = ntohs(value_v); /* host byte-order */
+
+	return sizeof(value_v);
 }
 
 /*------------------------------------------------------------------------
@@ -184,9 +188,13 @@ static int get_int16( const char* chunkdata, short* value )
  */
 static int get_int32( const char* chunkdata, int* value )
 {
-	*value = ntohl( *( (const int*) chunkdata ) );	/* host byte-order */
+	gint32 value_v;
 
-	return sizeof( int );
+	memcpy(&value_v, chunkdata, sizeof(value_v));
+
+	*value = ntohl(value_v); /* host byte-order */
+
+	return sizeof(value_v);
 }
 
 #if	0
@@ -382,7 +390,7 @@ int mxit_chunk_create_senddirect( char* chunkdata, const char* username, const c
  */
 int mxit_chunk_create_set_avatar( char* chunkdata, const unsigned char* data, int datalen )
 {
-	const char	fileid[MXIT_CHUNK_FILEID_LEN];
+	char	fileid[MXIT_CHUNK_FILEID_LEN];
 	int			pos = 0;
 
 	/* id [8 bytes] */
@@ -471,6 +479,9 @@ void mxit_chunk_parse_offer( char* chunkdata, int datalen, struct offerfile_chun
 
 	/* mime type [UTF-8] */
 	pos += get_utf8_string( &chunkdata[pos], offer->mimetype, sizeof( offer->mimetype ) );
+
+	if (pos > datalen)
+		purple_debug_warning(MXIT_PLUGIN_ID, "pos > datalen");
 
 	/* timestamp [8 bytes] */
 	/* not used by libPurple */
@@ -635,6 +646,9 @@ void mxit_chunk_parse_sendfile( char* chunkdata, int datalen, struct sendfile_ch
 
 	/* status message [UTF-8 string] */
 	pos += get_utf8_string( &chunkdata[pos], sendfile->statusmsg, sizeof( sendfile->statusmsg ) );
+
+	if (pos != datalen)
+		purple_debug_misc(MXIT_PLUGIN_ID, "pos != datalen");
 }
 
 

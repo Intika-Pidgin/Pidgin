@@ -1,8 +1,3 @@
-/**
- * @file pidginstock.c GTK+ Stock resources
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -62,7 +57,7 @@ static struct StockIcon
 	{ PIDGIN_STOCK_DISCONNECT,      NULL,      GTK_STOCK_DISCONNECT       },
 	{ PIDGIN_STOCK_FGCOLOR,         "buttons", "change-fgcolor-small.png" },
 	{ PIDGIN_STOCK_EDIT,            NULL,      GTK_STOCK_EDIT             },
-	{ PIDGIN_STOCK_FILE_CANCELED,   NULL,      GTK_STOCK_CANCEL           },
+	{ PIDGIN_STOCK_FILE_CANCELLED,  NULL,      GTK_STOCK_CANCEL           },
 	{ PIDGIN_STOCK_FILE_DONE,       NULL,      GTK_STOCK_APPLY            },
 	{ PIDGIN_STOCK_IGNORE,          NULL,      GTK_STOCK_DIALOG_ERROR     },
 	{ PIDGIN_STOCK_INVITE,          NULL,      GTK_STOCK_JUMP_TO          },
@@ -76,6 +71,7 @@ static struct StockIcon
 	{ PIDGIN_STOCK_TYPED,           "pidgin",  "typed.png"                },
 	{ PIDGIN_STOCK_UPLOAD,          NULL,      GTK_STOCK_GO_UP            },
 	{ PIDGIN_STOCK_INFO,            NULL,      GTK_STOCK_INFO             },
+	{ PIDGIN_STOCK_NEXT,            NULL,      GTK_STOCK_GO_FORWARD       },
 };
 
 static const GtkStockItem stock_items[] =
@@ -90,12 +86,13 @@ static const GtkStockItem stock_items[] =
 	{ PIDGIN_STOCK_ADD,                 N_("_Add..."),     0, 0, PACKAGE },
 	{ PIDGIN_STOCK_OPEN_MAIL,           N_("_Open Mail"),  0, 0, PACKAGE },
 	{ PIDGIN_STOCK_PAUSE,               N_("_Pause"),      0, 0, PACKAGE },
-	{ PIDGIN_STOCK_EDIT,                N_("_Edit"),       0, 0, PACKAGE }
+	{ PIDGIN_STOCK_EDIT,                N_("_Edit"),       0, 0, PACKAGE },
+	{ PIDGIN_STOCK_NEXT,                N_("_Next"),       0, 0, PACKAGE },
 };
 
 typedef struct {
 	const char *name;
- 	const char *dir;
+	const char *dir;
 	const char *filename;
 	gboolean microscopic;
 	gboolean extra_small;
@@ -403,7 +400,7 @@ void
 pidgin_stock_load_status_icon_theme(PidginStatusIconTheme *theme)
 {
 	GtkIconFactory *icon_factory;
-	gint i;
+	gsize i;
 	GtkIconSet *normal;
 	GtkIconSet *translucent = NULL;
 	GtkWidget *win;
@@ -491,7 +488,7 @@ void
 pidgin_stock_load_stock_icon_theme(PidginStockIconTheme *theme)
 {
 	GtkIconFactory *icon_factory;
-	gint i;
+	gsize i;
 	GtkWidget *win;
 
 	if (theme != NULL) {
@@ -520,8 +517,13 @@ pidgin_stock_load_stock_icon_theme(PidginStockIconTheme *theme)
 
 		if (stock_icons[i].dir == NULL) {
 			/* GTK+ Stock icon */
+#if GTK_CHECK_VERSION(3,0,0)
+			iconset = gtk_style_context_lookup_icon_set(gtk_widget_get_style_context(win),
+			                                            stock_icons[i].filename);
+#else
 			iconset = gtk_style_lookup_icon_set(gtk_widget_get_style(win),
-					stock_icons[i].filename);
+			                                    stock_icons[i].filename);
+#endif
 		} else {
 			filename = find_file(stock_icons[i].dir, stock_icons[i].filename);
 

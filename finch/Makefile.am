@@ -11,22 +11,22 @@ SUBDIRS = libgnt plugins
 
 if ENABLE_GNT
 
+noinst_LTLIBRARIES = libfinch.la
 bin_PROGRAMS = finch
 
 endif
 
-finch_SOURCES = \
+libfinch_la_SOURCES = \
 	gntaccount.c \
 	gntblist.c \
 	gntcertmgr.c \
 	gntconn.c \
 	gntconv.c \
 	gntdebug.c \
-	gntft.c \
-	finch.c \
 	gntidle.c \
 	gntlog.c \
 	gntmedia.c \
+	gntmenuutil.c \
 	gntnotify.c \
 	gntplugin.c \
 	gntpounce.c \
@@ -35,20 +35,22 @@ finch_SOURCES = \
 	gntroomlist.c \
 	gntsound.c \
 	gntstatus.c \
-	gntui.c
+	gntui.c \
+	gntxfer.c \
+	libfinch.c
 
-finch_headers = \
+libfinch_la_headers = \
 	gntaccount.h \
 	gntblist.h \
 	gntcertmgr.h \
 	gntconn.h \
 	gntconv.h \
 	gntdebug.h \
-	gntft.h \
 	finch.h \
 	gntidle.h \
 	gntlog.h \
 	gntmedia.h \
+	gntmenuutil.h \
 	gntnotify.h \
 	gntplugin.h \
 	gntpounce.h \
@@ -57,15 +59,19 @@ finch_headers = \
 	gntroomlist.h \
 	gntsound.h \
 	gntstatus.h \
-	gntui.h
+	gntui.h \
+	gntxfer.h
 
-finchincludedir=$(includedir)/finch
-finchinclude_HEADERS = \
-	$(finch_headers)
+finch_SOURCES = \
+	finch.c
 
-finch_DEPENDENCIES = @LIBOBJS@
-finch_LDFLAGS = -export-dynamic
-finch_LDADD = \
+libfinchincludedir=$(includedir)/finch
+libfinchinclude_HEADERS = \
+	$(libfinch_la_headers)
+
+libfinch_la_DEPENDENCIES = @LIBOBJS@
+libfinch_la_LDFLAGS = -export-dynamic
+libfinch_la_LIBADD = \
 	@LIBOBJS@ \
 	$(DBUS_LIBS) \
 	$(INTLLIBS) \
@@ -75,6 +81,10 @@ finch_LDADD = \
 	$(GSTREAMER_LIBS) \
 	./libgnt/libgnt.la \
 	$(top_builddir)/libpurple/libpurple.la
+
+finch_DEPENDENCIES = $(builddir)/libfinch.la
+finch_LDFLAGS = -export-dynamic
+finch_LDADD = $(builddir)/libfinch.la $(libfinch_la_LIBADD)
 
 AM_CPPFLAGS = \
 	-DSTANDALONE \
