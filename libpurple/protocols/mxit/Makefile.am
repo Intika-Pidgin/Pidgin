@@ -6,18 +6,14 @@ pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
 MXITSOURCES = \
 	actions.c \
 	actions.h \
-	aes.c \
-	aes.h \
 	chunk.c \
 	chunk.h \
-	cipher.c \
-	cipher.h \
+	cipher-mxit.c \
+	cipher-mxit.h \
 	filexfer.c \
 	filexfer.h \
 	formcmds.c \
 	formcmds.h \
-	http.c \
-	http.h \
 	login.c \
 	login.h \
 	markup.c \

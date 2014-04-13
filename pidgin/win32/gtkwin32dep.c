@@ -25,7 +25,9 @@
 #ifndef WINVER
 #define WINVER 0x0500 /* W2K */
 #endif
-#include <windows.h>
+
+#include "internal.h"
+
 #include <io.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,8 +37,6 @@
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkwin32.h>
-
-#include "internal.h"
 
 #include "debug.h"
 #include "notify.h"
@@ -72,6 +72,11 @@ static gboolean pwm_handles_connections = TRUE;
 
 HINSTANCE winpidgin_exe_hinstance(void) {
 	return exe_hInstance;
+}
+
+void winpidgin_set_exe_hinstance(HINSTANCE hint)
+{
+	exe_hInstance = hint;
 }
 
 HINSTANCE winpidgin_dll_hinstance(void) {
@@ -344,7 +349,7 @@ winpidgin_window_flash(GtkWindow *window, gboolean flash) {
 
 void
 winpidgin_conv_blink(PurpleConversation *conv, PurpleMessageFlags flags) {
-	PidginWindow *win;
+	PidginConvWindow *win;
 	GtkWindow *window;
 
 	/* Don't flash for our own messages or system messages */
@@ -385,14 +390,13 @@ winpidgin_conv_im_blink(PurpleAccount *account, const char *who, char **message,
 	return FALSE;
 }
 
-void winpidgin_init(HINSTANCE hint) {
+void winpidgin_init(void) {
 	typedef void (__cdecl* LPFNSETLOGFILE)(const LPCSTR);
 	LPFNSETLOGFILE MySetLogFile;
 	gchar *exchndl_dll_path;
 
-	purple_debug_info("winpidgin", "winpidgin_init start\n");
-
-	exe_hInstance = hint;
+	if (purple_debug_is_verbose())
+		purple_debug_misc("winpidgin", "winpidgin_init start\n");
 
 	exchndl_dll_path = g_build_filename(wpurple_install_dir(), "exchndl.dll", NULL);
 	MySetLogFile = (LPFNSETLOGFILE) wpurple_find_and_loadproc(exchndl_dll_path, "SetLogFile");
@@ -415,12 +419,13 @@ void winpidgin_init(HINSTANCE hint) {
 #ifdef USE_GTKSPELL
 	winpidgin_spell_init();
 #endif
-	purple_debug_info("winpidgin", "GTK+ :%u.%u.%u\n",
+	purple_debug_info("winpidgin", "GTK+: %u.%u.%u\n",
 		gtk_major_version, gtk_minor_version, gtk_micro_version);
 
 	messagewin_hwnd = winpidgin_message_window_init();
 
-	purple_debug_info("winpidgin", "winpidgin_init end\n");
+	if (purple_debug_is_verbose())
+		purple_debug_misc("winpidgin", "winpidgin_init end\n");
 }
 
 void winpidgin_post_init(void) {

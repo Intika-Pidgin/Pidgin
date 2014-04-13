@@ -1,8 +1,3 @@
-/**
- * @file gntcertmgr.c GNT Certificate Manager API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -89,8 +84,7 @@ tls_peers_mgmt_import_ok_cb(gpointer data, const char *filename)
 				default_hostname, FALSE, FALSE, NULL,
 				_("OK"), G_CALLBACK(tls_peers_mgmt_import_ok2_cb),
 				_("Cancel"), G_CALLBACK(tls_peers_mgmt_import_cancel2_cb),
-				NULL, NULL, NULL,
-				crt);
+				NULL, crt);
 		g_free(default_hostname);
 	} else {
 		gchar * secondary;
@@ -98,7 +92,7 @@ tls_peers_mgmt_import_ok_cb(gpointer data, const char *filename)
 		purple_notify_error(NULL,
 				_("Certificate Import Error"),
 				_("X.509 certificate import failed"),
-				secondary);
+				secondary, NULL);
 		g_free(secondary);
 	}
 }
@@ -112,7 +106,7 @@ add_cert_cb(GntWidget *button, gpointer null)
 			FALSE,
 			G_CALLBACK(tls_peers_mgmt_import_ok_cb),
 			NULL,
-			NULL, NULL, NULL, NULL );
+			NULL, NULL );
 }
 
 /* Save certs in some file */
@@ -128,7 +122,7 @@ tls_peers_mgmt_export_ok_cb(gpointer data, const char *filename)
 		purple_notify_error(NULL,
 				    _("Certificate Export Error"),
 				    _("X.509 certificate export failed"),
-				    secondary);
+				    secondary, NULL);
 		g_free(secondary);
 	}
 
@@ -160,8 +154,7 @@ save_cert_cb(GntWidget *button, gpointer null)
 			"certificate.pem", TRUE,
 			G_CALLBACK(tls_peers_mgmt_export_ok_cb),
 			G_CALLBACK(purple_certificate_destroy),
-			NULL, NULL, NULL,
-			crt);
+			NULL, crt);
 }
 
 /* Show information about a cert */
@@ -195,7 +188,7 @@ info_cert_cb(GntWidget *button, gpointer null)
 	secondary = g_strdup_printf(_("Common name: %s\n\nSHA1 fingerprint:\n%s"), subject, fpr_sha1_asc);
 
 	purple_notify_info(NULL,
-			   _("SSL Host Certificate"), primary, secondary);
+			   _("SSL Host Certificate"), primary, secondary, NULL);
 
 	g_free(primary);
 	g_free(secondary);
@@ -236,7 +229,7 @@ delete_cert_cb(GntWidget *button, gpointer null)
 	purple_request_yes_no((void *)key, _("Confirm certificate delete"),
 			primary, NULL,
 			0,
-			NULL, NULL, NULL,
+			NULL,
 			g_strdup(key),
 			tls_peers_mgmt_delete_confirm_cb,
 			g_free);

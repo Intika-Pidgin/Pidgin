@@ -27,6 +27,7 @@
 #include <winuser.h>
 
 #include "debug.h"
+#include "glibcompat.h"
 #include "notify.h"
 
 /*
@@ -80,7 +81,8 @@ FARPROC wpurple_find_and_loadproc(const char *dllname, const char *procedure) {
 	wchar_t *wc_dllname = g_utf8_to_utf16(dllname, -1, NULL, NULL, NULL);
 
 	if(!(hmod = GetModuleHandleW(wc_dllname))) {
-		purple_debug_warning("wpurple", "%s not already loaded; loading it...\n", dllname);
+		if (purple_debug_is_verbose())
+			purple_debug_info("wpurple", "%s not already loaded; loading it...\n", dllname);
 		if(!(hmod = LoadLibraryW(wc_dllname))) {
 			purple_debug_error("wpurple", "Could not load: %s (%s)\n", dllname,
 				g_win32_error_message(GetLastError()));
@@ -95,8 +97,10 @@ FARPROC wpurple_find_and_loadproc(const char *dllname, const char *procedure) {
 	wc_dllname = NULL;
 
 	if((proc = GetProcAddress(hmod, procedure))) {
-		purple_debug_info("wpurple", "This version of %s contains %s\n",
-			dllname, procedure);
+		if (purple_debug_is_verbose()) {
+			purple_debug_info("wpurple", "This version of %s contains %s\n",
+				dllname, procedure);
+		}
 		return proc;
 	}
 	else {
@@ -287,6 +291,52 @@ static gboolean _reg_read(HKEY reg_key, const char *valname, LPDWORD type, LPBYT
 	return (rv == ERROR_SUCCESS);
 }
 
+gboolean wpurple_reg_val_exists(HKEY rootkey, const char *subkey, const char *valname)
+{
+	HKEY hkey;
+	LONG retv;
+	DWORD index;
+	wchar_t name_buffer[100];
+	BOOL exists = FALSE;
+	wchar_t *wc_valname = NULL;
+	wchar_t *wc_subkey;
+
+	if (subkey == NULL)
+		return FALSE;
+
+	wc_subkey = g_utf8_to_utf16(subkey, -1, NULL, NULL, NULL);
+	retv = RegOpenKeyExW(rootkey, wc_subkey, 0, KEY_ENUMERATE_SUB_KEYS, &hkey);
+	g_free(wc_subkey);
+
+	if (retv != ERROR_SUCCESS)
+		return FALSE;
+
+	if (valname[0] == '\0' || valname == NULL) {
+		RegCloseKey(hkey);
+		return TRUE;
+	}
+
+	wc_valname = g_utf8_to_utf16(valname, -1, NULL, NULL, NULL);
+	index = 0;
+	while (TRUE)
+	{
+		DWORD name_size = sizeof(name_buffer);
+		retv = RegEnumValueW(hkey, index++, name_buffer, &name_size,
+			NULL, NULL, NULL, NULL);
+		if (retv != ERROR_SUCCESS)
+			break;
+		name_size /= sizeof(wchar_t);
+		if (wcsncmp(name_buffer, wc_valname, name_size) == 0) {
+			exists = TRUE;
+			break;
+		}
+	}
+	g_free(wc_valname);
+
+	RegCloseKey(hkey);
+	return exists;
+}
+
 gboolean wpurple_read_reg_dword(HKEY rootkey, const char *subkey, const char *valname, LPDWORD result) {
 
 	DWORD type;
@@ -328,17 +378,129 @@ char *wpurple_read_reg_string(HKEY rootkey, const char *subkey, const char *valn
 	return result;
 }
 
+int wpurple_input_pipe(int pipefd[2])
+{
+	SOCKET sock_server, sock_client, sock_server_established;
+	struct sockaddr_in saddr_in;
+	struct sockaddr * const saddr_p = (struct sockaddr *)&saddr_in;
+	int saddr_len = sizeof(struct sockaddr_in);
+	u_long arg;
+	fd_set select_set;
+	char succ = 1;
+
+	sock_server = sock_client = sock_server_established = INVALID_SOCKET;
+
+	purple_debug_misc("wpurple", "wpurple_input_pipe(0x%x[%d,%d])\n",
+		(unsigned int)pipefd, pipefd[0], pipefd[1]);
+
+	/* create client and passive server sockets */
+	sock_server = socket(AF_INET, SOCK_STREAM, 0);
+	sock_client = socket(AF_INET, SOCK_STREAM, 0);
+	succ = (sock_server != INVALID_SOCKET || sock_client != INVALID_SOCKET);
+
+	/* set created sockets into nonblocking mode */
+	arg = 1;
+	succ = (succ &&
+		ioctlsocket(sock_server, FIONBIO, &arg) != SOCKET_ERROR);
+	arg = 1;
+	succ = (succ &&
+		ioctlsocket(sock_client, FIONBIO, &arg) != SOCKET_ERROR);
+
+	/* listen on server socket */
+	memset(&saddr_in, 0, saddr_len);
+	saddr_in.sin_family = AF_INET;
+	saddr_in.sin_port = 0;
+	saddr_in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	succ = (succ &&
+		bind(sock_server, saddr_p, saddr_len) != SOCKET_ERROR &&
+		listen(sock_server, 1) != SOCKET_ERROR &&
+		getsockname(sock_server, saddr_p, &saddr_len) != SOCKET_ERROR);
+
+	/* request a connection from client to server socket */
+	succ = (succ &&
+		connect(sock_client, saddr_p, saddr_len) == SOCKET_ERROR &&
+		WSAGetLastError() == WSAEWOULDBLOCK);
+
+	/* ensure, that server socket is readable */
+	if (succ)
+	{
+		FD_ZERO(&select_set);
+		FD_SET(sock_server, &select_set);
+	}
+	succ = (succ &&
+		select(0, &select_set, NULL, NULL, NULL) != SOCKET_ERROR &&
+		FD_ISSET(sock_server, &select_set));
+
+	/* accept (establish) connection from client socket */
+	if (succ)
+	{
+		sock_server_established =
+			accept(sock_server, saddr_p, &saddr_len);
+		succ = (sock_server_established != INVALID_SOCKET);
+	}
+
+	/* ensure, that client socket is writable */
+	if (succ)
+	{
+		FD_ZERO(&select_set);
+		FD_SET(sock_client, &select_set);
+	}
+	succ = (succ &&
+		select(0, NULL, &select_set, NULL, NULL) != SOCKET_ERROR &&
+		FD_ISSET(sock_client, &select_set));
+
+	/* set sockets into blocking mode */
+	arg = 0;
+	succ = (succ &&
+		ioctlsocket(sock_client, FIONBIO, &arg) != SOCKET_ERROR);
+	arg = 0;
+	succ = (succ &&
+		ioctlsocket(sock_server_established, FIONBIO, &arg)
+			!= SOCKET_ERROR);
+
+	/* we don't need (passive) server socket anymore */
+	if (sock_server != INVALID_SOCKET)
+		closesocket(sock_server);
+
+	if (succ)
+	{
+		purple_debug_misc("wpurple",
+			"wpurple_input_pipe created pipe [%d,%d]\n",
+			sock_client, sock_server_established);
+		pipefd[0] = sock_client; /* for reading */
+		pipefd[1] = sock_server_established; /* for writing */
+		return 0;
+	}
+	else
+	{
+		purple_debug_error("wpurple", "wpurple_input_pipe failed\n");
+		if (sock_client != INVALID_SOCKET)
+			closesocket(sock_client);
+		if (sock_server_established != INVALID_SOCKET)
+			closesocket(sock_server_established);
+		errno = EMFILE;
+		return -1;
+	}
+}
+
 void wpurple_init(void) {
 	WORD wVersionRequested;
 	WSADATA wsaData;
 
+#if !GLIB_CHECK_VERSION(2, 32, 0)
+	/* GLib threading system is automaticaly initialized since 2.32.
+	 * For earlier versions, it have to be initialized before calling any
+	 * Glib or GTK+ functions.
+	 */
 	if (!g_thread_supported())
 		g_thread_init(NULL);
+#endif
 
-	purple_debug_info("wpurple", "wpurple_init start\n");
+	if (purple_debug_is_verbose())
+		purple_debug_misc("wpurple", "wpurple_init start\n");
+
 	purple_debug_info("wpurple", "libpurple version: " DISPLAY_VERSION "\n");
-
-	purple_debug_info("wpurple", "Glib:%u.%u.%u\n",
+	purple_debug_info("wpurple", "Glib: %u.%u.%u\n",
 		glib_major_version, glib_minor_version, glib_micro_version);
 
 	/* Winsock init */
@@ -354,7 +516,8 @@ void wpurple_init(void) {
 		WSACleanup();
 	}
 
-	purple_debug_info("wpurple", "wpurple_init end\n");
+	if (purple_debug_is_verbose())
+		purple_debug_misc("wpurple", "wpurple_init end\n");
 }
 
 /* Windows Cleanup */

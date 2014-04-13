@@ -6,6 +6,10 @@
 #undef STRINGIFY
 #undef pipe
 #endif
+
+#define SILENT_NO_TAINT_SUPPORT 0
+#define NO_TAINT_SUPPORT 0
+
 #include <EXTERN.h>
 #include <perl.h>
 #include <XSUB.h>
@@ -21,7 +25,6 @@
 #undef _WIN32DEP_H_
 #endif
 #include "plugin.h"
-#include "value.h"
 
 #define is_hvref(o) \
 	((o) && SvROK(o) && SvRV(o) && (SvTYPE(SvRV(o)) == SVt_PVHV))
@@ -35,9 +38,18 @@
 #define PURPLE_PERL_BOOT(x) \
 	purple_perl_callXS(boot_Purple__##x, cv, mark)
 
+#ifdef HAVE_NEW_SVUPGRADE
+#	define SvUPGRADE_common(a, b) SvUPGRADE(a, b)
+#else
+#	define SvUPGRADE_common(a, b) if (!SvUPGRADE(a, b)) { croak("Cannot upgrade variable"); }
+#endif
+
+typedef struct _PurplePerlInfoStrings PurplePerlInfoStrings;
+
 typedef struct
 {
 	PurplePlugin *plugin;
+	PurplePerlInfoStrings *info_strings;
 	char *package;
 	char *load_sub;
 	char *unload_sub;
@@ -65,8 +77,7 @@ gboolean purple_perl_value_from_sv(PurpleValue *value, SV *sv);
 SV *purple_perl_sv_from_value(const PurpleValue *value);
 #endif
 
-void *purple_perl_data_from_sv(PurpleValue *value, SV *sv);
-SV *purple_perl_sv_from_vargs(const PurpleValue *value, va_list *args,
-                            void ***copy_arg);
+void *purple_perl_data_from_sv(GType type, SV *sv);
+SV *purple_perl_sv_from_vargs(GType type, va_list *args, void ***copy_arg);
 SV *purple_perl_sv_from_fun(PurplePlugin *plugin, SV *callback);
 #endif /* _PURPLE_PERL_COMMON_H_ */
