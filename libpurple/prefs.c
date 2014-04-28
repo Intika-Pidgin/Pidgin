@@ -1349,6 +1349,7 @@ prefs_update_old(void)
 	purple_prefs_remove("/plugins/core/autorecon/hide_reconnecting_dialog");
 	purple_prefs_remove("/plugins/core/autorecon/restore_state");
 	purple_prefs_remove("/plugins/core/autorecon");
+	purple_prefs_remove("/plugins/lopl");
 
 	/* Convert old sounds while_away pref to new 3-way pref. */
 	if (purple_prefs_exists("/purple/sound/while_away") &&
@@ -1379,7 +1380,6 @@ purple_prefs_init(void)
 	purple_prefs_add_none("/purple");
 	purple_prefs_add_none("/plugins");
 	purple_prefs_add_none("/plugins/core");
-	purple_prefs_add_none("/plugins/lopl");
 	purple_prefs_add_none("/plugins/prpl");
 
 	/* Away */
