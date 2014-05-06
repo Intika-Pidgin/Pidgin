@@ -1,8 +1,3 @@
-/**
- * @file stun.c STUN (RFC3489) Implementation
- * @ingroup core
- */
-
 /* purple
  *
  * STUN implementation inspired by jstun [http://jstun.javawi.de/]
@@ -52,6 +47,10 @@
 #define MSGTYPE_BINDINGRESPONSE 0x0101
 
 #define ATTRIB_MAPPEDADDRESS 0x0001
+
+#ifndef _SIZEOF_ADDR_IFREQ
+#  define _SIZEOF_ADDR_IFREQ(a) sizeof(a)
+#endif
 
 struct stun_header {
 	guint16 type;
@@ -106,7 +105,7 @@ static void close_stun_conn(struct stun_conn *sc) {
 
 static void do_callbacks(void) {
 	while (callbacks) {
-		StunCallback cb = callbacks->data;
+		PurpleStunCallback cb = callbacks->data;
 		if (cb)
 			cb(&nattype);
 		callbacks = g_slist_delete_link(callbacks, callbacks);
@@ -164,12 +163,13 @@ static void do_test2(struct stun_conn *sc) {
 
 static void reply_cb(gpointer data, gint source, PurpleInputCondition cond) {
 	struct stun_conn *sc = data;
-	char buffer[65536];
-	char *tmp;
-	int len;
+	guchar buffer[65536];
+	struct ifreq buffer_ifr[1000];
+	guchar *it, *it_end;
+	gssize len;
 	struct in_addr in;
-	struct stun_attrib *attrib;
-	struct stun_header *hdr;
+	struct stun_attrib attrib;
+	struct stun_header hdr;
 	struct ifconf ifc;
 	struct ifreq *ifr;
 	struct sockaddr_in *sinptr;
@@ -177,61 +177,61 @@ static void reply_cb(gpointer data, gint source, PurpleInputCondition cond) {
 	memset(&in, 0, sizeof(in));
 
 	len = recv(source, buffer, sizeof(buffer) - 1, 0);
-	if (len < 0) {
+	if (len <= 0) {
 		purple_debug_warning("stun", "unable to read stun response\n");
 		return;
 	}
 	buffer[len] = '\0';
 
-	if (len < sizeof(struct stun_header)) {
+	if ((gsize)len < sizeof(struct stun_header)) {
 		purple_debug_warning("stun", "got invalid response\n");
 		return;
 	}
 
-	hdr = (struct stun_header*) buffer;
-	if (len != (ntohs(hdr->len) + sizeof(struct stun_header))) {
+	memcpy(&hdr, buffer, sizeof(hdr));
+	if ((gsize)len != (ntohs(hdr.len) + sizeof(struct stun_header))) {
 		purple_debug_warning("stun", "got incomplete response\n");
 		return;
 	}
 
 	/* wrong transaction */
-	if(hdr->transid[0] != sc->packet->transid[0]
-			|| hdr->transid[1] != sc->packet->transid[1]
-			|| hdr->transid[2] != sc->packet->transid[2]
-			|| hdr->transid[3] != sc->packet->transid[3]) {
+	if(hdr.transid[0] != sc->packet->transid[0]
+			|| hdr.transid[1] != sc->packet->transid[1]
+			|| hdr.transid[2] != sc->packet->transid[2]
+			|| hdr.transid[3] != sc->packet->transid[3]) {
 		purple_debug_warning("stun", "got wrong transid\n");
 		return;
 	}
 
 	if(sc->test==1) {
-		if (hdr->type != MSGTYPE_BINDINGRESPONSE) {
+		if (hdr.type != MSGTYPE_BINDINGRESPONSE) {
 			purple_debug_warning("stun",
 				"Expected Binding Response, got %d\n",
-				hdr->type);
+				hdr.type);
 			return;
 		}
 
-		tmp = buffer + sizeof(struct stun_header);
-		while((buffer + len) > (tmp + sizeof(struct stun_attrib))) {
-			attrib = (struct stun_attrib*) tmp;
-			tmp += sizeof(struct stun_attrib);
+		it = buffer + sizeof(struct stun_header);
+		while((buffer + len) > (it + sizeof(struct stun_attrib))) {
+			memcpy(&attrib, it, sizeof(attrib));
+			it += sizeof(struct stun_attrib);
 
-			if (!((buffer + len) > (tmp + ntohs(attrib->len))))
+			if (!((buffer + len) > (it + ntohs(attrib.len))))
 				break;
 
-			if(attrib->type == htons(ATTRIB_MAPPEDADDRESS)
-					&& ntohs(attrib->len) == 8) {
+			if(attrib.type == htons(ATTRIB_MAPPEDADDRESS)
+					&& ntohs(attrib.len) == 8) {
 				char *ip;
 				/* Skip the first unused byte,
 				 * the family(1 byte), and the port(2 bytes);
 				 * then read the 4 byte IPv4 address */
-				memcpy(&in.s_addr, tmp + 4, 4);
+				memcpy(&in.s_addr, it + 4, 4);
 				ip = inet_ntoa(in);
 				if(ip)
 					g_strlcpy(nattype.publicip, ip, sizeof(nattype.publicip));
 			}
 
-			tmp += ntohs(attrib->len);
+			it += ntohs(attrib.len);
 		}
 		purple_debug_info("stun", "got public ip %s\n", nattype.publicip);
 		nattype.status = PURPLE_STUN_STATUS_DISCOVERED;
@@ -240,19 +240,19 @@ static void reply_cb(gpointer data, gint source, PurpleInputCondition cond) {
 
 		/* is it a NAT? */
 
-		ifc.ifc_len = sizeof(buffer);
-		ifc.ifc_req = (struct ifreq *) buffer;
+		ifc.ifc_len = sizeof(buffer_ifr);
+		ifc.ifc_req = buffer_ifr;
 		ioctl(source, SIOCGIFCONF, &ifc);
 
-		tmp = buffer;
-		while(tmp < buffer + ifc.ifc_len) {
-			ifr = (struct ifreq *) tmp;
-
-			tmp += sizeof(struct ifreq);
+		it = buffer;
+		it_end = it + ifc.ifc_len;
+		while (it < it_end) {
+			ifr = (struct ifreq*)(gpointer)it;
+			it += _SIZEOF_ADDR_IFREQ(*ifr);
 
 			if(ifr->ifr_addr.sa_family == AF_INET) {
 				/* we only care about ipv4 interfaces */
-				sinptr = (struct sockaddr_in *) &ifr->ifr_addr;
+				sinptr = (struct sockaddr_in *)(gpointer)&ifr->ifr_addr;
 				if(sinptr->sin_addr.s_addr == in.s_addr) {
 					/* no NAT */
 					purple_debug_info("stun", "no nat\n");
@@ -318,7 +318,7 @@ static void hbn_listen_cb(int fd, gpointer data) {
 
 	if(sendto(sc->fd, &hdr_data, sizeof(struct stun_header), 0,
 			(struct sockaddr *)&(sc->addr),
-			sizeof(struct sockaddr_in)) < sizeof(struct stun_header)) {
+			sizeof(struct sockaddr_in)) < (gssize)sizeof(struct stun_header)) {
 		nattype.status = PURPLE_STUN_STATUS_UNKNOWN;
 		nattype.lookup_time = time(NULL);
 		do_callbacks();
@@ -340,7 +340,7 @@ static void hbn_cb(GSList *hosts, gpointer data, const char *error_message) {
 		return;
 	}
 
-	if (!purple_network_listen_range(12108, 12208, SOCK_DGRAM, hbn_listen_cb, hosts)) {
+	if (!purple_network_listen_range(12108, 12208, AF_UNSPEC, SOCK_DGRAM, TRUE, hbn_listen_cb, hosts)) {
 		while (hosts) {
 			hosts = g_slist_delete_link(hosts, hosts);
 			g_free(hosts->data);
@@ -367,17 +367,17 @@ static void do_test1(PurpleSrvResponse *resp, int results, gpointer sdata) {
 	purple_debug_info("stun", "got %d SRV responses, server: %s, port: %d\n",
 		results, servername, port);
 
-	purple_dnsquery_a_account(NULL, servername, port, hbn_cb, NULL);
+	purple_dnsquery_a(NULL, servername, port, hbn_cb, NULL);
 	g_free(resp);
 }
 
 static gboolean call_callback(gpointer data) {
-	StunCallback cb = data;
+	PurpleStunCallback cb = data;
 	cb(&nattype);
 	return FALSE;
 }
 
-PurpleStunNatDiscovery *purple_stun_discover(StunCallback cb) {
+PurpleStunNatDiscovery *purple_stun_discover(PurpleStunCallback cb) {
 	const char *servername = purple_prefs_get_string("/purple/network/stun_server");
 
 	purple_debug_info("stun", "using server %s\n", servername);
@@ -391,8 +391,8 @@ PurpleStunNatDiscovery *purple_stun_discover(StunCallback cb) {
 	if(nattype.status != PURPLE_STUN_STATUS_UNDISCOVERED) {
 		gboolean use_cached_result = TRUE;
 
-		/** Deal with the server name having changed since we did the
-		    lookup */
+		/* Deal with the server name having changed since we did the
+		   lookup */
 		if (servername && strlen(servername) > 1
 				&& !purple_strequal(servername, nattype.servername)) {
 			use_cached_result = FALSE;
@@ -426,7 +426,7 @@ PurpleStunNatDiscovery *purple_stun_discover(StunCallback cb) {
 	nattype.servername = g_strdup(servername);
 
 	callbacks = g_slist_append(callbacks, cb);
-	purple_srv_resolve_account(NULL, "stun", "udp", servername, do_test1,
+	purple_srv_resolve(NULL, "stun", "udp", servername, do_test1,
 		(gpointer) servername);
 
 	return &nattype;

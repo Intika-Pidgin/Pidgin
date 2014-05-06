@@ -25,11 +25,8 @@ static PurpleEventLoopUiOps eventloop_ui_ops = {
 	purple_check_input_add,
 	g_source_remove,
 	NULL, /* input_get_error */
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
 	NULL,
-#endif
 	NULL,
 	NULL,
 	NULL
@@ -37,7 +34,10 @@ static PurpleEventLoopUiOps eventloop_ui_ops = {
 
 static void
 purple_check_init(void) {
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+	/* GLib type system is automaticaly initialized since 2.36. */
 	g_type_init();
+#endif
 
 	purple_eventloop_set_ui_ops(&eventloop_ui_ops);
 
@@ -46,7 +46,7 @@ purple_check_init(void) {
 	{
 		gchar *home_dir;
 
-		home_dir = g_build_path(G_DIR_SEPARATOR_S, BUILDDIR, "libpurple", "tests", "home", NULL);
+		home_dir = g_build_path(G_DIR_SEPARATOR_S, $(top_builddir), "libpurple", "tests", "home", NULL);
 		purple_util_set_user_dir(home_dir);
 		g_free(home_dir);
 	}
@@ -91,7 +91,8 @@ int main(void)
 	srunner_add_suite(sr, oscar_util_suite());
 	srunner_add_suite(sr, yahoo_util_suite());
 	srunner_add_suite(sr, util_suite());
-	srunner_add_suite(sr, xmlnode_suite());
+	srunner_add_suite(sr, purple_xmlnode_suite());
+	srunner_add_suite(sr, purple_trie_suite());
 
 	/* make this a libpurple "ui" */
 	purple_check_init();

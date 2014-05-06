@@ -267,10 +267,10 @@ int aim_tlvlist_count(GSList *list)
  * @return The number of bytes that would be needed to
  *         write the passed TLV chain to a data buffer.
  */
-int aim_tlvlist_size(GSList *list)
+size_t aim_tlvlist_size(GSList *list)
 {
 	GSList *cur;
-	int size;
+	size_t size;
 
 	if (list == NULL)
 		return 0;
@@ -319,7 +319,7 @@ int aim_tlvlist_add_8(GSList **list, const guint16 type, const guint8 value)
 {
 	guint8 v8[1];
 
-	aimutil_put8(v8, value);
+	(void)aimutil_put8(v8, value);
 
 	return aim_tlvlist_add_raw(list, type, 1, v8);
 }
@@ -336,7 +336,7 @@ int aim_tlvlist_add_16(GSList **list, const guint16 type, const guint16 value)
 {
 	guint8 v16[2];
 
-	aimutil_put16(v16, value);
+	(void)aimutil_put16(v16, value);
 
 	return aim_tlvlist_add_raw(list, type, 2, v16);
 }
@@ -353,7 +353,7 @@ int aim_tlvlist_add_32(GSList **list, const guint16 type, const guint32 value)
 {
 	guint8 v32[4];
 
-	aimutil_put32(v32, value);
+	(void)aimutil_put32(v32, value);
 
 	return aim_tlvlist_add_raw(list, type, 4, v32);
 }
@@ -585,7 +585,7 @@ int aim_tlvlist_replace_8(GSList **list, const guint16 type, const guint8 value)
 {
 	guint8 v8[1];
 
-	aimutil_put8(v8, value);
+	(void)aimutil_put8(v8, value);
 
 	return aim_tlvlist_replace_raw(list, type, 1, v8);
 }
@@ -604,7 +604,7 @@ int aim_tlvlist_replace_32(GSList **list, const guint16 type, const guint32 valu
 {
 	guint8 v32[4];
 
-	aimutil_put32(v32, value);
+	(void)aimutil_put32(v32, value);
 
 	return aim_tlvlist_replace_raw(list, type, 4, v32);
 }
@@ -658,7 +658,7 @@ void aim_tlvlist_remove(GSList **list, const guint16 type)
  */
 int aim_tlvlist_write(ByteStream *bs, GSList **list)
 {
-	int goodbuflen;
+	size_t goodbuflen;
 	GSList *cur;
 	aim_tlv_t *tlv;
 

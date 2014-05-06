@@ -93,6 +93,7 @@
 #include "version.h"
 #include "debug.h"
 
+#include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
 
@@ -106,7 +107,7 @@ static GdkAtom _PurpleUnseenCount = GDK_NONE;
 
 /* notification set/unset */
 static int notify(PurpleConversation *conv, gboolean increment);
-static void notify_win(PidginWindow *purplewin, PurpleConversation *conv);
+static void notify_win(PidginConvWindow *purplewin, PurpleConversation *conv);
 static void unnotify(PurpleConversation *conv, gboolean reset);
 static int unnotify_cb(GtkWidget *widget, gpointer data,
                        PurpleConversation *conv);
@@ -121,19 +122,19 @@ static void apply_method(void);
 static void apply_notify(void);
 
 /* string function */
-static void handle_string(PidginWindow *purplewin);
+static void handle_string(PidginConvWindow *purplewin);
 
 /* count_title function */
-static void handle_count_title(PidginWindow *purplewin);
+static void handle_count_title(PidginConvWindow *purplewin);
 
 /* count_xprop function */
-static void handle_count_xprop(PidginWindow *purplewin);
+static void handle_count_xprop(PidginConvWindow *purplewin);
 
 /* urgent function */
-static void handle_urgent(PidginWindow *purplewin, gboolean set);
+static void handle_urgent(PidginConvWindow *purplewin, gboolean set);
 
 /* raise function */
-static void handle_raise(PidginWindow *purplewin);
+static void handle_raise(PidginConvWindow *purplewin);
 
 /* present function */
 static void handle_present(PurpleConversation *conv);
@@ -142,7 +143,7 @@ static void handle_present(PurpleConversation *conv);
 /* Begin doing stuff below this line... */
 /****************************************/
 static guint
-count_messages(PidginWindow *purplewin)
+count_messages(PidginConvWindow *purplewin)
 {
 	guint count = 0;
 	GList *convs = NULL, *l;
@@ -150,7 +151,7 @@ count_messages(PidginWindow *purplewin)
 	for (convs = purplewin->gtkconvs; convs != NULL; convs = convs->next) {
 		PidginConversation *conv = convs->data;
 		for (l = conv->convs; l != NULL; l = l->next) {
-			count += GPOINTER_TO_INT(purple_conversation_get_data(l->data, "notify-message-count"));
+			count += GPOINTER_TO_INT(g_object_get_data(G_OBJECT(l->data), "notify-message-count"));
 		}
 	}
 
@@ -162,7 +163,7 @@ notify(PurpleConversation *conv, gboolean increment)
 {
 	gint count;
 	gboolean has_focus;
-	PidginWindow *purplewin = NULL;
+	PidginConvWindow *purplewin = NULL;
 
 	if (conv == NULL || PIDGIN_CONVERSATION(conv) == NULL)
 		return 0;
@@ -173,9 +174,9 @@ notify(PurpleConversation *conv, gboolean increment)
 	purplewin = PIDGIN_CONVERSATION(conv)->win;
 
 	/* If we aren't doing notifications for this type of conversation, return */
-	if (((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) &&
+	if ((PURPLE_IS_IM_CONVERSATION(conv) &&
 	     !purple_prefs_get_bool("/plugins/gtk/X11/notify/type_im")) ||
-	    ((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) &&
+	    (PURPLE_IS_CHAT_CONVERSATION(conv) &&
 	     !purple_prefs_get_bool("/plugins/gtk/X11/notify/type_chat")))
 		return 0;
 
@@ -185,9 +186,9 @@ notify(PurpleConversation *conv, gboolean increment)
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/type_focused") ||
 	    !has_focus) {
 		if (increment) {
-			count = GPOINTER_TO_INT(purple_conversation_get_data(conv, "notify-message-count"));
+			count = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "notify-message-count"));
 			count++;
-			purple_conversation_set_data(conv, "notify-message-count", GINT_TO_POINTER(count));
+			g_object_set_data(G_OBJECT(conv), "notify-message-count", GINT_TO_POINTER(count));
 		}
 
 		notify_win(purplewin, conv);
@@ -197,7 +198,7 @@ notify(PurpleConversation *conv, gboolean increment)
 }
 
 static void
-notify_win(PidginWindow *purplewin, PurpleConversation *conv)
+notify_win(PidginConvWindow *purplewin, PurpleConversation *conv)
 {
 	if (count_messages(purplewin) <= 0)
 		return;
@@ -220,7 +221,7 @@ static void
 unnotify(PurpleConversation *conv, gboolean reset)
 {
 	PurpleConversation *active_conv = NULL;
-	PidginWindow *purplewin = NULL;
+	PidginConvWindow *purplewin = NULL;
 
 	g_return_if_fail(conv != NULL);
 	if (PIDGIN_CONVERSATION(conv) == NULL)
@@ -237,7 +238,7 @@ unnotify(PurpleConversation *conv, gboolean reset)
 		 * removing it just to have it readded in re-notify is an
 		 * unnecessary couple extra RTs to the server */
 		handle_urgent(purplewin, FALSE);
-		purple_conversation_set_data(conv, "notify-message-count", GINT_TO_POINTER(0));
+		g_object_set_data(G_OBJECT(conv), "notify-message-count", GINT_TO_POINTER(0));
 		/* Same logic as for the urgent hint, xprops are also a RT.
 		 * This needs to go here so that it gets the updated message
 		 * count. */
@@ -250,7 +251,7 @@ unnotify(PurpleConversation *conv, gboolean reset)
 static int
 unnotify_cb(GtkWidget *widget, gpointer data, PurpleConversation *conv)
 {
-	if (GPOINTER_TO_INT(purple_conversation_get_data(conv, "notify-message-count")) != 0)
+	if (GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "notify-message-count")) != 0)
 		unnotify(conv, TRUE);
 
 	return 0;
@@ -260,7 +261,7 @@ static gboolean
 message_displayed_cb(PurpleAccount *account, const char *who, char *message,
                      PurpleConversation *conv, PurpleMessageFlags flags)
 {
-	if ((purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
+	if ((PURPLE_IS_CHAT_CONVERSATION(conv) &&
 	     purple_prefs_get_bool("/plugins/gtk/X11/notify/type_chat_nick") &&
 	     !(flags & PURPLE_MESSAGE_NICK)))
 	    return FALSE;
@@ -274,22 +275,22 @@ message_displayed_cb(PurpleAccount *account, const char *who, char *message,
 static void
 im_sent_im(PurpleAccount *account, const char *receiver, const char *message)
 {
-	PurpleConversation *conv = NULL;
+	PurpleIMConversation *im = NULL;
 
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/notify_send")) {
-		conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, receiver, account);
-		unnotify(conv, TRUE);
+		im = purple_conversations_find_im_with_account(receiver, account);
+		unnotify(PURPLE_CONVERSATION(im), TRUE);
 	}
 }
 
 static void
 chat_sent_im(PurpleAccount *account, const char *message, int id)
 {
-	PurpleConversation *conv = NULL;
+	PurpleChatConversation *chat = NULL;
 
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/notify_send")) {
-		conv = purple_find_chat(purple_account_get_connection(account), id);
-		unnotify(conv, TRUE);
+		chat = purple_conversations_find_chat(purple_account_get_connection(account), id);
+		unnotify(PURPLE_CONVERSATION(chat), TRUE);
 	}
 }
 
@@ -297,7 +298,7 @@ static int
 attach_signals(PurpleConversation *conv)
 {
 	PidginConversation *gtkconv = NULL;
-	GSList *imhtml_ids = NULL, *entry_ids = NULL;
+	GSList *webview_ids = NULL, *entry_ids = NULL;
 	guint id;
 
 	gtkconv = PIDGIN_CONVERSATION(conv);
@@ -316,9 +317,9 @@ attach_signals(PurpleConversation *conv)
 		                      G_CALLBACK(unnotify_cb), conv);
 		entry_ids = g_slist_append(entry_ids, GUINT_TO_POINTER(id));
 
-		id = g_signal_connect(G_OBJECT(gtkconv->imhtml), "focus-in-event",
+		id = g_signal_connect(G_OBJECT(gtkconv->webview), "focus-in-event",
 		                      G_CALLBACK(unnotify_cb), conv);
-		imhtml_ids = g_slist_append(imhtml_ids, GUINT_TO_POINTER(id));
+		webview_ids = g_slist_append(webview_ids, GUINT_TO_POINTER(id));
 	}
 
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/notify_click")) {
@@ -328,9 +329,9 @@ attach_signals(PurpleConversation *conv)
 		                      G_CALLBACK(unnotify_cb), conv);
 		entry_ids = g_slist_append(entry_ids, GUINT_TO_POINTER(id));
 
-		id = g_signal_connect(G_OBJECT(gtkconv->imhtml), "button-press-event",
+		id = g_signal_connect(G_OBJECT(gtkconv->webview), "button-press-event",
 		                      G_CALLBACK(unnotify_cb), conv);
-		imhtml_ids = g_slist_append(imhtml_ids, GUINT_TO_POINTER(id));
+		webview_ids = g_slist_append(webview_ids, GUINT_TO_POINTER(id));
 	}
 
 	if (purple_prefs_get_bool("/plugins/gtk/X11/notify/notify_type")) {
@@ -339,8 +340,8 @@ attach_signals(PurpleConversation *conv)
 		entry_ids = g_slist_append(entry_ids, GUINT_TO_POINTER(id));
 	}
 
-	purple_conversation_set_data(conv, "notify-imhtml-signals", imhtml_ids);
-	purple_conversation_set_data(conv, "notify-entry-signals", entry_ids);
+	g_object_set_data(G_OBJECT(conv), "notify-webview-signals", webview_ids);
+	g_object_set_data(G_OBJECT(conv), "notify-entry-signals", entry_ids);
 
 	return 0;
 }
@@ -355,26 +356,26 @@ detach_signals(PurpleConversation *conv)
 	if (!gtkconv)
 		return;
 
-	ids = purple_conversation_get_data(conv, "notify-imhtml-signals");
+	ids = g_object_get_data(G_OBJECT(conv), "notify-webview-signals");
 	for (l = ids; l != NULL; l = l->next)
-		g_signal_handler_disconnect(gtkconv->imhtml, GPOINTER_TO_INT(l->data));
+		g_signal_handler_disconnect(gtkconv->webview, GPOINTER_TO_INT(l->data));
 	g_slist_free(ids);
 
-	ids = purple_conversation_get_data(conv, "notify-entry-signals");
+	ids = g_object_get_data(G_OBJECT(conv), "notify-entry-signals");
 	for (l = ids; l != NULL; l = l->next)
 		g_signal_handler_disconnect(gtkconv->entry, GPOINTER_TO_INT(l->data));
 	g_slist_free(ids);
 
-	purple_conversation_set_data(conv, "notify-message-count", GINT_TO_POINTER(0));
+	g_object_set_data(G_OBJECT(conv), "notify-message-count", GINT_TO_POINTER(0));
 
-	purple_conversation_set_data(conv, "notify-imhtml-signals", NULL);
-	purple_conversation_set_data(conv, "notify-entry-signals", NULL);
+	g_object_set_data(G_OBJECT(conv), "notify-webview-signals", NULL);
+	g_object_set_data(G_OBJECT(conv), "notify-entry-signals", NULL);
 }
 
 static void
 conv_created(PurpleConversation *conv)
 {
-	purple_conversation_set_data(conv, "notify-message-count",
+	g_object_set_data(G_OBJECT(conv), "notify-message-count",
 	                           GINT_TO_POINTER(0));
 
 	/* always attach the signals, notify() will take care of conversation
@@ -386,7 +387,7 @@ static void
 conv_switched(PurpleConversation *conv)
 {
 #if 0
-	PidginWindow *purplewin = purple_conversation_get_window(new_conv);
+	PidginConvWindow *purplewin = purple_conversation_get_window(new_conv);
 #endif
 
 	/*
@@ -412,7 +413,7 @@ conv_switched(PurpleConversation *conv)
 static void
 deleting_conv(PurpleConversation *conv)
 {
-	PidginWindow *purplewin = NULL;
+	PidginConvWindow *purplewin = NULL;
 	PidginConversation *gtkconv = PIDGIN_CONVERSATION(conv);
 
 	if (gtkconv == NULL)
@@ -423,7 +424,7 @@ deleting_conv(PurpleConversation *conv)
 	purplewin = gtkconv->win;
 
 	handle_urgent(purplewin, FALSE);
-	purple_conversation_set_data(conv, "notify-message-count", GINT_TO_POINTER(0));
+	g_object_set_data(G_OBJECT(conv), "notify-message-count", GINT_TO_POINTER(0));
 
 	return;
 
@@ -437,8 +438,8 @@ deleting_conv(PurpleConversation *conv)
 #if 0
 static void
 conversation_dragging(PurpleConversation *active_conv,
-                        PidginWindow *old_purplewin,
-                        PidginWindow *new_purplewin)
+                        PidginConvWindow *old_purplewin,
+                        PidginConvWindow *new_purplewin)
 {
 	if (old_purplewin != new_purplewin) {
 		if (old_purplewin == NULL) {
@@ -454,7 +455,7 @@ conversation_dragging(PurpleConversation *active_conv,
 			printf("if else count = %d\n", count_messages(old_purplewin));
 			/*
 			PurpleConversation *old_active_conv = NULL;
-			old_active_conv = purple_conv_window_get_active_conversation(new_purplewin);
+			old_active_conv = purple_conversation_window_get_active_conversation(new_purplewin);
 
 			purple_conversation_autoset_title(old_active_conv);
 			handle_urgent(old_purplewin, FALSE);
@@ -484,7 +485,7 @@ conversation_dragging(PurpleConversation *active_conv,
 #endif
 
 static void
-handle_string(PidginWindow *purplewin)
+handle_string(PidginConvWindow *purplewin)
 {
 	GtkWindow *window = NULL;
 	gchar newtitle[256];
@@ -501,7 +502,7 @@ handle_string(PidginWindow *purplewin)
 }
 
 static void
-handle_count_title(PidginWindow *purplewin)
+handle_count_title(PidginConvWindow *purplewin)
 {
 	GtkWindow *window;
 	char newtitle[256];
@@ -517,7 +518,7 @@ handle_count_title(PidginWindow *purplewin)
 }
 
 static void
-handle_count_xprop(PidginWindow *purplewin)
+handle_count_xprop(PidginConvWindow *purplewin)
 {
 #ifdef HAVE_X11
 	guint count;
@@ -536,11 +537,7 @@ handle_count_xprop(PidginWindow *purplewin)
 	}
 
 	count = count_messages(purplewin);
-#if GTK_CHECK_VERSION(2,14,0)
 	gdkwin = gtk_widget_get_window(window);
-#else
-	gdkwin = window->window;
-#endif
 
 	gdk_property_change(gdkwin, _PurpleUnseenCount, _Cardinal, 32,
 	                    GDK_PROP_MODE_REPLACE, (guchar *) &count, 1);
@@ -548,7 +545,7 @@ handle_count_xprop(PidginWindow *purplewin)
 }
 
 static void
-handle_urgent(PidginWindow *purplewin, gboolean set)
+handle_urgent(PidginConvWindow *purplewin, gboolean set)
 {
 	g_return_if_fail(purplewin != NULL);
 	g_return_if_fail(purplewin->window != NULL);
@@ -557,7 +554,7 @@ handle_urgent(PidginWindow *purplewin, gboolean set)
 }
 
 static void
-handle_raise(PidginWindow *purplewin)
+handle_raise(PidginConvWindow *purplewin)
 {
 	pidgin_conv_window_raise(purplewin);
 }
@@ -640,14 +637,14 @@ apply_method()
 {
 	GList *convs;
 
-	for (convs = purple_get_conversations(); convs != NULL;
+	for (convs = purple_conversations_get_all(); convs != NULL;
 	     convs = convs->next) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
 
 		/* remove notifications */
 		unnotify(conv, FALSE);
 
-		if (GPOINTER_TO_INT(purple_conversation_get_data(conv, "notify-message-count")) != 0)
+		if (GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "notify-message-count")) != 0)
 			/* reattach appropriate notifications */
 			notify(conv, FALSE);
 	}
@@ -656,7 +653,7 @@ apply_method()
 static void
 apply_notify()
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get_all();
 
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
@@ -677,12 +674,12 @@ get_config_frame(PurplePlugin *plugin)
 	GtkWidget *vbox = NULL, *hbox = NULL;
 	GtkWidget *toggle = NULL, *entry = NULL, *ref;
 
-	ret = gtk_vbox_new(FALSE, 18);
+	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
 	gtk_container_set_border_width(GTK_CONTAINER (ret), 12);
 
 	/*---------- "Notify For" ----------*/
 	frame = pidgin_make_frame(ret, _("Notify For"));
-	vbox = gtk_vbox_new(FALSE, 5);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 
 	toggle = gtk_check_button_new_with_mnemonic(_("_IM windows"));
@@ -719,11 +716,11 @@ get_config_frame(PurplePlugin *plugin)
 
 	/*---------- "Notification Methods" ----------*/
 	frame = pidgin_make_frame(ret, _("Notification Methods"));
-	vbox = gtk_vbox_new(FALSE, 5);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 
 	/* String method button */
-	hbox = gtk_hbox_new(FALSE, 18);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 18);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 	toggle = gtk_check_button_new_with_mnemonic(_("Prepend _string into window title:"));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle),
@@ -789,7 +786,7 @@ get_config_frame(PurplePlugin *plugin)
 
 	/*---------- "Notification Removals" ----------*/
 	frame = pidgin_make_frame(ret, _("Notification Removal"));
-	vbox = gtk_vbox_new(FALSE, 5);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
 	gtk_container_add(GTK_CONTAINER(frame), vbox);
 
 	/* Remove on focus button */
@@ -840,7 +837,7 @@ get_config_frame(PurplePlugin *plugin)
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get_all();
 	void *conv_handle = purple_conversations_get_handle();
 	void *gtk_conv_handle = pidgin_conversations_get_handle();
 
@@ -880,7 +877,7 @@ plugin_load(PurplePlugin *plugin)
 static gboolean
 plugin_unload(PurplePlugin *plugin)
 {
-	GList *convs = purple_get_conversations();
+	GList *convs = purple_conversations_get_all();
 
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
@@ -897,7 +894,6 @@ plugin_unload(PurplePlugin *plugin)
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0, /* page_num (Reserved) */
 
 	/* padding */
 	NULL,

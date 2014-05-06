@@ -24,13 +24,15 @@
 #include "purple.h"
 
 #include <glib.h>
+#include <glib/gprintf.h>
 
 #include <signal.h>
 #include <string.h>
-#ifndef _WIN32
-#include <unistd.h>
+#ifdef _WIN32
+#  include <conio.h>
+#  include "win32/win32dep.h"
 #else
-#include "win32/win32dep.h"
+#  include <unistd.h>
 #endif
 
 #include "defines.h"
@@ -64,13 +66,13 @@ static gboolean purple_glib_io_invoke(GIOChannel *source, GIOCondition condition
 		purple_cond |= PURPLE_INPUT_WRITE;
 
 	closure->function(closure->data, g_io_channel_unix_get_fd(source),
-			  purple_cond);
+		purple_cond);
 
 	return TRUE;
 }
 
-static guint glib_input_add(gint fd, PurpleInputCondition condition, PurpleInputFunction function,
-							   gpointer data)
+static guint glib_input_add(gint fd, PurpleInputCondition condition,
+	PurpleInputFunction function, gpointer data)
 {
 	PurpleGLibIOClosure *closure = g_new0(PurpleGLibIOClosure, 1);
 	GIOChannel *channel;
@@ -89,8 +91,8 @@ static guint glib_input_add(gint fd, PurpleInputCondition condition, PurpleInput
 #else
 	channel = g_io_channel_unix_new(fd);
 #endif
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      purple_glib_io_invoke, closure, purple_glib_io_destroy);
+	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT,
+		cond, purple_glib_io_invoke, closure, purple_glib_io_destroy);
 
 	g_io_channel_unref(channel);
 	return closure->result;
@@ -103,13 +105,10 @@ static PurpleEventLoopUiOps glib_eventloops =
 	glib_input_add,
 	g_source_remove,
 	NULL,
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -147,9 +146,6 @@ static PurpleConversationUiOps null_conv_uiops =
 	NULL,                      /* chat_update_user     */
 	NULL,                      /* present              */
 	NULL,                      /* has_focus            */
-	NULL,                      /* custom_smiley_add    */
-	NULL,                      /* custom_smiley_write  */
-	NULL,                      /* custom_smiley_close  */
 	NULL,                      /* send_confirm         */
 	NULL,
 	NULL,
@@ -175,6 +171,7 @@ static PurpleCoreUiOps null_core_uiops =
 	NULL,
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL,
@@ -218,26 +215,19 @@ init_libpurple(void)
 		abort();
 	}
 
-	/* Create and load the buddylist. */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
-
 	/* Load the preferences. */
 	purple_prefs_load();
 
 	/* Load the desired plugins. The client should save the list of loaded plugins in
 	 * the preferences using purple_plugins_save_loaded(PLUGIN_SAVE_PREF) */
 	purple_plugins_load_saved(PLUGIN_SAVE_PREF);
-
-	/* Load the pounces. */
-	purple_pounces_load();
 }
 
 static void
 signed_on(PurpleConnection *gc, gpointer null)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
-	printf("Account connected: %s %s\n", account->username, account->protocol_id);
+	printf("Account connected: %s %s\n", purple_account_get_username(account), purple_account_get_protocol_id(account));
 }
 
 static void
@@ -247,6 +237,36 @@ connect_to_signals_for_demonstration_purposes_only(void)
 	purple_signal_connect(purple_connections_get_handle(), "signed-on", &handle,
 				PURPLE_CALLBACK(signed_on), NULL);
 }
+
+#if defined(_WIN32) || defined(__BIONIC__)
+#ifndef PASS_MAX
+#  define PASS_MAX 1024
+#endif
+static gchar *
+getpass(const gchar *prompt)
+{
+	static gchar buff[PASS_MAX + 1];
+	guint i = 0;
+
+	g_fprintf(stderr, "%s", prompt);
+	fflush(stderr);
+
+	while (i < sizeof(buff) - 1) {
+#ifdef __BIONIC__
+		buff[i] = getc(stdin);
+#else
+		buff[i] = _getch();
+#endif
+		if (buff[i] == '\r' || buff[i] == '\n')
+			break;
+		i++;
+	}
+	buff[i] = '\0';
+	g_fprintf(stderr, "\n");
+
+	return buff;
+}
+#endif /* _WIN32 || __BIONIC__ */
 
 int main(int argc, char *argv[])
 {
@@ -280,7 +300,7 @@ int main(int argc, char *argv[])
 		PurplePluginInfo *info = plugin->info;
 		if (info && info->name) {
 			printf("\t%d: %s\n", i++, info->name);
-			names = g_list_append(names, info->id);
+			names = g_list_append(names, (gpointer)info->id);
 		}
 	}
 	printf("Select the protocol [0-%d]: ", i-1);
@@ -309,7 +329,7 @@ int main(int argc, char *argv[])
 
 	/* Get the password for the account */
 	password = getpass("Password: ");
-	purple_account_set_password(account, password);
+	purple_account_set_password(account, password, NULL, NULL);
 
 	/* It's necessary to enable the account first. */
 	purple_account_set_enabled(account, UI_ID, TRUE);
@@ -324,4 +344,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-
