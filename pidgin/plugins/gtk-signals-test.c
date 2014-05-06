@@ -57,7 +57,7 @@ blist_drawing_tooltip_cb(PurpleBlistNode *node, GString *str, gboolean full, voi
  * Conversation subsystem signal callbacks
  **************************************************************************/
 static void
-conversation_dragging_cb(PidginWindow *source, PidginWindow *destination) {
+conversation_dragging_cb(PidginConvWindow *source, PidginConvWindow *destination) {
 	purple_debug_info("gtk-signal-test", "conversation dragging cb\n");
 }
 
@@ -110,7 +110,7 @@ conversation_switched_cb(PurpleConversation *conv, void *data)
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	void *accounts_handle = pidgin_account_get_handle();
+	void *accounts_handle = pidgin_accounts_get_handle();
 	void *blist_handle = pidgin_blist_get_handle();
 	void *conv_handle = pidgin_conversations_get_handle();
 

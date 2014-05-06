@@ -185,11 +185,11 @@ static PurpleCmdRet irc_parse_purple_cmd(PurpleConversation *conv, const gchar *
 	struct irc_conn *irc;
 	struct _irc_user_cmd *cmdent;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 	if (!gc)
 		return PURPLE_CMD_RET_FAILED;
 
-	irc = gc->proto_data;
+	irc = purple_connection_get_protocol_data(gc);
 
 	if ((cmdent = g_hash_table_lookup(irc->cmds, cmd)) == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -390,7 +390,7 @@ char *irc_mirc2html(const char *string)
 	do {
 		end = strpbrk(cur, "\002\003\007\017\026\037");
 
-		decoded = g_string_append_len(decoded, cur, end ? end - cur : strlen(cur));
+		decoded = g_string_append_len(decoded, cur, (end ? (gssize)(end - cur) : (gssize)strlen(cur)));
 		cur = end ? end : cur + strlen(cur);
 
 		switch (*cur) {
@@ -571,7 +571,9 @@ char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, con
 			/* TODO: Should this read in the timestamp as a double? */
 			if (sscanf(cur, "PING %lu", &timestamp) == 1) {
 				buf = g_strdup_printf(_("Reply time from %s: %lu seconds"), from, time(NULL) - timestamp);
-				purple_notify_info(gc, _("PONG"), _("CTCP PING reply"), buf);
+				purple_notify_info(gc, _("PONG"),
+					_("CTCP PING reply"), buf,
+					purple_request_cpar_from_connection(gc));
 				g_free(buf);
 			} else
 				purple_debug(PURPLE_DEBUG_ERROR, "irc", "Unable to parse PING timestamp");
@@ -688,11 +690,11 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	} else if (!strncmp(input, "ERROR ", 6)) {
 		if (g_utf8_validate(input, -1, NULL)) {
 			char *tmp = g_strdup_printf("%s\n%s", _("Disconnected."), input);
-			purple_connection_error_reason (gc,
+			purple_connection_error (gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 			g_free(tmp);
 		} else
-			purple_connection_error_reason (gc,
+			purple_connection_error (gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 				_("Disconnected."));
 		return;

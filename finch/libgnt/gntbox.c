@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -592,7 +592,7 @@ gnt_box_class_init(GntBoxClass *klass)
 			g_param_spec_boolean("vertical", "Vertical",
 				"Whether the child widgets in the box should be stacked vertically.",
 				TRUE,
-				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+				G_PARAM_READWRITE|G_PARAM_CONSTRUCT|G_PARAM_STATIC_STRINGS
 			)
 		);
 	g_object_class_install_property(gclass,
@@ -600,7 +600,7 @@ gnt_box_class_init(GntBoxClass *klass)
 			g_param_spec_boolean("homogeneous", "Homogeneous",
 				"Whether the child widgets in the box should have the same size.",
 				TRUE,
-				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+				G_PARAM_READWRITE|G_PARAM_CONSTRUCT|G_PARAM_STATIC_STRINGS
 			)
 		);
 
@@ -633,7 +633,7 @@ gnt_box_init(GTypeInstance *instance, gpointer class)
  * GntBox API
  *****************************************************************************/
 GType
-gnt_box_get_gtype(void)
+gnt_box_get_type(void)
 {
 	static GType type = 0;
 
@@ -662,11 +662,10 @@ gnt_box_get_gtype(void)
 
 GntWidget *gnt_box_new(gboolean homo, gboolean vert)
 {
-	GntWidget *widget = g_object_new(GNT_TYPE_BOX, NULL);
+	GntWidget *widget = g_object_new(GNT_TYPE_BOX, "homogeneous", homo,
+			"vertical", vert, NULL);
 	GntBox *box = GNT_BOX(widget);
 
-	box->homogeneous = homo;
-	box->vertical = vert;
 	box->alignment = vert ? GNT_ALIGN_LEFT : GNT_ALIGN_MID;
 
 	return widget;
@@ -675,6 +674,12 @@ GntWidget *gnt_box_new(gboolean homo, gboolean vert)
 void gnt_box_add_widget(GntBox *b, GntWidget *widget)
 {
 	b->list = g_list_append(b->list, widget);
+	widget->parent = GNT_WIDGET(b);
+}
+
+void gnt_box_add_widget_in_front(GntBox *b, GntWidget *widget)
+{
+	b->list = g_list_prepend(b->list, widget);
 	widget->parent = GNT_WIDGET(b);
 }
 
@@ -731,6 +736,11 @@ void gnt_box_sync_children(GntBox *box)
 		GntWidget *w = GNT_WIDGET(iter->data);
 		int height, width;
 		int x, y;
+
+		if (G_UNLIKELY(w == NULL)) {
+			g_warn_if_reached();
+			continue;
+		}
 
 		if (GNT_WIDGET_IS_FLAG_SET(w, GNT_WIDGET_INVISIBLE))
 			continue;
@@ -820,6 +830,12 @@ void gnt_box_readjust(GntBox *box)
 	for (iter = box->list; iter; iter = iter->next)
 	{
 		GntWidget *w = iter->data;
+
+		if (G_UNLIKELY(w == NULL)) {
+			g_warn_if_reached();
+			continue;
+		}
+
 		if (GNT_IS_BOX(w))
 			gnt_box_readjust(GNT_BOX(w));
 		else
