@@ -27,9 +27,6 @@
  */
 
 #include "oscar.h"
-#ifdef _WIN32
-#include "win32dep.h"
-#endif
 
 /* Define to log unknown TLVs */
 /* #define LOG_UNKNOWN_TLV */
@@ -958,8 +955,7 @@ aim_info_extract(OscarData *od, ByteStream *bs, aim_userinfo_t *outinfo)
 			/*
 			 * My instance number.
 			 */
-			guint8 instance_number;
-			instance_number = byte_stream_get8(bs);
+			byte_stream_get8(bs);
 
 		} else if (type == 0x0019) {
 			/*

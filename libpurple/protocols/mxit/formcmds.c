@@ -26,6 +26,8 @@
 
 #include "internal.h"
 #include "debug.h"
+#include "http.h"
+#include "image-store.h"
 
 #include "protocol.h"
 #include "mxit.h"
@@ -74,42 +76,36 @@ struct ii_url_request
 
 /*------------------------------------------------------------------------
  * Callback function invoked when an inline image request to a web site completes.
- *
- *  @param url_data
- *  @param user_data		The Markup message object
- *  @param url_text			The data returned from the WAP site
- *  @param len				The length of the data returned
- *  @param error_message	Descriptive error message
  */
-static void mxit_cb_ii_returned(PurpleUtilFetchUrlData* url_data, gpointer user_data, const gchar* url_text, gsize len, const gchar* error_message)
+static void
+mxit_cb_ii_returned(PurpleHttpConnection *http_conn, PurpleHttpResponse *response,
+	gpointer _iireq)
 {
-	struct ii_url_request*	iireq		= (struct ii_url_request*) user_data;
-	int*					intptr		= NULL;
-	int						id;
+	struct ii_url_request*	iireq		= _iireq;
+	PurpleImage *img;
+	const gchar* data;
+	size_t len;
 
 #ifdef	MXIT_DEBUG_COMMANDS
 	purple_debug_info(MXIT_PLUGIN_ID, "Inline Image returned from %s\n", iireq->url);
 #endif
 
-	if (!url_text) {
+	if (!purple_http_response_is_successful(response)) {
 		/* no reply from the WAP site */
 		purple_debug_error(MXIT_PLUGIN_ID, "Error downloading Inline Image from %s.\n", iireq->url);
 		goto done;
 	}
 
 	/* lets first see if we don't have the inline image already in cache */
-	if (g_hash_table_lookup(iireq->mx->session->iimages, iireq->url)) {
+	if (g_hash_table_lookup(iireq->mx->session->inline_images, iireq->url)) {
 		/* inline image found in the cache, so we just ignore this reply */
 		goto done;
 	}
 
 	/* we now have the inline image, store a copy in the imagestore */
-	id = purple_imgstore_add_with_id(g_memdup(url_text, len), len, NULL);
-
-	/* map the inline image id to purple image id */
-	intptr = g_malloc(sizeof(int));
-	*intptr = id;
-	g_hash_table_insert(iireq->mx->session->iimages, iireq->url, intptr);
+	data = purple_http_response_get_data(response, &len);
+	img = purple_image_new_from_data(g_memdup(data, len), len);
+	g_hash_table_insert(iireq->mx->session->inline_images, iireq->url, img);
 
 	iireq->mx->flags |= PURPLE_MESSAGE_IMAGES;
 
@@ -227,11 +223,11 @@ static GHashTable* command_tokenize(char* cmd)
  */
 static void command_clear(struct MXitSession* session, const char* from, GHashTable* hash)
 {
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	char* clearmsgscreen;
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, from, session->acc);
-	if (conv == NULL) {
+	im = purple_conversations_find_im_with_account(from, session->acc);
+	if (im == NULL) {
 		purple_debug_error(MXIT_PLUGIN_ID, _( "Conversation with '%s' not found\n" ), from);
 		return;
 	}
@@ -239,7 +235,7 @@ static void command_clear(struct MXitSession* session, const char* from, GHashTa
 	clearmsgscreen = g_hash_table_lookup(hash, "clearmsgscreen");
 	if ( (clearmsgscreen) && (strcmp(clearmsgscreen, "true") == 0) ) {
 		/* this is a command to clear the chat screen */
-		purple_conversation_clear_message_history(conv);
+		purple_conversation_clear_message_history(PURPLE_CONVERSATION(im));
 	}
 }
 
@@ -326,14 +322,18 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 	const char*	reply;
 	guchar*		rawimg;
 	gsize		rawimglen;
-	int			imgid;
 
 	img = g_hash_table_lookup(hash, "dat");
 	if (img) {
+		PurpleImage *pimg;
+		guint pimg_id;
+
 		rawimg = purple_base64_decode(img, &rawimglen);
 		//purple_util_write_data_to_file_absolute("/tmp/mxitinline.png", (char*) rawimg, rawimglen);
-		imgid = purple_imgstore_add_with_id(rawimg, rawimglen, NULL);
-		g_string_append_printf(msg, "<img id=\"%i\">", imgid);
+		pimg = purple_image_new_from_data(rawimg, rawimglen);
+		pimg_id = purple_image_store_add(pimg);
+		g_string_append_printf(msg, "<img src=\""
+			PURPLE_IMAGE_STORE_PROTOCOL "%u\">", pimg_id);
 		mx->flags |= PURPLE_MESSAGE_IMAGES;
 	}
 	else {
@@ -349,7 +349,7 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 			mx->got_img = TRUE;
 
 			/* lets first see if we don't have the inline image already in cache */
-			if (g_hash_table_lookup(mx->session->iimages, iireq->url)) {
+			if (g_hash_table_lookup(mx->session->inline_images, iireq->url)) {
 				/* inline image found in the cache, so we do not have to request it from the web */
 				g_free(iireq);
 			}
@@ -357,8 +357,7 @@ static void command_image(struct RXMsgData* mx, GHashTable* hash, GString* msg)
 				/* send the request for the inline image */
 				purple_debug_info(MXIT_PLUGIN_ID, "sending request for inline image '%s'\n", iireq->url);
 
-				/* request the image (reference: "libpurple/util.h") */
-				purple_util_fetch_url_request(iireq->url, TRUE, NULL, TRUE, NULL, FALSE, mxit_cb_ii_returned, iireq);
+				purple_http_get(mx->session->con, mxit_cb_ii_returned, iireq, iireq->url);
 				mx->img_count++;
 			}
 		}

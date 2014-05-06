@@ -19,20 +19,13 @@
  * 02111-1301, USA.
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#ifndef PURPLE_PLUGINS
-# define PURPLE_PLUGINS
-#endif
-
+/* When writing a third-party plugin, do not include libpurple's internal.h
+ * included below. This file is for internal libpurple use only. We're including
+ * it here for our own convenience. */
 #include "internal.h"
 
-#include "plugin.h"
-#include "pluginpref.h"
-#include "prefs.h"
-#include "version.h"
+/* This file defines PURPLE_PLUGINS and includes all the libpurple headers */
+#include <purple.h>
 
 static PurplePluginPrefFrame *
 get_plugin_pref_frame(PurplePlugin *plugin) {
@@ -61,7 +54,7 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 	ppref = purple_plugin_pref_new_with_name_and_label(
 									"/plugins/core/pluginpref_example/int_choice",
 									"integer choice");
-	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
+	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
 	purple_plugin_pref_add_choice(ppref, "One", GINT_TO_POINTER(1));
 	purple_plugin_pref_add_choice(ppref, "Two", GINT_TO_POINTER(2));
 	purple_plugin_pref_add_choice(ppref, "Four", GINT_TO_POINTER(4));
@@ -95,7 +88,7 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 	ppref = purple_plugin_pref_new_with_name_and_label(
 							"/plugins/core/pluginpref_example/string_choice",
 							"string choice");
-	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
+	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
 	purple_plugin_pref_add_choice(ppref, "red", "red");
 	purple_plugin_pref_add_choice(ppref, "orange", "orange");
 	purple_plugin_pref_add_choice(ppref, "yellow", "yellow");
@@ -109,8 +102,8 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 
 static PurplePluginUiInfo prefs_info = {
 	get_plugin_pref_frame,
-	0,   /* page_num (Reserved) */
-	NULL, /* frame (Reserved) */
+	NULL,
+
 	/* Padding */
 	NULL,
 	NULL,

@@ -29,6 +29,7 @@
 #include "util.h"
 #include "version.h"
 
+#include "gtk3compat.h"
 #include "gtkblist.h"
 #include "gtkconv.h"
 #include "gtkplugin.h"
@@ -99,11 +100,12 @@ update_ims_from_contact(EContact *contact, const char *name,
 		me = g_strdup(purple_normalize(account, purple_account_get_username(account)));
 		for (l2 = ims; l2 != NULL; l2 = l2->next)
 		{
-			if (purple_find_buddy(account, l2->data) != NULL ||
+			if (purple_blist_find_buddy(account, l2->data) != NULL ||
 				!strcmp(me, purple_normalize(account, l2->data)))
 				continue;
 
-			gevo_add_buddy(account, _("Buddies"), l2->data, name);
+			gevo_add_buddy(account, PURPLE_BLIST_DEFAULT_GROUP_NAME,
+				l2->data, name);
 		}
 		g_free(me);
 	}
@@ -220,14 +222,14 @@ signed_on_cb(PurpleConnection *gc)
 static void
 menu_item_activate_cb(PurpleBlistNode *node, gpointer user_data)
 {
-	PurpleBuddy *buddy = (PurpleBuddy *)node;
+	PurpleBuddy *buddy = PURPLE_BUDDY(node);
 	gevo_associate_buddy_dialog_new(buddy);
 }
 
 static void
 menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
 {
-	PurpleBuddy *buddy = (PurpleBuddy *)node;
+	PurpleBuddy *buddy = PURPLE_BUDDY(node);
 	char *mail = NULL;
 
 	mail = gevo_get_email_for_buddy(buddy);
@@ -248,14 +250,15 @@ menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
 		}
 		else
 		{
-			purple_notify_error(NULL, NULL, _("Unable to send email"),
-							  _("The evolution executable was not found in the PATH."));
+			purple_notify_error(NULL, NULL, _("Unable to send "
+				"email"), _("The evolution executable was not "
+				"found in the PATH."), NULL);
 		}
 	}
 	else
 	{
 		purple_notify_error(NULL, NULL, _("Unable to send email"),
-						  _("An email address was not found for this buddy."));
+			_("An email address was not found for this buddy."), NULL);
 	}
 }
 
@@ -268,10 +271,10 @@ blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
 	EContact *contact;
 	char *mail;
 
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+	if (!PURPLE_IS_BUDDY(node))
 		return;
 
-	buddy = (PurpleBuddy *)node;
+	buddy = PURPLE_BUDDY(node);
 	account = purple_buddy_get_account(buddy);
 
 	if (!gevo_prpl_is_supported(account, buddy))
@@ -425,7 +428,7 @@ get_config_frame(PurplePlugin *plugin)
 	GList *l;
 
 	/* Outside container */
-	ret = gtk_vbox_new(FALSE, 18);
+	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
 	gtk_container_set_border_width(GTK_CONTAINER(ret), 12);
 
 	/* Configuration frame */
@@ -515,7 +518,6 @@ get_config_frame(PurplePlugin *plugin)
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,	/**< get_config_frame */
-	0,			/**< page_num */
 	/* Padding */
 	NULL,
 	NULL,

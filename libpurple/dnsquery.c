@@ -1,8 +1,3 @@
-/**
- * @file dnsquery.c DNS query API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -80,8 +75,7 @@ struct _PurpleDnsQueryResolverProcess {
 };
 
 static GSList *free_dns_children = NULL;
-/* TODO: Make me a GQueue when we require >= glib 2.4 */
-static GSList *queued_requests = NULL;
+static GQueue *queued_requests = NULL;
 
 static int number_of_dns_children = 0;
 
@@ -243,7 +237,7 @@ write_to_parent(int fd, const void *buf, size_t count)
 	ssize_t written;
 
 	written = write(fd, buf, count);
-	if (written != count) {
+	if (written < 0 || (gsize)written != count) {
 		if (written < 0)
 			fprintf(stderr, "dns[%d]: Error writing data to "
 					"parent: %s\n", getpid(), strerror(errno));
@@ -297,6 +291,10 @@ purple_dnsquery_resolver_run(int child_out, int child_in, gboolean show_debug)
 		}
 		rc = read(child_in, &dns_params, sizeof(dns_params_t));
 		if (rc < 0) {
+			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+				/* Try again */
+				continue;
+			}
 			fprintf(stderr, "dns[%d]: Error: Could not read dns_params: "
 					"%s\n", getpid(), strerror(errno));
 			break;
@@ -419,7 +417,7 @@ cope_with_gdb_brokenness(void)
 	if(n < 0)
 		return;
 
-	e[MIN(n,sizeof(e)-1)] = '\0';
+	e[MIN((gsize)n,sizeof(e)-1)] = '\0';
 
 	if(strstr(e,"gdb")) {
 		purple_debug_info("dns",
@@ -508,11 +506,13 @@ purple_dnsquery_resolver_new(gboolean show_debug)
 	return resolver;
 }
 
-/**
- * @return TRUE if the request was sent succesfully.  FALSE
- *         if the request could not be sent.  This isn't
- *         necessarily an error.  If the child has expired,
- *         for example, we won't be able to send the message.
+/*
+ * send_dns_request_to_child:
+ *
+ * Returns: TRUE if the request was sent succesfully.  FALSE
+ *          if the request could not be sent.  This isn't
+ *          necessarily an error.  If the child has expired,
+ *          for example, we won't be able to send the message.
  */
 static gboolean
 send_dns_request_to_child(PurpleDnsQueryData *query_data,
@@ -528,12 +528,12 @@ send_dns_request_to_child(PurpleDnsQueryData *query_data,
 	 * instance, we can't use it. */
 	pid = waitpid(resolver->dns_pid, NULL, WNOHANG);
 	if (pid > 0) {
-		purple_debug_warning("dns", "DNS child %d no longer exists\n",
+		purple_debug_info("dns", "DNS child %d no longer exists\n",
 				resolver->dns_pid);
 		purple_dnsquery_resolver_destroy(resolver);
 		return FALSE;
 	} else if (pid < 0) {
-		purple_debug_warning("dns", "Wait for DNS child %d failed: %s\n",
+		purple_debug_info("dns", "Wait for DNS child %d failed: %s\n",
 				resolver->dns_pid, g_strerror(errno));
 		purple_dnsquery_resolver_destroy(resolver);
 		return FALSE;
@@ -552,7 +552,7 @@ send_dns_request_to_child(PurpleDnsQueryData *query_data,
 		purple_dnsquery_resolver_destroy(resolver);
 		return FALSE;
 	}
-	if (rc < sizeof(dns_params)) {
+	if ((gsize)rc < sizeof(dns_params)) {
 		purple_debug_error("dns", "Tried to write %" G_GSSIZE_FORMAT
 				" bytes to child but only wrote %" G_GSSIZE_FORMAT "\n",
 				sizeof(dns_params), rc);
@@ -577,12 +577,11 @@ handle_next_queued_request(void)
 	PurpleDnsQueryData *query_data;
 	PurpleDnsQueryResolverProcess *resolver;
 
-	if (queued_requests == NULL)
+	if (g_queue_is_empty(queued_requests))
 		/* No more DNS queries, yay! */
 		return;
 
-	query_data = queued_requests->data;
-	queued_requests = g_slist_delete_link(queued_requests, queued_requests);
+	query_data = g_queue_pop_head(queued_requests);
 
 	/*
 	 * If we have any children, attempt to have them perform the DNS
@@ -606,7 +605,7 @@ handle_next_queued_request(void)
 		if (number_of_dns_children >= MAX_DNS_CHILDREN)
 		{
 			/* Apparently all our children are busy */
-			queued_requests = g_slist_prepend(queued_requests, query_data);
+			g_queue_push_head(queued_requests, query_data);
 			return;
 		}
 
@@ -692,7 +691,7 @@ host_resolved(gpointer data, gint source, PurpleInputCondition cond)
 static void
 resolve_host(PurpleDnsQueryData *query_data)
 {
-	queued_requests = g_slist_append(queued_requests, query_data);
+	g_queue_push_tail(queued_requests, query_data);
 
 	handle_next_queued_request();
 }
@@ -730,8 +729,10 @@ static gpointer
 dns_thread(gpointer data)
 {
 	PurpleDnsQueryData *query_data;
-#ifdef HAVE_GETADDRINFO
+#if defined(HAVE_GETADDRINFO) || defined(USE_IDN)
 	int rc;
+#endif
+#ifdef HAVE_GETADDRINFO
 	struct addrinfo hints, *res, *tmp;
 	char servname[20];
 #else
@@ -816,8 +817,8 @@ resolve_host(PurpleDnsQueryData *query_data)
 	 * Spin off a separate thread to perform the DNS lookup so
 	 * that we don't block the UI.
 	 */
-	query_data->resolver = g_thread_create(dns_thread,
-			query_data, FALSE, &err);
+	query_data->resolver = g_thread_try_new("dnsquery resolver", dns_thread,
+		query_data, &err);
 	if (query_data->resolver == NULL)
 	{
 		char message[1024];
@@ -826,6 +827,8 @@ resolve_host(PurpleDnsQueryData *query_data)
 		g_error_free(err);
 		purple_dnsquery_failed(query_data, message);
 	}
+	else
+		g_thread_unref(query_data->resolver);
 }
 
 #else /* not PURPLE_DNSQUERY_USE_FORK or _WIN32 */
@@ -892,7 +895,7 @@ initiate_resolving(gpointer data)
 		/* resolve_ip calls purple_dnsquery_resolved */
 		return FALSE;
 
-	proxy_type = purple_proxy_info_get_type(
+	proxy_type = purple_proxy_info_get_proxy_type(
 		purple_proxy_get_setup(query_data->account));
 	if (proxy_type == PURPLE_PROXY_TOR) {
 		purple_dnsquery_failed(query_data,
@@ -910,7 +913,7 @@ initiate_resolving(gpointer data)
 }
 
 PurpleDnsQueryData *
-purple_dnsquery_a_account(PurpleAccount *account, const char *hostname, int port,
+purple_dnsquery_a(PurpleAccount *account, const char *hostname, int port,
 				PurpleDnsQueryConnectFunction callback, gpointer data)
 {
 	PurpleDnsQueryData *query_data;
@@ -940,13 +943,6 @@ purple_dnsquery_a_account(PurpleAccount *account, const char *hostname, int port
 	return query_data;
 }
 
-PurpleDnsQueryData *
-purple_dnsquery_a(const char *hostname, int port,
-				PurpleDnsQueryConnectFunction callback, gpointer data)
-{
-	return purple_dnsquery_a_account(NULL, hostname, port, callback, data);
-}
-
 void
 purple_dnsquery_destroy(PurpleDnsQueryData *query_data)
 {
@@ -956,7 +952,7 @@ purple_dnsquery_destroy(PurpleDnsQueryData *query_data)
 		ops->destroy(query_data);
 
 #if defined(PURPLE_DNSQUERY_USE_FORK)
-	queued_requests = g_slist_remove(queued_requests, query_data);
+	g_queue_remove(queued_requests, query_data);
 
 	if (query_data->resolver != NULL)
 		/*
@@ -1015,6 +1011,33 @@ purple_dnsquery_get_port(PurpleDnsQueryData *query_data)
 	return query_data->port;
 }
 
+static PurpleDnsQueryUiOps *
+purple_dnsquery_ui_ops_copy(PurpleDnsQueryUiOps *ops)
+{
+	PurpleDnsQueryUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleDnsQueryUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_dnsquery_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleDnsQueryUiOps",
+				(GBoxedCopyFunc)purple_dnsquery_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
 void
 purple_dnsquery_set_ui_ops(PurpleDnsQueryUiOps *ops)
 {
@@ -1033,6 +1056,9 @@ purple_dnsquery_get_ui_ops(void)
 void
 purple_dnsquery_init(void)
 {
+#if defined(PURPLE_DNSQUERY_USE_FORK)
+	queued_requests = g_queue_new();
+#endif
 }
 
 void
@@ -1044,5 +1070,9 @@ purple_dnsquery_uninit(void)
 		purple_dnsquery_resolver_destroy(free_dns_children->data);
 		free_dns_children = g_slist_remove(free_dns_children, free_dns_children->data);
 	}
+
+	g_queue_free(queued_requests);
+	queued_requests = NULL;
 #endif /* end PURPLE_DNSQUERY_USE_FORK */
 }
+
