@@ -48,10 +48,6 @@
 #include "oscar.h"
 #include "peer.h"
 
-#ifdef _WIN32
-#include "win32dep.h"
-#endif
-
 #include "util.h"
 
 static const char * const errcodereason[] = {
@@ -174,7 +170,7 @@ error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 	else
 		buf = g_strdup_printf(_("Unable to send message: %s"), reason_str);
 
-	if (!purple_conv_present_error(bn, purple_connection_get_account(gc), buf)) {
+	if (!purple_conversation_present_error(bn, purple_connection_get_account(gc), buf)) {
 		g_free(buf);
 		if (errcode != 0 && errcode < errcodereasonlen)
 			buf = g_strdup_printf(_("Unable to send message to %s: %s (%s)"),
@@ -183,7 +179,8 @@ error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 		else
 			buf = g_strdup_printf(_("Unable to send message to %s: %s"),
 			                      bn ? bn : "(unknown)", reason_str);
-		purple_notify_error(od->gc, NULL, buf, reason_str);
+		purple_notify_error(od->gc, NULL, buf, reason_str,
+			purple_request_cpar_from_connection(od->gc));
 	}
 	g_free(buf);
 
@@ -649,6 +646,9 @@ aim_im_sendch2_odc_requestdirect(OscarData *od, guchar *cookie, const char *bn, 
 	aim_snacid_t snacid;
 	GSList *outer_tlvlist = NULL, *inner_tlvlist = NULL;
 	ByteStream hdrbs;
+
+	g_return_if_fail(bn != NULL);
+	g_return_if_fail(ip != NULL);
 
 	conn = flap_connection_findbygroup(od, SNAC_FAMILY_ICBM);
 	if (conn == NULL)
@@ -1720,7 +1720,7 @@ static int clientautoresp(OscarData *od, FlapConnection *conn, aim_module_t *mod
 					if (*unescaped_xstatus) {
 						purple_debug_misc("oscar", "X-Status reply: %s\n", unescaped_xstatus);
 						account = purple_connection_get_account(od->gc);
-						buddy = purple_find_buddy(account, bn);
+						buddy = purple_blist_find_buddy(account, bn);
 						presence = purple_buddy_get_presence(buddy);
 						status = purple_presence_get_status(presence, "mood");
 						if (status) {
@@ -1940,7 +1940,7 @@ int icq_im_xstatus_request(OscarData *od, const char *sn)
 
 	account = purple_connection_get_account(od->gc);
 
-	statxml = g_strdup_printf(fmt, account->username);
+	statxml = g_strdup_printf(fmt, purple_account_get_username(account));
 	xmllen = strlen(statxml);
 
 	aim_icbm_makecookie(cookie);
@@ -2034,7 +2034,7 @@ int icq_relay_xstatus(OscarData *od, const char *sn, const guchar *cookie)
 	/* if (!strcmp(account->username, sn))
 		icq_im_xstatus_request(od, sn); */
 
-	status = purple_presence_get_active_status(account->presence);
+	status = purple_presence_get_active_status(purple_account_get_presence(account));
 	if (!status)
 		return -EINVAL;
 
@@ -2050,7 +2050,7 @@ int icq_relay_xstatus(OscarData *od, const char *sn, const guchar *cookie)
 	if (!msg)
 		return -EINVAL;
 
-	statxml = g_strdup_printf(fmt, account->username, title, msg);
+	statxml = g_strdup_printf(fmt, purple_account_get_username(account), title, msg);
 	len = strlen(statxml);
 
 	purple_debug_misc("oscar", "X-Status AutoReply: %s, %s\n", formatted_msg, msg);
@@ -2091,6 +2091,12 @@ static int mtn_receive(OscarData *od, FlapConnection *conn, aim_module_t *mod, F
 	channel = byte_stream_get16(bs);
 	bnlen = byte_stream_get8(bs);
 	bn = byte_stream_getstr(bs, bnlen);
+	if (!g_utf8_validate(bn, -1, NULL)) {
+		purple_debug_warning("oscar", "Received SNAC %04hx/%04hx with "
+				"invalid UTF-8 buddy name.\n", snac->family, snac->subtype);
+		g_free(bn);
+		return 1;
+	}
 	event = byte_stream_get16(bs);
 
 	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))

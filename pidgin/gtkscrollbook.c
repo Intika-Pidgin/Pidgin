@@ -1,8 +1,3 @@
-/*
- * @file gtkscrollbook.c GTK+ Scrolling notebook widget
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -26,6 +21,7 @@
 
 #include "gtkscrollbook.h"
 
+#include "gtk3compat.h"
 
 static void pidgin_scroll_book_init (PidginScrollBook *scroll_book);
 static void pidgin_scroll_book_class_init (PidginScrollBookClass *klass);
@@ -102,7 +98,7 @@ refresh_scroll_box(PidginScrollBook *scroll_book, int index, int count)
 
 	gtk_widget_show_all(GTK_WIDGET(scroll_book));
 	if (count < 1)
-		gtk_widget_hide_all(scroll_book->hbox);
+		gtk_widget_hide(scroll_book->hbox);
 	else {
 		gtk_widget_show_all(scroll_book->hbox);
 		if (count == 1) {
@@ -147,7 +143,7 @@ scroll_close_cb(PidginScrollBook *scroll_book, GdkEventButton *event)
 }
 
 static void
-switch_page_cb(GtkNotebook *notebook, GtkNotebookPage *page, guint page_num, PidginScrollBook *scroll_book)
+switch_page_cb(GtkNotebook *notebook, GtkWidget *page, guint page_num, PidginScrollBook *scroll_book)
 {
 	int count;
 	count = gtk_notebook_get_n_pages(GTK_NOTEBOOK(scroll_book->notebook));
@@ -160,7 +156,7 @@ pidgin_scroll_book_add(GtkContainer *container, GtkWidget *widget)
 	PidginScrollBook *scroll_book;
 
 	g_return_if_fail(GTK_IS_WIDGET (widget));
-	g_return_if_fail (widget->parent == NULL);
+	g_return_if_fail(gtk_widget_get_parent(widget) == NULL);
 
 	scroll_book = PIDGIN_SCROLL_BOOK(container);
 	scroll_book->children = g_list_append(scroll_book->children, widget);
@@ -260,7 +256,7 @@ pidgin_scroll_book_init (PidginScrollBook *scroll_book)
 	GtkWidget *eb;
 	GtkWidget *close_button;
 
-	scroll_book->hbox = gtk_hbox_new(FALSE, 0);
+	scroll_book->hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 
 	/* Close */
 	eb = gtk_event_box_new();
