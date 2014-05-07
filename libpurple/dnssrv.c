@@ -1,7 +1,3 @@
-/**
- * @file dnssrv.c
- */
-
 /* purple
  *
  * Copyright (C) 2005 Thomas Butter <butter@uni-mannheim.de>
@@ -97,7 +93,7 @@ typedef struct _PurpleSrvResponseContainer {
 
 static gboolean purple_srv_txt_query_ui_resolve(PurpleSrvTxtQueryData *query_data);
 
-/**
+/*
  * Sort by priority, then by weight.  Strictly numerically--no
  * randomness.  Technically we only need to sort by pref and then
  * make sure any records with weight 0 are at the beginning of
@@ -121,16 +117,17 @@ responsecompare(gconstpointer ar, gconstpointer br)
 	return 1;
 }
 
-/**
+/*
+ * select_random_response:
+ * @list: The list of PurpleSrvResponseContainer.  This function
+ *        removes a node from this list and returns the new list.
+ * @container_ptr: The PurpleSrvResponseContainer that was chosen
+ *        will be returned here.
+ *
  * Iterate over a list of PurpleSrvResponseContainer making the sum
  * the running total of the sums.  Select a random integer in the range
  * (1, sum+1), then find the first element greater than or equal to the
  * number selected.  From RFC 2782.
- *
- * @param list The list of PurpleSrvResponseContainer.  This function
- *        removes a node from this list and returns the new list.
- * @param container_ptr The PurpleSrvResponseContainer that was chosen
- *        will be returned here.
  */
 static GList *
 select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
@@ -138,6 +135,8 @@ select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
 	GList *cur;
 	size_t runningtotal;
 	int r;
+
+	g_return_val_if_fail(list != NULL, NULL);
 
 	runningtotal = 0;
 	cur = list;
@@ -159,6 +158,8 @@ select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
 	r = runningtotal ? g_random_int_range(1, runningtotal + 1) : 0;
 	cur = list;
 	while (r > ((PurpleSrvResponseContainer *)cur->data)->sum) {
+		if (G_UNLIKELY(!cur->next))
+			break;
 		cur = cur->next;
 	}
 
@@ -167,7 +168,7 @@ select_random_response(GList *list, PurpleSrvResponseContainer **container_ptr)
 	return g_list_delete_link(list, cur);
 }
 
-/**
+/*
  * Reorder a GList of PurpleSrvResponses that have the same priority
  * (aka "pref").
  */
@@ -181,6 +182,8 @@ srv_reorder(GList *list, int num)
 	if (num < 2)
 		/* Nothing to sort */
 		return;
+
+	g_return_if_fail(list != NULL);
 
 	/* First build a list of container structs */
 	for (i = 0, cur = list; i < num; i++, cur = cur->next) {
@@ -196,6 +199,7 @@ srv_reorder(GList *list, int num)
 	 */
 	cur = list;
 	while (container_list) {
+		g_return_if_fail(cur);
 		container_list = select_random_response(container_list, &container);
 		cur->data = container->response;
 		g_free(container);
@@ -203,12 +207,14 @@ srv_reorder(GList *list, int num)
 	}
 }
 
-/**
+/*
+ * purple_srv_sort:
+ * @list: The original list, resorted
+ *
  * Sorts a GList of PurpleSrvResponses according to the
  * algorithm described in RFC 2782.
  *
- * @param response GList of PurpleSrvResponse's
- * @param The original list, resorted
+ * Returns: GList of PurpleSrvResponse's
  */
 static GList *
 purple_srv_sort(GList *list)
@@ -227,6 +233,9 @@ purple_srv_sort(GList *list)
 	count = 1;
 	while (cur) {
 		PurpleSrvResponse *next_response;
+
+		g_return_val_if_fail(cur->data, list);
+
 		pref = ((PurpleSrvResponse *)cur->data)->pref;
 		next_response = cur->next ? cur->next->data : NULL;
 		if (!next_response || next_response->pref != pref) {
@@ -424,8 +433,10 @@ resolve(int in, int out)
 
 			srvres = g_new0(PurpleSrvResponse, 1);
 			if (strlen(name) > sizeof(srvres->hostname) - 1) {
-				purple_debug_error("dnssrv", "hostname is longer than available buffer ('%s', %zd bytes)!",
-				                   name, strlen(name));
+				purple_debug_error("dnssrv", "hostname is "
+					"longer than available buffer ('%s', %"
+					G_GSIZE_FORMAT " bytes)!",
+					name, strlen(name));
 			}
 			g_strlcpy(srvres->hostname, name, sizeof(srvres->hostname));
 			srvres->pref = pref;
@@ -549,7 +560,7 @@ resolved(gpointer data, gint source, PurpleInputCondition cond)
 						res->content = g_new0(gchar, len);
 
 						red = read(source, res->content, len);
-						if (red != len) {
+						if (red < 0 || (gsize)red != len) {
 							purple_debug_error("dnssrv","unable to read txt "
 									"response: %s\n", g_strerror(errno));
 							size = 0;
@@ -577,7 +588,7 @@ resolved(gpointer data, gint source, PurpleInputCondition cond)
 
 #else /* _WIN32 */
 
-/** The Jabber Server code was inspiration for parts of this. */
+/* The Jabber Server code was inspiration for parts of this. */
 
 static gboolean
 res_main_thread_cb(gpointer data)
@@ -699,7 +710,7 @@ res_thread(gpointer data)
 				txtres = g_new0(PurpleTxtResponse, 1);
 
 				s = g_string_new("");
-				for (i = 0; i < txt_data->dwStringCount; ++i)
+				for (i = 0; i < (int)txt_data->dwStringCount; ++i)
 					s = g_string_append(s, txt_data->pStringArray[i]);
 				txtres->content = g_string_free(s, FALSE);
 
@@ -724,15 +735,7 @@ res_thread(gpointer data)
 #endif
 
 PurpleSrvTxtQueryData *
-purple_srv_resolve(const char *protocol, const char *transport,
-	const char *domain, PurpleSrvCallback cb, gpointer extradata)
-{
-	return purple_srv_resolve_account(NULL, protocol, transport, domain,
-			cb, extradata);
-}
-
-PurpleSrvTxtQueryData *
-purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
+purple_srv_resolve(PurpleAccount *account, const char *protocol,
 	const char *transport, const char *domain, PurpleSrvCallback cb,
 	gpointer extradata)
 {
@@ -754,7 +757,7 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 		g_return_val_if_reached(NULL);
 	}
 
-	proxy_type = purple_proxy_info_get_type(
+	proxy_type = purple_proxy_info_get_proxy_type(
 		purple_proxy_get_setup(account));
 	if (proxy_type == PURPLE_PROXY_TOR) {
 		purple_debug_info("dnssrv", "Aborting SRV lookup in Tor Proxy mode.\n");
@@ -796,6 +799,12 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 		return NULL;
 	}
 
+	/*
+	 * TODO: We should put a cap on the number of forked processes that we
+	 *       allow at any given time.  If we get too many requests they
+	 *       should be put into a queue and handled later.  (This is what
+	 *       we do for A record lookups.)
+	 */
 	pid = fork();
 	if (pid == -1) {
 		purple_debug_error("dnssrv", "Could not create process!\n");
@@ -834,11 +843,13 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 
 	return query_data;
 #else
-	query_data->resolver = g_thread_create(res_thread, query_data, FALSE, &err);
+	query_data->resolver = g_thread_try_new("dnssrv srv resolver", res_thread, query_data, &err);
 	if (query_data->resolver == NULL) {
 		query_data->error_message = g_strdup_printf("SRV thread create failure: %s\n", (err && err->message) ? err->message : "");
 		g_error_free(err);
 	}
+	else
+		g_thread_unref(query_data->resolver);
 
 	/* The query isn't going to happen, so finish the SRV lookup now.
 	 * Asynchronously call the callback since stuff may not expect
@@ -850,13 +861,7 @@ purple_srv_resolve_account(PurpleAccount *account, const char *protocol,
 #endif
 }
 
-PurpleSrvTxtQueryData *purple_txt_resolve(const char *owner,
-	const char *domain, PurpleTxtCallback cb, gpointer extradata)
-{
-	return purple_txt_resolve_account(NULL, owner, domain, cb, extradata);
-}
-
-PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
+PurpleSrvTxtQueryData *purple_txt_resolve(PurpleAccount *account,
 	const char *owner, const char *domain, PurpleTxtCallback cb,
 	gpointer extradata)
 {
@@ -872,7 +877,7 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 	GError* err = NULL;
 #endif
 
-	proxy_type = purple_proxy_info_get_type(
+	proxy_type = purple_proxy_info_get_proxy_type(
 		purple_proxy_get_setup(account));
 	if (proxy_type == PURPLE_PROXY_TOR) {
 		purple_debug_info("dnssrv", "Aborting TXT lookup in Tor Proxy mode.\n");
@@ -915,6 +920,12 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 		return NULL;
 	}
 
+	/*
+	 * TODO: We should put a cap on the number of forked processes that we
+	 *       allow at any given time.  If we get too many requests they
+	 *       should be put into a queue and handled later.  (This is what
+	 *       we do for A record lookups.)
+	 */
 	pid = fork();
 	if (pid == -1) {
 		purple_debug_error("dnssrv", "Could not create process!\n");
@@ -953,11 +964,13 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 
 	return query_data;
 #else
-	query_data->resolver = g_thread_create(res_thread, query_data, FALSE, &err);
+	query_data->resolver = g_thread_try_new("dnssrv srv resolver", res_thread, query_data, &err);
 	if (query_data->resolver == NULL) {
 		query_data->error_message = g_strdup_printf("TXT thread create failure: %s\n", (err && err->message) ? err->message : "");
 		g_error_free(err);
 	}
+	else
+		g_thread_unref(query_data->resolver);
 
 	/* The query isn't going to happen, so finish the TXT lookup now.
 	 * Asynchronously call the callback since stuff may not expect
@@ -967,18 +980,6 @@ PurpleSrvTxtQueryData *purple_txt_resolve_account(PurpleAccount *account,
 
 	return query_data;
 #endif
-}
-
-void
-purple_txt_cancel(PurpleSrvTxtQueryData *query_data)
-{
-	purple_srv_txt_query_destroy(query_data);
-}
-
-void
-purple_srv_cancel(PurpleSrvTxtQueryData *query_data)
-{
-	purple_srv_txt_query_destroy(query_data);
 }
 
 const gchar *
@@ -1111,9 +1112,39 @@ purple_srv_txt_query_get_query(PurpleSrvTxtQueryData *query_data)
 
 
 int
-purple_srv_txt_query_get_type(PurpleSrvTxtQueryData *query_data)
+purple_srv_txt_query_get_query_type(PurpleSrvTxtQueryData *query_data)
 {
 	g_return_val_if_fail(query_data != NULL, 0);
 
 	return query_data->type;
+}
+
+/**************************************************************************
+ * GBoxed code
+ **************************************************************************/
+static PurpleSrvTxtQueryUiOps *
+purple_srv_txt_query_ui_ops_copy(PurpleSrvTxtQueryUiOps *ops)
+{
+	PurpleSrvTxtQueryUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleSrvTxtQueryUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_srv_txt_query_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleSrvTxtQueryUiOps",
+				(GBoxedCopyFunc)purple_srv_txt_query_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }

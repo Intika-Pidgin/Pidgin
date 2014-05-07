@@ -76,7 +76,7 @@ msn_user_destroy(MsnUser *user)
 	}
 
 	if (user->msnobj != NULL)
-		msn_object_destroy(user->msnobj);
+		msn_object_destroy(user->msnobj, FALSE);
 
 	g_free(user->passport);
 	g_free(user->friendly_name);
@@ -233,7 +233,7 @@ msn_user_set_friendly_name(MsnUser *user, const char *name)
 	g_free(user->friendly_name);
 	user->friendly_name = g_strdup(name);
 
-	serv_got_alias(purple_account_get_connection(user->userlist->session->account),
+	purple_serv_got_alias(purple_account_get_connection(user->userlist->session->account),
 			user->passport, name);
 	return TRUE;
 }
@@ -330,7 +330,7 @@ msn_user_unset_op(MsnUser *user, MsnListOp list_op)
 }
 
 void
-msn_user_set_buddy_icon(MsnUser *user, PurpleStoredImage *img)
+msn_user_set_buddy_icon(MsnUser *user, PurpleImage *img)
 {
 	MsnObject *msnobj;
 
@@ -369,7 +369,7 @@ msn_user_add_group_id(MsnUser *user, const char* group_id)
 
 	purple_debug_info("msn", "User: group id:%s,name:%s,user:%s\n", group_id, group_name, passport);
 
-	g = purple_find_group(group_name);
+	g = purple_blist_find_group(group_name);
 
 	if ((group_id == NULL) && (g == NULL))
 	{
@@ -377,7 +377,7 @@ msn_user_add_group_id(MsnUser *user, const char* group_id)
 		purple_blist_add_group(g, NULL);
 	}
 
-	b = purple_find_buddy_in_group(account, passport, g);
+	b = purple_blist_find_buddy_in_group(account, passport, g);
 	if (b == NULL)
 	{
 		b = purple_buddy_new(account, passport, NULL);
@@ -393,7 +393,7 @@ msn_user_is_online(PurpleAccount *account, const char *name)
 {
 	PurpleBuddy *buddy;
 
-	buddy = purple_find_buddy(account, name);
+	buddy = purple_blist_find_buddy(account, name);
 	return PURPLE_BUDDY_IS_ONLINE(buddy);
 }
 
@@ -406,7 +406,7 @@ msn_user_is_yahoo(PurpleAccount *account, const char *name)
 
 	gc = purple_account_get_connection(account);
 	if (gc != NULL)
-		session = gc->proto_data;
+		session = purple_connection_get_protocol_data(gc);
 
 	if ((session != NULL) && (user = msn_userlist_find_user(session->userlist, name)) != NULL)
 	{
@@ -530,7 +530,7 @@ buddy_icon_cached(PurpleConnection *gc, MsnObject *obj)
 
 	account = purple_connection_get_account(gc);
 
-	buddy = purple_find_buddy(account, msn_object_get_creator(obj));
+	buddy = purple_blist_find_buddy(account, msn_object_get_creator(obj));
 	if (buddy == NULL)
 		return FALSE;
 
@@ -566,7 +566,7 @@ queue_buddy_icon_request(MsnUser *user)
 		return;
 	}
 
-	if (!buddy_icon_cached(account->gc, obj)) {
+	if (!buddy_icon_cached(purple_account_get_connection(account), obj)) {
 		MsnUserList *userlist;
 
 		userlist = user->userlist;
@@ -588,8 +588,8 @@ msn_user_set_object(MsnUser *user, MsnObject *obj)
 {
 	g_return_if_fail(user != NULL);
 
-	if (user->msnobj != NULL && !msn_object_find_local(msn_object_get_sha1(obj)))
-		msn_object_destroy(user->msnobj);
+	if (user->msnobj != NULL)
+		msn_object_destroy(user->msnobj, TRUE);
 
 	user->msnobj = obj;
 
@@ -761,17 +761,7 @@ msn_user_passport_cmp(MsnUser *user, const char *passport)
 	str = purple_normalize_nocase(NULL, msn_user_get_passport(user));
 	pass = g_strdup(str);
 
-#if GLIB_CHECK_VERSION(2,16,0)
 	result = g_strcmp0(pass, purple_normalize_nocase(NULL, passport));
-#else
-	str = purple_normalize_nocase(NULL, passport);
-	if (!pass)
-		result = -(pass != str);
-	else if (!str)
-		result = pass != str;
-	else
-		result = strcmp(pass, str);
-#endif /* GLIB < 2.16.0 */
 
 	g_free(pass);
 

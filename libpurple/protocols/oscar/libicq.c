@@ -36,9 +36,17 @@ icq_get_account_text_table(PurpleAccount *account)
 	return table;
 }
 
+static gssize
+icq_get_max_message_size(PurpleConversation *conv)
+{
+	/* XXX: got from pidgin-otr - verify and document it */
+	return 2346;
+}
+
 static PurplePluginProtocolInfo prpl_info =
 {
-	OPT_PROTO_MAIL_CHECK | OPT_PROTO_IM_IMAGE | OPT_PROTO_INVITE_MESSAGE,
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	OPT_PROTO_MAIL_CHECK | OPT_PROTO_IM_IMAGE | OPT_PROTO_INVITE_MESSAGE | OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE,
 	NULL,					/* user_splits */
 	NULL,					/* protocol_options */
 	{"gif,jpeg,bmp,ico", 0, 0, 64, 64, 7168, PURPLE_ICON_SCALE_SEND | PURPLE_ICON_SCALE_DISPLAY}, /* icon_spec */
@@ -59,7 +67,7 @@ static PurplePluginProtocolInfo prpl_info =
 	oscar_set_status,		/* set_status */
 	oscar_set_idle,			/* set_idle */
 	oscar_change_passwd,	/* change_passwd */
-	NULL,					/* add_buddy */
+	oscar_add_buddy,		/* add_buddy */
 	NULL,					/* add_buddies */
 	oscar_remove_buddy,		/* remove_buddy */
 	NULL,					/* remove_buddies */
@@ -78,7 +86,6 @@ static PurplePluginProtocolInfo prpl_info =
 	oscar_keepalive,		/* keepalive */
 	NULL,					/* register_user */
 	NULL,					/* get_cb_info */
-	NULL,					/* get_cb_away */
 	oscar_alias_buddy,		/* alias_buddy */
 	oscar_move_buddy,		/* group_buddy */
 	oscar_rename_group,		/* rename_group */
@@ -103,16 +110,13 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					/* unregister_user */
 	NULL,					/* send_attention */
 	NULL,					/* get_attention_types */
-
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	icq_get_account_text_table, /* get_account_text_table */
 	NULL,					/* initiate_media */
 	NULL,					/* can_do_media */
 	oscar_get_purple_moods, /* get_moods */
 	NULL,					/* set_public_alias */
 	NULL,					/* get_public_alias */
-	oscar_add_buddy,		/* add_buddy_with_invite */
-	NULL					/* add_buddies_with_invite */
+	icq_get_max_message_size		/* get_max_message_size */
 };
 
 static PurplePluginInfo info =

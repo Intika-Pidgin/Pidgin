@@ -18,6 +18,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+
+#include <config.h>
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
@@ -28,7 +31,6 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <glib.h>
-#include "config.h"
 #include "debug.h"
 #include "libc_internal.h"
 #include <glib/gstdio.h>
@@ -82,7 +84,7 @@ int wpurple_socket (int namespace, int style, int protocol) {
 
 	ret = socket( namespace, style, protocol );
 
-	if( ret == INVALID_SOCKET ) {
+	if (ret == (int)INVALID_SOCKET) {
 		errno = WSAGetLastError();
 		return -1;
 	}
@@ -308,7 +310,7 @@ wpurple_inet_pton(int af, const char *src, void *dst)
 		struct sockaddr_in6 sin6;
 		struct sockaddr_in sin;
 	} sa;
-	size_t srcsize;
+	int srcsize;
 	
 	switch(af)
 	{
@@ -325,7 +327,7 @@ wpurple_inet_pton(int af, const char *src, void *dst)
 			return -1;
 	}
 	
-	if (WSAStringToAddress(src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
+	if (WSAStringToAddress((LPTSTR)src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
 	{
 		errno = WSAGetLastError();
 		return -1;
@@ -509,12 +511,6 @@ int wpurple_gettimeofday(struct timeval *p, struct timezone *z) {
 	}
 
 	return res;
-}
-
-/* stdio.h */
-
-int wpurple_rename (const char *oldname, const char *newname) {
-	return g_rename(oldname, newname);
 }
 
 /* time.h */
@@ -1091,15 +1087,3 @@ wpurple_get_timezone_abbreviation(const struct tm *tm)
 	purple_debug_warning("wpurple", "could not find a match for Windows timezone \"%s\"\n", tzname);
 	return "";
 }
-
-int wpurple_g_access (const gchar *filename, int mode);
-/**
- * @deprecated - remove for 3.0.0
- */
-int
-wpurple_g_access (const gchar *filename, int mode)
-{
-	return g_access(filename, mode);
-}
-
-
