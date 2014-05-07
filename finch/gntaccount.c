@@ -1,8 +1,3 @@
-/**
- * @file gntaccount.c GNT Account API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -126,8 +121,10 @@ save_account_cb(AccountEditDialog *dialog)
 	if (value == NULL || *value == '\0')
 	{
 		purple_notify_error(NULL, _("Error"),
-				dialog->account ? _("Account was not modified") : _("Account was not added"),
-				_("Username of an account must be non-empty."));
+			dialog->account ? _("Account was not modified") :
+				_("Account was not added"),
+			_("Username of an account must be non-empty."),
+			purple_request_cpar_from_account(dialog->account));
 		return;
 	}
 
@@ -168,15 +165,25 @@ save_account_cb(AccountEditDialog *dialog)
 			const char *old = purple_account_get_protocol_id(account);
 			char *oldprpl;
 			if (strcmp(old, purple_plugin_get_id(plugin))) {
-				purple_notify_error(NULL, _("Error"), _("Account was not modified"),
-						_("The account's protocol cannot be changed while it is connected to the server."));
+				purple_notify_error(NULL, _("Error"),
+					_("Account was not modified"),
+					_("The account's protocol cannot be "
+					"changed while it is connected to the "
+					"server."),
+					purple_request_cpar_from_account(
+						account));
 				return;
 			}
 
 			oldprpl = g_strdup(purple_normalize(account, purple_account_get_username(account)));
 			if (g_utf8_collate(oldprpl, purple_normalize(account, username->str))) {
-				purple_notify_error(NULL, _("Error"), _("Account was not modified"),
-						_("The account's username cannot be changed while it is connected to the server."));
+				purple_notify_error(NULL, _("Error"),
+					_("Account was not modified"),
+					_("The account's username cannot be "
+					"changed while it is connected to the "
+					"server."),
+					purple_request_cpar_from_account(
+						account));
 				g_free(oldprpl);
 				return;
 			}
@@ -188,16 +195,16 @@ save_account_cb(AccountEditDialog *dialog)
 
 	/* Alias */
 	value = gnt_entry_get_text(GNT_ENTRY(dialog->alias));
-	purple_account_set_alias(account, value);
+	purple_account_set_private_alias(account, value);
 
 	/* Remember password and password */
 	purple_account_set_remember_password(account,
 			gnt_check_box_get_checked(GNT_CHECK_BOX(dialog->remember)));
 	value = gnt_entry_get_text(GNT_ENTRY(dialog->password));
 	if (value && *value)
-		purple_account_set_password(account, value);
+		purple_account_set_password(account, value, NULL, NULL);
 	else
-		purple_account_set_password(account, NULL);
+		purple_account_set_password(account, NULL, NULL, NULL);
 
 	/* Mail notification */
 	purple_account_set_check_mail(account,
@@ -213,7 +220,7 @@ save_account_cb(AccountEditDialog *dialog)
 		{
 			PurpleAccountOption *option = iter->data;
 			GntWidget *entry = entries->data;
-			PurplePrefType type = purple_account_option_get_type(option);
+			PurplePrefType type = purple_account_option_get_pref_type(option);
 			const char *setting = purple_account_option_get_setting(option);
 
 			if (type == PURPLE_PREF_STRING)
@@ -403,7 +410,7 @@ add_protocol_options(AccountEditDialog *dialog)
 	for (iter = prplinfo->protocol_options; iter; iter = iter->next)
 	{
 		PurpleAccountOption *option = iter->data;
-		PurplePrefType type = purple_account_option_get_type(option);
+		PurplePrefType type = purple_account_option_get_pref_type(option);
 
 		box = gnt_hbox_new(TRUE);
 		gnt_box_set_pad(GNT_BOX(box), 0);
@@ -534,7 +541,8 @@ prpl_changed_cb(GntWidget *combo, PurplePlugin *old, PurplePlugin *new, AccountE
 }
 
 static void
-edit_account(PurpleAccount *account)
+edit_account_continue(PurpleAccount *account, 
+	const gchar *password, GError *error, gpointer user_data)
 {
 	GntWidget *window, *hbox;
 	GntWidget *combo, *button, *entry;
@@ -556,8 +564,9 @@ edit_account(PurpleAccount *account)
 	list = purple_plugins_get_protocols();
 	if (list == NULL) {
 		purple_notify_error(NULL, _("Error"),
-				_("There are no protocol plugins installed."),
-				_("(You probably forgot to 'make install'.)"));
+			_("There are no protocol plugins installed."),
+			_("(You probably forgot to 'make install'.)"),
+			purple_request_cpar_from_account(account));
 		return;
 	}
 
@@ -617,7 +626,7 @@ edit_account(PurpleAccount *account)
 	gnt_box_add_widget(GNT_BOX(hbox), gnt_label_new(_("Password:")));
 	gnt_box_add_widget(GNT_BOX(hbox), entry);
 	if (account)
-		gnt_entry_set_text(GNT_ENTRY(entry), purple_account_get_password(account));
+		gnt_entry_set_text(GNT_ENTRY(entry), password);
 
 	hbox = gnt_hbox_new(TRUE);
 	gnt_box_set_pad(GNT_BOX(hbox), 0);
@@ -627,7 +636,7 @@ edit_account(PurpleAccount *account)
 	gnt_box_add_widget(GNT_BOX(hbox), gnt_label_new(_("Alias:")));
 	gnt_box_add_widget(GNT_BOX(hbox), entry);
 	if (account)
-		gnt_entry_set_text(GNT_ENTRY(entry), purple_account_get_alias(account));
+		gnt_entry_set_text(GNT_ENTRY(entry), purple_account_get_private_alias(account));
 
 	/* User options */
 	update_user_options(dialog);
@@ -664,6 +673,12 @@ edit_account(PurpleAccount *account)
 	gnt_widget_show(window);
 	gnt_box_readjust(GNT_BOX(window));
 	gnt_widget_draw(window);
+}
+
+static void
+edit_account(PurpleAccount *account)
+{
+	purple_account_get_password(account, edit_account_continue, account);
 }
 
 static void
@@ -712,10 +727,9 @@ delete_account_cb(GntWidget *widget, GntTree *tree)
 			purple_account_get_username(account));
 
 	purple_request_action(account, _("Delete Account"), prompt, NULL,
-						  PURPLE_DEFAULT_ACTION_NONE,
-						  account, NULL, NULL, account, 2,
-						  _("Delete"), really_delete_account,
-						  _("Cancel"), NULL);
+		PURPLE_DEFAULT_ACTION_NONE,
+		purple_request_cpar_from_account(account), account, 2,
+		_("Delete"), really_delete_account, _("Cancel"), NULL);
 	g_free(prompt);
 }
 
@@ -758,7 +772,8 @@ account_list_key_pressed_cb(GntWidget *widget, const char *text, gpointer null)
 	count = g_list_length(accounts);
 	pos = g_list_index(accounts, account);
 	pos = (move + pos + count + 1) % (count + 1);
-	purple_accounts_reorder(account, pos);
+	if (pos >= 0)
+		purple_accounts_reorder(account, pos);
 
 	/* I don't like this, but recreating the entire list seems to be
 	 * the easiest way of doing it */
@@ -959,7 +974,8 @@ notify_added(PurpleAccount *account, const char *remote_user,
 
 	buffer = make_info(account, gc, remote_user, id, alias, msg);
 
-	purple_notify_info(NULL, NULL, buffer, NULL);
+	purple_notify_info(NULL, NULL, buffer, NULL,
+		purple_request_cpar_from_connection(gc));
 
 	g_free(buffer);
 }
@@ -1006,12 +1022,11 @@ request_add(PurpleAccount *account, const char *remote_user,
 	data->alias    = (alias != NULL ? g_strdup(alias) : NULL);
 
 	buffer = make_info(account, gc, remote_user, id, alias, msg);
-	purple_request_action(NULL, NULL, _("Add buddy to your list?"),
-	                    buffer, PURPLE_DEFAULT_ACTION_NONE,
-						account, remote_user, NULL,
-						data, 2,
-	                    _("Add"),    G_CALLBACK(add_user_cb),
-	                    _("Cancel"), G_CALLBACK(free_add_user_data));
+	purple_request_action(NULL, NULL, _("Add buddy to your list?"), buffer,
+		PURPLE_DEFAULT_ACTION_NONE,
+		purple_request_cpar_from_account(account), data, 2,
+		_("Add"), G_CALLBACK(add_user_cb),
+		_("Cancel"), G_CALLBACK(free_add_user_data));
 	g_free(buffer);
 }
 
@@ -1036,7 +1051,7 @@ free_auth_and_add(auth_and_add *aa)
 static void
 authorize_and_add_cb(auth_and_add *aa)
 {
-	aa->auth_cb(aa->data);
+	aa->auth_cb(NULL, aa->data);
 	purple_blist_request_add_buddy(aa->account, aa->username,
 	 	                    NULL, aa->alias);
 }
@@ -1044,7 +1059,7 @@ authorize_and_add_cb(auth_and_add *aa)
 static void
 deny_no_add_cb(auth_and_add *aa)
 {
-	aa->deny_cb(aa->data);
+	aa->deny_cb(NULL, aa->data);
 }
 
 static void *
@@ -1096,7 +1111,7 @@ finch_request_authorize(PurpleAccount *account,
 
 		widget = purple_request_action(NULL, _("Authorize buddy?"), buffer, NULL,
 			PURPLE_DEFAULT_ACTION_NONE,
-			account, remote_user, NULL,
+			purple_request_cpar_from_account(account),
 			aa, 2,
 			_("Authorize"), authorize_and_add_cb,
 			_("Deny"), deny_no_add_cb);
@@ -1123,7 +1138,7 @@ finch_request_authorize(PurpleAccount *account,
 	} else {
 		uihandle = purple_request_action(NULL, _("Authorize buddy?"), buffer, NULL,
 			PURPLE_DEFAULT_ACTION_NONE,
-			account, remote_user, NULL,
+			purple_request_cpar_from_account(account),
 			user_data, 2,
 			_("Authorize"), auth_cb,
 			_("Deny"), deny_cb);
@@ -1150,7 +1165,8 @@ static PurpleAccountUiOps ui_ops =
 	NULL,
 	NULL,
 	NULL,
-	NULL
+	NULL,
+	NULL, NULL, NULL, NULL
 };
 
 PurpleAccountUiOps *finch_accounts_get_ui_ops()

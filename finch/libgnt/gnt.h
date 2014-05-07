@@ -1,13 +1,3 @@
-/**
- * @defgroup gnt GNT (GLib Ncurses Toolkit)
- *
- * GNT is an ncurses toolkit for creating text-mode graphical user interfaces
- * in a fast and easy way.
- */
-/**
- * @file gnt.h GNT API
- * @ingroup gnt
- */
 /*
  * GNT - The GLib Ncurses Toolkit
  *
@@ -32,179 +22,230 @@
 
 #ifndef GNT_H
 #define GNT_H
+/**
+ * SECTION:gnt
+ * @section_id: libgnt-gnt
+ * @short_description: <filename>gnt.h</filename>
+ * @title: GNT API
+ */
 
 #include <glib.h>
+
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif
+#ifdef _WIN32
+#  undef KEY_EVENT
+#endif
+#ifdef NO_WIDECHAR
+#  define NCURSES_WIDECHAR 0
+#else
+#  define NCURSES_WIDECHAR 1
+#endif
+#include <ncurses.h>
+
 #include "gntwidget.h"
 #include "gntclipboard.h"
 #include "gntcolors.h"
 #include "gntkeys.h"
 
 /**
- * Get things to compile in Glib < 2.8
- */
-#if !GLIB_CHECK_VERSION(2,8,0)
-	#define G_PARAM_STATIC_NAME  G_PARAM_PRIVATE
-	#define G_PARAM_STATIC_NICK  G_PARAM_PRIVATE
-	#define G_PARAM_STATIC_BLURB  G_PARAM_PRIVATE
-#endif
-
-#if !GLIB_CHECK_VERSION(2,14,0)
-	#define g_timeout_add_seconds(time, callback, data)  g_timeout_add(time * 1000, callback, data)
-#endif
-
-/**
+ * gnt_init:
+ *
  * Initialize GNT.
  */
 void gnt_init(void);
 
 /**
+ * gnt_set_config_dir:
+ * @config_dir: the path to a configuration directory, may be %NULL.
+ *
+ * Change directory to store gnt configuration files (default is ~).
+ *
+ * You have to call this before #gnt_init. You might want to call this
+ * with %NULL, to free the resources, but not before a call to #gnt_quit.
+ *
+ * Since: 2.8.0
+ */
+void gnt_set_config_dir(const gchar *config_dir);
+
+/**
+ * gnt_main:
+ *
  * Start running the mainloop for gnt.
  */
 void gnt_main(void);
 
 /**
+ * gnt_ascii_only:
+ *
  * Check whether the terminal is capable of UTF8 display.
  *
- * @return  @c FALSE if the terminal is capable of drawing UTF-8, @c TRUE otherwise.
+ * Returns:  %FALSE if the terminal is capable of drawing UTF-8, %TRUE otherwise.
  */
 gboolean gnt_ascii_only(void);
 
 /**
+ * gnt_window_present:
+ * @window:   The window the present.
+ *
  * Present a window. If the event was triggered because of user interaction,
  * the window is moved to the foreground. Otherwise, the Urgent hint is set.
  *
- * @param window   The window the present.
- *
- * @since 2.0.0 (gnt), 2.1.0 (pidgin)
+ * Since: 2.0.0 (gnt), 2.1.0 (pidgin)
  */
 void gnt_window_present(GntWidget *window);
 
 /**
- * @internal
- * Use #gnt_widget_show instead.
+ * gnt_screen_occupy:
+ *
+ * Internal function -- do not use.
+ * Use gnt_widget_show() instead.
  */
 void gnt_screen_occupy(GntWidget *widget);
 
 /**
- * @internal
- * Use #gnt_widget_hide instead.
+ * gnt_screen_release:
+ *
+ * Internal function -- do not use.
+ * Use gnt_widget_hide() instead.
  */
 void gnt_screen_release(GntWidget *widget);
 
 /**
- * @internal
- * Use #gnt_widget_draw instead.
+ * gnt_screen_update:
+ *
+ * Internal function -- do not use.
+ * Use gnt_widget_draw() instead.
  */
 void gnt_screen_update(GntWidget *widget);
 
 /**
- * Resize a widget.
+ * gnt_screen_resize_widget:
+ * @widget:  The widget to resize.
+ * @width:   The desired width.
+ * @height:  The desired height.
  *
- * @param widget  The widget to resize.
- * @param width   The desired width.
- * @param height  The desired height.
+ * Resize a widget.
  */
 void gnt_screen_resize_widget(GntWidget *widget, int width, int height);
 
 /**
- * Move a widget.
+ * gnt_screen_move_widget:
+ * @widget: The widget to move.
+ * @x:      The desired x-coordinate.
+ * @y:      The desired y-coordinate.
  *
- * @param widget The widget to move.
- * @param x      The desired x-coordinate.
- * @param y      The desired y-coordinate.
+ * Move a widget.
  */
 void gnt_screen_move_widget(GntWidget *widget, int x, int y);
 
 /**
- * Rename a widget.
+ * gnt_screen_rename_widget:
+ * @widget:  The widget to rename.
+ * @text:    The new name for the widget.
  *
- * @param widget  The widget to rename.
- * @param text    The new name for the widget.
+ * Rename a widget.
  */
 void gnt_screen_rename_widget(GntWidget *widget, const char *text);
 
 /**
+ * gnt_widget_has_focus:
+ * @widget:  The widget.
+ *
  * Check whether a widget has focus.
  *
- * @param widget  The widget.
- *
- * @return  @c TRUE if the widget has the current focus, @c FALSE otherwise.
+ * Returns:  %TRUE if the widget has the current focus, %FALSE otherwise.
  */
 gboolean gnt_widget_has_focus(GntWidget *widget);
 
 /**
- * Set the URGENT hint for a widget.
+ * gnt_widget_set_urgent:
+ * @widget:  The widget to set the URGENT hint for.
  *
- * @param widget  The widget to set the URGENT hint for.
+ * Set the URGENT hint for a widget.
  */
 void gnt_widget_set_urgent(GntWidget *widget);
 
 /**
- * Register a global action.
+ * gnt_register_action:
+ * @label:      The user-visible label for the action.
+ * @callback:   The callback function for the action.
  *
- * @param label      The user-visible label for the action.
- * @param callback   The callback function for the action.
+ * Register a global action.
  */
 void gnt_register_action(const char *label, void (*callback)(void));
 
 /**
+ * gnt_screen_menu_show:
+ * @menu:  The menu to display.
+ *
  * Show a menu.
  *
- * @param menu  The menu to display.
- *
- * @return @c TRUE if the menu is displayed, @c FALSE otherwise (e.g., if another menu is currently displayed).
+ * Returns: %TRUE if the menu is displayed, %FALSE otherwise (e.g., if another menu is currently displayed).
  */
 gboolean gnt_screen_menu_show(gpointer menu);
 
 /**
+ * gnt_quit:
+ *
  * Terminate the mainloop of gnt.
  */
 void gnt_quit(void);
 
 /**
+ * gnt_get_clipboard:
+ *
  * Get the global clipboard.
  *
- * @return  The clipboard.
+ * Returns: (transfer none): The clipboard.
  */
 GntClipboard * gnt_get_clipboard(void);
 
 /**
+ * gnt_get_clipboard_string:
+ *
  * Get the string in the clipboard.
  *
- * @return A copy of the string in the clipboard. The caller must @c g_free the string.
+ * Returns: A copy of the string in the clipboard. The caller
+ *          must g_free() the string.
  */
 gchar * gnt_get_clipboard_string(void);
 
 /**
- * Set the contents of the global clipboard.
+ * gnt_set_clipboard_string:
+ * @string:  The new content of the new clipboard.
  *
- * @param string  The new content of the new clipboard.
+ * Set the contents of the global clipboard.
  */
 void gnt_set_clipboard_string(const gchar *string);
 
 /**
+ * gnt_giveup_console:
+ * @wd:    The working directory for the new application.
+ * @argv:  The argument vector.
+ * @envp:  The environment, or %NULL.
+ * @stin:  Location to store the child's stdin, or %NULL.
+ * @stout: Location to store the child's stdout, or %NULL.
+ * @sterr: Location to store the child's stderr, or %NULL.
+ * @callback:   The callback to call after the child exits.
+ * @data:  The data to pass to the callback.
+ *
  * Spawn a different application that will consume the console.
  *
- * @param wd    The working directory for the new application.
- * @param argv  The argument vector.
- * @param envp  The environment, or @c NULL.
- * @param stin  Location to store the child's stdin, or @c NULL.
- * @param stout Location to store the child's stdout, or @c NULL.
- * @param sterr Location to store the child's stderr, or @c NULL.
- * @param callback   The callback to call after the child exits.
- * @param data  The data to pass to the callback.
- *
- * @return  @c TRUE if the child was successfully spawned, @c FALSE otherwise.
+ * Returns:  %TRUE if the child was successfully spawned, %FALSE otherwise.
  */
 gboolean gnt_giveup_console(const char *wd, char **argv, char **envp,
 		gint *stin, gint *stout, gint *sterr,
 		void (*callback)(int status, gpointer data), gpointer data);
 
 /**
+ * gnt_is_refugee:
+ *
  * Check whether a child process is in control of the current terminal.
  *
- * @return @c TRUE if a child process (eg., PAGER) is occupying the current
- *         terminal, @c FALSE otherwise.
+ * Returns: %TRUE if a child process (eg., PAGER) is occupying the current
+ *         terminal, %FALSE otherwise.
  */
 gboolean gnt_is_refugee(void);
 

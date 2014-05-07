@@ -53,6 +53,7 @@ typedef enum
 	CURRENT_MEDIA_OFFICE
 } CurrentMediaType;
 
+#include "image.h"
 #include "object.h"
 #include "session.h"
 #include "userlist.h"
@@ -138,7 +139,7 @@ typedef struct MsnUserEndpoint {
 } MsnUserEndpoint;
 
 /**************************************************************************
- ** @name User API                                                        *
+ ** User API                                                        *
  **************************************************************************/
 /*@{*/
 
@@ -220,7 +221,7 @@ gboolean msn_user_set_friendly_name(MsnUser *user, const char *name);
  * @param user     The user.
  * @param img      The buddy icon image
  */
-void msn_user_set_buddy_icon(MsnUser *user, PurpleStoredImage *img);
+void msn_user_set_buddy_icon(MsnUser *user, PurpleImage *img);
 
 /**
  * Sets the group ID list for a user.

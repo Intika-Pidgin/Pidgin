@@ -20,12 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#include <gtk/gtk.h>
-#include <gdk/gdkwin32.h>
-
 #include "internal.h"
 
-#include "gtkwin32dep.h"
+#include "pidgin.h"
 
 #include "core.h"
 #include "debug.h"
@@ -91,7 +88,7 @@ static void blist_set_ontop(gboolean val) {
 	if(!blist)
 		return;
 
-	gtk_window_set_keep_above(GTK_WINDOW(PIDGIN_BLIST(purple_get_blist())->window), val);
+	gtk_window_set_keep_above(GTK_WINDOW(PIDGIN_BLIST(purple_blist_get_buddy_list())->window), val);
 }
 
 static void blist_dock_cb(gboolean val) {
@@ -168,7 +165,7 @@ static void blist_create_cb(PurpleBuddyList *purple_blist, void *data) {
 		blist_set_dockable(TRUE);
 		if(purple_prefs_get_bool(PREF_DBLIST_DOCKED)) {
 			blist_ab->undocked_height = purple_prefs_get_int(PREF_DBLIST_HEIGHT);
-			if(!(gdk_window_get_state(blist->window)
+			if(!(gdk_window_get_state(gtk_widget_get_window(blist))
 					& GDK_WINDOW_STATE_WITHDRAWN)) {
 				gtk_appbar_dock(blist_ab,
 					purple_prefs_get_int(PREF_DBLIST_SIDE));
@@ -193,7 +190,7 @@ winprefs_set_autostart(GtkWidget *w) {
 	char *runval = NULL;
 
 	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w)))
-		runval = g_strdup_printf("\"%s" G_DIR_SEPARATOR_S "pidgin.exe\"", wpurple_install_dir());
+		runval = g_strdup_printf("\"%s" G_DIR_SEPARATOR_S "pidgin.exe\"", wpurple_bin_dir());
 
 	if(!wpurple_write_reg_string(HKEY_CURRENT_USER, RUNKEY, "Pidgin", runval)
 		/* For Win98 */
@@ -236,9 +233,9 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	handle = plugin;
 
 	/* blist docking init */
-	if(purple_get_blist() && PIDGIN_BLIST(purple_get_blist())
-			&& PIDGIN_BLIST(purple_get_blist())->window) {
-		blist_create_cb(purple_get_blist(), NULL);
+	if(purple_blist_get_buddy_list() && PIDGIN_BLIST(purple_blist_get_buddy_list())
+			&& PIDGIN_BLIST(purple_blist_get_buddy_list())->window) {
+		blist_create_cb(purple_blist_get_buddy_list(), NULL);
 	}
 
 	/* This really shouldn't happen anymore generally, but if for some strange
@@ -320,7 +317,6 @@ static GtkWidget* get_config_frame(PurplePlugin *plugin) {
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0,
 
 	/* padding */
 	NULL,
