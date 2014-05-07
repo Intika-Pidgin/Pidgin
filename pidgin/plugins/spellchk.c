@@ -39,6 +39,7 @@
 #include "util.h"
 #include "version.h"
 
+#include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkprefs.h"
 #include "gtkutils.h"
@@ -46,7 +47,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #define SPELLCHECK_PLUGIN_ID "gtk-spellcheck"
 #define SPELLCHK_OBJECT_KEY "spellchk"
@@ -126,7 +126,8 @@ make_word_proper(const gchar *word)
 	gchar *ret;
 
 	bytes = g_unichar_to_utf8(g_unichar_toupper(g_utf8_get_char(word)), buf);
-	buf[MIN(bytes, sizeof(buf) - 1)] = '\0';
+	g_assert(bytes >= 0);
+	buf[MIN((gsize)bytes, sizeof(buf) - 1)] = '\0';
 
 	ret = g_strconcat(buf, g_utf8_offset_to_pointer(lower, 1), NULL);
 	g_free(lower);
@@ -318,6 +319,10 @@ spellchk_inside_word(GtkTextIter *iter)
 	 *
 	 * Part 1 of 2: This marks . as being an inside-word character. */
 	if (c == '.')
+		return TRUE;
+	if (c == '+')
+		return TRUE;
+	if (c == '-')
 		return TRUE;
 
 	/* Avoid problems with \r, for example (SF #1289031). */
@@ -675,10 +680,10 @@ spellchk_new_attach(PurpleConversation *conv)
 	return;
 }
 
-static int buf_get_line(char *ibuf, char **buf, int *position, gsize len)
+static int buf_get_line(char *ibuf, char **buf, gsize *position, gsize len)
 {
-	int pos = *position;
-	int spos = pos;
+	gsize pos = *position;
+	gsize spos = pos;
 
 	if (pos == len)
 		return 0;
@@ -1775,7 +1780,7 @@ static void load_conf(void)
 	GHashTable *hashes;
 	char bad[82] = "";
 	char good[256] = "";
-	int pnt = 0;
+	gsize pnt = 0;
 	gsize size;
 	gboolean complete = TRUE;
 	gboolean case_sensitive = FALSE;
@@ -1969,7 +1974,7 @@ static void list_add_new(void)
 
 				purple_notify_error(NULL, _("Duplicate Correction"),
 					_("The specified word already exists in the correction list."),
-					gtk_entry_get_text(GTK_ENTRY(bad_entry)));
+					gtk_entry_get_text(GTK_ENTRY(bad_entry)), NULL);
 				return;
 			}
 
@@ -2115,7 +2120,7 @@ plugin_load(PurplePlugin *plugin)
 	load_conf();
 
 	/* Attach to existing conversations */
-	for (convs = purple_get_conversations(); convs != NULL; convs = convs->next)
+	for (convs = purple_conversations_get_all(); convs != NULL; convs = convs->next)
 	{
 		spellchk_new_attach((PurpleConversation *)convs->data);
 	}
@@ -2132,7 +2137,7 @@ plugin_unload(PurplePlugin *plugin)
 	GList *convs;
 
 	/* Detach from existing conversations */
-	for (convs = purple_get_conversations(); convs != NULL; convs = convs->next)
+	for (convs = purple_conversations_get_all(); convs != NULL; convs = convs->next)
 	{
 		PidginConversation *gtkconv = PIDGIN_CONVERSATION((PurpleConversation *)convs->data);
 		spellchk *spell = g_object_get_data(G_OBJECT(gtkconv->entry), SPELLCHK_OBJECT_KEY);
@@ -2165,7 +2170,7 @@ get_config_frame(PurplePlugin *plugin)
 	GtkWidget *vbox2;
 	GtkWidget *vbox3;
 
-	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width (GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 
 	vbox = pidgin_make_frame(ret, _("Text Replacements"));
@@ -2235,7 +2240,7 @@ get_config_frame(PurplePlugin *plugin)
 		TRUE, TRUE, 0);
 	gtk_widget_show(tree);
 
-	hbox = gtk_hbutton_box_new();
+	hbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 	gtk_widget_show(hbox);
 
@@ -2252,10 +2257,10 @@ get_config_frame(PurplePlugin *plugin)
 
 	vbox = pidgin_make_frame(ret, _("Add a new text replacement"));
 
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 	gtk_widget_show(hbox);
-	vbox2 = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox2, TRUE, TRUE, 0);
 	gtk_widget_show(vbox2);
 
@@ -2290,7 +2295,7 @@ get_config_frame(PurplePlugin *plugin)
 	button = gtk_button_new_from_stock(GTK_STOCK_ADD);
 	g_signal_connect(G_OBJECT(button), "clicked",
 			   G_CALLBACK(list_add_new), NULL);
-	vbox3 = gtk_vbox_new(FALSE, 0);
+	vbox3 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox3, TRUE, FALSE, 0);
 	gtk_widget_show(vbox3);
 	gtk_box_pack_end(GTK_BOX(vbox3), button, FALSE, FALSE, 0);
@@ -2314,7 +2319,6 @@ get_config_frame(PurplePlugin *plugin)
 static PidginPluginUiInfo ui_info =
 {
 	get_config_frame,
-	0, /* page_num (Reserved) */
 
 	/* padding */
 	NULL,

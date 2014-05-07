@@ -37,7 +37,7 @@ typedef enum {
 	JABBER_CAP_IQ_REGISTER    = 1 << 8,
 
 	/* Google Talk extensions:
-	 * http://code.google.com/apis/talk/jep_extensions/extensions.html
+	 * https://developers.google.com/talk/jep_extensions/extensions
 	 */
 	JABBER_CAP_GMAIL_NOTIFY   = 1 << 9,
 	JABBER_CAP_GOOGLE_ROSTER  = 1 << 10,
@@ -58,10 +58,11 @@ typedef struct _JabberStream JabberStream;
 
 #include <libxml/parser.h>
 #include <glib.h>
-#include "circbuffer.h"
+#include "circularbuffer.h"
 #include "connection.h"
 #include "dnsquery.h"
 #include "dnssrv.h"
+#include "http.h"
 #include "media.h"
 #include "mediamanager.h"
 #include "roomlist.h"
@@ -80,7 +81,7 @@ typedef struct _JabberStream JabberStream;
 #include <sasl/sasl.h>
 #endif
 
-#define CAPS0115_NODE "http://pidgin.im/"
+#define CAPS0115_NODE "https://pidgin.im/"
 
 #define JABBER_DEFAULT_REQUIRE_TLS    "require_starttls"
 #define JABBER_DEFAULT_FT_PROXIES     "proxy.eu.jabber.org"
@@ -101,11 +102,12 @@ typedef enum {
 struct _JabberStream
 {
 	int fd;
+	guint inpa;
 
 	PurpleSrvTxtQueryData *srv_query_data;
 
 	xmlParserCtxt *context;
-	xmlnode *current;
+	PurpleXmlNode *current;
 
 	struct {
 		guint8 major;
@@ -151,9 +153,9 @@ struct _JabberStream
 	 * when we receive a roster push.
 	 *
 	 * See these bug reports:
-	 * http://trac.adiumx.com/ticket/8834
-	 * http://developer.pidgin.im/ticket/5484
-	 * http://developer.pidgin.im/ticket/6188
+	 * https://trac.adium.im/ticket/8834
+	 * https://developer.pidgin.im/ticket/5484
+	 * https://developer.pidgin.im/ticket/6188
 	 */
 	gboolean currently_parsing_roster_push;
 
@@ -191,7 +193,7 @@ struct _JabberStream
 
 	GSList *pending_buddy_info_requests;
 
-	PurpleCircBuffer *write_buffer;
+	PurpleCircularBuffer *write_buffer;
 	guint writeh;
 
 	gboolean reinit;
@@ -257,19 +259,15 @@ struct _JabberStream
 	guint keepalive_timeout;
 	guint max_inactivity;
 	guint inactivity_timer;
+	guint conn_close_timeout;
 
 	PurpleSrvResponse *srv_rec;
 	guint srv_rec_idx;
 	guint max_srv_rec_idx;
 
-	/* BOSH stuff */
-	PurpleBOSHConnection *bosh;
+	PurpleJabberBOSHConnection *bosh;
 
-	/**
-	 * This linked list contains PurpleUtilFetchUrlData structs
-	 * for when we lookup buddy icons from a url
-	 */
-	GSList *url_datas;
+	PurpleHttpConnectionSet *http_conns;
 
 	/* keep a hash table of JingleSessions */
 	GHashTable *sessions;
@@ -282,8 +280,6 @@ struct _JabberStream
 	/* stuff for Google's relay handling */
 	gchar *google_relay_token;
 	gchar *google_relay_host;
-	GList *google_relay_requests; /* the HTTP requests to get */
-												/* relay info */
 };
 
 typedef gboolean (JabberFeatureEnabled)(JabberStream *js, const gchar *namespace);
@@ -305,7 +301,7 @@ typedef struct _JabberIdentity
 typedef struct _JabberBytestreamsStreamhost {
 	char *jid;
 	char *host;
-	int port;
+	guint16 port;
 	char *zeroconf;
 } JabberBytestreamsStreamhost;
 
@@ -316,17 +312,17 @@ extern GList *jabber_features;
  */
 extern GList *jabber_identities;
 
-void jabber_stream_features_parse(JabberStream *js, xmlnode *packet);
-void jabber_process_packet(JabberStream *js, xmlnode **packet);
-void jabber_send(JabberStream *js, xmlnode *data);
+void jabber_stream_features_parse(JabberStream *js, PurpleXmlNode *packet);
+void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet);
+void jabber_send(JabberStream *js, PurpleXmlNode *data);
 void jabber_send_raw(JabberStream *js, const char *data, int len);
-void jabber_send_signal_cb(PurpleConnection *pc, xmlnode **packet,
+void jabber_send_signal_cb(PurpleConnection *pc, PurpleXmlNode **packet,
                            gpointer unused);
 
 void jabber_stream_set_state(JabberStream *js, JabberStreamState state);
 
 void jabber_register_parse(JabberStream *js, const char *from,
-                           JabberIqType type, const char *id, xmlnode *query);
+                           JabberIqType type, const char *id, PurpleXmlNode *query);
 void jabber_register_start(JabberStream *js);
 
 char *jabber_get_next_id(JabberStream *js);
@@ -338,7 +334,7 @@ char *jabber_get_next_id(JabberStream *js);
  *  @param reason where to store the disconnection reason, or @c NULL if you
  *                don't care or you don't intend to close the connection.
  */
-char *jabber_parse_error(JabberStream *js, xmlnode *packet, PurpleConnectionError *reason);
+char *jabber_parse_error(JabberStream *js, PurpleXmlNode *packet, PurpleConnectionError *reason);
 
 /**
  * Add a feature to the list of features advertised via disco#info.  If you
@@ -354,7 +350,7 @@ void jabber_remove_feature(const gchar *namespace);
 
 /** Adds an identity to this jabber library instance. For list of valid values
  * visit the website of the XMPP Registrar
- * (http://www.xmpp.org/registrar/disco-categories.html#client).
+ * (http://xmpp.org/registrar/disco-categories.html#client)
  *
  * Like with jabber_add_feature, if you call this while accounts are connected,
  * Bad Things will happen.
@@ -396,7 +392,7 @@ void jabber_close(PurpleConnection *gc);
 void jabber_idle_set(PurpleConnection *gc, int idle);
 void jabber_blocklist_parse_push(JabberStream *js, const char *from,
                                  JabberIqType type, const char *id,
-                                 xmlnode *child);
+                                 PurpleXmlNode *child);
 void jabber_request_block_list(JabberStream *js);
 void jabber_add_deny(PurpleConnection *gc, const char *who);
 void jabber_rem_deny(PurpleConnection *gc, const char *who);
