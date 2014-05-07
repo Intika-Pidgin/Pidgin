@@ -1,8 +1,3 @@
-/**
- * @file eventloop.c Purple Event Loop API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -91,6 +86,16 @@ purple_input_get_error(int fd, int *error)
 	}
 }
 
+int
+purple_input_pipe(int pipefd[2])
+{
+#ifdef _WIN32
+	return wpurple_input_pipe(pipefd);
+#else
+	return pipe(pipefd);
+#endif
+}
+
 void
 purple_eventloop_set_ui_ops(PurpleEventLoopUiOps *ops)
 {
@@ -103,4 +108,34 @@ purple_eventloop_get_ui_ops(void)
 	g_return_val_if_fail(eventloop_ui_ops != NULL, NULL);
 
 	return eventloop_ui_ops;
+}
+
+/**************************************************************************
+ * GBoxed code
+ **************************************************************************/
+static PurpleEventLoopUiOps *
+purple_eventloop_ui_ops_copy(PurpleEventLoopUiOps *ops)
+{
+	PurpleEventLoopUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleEventLoopUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_eventloop_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleEventLoopUiOps",
+				(GBoxedCopyFunc)purple_eventloop_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }
