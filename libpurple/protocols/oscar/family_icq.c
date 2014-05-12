@@ -23,6 +23,8 @@
  *
  */
 
+#include "glibcompat.h"
+
 #include "encoding.h"
 #include "oscar.h"
 
@@ -423,8 +425,8 @@ gotalias(OscarData *od, struct aim_icq_info *info)
 		if (utf8 && *utf8) {
 			gchar who[16];
 			g_snprintf(who, sizeof(who), "%u", info->uin);
-			serv_got_alias(gc, who, utf8);
-			if ((b = purple_find_buddy(account, who))) {
+			purple_serv_got_alias(gc, who, utf8);
+			if ((b = purple_blist_find_buddy(account, who))) {
 				purple_blist_node_set_string((PurpleBlistNode*)b, "servernick", utf8);
 			}
 		}
@@ -624,7 +626,7 @@ icqresponse(OscarData *od, aim_modsnac_t *snac, ByteStream *bs)
 				PurpleStatus *status;
 
 				account = purple_connection_get_account(od->gc);
-				buddy = purple_find_buddy(account, uin);
+				buddy = purple_blist_find_buddy(account, uin);
 				presence = purple_buddy_get_presence(buddy);
 				status = purple_presence_get_active_status(presence);
 
@@ -771,10 +773,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 static void
 icq_shutdown(OscarData *od, aim_module_t *mod)
 {
-	GSList *cur;
-	for (cur = od->icq_info; cur; cur = cur->next)
-		aim_icq_freeinfo(cur->data);
-	g_slist_free(od->icq_info);
+	g_slist_free_full(od->icq_info, (GDestroyNotify)aim_icq_freeinfo);
 }
 
 int

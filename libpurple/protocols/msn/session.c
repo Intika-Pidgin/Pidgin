@@ -24,6 +24,7 @@
 
 #include "internal.h"
 #include "debug.h"
+#include "http.h"
 
 #include "error.h"
 #include "msnutils.h"
@@ -40,6 +41,8 @@ msn_session_new(PurpleAccount *account)
 
 	session = g_new0(MsnSession, 1);
 
+	session->http_reqs = purple_http_connection_set_new();
+
 	session->account = account;
 	session->notification = msn_notification_new(session);
 	session->userlist = msn_userlist_new(session);
@@ -54,6 +57,8 @@ msn_session_new(PurpleAccount *account)
 
 	session->guid = rand_guid();
 
+	session->soap = msn_soap_service_new(session);
+
 	return session;
 }
 
@@ -64,19 +69,12 @@ msn_session_destroy(MsnSession *session)
 
 	session->destroying = TRUE;
 
-	while (session->url_datas) {
-		purple_util_fetch_url_cancel(session->url_datas->data);
-		session->url_datas = g_slist_delete_link(session->url_datas, session->url_datas);
-	}
+	purple_http_connection_set_destroy(session->http_reqs);
 
 	if (session->connected)
 		msn_session_disconnect(session);
 
-	if (session->soap_cleanup_handle)
-		purple_timeout_remove(session->soap_cleanup_handle);
-
-	if (session->soap_table != NULL)
-		g_hash_table_destroy(session->soap_table);
+	msn_soap_service_destroy(session->soap);
 
 	while (session->slplinks != NULL)
 		msn_slplink_unref(session->slplinks->data);
@@ -176,21 +174,20 @@ msn_session_find_swboard(MsnSession *session, const char *username)
 	return NULL;
 }
 
-static PurpleConversation *
-msn_session_get_conv(MsnSession *session,const char *passport)
+static PurpleIMConversation *
+msn_session_get_im(MsnSession *session,const char *passport)
 {
 	PurpleAccount *account;
-	PurpleConversation * conv;
+	PurpleIMConversation * im;
 
 	g_return_val_if_fail(session != NULL, NULL);
 	account = session->account;
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-									passport, account);
-	if(conv == NULL){
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, passport);
+	im = purple_conversations_find_im_with_account(passport, account);
+	if(im == NULL){
+		im = purple_im_conversation_new(account, passport);
 	}
-	return conv;
+	return im;
 }
 
 /* put Message to User Conversation
@@ -200,10 +197,10 @@ msn_session_get_conv(MsnSession *session,const char *passport)
 void
 msn_session_report_user(MsnSession *session,const char *passport,const char *msg,PurpleMessageFlags flags)
 {
-	PurpleConversation * conv;
+	PurpleIMConversation * im;
 
-	if ((conv = msn_session_get_conv(session,passport)) != NULL){
-		purple_conversation_write(conv, NULL, msg, flags, time(NULL));
+	if ((im = msn_session_get_im(session,passport)) != NULL){
+		purple_conversation_write(PURPLE_CONVERSATION(im), NULL, msg, flags, time(NULL));
 	}
 }
 
@@ -311,7 +308,7 @@ msn_session_sync_users(MsnSession *session)
 	 * being logged in. This no longer happens, so we manually iterate
 	 * over the whole buddy list to identify sync issues.
 	 */
-	for (buddies = purple_find_buddies(session->account, NULL); buddies;
+	for (buddies = purple_blist_find_buddies(session->account, NULL); buddies;
 			buddies = g_slist_delete_link(buddies, buddies)) {
 		PurpleBuddy *buddy = buddies->data;
 		const gchar *buddy_name = purple_buddy_get_name(buddy);
@@ -384,7 +381,7 @@ msn_session_set_error(MsnSession *session, MsnErrorType error,
 			reason = PURPLE_CONNECTION_ERROR_NAME_IN_USE;
 			msg = g_strdup(_("You have signed on from another location"));
 			if (!purple_account_get_remember_password(session->account))
-				purple_account_set_password(session->account, NULL);
+				purple_account_set_password(session->account, NULL, NULL, NULL);
 			break;
 		case MSN_ERROR_SERV_UNAVAILABLE:
 			reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
@@ -404,7 +401,7 @@ msn_session_set_error(MsnSession *session, MsnErrorType error,
 								  _("Unknown error") : info);
 			/* Clear the password if it isn't being saved */
 			if (!purple_account_get_remember_password(session->account))
-				purple_account_set_password(session->account, NULL);
+				purple_account_set_password(session->account, NULL, NULL, NULL);
 			break;
 		case MSN_ERROR_BAD_BLIST:
 			reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
@@ -420,7 +417,7 @@ msn_session_set_error(MsnSession *session, MsnErrorType error,
 
 	msn_session_disconnect(session);
 
-	purple_connection_error_reason(gc, reason, msg);
+	purple_connection_error(gc, reason, msg);
 
 	g_free(msg);
 }
@@ -459,7 +456,7 @@ msn_session_set_login_step(MsnSession *session, MsnLoginStep step)
 	if (session->logged_in)
 		return;
 
-	gc = session->account->gc;
+	gc = purple_account_get_connection(session->account);
 
 	session->login_step = step;
 
@@ -472,7 +469,7 @@ msn_session_finish_login(MsnSession *session)
 {
 	PurpleAccount *account;
 	PurpleConnection *gc;
-	PurpleStoredImage *img;
+	PurpleImage *img;
 
 	if (!session->logged_in) {
 		account = session->account;
@@ -482,10 +479,10 @@ msn_session_finish_login(MsnSession *session)
 		/* TODO: Do we really want to call this if img is NULL? */
 		msn_user_set_buddy_icon(session->user, img);
 		if (img != NULL)
-			purple_imgstore_unref(img);
+			g_object_unref(img);
 
 		session->logged_in = TRUE;
-		purple_connection_set_state(gc, PURPLE_CONNECTED);
+		purple_connection_set_state(gc, PURPLE_CONNECTION_CONNECTED);
 
 		/* Sync users */
 		msn_session_sync_users(session);
