@@ -273,8 +273,12 @@ msn_error_handle(MsnSession *session, unsigned int type)
 	                      msn_error_get_text(type, &debug));
 	if (debug)
 		purple_debug_warning("msn", "error %d: %s\n", type, buf);
-	else
-		purple_notify_error(session->account->gc, NULL, buf, NULL);
+	else {
+		purple_notify_error(
+			purple_account_get_connection(session->account), NULL,
+			buf, NULL, purple_request_cpar_from_account(
+				session->account));
+	}
 	g_free(buf);
 }
 
@@ -290,12 +294,12 @@ msn_complete_sync_issue(MsnAddRemData *data)
 	PurpleGroup *group = NULL;
 
 	if (data->group != NULL)
-		group = purple_find_group(data->group);
+		group = purple_blist_find_group(data->group);
 
 	if (group != NULL)
-		buddy = purple_find_buddy_in_group(data->session->account, data->who, group);
+		buddy = purple_blist_find_buddy_in_group(data->session->account, data->who, group);
 	else
-		buddy = purple_find_buddy(data->session->account, data->who);
+		buddy = purple_blist_find_buddy(data->session->account, data->who);
 
 	if (buddy != NULL)
 		purple_blist_remove_buddy(buddy);
@@ -373,7 +377,7 @@ msn_error_sync_issue(MsnSession *session, const char *passport,
 	}
 
 	purple_request_action(gc, NULL, msg, reason, PURPLE_DEFAULT_ACTION_NONE,
-						account, data->who, NULL,
+		purple_request_cpar_from_account(account),
 						data, 2,
 						_("Yes"), G_CALLBACK(msn_add_cb),
 						_("No"), G_CALLBACK(msn_rem_cb));
