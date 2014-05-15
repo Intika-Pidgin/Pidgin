@@ -206,7 +206,7 @@ static struct _Z_InputQ *Z_SearchQueue(ZUnique_Id_t *uid, ZNotice_Kind_t kind)
 	if (ZCompareUID(uid, &qptr->uid) && qptr->kind == kind)
 	    return (qptr);
 	next = qptr->next;
-	if (qptr->timep && (qptr->timep+Z_NOTICETIMELIMIT < tv.tv_sec))
+	if (qptr->timep && ((time_t)qptr->timep+Z_NOTICETIMELIMIT < tv.tv_sec))
 	    Z_RemQueue(qptr);
 	qptr = next;
     }
@@ -526,15 +526,17 @@ Code_t Z_AddNoticeToEntry(qptr, notice, part)
 		hole = hole->next;
 	    }
 	    if (lasthole) {
-		if (!(lasthole->next = (struct _Z_Hole *)(struct _Z_InputQ *)
-		      malloc(sizeof(struct _Z_InputQ))))
+		struct _Z_InputQ *inputq = malloc(sizeof(struct _Z_InputQ));
+		if (!inputq)
 		    return (ENOMEM);
+		lasthole->next = (struct _Z_Hole *)inputq;
 		hole = lasthole->next;
 	    }
 	    else {
-		if (!(qptr->holelist = (struct _Z_Hole *)(struct _Z_InputQ *)
-		      malloc(sizeof(struct _Z_InputQ))))
+		struct _Z_InputQ *inputq = malloc(sizeof(struct _Z_InputQ));
+		if (!inputq)
 		    return (ENOMEM);
+		qptr->holelist = (struct _Z_Hole *)inputq;
 		hole = qptr->holelist;
 	    }
 	    hole->next = NULL;
@@ -550,15 +552,17 @@ Code_t Z_AddNoticeToEntry(qptr, notice, part)
 		hole = hole->next;
 	    }
 	    if (lasthole) {
-		if (!(lasthole->next = (struct _Z_Hole *)(struct _Z_InputQ *)
-		      malloc(sizeof(struct _Z_InputQ))))
+		struct _Z_InputQ *inputq = malloc(sizeof(struct _Z_InputQ));
+		if (!inputq)
 		    return (ENOMEM);
+		lasthole->next = (struct _Z_Hole *)inputq;
 		hole = lasthole->next;
 	    }
 	    else {
-		if (!(qptr->holelist = (struct _Z_Hole *)(struct _Z_InputQ *)
-		      malloc(sizeof(struct _Z_InputQ))))
+		struct _Z_InputQ *inputq = malloc(sizeof(struct _Z_InputQ));
+		if (!inputq)
 		    return (ENOMEM);
+		qptr->holelist = (struct _Z_Hole *)inputq;
 		hole = qptr->holelist;
 	    }
 	    hole->next = (struct _Z_Hole *) 0;
@@ -650,7 +654,7 @@ Code_t Z_FormatAuthHeader(notice, buffer, buffer_len, len, cert_routine)
 Code_t Z_FormatRawHeader(notice, buffer, buffer_len, len, cstart, cend)
     ZNotice_t *notice;
     char *buffer;
-    int buffer_len;
+    gsize buffer_len;
     int *len;
     char **cstart, **cend;
 {

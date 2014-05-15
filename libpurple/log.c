@@ -1,8 +1,3 @@
-/**
- * @file log.c Logging API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -28,12 +23,12 @@
 #include "account.h"
 #include "dbus-maybe.h"
 #include "debug.h"
-#include "internal.h"
+#include "glibcompat.h"
+#include "image-store.h"
 #include "log.h"
 #include "prefs.h"
 #include "util.h"
 #include "stringref.h"
-#include "imgstore.h"
 #include "time.h"
 
 static GSList *loggers = NULL;
@@ -292,6 +287,10 @@ gint purple_log_get_activity_score(PurpleLogType type, const char *name, PurpleA
 
 				while (logs) {
 					PurpleLog *log = (PurpleLog*)(logs->data);
+					if (!log) {
+						g_warn_if_reached();
+						continue;
+					}
 					/* Activity score counts bytes in the log, exponentially
 					   decayed with a half-life of 14 days. */
 					score_double += purple_log_get_size(log) *
@@ -453,6 +452,8 @@ PurpleLogLogger *purple_log_logger_new(const char *id, const char *name, int fun
 
 void purple_log_logger_free(PurpleLogLogger *logger)
 {
+	if (!logger)
+		return;
 	g_free(logger->name);
 	g_free(logger->id);
 	g_free(logger);
@@ -700,17 +701,16 @@ void purple_log_init(void)
 #else
 #error Unknown size of time_t
 #endif
-	                     purple_value_new(PURPLE_TYPE_STRING), 3,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_LOG),
+	                     G_TYPE_STRING, 3,
+	                     PURPLE_TYPE_LOG,
 #if SIZEOF_TIME_T == 4
-	                     purple_value_new(PURPLE_TYPE_INT),
+	                     G_TYPE_INT,
 #elif SIZEOF_TIME_T == 8
-	                     purple_value_new(PURPLE_TYPE_INT64),
+	                     G_TYPE_INT64,
 #else
 # error Unknown size of time_t
 #endif
-	                     purple_value_new(PURPLE_TYPE_BOOLEAN));
+	                     G_TYPE_BOOLEAN);
 
 	purple_prefs_connect_callback(NULL, "/purple/logging/format",
 							    logger_pref_cb, NULL);
@@ -745,6 +745,33 @@ purple_log_uninit(void)
 	g_hash_table_destroy(logsize_users_decayed);
 }
 
+static PurpleLog *
+purple_log_copy(PurpleLog *log)
+{
+	PurpleLog *log_copy;
+
+	g_return_val_if_fail(log != NULL, NULL);
+
+	log_copy = g_new(PurpleLog, 1);
+	*log_copy = *log;
+
+	return log_copy;
+}
+
+GType
+purple_log_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleLog",
+				(GBoxedCopyFunc)purple_log_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
 /****************************************************************************
  * LOGGERS ******************************************************************
  ****************************************************************************/
@@ -771,7 +798,9 @@ static char *log_get_timestamp(PurpleLog *log, time_t when)
 }
 
 /* NOTE: This can return msg (which you may or may not want to g_free())
- * NOTE: or a newly allocated string which you MUST g_free(). */
+ * NOTE: or a newly allocated string which you MUST g_free().
+ * TODO: XXX: does it really works?
+ */
 static char *
 convert_image_tags(const PurpleLog *log, const char *msg)
 {
@@ -801,13 +830,13 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 		{
 			FILE *image_file;
 			char *dir;
-			PurpleStoredImage *image;
+			PurpleImage *image;
 			gconstpointer image_data;
-			char *new_filename = NULL;
+			const gchar *new_filename = NULL;
 			char *path = NULL;
 			size_t image_byte_count;
 
-			image = purple_imgstore_find_by_id(imgid);
+			image = purple_image_store_get(imgid);
 			if (image == NULL)
 			{
 				/* This should never happen. */
@@ -816,10 +845,10 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 				g_return_val_if_reached((char *)msg);
 			}
 
-			image_data       = purple_imgstore_get_data(image);
-			image_byte_count = purple_imgstore_get_size(image);
+			image_data       = purple_image_get_data(image);
+			image_byte_count = purple_image_get_size(image);
 			dir              = purple_log_get_log_dir(log->type, log->name, log->account);
-			new_filename     = purple_util_get_image_filename(image_data, image_byte_count);
+			new_filename = purple_image_generate_filename(image);
 
 			path = g_build_filename(dir, new_filename, NULL);
 
@@ -835,7 +864,10 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 						fclose(image_file);
 
 						/* Attempt to not leave half-written files around. */
-						unlink(path);
+						if (g_unlink(path)) {
+							purple_debug_error("log", "Error deleting partial "
+									"file %s: %s\n", path, g_strerror(errno));
+						}
 					}
 					else
 					{
@@ -851,8 +883,7 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 			}
 
 			/* Write the new image tag */
-			g_string_append_printf(newmsg, "<IMG SRC=\"%s\">", new_filename);
-			g_free(new_filename);
+			g_string_append_printf(newmsg, "<img src=\"%s\">", new_filename);
 			g_free(path);
 		}
 
@@ -1014,7 +1045,7 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 		    strlen(filename) >= (17 + strlen(ext)))
 		{
 			char *tmp = g_build_filename(path, filename, NULL);
-			struct stat st;
+			GStatBuf st;
 			if (g_stat(tmp, &st))
 			{
 				purple_debug_error("log", "Error stating log file: %s\n", tmp);
@@ -1032,7 +1063,7 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 
 int purple_log_common_sizer(PurpleLog *log)
 {
-	struct stat st;
+	GStatBuf st;
 	PurpleLogCommonLoggerData *data = log->logger_data;
 
 	g_return_val_if_fail(data != NULL, 0);
@@ -1103,7 +1134,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 			/* Find the account for username in the list of accounts for protocol. */
 			username_unescaped = purple_unescape_filename(username);
 			for (account_iter = g_list_first(accounts) ; account_iter != NULL ; account_iter = account_iter->next) {
-				if (purple_strequal(((PurpleAccount *)account_iter->data)->username, username_unescaped)) {
+				if (purple_strequal(purple_account_get_username((PurpleAccount *)account_iter->data), username_unescaped)) {
 					account = account_iter->data;
 					break;
 				}
@@ -1147,7 +1178,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 
 				/* Determine if this (account, name) combination exists as a buddy. */
 				if (account != NULL && *name != '\0')
-					set->buddy = (purple_find_buddy(account, name) != NULL);
+					set->buddy = (purple_blist_find_buddy(account, name) != NULL);
 				else
 					set->buddy = FALSE;
 
@@ -1550,7 +1581,7 @@ static gsize txt_logger_write(PurpleLog *log,
 		data = log->logger_data;
 
 		/* if we can't write to the file, give up before we hurt ourselves */
-		if(!data->file)
+		if(!data || !data->file)
 			return 0;
 
 		if (log->type == PURPLE_LOG_SYSTEM)
@@ -1672,7 +1703,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, sn));
 	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
 	PurpleStringref *pathref = purple_stringref_new(pathstr);
-	struct stat st;
+	GStatBuf st;
 	time_t log_last_modified;
 	FILE *index;
 	FILE *file;
@@ -1701,7 +1732,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 		g_free(pathstr);
 		return NULL;
 	}
-	if (fstat(file_fd, &st) == -1) {
+	if (_purple_fstat(file_fd, &st) == -1) {
 		purple_stringref_unref(pathref);
 		g_free(pathstr);
 		fclose(file);
@@ -1714,7 +1745,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 
 	index_fd = g_open(pathstr, 0, O_RDONLY);
 	if (index_fd != -1) {
-		if (fstat(index_fd, &st) != 0) {
+		if (_purple_fstat(index_fd, &st) != 0) {
 			close(index_fd);
 			index_fd = -1;
 		}
@@ -1933,7 +1964,7 @@ static int old_logger_total_size(PurpleLogType type, const char *name, PurpleAcc
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, name));
 	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
 	int size;
-	struct stat st;
+	GStatBuf st;
 
 	if (g_stat(pathstr, &st))
 		size = 0;
@@ -2038,14 +2069,14 @@ static void old_logger_get_log_sets(PurpleLogSetCallback cb, GHashTable *sets)
 		     !found && gnode != NULL;
 		     gnode = purple_blist_node_get_sibling_next(gnode))
 		{
-			if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
+			if (!PURPLE_IS_GROUP(gnode))
 				continue;
 
 			for (cnode = purple_blist_node_get_first_child(gnode);
 			     !found && cnode != NULL;
 				 cnode = purple_blist_node_get_sibling_next(cnode))
 			{
-				if (!PURPLE_BLIST_NODE_IS_CONTACT(cnode))
+				if (!PURPLE_IS_CONTACT(cnode))
 					continue;
 
 				for (bnode = purple_blist_node_get_first_child(cnode);

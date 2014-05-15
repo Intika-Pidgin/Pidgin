@@ -34,17 +34,14 @@ static void irc_do_mode(struct irc_conn *irc, const char *target, const char *si
 
 int irc_cmd_default(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
-	PurpleConversation *convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, target, irc->account);
+	PurpleConversation *convo = purple_conversations_find_with_account(target, irc->account);
 	char *buf;
 
 	if (!convo)
 		return 1;
 
 	buf = g_strdup_printf(_("Unknown command: %s"), cmd);
-	if (purple_conversation_get_type(convo) == PURPLE_CONV_TYPE_IM)
-		purple_conv_im_write(PURPLE_CONV_IM(convo), "", buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
-	else
-		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), "", buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
+	purple_conversation_write_message(convo, "", buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
 	g_free(buf);
 
 	return 1;
@@ -104,20 +101,19 @@ int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *targe
 	if (!args || !args[0] || !gc)
 		return 0;
 
-	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY,
-		target, irc->account);
+	convo = purple_conversations_find_with_account(target, irc->account);
 
 	msg = g_strdup_printf("/me %s", args[0]);
 
 	/* XXX: we'd prefer to keep this in conversation.c */
-	if (purple_conversation_get_type(convo) == PURPLE_CONV_TYPE_IM) {
+	if (PURPLE_IS_IM_CONVERSATION(convo)) {
 		purple_signal_emit(purple_conversations_get_handle(),
 			"sending-im-msg", irc->account,
 			purple_conversation_get_name(convo), &msg);
 	} else {
 		purple_signal_emit(purple_conversations_get_handle(),
 			"sending-chat-msg", irc->account, &msg,
-			purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)));
+			purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(convo)));
 	}
 
 	if (!msg || !msg[0]) {
@@ -166,14 +162,14 @@ int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *targe
 	}
 
 	/* XXX: we'd prefer to keep this in conversation.c */
-	if (purple_conversation_get_type(convo) == PURPLE_CONV_TYPE_IM) {
+	if (PURPLE_IS_IM_CONVERSATION(convo)) {
 		purple_signal_emit(purple_conversations_get_handle(),
 			"sent-im-msg", irc->account,
 			purple_conversation_get_name(convo), msg);
 	} else {
 		purple_signal_emit(purple_conversations_get_handle(),
 			"sent-chat-msg", irc->account, msg,
-			purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)));
+			purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(convo)));
 	}
 
 	g_free(msg);
@@ -184,12 +180,12 @@ int irc_cmd_ctcp_action(struct irc_conn *irc, const char *cmd, const char *targe
 		g_free(escaped);
 		if (action[strlen(action) - 1] == '\n')
 			action[strlen(action) - 1] = '\0';
-		if (purple_conversation_get_type(convo) == PURPLE_CONV_TYPE_CHAT)
-			serv_got_chat_in(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)),
+		if (PURPLE_IS_CHAT_CONVERSATION(convo))
+			purple_serv_got_chat_in(gc, purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(convo)),
 			                 purple_connection_get_display_name(gc),
 			                 PURPLE_MESSAGE_SEND, action, time(NULL));
 		else
-			purple_conv_im_write(PURPLE_CONV_IM(convo), purple_connection_get_display_name(gc),
+			purple_conversation_write_message(convo, purple_connection_get_display_name(gc),
 			                     action, PURPLE_MESSAGE_SEND, time(NULL));
 		g_free(action);
 	}
@@ -245,13 +241,11 @@ int irc_cmd_join(struct irc_conn *irc, const char *cmd, const char *target, cons
 int irc_cmd_kick(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
 	char *buf;
-	PurpleConversation *convo;
 
 	if (!args || !args[0])
 		return 0;
 
-	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, target, irc->account);
-	if (!convo)
+	if (!purple_conversations_find_chat_with_account(target, irc->account))
 		return 0;
 
 	if (args[1])
@@ -468,7 +462,7 @@ int irc_cmd_quit(struct irc_conn *irc, const char *cmd, const char *target, cons
 
 		irc->quitting = TRUE;
 
-		if (!irc->account->disconnecting)
+		if (!purple_account_is_disconnecting(irc->account))
 			purple_account_set_status(irc->account, "offline", TRUE, NULL);
 	}
 
@@ -491,20 +485,21 @@ int irc_cmd_quote(struct irc_conn *irc, const char *cmd, const char *target, con
 
 int irc_cmd_query(struct irc_conn *irc, const char *cmd, const char *target, const char **args)
 {
-	PurpleConversation *convo;
+	PurpleIMConversation *im;
 	PurpleConnection *gc;
 
 	if (!args || !args[0])
 		return 0;
 
-	convo = purple_conversation_new(PURPLE_CONV_TYPE_IM, irc->account, args[0]);
-	purple_conversation_present(convo);
+	im = purple_im_conversation_new(irc->account, args[0]);
+	purple_conversation_present(PURPLE_CONVERSATION(im));
 
 	if (args[1]) {
 		gc = purple_account_get_connection(irc->account);
 		irc_cmd_privmsg(irc, cmd, target, args);
-		purple_conv_im_write(PURPLE_CONV_IM(convo), purple_connection_get_display_name(gc),
-			      args[1], PURPLE_MESSAGE_SEND, time(NULL));
+		purple_conversation_write_message(PURPLE_CONVERSATION(im),
+				purple_connection_get_display_name(gc), args[1],
+				PURPLE_MESSAGE_SEND, time(NULL));
 	}
 
 	return 0;
@@ -562,17 +557,17 @@ int irc_cmd_topic(struct irc_conn *irc, const char *cmd, const char *target, con
 {
 	char *buf;
 	const char *topic;
-	PurpleConversation *convo;
+	PurpleChatConversation *chat;
 
 	if (!args)
 		return 0;
 
-	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, target, irc->account);
-	if (!convo)
+	chat = purple_conversations_find_chat_with_account(target, irc->account);
+	if (!chat)
 		return 0;
 
 	if (!args[0]) {
-		topic = purple_conv_chat_get_topic (PURPLE_CONV_CHAT(convo));
+		topic = purple_chat_conversation_get_topic (chat);
 
 		if (topic) {
 			char *tmp, *tmp2;
@@ -583,7 +578,8 @@ int irc_cmd_topic(struct irc_conn *irc, const char *cmd, const char *target, con
 			g_free(tmp2);
 		} else
 			buf = g_strdup(_("No topic is set"));
-		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), target, buf, PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
+		purple_conversation_write_message(PURPLE_CONVERSATION(chat), target, buf,
+				PURPLE_MESSAGE_SYSTEM|PURPLE_MESSAGE_NO_LOG, time(NULL));
 		g_free(buf);
 
 		return 0;
