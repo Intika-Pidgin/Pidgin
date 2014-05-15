@@ -26,10 +26,10 @@
 
 /* removes deleted buddies from the list */
 void
-jabber_facebook_roster_cleanup(JabberStream *js, xmlnode *query);
+jabber_facebook_roster_cleanup(JabberStream *js, PurpleXmlNode *query);
 
 /* ignores facebook roster quirks */
 gboolean
-jabber_facebook_roster_incoming(JabberStream *js, xmlnode *item);
+jabber_facebook_roster_incoming(JabberStream *js, PurpleXmlNode *item);
 
 #endif /* PURPLE_XMPP_FACEBOOK_ROSTER_H_ */

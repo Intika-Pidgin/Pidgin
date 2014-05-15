@@ -29,7 +29,7 @@
 /* Purple headers */
 #include <version.h>
 
-#include <blist.h>
+#include <buddylist.h>
 #include <conversation.h>
 #include <core.h>
 #include <debug.h>
@@ -67,9 +67,9 @@ discard_data(OfflineMsg *offline)
 static void
 cancel_poune(OfflineMsg *offline)
 {
-	purple_conversation_set_data(offline->conv, "plugin_pack:offlinemsg",
+	g_object_set_data(G_OBJECT(offline->conv), "plugin_pack:offlinemsg",
 				GINT_TO_POINTER(OFFLINE_MSG_NO));
-	purple_conv_im_send_with_flags(PURPLE_CONV_IM(offline->conv), offline->message, 0);
+	purple_conversation_send_with_flags(offline->conv, offline->message, 0);
 	discard_data(offline);
 }
 
@@ -80,6 +80,7 @@ record_pounce(OfflineMsg *offline)
 	PurplePounceEvent event;
 	PurplePounceOption option;
 	PurpleConversation *conv;
+	char *temp;
 
 	event = PURPLE_POUNCE_SIGNON;
 	option = PURPLE_POUNCE_OPTION_NONE;
@@ -88,18 +89,23 @@ record_pounce(OfflineMsg *offline)
 					event, option);
 
 	purple_pounce_action_set_enabled(pounce, "send-message", TRUE);
-	purple_pounce_action_set_attribute(pounce, "send-message", "message", offline->message);
+
+	temp = g_strdup_printf("(%s) %s", _("Offline message"),
+			offline->message);
+	purple_pounce_action_set_attribute(pounce, "send-message", "message",
+			temp);
+	g_free(temp);
 
 	conv = offline->conv;
-	if (!purple_conversation_get_data(conv, "plugin_pack:offlinemsg"))
+	if (!g_object_get_data(G_OBJECT(conv), "plugin_pack:offlinemsg"))
 		purple_conversation_write(conv, NULL, _("The rest of the messages will be saved "
 							"as pounces. You can edit/delete the pounce from the `Buddy "
 							"Pounce' dialog."),
 							PURPLE_MESSAGE_SYSTEM, time(NULL));
-	purple_conversation_set_data(conv, "plugin_pack:offlinemsg",
+	g_object_set_data(G_OBJECT(conv), "plugin_pack:offlinemsg",
 				GINT_TO_POINTER(OFFLINE_MSG_YES));
 
-	purple_conv_im_write(PURPLE_CONV_IM(conv), offline->who, offline->message,
+	purple_conversation_write_message(conv, offline->who, offline->message,
 				PURPLE_MESSAGE_SEND, time(NULL));
 
 	discard_data(offline);
@@ -117,7 +123,7 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 			**message == '\0')
 		return;
 
-	buddy = purple_find_buddy(account, who);
+	buddy = purple_blist_find_buddy(account, who);
 	if (!buddy)
 		return;
 
@@ -131,13 +137,12 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 		return;
 	}
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-					who, account);
+	conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(who, account));
 
 	if (!conv)
 		return;
 
-	setting = GPOINTER_TO_INT(purple_conversation_get_data(conv, "plugin_pack:offlinemsg"));
+	setting = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "plugin_pack:offlinemsg"));
 	if (setting == OFFLINE_MSG_NO)
 		return;
 
@@ -159,8 +164,7 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 
 		purple_request_action(handle, _("Offline Message"), ask,
 					_("You can edit/delete the pounce from the `Buddy Pounces' dialog"),
-					0,
-					offline->account, offline->who, offline->conv,
+					0, purple_request_cpar_from_conversation(offline->conv),
 					offline, 2,
 					_("Yes"), record_pounce,
 					_("No"), cancel_poune);
@@ -202,7 +206,6 @@ get_plugin_pref_frame(PurplePlugin *plugin)
 
 static PurplePluginUiInfo prefs_info = {
 	get_plugin_pref_frame,
-	0,
 	NULL,
 
 	/* padding */
