@@ -481,19 +481,18 @@ purple_im_conversation_finalize(GObject *object)
 {
 	PurpleIMConversation *im = PURPLE_IM_CONVERSATION(object);
 	PurpleConnection *gc = purple_conversation_get_connection(PURPLE_CONVERSATION(im));
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 	const char *name = purple_conversation_get_name(PURPLE_CONVERSATION(im));
 
 	if (gc != NULL)
 	{
 		/* Still connected */
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+		protocol = purple_connection_get_protocol(gc);
 
 		if (purple_prefs_get_bool("/purple/conversations/im/send_typing"))
 			purple_serv_send_typing(gc, name, PURPLE_IM_NOT_TYPING);
 
-		if (gc && prpl_info->convo_closed != NULL)
-			prpl_info->convo_closed(gc, name);
+		purple_protocol_client_iface_convo_closed(protocol, gc, name);
 	}
 
 	purple_im_conversation_stop_typing_timeout(im);
@@ -875,7 +874,7 @@ purple_chat_conversation_add_users(PurpleChatConversation *chat, GList *users, G
 	PurpleChatConversationPrivate *priv;
 	PurpleAccount *account;
 	PurpleConnection *gc;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	GList *ul, *fl;
 	GList *cbuddies = NULL;
 
@@ -890,8 +889,8 @@ purple_chat_conversation_add_users(PurpleChatConversation *chat, GList *users, G
 	account = purple_conversation_get_account(conv);
 	gc = purple_conversation_get_connection(conv);
 	g_return_if_fail(PURPLE_IS_CONNECTION(gc));
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
-	g_return_if_fail(prpl_info != NULL);
+	protocol = purple_connection_get_protocol(gc);
+	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
 
 	ul = users;
 	fl = flags;
@@ -902,7 +901,7 @@ purple_chat_conversation_add_users(PurpleChatConversation *chat, GList *users, G
 		PurpleChatUserFlags flag = GPOINTER_TO_INT(fl->data);
 		const char *extra_msg = (extra_msgs ? extra_msgs->data : NULL);
 
-		if(!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
+		if(!(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME)) {
 			if (purple_strequal(priv->nick, purple_normalize(account, user))) {
 				const char *alias2 = purple_account_get_private_alias(account);
 				if (alias2 != NULL)
@@ -975,7 +974,7 @@ purple_chat_conversation_rename_user(PurpleChatConversation *chat, const char *o
 	PurpleConversationUiOps *ops;
 	PurpleAccount *account;
 	PurpleConnection *gc;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	PurpleChatUser *cb;
 	PurpleChatUserFlags flags;
 	PurpleChatConversationPrivate *priv;
@@ -995,8 +994,8 @@ purple_chat_conversation_rename_user(PurpleChatConversation *chat, const char *o
 
 	gc = purple_conversation_get_connection(conv);
 	g_return_if_fail(PURPLE_IS_CONNECTION(gc));
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
-	g_return_if_fail(prpl_info != NULL);
+	protocol = purple_connection_get_protocol(gc);
+	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
 
 	if (purple_strequal(priv->nick, purple_normalize(account, old_user))) {
 		const char *alias;
@@ -1004,7 +1003,7 @@ purple_chat_conversation_rename_user(PurpleChatConversation *chat, const char *o
 		/* Note this for later. */
 		is_me = TRUE;
 
-		if(!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
+		if(!(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME)) {
 			alias = purple_account_get_private_alias(account);
 			if (alias != NULL)
 				new_alias = alias;
@@ -1015,7 +1014,7 @@ purple_chat_conversation_rename_user(PurpleChatConversation *chat, const char *o
 					new_alias = display_name;
 			}
 		}
-	} else if (!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
+	} else if (!(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME)) {
 		PurpleBuddy *buddy;
 		if ((buddy = purple_blist_find_buddy(purple_connection_get_account(gc), new_user)) != NULL)
 			new_alias = purple_buddy_get_contact_alias(buddy);
@@ -1059,7 +1058,7 @@ purple_chat_conversation_rename_user(PurpleChatConversation *chat, const char *o
 			char *escaped;
 			char *escaped2;
 
-			if (!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
+			if (!(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME)) {
 				PurpleBuddy *buddy;
 
 				if ((buddy = purple_blist_find_buddy(purple_connection_get_account(gc), old_user)) != NULL)
@@ -1096,7 +1095,7 @@ purple_chat_conversation_remove_users(PurpleChatConversation *chat, GList *users
 {
 	PurpleConversation *conv;
 	PurpleConnection *gc;
-	PurplePluginProtocolInfo *prpl_info;
+	PurpleProtocol *protocol;
 	PurpleConversationUiOps *ops;
 	PurpleChatUser *cb;
 	PurpleChatConversationPrivate *priv;
@@ -1112,8 +1111,8 @@ purple_chat_conversation_remove_users(PurpleChatConversation *chat, GList *users
 
 	gc = purple_conversation_get_connection(conv);
 	g_return_if_fail(PURPLE_IS_CONNECTION(gc));
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
-	g_return_if_fail(prpl_info != NULL);
+	protocol = purple_connection_get_protocol(gc);
+	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
 
 	ops  = purple_conversation_get_ui_ops(conv);
 
@@ -1137,7 +1136,7 @@ purple_chat_conversation_remove_users(PurpleChatConversation *chat, GList *users
 			char *alias_esc;
 			char *tmp;
 
-			if (!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
+			if (!(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME)) {
 				PurpleBuddy *buddy;
 
 				if ((buddy = purple_blist_find_buddy(purple_connection_get_account(gc), user)) != NULL)
@@ -1485,7 +1484,7 @@ purple_chat_conversation_finalize(GObject *object)
 		 * which leads to two calls here.. We can't just return after
 		 * this, because then it'll return on the next pass. So, since
 		 * purple_serv_got_chat_left(), which is eventually called from the
-		 * prpl that purple_serv_chat_leave() calls, removes this conversation
+		 * protocol that purple_serv_chat_leave() calls, removes this conversation
 		 * from the gc's buddy_chats list, we're going to check to see
 		 * if this exists in the list. If so, we want to return after
 		 * calling this, because it'll be called again. If not, fall
@@ -1505,8 +1504,8 @@ purple_chat_conversation_finalize(GObject *object)
 #endif
 		/*
 		 * Instead of all of that, lets just close the window when
-		 * the user tells us to, and let the prpl deal with the
-		 * internals on it's own time. Don't do this if the prpl already
+		 * the user tells us to, and let the protocol deal with the
+		 * internals on it's own time. Don't do this if the protocol already
 		 * knows it left the chat.
 		 */
 		if (!purple_chat_conversation_has_left(chat))
@@ -1634,7 +1633,7 @@ purple_chat_conversation_new(PurpleAccount *account, const char *name)
 					"will be removed in libpurple 3.0.0", name);
 		} else {
 			/*
-			 * This hack is necessary because some prpls (MSN) have unnamed chats
+			 * This hack is necessary because some protocols (MSN) have unnamed chats
 			 * that all use the same name.  A PurpleConversation for one of those
 			 * is only ever re-used if the user has left, so calls to
 			 * purple_conversation_new need to fall-through to creating a new
