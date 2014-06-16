@@ -25,6 +25,8 @@
 
 #include	"internal.h"
 #include	"debug.h"
+#include	"http.h"
+#include "image-store.h"
 
 #include	"protocol.h"
 #include	"mxit.h"
@@ -332,7 +334,7 @@ static void mxit_show_split_message( struct RXMsgData* mx )
 			}
 
 			/* push message to pidgin */
-			serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
+			purple_serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
 			g_string_free( msg, TRUE );
 			msg = NULL;
 
@@ -356,7 +358,7 @@ static void mxit_show_split_message( struct RXMsgData* mx )
 		ch[pos] = '\n';
 
 		/* push message to pidgin */
-		serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
+		purple_serv_got_im( mx->session->con, mx->from, msg->str, mx->flags, mx->timestamp );
 		g_string_free( msg, TRUE );
 		msg = NULL;
 	}
@@ -377,12 +379,13 @@ void mxit_show_message( struct RXMsgData* mx )
 	int					emo_ofs;
 	char*				ii;
 	char				tag[64];
-	int*				img_id;
 
 	if ( mx->got_img ) {
 		/* search and replace all emoticon tags with proper image tags */
 
 		while ( ( pos = strstr( mx->msg->str, MXIT_II_TAG ) ) != NULL ) {
+			PurpleImage *img;
+
 			start = pos - mx->msg->str;					/* offset at which MXIT_II_TAG starts */
 			emo_ofs = start + strlen( MXIT_II_TAG );	/* offset at which EMO's ID starts */
 			end = emo_ofs + 1;							/* offset at which MXIT_II_TAG ends */
@@ -399,14 +402,18 @@ void mxit_show_message( struct RXMsgData* mx )
 			g_string_erase( mx->msg, start, ( end - start ) + 1 );
 
 			/* find the image entry */
-			img_id = (int*) g_hash_table_lookup( mx->session->iimages, ii );
-			if ( !img_id ) {
+			img = g_hash_table_lookup(mx->session->inline_images, ii);
+			if (img == NULL) {
 				/* inline image not found, so we will just skip it */
 				purple_debug_error( MXIT_PLUGIN_ID, "inline image NOT found (%s)\n", ii );
-			}
-			else {
+			} else {
+				guint img_id;
+
+				img_id = purple_image_store_add_temporary(img);
 				/* insert img tag */
-				g_snprintf( tag, sizeof( tag ), "<img id=\"%i\">", *img_id );
+				g_snprintf(tag, sizeof(tag), "<img src=\""
+					PURPLE_IMAGE_STORE_PROTOCOL "%u\">",
+					img_id);
 				g_string_insert( mx->msg, start, tag );
 			}
 
@@ -427,7 +434,7 @@ void mxit_show_message( struct RXMsgData* mx )
 	}
 	else {
 		/* this is a multimx message */
-		serv_got_chat_in( mx->session->con, mx->chatid, mx->from, mx->flags, mx->msg->str, mx->timestamp);
+		purple_serv_got_chat_in( mx->session->con, mx->chatid, mx->from, mx->flags, mx->msg->str, mx->timestamp);
 	}
 
 	/* freeup resource */
@@ -464,36 +471,30 @@ static void parse_emoticon_str( const char* message, char* emid )
 
 /*------------------------------------------------------------------------
  * Callback function invoked when a custom emoticon request to the WAP site completes.
- *
- *  @param url_data
- *  @param user_data		The Markup message object
- *  @param url_text			The data returned from the WAP site
- *  @param len				The length of the data returned
- *  @param error_message	Descriptive error message
  */
-static void emoticon_returned( PurpleUtilFetchUrlData* url_data, gpointer user_data, const gchar* url_text, gsize len, const gchar* error_message )
+static void emoticon_returned(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer user_data)
 {
+	PurpleImage *img;
 	struct RXMsgData*	mx			= (struct RXMsgData*) user_data;
-	const gchar*		data		= url_text;
+	const gchar*			data;
+	size_t				len;
 	unsigned int		pos			= 0;
-	int					id;
 	char*				str;
 	int					em_size		= 0;
 	char*				em_data		= NULL;
 	char*				em_id		= NULL;
-	int*				intptr		= NULL;
 	int					res;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "emoticon_returned\n" );
 
-	/* remove request from the async outstanding calls list */
-	mx->session->async_calls = g_slist_remove( mx->session->async_calls, url_data );
-
-	if ( !url_text ) {
+	if (!purple_http_response_is_successful(response)) {
 		/* no reply from the WAP site */
 		purple_debug_error( MXIT_PLUGIN_ID, "Error contacting the MXit WAP site. Please try again later (emoticon).\n" );
 		goto done;
 	}
+
+	data = purple_http_response_get_data(response, &len);
 
 #ifdef	MXIT_DEBUG_EMO
 	hex_dump( data, len );
@@ -578,7 +579,7 @@ static void emoticon_returned( PurpleUtilFetchUrlData* url_data, gpointer user_d
 		strcpy( em_id, emo );
 	}
 
-	if ( g_hash_table_lookup( mx->session->iimages, em_id ) ) {
+	if (g_hash_table_lookup(mx->session->inline_images, em_id)) {
 		/* emoticon found in the table, so ignore this one */
 		g_free( em_id );
 		goto done;
@@ -588,13 +589,9 @@ static void emoticon_returned( PurpleUtilFetchUrlData* url_data, gpointer user_d
 	em_data = g_malloc( em_size );
 	memcpy( em_data, &data[pos], em_size );
 
-	/* we now have the emoticon, store it in the imagestore */
-	id = purple_imgstore_add_with_id( em_data, em_size, NULL );
-
-	/* map the mxit emoticon id to purple image id */
-	intptr = g_malloc( sizeof( int ) );
-	*intptr = id;
-	g_hash_table_insert( mx->session->iimages, em_id, intptr );
+	/* map the mxit emoticon id to purple image */
+	img = purple_image_new_from_data(em_data, em_size);
+	g_hash_table_insert(mx->session->inline_images, em_id, img);
 
 	mx->flags |= PURPLE_MESSAGE_IMAGES;
 done:
@@ -617,21 +614,16 @@ done:
  */
 static void emoticon_request( struct RXMsgData* mx, const char* id )
 {
-	PurpleUtilFetchUrlData*	url_data;
 	const char*				wapserver;
-	char*					url;
 
 	purple_debug_info( MXIT_PLUGIN_ID, "sending request for emoticon '%s'\n", id );
 
 	wapserver = purple_account_get_string( mx->session->acc, MXIT_CONFIG_WAPSERVER, DEFAULT_WAPSITE );
 
-	/* reference: "libpurple/util.h" */
-	url = g_strdup_printf( "%s/res/?type=emo&mlh=%i&sc=%s&ts=%li", wapserver, MXIT_EMOTICON_SIZE, id, time( NULL ) );
-	url_data = purple_util_fetch_url_request( url, TRUE, NULL, TRUE, NULL, FALSE, emoticon_returned, mx );
-	if ( url_data )
-		mx->session->async_calls = g_slist_prepend( mx->session->async_calls, url_data );
-
-	g_free( url );
+	purple_http_connection_set_add(mx->session->async_http_reqs,
+		purple_http_get_printf(mx->session->con, emoticon_returned, mx,
+			"%s/res/?type=emo&mlh=%i&sc=%s&ts=%li", wapserver,
+			MXIT_EMOTICON_SIZE, id, time( NULL ) ));
 }
 
 
@@ -893,7 +885,7 @@ void mxit_parse_markup( struct RXMsgData* mx, char* message, int len, short msgt
 						if ( tmpstr1[0] != '\0' ) {
 							mx->got_img = TRUE;
 
-							if ( g_hash_table_lookup( mx->session->iimages, tmpstr1 ) ) {
+							if (g_hash_table_lookup(mx->session->inline_images, tmpstr1)) {
 								/* emoticon found in the cache, so we do not have to request it from the WAPsite */
 							}
 							else {
@@ -1013,22 +1005,18 @@ void mxit_parse_markup( struct RXMsgData* mx, char* message, int len, short msgt
 /*------------------------------------------------------------------------
  * Insert an inline image command.
  *
- *  @param mx				The message text as processed so far.
- *  @oaram id				The imgstore ID of the inline image.
+ *  @param mx    The message text as processed so far.
+ *  @oaram image The PurpleImage of the inline image.
  */
-static void inline_image_add( GString* mx, int id )
+static void
+inline_image_add(GString* mx, PurpleImage *image)
 {
-	PurpleStoredImage *image;
 	gconstpointer img_data;
 	gsize img_size;
 	gchar* enc;
 
-	image = purple_imgstore_find_by_id( id );
-	if ( image == NULL )
-		return;
-
-	img_data = purple_imgstore_get_data( image );
-	img_size = purple_imgstore_get_size( image );
+	img_data = purple_image_get_data(image);
+	img_size = purple_image_get_size(image);
 
 	enc = purple_base64_encode( img_data, img_size );
 
@@ -1073,7 +1061,7 @@ char* mxit_convert_markup_tx( const char* message, int* msgtype )
 	 *   Font colour:	<font color=#">...</font>
 	 *   Links:			<a href="">...</a>
 	 *   Newline:		<br>
-	 *   Inline image:  <IMG ID="">
+	 *   Inline image:  <IMG SRC="">
 	 * The following characters are also encoded:
 	 *   &amp;  &quot;  &lt;  &gt;
 	 */
@@ -1139,13 +1127,14 @@ char* mxit_convert_markup_tx( const char* message, int* msgtype )
 						tagstack = g_list_remove( tagstack, tag );
 						g_free( tag );
 					}
-				}
-				else if ( purple_str_has_prefix( &message[i], "<IMG ID=" ) ) {
+				} else if (purple_str_has_prefix(&message[i], "<img src=\"")) {
 					/* inline image */
-					int imgid;
+					PurpleImage *img;
+					img = purple_image_store_get_from_uri(
+						&message[i + sizeof("<img src=\"") - 1]);
 
-					if ( sscanf( &message[i+9], "%i", &imgid ) ) {
-						inline_image_add( mx, imgid );
+					if (img) {
+						inline_image_add(mx, img);
 						*msgtype = CP_MSGTYPE_COMMAND;		/* inline image must be sent as a MXit command */
 					}
 				}
@@ -1196,35 +1185,11 @@ char* mxit_convert_markup_tx( const char* message, int* msgtype )
 
 
 /*------------------------------------------------------------------------
- * Free an emoticon entry.
- *
- *  @param key				MXit emoticon ID
- *  @param value			Imagestore ID for emoticon
- *  @param user_data		NULL (unused)
- *  @return					TRUE
- */
-static gboolean emoticon_entry_free( gpointer key, gpointer value, gpointer user_data )
-{
-	int* imgid = value;
-
-	/* key is a string */
-	g_free( key );
-
-	/* value is 'id' in imagestore */
-	purple_imgstore_unref_by_id( *imgid );
-	g_free( value );
-
-	return TRUE;
-}
-
-
-/*------------------------------------------------------------------------
  * Free all entries in the emoticon cache.
  *
  *  @param session			The MXit session object
  */
 void mxit_free_emoticon_cache( struct MXitSession* session )
 {
-	g_hash_table_foreach_remove( session->iimages, emoticon_entry_free, NULL );
-	g_hash_table_destroy ( session->iimages );
+	g_hash_table_destroy(session->inline_images);
 }
