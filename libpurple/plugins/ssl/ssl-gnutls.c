@@ -285,9 +285,9 @@ static void ssl_gnutls_handshake_cb(gpointer data, gint source,
 
 		{
 			const gnutls_datum_t *cert_list;
-			unsigned int cert_list_size = 0;
+			guint cert_list_size = 0;
 			gnutls_session_t session=gnutls_data->session;
-			int i;
+			guint i;
 
 			cert_list =
 				gnutls_certificate_get_peers(session, &cert_list_size);
@@ -412,6 +412,11 @@ ssl_gnutls_connect(PurpleSslConnection *gsc)
 	gnutls_set_default_priority(gnutls_data->session);
 #endif
 
+	if (gsc->host) {
+		gnutls_server_name_set(gnutls_data->session, GNUTLS_NAME_DNS,
+			gsc->host, strlen(gsc->host));
+	}
+
 	gnutls_credentials_set(gnutls_data->session, GNUTLS_CRD_CERTIFICATE,
 		xcred);
 
@@ -468,6 +473,11 @@ ssl_gnutls_read(PurpleSslConnection *gsc, void *data, size_t len)
 	if(s == GNUTLS_E_AGAIN || s == GNUTLS_E_INTERRUPTED) {
 		s = -1;
 		errno = EAGAIN;
+#ifdef GNUTLS_E_PREMATURE_TERMINATION
+	} else if (s == GNUTLS_E_PREMATURE_TERMINATION) {
+		purple_debug_warning("gnutls", "premature termination\n");
+		s = 0;
+#endif
 	} else if(s < 0) {
 		purple_debug_error("gnutls", "receive failed: %s\n",
 				gnutls_strerror(s));
@@ -613,7 +623,7 @@ x509_crtdata_delref(x509_crtdata_t *cd)
 /** Helper macro to retrieve the GnuTLS crt_t from a PurpleCertificate */
 #define X509_GET_GNUTLS_DATA(pcrt) ( ((x509_crtdata_t *) (pcrt->data))->crt)
 
-/** Transforms a gnutls_datum containing an X.509 certificate into a Certificate instance under the x509_gnutls scheme
+/** Transforms a gnutls_datum_t containing an X.509 certificate into a Certificate instance under the x509_gnutls scheme
  *
  * @param dt   Datum to transform
  * @param mode GnuTLS certificate format specifier (GNUTLS_X509_FMT_PEM for
@@ -1112,7 +1122,7 @@ x509_check_name (PurpleCertificate *crt, const gchar *name)
 }
 
 static gboolean
-x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
+x509_times (PurpleCertificate *crt, gint64 *activation, gint64 *expiration)
 {
 	gnutls_x509_crt_t crt_dat;
 	/* GnuTLS time functions return this on error */
@@ -1138,6 +1148,101 @@ x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 	return success;
 }
 
+static GByteArray *
+x509_get_der_data(PurpleCertificate *crt)
+{
+	gnutls_x509_crt_t crt_dat;
+	GByteArray *data;
+	size_t len;
+	int ret;
+
+	crt_dat = X509_GET_GNUTLS_DATA(crt);
+	g_return_val_if_fail(crt_dat, NULL);
+
+	/* Obtain the output size required */
+	len = 0;
+	ret = gnutls_x509_crt_export(crt_dat, GNUTLS_X509_FMT_DER, NULL, &len);
+	g_return_val_if_fail(ret == GNUTLS_E_SHORT_MEMORY_BUFFER, NULL);
+
+	/* Now allocate a buffer and *really* export it */
+	data = g_byte_array_sized_new(len);
+	data->len = len;
+	ret = gnutls_x509_crt_export(crt_dat, GNUTLS_X509_FMT_DER, data->data, &len);
+	if (ret != 0) {
+		purple_debug_error("gnutls/x509",
+		                   "Failed to export cert to buffer with code %d\n",
+		                   ret);
+		g_byte_array_free(data, TRUE);
+		return NULL;
+	}
+
+	return data;
+}
+
+static gchar *
+x509_display_string(PurpleCertificate *crt)
+{
+	gchar *sha_asc;
+	GByteArray *sha_bin;
+	gchar *cn;
+	gint64 activation, expiration;
+	gchar *activ_str, *expir_str;
+	gchar *text;
+#if GLIB_CHECK_VERSION(2,26,0)
+	GDateTime *act_dt, *exp_dt;
+#endif
+
+	/* Pull out the SHA1 checksum */
+	sha_bin = x509_sha1sum(crt);
+	g_return_val_if_fail(sha_bin != NULL, NULL);
+	sha_asc = purple_base16_encode_chunked(sha_bin->data, sha_bin->len);
+
+	/* Get the cert Common Name */
+	/* TODO: Will break on CA certs */
+	cn = x509_common_name(crt);
+
+	/* Get the certificate times */
+	/* TODO: Check the times against localtime */
+	/* TODO: errorcheck? */
+	if (!x509_times(crt, &activation, &expiration)) {
+		purple_debug_error("certificate",
+				   "Failed to get certificate times!\n");
+		activation = expiration = 0;
+	}
+
+#if GLIB_CHECK_VERSION(2,26,0)
+	act_dt = g_date_time_new_from_unix_local(activation);
+	activ_str = g_date_time_format(act_dt, "%c");
+	g_date_time_unref(act_dt);
+
+	exp_dt = g_date_time_new_from_unix_local(expiration);
+	expir_str = g_date_time_format(exp_dt, "%c");
+	g_date_time_unref(exp_dt);
+#else
+	activ_str = g_strdup(ctime(&activation));
+	expir_str = g_strdup(ctime(&expiration));
+#endif
+
+	/* Make messages */
+	text = g_strdup_printf(_("Common name: %s\n\n"
+	                         "Fingerprint (SHA1): %s\n\n"
+	                         "Activation date: %s\n"
+	                         "Expiration date: %s\n"),
+	                       cn ? cn : "(null)",
+	                       sha_asc ? sha_asc : "(null)",
+	                       activ_str ? activ_str : "(null)",
+	                       expir_str ? expir_str : "(null)");
+
+	/* Cleanup */
+	g_free(cn);
+	g_free(sha_asc);
+	g_free(activ_str);
+	g_free(expir_str);
+	g_byte_array_free(sha_bin, TRUE);
+
+	return text;
+}
+
 /* X.509 certificate operations provided by this plugin */
 static PurpleCertificateScheme x509_gnutls = {
 	"x509",                          /* Scheme name */
@@ -1154,9 +1259,9 @@ static PurpleCertificateScheme x509_gnutls = {
 	x509_check_name,                 /* Check subject name */
 	x509_times,                      /* Activation/Expiration time */
 	x509_importcerts_from_file,      /* Multiple certificates import function */
+	x509_get_der_data,               /* Binary DER data */
+	x509_display_string,             /* Display representation */
 
-	NULL,
-	NULL,
 	NULL
 
 };
@@ -1172,6 +1277,7 @@ static PurpleSslOps ssl_ops =
 	ssl_gnutls_get_peer_certificates,
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL

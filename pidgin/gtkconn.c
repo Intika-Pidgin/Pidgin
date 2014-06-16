@@ -1,8 +1,3 @@
-/*
- * @file gtkconn.c GTK+ Connection API
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -49,7 +44,7 @@ typedef struct {
 	guint timeout;
 } PidginAutoRecon;
 
-/**
+/*
  * Contains accounts that are auto-reconnecting.
  * The key is a pointer to the PurpleAccount and the
  * value is a pointer to a PidginAutoRecon.
@@ -136,9 +131,9 @@ do_signon(gpointer data)
 }
 
 static void
-pidgin_connection_report_disconnect_reason (PurpleConnection *gc,
-                                            PurpleConnectionError reason,
-                                            const char *text)
+pidgin_connection_report_disconnect(PurpleConnection *gc,
+                                    PurpleConnectionError reason,
+                                    const char *text)
 {
 	PurpleAccount *account = NULL;
 	PidginAutoRecon *info;
@@ -196,10 +191,7 @@ static void pidgin_connection_network_disconnected (void)
 	while (l) {
 		PurpleAccount *a = (PurpleAccount*)l->data;
 		if (!purple_account_is_disconnected(a)) {
-			char *password = g_strdup(purple_account_get_password(a));
 			purple_account_disconnect(a);
-			purple_account_set_password(a, password);
-			g_free(password);
 		}
 		l = l->next;
 	}
@@ -215,10 +207,10 @@ static PurpleConnectionUiOps conn_ui_ops =
 	pidgin_connection_connected,
 	pidgin_connection_disconnected,
 	pidgin_connection_notice,
-	NULL, /* report_disconnect */
 	pidgin_connection_network_connected,
 	pidgin_connection_network_disconnected,
-	pidgin_connection_report_disconnect_reason,
+	pidgin_connection_report_disconnect,
+	NULL,
 	NULL,
 	NULL,
 	NULL

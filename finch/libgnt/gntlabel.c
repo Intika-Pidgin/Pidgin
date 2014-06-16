@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -123,7 +123,7 @@ gnt_label_class_init(GntLabelClass *klass)
 			g_param_spec_string("text", "Text",
 				"The text for the label.",
 				NULL,
-				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+				G_PARAM_READWRITE|G_PARAM_STATIC_STRINGS
 			)
 		);
 
@@ -135,7 +135,7 @@ gnt_label_class_init(GntLabelClass *klass)
 				GNT_TEXT_FLAG_NORMAL|GNT_TEXT_FLAG_BOLD|GNT_TEXT_FLAG_UNDERLINE|
 				GNT_TEXT_FLAG_BLINK|GNT_TEXT_FLAG_DIM|GNT_TEXT_FLAG_HIGHLIGHT,
 				GNT_TEXT_FLAG_NORMAL,
-				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+				G_PARAM_READWRITE|G_PARAM_STATIC_STRINGS
 			)
 		);
 	GNTDEBUG;
@@ -157,7 +157,7 @@ gnt_label_init(GTypeInstance *instance, gpointer class)
  * GntLabel API
  *****************************************************************************/
 GType
-gnt_label_get_gtype(void)
+gnt_label_get_type(void)
 {
 	static GType type = 0;
 

@@ -1,23 +1,19 @@
 EXTRA_DIST = \
 	Makefile.mingw
 
-pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+pkgdir = @PURPLE_PLUGINDIR@
 
 MXITSOURCES = \
 	actions.c \
 	actions.h \
-	aes.c \
-	aes.h \
 	chunk.c \
 	chunk.h \
-	cipher.c \
-	cipher.h \
+	cipher-mxit.c \
+	cipher-mxit.h \
 	filexfer.c \
 	filexfer.h \
 	formcmds.c \
 	formcmds.h \
-	http.c \
-	http.h \
 	login.c \
 	login.h \
 	markup.c \
@@ -40,7 +36,7 @@ MXITSOURCES = \
 
 AM_CFLAGS = $(st)
 
-libmxit_la_LDFLAGS = -module -avoid-version
+libmxit_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
 
 if STATIC_MXIT
 
@@ -54,7 +50,7 @@ else
 st =
 pkg_LTLIBRARIES   = libmxit.la
 libmxit_la_SOURCES = $(MXITSOURCES)
-libmxit_la_LIBADD  = $(GLIB_LIBS)
+libmxit_la_LIBADD  = @PURPLE_LIBS@
 
 endif
 
