@@ -6,8 +6,6 @@ GtkConvWin.xs
 GtkDebug.xs
 GtkDialogs.xs
 GtkFt.xs
-GtkIMHtml.xs
-GtkIMHtmlToolbar.xs
 GtkLog.xs
 GtkMenuTray.xs
 GtkPlugin.xs
@@ -20,7 +18,6 @@ GtkSavedStatuses.xs
 GtkSession.xs
 GtkSound.xs
 GtkStatusBox.xs
-GtkThemes.xs
 GtkUtils.xs
 MANIFEST
 Pidgin.pm

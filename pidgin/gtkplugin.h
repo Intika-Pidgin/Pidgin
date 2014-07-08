@@ -1,8 +1,3 @@
-/**
- * @file gtkplugin.h GTK+ Plugin API
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -23,8 +18,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #ifndef _PIDGINPLUGIN_H_
 #define _PIDGINPLUGIN_H_
+/**
+ * SECTION:gtkplugin
+ * @section_id: pidgin-gtkplugin
+ * @short_description: <filename>gtkplugin.h</filename>
+ * @title: Plugin API
+ */
 
 #include "pidgin.h"
 #include "plugin.h"
@@ -32,15 +34,15 @@
 typedef struct _PidginPluginUiInfo PidginPluginUiInfo;
 
 /**
+ * PidginPluginUiInfo:
+ *
  * A GTK+ UI structure for plugins.
  */
 struct _PidginPluginUiInfo
 {
 	GtkWidget *(*get_config_frame)(PurplePlugin *plugin);
 
-	int page_num;                                         /**< Reserved */
-
-	/* padding */
+	/*< private >*/
 	void (*_pidgin_reserved1)(void);
 	void (*_pidgin_reserved2)(void);
 	void (*_pidgin_reserved3)(void);
@@ -56,25 +58,22 @@ struct _PidginPluginUiInfo
 #define PIDGIN_PLUGIN_UI_INFO(plugin) \
 	((PidginPluginUiInfo *)(plugin)->info->ui_info)
 
-/**
- * Returns the configuration frame widget for a GTK+ plugin, if one
- * exists.
- *
- * @param plugin The plugin.
- *
- * @return The frame, if the plugin is a GTK+ plugin and provides a
- *         configuration frame.
- */
-GtkWidget *pidgin_plugin_get_config_frame(PurplePlugin *plugin);
+G_BEGIN_DECLS
 
 /**
+ * pidgin_plugins_save:
+ *
  * Saves all loaded plugins.
  */
 void pidgin_plugins_save(void);
 
 /**
+ * pidgin_plugin_dialog_show:
+ *
  * Shows the Plugins dialog
  */
 void pidgin_plugin_dialog_show(void);
+
+G_END_DECLS
 
 #endif /* _PIDGINPLUGIN_H_ */
