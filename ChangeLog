@@ -1,5 +1,78 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
+version 3.0.0 (??/??/????):
+	General:
+	* Various core components of libpurple are now GObjects (Ankit Vani).
+	* Ciphers are now built from the libpurple directory.
+	* Doxygen has been replaced by gtk-doc for generating documentation (Ankit
+	  Vani).
+
+	libpurple:
+	* Specify a different set of encryption ciphers for TLS connections when
+	  using GnuTLS. (elrond, belmyst, and Mark Doliner) (#8061)
+
+	Pidgin:
+	* Support building with the GTK+ 3.x toolkit.  When configuring the
+	  build, use --with-gtk=<2|3> to determine which toolkit to use.  Using
+	  either 2 or 3 will attempt to build with specifically 2.x or 3.x
+	  support.  The default is 'auto', which will first look for 3.x
+	  development headers and then 2.x development headers.
+	* Add email notification in the docklet area. (Alexei) (#3571)
+	* Add a pref to select the type messages in conversation that triggers
+	  the docklet notification. (Momchil) (#12598)
+	* Complete support for receiving a limited amount of history when
+	  joining a room. (Kha) (#15458)
+	* Fix gevolution plugin to compile with e-d-s >= 3.6, older versions are
+	  not supported anymore. (Ed Catmur) (#15353)
+
+	Finch:
+	* Support the conversation-extended signal for extending the
+	  conversation menu. (Howard Chu) (#14818)
+
+	AIM and ICQ:
+	* Make buddy list management code more efficient. (Oliver) (#4816)
+
+	Bonjour:
+	* Support file transfers up to ~9 EiB.
+
+	Gadu-Gadu:
+	* Possibility to require encryption. Also, using encryption when
+	  available is default option now. (Tomasz Wasilczyk)
+	* Show local time for incoming messages. (Tomasz Wasilczyk) (#4579)
+	* Fixed password change dialog and problems with connecting to accounts
+	  with non-ASCII passwords. (Tomasz Wasilczyk) (#14652)
+	* Option to show links from strangers. (Tomasz Wasilczyk) (#10591)
+	* Better handling of "invisible" and "chatty" statuses. (Tomasz
+	  Wasilczyk) (#13836)
+
+	MSN:
+	* Fix file transfer with older Mac MSN clients.
+	* Support file transfers up to ~9 EiB.
+	* Fix buddies not going offline.
+
+	MXit:
+	* Remove all reference to Hidden Number.
+	* Fix decoding of font-size changes in the markup of received messages.
+	* Ignore new invites to join a GroupChat if you're already joined, or
+	  still have a pending invite.
+	* The buddy's name was not centered vertically in the buddy-list if they
+	  did not have a status-message or mood set.
+
+	MySpace:
+	* Remove this protocol because the servers have been taken offline.
+	  (Robbie Vehse) (#15356)
+
+	XMPP:
+	* Strip element prefixes from XHTML-IM messages as they're presented
+	  to the core (and UIs) as incoming messages (Thijs Alkemade).
+	  (#14529)
+	* Support file transfers up to ~9 EiB.
+	* Invalid user moods can no longer be sent to the server.
+
+	Plugins:
+	* The Offline Message Emulation plugin now adds a note that the message
+	  was an offline message. (Flavius Anton) (#2497)
+
 version 2.10.10 (?/?/?):
 	General:
 	* Allow and prefer TLS 1.2 and 1.1 when using libnss. (Elrond and
@@ -1449,7 +1522,7 @@ version 2.6.4 (11/29/2009):
 	Finch:
 	* The TinyURL plugin now creates shorter URLs for long non-conversation
 	  URLs, e.g. URLs to open Inbox in Yahoo/MSN protocols, or the Yahoo
-	  Captcha when joining chat rooms.
+	  CAPTCHA when joining chat rooms.
 	* Fix displaying umlauts etc. in non-utf8 locale (fix in libgnt).
 
 	Pidgin:
