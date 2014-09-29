@@ -8,22 +8,35 @@
 #include optional $(PIDGIN_TREE_TOP)/local.mak to allow overriding of any definitions
 -include $(PIDGIN_TREE_TOP)/local.mak
 
+# TODO: we should do parsing like for PURPLE_VERSION, if we won't drop
+# Makefile.mingw files before 3.0.0 release
+PURPLE_MAJOR_VERSION := 3
+PURPLE_MINOR_VERSION := 0
+PURPLE_MICRO_VERSION := 0
+PURPLE_API_VERSION := 20
+
 # Locations of our various dependencies
 WIN32_DEV_TOP ?= $(PIDGIN_TREE_TOP)/../win32-dev
-GTKSPELL_TOP ?= $(WIN32_DEV_TOP)/gtkspell-2.0.16
-ENCHANT_TOP ?= $(WIN32_DEV_TOP)/enchant_1.6.0_win32
-GTK_TOP ?= $(WIN32_DEV_TOP)/gtk_2_0-2.14
+ENCHANT_TOP ?= $(WIN32_DEV_TOP)/enchant-1.6
+GNUTLS_TOP ?= $(WIN32_DEV_TOP)/gnutls-3.1
+GTK_TOP ?= $(WIN32_DEV_TOP)/gtk2-2.24
 GTK_BIN ?= $(GTK_TOP)/bin
-BONJOUR_TOP ?= $(WIN32_DEV_TOP)/Bonjour_SDK
-LIBXML2_TOP ?= $(WIN32_DEV_TOP)/libxml2-2.9.0
-MEANWHILE_TOP ?= $(WIN32_DEV_TOP)/meanwhile-1.0.2_daa3
+BONJOUR_TOP ?= $(WIN32_DEV_TOP)/bonjour-sdk
+JSON_GLIB_TOP ?= $(WIN32_DEV_TOP)/json-glib-0.14
+LIBXML2_TOP ?= $(WIN32_DEV_TOP)/libxml2-2.9
+MEANWHILE_TOP ?= $(WIN32_DEV_TOP)/meanwhile-1.0
 NSS_TOP ?= $(WIN32_DEV_TOP)/nss-3.17.1-nspr-4.10.7
-PERL_LIB_TOP ?= $(WIN32_DEV_TOP)/perl-5.10.0
-SILC_TOOLKIT ?= $(WIN32_DEV_TOP)/silc-toolkit-1.1.10
-TCL_LIB_TOP ?= $(WIN32_DEV_TOP)/tcl-8.4.5
-GSTREAMER_TOP ?= $(WIN32_DEV_TOP)/gstreamer-0.10.13
+PERL_LIB_TOP ?= $(WIN32_DEV_TOP)/perl-5.10
+SILC_TOOLKIT ?= $(WIN32_DEV_TOP)/silc-toolkit-1.1
+TCL_LIB_TOP ?= $(WIN32_DEV_TOP)/tcl-8.5
+GSTREAMER_TOP ?= $(WIN32_DEV_TOP)/gstreamer-0.10
 GCC_SSP_TOP ?= $(shell dirname $(shell which $(CC)))
-CYRUS_SASL_TOP ?= $(WIN32_DEV_TOP)/cyrus-sasl-2.1.25
+CYRUS_SASL_TOP ?= $(WIN32_DEV_TOP)/cyrus-sasl-2.1
+WEBKITGTK_TOP ?= $(WIN32_DEV_TOP)/libwebkitgtk-1.10
+LIBSOUP_TOP ?= $(WIN32_DEV_TOP)/libsoup-2.42
+GETTEXT_TOP ?= $(WIN32_DEV_TOP)/gettext-0.18
+INTLTOOL_TOP ?= $(WIN32_DEV_TOP)/intltool-0.50
+LIBGADU_TOP ?= $(WIN32_DEV_TOP)/libgadu-1.12
 
 # Where we installing this stuff to?
 PIDGIN_INSTALL_DIR := $(PIDGIN_TREE_TOP)/win32-install-dir

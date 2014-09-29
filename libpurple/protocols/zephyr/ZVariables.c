@@ -35,10 +35,10 @@ char *ZGetVariable(var)
 	if (ret != ZERR_NONE)
 		return ret;
 
-#ifdef WIN32
+#ifdef _WIN32
 	varfile = g_strdup("C:\\zephyr\\zephyr.var");
 #else
-	varfile = g_strdup_printf("%s/zephyr.vars", CONFDIR);
+	varfile = g_build_filename(PURPLE_SYSCONFDIR, "zephyr.vars", NULL);
 #endif
 	ret = get_varval(varfile, var);
 	g_free(varfile);
@@ -206,7 +206,7 @@ static int varline(bfr, var)
 #define max(a,b) ((a > b) ? (a) : (b))
 #endif
 
-    if (g_ascii_strncasecmp(bfr, var, max(strlen(var), cp - bfr)))
+    if (g_ascii_strncasecmp(bfr, var, max(strlen(var), (gsize)(cp - bfr))))
 	return(0);			/* var is not the var in
 					   bfr ==> no match */
 
