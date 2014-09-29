@@ -53,6 +53,7 @@ static PurplePlugin *my_protocol = NULL;
 
 static PurplePluginProtocolInfo prpl_info =
 {
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	OPT_PROTO_CHAT_TOPIC | OPT_PROTO_UNIQUE_CHATNAME | OPT_PROTO_MAIL_CHECK |
 #ifdef HAVE_CYRUS_SASL
 	OPT_PROTO_PASSWORD_OPTIONAL |
@@ -92,12 +93,10 @@ static PurplePluginProtocolInfo prpl_info =
 	jabber_get_chat_name,			/* get_chat_name */
 	jabber_chat_invite,				/* chat_invite */
 	jabber_chat_leave,				/* chat_leave */
-	NULL,							/* chat_whisper */
 	jabber_message_send_chat,		/* chat_send */
 	jabber_keepalive,				/* keepalive */
 	jabber_register_account,		/* register_user */
 	NULL,							/* get_cb_info */
-	NULL,							/* get_cb_away */
 	jabber_roster_alias_change,		/* alias_buddy */
 	jabber_roster_group_change,		/* group_buddy */
 	jabber_roster_group_rename,		/* rename_group */
@@ -106,7 +105,7 @@ static PurplePluginProtocolInfo prpl_info =
 	jabber_normalize,				/* normalize */
 	jabber_set_buddy_icon,			/* set_buddy_icon */
 	NULL,							/* remove_group */
-	jabber_chat_buddy_real_name,	/* get_cb_real_name */
+	jabber_chat_user_real_name,	/* get_cb_real_name */
 	jabber_chat_set_topic,			/* set_chat_topic */
 	jabber_find_blist_chat,			/* find_blist_chat */
 	jabber_roomlist_get_list,		/* roomlist_get_list */
@@ -122,16 +121,13 @@ static PurplePluginProtocolInfo prpl_info =
 	jabber_unregister_account,		/* unregister_user */
 	jabber_send_attention,			/* send_attention */
 	jabber_attention_types,			/* attention_types */
-
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	NULL, /* get_account_text_table */
 	jabber_initiate_media,          /* initiate_media */
 	jabber_get_media_caps,                  /* get_media_caps */
 	jabber_get_moods,  							/* get_moods */
 	NULL, /* set_public_alias */
 	NULL, /* get_public_alias */
-	NULL, /* add_buddy_with_invite */
-	NULL  /* add_buddies_with_invite */
+	NULL  /* get_max_message_size */
 };
 
 static gboolean load_plugin(PurplePlugin *plugin)
@@ -227,11 +223,11 @@ static gboolean xmpp_uri_handler(const char *proto, const char *user, GHashTable
 	if (!params || g_hash_table_lookup_extended(params, "message", NULL, NULL)) {
 		char *body = g_hash_table_lookup(params, "body");
 		if (user && *user) {
-			PurpleConversation *conv =
-					purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, user);
-			purple_conversation_present(conv);
+			PurpleIMConversation *im =
+					purple_im_conversation_new(acct, user);
+			purple_conversation_present(PURPLE_CONVERSATION(im));
 			if (body && *body)
-				purple_conv_send_confirm(conv, body);
+				purple_conversation_send_confirm(PURPLE_CONVERSATION(im), body);
 		}
 	} else if (g_hash_table_lookup_extended(params, "roster", NULL, NULL)) {
 		char *name = g_hash_table_lookup(params, "name");

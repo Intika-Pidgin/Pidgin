@@ -1,8 +1,3 @@
-/*
- * @file gtksound.c GTK+ Sound
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -85,19 +80,19 @@ unmute_login_sounds_cb(gpointer data)
 }
 
 static gboolean
-chat_nick_matches_name(PurpleConversation *conv, const char *aname)
+chat_nick_matches_name(PurpleChatConversation *chat, const char *aname)
 {
-	PurpleConvChat *chat = NULL;
 	char *nick = NULL;
 	char *name = NULL;
 	gboolean ret = FALSE;
-	chat = purple_conversation_get_chat_data(conv);
 
 	if (chat==NULL)
 		return ret;
 
-	nick = g_strdup(purple_normalize(conv->account, chat->nick));
-	name = g_strdup(purple_normalize(conv->account, aname));
+	nick = g_strdup(purple_normalize(purple_conversation_get_account(
+			PURPLE_CONVERSATION(chat)), purple_chat_conversation_get_nick(chat)));
+	name = g_strdup(purple_normalize(purple_conversation_get_account(
+			PURPLE_CONVERSATION(chat)), aname));
 
 	if (g_utf8_collate(nick, name) == 0)
 		ret = TRUE;
@@ -115,6 +110,8 @@ chat_nick_matches_name(PurpleConversation *conv, const char *aname)
 static void
 play_conv_event(PurpleConversation *conv, PurpleSoundEventID event)
 {
+	g_return_if_fail(event < PURPLE_NUM_SOUNDS);
+
 	/* If we should not play the sound for some reason, then exit early */
 	if (conv != NULL && PIDGIN_IS_PIDGIN_CONVERSATION(conv))
 	{
@@ -155,64 +152,63 @@ im_msg_received_cb(PurpleAccount *account, char *sender,
 }
 
 static void
-im_msg_sent_cb(PurpleAccount *account, const char *receiver,
-			   const char *message, PurpleSoundEventID event)
+im_msg_sent_cb(PurpleAccount *account, PurpleMessage *msg,
+	PurpleSoundEventID event)
 {
-	PurpleConversation *conv = purple_find_conversation_with_account(
-		PURPLE_CONV_TYPE_IM, receiver, account);
+	PurpleConversation *conv = PURPLE_CONVERSATION(
+		purple_conversations_find_im_with_account(
+			purple_message_get_recipient(msg), account));
 	play_conv_event(conv, event);
 }
 
 static void
-chat_buddy_join_cb(PurpleConversation *conv, const char *name,
-				   PurpleConvChatBuddyFlags flags, gboolean new_arrival,
+chat_user_join_cb(PurpleChatConversation *chat, const char *name,
+				   PurpleChatUserFlags flags, gboolean new_arrival,
 				   PurpleSoundEventID event)
 {
-	if (new_arrival && !chat_nick_matches_name(conv, name))
-		play_conv_event(conv, event);
+	if (new_arrival && !chat_nick_matches_name(chat, name))
+		play_conv_event(PURPLE_CONVERSATION(chat), event);
 }
 
 static void
-chat_buddy_left_cb(PurpleConversation *conv, const char *name,
+chat_user_left_cb(PurpleChatConversation *chat, const char *name,
 				   const char *reason, PurpleSoundEventID event)
 {
-	if (!chat_nick_matches_name(conv, name))
-		play_conv_event(conv, event);
+	if (!chat_nick_matches_name(chat, name))
+		play_conv_event(PURPLE_CONVERSATION(chat), event);
 }
 
 static void
-chat_msg_sent_cb(PurpleAccount *account, const char *message,
-				 int id, PurpleSoundEventID event)
+chat_msg_sent_cb(PurpleAccount *account, PurpleMessage *msg, int id,
+	PurpleSoundEventID event)
 {
 	PurpleConnection *conn = purple_account_get_connection(account);
 	PurpleConversation *conv = NULL;
 
 	if (conn!=NULL)
-		conv = purple_find_chat(conn,id);
+		conv = PURPLE_CONVERSATION(purple_conversations_find_chat(conn,id));
 
 	play_conv_event(conv, event);
 }
 
 static void
 chat_msg_received_cb(PurpleAccount *account, char *sender,
-					 char *message, PurpleConversation *conv,
+					 char *message, PurpleChatConversation *chat,
 					 PurpleMessageFlags flags, PurpleSoundEventID event)
 {
-	PurpleConvChat *chat;
-
+	PurpleConversation *conv = PURPLE_CONVERSATION(chat);
 	if (flags & PURPLE_MESSAGE_DELAYED || flags & PURPLE_MESSAGE_NOTIFY)
 		return;
 
-	chat = purple_conversation_get_chat_data(conv);
-	g_return_if_fail(chat != NULL);
+	g_return_if_fail(conv != NULL);
 
-	if (purple_conv_chat_is_user_ignored(chat, sender))
+	if (purple_chat_conversation_is_ignored_user(chat, sender))
 		return;
 
-	if (chat_nick_matches_name(conv, sender))
+	if (chat_nick_matches_name(chat, sender))
 		return;
 
-	if (flags & PURPLE_MESSAGE_NICK || purple_utf8_has_word(message, chat->nick))
+	if (flags & PURPLE_MESSAGE_NICK || purple_utf8_has_word(message, purple_chat_conversation_get_nick(chat)))
 		/* This isn't quite right; if you have the PURPLE_SOUND_CHAT_NICK event disabled
 		 * and the PURPLE_SOUND_CHAT_SAY event enabled, you won't get a sound at all */
 		play_conv_event(conv, PURPLE_SOUND_CHAT_NICK);
@@ -319,13 +315,11 @@ pidgin_sound_init(void)
 
 #ifdef USE_GSTREAMER
 	purple_debug_info("sound", "Initializing sound output drivers.\n");
-#ifdef GST_CAN_DISABLE_FORKING
-	gst_registry_fork_set_enabled (FALSE);
-#endif
+	gst_registry_fork_set_enabled(FALSE);
 	if ((gst_init_failed = !gst_init_check(NULL, NULL, &error))) {
 		purple_notify_error(NULL, _("GStreamer Failure"),
 					_("GStreamer failed to initialize."),
-					error ? error->message : "");
+					error ? error->message : "", NULL);
 		if (error) {
 			g_error_free(error);
 			error = NULL;
@@ -345,11 +339,11 @@ pidgin_sound_init(void)
 	purple_signal_connect(conv_handle, "sent-im-msg",
 						gtk_sound_handle, PURPLE_CALLBACK(im_msg_sent_cb),
 						GINT_TO_POINTER(PURPLE_SOUND_SEND));
-	purple_signal_connect(conv_handle, "chat-buddy-joined",
-						gtk_sound_handle, PURPLE_CALLBACK(chat_buddy_join_cb),
+	purple_signal_connect(conv_handle, "chat-user-joined",
+						gtk_sound_handle, PURPLE_CALLBACK(chat_user_join_cb),
 						GINT_TO_POINTER(PURPLE_SOUND_CHAT_JOIN));
-	purple_signal_connect(conv_handle, "chat-buddy-left",
-						gtk_sound_handle, PURPLE_CALLBACK(chat_buddy_left_cb),
+	purple_signal_connect(conv_handle, "chat-user-left",
+						gtk_sound_handle, PURPLE_CALLBACK(chat_user_left_cb),
 						GINT_TO_POINTER(PURPLE_SOUND_CHAT_LEAVE));
 	purple_signal_connect(conv_handle, "sent-chat-msg",
 						gtk_sound_handle, PURPLE_CALLBACK(chat_msg_sent_cb),
@@ -427,6 +421,18 @@ expire_old_child(gpointer data)
 }
 #endif
 
+#ifdef _WIN32
+static void
+pidgin_sound_play_file_win32(const char *filename)
+{
+	wchar_t *wc_filename = g_utf8_to_utf16(filename,
+			-1, NULL, NULL, NULL);
+	if (!PlaySoundW(wc_filename, NULL, SND_ASYNC | SND_FILENAME))
+		purple_debug(PURPLE_DEBUG_ERROR, "sound", "Error playing sound.\n");
+	g_free(wc_filename);
+}
+#endif /* _WIN32 */
+
 static void
 pidgin_sound_play_file(const char *filename)
 {
@@ -450,6 +456,12 @@ pidgin_sound_play_file(const char *filename)
 		gdk_beep();
 		return;
 	}
+#ifdef _WIN32
+	else if (!strcmp(method, "playsoundw")) {
+		pidgin_sound_play_file_win32(filename);
+		return;
+	}
+#endif /* _WIN32 */
 
 	if (!g_file_test(filename, G_FILE_TEST_EXISTS)) {
 		purple_debug_error("gtksound", "sound file (%s) does not exist.\n", filename);
@@ -510,11 +522,22 @@ pidgin_sound_play_file(const char *filename)
 	if (gst_init_failed)  /* Perhaps do gdk_beep instead? */
 		return;
 	volume = (float)(CLAMP(purple_prefs_get_int(PIDGIN_PREFS_ROOT "/sound/volume"),0,100)) / 50;
+#ifdef _WIN32
+	if (!strcmp(method, "automatic")) {
+		sink = gst_element_factory_make("directsoundsink", "sink");
+		if (sink == NULL)
+			sink = gst_element_factory_make("waveformsink", "sink");
+		if (sink == NULL)
+			sink = gst_element_factory_make("gconfaudiosink", "sink");
+	} else if (!strcmp(method, "directsound")) {
+		sink = gst_element_factory_make("directsoundsink", "sink");
+	} else if (!strcmp(method, "waveform")) {
+		sink = gst_element_factory_make("waveformsink", "sink");
+	}
+#else
 	if (!strcmp(method, "automatic")) {
 		sink = gst_element_factory_make("gconfaudiosink", "sink");
-	}
-#ifndef _WIN32
-	else if (!strcmp(method, "esd")) {
+	} else if (!strcmp(method, "esd")) {
 		sink = gst_element_factory_make("esdsink", "sink");
 	} else if (!strcmp(method, "alsa")) {
 		sink = gst_element_factory_make("alsasink", "sink");
@@ -530,13 +553,22 @@ pidgin_sound_play_file(const char *filename)
 		return;
 	}
 
+#if GST_CHECK_VERSION(1,0,0)
 	play = gst_element_factory_make("playbin", "play");
+#else
+	play = gst_element_factory_make("playbin2", "play");
+#endif
 
 	if (play == NULL) {
 		return;
 	}
 
+#ifdef _WIN32
+	uri = g_strdup_printf("file:///%s", filename);
+	g_strdelimit(uri, "\\", '/');
+#else
 	uri = g_strdup_printf("file://%s", filename);
+#endif
 
 	g_object_set(G_OBJECT(play), "uri", uri,
 		                     "volume", volume,
@@ -555,15 +587,7 @@ pidgin_sound_play_file(const char *filename)
 #ifndef _WIN32
 	gdk_beep();
 #else /* _WIN32 */
-	purple_debug_info("sound", "Playing %s\n", filename);
-
-	{
-		wchar_t *wc_filename = g_utf8_to_utf16(filename,
-				-1, NULL, NULL, NULL);
-		if (!PlaySoundW(wc_filename, NULL, SND_ASYNC | SND_FILENAME))
-			purple_debug(PURPLE_DEBUG_ERROR, "sound", "Error playing sound.\n");
-		g_free(wc_filename);
-	}
+	pidgin_sound_play_file_win32(filename);
 #endif /* _WIN32 */
 
 #endif /* USE_GSTREAMER */
@@ -609,11 +633,11 @@ pidgin_sound_play_event(PurpleSoundEventID event)
 			}
 		}
 
-		if (!filename || !strlen(filename)) {			    /* Use Default sounds */
+		if (!filename || !strlen(filename)) { /* Use Default sounds */
 			g_free(filename);
 
-			/* XXX Consider creating a constant for "sounds/purple" to be shared with Finch */
-			filename = g_build_filename(DATADIR, "sounds", "purple", sounds[event].def, NULL);
+			filename = g_build_filename(PURPLE_DATADIR,
+				"sounds", "purple", sounds[event].def, NULL);
 		}
 
 		purple_sound_play_file(filename, NULL);

@@ -28,6 +28,7 @@
 #include "debug.h"
 #include "notify.h"
 #include "plugin.h"
+#include "presence.h"
 #include "request.h"
 #include "server.h"
 #include "status.h"
@@ -151,7 +152,7 @@ idle_action(PurplePluginAction *action)
 	purple_request_field_account_set_show_all(field, FALSE);
 	purple_request_field_group_add_field(group, field);
 
-	field = purple_request_field_int_new("mins", _("Minutes"), 10);
+	field = purple_request_field_int_new("mins", _("Minutes"), 10, 0, 9999);
 	purple_request_field_group_add_field(group, field);
 
 	request = purple_request_fields_new();
@@ -164,8 +165,7 @@ idle_action(PurplePluginAction *action)
 			request,
 			_("_Set"), G_CALLBACK(idle_action_ok),
 			_("_Cancel"), NULL,
-			NULL, NULL, NULL,
-			NULL);
+			NULL, NULL);
 }
 
 static void
@@ -177,7 +177,7 @@ unidle_action(PurplePluginAction *action)
 
 	if (idled_accts == NULL)
 	{
-		purple_notify_info(NULL, NULL, _("None of your accounts are idle."), NULL);
+		purple_notify_info(NULL, NULL, _("None of your accounts are idle."), NULL, NULL);
 		return;
 	}
 
@@ -198,8 +198,7 @@ unidle_action(PurplePluginAction *action)
 			request,
 			_("_Unset"), G_CALLBACK(unidle_action_ok),
 			_("_Cancel"), NULL,
-			NULL, NULL, NULL,
-			NULL);
+			NULL, NULL);
 }
 
 static void
@@ -211,7 +210,7 @@ idle_all_action(PurplePluginAction *action)
 
 	group = purple_request_field_group_new(NULL);
 
-	field = purple_request_field_int_new("mins", _("Minutes"), 10);
+	field = purple_request_field_int_new("mins", _("Minutes"), 10, 0, 9999);
 	purple_request_field_group_add_field(group, field);
 
 	request = purple_request_fields_new();
@@ -224,8 +223,7 @@ idle_all_action(PurplePluginAction *action)
 			request,
 			_("_Set"), G_CALLBACK(idle_all_action_ok),
 			_("_Cancel"), NULL,
-			NULL, NULL, NULL,
-			NULL);
+			NULL, NULL);
 }
 
 static void
