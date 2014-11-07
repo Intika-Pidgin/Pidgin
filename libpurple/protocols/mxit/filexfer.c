@@ -98,11 +98,11 @@ const char* file_mime_type( const char* filename, const char* buf, int buflen )
  */
 static void mxit_xfer_free( PurpleXfer* xfer )
 {
-	struct mxitxfer*	mx		= (struct mxitxfer*) xfer->data;;
+	struct mxitxfer*	mx	= purple_xfer_get_protocol_data( xfer );
 
 	if ( mx ) {
+		purple_xfer_set_protocol_data( xfer, NULL );
 		g_free( mx );
-		xfer->data = NULL;
 	}
 }
 
@@ -118,16 +118,16 @@ static void mxit_xfer_free( PurpleXfer* xfer )
  */
 static void mxit_xfer_init( PurpleXfer* xfer )
 {
-	struct mxitxfer*	mx	= (struct mxitxfer*) xfer->data;
+	struct mxitxfer*	mx	= purple_xfer_get_protocol_data( xfer );
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_xfer_init\n" );
 
-	if ( purple_xfer_get_type( xfer ) == PURPLE_XFER_SEND ) {
+	if ( purple_xfer_get_xfer_type( xfer ) == PURPLE_XFER_TYPE_SEND ) {
 		/* we are trying to send a file to MXit */
 
 		if ( purple_xfer_get_size( xfer ) > CP_MAX_FILESIZE ) {
 			/* the file is too big */
-			purple_xfer_error( purple_xfer_get_type( xfer ), purple_xfer_get_account( xfer ), purple_xfer_get_remote_user( xfer ), _( "The file you are trying to send is too large!" ) );
+			purple_xfer_error( purple_xfer_get_xfer_type( xfer ), purple_xfer_get_account( xfer ), purple_xfer_get_remote_user( xfer ), _( "The file you are trying to send is too large!" ) );
 			purple_xfer_cancel_local( xfer );
 			return;
 		}
@@ -140,7 +140,7 @@ static void mxit_xfer_init( PurpleXfer* xfer )
 		 * we have just accepted a file transfer request from MXit.  send a confirmation
 		 * to the MXit server so that can send us the file
 		 */
-		mxit_send_file_accept( mx->session, mx->fileid, purple_xfer_get_size( xfer ), 0 );
+		mxit_send_file_accept( mx->session, mx->fileid, (int) purple_xfer_get_size( xfer ), 0 );
 	}
 }
 
@@ -158,7 +158,7 @@ static void mxit_xfer_start( PurpleXfer* xfer )
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_xfer_start\n" );
 
-	if ( purple_xfer_get_type( xfer ) == PURPLE_XFER_SEND ) {
+	if ( purple_xfer_get_xfer_type( xfer ) == PURPLE_XFER_TYPE_SEND ) {
 		/*
 		 * the user wants to send a file to one of his contacts. we need to create
 		 * a buffer and copy the file data into memory and then we can send it to
@@ -167,14 +167,14 @@ static void mxit_xfer_start( PurpleXfer* xfer )
 		filesize = purple_xfer_get_bytes_remaining( xfer );
 		buffer = g_malloc( filesize );
 
-		if (fread(buffer, filesize, 1, xfer->dest_fp) == 1) {
+		if (purple_xfer_read_file(xfer, buffer, filesize) == filesize) {
 			/* send data */
 			wrote = purple_xfer_write( xfer, buffer, filesize );
 			if ( wrote > 0 )
 				purple_xfer_set_bytes_sent( xfer, wrote );
 		} else {
 			/* file read error */
-			purple_xfer_error( purple_xfer_get_type( xfer ), purple_xfer_get_account( xfer ), purple_xfer_get_remote_user( xfer ), _( "Unable to access the local file" ) );
+			purple_xfer_error( purple_xfer_get_xfer_type( xfer ), purple_xfer_get_account( xfer ), purple_xfer_get_remote_user( xfer ), _( "Unable to access the local file" ) );
 			purple_xfer_cancel_local( xfer );
 		}
 
@@ -223,7 +223,7 @@ static void mxit_xfer_cancel_send( PurpleXfer* xfer )
  */
 static gssize mxit_xfer_write( const guchar* buffer, size_t size, PurpleXfer* xfer )
 {
-	struct mxitxfer*	mx	= (struct mxitxfer*) xfer->data;
+	struct mxitxfer*	mx	= purple_xfer_get_protocol_data( xfer );
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_xfer_write\n" );
 
@@ -231,7 +231,7 @@ static gssize mxit_xfer_write( const guchar* buffer, size_t size, PurpleXfer* xf
 		purple_debug_warning( MXIT_PLUGIN_ID, "mxit_xfer_write: invalid internal mxit xfer data\n" );
 		return -1;
 	}
-	else if ( purple_xfer_get_type( xfer ) != PURPLE_XFER_SEND ) {
+	else if ( purple_xfer_get_xfer_type( xfer ) != PURPLE_XFER_TYPE_SEND ) {
 		purple_debug_warning( MXIT_PLUGIN_ID, "mxit_xfer_write: wrong xfer type received\n" );
 		return -1;
 	}
@@ -253,7 +253,7 @@ static gssize mxit_xfer_write( const guchar* buffer, size_t size, PurpleXfer* xf
  */
 static void mxit_xfer_request_denied( PurpleXfer* xfer )
 {
-	struct mxitxfer*	mx		= (struct mxitxfer*) xfer->data;
+	struct mxitxfer*	mx		= purple_xfer_get_protocol_data( xfer );
 
 	purple_debug_info( MXIT_PLUGIN_ID, "mxit_xfer_request_denied\n" );
 
@@ -307,15 +307,15 @@ PurpleXfer* mxit_xfer_new( PurpleConnection* gc, const char* who )
 	PurpleXfer*			xfer	= NULL;
 	struct mxitxfer*	mx		= NULL;
 
-	/* (reference: "libpurple/ft.h") */
-	xfer = purple_xfer_new( session->acc, PURPLE_XFER_SEND, who );
+	/* (reference: "libpurple/xfer.h") */
+	xfer = purple_xfer_new( session->acc, PURPLE_XFER_TYPE_SEND, who );
 
 	/* create file info and attach it to the file transfer */
 	mx = g_new0( struct mxitxfer, 1 );
 	mx->session = session;
-	xfer->data = mx;
+	purple_xfer_set_protocol_data( xfer, mx );
 
-	/* configure callbacks (reference: "libpurple/ft.h") */
+	/* configure callbacks (reference: "libpurple/xfer.h") */
 	purple_xfer_set_init_fnc( xfer, mxit_xfer_init );
 	purple_xfer_set_start_fnc( xfer, mxit_xfer_start );
 	purple_xfer_set_end_fnc( xfer, mxit_xfer_end );
@@ -364,13 +364,13 @@ void mxit_xfer_rx_offer( struct MXitSession* session, const char* username, cons
 
 	purple_debug_info( MXIT_PLUGIN_ID, "File Offer: file=%s, from=%s, size=%i\n", filename, username, filesize );
 
-	xfer = purple_xfer_new( session->acc, PURPLE_XFER_RECEIVE, username );
+	xfer = purple_xfer_new( session->acc, PURPLE_XFER_TYPE_RECEIVE, username );
 	if ( xfer ) {
 		/* create a new mxit xfer struct for internal use */
 		mx = g_new0( struct mxitxfer, 1 );
 		mx->session = session;
 		memcpy( mx->fileid, fileid, MXIT_CHUNK_FILEID_LEN );
-		xfer->data = mx;
+		purple_xfer_set_protocol_data( xfer, mx );
 
 		purple_xfer_set_filename( xfer, filename );
 		if( filesize > 0 )
@@ -405,7 +405,7 @@ static PurpleXfer* find_mxit_xfer( struct MXitSession* session, const char* file
 
 		if ( purple_xfer_get_account( xfer ) == session->acc ) {
 			/* transfer is associated with this MXit account */
-			struct mxitxfer* mx	= xfer->data;
+			struct mxitxfer* mx	= purple_xfer_get_protocol_data( xfer );
 
 			/* does the fileid match? */
 			if ( ( mx ) && ( memcmp( mx->fileid, fileid, MXIT_CHUNK_FILEID_LEN ) == 0 ) )
@@ -439,11 +439,11 @@ void mxit_xfer_rx_file( struct MXitSession* session, const char* fileid, const c
 	xfer = find_mxit_xfer( session, fileid );
 	if ( xfer ) {
 		/* this is the transfer we have been looking for */
-		purple_xfer_ref( xfer );
+		g_object_ref( xfer );
 		purple_xfer_start( xfer, -1, NULL, 0 );
 
-		if ( fwrite( data, datalen, 1, xfer->dest_fp ) > 0 ) {
-			purple_xfer_unref( xfer );
+		if ( purple_xfer_write_file( xfer, (const guchar *)data, datalen ) ) {
+			g_object_unref( xfer );
 			purple_xfer_set_completed( xfer, TRUE );
 			purple_xfer_end( xfer );
 
@@ -452,7 +452,7 @@ void mxit_xfer_rx_file( struct MXitSession* session, const char* fileid, const c
 		}
 		else {
 			/* file write error */
-			purple_xfer_error( purple_xfer_get_type( xfer ), purple_xfer_get_account( xfer ), purple_xfer_get_remote_user( xfer ), _( "Unable to save the file" ) );
+			purple_xfer_error( purple_xfer_get_xfer_type( xfer ), purple_xfer_get_account( xfer ), purple_xfer_get_remote_user( xfer ), _( "Unable to save the file" ) );
 			purple_xfer_cancel_local( xfer );
 		}
 	}

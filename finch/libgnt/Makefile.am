@@ -73,11 +73,11 @@ CLEANFILES = \
 	gntmarshal.c
 
 gntmarshal.c: $(srcdir)/genmarshal gntmarshal.h
-	echo "#include \"gntmarshal.h\"" > $@
-	glib-genmarshal --prefix=gnt_closure_marshal --body $(srcdir)/genmarshal >> $@
+	$(AM_V_GEN)echo "#include \"gntmarshal.h\"" > $@
+	$(AM_V_at)glib-genmarshal --prefix=gnt_closure_marshal --body $(srcdir)/genmarshal >> $@
 
 gntmarshal.h: $(srcdir)/genmarshal
-	glib-genmarshal --prefix=gnt_closure_marshal --header $(srcdir)/genmarshal > $@
+	$(AM_V_GEN)glib-genmarshal --prefix=gnt_closure_marshal --header $(srcdir)/genmarshal > $@
 
 libgnt_laincludedir=$(includedir)/gnt
 libgnt_lainclude_HEADERS = \
@@ -90,6 +90,17 @@ libgnt_la_LIBADD = \
 	$(GNT_LIBS) \
 	$(LIBXML_LIBS) \
 	$(PY_LIBS)
+
+if IS_WIN32
+
+.rc.o: %.rc
+	$(AM_V_GEN)$(WINDRES) -i $< -o $@
+
+LIBGNT_WIN32RES = libgnt_winres.o
+libgnt_la_DEPENDENCIES += $(LIBGNT_WIN32RES)
+libgnt_la_LDFLAGS += -Wl,$(LIBGNT_WIN32RES)
+
+endif
 
 AM_CPPFLAGS = \
 	$(GLIB_CFLAGS) \

@@ -1,8 +1,3 @@
-/**
- * @file gtk_eventloop.c Purple Event Loop API (gtk implementation)
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -27,9 +22,7 @@
 #include <glib.h>
 #include "gtkeventloop.h"
 #include "eventloop.h"
-#ifdef _WIN32
-#include "win32dep.h"
-#endif
+#include "internal.h"
 
 #define PIDGIN_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
 #define PIDGIN_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
@@ -59,7 +52,7 @@ static gboolean pidgin_io_invoke(GIOChannel *source, GIOCondition condition, gpo
 
 #ifdef _WIN32
 	if(! purple_cond) {
-#ifdef DEBUG
+#if 0
 		purple_debug_misc("gtk_eventloop",
 			   "CLOSURE received GIOCondition of 0x%x, which does not"
 			   " match 0x%x (READ) or 0x%x (WRITE)\n",
@@ -124,11 +117,8 @@ static PurpleEventLoopUiOps eventloop_ops =
 	pidgin_input_add,
 	g_source_remove,
 	NULL, /* input_get_error */
-#if GLIB_CHECK_VERSION(2,14,0)
 	g_timeout_add_seconds,
-#else
 	NULL,
-#endif
 	NULL,
 	NULL,
 	NULL
