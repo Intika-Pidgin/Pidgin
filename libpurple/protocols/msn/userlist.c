@@ -46,24 +46,26 @@ typedef struct
  * Callbacks
  **************************************************************************/
 static void
-msn_accept_add_cb(gpointer data)
+msn_accept_add_cb(const char *message, gpointer data)
 {
+	MsnSession *session;
+	MsnUserList *userlist;
+	PurpleAccount *account;
 	MsnPermitAdd *pa = data;
 
 	purple_debug_misc("msn", "Accepted the new buddy: %s\n", pa->who);
 
-	if (PURPLE_CONNECTION_IS_VALID(pa->gc))
-	{
-		MsnSession *session = pa->gc->proto_data;
-		MsnUserList *userlist = session->userlist;
-		PurpleAccount *account = purple_connection_get_account(pa->gc);
+	PURPLE_ASSERT_CONNECTION_IS_VALID(pa->gc);
 
-		msn_userlist_add_buddy_to_list(userlist, pa->who, MSN_LIST_AL);
-		purple_privacy_deny_remove(account, pa->who, TRUE);
-		purple_privacy_permit_add(account, pa->who, TRUE);
+	session = purple_connection_get_protocol_data(pa->gc);
+	userlist = session->userlist;
+	account = purple_connection_get_account(pa->gc);
 
-		msn_del_contact_from_list(session, NULL, pa->who, MSN_LIST_PL);
-	}
+	msn_userlist_add_buddy_to_list(userlist, pa->who, MSN_LIST_AL);
+	purple_account_privacy_deny_remove(account, pa->who, TRUE);
+	purple_account_privacy_permit_add(account, pa->who, TRUE);
+
+	msn_del_contact_from_list(session, NULL, pa->who, MSN_LIST_PL);
 
 	g_free(pa->who);
 	g_free(pa->friendly);
@@ -71,23 +73,25 @@ msn_accept_add_cb(gpointer data)
 }
 
 static void
-msn_cancel_add_cb(gpointer data)
+msn_cancel_add_cb(const char *message, gpointer data)
 {
+	MsnSession *session;
+	MsnUserList *userlist;
+	MsnCallbackState *state;
 	MsnPermitAdd *pa = data;
 
 	purple_debug_misc("msn", "Denied the new buddy: %s\n", pa->who);
 
-	if (PURPLE_CONNECTION_IS_VALID(pa->gc))
-	{
-		MsnSession *session = pa->gc->proto_data;
-		MsnUserList *userlist = session->userlist;
-		MsnCallbackState *state = msn_callback_state_new(session);
+	PURPLE_ASSERT_CONNECTION_IS_VALID(pa->gc);
 
-		msn_callback_state_set_action(state, MSN_DENIED_BUDDY);
+	session = purple_connection_get_protocol_data(pa->gc);
+	userlist = session->userlist;
+	state = msn_callback_state_new(session);
 
-		msn_userlist_add_buddy_to_list(userlist, pa->who, MSN_LIST_BL);
-		msn_del_contact_from_list(session, state, pa->who, MSN_LIST_PL);
-	}
+	msn_callback_state_set_action(state, MSN_DENIED_BUDDY);
+
+	msn_userlist_add_buddy_to_list(userlist, pa->who, MSN_LIST_BL);
+	msn_del_contact_from_list(session, state, pa->who, MSN_LIST_PL);
 
 	g_free(pa->who);
 	g_free(pa->friendly);
@@ -107,7 +111,7 @@ got_new_entry(PurpleConnection *gc, const char *passport, const char *friendly, 
 
 	acct = purple_connection_get_account(gc);
 	purple_account_request_authorization(acct, passport, NULL, friendly, message,
-										 purple_find_buddy(acct, passport) != NULL,
+										 purple_blist_find_buddy(acct, passport) != NULL,
 										 msn_accept_add_cb, msn_cancel_add_cb, pa);
 
 }
@@ -146,21 +150,21 @@ msn_got_lst_user(MsnSession *session, MsnUser *user,
 
 		/* FIXME: It might be a real alias */
 		/* Umm, what? This might fix bug #1385130 */
-		serv_got_alias(gc, passport, store);
+		purple_serv_got_alias(gc, passport, store);
 	}
 
 	if (list_op & MSN_LIST_AL_OP)
 	{
 		/* These are users who are allowed to see our status. */
-		purple_privacy_deny_remove(account, passport, TRUE);
-		purple_privacy_permit_add(account, passport, TRUE);
+		purple_account_privacy_deny_remove(account, passport, TRUE);
+		purple_account_privacy_permit_add(account, passport, TRUE);
 	}
 
 	if (list_op & MSN_LIST_BL_OP)
 	{
 		/* These are users who are not allowed to see our status. */
-		purple_privacy_permit_remove(account, passport, TRUE);
-		purple_privacy_deny_add(account, passport, TRUE);
+		purple_account_privacy_permit_remove(account, passport, TRUE);
+		purple_account_privacy_deny_add(account, passport, TRUE);
 	}
 
 	if (list_op & MSN_LIST_RL_OP)
@@ -468,8 +472,7 @@ msn_userlist_rem_buddy(MsnUserList *userlist, const char *who)
 			purple_request_yes_no(userlist->session->account,
 				_("Delete Buddy from Address Book?"),
 				_("Do you want to delete this buddy from your address book as well?"),
-				user->passport, 0, userlist->session->account, user->passport,
-				NULL, ab,
+				user->passport, 0, purple_request_cpar_from_account(userlist->session->account), ab,
 				G_CALLBACK(userlist_ab_delete_cb), G_CALLBACK(userlist_ab_delete_cb));
 		} else
 			msn_delete_contact(userlist->session, user);
@@ -522,8 +525,9 @@ msn_userlist_add_buddy(MsnUserList *userlist, const char *who, const char *group
 
 		char *str = g_strdup_printf(_("Unable to add \"%s\"."), who);
 
-		purple_notify_error(NULL, NULL, str,
-				  _("The username specified is invalid."));
+		purple_notify_error(NULL, NULL, str, _("The username specified "
+			"is invalid."), purple_request_cpar_from_account(
+				userlist->session->account));
 		g_free(str);
 
 		return;
@@ -733,7 +737,7 @@ msn_userlist_load(MsnSession *session)
 
 	g_return_if_fail(gc != NULL);
 
-	for (l = purple_find_buddies(account, NULL); l != NULL;
+	for (l = purple_blist_find_buddies(account, NULL); l != NULL;
 			l = g_slist_delete_link(l, l)) {
 		PurpleBuddy *buddy = l->data;
 
@@ -742,13 +746,13 @@ msn_userlist_load(MsnSession *session)
 		purple_buddy_set_protocol_data(buddy, user);
 		msn_user_set_op(user, MSN_LIST_FL_OP);
 	}
-	for (l = session->account->permit; l != NULL; l = l->next)
+	for (l = purple_account_privacy_get_permitted(session->account); l != NULL; l = l->next)
 	{
 		user = msn_userlist_find_add_user(session->userlist,
 						(char *)l->data,NULL);
 		msn_user_set_op(user, MSN_LIST_AL_OP);
 	}
-	for (l = session->account->deny; l != NULL; l = l->next)
+	for (l = purple_account_privacy_get_denied(session->account); l != NULL; l = l->next)
 	{
 		user = msn_userlist_find_add_user(session->userlist,
 						(char *)l->data,NULL);

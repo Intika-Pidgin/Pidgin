@@ -27,7 +27,7 @@
 #include "cmds.h"
 #include "conversation.h"
 #include "debug.h"
-#include "ft.h"
+#include "xfer.h"
 #include "notify.h"
 #include "prpl.h"
 #include "request.h"
@@ -105,7 +105,7 @@ void silcpurple_verify_public_key(SilcClient client, SilcClientConnection conn,
 				  SilcVerifyPublicKey completion,
 				  void *context);
 GList *silcpurple_buddy_menu(PurpleBuddy *buddy);
-void silcpurple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group);
+void silcpurple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, const char *message);
 void silcpurple_send_buddylist(PurpleConnection *gc);
 void silcpurple_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group);
 void silcpurple_buddy_keyagr_request(SilcClient client,
@@ -142,7 +142,7 @@ char *silcpurple_get_chat_name(GHashTable *data);
 void silcpurple_chat_invite(PurpleConnection *gc, int id, const char *msg,
 			  const char *name);
 void silcpurple_chat_leave(PurpleConnection *gc, int id);
-int silcpurple_chat_send(PurpleConnection *gc, int id, const char *msg, PurpleMessageFlags flags);
+int silcpurple_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg);
 void silcpurple_chat_set_topic(PurpleConnection *gc, int id, const char *topic);
 PurpleRoomlist *silcpurple_roomlist_get_list(PurpleConnection *gc);
 void silcpurple_roomlist_cancel(PurpleRoomlist *list);
@@ -151,8 +151,7 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 void silcpurple_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 					 char **contactstr, char **langstr, char **devicestr,
 					 char **tzstr, char **geostr);
-void silcpurple_buddy_set_icon(PurpleConnection *gc, PurpleStoredImage *img);
-char *silcpurple_file2mime(const char *filename);
+void silcpurple_buddy_set_icon(PurpleConnection *gc, PurpleImage *img);
 SilcDList silcpurple_image_message(const char *msg, SilcMessageFlags *mflags);
 
 #ifdef _WIN32

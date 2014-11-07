@@ -112,16 +112,16 @@ static gboolean yahoo_uri_handler(const char *proto, const char *cmd, GHashTable
 		if (sname) {
 			char *message = g_hash_table_lookup(params, "m");
 
-			PurpleConversation *conv = purple_find_conversation_with_account(
-				PURPLE_CONV_TYPE_IM, sname, acct);
-			if (conv == NULL)
-				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, sname);
-			purple_conversation_present(conv);
+			PurpleIMConversation *im = purple_conversations_find_im_with_account(
+				sname, acct);
+			if (im == NULL)
+				im = purple_im_conversation_new(acct, sname);
+			purple_conversation_present(PURPLE_CONVERSATION(im));
 
 			if (message) {
 				/* Spaces are encoded as '+' */
 				g_strdelimit(message, "+", ' ');
-				purple_conv_send_confirm(conv, message);
+				purple_conversation_send_confirm(PURPLE_CONVERSATION(im), message);
 			}
 		}
 		/* else
@@ -139,7 +139,7 @@ static gboolean yahoo_uri_handler(const char *proto, const char *cmd, GHashTable
 			/* This is somewhat hacky, but the params aren't useful after this command */
 			g_hash_table_insert(params, g_strdup("room"), g_strdup(rname));
 			g_hash_table_insert(params, g_strdup("type"), g_strdup("Chat"));
-			serv_join_chat(purple_account_get_connection(acct), params);
+			purple_serv_join_chat(purple_account_get_connection(acct), params);
 		}
 		/* else
 			** Same as above (except that this would have to be re-written using purple_request_*)
@@ -194,7 +194,8 @@ static PurpleWhiteboardPrplOps yahoo_whiteboard_prpl_ops =
 
 static PurplePluginProtocolInfo prpl_info =
 {
-	OPT_PROTO_MAIL_CHECK | OPT_PROTO_CHAT_TOPIC,
+	sizeof(PurplePluginProtocolInfo),       /* struct_size */
+	OPT_PROTO_MAIL_CHECK | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE,
 	NULL, /* user_splits */
 	NULL, /* protocol_options */
 	{"png,gif,jpeg", 96, 96, 96, 96, 0, PURPLE_ICON_SCALE_SEND},
@@ -229,12 +230,10 @@ static PurplePluginProtocolInfo prpl_info =
 	yahoo_get_chat_name,
 	yahoo_c_invite,
 	yahoo_c_leave,
-	NULL, /* chat whisper */
 	yahoo_c_send,
 	yahoo_keepalive,
 	NULL, /* register_user */
 	NULL, /* get_cb_info */
-	NULL, /* get_cb_away */
 	yahoo_update_alias, /* alias_buddy */
 	yahoo_change_buddys_group,
 	yahoo_rename_group,
@@ -257,19 +256,15 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL, /* send_raw */
 	NULL, /* roomlist_room_serialize */
 	NULL, /* unregister_user */
-
 	yahoo_send_attention,
 	yahoo_attention_types,
-
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
 	yahoo_get_account_text_table,    /* get_account_text_table */
 	NULL, /* initiate_media */
 	NULL,  /* get_media_caps */
 	NULL,  /* get_moods */
 	NULL,  /* set_public_alias */
 	NULL,  /* get_public_alias */
-	NULL,  /* add_buddy_with_invite */
-	NULL   /* add_buddies_with_invite */
+	yahoo_get_max_message_size
 };
 
 static PurplePluginInfo info =
@@ -317,9 +312,6 @@ init_plugin(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("File transfer server"), "xfer_host", YAHOO_XFER_HOST);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
-	option = purple_account_option_int_new(_("File transfer port"), "xfer_port", YAHOO_XFER_PORT);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
-
 	option = purple_account_option_string_new(_("Chat room locale"), "room_list_locale", YAHOO_ROOMLIST_LOCALE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
@@ -329,10 +321,10 @@ init_plugin(PurplePlugin *plugin)
 	option = purple_account_option_bool_new(_("Ignore conference and chatroom invitations"), "ignore_invites", FALSE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
+#if 0
 	option = purple_account_option_bool_new(_("Use account proxy for HTTP and HTTPS connections"), "proxy_ssl", FALSE);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 
-#if 0
 	option = purple_account_option_string_new(_("Chat room list URL"), "room_list", YAHOO_ROOMLIST_URL);
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
 #endif
