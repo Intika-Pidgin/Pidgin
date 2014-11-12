@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -236,7 +236,7 @@ gnt_slider_init(GTypeInstance *instance, gpointer class)
  * GntSlider API
  *****************************************************************************/
 GType
-gnt_slider_get_gtype(void)
+gnt_slider_get_type(void)
 {
 	static GType type = 0;
 

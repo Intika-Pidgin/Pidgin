@@ -247,10 +247,12 @@ ssl_nss_init_nss(void)
 		purple_debug_info("nss", "TLS versions allowed by default: "
 				"0x%04hx through 0x%04hx\n", enabled.min, enabled.max);
 
-		/* Make sure all versions of TLS supported by the local library are
-		   enabled. (For some reason NSS doesn't enable newer versions of TLS
-		   by default -- more context in ticket #15909.) */
-		if (supported.max > enabled.max) {
+		/* Make sure SSL 3.0 is disabled (it's old and everyone should be
+		   using at least TLS 1.0 by now), and make sure all versions of TLS
+		   supported by the local library are enabled (for some reason NSS
+		   doesn't enable newer versions of TLS by default -- more context in
+		   ticket #15909). */
+		if (enabled.min != SSL_LIBRARY_VERSION_TLS_1_0 || supported.max > enabled.max) {
 			enabled.max = supported.max;
 			if (SSL_VersionRangeSetDefault(ssl_variant_stream, &enabled) == SECSuccess) {
 				purple_debug_info("nss", "Changed allowed TLS versions to "
@@ -1006,7 +1008,7 @@ x509_check_name (PurpleCertificate *crt, const gchar *name)
 }
 
 static gboolean
-x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
+x509_times (PurpleCertificate *crt, gint64 *activation, gint64 *expiration)
 {
 	CERTCertificate *crt_dat;
 	PRTime nss_activ, nss_expir;
@@ -1032,47 +1034,35 @@ x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 
 	if (activation) {
 		*activation = nss_activ;
-#if SIZEOF_TIME_T == 4
-		/** Hack to deal with dates past the 32-bit barrier.
-		    Handling is different for signed vs unsigned 32-bit types.
-		 */
-		if (*activation != nss_activ) {
-			if (nss_activ < 0) {
-				purple_debug_warning("nss",
-					"Setting Activation Date to epoch to handle pre-epoch value\n");
-				*activation = 0;
-			} else {
-				purple_debug_error("nss",
-					"Activation date past 32-bit barrier, forcing invalidity\n");
-				return FALSE;
-			}
-		}
-#endif
 	}
 	if (expiration) {
 		*expiration = nss_expir;
-#if SIZEOF_TIME_T == 4
-		if (*expiration != nss_expir) {
-			if (*expiration < nss_expir) {
-				if (*expiration < 0) {
-					purple_debug_warning("nss",
-						"Setting Expiration Date to 32-bit signed max\n");
-					*expiration = PR_INT32_MAX;
-				} else {
-					purple_debug_warning("nss",
-						"Setting Expiration Date to 32-bit unsigned max\n");
-					*expiration = PR_UINT32_MAX;
-				}
-			} else {
-				purple_debug_error("nss",
-					"Expiration date prior to unix epoch, forcing invalidity\n");
-				return FALSE;
-			}
-		}
-#endif
 	}
 
 	return TRUE;
+}
+
+static GByteArray *
+x509_get_der_data(PurpleCertificate *crt)
+{
+	CERTCertificate *crt_dat;
+	SECItem *dercrt;
+	GByteArray *data;
+
+	crt_dat = X509_NSS_DATA(crt);
+	g_return_val_if_fail(crt_dat, NULL);
+
+	dercrt = SEC_ASN1EncodeItem(NULL, NULL, crt_dat,
+	                            SEC_ASN1_GET(SEC_SignedCertificateTemplate));
+	g_return_val_if_fail(dercrt != NULL, FALSE);
+
+	data = g_byte_array_sized_new(dercrt->len);
+	memcpy(data->data, dercrt->data, dercrt->len);
+	data->len = dercrt->len;
+
+	SECITEM_FreeItem(dercrt, PR_TRUE);
+
+	return data;
 }
 
 static gboolean
@@ -1115,7 +1105,7 @@ x509_register_trusted_tls_cert(PurpleCertificate *crt, gboolean ca)
 	return TRUE;
 }
 
-static void x509_verify_cert(PurpleCertificateVerificationRequest *vrq, PurpleCertificateInvalidityFlags *flags)
+static void x509_verify_cert(PurpleCertificateVerificationRequest *vrq, PurpleCertificateVerificationStatus *flags)
 {
 	CERTCertDBHandle *certdb = CERT_GetDefaultCertDB();
 	CERTCertificate *crt_dat;
@@ -1209,8 +1199,12 @@ static PurpleCertificateScheme x509_nss = {
 	x509_check_name,                 /* Check subject name */
 	x509_times,                      /* Activation/Expiration time */
 	x509_importcerts_from_file,      /* Multiple certificate import function */
+	x509_get_der_data,               /* Binary DER data */
 	x509_register_trusted_tls_cert,  /* Register a certificate as trusted for TLS */
 	x509_verify_cert,                /* Verify that the specified cert chain is trusted */
+
+	NULL,
+	NULL,
 	NULL
 };
 
@@ -1225,6 +1219,7 @@ static PurpleSslOps ssl_ops =
 	ssl_nss_peer_certs,
 
 	/* padding */
+	NULL,
 	NULL,
 	NULL,
 	NULL

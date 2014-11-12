@@ -22,21 +22,21 @@ check_mail()
 	static off_t oldsize = 0;
 	gchar *filename;
 	off_t newsize;
-	struct stat s;
+	GStatBuf st;
 	gint ret = 0;
 
 	filename = g_strdup(g_getenv("MAIL"));
 	if (!filename)
 		filename = g_strconcat("/var/spool/mail/", g_get_user_name(), NULL);
 
-	if (g_stat(filename, &s) < 0) {
+	if (g_stat(filename, &st) < 0) {
 		g_free(filename);
 		return -1;
 	}
 
-	newsize = s.st_size;
+	newsize = st.st_size;
 	if (newsize) ret |= ANY_MAIL;
-	if (s.st_mtime > s.st_atime && newsize) ret |= UNREAD_MAIL;
+	if (st.st_mtime > st.st_atime && newsize) ret |= UNREAD_MAIL;
 	if (newsize != oldsize && (ret & UNREAD_MAIL)) ret |= NEW_MAIL;
 	oldsize = newsize;
 
@@ -55,7 +55,7 @@ static gboolean
 check_timeout(gpointer data)
 {
 	gint count = check_mail();
-	PurpleBuddyList *list = purple_get_blist();
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
 
 	if (count == -1)
 		return FALSE;
@@ -90,7 +90,7 @@ check_timeout(gpointer data)
 static void
 signon_cb(PurpleConnection *gc)
 {
-	PurpleBuddyList *list = purple_get_blist();
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
 	if (list && PURPLE_IS_GTK_BLIST(list) && !timer) {
 		check_timeout(NULL); /* we want the box to be drawn immediately */
 		timer = purple_timeout_add_seconds(2, check_timeout, NULL);
@@ -100,7 +100,7 @@ signon_cb(PurpleConnection *gc)
 static void
 signoff_cb(PurpleConnection *gc)
 {
-	PurpleBuddyList *list = purple_get_blist();
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
 	if ((!list || !PURPLE_IS_GTK_BLIST(list) || !PIDGIN_BLIST(list)->vbox) && timer) {
 		purple_timeout_remove(timer);
 		timer = 0;
@@ -114,7 +114,7 @@ signoff_cb(PurpleConnection *gc)
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	PurpleBuddyList *list = purple_get_blist();
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
 	void *conn_handle = purple_connections_get_handle();
 
 	if (!check_timeout(NULL)) {
