@@ -36,8 +36,6 @@ typedef enum
 
 #include "internal.h"
 
-#include "imgstore.h"
-
 typedef struct
 {
 	gboolean local;
@@ -45,7 +43,7 @@ typedef struct
 	char *creator;
 	int size;
 	MsnObjectType type;
-	PurpleStoredImage *img;
+	PurpleImage *img;
 	char *location;
 	char *friendly;
 	char *sha1d;
@@ -80,15 +78,16 @@ MsnObject *msn_object_new_from_string(const char *str);
  *
  * @return A new MsnObject structure
  */
-MsnObject *msn_object_new_from_image(PurpleStoredImage *img,
+MsnObject *msn_object_new_from_image(PurpleImage *img,
 		const char *location, const char *creator, MsnObjectType type);
 
 /**
  * Destroys an MsnObject structure.
  *
- * @param obj The object structure.
+ * @param obj         The object structure.
+ * @param only_remote Only destroy non-local objects.
  */
-void msn_object_destroy(MsnObject *obj);
+void msn_object_destroy(MsnObject *obj, gboolean only_remote);
 
 /**
  * Outputs a string representation of an MsnObject.
@@ -154,7 +153,7 @@ void msn_object_set_sha1c(MsnObject *obj, const char *sha1c);
  * @param obj The object.
  * @param img The image to associate.
  */
-void msn_object_set_image(MsnObject *obj, PurpleStoredImage *img);
+void msn_object_set_image(MsnObject *obj, PurpleImage *img);
 
 /**
  * Sets the url field in a MsnObject.
@@ -249,7 +248,7 @@ const char *msn_object_get_sha1(const MsnObject *obj);
  *
  * @return The associated image.
  */
-PurpleStoredImage *msn_object_get_image(const MsnObject *obj);
+PurpleImage *msn_object_get_image(const MsnObject *obj);
 
 /**
  * Returns a MsnObject's url value.

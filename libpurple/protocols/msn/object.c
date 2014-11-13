@@ -26,7 +26,7 @@
 #include "object.h"
 #include "debug.h"
 /* Sha1 stuff */
-#include "cipher.h"
+#include "ciphers/sha1hash.h"
 /* Base64 stuff */
 #include "util.h"
 
@@ -103,7 +103,7 @@ msn_object_new_from_string(const char *str)
 	if (obj->creator == NULL || obj->size == 0 || obj->type == 0
 	 || obj->sha1d == NULL) {
 		purple_debug_error("msn", "Discarding invalid msnobj: '%s'\n", str);
-		msn_object_destroy(obj);
+		msn_object_destroy(obj, FALSE);
 		return NULL;
 	}
 
@@ -111,12 +111,12 @@ msn_object_new_from_string(const char *str)
 		/* Location/friendly are required for non-buddyicon objects */
 		if (obj->type != MSN_OBJECT_USERTILE) {
 			purple_debug_error("msn", "Discarding invalid msnobj: '%s'\n", str);
-			msn_object_destroy(obj);
+			msn_object_destroy(obj, FALSE);
 			return NULL;
 		/* Buddy icon object can contain Url/Url1 instead */
 		} else if (obj->url == NULL || obj->url1 == NULL) {
 			purple_debug_error("msn", "Discarding invalid msnobj: '%s'\n", str);
-			msn_object_destroy(obj);
+			msn_object_destroy(obj, FALSE);
 			return NULL;
 		}
 	}
@@ -125,12 +125,12 @@ msn_object_new_from_string(const char *str)
 }
 
 MsnObject*
-msn_object_new_from_image(PurpleStoredImage *img, const char *location,
+msn_object_new_from_image(PurpleImage *img, const char *location,
 		const char *creator, MsnObjectType type)
 {
 	MsnObject *msnobj;
 
-	PurpleCipherContext *ctx;
+	PurpleHash *hash;
 	char *buf;
 	gconstpointer data;
 	size_t size;
@@ -140,10 +140,10 @@ msn_object_new_from_image(PurpleStoredImage *img, const char *location,
 	msnobj = NULL;
 
 	if (img == NULL)
-		return msnobj;
+		return NULL;
 
-	size = purple_imgstore_get_size(img);
-	data = purple_imgstore_get_data(img);
+	size = purple_image_get_size(img);
+	data = purple_image_get_data(img);
 
 	/* New object */
 	msnobj = msn_object_new();
@@ -157,9 +157,9 @@ msn_object_new_from_image(PurpleStoredImage *img, const char *location,
 	/* Compute the SHA1D field. */
 	memset(digest, 0, sizeof(digest));
 
-	ctx = purple_cipher_context_new_by_name("sha1", NULL);
-	purple_cipher_context_append(ctx, data, size);
-	purple_cipher_context_digest(ctx, sizeof(digest), digest, NULL);
+	hash = purple_sha1_hash_new();
+	purple_hash_append(hash, data, size);
+	purple_hash_digest(hash, digest, sizeof(digest));
 
 	base64 = purple_base64_encode(digest, sizeof(digest));
 	msn_object_set_sha1d(msnobj, base64);
@@ -179,10 +179,10 @@ msn_object_new_from_image(PurpleStoredImage *img, const char *location,
 
 	memset(digest, 0, sizeof(digest));
 
-	purple_cipher_context_reset(ctx, NULL);
-	purple_cipher_context_append(ctx, (const guchar *)buf, strlen(buf));
-	purple_cipher_context_digest(ctx, sizeof(digest), digest, NULL);
-	purple_cipher_context_destroy(ctx);
+	purple_hash_reset(hash);
+	purple_hash_append(hash, (const guchar *)buf, strlen(buf));
+	purple_hash_digest(hash, digest, sizeof(digest));
+	g_object_unref(hash);
 	g_free(buf);
 
 	base64 = purple_base64_encode(digest, sizeof(digest));
@@ -193,9 +193,12 @@ msn_object_new_from_image(PurpleStoredImage *img, const char *location,
 }
 
 void
-msn_object_destroy(MsnObject *obj)
+msn_object_destroy(MsnObject *obj, gboolean only_remote)
 {
 	g_return_if_fail(obj != NULL);
+
+	if (only_remote && obj->local)
+		return;
 
 	g_free(obj->creator);
 	g_free(obj->location);
@@ -205,7 +208,8 @@ msn_object_destroy(MsnObject *obj)
 	g_free(obj->url);
 	g_free(obj->url1);
 
-	purple_imgstore_unref(obj->img);
+	if (obj->img)
+		g_object_unref(obj->img);
 
 	if (obj->local)
 		local_objs = g_list_remove(local_objs, obj);
@@ -432,18 +436,20 @@ msn_object_set_local(MsnObject *obj)
 }
 
 void
-msn_object_set_image(MsnObject *obj, PurpleStoredImage *img)
+msn_object_set_image(MsnObject *obj, PurpleImage *img)
 {
 	g_return_if_fail(obj != NULL);
 	g_return_if_fail(img != NULL);
 
 	/* obj->local = TRUE; */
 
-	purple_imgstore_unref(obj->img);
-	obj->img = purple_imgstore_ref(img);
+	if (obj->img)
+		g_object_unref(obj->img);
+	g_object_ref(img);
+	obj->img = img;
 }
 
-PurpleStoredImage *
+PurpleImage *
 msn_object_get_image(const MsnObject *obj)
 {
 	MsnObject *local_obj;

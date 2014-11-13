@@ -153,7 +153,7 @@ PPCODE:
 	}
 
 Purple::PrefType
-purple_prefs_get_type(name)
+purple_prefs_get_pref_type(name)
 	const char *name
 
 gboolean
@@ -177,11 +177,6 @@ void
 purple_prefs_set_bool(name, value)
 	const char *name
 	gboolean value
-
-void
-purple_prefs_set_generic(name, value)
-	const char *name
-	gpointer value
 
 void
 purple_prefs_set_int(name, value)
@@ -247,6 +242,3 @@ PPCODE:
 		XPUSHs(sv_2mortal(newSVpv(l->data, 0)));
 		g_free(l->data);
 	}
-
-void
-purple_prefs_update_old()
