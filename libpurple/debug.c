@@ -1,8 +1,3 @@
-/**
- * @file debug.c Debug API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -50,6 +45,8 @@ static gboolean debug_enabled = FALSE;
 static gboolean debug_verbose = FALSE;
 static gboolean debug_unsafe = FALSE;
 
+static gboolean debug_colored = FALSE;
+
 static void
 purple_debug_vargs(PurpleDebugLevel level, const char *category,
 				 const char *format, va_list args)
@@ -67,20 +64,40 @@ purple_debug_vargs(PurpleDebugLevel level, const char *category,
 		return;
 
 	arg_s = g_strdup_vprintf(format, args);
+	g_strchomp(arg_s); /* strip trailing linefeeds */
 
 	if (debug_enabled) {
 		gchar *ts_s;
 		const char *mdate;
 		time_t mtime = time(NULL);
+		const gchar *format_pre, *format_post;
 
+		format_pre = "";
+		format_post = "";
+
+		if (!debug_colored)
+			format_pre = "";
+		else if (level == PURPLE_DEBUG_MISC)
+			format_pre = "\033[0;37m";
+		else if (level == PURPLE_DEBUG_INFO)
+			format_pre = "";
+		else if (level == PURPLE_DEBUG_WARNING)
+			format_pre = "\033[0;33m";
+		else if (level == PURPLE_DEBUG_ERROR)
+			format_pre = "\033[1;31m";
+		else if (level == PURPLE_DEBUG_FATAL)
+			format_pre = "\033[1;33;41m";
+
+		if (format_pre[0] != '\0')
+			format_post = "\033[0m";
 
 		mdate = purple_utf8_strftime("%H:%M:%S", localtime(&mtime));
 		ts_s = g_strdup_printf("(%s) ", mdate);
 
 		if (category == NULL)
-			g_print("%s%s", ts_s, arg_s);
+			g_print("%s%s%s%s\n", format_pre, ts_s, arg_s, format_post);
 		else
-			g_print("%s%s: %s", ts_s, category, arg_s);
+			g_print("%s%s%s: %s%s\n", format_pre, ts_s, category, arg_s, format_post);
 
 		g_free(ts_s);
 	}
@@ -177,6 +194,33 @@ purple_debug_is_enabled()
 	return debug_enabled;
 }
 
+static PurpleDebugUiOps *
+purple_debug_ui_ops_copy(PurpleDebugUiOps *ops)
+{
+	PurpleDebugUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleDebugUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_debug_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleDebugUiOps",
+				(GBoxedCopyFunc)purple_debug_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
 void
 purple_debug_set_ui_ops(PurpleDebugUiOps *ops)
 {
@@ -207,6 +251,12 @@ purple_debug_set_unsafe(gboolean unsafe)
 	debug_unsafe = unsafe;
 }
 
+void
+purple_debug_set_colored(gboolean colored)
+{
+	debug_colored = colored;
+}
+
 PurpleDebugUiOps *
 purple_debug_get_ui_ops(void)
 {
@@ -224,12 +274,5 @@ purple_debug_init(void)
 		purple_debug_set_verbose(TRUE);
 
 	purple_prefs_add_none("/purple/debug");
-
-	/*
-	 * This pref is obsolete and no longer referenced anywhere. It only
-	 * survives here because it would be an API break if we removed it.
-	 * Remove this when we get to 3.0.0 :)
-	 */
-	purple_prefs_add_bool("/purple/debug/timestamps", TRUE);
 }
 

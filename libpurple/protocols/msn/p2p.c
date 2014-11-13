@@ -161,7 +161,9 @@ msn_p2p_header_from_wire(MsnP2PInfo *info, const char *wire, size_t max_len)
 
 				if (header->data_header_len > 8) {
 					header->data_tlv = msn_tlvlist_read(wire, header->data_header_len - 8);
+#if 0
 					wire += header->data_header_len - 8;
+#endif
 				}
 			}
 
@@ -209,9 +211,9 @@ msn_p2p_header_to_wire(MsnP2PInfo *info, size_t *len)
 			char *header_wire = NULL;
 			char *data_header_wire = NULL;
 
-			if (header->header_tlv != NULL)
+			if (header->header_tlv != NULL) {
 				header_wire = msn_tlvlist_write(header->header_tlv, &header->header_len);
-			else
+			} else
 				header->header_len = 0;
 
 			if (header->data_tlv != NULL)
@@ -238,7 +240,9 @@ msn_p2p_header_to_wire(MsnP2PInfo *info, size_t *len)
 
 			if (data_header_wire != NULL) {
 				memcpy(tmp, data_header_wire, header->data_header_len);
+#if 0
 				tmp += header->data_header_len;
+#endif
 			}
 
 			if (len)
