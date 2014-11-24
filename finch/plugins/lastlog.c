@@ -60,7 +60,7 @@ window_kpress_cb(GntWidget *wid, const char *key, GntTextView *view)
 static PurpleCmdRet
 lastlog_cb(PurpleConversation *conv, const char *cmd, char **args, char **error, gpointer null)
 {
-	FinchConv *ggconv = conv->ui_data;
+	FinchConv *ggconv = FINCH_CONV(conv);
 	char **strings = g_strsplit(GNT_TEXT_VIEW(ggconv->tv)->string->str, "\n", 0);
 	GntWidget *win, *tv;
 	int i, j;
@@ -96,7 +96,7 @@ plugin_load(PurplePlugin *plugin)
 {
 	cmd = purple_cmd_register("lastlog", "s", PURPLE_CMD_P_DEFAULT,
 			PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM, NULL,
-			/* Translator Note: The "backlog" is the conversation buffer/history. */
+			/* Translators: The "backlog" here refers to the the conversation buffer/history. */
 			lastlog_cb, _("lastlog: Searches for a substring in the backlog."), NULL);
 	return TRUE;
 }

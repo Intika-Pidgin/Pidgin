@@ -31,11 +31,12 @@
 static void
 conv_placement_by_number(PidginConversation *conv)
 {
-	PidginWindow *win = NULL;
+	PidginConvWindow *win = NULL;
 	GList *wins = NULL;
 
 	if (purple_prefs_get_bool("/plugins/gtk/extplacement/placement_number_separate"))
-		win = pidgin_conv_window_last_with_type(purple_conversation_get_type(conv->active_conv));
+		win = PURPLE_IS_IM_CONVERSATION(conv->active_conv) ?
+				pidgin_conv_window_last_im() : pidgin_conv_window_last_chat();
 	else if ((wins = pidgin_conv_windows_get_list()) != NULL)
 		win = g_list_last(wins)->data;
 
@@ -56,8 +57,15 @@ conv_placement_by_number(PidginConversation *conv)
 			for (l = pidgin_conv_windows_get_list(); l != NULL; l = l->next) {
 				win = l->data;
 
+				if (!conv || !conv->active_conv ||
+					!G_TYPE_FROM_INSTANCE(conv->active_conv))
+				{
+					g_warn_if_reached();
+					continue;
+				}
+
 				if (purple_prefs_get_bool("/plugins/gtk/extplacement/placement_number_separate") &&
-					purple_conversation_get_type(pidgin_conv_window_get_active_conversation(win)) != purple_conversation_get_type(conv->active_conv))
+					G_TYPE_FROM_INSTANCE(pidgin_conv_window_get_active_conversation(win)) != G_TYPE_FROM_INSTANCE(conv->active_conv))
 					continue;
 
 				count = pidgin_conv_window_get_gtkconv_count(win);
@@ -103,7 +111,7 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 
 	/* Translators: "New conversations" should match the text in the preferences dialog and "By conversation count" should be the same text used above */
 	ppref = purple_plugin_pref_new_with_label(_("Note: The preference for \"New conversations\" must be set to \"By conversation count\"."));
-	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_INFO);
+	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_INFO);
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	ppref = purple_plugin_pref_new_with_name_and_label(
@@ -122,8 +130,7 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 
 static PurplePluginUiInfo prefs_info = {
 	get_plugin_pref_frame,
-	0,   /* page_num (Reserved) */
-	NULL, /* frame (Reserved) */
+	NULL,
 
 	/* padding */
 	NULL,
