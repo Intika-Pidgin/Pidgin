@@ -1,8 +1,3 @@
-/**
- * @file gntdebug.c GNT Debug API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -77,7 +72,7 @@ handle_fprintf_stderr(gboolean stop)
 		}
 		return;
 	}
-	if (pipe(pipes)) {
+	if (purple_input_pipe(pipes)) {
 		readhandle = -1;
 		return;
 	};
@@ -145,6 +140,7 @@ finch_debug_print(PurpleDebugLevel level, const char *category,
 		}
 
 		gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(debug.tview), args, flag);
+		gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(debug.tview), "\n", GNT_TEXT_FLAG_NORMAL);
 		if (pos <= 1)
 			gnt_text_view_scroll(GNT_TEXT_VIEW(debug.tview), 0);
 	}
@@ -273,7 +269,7 @@ file_save(GntFileSel *fs, const char *path, const char *file, GntTextView *tv)
 	FILE *fp;
 
 	if ((fp = g_fopen(path, "w+")) == NULL) {
-		purple_notify_error(NULL, NULL, _("Unable to open file."), NULL);
+		purple_notify_error(NULL, NULL, _("Unable to open file."), NULL, NULL);
 		return;
 	}
 
