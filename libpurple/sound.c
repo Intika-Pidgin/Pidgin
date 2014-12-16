@@ -22,7 +22,7 @@
  */
 #include "internal.h"
 
-#include "blist.h"
+#include "buddylist.h"
 #include "prefs.h"
 #include "sound.h"
 #include "sound-theme-loader.h"
@@ -81,6 +81,8 @@ purple_sound_play_event(PurpleSoundEventID event, const PurpleAccount *account)
 	if (!purple_sound_play_required(account))
 		return;
 
+	g_return_if_fail(event < PURPLE_NUM_SOUNDS);
+
 	if (time(NULL) - last_played[event] < 2)
 		return;
 	last_played[event] = time(NULL);
@@ -97,6 +99,33 @@ purple_sound_play_event(PurpleSoundEventID event, const PurpleAccount *account)
 		else
 			sound_ui_ops->play_event(event);
 	}
+}
+
+static PurpleSoundUiOps *
+purple_sound_ui_ops_copy(PurpleSoundUiOps *ops)
+{
+	PurpleSoundUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleSoundUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_sound_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleSoundUiOps",
+				(GBoxedCopyFunc)purple_sound_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }
 
 void
@@ -128,10 +157,7 @@ purple_sound_init()
 
 	purple_signal_register(handle, "playing-sound-event",
 	                     purple_marshal_BOOLEAN__INT_POINTER,
-	                     purple_value_new(PURPLE_TYPE_BOOLEAN), 2,
-	                     purple_value_new(PURPLE_TYPE_INT),
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_ACCOUNT));
+	                     G_TYPE_BOOLEAN, 2, G_TYPE_INT, PURPLE_TYPE_ACCOUNT);
 
 	purple_prefs_add_none("/purple/sound");
 	purple_prefs_add_int("/purple/sound/while_status", STATUS_AVAILABLE);

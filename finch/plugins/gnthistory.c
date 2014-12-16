@@ -43,7 +43,6 @@ static void historize(PurpleConversation *c)
 {
 	PurpleAccount *account = purple_conversation_get_account(c);
 	const char *name = purple_conversation_get_name(c);
-	PurpleConversationType convtype;
 	GList *logs = NULL;
 	const char *alias = name;
 	PurpleLogReadFlags flags;
@@ -51,8 +50,7 @@ static void historize(PurpleConversation *c)
 	char *header;
 	PurpleMessageFlags mflag;
 
-	convtype = purple_conversation_get_type(c);
-	if (convtype == PURPLE_CONV_TYPE_IM) {
+	if (PURPLE_IS_IM_CONVERSATION(c)) {
 		GSList *buddies;
 		GSList *cur;
 		FinchConv *fc = FINCH_CONV(c);
@@ -65,11 +63,11 @@ static void historize(PurpleConversation *c)
 			return;
 
 		/* Find buddies for this conversation. */
-		buddies = purple_find_buddies(account, name);
+		buddies = purple_blist_find_buddies(account, name);
 
 		/* If we found at least one buddy, save the first buddy's alias. */
 		if (buddies != NULL)
-			alias = purple_buddy_get_contact_alias((PurpleBuddy *)buddies->data);
+			alias = purple_buddy_get_contact_alias(PURPLE_BUDDY(buddies->data));
 
 		for (cur = buddies; cur != NULL; cur = cur->next) {
 			PurpleBlistNode *node = cur->data;
@@ -78,7 +76,7 @@ static void historize(PurpleConversation *c)
 						(purple_blist_node_get_sibling_next(node) != NULL))) {
 				PurpleBlistNode *node2;
 
-				alias = purple_buddy_get_contact_alias((PurpleBuddy *)node);
+				alias = purple_buddy_get_contact_alias(PURPLE_BUDDY(node));
 
 				/* We've found a buddy that matches this conversation.  It's part of a
 				 * PurpleContact with more than one PurpleBuddy.  Loop through the PurpleBuddies
@@ -87,8 +85,8 @@ static void historize(PurpleConversation *c)
 						node2 != NULL ; node2 = purple_blist_node_get_sibling_next(node2)) {
 					logs = g_list_concat(
 							purple_log_get_logs(PURPLE_LOG_IM,
-								purple_buddy_get_name((PurpleBuddy *)node2),
-								purple_buddy_get_account((PurpleBuddy *)node2)),
+								purple_buddy_get_name(PURPLE_BUDDY(node2)),
+								purple_buddy_get_account(PURPLE_BUDDY(node2))),
 							logs);
 				}
 				break;
@@ -100,7 +98,7 @@ static void historize(PurpleConversation *c)
 			logs = purple_log_get_logs(PURPLE_LOG_IM, name, account);
 		else
 			logs = g_list_sort(logs, purple_log_compare);
-	} else if (convtype == PURPLE_CONV_TYPE_CHAT) {
+	} else if (PURPLE_IS_CHAT_CONVERSATION(c)) {
 		/* If we're not logging, don't show anything.
 		 * Otherwise, we might show a very old log. */
 		if (!purple_prefs_get_bool("/purple/logging/log_chats"))
@@ -117,15 +115,15 @@ static void historize(PurpleConversation *c)
 
 	header = g_strdup_printf(_("<b>Conversation with %s on %s:</b><br>"), alias,
 			purple_date_format_full(localtime(&((PurpleLog *)logs->data)->time)));
-	purple_conversation_write(c, "", header, mflag, time(NULL));
+	purple_conversation_write_system_message(c, header, mflag);
 	g_free(header);
 
 	if (flags & PURPLE_LOG_READ_NO_NEWLINE)
 		purple_str_strip_char(history, '\n');
-	purple_conversation_write(c, "", history, mflag, time(NULL));
+	purple_conversation_write_system_message(c, history, mflag);
 	g_free(history);
 
-	purple_conversation_write(c, "", "<hr>", mflag, time(NULL));
+	purple_conversation_write_system_message(c, "<hr>", mflag);
 
 	g_list_foreach(logs, (GFunc)purple_log_free, NULL);
 	g_list_free(logs);
@@ -180,7 +178,7 @@ history_prefs_check(PurplePlugin *plugin)
 				      fields,
 				      _("OK"), G_CALLBACK(finch_request_save_in_prefs),
 				      _("Cancel"), NULL,
-				      NULL, NULL, NULL, plugin);
+				      NULL, plugin);
 	}
 }
 

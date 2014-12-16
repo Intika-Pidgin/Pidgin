@@ -98,11 +98,11 @@ PPCODE:
 	}
 
 Purple::PrefType
-purple_account_option_get_type(option)
+purple_account_option_get_pref_type(option)
 	Purple::Account::Option option
 
 gboolean
-purple_account_option_get_masked(option)
+purple_account_option_string_get_masked(option)
 	Purple::Account::Option option
 
 int
@@ -138,7 +138,7 @@ PPCODE:
 	purple_account_option_set_list(option, t_GL);
 
 void
-purple_account_option_set_masked(option, masked)
+purple_account_option_string_set_masked(option, masked)
 	Purple::Account::Option option
 	gboolean masked
 
