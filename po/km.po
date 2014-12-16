@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-11-22 10:22-0800\n"
-"PO-Revision-Date: 2014-11-20 10:22+0000\n"
+"POT-Creation-Date: 2014-02-02 12:44-0800\n"
+"PO-Revision-Date: 2014-02-02 09:03+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Khmer (http://www.transifex.com/projects/p/pidgin/language/"
 "km/)\n"
@@ -1636,6 +1636,7 @@ msgstr ""
 msgid "Unknown"
 msgstr "មិន​ស្គាល់"
 
+#. Changing this string?  Look in add_purple_buddy_to_groups
 msgid "Buddies"
 msgstr "មិត្តភក្ដិ"
 
@@ -1744,31 +1745,26 @@ msgstr ""
 "វិញ្ញាបនបត្រ​បានអះអាង​ថា​បានមក​ពី​ \"%s\" ជំនួស​វិញ ។ វា​អាច​មានន័យ​ថា អ្នក​មិនបាន​តភ្ជាប់​ទៅ​កាន់សេវា​"
 "ដែល​អ្នក​ជឿជាក់​នោះ​ទេ ។"
 
-#. TODO: Find what the handle ought to be
-msgid "Certificate Information"
-msgstr "ព័ត៌មាន​វិញ្ញាបនបត្រ"
-
-msgid "Unable to find Issuer Certificate"
-msgstr ""
-
 #. Make messages
 #, c-format
 msgid ""
 "Common name: %s\n"
-"\n"
-"Issued By: %s\n"
 "\n"
 "Fingerprint (SHA1): %s\n"
 "\n"
 "Activation date: %s\n"
 "Expiration date: %s\n"
 msgstr ""
+"ឈ្មោះ​​ធម្មតា ៖ %s\n"
+"\n"
+"ស្នាមម្រាមដៃ (SHA1) ៖ %s\n"
+"\n"
+"កាលបរិច្ឆេទ​ធ្វើ​ឲ្យ​សកម្ម ៖ %s\n"
+"កាលបរិច្ឆេទ​ផុត​កំណត់ ៖ %s\n"
 
-msgid "(self-signed)"
-msgstr ""
-
-msgid "View Issuer Certificate"
-msgstr ""
+#. TODO: Find what the handle ought to be
+msgid "Certificate Information"
+msgstr "ព័ត៌មាន​វិញ្ញាបនបត្រ"
 
 #. show error to user
 msgid "Registration Error"
@@ -1841,129 +1837,6 @@ msgid ""
 "Please enter the name of the user you wish to invite, along with an optional "
 "invite message."
 msgstr "សូម​បញ្ចូល​ឈ្មោះ​របស់​អ្នកប្រើ​ដែល​អ្នក​ចង់​អញ្ជើញ រួម​ជា​មួយ​នឹង​សារ​អញ្ជើញ​ជា​ជម្រើស ។"
-
-msgid "Whether the specified command should handle \"aim\" URLs"
-msgstr "ថាតើ​ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់​គួរគ្រប់គ្រង URLs \"aim\" ។"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"aim\" "
-"URLs."
-msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បានបញ្ជាក់​នៅ​​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"aim\" ។"
-
-msgid "The handler for \"aim\" URLs"
-msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"aim\""
-
-msgid "The command used to handle \"aim\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"aim\" URLs ប្រសិន​បើ​បាន​បើក ។"
-
-msgid "Run the command in a terminal"
-msgstr "រត់​ពាក្យ​បញ្ជា​នៅ​ក្នុង​ស្ថានីយ"
-
-msgid ""
-"True if the command used to handle this type of URL should be run in a "
-"terminal."
-msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​​រត់​នៅ​ក្នុង​ស្ថានីយ ។"
-
-msgid "Whether the specified command should handle \"gg\" URLs"
-msgstr "ថាតើ​ពាក្យ​បញ្ជា​ដែលបាន​បញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"gg\" ។"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"gg\" "
-"URLs."
-msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"gg\" ។"
-
-msgid "The handler for \"gg\" URLs"
-msgstr "កម្មវិធី​គ្រប់គ្រ​ងសម្រាប់ URLs \"gg\""
-
-msgid "The command used to handle \"gg\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​​ដើម្បី​គ្រប់គ្រង \"gg\" URLs ប្រសិនបើ​បាន​បើក ។"
-
-msgid "Whether the specified command should handle \"icq\" URLs"
-msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែល​បានប​ញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"icq\" ។"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"icq\" "
-"URLs."
-msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"icq\" ។"
-
-msgid "The handler for \"icq\" URLs"
-msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"icq\""
-
-msgid "The command used to handle \"icq\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​ដើម្បី​គ្រប់គ្រង \"icq\" URLs ប្រសិន​បើ​បាន​បើក ។"
-
-msgid "Whether the specified command should handle \"irc\" URLs"
-msgstr "ថាតើ​ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់គួរ​គ្រប់គ្រង URLs \"irc\" ។"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"irc\" "
-"URLs."
-msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"irc\" ។"
-
-msgid "The handler for \"irc\" URLs"
-msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"irc\""
-
-msgid "The command used to handle \"irc\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​ដើម្បី​គ្រប់គ្រង \"irc\" URLs ប្រសិន​បើ​បានបើក ។"
-
-msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែលបានបញ្ជាក់គួរ​គ្រប់គ្រង URLs \"msnim\" ។"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-msgstr ""
-"ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"msnim\" ។"
-
-msgid "The handler for \"msnim\" URLs"
-msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"msnim\""
-
-msgid "The command used to handle \"msnim\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"msnim\" URLs ប្រសិន​បើ​បានបើក ។"
-
-msgid "Whether the specified command should handle \"sip\" URLs"
-msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"sip\""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"sip\" "
-"URLs."
-msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"sip\" ។"
-
-msgid "The handler for \"sip\" URLs"
-msgstr "កម្ម​វិធី​គ្រប់គ្រង​សម្រាប់ URLs \"sip\""
-
-msgid "The command used to handle \"sip\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"sip\" URLs ប្រសិនបើ​បានបើក ។"
-
-msgid "Whether the specified command should handle \"xmpp\" URLs"
-msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"xmpp\" ។"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"xmpp\" "
-"URLs."
-msgstr ""
-"ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"xmpp\" ។"
-
-msgid "The handler for \"xmpp\" URLs"
-msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"xmpp\""
-
-msgid "The command used to handle \"xmpp\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​ដើម្បី​គ្រប់គ្រង \"xmpp\" URLs ប្រសិន​បើ​បានបើក ។"
-
-msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr "ថាតើ ពាក្យ​បញ្ជាក់​ដែលបានបញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"ymsgr\" ។"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-msgstr ""
-"ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"ymsgr\" ។"
-
-msgid "The handler for \"ymsgr\" URLs"
-msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"ymsgr\""
-
-msgid "The command used to handle \"ymsgr\" URLs, if enabled."
-msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"ymsgr\" URLs ប្រសិន​បើ​បានបើក ។"
 
 #, c-format
 msgid "Failed to get connection: %s"
@@ -2138,6 +2011,129 @@ msgstr "បាន​បរាជ័យ​ក្នុងកា​រផ្ទេ
 #, c-format
 msgid "File transfer from %s failed."
 msgstr "បាន​បរាជ័យ​ក្នុងការ​ផ្ទេរ​ពី %s ។"
+
+msgid "Whether the specified command should handle \"aim\" URLs"
+msgstr "ថាតើ​ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់​គួរគ្រប់គ្រង URLs \"aim\" ។"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"aim\" "
+"URLs."
+msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បានបញ្ជាក់​នៅ​​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"aim\" ។"
+
+msgid "The handler for \"aim\" URLs"
+msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"aim\""
+
+msgid "The command used to handle \"aim\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"aim\" URLs ប្រសិន​បើ​បាន​បើក ។"
+
+msgid "Run the command in a terminal"
+msgstr "រត់​ពាក្យ​បញ្ជា​នៅ​ក្នុង​ស្ថានីយ"
+
+msgid ""
+"True if the command used to handle this type of URL should be run in a "
+"terminal."
+msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​​រត់​នៅ​ក្នុង​ស្ថានីយ ។"
+
+msgid "Whether the specified command should handle \"gg\" URLs"
+msgstr "ថាតើ​ពាក្យ​បញ្ជា​ដែលបាន​បញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"gg\" ។"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"gg\" "
+"URLs."
+msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"gg\" ។"
+
+msgid "The handler for \"gg\" URLs"
+msgstr "កម្មវិធី​គ្រប់គ្រ​ងសម្រាប់ URLs \"gg\""
+
+msgid "The command used to handle \"gg\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​​ដើម្បី​គ្រប់គ្រង \"gg\" URLs ប្រសិនបើ​បាន​បើក ។"
+
+msgid "Whether the specified command should handle \"icq\" URLs"
+msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែល​បានប​ញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"icq\" ។"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"icq\" "
+"URLs."
+msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"icq\" ។"
+
+msgid "The handler for \"icq\" URLs"
+msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"icq\""
+
+msgid "The command used to handle \"icq\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​ដើម្បី​គ្រប់គ្រង \"icq\" URLs ប្រសិន​បើ​បាន​បើក ។"
+
+msgid "Whether the specified command should handle \"irc\" URLs"
+msgstr "ថាតើ​ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់គួរ​គ្រប់គ្រង URLs \"irc\" ។"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"irc\" "
+"URLs."
+msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"irc\" ។"
+
+msgid "The handler for \"irc\" URLs"
+msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"irc\""
+
+msgid "The command used to handle \"irc\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​ដើម្បី​គ្រប់គ្រង \"irc\" URLs ប្រសិន​បើ​បានបើក ។"
+
+msgid "Whether the specified command should handle \"msnim\" URLs"
+msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែលបានបញ្ជាក់គួរ​គ្រប់គ្រង URLs \"msnim\" ។"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"msnim\" "
+"URLs."
+msgstr ""
+"ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"msnim\" ។"
+
+msgid "The handler for \"msnim\" URLs"
+msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"msnim\""
+
+msgid "The command used to handle \"msnim\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"msnim\" URLs ប្រសិន​បើ​បានបើក ។"
+
+msgid "Whether the specified command should handle \"sip\" URLs"
+msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"sip\""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"sip\" "
+"URLs."
+msgstr "ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"sip\" ។"
+
+msgid "The handler for \"sip\" URLs"
+msgstr "កម្ម​វិធី​គ្រប់គ្រង​សម្រាប់ URLs \"sip\""
+
+msgid "The command used to handle \"sip\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"sip\" URLs ប្រសិនបើ​បានបើក ។"
+
+msgid "Whether the specified command should handle \"xmpp\" URLs"
+msgstr "ថាតើ ពាក្យ​បញ្ជា​ដែល​បាន​បញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"xmpp\" ។"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"xmpp\" "
+"URLs."
+msgstr ""
+"ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"xmpp\" ។"
+
+msgid "The handler for \"xmpp\" URLs"
+msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"xmpp\""
+
+msgid "The command used to handle \"xmpp\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បាន​ប្រើ​ដើម្បី​គ្រប់គ្រង \"xmpp\" URLs ប្រសិន​បើ​បានបើក ។"
+
+msgid "Whether the specified command should handle \"ymsgr\" URLs"
+msgstr "ថាតើ ពាក្យ​បញ្ជាក់​ដែលបានបញ្ជាក់​គួរ​គ្រប់គ្រង URLs \"ymsgr\" ។"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"ymsgr\" "
+"URLs."
+msgstr ""
+"ពិត ប្រសិនបើ​ពាក្យ​បញ្ជា​បាន​បញ្ជាក់​នៅ​​គ្រាប់ចុច \"ពាក្យ​បញ្ជា\" គួរ​គ្រប់គ្រង URLs \"ymsgr\" ។"
+
+msgid "The handler for \"ymsgr\" URLs"
+msgstr "កម្មវិធី​គ្រប់គ្រង​សម្រាប់ URLs \"ymsgr\""
+
+msgid "The command used to handle \"ymsgr\" URLs, if enabled."
+msgstr "ពាក្យ​បញ្ជា​បានប្រើ​ដើម្បី​គ្រប់គ្រង \"ymsgr\" URLs ប្រសិន​បើ​បានបើក ។"
 
 msgid "<b><font color=\"red\">The logger has no read function</font></b>"
 msgstr "<b><font color=\"red\">មិនមាន​មុខងារ​អាន​ទៀតទេ</font></b>"
@@ -2800,56 +2796,6 @@ msgstr "កម្មវិធី​ជំនួយ​ធម្មតា"
 msgid "Tests to see that most things are working."
 msgstr "សាកល្បង​ដើម្បី​ដឹង​ថា អ្វីៗ​ជា​ច្រើន​កំពុង​ដំណើរការ ។"
 
-msgid "TLS/SSL Versions"
-msgstr ""
-
-msgid "Minimum Version"
-msgstr ""
-
-msgid "Maximum Version"
-msgstr ""
-
-msgid "SSL 2"
-msgstr ""
-
-msgid "SSL 3"
-msgstr ""
-
-msgid "TLS 1.0"
-msgstr ""
-
-msgid "TLS 1.1"
-msgstr ""
-
-msgid "TLS 1.2"
-msgstr ""
-
-msgid "TLS 1.3"
-msgstr ""
-
-#. TODO: look into how to do this for older versions?
-msgid "Not Supported for NSS < 3.14"
-msgstr ""
-
-msgid "Ciphers"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "NSS Preferences"
-msgstr ""
-
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Configure Ciphers and other Settings for the NSS SSL/TLS Plugin"
-msgstr ""
-
 #. Scheme name
 msgid "X.509 Certificates"
 msgstr "វិញ្ញាបនបត្រ X.509"
@@ -3179,14 +3125,14 @@ msgstr "បន្ថែម​ទៅ​កាន់​ការ​ជជែក"
 msgid "Chat _name:"
 msgstr "ឈ្មោះការ​ជជែក ៖"
 
+#, c-format
+msgid "Unable to resolve hostname '%s': %s"
+msgstr "មិន​អាច​ដោះស្រាយ​ឈ្មោះ​ម៉ាស៊ីន '%s': %s បាន​ទេ"
+
 #. 1. connect to server
 #. connect to the server
 msgid "Connecting"
 msgstr "តភ្ជាប់"
-
-#, c-format
-msgid "Unable to resolve hostname: %s"
-msgstr ""
 
 msgid "Chat error"
 msgstr "កំហុស​ក្នុងកា​រជជែក"
@@ -5792,9 +5738,9 @@ msgstr "ម៉ាស៊ីន​បម្រើ MSN នឹង​ត្រូវ�
 msgid "Unable to authenticate: %s"
 msgstr "មិនអាច​ផ្ទៀងផ្ទាត់​ភាព​ត្រឹមត្រូវ ៖ %s"
 
-#, c-format
-msgid "Your MSN buddy list is temporarily unavailable: %s"
-msgstr ""
+msgid ""
+"Your MSN buddy list is temporarily unavailable. Please wait and try again."
+msgstr "បញ្ជី​​មិត្តភក្ដិ​របស់​អ្នក MSN ​មិន​អាច​ប្រើ​បាន​ជា​បណ្ដោះ​អាសន្ន ។ សូម​រង់ចាំ ហើយ​ព្យាយាម​ម្ដង​ទៀត ។"
 
 msgid "Handshaking"
 msgstr "ការ​ចាប់ដៃ"
@@ -9669,9 +9615,6 @@ msgstr "ការ​កំណត់​វត្តមាន"
 msgid "Start Doodling"
 msgstr "ចាប់ផ្ដើម Doodling"
 
-msgid "Activate which ID?"
-msgstr ""
-
 msgid "Select the ID you want to activate"
 msgstr "ជ្រើស​លេខ​សម្គាល់​ដែល​អ្នក​ចង់​ធ្វើ​ឲ្យ​សកម្ម"
 
@@ -10213,22 +10156,6 @@ msgid ""
 msgstr ""
 "មានកំហុស​មួយ​ក្នុងការ​អាន​ %s របស់​អ្នក ។ ឯកសារ​មិន​ត្រូវ​បានផ្ទុក​ទេ ហើយ​ឯកសារ​ចាស់​ត្រូវ​បាន​ប្ដូរ​ឈ្មោះ​ទៅ​"
 "ជា %s~ ។"
-
-msgid "Instant Messaging Client"
-msgstr ""
-
-msgid ""
-"Pidgin is a chat program which lets you log in to accounts on multiple chat "
-"networks simultaneously."
-msgstr ""
-
-msgid ""
-"This means that you can be chatting with friends on MSN, talking to a friend "
-"on Google Talk, and sitting in a Yahoo chat room all at the same time."
-msgstr ""
-
-msgid "The buddy list showing friends on different networks."
-msgstr ""
 
 msgid "Pidgin Internet Messenger"
 msgstr "កម្មវិធី​ផ្ញើសារ​អ៊ីនធឺណិត​របស់ Pidgin"
@@ -11431,9 +11358,6 @@ msgstr "បេន្កាលី"
 msgid "Bengali-India"
 msgstr ""
 
-msgid "Bodo"
-msgstr ""
-
 msgid "Bosnian"
 msgstr "បូស្នី"
 
@@ -11472,9 +11396,6 @@ msgstr "អេស្ពេរ៉ាន់តូ\t"
 
 msgid "Spanish"
 msgstr "​អេស៉្បាញ"
-
-msgid "Argentine Spanish"
-msgstr ""
 
 msgid "Estonian"
 msgstr "អេស្តូនី"
@@ -11515,6 +11436,9 @@ msgstr ""
 msgid "Hungarian"
 msgstr "ហុងគ្រី"
 
+msgid "Armenian"
+msgstr "អាម៉ីនៀន"
+
 msgid "Indonesian"
 msgstr "ឥណ្ឌូនេស៊ី"
 
@@ -11530,9 +11454,6 @@ msgstr "ហ្សកហ្ស៊ី"
 msgid "Ubuntu Georgian Translators"
 msgstr "អ្នកប្រើ​ប្រែ​​ហ្សកហ្ស៊ី​របស់​អូប៊ុនទូ"
 
-msgid "Kazakh"
-msgstr ""
-
 msgid "Khmer"
 msgstr "ខ្មែរ"
 
@@ -11545,20 +11466,14 @@ msgstr "ក្រុម​អ្នកបកប្រែ​ភាសា​កិ
 msgid "Korean"
 msgstr "កូរ៉េ"
 
-msgid "Kashmiri"
-msgstr ""
-
 msgid "Kurdish"
 msgstr "ឃឺដ"
 
-msgid "Kurdish (Sorani)"
-msgstr ""
+msgid "Lao"
+msgstr "ឡាវ"
 
 msgid "Lithuanian"
 msgstr "លីទុយអានី"
-
-msgid "Latvian"
-msgstr ""
 
 msgid "Maithili"
 msgstr ""
@@ -11577,6 +11492,9 @@ msgstr "ម៉ុងហ្គោលី"
 
 msgid "Marathi"
 msgstr "ម៉ារ៉ា​ធី"
+
+msgid "Malay"
+msgstr "ម៉ាឡេស៊ី"
 
 msgid "Burmese"
 msgstr ""
@@ -11620,9 +11538,6 @@ msgstr "រូម៉ានី"
 msgid "Russian"
 msgstr "រុស្ស៊ី"
 
-msgid "Sindhi"
-msgstr ""
-
 msgid "Slovak"
 msgstr "ស្លូវ៉ាគី"
 
@@ -11656,22 +11571,11 @@ msgstr "តេលូហ្គូ"
 msgid "Thai"
 msgstr "ថៃ"
 
-msgid "Tatar"
-msgstr ""
-
 msgid "Ukranian"
 msgstr "អ៊ុយ​ក្រែន"
 
 msgid "Urdu"
 msgstr "​អ៊ូរ្ឌូ"
-
-msgid "Uzbek"
-msgstr ""
-
-#. Translators: This is a person's name. For most languages we recommend
-#. not translating it.
-msgid "Akmal Khushvakov"
-msgstr ""
 
 msgid "Vietnamese"
 msgstr "វៀតណាម"
@@ -11687,15 +11591,6 @@ msgstr "ចិនបុរាណ"
 
 msgid "Amharic"
 msgstr "អាមហារីច"
-
-msgid "Armenian"
-msgstr "អាម៉ីនៀន"
-
-msgid "Lao"
-msgstr "ឡាវ"
-
-msgid "Malay"
-msgstr "ម៉ាឡេស៊ី"
 
 msgid "Turkish"
 msgstr "ទួរគី"

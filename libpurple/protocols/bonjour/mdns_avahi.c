@@ -122,7 +122,7 @@ _resolver_callback(AvahiServiceResolver *r, AvahiIfIndex interface, AvahiProtoco
 
 	g_return_if_fail(r != NULL);
 
-	pb = purple_find_buddy(account, name);
+	pb = purple_blist_find_buddy(account, name);
 	bb = (pb != NULL) ? purple_buddy_get_protocol_data(pb) : NULL;
 
 	switch (event) {
@@ -136,7 +136,7 @@ _resolver_callback(AvahiServiceResolver *r, AvahiIfIndex interface, AvahiProtoco
 				res = g_slist_find_custom(b_impl->resolvers, r, _find_resolver_data_by_resolver);
 				if (res != NULL) {
 					rd = res->data;
-					b_impl->resolvers = g_slist_remove_link(b_impl->resolvers, res);
+					b_impl->resolvers = g_slist_delete_link(b_impl->resolvers, res);
 
 					/* We've already freed the resolver */
 					rd->resolver = NULL;
@@ -266,7 +266,7 @@ _browser_callback(AvahiServiceBrowser *b, AvahiIfIndex interface,
 			break;
 		case AVAHI_BROWSER_REMOVE:
 			purple_debug_info("bonjour", "_browser_callback - Remove service\n");
-			pb = purple_find_buddy(account, name);
+			pb = purple_blist_find_buddy(account, name);
 			if (pb != NULL) {
 				BonjourBuddy *bb = purple_buddy_get_protocol_data(pb);
 				AvahiBuddyImplData *b_impl;
@@ -618,7 +618,7 @@ void _mdns_delete_buddy(BonjourBuddy *buddy) {
 
 void _mdns_retrieve_buddy_icon(BonjourBuddy* buddy) {
 	PurpleConnection *conn = purple_account_get_connection(buddy->account);
-	BonjourData *bd = conn->proto_data;
+	BonjourData *bd = purple_connection_get_protocol_data(conn);
 	AvahiSessionImplData *session_idata = bd->dns_sd_data->mdns_impl_data;
 	AvahiBuddyImplData *idata = buddy->mdns_impl_data;
 	gchar *name;
