@@ -27,7 +27,7 @@
 #include "msn.h"
 #include "msnutils.h"
 
-#include "cipher.h"
+#include "ciphers/md5hash.h"
 
 /**************************************************************************
  * Util
@@ -536,22 +536,20 @@ msn_email_is_valid(const char *passport)
 /*
  * Handle MSN Challenge computation
  * This algorithm references
- *  http://imfreedom.org/wiki/index.php/MSN:NS/Challenges
+ *  https://imfreedom.org/wiki/MSN:NS/Challenges
  */
 #define BUFSIZE	256
 void
 msn_handle_chl(char *input, char *output)
 {
-	PurpleCipher *cipher;
-	PurpleCipherContext *context;
+	PurpleHash *hash;
 	const guchar productKey[] = MSNP15_WLM_PRODUCT_KEY;
 	const guchar productID[]  = MSNP15_WLM_PRODUCT_ID;
 	const char hexChars[]     = "0123456789abcdef";
 	char buf[BUFSIZE];
-	unsigned char md5Hash[16];
+	guint32 md5Parts[4];
 	unsigned char *newHash;
-	unsigned int *md5Parts;
-	unsigned int *chlStringParts;
+	guint32 chlStringParts[BUFSIZE / sizeof(guint32)];
 	unsigned int newHashParts[5];
 
 	long long nHigh = 0, nLow = 0;
@@ -560,16 +558,14 @@ msn_handle_chl(char *input, char *output)
 	int i;
 
 	/* Create the MD5 hash by using Purple MD5 algorithm */
-	cipher = purple_ciphers_find_cipher("md5");
-	context = purple_cipher_context_new(cipher, NULL);
+	hash = purple_md5_hash_new();
 
-	purple_cipher_context_append(context, (guchar *)input, strlen(input));
-	purple_cipher_context_append(context, productKey, sizeof(productKey) - 1);
-	purple_cipher_context_digest(context, sizeof(md5Hash), md5Hash, NULL);
-	purple_cipher_context_destroy(context);
+	purple_hash_append(hash, (guchar *)input, strlen(input));
+	purple_hash_append(hash, productKey, sizeof(productKey) - 1);
+	purple_hash_digest(hash, (guchar *)md5Parts, sizeof(md5Parts));
+	g_object_unref(hash);
 
 	/* Split it into four integers */
-	md5Parts = (unsigned int *)md5Hash;
 	for (i = 0; i < 4; i++) {
 		/* adjust endianess */
 		md5Parts[i] = GUINT_TO_LE(md5Parts[i]);
@@ -591,7 +587,7 @@ msn_handle_chl(char *input, char *output)
 	}
 
 	/* split into integers */
-	chlStringParts = (unsigned int *)buf;
+	memcpy(&chlStringParts, &buf, sizeof(chlStringParts));
 
 	/* this is magic */
 	for (i = 0; i < (len / 4); i += 2) {
@@ -642,78 +638,96 @@ msn_read8(const char *buf)
 guint16
 msn_read16le(const char *buf)
 {
-	return GUINT16_FROM_LE(*(guint16 *)buf);
+	guint16 val;
+	memcpy(&val, buf, sizeof(val));
+	return GUINT16_FROM_LE(val);
 }
 
 guint16
 msn_read16be(const char *buf)
 {
-	return GUINT16_FROM_BE(*(guint16 *)buf);
+	guint16 val;
+	memcpy(&val, buf, sizeof(val));
+	return GUINT16_FROM_BE(val);
 }
 
 guint32
 msn_read32le(const char *buf)
 {
-	return GUINT32_FROM_LE(*(guint32 *)buf);
+	guint32 val;
+	memcpy(&val, buf, sizeof(val));
+	return GUINT32_FROM_LE(val);
 }
 
 guint32
 msn_read32be(const char *buf)
 {
-	return GUINT32_FROM_BE(*(guint32 *)buf);
+	guint32 val;
+	memcpy(&val, buf, sizeof(val));
+	return GUINT32_FROM_BE(val);
 }
 
 guint64
 msn_read64le(const char *buf)
 {
-	return GUINT64_FROM_LE(*(guint64 *)buf);
+	guint64 val;
+	memcpy(&val, buf, sizeof(val));
+	return GUINT64_FROM_LE(val);
 }
 
 guint64
 msn_read64be(const char *buf)
 {
-	return GUINT64_FROM_BE(*(guint64 *)buf);
+	guint64 val;
+	memcpy(&val, buf, sizeof(val));
+	return GUINT64_FROM_BE(val);
 }
 
 void
 msn_write8(char *buf, guint8 data)
 {
-	*(guint8 *)buf = data;
+	memcpy(buf, &data, sizeof(data));
 }
 
 void
 msn_write16le(char *buf, guint16 data)
 {
-	*(guint16 *)buf = GUINT16_TO_LE(data);
+	data = GUINT16_TO_LE(data);
+	memcpy(buf, &data, sizeof(data));
 }
 
 void
 msn_write16be(char *buf, guint16 data)
 {
-	*(guint16 *)buf = GUINT16_TO_BE(data);
+	data = GUINT16_TO_BE(data);
+	memcpy(buf, &data, sizeof(data));
 }
 
 void
 msn_write32le(char *buf, guint32 data)
 {
-	*(guint32 *)buf = GUINT32_TO_LE(data);
+	data = GUINT32_TO_LE(data);
+	memcpy(buf, &data, sizeof(data));
 }
 
 void
 msn_write32be(char *buf, guint32 data)
 {
-	*(guint32 *)buf = GUINT32_TO_BE(data);
+	data = GUINT32_TO_BE(data);
+	memcpy(buf, &data, sizeof(data));
 }
 
 void
 msn_write64le(char *buf, guint64 data)
 {
-	*(guint64 *)buf = GUINT64_TO_LE(data);
+	data = GUINT64_TO_LE(data);
+	memcpy(buf, &data, sizeof(data));
 }
 
 void
 msn_write64be(char *buf, guint64 data)
 {
-	*(guint64 *)buf = GUINT64_TO_BE(data);
+	data = GUINT64_TO_BE(data);
+	memcpy(buf, &data, sizeof(data));
 }
 

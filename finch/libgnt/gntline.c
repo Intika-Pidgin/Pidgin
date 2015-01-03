@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -120,7 +120,7 @@ gnt_line_class_init(GntLineClass *klass)
 			g_param_spec_boolean("vertical", "Vertical",
 				"Whether it's a vertical line or a horizontal one.",
 				TRUE,
-				G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
+				G_PARAM_READWRITE|G_PARAM_STATIC_STRINGS
 			)
 		);
 }
@@ -139,7 +139,7 @@ gnt_line_init(GTypeInstance *instance, gpointer class)
  * GntLine API
  *****************************************************************************/
 GType
-gnt_line_get_gtype(void)
+gnt_line_get_type(void)
 {
 	static GType type = 0;
 

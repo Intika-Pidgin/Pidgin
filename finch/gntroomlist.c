@@ -1,8 +1,3 @@
-/**
- * @file gntroomlist.c GNT Room List API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -41,6 +36,7 @@
 
 #define PREF_ROOT "/finch/roomlist"
 
+
 /* Yes, just one roomlist at a time. Let's not get greedy. Aight? */
 struct _FinchRoomlist
 {
@@ -67,7 +63,7 @@ unset_roomlist(gpointer null)
 {
 	froomlist.window = NULL;
 	if (froomlist.roomlist) {
-		purple_roomlist_unref(froomlist.roomlist);
+		g_object_unref(froomlist.roomlist);
 		froomlist.roomlist = NULL;
 	}
 	froomlist.account = NULL;
@@ -81,10 +77,10 @@ update_roomlist(PurpleRoomlist *list)
 		return;
 
 	if (froomlist.roomlist)
-		purple_roomlist_unref(froomlist.roomlist);
+		g_object_unref(froomlist.roomlist);
 
 	if ((froomlist.roomlist = list) != NULL)
-		purple_roomlist_ref(list);
+		g_object_ref(list);
 }
 
 static void fl_stop(GntWidget *button, gpointer null)
@@ -141,14 +137,14 @@ roomlist_activated(GntWidget *widget)
 	if (!room)
 		return;
 
-	switch (purple_roomlist_room_get_type(room)) {
+	switch (purple_roomlist_room_get_room_type(room)) {
 		case PURPLE_ROOMLIST_ROOMTYPE_ROOM:
 			purple_roomlist_room_join(froomlist.roomlist, room);
 			break;
 		case PURPLE_ROOMLIST_ROOMTYPE_CATEGORY:
-			if (!room->expanded_once) {
+			if (!purple_roomlist_room_get_expanded_once(room)) {
 				purple_roomlist_expand_category(froomlist.roomlist, room);
-				room->expanded_once = TRUE;
+				purple_roomlist_room_set_expanded_once(room, TRUE);
 			}
 			break;
 	}
@@ -186,7 +182,7 @@ roomlist_selection_changed(GntWidget *widget, gpointer old, gpointer current, gp
 				purple_roomlist_field_get_label(f), GNT_TEXT_FLAG_BOLD);
 		gnt_text_view_append_text_with_flags(tv, ": ", GNT_TEXT_FLAG_BOLD);
 
-		switch (purple_roomlist_field_get_type(f)) {
+		switch (purple_roomlist_field_get_field_type(f)) {
 			case PURPLE_ROOMLIST_FIELD_BOOL:
 				label = g_strdup(iter->data ? "True" : "False");
 				break;
@@ -202,7 +198,7 @@ roomlist_selection_changed(GntWidget *widget, gpointer old, gpointer current, gp
 		first = FALSE;
 	}
 
-	if (purple_roomlist_room_get_type(room) == PURPLE_ROOMLIST_ROOMTYPE_CATEGORY) {
+	if (purple_roomlist_room_get_room_type(room) == PURPLE_ROOMLIST_ROOMTYPE_CATEGORY) {
 		if (!first)
 			gnt_text_view_append_text_with_flags(tv, "\n", GNT_TEXT_FLAG_NORMAL);
 		gnt_text_view_append_text_with_flags(tv,
@@ -343,7 +339,7 @@ fl_show_with_account(PurpleAccount *account)
 static void
 fl_create(PurpleRoomlist *list)
 {
-	FINCH_SET_DATA(list, &froomlist);
+	purple_roomlist_set_ui_data(list, &froomlist);
 	setup_roomlist(NULL);
 	update_roomlist(list);
 }
@@ -360,7 +356,7 @@ fl_add_room(PurpleRoomlist *roomlist, PurpleRoomlistRoom *room)
 	if (froomlist.roomlist != roomlist)
 		return;
 
-	category = (purple_roomlist_room_get_type(room) == PURPLE_ROOMLIST_ROOMTYPE_CATEGORY);
+	category = (purple_roomlist_room_get_room_type(room) == PURPLE_ROOMLIST_ROOMTYPE_CATEGORY);
 	gnt_tree_remove(GNT_TREE(froomlist.tree), room);
 	gnt_tree_add_row_after(GNT_TREE(froomlist.tree), room,
 			gnt_tree_create_row(GNT_TREE(froomlist.tree),

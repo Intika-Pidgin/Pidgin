@@ -389,7 +389,6 @@ SectionGroupEnd
 SectionGroup /e $(URIHANDLERSSECTIONTITLE) SecURIHandlers
   !insertmacro URI_SECTION "aim"
   !insertmacro URI_SECTION "msnim"
-  !insertmacro URI_SECTION "myim"
   !insertmacro URI_SECTION "ymsgr"
   !insertmacro URI_SECTION "xmpp"
 SectionGroupEnd
@@ -508,8 +507,6 @@ Section Uninstall
     Call un.UnregisterURIHandler
     Push "msnim"
     Call un.UnregisterURIHandler
-    Push "myim"
-    Call un.UnregisterURIHandler
     Push "ymsgr"
     Call un.UnregisterURIHandler
     Push "xmpp"
@@ -548,12 +545,19 @@ Section Uninstall
     RMDir "$INSTDIR\ca-certs"
     RMDir /r "$INSTDIR\locale"
     RMDir /r "$INSTDIR\pixmaps"
+	RMDir /r "$INSTDIR\theme"
     Delete "$INSTDIR\plugins\autoaccept.dll"
     Delete "$INSTDIR\plugins\buddynote.dll"
     Delete "$INSTDIR\plugins\convcolors.dll"
     Delete "$INSTDIR\plugins\extplacement.dll"
     Delete "$INSTDIR\plugins\gtkbuddynote.dll"
     Delete "$INSTDIR\plugins\history.dll"
+	Delete "$INSTDIR\plugins\internalkeyring.dll"
+	Delete "$INSTDIR\plugins\libfacebook.dll"
+	Delete "$INSTDIR\plugins\libgtalk.dll"
+	Delete "$INSTDIR\plugins\ssl-gnutls.dll"
+	Delete "$INSTDIR\plugins\webkit.dll"
+	Delete "$INSTDIR\plugins\wincred.dll"
     Delete "$INSTDIR\plugins\iconaway.dll"
     Delete "$INSTDIR\plugins\idle.dll"
     Delete "$INSTDIR\plugins\joinpart.dll"
@@ -564,13 +568,10 @@ Section Uninstall
     Delete "$INSTDIR\plugins\libirc.dll"
     Delete "$INSTDIR\plugins\libmsn.dll"
     Delete "$INSTDIR\plugins\libmxit.dll"
-    Delete "$INSTDIR\plugins\libmyspace.dll"
-    Delete "$INSTDIR\plugins\libnapster.dll"
     Delete "$INSTDIR\plugins\libnovell.dll"
     Delete "$INSTDIR\plugins\libsametime.dll"
     Delete "$INSTDIR\plugins\libsilc.dll"
     Delete "$INSTDIR\plugins\libsimple.dll"
-    Delete "$INSTDIR\plugins\libtoc.dll"
     Delete "$INSTDIR\plugins\libyahoo.dll"
     Delete "$INSTDIR\plugins\libyahoojp.dll"
     Delete "$INSTDIR\plugins\libxmpp.dll"
@@ -620,7 +621,6 @@ Section Uninstall
     RMDir "$INSTDIR\sounds\purple"
     RMDir "$INSTDIR\sounds"
     Delete "$INSTDIR\spellcheck\libenchant.dll"
-    Delete "$INSTDIR\spellcheck\libgtkspell-0.dll"
     Delete "$INSTDIR\spellcheck\lib\enchant\libenchant_aspell.dll"
     Delete "$INSTDIR\spellcheck\lib\enchant\libenchant_ispell.dll"
     Delete "$INSTDIR\spellcheck\lib\enchant\libenchant_myspell.dll"
