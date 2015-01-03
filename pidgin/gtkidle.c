@@ -42,7 +42,9 @@
 
 #include "idle.h"
 
-/**
+/*
+ * pidgin_get_time_idle:
+ *
  * Get the number of seconds the user has been idle.  In Unix-world
  * this is based on the X Windows usage.  In MS Windows this is
  * based on keyboard/mouse usage information obtained from the OS.
@@ -65,7 +67,7 @@
  *
  * See watch() in xscreensaver/driver/xscreensaver-command.c.
  *
- * @return The number of seconds the user has been idle.
+ * Returns: The number of seconds the user has been idle.
  */
 #if defined(USE_SCREENSAVER) || defined(HAVE_IOKIT)
 static time_t
@@ -107,14 +109,16 @@ pidgin_get_time_idle(void)
 	int event_base, error_base;
 
 	if (has_extension == -1)
-		has_extension = XScreenSaverQueryExtension(GDK_DISPLAY(), &event_base, &error_base);
+		has_extension = XScreenSaverQueryExtension(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()),
+		                                           &event_base, &error_base);
 
 	if (has_extension)
 	{
 		if (mit_info == NULL)
 			mit_info = XScreenSaverAllocInfo();
 
-		XScreenSaverQueryInfo(GDK_DISPLAY(), GDK_ROOT_WINDOW(), mit_info);
+		XScreenSaverQueryInfo(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()),
+		                      GDK_ROOT_WINDOW(), mit_info);
 		return (mit_info->idle) / 1000;
 	}
 	else

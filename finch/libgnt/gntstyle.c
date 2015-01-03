@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -35,9 +35,7 @@
 
 #define MAX_WORKSPACES 99
 
-#if GLIB_CHECK_VERSION(2,6,0)
 static GKeyFile *gkfile;
-#endif
 
 static char * str_styles[GNT_STYLES];
 static int int_styles[GNT_STYLES];
@@ -50,23 +48,24 @@ const char *gnt_style_get(GntStyle style)
 
 char *gnt_style_get_from_name(const char *group, const char *key)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
-	const char *prg = g_get_prgname();
+	const char *prg;
+
+	/* gkfile is NULL when run by gtkdoc-scanobj or g-ir-scanner */
+	if (!gkfile)
+		return NULL;
+
+	prg = g_get_prgname();
 	if ((group == NULL || *group == '\0') && prg &&
 			g_key_file_has_group(gkfile, prg))
 		group = prg;
 	if (!group)
 		group = "general";
 	return g_key_file_get_value(gkfile, group, key, NULL);
-#else
-	return NULL;
-#endif
 }
 
 int
 gnt_style_get_color(char *group, char *key)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	int fg = 0, bg = 0;
 	gsize n;
 	char **vals;
@@ -79,14 +78,10 @@ gnt_style_get_color(char *group, char *key)
 	}
 	g_strfreev(vals);
 	return ret;
-#else
-	return 0;
-#endif
 }
 
 char **gnt_style_get_string_list(const char *group, const char *key, gsize *length)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	const char *prg = g_get_prgname();
 	if ((group == NULL || *group == '\0') && prg &&
 			g_key_file_has_group(gkfile, prg))
@@ -94,9 +89,6 @@ char **gnt_style_get_string_list(const char *group, const char *key, gsize *leng
 	if (!group)
 		group = "general";
 	return g_key_file_get_string_list(gkfile, group, key, length, NULL);
-#else
-	return NULL;
-#endif
 }
 
 gboolean gnt_style_get_bool(GntStyle style, gboolean def)
@@ -134,7 +126,6 @@ gboolean gnt_style_parse_bool(const char *str)
 	return def;
 }
 
-#if GLIB_CHECK_VERSION(2,6,0)
 static void
 refine(char *text)
 {
@@ -175,11 +166,9 @@ parse_key(const char *key)
 {
 	return (char *)gnt_key_translate(key);
 }
-#endif
 
 void gnt_style_read_workspaces(GntWM *wm)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	int i;
 	gchar *name;
 	gsize c;
@@ -212,13 +201,16 @@ void gnt_style_read_workspaces(GntWM *wm)
 			g_strfreev(titles);
 		}
 	}
-#endif
 }
+
 void gnt_style_read_actions(GType type, GntBindableClass *klass)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	char *name;
 	GError *error = NULL;
+
+	/* gkfile is NULL when run by gtkdoc-scanobj or g-ir-scanner */
+	if (!gkfile)
+		return;
 
 	name = g_strdup_printf("%s::binding", g_type_name(type));
 
@@ -264,12 +256,10 @@ void gnt_style_read_actions(GType type, GntBindableClass *klass)
 		g_strfreev(keys);
 	}
 	g_free(name);
-#endif
 }
 
 gboolean gnt_style_read_menu_accels(const char *name, GHashTable *table)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	char *kname;
 	GError *error = NULL;
 	gboolean ret = FALSE;
@@ -322,13 +312,10 @@ gboolean gnt_style_read_menu_accels(const char *name, GHashTable *table)
 
 	g_free(kname);
 	return ret;
-#endif
-	return FALSE;
 }
 
 void gnt_styles_get_keyremaps(GType type, GHashTable *hash)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	char *name;
 	GError *error = NULL;
 
@@ -373,10 +360,8 @@ void gnt_styles_get_keyremaps(GType type, GHashTable *hash)
 	}
 
 	g_free(name);
-#endif
 }
 
-#if GLIB_CHECK_VERSION(2,6,0)
 static void
 read_general_style(GKeyFile *kfile)
 {
@@ -419,11 +404,9 @@ read_general_style(GKeyFile *kfile)
 	}
 	g_strfreev(keys);
 }
-#endif
 
 void gnt_style_read_configure_file(const char *filename)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	GError *error = NULL;
 	gkfile = g_key_file_new();
 
@@ -436,7 +419,6 @@ void gnt_style_read_configure_file(const char *filename)
 	}
 	gnt_colors_parse(gkfile);
 	read_general_style(gkfile);
-#endif
 }
 
 void gnt_init_styles()
@@ -458,9 +440,7 @@ void gnt_uninit_styles()
 		str_styles[i] = NULL;
 	}
 
-#if GLIB_CHECK_VERSION(2,6,0)
 	g_key_file_free(gkfile);
 	gkfile = NULL;
-#endif
 }
 

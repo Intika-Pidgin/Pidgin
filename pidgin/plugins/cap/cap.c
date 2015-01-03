@@ -33,9 +33,10 @@ static void generate_prediction(CapStatistics *statistics) {
 static double generate_prediction_for(PurpleBuddy *buddy) {
 	double prediction = 1.0f;
 	gboolean generated = FALSE;
-	gchar *buddy_name = buddy->name;
-	const gchar *protocol_id = purple_account_get_protocol_id(buddy->account);
-	const gchar *account_id = purple_account_get_username(buddy->account);
+	PurpleAccount *account = purple_buddy_get_account(buddy);
+	const gchar *buddy_name = purple_buddy_get_name(buddy);
+	const gchar *protocol_id = purple_account_get_protocol_id(account);
+	const gchar *account_id = purple_account_get_username(account);
 	const gchar *status_id = purple_status_get_id(get_status_for(buddy));
 	time_t t = time(NULL);
 	struct tm *current_time = localtime(&t);
@@ -43,7 +44,7 @@ static double generate_prediction_for(PurpleBuddy *buddy) {
 	int threshold = purple_prefs_get_int("/plugins/gtk/cap/threshold");
 	int min_minute = (current_minute - threshold) % 1440;
 	int max_minute = (current_minute + threshold) % 1440;
-	char *sql, *sta_id = NULL;
+	gchar *sql;
 	sqlite3_stmt *stmt = NULL;
 	const char *tail = NULL;
 	int rc;
@@ -93,15 +94,6 @@ static double generate_prediction_for(PurpleBuddy *buddy) {
 	}
 	sqlite3_free(sql);
 
-
-	sta_id = purple_status_get_id(get_status_for(buddy));
-
-	if(sta_id && !strcmp(sta_id, "offline")) {
-		/* This is kind of stupid, change it. */
-		if(prediction == 1.0f)
-			prediction = 0.0f;
-	}
-
 	if(generated)
 		return prediction;
 	else
@@ -113,7 +105,7 @@ static CapStatistics * get_stats_for(PurpleBuddy *buddy) {
 
 	g_return_val_if_fail(buddy != NULL, NULL);
 
-	stats = g_hash_table_lookup(_buddy_stats, buddy->name);
+	stats = g_hash_table_lookup(_buddy_stats, purple_buddy_get_name(buddy));
 	if(!stats) {
 		stats = g_malloc0(sizeof(CapStatistics));
 		stats->last_message = -1;
@@ -121,7 +113,8 @@ static CapStatistics * get_stats_for(PurpleBuddy *buddy) {
 		stats->last_seen = -1;
 		stats->last_status_id = "";
 
-		g_hash_table_insert(_buddy_stats, g_strdup(buddy->name), stats);
+		g_hash_table_insert(_buddy_stats,
+			g_strdup(purple_buddy_get_name(buddy)), stats);
 	} else {
 		/* This may actually be a different PurpleBuddy than what is in stats.
 		 * We replace stats->buddy to make sure we're looking at a valid pointer. */
@@ -290,9 +283,10 @@ insert_cap_status_count_failed(const char *buddy_name, const char *account, cons
 }
 
 static void insert_cap_success(CapStatistics *stats) {
-	gchar *buddy_name = stats->buddy->name;
-	const gchar *protocol_id = purple_account_get_protocol_id(stats->buddy->account);
-	const gchar *account_id = purple_account_get_username(stats->buddy->account);
+	PurpleAccount *account = purple_buddy_get_account(stats->buddy);
+	const gchar *buddy_name = purple_buddy_get_name(stats->buddy);
+	const gchar *protocol_id = purple_account_get_protocol_id(account);
+	const gchar *account_id = purple_account_get_username(account);
 	const gchar *status_id = (stats->last_message_status_id) ?
 		stats->last_message_status_id :
 		purple_status_get_id(get_status_for(stats->buddy));
@@ -316,9 +310,10 @@ static void insert_cap_success(CapStatistics *stats) {
 }
 
 static void insert_cap_failure(CapStatistics *stats) {
-	gchar *buddy_name = stats->buddy->name;
-	const gchar *protocol_id = purple_account_get_protocol_id(stats->buddy->account);
-	const gchar *account_id = purple_account_get_username(stats->buddy->account);
+	PurpleAccount *account = purple_buddy_get_account(stats->buddy);
+	const gchar *buddy_name = purple_buddy_get_name(stats->buddy);
+	const gchar *protocol_id = purple_account_get_protocol_id(account);
+	const gchar *account_id = purple_account_get_username(account);
 	const gchar *status_id = (stats->last_message_status_id) ?
 		stats->last_message_status_id :
 		purple_status_get_id(get_status_for(stats->buddy));
@@ -344,22 +339,23 @@ static gboolean max_message_difference_cb(gpointer data) {
 /* Purple Signal Handlers */
 
 /* sent-im-msg */
-static void sent_im_msg(PurpleAccount *account, const char *receiver, const char *message) {
+static void sent_im_msg(PurpleAccount *account, PurpleMessage *msg, gpointer _unused)
+{
 	PurpleBuddy *buddy;
 	guint interval, words;
 	CapStatistics *stats = NULL;
 
-	buddy = purple_find_buddy(account, receiver);
+	buddy = purple_blist_find_buddy(account, purple_message_get_who(msg));
 
 	if (buddy == NULL)
 		return;
 
 	interval = purple_prefs_get_int("/plugins/gtk/cap/max_msg_difference") * 60;
-	words = word_count(message);
+	words = word_count(purple_message_get_contents(msg));
 
 	stats = get_stats_for(buddy);
 
-	insert_word_count(purple_account_get_username(account), receiver, words);
+	insert_word_count(purple_account_get_username(account), purple_message_get_who(msg), words);
 	stats->last_message = time(NULL);
 	stats->last_message_status_id = purple_status_get_id(get_status_for(buddy));
 	if(stats->timeout_source_id != 0)
@@ -378,7 +374,7 @@ received_im_msg(PurpleAccount *account, char *sender, char *message, PurpleConve
 	if (flags & PURPLE_MESSAGE_AUTO_RESP)
 		return;
 
-	buddy = purple_find_buddy(account, sender);
+	buddy = purple_blist_find_buddy(account, sender);
 
 	if (buddy == NULL)
 		return;
@@ -438,8 +434,8 @@ static void buddy_signed_off(PurpleBuddy *buddy) {
 
 /* drawing-tooltip */
 static void drawing_tooltip(PurpleBlistNode *node, GString *text, gboolean full) {
-	if(node->type == PURPLE_BLIST_BUDDY_NODE) {
-		PurpleBuddy *buddy = (PurpleBuddy *)node;
+	if (PURPLE_IS_BUDDY(node)) {
+		PurpleBuddy *buddy = PURPLE_BUDDY(node);
 		CapStatistics *stats = get_stats_for(buddy);
 		/* get the probability that this buddy will respond and add to the tooltip */
 		if(stats->prediction->probability >= 0.0) {
@@ -509,8 +505,7 @@ static PurpleStatus * get_status_for(PurpleBuddy *buddy) {
 }
 
 static void create_tables() {
-	int rc;
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"CREATE TABLE IF NOT EXISTS cap_status ("
 		"	buddy varchar(60) not null,"
 		"	account varchar(60) not null,"
@@ -521,7 +516,7 @@ static void create_tables() {
 		");",
 		NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_message ("
 		"	sender varchar(60) not null,"
 		"	receiver varchar(60) not null,"
@@ -533,7 +528,7 @@ static void create_tables() {
 		");",
 		NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_msg_count ("
 		"	buddy varchar(60) not null,"
 		"	account varchar(60) not null,"
@@ -545,7 +540,7 @@ static void create_tables() {
 		");",
 	NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_status_count ("
 		"	buddy varchar(60) not null,"
 		"	account varchar(60) not null,"
@@ -557,7 +552,7 @@ static void create_tables() {
 		");",
 	NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_my_usage ("
 		"	account varchar(60) not null,"
 		"	protocol varchar(60) not null,"
@@ -611,8 +606,8 @@ static void insert_status_change(CapStatistics *statistics) {
 }
 
 static void insert_status_change_from_purple_status(CapStatistics *statistics, PurpleStatus *status) {
+	PurpleAccount *account = purple_buddy_get_account(statistics->buddy);
 	char *sql;
-	int rc;
 	const gchar *status_id;
 	const gchar *buddy_name;
 	const gchar *protocol_id;
@@ -625,16 +620,16 @@ static void insert_status_change_from_purple_status(CapStatistics *statistics, P
 		return;
 
 	status_id = purple_status_get_id(status);
-	buddy_name = statistics->buddy->name;
-	protocol_id = purple_account_get_protocol_id(statistics->buddy->account);
-	account_id = purple_account_get_username(statistics->buddy->account);
+	buddy_name = purple_buddy_get_name(statistics->buddy);
+	protocol_id = purple_account_get_protocol_id(account);
+	account_id = purple_account_get_username(account);
 
 	statistics->last_status_id = purple_status_get_id(status);
 
 	purple_debug_info("cap", "Executing: insert into cap_status (buddy, account, protocol, status, event_time) values(%s, %s, %s, %s, now());\n", buddy_name, account_id, protocol_id, status_id);
 
 	sql = sqlite3_mprintf("insert into cap_status values (%Q, %Q, %Q, %Q, now());", buddy_name, account_id, protocol_id, status_id);
-	rc = sqlite3_exec(_db, sql, NULL, NULL, NULL);
+	sqlite3_exec(_db, sql, NULL, NULL, NULL);
 	sqlite3_free(sql);
 }
 
@@ -868,7 +863,7 @@ static CapPrefsUI * create_cap_prefs_ui() {
 	return ui;
 }
 
-static void cap_prefs_ui_destroy_cb(GtkObject *object, gpointer user_data) {
+static void cap_prefs_ui_destroy_cb(GObject *object, gpointer user_data) {
 	CapPrefsUI *ui = user_data;
 	if(_db) {
 		add_plugin_functionality(_plugin_pointer);
@@ -882,8 +877,7 @@ static void numeric_spinner_prefs_cb(GtkSpinButton *spinbutton, gpointer user_da
 
 static PidginPluginUiInfo ui_info = {
 	get_config_frame,
-	0 /* page_num (reserved) */,
-	NULL,NULL,NULL,NULL
+	NULL, NULL, NULL, NULL
 };
 
 static PurplePluginInfo info = {

@@ -162,7 +162,7 @@ gnt_ws_show(GntWS *ws, GHashTable *nodes)
 }
 
 GType
-gnt_ws_get_gtype(void)
+gnt_ws_get_type(void)
 {
 	static GType type = 0;
 

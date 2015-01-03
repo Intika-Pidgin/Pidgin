@@ -3,15 +3,15 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Translators:
-# Algimantas Margevičius <gymka@archlinux.lt>, 2012-2014
+# Algimantas Margevičius <gymka@archlinux.lt>, 2012-2013
 # Algimantas Margevičius <margevicius.algimantas@gmail.com>, 2012
 # Richard Laager <rlaager@wiktel.com>, 2011
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-11-22 10:22-0800\n"
-"PO-Revision-Date: 2014-11-20 10:22+0000\n"
+"POT-Creation-Date: 2014-02-02 10:38-0800\n"
+"PO-Revision-Date: 2014-01-21 08:26+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Lithuanian (http://www.transifex.com/projects/p/pidgin/"
 "language/lt/)\n"
@@ -1682,6 +1682,7 @@ msgstr "Šis protokolas nepalaiko viešos tapatybės gavimo."
 msgid "Unknown"
 msgstr "Nežinoma"
 
+#. Changing this string?  Look in add_purple_buddy_to_groups
 msgid "Buddies"
 msgstr "Bičiuliai"
 
@@ -1795,19 +1796,10 @@ msgstr ""
 "Liudijimas iš tikrųjų priklauso „%s“.  Galbūt jūs jungiatės ne prie tos "
 "paslaugos, prie kurios manote, kad jungiatės."
 
-#. TODO: Find what the handle ought to be
-msgid "Certificate Information"
-msgstr "Liudijimo informacija"
-
-msgid "Unable to find Issuer Certificate"
-msgstr "Nepavyko rasti sertifikato išdavėjo"
-
 #. Make messages
 #, c-format
 msgid ""
 "Common name: %s\n"
-"\n"
-"Issued By: %s\n"
 "\n"
 "Fingerprint (SHA1): %s\n"
 "\n"
@@ -1816,18 +1808,14 @@ msgid ""
 msgstr ""
 "Įprastas vardas: %s\n"
 "\n"
-"Išdavė: %s\n"
+"SHA1 kontrolinis kodas: %s\n"
 "\n"
-"Kontrolinis kodas (SHA1): %s\n"
-"\n"
-"Aktyvuota: %s\n"
+"Galiojimo pradžia: %s\n"
 "Galiojimo pabaiga: %s\n"
 
-msgid "(self-signed)"
-msgstr "(paties pasirašytas)"
-
-msgid "View Issuer Certificate"
-msgstr "Rodyti išdavėjo sertifikatą"
+#. TODO: Find what the handle ought to be
+msgid "Certificate Information"
+msgstr "Liudijimo informacija"
 
 #. show error to user
 msgid "Registration Error"
@@ -1902,144 +1890,6 @@ msgid ""
 msgstr ""
 "Prašom įvesti naudotojo, kurį norite pakviesti, vardą, kartu su neprivaloma "
 "pakvietimo žinute."
-
-msgid "Whether the specified command should handle \"aim\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „aim“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"aim\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „aim“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"aim\" URLs"
-msgstr "Komanda „aim“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"aim\" URLs, if enabled."
-msgstr "Komanda „aim“ universaliųjų adresų apdorojimui, jei aktyvuota."
-
-msgid "Run the command in a terminal"
-msgstr "Vykdyti komandą terminale"
-
-msgid ""
-"True if the command used to handle this type of URL should be run in a "
-"terminal."
-msgstr ""
-"„True“, jeigu komanda, turinti apdoroti šio tipo universaliuosius adresus, "
-"turi būti leidžiama terminale."
-
-msgid "Whether the specified command should handle \"gg\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „gg“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"gg\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „gg“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"gg\" URLs"
-msgstr "Komanda „aim“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"gg\" URLs, if enabled."
-msgstr "Komanda „gg“ universaliųjų adresų apdorojimui, jei aktyvuota."
-
-msgid "Whether the specified command should handle \"icq\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „icq“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"icq\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „icq“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"icq\" URLs"
-msgstr "Komanda „icq“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"icq\" URLs, if enabled."
-msgstr "Komanda „icq“ universaliųjų adresų apdorojimui, jei aktyvuota."
-
-msgid "Whether the specified command should handle \"irc\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „irc“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"irc\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „irc“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"irc\" URLs"
-msgstr "Komanda „irc“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"irc\" URLs, if enabled."
-msgstr "Komanda „irc“ universaliųjų adresų apdorojimui, jei aktyvuota."
-
-msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „msnim“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „msnim“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"msnim\" URLs"
-msgstr "Komanda „msnim“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"msnim\" URLs, if enabled."
-msgstr "Komanda „msnim“ universaliųjų adresų apdorojimui, jei aktyvuota."
-
-msgid "Whether the specified command should handle \"sip\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „sip“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"sip\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „sip“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"sip\" URLs"
-msgstr "Komanda „sip“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"sip\" URLs, if enabled."
-msgstr "Komanda „sip“ universaliųjų adresų apdorojimui, jei aktyvuota."
-
-msgid "Whether the specified command should handle \"xmpp\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „xmpp“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"xmpp\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „xmpp“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"xmpp\" URLs"
-msgstr "Komanda „xmpp“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"xmpp\" URLs, if enabled."
-msgstr "Komanda „xmpp“ universaliųjų adresų apdorojimui, jei aktyvuota."
-
-msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr "Ar nurodytoji komanda turėtų apdoroti „ysmgr“ universaliuosius adresus"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-msgstr ""
-"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „ysmgr“ "
-"universaliuosius adresus."
-
-msgid "The handler for \"ymsgr\" URLs"
-msgstr "Komanda „ysmgr“ universaliųjų adresų apdorojimui"
-
-msgid "The command used to handle \"ymsgr\" URLs, if enabled."
-msgstr "Komanda „ysmgr“ universaliųjų adresų apdorojimui, jei aktyvuota."
 
 #, c-format
 msgid "Failed to get connection: %s"
@@ -2214,6 +2064,144 @@ msgstr "Įvyko failo perdavimo bičiuliui %s klaida."
 #, c-format
 msgid "File transfer from %s failed."
 msgstr "Įvyko failo gavimo iš %s klaida."
+
+msgid "Whether the specified command should handle \"aim\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „aim“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"aim\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „aim“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"aim\" URLs"
+msgstr "Komanda „aim“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"aim\" URLs, if enabled."
+msgstr "Komanda „aim“ universaliųjų adresų apdorojimui, jei aktyvuota."
+
+msgid "Run the command in a terminal"
+msgstr "Vykdyti komandą terminale"
+
+msgid ""
+"True if the command used to handle this type of URL should be run in a "
+"terminal."
+msgstr ""
+"„True“, jeigu komanda, turinti apdoroti šio tipo universaliuosius adresus, "
+"turi būti leidžiama terminale."
+
+msgid "Whether the specified command should handle \"gg\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „gg“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"gg\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „gg“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"gg\" URLs"
+msgstr "Komanda „aim“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"gg\" URLs, if enabled."
+msgstr "Komanda „gg“ universaliųjų adresų apdorojimui, jei aktyvuota."
+
+msgid "Whether the specified command should handle \"icq\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „icq“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"icq\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „icq“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"icq\" URLs"
+msgstr "Komanda „icq“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"icq\" URLs, if enabled."
+msgstr "Komanda „icq“ universaliųjų adresų apdorojimui, jei aktyvuota."
+
+msgid "Whether the specified command should handle \"irc\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „irc“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"irc\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „irc“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"irc\" URLs"
+msgstr "Komanda „irc“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"irc\" URLs, if enabled."
+msgstr "Komanda „irc“ universaliųjų adresų apdorojimui, jei aktyvuota."
+
+msgid "Whether the specified command should handle \"msnim\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „msnim“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"msnim\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „msnim“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"msnim\" URLs"
+msgstr "Komanda „msnim“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"msnim\" URLs, if enabled."
+msgstr "Komanda „msnim“ universaliųjų adresų apdorojimui, jei aktyvuota."
+
+msgid "Whether the specified command should handle \"sip\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „sip“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"sip\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „sip“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"sip\" URLs"
+msgstr "Komanda „sip“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"sip\" URLs, if enabled."
+msgstr "Komanda „sip“ universaliųjų adresų apdorojimui, jei aktyvuota."
+
+msgid "Whether the specified command should handle \"xmpp\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „xmpp“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"xmpp\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „xmpp“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"xmpp\" URLs"
+msgstr "Komanda „xmpp“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"xmpp\" URLs, if enabled."
+msgstr "Komanda „xmpp“ universaliųjų adresų apdorojimui, jei aktyvuota."
+
+msgid "Whether the specified command should handle \"ymsgr\" URLs"
+msgstr "Ar nurodytoji komanda turėtų apdoroti „ysmgr“ universaliuosius adresus"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"ymsgr\" "
+"URLs."
+msgstr ""
+"„True“, jeigu komanda, nurodyta „command“ rakte, turi apdoroti „ysmgr“ "
+"universaliuosius adresus."
+
+msgid "The handler for \"ymsgr\" URLs"
+msgstr "Komanda „ysmgr“ universaliųjų adresų apdorojimui"
+
+msgid "The command used to handle \"ymsgr\" URLs, if enabled."
+msgstr "Komanda „ysmgr“ universaliųjų adresų apdorojimui, jei aktyvuota."
 
 msgid "<b><font color=\"red\">The logger has no read function</font></b>"
 msgstr ""
@@ -2891,56 +2879,6 @@ msgstr "Paprastas papildinys"
 msgid "Tests to see that most things are working."
 msgstr "Patikrina, ar dauguma dalykų veikia"
 
-msgid "TLS/SSL Versions"
-msgstr ""
-
-msgid "Minimum Version"
-msgstr ""
-
-msgid "Maximum Version"
-msgstr ""
-
-msgid "SSL 2"
-msgstr ""
-
-msgid "SSL 3"
-msgstr ""
-
-msgid "TLS 1.0"
-msgstr ""
-
-msgid "TLS 1.1"
-msgstr ""
-
-msgid "TLS 1.2"
-msgstr ""
-
-msgid "TLS 1.3"
-msgstr ""
-
-#. TODO: look into how to do this for older versions?
-msgid "Not Supported for NSS < 3.14"
-msgstr ""
-
-msgid "Ciphers"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "NSS Preferences"
-msgstr ""
-
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Configure Ciphers and other Settings for the NSS SSL/TLS Plugin"
-msgstr ""
-
 #. Scheme name
 msgid "X.509 Certificates"
 msgstr "X.509 liudijimai"
@@ -3275,14 +3213,14 @@ msgstr "Įtraukti į pokalbių kambarį"
 msgid "Chat _name:"
 msgstr "Ka_nalo pavadinimas:"
 
+#, c-format
+msgid "Unable to resolve hostname '%s': %s"
+msgstr "Nepavyko nustatyti IP adreso pagal vardą „%s“: %s"
+
 #. 1. connect to server
 #. connect to the server
 msgid "Connecting"
 msgstr "Jungiamasi"
-
-#, c-format
-msgid "Unable to resolve hostname: %s"
-msgstr "Nepavyko nustatyti adreso: %s"
 
 msgid "Chat error"
 msgstr "Pokalbių kambario klaida"
@@ -3438,7 +3376,7 @@ msgid "Auto-detect incoming UTF-8"
 msgstr "Automatiškai nustatyti gaunamą UTF-8"
 
 msgid "Ident name"
-msgstr "Tapatybės vardas"
+msgstr ""
 
 msgid "Real name"
 msgstr "Tikras vardas"
@@ -3491,11 +3429,13 @@ msgstr "<i>(identifikavęsis)</i>"
 msgid "Nick"
 msgstr "Vardas"
 
+#, fuzzy
 msgid "Login name"
-msgstr "Prisijungimo vardas"
+msgstr "Be vardo"
 
+#, fuzzy
 msgid "Host name"
-msgstr "Kompiuterio vardas"
+msgstr "Mazgo vardas"
 
 msgid "Currently on"
 msgstr "Kanaluose"
@@ -5953,9 +5893,11 @@ msgstr "MSN serveriai yra laikinai išjungiami"
 msgid "Unable to authenticate: %s"
 msgstr "Negalima patikrinti tapatybės: %s"
 
-#, c-format
-msgid "Your MSN buddy list is temporarily unavailable: %s"
+msgid ""
+"Your MSN buddy list is temporarily unavailable. Please wait and try again."
 msgstr ""
+"Jūsų MSN bičiulių sąrašas yra laikinai neprieinamas. Prašome palaukti ir "
+"pabandyti iš naujo."
 
 msgid "Handshaking"
 msgstr "Pasisveikinimas"
@@ -9982,9 +9924,6 @@ msgstr "Būsenos nuostatos"
 msgid "Start Doodling"
 msgstr "Pradėti paišinėjimą"
 
-msgid "Activate which ID?"
-msgstr "Kurį ID aktyvuoti?"
-
 msgid "Select the ID you want to activate"
 msgstr "Pasirinkite ID, kurį norite aktyvuoti"
 
@@ -10553,22 +10492,6 @@ msgid ""
 msgstr ""
 "Failo %s skaitymo metu įvyko klaida.  Failas įkeltas nebuvo, o senasis "
 "failas pervadintas į %s~."
-
-msgid "Instant Messaging Client"
-msgstr ""
-
-msgid ""
-"Pidgin is a chat program which lets you log in to accounts on multiple chat "
-"networks simultaneously."
-msgstr ""
-
-msgid ""
-"This means that you can be chatting with friends on MSN, talking to a friend "
-"on Google Talk, and sitting in a Yahoo chat room all at the same time."
-msgstr ""
-
-msgid "The buddy list showing friends on different networks."
-msgstr ""
 
 msgid "Pidgin Internet Messenger"
 msgstr "Pidgin pokalbiai internete"
@@ -11781,7 +11704,7 @@ msgid "Assamese"
 msgstr "Asamesų"
 
 msgid "Asturian"
-msgstr "Asturų"
+msgstr ""
 
 msgid "Belarusian Latin"
 msgstr "Baltarusų kalba lotynu abėcėle"
@@ -11794,9 +11717,6 @@ msgstr "Bengalų kalba"
 
 msgid "Bengali-India"
 msgstr "Bengalų (Indija)"
-
-msgid "Bodo"
-msgstr "Bodo"
 
 msgid "Bosnian"
 msgstr "Bosnių kalba"
@@ -11837,9 +11757,6 @@ msgstr "Esperanto"
 msgid "Spanish"
 msgstr "Ispanų kalba"
 
-msgid "Argentine Spanish"
-msgstr "Argentinos ispanų"
-
 msgid "Estonian"
 msgstr "Estų kalba"
 
@@ -11879,6 +11796,9 @@ msgstr "Kroatų"
 msgid "Hungarian"
 msgstr "Vengrų kalba"
 
+msgid "Armenian"
+msgstr "Armėnų kalba"
+
 msgid "Indonesian"
 msgstr "Indoneziečių kalba"
 
@@ -11894,9 +11814,6 @@ msgstr "Gruzinų kalba"
 msgid "Ubuntu Georgian Translators"
 msgstr "Ubuntu vertėjai į gruzinų kalbą"
 
-msgid "Kazakh"
-msgstr "Kazachų"
-
 msgid "Khmer"
 msgstr "Khmerų kalba"
 
@@ -11909,20 +11826,14 @@ msgstr "Kanadų kalbos vertimo komanda"
 msgid "Korean"
 msgstr "Korėjiečių kalba"
 
-msgid "Kashmiri"
-msgstr "Kašmyro"
-
 msgid "Kurdish"
 msgstr "Kurdų kalba"
 
-msgid "Kurdish (Sorani)"
-msgstr ""
+msgid "Lao"
+msgstr "Laosiečių kalba"
 
 msgid "Lithuanian"
 msgstr "Lietuvių kalba"
-
-msgid "Latvian"
-msgstr "Latvių"
 
 msgid "Maithili"
 msgstr "Maitilių"
@@ -11941,6 +11852,9 @@ msgstr "Mongolų kalba"
 
 msgid "Marathi"
 msgstr "Maratų"
+
+msgid "Malay"
+msgstr "Malajiečių"
 
 msgid "Burmese"
 msgstr "Birmiečių"
@@ -11984,9 +11898,6 @@ msgstr "Rumunų kalba"
 msgid "Russian"
 msgstr "Rusų kalba"
 
-msgid "Sindhi"
-msgstr "Sindų"
-
 msgid "Slovak"
 msgstr "Slovakų kalba"
 
@@ -12020,22 +11931,11 @@ msgstr "Telugu kalba"
 msgid "Thai"
 msgstr "Tajų kalba"
 
-msgid "Tatar"
-msgstr "Totorių"
-
 msgid "Ukranian"
 msgstr "Ukrainiečių"
 
 msgid "Urdu"
 msgstr "Urdu kalba"
-
-msgid "Uzbek"
-msgstr "Uzbekų"
-
-#. Translators: This is a person's name. For most languages we recommend
-#. not translating it.
-msgid "Akmal Khushvakov"
-msgstr ""
 
 msgid "Vietnamese"
 msgstr "Vietnamiečių kalba"
@@ -12051,15 +11951,6 @@ msgstr "Tradicinė kinų kalba"
 
 msgid "Amharic"
 msgstr "Amharų kalba"
-
-msgid "Armenian"
-msgstr "Armėnų kalba"
-
-msgid "Lao"
-msgstr "Laosiečių kalba"
-
-msgid "Malay"
-msgstr "Malajiečių"
 
 msgid "Turkish"
 msgstr "Turkų kalba"
@@ -12799,7 +12690,7 @@ msgid ""
 msgstr "Pasirinkta 'Rankinė' naršyklės komanda, tačiau komanda nenustatyta."
 
 msgid "Unable to open URL: the 'Manual' browser command seems invalid."
-msgstr "Nepavyko atverti URL: „Manual“ naršyklės komanda netinkama"
+msgstr ""
 
 msgid "No message"
 msgstr "Žinutės nėra"
@@ -14781,33 +14672,34 @@ msgstr ""
 
 #. Alerts
 msgid "Chatroom alerts"
-msgstr "Pokalbių kambarių įspėjimai"
+msgstr ""
 
 msgid "Chatroom message alerts _only where someone says your username"
-msgstr "Pokalbių kambarių įspėjimai, _tik tada kai minimas jūsų vardas"
+msgstr ""
 
 #. Launcher integration
 msgid "Launcher Icon"
-msgstr "Leistuko piktograma"
+msgstr ""
 
 msgid "_Disable launcher integration"
-msgstr "_Išjungti leistuko integravimą"
+msgstr ""
 
 msgid "Show number of unread _messages on launcher icon"
-msgstr "Leistuko piktogramoje rodyti neskaitytų _pranešimų skaičių"
+msgstr ""
 
+#, fuzzy
 msgid "Show number of unread co_nversations on launcher icon"
-msgstr "Leistuko _piktogramoje rodyti neskaitytų pranešimų skaičių"
+msgstr "Pokalbių skaičius langui"
 
 #. Messaging menu integration
 msgid "Messaging Menu"
-msgstr "Pranešimų meniu"
+msgstr ""
 
 msgid "Show number of _unread messages for conversations in messaging menu"
-msgstr "Pranešimų meniu rodyti _neskaitytų pranešimų skaičių"
+msgstr ""
 
 msgid "Show _elapsed time for unread conversations in messaging menu"
-msgstr "Pranešimų meniu rodyti kiek _laiko jau yra neskaitytų pranešimų"
+msgstr ""
 
 #. *< type
 #. *< ui_requirement
@@ -14816,17 +14708,17 @@ msgstr "Pranešimų meniu rodyti kiek _laiko jau yra neskaitytų pranešimų"
 #. *< priority
 #. *< id
 msgid "Unity Integration"
-msgstr "Unity integravimas"
+msgstr ""
 
 #. *< name
 #. *< version
 #. *  summary
 msgid "Provides integration with Unity."
-msgstr "Suteikia Unity integravimą."
+msgstr ""
 
 #. *  description
 msgid "Provides integration with Unity's messaging menu and launcher."
-msgstr "Suteikia integravimą į Unity pranešimų meniu ir leistuką."
+msgstr ""
 
 msgid "Audio"
 msgstr "Garsas"
