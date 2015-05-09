@@ -21,15 +21,16 @@
 
 #define PLUGIN_ID			"core-plugin_pack-offlinemsg"
 #define PLUGIN_NAME			N_("Offline Message Emulation")
+#define PLUGIN_CATEGORY		N_("Utility")
 #define PLUGIN_STATIC_NAME	offlinemsg
 #define PLUGIN_SUMMARY		N_("Save messages sent to an offline user as pounce.")
 #define PLUGIN_DESCRIPTION	N_("Save messages sent to an offline user as pounce.")
-#define PLUGIN_AUTHOR		"Sadrul H Chowdhury <sadrul@users.sourceforge.net>"
+#define PLUGIN_AUTHORS		{"Sadrul H Chowdhury <sadrul@users.sourceforge.net>", NULL}
 
 /* Purple headers */
 #include <version.h>
 
-#include <blist.h>
+#include <buddylist.h>
 #include <conversation.h>
 #include <core.h>
 #include <debug.h>
@@ -67,9 +68,9 @@ discard_data(OfflineMsg *offline)
 static void
 cancel_poune(OfflineMsg *offline)
 {
-	purple_conversation_set_data(offline->conv, "plugin_pack:offlinemsg",
+	g_object_set_data(G_OBJECT(offline->conv), "plugin_pack:offlinemsg",
 				GINT_TO_POINTER(OFFLINE_MSG_NO));
-	purple_conv_im_send_with_flags(PURPLE_CONV_IM(offline->conv), offline->message, 0);
+	purple_conversation_send_with_flags(offline->conv, offline->message, 0);
 	discard_data(offline);
 }
 
@@ -80,6 +81,7 @@ record_pounce(OfflineMsg *offline)
 	PurplePounceEvent event;
 	PurplePounceOption option;
 	PurpleConversation *conv;
+	char *temp;
 
 	event = PURPLE_POUNCE_SIGNON;
 	option = PURPLE_POUNCE_OPTION_NONE;
@@ -88,36 +90,43 @@ record_pounce(OfflineMsg *offline)
 					event, option);
 
 	purple_pounce_action_set_enabled(pounce, "send-message", TRUE);
-	purple_pounce_action_set_attribute(pounce, "send-message", "message", offline->message);
+
+	temp = g_strdup_printf("(%s) %s", _("Offline message"),
+			offline->message);
+	purple_pounce_action_set_attribute(pounce, "send-message", "message",
+			temp);
+	g_free(temp);
 
 	conv = offline->conv;
-	if (!purple_conversation_get_data(conv, "plugin_pack:offlinemsg"))
-		purple_conversation_write(conv, NULL, _("The rest of the messages will be saved "
-							"as pounces. You can edit/delete the pounce from the `Buddy "
-							"Pounce' dialog."),
-							PURPLE_MESSAGE_SYSTEM, time(NULL));
-	purple_conversation_set_data(conv, "plugin_pack:offlinemsg",
+	if (!g_object_get_data(G_OBJECT(conv), "plugin_pack:offlinemsg")) {
+		purple_conversation_write_system_message(conv,
+			_("The rest of the messages will be saved "
+			"as pounces. You can edit/delete the pounce from the `Buddy "
+			"Pounce' dialog."), 0);
+	}
+	g_object_set_data(G_OBJECT(conv), "plugin_pack:offlinemsg",
 				GINT_TO_POINTER(OFFLINE_MSG_YES));
 
-	purple_conv_im_write(PURPLE_CONV_IM(conv), offline->who, offline->message,
-				PURPLE_MESSAGE_SEND, time(NULL));
+	/* TODO: use a reference to a PurpleMessage */
+	purple_conversation_write_message(conv,
+		purple_message_new_outgoing(offline->who, offline->message, 0));
 
 	discard_data(offline);
 }
 
 static void
-sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer handle)
+sending_msg_cb(PurpleAccount *account, PurpleMessage *msg, gpointer handle)
 {
 	PurpleBuddy *buddy;
 	OfflineMsg *offline;
 	PurpleConversation *conv;
 	OfflineMessageSetting setting;
+	const gchar *who = purple_message_get_recipient(msg);
 
-	if (message == NULL || *message == NULL ||
-			**message == '\0')
+	if (purple_message_is_empty(msg))
 		return;
 
-	buddy = purple_find_buddy(account, who);
+	buddy = purple_blist_find_buddy(account, who);
 	if (!buddy)
 		return;
 
@@ -131,13 +140,12 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 		return;
 	}
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-					who, account);
+	conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(who, account));
 
 	if (!conv)
 		return;
 
-	setting = GPOINTER_TO_INT(purple_conversation_get_data(conv, "plugin_pack:offlinemsg"));
+	setting = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conv), "plugin_pack:offlinemsg"));
 	if (setting == OFFLINE_MSG_NO)
 		return;
 
@@ -145,8 +153,8 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 	offline->conv = conv;
 	offline->account = account;
 	offline->who = g_strdup(who);
-	offline->message = *message;
-	*message = NULL;
+	offline->message = g_strdup(purple_message_get_contents(msg));
+	purple_message_set_contents(msg, NULL);
 
 	if (purple_prefs_get_bool(PREF_ALWAYS) || setting == OFFLINE_MSG_YES)
 		record_pounce(offline);
@@ -159,27 +167,12 @@ sending_msg_cb(PurpleAccount *account, const char *who, char **message, gpointer
 
 		purple_request_action(handle, _("Offline Message"), ask,
 					_("You can edit/delete the pounce from the `Buddy Pounces' dialog"),
-					0,
-					offline->account, offline->who, offline->conv,
+					0, purple_request_cpar_from_conversation(offline->conv),
 					offline, 2,
 					_("Yes"), record_pounce,
 					_("No"), cancel_poune);
 		g_free(ask);
 	}
-}
-
-static gboolean
-plugin_load(PurplePlugin *plugin)
-{
-	purple_signal_connect_priority(purple_conversations_get_handle(), "sending-im-msg",
-					plugin, PURPLE_CALLBACK(sending_msg_cb), plugin, PURPLE_SIGNAL_PRIORITY_HIGHEST);
-	return TRUE;
-}
-
-static gboolean
-plugin_unload(PurplePlugin *plugin)
-{
-	return TRUE;
 }
 
 static PurplePluginPrefFrame *
@@ -200,58 +193,41 @@ get_plugin_pref_frame(PurplePlugin *plugin)
 	return frame;
 }
 
-static PurplePluginUiInfo prefs_info = {
-	get_plugin_pref_frame,
-	0,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static PurplePluginInfo info =
+static PurplePluginInfo *
+plugin_query(GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,			/* Magic				*/
-	PURPLE_MAJOR_VERSION,			/* Purple Major Version	*/
-	PURPLE_MINOR_VERSION,			/* Purple Minor Version	*/
-	PURPLE_PLUGIN_STANDARD,			/* plugin type			*/
-	NULL,					/* ui requirement		*/
-	0,					/* flags				*/
-	NULL,					/* dependencies			*/
-	PURPLE_PRIORITY_DEFAULT,			/* priority				*/
+	const gchar * const authors[] = PLUGIN_AUTHORS;
 
-	PLUGIN_ID,				/* plugin id			*/
-	PLUGIN_NAME,				/* name					*/
-	DISPLAY_VERSION,			/* version				*/
-	PLUGIN_SUMMARY,				/* summary				*/
-	PLUGIN_DESCRIPTION,			/* description			*/
-	PLUGIN_AUTHOR,				/* author				*/
-	PURPLE_WEBSITE,				/* website				*/
+	return purple_plugin_info_new(
+		"id",             PLUGIN_ID,
+		"name",           PLUGIN_NAME,
+		"version",        DISPLAY_VERSION,
+		"category",       PLUGIN_CATEGORY,
+		"summary",        PLUGIN_SUMMARY,
+		"description",    PLUGIN_DESCRIPTION,
+		"authors",        authors,
+		"website",        PURPLE_WEBSITE,
+		"abi-version",    PURPLE_ABI_VERSION,
+		"pref-frame-cb",  get_plugin_pref_frame,
+		NULL
+	);
+}
 
-	plugin_load,				/* load					*/
-	plugin_unload,				/* unload				*/
-	NULL,					/* destroy				*/
-
-	NULL,					/* ui_info				*/
-	NULL,					/* extra_info			*/
-	&prefs_info,				/* prefs_info			*/
-	NULL,					/* actions				*/
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_prefs_add_none(PREF_PREFIX);
 	purple_prefs_add_bool(PREF_ALWAYS, FALSE);
+
+	purple_signal_connect_priority(purple_conversations_get_handle(), "sending-im-msg",
+					plugin, PURPLE_CALLBACK(sending_msg_cb), plugin, PURPLE_SIGNAL_PRIORITY_HIGHEST);
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(PLUGIN_STATIC_NAME, init_plugin, info)
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(PLUGIN_STATIC_NAME, plugin_query, plugin_load, plugin_unload);

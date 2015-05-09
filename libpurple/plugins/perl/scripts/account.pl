@@ -27,13 +27,44 @@ use Purple;
 
 	# We will create these on load then destroy them on unload
 	my $TEST_NAME	 	= "perlTestName";
-	my $PROTOCOL_ID 	= "prpl-aim";
+	my $PROTOCOL_ID 	= "aim";
 
 
 sub plugin_init {
 	return %PLUGIN_INFO;
 }
 
+sub set_password_cb
+{
+	my $account = shift;
+	my $error = shift;
+	my $data = shift;
+
+	if ($error) {
+		Purple::Debug::warning($MODULE_NAME, "Failed to set password " .
+			"for $account\n");
+		return;
+	}
+
+	Purple::Debug::misc($MODULE_NAME, "Password for $account was set\n");
+}
+
+sub get_password_cb
+{
+	my $account = shift;
+	my $password = shift;
+	my $error = shift;
+	my $data = shift;
+
+	if ($error) {
+		Purple::Debug::warning($MODULE_NAME, "Failed to get password for $account\n");
+		return;
+	}
+
+	Purple::Debug::misc($MODULE_NAME, "Got password for $account\n");
+
+	$account->set_password($password, \&set_password_cb);
+}
 
 # This is the sub defined in %PLUGIN_INFO to be called when the plugin is loaded
 #	Note: The plugin has a reference to itself on top of the argument stack.
@@ -100,6 +131,8 @@ sub plugin_load {
 
 	$account->set_status("available", TRUE);
 	$account->connect();
+
+	$account->get_password(\&get_password_cb);
 
 	print "\n\n";
 	Purple::Debug::info($MODULE_NAME, "plugin_load() - Testing $MODULE_NAME Completed.\n");

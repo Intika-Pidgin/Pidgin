@@ -93,7 +93,7 @@ extern void boot_DynaLoader _((pTHX_ CV * cv)); /* perl is so wacky */
 #endif
 #include "internal.h"
 #include "debug.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "signals.h"
 #include "version.h"
 
@@ -106,11 +106,22 @@ extern void boot_DynaLoader _((pTHX_ CV * cv)); /* perl is so wacky */
 
 PerlInterpreter *my_perl = NULL;
 
+struct _PurplePerlInfoStrings
+{
+	char *name;
+	char *id;
+	char *homepage;
+	char *author;
+	char *summary;
+	char *description;
+	char *version;
+};
+
 static PurplePluginUiInfo ui_info =
 {
 	purple_perl_get_plugin_frame,
-	0,   /* page_num (Reserved) */
-	NULL, /* frame (Reserved)    */
+	NULL,
+
 	/* Padding */
 	NULL,
 	NULL,
@@ -125,6 +136,21 @@ static PurpleGtkPluginUiInfo gtk_ui_info =
 	0 /* page_num (Reserved) */
 };
 #endif
+
+static void perl_infostrings_free(PurplePerlInfoStrings *info_strings)
+{
+	if (info_strings == NULL)
+		return;
+
+	g_free(info_strings->name);
+	g_free(info_strings->id);
+	g_free(info_strings->homepage);
+	g_free(info_strings->author);
+	g_free(info_strings->summary);
+	g_free(info_strings->description);
+	g_free(info_strings->version);
+	g_free(info_strings);
+}
 
 static void
 #ifdef OLD_PERL
@@ -353,6 +379,7 @@ probe_perl_plugin(PurplePlugin *plugin)
 
 			info = g_new0(PurplePluginInfo, 1);
 			gps  = g_new0(PurplePerlScript, 1);
+			gps->info_strings = g_new0(PurplePerlInfoStrings, 1);
 
 			info->magic = PURPLE_PLUGIN_MAGIC;
 			info->major_version = PURPLE_MAJOR_VERSION;
@@ -372,9 +399,9 @@ probe_perl_plugin(PurplePlugin *plugin)
 
 			/* We know this one exists. */
 			key = hv_fetch(plugin_info, "name", strlen("name"), 0);
-			info->name = g_strdup(SvPVutf8_nolen(*key));
+			info->name = gps->info_strings->name = g_strdup(SvPVutf8_nolen(*key));
 			/* Set id here in case we don't find one later. */
-			info->id = g_strdup(info->name);
+			info->id = gps->info_strings->id = g_strdup(info->name);
 
 #ifdef PURPLE_GTKPERL
 			if ((key = hv_fetch(plugin_info, "GTK_UI",
@@ -384,23 +411,23 @@ probe_perl_plugin(PurplePlugin *plugin)
 
 			if ((key = hv_fetch(plugin_info, "url",
 			                    strlen("url"), 0)))
-				info->homepage = g_strdup(SvPVutf8_nolen(*key));
+				info->homepage = gps->info_strings->homepage = g_strdup(SvPVutf8_nolen(*key));
 
 			if ((key = hv_fetch(plugin_info, "author",
 			                    strlen("author"), 0)))
-				info->author = g_strdup(SvPVutf8_nolen(*key));
+				info->author = gps->info_strings->author = g_strdup(SvPVutf8_nolen(*key));
 
 			if ((key = hv_fetch(plugin_info, "summary",
 			                    strlen("summary"), 0)))
-				info->summary = g_strdup(SvPVutf8_nolen(*key));
+				info->summary = gps->info_strings->summary = g_strdup(SvPVutf8_nolen(*key));
 
 			if ((key = hv_fetch(plugin_info, "description",
 			                    strlen("description"), 0)))
-				info->description = g_strdup(SvPVutf8_nolen(*key));
+				info->description = gps->info_strings->description = g_strdup(SvPVutf8_nolen(*key));
 
 			if ((key = hv_fetch(plugin_info, "version",
 			                    strlen("version"), 0)))
-				info->version = g_strdup(SvPVutf8_nolen(*key));
+				info->version = gps->info_strings->version = g_strdup(SvPVutf8_nolen(*key));
 
 			/* We know this one exists. */
 			key = hv_fetch(plugin_info, "load", strlen("load"), 0);
@@ -415,8 +442,8 @@ probe_perl_plugin(PurplePlugin *plugin)
 
 			if ((key = hv_fetch(plugin_info, "id",
 			                    strlen("id"), 0))) {
-				g_free(info->id);
-				info->id = g_strdup_printf("perl-%s",
+				g_free(gps->info_strings->id);
+				info->id = gps->info_strings->id = g_strdup_printf("perl-%s",
 				                           SvPVutf8_nolen(*key));
 			}
 
@@ -603,16 +630,11 @@ destroy_perl_plugin(PurplePlugin *plugin)
 	if (plugin->info != NULL) {
 		PurplePerlScript *gps;
 
-		g_free(plugin->info->name);
-		g_free(plugin->info->id);
-		g_free(plugin->info->homepage);
-		g_free(plugin->info->author);
-		g_free(plugin->info->summary);
-		g_free(plugin->info->description);
-		g_free(plugin->info->version);
-
 		gps = (PurplePerlScript *)plugin->info->extra_info;
 		if (gps != NULL) {
+			perl_infostrings_free(gps->info_strings);
+			gps->info_strings = NULL;
+
 			g_free(gps->package);
 			g_free(gps->load_sub);
 			g_free(gps->unload_sub);
@@ -630,69 +652,51 @@ destroy_perl_plugin(PurplePlugin *plugin)
 	}
 }
 
+static PurplePluginLoaderInfo loader_info =
+{
+	probe_perl_plugin,                                /**< probe          */
+	load_perl_plugin,                                 /**< load           */
+	unload_perl_plugin,                               /**< unload         */
+	destroy_perl_plugin,                              /**< destroy        */
+};
+
+static GPluginPluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Christian Hammond <chipx86@gnupdate.org>",
+		NULL
+	};
+
+	return gplugin_plugin_info_new(
+		"id",             PERL_PLUGIN_ID,
+		"name",           N_("Perl Plugin Loader"),
+		"version",        DISPLAY_VERSION,
+		"category",       N_("Loader"),
+		"summary",        N_("Provides support for loading perl plugins."),
+		"description",    N_("Provides support for loading perl plugins."),
+		"authors",        authors,
+		"website",        PURPLE_WEBSITE,
+		"abi-version",    PURPLE_ABI_VERSION,
+		"internal",       TRUE,
+		"load-on-query",  TRUE,
+		NULL
+	);
+}
+
 static gboolean
-plugin_load(PurplePlugin *plugin)
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	return TRUE;
 }
 
 static gboolean
-plugin_unload(PurplePlugin *plugin)
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	perl_end();
 
 	return TRUE;
 }
-
-static PurplePluginLoaderInfo loader_info =
-{
-	NULL,                                             /**< exts           */
-	probe_perl_plugin,                                /**< probe          */
-	load_perl_plugin,                                 /**< load           */
-	unload_perl_plugin,                               /**< unload         */
-	destroy_perl_plugin,                              /**< destroy        */
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_LOADER,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                          /**< priority       */
-
-	PERL_PLUGIN_ID,                                   /**< id             */
-	N_("Perl Plugin Loader"),                         /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	N_("Provides support for loading perl plugins."), /**< summary        */
-	N_("Provides support for loading perl plugins."), /**< description    */
-	"Christian Hammond <chipx86@gnupdate.org>",       /**< author         */
-	PURPLE_WEBSITE,                                   /**< homepage       */
-
-	plugin_load,                                      /**< load           */
-	plugin_unload,                                    /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	&loader_info,                                     /**< extra_info     */
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
 
 static void
 init_plugin(PurplePlugin *plugin)
@@ -719,4 +723,4 @@ my_init(void)
 	g_module_open("perl.so", 0);
 }
 
-PURPLE_INIT_PLUGIN(perl, init_plugin, info)
+PURPLE_PLUGIN_INIT(perl, plugin_query, plugin_load, plugin_unload);
