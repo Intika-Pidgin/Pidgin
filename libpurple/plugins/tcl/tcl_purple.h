@@ -27,8 +27,7 @@
 
 #include "internal.h"
 #include "cmds.h"
-#include "plugin.h"
-#include "value.h"
+#include "plugins.h"
 #include "stringref.h"
 
 struct tcl_signal_handler {
@@ -41,9 +40,9 @@ struct tcl_signal_handler {
 	Tcl_Obj *args;
 	Tcl_Obj *proc;
 
-	PurpleValue *returntype;
+	GType returntype;
 	int nargs;
-	PurpleValue **argtypes;
+	GType *argtypes;
 };
 
 struct tcl_cmd_handler {
@@ -56,7 +55,7 @@ struct tcl_cmd_handler {
 	const char *args;
 	int priority;
 	int flags;
-	const char *prpl_id;
+	const char *protocol_id;
 	Tcl_Obj *proc;
 	const char *helpstr;
 

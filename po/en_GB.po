@@ -1,17 +1,15 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
+# Pidgin British English (en_GB) translations
+# Copyright (C) 2003-2005 Luke Ross <lukeross@sys3175.co.uk>
 #
 # Translators:
-# Philip Hannent <phil@hannent.co.uk>, 2014
-# Philip Hannent <phil@hannent.co.uk>, 2014
+# Phil Hannent <phil@hannent.co.uk>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-11-22 10:22-0800\n"
-"PO-Revision-Date: 2014-11-20 10:22+0000\n"
-"Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
+"POT-Creation-Date: 2014-02-02 10:38-0800\n"
+"PO-Revision-Date: 2014-01-23 10:01+0000\n"
+"Last-Translator: Phil Hannent <phil@hannent.co.uk>\n"
 "Language-Team: English (United Kingdom) (http://www.transifex.com/projects/p/"
 "pidgin/language/en_GB/)\n"
 "Language: en_GB\n"
@@ -1660,6 +1658,7 @@ msgstr "This protocol does not support fetching the public alias."
 msgid "Unknown"
 msgstr "Unknown"
 
+#. Changing this string?  Look in add_purple_buddy_to_groups
 msgid "Buddies"
 msgstr "Buddies"
 
@@ -1771,31 +1770,26 @@ msgstr ""
 "The certificate claims to be from \"%s\" instead. This could mean that you "
 "are not connecting to the service you believe you are."
 
-#. TODO: Find what the handle ought to be
-msgid "Certificate Information"
-msgstr "Certificate Information"
-
-msgid "Unable to find Issuer Certificate"
-msgstr ""
-
 #. Make messages
 #, c-format
 msgid ""
 "Common name: %s\n"
-"\n"
-"Issued By: %s\n"
 "\n"
 "Fingerprint (SHA1): %s\n"
 "\n"
 "Activation date: %s\n"
 "Expiration date: %s\n"
 msgstr ""
+"Common name: %s\n"
+"\n"
+"Fingerprint (SHA1): %s\n"
+"\n"
+"Activation date: %s\n"
+"Expiration date: %s\n"
 
-msgid "(self-signed)"
-msgstr ""
-
-msgid "View Issuer Certificate"
-msgstr ""
+#. TODO: Find what the handle ought to be
+msgid "Certificate Information"
+msgstr "Certificate Information"
 
 #. show error to user
 msgid "Registration Error"
@@ -1870,144 +1864,6 @@ msgid ""
 msgstr ""
 "Please enter the name of the user you wish to invite, along with an optional "
 "invite message."
-
-msgid "Whether the specified command should handle \"aim\" URLs"
-msgstr "Whether the specified command should handle \"aim\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"aim\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"aim\" "
-"URLs."
-
-msgid "The handler for \"aim\" URLs"
-msgstr "The handler for \"aim\" URLs"
-
-msgid "The command used to handle \"aim\" URLs, if enabled."
-msgstr "The command used to handle \"aim\" URLs, if enabled."
-
-msgid "Run the command in a terminal"
-msgstr "Run the command in a terminal"
-
-msgid ""
-"True if the command used to handle this type of URL should be run in a "
-"terminal."
-msgstr ""
-"True if the command used to handle this type of URL should be run in a "
-"terminal."
-
-msgid "Whether the specified command should handle \"gg\" URLs"
-msgstr "Whether the specified command should handle \"gg\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"gg\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"gg\" "
-"URLs."
-
-msgid "The handler for \"gg\" URLs"
-msgstr "The handler for \"gg\" URLs"
-
-msgid "The command used to handle \"gg\" URLs, if enabled."
-msgstr "The command used to handle \"gg\" URLs, if enabled."
-
-msgid "Whether the specified command should handle \"icq\" URLs"
-msgstr "Whether the specified command should handle \"icq\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"icq\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"icq\" "
-"URLs."
-
-msgid "The handler for \"icq\" URLs"
-msgstr "The handler for \"icq\" URLs"
-
-msgid "The command used to handle \"icq\" URLs, if enabled."
-msgstr "The command used to handle \"icq\" URLs, if enabled."
-
-msgid "Whether the specified command should handle \"irc\" URLs"
-msgstr "Whether the specified command should handle \"irc\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"irc\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"irc\" "
-"URLs."
-
-msgid "The handler for \"irc\" URLs"
-msgstr "The handler for \"irc\" URLs"
-
-msgid "The command used to handle \"irc\" URLs, if enabled."
-msgstr "The command used to handle \"irc\" URLs, if enabled."
-
-msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr "Whether the specified command should handle \"msnim\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-
-msgid "The handler for \"msnim\" URLs"
-msgstr "The handler for \"msnim\" URLs"
-
-msgid "The command used to handle \"msnim\" URLs, if enabled."
-msgstr "The command used to handle \"msnim\" URLs, if enabled."
-
-msgid "Whether the specified command should handle \"sip\" URLs"
-msgstr "Whether the specified command should handle \"sip\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"sip\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"sip\" "
-"URLs."
-
-msgid "The handler for \"sip\" URLs"
-msgstr "The handler for \"sip\" URLs"
-
-msgid "The command used to handle \"sip\" URLs, if enabled."
-msgstr "The command used to handle \"sip\" URLs, if enabled."
-
-msgid "Whether the specified command should handle \"xmpp\" URLs"
-msgstr "Whether the specified command should handle \"xmpp\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"xmpp\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"xmpp\" "
-"URLs."
-
-msgid "The handler for \"xmpp\" URLs"
-msgstr "The handler for \"xmpp\" URLs"
-
-msgid "The command used to handle \"xmpp\" URLs, if enabled."
-msgstr "The command used to handle \"xmpp\" URLs, if enabled."
-
-msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr "Whether the specified command should handle \"ymsgr\" URLs"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-msgstr ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-
-msgid "The handler for \"ymsgr\" URLs"
-msgstr "The handler for \"ymsgr\" URLs"
-
-msgid "The command used to handle \"ymsgr\" URLs, if enabled."
-msgstr "The command used to handle \"ymsgr\" URLs, if enabled."
 
 #, c-format
 msgid "Failed to get connection: %s"
@@ -2182,6 +2038,144 @@ msgstr "File transfer to %s failed."
 #, c-format
 msgid "File transfer from %s failed."
 msgstr "File transfer from %s failed."
+
+msgid "Whether the specified command should handle \"aim\" URLs"
+msgstr "Whether the specified command should handle \"aim\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"aim\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"aim\" "
+"URLs."
+
+msgid "The handler for \"aim\" URLs"
+msgstr "The handler for \"aim\" URLs"
+
+msgid "The command used to handle \"aim\" URLs, if enabled."
+msgstr "The command used to handle \"aim\" URLs, if enabled."
+
+msgid "Run the command in a terminal"
+msgstr "Run the command in a terminal"
+
+msgid ""
+"True if the command used to handle this type of URL should be run in a "
+"terminal."
+msgstr ""
+"True if the command used to handle this type of URL should be run in a "
+"terminal."
+
+msgid "Whether the specified command should handle \"gg\" URLs"
+msgstr "Whether the specified command should handle \"gg\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"gg\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"gg\" "
+"URLs."
+
+msgid "The handler for \"gg\" URLs"
+msgstr "The handler for \"gg\" URLs"
+
+msgid "The command used to handle \"gg\" URLs, if enabled."
+msgstr "The command used to handle \"gg\" URLs, if enabled."
+
+msgid "Whether the specified command should handle \"icq\" URLs"
+msgstr "Whether the specified command should handle \"icq\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"icq\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"icq\" "
+"URLs."
+
+msgid "The handler for \"icq\" URLs"
+msgstr "The handler for \"icq\" URLs"
+
+msgid "The command used to handle \"icq\" URLs, if enabled."
+msgstr "The command used to handle \"icq\" URLs, if enabled."
+
+msgid "Whether the specified command should handle \"irc\" URLs"
+msgstr "Whether the specified command should handle \"irc\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"irc\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"irc\" "
+"URLs."
+
+msgid "The handler for \"irc\" URLs"
+msgstr "The handler for \"irc\" URLs"
+
+msgid "The command used to handle \"irc\" URLs, if enabled."
+msgstr "The command used to handle \"irc\" URLs, if enabled."
+
+msgid "Whether the specified command should handle \"msnim\" URLs"
+msgstr "Whether the specified command should handle \"msnim\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"msnim\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"msnim\" "
+"URLs."
+
+msgid "The handler for \"msnim\" URLs"
+msgstr "The handler for \"msnim\" URLs"
+
+msgid "The command used to handle \"msnim\" URLs, if enabled."
+msgstr "The command used to handle \"msnim\" URLs, if enabled."
+
+msgid "Whether the specified command should handle \"sip\" URLs"
+msgstr "Whether the specified command should handle \"sip\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"sip\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"sip\" "
+"URLs."
+
+msgid "The handler for \"sip\" URLs"
+msgstr "The handler for \"sip\" URLs"
+
+msgid "The command used to handle \"sip\" URLs, if enabled."
+msgstr "The command used to handle \"sip\" URLs, if enabled."
+
+msgid "Whether the specified command should handle \"xmpp\" URLs"
+msgstr "Whether the specified command should handle \"xmpp\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"xmpp\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"xmpp\" "
+"URLs."
+
+msgid "The handler for \"xmpp\" URLs"
+msgstr "The handler for \"xmpp\" URLs"
+
+msgid "The command used to handle \"xmpp\" URLs, if enabled."
+msgstr "The command used to handle \"xmpp\" URLs, if enabled."
+
+msgid "Whether the specified command should handle \"ymsgr\" URLs"
+msgstr "Whether the specified command should handle \"ymsgr\" URLs"
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"ymsgr\" "
+"URLs."
+msgstr ""
+"True if the command specified in the \"command\" key should handle \"ymsgr\" "
+"URLs."
+
+msgid "The handler for \"ymsgr\" URLs"
+msgstr "The handler for \"ymsgr\" URLs"
+
+msgid "The command used to handle \"ymsgr\" URLs, if enabled."
+msgstr "The command used to handle \"ymsgr\" URLs, if enabled."
 
 msgid "<b><font color=\"red\">The logger has no read function</font></b>"
 msgstr "<b><font color=\"red\">The logger has no read function</font></b>"
@@ -2855,56 +2849,6 @@ msgstr "Simple Plug-in"
 msgid "Tests to see that most things are working."
 msgstr "Tests to see that most things are working."
 
-msgid "TLS/SSL Versions"
-msgstr ""
-
-msgid "Minimum Version"
-msgstr ""
-
-msgid "Maximum Version"
-msgstr ""
-
-msgid "SSL 2"
-msgstr ""
-
-msgid "SSL 3"
-msgstr ""
-
-msgid "TLS 1.0"
-msgstr ""
-
-msgid "TLS 1.1"
-msgstr ""
-
-msgid "TLS 1.2"
-msgstr ""
-
-msgid "TLS 1.3"
-msgstr ""
-
-#. TODO: look into how to do this for older versions?
-msgid "Not Supported for NSS < 3.14"
-msgstr ""
-
-msgid "Ciphers"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "NSS Preferences"
-msgstr ""
-
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Configure Ciphers and other Settings for the NSS SSL/TLS Plugin"
-msgstr ""
-
 #. Scheme name
 msgid "X.509 Certificates"
 msgstr "X.509 Certificates"
@@ -3239,14 +3183,14 @@ msgstr "Add to chat"
 msgid "Chat _name:"
 msgstr "Chat _name:"
 
+#, c-format
+msgid "Unable to resolve hostname '%s': %s"
+msgstr "Unable to resolve hostname '%s': %s"
+
 #. 1. connect to server
 #. connect to the server
 msgid "Connecting"
 msgstr "Connecting"
-
-#, c-format
-msgid "Unable to resolve hostname: %s"
-msgstr ""
 
 msgid "Chat error"
 msgstr "Chat error"
@@ -5899,9 +5843,10 @@ msgstr "The MSN servers are going down temporarily"
 msgid "Unable to authenticate: %s"
 msgstr "Unable to authenticate: %s"
 
-#, c-format
-msgid "Your MSN buddy list is temporarily unavailable: %s"
+msgid ""
+"Your MSN buddy list is temporarily unavailable. Please wait and try again."
 msgstr ""
+"Your MSN buddy list is temporarily unavailable. Please wait and try again."
 
 msgid "Handshaking"
 msgstr "Handshaking"
@@ -9860,9 +9805,6 @@ msgstr "Presence Settings"
 msgid "Start Doodling"
 msgstr "Start Doodling"
 
-msgid "Activate which ID?"
-msgstr ""
-
 msgid "Select the ID you want to activate"
 msgstr "Select the ID you want to activate"
 
@@ -10419,22 +10361,6 @@ msgid ""
 msgstr ""
 "An error was encountered reading your %s.  The file has not been loaded, and "
 "the old file has been renamed to %s~."
-
-msgid "Instant Messaging Client"
-msgstr ""
-
-msgid ""
-"Pidgin is a chat program which lets you log in to accounts on multiple chat "
-"networks simultaneously."
-msgstr ""
-
-msgid ""
-"This means that you can be chatting with friends on MSN, talking to a friend "
-"on Google Talk, and sitting in a Yahoo chat room all at the same time."
-msgstr ""
-
-msgid "The buddy list showing friends on different networks."
-msgstr ""
 
 msgid "Pidgin Internet Messenger"
 msgstr "Pidgin Internet Messenger"
@@ -11659,9 +11585,6 @@ msgstr "Bengali"
 msgid "Bengali-India"
 msgstr "Bengali-India"
 
-msgid "Bodo"
-msgstr ""
-
 msgid "Bosnian"
 msgstr "Bosnian"
 
@@ -11700,9 +11623,6 @@ msgstr "Esperanto"
 
 msgid "Spanish"
 msgstr "Spanish"
-
-msgid "Argentine Spanish"
-msgstr ""
 
 msgid "Estonian"
 msgstr "Estonian"
@@ -11743,6 +11663,9 @@ msgstr "Croatian"
 msgid "Hungarian"
 msgstr "Hungarian"
 
+msgid "Armenian"
+msgstr "Armenian"
+
 msgid "Indonesian"
 msgstr "Indonesian"
 
@@ -11758,9 +11681,6 @@ msgstr "Georgian"
 msgid "Ubuntu Georgian Translators"
 msgstr "Ubuntu Georgian Translators"
 
-msgid "Kazakh"
-msgstr ""
-
 msgid "Khmer"
 msgstr "Khmer"
 
@@ -11773,20 +11693,14 @@ msgstr "Kannada Translation team"
 msgid "Korean"
 msgstr "Korean"
 
-msgid "Kashmiri"
-msgstr ""
-
 msgid "Kurdish"
 msgstr "Kurdish"
 
-msgid "Kurdish (Sorani)"
-msgstr ""
+msgid "Lao"
+msgstr "Lao"
 
 msgid "Lithuanian"
 msgstr "Lithuanian"
-
-msgid "Latvian"
-msgstr ""
 
 msgid "Maithili"
 msgstr "Maithili"
@@ -11805,6 +11719,9 @@ msgstr "Mongolian"
 
 msgid "Marathi"
 msgstr "Marathi"
+
+msgid "Malay"
+msgstr "Malay"
 
 msgid "Burmese"
 msgstr "Burmese"
@@ -11848,9 +11765,6 @@ msgstr "Romanian"
 msgid "Russian"
 msgstr "Russian"
 
-msgid "Sindhi"
-msgstr ""
-
 msgid "Slovak"
 msgstr "Slovak"
 
@@ -11884,22 +11798,11 @@ msgstr "Telugu"
 msgid "Thai"
 msgstr "Thai"
 
-msgid "Tatar"
-msgstr ""
-
 msgid "Ukranian"
 msgstr "Ukranian"
 
 msgid "Urdu"
 msgstr "Urdu"
-
-msgid "Uzbek"
-msgstr ""
-
-#. Translators: This is a person's name. For most languages we recommend
-#. not translating it.
-msgid "Akmal Khushvakov"
-msgstr ""
 
 msgid "Vietnamese"
 msgstr "Vietnamese"
@@ -11915,15 +11818,6 @@ msgstr "Traditional Chinese"
 
 msgid "Amharic"
 msgstr "Amharic"
-
-msgid "Armenian"
-msgstr "Armenian"
-
-msgid "Lao"
-msgstr "Lao"
-
-msgid "Malay"
-msgstr "Malay"
 
 msgid "Turkish"
 msgstr "Turkish"

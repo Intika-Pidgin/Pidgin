@@ -1,8 +1,3 @@
-/**
- * @file backend-fs2.c Farstream backend for media API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -25,6 +20,7 @@
  */
 
 #include "internal.h"
+#include "glibcompat.h"
 
 #include "backend-fs2.h"
 
@@ -87,8 +83,8 @@ static GList *purple_media_backend_fs2_get_local_candidates(
 		const gchar *sess_id, const gchar *participant);
 #if GST_CHECK_VERSION(1,0,0)
 static gboolean purple_media_backend_fs2_set_encryption_parameters (
-	PurpleMediaBackend *self, const gchar *sess_id, const gchar *cipher,
-	const gchar *auth, const gchar *key, gsize key_len);
+		PurpleMediaBackend *self, const gchar *sess_id, const gchar *cipher,
+		const gchar *auth, const gchar *key, gsize key_len);
 static gboolean purple_media_backend_fs2_set_decryption_parameters(
 		PurpleMediaBackend *self, const gchar *sess_id,
 		const gchar *participant, const gchar *cipher,
@@ -194,7 +190,12 @@ enum {
 
 static void
 purple_media_backend_fs2_init(PurpleMediaBackendFs2 *self)
-{}
+{
+#if GLIB_CHECK_VERSION(2, 37, 3)
+	/* silence a warning */
+	(void)purple_media_backend_fs2_get_instance_private;
+#endif
+}
 
 static FsCandidateType
 purple_media_candidate_type_to_fs(PurpleMediaCandidateType type)
@@ -2121,10 +2122,10 @@ create_stream(PurpleMediaBackendFs2 *self,
 	PurpleMediaBackendFs2Session *session;
 	PurpleMediaBackendFs2Stream *stream;
 	FsParticipant *participant;
-	/* check if the prpl has already specified a relay-info
+	/* check if the protocol has already specified a relay-info
 	  we need to do this to allow them to override when using non-standard
 	  TURN modes, like Google f.ex. */
-	gboolean got_turn_from_prpl = FALSE;
+	gboolean got_turn_from_protocol = FALSE;
 	guint i;
 
 	session = get_session(self, sess_id);
@@ -2164,7 +2165,7 @@ create_stream(PurpleMediaBackendFs2 *self,
 
 	for (i = 0 ; i < num_params ; i++) {
 		if (purple_strequal(params[i].name, "relay-info")) {
-			got_turn_from_prpl = TRUE;
+			got_turn_from_protocol = TRUE;
 			break;
 		}
 	}
@@ -2188,7 +2189,7 @@ create_stream(PurpleMediaBackendFs2 *self,
 		++_num_params;
 	}
 
-	if (turn_ip && !strcmp("nice", transmitter) && !got_turn_from_prpl) {
+	if (turn_ip && !strcmp("nice", transmitter) && !got_turn_from_protocol) {
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 		GValueArray *relay_info = g_value_array_new(0);
 G_GNUC_END_IGNORE_DEPRECATIONS

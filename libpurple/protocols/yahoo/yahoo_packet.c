@@ -24,7 +24,7 @@
 #include "internal.h"
 #include "debug.h"
 
-#include "libymsg.h"
+#include "ymsg.h"
 #include "yahoo_packet.h"
 
 struct yahoo_packet *yahoo_packet_new(enum yahoo_service service, enum yahoo_status status, int id)
@@ -208,7 +208,7 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 	/*
 	 * Originally this function used g_slist_append().  I changed
 	 * it to use g_slist_prepend() for improved performance.
-	 * Ideally the Yahoo! PRPL code would be indifferent to the
+	 * Ideally the Yahoo! protocol code would be indifferent to the
 	 * order of the key/value pairs, but I don't know if this is
 	 * the case for all incoming messages.  To be on the safe side
 	 * we reverse the list.
@@ -287,8 +287,9 @@ yahoo_packet_send_can_write(gpointer data, gint source, PurpleInputCondition con
 {
 	YahooData *yd = data;
 	int ret, writelen;
+	const gchar *output = NULL;
 
-	writelen = purple_circ_buffer_get_max_read(yd->txbuf);
+	writelen = purple_circular_buffer_get_max_read(yd->txbuf);
 
 	if (writelen == 0) {
 		purple_input_remove(yd->txhandler);
@@ -296,18 +297,20 @@ yahoo_packet_send_can_write(gpointer data, gint source, PurpleInputCondition con
 		return;
 	}
 
-	ret = write(yd->fd, yd->txbuf->outptr, writelen);
+	output = purple_circular_buffer_get_output(yd->txbuf);
+
+	ret = write(yd->fd, output, writelen);
 
 	if (ret < 0 && errno == EAGAIN)
 		return;
 	else if (ret < 0) {
 		/* TODO: what to do here - do we really have to disconnect? */
-		purple_connection_error_reason(yd->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		purple_connection_error(yd->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 		                               _("Write Error"));
 		return;
 	}
 
-	purple_circ_buffer_mark_read(yd->txbuf, ret);
+	purple_circular_buffer_mark_read(yd->txbuf, ret);
 }
 
 
@@ -374,7 +377,7 @@ int yahoo_packet_send(struct yahoo_packet *pkt, YahooData *yd)
 		if (yd->txhandler == 0)
 			yd->txhandler = purple_input_add(yd->fd, PURPLE_INPUT_WRITE,
 				yahoo_packet_send_can_write, yd);
-		purple_circ_buffer_append(yd->txbuf, data + ret, len - ret);
+		purple_circular_buffer_append(yd->txbuf, data + ret, len - ret);
 	}
 
 	g_free(data);
