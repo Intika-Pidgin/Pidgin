@@ -46,7 +46,7 @@ typedef struct _JabberPresence JabberPresence;
 
 struct _JabberPresenceChatInfo {
 	GSList *codes;
-	xmlnode *item;
+	PurpleXmlNode *item;
 };
 
 struct _JabberPresence {
@@ -59,7 +59,7 @@ struct _JabberPresence {
 	JabberBuddy *jb;
 	JabberChat *chat;
 	JabberPresenceChatInfo chat_info;
-	xmlnode *caps; /* TODO: Temporary, see presence.c:parse_caps */
+	PurpleXmlNode *caps; /* TODO: Temporary, see presence.c:parse_caps */
 
 	JabberBuddyState state;
 	gchar *status;
@@ -71,10 +71,11 @@ struct _JabberPresence {
 	gboolean delayed;
 	time_t sent;
 	int idle;
+	gboolean adjust_idle_for_delay;
 };
 
 typedef void (JabberPresenceHandler)(JabberStream *js, JabberPresence *presence,
-                                     xmlnode *child);
+                                     PurpleXmlNode *child);
 void jabber_presence_register_handler(const char *node, const char *xmlns,
                                       JabberPresenceHandler *handler);
 
@@ -92,9 +93,8 @@ void jabber_set_status(PurpleAccount *account, PurpleStatus *status);
  */
 void jabber_presence_send(JabberStream *js, gboolean force);
 
-xmlnode *jabber_presence_create(JabberBuddyState state, const char *msg, int priority); /* DEPRECATED */
-xmlnode *jabber_presence_create_js(JabberStream *js, JabberBuddyState state, const char *msg, int priority);
-void jabber_presence_parse(JabberStream *js, xmlnode *packet);
+PurpleXmlNode *jabber_presence_create_js(JabberStream *js, JabberBuddyState state, const char *msg, int priority);
+void jabber_presence_parse(JabberStream *js, PurpleXmlNode *packet);
 void jabber_presence_subscription_set(JabberStream *js, const char *who,
 		const char *type);
 void jabber_presence_fake_to_self(JabberStream *js, PurpleStatus *status);

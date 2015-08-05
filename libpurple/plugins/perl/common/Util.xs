@@ -1,31 +1,5 @@
 #include "module.h"
 
-static void
-purple_perl_util_url_cb(PurpleUtilFetchUrlData *url_data, void *user_data,
-                        const gchar *url_text, size_t size,
-                        const gchar *error_message)
-{
-	SV *sv = (SV *)user_data;
-	dSP;
-	ENTER;
-	SAVETMPS;
-	PUSHMARK(SP);
-
-	XPUSHs(sv_2mortal(newSVpvn(url_text, size)));
-	PUTBACK;
-
-	call_sv(sv, G_EVAL | G_SCALAR);
-	SPAGAIN;
-
-	/* XXX Make sure this destroys it correctly and that we don't want
-	 * something like sv_2mortal(sv) or something else here instead. */
-	SvREFCNT_dec(sv);
-
-	PUTBACK;
-	FREETMPS;
-	LEAVE;
-}
-
 static void markup_find_tag_foreach(GQuark key_id, char *data, HV *hv) {
 	const char *key = NULL;
 	key = g_quark_to_string(key_id);
@@ -136,37 +110,6 @@ const char *
 purple_url_encode(str)
 	const char *str
 
- # XXX: this made perl assert()...
- #
- #gboolean
- #purple_url_parse(url, OUTLIST gchar_own *ret_host, OUTLIST int ret_port, OUTLIST gchar_own *ret_path, OUTLIST gchar_own *ret_user, OUTLIST gchar_own *ret_passwd)
- #	const char *url
- #	PROTOTYPE: $
-
-void
-purple_url_parse(url)
-	const char *url
-	PREINIT:
-		char *ret_host;
-		int ret_port;
-		char *ret_path;
-		char *ret_user;
-		char *ret_passwd;
-		gboolean ret;
-	PPCODE:
-		ret = purple_url_parse(url, &ret_host, &ret_port, &ret_path, &ret_user, &ret_passwd);
-		XPUSHs(sv_2mortal(newSViv(ret)));
-		XPUSHs(ret_host ? sv_2mortal(newSVpv(ret_host, 0)) : sv_2mortal(newSV(0)));
-		XPUSHs(sv_2mortal(newSViv(ret_port)));
-		XPUSHs(ret_path ? sv_2mortal(newSVpv(ret_path, 0)) : sv_2mortal(newSV(0)));
-		XPUSHs(ret_user ? sv_2mortal(newSVpv(ret_user, 0)) : sv_2mortal(newSV(0)));
-		XPUSHs(ret_passwd ? sv_2mortal(newSVpv(ret_passwd, 0)) : sv_2mortal(newSV(0)));
-		g_free(ret_host);
-		g_free(ret_path);
-		g_free(ret_user);
-		g_free(ret_passwd);
-
-
 const char *
 purple_user_dir()
 
@@ -201,6 +144,14 @@ purple_utf8_try_convert(str)
 
 gboolean
 purple_ip_address_is_valid(ip)
+	const char* ip
+
+gboolean
+purple_ipv4_address_is_valid(ip)
+	const char* ip
+
+gboolean
+purple_ipv6_address_is_valid(ip)
 	const char* ip
 
 const char*
@@ -453,30 +404,6 @@ purple_markup_unescape_entity(text)
 MODULE = Purple::Util  PACKAGE = Purple::Util  PREFIX = purple_util_
 PROTOTYPES: ENABLE
 
- #XXX: expand...
-void
-purple_util_fetch_url(plugin, url, full, user_agent, http11, cb)
-	Purple::Plugin plugin
-	const char *url
-	gboolean full
-	const char *user_agent
-	gboolean http11
-	SV * cb
-PREINIT:
-	PurpleUtilFetchUrlData *data;
-PPCODE:
-	/* XXX: i don't like this... only plugins can use it... */
-	SV *sv = purple_perl_sv_from_fun(plugin, cb);
-
-	if (sv != NULL) {
-		data = purple_util_fetch_url(url, full, user_agent, http11,
-		                      purple_perl_util_url_cb, sv);
-		XPUSHs(sv_2mortal(purple_perl_bless_object(data, "Purple::Util::FetchUrlData")));
-	} else {
-		purple_debug_warning("perl", "Callback not a valid type, only strings and coderefs allowed in purple_util_fetch_url.\n");
-		XSRETURN_UNDEF;
-	}
-
 void
 purple_util_set_user_dir(dir)
 	const char *dir
@@ -499,14 +426,6 @@ purple_util_format_song_info(title, artist, album, unused)
 	const char* album
 	gpointer unused
 
-const char*
-purple_util_get_image_extension(const char *data, size_t length(data))
-	PROTOTYPE: $
-
-gchar_own*
-purple_util_get_image_filename(const char *image_data, size_t length(image_data))
-	PROTOTYPE: $
-
 Purple::XMLNode
 purple_util_read_xml_from_file(filename, description)
 	const char* filename
@@ -516,4 +435,3 @@ gboolean
 purple_util_write_data_to_file_absolute(filename_full, char *data, gssize length(data))
 	const char* filename_full
 	PROTOTYPE: $$
-

@@ -22,17 +22,12 @@
 #ifndef _YAHOO_FILEXFER_H_
 #define _YAHOO_FILEXFER_H_
 
-#include "ft.h"
+#include "xfer.h"
 
 /**
  * Process ymsg events, particular IMViroments like Doodle
  */
 void yahoo_process_p2pfilexfer( PurpleConnection *gc, struct yahoo_packet *pkt );
-
-/**
- * Process ymsg file receive invites.
- */
-void yahoo_process_filetransfer(PurpleConnection *gc, struct yahoo_packet *pkt);
 
 /**
  * Create a new PurpleXfer
@@ -44,8 +39,6 @@ PurpleXfer *yahoo_new_xfer(PurpleConnection *gc, const char *who);
 
 /**
  * Returns TRUE if the buddy can receive file, FALSE otherwise.
- * Federated users cannot receive files. So this will return FALSE only
- * for them.
  *
  * @param gc The connection
  * @param who The name of the remote user
