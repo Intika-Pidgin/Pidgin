@@ -25,7 +25,7 @@
 #ifndef _YAHOO_FRIEND_H_
 #define _YAHOO_FRIEND_H_
 
-#include "libymsg.h"
+#include "ymsg.h"
 #include "yahoo_packet.h"
 
 typedef enum {
@@ -55,7 +55,6 @@ typedef struct _YahooFriend {
 	gchar *ip;
 	gboolean bicon_sent_request;
 	YahooPresenceVisibility presence;
-	YahooFederation fed;
 	long int version_id;
 	YahooPersonalDetails ypd;
 	YahooP2PStatus p2p_status;

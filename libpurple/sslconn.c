@@ -1,8 +1,3 @@
-/**
- * @file sslconn.c SSL API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -29,6 +24,7 @@
 
 #include "certificate.h"
 #include "debug.h"
+#include "plugins.h"
 #include "request.h"
 #include "sslconn.h"
 
@@ -44,10 +40,10 @@ ssl_init(void)
 	if (_ssl_initialized)
 		return FALSE;
 
-	plugin = purple_plugins_find_with_id("core-ssl");
+	plugin = purple_plugins_find_plugin("core-ssl");
 
-	if (plugin != NULL && !purple_plugin_is_loaded(plugin))
-		purple_plugin_load(plugin);
+	if (plugin && !purple_plugin_is_loaded(plugin))
+		purple_plugin_load(plugin, NULL);
 
 	ops = purple_ssl_get_ops();
 	if ((ops == NULL) || (ops->init == NULL) || (ops->uninit == NULL) ||
@@ -162,10 +158,21 @@ purple_ssl_input_add(PurpleSslConnection *gsc, PurpleSslInputFunction func,
 	g_return_if_fail(func != NULL);
 	g_return_if_fail(purple_ssl_is_supported());
 
+	purple_ssl_input_remove(gsc);
+
 	gsc->recv_cb_data = data;
 	gsc->recv_cb      = func;
 
 	gsc->inpa = purple_input_add(gsc->fd, PURPLE_INPUT_READ, recv_cb, gsc);
+}
+
+void
+purple_ssl_input_remove(PurpleSslConnection *gsc)
+{
+	if (gsc->inpa > 0) {
+		purple_input_remove(gsc->inpa);
+		gsc->inpa = 0;
+	}
 }
 
 const gchar *
@@ -182,15 +189,6 @@ purple_ssl_strerror(PurpleSslErrorType error)
 			purple_debug_warning("sslconn", "Unknown SSL error code %d\n", error);
 			return _("Unknown SSL error");
 	}
-}
-
-PurpleSslConnection *
-purple_ssl_connect_fd(PurpleAccount *account, int fd,
-					PurpleSslInputFunction func,
-					PurpleSslErrorFunction error_func,
-                    void *data)
-{
-    return purple_ssl_connect_with_host_fd(account, fd, func, error_func, NULL, data);
 }
 
 PurpleSslConnection *

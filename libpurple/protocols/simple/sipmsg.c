@@ -23,12 +23,12 @@
 #include "internal.h"
 
 #include "accountopt.h"
-#include "blist.h"
+#include "buddylist.h"
 #include "conversation.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
-#include "plugin.h"
+#include "protocol.h"
+#include "plugins.h"
 #include "util.h"
 #include "version.h"
 

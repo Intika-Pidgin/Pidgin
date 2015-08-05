@@ -30,10 +30,6 @@
 
 G_BEGIN_DECLS
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define JINGLE "urn:xmpp:jingle:1"
 #define JINGLE_ERROR "urn:xmpp:jingle:errors:0"
 #define JINGLE_APP_FT "urn:xmpp:jingle:apps:file-transfer:1"
@@ -74,7 +70,7 @@ JingleActionType jingle_get_action_type(const gchar *action);
 GType jingle_get_type(const gchar *type);
 
 void jingle_parse(JabberStream *js, const char *from, JabberIqType type,
-                  const char *id, xmlnode *child);
+                  const char *id, PurpleXmlNode *child);
 
 void jingle_terminate_sessions(JabberStream *js);
 
@@ -84,10 +80,6 @@ void jingle_terminate_sessions(JabberStream *js);
 GParameter *jingle_get_params(JabberStream *js, const gchar *relay_ip,
 	guint relay_udp, guint relay_tcp, guint relay_ssltcp,
     const gchar *relay_username, const gchar *relay_password, guint *num_params);
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 G_END_DECLS

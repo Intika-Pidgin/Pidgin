@@ -26,11 +26,11 @@
 
 #include "account.h"
 #include "accountopt.h"
-#include "blist.h"
+#include "buddylist.h"
 #include "debug.h"
 #include "util.h"
 #include "version.h"
-#include "libymsg.h"
+#include "ymsg.h"
 #include "yahoo_packet.h"
 
 void yahoo_update_alias(PurpleConnection *gc, const char *who, const char *alias);

@@ -54,8 +54,8 @@ struct _JingleIceUdpClass
 {
 	JingleTransportClass parent_class;     /**< The parent class. */
 
-	xmlnode *(*to_xml) (JingleTransport *transport, xmlnode *content, JingleActionType action);
-	JingleTransport *(*parse) (xmlnode *transport);
+	PurpleXmlNode *(*to_xml) (JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
+	JingleTransport *(*parse) (PurpleXmlNode *transport);
 };
 
 /** The iceudp class's private data */
@@ -67,10 +67,10 @@ struct _JingleIceUdp
 
 struct _JingleIceUdpCandidate
 {
+	gchar *id;
 	guint component;
 	gchar *foundation;
 	guint generation;
-	gchar *id;
 	gchar *ip;
 	guint network;
 	guint port;
@@ -87,10 +87,6 @@ struct _JingleIceUdpCandidate
 				 * about this candidate */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 GType jingle_iceudp_candidate_get_type(void);
 
 /**
@@ -98,19 +94,18 @@ GType jingle_iceudp_candidate_get_type(void);
  *
  * @return The iceudp class's GType.
  */
-GType jingle_iceudp_get_type(void);
+G_MODULE_EXPORT GType jingle_iceudp_get_type(void);
 
-JingleIceUdpCandidate *jingle_iceudp_candidate_new(guint component,
-		const gchar *foundation, guint generation, const gchar *id,
+/**
+ * Registers the JingleIceUdp type in the type system.
+ */
+void jingle_iceudp_register_type(PurplePlugin *plugin);
+
+JingleIceUdpCandidate *jingle_iceudp_candidate_new(const gchar *id,
+		guint component, const gchar *foundation, guint generation,
 		const gchar *ip, guint network, guint port, guint priority,
 		const gchar *protocol, const gchar *type,
 		const gchar *username, const gchar *password);
-void jingle_iceudp_add_local_candidate(JingleIceUdp *iceudp, JingleIceUdpCandidate *candidate);
-GList *jingle_iceudp_get_remote_candidates(JingleIceUdp *iceudp);
-
-#ifdef __cplusplus
-}
-#endif
 
 G_END_DECLS
 

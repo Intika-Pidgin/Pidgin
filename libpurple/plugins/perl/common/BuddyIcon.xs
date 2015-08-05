@@ -7,7 +7,7 @@ Purple::Buddy::Icon
 purple_buddy_icon_ref(icon)
 	Purple::Buddy::Icon icon
 
-Purple::Buddy::Icon
+void
 purple_buddy_icon_unref(icon)
 	Purple::Buddy::Icon icon
 
@@ -40,12 +40,12 @@ purple_buddy_icon_get_extension(icon)
 	Purple::Buddy::Icon icon
 
 void
-purple_buddy_icon_get_scale_size(spec, width, height)
+purple_buddy_icon_spec_get_scaled_size(spec, width, height)
 	Purple::Buddy::Icon::Spec spec
 	int *width
 	int *height
 
-gchar_own *
+const gchar *
 purple_buddy_icon_get_full_path(icon);
 	Purple::Buddy::Icon icon
 
