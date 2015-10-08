@@ -22,7 +22,7 @@
  */
 
 #include "internal.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "util.h"
 #include "debug.h"
 
@@ -46,9 +46,10 @@ YahooFriend *yahoo_friend_find(PurpleConnection *gc, const char *name)
 	const char *norm;
 
 	g_return_val_if_fail(gc != NULL, NULL);
-	g_return_val_if_fail(gc->proto_data != NULL, NULL);
 
-	yd = gc->proto_data;
+	yd = purple_connection_get_protocol_data(gc);
+	g_return_val_if_fail(yd != NULL, NULL);
+
 	norm = purple_normalize(purple_connection_get_account(gc), name);
 
 	return g_hash_table_lookup(yd->friends, norm);
@@ -61,9 +62,10 @@ YahooFriend *yahoo_friend_find_or_new(PurpleConnection *gc, const char *name)
 	const char *norm;
 
 	g_return_val_if_fail(gc != NULL, NULL);
-	g_return_val_if_fail(gc->proto_data != NULL, NULL);
 
-	yd = gc->proto_data;
+	yd = purple_connection_get_protocol_data(gc);
+	g_return_val_if_fail(yd != NULL, NULL);
+
 	norm = purple_normalize(purple_connection_get_account(gc), name);
 
 	f = g_hash_table_lookup(yd->friends, norm);
@@ -151,7 +153,6 @@ void yahoo_process_presence(PurpleConnection *gc, struct yahoo_packet *pkt)
 	char *temp = NULL;
 	char *who = NULL;
 	int value = 0;
-	YahooFederation fed = YAHOO_FEDERATION_NONE;
 
 	while (l) {
 		struct yahoo_pair *pair = l->data;
@@ -168,9 +169,6 @@ void yahoo_process_presence(PurpleConnection *gc, struct yahoo_packet *pkt)
 			case 31:
 				value = strtol(pair->value, NULL, 10);
 				break;
-			case 241:
-				fed = strtol(pair->value, NULL, 10);
-				break;
 		}
 
 		l = l->next;
@@ -181,23 +179,8 @@ void yahoo_process_presence(PurpleConnection *gc, struct yahoo_packet *pkt)
 		return;
 	}
 
-	switch (fed) {
-		case YAHOO_FEDERATION_MSN:
-			who = g_strconcat("msn/", temp, NULL);
-			break;
-		case YAHOO_FEDERATION_OCS:
-			who = g_strconcat("ocs/", temp, NULL);
-			break;
-		case YAHOO_FEDERATION_IBM:
-			who = g_strconcat("ibm/", temp, NULL);
-			break;
-		case YAHOO_FEDERATION_PBX:
-			who = g_strconcat("pbx/", temp, NULL);
-			break;
-		case YAHOO_FEDERATION_NONE:
-			who = g_strdup(temp);
-			break;
-	}
+	who = g_strdup(temp);
+
 	g_return_if_fail(who != NULL);
 
 	f = yahoo_friend_find(gc, who);
@@ -230,7 +213,7 @@ void yahoo_process_presence(PurpleConnection *gc, struct yahoo_packet *pkt)
 void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 		YahooPresenceVisibility presence)
 {
-	YahooData *yd = gc->proto_data;
+	YahooData *yd = purple_connection_get_protocol_data(gc);
 	struct yahoo_packet *pkt = NULL;
 	YahooFriend *f;
 	const char *thirtyone, *thirteen;
@@ -244,10 +227,7 @@ void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 	if (!f)
 		return;
 
-	if(f->fed != YAHOO_FEDERATION_NONE)
-		temp = name+4;
-	else
-		temp = name;
+	temp = name;
 
 	/* No need to change the value if it is already correct */
 	if (f->presence == presence) {
@@ -273,20 +253,12 @@ void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 		if (f->presence == YAHOO_PRESENCE_PERM_OFFLINE) {
 			pkt = yahoo_packet_new(YAHOO_SERVICE_PRESENCE_PERM,
 					YAHOO_STATUS_AVAILABLE, yd->session_id);
-			if(f->fed)
-				yahoo_packet_hash(pkt, "ssssssiss",
-					1, purple_connection_get_display_name(gc),
-					31, "2", 13, "2",
-					302, "319", 300, "319",
-					7, temp, 241, f->fed,
-					301, "319", 303, "319");
-			else
-				yahoo_packet_hash(pkt, "ssssssss",
-					1, purple_connection_get_display_name(gc),
-					31, "2", 13, "2",
-					302, "319", 300, "319",
-					7, temp,
-					301, "319", 303, "319");
+			yahoo_packet_hash(pkt, "ssssssss",
+				1, purple_connection_get_display_name(gc),
+				31, "2", 13, "2",
+				302, "319", 300, "319",
+				7, temp,
+				301, "319", 303, "319");
 
 			yahoo_packet_send_and_free(pkt, yd);
 		}
@@ -300,20 +272,12 @@ void yahoo_friend_update_presence(PurpleConnection *gc, const char *name,
 		pkt = yahoo_packet_new(service,
 				YAHOO_STATUS_AVAILABLE, yd->session_id);
 
-		if(f->fed)
-			yahoo_packet_hash(pkt, "ssssssiss",
-				1, purple_connection_get_display_name(gc),
-				31, thirtyone, 13, thirteen,
-				302, "319", 300, "319",
-				7, temp, 241, f->fed,
-				301, "319", 303, "319");
-		else
-			yahoo_packet_hash(pkt, "ssssssss",
-				1, purple_connection_get_display_name(gc),
-				31, thirtyone, 13, thirteen,
-				302, "319", 300, "319",
-				7, temp,
-				301, "319", 303, "319");
+		yahoo_packet_hash(pkt, "ssssssss",
+			1, purple_connection_get_display_name(gc),
+			31, thirtyone, 13, thirteen,
+			302, "319", 300, "319",
+			7, temp,
+			301, "319", 303, "319");
 
 		yahoo_packet_send_and_free(pkt, yd);
 	}

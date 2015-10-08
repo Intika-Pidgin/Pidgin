@@ -28,7 +28,7 @@
 
 
 #include "internal.h"
-
+#include "http.h"
 
 #if defined( __APPLE__ )
 /* apple architecture */
@@ -40,7 +40,6 @@
 #ifndef HOST_NAME_MAX
 #define		HOST_NAME_MAX				512
 #endif
-#include	"libc_interface.h"
 #elif defined( __linux__ )
 /* linux architecture */
 #include	<net/if.h>
@@ -56,19 +55,34 @@
 #endif
 
 
-#include	"protocol.h"
+#include	"client.h"
 #include	"profile.h"
 
 
+/* Protocol details */
+#define		MXIT_PROTOCOL_ID			"prpl-loubserp-mxit"
+#define		MXIT_PROTOCOL_NAME			"MXit"
+
+
 /* Plugin details */
-#define		MXIT_PLUGIN_ID				"prpl-loubserp-mxit"
-#define		MXIT_PLUGIN_NAME			"MXit"
-#define		MXIT_PLUGIN_EMAIL			"Pieter Loubser <libpurple@mxit.com>"
+#define		MXIT_PLUGIN_ID				"prpl-mxit"
+#define		MXIT_PLUGIN_NAME			"MXit Protocol"
+#define		MXIT_PLUGIN_CATEGORY		"Protocol"
+#define		MXIT_PLUGIN_AUTHORS			{ "Pieter Loubser <libpurple@mxit.com>", NULL }
 #define		MXIT_PLUGIN_WWW				"http://www.mxit.com"
 #define		MXIT_PLUGIN_SUMMARY			"MXit Protocol Plugin"
 #define		MXIT_PLUGIN_DESC			"MXit"
 
 #define		MXIT_HTTP_USERAGENT			"libpurple-"DISPLAY_VERSION
+
+
+/* protocol type macros */
+#define MXIT_TYPE_PROTOCOL             (mxit_protocol_get_type())
+#define MXIT_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), MXIT_TYPE_PROTOCOL, MXitProtocol))
+#define MXIT_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), MXIT_TYPE_PROTOCOL, MXitProtocolClass))
+#define MXIT_IS_PROTOCOL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), MXIT_TYPE_PROTOCOL))
+#define MXIT_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), MXIT_TYPE_PROTOCOL))
+#define MXIT_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), MXIT_TYPE_PROTOCOL, MXitProtocolClass))
 
 
 /* default connection settings */
@@ -123,6 +137,17 @@
 #define		ARRAY_SIZE( x )				( sizeof( x ) / sizeof( x[0] ) )
 
 
+typedef struct _MXitProtocol
+{
+	PurpleProtocol parent;
+} MXitProtocol;
+
+typedef struct _MXitProtocolClass
+{
+	PurpleProtocolClass parent_class;
+} MXitProtocolClass;
+
+
 /*
  * data structure containing all MXit session information
  */
@@ -160,6 +185,7 @@ struct MXitSession {
 	/* libpurple */
 	PurpleAccount*		acc;						/* pointer to the libpurple internal account struct */
 	PurpleConnection*	con;						/* pointer to the libpurple internal connection struct */
+	guint				inpa;						/* the input watcher */
 
 	/* transmit */
 	struct tx_queue		queue;						/* transmit packet queue (FIFO mode) */
@@ -167,7 +193,7 @@ struct MXitSession {
 	int					outack;						/* outstanding ack packet */
 	guint				q_slow_timer_id;			/* timer handle for slow tx queue */
 	guint				q_fast_timer_id;			/* timer handle for fast tx queue */
-	GSList*				async_calls;				/* list of current outstanding async calls */
+	PurpleHttpConnectionSet*	async_http_reqs;			/* list of current outstanding async http requests */
 
 	/* receive */
 	char				rx_lbuf[16];				/* receive byte buffer (socket packet length) */
@@ -183,9 +209,10 @@ struct MXitSession {
 	GList*				rooms;						/* active groupchat rooms */
 
 	/* inline images */
-	GHashTable*			iimages;					/* table which maps inline images (including emoticons) to purple's imgstore id's */
+	GHashTable *inline_images; /* table which maps inline images (including emoticons) to PurpleImages */
 };
 
+G_MODULE_EXPORT GType mxit_protocol_get_type(void);
 
 char* mxit_status_text( PurpleBuddy* buddy );
 void mxit_enable_signals( struct MXitSession* session );

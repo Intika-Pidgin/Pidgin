@@ -1,7 +1,7 @@
 EXTRA_DIST = \
 	Makefile.mingw
 
-pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+pkgdir = @PURPLE_PLUGINDIR@
 
 noinst_HEADERS = sametime.h
 
@@ -24,14 +24,15 @@ pkg_LTLIBRARIES     = libsametime.la
 endif
 
 libsametime_la_SOURCES = $(SAMETIMESOURCES)
-libsametime_la_LDFLAGS = -module -avoid-version
-libsametime_la_LIBADD = $(GLIB_LIBS) $(MEANWHILE_LIBS)
+libsametime_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
+libsametime_la_LIBADD = @PURPLE_LIBS@ $(MEANWHILE_LIBS)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(MEANWHILE_CFLAGS) \
 	-DG_LOG_DOMAIN=\"sametime\"
 
