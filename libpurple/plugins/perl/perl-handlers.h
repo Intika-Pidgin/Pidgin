@@ -2,7 +2,7 @@
 #define _PURPLE_PERL_HANDLERS_H_
 
 #include "cmds.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "prefs.h"
 #include "pluginpref.h"
 #ifdef PURPLE_GTKPERL
@@ -15,7 +15,7 @@ typedef struct
 	PurpleCmdId id;
 	SV *callback;
 	SV *data;
-	gchar *prpl_id;
+	gchar *protocol_id;
 	gchar *cmd;
 	PurplePlugin *plugin;
 } PurplePerlCmdHandler;
@@ -73,7 +73,7 @@ void purple_perl_signal_clear(void);
 
 PurpleCmdId purple_perl_cmd_register(PurplePlugin *plugin, const gchar *cmd,
                                  const gchar *args, PurpleCmdPriority priority,
-                                 PurpleCmdFlag flag, const gchar *prpl_id,
+                                 PurpleCmdFlag flag, const gchar *protocol_id,
                                  SV *callback, const gchar *helpstr, SV *data);
 void purple_perl_cmd_unregister(PurpleCmdId id);
 void purple_perl_cmd_clear_for_plugin(PurplePlugin *plugin);
@@ -81,5 +81,11 @@ void purple_perl_cmd_clear_for_plugin(PurplePlugin *plugin);
 guint purple_perl_prefs_connect_callback(PurplePlugin *plugin, const char *name, SV *callback, SV *data);
 void purple_perl_prefs_disconnect_callback(guint callback_id);
 void purple_perl_pref_cb_clear_for_plugin(PurplePlugin *plugin);
+
+void
+purple_perl_account_get_password(PurpleAccount *account, SV *func, SV *data);
+void
+purple_perl_account_set_password(PurpleAccount *account, const char *password,
+	SV *func, SV *data);
 
 #endif /* _PURPLE_PERL_HANDLERS_H_ */

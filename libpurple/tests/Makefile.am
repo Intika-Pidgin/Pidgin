@@ -15,6 +15,7 @@ check_libpurple_SOURCES=\
 		test_jabber_jutil.c \
 		test_jabber_scram.c \
 		test_oscar_util.c \
+		test_trie.c \
 		test_yahoo_util.c \
 		test_util.c \
 		test_xmlnode.c \
@@ -23,18 +24,19 @@ check_libpurple_SOURCES=\
 check_libpurple_CFLAGS=\
         @CHECK_CFLAGS@ \
 		$(GLIB_CFLAGS) \
+		$(GPLUGIN_CFLAGS) \
 		$(DEBUG_CFLAGS) \
 		$(LIBXML_CFLAGS) \
 		-I.. \
-		-I$(top_srcdir)/libpurple \
-		-DBUILDDIR=\"$(top_builddir)\"
+		-I$(top_srcdir)/libpurple
 
 check_libpurple_LDADD=\
 		$(top_builddir)/libpurple/protocols/jabber/libjabber.la \
 		$(top_builddir)/libpurple/protocols/oscar/liboscar.la \
-		$(top_builddir)/libpurple/protocols/yahoo/libymsg.la \
+		$(top_builddir)/libpurple/protocols/yahoo/libyahoo.la \
 		$(top_builddir)/libpurple/libpurple.la \
         @CHECK_LIBS@ \
-		$(GLIB_LIBS)
+		$(GLIB_LIBS) \
+		$(GPLUGIN_LIBS)
 
 endif

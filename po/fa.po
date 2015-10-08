@@ -3,15 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Translators:
-# Elnaz Sarbar <elnaz.s@gmail.com>, 2013
-# Elnaz Sarbar <elnaz.s@gmail.com>, 2013
+# elnaaz <elnaz.s@gmail.com>, 2013
 # Richard Laager <rlaager@wiktel.com>, 2011
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-11-22 10:22-0800\n"
-"PO-Revision-Date: 2014-11-20 10:22+0000\n"
+"POT-Creation-Date: 2014-02-02 10:38-0800\n"
+"PO-Revision-Date: 2014-01-21 08:25+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Persian (http://www.transifex.com/projects/p/pidgin/language/"
 "fa/)\n"
@@ -1646,6 +1645,7 @@ msgstr ""
 msgid "Unknown"
 msgstr "نامعلوم"
 
+#. Changing this string?  Look in add_purple_buddy_to_groups
 msgid "Buddies"
 msgstr "رفقا"
 
@@ -1745,19 +1745,10 @@ msgid ""
 "are not connecting to the service you believe you are."
 msgstr ""
 
-#. TODO: Find what the handle ought to be
-msgid "Certificate Information"
-msgstr ""
-
-msgid "Unable to find Issuer Certificate"
-msgstr ""
-
 #. Make messages
 #, c-format
 msgid ""
 "Common name: %s\n"
-"\n"
-"Issued By: %s\n"
 "\n"
 "Fingerprint (SHA1): %s\n"
 "\n"
@@ -1765,10 +1756,8 @@ msgid ""
 "Expiration date: %s\n"
 msgstr ""
 
-msgid "(self-signed)"
-msgstr ""
-
-msgid "View Issuer Certificate"
+#. TODO: Find what the handle ought to be
+msgid "Certificate Information"
 msgstr ""
 
 #. show error to user
@@ -1844,126 +1833,6 @@ msgid ""
 msgstr ""
 "لطفاً نام کاربری را که مایلید از او دعوت کنید، در صورت تمایل همراه با پیغام "
 "دعوت‌نامه، وارد کنید."
-
-msgid "Whether the specified command should handle \"aim\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"aim\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"aim\" URLs"
-msgstr "متصدی نشانی اینترنتی «aim»"
-
-msgid "The command used to handle \"aim\" URLs, if enabled."
-msgstr ""
-
-msgid "Run the command in a terminal"
-msgstr "فرمان در در پایانه اجرا کنید"
-
-msgid ""
-"True if the command used to handle this type of URL should be run in a "
-"terminal."
-msgstr ""
-
-msgid "Whether the specified command should handle \"gg\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"gg\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"gg\" URLs"
-msgstr "متصدی نشانی اینترنتی «gg»"
-
-msgid "The command used to handle \"gg\" URLs, if enabled."
-msgstr ""
-
-msgid "Whether the specified command should handle \"icq\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"icq\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"icq\" URLs"
-msgstr "متصدی نشانی اینترنتی «icq»"
-
-msgid "The command used to handle \"icq\" URLs, if enabled."
-msgstr ""
-
-msgid "Whether the specified command should handle \"irc\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"irc\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"irc\" URLs"
-msgstr "متصدی نشانی اینترنتی «irc»"
-
-msgid "The command used to handle \"irc\" URLs, if enabled."
-msgstr ""
-
-msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"msnim\" URLs"
-msgstr "متصدی نشانی اینترنتی «msnim»"
-
-msgid "The command used to handle \"msnim\" URLs, if enabled."
-msgstr ""
-
-msgid "Whether the specified command should handle \"sip\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"sip\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"sip\" URLs"
-msgstr "متصدی نشانی اینترنتی «sip»"
-
-msgid "The command used to handle \"sip\" URLs, if enabled."
-msgstr ""
-
-msgid "Whether the specified command should handle \"xmpp\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"xmpp\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"xmpp\" URLs"
-msgstr "متصدی نشانی اینترنتی «xmpp»"
-
-msgid "The command used to handle \"xmpp\" URLs, if enabled."
-msgstr ""
-
-msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"ymsgr\" URLs"
-msgstr "متصدی نشانی اینترنتی «ymsgr»"
-
-msgid "The command used to handle \"ymsgr\" URLs, if enabled."
-msgstr ""
 
 #, c-format
 msgid "Failed to get connection: %s"
@@ -2139,6 +2008,126 @@ msgstr "انتقال پرونده به %s شکست خورد."
 #, c-format
 msgid "File transfer from %s failed."
 msgstr "انتقال پرونده از %s شکست خورد."
+
+msgid "Whether the specified command should handle \"aim\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"aim\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"aim\" URLs"
+msgstr "متصدی نشانی اینترنتی «aim»"
+
+msgid "The command used to handle \"aim\" URLs, if enabled."
+msgstr ""
+
+msgid "Run the command in a terminal"
+msgstr "فرمان در در پایانه اجرا کنید"
+
+msgid ""
+"True if the command used to handle this type of URL should be run in a "
+"terminal."
+msgstr ""
+
+msgid "Whether the specified command should handle \"gg\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"gg\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"gg\" URLs"
+msgstr "متصدی نشانی اینترنتی «gg»"
+
+msgid "The command used to handle \"gg\" URLs, if enabled."
+msgstr ""
+
+msgid "Whether the specified command should handle \"icq\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"icq\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"icq\" URLs"
+msgstr "متصدی نشانی اینترنتی «icq»"
+
+msgid "The command used to handle \"icq\" URLs, if enabled."
+msgstr ""
+
+msgid "Whether the specified command should handle \"irc\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"irc\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"irc\" URLs"
+msgstr "متصدی نشانی اینترنتی «irc»"
+
+msgid "The command used to handle \"irc\" URLs, if enabled."
+msgstr ""
+
+msgid "Whether the specified command should handle \"msnim\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"msnim\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"msnim\" URLs"
+msgstr "متصدی نشانی اینترنتی «msnim»"
+
+msgid "The command used to handle \"msnim\" URLs, if enabled."
+msgstr ""
+
+msgid "Whether the specified command should handle \"sip\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"sip\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"sip\" URLs"
+msgstr "متصدی نشانی اینترنتی «sip»"
+
+msgid "The command used to handle \"sip\" URLs, if enabled."
+msgstr ""
+
+msgid "Whether the specified command should handle \"xmpp\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"xmpp\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"xmpp\" URLs"
+msgstr "متصدی نشانی اینترنتی «xmpp»"
+
+msgid "The command used to handle \"xmpp\" URLs, if enabled."
+msgstr ""
+
+msgid "Whether the specified command should handle \"ymsgr\" URLs"
+msgstr ""
+
+msgid ""
+"True if the command specified in the \"command\" key should handle \"ymsgr\" "
+"URLs."
+msgstr ""
+
+msgid "The handler for \"ymsgr\" URLs"
+msgstr "متصدی نشانی اینترنتی «ymsgr»"
+
+msgid "The command used to handle \"ymsgr\" URLs, if enabled."
+msgstr ""
 
 msgid "<b><font color=\"red\">The logger has no read function</font></b>"
 msgstr "<b><font color=\"red\">تاریخچه‌نویس تابع خواندن ندارد</font></b>"
@@ -2795,56 +2784,6 @@ msgstr "متصل شوندهٔ ساده"
 msgid "Tests to see that most things are working."
 msgstr "برای اطمینان از این که اغلب چیزها کار می‌کنند آزمایش‌هایی انجام می‌دهد."
 
-msgid "TLS/SSL Versions"
-msgstr ""
-
-msgid "Minimum Version"
-msgstr ""
-
-msgid "Maximum Version"
-msgstr ""
-
-msgid "SSL 2"
-msgstr ""
-
-msgid "SSL 3"
-msgstr ""
-
-msgid "TLS 1.0"
-msgstr ""
-
-msgid "TLS 1.1"
-msgstr ""
-
-msgid "TLS 1.2"
-msgstr ""
-
-msgid "TLS 1.3"
-msgstr ""
-
-#. TODO: look into how to do this for older versions?
-msgid "Not Supported for NSS < 3.14"
-msgstr ""
-
-msgid "Ciphers"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "NSS Preferences"
-msgstr ""
-
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Configure Ciphers and other Settings for the NSS SSL/TLS Plugin"
-msgstr ""
-
 #. Scheme name
 msgid "X.509 Certificates"
 msgstr ""
@@ -3173,14 +3112,14 @@ msgstr "اضافه کردن به گپ"
 msgid "Chat _name:"
 msgstr "_نام گپ:"
 
+#, c-format
+msgid "Unable to resolve hostname '%s': %s"
+msgstr ""
+
 #. 1. connect to server
 #. connect to the server
 msgid "Connecting"
 msgstr "در حال اتصال"
-
-#, c-format
-msgid "Unable to resolve hostname: %s"
-msgstr ""
 
 msgid "Chat error"
 msgstr "خطای گپ"
@@ -3388,11 +3327,13 @@ msgstr "<i>(شناسایی شده)</i>"
 msgid "Nick"
 msgstr "لقب"
 
+#, fuzzy
 msgid "Login name"
-msgstr ""
+msgstr "بدون نام"
 
+#, fuzzy
 msgid "Host name"
-msgstr ""
+msgstr "نام میزبان"
 
 msgid "Currently on"
 msgstr "در حال حاضر روی"
@@ -5787,9 +5728,11 @@ msgstr ""
 msgid "Unable to authenticate: %s"
 msgstr "تأیید هویت ممکن نیست: %s"
 
-#, c-format
-msgid "Your MSN buddy list is temporarily unavailable: %s"
+msgid ""
+"Your MSN buddy list is temporarily unavailable. Please wait and try again."
 msgstr ""
+"فهرست رفقای MSN شما موقتاً قابل دسترسی نیست. لطفاً پس از کمی صبر دوباره امتحان "
+"کنید."
 
 msgid "Handshaking"
 msgstr "در حال دست دادن"
@@ -9643,9 +9586,6 @@ msgstr "تنظیمات حضور"
 msgid "Start Doodling"
 msgstr ""
 
-msgid "Activate which ID?"
-msgstr ""
-
 msgid "Select the ID you want to activate"
 msgstr ""
 
@@ -10184,22 +10124,6 @@ msgstr "خطا هنگام خواندن %s"
 msgid ""
 "An error was encountered reading your %s.  The file has not been loaded, and "
 "the old file has been renamed to %s~."
-msgstr ""
-
-msgid "Instant Messaging Client"
-msgstr ""
-
-msgid ""
-"Pidgin is a chat program which lets you log in to accounts on multiple chat "
-"networks simultaneously."
-msgstr ""
-
-msgid ""
-"This means that you can be chatting with friends on MSN, talking to a friend "
-"on Google Talk, and sitting in a Yahoo chat room all at the same time."
-msgstr ""
-
-msgid "The buddy list showing friends on different networks."
 msgstr ""
 
 msgid "Pidgin Internet Messenger"
@@ -11387,9 +11311,6 @@ msgstr "بنگالی"
 msgid "Bengali-India"
 msgstr ""
 
-msgid "Bodo"
-msgstr ""
-
 msgid "Bosnian"
 msgstr "بوسنیایی"
 
@@ -11428,9 +11349,6 @@ msgstr ""
 
 msgid "Spanish"
 msgstr "اسپانیایی"
-
-msgid "Argentine Spanish"
-msgstr ""
 
 msgid "Estonian"
 msgstr "استونیایی"
@@ -11471,6 +11389,9 @@ msgstr ""
 msgid "Hungarian"
 msgstr "مجاری"
 
+msgid "Armenian"
+msgstr ""
+
 msgid "Indonesian"
 msgstr "اندونزیایی"
 
@@ -11486,9 +11407,6 @@ msgstr "گرجی"
 msgid "Ubuntu Georgian Translators"
 msgstr ""
 
-msgid "Kazakh"
-msgstr ""
-
 msgid "Khmer"
 msgstr ""
 
@@ -11501,20 +11419,14 @@ msgstr ""
 msgid "Korean"
 msgstr "کره‌ای"
 
-msgid "Kashmiri"
-msgstr ""
-
 msgid "Kurdish"
 msgstr "کردی"
 
-msgid "Kurdish (Sorani)"
+msgid "Lao"
 msgstr ""
 
 msgid "Lithuanian"
 msgstr "لیتوانیایی"
-
-msgid "Latvian"
-msgstr ""
 
 msgid "Maithili"
 msgstr ""
@@ -11532,6 +11444,9 @@ msgid "Mongolian"
 msgstr ""
 
 msgid "Marathi"
+msgstr ""
+
+msgid "Malay"
 msgstr ""
 
 msgid "Burmese"
@@ -11576,9 +11491,6 @@ msgstr "رومانیایی"
 msgid "Russian"
 msgstr "روسی"
 
-msgid "Sindhi"
-msgstr ""
-
 msgid "Slovak"
 msgstr "اسلوواکی"
 
@@ -11612,21 +11524,10 @@ msgstr "تلوگویی"
 msgid "Thai"
 msgstr "تایلندی"
 
-msgid "Tatar"
-msgstr ""
-
 msgid "Ukranian"
 msgstr ""
 
 msgid "Urdu"
-msgstr ""
-
-msgid "Uzbek"
-msgstr ""
-
-#. Translators: This is a person's name. For most languages we recommend
-#. not translating it.
-msgid "Akmal Khushvakov"
 msgstr ""
 
 msgid "Vietnamese"
@@ -11643,15 +11544,6 @@ msgstr "چینی سنتی"
 
 msgid "Amharic"
 msgstr "امهری"
-
-msgid "Armenian"
-msgstr ""
-
-msgid "Lao"
-msgstr ""
-
-msgid "Malay"
-msgstr ""
 
 msgid "Turkish"
 msgstr "ترکی"
@@ -14312,8 +14204,9 @@ msgstr ""
 msgid "Show number of unread _messages on launcher icon"
 msgstr ""
 
+#, fuzzy
 msgid "Show number of unread co_nversations on launcher icon"
-msgstr ""
+msgstr "تعداد گفتگوها در هر پنجره"
 
 #. Messaging menu integration
 msgid "Messaging Menu"

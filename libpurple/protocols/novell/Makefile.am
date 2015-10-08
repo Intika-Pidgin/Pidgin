@@ -1,7 +1,7 @@
 EXTRA_DIST = \
 	Makefile.mingw
 
-pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+pkgdir = @PURPLE_PLUGINDIR@
 
 NOVELLSOURCES = \
 		nmfield.h \
@@ -24,11 +24,12 @@ NOVELLSOURCES = \
 		nmuser.c \
 		nmuserrecord.h \
 		nmuserrecord.c \
+		novell.h \
 		novell.c
 
 AM_CFLAGS = $(st)
 
-libnovell_la_LDFLAGS = -module -avoid-version
+libnovell_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
 
 if STATIC_NOVELL
 
@@ -42,7 +43,7 @@ else
 st =
 pkg_LTLIBRARIES      = libnovell.la
 libnovell_la_SOURCES = $(NOVELLSOURCES)
-libnovell_la_LIBADD  = $(GLIB_LIBS)
+libnovell_la_LIBADD  = @PURPLE_LIBS@
 
 endif
 
@@ -50,4 +51,5 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
 	$(DEBUG_CFLAGS) \
-	$(GLIB_CFLAGS)
+	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS)

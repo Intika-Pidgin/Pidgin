@@ -1,8 +1,3 @@
-/**
- * @file mediamanager.c Media Manager API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -39,40 +34,20 @@
 #ifdef USE_VV
 #include <media/backend-fs2.h>
 
-#ifdef HAVE_FARSIGHT
-#include <gst/farsight/fs-element-added-notifier.h>
-#else
 #include <farstream/fs-element-added-notifier.h>
-#endif
-#ifdef HAVE_MEDIA_APPLICATION
-#include <gst/app/app.h>
-#endif
-
 #if GST_CHECK_VERSION(1,0,0)
 #include <gst/video/videooverlay.h>
 #else
 #include <gst/interfaces/xoverlay.h>
 #endif
+#ifdef HAVE_MEDIA_APPLICATION
+#include <gst/app/app.h>
+#endif
 
-/** @copydoc _PurpleMediaManagerPrivate */
-typedef struct _PurpleMediaManagerPrivate PurpleMediaManagerPrivate;
 /** @copydoc _PurpleMediaOutputWindow */
 typedef struct _PurpleMediaOutputWindow PurpleMediaOutputWindow;
 /** @copydoc _PurpleMediaManagerPrivate */
 typedef struct _PurpleMediaElementInfoPrivate PurpleMediaElementInfoPrivate;
-
-/** The media manager class. */
-struct _PurpleMediaManagerClass
-{
-	GObjectClass parent_class;       /**< The parent class. */
-};
-
-/** The media manager's data. */
-struct _PurpleMediaManager
-{
-	GObject parent;                  /**< The parent of this manager. */
-	PurpleMediaManagerPrivate *priv; /**< Private data for the manager. */
-};
 
 struct _PurpleMediaOutputWindow
 {
@@ -709,7 +684,7 @@ purple_media_manager_set_video_caps(PurpleMediaManager *manager, GstCaps *caps)
 		GstElement *src = gst_bin_get_by_name(GST_BIN(manager->priv->pipeline), id);
 
 		if (src) {
-			GstElement *capsfilter = gst_bin_get_by_name(GST_BIN(src), "prpl_video_caps");
+			GstElement *capsfilter = gst_bin_get_by_name(GST_BIN(src), "protocol_video_caps");
 			if (capsfilter) {
 				g_object_set(G_OBJECT(capsfilter), "caps", caps, NULL);
 				gst_object_unref (capsfilter);
@@ -1063,6 +1038,7 @@ create_recv_appsink(PurpleMedia *media,
 }
 #endif
 
+#ifdef USE_VV
 static PurpleMediaElementInfo *
 get_send_application_element_info ()
 {
@@ -1083,7 +1059,6 @@ get_send_application_element_info ()
 	return info;
 }
 
-
 static PurpleMediaElementInfo *
 get_recv_application_element_info ()
 {
@@ -1103,6 +1078,7 @@ get_recv_application_element_info ()
 
 	return info;
 }
+#endif	/* USE_VV */
 
 GstElement *
 purple_media_manager_get_element(PurpleMediaManager *manager,
@@ -1156,7 +1132,7 @@ purple_media_manager_get_element(PurpleMediaManager *manager,
 				GstElement *capsfilter;
 
 				videoscale = gst_element_factory_make("videoscale", NULL);
-				capsfilter = gst_element_factory_make("capsfilter", "prpl_video_caps");
+				capsfilter = gst_element_factory_make("capsfilter", "protocol_video_caps");
 
 				g_object_set(G_OBJECT(capsfilter),
 					"caps", purple_media_manager_get_video_caps(manager), NULL);
@@ -2029,14 +2005,16 @@ purple_media_element_info_class_init(PurpleMediaElementInfoClass *klass)
 			"ID",
 			"The unique identifier of the element.",
 			NULL,
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
 	g_object_class_install_property(gobject_class, PROP_NAME,
 			g_param_spec_string("name",
 			"Name",
 			"The friendly/display name of this element.",
 			NULL,
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
 	g_object_class_install_property(gobject_class, PROP_TYPE,
 			g_param_spec_flags("type",
@@ -2044,13 +2022,15 @@ purple_media_element_info_class_init(PurpleMediaElementInfoClass *klass)
 			"The type of element this is.",
 			PURPLE_TYPE_MEDIA_ELEMENT_TYPE,
 			PURPLE_MEDIA_ELEMENT_NONE,
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
 	g_object_class_install_property(gobject_class, PROP_CREATE_CB,
 			g_param_spec_pointer("create-cb",
 			"Create Callback",
 			"The function called to create this element.",
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
 	g_type_class_add_private(klass, sizeof(PurpleMediaElementInfoPrivate));
 }
@@ -2070,6 +2050,12 @@ purple_media_element_info_get_id(PurpleMediaElementInfo *info)
 {
 #ifdef USE_VV
 	gchar *id;
+
+#if GLIB_CHECK_VERSION(2, 37, 3)
+	/* Silence a warning. This could be anywhere below G_DEFINE_TYPE */
+	(void)purple_media_element_info_get_instance_private;
+#endif
+
 	g_return_val_if_fail(PURPLE_IS_MEDIA_ELEMENT_INFO(info), NULL);
 	g_object_get(info, "id", &id, NULL);
 	return id;

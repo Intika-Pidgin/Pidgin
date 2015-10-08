@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -51,6 +51,12 @@ void gnt_init_keys()
 			term = "";  /* Just in case */
 	}
 
+#ifdef _WIN32
+	gnt_key_cup = GNT_KEY_CTRL_UP;
+	gnt_key_cdown = GNT_KEY_CTRL_DOWN;
+	gnt_key_cright = GNT_KEY_CTRL_RIGHT;
+	gnt_key_cleft = GNT_KEY_CTRL_LEFT;
+#else
 	if (strstr(term, "xterm") == term || strcmp(term, "rxvt") == 0) {
 		gnt_key_cup    = "\033" "[1;5A";
 		gnt_key_cdown  = "\033" "[1;5B";
@@ -62,6 +68,7 @@ void gnt_init_keys()
 		gnt_key_cright = "\033" "Oc";
 		gnt_key_cleft  = "\033" "Od";
 	}
+#endif
 
 	specials = g_hash_table_new(g_str_hash, g_str_equal);
 
@@ -141,7 +148,7 @@ void gnt_init_keys()
 		}
 	}
 	c = 0;
-	for (a = 0; alts[a]; a++) {
+	for (a = 0; alts[a]; a++) { /* XXX: is that loop necessary? */
 		/* Upper-case alphabets */
 		for (ch = 0; ch < 26; ch++) {
 			char str[2] = {'A' + ch, 0}, code[] = {'\033', 'A' + ch, 0};
@@ -201,7 +208,7 @@ const char *gnt_key_lookup(const char *key)
 	return k.name;
 }
 
-/**
+/*
  * The key-bindings will be saved in a tree. When a keystroke happens, GNT will
  * find the sequence that matches a binding and return the length.
  * A sequence should not be a prefix of another sequence. If it is, then only
