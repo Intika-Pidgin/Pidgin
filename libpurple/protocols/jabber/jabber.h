@@ -49,8 +49,6 @@ typedef enum {
 	JABBER_CAP_ITEMS          = 1 << 14,
 	JABBER_CAP_ROSTER_VERSIONING = 1 << 15,
 
-	JABBER_CAP_FACEBOOK       = 1 << 16,
-
 	JABBER_CAP_RETRIEVED      = 1 << 31
 } JabberCapabilities;
 
@@ -58,6 +56,7 @@ typedef struct _JabberStream JabberStream;
 
 #include <libxml/parser.h>
 #include <glib.h>
+#include <gmodule.h>
 #include "circularbuffer.h"
 #include "connection.h"
 #include "dnsquery.h"
@@ -65,6 +64,7 @@ typedef struct _JabberStream JabberStream;
 #include "http.h"
 #include "media.h"
 #include "mediamanager.h"
+#include "protocol.h"
 #include "roomlist.h"
 #include "sslconn.h"
 
@@ -83,8 +83,14 @@ typedef struct _JabberStream JabberStream;
 
 #define CAPS0115_NODE "https://pidgin.im/"
 
+#define JABBER_TYPE_PROTOCOL             (jabber_protocol_get_type())
+#define JABBER_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), JABBER_TYPE_PROTOCOL, JabberProtocol))
+#define JABBER_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), JABBER_TYPE_PROTOCOL, JabberProtocolClass))
+#define JABBER_IS_PROTOCOL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), JABBER_TYPE_PROTOCOL))
+#define JABBER_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), JABBER_TYPE_PROTOCOL))
+#define JABBER_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), JABBER_TYPE_PROTOCOL, JabberProtocolClass))
+
 #define JABBER_DEFAULT_REQUIRE_TLS    "require_starttls"
-#define JABBER_DEFAULT_FT_PROXIES     "proxy.eu.jabber.org"
 
 /* Index into attention_types list */
 #define JABBER_BUZZ 0
@@ -98,6 +104,16 @@ typedef enum {
 	JABBER_STREAM_POST_AUTH,
 	JABBER_STREAM_CONNECTED
 } JabberStreamState;
+
+typedef struct _JabberProtocol
+{
+	PurpleProtocol parent;
+} JabberProtocol;
+
+typedef struct _JabberProtocolClass
+{
+	PurpleProtocolClass parent_class;
+} JabberProtocolClass;
 
 struct _JabberStream
 {
@@ -280,9 +296,6 @@ struct _JabberStream
 	/* stuff for Google's relay handling */
 	gchar *google_relay_token;
 	gchar *google_relay_host;
-
-	/* facebook quirks */
-	gboolean facebook_roster_cleanup_performed;
 };
 
 typedef gboolean (JabberFeatureEnabled)(JabberStream *js, const gchar *namespace);
@@ -314,6 +327,11 @@ extern GList *jabber_features;
  * so it remains sorted.
  */
 extern GList *jabber_identities;
+
+/**
+ * Returns the GType for the JabberProtocol object.
+ */
+G_MODULE_EXPORT GType jabber_protocol_get_type(void);
 
 void jabber_stream_features_parse(JabberStream *js, PurpleXmlNode *packet);
 void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet);
@@ -384,7 +402,7 @@ gboolean jabber_stream_is_ssl(JabberStream *js);
  */
 void jabber_stream_restart_inactivity_timer(JabberStream *js);
 
-/** PRPL functions */
+/** Protocol functions */
 const char *jabber_list_icon(PurpleAccount *a, PurpleBuddy *b);
 const char* jabber_list_emblem(PurpleBuddy *b);
 char *jabber_status_text(PurpleBuddy *b);
@@ -408,8 +426,8 @@ GList *jabber_attention_types(PurpleAccount *account);
 void jabber_convo_closed(PurpleConnection *gc, const char *who);
 PurpleChat *jabber_find_blist_chat(PurpleAccount *account, const char *name);
 gboolean jabber_offline_message(const PurpleBuddy *buddy);
-int jabber_prpl_send_raw(PurpleConnection *gc, const char *buf, int len);
-GList *jabber_actions(PurplePlugin *plugin, gpointer context);
+int jabber_protocol_send_raw(PurpleConnection *gc, const char *buf, int len);
+GList *jabber_get_actions(PurpleConnection *gc);
 
 gboolean jabber_audio_enabled(JabberStream *js, const char *unused);
 gboolean jabber_video_enabled(JabberStream *js, const char *unused);
@@ -417,8 +435,5 @@ gboolean jabber_initiate_media(PurpleAccount *account, const char *who,
 		PurpleMediaSessionType type);
 PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who);
 gboolean jabber_can_receive_file(PurpleConnection *gc, const gchar *who);
-
-void jabber_plugin_init(PurplePlugin *plugin);
-void jabber_plugin_uninit(PurplePlugin *plugin);
 
 #endif /* PURPLE_JABBER_H_ */

@@ -1,4 +1,4 @@
-DIST_SUBDIRS = cap disco gestures gevolution musicmessaging perl ticker win32/winprefs win32/transparency
+DIST_SUBDIRS = cap disco gestures gevolution musicmessaging ticker win32/winprefs win32/transparency
 
 if BUILD_GEVOLUTION
 GEVOLUTION_DIR = gevolution
@@ -12,10 +12,6 @@ if ENABLE_CAP
 CAP_DIR = cap
 endif
 
-if USE_PERL
-PERL_DIR = perl
-endif
-
 if ENABLE_GESTURES
 GESTURE_DIR = gestures
 endif
@@ -25,7 +21,6 @@ SUBDIRS = \
 	$(GESTURE_DIR) \
 	$(GEVOLUTION_DIR) \
 	$(MUSICMESSAGING_DIR) \
-	$(PERL_DIR) \
 	disco \
 	ticker
 
@@ -50,7 +45,6 @@ relnot_la_LDFLAGS           = -module @PLUGIN_LDFLAGS@
 screencap_la_LDFLAGS        = -module @PLUGIN_LDFLAGS@
 sendbutton_la_LDFLAGS       = -module @PLUGIN_LDFLAGS@
 spellchk_la_LDFLAGS         = -module @PLUGIN_LDFLAGS@
-themeedit_la_LDFLAGS        = -module @PLUGIN_LDFLAGS@
 unity_la_LDFLAGS            = -module @PLUGIN_LDFLAGS@
 webkit_la_LDFLAGS           = -module @PLUGIN_LDFLAGS@
 xmppconsole_la_LDFLAGS      = -module @PLUGIN_LDFLAGS@
@@ -69,7 +63,6 @@ plugin_LTLIBRARIES = \
 	screencap.la        \
 	sendbutton.la       \
 	spellchk.la         \
-	themeedit.la        \
 	webkit.la           \
 	xmppconsole.la
 
@@ -94,7 +87,6 @@ relnot_la_SOURCES           = relnot.c
 screencap_la_SOURCES        = screencap.c
 sendbutton_la_SOURCES       = sendbutton.c
 spellchk_la_SOURCES         = spellchk.c
-themeedit_la_SOURCES        = themeedit.c themeedit-icon.c themeedit-icon.h
 unity_la_SOURCES            = unity.c
 webkit_la_SOURCES           = webkit.c
 xmppconsole_la_SOURCES      = xmppconsole.c
@@ -112,7 +104,6 @@ relnot_la_LIBADD            = @PIDGIN_LIBS@
 screencap_la_LIBADD         = @PIDGIN_LIBS@
 sendbutton_la_LIBADD        = @PIDGIN_LIBS@
 spellchk_la_LIBADD          = @PIDGIN_LIBS@
-themeedit_la_LIBADD         = @PIDGIN_LIBS@
 unity_la_LIBADD             = @PIDGIN_LIBS@ $(UNITY_LIBS)
 webkit_la_LIBADD            = @PIDGIN_LIBS@ $(WEBKIT_LIBS)
 xmppconsole_la_LIBADD       = @PIDGIN_LIBS@
@@ -139,6 +130,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/pidgin \
 	$(DEBUG_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(UNITY_CFLAGS) \
 	$(WEBKIT_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \

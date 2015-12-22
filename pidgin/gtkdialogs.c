@@ -26,8 +26,8 @@
 
 #include "debug.h"
 #include "notify.h"
-#include "plugin.h"
-#include "prpl.h"
+#include "plugins.h"
+#include "protocol.h"
 #include "request.h"
 #include "util.h"
 #include "core.h"
@@ -161,6 +161,7 @@ static const struct translator translators[] = {
 	{NULL,                      NULL, "Israt Jahan", "israt@ankur.org.bd"},
 	{NULL,                      NULL, "Samia Nimatullah", "mailsamia2001@yahoo.com"},
 	{N_("Bengali-India"),       "bn_IN", "Runa Bhattacharjee", "runab@fedoraproject.org"},
+	{N_("Breton"),              "br", "Gwenn Meynier", "tornoz@laposte.net"},
 	{N_("Bodo"),                "brx", "Chandrakant Dhutadmal", "cpdhutadmal@yahoo.com"},
 	{N_("Bosnian"),             "bs", "Lejla Hadzialic", "lejlah@gmail.com"},
 	{N_("Catalan"),             "ca", "Josep Puigdemont", "josep.puigdemont@gmail.com"},
@@ -186,7 +187,6 @@ static const struct translator translators[] = {
 	{NULL,                      NULL, "Roozbeh Pournader", "roozbeh@farsiweb.info"},
 	{NULL,                      NULL, "Meelad Zakaria", "meelad@farsiweb.info"},
 	{N_("Finnish"),             "fi", "Timo Jyrinki", "timo.jyrinki@iki.fi"},
-	{N_("French"),              "fr", "Éric Boumaour", "zongo_fr@users.sourceforge.net"},
 	{N_("Irish"),               "ga", "Aaron Kearns", "ajkearns6@gmail.com"},
 	{N_("Irish"),               "ga", "Kevin Scannell", NULL},
 	{N_("Galician"),            "gl", "Mar Castro", "mariamarcp@gmail.com"},
@@ -222,9 +222,10 @@ static const struct translator translators[] = {
 	{N_("Malayalam"),           "ml", "Ani Peter", "apeter@redhat.com"},
 	{N_("Mongolian"),           "mn", "gooyo", NULL},
 	{N_("Marathi"),             "mr", "Sandeep Shedmake", "sandeep.shedmake@gmail.com"},
+	{N_("Malay"),               "ms_MY", "abuyop", "abuyop@gmail.com"},
 	{N_("Burmese"),             "my_MM", "Thura Hlaing", "trhura@gmail.com"},
 	{N_("Bokmål Norwegian"),    "nb", "Allan Nordhøy", "epost@anotheragency.no"},
-	{N_("Nepali"),              "ne", "Shyam Krishna Bal", NULL},
+	{N_("Nepali"),              "ne", "Saroj Dhakal", "lotusnagarkot@gmail.com"},
 	{N_("Dutch, Flemish"),      "nl", "Gideon van Melle", "translations@gvmelle.com"},
 	{N_("Norwegian Nynorsk"),   "nn", "Yngve Spjeld Landro", "l10n@landro.net"},
 	{N_("Occitan"),             "oc", "Cédric Valmary", "cvalmary@yahoo.fr"},
@@ -299,6 +300,7 @@ static const struct translator past_translators[] = {
 	{NULL,                      NULL, "Loïc Jeannin", NULL},
 	{NULL,                      NULL, "Stéphane Pontier", NULL},
 	{NULL,                      NULL, "Stéphane Wirtel", NULL},
+	{NULL,                      NULL, "Éric Boumaour", NULL},
 	{N_("Galician"),            "gl", "Ignacio Casal Quinteiro", NULL},
 	{N_("Hebrew"),              "he", "Pavel Bibergal", NULL},
 	{N_("Hindi"),               "hi", "Ravishankar Shrivastava", NULL},
@@ -323,6 +325,7 @@ static const struct translator past_translators[] = {
 	{NULL,                      NULL, "Hallvard Glad", NULL},
 	{NULL,                      NULL, "Petter Johan Olsen", NULL},
 	{NULL,                      NULL, "Espen Stefansen", NULL},
+	{N_("Nepali"),              "ne", "Shyam Krishna Bal", NULL},
 	{N_("Dutch, Flemish"),      "nl", "Vincent van Adrighem", NULL},
 	{N_("Occitan"),             "oc", "Yannig Marchegay", NULL},
 	{N_("Polish"),              "pl", "Krzysztof Foltman", NULL},
@@ -464,13 +467,8 @@ pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 	AtkObject *obj;
 	char *filename, *tmp;
 
-#if GTK_CHECK_VERSION(3,0,0)
 	win = pidgin_create_dialog(title, 0, role, TRUE);
 	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, 0);
-#else
-	win = pidgin_create_dialog(title, PIDGIN_HIG_BORDER, role, TRUE);
-	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, PIDGIN_HIG_BORDER);
-#endif
 	gtk_window_set_default_size(GTK_WINDOW(win), 475, 450);
 
 	/* Generate a logo with a version number */
@@ -621,11 +619,7 @@ void pidgin_dialogs_buildinfo(void)
 	g_string_append(str, "<dt>Plugins:</dt><dd>Disabled</dd>");
 #endif
 
-#ifdef HAVE_SSL
 	g_string_append(str, "<dt>SSL:</dt><dd>SSL support is present.</dd>");
-#else
-	g_string_append(str, "<dt>SSL:</dt><dd>SSL support was <strong><em>NOT</em></strong> compiled!</dd>");
-#endif
 
 	g_string_append_printf(str, "<dt>GTK+ Runtime:</dt><dd>%u.%u.%u</dd>"
 		"<dt>GLib Runtime:</dt><dd>%u.%u.%u</dd>",
@@ -696,12 +690,14 @@ void pidgin_dialogs_buildinfo(void)
 	g_string_append(str, "<dt>Network Security Services (NSS):</dt><dd>Disabled</dd>");
 #endif
 
-	if (purple_plugins_find_with_id("core-perl") != NULL)
+#warning TODO: Check for perl.
+	if (purple_plugins_find_plugin("core-perl") != NULL)
 		g_string_append(str, "<dt>Perl:</dt><dd>Enabled</dd>");
 	else
 		g_string_append(str, "<dt>Perl:</dt><dd>Disabled</dd>");
 
-	if (purple_plugins_find_with_id("core-tcl") != NULL) {
+#warning TODO: Check for tcl.
+	if (purple_plugins_find_plugin("core-tcl") != NULL) {
 		g_string_append(str, "<dt>Tcl:</dt><dd>Enabled</dd>");
 #ifdef HAVE_TK
 		g_string_append(str, "<dt>Tk:</dt><dd>Enabled</dd>");
@@ -838,47 +834,84 @@ void pidgin_dialogs_translators(void)
 void pidgin_dialogs_plugins_info(void)
 {
 	GString *str;
-	GList *l = NULL;
+	GList *plugins, *l = NULL;
 	PurplePlugin *plugin = NULL;
+	PurplePluginInfo *info;
+	PurplePluginExtraCb extra_cb;
 	char *title = g_strdup_printf(_("%s Plugin Information"), PIDGIN_NAME);
-	char *pname = NULL, *pauthor = NULL;
-	const char *pver, *pwebsite, *pid;
-	gboolean ploaded, punloadable;
+	char *pname = NULL, *authors, *pauthors, *pextra;
+	const char *pver, *plicense, *pwebsite, *pid;
+	gboolean ploaded, ploadable;
+	const char * const *authorlist;
+	guint n_authors;
 	static GtkWidget *plugins_info = NULL;
 
 	str = g_string_sized_new(4096);
 
 	g_string_append_printf(str, "<h2>%s</h2><dl>", _("Plugin Information"));
 
-	for(l = purple_plugins_get_all(); l; l = l->next) {
-		plugin = (PurplePlugin *)l->data;
+	plugins = purple_plugins_find_all();
 
-		pname = g_markup_escape_text(purple_plugin_get_name(plugin), -1);
-		if ((pauthor = (char *)purple_plugin_get_author(plugin)) != NULL)
-			pauthor = g_markup_escape_text(pauthor, -1);
-		pver = purple_plugin_get_version(plugin);
-		pwebsite = purple_plugin_get_homepage(plugin);
-		pid = purple_plugin_get_id(plugin);
-		punloadable = purple_plugin_is_unloadable(plugin);
+	for(l = plugins; l; l = l->next) {
+		plugin = PURPLE_PLUGIN(l->data);
+		info = purple_plugin_get_info(plugin);
+		extra_cb = purple_plugin_info_get_extra_cb(info);
+
+		pname = g_markup_escape_text(purple_plugin_info_get_name(info), -1);
+		authorlist = purple_plugin_info_get_authors(info);
+
+		if (authorlist) {
+			authors = g_strjoinv(", ", (gchar **)authorlist);
+			n_authors = g_strv_length((gchar **)authorlist);
+		} else {
+			authors = NULL;
+			n_authors = 0;
+		}
+
+		if (authors)
+			pauthors = g_markup_escape_text(authors, -1);
+		else
+			pauthors = NULL;
+
+		pver = purple_plugin_info_get_version(info);
+		plicense = purple_plugin_info_get_license_id(info);
+		pwebsite = purple_plugin_info_get_website(info);
+		pid = purple_plugin_info_get_id(info);
+		ploadable = !purple_plugin_info_get_error(info);
 		ploaded = purple_plugin_is_loaded(plugin);
 
+		if (ploaded && extra_cb)
+			pextra = extra_cb(plugin);
+		else
+			pextra = NULL;
+
 		g_string_append_printf(str, "<dt>%s</dt><dd>", pname);
-		if (pauthor)
-			g_string_append_printf(str, "<b>Author:</b> %s<br/>", pauthor);
+		if (pauthors)
+			g_string_append_printf(str, "<b>%s:</b> %s<br/>",
+				(n_authors > 1 ? "Authors" : "Author"), pauthors ? pauthors : "");
 		g_string_append_printf(str,
 				"<b>Version:</b> %s<br/>"
+				"<b>License:</b> %s<br/>"
 				"<b>Website:</b> %s<br/>"
 				"<b>ID String:</b> %s<br/>"
+				"<b>Extra:</b> %s<br/>"
 				"<b>Loadable:</b> %s<br/>"
 				"<b>Loaded:</b> %s"
 				"</dd><br/>",
-				pver, pwebsite, pid,
-				punloadable ? "<span style=\"color: #FF0000;\"><b>No</b></span>" : "Yes",
-				ploaded ? "Yes" : "No");
+				pver     ? pver     : "",
+				plicense ? plicense : "",
+				pwebsite ? pwebsite : "",
+				pid,
+				pextra    ? pextra  : "",
+				ploadable ? "Yes" : "<span style=\"color: #FF0000;\"><b>No</b></span>",
+				ploaded   ? "Yes" : "No");
 
 		g_free(pname);
-		g_free(pauthor);
+		g_free(pextra);
+		g_free(pauthors);
+		g_free(authors);
 	}
+	g_list_free(plugins);
 
 	g_string_append(str, "</dl>");
 
@@ -906,15 +939,15 @@ pidgin_dialogs_im_name_validator(PurpleRequestField *field, gchar **errmsg,
 {
 	PurpleRequestFields *fields = _fields;
 	PurpleAccount *account;
-	PurplePlugin *prpl;
+	PurpleProtocol *protocol;
 	const char *username;
 	gboolean valid;
 
 	account = purple_request_fields_get_account(fields, "account");
-	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
 	username = purple_request_fields_get_string(fields, "screenname");
 
-	valid = purple_validate(prpl, username);
+	valid = purple_validate(protocol, username);
 
 	if (errmsg && !valid)
 		*errmsg = g_strdup(_("Invalid username"));

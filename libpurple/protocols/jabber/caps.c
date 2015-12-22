@@ -922,8 +922,8 @@ gchar *jabber_caps_calculate_hash(JabberCapsClientInfo *info, PurpleHash *hash)
 void jabber_caps_calculate_own_hash(JabberStream *js) {
 	JabberCapsClientInfo info;
 	PurpleHash *hasher;
-	GList *iter = 0;
-	GList *features = 0;
+	GList *iter = NULL;
+	GList *features = NULL;
 
 	if (!jabber_identities && !jabber_features) {
 		/* This really shouldn't ever happen */
@@ -973,8 +973,8 @@ void jabber_caps_broadcast_change()
 
 	for (node = accounts; node; node = node->next) {
 		PurpleAccount *account = node->data;
-		const char *prpl_id = purple_account_get_protocol_id(account);
-		if (g_str_equal("prpl-jabber", prpl_id) && purple_account_is_connected(account)) {
+		const char *protocol_id = purple_account_get_protocol_id(account);
+		if (g_str_equal("prpl-jabber", protocol_id) && purple_account_is_connected(account)) {
 			PurpleConnection *gc = purple_account_get_connection(account);
 			jabber_presence_send(purple_connection_get_protocol_data(gc), TRUE);
 		}

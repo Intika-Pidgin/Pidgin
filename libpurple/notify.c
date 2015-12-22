@@ -62,7 +62,7 @@ struct _PurpleNotifySearchColumn
 };
 
 void *
-purple_notify_message(void *handle, PurpleNotifyMsgType type, const char *title,
+purple_notify_message(void *handle, PurpleNotifyMessageType type, const char *title,
 	const char *primary, const char *secondary,
 	PurpleRequestCommonParameters *cpar, PurpleNotifyCloseCallback cb,
 	gpointer user_data)
@@ -854,6 +854,33 @@ purple_notify_ui_ops_get_type(void)
 	if (type == 0) {
 		type = g_boxed_type_register_static("PurpleNotifyUiOps",
 				(GBoxedCopyFunc)purple_notify_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
+static PurpleNotifySearchButton *
+purple_notify_search_button_copy(PurpleNotifySearchButton *button)
+{
+	PurpleNotifySearchButton *button_new;
+
+	g_return_val_if_fail(button != NULL, NULL);
+
+	button_new = g_new(PurpleNotifySearchButton, 1);
+	*button_new = *button;
+
+	return button_new;
+}
+
+GType
+purple_notify_search_button_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleNotifySearchButton",
+				(GBoxedCopyFunc)purple_notify_search_button_copy,
 				(GBoxedFreeFunc)g_free);
 	}
 

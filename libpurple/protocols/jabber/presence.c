@@ -133,14 +133,14 @@ void jabber_presence_fake_to_self(JabberStream *js, PurpleStatus *status)
 	if (purple_blist_find_buddy(account, username)) {
 		jbr = jabber_buddy_find_resource(jb, NULL);
 		if (jbr) {
-			purple_prpl_got_user_status(account, username,
+			purple_protocol_got_user_status(account, username,
 					jabber_buddy_state_get_status_id(jbr->state),
 					"priority", jbr->priority,
 					jbr->status ? "message" : NULL, jbr->status,
 					NULL);
-			purple_prpl_got_user_idle(account, username, jbr->idle, jbr->idle);
+			purple_protocol_got_user_idle(account, username, jbr->idle, jbr->idle);
 		} else {
-			purple_prpl_got_user_status(account, username, "offline",
+			purple_protocol_got_user_status(account, username, "offline",
 					msg ? "message" : NULL, msg,
 					NULL);
 		}
@@ -245,10 +245,8 @@ void jabber_presence_send(JabberStream *js, gboolean force)
 
 		/* update old values */
 
-		if(js->old_msg)
-			g_free(js->old_msg);
-		if(js->old_avatarhash)
-			g_free(js->old_avatarhash);
+		g_free(js->old_msg);
+		g_free(js->old_avatarhash);
 		js->old_msg = g_strdup(stripped);
 		js->old_avatarhash = g_strdup(js->avatar_hash);
 		js->old_state = state;
@@ -334,7 +332,7 @@ PurpleXmlNode *jabber_presence_create_js(JabberStream *js, JabberBuddyState stat
 	}
 
 	/* if we are idle and not offline, include idle */
-	if (js->idle && state != JABBER_BUDDY_STATE_UNAVAILABLE) {
+	if (js && js->idle && state != JABBER_BUDDY_STATE_UNAVAILABLE) {
 		PurpleXmlNode *query = purple_xmlnode_new_child(presence, "query");
 		gchar seconds[10];
 		g_snprintf(seconds, 10, "%d", (int) (time(NULL) - js->idle));
@@ -440,7 +438,7 @@ jabber_vcard_parse_avatar(JabberStream *js, const char *from,
 			if (tmp && strstr(bare_jid, tmp) == NULL) {
 				g_free(nickname);
 				nickname = tmp;
-			} else if (tmp)
+			} else
 				g_free(tmp);
 
 			g_free(bare_jid);
@@ -508,7 +506,7 @@ jabber_presence_set_capabilities(JabberCapsClientInfo *info, GList *exts,
 	jbr->caps.info = info;
 	jbr->caps.exts = exts;
 
-	purple_prpl_got_media_caps(
+	purple_protocol_got_media_caps(
 			purple_connection_get_account(userdata->js->gc),
 			userdata->from);
 	if (info == NULL)
@@ -888,17 +886,17 @@ handle_presence_contact(JabberStream *js, JabberPresence *presence)
 	jbr = jabber_buddy_find_resource(presence->jb, NULL);
 	if (jbr) {
 		jabber_google_presence_incoming(js, buddy_name, jbr);
-		purple_prpl_got_user_status(account, buddy_name,
+		purple_protocol_got_user_status(account, buddy_name,
 				jabber_buddy_state_get_status_id(jbr->state),
 				"priority", jbr->priority,
 				"message", jbr->status,
 				NULL);
-		purple_prpl_got_user_idle(account, buddy_name,
+		purple_protocol_got_user_idle(account, buddy_name,
 				jbr->idle, jbr->idle);
 		if (presence->nickname)
 			purple_serv_got_alias(js->gc, buddy_name, presence->nickname);
 	} else {
-		purple_prpl_got_user_status(account, buddy_name,
+		purple_protocol_got_user_status(account, buddy_name,
 				jabber_buddy_state_get_status_id(JABBER_BUDDY_STATE_UNAVAILABLE),
 				presence->status ? "message" : NULL, presence->status,
 				NULL);
@@ -936,7 +934,7 @@ void jabber_presence_parse(JabberStream *js, PurpleXmlNode *packet)
 		return;
 	}
 
-	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_prpl(js->gc),
+	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_protocol(js->gc),
 			"jabber-receiving-presence", js->gc, type, presence.from, packet));
 	if (signal_return) {
 		goto out;
@@ -945,10 +943,8 @@ void jabber_presence_parse(JabberStream *js, PurpleXmlNode *packet)
 	if (presence.jid_from->node)
 		presence.chat = jabber_chat_find(js, presence.jid_from->node,
 		                                 presence.jid_from->domain);
-	if(presence.jb->error_msg) {
-		g_free(presence.jb->error_msg);
-		presence.jb->error_msg = NULL;
-	}
+	g_free(presence.jb->error_msg);
+	presence.jb->error_msg = NULL;
 
 	if (presence.type == JABBER_PRESENCE_AVAILABLE) {
 		presence.state = JABBER_BUDDY_STATE_ONLINE;

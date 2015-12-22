@@ -34,13 +34,13 @@
 
 #include "debug.h"
 #include "http.h"
-#include "prpl.h"
+#include "protocol.h"
 
 #include "conversation.h"
 #include "notify.h"
 #include "util.h"
 
-#include "libymsg.h"
+#include "ymsg.h"
 #include "yahoo_packet.h"
 #include "yahoochat.h"
 #include "ycht.h"
@@ -67,12 +67,11 @@ static void yahoo_chat_online(PurpleConnection *gc)
 
 	pkt = yahoo_packet_new(YAHOO_SERVICE_CHATONLINE, YAHOO_STATUS_AVAILABLE, yd->session_id);
 	yahoo_packet_hash(pkt, "sssss",
-					  109, purple_connection_get_display_name(gc),
-					  1, purple_connection_get_display_name(gc),
-					  6, "abcde",
-					/* I'm not sure this is the correct way to set this. */
-					  98, rll,
-					  135, yd->jp ? YAHOO_CLIENT_VERSION : YAHOOJP_CLIENT_VERSION);
+			109, purple_connection_get_display_name(gc),
+			1, purple_connection_get_display_name(gc),
+			6, "abcde",
+			98, rll,
+			135, YAHOO_CLIENT_VERSION);
 	yahoo_packet_send_and_free(pkt, yd);
 }
 
@@ -728,8 +727,7 @@ void yahoo_process_chat_message(PurpleConnection *gc, struct yahoo_packet *pkt)
 
 	c = purple_conversations_find_chat(gc, YAHOO_CHAT_ID);
 	if (!who || !c) {
-		if (room)
-			g_free(room);
+		g_free(room);
 		/* we still get messages after we part, funny that */
 		return;
 	}
@@ -956,10 +954,8 @@ static void yahoo_chat_leave(PurpleConnection *gc, const char *room, const char 
 	yahoo_packet_send_and_free(pkt, yd);
 
 	yd->in_chat = 0;
-	if (yd->chat_name) {
-		g_free(yd->chat_name);
-		yd->chat_name = NULL;
-	}
+	g_free(yd->chat_name);
+	yd->chat_name = NULL;
 
 	if (purple_conversations_find_chat(gc, YAHOO_CHAT_ID) != NULL)
 		purple_serv_got_chat_left(gc, YAHOO_CHAT_ID);
@@ -1151,9 +1147,9 @@ int yahoo_c_send(PurpleConnection *gc, int id, PurpleMessage *msg)
 GList *yahoo_c_info(PurpleConnection *gc)
 {
 	GList *m = NULL;
-	struct proto_chat_entry *pce;
+	PurpleProtocolChatEntry *pce;
 
-	pce = g_new0(struct proto_chat_entry, 1);
+	pce = g_new0(PurpleProtocolChatEntry, 1);
 	pce->label = _("_Room:");
 	pce->identifier = "room";
 	pce->required = TRUE;
@@ -1516,15 +1512,8 @@ PurpleRoomlist *yahoo_roomlist_get_list(PurpleConnection *gc)
 
 	account = purple_connection_get_account(gc);
 
-	/* for Yahoo Japan, it appears there is only one valid URL and locale */
-	if(purple_account_get_bool(account, "yahoojp", FALSE)) {
-		rll = YAHOOJP_ROOMLIST_LOCALE;
-		rlurl = YAHOOJP_ROOMLIST_URL;
-	}
-	else { /* but for the rest of the world that isn't the case */
-		rll = purple_account_get_string(account, "room_list_locale", YAHOO_ROOMLIST_LOCALE);
-		rlurl = purple_account_get_string(account, "room_list", YAHOO_ROOMLIST_URL);
-	}
+	rll = purple_account_get_string(account, "room_list_locale", YAHOO_ROOMLIST_LOCALE);
+	rlurl = purple_account_get_string(account, "room_list", YAHOO_ROOMLIST_URL);
 
 	url = g_strdup_printf("%s?chatcat=0&intl=%s", rlurl, rll);
 

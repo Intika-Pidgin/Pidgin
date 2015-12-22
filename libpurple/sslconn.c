@@ -24,6 +24,7 @@
 
 #include "certificate.h"
 #include "debug.h"
+#include "plugins.h"
 #include "request.h"
 #include "sslconn.h"
 
@@ -39,10 +40,10 @@ ssl_init(void)
 	if (_ssl_initialized)
 		return FALSE;
 
-	plugin = purple_plugins_find_with_id("core-ssl");
+	plugin = purple_plugins_find_plugin("core-ssl");
 
-	if (plugin != NULL && !purple_plugin_is_loaded(plugin))
-		purple_plugin_load(plugin);
+	if (plugin && !purple_plugin_is_loaded(plugin))
+		purple_plugin_load(plugin, NULL);
 
 	ops = purple_ssl_get_ops();
 	if ((ops == NULL) || (ops->init == NULL) || (ops->uninit == NULL) ||
@@ -53,17 +54,6 @@ ssl_init(void)
 	}
 
 	return (_ssl_initialized = ops->init());
-}
-
-gboolean
-purple_ssl_is_supported(void)
-{
-#ifdef HAVE_SSL
-	ssl_init();
-	return (purple_ssl_get_ops() != NULL);
-#else
-	return FALSE;
-#endif
 }
 
 static void
@@ -109,7 +99,6 @@ purple_ssl_connect_with_ssl_cn(PurpleAccount *account, const char *host, int por
 	g_return_val_if_fail(host != NULL,            NULL);
 	g_return_val_if_fail(port != 0 && port != -1, NULL);
 	g_return_val_if_fail(func != NULL,            NULL);
-	g_return_val_if_fail(purple_ssl_is_supported(), NULL);
 
 	if (!_ssl_initialized)
 	{
@@ -155,7 +144,6 @@ purple_ssl_input_add(PurpleSslConnection *gsc, PurpleSslInputFunction func,
 				   void *data)
 {
 	g_return_if_fail(func != NULL);
-	g_return_if_fail(purple_ssl_is_supported());
 
 	purple_ssl_input_remove(gsc);
 
@@ -202,7 +190,6 @@ purple_ssl_connect_with_host_fd(PurpleAccount *account, int fd,
 
 	g_return_val_if_fail(fd != -1,                NULL);
 	g_return_val_if_fail(func != NULL,            NULL);
-	g_return_val_if_fail(purple_ssl_is_supported(), NULL);
 
 	if (!_ssl_initialized)
 	{

@@ -428,24 +428,16 @@ static void close_button_cb(GtkButton *button, PidginDiscoDialog *dialog)
 
 static gboolean account_filter_func(PurpleAccount *account)
 {
-	return purple_strequal(purple_account_get_protocol_id(account), XMPP_PLUGIN_ID);
+	return purple_strequal(purple_account_get_protocol_id(account), XMPP_PROTOCOL_ID);
 }
 
 static gboolean
 disco_paint_tooltip(GtkWidget *tipwindow, cairo_t *cr, gpointer data)
 {
 	PangoLayout *layout = g_object_get_data(G_OBJECT(tipwindow), "tooltip-plugin");
-#if GTK_CHECK_VERSION(3,0,0)
 	GtkStyleContext *context = gtk_widget_get_style_context(tipwindow);
 	gtk_style_context_add_class(context, GTK_STYLE_CLASS_TOOLTIP);
 	gtk_render_layout(context, cr, 6, 6, layout);
-#else
-	gtk_paint_layout(gtk_widget_get_style(tipwindow),
-	                 gtk_widget_get_window(tipwindow),
-	                 GTK_STATE_NORMAL, FALSE,
-	                 NULL, tipwindow, "tooltip",
-	                 6, 6, layout);
-#endif
 	return TRUE;
 }
 

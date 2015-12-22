@@ -254,16 +254,22 @@ purple_buddy_icon_data_new(guchar *icon_data, size_t icon_len)
 	newimg = purple_image_new_from_data(icon_data, icon_len);
 	filename = purple_image_generate_filename(newimg);
 
-	oldimg = g_hash_table_lookup(icon_data_cache, filename);
-	if (oldimg) {
-		g_warn_if_fail(PURPLE_IS_IMAGE(oldimg));
-		g_object_unref(newimg);
-		g_object_ref(oldimg);
-		return oldimg;
+	/* TODO: Why is this function called for buddies without icons? If this is
+	 * intended, should the filename be null?
+	 */
+	if (filename != NULL) {
+		oldimg = g_hash_table_lookup(icon_data_cache, filename);
+		if (oldimg) {
+			g_warn_if_fail(PURPLE_IS_IMAGE(oldimg));
+			g_object_unref(newimg);
+			g_object_ref(oldimg);
+			return oldimg;
+		}
+
+		/* This will take ownership of file and free it as needed */
+		g_hash_table_insert(icon_data_cache, g_strdup(filename), newimg);
 	}
 
-	/* This will take ownership of file and free it as needed */
-	g_hash_table_insert(icon_data_cache, g_strdup(filename), newimg);
 	g_object_set_data_full(G_OBJECT(newimg), "purple-buddyicon-filename",
 		g_strdup(filename), image_deleting_cb);
 
@@ -750,13 +756,13 @@ purple_buddy_icons_set_account_icon(PurpleAccount *account,
 	if (!purple_account_is_disconnected(account))
 	{
 		PurpleConnection *gc;
-		PurplePluginProtocolInfo *prpl_info;
+		PurpleProtocol *protocol;
 
 		gc = purple_account_get_connection(account);
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+		protocol = purple_connection_get_protocol(gc);
 
-		if (prpl_info && prpl_info->set_buddy_icon)
-			prpl_info->set_buddy_icon(gc, img);
+		if (protocol)
+			purple_protocol_server_iface_set_buddy_icon(protocol, gc, img);
 	}
 
 	if (old_img)
@@ -1106,7 +1112,55 @@ purple_buddy_icons_uninit()
 	cache_dir = NULL;
 }
 
-void purple_buddy_icon_get_scale_size(PurpleBuddyIconSpec *spec, int *width, int *height)
+GType
+purple_buddy_icon_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleBuddyIcon",
+				(GBoxedCopyFunc)purple_buddy_icon_ref,
+				(GBoxedFreeFunc)purple_buddy_icon_unref);
+	}
+
+	return type;
+}
+
+PurpleBuddyIconSpec *
+purple_buddy_icon_spec_new(char *format, int min_width, int min_height,
+		int max_width, int max_height, size_t max_filesize,
+		PurpleBuddyIconScaleFlags scale_rules)
+{
+	PurpleBuddyIconSpec *icon_spec;
+
+	icon_spec = g_new0(PurpleBuddyIconSpec, 1);
+
+	icon_spec->format       = format;
+	icon_spec->min_width    = min_width;
+	icon_spec->min_height   = min_height;
+	icon_spec->max_width    = max_width;
+	icon_spec->max_height   = max_height;
+	icon_spec->max_filesize = max_filesize;
+	icon_spec->scale_rules  = scale_rules;
+
+	return icon_spec;
+}
+
+static PurpleBuddyIconSpec *
+purple_buddy_icon_spec_copy(PurpleBuddyIconSpec *icon_spec)
+{
+	PurpleBuddyIconSpec *icon_spec_copy;
+
+	g_return_val_if_fail(icon_spec != NULL, NULL);
+
+	icon_spec_copy  = g_new0(PurpleBuddyIconSpec, 1);
+	*icon_spec_copy = *icon_spec;
+
+	return icon_spec_copy;
+}
+
+void purple_buddy_icon_spec_get_scaled_size(PurpleBuddyIconSpec *spec,
+		int *width, int *height)
 {
 	int new_width, new_height;
 
@@ -1136,14 +1190,14 @@ void purple_buddy_icon_get_scale_size(PurpleBuddyIconSpec *spec, int *width, int
 }
 
 GType
-purple_buddy_icon_get_type(void)
+purple_buddy_icon_spec_get_type(void)
 {
 	static GType type = 0;
 
 	if (type == 0) {
-		type = g_boxed_type_register_static("PurpleBuddyIcon",
-				(GBoxedCopyFunc)purple_buddy_icon_ref,
-				(GBoxedFreeFunc)purple_buddy_icon_unref);
+		type = g_boxed_type_register_static("PurpleBuddyIconSpec",
+				(GBoxedCopyFunc)purple_buddy_icon_spec_copy,
+				(GBoxedFreeFunc)g_free);
 	}
 
 	return type;
