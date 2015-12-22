@@ -74,6 +74,11 @@ purple_media_codec_init(PurpleMediaCodec *info)
 			PURPLE_MEDIA_CODEC_GET_PRIVATE(info);
 	priv->encoding_name = NULL;
 	priv->optional_params = NULL;
+
+#if GLIB_CHECK_VERSION(2, 37, 3)
+	/* silence a warning */
+	(void)purple_media_codec_get_instance_private;
+#endif
 }
 
 static void
@@ -189,7 +194,7 @@ purple_media_codec_class_init(PurpleMediaCodecClass *klass)
 
 	properties[PROP_MEDIA_TYPE] = g_param_spec_flags("media-type",
 			"Media Type",
-			"Whether this is an audio of video codec.",
+			"Whether this is an audio, video or application codec.",
 			PURPLE_TYPE_MEDIA_SESSION_TYPE,
 			PURPLE_MEDIA_NONE,
 			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
@@ -406,6 +411,8 @@ purple_media_codec_to_string(const PurpleMediaCodec *codec)
 		media_type_str = "audio";
 	else if (priv->media_type & PURPLE_MEDIA_VIDEO)
 		media_type_str = "video";
+	else if (priv->media_type & PURPLE_MEDIA_APPLICATION)
+		media_type_str = "application";
 
 	g_string_printf(string, "%d: %s %s clock:%d channels:%d", priv->id,
 			media_type_str, priv->encoding_name,

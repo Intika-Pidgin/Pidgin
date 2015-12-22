@@ -71,14 +71,9 @@ static void pidgin_status_box_refresh(PidginStatusBox *status_box);
 static void status_menu_refresh_iter(PidginStatusBox *status_box, gboolean status_changed);
 static void pidgin_status_box_regenerate(PidginStatusBox *status_box, gboolean status_changed);
 static void pidgin_status_box_changed(PidginStatusBox *box);
-#if GTK_CHECK_VERSION(3,0,0)
 static void pidgin_status_box_get_preferred_height (GtkWidget *widget,
 	gint *minimum_height, gint *natural_height);
 static gboolean pidgin_status_box_draw (GtkWidget *widget, cairo_t *cr);
-#else
-static void pidgin_status_box_size_request (GtkWidget *widget, GtkRequisition *requisition);
-static gboolean pidgin_status_box_expose_event (GtkWidget *widget, GdkEventExpose *event);
-#endif
 static void pidgin_status_box_size_allocate (GtkWidget *widget, GtkAllocation *allocation);
 static void pidgin_status_box_redisplay_buddy_icon(PidginStatusBox *status_box);
 static void pidgin_status_box_forall (GtkContainer *container, gboolean include_internals, GtkCallback callback, gpointer callback_data);
@@ -122,7 +117,7 @@ enum {
 	/*
  	 * This column stores the GdkPixbuf for the status emblem. Currently only 'saved' is stored.
 	 * In the GtkTreeModel for the dropdown, this is the stock-id (gchararray), and for the
-	 * GtkTreeModel for the cell_view (for the account-specific statusbox), this is the prpl-icon
+	 * GtkTreeModel for the cell_view (for the account-specific statusbox), this is the protocol icon
 	 * (GdkPixbuf) of the account.
  	 */
 	EMBLEM_COLUMN,
@@ -451,13 +446,8 @@ destroy_icon_box(PidginStatusBox *statusbox)
 
 	gtk_widget_destroy(statusbox->icon_box);
 
-#if GTK_CHECK_VERSION(3,0,0)
 	g_object_unref(statusbox->hand_cursor);
 	g_object_unref(statusbox->arrow_cursor);
-#else
-	gdk_cursor_unref(statusbox->hand_cursor);
-	gdk_cursor_unref(statusbox->arrow_cursor);
-#endif
 
 	if (statusbox->buddy_icon_img)
 		g_object_unref(statusbox->buddy_icon_img);
@@ -491,12 +481,13 @@ pidgin_status_box_set_property(GObject *object, guint param_id,
 	case PROP_ICON_SEL:
 		if (g_value_get_boolean(value)) {
 			if (statusbox->account) {
-				PurplePlugin *plug = purple_plugins_find_with_id(purple_account_get_protocol_id(statusbox->account));
-				if (plug) {
-					PurplePluginProtocolInfo *prplinfo = PURPLE_PLUGIN_PROTOCOL_INFO(plug);
-					if (prplinfo && prplinfo->icon_spec.format != NULL)
-						setup_icon_box(statusbox);
-				}
+				PurpleBuddyIconSpec *icon_spec = NULL;
+				PurpleProtocol *protocol =
+						purple_protocols_find(purple_account_get_protocol_id(statusbox->account));
+				if (protocol)
+					icon_spec = purple_protocol_get_icon_spec(protocol);
+				if (icon_spec && icon_spec->format != NULL)
+					setup_icon_box(statusbox);
 			} else {
 				setup_icon_box(statusbox);
 			}
@@ -565,13 +556,8 @@ pidgin_status_box_class_init (PidginStatusBoxClass *klass)
 	parent_class = g_type_class_peek_parent(klass);
 
 	widget_class = (GtkWidgetClass*)klass;
-#if GTK_CHECK_VERSION(3,0,0)
 	widget_class->get_preferred_height = pidgin_status_box_get_preferred_height;
 	widget_class->draw = pidgin_status_box_draw;
-#else
-	widget_class->size_request = pidgin_status_box_size_request;
-	widget_class->expose_event = pidgin_status_box_expose_event;
-#endif
 	widget_class->size_allocate = pidgin_status_box_size_allocate;
 
 	container_class->child_type = pidgin_status_box_child_type;
@@ -712,7 +698,7 @@ pidgin_status_box_refresh(PidginStatusBox *status_box)
 		text = g_strdup_printf("%s - <span size=\"smaller\" color=\"%s\">%s</span>",
 				       purple_account_get_username(status_box->account),
 				       aa_color, secondary ? secondary : primary);
-		emblem = pidgin_create_prpl_icon(status_box->account, PIDGIN_PRPL_ICON_SMALL);
+		emblem = pidgin_create_protocol_icon(status_box->account, PIDGIN_PROTOCOL_ICON_SMALL);
 	} else if (secondary != NULL) {
 		text = g_strdup_printf("%s<span size=\"smaller\" color=\"%s\"> - %s</span>",
 				       primary, aa_color, secondary);
@@ -959,11 +945,11 @@ static PurpleAccount* check_active_accounts_for_identical_statuses(void)
 {
 	GList *iter, *active_accts = purple_accounts_get_all_active();
 	PurpleAccount *acct1 = NULL;
-	const char *prpl1 = NULL;
+	const char *proto1 = NULL;
 
 	if (active_accts) {
 		acct1 = active_accts->data;
-		prpl1 = purple_account_get_protocol_id(acct1);
+		proto1 = purple_account_get_protocol_id(acct1);
 	} else {
 		/* there's no enabled account */
 		return NULL;
@@ -974,7 +960,7 @@ static PurpleAccount* check_active_accounts_for_identical_statuses(void)
 		PurpleAccount *acct2 = iter->data;
 		GList *s1, *s2;
 
-		if (!g_str_equal(prpl1, purple_account_get_protocol_id(acct2))) {
+		if (!g_str_equal(proto1, purple_account_get_protocol_id(acct2))) {
 			acct1 = NULL;
 			break;
 		}
@@ -1324,7 +1310,6 @@ static gboolean
 popup_grab_on_window(GdkWindow *window, GdkEvent *event)
 {
 	guint32 activate_time = gdk_event_get_time(event);
-#if GTK_CHECK_VERSION(3,0,0)
 	GdkDevice *device = gdk_event_get_device(event);
 	GdkGrabStatus status;
 
@@ -1345,23 +1330,6 @@ popup_grab_on_window(GdkWindow *window, GdkEvent *event)
 	}
 
 	return FALSE;
-#else
-	if ((gdk_pointer_grab(window, TRUE,
-	                      GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
-	                      GDK_POINTER_MOTION_MASK,
-	                      NULL, NULL, activate_time) == 0))
-	{
-		if (gdk_keyboard_grab(window, TRUE, activate_time) == 0)
-			return TRUE;
-		else {
-			gdk_display_pointer_ungrab(gdk_window_get_display(window),
-			                           activate_time);
-			return FALSE;
-		}
-	}
-
-	return FALSE;
-#endif
 }
 
 
@@ -1395,22 +1363,15 @@ static void
 pidgin_status_box_popdown(PidginStatusBox *box, GdkEvent *event)
 {
 	guint32 time;
-#if GTK_CHECK_VERSION(3,0,0)
 	GdkDevice *device;
-#endif
 	gtk_widget_hide(box->popup_window);
 	box->popup_in_progress = FALSE;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(box->toggle_button), FALSE);
 	gtk_grab_remove(box->popup_window);
 	time = gdk_event_get_time(event);
-#if GTK_CHECK_VERSION(3,0,0)
 	device = gdk_event_get_device(event);
 	gdk_device_ungrab(device, time);
 	gdk_device_ungrab(gdk_device_get_associated_device(device), time);
-#else
-	gdk_pointer_ungrab(time);
-	gdk_keyboard_ungrab(time);
-#endif
 }
 
 static gboolean
@@ -1447,47 +1408,47 @@ static void
 buddy_icon_set_cb(const char *filename, PidginStatusBox *box)
 {
 	PurpleImage *img = NULL;
+	PurpleBuddyIconSpec *icon_spec = NULL;
 
 	if (box->account) {
-		PurplePlugin *plug = purple_find_prpl(purple_account_get_protocol_id(box->account));
-		if (plug) {
-			PurplePluginProtocolInfo *prplinfo = PURPLE_PLUGIN_PROTOCOL_INFO(plug);
-			if (prplinfo && prplinfo->icon_spec.format) {
-				gpointer data = NULL;
-				size_t len = 0;
-				if (filename)
-					data = pidgin_convert_buddy_icon(plug, filename, &len);
-				img = purple_buddy_icons_set_account_icon(box->account, data, len);
-				if (img) {
-					/*
-					 * set_account_icon doesn't give us a reference, but we
-					 * unref one below (for the other code path)
-					 */
-					g_object_ref(img);
-				}
-
-				purple_account_set_buddy_icon_path(box->account, filename);
-
-				purple_account_set_bool(box->account, "use-global-buddyicon", (filename != NULL));
+		PurpleProtocol *protocol =
+				purple_protocols_find(purple_account_get_protocol_id(box->account));
+		if (protocol)
+			icon_spec = purple_protocol_get_icon_spec(protocol);
+		if (icon_spec && icon_spec->format) {
+			gpointer data = NULL;
+			size_t len = 0;
+			if (filename)
+				data = pidgin_convert_buddy_icon(protocol, filename, &len);
+			img = purple_buddy_icons_set_account_icon(box->account, data, len);
+			if (img) {
+				/*
+				 * set_account_icon doesn't give us a reference, but we
+				 * unref one below (for the other code path)
+				 */
+				g_object_ref(img);
 			}
+
+			purple_account_set_buddy_icon_path(box->account, filename);
+
+			purple_account_set_bool(box->account, "use-global-buddyicon", (filename != NULL));
 		}
 	} else {
 		GList *accounts;
 		for (accounts = purple_accounts_get_all(); accounts != NULL; accounts = accounts->next) {
 			PurpleAccount *account = accounts->data;
-			PurplePlugin *plug = purple_find_prpl(purple_account_get_protocol_id(account));
-			if (plug) {
-				PurplePluginProtocolInfo *prplinfo = PURPLE_PLUGIN_PROTOCOL_INFO(plug);
-				if (prplinfo != NULL &&
-				    purple_account_get_bool(account, "use-global-buddyicon", TRUE) &&
-				    prplinfo->icon_spec.format) {
-					gpointer data = NULL;
-					size_t len = 0;
-					if (filename)
-						data = pidgin_convert_buddy_icon(plug, filename, &len);
-					purple_buddy_icons_set_account_icon(account, data, len);
-					purple_account_set_buddy_icon_path(account, filename);
-				}
+			PurpleProtocol *protocol =
+					purple_protocols_find(purple_account_get_protocol_id(account));
+			if (protocol)
+				icon_spec = purple_protocol_get_icon_spec(protocol);
+			if (icon_spec && icon_spec->format &&
+			    purple_account_get_bool(account, "use-global-buddyicon", TRUE)) {
+				gpointer data = NULL;
+				size_t len = 0;
+				if (filename)
+					data = pidgin_convert_buddy_icon(protocol, filename, &len);
+				purple_buddy_icons_set_account_icon(account, data, len);
+				purple_account_set_buddy_icon_path(account, filename);
 			}
 		}
 
@@ -1910,7 +1871,6 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 
 }
 
-#if GTK_CHECK_VERSION(3,0,0)
 static void
 pidgin_status_box_get_preferred_height(GtkWidget *widget, gint *minimum_height,
                                        gint *natural_height)
@@ -1936,30 +1896,6 @@ pidgin_status_box_get_preferred_height(GtkWidget *widget, gint *minimum_height,
 			*natural_height += box_nat_height + border_width * 2;
 	}
 }
-#else
-static void
-pidgin_status_box_size_request(GtkWidget *widget,
-								 GtkRequisition *requisition)
-{
-	GtkRequisition box_req;
-	gint border_width = GTK_CONTAINER (widget)->border_width;
-
-	gtk_widget_size_request(PIDGIN_STATUS_BOX(widget)->toggle_button, requisition);
-
-	/* Make this icon the same size as other buddy icons in the list; unless it already wants to be bigger */
-	requisition->height = MAX(requisition->height, 34);
-	requisition->height += border_width * 2;
-
-	/* If the gtkwebview is visible, then add some additional padding */
-	if (PIDGIN_STATUS_BOX(widget)->webview_visible) {
-		gtk_widget_size_request(PIDGIN_STATUS_BOX(widget)->vbox, &box_req);
-		if (box_req.height > 1)
-			requisition->height += box_req.height + border_width * 2;
-	}
-
-	requisition->width = 1;
-}
-#endif
 
 /* From gnome-panel */
 static void
@@ -2050,7 +1986,6 @@ pidgin_status_box_size_allocate(GtkWidget *widget,
 	gtk_widget_set_allocation(GTK_WIDGET(status_box), allocation);
 }
 
-#if GTK_CHECK_VERSION(3,0,0)
 static gboolean
 pidgin_status_box_draw(GtkWidget *widget, cairo_t *cr)
 {
@@ -2068,22 +2003,6 @@ pidgin_status_box_draw(GtkWidget *widget, cairo_t *cr)
 	}
 	return FALSE;
 }
-#else
-static gboolean
-pidgin_status_box_expose_event(GtkWidget *widget,
-				 GdkEventExpose *event)
-{
-	PidginStatusBox *status_box = PIDGIN_STATUS_BOX(widget);
-	gtk_container_propagate_expose(GTK_CONTAINER(widget), status_box->vbox, event);
-	gtk_container_propagate_expose(GTK_CONTAINER(widget), status_box->toggle_button, event);
-	if (status_box->icon_box && status_box->icon_opaque) {
-		gtk_paint_box(widget->style, widget->window, GTK_STATE_NORMAL, GTK_SHADOW_OUT, NULL,
-				status_box->icon_box, "button", status_box->icon_box->allocation.x-1, status_box->icon_box->allocation.y-1,
-				34, 34);
-	}
-	return FALSE;
-}
-#endif
 
 static void
 pidgin_status_box_forall(GtkContainer *container,
@@ -2395,11 +2314,8 @@ activate_currently_selected_status(PidginStatusBox *status_box)
 	{
 		gtk_widget_hide(status_box->vbox);
 		status_box->webview_visible = FALSE;
-		if (message != NULL)
-		{
-			g_free(message);
-			message = NULL;
-		}
+		g_free(message);
+		message = NULL;
 	}
 
 	if (status_box->account == NULL) {

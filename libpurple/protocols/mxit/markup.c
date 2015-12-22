@@ -28,7 +28,7 @@
 #include	"http.h"
 #include "image-store.h"
 
-#include	"protocol.h"
+#include	"client.h"
 #include	"mxit.h"
 #include	"markup.h"
 #include	"chunk.h"
@@ -258,8 +258,7 @@ static void free_markupdata( struct RXMsgData* mx )
 	if ( mx ) {
 		if ( mx->msg )
 			g_string_free( mx->msg, TRUE );
-		if ( mx->from )
-			g_free( mx->from );
+		g_free(mx->from);
 		g_free( mx );
 	}
 }

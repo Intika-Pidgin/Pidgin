@@ -24,7 +24,7 @@
 #include "internal.h"
 #include "debug.h"
 
-#include "libymsg.h"
+#include "ymsg.h"
 #include "yahoo_packet.h"
 
 struct yahoo_packet *yahoo_packet_new(enum yahoo_service service, enum yahoo_status status, int id)
@@ -208,7 +208,7 @@ void yahoo_packet_read(struct yahoo_packet *pkt, const guchar *data, int len)
 	/*
 	 * Originally this function used g_slist_append().  I changed
 	 * it to use g_slist_prepend() for improved performance.
-	 * Ideally the Yahoo! PRPL code would be indifferent to the
+	 * Ideally the Yahoo! protocol code would be indifferent to the
 	 * order of the key/value pairs, but I don't know if this is
 	 * the case for all incoming messages.  To be on the safe side
 	 * we reverse the list.
@@ -314,8 +314,7 @@ yahoo_packet_send_can_write(gpointer data, gint source, PurpleInputCondition con
 }
 
 
-size_t yahoo_packet_build(struct yahoo_packet *pkt, int pad, gboolean wm,
-			 gboolean jp, guchar **buf)
+size_t yahoo_packet_build(struct yahoo_packet *pkt, int pad, gboolean wm, guchar **buf)
 {
 	size_t pktlen = yahoo_packet_length(pkt);
 	size_t len = YAHOO_PACKET_HDRLEN + pktlen;
@@ -328,8 +327,6 @@ size_t yahoo_packet_build(struct yahoo_packet *pkt, int pad, gboolean wm,
 
 	if (wm)
 		pos += yahoo_put16(data + pos, YAHOO_WEBMESSENGER_PROTO_VER);
-	else if (jp)
-		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER_JAPAN);
 	else
 		pos += yahoo_put16(data + pos, YAHOO_PROTO_VER);
 	pos += yahoo_put16(data + pos, 0x0000);
@@ -354,7 +351,7 @@ int yahoo_packet_send(struct yahoo_packet *pkt, YahooData *yd)
 	if (yd->fd < 0)
 		return -1;
 
-	len = yahoo_packet_build(pkt, 0, yd->wm, yd->jp, &data);
+	len = yahoo_packet_build(pkt, 0, yd->wm, &data);
 
 	yahoo_packet_dump(data, len);
 	if (yd->txhandler == 0)

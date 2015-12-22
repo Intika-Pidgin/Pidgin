@@ -24,6 +24,7 @@ syntax: regexp
 .*\.dll$
 .*\.exe$
 .*\.g?mo$
+.*\.gir$
 .*\.la$
 \.libs
 .*\.lo$
@@ -34,6 +35,7 @@ syntax: regexp
 .*\.pyo$
 .*\.rej$
 .*\.so$
+.*\.typelib$
 .*\.moc$
 VERSION$
 aclocal.m4
@@ -81,6 +83,7 @@ libpurple/plugins/perl/common/Makefile.old
 libpurple/plugins/perl/common/const-c.inc
 libpurple/plugins/perl/common/const-xs.inc
 libpurple/plugins/perl/common/lib
+libpurple/protocols/facebook/marshal.[ch]
 libpurple/purple-client-bindings.[ch]
 libpurple/purple-client-example
 libpurple/purple.h$

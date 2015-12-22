@@ -26,7 +26,7 @@
 #include "internal.h"
 #include "debug.h"
 
-#include "protocol.h"
+#include "client.h"
 #include "mxit.h"
 #include "multimx.h"
 #include "markup.h"
@@ -164,8 +164,7 @@ static void room_remove(struct MXitSession* session, struct multimx* multimx)
 	session->rooms = g_list_remove(session->rooms, multimx);
 
 	/* free nickname */
-	if (multimx->nickname)
-		g_free(multimx->nickname);
+	g_free(multimx->nickname);
 
 	/* Deallocate it */
 	g_free (multimx);
@@ -435,10 +434,10 @@ void multimx_message_received(struct RXMsgData* mx, char* msg, int msglen, short
 GList* mxit_chat_info(PurpleConnection *gc)
 {
 	GList *m = NULL;
-	struct proto_chat_entry *pce;
+	PurpleProtocolChatEntry *pce;
 
 	/* Configuration option: Room Name */
-	pce = g_new0(struct proto_chat_entry, 1);
+	pce = g_new0(PurpleProtocolChatEntry, 1);
 	pce->label = _( "_Room Name:" );
 	pce->identifier = "room";
 	pce->required = TRUE;

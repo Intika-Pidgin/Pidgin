@@ -35,7 +35,7 @@
 #include "network.h"
 #include "notify.h"
 #include "prefs.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "pounce.h"
 #include "sound.h"
 #include "status.h"
@@ -431,10 +431,8 @@ int pidgin_start(int argc, char *argv[])
 	char *opt_login_arg = NULL;
 	char *opt_session_arg = NULL;
 	char *search_path;
-#if GTK_CHECK_VERSION(3,0,0)
 	GtkCssProvider *provider;
 	GdkScreen *screen;
-#endif
 	GList *accounts;
 #ifdef HAVE_SIGNAL_H
 	int sig_indx;	/* for setting up signal catching */
@@ -443,17 +441,16 @@ int pidgin_start(int argc, char *argv[])
 	GIOChannel *signal_channel;
 	GIOStatus signal_status;
 	guint signal_channel_watcher;
+	GError *error;
 #ifndef DEBUG
 	char *segfault_message_tmp;
-#endif
-#endif
-#if defined(HAVE_SIGNAL_H) || GTK_CHECK_VERSION(3,0,0)
-	GError *error;
-#endif
+#endif /* DEBUG */
+#endif /* HAVE_SIGNAL_N */
 	int opt;
 	gboolean gui_check;
 	gboolean debug_enabled, debug_colored;
 	GList *active_accounts;
+	GStatBuf st;
 
 	struct option long_options[] = {
 		{"config",       required_argument, NULL, 'c'},
@@ -693,12 +690,6 @@ int pidgin_start(int argc, char *argv[])
 	purple_debug_set_enabled(debug_enabled);
 	purple_debug_set_colored(debug_colored);
 
-#if !GTK_CHECK_VERSION(3,0,0)
-	search_path = g_build_filename(purple_user_dir(), "gtkrc-2.0", NULL);
-	gtk_rc_add_default_file(search_path);
-	g_free(search_path);
-#endif
-
 	gui_check = gtk_init_check(&argc, &argv);
 	if (!gui_check) {
 		char *display = gdk_get_display();
@@ -714,7 +705,6 @@ int pidgin_start(int argc, char *argv[])
 		return 1;
 	}
 
-#if GTK_CHECK_VERSION(3,0,0)
 	search_path = g_build_filename(purple_user_dir(), "gtk-3.0.css", NULL);
 
 	error = NULL;
@@ -732,7 +722,6 @@ int pidgin_start(int argc, char *argv[])
 	}
 
 	g_free(search_path);
-#endif
 
 #ifdef _WIN32
 	winpidgin_init();
@@ -740,17 +729,6 @@ int pidgin_start(int argc, char *argv[])
 
 	purple_core_set_ui_ops(pidgin_core_get_ui_ops());
 	purple_eventloop_set_ui_ops(pidgin_eventloop_get_ui_ops());
-
-	/*
-	 * Set plugin search directories. Give priority to the plugins
-	 * in user's home directory.
-	 */
-	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
-	if (g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR) != 0 && errno != EEXIST)
-		fprintf(stderr, "Couldn't create plugins dir\n");
-	purple_plugins_add_search_path(search_path);
-	g_free(search_path);
-	purple_plugins_add_search_path(PIDGIN_LIBDIR);
 
 	if (!purple_core_init(PIDGIN_UI)) {
 		fprintf(stderr,
@@ -761,6 +739,15 @@ int pidgin_start(int argc, char *argv[])
 #endif
 		abort();
 	}
+
+	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
+	if (!g_stat(search_path, &st))
+		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
+	purple_plugins_add_search_path(search_path);
+	g_free(search_path);
+
+	purple_plugins_add_search_path(PIDGIN_LIBDIR);
+	purple_plugins_refresh();
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
 #ifdef HAVE_DBUS
@@ -789,14 +776,10 @@ int pidgin_start(int argc, char *argv[])
 #ifdef USE_SM
 	pidgin_session_init(argv[0], opt_session_arg, opt_config_dir_arg);
 #endif
-	if (opt_session_arg != NULL) {
-		g_free(opt_session_arg);
-		opt_session_arg = NULL;
-	}
-	if (opt_config_dir_arg != NULL) {
-		g_free(opt_config_dir_arg);
-		opt_config_dir_arg = NULL;
-	}
+	g_free(opt_session_arg);
+	opt_session_arg = NULL;
+	g_free(opt_config_dir_arg);
+	opt_config_dir_arg = NULL;
 
 	/* This needs to be before purple_blist_show() so the
 	 * statusbox gets the forced online status. */
@@ -823,10 +806,8 @@ int pidgin_start(int argc, char *argv[])
 			purple_savedstatus_activate(purple_savedstatus_get_startup());
 		/* now enable the requested ones */
 		dologin_named(opt_login_arg);
-		if (opt_login_arg != NULL) {
-			g_free(opt_login_arg);
-			opt_login_arg = NULL;
-		}
+		g_free(opt_login_arg);
+		opt_login_arg = NULL;
 	} else if (opt_nologin)	{
 		/* Set all accounts to "offline" */
 		PurpleSavedStatus *saved_status;

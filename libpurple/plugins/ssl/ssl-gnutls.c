@@ -22,7 +22,7 @@
 #include "internal.h"
 #include "debug.h"
 #include "certificate.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "sslconn.h"
 #include "version.h"
 #include "util.h"
@@ -170,20 +170,6 @@ ssl_gnutls_init_gnutls(void)
 {
 	const char *debug_level;
 	const char *host_priorities_str;
-
-	/* Configure GnuTLS to use glib memory management */
-	/* I expect that this isn't really necessary, but it may prevent
-	   some bugs */
-	/* TODO: It may be necessary to wrap this allocators for GnuTLS.
-	   If there are strange bugs, perhaps look here (yes, I am a
-	   hypocrite) */
-	gnutls_global_set_mem_functions(
-		(gnutls_alloc_function)   g_malloc, /* malloc */
-		(gnutls_alloc_function)   g_malloc, /* secure malloc */
-		NULL,      /* mem_is_secure */
-		(gnutls_realloc_function) g_realloc, /* realloc */
-		(gnutls_free_function)    g_free     /* free */
-		);
 
 	debug_level = g_getenv("PURPLE_GNUTLS_DEBUG");
 	if (debug_level) {
@@ -1107,7 +1093,6 @@ x509_certificate_signed_by(PurpleCertificate * crt,
 		return FALSE;
 	}
 
-#ifdef HAVE_GNUTLS_CERT_INSECURE_ALGORITHM
 	if (verify & GNUTLS_CERT_INSECURE_ALGORITHM) {
 		/*
 		 * A certificate in the chain is signed with an insecure
@@ -1121,7 +1106,6 @@ x509_certificate_signed_by(PurpleCertificate * crt,
 				"Insecure hash algorithm used by %s to sign %s\n",
 				issuer_id, crt_id);
 	}
-#endif
 
 	if (verify & GNUTLS_CERT_INVALID) {
 		/* Signature didn't check out, but at least
@@ -1400,8 +1384,31 @@ static PurpleSslOps ssl_ops =
 	NULL
 };
 
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Christian Hammond <chipx86@gnupdate.org>",
+		NULL
+	};
+
+	return purple_plugin_info_new(
+		"id",           SSL_GNUTLS_PLUGIN_ID,
+		"name",         N_("GNUTLS"),
+		"version",      DISPLAY_VERSION,
+		"category",     N_("SSL"),
+		"summary",      N_("Provides SSL support through GNUTLS."),
+		"description",  N_("Provides SSL support through GNUTLS."),
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        PURPLE_PLUGIN_INFO_FLAGS_INTERNAL,
+		NULL
+	);
+}
+
 static gboolean
-plugin_load(PurplePlugin *plugin)
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	if(!purple_ssl_get_ops()) {
 		purple_ssl_set_ops(&ssl_ops);
@@ -1417,7 +1424,7 @@ plugin_load(PurplePlugin *plugin)
 }
 
 static gboolean
-plugin_unload(PurplePlugin *plugin)
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	if(purple_ssl_get_ops() == &ssl_ops) {
 		purple_ssl_set_ops(NULL);
@@ -1428,46 +1435,4 @@ plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	PURPLE_PLUGIN_FLAG_INVISIBLE,                       /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
-
-	SSL_GNUTLS_PLUGIN_ID,                             /**< id             */
-	N_("GNUTLS"),                                     /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	N_("Provides SSL support through GNUTLS."),
-	                                                  /**  description    */
-	N_("Provides SSL support through GNUTLS."),
-	"Christian Hammond <chipx86@gnupdate.org>",
-	PURPLE_WEBSITE,                                     /**< homepage       */
-
-	plugin_load,                                      /**< load           */
-	plugin_unload,                                    /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	NULL,                                             /**< extra_info     */
-	NULL,                                             /**< prefs_info     */
-	NULL,                                             /**< actions        */
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
-{
-}
-
-PURPLE_INIT_PLUGIN(ssl_gnutls, init_plugin, info)
+PURPLE_PLUGIN_INIT(ssl_gnutls, plugin_query, plugin_load, plugin_unload);

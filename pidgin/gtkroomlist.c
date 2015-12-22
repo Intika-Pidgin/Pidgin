@@ -226,13 +226,13 @@ static void do_add_room_cb(GtkWidget *w, struct _menu_cb_info *info)
 	char *name;
 	PurpleAccount *account = purple_roomlist_get_account(info->list);
 	PurpleConnection *gc = purple_account_get_connection(account);
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 
 	if(gc != NULL)
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+		protocol = purple_connection_get_protocol(gc);
 
-	if(prpl_info != NULL && prpl_info->roomlist_room_serialize)
-		name = prpl_info->roomlist_room_serialize(info->room);
+	if(protocol != NULL && PURPLE_PROTOCOL_IMPLEMENTS(protocol, ROOMLIST_IFACE, room_serialize))
+		name = purple_protocol_roomlist_iface_room_serialize(protocol, info->room);
 	else
 		name = g_strdup(purple_roomlist_room_get_name(info->room));
 
@@ -355,23 +355,16 @@ pidgin_roomlist_paint_tooltip(GtkWidget *widget, cairo_t *cr, gpointer user_data
 	int current_height, max_width;
 	int max_text_width;
 	GtkTextDirection dir = gtk_widget_get_direction(GTK_WIDGET(grl->tree));
-#if GTK_CHECK_VERSION(3,0,0)
 	GtkStyleContext *context;
 
 	context = gtk_widget_get_style_context(grl->tipwindow);
 	gtk_style_context_add_class(context, GTK_STYLE_CLASS_TOOLTIP);
-#else
-	GtkStyle *style;
-
-	style = gtk_widget_get_style(grl->tipwindow);
-#endif
 
 	max_text_width = MAX(grl->tip_width, grl->tip_name_width);
 	max_width = TOOLTIP_BORDER + SMALL_SPACE + max_text_width + TOOLTIP_BORDER;
 
 	current_height = 12;
 
-#if GTK_CHECK_VERSION(3,0,0)
 	if (dir == GTK_TEXT_DIR_RTL) {
 		gtk_render_layout(context, cr,
 		                  max_width - (TOOLTIP_BORDER + SMALL_SPACE) - PANGO_PIXELS(600000),
@@ -394,34 +387,6 @@ pidgin_roomlist_paint_tooltip(GtkWidget *widget, cairo_t *cr, gpointer user_data
 		                  current_height + grl->tip_name_height,
 		                  grl->tip_layout);
 	}
-#else
-	if (dir == GTK_TEXT_DIR_RTL) {
-		gtk_paint_layout(style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
-		                 NULL, grl->tipwindow, "tooltip",
-		                 max_width - (TOOLTIP_BORDER + SMALL_SPACE) - PANGO_PIXELS(600000),
-		                 current_height,
-		                 grl->tip_name_layout);
-	} else {
-		gtk_paint_layout(style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
-		                 NULL, grl->tipwindow, "tooltip",
-		                 TOOLTIP_BORDER + SMALL_SPACE,
-		                 current_height,
-		                 grl->tip_name_layout);
-	}
-	if (dir != GTK_TEXT_DIR_RTL) {
-		gtk_paint_layout(style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
-		                 NULL, grl->tipwindow, "tooltip",
-		                 TOOLTIP_BORDER + SMALL_SPACE,
-		                 current_height + grl->tip_name_height,
-		                 grl->tip_layout);
-	} else {
-		gtk_paint_layout(style, grl->tipwindow->window, GTK_STATE_NORMAL, FALSE,
-		                 NULL, grl->tipwindow, "tooltip",
-		                 max_width - (TOOLTIP_BORDER + SMALL_SPACE) - PANGO_PIXELS(600000),
-		                 current_height + grl->tip_name_height,
-		                 grl->tip_layout);
-	}
-#endif
 
 	return FALSE;
 }
@@ -533,12 +498,12 @@ pidgin_roomlist_create_tooltip(GtkWidget *widget, GtkTreePath *path,
 static gboolean account_filter_func(PurpleAccount *account)
 {
 	PurpleConnection *conn = purple_account_get_connection(account);
-	PurplePluginProtocolInfo *prpl_info = NULL;
+	PurpleProtocol *protocol = NULL;
 
 	if (conn && PURPLE_CONNECTION_IS_CONNECTED(conn))
-		prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(conn));
+		protocol = purple_connection_get_protocol(conn);
 
-	return (prpl_info && prpl_info->roomlist_get_list != NULL);
+	return (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, ROOMLIST_IFACE, get_list));
 }
 
 gboolean
@@ -567,11 +532,7 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 	dialog->account = account;
 
 	/* Create the window. */
-#if GTK_CHECK_VERSION(3,0,0)
 	dialog->window = window = pidgin_create_dialog(_("Room List"), 0, "room list", TRUE);
-#else
-	dialog->window = window = pidgin_create_dialog(_("Room List"), PIDGIN_HIG_BORDER, "room list", TRUE);
-#endif
 
 	g_signal_connect(G_OBJECT(window), "delete_event",
 					 G_CALLBACK(delete_win_cb), dialog);

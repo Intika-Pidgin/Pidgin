@@ -123,28 +123,7 @@ jingle_google_p2p_candidate_new(const gchar *id, guint generation,
 	return candidate;
 }
 
-GType
-jingle_google_p2p_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(JingleGoogleP2PClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) jingle_google_p2p_class_init,
-			NULL,
-			NULL,
-			sizeof(JingleGoogleP2P),
-			0,
-			(GInstanceInitFunc) jingle_google_p2p_init,
-			NULL
-		};
-		type = g_type_register_static(JINGLE_TYPE_TRANSPORT, "JingleGoogleP2P", &info, 0);
-	}
-	return type;
-}
+PURPLE_DEFINE_TYPE(JingleGoogleP2P, jingle_google_p2p, JINGLE_TYPE_TRANSPORT);
 
 static void
 jingle_google_p2p_class_init(JingleGoogleP2PClass *klass)
@@ -319,7 +298,7 @@ jingle_google_p2p_get_remote_candidates(JingleTransport *transport)
 								PURPLE_MEDIA_CANDIDATE_TYPE_RELAY : 0,
 				!strcmp(candidate->protocol, "udp") ?
 					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP :
-					PURPLE_MEDIA_NETWORK_PROTOCOL_TCP,
+					PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_PASSIVE,
 				candidate->address, candidate->port);
 		g_object_set(new_candidate,
 		             "username", candidate->username,

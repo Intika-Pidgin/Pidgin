@@ -330,18 +330,12 @@ purple_gnome_proxy_get_info(void)
 	g_free(tmp);
 
 	/* Free the old fields */
-	if (info.host) {
-		g_free(info.host);
-		info.host = NULL;
-	}
-	if (info.username) {
-		g_free(info.username);
-		info.username = NULL;
-	}
-	if (info.password) {
-		g_free(info.password);
-		info.password = NULL;
-	}
+	g_free(info.host);
+	info.host = NULL;
+	g_free(info.username);
+	info.username = NULL;
+	g_free(info.password);
+	info.password = NULL;
 
 	tmp = purple_gnome_proxy_get_parameter(GNOME_PROXY_USE_SAME_PROXY, gnome_version);
 	if (!tmp)
@@ -575,6 +569,9 @@ purple_win32_proxy_get_info(void)
 static void
 purple_proxy_connect_data_destroy(PurpleProxyConnectData *connect_data)
 {
+	if (!PURPLE_PROXY_CONNECT_DATA_IS_VALID(connect_data))
+		return;
+
 	handles = g_slist_remove(handles, connect_data);
 
 	if (connect_data->query_data != NULL)

@@ -96,7 +96,8 @@ msn_callback_state_free(MsnCallbackState *state)
 	g_free(state->old_group_name);
 	g_free(state->new_group_name);
 	g_free(state->guid);
-	purple_xmlnode_free(state->body);
+	if (state->body)
+		purple_xmlnode_free(state->body);
 
 	g_free(state);
 }
@@ -854,8 +855,8 @@ msn_parse_addressbook_contacts(MsnSession *session, PurpleXmlNode *node)
 		if (mobile && user)
 		{
 			user->mobile = TRUE;
-			purple_prpl_got_user_status(session->account, user->passport, "mobile", NULL);
-			purple_prpl_got_user_status(session->account, user->passport, "available", NULL);
+			purple_protocol_got_user_status(session->account, user->passport, "mobile", NULL);
+			purple_protocol_got_user_status(session->account, user->passport, "available", NULL);
 		}
 		if (alias)
 			purple_serv_got_private_alias(pc, passport, alias);

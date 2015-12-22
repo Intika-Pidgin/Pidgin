@@ -351,8 +351,7 @@ void jabber_bytestreams_parse(JabberStream *js, const char *from,
 	if(!jsx->accepted)
 		return;
 
-	if(jsx->iq_id)
-		g_free(jsx->iq_id);
+	g_free(jsx->iq_id);
 	jsx->iq_id = g_strdup(id);
 
 	for(streamhost = purple_xmlnode_get_child(query, "streamhost"); streamhost;
@@ -1008,7 +1007,7 @@ jabber_si_xfer_ibb_recv_data_cb(JabberIBBSession *sess, gpointer data,
 		purple_debug_info("jabber", "about to write %" G_GSIZE_FORMAT " bytes from IBB stream\n",
 			size);
 		purple_circular_buffer_append(jsx->ibb_buffer, data, size);
-		purple_xfer_prpl_ready(xfer);
+		purple_xfer_protocol_ready(xfer);
 	} else {
 		/* trying to write past size of file transfers negotiated size,
 		  reject transfer to protect against malicious behaviour */
@@ -1113,7 +1112,7 @@ jabber_si_xfer_ibb_sent_cb(JabberIBBSession *sess)
 		purple_xfer_end(xfer);
 	} else {
 		/* send more... */
-		purple_xfer_prpl_ready(xfer);
+		purple_xfer_protocol_ready(xfer);
 	}
 }
 
@@ -1124,7 +1123,7 @@ jabber_si_xfer_ibb_opened_cb(JabberIBBSession *sess)
 
 	if (jabber_ibb_session_get_state(sess) == JABBER_IBB_SESSION_OPENED) {
 		purple_xfer_start(xfer, -1, NULL, 0);
-		purple_xfer_prpl_ready(xfer);
+		purple_xfer_protocol_ready(xfer);
 	} else {
 		/* error */
 		purple_xfer_end(xfer);

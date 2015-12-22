@@ -147,8 +147,7 @@ static void handle_chat(JabberMessage *jm)
 					jbr->chat_states = JABBER_CHAT_STATES_UNSUPPORTED;
 			}
 
-			if(jbr->thread_id)
-				g_free(jbr->thread_id);
+			g_free(jbr->thread_id);
 			jbr->thread_id = g_strdup(jbr->thread_id);
 		}
 
@@ -316,7 +315,7 @@ static void handle_buzz(JabberMessage *jm) {
 		return; /* Do not accept buzzes from unknown people */
 
 	/* xmpp only has 1 attention type, so index is 0 */
-	purple_prpl_got_attention(jm->js->gc, jm->from, 0);
+	purple_protocol_got_attention(jm->js->gc, jm->from, 0);
 }
 
 /* used internally by the functions below */
@@ -560,7 +559,7 @@ void jabber_message_parse(JabberStream *js, PurpleXmlNode *packet)
 	to   = purple_xmlnode_get_attrib(packet, "to");
 	type = purple_xmlnode_get_attrib(packet, "type");
 
-	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_prpl(js->gc),
+	signal_return = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_connection_get_protocol(js->gc),
 			"jabber-receiving-message", js->gc, type, id, from, to, packet));
 	if (signal_return)
 		return;

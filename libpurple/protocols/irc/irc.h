@@ -24,6 +24,7 @@
 #define _PURPLE_IRC_H
 
 #include <glib.h>
+#include <gmodule.h>
 
 #ifdef HAVE_CYRUS_SASL
 #include <sasl/sasl.h>
@@ -33,6 +34,13 @@
 #include "xfer.h"
 #include "roomlist.h"
 #include "sslconn.h"
+
+#define IRC_TYPE_PROTOCOL             (irc_protocol_get_type())
+#define IRC_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), IRC_TYPE_PROTOCOL, IRCProtocol))
+#define IRC_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), IRC_TYPE_PROTOCOL, IRCProtocolClass))
+#define IRC_IS_PROTOCOL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), IRC_TYPE_PROTOCOL))
+#define IRC_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), IRC_TYPE_PROTOCOL))
+#define IRC_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), IRC_TYPE_PROTOCOL, IRCProtocolClass))
 
 #define IRC_DEFAULT_SERVER "irc.freenode.net"
 #define IRC_DEFAULT_PORT 6667
@@ -48,9 +56,18 @@
 
 #define IRC_NAMES_FLAG "irc-namelist"
 
-
 enum { IRC_USEROPT_SERVER, IRC_USEROPT_PORT, IRC_USEROPT_CHARSET };
 enum irc_state { IRC_STATE_NEW, IRC_STATE_ESTABLISHED };
+
+typedef struct _IRCProtocol
+{
+	PurpleProtocol parent;
+} IRCProtocol;
+
+typedef struct _IRCProtocolClass
+{
+	PurpleProtocolClass parent_class;
+} IRCProtocolClass;
 
 struct irc_conn {
 	PurpleAccount *account;
@@ -118,6 +135,8 @@ struct irc_buddy {
 
 typedef int (*IRCCmdCallback) (struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 
+G_MODULE_EXPORT GType irc_protocol_get_type(void);
+
 int irc_send(struct irc_conn *irc, const char *buf);
 int irc_send_len(struct irc_conn *irc, const char *buf, int len);
 gboolean irc_blist_timeout(struct irc_conn *irc);
@@ -134,6 +153,7 @@ const char *irc_nick_skip_mode(struct irc_conn *irc, const char *string);
 gboolean irc_ischannel(const char *string);
 
 void irc_register_commands(void);
+void irc_unregister_commands(void);
 void irc_msg_table_build(struct irc_conn *irc);
 void irc_parse_msg(struct irc_conn *irc, char *input);
 char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, const char *msg, int notice);

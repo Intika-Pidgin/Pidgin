@@ -24,7 +24,7 @@
 #include "debug.h"
 #include "notify.h"
 #include "xfer.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "util.h"
 
 #include "gtkxfer.h"
@@ -718,11 +718,7 @@ pidgin_xfer_dialog_new(void)
 		purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/filetransfer/clear_finished");
 
 	/* Create the window. */
-#if GTK_CHECK_VERSION(3,0,0)
 	dialog->window = window = pidgin_create_dialog(_("File Transfers"), 0, "file transfer", TRUE);
-#else
-	dialog->window = window = pidgin_create_dialog(_("File Transfers"), PIDGIN_HIG_BORDER, "file transfer", TRUE);
-#endif
 	gtk_window_set_default_size(GTK_WINDOW(window), 450, 250);
 
 	g_signal_connect(G_OBJECT(window), "delete_event",
@@ -1210,10 +1206,10 @@ pidgin_xfer_add_thumbnail(PurpleXfer *xfer, const gchar *formats)
 				}
 			}
 
-			/* Try the first format given by the PRPL without options */
+			/* Try the first format given by the protocol without options */
 			if (format == NULL) {
 				purple_debug_info("xfer",
-				    "creating thumbnail of format %s as demanded by PRPL\n",
+				    "creating thumbnail of format %s as demanded by protocol\n",
 				    formats_split[0]);
 				format = formats_split[0];
 			}

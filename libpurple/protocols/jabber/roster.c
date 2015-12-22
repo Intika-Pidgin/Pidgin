@@ -27,7 +27,6 @@
 
 #include "buddy.h"
 #include "chat.h"
-#include "facebook_roster.h"
 #include "google/google.h"
 #include "google/google_roster.h"
 #include "presence.h"
@@ -216,17 +215,10 @@ void jabber_roster_parse(JabberStream *js, const char *from,
 
 	js->currently_parsing_roster_push = TRUE;
 
-	if (js->server_caps & JABBER_CAP_FACEBOOK)
-		jabber_facebook_roster_cleanup(js, query);
-
 	for(item = purple_xmlnode_get_child(query, "item"); item; item = purple_xmlnode_get_next_twin(item))
 	{
 		const char *jid, *name, *subscription, *ask;
 		JabberBuddy *jb;
-
-		if (js->server_caps & JABBER_CAP_FACEBOOK)
-			if (!jabber_facebook_roster_incoming(js, item))
-				continue;
 
 		subscription = purple_xmlnode_get_attrib(item, "subscription");
 		jid = purple_xmlnode_get_attrib(item, "jid");
@@ -434,7 +426,7 @@ void jabber_roster_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
 	} else if(!jb || !(jb->subscription & JABBER_SUB_TO)) {
 		jabber_presence_subscription_set(js, who, "subscribe");
 	} else if((jbr =jabber_buddy_find_resource(jb, NULL))) {
-		purple_prpl_got_user_status(purple_connection_get_account(gc), who,
+		purple_protocol_got_user_status(purple_connection_get_account(gc), who,
 				jabber_buddy_state_get_status_id(jbr->state),
 				"priority", jbr->priority, jbr->status ? "message" : NULL, jbr->status, NULL);
 	}

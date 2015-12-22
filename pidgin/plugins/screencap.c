@@ -276,21 +276,6 @@ scrncap_draw_window_paint(GtkWidget *widget, cairo_t *cr, gpointer _surface)
 	return FALSE;
 }
 
-#if !GTK_CHECK_VERSION(3,0,0)
-static gboolean
-scrncap_draw_window_expose(GtkWidget *widget, GdkEventExpose *event,
-	gpointer _surface)
-{
-	cairo_t *cr = gdk_cairo_create(GDK_DRAWABLE(widget->window));
-
-	scrncap_draw_window_paint(widget, cr, _surface);
-
-	cairo_destroy(cr);
-
-	return FALSE;
-}
-#endif
-
 static void
 scrncap_draw_window_response(GtkDialog *draw_window, gint response_id,
 	gpointer _webview)
@@ -372,13 +357,8 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 		G_CALLBACK(scrncap_draw_window_close), NULL);
 
 	draw_cursor = gdk_cursor_new(GDK_PENCIL);
-#if GTK_CHECK_VERSION(3,0,0)
 	g_object_set_data_full(G_OBJECT(draw_window), "draw-cursor",
 		draw_cursor, g_object_unref);
-#else
-	g_object_set_data_full(G_OBJECT(draw_window), "draw-cursor",
-		draw_cursor, (GDestroyNotify)gdk_cursor_unref);
-#endif
 
 	width = gdk_pixbuf_get_width(screen);
 	height = gdk_pixbuf_get_height(screen);
@@ -397,13 +377,8 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 
 	drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(drawing_area, width, height);
-#if GTK_CHECK_VERSION(3,0,0)
 	g_signal_connect(G_OBJECT(drawing_area), "draw",
 		G_CALLBACK(scrncap_draw_window_paint), surface);
-#else
-	g_signal_connect(G_OBJECT(drawing_area), "expose_event",
-		G_CALLBACK(scrncap_draw_window_expose), surface);
-#endif
 	gtk_widget_add_events(drawing_area, GDK_BUTTON_PRESS_MASK |
 		GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_MOTION_MASK |
 		GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK);
@@ -423,9 +398,7 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 	scroll_area = pidgin_make_scrollable(box,
 		GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC,
 		GTK_SHADOW_NONE, -1, -1);
-#if GTK_CHECK_VERSION(3,0,0)
 	g_object_set(G_OBJECT(scroll_area), "expand", TRUE, NULL);
-#endif
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(
 		GTK_DIALOG(draw_window))), scroll_area);
 
@@ -585,11 +558,7 @@ scrncap_crop_window_realize(GtkWidget *crop_window, gpointer _unused)
 
 	cursor = gdk_cursor_new(GDK_CROSSHAIR);
 	gdk_window_set_cursor(gdkwindow, cursor);
-#if GTK_CHECK_VERSION(3,0,0)
 	g_object_unref(cursor);
-#else
-	gdk_cursor_unref(cursor);
-#endif
 }
 
 static gboolean
@@ -933,11 +902,41 @@ scrncap_conversation_uninit(PidginConversation *gtkconv)
  * Plugin setup
  ******************************************************************************/
 
+static PidginPluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Tomasz Wasilczyk <twasilczyk@pidgin.im>",
+		NULL
+	};
+
+	return pidgin_plugin_info_new(
+		"id",           "gtk-screencap",
+		"name",         N_("Screen Capture"),
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Utility"),
+		"summary",      N_("Send screenshots to your buddies."),
+		"description",  N_("Adds an option to send a screenshot as an inline "
+		                   "image. It works only with protocols that supports "
+		                   "inline images."),
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		NULL
+	);
+}
+
 static gboolean
-scrncap_plugin_load(PurplePlugin *plugin)
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	GList *it;
 	const gchar *color_str;
+
+	purple_prefs_add_none("/plugins");
+	purple_prefs_add_none("/plugins/gtk");
+	purple_prefs_add_none("/plugins/gtk/screencap");
+	purple_prefs_add_string("/plugins/gtk/screencap/brush_color",
+		SCRNCAP_DEFAULT_COLOR);
 
 	color_str = purple_prefs_get_string("/plugins/gtk/screencap/brush_color");
 	if (color_str && color_str[0])
@@ -969,7 +968,7 @@ scrncap_plugin_load(PurplePlugin *plugin)
 }
 
 static gboolean
-scrncap_plugin_unload(PurplePlugin *plugin)
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	GList *it;
 
@@ -996,52 +995,4 @@ scrncap_plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
-static PidginPluginUiInfo scrncap_ui_info =
-{
-	NULL, /* config */
-
-	/* padding */
-	NULL, NULL, NULL, NULL
-};
-
-static PurplePluginInfo scrncap_info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,
-	PIDGIN_PLUGIN_TYPE,
-	0,
-	NULL,
-	PURPLE_PRIORITY_DEFAULT,
-	"gtk-screencap",
-	N_("Screen Capture"),
-	DISPLAY_VERSION,
-	N_("Send screenshots to your buddies."),
-	N_("Adds an option to send a screenshot as an inline image. "
-		"It works only with protocols that supports inline images."),
-	"Tomasz Wasilczyk <twasilczyk@pidgin.im>",
-	PURPLE_WEBSITE,
-	scrncap_plugin_load,
-	scrncap_plugin_unload,
-	NULL,
-	&scrncap_ui_info,
-	NULL,
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL, NULL, NULL, NULL
-};
-
-static void
-scrncap_init_plugin(PurplePlugin *plugin)
-{
-	purple_prefs_add_none("/plugins");
-	purple_prefs_add_none("/plugins/gtk");
-	purple_prefs_add_none("/plugins/gtk/screencap");
-	purple_prefs_add_string("/plugins/gtk/screencap/brush_color",
-		SCRNCAP_DEFAULT_COLOR);
-}
-
-PURPLE_INIT_PLUGIN(screencap, scrncap_init_plugin, scrncap_info)
+PURPLE_PLUGIN_INIT(screencap, plugin_query, plugin_load, plugin_unload);
