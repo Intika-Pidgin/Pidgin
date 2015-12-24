@@ -752,6 +752,8 @@ static void plugin_dialog_response_cb(GtkWidget *d, int response, GtkTreeSelecti
 	GtkTreeIter iter;
 	GList *list, *it;
 
+	g_return_if_fail(d != NULL);
+
 	switch (response) {
 	case GTK_RESPONSE_CLOSE:
 	case GTK_RESPONSE_DELETE_EVENT:
@@ -806,15 +808,9 @@ static gboolean
 pidgin_plugins_paint_tooltip(GtkWidget *tipwindow, cairo_t *cr, gpointer data)
 {
 	PangoLayout *layout = g_object_get_data(G_OBJECT(tipwindow), "tooltip-plugin");
-#if GTK_CHECK_VERSION(3,0,0)
 	GtkStyleContext *context = gtk_widget_get_style_context(tipwindow);
 	gtk_style_context_add_class(context, GTK_STYLE_CLASS_TOOLTIP);
 	gtk_render_layout(context, cr, 6, 6, layout);
-#else
-	gtk_paint_layout(tipwindow->style, tipwindow->window, GTK_STATE_NORMAL, FALSE,
-	                 NULL, tipwindow, "tooltip",
-	                 6, 6, layout);
-#endif
 	return TRUE;
 }
 

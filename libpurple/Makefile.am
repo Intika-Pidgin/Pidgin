@@ -253,16 +253,23 @@ purple_builtheaders = purple.h version.h enums.h marshallers.h
 
 purple_enumheaders = \
 	$(srcdir)/account.h \
+	$(srcdir)/buddyicon.h \
 	$(srcdir)/cipher.h \
 	$(srcdir)/connection.h \
 	$(srcdir)/conversation.h \
 	$(srcdir)/conversationtypes.h \
+	$(srcdir)/debug.h \
+	$(srcdir)/eventloop.h \
+	$(srcdir)/notify.h \
 	$(srcdir)/plugins.h \
 	$(srcdir)/protocol.h \
 	$(srcdir)/protocols.h \
 	$(srcdir)/roomlist.h \
 	$(srcdir)/status.h \
-	$(srcdir)/xfer.h
+	${srcdir}/sound.h \
+	$(srcdir)/xfer.h \
+	$(srcdir)/xmlnode.h
+
 
 marshallers.h: marshallers.list
 	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=purple_smarshal $(srcdir)/marshallers.list --header > marshallers.h

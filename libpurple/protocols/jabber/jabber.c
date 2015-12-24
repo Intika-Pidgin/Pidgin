@@ -70,7 +70,6 @@
 #include "adhoccommands.h"
 #include "xmpp.h"
 #include "gtalk.h"
-#include "facebook.h"
 
 #include "jingle/jingle.h"
 #include "jingle/content.h"
@@ -90,7 +89,6 @@ GList *jabber_identities = NULL;
 
 static PurpleProtocol *xmpp_protocol = NULL;
 static PurpleProtocol *gtalk_protocol = NULL;
-static PurpleProtocol *facebook_protocol = NULL;
 
 static GHashTable *jabber_cmds = NULL; /* PurpleProtocol * => GSList of ids */
 
@@ -103,10 +101,8 @@ static void jabber_stream_init(JabberStream *js)
 {
 	char *open_stream;
 
-	if (js->stream_id) {
-		g_free(js->stream_id);
-		js->stream_id = NULL;
-	}
+	g_free(js->stream_id);
+	js->stream_id = NULL;
 
 	open_stream = g_strdup_printf("<stream:stream to='%s' "
 				          "xmlns='" NS_XMPP_CLIENT "' "
@@ -239,21 +235,16 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	 */
 	{
 		const gchar *connection_security = purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS);
-		if (!g_str_equal(connection_security, "none") &&
-				purple_ssl_is_supported()) {
+		if (!g_str_equal(connection_security, "none")) {
 			jabber_send_raw(js,
 					"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
 			return TRUE;
 		}
 	}
 #else
-	if(purple_ssl_is_supported()) {
-		jabber_send_raw(js,
-				"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
-		return TRUE;
-	} else {
-		purple_debug_warning("jabber", "No libpurple TLS/SSL support found.");
-	}
+	jabber_send_raw(js,
+			"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
+	return TRUE;
 #endif
 
 	starttls = purple_xmlnode_get_child(packet, "starttls");
@@ -1053,19 +1044,13 @@ jabber_stream_connect(JabberStream *js)
 
 	/* if they've got old-ssl mode going, we probably want to ignore SRV lookups */
 	if (g_str_equal("old_ssl", purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS))) {
-		if(purple_ssl_is_supported()) {
-			js->gsc = purple_ssl_connect(account, js->certificate_CN,
-					purple_account_get_int(account, "port", 5223),
-					jabber_login_callback_ssl, jabber_ssl_connect_failure, gc);
-			if (!js->gsc) {
-				purple_connection_error(gc,
-					PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-					_("Unable to establish SSL connection"));
-			}
-		} else {
+		js->gsc = purple_ssl_connect(account, js->certificate_CN,
+				purple_account_get_int(account, "port", 5223),
+				jabber_login_callback_ssl, jabber_ssl_connect_failure, gc);
+		if (!js->gsc) {
 			purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-				_("SSL support unavailable"));
+				_("Unable to establish SSL connection"));
 		}
 
 		return;
@@ -1096,9 +1081,11 @@ jabber_login(PurpleAccount *account)
 	if (js == NULL)
 		return;
 
-	/* TODO: Remove this at some point.  Added 2010-02-14 (v2.6.6) */
-	if (g_str_equal("proxy.jabber.org", purple_account_get_string(account, "ft_proxies", "")))
-		purple_account_set_string(account, "ft_proxies", JABBER_DEFAULT_FT_PROXIES);
+	/* replace old default proxies with the new default: NULL
+	 * TODO: these can eventually be removed */
+	if (g_str_equal("proxy.jabber.org", purple_account_get_string(account, "ft_proxies", ""))
+			|| g_str_equal("proxy.eu.jabber.org", purple_account_get_string(account, "ft_proxies", "")))
+		purple_account_set_string(account, "ft_proxies", NULL);
 
 	/*
 	 * Calculate the avatar hash for our current image so we know (when we
@@ -2649,10 +2636,8 @@ void jabber_convo_closed(PurpleConnection *gc, const char *who)
 
 	if((jb = jabber_buddy_find(js, who, TRUE)) &&
 			(jbr = jabber_buddy_find_resource(jb, jid->resource))) {
-		if(jbr->thread_id) {
-			g_free(jbr->thread_id);
-			jbr->thread_id = NULL;
-		}
+		g_free(jbr->thread_id);
+		jbr->thread_id = NULL;
 	}
 
 	jabber_id_free(jid);
@@ -4296,8 +4281,8 @@ plugin_query(GError **error)
 		"name",         "XMPP Protocols",
 		"version",      DISPLAY_VERSION,
 		"category",     N_("Protocol"),
-		"summary",      N_("XMPP, GTalk, and Facebook Protocols Plugin"),
-		"description",  N_("XMPP, GTalk, and Facebook Protocols Plugin"),
+		"summary",      N_("XMPP and GTalk Protocols Plugin"),
+		"description",  N_("XMPP and GTalk Protocols Plugin"),
 		"website",      PURPLE_WEBSITE,
 		"abi-version",  PURPLE_ABI_VERSION,
 		"flags",        PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
@@ -4323,7 +4308,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 
 	jabber_protocol_register_type(plugin);
 
-	facebook_protocol_register_type(plugin);
 	gtalk_protocol_register_type(plugin);
 	xmpp_protocol_register_type(plugin);
 
@@ -4335,10 +4319,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	if (!gtalk_protocol)
 		return FALSE;
 
-	facebook_protocol = purple_protocols_add(FACEBOOK_TYPE_PROTOCOL, error);
-	if (!facebook_protocol)
-		return FALSE;
-
 	purple_signal_connect(purple_get_core(), "uri-handler", xmpp_protocol,
 		PURPLE_CALLBACK(xmpp_uri_handler), NULL);
 	purple_signal_connect(purple_get_core(), "uri-handler", gtalk_protocol,
@@ -4346,7 +4326,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 
 	jabber_init_protocol(xmpp_protocol);
 	jabber_init_protocol(gtalk_protocol);
-	jabber_init_protocol(facebook_protocol);
 
 	return TRUE;
 }
@@ -4354,12 +4333,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
-	jabber_uninit_protocol(facebook_protocol);
 	jabber_uninit_protocol(gtalk_protocol);
 	jabber_uninit_protocol(xmpp_protocol);
-
-	if (!purple_protocols_remove(facebook_protocol, error))
-		return FALSE;
 
 	if (!purple_protocols_remove(gtalk_protocol, error))
 		return FALSE;

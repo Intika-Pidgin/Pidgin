@@ -103,7 +103,7 @@ get_last_auto_response(PurpleConnection *gc, const char *name)
 		tmp = tmp->next;
 	}
 
-	lar = (struct last_auto_response *)g_new0(struct last_auto_response, 1);
+	lar = g_new0(struct last_auto_response, 1);
 	g_snprintf(lar->name, sizeof(lar->name), "%s", name);
 	lar->gc = gc;
 	lar->sent = 0;
@@ -765,10 +765,7 @@ PurpleChatConversation *purple_serv_got_joined_chat(PurpleConnection *gc,
 	g_return_val_if_fail(account != NULL, NULL);
 	g_return_val_if_fail(name != NULL, NULL);
 
-	chat = purple_conversations_find_chat_with_account(name, account);
-	if (!chat) {
-		chat = purple_chat_conversation_new(account, name);
-	}
+	chat = purple_chat_conversation_new(account, name);
 	g_return_val_if_fail(chat != NULL, NULL);
 
 	if (!g_slist_find(purple_connection_get_active_chats(gc), chat))
