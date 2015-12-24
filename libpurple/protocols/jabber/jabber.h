@@ -49,8 +49,6 @@ typedef enum {
 	JABBER_CAP_ITEMS          = 1 << 14,
 	JABBER_CAP_ROSTER_VERSIONING = 1 << 15,
 
-	JABBER_CAP_FACEBOOK       = 1 << 16,
-
 	JABBER_CAP_RETRIEVED      = 1 << 31
 } JabberCapabilities;
 
@@ -58,6 +56,7 @@ typedef struct _JabberStream JabberStream;
 
 #include <libxml/parser.h>
 #include <glib.h>
+#include <gmodule.h>
 #include "circularbuffer.h"
 #include "connection.h"
 #include "dnsquery.h"
@@ -92,7 +91,6 @@ typedef struct _JabberStream JabberStream;
 #define JABBER_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), JABBER_TYPE_PROTOCOL, JabberProtocolClass))
 
 #define JABBER_DEFAULT_REQUIRE_TLS    "require_starttls"
-#define JABBER_DEFAULT_FT_PROXIES     "proxy.eu.jabber.org"
 
 /* Index into attention_types list */
 #define JABBER_BUZZ 0
@@ -298,9 +296,6 @@ struct _JabberStream
 	/* stuff for Google's relay handling */
 	gchar *google_relay_token;
 	gchar *google_relay_host;
-
-	/* facebook quirks */
-	gboolean facebook_roster_cleanup_performed;
 };
 
 typedef gboolean (JabberFeatureEnabled)(JabberStream *js, const gchar *namespace);

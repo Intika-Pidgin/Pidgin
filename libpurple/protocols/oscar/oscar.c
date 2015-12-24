@@ -546,6 +546,7 @@ flap_connection_established_bart(OscarData *od, FlapConnection *conn)
 static int
 flap_connection_established(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 {
+	conn->connected = TRUE;
 	purple_debug_info("oscar", "FLAP connection of type 0x%04hx is "
 			"now fully connected\n", conn->type);
 	if (conn->type == SNAC_FAMILY_LOCATE)
@@ -740,14 +741,7 @@ oscar_login(PurpleAccount *account)
 	od->default_port = purple_account_get_int(account, "port", OSCAR_DEFAULT_LOGIN_PORT);
 
 	encryption_type = purple_account_get_string(account, "encryption", OSCAR_DEFAULT_ENCRYPTION);
-	if (!purple_ssl_is_supported() && strcmp(encryption_type, OSCAR_REQUIRE_ENCRYPTION) == 0) {
-		purple_connection_error(
-			gc,
-			PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-			_("You required encryption in your account settings, but encryption is not supported by your system."));
-		return;
-	}
-	od->use_ssl = purple_ssl_is_supported() && strcmp(encryption_type, OSCAR_NO_ENCRYPTION) != 0;
+	od->use_ssl = strcmp(encryption_type, OSCAR_NO_ENCRYPTION) != 0;
 
 	/* Connect to core Purple signals */
 	purple_prefs_connect_callback(purple_connection_get_protocol(gc), "/purple/away/idle_reporting", idle_reporting_pref_cb, gc);

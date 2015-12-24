@@ -275,6 +275,7 @@ version 3.0.0 (??/??/????):
 		* purple_conversation_get_gc renamed to
 		  purple_conversation_get_connection
 		* purple_dnsquery_a now takes a PurpleAccount as the first parameter
+		* PurpleIconScaleRules renamed to PurpleBuddyIconScaleFlags
 		* purple_imgstore_add renamed to purple_imgstore_new
 		* purple_imgstore_add_with_id renamed to purple_imgstore_new_with_id
 		* purple_network_listen now takes the protocol family as the second
@@ -285,6 +286,7 @@ version 3.0.0 (??/??/????):
 		  port mapping as the fifth parameter
 		* purple_network_listen_range now takes the protocol family as the
 		  third parameter
+		* PurpleNotifyMsgType renamed to PurpleNotifyMessageType
 		* purple_notify_user_info_add_pair renamed to
 		  purple_notify_user_info_add_pair_html
 		* purple_notify_user_info_get_entries returns a GQueue instead of

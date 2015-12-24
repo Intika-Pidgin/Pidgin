@@ -34,16 +34,8 @@
 #ifdef USE_VV
 #include <media/backend-fs2.h>
 
-#ifdef HAVE_FARSIGHT
-#include <gst/farsight/fs-element-added-notifier.h>
-#else
 #include <farstream/fs-element-added-notifier.h>
-#endif
-#if GST_CHECK_VERSION(1,0,0)
 #include <gst/video/videooverlay.h>
-#else
-#include <gst/interfaces/xoverlay.h>
-#endif
 #ifdef HAVE_MEDIA_APPLICATION
 #include <gst/app/app.h>
 #endif
@@ -84,6 +76,7 @@ struct _PurpleMediaManagerPrivate
 	/* Application data streams */
 	GList *appdata_info; /* holds PurpleMediaAppDataInfo */
 	GMutex appdata_mutex;
+	guint appdata_cb_token; /* last used read/write callback token */
 #endif
 };
 
@@ -103,6 +96,8 @@ typedef struct {
 	guint sample_offset;
 	gboolean writable;
 	gboolean connected;
+	guint writable_cb_token;
+	guint readable_cb_token;
 	guint writable_timer_id;
 	guint readable_timer_id;
 	GCond readable_cond;
@@ -313,11 +308,7 @@ purple_media_manager_get_pipeline(PurpleMediaManager *manager)
 		gst_bus_add_signal_watch(GST_BUS(bus));
 		g_signal_connect(G_OBJECT(bus), "message",
 				G_CALLBACK(pipeline_bus_call), manager);
-#if GST_CHECK_VERSION(1,0,0)
 		gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL, NULL);
-#else
-		gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL);
-#endif
 		gst_object_unref(bus);
 
 		filename = g_build_filename(purple_user_dir(),
@@ -541,6 +532,11 @@ free_appdata_info_locked (PurpleMediaAppDataInfo *info)
 	g_free (info->session_id);
 	g_free (info->participant);
 
+	/* This lets the potential read or write callbacks waiting for appdata_mutex
+	 * know the info structure has been destroyed. */
+	info->readable_cb_token = 0;
+	info->writable_cb_token = 0;
+
 	if (info->readable_timer_id) {
 		purple_timeout_remove (info->readable_timer_id);
 		info->readable_timer_id = 0;
@@ -622,9 +618,7 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 {
 	GstElement *parent = GST_ELEMENT_PARENT(pad);
 	GstIterator *iter;
-#if GST_CHECK_VERSION(1,0,0)
 	GValue tmp = G_VALUE_INIT;
-#endif
 	GstPad *remaining_pad;
 	GstIteratorResult result;
 
@@ -632,21 +626,15 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 
 	iter = gst_element_iterate_src_pads(parent);
 
-#if GST_CHECK_VERSION(1,0,0)
 	result = gst_iterator_next(iter, &tmp);
-#else
-	result = gst_iterator_next(iter, (gpointer)&remaining_pad);
-#endif
 
 	if (result == GST_ITERATOR_DONE) {
 		gst_element_set_locked_state(parent, TRUE);
 		gst_element_set_state(parent, GST_STATE_NULL);
 		gst_bin_remove(GST_BIN(GST_ELEMENT_PARENT(parent)), parent);
 	} else if (result == GST_ITERATOR_OK) {
-#if GST_CHECK_VERSION(1,0,0)
 		remaining_pad = g_value_get_object(&tmp);
 		g_value_reset(&tmp);
-#endif
 		gst_object_unref(remaining_pad);
 	}
 
@@ -698,11 +686,7 @@ purple_media_manager_get_video_caps(PurpleMediaManager *manager)
 {
 #ifdef USE_VV
 	if (manager->priv->video_caps == NULL)
-#if GST_CHECK_VERSION(1,0,0)
 		manager->priv->video_caps = gst_caps_from_string("video/x-raw,"
-#else
-		manager->priv->video_caps = gst_caps_from_string("video/x-raw-yuv,"
-#endif
 			"width=[250,352], height=[200,288], framerate=[1/1,20/1]");
 	return manager->priv->video_caps;
 #else
@@ -729,19 +713,19 @@ appsrc_writable (gpointer user_data)
 	gchar *participant;
 	gboolean writable;
 	gpointer cb_data;
-	guint *timer_id_ptr = &info->writable_timer_id;
-	guint timer_id = *timer_id_ptr;
+	guint *cb_token_ptr = &info->writable_cb_token;
+	guint cb_token = *cb_token_ptr;
 
 
 	g_mutex_lock (&manager->priv->appdata_mutex);
-	if (timer_id == 0 || timer_id != *timer_id_ptr) {
+	if (cb_token == 0 || cb_token != *cb_token_ptr) {
 		/* In case info was freed while we were waiting for the mutex to unlock
-		 * we still have a pointer to the timer_id which should still be
+		 * we still have a pointer to the cb_token which should still be
 		 * accessible since it's in the Glib slice allocator. It gets set to 0
 		 * just after the timeout is canceled which happens also before the
 		 * AppDataInfo is freed, so even if that memory slice gets reused, the
-		 * timer_id would be different from its previous value (unless
-		 * extremely unlucky). So checking if the value for the timer_id changed
+		 * cb_token would be different from its previous value (unless
+		 * extremely unlucky). So checking if the value for the cb_token changed
 		 * should be enough to prevent any kind of race condition in which the
 		 * media/AppDataInfo gets destroyed in one thread while the timeout was
 		 * triggered and is waiting on the mutex to get unlocked in this thread
@@ -756,7 +740,7 @@ appsrc_writable (gpointer user_data)
 	writable = info->writable && info->connected;
 	cb_data = info->user_data;
 
-    info->writable_timer_id = 0;
+	info->writable_cb_token = 0;
 	g_mutex_unlock (&manager->priv->appdata_mutex);
 
 
@@ -784,10 +768,18 @@ appsrc_writable (gpointer user_data)
 static void
 call_appsrc_writable_locked (PurpleMediaAppDataInfo *info)
 {
+	PurpleMediaManager *manager = purple_media_manager_get ();
+
 	/* We already have a writable callback scheduled, don't create another one */
-	if (info->writable_timer_id || info->callbacks.writable == NULL)
+	if (info->writable_cb_token || info->callbacks.writable == NULL)
 		return;
 
+	/* We can't use writable_timer_id as a token, because the timeout is added
+	 * into libpurple's main event loop, which runs in a different thread than
+	 * from where call_appsrc_writable_locked() was called. Consequently, the
+	 * callback may run even before purple_timeout_add() returns the timer ID
+	 * to us. */
+	info->writable_cb_token = ++manager->priv->appdata_cb_token;
 	info->writable_timer_id = purple_timeout_add (0, appsrc_writable, info);
 }
 
@@ -909,17 +901,18 @@ appsink_readable (gpointer user_data)
 	gchar *session_id;
 	gchar *participant;
 	gpointer cb_data;
-	guint *timer_id_ptr = &info->readable_timer_id;
-	guint timer_id = *timer_id_ptr;
+	guint *cb_token_ptr = &info->readable_cb_token;
+	guint cb_token = *cb_token_ptr;
+	gboolean run_again = FALSE;
 
 	g_mutex_lock (&manager->priv->appdata_mutex);
-	if (timer_id == 0 || timer_id != *timer_id_ptr) {
+	if (cb_token == 0 || cb_token != *cb_token_ptr) {
 		/* Avoided a race condition (see writable callback) */
 		g_mutex_unlock (&manager->priv->appdata_mutex);
 		return FALSE;
 	}
-	/* We need to signal readable until there are no more samples */
-	while (info->callbacks.readable &&
+
+	if (info->callbacks.readable &&
 		(info->num_samples > 0 || info->current_sample != NULL)) {
 		readable_cb = info->callbacks.readable;
 		media = g_weak_ref_get (&info->media_ref);
@@ -935,27 +928,38 @@ appsink_readable (gpointer user_data)
 		g_object_unref (media);
 		g_free (session_id);
 		g_free (participant);
-		if (timer_id == 0 || timer_id != *timer_id_ptr) {
+		if (cb_token == 0 || cb_token != *cb_token_ptr) {
 			/* We got cancelled */
 			g_mutex_unlock (&manager->priv->appdata_mutex);
 			return FALSE;
 		}
 	}
-    info->readable_timer_id = 0;
+
+	/* Do we still have samples? Schedule appsink_readable again. We break here
+	 * so that other events get a chance to be processed too. */
+	if (info->num_samples > 0 || info->current_sample != NULL) {
+		run_again = TRUE;
+	} else {
+		info->readable_cb_token = 0;
+	}
+
 	g_mutex_unlock (&manager->priv->appdata_mutex);
-	return FALSE;
+	return run_again;
 }
 
 static void
 call_appsink_readable_locked (PurpleMediaAppDataInfo *info)
 {
+	PurpleMediaManager *manager = purple_media_manager_get ();
+
 	/* We must signal that a new sample has arrived to release blocking reads */
 	g_cond_broadcast (&info->readable_cond);
 
 	/* We already have a writable callback scheduled, don't create another one */
-	if (info->readable_timer_id || info->callbacks.readable == NULL)
+	if (info->readable_cb_token || info->callbacks.readable == NULL)
 		return;
 
+	info->readable_cb_token = ++manager->priv->appdata_cb_token;
 	info->readable_timer_id = purple_timeout_add (0, appsink_readable, info);
 }
 
@@ -1014,6 +1018,7 @@ create_recv_appsink(PurpleMedia *media,
 }
 #endif
 
+#ifdef USE_VV
 static PurpleMediaElementInfo *
 get_send_application_element_info ()
 {
@@ -1034,7 +1039,6 @@ get_send_application_element_info ()
 	return info;
 }
 
-
 static PurpleMediaElementInfo *
 get_recv_application_element_info ()
 {
@@ -1054,6 +1058,7 @@ get_recv_application_element_info ()
 
 	return info;
 }
+#endif	/* USE_VV */
 
 GstElement *
 purple_media_manager_get_element(PurpleMediaManager *manager,
@@ -1134,11 +1139,7 @@ purple_media_manager_get_element(PurpleMediaManager *manager,
 		g_free(id);
 
 		tee = gst_bin_get_by_name(GST_BIN(ret), "tee");
-#if GST_CHECK_VERSION(1,0,0)
 		pad = gst_element_get_request_pad(tee, "src_%u");
-#else
-		pad = gst_element_get_request_pad(tee, "src%d");
-#endif
 		gst_object_unref(tee);
 		ghost = gst_ghost_pad_new(NULL, pad);
 		gst_object_unref(pad);
@@ -1344,11 +1345,7 @@ window_id_cb(GstBus *bus, GstMessage *msg, PurpleMediaOutputWindow *ow)
 	GstElement *sink;
 
 	if (GST_MESSAGE_TYPE(msg) != GST_MESSAGE_ELEMENT
-#if GST_CHECK_VERSION(1,0,0)
 	 || !gst_is_video_overlay_prepare_window_handle_message(msg))
-#else
-	 || !gst_structure_has_name(msg->structure, "prepare-xwindow-id"))
-#endif
 		return;
 
 	sink = GST_ELEMENT(GST_MESSAGE_SRC(msg));
@@ -1362,16 +1359,8 @@ window_id_cb(GstBus *bus, GstMessage *msg, PurpleMediaOutputWindow *ow)
 			| G_SIGNAL_MATCH_DATA, 0, 0, NULL,
 			window_id_cb, ow);
 
-#if GST_CHECK_VERSION(1,0,0)
 	gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(GST_MESSAGE_SRC(msg)),
 	                                    ow->window_id);
-#elif GST_CHECK_VERSION(0,10,31)
-	gst_x_overlay_set_window_handle(GST_X_OVERLAY(GST_MESSAGE_SRC(msg)),
-	                                ow->window_id);
-#else
-	gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(GST_MESSAGE_SRC(msg)),
-	                             ow->window_id);
-#endif
 }
 #endif
 
@@ -1404,11 +1393,7 @@ purple_media_manager_create_output_window(PurpleMediaManager *manager,
 				continue;
 
 			queue = gst_element_factory_make("queue", NULL);
-#if GST_CHECK_VERSION(1,0,0)
 			convert = gst_element_factory_make("videoconvert", NULL);
-#else
-			convert = gst_element_factory_make("ffmpegcolorspace", NULL);
-#endif
 			ow->sink = purple_media_manager_get_element(
 					manager, PURPLE_MEDIA_RECV_VIDEO,
 					ow->media, ow->session_id,
@@ -1642,14 +1627,14 @@ purple_media_manager_set_application_data_callbacks(PurpleMediaManager *manager,
 	if (info->notify)
 		info->notify (info->user_data);
 
-	if (info->readable_timer_id) {
+	if (info->readable_cb_token) {
 		purple_timeout_remove (info->readable_timer_id);
-		info->readable_timer_id = 0;
+		info->readable_cb_token = 0;
 	}
 
-	if (info->writable_timer_id) {
+	if (info->writable_cb_token) {
 		purple_timeout_remove (info->writable_timer_id);
-		info->writable_timer_id = 0;
+		info->writable_cb_token = 0;
 	}
 
 	if (callbacks) {

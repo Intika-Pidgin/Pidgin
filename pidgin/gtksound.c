@@ -388,6 +388,7 @@ bus_call (GstBus     *bus,
 	case GST_MESSAGE_EOS:
 		gst_element_set_state(play, GST_STATE_NULL);
 		gst_object_unref(GST_OBJECT(play));
+		return FALSE;
 		break;
 	case GST_MESSAGE_WARNING:
 		gst_message_parse_warning(msg, &err, NULL);
@@ -553,11 +554,7 @@ pidgin_sound_play_file(const char *filename)
 		return;
 	}
 
-#if GST_CHECK_VERSION(1,0,0)
 	play = gst_element_factory_make("playbin", "play");
-#else
-	play = gst_element_factory_make("playbin2", "play");
-#endif
 
 	if (play == NULL) {
 		return;
