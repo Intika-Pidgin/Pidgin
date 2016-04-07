@@ -175,10 +175,8 @@ static const gchar *VIDEO_SINK_PLUGINS[] = {
 	"directdrawsink", "DirectDraw",
 	/* "gconfvideosink", "GConf", */
 	"glimagesink",	"OpenGL",
-	/* Currently broken when embedding in a Gtk window
-	 * "ximagesink",	"X Window System",
-	 * "xvimagesink",	"X Window System (Xv)",
-	 */
+	"ximagesink",	"X Window System",
+	"xvimagesink",	"X Window System (Xv)",
 	NULL
 };
 
@@ -3688,15 +3686,17 @@ create_video_pipeline(void)
 {
 	GstElement *pipeline;
 	GstElement *src, *sink;
+	GstElement *videoconvert;
 
 	pipeline = gst_pipeline_new("videotest");
 	src = create_test_element(PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC);
 	sink = create_test_element(PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SINK);
+	videoconvert = gst_element_factory_make("videoconvert", NULL);
 
 	g_object_set_data(G_OBJECT(pipeline), "sink", sink);
 
-	gst_bin_add_many(GST_BIN(pipeline), src, sink, NULL);
-	gst_element_link_many(src, sink, NULL);
+	gst_bin_add_many(GST_BIN(pipeline), src, videoconvert, sink, NULL);
+	gst_element_link_many(src, videoconvert, sink, NULL);
 
 	return pipeline;
 }
@@ -3809,11 +3809,9 @@ make_video_test(GtkWidget *vbox)
 {
 	GtkWidget *test;
 	GtkWidget *video;
-	GdkRGBA color = {0.0, 0.0, 0.0, 1.0};
 
-	video_drawing_area = video = gtk_drawing_area_new();
+	video_drawing_area = video = pidgin_create_video_widget();
 	gtk_box_pack_start(GTK_BOX(vbox), video, TRUE, TRUE, 0);
-	gtk_widget_override_background_color(video, GTK_STATE_FLAG_NORMAL, &color);
 	gtk_widget_set_size_request(GTK_WIDGET(video), 240, 180);
 
 	test = gtk_toggle_button_new_with_label(_("Test Video"));

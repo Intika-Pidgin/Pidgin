@@ -387,7 +387,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 
 int main()
 {
-	char buf[6];
+	char buf[64];
 	time_t t = time(NULL);
 
 	if (strftime(buf, sizeof(buf), "%z", localtime(&t)) != 5)
@@ -496,6 +496,9 @@ AC_SUBST(GLIB_GENMARSHAL)
 
 GLIB_MKENUMS=`$PKG_CONFIG --variable=glib_mkenums glib-2.0`
 AC_SUBST(GLIB_MKENUMS)
+
+AC_PATH_PROG(GTESTER, gtester)
+GLIB_TESTS
 
 AC_ARG_WITH([extraversion],
 			AS_HELP_STRING([--with-extraversion=STRING],
@@ -2167,14 +2170,6 @@ if test "x$ac_cv_va_val_copy" = "xno"; then
 fi
 
 dnl #######################################################################
-dnl # Check for check
-dnl #######################################################################
-PKG_CHECK_MODULES(CHECK, [check >= 0.9.4], , [AC_MSG_RESULT([no, testing is disabled])])
-AM_CONDITIONAL(HAVE_CHECK, [test "x$CHECK_LIBS" != "x"])
-AC_SUBST(CHECK_CFLAGS)
-AC_SUBST(CHECK_LIBS)
-
-dnl #######################################################################
 dnl # Disable pixmap installation
 dnl #######################################################################
 AC_ARG_ENABLE(pixmaps-install, AS_HELP_STRING([--disable-pixmaps-install], [disable installation of pixmap files - Pidgin still needs them!]), enable_pixmaps="$enableval", enable_pixmaps=yes)
@@ -2226,7 +2221,6 @@ AC_CONFIG_FILES([Makefile
 		   doc/reference/pidgin/Makefile
 		   doc/reference/pidgin/version.xml
 		   m4macros/Makefile
-		   pidgin.apspec
 		   pidgin/Makefile
 		   pidgin/data/pidgin.desktop.in
 		   pidgin/data/pidgin-3.pc
@@ -2260,15 +2254,18 @@ AC_CONFIG_FILES([Makefile
 		   libpurple/protocols/gg/Makefile
 		   libpurple/protocols/irc/Makefile
 		   libpurple/protocols/jabber/Makefile
+		   libpurple/protocols/jabber/tests/Makefile
 		   libpurple/protocols/msn/Makefile
 		   libpurple/protocols/mxit/Makefile
 		   libpurple/protocols/novell/Makefile
 		   libpurple/protocols/null/Makefile
 		   libpurple/protocols/oscar/Makefile
+		   libpurple/protocols/oscar/tests/Makefile
 		   libpurple/protocols/sametime/Makefile
 		   libpurple/protocols/silc/Makefile
 		   libpurple/protocols/simple/Makefile
 		   libpurple/protocols/yahoo/Makefile
+		   libpurple/protocols/yahoo/tests/Makefile
 		   libpurple/protocols/zephyr/Makefile
 		   libpurple/tests/Makefile
 		   libpurple/purple.h
