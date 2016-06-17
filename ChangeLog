@@ -1,17 +1,34 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
 version 2.10.13 (MM/DD/YY):
+	libpurple:
+	* media: fix an issue with ximagesink displaying only a corner cut-out of
+	  a larger webcam video (Jakub Adam)
+	* mediamanager: update output window destruction so that it reflects recent
+	  changes in the media pipeline structure (Jakub Adam)
+
 	Pidgin:
 	* Fixed #14962
 	* Fixed alignment of incoming right-to-left messages in protocols that
 	don't support rich text
 	* Fix a potential crash while exiting pidgin
 
+	AIM:
+	* Add support for the newer kerberos-based authentication of AIM 8.x
+
 	Windows-Specific Changes:
 	* Use getaddrinfo for DNS to enable IPv6 (#1075)
 
 	Bonjour
 	* Fixed building on Mac OSX (Patrick Cloke) (#16883)
+
+	ICQ:
+	* Stop truncating passwords to 8 characters like old ICQ clients did.
+	(#16692). If you actually needed this, truncate your password
+	manually by pressing backspace a few times.
+
+	IRC:
+	* Base64-decode SASL messages before passing to libsasl (#16268)
 
 version 2.10.12 (12/31/15):
 	General:
