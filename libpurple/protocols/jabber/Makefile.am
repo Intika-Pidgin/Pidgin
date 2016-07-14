@@ -109,6 +109,10 @@ if IS_WIN32
 JABBERSOURCES += win32/posix.uname.c
 endif
 
+if USE_WEBEX_TOKEN
+JABBERSOURCES += auth_webex.c
+endif
+
 if STATIC_JABBER
 
 st = -DPURPLE_STATIC_PRPL

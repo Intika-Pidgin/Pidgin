@@ -2044,6 +2044,18 @@ else
 fi
 
 dnl #######################################################################
+dnl # Check if we want webex token support for XMPP
+dnl #######################################################################
+dnl AC_CHECK_SIZEOF(short)
+AC_ARG_ENABLE(webex-token, AC_HELP_STRING([--enable-webex-token], [enable WebEx Token SASL for xmpp/irc]), enable_webex_token=$enableval, enable_webex_token=no)
+if test "x$enable_webex_token" = "xyes" ; then
+    AM_CONDITIONAL(USE_WEBEX_TOKEN, true)
+    AC_DEFINE(HAVE_WEBEX_TOKEN, [1], [Define to 1 if building WebEx Token support])
+else
+	AM_CONDITIONAL(USE_WEBEX_TOKEN, false)
+fi
+
+dnl #######################################################################
 dnl # Check for Kerberos (for Zephyr)
 dnl #######################################################################
 AC_DEFINE(ZEPHYR_INT32, long, [Size of an int32.])
