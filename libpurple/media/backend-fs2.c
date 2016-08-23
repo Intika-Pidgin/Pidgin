@@ -35,6 +35,10 @@
 #include <farstream/fs-utils.h>
 #include <gst/gststructure.h>
 
+#if !GST_CHECK_VERSION(1,0,0)
+#define gst_registry_get() gst_registry_get_default()
+#endif
+
 /** @copydoc _PurpleMediaBackendFs2Class */
 typedef struct _PurpleMediaBackendFs2Class PurpleMediaBackendFs2Class;
 /** @copydoc _PurpleMediaBackendFs2Private */
@@ -2568,7 +2572,6 @@ purple_media_backend_fs2_get_type(void)
 }
 #endif /* USE_VV */
 
-#ifdef USE_GSTREAMER
 GstElement *
 purple_media_backend_fs2_get_src(PurpleMediaBackendFs2 *self,
 		const gchar *sess_id)
@@ -2658,7 +2661,6 @@ purple_media_backend_fs2_set_output_volume(PurpleMediaBackendFs2 *self,
 	}
 #endif /* USE_VV */
 }
-#endif /* USE_GSTREAMER */
 
 #ifdef USE_VV
 static gboolean
