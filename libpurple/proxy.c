@@ -60,18 +60,6 @@ struct _PurpleProxyConnectData {
 	GCancellable *cancellable;
 };
 
-static const char * const socks5errors[] = {
-	"succeeded\n",
-	"general SOCKS server failure\n",
-	"connection not allowed by ruleset\n",
-	"Network unreachable\n",
-	"Host unreachable\n",
-	"Connection refused\n",
-	"TTL expired\n",
-	"Command not supported\n",
-	"Address type not supported\n"
-};
-
 static PurpleProxyInfo *global_proxy_info = NULL;
 
 static GSList *handles = NULL;
@@ -1050,11 +1038,9 @@ purple_proxy_get_proxy_resolver(PurpleAccount *account)
 	GProxyResolver *resolver;
 
 	if (purple_proxy_info_get_proxy_type(info) == PURPLE_PROXY_NONE) {
-		/* Return the default proxy which, if it doesn't support any
-		 * further system proxy settings than purple_proxy_get_setup()
-		 * detects, will end up as direct connections as intended.
-		 */
-		return g_object_ref(g_proxy_resolver_get_default());
+		/* Return an empty simple resolver, which will resolve on direct
+		 * connection. */
+		return g_simple_proxy_resolver_new(NULL, NULL);
 	}
 
 	switch (purple_proxy_info_get_proxy_type(info))
