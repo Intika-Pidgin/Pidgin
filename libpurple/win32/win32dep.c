@@ -297,22 +297,6 @@ const char *wpurple_sysconf_dir(void)
 	return sysconf_dir;
 }
 
-#ifdef SSL_CERTIFICATES_DIR
-const char *
-wpurple_cert_dir(void)
-{
-	static gboolean initialized = FALSE;
-
-	if (initialized)
-		return sysconf_dir;
-
-	sysconf_dir = wpurple_install_relative_path(SSL_CERTIFICATES_DIR);
-	initialized = TRUE;
-
-	return sysconf_dir;
-}
-#endif
-
 /* Miscellaneous */
 
 gboolean wpurple_write_reg_string(HKEY rootkey, const char *subkey, const char *valname,
