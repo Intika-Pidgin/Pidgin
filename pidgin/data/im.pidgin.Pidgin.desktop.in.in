@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Pidgin
+GenericName=Internet Messenger
+Comment=Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, and more
+Exec=pidgin
+Icon=pidgin
+StartupNotify=true
+Terminal=false
+Type=Application
+Categories=Network;InstantMessaging;
+@USES_MM_CHAT_SECTION@
