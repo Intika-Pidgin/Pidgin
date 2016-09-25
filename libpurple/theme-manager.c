@@ -160,7 +160,7 @@ purple_theme_manager_refresh(void)
 	g_free(path);
 
 	/* look for XDG_DATA_HOME.  If we don't have it use ~/.local, and add it */
-	if ((xdg = g_getenv("XDG_DATA_HOME")) != NULL)
+	if ((xdg = g_getenv("XDG_DATA_HOME")) != NULL)  /* XXX: change to g_get_user_data_dir() ? */
 		path = g_build_filename(xdg, "themes", NULL);
 	else
 		path = g_build_filename(purple_home_dir(), ".local", "themes", NULL);
@@ -169,7 +169,7 @@ purple_theme_manager_refresh(void)
 	g_free(path);
 
 	/* now dig through XDG_DATA_DIRS and add those too */
-	xdg = g_getenv("XDG_DATA_DIRS");
+	xdg = g_getenv("XDG_DATA_DIRS");  /* XXX: change to g_get_system_data_dir() ? */
 	if (xdg) {
 		gchar **xdg_dirs = g_strsplit(xdg, G_SEARCHPATH_SEPARATOR_S, 0);
 
