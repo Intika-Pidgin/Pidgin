@@ -788,6 +788,42 @@ const gchar *purple_home_dir(void);
 const char *purple_user_dir(void);
 
 /**
+ * purple_cache_dir:
+ *
+ * Returns the purple cache directory according to XDG Base Directory Specification.
+ * This is usually ~/.cache/purple
+ *
+ *  See purple_home_dir()
+ *
+ * Returns: The purple cache directory.
+ */
+const char *purple_cache_dir(void);
+
+/**
+ * purple_config_dir:
+ *
+ * Returns the purple configuration directory according to XDG Base Directory Specification.
+ * This is usually ~/.config/purple
+ *
+ *  See purple_home_dir()
+ *
+ * Returns: The purple configuration directory.
+ */
+const char *purple_config_dir(void);
+
+/**
+ * purple_data_dir:
+ *
+ * Returns the purple data directory according to XDG Base Directory Specification.
+ * This is usually ~/.local/share/purple
+ *
+ *  See purple_home_dir()
+ *
+ * Returns: The purple data directory.
+ */
+const char *purple_data_dir(void);
+
+/**
  * purple_util_set_user_dir:
  * @dir: The custom settings directory
  *
