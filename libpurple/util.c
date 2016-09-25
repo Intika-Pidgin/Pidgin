@@ -48,8 +48,6 @@ static char *data_dir = NULL;
 static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
 
-/* If legacy directory for libpurple exists, move it to location following 
-* xdg base dir spec. https://developer.pidgin.im/ticket/10029 */
 static void
 move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
 {
@@ -74,7 +72,7 @@ move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
 		char *old_dir;
 		gboolean old_dir_exists;
 
-		old_dir = g_build_filename(purple_home_dir(), ".purple", subdir, NULL);
+		old_dir = g_build_filename(purple_user_dir(), subdir, NULL);
 		old_dir_exists = g_file_test(old_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
 
 		if (old_dir_exists) {
@@ -91,22 +89,21 @@ move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
 	return;
 }
 
+/* If legacy directory for libpurple exists, move it to location following 
+* xdg base dir spec. https://developer.pidgin.im/ticket/10029 */
 static void
 migrate_to_xdg_base_dirs(void)
 {
-	char *legacy_purple_dir;
+	const char *legacy_purple_dir;
 	gboolean dir_exists;
 
-	legacy_purple_dir = g_build_filename(purple_home_dir(), ".purple", NULL);
+	legacy_purple_dir = purple_user_dir();
 	dir_exists = g_file_test(legacy_purple_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
 	if (dir_exists) {
 		move_to_xdg_base_dir(purple_data_dir(), "certificates");
 		move_to_xdg_base_dir(purple_cache_dir(), "icons");
 		move_to_xdg_base_dir(purple_data_dir(), "logs");
 	}
-
-	g_free(legacy_purple_dir);
-	legacy_purple_dir = NULL;
 
 	return;
 }
@@ -210,7 +207,10 @@ purple_util_init(void)
 	escape_js_node = json_node_new(JSON_NODE_VALUE);
 	escape_js_gen = json_generator_new();
 	json_node_set_boolean(escape_js_node, FALSE);
-	migrate_to_xdg_base_dirs();
+
+	if (custom_user_dir == NULL) {
+		migrate_to_xdg_base_dirs();
+	}
 }
 
 void
@@ -3003,6 +3003,10 @@ purple_user_dir(void)
 const char *
 purple_cache_dir(void)
 {
+	if (custom_user_dir != NULL) {
+		return custom_user_dir;
+	}
+
 	if (!cache_dir) {
 		cache_dir = g_build_filename(g_get_user_cache_dir(), "purple", NULL);
 	}
@@ -3013,20 +3017,28 @@ purple_cache_dir(void)
 const char *
 purple_config_dir(void)
 {
+	if (custom_user_dir != NULL) {
+		return custom_user_dir;
+	}
+
 	if (!config_dir) {
 		config_dir = g_build_filename(g_get_user_config_dir(), "purple", NULL);
 	}
-	
+
 	return config_dir;
 }
 
 const char *
 purple_data_dir(void)
 {
+	if (custom_user_dir != NULL) {
+		return custom_user_dir;
+	}
+
 	if (!data_dir) {
 		data_dir = g_build_filename(g_get_user_data_dir(), "purple", NULL);
 	}
-	
+
 	return data_dir;
 }
 
