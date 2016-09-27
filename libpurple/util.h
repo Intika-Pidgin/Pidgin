@@ -864,6 +864,54 @@ gboolean purple_util_write_data_to_file(const char *filename, const char *data,
 									  gssize size);
 
 /**
+ * purple_util_write_data_to_cache_file:
+ * @filename: The basename of the file to write in the purple_cache_dir.
+ * @data:     A null-terminated string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * cache directory ($HOME/.cache/purple by default).
+ * 
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean purple_util_write_data_to_cache_file(const char *filename, const char *data, gssize size);
+
+/**
+ * purple_util_write_data_to_config_file:
+ * @filename: The basename of the file to write in the purple_config_dir.
+ * @data:     A null-terminated string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * config directory ($HOME/.config/purple by default).
+ *
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size);
+
+/**
+ * purple_util_write_data_to_data_file:
+ * @filename: The basename of the file to write in the purple_data_dir.
+ * @data:     A null-terminated string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * data directory ($HOME/.local/share/purple by default).
+ *
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size);
+
+/**
  * purple_util_write_data_to_file_absolute:
  * @filename_full: Filename to write to
  * @data:          A null-terminated string of data to write.

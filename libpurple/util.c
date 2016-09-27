@@ -90,7 +90,8 @@ move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
 }
 
 /* If legacy directory for libpurple exists, move it to location following 
-* xdg base dir spec. https://developer.pidgin.im/ticket/10029 */
+ * xdg base dir spec. https://developer.pidgin.im/ticket/10029
+ */
 static void
 migrate_to_xdg_base_dirs(void)
 {
@@ -3062,9 +3063,9 @@ purple_util_write_data_to_file_common(const char *dir, const char *filename, con
 {
 	gchar *filename_full;
 	gboolean ret = FALSE;
-	
+
 	g_return_val_if_fail(dir != NULL, FALSE);
-	
+
 	purple_debug_misc("util", "Writing file %s to directory %s",
 			  filename, dir);
 
@@ -3078,11 +3079,11 @@ purple_util_write_data_to_file_common(const char *dir, const char *filename, con
 			return FALSE;
 		}
 	}
-	
+
 	filename_full = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", dir, filename);
-	
+
 	ret = purple_util_write_data_to_file_absolute(filename_full, data, size);
-	
+
 	g_free(filename_full);
 	return ret;
 }
