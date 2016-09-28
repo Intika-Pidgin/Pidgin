@@ -791,9 +791,9 @@ const char *purple_user_dir(void);
  * purple_cache_dir:
  *
  * Returns the purple cache directory according to XDG Base Directory Specification.
- * This is usually ~/.cache/purple
- *
- *  See purple_home_dir()
+ * This is usually ~/.cache/purple.
+ * If custom user dir was specified then this is cache
+ * sub-directory of DIR argument passed to -c option.
  *
  * Returns: The purple cache directory.
  */
@@ -803,9 +803,9 @@ const char *purple_cache_dir(void);
  * purple_config_dir:
  *
  * Returns the purple configuration directory according to XDG Base Directory Specification.
- * This is usually ~/.config/purple
- *
- *  See purple_home_dir()
+ * This is usually ~/.config/purple.
+ * If custom user dir was specified then this is config
+ * sub-directory of DIR argument passed to -c option.
  *
  * Returns: The purple configuration directory.
  */
@@ -815,9 +815,9 @@ const char *purple_config_dir(void);
  * purple_data_dir:
  *
  * Returns the purple data directory according to XDG Base Directory Specification.
- * This is usually ~/.local/share/purple
- *
- *  See purple_home_dir()
+ * This is usually ~/.local/share/purple.
+ * If custom user dir was specified then this is data
+ * sub-directory of DIR argument passed to -c option.
  *
  * Returns: The purple data directory.
  */
@@ -877,7 +877,8 @@ gboolean purple_util_write_data_to_file(const char *filename, const char *data,
  *
  * Returns: TRUE if the file was written successfully.  FALSE otherwise.
  */
-gboolean purple_util_write_data_to_cache_file(const char *filename, const char *data, gssize size);
+gboolean
+purple_util_write_data_to_cache_file(const char *filename, const char *data, gssize size);
 
 /**
  * purple_util_write_data_to_config_file:
@@ -893,7 +894,8 @@ gboolean purple_util_write_data_to_cache_file(const char *filename, const char *
  *
  * Returns: TRUE if the file was written successfully.  FALSE otherwise.
  */
-gboolean purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size);
+gboolean
+purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size);
 
 /**
  * purple_util_write_data_to_data_file:
@@ -909,7 +911,8 @@ gboolean purple_util_write_data_to_config_file(const char *filename, const char 
  *
  * Returns: TRUE if the file was written successfully.  FALSE otherwise.
  */
-gboolean purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size);
+gboolean
+purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size);
 
 /**
  * purple_util_write_data_to_file_absolute:

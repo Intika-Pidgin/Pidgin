@@ -58,10 +58,10 @@ move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
 	if (!xdg_dir_exists) {
 		gint mkdir_res;
 
-		mkdir_res = g_mkdir_with_parents(purple_xdg_dir, (S_IRUSR | S_IWUSR | S_IXUSR));
+		mkdir_res = purple_build_dir(purple_xdg_dir, (S_IRUSR | S_IWUSR | S_IXUSR));
 		if (mkdir_res == -1) {
 			purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
-					   purple_xdg_dir, g_strerror(errno));
+						purple_xdg_dir, g_strerror(errno));
 			return;
 		}
 	}
@@ -209,9 +209,7 @@ purple_util_init(void)
 	escape_js_gen = json_generator_new();
 	json_node_set_boolean(escape_js_node, FALSE);
 
-	if (custom_user_dir == NULL) {
-		migrate_to_xdg_base_dirs();
-	}
+	migrate_to_xdg_base_dirs();
 }
 
 void
@@ -3004,12 +3002,12 @@ purple_user_dir(void)
 const char *
 purple_cache_dir(void)
 {
-	if (custom_user_dir != NULL) {
-		return custom_user_dir;
-	}
-
 	if (!cache_dir) {
-		cache_dir = g_build_filename(g_get_user_cache_dir(), "purple", NULL);
+		if (!custom_user_dir) {
+			cache_dir = g_build_filename(g_get_user_cache_dir(), "purple", NULL);
+		} else {
+			cache_dir = g_build_filename(custom_user_dir, "cache", NULL);
+		}
 	}
 
 	return cache_dir;
@@ -3018,12 +3016,12 @@ purple_cache_dir(void)
 const char *
 purple_config_dir(void)
 {
-	if (custom_user_dir != NULL) {
-		return custom_user_dir;
-	}
-
 	if (!config_dir) {
-		config_dir = g_build_filename(g_get_user_config_dir(), "purple", NULL);
+		if (!custom_user_dir) {
+			config_dir = g_build_filename(g_get_user_config_dir(), "purple", NULL);
+		} else {
+			config_dir = g_build_filename(custom_user_dir, "config", NULL);
+		}
 	}
 
 	return config_dir;
@@ -3032,12 +3030,12 @@ purple_config_dir(void)
 const char *
 purple_data_dir(void)
 {
-	if (custom_user_dir != NULL) {
-		return custom_user_dir;
-	}
-
 	if (!data_dir) {
-		data_dir = g_build_filename(g_get_user_data_dir(), "purple", NULL);
+		if (!custom_user_dir) {
+			data_dir = g_build_filename(g_get_user_data_dir(), "purple", NULL);
+		} else {
+			data_dir = g_build_filename(custom_user_dir, "data", NULL);
+		}
 	}
 
 	return data_dir;
@@ -3053,7 +3051,7 @@ void purple_util_set_user_dir(const char *dir)
 		custom_user_dir = NULL;
 }
 
-int purple_build_dir (const char *path, int mode)
+int purple_build_dir(const char *path, int mode)
 {
 	return g_mkdir_with_parents(path, mode);
 }
@@ -3069,7 +3067,7 @@ purple_util_write_data_to_file_common(const char *dir, const char *filename, con
 	purple_debug_misc("util", "Writing file %s to directory %s",
 			  filename, dir);
 
-	/* Ensure the user directory exists */
+	/* Ensure the directory exists */
 	if (!g_file_test(dir, G_FILE_TEST_IS_DIR))
 	{
 		if (g_mkdir(dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
@@ -3088,11 +3086,6 @@ purple_util_write_data_to_file_common(const char *dir, const char *filename, con
 	return ret;
 }
 
-/*
- * This function is long and beautiful, like my--um, yeah.  Anyway,
- * it includes lots of error checking so as we don't overwrite
- * people's settings if there is a problem writing the new values.
- */
 gboolean
 purple_util_write_data_to_file(const char *filename, const char *data, gssize size)
 {
@@ -3129,6 +3122,11 @@ purple_util_write_data_to_data_file(const char *filename, const char *data, gssi
 	return ret;
 }
 
+/*
+ * This function is long and beautiful, like my--um, yeah.  Anyway,
+ * it includes lots of error checking so as we don't overwrite
+ * people's settings if there is a problem writing the new values.
+ */
 gboolean
 purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size)
 {
