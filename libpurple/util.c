@@ -49,16 +49,17 @@ static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
 
 static void
-move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
+move_to_xdg_base_dir(const char *purple_xdg_dir, char *name)
 {
-	char *xdg_dir;
-	gboolean xdg_dir_exists;
+	char *xdg_path;
+	gboolean xdg_path_exists;
 
-	xdg_dir_exists = g_file_test(purple_xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-	if (!xdg_dir_exists) {
+	/* Check if destination dir exists, otherwise create it */
+	xdg_path_exists = g_file_test(purple_xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
+	if (!xdg_path_exists) {
 		gint mkdir_res;
 
-		mkdir_res = purple_build_dir(purple_xdg_dir, (S_IRUSR | S_IWUSR | S_IXUSR));
+		mkdir_res = purple_build_dir(purple_xdg_dir, S_IRWXU);
 		if (mkdir_res == -1) {
 			purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
 						purple_xdg_dir, g_strerror(errno));
@@ -66,25 +67,24 @@ move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
 		}
 	}
 
-	xdg_dir = g_build_filename(purple_xdg_dir, subdir, NULL);
-	xdg_dir_exists = g_file_test(xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-	if (!xdg_dir_exists) {
-		char *old_dir;
-		gboolean old_dir_exists;
+	xdg_path = g_build_filename(purple_xdg_dir, name, NULL);
+	xdg_path_exists = g_file_test(xdg_path, G_FILE_TEST_EXISTS);
+	if (!xdg_path_exists) {
+		char *old_path;
+		gboolean old_path_exists;
 
-		old_dir = g_build_filename(purple_user_dir(), subdir, NULL);
-		old_dir_exists = g_file_test(old_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-
-		if (old_dir_exists) {
-			g_rename(old_dir, xdg_dir);
+		old_path = g_build_filename(purple_user_dir(), name, NULL);
+		old_path_exists = g_file_test(old_path, G_FILE_TEST_EXISTS);
+		if (old_path_exists) {
+			g_rename(old_path, xdg_path);
 		}
 
-		g_free(old_dir);
-		old_dir = NULL;
+		g_free(old_path);
+		old_path = NULL;
 	}
 
-	g_free(xdg_dir);
-	xdg_dir = NULL;
+	g_free(xdg_path);
+	xdg_path = NULL;
 
 	return;
 }
