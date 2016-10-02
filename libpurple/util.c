@@ -63,6 +63,7 @@ migrate_to_xdg_base_dirs(void)
 		purple_move_to_xdg_base_dir(purple_data_dir(), "certificates");
 		purple_move_to_xdg_base_dir(purple_cache_dir(), "icons");
 		purple_move_to_xdg_base_dir(purple_data_dir(), "logs");
+		purple_move_to_xdg_base_dir(purple_data_dir(), "pounces.xml");
 	}
 
 	return;
