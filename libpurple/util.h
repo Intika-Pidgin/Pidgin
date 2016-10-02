@@ -784,6 +784,9 @@ const gchar *purple_home_dir(void);
  *  See purple_home_dir()
  *
  * Returns: The purple settings directory.
+ * 
+ * Deprecated: Use purple_cache_dir(), purple_config_dir() or
+ *             purple_data_dir() instead.
  */
 const char *purple_user_dir(void);
 
@@ -871,6 +874,10 @@ int purple_build_dir(const char *path, int mode);
  * should work fine for saving binary files as well.
  *
  * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ * 
+ * Deprecated: Use purple_util_write_data_to_cache_file(),
+ *             purple_util_write_data_to_config_file() or
+ *             purple_util_write_data_to_data_file() instead.
  */
 gboolean purple_util_write_data_to_file(const char *filename, const char *data,
 									  gssize size);
@@ -960,6 +967,10 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
  *
  * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
  *         the file does not exist or there was an error reading the file.
+ * 
+ * Deprecated: Use purple_util_read_xml_from_cache_file(),
+ *             purple_util_read_xml_from_config_file() or
+ *             purple_util_read_xml_from_data_file() instead.
  */
 PurpleXmlNode *purple_util_read_xml_from_file(const char *filename,
 									  const char *description);
