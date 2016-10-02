@@ -953,6 +953,60 @@ PurpleXmlNode *purple_util_read_xml_from_file(const char *filename,
 									  const char *description);
 
 /**
+ * purple_util_read_xml_from_cache_file:
+ * @filename:    The basename of the file to open in the purple_cache_dir.
+ * @description: A very short description of the contents of this
+ *                    file.  This is used in error messages shown to the
+ *                    user when the file can not be opened.  For example,
+ *                    "preferences," or "buddy pounces."
+ *
+ * Read the contents of a given file and parse the results into an
+ * PurpleXmlNode tree structure.  This is intended to be used to read
+ * Purple's cache xml files (xmpp-caps.xml, etc.)
+ *
+ * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
+ *         the file does not exist or there was an error reading the file.
+ */
+PurpleXmlNode *
+purple_util_read_xml_from_cache_file(const char *filename, const char *description);
+
+/**
+ * purple_util_read_xml_from_config_file:
+ * @filename:    The basename of the file to open in the purple_config_dir.
+ * @description: A very short description of the contents of this
+ *                    file.  This is used in error messages shown to the
+ *                    user when the file can not be opened.  For example,
+ *                    "preferences," or "buddy pounces."
+ *
+ * Read the contents of a given file and parse the results into an
+ * PurpleXmlNode tree structure.  This is intended to be used to read
+ * Purple's config xml files (prefs.xml, pounces.xml, etc.)
+ *
+ * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
+ *         the file does not exist or there was an error reading the file.
+ */
+PurpleXmlNode *
+purple_util_read_xml_from_config_file(const char *filename, const char *description);
+
+/**
+ * purple_util_read_xml_from_data_file:
+ * @filename:    The basename of the file to open in the purple_data_dir.
+ * @description: A very short description of the contents of this
+ *                    file.  This is used in error messages shown to the
+ *                    user when the file can not be opened.  For example,
+ *                    "preferences," or "buddy pounces."
+ *
+ * Read the contents of a given file and parse the results into an
+ * PurpleXmlNode tree structure.  This is intended to be used to read
+ * Purple's cache xml files (accounts.xml, etc.)
+ *
+ * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
+ *         the file does not exist or there was an error reading the file.
+ */
+PurpleXmlNode *
+purple_util_read_xml_from_data_file(const char *filename, const char *description);
+
+/**
  * purple_mkstemp:
  * @path:   The returned path to the temp file.
  * @binary: Text or binary, for platforms where it matters.

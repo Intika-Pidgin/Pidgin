@@ -3284,6 +3284,24 @@ purple_util_read_xml_from_file(const char *filename, const char *description)
 	return purple_xmlnode_from_file(purple_user_dir(), filename, description, "util");
 }
 
+PurpleXmlNode *
+purple_util_read_xml_from_cache_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_cache_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_config_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_config_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_data_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_data_dir(), filename, description, "util");
+}
+
 /*
  * Like mkstemp() but returns a file pointer, uses a pre-set template,
  * uses the semantics of tempnam() for the directory to use and allocates
