@@ -521,7 +521,8 @@ yahoo_xfer_dns_connected_15(GObject *sender, GAsyncResult *result, gpointer data
 	account = purple_connection_get_account(gc);
 	yd = purple_connection_get_protocol_data(gc);
 
-	addresses = g_resolver_lookup_by_name_finish(g_resolver_get_default(), result, &error);
+	addresses = g_resolver_lookup_by_name_finish(G_RESOLVER(sender),
+			result, &error);
 	if(error) {
 		purple_debug_error("yahoo",
 		                   "Unable to find an IP address for relay.msg.yahoo.com : %s\n",
@@ -678,6 +679,7 @@ void yahoo_process_filetrans_15(PurpleConnection *gc, struct yahoo_packet *pkt)
 	if(val_222 == 3)
 	{
 		struct yahoo_xfer_data *xd;
+		GResolver *resolver;
 
 		xfer = g_hash_table_lookup(yd->xfer_peer_idstring_map,
 								   xfer_peer_idstring);
@@ -702,11 +704,13 @@ void yahoo_process_filetrans_15(PurpleConnection *gc, struct yahoo_packet *pkt)
 		}
 		xd->is_relay = TRUE;
 
-		g_resolver_lookup_by_name_async(g_resolver_get_default(),
+		resolver = g_resolver_get_default();
+		g_resolver_lookup_by_name_async(resolver,
 		                                YAHOO_XFER_RELAY_HOST,
 		                                NULL,
 		                                yahoo_xfer_dns_connected_15,
 		                                xfer);
+		g_object_unref(resolver);
 
 		return;
 	}

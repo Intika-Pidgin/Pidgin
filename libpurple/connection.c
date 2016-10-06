@@ -39,6 +39,8 @@
 #include "signals.h"
 #include "util.h"
 
+G_DEFINE_QUARK(purple-connection-error-quark, purple_connection_error);
+
 #define KEEPALIVE_INTERVAL 30
 
 #define PURPLE_CONNECTION_GET_PRIVATE(obj) \
@@ -540,6 +542,52 @@ purple_connection_ssl_error (PurpleConnection *gc,
 
 	purple_connection_error (gc, reason,
 		purple_ssl_strerror(ssl_error));
+}
+
+void
+purple_connection_g_error(PurpleConnection *pc, const GError *error)
+{
+	PurpleConnectionError reason;
+
+	if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		/* Not a connection error. Ignore. */
+		return;
+	}
+
+	if (error->domain == G_TLS_ERROR) {
+		switch (error->code) {
+			case G_TLS_ERROR_UNAVAILABLE:
+				reason = PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT;
+				break;
+			case G_TLS_ERROR_NOT_TLS:
+			case G_TLS_ERROR_HANDSHAKE:
+				reason = PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR;
+				break;
+			case G_TLS_ERROR_BAD_CERTIFICATE:
+			case G_TLS_ERROR_CERTIFICATE_REQUIRED:
+				reason = PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR;
+				break;
+			case G_TLS_ERROR_EOF:
+			case G_TLS_ERROR_MISC:
+			default:
+				reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+		}
+	} else if (error->domain == G_IO_ERROR) {
+		reason = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+	} else if (error->domain == PURPLE_CONNECTION_ERROR) {
+		reason = error->code;
+	} else {
+		reason = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
+	}
+
+	purple_connection_error(pc, reason, error->message);
+}
+
+void
+purple_connection_take_error(PurpleConnection *pc, GError *error)
+{
+	purple_connection_g_error(pc, error);
+	g_error_free(error);
 }
 
 gboolean

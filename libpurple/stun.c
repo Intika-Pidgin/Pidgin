@@ -312,7 +312,7 @@ hbn_listen_cb(int fd, gpointer data) {
 
 	sc->incb = purple_input_add(fd, PURPLE_INPUT_READ, reply_cb, sc);
 
-	address = G_INET_ADDRESS(ld->addresses->data);
+	address = g_object_ref(G_INET_ADDRESS(ld->addresses->data));
 	socket_address = g_inet_socket_address_new(address, ld->port);
 
 	g_socket_address_to_native(socket_address, &(sc->addr), g_socket_address_get_native_size(socket_address), NULL);
@@ -351,7 +351,8 @@ hbn_cb(GObject *sender, GAsyncResult *res, gpointer data) {
 
 	ld = g_new0(StunHBNListenData, 1);
 
-	ld->addresses = g_resolver_lookup_by_name_finish(g_resolver_get_default(), res, &error);
+	ld->addresses = g_resolver_lookup_by_name_finish(G_RESOLVER(sender),
+			res, &error);
 	if(error != NULL) {
 		nattype.status = PURPLE_STUN_STATUS_UNDISCOVERED;
 		nattype.lookup_time = time(NULL);
@@ -376,10 +377,12 @@ static void
 do_test1(GObject *sender, GAsyncResult *res, gpointer data) {
 	GList *services = NULL;
 	GError *error = NULL;
+	GResolver *resolver;
 	const char *servername = data;
 	int port = 3478;
 
-	services = g_resolver_lookup_service_finish(g_resolver_get_default(), res, &error);
+	services = g_resolver_lookup_service_finish(G_RESOLVER(sender),
+			res, &error);
 	if(error != NULL) {
 		purple_debug_info("stun", "Failed to look up srv record : %s\n", error->message);
 
@@ -391,11 +394,13 @@ do_test1(GObject *sender, GAsyncResult *res, gpointer data) {
 
 	purple_debug_info("stun", "connecting to %s:%d\n", servername, port);
 
-	g_resolver_lookup_by_name_async(g_resolver_get_default(),
+	resolver = g_resolver_get_default();
+	g_resolver_lookup_by_name_async(resolver,
 	                                servername,
 	                                NULL,
 	                                hbn_cb,
 	                                GINT_TO_POINTER(port));
+	g_object_unref(resolver);
 
 	g_resolver_free_targets(services);
 }
@@ -408,6 +413,7 @@ static gboolean call_callback(gpointer data) {
 
 PurpleStunNatDiscovery *purple_stun_discover(PurpleStunCallback cb) {
 	const char *servername = purple_prefs_get_string("/purple/network/stun_server");
+	GResolver *resolver;
 
 	purple_debug_info("stun", "using server %s\n", servername);
 
@@ -456,13 +462,15 @@ PurpleStunNatDiscovery *purple_stun_discover(PurpleStunCallback cb) {
 
 	callbacks = g_slist_append(callbacks, cb);
 
-	g_resolver_lookup_service_async(g_resolver_get_default(),
+	resolver = g_resolver_get_default();
+	g_resolver_lookup_service_async(resolver,
 	                                "stun",
 	                                "udp",
 	                                servername,
 	                                NULL,
 	                                do_test1,
 	                                (gpointer)servername);
+	g_object_unref(resolver);
 
 	return &nattype;
 }

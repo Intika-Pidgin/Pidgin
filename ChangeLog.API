@@ -71,6 +71,7 @@ version 3.0.0 (??/??/????):
 		* purple_notify_searchresult_column_set_visible
 		* purple_notify_user_info_entry_destroy
 		* purple_notify_user_info_prepend_pair_plaintext
+		* purple_media_manager_enumerate_elements
 		* purple_menu_action_get_callback
 		* purple_menu_action_get_children
 		* purple_menu_action_get_data
@@ -569,6 +570,8 @@ version 3.0.0 (??/??/????):
 		* FULL_CIRCLE_DEGREES renamed to PIDGIN_FULL_CIRCLE_DEGREES
 		* NUM_NICK_SEED_COLORS renamed to PIDGIN_NUM_NICK_SEED_COLORS
 		* PALETTE_NUM_COLORS renamed to PIDGIN_PALETTE_NUM_COLORS
+		* pidgin_new_item_from_stock renamed to pidgin_new_menu_item and
+		  removed the accel related parameters.
 		* pidgin_setup_screenname_autocomplete now takes a filter function and
 		  its data as final two arguments
 		* smiley_list renamed to PidginSmileyList
@@ -628,6 +631,24 @@ version 3.0.0 (??/??/????):
 		* _GntProgressBarOrientation
 		* _GntTreeColumnFlag
 		* _GntWidgetFlags
+
+version 2.11.0:
+	libpurple:
+		Added:
+		* account-status-changing signal (account signals)
+		* buddy-removed-from-group signal (blist signals)
+		* PurpleCommandsUiOps, to allow the UI to override the
+		  built-in handling of commands.
+		* PurplePrefsUiOps, to allow the UI to override the way global
+		  preferences are stored.
+		* PurpleAccountPrefsUiOps, to allow the UI to handle storage
+		  of account preferences.
+		* purple_media_set_encryption_parameters
+		* purple_media_set_decryption_parameters
+		* purple_xfer_write_file
+		* purple_xfer_read_file
+		* purple_media_set_send_rtcp_mux
+		* purple_media_backend_set_send_rtcp_mux
 
 version 2.10.12:
 	* No changes
