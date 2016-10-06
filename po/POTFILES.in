@@ -95,7 +95,6 @@ libpurple/protocols/jabber/auth_scram.c
 libpurple/protocols/jabber/bosh.c
 libpurple/protocols/jabber/buddy.c
 libpurple/protocols/jabber/chat.c
-libpurple/protocols/jabber/facebook_roster.c
 libpurple/protocols/jabber/jabber.c
 libpurple/protocols/jabber/jutil.c
 libpurple/protocols/jabber/libxmpp.c
@@ -107,9 +106,6 @@ libpurple/protocols/jabber/si.c
 libpurple/protocols/jabber/usermood.c
 libpurple/protocols/jabber/usernick.c
 libpurple/protocols/jabber/xdata.c
-libpurple/protocols/myspace/myspace.c
-libpurple/protocols/myspace/user.c
-libpurple/protocols/myspace/zap.c
 libpurple/protocols/novell/nmuser.c
 libpurple/protocols/novell/novell.c
 libpurple/protocols/oscar/authorization.c
@@ -147,16 +143,6 @@ libpurple/protocols/silc10/silc.c
 libpurple/protocols/silc10/util.c
 libpurple/protocols/silc10/wb.c
 libpurple/protocols/simple/simple.c
-libpurple/protocols/yahoo/libyahoo.c
-libpurple/protocols/yahoo/libyahoojp.c
-libpurple/protocols/yahoo/libymsg.c
-libpurple/protocols/yahoo/yahoo_aliases.c
-libpurple/protocols/yahoo/yahoo_doodle.c
-libpurple/protocols/yahoo/yahoo_filexfer.c
-libpurple/protocols/yahoo/yahoo_packet.c
-libpurple/protocols/yahoo/yahoo_profile.c
-libpurple/protocols/yahoo/yahoochat.c
-libpurple/protocols/yahoo/ycht.c
 libpurple/protocols/zephyr/zephyr.c
 libpurple/proxy.c
 libpurple/prpl.c
