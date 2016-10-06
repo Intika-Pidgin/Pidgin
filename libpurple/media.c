@@ -31,10 +31,9 @@
 #include "media/backend-fs2.h"
 #include "marshallers.h"
 #include "media-gst.h"
-#endif
+#endif /* USE_GSTREAMER */
 
 #ifdef USE_VV
-
 /** @copydoc _PurpleMediaSession */
 typedef struct _PurpleMediaSession PurpleMediaSession;
 /** @copydoc _PurpleMediaStream */
@@ -562,11 +561,10 @@ purple_media_get_session_ids(PurpleMedia *media)
 #endif
 }
 
-#ifdef USE_GSTREAMER
+#ifdef USE_VV
 GstElement *
 purple_media_get_src(PurpleMedia *media, const gchar *sess_id)
 {
-#ifdef USE_VV
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), NULL);
 
 	if (PURPLE_IS_MEDIA_BACKEND_FS2(media->priv->backend))
@@ -575,11 +573,8 @@ purple_media_get_src(PurpleMedia *media, const gchar *sess_id)
 				media->priv->backend), sess_id);
 
 	g_return_val_if_reached(NULL);
-#else
-	return NULL;
-#endif
 }
-#endif /* USE_GSTREAMER */
+#endif /* USE_VV */
 
 PurpleAccount *
 purple_media_get_account(PurpleMedia *media)
@@ -1451,12 +1446,11 @@ purple_media_remove_output_windows(PurpleMedia *media)
 #endif
 }
 
-#ifdef USE_GSTREAMER
+#ifdef USE_VV
 GstElement *
 purple_media_get_tee(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
-#ifdef USE_VV
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), NULL);
 
 	if (PURPLE_IS_MEDIA_BACKEND_FS2(media->priv->backend))
@@ -1465,11 +1459,8 @@ purple_media_get_tee(PurpleMedia *media,
 				media->priv->backend),
 				session_id, participant);
 	g_return_val_if_reached(NULL);
-#else
-	return NULL;
-#endif
 }
-#endif /* USE_GSTREAMER */
+#endif /* USE_VV */
 
 gboolean
 purple_media_send_dtmf(PurpleMedia *media, const gchar *session_id,

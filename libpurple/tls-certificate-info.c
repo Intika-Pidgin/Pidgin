@@ -222,6 +222,19 @@ typedef struct {
 	gchar *value;
 } DerOIDValue;
 
+static DerOIDValue *
+der_oid_value_copy(DerOIDValue *data)
+{
+	DerOIDValue *ret;
+
+	g_return_val_if_fail(data != NULL, NULL);
+
+	ret = g_new0(DerOIDValue, 1);
+	ret->oid = g_strdup(data->oid);
+	ret->value = g_strdup(data->value);
+	return ret;
+}
+
 static void
 der_oid_value_free(DerOIDValue *data)
 {
@@ -302,7 +315,7 @@ der_parse_name(DerNodeData *name_node)
 {
 	GSList *list;
 	GSList *ret = NULL;
-	DerOIDValue *value;
+	DerOIDValue *value = NULL;
 
 	g_return_val_if_fail(name_node != NULL, NULL);
 
@@ -381,6 +394,8 @@ der_parse_time(DerNodeData *node)
 
 	g_return_val_if_fail(node != NULL, NULL);
 	g_return_val_if_fail(node->content != NULL, NULL);
+
+	memset(time_parts, 0, sizeof(time_parts));
 
 	time = der_parse_string(node);
 
@@ -601,6 +616,24 @@ purple_tls_certificate_get_info(GTlsCertificate *certificate)
 	return info;
 }
 
+static PurpleTlsCertificateInfo *
+purple_tls_certificate_info_copy(PurpleTlsCertificateInfo *info)
+{
+	PurpleTlsCertificateInfo *ret;
+
+	g_return_val_if_fail(info != NULL, NULL);
+
+	ret = g_new0(PurpleTlsCertificateInfo, 1);
+	ret->issuer = g_slist_copy_deep(info->issuer,
+			(GCopyFunc)der_oid_value_copy, NULL);
+	ret->notBefore = g_date_time_ref(info->notBefore);
+	ret->notAfter = g_date_time_ref(info->notAfter);
+	ret->subject = g_slist_copy_deep(info->subject,
+			(GCopyFunc)der_oid_value_copy, NULL);
+
+	return ret;
+}
+
 void
 purple_tls_certificate_info_free(PurpleTlsCertificateInfo *info)
 {
@@ -615,6 +648,10 @@ purple_tls_certificate_info_free(PurpleTlsCertificateInfo *info)
 
 	g_free(info);
 }
+
+G_DEFINE_BOXED_TYPE(PurpleTlsCertificateInfo, purple_tls_certificate_info,
+		purple_tls_certificate_info_copy,
+		purple_tls_certificate_info_free);
 
 /* Looks up the relative distinguished name (RDN) from an ObjectID */
 static const gchar *

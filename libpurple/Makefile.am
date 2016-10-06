@@ -17,6 +17,7 @@ EXTRA_DIST = \
 		Makefile.mingw \
 		data/purple-3.pc.in \
 		data/purple-3-uninstalled.pc.in \
+		data/purple-url-handler.desktop.in \
 		win32/global.mak \
 		win32/libc_interface.c \
 		win32/libc_interface.h \
@@ -29,20 +30,17 @@ EXTRA_DIST = \
 		win32/giowin32.c \
 		win32/win32dep.h
 
-if USE_GCONFTOOL
-GCONF_DIR=data/gconf
-endif
-
-SUBDIRS = $(GCONF_DIR) . plugins protocols tests example
+SUBDIRS = . plugins protocols tests example
 
 purple_coresources = \
 	account.c \
 	accounts.c \
 	accountopt.c \
 	blistnode.c \
-	blistnodetypes.c \
+	buddy.c \
 	buddylist.c \
 	buddyicon.c \
+	chat.c \
 	ciphers/aescipher.c \
 	ciphers/descipher.c \
 	ciphers/des3cipher.c \
@@ -57,13 +55,16 @@ purple_coresources = \
 	circularbuffer.c \
 	cmds.c \
 	connection.c \
+	contact.c \
 	conversation.c \
 	conversationtypes.c \
 	conversations.c \
 	core.c \
+	countingnode.c \
 	debug.c \
 	e2ee.c \
 	eventloop.c \
+	group.c \
 	http.c \
 	idle.c \
 	image.c \
@@ -92,7 +93,9 @@ purple_coresources = \
 	proxy.c \
 	protocol.c \
 	protocols.c \
+	purple-gio.c \
 	purple-socket.c \
+	queuedoutputstream.c \
 	request.c \
 	request-datasheet.c \
 	roomlist.c \
@@ -133,21 +136,25 @@ purple_coreheaders = \
 	accounts.h \
 	accountopt.h \
 	blistnode.h \
-	blistnodetypes.h \
+	buddy.h \
 	buddylist.h \
 	buddyicon.h \
+	chat.h \
 	cipher.h \
 	circularbuffer.h \
 	cmds.h \
 	connection.h \
+	contact.h \
 	conversation.h \
 	conversationtypes.h \
 	conversations.h \
 	core.h \
+	countingnode.h \
 	dbus-maybe.h \
 	debug.h \
 	e2ee.h \
 	eventloop.h \
+	group.h \
 	http.h \
 	idle.h \
 	image.h \
@@ -171,7 +178,9 @@ purple_coreheaders = \
 	proxy.h \
 	protocol.h \
 	protocols.h \
+	purple-gio.h \
 	purple-socket.h \
+	queuedoutputstream.h \
 	request.h \
 	request-datasheet.h \
 	roomlist.h \
@@ -190,6 +199,7 @@ purple_coreheaders = \
 	sound-theme.h \
 	sound-theme-loader.h \
 	sslconn.h \
+	tests.h \
 	theme.h \
 	theme-loader.h \
 	theme-manager.h \
@@ -262,7 +272,7 @@ purple_enumheaders = \
 	$(srcdir)/protocols.h \
 	$(srcdir)/roomlist.h \
 	$(srcdir)/status.h \
-	${srcdir}/sound.h \
+	$(srcdir)/sound.h \
 	$(srcdir)/xfer.h \
 	$(srcdir)/xmlnode.h
 
@@ -305,7 +315,7 @@ dbus_sources  = dbus-server.c dbus-useful.c
 dbus_headers  = dbus-server.h dbus-bindings.h dbus-purple.h dbus-useful.h dbus-define-api.h dbus-types.h
 
 dbus_exported = dbus-useful.h dbus-define-api.h account.h accounts.h blistnode.h \
-                blistnodetypes.h buddylist.h buddyicon.h connection.h conversation.h \
+                buddy.h buddylist.h buddyicon.h connection.h conversation.h \
                 conversationtypes.h conversations.h core.h xfer.h log.h notify.h \
                 prefs.h presence.h roomlist.h savedstatuses.h smiley.h smiley-list.h \
 				status.h server.h util.h xmlnode.h protocol.h protocols.h
@@ -321,16 +331,16 @@ dbus_signals = $(addprefix $(srcdir)/, $(purple_coresources)) \
 	$(srcdir)/protocols/jabber/jabber.c
 
 dbus-types.c: dbus-analyze-types.py $(purple_build_coreheaders)
-	$(AM_V_GEN)cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DEFINE_TYPE\(%s\) > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DEFINE_TYPE\(%s\) -o $@ $(purple_build_coreheaders)
 
 dbus-types.h: dbus-analyze-types.py $(purple_build_coreheaders)
-	$(AM_V_GEN)cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DECLARE_TYPE\(%s\) > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DECLARE_TYPE\(%s\) -o $@ $(purple_build_coreheaders)
 
 dbus-bindings.c: dbus-analyze-functions.py $(dbus_exported)
-	$(AM_V_GEN)cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py > $@
+	$(AM_V_GEN)$(PYTHON) $(srcdir)/dbus-analyze-functions.py -o $@ $(dbus_build_exported)
 
 dbus-signals.c: dbus-analyze-signals.py $(dbus_signals)
-	$(AM_V_GEN)cat $(dbus_signals) | $(PYTHON) $(srcdir)/dbus-analyze-signals.py > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-signals.py -o $@ $(dbus_signals)
 
 dbus-server.$(OBJEXT): dbus-bindings.c dbus-signals.c dbus-types.c dbus-types.h
 dbus-server.lo: dbus-bindings.c dbus-signals.c dbus-types.c dbus-types.h
@@ -345,11 +355,11 @@ libpurple_client_la_LDFLAGS = -version-info $(PURPLE_LT_VERSION_INFO) -no-undefi
 libpurple_client_la_LIBADD = $(DBUS_LIBS)
 
 purple-client-bindings.c: dbus-analyze-functions.py $(dbus_exported)
-	$(AM_V_GEN)cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client -o $@ $(dbus_build_exported)
 
 purple-client-bindings.h: dbus-analyze-types.py dbus-analyze-functions.py $(purple_coreheaders) $(addprefix ciphers/, $(purple_cipherheaders)) $(addprefix media/, $(purple_mediaheaders)) $(purple_builtheaders) $(dbus_exported)
-	$(AM_V_GEN)cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --keyword=enum --verbatim > $@
-	$(AM_V_at)cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client --headers >> $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-types.py --keyword=enum --verbatim -o $@ $(purple_build_coreheaders)
+	$(AM_V_at) $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client --headers --append -o $@ $(dbus_build_exported)
 
 $(libpurple_client_la_OBJECTS): purple-client-bindings.h purple-client-bindings.c
 
@@ -416,6 +426,21 @@ mediainclude_HEADERS = \
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = data/purple-3.pc
 
+if INSTALL_I18N
+DESKTOP_FILE=data/purple-url-handler.desktop
+
+appsdir = $(datadir)/applications
+apps_in_files = data/purple-url-handler.desktop.in
+apps_DATA = $(apps_in_files:.desktop.in=.desktop)
+
+# silenced INTLTOOL_DESKTOP_RULE
+%.desktop: %.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po)
+	$(AM_V_GEN) LC_ALL=C $(INTLTOOL_MERGE) -d -u -c $(top_builddir)/po/.intltool-merge-cache $(top_srcdir)/po $< $@ > /dev/null
+
+@INTLTOOL_XML_RULE@
+
+endif # INSTALL_I18N
+
 libpurple_la_DEPENDENCIES = \
 	$(STATIC_LINK_LIBS) $(LIBPURPLE_WIN32RES)
 
@@ -474,7 +499,7 @@ introspection_sources = \
 	$(addprefix media/, $(purple_mediaheaders))
 
 Purple-$(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION).gir: $(builddir)/libpurple.la
-Purple_3_0_gir_INCLUDES = GObject-2.0
+Purple_3_0_gir_INCLUDES = Gio-2.0 GObject-2.0
 if PLUGINS
 Purple_3_0_gir_INCLUDES += GPlugin-0.0
 endif
