@@ -24,7 +24,7 @@
 #include "account.h"
 #include "accountopt.h"
 #include "blistnode.h"
-#include "blistnodetypes.h"
+#include "buddy.h"
 #include "buddyicon.h"
 #include "buddylist.h"
 #include "cmds.h"
@@ -332,8 +332,8 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 
 	gc = fb_data_get_connection(fata);
 
-	if (error->domain == FB_MQTT_SSL_ERROR) {
-		purple_connection_ssl_error(gc, error->code);
+	if (error->domain == G_IO_ERROR) {
+		purple_connection_g_error(gc, error);
 		return;
 	}
 

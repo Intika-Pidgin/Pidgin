@@ -128,60 +128,6 @@ static GtkListStore *prefs_smiley_themes;
 
 #ifdef USE_VV
 
-static const gchar *AUDIO_SRC_PLUGINS[] = {
-	"alsasrc",	"ALSA",
-	"directsoundsrc", "DirectSound",
-	/* "esdmon",	"ESD", ? */
-	"osssrc",	"OSS",
-	"pulsesrc",	"PulseAudio",
-	"sndiosrc",	"sndio",
-	/* "audiotestsrc wave=silence", "Silence", */
-	/* Translators: This is a noun that refers to one possible audio input
-	   plugin. The plugin can be used by the user to sanity check basic audio
-	   functionality within Pidgin.  */
-	"audiotestsrc",	N_("Test Sound"),
-	NULL
-};
-
-static const gchar *AUDIO_SINK_PLUGINS[] = {
-	"alsasink",	"ALSA",
-	"directsoundsink", "DirectSound",
-	/* "gconfaudiosink", "GConf", */
-	"artsdsink",	"aRts",
-	"esdsink",	"ESD",
-	"osssink",	"OSS",
-	"pulsesink",	"PulseAudio",
-	"sndiosink",	"sndio",
-	NULL
-};
-
-static const gchar *VIDEO_SRC_PLUGINS[] = {
-	"videodisabledsrc",	N_("Disabled"),
-	/* Translators: This is a noun that refers to one possible video input
-	   plugin. The plugin can be used by the user to sanity check basic video
-	   functionality within Pidgin. */
-	"videotestsrc",	N_("Test Input"),
-	"dshowvideosrc","DirectDraw",
-	"ksvideosrc",	"KS Video",
-	"qcamsrc",	"Quickcam",
-	"v4lsrc",	"Video4Linux",
-	"v4l2src",	"Video4Linux2",
-	"v4lmjpegsrc",	"Video4Linux MJPEG",
-	NULL
-};
-
-static const gchar *VIDEO_SINK_PLUGINS[] = {
-	/* "aasink",	"AALib", Didn't work for me */
-	"directdrawsink", "DirectDraw",
-	/* "gconfvideosink", "GConf", */
-	"glimagesink",	"OpenGL",
-	/* Currently broken when embedding in a Gtk window
-	 * "ximagesink",	"X Window System",
-	 * "xvimagesink",	"X Window System (Xv)",
-	 */
-	NULL
-};
-
 static GtkWidget *voice_level;
 static GtkWidget *voice_threshold;
 static GtkWidget *voice_volume;
@@ -1417,7 +1363,8 @@ add_theme_prefs_combo(GtkWidget *vbox,
 	GtkWidget *themesel_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 
 	label = gtk_label_new(label_str);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 	gtk_size_group_add_widget(label_sg, label);
 	gtk_box_pack_start(GTK_BOX(themesel_hbox), label, FALSE, FALSE, 0);
 
@@ -1449,7 +1396,8 @@ add_child_theme_prefs_combo(GtkWidget *vbox, GtkSizeGroup *combo_sg,
 	gtk_box_pack_start(GTK_BOX(vbox), themesel_hbox, FALSE, FALSE, 0);
 
 	label = gtk_label_new(label_str);
-	gtk_misc_set_alignment(GTK_MISC(label), 1, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_END);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 	gtk_size_group_add_widget(label_sg, label);
 	gtk_box_pack_start(GTK_BOX(themesel_hbox), label, FALSE, FALSE, 0);
 
@@ -1486,7 +1434,8 @@ theme_page(void)
 							"the lists below.\nNew themes can be installed by "
 							"dragging and dropping them onto the theme list."));
 
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 	gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
 
 	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, FALSE, 0);
@@ -1746,7 +1695,8 @@ interface_page(void)
 					_("Never"), "never",
 					NULL);
 	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 
 	vbox = pidgin_make_frame(ret, _("Conversation Window"));
 	label = pidgin_prefs_dropdown(vbox, _("_Hide new IM conversations:"),
@@ -1756,7 +1706,8 @@ interface_page(void)
 					_("Always"), "always",
 					NULL);
 	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 
 #ifdef _WIN32
 	pidgin_prefs_checkbox(_("Minimi_ze new conversation windows"), PIDGIN_PREFS_ROOT "/win32/minimize_new_convs", vbox);
@@ -1792,12 +1743,14 @@ interface_page(void)
 					_("Right Vertical"), GTK_POS_RIGHT|8,
 					NULL);
 	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 
 	names = pidgin_conv_placement_get_options();
 	label = pidgin_prefs_dropdown_from_list(vbox2, _("N_ew conversations:"),
 				PURPLE_PREF_STRING, PIDGIN_PREFS_ROOT "/conversations/placement", names);
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 
 	gtk_size_group_add_widget(sg, label);
 
@@ -2167,7 +2120,8 @@ network_page(void)
 	label = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(label),
 			_("<span style=\"italic\">Example: stunserver.org</span>"));
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 	gtk_container_add(GTK_CONTAINER(hbox), label);
 
 	auto_ip_checkbox = pidgin_prefs_checkbox("Use _automatically detected IP address",
@@ -2408,7 +2362,8 @@ browser_page(void)
 											 PIDGIN_PREFS_ROOT "/browsers/browser",
 											 browsers);
 			g_list_free(browsers);
-			gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+			gtk_widget_set_halign(label, GTK_ALIGN_START);
+			gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 			gtk_size_group_add_widget(sg, label);
 
 			hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -2418,7 +2373,8 @@ browser_page(void)
 				_("New window"), PIDGIN_BROWSER_NEW_WINDOW,
 				_("New tab"), PIDGIN_BROWSER_NEW_TAB,
 				NULL);
-			gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+			gtk_widget_set_halign(label, GTK_ALIGN_START);
+			gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 			gtk_size_group_add_widget(sg, label);
 			gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 
@@ -2452,7 +2408,7 @@ proxy_page(void)
 {
 	GtkWidget *ret = NULL, *vbox = NULL, *hbox = NULL;
 	GtkWidget *grid = NULL, *entry = NULL, *proxy_button = NULL;
-	GtkLabel *label = NULL;
+	GtkWidget *label = NULL;
 	GtkWidget *prefs_proxy_frame = NULL;
 	PurpleProxyInfo *proxy_info;
 
@@ -2465,10 +2421,10 @@ proxy_page(void)
 		gchar *path = NULL;
 
 		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-		label = GTK_LABEL(gtk_label_new(_("Proxy preferences "
-			"are configured in GNOME preferences")));
+		label = gtk_label_new(_("Proxy preferences are configured in "
+				"GNOME preferences"));
 		gtk_container_add(GTK_CONTAINER(vbox), hbox);
-		gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(label), FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
 		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 		gtk_container_add(GTK_CONTAINER(vbox), hbox);
@@ -2486,10 +2442,11 @@ proxy_page(void)
 		}
 
 		if (path == NULL) {
-			label = GTK_LABEL(gtk_label_new(NULL));
-			gtk_label_set_markup(label, _("<b>Proxy configuration "
-				"program was not found.</b>"));
-			gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(label), FALSE, FALSE, 0);
+			label = gtk_label_new(NULL);
+			gtk_label_set_markup(GTK_LABEL(label),
+					_("<b>Proxy configuration program was "
+					"not found.</b>"));
+			gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 		} else {
 			proxy_button = gtk_button_new_with_mnemonic(_("Configure _Proxy"));
 			g_signal_connect(G_OBJECT(proxy_button), "clicked",
@@ -2527,21 +2484,22 @@ proxy_page(void)
 		purple_prefs_connect_callback(prefs, "/purple/proxy/type",
 					    proxy_changed_cb, prefs_proxy_subframe);
 
-		grid = gtk_grid_table_new(4, 2);
+		grid = gtk_grid_new();
 		gtk_container_set_border_width(GTK_CONTAINER(grid), 0);
 		gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
 		gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
 		gtk_container_add(GTK_CONTAINER(prefs_proxy_subframe), grid);
 
-		label = GTK_LABEL(gtk_label_new_with_mnemonic(_("_Host:")));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_grid_attach_full(GTK_GRID(grid), GTK_WIDGET(label), 0, 0, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		label = gtk_label_new_with_mnemonic(_("_Host:"));
+		gtk_widget_set_halign(label, GTK_ALIGN_END);
+		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
 
 		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(label, entry);
-		gtk_grid_attach_full(GTK_GRID(grid), entry, 1, 0, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), entry, 1, 0, 1, 1);
+
 		g_signal_connect(G_OBJECT(entry), "changed",
 				 G_CALLBACK(proxy_print_option), (void *)PROXYHOST);
 
@@ -2552,17 +2510,18 @@ proxy_page(void)
 		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
 		gtk_box_set_homogeneous(GTK_BOX(hbox), TRUE);
 		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-		pidgin_set_accessible_label(entry, label);
+		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
-		label = GTK_LABEL(gtk_label_new_with_mnemonic(_("P_ort:")));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_grid_attach_full(GTK_GRID(grid), GTK_WIDGET(label), 2, 0, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		label = gtk_label_new_with_mnemonic(_("P_ort:"));
+		gtk_widget_set_halign(label, GTK_ALIGN_END);
+		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), label, 2, 0, 1, 1);
 
 		entry = gtk_spin_button_new_with_range(0, 65535, 1);
-		gtk_label_set_mnemonic_widget(label, entry);
-		gtk_grid_attach_full(GTK_GRID(grid), entry, 3, 0, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), entry, 3, 0, 1, 1);
+
 		g_signal_connect(G_OBJECT(entry), "changed",
 				 G_CALLBACK(proxy_print_option), (void *)PROXYPORT);
 
@@ -2570,17 +2529,18 @@ proxy_page(void)
 			gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry),
 				purple_proxy_info_get_port(proxy_info));
 		}
-		pidgin_set_accessible_label(entry, label);
+		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
-		label = GTK_LABEL(gtk_label_new_with_mnemonic(_("User_name:")));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_grid_attach_full(GTK_GRID(grid), GTK_WIDGET(label), 0, 1, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		label = gtk_label_new_with_mnemonic(_("User_name:"));
+		gtk_widget_set_halign(label, GTK_ALIGN_END);
+		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), label, 0, 1, 1, 1);
 
 		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(label, entry);
-		gtk_grid_attach_full(GTK_GRID(grid), entry, 1, 1, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), entry, 1, 1, 1, 1);
+
 		g_signal_connect(G_OBJECT(entry), "changed",
 				 G_CALLBACK(proxy_print_option), (void *)PROXYUSER);
 
@@ -2591,17 +2551,18 @@ proxy_page(void)
 		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
 		gtk_box_set_homogeneous(GTK_BOX(hbox), TRUE);
 		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-		pidgin_set_accessible_label(entry, label);
+		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
-		label = GTK_LABEL(gtk_label_new_with_mnemonic(_("Pa_ssword:")));
-		gtk_misc_set_alignment(GTK_MISC(label), 1.0, 0.5);
-		gtk_grid_attach_full(GTK_GRID(grid), GTK_WIDGET(label), 2, 1, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		label = gtk_label_new_with_mnemonic(_("Pa_ssword:"));
+		gtk_widget_set_halign(label, GTK_ALIGN_END);
+		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), label, 2, 1, 1, 1);
 
 		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(label, entry);
-		gtk_grid_attach_full(GTK_GRID(grid), entry, 3, 1, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
+		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
+		gtk_grid_attach(GTK_GRID(grid), entry, 3, 1, 1, 1);
+
 		gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
 		g_signal_connect(G_OBJECT(entry), "changed",
 				 G_CALLBACK(proxy_print_option), (void *)PROXYPASS);
@@ -2609,7 +2570,7 @@ proxy_page(void)
 		if (proxy_info != NULL && purple_proxy_info_get_password(proxy_info) != NULL)
 			gtk_entry_set_text(GTK_ENTRY(entry),
 					   purple_proxy_info_get_password(proxy_info));
-		pidgin_set_accessible_label(entry, label);
+		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
 		proxy_changed_cb("/purple/proxy/type", PURPLE_PREF_STRING,
 			purple_prefs_get_string("/purple/proxy/type"),
@@ -3141,7 +3102,8 @@ sound_page(void)
 			_("No sounds"), "none",
 			NULL);
 	gtk_size_group_add_widget(sg, dd);
-	gtk_misc_set_alignment(GTK_MISC(dd), 0, 0.5);
+	gtk_widget_set_halign(dd, GTK_ALIGN_START);
+	gtk_widget_set_valign(dd, GTK_ALIGN_CENTER);
 
 	entry = gtk_entry_new();
 	gtk_editable_set_editable(GTK_EDITABLE(entry), TRUE);
@@ -3312,7 +3274,8 @@ away_page(void)
 #endif
 		NULL);
 	gtk_size_group_add_widget(sg, dd);
-	gtk_misc_set_alignment(GTK_MISC(dd), 0, 0.5);
+	gtk_widget_set_halign(dd, GTK_ALIGN_START);
+	gtk_widget_set_valign(dd, GTK_ALIGN_CENTER);
 
 	pidgin_prefs_labeled_spin_button(vbox,
 			_("_Minutes before becoming idle:"), "/purple/away/mins_before_away",
@@ -3346,7 +3309,8 @@ away_page(void)
 		_("When both away and idle"), "awayidle",
 		NULL);
 	gtk_size_group_add_widget(sg, dd);
-	gtk_misc_set_alignment(GTK_MISC(dd), 0, 0.5);
+	gtk_widget_set_halign(dd, GTK_ALIGN_START);
+	gtk_widget_set_valign(dd, GTK_ALIGN_CENTER);
 
 	/* Signon status stuff */
 	vbox = pidgin_make_frame(ret, _("Status at Startup"));
@@ -3377,71 +3341,24 @@ away_page(void)
 
 #ifdef USE_VV
 static GList *
-get_vv_element_devices(const gchar *element_name)
+get_vv_device_menuitems(PurpleMediaElementType type)
 {
-	GList *ret = NULL;
-	GstElement *element;
-	GObjectClass *klass;
+	GList *result = NULL;
+	GList *i;
 
-	ret = g_list_prepend(ret, g_strdup(_("Default")));
-	ret = g_list_prepend(ret, g_strdup(""));
+	i = purple_media_manager_enumerate_elements(purple_media_manager_get(),
+			type);
+	for (; i; i = g_list_delete_link(i, i)) {
+		PurpleMediaElementInfo *info = i->data;
 
-	if (!strcmp(element_name, "<custom>") || (*element_name == '\0')) {
-		return g_list_reverse(ret);
+		result = g_list_append(result,
+				purple_media_element_info_get_name(info));
+		result = g_list_append(result,
+				purple_media_element_info_get_id(info));
+		g_object_unref(info);
 	}
 
-	if (g_strcmp0(element_name, "videodisabledsrc") == 0) {
-		/* Translators: This string refers to 'static' or 'snow' sometimes
-		   seen when trying to tune a TV to a non-existant analog station. */
-		ret = g_list_prepend(ret, g_strdup(_("Random noise")));
-		ret = g_list_prepend(ret, g_strdup("snow"));
-
-		return g_list_reverse(ret);
-	}
-
-	element = gst_element_factory_make(element_name, "test");
-	if (!element) {
-		purple_debug_info("vvconfig", "'%s' - unable to find element\n",
-			element_name);
-		return g_list_reverse(ret);
-	}
-
-	klass = G_OBJECT_GET_CLASS (element);
-	if (!klass) {
-		purple_debug_info("vvconfig", "'%s' - unable to find GObject "
-			"Class\n", element_name);
-		return g_list_reverse(ret);
-	}
-
-	purple_debug_info("vvconfig", "'%s' - gstreamer-1.0 doesn't suport "
-		"property probing\n", element_name);
-
-	gst_object_unref(element);
-	return g_list_reverse(ret);
-}
-
-static GList *
-get_vv_element_plugins(const gchar **plugins)
-{
-	GList *ret = NULL;
-
-	ret = g_list_prepend(ret, (gpointer)_("Default"));
-	ret = g_list_prepend(ret, "");
-	for (; plugins[0] && plugins[1]; plugins += 2) {
-#if GST_CHECK_VERSION(1,0,0)
-		if (gst_registry_check_feature_version(gst_registry_get(),
-			plugins[0], 0, 0, 0)
-#else
-		if (gst_default_registry_check_feature_version(plugins[0], 0, 0, 0)
-#endif
-			|| g_strcmp0(plugins[0], "videodisabledsrc") == 0)
-		{
-			ret = g_list_prepend(ret, (gpointer)_(plugins[1]));
-			ret = g_list_prepend(ret, (gpointer)plugins[0]);
-		}
-	}
-
-	return g_list_reverse(ret);
+	return result;
 }
 
 static GstElement *
@@ -3658,7 +3575,8 @@ make_voice_test(GtkWidget *vbox)
 	                      purple_prefs_get_int("/purple/media/audio/silence_threshold"));
 	label = gtk_label_new(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
 	g_free(tmp);
 	threshold = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
 		0, 100, 1);
@@ -3688,15 +3606,20 @@ create_video_pipeline(void)
 {
 	GstElement *pipeline;
 	GstElement *src, *sink;
+	GstElement *videoconvert;
+	GstElement *videoscale;
 
 	pipeline = gst_pipeline_new("videotest");
 	src = create_test_element(PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC);
 	sink = create_test_element(PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SINK);
+	videoconvert = gst_element_factory_make("videoconvert", NULL);
+	videoscale = gst_element_factory_make("videoscale", NULL);
 
 	g_object_set_data(G_OBJECT(pipeline), "sink", sink);
 
-	gst_bin_add_many(GST_BIN(pipeline), src, sink, NULL);
-	gst_element_link_many(src, sink, NULL);
+	gst_bin_add_many(GST_BIN(pipeline), src, videoconvert, videoscale, sink,
+			NULL);
+	gst_element_link_many(src, videoconvert, videoscale, sink, NULL);
 
 	return pipeline;
 }
@@ -3809,11 +3732,9 @@ make_video_test(GtkWidget *vbox)
 {
 	GtkWidget *test;
 	GtkWidget *video;
-	GdkRGBA color = {0.0, 0.0, 0.0, 1.0};
 
-	video_drawing_area = video = gtk_drawing_area_new();
+	video_drawing_area = video = pidgin_create_video_widget();
 	gtk_box_pack_start(GTK_BOX(vbox), video, TRUE, TRUE, 0);
-	gtk_widget_override_background_color(video, GTK_STATE_FLAG_NORMAL, &color);
 	gtk_widget_set_size_request(GTK_WIDGET(video), 240, 180);
 
 	test = gtk_toggle_button_new_with_label(_("Test Video"));
@@ -3824,38 +3745,15 @@ make_video_test(GtkWidget *vbox)
 }
 
 static void
-vv_plugin_changed_cb(const gchar *name, PurplePrefType type,
+vv_device_changed_cb(const gchar *name, PurplePrefType type,
                      gconstpointer value, gpointer data)
 {
-	GtkWidget *vbox = data;
-	GtkSizeGroup *sg;
-	GtkWidget *widget;
-	gchar *pref;
-	GList *devices;
+	PurpleMediaManager *manager;
+	PurpleMediaElementInfo *info;
 
-	sg = g_object_get_data(G_OBJECT(vbox), "size-group");
-	widget = g_object_get_data(G_OBJECT(vbox), "device-hbox");
-	gtk_widget_destroy(widget);
-
-	pref = g_strdup(name);
-	strcpy(pref + strlen(pref) - strlen("plugin"), "device");
-	devices = get_vv_element_devices(value);
-	if (g_list_find_custom(devices, purple_prefs_get_string(pref),
-		(GCompareFunc)strcmp) == NULL)
-	{
-		GList *next = g_list_next(devices);
-		if (next)
-			purple_prefs_set_string(pref, next->data);
-	}
-	widget = pidgin_prefs_dropdown_from_list(vbox, _("_Device"),
-	                                         PURPLE_PREF_STRING, pref, devices);
-	g_list_free_full(devices, g_free);
-	gtk_size_group_add_widget(sg, widget);
-	gtk_misc_set_alignment(GTK_MISC(widget), 0, 0.5);
-
-	g_object_set_data(G_OBJECT(vbox), "device-hbox",
-	                  gtk_widget_get_parent(widget));
-	g_signal_connect_swapped(widget, "destroy", G_CALLBACK(g_free), pref);
+	manager = purple_media_manager_get();
+	info = purple_media_manager_get_element_info(manager, value);
+	purple_media_manager_set_active_element(manager, info);
 
 	/* Refresh test viewers */
 	if (strstr(name, "audio") && voice_pipeline) {
@@ -3867,48 +3765,102 @@ vv_plugin_changed_cb(const gchar *name, PurplePrefType type,
 	}
 }
 
-static void
-make_vv_frame(GtkWidget *parent, GtkSizeGroup *sg,
-              const gchar *name, const gchar **plugin_strs,
-              const gchar *plugin_pref, const gchar *device_pref)
+static const char *
+purple_media_type_to_preference_key(PurpleMediaElementType type)
 {
-	GtkWidget *vbox, *widget;
-	GList *plugins, *devices;
+	if (type & PURPLE_MEDIA_ELEMENT_AUDIO) {
+		if (type & PURPLE_MEDIA_ELEMENT_SRC) {
+			return PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device";
+		} else if (type & PURPLE_MEDIA_ELEMENT_SINK) {
+			return PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device";
+		}
+	} else if (type & PURPLE_MEDIA_ELEMENT_VIDEO) {
+		if (type & PURPLE_MEDIA_ELEMENT_SRC) {
+			return PIDGIN_PREFS_ROOT "/vvconfig/video/src/device";
+		} else if (type & PURPLE_MEDIA_ELEMENT_SINK) {
+			return PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device";
+		}
+	}
 
-	vbox = pidgin_make_frame(parent, name);
+	return NULL;
+}
 
-	/* Setup plugin preference */
-	plugins = get_vv_element_plugins(plugin_strs);
-	widget = pidgin_prefs_dropdown_from_list(vbox, _("_Plugin"),
-	                                         PURPLE_PREF_STRING, plugin_pref,
-	                                         plugins);
-	g_list_free(plugins);
-	gtk_size_group_add_widget(sg, widget);
-	gtk_misc_set_alignment(GTK_MISC(widget), 0, 0.5);
+static GtkWidget *
+make_vv_dropdown(GtkWidget *parent, GtkSizeGroup *size_group,
+		PurpleMediaElementType element_type)
+{
+	GtkWidget *label;
+	const gchar *preference_key;
+	GList *devices;
 
-	/* Setup device preference */
-	devices = get_vv_element_devices(purple_prefs_get_string(plugin_pref));
-	if (g_list_find_custom(devices, purple_prefs_get_string(device_pref),
+	preference_key = purple_media_type_to_preference_key(element_type);
+	devices = get_vv_device_menuitems(element_type);
+
+	if (g_list_find_custom(devices, purple_prefs_get_string(preference_key),
 		(GCompareFunc)strcmp) == NULL)
 	{
 		GList *next = g_list_next(devices);
 		if (next)
-			purple_prefs_set_string(device_pref, next->data);
+			purple_prefs_set_string(preference_key, next->data);
 	}
-	widget = pidgin_prefs_dropdown_from_list(vbox, _("_Device"),
-	                                         PURPLE_PREF_STRING, device_pref,
-	                                         devices);
-	g_list_free_full(devices, g_free);
-	gtk_size_group_add_widget(sg, widget);
-	gtk_misc_set_alignment(GTK_MISC(widget), 0, 0.5);
 
-	widget = gtk_widget_get_parent(widget);
-	g_object_set_data(G_OBJECT(vbox), "size-group", sg);
-	g_object_set_data(G_OBJECT(vbox), "device-hbox", widget);
-	purple_prefs_connect_callback(vbox, plugin_pref, vv_plugin_changed_cb,
-	                              vbox);
+	label = pidgin_prefs_dropdown_from_list(parent, _("_Device"),
+			PURPLE_PREF_STRING, preference_key, devices);
+
+	g_list_free_full(devices, g_free);
+
+	gtk_size_group_add_widget(size_group, label);
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+
+	/* Return the parent GtkBox of dropdown and label, which was created
+	 * in pidgin_prefs_dropdown_from_list(). */
+	return gtk_widget_get_parent(label);
+}
+
+static GtkWidget *
+make_vv_frame(GtkWidget *parent, GtkSizeGroup *sg,
+              const gchar *name, PurpleMediaElementType type)
+{
+	GtkWidget *vbox;
+	GtkWidget *dropdown;
+
+	vbox = pidgin_make_frame(parent, name);
+
+	dropdown = make_vv_dropdown(vbox, sg, type);
+
+	purple_prefs_connect_callback(vbox,
+			purple_media_type_to_preference_key(type),
+			vv_device_changed_cb, vbox);
 	g_signal_connect_swapped(vbox, "destroy",
 	                         G_CALLBACK(purple_prefs_disconnect_by_handle), vbox);
+
+	g_object_set_data(G_OBJECT(vbox), "vv_frame", vbox);
+	g_object_set_data(G_OBJECT(vbox), "vv_dropdown", dropdown);
+	g_object_set_data(G_OBJECT(vbox), "vv_size_group", sg);
+	g_object_set_data(G_OBJECT(vbox), "vv_media_type", (gpointer)type);
+
+	return vbox;
+}
+
+static void
+device_list_changed_cb(PurpleMediaManager *manager, GtkWidget *widget)
+{
+	GtkWidget *frame;
+	GtkWidget *dropdown;
+	PurpleMediaElementType media_type;
+
+	gtk_widget_destroy(g_object_get_data(G_OBJECT(widget), "vv_dropdown"));
+
+	frame = g_object_get_data(G_OBJECT(widget), "vv_frame");
+	media_type = (PurpleMediaElementType)g_object_get_data(G_OBJECT(widget),
+			"vv_media_type");
+
+	dropdown = make_vv_dropdown(frame,
+			g_object_get_data(G_OBJECT(widget), "vv_size_group"),
+			media_type);
+
+	g_object_set_data(G_OBJECT(widget), "vv_dropdown", dropdown);
 }
 
 static GtkWidget *
@@ -3916,29 +3868,41 @@ vv_page(void)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
+	GtkWidget *frame;
 	GtkSizeGroup *sg;
+	PurpleMediaManager *manager;
 
 	ret = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
+	manager = purple_media_manager_get();
+
 	vbox = pidgin_make_frame(ret, _("Audio"));
-	make_vv_frame(vbox, sg, _("Input"), AUDIO_SRC_PLUGINS,
-	              PIDGIN_PREFS_ROOT "/vvconfig/audio/src/plugin",
-	              PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device");
-	make_vv_frame(vbox, sg, _("Output"), AUDIO_SINK_PLUGINS,
-	              PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/plugin",
-	              PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device");
+	frame = make_vv_frame(vbox, sg, _("Input"),
+			PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SRC);
+	g_signal_connect_object(manager, "elements-changed::audiosrc",
+			G_CALLBACK(device_list_changed_cb), frame, 0);
+
+	frame = make_vv_frame(vbox, sg, _("Output"),
+			PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SINK);
+	g_signal_connect_object(manager, "elements-changed::audiosink",
+			G_CALLBACK(device_list_changed_cb), frame, 0);
+
 	make_voice_test(vbox);
 
 	vbox = pidgin_make_frame(ret, _("Video"));
-	make_vv_frame(vbox, sg, _("Input"), VIDEO_SRC_PLUGINS,
-	              PIDGIN_PREFS_ROOT "/vvconfig/video/src/plugin",
-	              PIDGIN_PREFS_ROOT "/vvconfig/video/src/device");
-	make_vv_frame(vbox, sg, _("Output"), VIDEO_SINK_PLUGINS,
-	              PIDGIN_PREFS_ROOT "/vvconfig/video/sink/plugin",
-	              PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device");
+	frame = make_vv_frame(vbox, sg, _("Input"),
+	              PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC);
+	g_signal_connect_object(manager, "elements-changed::videosrc",
+			G_CALLBACK(device_list_changed_cb), frame, 0);
+
+	frame = make_vv_frame(vbox, sg, _("Output"),
+			PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SINK);
+	g_signal_connect_object(manager, "elements-changed::videosink",
+			G_CALLBACK(device_list_changed_cb), frame, 0);
+
 	make_video_test(vbox);
 
 	gtk_widget_show_all(ret);
@@ -4118,18 +4082,14 @@ pidgin_prefs_init(void)
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio/src");
-	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/plugin", "");
 	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device", "");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink");
-	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/plugin", "");
 	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device", "");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video/src");
-	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/plugin", "");
 	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/device", "");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video/sink");
-	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/plugin", "");
 	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device", "");
 #endif
 
@@ -4228,33 +4188,17 @@ pidgin_prefs_update_old(void)
 			PIDGIN_PREFS_ROOT "/conversations/im/y");
 
 	/* Fixup vvconfig plugin prefs */
-	if (purple_prefs_exists("/plugins/core/vvconfig/audio/src/plugin")) {
-		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/plugin",
-				purple_prefs_get_string("/plugins/core/vvconfig/audio/src/plugin"));
-	}
 	if (purple_prefs_exists("/plugins/core/vvconfig/audio/src/device")) {
 		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device",
 				purple_prefs_get_string("/plugins/core/vvconfig/audio/src/device"));
-	}
-	if (purple_prefs_exists("/plugins/core/vvconfig/audio/sink/plugin")) {
-		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/plugin",
-				purple_prefs_get_string("/plugins/core/vvconfig/audio/sink/plugin"));
 	}
 	if (purple_prefs_exists("/plugins/core/vvconfig/audio/sink/device")) {
 		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device",
 				purple_prefs_get_string("/plugins/core/vvconfig/audio/sink/device"));
 	}
-	if (purple_prefs_exists("/plugins/core/vvconfig/video/src/plugin")) {
-		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/plugin",
-				purple_prefs_get_string("/plugins/core/vvconfig/video/src/plugin"));
-	}
 	if (purple_prefs_exists("/plugins/core/vvconfig/video/src/device")) {
 		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/device",
 				purple_prefs_get_string("/plugins/core/vvconfig/video/src/device"));
-	}
-	if (purple_prefs_exists("/plugins/gtk/vvconfig/video/sink/plugin")) {
-		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/plugin",
-				purple_prefs_get_string("/plugins/gtk/vvconfig/video/sink/plugin"));
 	}
 	if (purple_prefs_exists("/plugins/gtk/vvconfig/video/sink/device")) {
 		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device",
@@ -4263,6 +4207,11 @@ pidgin_prefs_update_old(void)
 
 	purple_prefs_remove("/plugins/core/vvconfig");
 	purple_prefs_remove("/plugins/gtk/vvconfig");
+
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/plugin");
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/plugin");
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/vvconfig/video/src/plugin");
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/plugin");
 
 #ifndef _WIN32
 	/* Added in 3.0.0. */
