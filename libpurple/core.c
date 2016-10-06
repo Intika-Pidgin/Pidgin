@@ -20,7 +20,6 @@
  */
 #include "internal.h"
 #include "cipher.h"
-#include "certificate.h"
 #include "cmds.h"
 #include "connection.h"
 #include "conversation.h"
@@ -114,11 +113,6 @@ purple_core_init(const char *ui)
 	wpurple_init();
 #endif
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-	/* GLib type system is automaticaly initialized since 2.36. */
-	g_type_init();
-#endif
-
 	_core = core = g_new0(PurpleCore, 1);
 	core->ui = g_strdup(ui);
 	core->reserved = NULL;
@@ -190,7 +184,6 @@ purple_core_init(const char *ui)
 	purple_accounts_init();
 	purple_savedstatuses_init();
 	purple_notify_init();
-	purple_certificate_init();
 	_purple_message_init();
 	purple_conversations_init();
 	purple_blist_init();
@@ -200,7 +193,6 @@ purple_core_init(const char *ui)
 	_purple_socket_init();
 	purple_proxy_init();
 	purple_sound_init();
-	purple_ssl_init();
 	purple_stun_init();
 	purple_xfers_init();
 	purple_idle_init();
@@ -241,17 +233,6 @@ purple_core_quit(void)
 
 	/* Transmission ends */
 	purple_connections_disconnect_all();
-
-	/*
-	 * Certificates must be destroyed before the SSL plugins, because
-	 * PurpleCertificates contain pointers to PurpleCertificateSchemes,
-	 * and the PurpleCertificateSchemes will be unregistered when the
-	 * SSL plugin is uninit.
-	 */
-	purple_certificate_uninit();
-
-	/* The SSL plugins must be uninit before they're unloaded */
-	purple_ssl_uninit();
 
 	/* Save .xml files, remove signals, etc. */
 	_purple_smiley_theme_uninit();

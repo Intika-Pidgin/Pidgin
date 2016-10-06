@@ -228,6 +228,30 @@ pidgin_create_dialog(const char *title, guint border_width, const char *role, gb
 }
 
 GtkWidget *
+pidgin_create_video_widget(void)
+{
+	GtkWidget *video = NULL;
+	GdkRGBA color = {0.0, 0.0, 0.0, 1.0};
+
+	video = gtk_drawing_area_new();
+	gtk_widget_override_background_color(video, GTK_STATE_FLAG_NORMAL, &color);
+
+	/* In order to enable client shadow decorations, GtkDialog from GTK+ 3.0
+	 * uses ARGB visual which by default gets inherited by its child widgets.
+	 * XVideo adaptors on the other hand often support just depth 24 and
+	 * rendering video through xvimagesink onto a widget inside a GtkDialog
+	 * then results in no visible output.
+	 *
+	 * This ensures the default system visual of the drawing area doesn't get
+	 * overridden by the widget's parent.
+	 */
+	gtk_widget_set_visual(video,
+	                gdk_screen_get_system_visual(gtk_widget_get_screen(video)));
+
+	return video;
+}
+
+GtkWidget *
 pidgin_dialog_get_vbox_with_properties(GtkDialog *dialog, gboolean homogeneous, gint spacing)
 {
 	GtkBox *vbox = GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog)));
@@ -374,29 +398,6 @@ GtkWidget *pidgin_separator(GtkWidget *menu)
 	return menuitem;
 }
 
-GtkWidget *pidgin_new_item(GtkWidget *menu, const char *str)
-{
-	GtkWidget *menuitem;
-	GtkWidget *label;
-
-	menuitem = gtk_menu_item_new();
-	if (menu)
-		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
-	gtk_widget_show(menuitem);
-
-	label = gtk_label_new(str);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	gtk_label_set_pattern(GTK_LABEL(label), "_");
-	gtk_container_add(GTK_CONTAINER(menuitem), label);
-	gtk_widget_show(label);
-/* FIXME: Go back and fix this
-	gtk_widget_add_accelerator(menuitem, "activate", accel, str[0],
-				   GDK_MOD1_MASK, GTK_ACCEL_LOCKED);
-*/
-	pidgin_set_accessible_label(menuitem, GTK_LABEL(label));
-	return menuitem;
-}
-
 GtkWidget *pidgin_new_check_item(GtkWidget *menu, const char *str,
 		GCallback cb, gpointer data, gboolean checked)
 {
@@ -482,43 +483,33 @@ pidgin_pixbuf_button_from_stock(const char *text, const char *icon,
 }
 
 
-GtkWidget *pidgin_new_item_from_stock(GtkWidget *menu, const char *str, const char *icon, GCallback cb, gpointer data, guint accel_key, guint accel_mods, char *mod)
+GtkWidget *pidgin_new_menu_item(GtkWidget *menu, const char *mnemonic,
+                const char *icon, GCallback cb, gpointer data)
 {
 	GtkWidget *menuitem;
-	/*
-	GtkWidget *hbox;
+	GtkWidget *box;
 	GtkWidget *label;
-	*/
-	GtkWidget *image;
 
-	if (icon == NULL)
-		menuitem = gtk_menu_item_new_with_mnemonic(str);
-	else
-		menuitem = gtk_image_menu_item_new_with_mnemonic(str);
+        box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 
-	if (menu)
-		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+        menuitem = gtk_menu_item_new();
 
 	if (cb)
 		g_signal_connect(G_OBJECT(menuitem), "activate", cb, data);
 
-	if (icon != NULL) {
-		image = gtk_image_new_from_stock(icon, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL));
-		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menuitem), image);
-	}
-/* FIXME: this isn't right
-	if (mod) {
-		label = gtk_label_new(mod);
-		gtk_box_pack_end(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-		gtk_widget_show(label);
-	}
-*/
-/*
-	if (accel_key) {
-		gtk_widget_add_accelerator(menuitem, "activate", accel, accel_key,
-					   accel_mods, GTK_ACCEL_LOCKED);
-	}
-*/
+        if (icon) {
+                GtkWidget *image;
+                image = gtk_image_new_from_stock(icon, GTK_ICON_SIZE_MENU);
+                gtk_container_add(GTK_CONTAINER(box), image);
+        }
+
+        label = gtk_label_new_with_mnemonic(mnemonic);
+        gtk_container_add(GTK_CONTAINER(box), label);
+
+        gtk_container_add(GTK_CONTAINER(menuitem), box);
+
+	if (menu)
+		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 
 	gtk_widget_show_all(menuitem);
 
@@ -542,7 +533,8 @@ pidgin_make_frame(GtkWidget *parent, const char *title)
 	gtk_label_set_markup(label, labeltitle);
 	g_free(labeltitle);
 
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(label), FALSE, FALSE, 0);
 	gtk_widget_show(GTK_WIDGET(label));
 	pidgin_set_accessible_label(vbox, label);
@@ -1191,6 +1183,7 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 							gpointer data)
 {
 	GtkWidget *widget;
+	GtkStyleContext *context;
 	GtkRequisition requisition;
 	GdkScreen *screen;
 	GdkRectangle monitor;
@@ -1206,8 +1199,10 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 
 	widget     = GTK_WIDGET(menu);
 	screen     = gtk_widget_get_screen(widget);
-	xthickness = gtk_widget_get_style(widget)->xthickness;
-	ythickness = gtk_widget_get_style(widget)->ythickness;
+	context    = gtk_widget_get_style_context(widget);
+	gtk_style_context_get(context, gtk_style_context_get_state(context),
+	                      "xthickness", &xthickness,
+	                      "ythickness", &ythickness, NULL);
 	rtl        = (gtk_widget_get_direction(widget) == GTK_TEXT_DIR_RTL);
 
 	/*
@@ -1345,8 +1340,12 @@ pidgin_treeview_popup_menu_position_func(GtkMenu *menu,
 	GtkTreePath *path;
 	GtkTreeViewColumn *col;
 	GdkRectangle rect;
-	gint ythickness = gtk_widget_get_style(GTK_WIDGET(menu))->ythickness;
+	GtkStyleContext *context;
+	gint ythickness;
 
+	context = gtk_widget_get_style_context(GTK_WIDGET(menu));
+	gtk_style_context_get(context, gtk_style_context_get_state(context),
+	                      "ythickness", &ythickness, NULL);
 	gdk_window_get_origin (gtk_widget_get_window(widget), x, y);
 	gtk_tree_view_get_cursor (tv, &path, &col);
 	gtk_tree_view_get_cell_area (tv, path, col, &rect);
@@ -2148,13 +2147,15 @@ pidgin_screenname_autocomplete_default_filter(const PidginBuddyCompletionEntry *
 
 void pidgin_set_cursor(GtkWidget *widget, GdkCursorType cursor_type)
 {
+	GdkDisplay *display;
 	GdkCursor *cursor;
 
 	g_return_if_fail(widget != NULL);
 	if (gtk_widget_get_window(widget) == NULL)
 		return;
 
-	cursor = gdk_cursor_new(cursor_type);
+	display = gtk_widget_get_display(widget);
+	cursor = gdk_cursor_new_for_display(display, cursor_type);
 	gdk_window_set_cursor(gtk_widget_get_window(widget), cursor);
 
 	g_object_unref(cursor);
@@ -2802,19 +2803,25 @@ void pidgin_gdk_pixbuf_make_round(GdkPixbuf *pixbuf) {
 
 const char *pidgin_get_dim_grey_string(GtkWidget *widget) {
 	static char dim_grey_string[8] = "";
-	GtkStyle *style;
+	GtkStyleContext *context;
+	GdkRGBA fg, bg;
 
 	if (!widget)
 		return "dim grey";
 
-	style = gtk_widget_get_style(widget);
-	if (!style)
+	context = gtk_widget_get_style_context(widget);
+	if (!context)
 		return "dim grey";
 
+	gtk_style_context_get_color(context, gtk_style_context_get_state(context),
+	                            &fg);
+	gtk_style_context_get_background_color(context,
+	                                       gtk_style_context_get_state(context),
+	                                       &bg);
 	snprintf(dim_grey_string, sizeof(dim_grey_string), "#%02x%02x%02x",
-	style->text_aa[GTK_STATE_NORMAL].red >> 8,
-	style->text_aa[GTK_STATE_NORMAL].green >> 8,
-	style->text_aa[GTK_STATE_NORMAL].blue >> 8);
+		 (unsigned int)((fg.red + bg.red) * 0.5 * 255),
+		 (unsigned int)((fg.green + bg.green) * 0.5 * 255),
+		 (unsigned int)((fg.blue + bg.blue) * 0.5 * 255));
 	return dim_grey_string;
 }
 
@@ -2884,7 +2891,7 @@ pidgin_add_widget_to_vbox(GtkBox *vbox, const char *widget_label, GtkSizeGroup *
 		label = gtk_label_new_with_mnemonic(widget_label);
 		gtk_widget_show(label);
 		if (sg) {
-			gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+			gtk_label_set_xalign(GTK_LABEL(label), 0);
 			gtk_size_group_add_widget(sg, label);
 		}
 		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);

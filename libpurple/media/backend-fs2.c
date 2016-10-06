@@ -35,6 +35,10 @@
 #include <farstream/fs-utils.h>
 #include <gst/gststructure.h>
 
+#if !GST_CHECK_VERSION(1,0,0)
+#define gst_registry_get() gst_registry_get_default()
+#endif
+
 /** @copydoc _PurpleMediaBackendFs2Class */
 typedef struct _PurpleMediaBackendFs2Class PurpleMediaBackendFs2Class;
 /** @copydoc _PurpleMediaBackendFs2Private */
@@ -489,6 +493,8 @@ static void
 purple_media_backend_fs2_class_init(PurpleMediaBackendFs2Class *klass)
 {
 	GObjectClass *gobject_class = (GObjectClass*)klass;
+	GList *features;
+	GList *it;
 
 	gobject_class->dispose = purple_media_backend_fs2_dispose;
 	gobject_class->finalize = purple_media_backend_fs2_finalize;
@@ -500,6 +506,15 @@ purple_media_backend_fs2_class_init(PurpleMediaBackendFs2Class *klass)
 	g_object_class_override_property(gobject_class, PROP_MEDIA, "media");
 
 	g_type_class_add_private(klass, sizeof(PurpleMediaBackendFs2Private));
+
+	/* VA-API elements aren't well supported in Farstream. Ignore them. */
+	features = gst_registry_get_feature_list_by_plugin(gst_registry_get(),
+			"vaapi");
+	for (it = features; it; it = it->next) {
+		gst_plugin_feature_set_rank((GstPluginFeature *)it->data,
+				GST_RANK_NONE);
+	}
+	gst_plugin_feature_list_free(features);
 }
 
 static void
@@ -2557,7 +2572,6 @@ purple_media_backend_fs2_get_type(void)
 }
 #endif /* USE_VV */
 
-#ifdef USE_GSTREAMER
 GstElement *
 purple_media_backend_fs2_get_src(PurpleMediaBackendFs2 *self,
 		const gchar *sess_id)
@@ -2647,7 +2661,6 @@ purple_media_backend_fs2_set_output_volume(PurpleMediaBackendFs2 *self,
 	}
 #endif /* USE_VV */
 }
-#endif /* USE_GSTREAMER */
 
 #ifdef USE_VV
 static gboolean

@@ -11,6 +11,7 @@ OSCARSOURCES = \
 	aim.h               \
 	bstream.c           \
 	clientlogin.c       \
+	kerberos.c          \
 	encoding.c          \
 	encoding.h          \
 	family_admin.c      \
@@ -78,3 +79,5 @@ AM_CPPFLAGS = \
 	$(GLIB_CFLAGS) \
 	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS)
+
+SUBDIRS=tests
