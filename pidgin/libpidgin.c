@@ -70,14 +70,13 @@
 #include "pidginstock.h"
 #include "gtkwhiteboard.h"
 
-#ifdef HAVE_SIGNAL_H
-# include <signal.h>
+#ifndef _WIN32
+#include <signal.h>
 #endif
 
 #include <getopt.h>
 
-
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 
 /*
  * Lists of signals we wish to catch and those we wish to ignore.
@@ -96,7 +95,7 @@ static const int ignore_sig_list[] = {
 	SIGPIPE,
 	-1
 };
-#endif
+#endif /* !_WIN32 */
 
 static void
 dologin_named(const char *name)
@@ -126,7 +125,7 @@ dologin_named(const char *name)
 	}
 }
 
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 static char *segfault_message;
 
 static int signal_sockets[2];
@@ -195,7 +194,7 @@ mainloop_sighandler(GIOChannel *source, GIOCondition cond, gpointer data)
 
 	return TRUE;
 }
-#endif
+#endif /* !_WIN32 */
 
 static int
 ui_main(void)
@@ -434,23 +433,23 @@ int pidgin_start(int argc, char *argv[])
 	GtkCssProvider *provider;
 	GdkScreen *screen;
 	GList *accounts;
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 	int sig_indx;	/* for setting up signal catching */
 	sigset_t sigset;
 	char errmsg[BUFSIZ];
 	GIOChannel *signal_channel;
 	GIOStatus signal_status;
 	guint signal_channel_watcher;
-	GError *error;
 #ifndef DEBUG
 	char *segfault_message_tmp;
 #endif /* DEBUG */
-#endif /* HAVE_SIGNAL_N */
+#endif /* !_WIN32 */
 	int opt;
 	gboolean gui_check;
 	gboolean debug_enabled, debug_colored;
 	GList *active_accounts;
 	GStatBuf st;
+	GError *error;
 
 	struct option long_options[] = {
 		{"config",       required_argument, NULL, 'c'},
@@ -480,12 +479,10 @@ int pidgin_start(int argc, char *argv[])
 	textdomain(PACKAGE);
 #endif
 
-#ifdef HAVE_SETLOCALE
 	/* Locale initialization is not complete here.  See gtk_init_check() */
 	setlocale(LC_ALL, "");
-#endif
 
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 
 #ifndef DEBUG
 		/* We translate this here in case the crash breaks gettext. */
@@ -587,7 +584,7 @@ int pidgin_start(int argc, char *argv[])
 		snprintf(errmsg, sizeof(errmsg), "Warning: couldn't unblock signals");
 		perror(errmsg);
 	}
-#endif
+#endif /* !_WIN32 */
 
 	/* scan command-line options */
 	opterr = 1;
@@ -640,7 +637,7 @@ int pidgin_start(int argc, char *argv[])
 		case '?':	/* show terse help */
 		default:
 			show_usage(argv[0], TRUE);
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 			g_free(segfault_message);
 #endif
 			return 0;
@@ -651,7 +648,7 @@ int pidgin_start(int argc, char *argv[])
 	/* show help message */
 	if (opt_help) {
 		show_usage(argv[0], FALSE);
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 		g_free(segfault_message);
 #endif
 		return 0;
@@ -660,7 +657,7 @@ int pidgin_start(int argc, char *argv[])
 	if (opt_version) {
 		printf("%s %s (libpurple %s)\n", PIDGIN_NAME, DISPLAY_VERSION,
 		                                 purple_core_get_version());
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 		g_free(segfault_message);
 #endif
 		return 0;
@@ -692,13 +689,12 @@ int pidgin_start(int argc, char *argv[])
 
 	gui_check = gtk_init_check(&argc, &argv);
 	if (!gui_check) {
-		char *display = gdk_get_display();
+		const char *display = gdk_display_get_name(gdk_display_get_default());
 
 		printf("%s %s\n", PIDGIN_NAME, DISPLAY_VERSION);
 
 		g_warning("cannot open display: %s", display ? display : "unset");
-		g_free(display);
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 		g_free(segfault_message);
 #endif
 
@@ -734,7 +730,7 @@ int pidgin_start(int argc, char *argv[])
 		fprintf(stderr,
 				"Initialization of the libpurple core failed. Dumping core.\n"
 				"Please report this!\n");
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 		g_free(segfault_message);
 #endif
 		abort();
@@ -762,7 +758,7 @@ int pidgin_start(int argc, char *argv[])
 		gdk_notify_startup_complete();
 		purple_core_quit();
 		g_printerr(_("Exiting because another libpurple client is already running.\n"));
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 		g_free(segfault_message);
 #endif
 		return 0;
@@ -849,7 +845,7 @@ int pidgin_start(int argc, char *argv[])
 
 	gtk_main();
 
-#ifdef HAVE_SIGNAL_H
+#ifndef _WIN32
 	g_free(segfault_message);
 	g_source_remove(signal_channel_watcher);
 	close(signal_sockets[0]);

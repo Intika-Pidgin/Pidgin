@@ -220,12 +220,13 @@ static char *jabber_prep_resource(char *input) {
 static gboolean
 jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 {
-	PurpleAccount *account;
+#if 0
 	PurpleXmlNode *starttls;
+
+	PurpleAccount *account;
 
 	account = purple_connection_get_account(js->gc);
 
-#if 0
 	/*
 	 * This code DOES NOT EXIST, will never be enabled by default, and
 	 * will never ever be supported (by me).
@@ -245,6 +246,7 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	return TRUE;
 #endif
 
+#if 0
 	starttls = purple_xmlnode_get_child(packet, "starttls");
 	if(purple_xmlnode_get_child(starttls, "required")) {
 		purple_connection_error(js->gc,
@@ -261,6 +263,7 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	}
 
 	return FALSE;
+#endif
 }
 
 void jabber_stream_features_parse(JabberStream *js, PurpleXmlNode *packet)
@@ -763,7 +766,8 @@ txt_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 	JabberStream *js = data;
 	gboolean found = FALSE;
 
-	records = g_resolver_lookup_service_finish(g_resolver_get_default(), result, &error);
+	records = g_resolver_lookup_records_finish(G_RESOLVER(sender),
+			result, &error);
 	if(error) {
 		purple_debug_warning("jabber", "Unable to find alternative XMPP connection "
 				  "methods after failing to connect directly. : %s\n",
@@ -824,17 +828,19 @@ jabber_login_callback(gpointer data, gint source, const gchar *error)
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 
 	if (source < 0) {
+		GResolver *resolver = g_resolver_get_default();
 		gchar *name = g_strdup_printf("_xmppconnect.%s", js->user->domain);
 
 		purple_debug_info("jabber", "Couldn't connect directly to %s.  Trying to find alternative connection methods, like BOSH.\n", js->user->domain);
 
-		g_resolver_lookup_records_async(g_resolver_get_default(),
+		g_resolver_lookup_records_async(resolver,
 		                                name,
 		                                G_RESOLVER_RECORD_TXT,
 		                                js->cancellable,
 		                                txt_resolved_cb,
 		                                js);
 		g_free(name);
+		g_object_unref(resolver);
 
 		return;
 	}
@@ -907,7 +913,8 @@ srv_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 	GList *targets = NULL, *l = NULL;
 	JabberStream *js = data;
 
-	targets = g_resolver_lookup_service_finish(g_resolver_get_default(), result, &error);
+	targets = g_resolver_lookup_service_finish(G_RESOLVER(sender),
+			result, &error);
 	if(error) {
 		purple_debug_warning("jabber",
 		                     "SRV lookup failed, proceeding with normal connection : %s",
@@ -1089,13 +1096,15 @@ jabber_stream_connect(JabberStream *js)
 		jabber_login_connect(js, js->user->domain, connect_server,
 				purple_account_get_int(account, "port", 5222), TRUE);
 	} else {
-		g_resolver_lookup_service_async(g_resolver_get_default(),
+		GResolver *resolver = g_resolver_get_default();
+		g_resolver_lookup_service_async(resolver,
 		                                "xmpp-client",
 		                                "tcp",
 		                                js->user->domain,
 		                                js->cancellable,
 		                                srv_resolved_cb,
 		                                js);
+		g_object_unref(resolver);
 	}
 }
 
@@ -1690,6 +1699,7 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->sasl_cb);
 	/* Note: _not_ g_free.  See auth_cyrus.c:jabber_sasl_cb_secret */
 	free(js->sasl_secret);
+	g_free(js->sasl_password);
 #endif
 	g_free(js->serverFQDN);
 	while(js->commands) {

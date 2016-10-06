@@ -29,6 +29,8 @@
  * @see_also: <link linkend="chapter-signals-connection">Connection signals</link>
  */
 
+#include <glib.h>
+
 #define PURPLE_TYPE_CONNECTION             (purple_connection_get_type())
 #define PURPLE_CONNECTION(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_CONNECTION, PurpleConnection))
 #define PURPLE_CONNECTION_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_CONNECTION, PurpleConnectionClass))
@@ -98,6 +100,16 @@ typedef enum
 	PURPLE_CONNECTION_CONNECTED,
 	PURPLE_CONNECTION_CONNECTING
 } PurpleConnectionState;
+
+#define PURPLE_CONNECTION_ERROR purple_connection_error_quark()
+
+/**
+ * purple_connection_error_quark:
+ *
+ * Error domain for Purple connection errors. Errors in this domain will be
+ * from the #PurpleConnectionError enum.
+ */
+GQuark purple_connection_error_quark(void);
 
 /**
  * PurpleConnectionError:
@@ -505,6 +517,39 @@ purple_connection_get_error_info(const PurpleConnection *gc);
 void
 purple_connection_ssl_error (PurpleConnection *gc,
                              PurpleSslErrorType ssl_error);
+
+/*
+ * purple_connection_g_error
+ * @gc: Connection the error is associated with
+ * @error: Error information
+ *
+ * Closes a connection similar to purple_connection_error(), but
+ * takes a GError which is then converted to purple error codes.
+ *
+ * This function ignores G_IO_ERROR_CANCELLED, returning without
+ * closing the connection. This can be used as a shortcut when
+ * cancelling connections, as this is commonly done when shutting
+ * down a connection. If G_IO_ERROR_CANCELLED needs to be caught,
+ * do so with g_error_matches() prior to calling this function.
+ */
+void
+purple_connection_g_error(PurpleConnection *pc,
+                          const GError *error);
+
+/*
+ * purple_connection_take_error
+ * @gc: Connection the error is associated with
+ * @error: (transfer full): Error information
+ *
+ * Closes a connection similar to purple_connection_error(), but
+ * takes a GError which is then converted to purple error codes.
+ *
+ * This function is equivalent to purple_connection_g_error(),
+ * except that it takes ownership of the GError.
+ */
+void
+purple_connection_take_error(PurpleConnection *pc,
+                             GError *error);
 
 /**
  * purple_connection_error_is_fatal:

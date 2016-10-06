@@ -30,7 +30,8 @@ jabber_google_stun_lookup_cb(GObject *sender, GAsyncResult *result, gpointer dat
 	GList *addresses = NULL;
 	JabberStream *js = (JabberStream *) data;
 
-	addresses = g_resolver_lookup_by_name_finish(g_resolver_get_default(), result, &error);
+	addresses = g_resolver_lookup_by_name_finish(G_RESOLVER(sender),
+			result, &error);
 
 	if(error) {
 		purple_debug_error("jabber", "Google STUN lookup failed: %s\n",
@@ -92,13 +93,16 @@ jabber_google_jingle_info_common(JabberStream *js, const char *from,
 			const gchar *udp = purple_xmlnode_get_attrib(server, "udp");
 
 			if (host && udp) {
+				GResolver *resolver = g_resolver_get_default();
+
 				js->stun_port = atoi(udp);
 
-				g_resolver_lookup_by_name_async(g_resolver_get_default(),
+				g_resolver_lookup_by_name_async(resolver,
 				                                host,
 				                                NULL,
 				                                jabber_google_stun_lookup_cb,
 				                                js);
+				g_object_unref(resolver);
 			}
 		}
 	}

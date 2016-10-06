@@ -30,6 +30,9 @@
 
 /**
  * PurpleSslErrorType:
+ * @PURPLE_SSL_HANDSHAKE_FAILED: The handshake failed
+ * @PURPLE_SSL_CONNECT_FAILED: The connection failed
+ * @PURPLE_SSL_CERTIFICATE_INVALID: The certificated is invalid
  *
  * Possible SSL errors.
  */
@@ -40,13 +43,12 @@ typedef enum
 	PURPLE_SSL_CERTIFICATE_INVALID = 3
 } PurpleSslErrorType;
 
-#include "certificate.h"
+#include <gio/gio.h>
 #include "proxy.h"
 
 #define PURPLE_SSL_DEFAULT_PORT 443
 
 typedef struct _PurpleSslConnection PurpleSslConnection;
-typedef struct _PurpleSslOps PurpleSslOps;
 
 typedef void (*PurpleSslInputFunction)(gpointer, PurpleSslConnection *,
 									 PurpleInputCondition);
@@ -67,9 +69,10 @@ typedef void (*PurpleSslErrorFunction)(PurpleSslConnection *, PurpleSslErrorType
  * @inpa:            Glib event source ID; used to refer to the received data
  *                   callback in the glib eventloop
  * @connect_data:    Data related to the underlying TCP connection
+ * @conn:            The underlying #GTlsConnection
+ * @cancellable:     A cancellable to call when cancelled
  * @private_data:    Internal connection data managed by the SSL backend
  *                   (GnuTLS/LibNSS/whatever)
- * @verifier:        Verifier to use in authenticating the peer
  */
 struct _PurpleSslConnection
 {
@@ -85,64 +88,10 @@ struct _PurpleSslConnection
 	guint inpa;
 	PurpleProxyConnectData *connect_data;
 
+	GTlsConnection *conn;
+	GCancellable *cancellable;
+
 	void *private_data;
-	PurpleCertificateVerifier *verifier;
-};
-
-/**
- * PurpleSslOps:
- * @init: Initializes the SSL system provided. See purple_ssl_init().
- *        <sbr/>Returns: %TRUE if initialization succeeded
- * @uninit: Unloads the SSL system. Inverse of PurpleSslOps::init.
- *          See purple_ssl_uninit().
- * @connectfunc: Sets up the SSL connection for a #PurpleSslConnection once the
- *               TCP connection has been established. See purple_ssl_connect().
- * @close: Destroys the internal data of the SSL connection provided. Freeing
- *         @gsc itself is left to purple_ssl_close().
- * @read: Reads data from a connection (like POSIX read()).
- *        See purple_ssl_read().
- *        <sbr/>@gsc:    Connection context
- *        <sbr/>@data:   Pointer to buffer to drop data into
- *        <sbr/>@len:    Maximum number of bytes to read
- *        <sbr/>Returns: Number of bytes actually written into @data
- *                       (which may be less than @len), or <0 on error
- * @write: Writes data to a connection (like POSIX send()).
- *         See purple_ssl_write().
- *         <sbr/>@gsc:    Connection context
- *         <sbr/>@data:   Data buffer to send data from
- *         <sbr/>@len:    Number of bytes to send from buffer
- *         <sbr/>Returns: The number of bytes written to @data (may be less than
- *                        @len) or <0 on error
- * @get_peer_certificates: Obtains the certificate chain provided by the peer.
- *                         See #PurpleCertificate.
- *                         <sbr/>@gsc:    Connection context
- *                         <sbr/>Returns: A newly allocated list containing the
- *                                        certificates the peer provided.
- *
- * SSL implementation operations structure.
- *
- * Every SSL implementation must provide all of these and register it via
- * purple_ssl_set_ops().
- * These should not be called directly! Instead, use the purple_ssl_* functions.
- */
-struct _PurpleSslOps
-{
-	gboolean (*init)(void);
-	void (*uninit)(void);
-	void (*connectfunc)(PurpleSslConnection *gsc);
-	void (*close)(PurpleSslConnection *gsc);
-	size_t (*read)(PurpleSslConnection *gsc, void *data, size_t len);
-	size_t (*write)(PurpleSslConnection *gsc, const void *data, size_t len);
-
-	/* TODO Decide whether the ordering of certificates in this list can be
-	        guaranteed. */
-	GList * (* get_peer_certificates)(PurpleSslConnection * gsc);
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
 };
 
 G_BEGIN_DECLS
@@ -297,23 +246,6 @@ GList * purple_ssl_get_peer_certificates(PurpleSslConnection *gsc);
 /**************************************************************************/
 /* Subsystem API                                                          */
 /**************************************************************************/
-
-/**
- * purple_ssl_set_ops:
- * @ops: The SSL operations structure to assign.
- *
- * Sets the current SSL operations structure.
- */
-void purple_ssl_set_ops(PurpleSslOps *ops);
-
-/**
- * purple_ssl_get_ops:
- *
- * Returns the current SSL operations structure.
- *
- * Returns: The SSL operations structure.
- */
-PurpleSslOps *purple_ssl_get_ops(void);
 
 /**
  * purple_ssl_init:

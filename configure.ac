@@ -149,28 +149,24 @@ case "$host" in
 		is_win32="no"
 		is_not_win32="yes"
 		PLUGIN_LDFLAGS="-avoid-version"
-		AC_CHECK_HEADERS(signal.h)
 		;;
 esac
 AM_CONDITIONAL(IS_WIN32, test "x$is_win32" = "xyes")
 AC_SUBST([PLUGIN_LDFLAGS])
 
 dnl Define *_LIBS
-PURPLE_LIBS="\$(top_builddir)/libpurple/libpurple.la \$(GLIB_LIBS)"
-PIDGIN_LIBS="\$(top_builddir)/pidgin/libpidgin.la \$(GTK_LIBS)"
-FINCH_LIBS="\$(top_builddir)/finch/libfinch.la \$(top_builddir)/finch/libgnt/libgnt.la \$(GLIB_LIBS)"
+PURPLE_LIBS="\$(top_builddir)/libpurple/libpurple.la \$(GLIB_LIBS) \$(GPLUGIN_LIBS)"
+PIDGIN_LIBS="\$(top_builddir)/pidgin/libpidgin.la \$(GTK_LIBS) \$(PURPLE_LIBS) \$(WEBKIT_LIBS)"
+FINCH_LIBS="\$(top_builddir)/finch/libfinch.la \$(top_builddir)/finch/libgnt/libgnt.la \$(PURPLE_LIBS)"
 AC_SUBST(PURPLE_LIBS)
 AC_SUBST(PIDGIN_LIBS)
 AC_SUBST(FINCH_LIBS)
 
 dnl Checks for header files.
-AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS(arpa/nameser_compat.h fcntl.h sys/time.h unistd.h locale.h stdint.h)
+AC_CHECK_HEADERS(fcntl.h unistd.h stdint.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_STRUCT_TM
 AC_CHECK_SIZEOF(time_t, ,[
 #include <stdio.h>
 #include <time.h>])
@@ -253,9 +249,7 @@ FINCH_PLUGINDIR="\$(libdir)/finch-$PURPLE_MAJOR_VERSION"
 AC_SUBST([FINCH_PLUGINDIR])
 
 dnl Checks for library functions.
-AC_TYPE_SIGNAL
-AC_FUNC_STRFTIME
-AC_CHECK_FUNCS(strdup strstr atexit setlocale)
+AC_CHECK_FUNCS(strdup)
 dnl Checks for getopt in standard library
 AC_CHECK_FUNCS(getopt_long,,
 [
@@ -379,15 +373,12 @@ int main(int argc, char *argv[])
 
 AC_MSG_CHECKING([for the %z format string in strftime()])
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
 #include <time.h>
 #include <stdio.h>
 
 int main()
 {
-	char buf[6];
+	char buf[64];
 	time_t t = time(NULL);
 
 	if (strftime(buf, sizeof(buf), "%z", localtime(&t)) != 5)
@@ -477,13 +468,13 @@ fi #enable_i18n
 AM_CONDITIONAL(INSTALL_I18N, test "x$enable_i18n" = "xyes")
 
 dnl #######################################################################
-dnl # Check for GLib 2.34 (required)
+dnl # Check for GLib 2.36 (required)
 dnl #######################################################################
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.34.0 gio-2.0 gobject-2.0 gthread-2.0], , [
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.36.0 gio-2.0 gobject-2.0 gthread-2.0], , [
 	AC_MSG_RESULT(no)
 	AC_MSG_ERROR([
 
-You must have GLib 2.34.0 or newer development headers installed to build.
+You must have GLib 2.36.0 or newer development headers installed to build.
 
 If you have these installed already you may need to install pkg-config so
 I can find them.
@@ -491,11 +482,14 @@ I can find them.
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-GLIB_GENMARSHAL=`pkg-config --variable=glib_genmarshal glib-2.0`
+GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
 AC_SUBST(GLIB_GENMARSHAL)
 
-GLIB_MKENUMS=`pkg-config --variable=glib_mkenums glib-2.0`
+GLIB_MKENUMS=`$PKG_CONFIG --variable=glib_mkenums glib-2.0`
 AC_SUBST(GLIB_MKENUMS)
+
+AC_PATH_PROG(GTESTER, gtester)
+GLIB_TESTS
 
 AC_ARG_WITH([extraversion],
 			AS_HELP_STRING([--with-extraversion=STRING],
@@ -576,28 +570,22 @@ dnl #######################################################################
 dnl Check Pidgin dependencies
 dnl #######################################################################
 if test "x$enable_gtkui" = "xyes" ; then
-	PKG_CHECK_MODULES(GTK, [gtk+-3.0 >= 3.0.0], , [
+	PKG_CHECK_MODULES(GTK, [gtk+-3.0 >= 3.4.2], , [
 		AC_MSG_RESULT(no)
 		AC_MSG_ERROR([
-You must have GTK+ 3.0.0 or newer development headers installed to compile
+You must have GTK+ 3.4.2 or newer development headers installed to compile
 Pidgin.  If you want to build only Finch then specify --disable-gtkui when
 running configure.
 ])])
 	AC_SUBST(GTK_CFLAGS)
 	AC_SUBST(GTK_LIBS)
 
-	GTK_PC_MODULE="gtk+-3.0"
-	GTK_VERSION="3"
-	AC_SUBST(GTK_PC_MODULE)
-	AC_SUBST(GTK_VERSION)
-
 	dnl We only really need Pango >= 1.4 for decent RTL support
 	PKG_CHECK_MODULES(PANGO, [pango >= 1.4.0],
 			AC_DEFINE(HAVE_PANGO14, 1, [Define if we have Pango 1.4 or newer.]),:)
 
 	WEBKIT_VERSION=1.3.7
-	WEBKIT_PC_MODULE="webkitgtk-3.0"
-	PKG_CHECK_MODULES(WEBKIT, [$WEBKIT_PC_MODULE >= $WEBKIT_VERSION], , [
+	PKG_CHECK_MODULES(WEBKIT, ["webkitgtk-3.0" >= $WEBKIT_VERSION], , [
 		AC_MSG_RESULT(no)
 		AC_MSG_ERROR([
 You must have WebKit for GTK+3 $WEBKIT_VERSION or newer development headers
@@ -606,7 +594,6 @@ installed to compile Pidgin.  If you want to build only Finch then specify
 ])])
 	AC_SUBST(WEBKIT_CFLAGS)
 	AC_SUBST(WEBKIT_LIBS)
-	AC_SUBST(WEBKIT_PC_MODULE)
 
 	dnl #######################################################################
 	dnl # Check if we should compile with enchant support
@@ -949,13 +936,6 @@ AC_SUBST(ZLIB_CFLAGS)
 AC_SUBST(ZLIB_LIBS)
 
 dnl #######################################################################
-dnl # GConf schemas
-dnl #######################################################################
-AC_PATH_PROG(GCONFTOOL, gconftool-2, no)
-AM_CONDITIONAL(USE_GCONFTOOL, test "x$GCONFTOOL" != "xno")
-AM_GCONF_SOURCE_2
-
-dnl #######################################################################
 dnl # Check for GStreamer
 dnl #######################################################################
 AC_ARG_ENABLE(gstreamer,
@@ -965,7 +945,6 @@ AC_ARG_ENABLE(gstreamer,
 if test x"$enable_gst" != "xno"; then
 	PKG_CHECK_MODULES(GSTREAMER, [gstreamer-1.0], [
 	   AC_DEFINE(USE_GSTREAMER, 1, [Use GStreamer for playing sounds])
-	   with_gstreamer="1.0"
 	   AC_SUBST(GSTREAMER_CFLAGS)
 	   AC_SUBST(GSTREAMER_LIBS)
    ], [
@@ -1202,58 +1181,38 @@ fi
 dnl #######################################################################
 dnl # Check for Gadu-Gadu protocol library (libgadu)
 dnl #######################################################################
+AC_ARG_ENABLE(libgadu,
+	[AS_HELP_STRING([--disable-libgadu],
+		[compile without libgadu (required for GaduGadu support)])],
+	enable_libgadu="$enableval", enable_libgadu="yes")
 
-PKG_CHECK_MODULES(LIBGADU, [libgadu >= 1.12.0], [have_libgadu=yes], [have_libgadu=no])
-
-if test "x$have_libgadu" = "xyes"; then
-	AC_CHECK_LIB(gadu, gg_is_gpl_compliant, , [
-		LIBGADU_LIBS=""
-		LIBGADU_CFLAGS=""
-		have_libgadu=no
-		AC_MSG_WARN([
+if test "x$enable_libgadu" = "xyes"; then
+	PKG_CHECK_MODULES(LIBGADU, [libgadu >= 1.12.0], [
+		have_libgadu=yes
+		AC_CHECK_LIB(gadu, gg_is_gpl_compliant, , [
+			LIBGADU_LIBS=""
+			LIBGADU_CFLAGS=""
+			have_libgadu=no
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_WARN([
 libgadu is not compatible with the GPL when compiled with OpenSSL support.
 
-To compile against system libgadu, please recompile libgadu using:
+To link against libgadu, please recompile it using:
 ./configure --with-openssl=no
 Then rerun this ./configure
-
-Falling back to using our own copy of libgadu.
-		])
-	])
-fi
-
-AM_CONDITIONAL(HAVE_LIBGADU, test "x$have_libgadu" = "xyes")
-if test "x$have_libgadu" = "xyes"; then
-	AC_DEFINE(HAVE_LIBGADU, 1, [Linked with external libgadu])
-else
-	AC_CHECK_LIB(gnutls, gnutls_certificate_set_x509_system_trust, [gg_have_gnutls_csxst=yes], [gg_have_gnutls_csxst=no])
-
-	gg_gnutls_sts=""
-	if test "x$gg_have_gnutls_csxst" = "xno"; then
-		for i in /etc/ssl/ca-bundle.pem \
-			/etc/ssl/certs/ca-certificates.crt \
-			/etc/pki/tls/cert.pem \
-			/usr/local/share/certs/ca-root-nss.crt \
-			/etc/ssl/cert.pem
-		do
-			if test -e $i; then
-				gg_gnutls_sts="$i"
-				break
+				])
 			fi
-		done
-	fi
+		], [$LIBGADU_LIBS])
+	], [
+		have_libgadu=no
+	])
 
-	if test "x$gg_have_gnutls_csxst" = "xyes"; then
-		AC_DEFINE(HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST, 1, [gnutls contains the gnutls_certificate_set_x509_system_trust function])
+	if test "x$have_libgadu" != "xyes" -a "x$force_deps" = "xyes" ; then
+		AC_MSG_ERROR([
+Libgadu development headers not found.
+Use --disable-libgadu if you do not need GG (GaduGadu) support.
+])
 	fi
-	if test "x$gg_gnutls_sts" != "x"; then
-		AC_DEFINE_UNQUOTED(GG_CONFIG_GNUTLS_SYSTEM_TRUST_STORE, ["$gg_gnutls_sts"], [use the given file as GnuTLS default trust store])
-	fi
-
-	dnl # redundant - only here to stay compatible with libgadu upstream
-	PKG_CHECK_MODULES([GNUTLS_2_10], [gnutls >= 2.10.0], [
-		AC_DEFINE([HAVE_GNUTLS_2_10], [], [Defined if GnuTLS >= 2.10.0 is available.])
-	],:)
 fi
 
 AC_SUBST(LIBGADU_LIBS)
@@ -1279,6 +1238,9 @@ if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/silc//'`
+fi
+if test "x$have_libgadu" != "xyes" ; then
+	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/gg//'`
 fi
 if test "x$is_win32" = "xyes" ; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/zephyr//'`
@@ -1353,6 +1315,9 @@ if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/silc//'`
+fi
+if test "x$have_libgadu" != "xyes"; then
+	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/gg//'`
 fi
 if test "x$is_win32" = "xyes" ; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/zephyr//'`
@@ -1723,11 +1688,7 @@ dnl #######################################################################
 if test "x$enable_plugins" = "xyes" ; then
 	PKG_CHECK_MODULES(GPLUGIN, [gplugin >= 0.0.17 gmodule-2.0], [
 		dnl # GPLUGIN_REQ sets pkg-config requirements in the .pc file
-		if test "x$enable_gtkui" != "xno" ; then
-			GPLUGIN_REQ=[", gplugin, gplugin-gtk"]
-		else
-			GPLUGIN_REQ=[", gplugin"]
-		fi
+		GPLUGIN_REQ=[", gplugin"]
 	], [
 		AC_MSG_RESULT(no)
 		AC_MSG_ERROR([
@@ -1970,8 +1931,6 @@ if test "x$enable_nss" != "xno"; then
 	if test "x$have_nss" = "xyes"; then
 		AC_DEFINE(HAVE_NSS, 1, [Define if you have Mozilla NSS])
 		msg_nss="Mozilla NSS"
-	else
-		AC_MSG_ERROR([No SSL/TLS library available])
 	fi
 fi
 
@@ -2114,11 +2073,10 @@ fi
 
 AC_MSG_CHECKING(for me pot o' gold)
 AC_MSG_RESULT(no)
-AC_CHECK_FUNCS(gethostid lrand48 timegm)
-AC_CHECK_FUNCS(memcpy memmove random strchr strerror vprintf)
-AC_CHECK_HEADERS(malloc.h paths.h sgtty.h stdarg.h sys/cdefs.h)
+AC_CHECK_FUNCS(gethostid timegm)
+AC_CHECK_HEADERS(paths.h sgtty.h sys/cdefs.h)
 AC_CHECK_HEADERS(sys/file.h sys/filio.h sys/ioctl.h sys/msgbuf.h)
-AC_CHECK_HEADERS(sys/select.h sys/uio.h sys/utsname.h sys/wait.h)
+AC_CHECK_HEADERS(sys/select.h sys/uio.h sys/wait.h)
 AC_CHECK_HEADERS(termios.h)
 
 # sys/sysctl.h on OpenBSD 4.2 requires sys/param.h
@@ -2135,48 +2093,10 @@ AC_CHECK_HEADERS(sys/sysctl.h, [], [],
 AC_CHECK_HEADERS(sys/socket.h)
 AC_VAR_TIMEZONE_EXTERNALS
 
-AC_CACHE_CHECK(for tm_gmtoff in struct tm, ac_cv_struct_tm_gmtoff,
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-                #include <time.h>
-        ]], [[
-                struct tm tm;
-                tm.tm_gmtoff = 1;
-        ]])], [ac_cv_struct_tm_gmtoff=yes], [ac_cv_struct_tm_gmtoff=no]))
-if test $ac_cv_struct_tm_gmtoff = yes; then
-        AC_DEFINE(HAVE_TM_GMTOFF, 1, [Define if you have a tm_gmtoff member in struct tm])
-fi
-
-AC_CACHE_CHECK([whether va_lists can be copied by value], ac_cv_va_val_copy,[
-	AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <stdarg.h>
-#include <stdlib.h>
-	void f (int i, ...) {
-	va_list args1, args2;
-	va_start (args1, i);
-	args2 = args1;
-	if (va_arg (args2, int) != 42 || va_arg (args1, int) != 42)
-	  exit (1);
-	va_end (args1); va_end (args2);
-	}
-	int main() {
-	  f (0, 42);
-	  return 0;
-	}]])],
-	[ac_cv_va_val_copy=yes],
-	[ac_cv_va_val_copy=no],
-	[ac_cv_va_val_copy=yes])
-])
-
-if test "x$ac_cv_va_val_copy" = "xno"; then
-	AC_DEFINE(VA_COPY_AS_ARRAY, 1, ['va_lists' cannot be copied as values])
-fi
-
-dnl #######################################################################
-dnl # Check for check
-dnl #######################################################################
-PKG_CHECK_MODULES(CHECK, [check >= 0.9.4], , [AC_MSG_RESULT([no, testing is disabled])])
-AM_CONDITIONAL(HAVE_CHECK, [test "x$CHECK_LIBS" != "x"])
-AC_SUBST(CHECK_CFLAGS)
-AC_SUBST(CHECK_LIBS)
+AC_CHECK_MEMBER([struct tm.tm_gmtoff],
+	[AC_DEFINE(HAVE_TM_GMTOFF, 1, [Define if you have a tm_gmtoff member in struct tm])],
+	[],
+	[[#include <time.h>]])
 
 dnl #######################################################################
 dnl # Disable pixmap installation
@@ -2230,7 +2150,6 @@ AC_CONFIG_FILES([Makefile
 		   doc/reference/pidgin/Makefile
 		   doc/reference/pidgin/version.xml
 		   m4macros/Makefile
-		   pidgin.apspec
 		   pidgin/Makefile
 		   pidgin/data/pidgin.desktop.in
 		   pidgin/data/pidgin-3.pc
@@ -2250,13 +2169,12 @@ AC_CONFIG_FILES([Makefile
 		   pidgin/themes/Makefile
 		   pidgin/win32/pidgin_dll_rc.rc
 		   pidgin/win32/pidgin_exe_rc.rc
-		   libpurple/data/gconf/Makefile
+		   libpurple/data/purple-url-handler.desktop.in
 		   libpurple/data/purple-3.pc
 		   libpurple/data/purple-3-uninstalled.pc
 		   libpurple/example/Makefile
 		   libpurple/plugins/Makefile
 		   libpurple/plugins/keyrings/Makefile
-		   libpurple/plugins/ssl/Makefile
 		   libpurple/Makefile
 		   libpurple/protocols/Makefile
 		   libpurple/protocols/bonjour/Makefile
@@ -2264,15 +2182,18 @@ AC_CONFIG_FILES([Makefile
 		   libpurple/protocols/gg/Makefile
 		   libpurple/protocols/irc/Makefile
 		   libpurple/protocols/jabber/Makefile
+		   libpurple/protocols/jabber/tests/Makefile
 		   libpurple/protocols/msn/Makefile
 		   libpurple/protocols/mxit/Makefile
 		   libpurple/protocols/novell/Makefile
 		   libpurple/protocols/null/Makefile
 		   libpurple/protocols/oscar/Makefile
+		   libpurple/protocols/oscar/tests/Makefile
 		   libpurple/protocols/sametime/Makefile
 		   libpurple/protocols/silc/Makefile
 		   libpurple/protocols/simple/Makefile
 		   libpurple/protocols/yahoo/Makefile
+		   libpurple/protocols/yahoo/tests/Makefile
 		   libpurple/protocols/zephyr/Makefile
 		   libpurple/tests/Makefile
 		   libpurple/purple.h
@@ -2306,7 +2227,6 @@ echo Protocols to build dynamically : $DYNAMIC_PRPLS
 echo Protocols to link statically.. : $STATIC_PRPLS
 echo
 echo Build with GStreamer support.. : $enable_gst
-echo Build for GStreamer version... : $with_gstreamer
 echo Build with D-Bus support...... : $enable_dbus
 echo Build with voice and video.... : $enable_vv
 if test "x$enable_dbus" = "xyes" ; then
@@ -2320,7 +2240,6 @@ fi
 echo Build with Cyrus SASL support. : $enable_cyrus_sasl
 echo Use kerberos 4 with zephyr.... : $kerberos
 echo Use external libzephyr........ : $zephyr
-echo Use external libgadu.......... : $have_libgadu
 echo Install pixmaps............... : $enable_pixmaps
 echo Old tray icon compatibility... : $enable_traycompat
 echo Install translations.......... : $enable_i18n
