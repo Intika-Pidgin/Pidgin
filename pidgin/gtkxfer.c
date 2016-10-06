@@ -508,7 +508,9 @@ open_button_cb(GtkButton *button, PidginXferDialog *dialog)
 	}
 	else
 	{
-		purple_notify_uri(NULL, filename);
+		gchar *uri = g_strdup_printf("file://%s", filename);
+		purple_notify_uri(NULL, uri);
+		g_free(uri);
 		return;
 	}
 
@@ -662,7 +664,7 @@ make_info_grid(PidginXferDialog *dialog)
 	};
 
 	/* Setup the initial grid */
-	dialog->grid = grid = gtk_grid_table_new(G_N_ELEMENTS(labels) + 1, 2);
+	dialog->grid = grid = gtk_grid_new();
 	gtk_grid_set_row_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
 
@@ -677,23 +679,26 @@ make_info_grid(PidginXferDialog *dialog)
 		*labels[i].desc_label = label = gtk_label_new(NULL);
 		gtk_label_set_markup(GTK_LABEL(label), buf);
 		gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_RIGHT);
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-		gtk_grid_attach_full(GTK_GRID(grid), label, 0, i, 1, 1,
-			GTK_FILL, 0, 0, 0);
+		gtk_label_set_xalign(GTK_LABEL(label), 0);
+		gtk_grid_attach(GTK_GRID(grid), label, 0, i, 1, 1);
+		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+
 		gtk_widget_show(label);
 
 		*labels[i].val_label = label = gtk_label_new(NULL);
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-		gtk_grid_attach_full(GTK_GRID(grid), label, 1, i, 1, 1,
-			GTK_FILL | GTK_EXPAND, 0, 0, 0);
+		gtk_label_set_xalign(GTK_LABEL(label), 0);
+		gtk_grid_attach(GTK_GRID(grid), label, 1, i, 1, 1);
+		gtk_widget_set_hexpand(label, TRUE);
+		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+
 		gtk_widget_show(label);
 	}
 
 	/* Setup the progress bar */
 	dialog->progress = gtk_progress_bar_new();
-	gtk_grid_attach_full(GTK_GRID(grid), dialog->progress,
-		0, G_N_ELEMENTS(labels), 2, 1,
-		GTK_FILL, GTK_FILL, 0, 0);
+	gtk_grid_attach(GTK_GRID(grid), dialog->progress,
+		0, G_N_ELEMENTS(labels), 2, 1);
+
 	gtk_widget_show(dialog->progress);
 
 	return grid;
@@ -706,7 +711,9 @@ pidgin_xfer_dialog_new(void)
 	GtkWidget *window;
 	GtkWidget *vbox;
 	GtkWidget *expander;
+#if !GTK_CHECK_VERSION(3,14,0)
 	GtkWidget *alignment;
+#endif
 	GtkWidget *grid;
 	GtkWidget *checkbox;
 	GtkWidget *bbox;
@@ -718,11 +725,7 @@ pidgin_xfer_dialog_new(void)
 		purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/filetransfer/clear_finished");
 
 	/* Create the window. */
-#if GTK_CHECK_VERSION(3,0,0)
 	dialog->window = window = pidgin_create_dialog(_("File Transfers"), 0, "file transfer", TRUE);
-#else
-	dialog->window = window = pidgin_create_dialog(_("File Transfers"), PIDGIN_HIG_BORDER, "file transfer", TRUE);
-#endif
 	gtk_window_set_default_size(GTK_WINDOW(window), 450, 250);
 
 	g_signal_connect(G_OBJECT(window), "delete_event",
@@ -764,6 +767,15 @@ pidgin_xfer_dialog_new(void)
 
 	gtk_widget_set_sensitive(expander, FALSE);
 
+#if GTK_CHECK_VERSION(3,14,0)
+	/* The grid of information. */
+	grid = make_info_grid(dialog);
+	gtk_container_add(GTK_CONTAINER(expander), grid);
+	gtk_widget_show(grid);
+
+	/* Small indent make grid fall under GtkExpander's label */
+	gtk_widget_set_margin_start(grid, 20);
+#else
 	/* Small indent make grid fall under GtkExpander's label */
 	alignment = gtk_alignment_new(1, 0, 1, 1);
 	gtk_alignment_set_padding(GTK_ALIGNMENT(alignment), 0, 0, 20, 0);
@@ -774,6 +786,7 @@ pidgin_xfer_dialog_new(void)
 	grid = make_info_grid(dialog);
 	gtk_container_add(GTK_CONTAINER(alignment), grid);
 	gtk_widget_show(grid);
+#endif
 
 	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(window));
 

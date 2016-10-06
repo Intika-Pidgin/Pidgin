@@ -107,18 +107,6 @@ docklet_gtk_status_update_icon(PurpleStatusPrimitive status, PidginDockletFlag n
 	if (icon_name) {
 		gtk_status_icon_set_from_icon_name(docklet, icon_name);
 	}
-
-#if !GTK_CHECK_VERSION(3,0,0)
-	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/blink")) {
-		gboolean pending = FALSE;
-		pending |= (newflag & PIDGIN_DOCKLET_EMAIL_PENDING);
-		pending |= (newflag & PIDGIN_DOCKLET_CONV_PENDING);
-		gtk_status_icon_set_blinking(docklet, pending &&
-			!(newflag & PIDGIN_DOCKLET_CONNECTING));
-	} else if (gtk_status_icon_get_blinking(docklet)) {
-		gtk_status_icon_set_blinking(docklet, FALSE);
-	}
-#endif
 }
 
 static GList *
@@ -340,15 +328,6 @@ docklet_toggle_mute(GtkWidget *toggle, void *data)
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/sound/mute",
 	                      gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(toggle)));
 }
-
-#if !GTK_CHECK_VERSION(3,0,0)
-static void
-docklet_toggle_blink(GtkWidget *toggle, void *data)
-{
-	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/docklet/blink",
-	                      gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(toggle)));
-}
-#endif
 
 static void
 docklet_toggle_blist(GtkWidget *toggle, void *data)
@@ -610,8 +589,10 @@ docklet_status_submenu(void)
 
 	pidgin_separator(submenu);
 
-	pidgin_new_item_from_stock(submenu, _("New..."), NULL, G_CALLBACK(show_custom_status_editor_cb), NULL, 0, 0, NULL);
-	pidgin_new_item_from_stock(submenu, _("Saved..."), NULL, G_CALLBACK(pidgin_status_window_show), NULL, 0, 0, NULL);
+	pidgin_new_menu_item(submenu, _("New..."), NULL,
+                        G_CALLBACK(show_custom_status_editor_cb), NULL);
+	pidgin_new_menu_item(submenu, _("Saved..."), NULL,
+                        G_CALLBACK(pidgin_status_window_show), NULL);
 
 	return menuitem;
 }
@@ -734,12 +715,15 @@ docklet_menu(void)
 
 	pidgin_separator(menu);
 
-	menuitem = pidgin_new_item_from_stock(menu, _("New _Message..."), PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW, G_CALLBACK(pidgin_dialogs_im), NULL, 0, 0, NULL);
+	menuitem = pidgin_new_menu_item(menu, _("New _Message..."),
+                        PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW,
+                        G_CALLBACK(pidgin_dialogs_im), NULL);
 	if (status == PURPLE_STATUS_OFFLINE)
 		gtk_widget_set_sensitive(menuitem, FALSE);
 
-	menuitem = pidgin_new_item_from_stock(menu, _("Join Chat..."), PIDGIN_STOCK_CHAT,
-			G_CALLBACK(pidgin_blist_joinchat_show), NULL, 0, 0, NULL);
+	menuitem = pidgin_new_menu_item(menu, _("Join Chat..."),
+                        PIDGIN_STOCK_CHAT, G_CALLBACK(pidgin_blist_joinchat_show),
+                        NULL);
 	if (status == PURPLE_STATUS_OFFLINE)
 		gtk_widget_set_sensitive(menuitem, FALSE);
 
@@ -748,9 +732,14 @@ docklet_menu(void)
 
 	pidgin_separator(menu);
 
-	pidgin_new_item_from_stock(menu, _("_Accounts"), NULL, G_CALLBACK(pidgin_accounts_window_show), NULL, 0, 0, NULL);
-	pidgin_new_item_from_stock(menu, _("Plu_gins"), PIDGIN_STOCK_TOOLBAR_PLUGINS, G_CALLBACK(pidgin_plugin_dialog_show), NULL, 0, 0, NULL);
-	pidgin_new_item_from_stock(menu, _("Pr_eferences"), GTK_STOCK_PREFERENCES, G_CALLBACK(pidgin_prefs_show), NULL, 0, 0, NULL);
+	pidgin_new_menu_item(menu, _("_Accounts"), NULL,
+                        G_CALLBACK(pidgin_accounts_window_show), NULL);
+	pidgin_new_menu_item(menu, _("Plu_gins"),
+                        PIDGIN_STOCK_TOOLBAR_PLUGINS,
+                        G_CALLBACK(pidgin_plugin_dialog_show), NULL);
+	pidgin_new_menu_item(menu, _("Pr_eferences"),
+                        GTK_STOCK_PREFERENCES,
+                        G_CALLBACK(pidgin_prefs_show), NULL);
 
 	pidgin_separator(menu);
 
@@ -761,19 +750,13 @@ docklet_menu(void)
 	g_signal_connect(G_OBJECT(menuitem), "toggled", G_CALLBACK(docklet_toggle_mute), NULL);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 
-#if !GTK_CHECK_VERSION(3,0,0)
-	menuitem = gtk_check_menu_item_new_with_mnemonic(_("_Blink on New Message"));
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitem), purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/blink"));
-	g_signal_connect(G_OBJECT(menuitem), "toggled", G_CALLBACK(docklet_toggle_blink), NULL);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
-#endif
-
 	pidgin_separator(menu);
 
 	/* add plugin actions */
 	docklet_plugin_actions(menu);
 
-	pidgin_new_item_from_stock(menu, _("_Quit"), GTK_STOCK_QUIT, G_CALLBACK(purple_core_quit), NULL, 0, 0, NULL);
+	pidgin_new_menu_item(menu, _("_Quit"), GTK_STOCK_QUIT,
+                        G_CALLBACK(purple_core_quit), NULL);
 
 #ifdef _WIN32
 	g_signal_connect(menu, "leave-notify-event", G_CALLBACK(docklet_menu_leave_enter), NULL);

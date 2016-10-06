@@ -524,15 +524,16 @@ pidgin_widget_decorate_account(GtkWidget *cont, PurpleAccount *account)
 			GTK_DIALOG(cont))), image, FALSE, TRUE, 0);
 		gtk_box_reorder_child(GTK_BOX(gtk_dialog_get_action_area(
 			GTK_DIALOG(cont))), image, 0);
-	} else if (GTK_IS_HBOX(cont)) {
-		gtk_misc_set_alignment(GTK_MISC(image), 0, 0);
+	} else if (GTK_IS_BOX(cont)) {
+		gtk_widget_set_halign(image, GTK_ALIGN_START);
+		gtk_widget_set_valign(image, GTK_ALIGN_START);
 		gtk_box_pack_end(GTK_BOX(cont), image, FALSE, TRUE, 0);
 	}
 	gtk_widget_show(image);
 }
 
 static void *
-pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
+pidgin_notify_message(PurpleNotifyMessageType type, const char *title,
 	const char *primary, const char *secondary,
 	PurpleRequestCommonParameters *cpar)
 {
@@ -566,7 +567,8 @@ pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
 	if (icon_name != NULL)
 	{
 		img = gtk_image_new_from_stock(icon_name, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
-		gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
+		gtk_widget_set_halign(img, GTK_ALIGN_START);
+		gtk_widget_set_valign(img, GTK_ALIGN_START);
 	}
 
 	dialog = gtk_dialog_new_with_buttons(title ? title : PIDGIN_ALERT_TITLE,
@@ -609,7 +611,8 @@ pidgin_notify_message(PurpleNotifyMsgType type, const char *title,
 	gtk_label_set_markup(GTK_LABEL(label), label_text);
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
 	gtk_label_set_selectable(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
 	g_object_set_data(G_OBJECT(dialog), "pidgin-parent-from",
@@ -888,9 +891,6 @@ pidgin_notify_formatted(const char *title, const char *primary,
 
 	window = gtk_dialog_new();
 	gtk_window_set_title(GTK_WINDOW(window), title);
-#if !GTK_CHECK_VERSION(3,0,0)
-	gtk_container_set_border_width(GTK_CONTAINER(window), PIDGIN_HIG_BORDER);
-#endif
 	gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 
 	g_signal_connect(G_OBJECT(window), "delete_event",
@@ -915,7 +915,8 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	gtk_label_set_markup(GTK_LABEL(label), label_text);
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
 	gtk_label_set_selectable(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 
@@ -1040,7 +1041,8 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	label = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(label), label_text);
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 	g_free(label_text);
@@ -1740,7 +1742,8 @@ pidgin_create_notification_dialog(PidginNotifyType type)
 		GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
 
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox),
 		pidgin_make_scrollable(spec_dialog->treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),

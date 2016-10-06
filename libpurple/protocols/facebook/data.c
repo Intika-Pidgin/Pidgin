@@ -30,6 +30,7 @@
 struct _FbDataPrivate
 {
 	FbApi *api;
+	FbHttpConns *cons;
 	PurpleConnection *gc;
 	PurpleRoomlist *roomlist;
 	GQueue *msgs;
@@ -44,6 +45,7 @@ struct _FbDataImagePrivate
 	gchar *url;
 	FbDataImageFunc func;
 	gpointer data;
+	GDestroyNotify dunc;
 
 	gboolean active;
 	const guint8 *image;
@@ -67,6 +69,7 @@ fb_data_dispose(GObject *obj)
 	GHashTableIter iter;
 	gpointer ptr;
 
+	fb_http_conns_cancel_all(priv->cons);
 	g_hash_table_iter_init(&iter, priv->evs);
 
 	while (g_hash_table_iter_next(&iter, NULL, &ptr)) {
@@ -77,6 +80,7 @@ fb_data_dispose(GObject *obj)
 		g_object_unref(priv->api);
 	}
 
+	fb_http_conns_free(priv->cons);
 	g_queue_free_full(priv->msgs, (GDestroyNotify) fb_api_message_free);
 
 	g_hash_table_destroy(priv->imgs);
@@ -101,7 +105,9 @@ fb_data_init(FbData *fata)
 	priv = G_TYPE_INSTANCE_GET_PRIVATE(fata, FB_TYPE_DATA, FbDataPrivate);
 	fata->priv = priv;
 
+	priv->cons = fb_http_conns_new();
 	priv->msgs = g_queue_new();
+
 	priv->imgs = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                   g_object_unref, NULL);
 	priv->unread = g_hash_table_new_full(fb_id_hash, fb_id_equal,
@@ -116,6 +122,10 @@ fb_data_image_dispose(GObject *obj)
 	FbDataImage *img = FB_DATA_IMAGE(obj);
 	FbDataImagePrivate *priv = img->priv;
 	FbData *fata = priv->fata;
+
+	if ((priv->dunc != NULL) && (priv->data != NULL)) {
+		priv->dunc(priv->data);
+	}
 
 	g_free(priv->url);
 	g_hash_table_steal(fata->priv->imgs, img);
@@ -423,7 +433,7 @@ fb_data_take_messages(FbData *fata, FbId uid)
 
 FbDataImage *
 fb_data_image_add(FbData *fata, const gchar *url, FbDataImageFunc func,
-                  gpointer data)
+                  gpointer data, GDestroyNotify dunc)
 {
 	FbDataImage *img;
 	FbDataImagePrivate *priv;
@@ -439,6 +449,7 @@ fb_data_image_add(FbData *fata, const gchar *url, FbDataImageFunc func,
 	priv->url = g_strdup(url);
 	priv->func = func;
 	priv->data = data;
+	priv->dunc = dunc;
 
 	g_hash_table_insert(fata->priv->imgs, img, img);
 	return img;
@@ -528,22 +539,25 @@ fb_data_image_cb(PurpleHttpConnection *con, PurpleHttpResponse *res,
 {
 	FbDataImage *img = data;
 	FbDataImagePrivate *priv = img->priv;
+	FbDataPrivate *driv = priv->fata->priv;
 	GError *err = NULL;
 
-	if (G_UNLIKELY(purple_http_conn_is_cancelling(con))) {
-		/* Ignore canceling HTTP requests */
+	if (fb_http_conns_is_canceled(driv->cons)) {
 		return;
 	}
 
+	fb_http_conns_remove(driv->cons, con);
 	fb_http_error_chk(res, &err);
-	priv->image = (guint8*) purple_http_response_get_data(res, &priv->size);
+
+	priv->image = (guint8 *) purple_http_response_get_data(res, &priv->size);
 	priv->func(img, err);
 
-	if (G_UNLIKELY(err != NULL)) {
+	if (G_LIKELY(err == NULL)) {
+		fb_data_image_queue(priv->fata);
+	} else {
 		g_error_free(err);
 	}
 
-	fb_data_image_queue(priv->fata);
 	g_object_unref(img);
 }
 
@@ -555,12 +569,13 @@ fb_data_image_queue(FbData *fata)
 	FbDataPrivate *priv;
 	GHashTableIter iter;
 	guint active = 0;
+	PurpleHttpConnection *con;
 
 	g_return_if_fail(FB_IS_DATA(fata));
 	priv = fata->priv;
 	g_hash_table_iter_init(&iter, priv->imgs);
 
-	while (g_hash_table_iter_next(&iter, (gpointer*) &img, NULL)) {
+	while (g_hash_table_iter_next(&iter, (gpointer *) &img, NULL)) {
 		if (fb_data_image_get_active(img)) {
 			active++;
 		}
@@ -572,14 +587,15 @@ fb_data_image_queue(FbData *fata)
 
 	g_hash_table_iter_init(&iter, priv->imgs);
 
-	while (g_hash_table_iter_next(&iter, (gpointer*) &img, NULL)) {
+	while (g_hash_table_iter_next(&iter, (gpointer *) &img, NULL)) {
 		if (fb_data_image_get_active(img)) {
 			continue;
 		}
 
 		img->priv->active = TRUE;
 		url = fb_data_image_get_url(img);
-		purple_http_get(priv->gc, fb_data_image_cb, img, url);
+		con = purple_http_get(priv->gc, fb_data_image_cb, img, url);
+		fb_http_conns_add(priv->cons, con);
 
 		if (++active >= FB_DATA_ICON_MAX) {
 			break;

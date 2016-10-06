@@ -53,7 +53,7 @@ static gint crop_x, crop_y, crop_w, crop_h;
 static gint draw_origin_x, draw_origin_y;
 static gboolean draw_active;
 
-static GdkColor brush_color = {0, 65535, 0, 0};
+static GdkRGBA brush_color = {1, 0, 0, 1};
 static gint line_width = 2;
 
 /******************************************************************************
@@ -276,21 +276,6 @@ scrncap_draw_window_paint(GtkWidget *widget, cairo_t *cr, gpointer _surface)
 	return FALSE;
 }
 
-#if !GTK_CHECK_VERSION(3,0,0)
-static gboolean
-scrncap_draw_window_expose(GtkWidget *widget, GdkEventExpose *event,
-	gpointer _surface)
-{
-	cairo_t *cr = gdk_cairo_create(GDK_DRAWABLE(widget->window));
-
-	scrncap_draw_window_paint(widget, cr, _surface);
-
-	cairo_destroy(cr);
-
-	return FALSE;
-}
-#endif
-
 static void
 scrncap_draw_window_response(GtkDialog *draw_window, gint response_id,
 	gpointer _webview)
@@ -337,14 +322,10 @@ scrncap_draw_color_selected(GtkColorButton *button, cairo_t *cr)
 {
 	gchar *color_str;
 
-	pidgin_color_chooser_get_rgb(GTK_COLOR_CHOOSER(button), &brush_color);
+	gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(button), &brush_color);
+	gdk_cairo_set_source_rgba(cr, &brush_color);
 
-	cairo_set_source_rgb(cr,
-		brush_color.red / 65535.0,
-		brush_color.green / 65535.0,
-		brush_color.blue / 65535.0);
-
-	color_str = gdk_color_to_string(&brush_color);
+	color_str = gdk_rgba_to_string(&brush_color);
 	purple_prefs_set_string("/plugins/gtk/screencap/brush_color", color_str);
 	g_free(color_str);
 }
@@ -359,6 +340,7 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 	int width, height;
 	cairo_t *cr;
 	cairo_surface_t *surface;
+	GdkDisplay *display;
 	GdkCursor *draw_cursor;
 
 	is_shooting = TRUE;
@@ -371,14 +353,10 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 	g_signal_connect(G_OBJECT(draw_window), "destroy",
 		G_CALLBACK(scrncap_draw_window_close), NULL);
 
-	draw_cursor = gdk_cursor_new(GDK_PENCIL);
-#if GTK_CHECK_VERSION(3,0,0)
+	display = gtk_widget_get_display(current_window);
+	draw_cursor = gdk_cursor_new_for_display(display, GDK_PENCIL);
 	g_object_set_data_full(G_OBJECT(draw_window), "draw-cursor",
 		draw_cursor, g_object_unref);
-#else
-	g_object_set_data_full(G_OBJECT(draw_window), "draw-cursor",
-		draw_cursor, (GDestroyNotify)gdk_cursor_unref);
-#endif
 
 	width = gdk_pixbuf_get_width(screen);
 	height = gdk_pixbuf_get_height(screen);
@@ -397,13 +375,8 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 
 	drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(drawing_area, width, height);
-#if GTK_CHECK_VERSION(3,0,0)
 	g_signal_connect(G_OBJECT(drawing_area), "draw",
 		G_CALLBACK(scrncap_draw_window_paint), surface);
-#else
-	g_signal_connect(G_OBJECT(drawing_area), "expose_event",
-		G_CALLBACK(scrncap_draw_window_expose), surface);
-#endif
 	gtk_widget_add_events(drawing_area, GDK_BUTTON_PRESS_MASK |
 		GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_MOTION_MASK |
 		GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK);
@@ -418,19 +391,25 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 	g_signal_connect(G_OBJECT(drawing_area), "leave-notify-event",
 		G_CALLBACK(scrncap_drawing_area_leave), draw_cursor);
 
+#if GTK_CHECK_VERSION(3,14,0)
+	box = drawing_area;
+	g_object_set(drawing_area,
+		"halign", GTK_ALIGN_CENTER,
+		"valign", GTK_ALIGN_CENTER,
+		NULL);
+#else
 	box = gtk_alignment_new(0.5, 0.5, 0, 0);
 	gtk_container_add(GTK_CONTAINER(box), drawing_area);
+#endif
 	scroll_area = pidgin_make_scrollable(box,
 		GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC,
 		GTK_SHADOW_NONE, -1, -1);
-#if GTK_CHECK_VERSION(3,0,0)
 	g_object_set(G_OBJECT(scroll_area), "expand", TRUE, NULL);
-#endif
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(
 		GTK_DIALOG(draw_window))), scroll_area);
 
 	color_button = gtk_color_button_new();
-	pidgin_color_chooser_set_rgb(GTK_COLOR_CHOOSER(color_button),
+	gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(color_button),
 		&brush_color);
 	g_signal_connect(G_OBJECT(color_button), "color-set",
 		G_CALLBACK(scrncap_draw_color_selected), cr);
@@ -575,21 +554,19 @@ static void
 scrncap_crop_window_realize(GtkWidget *crop_window, gpointer _unused)
 {
 	GdkWindow *gdkwindow;
+	GdkDisplay *display;
 	GdkCursor *cursor;
 
 	gdkwindow = gtk_widget_get_window(GTK_WIDGET(crop_window));
+	display = gdk_window_get_display(gdkwindow);
 
 	gdk_window_set_events(gdkwindow, gdk_window_get_events(gdkwindow) |
 		GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
 		GDK_BUTTON_MOTION_MASK);
 
-	cursor = gdk_cursor_new(GDK_CROSSHAIR);
+	cursor = gdk_cursor_new_for_display(display, GDK_CROSSHAIR);
 	gdk_window_set_cursor(gdkwindow, cursor);
-#if GTK_CHECK_VERSION(3,0,0)
 	g_object_unref(cursor);
-#else
-	gdk_cursor_unref(cursor);
-#endif
 }
 
 static gboolean
@@ -665,7 +642,15 @@ scrncap_do_screenshot_cb(gpointer _webview)
 		"or press Escape button to cancel"));
 	gtk_label_set_markup(GTK_LABEL(hint), hint_msg);
 	g_free(hint_msg);
-	gtk_misc_set_padding(GTK_MISC(hint), 10, 7);
+#if GTK_CHECK_VERSION(3,12,0)
+	gtk_widget_set_margin_start(hint, 10);
+	gtk_widget_set_margin_end(hint, 10);
+#else
+	gtk_widget_set_margin_left(hint, 10);
+	gtk_widget_set_margin_right(hint, 10);
+#endif
+	gtk_widget_set_margin_top(hint, 7);
+	gtk_widget_set_margin_bottom(hint, 7);
 	hint_box = gtk_event_box_new();
 	gtk_container_add(GTK_CONTAINER(hint_box), hint);
 	gtk_widget_get_preferred_size(hint, NULL, &hint_size);
@@ -971,7 +956,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
 
 	color_str = purple_prefs_get_string("/plugins/gtk/screencap/brush_color");
 	if (color_str && color_str[0])
-		gdk_color_parse(color_str, &brush_color);
+		gdk_rgba_parse(&brush_color, color_str);
 
 	purple_signal_connect(pidgin_conversations_get_handle(),
 		"conversation-displayed", plugin,

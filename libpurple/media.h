@@ -415,6 +415,8 @@ gboolean purple_media_codecs_ready(PurpleMedia *media, const gchar *sess_id);
  * Sets the rtcp-mux option for the stream.
  *
  * Returns: %TRUE RTCP-Mux was set successfully, or %FALSE otherwise.
+ *
+ * @since 2.11.0
  */
 gboolean purple_media_set_send_rtcp_mux(PurpleMedia *media,
 		const gchar *sess_id, const gchar *participant, gboolean send_rtcp_mux);
@@ -492,7 +494,7 @@ void purple_media_remove_output_windows(PurpleMedia *media);
 /**
  * purple_media_send_dtmf:
  * @media: The media instance to send a DTMF signal to.
- * @sess_id: The session id of the session to send the DTMF signal on.
+ * @session_id: The session id of the session to send the DTMF signal on.
  * @dtmf: The character representing the DTMF in the range [0-9#*A-D].
  * @volume: The power level expressed in dBm0 after dropping the sign in the
  *          range of 0 to 63.  A larger value represents a lower volume.

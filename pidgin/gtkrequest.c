@@ -23,6 +23,7 @@
 
 #include "debug.h"
 #include "prefs.h"
+#include "tls-certificate-info.h"
 #include "util.h"
 
 #include "gtkwebview.h"
@@ -37,9 +38,6 @@
 #ifdef ENABLE_GCR
 #define GCR_API_SUBJECT_TO_CHANGE
 #include <gcr/gcr.h>
-#if !GTK_CHECK_VERSION(3,0,0)
-#include <gcr/gcr-simple-certificate.h>
-#endif
 #endif
 
 #include "gtk3compat.h"
@@ -113,8 +111,9 @@ pidgin_widget_decorate_account(GtkWidget *cont, PurpleAccount *account)
 	                       image, FALSE, TRUE, 0);
 		gtk_box_reorder_child(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(cont))),
 	                          image, 0);
-	} else if (GTK_IS_HBOX(cont)) {
-		gtk_misc_set_alignment(GTK_MISC(image), 0, 0);
+	} else if (GTK_IS_BOX(cont)) {
+		gtk_widget_set_halign(image, GTK_ALIGN_START);
+		gtk_widget_set_valign(image, GTK_ALIGN_START);
 		gtk_box_pack_end(GTK_BOX(cont), image, FALSE, TRUE, 0);
 	}
 	gtk_widget_show(image);
@@ -568,7 +567,8 @@ pidgin_request_input(const char *title, const char *primary,
 
 	/* Dialog icon. */
 	img = pidgin_request_dialog_icon(PURPLE_REQUEST_INPUT, cpar);
-	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
+	gtk_widget_set_halign(img, GTK_ALIGN_START);
+	gtk_widget_set_valign(img, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	pidgin_request_add_help(GTK_DIALOG(dialog), cpar);
@@ -595,7 +595,8 @@ pidgin_request_input(const char *title, const char *primary,
 
 	gtk_label_set_markup(label, label_text);
 	gtk_label_set_line_wrap(label, TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(label, 0);
+	gtk_label_set_yalign(label, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(label), FALSE, FALSE, 0);
 
 	g_free(label_text);
@@ -725,7 +726,8 @@ pidgin_request_choice(const char *title, const char *primary,
 
 	/* Dialog icon. */
 	img = pidgin_request_dialog_icon(PURPLE_REQUEST_CHOICE, cpar);
-	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
+	gtk_widget_set_halign(img, GTK_ALIGN_START);
+	gtk_widget_set_valign(img, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	pidgin_widget_decorate_account(hbox, purple_request_cpar_get_account(cpar));
@@ -751,7 +753,8 @@ pidgin_request_choice(const char *title, const char *primary,
 
 	gtk_label_set_markup(GTK_LABEL(label), label_text);
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, TRUE, 0);
 
 	g_free(label_text);
@@ -847,7 +850,8 @@ pidgin_request_action(const char *title, const char *primary,
 	                  hbox);
 
 	img = pidgin_request_dialog_icon(PURPLE_REQUEST_ACTION, cpar);
-	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
+	gtk_widget_set_halign(img, GTK_ALIGN_START);
+	gtk_widget_set_valign(img, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	/* Vertical box */
@@ -874,7 +878,8 @@ pidgin_request_action(const char *title, const char *primary,
 
 	gtk_label_set_markup(GTK_LABEL(label), label_text);
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_label_set_selectable(GTK_LABEL(label), TRUE);
 	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, TRUE, 0);
 
@@ -956,7 +961,8 @@ pidgin_request_wait(const char *title, const char *primary,
 		GTK_DIALOG(dialog))), hbox);
 
 	img = pidgin_request_dialog_icon(PURPLE_REQUEST_WAIT, cpar);
-	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
+	gtk_widget_set_halign(img, GTK_ALIGN_START);
+	gtk_widget_set_valign(img, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	/* Cancel button */
@@ -988,7 +994,8 @@ pidgin_request_wait(const char *title, const char *primary,
 
 	gtk_label_set_markup(GTK_LABEL(label), label_text);
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_label_set_selectable(GTK_LABEL(label), FALSE);
 	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, TRUE, 0);
 
@@ -1519,12 +1526,13 @@ create_list_field(PurpleRequestField *field)
 static GtkWidget *
 create_certificate_field(PurpleRequestField *field)
 {
-	PurpleCertificate *cert;
+	GTlsCertificate *cert;
 #ifdef ENABLE_GCR
+	GByteArray *der = NULL;
 	GcrCertificateBasicsWidget *cert_widget;
-	GByteArray *der;
 	GcrCertificate *gcrt;
 #else
+	PurpleTlsCertificateInfo *info;
 	GtkWidget *cert_label;
 	char *str;
 	char *escaped;
@@ -1533,7 +1541,7 @@ create_certificate_field(PurpleRequestField *field)
 	cert = purple_request_field_certificate_get_value(field);
 
 #ifdef ENABLE_GCR
-	der = purple_certificate_get_der_data(cert);
+	g_object_get(cert, "certificate", &der, NULL);
 	g_return_val_if_fail(der, NULL);
 
 	gcrt = gcr_simple_certificate_new(der->data, der->len);
@@ -1546,13 +1554,17 @@ create_certificate_field(PurpleRequestField *field)
 
 	return GTK_WIDGET(cert_widget);
 #else
-	str = purple_certificate_get_display_string(cert);
+	info = purple_tls_certificate_get_info(cert);
+	str = purple_tls_certificate_info_get_display_string(info);
+	purple_tls_certificate_info_free(info);
+
 	escaped = g_markup_escape_text(str, -1);
 
 	cert_label = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(cert_label), escaped);
 	gtk_label_set_line_wrap(GTK_LABEL(cert_label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(cert_label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(cert_label), 0);
+	gtk_label_set_yalign(GTK_LABEL(cert_label), 0);
 
 	g_free(str);
 	g_free(escaped);
@@ -1675,12 +1687,11 @@ datasheet_button_check_sens(GtkWidget *button, gpointer _sheet_widget)
 static void
 datasheet_selection_changed(GtkWidget *sheet_widget)
 {
-	GtkVBox *buttons_box;
+	gpointer buttons_box;
 
 	g_return_if_fail(sheet_widget != NULL);
 
-	buttons_box = GTK_VBOX(g_object_get_data(G_OBJECT(sheet_widget),
-		"buttons"));
+	buttons_box = g_object_get_data(G_OBJECT(sheet_widget), "buttons");
 	gtk_container_foreach(GTK_CONTAINER(buttons_box),
 		datasheet_button_check_sens, sheet_widget);
 }
@@ -1837,12 +1848,12 @@ create_datasheet_field(PurpleRequestField *field, GtkSizeGroup *buttons_sg)
 	GtkWidget *scrollable;
 	GtkCellRenderer *renderer_image = NULL, *renderer_text = NULL;
 	GtkTreeViewColumn *id_column;
-	GtkHBox *main_box;
-	GtkVBox *buttons_box;
+	GtkWidget *main_box;
+	GtkWidget *buttons_box;
 	const GList *it;
 
 	sheet = purple_request_field_datasheet_get_sheet(field);
-	main_box = GTK_HBOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
+	main_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 
 	col_count = purple_request_datasheet_get_column_count(sheet);
 
@@ -1908,14 +1919,14 @@ create_datasheet_field(PurpleRequestField *field, GtkSizeGroup *buttons_sg)
 		GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1);
 	gtk_widget_show(GTK_WIDGET(view));
 
-	buttons_box = GTK_VBOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BORDER));
-	gtk_size_group_add_widget(buttons_sg, GTK_WIDGET(buttons_box));
+	buttons_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BORDER);
+	gtk_size_group_add_widget(buttons_sg, buttons_box);
 
 	gtk_box_pack_start(GTK_BOX(main_box), scrollable, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(main_box), GTK_WIDGET(buttons_box),
+	gtk_box_pack_start(GTK_BOX(main_box), buttons_box,
 		FALSE, FALSE, 0);
 	gtk_widget_show(scrollable);
-	gtk_widget_show(GTK_WIDGET(buttons_box));
+	gtk_widget_show(buttons_box);
 
 	it = purple_request_datasheet_get_actions(sheet);
 	for (; it != NULL; it = g_list_next(it)) {
@@ -1950,7 +1961,7 @@ create_datasheet_field(PurpleRequestField *field, GtkSizeGroup *buttons_sg)
 	g_signal_connect(G_OBJECT(sel), "changed",
 		G_CALLBACK(datasheet_selection_changed_cb), main_box);
 
-	return GTK_WIDGET(main_box);
+	return main_box;
 }
 
 static void *
@@ -2014,7 +2025,8 @@ pidgin_request_fields(const char *title, const char *primary,
 
 	/* Dialog icon. */
 	img = pidgin_request_dialog_icon(PURPLE_REQUEST_FIELDS, cpar);
-	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
+	gtk_widget_set_halign(img, GTK_ALIGN_START);
+	gtk_widget_set_valign(img, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 	gtk_widget_show(img);
 
@@ -2065,7 +2077,8 @@ pidgin_request_fields(const char *title, const char *primary,
 
 		gtk_label_set_markup(GTK_LABEL(label), label_text);
 		gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+		gtk_label_set_xalign(GTK_LABEL(label), 0);
+		gtk_label_set_yalign(GTK_LABEL(label), 0);
 		gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 		gtk_widget_show(label);
 		g_free(label_text);
@@ -2146,7 +2159,8 @@ pidgin_request_fields(const char *title, const char *primary,
 		gtk_label_set_markup(GTK_LABEL(label), secondary_esc);
 		g_free(secondary_esc);
 		gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+		gtk_label_set_xalign(GTK_LABEL(label), 0);
+		gtk_label_set_yalign(GTK_LABEL(label), 0);
 		gtk_box_pack_start(GTK_BOX(vbox), label, (notebook == NULL),
 			(notebook == NULL), 0);
 		gtk_widget_show(label);
@@ -2245,10 +2259,7 @@ pidgin_request_fields(const char *title, const char *primary,
 #endif
 		}
 
-		if (compact)
-			grid = gtk_grid_table_new(rows, cols);
-		else
-			grid = gtk_grid_table_new(rows, 2 * cols);
+		grid = gtk_grid_new();
 		gtk_grid_set_row_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
 		gtk_grid_set_column_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
 
@@ -2308,7 +2319,9 @@ pidgin_request_fields(const char *title, const char *primary,
 					gtk_label_set_markup_with_mnemonic(GTK_LABEL(label), text ? text : field_label);
 					g_free(text);
 
-					gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+					gtk_widget_set_hexpand(label, TRUE);
+					gtk_widget_set_vexpand(label, TRUE);
+					gtk_label_set_xalign(GTK_LABEL(label), 0);
 
 					gtk_size_group_add_widget(sg, label);
 
@@ -2322,7 +2335,7 @@ pidgin_request_fields(const char *title, const char *primary,
 							row_num++;
 #endif
 
-						gtk_grid_attach_defaults(GTK_GRID(grid), label,
+						gtk_grid_attach(GTK_GRID(grid), label,
 							0, row_num, 2 * cols, 1);
 
 						row_num++;
@@ -2332,7 +2345,7 @@ pidgin_request_fields(const char *title, const char *primary,
 					}
 					else
 					{
-						gtk_grid_attach_defaults(GTK_GRID(grid), label,
+						gtk_grid_attach(GTK_GRID(grid), label,
 							col_offset, row_num, 1, 1);
 					}
 
@@ -2371,44 +2384,39 @@ pidgin_request_fields(const char *title, const char *primary,
 				if (label)
 					gtk_label_set_mnemonic_widget(GTK_LABEL(label), widget);
 
+				gtk_widget_set_hexpand(widget, TRUE);
+				gtk_widget_set_vexpand(widget, TRUE);
+#if GTK_CHECK_VERSION(3,12,0)
+				gtk_widget_set_margin_start(widget, 5);
+				gtk_widget_set_margin_end(widget, 5);
+#else
+				gtk_widget_set_margin_left(widget, 5);
+				gtk_widget_set_margin_right(widget, 5);
+#endif
+
 				if (type == PURPLE_REQUEST_FIELD_STRING &&
 					purple_request_field_string_is_multiline(field))
 				{
-					gtk_grid_attach_full(GTK_GRID(grid), widget,
-						0, row_num, 2 * cols, 1,
-						GTK_FILL | GTK_EXPAND,
-						GTK_FILL | GTK_EXPAND,
-						5, 0);
+					gtk_grid_attach(GTK_GRID(grid), widget,
+						0, row_num, 2 * cols, 1);
 				}
 				else if (type == PURPLE_REQUEST_FIELD_LIST)
 				{
-					gtk_grid_attach_full(GTK_GRID(grid), widget,
-						0, row_num, 2 * cols, 1,
-						GTK_FILL | GTK_EXPAND,
-						GTK_FILL | GTK_EXPAND,
-						5, 0);
+					gtk_grid_attach(GTK_GRID(grid), widget,
+						0, row_num, 2 * cols, 1);
 				}
 				else if (type == PURPLE_REQUEST_FIELD_BOOLEAN)
 				{
-					gtk_grid_attach_full(GTK_GRID(grid), widget,
-						col_offset, row_num, 1, 1,
-						GTK_FILL | GTK_EXPAND,
-						GTK_FILL | GTK_EXPAND,
-						5, 0);
+					gtk_grid_attach(GTK_GRID(grid), widget,
+						col_offset, row_num, 1, 1);
 				}
 				else if (compact) {
 					row_num++;
-					gtk_grid_attach_full(GTK_GRID(grid), widget,
-						0, row_num, 2 * cols, 1,
-						GTK_FILL | GTK_EXPAND,
-						GTK_FILL | GTK_EXPAND,
-						5, 0);
+					gtk_grid_attach(GTK_GRID(grid), widget,
+						0, row_num, 2 * cols, 1);
 				} else {
-					gtk_grid_attach_full(GTK_GRID(grid), widget,
-						1, row_num, 2 * cols - 1, 1,
-						GTK_FILL | GTK_EXPAND,
-						GTK_FILL | GTK_EXPAND,
-						5, 0);
+					gtk_grid_attach(GTK_GRID(grid), widget,
+						1, row_num, 2 * cols - 1, 1);
 				}
 
 				gtk_widget_show(widget);

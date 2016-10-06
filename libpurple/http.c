@@ -24,8 +24,10 @@
 #include "internal.h"
 #include "glibcompat.h"
 
+
 #include "debug.h"
 #include "ntlm.h"
+#include "proxy.h"
 #include "purple-socket.h"
 
 #include <zlib.h>
@@ -751,8 +753,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		request_url,
 		req->http11 ? "1.1" : "1.0");
 
-	if (tmp_url)
-		g_free(tmp_url);
+	g_free(tmp_url);
 
 	if (!purple_http_headers_get(hdrs, "host"))
 		g_string_append_printf(h, "Host: %s\r\n", url->host);
@@ -1169,6 +1170,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			gchar *buffer = g_string_free(hc->response_buffer, FALSE);
 			hc->response_buffer = NULL;
 			_purple_http_recv_body(hc, buffer, buffer_len);
+			g_free(buffer);
 		}
 		if (!hc->headers_got)
 			return got_anything;
@@ -1188,6 +1190,10 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 		const gchar *redirect;
 
 		if (hc->is_chunked && !hc->chunks_done) {
+			if (len == 0) {
+				_purple_http_error(hc, _("Chunked connection terminated"));
+				return FALSE;
+			}
 			if (purple_debug_is_verbose()) {
 				purple_debug_misc("http",
 					"I need the terminating empty chunk\n");
@@ -1473,13 +1479,6 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 		return FALSE;
 	}
 
-	if (is_ssl && !purple_ssl_is_supported()) {
-		_purple_http_error(hc, _("Unable to connect to %s: %s"),
-			url->host, _("Server requires TLS/SSL, "
-			"but no TLS/SSL support was found."));
-		return FALSE;
-	}
-
 	if (hc->request->keepalive_pool != NULL) {
 		hc->socket_request = purple_http_keepalive_pool_request(
 			hc->request->keepalive_pool, hc->gc, url->host,
@@ -1755,13 +1754,6 @@ void purple_http_conn_cancel_all(PurpleConnection *gc)
 			"related to gc=%p (it shouldn't happen)\n", gc);
 }
 
-gboolean purple_http_conn_is_cancelling(PurpleHttpConnection *http_conn)
-{
-	if (http_conn == NULL)
-		return FALSE;
-	return http_conn->is_cancelling;
-}
-
 gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn)
 {
 	if (http_conn == NULL)
@@ -2004,7 +1996,7 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 	while (g_hash_table_iter_next(&it, (gpointer*)&key,
 		(gpointer*)&cookie))
 	{
-		if (cookie->expires != -1 && cookie->expires <= now)
+		if (cookie->expires != -1 && cookie->expires != 0 && cookie->expires <= now)
 			continue;
 		g_string_append_printf(str, "%s=%s; ", key, cookie->value);
 	}
@@ -2017,7 +2009,17 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name, const gchar *value)
 {
-	purple_http_cookie_jar_set_ext(cookie_jar, name, value, -1);
+	gchar *escaped_name = g_strdup(purple_url_encode(name));
+	gchar *escaped_value = NULL;
+
+	if (value) {
+		escaped_value = g_strdup(purple_url_encode(value));
+	}
+
+	purple_http_cookie_jar_set_ext(cookie_jar, escaped_name, escaped_value, -1);
+
+	g_free(escaped_name);
+	g_free(escaped_value);
 }
 
 static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
@@ -2026,7 +2028,7 @@ static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
 	g_return_if_fail(cookie_jar != NULL);
 	g_return_if_fail(name != NULL);
 
-	if (expires != -1 && time(NULL) >= expires)
+	if (expires != -1 && expires != 0 && time(NULL) >= expires)
 		value = NULL;
 
 	if (value != NULL) {
@@ -2037,7 +2039,7 @@ static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
 		g_hash_table_remove(cookie_jar->tab, name);
 }
 
-const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
+gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name)
 {
 	PurpleHttpCookie *cookie;
@@ -2049,7 +2051,7 @@ const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
 	if (!cookie)
 		return NULL;
 
-	return cookie->value;
+	return g_strdup(purple_url_decode(cookie->value));
 }
 
 gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar)

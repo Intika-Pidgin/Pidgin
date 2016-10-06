@@ -193,7 +193,7 @@ fb_thrift_read(FbThrift *thft, gpointer data, guint size);
 /**
  * fb_thrift_read_bool:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a boolean value from the #FbThrift. If @value is #NULL, this
  * will simply advance the cursor position.
@@ -206,7 +206,7 @@ fb_thrift_read_bool(FbThrift *thft, gboolean *value);
 /**
  * fb_thrift_read_byte:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads an 8-bit integer value from the #FbThrift. If @value is #NULL,
  * this will simply advance the cursor position.
@@ -219,7 +219,7 @@ fb_thrift_read_byte(FbThrift *thft, guint8 *value);
 /**
  * fb_thrift_read_dbl:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a 64-bit floating point value from the #FbThrift. If @value
  * is #NULL, this will simply advance the cursor position.
@@ -232,7 +232,7 @@ fb_thrift_read_dbl(FbThrift *thft, gdouble *value);
 /**
  * fb_thrift_read_i16:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a signed 16-bit integer value from the #FbThrift. This will
  * convert the integer from the zig-zag format. If @value is #NULL,
@@ -246,7 +246,7 @@ fb_thrift_read_i16(FbThrift *thft, gint16 *value);
 /**
  * fb_thrift_read_vi16:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a 16-bit integer value from the #FbThrift. This reads the raw
  * integer value without converting it from the zig-zag format. If
@@ -260,7 +260,7 @@ fb_thrift_read_vi16(FbThrift *thft, guint16 *value);
 /**
  * fb_thrift_read_i32:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a signed 32-bit integer value from the #FbThrift. This will
  * convert the integer from the zig-zag format. If @value is #NULL,
@@ -274,7 +274,7 @@ fb_thrift_read_i32(FbThrift *thft, gint32 *value);
 /**
  * fb_thrift_read_vi32:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a 32-bit integer value from the #FbThrift. This reads the raw
  * integer value without converting it from the zig-zag format. If
@@ -288,7 +288,7 @@ fb_thrift_read_vi32(FbThrift *thft, guint32 *value);
 /**
  * fb_thrift_read_i64:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a signed 64-bit integer value from the #FbThrift. This will
  * convert the integer from the zig-zag format. If @value is #NULL,
@@ -302,7 +302,7 @@ fb_thrift_read_i64(FbThrift *thft, gint64 *value);
 /**
  * fb_thrift_read_vi64:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a 64-bit integer value from the #FbThrift. This reads the raw
  * integer value without converting it from the zig-zag format. If
@@ -316,7 +316,7 @@ fb_thrift_read_vi64(FbThrift *thft, guint64 *value);
 /**
  * fb_thrift_read_str:
  * @thft: The #FbThrift.
- * @value: The return location for the value, or #NULL.
+ * @value: The return location for the value or #NULL.
  *
  * Reads a string value from the #FbThrift. The value returned to
  * @value should be freed with #g_free() when no longer needed. If
@@ -331,14 +331,16 @@ fb_thrift_read_str(FbThrift *thft, gchar **value);
  * fb_thrift_read_field:
  * @thft: The #FbThrift.
  * @type: The return location for the #FbThriftType.
- * @id: The return location for the identifier, or #NULL.
+ * @id: The return location for the identifier.
+ * @lastid: The identifier of the previous field.
  *
  * Reads a field header from the #FbThrift.
  *
  * Returns: #TRUE if the field header was read, otherwise #FALSE.
  */
 gboolean
-fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id);
+fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id,
+					 gint16 lastid);
 
 /**
  * fb_thrift_read_stop:
@@ -525,11 +527,13 @@ fb_thrift_write_str(FbThrift *thft, const gchar *value);
  * @thft: The #FbThrift.
  * @type: The #FbThriftType.
  * @id: The identifier.
+ * @lastid: The identifier of the previous field.
  *
  * Writes a field header to the #FbThrift.
  */
 void
-fb_thrift_write_field(FbThrift *thft, FbThriftType type, gint16 id);
+fb_thrift_write_field(FbThrift *thft, FbThriftType type, gint16 id,
+					  gint16 lastid);
 
 /**
  * fb_thrift_write_stop:

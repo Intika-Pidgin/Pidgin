@@ -304,12 +304,12 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 	menu = gtk_menu_new();
 
 	if (service->flags & XMPP_DISCO_ADD)
-		pidgin_new_item_from_stock(menu, _("Add to Buddy List"), GTK_STOCK_ADD,
-		                           G_CALLBACK(add_to_blist_cb), pdl->dialog,
-		                           0, 0, NULL);
+		pidgin_new_menu_item(menu, _("Add to Buddy List"), GTK_STOCK_ADD,
+                                G_CALLBACK(add_to_blist_cb), pdl->dialog);
 
 	if (service->flags & XMPP_DISCO_REGISTER) {
-		GtkWidget *item = pidgin_new_item(menu, _("Register"));
+		GtkWidget *item = pidgin_new_menu_item(menu, _("Register"),
+                                NULL, NULL, NULL);
 		g_signal_connect(G_OBJECT(item), "activate",
 		                 G_CALLBACK(register_button_cb), pdl->dialog);
 	}
@@ -435,17 +435,9 @@ static gboolean
 disco_paint_tooltip(GtkWidget *tipwindow, cairo_t *cr, gpointer data)
 {
 	PangoLayout *layout = g_object_get_data(G_OBJECT(tipwindow), "tooltip-plugin");
-#if GTK_CHECK_VERSION(3,0,0)
 	GtkStyleContext *context = gtk_widget_get_style_context(tipwindow);
 	gtk_style_context_add_class(context, GTK_STYLE_CLASS_TOOLTIP);
 	gtk_render_layout(context, cr, 6, 6, layout);
-#else
-	gtk_paint_layout(gtk_widget_get_style(tipwindow),
-	                 gtk_widget_get_window(tipwindow),
-	                 GTK_STATE_NORMAL, FALSE,
-	                 NULL, tipwindow, "tooltip",
-	                 6, 6, layout);
-#endif
 	return TRUE;
 }
 

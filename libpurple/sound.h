@@ -24,7 +24,7 @@
 /**
  * SECTION:sound
  * @section_id: libpurple-sound
- * @short_description: <filename>sound.h</filename>
+ * @short_description: Sound subsystem definition.
  * @title: Sound API
  * @see_also: <link linkend="chapter-signals-sound">Sound signals</link>
  */
@@ -37,6 +37,20 @@
 /** Data Structures                                                       */
 /**************************************************************************/
 typedef struct _PurpleSoundUiOps PurpleSoundUiOps;
+
+/**
+ * PurpleSoundStatus:
+ * @PURPLE_SOUND_STATUS_AVAILABLE:	Only play sound when Status is Available.
+ * @PURPLE_SOUND_STATUS_AWAY:		Only play sound when Status is Not Available.
+ * @PURPLE_SOUND_STATUS_ALWAYS:		Always play sound.
+ *
+ * A preference option on when to play sounds depending on the current status
+ */
+typedef enum {
+	PURPLE_SOUND_STATUS_AVAILABLE = 1,
+	PURPLE_SOUND_STATUS_AWAY,
+	PURPLE_SOUND_STATUS_ALWAYS,
+} PurpleSoundStatus;
 
 /**
  * PurpleSoundEventID:
@@ -56,7 +70,6 @@ typedef struct _PurpleSoundUiOps PurpleSoundUiOps;
  *
  * A type of sound.
  */
-
 typedef enum
 {
 	PURPLE_SOUND_BUDDY_ARRIVE = 0,
@@ -77,6 +90,12 @@ typedef enum
 
 /**
  * PurpleSoundUiOps:
+ * @init: Called when the UI should initialize sound
+ * @uninit: Called when the UI should teardown sound
+ * @play_file: Called when a file should be played.
+ *             <sbr/>@filename: The filename to play
+ * @play_event: Called when a sound event should be played.
+ *              <sbr/>@event: The #@PurpleSoundEventID to play
  *
  * Operations used by the core to request that particular sound files, or the
  * sound associated with a particular event, should be played.
@@ -111,7 +130,7 @@ GType purple_sound_ui_ops_get_type(void);
 /**
  * purple_sound_play_file:
  * @filename: The file to play.
- * @account: The account that this sound is associated with, or
+ * @account: (nullable): The account that this sound is associated with, or
  *        NULL if the sound is not associated with any specific
  *        account.  This is needed for the "sounds while away?"
  *        preference to work correctly.
@@ -123,7 +142,7 @@ void purple_sound_play_file(const char *filename, const PurpleAccount *account);
 /**
  * purple_sound_play_event:
  * @event: The event.
- * @account: The account that this sound is associated with, or
+ * @account: (nullable): The account that this sound is associated with, or
  *        NULL if the sound is not associated with any specific
  *        account.  This is needed for the "sounds while away?"
  *        preference to work correctly.

@@ -696,6 +696,14 @@ pidgin_media_add_audio_widget(PidginMedia *gtkmedia,
 	GtkWidget *volume_widget, *progress_parent, *volume, *progress;
 	double value;
 
+	static const gchar * input_volume_icons[] = {
+		"microphone-sensitivity-muted-symbolic",
+		"microphone-sensitivity-high-symbolic",
+		"microphone-sensitivity-low-symbolic",
+		"microphone-sensitivity-medium-symbolic",
+		NULL
+	};
+
 	if (type & PURPLE_MEDIA_SEND_AUDIO) {
 		value = purple_prefs_get_int(
 			"/purple/media/audio/volume/input");
@@ -726,6 +734,9 @@ pidgin_media_add_audio_widget(PidginMedia *gtkmedia,
 		g_signal_connect (G_OBJECT(volume), "value-changed",
 				G_CALLBACK(pidgin_media_input_volume_changed),
 				gtkmedia->priv->media);
+		gtk_scale_button_set_icons(GTK_SCALE_BUTTON(volume),
+				input_volume_icons);
+
 		gtkmedia->priv->send_progress = progress;
 	} else if (type & PURPLE_MEDIA_RECV_AUDIO) {
 		g_signal_connect (G_OBJECT(volume), "value-changed",
@@ -771,14 +782,13 @@ phone_create_button(const gchar *text_hi, const gchar *text_lo)
 	else
 		text_hi_local = "";
 
-	grid = gtk_vbox_new(TRUE, 0);
+	grid = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	gtk_box_set_homogeneous(GTK_BOX(grid), TRUE);
 
 	button = gtk_button_new();
 	label_hi = gtk_label_new(text_hi_local);
-	gtk_misc_set_alignment(GTK_MISC(label_hi), 0.5, 0.5);
 	gtk_box_pack_end(GTK_BOX(grid), label_hi, FALSE, TRUE, 0);
 	label_lo = gtk_label_new(text_lo);
-	gtk_misc_set_alignment(GTK_MISC(label_lo), 0.5, 0.5);
 	gtk_label_set_use_markup(GTK_LABEL(label_lo), TRUE);
 	gtk_box_pack_end(GTK_BOX(grid), label_lo, FALSE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(button), grid);
@@ -844,10 +854,13 @@ static GtkWidget *
 pidgin_media_add_dtmf_widget(PidginMedia *gtkmedia,
 		PurpleMediaSessionType type, const gchar *_sid)
 {
-	GtkWidget *grid = gtk_table_new(4, 3, TRUE);
+	GtkWidget *grid = gtk_grid_new();
 	GtkWidget *button;
 	gint index = 0;
 	GtkWindow *win = &gtkmedia->parent;
+
+	gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
+	gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
 
 	/* Add buttons */
 	for (index = 0; phone_labels[index].subtext != NULL; index++) {
@@ -859,10 +872,9 @@ pidgin_media_add_dtmf_widget(PidginMedia *gtkmedia,
 				GINT_TO_POINTER(phone_labels[index].chr));
 		g_object_set_data_full(G_OBJECT(button), "session-id",
 				g_strdup(_sid), g_free);
-		gtk_table_attach(GTK_TABLE(grid), button, index % 3,
-				index % 3 + 1, index / 3, index / 3 + 1,
-				GTK_FILL | GTK_EXPAND, GTK_FILL | GTK_EXPAND,
-				2, 2);
+		gtk_grid_attach(GTK_GRID(grid), button,
+				index % 3, index / 3, 1, 1);
+		g_object_set(button, "expand", TRUE, "margin", 2, NULL);
 	}
 
 	g_signal_connect(G_OBJECT(win), "key-press-event",
@@ -922,11 +934,6 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 		PidginMediaRealizeData *data;
 		GtkWidget *aspect;
 		GtkWidget *remote_video;
-#if GTK_CHECK_VERSION(3,0,0)
-		GdkRGBA color = {0.0, 0.0, 0.0, 1.0};
-#else
-		GdkColor color = {0, 0, 0, 0};
-#endif
 
 		aspect = gtk_aspect_frame_new(NULL, 0, 0, 4.0/3.0, FALSE);
 		gtk_frame_set_shadow_type(GTK_FRAME(aspect), GTK_SHADOW_IN);
@@ -937,12 +944,7 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 		data->session_id = g_strdup(sid);
 		data->participant = g_strdup(gtkmedia->priv->screenname);
 
-		remote_video = gtk_drawing_area_new();
-#if GTK_CHECK_VERSION(3,0,0)
-		gtk_widget_override_background_color(remote_video, GTK_STATE_FLAG_NORMAL, &color);
-#else
-		gtk_widget_modify_bg(remote_video, GTK_STATE_NORMAL, &color);
-#endif
+		remote_video = pidgin_create_video_widget();
 		g_signal_connect(G_OBJECT(remote_video), "realize",
 				G_CALLBACK(realize_cb), data);
 		gtk_container_add(GTK_CONTAINER(aspect), remote_video);
@@ -961,11 +963,6 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 		PidginMediaRealizeData *data;
 		GtkWidget *aspect;
 		GtkWidget *local_video;
-#if GTK_CHECK_VERSION(3,0,0)
-		GdkRGBA color = {0.0, 0.0, 0.0, 1.0};
-#else
-		GdkColor color = {0, 0, 0, 0};
-#endif
 
 		aspect = gtk_aspect_frame_new(NULL, 0, 0, 4.0/3.0, TRUE);
 		gtk_frame_set_shadow_type(GTK_FRAME(aspect), GTK_SHADOW_IN);
@@ -976,12 +973,7 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 		data->session_id = g_strdup(sid);
 		data->participant = NULL;
 
-		local_video = gtk_drawing_area_new();
-#if GTK_CHECK_VERSION(3,0,0)
-		gtk_widget_override_background_color(local_video, GTK_STATE_FLAG_NORMAL, &color);
-#else
-		gtk_widget_modify_bg(local_video, GTK_STATE_NORMAL, &color);
-#endif
+		local_video = pidgin_create_video_widget();
 		g_signal_connect(G_OBJECT(local_video), "realize",
 				G_CALLBACK(realize_cb), data);
 		gtk_container_add(GTK_CONTAINER(aspect), local_video);
@@ -1141,8 +1133,7 @@ pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 			break;
 		}
 		case PROP_SCREENNAME:
-			if (media->priv->screenname)
-				g_free(media->priv->screenname);
+			g_free(media->priv->screenname);
 			media->priv->screenname = g_value_dup_string(value);
 			break;
 		default:
@@ -1203,221 +1194,6 @@ pidgin_media_new_cb(PurpleMediaManager *manager, PurpleMedia *media,
 
 	return TRUE;
 }
-
-static GstElement *
-create_vv_element(const gchar *plugin, const gchar *device)
-{
-	GstElement *element, *source;
-
-	g_return_val_if_fail(plugin != NULL, NULL);
-	g_return_val_if_fail(plugin[0] != '\0', NULL);
-
-	if (device != NULL && device[0] == '\0')
-		device = NULL;
-
-	if (g_strcmp0(plugin, "videodisabledsrc") == 0) {
-		element = gst_element_factory_make("videotestsrc", NULL);
-		g_object_set(G_OBJECT(element), "is-live", TRUE, NULL);
-		if (g_strcmp0(device, "snow") == 0) {
-			/* GST_VIDEO_TEST_SRC_SNOW */
-			g_object_set(G_OBJECT(element), "pattern", 1, NULL);
-		} else {
-			/* GST_VIDEO_TEST_SRC_BLACK */
-			g_object_set(G_OBJECT(element), "pattern", 2, NULL);
-		}
-		return element;
-	}
-
-	if (g_strcmp0(plugin, "ksvideosrc") == 0) {
-		GstElement *ksv_bin, *ksv_src, *ksv_filter;
-		GstPad *ksv_pad, *ksv_ghost;
-
-		ksv_bin = gst_bin_new("ksvideofilteredsrc");
-		ksv_src = gst_element_factory_make("ksvideosrc", NULL);
-		ksv_filter = gst_element_factory_make("ffmpegcolorspace", NULL);
-
-		gst_bin_add_many(GST_BIN(ksv_bin), ksv_src, ksv_filter, NULL);
-
-		gst_element_link(ksv_src, ksv_filter);
-
-		ksv_pad = gst_element_get_static_pad(ksv_filter, "src");
-		ksv_ghost = gst_ghost_pad_new("src", ksv_pad);
-		gst_object_unref(ksv_pad);
-		gst_element_add_pad(ksv_bin, ksv_ghost);
-
-		element = ksv_bin;
-		source = ksv_src;
-	}
-	else
-		element = source = gst_element_factory_make(plugin, NULL);
-
-	if (element == NULL)
-		return NULL;
-
-	if (device != NULL) {
-		GObjectClass *klass = G_OBJECT_GET_CLASS(source);
-		if (g_object_class_find_property(klass, "device"))
-			g_object_set(G_OBJECT(source), "device", device, NULL);
-		else if (g_object_class_find_property(klass, "device-index"))
-			g_object_set(G_OBJECT(source), "device-index",
-				g_ascii_strtoull(device, NULL, 10), NULL);
-		else
-			purple_debug_warning("gtkmedia", "No possibility to "
-				"set device\n");
-	}
-
-	if (g_strcmp0(plugin, "videotestsrc") == 0)
-		g_object_set(G_OBJECT(element), "is-live", TRUE, NULL);
-
-	return element;
-}
-
-static GstElement *
-create_configured_vv_element(const gchar *type, const gchar *dir)
-{
-	gchar *tmp;
-	const gchar *plugin, *device;
-
-	tmp = g_strdup_printf(PIDGIN_PREFS_ROOT "/vvconfig/%s/%s/plugin",
-		type, dir);
-	plugin = purple_prefs_get_string(tmp);
-	g_free(tmp);
-
-	tmp = g_strdup_printf(PIDGIN_PREFS_ROOT "/vvconfig/%s/%s/device",
-		type, dir);
-	device = purple_prefs_get_string(tmp);
-	g_free(tmp);
-
-	if (plugin == NULL || plugin[0] == '\0')
-		return NULL;
-
-	return create_vv_element(plugin, device);
-}
-
-static GstElement *
-create_default_video_src(PurpleMedia *media,
-		const gchar *session_id, const gchar *participant)
-{
-	GstElement *sendbin, *src;
-	GstPad *pad;
-	GstPad *ghost;
-
-	src = create_configured_vv_element("video", "src");
-
-#ifdef _WIN32
-	if (src == NULL)
-		src = create_vv_element("ksvideosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("dshowvideosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("autovideosrc", NULL);
-#elif defined(__APPLE__)
-	if (src == NULL)
-		src = create_vv_element("osxvideosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("autovideosrc", NULL);
-#else
-	if (src == NULL)
-		src = create_vv_element("gconfvideosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("autovideosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("v4l2src", NULL);
-	if (src == NULL)
-		src = create_vv_element("v4lsrc", NULL);
-#endif
-	if (src == NULL)
-		src = create_vv_element("videotestsrc", NULL);
-	if (src == NULL) {
-		purple_debug_error("gtkmedia", "Unable to find a suitable "
-				"element for the default video source.\n");
-		return NULL;
-	}
-
-	sendbin = gst_bin_new("pidgindefaultvideosrc");
-
-	gst_bin_add(GST_BIN(sendbin), src);
-
-	pad = gst_element_get_static_pad(src, "src");
-	ghost = gst_ghost_pad_new("ghostsrc", pad);
-	gst_object_unref(pad);
-	gst_element_add_pad(sendbin, ghost);
-
-	return sendbin;
-}
-
-static GstElement *
-create_default_video_sink(PurpleMedia *media,
-		const gchar *session_id, const gchar *participant)
-{
-	GstElement *sink;
-
-	sink = create_configured_vv_element("video", "sink");
-
-	if (sink == NULL)
-		sink = create_vv_element("directdrawsink", NULL);
-	if (sink == NULL)
-		sink = create_vv_element("gconfvideosink", NULL);
-	if (sink == NULL)
-		sink = create_vv_element("autovideosink", NULL);
-	if (sink == NULL)
-		purple_debug_error("gtkmedia", "Unable to find a suitable "
-				"element for the default video sink.\n");
-	return sink;
-}
-
-static GstElement *
-create_default_audio_src(PurpleMedia *media,
-		const gchar *session_id, const gchar *participant)
-{
-	GstElement *src;
-
-	src = create_configured_vv_element("audio", "src");
-
-	if (src == NULL)
-		src = create_vv_element("directsoundsrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("gconfaudiosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("autoaudiosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("alsasrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("osssrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("dshowaudiosrc", NULL);
-	if (src == NULL)
-		src = create_vv_element("osxaudiosrc", NULL);
-	if (src == NULL) {
-		purple_debug_error("gtkmedia", "Unable to find a suitable "
-				"element for the default audio source.\n");
-		return NULL;
-	}
-	gst_element_set_name(src, "pidgindefaultaudiosrc");
-	return src;
-}
-
-static GstElement *
-create_default_audio_sink(PurpleMedia *media,
-		const gchar *session_id, const gchar *participant)
-{
-	GstElement *sink;
-
-	sink = create_configured_vv_element("audio", "sink");
-
-	if (sink == NULL)
-		sink = create_vv_element("directsoundsink", NULL);
-	if (sink == NULL)
-		sink = create_vv_element("gconfaudiosink", NULL);
-	if (sink == NULL)
-		sink = create_vv_element("autoaudiosink",NULL);
-	if (sink == NULL) {
-		purple_debug_error("gtkmedia", "Unable to find a suitable "
-				"element for the default audio sink.\n");
-		return NULL;
-	}
-	return sink;
-}
 #endif  /* USE_VV */
 
 void
@@ -1425,40 +1201,59 @@ pidgin_medias_init(void)
 {
 #ifdef USE_VV
 	PurpleMediaManager *manager = purple_media_manager_get();
-	PurpleMediaElementInfo *default_video_src =
-			g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
-			"id", "pidgindefaultvideosrc",
-			"name", "Pidgin Default Video Source",
-			"type", PURPLE_MEDIA_ELEMENT_VIDEO
-					| PURPLE_MEDIA_ELEMENT_SRC
-					| PURPLE_MEDIA_ELEMENT_ONE_SRC
-					| PURPLE_MEDIA_ELEMENT_UNIQUE,
-			"create-cb", create_default_video_src, NULL);
-	PurpleMediaElementInfo *default_video_sink =
-			g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
-			"id", "pidgindefaultvideosink",
-			"name", "Pidgin Default Video Sink",
-			"type", PURPLE_MEDIA_ELEMENT_VIDEO
-					| PURPLE_MEDIA_ELEMENT_SINK
-					| PURPLE_MEDIA_ELEMENT_ONE_SINK,
-			"create-cb", create_default_video_sink, NULL);
-	PurpleMediaElementInfo *default_audio_src =
-			g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
-			"id", "pidgindefaultaudiosrc",
-			"name", "Pidgin Default Audio Source",
-			"type", PURPLE_MEDIA_ELEMENT_AUDIO
-					| PURPLE_MEDIA_ELEMENT_SRC
-					| PURPLE_MEDIA_ELEMENT_ONE_SRC
-					| PURPLE_MEDIA_ELEMENT_UNIQUE,
-			"create-cb", create_default_audio_src, NULL);
-	PurpleMediaElementInfo *default_audio_sink =
-			g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
-			"id", "pidgindefaultaudiosink",
-			"name", "Pidgin Default Audio Sink",
-			"type", PURPLE_MEDIA_ELEMENT_AUDIO
-					| PURPLE_MEDIA_ELEMENT_SINK
-					| PURPLE_MEDIA_ELEMENT_ONE_SINK,
-			"create-cb", create_default_audio_sink, NULL);
+	PurpleMediaElementInfo *video_src = NULL;
+	PurpleMediaElementInfo *video_sink = NULL;
+	PurpleMediaElementInfo *audio_src = NULL;
+	PurpleMediaElementInfo *audio_sink = NULL;
+	const char *pref;
+
+	pref = purple_prefs_get_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/video/src/device");
+	if (pref)
+		video_src = purple_media_manager_get_element_info(manager, pref);
+	if (!video_src) {
+		pref = "autovideosrc";
+		purple_prefs_set_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/video/src/device", pref);
+		video_src = purple_media_manager_get_element_info(manager,
+				pref);
+	}
+
+	pref = purple_prefs_get_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device");
+	if (pref)
+		video_sink = purple_media_manager_get_element_info(manager, pref);
+	if (!video_sink) {
+		pref = "autovideosink";
+		purple_prefs_set_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device", pref);
+		video_sink = purple_media_manager_get_element_info(manager,
+				pref);
+	}
+
+	pref = purple_prefs_get_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device");
+	if (pref)
+		audio_src = purple_media_manager_get_element_info(manager, pref);
+	if (!audio_src) {
+		pref = "autoaudiosrc";
+		purple_prefs_set_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device", pref);
+		audio_src = purple_media_manager_get_element_info(manager,
+				pref);
+	}
+
+	pref = purple_prefs_get_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device");
+	if (pref)
+		audio_sink = purple_media_manager_get_element_info(manager, pref);
+	if (!audio_sink) {
+		pref = "autoaudiosink";
+		purple_prefs_set_string(
+			PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device", pref);
+		audio_sink = purple_media_manager_get_element_info(manager,
+				pref);
+	}
 
 	g_signal_connect(G_OBJECT(manager), "init-media",
 			 G_CALLBACK(pidgin_media_new_cb), NULL);
@@ -1471,10 +1266,10 @@ pidgin_medias_init(void)
 			PURPLE_MEDIA_CAPS_AUDIO_VIDEO);
 
 	purple_debug_info("gtkmedia", "Registering media element types\n");
-	purple_media_manager_set_active_element(manager, default_video_src);
-	purple_media_manager_set_active_element(manager, default_video_sink);
-	purple_media_manager_set_active_element(manager, default_audio_src);
-	purple_media_manager_set_active_element(manager, default_audio_sink);
+	purple_media_manager_set_active_element(manager, video_src);
+	purple_media_manager_set_active_element(manager, video_sink);
+	purple_media_manager_set_active_element(manager, audio_src);
+	purple_media_manager_set_active_element(manager, audio_sink);
 #endif
 }
 

@@ -159,8 +159,7 @@ static void ggp_roster_content_free(ggp_roster_content *content)
 		g_hash_table_destroy(content->group_ids);
 	if (content->group_names)
 		g_hash_table_destroy(content->group_names);
-	if (content->bots_group_id)
-		g_free(content->bots_group_id);
+	g_free(content->bots_group_id);
 	g_free(content);
 }
 
@@ -498,7 +497,7 @@ static gboolean ggp_roster_reply_list_read_buddy(PurpleConnection *gc,
 	g_hash_table_insert(content->contact_nodes, GINT_TO_POINTER(uin), node);
 
 	/* check, if alias is set */
-	if (strlen(alias) == 0 ||
+	if (*alias == '\0' ||
 		strcmp(alias, ggp_uin_to_str(uin)) == 0)
 	{
 		g_free(alias);

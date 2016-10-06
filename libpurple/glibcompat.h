@@ -33,168 +33,6 @@
 
 #include <glib.h>
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-
-#include <errno.h>
-#include <fcntl.h>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
-static inline gboolean g_close(gint fd, GError **error)
-{
-	int res;
-	int errsv;
-
-	res = close(fd);
-
-	if (G_LIKELY(res == 0))
-		return TRUE;
-	if (G_UNLIKELY(errno == EINTR))
-		return TRUE;
-
-	errsv = errno;
-	g_set_error_literal(error, G_FILE_ERROR,
-		g_file_error_from_errno(errsv), g_strerror(errsv));
-	errno = errsv;
-
-	return FALSE;
-}
-
-#if !GLIB_CHECK_VERSION(2, 32, 0)
-
-#include <glib-object.h>
-#include <string.h>
-
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#define G_GNUC_END_IGNORE_DEPRECATIONS
-
-#define G_SOURCE_REMOVE FALSE
-#define G_SOURCE_CONTINUE TRUE
-
-#define g_signal_handlers_disconnect_by_data(instance, data) \
-	g_signal_handlers_disconnect_matched((instance), G_SIGNAL_MATCH_DATA, \
-			0, 0, NULL, NULL, (data))
-
-static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
-{
-	GByteArray *array;
-
-	array = g_byte_array_new();
-	g_byte_array_append(array, data, len);
-	g_free(data);
-
-	return array;
-}
-
-static inline void g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
-{
-	g_queue_foreach(queue, (GFunc)free_func, NULL);
-	g_queue_free(queue);
-}
-
-static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
-	gpointer data, GError **error)
-{
-	return g_thread_create(func, data, TRUE, error);
-}
-
-#if !GLIB_CHECK_VERSION(2, 30, 0)
-
-#define G_VALUE_INIT {0, {{0}}}
-
-static inline gchar *g_utf8_substring(const gchar *str, glong start_pos,
-	glong end_pos)
-{
-	gchar *start = g_utf8_offset_to_pointer(str, start_pos);
-	gchar *end = g_utf8_offset_to_pointer(start, end_pos - start_pos);
-	gchar *out = g_malloc(end - start + 1);
-
-	memcpy(out, start, end - start);
-	out[end - start] = 0;
-
-	return out;
-}
-
-#if !GLIB_CHECK_VERSION(2, 28, 0)
-
-static inline gint64 g_get_monotonic_time(void)
-{
-	GTimeVal time_s;
-
-	g_get_current_time(&time_s);
-
-	return ((gint64)time_s.tv_sec << 32) | time_s.tv_usec;
-}
-
-static inline gint64 g_get_real_time(void)
-{
-	GTimeVal time_s;
-
-	g_get_current_time(&time_s);
-
-	return (((gint64)time_s.tv_sec) * 1000000) + time_s.tv_usec;
-}
-
-static inline void g_list_free_full(GList *list, GDestroyNotify free_func)
-{
-	g_list_foreach(list, (GFunc)free_func, NULL);
-	g_list_free(list);
-}
-
-static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
-{
-	g_slist_foreach(list, (GFunc)free_func, NULL);
-	g_slist_free(list);
-}
-
-#if !GLIB_CHECK_VERSION(2, 26, 0)
-
-typedef struct stat GStatBuf;
-
-static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
-{
-	g_object_notify(object, g_param_spec_get_name(pspec));
-}
-
-static inline void g_object_class_install_properties(GObjectClass *oclass,
-	guint n_pspecs, GParamSpec **pspecs)
-{
-	guint i;
-	for (i = 1; i < n_pspecs; ++i)
-		g_object_class_install_property(oclass, i, pspecs[i]);
-}
-
-#if !GLIB_CHECK_VERSION(2, 22, 0)
-
-#include <stdarg.h>
-
-static inline GError * g_error_new_valist(GQuark domain, gint code,
-	const gchar *format, va_list args)
-{
-	gchar *str;
-	GError *error;
-
-	str = g_strdup_vprintf(format, args);
-	error = g_error_new_literal(domain, code, str);
-
-	g_free(str);
-	return error;
-}
-
-#endif /* < 2.22.0 */
-
-#endif /* < 2.26.0 */
-
-#endif /* < 2.28.0 */
-
-#endif /* < 2.30.0 */
-
-#endif /* < 2.32.0 */
-
-#endif /* < 2.36.0 */
-
-
 /* glib's definition of g_stat+GStatBuf seems to be broken on mingw64-w32 (and
  * possibly other 32-bit windows), so instead of relying on it,
  * we'll define our own.
@@ -224,5 +62,46 @@ purple_g_stat(const gchar *filename, GStatBufW32 *buf)
 	_Pragma ("clang diagnostic pop")
 
 #endif /* __clang__ */
+
+/******************************************************************************
+ * g_assert_* macros
+ *****************************************************************************/
+#if !GLIB_CHECK_VERSION(2, 38, 0)
+#define g_assert_true(expr)             G_STMT_START { \
+                                             if G_LIKELY (expr) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should be TRUE"); \
+                                        } G_STMT_END
+#define g_assert_false(expr)            G_STMT_START { \
+                                             if G_LIKELY (!(expr)) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should be FALSE"); \
+                                        } G_STMT_END
+#define g_assert_null(expr)             G_STMT_START { if G_LIKELY ((expr) == NULL) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should be NULL"); \
+                                        } G_STMT_END
+#endif
+
+#if !GLIB_CHECK_VERSION(2, 40, 0)
+#define g_assert_nonnull(expr)          G_STMT_START { \
+                                             if G_LIKELY ((expr) != NULL) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should not be NULL"); \
+                                        } G_STMT_END
+#endif
+                                        
+#if !GLIB_CHECK_VERSION(2, 46, 0)
+#define g_assert_cmpmem(m1, l1, m2, l2) G_STMT_START {\
+                                             gconstpointer __m1 = m1, __m2 = m2; \
+                                             int __l1 = l1, __l2 = l2; \
+                                             if (__l1 != __l2) \
+                                               g_assertion_message_cmpnum (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                           #l1 " (len(" #m1 ")) == " #l2 " (len(" #m2 "))", __l1, "==", __l2, 'i'); \
+                                             else if (memcmp (__m1, __m2, __l1) != 0) \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "assertion failed (" #m1 " == " #m2 ")"); \
+                                        } G_STMT_END
+#endif
 
 #endif /* _GLIBCOMPAT_H_ */
