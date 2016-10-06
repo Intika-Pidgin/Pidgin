@@ -1,4 +1,4 @@
-DIST_SUBDIRS = ssl keyrings
+DIST_SUBDIRS = keyrings
 
 if ENABLE_DBUS
 DBUS_LTLIB = dbus-example.la
@@ -13,7 +13,6 @@ autoaccept_la_LDFLAGS         = -module @PLUGIN_LDFLAGS@
 buddynote_la_LDFLAGS          = -module @PLUGIN_LDFLAGS@
 caesarcipher_la_LDFLAGS          = -module @PLUGIN_LDFLAGS@
 caesarcipher_consumer_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
-ciphertest_la_LDFLAGS         = -module @PLUGIN_LDFLAGS@
 codeinline_la_LDFLAGS         = -module @PLUGIN_LDFLAGS@
 debug_example_la_LDFLAGS      = -module @PLUGIN_LDFLAGS@
 helloworld_la_LDFLAGS         = -module @PLUGIN_LDFLAGS@
@@ -47,7 +46,6 @@ plugin_LTLIBRARIES = \
 noinst_LTLIBRARIES = \
 	caesarcipher.la \
 	caesarcipher_consumer.la \
-	ciphertest.la \
 	codeinline.la \
 	debug_example.la \
 	helloworld.la \
@@ -62,7 +60,6 @@ autoaccept_la_SOURCES       = autoaccept.c
 buddynote_la_SOURCES        = buddynote.c
 caesarcipher_la_SOURCES     = caesarcipher.c caesarcipher.h
 caesarcipher_consumer_la_SOURCES = caesarcipher_consumer.c
-ciphertest_la_SOURCES		= ciphertest.c
 codeinline_la_SOURCES		= codeinline.c
 debug_example_la_SOURCES = debug_example.c
 helloworld_la_SOURCES       = helloworld.c
@@ -82,7 +79,6 @@ autoaccept_la_LIBADD         = @PURPLE_LIBS@
 buddynote_la_LIBADD          = @PURPLE_LIBS@
 caesarcipher_la_LIBADD          = @PURPLE_LIBS@
 caesarcipher_consumer_la_LIBADD = @PURPLE_LIBS@
-ciphertest_la_LIBADD         = @PURPLE_LIBS@
 codeinline_la_LIBADD         = @PURPLE_LIBS@
 idle_la_LIBADD               = @PURPLE_LIBS@
 joinpart_la_LIBADD           = @PURPLE_LIBS@
@@ -123,7 +119,6 @@ EXTRA_DIST = \
 	Makefile.mingw \
 	dbus-buddyicons-example.py \
 	filectl.c \
-	fortuneprofile.pl \
 	startup.py
 
 AM_CPPFLAGS = \

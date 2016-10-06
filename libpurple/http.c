@@ -1190,6 +1190,10 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 		const gchar *redirect;
 
 		if (hc->is_chunked && !hc->chunks_done) {
+			if (len == 0) {
+				_purple_http_error(hc, _("Chunked connection terminated"));
+				return FALSE;
+			}
 			if (purple_debug_is_verbose()) {
 				purple_debug_misc("http",
 					"I need the terminating empty chunk\n");
@@ -2007,13 +2011,13 @@ void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 {
 	gchar *escaped_name = g_strdup(purple_url_encode(name));
 	gchar *escaped_value = NULL;
-	
-	if (escaped_value) {
+
+	if (value) {
 		escaped_value = g_strdup(purple_url_encode(value));
 	}
-	
+
 	purple_http_cookie_jar_set_ext(cookie_jar, escaped_name, escaped_value, -1);
-	
+
 	g_free(escaped_name);
 	g_free(escaped_value);
 }
