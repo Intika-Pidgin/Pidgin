@@ -88,7 +88,6 @@ void pidgin_tooltip_destroy()
 	}
 }
 
-#if GTK_CHECK_VERSION(3,0,0)
 static gboolean
 pidgin_tooltip_draw_cb(GtkWidget *widget, cairo_t *cr, gpointer data)
 {
@@ -105,20 +104,6 @@ pidgin_tooltip_draw_cb(GtkWidget *widget, cairo_t *cr, gpointer data)
 	}
 	return FALSE;
 }
-#else
-static gboolean
-pidgin_tooltip_expose_event(GtkWidget *widget, GdkEventExpose *event, gpointer data)
-{
-	if (pidgin_tooltip.paint_tooltip) {
-		cairo_t *cr = gdk_cairo_create(GDK_DRAWABLE(gtk_widget_get_window(widget)));
-		gtk_paint_flat_box(widget->style, widget->window, GTK_STATE_NORMAL, GTK_SHADOW_OUT,
-		                   NULL, widget, "tooltip", 0, 0, -1, -1);
-		pidgin_tooltip.paint_tooltip(widget, cr, data);
-		cairo_destroy(cr);
-	}
-	return FALSE;
-}
-#endif
 
 static GtkWidget*
 setup_tooltip_window(void)
@@ -141,7 +126,6 @@ setup_tooltip_window(void)
 static void
 setup_tooltip_window_position(gpointer data, int w, int h)
 {
-	int sig;
 	int scr_w, scr_h, x, y, dy;
 	int preserved_x, preserved_y;
 	int mon_num;
@@ -149,17 +133,12 @@ setup_tooltip_window_position(gpointer data, int w, int h)
 	GdkRectangle mon_size;
 	GtkWidget *tipwindow = pidgin_tooltip.tipwindow;
 
-#if GTK_CHECK_VERSION(3,0,0)
 	GdkDeviceManager *devmgr;
 	GdkDevice *dev;
 
 	devmgr = gdk_display_get_device_manager(gdk_display_get_default());
 	dev = gdk_device_manager_get_client_pointer(devmgr);
 	gdk_device_get_position(dev, &screen, &x, &y);
-#else
-	gdk_display_get_pointer(gdk_display_get_default(),
-		&screen, &x, &y, NULL);
-#endif
 
 	mon_num = gdk_screen_get_monitor_at_point(screen, x, y);
 	gdk_screen_get_monitor_geometry(screen, mon_num, &mon_size);
@@ -209,17 +188,13 @@ setup_tooltip_window_position(gpointer data, int w, int h)
 	gtk_window_move(GTK_WINDOW(tipwindow), x, y);
 	gtk_widget_show(tipwindow);
 
-#if GTK_CHECK_VERSION(3,0,0)
 	g_signal_connect(G_OBJECT(tipwindow), "draw",
 			G_CALLBACK(pidgin_tooltip_draw_cb), data);
-#else
-	g_signal_connect(G_OBJECT(tipwindow), "expose_event",
-			G_CALLBACK(pidgin_tooltip_expose_event), data);
-#endif
 
 	/* Hide the tooltip when the widget is destroyed */
-	sig = g_signal_connect(G_OBJECT(pidgin_tooltip.widget), "destroy", G_CALLBACK(pidgin_tooltip_destroy), NULL);
-	g_signal_connect_swapped(G_OBJECT(tipwindow), "destroy", G_CALLBACK(g_source_remove), GINT_TO_POINTER(sig));
+	g_signal_connect_object(G_OBJECT(pidgin_tooltip.widget),
+			"destroy", G_CALLBACK(pidgin_tooltip_destroy),
+			G_OBJECT(tipwindow), 0);
 }
 
 void pidgin_tooltip_show(GtkWidget *widget, gpointer userdata,

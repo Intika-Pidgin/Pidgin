@@ -37,7 +37,6 @@
 #include	"filexfer.h"
 #include	"actions.h"
 #include	"multimx.h"
-#include	"voicevideo.h"
 
 
 #ifdef	MXIT_LINK_CLICK
@@ -112,8 +111,7 @@ static void* mxit_link_click( const char* link64 )
 skip:
 	/* this is not an internal mxit link */
 
-	if ( link )
-		g_free( link );
+	g_free(link);
 	link = NULL;
 
 	if ( parts )
@@ -491,12 +489,9 @@ static void mxit_free_buddy( PurpleBuddy* buddy )
 
 	contact = purple_buddy_get_protocol_data( buddy );
 	if ( contact ) {
-		if ( contact->statusMsg )
-			g_free( contact->statusMsg );
-		if ( contact->avatarId )
-			g_free( contact->avatarId );
-		if ( contact->msg )
-			g_free( contact->msg );
+		g_free(contact->statusMsg);
+		g_free(contact->avatarId);
+		g_free(contact->msg);
 		if (contact->image)
 			g_object_unref(contact->image);
 		g_free( contact );
@@ -832,14 +827,6 @@ mxit_protocol_chat_iface_init( PurpleProtocolChatIface *chat_iface )
 
 
 static void
-mxit_protocol_media_iface_init( PurpleProtocolMediaIface *media_iface )
-{
-	media_iface->initiate_session = mxit_media_initiate;
-	media_iface->get_caps         = mxit_media_caps;
-}
-
-
-static void
 mxit_protocol_xfer_iface_init( PurpleProtocolXferIface *xfer_iface )
 {
 	xfer_iface->can_receive = mxit_xfer_enabled;	/* [filexfer.c] */
@@ -862,9 +849,6 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC( PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
 	                                   mxit_protocol_chat_iface_init )
-
-	PURPLE_IMPLEMENT_INTERFACE_STATIC( PURPLE_TYPE_PROTOCOL_MEDIA_IFACE,
-	                                   mxit_protocol_media_iface_init )
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC( PURPLE_TYPE_PROTOCOL_XFER_IFACE,
 	                                   mxit_protocol_xfer_iface_init )

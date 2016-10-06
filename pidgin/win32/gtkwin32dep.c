@@ -187,27 +187,19 @@ void winpidgin_notify_uri(const char *uri) {
 #define PIDGIN_WM_PROTOCOL_HANDLE (WM_APP + 14)
 
 static void*
-winpidgin_netconfig_changed_cb(void *data)
+winpidgin_netconfig_changed_cb(GNetworkMonitor *monitor, gboolean available, gpointer data)
 {
 	pwm_handles_connections = FALSE;
 
 	return NULL;
 }
 
-static void*
-winpidgin_get_handle(void)
-{
-	static int handle;
-
-	return &handle;
-}
-
 static gboolean
 winpidgin_pwm_reconnect()
 {
-	purple_signal_disconnect(purple_network_get_handle(), "network-configuration-changed",
-		winpidgin_get_handle(), PURPLE_CALLBACK(winpidgin_netconfig_changed_cb));
-
+	g_signal_handlers_disconnect_by_func(g_network_monitor_get_default,
+	                                     G_CALLBACK(winpidgin_netconfig_changed_cb),
+	                                     NULL);
 	if (pwm_handles_connections == TRUE) {
 		PurpleConnectionUiOps *ui_ops = pidgin_connections_get_ui_ops();
 
@@ -246,8 +238,10 @@ static LRESULT CALLBACK message_window_handler(HWND hwnd, UINT msg, WPARAM wpara
 			if (ui_ops != NULL && ui_ops->network_disconnected != NULL)
 				ui_ops->network_disconnected();
 
-			purple_signal_connect(purple_network_get_handle(), "network-configuration-changed", winpidgin_get_handle(),
-				PURPLE_CALLBACK(winpidgin_netconfig_changed_cb), NULL);
+			g_signal_connect(g_network_monitor_get_default(),
+			                 "network-changed",
+			                 G_CALLBACK(winpidgin_netconfig_changed_cb),
+			                 NULL);
 
 			return TRUE;
 		} else if (wparam == PBT_APMRESUMESUSPEND) {
@@ -463,12 +457,49 @@ get_WorkingAreaRectForWindow(HWND hwnd, RECT *workingAreaRc) {
 	return TRUE;
 }
 
+typedef HRESULT (WINAPI* DwmIsCompositionEnabledFunction)(BOOL*);
+typedef HRESULT (WINAPI* DwmGetWindowAttributeFunction)(HWND, DWORD, PVOID, DWORD);
+static HMODULE dwmapi_module = NULL;
+static DwmIsCompositionEnabledFunction DwmIsCompositionEnabled = NULL;
+static DwmGetWindowAttributeFunction DwmGetWindowAttribute = NULL;
+#ifndef DWMWA_EXTENDED_FRAME_BOUNDS
+#	define DWMWA_EXTENDED_FRAME_BOUNDS 9
+#endif
+
+static RECT
+get_actualWindowRect(HWND hwnd)
+{
+	RECT winR;
+
+	GetWindowRect(hwnd, &winR);
+
+	if (dwmapi_module == NULL) {
+		dwmapi_module = GetModuleHandleW(L"dwmapi.dll");
+		if (dwmapi_module != NULL) {
+			DwmIsCompositionEnabled = (DwmIsCompositionEnabledFunction) GetProcAddress(dwmapi_module, "DwmIsCompositionEnabled");
+			DwmGetWindowAttribute = (DwmGetWindowAttributeFunction) GetProcAddress(dwmapi_module, "DwmGetWindowAttribute");
+		}
+	}
+
+	if (DwmIsCompositionEnabled != NULL && DwmGetWindowAttribute != NULL) {
+		BOOL pfEnabled;
+		if (SUCCEEDED(DwmIsCompositionEnabled(&pfEnabled))) {
+			RECT tempR;
+			if (SUCCEEDED(DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &tempR, sizeof(tempR)))) {
+				winR = tempR;
+			}
+		}
+	}
+
+	return winR;
+}
+
 void winpidgin_ensure_onscreen(GtkWidget *win) {
 	RECT winR, wAR, intR;
 	HWND hwnd = GDK_WINDOW_HWND(gtk_widget_get_window(win));
 
 	g_return_if_fail(hwnd != NULL);
-	GetWindowRect(hwnd, &winR);
+	winR = get_actualWindowRect(hwnd);
 
 	purple_debug_info("win32placement",
 			"Window RECT: L:%ld R:%ld T:%ld B:%ld\n",

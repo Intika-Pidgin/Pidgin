@@ -30,7 +30,6 @@
 #include "connection.h"
 #include "conversation.h"
 #include "debug.h"
-#include "dnssrv.h"
 #include "http.h"
 #include "message.h"
 #include "notify.h"
@@ -95,16 +94,13 @@ static GHashTable *jabber_cmds = NULL; /* PurpleProtocol * => GSList of ids */
 static gint plugin_ref = 0;
 
 static void jabber_unregister_account_cb(JabberStream *js);
-static void try_srv_connect(JabberStream *js);
 
 static void jabber_stream_init(JabberStream *js)
 {
 	char *open_stream;
 
-	if (js->stream_id) {
-		g_free(js->stream_id);
-		js->stream_id = NULL;
-	}
+	g_free(js->stream_id);
+	js->stream_id = NULL;
 
 	open_stream = g_strdup_printf("<stream:stream to='%s' "
 				          "xmlns='" NS_XMPP_CLIENT "' "
@@ -224,12 +220,13 @@ static char *jabber_prep_resource(char *input) {
 static gboolean
 jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 {
-	PurpleAccount *account;
+#if 0
 	PurpleXmlNode *starttls;
+
+	PurpleAccount *account;
 
 	account = purple_connection_get_account(js->gc);
 
-#if 0
 	/*
 	 * This code DOES NOT EXIST, will never be enabled by default, and
 	 * will never ever be supported (by me).
@@ -237,23 +234,19 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	 */
 	{
 		const gchar *connection_security = purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS);
-		if (!g_str_equal(connection_security, "none") &&
-				purple_ssl_is_supported()) {
+		if (!g_str_equal(connection_security, "none")) {
 			jabber_send_raw(js,
 					"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
 			return TRUE;
 		}
 	}
 #else
-	if(purple_ssl_is_supported()) {
-		jabber_send_raw(js,
-				"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
-		return TRUE;
-	} else {
-		purple_debug_warning("jabber", "No libpurple TLS/SSL support found.");
-	}
+	jabber_send_raw(js,
+			"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
+	return TRUE;
 #endif
 
+#if 0
 	starttls = purple_xmlnode_get_child(packet, "starttls");
 	if(purple_xmlnode_get_child(starttls, "required")) {
 		purple_connection_error(js->gc,
@@ -270,6 +263,7 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	}
 
 	return FALSE;
+#endif
 }
 
 void jabber_stream_features_parse(JabberStream *js, PurpleXmlNode *packet)
@@ -765,27 +759,54 @@ jabber_login_callback_ssl(gpointer data, PurpleSslConnection *gsc,
 }
 
 static void
-txt_resolved_cb(GList *responses, gpointer data)
+txt_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 {
+	GError *error = NULL;
+	GList *records = NULL, *l = NULL;
 	JabberStream *js = data;
 	gboolean found = FALSE;
 
-	js->srv_query_data = NULL;
+	records = g_resolver_lookup_records_finish(G_RESOLVER(sender),
+			result, &error);
+	if(error) {
+		purple_debug_warning("jabber", "Unable to find alternative XMPP connection "
+				  "methods after failing to connect directly. : %s\n",
+				  error->message);
 
-	while (responses) {
-		PurpleTxtResponse *resp = responses->data;
-		gchar **token;
-		token = g_strsplit(purple_txt_response_get_content(resp), "=", 2);
-		if (!strcmp(token[0], "_xmpp-client-xbosh")) {
-			purple_debug_info("jabber","Found alternative connection method using %s at %s.\n", token[0], token[1]);
-			js->bosh = jabber_bosh_connection_new(js, token[1]);
-			g_strfreev(token);
-			break;
-		}
-		g_strfreev(token);
-		purple_txt_response_destroy(resp);
-		responses = g_list_delete_link(responses, responses);
+		purple_connection_error(js->gc,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				_("Unable to connect"));
+
+		g_error_free(error);
+
+		return;
 	}
+
+	for(l = records; l; l = l->next) {
+		GVariantIter *iter = NULL;
+		gchar *str = NULL;
+
+		g_variant_get((GVariant *)l->data, "(as)", &iter);
+		while(g_variant_iter_loop(iter, "s", &str)) {
+			gchar **token = g_strsplit(str, "=", 2);
+
+			if(!g_ascii_strcasecmp(token[0], "_xmpp-client-xbosh")) {
+				purple_debug_info("jabber","Found alternative connection method using %s at %s.\n", token[0], token[1]);
+
+				js->bosh = jabber_bosh_connection_new(js, token[1]);
+
+				g_strfreev(token);
+
+				break;
+			}
+
+			g_strfreev(token);
+		}
+
+		g_variant_iter_free(iter);
+	}
+
+	g_list_free_full(records, (GDestroyNotify)g_variant_unref);
 
 	if (js->bosh)
 		found = TRUE;
@@ -798,11 +819,6 @@ txt_resolved_cb(GList *responses, gpointer data)
 				_("Unable to connect"));
 		return;
 	}
-
-	if (responses) {
-		g_list_foreach(responses, (GFunc)purple_txt_response_destroy, NULL);
-		g_list_free(responses);
-	}
 }
 
 static void
@@ -812,20 +828,22 @@ jabber_login_callback(gpointer data, gint source, const gchar *error)
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 
 	if (source < 0) {
-		if (js->srv_rec != NULL) {
-			purple_debug_error("jabber", "Unable to connect to server: %s.  Trying next SRV record or connecting directly.\n", error);
-			try_srv_connect(js);
-		} else {
-			purple_debug_info("jabber","Couldn't connect directly to %s.  Trying to find alternative connection methods, like BOSH.\n", js->user->domain);
-			js->srv_query_data = purple_txt_resolve(
-					purple_connection_get_account(gc), "_xmppconnect",
-					js->user->domain, txt_resolved_cb, js);
-		}
+		GResolver *resolver = g_resolver_get_default();
+		gchar *name = g_strdup_printf("_xmppconnect.%s", js->user->domain);
+
+		purple_debug_info("jabber", "Couldn't connect directly to %s.  Trying to find alternative connection methods, like BOSH.\n", js->user->domain);
+
+		g_resolver_lookup_records_async(resolver,
+		                                name,
+		                                G_RESOLVER_RECORD_TXT,
+		                                js->cancellable,
+		                                txt_resolved_cb,
+		                                js);
+		g_free(name);
+		g_object_unref(resolver);
+
 		return;
 	}
-
-	g_free(js->srv_rec);
-	js->srv_rec = NULL;
 
 	js->fd = source;
 
@@ -888,37 +906,44 @@ static gboolean jabber_login_connect(JabberStream *js, const char *domain, const
 	return TRUE;
 }
 
-static void try_srv_connect(JabberStream *js)
+static void
+srv_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 {
-	while (js->srv_rec != NULL && js->srv_rec_idx < js->max_srv_rec_idx) {
-		PurpleSrvResponse *tmp_resp = js->srv_rec + (js->srv_rec_idx++);
-		if (jabber_login_connect(js, tmp_resp->hostname, tmp_resp->hostname, tmp_resp->port, FALSE))
-			return;
-	}
-
-	g_free(js->srv_rec);
-	js->srv_rec = NULL;
-
-	/* Fall back to the defaults (I'm not sure if we should actually do this) */
-	jabber_login_connect(js, js->user->domain, js->user->domain,
-			purple_account_get_int(purple_connection_get_account(js->gc), "port", 5222),
-			TRUE);
-}
-
-static void srv_resolved_cb(PurpleSrvResponse *resp, int results, gpointer data)
-{
+	GError *error = NULL;
+	GList *targets = NULL, *l = NULL;
 	JabberStream *js = data;
-	js->srv_query_data = NULL;
 
-	if(results) {
-		js->srv_rec = resp;
-		js->srv_rec_idx = 0;
-		js->max_srv_rec_idx = results;
-		try_srv_connect(js);
-	} else {
+	targets = g_resolver_lookup_service_finish(G_RESOLVER(sender),
+			result, &error);
+	if(error) {
+		purple_debug_warning("jabber",
+		                     "SRV lookup failed, proceeding with normal connection : %s",
+		                     error->message);
+
+		g_error_free(error);
+
 		jabber_login_connect(js, js->user->domain, js->user->domain,
 				purple_account_get_int(purple_connection_get_account(js->gc), "port", 5222),
 				TRUE);
+
+	} else {
+		for(l = targets; l; l = l->next) {
+			GSrvTarget *target = (GSrvTarget *)l->data;
+			const gchar *hostname = g_srv_target_get_hostname(target);
+			guint port = g_srv_target_get_port(target);
+
+			if(jabber_login_connect(js, hostname, hostname, port, FALSE)) {
+				g_resolver_free_targets(targets);
+
+				return;
+			}
+		}
+
+		g_resolver_free_targets(targets);
+
+		jabber_login_connect(js, js->user->domain, js->user->domain,
+				purple_account_get_int(purple_connection_get_account(js->gc), "port", 5222),
+				TRUE);		
 	}
 }
 
@@ -936,6 +961,9 @@ jabber_stream_new(PurpleAccount *account)
 	js->gc = gc;
 	js->fd = -1;
 	js->http_conns = purple_http_connection_set_new();
+
+	/* we might want to expose this at some point */
+	js->cancellable = g_cancellable_new();
 
 	user = g_strdup(purple_account_get_username(account));
 	/* jabber_id_new doesn't accept "user@domain/" as valid */
@@ -1007,7 +1035,6 @@ jabber_stream_new(PurpleAccount *account)
 	js->sessions = NULL;
 	js->stun_ip = NULL;
 	js->stun_port = 0;
-	js->stun_query = NULL;
 	js->google_relay_token = NULL;
 	js->google_relay_host = NULL;
 
@@ -1051,19 +1078,13 @@ jabber_stream_connect(JabberStream *js)
 
 	/* if they've got old-ssl mode going, we probably want to ignore SRV lookups */
 	if (g_str_equal("old_ssl", purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS))) {
-		if(purple_ssl_is_supported()) {
-			js->gsc = purple_ssl_connect(account, js->certificate_CN,
-					purple_account_get_int(account, "port", 5223),
-					jabber_login_callback_ssl, jabber_ssl_connect_failure, gc);
-			if (!js->gsc) {
-				purple_connection_error(gc,
-					PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-					_("Unable to establish SSL connection"));
-			}
-		} else {
+		js->gsc = purple_ssl_connect(account, js->certificate_CN,
+				purple_account_get_int(account, "port", 5223),
+				jabber_login_callback_ssl, jabber_ssl_connect_failure, gc);
+		if (!js->gsc) {
 			purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-				_("SSL support unavailable"));
+				_("Unable to establish SSL connection"));
 		}
 
 		return;
@@ -1075,8 +1096,15 @@ jabber_stream_connect(JabberStream *js)
 		jabber_login_connect(js, js->user->domain, connect_server,
 				purple_account_get_int(account, "port", 5222), TRUE);
 	} else {
-		js->srv_query_data = purple_srv_resolve(account, "xmpp-client",
-				"tcp", js->user->domain, srv_resolved_cb, js);
+		GResolver *resolver = g_resolver_get_default();
+		g_resolver_lookup_service_async(resolver,
+		                                "xmpp-client",
+		                                "tcp",
+		                                js->user->domain,
+		                                js->cancellable,
+		                                srv_resolved_cb,
+		                                js);
+		g_object_unref(resolver);
 	}
 }
 
@@ -1608,9 +1636,6 @@ void jabber_close(PurpleConnection *gc)
 	} else if ((js->gsc && js->gsc->fd > 0) || js->fd > 0)
 		jabber_send_raw(js, "</stream:stream>", -1);
 
-	if (js->srv_query_data)
-		purple_srv_txt_query_destroy(js->srv_query_data);
-
 	if(js->gsc) {
 		purple_ssl_close(js->gsc);
 	} else if (js->fd > 0) {
@@ -1674,6 +1699,7 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->sasl_cb);
 	/* Note: _not_ g_free.  See auth_cyrus.c:jabber_sasl_cb_secret */
 	free(js->sasl_secret);
+	g_free(js->sasl_password);
 #endif
 	g_free(js->serverFQDN);
 	while(js->commands) {
@@ -1706,17 +1732,10 @@ void jabber_close(PurpleConnection *gc)
 	if (js->conn_close_timeout != 0)
 		purple_timeout_remove(js->conn_close_timeout);
 
-	g_free(js->srv_rec);
-	js->srv_rec = NULL;
+	g_cancellable_cancel(js->cancellable);
+	g_object_unref(G_OBJECT(js->cancellable));
 
 	g_free(js->stun_ip);
-	js->stun_ip = NULL;
-
-	/* cancel DNS query for STUN, if one is ongoing */
-	if (js->stun_query) {
-		purple_dnsquery_destroy(js->stun_query);
-		js->stun_query = NULL;
-	}
 
 	/* remove Google relay-related stuff */
 	g_free(js->google_relay_token);
@@ -2649,10 +2668,8 @@ void jabber_convo_closed(PurpleConnection *gc, const char *who)
 
 	if((jb = jabber_buddy_find(js, who, TRUE)) &&
 			(jbr = jabber_buddy_find_resource(jb, jid->resource))) {
-		if(jbr->thread_id) {
-			g_free(jbr->thread_id);
-			jbr->thread_id = NULL;
-		}
+		g_free(jbr->thread_id);
+		jbr->thread_id = NULL;
 	}
 
 	jabber_id_free(jid);

@@ -114,11 +114,7 @@ typedef struct
 	GtkWidget *password_box;
 	gchar *password;
 	GtkWidget *username_entry;
-#if GTK_CHECK_VERSION(3,0,0)
 	GdkRGBA username_entry_hint_color;
-#else
-	GdkColor *username_entry_hint_color;
-#endif
 	GtkWidget *password_entry;
 	GtkWidget *alias_entry;
 	GtkWidget *remember_pass_check;
@@ -308,144 +304,6 @@ username_changed_cb(GtkEntry *entry, AccountPrefsDialog *dialog)
 	}
 }
 
-#if !GTK_CHECK_VERSION(3,2,0)
-static gboolean
-username_focus_cb(GtkWidget *widget, GdkEventFocus *event, AccountPrefsDialog *dialog)
-{
-	GHashTable *table;
-	const char *label;
-
-	if (!dialog->protocol || ! PURPLE_PROTOCOL_IMPLEMENTS(
-		dialog->protocol, CLIENT_IFACE, get_account_text_table)) {
-		return FALSE;
-	}
-
-	table = purple_protocol_client_iface_get_account_text_table(dialog->protocol, NULL);
-	label = g_hash_table_lookup(table, "login_label");
-
-	if(!strcmp(gtk_entry_get_text(GTK_ENTRY(widget)), label)) {
-		gtk_entry_set_text(GTK_ENTRY(widget), "");
-#if GTK_CHECK_VERSION(3,0,0)
-		gtk_widget_override_color(widget, GTK_STATE_NORMAL, NULL);
-#else
-		gtk_widget_modify_text(widget, GTK_STATE_NORMAL,NULL);
-#endif
-	}
-
-	g_hash_table_destroy(table);
-
-	return FALSE;
-}
-
-static gboolean
-username_nofocus_cb(GtkWidget *widget, GdkEventFocus *event, AccountPrefsDialog *dialog)
-{
-	GHashTable *table = NULL;
-	const char *label = NULL;
-
-	if (PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, CLIENT_IFACE, get_account_text_table)) {
-		table = purple_protocol_client_iface_get_account_text_table(dialog->protocol, NULL);
-		label = g_hash_table_lookup(table, "login_label");
-
-		if (*gtk_entry_get_text(GTK_ENTRY(widget)) == '\0') {
-			/* We have to avoid hitting the username_changed_cb function
-			 * because it enables buttons we don't want enabled yet ;)
-			 */
-			g_signal_handlers_block_by_func(widget, G_CALLBACK(username_changed_cb), dialog);
-			gtk_entry_set_text(GTK_ENTRY(widget), label);
-			/* Make sure we can hit it again */
-			g_signal_handlers_unblock_by_func(widget, G_CALLBACK(username_changed_cb), dialog);
-#if GTK_CHECK_VERSION(3,0,0)
-			gtk_widget_override_color(widget, GTK_STATE_NORMAL, &dialog->username_entry_hint_color);
-#else
-			gtk_widget_modify_text(widget, GTK_STATE_NORMAL, dialog->username_entry_hint_color);
-#endif
-		}
-
-		g_hash_table_destroy(table);
-	}
-
-	return FALSE;
-}
-
-static gboolean
-username_themechange_cb(GObject *widget, GdkEventFocus *event, AccountPrefsDialog *dialog)
-{
-	GHashTable *table;
-	const char *label, *text;
-	char *temp_text = NULL;
-#if GTK_CHECK_VERSION(3,0,0)
-	GtkStyleContext *context;
-	GtkBorder border;
-#else
-	GtkStyle *style;
-	const GtkBorder *border = NULL;
-#endif
-	gint xsize;
-
-	table = purple_protocol_client_iface_get_account_text_table(dialog->protocol, NULL);
-	label = g_hash_table_lookup(table, "login_label");
-	text = gtk_entry_get_text(GTK_ENTRY(widget));
-
-	g_signal_handlers_block_by_func(widget, G_CALLBACK(username_themechange_cb), dialog);
-	g_signal_handlers_block_by_func(widget, G_CALLBACK(username_changed_cb), dialog);
-	if (strcmp(text, label)) {
-		temp_text = g_strdup(text);
-		gtk_entry_set_text(GTK_ENTRY(widget), label);
-#if GTK_CHECK_VERSION(3,0,0)
-		gtk_widget_override_color(GTK_WIDGET(widget), GTK_STATE_NORMAL, NULL);
-#else
-		gtk_widget_modify_text(GTK_WIDGET(widget), GTK_STATE_NORMAL, NULL);
-#endif
-	}
-
-#if GTK_CHECK_VERSION(3,0,0)
-	context = gtk_widget_get_style_context(dialog->username_entry);
-	gtk_style_context_get_color(context, GTK_STATE_FLAG_INSENSITIVE,
-	                            &dialog->username_entry_hint_color);
-#else
-	style = gtk_rc_get_style(dialog->username_entry);
-	dialog->username_entry_hint_color = &(style->fg[GTK_STATE_INSENSITIVE]);
-#endif
-
-	pango_layout_get_pixel_size(gtk_entry_get_layout(GTK_ENTRY(widget)), &xsize, NULL);
-#if GTK_CHECK_VERSION(3,0,0)
-	gtk_style_context_get_margin(context, GTK_STATE_FLAG_NORMAL, &border);
-	xsize += border.left + border.right;
-	gtk_style_context_get_padding(context, GTK_STATE_FLAG_NORMAL, &border);
-	xsize += border.left + border.right;
-#else
-	xsize += 2 * style->xthickness;
-	gtk_style_get(style, GTK_TYPE_ENTRY, "inner-border", &border, NULL);
-	if (border)
-		xsize += border->left + border->right;
-	else
-		xsize += 4; /* 2 * default inner-border */
-#endif
-	gtk_widget_set_size_request(GTK_WIDGET(widget), xsize, -1);
-	if (temp_text) {
-		gtk_entry_set_text(GTK_ENTRY(widget), temp_text);
-		g_free(temp_text);
-#if GTK_CHECK_VERSION(3,0,0)
-		gtk_widget_override_color(GTK_WIDGET(widget), GTK_STATE_NORMAL, NULL);
-#else
-		gtk_widget_modify_text(GTK_WIDGET(widget), GTK_STATE_NORMAL, NULL);
-#endif
-	} else
-#if GTK_CHECK_VERSION(3,0,0)
-		gtk_widget_override_color(GTK_WIDGET(widget), GTK_STATE_NORMAL, &dialog->username_entry_hint_color);
-#else
-		gtk_widget_modify_text(GTK_WIDGET(widget), GTK_STATE_NORMAL, dialog->username_entry_hint_color);
-#endif
-
-	g_signal_handlers_unblock_by_func(widget, G_CALLBACK(username_themechange_cb), dialog);
-	g_signal_handlers_unblock_by_func(widget, G_CALLBACK(username_changed_cb), dialog);
-	g_hash_table_destroy(table);
-
-	return FALSE;
-}
-#endif
-
 static void
 register_button_cb(GtkWidget *checkbox, AccountPrefsDialog *dialog)
 {
@@ -454,11 +312,6 @@ register_button_cb(GtkWidget *checkbox, AccountPrefsDialog *dialog)
 	int opt_noscreenname = (dialog->protocol != NULL &&
 		(purple_protocol_get_options(dialog->protocol) & OPT_PROTO_REGISTER_NOSCREENNAME));
 	int register_noscreenname = (opt_noscreenname && register_checked);
-
-#if !GTK_CHECK_VERSION(3,2,0)
-	/* get rid of login_label in username field */
-	username_focus_cb(dialog->username_entry, NULL, dialog);
-#endif
 
 	if (register_noscreenname) {
 		gtk_entry_set_text(GTK_ENTRY(dialog->username_entry), "");
@@ -475,10 +328,6 @@ register_button_cb(GtkWidget *checkbox, AccountPrefsDialog *dialog)
 			*gtk_entry_get_text(GTK_ENTRY(dialog->username_entry))
 				!= '\0');
 	}
-
-#if !GTK_CHECK_VERSION(3,2,0)
-	username_nofocus_cb(dialog->username_entry, NULL, dialog);
-#endif
 }
 
 static void
@@ -548,12 +397,8 @@ account_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 static void
 update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 {
-#if GTK_CHECK_VERSION(3,0,0)
 	GtkStyleContext *style;
 	GdkRGBA color;
-#else
-	GtkStyle *style;
-#endif
 	gboolean set;
 	GList *l;
 
@@ -566,7 +411,6 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 	set = !(purple_account_is_connected(dialog->account) || purple_account_is_connecting(dialog->account));
 	gtk_widget_set_sensitive(dialog->protocol_menu, set);
 	gtk_editable_set_editable(GTK_EDITABLE(dialog->username_entry), set);
-#if GTK_CHECK_VERSION(3,0,0)
 	style = set ? NULL : gtk_widget_get_style_context(dialog->username_entry);
 	if (style) {
 		gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
@@ -574,18 +418,12 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 	} else {
 		gtk_widget_override_background_color(dialog->username_entry, GTK_STATE_FLAG_NORMAL, NULL);
 	}
-#else
-	style = set ? NULL : gtk_widget_get_style(dialog->username_entry);
-	gtk_widget_modify_base(dialog->username_entry, GTK_STATE_NORMAL,
-			style ? &style->base[GTK_STATE_INSENSITIVE] : NULL);
-#endif
 
 	for (l = dialog->user_split_entries ; l != NULL ; l = l->next) {
 		if (l->data == NULL)
 			continue;
 		if (GTK_IS_EDITABLE(l->data)) {
 			gtk_editable_set_editable(GTK_EDITABLE(l->data), set);
-#if GTK_CHECK_VERSION(3,0,0)
 			style = set ? NULL : gtk_widget_get_style_context(GTK_WIDGET(l->data));
 			if (style) {
 				gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
@@ -593,11 +431,6 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 			} else {
 				gtk_widget_override_background_color(GTK_WIDGET(l->data), GTK_STATE_FLAG_NORMAL, NULL);
 			}
-#else
-			style = set ? NULL : gtk_widget_get_style(GTK_WIDGET(l->data));
-			gtk_widget_modify_base(GTK_WIDGET(l->data), GTK_STATE_NORMAL,
-					style ? &style->base[GTK_STATE_INSENSITIVE] : NULL);
-#endif
 		} else {
 			gtk_widget_set_sensitive(GTK_WIDGET(l->data), set);
 		}
@@ -668,18 +501,7 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		table = purple_protocol_client_iface_get_account_text_table(dialog->protocol, NULL);
 		label = g_hash_table_lookup(table, "login_label");
 
-#if GTK_CHECK_VERSION(3,2,0)
 		gtk_entry_set_placeholder_text(GTK_ENTRY(dialog->username_entry), label);
-#else
-		gtk_entry_set_text(GTK_ENTRY(dialog->username_entry), label);
-		username_themechange_cb(G_OBJECT(dialog->username_entry), NULL, dialog);
-		g_signal_connect(G_OBJECT(dialog->username_entry), "style-set",
-				G_CALLBACK(username_themechange_cb), dialog);
-		g_signal_connect(G_OBJECT(dialog->username_entry), "focus-in-event",
-				G_CALLBACK(username_focus_cb), dialog);
-		g_signal_connect(G_OBJECT(dialog->username_entry), "focus-out-event",
-				G_CALLBACK(username_nofocus_cb), dialog);
-#endif
 
 		g_hash_table_destroy(table);
 	}
@@ -2476,7 +2298,6 @@ create_accounts_list(AccountsWindow *dialog)
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
 	gtk_widget_show(label);
 
-	gtk_misc_set_alignment(GTK_MISC(label), 0.5, 0.5);
 	gtk_notebook_append_page(GTK_NOTEBOOK(accounts_window->notebook), label, NULL);
 
 	/* Create the list model. */
@@ -2574,11 +2395,7 @@ pidgin_accounts_window_show(void)
 	width  = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/accounts/dialog/width");
 	height = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/accounts/dialog/height");
 
-#if GTK_CHECK_VERSION(3,0,0)
 	dialog->window = win = pidgin_create_dialog(_("Accounts"), 0, "accounts", TRUE);
-#else
-	dialog->window = win = pidgin_create_dialog(_("Accounts"), PIDGIN_HIG_BORDER, "accounts", TRUE);
-#endif
 	gtk_window_set_default_size(GTK_WINDOW(win), width, height);
 
 	g_signal_connect(G_OBJECT(win), "delete_event",

@@ -33,7 +33,6 @@
 
 #include <glib.h>
 
-#include "blistnodetypes.h"
 #include "connection.h"
 #include "roomlist.h"
 
@@ -158,7 +157,7 @@ fb_data_new(PurpleConnection *gc);
  *
  * Loads the internal data from the underlying #PurpleAccount.
  *
- * Return: TRUE if all of the data was loaded, otherwise FALSE.
+ * Return: #TRUE if all of the data was loaded, otherwise #FALSE.
  */
 gboolean
 fb_data_load(FbData *fata);
@@ -260,7 +259,7 @@ fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list);
  * fb_data_set_unread:
  * @fata: The #FbData.
  * @id: The #FbId.
- * @unread: #TRUE if the #FbId is unread, otherwise FALSE.
+ * @unread: #TRUE if the #FbId is unread, otherwise #FALSE.
  *
  * Sets the unread state of an #FbId to the #FbData.
  */
@@ -306,6 +305,7 @@ fb_data_take_messages(FbData *fata, FbId uid);
  * @url: The image URL.
  * @func: The #FbDataImageFunc.
  * @data: The user-defined data.
+ * @dunc: The #GDestroyNotify for @data or #NULL.
  *
  * Adds a new #FbDataImage to the #FbData. This is used to fetch images
  * from HTTP sources. After calling this, #fb_data_image_queue() should
@@ -315,7 +315,7 @@ fb_data_take_messages(FbData *fata, FbId uid);
  */
 FbDataImage *
 fb_data_image_add(FbData *fata, const gchar *url, FbDataImageFunc func,
-                  gpointer data);
+                  gpointer data, GDestroyNotify dunc);
 
 /**
  * fb_data_image_get_active:

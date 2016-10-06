@@ -1705,9 +1705,9 @@ static void yahoo_auth16_stage2(PurpleHttpConnection *http_conn,
 		"\r\n", -1);
 
 	cookiejar = purple_http_conn_get_cookie_jar(http_conn);
-	yd->cookie_b = g_strdup(purple_http_cookie_jar_get(cookiejar, "B"));
-	yd->cookie_t = g_strdup(purple_http_cookie_jar_get(cookiejar, "T"));
-	yd->cookie_y = g_strdup(purple_http_cookie_jar_get(cookiejar, "Y"));
+	yd->cookie_b = purple_http_cookie_jar_get(cookiejar, "B");
+	yd->cookie_t = purple_http_cookie_jar_get(cookiejar, "T");
+	yd->cookie_y = purple_http_cookie_jar_get(cookiejar, "Y");
 
 	i = 0;
 	while (splits[i]) {
@@ -1905,11 +1905,6 @@ static void yahoo_auth16_stage1(PurpleConnection *gc, const char *seed)
 	char *encoded_password;
 
 	purple_debug_info("yahoo", "Authentication: In yahoo_auth16_stage1\n");
-
-	if(!purple_ssl_is_supported()) {
-		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT, _("SSL support unavailable"));
-		return;
-	}
 
 	auth_data = g_new0(struct yahoo_auth_data, 1);
 	auth_data->gc = gc;
@@ -3219,7 +3214,7 @@ yahoo_login_page_got(PurpleHttpConnection *hc, PurpleHttpResponse *resp,
 	PurpleAccount *account = purple_connection_get_account(gc);
 	PurpleHttpCookieJar *cjar;
 	GString *auth_s;
-	const gchar *cookie;
+	gchar *cookie;
 
 	if (purple_http_response_get_code(resp) != 302) {
 		purple_connection_error(gc,
@@ -3231,14 +3226,20 @@ yahoo_login_page_got(PurpleHttpConnection *hc, PurpleHttpResponse *resp,
 	auth_s = g_string_new(NULL);
 	cjar = purple_http_conn_get_cookie_jar(hc);
 	cookie = purple_http_cookie_jar_get(cjar, "B");
-	if (cookie)
+	if (cookie) {
 		g_string_append_printf(auth_s, "B=%s; ", cookie);
+		g_free(cookie);
+	}
 	cookie = purple_http_cookie_jar_get(cjar, "T");
-	if (cookie)
+	if (cookie) {
 		g_string_append_printf(auth_s, "T=%s; ", cookie);
+		g_free(cookie);
+	}
 	cookie = purple_http_cookie_jar_get(cjar, "Y");
-	if (cookie)
+	if (cookie) {
 		g_string_append_printf(auth_s, "Y=%s; ", cookie);
+		g_free(cookie);
+	}
 
 	yd->auth = g_string_free(auth_s, FALSE);
 	/* Now we have our cookies to login with.  I'll go get the milk. */

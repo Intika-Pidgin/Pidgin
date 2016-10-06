@@ -32,9 +32,7 @@
 #endif
 
 /* Alver says we need this for IRIX. */
-#if HAVE_STRING_H
 #include "string.h"
-#endif
 
 #ifdef __GNUC__
 #define alloca __builtin_alloca
@@ -108,7 +106,7 @@ char *alloca ();
    Also, when `ordering' is RETURN_IN_ORDER,
    each non-option ARGV-element is returned here.  */
 
-char *optarg = 0;
+char *optarg = NULL;
 
 /* Index in ARGV of the next element to be scanned.
    This is used for communication to and from the caller
@@ -327,7 +325,7 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 {
   int option_index;
 
-  optarg = 0;
+  optarg = NULL;
 
   /* Initialize the internal data when the first call is made.
      Start processing options with ARGV-element 1 (since ARGV-element 0
@@ -607,7 +605,7 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 		optind++;
 	      }
 	    else
-	      optarg = 0;
+	      optarg = NULL;
 	    nextchar = NULL;
 	  }
 	else

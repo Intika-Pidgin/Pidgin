@@ -45,6 +45,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <time.h>
+#include <gmodule.h>
 
 #ifndef _WIN32
 #include <sys/time.h>
@@ -116,7 +117,7 @@ extern "C" {
 /**
  * Maximum length for the password of an ICQ account
  */
-#define MAXICQPASSLEN 8
+#define MAXICQPASSLEN 16
 
 #define AIM_MD5_STRING "AOL Instant Messenger (SM)"
 
@@ -522,6 +523,12 @@ int aim_send_login(OscarData *od, FlapConnection *conn, const char *bn, const ch
  * Only used when connecting with clientLogin.
  */
 void send_client_login(OscarData *od, const char *username);
+
+/**
+ * Only used when connecting with kerberos login.
+ */
+void send_kerberos_login(OscarData *od, const char *username);
+
 
 /* flap_connection.c */
 FlapConnection *flap_connection_new(OscarData *, int type);
@@ -1366,7 +1373,7 @@ struct name_data
 
 void oscar_free_name_data(struct name_data *data);
 
-void oscar_init_account_options(PurpleProtocol *protocol);
+void oscar_init_account_options(PurpleProtocol *protocol, gboolean is_icq);
 
 #ifdef __cplusplus
 }

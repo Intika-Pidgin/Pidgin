@@ -53,7 +53,6 @@
 #include <accountopt.h>
 #include <buddylist.h>
 #include <buddyicon.h>
-#include <certificate.h>
 #include <cipher.h>
 #include <circularbuffer.h>
 #include <cmds.h>
@@ -61,9 +60,6 @@
 #include <conversations.h>
 #include <core.h>
 #include <debug.h>
-#include <desktopitem.h>
-#include <dnsquery.h>
-#include <dnssrv.h>
 #include <enums.h>
 #include <eventloop.h>
 #include <idle.h>
@@ -98,6 +94,7 @@
 #include <theme.h>
 #include <theme-loader.h>
 #include <theme-manager.h>
+#include <tls-certificate.h>
 #include <upnp.h>
 #include <util.h>
 #include <version.h>

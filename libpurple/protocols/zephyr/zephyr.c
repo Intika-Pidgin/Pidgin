@@ -2313,10 +2313,8 @@ static void zephyr_set_status(PurpleAccount *account, PurpleStatus *status) {
 	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	PurpleStatusPrimitive primitive = purple_status_type_get_primitive(purple_status_get_status_type(status));
 
-	if (zephyr->away) {
-		g_free(zephyr->away);
-		zephyr->away=NULL;
-	}
+	g_free(zephyr->away);
+	zephyr->away = NULL;
 
 	if (primitive == PURPLE_STATUS_AWAY) {
 		zephyr->away = g_strdup(purple_status_get_attr_string(status,"message"));
@@ -2458,7 +2456,7 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 	if (!g_ascii_strcasecmp(classname,"%canon%"))
 		classname = g_strdup(zephyr->ourhostcanon);
 
-	if (!instname || !strlen(instname))
+	if (!instname || *instname == '\0')
 		instname = "*";
 
 	if (!g_ascii_strcasecmp(instname,"%host%"))
