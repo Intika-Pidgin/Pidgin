@@ -3107,7 +3107,7 @@ purple_util_write_data_to_cache_file(const char *filename, const char *data, gss
 gboolean
 purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size)
 {
-	const char *config_dir = purple_cache_dir();
+	const char *config_dir = purple_config_dir();
 	gboolean ret = purple_util_write_data_to_file_common(config_dir, filename, data, size);
 
 	return ret;
@@ -3116,7 +3116,7 @@ purple_util_write_data_to_config_file(const char *filename, const char *data, gs
 gboolean
 purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size)
 {
-	const char *data_dir = purple_cache_dir();
+	const char *data_dir = purple_data_dir();
 	gboolean ret = purple_util_write_data_to_file_common(data_dir, filename, data, size);
 
 	return ret;
