@@ -1022,6 +1022,7 @@ x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 {
 	CERTCertificate *crt_dat;
 	PRTime nss_activ, nss_expir;
+	SECStatus cert_times_success;
 
 	g_return_val_if_fail(crt, FALSE);
 	g_return_val_if_fail(crt->scheme == &x509_nss, FALSE);
@@ -1031,10 +1032,9 @@ x509_times (PurpleCertificate *crt, time_t *activation, time_t *expiration)
 
 	/* Extract the times into ugly PRTime thingies */
 	/* TODO: Maybe this shouldn't throw an error? */
-	g_return_val_if_fail(
-		SECSuccess == CERT_GetCertTimes(crt_dat,
-						&nss_activ, &nss_expir),
-		FALSE);
+	cert_times_success = CERT_GetCertTimes(crt_dat,
+						&nss_activ, &nss_expir);
+	g_return_val_if_fail(cert_times_success == SECSuccess, FALSE);
 
 	/* NSS's native PRTime type *almost* corresponds to time_t; however,
 	   it measures *microseconds* since the epoch, not seconds. Hence
