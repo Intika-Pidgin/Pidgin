@@ -18,7 +18,6 @@ SMILEYS = \
     bowl.png \
     boy.png \
     brb.png \
-    bulgy-eyes.png \
     bunny.png \
     bye.png \
     cake.png \
@@ -70,7 +69,6 @@ SMILEYS = \
     fingers-crossed.png \
     flag.png \
     foot-in-mouth.png \
-    freaked-out.png \
     ghost.png \
     giggle.png \
     girl.png \
@@ -106,9 +104,7 @@ SMILEYS = \
     male-fighter2.png \
     mean.png \
     meeting.png \
-    messed.png \
     mobile.png \
-    mohawk.png \
     moneymouth.png \
     monkey.png \
     moon.png \
@@ -148,15 +144,12 @@ SMILEYS = \
     shout.png \
     shut-mouth.png \
     sick.png \
-    sidefrown.png \
     silly.png \
-    sinister.png \
     skeleton.png \
     skywalker.png \
     sleeping.png \
     sleepy.png \
     happy.png \
-    smirk.png \
     snail.png \
     snicker.png \
     snowman.png \
@@ -201,7 +194,7 @@ pidginsmileypix_DATA = \
         theme
 
 theme: default.theme.in
-	sed -e 's/^_Name=/Name=/' \
+	$(AM_V_GEN) sed -e 's/^_Name=/Name=/' \
 	    -e 's/^_Description=/Description=/' \
 	    -e 's/^_Author=/Author=/' \
 	$< > $@

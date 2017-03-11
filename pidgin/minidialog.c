@@ -1,8 +1,3 @@
-/**
- * @file minidialog.c Implementation of the #PidginMiniDialog Gtk widget.
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -25,8 +20,11 @@
  */
 
 #include "internal.h"
+#include "glibcompat.h"
 
 #include <gtk/gtk.h>
+
+#include "gtk3compat.h"
 
 #include "libpurple/prefs.h"
 
@@ -64,7 +62,7 @@ pidgin_mini_dialog_get_type (void)
 			(GInstanceInitFunc) pidgin_mini_dialog_init,
 			NULL,
 		};
-		g_define_type_id = g_type_register_static (GTK_TYPE_VBOX,
+		g_define_type_id = g_type_register_static(GTK_TYPE_BOX,
 			"PidginMiniDialog", &g_define_type_info, 0);
 	}
 	return g_define_type_id;
@@ -80,6 +78,8 @@ enum
 
 	LAST_PROPERTY
 } HazeConnectionProperties;
+
+static GParamSpec *properties[LAST_PROPERTY];
 
 typedef struct _PidginMiniDialogPrivate
 {
@@ -145,16 +145,6 @@ pidgin_mini_dialog_enable_description_markup(PidginMiniDialog *mini_dialog)
 	g_object_set(G_OBJECT(mini_dialog), "enable-description-markup", TRUE, NULL);
 }
 
-gboolean
-pidgin_mini_dialog_links_supported()
-{
-#if GTK_CHECK_VERSION(2,18,0)
-	return TRUE;
-#else
-	return FALSE;
-#endif
-}
-
 void pidgin_mini_dialog_set_link_callback(PidginMiniDialog *mini_dialog, GCallback cb, gpointer user_data)
 {
 	g_signal_connect(PIDGIN_MINI_DIALOG_GET_PRIVATE(mini_dialog)->desc, "activate-link", cb, user_data);
@@ -184,7 +174,12 @@ struct _mini_dialog_button_clicked_cb_data
 guint
 pidgin_mini_dialog_get_num_children(PidginMiniDialog *mini_dialog)
 {
-	return g_list_length(mini_dialog->contents->children);
+	GList *tmp;
+	guint len;
+	tmp = gtk_container_get_children(GTK_CONTAINER(mini_dialog->contents));
+	len = g_list_length(tmp);
+	g_list_free(tmp);
+	return len;
 }
 
 static gboolean
@@ -251,7 +246,6 @@ mini_dialog_add_button(PidginMiniDialog *self,
 	g_signal_connect(G_OBJECT(button), "destroy",
 		(GCallback) mini_dialog_button_destroy_cb, callback_data);
 
-	gtk_misc_set_alignment(GTK_MISC(label), 0.5, 0.5);
 	gtk_container_add(GTK_CONTAINER(button), label);
 
 	gtk_box_pack_end(GTK_BOX(priv->buttons), button, FALSE, FALSE,
@@ -327,6 +321,8 @@ mini_dialog_set_title(PidginMiniDialog *self,
 
 	g_free(title_esc);
 	g_free(title_markup);
+
+	g_object_notify_by_pspec(G_OBJECT(self), properties[PROP_TITLE]);
 }
 
 static void
@@ -357,6 +353,8 @@ mini_dialog_set_description(PidginMiniDialog *self,
 	 	 */
 		g_object_set(G_OBJECT(priv->desc), "no-show-all", TRUE, NULL);
 	}
+
+	g_object_notify_by_pspec(G_OBJECT(self), properties[PROP_DESCRIPTION]);
 }
 
 static void
@@ -411,109 +409,82 @@ static void
 pidgin_mini_dialog_class_init(PidginMiniDialogClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS(klass);
-	GParamSpec *param_spec;
 
 	object_class->get_property = pidgin_mini_dialog_get_property;
 	object_class->set_property = pidgin_mini_dialog_set_property;
 	object_class->finalize = pidgin_mini_dialog_finalize;
 
-	param_spec = g_param_spec_string("title", "title",
+	properties[PROP_TITLE] = g_param_spec_string("title",
+		"title",
 		"String specifying the mini-dialog's title", NULL,
-		G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB |
-		G_PARAM_READWRITE);
-	g_object_class_install_property (object_class, PROP_TITLE, param_spec);
+		G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE);
 
-	param_spec = g_param_spec_string("description", "description",
+	properties[PROP_DESCRIPTION] = g_param_spec_string("description",
+		"description",
 		"Description text for the mini-dialog, if desired", NULL,
-		G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB |
-		G_PARAM_READWRITE);
-	g_object_class_install_property (object_class, PROP_DESCRIPTION, param_spec);
+		G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE);
 
-	param_spec = g_param_spec_string("icon-name", "icon-name",
+	properties[PROP_ICON_NAME] = g_param_spec_string("icon-name",
+		"icon-name",
 		"String specifying the Gtk stock name of the dialog's icon",
 		NULL,
-		G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB |
-		G_PARAM_READWRITE);
-	g_object_class_install_property (object_class, PROP_ICON_NAME, param_spec);
+		G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE);
 
-	param_spec = g_param_spec_object("custom-icon", "custom-icon",
+	properties[PROP_CUSTOM_ICON] = g_param_spec_object("custom-icon",
+		"custom-icon",
 		"Pixbuf to use as the dialog's icon",
 		GDK_TYPE_PIXBUF,
-		G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB |
-		G_PARAM_READWRITE);
-	g_object_class_install_property (object_class, PROP_CUSTOM_ICON, param_spec);
+		G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE);
 
-	param_spec = g_param_spec_boolean("enable-description-markup", "enable-description-markup",
+	properties[PROP_ENABLE_DESCRIPTION_MARKUP] =
+		g_param_spec_boolean("enable-description-markup",
+		"enable-description-markup",
 		"Use GMarkup in the description text", FALSE,
-		G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB |
-		G_PARAM_READWRITE);
-	g_object_class_install_property (object_class, PROP_ENABLE_DESCRIPTION_MARKUP, param_spec);
-}
+		G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE);
 
-/* 16 is the width of the icon, due to PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL */
-#define BLIST_WIDTH_OTHER_THAN_LABEL \
-	((PIDGIN_HIG_BOX_SPACE * 3) + 16)
-
-#define BLIST_WIDTH_PREF \
-	(PIDGIN_PREFS_ROOT "/blist/width")
-
-static void
-blist_width_changed_cb(const char *name,
-                       PurplePrefType type,
-                       gconstpointer val,
-                       gpointer data)
-{
-	PidginMiniDialog *self = PIDGIN_MINI_DIALOG(data);
-	PidginMiniDialogPrivate *priv = PIDGIN_MINI_DIALOG_GET_PRIVATE(self);
-	guint blist_width = GPOINTER_TO_INT(val);
-	guint label_width = blist_width - BLIST_WIDTH_OTHER_THAN_LABEL;
-
-	gtk_widget_set_size_request(GTK_WIDGET(priv->title), label_width, -1);
-	gtk_widget_set_size_request(GTK_WIDGET(priv->desc), label_width, -1);
+	g_object_class_install_properties(object_class, LAST_PROPERTY, properties);
 }
 
 static void
 pidgin_mini_dialog_init(PidginMiniDialog *self)
 {
 	GtkBox *self_box = GTK_BOX(self);
-	guint blist_width = purple_prefs_get_int(BLIST_WIDTH_PREF);
-	guint label_width = blist_width - BLIST_WIDTH_OTHER_THAN_LABEL;
 
 	PidginMiniDialogPrivate *priv = g_new0(PidginMiniDialogPrivate, 1);
 	self->priv = priv;
 
+	gtk_orientable_set_orientation(GTK_ORIENTABLE(self), GTK_ORIENTATION_VERTICAL);
+
 	gtk_container_set_border_width(GTK_CONTAINER(self), PIDGIN_HIG_BOX_SPACE);
 
-	priv->title_box = GTK_BOX(gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE));
+	priv->title_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE));
 
 	priv->icon = GTK_IMAGE(gtk_image_new());
-	gtk_misc_set_alignment(GTK_MISC(priv->icon), 0, 0);
+	gtk_widget_set_halign(GTK_WIDGET(priv->icon), GTK_ALIGN_START);
+	gtk_widget_set_valign(GTK_WIDGET(priv->icon), GTK_ALIGN_START);
 
 	priv->title = GTK_LABEL(gtk_label_new(NULL));
-	gtk_widget_set_size_request(GTK_WIDGET(priv->title), label_width, -1);
 	gtk_label_set_line_wrap(priv->title, TRUE);
 	gtk_label_set_selectable(priv->title, TRUE);
-	gtk_misc_set_alignment(GTK_MISC(priv->title), 0, 0);
+	gtk_label_set_xalign(priv->title, 0);
+	gtk_label_set_yalign(priv->title, 0);
 
 	gtk_box_pack_start(priv->title_box, GTK_WIDGET(priv->icon), FALSE, FALSE, 0);
 	gtk_box_pack_start(priv->title_box, GTK_WIDGET(priv->title), TRUE, TRUE, 0);
 
 	priv->desc = GTK_LABEL(gtk_label_new(NULL));
-	gtk_widget_set_size_request(GTK_WIDGET(priv->desc), label_width, -1);
 	gtk_label_set_line_wrap(priv->desc, TRUE);
-	gtk_misc_set_alignment(GTK_MISC(priv->desc), 0, 0);
+	gtk_label_set_xalign(priv->desc, 0);
+	gtk_label_set_yalign(priv->desc, 0);
 	gtk_label_set_selectable(priv->desc, TRUE);
 	/* make calling show_all() on the minidialog not affect desc even though
 	 * it's packed inside it.
 	 */
 	g_object_set(G_OBJECT(priv->desc), "no-show-all", TRUE, NULL);
 
-	purple_prefs_connect_callback(self, BLIST_WIDTH_PREF,
-		blist_width_changed_cb, self);
+	self->contents = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
 
-	self->contents = GTK_BOX(gtk_vbox_new(FALSE, 0));
-
-	priv->buttons = GTK_BOX(gtk_hbox_new(FALSE, 0));
+	priv->buttons = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
 
 	gtk_box_pack_start(self_box, GTK_WIDGET(priv->title_box), FALSE, FALSE, 0);
 	gtk_box_pack_start(self_box, GTK_WIDGET(priv->desc), FALSE, FALSE, 0);

@@ -34,6 +34,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+static GSList *cmds = NULL;
+
 static char *irc_send_convert(struct irc_conn *irc, const char *string);
 static char *irc_recv_convert(struct irc_conn *irc, const char *string);
 
@@ -44,7 +46,7 @@ static char *irc_mirc_colors[16] = {
 		"orange", "yellow", "green", "teal", "cyan", "light blue",
 		"pink", "grey", "light grey" };
 
-extern PurplePlugin *_irc_plugin;
+extern PurpleProtocol *_irc_protocol;
 
 /*typedef void (*IRCMsgCallback)(struct irc_conn *irc, char *from, char *name, char **args);*/
 static struct _irc_msg {
@@ -185,11 +187,11 @@ static PurpleCmdRet irc_parse_purple_cmd(PurpleConversation *conv, const gchar *
 	struct irc_conn *irc;
 	struct _irc_user_cmd *cmdent;
 
-	gc = purple_conversation_get_gc(conv);
+	gc = purple_conversation_get_connection(conv);
 	if (!gc)
 		return PURPLE_CMD_RET_FAILED;
 
-	irc = gc->proto_data;
+	irc = purple_connection_get_protocol_data(gc);
 
 	if ((cmdent = g_hash_table_lookup(irc->cmds, cmd)) == NULL)
 		return PURPLE_CMD_RET_FAILED;
@@ -201,12 +203,13 @@ static PurpleCmdRet irc_parse_purple_cmd(PurpleConversation *conv, const gchar *
 
 static void irc_register_command(struct _irc_user_cmd *c)
 {
+	PurpleCmdId id;
 	PurpleCmdFlag f;
 	char args[10];
 	char *format;
 	size_t i;
 
-	f = PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PRPL_ONLY
+	f = PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PROTOCOL_ONLY
 	    | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS;
 
 	format = c->format;
@@ -227,8 +230,9 @@ static void irc_register_command(struct _irc_user_cmd *c)
 
 	args[i] = '\0';
 
-	purple_cmd_register(c->name, args, PURPLE_CMD_P_PRPL, f, "prpl-irc",
+	id = purple_cmd_register(c->name, args, PURPLE_CMD_P_PROTOCOL, f, "prpl-irc",
 	                  irc_parse_purple_cmd, _(c->help), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 }
 
 void irc_register_commands(void)
@@ -237,6 +241,15 @@ void irc_register_commands(void)
 
 	for (c = _irc_cmds; c && c->name; c++)
 		irc_register_command(c);
+}
+
+void irc_unregister_commands(void)
+{
+	while (cmds) {
+		PurpleCmdId id = GPOINTER_TO_UINT(cmds->data);
+		purple_cmd_unregister(id);
+		cmds = g_slist_delete_link(cmds, cmds);
+	}
 }
 
 static char *irc_send_convert(struct irc_conn *irc, const char *string)
@@ -571,7 +584,9 @@ char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, con
 			/* TODO: Should this read in the timestamp as a double? */
 			if (sscanf(cur, "PING %lu", &timestamp) == 1) {
 				buf = g_strdup_printf(_("Reply time from %s: %lu seconds"), from, time(NULL) - timestamp);
-				purple_notify_info(gc, _("PONG"), _("CTCP PING reply"), buf);
+				purple_notify_info(gc, _("PONG"),
+					_("CTCP PING reply"), buf,
+					purple_request_cpar_from_connection(gc));
 				g_free(buf);
 			} else
 				purple_debug(PURPLE_DEBUG_ERROR, "irc", "Unable to parse PING timestamp");
@@ -678,7 +693,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	 * TODO: It should be passed as an array of bytes and a length
 	 * instead of a null terminated string.
 	 */
-	purple_signal_emit(_irc_plugin, "irc-receiving-text", gc, &input);
+	purple_signal_emit(_irc_protocol, "irc-receiving-text", gc, &input);
 
 	if (!strncmp(input, "PING ", 5)) {
 		msg = irc_format(irc, "vv", "PONG", input + 5);
@@ -687,14 +702,15 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 		return;
 	} else if (!strncmp(input, "ERROR ", 6)) {
 		if (g_utf8_validate(input, -1, NULL)) {
-			char *tmp = g_strdup_printf("%s\n%s", _("Disconnected."), input);
-			purple_connection_error_reason (gc,
-				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
-			g_free(tmp);
-		} else
-			purple_connection_error_reason (gc,
+			purple_connection_take_error(gc, g_error_new(
+				PURPLE_CONNECTION_ERROR,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-				_("Disconnected."));
+				"%s\n%s", _("Disconnected."), input));
+		} else
+			purple_connection_take_error(gc, g_error_new_literal(
+				PURPLE_CONNECTION_ERROR,
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				_("Disconnected.")));
 		return;
 #ifdef HAVE_CYRUS_SASL
 	} else if (!strncmp(input, "AUTHENTICATE ", 13)) {
@@ -759,7 +775,7 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 			break;
 		case '*':
 			/* Ditto 'v' above; we're going to salvage this in case
-			 * it leaks past the IRC prpl */
+			 * it leaks past the IRC protocol */
 			args[i] = purple_utf8_salvage(cur);
 			cur = cur + strlen(cur);
 			break;

@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -79,7 +79,7 @@ gnt_menu_draw(GntWidget *widget)
 	GntMenu *menu = GNT_MENU(widget);
 	GList *iter;
 	chtype type;
-	int i;
+	guint i;
 
 	if (menu->type == GNT_MENU_TOPLEVEL) {
 		wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_HIGHLIGHT));
@@ -87,7 +87,13 @@ gnt_menu_draw(GntWidget *widget)
 
 		for (i = 0, iter = menu->list; iter; iter = iter->next, i++) {
 			GntMenuItem *item = GNT_MENU_ITEM(iter->data);
-			type = ' ' | gnt_color_pair(GNT_COLOR_HIGHLIGHT);
+			if (!gnt_menuitem_is_visible(item))
+				continue;
+			type = ' ';
+			if (item->callback || item->submenu)
+				type |= gnt_color_pair(GNT_COLOR_HIGHLIGHT);
+			else
+				type |= gnt_color_pair(GNT_COLOR_DISABLED);
 			if (i == menu->selected)
 				type |= A_REVERSE;
 			item->priv.x = getcurx(widget->window) + widget->priv.x;
@@ -119,7 +125,9 @@ gnt_menu_size_request(GntWidget *widget)
 static void
 menu_tree_add(GntMenu *menu, GntMenuItem *item, GntMenuItem *parent)
 {
-	char trigger[4] = "\0 )\0";
+	char trigger[] = "\0 )\0";
+
+	g_return_if_fail(item != NULL);
 
 	if ((trigger[1] = gnt_menuitem_get_trigger(item)) && trigger[1] != ' ')
 		trigger[0] = '(';
@@ -128,9 +136,12 @@ menu_tree_add(GntMenu *menu, GntMenuItem *item, GntMenuItem *parent)
 		gnt_tree_add_choice(GNT_TREE(menu), item,
 			gnt_tree_create_row(GNT_TREE(menu), item->text, trigger, " "), parent, NULL);
 		gnt_tree_set_choice(GNT_TREE(menu), item, gnt_menuitem_check_get_checked(GNT_MENU_ITEM_CHECK(item)));
-	} else
+	} else {
 		gnt_tree_add_row_last(GNT_TREE(menu), item,
 			gnt_tree_create_row(GNT_TREE(menu), item->text, trigger, item->submenu ? ">" : " "), parent);
+		if (!item->callback && !item->submenu)
+			gnt_tree_set_row_color(GNT_TREE(menu), item, GNT_COLOR_DISABLED);
+	}
 
 	if (0 && item->submenu) {
 		GntMenu *sub = GNT_MENU(item->submenu);
@@ -277,7 +288,7 @@ static gboolean
 gnt_menu_key_pressed(GntWidget *widget, const char *text)
 {
 	GntMenu *menu = GNT_MENU(widget);
-	int current = menu->selected;
+	guint current = menu->selected;
 
 	if (menu->submenu) {
 		GntMenu *sub = menu;
@@ -303,14 +314,25 @@ gnt_menu_key_pressed(GntWidget *widget, const char *text)
 	}
 
 	if (menu->type == GNT_MENU_TOPLEVEL) {
+		GntMenuItem *item;
+		GList *it;
 		if (strcmp(text, GNT_KEY_LEFT) == 0) {
-			menu->selected--;
-			if (menu->selected < 0)
-				menu->selected = g_list_length(menu->list) - 1;
+			do {
+				if (menu->selected == 0)
+					menu->selected = g_list_length(menu->list) - 1;
+				else
+					menu->selected--;
+				it = g_list_nth(menu->list, menu->selected);
+				item = it ? it->data : NULL;
+			} while (!gnt_menuitem_is_visible(item));
 		} else if (strcmp(text, GNT_KEY_RIGHT) == 0) {
-			menu->selected++;
-			if ((guint)menu->selected >= g_list_length(menu->list))
-				menu->selected = 0;
+			do {
+				menu->selected++;
+				if (menu->selected >= g_list_length(menu->list))
+					menu->selected = 0;
+				it = g_list_nth(menu->list, menu->selected);
+				item = it ? it->data : NULL;
+			} while (!gnt_menuitem_is_visible(item));
 		} else if (strcmp(text, GNT_KEY_ENTER) == 0 ||
 				strcmp(text, GNT_KEY_DOWN) == 0) {
 			gnt_widget_activate(widget);
@@ -449,7 +471,7 @@ gnt_menu_init(GTypeInstance *instance, gpointer class)
  * GntMenu API
  *****************************************************************************/
 GType
-gnt_menu_get_gtype(void)
+gnt_menu_get_type(void)
 {
 	static GType type = 0;
 

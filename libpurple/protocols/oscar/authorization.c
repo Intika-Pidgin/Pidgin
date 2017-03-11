@@ -37,7 +37,7 @@ oscar_auth_sendrequest(PurpleConnection *gc, const char *bname, const char *msg)
 
 	od = purple_connection_get_protocol_data(gc);
 	account = purple_connection_get_account(gc);
-	buddy = purple_find_buddy(account, bname);
+	buddy = purple_blist_find_buddy(account, bname);
 	if (buddy != NULL)
 		group = purple_buddy_get_group(buddy);
 	else
@@ -49,16 +49,16 @@ oscar_auth_sendrequest(PurpleConnection *gc, const char *bname, const char *msg)
 		purple_debug_info("oscar", "ssi: adding buddy %s to group %s\n",
 				   bname, gname);
 		aim_ssi_sendauthrequest(od, bname, msg ? msg : _("Please authorize me so I can add you to my buddy list."));
-		if (!aim_ssi_itemlist_finditem(od->ssi.local, gname, bname, AIM_SSI_TYPE_BUDDY))
+		if (!aim_ssi_itemlist_finditem(&od->ssi.local, gname, bname, AIM_SSI_TYPE_BUDDY))
 		{
 			aim_ssi_addbuddy(od, bname, gname, NULL, purple_buddy_get_alias_only(buddy), NULL, NULL, TRUE);
 
 			/* Mobile users should always be online */
 			if (bname[0] == '+') {
-				purple_prpl_got_user_status(account,
+				purple_protocol_got_user_status(account,
 						purple_buddy_get_name(buddy),
 						OSCAR_STATUS_ID_AVAILABLE, NULL);
-				purple_prpl_got_user_status(account,
+				purple_protocol_got_user_status(account,
 						purple_buddy_get_name(buddy),
 						OSCAR_STATUS_ID_MOBILE, NULL);
 			}
@@ -67,7 +67,7 @@ oscar_auth_sendrequest(PurpleConnection *gc, const char *bname, const char *msg)
 }
 
 static void
-oscar_auth_grant(gpointer cbdata)
+oscar_auth_grant(const char *message, gpointer cbdata)
 {
 	struct name_data *data = cbdata;
 	PurpleConnection *gc = data->gc;
@@ -79,8 +79,9 @@ oscar_auth_grant(gpointer cbdata)
 }
 
 static void
-oscar_auth_dontgrant(struct name_data *data, char *msg)
+oscar_auth_dontgrant(const char *msg, gpointer cbdata)
 {
+	struct name_data *data = cbdata;
 	PurpleConnection *gc = data->gc;
 	OscarData *od = purple_connection_get_protocol_data(gc);
 
@@ -89,25 +90,13 @@ oscar_auth_dontgrant(struct name_data *data, char *msg)
 	oscar_free_name_data(data);
 }
 
-static void
-oscar_auth_dontgrant_msgprompt(gpointer cbdata)
-{
-	struct name_data *data = cbdata;
-	purple_request_input(data->gc, NULL, _("Authorization Denied Message:"),
-					   NULL, _("No reason given."), TRUE, FALSE, NULL,
-					   _("_OK"), G_CALLBACK(oscar_auth_dontgrant),
-					   _("_Cancel"), G_CALLBACK(oscar_free_name_data),
-					   purple_connection_get_account(data->gc), data->name, NULL,
-					   data);
-}
-
 void
 oscar_auth_sendrequest_menu(PurpleBlistNode *node, gpointer ignored)
 {
 	PurpleBuddy *buddy;
 	PurpleConnection *gc;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -126,6 +115,6 @@ oscar_auth_recvrequest(PurpleConnection *gc, gchar *name, gchar *nick, gchar *re
 	data->nick = nick;
 
 	purple_account_request_authorization(account, data->name, NULL, data->nick,
-		reason, purple_find_buddy(account, data->name) != NULL,
-		oscar_auth_grant, oscar_auth_dontgrant_msgprompt, data);
+		reason, purple_blist_find_buddy(account, data->name) != NULL,
+		oscar_auth_grant, oscar_auth_dontgrant, data);
 }

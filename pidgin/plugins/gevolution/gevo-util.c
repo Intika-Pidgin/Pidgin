@@ -29,32 +29,33 @@ void
 gevo_add_buddy(PurpleAccount *account, const char *group_name,
 			   const char *buddy_name, const char *alias)
 {
-	PurpleConversation *conv = NULL;
+	PurpleIMConversation *im = NULL;
 	PurpleBuddy *buddy;
 	PurpleGroup *group;
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, buddy_name, account);
+	im = purple_conversations_find_im_with_account(buddy_name, account);
 
-	group = purple_find_group(group_name);
+	group = purple_blist_find_group(group_name);
 	if (group == NULL)
 	{
 		group = purple_group_new(group_name);
 		purple_blist_add_group(group, NULL);
 	}
 
-	buddy = purple_find_buddy_in_group(account, buddy_name, group);
+	buddy = purple_blist_find_buddy_in_group(account, buddy_name, group);
 	if (buddy == NULL)
 	{
 		buddy = purple_buddy_new(account, buddy_name, alias);
 		purple_blist_add_buddy(buddy, NULL, group, NULL);
 	}
 
-	purple_account_add_buddy(account, buddy);
+	purple_account_add_buddy(account, buddy, NULL);
 
-	if (conv != NULL)
+	if (im != NULL)
 	{
-		purple_buddy_icon_update(purple_conv_im_get_icon(PURPLE_CONV_IM(conv)));
-		purple_conversation_update(conv, PURPLE_CONV_UPDATE_ADD);
+		purple_buddy_icon_update(purple_im_conversation_get_icon(im));
+		purple_conversation_update(PURPLE_CONVERSATION(im),
+			PURPLE_CONVERSATION_UPDATE_ADD);
 	}
 }
 
@@ -68,20 +69,19 @@ gevo_get_groups(void)
 	g_list_free(list);
 	list = NULL;
 
-	if (purple_get_blist()->root == NULL)
-	{
-		list  = g_list_append(list, (gpointer)_("Buddies"));
-	}
-	else
-	{
-		for (gnode = purple_get_blist()->root;
+	if (purple_blist_get_buddy_list()->root == NULL) {
+		list  = g_list_append(list,
+			(gpointer)PURPLE_BLIST_DEFAULT_GROUP_NAME);
+	} else {
+		for (gnode = purple_blist_get_buddy_list()->root;
 			 gnode != NULL;
 			 gnode = gnode->next)
 		{
-			if (PURPLE_BLIST_NODE_IS_GROUP(gnode))
+			if (PURPLE_IS_GROUP(gnode))
 			{
-				g = (PurpleGroup *)gnode;
-				list = g_list_append(list, g->name);
+				g = PURPLE_GROUP(gnode);
+				list = g_list_append(list,
+					(gpointer)purple_group_get_name(g));
 			}
 		}
 	}
@@ -90,7 +90,7 @@ gevo_get_groups(void)
 }
 
 EContactField
-gevo_prpl_get_field(PurpleAccount *account, PurpleBuddy *buddy)
+gevo_protocol_get_field(PurpleAccount *account, PurpleBuddy *buddy)
 {
 	EContactField protocol_field = 0;
 	const char *protocol_id;
@@ -114,22 +114,45 @@ gevo_prpl_get_field(PurpleAccount *account, PurpleBuddy *buddy)
 }
 
 gboolean
-gevo_prpl_is_supported(PurpleAccount *account, PurpleBuddy *buddy)
+gevo_protocol_is_supported(PurpleAccount *account, PurpleBuddy *buddy)
 {
-	return (gevo_prpl_get_field(account, buddy) != 0);
+	return (gevo_protocol_get_field(account, buddy) != 0);
 }
 
 gboolean
-gevo_load_addressbook(const gchar* uri, EBook **book, GError **error)
+gevo_load_addressbook(const gchar* uid, EBook **book, GError **error)
 {
 	gboolean result = FALSE;
+	ESourceRegistry *registry;
+	ESource *source;
 
 	g_return_val_if_fail(book != NULL, FALSE);
 
-	if (uri == NULL)
-		*book = e_book_new_system_addressbook(error);
+	registry = e_source_registry_new_sync(NULL, error);
+
+	if (!registry)
+		return FALSE;
+
+	if (uid == NULL)
+		source = e_source_registry_ref_default_address_book(registry);
 	else
-		*book = e_book_new_from_uri(uri, error);
+		source = e_source_registry_ref_source(registry, uid);
+
+	g_object_unref(registry);
+
+	result = gevo_load_addressbook_from_source(source, book, error);
+
+	g_object_unref(source);
+
+	return result;
+}
+
+gboolean
+gevo_load_addressbook_from_source(ESource *source, EBook **book, GError **error)
+{
+	gboolean result = FALSE;
+
+	*book = e_book_new(source, error);
 
 	if (*book == NULL)
 		return FALSE;

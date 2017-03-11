@@ -1,3 +1,5 @@
+libpurple/data/purple-url-handler.desktop.in.in
+libpurple/plugins/mono/loader/mono.c
 libpurple/plugins/perl/common/Account.c
 libpurple/plugins/perl/common/AccountOpts.c
 libpurple/plugins/perl/common/BuddyIcon.c
@@ -11,7 +13,6 @@ libpurple/plugins/perl/common/Core.c
 libpurple/plugins/perl/common/Debug.c
 libpurple/plugins/perl/common/FT.c
 libpurple/plugins/perl/common/Idle.c
-libpurple/plugins/perl/common/ImgStore.c
 libpurple/plugins/perl/common/Log.c
 libpurple/plugins/perl/common/Network.c
 libpurple/plugins/perl/common/Notify.c
@@ -19,6 +20,7 @@ libpurple/plugins/perl/common/Plugin.c
 libpurple/plugins/perl/common/PluginPref.c
 libpurple/plugins/perl/common/Pounce.c
 libpurple/plugins/perl/common/Prefs.c
+libpurple/plugins/perl/common/Presence.c
 libpurple/plugins/perl/common/Privacy.c
 libpurple/plugins/perl/common/Proxy.c
 libpurple/plugins/perl/common/Prpl.c
@@ -36,6 +38,9 @@ libpurple/plugins/perl/common/Stringref.c
 libpurple/plugins/perl/common/Util.c
 libpurple/plugins/perl/common/Whiteboard.c
 libpurple/plugins/perl/common/XMLNode.c
+libpurple/plugins/perl/common/Xfer.c
+libpurple/plugins/perl/perl.c
+libpurple/plugins/tcl/tcl.c
 libpurple/protocols/null/nullprpl.c
 pidgin/data/pidgin.desktop.in.in
 pidgin/plugins/crazychat/cc_pidgin_plugin.c
@@ -64,6 +69,7 @@ pidgin/plugins/perl/common/GtkStatusBox.c
 pidgin/plugins/perl/common/GtkThemes.c
 pidgin/plugins/perl/common/GtkUtils.c
 pidgin/plugins/perl/common/Pidgin.c
+sub/libpurple/data/purple-url-handler.desktop.in
 sub/libpurple/plugins/perl/common/Account.c
 sub/libpurple/plugins/perl/common/AccountOpts.c
 sub/libpurple/plugins/perl/common/BuddyIcon.c

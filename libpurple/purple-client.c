@@ -1,3 +1,25 @@
+/*
+ * purple
+ *
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
+ *
+ */
 #ifndef DBUS_API_SUBJECT_TO_CHANGE
 #define DBUS_API_SUBJECT_TO_CHANGE
 #endif
@@ -66,19 +88,14 @@ void purple_init(void)
 {
 	GError *error = NULL;
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-	/* GLib type system is automaticaly initialized since 2.36. */
-	g_type_init();
-#endif
-
 	bus = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
 	if (!bus)
 		lose_gerror ("Couldn't connect to session bus", error);
 
 	purple_proxy = dbus_g_proxy_new_for_name (bus,
-					DBUS_SERVICE_PURPLE,
-					DBUS_PATH_PURPLE,
-					DBUS_INTERFACE_PURPLE);
+					PURPLE_DBUS_SERVICE,
+					PURPLE_DBUS_PATH,
+					PURPLE_DBUS_INTERFACE);
 
 	if (!purple_proxy)
 		lose_gerror ("Couldn't connect to the Purple Service", error);

@@ -109,7 +109,8 @@ _mdns_handle_event(gpointer data, gint source, PurpleInputCondition condition) {
 		purple_debug_error("bonjour", "Error (%d) handling mDNS response.\n", errorCode);
 		/* This happens when the mDNSResponder goes down, I haven't seen it happen any other time (in my limited testing) */
 		if (errorCode == kDNSServiceErr_Unknown) {
-			purple_connection_error_reason(srh->account->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			purple_connection_error(purple_account_get_connection(srh->account),
+				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 				_("Error communicating with local mDNSResponder."));
 		}
 	}
@@ -180,8 +181,8 @@ _mdns_resolve_host_callback(DNSServiceRef sdRef, DNSServiceFlags flags,
 	g_free(args->resolver_query);
 	args->resolver_query = NULL;
 
-	if ((pb = purple_find_buddy(args->account, args->res_data->name))) {
-		if (pb->proto_data != args->bb) {
+	if ((pb = purple_blist_find_buddy(args->account, args->res_data->name))) {
+		if (purple_buddy_get_protocol_data(pb) != args->bb) {
 			purple_debug_error("bonjour", "Found purple buddy for %s not matching bonjour buddy record.",
 				args->res_data->name);
 			goto cleanup;
@@ -297,7 +298,7 @@ _mdns_service_resolve_callback(DNSServiceRef sdRef, DNSServiceFlags flags, uint3
 	if (idata->resolvers == NULL) {
 		PurpleBuddy *pb;
 		/* See if this is now attached to a PurpleBuddy */
-		if ((pb = purple_find_buddy(args->account, args->bb->name)))
+		if ((pb = purple_blist_find_buddy(args->account, args->bb->name)))
 			bonjour_buddy_signed_off(pb);
 		else {
 			/* Remove from the pending list */
@@ -351,8 +352,8 @@ _mdns_service_browse_callback(DNSServiceRef sdRef, DNSServiceFlags flags, uint32
 				Win32BuddyImplData *idata;
 
 				/* Is there an existing buddy? */
-				if ((pb = purple_find_buddy(account, serviceName)))
-					bb = pb->proto_data;
+				if ((pb = purple_blist_find_buddy(account, serviceName)))
+					bb = purple_buddy_get_protocol_data(pb);
 				/* Is there a pending buddy? */
 				else {
 					while (tmp) {
@@ -372,7 +373,7 @@ _mdns_service_browse_callback(DNSServiceRef sdRef, DNSServiceFlags flags, uint32
 					if (pb == NULL)
 						pending_buddies = g_slist_prepend(pending_buddies, bb);
 					else
-						pb->proto_data = bb;
+						purple_buddy_set_protocol_data(pb, bb);
 				}
 
 				rd = g_new0(Win32SvcResolverData, 1);
@@ -407,12 +408,12 @@ _mdns_service_browse_callback(DNSServiceRef sdRef, DNSServiceFlags flags, uint32
 						  serviceName, interfaceIndex, regtype ? regtype : "",
 						  replyDomain ? replyDomain : "");
 
-		pb = purple_find_buddy(account, serviceName);
+		pb = purple_blist_find_buddy(account, serviceName);
 		if (pb != NULL) {
 			GSList *l;
 			/* There may be multiple presences, we should only get rid of this one */
 			Win32SvcResolverData *rd_search;
-			BonjourBuddy *bb = pb->proto_data;
+			BonjourBuddy *bb = purple_buddy_get_protocol_data(pb);
 			Win32BuddyImplData *idata;
 
 			g_return_if_fail(bb != NULL);
