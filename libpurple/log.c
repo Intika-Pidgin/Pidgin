@@ -1,8 +1,3 @@
-/**
- * @file log.c Logging API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -28,12 +23,12 @@
 #include "account.h"
 #include "dbus-maybe.h"
 #include "debug.h"
-#include "internal.h"
+#include "glibcompat.h"
+#include "image-store.h"
 #include "log.h"
 #include "prefs.h"
 #include "util.h"
 #include "stringref.h"
-#include "imgstore.h"
 #include "time.h"
 
 static GSList *loggers = NULL;
@@ -292,6 +287,10 @@ gint purple_log_get_activity_score(PurpleLogType type, const char *name, PurpleA
 
 				while (logs) {
 					PurpleLog *log = (PurpleLog*)(logs->data);
+					if (!log) {
+						g_warn_if_reached();
+						continue;
+					}
 					/* Activity score counts bytes in the log, exponentially
 					   decayed with a half-life of 14 days. */
 					score_double += purple_log_get_size(log) *
@@ -336,18 +335,17 @@ gboolean purple_log_delete(PurpleLog *log)
 char *
 purple_log_get_log_dir(PurpleLogType type, const char *name, PurpleAccount *account)
 {
-	PurplePlugin *prpl;
-	PurplePluginProtocolInfo *prpl_info;
-	const char *prpl_name;
+	PurpleProtocol *protocol;
+	const char *protocol_name;
 	char *acct_name;
 	const char *target;
 	char *dir;
 
-	prpl = purple_find_prpl(purple_account_get_protocol_id(account));
-	if (!prpl)
+	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
+	if (!protocol)
 		return NULL;
-	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-	prpl_name = prpl_info->list_icon(account, NULL);
+
+	protocol_name = purple_protocol_class_list_icon(protocol, account, NULL);
 
 	acct_name = g_strdup(purple_escape_filename(purple_normalize(account,
 				purple_account_get_username(account))));
@@ -362,7 +360,7 @@ purple_log_get_log_dir(PurpleLogType type, const char *name, PurpleAccount *acco
 		target = purple_escape_filename(purple_normalize(account, name));
 	}
 
-	dir = g_build_filename(purple_user_dir(), "logs", prpl_name, acct_name, target, NULL);
+	dir = g_build_filename(purple_user_dir(), "logs", protocol_name, acct_name, target, NULL);
 
 	g_free(acct_name);
 
@@ -453,6 +451,8 @@ PurpleLogLogger *purple_log_logger_new(const char *id, const char *name, int fun
 
 void purple_log_logger_free(PurpleLogLogger *logger)
 {
+	if (!logger)
+		return;
 	g_free(logger->name);
 	g_free(logger->id);
 	g_free(logger);
@@ -700,17 +700,16 @@ void purple_log_init(void)
 #else
 #error Unknown size of time_t
 #endif
-	                     purple_value_new(PURPLE_TYPE_STRING), 3,
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_LOG),
+	                     G_TYPE_STRING, 3,
+	                     PURPLE_TYPE_LOG,
 #if SIZEOF_TIME_T == 4
-	                     purple_value_new(PURPLE_TYPE_INT),
+	                     G_TYPE_INT,
 #elif SIZEOF_TIME_T == 8
-	                     purple_value_new(PURPLE_TYPE_INT64),
+	                     G_TYPE_INT64,
 #else
 # error Unknown size of time_t
 #endif
-	                     purple_value_new(PURPLE_TYPE_BOOLEAN));
+	                     G_TYPE_BOOLEAN);
 
 	purple_prefs_connect_callback(NULL, "/purple/logging/format",
 							    logger_pref_cb, NULL);
@@ -745,6 +744,33 @@ purple_log_uninit(void)
 	g_hash_table_destroy(logsize_users_decayed);
 }
 
+static PurpleLog *
+purple_log_copy(PurpleLog *log)
+{
+	PurpleLog *log_copy;
+
+	g_return_val_if_fail(log != NULL, NULL);
+
+	log_copy = g_new(PurpleLog, 1);
+	*log_copy = *log;
+
+	return log_copy;
+}
+
+GType
+purple_log_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleLog",
+				(GBoxedCopyFunc)purple_log_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
 /****************************************************************************
  * LOGGERS ******************************************************************
  ****************************************************************************/
@@ -771,7 +797,9 @@ static char *log_get_timestamp(PurpleLog *log, time_t when)
 }
 
 /* NOTE: This can return msg (which you may or may not want to g_free())
- * NOTE: or a newly allocated string which you MUST g_free(). */
+ * NOTE: or a newly allocated string which you MUST g_free().
+ * TODO: XXX: does it really works?
+ */
 static char *
 convert_image_tags(const PurpleLog *log, const char *msg)
 {
@@ -801,13 +829,13 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 		{
 			FILE *image_file;
 			char *dir;
-			PurpleStoredImage *image;
+			PurpleImage *image;
 			gconstpointer image_data;
-			char *new_filename = NULL;
+			const gchar *new_filename = NULL;
 			char *path = NULL;
 			size_t image_byte_count;
 
-			image = purple_imgstore_find_by_id(imgid);
+			image = purple_image_store_get(imgid);
 			if (image == NULL)
 			{
 				/* This should never happen. */
@@ -816,10 +844,10 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 				g_return_val_if_reached((char *)msg);
 			}
 
-			image_data       = purple_imgstore_get_data(image);
-			image_byte_count = purple_imgstore_get_size(image);
+			image_data       = purple_image_get_data(image);
+			image_byte_count = purple_image_get_size(image);
 			dir              = purple_log_get_log_dir(log->type, log->name, log->account);
-			new_filename     = purple_util_get_image_filename(image_data, image_byte_count);
+			new_filename = purple_image_generate_filename(image);
 
 			path = g_build_filename(dir, new_filename, NULL);
 
@@ -835,7 +863,10 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 						fclose(image_file);
 
 						/* Attempt to not leave half-written files around. */
-						unlink(path);
+						if (g_unlink(path)) {
+							purple_debug_error("log", "Error deleting partial "
+									"file %s: %s\n", path, g_strerror(errno));
+						}
 					}
 					else
 					{
@@ -851,8 +882,7 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 			}
 
 			/* Write the new image tag */
-			g_string_append_printf(newmsg, "<IMG SRC=\"%s\">", new_filename);
-			g_free(new_filename);
+			g_string_append_printf(newmsg, "<img src=\"%s\">", new_filename);
 			g_free(path);
 		}
 
@@ -911,8 +941,9 @@ void purple_log_common_writer(PurpleLog *log, const char *ext)
 					"Could not create log file %s\n", path);
 
 			if (log->conv != NULL)
-				purple_conversation_write(log->conv, NULL, _("Logging of this conversation failed."),
-										PURPLE_MESSAGE_ERROR, time(NULL));
+				purple_conversation_write_system_message(log->conv,
+					_("Logging of this conversation failed."),
+					PURPLE_MESSAGE_ERROR);
 
 			g_free(path);
 			return;
@@ -1014,7 +1045,7 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 		    strlen(filename) >= (17 + strlen(ext)))
 		{
 			char *tmp = g_build_filename(path, filename, NULL);
-			struct stat st;
+			GStatBuf st;
 			if (g_stat(tmp, &st))
 			{
 				purple_debug_error("log", "Error stating log file: %s\n", tmp);
@@ -1032,7 +1063,7 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 
 int purple_log_common_sizer(PurpleLog *log)
 {
-	struct stat st;
+	GStatBuf st;
 	PurpleLogCommonLoggerData *data = log->logger_data;
 
 	g_return_val_if_fail(data != NULL, 0);
@@ -1070,20 +1101,18 @@ static void log_get_log_sets_common(GHashTable *sets)
 		}
 
 		/* Using g_strdup() to cover the one-in-a-million chance that a
-		 * prpl's list_icon function uses purple_unescape_filename(). */
+		 * protocol's list_icon function uses purple_unescape_filename(). */
 		protocol_unescaped = g_strdup(purple_unescape_filename(protocol));
 
 		/* Find all the accounts for protocol. */
 		for (account_iter = purple_accounts_get_all() ; account_iter != NULL ; account_iter = account_iter->next) {
-			PurplePlugin *prpl;
-			PurplePluginProtocolInfo *prpl_info;
+			PurpleProtocol *protocol;
 
-			prpl = purple_find_prpl(purple_account_get_protocol_id((PurpleAccount *)account_iter->data));
-			if (!prpl)
+			protocol = purple_protocols_find(purple_account_get_protocol_id((PurpleAccount *)account_iter->data));
+			if (!protocol)
 				continue;
-			prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
 
-			if (purple_strequal(protocol_unescaped, prpl_info->list_icon((PurpleAccount *)account_iter->data, NULL)))
+			if (purple_strequal(protocol_unescaped, purple_protocol_class_list_icon(protocol, (PurpleAccount *)account_iter->data, NULL)))
 				accounts = g_list_prepend(accounts, account_iter->data);
 		}
 		g_free(protocol_unescaped);
@@ -1103,7 +1132,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 			/* Find the account for username in the list of accounts for protocol. */
 			username_unescaped = purple_unescape_filename(username);
 			for (account_iter = g_list_first(accounts) ; account_iter != NULL ; account_iter = account_iter->next) {
-				if (purple_strequal(((PurpleAccount *)account_iter->data)->username, username_unescaped)) {
+				if (purple_strequal(purple_account_get_username((PurpleAccount *)account_iter->data), username_unescaped)) {
 					account = account_iter->data;
 					break;
 				}
@@ -1147,7 +1176,7 @@ static void log_get_log_sets_common(GHashTable *sets)
 
 				/* Determine if this (account, name) combination exists as a buddy. */
 				if (account != NULL && *name != '\0')
-					set->buddy = (purple_find_buddy(account, name) != NULL);
+					set->buddy = (purple_blist_find_buddy(account, name) != NULL);
 				else
 					set->buddy = FALSE;
 
@@ -1255,116 +1284,6 @@ static char *process_txt_log(char *txt, char *to_free)
 	return txt;
 }
 
-#if 0 /* Maybe some other time. */
-/****************
- ** XML LOGGER **
- ****************/
-
-static const char *str_from_msg_type (PurpleMessageFlags type)
-{
-
-		return "";
-
-}
-
-static void xml_logger_write(PurpleLog *log,
-			     PurpleMessageFlags type,
-			     const char *from, time_t time, const char *message)
-{
-	char *xhtml = NULL;
-
-	if (!log->logger_data) {
-		/* This log is new.  We could use the loggers 'new' function, but
-		 * creating a new file there would result in empty files in the case
-		 * that you open a convo with someone, but don't say anything.
-		 */
-		struct tm *tm;
-		const char *tz;
-		const char *date;
-		char *dir = purple_log_get_log_dir(log->type, log->name, log->account);
-		char *name;
-		char *filename;
-
-		if (dir == NULL)
-			return;
-
-		tm = localtime(&log->time);
-		tz = purple_escape_filename(purple_utf8_strftime("%Z", tm);
-		date = purple_utf8_strftime("%Y-%m-%d.%H%M%S%z", tm);
-
-		name = g_strdup_printf("%s%s%s", date, tz, ext ? ext : "");
-
-		purple_build_dir (dir, S_IRUSR | S_IWUSR | S_IXUSR);
-
-		filename = g_build_filename(dir, name, NULL);
-		g_free(dir);
-		g_free(name);
-
-		log->logger_data = g_fopen(filename, "a");
-		if (!log->logger_data) {
-			purple_debug(PURPLE_DEBUG_ERROR, "log", "Could not create log file %s\n", filename);
-			g_free(filename);
-			return;
-		}
-		g_free(filename);
-		fprintf(log->logger_data, "<?xml version='1.0' encoding='UTF-8' ?>\n"
-			"<?xml-stylesheet href='file:///usr/src/web/htdocs/log-stylesheet.xsl' type='text/xml' ?>\n");
-
-		date = purple_utf8_strftime("%Y-%m-%d %H:%M:%S", localtime(&log->time));
-		fprintf(log->logger_data, "<conversation time='%s' screenname='%s' protocol='%s'>\n",
-			date, log->name, prpl);
-	}
-
-	/* if we can't write to the file, give up before we hurt ourselves */
-	if(!data->file)
-		return;
-
-	date = log_get_timestamp(log, time);
-
-	purple_markup_html_to_xhtml(message, &xhtml, NULL);
-	if (from)
-		fprintf(log->logger_data, "<message %s %s from='%s' time='%s'>%s</message>\n",
-			str_from_msg_type(type),
-			type & PURPLE_MESSAGE_SEND ? "direction='sent'" :
-			type & PURPLE_MESSAGE_RECV ? "direction='received'" : "",
-			from, date, xhtml);
-	else
-		fprintf(log->logger_data, "<message %s %s time='%s'>%s</message>\n",
-			str_from_msg_type(type),
-			type & PURPLE_MESSAGE_SEND ? "direction='sent'" :
-			type & PURPLE_MESSAGE_RECV ? "direction='received'" : "",
-			date, xhtml):
-	fflush(log->logger_data);
-	g_free(date);
-	g_free(xhtml);
-}
-
- static void xml_logger_finalize(PurpleLog *log)
-{
-	if (log->logger_data) {
-		fprintf(log->logger_data, "</conversation>\n");
-		fclose(log->logger_data);
-		log->logger_data = NULL;
-	}
-}
-
-static GList *xml_logger_list(PurpleLogType type, const char *sn, PurpleAccount *account)
-{
-	return purple_log_common_lister(type, sn, account, ".xml", &xml_logger);
-}
-
-static PurpleLogLogger xml_logger =  {
-	N_("XML"), "xml",
-	NULL,
-	xml_logger_write,
-	xml_logger_finalize,
-	xml_logger_list,
-	NULL,
-	NULL,
-	NULL
-};
-#endif
-
 /****************************
  ** HTML LOGGER *************
  ****************************/
@@ -1377,13 +1296,13 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 	char *date;
 	char *header;
 	char *escaped_from;
-	PurplePlugin *plugin = purple_find_prpl(purple_account_get_protocol_id(log->account));
+	PurpleProtocol *protocol =
+			purple_protocols_find(purple_account_get_protocol_id(log->account));
 	PurpleLogCommonLoggerData *data = log->logger_data;
 	gsize written = 0;
 
 	if(!data) {
-		const char *prpl =
-			PURPLE_PLUGIN_PROTOCOL_INFO(plugin)->list_icon(log->account, NULL);
+		const char *proto = purple_protocol_class_list_icon(protocol, log->account, NULL);
 		const char *date;
 		purple_log_common_writer(log, ".html");
 
@@ -1400,10 +1319,10 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 		written += fprintf(data->file, "<title>");
 		if (log->type == PURPLE_LOG_SYSTEM)
 			header = g_strdup_printf("System log for account %s (%s) connected at %s",
-					purple_account_get_username(log->account), prpl, date);
+					purple_account_get_username(log->account), proto, date);
 		else
 			header = g_strdup_printf("Conversation with %s at %s on %s (%s)",
-					log->name, date, purple_account_get_username(log->account), prpl);
+					log->name, date, purple_account_get_username(log->account), proto);
 
 		written += fprintf(data->file, "%s", header);
 		written += fprintf(data->file, "</title></head><body>");
@@ -1415,7 +1334,8 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 	if(!data->file)
 		return 0;
 
-	escaped_from = g_markup_escape_text(from, -1);
+	escaped_from = g_markup_escape_text(from != NULL ? from : "<NULL>",
+			-1);
 
 	image_corrected_msg = convert_image_tags(log, message);
 	purple_markup_html_to_xhtml(image_corrected_msg, &msg_fixed, NULL);
@@ -1436,9 +1356,6 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 			written += fprintf(data->file, "<font size=\"2\">(%s)</font> %s<br/>\n", date, msg_fixed);
 		else if (type & PURPLE_MESSAGE_ERROR)
 			written += fprintf(data->file, "<font color=\"#FF0000\"><font size=\"2\">(%s)</font><b> %s</b></font><br/>\n", date, msg_fixed);
-		else if (type & PURPLE_MESSAGE_WHISPER)
-			written += fprintf(data->file, "<font color=\"#6C2585\"><font size=\"2\">(%s)</font><b> %s:</b></font> %s<br/>\n",
-					date, escaped_from, msg_fixed);
 		else if (type & PURPLE_MESSAGE_AUTO_RESP) {
 			if (type & PURPLE_MESSAGE_SEND)
 				written += fprintf(data->file, _("<font color=\"#16569E\"><font size=\"2\">(%s)</font> <b>%s &lt;AUTO-REPLY&gt;:</b></font> %s<br/>\n"), date, escaped_from, msg_fixed);
@@ -1532,7 +1449,8 @@ static gsize txt_logger_write(PurpleLog *log,
 							 const char *from, time_t time, const char *message)
 {
 	char *date;
-	PurplePlugin *plugin = purple_find_prpl(purple_account_get_protocol_id(log->account));
+	PurpleProtocol *protocol =
+			purple_protocols_find(purple_account_get_protocol_id(log->account));
 	PurpleLogCommonLoggerData *data = log->logger_data;
 	char *stripped = NULL;
 
@@ -1543,24 +1461,23 @@ static gsize txt_logger_write(PurpleLog *log,
 		 * creating a new file there would result in empty files in the case
 		 * that you open a convo with someone, but don't say anything.
 		 */
-		const char *prpl =
-			PURPLE_PLUGIN_PROTOCOL_INFO(plugin)->list_icon(log->account, NULL);
+		const char *proto = purple_protocol_class_list_icon(protocol, log->account, NULL);
 		purple_log_common_writer(log, ".txt");
 
 		data = log->logger_data;
 
 		/* if we can't write to the file, give up before we hurt ourselves */
-		if(!data->file)
+		if(!data || !data->file)
 			return 0;
 
 		if (log->type == PURPLE_LOG_SYSTEM)
 			written += fprintf(data->file, "System log for account %s (%s) connected at %s\n",
-				purple_account_get_username(log->account), prpl,
+				purple_account_get_username(log->account), proto,
 				purple_date_format_full(localtime(&log->time)));
 		else
 			written += fprintf(data->file, "Conversation with %s at %s on %s (%s)\n",
 				log->name, purple_date_format_full(localtime(&log->time)),
-				purple_account_get_username(log->account), prpl);
+				purple_account_get_username(log->account), proto);
 	}
 
 	/* if we can't write to the file, give up before we hurt ourselves */
@@ -1594,9 +1511,7 @@ static gsize txt_logger_write(PurpleLog *log,
 			/* This shouldn't happen */
 			g_free(stripped);
 			return written;
-		} else if (type & PURPLE_MESSAGE_WHISPER)
-			written += fprintf(data->file, "(%s) *%s* %s", date, from, stripped);
-		else
+		} else
 			written += fprintf(data->file, "(%s) %s%s %s\n", date, from ? from : "",
 					from ? ":" : "", stripped);
 	}
@@ -1672,7 +1587,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, sn));
 	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
 	PurpleStringref *pathref = purple_stringref_new(pathstr);
-	struct stat st;
+	GStatBuf st;
 	time_t log_last_modified;
 	FILE *index;
 	FILE *file;
@@ -1701,7 +1616,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 		g_free(pathstr);
 		return NULL;
 	}
-	if (fstat(file_fd, &st) == -1) {
+	if (_purple_fstat(file_fd, &st) == -1) {
 		purple_stringref_unref(pathref);
 		g_free(pathstr);
 		fclose(file);
@@ -1714,7 +1629,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 
 	index_fd = g_open(pathstr, 0, O_RDONLY);
 	if (index_fd != -1) {
-		if (fstat(index_fd, &st) != 0) {
+		if (_purple_fstat(index_fd, &st) != 0) {
 			close(index_fd);
 			index_fd = -1;
 		}
@@ -1933,7 +1848,7 @@ static int old_logger_total_size(PurpleLogType type, const char *name, PurpleAcc
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, name));
 	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
 	int size;
-	struct stat st;
+	GStatBuf st;
 
 	if (g_stat(pathstr, &st))
 		size = 0;
@@ -2038,14 +1953,14 @@ static void old_logger_get_log_sets(PurpleLogSetCallback cb, GHashTable *sets)
 		     !found && gnode != NULL;
 		     gnode = purple_blist_node_get_sibling_next(gnode))
 		{
-			if (!PURPLE_BLIST_NODE_IS_GROUP(gnode))
+			if (!PURPLE_IS_GROUP(gnode))
 				continue;
 
 			for (cnode = purple_blist_node_get_first_child(gnode);
 			     !found && cnode != NULL;
 				 cnode = purple_blist_node_get_sibling_next(cnode))
 			{
-				if (!PURPLE_BLIST_NODE_IS_CONTACT(cnode))
+				if (!PURPLE_IS_CONTACT(cnode))
 					continue;
 
 				for (bnode = purple_blist_node_get_first_child(cnode);

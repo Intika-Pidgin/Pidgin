@@ -20,14 +20,14 @@
  *
  */
 
-/* oscarcommon.h contains prototypes for the prpl functions used by libaim.c
+/* oscarcommon.h contains prototypes for the protocol functions used by libaim.c
  * and libicq.c
  */
 
 #include "internal.h"
 
 #include "accountopt.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "version.h"
 #include "notify.h"
 #include "status.h"
@@ -90,9 +90,9 @@ GList *oscar_chat_info(PurpleConnection *gc);
 GHashTable *oscar_chat_info_defaults(PurpleConnection *gc, const char *chat_name);
 void oscar_login(PurpleAccount *account);
 void oscar_close(PurpleConnection *gc);
-int oscar_send_im(PurpleConnection *gc, const char *name, const char *message, PurpleMessageFlags imflags);
+int oscar_send_im(PurpleConnection *gc, PurpleMessage *msg);
 void oscar_set_info(PurpleConnection *gc, const char *rawinfo);
-unsigned int oscar_send_typing(PurpleConnection *gc, const char *name, PurpleTypingState state);
+unsigned int oscar_send_typing(PurpleConnection *gc, const char *name, PurpleIMTypingState state);
 void oscar_get_info(PurpleConnection *gc, const char *name);
 void oscar_set_status(PurpleAccount *account, PurpleStatus *status);
 void oscar_set_idle(PurpleConnection *gc, int time);
@@ -107,18 +107,20 @@ void oscar_join_chat(PurpleConnection *gc, GHashTable *data);
 char *oscar_get_chat_name(GHashTable *data);
 void oscar_chat_invite(PurpleConnection *gc, int id, const char *message, const char *name);
 void oscar_chat_leave(PurpleConnection *gc, int id);
-int oscar_send_chat(PurpleConnection *gc, int id, const char *message, PurpleMessageFlags flags);
+int oscar_send_chat(PurpleConnection *gc, int id, PurpleMessage *msg);
 void oscar_keepalive(PurpleConnection *gc);
 void oscar_alias_buddy(PurpleConnection *gc, const char *name, const char *alias);
 void oscar_move_buddy(PurpleConnection *gc, const char *name, const char *old_group, const char *new_group);
 void oscar_rename_group(PurpleConnection *gc, const char *old_name, PurpleGroup *group, GList *moved_buddies);
 void oscar_convo_closed(PurpleConnection *gc, const char *who);
 const char *oscar_normalize(const PurpleAccount *account, const char *str);
-void oscar_set_icon(PurpleConnection *gc, PurpleStoredImage *img);
+void oscar_set_icon(PurpleConnection *gc, PurpleImage *img);
 void oscar_remove_group(PurpleConnection *gc, PurpleGroup *group);
 gboolean oscar_can_receive_file(PurpleConnection *gc, const char *who);
 void oscar_send_file(PurpleConnection *gc, const char *who, const char *file);
 PurpleXfer *oscar_new_xfer(PurpleConnection *gc, const char *who);
 gboolean oscar_offline_message(const PurpleBuddy *buddy);
-GList *oscar_actions(PurplePlugin *plugin, gpointer context);
-void oscar_init(PurplePlugin *plugin, gboolean is_icq);
+gssize oscar_get_max_message_size(PurpleConversation *conv);
+GList *oscar_get_actions(PurpleConnection *gc);
+const gchar *oscar_get_login_server(gboolean is_icq, gboolean use_ssl);
+gboolean oscar_uri_handler(const char *proto, const char *cmd, GHashTable *params);

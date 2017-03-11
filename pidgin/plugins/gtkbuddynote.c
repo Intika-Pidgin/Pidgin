@@ -42,8 +42,36 @@ append_to_tooltip(PurpleBlistNode *node, GString *text, gboolean full)
 	}
 }
 
+static PidginPluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Etan Reisner <deryni@pidgin.im>",
+		NULL
+	};
+
+	const gchar * const dependencies[] = {
+		"core-plugin_pack-buddynote",
+		NULL
+	};
+
+	return pidgin_plugin_info_new(
+		"id",            "gtkbuddynote",
+		"name",          N_("Buddy Note Tooltips"),
+		"version",       DISPLAY_VERSION,
+		"category",      N_("User interface"),
+		"summary",       N_("Shows stored buddy notes on the buddy's tooltip."),
+		"description",   N_("Shows stored buddy notes on the buddy's tooltip."),
+		"authors",       authors,
+		"website",       PURPLE_WEBSITE,
+		"abi-version",   PURPLE_ABI_VERSION,
+		"dependencies",  dependencies,
+		NULL
+	);
+}
+
 static gboolean
-plugin_load(PurplePlugin *plugin)
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_signal_connect(pidgin_blist_get_handle(), "drawing-tooltip",
 	                      plugin, PURPLE_CALLBACK(append_to_tooltip), NULL);
@@ -51,95 +79,9 @@ plugin_load(PurplePlugin *plugin)
 }
 
 static gboolean
-plugin_unload(PurplePlugin *plugin)
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
-	PurplePlugin *buddynote = NULL;
-
-	buddynote = purple_plugins_find_with_id("core-plugin_pack-buddynote");
-
-	purple_plugin_unload(buddynote);
-
 	return TRUE;
 }
 
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,                           /**< major version */
-	PURPLE_MINOR_VERSION,                           /**< minor version */
-	PURPLE_PLUGIN_STANDARD,                         /**< type */
-	PIDGIN_PLUGIN_TYPE,                             /**< ui_requirement */
-	0,                                              /**< flags */
-	NULL,                                           /**< dependencies */
-	PURPLE_PRIORITY_DEFAULT,                        /**< priority */
-	"gtkbuddynote",                                 /**< id */
-	N_("Buddy Notes"),                              /**< name */
-	DISPLAY_VERSION,                                /**< version */
-	N_("Store notes on particular buddies."),       /**< summary */
-	N_("Adds the option to store notes for buddies "
-	   "on your buddy list."),                      /**< description */
-	"Etan Reisner <deryni@pidgin.im>",              /**< author */
-	PURPLE_WEBSITE,                                 /**< homepage */
-	plugin_load,                                    /**< load */
-	plugin_unload,                                  /**< unload */
-	NULL,                                           /**< destroy */
-	NULL,                                           /**< ui_info */
-	NULL,                                           /**< extra_info */
-	NULL,                                           /**< prefs_info */
-	NULL,                                           /**< actions */
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static gboolean
-check_for_buddynote(gpointer data)
-{
-	PurplePlugin *buddynote = NULL;
-	PurplePlugin *plugin = (PurplePlugin *)data;
-
-	buddynote = purple_plugins_find_with_id("core-plugin_pack-buddynote");
-
-	if (buddynote == NULL) {
-		buddynote = purple_plugins_find_with_basename("buddynote");
-	}
-
-	if (buddynote != NULL) {
-		PurplePluginInfo *bninfo = buddynote->info;
-
-		bninfo->flags = PURPLE_PLUGIN_FLAG_INVISIBLE;
-
-
-		/* If non-gtk buddy note plugin is loaded, but we are not, then load
-		 * ourselves, otherwise people upgrading from pre-gtkbuddynote days
-		 * will not have 'Buddy Notes' showing as loaded in the plugins list.
-		 * We also trigger a save on the list of plugins because it's not been
-		 * loaded through the UI. */
-		if (purple_plugin_is_loaded(buddynote) &&
-		    !purple_plugin_is_loaded(plugin)) {
-			purple_plugin_load(plugin);
-			pidgin_plugins_save();
-		}
-
-	} else {
-		info.flags = PURPLE_PLUGIN_FLAG_INVISIBLE;
-	}
-
-	return FALSE;
-}
-
-static void
-init_plugin(PurplePlugin *plugin)
-{
-	/* Use g_idle_add so that the rest of the plugins can get loaded
-	 * before we do our check. */
-	g_idle_add(check_for_buddynote, plugin);
-
-	info.dependencies = g_list_append(info.dependencies,
-	                                  "core-plugin_pack-buddynote");
-}
-
-PURPLE_INIT_PLUGIN(gtkbuddynote, init_plugin, info)
+PURPLE_PLUGIN_INIT(gtkbuddynote, plugin_query, plugin_load, plugin_unload);

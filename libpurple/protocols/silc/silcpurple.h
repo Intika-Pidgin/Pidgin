@@ -20,6 +20,8 @@
 #ifndef SILCPURPLE_H
 #define SILCPURPLE_H
 
+#include <gmodule.h>
+
 /* Purple includes */
 #include "internal.h"
 #include "account.h"
@@ -27,9 +29,9 @@
 #include "cmds.h"
 #include "conversation.h"
 #include "debug.h"
-#include "ft.h"
+#include "xfer.h"
 #include "notify.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "request.h"
 #include "roomlist.h"
 #include "server.h"
@@ -37,6 +39,13 @@
 
 #undef SILC_VERSION
 #define SILC_VERSION(a, b, c) (((a) << 24) + ((b) << 16) + ((c) << 8))
+
+#define SILCPURPLE_TYPE_PROTOCOL             (silcpurple_protocol_get_type())
+#define SILCPURPLE_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), SILCPURPLE_TYPE_PROTOCOL, SilcProtocol))
+#define SILCPURPLE_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), SILCPURPLE_TYPE_PROTOCOL, SilcProtocolClass))
+#define SILCPURPLE_IS_PROTOCOL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), SILCPURPLE_TYPE_PROTOCOL))
+#define SILCPURPLE_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), SILCPURPLE_TYPE_PROTOCOL))
+#define SILCPURPLE_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), SILCPURPLE_TYPE_PROTOCOL, SilcProtocolClass))
 
 /* Default public and private key file names */
 #define SILCPURPLE_PUBLIC_KEY_NAME "public_key.pub"
@@ -56,6 +65,16 @@
 #define SILCPURPLE_STATUS_ID_BUSY		"busy"
 #define SILCPURPLE_STATUS_ID_INDISPOSED "indisposed"
 #define SILCPURPLE_STATUS_ID_PAGE		"page"
+
+typedef struct _SilcProtocol
+{
+	PurpleProtocol parent;
+} SilcProtocol;
+
+typedef struct _SilcProtocolClass
+{
+	PurpleProtocolClass parent_class;
+} SilcProtocolClass;
 
 typedef struct {
 	unsigned long id;
@@ -90,6 +109,8 @@ typedef struct SilcPurpleStruct {
 } *SilcPurple;
 
 
+G_MODULE_EXPORT GType silcpurple_protocol_get_type(void);
+
 void silc_say(SilcClient client, SilcClientConnection conn,
 	      SilcClientMessageType type, char *msg, ...);
 SilcBool silcpurple_command_reply(SilcClient client, SilcClientConnection conn,
@@ -105,7 +126,7 @@ void silcpurple_verify_public_key(SilcClient client, SilcClientConnection conn,
 				  SilcVerifyPublicKey completion,
 				  void *context);
 GList *silcpurple_buddy_menu(PurpleBuddy *buddy);
-void silcpurple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group);
+void silcpurple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, const char *message);
 void silcpurple_send_buddylist(PurpleConnection *gc);
 void silcpurple_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group);
 void silcpurple_buddy_keyagr_request(SilcClient client,
@@ -142,7 +163,7 @@ char *silcpurple_get_chat_name(GHashTable *data);
 void silcpurple_chat_invite(PurpleConnection *gc, int id, const char *msg,
 			  const char *name);
 void silcpurple_chat_leave(PurpleConnection *gc, int id);
-int silcpurple_chat_send(PurpleConnection *gc, int id, const char *msg, PurpleMessageFlags flags);
+int silcpurple_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg);
 void silcpurple_chat_set_topic(PurpleConnection *gc, int id, const char *topic);
 PurpleRoomlist *silcpurple_roomlist_get_list(PurpleConnection *gc);
 void silcpurple_roomlist_cancel(PurpleRoomlist *list);
@@ -151,8 +172,7 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 void silcpurple_parse_attrs(SilcDList attrs, char **moodstr, char **statusstr,
 					 char **contactstr, char **langstr, char **devicestr,
 					 char **tzstr, char **geostr);
-void silcpurple_buddy_set_icon(PurpleConnection *gc, PurpleStoredImage *img);
-char *silcpurple_file2mime(const char *filename);
+void silcpurple_buddy_set_icon(PurpleConnection *gc, PurpleImage *img);
 SilcDList silcpurple_image_message(const char *msg, SilcMessageFlags *mflags);
 
 #ifdef _WIN32

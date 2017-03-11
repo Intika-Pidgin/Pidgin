@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+               "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+]>
+<chapter id="chapter-tut-c-plugins">
+  <title>C Plugins tutorial</title>
+
+  <sect2 id="tut-c-plugins-introduction">
+  <title>Introduction</title>
+  <para>
+  C plugins are native plugins.  They have complete access to all of the API,
+  and can do basically whatever they want.  All of the protocol plugins are
+  also written in C.
+  </para>
+  </sect2>
+
+  <sect2 id="tut-c-plugins-getting-started">
+  <title>Getting Started</title>
+  <para>
+  To develop a plugin you need to have the libpurple and (for UI plugins) the
+  Pidgin/Finch source code or development headers.  It is generally a good idea
+  to compile against the same version of Pidgin that you are running.  You may
+  also want to develop against the code in our Mercurial repository if you need
+  to use a new feature.  Please do not abuse our Mercurial repository, however.
+  </para>
+
+  <para>
+  All plugins must have <literal>PURPLE_PLUGINS</literal> defined and the
+  definition must be before including any libpurple, Pidgin, or Finch header
+  files.  Failure to do so can lead to strange errors that are hard to diagnose.
+  Including <literal>purple.h</literal> will define this for you.
+  </para>
+  </sect2>
+
+  <sect2 id="tut-c-plugins-hello-world">
+  <title>An Example</title>
+  <para>
+  I know every tutorial has a hello world, so why should libpurple be any
+  different?
+
+<example>
+<title>Hello World!</title>
+<programlisting>
+#include &lt;purple.h&gt;
+
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Author Name &lt;e@mail&gt;",
+		NULL
+	};
+
+	/* For specific notes on the meanings of each of these members, consult the
+	   C Plugin Howto on the website. */
+	return purple_plugin_info_new (
+		"name",         "Hello World!",
+		"version",      VERSION,
+		"category",     "Example",
+		"summary",      "Hello World Plugin",
+		"description",  "Hello World Plugin",
+		"authors",      authors,
+		"website",      "http://helloworld.tld",
+		"abi-version",  PURPLE_ABI_VERSION,
+		NULL
+	);
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	purple_notify_message(plugin, PURPLE_NOTIFY_MSG_INFO, "Hello World!",
+						"This is the Hello World! plugin :)",
+						NULL, NULL, NULL, NULL);
+
+	return TRUE;
+}
+
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(hello_world, plugin_query, plugin_load, plugin_unload);
+</programlisting>
+</example>
+  </para>
+
+  <para>
+  Okay, so what does all this mean?  We start off by including purple.h.  This
+  file defines <literal>PURPLE_PLUGINS</literal> as described before so that we
+  don't have to manually define it.  It also includes all the libpurple header
+  files.
+  </para>
+
+  <para>
+  <literal>plugin_query</literal>, <literal>plugin_load</literal> and
+  <literal>plugin_unload</literal> must be implemented in every plugin.  Each of
+  these functions can return an error on failure by using
+  <function>g_set_error()</function> on the <literal>error</literal> argument.
+  </para>
+
+  <para>
+  <literal>plugin_query</literal> is called when the plugin is probed by the
+  plugin system, and returns various information about the plugin in form of a
+  newly created <literal>PurplePluginInfo</literal> instance.  For a list of all
+  available properties, see
+  <link linkend="purple-plugin-info-new"><function>purple_plugin_info_new()</function></link>.
+  </para>
+
+  <para>
+  <literal>plugin_load</literal> is called when the plugin is loaded so that you
+  can initialize any variables, register dynamic types, and so on.  Plugins may
+  also want to add their preferences to the pref tree--more about that later.
+  In this plugin we'll just use it to display a message.
+  </para>
+
+  <para>
+  <literal>plugin_unload</literal> is called when the plugin is unloaded, and we
+  can use it to wrap up everything, and free our variables.
+  </para>
+
+  <para>
+  Finally we have
+  <link linkend="PURPLE-PLUGIN-INIT:CAPS"><function>PURPLE_PLUGIN_INIT()</function></link>.
+  It is a macro that every plugin MUST have. It tells libpurple some basic
+  things about your plugin, like what name to use if the plugin is compiled
+  statically, along with the <literal>plugin_query</literal>,
+  <literal>plugin_load</literal>, and <literal>plugin_unload</literal>
+  functions.
+  </para>
+ </sect2>
+</chapter>

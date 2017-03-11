@@ -148,11 +148,13 @@ aim_xsnac_free(aim_xsnac_t *xsnac)
 }
 
 static void
-kerberos_login_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-	const gchar *got_data, gsize got_len, const gchar *error_message)
+kerberos_login_cb(PurpleHttpConnection *http_conn,
+	PurpleHttpResponse *response, gpointer _od)
 {
-	OscarData *od = user_data;
+	OscarData *od = _od;
 	PurpleConnection *gc;
+	const gchar *got_data;
+	size_t got_len;
 	ByteStream bs;
 	aim_xsnac_t xsnac = {0};
 	guint16 len;
@@ -165,23 +167,24 @@ kerberos_login_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 
 	gc = od->gc;
 
-	od->url_data = NULL;
+	od->hc = NULL;
 
-	if (error_message != NULL || got_len == 0) {
+	if (!purple_http_response_is_successful(response)) {
 		gchar *tmp;
 		gchar *url;
 
 		url = get_kdc_url(od);
 		tmp = g_strdup_printf(_("Error requesting %s: %s"),
-				url, error_message ?
-				error_message : _("The server returned an empty response"));
-		purple_connection_error_reason(gc,
+				url,
+				purple_http_response_get_error(response));
+		purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		g_free(url);
 		return;
 	}
 
+	got_data = purple_http_response_get_data(response, &got_len);
 	purple_debug_info("oscar", "Received kerberos login HTTP response %lu : ", got_len);
 
 	byte_stream_init(&bs, (guint8 *)got_data, got_len);
@@ -191,13 +194,13 @@ kerberos_login_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 	byte_stream_getrawbuf(&bs, (guint8 *) xsnac.flags, 8);
 
 	if (xsnac.family == 0x50C && xsnac.subtype == 0x0005) {
-		purple_connection_error_reason(gc,
+		purple_connection_error(gc,
 			PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
 			_("Incorrect password"));
 		return;
 	}
 	if (xsnac.family != 0x50C || xsnac.subtype != 0x0003) {
-		purple_connection_error_reason(gc,
+		purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Error parsing response from authentication server"));
 		return;
@@ -289,7 +292,7 @@ kerberos_login_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 		oscar_connect_to_bos(gc, od, host, port, cookie, cookie_len, tlsCertName);
 		g_free(host);
 	} else {
-		purple_connection_error_reason(gc,
+		purple_connection_error(gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Unknown error during authentication"));
 	}
@@ -321,7 +324,7 @@ kerberos_login_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
 void send_kerberos_login(OscarData *od, const char *username)
 {
 	PurpleConnection *gc;
-	GString *request;
+	PurpleHttpRequest *req;
 	gchar *url;
 	const gchar *password;
 	gchar password_xored[MAXAIMPASSLEN];
@@ -408,23 +411,15 @@ void send_kerberos_login(OscarData *od, const char *username)
 	g_free(imapp_key);
 
 	url = get_kdc_url(od);
-
-	/* Construct an HTTP POST request */
-	request = g_string_new("POST / HTTP/1.1\n"
-			"Connection: close\n"
-			"Accept: application/x-snac\n");
-
-	/* Tack on the body */
-	g_string_append_printf(request, "Content-Type: application/x-snac\n");
-	g_string_append_printf(request, "Content-Length: %" G_GSIZE_FORMAT "\n\n", body->len);
-	g_string_append_len(request, body->str, body->len);
-
-	/* Send the POST request  */
-	od->url_data = purple_util_fetch_url_request_data_len_with_account(
-			purple_connection_get_account(gc), url,
-			TRUE, NULL, TRUE, request->str, request->len, FALSE, -1,
-			kerberos_login_cb, od);
-	g_string_free(request, TRUE);
+	req = purple_http_request_new(url);
+	purple_http_request_set_method(req, "POST");
+	purple_http_request_header_set(req, "Content-Type",
+		"application/x-snac");
+	purple_http_request_header_set(req, "Accept",
+		"application/x-snac");
+	purple_http_request_set_contents(req, body->str, body->len);
+	od->hc = purple_http_request(gc, req, kerberos_login_cb, od);
+	purple_http_request_unref(req);
 
 	g_string_free(body, TRUE);
 	g_free(url);

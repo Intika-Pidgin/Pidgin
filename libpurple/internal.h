@@ -1,8 +1,3 @@
-/**
- * @file internal.h Internal definitions and includes
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -23,8 +18,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #ifndef _PURPLE_INTERNAL_H_
 #define _PURPLE_INTERNAL_H_
+/*
+ * SECTION:internal
+ * @section_id: libpurple-internal
+ * @short_description: <filename>internal.h</filename>
+ * @title: Internal definitions and includes
+ */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -48,6 +50,7 @@
 #ifdef ENABLE_NLS
 #  include <locale.h>
 #  include <libintl.h>
+#  undef printf
 #  define _(String) ((const char *)dgettext(PACKAGE, String))
 #  ifdef gettext_noop
 #    define N_(String) gettext_noop (String)
@@ -75,7 +78,6 @@
 #define BUF_LEN MSG_LEN
 #define BUF_LONG BUF_LEN * 2
 
-#include <sys/stat.h>
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/time.h>
@@ -99,14 +101,6 @@
 #include <langinfo.h>
 #endif
 
-#include <gmodule.h>
-
-#ifdef PURPLE_PLUGINS
-# ifdef HAVE_DLFCN_H
-#  include <dlfcn.h>
-# endif
-#endif
-
 #ifndef _WIN32
 # include <netinet/in.h>
 # include <sys/socket.h>
@@ -123,20 +117,10 @@
 #endif
 
 #include <glib.h>
-
-/* This wasn't introduced until Glib 2.14 :( */
-#ifndef G_MAXSSIZE
-#	if GLIB_SIZEOF_LONG == 8
-#		define G_MAXSSIZE ((gssize) 0x7fffffffffffffff)
-#	else
-#		define G_MAXSSIZE ((gssize) 0x7fffffff)
-#	endif
-#endif
-
 #include <glib/gstdio.h>
 
 #ifdef _WIN32
-#include "win32dep.h"
+#include "win32/win32dep.h"
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -149,27 +133,33 @@
 #endif
 #endif
 
-#include <glib-object.h>
+#define PURPLE_STATIC_ASSERT(condition, message) \
+	{ typedef char static_assertion_failed_ ## message \
+	[(condition) ? 1 : -1]; static_assertion_failed_ ## message dummy; \
+	(void)dummy; }
 
-#if !GLIB_CHECK_VERSION(2, 32, 0)
-
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#define G_GNUC_END_IGNORE_DEPRECATIONS
-
-#endif /* 2.32.0 */
+/* This is meant to track use-after-free errors.
+ * TODO: it should be disabled in released code. */
+#define PURPLE_ASSERT_CONNECTION_IS_VALID(gc) \
+	_purple_assert_connection_is_valid(gc, __FILE__, __LINE__)
 
 #ifdef __clang__
 
-#undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
+#define PURPLE_BEGIN_IGNORE_CAST_ALIGN \
 	_Pragma ("clang diagnostic push") \
-	_Pragma ("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+	_Pragma ("clang diagnostic ignored \"-Wcast-align\"")
 
-#undef G_GNUC_END_IGNORE_DEPRECATIONS
-#define G_GNUC_END_IGNORE_DEPRECATIONS \
+#define PURPLE_END_IGNORE_CAST_ALIGN \
 	_Pragma ("clang diagnostic pop")
 
+#else
+
+#define PURPLE_BEGIN_IGNORE_CAST_ALIGN
+#define PURPLE_END_IGNORE_CAST_ALIGN
+
 #endif /* __clang__ */
+
+#include <glib-object.h>
 
 #ifdef __COVERITY__
 
@@ -179,12 +169,6 @@
 
 #endif
 
-/* Safer ways to work with static buffers. When using non-static
- * buffers, either use g_strdup_* functions (preferred) or use
- * g_strlcpy/g_strlcpy directly. */
-#define purple_strlcpy(dest, src) g_strlcpy(dest, src, sizeof(dest))
-#define purple_strlcat(dest, src) g_strlcat(dest, src, sizeof(dest))
-
 typedef union
 {
 	struct sockaddr sa;
@@ -193,14 +177,45 @@ typedef union
 	struct sockaddr_storage storage;
 } common_sockaddr_t;
 
-#define PURPLE_WEBSITE "http://pidgin.im/"
-#define PURPLE_DEVEL_WEBSITE "http://developer.pidgin.im/"
+#define PURPLE_WEBSITE "https://pidgin.im/"
+#define PURPLE_DEVEL_WEBSITE "https://developer.pidgin.im/"
 
 
 /* INTERNAL FUNCTIONS */
 
-#include "account.h"
+#include "accounts.h"
 #include "connection.h"
+
+/**
+ * _purple_account_set_current_error:
+ * @account:  The account to set the error for.
+ * @new_err:  The #PurpleConnectionErrorInfo instance representing the
+ *                 error.
+ *
+ * Sets an error for an account.
+ */
+void _purple_account_set_current_error(PurpleAccount *account,
+                                       PurpleConnectionErrorInfo *new_err);
+
+/**
+ * _purple_account_to_xmlnode:
+ * @account:  The account
+ *
+ * Get an XML description of an account.
+ *
+ * Returns:  The XML description of the account.
+ */
+PurpleXmlNode *_purple_account_to_xmlnode(PurpleAccount *account);
+
+/**
+ * _purple_blist_get_last_child:
+ * @node:  The node whose last child is to be retrieved.
+ *
+ * Returns the last child of a particular node.
+ *
+ * Returns: The last child of the node.
+ */
+PurpleBlistNode *_purple_blist_get_last_child(PurpleBlistNode *node);
 
 /* This is for the accounts code to notify the buddy icon code that
  * it's done loading.  We may want to replace this with a signal. */
@@ -212,13 +227,13 @@ _purple_buddy_icons_account_loaded_cb(void);
 void
 _purple_buddy_icons_blist_loaded_cb(void);
 
-/* This is for the purple_core_migrate() code to tell the buddy
- * icon subsystem about the old icons directory so it can
- * migrate any icons in use. */
-void
-_purple_buddy_icon_set_old_icons_dir(const char *dirname);
-
 /**
+ * _purple_connection_new:
+ * @account:  The account the connection should be connecting to.
+ * @regist:   Whether we are registering a new account or just
+ *                 trying to do a normal signon.
+ * @password: The password to use.
+ *
  * Creates a connection to the specified account and either connects
  * or attempts to register a new account.  If you are logging in,
  * the connection uses the current active status for this account.
@@ -226,41 +241,102 @@ _purple_buddy_icon_set_old_icons_dir(const char *dirname);
  * have called purple_account_set_status(account, "away").
  * (And this will call purple_account_connect() automatically).
  *
- * @note This function should only be called by purple_account_connect()
+ * Note: This function should only be called by purple_account_connect()
  *       in account.c.  If you're trying to sign on an account, use that
  *       function instead.
- *
- * @param account  The account the connection should be connecting to.
- * @param regist   Whether we are registering a new account or just
- *                 trying to do a normal signon.
- * @param password The password to use.
  */
 void _purple_connection_new(PurpleAccount *account, gboolean regist,
                             const char *password);
 /**
+ * _purple_connection_new_unregister:
+ * @account:  The account to unregister
+ * @password: The password to use.
+ * @cb: Optional callback to be called when unregistration is complete
+ * @user_data: user data to pass to the callback
+ *
  * Tries to unregister the account on the server. If the account is not
  * connected, also creates a new connection.
  *
- * @note This function should only be called by purple_account_unregister()
+ * Note: This function should only be called by purple_account_unregister()
  *       in account.c.
- *
- * @param account  The account to unregister
- * @param password The password to use.
- * @param cb Optional callback to be called when unregistration is complete
- * @param user_data user data to pass to the callback
  */
 void _purple_connection_new_unregister(PurpleAccount *account, const char *password,
                                        PurpleAccountUnregistrationCb cb, void *user_data);
 /**
- * Disconnects and destroys a PurpleConnection.
+ * _purple_connection_wants_to_die:
+ * @gc:  The connection to check
  *
- * @note This function should only be called by purple_account_disconnect()
- *        in account.c.  If you're trying to sign off an account, use that
- *        function instead.
+ * Checks if a connection is disconnecting, and should not attempt to reconnect.
  *
- * @param gc The purple connection to destroy.
+ * Note: This function should only be called by purple_account_set_enabled()
+ *       in account.c.
  */
-void _purple_connection_destroy(PurpleConnection *gc);
+gboolean _purple_connection_wants_to_die(const PurpleConnection *gc);
+
+/**
+ * _purple_connection_add_active_chat:
+ * @gc:    The connection
+ * @chat:  The chat conversation to add
+ *
+ * Adds a chat to the active chats list of a connection
+ *
+ * Note: This function should only be called by purple_serv_got_joined_chat()
+ *       in server.c.
+ */
+void _purple_connection_add_active_chat(PurpleConnection *gc,
+                                        PurpleChatConversation *chat);
+/**
+ * _purple_connection_remove_active_chat:
+ * @gc:    The connection
+ * @chat:  The chat conversation to remove
+ *
+ * Removes a chat from the active chats list of a connection
+ *
+ * Note: This function should only be called by purple_serv_got_chat_left()
+ *       in server.c.
+ */
+void _purple_connection_remove_active_chat(PurpleConnection *gc,
+                                           PurpleChatConversation *chat);
+
+/**
+ * _purple_conversations_update_cache:
+ * @conv:    The conversation.
+ * @name:    The new name. If no change, use %NULL.
+ * @account: The new account. If no change, use %NULL.
+ *
+ * Updates the conversation cache to use a new conversation name and/or
+ * account. This function only updates the conversation cache. It is the
+ * caller's responsibility to actually update the conversation.
+ *
+ * Note: This function should only be called by purple_conversation_set_name()
+ *       and purple_conversation_set_account() in conversation.c.
+ */
+void _purple_conversations_update_cache(PurpleConversation *conv,
+		const char *name, PurpleAccount *account);
+
+/**
+ * _purple_statuses_get_primitive_scores:
+ *
+ * Note: This function should only be called by
+ *       purple_buddy_presence_compute_score() in presence.c.
+ *
+ * Returns: The primitive scores array from status.c.
+ */
+int *_purple_statuses_get_primitive_scores(void);
+
+/**
+ * _purple_blist_get_localized_default_group_name:
+ *
+ * Returns the name of default group for previously used non-English
+ * localization. It's used for merging default group, in case when roster
+ * contains localized name.
+ *
+ * Please note, prpls shouldn't save default group name depending on current
+ * locale. So, this function is mostly for libpurple2 compatibility. And for
+ * improperly written prpls.
+ */
+const gchar *
+_purple_blist_get_localized_default_group_name(void);
 
 /**
  * Sets most commonly used socket flags: O_NONBLOCK and FD_CLOEXEC.
@@ -271,5 +347,54 @@ void _purple_connection_destroy(PurpleConnection *gc);
  */
 gboolean
 _purple_network_set_common_socket_flags(int fd);
+
+/**
+ * A fstat alternative, like g_stat for stat.
+ *
+ * @param fd The file descriptor.
+ * @param st The stat buffer.
+ *
+ * @return the result just like for fstat.
+ */
+int
+_purple_fstat(int fd, GStatBuf *st);
+
+/**
+ * _purple_message_init: (skip)
+ *
+ * Initializes the #PurpleMessage subsystem.
+ */
+void
+_purple_message_init(void);
+
+/**
+ * _purple_message_uninit: (skip)
+ *
+ * Uninitializes the #PurpleMessage subsystem.
+ */
+void
+_purple_message_uninit(void);
+
+void
+_purple_assert_connection_is_valid(PurpleConnection *gc,
+	const gchar *file, int line);
+
+/**
+ * _purple_conversation_write_common:
+ * @conv:    The conversation.
+ * @msg:     The message.
+ *
+ * Writes to a conversation window.
+ *
+ * This function should not be used to write IM or chat messages. Use
+ * purple_conversation_write_message() instead. This function will
+ * most likely call this anyway, but it may do it's own formatting,
+ * sound playback, etc. depending on whether the conversation is a chat or an
+ * IM.
+ *
+ * See purple_conversation_write_message().
+ */
+void
+_purple_conversation_write_common(PurpleConversation *conv, PurpleMessage *msg);
 
 #endif /* _PURPLE_INTERNAL_H_ */

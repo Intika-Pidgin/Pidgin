@@ -42,7 +42,7 @@ AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 GNT_MAJOR_VERSION=gnt_major_version
 GNT_MINOR_VERSION=gnt_minor_version
 GNT_MICRO_VERSION=gnt_micro_version
-GNT_VERSION=[gnt_display_version]
+GNT_VERSION=gnt_display_version
 AC_SUBST(GNT_MAJOR_VERSION)
 AC_SUBST(GNT_MINOR_VERSION)
 AC_SUBST(GNT_MICRO_VERSION)
@@ -67,80 +67,22 @@ dnl we don't use autobreak on cygwin!!
 dnl AC_CYGWIN
 
 dnl Checks for header files.
-AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS(arpa/nameser_compat.h fcntl.h sys/time.h unistd.h locale.h signal.h stdint.h regex.h)
+AC_CHECK_HEADERS(unistd.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_STRUCT_TM
 
 AC_C_BIGENDIAN
 
 dnl Checks for library functions.
-AC_TYPE_SIGNAL
-AC_FUNC_STRFTIME
-AC_CHECK_FUNCS(strdup strstr atexit setlocale)
+AC_CHECK_FUNCS(strdup)
 
 dnl to prevent the g_stat()/g_unlink() crash,
 dnl (09:50:07) Robot101: LSchiere2: it's easy. +LC_SYS_LARGEFILE somewhere in configure.ac
 AC_SYS_LARGEFILE
 
-dnl FreeBSD doesn't have libdl, dlopen is provided by libc
-AC_CHECK_FUNC(dlopen, LIBDL="", [AC_CHECK_LIB(dl, dlopen, LIBDL="-ldl")])
-
-AC_MSG_CHECKING(for the %z format string in strftime())
-AC_TRY_RUN([
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#include <time.h>
-#include <stdio.h>
-
-int main()
-{
-	char buf[6];
-	time_t t = time(NULL);
-
-	if (strftime(buf, sizeof(buf), "%z", localtime(&t)) != 5)
-		return 1;
-
-	fprintf(stderr, "strftime(\"%%z\") yields: \"%s\"\n", buf);
-
-	return !((buf[0] == '-' || buf[0] == '+') &&
-	         (buf[1] >= '0' && buf[1] <= '9') &&
-	         (buf[2] >= '0' && buf[2] <= '9') &&
-	         (buf[3] >= '0' && buf[3] <= '9') &&
-	         (buf[4] >= '0' && buf[4] <= '9')
-	        );
-}
-],
-[
-	AC_MSG_RESULT(yes)
-	AC_DEFINE([HAVE_STRFTIME_Z_FORMAT], [1],
-                                      [Define to 1 if you have a strftime() that supports the %z format string.])
-],
-[
-	AC_MSG_RESULT(no)
-],
-[
-	# Fallback for Cross Compiling...
-	# This will enable the compatibility code.
-	AC_MSG_RESULT(no)
-]
-)
-
-
-AC_CHECK_HEADER(sys/utsname.h)
-AC_CHECK_FUNC(uname)
-
 if test "x$enable_debug" = "xyes" ; then
 	AC_DEFINE(DEBUG, 1, [Define if debugging is enabled.])
-	enable_fatal_asserts="yes"
-fi
-
-if test "x$enable_fatal_asserts" = "xyes" ; then
-	AC_DEFINE(GAIM_FATAL_ASSERTS, 1, [Define to make assertions fatal (useful for debugging).])
 fi
 
 if test "x$enable_deprecated" = "xno"; then
@@ -237,12 +179,7 @@ AC_SUBST(GLIB_LIBS)
 
 AC_MSG_CHECKING(for me pot o' gold)
 AC_MSG_RESULT(no)
-AC_CHECK_FUNCS(gethostid lrand48)
-AC_CHECK_FUNCS(memcpy memmove random strchr strerror vprintf)
-AC_CHECK_HEADERS(malloc.h paths.h sgtty.h stdarg.h sys/cdefs.h)
-AC_CHECK_HEADERS(sys/file.h sys/filio.h sys/ioctl.h sys/msgbuf.h)
-AC_CHECK_HEADERS(sys/select.h sys/uio.h sys/utsname.h sys/wait.h)
-AC_CHECK_HEADERS(termios.h)
+AC_CHECK_HEADERS(sys/wait.h)
 #AC_CHECK_FUNC(wcwidth, [AC_DEFINE([HAVE_WCWIDTH], [1], [Define to 1 if you have wcwidth function.])])
 #AC_VAR_TIMEZONE_EXTERNALS
 

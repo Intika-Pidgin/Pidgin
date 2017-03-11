@@ -2,6 +2,9 @@ EXTRA_DIST = \
 		dbus-analyze-functions.py \
 		dbus-analyze-signals.py \
 		dbus-analyze-types.py \
+		enums.c.in \
+		enums.h.in \
+		glibcompat.h \
 		marshallers.list \
 		purple-notifications-example \
 		purple-remote \
@@ -9,10 +12,12 @@ EXTRA_DIST = \
 		purple-send-async \
 		purple-url-handler \
 		purple.h.in \
+		tag.sh \
 		version.h.in \
 		Makefile.mingw \
-		data/purple.pc.in \
-		data/purple-uninstalled.pc.in \
+		data/purple-3.pc.in \
+		data/purple-3-uninstalled.pc.in \
+		data/purple-url-handler.desktop.in \
 		win32/global.mak \
 		win32/libc_interface.c \
 		win32/libc_interface.h \
@@ -25,30 +30,46 @@ EXTRA_DIST = \
 		win32/giowin32.c \
 		win32/win32dep.h
 
-if USE_GCONFTOOL
-GCONF_DIR=data/gconf
-endif
-
-SUBDIRS = $(GCONF_DIR) plugins protocols ciphers . tests example
+SUBDIRS = . plugins protocols tests example
 
 purple_coresources = \
 	account.c \
+	accounts.c \
 	accountopt.c \
-	blist.c \
+	blistnode.c \
+	buddy.c \
+	buddylist.c \
 	buddyicon.c \
-	certificate.c \
+	chat.c \
+	ciphers/aescipher.c \
+	ciphers/descipher.c \
+	ciphers/des3cipher.c \
+	ciphers/hmaccipher.c \
+	ciphers/md4hash.c \
+	ciphers/md5hash.c \
+	ciphers/pbkdf2cipher.c \
+	ciphers/rc4cipher.c \
+	ciphers/sha1hash.c \
+	ciphers/sha256hash.c \
 	cipher.c \
-	circbuffer.c \
+	circularbuffer.c \
 	cmds.c \
 	connection.c \
+	contact.c \
 	conversation.c \
+	conversationtypes.c \
+	conversations.c \
 	core.c \
+	countingnode.c \
 	debug.c \
-	desktopitem.c \
+	e2ee.c \
 	eventloop.c \
-	ft.c \
+	group.c \
+	http.c \
 	idle.c \
-	imgstore.c \
+	image.c \
+	image-store.c \
+	keyring.c \
 	log.c \
 	media/backend-fs2.c \
 	media/backend-iface.c \
@@ -57,26 +78,34 @@ purple_coresources = \
 	media/enum-types.c \
 	media.c \
 	mediamanager.c \
+	memorypool.c \
+	message.c \
 	mime.c \
 	nat-pmp.c \
 	network.c \
 	ntlm.c \
 	notify.c \
-	plugin.c \
+	plugins.c \
 	pluginpref.c \
 	pounce.c \
 	prefs.c \
-	privacy.c \
+	presence.c \
 	proxy.c \
-	prpl.c \
+	protocol.c \
+	protocols.c \
+	purple-gio.c \
+	queuedoutputstream.c \
 	request.c \
+	request-datasheet.c \
 	roomlist.c \
 	savedstatuses.c \
 	server.c \
 	signals.c \
+	smiley-custom.c \
+	smiley-list.c \
+	smiley-parser.c \
+	smiley-theme.c \
 	smiley.c \
-	dnsquery.c \
-	dnssrv.c\
 	status.c \
 	stringref.c \
 	stun.c \
@@ -87,60 +116,80 @@ purple_coresources = \
 	theme.c \
 	theme-loader.c \
 	theme-manager.c \
+	tls-certificate.c \
+	tls-certificate-info.c \
+	trie.c \
 	upnp.c \
 	util.c \
-	value.c \
 	version.c \
-	xmlnode.c \
-	whiteboard.c
+	whiteboard.c \
+	xfer.c \
+	xmlnode.c
 
 purple_builtsources = \
+	enums.c \
 	marshallers.c
 
 purple_coreheaders = \
 	account.h \
+	accounts.h \
 	accountopt.h \
-	blist.h \
+	blistnode.h \
+	buddy.h \
+	buddylist.h \
 	buddyicon.h \
-	certificate.h \
+	chat.h \
 	cipher.h \
-	circbuffer.h \
+	circularbuffer.h \
 	cmds.h \
 	connection.h \
+	contact.h \
 	conversation.h \
+	conversationtypes.h \
+	conversations.h \
 	core.h \
+	countingnode.h \
 	dbus-maybe.h \
 	debug.h \
-	desktopitem.h \
+	e2ee.h \
 	eventloop.h \
-	ft.h \
-	gaim-compat.h \
+	group.h \
+	http.h \
 	idle.h \
-	imgstore.h \
+	image.h \
+	image-store.h \
+	keyring.h \
 	log.h \
 	media.h \
-	media-gst.h \
 	mediamanager.h \
+	memorypool.h \
+	message.h \
 	mime.h \
 	nat-pmp.h \
 	network.h \
 	notify.h \
 	ntlm.h \
-	plugin.h \
+	plugins.h \
 	pluginpref.h \
 	pounce.h \
 	prefs.h \
-	privacy.h \
+	presence.h \
 	proxy.h \
-	prpl.h \
+	protocol.h \
+	protocols.h \
+	purple-gio.h \
+	queuedoutputstream.h \
 	request.h \
+	request-datasheet.h \
 	roomlist.h \
 	savedstatuses.h \
 	server.h \
 	signals.h \
+	smiley-custom.h \
+	smiley-list.h \
+	smiley-parser.h \
+	smiley-theme.h \
 	smiley.h \
-	dnsquery.h \
-	dnssrv.h \
 	status.h \
 	stringref.h \
 	stun.h \
@@ -148,14 +197,43 @@ purple_coreheaders = \
 	sound-theme.h \
 	sound-theme-loader.h \
 	sslconn.h \
+	tests.h \
 	theme.h \
 	theme-loader.h \
 	theme-manager.h \
+	tls-certificate.h \
+	tls-certificate-info.h \
+	trie.h \
 	upnp.h \
 	util.h \
-	value.h \
-	xmlnode.h \
-	whiteboard.h
+	whiteboard.h \
+	xfer.h \
+	xmlnode.h
+
+if USE_VV
+purple_coreheaders += media-gst.h
+else
+EXTRA_DIST += media-gst.h
+endif
+
+if IS_WIN32
+purple_coresources += \
+	win32/giowin32.c \
+	win32/libc_interface.c \
+	win32/win32dep.c
+
+purple_coreheaders += \
+	win32/libc_interface.h \
+	win32/libc_internal.h \
+	win32/win32dep.h \
+	win32/wpurpleerror.h
+
+.rc.o: %.rc
+	$(AM_V_GEN)$(WINDRES) -i $< -o $@
+
+LIBPURPLE_WIN32RES = win32/libpurplerc.o
+LIBPURPLE_WIN32RES_LDFLAGS = -Wl,$(LIBPURPLE_WIN32RES)
+endif
 
 purple_mediaheaders = \
 	backend-iface.h \
@@ -163,7 +241,39 @@ purple_mediaheaders = \
 	codec.h \
 	enum-types.h
 
-purple_builtheaders = purple.h version.h marshallers.h
+purple_cipherheaders = \
+	aescipher.h \
+	descipher.h \
+	des3cipher.h \
+	hmaccipher.h \
+	md4hash.h \
+	md5hash.h \
+	pbkdf2cipher.h \
+	rc4cipher.h \
+	sha1hash.h \
+	sha256hash.h
+
+purple_builtheaders = purple.h version.h enums.h marshallers.h
+
+purple_enumheaders = \
+	$(srcdir)/account.h \
+	$(srcdir)/buddyicon.h \
+	$(srcdir)/cipher.h \
+	$(srcdir)/connection.h \
+	$(srcdir)/conversation.h \
+	$(srcdir)/conversationtypes.h \
+	$(srcdir)/debug.h \
+	$(srcdir)/eventloop.h \
+	$(srcdir)/notify.h \
+	$(srcdir)/plugins.h \
+	$(srcdir)/protocol.h \
+	$(srcdir)/protocols.h \
+	$(srcdir)/roomlist.h \
+	$(srcdir)/status.h \
+	$(srcdir)/sound.h \
+	$(srcdir)/xfer.h \
+	$(srcdir)/xmlnode.h
+
 
 marshallers.h: marshallers.list
 	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=purple_smarshal $(srcdir)/marshallers.list --header > marshallers.h
@@ -172,17 +282,35 @@ marshallers.c: marshallers.list marshallers.h
 	$(AM_V_GEN)echo "#include \"marshallers.h\"" > marshallers.c
 	$(AM_V_at)$(GLIB_GENMARSHAL) --prefix=purple_smarshal $(srcdir)/marshallers.list --body >> marshallers.c
 
-if ENABLE_DBUS
+# glib-mkenums doesn't handle VPATHs well, sed is used here to fix the
+# include paths and documentation.
+# Escaping possible . in $(srcdir) to \. for sed pattern.
+enums.h: $(srcdir)/enums.h.in $(purple_enumheaders)
+	$(AM_V_GEN)$(GLIB_MKENUMS) --template $(srcdir)/enums.h.in $(purple_enumheaders) > $@
+	sed -i 's,$(subst .,\.,$(srcdir))/,,g' $@
+
+enums.c: $(srcdir)/enums.c.in $(purple_enumheaders)
+	$(AM_V_GEN)$(GLIB_MKENUMS) --template $(srcdir)/enums.c.in $(purple_enumheaders) > $@
+	sed -i 's,$(subst .,\.,$(srcdir))/,,g' $@
 
 CLEANFILES = \
+	enums.c \
+	enums.h \
+	marshallers.c \
+	marshallers.h
+
+DISTCLEANFILES = \
+	data/purple-url-handler.desktop
+
+if ENABLE_DBUS
+
+CLEANFILES += \
 	dbus-bindings.c \
 	dbus-client-binding.c \
 	dbus-client-binding.h \
 	dbus-signals.c \
 	dbus-types.c \
 	dbus-types.h \
-	marshallers.c \
-	marshallers.h \
 	purple-client-bindings.c \
 	purple-client-bindings.h \
 	purple.service
@@ -190,36 +318,46 @@ CLEANFILES = \
 # purple dbus server
 
 dbus_sources  = dbus-server.c dbus-useful.c
-dbus_headers  = dbus-bindings.h dbus-purple.h dbus-server.h dbus-useful.h dbus-define-api.h dbus-types.h
+dbus_headers  = dbus-server.h dbus-bindings.h dbus-purple.h dbus-useful.h dbus-define-api.h dbus-types.h
 
-dbus_exported = dbus-useful.h dbus-define-api.h account.h blist.h buddyicon.h \
-                connection.h conversation.h core.h ft.h log.h notify.h prefs.h roomlist.h \
-                savedstatuses.h smiley.h status.h server.h util.h xmlnode.h prpl.h
+dbus_exported = dbus-useful.h dbus-define-api.h account.h accounts.h blistnode.h \
+                buddy.h buddylist.h buddyicon.h connection.h conversation.h \
+                conversationtypes.h conversations.h core.h xfer.h log.h notify.h \
+                prefs.h presence.h roomlist.h savedstatuses.h smiley.h smiley-list.h \
+				status.h server.h util.h xmlnode.h protocol.h protocols.h
 
+# Filter out enums.h and marshallers.h as they don't actually generate
+# anything. This way making from a VPATH and distcheck doesn't fail due
+# to not being able to find the enums.h or marshallers.h files if
+# they've already been generated in the $(srcdir).
 purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders)) \
+		$(addprefix $(srcdir)/ciphers/, $(purple_cipherheaders)) \
 		$(addprefix $(srcdir)/media/, $(purple_mediaheaders)) \
-		$(purple_builtheaders)
+		$(filter-out: enums.h marshallers.h, $(purple_builtheaders))
 dbus_build_exported = $(addprefix $(srcdir)/, $(dbus_exported))
 # We should probably make this better
 dbus_signals = $(addprefix $(srcdir)/, $(purple_coresources)) \
 	$(srcdir)/protocols/irc/irc.c \
-	$(srcdir)/protocols/jabber/libxmpp.c
+	$(srcdir)/protocols/jabber/jabber.c
 
 dbus-types.c: dbus-analyze-types.py $(purple_build_coreheaders)
-	$(AM_V_GEN)cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DEFINE_TYPE\(%s\) > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DEFINE_TYPE\(%s\) -o $@ $(purple_build_coreheaders)
 
 dbus-types.h: dbus-analyze-types.py $(purple_build_coreheaders)
-	$(AM_V_GEN)cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DECLARE_TYPE\(%s\) > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-types.py --pattern=PURPLE_DBUS_DECLARE_TYPE\(%s\) -o $@ $(purple_build_coreheaders)
 
 dbus-bindings.c: dbus-analyze-functions.py $(dbus_exported)
-	$(AM_V_GEN)cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py > $@
+	$(AM_V_GEN)$(PYTHON) $(srcdir)/dbus-analyze-functions.py -o $@ $(dbus_build_exported)
 
 dbus-signals.c: dbus-analyze-signals.py $(dbus_signals)
-	$(AM_V_GEN)cat $(dbus_signals) | $(PYTHON) $(srcdir)/dbus-analyze-signals.py > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-signals.py -o $@ $(dbus_signals)
 
 dbus-server.$(OBJEXT): dbus-bindings.c dbus-signals.c dbus-types.c dbus-types.h
 dbus-server.lo: dbus-bindings.c dbus-signals.c dbus-types.c dbus-types.h
-$(libpurple_la_OBJECTS): dbus-types.h
+
+# Declare these as dependencies so they're built even if `make distcheck`
+# is run immediately after configuring.
+$(libpurple_la_OBJECTS): dbus-types.h enums.h marshallers.h
 
 # libpurple-client
 
@@ -230,11 +368,11 @@ libpurple_client_la_LDFLAGS = -version-info $(PURPLE_LT_VERSION_INFO) -no-undefi
 libpurple_client_la_LIBADD = $(DBUS_LIBS)
 
 purple-client-bindings.c: dbus-analyze-functions.py $(dbus_exported)
-	$(AM_V_GEN)cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client > $@
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client -o $@ $(dbus_build_exported)
 
-purple-client-bindings.h: dbus-analyze-types.py dbus-analyze-functions.py $(purple_coreheaders) $(addprefix media/, $(purple_mediaheaders)) $(purple_builtheaders) $(dbus_exported)
-	$(AM_V_GEN)cat $(purple_build_coreheaders) | $(PYTHON) $(srcdir)/dbus-analyze-types.py --keyword=enum --verbatim > $@
-	$(AM_V_at)cat $(dbus_build_exported) | $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client --headers >> $@
+purple-client-bindings.h: dbus-analyze-types.py dbus-analyze-functions.py $(purple_coreheaders) $(addprefix ciphers/, $(purple_cipherheaders)) $(addprefix media/, $(purple_mediaheaders)) $(purple_builtheaders) $(dbus_exported)
+	$(AM_V_GEN) $(PYTHON) $(srcdir)/dbus-analyze-types.py --keyword=enum --verbatim -o $@ $(purple_build_coreheaders)
+	$(AM_V_at) $(PYTHON) $(srcdir)/dbus-analyze-functions.py --client --headers --append -o $@ $(dbus_build_exported)
 
 $(libpurple_client_la_OBJECTS): purple-client-bindings.h purple-client-bindings.c
 
@@ -270,6 +408,10 @@ else
 
 BUILT_SOURCES = $(purple_builtheaders) $(purple_builtsources)
 
+# Declare these as dependencies so they're built even if `make distcheck`
+# is run immediately after configuring.
+$(libpurple_la_OBJECTS): enums.h marshallers.h
+
 endif
 
 lib_LTLIBRARIES = libpurple.la $(libpurple_client_lib)
@@ -290,19 +432,43 @@ libpurpleinclude_HEADERS = \
 	$(purple_builtheaders) \
 	$(dbus_headers)
 
+cipherincludedir=$(includedir)/libpurple/ciphers
+cipherinclude_HEADERS = \
+	$(addprefix $(srcdir)/ciphers/, $(purple_cipherheaders))
+
 mediaincludedir=$(includedir)/libpurple/media
 mediainclude_HEADERS = \
 	$(addprefix $(srcdir)/media/, $(purple_mediaheaders))
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = data/purple.pc
+pkgconfig_DATA = data/purple-3.pc
 
-libpurple_la_DEPENDENCIES = $(STATIC_LINK_LIBS)
-libpurple_la_LDFLAGS = -export-dynamic -version-info $(PURPLE_LT_VERSION_INFO) -no-undefined
+if INSTALL_I18N
+DESKTOP_FILE=data/purple-url-handler.desktop
+
+appsdir = $(datadir)/applications
+apps_in_files = data/purple-url-handler.desktop.in
+apps_DATA = $(apps_in_files:.desktop.in=.desktop)
+
+# silenced INTLTOOL_DESKTOP_RULE
+%.desktop: %.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po)
+	$(AM_V_GEN) LC_ALL=C $(INTLTOOL_MERGE) -d -u -c $(top_builddir)/po/.intltool-merge-cache $(top_srcdir)/po $< $@ > /dev/null
+
+@INTLTOOL_XML_RULE@
+
+endif # INSTALL_I18N
+
+libpurple_la_DEPENDENCIES = \
+	$(STATIC_LINK_LIBS) $(LIBPURPLE_WIN32RES)
+
+libpurple_la_LDFLAGS = -export-dynamic -version-info $(PURPLE_LT_VERSION_INFO) \
+	-no-undefined $(LIBPURPLE_WIN32RES_LDFLAGS)
 libpurple_la_LIBADD = \
 	$(STATIC_LINK_LIBS) \
 	$(DBUS_LIBS) \
+	$(DNSAPI_LIBS) \
 	$(GLIB_LIBS) \
+	$(GPLUGIN_LIBS) \
 	$(LIBXML_LIBS) \
 	$(NETWORKMANAGER_LIBS) \
 	$(INTLLIBS) \
@@ -312,15 +478,16 @@ libpurple_la_LIBADD = \
 	$(GSTAPP_LIBS) \
 	$(GSTINTERFACES_LIBS) \
 	$(IDN_LIBS) \
-	ciphers/libpurple-ciphers.la \
+	$(JSON_LIBS) \
+	$(GNUTLS_LIBS) \
+	$(NSS_LIBS) \
+	$(ZLIB_LIBS) \
+	$(INTROSPECTION_LIBS) \
 	-lm
 
 AM_CPPFLAGS = \
-	-DDATADIR=\"$(datadir)\" \
-	-DLIBDIR=\"$(libdir)/purple-$(PURPLE_MAJOR_VERSION)/\" \
-	-DLOCALEDIR=\"$(datadir)/locale\" \
-	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \
@@ -330,10 +497,65 @@ AM_CPPFLAGS = \
 	$(GSTAPP_CFLAGS) \
 	$(GSTINTERFACES_CFLAGS) \
 	$(IDN_CFLAGS) \
-	$(NETWORKMANAGER_CFLAGS)
+	$(NETWORKMANAGER_CFLAGS) \
+	$(JSON_CFLAGS) \
+	$(GNUTLS_CFLAGS) \
+	$(NSS_CFLAGS) \
+	$(ZLIB_CFLAGS) \
+	$(INTROSPECTION_CFLAGS)
 
-# INSTALL_SSL_CERTIFICATES is true when SSL_CERTIFICATES_DIR is empty.
-# We want to use SSL_CERTIFICATES_DIR when it's not empty.
-if ! INSTALL_SSL_CERTIFICATES
-AM_CPPFLAGS += -DSSL_CERTIFICATES_DIR=\"$(SSL_CERTIFICATES_DIR)\"
+-include $(INTROSPECTION_MAKEFILE)
+INTROSPECTION_GIRS =
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(prefix)/share/gir-1.0 --warn-all
+INTROSPECTION_COMPILER_ARGS = --includedir=$(prefix)/share/gir-1.0
+
+if HAVE_INTROSPECTION
+introspection_sources = \
+	$(libpurpleinclude_HEADERS) \
+	$(addprefix ciphers/, $(purple_cipherheaders)) \
+	$(addprefix media/, $(purple_mediaheaders))
+
+Purple-$(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION).gir: $(builddir)/libpurple.la
+Purple_3_0_gir_INCLUDES = Gio-2.0 GObject-2.0
+if PLUGINS
+Purple_3_0_gir_INCLUDES += GPlugin-0.0
+endif
+if ENABLE_DBUS
+Purple_3_0_gir_INCLUDES += DBus-1.0 DBusGLib-1.0
+endif
+
+Purple_3_0_gir_CFLAGS = \
+	-I$(srcdir) \
+	$(INCLUDES) \
+	-DDATADIR=\"$(datadir)\" \
+	-DLIBDIR=\"$(libdir)/purple-$(PURPLE_MAJOR_VERSION)/\" \
+	-DLOCALEDIR=\"$(datadir)/locale\" \
+	-DSYSCONFDIR=\"$(sysconfdir)\" \
+	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
+	$(DBUS_CFLAGS) \
+	$(LIBXML_CFLAGS) \
+	$(FARSTREAM_CFLAGS) \
+	$(GSTREAMER_CFLAGS) \
+	$(GSTVIDEO_CFLAGS) \
+	$(GSTINTERFACES_CFLAGS) \
+	$(IDN_CFLAGS) \
+	$(NETWORKMANAGER_CFLAGS) \
+	$(JSON_CFLAGS) \
+	$(GNUTLS_CFLAGS) \
+	$(NSS_CFLAGS) \
+	$(ZLIB_CFLAGS) \
+	$(INTROSPECTION_CFLAGS)
+
+Purple_3_0_gir_LIBS = $(builddir)/libpurple.la
+Purple_3_0_gir_FILES = $(introspection_sources)
+INTROSPECTION_GIRS += Purple-$(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION).gir
+
+girdir = $(prefix)/share/gir-1.0 $(INTROSPECTION_GIRDIR)
+gir_DATA = $(INTROSPECTION_GIRS)
+
+typelibdir = $(prefix)/share/gir-1.0 $(INTROSPECTION_TYPELIBDIR)
+typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
+
+CLEANFILES += $(gir_DATA) $(typelib_DATA)
 endif

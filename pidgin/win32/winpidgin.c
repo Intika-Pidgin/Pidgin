@@ -25,16 +25,20 @@
  *
  */
 
+#include "config.h"
+
 #include <windows.h>
+#include <shellapi.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "config.h"
 
+#ifndef IS_WIN32_CROSS_COMPILED
 typedef int (__cdecl* LPFNPIDGINMAIN)(HINSTANCE, int, char**);
+#endif
 typedef void (WINAPI* LPFNSETDLLDIRECTORY)(LPCWSTR);
 typedef BOOL (WINAPI* LPFNATTACHCONSOLE)(DWORD);
 typedef BOOL (WINAPI* LPFNSETPROCESSDEPPOLICY)(DWORD);
@@ -44,7 +48,11 @@ static BOOL portable_mode = FALSE;
 /*
  *  PROTOTYPES
  */
+#ifdef IS_WIN32_CROSS_COMPILED
+int __cdecl pidgin_main(HINSTANCE hint, int argc, char *argv[]);
+#else
 static LPFNPIDGINMAIN pidgin_main = NULL;
+#endif
 static LPFNSETDLLDIRECTORY MySetDllDirectory = NULL;
 
 static const wchar_t *get_win32_error_message(DWORD err) {
@@ -57,6 +65,44 @@ static const wchar_t *get_win32_error_message(DWORD err) {
 		(LPWSTR) &err_msg, sizeof(err_msg) / sizeof(wchar_t), NULL);
 
 	return err_msg;
+}
+
+static BOOL reg_value_exists(HKEY key, wchar_t *sub_key, wchar_t *val_name) {
+	HKEY hkey;
+	LONG retv;
+	DWORD index;
+	wchar_t name_buffer[100];
+	BOOL exists = FALSE;
+
+	if (sub_key == NULL || val_name == NULL)
+		return FALSE;
+
+	retv = RegOpenKeyExW(key, sub_key, 0, KEY_ENUMERATE_SUB_KEYS, &hkey);
+	if (retv != ERROR_SUCCESS)
+		return FALSE;
+
+	if (val_name[0] == L'\0') {
+		RegCloseKey(hkey);
+		return TRUE;
+	}
+
+	index = 0;
+	while (TRUE)
+	{
+		DWORD name_size = sizeof(name_buffer);
+		retv = RegEnumValueW(hkey, index++, name_buffer, &name_size,
+			NULL, NULL, NULL, NULL);
+		if (retv != ERROR_SUCCESS)
+			break;
+		name_size /= sizeof(wchar_t);
+		if (wcsncmp(name_buffer, val_name, name_size) == 0) {
+			exists = TRUE;
+			break;
+		}
+	}
+
+	RegCloseKey(hkey);
+	return exists;
 }
 
 static BOOL read_reg_string(HKEY key, wchar_t *sub_key, wchar_t *val_name, LPBYTE data, LPDWORD data_len) {
@@ -91,9 +137,7 @@ static BOOL read_reg_string(HKEY key, wchar_t *sub_key, wchar_t *val_name, LPBYT
 	return ret;
 }
 
-static BOOL common_dll_prep(const wchar_t *path) {
-	HMODULE hmod;
-	HKEY hkey;
+static BOOL check_for_gtk(const wchar_t *path) {
 	struct _stat stat_buf;
 	wchar_t test_path[MAX_PATH + 1];
 
@@ -101,14 +145,78 @@ static BOOL common_dll_prep(const wchar_t *path) {
 		L"%s\\libgtk-win32-2.0-0.dll", path);
 	test_path[sizeof(test_path) / sizeof(wchar_t) - 1] = L'\0';
 
-	if (_wstat(test_path, &stat_buf) != 0) {
-		printf("Unable to determine GTK+ path. \n"
-			"Assuming GTK+ is in the PATH.\n");
-		return FALSE;
+	return (_wstat(test_path, &stat_buf) == 0);
+}
+
+static void common_dll_prep(const wchar_t *path) {
+	HMODULE hmod;
+	HKEY hkey;
+	wchar_t alt_path_buff[MAX_PATH + 1];
+	wchar_t tmp_path[MAX_PATH + 1];
+	/* Hold strlen("FS_PLUGIN_PATH=" or "GST_PLUGIN_SYSTEM_PATH") +
+	 * MAX_PATH + 1
+	 */
+	wchar_t set_path[MAX_PATH + 24];
+	wchar_t *fslash, *bslash;
+
+	if (!check_for_gtk(path)) {
+		const wchar_t *winpath = _wgetenv(L"PATH");
+		wchar_t *delim;
+
+		if (winpath == NULL) {
+			printf("Unable to determine GTK+ path (and PATH is not set).\n");
+			exit(-1);
+		}
+
+		path = NULL;
+		do
+		{
+			wcsncpy(alt_path_buff, winpath, MAX_PATH);
+			alt_path_buff[MAX_PATH] = L'\0';
+			delim = wcschr(alt_path_buff, L';');
+			if (delim != NULL) {
+				delim[0] = L'\0';
+				winpath = wcschr(winpath, L';') + 1;
+			}
+			if (check_for_gtk(alt_path_buff)) {
+				path = alt_path_buff;
+				break;
+			}
+		}
+		while (delim != NULL);
+
+		if (path == NULL) {
+			printf("Unable to determine GTK+ path.\n");
+			exit(-1);
+		}
 	}
 
-
 	wprintf(L"GTK+ path found: %s\n", path);
+
+	wcsncpy(tmp_path, path, MAX_PATH);
+	tmp_path[MAX_PATH] = L'\0';
+	bslash = wcsrchr(tmp_path, L'\\');
+	fslash = wcsrchr(tmp_path, L'/');
+	if (bslash && bslash > fslash)
+		bslash[0] = L'\0';
+	else if (fslash && fslash > bslash)
+		fslash[0] = L'\0';
+	/* tmp_path now contains \path\to\Pidgin\Gtk */
+
+	_snwprintf(set_path, sizeof(set_path) / sizeof(wchar_t),
+		L"FS_PLUGIN_PATH=%s\\lib\\farstream-0.1", tmp_path);
+	set_path[sizeof(set_path) / sizeof(wchar_t) - 1] = L'\0';
+	_wputenv(set_path);
+
+	_snwprintf(set_path, sizeof(set_path) / sizeof(wchar_t),
+		L"GST_PLUGIN_SYSTEM_PATH=%s\\lib\\gstreamer-0.10", tmp_path);
+	set_path[sizeof(set_path) / sizeof(wchar_t) - 1] = L'\0';
+	_wputenv(set_path);
+
+	_snwprintf(set_path, sizeof(set_path) / sizeof(wchar_t),
+		L"GST_PLUGIN_PATH=%s\\lib\\gstreamer-0.10", tmp_path);
+	set_path[sizeof(set_path) / sizeof(wchar_t) - 1] = L'\0';
+	_wputenv(set_path);
 
 	if ((hmod = GetModuleHandleW(L"kernel32.dll"))) {
 		MySetDllDirectory = (LPFNSETDLLDIRECTORY) GetProcAddress(
@@ -120,7 +228,6 @@ static BOOL common_dll_prep(const wchar_t *path) {
 
 	/* For Windows XP SP1+ / Server 2003 we use SetDllDirectory to avoid dll hell */
 	if (MySetDllDirectory) {
-		printf("Using SetDllDirectory\n");
 		MySetDllDirectory(path);
 	}
 
@@ -178,11 +285,10 @@ static BOOL common_dll_prep(const wchar_t *path) {
 				printf("SafeDllSearchMode is set to 0\n");
 		}/*end else*/
 	}
-
-	return TRUE;
 }
 
-static BOOL dll_prep(const wchar_t *pidgin_dir) {
+#ifndef IS_WIN32_CROSS_COMPILED
+static void dll_prep(const wchar_t *pidgin_dir) {
 	wchar_t path[MAX_PATH + 1];
 	path[0] = L'\0';
 
@@ -191,8 +297,9 @@ static BOOL dll_prep(const wchar_t *pidgin_dir) {
 		path[sizeof(path) / sizeof(wchar_t) - 1] = L'\0';
 	}
 
-	return common_dll_prep(path);
+	common_dll_prep(path);
 }
+#endif
 
 static void portable_mode_dll_prep(const wchar_t *pidgin_dir) {
 	/* need to be able to fit MAX_PATH + "PURPLEHOME=" in path2 */
@@ -213,8 +320,8 @@ static void portable_mode_dll_prep(const wchar_t *pidgin_dir) {
 		path[cnt] = L'\0';
 	} else {
 		printf("Unable to determine current executable path. \n"
-			"This will prevent the settings dir from being set.\n"
-			"Assuming GTK+ is in the PATH.\n");
+			"This will prevent the settings dir from being set.\n");
+		common_dll_prep(L'\0');
 		return;
 	}
 
@@ -228,7 +335,12 @@ static void portable_mode_dll_prep(const wchar_t *pidgin_dir) {
 	wprintf(L"Setting settings dir: %s\n", path2);
 	_wputenv(path2);
 
-	if (!dll_prep(pidgin_dir)) {
+	_snwprintf(path2, sizeof(path2) / sizeof(wchar_t), L"%s\\Gtk\\bin",
+		pidgin_dir);
+	path2[sizeof(path2) / sizeof(wchar_t) - 1] = L'\0';
+	if (check_for_gtk(path2))
+		common_dll_prep(path2);
+	else {
 		/* set the GTK+ path to be \\path\to\GTK\bin */
 		wcscat(path, L"\\GTK\\bin");
 		common_dll_prep(path);
@@ -688,8 +800,10 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 
 	if (portable_mode)
 		portable_mode_dll_prep(pidgin_dir);
+#ifndef IS_WIN32_CROSS_COMPILED
 	else if (!getenv("PIDGIN_NO_DLL_CHECK"))
 		dll_prep(pidgin_dir);
+#endif
 
 	winpidgin_set_locale();
 
@@ -698,15 +812,18 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		if (!winpidgin_set_running(getenv("PIDGIN_MULTI_INST") == NULL && !multiple))
 			return 0;
 
+#ifndef IS_WIN32_CROSS_COMPILED
 	/* Now we are ready for Pidgin .. */
 	wcscat(pidgin_dir, L"\\pidgin.dll");
 	if ((hmod = LoadLibraryW(pidgin_dir)))
 		pidgin_main = (LPFNPIDGINMAIN) GetProcAddress(hmod, "pidgin_main");
+#endif
 
 	/* Restore pidgin_dir to point to where the executable is */
 	if (pidgin_dir_start)
 		pidgin_dir_start[0] = L'\0';
 
+#ifndef IS_WIN32_CROSS_COMPILED
 	if (!pidgin_main) {
 		DWORD dw = GetLastError();
 		BOOL mod_not_found = (dw == ERROR_MOD_NOT_FOUND || dw == ERROR_DLL_NOT_FOUND);
@@ -721,6 +838,7 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 
 		return 0;
 	}
+#endif
 
 	/* Convert argv to utf-8*/
 	szArglist = CommandLineToArgvW(cmdLine, &j);
