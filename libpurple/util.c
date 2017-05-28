@@ -4403,7 +4403,7 @@ purple_email_is_valid(const char *address)
 		if (*c == '\"' && (c == address || *(c - 1) == '.' || *(c - 1) == '\"')) {
 			while (*++c) {
 				if (*c == '\\') {
-					if (*c++ && *c < 127 && *c != '\n' && *c != '\r') continue;
+					if (*c++ && *c < 127 && *c > 0 && *c != '\n' && *c != '\r') continue;
 					else return FALSE;
 				}
 				if (*c == '\"') break;
