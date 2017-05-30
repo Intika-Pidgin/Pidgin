@@ -4181,7 +4181,7 @@ _pidgin_e2ee_stock_icon_get(const gchar *stock_name)
 	g_snprintf(filename, sizeof(filename), "%s.png", stock_name);
 	path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
 		"e2ee", "16", filename, NULL);
-	image = purple_image_new_from_file(path, FALSE);
+	image = purple_image_new_from_file(path, NULL);
 	g_free(path);
 
 	g_hash_table_insert(e2ee_stock, g_strdup(stock_name), image);
@@ -6069,12 +6069,11 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	if (generated_nick_colors == NULL) {
 		GdkColor color;
 		GdkRGBA rgba;
-		/* FIXME: No matter how I ask the GtkStyleContext, it always gives me
-		 * back black instead of the _actual_ background colour. */
 		color = gtk_widget_get_style(gtkconv->webview)->base[GTK_STATE_NORMAL];
 		rgba.red = color.red / 65535.0;
 		rgba.green = color.green / 65535.0;
 		rgba.blue = color.blue / 65535.0;
+		rgba.alpha = 1.0;
 		generated_nick_colors = generate_nick_colors(NICK_COLOR_GENERATE_COUNT, rgba);
 	}
 
@@ -6537,14 +6536,12 @@ static gboolean
 pidgin_conv_write_smiley(GString *out, PurpleSmiley *smiley,
 	PurpleConversation *conv, gpointer _proto_name)
 {
-	PurpleImage *image;
 	gchar *escaped_shortcut;
 	gchar *uri;
 
 	escaped_shortcut = g_markup_escape_text(
 		purple_smiley_get_shortcut(smiley), -1);
-	image = purple_smiley_get_image(smiley);
-	uri = purple_image_store_get_uri(image);
+	uri = purple_image_store_get_uri(PURPLE_IMAGE(smiley));
 
 	g_string_append_printf(out,
 		"<img class=\"emoticon\" alt=\"%s\" title=\"%s\" "
@@ -6593,11 +6590,14 @@ box_remote_image_cb(const GMatchInfo *info, GString *result, gpointer _conv)
 
 	full = g_match_info_fetch(info, 0);
 
+#warning fix this
+#if 0
 	if (purple_image_is_ready(image)) {
 		g_string_append(result, full);
 		g_free(full);
 		return FALSE;
 	}
+#endif
 
 	/* search for alt */
 	alt = strstr(full, "alt=\"");
@@ -7860,7 +7860,7 @@ pidgin_conv_update_buddy_icon(PurpleIMConversation *im)
 			if (custom_img) {
 				/* There is a custom icon for this user */
 				data = purple_image_get_data(custom_img);
-				len = purple_image_get_size(custom_img);
+				len = purple_image_get_data_size(custom_img);
 			}
 		}
 	}
@@ -11247,7 +11247,7 @@ generate_nick_colors(guint numcolors, GdkRGBA background)
 	 */
 	while(i < numcolors && time(NULL) < breakout_time)
 	{
-		GdkRGBA color = {rand() % 65536 / 65535.0, rand() % 65536 / 65535.0, rand() % 65536 / 65535.0, 1};
+		GdkRGBA color = {g_random_double_range(0, 1), g_random_double_range(0, 1), g_random_double_range(0, 1), 1};
 
 		if (color_is_visible(color, background,     MIN_LUMINANCE_CONTRAST_RATIO) &&
 			color_is_visible(color, nick_highlight, MIN_LUMINANCE_CONTRAST_RATIO) &&
