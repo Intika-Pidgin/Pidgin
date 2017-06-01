@@ -130,7 +130,7 @@ void jabber_avatar_set(JabberStream *js, PurpleImage *img)
 			} ihdr;
 		} *png = NULL;
 
-		if (purple_image_get_size(img) > sizeof(*png))
+		if (purple_image_get_data_size(img) > sizeof(*png))
 			png = purple_image_get_data(img);
 
 		/* check if the data is a valid png file (well, at least to some extent) */
@@ -157,10 +157,10 @@ void jabber_avatar_set(JabberStream *js, PurpleImage *img)
 			char *hash = g_compute_checksum_for_data(
 				G_CHECKSUM_SHA1,
 				purple_image_get_data(img),
-				purple_image_get_size(img));
+				purple_image_get_data_size(img));
 			char *base64avatar = purple_base64_encode(
 				purple_image_get_data(img),
-				purple_image_get_size(img));
+				purple_image_get_data_size(img));
 
 			publish = purple_xmlnode_new("publish");
 			purple_xmlnode_set_attrib(publish, "node", NS_AVATAR_1_1_DATA);
@@ -178,7 +178,7 @@ void jabber_avatar_set(JabberStream *js, PurpleImage *img)
 			g_free(base64avatar);
 
 			lengthstring = g_strdup_printf("%" G_GSIZE_FORMAT,
-				purple_image_get_size(img));
+				purple_image_get_data_size(img));
 			widthstring = g_strdup_printf("%u", width);
 			heightstring = g_strdup_printf("%u", height);
 
