@@ -475,7 +475,8 @@ void jabber_set_info(PurpleConnection *gc, const char *info)
 			js->initial_avatar_hash = g_compute_checksum_for_data(
 				G_CHECKSUM_SHA1,
 				purple_image_get_data(image),
-				purple_image_get_size(image));
+				purple_image_get_data_size(image)
+			);
 			g_object_unref(image);
 		} else {
 			js->initial_avatar_hash = NULL;
@@ -515,7 +516,7 @@ void jabber_set_info(PurpleConnection *gc, const char *info)
 		}
 
 		avatar_data = purple_image_get_data(img);
-		avatar_len = purple_image_get_size(img);
+		avatar_len = purple_image_get_data_size(img);
 		/* Get rid of an old PHOTO if one exists.
 		 * TODO: This may want to be modified to remove all old PHOTO
 		 * children, at the moment some people have managed to get

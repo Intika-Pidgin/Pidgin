@@ -134,9 +134,14 @@ pidgin_color_parse(const gchar *str, GdkRGBA *color)
 
 	if (strcmp(str, "inherit") == 0) {
 		return FALSE;
-	} else {
-		return gdk_rgba_parse(color, str);
 	}
+
+	if (!gdk_rgba_parse(color, str)) {
+		return FALSE;
+	}
+
+	/* FALSE for fully transparent color (same behavior as with "inherit") */
+	return color->alpha > 0;
 }
 
 static gchar*
@@ -562,7 +567,7 @@ do_insert_image_cb(GtkWidget *widget, int response, PidginWebViewToolbar *toolba
 	if (filename == NULL)
 		return;
 
-	img = purple_image_new_from_file(filename, TRUE);
+	img = purple_image_new_from_file(filename, NULL);
 
 	if (!img) {
 		gchar *buf = g_strdup_printf(_("Failed to store image: %s"),
@@ -633,15 +638,13 @@ static void
 insert_smiley_text(GtkWidget *widget, PidginWebViewToolbar *toolbar)
 {
 	PurpleSmiley *smiley;
-	PurpleImage *image;
 	guint image_id;
 	gchar *escaped_smiley, *smiley_html;
 	const gchar *smiley_class;
 
 	smiley = g_object_get_data(G_OBJECT(widget), "smiley");
 	smiley_class = g_object_get_data(G_OBJECT(widget), "smiley-class");
-	image = purple_smiley_get_image(smiley);
-	image_id = purple_image_store_add(image);
+	image_id = purple_image_store_add(PURPLE_IMAGE(smiley));
 
 	escaped_smiley = g_markup_escape_text(
 		purple_smiley_get_shortcut(smiley), -1);
@@ -694,8 +697,7 @@ smileys_load_button_thumbs(GList *smileys)
 			continue;
 		}
 
-		pixbuf = pidgin_pixbuf_from_image(
-			purple_smiley_get_image(smiley));
+		pixbuf = pidgin_pixbuf_from_image(PURPLE_IMAGE(smiley));
 		pixbuf = pidgin_pixbuf_scale_down(pixbuf,
 			24, 24, GDK_INTERP_BILINEAR, TRUE);
 
@@ -1197,17 +1199,10 @@ menu_position_func(GtkMenu  *menu,
                    gpointer data)
 {
 	GtkWidget *widget = GTK_WIDGET(data);
-	GtkRequisition menu_req;
 	GtkAllocation allocation;
-	GtkStyleContext *context;
-	gint ythickness;
 	int savy;
 
-	context = gtk_widget_get_style_context(widget);
-	gtk_style_context_get(context, gtk_style_context_get_state(context),
-	                      "ythickness", &ythickness, NULL);
 	gtk_widget_get_allocation(widget, &allocation);
-	gtk_widget_get_preferred_size(GTK_WIDGET(menu), NULL, &menu_req);
 	gdk_window_get_origin(gtk_widget_get_window(widget), x, y);
 	*x += allocation.x;
 	*y += allocation.y + allocation.height;
@@ -1215,7 +1210,7 @@ menu_position_func(GtkMenu  *menu,
 
 	pidgin_menu_position_func_helper(menu, x, y, push_in, data);
 
-	if (savy > *y + ythickness + 1)
+	if (savy > *y + 1)
 		*y -= allocation.height;
 }
 

@@ -1124,8 +1124,8 @@ jabber_login(PurpleAccount *account)
 
 	/* replace old default proxies with the new default: NULL
 	 * TODO: these can eventually be removed */
-	if (g_str_equal("proxy.jabber.org", purple_account_get_string(account, "ft_proxies", ""))
-			|| g_str_equal("proxy.eu.jabber.org", purple_account_get_string(account, "ft_proxies", "")))
+	if (purple_strequal("proxy.jabber.org", purple_account_get_string(account, "ft_proxies", ""))
+			|| purple_strequal("proxy.eu.jabber.org", purple_account_get_string(account, "ft_proxies", "")))
 		purple_account_set_string(account, "ft_proxies", NULL);
 
 	/*
@@ -1138,7 +1138,8 @@ jabber_login(PurpleAccount *account)
 		js->initial_avatar_hash = g_compute_checksum_for_data(
 			G_CHECKSUM_SHA1,
 			purple_image_get_data(image),
-			purple_image_get_size(image));
+			purple_image_get_data_size(image)
+		);
 		g_object_unref(image);
 	}
 
