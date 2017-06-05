@@ -154,10 +154,11 @@ void jabber_avatar_set(JabberStream *js, PurpleImage *img)
 			char *lengthstring, *widthstring, *heightstring;
 
 			/* compute the sha1 hash */
-			char *hash = jabber_calculate_data_hash(
+			char *hash = g_compute_checksum_for_data(
+				G_CHECKSUM_SHA1,
 				purple_image_get_data(img),
-				purple_image_get_data_size(img), "sha1");
-			char *base64avatar = purple_base64_encode(
+				purple_image_get_data_size(img));
+			char *base64avatar = g_base64_encode(
 				purple_image_get_data(img),
 				purple_image_get_data_size(img));
 
@@ -314,7 +315,7 @@ do_buddy_avatar_update_data(JabberStream *js, const char *from, PurpleXmlNode *i
 	if(!b64data)
 		return;
 
-	img = purple_base64_decode(b64data, &size);
+	img = g_base64_decode(b64data, &size);
 	if(!img) {
 		g_free(b64data);
 		return;
