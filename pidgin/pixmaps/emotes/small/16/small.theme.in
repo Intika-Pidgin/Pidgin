@@ -1,0 +1,97 @@
+_Name=Small
+_Description=Smaller versions of the default smileys
+Icon=wink.png
+Author=Hylke Bons
+
+
+# Default smileys
+[default]
+happy.png           :)      :-)
+excited.png         :-D     :-d     :D      :d
+sad.png             :-(     :(
+wink.png            ;-)     ;)
+tongue.png          :P      :p      :-P     :-p
+shocked.png         =-O     =-o
+kiss.png            :-*
+glasses-cool.png    8-)
+embarrassed.png     :-[
+crying.png          :'(     :'-(
+thinking.png        :-/     :-\\
+angel.png           O:-)    o:-)
+shut-mouth.png      :-X
+
+
+[XMPP]
+# Following XEP-0038 + GTalk + our default set, in default set order
+# The GTalk strings come from ticket #3307.
+happy.png           :)      :-)     =)
+excited.png         :-D     :-d     :D      :d      =D      =d
+sad.png             :-(     :(
+wink.png            ;-)     ;)      ;^)
+tongue.png          :P      :p      :-P     :-p
+shocked.png         =-O     =-o     :-O     :-o
+kiss.png            :kiss:  :-*
+glasses-cool.png    8-)     B-)
+embarrassed.png     :-[
+crying.png          :'-(    :'(
+thinking.png        :-/     :-\\
+angel.png           O:-)    o:-)
+shut-mouth.png      :-X
+
+# Following XEP-0038 + GTalk
+angry.png           >:-(    >:(     X-(    x-(
+rose.png            @->--   :rose:
+phone.png           :telephone:
+lamp.png            :jabber:
+in_love.png         :heart: :love:  <3
+musical-note.png    :music:
+beer.png            :beer:
+coffee.png          :coffee:
+star.png            :star:
+
+# Others
+neutral.png         :|      :-|
+
+# Hidden icons from the default set.
+
+
+# Following AIM 6.1
+[AIM]
+happy.png           :-)     :)
+wink.png            ;-)     ;)
+sad.png             :-(     :(
+tongue.png          :P      :p      :-P     :-p
+shocked.png         =-O
+kiss.png            :-*
+excited.png         :-D     :D
+embarrassed.png     :-[
+angel.png           O:-)
+thinking.png        :-\\    :-/
+crying.png          :'(
+shut-mouth.png      :-X
+glasses-cool.png    8-)
+
+
+# Following ICQ 6.0
+[ICQ]
+happy.png           :-)     :)
+neutral.png         :-$
+sad.png             :-(     :(
+shocked.png         =-O
+wink.png            ;-)     ;)
+tongue.png          :-P     :P      :-p     :p
+music.png           [:-}
+sleeping.png        *TIRED*
+crying.png          :'(    :'-(
+sick.png            :-!
+kiss.png            :-{} :-*
+embarrassed.png     :-[
+devil.png           ]:->
+angel.png           O:-)
+rose.png            @}->--
+shut-mouth.png      :-X     :X      :-x     :x
+thinking.png        :-\\    :-/
+beer.png            *DRINK*
+excited.png         :-D     :D
+glasses-cool.png    8-)
+amorous.png         *IN\ LOVE*
