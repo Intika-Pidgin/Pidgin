@@ -1,0 +1,104 @@
+/* purple
+ *
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
+ */
+
+#ifndef _PURPLE_PURPLE_H_
+#define _PURPLE_PURPLE_H_
+/**
+ * SECTION:purple
+ * @section_id: libpurple-purple
+ * @short_description: <filename>purple.h</filename>
+ * @title: Header files and defines
+ *
+ * This file contains all the necessary preprocessor directives to include
+ * libpurple's headers and other preprocessor directives required for plugins
+ * or UIs to build.  Including this file eliminates the need to directly
+ * include any other libpurple files.
+ */
+
+#include <glib.h>
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#ifndef G_GNUC_NULL_TERMINATED
+#	if     __GNUC__ >= 4
+#		define G_GNUC_NULL_TERMINATED __attribute__((__sentinel__))
+#	else
+#		define G_GNUC_NULL_TERMINATED
+#	endif
+#endif
+
+@PLUGINS_DEFINE@
+
+#include <accounts.h>
+#include <accountopt.h>
+#include <buddylist.h>
+#include <buddyicon.h>
+#include <cipher.h>
+#include <circularbuffer.h>
+#include <cmds.h>
+#include <connection.h>
+#include <conversations.h>
+#include <core.h>
+#include <debug.h>
+#include <enums.h>
+#include <eventloop.h>
+#include <idle.h>
+#include <log.h>
+#include <media.h>
+#include <mediamanager.h>
+#include <mime.h>
+#include <nat-pmp.h>
+#include <network.h>
+#include <notify.h>
+#include <plugins.h>
+#include <pluginpref.h>
+#include <pounce.h>
+#include <prefs.h>
+#include <presence.h>
+#include <proxy.h>
+#include <protocols.h>
+#include <request.h>
+#include <roomlist.h>
+#include <savedstatuses.h>
+#include <server.h>
+#include <signals.h>
+#include <smiley.h>
+#include <sound.h>
+#include <sound-theme.h>
+#include <sound-theme-loader.h>
+#include <sslconn.h>
+#include <status.h>
+#include <stringref.h>
+#include <stun.h>
+#include <theme.h>
+#include <theme-loader.h>
+#include <theme-manager.h>
+#include <tls-certificate.h>
+#include <upnp.h>
+#include <util.h>
+#include <version.h>
+#include <whiteboard.h>
+#include <xfer.h>
+#include <xmlnode.h>
+
+#endif
