@@ -5,7 +5,6 @@ EXTRA_DIST = \
 		enums.c.in \
 		enums.h.in \
 		glibcompat.h \
-		marshallers.list \
 		purple-notifications-example \
 		purple-remote \
 		purple-send \
@@ -114,8 +113,7 @@ purple_coresources = \
 	xmlnode.c
 
 purple_builtsources = \
-	enums.c \
-	marshallers.c
+	enums.c
 
 purple_coreheaders = \
 	account.h \
@@ -225,7 +223,7 @@ purple_mediaheaders = \
 	codec.h \
 	enum-types.h
 
-purple_builtheaders = purple.h version.h enums.h marshallers.h
+purple_builtheaders = purple.h version.h enums.h
 
 purple_enumheaders = \
 	$(srcdir)/account.h \
@@ -246,13 +244,6 @@ purple_enumheaders = \
 	$(srcdir)/xmlnode.h
 
 
-marshallers.h: marshallers.list
-	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=purple_smarshal $(srcdir)/marshallers.list --header > marshallers.h
-
-marshallers.c: marshallers.list marshallers.h
-	$(AM_V_GEN)echo "#include \"marshallers.h\"" > marshallers.c
-	$(AM_V_at)$(GLIB_GENMARSHAL) --prefix=purple_smarshal $(srcdir)/marshallers.list --body >> marshallers.c
-
 # glib-mkenums doesn't handle VPATHs well, sed is used here to fix the
 # include paths and documentation.
 # Escaping possible . in $(srcdir) to \. for sed pattern.
@@ -266,9 +257,7 @@ enums.c: $(srcdir)/enums.c.in $(purple_enumheaders)
 
 CLEANFILES = \
 	enums.c \
-	enums.h \
-	marshallers.c \
-	marshallers.h
+	enums.h
 
 DISTCLEANFILES = \
 	data/purple-url-handler.desktop
@@ -297,13 +286,13 @@ dbus_exported = dbus-useful.h dbus-define-api.h account.h accounts.h blistnode.h
                 prefs.h presence.h roomlist.h savedstatuses.h smiley.h smiley-list.h \
 				status.h server.h util.h xmlnode.h protocol.h protocols.h
 
-# Filter out enums.h and marshallers.h as they don't actually generate
-# anything. This way making from a VPATH and distcheck doesn't fail due
-# to not being able to find the enums.h or marshallers.h files if
-# they've already been generated in the $(srcdir).
+# Filter out enums.h as it doesn't actually generate anything.
+# This way making from a VPATH and distcheck doesn't fail due
+# to not being able to find the enums.h file if it's already
+# been generated in the $(srcdir).
 purple_build_coreheaders = $(addprefix $(srcdir)/, $(purple_coreheaders)) \
 		$(addprefix $(srcdir)/media/, $(purple_mediaheaders)) \
-		$(filter-out: enums.h marshallers.h, $(purple_builtheaders))
+		$(filter-out: enums.h, $(purple_builtheaders))
 dbus_build_exported = $(addprefix $(srcdir)/, $(dbus_exported))
 # We should probably make this better
 dbus_signals = $(addprefix $(srcdir)/, $(purple_coresources)) \
@@ -327,7 +316,7 @@ dbus-server.lo: dbus-bindings.c dbus-signals.c dbus-types.c dbus-types.h
 
 # Declare these as dependencies so they're built even if `make distcheck`
 # is run immediately after configuring.
-$(libpurple_la_OBJECTS): dbus-types.h enums.h marshallers.h
+$(libpurple_la_OBJECTS): dbus-types.h enums.h
 
 # libpurple-client
 
@@ -380,7 +369,7 @@ BUILT_SOURCES = $(purple_builtheaders) $(purple_builtsources)
 
 # Declare these as dependencies so they're built even if `make distcheck`
 # is run immediately after configuring.
-$(libpurple_la_OBJECTS): enums.h marshallers.h
+$(libpurple_la_OBJECTS): enums.h
 
 endif
 
