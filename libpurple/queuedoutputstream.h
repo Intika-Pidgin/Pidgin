@@ -96,17 +96,6 @@ PurpleQueuedOutputStream *purple_queued_output_stream_new(
 		GOutputStream *base_stream);
 
 /*
- * purple_queued_output_stream_push_bytes
- * @stream: Stream to push bytes to
- * @bytes: Bytes to queue
- *
- * Queues data to be output through the stream. Flush the stream to
- * output this data.
- */
-void purple_queued_output_stream_push_bytes(PurpleQueuedOutputStream *stream,
-		GBytes *bytes);
-
-/*
  * purple_queued_output_stream_push_bytes_async
  * @stream: #PurpleQueuedOutputStream to push bytes to
  * @bytes: Bytes to queue
