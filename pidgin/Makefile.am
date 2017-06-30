@@ -4,6 +4,7 @@ EXTRA_DIST = \
 		getopt1.c \
 		gtk3compat.h \
 		gtkdebug.html \
+		pidgin.gresource.xml \
 		Makefile.mingw \
 		data/pidgin.appdata.xml.in \
 		data/pidgin.desktop.in \
@@ -55,7 +56,6 @@ libpidgin_la_SOURCES = \
 	gtkdialogs.c \
 	gtkdnd-hints.c \
 	gtkdocklet.c \
-	gtkeventloop.c \
 	gtkicon-theme.c \
 	gtkicon-theme-loader.c \
 	gtkidle.c \
@@ -72,7 +72,6 @@ libpidgin_la_SOURCES = \
 	gtkroomlist.c \
 	gtksavedstatuses.c \
 	gtkscrollbook.c \
-	gtksession.c \
 	gtksmiley-manager.c \
 	gtksmiley-theme.c \
 	gtksound.c \
@@ -85,6 +84,7 @@ libpidgin_la_SOURCES = \
 	gtkxfer.c \
 	libpidgin.c \
 	minidialog.c \
+	pidgin.gresource.c \
 	pidgintooltip.c
 
 libpidgin_la_headers = \
@@ -103,7 +103,6 @@ libpidgin_la_headers = \
 	gtkdialogs.h \
 	gtkdnd-hints.h \
 	gtkdocklet.h \
-	gtkeventloop.h \
 	gtkicon-theme.h \
 	gtkicon-theme-loader.h \
 	gtkidle.h \
@@ -121,7 +120,6 @@ libpidgin_la_headers = \
 	gtkroomlist.h \
 	gtksavedstatuses.h \
 	gtkscrollbook.h \
-	gtksession.h \
 	gtksmiley-manager.h \
 	gtksmiley-theme.h \
 	gtksound.h \
@@ -172,18 +170,22 @@ libpidginincludedir=$(includedir)/pidgin
 libpidgininclude_HEADERS = \
 	$(libpidgin_la_headers)
 
-libpidgin_la_builtheaders = gtkdebug.html.h
+libpidgin_la_builtheaders = pidgin.gresource.h
+libpidgin_la_builtsources = pidgin.gresource.c
 
-BUILT_SOURCES = $(libpidgin_la_builtheaders)
+BUILT_SOURCES = $(libpidgin_la_builtheaders) $(libpidgin_la_builtsources)
 
-CLEANFILES = gtkdebug.html.h
+CLEANFILES = pidgin.gresource.h pidgin.gresource.c
 
-%.html.h: %.html
-	$(AM_V_GEN)echo "static const char $*_html[] = {" > $@
-	$(AM_V_at)$(sedpath) -e 's/^[ 	]\+//g' -e 's/[ 	]\+/ /g' $< | $(xxdpath) -i | sed -e 's/\(0x[0-9a-f][0-9a-f]\)$$/\1, 0x00/' >> $@
-	$(AM_V_at)echo "};" >> $@
+%.gresource.h: %.gresource.xml
+	$(AM_V_GEN)$(GLIB_COMPILE_RESOURCES) --generate-header --target $@ --c-name $* --sourcedir $(srcdir) $<
 
-gtkdebug.c: gtkdebug.html.h
+%.gresource.c: %.gresource.xml
+	$(AM_V_GEN)$(GLIB_COMPILE_RESOURCES) --generate-source --target $@ --c-name $* --sourcedir $(srcdir) $<
+
+pidgin.gresource.c: gtkdebug.html
+pidgin.gresource.h: gtkdebug.html
+gtkdebug.c: pidgin.gresource.h
 
 libpidgin_la_DEPENDENCIES = @LIBOBJS@ $(LIBPIDGIN_WIN32RES)
 libpidgin_la_LDFLAGS = -export-dynamic -no-undefined \
@@ -199,7 +201,6 @@ libpidgin_la_LIBADD = \
 	$(GSTVIDEO_LIBS) \
 	$(GSTINTERFACES_LIBS) \
 	$(XSS_LIBS) \
-	$(SM_LIBS) \
 	$(INTLLIBS) \
 	$(LIBXML_LIBS) \
 	$(WEBKIT_LIBS) \
