@@ -800,7 +800,7 @@ const char *purple_user_dir(void);
  *
  * Returns: The purple cache directory.
  */
-const char *purple_cache_dir(void);
+const gchar *purple_cache_dir(void);
 
 /**
  * purple_config_dir:
@@ -812,7 +812,7 @@ const char *purple_cache_dir(void);
  *
  * Returns: The purple configuration directory.
  */
-const char *purple_config_dir(void);
+const gchar *purple_config_dir(void);
 
 /**
  * purple_data_dir:
@@ -824,7 +824,7 @@ const char *purple_config_dir(void);
  *
  * Returns: The purple data directory.
  */
-const char *purple_data_dir(void);
+const gchar *purple_data_dir(void);
 
 /**
  * purple_move_to_xdg_base_dir:

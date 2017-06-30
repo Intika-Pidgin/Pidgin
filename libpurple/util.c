@@ -41,9 +41,9 @@ struct _PurpleMenuAction
 
 static char *custom_user_dir = NULL;
 static char *user_dir = NULL;
-static char *cache_dir = NULL;
-static char *config_dir = NULL;
-static char *data_dir = NULL;
+static gchar *cache_dir = NULL;
+static gchar *config_dir = NULL;
+static gchar *data_dir = NULL;
 
 static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
@@ -2959,7 +2959,7 @@ purple_user_dir(void)
 	return user_dir;
 }
 
-const char *
+const gchar *
 purple_cache_dir(void)
 {
 	if (!cache_dir) {
@@ -2973,7 +2973,7 @@ purple_cache_dir(void)
 	return cache_dir;
 }
 
-const char *
+const gchar *
 purple_config_dir(void)
 {
 	if (!config_dir) {
@@ -2987,7 +2987,7 @@ purple_config_dir(void)
 	return config_dir;
 }
 
-const char *
+const gchar *
 purple_data_dir(void)
 {
 	if (!data_dir) {
