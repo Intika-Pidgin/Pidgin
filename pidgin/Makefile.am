@@ -56,7 +56,6 @@ libpidgin_la_SOURCES = \
 	gtkdialogs.c \
 	gtkdnd-hints.c \
 	gtkdocklet.c \
-	gtkeventloop.c \
 	gtkicon-theme.c \
 	gtkicon-theme-loader.c \
 	gtkidle.c \
@@ -104,7 +103,6 @@ libpidgin_la_headers = \
 	gtkdialogs.h \
 	gtkdnd-hints.h \
 	gtkdocklet.h \
-	gtkeventloop.h \
 	gtkicon-theme.h \
 	gtkicon-theme-loader.h \
 	gtkidle.h \
