@@ -2959,46 +2959,36 @@ purple_user_dir(void)
 	return user_dir;
 }
 
-const gchar *
-purple_cache_dir(void)
+static const gchar *
+purple_xdg_dir(gchar **xdg_dir, const gchar *xdg_base_dir, const gchar *xdg_type)
 {
-	if (!cache_dir) {
+	if (!*xdg_dir) {
 		if (!custom_user_dir) {
-			cache_dir = g_build_filename(g_get_user_cache_dir(), "purple", NULL);
+			*xdg_dir = g_build_filename(xdg_base_dir, "purple", NULL);
 		} else {
-			cache_dir = g_build_filename(custom_user_dir, "cache", NULL);
+			*xdg_dir = g_build_filename(custom_user_dir, xdg_type, NULL);
 		}
 	}
 
-	return cache_dir;
+	return *xdg_dir;
+}
+
+const gchar *
+purple_cache_dir(void)
+{
+	return purple_xdg_dir(&cache_dir, g_get_user_cache_dir(), "cache");
 }
 
 const gchar *
 purple_config_dir(void)
 {
-	if (!config_dir) {
-		if (!custom_user_dir) {
-			config_dir = g_build_filename(g_get_user_config_dir(), "purple", NULL);
-		} else {
-			config_dir = g_build_filename(custom_user_dir, "config", NULL);
-		}
-	}
-
-	return config_dir;
+	return purple_xdg_dir(&config_dir, g_get_user_config_dir(), "config");
 }
 
 const gchar *
 purple_data_dir(void)
 {
-	if (!data_dir) {
-		if (!custom_user_dir) {
-			data_dir = g_build_filename(g_get_user_data_dir(), "purple", NULL);
-		} else {
-			data_dir = g_build_filename(custom_user_dir, "data", NULL);
-		}
-	}
-
-	return data_dir;
+	return purple_xdg_dir(&data_dir, g_get_user_data_dir(), "data");
 }
 
 void
@@ -3108,7 +3098,7 @@ purple_util_write_data_to_cache_file(const char *filename, const char *data, gss
 gboolean
 purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size)
 {
-	const char *config_dir = purple_cache_dir();
+	const char *config_dir = purple_config_dir();
 	gboolean ret = purple_util_write_data_to_file_common(config_dir, filename, data, size);
 
 	return ret;
@@ -3117,7 +3107,7 @@ purple_util_write_data_to_config_file(const char *filename, const char *data, gs
 gboolean
 purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size)
 {
-	const char *data_dir = purple_cache_dir();
+	const char *data_dir = purple_data_dir();
 	gboolean ret = purple_util_write_data_to_file_common(data_dir, filename, data, size);
 
 	return ret;
