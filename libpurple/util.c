@@ -48,27 +48,6 @@ static gchar *data_dir = NULL;
 static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
 
-/* If legacy directory for libpurple exists, move it to location following 
- * xdg base dir spec. https://developer.pidgin.im/ticket/10029
- */
-static void
-migrate_to_xdg_base_dirs(void)
-{
-	const char *legacy_purple_dir;
-	gboolean dir_exists;
-
-	legacy_purple_dir = purple_user_dir();
-	dir_exists = g_file_test(legacy_purple_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-	if (dir_exists) {
-		purple_move_to_xdg_base_dir(purple_data_dir(), "certificates");
-		purple_move_to_xdg_base_dir(purple_cache_dir(), "icons");
-		purple_move_to_xdg_base_dir(purple_data_dir(), "logs");
-		purple_move_to_xdg_base_dir(purple_data_dir(), "pounces.xml");
-	}
-
-	return;
-}
-
 PurpleMenuAction *
 purple_menu_action_new(const char *label, PurpleCallback callback, gpointer data,
                      GList *children)
@@ -168,8 +147,6 @@ purple_util_init(void)
 	escape_js_node = json_node_new(JSON_NODE_VALUE);
 	escape_js_gen = json_generator_new();
 	json_node_set_boolean(escape_js_node, FALSE);
-
-	migrate_to_xdg_base_dirs();
 }
 
 void
@@ -2991,45 +2968,49 @@ purple_data_dir(void)
 	return purple_xdg_dir(&data_dir, g_get_user_data_dir(), "data");
 }
 
-void
+gboolean
 purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path)
 {
-	char *xdg_path;
+	gint mkdir_res;
+	gchar *xdg_path;
 	gboolean xdg_path_exists;
 
-	/* Check if destination dir exists, otherwise create it */
-	xdg_path_exists = g_file_test(purple_xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-	if (!xdg_path_exists) {
-		gint mkdir_res;
-
-		mkdir_res = purple_build_dir(purple_xdg_dir, S_IRWXU);
-		if (mkdir_res == -1) {
-			purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
-						purple_xdg_dir, g_strerror(errno));
-			return;
-		}
+	/* Create destination directory */
+	mkdir_res = purple_build_dir(purple_xdg_dir, S_IRWXU);
+	if (mkdir_res == -1) {
+		purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
+					purple_xdg_dir, g_strerror(errno));
+		return FALSE;
 	}
 
 	xdg_path = g_build_filename(purple_xdg_dir, path, NULL);
 	xdg_path_exists = g_file_test(xdg_path, G_FILE_TEST_EXISTS);
 	if (!xdg_path_exists) {
-		char *old_path;
+		gchar *old_path;
 		gboolean old_path_exists;
 
 		old_path = g_build_filename(purple_user_dir(), path, NULL);
 		old_path_exists = g_file_test(old_path, G_FILE_TEST_EXISTS);
 		if (old_path_exists) {
-			g_rename(old_path, xdg_path);
+			int rename_res;
+
+			rename_res = g_rename(old_path, xdg_path);
+			if (rename_res == -1) {
+				purple_debug_error("util", "Error renaming %s to %s; failed migration\n",
+							old_path, xdg_path);
+				g_free(old_path);
+				g_free(xdg_path);
+
+				return FALSE;
+			}
 		}
 
 		g_free(old_path);
-		old_path = NULL;
 	}
 
 	g_free(xdg_path);
-	xdg_path = NULL;
 
-	return;
+	return TRUE;
 }
 
 void purple_util_set_user_dir(const char *dir)

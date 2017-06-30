@@ -834,8 +834,10 @@ const gchar *purple_data_dir(void);
  * 
  * Moves file or directory from legacy user dir to XDG
  * based dir.
+ * 
+ * Returns: TRUE if moved successfully, FALSE otherwise
  */
-void
+gboolean
 purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path);
 
 /**
