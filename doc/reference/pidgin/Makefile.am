@@ -111,6 +111,7 @@ GTKDOC_CFLAGS = \
 
 GTKDOC_LIBS = \
 	$(top_builddir)/pidgin/libpidgin.la \
+	$(top_builddir)/libpurple/libpurple.la \
 	$(GLIB_LIBS) \
 	$(GPLUGIN_LIBS) \
 	$(GCR_LIBS) \
@@ -119,7 +120,6 @@ GTKDOC_LIBS = \
 	$(GSTVIDEO_LIBS) \
 	$(GSTINTERFACES_LIBS) \
 	$(XSS_LIBS) \
-	$(SM_LIBS) \
 	$(INTLLIBS) \
 	$(LIBXML_LIBS) \
 	$(WEBKIT_LIBS) \
