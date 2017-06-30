@@ -425,3 +425,30 @@ GHashTable* purple_core_get_ui_info() {
 
 	return ops->get_ui_info();
 }
+
+#define MIGRATE_TO_XDG_DIR(xdg_base_dir, legacy_path) do { \
+		gboolean migrate_res; \
+		\
+		migrate_res = purple_move_to_xdg_base_dir(xdg_base_dir, legacy_path); \
+		if (!migrate_res) { \
+			purple_debug_error("core", "Error migrating %s to %s\n", \
+						legacy_path, xdg_base_dir); \
+			return FALSE; \
+		} \
+	} while (0)
+
+gboolean
+purple_core_migrate_to_xdg_base_dirs(void)
+{
+	gboolean xdg_dir_exists;
+
+	xdg_dir_exists = g_file_test(purple_data_dir(), G_FILE_TEST_EXISTS);
+	if (!xdg_dir_exists) {
+		MIGRATE_TO_XDG_DIR(purple_data_dir(), "certificates");
+		MIGRATE_TO_XDG_DIR(purple_cache_dir(), "icons");
+		MIGRATE_TO_XDG_DIR(purple_data_dir(), "logs");
+		MIGRATE_TO_XDG_DIR(purple_data_dir(), "pounces.xml");
+	}
+
+	return TRUE;
+}
