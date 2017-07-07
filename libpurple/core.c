@@ -263,7 +263,7 @@ purple_core_quit(void)
 	purple_prefs_uninit();
 	purple_plugins_uninit();
 
-	static_proto_unload();	
+	static_proto_unload();
 	purple_protocols_uninit();
 
 #ifdef HAVE_DBUS
@@ -423,7 +423,8 @@ GHashTable* purple_core_get_ui_info() {
 	return ops->get_ui_info();
 }
 
-#define MIGRATE_TO_XDG_DIR(xdg_base_dir, legacy_path) do { \
+#define MIGRATE_TO_XDG_DIR(xdg_base_dir, legacy_path) \
+	G_STMT_START { \
 		gboolean migrate_res; \
 		\
 		migrate_res = purple_move_to_xdg_base_dir(xdg_base_dir, legacy_path); \
@@ -432,7 +433,7 @@ GHashTable* purple_core_get_ui_info() {
 						legacy_path, xdg_base_dir); \
 			return FALSE; \
 		} \
-	} while (0)
+	} G_STMT_END
 
 gboolean
 purple_core_migrate_to_xdg_base_dirs(void)
