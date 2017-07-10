@@ -8,7 +8,8 @@ ignore_hfiles = [
     'win32',
     'getopt.h',
     'gtk3compat.h',
-    'gtkinternal.h'
+    'gtkinternal.h',
+    'pidgin.gresource.h'
 ]
 
 # Extra options to supply to gtkdoc-scan.
@@ -17,6 +18,11 @@ scan_args = [
     '--rebuild-types',
     '--rebuild-sections',
     '--ignore-headers=' + ' '.join(ignore_hfiles),
+]
+
+# Extra options to supply to gtkdoc-mkdb.
+mkdb_args = [
+    '--ignore-files=' + ' '.join(ignore_hfiles),
 ]
 
 configure_file(
@@ -38,5 +44,6 @@ gnome.gtkdoc(DOC_MODULE,
     dependencies : libpidgin_dep,
     install : true,
     scan_args : scan_args,
+    mkdb_args : mkdb_args,
     gobject_typesfile : DOC_MODULE + '.types',
     content_files : content_files)
