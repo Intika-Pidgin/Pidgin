@@ -78,7 +78,7 @@ if PLUGINS
 		name_prefix : '',
 	)
 
-	toast = library('toast', 'purple-toast.c',
+	purple_toast = library('purple-toast', 'purple-toast.c',
 		dependencies : [libpurple_dep],
 		name_prefix: '',
 		install : true, install_dir : PURPLE_PLUGINDIR)
