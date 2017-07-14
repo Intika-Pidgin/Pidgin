@@ -4,6 +4,12 @@
 
 #include <purple.h>
 
+/* make the compiler happy... */
+G_MODULE_EXPORT GPluginPluginInfo *gplugin_query(GError **error);
+G_MODULE_EXPORT gboolean gplugin_load(GPluginPlugin *plugin, GError **error);
+G_MODULE_EXPORT gboolean gplugin_unload(GPluginPlugin *plugin, GError **error);
+
+
 static GApplication *
 _purple_toast_get_application(void) {
 	static GApplication *application = NULL;
@@ -51,18 +57,19 @@ _purple_toast_find_icon(PurpleAccount *account,
 	GIcon *icon = NULL;
 
 	if(PURPLE_IS_BUDDY(buddy)) {
-		PurpleBuddyIcon *buddy_icon = NULL;
-		GBytes *bytes = NULL;
-		gconstpointer data = NULL;
-		gsize size;
+		PurpleBuddyIcon *buddy_icon = purple_buddy_get_icon(buddy);
 
-		buddy_icon = purple_buddy_get_icon(buddy);
 		if(buddy_icon) {
-			data = purple_buddy_icon_get_data(buddy_icon, &size);
+			const gchar *filename = NULL;
 
-			bytes = g_bytes_new(data, size);
-			icon = g_bytes_icon_new(bytes);
-			//g_object_unref(G_OBJECT(bytes));
+			filename = purple_buddy_icon_get_full_path(buddy_icon);
+			if(filename != NULL) {
+				GFile *file = g_file_new_for_path(filename);
+
+				icon = g_file_icon_new(file);
+
+				g_object_unref(file);
+			}
 		}
 	} else {
 		PurpleImage *image = NULL;
@@ -71,10 +78,10 @@ _purple_toast_find_icon(PurpleAccount *account,
 		image = purple_buddy_icons_find_account_icon(account);
 		if(PURPLE_IS_IMAGE(image)) {		
 			path = purple_image_get_path(image);
-			g_message("path: %p", path);
+			g_message("toast path: %p", path);
 			if(path) {
 				GFile *file = g_file_new_for_path(path);
-				g_message("file: %p", file);
+				g_message("toast file: %p", file);
 				icon = g_file_icon_new(file);
 				g_object_unref(G_OBJECT(file));
 			}
