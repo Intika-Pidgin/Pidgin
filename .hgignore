@@ -1,0 +1,11 @@
+syntax: glob
+.*.swp
+.DS_Store
+*.pyc
+*~
+\#*\#
+subprojects/*/
+
+syntax: regexp
+^build(.+)?\/
+win32-install-dir(\.release)?
