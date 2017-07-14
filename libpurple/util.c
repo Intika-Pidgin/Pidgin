@@ -476,53 +476,6 @@ purple_mime_decode_field(const char *str)
  * Date/Time Functions
  **************************************************************************/
 
-const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso)
-{
-	static char buf[7];
-	long off;
-	gint8 min;
-	gint8 hrs;
-	struct tm new_tm = *tm;
-
-	mktime(&new_tm);
-
-	if (new_tm.tm_isdst < 0)
-		g_return_val_if_reached("");
-
-#ifdef _WIN32
-	if ((off = wpurple_get_tz_offset()) == -1)
-		return "";
-#elif defined(HAVE_TM_GMTOFF)
-	off = new_tm.tm_gmtoff;
-#elif defined(HAVE_TIMEZONE)
-	tzset();
-	off = -1 * timezone;
-#else
-	purple_debug_warning("util",
-		"there is no possibility to obtain tz offset");
-	return "";
-#endif
-
-	min = (off / 60) % 60;
-	hrs = ((off / 60) - min) / 60;
-
-	if(iso) {
-		if (0 == off) {
-			strcpy(buf, "Z");
-		} else {
-			/* please leave the colons...they're optional for iso, but jabber
-			 * wants them */
-			if(g_snprintf(buf, sizeof(buf), "%+03d:%02d", hrs, ABS(min)) > 6)
-				g_return_val_if_reached("");
-		}
-	} else {
-		if (g_snprintf(buf, sizeof(buf), "%+03d%02d", hrs, ABS(min)) > 5)
-			g_return_val_if_reached("");
-	}
-
-	return buf;
-}
-
 const char *
 purple_utf8_strftime(const char *format, const struct tm *tm)
 {
