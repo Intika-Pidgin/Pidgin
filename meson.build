@@ -120,12 +120,6 @@ endif
 # Checks for programs.
 compiler = meson.get_compiler('c')
 
-if compiler.has_function('alloca')  # FIXME: Probably not enough.
-	conf.set('HAVE_ALLOCA_H', true)
-else
-	error('alloca could not be found')
-endif
-
 # Check for Sun compiler
 SUNCC = compiler.compiles('void main() {__SUNPRO_C;};')
 
