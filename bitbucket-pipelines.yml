@@ -1,0 +1,20 @@
+# vi:et:ts=2 sw=2 sts=2
+image: pidgin/builder-debian:buster
+pipelines:
+  default:
+    - step:
+        script:
+          - set -ex
+          - meson -Dsilc=false -Ddoc=true -Ddebug=true build
+          - ninja -C build
+          - ninja -C build test
+  branches:
+    release-2.x.y:
+      - step:
+          image: pidgin/release-builder:release-2.x.y
+          script:
+            - set -ex
+            - ./autogen.sh --enable-debug
+            - make -s -j$(nproc)
+            - make -s -j$(nproc) check
+            - make distcheck
