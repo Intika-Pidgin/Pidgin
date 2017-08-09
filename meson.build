@@ -235,12 +235,6 @@ foreach func : ['strdup']
 	conf.set('HAVE_' + func.to_upper(),
 	    compiler.has_function(func))
 endforeach
-# Checks for getopt in standard library
-if compiler.has_function('getopt_long')
-	getopt_files = []
-else
-	getopt_files = ['getopt.c', 'getopt1.c']
-endif
 
 # Check for inet_aton
 if not IS_WIN32
@@ -388,9 +382,9 @@ if INSTALL_I18N
 endif
 
 # #######################################################################
-# # Check for GLib 2.36 (required)
+# # Check for GLib 2.40 (required)
 # #######################################################################
-glib = dependency('glib-2.0', version : '>= 2.36.0')
+glib = dependency('glib-2.0', version : '>= 2.40.0')
 gio = dependency('gio-2.0')
 gmodule = dependency('gmodule-2.0')
 gobject = dependency('gobject-2.0')
@@ -1130,7 +1124,8 @@ if get_option('plugins')
 	gplugin = dependency('gplugin', version : '>= 0.0.17')
 	# GPLUGIN_REQ sets pkg-config requirements in the .pc file
 	pkg_conf.set('GPLUGIN_REQ', ', gplugin')
-	enable_introspection = true
+	enable_introspection = dependency('gobject-introspection-1.0',
+	    version : '>= 1.30.0', required : false).found()
 else
 	gplugin = []
 	enable_introspection = false
@@ -1416,7 +1411,7 @@ endif
 if not INSTALL_I18N
 	message('')
 	message('Warning: You have disabled the building and installation of translation')
-	message('data.  This will prevent building pidgin.desktop.')
+	message('data.  This will prevent building Pidgin desktop files.')
 	message('Be sure you know what you are doing.')
 endif
 message('')
