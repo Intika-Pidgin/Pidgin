@@ -249,12 +249,6 @@ AC_SUBST([FINCH_PLUGINDIR])
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(strdup)
-dnl Checks for getopt in standard library
-AC_CHECK_FUNCS(getopt_long,,
-[
-	AC_LIBOBJ(getopt)
-	AC_LIBOBJ(getopt1)
-])
 
 dnl Check for inet_aton
 if test "x$is_win32" != "xyes" ; then
@@ -464,13 +458,13 @@ fi #enable_i18n
 AM_CONDITIONAL(INSTALL_I18N, test "x$enable_i18n" = "xyes")
 
 dnl #######################################################################
-dnl # Check for GLib 2.36 (required)
+dnl # Check for GLib 2.40 (required)
 dnl #######################################################################
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.36.0 gio-2.0 gobject-2.0 gthread-2.0], , [
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.40.0 gio-2.0 gobject-2.0 gthread-2.0], , [
 	AC_MSG_RESULT(no)
 	AC_MSG_ERROR([
 
-You must have GLib 2.36.0 or newer development headers installed to build.
+You must have GLib 2.40.0 or newer development headers installed to build.
 
 If you have these installed already you may need to install pkg-config so
 I can find them.
@@ -1277,6 +1271,7 @@ if test "x$GCC" = "xyes"; then
 			"-Wendif-labels" \
 			"-Werror-implicit-function-declaration" \
 			"-Wextra -Wno-unused-parameter" \
+				"-Wno-missing-field-initializers" \
 			"-Wformat-security" \
 				"-Werror=format-security" \
 			"-Winit-self" \
@@ -1989,7 +1984,7 @@ AC_CONFIG_FILES([Makefile
 		   doc/reference/pidgin/version.xml
 		   m4macros/Makefile
 		   pidgin/Makefile
-		   pidgin/data/pidgin.desktop.in
+		   pidgin/data/im.pidgin.Pidgin.desktop.in
 		   pidgin/data/pidgin-3.pc
 		   pidgin/data/pidgin-3-uninstalled.pc
 		   pidgin/pixmaps/Makefile
@@ -2111,7 +2106,7 @@ fi
 if test "x$enable_i18n" = "xno" ; then
 	echo
 	echo Warning: You have disabled the building and installation of translation
-	echo data.  This will prevent building pidgin.desktop.
+	echo data.  This will prevent building Pidgin desktop files.
 	echo Be sure you know what you are doing.
 fi
 echo
