@@ -393,8 +393,7 @@ libpurple = library('purple',
                     dependencies : # static_link_libs
                         [dbus, dbus_glib, dnsapi, ws2_32, glib, gio, gplugin, libxml,
                          farstream, gstreamer, gstreamer_video,
-                         gstreamer_app, idn, json,
-                         zlib, math])
+                         gstreamer_app, idn, json, math])
 libpurple_dep = declare_dependency(
     sources : purple_builtheaders,  # Ensure built before any dependencies.
     include_directories : [toplevel_inc, libpurple_inc],
@@ -451,6 +450,9 @@ if enable_introspection
 	endif
 	if enable_dbus
 		Purple_gir_includes += ['DBus-1.0', 'DBusGLib-1.0']
+	endif
+	if enable_gst
+		Purple_gir_includes += ['Gst-1.0']
 	endif
 
 	libpurple_gir = gnome.generate_gir(libpurple,
