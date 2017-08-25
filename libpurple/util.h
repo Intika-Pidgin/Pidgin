@@ -482,6 +482,18 @@ time_t purple_str_to_time(const char *timestamp, gboolean utc,
                         struct tm *tm, long *tz_off, const char **rest);
 
 /**
+ * purple_str_to_date_time:
+ * @timestamp: The timestamp
+ * @utc:       Assume UTC if no timezone specified
+ *
+ * Parses a timestamp in jabber, ISO8601, or MM/DD/YYYY format and returns
+ * a GDateTime.
+ *
+ * Returns: (transfer full): A GDateTime.
+ */
+GDateTime *purple_str_to_date_time(const char *timestamp, gboolean utc);
+
+/**
  * purple_uts35_to_str:
  * @format: The formatting string, according to UTS \#35
  *               See http://unicode.org/reports/tr35/
@@ -1399,17 +1411,6 @@ int purple_utf8_strcasecmp(const char *a, const char *b);
  * Returns: TRUE if haystack has the word, otherwise FALSE
  */
 gboolean purple_utf8_has_word(const char *haystack, const char *needle);
-
-/**
- * purple_print_utf8_to_console:
- * @filestream: The file stream (e.g. STDOUT or STDERR)
- * @message:    The message to print.
- *
- * Prints a UTF-8 message to the given file stream. The function
- * tries to convert the UTF-8 message to user's locale. If this
- * is not possible, the original UTF-8 text will be printed.
- */
-void purple_print_utf8_to_console(FILE *filestream, char *message);
 
 /**
  * purple_message_meify:
