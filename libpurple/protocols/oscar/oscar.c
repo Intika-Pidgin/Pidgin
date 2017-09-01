@@ -5760,7 +5760,7 @@ oscar_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
 }
 
 static void
-oscar_protocol_xfer_iface_init(PurpleProtocolXferIface *xfer_iface)
+oscar_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = oscar_can_receive_file;
 	xfer_iface->send        = oscar_send_file;
@@ -5785,7 +5785,7 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
 	                                  oscar_protocol_privacy_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
 	                                  oscar_protocol_xfer_iface_init)
 );
 
