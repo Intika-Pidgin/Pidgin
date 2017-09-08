@@ -1,5 +1,6 @@
 PROGS = [
     'image',
+    'protocol_xfer',
     'smiley',
     'smiley_list',
     'trie',
