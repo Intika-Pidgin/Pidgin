@@ -2496,7 +2496,7 @@ purple_protocol_xfer_can_receive(PurpleProtocolXferInterface *iface,
 	g_return_val_if_fail(PURPLE_IS_CONNECTION(connection), FALSE);
 	g_return_val_if_fail(who, FALSE);
 
-	return iface->can_receive(connection, who);
+	return iface->can_receive(iface, connection, who);
 }
 
 void
@@ -2510,7 +2510,7 @@ purple_protocol_xfer_send(PurpleProtocolXferInterface *iface,
 	g_return_if_fail(who);
 	g_return_if_fail(filename);
 
-	iface->send(connection, who, filename);
+	iface->send(iface, connection, who, filename);
 }
 
 PurpleXfer *
@@ -2522,5 +2522,5 @@ purple_protocol_xfer_new_xfer(PurpleProtocolXferInterface *iface,
 	g_return_val_if_fail(PURPLE_IS_CONNECTION(connection), FALSE);
 	g_return_val_if_fail(who, FALSE);
 
-	return iface->new_xfer(connection, who);
+	return iface->new_xfer(iface, connection, who);
 }
