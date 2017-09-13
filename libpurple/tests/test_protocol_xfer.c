@@ -25,6 +25,15 @@
 
 #include <purple.h>
 
+#include "dbus-server.h"
+
+/******************************************************************************
+ * Junk
+ *****************************************************************************/
+typedef struct {
+	gint dummy;
+} TestPurpleProtocolXferFixture;
+
 /******************************************************************************
  * PurpleProtcolXfer Implementations
  *****************************************************************************/
@@ -74,12 +83,31 @@ test_purple_protocol_xfer_class_init(TestPurpleProtocolXferClass *klass){
 }
 
 /******************************************************************************
+ * Helpers
+ *****************************************************************************/
+static void
+test_purple_protocol_xfer_setup(TestPurpleProtocolXferFixture *fixture, gconstpointer data) {
+	/* we need to find a way to make this crap not required */
+	// purple_core_init("testing");
+	purple_signals_init();
+	purple_prefs_init();
+	purple_dbus_init_ids();
+	purple_cmds_init();
+	purple_protocols_init();
+	purple_plugins_init();
+	purple_keyring_init();
+	purple_connections_init();
+	purple_accounts_init();
+}
+
+/******************************************************************************
  * Tests
  *****************************************************************************/
 static void
-test_purple_protocol_xfer_can_receive_func(void) {
+test_purple_protocol_xfer_can_receive_func(TestPurpleProtocolXferFixture *fixture, gconstpointer data) {
 	TestPurpleProtocolXfer *xfer = g_object_new(test_purple_protocol_xfer_get_type(), NULL);
-	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, NULL);	
+	PurpleAccount *a = purple_account_new("testing", "testing");
+	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, "account", a, NULL);
 	gboolean actual = FALSE;
 
 	xfer->can_send = FALSE;
@@ -110,7 +138,14 @@ main(gint argc, gchar **argv) {
 	g_test_set_nonfatal_assertions();
 	#endif /* GLIB_CHECK_VERSION(2, 38, 0) */
 
-	g_test_add_func("/protocol-xfer/can-receive", test_purple_protocol_xfer_can_receive_func);
+	g_test_add(
+		"/protocol-xfer/can-receive",
+		TestPurpleProtocolXferFixture,
+		NULL,
+		test_purple_protocol_xfer_setup,
+		test_purple_protocol_xfer_can_receive_func,
+		NULL
+	);
 
 	return g_test_run();
 }
