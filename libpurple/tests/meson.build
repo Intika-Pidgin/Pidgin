@@ -7,6 +7,7 @@ PROGS = [
     'util',
     'xmlnode'
 ]
+
 foreach prog : PROGS
 	e = executable('test_' + prog, 'test_@0@.c'.format(prog),
 	               c_args : [
@@ -15,3 +16,12 @@ foreach prog : PROGS
 	               dependencies : [libpurple_dep, glib, dbus, dbus_glib])
 	test(prog, e)
 endforeach
+
+test_ui = static_library(
+    'test-ui',
+    'test_ui.c',
+    c_args: [
+        '-DTEST_DATA_DIR="@0@/data"'.format(meson.current_source_dir())
+    ],
+    dependencies: [libpurple_dep, glib, dbus, dbus_glib]
+)
