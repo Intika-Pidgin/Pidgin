@@ -2054,9 +2054,10 @@ gtk_smiley_tree_lookup (GtkSmileyTree *tree,
 {
 	GtkSmileyTree *t = tree;
 	const gchar *x = text;
-	gint len = 0;
 	const gchar *amp;
 	gint alen;
+	gint len = 0;
+	gint lastlen = 0;
 
 	while (*x) {
 		gchar *pos;
@@ -2091,9 +2092,11 @@ gtk_smiley_tree_lookup (GtkSmileyTree *tree,
 			pos = strchr (t->values->str, *x);
 		}
 
-		if (pos)
+		if (pos) {
 			t = t->children [GPOINTER_TO_INT(pos) - GPOINTER_TO_INT(t->values->str)];
-		else
+			if (t->image)
+				lastlen = len + alen;
+		} else
 			break;
 
 		x += alen;
@@ -2103,7 +2106,7 @@ gtk_smiley_tree_lookup (GtkSmileyTree *tree,
 	if (t->image)
 		return len;
 
-	return 0;
+	return lastlen;
 }
 
 static void
