@@ -31,7 +31,7 @@ struct docklet_ui_ops
 {
 	void (*create)(void);
 	void (*destroy)(void);
-	void (*update_icon)(PurpleStatusPrimitive, gboolean, gboolean);
+	void (*update_icon)(PurpleStatusPrimitive, gboolean, gboolean, gboolean);
 	void (*blank_icon)(void);
 	void (*set_tooltip)(gchar *);
 	GtkMenuPositionFunc position_menu;
@@ -39,7 +39,7 @@ struct docklet_ui_ops
 
 
 /* functions in gtkdocklet.c */
-void pidgin_docklet_update_icon(void);
+void pidgin_docklet_update_icon(gboolean blinked);
 void pidgin_docklet_clicked(int);
 void pidgin_docklet_embedded(void);
 void pidgin_docklet_remove(void);
