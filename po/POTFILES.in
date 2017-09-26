@@ -168,6 +168,8 @@ libpurple/util.c
 libpurple/win32/libc_interface.c
 libpurple/xfer.c
 libpurple/xmlnode.c
+[type: gettext/glade]pidgin/about.ui
+pidgin/credits.json
 pidgin/data/im.pidgin.Pidgin.appdata.xml.in
 pidgin/data/im.pidgin.Pidgin.desktop.in.in
 pidgin/gtkaccount.c
@@ -199,6 +201,7 @@ pidgin/gtkwhiteboard.c
 pidgin/gtkxfer.c
 pidgin/libpidgin.c
 pidgin/pidgin.h
+pidgin/pidginabout.c
 pidgin/pidginstock.c
 pidgin/pidgintooltip.c
 pidgin/pixmaps/emotes/default/24/default.theme.in
