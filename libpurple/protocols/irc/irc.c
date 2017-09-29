@@ -685,31 +685,38 @@ static void irc_input_cb_ssl(gpointer data, PurpleSslConnection *gsc,
 		return;
 	}
 
-	if (irc->inbuflen < irc->inbufused + IRC_INITIAL_BUFSIZE) {
-		irc->inbuflen += IRC_INITIAL_BUFSIZE;
-		irc->inbuf = g_realloc(irc->inbuf, irc->inbuflen);
-	}
+	do {
+		// resize buffer upwards so we have at least IRC_BUFSIZE_INCREMENT
+		// bytes free in inbuf
+		if (irc->inbuflen < irc->inbufused + IRC_BUFSIZE_INCREMENT) {
+			if (irc->inbuflen + IRC_BUFSIZE_INCREMENT <= IRC_MAX_BUFSIZE) {
+				irc->inbuflen += IRC_BUFSIZE_INCREMENT;
+				irc->inbuf = g_realloc(irc->inbuf, irc->inbuflen);
+			} else {
+				// discard unparseable data from the buffer
+				irc->inbufused = 0;
+			}
+		}
 
-	len = purple_ssl_read(gsc, irc->inbuf + irc->inbufused, IRC_INITIAL_BUFSIZE - 1);
+		len = purple_ssl_read(gsc, irc->inbuf + irc->inbufused, IRC_BUFSIZE_INCREMENT - 1);
+		if (len > 0) {
+			read_input(irc, len);
+		}
+	} while (len > 0);
 
-	if (len < 0 && errno == EAGAIN) {
-		/* Try again later */
-		return;
-	} else if (len < 0) {
+	if (len < 0 && errno != EAGAIN) {
 		gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
 				g_strerror(errno));
 		purple_connection_error_reason (gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
-		return;
 	} else if (len == 0) {
 		purple_connection_error_reason (gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Server closed the connection"));
-		return;
 	}
 
-	read_input(irc, len);
+	/* else: len < 0 && errno == EAGAIN; this is fine, try again later */
 }
 
 static void irc_input_cb(gpointer data, gint source, PurpleInputCondition cond)
@@ -718,12 +725,18 @@ static void irc_input_cb(gpointer data, gint source, PurpleInputCondition cond)
 	struct irc_conn *irc = gc->proto_data;
 	int len;
 
-	if (irc->inbuflen < irc->inbufused + IRC_INITIAL_BUFSIZE) {
-		irc->inbuflen += IRC_INITIAL_BUFSIZE;
-		irc->inbuf = g_realloc(irc->inbuf, irc->inbuflen);
+	/* see irc_input_cb_ssl */
+	if (irc->inbuflen < irc->inbufused + IRC_BUFSIZE_INCREMENT) {
+		if (irc->inbuflen + IRC_BUFSIZE_INCREMENT <= IRC_MAX_BUFSIZE) {
+			irc->inbuflen += IRC_BUFSIZE_INCREMENT;
+			irc->inbuf = g_realloc(irc->inbuf, irc->inbuflen);
+		} else {
+			irc->inbufused = 0;
+		}
 	}
 
-	len = read(irc->fd, irc->inbuf + irc->inbufused, IRC_INITIAL_BUFSIZE - 1);
+	len = read(irc->fd, irc->inbuf + irc->inbufused, IRC_BUFSIZE_INCREMENT - 1);
+
 	if (len < 0 && errno == EAGAIN) {
 		return;
 	} else if (len < 0) {
