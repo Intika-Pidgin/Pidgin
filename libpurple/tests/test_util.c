@@ -232,6 +232,24 @@ START_TEST(test_strdup_withhtml)
 }
 END_TEST
 
+START_TEST(test_uri_escape_for_open)
+{
+	/* make sure shell stuff is escaped... */
+	gchar *result = purple_uri_escape_for_open("https://$(xterm)");
+	assert_string_equal_free("https://%24%28xterm%29", result);
+
+	result = purple_uri_escape_for_open("https://`xterm`");
+	assert_string_equal_free("https://%60xterm%60", result);
+
+	result = purple_uri_escape_for_open("https://$((25 + 13))");
+	assert_string_equal_free("https://%24%28%2825%20+%2013%29%29", result);
+
+	/* ...but keep brackets so that ipv6 links can be opened. */
+	result = purple_uri_escape_for_open("https://[123:4567:89a::::]");
+	assert_string_equal_free("https://[123:4567:89a::::]", result);
+}
+END_TEST
+
 Suite *
 util_suite(void)
 {
@@ -282,6 +300,10 @@ util_suite(void)
 
 	tc = tcase_create("strdup_withhtml");
 	tcase_add_test(tc, test_strdup_withhtml);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("escape_uri_for_open");
+	tcase_add_test(tc, test_uri_escape_for_open);
 	suite_add_tcase(s, tc);
 
 	return s;

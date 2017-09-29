@@ -4583,6 +4583,17 @@ purple_uri_list_extract_filenames(const gchar *uri_list)
 	return result;
 }
 
+char *
+purple_uri_escape_for_open(const char *unescaped)
+{
+	/* Replace some special characters like $ with their percent-encoded value.
+	 * This shouldn't be necessary because we shell-escape the entire arg before
+	 * exec'ing the browser, however, we had a report that a URL containing
+	 * $(xterm) was causing xterm to start on his system. This is obviously a
+	 * bug on his system, but it's pretty easy for us to protect against it. */
+	return g_uri_escape_string(unescaped, "[]:;/%#,+?=&@", FALSE);
+}
+
 /**************************************************************************
  * UTF8 String Functions
  **************************************************************************/

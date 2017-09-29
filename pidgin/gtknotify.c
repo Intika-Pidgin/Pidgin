@@ -1284,13 +1284,7 @@ pidgin_notify_uri(const char *uri)
 	GSList *argv = NULL, *argv_remote = NULL;
 	gchar **usercmd_argv = NULL;
 
-	/* Replace some special characters like $ with their percent-encoded
-	   value. This shouldn't be necessary because we shell-escape the entire
-	   arg before exec'ing the browser, however, we had a report that a URL
-	   containing $(xterm) was causing xterm to start on his system. This is
-	   obviously a bug on his system, but it's pretty easy for us to protect
-	   against it. */
-	uri_escaped = g_uri_escape_string(uri, "[]:;/%#,+?=&@", FALSE);
+	uri_escaped = purple_uri_escape_for_open(uri);
 
 	web_browser = purple_prefs_get_string(PIDGIN_PREFS_ROOT
 		"/browsers/browser");
