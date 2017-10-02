@@ -1059,7 +1059,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		FsParticipant *participant;
 		PurpleMediaBackendFs2Session *session;
 		PurpleMediaBackendFs2Stream *media_stream;
-		gchar *name;
+		const gchar *name;
 
 		value = gst_structure_get_value(structure, "stream");
 		stream = g_value_get_object(value);
@@ -1073,8 +1073,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 				local_candidate->foundation);
 
 		g_object_get(stream, "participant", &participant, NULL);
-		g_object_get(participant, "cname", &name, NULL);
-		g_object_unref(participant);
+		name = g_object_get_data(G_OBJECT(participant), "purple-name");
 
 		media_stream = get_stream(self, session->id, name);
 		media_stream->local_candidates = g_list_append(
@@ -1085,24 +1084,25 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		g_signal_emit_by_name(self, "new-candidate",
 				session->id, name, candidate);
 		g_object_unref(candidate);
+		g_object_unref(participant);
 	} else if (gst_structure_has_name(structure,
 			"farstream-local-candidates-prepared")) {
 		const GValue *value;
 		FsStream *stream;
 		FsParticipant *participant;
 		PurpleMediaBackendFs2Session *session;
-		gchar *name;
 
 		value = gst_structure_get_value(structure, "stream");
 		stream = g_value_get_object(value);
 		session = get_session_from_fs_stream(self, stream);
 
 		g_object_get(stream, "participant", &participant, NULL);
-		g_object_get(participant, "cname", &name, NULL);
-		g_object_unref(participant);
 
 		g_signal_emit_by_name(self, "candidates-prepared",
-				session->id, name);
+				session->id,
+				g_object_get_data(G_OBJECT(participant), "purple-name"));
+
+		g_object_unref(participant);
 	} else if (gst_structure_has_name(structure,
 			"farstream-new-active-candidate-pair")) {
 		const GValue *value;
@@ -1112,7 +1112,6 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		FsParticipant *participant;
 		PurpleMediaBackendFs2Session *session;
 		PurpleMediaCandidate *lcandidate, *rcandidate;
-		gchar *name;
 
 		value = gst_structure_get_value(structure, "stream");
 		stream = g_value_get_object(value);
@@ -1122,8 +1121,6 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		remote_candidate = g_value_get_boxed(value);
 
 		g_object_get(stream, "participant", &participant, NULL);
-		g_object_get(participant, "cname", &name, NULL);
-		g_object_unref(participant);
 
 		session = get_session_from_fs_stream(self, stream);
 
@@ -1131,8 +1128,11 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		rcandidate = candidate_from_fs(remote_candidate);
 
 		g_signal_emit_by_name(self, "active-candidate-pair",
-				session->id, name, lcandidate, rcandidate);
+				session->id,
+				g_object_get_data(G_OBJECT(participant), "purple-name"),
+				lcandidate, rcandidate);
 
+		g_object_unref(participant);
 		g_object_unref(lcandidate);
 		g_object_unref(rcandidate);
 	} else if (gst_structure_has_name(structure,
@@ -1774,6 +1774,9 @@ create_participant(PurpleMediaBackendFs2 *self, const gchar *name)
 		g_error_free(err);
 		return FALSE;
 	}
+
+	g_object_set_data_full(G_OBJECT(participant), "purple-name",
+			g_strdup(name), g_free);
 
 	if (g_object_class_find_property(G_OBJECT_GET_CLASS(participant),
 			"cname")) {
