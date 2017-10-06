@@ -588,6 +588,7 @@ int pidgin_start(int argc, char *argv[])
 #endif /* !_WIN32 */
 
 	context = g_option_context_new(NULL);
+	g_option_context_add_group(context, gplugin_get_option_group());
 
 	summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
 	g_option_context_set_summary(context, summary);
