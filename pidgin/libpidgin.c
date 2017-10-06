@@ -394,7 +394,6 @@ login_opt_arg_func(const gchar *option_name, const gchar *value,
 int pidgin_start(int argc, char *argv[])
 {
 	GApplication *app;
-	gboolean opt_force_online = FALSE;
 	gboolean opt_nologin = FALSE;
 	gboolean opt_version = FALSE;
 	gboolean opt_si = TRUE;     /* Check for single instance? */
@@ -427,9 +426,6 @@ int pidgin_start(int argc, char *argv[])
 		{"config", 'c', 0,
 			G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
 			_("use DIR for config files"), _("DIR")},
-		{"force-online", 'f', 0,
-			G_OPTION_ARG_NONE, &opt_force_online,
-			_("force online, regardless of network status"), NULL},
 		{"login", 'l', G_OPTION_FLAG_OPTIONAL_ARG,
 			G_OPTION_ARG_CALLBACK, &login_opt_arg_func,
 			_("enable specified account(s) (optional argument NAME\n"
@@ -716,11 +712,6 @@ int pidgin_start(int argc, char *argv[])
 
 	g_free(opt_config_dir_arg);
 	opt_config_dir_arg = NULL;
-
-	/* This needs to be before purple_blist_show() so the
-	 * statusbox gets the forced online status. */
-	if (opt_force_online)
-		purple_network_force_online();
 
 	/*
 	 * We want to show the blist early in the init process so the
