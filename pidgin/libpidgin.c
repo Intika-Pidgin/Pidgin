@@ -588,7 +588,6 @@ int pidgin_start(int argc, char *argv[])
 #endif /* !_WIN32 */
 
 	context = g_option_context_new(NULL);
-	g_option_context_add_group(context, gplugin_get_option_group());
 
 	summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
 	g_option_context_set_summary(context, summary);
@@ -596,6 +595,7 @@ int pidgin_start(int argc, char *argv[])
 
 	g_option_context_add_main_entries(context, option_entries, PACKAGE);
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
+	g_option_context_add_group(context, gplugin_get_option_group());
 
 #ifdef G_OS_WIN32
 	/* Handle Unicode filenames on Windows. See GOptionContext docs. */
