@@ -53,6 +53,18 @@ force_online_cb(const gchar *option_name, const gchar *value,
 /******************************************************************************
  * API
  *****************************************************************************/
+
+/**
+ * purple_get_option_group:
+ *
+ * Returns a #GOptionGroup for the commandline arguments recognized by
+ * LibPurple.  You should add this option group to your #GOptionContext with
+ * g_option_context_add_group(), if you are using g_option_context_parse() to
+ * parse your commandline arguments.
+ *
+ * Return Value: (transfer full): a #GOptionGroup for the commandline arguments
+ *                                recognized by LibPurple.
+ */
 GOptionGroup *
 purple_get_option_group(void) {
 	GOptionGroup *group = NULL;

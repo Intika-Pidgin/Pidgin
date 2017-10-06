@@ -22,6 +22,15 @@
 #ifndef PURPLE_OPTIONS_H
 #define PURPLE_OPTIONS_H
 
+/**
+ * SECTION:options
+ * @section_id: libpurple-options
+ * @short_description: <filename>options.h</filename>
+ * @title: Options API
+ *
+ * The functions defined here are to help in handling command line options.
+ */
+
 #include <glib.h>
 
 G_BEGIN_DECLS
