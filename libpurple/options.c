@@ -23,11 +23,13 @@
 
 #include "options.h"
 
+#include "network.h"
+
 /******************************************************************************
  * Callbacks
  *****************************************************************************/
 static gboolean
-debug_opt_arg_func(const gchar *option_name, const gchar *value,
+debug_cb(const gchar *option_name, const gchar *value,
 		gpointer data, GError **error)
 {
 	purple_debug_set_enabled(TRUE);
@@ -35,6 +37,15 @@ debug_opt_arg_func(const gchar *option_name, const gchar *value,
 	if (purple_strequal(value, "colored")) {
 		purple_debug_set_colored(TRUE);
 	}
+
+	return TRUE;
+}
+
+static gboolean
+force_online_cb(const gchar *option_name, const gchar *value,
+                gpointer data, GError **error)
+{
+	purple_network_force_online();
 
 	return TRUE;
 }
@@ -48,9 +59,14 @@ purple_get_option_group(void) {
 	GOptionEntry entries[] = {
 		{
 			"debug", 'd', G_OPTION_FLAG_OPTIONAL_ARG,
-			G_OPTION_ARG_CALLBACK, &debug_opt_arg_func,
+			G_OPTION_ARG_CALLBACK, &debug_cb,
 			_("print debugging messages to stdout"),
 			_("[colored]")
+		}, {
+			"force-online", 'f', 0,
+			G_OPTION_ARG_NONE, &force_online_cb,
+			_("force online, regardless of network status"),
+			NULL
 		},
 	};
 
