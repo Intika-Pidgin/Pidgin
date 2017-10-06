@@ -27,6 +27,8 @@
 
 #include "dbus-server.h"
 
+#include "test_ui.h"
+
 /******************************************************************************
  * Junk
  *****************************************************************************/
@@ -87,17 +89,7 @@ test_purple_protocol_xfer_class_init(TestPurpleProtocolXferClass *klass){
  *****************************************************************************/
 static void
 test_purple_protocol_xfer_setup(TestPurpleProtocolXferFixture *fixture, gconstpointer data) {
-	/* we need to find a way to make this crap not required */
-	// purple_core_init("testing");
-	purple_signals_init();
-	purple_prefs_init();
-	purple_dbus_init_ids();
-	purple_cmds_init();
-	purple_protocols_init();
-	purple_plugins_init();
-	purple_keyring_init();
-	purple_connections_init();
-	purple_accounts_init();
+	test_ui_purple_init();
 }
 
 /******************************************************************************

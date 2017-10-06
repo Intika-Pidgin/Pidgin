@@ -34,7 +34,7 @@
 #  include <unistd.h>
 #endif
 
-#include "defines.h"
+#include "test_ui.h"
 
 /*** Conversation uiops ***/
 static void
@@ -63,8 +63,17 @@ static PurpleCoreUiOps test_core_uiops = {
 	.ui_init = test_ui_init
 };
 
-static void
-init_libpurple(void) {
+void
+test_ui_purple_init(void) {
+#ifndef _WIN32
+	/* libpurple's built-in DNS resolution forks processes to perform
+	 * blocking lookups without blocking the main process.  It does not
+	 * handle SIGCHLD itself, so if the UI does not you quickly get an army
+	 * of zombie subprocesses marching around.
+	 */
+	signal(SIGCHLD, SIG_IGN);
+#endif
+
 	/* Set a custom user directory (optional) */
 	purple_util_set_user_dir(TEST_DATA_DIR);
 
@@ -102,36 +111,4 @@ init_libpurple(void) {
 	/* Load the desired plugins. The client should save the list of loaded plugins in
 	 * the preferences using purple_plugins_save_loaded(PLUGIN_SAVE_PREF) */
 	purple_plugins_load_saved(TEST_DATA_DIR);
-}
-
-gint
-main(int argc, char *argv[]) {
-	GList *list, *iter;
-	int i, num;
-	GList *names = NULL;
-	const char *protocol = NULL;
-	char name[128];
-	char *password;
-	GMainLoop *loop = g_main_loop_new(NULL, FALSE);
-	PurpleAccount *account;
-	PurpleSavedStatus *status;
-	char *res;
-
-
-#ifndef _WIN32
-	/* libpurple's built-in DNS resolution forks processes to perform
-	 * blocking lookups without blocking the main process.  It does not
-	 * handle SIGCHLD itself, so if the UI does not you quickly get an army
-	 * of zombie subprocesses marching around.
-	 */
-	signal(SIGCHLD, SIG_IGN);
-#endif
-
-	init_libpurple();
-
-	printf("libpurple initialized.\n");
-
-	g_main_loop_run(loop);
-
-	return 0;
 }
