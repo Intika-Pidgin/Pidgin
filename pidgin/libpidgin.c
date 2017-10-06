@@ -33,6 +33,7 @@
 #include "log.h"
 #include "network.h"
 #include "notify.h"
+#include "options.h"
 #include "prefs.h"
 #include "protocol.h"
 #include "pounce.h"
@@ -375,23 +376,8 @@ pidgin_activate_cb(GApplication *application, gpointer user_data)
 	purple_blist_set_visible(TRUE);
 }
 
-static gboolean debug_colored = FALSE;
-static gboolean debug_enabled = FALSE;
 static gboolean opt_login = FALSE;
 static gchar *opt_login_arg = NULL;
-
-static gboolean
-debug_opt_arg_func(const gchar *option_name, const gchar *value,
-		gpointer data, GError **error)
-{
-	debug_enabled = TRUE;
-
-	if (purple_strequal(value, "colored")) {
-		debug_colored = TRUE;
-	}
-
-	return TRUE;
-}
 
 static gboolean
 login_opt_arg_func(const gchar *option_name, const gchar *value,
@@ -441,10 +427,6 @@ int pidgin_start(int argc, char *argv[])
 		{"config", 'c', 0,
 			G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
 			_("use DIR for config files"), _("DIR")},
-		{"debug", 'd', G_OPTION_FLAG_OPTIONAL_ARG,
-			G_OPTION_ARG_CALLBACK, &debug_opt_arg_func,
-			_("print debugging messages to stdout"),
-			_("[colored]")},
 		{"force-online", 'f', 0,
 			G_OPTION_ARG_NONE, &opt_force_online,
 			_("force online, regardless of network status"), NULL},
@@ -468,11 +450,8 @@ int pidgin_start(int argc, char *argv[])
 		{NULL}
 	};
 
-	debug_colored = FALSE;
 #ifdef DEBUG
-	debug_enabled = TRUE;
-#else
-	debug_enabled = FALSE;
+	purple_debug_set_enabled(TRUE);
 #endif
 
 #ifdef ENABLE_NLS
@@ -594,8 +573,9 @@ int pidgin_start(int argc, char *argv[])
 	g_free(summary);
 
 	g_option_context_add_main_entries(context, option_entries, PACKAGE);
-	g_option_context_add_group(context, gtk_get_option_group(TRUE));
+	g_option_context_add_group(context, purple_get_option_group());
 	g_option_context_add_group(context, gplugin_get_option_group());
+	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 
 #ifdef G_OS_WIN32
 	/* Handle Unicode filenames on Windows. See GOptionContext docs. */
@@ -646,11 +626,6 @@ int pidgin_start(int argc, char *argv[])
 	 * We're done piddling around with command line arguments.
 	 * Fire up this baby.
 	 */
-
-	if (g_getenv("PIDGIN_DEBUG_COLORED") != NULL)
-		debug_colored = TRUE;
-	purple_debug_set_enabled(debug_enabled);
-	purple_debug_set_colored(debug_colored);
 
 	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
 				G_APPLICATION_NON_UNIQUE));
