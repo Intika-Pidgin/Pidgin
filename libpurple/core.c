@@ -447,7 +447,7 @@ purple_core_migrate_to_xdg_base_dirs(void)
 		MIGRATE_TO_XDG_DIR(purple_data_dir(), "certificates");
 		MIGRATE_TO_XDG_DIR(purple_cache_dir(), "icons");
 		MIGRATE_TO_XDG_DIR(purple_data_dir(), "logs");
-		MIGRATE_TO_XDG_DIR(purple_data_dir(), "pounces.xml");
+		MIGRATE_TO_XDG_DIR(purple_config_dir(), "pounces.xml");
 	}
 
 	return TRUE;
