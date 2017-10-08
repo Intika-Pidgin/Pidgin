@@ -3050,7 +3050,7 @@ purple_util_write_data_to_file_common(const char *dir, const char *filename, con
 		}
 	}
 
-	filename_full = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", dir, filename);
+	filename_full = g_build_filename(dir, filename, NULL);
 
 	ret = purple_util_write_data_to_file_absolute(filename_full, data, size);
 
