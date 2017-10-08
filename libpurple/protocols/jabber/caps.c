@@ -221,7 +221,7 @@ static void
 schedule_caps_save(void)
 {
 	if (save_timer == 0)
-		save_timer = purple_timeout_add_seconds(5, do_jabber_caps_store, NULL);
+		save_timer = g_timeout_add_seconds(5, do_jabber_caps_store, NULL);
 }
 
 static void
@@ -336,7 +336,7 @@ void jabber_caps_init(void)
 void jabber_caps_uninit(void)
 {
 	if (save_timer != 0) {
-		purple_timeout_remove(save_timer);
+		g_source_remove(save_timer);
 		save_timer = 0;
 		do_jabber_caps_store(NULL);
 	}

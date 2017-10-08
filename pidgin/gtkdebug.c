@@ -40,7 +40,7 @@
 
 #include "gtk3compat.h"
 
-#include "pidgin.gresource.h"
+#include "pidginresources.h"
 
 typedef struct
 {
@@ -59,7 +59,21 @@ typedef struct
 } DebugWindow;
 
 static DebugWindow *debug_win = NULL;
-static guint debug_enabled_timer = 0;
+
+struct _PidginDebugUi
+{
+	GObject parent;
+
+	/* Other members, including private data. */
+	guint debug_enabled_timer;
+};
+
+static void pidgin_debug_ui_finalize(GObject *gobject);
+static void pidgin_debug_ui_interface_init(PurpleDebugUiInterface *iface);
+
+G_DEFINE_TYPE_WITH_CODE(PidginDebugUi, pidgin_debug_ui, G_TYPE_OBJECT,
+                        G_IMPLEMENT_INTERFACE(PURPLE_TYPE_DEBUG_UI,
+                                              pidgin_debug_ui_interface_init));
 
 static gint
 debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
@@ -69,7 +83,7 @@ debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 	if(debug_win->timer != 0) {
 		const gchar *text;
 
-		purple_timeout_remove(debug_win->timer);
+		g_source_remove(debug_win->timer);
 
 		text = gtk_entry_get_text(GTK_ENTRY(debug_win->expression));
 		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/debug/regex", text);
@@ -261,7 +275,7 @@ regex_changed_cb(GtkWidget *w, DebugWindow *win) {
 	}
 
 	if (win->timer == 0)
-		win->timer = purple_timeout_add_seconds(5, (GSourceFunc)regex_timer_cb, win);
+		win->timer = g_timeout_add_seconds(5, (GSourceFunc)regex_timer_cb, win);
 
 	text = gtk_entry_get_text(GTK_ENTRY(win->expression));
 
@@ -382,7 +396,7 @@ toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
 	GtkToolbarStyle value[3];
 	int i;
 
-	if (!(event->button == 3 && event->type == GDK_BUTTON_PRESS))
+	if (!gdk_event_triggers_context_menu((GdkEvent *)event))
 		return FALSE;
 
 	text[0] = _("_Icon Only");          value[0] = GTK_TOOLBAR_ICONS;
@@ -402,7 +416,7 @@ toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
 
 	gtk_widget_show_all(menu);
 
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 3, event->time);
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
 	return FALSE;
 }
 
@@ -592,7 +606,7 @@ debug_window_new(void)
 	resource = pidgin_get_resource();
 	error = NULL;
 	resource_bytes = g_resource_lookup_data(resource,
-	                                        "/im/pidgin/Pidgin/gtkdebug.html",
+	                                        "/im/pidgin/Pidgin/Debug/gtkdebug.html",
 	                                        G_RESOURCE_LOOKUP_FLAGS_NONE,
 	                                        &error);
 	if (G_UNLIKELY(resource_bytes == NULL || error != NULL)) {
@@ -621,12 +635,23 @@ debug_window_new(void)
 static gboolean
 debug_enabled_timeout_cb(gpointer data)
 {
-	debug_enabled_timer = 0;
+	PidginDebugUi *ui = PIDGIN_DEBUG_UI(data);
 
-	if (data)
-		pidgin_debug_window_show();
-	else
-		pidgin_debug_window_hide();
+	ui->debug_enabled_timer = 0;
+
+	pidgin_debug_window_show();
+
+	return FALSE;
+}
+
+static gboolean
+debug_disabled_timeout_cb(gpointer data)
+{
+	PidginDebugUi *ui = PIDGIN_DEBUG_UI(data);
+
+	ui->debug_enabled_timer = 0;
+
+	pidgin_debug_window_hide();
 
 	return FALSE;
 }
@@ -635,7 +660,12 @@ static void
 debug_enabled_cb(const char *name, PurplePrefType type,
 				 gconstpointer value, gpointer data)
 {
-	debug_enabled_timer = g_timeout_add(0, debug_enabled_timeout_cb, GINT_TO_POINTER(GPOINTER_TO_INT(value)));
+	PidginDebugUi *ui = PIDGIN_DEBUG_UI(data);
+
+	if (GPOINTER_TO_INT(value))
+		ui->debug_enabled_timer = g_timeout_add(0, debug_enabled_timeout_cb, data);
+	else
+		ui->debug_enabled_timer = g_timeout_add(0, debug_disabled_timeout_cb, data);
 }
 
 static void
@@ -701,8 +731,8 @@ pidgin_glib_dummy_print_handler(const gchar *string)
 }
 #endif
 
-void
-pidgin_debug_init(void)
+static void
+pidgin_debug_ui_init(PidginDebugUi *self)
 {
 	/* Debug window preferences. */
 	/*
@@ -730,7 +760,7 @@ pidgin_debug_init(void)
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/highlight", FALSE);
 
 	purple_prefs_connect_callback(NULL, PIDGIN_PREFS_ROOT "/debug/enabled",
-								debug_enabled_cb, NULL);
+	                              debug_enabled_cb, self);
 
 #define REGISTER_G_LOG_HANDLER(name) \
 	g_log_set_handler((name), G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL \
@@ -757,13 +787,16 @@ pidgin_debug_init(void)
 #endif
 }
 
-void
-pidgin_debug_uninit(void)
+static void
+pidgin_debug_ui_finalize(GObject *gobject)
 {
-	purple_debug_set_ui_ops(NULL);
+	PidginDebugUi *self = PIDGIN_DEBUG_UI(gobject);
 
-	if (debug_enabled_timer != 0)
-		g_source_remove(debug_enabled_timer);
+	if (self->debug_enabled_timer != 0)
+		g_source_remove(self->debug_enabled_timer);
+	self->debug_enabled_timer = 0;
+
+	G_OBJECT_CLASS(pidgin_debug_ui_parent_class)->finalize(gobject);
 }
 
 void
@@ -787,8 +820,9 @@ pidgin_debug_window_hide(void)
 }
 
 static void
-pidgin_debug_print(PurpleDebugLevel level, const char *category,
-	const char *arg_s)
+pidgin_debug_print(PurpleDebugUi *self,
+                   PurpleDebugLevel level, const char *category,
+                   const char *arg_s)
 {
 	gchar *esc_s;
 	const char *mdate;
@@ -814,26 +848,31 @@ pidgin_debug_print(PurpleDebugLevel level, const char *category,
 }
 
 static gboolean
-pidgin_debug_is_enabled(PurpleDebugLevel level, const char *category)
+pidgin_debug_is_enabled(PurpleDebugUi *self, PurpleDebugLevel level, const char *category)
 {
 	return (debug_win != NULL &&
 			purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"));
 }
 
-static PurpleDebugUiOps ops =
+static void
+pidgin_debug_ui_interface_init(PurpleDebugUiInterface *iface)
 {
-	pidgin_debug_print,
-	pidgin_debug_is_enabled,
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
+	iface->print = pidgin_debug_print;
+	iface->is_enabled = pidgin_debug_is_enabled;
+}
 
-PurpleDebugUiOps *
-pidgin_debug_get_ui_ops(void)
+static void
+pidgin_debug_ui_class_init(PidginDebugUiClass *klass)
 {
-	return &ops;
+	GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+	object_class->finalize = pidgin_debug_ui_finalize;
+}
+
+PidginDebugUi *
+pidgin_debug_ui_new(void)
+{
+	return g_object_new(PIDGIN_TYPE_DEBUG_UI, NULL);
 }
 
 void *

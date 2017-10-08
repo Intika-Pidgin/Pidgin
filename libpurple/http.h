@@ -174,6 +174,7 @@ PurpleHttpConnection * purple_http_get(PurpleConnection *gc,
  * @callback:  (scope call): The callback function.
  * @user_data: The user data to pass to the callback function.
  * @format:    The format string.
+ * @...:       The parameters to insert into the format string.
  *
  * Constructs an URL and fetches the data from it with GET request, then passes
  * it to a callback function.
@@ -529,6 +530,7 @@ void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url);
  * purple_http_request_set_url_printf:
  * @request: The request.
  * @format:  The format string.
+ * @...:       The parameters to insert into the format string.
  *
  * Constructs and sets an URL for HTTP request.
  */
@@ -756,6 +758,7 @@ void purple_http_request_header_set_printf(PurpleHttpRequest *request,
 
 /**
  * purple_http_request_header_add:
+ * @request: The request.
  * @key:   A header to be set.
  * @value: A value to set.
  *
@@ -905,8 +908,8 @@ const gchar * purple_http_response_get_data(PurpleHttpResponse *response, size_t
  *
  * Gets all headers got with response.
  *
- * Returns:         GList of PurpleKeyValuePair, which keys are header field
- *                 names (gchar*) and values are its contents (gchar*).
+ * Returns: (element-type PurpleKeyValuePair) (transfer none): Keys are header
+ *          field names (gchar*) and values are its contents (gchar*).
  */
 const GList * purple_http_response_get_all_headers(PurpleHttpResponse *response);
 
@@ -917,7 +920,7 @@ const GList * purple_http_response_get_all_headers(PurpleHttpResponse *response)
  *
  * Gets all headers with specified name got with response.
  *
- * Returns:         GList of header field records contents (gchar*).
+ * Returns: (element-type gchar*) (transfer none): Header field record contents.
  */
 const GList * purple_http_response_get_headers_by_name(
 	PurpleHttpResponse *response, const gchar *name);

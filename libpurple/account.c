@@ -217,7 +217,7 @@ purple_account_register_completed(PurpleAccount *account, gboolean succeeded)
 	closure->account = g_object_ref(account);
 	closure->succeeded = succeeded;
 
-	purple_timeout_add(0, purple_account_register_completed_cb, closure);
+	g_timeout_add(0, purple_account_register_completed_cb, closure);
 }
 
 void
@@ -1066,7 +1066,7 @@ purple_account_set_public_alias(PurpleAccount *account,
 				g_new0(struct public_alias_closure, 1);
 		closure->account = g_object_ref(account);
 		closure->failure_cb = failure_cb;
-		purple_timeout_add(0, set_public_alias_unsupported, closure);
+		g_timeout_add(0, set_public_alias_unsupported, closure);
 	}
 }
 
@@ -1106,7 +1106,7 @@ purple_account_get_public_alias(PurpleAccount *account,
 				g_new0(struct public_alias_closure, 1);
 		closure->account = g_object_ref(account);
 		closure->failure_cb = failure_cb;
-		purple_timeout_add(0, get_public_alias_unsupported, closure);
+		g_timeout_add(0, get_public_alias_unsupported, closure);
 	}
 }
 
@@ -2218,13 +2218,20 @@ purple_account_get_log(PurpleAccount *account, gboolean create)
 	if(!priv->system_log && create){
 		PurplePresence *presence;
 		int login_time;
+		GDateTime *dt;
 
 		presence = purple_account_get_presence(account);
 		login_time = purple_presence_get_login_time(presence);
+		if (login_time != 0) {
+			dt = g_date_time_new_from_unix_local(login_time);
+		} else {
+			dt = g_date_time_new_now_local();
+		}
 
-		priv->system_log	 = purple_log_new(PURPLE_LOG_SYSTEM,
-				purple_account_get_username(account), account, NULL,
-				(login_time != 0) ? login_time : time(NULL), NULL);
+		priv->system_log = purple_log_new(PURPLE_LOG_SYSTEM,
+		                                  purple_account_get_username(account),
+		                                  account, NULL, dt);
+		g_date_time_unref(dt);
 	}
 
 	return priv->system_log;

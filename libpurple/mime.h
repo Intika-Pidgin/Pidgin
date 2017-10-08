@@ -89,6 +89,8 @@ PurpleMimeDocument *purple_mime_document_parsen(const char *buf, gsize len);
 
 /**
  * purple_mime_document_write:
+ * @doc: The MIME document.
+ * @str: The string to write the MIME document to.
  *
  * Write (append) a MIME document onto a GString.
  */
@@ -100,8 +102,8 @@ void purple_mime_document_write(PurpleMimeDocument *doc, GString *str);
  *
  * The list of fields in the header of a document
  *
- * Returns: (transfer none): A list of strings indicating the fields (but not
- *          the values of the fields) in the header of doc.
+ * Returns: (element-type utf8) (transfer none): A list of strings indicating
+ *          the fields (but not the values of the fields) in the header of doc.
  */
 GList *purple_mime_document_get_fields(PurpleMimeDocument *doc);
 
@@ -138,7 +140,8 @@ void purple_mime_document_set_field(PurpleMimeDocument *doc,
  *
  * The list of parts in a multipart document.
  *
- * Returns: (transfer none):   List of PurpleMimePart contained within doc.
+ * Returns: (element-type PurpleMimePart) (transfer none): List of MIME parts
+ *          contained within doc.
  */
 GList *purple_mime_document_get_parts(PurpleMimeDocument *doc);
 
@@ -157,8 +160,8 @@ PurpleMimePart *purple_mime_part_new(PurpleMimeDocument *doc);
  *
  * The list of fields in the header of a document part.
  *
- * Returns: (transfer none): List of strings indicating the fields (but not the
- *          values of the fields) in the header of part.
+ * Returns: (element-type utf8) (transfer none): List of strings indicating the
+ *          fields (but not the values of the fields) in the header of part.
  */
 GList *purple_mime_part_get_fields(PurpleMimePart *part);
 
@@ -178,6 +181,8 @@ const char *purple_mime_part_get_field(PurpleMimePart *part,
 
 /**
  * purple_mime_part_get_field_decoded:
+ * @part:  The MIME document part.
+ * @field: Case-insensitive name of the header field.
  *
  * Get the decoded value of a specific field in the header of a
  * document part.

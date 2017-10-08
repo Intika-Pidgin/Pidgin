@@ -59,6 +59,7 @@
 #include "gtkblist-theme-loader.h"
 #include "gtkutils.h"
 #include "pidgin/minidialog.h"
+#include "pidgin/pidginabout.h"
 #include "pidgin/pidgintooltip.h"
 
 #include <gdk/gdkkeysyms.h>
@@ -183,7 +184,6 @@ typedef struct _pidgin_blist_node {
 	gint recent_signonoff_timer;
 	struct {
 		PurpleConversation *conv;
-		time_t last_message;          /* timestamp for last displayed message */
 		PidginBlistNodeFlags flags;
 	} conv;
 } PidginBlistNode;
@@ -1869,11 +1869,7 @@ create_buddy_menu(PurpleBlistNode *node, PurpleBuddy *b)
 }
 
 static gboolean
-pidgin_blist_show_context_menu(PurpleBlistNode *node,
-								 GtkMenuPositionFunc func,
-								 GtkWidget *tv,
-								 guint button,
-								 guint32 time)
+pidgin_blist_show_context_menu(GtkWidget *tv, PurpleBlistNode *node, GdkEvent *event)
 {
 	struct _pidgin_blist_node *gtknode = purple_blist_node_get_ui_data(node);
 	GtkWidget *menu = NULL;
@@ -1916,7 +1912,13 @@ pidgin_blist_show_context_menu(PurpleBlistNode *node,
 	/* Now display the menu */
 	if (menu != NULL) {
 		gtk_widget_show_all(menu);
-		gtk_menu_popup(GTK_MENU(menu), NULL, NULL, func, tv, button, time);
+		if (event != NULL) {
+			/* Pointer event */
+			gtk_menu_popup_at_pointer(GTK_MENU(menu), event);
+		} else {
+			/* Keyboard event */
+			pidgin_menu_popup_at_treeview_selection(menu, tv);
+		}
 		handled = TRUE;
 	}
 
@@ -1942,11 +1944,11 @@ gtk_blist_button_press_cb(GtkWidget *tv, GdkEventButton *event, gpointer user_da
 	gtknode = purple_blist_node_get_ui_data(node);
 
 	/* Right click draws a context menu */
-	if ((event->button == 3) && (event->type == GDK_BUTTON_PRESS)) {
-		handled = pidgin_blist_show_context_menu(node, NULL, tv, 3, event->time);
+	if (gdk_event_triggers_context_menu((GdkEvent *)event)) {
+		handled = pidgin_blist_show_context_menu(tv, node, (GdkEvent *)event);
 
 	/* CTRL+middle click expands or collapse a contact */
-	} else if ((event->button == 2) && (event->type == GDK_BUTTON_PRESS) &&
+	} else if ((event->button == GDK_BUTTON_MIDDLE) && (event->type == GDK_BUTTON_PRESS) &&
 			   (event->state & GDK_CONTROL_MASK) && (PURPLE_IS_CONTACT(node))) {
 		if (gtknode->contact_expanded)
 			pidgin_blist_collapse_contact_cb(NULL, node);
@@ -1955,7 +1957,7 @@ gtk_blist_button_press_cb(GtkWidget *tv, GdkEventButton *event, gpointer user_da
 		handled = TRUE;
 
 	/* Double middle click gets info */
-	} else if ((event->button == 2) && (event->type == GDK_2BUTTON_PRESS) &&
+	} else if ((event->button == GDK_BUTTON_MIDDLE) && (event->type == GDK_2BUTTON_PRESS) &&
 			   ((PURPLE_IS_CONTACT(node)) || (PURPLE_IS_BUDDY(node)))) {
 		PurpleBuddy *b;
 		if(PURPLE_IS_CONTACT(node))
@@ -2006,7 +2008,7 @@ pidgin_blist_popup_menu_cb(GtkWidget *tv, void *user_data)
 	gtk_tree_model_get(GTK_TREE_MODEL(gtkblist->treemodel), &iter, NODE_COLUMN, &node, -1);
 
 	/* Shift+F10 draws a context menu */
-	handled = pidgin_blist_show_context_menu(node, pidgin_treeview_popup_menu_position_func, tv, 0, GDK_CURRENT_TIME);
+	handled = pidgin_blist_show_context_menu(tv, node, NULL);
 
 	return handled;
 }
@@ -3605,6 +3607,15 @@ set_mood_show(void)
 /***************************************************
  *            Crap                                 *
  ***************************************************/
+static void
+_pidgin_about_cb(GtkAction *action, GtkWidget *window) {
+	GtkWidget *about = pidgin_about_dialog_new();
+
+	gtk_window_set_transient_for(GTK_WINDOW(about), GTK_WINDOW(window));
+
+	gtk_widget_show_all(about);
+}
+
 /* TODO: fill out tooltips... */
 static const GtkActionEntry blist_menu_entries[] = {
 /* NOTE: Do not set any accelerator to Control+O. It is mapped by
@@ -3642,12 +3653,9 @@ static const GtkActionEntry blist_menu_entries[] = {
 	/* Help */
 	{ "HelpMenu", NULL, N_("_Help"), NULL, NULL, NULL },
 	{ "OnlineHelp", GTK_STOCK_HELP, N_("Online _Help"), "F1", NULL, gtk_blist_show_onlinehelp_cb },
-	{ "BuildInformation", NULL, N_("_Build Information"), NULL, NULL, pidgin_dialogs_buildinfo },
 	{ "DebugWindow", NULL, N_("_Debug Window"), NULL, NULL, toggle_debug },
-	{ "DeveloperInformation", NULL, N_("De_veloper Information"), NULL, NULL, pidgin_dialogs_developers },
 	{ "PluginInformation", NULL, N_("_Plugin Information"), NULL, NULL, pidgin_dialogs_plugins_info },
-	{ "TranslatorInformation", NULL, N_("_Translator Information"), NULL, NULL, pidgin_dialogs_translators },
-	{ "About", GTK_STOCK_ABOUT, N_("_About"), NULL, NULL, pidgin_dialogs_about },
+	{ "About", GTK_STOCK_ABOUT, N_("_About"), NULL, NULL, _pidgin_about_cb },
 };
 
 /* Toggle items */
@@ -3709,11 +3717,8 @@ static const char *blist_menu =
 		"<menu action='HelpMenu'>"
 			"<menuitem action='OnlineHelp'/>"
 			"<separator/>"
-			"<menuitem action='BuildInformation'/>"
 			"<menuitem action='DebugWindow'/>"
-			"<menuitem action='DeveloperInformation'/>"
 			"<menuitem action='PluginInformation'/>"
-			"<menuitem action='TranslatorInformation'/>"
 			"<separator/>"
 			"<menuitem action='About'/>"
 		"</menu>"
@@ -4588,7 +4593,7 @@ plugin_changed_cb(PurplePlugin *p, gpointer data)
 }
 
 static void
-unseen_conv_menu(void)
+unseen_conv_menu(GdkEvent *event)
 {
 	static GtkWidget *menu = NULL;
 	GList *convs = NULL;
@@ -4619,8 +4624,7 @@ unseen_conv_menu(void)
 	pidgin_conversations_fill_menu(menu, convs);
 	g_list_free(convs);
 	gtk_widget_show_all(menu);
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 3,
-			gtk_get_current_event_time());
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), event);
 }
 
 static gboolean
@@ -4628,21 +4632,20 @@ menutray_press_cb(GtkWidget *widget, GdkEventButton *event)
 {
 	GList *convs;
 
-	switch (event->button) {
-		case 1:
-			convs = pidgin_conversations_get_unseen_ims(PIDGIN_UNSEEN_TEXT, FALSE, 1);
+	if (event->button == GDK_BUTTON_PRIMARY) {
+		convs = pidgin_conversations_get_unseen_ims(PIDGIN_UNSEEN_TEXT, FALSE, 1);
+		if(!convs)
+			convs = pidgin_conversations_get_unseen_chats(PIDGIN_UNSEEN_NICK, FALSE, 1);
 
-			if(!convs)
-				convs = pidgin_conversations_get_unseen_chats(PIDGIN_UNSEEN_NICK, FALSE, 1);
-			if (convs) {
-				pidgin_conv_present_conversation((PurpleConversation*)convs->data);
-				g_list_free(convs);
-			}
-			break;
-		case 3:
-			unseen_conv_menu();
-			break;
+		if (convs) {
+			pidgin_conv_present_conversation((PurpleConversation*)convs->data);
+			g_list_free(convs);
+		}
+
+	} else if (gdk_event_triggers_context_menu((GdkEvent *)event)) {
+		unseen_conv_menu((GdkEvent *)event);
 	}
+
 	return TRUE;
 }
 
@@ -4732,7 +4735,6 @@ conversation_deleted_update_ui_cb(PurpleConversation *conv, struct _pidgin_blist
 		return;
 	ui->conv.conv = NULL;
 	ui->conv.flags = 0;
-	ui->conv.last_message = 0;
 }
 
 static void
@@ -4753,7 +4755,6 @@ written_msg_update_ui_cb(PurpleConversation *conv, PurpleMessage *msg, PurpleBli
 	if (PURPLE_IS_CHAT_CONVERSATION(conv) && (purple_message_get_flags(msg) & PURPLE_MESSAGE_NICK))
 		ui->conv.flags |= PIDGIN_BLIST_CHAT_HAS_PENDING_MESSAGE_WITH_NICK;
 
-	ui->conv.last_message = time(NULL);    /* XXX: for lack of better data */
 	pidgin_blist_update(purple_blist_get_buddy_list(), node);
 }
 
@@ -4783,7 +4784,6 @@ conversation_created_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
 				continue;
 			ui->conv.conv = conv;
 			ui->conv.flags = 0;
-			ui->conv.last_message = 0;
 			purple_signal_connect(purple_conversations_get_handle(), "deleting-conversation",
 					ui, PURPLE_CALLBACK(conversation_deleted_update_ui_cb), ui);
 			purple_signal_connect(purple_conversations_get_handle(), "wrote-im-msg",
@@ -4801,7 +4801,6 @@ conversation_created_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
 			return;
 		ui->conv.conv = conv;
 		ui->conv.flags = 0;
-		ui->conv.last_message = 0;
 		purple_signal_connect(purple_conversations_get_handle(), "deleting-conversation",
 				ui, PURPLE_CALLBACK(conversation_deleted_update_ui_cb), ui);
 		purple_signal_connect(purple_conversations_get_handle(), "wrote-chat-msg",
@@ -4981,7 +4980,7 @@ static gboolean pidgin_blist_select_notebook_page_cb(gpointer user_data)
 static void pidgin_blist_select_notebook_page(PidginBuddyList *gtkblist)
 {
 	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
-	priv->select_notebook_page_timeout = purple_timeout_add(0,
+	priv->select_notebook_page_timeout = g_timeout_add(0,
 		pidgin_blist_select_notebook_page_cb, gtkblist);
 }
 
@@ -6042,7 +6041,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	purple_blist_set_visible(purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/list_visible"));
 
 	/* start the refresh timer */
-	gtkblist->refresh_timer = purple_timeout_add_seconds(30, (GSourceFunc)pidgin_blist_refresh_timer, list);
+	gtkblist->refresh_timer = g_timeout_add_seconds(30, (GSourceFunc)pidgin_blist_refresh_timer, list);
 
 	handle = pidgin_blist_get_handle();
 
@@ -6165,7 +6164,7 @@ pidgin_blist_update_refresh_timeout()
 	blist = purple_blist_get_buddy_list();
 	gtkblist = PIDGIN_BLIST(purple_blist_get_buddy_list());
 
-	gtkblist->refresh_timer = purple_timeout_add_seconds(30,(GSourceFunc)pidgin_blist_refresh_timer, blist);
+	gtkblist->refresh_timer = g_timeout_add_seconds(30,(GSourceFunc)pidgin_blist_refresh_timer, blist);
 }
 
 static gboolean get_iter_from_node(PurpleBlistNode *node, GtkTreeIter *iter) {
@@ -6218,7 +6217,7 @@ static void pidgin_blist_remove(PurpleBuddyList *list, PurpleBlistNode *node)
 
 	if(gtknode) {
 		if(gtknode->recent_signonoff_timer > 0)
-			purple_timeout_remove(gtknode->recent_signonoff_timer);
+			g_source_remove(gtknode->recent_signonoff_timer);
 
 		purple_signals_disconnect_by_handle(gtknode);
 		g_free(gtknode);
@@ -6882,7 +6881,7 @@ static void pidgin_blist_destroy(PurpleBuddyList *list)
 	pidgin_blist_tooltip_destroy();
 
 	if (gtkblist->refresh_timer)
-		purple_timeout_remove(gtkblist->refresh_timer);
+		g_source_remove(gtkblist->refresh_timer);
 	if (gtkblist->timeout)
 		g_source_remove(gtkblist->timeout);
 	if (gtkblist->drag_timeout)
@@ -6902,7 +6901,7 @@ static void pidgin_blist_destroy(PurpleBuddyList *list)
 	if (priv->current_theme)
 		g_object_unref(priv->current_theme);
 	if (priv->select_notebook_page_timeout)
-		purple_timeout_remove(priv->select_notebook_page_timeout);
+		g_source_remove(priv->select_notebook_page_timeout);
 	g_free(priv);
 
 	g_free(gtkblist);
@@ -7494,10 +7493,10 @@ static void buddy_signonoff_cb(PurpleBuddy *buddy)
 	gtknode->recent_signonoff = TRUE;
 
 	if(gtknode->recent_signonoff_timer > 0)
-		purple_timeout_remove(gtknode->recent_signonoff_timer);
-	
+		g_source_remove(gtknode->recent_signonoff_timer);
+
 	g_object_ref(buddy);
-	gtknode->recent_signonoff_timer = purple_timeout_add_seconds(10,
+	gtknode->recent_signonoff_timer = g_timeout_add_seconds(10,
 			(GSourceFunc)buddy_signonoff_timeout_cb, buddy);
 }
 

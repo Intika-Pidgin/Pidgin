@@ -69,7 +69,6 @@ typedef struct _PurpleMood {
 
 /**
  * PurpleStatusPrimitive:
- *
  * @PURPLE_STATUS_UNSET: The status is not set
  * @PURPLE_STATUS_OFFLINE: The status is offline
  * @PURPLE_STATUS_AVAILABLE: The status is available
@@ -80,6 +79,7 @@ typedef struct _PurpleMood {
  * @PURPLE_STATUS_MOBILE: The status is mobile
  * @PURPLE_STATUS_TUNE: The status includes a song title
  * @PURPLE_STATUS_MOOD: The status includes a mood
+ *
  * A primitive defining the basic structure of a status type.
  */
 /*
@@ -408,13 +408,14 @@ PurpleStatusAttribute *purple_status_type_get_attr(const PurpleStatusType *statu
  *
  * Returns a list of all attributes in a status type.
  *
- * Returns: (transfer none): The list of attributes.
+ * Returns: (element-type PurpleStatusAttribute) (transfer none): The list of attributes.
  */
 GList *purple_status_type_get_attrs(const PurpleStatusType *status_type);
 
 /**
  * purple_status_type_find_with_id:
- * @status_types: A list of status types.  Often account->status_types.
+ * @status_types: (element-type PurpleStatus) (transfer none): A list of status
+ *                types.  Often account->status_types.
  * @id: The unique ID of the status type you wish to find.
  *
  * Find the PurpleStatusType with the given id.
