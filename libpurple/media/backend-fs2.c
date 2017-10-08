@@ -840,8 +840,8 @@ get_stream(PurpleMediaBackendFs2 *self,
 
 	for (; streams; streams = g_list_next(streams)) {
 		PurpleMediaBackendFs2Stream *stream = streams->data;
-		if (!strcmp(stream->session->id, sess_id) &&
-				!strcmp(stream->participant, name))
+		if (purple_strequal(stream->session->id, sess_id) &&
+				purple_strequal(stream->participant, name))
 			return stream;
 	}
 
@@ -863,9 +863,9 @@ get_streams(PurpleMediaBackendFs2 *self,
 	for (; streams; streams = g_list_next(streams)) {
 		PurpleMediaBackendFs2Stream *stream = streams->data;
 
-		if (sess_id != NULL && strcmp(stream->session->id, sess_id))
+		if (sess_id != NULL && !purple_strequal(stream->session->id, sess_id))
 			continue;
-		else if (name != NULL && strcmp(stream->participant, name))
+		else if (name != NULL && !purple_strequal(stream->participant, name))
 			continue;
 		else
 			ret = g_list_prepend(ret, stream);
@@ -1724,7 +1724,7 @@ create_session(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 	 * receiving the src-pad-added signal.
 	 * Only works for non-multicast FsRtpSessions.
 	 */
-	if (!!strcmp(transmitter, "multicast"))
+	if (!purple_strequal(transmitter, "multicast"))
 		g_object_set(G_OBJECT(session->session),
 				"no-rtcp-timeout", 0, NULL);
 
@@ -1888,7 +1888,7 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 	gst_pad_link(srcpad, sinkpad);
 	gst_object_unref(sinkpad);
 
-	stream->connected_cb_id = purple_timeout_add(0,
+	stream->connected_cb_id = g_timeout_add(0,
 			(GSourceFunc)src_pad_added_cb_cb, stream);
 }
 
@@ -2003,7 +2003,7 @@ create_stream(PurpleMediaBackendFs2 *self,
 		++_num_params;
 	}
 
-	if (turn_ip && !strcmp("nice", transmitter) && !got_turn_from_protocol) {
+	if (turn_ip && purple_strequal("nice", transmitter) && !got_turn_from_protocol) {
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 		GValueArray *relay_info = g_value_array_new(0);
 G_GNUC_END_IGNORE_DEPRECATIONS
@@ -2019,7 +2019,7 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 			relay_info = append_relay_info(relay_info, turn_ip, port, username,
 				password, "udp");
 		}
-		
+
 		/* TCP */
 		port = purple_prefs_get_int("/purple/network/turn_port_tcp");
 		if (port > 0) {
@@ -2056,7 +2056,7 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 	stream->participant = g_strdup(who);
 	stream->session = session;
 	stream->stream = fsstream;
-	stream->supports_add = !strcmp(transmitter, "nice");
+	stream->supports_add = purple_strequal(transmitter, "nice");
 
 	priv->streams =	g_list_append(priv->streams, stream);
 
@@ -2071,7 +2071,7 @@ free_stream(PurpleMediaBackendFs2Stream *stream)
 {
 	/* Remove the connected_cb timeout */
 	if (stream->connected_cb_id != 0)
-		purple_timeout_remove(stream->connected_cb_id);
+		g_source_remove(stream->connected_cb_id);
 
 	g_free(stream->participant);
 
@@ -2463,7 +2463,7 @@ param_to_sdes_type(const gchar *param)
 	guint i;
 
 	for (i = 0; supported[i] != NULL; ++i) {
-		if (!strcmp(param, supported[i])) {
+		if (purple_strequal(param, supported[i])) {
 			return sdes_types[i];
 		}
 	}
@@ -2558,7 +2558,7 @@ purple_media_backend_fs2_send_dtmf(PurpleMediaBackend *self,
 	if (duration <= 50) {
 		fs_session_stop_telephony_event(session->session);
 	} else {
-		purple_timeout_add(duration, send_dtmf_callback,
+		g_timeout_add(duration, send_dtmf_callback,
 				session->session);
 	}
 

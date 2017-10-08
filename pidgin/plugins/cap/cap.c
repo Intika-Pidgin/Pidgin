@@ -130,7 +130,7 @@ static void destroy_stats(gpointer data) {
 	/* g_free(stats->hourly_usage); */
 	/* g_free(stats->daily_usage); */
 	if (stats->timeout_source_id != 0)
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 	g_free(stats);
 }
 
@@ -359,9 +359,9 @@ static void sent_im_msg(PurpleAccount *account, PurpleMessage *msg, gpointer _un
 	stats->last_message = time(NULL);
 	stats->last_message_status_id = purple_status_get_id(get_status_for(buddy));
 	if(stats->timeout_source_id != 0)
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 
-	stats->timeout_source_id = purple_timeout_add_seconds(interval, max_message_difference_cb, stats);
+	stats->timeout_source_id = g_timeout_add_seconds(interval, max_message_difference_cb, stats);
 }
 
 /* received-im-msg */
@@ -387,7 +387,7 @@ received_im_msg(PurpleAccount *account, char *sender, char *message, PurpleConve
 	 * then cancel the timeout callback. */
 	if(stats->timeout_source_id != 0) {
 		purple_debug_info("cap", "Cancelling timeout callback\n");
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 		stats->timeout_source_id = 0;
 	}
 
@@ -616,7 +616,7 @@ static void insert_status_change_from_purple_status(CapStatistics *statistics, P
 	/* It would seem that some protocols receive periodic updates of the buddies status.
 	 * Check to make sure the last status is not the same as current status to prevent
 	 * to many duplicated useless database entries. */
-	if(strcmp(statistics->last_status_id, purple_status_get_id(status)) == 0)
+	if(purple_strequal(statistics->last_status_id, purple_status_get_id(status)))
 		return;
 
 	status_id = purple_status_get_id(status);
@@ -678,7 +678,7 @@ static void add_plugin_functionality(PurplePlugin *plugin) {
 static void cancel_conversation_timeouts(gpointer key, gpointer value, gpointer user_data) {
 	CapStatistics *stats = value;
 	if(stats->timeout_source_id != 0) {
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 		stats->timeout_source_id = 0;
 	}
 }

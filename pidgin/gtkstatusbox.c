@@ -301,7 +301,7 @@ account_status_changed_cb(PurpleAccount *account, PurpleStatus *oldstatus, Purpl
 static gboolean
 icon_box_press_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
 {
-	if (event->button == 3) {
+	if (gdk_event_triggers_context_menu((GdkEvent *)event)) {
 		GtkWidget *menu_item;
 		const char *path;
 
@@ -320,8 +320,7 @@ icon_box_press_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box
 				|| !*path)
 			gtk_widget_set_sensitive(menu_item, FALSE);
 
-		gtk_menu_popup(GTK_MENU(box->icon_box_menu), NULL, NULL, NULL, NULL,
-			       event->button, event->time);
+		gtk_menu_popup_at_pointer(GTK_MENU(box->icon_box_menu), (GdkEvent *)event);
 
 	} else {
 		choose_buddy_icon_cb(widget, box);
@@ -412,7 +411,7 @@ setup_icon_box(PidginStatusBox *status_box)
 		PurpleImage *img = NULL;
 
 		if (filename && *filename)
-			img = purple_image_new_from_file(filename, TRUE);
+			img = purple_image_new_from_file(filename, NULL);
 
 		pidgin_status_box_set_buddy_icon(status_box, img);
 		if (img)
@@ -820,7 +819,7 @@ status_menu_refresh_iter(PidginStatusBox *status_box, gboolean status_changed)
 							TEXT_COLUMN, &name, -1);
 
 					if (!purple_savedstatus_has_substatuses(saved_status)
-						|| !strcmp(name, acct_status_name))
+						|| purple_strequal(name, acct_status_name))
 					{
 						/* Found! */
 						path = gtk_tree_model_get_path(GTK_TREE_MODEL(status_box->dropdown_store), &iter);
@@ -956,7 +955,7 @@ static PurpleAccount* check_active_accounts_for_identical_statuses(void)
 		PurpleAccount *acct2 = iter->data;
 		GList *s1, *s2;
 
-		if (!g_str_equal(proto1, purple_account_get_protocol_id(acct2))) {
+		if (!purple_strequal(proto1, purple_account_get_protocol_id(acct2))) {
 			acct1 = NULL;
 			break;
 		}
@@ -967,8 +966,8 @@ static PurpleAccount* check_active_accounts_for_identical_statuses(void)
 			PurpleStatusType *st1 = s1->data, *st2 = s2->data;
 			/* TODO: Are these enough to consider the statuses identical? */
 			if (purple_status_type_get_primitive(st1) != purple_status_type_get_primitive(st2)
-				|| strcmp(purple_status_type_get_id(st1), purple_status_type_get_id(st2))
-				|| strcmp(purple_status_type_get_name(st1), purple_status_type_get_name(st2))) {
+				|| !purple_strequal(purple_status_type_get_id(st1), purple_status_type_get_id(st2))
+				|| !purple_strequal(purple_status_type_get_name(st1), purple_status_type_get_name(st2))) {
 				acct1 = NULL;
 				break;
 			}
@@ -1094,7 +1093,7 @@ webview_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_b
 	/* Reset the status if Escape was pressed */
 	if (event->keyval == GDK_KEY_Escape)
 	{
-		purple_timeout_remove(status_box->typing);
+		g_source_remove(status_box->typing);
 		status_box->typing = 0;
 #if 0
 	/* TODO WebKit: Doesn't do this? */
@@ -1112,8 +1111,8 @@ webview_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_b
 	}
 
 	pidgin_status_box_pulse_typing(status_box);
-	purple_timeout_remove(status_box->typing);
-	status_box->typing = purple_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
+	g_source_remove(status_box->typing);
+	status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
 
 	return FALSE;
 }
@@ -1209,7 +1208,7 @@ spellcheck_prefs_cb(const char *name, PurplePrefType type,
 static gboolean button_released_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
 {
 
-	if (event->button != 1)
+	if (event->button != GDK_BUTTOM_PRIMARY)
 		return FALSE;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(box->toggle_button), FALSE);
 	if (!box->webview_visible)
@@ -1219,7 +1218,7 @@ static gboolean button_released_cb(GtkWidget *widget, GdkEventButton *event, Pid
 
 static gboolean button_pressed_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
 {
-	if (event->button != 1)
+	if (event->button != GDK_BUTTOM_PRIMARY)
 		return FALSE;
 	gtk_combo_box_popup(GTK_COMBO_BOX(box));
 	/* Disabled until button_released_cb works */
@@ -1450,7 +1449,7 @@ buddy_icon_set_cb(const char *filename, PidginStatusBox *box)
 
 		/* Even if no accounts were processed, load the icon that was set. */
 		if (filename != NULL)
-			img = purple_image_new_from_file(filename, TRUE);
+			img = purple_image_new_from_file(filename, NULL);
 	}
 
 	pidgin_status_box_set_buddy_icon(box, img);
@@ -2191,12 +2190,12 @@ pidgin_status_box_redisplay_buddy_icon(PidginStatusBox *status_box)
 		g_signal_connect(G_OBJECT(loader), "size-prepared", G_CALLBACK(pixbuf_size_prepared_cb), NULL);
 		if (!gdk_pixbuf_loader_write(loader,
 				purple_image_get_data(status_box->buddy_icon_img),
-				purple_image_get_size(status_box->buddy_icon_img),
+				purple_image_get_data_size(status_box->buddy_icon_img),
 				&error) || error)
 		{
 			purple_debug_warning("gtkstatusbox",
 				"gdk_pixbuf_loader_write() failed with size=%"
-				G_GSIZE_FORMAT ": %s", purple_image_get_size(
+				G_GSIZE_FORMAT ": %s", purple_image_get_data_size(
 					status_box->buddy_icon_img),
 				error ? error->message : "(no error message)");
 			if (error)
@@ -2205,7 +2204,7 @@ pidgin_status_box_redisplay_buddy_icon(PidginStatusBox *status_box)
 			purple_debug_warning("gtkstatusbox",
 				"gdk_pixbuf_loader_close() failed for image of "
 				"size %" G_GSIZE_FORMAT ": %s",
-				purple_image_get_size(status_box->buddy_icon_img),
+				purple_image_get_data_size(status_box->buddy_icon_img),
 				error ? error->message : "(no error message)");
 			if (error)
 				g_error_free(error);
@@ -2341,7 +2340,7 @@ activate_currently_selected_status(PidginStatusBox *status_box)
 			acct_status_type = find_status_type_by_index(status_box->token_status_account, active);
 			id = purple_status_type_get_id(acct_status_type);
 
-			if (g_str_equal(id, purple_status_get_id(status)) &&
+			if (purple_strequal(id, purple_status_get_id(status)) &&
 				purple_strequal(message, purple_status_get_attr_string(status, "message")))
 			{
 				/* Selected status and previous status is the same */
@@ -2442,7 +2441,7 @@ activate_currently_selected_status(PidginStatusBox *status_box)
 		status_type = find_status_type_by_index(status_box->account, active);
 		id = purple_status_type_get_id(status_type);
 
-		if (g_str_equal(id, purple_status_get_id(status)) &&
+		if (purple_strequal(id, purple_status_get_id(status)) &&
 			purple_strequal(message, purple_status_get_attr_string(status, "message")))
 		{
 			/* Selected status and previous status is the same */
@@ -2562,7 +2561,7 @@ static void remove_typing_cb(PidginStatusBox *status_box)
 		PIDGIN_WEBVIEW(status_box->webview), TRUE);
 #endif
 
-	purple_timeout_remove(status_box->typing);
+	g_source_remove(status_box->typing);
 	status_box->typing = 0;
 
 	activate_currently_selected_status(status_box);
@@ -2591,7 +2590,7 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 			   DATA_COLUMN, &data,
 			   -1);
 	if ((wastyping = (status_box->typing != 0)))
-		purple_timeout_remove(status_box->typing);
+		g_source_remove(status_box->typing);
 	status_box->typing = 0;
 
 	if (gtk_widget_get_sensitive(GTK_WIDGET(status_box)))
@@ -2661,7 +2660,7 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 		if (status_box->webview_visible)
 		{
 			gtk_widget_show_all(status_box->vbox);
-			status_box->typing = purple_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
+			status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
 			gtk_widget_grab_focus(status_box->webview);
 #if 0
 			/* TODO WebKit: Doesn't do this? */
@@ -2718,9 +2717,9 @@ webview_changed_cb(PidginWebView *webview, void *data)
 	{
 		if (status_box->typing != 0) {
 			pidgin_status_box_pulse_typing(status_box);
-			purple_timeout_remove(status_box->typing);
+			g_source_remove(status_box->typing);
 		}
-		status_box->typing = purple_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
+		status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
 	}
 	pidgin_status_box_refresh(status_box);
 }

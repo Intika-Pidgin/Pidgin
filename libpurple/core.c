@@ -19,7 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
-#include "cipher.h"
 #include "cmds.h"
 #include "connection.h"
 #include "conversation.h"
@@ -190,7 +189,6 @@ purple_core_init(const char *ui)
 	purple_log_init();
 	purple_network_init();
 	purple_pounces_init();
-	_purple_socket_init();
 	purple_proxy_init();
 	purple_sound_init();
 	purple_stun_init();
@@ -254,7 +252,6 @@ purple_core_quit(void)
 	purple_theme_manager_uninit();
 	purple_xfers_uninit();
 	purple_proxy_uninit();
-	_purple_socket_uninit();
 	_purple_image_store_uninit();
 	purple_network_uninit();
 
@@ -266,7 +263,7 @@ purple_core_quit(void)
 	purple_prefs_uninit();
 	purple_plugins_uninit();
 
-	static_proto_unload();	
+	static_proto_unload();
 	purple_protocols_uninit();
 
 #ifdef HAVE_DBUS
@@ -426,7 +423,8 @@ GHashTable* purple_core_get_ui_info() {
 	return ops->get_ui_info();
 }
 
-#define MIGRATE_TO_XDG_DIR(xdg_base_dir, legacy_path) do { \
+#define MIGRATE_TO_XDG_DIR(xdg_base_dir, legacy_path) \
+	G_STMT_START { \
 		gboolean migrate_res; \
 		\
 		migrate_res = purple_move_to_xdg_base_dir(xdg_base_dir, legacy_path); \
@@ -435,7 +433,7 @@ GHashTable* purple_core_get_ui_info() {
 						legacy_path, xdg_base_dir); \
 			return FALSE; \
 		} \
-	} while (0)
+	} G_STMT_END
 
 gboolean
 purple_core_migrate_to_xdg_base_dirs(void)
@@ -445,7 +443,6 @@ purple_core_migrate_to_xdg_base_dirs(void)
 	xdg_dir_exists = g_file_test(purple_data_dir(), G_FILE_TEST_EXISTS);
 	if (!xdg_dir_exists) {
 		MIGRATE_TO_XDG_DIR(purple_data_dir(), "certificates");
-		MIGRATE_TO_XDG_DIR(purple_cache_dir(), "icons");
 		MIGRATE_TO_XDG_DIR(purple_data_dir(), "logs");
 		MIGRATE_TO_XDG_DIR(purple_config_dir(), "pounces.xml");
 	}

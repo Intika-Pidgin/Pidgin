@@ -35,7 +35,7 @@ SCAN_OPTIONS=\
 
 # Extra options to supply to gtkdoc-mkdb.
 # e.g. MKDB_OPTIONS=--xml-mode --output-format=xml
-MKDB_OPTIONS=--xml-mode --output-format=xml
+MKDB_OPTIONS=--xml-mode --output-format=xml --ignore-files="$(IGNORE_HFILES)"
 
 # Extra options to supply to gtkdoc-mktmpl
 # e.g. MKTMPL_OPTIONS=--only-section-tmpl
@@ -63,10 +63,8 @@ EXTRA_HFILES=
 IGNORE_HFILES=\
 	plugins \
 	test \
-	wms \
-	getopt.h \
+	libgnt/wms \
 	gntinternal.h \
-	gntmarshal.h \
 	gnt-skel.h
 
 # Images to copy into HTML directory.
@@ -103,6 +101,7 @@ GTKDOC_CFLAGS = \
 
 GTKDOC_LIBS = \
 	$(top_builddir)/finch/libfinch.la \
+	$(top_builddir)/libpurple/libpurple.la \
 	$(DBUS_LIBS) \
 	$(INTLLIBS) \
 	$(GLIB_LIBS) \

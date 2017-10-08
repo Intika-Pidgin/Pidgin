@@ -197,12 +197,15 @@ static void
 open_log(PurpleConversation *conv)
 {
 	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	GDateTime *dt;
 
 	g_return_if_fail(priv != NULL);
 
+	dt = g_date_time_new_now_local();
 	priv->logs = g_list_append(NULL, purple_log_new(PURPLE_IS_CHAT_CONVERSATION(conv) ? PURPLE_LOG_CHAT :
 							   PURPLE_LOG_IM, priv->name, priv->account,
-							   conv, time(NULL), NULL));
+							   conv, dt));
+	g_date_time_unref(dt);
 }
 
 /* Functions that deal with PurpleMessage history */
@@ -611,16 +614,19 @@ _purple_conversation_write_common(PurpleConversation *conv, PurpleMessage *pmsg)
 
 	if (!(purple_message_get_flags(pmsg) & PURPLE_MESSAGE_NO_LOG) && purple_conversation_is_logging(conv)) {
 		GList *log;
+		GDateTime *dt;
 
+		dt = g_date_time_new_from_unix_local(purple_message_get_time(pmsg));
 		log = priv->logs;
 		while (log != NULL) {
 			purple_log_write((PurpleLog *)log->data,
 				purple_message_get_flags(pmsg),
 				purple_message_get_author_alias(pmsg),
-				purple_message_get_time(pmsg),
+				dt,
 				purple_message_get_contents(pmsg));
 			log = log->next;
 		}
+		g_date_time_unref(dt);
 	}
 
 	if (ops) {
@@ -837,16 +843,14 @@ purple_conversation_get_max_message_size(PurpleConversation *conv)
 	return purple_protocol_client_iface_get_max_message_size(protocol, conv);
 }
 
-PurpleSmiley *
-purple_conversation_add_remote_smiley(PurpleConversation *conv,
-	const gchar *shortcut)
-{
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
-	PurpleSmiley *smiley;
+void
+purple_conversation_add_smiley(PurpleConversation *conv, PurpleSmiley *smiley) {
+	PurpleConversationPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
-	g_return_val_if_fail(shortcut != NULL, NULL);
-	g_return_val_if_fail(shortcut[0] != '\0', NULL);
+	g_return_if_fail(PURPLE_IS_CONVERSATION(conv));
+	g_return_if_fail(smiley);
+
+	priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
 
 	if (priv->remote_smileys == NULL) {
 		priv->remote_smileys = purple_smiley_list_new();
@@ -854,42 +858,33 @@ purple_conversation_add_remote_smiley(PurpleConversation *conv,
 			"drop-failed-remotes", TRUE, NULL);
 	}
 
-	smiley = purple_smiley_list_get_by_shortcut(
-		priv->remote_smileys, shortcut);
-
-	/* smiley was already added */
-	if (smiley)
-		return NULL;
-
-	smiley = purple_smiley_new_remote(shortcut);
+	if(purple_smiley_list_get_by_shortcut(
+		priv->remote_smileys,
+		purple_smiley_get_shortcut(smiley)))
+	{
+		/* smiley was already added */
+		return;
+	}
 
 	if (!purple_smiley_list_add(priv->remote_smileys, smiley)) {
 		purple_debug_error("conversation", "failed adding remote "
 			"smiley to the list");
-		g_object_unref(smiley);
-		return NULL;
 	}
-
-	/* priv->remote_smileys holds the only one ref */
-	g_object_unref(smiley);
-	return smiley;
 }
 
 PurpleSmiley *
-purple_conversation_get_remote_smiley(PurpleConversation *conv,
-	const gchar *shortcut)
-{
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+purple_conversation_get_smiley(PurpleConversation *conv, const gchar *shortcut) {
+	PurpleConversationPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
-	g_return_val_if_fail(shortcut != NULL, NULL);
-	g_return_val_if_fail(shortcut[0] != '\0', NULL);
+	g_return_val_if_fail(PURPLE_IS_CONVERSATION(conv), NULL);
+	g_return_val_if_fail(shortcut, NULL);
+
+	priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
 
 	if (priv->remote_smileys == NULL)
 		return NULL;
 
-	return purple_smiley_list_get_by_shortcut(
-		priv->remote_smileys, shortcut);
+	return purple_smiley_list_get_by_shortcut(priv->remote_smileys, shortcut);
 }
 
 PurpleSmileyList *

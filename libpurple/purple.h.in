@@ -53,7 +53,6 @@
 #include <accountopt.h>
 #include <buddylist.h>
 #include <buddyicon.h>
-#include <cipher.h>
 #include <circularbuffer.h>
 #include <cmds.h>
 #include <connection.h>
@@ -70,7 +69,6 @@
 #include <nat-pmp.h>
 #include <network.h>
 #include <notify.h>
-#include <ntlm.h>
 #include <plugins.h>
 #include <pluginpref.h>
 #include <pounce.h>

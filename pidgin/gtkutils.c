@@ -696,7 +696,7 @@ create_protocols_menu(const char *default_proto_id)
 		if (pixbuf)
 			g_object_unref(pixbuf);
 
-		if (default_proto_id != NULL && !strcmp(purple_protocol_get_id(protocol), default_proto_id))
+		if (default_proto_id != NULL && purple_strequal(purple_protocol_get_id(protocol), default_proto_id))
 			aop_menu->default_item = i;
 	}
 	g_list_free(list);
@@ -884,7 +884,7 @@ pidgin_save_accels_cb(GtkAccelGroup *accel_group, guint arg1,
 	           "accel changed, scheduling save.\n");
 
 	if (!accels_save_timer)
-		accels_save_timer = purple_timeout_add_seconds(5, pidgin_save_accels,
+		accels_save_timer = g_timeout_add_seconds(5, pidgin_save_accels,
 		                                  NULL);
 }
 
@@ -1061,15 +1061,15 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 
 				protoname = purple_protocol_class_list_icon(proto, account, NULL);
 
-				if (!strcmp(protoname, protocol))
+				if (purple_strequal(protoname, protocol))
 					break;
 
 				account = NULL;
 			}
 
 			/* Special case for AIM and ICQ */
-			if (account == NULL && (!strcmp(protocol, "aim") ||
-									!strcmp(protocol, "icq")))
+			if (account == NULL && (purple_strequal(protocol, "aim") ||
+									purple_strequal(protocol, "icq")))
 			{
 				for (l = list; l != NULL; l = l->next)
 				{
@@ -1100,7 +1100,7 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 
 					protoname = purple_protocol_class_list_icon(proto, account, NULL);
 
-					if (!strcmp(protoname, "aim") || !strcmp(protoname, "icq"))
+					if (purple_strequal(protoname, "aim") || purple_strequal(protoname, "icq"))
 						break;
 
 					account = NULL;
@@ -1183,26 +1183,17 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 							gpointer data)
 {
 	GtkWidget *widget;
-	GtkStyleContext *context;
 	GtkRequisition requisition;
 	GdkScreen *screen;
 	GdkRectangle monitor;
 	gint monitor_num;
 	gint space_left, space_right, space_above, space_below;
-	gint needed_width;
-	gint needed_height;
-	gint xthickness;
-	gint ythickness;
 	gboolean rtl;
 
 	g_return_if_fail(GTK_IS_MENU(menu));
 
 	widget     = GTK_WIDGET(menu);
 	screen     = gtk_widget_get_screen(widget);
-	context    = gtk_widget_get_style_context(widget);
-	gtk_style_context_get(context, gtk_style_context_get_state(context),
-	                      "xthickness", &xthickness,
-	                      "ythickness", &ythickness, NULL);
 	rtl        = (gtk_widget_get_direction(widget) == GTK_TEXT_DIR_RTL);
 
 	/*
@@ -1245,24 +1236,14 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 
 	/* position horizontally */
 
-	/* the amount of space we need to position the menu. Note the
-	 * menu is offset "xthickness" pixels
-	 */
-	needed_width = requisition.width - xthickness;
-
-	if (needed_width <= space_left ||
-	    needed_width <= space_right)
+	if (requisition.width <= space_left ||
+	    requisition.width <= space_right)
 	{
-		if ((rtl  && needed_width <= space_left) ||
-		    (!rtl && needed_width >  space_right))
+		if ((rtl  && requisition.width <= space_left) ||
+		    (!rtl && requisition.width >  space_right))
 		{
 			/* position left */
-			*x = *x + xthickness - requisition.width + 1;
-		}
-		else
-		{
-			/* position right */
-			*x = *x - xthickness;
+			*x = *x - requisition.width + 1;
 		}
 
 		/* x is clamped on-screen further down */
@@ -1301,20 +1282,19 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	/* Position vertically. The algorithm is the same as above, but
 	 * simpler because we don't have to take RTL into account.
 	 */
-	needed_height = requisition.height - ythickness;
 
-	if (needed_height <= space_above ||
-	    needed_height <= space_below)
+	if (requisition.height <= space_above ||
+	    requisition.height <= space_below)
 	{
-		if (needed_height <= space_below)
-			*y = *y - ythickness;
-		else
-			*y = *y + ythickness - requisition.height + 1;
+		if (requisition.height > space_below) {
+			*y = *y - requisition.height + 1;
+		}
 
 		*y = CLAMP (*y, monitor.y,
 			   monitor.y + monitor.height - requisition.height);
 	}
-	else if (needed_height > space_below && needed_height > space_above)
+	else if (requisition.height > space_below &&
+	         requisition.height > space_above)
 	{
 		if (space_below >= space_above)
 			*y = monitor.y + monitor.height - requisition.height;
@@ -1328,7 +1308,8 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 }
 
 
-void
+#if !GTK_CHECK_VERSION(3,22,0)
+static void
 pidgin_treeview_popup_menu_position_func(GtkMenu *menu,
 										   gint *x,
 										   gint *y,
@@ -1340,20 +1321,45 @@ pidgin_treeview_popup_menu_position_func(GtkMenu *menu,
 	GtkTreePath *path;
 	GtkTreeViewColumn *col;
 	GdkRectangle rect;
-	GtkStyleContext *context;
-	gint ythickness;
 
-	context = gtk_widget_get_style_context(GTK_WIDGET(menu));
-	gtk_style_context_get(context, gtk_style_context_get_state(context),
-	                      "ythickness", &ythickness, NULL);
 	gdk_window_get_origin (gtk_widget_get_window(widget), x, y);
 	gtk_tree_view_get_cursor (tv, &path, &col);
 	gtk_tree_view_get_cell_area (tv, path, col, &rect);
 
 	*x += rect.x+rect.width;
-	*y += rect.y+rect.height+ythickness;
+	*y += rect.y + rect.height;
 	pidgin_menu_position_func_helper(menu, x, y, push_in, data);
 }
+#endif
+
+
+void
+pidgin_menu_popup_at_treeview_selection(GtkWidget *menu, GtkWidget *treeview)
+{
+#if GTK_CHECK_VERSION(3,22,0)
+	GtkTreePath *path;
+	GtkTreeViewColumn *column;
+	GdkWindow *bin_window;
+	GdkRectangle rect;
+
+	gtk_tree_view_get_cursor(GTK_TREE_VIEW(treeview), &path, &column);
+	g_return_if_fail(path != NULL);
+	if (column == NULL)
+		column = gtk_tree_view_get_column(GTK_TREE_VIEW(treeview), 0);
+	bin_window = gtk_tree_view_get_bin_window(GTK_TREE_VIEW(treeview));
+	gtk_tree_view_get_cell_area(GTK_TREE_VIEW(treeview), path, column, &rect);
+	gtk_menu_popup_at_rect(GTK_MENU(menu), bin_window, &rect,
+	                       GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST,
+	                       NULL);
+
+	gtk_tree_path_free(path);
+#else
+	gtk_menu_popup(GTK_MENU(menu), NULL, NULL,
+	               pidgin_treeview_popup_menu_position_func, treeview,
+	               0, GDK_CURRENT_TIME);
+#endif
+}
+
 
 static void dnd_image_ok_callback(_DndData *data, int choice)
 {
@@ -1574,7 +1580,7 @@ pidgin_dnd_file_send_desktop(PurpleAccount *account, const gchar *who,
 	 * nothing else? Probably not.  I'll just give an error and
 	 * return. */
 	/* The original patch sent the icon used by the launcher.  That's probably wrong */
-	if (!g_strcmp0(type, "Link")) {
+	if (purple_strequal(type, "Link")) {
 		purple_notify_error(NULL, NULL, _("Cannot send launcher"),
 				_("You dragged a desktop launcher. Most "
 					"likely you wanted to send the target "
@@ -1928,7 +1934,7 @@ add_buddyname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, c
 
 	/* There's no sense listing things like: 'xxx "xxx"'
 	   when the name and buddy alias match. */
-	if (buddy_alias && strcmp(buddy_alias, buddyname)) {
+	if (buddy_alias && !purple_strequal(buddy_alias, buddyname)) {
 		char *completion_entry = g_strdup_printf("%s \"%s\"", buddyname, buddy_alias);
 		char *tmp2 = g_utf8_normalize(buddy_alias, -1, G_NORMALIZE_DEFAULT);
 
@@ -1950,9 +1956,9 @@ add_buddyname_autocomplete_entry(GtkListStore *store, const char *buddy_alias, c
 
 	/* There's no sense listing things like: 'xxx "xxx"'
 	   when the name and contact alias match. */
-	if (contact_alias && strcmp(contact_alias, buddyname)) {
+	if (contact_alias && !purple_strequal(contact_alias, buddyname)) {
 		/* We don't want duplicates when the contact and buddy alias match. */
-		if (!buddy_alias || strcmp(contact_alias, buddy_alias)) {
+		if (!purple_strequal(contact_alias, buddy_alias)) {
 			char *completion_entry = g_strdup_printf("%s \"%s\"",
 							buddyname, contact_alias);
 			char *tmp2 = g_utf8_normalize(contact_alias, -1, G_NORMALIZE_DEFAULT);
@@ -2404,10 +2410,10 @@ pidgin_convert_buddy_icon(PurpleProtocol *protocol, const char *path, size_t *le
 
 				purple_debug_info("buddyicon", "Converting buddy icon to %s\n", protocol_formats[i]);
 
-				if (g_str_equal(protocol_formats[i], "png")) {
+				if (purple_strequal(protocol_formats[i], "png")) {
 					key = "compression";
 					value = "9";
-				} else if (g_str_equal(protocol_formats[i], "jpeg")) {
+				} else if (purple_strequal(protocol_formats[i], "jpeg")) {
 					sprintf(tmp_buf, "%u", quality);
 					key = "quality";
 					value = tmp_buf;
@@ -2448,7 +2454,7 @@ pidgin_convert_buddy_icon(PurpleProtocol *protocol, const char *path, size_t *le
 
 				g_free(contents);
 
-				if (!g_str_equal(protocol_formats[i], "jpeg")) {
+				if (!purple_strequal(protocol_formats[i], "jpeg")) {
 					/* File size was too big and we can't lower the quality,
 					   so skip to the next image type. */
 					break;
@@ -3101,7 +3107,7 @@ GdkPixbuf *
 pidgin_pixbuf_from_image(PurpleImage *image)
 {
 	return pidgin_pixbuf_from_data(purple_image_get_data(image),
-		purple_image_get_size(image));
+		purple_image_get_data_size(image));
 }
 
 GdkPixbuf *pidgin_pixbuf_new_from_file(const gchar *filename)
@@ -3525,9 +3531,9 @@ open_dialog(PidginWebView *webview, const char *url)
 
 	str = url + sizeof("open://") - 1;
 
-	if (strcmp(str, "accounts") == 0)
+	if (purple_strequal(str, "accounts"))
 		pidgin_accounts_window_show();
-	else if (strcmp(str, "prefs") == 0)
+	else if (purple_strequal(str, "prefs"))
 		pidgin_prefs_show();
 	else
 		return FALSE;

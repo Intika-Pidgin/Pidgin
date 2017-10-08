@@ -109,7 +109,6 @@ GNT_LT_VERSION_INFO="gnt_lt_current:gnt_micro_version:gnt_minor_version"
 AC_SUBST(GNT_LT_VERSION_INFO)
 
 AC_PATH_PROG(sedpath, sed)
-AC_PATH_PROG(xxdpath, xxd)
 
 dnl Storing configure arguments
 AC_DEFINE_UNQUOTED(CONFIG_ARGS, "$ac_configure_args", [configure arguments])
@@ -155,9 +154,9 @@ AM_CONDITIONAL(IS_WIN32, test "x$is_win32" = "xyes")
 AC_SUBST([PLUGIN_LDFLAGS])
 
 dnl Define *_LIBS
-PURPLE_LIBS="\$(top_builddir)/libpurple/libpurple.la \$(GLIB_LIBS)"
-PIDGIN_LIBS="\$(top_builddir)/pidgin/libpidgin.la \$(GTK_LIBS)"
-FINCH_LIBS="\$(top_builddir)/finch/libfinch.la \$(top_builddir)/finch/libgnt/libgnt.la \$(GLIB_LIBS)"
+PURPLE_LIBS="\$(top_builddir)/libpurple/libpurple.la \$(GLIB_LIBS) \$(GPLUGIN_LIBS)"
+PIDGIN_LIBS="\$(top_builddir)/pidgin/libpidgin.la \$(GTK_LIBS) \$(PURPLE_LIBS) \$(WEBKIT_LIBS)"
+FINCH_LIBS="\$(top_builddir)/finch/libfinch.la \$(top_builddir)/finch/libgnt/libgnt.la \$(PURPLE_LIBS)"
 AC_SUBST(PURPLE_LIBS)
 AC_SUBST(PIDGIN_LIBS)
 AC_SUBST(FINCH_LIBS)
@@ -250,19 +249,12 @@ AC_SUBST([FINCH_PLUGINDIR])
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(strdup)
-dnl Checks for getopt in standard library
-AC_CHECK_FUNCS(getopt_long,,
-[
-	AC_LIBOBJ(getopt)
-	AC_LIBOBJ(getopt1)
-])
 
 dnl Check for inet_aton
 if test "x$is_win32" != "xyes" ; then
 	AC_CHECK_FUNC(inet_aton, , [AC_CHECK_LIB(resolv, inet_aton, ,
 		[AC_MSG_ERROR([inet_aton not found])])])
 fi
-AC_CHECK_LIB(resolv, __res_query)
 AC_CHECK_LIB(nsl, gethostent)
 if test "x$is_win32" = "xyes" ; then
 	AC_DEFINE(HAVE_GETADDRINFO, 1, [Define to 1 if you have the getaddrinfo function.])
@@ -408,8 +400,6 @@ int main()
 # before gettexting, in case iconv matters
 case "$host_os" in
 darwin*)
-	AC_CHECK_LIB(resolv, res_query)
-
 	AC_CHECK_HEADER(CoreFoundation/CoreFoundation.h, [
 		AC_CHECK_HEADER(IOKit/IOKitLib.h, [
 			AC_DEFINE(HAVE_IOKIT, 1, [Define if we have IOKit])
@@ -468,13 +458,13 @@ fi #enable_i18n
 AM_CONDITIONAL(INSTALL_I18N, test "x$enable_i18n" = "xyes")
 
 dnl #######################################################################
-dnl # Check for GLib 2.36 (required)
+dnl # Check for GLib 2.40 (required)
 dnl #######################################################################
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.36.0 gio-2.0 gobject-2.0 gthread-2.0], , [
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.40.0 gio-2.0 gobject-2.0 gthread-2.0], , [
 	AC_MSG_RESULT(no)
 	AC_MSG_ERROR([
 
-You must have GLib 2.36.0 or newer development headers installed to build.
+You must have GLib 2.40.0 or newer development headers installed to build.
 
 If you have these installed already you may need to install pkg-config so
 I can find them.
@@ -487,6 +477,8 @@ AC_SUBST(GLIB_GENMARSHAL)
 
 GLIB_MKENUMS=`$PKG_CONFIG --variable=glib_mkenums glib-2.0`
 AC_SUBST(GLIB_MKENUMS)
+
+AC_PATH_PROG(GLIB_COMPILE_RESOURCES, [glib-compile-resources])
 
 AC_PATH_PROG(GTESTER, gtester)
 GLIB_TESTS
@@ -518,18 +510,6 @@ AC_ARG_ENABLE(consoleui, [AS_HELP_STRING([--disable-consoleui],
 dnl #######################################################################
 dnl # Check for GTK+ 2.18 and other things used by the GTK UI
 dnl #######################################################################
-AC_ARG_ENABLE(screensaver,
-	[AS_HELP_STRING([--disable-screensaver],
-		[compile without X screensaver extension (used to detect idleness)])],
-	enable_screensaver="$enableval", enable_screensaver="yes")
-AC_ARG_ENABLE(sm,
-	[AS_HELP_STRING([--disable-sm],
-		[compile without X session management support])],
-	enable_sm="$enableval", enable_sm="yes")
-AC_ARG_ENABLE(startup-notification,
-	[AS_HELP_STRING([--disable-startup-notification],
-		[compile without startup notification support])],
-	enable_startup_notification="$enableval", enable_startup_notification="yes")
 AC_ARG_ENABLE(enchant,
 	[AS_HELP_STRING([--disable-enchant],
 		[compile without Enchant spell checking support])],
@@ -643,80 +623,7 @@ Use --without-x if you do not need X11 support.
 		AC_SUBST(X11_LIBS)
 		AC_SUBST(X11_CFLAGS)
 	else
-		enable_screensaver=no
-		enable_sm=no
 		enable_gestures=no
-	fi
-
-	dnl #######################################################################
-	dnl # Check for XScreenSaver
-	dnl #######################################################################
-	if test "x$enable_screensaver" = "xyes" ; then
-		if test "x$with_x" = "xyes" ; then
-			old_LIBS="$LIBS"
-			LIBS="$LIBS $GTK_LIBS $x_libpath_add"
-			XSS_LIBS=""
-			XSS_HEADERS=""
-			AC_CHECK_LIB(Xext, XScreenSaverRegister,[XSS_LIBS="$X_LIBS $X_PRE_LIBS -lX11 -lXext $X_EXTRA_LIBS"],[],[-lX11 -lXext -lm])
-			AC_CHECK_LIB(Xss, XScreenSaverRegister,[XSS_LIBS="$X_LIBS $X_PRE_LIBS -lX11 -lXext $X_LIBS $X_EXTRA_LIBS -lXss"],[],[-lX11 -lXext -lm])
-			if test "x$XSS_LIBS" != "x"; then
-				oldCPPFLAGS="$CPPFLAGS"
-				CPPFLAGS="$CPPFLAGS $x_incpath_add"
-				AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-					#include <X11/Xlib.h>
-					#include <X11/extensions/scrnsaver.h>
-					]], [[]])], [], [enable_screensaver=no])
-				CPPFLAGS="$oldCPPFLAGS"
-			else
-				enable_screensaver=no
-			fi
-			LIBS="$old_LIBS"
-
-			if test "x$enable_screensaver" = "xyes" ; then
-				AC_DEFINE(USE_SCREENSAVER, 1, [Define if we're using XScreenSaver.])
-				AC_SUBST(XSS_LIBS)
-			else
-				if test "x$force_deps" = "xyes" ; then
-					AC_MSG_ERROR([
-XScreenSaver extension development headers (libXScrnSaver-devel or libxss-dev) not found.
-Use --disable-screensaver if you do not need XScreenSaver extension support,
-this is required for detecting idle time by mouse and keyboard usage.
-])
-				fi
-			fi
-		else
-			AC_MSG_ERROR([X support is required to build with XScreenSaver extensions])
-		fi
-	fi
-
-	dnl #######################################################################
-	dnl # Check for X session management libs
-	dnl #######################################################################
-	if test "x$enable_sm" = "xyes"; then
-		if test "x$with_x" = "xyes" ; then
-			enable_sm=no
-			AC_CHECK_LIB(SM, SmcSaveYourselfDone, found_sm_lib=true, , [$x_libpath_add -lICE])
-			if test "x$found_sm_lib" = "xtrue"; then
-				oldCPPFLAGS="$CPPFLAGS"
-				CPPFLAGS="$CPPFLAGS $x_incpath_add"
-				AC_CHECK_HEADERS(X11/SM/SMlib.h, SM_LIBS="$x_libpath_add -lSM -lICE" enable_sm=yes)
-				CPPFLAGS="$oldCPPFLAGS"
-			fi
-
-			if test "x$enable_sm" = "xyes"; then
-				AC_DEFINE(USE_SM, 1, [Define if we're using X Session Management.])
-				AC_SUBST(SM_LIBS)
-			else
-				if test "x$force_deps" = "xyes" ; then
-					AC_MSG_ERROR([
-X session management development headers not found.
-Use --disable-sm if you do not need session management support.
-])
-				fi
-			fi
-		else
-			AC_MSG_ERROR([X support is required to build with X session management support])
-		fi
 	fi
 
 	dnl #######################################################################
@@ -786,9 +693,6 @@ else # GTK
 	enable_gcr=no
 	enable_cap=no
 	enable_gevolution=no
-	enable_screensaver=no
-	enable_sm=no
-	enable_startup_notification=no
 fi	# GTK
 
 AM_CONDITIONAL(ENABLE_GTK, test "x$enable_gtkui" = "xyes")
@@ -923,17 +827,6 @@ You must have JSON-GLib >= 0.14.0 development headers installed to build.
 
 AC_SUBST(JSON_CFLAGS)
 AC_SUBST(JSON_LIBS)
-
-dnl #######################################################################
-dnl # Check for zlib (required)
-dnl #######################################################################
-
-PKG_CHECK_MODULES(ZLIB, [zlib >= 1.2.0], , [
-	AC_SEARCH_LIBS([deflate], [z], [], AC_MSG_ERROR([You must have zlib >= 1.2.0 development headers installed to build.]), [])
-])
-
-AC_SUBST(ZLIB_CFLAGS)
-AC_SUBST(ZLIB_LIBS)
 
 dnl #######################################################################
 dnl # Check for GStreamer
@@ -1181,66 +1074,44 @@ fi
 dnl #######################################################################
 dnl # Check for Gadu-Gadu protocol library (libgadu)
 dnl #######################################################################
+AC_ARG_ENABLE(libgadu,
+	[AS_HELP_STRING([--disable-libgadu],
+		[compile without libgadu (required for GaduGadu support)])],
+	enable_libgadu="$enableval", enable_libgadu="yes")
 
-PKG_CHECK_MODULES(LIBGADU, [libgadu >= 1.12.0], [have_libgadu=yes], [have_libgadu=no])
-
-if test "x$have_libgadu" = "xyes"; then
-	AC_CHECK_LIB(gadu, gg_is_gpl_compliant, , [
-		LIBGADU_LIBS=""
-		LIBGADU_CFLAGS=""
-		have_libgadu=no
-		AC_MSG_WARN([
+if test "x$enable_libgadu" = "xyes"; then
+	PKG_CHECK_MODULES(LIBGADU, [libgadu >= 1.12.0], [
+		have_libgadu=yes
+		AC_CHECK_LIB(gadu, gg_is_gpl_compliant, [ ], [
+			LIBGADU_LIBS=""
+			LIBGADU_CFLAGS=""
+			have_libgadu=no
+			if test "x$force_deps" = "xyes" ; then
+				AC_MSG_WARN([
 libgadu is not compatible with the GPL when compiled with OpenSSL support.
 
-To compile against system libgadu, please recompile libgadu using:
+To link against libgadu, please recompile it using:
 ./configure --with-openssl=no
 Then rerun this ./configure
-
-Falling back to using our own copy of libgadu.
-		])
-	])
-fi
-
-AM_CONDITIONAL(HAVE_LIBGADU, test "x$have_libgadu" = "xyes")
-if test "x$have_libgadu" = "xyes"; then
-	AC_DEFINE(HAVE_LIBGADU, 1, [Linked with external libgadu])
-else
-	AC_CHECK_LIB(gnutls, gnutls_certificate_set_x509_system_trust, [gg_have_gnutls_csxst=yes], [gg_have_gnutls_csxst=no])
-
-	gg_gnutls_sts=""
-	if test "x$gg_have_gnutls_csxst" = "xno"; then
-		for i in /etc/ssl/ca-bundle.pem \
-			/etc/ssl/certs/ca-certificates.crt \
-			/etc/pki/tls/cert.pem \
-			/usr/local/share/certs/ca-root-nss.crt \
-			/etc/ssl/cert.pem
-		do
-			if test -e $i; then
-				gg_gnutls_sts="$i"
-				break
+				])
 			fi
-		done
-	fi
+		], [$LIBGADU_LIBS])
+	], [
+		have_libgadu=no
+	])
 
-	if test "x$gg_have_gnutls_csxst" = "xyes"; then
-		AC_DEFINE(HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST, 1, [gnutls contains the gnutls_certificate_set_x509_system_trust function])
+	if test "x$have_libgadu" != "xyes" -a "x$force_deps" = "xyes" ; then
+		AC_MSG_ERROR([
+Libgadu development headers not found.
+Use --disable-libgadu if you do not need GG (GaduGadu) support.
+])
 	fi
-	if test "x$gg_gnutls_sts" != "x"; then
-		AC_DEFINE_UNQUOTED(GG_CONFIG_GNUTLS_SYSTEM_TRUST_STORE, ["$gg_gnutls_sts"], [use the given file as GnuTLS default trust store])
-	fi
-
-	dnl # redundant - only here to stay compatible with libgadu upstream
-	PKG_CHECK_MODULES([GNUTLS_2_10], [gnutls >= 2.10.0], [
-		AC_DEFINE([HAVE_GNUTLS_2_10], [], [Defined if GnuTLS >= 2.10.0 is available.])
-	],:)
 fi
 
 AC_SUBST(LIBGADU_LIBS)
 AC_SUBST(LIBGADU_CFLAGS)
 
 
-AC_ARG_ENABLE(distrib,,,enable_distrib=no)
-AM_CONDITIONAL(DISTRIB, test "x$enable_distrib" = "xyes")
 DYNAMIC_PRPLS=all
 AC_ARG_WITH(static-prpls, [AS_HELP_STRING([--with-static-prpls], [Link to certain protocols statically])], [STATIC_PRPLS=`echo $withval | $sedpath 's/,/ /g'`], [STATIC_PRPLS=""])
 if test "x$STATIC_PRPLS" != "x" -a "x$DYNAMIC_PRPLS" = "xall"; then
@@ -1248,7 +1119,7 @@ if test "x$STATIC_PRPLS" != "x" -a "x$DYNAMIC_PRPLS" = "xall"; then
 fi
 
 if test "x$STATIC_PRPLS" = "xall" ; then
-	STATIC_PRPLS="bonjour facebook gg irc jabber msn mxit novell oscar sametime silc simple yahoo zephyr"
+	STATIC_PRPLS="bonjour facebook gg irc jabber novell oscar sametime silc simple zephyr"
 fi
 if test "x$have_meanwhile" != "xyes" ; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/sametime//'`
@@ -1258,6 +1129,9 @@ if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/silc//'`
+fi
+if test "x$have_libgadu" != "xyes" ; then
+	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/gg//'`
 fi
 if test "x$is_win32" = "xyes" ; then
 	STATIC_PRPLS=`echo $STATIC_PRPLS | $sedpath 's/zephyr//'`
@@ -1286,8 +1160,6 @@ for i in $STATIC_PRPLS ; do
 		gg)			static_gg=yes ;;
 		irc)		static_irc=yes ;;
 		jabber)		static_jabber=yes ;;
-		msn)		static_msn=yes ;;
-		mxit)		static_mxit=yes ;;
 		novell)		static_novell=yes ;;
 		oscar)		static_oscar=yes ;;
 		aim)		static_oscar=yes ;;
@@ -1295,7 +1167,6 @@ for i in $STATIC_PRPLS ; do
 		sametime)	static_sametime=yes ;;
 		silc)		static_silc=yes ;;
 		simple)		static_simple=yes ;;
-		yahoo)		static_yahoo=yes ;;
 		zephyr)		static_zephyr=yes ;;
 		*)			echo "Invalid static protocol $i!!" ; exit 1 ;;
 	esac
@@ -1305,14 +1176,11 @@ AM_CONDITIONAL(STATIC_FACEBOOK, test "x$static_facebook" = "xyes")
 AM_CONDITIONAL(STATIC_GG, test "x$static_gg" = "xyes")
 AM_CONDITIONAL(STATIC_IRC, test "x$static_irc" = "xyes")
 AM_CONDITIONAL(STATIC_JABBER, test "x$static_jabber" = "xyes")
-AM_CONDITIONAL(STATIC_MSN, test "x$static_msn" = "xyes")
-AM_CONDITIONAL(STATIC_MXIT, test "x$static_mxit" = "xyes")
 AM_CONDITIONAL(STATIC_NOVELL, test "x$static_novell" = "xyes")
 AM_CONDITIONAL(STATIC_OSCAR, test "x$static_oscar" = "xyes")
 AM_CONDITIONAL(STATIC_SAMETIME, test "x$static_sametime" = "xyes" -a "x$have_meanwhile" = "xyes")
 AM_CONDITIONAL(STATIC_SILC, test "x$static_silc" = "xyes" -a "x$have_silc" = "xyes")
 AM_CONDITIONAL(STATIC_SIMPLE, test "x$static_simple" = "xyes")
-AM_CONDITIONAL(STATIC_YAHOO, test "x$static_yahoo" = "xyes")
 AM_CONDITIONAL(STATIC_ZEPHYR, test "x$static_zephyr" = "xyes")
 AC_SUBST(STATIC_LINK_LIBS)
 AC_DEFINE_UNQUOTED(STATIC_PROTO_LOAD, $extern_load static void static_proto_load(void) { $load_proto },
@@ -1322,7 +1190,7 @@ AC_DEFINE_UNQUOTED(STATIC_PROTO_UNLOAD, $extern_unload static void static_proto_
 
 AC_ARG_WITH(dynamic_prpls, [AS_HELP_STRING([--with-dynamic-prpls], [specify which protocols to build dynamically])], [DYNAMIC_PRPLS=`echo $withval | $sedpath 's/,/ /g'`])
 if test "x$DYNAMIC_PRPLS" = "xall" ; then
-	DYNAMIC_PRPLS="bonjour facebook gg irc jabber msn mxit novell oscar sametime silc simple yahoo zephyr"
+	DYNAMIC_PRPLS="bonjour facebook gg irc jabber novell oscar sametime silc simple zephyr"
 fi
 if test "x$have_meanwhile" != "xyes"; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/sametime//'`
@@ -1332,6 +1200,9 @@ if test "x$avahiincludes" != "xyes" -o "x$avahilibs" != "xyes"; then
 fi
 if test "x$silcincludes" != "xyes" -o "x$silcclient" != "xyes"; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/silc//'`
+fi
+if test "x$have_libgadu" != "xyes"; then
+	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/gg//'`
 fi
 if test "x$is_win32" = "xyes" ; then
 	DYNAMIC_PRPLS=`echo $DYNAMIC_PRPLS | $sedpath 's/zephyr//'`
@@ -1344,8 +1215,6 @@ for i in $DYNAMIC_PRPLS ; do
 		gg)			dynamic_gg=yes ;;
 		irc)		dynamic_irc=yes ;;
 		jabber)		dynamic_jabber=yes ;;
-		msn)		dynamic_msn=yes ;;
-		mxit)		dynamic_mxit=yes ;;
 		novell)		dynamic_novell=yes ;;
 		null)		dynamic_null=yes ;;
 		oscar)		dynamic_oscar=yes ;;
@@ -1354,7 +1223,6 @@ for i in $DYNAMIC_PRPLS ; do
 		sametime)	dynamic_sametime=yes ;;
 		silc)		dynamic_silc=yes ;;
 		simple)		dynamic_simple=yes ;;
-		yahoo)		dynamic_yahoo=yes ;;
 		zephyr)		dynamic_zephyr=yes ;;
 		*)			echo "Invalid dynamic protocol $i!!" ; exit 1 ;;
 	esac
@@ -1392,6 +1260,7 @@ if test "x$GCC" = "xyes"; then
 			"-Wendif-labels" \
 			"-Werror-implicit-function-declaration" \
 			"-Wextra -Wno-unused-parameter" \
+				"-Wno-missing-field-initializers" \
 			"-Wformat-security" \
 				"-Werror=format-security" \
 			"-Winit-self" \
@@ -1514,6 +1383,7 @@ fi
 
 dnl #######################################################################
 dnl # Check for Unity and Messaging Menu
+dnl # Remove when Ubuntu 16.04 is EOL
 dnl #######################################################################
 AC_ARG_ENABLE(unity, [AC_HELP_STRING([--enable-unity],
 	[compile with support for unity integration plugin])], enable_unity="$enableval", enable_unity="no")
@@ -1536,19 +1406,29 @@ dnl #######################################################################
 dnl # Check for Secret Service headers
 dnl #######################################################################
 
-# disabled - see secretservice.c
-#AC_ARG_ENABLE(libsecret, [AC_HELP_STRING([--disable-libsecret], [enable Secret Service support])], enable_secret_service=no, enable_secret_service=yes)
+AC_ARG_ENABLE(libsecret,
+	[AC_HELP_STRING([--disable-libsecret], [enable Secret Service support])],
+	enable_secret_service="$enableval", enable_secret_service="$is_not_win32")
 
-#if test "x$enable_secret_service" = "xyes" ; then
-#	PKG_CHECK_MODULES(SECRETSERVICE, [libsecret-1], [
-#		AC_SUBST(SECRETSERVICE_CFLAGS)
-#		AC_SUBST(SECRETSERVICE_LIBS)
-#		AC_DEFINE(HAVE_SECRETSERVICE, 1, [Define if we have Secret Service.])
-#	])
-#fi
+if test "x$enable_secret_service" = "xyes" ; then
+	PKG_CHECK_MODULES(SECRETSERVICE, [libsecret-1], [
+		AC_SUBST(SECRETSERVICE_CFLAGS)
+		AC_SUBST(SECRETSERVICE_LIBS)
+		AC_DEFINE(HAVE_SECRETSERVICE, 1, [Define if we have Secret Service.])
+	], [
+		AC_MSG_RESULT(no)
+		enable_secret_service="no"
+		if test "x$force_deps" = "xyes" ; then
+			AC_MSG_ERROR([
+Libsecret development headers not found
+Use --disable-libsecret if you do not need it.
+])
+		fi
+	])
 
-#AM_CONDITIONAL(ENABLE_SECRETSERVICE, test "x$enable_secret_service" = "xyes")
-AM_CONDITIONAL(ENABLE_SECRETSERVICE, test "x1" = "x2")
+fi
+
+AM_CONDITIONAL(ENABLE_SECRETSERVICE, test "x$enable_secret_service" = "xyes")
 
 dnl #######################################################################
 dnl # Check for GNOME Keyring headers
@@ -1878,105 +1758,6 @@ if test "x$SSL_CERTIFICATES_DIR" != "x" ; then
 fi
 AM_CONDITIONAL(INSTALL_SSL_CERTIFICATES, test "x$SSL_CERTIFICATES_DIR" = "x")
 
-dnl These two are inverses of each other <-- stolen from evolution!
-
-AC_ARG_ENABLE(gnutls,
-	[  --enable-gnutls=[yes,no]  attempt to use GnuTLS for SSL support [default=yes]],
-	[enable_gnutls="$enableval"],
-	[enable_gnutls="yes"])
-
-AC_ARG_ENABLE(nss,
-	[  --enable-nss=[yes,no,static]    attempt to use Mozilla libnss for SSL support [default=yes]],
-	[enable_nss="$enableval"],
-	[enable_nss="yes"])
-
-msg_ssl="None. MSN, Yahoo!, Novell Groupwise and Google Talk will not work without GnuTLS or NSS. OpenSSL is NOT usable!"
-looked_for_gnutls="no"
-dnl #
-dnl # Check for GnuTLS if it isn't disabled
-dnl #
-if test "x$enable_gnutls" != "xno"; then
-	looked_for_gnutls="yes"
-
-	if `$PKG_CONFIG --exists gnutls`; then
-		dnl # minimum required version should almost certainly be higher
-		PKG_CHECK_MODULES(GNUTLS, [gnutls >= 2.10], [
-			have_gnutls="yes"
-		], [
-			AC_MSG_RESULT(no)
-			have_gnutls="no"
-		])
-	fi
-
-	if test "x$have_gnutls" = "xyes"; then
-		AC_DEFINE(HAVE_GNUTLS, 1, [Define if you have GnuTLS])
-		msg_gnutls="GnuTLS"
-	fi
-fi
-
-AM_CONDITIONAL(USE_GNUTLS, test "x$have_gnutls" = "xyes")
-
-
-dnl #
-dnl # Check for NSS if it isn't disabled
-dnl #
-looked_for_nss="no"
-if test "x$enable_nss" != "xno"; then
-	looked_for_nss="yes"
-
-	if `$PKG_CONFIG --exists mozilla-nss`; then
-		dnl # TODO: set required minimum version
-		PKG_CHECK_MODULES(NSS, mozilla-nss, [
-			have_nss="yes"
-		], [
-			AC_MSG_RESULT(no)
-			have_nss="no"
-		])
-	elif `$PKG_CONFIG --exists nss`; then
-		dnl # TODO: set required minimum version
-		PKG_CHECK_MODULES(NSS, nss, [
-			have_nss="yes"
-		], [
-			AC_MSG_RESULT(no)
-			have_nss="no"
-		])
-	fi
-
-	if test "x$have_nss" = "xyes"; then
-		AC_DEFINE(HAVE_NSS, 1, [Define if you have Mozilla NSS])
-		msg_nss="Mozilla NSS"
-	fi
-fi
-
-AM_CONDITIONAL(USE_NSS, test "x$have_nss" = "xyes")
-
-
-if test "x$msg_nss" != "x" -a "x$msg_gnutls" != "x"; then
-	msg_ssl="$msg_nss and $msg_gnutls"
-elif test "x$msg_nss" != "x"; then
-	msg_ssl=$msg_nss
-elif test "x$msg_gnutls" != "x"; then
-	msg_ssl=$msg_gnutls
-elif test "x$looked_for_gnutls" = "xyes" -a "x$looked_for_nss" = "xyes" -a "x$force_deps" = "xyes" ; then
-	AC_MSG_ERROR([
-Neither GnuTLS or NSS SSL development headers found.
-Use --disable-nss --disable-gnutls if you do not need SSL support.
-MSN, Yahoo!, Novell Groupwise and Google Talk will not work without GnuTLS or NSS. OpenSSL is NOT usable!
-])
-elif test "x$looked_for_gnutls" = "xyes" -a "x$force_deps" = "xyes" ; then
-	AC_MSG_ERROR([
-GnuTLS SSL development headers not found.
-Use --disable-gnutls if you do not need SSL support.
-MSN, Yahoo!, Novell Groupwise and Google Talk will not work without SSL support.
-])
-elif test "x$looked_for_nss" = "xyes" -a "x$force_deps" = "xyes" ; then
-	AC_MSG_ERROR([
-NSS SSL development headers not found.
-Use --disable-nss if you do not need SSL support.
-MSN, Yahoo!, Novell Groupwise and Google Talk will not work without SSL support.
-])
-fi
-
 if test "$ac_cv_cygwin" = yes ; then
 	LDADD="$LDADD -static"
 	AC_DEFINE(DEBUG, 1, [Define if debugging is enabled.])
@@ -1996,6 +1777,33 @@ else
 	PLUGINS_DEFINE="#undef PURPLE_PLUGINS"
 fi
 AC_SUBST(PLUGINS_DEFINE)
+
+dnl #######################################################################
+dnl # Check for Nettle (Crypto Library)
+dnl #######################################################################
+AC_ARG_ENABLE(nettle,
+	[AC_HELP_STRING([--disable-nettle], [disable Nettle support])],
+	enable_nettle="$enableval", enable_nettle="yes")
+
+if test "x$enable_nettle" = "xyes" ; then
+	PKG_CHECK_MODULES(NETTLE, [nettle >= 3.0], [
+		enable_nettle="yes"
+		AC_SUBST(NETTLE_CFLAGS)
+		AC_SUBST(NETTLE_LIBS)
+		AC_DEFINE(HAVE_NETTLE, 1, [Define if we have Nettle.])
+	], [
+		enable_nettle="no"
+	])
+
+	if test "x$enable_nettle" != "xyes" -a "x$force_deps" = "xyes" ; then
+		AC_MSG_ERROR([
+Nettle development headers not found
+Use --disable-nettle if you do not need it.
+])
+	fi
+fi
+
+AM_CONDITIONAL(ENABLE_NETTLE, test "x$enable_nettle" = "xyes")
 
 dnl #######################################################################
 dnl # Check for Cyrus-SASL (for xmpp/irc)
@@ -2165,7 +1973,7 @@ AC_CONFIG_FILES([Makefile
 		   doc/reference/pidgin/version.xml
 		   m4macros/Makefile
 		   pidgin/Makefile
-		   pidgin/data/pidgin.desktop.in
+		   pidgin/data/im.pidgin.Pidgin.desktop.in
 		   pidgin/data/pidgin-3.pc
 		   pidgin/data/pidgin-3-uninstalled.pc
 		   pidgin/pixmaps/Makefile
@@ -2197,8 +2005,6 @@ AC_CONFIG_FILES([Makefile
 		   libpurple/protocols/irc/Makefile
 		   libpurple/protocols/jabber/Makefile
 		   libpurple/protocols/jabber/tests/Makefile
-		   libpurple/protocols/msn/Makefile
-		   libpurple/protocols/mxit/Makefile
 		   libpurple/protocols/novell/Makefile
 		   libpurple/protocols/null/Makefile
 		   libpurple/protocols/oscar/Makefile
@@ -2206,8 +2012,6 @@ AC_CONFIG_FILES([Makefile
 		   libpurple/protocols/sametime/Makefile
 		   libpurple/protocols/silc/Makefile
 		   libpurple/protocols/simple/Makefile
-		   libpurple/protocols/yahoo/Makefile
-		   libpurple/protocols/yahoo/tests/Makefile
 		   libpurple/protocols/zephyr/Makefile
 		   libpurple/tests/Makefile
 		   libpurple/purple.h
@@ -2247,29 +2051,25 @@ if test "x$enable_dbus" = "xyes" ; then
 	eval eval echo D-Bus services directory...... : $DBUS_SERVICES_DIR
 fi
 echo Build with GNU Libidn......... : $enable_idn
-echo SSL Library/Libraries......... : $msg_ssl
 if test "x$SSL_CERTIFICATES_DIR" != "x" ; then
 	eval eval echo SSL CA certificates directory. : $SSL_CERTIFICATES_DIR
 fi
+echo Build with Nettle support..... : $enable_nettle
 echo Build with Cyrus SASL support. : $enable_cyrus_sasl
 echo Use kerberos 4 with zephyr.... : $kerberos
 echo Use external libzephyr........ : $zephyr
-echo Use external libgadu.......... : $have_libgadu
 echo Install pixmaps............... : $enable_pixmaps
 echo Old tray icon compatibility... : $enable_traycompat
 echo Install translations.......... : $enable_i18n
 echo Has you....................... : yes
 echo
-echo Use XScreenSaver Extension.... : $enable_screensaver
-echo Use X Session Management...... : $enable_sm
-echo Use startup notification...... : $enable_startup_notification
 echo Build with Enchant support.... : $use_enchant
 echo Build with GCR widgets........ : $enable_gcr
 echo Build Unity integration plugin.: $enable_unity
 echo
 echo Build with GNOME Keyring...... : $enable_gnome_keyring
 echo Build with KWallet............ : $enable_kwallet
-#echo Build with Secret Service..... : $enable_secret_service
+echo Build with Secret Service..... : $enable_secret_service
 echo
 echo Build with plugin support..... : $enable_plugins
 echo Enable Introspection...........: $enable_introspection
@@ -2295,7 +2095,7 @@ fi
 if test "x$enable_i18n" = "xno" ; then
 	echo
 	echo Warning: You have disabled the building and installation of translation
-	echo data.  This will prevent building pidgin.desktop and the GConf schemas.
+	echo data.  This will prevent building Pidgin desktop files.
 	echo Be sure you know what you are doing.
 fi
 echo

@@ -61,7 +61,7 @@
  * #dbus-analyze-types.py script.
  */
 
-#include "dbus-types.c"
+#include "dbus-types.ch"
 
 /*
  * The following three hashtables map are used to translate between
@@ -411,8 +411,8 @@ purple_dbus_get_connection(void)
 	return purple_dbus_connection;
 }
 
-#include "dbus-bindings.c"
-#include "dbus-signals.c"
+#include "dbus-bindings.ch"
+#include "dbus-signals.ch"
 
 static gboolean
 purple_dbus_dispatch_cb(DBusConnection *connection,
@@ -436,7 +436,7 @@ purple_dbus_dispatch_cb(DBusConnection *connection,
 		return FALSE;
 
 	for (i = 0; bindings[i].name; i++)
-		if (!strcmp(name, bindings[i].name))
+		if (purple_strequal(name, bindings[i].name))
 		{
 			DBusMessage *reply;
 			DBusError error;
@@ -782,7 +782,7 @@ purple_dbus_signal_emit_purple(const char *name, int num_values,
 	 * flag for each signal that states whether this signal is to be
 	 * dbus-propagated or not.
 	 */
-	if (!strcmp(name, "dbus-method-called"))
+	if (purple_strequal(name, "dbus-method-called"))
 		return;
 
 	newname = purple_dbus_convert_signal_name(name);

@@ -1,12 +1,15 @@
 EXTRA_DIST = \
-		getopt.c \
-		getopt.h \
-		getopt1.c \
+		about.ui \
+		about.html \
+		about.md \
+		credits.json \
 		gtk3compat.h \
 		gtkdebug.html \
+		logo.png \
+		pidgin.gresource.xml \
 		Makefile.mingw \
-		data/pidgin.appdata.xml.in \
-		data/pidgin.desktop.in \
+		data/im.pidgin.Pidgin.appdata.xml.in \
+		data/im.pidgin.Pidgin.desktop.in \
 		data/pidgin-3.pc.in \
 		data/pidgin-3-uninstalled.pc.in \
 		win32/MinimizeToTray.h \
@@ -55,7 +58,6 @@ libpidgin_la_SOURCES = \
 	gtkdialogs.c \
 	gtkdnd-hints.c \
 	gtkdocklet.c \
-	gtkeventloop.c \
 	gtkicon-theme.c \
 	gtkicon-theme-loader.c \
 	gtkidle.c \
@@ -72,7 +74,6 @@ libpidgin_la_SOURCES = \
 	gtkroomlist.c \
 	gtksavedstatuses.c \
 	gtkscrollbook.c \
-	gtksession.c \
 	gtksmiley-manager.c \
 	gtksmiley-theme.c \
 	gtksound.c \
@@ -85,6 +86,8 @@ libpidgin_la_SOURCES = \
 	gtkxfer.c \
 	libpidgin.c \
 	minidialog.c \
+	pidginabout.c \
+	pidginresources.c \
 	pidgintooltip.c
 
 libpidgin_la_headers = \
@@ -103,7 +106,6 @@ libpidgin_la_headers = \
 	gtkdialogs.h \
 	gtkdnd-hints.h \
 	gtkdocklet.h \
-	gtkeventloop.h \
 	gtkicon-theme.h \
 	gtkicon-theme-loader.h \
 	gtkidle.h \
@@ -121,7 +123,6 @@ libpidgin_la_headers = \
 	gtkroomlist.h \
 	gtksavedstatuses.h \
 	gtkscrollbook.h \
-	gtksession.h \
 	gtksmiley-manager.h \
 	gtksmiley-theme.h \
 	gtksound.h \
@@ -134,6 +135,7 @@ libpidgin_la_headers = \
 	gtkwhiteboard.h \
 	gtkxfer.h \
 	minidialog.h \
+	pidginabout.h \
 	pidgintooltip.h \
 	pidgin.h
 
@@ -172,18 +174,22 @@ libpidginincludedir=$(includedir)/pidgin
 libpidgininclude_HEADERS = \
 	$(libpidgin_la_headers)
 
-libpidgin_la_builtheaders = gtkdebug.html.h
+libpidgin_la_builtheaders = pidginresources.h
+libpidgin_la_builtsources = pidginresources.c
 
-BUILT_SOURCES = $(libpidgin_la_builtheaders)
+BUILT_SOURCES = $(libpidgin_la_builtheaders) $(libpidgin_la_builtsources)
 
-CLEANFILES = gtkdebug.html.h
+CLEANFILES = pidginresources.h pidginresources.c
 
-%.html.h: %.html
-	$(AM_V_GEN)echo "static const char $*_html[] = {" > $@
-	$(AM_V_at)$(sedpath) -e 's/^[ 	]\+//g' -e 's/[ 	]\+/ /g' $< | $(xxdpath) -i | sed -e 's/\(0x[0-9a-f][0-9a-f]\)$$/\1, 0x00/' >> $@
-	$(AM_V_at)echo "};" >> $@
+%resources.h: %.gresource.xml
+	$(AM_V_GEN)$(GLIB_COMPILE_RESOURCES) --generate-header --target $@ --c-name $* --sourcedir $(srcdir) $<
 
-gtkdebug.c: gtkdebug.html.h
+%resources.c: %.gresource.xml
+	$(AM_V_GEN)$(GLIB_COMPILE_RESOURCES) --generate-source --target $@ --c-name $* --sourcedir $(srcdir) $<
+
+pidginresources.c: gtkdebug.html
+pidginresources.h: gtkdebug.html
+gtkdebug.c: pidginresources.h
 
 libpidgin_la_DEPENDENCIES = @LIBOBJS@ $(LIBPIDGIN_WIN32RES)
 libpidgin_la_LDFLAGS = -export-dynamic -no-undefined \
@@ -198,9 +204,8 @@ libpidgin_la_LIBADD = \
 	$(GSTREAMER_LIBS) \
 	$(GSTVIDEO_LIBS) \
 	$(GSTINTERFACES_LIBS) \
-	$(XSS_LIBS) \
-	$(SM_LIBS) \
 	$(INTLLIBS) \
+	$(JSON_LIBS) \
 	$(LIBXML_LIBS) \
 	$(WEBKIT_LIBS) \
 	$(GTK_LIBS) \
@@ -231,6 +236,7 @@ AM_CPPFLAGS = \
 	$(GSTINTERFACES_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(JSON_CFLAGS) \
 	$(X11_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \
@@ -241,19 +247,19 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = data/pidgin-3.pc
 
 if INSTALL_I18N
-DESKTOP_FILE=data/pidgin.desktop
+DESKTOP_FILE=data/im.pidgin.Pidgin.desktop
 
 appsdir = $(datadir)/applications
-apps_in_files = data/pidgin.desktop.in
+apps_in_files = data/im.pidgin.Pidgin.desktop.in
 apps_DATA = $(apps_in_files:.desktop.in=.desktop)
 
 # silenced INTLTOOL_DESKTOP_RULE
 %.desktop: %.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po)
 	$(AM_V_GEN) LC_ALL=C $(INTLTOOL_MERGE) -d -u -c $(top_builddir)/po/.intltool-merge-cache $(top_srcdir)/po $< $@ > /dev/null
 
-appdatadir = $(datarootdir)/appdata
+appdatadir = $(datarootdir)/metainfo
 appdata_DATA = $(appdata_in_files:.xml.in=.xml)
-appdata_in_files = data/pidgin.appdata.xml.in
+appdata_in_files = data/im.pidgin.Pidgin.appdata.xml.in
 
 @INTLTOOL_XML_RULE@
 
@@ -264,7 +270,7 @@ DISTCLEANFILES = $(DESKTOP_FILE)
 
 -include $(INTROSPECTION_MAKEFILE)
 INTROSPECTION_GIRS =
-INTROSPECTION_SCANNER_ARGS = --warn-all --add-include-path=$(top_builddir)/libpurple --add-include-path=$(prefix)/share/gir-1.0
+INTROSPECTION_SCANNER_ARGS = --warn-all --add-include-path=$(top_builddir)/libpurple --add-include-path=$(prefix)/share/gir-1.0 --pkg=purple-$(PURPLE_MAJOR_VERSION) --pkg-export=pidgin-$(PURPLE_MAJOR_VERSION)
 INTROSPECTION_COMPILER_ARGS = --includedir=$(top_builddir)/libpurple --includedir=$(prefix)/share/gir-1.0
 
 if HAVE_INTROSPECTION
@@ -299,6 +305,7 @@ Pidgin_3_0_gir_CFLAGS = \
 Pidgin_3_0_gir_LIBS = $(builddir)/libpidgin.la
 Pidgin_3_0_gir_FILES = $(introspection_sources)
 INTROSPECTION_GIRS += Pidgin-$(PURPLE_MAJOR_VERSION).$(PURPLE_MINOR_VERSION).gir
+INTROSPECTION_SCANNER_ENV = PKG_CONFIG_PATH=$(top_builddir)/libpurple/data/
 
 girdir = $(prefix)/share/gir-1.0 $(INTROSPECTION_GIRDIR)
 gir_DATA = $(INTROSPECTION_GIRS)

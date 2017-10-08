@@ -29,7 +29,6 @@
 #include "core.h"
 #include "dbus-maybe.h"
 #include "debug.h"
-#include "eventloop.h"
 #include "glibcompat.h"
 #include "log.h"
 #include "network.h"
@@ -50,7 +49,6 @@
 #include "gtkdebug.h"
 #include "gtkdialogs.h"
 #include "gtkdocklet.h"
-#include "gtkeventloop.h"
 #include "gtkxfer.h"
 #include "gtkidle.h"
 #include "gtklog.h"
@@ -63,17 +61,17 @@
 #include "gtkrequest.h"
 #include "gtkroomlist.h"
 #include "gtksavedstatuses.h"
-#include "gtksession.h"
 #include "gtksmiley-theme.h"
 #include "gtksound.h"
 #include "gtkutils.h"
 #include "pidginstock.h"
 #include "gtkwhiteboard.h"
 
+#ifndef _WIN32
 #include <signal.h>
+#endif
 
-#include <getopt.h>
-
+#ifndef _WIN32
 
 /*
  * Lists of signals we wish to catch and those we wish to ignore.
@@ -92,6 +90,7 @@ static const int ignore_sig_list[] = {
 	SIGPIPE,
 	-1
 };
+#endif /* !_WIN32 */
 
 static void
 dologin_named(const char *name)
@@ -121,6 +120,7 @@ dologin_named(const char *name)
 	}
 }
 
+#ifndef _WIN32
 static char *segfault_message;
 
 static int signal_sockets[2];
@@ -189,6 +189,7 @@ mainloop_sighandler(GIOChannel *source, GIOCondition cond, gpointer data)
 
 	return TRUE;
 }
+#endif /* !_WIN32 */
 
 static int
 ui_main(void)
@@ -243,8 +244,8 @@ ui_main(void)
 static void
 debug_init(void)
 {
-	purple_debug_set_ui_ops(pidgin_debug_get_ui_ops());
-	pidgin_debug_init();
+	PidginDebugUi *ui = pidgin_debug_ui_new();
+	purple_debug_set_ui(PURPLE_DEBUG_UI(ui));
 }
 
 static void
@@ -261,9 +262,7 @@ pidgin_ui_init(void)
 	purple_sound_set_ui_ops(pidgin_sound_get_ui_ops());
 	purple_connections_set_ui_ops(pidgin_connections_get_ui_ops());
 	purple_whiteboard_set_ui_ops(pidgin_whiteboard_get_ui_ops());
-#if defined(USE_SCREENSAVER) || defined(HAVE_IOKIT)
 	purple_idle_set_ui_ops(pidgin_idle_get_ui_ops());
-#endif
 
 	pidgin_accounts_init();
 	pidgin_connection_init();
@@ -288,12 +287,9 @@ static GHashTable *ui_info = NULL;
 static void
 pidgin_quit(void)
 {
-#ifdef USE_SM
-	/* unplug */
-	pidgin_session_end();
-#endif
-
 	/* Uninit */
+	PurpleDebugUi *ui;
+
 	pidgin_utils_uninit();
 	pidgin_notify_uninit();
 	_pidgin_smiley_theme_uninit();
@@ -305,13 +301,15 @@ pidgin_quit(void)
 	pidgin_connection_uninit();
 	pidgin_accounts_uninit();
 	pidgin_xfers_uninit();
-	pidgin_debug_uninit();
+	ui = purple_debug_get_ui();
+	purple_debug_set_ui(NULL);
+	g_object_unref(ui);
 
 	if(NULL != ui_info)
 		g_hash_table_destroy(ui_info);
 
 	/* and end it all... */
-	gtk_main_quit();
+	g_application_quit(g_application_get_default());
 }
 
 static GHashTable *pidgin_ui_get_info(void)
@@ -326,24 +324,26 @@ static GHashTable *pidgin_ui_get_info(void)
 		g_hash_table_insert(ui_info, "client_type", "pc");
 
 		/*
-		 * This is the client key for "Pidgin."  It is owned by the AIM
-		 * account "markdoliner."  Please don't use this key for other
-		 * applications.  You can either not specify a client key, in
-		 * which case the default "libpurple" key will be used, or you
-		 * can try to register your own at the AIM or ICQ web sites
-		 * (although this functionality was removed at some point, it's
-		 * possible it has been re-added).  AOL's old key management
-		 * page is http://developer.aim.com/manageKeys.jsp
+		 * prpl-aim-clientkey is a DevID (or "client key") for Pidgin, given to
+		 * us by AOL in September 2016.  prpl-icq-clientkey is also a client key
+		 * for Pidgin, owned by the AIM account "markdoliner."  Please don't use 
+		 * either for other applications.  Instead, you can either not specify a 
+		 * client key, in which case the default "libpurple" key will be used,
+		 * or you can try to register your own at the AIM or ICQ web sites
+		 * (although this functionality was removed at some point, it's possible 
+		 * it has been re-added).
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma1cSASNCKFtrdv9");
+		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "do1UCeb5gNqxB1S1");
 		g_hash_table_insert(ui_info, "prpl-icq-clientkey", "ma1cSASNCKFtrdv9");
 
 		/*
-		 * This is the distid for Pidgin, given to us by AOL.  Please
-		 * don't use this for other applications.  You can just not
-		 * specify a distid and libpurple will use a default.
+		 * prpl-aim-distid is a distID for Pidgin, given to us by AOL in
+		 * September 2016.  prpl-icq-distid is also a distID for Pidgin, given
+		 * to us by AOL.  Please don't use either for other applications.
+		 * Instead, you can just not specify a distID and libpurple will use a
+		 * default.
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1550));
+		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1715));
 		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1550));
 	}
 
@@ -370,92 +370,102 @@ pidgin_core_get_ui_ops(void)
 }
 
 static void
-show_usage(const char *name, gboolean terse)
+pidgin_activate_cb(GApplication *application, gpointer user_data)
 {
-	char *text;
+	purple_blist_set_visible(TRUE);
+}
 
-	if (terse) {
-		text = g_strdup_printf(_("%s %s. Try `%s -h' for more information.\n"), PIDGIN_NAME, DISPLAY_VERSION, name);
-	} else {
-		GString *str = g_string_new(NULL);
-		g_string_append_printf(str, "%s %s\n", PIDGIN_NAME, DISPLAY_VERSION);
-		g_string_append_printf(str, _("Usage: %s [OPTION]...\n\n"), name);
-		g_string_append_printf(str, "  -c, --config=%s    %s\n",
-				_("DIR"), _("use DIR for config files"));
-		g_string_append_printf(str, "  -d, --debug[=colored] %s\n",
-				_("print debugging messages to stdout"));
-		g_string_append_printf(str, "  -f, --force-online  %s\n",
-				_("force online, regardless of network status"));
-		g_string_append_printf(str, "  -h, --help          %s\n",
-				_("display this help and exit"));
-		g_string_append_printf(str, "  -m, --multiple      %s\n",
-				_("allow multiple instances"));
-		g_string_append_printf(str, "  -n, --nologin       %s\n",
-				_("don't automatically login"));
-		g_string_append_printf(str, "  -l, --login[=%s]  %s\n",
-				_("NAME"),
-				_("enable specified account(s) (optional argument NAME\n"
-				  "                      "
-				  "specifies account(s) to use, separated by commas.\n"
-				  "                      "
-				  "Without this only the first account will be enabled)."));
-#ifndef WIN32
-		g_string_append_printf(str, "  --display=DISPLAY   %s\n",
-				_("X display to use"));
-#endif /* !WIN32 */
-		g_string_append_printf(str, "  -v, --version       %s\n",
-				_("display the current version and exit"));
-		text = g_string_free(str, FALSE);
+static gboolean debug_colored = FALSE;
+static gboolean debug_enabled = FALSE;
+static gboolean opt_login = FALSE;
+static gchar *opt_login_arg = NULL;
+
+static gboolean
+debug_opt_arg_func(const gchar *option_name, const gchar *value,
+		gpointer data, GError **error)
+{
+	debug_enabled = TRUE;
+
+	if (purple_strequal(value, "colored")) {
+		debug_colored = TRUE;
 	}
 
-	purple_print_utf8_to_console(stdout, text);
-	g_free(text);
+	return TRUE;
+}
+
+static gboolean
+login_opt_arg_func(const gchar *option_name, const gchar *value,
+		gpointer data, GError **error)
+{
+	opt_login = TRUE;
+
+	g_free(opt_login_arg);
+	opt_login_arg = g_strdup(value);
+
+	return TRUE;
 }
 
 int pidgin_start(int argc, char *argv[])
 {
+	GApplication *app;
 	gboolean opt_force_online = FALSE;
-	gboolean opt_help = FALSE;
-	gboolean opt_login = FALSE;
 	gboolean opt_nologin = FALSE;
 	gboolean opt_version = FALSE;
 	gboolean opt_si = TRUE;     /* Check for single instance? */
 	char *opt_config_dir_arg = NULL;
-	char *opt_login_arg = NULL;
-	char *opt_session_arg = NULL;
 	char *search_path;
 	GtkCssProvider *provider;
 	GdkScreen *screen;
 	GList *accounts;
+#ifndef _WIN32
 	int sig_indx;	/* for setting up signal catching */
 	sigset_t sigset;
 	char errmsg[BUFSIZ];
 	GIOChannel *signal_channel;
 	GIOStatus signal_status;
 	guint signal_channel_watcher;
-	GError *error;
 #ifndef DEBUG
 	char *segfault_message_tmp;
 #endif /* DEBUG */
-	int opt;
+#endif /* !_WIN32 */
+	GOptionContext *context;
+	gchar *summary;
+	gchar **args;
 	gboolean gui_check;
-	gboolean debug_enabled, debug_colored;
 	GList *active_accounts;
 	GStatBuf st;
+	GError *error = NULL;
+	int ret;
 
-	struct option long_options[] = {
-		{"config",       required_argument, NULL, 'c'},
-		{"debug",        optional_argument, NULL, 'd'},
-		{"force-online", no_argument,       NULL, 'f'},
-		{"help",         no_argument,       NULL, 'h'},
-		{"login",        optional_argument, NULL, 'l'},
-		{"multiple",     no_argument,       NULL, 'm'},
-		{"nologin",      no_argument,       NULL, 'n'},
-		{"session",      required_argument, NULL, 's'},
-		{"version",      no_argument,       NULL, 'v'},
-		{"display",      required_argument, NULL, 'D'},
-		{"sync",         no_argument,       NULL, 'S'},
-		{0, 0, 0, 0}
+	GOptionEntry option_entries[] = {
+		{"config", 'c', 0,
+			G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
+			_("use DIR for config files"), _("DIR")},
+		{"debug", 'd', G_OPTION_FLAG_OPTIONAL_ARG,
+			G_OPTION_ARG_CALLBACK, &debug_opt_arg_func,
+			_("print debugging messages to stdout"),
+			_("[colored]")},
+		{"force-online", 'f', 0,
+			G_OPTION_ARG_NONE, &opt_force_online,
+			_("force online, regardless of network status"), NULL},
+		{"login", 'l', G_OPTION_FLAG_OPTIONAL_ARG,
+			G_OPTION_ARG_CALLBACK, &login_opt_arg_func,
+			_("enable specified account(s) (optional argument NAME\n"
+			  "                            "
+			  "specifies account(s) to use, separated by commas.\n"
+			  "                            "
+			  "Without this only the first account will be enabled)"),
+			_("[NAME]")},
+		{"multiple", 'm', G_OPTION_FLAG_REVERSE,
+			G_OPTION_ARG_NONE,  &opt_si,
+			_("allow multiple instances"), NULL},
+		{"nologin", 'n', 0,
+			G_OPTION_ARG_NONE, &opt_nologin,
+			_("don't automatically login"), NULL},
+		{"version", 'v', 0,
+			G_OPTION_ARG_NONE, &opt_version,
+			_("display the current version and exit"), NULL},
+		{NULL}
 	};
 
 	debug_colored = FALSE;
@@ -473,6 +483,8 @@ int pidgin_start(int argc, char *argv[])
 
 	/* Locale initialization is not complete here.  See gtk_init_check() */
 	setlocale(LC_ALL, "");
+
+#ifndef _WIN32
 
 #ifndef DEBUG
 		/* We translate this here in case the crash breaks gettext. */
@@ -493,7 +505,6 @@ int pidgin_start(int argc, char *argv[])
 		/* we have to convert the message (UTF-8 to console
 		   charset) early because after a segmentation fault
 		   it's not a good practice to allocate memory */
-		error = NULL;
 		segfault_message = g_locale_from_utf8(segfault_message_tmp,
 						      -1, NULL, NULL, &error);
 		if (segfault_message != NULL) {
@@ -502,7 +513,7 @@ int pidgin_start(int argc, char *argv[])
 		else {
 			/* use 'segfault_message_tmp' (UTF-8) as a fallback */
 			g_warning("%s\n", error->message);
-			g_error_free(error);
+			g_clear_error(&error);
 			segfault_message = segfault_message_tmp;
 		}
 #else
@@ -531,11 +542,11 @@ int pidgin_start(int argc, char *argv[])
 	 * Set the channel encoding to raw binary instead of the default of
 	 * UTF-8, because we'll be sending integers across instead of strings.
 	 */
-	error = NULL;
 	signal_status = g_io_channel_set_encoding(signal_channel, NULL, &error);
 	if (signal_status != G_IO_STATUS_NORMAL) {
 		fprintf(stderr, "Failed to set the signal channel to raw "
 				"binary: %s", error->message);
+		g_clear_error(&error);
 		exit(1);
 	}
 	signal_channel_watcher = g_io_add_watch(signal_channel, G_IO_IN, mainloop_sighandler, NULL);
@@ -574,75 +585,45 @@ int pidgin_start(int argc, char *argv[])
 		snprintf(errmsg, sizeof(errmsg), "Warning: couldn't unblock signals");
 		perror(errmsg);
 	}
+#endif /* !_WIN32 */
 
-	/* scan command-line options */
-	opterr = 1;
-	while ((opt = getopt_long(argc, argv,
-#ifndef _WIN32
-				  "c:dfhmnl::s:v",
+	context = g_option_context_new(NULL);
+
+	summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
+	g_option_context_set_summary(context, summary);
+	g_free(summary);
+
+	g_option_context_add_main_entries(context, option_entries, PACKAGE);
+	g_option_context_add_group(context, gtk_get_option_group(TRUE));
+
+#ifdef G_OS_WIN32
+	/* Handle Unicode filenames on Windows. See GOptionContext docs. */
+	args = g_win32_get_command_line();
 #else
-				  "c:dfhmnl::v",
+	args = g_strdupv(argv);
 #endif
-				  long_options, NULL)) != -1) {
-		switch (opt) {
-		case 'c':	/* config dir */
-			g_free(opt_config_dir_arg);
-			opt_config_dir_arg = g_strdup(optarg);
-			break;
-		case 'd':	/* debug */
-			debug_enabled = TRUE;
-			if (g_strcmp0(optarg, "colored") == 0)
-				debug_colored = TRUE;
-			break;
-		case 'f':	/* force-online */
-			opt_force_online = TRUE;
-			break;
-		case 'h':	/* help */
-			opt_help = TRUE;
-			break;
-		case 'n':	/* no autologin */
-			opt_nologin = TRUE;
-			break;
-		case 'l':	/* login, option username */
-			opt_login = TRUE;
-			g_free(opt_login_arg);
-			if (optarg != NULL)
-				opt_login_arg = g_strdup(optarg);
-			break;
-		case 's':	/* use existing session ID */
-			g_free(opt_session_arg);
-			opt_session_arg = g_strdup(optarg);
-			break;
-		case 'v':	/* version */
-			opt_version = TRUE;
-			break;
-		case 'm':   /* do not ensure single instance. */
-			opt_si = FALSE;
-			break;
-		case 'D':   /* --display */
-		case 'S':   /* --sync */
-			/* handled by gtk_init_check below */
-			break;
-		case '?':	/* show terse help */
-		default:
-			show_usage(argv[0], TRUE);
-			g_free(segfault_message);
-			return 0;
-			break;
-		}
+
+	if (!g_option_context_parse_strv(context, &args, &error)) {
+		g_strfreev(args);
+		g_printerr(_("%s %s: %s\nTry `%s -h' for more information.\n"),
+				PIDGIN_NAME, DISPLAY_VERSION, error->message,
+				argv[0]);
+		g_clear_error(&error);
+#ifndef _WIN32
+		g_free(segfault_message);
+#endif
+		return 1;
 	}
 
-	/* show help message */
-	if (opt_help) {
-		show_usage(argv[0], FALSE);
-		g_free(segfault_message);
-		return 0;
-	}
+	g_strfreev(args);
+
 	/* show version message */
 	if (opt_version) {
 		printf("%s %s (libpurple %s)\n", PIDGIN_NAME, DISPLAY_VERSION,
 		                                 purple_core_get_version());
+#ifndef _WIN32
 		g_free(segfault_message);
+#endif
 		return 0;
 	}
 
@@ -670,21 +651,28 @@ int pidgin_start(int argc, char *argv[])
 	purple_debug_set_enabled(debug_enabled);
 	purple_debug_set_colored(debug_colored);
 
-	gui_check = gtk_init_check(&argc, &argv);
-	if (!gui_check) {
-		const char *display = gdk_display_get_name(gdk_display_get_default());
+	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
+				G_APPLICATION_NON_UNIQUE));
 
-		printf("%s %s\n", PIDGIN_NAME, DISPLAY_VERSION);
+	g_object_set(app, "register-session", TRUE, NULL);
 
-		g_warning("cannot open display: %s", display ? display : "unset");
+	g_signal_connect(app, "activate",
+			G_CALLBACK(pidgin_activate_cb), NULL);
+
+	if (!g_application_register(app, NULL, &error)) {
+		purple_debug_error("gtk",
+				"Unable to register GApplication: %s\n",
+				error->message);
+		g_clear_error(&error);
+		g_object_unref(app);
+#ifndef _WIN32
 		g_free(segfault_message);
-
+#endif
 		return 1;
 	}
 
 	search_path = g_build_filename(purple_user_dir(), "gtk-3.0.css", NULL);
 
-	error = NULL;
 	provider = gtk_css_provider_new();
 	gui_check = gtk_css_provider_load_from_path(provider, search_path, &error);
 
@@ -696,6 +684,7 @@ int pidgin_start(int argc, char *argv[])
 	} else {
 		purple_debug_error("gtk", "Unable to load custom gtk-3.0.css: %s\n",
 		                   error ? error->message : "(unknown error)");
+		g_clear_error(&error);
 	}
 
 	g_free(search_path);
@@ -705,13 +694,14 @@ int pidgin_start(int argc, char *argv[])
 #endif
 
 	purple_core_set_ui_ops(pidgin_core_get_ui_ops());
-	purple_eventloop_set_ui_ops(pidgin_eventloop_get_ui_ops());
 
 	if (!purple_core_init(PIDGIN_UI)) {
 		fprintf(stderr,
 				"Initialization of the libpurple core failed. Dumping core.\n"
 				"Please report this!\n");
+#ifndef _WIN32
 		g_free(segfault_message);
+#endif
 		abort();
 	}
 
@@ -737,7 +727,9 @@ int pidgin_start(int argc, char *argv[])
 		gdk_notify_startup_complete();
 		purple_core_quit();
 		g_printerr(_("Exiting because another libpurple client is already running.\n"));
+#ifndef _WIN32
 		g_free(segfault_message);
+#endif
 		return 0;
 	}
 
@@ -746,11 +738,6 @@ int pidgin_start(int argc, char *argv[])
 
 	ui_main();
 
-#ifdef USE_SM
-	pidgin_session_init(argv[0], opt_session_arg, opt_config_dir_arg);
-#endif
-	g_free(opt_session_arg);
-	opt_session_arg = NULL;
 	g_free(opt_config_dir_arg);
 	opt_config_dir_arg = NULL;
 
@@ -820,16 +807,34 @@ int pidgin_start(int argc, char *argv[])
 	winpidgin_post_init();
 #endif
 
-	gtk_main();
+	/* TODO: Use GtkApplicationWindow or add a window instead */
+	g_application_hold(app);
 
+	ret = g_application_run(app, 0, NULL);
+
+	/* Make sure purple has quit in case something in GApplication
+	 * has caused g_application_run() to finish on its own. This can
+	 * happen, for example, if the desktop session is ending.
+	 */
+	if (purple_get_core() != NULL) {
+		purple_core_quit();
+	}
+
+	/* Now that we're sure purple_core_quit() has been called,
+	 * this can be freed.
+	 */
+	g_object_unref(app);
+
+#ifndef _WIN32
 	g_free(segfault_message);
 	g_source_remove(signal_channel_watcher);
 	close(signal_sockets[0]);
 	close(signal_sockets[1]);
+#endif
 
 #ifdef _WIN32
 	winpidgin_cleanup();
 #endif
 
-	return 0;
+	return ret;
 }

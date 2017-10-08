@@ -29,7 +29,6 @@
 
 #ifdef USE_GSTREAMER
 #include "media/backend-fs2.h"
-#include "marshallers.h"
 #include "media-gst.h"
 #endif /* USE_GSTREAMER */
 
@@ -224,41 +223,33 @@ purple_media_class_init (PurpleMediaClass *klass)
 			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
 	purple_media_signals[S_ERROR] = g_signal_new("error", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 g_cclosure_marshal_VOID__STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_STRING);
 	purple_media_signals[CANDIDATES_PREPARED] = g_signal_new("candidates-prepared", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__STRING_STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 2, G_TYPE_STRING,
 					 G_TYPE_STRING);
 	purple_media_signals[CODECS_CHANGED] = g_signal_new("codecs-changed", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 g_cclosure_marshal_VOID__STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_STRING);
 	purple_media_signals[LEVEL] = g_signal_new("level", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__STRING_STRING_DOUBLE,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 3, G_TYPE_STRING,
 					 G_TYPE_STRING, G_TYPE_DOUBLE);
 	purple_media_signals[NEW_CANDIDATE] = g_signal_new("new-candidate", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__POINTER_POINTER_OBJECT,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 3, G_TYPE_POINTER,
 					 G_TYPE_POINTER, PURPLE_TYPE_MEDIA_CANDIDATE);
 	purple_media_signals[STATE_CHANGED] = g_signal_new("state-changed", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__ENUM_STRING_STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 3, PURPLE_MEDIA_TYPE_STATE,
 					 G_TYPE_STRING, G_TYPE_STRING);
 	purple_media_signals[STREAM_INFO] = g_signal_new("stream-info", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__ENUM_STRING_STRING_BOOLEAN,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 4, PURPLE_MEDIA_TYPE_INFO_TYPE,
 					 G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN);
 	purple_media_signals[CANDIDATE_PAIR_ESTABLISHED] = g_signal_new("candidate-pair-established", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__POINTER_POINTER_OBJECT_OBJECT,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 4, G_TYPE_POINTER, G_TYPE_POINTER,
 					 PURPLE_TYPE_MEDIA_CANDIDATE, PURPLE_TYPE_MEDIA_CANDIDATE);
 	g_type_class_add_private(klass, sizeof(PurpleMediaPrivate));
@@ -463,8 +454,8 @@ purple_media_get_stream(PurpleMedia *media, const gchar *session, const gchar *p
 
 	for (; streams; streams = g_list_next(streams)) {
 		PurpleMediaStream *stream = streams->data;
-		if (!strcmp(stream->session->id, session) &&
-				!strcmp(stream->participant, participant))
+		if (purple_strequal(stream->session->id, session) &&
+				purple_strequal(stream->participant, participant))
 			return stream;
 	}
 
@@ -485,9 +476,9 @@ purple_media_get_streams(PurpleMedia *media, const gchar *session,
 	for (; streams; streams = g_list_next(streams)) {
 		PurpleMediaStream *stream = streams->data;
 		if ((session == NULL ||
-				!strcmp(stream->session->id, session)) &&
+				purple_strequal(stream->session->id, session)) &&
 				(participant == NULL ||
-				!strcmp(stream->participant, participant)))
+				purple_strequal(stream->participant, participant)))
 			ret = g_list_append(ret, stream);
 	}
 
@@ -934,7 +925,7 @@ purple_media_param_is_supported(PurpleMedia *media, const gchar *param)
 
 	params = purple_media_backend_get_available_params(media->priv->backend);
 	for (; *params != NULL; ++params)
-		if (!strcmp(*params, param))
+		if (purple_strequal(*params, param))
 			return TRUE;
 #endif
 	return FALSE;

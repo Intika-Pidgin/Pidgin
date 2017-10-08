@@ -505,7 +505,7 @@ notify_buddy_status_update(PurpleBuddy *buddy, PurplePresence *presence,
 {
 	if (purple_prefs_get_bool("/purple/logging/log_system"))
 	{
-		time_t current_time = time(NULL);
+		GDateTime *current_time = g_date_time_new_now_utc();
 		const char *buddy_alias = purple_buddy_get_alias(buddy);
 		char *tmp, *logtmp;
 		PurpleLog *log;
@@ -545,6 +545,7 @@ notify_buddy_status_update(PurpleBuddy *buddy, PurplePresence *presence,
 			               current_time, logtmp);
 		}
 
+		g_date_time_unref(current_time);
 		g_free(tmp);
 		g_free(logtmp);
 	}
@@ -795,9 +796,7 @@ purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean active,
 			if (G_VALUE_TYPE(default_value) == G_TYPE_STRING) {
 				const char *cur = purple_status_get_attr_string(status, attr->id);
 				const char *def = g_value_get_string(default_value);
-				if ((cur == NULL && def == NULL)
-				    || (cur != NULL && def != NULL
-					&& !strcmp(cur, def))) {
+				if (purple_strequal(cur, def)) {
 					continue;
 				}
 

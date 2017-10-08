@@ -44,21 +44,21 @@
 
 static PurpleProtocol *my_protocol = NULL;
 
-static char *gentag(void) {
-	return g_strdup_printf("%04d%04d", rand() & 0xFFFF, rand() & 0xFFFF);
+static gchar *gentag(void) {
+	return g_strdup_printf("%04d%04d", g_random_int(), g_random_int());
 }
 
 static char *genbranch(void) {
 	return g_strdup_printf("z9hG4bK%04X%04X%04X%04X%04X",
-		rand() & 0xFFFF, rand() & 0xFFFF, rand() & 0xFFFF,
-		rand() & 0xFFFF, rand() & 0xFFFF);
+		g_random_int(), g_random_int(), g_random_int(),
+		g_random_int(), g_random_int());
 }
 
 static char *gencallid(void) {
 	return g_strdup_printf("%04Xg%04Xa%04Xi%04Xm%04Xt%04Xb%04Xx%04Xx",
-		rand() & 0xFFFF, rand() & 0xFFFF, rand() & 0xFFFF,
-		rand() & 0xFFFF, rand() & 0xFFFF, rand() & 0xFFFF,
-		rand() & 0xFFFF, rand() & 0xFFFF);
+		g_random_int(), g_random_int(), g_random_int(),
+		g_random_int(), g_random_int(), g_random_int(),
+		g_random_int(), g_random_int());
 }
 
 static const char *simple_list_icon(PurpleAccount *a, PurpleBuddy *b) {
@@ -143,7 +143,7 @@ static struct simple_watcher *watcher_find(struct simple_account_data *sip,
 	GSList *entry = sip->watcher;
 	while(entry) {
 		watcher = entry->data;
-		if(!strcmp(name, watcher->name)) return watcher;
+		if(purple_strequal(name, watcher->name)) return watcher;
 		entry = entry->next;
 	}
 	return NULL;
@@ -265,11 +265,8 @@ static gchar *auth_header(struct simple_account_data *sip,
 	gchar noncecount[9];
 	gchar *response;
 	gchar *ret;
-	gchar *tmp;
-	const char *authdomain;
 	const char *authuser;
 
-	authdomain = purple_account_get_string(sip->account, "authdomain", "");
 	authuser = purple_account_get_string(sip->account, "authuser", sip->username);
 
 	if(!authuser || strlen(authuser) < 1) {
@@ -287,6 +284,13 @@ static gchar *auth_header(struct simple_account_data *sip,
 		g_free(response);
 		return ret;
 	} else if(auth->type == 2) { /* NTLM */
+#ifdef HAVE_NETTLE
+		const gchar *authdomain;
+		gchar *tmp;
+
+		authdomain = purple_account_get_string(sip->account,
+				"authdomain", "");
+
 		if(auth->nc == 3 && auth->nonce) {
 			/* TODO: Don't hardcode "purple" as the hostname */
 			ret = purple_ntlm_gen_type3(authuser, sip->password, "purple", authdomain, (const guint8 *)auth->nonce, &auth->flags);
@@ -296,6 +300,10 @@ static gchar *auth_header(struct simple_account_data *sip,
 		}
 		tmp = g_strdup_printf("NTLM qop=\"auth\", realm=\"%s\", targetname=\"%s\", gssapi-data=\"\"", auth->realm, auth->target);
 		return tmp;
+#else
+		/* Used without support enabled */
+		g_return_val_if_reached(NULL);
+#endif /* HAVE_NETTLE */
 	}
 
 	sprintf(noncecount, "%08d", auth->nc++);
@@ -350,6 +358,7 @@ static void fill_auth(struct simple_account_data *sip, const gchar *hdr, struct 
 	}
 
 	if(!g_ascii_strncasecmp(hdr, "NTLM", 4)) {
+#ifdef HAVE_NETTLE
 		purple_debug_info("simple", "found NTLM\n");
 		auth->type = 2;
 		parts = g_strsplit(hdr+5, "\",", 0);
@@ -382,6 +391,11 @@ static void fill_auth(struct simple_account_data *sip, const gchar *hdr, struct 
 		}
 
 		return;
+#else
+		purple_debug_error("simple", "NTLM auth unsupported without "
+				"libnettle support. Please rebuild with "
+				"libnettle support for this feature.\n");
+#endif /* HAVE_NETTLE */
 	} else if(!g_ascii_strncasecmp(hdr, "DIGEST", 6)) {
 
 		purple_debug_info("simple", "found DIGEST\n");
@@ -622,7 +636,7 @@ static struct transaction *transactions_find(struct simple_account_data *sip, st
 	if (cseq) {
 		while(transactions) {
 			trans = transactions->data;
-			if(!strcmp(trans->cseq, cseq)) {
+			if(purple_strequal(trans->cseq, cseq)) {
 				return trans;
 			}
 			transactions = transactions->next;
@@ -645,7 +659,7 @@ static void send_sip_request(PurpleConnection *gc, const gchar *method,
 	gchar *tag = NULL;
 	char *buf;
 
-	if(!strcmp(method, "REGISTER")) {
+	if(purple_strequal(method, "REGISTER")) {
 		if(sip->regcallid) {
 			g_free(callid);
 			callid = g_strdup(sip->regcallid);
@@ -654,12 +668,12 @@ static void send_sip_request(PurpleConnection *gc, const gchar *method,
 	}
 
 	if(addheaders) addh = addheaders;
-	if(sip->registrar.type && !strcmp(method, "REGISTER")) {
+	if(sip->registrar.type && purple_strequal(method, "REGISTER")) {
 		buf = auth_header(sip, &sip->registrar, method, url);
 		auth = g_strdup_printf("Authorization: %s\r\n", buf);
 		g_free(buf);
 		purple_debug(PURPLE_DEBUG_MISC, "simple", "header %s", auth);
-	} else if(sip->proxy.type && strcmp(method, "REGISTER")) {
+	} else if(sip->proxy.type && !purple_strequal(method, "REGISTER")) {
 		buf = auth_header(sip, &sip->proxy, method, url);
 		auth = g_strdup_printf("Proxy-Authorization: %s\r\n", buf);
 		g_free(buf);
@@ -858,7 +872,7 @@ static void simple_subscribe_exp(struct simple_account_data *sip, struct simple_
 	/* resubscribe before subscription expires */
 	/* add some jitter */
 	if (expiration > 60)
-		buddy->resubscribe = time(NULL) + (expiration - 60) + (rand() % 50);
+		buddy->resubscribe = time(NULL) + (expiration - 60) + (g_random_int_range(0, 50));
 	else if (expiration > 0)
 		buddy->resubscribe = time(NULL) + ((int) (expiration / 2));
 }
@@ -1174,9 +1188,9 @@ static gboolean dialog_match(struct sip_dialog *dialog, struct sipmsg *msg)
 	theirtag = find_tag(fromhdr);
 
 	if (ourtag && theirtag &&
-			!strcmp(dialog->callid, callid) &&
-			!strcmp(dialog->ourtag, ourtag) &&
-			!strcmp(dialog->theirtag, theirtag))
+			purple_strequal(dialog->callid, callid) &&
+			purple_strequal(dialog->ourtag, ourtag) &&
+			purple_strequal(dialog->theirtag, theirtag))
 		match = TRUE;
 
 	g_free(ourtag);
@@ -1508,13 +1522,13 @@ privend:
 static void process_input_message(struct simple_account_data *sip, struct sipmsg *msg) {
 	gboolean found = FALSE;
 	if(msg->response == 0) { /* request */
-		if(!strcmp(msg->method, "MESSAGE")) {
+		if(purple_strequal(msg->method, "MESSAGE")) {
 			process_incoming_message(sip, msg);
 			found = TRUE;
-		} else if(!strcmp(msg->method, "NOTIFY")) {
+		} else if(purple_strequal(msg->method, "NOTIFY")) {
 			process_incoming_notify(sip, msg);
 			found = TRUE;
-		} else if(!strcmp(msg->method, "SUBSCRIBE")) {
+		} else if(purple_strequal(msg->method, "SUBSCRIBE")) {
 			process_incoming_subscribe(sip, msg);
 			found = TRUE;
 		} else {
@@ -1548,7 +1562,7 @@ static void process_input_message(struct simple_account_data *sip, struct sipmsg
 					purple_debug_info("simple", "got trying response\n");
 				} else {
 					sip->proxy.retries = 0;
-					if(!strcmp(trans->msg->method, "REGISTER")) {
+					if(purple_strequal(trans->msg->method, "REGISTER")) {
 
 						/* This is encountered when a REGISTER request was ...
 						 */
@@ -1752,7 +1766,7 @@ static void login_cb(gpointer data, gint source, const gchar *error_message) {
 
 	conn = connection_create(sip, source);
 
-	sip->registertimeout = purple_timeout_add((rand()%100)+10*1000, (GSourceFunc)subscribe_timeout, sip);
+	sip->registertimeout = g_timeout_add(g_random_int_range(10000, 100000), (GSourceFunc)subscribe_timeout, sip);
 
 	do_register(sip);
 
@@ -1794,8 +1808,8 @@ static void simple_udp_host_resolved_listen_cb(int listenfd, gpointer data) {
 
 	sip->listenpa = purple_input_add(sip->fd, PURPLE_INPUT_READ, simple_udp_process, sip->gc);
 
-	sip->resendtimeout = purple_timeout_add(2500, (GSourceFunc) resend_timeout, sip);
-	sip->registertimeout = purple_timeout_add((rand()%100)+10*1000, (GSourceFunc)subscribe_timeout, sip);
+	sip->resendtimeout = g_timeout_add(2500, (GSourceFunc) resend_timeout, sip);
+	sip->registertimeout = g_timeout_add(g_random_int_range(10000, 100000), (GSourceFunc)subscribe_timeout, sip);
 	do_register(sip);
 }
 
@@ -2037,9 +2051,9 @@ static void simple_close(PurpleConnection *gc)
 	if (sip->tx_handler)
 		purple_input_remove(sip->tx_handler);
 	if (sip->resendtimeout)
-		purple_timeout_remove(sip->resendtimeout);
+		g_source_remove(sip->resendtimeout);
 	if (sip->registertimeout)
-		purple_timeout_remove(sip->registertimeout);
+		g_source_remove(sip->registertimeout);
 
 	g_cancellable_cancel(sip->cancellable);
 	g_object_unref(G_OBJECT(sip->cancellable));

@@ -119,12 +119,12 @@ int irc_send(struct irc_conn *irc, const char *buf)
 
 int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
 {
- 	char *tosend= g_strdup(buf);
+ 	char *tosend = g_strdup(buf);
 	int len;
 	GBytes *data;
 
 	purple_signal_emit(_irc_protocol, "irc-sending-text", purple_account_get_connection(irc->account), &tosend);
-	
+
 	if (tosend == NULL)
 		return 0;
 
@@ -463,7 +463,7 @@ static void irc_close(PurpleConnection *gc)
 	g_clear_object(&irc->conn);
 
 	if (irc->timer)
-		purple_timeout_remove(irc->timer);
+		g_source_remove(irc->timer);
 	g_hash_table_destroy(irc->cmds);
 	g_hash_table_destroy(irc->msgs);
 	g_hash_table_destroy(irc->buddies);
@@ -529,12 +529,12 @@ static void irc_set_status(PurpleAccount *account, PurpleStatus *status)
 
 	args[0] = NULL;
 
-	if (!strcmp(status_id, "away")) {
+	if (purple_strequal(status_id, "away")) {
 		args[0] = purple_status_get_attr_string(status, "message");
 		if ((args[0] == NULL) || (*args[0] == '\0'))
 			args[0] = _("Away");
 		irc_cmd_away(irc, "away", NULL, args);
-	} else if (!strcmp(status_id, "available")) {
+	} else if (purple_strequal(status_id, "available")) {
 		irc_cmd_away(irc, "back", NULL, args);
 	}
 }

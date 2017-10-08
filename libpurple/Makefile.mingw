@@ -56,7 +56,7 @@ else
 VV_SRC =
 endif
 
-BUILT_SRC = marshallers.c enums.c
+BUILT_SRC = enums.c
 
 C_SRC =	\
 			$(BUILT_SRC) \
@@ -68,17 +68,6 @@ C_SRC =	\
 			buddylist.c \
 			buddyicon.c \
 			certificate.c \
-			ciphers/aescipher.c \
-			ciphers/descipher.c \
-			ciphers/des3cipher.c \
-			ciphers/hmaccipher.c \
-			ciphers/md4hash.c \
-			ciphers/md5hash.c \
-			ciphers/pbkdf2cipher.c \
-			ciphers/rc4cipher.c \
-			ciphers/sha1hash.c \
-			ciphers/sha256hash.c \
-			cipher.c \
 			circularbuffer.c \
 			cmds.c \
 			connection.c \
@@ -106,7 +95,6 @@ C_SRC =	\
 			nat-pmp.c \
 			network.c \
 			notify.c \
-			ntlm.c \
 			plugins.c \
 			pluginpref.c \
 			pounce.c \
@@ -115,7 +103,6 @@ C_SRC =	\
 			proxy.c \
 			protocol.c \
 			protocols.c \
-			purple-socket.c \
 			request.c \
 			request-datasheet.c \
 			roomlist.c \
@@ -144,7 +131,6 @@ C_SRC =	\
 			whiteboard.c \
 			xfer.c \
 			xmlnode.c \
-			win32/giowin32.c \
 			win32/libc_interface.c \
 			win32/win32dep.c \
 			$(VV_SRC)
@@ -153,7 +139,6 @@ RC_SRC = win32/libpurplerc.rc
 
 ENUM_HEADERS = \
 	account.h \
-	cipher.h \
 	connection.h \
 	conversation.h \
 	conversationtypes.h \
@@ -216,15 +201,6 @@ install: install_shallow all
 
 $(OBJECTS): $(PURPLE_CONFIG_H) $(PURPLE_VERSION_H) $(PURPLE_PURPLE_H)
 
-marshallers.h: marshallers.list
-	@echo -e "  GEN\t$@"
-	@$(GLIB_GENMARSHAL) --prefix=purple_smarshal $< --header > marshallers.h
-
-marshallers.c: marshallers.list marshallers.h
-	@echo -e "  GEN\t$@"
-	@echo "#include \"marshallers.h\"" > marshallers.c
-	@$(GLIB_GENMARSHAL) --prefix=purple_smarshal $< --body >> marshallers.c
-
 enums.h: enums.h.in $(ENUM_HEADERS)
 	@echo -e "  GEN\t$@"
 	@$(GLIB_MKENUMS) --template enums.h.in $(ENUM_HEADERS) > enums.h
@@ -240,7 +216,7 @@ $(TARGET).dll $(TARGET).dll.a: $(OBJECTS)
 ## CLEAN RULES
 ##
 clean:
-	rm -f $(OBJECTS) $(RC_SRC) $(PURPLE_VERSION_H) $(PURPLE_PURPLE_H) marshallers.h marshallers.c enums.h enums.c
+	rm -f $(OBJECTS) $(RC_SRC) $(PURPLE_VERSION_H) $(PURPLE_PURPLE_H) enums.h enums.c
 	rm -f $(TARGET).dll $(TARGET).dll.a $(TARGET).def
 	$(MAKE_at) $(MAKE) -C $(PURPLE_PROTOS_TOP) -f $(MINGW_MAKEFILE) clean
 	$(MAKE_at) $(MAKE) -C $(PURPLE_PLUGINS_TOP) -f $(MINGW_MAKEFILE) clean

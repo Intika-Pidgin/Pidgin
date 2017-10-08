@@ -154,6 +154,7 @@ typedef void (*PurpleKeyringClose)(void);
  * @account: The account.
  * @mode:    A keyring specific option that was stored. Can be NULL.
  * @data:    Data that was stored. Can be NULL.
+ * @error:   Error that may have occurred.
  *
  * Import serialized (and maybe encrypted) password.
  *
@@ -277,7 +278,7 @@ purple_keyring_unregister(PurpleKeyring *keyring);
  * Returns a GList containing the IDs and names of the registered
  * keyrings.
  *
- * Returns: The list of IDs and names.
+ * Returns: (element-type utf8) (transfer container): The list of IDs and names.
  */
 GList *
 purple_keyring_get_options(void);
@@ -292,6 +293,7 @@ purple_keyring_get_options(void);
  * @keyring_id: The plugin ID that was stored in the xml file. Can be NULL.
  * @mode:       A keyring specific option that was stored. Can be NULL.
  * @data:       Data that was stored, can be NULL.
+ * @error:      Error that may have occurred.
  *
  * Import serialized (and maybe encrypted) password into current keyring.
  *

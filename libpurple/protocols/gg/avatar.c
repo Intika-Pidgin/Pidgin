@@ -90,14 +90,14 @@ void ggp_avatar_setup(PurpleConnection *gc)
 	avdata->current_update = NULL;
 	avdata->own_data = g_new0(ggp_avatar_own_data, 1);
 
-	avdata->timer = purple_timeout_add_seconds(1, ggp_avatar_timer_cb, gc);
+	avdata->timer = g_timeout_add_seconds(1, ggp_avatar_timer_cb, gc);
 }
 
 void ggp_avatar_cleanup(PurpleConnection *gc)
 {
 	ggp_avatar_session_data *avdata = ggp_avatar_get_avdata(gc);
 
-	purple_timeout_remove(avdata->timer);
+	g_source_remove(avdata->timer);
 
 	if (avdata->current_update != NULL) {
 		ggp_avatar_buddy_update_req *current_update =
@@ -353,8 +353,8 @@ ggp_avatar_own_got_token(PurpleConnection *gc, const gchar *token,
 	}
 	own_data->img = NULL;
 
-	img_data = purple_base64_encode(purple_image_get_data(img),
-		purple_image_get_size(img));
+	img_data = g_base64_encode(purple_image_get_data(img),
+		purple_image_get_data_size(img));
 	img_data_e = g_uri_escape_string(img_data, NULL, FALSE);
 	g_free(img_data);
 	request_data = g_strdup_printf("uin=%d&photo=%s", uin, img_data_e);

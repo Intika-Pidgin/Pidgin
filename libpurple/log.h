@@ -101,7 +101,7 @@ struct _PurpleLogLogger {
 	gsize (*write)(PurpleLog *log,
 		     PurpleMessageFlags type,
 		     const char *from,
-		     time_t time,
+		     GDateTime *time,
 		     const char *message);
 
 	void (*finalize)(PurpleLog *log);
@@ -139,10 +139,6 @@ struct _PurpleLogLogger {
  *               timezone
  * @logger:      The logging mechanism this log is to use
  * @logger_data: Data used by the log logger
- * @tm:          The time this conversation started, saved with original
- *               timezone data, if available and if struct tm has the BSD
- *               timezone fields, else %NULL. Do NOT modify anything in this
- *               struct.
  *
  * A log.  Not the wooden type.
  */
@@ -151,11 +147,10 @@ struct _PurpleLog {
 	char *name;
 	PurpleAccount *account;
 	PurpleConversation *conv;
-	time_t time;
+	GDateTime *time;
 
 	PurpleLogLogger *logger;
 	void *logger_data;
-	struct tm *tm;
 
 	/* IMPORTANT: Some code in log.c allocates these without zeroing them.
 	 * IMPORTANT: Update that code if you add members here. */
@@ -225,15 +220,13 @@ GType purple_log_get_type(void);
  * @account:     The account the conversation is occurring on
  * @conv:        The conversation being logged
  * @time:        The time this conversation started
- * @tm:          The time this conversation started, with timezone data,
- *                    if available and if struct tm has the BSD timezone fields.
  *
  * Creates a new log
  *
  * Returns:            The new log
  */
 PurpleLog *purple_log_new(PurpleLogType type, const char *name, PurpleAccount *account,
-                      PurpleConversation *conv, time_t time, const struct tm *tm);
+                      PurpleConversation *conv, GDateTime *time);
 
 /**
  * purple_log_free:
@@ -257,7 +250,7 @@ void purple_log_free(PurpleLog *log);
 void purple_log_write(PurpleLog *log,
 		    PurpleMessageFlags type,
 		    const char *from,
-		    time_t time,
+		    GDateTime *time,
 		    const char *message);
 
 /**
@@ -279,7 +272,7 @@ char *purple_log_read(PurpleLog *log, PurpleLogReadFlags *flags);
  *
  * Returns a list of all available logs
  *
- * Returns:                    A sorted list of PurpleLogs
+ * Returns: (element-type PurpleLog): A sorted list of logs
  */
 GList *purple_log_get_logs(PurpleLogType type, const char *name, PurpleAccount *account);
 
@@ -299,7 +292,8 @@ GList *purple_log_get_logs(PurpleLogType type, const char *name, PurpleAccount *
  * destroyed. If a PurpleLogSet is removed from the GHashTable, it
  * must be freed with purple_log_set_free().
  *
- * Returns: A GHashTable of all available unique PurpleLogSets
+ * Returns: (element-type PurpleLogSet PurpleLogSet): All available unique log
+ *          sets.
  */
 GHashTable *purple_log_get_log_sets(void);
 
@@ -309,7 +303,7 @@ GHashTable *purple_log_get_log_sets(void);
  *
  * Returns a list of all available system logs
  *
- * Returns:        A sorted list of PurpleLogs
+ * Returns: (element-type PurpleLog): A sorted list of logs
  */
 GList *purple_log_get_system_logs(PurpleAccount *account);
 
@@ -447,7 +441,7 @@ void purple_log_common_writer(PurpleLog *log, const char *ext);
  * @ext:      The file extension this log format uses.
  * @logger:   A reference to the logger struct for this log.
  *
- * Returns a sorted GList of PurpleLogs of the requested type.
+ * Returns a sorted list of logs of the requested type.
  *
  * This function should only be used with logs that are written
  * with purple_log_common_writer().  It's intended to be used as
@@ -455,7 +449,7 @@ void purple_log_common_writer(PurpleLog *log, const char *ext);
  * It should only be passed to purple_log_logger_new() and never
  * called directly.
  *
- * Returns: A sorted GList of PurpleLogs matching the parameters.
+ * Returns: (element-type PurpleLog): A sorted list of logs matching the parameters.
  */
 GList *purple_log_common_lister(PurpleLogType type, const char *name,
 							  PurpleAccount *account, const char *ext,
@@ -611,7 +605,7 @@ PurpleLogLogger *purple_log_logger_get (void);
  * Returns a GList containing the IDs and names of the registered
  * loggers.
  *
- * Returns: The list of IDs and names.
+ * Returns: (element-type utf8) (transfer container): The list of IDs and names.
  */
 GList *purple_log_logger_get_options(void);
 

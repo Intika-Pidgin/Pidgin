@@ -212,16 +212,16 @@ struct _PurpleConversationClass {
  * @destroy_conversation: Called just before @conv is freed.
  * @write_chat: Write a message to a chat. If this field is %NULL, libpurple
  *              will fall back to using @write_conv.
- *              See purple_conversation_write().
+ *              See purple_conversation_write_message().
  * @write_im: Write a message to an IM conversation. If this field is %NULL,
  *            libpurple will fall back to using @write_conv.
- *            See purple_conversation_write().
+ *            See purple_conversation_write_message().
  * @write_conv: Write a message to a conversation. This is used rather than the
  *              chat- or im-specific ops for errors, system messages (such as "x
  *              is now know as y"), and as the fallback if @write_im and
  *              @write_chat are not implemented. It should be implemented, or
  *              the UI will miss conversation error messages and your users will
- *              hate you. See purple_conversation_write().
+ *              hate you. See purple_conversation_write_message().
  * @chat_add_users: Add @cbuddies to a chat.
  *                  <sbr/>@cbuddies:     A GList of #PurpleChatUser structs.
  *                  <sbr/>@new_arrivals: Whether join notices should be shown.
@@ -652,40 +652,24 @@ gssize
 purple_conversation_get_max_message_size(PurpleConversation *conv);
 
 /**
- * purple_conversation_add_remote_smiley:
+ * purple_conversation_add_smiley:
  * @conv: The conversation that receives new smiley.
- * @shortcut: The shortcut for the new smiley.
+ * @smiley: The smiley.
  *
- * Adds new smiley to the list of remote smileys for this conversation.
- * The smiley image have to be written and closed, when data is ready.
- *
- * You can retrieve smiley's #PurpleImage object using #purple_smiley_get_image
- * and set its data with #purple_image_transfer_write
- * and #purple_image_transfer_close.
- *
- * Returns: (transfer none): New smiley, or %NULL if it's already being
- *          retrieved (or possibly, in case of error).
+ * Adds a smiley to the list of smileys that belong to this conversation.
  */
-PurpleSmiley *
-purple_conversation_add_remote_smiley(PurpleConversation *conv,
-	const gchar *shortcut);
+void purple_conversation_add_smiley(PurpleConversation *conv, PurpleSmiley *smiley);
 
 /**
- * purple_conversation_get_remote_smiley:
+ * purple_conversation_get_smiley:
  * @conv: The conversation.
  * @shortcut: The shortcut.
  *
- * Lookups for the remote smiley previously added to this conversation.
- *
- * You may use this function when you receive the smiley data, but it's
- * better just to store and use the reference returned by
- * #purple_conversation_add_remote_smiley.
+ * Lookups for the smiley previously added to this conversation.
  *
  * Returns: (transfer none): The smiley, or %NULL if it doesn't exists.
  */
-PurpleSmiley *
-purple_conversation_get_remote_smiley(PurpleConversation *conv,
-	const gchar *shortcut);
+PurpleSmiley *purple_conversation_get_smiley(PurpleConversation *conv, const gchar *shortcut);
 
 /**
  * purple_conversation_get_remote_smileys:

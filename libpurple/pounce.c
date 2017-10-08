@@ -295,7 +295,7 @@ static void
 schedule_pounces_save(void)
 {
 	if (save_timer == 0)
-		save_timer = purple_timeout_add_seconds(5, save_cb, NULL);
+		save_timer = g_timeout_add_seconds(5, save_cb, NULL);
 }
 
 
@@ -730,7 +730,7 @@ purple_pounce_destroy_all_by_buddy(PurpleBuddy *buddy)
 		pouncer = purple_pounce_get_pouncer(pounce);
 		pouncee = purple_pounce_get_pouncee(pounce);
 
-		if ( (pouncer == bacct) && (strcmp(pouncee, bname) == 0) )
+		if ( (pouncer == bacct) && (purple_strequal(pouncee, bname)) )
 			purple_pounce_destroy(pounce);
 	}
 }
@@ -1194,7 +1194,7 @@ purple_pounces_uninit()
 {
 	if (save_timer != 0)
 	{
-		purple_timeout_remove(save_timer);
+		g_source_remove(save_timer);
 		save_timer = 0;
 		sync_pounces();
 	}

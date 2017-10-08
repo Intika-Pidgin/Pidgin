@@ -65,7 +65,7 @@ static gboolean joinpart_key_equal(const struct joinpart_key *a, const struct jo
 	else if (b == NULL)
 		return FALSE;
 
-	return (a->conv == b->conv) && !strcmp(a->user, b->user);
+	return (a->conv == b->conv) && purple_strequal(a->user, b->user);
 }
 
 static void joinpart_key_destroy(struct joinpart_key *key)
@@ -255,7 +255,7 @@ static gboolean plugin_load(PurplePlugin *plugin, GError **error)
 	                    PURPLE_CALLBACK(received_chat_msg_cb), users);
 
 	/* Cleanup every 5 minutes */
-	id = purple_timeout_add_seconds(60 * 5, (GSourceFunc)clean_users_hash, users);
+	id = g_timeout_add_seconds(60 * 5, (GSourceFunc)clean_users_hash, users);
 
 	g_object_set_data(G_OBJECT(plugin), "users", users);
 	g_object_set_data(G_OBJECT(plugin), "id", GUINT_TO_POINTER(id));
@@ -270,7 +270,7 @@ static gboolean plugin_unload(PurplePlugin *plugin, GError **error)
 	 * we don't have to worry one will be called after this. */
 	g_hash_table_destroy((GHashTable *)g_object_get_data(G_OBJECT(plugin), "users"));
 
-	purple_timeout_remove(GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(plugin), "id")));
+	g_source_remove(GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(plugin), "id")));
 
 	return TRUE;
 }
