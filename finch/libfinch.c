@@ -26,7 +26,6 @@
 #include "conversation.h"
 #include "core.h"
 #include "debug.h"
-#include "eventloop.h"
 #include "glibcompat.h"
 #include "log.h"
 #include "notify.h"
@@ -45,17 +44,14 @@
 #include "gntui.h"
 #include "gntidle.h"
 
-#define _GNU_SOURCE
-#include <getopt.h>
-
 #include "config.h"
 #include "package_revision.h"
 
 static void
 debug_init(void)
 {
-	finch_debug_init();
-	purple_debug_set_ui_ops(finch_debug_get_ui_ops());
+	FinchDebugUi *ui = finch_debug_ui_new();
+	purple_debug_set_ui(PURPLE_DEBUG_UI(ui));
 }
 
 static GHashTable *ui_info = NULL;
@@ -71,16 +67,11 @@ static GHashTable *finch_ui_get_info(void)
 		g_hash_table_insert(ui_info, "client_type", "console");
 
 		/*
-		 * This is the client key for "Finch."  It is owned by the AIM
-		 * account "markdoliner."  Please don't use this key for other
-		 * applications.  You can either not specify a client key, in
-		 * which case the default "libpurple" key will be used, or you
-		 * can try to register your own at the AIM or ICQ web sites
-		 * (although this functionality was removed at some point, it's
-		 * possible it has been re-added).  AOL's old key management
-		 * page is http://developer.aim.com/manageKeys.jsp
+		 * This is the client key for "Finch." Please don't use this
+		 * key for other applications.  You can not specify a client
+		 * key, in which case the default "libpurple" key will be used
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma19sqWV9ymU6UYc");
+		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma18nmEklXMR7Cj_");
 
 		/*
 		 * This is the client key for "Pidgin."  It is owned by the AIM
@@ -103,7 +94,7 @@ static GHashTable *finch_ui_get_info(void)
 		 * don't use this for other applications.  You can just not
 		 * specify a distid and libpurple will use a default.
 		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1552));
+		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1718));
 		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1552));
 	}
 
@@ -139,143 +130,32 @@ gnt_core_get_ui_ops(void)
 	return &core_ops;
 }
 
-/* Anything IO-related is directly copied from gtkpurple's source tree */
-
-#define FINCH_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
-#define FINCH_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
-
-typedef struct _PurpleGntIOClosure {
-	PurpleInputFunction function;
-	guint result;
-	gpointer data;
-
-} PurpleGntIOClosure;
-
-static void purple_gnt_io_destroy(gpointer data)
-{
-	g_free(data);
-}
-
-static gboolean purple_gnt_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
-{
-	PurpleGntIOClosure *closure = data;
-	PurpleInputCondition purple_cond = 0;
-
-	if (condition & FINCH_READ_COND)
-		purple_cond |= PURPLE_INPUT_READ;
-	if (condition & FINCH_WRITE_COND)
-		purple_cond |= PURPLE_INPUT_WRITE;
-
-#if 0
-	purple_debug(PURPLE_DEBUG_MISC, "gtk_eventloop",
-			   "CLOSURE: callback for %d, fd is %d\n",
-			   closure->result, g_io_channel_unix_get_fd(source));
-#endif
-
-#ifdef _WIN32
-	if(! purple_cond) {
-#if 0
-		purple_debug_misc("gnt_eventloop",
-			   "CLOSURE received GIOCondition of 0x%x, which does not"
-			   " match 0x%x (READ) or 0x%x (WRITE)\n",
-			   condition, FINCH_READ_COND, FINCH_WRITE_COND);
-#endif /* DEBUG */
-
-		return TRUE;
-	}
-#endif /* _WIN32 */
-
-	closure->function(closure->data, g_io_channel_unix_get_fd(source),
-			  purple_cond);
-
-	return TRUE;
-}
-
-static guint gnt_input_add(gint fd, PurpleInputCondition condition, PurpleInputFunction function,
-							   gpointer data)
-{
-	PurpleGntIOClosure *closure = g_new0(PurpleGntIOClosure, 1);
-	GIOChannel *channel;
-	GIOCondition cond = 0;
-
-	closure->function = function;
-	closure->data = data;
-
-	if (condition & PURPLE_INPUT_READ)
-		cond |= FINCH_READ_COND;
-	if (condition & PURPLE_INPUT_WRITE)
-		cond |= FINCH_WRITE_COND;
-
-	channel = g_io_channel_unix_new(fd);
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      purple_gnt_io_invoke, closure, purple_gnt_io_destroy);
-
-	g_io_channel_unref(channel);
-	return closure->result;
-}
-
-static PurpleEventLoopUiOps eventloop_ops =
-{
-	g_timeout_add,
-	g_source_remove,
-	gnt_input_add,
-	g_source_remove,
-	NULL, /* input_get_error */
-	g_timeout_add_seconds,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static PurpleEventLoopUiOps *
-gnt_eventloop_get_ui_ops(void)
-{
-	return &eventloop_ops;
-}
-
-/* This is mostly copied from gtkpurple's source tree */
-static void
-show_usage(const char *name, gboolean terse)
-{
-	char *text;
-
-	if (terse) {
-		text = g_strdup_printf(_("%s. Try `%s -h' for more information.\n"), DISPLAY_VERSION, name);
-	} else {
-		text = g_strdup_printf(_("%s\n"
-		       "Usage: %s [OPTION]...\n\n"
-		       "  -c, --config=DIR    use DIR for config files\n"
-		       "  -d, --debug         print debugging messages to stderr\n"
-		       "  -h, --help          display this help and exit\n"
-		       "  -n, --nologin       don't automatically login\n"
-		       "  -v, --version       display the current version and exit\n"), DISPLAY_VERSION, name);
-	}
-
-	purple_print_utf8_to_console(stdout, text);
-	g_free(text);
-}
-
 static int
 init_libpurple(int argc, char **argv)
 {
 	char *path;
-	int opt;
-	gboolean opt_help = FALSE;
 	gboolean opt_nologin = FALSE;
 	gboolean opt_version = FALSE;
 	char *opt_config_dir_arg = NULL;
 	gboolean debug_enabled = FALSE;
+	GOptionContext *context;
+	gchar **args;
+	GError *error = NULL;
 
-	struct option long_options[] = {
-		{"config",   required_argument, NULL, 'c'},
-		{"debug",    no_argument,       NULL, 'd'},
-		{"help",     no_argument,       NULL, 'h'},
-		{"nologin",  no_argument,       NULL, 'n'},
-		{"version",  no_argument,       NULL, 'v'},
-		{0, 0, 0, 0}
+	GOptionEntry option_entries[] = {
+		{"config", 'c', 0,
+			G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
+			_("use DIR for config files"), _("DIR")},
+		{"debug", 'd', 0,
+			G_OPTION_ARG_NONE, &debug_enabled,
+			_("print debugging messages to stderr"), NULL},
+		{"nologin", 'n', 0,
+			G_OPTION_ARG_NONE, &opt_nologin,
+			_("don't automatically login"), NULL},
+		{"version", 'v', 0,
+			G_OPTION_ARG_NONE, &opt_version,
+			_("display the current version and exit"), NULL},
+		{NULL}
 	};
 
 #ifdef ENABLE_NLS
@@ -286,40 +166,27 @@ init_libpurple(int argc, char **argv)
 
 	setlocale(LC_ALL, "");
 
-	/* scan command-line options */
-	opterr = 1;
-	while ((opt = getopt_long(argc, argv, "c:dhn::v",
-				  long_options, NULL)) != -1) {
-		switch (opt) {
-		case 'c':	/* config dir */
-			g_free(opt_config_dir_arg);
-			opt_config_dir_arg = g_strdup(optarg);
-			break;
-		case 'd':	/* debug */
-			debug_enabled = TRUE;
-			break;
-		case 'h':	/* help */
-			opt_help = TRUE;
-			break;
-		case 'n':	/* no autologin */
-			opt_nologin = TRUE;
-			break;
-		case 'v':	/* version */
-			opt_version = TRUE;
-			break;
-		case '?':	/* show terse help */
-		default:
-			show_usage(argv[0], TRUE);
-			return 0;
-			break;
-		}
+	context = g_option_context_new(NULL);
+	g_option_context_set_summary(context, DISPLAY_VERSION);
+	g_option_context_add_main_entries(context, option_entries, PACKAGE);
+
+#ifdef G_OS_WIN32
+	/* Handle Unicode filenames on Windows. See GOptionContext docs. */
+	args = g_win32_get_command_line();
+#else
+	args = g_strdupv(argv);
+#endif
+
+	if (!g_option_context_parse_strv(context, &args, &error)) {
+		g_strfreev(args);
+		g_printerr(_("%s: %s\nTry `%s -h' for more information.\n"),
+				DISPLAY_VERSION, error->message, argv[0]);
+		g_clear_error(&error);
+		return 1;
 	}
 
-	/* show help message */
-	if (opt_help) {
-		show_usage(argv[0], FALSE);
-		return 0;
-	}
+	g_strfreev(args);
+
 	/* show version message */
 	if (opt_version) {
 		/* Translators may want to transliterate the name.
@@ -353,7 +220,6 @@ init_libpurple(int argc, char **argv)
 	purple_debug_set_enabled(debug_enabled);
 
 	purple_core_set_ui_ops(gnt_core_get_ui_ops());
-	purple_eventloop_set_ui_ops(gnt_eventloop_get_ui_ops());
 	purple_idle_set_ui_ops(finch_idle_get_ui_ops());
 
 	if (!purple_core_init(FINCH_UI))

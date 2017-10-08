@@ -181,6 +181,7 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account);
 
 /**
  * purple_roomlist_get_account:
+ * @list: The room list.
  *
  * Retrieve the PurpleAccount that was given when the room list was
  * created.
@@ -192,8 +193,8 @@ PurpleAccount *purple_roomlist_get_account(PurpleRoomlist *list);
 /**
  * purple_roomlist_set_fields:
  * @list: The room list.
- * @fields: A GList of PurpleRoomlistField's. UI's are encouraged
- *               to default to displaying them in the order given.
+ * @fields: (element-type PurpleRoomlistField) (transfer full): UI's are
+ *          encouraged to default to displaying these fields in the order given.
  *
  * Set the different field types and their names for this protocol.
  *
@@ -279,7 +280,7 @@ void purple_roomlist_expand_category(PurpleRoomlist *list, PurpleRoomlistRoom *c
  *
  * Get the list of fields for a roomlist.
  *
- * Returns: (transfer none): A list of fields
+ * Returns: (element-type PurpleRoomlistField) (transfer none): A list of fields
  */
 GList *purple_roomlist_get_fields(PurpleRoomlist *roomlist);
 
@@ -423,7 +424,7 @@ void purple_roomlist_room_set_expanded_once(PurpleRoomlistRoom *room, gboolean e
  *
  * Get the list of fields for a room.
  *
- * Returns: (transfer none): A list of fields
+ * Returns: (element-type PurpleRoomlistField) (transfer none): A list of fields
  */
 GList * purple_roomlist_room_get_fields(PurpleRoomlistRoom *room);
 

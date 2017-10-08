@@ -61,7 +61,7 @@ EXTRA_HFILES =
 
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
-IGNORE_HFILES=marshal.h
+IGNORE_HFILES=
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
@@ -88,7 +88,6 @@ GTKDOC_CFLAGS = \
 	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(JSON_CFLAGS) \
-	$(ZLIB_CFLAGS) \
 	$(INTROSPECTION_CFLAGS)
 
 GTKDOC_LIBS = \
@@ -98,7 +97,6 @@ GTKDOC_LIBS = \
 	$(GPLUGIN_LIBS) \
 	$(INTLLIBS) \
 	$(JSON_LIBS) \
-	$(ZLIB_LIBS) \
 	$(INTROSPECTION_LIBS)
 
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
@@ -106,7 +104,6 @@ include $(top_srcdir)/gtk-doc.make
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
-EXTRA_DIST += version.xml.in
 
 # Files not to distribute
 # for --rebuild-types in $(SCAN_OPTIONS), e.g. $(DOC_MODULE).types

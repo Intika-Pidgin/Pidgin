@@ -26,14 +26,8 @@
 
 
 #include "debug.h"
-#include "ntlm.h"
 #include "proxy.h"
-#include "purple-socket.h"
-
-#include <zlib.h>
-#ifndef z_const
-#define z_const
-#endif
+#include "purple-gio.h"
 
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
@@ -57,9 +51,15 @@ typedef struct _PurpleHttpKeepaliveRequest PurpleHttpKeepaliveRequest;
 
 typedef struct _PurpleHttpGzStream PurpleHttpGzStream;
 
+typedef void (*PurpleHttpSocketConnectCb)(PurpleHttpSocket *hs,
+		const gchar *error, gpointer _hc);
+
 struct _PurpleHttpSocket
 {
-	PurpleSocket *ps;
+	GSocketConnection *conn;
+	GCancellable *cancellable;
+	guint input_source;
+	guint output_source;
 
 	gboolean is_busy;
 	guint use_count;
@@ -175,7 +175,7 @@ struct _PurpleHttpCookieJar
 struct _PurpleHttpKeepaliveRequest
 {
 	PurpleConnection *gc;
-	PurpleSocketConnectCb cb;
+	PurpleHttpSocketConnectCb cb;
 	gpointer user_data;
 
 	PurpleHttpKeepaliveHost *host;
@@ -218,10 +218,29 @@ struct _PurpleHttpConnectionSet
 struct _PurpleHttpGzStream
 {
 	gboolean failed;
-	z_stream zs;
+	GZlibDecompressor *decompressor;
 	gsize max_output;
 	gsize decompressed;
 	GString *pending;
+};
+
+struct _ntlm_type1_message {
+	guint8  protocol[8];     /* 'N', 'T', 'L', 'M', 'S', 'S', 'P', '\0' */
+	guint32 type;            /* 0x00000001 */
+	guint32 flags;           /* 0x0000b203 */
+
+	guint16 dom_len1;        /* domain string length */
+	guint16 dom_len2;        /* domain string length */
+	guint32 dom_off;         /* domain string offset */
+
+	guint16 host_len1;       /* host string length */
+	guint16 host_len2;       /* host string length */
+	guint32 host_off;        /* host string offset (always 0x00000020) */
+
+#if 0
+	guint8  host[*];         /* host string (ASCII) */
+	guint8  dom[*];          /* domain string (ASCII) */
+#endif
 };
 
 static time_t purple_http_rfc1123_to_time(const gchar *str);
@@ -247,7 +266,7 @@ gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar);
 static PurpleHttpKeepaliveRequest *
 purple_http_keepalive_pool_request(PurpleHttpKeepalivePool *pool,
 	PurpleConnection *gc, const gchar *host, int port, gboolean is_ssl,
-	PurpleSocketConnectCb cb, gpointer user_data);
+	PurpleHttpSocketConnectCb cb, gpointer user_data);
 static void
 purple_http_keepalive_pool_request_cancel(PurpleHttpKeepaliveRequest *req);
 static void
@@ -347,19 +366,14 @@ static PurpleHttpGzStream *
 purple_http_gz_new(gsize max_output, gboolean is_deflate)
 {
 	PurpleHttpGzStream *gzs = g_new0(PurpleHttpGzStream, 1);
-	int windowBits;
+	GZlibCompressorFormat format;
 
 	if (is_deflate)
-		windowBits = -MAX_WBITS;
+		format = G_ZLIB_COMPRESSOR_FORMAT_RAW;
 	else /* is gzip */
-		windowBits = MAX_WBITS + 32;
+		format = G_ZLIB_COMPRESSOR_FORMAT_GZIP;
 
-	if (inflateInit2(&gzs->zs, windowBits) != Z_OK) {
-		purple_debug_error("http", "Cannot initialize zlib stream\n");
-		g_free(gzs);
-		return NULL;
-	}
-
+	gzs->decompressor = g_zlib_decompressor_new(format);
 	gzs->max_output = max_output;
 
 	return gzs;
@@ -371,15 +385,12 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 	const gchar *compressed_buff;
 	gsize compressed_len;
 	GString *ret;
-	z_stream *zs;
 
 	g_return_val_if_fail(gzs != NULL, NULL);
 	g_return_val_if_fail(buf != NULL, NULL);
 
 	if (gzs->failed)
 		return NULL;
-
-	zs = &gzs->zs;
 
 	if (gzs->pending) {
 		g_string_append_len(gzs->pending, buf, len);
@@ -390,22 +401,26 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 		compressed_len = len;
 	}
 
-	zs->next_in = (z_const Bytef*)compressed_buff;
-	zs->avail_in = compressed_len;
-
 	ret = g_string_new(NULL);
-	while (zs->avail_in > 0) {
-		int gzres;
+	while (compressed_len > 0) {
+		GConverterResult gzres;
 		gchar decompressed_buff[PURPLE_HTTP_GZ_BUFF_LEN];
-		gsize decompressed_len;
+		gsize decompressed_len = 0;
+		gsize bytes_read = 0;
+		GError *error = NULL;
 
-		zs->next_out = (Bytef*)decompressed_buff;
-		zs->avail_out = sizeof(decompressed_buff);
-		decompressed_len = zs->avail_out = sizeof(decompressed_buff);
-		gzres = inflate(zs, Z_FULL_FLUSH);
-		decompressed_len -= zs->avail_out;
+		gzres = g_converter_convert(G_CONVERTER(gzs->decompressor),
+			       compressed_buff, compressed_len,
+		       	       decompressed_buff, sizeof(decompressed_buff),
+			       G_CONVERTER_NO_FLAGS,
+			       &bytes_read,
+			       &decompressed_len,
+			       &error);
 
-		if (gzres == Z_OK || gzres == Z_STREAM_END) {
+		compressed_buff += bytes_read;
+		compressed_len -= bytes_read;
+
+		if (gzres == G_CONVERTER_CONVERTED || gzres == G_CONVERTER_FINISHED) {
 			if (decompressed_len == 0)
 				break;
 			if (gzs->decompressed + decompressed_len >=
@@ -415,17 +430,18 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 					" decompressed data is reached\n");
 				decompressed_len = gzs->max_output -
 					gzs->decompressed;
-				gzres = Z_STREAM_END;
+				gzres = G_CONVERTER_FINISHED;
 			}
 			gzs->decompressed += decompressed_len;
 			g_string_append_len(ret, decompressed_buff,
 				decompressed_len);
-			if (gzres == Z_STREAM_END)
+			if (gzres == G_CONVERTER_FINISHED)
 				break;
 		} else {
 			purple_debug_error("http",
 				"Decompression failed (%d): %s\n", gzres,
-				zs->msg);
+				error->message);
+			g_clear_error(&error);
 			gzs->failed = TRUE;
 			return NULL;
 		}
@@ -436,9 +452,9 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 		gzs->pending = NULL;
 	}
 
-	if (zs->avail_in > 0) {
-		gzs->pending = g_string_new_len((gchar*)zs->next_in,
-			zs->avail_in);
+	if (compressed_len > 0) {
+		gzs->pending = g_string_new_len(compressed_buff,
+			compressed_len);
 	}
 
 	return ret;
@@ -449,10 +465,60 @@ purple_http_gz_free(PurpleHttpGzStream *gzs)
 {
 	if (gzs == NULL)
 		return;
-	inflateEnd(&gzs->zs);
+	g_object_unref(gzs->decompressor);
 	if (gzs->pending)
 		g_string_free(gzs->pending, TRUE);
 	g_free(gzs);
+}
+
+/*** NTLM *********************************************************************/
+
+/**
+ * purple_ntlm_gen_type1:
+ * @hostname: Your hostname
+ * @domain: The domain to authenticate to
+ *
+ * Generates the base64 encoded type 1 message needed for NTLM authentication
+ *
+ * Returns: base64 encoded string to send to the server.  This should
+ *         be g_free'd by the caller.
+ */
+static gchar *
+purple_http_ntlm_gen_type1(const gchar *hostname, const gchar *domain)
+{
+	int hostnamelen,host_off;
+	int domainlen,dom_off;
+	unsigned char *msg;
+	struct _ntlm_type1_message *tmsg;
+	gchar *tmp;
+
+	hostnamelen = strlen(hostname);
+	domainlen = strlen(domain);
+	host_off = sizeof(struct _ntlm_type1_message);
+	dom_off = sizeof(struct _ntlm_type1_message) + hostnamelen;
+	msg = g_malloc0(sizeof(struct _ntlm_type1_message) + hostnamelen + domainlen);
+	tmsg = (struct _ntlm_type1_message*)(gpointer)msg;
+	tmsg->protocol[0] = 'N';
+	tmsg->protocol[1] = 'T';
+	tmsg->protocol[2] = 'L';
+	tmsg->protocol[3] = 'M';
+	tmsg->protocol[4] = 'S';
+	tmsg->protocol[5] = 'S';
+	tmsg->protocol[6] = 'P';
+	tmsg->protocol[7] = '\0';
+	tmsg->type      = GUINT32_TO_LE(0x00000001);
+	tmsg->flags     = GUINT32_TO_LE(0x0000b203);
+	tmsg->dom_len1  = tmsg->dom_len2 = GUINT16_TO_LE(domainlen);
+	tmsg->dom_off   = GUINT32_TO_LE(dom_off);
+	tmsg->host_len1 = tmsg->host_len2 = GUINT16_TO_LE(hostnamelen);
+	tmsg->host_off  = GUINT32_TO_LE(host_off);
+	memcpy(msg + host_off, hostname, hostnamelen);
+	memcpy(msg + dom_off, domain, domainlen);
+
+	tmp = g_base64_encode(msg, sizeof(struct _ntlm_type1_message) + hostnamelen + domainlen);
+	g_free(msg);
+
+	return tmp;
 }
 
 /*** HTTP Sockets *************************************************************/
@@ -463,22 +529,68 @@ purple_http_socket_hash(const gchar *host, int port, gboolean is_ssl)
 	return g_strdup_printf("%c:%s:%d", (is_ssl ? 'S' : 'R'), host, port);
 }
 
+static void
+purple_http_socket_connect_new_cb(GObject *source, GAsyncResult *res,
+		gpointer user_data)
+{
+	PurpleHttpSocket *hs = user_data;
+	GSocketConnection *conn;
+	PurpleHttpSocketConnectCb cb;
+	gpointer cb_data;
+	GError *error = NULL;
+
+	conn = g_socket_client_connect_to_host_finish(G_SOCKET_CLIENT(source),
+			res, &error);
+
+	cb = g_object_steal_data(source, "cb");
+	cb_data = g_object_steal_data(source, "cb_data");
+
+	if (conn == NULL) {
+		if (!g_error_matches(error,
+				G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			cb(hs, error->message, cb_data);
+		}
+
+		g_clear_error(&error);
+		return;
+	}
+
+	hs->conn = conn;
+
+	cb(hs, NULL, cb_data);
+}
+
 static PurpleHttpSocket *
 purple_http_socket_connect_new(PurpleConnection *gc, const gchar *host,
-	int port, gboolean is_ssl, PurpleSocketConnectCb cb, gpointer user_data)
+		int port, gboolean is_ssl,
+		PurpleHttpSocketConnectCb cb, gpointer user_data)
 {
-	PurpleHttpSocket *hs = g_new0(PurpleHttpSocket, 1);
+	PurpleHttpSocket *hs;
+	GSocketClient *client;
+	GError *error = NULL;
 
-	hs->ps = purple_socket_new(gc);
-	purple_socket_set_data(hs->ps, "hs", hs);
-	purple_socket_set_tls(hs->ps, is_ssl);
-	purple_socket_set_host(hs->ps, host);
-	purple_socket_set_port(hs->ps, port);
-	if (!purple_socket_connect(hs->ps, cb, user_data)) {
-		purple_socket_destroy(hs->ps);
-		g_free(hs);
+	client = purple_gio_socket_client_new(
+			purple_connection_get_account(gc), &error);
+
+	if (client == NULL) {
+		purple_debug_error("http", "Error connecting to '%s:%d': %s",
+				host, port, error->message);
+		g_clear_error(&error);
 		return NULL;
 	}
+
+	hs = g_new0(PurpleHttpSocket, 1);
+	hs->cancellable = g_cancellable_new();
+
+	g_socket_client_set_tls(client, is_ssl);
+	g_object_set_data(G_OBJECT(client), "cb", cb);
+	g_object_set_data(G_OBJECT(client), "cb_data", user_data);
+
+	g_socket_client_connect_to_host_async(client,
+			host, port, hs->cancellable,
+			purple_http_socket_connect_new_cb, hs);
+
+	g_object_unref(client);
 
 	if (purple_debug_is_verbose())
 		purple_debug_misc("http", "new socket created: %p\n", hs);
@@ -495,7 +607,26 @@ purple_http_socket_close_free(PurpleHttpSocket *hs)
 	if (purple_debug_is_verbose())
 		purple_debug_misc("http", "destroying socket: %p\n", hs);
 
-	purple_socket_destroy(hs->ps);
+	if (hs->input_source > 0) {
+		g_source_remove(hs->input_source);
+		hs->input_source = 0;
+	}
+
+	if (hs->output_source > 0) {
+		g_source_remove(hs->output_source);
+		hs->output_source = 0;
+	}
+
+	if (hs->cancellable != NULL) {
+		g_cancellable_cancel(hs->cancellable);
+		g_clear_object(&hs->cancellable);
+	}
+
+	if (hs->conn != NULL) {
+		purple_gio_graceful_close(G_IO_STREAM(hs->conn), NULL, NULL);
+		g_clear_object(&hs->conn);
+	}
+
 	g_free(hs);
 }
 
@@ -682,10 +813,9 @@ static void _purple_http_disconnect(PurpleHttpConnection *hc,
 	gboolean is_graceful);
 
 static void _purple_http_gen_headers(PurpleHttpConnection *hc);
-static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd);
-static void _purple_http_recv(gpointer _hc, gint fd,
-	PurpleInputCondition cond);
-static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond);
+static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc);
+static gboolean _purple_http_recv(GObject *source, gpointer _hc);
+static gboolean _purple_http_send(GObject *source, gpointer _hc);
 
 /* closes current connection (if exists), estabilishes one and proceeds with
  * request */
@@ -789,11 +919,12 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 		tmp = g_strdup_printf("%s:%s", proxy_username, proxy_password);
 		len = strlen(tmp);
-		proxy_auth = purple_base64_encode((const guchar *)tmp, len);
+		proxy_auth = g_base64_encode((const guchar *)tmp, len);
 		memset(tmp, 0, len);
 		g_free(tmp);
 
-		ntlm_type1 = purple_ntlm_gen_type1(purple_get_host_name(), "");
+		ntlm_type1 = purple_http_ntlm_gen_type1(purple_get_host_name(),
+			"");
 
 		g_string_append_printf(h, "Proxy-Authorization: Basic %s\r\n",
 			proxy_auth);
@@ -1077,21 +1208,33 @@ static gboolean _purple_http_recv_body(PurpleHttpConnection *hc,
 	return _purple_http_recv_body_data(hc, buf, len);
 }
 
-static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
+static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc)
 {
 	int len;
 	gchar buf[4096];
 	gboolean got_anything;
+	GError *error = NULL;
 
-	len = purple_socket_read(hc->socket->ps, (guchar*)buf, sizeof(buf));
+	len = g_pollable_input_stream_read_nonblocking(
+				G_POLLABLE_INPUT_STREAM(
+				g_io_stream_get_input_stream(
+				G_IO_STREAM(hc->socket->conn))),
+				buf, sizeof(buf), hc->socket->cancellable,
+				&error);
 	got_anything = (len > 0);
 
-	if (len < 0 && errno == EAGAIN)
+	if (len < 0 && (g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK) ||
+			g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_CANCELLED))) {
+		g_clear_error(&error);
 		return FALSE;
+	}
 
 	if (len < 0) {
 		_purple_http_error(hc, _("Error reading from %s: %s"),
-			hc->url->host, g_strerror(errno));
+			hc->url->host, error->message);
+		g_clear_error(&error);
 		return FALSE;
 	}
 
@@ -1270,11 +1413,13 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 	return got_anything;
 }
 
-static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
+static gboolean _purple_http_recv(GObject *source, gpointer _hc)
 {
 	PurpleHttpConnection *hc = _hc;
 
-	while (_purple_http_recv_loopbody(hc, fd));
+	while (_purple_http_recv_loopbody(hc));
+
+	return G_SOURCE_CONTINUE;
 }
 
 static void _purple_http_send_got_data(PurpleHttpConnection *hc,
@@ -1305,17 +1450,19 @@ static void _purple_http_send_got_data(PurpleHttpConnection *hc,
 	hc->request->contents_length = estimated_length;
 }
 
-static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
+static gboolean _purple_http_send(GObject *source, gpointer _hc)
 {
 	PurpleHttpConnection *hc = _hc;
 	int written, write_len;
 	const gchar *write_from;
 	gboolean writing_headers;
+	GError *error = NULL;
+	GSource *gsource;
 
 	/* Waiting for data. This could be written more efficiently, by removing
 	 * (and later, adding) hs->inpa. */
 	if (hc->contents_reader_requested)
-		return;
+		return G_SOURCE_CONTINUE;
 
 	_purple_http_gen_headers(hc);
 
@@ -1328,7 +1475,7 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 			hc->request_header_written;
 	} else if (hc->request->contents_reader) {
 		if (hc->contents_reader_requested)
-			return; /* waiting for data */
+			return G_SOURCE_CONTINUE; /* waiting for data */
 		if (!hc->contents_reader_buffer)
 			hc->contents_reader_buffer = g_string_new("");
 		if (hc->contents_reader_buffer->len == 0) {
@@ -1341,7 +1488,7 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 				PURPLE_HTTP_MAX_READ_BUFFER_LEN,
 				hc->request->contents_reader_data,
 				_purple_http_send_got_data);
-			return;
+			return G_SOURCE_CONTINUE;
 		}
 		write_from = hc->contents_reader_buffer->str;
 		write_len = hc->contents_reader_buffer->len;
@@ -1356,12 +1503,21 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 		purple_debug_warning("http", "Nothing to write\n");
 		written = 0;
 	} else {
-		written = purple_socket_write(hc->socket->ps,
-			(const guchar*)write_from, write_len);
+		written = g_pollable_output_stream_write_nonblocking(
+				G_POLLABLE_OUTPUT_STREAM(
+				g_io_stream_get_output_stream(
+				G_IO_STREAM(hc->socket->conn))),
+				write_from, write_len, hc->socket->cancellable,
+				&error);
 	}
 
-	if (written < 0 && errno == EAGAIN)
-		return;
+	if (written < 0 && (g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK) ||
+			g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_CANCELLED))) {
+		g_clear_error(&error);
+		return G_SOURCE_CONTINUE;
+	}
 
 	if (written < 0) {
 		if (hc->request_header_written == 0 &&
@@ -1370,21 +1526,22 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 			purple_debug_info("http", "Keep-alive connection "
 				"expired (when writing), retrying...\n");
 			purple_http_conn_retry(hc);
-			return;
+		} else {
+			_purple_http_error(hc, _("Error writing to %s: %s"),
+				hc->url->host, error->message);
 		}
 
-		_purple_http_error(hc, _("Error writing to %s: %s"),
-			hc->url->host, g_strerror(errno));
-		return;
+		g_clear_error(&error);
+		return G_SOURCE_CONTINUE;
 	}
 
 	if (writing_headers) {
 		hc->request_header_written += written;
 		purple_http_conn_notify_progress_watcher(hc);
 		if (hc->request_header_written < hc->request_header->len)
-			return;
+			return G_SOURCE_CONTINUE;
 		if (hc->request->contents_length > 0)
-			return;
+			return G_SOURCE_CONTINUE;
 	} else {
 		hc->request_contents_written += written;
 		purple_http_conn_notify_progress_watcher(hc);
@@ -1394,14 +1551,24 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 			hc->request_contents_written <
 			(guint)hc->request->contents_length)
 		{
-			return;
+			return G_SOURCE_CONTINUE;
 		}
 	}
 
 	/* request is completely written, let's read the response */
 	hc->is_reading = TRUE;
-	purple_socket_watch(hc->socket->ps, PURPLE_INPUT_READ,
-		_purple_http_recv, hc);
+	gsource = g_pollable_input_stream_create_source(
+			G_POLLABLE_INPUT_STREAM(
+			g_io_stream_get_input_stream(
+			G_IO_STREAM(hc->socket->conn))),
+			NULL);
+	g_source_set_callback(gsource,
+		(GSourceFunc)_purple_http_recv, hc, NULL);
+	hc->socket->input_source = g_source_attach(gsource, NULL);
+	g_source_unref(gsource);
+
+	hc->socket->output_source = 0;
+	return G_SOURCE_REMOVE;
 }
 
 static void _purple_http_disconnect(PurpleHttpConnection *hc,
@@ -1426,13 +1593,10 @@ static void _purple_http_disconnect(PurpleHttpConnection *hc,
 }
 
 static void
-_purple_http_connected(PurpleSocket *ps, const gchar *error, gpointer _hc)
+_purple_http_connected(PurpleHttpSocket *hs, const gchar *error, gpointer _hc)
 {
-	PurpleHttpSocket *hs = NULL;
 	PurpleHttpConnection *hc = _hc;
-
-	if (ps != NULL)
-		hs = purple_socket_get_data(ps, "hs");
+	GSource *source;
 
 	hc->socket_request = NULL;
 	hc->socket = hs;
@@ -1443,7 +1607,14 @@ _purple_http_connected(PurpleSocket *ps, const gchar *error, gpointer _hc)
 		return;
 	}
 
-	purple_socket_watch(ps, PURPLE_INPUT_WRITE, _purple_http_send, hc);
+	source = g_pollable_output_stream_create_source(
+			G_POLLABLE_OUTPUT_STREAM(
+			g_io_stream_get_output_stream(G_IO_STREAM(hs->conn))),
+			NULL);
+	g_source_set_callback(source,
+			(GSourceFunc)_purple_http_send, hc, NULL);
+	hc->socket->output_source = g_source_attach(source, NULL);
+	g_source_unref(source);
 }
 
 static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
@@ -1603,7 +1774,7 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 
 	_purple_http_reconnect(hc);
 
-	hc->timeout_handle = purple_timeout_add_seconds(request->timeout,
+	hc->timeout_handle = g_timeout_add_seconds(request->timeout,
 		purple_http_request_timeout, hc);
 
 	return hc;
@@ -1643,9 +1814,9 @@ static PurpleHttpConnection * purple_http_connection_new(
 static void purple_http_connection_free(PurpleHttpConnection *hc)
 {
 	if (hc->timeout_handle)
-		purple_timeout_remove(hc->timeout_handle);
+		g_source_remove(hc->timeout_handle);
 	if (hc->watcher_delayed_handle)
-		purple_timeout_remove(hc->watcher_delayed_handle);
+		g_source_remove(hc->watcher_delayed_handle);
 
 	if (hc->connection_set != NULL)
 		purple_http_connection_set_remove(hc->connection_set, hc);
@@ -1832,14 +2003,14 @@ static void purple_http_conn_notify_progress_watcher(
 	{
 		if (hc->watcher_delayed_handle)
 			return;
-		hc->watcher_delayed_handle = purple_timeout_add_seconds(
+		hc->watcher_delayed_handle = g_timeout_add_seconds(
 			1 + hc->watcher_interval_threshold / 1000000,
 			purple_http_conn_notify_progress_watcher_timeout, hc);
 		return;
 	}
 
 	if (hc->watcher_delayed_handle)
-		purple_timeout_remove(hc->watcher_delayed_handle);
+		g_source_remove(hc->watcher_delayed_handle);
 	hc->watcher_delayed_handle = 0;
 
 	hc->watcher_last_call = now;
@@ -2096,7 +2267,7 @@ purple_http_keepalive_host_free(gpointer _host)
 		(GDestroyNotify)purple_http_socket_close_free);
 
 	if (host->process_queue_timeout > 0) {
-		purple_timeout_remove(host->process_queue_timeout);
+		g_source_remove(host->process_queue_timeout);
 		host->process_queue_timeout = 0;
 	}
 
@@ -2155,7 +2326,7 @@ purple_http_keepalive_pool_unref(PurpleHttpKeepalivePool *pool)
 static PurpleHttpKeepaliveRequest *
 purple_http_keepalive_pool_request(PurpleHttpKeepalivePool *pool,
 	PurpleConnection *gc, const gchar *host, int port, gboolean is_ssl,
-	PurpleSocketConnectCb cb, gpointer user_data)
+	PurpleHttpSocketConnectCb cb, gpointer user_data)
 {
 	PurpleHttpKeepaliveRequest *req;
 	PurpleHttpKeepaliveHost *kahost;
@@ -2198,19 +2369,15 @@ purple_http_keepalive_pool_request(PurpleHttpKeepalivePool *pool,
 }
 
 static void
-_purple_http_keepalive_socket_connected(PurpleSocket *ps,
+_purple_http_keepalive_socket_connected(PurpleHttpSocket *hs,
 	const gchar *error, gpointer _req)
 {
-	PurpleHttpSocket *hs = NULL;
 	PurpleHttpKeepaliveRequest *req = _req;
-
-	if (ps != NULL)
-		hs = purple_socket_get_data(ps, "hs");
 
 	if (hs != NULL)
 		hs->use_count++;
 
-	req->cb(ps, error, req->user_data);
+	req->cb(hs, error, req->user_data);
 	g_free(req);
 }
 
@@ -2266,7 +2433,7 @@ _purple_http_keepalive_host_process_queue_cb(gpointer _host)
 
 		purple_http_keepalive_host_process_queue(host);
 
-		req->cb(hs->ps, NULL, req->user_data);
+		req->cb(hs, NULL, req->user_data);
 		g_free(req);
 
 		return FALSE;
@@ -2300,7 +2467,7 @@ purple_http_keepalive_host_process_queue(PurpleHttpKeepaliveHost *host)
 	if (host->process_queue_timeout > 0)
 		return;
 
-	host->process_queue_timeout = purple_timeout_add(0,
+	host->process_queue_timeout = g_timeout_add(0,
 		_purple_http_keepalive_host_process_queue_cb, host);
 }
 
@@ -2337,7 +2504,16 @@ purple_http_keepalive_pool_release(PurpleHttpSocket *hs, gboolean invalidate)
 	if (purple_debug_is_verbose())
 		purple_debug_misc("http", "releasing a socket: %p\n", hs);
 
-	purple_socket_watch(hs->ps, 0, NULL, NULL);
+	if (hs->input_source > 0) {
+		g_source_remove(hs->input_source);
+		hs->input_source = 0;
+	}
+
+	if (hs->output_source > 0) {
+		g_source_remove(hs->output_source);
+		hs->output_source = 0;
+	}
+
 	hs->is_busy = FALSE;
 	host = hs->host;
 

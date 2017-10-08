@@ -1,12 +1,9 @@
 EXTRA_DIST = \
-	Makefile.mingw \
-	marshaller.list
+	Makefile.mingw
 
 pkgdir = @PURPLE_PLUGINDIR@
 
 FACEBOOKSOURCES = \
-	marshal.c \
-	marshal.h \
 	api.c \
 	api.h \
 	data.c \
@@ -25,17 +22,6 @@ FACEBOOKSOURCES = \
 	util.c \
 	util.h
 
-CLEANFILES = \
-	marshal.c \
-	marshal.h
-
-marshal.c: $(srcdir)/marshaller.list marshal.h
-	$(AM_V_GEN)echo "#include \"marshal.h\"" > $@
-	$(AM_V_at)$(GLIB_GENMARSHAL) --prefix=fb_marshal --body $(srcdir)/marshaller.list >> $@
-
-marshal.h: $(srcdir)/marshaller.list
-	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=fb_marshal --header $(srcdir)/marshaller.list > $@
-
 AM_CFLAGS = $(st)
 
 libfacebook_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
@@ -52,7 +38,7 @@ else
 st =
 pkg_LTLIBRARIES        = libfacebook.la
 libfacebook_la_SOURCES = $(FACEBOOKSOURCES)
-libfacebook_la_LIBADD  = @PURPLE_LIBS@
+libfacebook_la_LIBADD  = @PURPLE_LIBS@ $(JSON_LIBS)
 
 endif
 
@@ -62,6 +48,5 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	$(GLIB_CFLAGS) \
 	$(JSON_CFLAGS) \
-	$(ZLIB_CFLAGS) \
 	$(GPLUGIN_CFLAGS) \
 	$(DEBUG_CFLAGS)

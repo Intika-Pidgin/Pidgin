@@ -89,7 +89,7 @@ jabber_si_xfer_find(JabberStream *js, const char *sid, const char *from)
 		PurpleXfer *xfer = xfers->data;
 		JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
 		if(jsx->stream_id && purple_xfer_get_remote_user(xfer) &&
-				!strcmp(jsx->stream_id, sid) && !strcmp(purple_xfer_get_remote_user(xfer), from))
+				purple_strequal(jsx->stream_id, sid) && purple_strequal(purple_xfer_get_remote_user(xfer), from))
 			return xfer;
 	}
 
@@ -128,7 +128,7 @@ jabber_si_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_
 	jsx->connect_data = NULL;
 
 	if (jsx->connect_timeout > 0)
-		purple_timeout_remove(jsx->connect_timeout);
+		g_source_remove(jsx->connect_timeout);
 	jsx->connect_timeout = 0;
 
 	if(source < 0) {
@@ -194,7 +194,7 @@ static void
 jabber_si_bytestreams_ibb_timeout_remove(JabberSIXfer *jsx)
 {
 	if (jsx->ibb_timeout_handle) {
-		purple_timeout_remove(jsx->ibb_timeout_handle);
+		g_source_remove(jsx->ibb_timeout_handle);
 		jsx->ibb_timeout_handle = 0;
 	}
 }
@@ -252,7 +252,7 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 				jabber_si_xfer_ibb_send_init(jsx->js, xfer);
 			} else {
 				/* setup a timeout to cancel waiting for IBB open */
-				jsx->ibb_timeout_handle = purple_timeout_add_seconds(30,
+				jsx->ibb_timeout_handle = g_timeout_add_seconds(30,
 					jabber_si_bytestreams_ibb_timeout_cb, xfer);
 			}
 			/* if we are the receiver, just wait for IBB open, callback is
@@ -273,7 +273,7 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 		purple_proxy_connect_cancel(jsx->connect_data);
 		jsx->connect_data = NULL;
 		if (jsx->connect_timeout > 0)
-			purple_timeout_remove(jsx->connect_timeout);
+			g_source_remove(jsx->connect_timeout);
 		jsx->connect_timeout = 0;
 	}
 	if (jsx->gpi != NULL)
@@ -301,7 +301,8 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 				jsx->js->user->node, jsx->js->user->domain, jsx->js->user->resource);
 
 		/* Per XEP-0065, the 'host' must be SHA1(SID + from JID + to JID) */
-		hash = jabber_calculate_data_hash(dstaddr, strlen(dstaddr), "sha1");
+		hash = g_compute_checksum_for_string(G_CHECKSUM_SHA1,
+				dstaddr, -1);
 
 		account = purple_connection_get_account(jsx->js->gc);
 		jsx->connect_data = purple_proxy_connect_socks5_account(NULL, account,
@@ -312,7 +313,7 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 
 		/* When selecting a streamhost, timeout after STREAMHOST_CONNECT_TIMEOUT seconds, otherwise it takes forever */
 		if (purple_xfer_get_xfer_type(xfer) != PURPLE_XFER_TYPE_SEND && jsx->connect_data != NULL)
-			jsx->connect_timeout = purple_timeout_add_seconds(
+			jsx->connect_timeout = g_timeout_add_seconds(
 				STREAMHOST_CONNECT_TIMEOUT, connect_timeout_cb, xfer);
 
 		jabber_id_free(dstjid);
@@ -478,7 +479,7 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 			jsx->js->user->resource, purple_xfer_get_remote_user(xfer));
 
 	/* Per XEP-0065, the 'host' must be SHA1(SID + from JID + to JID) */
-	hash = jabber_calculate_data_hash(dstaddr, strlen(dstaddr), "sha1");
+	hash = g_compute_checksum_for_string(G_CHECKSUM_SHA1, dstaddr, -1);
 
 	if(strncmp(hash, jsx->rxqueue + 5, 40) ||
 			jsx->rxqueue[45] != 0x00 || jsx->rxqueue[46] != 0x00) {
@@ -733,7 +734,7 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 				&& !jsx->ibb_session) {
 				jabber_si_xfer_ibb_send_init(js, xfer);
 			} else {
-				jsx->ibb_timeout_handle = purple_timeout_add_seconds(30,
+				jsx->ibb_timeout_handle = g_timeout_add_seconds(30,
 					jabber_si_bytestreams_ibb_timeout_cb, xfer);
 			}
 			/* if we are receiver, just wait for IBB open stanza, callback
@@ -763,7 +764,7 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 	{
 		gchar *my_jid = g_strdup_printf("%s@%s/%s", jsx->js->user->node,
 			jsx->js->user->domain, jsx->js->user->resource);
-		if (!strcmp(jid, my_jid)) {
+		if (purple_strequal(jid, my_jid)) {
 			purple_debug_info("jabber", "Got local SOCKS5 streamhost-used.\n");
 			purple_xfer_start(xfer, purple_xfer_get_fd(xfer), NULL, -1);
 		} else {
@@ -774,7 +775,7 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 				if (purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_SEND) {
 					jabber_si_xfer_ibb_send_init(jsx->js, xfer);
 				} else {
-					jsx->ibb_timeout_handle = purple_timeout_add_seconds(30,
+					jsx->ibb_timeout_handle = g_timeout_add_seconds(30,
 						jabber_si_bytestreams_ibb_timeout_cb, xfer);
 				}
 				/* if we are the receiver, we are already set up...*/
@@ -869,7 +870,7 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 		}
 
 		/* Include the public IP (assuming that there is a port mapped somehow) */
-		if (!has_public_ip && strcmp(public_ip, "0.0.0.0") != 0) {
+		if (!has_public_ip && !purple_strequal(public_ip, "0.0.0.0")) {
 			streamhost_count++;
 			streamhost = purple_xmlnode_new_child(query, "streamhost");
 			purple_xmlnode_set_attrib(streamhost, "jid", jid);
@@ -925,7 +926,7 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 				/* if we are the sender, init the IBB session... */
 				jabber_si_xfer_ibb_send_init(jsx->js, xfer);
 			} else {
-				jsx->ibb_timeout_handle = purple_timeout_add_seconds(30,
+				jsx->ibb_timeout_handle = g_timeout_add_seconds(30,
 					jabber_si_bytestreams_ibb_timeout_cb, xfer);
 			}
 			/* if we are the receiver, we should just wait... the IBB open
@@ -1192,14 +1193,14 @@ static void jabber_si_xfer_send_method_cb(JabberStream *js, const char *from,
 		const char *var = purple_xmlnode_get_attrib(field, "var");
 		JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
 
-		if(var && !strcmp(var, "stream-method")) {
+		if(purple_strequal(var, "stream-method")) {
 			if((value = purple_xmlnode_get_child(field, "value"))) {
 				char *val = purple_xmlnode_get_data(value);
-				if(val && !strcmp(val, NS_BYTESTREAMS)) {
+				if(purple_strequal(val, NS_BYTESTREAMS)) {
 					jabber_si_xfer_bytestreams_send_init(xfer);
 					jsx->stream_method |= STREAM_METHOD_BYTESTREAMS;
 					found_method = TRUE;
-				} else if (val && !strcmp(val, NS_IBB)) {
+				} else if (purple_strequal(val, NS_IBB)) {
 					jsx->stream_method |= STREAM_METHOD_IBB;
 					if (!found_method) {
 						/* we haven't tried to init a bytestream session, yet
@@ -1313,9 +1314,9 @@ static void jabber_si_xfer_free(PurpleXfer *xfer)
 			purple_network_remove_port_mapping(purple_xfer_get_fd(xfer));
 		}
 		if (jsx->connect_timeout > 0)
-			purple_timeout_remove(jsx->connect_timeout);
+			g_source_remove(jsx->connect_timeout);
 		if (jsx->ibb_timeout_handle > 0)
-			purple_timeout_remove(jsx->ibb_timeout_handle);
+			g_source_remove(jsx->ibb_timeout_handle);
 
 		if (jsx->streamhosts) {
 			g_list_foreach(jsx->streamhosts, jabber_si_free_streamhost, NULL);
@@ -1688,7 +1689,7 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 	goffset filesize = 0;
 
 	if(!(profile = purple_xmlnode_get_attrib(si, "profile")) ||
-			strcmp(profile, NS_SI_FILE_TRANSFER))
+			!purple_strequal(profile, NS_SI_FILE_TRANSFER))
 		return;
 
 	if(!(stream_id = purple_xmlnode_get_attrib(si, "id")))
@@ -1725,15 +1726,15 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 
 	for(field = purple_xmlnode_get_child(x, "field"); field; field = purple_xmlnode_get_next_twin(field)) {
 		const char *var = purple_xmlnode_get_attrib(field, "var");
-		if(var && !strcmp(var, "stream-method")) {
+		if(purple_strequal(var, "stream-method")) {
 			for(option = purple_xmlnode_get_child(field, "option"); option;
 					option = purple_xmlnode_get_next_twin(option)) {
 				if((value = purple_xmlnode_get_child(option, "value"))) {
 					char *val;
 					if((val = purple_xmlnode_get_data(value))) {
-						if(!strcmp(val, NS_BYTESTREAMS)) {
+						if(purple_strequal(val, NS_BYTESTREAMS)) {
 							jsx->stream_method |= STREAM_METHOD_BYTESTREAMS;
-						} else if(!strcmp(val, NS_IBB)) {
+						} else if(purple_strequal(val, NS_IBB)) {
 							jsx->stream_method |= STREAM_METHOD_IBB;
 						}
 						g_free(val);

@@ -103,15 +103,15 @@ silcpurple_set_status(PurpleAccount *account, PurpleStatus *status)
 		  SILC_UMODE_INDISPOSED |
 		  SILC_UMODE_PAGE);
 
-	if (!strcmp(state, "hyper"))
+	if (purple_strequal(state, "hyper"))
 		mode |= SILC_UMODE_HYPER;
-	else if (!strcmp(state, "away"))
+	else if (purple_strequal(state, "away"))
 		mode |= SILC_UMODE_GONE;
-	else if (!strcmp(state, "busy"))
+	else if (purple_strequal(state, "busy"))
 		mode |= SILC_UMODE_BUSY;
-	else if (!strcmp(state, "indisposed"))
+	else if (purple_strequal(state, "indisposed"))
 		mode |= SILC_UMODE_INDISPOSED;
-	else if (!strcmp(state, "page"))
+	else if (purple_strequal(state, "page"))
 		mode |= SILC_UMODE_PAGE;
 
 	/* Send UMODE */
@@ -221,7 +221,7 @@ silcpurple_scheduler(SilcSchedule schedule,
 	    /* Add timeout */
 	    ptask = silc_calloc(1, sizeof(*ptask));
 	    ptask->sg = sg;
-	    ptask->tag = purple_timeout_add((seconds * 1000) +
+	    ptask->tag = g_timeout_add((seconds * 1000) +
 					    (useconds / 1000),
 					    silcpurple_scheduler_timeout,
 					    ptask);
@@ -602,13 +602,13 @@ silcpurple_login(PurpleAccount *account)
 	cipher = purple_account_get_string(account, "cipher",
 					   SILC_DEFAULT_CIPHER);
 	for (i = 0; silc_default_ciphers[i].name; i++)
-		if (!strcmp(silc_default_ciphers[i].name, cipher)) {
+		if (purple_strequal(silc_default_ciphers[i].name, cipher)) {
 			silc_cipher_register(&(silc_default_ciphers[i]));
 			break;
 		}
 	hmac = purple_account_get_string(account, "hmac", SILC_DEFAULT_HMAC);
 	for (i = 0; silc_default_hmacs[i].name; i++)
-		if (!strcmp(silc_default_hmacs[i].name, hmac)) {
+		if (purple_strequal(silc_default_hmacs[i].name, hmac)) {
 			silc_hmac_register(&(silc_default_hmacs[i]));
 			break;
 		}
@@ -646,7 +646,7 @@ silcpurple_login(PurpleAccount *account)
 
 #if __SILC_TOOLKIT_VERSION < SILC_VERSION(1,1,1)
 	/* Schedule SILC using Glib's event loop */
-	sg->scheduler = purple_timeout_add(300, (GSourceFunc)silcpurple_scheduler, client);
+	sg->scheduler = g_timeout_add(300, (GSourceFunc)silcpurple_scheduler, client);
 #else
 	/* Run SILC scheduler */
 	sg->tasks = silc_dlist_init();
@@ -723,10 +723,10 @@ silcpurple_close(PurpleConnection *gc)
 #endif /* __SILC_TOOLKIT_VERSION */
 
 	if (sg->scheduler)
-		purple_timeout_remove(sg->scheduler);
+		g_source_remove(sg->scheduler);
 
 	purple_debug_info("silc", "Scheduling destruction of SilcPurple %p\n", sg);
-	purple_timeout_add(1, (GSourceFunc)silcpurple_close_final, sg);
+	g_timeout_add(1, (GSourceFunc)silcpurple_close_final, sg);
 }
 
 
@@ -1159,7 +1159,7 @@ silcpurple_create_keypair_cb(PurpleConnection *gc, PurpleRequestFields *fields)
 	else
 		pass2 = "";
 
-	if (strcmp(pass1, pass2)) {
+	if (!purple_strequal(pass1, pass2)) {
 		purple_notify_error(gc, _("Create New SILC Key Pair"),
 			_("Passphrases do not match"), NULL,
 			purple_request_cpar_from_connection(gc));

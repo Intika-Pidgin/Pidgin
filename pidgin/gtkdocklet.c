@@ -147,7 +147,7 @@ docklet_update_status(void)
 	/* determine if any ims have unseen messages */
 	convs = get_pending_list(DOCKLET_TOOLTIP_LINE_LIMIT);
 
-	if (!strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/docklet/show"), "pending")) {
+	if (purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/docklet/show"), "pending")) {
 		if (convs && !visible) {
 			g_list_free(convs);
 			docklet_gtk_status_create(FALSE);
@@ -300,14 +300,14 @@ docklet_show_pref_changed_cb(const char *name, PurplePrefType type,
 			     gconstpointer value, gpointer data)
 {
 	const char *val = value;
-	if (!strcmp(val, "always")) {
+	if (purple_strequal(val, "always")) {
 		if (!visible)
 			docklet_gtk_status_create(FALSE);
 		else if (!visibility_manager) {
 			pidgin_blist_visibility_manager_add();
 			visibility_manager = TRUE;
 		}
-	} else if (!strcmp(val, "never")) {
+	} else if (purple_strequal(val, "never")) {
 		if (visible)
 			docklet_gtk_status_destroy();
 	} else {
@@ -358,7 +358,7 @@ docklet_menu_leave_enter(GtkWidget *menu, GdkEventCrossing *event, void *data)
 		purple_debug(PURPLE_DEBUG_INFO, "docklet", "menu leave-notify-event\n");
 		/* Add some slop so that the menu doesn't annoyingly disappear when mousing around */
 		if (hide_docklet_timer == 0) {
-			hide_docklet_timer = purple_timeout_add(500,
+			hide_docklet_timer = g_timeout_add(500,
 					hide_docklet_menu, menu);
 		}
 	} else if (event->type == GDK_ENTER_NOTIFY && event->detail == GDK_NOTIFY_ANCESTOR) {
@@ -366,7 +366,7 @@ docklet_menu_leave_enter(GtkWidget *menu, GdkEventCrossing *event, void *data)
 		if (hide_docklet_timer != 0) {
 			/* Cancel the hiding if we reenter */
 
-			purple_timeout_remove(hide_docklet_timer);
+			g_source_remove(hide_docklet_timer);
 			hide_docklet_timer = 0;
 		}
 	}
@@ -433,7 +433,7 @@ activate_status_account_cb(GtkMenuItem *menuitem, gpointer user_data)
 				if (sub) {
 					const PurpleStatusType *sub_type = purple_savedstatus_substatus_get_status_type(sub);
 					const char *subtype_status_id = purple_status_type_get_id(sub_type);
-					if (subtype_status_id && !strcmp(subtype_status_id,
+					if (subtype_status_id && purple_strequal(subtype_status_id,
 							purple_status_type_get_id(status_type)))
 						found = TRUE;
 				}
@@ -681,7 +681,6 @@ docklet_menu(void)
 {
 	static GtkWidget *menu = NULL;
 	GtkWidget *menuitem;
-	GtkMenuPositionFunc pos_func = gtk_status_icon_position_menu;
 
 	if (menu) {
 		gtk_widget_destroy(menu);
@@ -745,7 +744,7 @@ docklet_menu(void)
 
 	menuitem = gtk_check_menu_item_new_with_mnemonic(_("Mute _Sounds"));
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitem), purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/sound/mute"));
-	if (!strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"), "none"))
+	if (purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"), "none"))
 		gtk_widget_set_sensitive(GTK_WIDGET(menuitem), FALSE);
 	g_signal_connect(G_OBJECT(menuitem), "toggled", G_CALLBACK(docklet_toggle_mute), NULL);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
@@ -761,12 +760,9 @@ docklet_menu(void)
 #ifdef _WIN32
 	g_signal_connect(menu, "leave-notify-event", G_CALLBACK(docklet_menu_leave_enter), NULL);
 	g_signal_connect(menu, "enter-notify-event", G_CALLBACK(docklet_menu_leave_enter), NULL);
-	pos_func = NULL;
 #endif
 	gtk_widget_show_all(menu);
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL,
-		       pos_func,
-		       docklet, 0, gtk_get_current_event_time());
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 }
 
 static void
@@ -796,7 +792,7 @@ static void
 pidgin_docklet_embedded(void)
 {
 	if (!visibility_manager
-	    && strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/docklet/show"), "pending")) {
+	    && !purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/docklet/show"), "pending")) {
 		pidgin_blist_visibility_manager_add();
 		visibility_manager = TRUE;
 	}
@@ -840,7 +836,7 @@ static gboolean
 docklet_gtk_embedded_cb(GtkWidget *widget, gpointer data)
 {
 	if (embed_timeout) {
-		purple_timeout_remove(embed_timeout);
+		g_source_remove(embed_timeout);
 		embed_timeout = 0;
 	}
 
@@ -885,7 +881,7 @@ docklet_gtk_status_destroy(void)
 	pidgin_docklet_remove();
 
 	if (embed_timeout) {
-		purple_timeout_remove(embed_timeout);
+		g_source_remove(embed_timeout);
 		embed_timeout = 0;
 	}
 
@@ -933,9 +929,9 @@ docklet_gtk_status_create(gboolean recreate)
 		pidgin_docklet_embedded();
 #ifndef _WIN32
 		if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/gtk/embedded")) {
-			embed_timeout = purple_timeout_add_seconds(LONG_EMBED_TIMEOUT, docklet_gtk_embed_timeout_cb, NULL);
+			embed_timeout = g_timeout_add_seconds(LONG_EMBED_TIMEOUT, docklet_gtk_embed_timeout_cb, NULL);
 		} else {
-			embed_timeout = purple_timeout_add_seconds(SHORT_EMBED_TIMEOUT, docklet_gtk_embed_timeout_cb, NULL);
+			embed_timeout = g_timeout_add_seconds(SHORT_EMBED_TIMEOUT, docklet_gtk_embed_timeout_cb, NULL);
 		}
 #endif
 	}
@@ -991,7 +987,7 @@ pidgin_docklet_init()
 	gtk_icon_theme_append_search_path(gtk_icon_theme_get_default(), tmp);
 	g_free(tmp);
 
-	if (!strcmp(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/docklet/show"), "always"))
+	if (purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/docklet/show"), "always"))
 		docklet_gtk_status_create(FALSE);
 
 	purple_signal_connect(conn_handle, "signed-on",

@@ -90,9 +90,6 @@
 /* Define to 1 if you have the `getifaddrs' function. */
 /* #undef HAVE_GETIFADDRS */
 
-/* Define to 1 if you have the `getopt_long' function. */
-/* #define HAVE_GETOPT_LONG 1 */
-
 /* Define if the GNU gettext() function is already present or preinstalled. */
 /* #define HAVE_GETTEXT 1 */
 
@@ -180,18 +177,6 @@
 /* Define to 1 if you have the <paths.h> header file. */
 /* #define HAVE_PATHS_H 1 */
 
-/* Compile with support for perl */
-#define HAVE_PERL 1
-
-/* Define to 1 if you have the `Perl_eval_pv' function. */
-/* #undef HAVE_PERL_EVAL_PV */
-
-/* Define to 1 if you have the <perl.h> header file. */
-#define HAVE_PERL_H 1
-
-/* Define to 1 if you have the `perl_run' function. */
-/* #define HAVE_PERL_RUN 1 */
-
 /* Define to 1 if you have the <prio.h> header file. */
 /* #undef HAVE_PRIO_H */
 
@@ -273,9 +258,6 @@
 /* Define to 1 if you have the <sys/wait.h> header file. */
 /* #define HAVE_SYS_WAIT_H 1 */
 
-/* Compile with support for the Tcl toolkit */
-/* #define HAVE_TCL 1 */
-
 /* Define to 1 if you have the <termios.h> header file. */
 /* #define HAVE_TERMIOS_H 1 */
 
@@ -284,9 +266,6 @@
 
 /* Define if you have the external 'timezone' variable. */
 #define HAVE_TIMEZONE 1
-
-/* Compile with support for the Tk toolkit */
-#define HAVE_TK 1
 
 /* Define if you have a tm_gmtoff member in struct tm */
 /* #define HAVE_TM_GMTOFF 1 */
@@ -305,9 +284,6 @@
 /* Define to 1 if you have X11 */
 /* #define HAVE_X11 1 */
 
-/* Define to 1 if you have the <X11/SM/SMlib.h> header file. */
-/* #define HAVE_X11_SM_SMLIB_H 1 */
-
 /* whether or not we have xsltproc for devhelp index */
 /* #define HAVE_XSLTPROC 1 */
 
@@ -320,9 +296,6 @@
 
 /* Define to 1 if you don't have wide-character support. */
 /* #undef NO_WIDECHAR */
-
-/* Define if old perl is installed. */
-/* #undef OLD_PERL */
 
 /* Name of package */
 #define PACKAGE "pidgin"
@@ -377,12 +350,6 @@
 
 /* Define if python headers are available. */
 /* #undef USE_PYTHON */
-
-/* Define if we're using XScreenSaver. */
-#define USE_SCREENSAVER 1
-
-/* Define if we're using X Session Management. */
-/* #define USE_SM 1 */
 
 /* Use voice and video */
 /* #define USE_VV 1 */

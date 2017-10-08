@@ -24,7 +24,6 @@
 #include "debug.h"
 #include "glibcompat.h"
 #include "image-store.h"
-#include "marshallers.h"
 #include "pidgin.h"
 #include "pidginstock.h"
 
@@ -204,9 +203,8 @@ webview_resource_loading(WebKitWebView *webview,
 			gchar *b64, *src;
 			const gchar *type;
 
-			b64 = purple_base64_encode(
-				purple_image_get_data(img),
-				purple_image_get_size(img));
+			b64 = g_base64_encode(purple_image_get_data(img),
+				purple_image_get_data_size(img));
 			type = purple_image_get_mimetype(img);
 			src = g_strdup_printf("data:%s;base64,%s", type, b64);
 			g_free(b64);
@@ -747,7 +745,7 @@ webview_image_add_smiley(GtkWidget *item, WebKitDOMHTMLImageElement *image_node)
 }
 
 static void
-do_popup_menu(WebKitWebView *webview, int button, int time, int context,
+do_popup_menu(WebKitWebView *webview, GdkEvent *event, int context,
               WebKitDOMNode *node, const char *uri)
 {
 	GtkWidget *menu;
@@ -931,7 +929,7 @@ do_popup_menu(WebKitWebView *webview, int button, int time, int context,
 	g_signal_emit_by_name(G_OBJECT(webview), "populate-popup", menu);
 
 	gtk_menu_attach_to_widget(GTK_MENU(menu), GTK_WIDGET(webview), NULL);
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, button, time);
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), event);
 }
 
 static gboolean
@@ -960,8 +958,7 @@ webview_popup_menu(WebKitWebView *webview)
 		}
 	}
 
-	do_popup_menu(webview, 0, gtk_get_current_event_time(),
-		context, node, uri);
+	do_popup_menu(webview, NULL, context, node, uri);
 
 	g_free(uri);
 
@@ -971,7 +968,7 @@ webview_popup_menu(WebKitWebView *webview)
 static gboolean
 webview_button_pressed(WebKitWebView *webview, GdkEventButton *event)
 {
-	if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
+	if (gdk_event_triggers_context_menu((GdkEvent *)event)) {
 		WebKitHitTestResult *hit;
 		int context;
 		WebKitDOMNode *node;
@@ -984,7 +981,7 @@ webview_button_pressed(WebKitWebView *webview, GdkEventButton *event)
 		             "link-uri", &uri,
 		             NULL);
 
-		do_popup_menu(webview, event->button, event->time, context,
+		do_popup_menu(webview, (GdkEvent *)event, context,
 		              node, uri);
 
 		g_free(uri);
@@ -1345,45 +1342,44 @@ pidgin_webview_class_init(PidginWebViewClass *klass, gpointer userdata)
 	                                       G_TYPE_FROM_CLASS(gobject_class),
 	                                       G_SIGNAL_RUN_FIRST,
 	                                       G_STRUCT_OFFSET(PidginWebViewClass, buttons_update),
-	                                       NULL, 0, g_cclosure_marshal_VOID__INT,
+	                                       NULL, 0, NULL,
 	                                       G_TYPE_NONE, 1, G_TYPE_INT);
 	signals[TOGGLE_FORMAT] = g_signal_new("format-toggled",
 	                                      G_TYPE_FROM_CLASS(gobject_class),
 	                                      G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
 	                                      G_STRUCT_OFFSET(PidginWebViewClass, toggle_format),
-	                                      NULL, 0, g_cclosure_marshal_VOID__INT,
+	                                      NULL, 0, NULL,
 	                                      G_TYPE_NONE, 1, G_TYPE_INT);
 	signals[CLEAR_FORMAT] = g_signal_new("format-cleared",
 	                                     G_TYPE_FROM_CLASS(gobject_class),
 	                                     G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
 	                                     G_STRUCT_OFFSET(PidginWebViewClass, clear_format),
-	                                     NULL, 0, g_cclosure_marshal_VOID__VOID,
+	                                     NULL, 0, NULL,
 	                                     G_TYPE_NONE, 0);
 	signals[UPDATE_FORMAT] = g_signal_new("format-updated",
 	                                      G_TYPE_FROM_CLASS(gobject_class),
 	                                      G_SIGNAL_RUN_FIRST,
 	                                      G_STRUCT_OFFSET(PidginWebViewClass, update_format),
-	                                      NULL, 0, g_cclosure_marshal_VOID__VOID,
+	                                      NULL, 0, NULL,
 	                                      G_TYPE_NONE, 0);
 	signals[CHANGED] = g_signal_new("changed",
 	                                G_TYPE_FROM_CLASS(gobject_class),
 	                                G_SIGNAL_RUN_FIRST,
 	                                G_STRUCT_OFFSET(PidginWebViewClass, changed),
-	                                NULL, NULL, g_cclosure_marshal_VOID__VOID,
+	                                NULL, NULL, NULL,
 	                                G_TYPE_NONE, 0);
 	signals[HTML_APPENDED] = g_signal_new("html-appended",
 	                                      G_TYPE_FROM_CLASS(gobject_class),
 	                                      G_SIGNAL_RUN_FIRST,
 	                                      G_STRUCT_OFFSET(PidginWebViewClass, html_appended),
-	                                      NULL, NULL,
-	                                      g_cclosure_marshal_VOID__OBJECT,
+	                                      NULL, NULL, NULL,
 	                                      G_TYPE_NONE, 1, WEBKIT_TYPE_DOM_RANGE,
 	                                      NULL);
 	signals[INSERT_IMAGE] = g_signal_new("insert-image",
 		G_TYPE_FROM_CLASS(gobject_class), G_SIGNAL_RUN_LAST,
 		G_STRUCT_OFFSET(PidginWebViewClass, insert_image),
-		pidgin_webview_insert_image_accu, NULL,
-		purple_smarshal_BOOLEAN__OBJECT, G_TYPE_BOOLEAN, 1,
+		pidgin_webview_insert_image_accu, NULL, NULL,
+		G_TYPE_BOOLEAN, 1,
 		PURPLE_TYPE_IMAGE);
 
 	/* Class Methods */

@@ -171,7 +171,7 @@ pounce_test_sound(GtkWidget *w, GtkWidget *entry)
 
 	filename = gtk_entry_get_text(GTK_ENTRY(entry));
 
-	if (filename != NULL && *filename != '\0' && strcmp(filename, _("(default)")))
+	if (filename != NULL && *filename != '\0' && !purple_strequal(filename, _("(default)")))
 		purple_sound_play_file(filename, NULL);
 	else
 		purple_sound_play_event(PURPLE_SOUND_POUNCE_DEFAULT, NULL);
@@ -311,7 +311,7 @@ save_pounce_cb(GtkWidget *w, PidginPounceDialog *dialog)
 		message = NULL;
 	}
 	if (*command == '\0') command = NULL;
-	if (*sound   == '\0' || !strcmp(sound, _("(default)"))) sound   = NULL;
+	if (*sound   == '\0' || purple_strequal(sound, _("(default)"))) sound   = NULL;
 
 	/* If the pounce has already been triggered, let's pretend it is a new one */
 	if (dialog->pounce != NULL
@@ -1187,7 +1187,7 @@ pounce_double_click_cb(GtkTreeView *treeview, GdkEventButton *event, gpointer us
 	gtk_tree_path_free(path);
 	gtk_tree_model_get(GTK_TREE_MODEL(dialog->model), &iter, POUNCES_MANAGER_COLUMN_POUNCE, &pounce, -1);
 
-	if ((pounce != NULL) && (event->button == 1) &&
+	if ((pounce != NULL) && (event->button == GDK_BUTTON_PRIMARY) &&
 		(event->type == GDK_2BUTTON_PRESS))
 	{
 		pidgin_pounce_editor_show(NULL, NULL, pounce);
@@ -1254,7 +1254,6 @@ create_pounces_list(PouncesManager *dialog)
 	treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(dialog->model));
 	g_object_unref(G_OBJECT(dialog->model));
 	dialog->treeview = treeview;
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(treeview), TRUE);
 
 	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
 	gtk_tree_selection_set_mode(sel, GTK_SELECTION_MULTIPLE);
