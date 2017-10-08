@@ -78,8 +78,8 @@ G_BEGIN_DECLS
  * @callback: The function to be called when the action is used on
  *                 the selected item.
  * @data:     Additional data to be passed to the callback.
- * @children: A GList of PurpleMenuActions to be added as a submenu
- *                 of the action.
+ * @children: (element-type PurpleMenuAction) (transfer full): Menu actions to
+ *            be added as a submenu of this action.
  *
  * Creates a new PurpleMenuAction.
  *
@@ -132,7 +132,7 @@ gpointer purple_menu_action_get_data(const PurpleMenuAction *act);
  *
  * Returns the children of the PurpleMenuAction.
  *
- * Returns: The  GList of children.
+ * Returns: (element-type PurpleMenuAction) (transfer none): The menu children.
  */
 GList* purple_menu_action_get_children(const PurpleMenuAction *act);
 
@@ -166,7 +166,7 @@ void purple_menu_action_set_data(PurpleMenuAction *act, gpointer data);
 /**
  * purple_menu_action_set_children:
  * @act:       The menu action.
- * @children:  The PurpleMenuAtion children
+ * @children: (element-type PurpleMenuAction) (transfer full): The menu children
  *
  * Set the children of the PurpleMenuAction.
  */
@@ -480,6 +480,18 @@ time_t purple_time_build(int year, int month, int day, int hour,
  */
 time_t purple_str_to_time(const char *timestamp, gboolean utc,
                         struct tm *tm, long *tz_off, const char **rest);
+
+/**
+ * purple_str_to_date_time:
+ * @timestamp: The timestamp
+ * @utc:       Assume UTC if no timezone specified
+ *
+ * Parses a timestamp in jabber, ISO8601, or MM/DD/YYYY format and returns
+ * a GDateTime.
+ *
+ * Returns: (transfer full): A GDateTime.
+ */
+GDateTime *purple_str_to_date_time(const char *timestamp, gboolean utc);
 
 /**
  * purple_uts35_to_str:
@@ -1384,8 +1396,8 @@ gboolean purple_ipv6_address_is_valid(const char *ip);
  * This function extracts a list of URIs from the a "text/uri-list"
  * string.  It was "borrowed" from gnome_uri_list_extract_uris
  *
- * Returns: A GList containing strings allocated with g_malloc
- *         that have been splitted from uri-list.
+ * Returns: (element-type utf8): A GList containing strings allocated with
+ *          g_malloc that have been split from uri-list.
  */
 GList *purple_uri_list_extract_uris(const gchar *uri_list);
 
@@ -1397,10 +1409,10 @@ GList *purple_uri_list_extract_uris(const gchar *uri_list);
  * "text/uri-list" string.  It was "borrowed" from
  * gnome_uri_list_extract_filenames
  *
- * Returns: A GList containing strings allocated with g_malloc that
- *         contain the filenames in the uri-list. Note that unlike
- *         purple_uri_list_extract_uris() function, this will discard
- *         any non-file uri from the result value.
+ * Returns: (element-type utf8): A GList containing strings allocated with
+ *          g_malloc that contain the filenames in the uri-list. Note that
+ *          unlike the purple_uri_list_extract_uris() function, this will
+ *          discard any non-file uri from the result value.
  */
 GList *purple_uri_list_extract_filenames(const gchar *uri_list);
 
@@ -1486,17 +1498,6 @@ int purple_utf8_strcasecmp(const char *a, const char *b);
  * Returns: TRUE if haystack has the word, otherwise FALSE
  */
 gboolean purple_utf8_has_word(const char *haystack, const char *needle);
-
-/**
- * purple_print_utf8_to_console:
- * @filestream: The file stream (e.g. STDOUT or STDERR)
- * @message:    The message to print.
- *
- * Prints a UTF-8 message to the given file stream. The function
- * tries to convert the UTF-8 message to user's locale. If this
- * is not possible, the original UTF-8 text will be printed.
- */
-void purple_print_utf8_to_console(FILE *filestream, char *message);
 
 /**
  * purple_message_meify:

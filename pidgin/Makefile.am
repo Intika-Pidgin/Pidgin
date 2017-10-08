@@ -1,13 +1,15 @@
 EXTRA_DIST = \
-		getopt.c \
-		getopt.h \
-		getopt1.c \
+		about.ui \
+		about.html \
+		about.md \
+		credits.json \
 		gtk3compat.h \
 		gtkdebug.html \
+		logo.png \
 		pidgin.gresource.xml \
 		Makefile.mingw \
-		data/pidgin.appdata.xml.in \
-		data/pidgin.desktop.in \
+		data/im.pidgin.Pidgin.appdata.xml.in \
+		data/im.pidgin.Pidgin.desktop.in \
 		data/pidgin-3.pc.in \
 		data/pidgin-3-uninstalled.pc.in \
 		win32/MinimizeToTray.h \
@@ -84,7 +86,8 @@ libpidgin_la_SOURCES = \
 	gtkxfer.c \
 	libpidgin.c \
 	minidialog.c \
-	pidgin.gresource.c \
+	pidginabout.c \
+	pidginresources.c \
 	pidgintooltip.c
 
 libpidgin_la_headers = \
@@ -132,6 +135,7 @@ libpidgin_la_headers = \
 	gtkwhiteboard.h \
 	gtkxfer.h \
 	minidialog.h \
+	pidginabout.h \
 	pidgintooltip.h \
 	pidgin.h
 
@@ -170,22 +174,22 @@ libpidginincludedir=$(includedir)/pidgin
 libpidgininclude_HEADERS = \
 	$(libpidgin_la_headers)
 
-libpidgin_la_builtheaders = pidgin.gresource.h
-libpidgin_la_builtsources = pidgin.gresource.c
+libpidgin_la_builtheaders = pidginresources.h
+libpidgin_la_builtsources = pidginresources.c
 
 BUILT_SOURCES = $(libpidgin_la_builtheaders) $(libpidgin_la_builtsources)
 
-CLEANFILES = pidgin.gresource.h pidgin.gresource.c
+CLEANFILES = pidginresources.h pidginresources.c
 
-%.gresource.h: %.gresource.xml
+%resources.h: %.gresource.xml
 	$(AM_V_GEN)$(GLIB_COMPILE_RESOURCES) --generate-header --target $@ --c-name $* --sourcedir $(srcdir) $<
 
-%.gresource.c: %.gresource.xml
+%resources.c: %.gresource.xml
 	$(AM_V_GEN)$(GLIB_COMPILE_RESOURCES) --generate-source --target $@ --c-name $* --sourcedir $(srcdir) $<
 
-pidgin.gresource.c: gtkdebug.html
-pidgin.gresource.h: gtkdebug.html
-gtkdebug.c: pidgin.gresource.h
+pidginresources.c: gtkdebug.html
+pidginresources.h: gtkdebug.html
+gtkdebug.c: pidginresources.h
 
 libpidgin_la_DEPENDENCIES = @LIBOBJS@ $(LIBPIDGIN_WIN32RES)
 libpidgin_la_LDFLAGS = -export-dynamic -no-undefined \
@@ -200,8 +204,8 @@ libpidgin_la_LIBADD = \
 	$(GSTREAMER_LIBS) \
 	$(GSTVIDEO_LIBS) \
 	$(GSTINTERFACES_LIBS) \
-	$(XSS_LIBS) \
 	$(INTLLIBS) \
+	$(JSON_LIBS) \
 	$(LIBXML_LIBS) \
 	$(WEBKIT_LIBS) \
 	$(GTK_LIBS) \
@@ -232,6 +236,7 @@ AM_CPPFLAGS = \
 	$(GSTINTERFACES_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(JSON_CFLAGS) \
 	$(X11_CFLAGS) \
 	$(DBUS_CFLAGS) \
 	$(LIBXML_CFLAGS) \
@@ -242,19 +247,19 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = data/pidgin-3.pc
 
 if INSTALL_I18N
-DESKTOP_FILE=data/pidgin.desktop
+DESKTOP_FILE=data/im.pidgin.Pidgin.desktop
 
 appsdir = $(datadir)/applications
-apps_in_files = data/pidgin.desktop.in
+apps_in_files = data/im.pidgin.Pidgin.desktop.in
 apps_DATA = $(apps_in_files:.desktop.in=.desktop)
 
 # silenced INTLTOOL_DESKTOP_RULE
 %.desktop: %.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po)
 	$(AM_V_GEN) LC_ALL=C $(INTLTOOL_MERGE) -d -u -c $(top_builddir)/po/.intltool-merge-cache $(top_srcdir)/po $< $@ > /dev/null
 
-appdatadir = $(datarootdir)/appdata
+appdatadir = $(datarootdir)/metainfo
 appdata_DATA = $(appdata_in_files:.xml.in=.xml)
-appdata_in_files = data/pidgin.appdata.xml.in
+appdata_in_files = data/im.pidgin.Pidgin.appdata.xml.in
 
 @INTLTOOL_XML_RULE@
 

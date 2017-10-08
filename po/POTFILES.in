@@ -45,7 +45,7 @@ libpurple/buddylist.c
 libpurple/connection.c
 libpurple/conversation.c
 libpurple/conversationtypes.c
-libpurple/data/purple-url-handler.desktop.in
+libpurple/data/purple-url-handler.desktop.in.in
 libpurple/dbus-server.c
 libpurple/dbus-server.h
 libpurple/http.c
@@ -168,8 +168,10 @@ libpurple/util.c
 libpurple/win32/libc_interface.c
 libpurple/xfer.c
 libpurple/xmlnode.c
-pidgin/data/pidgin.appdata.xml.in
-pidgin/data/pidgin.desktop.in
+[type: gettext/glade]pidgin/about.ui
+pidgin/credits.json
+pidgin/data/im.pidgin.Pidgin.appdata.xml.in
+pidgin/data/im.pidgin.Pidgin.desktop.in.in
 pidgin/gtkaccount.c
 pidgin/gtkblist-theme.c
 pidgin/gtkblist.c
@@ -199,6 +201,7 @@ pidgin/gtkwhiteboard.c
 pidgin/gtkxfer.c
 pidgin/libpidgin.c
 pidgin/pidgin.h
+pidgin/pidginabout.c
 pidgin/pidginstock.c
 pidgin/pidgintooltip.c
 pidgin/pixmaps/emotes/default/24/default.theme.in

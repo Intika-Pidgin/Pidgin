@@ -301,7 +301,7 @@ account_status_changed_cb(PurpleAccount *account, PurpleStatus *oldstatus, Purpl
 static gboolean
 icon_box_press_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
 {
-	if (event->button == 3) {
+	if (gdk_event_triggers_context_menu((GdkEvent *)event)) {
 		GtkWidget *menu_item;
 		const char *path;
 
@@ -320,8 +320,7 @@ icon_box_press_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box
 				|| !*path)
 			gtk_widget_set_sensitive(menu_item, FALSE);
 
-		gtk_menu_popup(GTK_MENU(box->icon_box_menu), NULL, NULL, NULL, NULL,
-			       event->button, event->time);
+		gtk_menu_popup_at_pointer(GTK_MENU(box->icon_box_menu), (GdkEvent *)event);
 
 	} else {
 		choose_buddy_icon_cb(widget, box);
@@ -1094,7 +1093,7 @@ webview_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_b
 	/* Reset the status if Escape was pressed */
 	if (event->keyval == GDK_KEY_Escape)
 	{
-		purple_timeout_remove(status_box->typing);
+		g_source_remove(status_box->typing);
 		status_box->typing = 0;
 #if 0
 	/* TODO WebKit: Doesn't do this? */
@@ -1112,8 +1111,8 @@ webview_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_b
 	}
 
 	pidgin_status_box_pulse_typing(status_box);
-	purple_timeout_remove(status_box->typing);
-	status_box->typing = purple_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
+	g_source_remove(status_box->typing);
+	status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
 
 	return FALSE;
 }
@@ -1209,7 +1208,7 @@ spellcheck_prefs_cb(const char *name, PurplePrefType type,
 static gboolean button_released_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
 {
 
-	if (event->button != 1)
+	if (event->button != GDK_BUTTOM_PRIMARY)
 		return FALSE;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(box->toggle_button), FALSE);
 	if (!box->webview_visible)
@@ -1219,7 +1218,7 @@ static gboolean button_released_cb(GtkWidget *widget, GdkEventButton *event, Pid
 
 static gboolean button_pressed_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
 {
-	if (event->button != 1)
+	if (event->button != GDK_BUTTOM_PRIMARY)
 		return FALSE;
 	gtk_combo_box_popup(GTK_COMBO_BOX(box));
 	/* Disabled until button_released_cb works */
@@ -2562,7 +2561,7 @@ static void remove_typing_cb(PidginStatusBox *status_box)
 		PIDGIN_WEBVIEW(status_box->webview), TRUE);
 #endif
 
-	purple_timeout_remove(status_box->typing);
+	g_source_remove(status_box->typing);
 	status_box->typing = 0;
 
 	activate_currently_selected_status(status_box);
@@ -2591,7 +2590,7 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 			   DATA_COLUMN, &data,
 			   -1);
 	if ((wastyping = (status_box->typing != 0)))
-		purple_timeout_remove(status_box->typing);
+		g_source_remove(status_box->typing);
 	status_box->typing = 0;
 
 	if (gtk_widget_get_sensitive(GTK_WIDGET(status_box)))
@@ -2661,7 +2660,7 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 		if (status_box->webview_visible)
 		{
 			gtk_widget_show_all(status_box->vbox);
-			status_box->typing = purple_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
+			status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
 			gtk_widget_grab_focus(status_box->webview);
 #if 0
 			/* TODO WebKit: Doesn't do this? */
@@ -2718,9 +2717,9 @@ webview_changed_cb(PidginWebView *webview, void *data)
 	{
 		if (status_box->typing != 0) {
 			pidgin_status_box_pulse_typing(status_box);
-			purple_timeout_remove(status_box->typing);
+			g_source_remove(status_box->typing);
 		}
-		status_box->typing = purple_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
+		status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
 	}
 	pidgin_status_box_refresh(status_box);
 }

@@ -35,7 +35,7 @@ SCAN_OPTIONS=\
 
 # Extra options to supply to gtkdoc-mkdb.
 # e.g. MKDB_OPTIONS=--xml-mode --output-format=xml
-MKDB_OPTIONS=--xml-mode --output-format=xml
+MKDB_OPTIONS=--xml-mode --output-format=xml --ignore-files="$(IGNORE_HFILES)"
 
 # Extra options to supply to gtkdoc-mktmpl
 # e.g. MKTMPL_OPTIONS=--only-section-tmpl
@@ -65,9 +65,9 @@ IGNORE_HFILES=\
 	plugins \
 	themes \
 	win32 \
-	getopt.h \
 	gtk3compat.h \
-	gtkinternal.h
+	gtkinternal.h \
+	pidgin.gresource.h
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
@@ -119,7 +119,6 @@ GTKDOC_LIBS = \
 	$(GSTREAMER_LIBS) \
 	$(GSTVIDEO_LIBS) \
 	$(GSTINTERFACES_LIBS) \
-	$(XSS_LIBS) \
 	$(INTLLIBS) \
 	$(LIBXML_LIBS) \
 	$(WEBKIT_LIBS) \
