@@ -84,7 +84,7 @@ static gint delete_win_cb(GtkWidget *w, GdkEventAny *e, gpointer d)
 		purple_roomlist_cancel_get_list(dialog->roomlist);
 
 	if (dialog->pg_update_to > 0)
-		purple_timeout_remove(dialog->pg_update_to);
+		g_source_remove(dialog->pg_update_to);
 
 	if (dialog->roomlist) {
 		PidginRoomlist *rl = purple_roomlist_get_ui_data(dialog->roomlist);
@@ -298,7 +298,7 @@ static gboolean room_click_cb(GtkWidget *tv, GdkEventButton *event, PurpleRoomli
 	GtkWidget *menu;
 	static struct _menu_cb_info info; /* XXX? */
 
-	if (event->button != 3 || event->type != GDK_BUTTON_PRESS)
+	if (!gdk_event_triggers_context_menu((GdkEvent *)event))
 		return FALSE;
 
 	/* Here we figure out which room was clicked */
@@ -323,7 +323,7 @@ static gboolean room_click_cb(GtkWidget *tv, GdkEventButton *event, PurpleRoomli
                         G_CALLBACK(do_add_room_cb), &info);
 
 	gtk_widget_show_all(menu);
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 3, event->time);
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
 
 	return FALSE;
 }
@@ -728,7 +728,6 @@ static void pidgin_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
 	g_free(types);
 
 	tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(tree), TRUE);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 	g_signal_connect(G_OBJECT(selection), "changed",

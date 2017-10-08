@@ -259,6 +259,9 @@ version 3.0.0 (??/??/????):
 		* PurpleIconScaleRules renamed to PurpleBuddyIconScaleFlags
 		* purple_imgstore_add renamed to purple_imgstore_new
 		* purple_imgstore_add_with_id renamed to purple_imgstore_new_with_id
+		* PurpleLog, purple_log_new, purple_log_write and
+		  PurpleLogLogger->write take a GDateTime instead of a time_t
+		  and struct tm
 		* purple_network_listen now takes the protocol family as the second
 		  parameter
 		* purple_network_listen now takes a boolean indicating external port
@@ -468,6 +471,7 @@ version 3.0.0 (??/??/????):
 		* purple_presence_new
 		* purple_presence_new_for_account
 		* purple_presence_new_for_buddy
+		* purple_print_utf8_to_console
 		* PurplePluginProtocolInfo
 		* purple_proxy_connect_socks5
 		* purple_request_field_list_add
@@ -484,6 +488,7 @@ version 3.0.0 (??/??/????):
 		* purple_status_type_set_primary_attr
 		* purple_strlcat
 		* purple_strlcpy
+		* purple_timeout_*. Use g_timeout_* or g_idle_* instead.
 		* purple_txt_cancel
 		* purple_txt_resolve_account
 		* PurpleType, use GType instead.
