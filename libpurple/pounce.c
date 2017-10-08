@@ -278,7 +278,7 @@ sync_pounces(void)
 
 	node = pounces_to_xmlnode();
 	data = purple_xmlnode_to_formatted_str(node, NULL);
-	purple_util_write_data_to_data_file("pounces.xml", data, -1);
+	purple_util_write_data_to_config_file("pounces.xml", data, -1);
 	g_free(data);
 	purple_xmlnode_free(node);
 }
@@ -570,7 +570,7 @@ static GMarkupParser pounces_parser =
 static gboolean
 purple_pounces_load(void)
 {
-	gchar *filename = g_build_filename(purple_data_dir(), "pounces.xml", NULL);
+	gchar *filename = g_build_filename(purple_config_dir(), "pounces.xml", NULL);
 	gchar *contents = NULL;
 	gsize length;
 	GMarkupParseContext *context;
