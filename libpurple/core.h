@@ -232,7 +232,7 @@ GHashTable* purple_core_get_ui_info(void);
  * Migrates from legacy directory for libpurple to location following 
  * XDG base dir spec. https://developer.pidgin.im/ticket/10029
  * NOTE This is not finished yet. Need to decide where other profile files
- * should be moved.
+ * should be moved. Search for usages of purple_user_dir().
  * 
  * Returns: TRUE if migrated successfully, FALSE otherwise. On failure,
  *         the application must display an error to the user and then exit.
