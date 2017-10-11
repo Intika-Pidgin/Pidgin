@@ -54,6 +54,7 @@ libpurple/log.c
 libpurple/mediamanager.c
 libpurple/media/backend-fs2.c
 libpurple/message.c
+libpurple/options.c
 libpurple/plugins.c
 libpurple/plugins/autoaccept.c
 libpurple/plugins/buddynote.c
