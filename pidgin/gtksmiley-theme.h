@@ -148,7 +148,7 @@ pidgin_smiley_theme_for_conv(PurpleConversation *conv);
  *
  * Returns the list of currently available smiley themes.
  *
- * Returns: (transfer none): the #GList of #PidginSmileyTheme's.
+ * Returns: (transfer none) (element-type PidginSmileyTheme): the #GList of #PidginSmileyTheme's.
  */
 GList *
 pidgin_smiley_theme_get_all(void);

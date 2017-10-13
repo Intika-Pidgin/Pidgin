@@ -187,7 +187,7 @@ void pidgin_mini_dialog_enable_description_markup(PidginMiniDialog *mini_dialog)
 /**
  * pidgin_mini_dialog_set_link_callback:
  * @mini_dialog: a mini-dialog
- * @cb: the callback to invoke
+ * @cb: (scope call): the callback to invoke
  * @user_data: the user data to pass to the callback
  *
  * Sets a callback which gets invoked when a hyperlink in the dialog's description is clicked on.
@@ -218,7 +218,7 @@ void pidgin_mini_dialog_set_custom_icon(PidginMiniDialog *mini_dialog,
  * pidgin_mini_dialog_add_button:
  * @mini_dialog: a mini-dialog
  * @text:        the text to display on the new button
- * @clicked_cb:  the function to call when the button is clicked
+ * @clicked_cb: (scope call): the function to call when the button is clicked
  * @user_data:   arbitrary data to pass to @clicked_cb when it is
  *                    called.
  *
@@ -232,6 +232,11 @@ void pidgin_mini_dialog_add_button(PidginMiniDialog *mini_dialog,
 
 /**
  * pidgin_mini_dialog_add_non_closing_button:
+ * @mini_dialog: a mini-dialog
+ * @text:        the text to display on the new button
+ * @clicked_cb: (scope call): the function to call when the button is clicked
+ * @user_data:   arbitrary data to pass to @clicked_cb when it is
+ *                    called.
  *
  * Equivalent to pidgin_mini_dialog_add_button(), the only difference
  * is that the mini-dialog won't be closed after the button is clicked.

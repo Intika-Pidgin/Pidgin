@@ -104,7 +104,7 @@ void pidgin_setup_webview(GtkWidget *webview);
  * function puts both widgets in a nice GtkFrame.  They're separated by an
  * attractive GtkSeparator.
  *
- * Returns: The GtkFrame containing the toolbar and webview.
+ * Returns: (transfer full): The GtkFrame containing the toolbar and webview.
  */
 GtkWidget *pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, GtkWidget **sw_ret);
 
@@ -114,7 +114,7 @@ GtkWidget *pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, Gtk
  *
  * Creates a small button
  *
- * Returns:   A GtkButton created from the image.
+ * Returns: (transfer full): A GtkButton created from the image.
  */
 GtkWidget *pidgin_create_small_button(GtkWidget *image);
 
@@ -126,6 +126,8 @@ GtkWidget *pidgin_create_small_button(GtkWidget *image);
  * @resizable:    Whether the window should be resizable (%TRUE) or not (%FALSE)
  *
  * Creates a new window
+ *
+ * Returns: (transfer full): A new window.
  */
 GtkWidget *pidgin_create_window(const char *title, guint border_width, const char *role, gboolean resizable);
 
@@ -137,6 +139,8 @@ GtkWidget *pidgin_create_window(const char *title, guint border_width, const cha
  * @resizable:    Whether the window should be resizable (%TRUE) or not (%FALSE)
  *
  * Creates a new dialog window
+ *
+ * Returns: (transfer full): A new dialog window.
  */
 GtkWidget *pidgin_create_dialog(const char *title, guint border_width, const char *role, gboolean resizable);
 
@@ -144,6 +148,8 @@ GtkWidget *pidgin_create_dialog(const char *title, guint border_width, const cha
  * pidgin_create_video_widget:
  *
  * Creates a new drawing area suitable for displaying a video
+ *
+ * Returns: (transfer full): A new drawing area for displaying video.
  */
 GtkWidget *pidgin_create_video_widget(void);
 
@@ -154,6 +160,8 @@ GtkWidget *pidgin_create_video_widget(void);
  * @spacing:      the number of pixels to place by default between children
  *
  * Retrieves the main content box (vbox) from a pidgin dialog window
+ *
+ * Returns: (transfer none): The main vbox from @dialog.
  */
 GtkWidget *pidgin_dialog_get_vbox_with_properties(GtkDialog *dialog, gboolean homogeneous, gint spacing);
 
@@ -162,19 +170,21 @@ GtkWidget *pidgin_dialog_get_vbox_with_properties(GtkDialog *dialog, gboolean ho
  * @dialog:       The dialog window
  *
  * Retrieves the main content box (vbox) from a pidgin dialog window
+ *
+ * Returns: (transfer none): the main vbox from @dialog.
  */
 GtkWidget *pidgin_dialog_get_vbox(GtkDialog *dialog);
 
 /**
  * pidgin_dialog_add_button:
- * @dialog:         The dialog window
- * @label:          The stock-id or the label for the button
- * @callback:       The callback function for the button
- * @callbackdata:   The user data for the callback function
+ * @dialog: The dialog window
+ * @label: The stock-id or the label for the button
+ * @callback: (scope call): The callback function for the button
+ * @callbackdata: The user data for the callback function
  *
  * Add a button to a dialog created by #pidgin_create_dialog.
  *
- * Returns: The created button.
+ * Returns: (transfer full): The created button.
  */
 GtkWidget *pidgin_dialog_add_button(GtkDialog *dialog, const char *label,
 		GCallback callback, gpointer callbackdata);
@@ -184,6 +194,8 @@ GtkWidget *pidgin_dialog_add_button(GtkDialog *dialog, const char *label,
  * @dialog:       The dialog window
  *
  * Retrieves the action area (button box) from a pidgin dialog window
+ *
+ * Returns: (transfer none): The action area (button box) from @dialog.
  */
 GtkWidget *pidgin_dialog_get_action_area(GtkDialog *dialog);
 
@@ -210,7 +222,7 @@ void pidgin_set_sensitive_if_input(GtkWidget *entry, GtkWidget *dialog);
 /**
  * pidgin_toggle_sensitive_array:
  * @w:    %NULL. Used for signal handlers.
- * @data: The array containing the widgets to toggle.
+ * @data: (element-type GtkWidget): The array containing the widgets to toggle.
  *
  * Toggles the sensitivity of all widgets in a pointer array.
  */
@@ -231,21 +243,21 @@ void pidgin_toggle_showhide(GtkWidget *widget, GtkWidget *to_toggle);
  *
  * Adds a separator to a menu.
  *
- * Returns: The separator.
+ * Returns: (transfer full): The separator.
  */
 GtkWidget *pidgin_separator(GtkWidget *menu);
 
 /**
  * pidgin_new_check_item:
- * @menu:     The menu to which to append the check menu item.
- * @str:      The title to use for the newly created menu item.
- * @cb:       A function to call when the menu item is activated.
- * @data:     Data to pass to the signal function.
- * @checked:  The initial state of the check item
+ * @menu: The menu to which to append the check menu item.
+ * @str: The title to use for the newly created menu item.
+ * @cb: (scope call): A function to call when the menu item is activated.
+ * @data: Data to pass to the signal function.
+ * @checked: The initial state of the check item
  *
  * Creates a check menu item.
  *
- * Returns: The newly created menu item.
+ * Returns: (transfer full): The newly created menu item.
  */
 GtkWidget *pidgin_new_check_item(GtkWidget *menu, const char *str,
 		GCallback cb, gpointer data, gboolean checked);
@@ -256,12 +268,12 @@ GtkWidget *pidgin_new_check_item(GtkWidget *menu, const char *str,
  * @mnemonic:   The title for the menu item.
  * @icon:       An icon to place to the left of the menu item,
  *                   or %NULL for no icon.
- * @cb:         A function to call when the menu item is activated.
+ * @cb: (scope call): A function to call when the menu item is activated.
  * @data:       Data to pass to the signal function.
  *
  * Creates a menu item.
  *
- * Returns: The newly created menu item.
+ * Returns: (transfer full): The newly created menu item.
  */
 GtkWidget *pidgin_new_menu_item(GtkWidget *menu, const char *mnemonic,
                 const char *icon, GCallback cb, gpointer data);
@@ -274,7 +286,7 @@ GtkWidget *pidgin_new_menu_item(GtkWidget *menu, const char *mnemonic,
  *
  * Creates a button with the specified text and stock icon.
  *
- * Returns: The button.
+ * Returns: (transfer full): The button.
  */
 GtkWidget *pidgin_pixbuf_button_from_stock(const char *text, const char *icon,
 										 PidginButtonOrientation style);
@@ -285,7 +297,7 @@ GtkWidget *pidgin_pixbuf_button_from_stock(const char *text, const char *icon,
  *
  * Creates a toolbar button with the stock icon.
  *
- * Returns: The button.
+ * Returns: (transfer full): The button.
  */
 GtkWidget *pidgin_pixbuf_toolbar_button_from_stock(const char *stock);
 
@@ -296,19 +308,19 @@ GtkWidget *pidgin_pixbuf_toolbar_button_from_stock(const char *stock);
  *
  * Creates a HIG preferences frame.
  *
- * Returns: The vbox to put things into.
+ * Returns: (transfer full): The vbox to put things into.
  */
 GtkWidget *pidgin_make_frame(GtkWidget *parent, const char *title);
 
 /**
  * pidgin_protocol_option_menu_new:
- * @id:        The protocol to select by default.
- * @cb:        The callback to call when a protocol is selected.
+ * @id: The protocol to select by default.
+ * @cb: (scope call): The callback to call when a protocol is selected.
  * @user_data: Data to pass to the callback function.
  *
  * Creates a drop-down option menu filled with protocols.
  *
- * Returns: The drop-down option menu.
+ * Returns: (transfer full): The drop-down option menu.
  */
 GtkWidget *pidgin_protocol_option_menu_new(const char *id,
 											 GCallback cb,
@@ -328,16 +340,16 @@ const char *pidgin_protocol_option_menu_get_selected(GtkWidget *optmenu);
 /**
  * pidgin_account_option_menu_new:
  * @default_account: The account to select by default.
- * @show_all:        Whether or not to show all accounts, or just
- *                        active accounts.
- * @cb:              The callback to call when an account is selected.
- * @filter_func:     A function for checking if an account should
- *                        be shown. This can be NULL.
- * @user_data:       Data to pass to the callback function.
+ * @show_all: Whether or not to show all accounts, or just
+ *            active accounts.
+ * @cb: (scope call): The callback to call when an account is selected.
+ * @filter_func: (scope call): A function for checking if an account should
+ *               be shown. This can be NULL.
+ * @user_data: Data to pass to the callback function.
  *
  * Creates a drop-down option menu filled with accounts.
  *
- * Returns: The drop-down option menu.
+ * Returns: (transfer full): The drop-down option menu.
  */
 GtkWidget *pidgin_account_option_menu_new(PurpleAccount *default_account,
 		gboolean show_all, GCallback cb,
@@ -350,7 +362,7 @@ GtkWidget *pidgin_account_option_menu_new(PurpleAccount *default_account,
  *
  * Gets the currently selected account from an account drop down box.
  *
- * Returns: Returns the PurpleAccount that is currently selected.
+ * Returns: (transfer none): Returns the PurpleAccount that is currently selected.
  */
 PurpleAccount *pidgin_account_option_menu_get_selected(GtkWidget *optmenu);
 
@@ -370,7 +382,7 @@ void pidgin_account_option_menu_set_selected(GtkWidget *optmenu, PurpleAccount *
  * @optmenu:     A menu for accounts, returned by pidgin_account_option_menu_new().
  *                    If @optmenu is not %NULL, it'll be updated when a username is chosen
  *                    from the autocomplete list.
- * @filter_func: A function for checking if an autocomplete entry
+ * @filter_func: (scope call): A function for checking if an autocomplete entry
  *                    should be shown. This can be %NULL.
  * @user_data:  The data to be passed to the filter_func function.
  *
@@ -525,7 +537,7 @@ void pidgin_buddy_icon_get_scale_size(GdkPixbuf *buf, PurpleBuddyIconSpec *spec,
  * Returns the base image to represent the account, based on
  * the currently selected theme.
  *
- * Returns: A newly-created pixbuf with a reference count of 1,
+ * Returns: (transfer full): A newly-created pixbuf with a reference count of 1,
  *         or NULL if any of several error conditions occurred:
  *         the file could not be opened, there was no loader
  *         for the file's format, there was not enough memory
@@ -542,7 +554,7 @@ GdkPixbuf *pidgin_create_protocol_icon(PurpleAccount *account, PidginProtocolIco
  *
  * Creates a status icon for a given primitve
  *
- * Returns: A GdkPixbuf, created from stock
+ * Returns: (transfer full): A GdkPixbuf, created from stock
  */
 GdkPixbuf * pidgin_create_status_icon(PurpleStatusPrimitive primitive, GtkWidget *w, const char *size);
 
@@ -574,7 +586,7 @@ const char *pidgin_stock_id_from_presence(PurplePresence *presence);
  *
  * Append a PurpleMenuAction to a menu.
  *
- * Returns:   The menuitem added.
+ * Returns: (transfer full): The menuitem added.
  */
 GtkWidget *pidgin_append_menu_action(GtkWidget *menu, PurpleMenuAction *act,
                                  gpointer gobject);
@@ -614,7 +626,7 @@ void pidgin_clear_cursor(GtkWidget *widget);
  *
  * Creates a File Selection widget for choosing a buddy icon
  *
- * Returns:            The file dialog
+ * Returns: (transfer full): The file dialog
  */
 GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(const char*,gpointer), gpointer data);
 
@@ -673,7 +685,7 @@ typedef void (*PidginUtilMiniDialogCallback)(gpointer user_data, GtkButton *);
  *
  * See <link linkend="pidgin-pidginstock">Stock Resources</link>.
  *
- * Returns:               A #PidginMiniDialog, suitable for passing to
+ * Returns: (transfer full) A #PidginMiniDialog, suitable for passing to
  *                       pidgin_blist_add_alert().
  */
 GtkWidget *pidgin_make_mini_dialog(PurpleConnection *handle,
@@ -682,9 +694,24 @@ GtkWidget *pidgin_make_mini_dialog(PurpleConnection *handle,
 
 /**
  * pidgin_make_mini_dialog_with_custom_icon:
+ * @custom_icon: A custom GdkPixbuf to use.
+ * @primary: The primary text
+ * @secondary: The secondary text, or %NULL for no description.
+ * @user_data: Data to pass to the callbacks
+ * @...: a %NULL-terminated list of button labels
+ *       (<type>char *</type>) and callbacks
+ *       (#PidginUtilMiniDialogCallback).  @user_data will be
+ *       passed as the first argument.  (Callbacks may lack a
+ *       second argument, or be %NULL to take no action when
+ *       the corresponding button is pressed.) When a button is
+ *       pressed, the callback (if any) will be called; when
+ *       the callback returns the dialog will be destroyed.
  *
  * Does exactly what pidgin_make_mini_dialog() does, except you can specify
  * a custom icon for the dialog.
+ *
+ * Returns: (transfer full): A #PidginMiniDialog, suitable for passing to
+ *          pidgin_blist_add_alert().
  */
 GtkWidget *pidgin_make_mini_dialog_with_custom_icon(PurpleConnection *gc,
 	GdkPixbuf *custom_icon,
@@ -748,13 +775,13 @@ const char *pidgin_get_dim_grey_string(GtkWidget *widget);
 
 /**
  * pidgin_text_combo_box_entry_new:
- * @default_item:   Initial contents of GtkEntry
- * @items:          GList containing strings to add to GtkComboBox
+ * @default_item: Initial contents of GtkEntry
+ * @items: (element-type utf8): GList containing strings to add to GtkComboBox
  *
  * Create a simple text GtkComboBoxEntry equivalent
  *
- * Returns:               A newly created text GtkComboBox containing a GtkEntry
- *                       child.
+ * Returns: (transfer full): A newly created text GtkComboBox containing a GtkEntry
+ *          child.
  */
 GtkWidget *pidgin_text_combo_box_entry_new(const char *default_item, GList *items);
 
@@ -798,7 +825,7 @@ gboolean pidgin_auto_parent_window(GtkWidget *window);
  *
  * Add a labelled widget to a GtkBox
  *
- * Returns:  A GtkBox already added to the GtkBox containing the GtkLabel and the GtkWidget.
+ * Returns:  (transfer full): A GtkBox already added to the GtkBox containing the GtkLabel and the GtkWidget.
  */
 GtkWidget *pidgin_add_widget_to_vbox(GtkBox *vbox, const char *widget_label, GtkSizeGroup *sg, GtkWidget *widget, gboolean expand, GtkWidget **p_label);
 
@@ -809,7 +836,7 @@ GtkWidget *pidgin_add_widget_to_vbox(GtkBox *vbox, const char *widget_label, Gtk
  *
  * Create a GdkPixbuf from a chunk of image data.
  *
- * Returns: A GdkPixbuf created from the image data, or NULL if
+ * Returns: (transfer full): A GdkPixbuf created from the image data, or NULL if
  *         there was an error parsing the data.
  */
 GdkPixbuf *pidgin_pixbuf_from_data(const guchar *buf, gsize count);
@@ -821,7 +848,7 @@ GdkPixbuf *pidgin_pixbuf_from_data(const guchar *buf, gsize count);
  *
  * Create a GdkPixbufAnimation from a chunk of image data.
  *
- * Returns: A GdkPixbufAnimation created from the image data, or NULL if
+ * Returns: (transfer full): A GdkPixbufAnimation created from the image data, or NULL if
  *         there was an error parsing the data.
  */
 GdkPixbufAnimation *pidgin_pixbuf_anim_from_data(const guchar *buf, gsize count);
@@ -832,7 +859,7 @@ GdkPixbufAnimation *pidgin_pixbuf_anim_from_data(const guchar *buf, gsize count)
  *
  * Create a GdkPixbuf from a PurpleImage.
  *
- * Returns: a GdkPixbuf created from the @image.
+ * Returns: (transfer full): a GdkPixbuf created from the @image.
  */
 GdkPixbuf *
 pidgin_pixbuf_from_image(PurpleImage *image);
@@ -856,7 +883,7 @@ pidgin_pixbuf_from_image(PurpleImage *image);
  * gdk-pixbuf where the aforementioned bug is fixed.  However, it might be
  * nice to keep this function around for the debug message that it logs.
  *
- * Returns: The GdkPixbuf if successful.  Otherwise NULL is returned and
+ * Returns: (transfer full): The GdkPixbuf if successful.  Otherwise NULL is returned and
  *         a warning is logged.
  */
 GdkPixbuf *pidgin_pixbuf_new_from_file(const char *filename);
@@ -882,7 +909,7 @@ GdkPixbuf *pidgin_pixbuf_new_from_file(const char *filename);
  * gdk-pixbuf where the aforementioned bug is fixed.  However, it might be
  * nice to keep this function around for the debug message that it logs.
  *
- * Returns: The GdkPixbuf if successful.  Otherwise NULL is returned and
+ * Returns: (transfer full): The GdkPixbuf if successful.  Otherwise NULL is returned and
  *         a warning is logged.
  */
 GdkPixbuf *pidgin_pixbuf_new_from_file_at_size(const char *filename, int width, int height);
@@ -909,7 +936,7 @@ GdkPixbuf *pidgin_pixbuf_new_from_file_at_size(const char *filename, int width, 
  * gdk-pixbuf where the aforementioned bug is fixed.  However, it might be
  * nice to keep this function around for the debug message that it logs.
  *
- * Returns: The GdkPixbuf if successful.  Otherwise NULL is returned and
+ * Returns: (transfer full): The GdkPixbuf if successful.  Otherwise NULL is returned and
  *         a warning is logged.
  */
 GdkPixbuf *pidgin_pixbuf_new_from_file_at_scale(const char *filename, int width, int height, gboolean preserve_aspect_ratio);
@@ -928,7 +955,7 @@ GdkPixbuf *pidgin_pixbuf_new_from_file_at_scale(const char *filename, int width,
  * If new image is created, @src reference cound will be decreased and new image
  * with a ref count of 1 will be returned.
  *
- * Returns: The image with proper sizing. %NULL in case of error.
+ * Returns: (transfer full): The image with proper sizing. %NULL in case of error.
  */
 GdkPixbuf *
 pidgin_pixbuf_scale_down(GdkPixbuf *src, guint max_width, guint max_height,
@@ -944,6 +971,8 @@ pidgin_pixbuf_scale_down(GdkPixbuf *src, guint max_width, guint max_height,
  * @height:             Desired widget height, or -1 for default
  *
  * Add scrollbars to a widget
+ *
+ * Returns: (transfer full): A scrolled window with @child packed inside of it.
  */
 GtkWidget *pidgin_make_scrollable(GtkWidget *child, GtkPolicyType hscrollbar_policy, GtkPolicyType vscrollbar_policy, GtkShadowType shadow_type, int width, int height);
 

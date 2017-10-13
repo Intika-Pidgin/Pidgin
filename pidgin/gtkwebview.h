@@ -666,7 +666,7 @@ pidgin_webview_set_toolbar(PidginWebView *webview, GtkWidget *toolbar);
  *
  * Returns the toolbar associated with the webview.
  *
- * Returns: the toolbar.
+ * Returns: (transfer none): the toolbar.
  */
 GtkWidget *
 pidgin_webview_get_toolbar(PidginWebView *webview);

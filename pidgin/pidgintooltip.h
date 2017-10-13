@@ -70,10 +70,10 @@ G_BEGIN_DECLS
 
 /**
  * pidgin_tooltip_setup_for_treeview:
- * @tree:         The treeview
- * @userdata:     The userdata to send to the callback functions
- * @create_cb:    Callback function to create the tooltip for a GtkTreePath
- * @paint_cb:     Callback function to paint the tooltip
+ * @tree: The treeview
+ * @userdata: The userdata to send to the callback functions
+ * @create_cb: (scope call): Callback function to create the tooltip for a GtkTreePath
+ * @paint_cb: (scope call): Callback function to paint the tooltip
  *
  * Setup tooltip drawing functions for a treeview.
  *
@@ -84,10 +84,10 @@ gboolean pidgin_tooltip_setup_for_treeview(GtkWidget *tree, gpointer userdata,
 
 /**
  * pidgin_tooltip_setup_for_widget:
- * @widget:       The widget
- * @userdata:     The userdata to send to the callback functions
- * @create_cb:    Callback function to create the tooltip for the widget
- * @paint_cb:     Callback function to paint the tooltip
+ * @widget: The widget
+ * @userdata: The userdata to send to the callback functions
+ * @create_cb: (scope call): Callback function to create the tooltip for the widget
+ * @paint_cb: (scope call): Callback function to paint the tooltip
  *
  * Setup tooltip drawing functions for any widget.
  *
@@ -107,8 +107,8 @@ void pidgin_tooltip_destroy(void);
  * pidgin_tooltip_show:
  * @widget:      The widget the tooltip is for
  * @userdata:    The userdata to send to the callback functions
- * @create_cb:    Callback function to create the tooltip from the GtkTreePath
- * @paint_cb:     Callback function to paint the tooltip
+ * @create_cb: (scope call): Callback function to create the tooltip from the GtkTreePath
+ * @paint_cb: (scope call): Callback function to paint the tooltip
  *
  * Create and show a tooltip.
  */
