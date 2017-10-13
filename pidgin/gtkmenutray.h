@@ -82,7 +82,7 @@ GtkWidget *pidgin_menu_tray_new(void);
  *
  * Gets the box for the PidginMenuTray
  *
- * Returns: The box that this menu tray is using
+ * Returns: (transfer none): The box that this menu tray is using
  */
 GtkWidget *pidgin_menu_tray_get_box(PidginMenuTray *menu_tray);
 
