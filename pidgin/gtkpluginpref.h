@@ -41,7 +41,7 @@ G_BEGIN_DECLS
  *
  * Creates a Gtk Preference frame for a PurplePluginPrefFrame
  *
- * Returns: The gtk preference frame
+ * Returns: (transfer full): The gtk preference frame
  */
 GtkWidget *pidgin_plugin_pref_create_frame(PurplePluginPrefFrame *frame);
 

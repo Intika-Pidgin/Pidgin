@@ -41,7 +41,7 @@
 typedef struct _PidginPluginInfo PidginPluginInfo;
 typedef struct _PidginPluginInfoClass PidginPluginInfoClass;
 
-typedef GtkWidget *(*PidginPluginConfigFrameCb)(PurplePlugin *);
+typedef GtkWidget *(*PidginPluginConfigFrameCb)(PurplePlugin *plugin);
 
 /**
  * PidginPluginInfo:
