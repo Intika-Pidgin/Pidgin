@@ -34,7 +34,7 @@
 #define PURPLE_TYPE_PROTOCOL_ACTION  (purple_protocol_action_get_type())
 
 typedef struct _PurpleProtocolAction PurpleProtocolAction;
-typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *);
+typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *action);
 
 #define PURPLE_TYPE_ATTENTION_TYPE  (purple_attention_type_get_type())
 
@@ -466,7 +466,7 @@ void purple_protocol_change_account_status(PurpleAccount *account,
  *
  * Retrieves the list of stock status types from a protocol.
  *
- * Returns: (element-type PurpleStatus): List of statuses
+ * Returns: (transfer full) (element-type PurpleStatus): List of statuses
  */
 GList *purple_protocol_get_statuses(PurpleAccount *account,
                                     PurplePresence *presence);

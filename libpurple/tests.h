@@ -30,8 +30,8 @@ typedef struct {
 	const gchar *output;
 } PurpleTestStringData;
 
-typedef const gchar *(*PurpleTestStringFunc)(const gchar *);
-typedef gchar *(*PurpleTestStringFreeFunc)(const gchar *);
+typedef const gchar *(*PurpleTestStringFunc)(const gchar *str);
+typedef gchar *(*PurpleTestStringFreeFunc)(const gchar *str);
 
 static inline void
 purple_test_string_compare(PurpleTestStringFunc func,

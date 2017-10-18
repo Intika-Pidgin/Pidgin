@@ -81,7 +81,7 @@ typedef enum
  *
  * A pounce callback.
  */
-typedef void (*PurplePounceCb)(PurplePounce *, PurplePounceEvent, void *);
+typedef void (*PurplePounceCb)(PurplePounce *pounce, PurplePounceEvent event, void *data);
 
 G_BEGIN_DECLS
 

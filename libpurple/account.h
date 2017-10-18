@@ -42,7 +42,7 @@ typedef struct _PurpleAccount       PurpleAccount;
 typedef struct _PurpleAccountClass  PurpleAccountClass;
 
 typedef gboolean (*PurpleFilterAccountFunc)(PurpleAccount *account);
-typedef void (*PurpleAccountRequestAuthorizationCb)(const char *, void *);
+typedef void (*PurpleAccountRequestAuthorizationCb)(const char *response, void *data);
 typedef void (*PurpleAccountRegistrationCb)(PurpleAccount *account, gboolean succeeded, void *user_data);
 typedef void (*PurpleAccountUnregistrationCb)(PurpleAccount *account, gboolean succeeded, void *user_data);
 typedef void (*PurpleSetPublicAliasSuccessCallback)(PurpleAccount *account, const char *new_alias);

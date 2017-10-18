@@ -50,10 +50,10 @@ typedef enum
 
 typedef struct _PurpleSslConnection PurpleSslConnection;
 
-typedef void (*PurpleSslInputFunction)(gpointer, PurpleSslConnection *,
-									 PurpleInputCondition);
-typedef void (*PurpleSslErrorFunction)(PurpleSslConnection *, PurpleSslErrorType,
-									 gpointer);
+typedef void (*PurpleSslInputFunction)(gpointer data, PurpleSslConnection *connection,
+									 PurpleInputCondition cond);
+typedef void (*PurpleSslErrorFunction)(PurpleSslConnection *connection, PurpleSslErrorType err,
+									 gpointer data);
 
 /**
  * PurpleSslConnection:

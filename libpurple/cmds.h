@@ -75,7 +75,7 @@ typedef enum {
  * A function implementing a command, as passed to purple_cmd_register().
  */
 /* TODO document the arguments to these functions. */
-typedef PurpleCmdRet (*PurpleCmdFunc)(PurpleConversation *, const gchar *cmd,
+typedef PurpleCmdRet (*PurpleCmdFunc)(PurpleConversation *conversation, const gchar *cmd,
                                   gchar **args, gchar **error, void *data);
 /**
  * PurpleCmdId:
