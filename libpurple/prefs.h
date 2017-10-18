@@ -130,24 +130,26 @@ struct _PurplePrefsUiOps
 	void (*schedule_save)(void);
 
 	/**
+	 * connect_callback:
+	 * @name: The preference name.
+	 * @data: The object to be passed when triggering the callback
+	 *
 	 * Called when a callback is added to a preference. The UI must keep
 	 * track of it and call #purple_prefs_trigger_callback_object with the
 	 * data attribute.
 	 *
-	 * @param name The preference name.
-	 * @param data The object to be passed when triggering the callback
-	 * @return A pointer to a ui_data object.
-	 * */
+	 * Returns: A pointer to a ui_data object.
+	 */
 	void *(*connect_callback)(const char *name, PurplePrefCallbackData *data);
 
 	/**
+	 * disconnect_callback:
+	 * @name The preference name
+	 * @ui_data The object that was returned from the connect_callback UI OP.
+	 *
 	 * Called when a callback is removed from a preference. The ui_data
 	 * object is the one returned from connect_callback.
-	 *
-	 * @param name The preference name
-	 * @param ui_data The object that was returned from the
-	 * connect_callback UI OP.
-	 * */
+	 */
 	void (*disconnect_callback)(const char *name, void *ui_data);
 
 	void (*_purple_reserved1)(void);

@@ -88,7 +88,7 @@ struct _PurpleStunNatDiscovery {
 	time_t lookup_time;
 };
 
-typedef void (*PurpleStunCallback) (PurpleStunNatDiscovery *);
+typedef void (*PurpleStunCallback) (PurpleStunNatDiscovery *discovery);
 
 G_BEGIN_DECLS
 

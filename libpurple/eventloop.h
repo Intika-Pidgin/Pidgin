@@ -53,7 +53,7 @@ typedef enum
  * purple_input_add(), the file descriptor on which the event occurred, and the
  * condition that was satisfied to cause the callback to be invoked.
  */
-typedef void (*PurpleInputFunction)(gpointer, gint, PurpleInputCondition);
+typedef void (*PurpleInputFunction)(gpointer data, gint fd, PurpleInputCondition cond);
 
 G_BEGIN_DECLS
 
