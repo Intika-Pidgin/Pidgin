@@ -180,7 +180,7 @@ PurpleConversationUiOps *pidgin_conversations_get_conv_ui_ops(void);
  *
  * Returns the default theme for GTK+ conversations.
  *
- * Returns: The default GTK+ conversation theme.
+ * Returns: (transfer none): The default GTK+ conversation theme.
  */
 PurpleTheme *pidgin_conversations_get_default_theme(void);
 
@@ -222,7 +222,7 @@ void pidgin_conv_update_buttons_by_protocol(PurpleConversation *conv);
  * converations returned if greater than zero. The returned list should
  * be freed by the caller.
  *
- * Returns: List of PurpleConversation matching criteria, or %NULL.
+ * Returns: (transfer container) (element-type PurpleConversation): List of PurpleConversation matching criteria, or %NULL.
  */
 GList *
 pidgin_conversations_get_unseen_all(PidginUnseenState min_state,
@@ -243,7 +243,7 @@ pidgin_conversations_get_unseen_all(PidginUnseenState min_state,
  * returned if greater than zero. The returned list should be freed by the
  * caller.
  *
- * Returns: List of PurpleIMConversation matching criteria, or %NULL.
+ * Returns: (transfer container) (element-type PurpleConversation): List of PurpleIMConversation matching criteria, or %NULL.
  */
 GList *
 pidgin_conversations_get_unseen_ims(PidginUnseenState min_state,
@@ -264,7 +264,7 @@ pidgin_conversations_get_unseen_ims(PidginUnseenState min_state,
  * returned if greater than zero. The returned list should be freed by the
  * caller.
  *
- * Returns: List of PurpleChatConversation matching criteria, or %NULL.
+ * Returns: (transfer container) (element-type PurpleConversation): List of PurpleChatConversation matching criteria, or %NULL.
  */
 GList *
 pidgin_conversations_get_unseen_chats(PidginUnseenState min_state,
@@ -273,8 +273,8 @@ pidgin_conversations_get_unseen_chats(PidginUnseenState min_state,
 
 /**
  * pidgin_conversations_fill_menu:
- * @menu:   Menu widget to add items to.
- * @convs:  List of PurpleConversation to add to menu.
+ * @menu: Menu widget to add items to.
+ * @convs: (element-type PurpleConversation): List of PurpleConversation to add to menu.
  *
  * Fill a menu with a list of conversations. Clicking the conversation
  * menu item will present that conversation to the user.
@@ -315,7 +315,7 @@ PidginConvWindow *pidgin_conv_get_window(PidginConversation *gtkconv);
  * @conv:       The conversation.
  * @small_icon: Whether to get the small icon.
  *
- * Returns: The tab icon.
+ * Returns: (transfer full): The tab icon.
  */
 GdkPixbuf *pidgin_conv_get_tab_icon(PurpleConversation *conv, gboolean small_icon);
 

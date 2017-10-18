@@ -658,7 +658,7 @@ char *pidgin_make_pretty_arrows(const char *str);
  *
  * The type of callbacks passed to pidgin_make_mini_dialog().
  */
-typedef void (*PidginUtilMiniDialogCallback)(gpointer user_data, GtkButton *);
+typedef void (*PidginUtilMiniDialogCallback)(gpointer user_data, GtkButton *button);
 
 /**
  * pidgin_make_mini_dialog:
@@ -685,7 +685,7 @@ typedef void (*PidginUtilMiniDialogCallback)(gpointer user_data, GtkButton *);
  *
  * See <link linkend="pidgin-pidginstock">Stock Resources</link>.
  *
- * Returns: (transfer full) A #PidginMiniDialog, suitable for passing to
+ * Returns: (transfer full): A #PidginMiniDialog, suitable for passing to
  *                       pidgin_blist_add_alert().
  */
 GtkWidget *pidgin_make_mini_dialog(PurpleConnection *handle,

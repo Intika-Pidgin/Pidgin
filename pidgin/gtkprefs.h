@@ -54,6 +54,8 @@ void pidgin_prefs_show(void);
  * @page:  The page to which the new checkbox will be added
  *
  * Add a new checkbox for a boolean preference
+ *
+ * Returns: (transfer full): The new checkbox
  */
 GtkWidget *pidgin_prefs_checkbox(const char *title, const char *key,
 		GtkWidget *page);
@@ -69,9 +71,9 @@ GtkWidget *pidgin_prefs_checkbox(const char *title, const char *key,
  *
  * Add a new spin button representing an int preference
  *
- * Returns:      An hbox containing both the label and the spinner.  Can be
- *              used to set the widgets to sensitive or insensitive based on the
- *              value of a checkbox.
+ * Returns: (transfer full): An hbox containing both the label and the spinner.  Can be
+ *          used to set the widgets to sensitive or insensitive based on the
+ *          value of a checkbox.
  */
 GtkWidget *pidgin_prefs_labeled_spin_button(GtkWidget *page,
 		const gchar *title, const char *key, int min, int max, GtkSizeGroup *sg);
@@ -85,9 +87,9 @@ GtkWidget *pidgin_prefs_labeled_spin_button(GtkWidget *page,
  *
  * Add a new entry representing a string preference
  *
- * Returns:      An hbox containing both the label and the entry.  Can be used to set
- *               the widgets to sensitive or insensitive based on the value of a
- *               checkbox.
+ * Returns: (transfer full) :An hbox containing both the label and the entry.  Can be used to set
+ *          the widgets to sensitive or insensitive based on the value of a
+ *          checkbox.
  */
 GtkWidget *pidgin_prefs_labeled_entry(GtkWidget *page, const gchar *title,
 										const char *key, GtkSizeGroup *sg);
@@ -102,9 +104,9 @@ GtkWidget *pidgin_prefs_labeled_entry(GtkWidget *page, const gchar *title,
  * Add a new entry representing a password (string) preference
  * The entry will use a password-style text entry (the text is substituded)
  *
- * Returns:      An hbox containing both the label and the entry.  Can be used to set
- *               the widgets to sensitive or insensitive based on the value of a
- *               checkbox.
+ * Returns: (transfer full): An hbox containing both the label and the entry.  Can be used to set
+ *          the widgets to sensitive or insensitive based on the value of a
+ *          checkbox.
  */
 GtkWidget *pidgin_prefs_labeled_password(GtkWidget *page, const gchar *title,
 										const char *key, GtkSizeGroup *sg);
@@ -119,6 +121,8 @@ GtkWidget *pidgin_prefs_labeled_password(GtkWidget *page, const gchar *title,
  *              paired as label/value
  *
  * Add a new dropdown representing a preference of the specified type
+ *
+ * Returns: (transfer full): The new dropdown. 
  */
 GtkWidget *pidgin_prefs_dropdown(GtkWidget *page, const gchar *title,
 		PurplePrefType type, const char *key, ...);
@@ -130,9 +134,11 @@ GtkWidget *pidgin_prefs_dropdown(GtkWidget *page, const gchar *title,
  * @type:      The type of preference to be stored in the dropdown
  * @key:       The key of the pref that will be represented by the dropdown
  * @menuitems: The choices to be added to the dropdown, choices should
- *                  be paired as label/value
+ *             be paired as label/value
  *
  * Add a new dropdown representing a preference of the specified type
+ *
+ * Returns: (transfer full): The new dropdown. 
  */
 GtkWidget *pidgin_prefs_dropdown_from_list(GtkWidget *page,
 		const gchar * title, PurplePrefType type, const char *key,
