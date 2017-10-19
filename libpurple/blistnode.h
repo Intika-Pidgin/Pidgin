@@ -96,7 +96,7 @@ GType purple_blist_node_get_type(void);
  * See purple_blist_node_get_parent(), purple_blist_node_get_first_child(),
  *   purple_blist_node_get_sibling_next(), purple_blist_node_get_sibling_prev().
  *
- * Returns (transfer none): The next node
+ * Returns: (transfer none): The next node
  */
 PurpleBlistNode *purple_blist_node_next(PurpleBlistNode *node, gboolean offline);
 
@@ -109,7 +109,7 @@ PurpleBlistNode *purple_blist_node_next(PurpleBlistNode *node, gboolean offline)
  * See purple_blist_node_get_first_child(), purple_blist_node_get_sibling_next(),
  *     purple_blist_node_get_sibling_prev(), purple_blist_node_next().
  *
- * Returns (transfer none): The parent node.
+ * Returns: (transfer none): The parent node.
  */
 PurpleBlistNode *purple_blist_node_get_parent(PurpleBlistNode *node);
 
