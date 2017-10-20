@@ -388,10 +388,11 @@ static void
 finch_notify_sr_new_rows(PurpleConnection *gc,
 		PurpleNotifySearchResults *results, void *data)
 {
-	GntTree *tree = GNT_TREE(data);
+	GntWindow *window = GNT_WINDOW(data);
+	GntTree *tree = GNT_TREE(g_object_get_data(G_OBJECT(window), "tree-widget"));
 	GList *o;
 
-	/* XXX: Do I need to empty the tree here? */
+	gnt_tree_remove_all(GNT_TREE(tree));
 
 	for (o = results->rows; o; o = o->next)
 	{
@@ -483,12 +484,16 @@ finch_notify_searchresults(PurpleConnection *gc, const char *title,
 
 	gnt_box_add_widget(GNT_BOX(window), box);
 
-	finch_notify_sr_new_rows(gc, results, tree);
+	g_object_set_data(G_OBJECT(window), "tree-widget", tree);
+	finch_notify_sr_new_rows(gc, results, window);
+
+	g_signal_connect(G_OBJECT(window), "destroy",
+			G_CALLBACK(notify_msg_window_destroy_cb), GINT_TO_POINTER(PURPLE_NOTIFY_SEARCHRESULTS));
 
 	gnt_widget_show(window);
 	g_object_set_data(G_OBJECT(window), "notify-results", results);
 
-	return tree;
+	return window;
 }
 
 static void *
