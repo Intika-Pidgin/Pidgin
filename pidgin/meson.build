@@ -95,6 +95,7 @@ libpidgin_headers = [
 	'pidginabout.h',
 	'pidgindebug.h',
 	'pidgindebugplugininfo.h',
+	'pidginicon.h',
 	'pidgintalkatu.h',
 	'pidgintooltip.h',
 	'pidgin.h',
