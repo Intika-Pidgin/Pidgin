@@ -23,6 +23,9 @@
 #define PIDGIN_ICON_H
 
 #define PIDGIN_ICON_CAMERA_PHOTO "camera-photo"
-#define PIDGIN_ICON_DIALOG_INFO "pidgin-dialog-info"
+#define PIDGIN_ICON_CONNECT      "pidgin-connect"
+#define PIDGIN_ICON_DIALOG_INFO  "pidgin-dialog-info"
+#define PIDGIN_ICON_MAIL_NEW     "mail-message-new"
+#define PIDGIN_ICON_MESSAGE_NEW  "pidgin-im-message-new"
 
 #endif /* PIDGIN_ICON_H */
