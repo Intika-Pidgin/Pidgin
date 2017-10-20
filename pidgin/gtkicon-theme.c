@@ -21,7 +21,6 @@
  */
 
 #include "gtkicon-theme.h"
-#include "pidginstock.h"
 
 #include <gtk/gtk.h>
 
