@@ -22,6 +22,7 @@
 #ifndef PIDGIN_ICON_H
 #define PIDGIN_ICON_H
 
+#define PIDGIN_ICON_CAMERA_PHOTO "camera-photo"
 #define PIDGIN_ICON_DIALOG_INFO "pidgin-dialog-info"
 
 #endif /* PIDGIN_ICON_H */
