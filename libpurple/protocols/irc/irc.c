@@ -698,7 +698,7 @@ static void irc_input_cb_ssl(gpointer data, PurpleSslConnection *gsc,
 			}
 		}
 
-		len = purple_ssl_read(gsc, irc->inbuf + irc->inbufused, IRC_BUFSIZE_INCREMENT - 1);
+		len = purple_ssl_read(gsc, irc->inbuf + irc->inbufused, irc->inbuflen - irc->inbufused - 1);
 		if (len > 0) {
 			read_input(irc, len);
 		}
@@ -735,7 +735,7 @@ static void irc_input_cb(gpointer data, gint source, PurpleInputCondition cond)
 		}
 	}
 
-	len = read(irc->fd, irc->inbuf + irc->inbufused, IRC_BUFSIZE_INCREMENT - 1);
+	len = read(irc->fd, irc->inbuf + irc->inbufused, irc->inbuflen - irc->inbufused - 1);
 
 	if (len < 0 && errno == EAGAIN) {
 		return;
