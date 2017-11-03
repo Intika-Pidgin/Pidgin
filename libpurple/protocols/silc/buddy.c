@@ -18,7 +18,10 @@
 */
 
 #include "internal.h"
+#include "glibcompat.h"
+PURPLE_BEGIN_IGNORE_CAST_ALIGN
 #include "silc.h"
+PURPLE_END_IGNORE_CAST_ALIGN
 #include "silcclient.h"
 #include "silcpurple.h"
 #include "wb.h"
@@ -52,7 +55,8 @@ silcpurple_buddy_keyagr_resolved(SilcClient client,
 		g_snprintf(tmp, sizeof(tmp),
 			   _("User %s is not present in the network"), r->nick);
 		purple_notify_error(gc, _("Key Agreement"),
-				  _("Cannot perform the key agreement"), tmp);
+			_("Cannot perform the key agreement"), tmp,
+			purple_request_cpar_from_connection(gc));
 		g_free(r->nick);
 		silc_free(r);
 		return;
@@ -72,7 +76,7 @@ silcpurple_buddy_keyagr_cb(SilcClient client,
 			   void *context)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 
 	if (!sg->conn)
 		return;
@@ -80,7 +84,7 @@ silcpurple_buddy_keyagr_cb(SilcClient client,
 	switch (status) {
 	case SILC_KEY_AGREEMENT_OK:
 		{
-			PurpleConversation *convo;
+			PurpleIMConversation *im;
 			char tmp[128];
 
 			/* Set the private key for this client */
@@ -91,50 +95,56 @@ silcpurple_buddy_keyagr_cb(SilcClient client,
 
 
 			/* Open IM window */
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
+			im = purple_conversations_find_im_with_account(
 								      client_entry->nickname, sg->account);
-			if (convo) {
+			if (im) {
 				/* we don't have windows in the core anymore...but we may want to
 				 * provide some method for asking the UI to show the window
-				purple_conv_window_show(purple_conversation_get_window(convo));
+				purple_conversation_window_show(purple_conversation_get_window(im));
 				 */
 			} else {
-				convo = purple_conversation_new(PURPLE_CONV_TYPE_IM, sg->account,
+				im = purple_im_conversation_new(sg->account,
 								client_entry->nickname);
 			}
 			g_snprintf(tmp, sizeof(tmp), "%s [private key]", client_entry->nickname);
-			purple_conversation_set_title(convo, tmp);
+			purple_conversation_set_title(PURPLE_CONVERSATION(im), tmp);
 		}
 		break;
 
 	case SILC_KEY_AGREEMENT_ERROR:
 		purple_notify_error(gc, _("Key Agreement"),
-				    _("Error occurred during key agreement"), NULL);
+			_("Error occurred during key agreement"), NULL,
+			purple_request_cpar_from_connection(gc));
 		break;
 
 	case SILC_KEY_AGREEMENT_FAILURE:
-		purple_notify_error(gc, _("Key Agreement"), _("Key Agreement failed"), NULL);
+		purple_notify_error(gc, _("Key Agreement"),
+			_("Key Agreement failed"), NULL,
+			purple_request_cpar_from_connection(gc));
 		break;
 
 	case SILC_KEY_AGREEMENT_TIMEOUT:
 		purple_notify_error(gc, _("Key Agreement"),
-				    _("Timeout during key agreement"), NULL);
+			_("Timeout during key agreement"), NULL,
+			purple_request_cpar_from_connection(gc));
 		break;
 
 	case SILC_KEY_AGREEMENT_ABORTED:
 		purple_notify_error(gc, _("Key Agreement"),
-				    _("Key agreement was aborted"), NULL);
+			_("Key agreement was aborted"), NULL,
+			purple_request_cpar_from_connection(gc));
 		break;
 
 	case SILC_KEY_AGREEMENT_ALREADY_STARTED:
-		purple_notify_error(gc, _("Key Agreement"),
-				    _("Key agreement is already started"), NULL);
+		purple_notify_error(gc, _("Key Agreement"), _("Key agreement is"
+			" already started"), NULL,
+			purple_request_cpar_from_connection(gc));
 		break;
 
 	case SILC_KEY_AGREEMENT_SELF_DENIED:
-		purple_notify_error(gc, _("Key Agreement"),
-				    _("Key agreement cannot be started with yourself"),
-				    NULL);
+		purple_notify_error(gc, _("Key Agreement"), _("Key agreement "
+			"cannot be started with yourself"), NULL,
+			purple_request_cpar_from_connection(gc));
 		break;
 
 	default:
@@ -146,7 +156,7 @@ static void
 silcpurple_buddy_keyagr_do(PurpleConnection *gc, const char *name,
 			   gboolean force_local)
 {
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcDList clients;
 	SilcClientEntry client_entry;
 	SilcClientConnectionParams params;
@@ -254,7 +264,7 @@ silcpurple_buddy_keyagr_request_cb(SilcPurpleKeyAgrAsk a, gint id)
 	if (!client_entry) {
 		purple_notify_error(a->client->application, _("Key Agreement"),
 				    _("The remote user is not present in the network any more"),
-				    NULL);
+				    NULL, NULL);
 		goto out;
 	}
 
@@ -314,8 +324,8 @@ void silcpurple_buddy_keyagr_request(SilcClient client,
 	a->port = port;
 
 	purple_request_action(client->application, _("Key Agreement Request"), tmp,
-			      hostname ? tmp2 : NULL, 1, gc->account, client_entry->nickname,
-			      NULL, a, 2, _("Yes"), G_CALLBACK(silcpurple_buddy_keyagr_request_cb),
+			      hostname ? tmp2 : NULL, 1, purple_request_cpar_from_connection(gc),
+			      a, 2, _("Yes"), G_CALLBACK(silcpurple_buddy_keyagr_request_cb),
 			      _("No"), G_CALLBACK(silcpurple_buddy_keyagr_request_cb));
 }
 
@@ -342,11 +352,11 @@ silcpurple_buddy_resetkey(PurpleBlistNode *node, gpointer data)
         SilcPurple sg;
 	SilcDList clients;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	b = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(b));
-	sg = gc->proto_data;
+	sg = purple_connection_get_protocol_data(gc);
 
 	/* Find client entry */
 	clients = silc_client_get_clients_local(sg->client, sg->conn,
@@ -385,7 +395,7 @@ silcpurple_buddy_privkey_cb(SilcPurplePrivkey p, const char *passphrase)
 	if (!client_entry) {
 		purple_notify_error(p->client->application, _("IM With Password"),
 				    _("The remote user is not present in the network any more"),
-				    NULL);
+				    NULL, NULL);
 		silc_free(p);
 		return;
 	}
@@ -414,7 +424,7 @@ silcpurple_buddy_privkey_resolved(SilcClient client,
 			   _("User %s is not present in the network"),
 			   (const char *)context);
 		purple_notify_error(client->application, _("IM With Password"),
-				  _("Cannot set IM key"), tmp);
+				  _("Cannot set IM key"), tmp, NULL);
 		g_free(context);
 		return;
 	}
@@ -426,7 +436,7 @@ silcpurple_buddy_privkey_resolved(SilcClient client,
 static void
 silcpurple_buddy_privkey(PurpleConnection *gc, const char *name)
 {
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcPurplePrivkey p;
 	SilcDList clients;
 	SilcClientEntry client_entry;
@@ -457,7 +467,7 @@ silcpurple_buddy_privkey(PurpleConnection *gc, const char *name)
 	                     _("Set IM Password"), NULL, FALSE, TRUE, NULL,
 	                     _("OK"), G_CALLBACK(silcpurple_buddy_privkey_cb),
 	                     _("Cancel"), G_CALLBACK(silcpurple_buddy_privkey_cb),
-	                     gc->account, NULL, NULL, p);
+	                     purple_request_cpar_from_connection(gc), p);
 
 	silc_client_list_free(sg->client, sg->conn, clients);
 }
@@ -468,7 +478,7 @@ silcpurple_buddy_privkey_menu(PurpleBlistNode *node, gpointer data)
 	PurpleBuddy *buddy;
 	PurpleConnection *gc;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -499,7 +509,7 @@ silcpurple_buddy_getkey_cb(SilcClient client, SilcClientConnection conn,
 	if (status != SILC_STATUS_OK) {
 		purple_notify_error(g->client->application, _("Get Public Key"),
 				  _("The remote user is not present in the network any more"),
-				  NULL);
+				  NULL, NULL);
 		silc_free(g);
 		return FALSE;
 	}
@@ -510,7 +520,7 @@ silcpurple_buddy_getkey_cb(SilcClient client, SilcClientConnection conn,
 	if (!client_entry) {
 		purple_notify_error(g->client->application, _("Get Public Key"),
 				  _("The remote user is not present in the network any more"),
-				  NULL);
+				  NULL, NULL);
 		silc_free(g);
 		return FALSE;
 	}
@@ -542,7 +552,7 @@ silcpurple_buddy_getkey_resolved(SilcClient client,
 			   _("User %s is not present in the network"),
 			   (const char *)context);
 		purple_notify_error(client->application, _("Get Public Key"),
-				    _("Cannot fetch the public key"), tmp);
+				    _("Cannot fetch the public key"), tmp, NULL);
 		g_free(context);
 		return;
 	}
@@ -554,7 +564,7 @@ silcpurple_buddy_getkey_resolved(SilcClient client,
 static void
 silcpurple_buddy_getkey(PurpleConnection *gc, const char *name)
 {
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClient client = sg->client;
 	SilcClientConnection conn = sg->conn;
 	SilcClientEntry client_entry;
@@ -597,7 +607,7 @@ silcpurple_buddy_getkey_menu(PurpleBlistNode *node, gpointer data)
 	PurpleBuddy *buddy;
 	PurpleConnection *gc;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	buddy = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(buddy));
@@ -614,17 +624,17 @@ silcpurple_buddy_showkey(PurpleBlistNode *node, gpointer data)
 	SilcPublicKey public_key;
 	const char *pkfile;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	b = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(b));
-	sg = gc->proto_data;
+	sg = purple_connection_get_protocol_data(gc);
 
 	pkfile = purple_blist_node_get_string(node, "public-key");
 	if (!silc_pkcs_load_public_key(pkfile, &public_key)) {
-		purple_notify_error(gc,
-				  _("Show Public Key"),
-				  _("Could not load public key"), NULL);
+		purple_notify_error(gc, _("Show Public Key"),
+			_("Could not load public key"), NULL,
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 
@@ -669,7 +679,7 @@ silcpurple_add_buddy_resolved(SilcClient client,
 
 void silcpurple_get_info(PurpleConnection *gc, const char *who)
 {
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClient client = sg->client;
 	SilcClientConnection conn = sg->conn;
 	SilcClientEntry client_entry;
@@ -686,7 +696,7 @@ void silcpurple_get_info(PurpleConnection *gc, const char *who)
 	if (strlen(who) > 2 && who[0] == '*' && who[1] == '@')
 		nick = who + 2;
 
-	b = purple_find_buddy(gc->account, nick);
+	b = purple_blist_find_buddy(purple_connection_get_account(gc), nick);
 	if (b) {
 		/* See if we have this buddy's public key.  If we do use that
 		   to search the details. */
@@ -704,7 +714,8 @@ void silcpurple_get_info(PurpleConnection *gc, const char *who)
 			g_snprintf(tmp, sizeof(tmp),
 				   _("User %s is not present in the network"), purple_buddy_get_name(b));
 			purple_notify_error(gc, _("User Information"),
-					  _("Cannot get user information"), tmp);
+				_("Cannot get user information"), tmp,
+				purple_request_cpar_from_connection(gc));
 			return;
 		}
 
@@ -730,8 +741,9 @@ silcpurple_add_buddy_pk_no(SilcPurpleBuddyRes r)
 	purple_notify_error(r->client->application, _("Add Buddy"), tmp,
 			    _("You cannot receive buddy notifications until you "
 			      "import his/her public key.  You can use the Get Public Key "
-			      "command to get the public key."));
-	purple_prpl_got_user_status(purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
+			      "command to get the public key."),
+		purple_request_cpar_from_account(purple_buddy_get_account(r->b)));
+	purple_protocol_got_user_status(purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
 }
 
 static void
@@ -774,7 +786,7 @@ silcpurple_add_buddy_save(SilcBool success, void *context)
 			   "%s" G_DIR_SEPARATOR_S "clientkeys" G_DIR_SEPARATOR_S "clientkey_%s.pub",
 			   silcpurple_silcdir(), fingerprint);
 		purple_blist_node_set_string((PurpleBlistNode *)b, "public-key", filename);
-		purple_prpl_got_user_status(purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
+		purple_protocol_got_user_status(purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
 		silc_free(fingerprint);
 		silc_free(r->offline_pk);
 		if (r->public_key)
@@ -1001,7 +1013,7 @@ silcpurple_add_buddy_save(SilcBool success, void *context)
 	purple_blist_node_set_string((PurpleBlistNode *)b, "public-key", filename);
 
 	/* Update online status */
-	purple_prpl_got_user_status(purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), SILCPURPLE_STATUS_ID_AVAILABLE, NULL);
+	purple_protocol_got_user_status(purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), SILCPURPLE_STATUS_ID_AVAILABLE, NULL);
 
 	/* Finally, start watching this user so we receive its status
 	   changes from the server */
@@ -1025,8 +1037,10 @@ silcpurple_add_buddy_ask_import(void *user_data, const char *name)
 	/* Load the public key */
 	if (!silc_pkcs_load_public_key(name, &r->public_key)) {
 		silcpurple_add_buddy_ask_pk_cb(r, 0);
-		purple_notify_error(r->client->application,
-				  _("Add Buddy"), _("Could not load public key"), NULL);
+		purple_notify_error(r->client->application, _("Add Buddy"),
+			_("Could not load public key"), NULL,
+			purple_request_cpar_from_account(
+				purple_buddy_get_account(r->b)));
 		return;
 	}
 
@@ -1061,7 +1075,7 @@ silcpurple_add_buddy_ask_pk_cb(SilcPurpleBuddyRes r, gint id)
 	purple_request_file(r->client->application, _("Open..."), NULL, FALSE,
 			    G_CALLBACK(silcpurple_add_buddy_ask_import),
 			    G_CALLBACK(silcpurple_add_buddy_ask_pk_cancel),
-			    purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), NULL, r);
+			    purple_request_cpar_from_account(purple_buddy_get_account(r->b)), r);
 
 }
 
@@ -1074,7 +1088,7 @@ silcpurple_add_buddy_ask_pk(SilcPurpleBuddyRes r)
 	purple_request_action(r->client->application, _("Add Buddy"), tmp,
 			      _("To add the buddy you must import his/her public key. "
 				"Press Import to import a public key."), 0,
-			      purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), NULL, r, 2,
+				purple_request_cpar_from_account(purple_buddy_get_account(r->b)), r, 2,
 			      _("Cancel"), G_CALLBACK(silcpurple_add_buddy_ask_pk_cb),
 			      _("_Import..."), G_CALLBACK(silcpurple_add_buddy_ask_pk_cb));
 }
@@ -1191,7 +1205,7 @@ silcpurple_add_buddy_select(SilcPurpleBuddyRes r, SilcDList clients)
 			      fields,
 			      _("OK"), G_CALLBACK(silcpurple_add_buddy_select_cb),
 			      _("Cancel"), G_CALLBACK(silcpurple_add_buddy_select_cancel),
-			      purple_buddy_get_account(r->b), purple_buddy_get_name(r->b), NULL, r);
+			      purple_request_cpar_from_account(purple_buddy_get_account(r->b)), r);
 }
 
 static void
@@ -1270,6 +1284,8 @@ silcpurple_add_buddy_resolved(SilcClient client,
 		}
 	}
 
+	g_return_if_fail(client_entry != NULL);
+
 	/* The client was found.  Now get its public key and verify
 	   that before adding the buddy. */
 	memset(&userpk, 0, sizeof(userpk));
@@ -1332,7 +1348,7 @@ silcpurple_add_buddy_resolved(SilcClient client,
 static void
 silcpurple_add_buddy_i(PurpleConnection *gc, PurpleBuddy *b, gboolean init)
 {
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClient client = sg->client;
 	SilcClientConnection conn = sg->conn;
 	SilcPurpleBuddyRes r;
@@ -1390,7 +1406,7 @@ silcpurple_add_buddy_i(PurpleConnection *gc, PurpleBuddy *b, gboolean init)
 	silc_buffer_free(attrs);
 }
 
-void silcpurple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group)
+void silcpurple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, const char *message)
 {
 	/* Don't add if the buddy is already on the list.
 	 *
@@ -1407,7 +1423,7 @@ void silcpurple_send_buddylist(PurpleConnection *gc)
 
 	account = purple_connection_get_account(gc);
 
-	for (buddies = purple_find_buddies(account, NULL); buddies;
+	for (buddies = purple_blist_find_buddies(account, NULL); buddies;
 			buddies = g_slist_delete_link(buddies, buddies))
 	{
 		PurpleBuddy *buddy = buddies->data;
@@ -1431,7 +1447,7 @@ void silcpurple_idle_set(PurpleConnection *gc, int idle)
 	const char *server;
 	int port;
 
-	sg = gc->proto_data;
+	sg = purple_connection_get_protocol_data(gc);
 	if (sg == NULL)
 		return;
 
@@ -1461,7 +1477,7 @@ char *silcpurple_status_text(PurpleBuddy *b)
 {
 	PurpleAccount *account = purple_buddy_get_account(b);
 	PurpleConnection *gc = purple_account_get_connection(account);
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClient client = sg->client;
 	SilcClientConnection conn = sg->conn;
 	SilcClientID *client_id = purple_buddy_get_protocol_data(b);
@@ -1527,7 +1543,7 @@ void silcpurple_tooltip_text(PurpleBuddy *b, PurpleNotifyUserInfo *user_info, gb
 {
 	PurpleAccount *account = purple_buddy_get_account(b);
 	PurpleConnection *gc = purple_account_get_connection(account);
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClient client = sg->client;
 	SilcClientConnection conn = sg->conn;
 	SilcClientID *client_id = purple_buddy_get_protocol_data(b);
@@ -1540,52 +1556,69 @@ void silcpurple_tooltip_text(PurpleBuddy *b, PurpleNotifyUserInfo *user_info, gb
 	if (!client_entry)
 		return;
 
-	purple_notify_user_info_add_pair(user_info, _("Nickname"),
-					       client_entry->nickname);
+	/* TODO: Check whether it's correct to call add_pair_html,
+	         or if we should be using add_pair_plaintext */
+	purple_notify_user_info_add_pair_html(user_info, _("Nickname"), client_entry->nickname);
 	g_snprintf(tmp, sizeof(tmp), "%s@%s", client_entry->username, client_entry->hostname);
-	purple_notify_user_info_add_pair(user_info, _("Username"), tmp);
+	/* TODO: Check whether it's correct to call add_pair_html,
+	         or if we should be using add_pair_plaintext */
+	purple_notify_user_info_add_pair_html(user_info, _("Username"), tmp);
 	if (client_entry->mode) {
 		memset(tmp, 0, sizeof(tmp));
 		silcpurple_get_umode_string(client_entry->mode,
 					  tmp, sizeof(tmp) - strlen(tmp));
-		purple_notify_user_info_add_pair(user_info, _("User Modes"), tmp);
+		purple_notify_user_info_add_pair_plaintext(user_info, _("User Modes"), tmp);
 	}
 
 	silcpurple_parse_attrs(client_entry->attrs, &moodstr, &statusstr, &contactstr, &langstr, &devicestr, &tzstr, &geostr);
 
 	if (statusstr) {
-		purple_notify_user_info_add_pair(user_info, _("Message"), statusstr);
+		/* TODO: Check whether it's correct to call add_pair_html,
+		         or if we should be using add_pair_plaintext */
+		purple_notify_user_info_add_pair_html(user_info, _("Message"), statusstr);
 		g_free(statusstr);
 	}
 
 	if (full) {
 		if (moodstr) {
-			purple_notify_user_info_add_pair(user_info, _("Mood"), moodstr);
+			/* TODO: Check whether it's correct to call add_pair_html,
+			         or if we should be using add_pair_plaintext */
+			purple_notify_user_info_add_pair_html(user_info, _("Mood"), moodstr);
 			g_free(moodstr);
 		}
 
 		if (contactstr) {
-			purple_notify_user_info_add_pair(user_info, _("Preferred Contact"), contactstr);
+			/* TODO: Check whether it's correct to call add_pair_html,
+			         or if we should be using add_pair_plaintext */
+			purple_notify_user_info_add_pair_html(user_info, _("Preferred Contact"), contactstr);
 			g_free(contactstr);
 		}
 
 		if (langstr) {
-			purple_notify_user_info_add_pair(user_info, _("Preferred Language"), langstr);
+			/* TODO: Check whether it's correct to call add_pair_html,
+			         or if we should be using add_pair_plaintext */
+			purple_notify_user_info_add_pair_html(user_info, _("Preferred Language"), langstr);
 			g_free(langstr);
 		}
 
 		if (devicestr) {
-			purple_notify_user_info_add_pair(user_info, _("Device"), devicestr);
+			/* TODO: Check whether it's correct to call add_pair_html,
+			         or if we should be using add_pair_plaintext */
+			purple_notify_user_info_add_pair_html(user_info, _("Device"), devicestr);
 			g_free(devicestr);
 		}
 
 		if (tzstr) {
-			purple_notify_user_info_add_pair(user_info, _("Timezone"), tzstr);
+			/* TODO: Check whether it's correct to call add_pair_html,
+			         or if we should be using add_pair_plaintext */
+			purple_notify_user_info_add_pair_html(user_info, _("Timezone"), tzstr);
 			g_free(tzstr);
 		}
 
 		if (geostr) {
-			purple_notify_user_info_add_pair(user_info, _("Geolocation"), geostr);
+			/* TODO: Check whether it's correct to call add_pair_html,
+			         or if we should be using add_pair_plaintext */
+			purple_notify_user_info_add_pair_html(user_info, _("Geolocation"), geostr);
 			g_free(geostr);
 		}
 	}
@@ -1598,11 +1631,11 @@ silcpurple_buddy_kill(PurpleBlistNode *node, gpointer data)
 	PurpleConnection *gc;
 	SilcPurple sg;
 
-	g_return_if_fail(PURPLE_BLIST_NODE_IS_BUDDY(node));
+	g_return_if_fail(PURPLE_IS_BUDDY(node));
 
 	b = (PurpleBuddy *) node;
 	gc = purple_account_get_connection(purple_buddy_get_account(b));
-	sg = gc->proto_data;
+	sg = purple_connection_get_protocol_data(gc);
 
 	/* Call KILL */
 	silc_client_command_call(sg->client, sg->conn, NULL, "KILL",
@@ -1626,7 +1659,7 @@ GList *silcpurple_buddy_menu(PurpleBuddy *buddy)
 {
 	PurpleAccount *account = purple_buddy_get_account(buddy);
 	PurpleConnection *gc = purple_account_get_connection(account);
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClientConnection conn = sg->conn;
 	const char *pkfile = NULL;
 	SilcClientEntry client_entry = NULL;
@@ -1690,14 +1723,13 @@ GList *silcpurple_buddy_menu(PurpleBuddy *buddy)
 	return m;
 }
 
-void silcpurple_buddy_set_icon(PurpleConnection *gc, PurpleStoredImage *img)
+void silcpurple_buddy_set_icon(PurpleConnection *gc, PurpleImage *img)
 {
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClient client = sg->client;
 	SilcClientConnection conn = sg->conn;
 	SilcMime mime;
-	char type[32];
-	const char *t;
+	const gchar *type;
 
 	/* Remove */
 	if (!img) {
@@ -1706,24 +1738,23 @@ void silcpurple_buddy_set_icon(PurpleConnection *gc, PurpleStoredImage *img)
 		return;
 	}
 
+	type = purple_image_get_mimetype(img);
+	if (type == NULL)
+		return;
+	if (purple_strequal(purple_image_get_extension(img), "ico"))
+		return;
+
 	/* Add */
 	mime = silc_mime_alloc();
 	if (!mime)
 		return;
 
-	t = purple_imgstore_get_extension(img);
-	if (!t || purple_strequal(t, "icon")) {
-		silc_mime_free(mime);
-		return;
-	}
-	if (purple_strequal(t, "jpg"))
-		t = "jpeg";
-	g_snprintf(type, sizeof(type), "image/%s", t);
 	silc_mime_add_field(mime, "Content-Type", type);
-	silc_mime_add_data(mime, purple_imgstore_get_data(img), purple_imgstore_get_size(img));
+	silc_mime_add_data(mime, purple_image_get_data(img),
+		purple_image_get_data_size(img));
 
-	silc_client_attribute_add(client, conn,
-				  SILC_ATTRIBUTE_USER_ICON, mime, sizeof(*mime));
+	silc_client_attribute_add(client, conn, SILC_ATTRIBUTE_USER_ICON,
+		mime, sizeof(*mime));
 
 	silc_mime_free(mime);
 }

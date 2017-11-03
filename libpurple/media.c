@@ -1,8 +1,3 @@
-/**
- * @file media.c Media API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -34,33 +29,14 @@
 
 #ifdef USE_GSTREAMER
 #include "media/backend-fs2.h"
-#include "marshallers.h"
 #include "media-gst.h"
-#endif
+#endif /* USE_GSTREAMER */
 
 #ifdef USE_VV
-
 /** @copydoc _PurpleMediaSession */
 typedef struct _PurpleMediaSession PurpleMediaSession;
 /** @copydoc _PurpleMediaStream */
 typedef struct _PurpleMediaStream PurpleMediaStream;
-/** @copydoc _PurpleMediaClass */
-typedef struct _PurpleMediaClass PurpleMediaClass;
-/** @copydoc _PurpleMediaPrivate */
-typedef struct _PurpleMediaPrivate PurpleMediaPrivate;
-
-/** The media class */
-struct _PurpleMediaClass
-{
-	GObjectClass parent_class;     /**< The parent class. */
-};
-
-/** The media class's private data */
-struct _PurpleMedia
-{
-	GObject parent;                /**< The parent of this object. */
-	PurpleMediaPrivate *priv;      /**< The private data of this object. */
-};
 
 struct _PurpleMediaSession
 {
@@ -95,7 +71,7 @@ struct _PurpleMediaPrivate
 	PurpleMediaBackend *backend;
 	gchar *conference_type;
 	gboolean initiator;
-	gpointer prpl_data;
+	gpointer protocol_data;
 
 	GHashTable *sessions;	/* PurpleMediaSession table */
 	GList *participants;
@@ -153,7 +129,7 @@ enum {
 	PROP_ACCOUNT,
 	PROP_CONFERENCE_TYPE,
 	PROP_INITIATOR,
-	PROP_PRPL_DATA,
+	PROP_PROTOCOL_DATA,
 };
 #endif
 
@@ -202,7 +178,8 @@ purple_media_class_init (PurpleMediaClass *klass)
 			"Purple Media Manager",
 			"The media manager that contains this media session.",
 			PURPLE_TYPE_MEDIA_MANAGER,
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
 	/*
 	 * This one should be PURPLE_TYPE_MEDIA_BACKEND, but it doesn't
@@ -213,13 +190,14 @@ purple_media_class_init (PurpleMediaClass *klass)
 			"Purple Media Backend",
 			"The backend object this media object uses.",
 			G_TYPE_OBJECT,
-			G_PARAM_READABLE));
+			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
 	g_object_class_install_property(gobject_class, PROP_ACCOUNT,
-			g_param_spec_pointer("account",
-			"PurpleAccount",
+			g_param_spec_object("account", "PurpleAccount",
 			"The account this media session is on.",
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			PURPLE_TYPE_ACCOUNT,
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
 	g_object_class_install_property(gobject_class, PROP_CONFERENCE_TYPE,
 			g_param_spec_string("conference-type",
@@ -227,57 +205,51 @@ purple_media_class_init (PurpleMediaClass *klass)
 			"The type of conference that this media object "
 			"has been created to provide.",
 			NULL,
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
 	g_object_class_install_property(gobject_class, PROP_INITIATOR,
 			g_param_spec_boolean("initiator",
 			"initiator",
 			"If the local user initiated the conference.",
 			FALSE,
-			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE));
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
 
-	g_object_class_install_property(gobject_class, PROP_PRPL_DATA,
-			g_param_spec_pointer("prpl-data",
+	g_object_class_install_property(gobject_class, PROP_PROTOCOL_DATA,
+			g_param_spec_pointer("protocol-data",
 			"gpointer",
-			"Data the prpl plugin set on the media session.",
-			G_PARAM_READWRITE));
+			"Data the protocol set on the media session.",
+			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
 	purple_media_signals[S_ERROR] = g_signal_new("error", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 g_cclosure_marshal_VOID__STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_STRING);
 	purple_media_signals[CANDIDATES_PREPARED] = g_signal_new("candidates-prepared", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__STRING_STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 2, G_TYPE_STRING,
 					 G_TYPE_STRING);
 	purple_media_signals[CODECS_CHANGED] = g_signal_new("codecs-changed", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 g_cclosure_marshal_VOID__STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_STRING);
 	purple_media_signals[LEVEL] = g_signal_new("level", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__STRING_STRING_DOUBLE,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 3, G_TYPE_STRING,
 					 G_TYPE_STRING, G_TYPE_DOUBLE);
 	purple_media_signals[NEW_CANDIDATE] = g_signal_new("new-candidate", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__POINTER_POINTER_OBJECT,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 3, G_TYPE_POINTER,
 					 G_TYPE_POINTER, PURPLE_TYPE_MEDIA_CANDIDATE);
 	purple_media_signals[STATE_CHANGED] = g_signal_new("state-changed", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__ENUM_STRING_STRING,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 3, PURPLE_MEDIA_TYPE_STATE,
 					 G_TYPE_STRING, G_TYPE_STRING);
 	purple_media_signals[STREAM_INFO] = g_signal_new("stream-info", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__ENUM_STRING_STRING_BOOLEAN,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 4, PURPLE_MEDIA_TYPE_INFO_TYPE,
 					 G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN);
 	purple_media_signals[CANDIDATE_PAIR_ESTABLISHED] = g_signal_new("candidate-pair-established", G_TYPE_FROM_CLASS(klass),
-					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-					 purple_smarshal_VOID__POINTER_POINTER_OBJECT_OBJECT,
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 4, G_TYPE_POINTER, G_TYPE_POINTER,
 					 PURPLE_TYPE_MEDIA_CANDIDATE, PURPLE_TYPE_MEDIA_CANDIDATE);
 	g_type_class_add_private(klass, sizeof(PurpleMediaPrivate));
@@ -383,7 +355,7 @@ purple_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 			media->priv->manager = g_value_dup_object(value);
 			break;
 		case PROP_ACCOUNT:
-			media->priv->account = g_value_get_pointer(value);
+			media->priv->account = g_value_get_object(value);
 			break;
 		case PROP_CONFERENCE_TYPE:
 			media->priv->conference_type =
@@ -419,8 +391,8 @@ purple_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 		case PROP_INITIATOR:
 			media->priv->initiator = g_value_get_boolean(value);
 			break;
-		case PROP_PRPL_DATA:
-			media->priv->prpl_data = g_value_get_pointer(value);
+		case PROP_PROTOCOL_DATA:
+			media->priv->protocol_data = g_value_get_pointer(value);
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -444,7 +416,7 @@ purple_media_get_property (GObject *object, guint prop_id, GValue *value, GParam
 			g_value_set_object(value, media->priv->backend);
 			break;
 		case PROP_ACCOUNT:
-			g_value_set_pointer(value, media->priv->account);
+			g_value_set_object(value, media->priv->account);
 			break;
 		case PROP_CONFERENCE_TYPE:
 			g_value_set_string(value,
@@ -453,8 +425,8 @@ purple_media_get_property (GObject *object, guint prop_id, GValue *value, GParam
 		case PROP_INITIATOR:
 			g_value_set_boolean(value, media->priv->initiator);
 			break;
-		case PROP_PRPL_DATA:
-			g_value_set_pointer(value, media->priv->prpl_data);
+		case PROP_PROTOCOL_DATA:
+			g_value_set_pointer(value, media->priv->protocol_data);
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -580,11 +552,10 @@ purple_media_get_session_ids(PurpleMedia *media)
 #endif
 }
 
-#ifdef USE_GSTREAMER
+#ifdef USE_VV
 GstElement *
 purple_media_get_src(PurpleMedia *media, const gchar *sess_id)
 {
-#ifdef USE_VV
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), NULL);
 
 	if (PURPLE_IS_MEDIA_BACKEND_FS2(media->priv->backend))
@@ -593,11 +564,8 @@ purple_media_get_src(PurpleMedia *media, const gchar *sess_id)
 				media->priv->backend), sess_id);
 
 	g_return_val_if_reached(NULL);
-#else
-	return NULL;
-#endif
 }
-#endif /* USE_GSTREAMER */
+#endif /* USE_VV */
 
 PurpleAccount *
 purple_media_get_account(PurpleMedia *media)
@@ -613,24 +581,24 @@ purple_media_get_account(PurpleMedia *media)
 }
 
 gpointer
-purple_media_get_prpl_data(PurpleMedia *media)
+purple_media_get_protocol_data(PurpleMedia *media)
 {
 #ifdef USE_VV
-	gpointer prpl_data;
+	gpointer protocol_data;
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), NULL);
-	g_object_get(G_OBJECT(media), "prpl-data", &prpl_data, NULL);
-	return prpl_data;
+	g_object_get(G_OBJECT(media), "protocol-data", &protocol_data, NULL);
+	return protocol_data;
 #else
 	return NULL;
 #endif
 }
 
 void
-purple_media_set_prpl_data(PurpleMedia *media, gpointer prpl_data)
+purple_media_set_protocol_data(PurpleMedia *media, gpointer protocol_data)
 {
 #ifdef USE_VV
 	g_return_if_fail(PURPLE_IS_MEDIA(media));
-	g_object_set(G_OBJECT(media), "prpl-data", prpl_data, NULL);
+	g_object_set(G_OBJECT(media), "protocol-data", protocol_data, NULL);
 #endif
 }
 
@@ -1105,7 +1073,7 @@ purple_media_add_stream(PurpleMedia *media, const gchar *sess_id,
 		media->priv->participants = g_list_prepend(
 				media->priv->participants, g_strdup(who));
 
-		g_signal_emit_by_name(media, "state-changed",
+		g_signal_emit(media, purple_media_signals[STATE_CHANGED], 0,
 				PURPLE_MEDIA_STATE_NEW, NULL, who);
 	}
 
@@ -1469,12 +1437,11 @@ purple_media_remove_output_windows(PurpleMedia *media)
 #endif
 }
 
-#ifdef USE_GSTREAMER
+#ifdef USE_VV
 GstElement *
 purple_media_get_tee(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
 {
-#ifdef USE_VV
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), NULL);
 
 	if (PURPLE_IS_MEDIA_BACKEND_FS2(media->priv->backend))
@@ -1483,11 +1450,8 @@ purple_media_get_tee(PurpleMedia *media,
 				media->priv->backend),
 				session_id, participant);
 	g_return_val_if_reached(NULL);
-#else
-	return NULL;
-#endif
 }
-#endif /* USE_GSTREAMER */
+#endif /* USE_VV */
 
 gboolean
 purple_media_send_dtmf(PurpleMedia *media, const gchar *session_id,

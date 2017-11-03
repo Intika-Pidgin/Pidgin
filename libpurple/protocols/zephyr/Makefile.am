@@ -1,4 +1,4 @@
-pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+pkgdir = @PURPLE_PLUGINDIR@
 
 ZEPHYRSOURCES = \
 	ZAsyncLocate.c \
@@ -62,9 +62,10 @@ ZEPHYRSOURCES = \
 	zephyr_err.c \
 	zephyr_err.h \
 	zephyr_internal.h \
-	zephyr.c
+	zephyr.c \
+	zephyr.h
 
-ZEPHYRSOURCESEXT = zephyr.c
+ZEPHYRSOURCESEXT = zephyr.c zephyr.h
 
 AM_CFLAGS = $(st)
 
@@ -72,7 +73,7 @@ ZEPHYRLIBS = $(KRB4_LDFLAGS) $(KRB4_LIBS)
 
 ZEPHYRLIBSEXT = $(ZEPHYR_LDFLAGS) $(ZEPHYR_LIBS)
 
-libzephyr_la_LDFLAGS = -module -avoid-version
+libzephyr_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
 
 if STATIC_ZEPHYR
 
@@ -80,7 +81,7 @@ st = -DPURPLE_STATIC_PRPL -Dlint
 noinst_LTLIBRARIES   = libzephyr.la
 libzephyr_la_SOURCES = $(ZEPHYRSOURCES)
 libzephyr_la_CFLAGS  = $(AM_CFLAGS)
-libzephyr_la_LIBADD  = $(ZEPHYRLIBS)
+libzephyr_la_LIBADD  = @PURPLE_LIBS@ $(ZEPHYRLIBS)
 
 else
 
@@ -89,10 +90,10 @@ pkg_LTLIBRARIES = libzephyr.la
 
 if EXTERNAL_LIBZEPHYR
 libzephyr_la_SOURCES = $(ZEPHYRSOURCESEXT)
-libzephyr_la_LIBADD  = $(GLIB_LIBS) $(ZEPHYRLIBSEXT)
+libzephyr_la_LIBADD  = @PURPLE_LIBS@ $(ZEPHYRLIBSEXT)
 else
 libzephyr_la_SOURCES = $(ZEPHYRSOURCES)
-libzephyr_la_LIBADD  = $(GLIB_LIBS) $(ZEPHYRLIBS)
+libzephyr_la_LIBADD  = @PURPLE_LIBS@ $(ZEPHYRLIBS)
 endif
 
 
@@ -103,7 +104,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
 	-I$(top_srcdir)/libpurple/protocols \
-	-DCONFDIR=\"$(sysconfdir)\" \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(KRB4_CFLAGS) \
 	$(DEBUG_CFLAGS)

@@ -1,9 +1,3 @@
-/**
- * @file smiley.h Smiley API
- * @ingroup core
- * @since 2.5.0
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -22,241 +16,124 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
- *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PURPLE_SMILEY_H_
-#define _PURPLE_SMILEY_H_
+#ifndef PURPLE_SMILEY_H
+#define PURPLE_SMILEY_H
+
+/**
+ * SECTION:smiley
+ * @include:smiley.h
+ * @section_id: libpurple-smiley
+ * @short_description: a link between emoticon image and its textual representation
+ * @title: Smileys
+ *
+ * A #PurpleSmiley is a base class for associating emoticon images and their
+ * textual representation. It's intended for various smiley-related tasks:
+ * parsing the text against them, displaying in the smiley selector, or handling
+ * remote data.
+ *
+ * The #PurpleSmiley:shortcut is always unescaped, but <link linkend="libpurple-smiley-parser">smiley parser</link>
+ * may deal with special characters.
+ */
+
+#include "image.h"
 
 #include <glib-object.h>
 
-#include "imgstore.h"
-#include "util.h"
+typedef struct _PurpleSmiley PurpleSmiley;
+typedef struct _PurpleSmileyClass PurpleSmileyClass;
+
+#define PURPLE_TYPE_SMILEY            (purple_smiley_get_type())
+#define PURPLE_SMILEY(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_SMILEY, PurpleSmiley))
+#define PURPLE_SMILEY_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
+#define PURPLE_IS_SMILEY(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_SMILEY))
+#define PURPLE_IS_SMILEY_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_SMILEY))
+#define PURPLE_SMILEY_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
 
 /**
- * A custom smiley.
- * This contains everything Purple will ever need to know about a custom smiley.
- * Everything.
+ * PurpleSmiley:
  *
- * PurpleSmiley is a GObject.
+ * A generic smiley. It can either be a theme smiley, or a custom smiley.
  */
-typedef struct _PurpleSmiley        PurpleSmiley;
-typedef struct _PurpleSmileyClass   PurpleSmileyClass;
-
-#define PURPLE_TYPE_SMILEY             (purple_smiley_get_type ())
-#define PURPLE_SMILEY(smiley)          (G_TYPE_CHECK_INSTANCE_CAST ((smiley), PURPLE_TYPE_SMILEY, PurpleSmiley))
-#define PURPLE_SMILEY_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
-#define PURPLE_IS_SMILEY(smiley)       (G_TYPE_CHECK_INSTANCE_TYPE ((smiley), PURPLE_TYPE_SMILEY))
-#define PURPLE_IS_SMILEY_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), PURPLE_TYPE_SMILEY))
-#define PURPLE_SMILEY_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**************************************************************************/
-/** @name Custom Smiley API                                               */
-/**************************************************************************/
-/*@{*/
+struct _PurpleSmiley {
+	/*< private >*/
+	PurpleImage parent;
+};
 
 /**
- * GObject-fu.
- * @internal.
+ * PurpleSmileyClass:
+ *
+ * Base class for #PurpleSmiley objects.
+ */
+struct _PurpleSmileyClass {
+	/*< private >*/
+	PurpleImageClass parent_class;
+
+	/*< private >*/
+	void (*purple_reserved1)(void);
+	void (*purple_reserved2)(void);
+	void (*purple_reserved3)(void);
+	void (*purple_reserved4)(void);
+};
+
+G_BEGIN_DECLS
+
+/**
+ * purple_smiley_get_type:
+ *
+ * Returns: the #GType for a smiley.
  */
 GType purple_smiley_get_type(void);
 
 /**
- * Creates a new custom smiley from a PurpleStoredImage.
+ * purple_smiley_new:
+ * @shortcut: the smiley shortcut (unescaped).
+ * @path: the smiley image file path.
  *
- * If a custom smiley with the given shortcut already exists, it
- * will be automaticaly returned.
+ * Creates new smiley, which is ready to display (its file exists
+ * and is a valid image).
  *
- * @param img         The image associated with the smiley.
- * @param shortcut    The associated shortcut (e.g. "(homer)").
- *
- * @return The custom smiley.
+ * Returns: the new #PurpleSmiley.
  */
-PurpleSmiley *
-purple_smiley_new(PurpleStoredImage *img, const char *shortcut);
+PurpleSmiley *purple_smiley_new(const gchar *shortcut, const gchar *path);
 
 /**
- * Creates a new custom smiley, reading the image data from a file.
+ * purple_smiley_new_from_data:
+ * @shortcut: The smiley shortcut (unescaped).
+ * @data: The raw data of the image.
+ * @length: The length of @data in bytes.
  *
- * If a custom smiley with the given shortcut already exists, it
- * will be automaticaly returned.
+ * Creates new smiley from @data.
  *
- * @param shortcut           The associated shortcut (e.g. "(homer)").
- * @param filepath           The image file.
- *
- * @return The custom smiley.
+ * Returns: A new #PurpleSmiley.
  */
-PurpleSmiley *
-purple_smiley_new_from_file(const char *shortcut, const char *filepath);
+PurpleSmiley *purple_smiley_new_from_data(const gchar *shortcut, const guint8 *data, gsize length);
 
 /**
- * Destroys the custom smiley and releases the associated resources.
+ * purple_smiley_new_remote:
+ * @shortcut: the smiley shortcut (unescaped).
  *
- * @param smiley    The custom smiley.
+ * Creates new remote smiley. It's not bound to any conversation, so most
+ * probably you might want to use
+ * #purple_conversation_add_remote_smiley instead.
+ *
+ * Returns: the new remote #PurpleSmiley.
  */
-void
-purple_smiley_delete(PurpleSmiley *smiley);
+PurpleSmiley *purple_smiley_new_remote(const gchar *shortcut);
 
 /**
- * Changes the custom smiley's shortcut.
+ * purple_smiley_get_shortcut:
+ * @smiley: the smiley.
  *
- * @param smiley    The custom smiley.
- * @param shortcut  The new shortcut. A custom smiley with this shortcut
- *                  cannot already be in use.
+ * Returns the @smiley's associated shortcut (e.g. <literal>(homer)</literal> or
+ * <literal>:-)</literal>).
  *
- * @return TRUE if the shortcut was changed. FALSE otherwise.
+ * Returns: the unescaped shortcut.
  */
-gboolean
-purple_smiley_set_shortcut(PurpleSmiley *smiley, const char *shortcut);
+const gchar *purple_smiley_get_shortcut(const PurpleSmiley *smiley);
 
-/**
- * Changes the custom smiley's image data.
- *
- * @param smiley             The custom smiley.
- * @param smiley_data        The custom smiley data, which the smiley code
- *                           takes ownership of and will free.
- * @param smiley_data_len    The length of the data in @a smiley_data.
- */
-void
-purple_smiley_set_data(PurpleSmiley *smiley, guchar *smiley_data,
-                                           size_t smiley_data_len);
+G_END_DECLS
 
-/**
- * Returns the custom smiley's associated shortcut (e.g. "(homer)").
- *
- * @param smiley   The custom smiley.
- *
- * @return The shortcut.
- */
-const char *purple_smiley_get_shortcut(const PurpleSmiley *smiley);
-
-/**
- * Returns the custom smiley data's checksum.
- *
- * @param smiley   The custom smiley.
- *
- * @return The checksum.
- */
-const char *purple_smiley_get_checksum(const PurpleSmiley *smiley);
-
-/**
- * Returns the PurpleStoredImage with the reference counter incremented.
- *
- * The returned PurpleStoredImage reference counter must be decremented
- * when the caller is done using it.
- *
- * @param smiley   The custom smiley.
- *
- * @return A PurpleStoredImage.
- */
-PurpleStoredImage *purple_smiley_get_stored_image(const PurpleSmiley *smiley);
-
-/**
- * Returns the custom smiley's data.
- *
- * @param smiley  The custom smiley.
- * @param len     If not @c NULL, the length of the image data returned
- *                will be set in the location pointed to by this.
- *
- * @return A pointer to the custom smiley data.
- */
-gconstpointer purple_smiley_get_data(const PurpleSmiley *smiley, size_t *len);
-
-/**
- * Returns an extension corresponding to the custom smiley's file type.
- *
- * @param smiley  The custom smiley.
- *
- * @return The custom smiley's extension, "icon" if unknown, or @c NULL if
- *         the image data has disappeared.
- */
-const char *purple_smiley_get_extension(const PurpleSmiley *smiley);
-
-/**
- * Returns a full path to an custom smiley.
- *
- * If the custom smiley has data and the file exists in the cache, this
- * will return a full path to the cached file.
- *
- * In general, it is not appropriate to be poking in the file cache
- * directly.  If you find yourself wanting to use this function, think
- * very long and hard about it, and then don't.
- *
- * Think some more.
- *
- * @param smiley  The custom smiley.
- *
- * @return A full path to the file, or @c NULL under various conditions.
- *         The caller should use g_free to free the returned string.
- */
-char *purple_smiley_get_full_path(PurpleSmiley *smiley);
-
-/*@}*/
-
-
-/**************************************************************************/
-/** @name Custom Smiley Subsystem API                                     */
-/**************************************************************************/
-/*@{*/
-
-/**
- * Returns a list of all custom smileys. The caller is responsible for freeing
- * the list.
- *
- * @return A list of all custom smileys.
- */
-GList *
-purple_smileys_get_all(void);
-
-/**
- * Returns a custom smiley given its shortcut.
- *
- * @param shortcut The custom smiley's shortcut.
- *
- * @return The custom smiley if found, or @c NULL if not found.
- */
-PurpleSmiley *
-purple_smileys_find_by_shortcut(const char *shortcut);
-
-/**
- * Returns a custom smiley given its checksum.
- *
- * @param checksum The custom smiley's checksum.
- *
- * @return The custom smiley if found, or @c NULL if not found.
- */
-PurpleSmiley *
-purple_smileys_find_by_checksum(const char *checksum);
-
-/**
- * Returns the directory used to store custom smiley cached files.
- *
- * The default directory is PURPLEDIR/custom_smiley.
- *
- * @return The directory in which to store custom smileys cached files.
- */
-const char *purple_smileys_get_storing_dir(void);
-
-/**
- * Initializes the custom smiley subsystem.
- */
-void purple_smileys_init(void);
-
-/**
- * Uninitializes the custom smiley subsystem.
- */
-void purple_smileys_uninit(void);
-
-/*@}*/
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _PURPLE_SMILEY_H_ */
-
+#endif /* PURPLE_SMILEY_H */

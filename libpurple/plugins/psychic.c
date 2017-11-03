@@ -3,26 +3,26 @@
 #include "internal.h"
 
 #include "account.h"
-#include "blist.h"
+#include "buddylist.h"
 #include "conversation.h"
 #include "debug.h"
 #include "signals.h"
 #include "status.h"
 #include "version.h"
-#include "privacy.h"
 
-#include "plugin.h"
+#include "plugins.h"
 #include "pluginpref.h"
 #include "prefs.h"
 
 
 #define PLUGIN_ID       "core-psychic"
 #define PLUGIN_NAME     N_("Psychic Mode")
+#define PLUGIN_CATEGORY N_("Utility")
 #define PLUGIN_SUMMARY  N_("Psychic mode for incoming conversation")
 #define PLUGIN_DESC     N_("Causes conversation windows to appear as other" \
 			   " users begin to message you.  This works for" \
 			   " AIM, ICQ, XMPP, and Sametime")
-#define PLUGIN_AUTHOR   "Christopher O'Brien <siege@preoccupied.net>"
+#define PLUGIN_AUTHORS  { "Christopher O'Brien <siege@preoccupied.net>", NULL }
 
 
 #define PREFS_BASE    "/plugins/core/psychic"
@@ -34,7 +34,7 @@
 
 static void
 buddy_typing_cb(PurpleAccount *acct, const char *name, void *data) {
-  PurpleConversation *gconv;
+  PurpleIMConversation *im;
 
   if(purple_prefs_get_bool(PREF_STATUS) &&
      ! purple_status_is_available(purple_account_get_active_status(acct))) {
@@ -43,23 +43,23 @@ buddy_typing_cb(PurpleAccount *acct, const char *name, void *data) {
   }
 
   if(purple_prefs_get_bool(PREF_BUDDIES) &&
-     ! purple_find_buddy(acct, name)) {
+     ! purple_blist_find_buddy(acct, name)) {
     purple_debug_info("psychic", "not in blist, doing nothing\n");
     return;
   }
 
-  if(FALSE == purple_privacy_check(acct, name)) {
+  if(FALSE == purple_account_privacy_check(acct, name)) {
     purple_debug_info("psychic", "user %s is blocked\n", name);
     return;
   }
 
-  gconv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, acct);
-  if(! gconv) {
+  im = purple_conversations_find_im_with_account(name, acct);
+  if(! im) {
     purple_debug_info("psychic", "no previous conversation exists\n");
-    gconv = purple_conversation_new(PURPLE_CONV_TYPE_IM, acct, name);
+    im = purple_im_conversation_new(acct, name);
 
     if(purple_prefs_get_bool(PREF_RAISE)) {
-      purple_conversation_present(gconv);
+      purple_conversation_present(PURPLE_CONVERSATION(im));
     }
 
     if(purple_prefs_get_bool(PREF_NOTICE)) {
@@ -68,14 +68,13 @@ buddy_typing_cb(PurpleAccount *acct, const char *name, void *data) {
 	 translate it literally.  If you can't find a fitting cultural
 	 reference in your language, consider translating something
 	 like this instead: "You feel a new message coming." */
-      purple_conversation_write(gconv, NULL,
-			      _("You feel a disturbance in the force..."),
-			      PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ACTIVE_ONLY,
-			      time(NULL));
+      purple_conversation_write_system_message(PURPLE_CONVERSATION(im),
+		_("You feel a disturbance in the force..."),
+		PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_ACTIVE_ONLY);
     }
 
     /* Necessary because we may be creating a new conversation window. */
-    purple_conv_im_set_typing_state(PURPLE_CONV_IM(gconv), PURPLE_TYPING);
+    purple_im_conversation_set_typing_state(im, PURPLE_IM_TYPING);
   }
 }
 
@@ -110,10 +109,37 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 }
 
 
+static PurplePluginInfo *
+plugin_query(GError **error) {
+
+  const gchar * const authors[] = PLUGIN_AUTHORS;
+
+  return purple_plugin_info_new(
+    "id",             PLUGIN_ID,
+    "name",           PLUGIN_NAME,
+    "version",        DISPLAY_VERSION,
+    "category",       PLUGIN_CATEGORY,
+    "summary",        PLUGIN_SUMMARY,
+    "description",    PLUGIN_DESC,
+    "authors",        authors,
+    "website",        PURPLE_WEBSITE,
+    "abi-version",    PURPLE_ABI_VERSION,
+    "pref-frame-cb",  get_plugin_pref_frame,
+    NULL
+  );
+}
+
+
 static gboolean
-plugin_load(PurplePlugin *plugin) {
+plugin_load(PurplePlugin *plugin, GError **error) {
 
   void *convs_handle;
+
+  purple_prefs_add_none(PREFS_BASE);
+  purple_prefs_add_bool(PREF_BUDDIES, FALSE);
+  purple_prefs_add_bool(PREF_NOTICE, TRUE);
+  purple_prefs_add_bool(PREF_STATUS, TRUE);
+
   convs_handle = purple_conversations_get_handle();
 
   purple_signal_connect(convs_handle, "buddy-typing", plugin,
@@ -123,61 +149,11 @@ plugin_load(PurplePlugin *plugin) {
 }
 
 
-static PurplePluginUiInfo prefs_info = {
-  get_plugin_pref_frame,
-  0,    /* page_num (Reserved) */
-  NULL, /* frame (Reserved) */
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error) {
 
-  /* padding */
-  NULL,
-  NULL,
-  NULL,
-  NULL
-};
-
-
-static PurplePluginInfo info = {
-  PURPLE_PLUGIN_MAGIC,
-  PURPLE_MAJOR_VERSION,
-  PURPLE_MINOR_VERSION,
-  PURPLE_PLUGIN_STANDARD,   /**< type */
-  NULL,                   /**< ui_requirement */
-  0,                      /**< flags */
-  NULL,                   /**< dependencies */
-  PURPLE_PRIORITY_DEFAULT,  /**< priority */
-
-  PLUGIN_ID,              /**< id */
-  PLUGIN_NAME,            /**< name */
-  DISPLAY_VERSION,        /**< version */
-  PLUGIN_SUMMARY,         /**< summary */
-  PLUGIN_DESC,            /**< description */
-  PLUGIN_AUTHOR,          /**< author */
-  PURPLE_WEBSITE,           /**< homepage */
-
-  plugin_load,            /**< load */
-  NULL,                   /**< unload */
-  NULL,                   /**< destroy */
-
-  NULL,                   /**< ui_info */
-  NULL,                   /**< extra_info */
-  &prefs_info,            /**< prefs_info */
-  NULL,                   /**< actions */
-
-  /* padding */
-  NULL,
-  NULL,
-  NULL,
-  NULL
-};
-
-
-static void
-init_plugin(PurplePlugin *plugin) {
-  purple_prefs_add_none(PREFS_BASE);
-  purple_prefs_add_bool(PREF_BUDDIES, FALSE);
-  purple_prefs_add_bool(PREF_NOTICE, TRUE);
-  purple_prefs_add_bool(PREF_STATUS, TRUE);
+  return TRUE;
 }
 
 
-PURPLE_INIT_PLUGIN(psychic, init_plugin, info)
+PURPLE_PLUGIN_INIT(psychic, plugin_query, plugin_load, plugin_unload);

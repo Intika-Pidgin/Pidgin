@@ -22,66 +22,50 @@
 #include "debug.h"
 #include "jingleinfo.h"
 
+#include <gio/gio.h>
+
 static void
-jabber_google_stun_lookup_cb(GSList *hosts, gpointer data,
-	const char *error_message)
-{
+jabber_google_stun_lookup_cb(GObject *sender, GAsyncResult *result, gpointer data) {
+	GError *error = NULL;
+	GList *addresses = NULL;
 	JabberStream *js = (JabberStream *) data;
 
-	if (error_message) {
+	addresses = g_resolver_lookup_by_name_finish(G_RESOLVER(sender),
+			result, &error);
+
+	if(error) {
 		purple_debug_error("jabber", "Google STUN lookup failed: %s\n",
-			error_message);
-		g_slist_free(hosts);
-		js->stun_query = NULL;
+			error->message);
+
+		g_error_free(error);
+
 		return;
 	}
 
-	if (hosts && g_slist_next(hosts)) {
-		struct sockaddr *addr = g_slist_next(hosts)->data;
-		char dst[INET6_ADDRSTRLEN];
-		int port;
+	if(g_list_length(addresses) > 0) {
+		GInetAddress *inet_address = G_INET_ADDRESS(addresses->data);
 
-		if (addr->sa_family == AF_INET6) {
-			inet_ntop(addr->sa_family, &((struct sockaddr_in6 *) addr)->sin6_addr,
-				dst, sizeof(dst));
-			port = ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
-		} else {
-			inet_ntop(addr->sa_family, &((struct sockaddr_in *) addr)->sin_addr,
-				dst, sizeof(dst));
-			port = ntohs(((struct sockaddr_in *) addr)->sin_port);
-		}
-
-		if (js->stun_ip)
-			g_free(js->stun_ip);
-		js->stun_ip = g_strdup(dst);
-		js->stun_port = port;
+		g_free(js->stun_ip);
+		js->stun_ip = g_inet_address_to_string(inet_address);
 
 		purple_debug_info("jabber", "set Google STUN IP/port address: "
-		                  "%s:%d\n", dst, port);
-
-		/* unmark ongoing query */
-		js->stun_query = NULL;
+		                  "%s:%d\n", js->stun_ip, js->stun_port);
 	}
 
-	while (hosts != NULL) {
-		hosts = g_slist_delete_link(hosts, hosts);
-		/* Free the address */
-		g_free(hosts->data);
-		hosts = g_slist_delete_link(hosts, hosts);
-	}
+	g_resolver_free_addresses(addresses);
 }
 
 static void
 jabber_google_jingle_info_common(JabberStream *js, const char *from,
-                                 JabberIqType type, xmlnode *query)
+                                 JabberIqType type, PurpleXmlNode *query)
 {
-	const xmlnode *stun = xmlnode_get_child(query, "stun");
-	const xmlnode *relay = xmlnode_get_child(query, "relay");
+	const PurpleXmlNode *stun = purple_xmlnode_get_child(query, "stun");
+	const PurpleXmlNode *relay = purple_xmlnode_get_child(query, "relay");
 	gchar *my_bare_jid;
 
 	/*
 	 * Make sure that random people aren't sending us STUN servers. Per
-	 * http://code.google.com/apis/talk/jep_extensions/jingleinfo.html, these
+	 * https://developers.google.com/talk/jep_extensions/jingleinfo, these
 	 * stanzas are stamped from our bare JID.
 	 */
 	if (from) {
@@ -102,41 +86,41 @@ jabber_google_jingle_info_common(JabberStream *js, const char *from,
 	purple_debug_info("jabber", "got google:jingleinfo\n");
 
 	if (stun) {
-		xmlnode *server = xmlnode_get_child(stun, "server");
+		PurpleXmlNode *server = purple_xmlnode_get_child(stun, "server");
 
 		if (server) {
-			const gchar *host = xmlnode_get_attrib(server, "host");
-			const gchar *udp = xmlnode_get_attrib(server, "udp");
+			const gchar *host = purple_xmlnode_get_attrib(server, "host");
+			const gchar *udp = purple_xmlnode_get_attrib(server, "udp");
 
 			if (host && udp) {
-				PurpleAccount *account;
-				int port = atoi(udp);
-				/* if there, would already be an ongoing query,
-				 cancel it */
-				if (js->stun_query)
-					purple_dnsquery_destroy(js->stun_query);
+				GResolver *resolver = g_resolver_get_default();
 
-				account = purple_connection_get_account(js->gc);
-				js->stun_query = purple_dnsquery_a_account(account, host, port,
-					jabber_google_stun_lookup_cb, js);
+				js->stun_port = atoi(udp);
+
+				g_resolver_lookup_by_name_async(resolver,
+				                                host,
+				                                NULL,
+				                                jabber_google_stun_lookup_cb,
+				                                js);
+				g_object_unref(resolver);
 			}
 		}
 	}
 
 	if (relay) {
-		xmlnode *token = xmlnode_get_child(relay, "token");
-		xmlnode *server = xmlnode_get_child(relay, "server");
+		PurpleXmlNode *token = purple_xmlnode_get_child(relay, "token");
+		PurpleXmlNode *server = purple_xmlnode_get_child(relay, "server");
 
 		if (token) {
-			gchar *relay_token = xmlnode_get_data(token);
+			gchar *relay_token = purple_xmlnode_get_data(token);
 
-			/* we let js own the string returned from xmlnode_get_data */
+			/* we let js own the string returned from purple_xmlnode_get_data */
 			js->google_relay_token = relay_token;
 		}
 
 		if (server) {
 			js->google_relay_host =
-				g_strdup(xmlnode_get_attrib(server, "host"));
+				g_strdup(purple_xmlnode_get_attrib(server, "host"));
 		}
 	}
 }
@@ -144,9 +128,9 @@ jabber_google_jingle_info_common(JabberStream *js, const char *from,
 static void
 jabber_google_jingle_info_cb(JabberStream *js, const char *from,
                              JabberIqType type, const char *id,
-                             xmlnode *packet, gpointer data)
+                             PurpleXmlNode *packet, gpointer data)
 {
-	xmlnode *query = xmlnode_get_child_with_namespace(packet, "query",
+	PurpleXmlNode *query = purple_xmlnode_get_child_with_namespace(packet, "query",
 			NS_GOOGLE_JINGLE_INFO);
 
 	if (query)
@@ -158,7 +142,7 @@ jabber_google_jingle_info_cb(JabberStream *js, const char *from,
 void
 jabber_google_handle_jingle_info(JabberStream *js, const char *from,
                                  JabberIqType type, const char *id,
-                                 xmlnode *child)
+                                 PurpleXmlNode *child)
 {
 	jabber_google_jingle_info_common(js, from, type, child);
 }

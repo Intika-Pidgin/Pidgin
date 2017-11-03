@@ -19,20 +19,13 @@
  * 02111-1301, USA.
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#ifndef PURPLE_PLUGINS
-# define PURPLE_PLUGINS
-#endif
-
+/* When writing a third-party plugin, do not include libpurple's internal.h
+ * included below. This file is for internal libpurple use only. We're including
+ * it here for our own convenience. */
 #include "internal.h"
 
-#include "plugin.h"
-#include "pluginpref.h"
-#include "prefs.h"
-#include "version.h"
+/* This file defines PURPLE_PLUGINS and includes all the libpurple headers */
+#include <purple.h>
 
 static PurplePluginPrefFrame *
 get_plugin_pref_frame(PurplePlugin *plugin) {
@@ -61,7 +54,7 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 	ppref = purple_plugin_pref_new_with_name_and_label(
 									"/plugins/core/pluginpref_example/int_choice",
 									"integer choice");
-	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
+	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
 	purple_plugin_pref_add_choice(ppref, "One", GINT_TO_POINTER(1));
 	purple_plugin_pref_add_choice(ppref, "Two", GINT_TO_POINTER(2));
 	purple_plugin_pref_add_choice(ppref, "Four", GINT_TO_POINTER(4));
@@ -95,7 +88,7 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 	ppref = purple_plugin_pref_new_with_name_and_label(
 							"/plugins/core/pluginpref_example/string_choice",
 							"string choice");
-	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
+	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
 	purple_plugin_pref_add_choice(ppref, "red", "red");
 	purple_plugin_pref_add_choice(ppref, "orange", "orange");
 	purple_plugin_pref_add_choice(ppref, "yellow", "yellow");
@@ -107,55 +100,31 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 	return frame;
 }
 
-static PurplePluginUiInfo prefs_info = {
-	get_plugin_pref_frame,
-	0,   /* page_num (Reserved) */
-	NULL, /* frame (Reserved) */
-	/* Padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static PurplePluginInfo info =
+static PurplePluginInfo *
+plugin_query(GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
+	const gchar * const authors[] = {
+		"Gary Kramlich <amc_grim@users.sf.net>",
+		NULL
+	};
 
-	"core-pluginpref_example",                     /**< id             */
-	"Pluginpref Example",                           /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	"An example of how to use pluginprefs",
-	                                                  /**  description    */
-	"An example of how to use pluginprefs",
-	"Gary Kramlich <amc_grim@users.sf.net>",      /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
+	return purple_plugin_info_new(
+		"id",             "core-pluginpref_example",
+		"name",           "Pluginpref Example",
+		"version",        DISPLAY_VERSION,
+		"category",       "Example",
+		"summary",        "An example of how to use pluginprefs",
+		"description",    "An example of how to use pluginprefs",
+		"authors",        authors,
+		"website",        PURPLE_WEBSITE,
+		"abi-version",    PURPLE_ABI_VERSION,
+		"pref-frame-cb",  get_plugin_pref_frame,
+		NULL
+	);
+}
 
-	NULL,                                             /**< load           */
-	NULL,                                             /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	NULL,                                             /**< extra_info     */
-	&prefs_info,                                      /**< prefs_info     */
-	NULL,                                             /**< actions        */
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_prefs_add_none("/plugins/core/pluginpref_example");
 	purple_prefs_add_bool("/plugins/core/pluginpref_example/bool", TRUE);
@@ -167,6 +136,14 @@ init_plugin(PurplePlugin *plugin)
 							"max length string");
 	purple_prefs_add_string("/plugins/core/pluginpref_example/masked_string", "masked");
 	purple_prefs_add_string("/plugins/core/pluginpref_example/string_choice", "red");
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(ppexample, init_plugin, info)
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(ppexample, plugin_query, plugin_load, plugin_unload);

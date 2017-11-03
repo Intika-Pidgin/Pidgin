@@ -1,8 +1,3 @@
-/**
- * @file accountopt.c Account Options API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -27,6 +22,60 @@
 
 #include "accountopt.h"
 #include "util.h"
+#include "glibcompat.h"
+
+/*
+ * An option for an account.
+ *
+ * This is set by protocols, and appears in the account settings
+ * dialogs.
+ */
+struct _PurpleAccountOption
+{
+	PurplePrefType type;      /* The type of value.                     */
+
+	char *text;             /* The text that will appear to the user. */
+	char *pref_name;        /* The name of the associated preference. */
+
+	union
+	{
+		gboolean boolean;   /* The default boolean value.             */
+		int integer;        /* The default integer value.             */
+		char *string;       /* The default string value.              */
+		GList *list;        /* The default list value.                */
+
+	} default_value;
+
+	union
+	{
+		struct
+		{
+			gboolean masked; /* Whether the value entered should
+			                  *   be obscured from view (for
+			                  *   passwords and similar options)
+			                  */
+			GSList *hints;    /* List of hinted values */
+		} string;
+	} params;
+};
+
+/*
+ * A username split.
+ *
+ * This is used by some protocols to separate the fields of the username
+ * into more human-readable components.
+ */
+struct _PurpleAccountUserSplit
+{
+	char *text;             /* The text that will appear to the user. */
+	char *default_value;    /* The default value.                     */
+	char  field_sep;        /* The field separator.                   */
+	gboolean reverse;       /* TRUE if the separator should be found
+							   starting a the end of the string, FALSE
+							   otherwise                                 */
+	gboolean constant;
+};
+
 
 PurpleAccountOption *
 purple_account_option_new(PurplePrefType type, const char *text,
@@ -132,6 +181,7 @@ purple_account_option_destroy(PurpleAccountOption *option)
 	if (option->type == PURPLE_PREF_STRING)
 	{
 		g_free(option->default_value.string);
+		g_slist_free_full(option->params.string.hints, &g_free);
 	}
 	else if (option->type == PURPLE_PREF_STRING_LIST)
 	{
@@ -176,14 +226,23 @@ purple_account_option_set_default_string(PurpleAccountOption *option,
 }
 
 void
-purple_account_option_set_masked(PurpleAccountOption *option, gboolean masked)
+purple_account_option_string_set_masked(PurpleAccountOption *option, gboolean masked)
 {
 	g_return_if_fail(option != NULL);
 	g_return_if_fail(option->type == PURPLE_PREF_STRING);
 
-	option->masked = masked;
+	option->params.string.masked = masked;
 }
 
+void
+purple_account_option_string_set_hints(PurpleAccountOption *option, GSList *hints)
+{
+	g_return_if_fail(option != NULL);
+	g_return_if_fail(option->type == PURPLE_PREF_STRING);
+
+	g_slist_free_full(option->params.string.hints, &g_free);
+	option->params.string.hints = hints;
+}
 
 void
 purple_account_option_set_list(PurpleAccountOption *option, GList *values)
@@ -220,7 +279,7 @@ purple_account_option_add_list_item(PurpleAccountOption *option,
 }
 
 PurplePrefType
-purple_account_option_get_type(const PurpleAccountOption *option)
+purple_account_option_get_pref_type(const PurpleAccountOption *option)
 {
 	g_return_val_if_fail(option != NULL, PURPLE_PREF_NONE);
 
@@ -287,12 +346,21 @@ purple_account_option_get_default_list_value(const PurpleAccountOption *option)
 }
 
 gboolean
-purple_account_option_get_masked(const PurpleAccountOption *option)
+purple_account_option_string_get_masked(const PurpleAccountOption *option)
 {
 	g_return_val_if_fail(option != NULL, FALSE);
 	g_return_val_if_fail(option->type == PURPLE_PREF_STRING, FALSE);
 
-	return option->masked;
+	return option->params.string.masked;
+}
+
+const GSList *
+purple_account_option_string_get_hints(const PurpleAccountOption *option)
+{
+	g_return_val_if_fail(option != NULL, FALSE);
+	g_return_val_if_fail(option->type == PURPLE_PREF_STRING, FALSE);
+
+	return option->params.string.hints;
 }
 
 GList *
@@ -374,4 +442,21 @@ purple_account_user_split_set_reverse(PurpleAccountUserSplit *split, gboolean re
 	g_return_if_fail(split != NULL);
 
 	split->reverse = reverse;
+}
+
+gboolean
+purple_account_user_split_is_constant(const PurpleAccountUserSplit *split)
+{
+	g_return_val_if_fail(split != NULL, FALSE);
+
+	return split->constant;
+}
+
+void
+purple_account_user_split_set_constant(PurpleAccountUserSplit *split,
+	gboolean constant)
+{
+	g_return_if_fail(split != NULL);
+
+	split->constant = constant;
 }

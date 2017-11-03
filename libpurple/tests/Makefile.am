@@ -1,38 +1,45 @@
-if HAVE_CHECK
-TESTS=check_libpurple
+include $(top_srcdir)/glib-tap.mk
 
-clean-local:
-	-rm -rf libpurple..
+COMMON_LIBS=\
+	$(top_builddir)/libpurple/libpurple.la \
+	$(GLIB_LIBS) \
+	$(GPLUGIN_LIBS)
 
-check_PROGRAMS=check_libpurple
+test_programs=\
+	test_image \
+	test_smiley \
+	test_smiley_list \
+	test_trie \
+	test_util \
+	test_xmlnode
 
-check_libpurple_SOURCES=\
-        check_libpurple.c \
-	    tests.h \
-		test_cipher.c \
-		test_jabber_caps.c \
-		test_jabber_digest_md5.c \
-		test_jabber_jutil.c \
-		test_jabber_scram.c \
-		test_oscar_util.c \
-		test_util.c \
-		test_xmlnode.c \
-		$(top_builddir)/libpurple/util.h
+test_image_SOURCES=test_image.c
+test_image_LDADD=$(COMMON_LIBS)
 
-check_libpurple_CFLAGS=\
-        @CHECK_CFLAGS@ \
-		$(GLIB_CFLAGS) \
-		$(DEBUG_CFLAGS) \
-		$(LIBXML_CFLAGS) \
-		-I.. \
-		-I$(top_srcdir)/libpurple \
-		-DBUILDDIR=\"$(top_builddir)\"
+test_smiley_SOURCES=test_smiley.c
+test_smiley_LDADD=$(COMMON_LIBS)
 
-check_libpurple_LDADD=\
-		$(top_builddir)/libpurple/protocols/jabber/libjabber.la \
-		$(top_builddir)/libpurple/protocols/oscar/liboscar.la \
-		$(top_builddir)/libpurple/libpurple.la \
-        @CHECK_LIBS@ \
-		$(GLIB_LIBS)
+test_smiley_list_SOURCES=test_smiley_list.c
+test_smiley_list_LDADD=$(COMMON_LIBS)
 
-endif
+test_trie_SOURCES=test_trie.c
+test_trie_LDADD=$(COMMON_LIBS)
+
+test_util_SOURCES=test_util.c
+test_util_LDADD=$(COMMON_LIBS)
+
+test_xmlnode_SOURCES=test_xmlnode.c
+test_xmlnode_LDADD=$(COMMON_LIBS)
+
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/libpurple \
+	-I$(top_builddir)/libpurple \
+	-DTEST_DATA_DIR=\"$(srcdir)/data\" \
+	$(DEBUG_CFLAGS) \
+	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
+	$(PLUGIN_CFLAGS) \
+	$(DBUS_CFLAGS)
+
+EXTRA_DIST += \
+	data/test-image.png

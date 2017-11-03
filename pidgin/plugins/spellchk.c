@@ -39,6 +39,7 @@
 #include "util.h"
 #include "version.h"
 
+#include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkprefs.h"
 #include "gtkutils.h"
@@ -46,7 +47,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #define SPELLCHECK_PLUGIN_ID "gtk-spellcheck"
 #define SPELLCHK_OBJECT_KEY "spellchk"
@@ -319,6 +319,10 @@ spellchk_inside_word(GtkTextIter *iter)
 	 *
 	 * Part 1 of 2: This marks . as being an inside-word character. */
 	if (c == '.')
+		return TRUE;
+	if (c == '+')
+		return TRUE;
+	if (c == '-')
 		return TRUE;
 
 	/* Avoid problems with \r, for example (SF #1289031). */
@@ -1970,7 +1974,7 @@ static void list_add_new(void)
 
 				purple_notify_error(NULL, _("Duplicate Correction"),
 					_("The specified word already exists in the correction list."),
-					gtk_entry_get_text(GTK_ENTRY(bad_entry)));
+					gtk_entry_get_text(GTK_ENTRY(bad_entry)), NULL);
 				return;
 			}
 
@@ -2103,48 +2107,6 @@ static void on_entry_changed(GtkEditable *editable, gpointer data)
 		non_empty(gtk_entry_get_text(GTK_ENTRY(good_entry))));
 }
 
-/*
- *  EXPORTED FUNCTIONS
- */
-
-static gboolean
-plugin_load(PurplePlugin *plugin)
-{
-	void *conv_handle = purple_conversations_get_handle();
-	GList *convs;
-
-	load_conf();
-
-	/* Attach to existing conversations */
-	for (convs = purple_get_conversations(); convs != NULL; convs = convs->next)
-	{
-		spellchk_new_attach((PurpleConversation *)convs->data);
-	}
-
-	purple_signal_connect(conv_handle, "conversation-created",
-			    plugin, PURPLE_CALLBACK(spellchk_new_attach), NULL);
-
-	return TRUE;
-}
-
-static gboolean
-plugin_unload(PurplePlugin *plugin)
-{
-	GList *convs;
-
-	/* Detach from existing conversations */
-	for (convs = purple_get_conversations(); convs != NULL; convs = convs->next)
-	{
-		PidginConversation *gtkconv = PIDGIN_CONVERSATION((PurpleConversation *)convs->data);
-		spellchk *spell = g_object_get_data(G_OBJECT(gtkconv->entry), SPELLCHK_OBJECT_KEY);
-
-		g_signal_handlers_disconnect_by_func(gtkconv->entry, message_send_cb, spell);
-		g_object_set_data(G_OBJECT(gtkconv->entry), SPELLCHK_OBJECT_KEY, NULL);
-	}
-
-	return TRUE;
-}
-
 static void whole_words_button_toggled(GtkToggleButton *complete_toggle, GtkToggleButton *case_toggle)
 {
 	gboolean enabled = gtk_toggle_button_get_active(complete_toggle);
@@ -2166,7 +2128,7 @@ get_config_frame(PurplePlugin *plugin)
 	GtkWidget *vbox2;
 	GtkWidget *vbox3;
 
-	ret = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_set_border_width (GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
 
 	vbox = pidgin_make_frame(ret, _("Text Replacements"));
@@ -2174,7 +2136,6 @@ get_config_frame(PurplePlugin *plugin)
 	gtk_widget_show(vbox);
 
 	tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(tree), TRUE);
 	gtk_widget_set_size_request(tree, -1, 200);
 
 	renderer = gtk_cell_renderer_text_new();
@@ -2236,7 +2197,7 @@ get_config_frame(PurplePlugin *plugin)
 		TRUE, TRUE, 0);
 	gtk_widget_show(tree);
 
-	hbox = gtk_hbutton_box_new();
+	hbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 	gtk_widget_show(hbox);
 
@@ -2253,10 +2214,10 @@ get_config_frame(PurplePlugin *plugin)
 
 	vbox = pidgin_make_frame(ret, _("Add a new text replacement"));
 
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 	gtk_widget_show(hbox);
-	vbox2 = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox2, TRUE, TRUE, 0);
 	gtk_widget_show(vbox2);
 
@@ -2291,7 +2252,7 @@ get_config_frame(PurplePlugin *plugin)
 	button = gtk_button_new_from_stock(GTK_STOCK_ADD);
 	g_signal_connect(G_OBJECT(button), "clicked",
 			   G_CALLBACK(list_add_new), NULL);
-	vbox3 = gtk_vbox_new(FALSE, 0);
+	vbox3 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox3, TRUE, FALSE, 0);
 	gtk_widget_show(vbox3);
 	gtk_box_pack_end(GTK_BOX(vbox3), button, FALSE, FALSE, 0);
@@ -2312,59 +2273,76 @@ get_config_frame(PurplePlugin *plugin)
 	return ret;
 }
 
-static PidginPluginUiInfo ui_info =
+/*
+ *  EXPORTED FUNCTIONS
+ */
+
+static PidginPluginInfo *
+plugin_query(GError **error)
 {
-	get_config_frame,
-	0, /* page_num (Reserved) */
+	const gchar * const authors[] = {
+		"Eric Warmenhoven <eric@warmenhoven.org>",
+		NULL
+	};
 
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
+	return pidgin_plugin_info_new(
+		"id",                   SPELLCHECK_PLUGIN_ID,
+		"name",                 N_("Text replacement"),
+		"version",              DISPLAY_VERSION,
+		"category",             N_("Utility"),
+		"summary",              N_("Replaces text in outgoing messages according to user-defined rules."),
+		"description",          N_("Replaces text in outgoing messages according to user-defined rules."),
+		"authors",              authors,
+		"website",              PURPLE_WEBSITE,
+		"abi-version",          PURPLE_ABI_VERSION,
+		"gtk-config-frame-cb",  get_config_frame,
+		NULL
+	);
+}
 
-static PurplePluginInfo info =
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,
-	PIDGIN_PLUGIN_TYPE,
-	0,
-	NULL,
-	PURPLE_PRIORITY_DEFAULT,
-	SPELLCHECK_PLUGIN_ID,
-	N_("Text replacement"),
-	DISPLAY_VERSION,
-	N_("Replaces text in outgoing messages according to user-defined rules."),
-	N_("Replaces text in outgoing messages according to user-defined rules."),
-	"Eric Warmenhoven <eric@warmenhoven.org>",
-	PURPLE_WEBSITE,
-	plugin_load,
-	plugin_unload,
-	NULL,
-	&ui_info,
-	NULL,
-	NULL,
-	NULL,
+	void *conv_handle = purple_conversations_get_handle();
+	GList *convs;
 
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
-{
 #if 0
 	purple_prefs_add_none("/plugins");
 	purple_prefs_add_none("/plugins/gtk");
 	purple_prefs_add_none("/plugins/gtk/spellchk");
 	purple_prefs_add_bool("/plugins/gtk/spellchk/last_word_replace", TRUE);
 #endif
+
+	load_conf();
+
+	/* Attach to existing conversations */
+	for (convs = purple_conversations_get_all(); convs != NULL; convs = convs->next)
+	{
+		spellchk_new_attach((PurpleConversation *)convs->data);
+	}
+
+	purple_signal_connect(conv_handle, "conversation-created",
+			    plugin, PURPLE_CALLBACK(spellchk_new_attach), NULL);
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(spellcheck, init_plugin, info)
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	GList *convs;
+
+	/* Detach from existing conversations */
+	for (convs = purple_conversations_get_all(); convs != NULL; convs = convs->next)
+	{
+		PidginConversation *gtkconv = PIDGIN_CONVERSATION((PurpleConversation *)convs->data);
+		spellchk *spell = g_object_get_data(G_OBJECT(gtkconv->entry), SPELLCHK_OBJECT_KEY);
+
+		g_signal_handlers_disconnect_by_func(gtkconv->entry, message_send_cb, spell);
+		g_object_set_data(G_OBJECT(gtkconv->entry), SPELLCHK_OBJECT_KEY, NULL);
+	}
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(spellcheck, plugin_query, plugin_load, plugin_unload);

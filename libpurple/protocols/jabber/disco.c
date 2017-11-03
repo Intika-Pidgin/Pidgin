@@ -52,32 +52,32 @@ struct _jabber_disco_items_cb_data {
 };
 
 #define SUPPORT_FEATURE(x) { \
-	feature = xmlnode_new_child(query, "feature"); \
-	xmlnode_set_attrib(feature, "var", x); \
+	feature = purple_xmlnode_new_child(query, "feature"); \
+	purple_xmlnode_set_attrib(feature, "var", x); \
 }
 
 static void
 jabber_disco_bytestream_server_cb(JabberStream *js, const char *from,
                                   JabberIqType type, const char *id,
-                                  xmlnode *packet, gpointer data)
+                                  PurpleXmlNode *packet, gpointer data)
 {
 	JabberBytestreamsStreamhost *sh = data;
-	xmlnode *query = xmlnode_get_child_with_namespace(packet, "query",
+	PurpleXmlNode *query = purple_xmlnode_get_child_with_namespace(packet, "query",
 		NS_BYTESTREAMS);
 
 	if (from && purple_strequal(from, sh->jid) && query != NULL) {
-		xmlnode *sh_node = xmlnode_get_child(query, "streamhost");
+		PurpleXmlNode *sh_node = purple_xmlnode_get_child(query, "streamhost");
 		if (sh_node) {
-			const char *jid = xmlnode_get_attrib(sh_node, "jid");
-			const char *port = xmlnode_get_attrib(sh_node, "port");
+			const char *jid = purple_xmlnode_get_attrib(sh_node, "jid");
+			const char *port = purple_xmlnode_get_attrib(sh_node, "port");
 
 
 			if (jid == NULL || !purple_strequal(jid, from))
 				purple_debug_error("jabber", "Invalid jid(%s) for bytestream.\n",
 						   jid ? jid : "(null)");
 
-			sh->host = g_strdup(xmlnode_get_attrib(sh_node, "host"));
-			sh->zeroconf = g_strdup(xmlnode_get_attrib(sh_node, "zeroconf"));
+			sh->host = g_strdup(purple_xmlnode_get_attrib(sh_node, "host"));
+			sh->zeroconf = g_strdup(purple_xmlnode_get_attrib(sh_node, "zeroconf"));
 			if (port != NULL)
 				sh->port = atoi(port);
 		}
@@ -101,12 +101,12 @@ jabber_disco_bytestream_server_cb(JabberStream *js, const char *from,
 
 void jabber_disco_info_parse(JabberStream *js, const char *from,
                              JabberIqType type, const char *id,
-                             xmlnode *in_query)
+                             PurpleXmlNode *in_query)
 {
 	if(type == JABBER_IQ_GET) {
-		xmlnode *query, *identity, *feature;
+		PurpleXmlNode *query, *identity, *feature;
 		JabberIq *iq;
-		const char *node = xmlnode_get_attrib(in_query, "node");
+		const char *node = purple_xmlnode_get_attrib(in_query, "node");
 		char *node_uri = NULL;
 
 		/* create custom caps node URI */
@@ -117,29 +117,29 @@ void jabber_disco_info_parse(JabberStream *js, const char *from,
 		jabber_iq_set_id(iq, id);
 
 		if (from)
-			xmlnode_set_attrib(iq->node, "to", from);
-		query = xmlnode_get_child(iq->node, "query");
+			purple_xmlnode_set_attrib(iq->node, "to", from);
+		query = purple_xmlnode_get_child(iq->node, "query");
 
 		if(node)
-			xmlnode_set_attrib(query, "node", node);
+			purple_xmlnode_set_attrib(query, "node", node);
 
 		if(!node || purple_strequal(node, node_uri)) {
 			GList *features, *identities;
 			for(identities = jabber_identities; identities; identities = identities->next) {
 				JabberIdentity *ident = (JabberIdentity*)identities->data;
-				identity = xmlnode_new_child(query, "identity");
-				xmlnode_set_attrib(identity, "category", ident->category);
-				xmlnode_set_attrib(identity, "type", ident->type);
+				identity = purple_xmlnode_new_child(query, "identity");
+				purple_xmlnode_set_attrib(identity, "category", ident->category);
+				purple_xmlnode_set_attrib(identity, "type", ident->type);
 				if (ident->lang)
-					xmlnode_set_attrib(identity, "xml:lang", ident->lang);
+					purple_xmlnode_set_attrib(identity, "xml:lang", ident->lang);
 				if (ident->name)
-					xmlnode_set_attrib(identity, "name", ident->name);
+					purple_xmlnode_set_attrib(identity, "name", ident->name);
 			}
 			for(features = jabber_features; features; features = features->next) {
 				JabberFeature *feat = (JabberFeature*)features->data;
 				if (!feat->is_enabled || feat->is_enabled(js, feat->namespace)) {
-					feature = xmlnode_new_child(query, "feature");
-					xmlnode_set_attrib(feature, "var", feat->namespace);
+					feature = purple_xmlnode_new_child(query, "feature");
+					purple_xmlnode_set_attrib(feature, "var", feat->namespace);
 				}
 			}
 #ifdef USE_VV
@@ -153,8 +153,8 @@ void jabber_disco_info_parse(JabberStream *js, const char *from,
 			 * node='http://mail.google.com/xmpp/client/caps', ver='1.1'
 			 * advertises as 'voice-v1'.
 			 */
-			xmlnode *feature = xmlnode_new_child(query, "feature");
-			xmlnode_set_attrib(feature, "var", NS_GOOGLE_VOICE);
+			PurpleXmlNode *feature = purple_xmlnode_new_child(query, "feature");
+			purple_xmlnode_set_attrib(feature, "var", NS_GOOGLE_VOICE);
 		} else if (purple_strequal(node, CAPS0115_NODE "#" "video-v1")) {
 			/*
 			 * HUGE HACK! We advertise this ext (see jabber_presence_create_js
@@ -165,8 +165,8 @@ void jabber_disco_info_parse(JabberStream *js, const char *from,
 			 * node='http://mail.google.com/xmpp/client/caps', ver='1.1'
 			 * advertises as 'video-v1'.
 			 */
-			xmlnode *feature = xmlnode_new_child(query, "feature");
-			xmlnode_set_attrib(feature, "var", NS_GOOGLE_VIDEO);
+			PurpleXmlNode *feature = purple_xmlnode_new_child(query, "feature");
+			purple_xmlnode_set_attrib(feature, "var", NS_GOOGLE_VIDEO);
 		} else if (purple_strequal(node, CAPS0115_NODE "#" "camera-v1")) {
 			/*
 			 * HUGE HACK! We advertise this ext (see jabber_presence_create_js
@@ -177,40 +177,40 @@ void jabber_disco_info_parse(JabberStream *js, const char *from,
 			 * node='http://mail.google.com/xmpp/client/caps', ver='1.1'
 			 * advertises as 'camera-v1'.
 			 */
-			xmlnode *feature = xmlnode_new_child(query, "feature");
-			xmlnode_set_attrib(feature, "var", NS_GOOGLE_CAMERA);
+			PurpleXmlNode *feature = purple_xmlnode_new_child(query, "feature");
+			purple_xmlnode_set_attrib(feature, "var", NS_GOOGLE_CAMERA);
 #endif
 		} else {
-			xmlnode *error, *inf;
+			PurpleXmlNode *error, *inf;
 
 			/* XXX: gross hack, implement jabber_iq_set_type or something */
-			xmlnode_set_attrib(iq->node, "type", "error");
+			purple_xmlnode_set_attrib(iq->node, "type", "error");
 			iq->type = JABBER_IQ_ERROR;
 
-			error = xmlnode_new_child(query, "error");
-			xmlnode_set_attrib(error, "code", "404");
-			xmlnode_set_attrib(error, "type", "cancel");
-			inf = xmlnode_new_child(error, "item-not-found");
-			xmlnode_set_namespace(inf, NS_XMPP_STANZAS);
+			error = purple_xmlnode_new_child(query, "error");
+			purple_xmlnode_set_attrib(error, "code", "404");
+			purple_xmlnode_set_attrib(error, "type", "cancel");
+			inf = purple_xmlnode_new_child(error, "item-not-found");
+			purple_xmlnode_set_namespace(inf, NS_XMPP_STANZAS);
 		}
 		g_free(node_uri);
 		jabber_iq_send(iq);
 	} else if (type == JABBER_IQ_SET) {
 		/* wtf? seriously. wtf‽ */
 		JabberIq *iq = jabber_iq_new(js, JABBER_IQ_ERROR);
-		xmlnode *error, *bad_request;
+		PurpleXmlNode *error, *bad_request;
 
 		/* Free the <query/> */
-		xmlnode_free(xmlnode_get_child(iq->node, "query"));
+		purple_xmlnode_free(purple_xmlnode_get_child(iq->node, "query"));
 		/* Add an error */
-		error = xmlnode_new_child(iq->node, "error");
-		xmlnode_set_attrib(error, "type", "modify");
-		bad_request = xmlnode_new_child(error, "bad-request");
-		xmlnode_set_namespace(bad_request, NS_XMPP_STANZAS);
+		error = purple_xmlnode_new_child(iq->node, "error");
+		purple_xmlnode_set_attrib(error, "type", "modify");
+		bad_request = purple_xmlnode_new_child(error, "bad-request");
+		purple_xmlnode_set_namespace(bad_request, NS_XMPP_STANZAS);
 
 		jabber_iq_set_id(iq, id);
 		if (from)
-			xmlnode_set_attrib(iq->node, "to", from);
+			purple_xmlnode_set_attrib(iq->node, "to", from);
 
 		jabber_iq_send(iq);
 	}
@@ -218,15 +218,15 @@ void jabber_disco_info_parse(JabberStream *js, const char *from,
 
 static void jabber_disco_info_cb(JabberStream *js, const char *from,
                                  JabberIqType type, const char *id,
-                                 xmlnode *packet, gpointer data)
+                                 PurpleXmlNode *packet, gpointer data)
 {
 	struct _jabber_disco_info_cb_data *jdicd = data;
-	xmlnode *query;
+	PurpleXmlNode *query;
 
-	query = xmlnode_get_child_with_namespace(packet, "query", NS_DISCO_INFO);
+	query = purple_xmlnode_get_child_with_namespace(packet, "query", NS_DISCO_INFO);
 
 	if (type == JABBER_IQ_RESULT && query) {
-		xmlnode *child;
+		PurpleXmlNode *child;
 		JabberID *jid;
 		JabberBuddy *jb;
 		JabberBuddyResource *jbr = NULL;
@@ -242,12 +242,12 @@ static void jabber_disco_info_cb(JabberStream *js, const char *from,
 			capabilities = jbr->capabilities;
 
 		for(child = query->child; child; child = child->next) {
-			if(child->type != XMLNODE_TYPE_TAG)
+			if(child->type != PURPLE_XMLNODE_TYPE_TAG)
 				continue;
 
 			if(purple_strequal(child->name, "identity")) {
-				const char *category = xmlnode_get_attrib(child, "category");
-				const char *type = xmlnode_get_attrib(child, "type");
+				const char *category = purple_xmlnode_get_attrib(child, "category");
+				const char *type = purple_xmlnode_get_attrib(child, "type");
 				if(!category || !type)
 					continue;
 
@@ -271,13 +271,13 @@ static void jabber_disco_info_cb(JabberStream *js, const char *from,
 
 					iq = jabber_iq_new_query(js, JABBER_IQ_GET,
 							NS_BYTESTREAMS);
-					xmlnode_set_attrib(iq->node, "to", sh->jid);
+					purple_xmlnode_set_attrib(iq->node, "to", sh->jid);
 					jabber_iq_set_callback(iq, jabber_disco_bytestream_server_cb, sh);
 					jabber_iq_send(iq);
 				}
 
 			} else if(purple_strequal(child->name, "feature")) {
-				const char *var = xmlnode_get_attrib(child, "var");
+				const char *var = purple_xmlnode_get_attrib(child, "var");
 				if(!var)
 					continue;
 
@@ -338,22 +338,22 @@ static void jabber_disco_info_cb(JabberStream *js, const char *from,
 
 void jabber_disco_items_parse(JabberStream *js, const char *from,
                               JabberIqType type, const char *id,
-                              xmlnode *query)
+                              PurpleXmlNode *query)
 {
 	if(type == JABBER_IQ_GET) {
 		JabberIq *iq = jabber_iq_new_query(js, JABBER_IQ_RESULT,
 				NS_DISCO_ITEMS);
 
 		/* preserve node */
-		xmlnode *iq_query = xmlnode_get_child(iq->node, "query");
-		const char *node = xmlnode_get_attrib(query, "node");
+		PurpleXmlNode *iq_query = purple_xmlnode_get_child(iq->node, "query");
+		const char *node = purple_xmlnode_get_attrib(query, "node");
 		if(node)
-			xmlnode_set_attrib(iq_query,"node",node);
+			purple_xmlnode_set_attrib(iq_query,"node",node);
 
 		jabber_iq_set_id(iq, id);
 
 		if (from)
-			xmlnode_set_attrib(iq->node, "to", from);
+			purple_xmlnode_set_attrib(iq->node, "to", from);
 		jabber_iq_send(iq);
 	}
 }
@@ -387,7 +387,7 @@ jabber_disco_finish_server_info_result_cb(JabberStream *js)
 	}
 
 	/* If there are manually specified bytestream proxies, query them */
-	ft_proxies = purple_account_get_string(js->gc->account, "ft_proxies", NULL);
+	ft_proxies = purple_account_get_string(purple_connection_get_account(js->gc), "ft_proxies", NULL);
 	if (ft_proxies) {
 		JabberIq *iq;
 		JabberBytestreamsStreamhost *sh;
@@ -409,7 +409,7 @@ jabber_disco_finish_server_info_result_cb(JabberStream *js)
 			js->bs_proxies = g_list_prepend(js->bs_proxies, sh);
 
 			iq = jabber_iq_new_query(js, JABBER_IQ_GET, NS_BYTESTREAMS);
-			xmlnode_set_attrib(iq->node, "to", sh->jid);
+			purple_xmlnode_set_attrib(iq->node, "to", sh->jid);
 			jabber_iq_set_callback(iq, jabber_disco_bytestream_server_cb, sh);
 			jabber_iq_send(iq);
 		}
@@ -419,84 +419,49 @@ jabber_disco_finish_server_info_result_cb(JabberStream *js)
 
 }
 
-/* should probably share this code with google.c, or maybe from 2.7.0
- introduce an abstracted hostname -> IP function in dns.c */
 static void
-jabber_disco_stun_lookup_cb(GSList *hosts, gpointer data,
-	const char *error_message)
-{
+jabber_disco_stun_srv_resolve_cb(GObject *sender, GAsyncResult *result, gpointer data) {
+	GError *error = NULL;
+	GList *services = NULL;
 	JabberStream *js = (JabberStream *) data;
+	gint results = 0;
 
-	if (error_message) {
-		purple_debug_error("jabber", "STUN lookup failed: %s\n",
-			error_message);
-		g_slist_free(hosts);
-		js->stun_query = NULL;
+	services = g_resolver_lookup_service_finish(G_RESOLVER(sender),
+			result, &error);
+
+	if(error != NULL) {
+		purple_debug_info("jabber", "Failed to look up a STUN record : %s\n", error->message);
+
+		g_error_free(error);
+
 		return;
 	}
 
-	if (hosts && g_slist_next(hosts)) {
-		struct sockaddr *addr = g_slist_next(hosts)->data;
-		char dst[INET6_ADDRSTRLEN];
-		int port;
-
-		if (addr->sa_family == AF_INET6) {
-			inet_ntop(addr->sa_family, &((struct sockaddr_in6 *) addr)->sin6_addr,
-				dst, sizeof(dst));
-			port = ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
-		} else {
-			inet_ntop(addr->sa_family, &((struct sockaddr_in *) addr)->sin_addr,
-				dst, sizeof(dst));
-			port = ntohs(((struct sockaddr_in *) addr)->sin_port);
-		}
-
-		if (js->stun_ip)
-			g_free(js->stun_ip);
-		js->stun_ip = g_strdup(dst);
-		js->stun_port = port;
-
-		purple_debug_info("jabber", "set STUN IP/port address: "
-		                  "%s:%d\n", dst, port);
-
-		/* unmark ongoing query */
-		js->stun_query = NULL;
-	}
-
-	while (hosts != NULL) {
-		hosts = g_slist_delete_link(hosts, hosts);
-		/* Free the address */
-		g_free(hosts->data);
-		hosts = g_slist_delete_link(hosts, hosts);
-	}
-}
-
-
-static void
-jabber_disco_stun_srv_resolve_cb(PurpleSrvResponse *resp, int results, gpointer data)
-{
-	JabberStream *js = (JabberStream *) data;
+	results = g_list_length(services);
 
 	purple_debug_info("jabber", "got %d SRV responses for STUN.\n", results);
-	js->srv_query_data = NULL;
 
 	if (results > 0) {
-		PurpleAccount *account;
-		purple_debug_info("jabber", "looking up IP for %s:%d\n",
-			resp[0].hostname, resp[0].port);
-		account = purple_connection_get_account(js->gc);
-		js->stun_query =
-			purple_dnsquery_a_account(account, resp[0].hostname, resp[0].port,
-				jabber_disco_stun_lookup_cb, js);
+		GSrvTarget *target = (GSrvTarget *)services->data;
+		const gchar *hostname = g_srv_target_get_hostname(target);
+
+		js->stun_ip = g_strdup(hostname);
+		js->stun_port = g_srv_target_get_port(target);
+
+		purple_debug_info("jabber", "set stun address to %s:%d\n",
+			hostname, js->stun_port);
 	}
+
+	g_resolver_free_targets(services);
 }
 
 
 static void
 jabber_disco_server_info_result_cb(JabberStream *js, const char *from,
                                    JabberIqType type, const char *id,
-                                   xmlnode *packet, gpointer data)
+                                   PurpleXmlNode *packet, gpointer data)
 {
-	xmlnode *query, *child;
+	PurpleXmlNode *query, *child;
 
 	if (!from || !purple_strequal(from, js->user->domain)) {
 		jabber_disco_finish_server_info_result_cb(js);
@@ -509,31 +474,32 @@ jabber_disco_server_info_result_cb(JabberStream *js, const char *from,
 		return;
 	}
 
-	query = xmlnode_get_child(packet, "query");
+	query = purple_xmlnode_get_child(packet, "query");
 
 	if (!query) {
 		jabber_disco_finish_server_info_result_cb(js);
 		return;
 	}
 
-	for (child = xmlnode_get_child(query, "identity"); child;
-	     child = xmlnode_get_next_twin(child)) {
-		const char *category, *type, *name;
-		const char *stun_ip;
-		category = xmlnode_get_attrib(child, "category");
-		type = xmlnode_get_attrib(child, "type");
+	for (child = purple_xmlnode_get_child(query, "identity"); child;
+	     child = purple_xmlnode_get_next_twin(child)) {
+		const char *category, *type, *name, *stun_ip;
+		category = purple_xmlnode_get_attrib(child, "category");
+		type = purple_xmlnode_get_attrib(child, "type");
 		if(purple_strequal(category, "pubsub") && purple_strequal(type, "pep")) {
 			PurpleConnection *gc = js->gc;
 			js->pep = TRUE;
-			gc->flags |= PURPLE_CONNECTION_SUPPORT_MOODS |
-				PURPLE_CONNECTION_SUPPORT_MOOD_MESSAGES;
+			purple_connection_set_flags(gc,
+					  purple_connection_get_flags(gc)
+					| PURPLE_CONNECTION_FLAG_SUPPORT_MOODS
+					| PURPLE_CONNECTION_FLAG_SUPPORT_MOOD_MESSAGES);
 		}
 		if (!purple_strequal(category, "server"))
 			continue;
 		if (!purple_strequal(type, "im"))
 			continue;
 
-		name = xmlnode_get_attrib(child, "name");
+		name = purple_xmlnode_get_attrib(child, "name");
 		if (!name)
 			continue;
 
@@ -549,19 +515,24 @@ jabber_disco_server_info_result_cb(JabberStream *js, const char *from,
 				jabber_google_send_jingle_info(js);
 			}
 		} else if (!stun_ip || !*stun_ip) {
-			js->srv_query_data =
-				purple_srv_resolve_account(
-					purple_connection_get_account(js->gc), "stun", "udp",
-					js->user->domain,
-					jabber_disco_stun_srv_resolve_cb, js);
+
+			GResolver *resolver = g_resolver_get_default();
+			g_resolver_lookup_service_async(resolver,
+			                                "stun",
+			                                "udp",
+			                                js->user->domain,
+			                                NULL,
+			                                jabber_disco_stun_srv_resolve_cb,
+			                                js);
+			g_object_unref(resolver);
 			/* TODO: add TURN support later... */
 		}
 	}
 
-	for (child = xmlnode_get_child(query, "feature"); child;
-	     child = xmlnode_get_next_twin(child)) {
+	for (child = purple_xmlnode_get_child(query, "feature"); child;
+	     child = purple_xmlnode_get_next_twin(child)) {
 		const char *var;
-		var = xmlnode_get_attrib(child, "var");
+		var = purple_xmlnode_get_attrib(child, "var");
 		if (!var)
 			continue;
 
@@ -583,9 +554,9 @@ jabber_disco_server_info_result_cb(JabberStream *js, const char *from,
 static void
 jabber_disco_server_items_result_cb(JabberStream *js, const char *from,
                                     JabberIqType type, const char *id,
-                                    xmlnode *packet, gpointer data)
+                                    PurpleXmlNode *packet, gpointer data)
 {
-	xmlnode *query, *child;
+	PurpleXmlNode *query, *child;
 
 	if (!from || !purple_strequal(from, js->user->domain))
 		return;
@@ -598,23 +569,23 @@ jabber_disco_server_items_result_cb(JabberStream *js, const char *from,
 		js->chat_servers = g_list_delete_link(js->chat_servers, js->chat_servers);
 	}
 
-	query = xmlnode_get_child(packet, "query");
+	query = purple_xmlnode_get_child(packet, "query");
 
-	for(child = xmlnode_get_child(query, "item"); child;
-			child = xmlnode_get_next_twin(child)) {
+	for(child = purple_xmlnode_get_child(query, "item"); child;
+			child = purple_xmlnode_get_next_twin(child)) {
 		JabberIq *iq;
 		const char *jid;
 
-		if(!(jid = xmlnode_get_attrib(child, "jid")))
+		if(!(jid = purple_xmlnode_get_attrib(child, "jid")))
 			continue;
 
 		/* we don't actually care about the specific nodes,
 		 * so we won't query them */
-		if(xmlnode_get_attrib(child, "node") != NULL)
+		if(purple_xmlnode_get_attrib(child, "node") != NULL)
 			continue;
 
 		iq = jabber_iq_new_query(js, JABBER_IQ_GET, NS_DISCO_INFO);
-		xmlnode_set_attrib(iq->node, "to", jid);
+		purple_xmlnode_set_attrib(iq->node, "to", jid);
 		jabber_iq_set_callback(iq, jabber_disco_info_cb, NULL);
 		jabber_iq_send(iq);
 	}
@@ -624,13 +595,13 @@ void jabber_disco_items_server(JabberStream *js)
 {
 	JabberIq *iq = jabber_iq_new_query(js, JABBER_IQ_GET, NS_DISCO_ITEMS);
 
-	xmlnode_set_attrib(iq->node, "to", js->user->domain);
+	purple_xmlnode_set_attrib(iq->node, "to", js->user->domain);
 
 	jabber_iq_set_callback(iq, jabber_disco_server_items_result_cb, NULL);
 	jabber_iq_send(iq);
 
 	iq = jabber_iq_new_query(js, JABBER_IQ_GET, NS_DISCO_INFO);
-	xmlnode_set_attrib(iq->node, "to", js->user->domain);
+	purple_xmlnode_set_attrib(iq->node, "to", js->user->domain);
 	jabber_iq_set_callback(iq, jabber_disco_server_info_result_cb, NULL);
 	jabber_iq_send(iq);
 }
@@ -659,7 +630,7 @@ void jabber_disco_info_do(JabberStream *js, const char *who, JabberDiscoInfoCall
 	jdicd->callback = callback;
 
 	iq = jabber_iq_new_query(js, JABBER_IQ_GET, NS_DISCO_INFO);
-	xmlnode_set_attrib(iq->node, "to", who);
+	purple_xmlnode_set_attrib(iq->node, "to", who);
 
 	jabber_iq_set_callback(iq, jabber_disco_info_cb, jdicd);
 	jabber_iq_send(iq);

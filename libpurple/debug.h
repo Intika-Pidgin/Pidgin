@@ -1,8 +1,3 @@
-/**
- * @file debug.h Debug API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -23,221 +18,285 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #ifndef _PURPLE_DEBUG_H_
 #define _PURPLE_DEBUG_H_
+/**
+ * SECTION:debug
+ * @section_id: libpurple-debug
+ * @short_description: <filename>debug.h</filename>
+ * @title: Debug API
+ */
 
 #include <glib.h>
+#include <glib-object.h>
+
 #include <stdarg.h>
 
+G_BEGIN_DECLS
+
+#define PURPLE_TYPE_DEBUG_UI (purple_debug_ui_get_type())
+#if GLIB_CHECK_VERSION(2,44,0)
+G_DECLARE_INTERFACE(PurpleDebugUi, purple_debug_ui, PURPLE, DEBUG_UI, GObject)
+#else
+GType purple_debug_ui_get_type(void);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+typedef struct _PurpleDebugUi PurpleDebugUi;
+typedef struct _PurpleDebugUiInterface PurpleDebugUiInterface;
+static inline PurpleDebugUi *
+PURPLE_DEBUG_UI(gpointer ptr)
+{
+	return G_TYPE_CHECK_INSTANCE_CAST(ptr, purple_debug_ui_get_type(), PurpleDebugUi);
+}
+static inline gboolean
+PURPLE_IS_DEBUG_UI(gpointer ptr)
+{
+	return G_TYPE_CHECK_INSTANCE_TYPE(ptr, purple_debug_ui_get_type());
+}
+static inline PurpleDebugUiInterface *
+PURPLE_DEBUG_UI_GET_IFACE(gpointer ptr)
+{
+	return G_TYPE_INSTANCE_GET_INTERFACE(ptr, purple_debug_ui_get_type(), PurpleDebugUiInterface);
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+#endif
+
 /**
+ * PurpleDebugLevel:
+ * @PURPLE_DEBUG_ALL:     All debug levels.
+ * @PURPLE_DEBUG_MISC:    General chatter.
+ * @PURPLE_DEBUG_INFO:    General operation Information.
+ * @PURPLE_DEBUG_WARNING: Warnings.
+ * @PURPLE_DEBUG_ERROR:   Errors.
+ * @PURPLE_DEBUG_FATAL:   Fatal errors.
+ *
  * Debug levels.
  */
 typedef enum
 {
-	PURPLE_DEBUG_ALL = 0,  /**< All debug levels.              */
-	PURPLE_DEBUG_MISC,     /**< General chatter.               */
-	PURPLE_DEBUG_INFO,     /**< General operation Information. */
-	PURPLE_DEBUG_WARNING,  /**< Warnings.                      */
-	PURPLE_DEBUG_ERROR,    /**< Errors.                        */
-	PURPLE_DEBUG_FATAL     /**< Fatal errors.                  */
+	PURPLE_DEBUG_ALL = 0,
+	PURPLE_DEBUG_MISC,
+	PURPLE_DEBUG_INFO,
+	PURPLE_DEBUG_WARNING,
+	PURPLE_DEBUG_ERROR,
+	PURPLE_DEBUG_FATAL
 
 } PurpleDebugLevel;
 
 /**
+ * PurpleDebugUiInterface:
+ *
  * Debug UI operations.
  */
-typedef struct
+struct _PurpleDebugUiInterface
 {
-	void (*print)(PurpleDebugLevel level, const char *category,
-				  const char *arg_s);
-	gboolean (*is_enabled)(PurpleDebugLevel level,
-			const char *category);
+	GTypeInterface parent_iface;
 
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-} PurpleDebugUiOps;
+	void (*print)(PurpleDebugUi *self,
+	              PurpleDebugLevel level, const char *category,
+	              const char *arg_s);
+	gboolean (*is_enabled)(PurpleDebugUi *self,
+	                       PurpleDebugLevel level,
+	                       const char *category);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	/*< private >*/
+	void (*_purple_reserved1)(PurpleDebugUi *self);
+	void (*_purple_reserved2)(PurpleDebugUi *self);
+	void (*_purple_reserved3)(PurpleDebugUi *self);
+	void (*_purple_reserved4)(PurpleDebugUi *self);
+};
 
 /**************************************************************************/
-/** @name Debug API                                                       */
+/* Debug API                                                              */
 /**************************************************************************/
 /**
- * Outputs debug information.
+ * purple_debug:
+ * @level:    The debug level.
+ * @category: The category (or %NULL).
+ * @format:   The format string.
+ * @...:  The parameters to insert into the format string.
  *
- * @param level    The debug level.
- * @param category The category (or @c NULL).
- * @param format   The format string.
+ * Outputs debug information.
  */
 void purple_debug(PurpleDebugLevel level, const char *category,
 				const char *format, ...) G_GNUC_PRINTF(3, 4);
 
 /**
+ * purple_debug_misc:
+ * @category: The category (or %NULL).
+ * @format:   The format string.
+ * @...:  The parameters to insert into the format string.
+ *
  * Outputs misc. level debug information.
  *
  * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_MISC as
  * the level.
  *
- * @param category The category (or @c NULL).
- * @param format   The format string.
- *
- * @see purple_debug()
+ * See purple_debug().
  */
 void purple_debug_misc(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
+ * purple_debug_info:
+ * @category: The category (or %NULL).
+ * @format:   The format string.
+ * @...:  The parameters to insert into the format string.
+ *
  * Outputs info level debug information.
  *
  * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_INFO as
  * the level.
  *
- * @param category The category (or @c NULL).
- * @param format   The format string.
- *
- * @see purple_debug()
+ * See purple_debug().
  */
 void purple_debug_info(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
+ * purple_debug_warning:
+ * @category: The category (or %NULL).
+ * @format:   The format string.
+ * @...:  The parameters to insert into the format string.
+ *
  * Outputs warning level debug information.
  *
  * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_WARNING as
  * the level.
  *
- * @param category The category (or @c NULL).
- * @param format   The format string.
- *
- * @see purple_debug()
+ * See purple_debug().
  */
 void purple_debug_warning(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
+ * purple_debug_error:
+ * @category: The category (or %NULL).
+ * @format:   The format string.
+ * @...:  The parameters to insert into the format string.
+ *
  * Outputs error level debug information.
  *
  * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_ERROR as
  * the level.
  *
- * @param category The category (or @c NULL).
- * @param format   The format string.
- *
- * @see purple_debug()
+ * See purple_debug().
  */
 void purple_debug_error(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
+ * purple_debug_fatal:
+ * @category: The category (or %NULL).
+ * @format:   The format string.
+ * @...:  The parameters to insert into the format string.
+ *
  * Outputs fatal error level debug information.
  *
  * This is a wrapper for purple_debug(), and uses PURPLE_DEBUG_ERROR as
  * the level.
  *
- * @param category The category (or @c NULL).
- * @param format   The format string.
- *
- * @see purple_debug()
+ * See purple_debug().
  */
 void purple_debug_fatal(const char *category, const char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
- * Enable or disable printing debug output to the console.
+ * purple_debug_set_enabled:
+ * @enabled: TRUE to enable debug output or FALSE to disable it.
  *
- * @param enabled TRUE to enable debug output or FALSE to disable it.
+ * Enable or disable printing debug output to the console.
  */
 void purple_debug_set_enabled(gboolean enabled);
 
 /**
+ * purple_debug_is_enabled:
+ *
  * Check if console debug output is enabled.
  *
- * @return TRUE if debugging is enabled, FALSE if it is not.
+ * Returns: TRUE if debugging is enabled, FALSE if it is not.
  */
 gboolean purple_debug_is_enabled(void);
 
 /**
+ * purple_debug_set_verbose:
+ * @verbose: TRUE to enable verbose debugging or FALSE to disable it.
+ *
  * Enable or disable verbose debugging.  This ordinarily should only be called
  * by #purple_debug_init, but there are cases where this can be useful for
  * plugins.
- *
- * @param verbose TRUE to enable verbose debugging or FALSE to disable it.
- *
- * @since 2.6.0
  */
 void purple_debug_set_verbose(gboolean verbose);
 
 /**
+ * purple_debug_is_verbose:
+ *
  * Check if verbose logging is enabled.
  *
- * @return TRUE if verbose debugging is enabled, FALSE if it is not.
- *
- * @since 2.6.0
+ * Returns: TRUE if verbose debugging is enabled, FALSE if it is not.
  */
 gboolean purple_debug_is_verbose(void);
 
 /**
- * Enable or disable unsafe debugging.  This ordinarily should only be called
- * by #purple_debug_init, but there are cases where this can be useful for
- * plugins.
- *
- * @param unsafe TRUE to enable debug logging of messages that could
+ * purple_debug_set_unsafe:
+ * @unsafe: TRUE to enable debug logging of messages that could
  *        potentially contain passwords and other sensitive information.
  *        FALSE to disable it.
  *
- * @since 2.6.0
+ * Enable or disable unsafe debugging.  This ordinarily should only be called
+ * by #purple_debug_init, but there are cases where this can be useful for
+ * plugins.
  */
 void purple_debug_set_unsafe(gboolean unsafe);
 
 /**
+ * purple_debug_is_unsafe:
+ *
  * Check if unsafe debugging is enabled.  Defaults to FALSE.
  *
- * @return TRUE if the debug logging of all messages is enabled, FALSE
+ * Returns: TRUE if the debug logging of all messages is enabled, FALSE
  *         if messages that could potentially contain passwords and other
  *         sensitive information are not logged.
- *
- * @since 2.6.0
  */
 gboolean purple_debug_is_unsafe(void);
 
-/*@}*/
+/**
+ * purple_debug_set_colored:
+ * @colored: TRUE to enable colored output, FALSE to disable it.
+ *
+ * Enable or disable colored output for bash console.
+ */
+void purple_debug_set_colored(gboolean colored);
 
 /**************************************************************************/
-/** @name UI Registration Functions                                       */
+/* UI Registration Functions                                              */
 /**************************************************************************/
-/*@{*/
 
 /**
+ * purple_debug_set_ui:
+ * @ops: The UI operations structure.
+ *
  * Sets the UI operations structure to be used when outputting debug
  * information.
- *
- * @param ops The UI operations structure.
  */
-void purple_debug_set_ui_ops(PurpleDebugUiOps *ops);
+void purple_debug_set_ui(PurpleDebugUi *ops);
 
 /**
+ * purple_debug_get_ui:
+ *
  * Returns the UI operations structure used when outputting debug
  * information.
  *
- * @return The UI operations structure in use.
+ * Returns: The UI operations structure in use.
  */
-PurpleDebugUiOps *purple_debug_get_ui_ops(void);
-
-/*@}*/
+PurpleDebugUi *purple_debug_get_ui(void);
 
 /**************************************************************************/
-/** @name Debug Subsystem                                                 */
+/* Debug Subsystem                                                        */
 /**************************************************************************/
-/*@{*/
 
 /**
+ * purple_debug_init:
+ *
  * Initializes the debug subsystem.
  */
 void purple_debug_init(void);
 
-/*@}*/
-
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_DEBUG_H_ */

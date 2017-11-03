@@ -31,6 +31,7 @@
 #include "request.h"
 #include "pidgintooltip.h"
 
+#include "gtk3compat.h"
 #include "gtkdisco.h"
 #include "xmppdisco.h"
 
@@ -119,14 +120,18 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 
 	if (service->type == XMPP_DISCO_SERVICE_TYPE_GATEWAY && service->gateway_type) {
 		char *tmp = g_strconcat(service->gateway_type, ".png", NULL);
-		filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "protocols", size, tmp, NULL);
+		filename = g_build_filename(PURPLE_DATADIR,
+			"pixmaps", "pidgin", "protocols", size, tmp, NULL);
 		g_free(tmp);
 #if 0
 	} else if (service->type == XMPP_DISCO_SERVICE_TYPE_USER) {
-		filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "status", size, "person.png", NULL);
+		filename = g_build_filename(PURPLE_DATADIR,
+			"pixmaps", "pidgin", "status", size, "person.png", NULL);
 #endif
-	} else if (service->type == XMPP_DISCO_SERVICE_TYPE_CHAT)
-		filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "status", size, "chat.png", NULL);
+	} else if (service->type == XMPP_DISCO_SERVICE_TYPE_CHAT) {
+		filename = g_build_filename(PURPLE_DATADIR,
+			"pixmaps", "pidgin", "status", size, "chat.png", NULL);
+	}
 
 	if (filename) {
 		pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
@@ -175,7 +180,7 @@ static void discolist_ok_cb(PidginDiscoList *pdl, const char *server)
 
 	if (!server || !*server) {
 		purple_notify_error(my_plugin, _("Invalid Server"), _("Invalid Server"),
-		                    NULL);
+			NULL, purple_request_cpar_from_connection(pdl->pc));
 
 		pidgin_disco_list_set_in_progress(pdl, FALSE);
 		pidgin_disco_list_unref(pdl);
@@ -237,14 +242,14 @@ static void browse_button_cb(GtkWidget *button, PidginDiscoDialog *dialog)
 		/* This shouldn't ever happen since the account is connected */
 		server = g_strdup("jabber.org");
 
-	/* Note to translators: The string "Enter an XMPP Server" is asking the
-	   user to type the name of an XMPP server which will then be queried */
+	/* Translators: The string "Enter an XMPP Server" is asking the user to
+	   type the name of an XMPP server which will then be queried */
 	dialog->prompt_handle = purple_request_input(my_plugin, _("Server name request"), _("Enter an XMPP Server"),
 			_("Select an XMPP server to query"),
 			server, FALSE, FALSE, NULL,
 			_("Find Services"), PURPLE_CALLBACK(discolist_ok_cb),
 			_("Cancel"), PURPLE_CALLBACK(discolist_cancel_cb),
-			purple_connection_get_account(pc), NULL, NULL, pdl);
+			purple_request_cpar_from_connection(pc), pdl);
 
 	g_free(server);
 }
@@ -277,7 +282,7 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 	GtkTreeIter iter;
 	GValue val;
 
-	if (event->button != 3 || event->type != GDK_BUTTON_PRESS)
+	if (!gdk_event_triggers_context_menu((GdkEvent *)event))
 		return FALSE;
 
 	pdl = user_data;
@@ -299,19 +304,18 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 	menu = gtk_menu_new();
 
 	if (service->flags & XMPP_DISCO_ADD)
-		pidgin_new_item_from_stock(menu, _("Add to Buddy List"), GTK_STOCK_ADD,
-		                           G_CALLBACK(add_to_blist_cb), pdl->dialog,
-		                           0, 0, NULL);
+		pidgin_new_menu_item(menu, _("Add to Buddy List"), GTK_STOCK_ADD,
+                                G_CALLBACK(add_to_blist_cb), pdl->dialog);
 
 	if (service->flags & XMPP_DISCO_REGISTER) {
-		GtkWidget *item = pidgin_new_item(menu, _("Register"));
+		GtkWidget *item = pidgin_new_menu_item(menu, _("Register"),
+                                NULL, NULL, NULL);
 		g_signal_connect(G_OBJECT(item), "activate",
 		                 G_CALLBACK(register_button_cb), pdl->dialog);
 	}
 
 	gtk_widget_show_all(menu);
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, event->button,
-	               event->time);
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
 	return FALSE;
 }
 
@@ -423,22 +427,16 @@ static void close_button_cb(GtkButton *button, PidginDiscoDialog *dialog)
 
 static gboolean account_filter_func(PurpleAccount *account)
 {
-	return purple_strequal(purple_account_get_protocol_id(account), XMPP_PLUGIN_ID);
+	return purple_strequal(purple_account_get_protocol_id(account), XMPP_PROTOCOL_ID);
 }
 
 static gboolean
-disco_paint_tooltip(GtkWidget *tipwindow, gpointer data)
+disco_paint_tooltip(GtkWidget *tipwindow, cairo_t *cr, gpointer data)
 {
 	PangoLayout *layout = g_object_get_data(G_OBJECT(tipwindow), "tooltip-plugin");
-#if GTK_CHECK_VERSION(2,14,0)
-	gtk_paint_layout(gtk_widget_get_style(tipwindow),
-			gtk_widget_get_window(tipwindow),
-			GTK_STATE_NORMAL, FALSE,
-#else
-	gtk_paint_layout(tipwindow->style, tipwindow->window, GTK_STATE_NORMAL, FALSE,
-#endif
-			NULL, tipwindow, "tooltip",
-			6, 6, layout);
+	GtkStyleContext *context = gtk_widget_get_style_context(tipwindow);
+	gtk_style_context_add_class(context, GTK_STYLE_CLASS_TOOLTIP);
+	gtk_render_layout(context, cr, 6, 6, layout);
 	return TRUE;
 }
 
@@ -536,7 +534,6 @@ static void pidgin_disco_create_tree(PidginDiscoList *pdl)
 	);
 
 	pdl->tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(pdl->model));
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(pdl->tree), TRUE);
 
 	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(pdl->tree));
 	g_signal_connect(G_OBJECT(selection), "changed",
@@ -642,7 +639,7 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 	/* Create the parent vbox for everything. */
 	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(window), FALSE, PIDGIN_HIG_BORDER);
 
-	vbox2 = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
+	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(vbox), vbox2);
 	gtk_widget_show(vbox2);
 

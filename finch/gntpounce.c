@@ -1,8 +1,3 @@
-/**
- * @file gntpounce.c GNT Buddy Pounce API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -43,7 +38,7 @@
 #include "conversation.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "request.h"
 #include "server.h"
 #include "util.h"
@@ -173,7 +168,7 @@ setup_buddy_list_suggestion(GntEntry *entry, gboolean offline)
 {
 	PurpleBlistNode *node = purple_blist_get_root();
 	for (; node; node = purple_blist_node_next(node, offline)) {
-		if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+		if (!PURPLE_IS_BUDDY(node))
 			continue;
 		gnt_entry_add_suggest(entry, purple_buddy_get_name((PurpleBuddy*)node));
 	}
@@ -192,7 +187,7 @@ save_pounce_cb(GntWidget *w, PurpleGntPounceDialog *dialog)
 	if (*name == '\0')
 	{
 		purple_notify_error(NULL, NULL,
-						  _("Please enter a buddy to pounce."), NULL);
+						  _("Please enter a buddy to pounce."), NULL, NULL);
 		return;
 	}
 
@@ -558,7 +553,7 @@ finch_pounce_editor_show(PurpleAccount *account, const char *name,
 		PurpleBuddy *buddy = NULL;
 
 		if (name != NULL)
-			buddy = purple_find_buddy(account, name);
+			buddy = purple_blist_find_buddy(account, name);
 
 		/* Set some defaults */
 		if (buddy == NULL) {
@@ -631,7 +626,7 @@ pounces_manager_add_cb(GntButton *button, gpointer user_data)
 	if (purple_accounts_get_all() == NULL) {
 		purple_notify_error(NULL, _("Cannot create pounce"),
 				_("You do not have any accounts."),
-				_("You must create an account first before you can create a pounce."));
+				_("You must create an account first before you can create a pounce."), NULL);
 		return;
 	}
 	finch_pounce_editor_show(NULL, NULL, NULL);
@@ -675,8 +670,7 @@ pounces_manager_delete_cb(GntButton *button, gpointer user_data)
 	pouncee = purple_pounce_get_pouncee(pounce);
 	buf = g_strdup_printf(_("Are you sure you want to delete the pounce on %s for %s?"), pouncee, pouncer);
 	purple_request_action(pounce, NULL, buf, NULL, 0,
-						account, pouncee, NULL,
-						pounce, 2,
+		purple_request_cpar_from_account(account), pounce, 2,
 						_("Delete"), pounces_manager_delete_confirm_cb,
 						_("Cancel"), NULL);
 	g_free(buf);
@@ -780,7 +774,7 @@ finch_pounces_manager_hide(void)
 static void
 pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 {
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 	PurpleAccount *account;
 	PurpleBuddy *buddy;
 	const char *pouncee;
@@ -789,7 +783,7 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 	pouncee = purple_pounce_get_pouncee(pounce);
 	account = purple_pounce_get_pouncer(pounce);
 
-	buddy = purple_find_buddy(account, pouncee);
+	buddy = purple_blist_find_buddy(account, pouncee);
 	if (buddy != NULL)
 	{
 		alias = purple_buddy_get_alias(buddy);
@@ -801,8 +795,8 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 
 	if (purple_pounce_action_is_enabled(pounce, "open-window"))
 	{
-		if (!purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, pouncee, account))
-			purple_conversation_new(PURPLE_CONV_TYPE_IM, account, pouncee);
+		if (!purple_conversations_find_im_with_account(pouncee, account))
+			purple_im_conversation_new(account, pouncee);
 	}
 
 	if (purple_pounce_action_is_enabled(pounce, "popup-notify"))
@@ -849,17 +843,17 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 		 * NULL to the account alias if we have it or the account
 		 * name if that's all we have
 		 */
-		if ((name_shown = purple_account_get_alias(account)) == NULL)
+		if ((name_shown = purple_account_get_private_alias(account)) == NULL)
 			name_shown = purple_account_get_username(account);
 
 		if (reason == NULL)
 		{
-			purple_notify_info(NULL, name_shown, tmp, purple_date_format_full(NULL));
+			purple_notify_info(NULL, name_shown, tmp, purple_date_format_full(NULL), NULL);
 		}
 		else
 		{
 			char *tmp2 = g_strdup_printf("%s\n\n%s", reason, purple_date_format_full(NULL));
-			purple_notify_info(NULL, name_shown, tmp, tmp2);
+			purple_notify_info(NULL, name_shown, tmp, tmp2, NULL);
 			g_free(tmp2);
 		}
 		g_free(tmp);
@@ -874,20 +868,24 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 
 		if (message != NULL)
 		{
-			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, pouncee, account);
+			PurpleMessage *pmsg;
 
-			if (conv == NULL)
-				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, pouncee);
+			im = purple_conversations_find_im_with_account(pouncee, account);
 
-			purple_conversation_write(conv, NULL, message,
-									PURPLE_MESSAGE_SEND, time(NULL));
+			if (im == NULL)
+				im = purple_im_conversation_new(account, pouncee);
 
-			serv_send_im(purple_account_get_connection(account), (char *)pouncee, (char *)message, 0);
+			pmsg = purple_message_new_outgoing(pouncee, message, 0);
+			purple_serv_send_im(purple_account_get_connection(account), pmsg);
+			purple_conversation_write_message(PURPLE_CONVERSATION(im), pmsg);
 		}
 	}
 
 	if (purple_pounce_action_is_enabled(pounce, "execute-command"))
 	{
+#ifdef _WIN32
+		purple_debug_error("gntpounce", "execute-command is not supported on this OS");
+#else
 		const char *command;
 
 		command = purple_pounce_action_get_attribute(pounce,
@@ -917,6 +915,7 @@ pounce_cb(PurplePounce *pounce, PurplePounceEvent events, void *data)
 				g_free(localecmd);
 			}
 		}
+#endif
 	}
 
 	if (purple_pounce_action_is_enabled(pounce, "play-beep"))
@@ -979,11 +978,11 @@ finch_pounces_init(void)
 						PURPLE_CALLBACK(signed_on_off_cb), NULL);
 }
 
-/* XXX: There's no such thing in pidgin. Perhaps there should be? */
+/* XXX: There's no such thing in pidgin. Perhaps there should be?
+ * For sure, we don't need purple_pounces_unregister_handler -
+ * it's wiped in purple_pounces_uninit.
+ */
 void finch_pounces_uninit()
 {
-	purple_pounces_unregister_handler(FINCH_UI);
-
 	purple_signals_disconnect_by_handle(finch_pounces_get_handle());
 }
-

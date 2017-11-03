@@ -189,10 +189,8 @@ void nm_release_conn(NMConn *conn)
 		}
 		g_slist_free(conn->requests);
 		conn->requests = NULL;
-		if (conn->ssl_conn) {
-			g_free(conn->ssl_conn);
-			conn->ssl_conn = NULL;
-		}
+		g_free(conn->ssl_conn);
+		conn->ssl_conn = NULL;
 		g_free(conn->addr);
 		conn->addr = NULL;
 		g_free(conn);
@@ -633,9 +631,7 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 	} while ((type != 0) && (count != 0));
 
 
-	if (str != NULL) {
-		g_free(str);
-	}
+	g_free(str);
 
 	if (sub_fields != NULL) {
 		nm_free_fields(&sub_fields);

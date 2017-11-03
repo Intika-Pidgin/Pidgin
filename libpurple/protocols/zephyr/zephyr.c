@@ -31,14 +31,14 @@
 #include "accountopt.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
+#include "plugins.h"
 #include "server.h"
 #include "util.h"
 #include "cmds.h"
-#include "privacy.h"
 #include "version.h"
 
 #include "internal.h"
+#include "zephyr.h"
 
 #include <strings.h>
 
@@ -49,6 +49,9 @@
 #define ZEPHYR_TYPING_RECV_TIMEOUT 10
 #define ZEPHYR_FD_READ 0
 #define ZEPHYR_FD_WRITE 1
+
+static PurpleProtocol *my_protocol = NULL;
+static GSList *cmds = NULL;
 
 extern Code_t ZGetLocations(ZLocations_t *, int *);
 extern Code_t ZSetLocation(char *);
@@ -146,7 +149,7 @@ struct _zephyr_triple {
 					return TRUE;
 
 #define z_call_s(func, err)	if (func != ZERR_NONE) {\
-					purple_connection_error(gc, err);\
+					purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, err);\
 					return;\
 				}
 
@@ -347,7 +350,7 @@ static gchar *zephyr_recv_convert(PurpleConnection *gc, gchar *string)
 {
 	gchar *utf8;
 	GError *err = NULL;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if (g_utf8_validate(string, -1, NULL)) {
 		return g_strdup(string);
 	} else {
@@ -756,18 +759,20 @@ static void message_failed(PurpleConnection *gc, ZNotice_t *notice, struct socka
 			_("Unable to send to chat %s,%s,%s"),
 			notice->z_class, notice->z_class_inst,
 			notice->z_recipient);
-		purple_notify_error(gc,"",chat_failed,NULL);
+		purple_notify_error(gc,"",chat_failed,NULL,
+			purple_request_cpar_from_connection(gc));
 		g_free(chat_failed);
 	} else {
 		purple_notify_error(gc, notice->z_recipient,
-			_("User is offline"), NULL);
+			_("User is offline"), NULL,
+			purple_request_cpar_from_connection(gc));
 	}
 }
 
 static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 {
 	ZNotice_t notice;
-	zephyr_account* zephyr = gc->proto_data;
+	zephyr_account* zephyr = purple_connection_get_protocol_data(gc);
 
 	memcpy(&notice, notice_p, sizeof(notice)); /* TODO - use pointer? */
 
@@ -784,9 +789,9 @@ static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 			if (ZParseLocations(&notice, NULL, &nlocs, &user) != ZERR_NONE)
 				return;
 
-			if ((b = purple_find_buddy(gc->account, user)) == NULL) {
+			if ((b = purple_blist_find_buddy(purple_connection_get_account(gc), user)) == NULL) {
 				char* stripped_user = zephyr_strip_local_realm(zephyr,user);
-				b = purple_find_buddy(gc->account,stripped_user);
+				b = purple_blist_find_buddy(purple_connection_get_account(gc),stripped_user);
 				g_free(stripped_user);
 			}
 
@@ -798,20 +803,23 @@ static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 				char *tmp;
 				const char *balias;
 
-				purple_notify_user_info_add_pair(user_info, _("User"), (b ? bname : user));
-				balias = purple_buddy_get_local_buddy_alias(b);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("User"), (b ? bname : user));
+				balias = purple_buddy_get_local_alias(b);
 				if (b && balias)
-					purple_notify_user_info_add_pair(user_info, _("Alias"), balias);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Alias"), balias);
 
 				if (!nlocs) {
-					purple_notify_user_info_add_pair(user_info, NULL, _("Hidden or not logged-in"));
+					purple_notify_user_info_add_pair_plaintext(user_info, NULL, _("Hidden or not logged-in"));
 				}
 				for (; nlocs > 0; nlocs--) {
 					/* XXX add real error reporting */
 
 					ZGetLocations(&locs, &one);
+					/* TODO: Need to escape locs.host and locs.time? */
 					tmp = g_strdup_printf(_("<br>At %s since %s"), locs.host, locs.time);
-					purple_notify_user_info_add_pair(user_info, _("Location"), tmp);
+					purple_notify_user_info_add_pair_html(user_info, _("Location"), tmp);
 					g_free(tmp);
 				}
 				purple_notify_userinfo(gc, (b ? bname : user),
@@ -819,9 +827,9 @@ static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 				purple_notify_user_info_destroy(user_info);
 			} else {
 				if (nlocs>0)
-					purple_prpl_got_user_status(gc->account, b ? bname : user, "available", NULL);
+					purple_protocol_got_user_status(purple_connection_get_account(gc), b ? bname : user, "available", NULL);
 				else
-					purple_prpl_got_user_status(gc->account, b ? bname : user, "offline", NULL);
+					purple_protocol_got_user_status(purple_connection_get_account(gc), b ? bname : user, "offline", NULL);
 			}
 
 			g_free(user);
@@ -829,8 +837,7 @@ static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 	} else {
 		char *buf, *buf2, *buf3;
 		char *send_inst;
-		PurpleConversation *gconv1;
-		PurpleConvChat *gcc;
+		PurpleChatConversation *gcc;
 		char *ptr = (char *) notice.z_message + (strlen(notice.z_message) + 1);
 		int len;
 		char *stripped_sender;
@@ -867,14 +874,14 @@ static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 				flags |= PURPLE_MESSAGE_AUTO_RESP;
 
 			if (!g_ascii_strcasecmp(notice.z_opcode,"PING"))
-				serv_got_typing(gc,stripped_sender,ZEPHYR_TYPING_RECV_TIMEOUT, PURPLE_TYPING);
+				purple_serv_got_typing(gc,stripped_sender,ZEPHYR_TYPING_RECV_TIMEOUT, PURPLE_IM_TYPING);
 			else
-				serv_got_im(gc, stripped_sender, buf3, flags, time(NULL));
+				purple_serv_got_im(gc, stripped_sender, buf3, flags, time(NULL));
 
 		} else {
 			zephyr_triple *zt1, *zt2;
 			gchar *send_inst_utf8;
-			zephyr_account *zephyr = gc->proto_data;
+			zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 			zt1 = new_triple(zephyr,notice.z_class, notice.z_class_inst, notice.z_recipient);
 			zt2 = find_sub_by_triple(zephyr,zt1);
 			if (!zt2) {
@@ -885,7 +892,7 @@ static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 
 			if (!zt2->open) {
 				zt2->open = TRUE;
-				serv_got_joined_chat(gc, zt2->id, zt2->name);
+				purple_serv_got_joined_chat(gc, zt2->id, zt2->name);
 				zephyr_chat_set_topic(gc,zt2->id,notice.z_class_inst);
 			}
 
@@ -901,22 +908,22 @@ static void handle_message(PurpleConnection *gc, ZNotice_t *notice_p)
 				}
 			}
 
-			gconv1 = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
-														 zt2->name, gc->account);
-			gcc = purple_conversation_get_chat_data(gconv1);
+			gcc = purple_conversations_find_chat_with_account(
+														 zt2->name, purple_connection_get_account(gc));
 #ifndef INET_ADDRSTRLEN
 #define INET_ADDRSTRLEN 16
 #endif
-			if (!purple_conv_chat_find_user(gcc, stripped_sender)) {
+			if (!purple_chat_conversation_has_user(gcc, stripped_sender)) {
 				gchar ipaddr[INET_ADDRSTRLEN];
 #ifdef HAVE_INET_NTOP
 				inet_ntop(AF_INET, &notice.z_sender_addr.s_addr, ipaddr, sizeof(ipaddr));
 #else
 				memcpy(ipaddr,inet_ntoa(notice.z_sender_addr),sizeof(ipaddr));
 #endif
-				purple_conv_chat_add_user(gcc, stripped_sender, ipaddr, PURPLE_CBFLAGS_NONE, TRUE);
+				purple_chat_conversation_add_user(gcc, stripped_sender, ipaddr, PURPLE_CHAT_USER_NONE, TRUE);
 			}
-			serv_got_chat_in(gc, zt2->id, send_inst_utf8, 0, buf3, time(NULL));
+			purple_serv_got_chat_in(gc, zt2->id, send_inst_utf8,
+				PURPLE_MESSAGE_RECV, buf3, time(NULL));
 			g_free(send_inst_utf8);
 
 			free_triple(zt1);
@@ -1087,7 +1094,7 @@ static parse_tree  *read_from_tzc(zephyr_account* zephyr){
 		selected = 1;
 		if (read(zephyr->fromtzc[ZEPHYR_FD_READ], bufcur, 1) != 1) {
 			purple_debug_error("zephyr", "couldn't read\n");
-			purple_connection_error(purple_account_get_connection(zephyr->account), "couldn't read");
+			purple_connection_error(purple_account_get_connection(zephyr->account), PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "couldn't read");
 			free(buf);
 			return NULL;
 		}
@@ -1114,7 +1121,7 @@ static parse_tree  *read_from_tzc(zephyr_account* zephyr){
 static gint check_notify_tzc(gpointer data)
 {
 	PurpleConnection *gc = (PurpleConnection *)data;
-	zephyr_account* zephyr = gc->proto_data;
+	zephyr_account* zephyr = purple_connection_get_protocol_data(gc);
 	parse_tree *newparsetree = read_from_tzc(zephyr);
 	if (newparsetree != NULL) {
 		gchar *spewtype;
@@ -1161,15 +1168,15 @@ static gint check_notify_tzc(gpointer data)
 				gchar *locval;
 				user = tree_child(find_node(newparsetree,"user"),2)->contents;
 
-				if ((b = purple_find_buddy(gc->account, user)) == NULL) {
+				if ((b = purple_blist_find_buddy(purple_connection_get_account(gc), user)) == NULL) {
 					gchar *stripped_user = zephyr_strip_local_realm(zephyr,user);
-					b = purple_find_buddy(gc->account, stripped_user);
+					b = purple_blist_find_buddy(purple_connection_get_account(gc), stripped_user);
 					g_free(stripped_user);
 				}
 				locations = find_node(newparsetree,"locations");
 				locval = tree_child(tree_child(tree_child(tree_child(locations,2),0),0),2)->contents;
 
-				if (!locval || !g_ascii_strcasecmp(locval," ") || (strlen(locval) == 0)) {
+				if (!locval || !g_ascii_strcasecmp(locval," ") || !*locval) {
 					nlocs = 0;
 				} else {
 					nlocs = 1;
@@ -1181,19 +1188,22 @@ static gint check_notify_tzc(gpointer data)
 					char *tmp;
 					const char *balias;
 
-					purple_notify_user_info_add_pair(user_info, _("User"), (b ? bname : user));
+					/* TODO: Check whether it's correct to call add_pair_html,
+					         or if we should be using add_pair_plaintext */
+					purple_notify_user_info_add_pair_html(user_info, _("User"), (b ? bname : user));
 
-					balias = b ? purple_buddy_get_local_buddy_alias(b) : NULL;
+					balias = b ? purple_buddy_get_local_alias(b) : NULL;
 					if (balias)
-						purple_notify_user_info_add_pair(user_info, _("Alias"), balias);
+						purple_notify_user_info_add_pair_plaintext(user_info, _("Alias"), balias);
 
 					if (!nlocs) {
-						purple_notify_user_info_add_pair(user_info, NULL, _("Hidden or not logged-in"));
+						purple_notify_user_info_add_pair_plaintext(user_info, NULL, _("Hidden or not logged-in"));
 					} else {
+						/* TODO: Need to escape the two strings that make up tmp? */
 						tmp = g_strdup_printf(_("<br>At %s since %s"),
 									  tree_child(tree_child(tree_child(tree_child(locations,2),0),0),2)->contents,
 									  tree_child(tree_child(tree_child(tree_child(locations,2),0),2),2)->contents);
-						purple_notify_user_info_add_pair(user_info, _("Location"), tmp);
+						purple_notify_user_info_add_pair_html(user_info, _("Location"), tmp);
 						g_free(tmp);
 					}
 
@@ -1202,9 +1212,9 @@ static gint check_notify_tzc(gpointer data)
 					purple_notify_user_info_destroy(user_info);
 				} else {
 					if (nlocs>0)
-						purple_prpl_got_user_status(gc->account, b ? bname : user, "available", NULL);
+						purple_protocol_got_user_status(purple_connection_get_account(gc), b ? bname : user, "available", NULL);
 					else
-						purple_prpl_got_user_status(gc->account, b ? bname : user, "offline", NULL);
+						purple_protocol_got_user_status(purple_connection_get_account(gc), b ? bname : user, "offline", NULL);
 				}
 			}
 			else if (!g_ascii_strncasecmp(spewtype,"subscribed",10)) {
@@ -1269,12 +1279,12 @@ static gint check_loc(gpointer data)
 	GSList *buddies;
 	ZLocations_t locations;
 	PurpleConnection *gc = data;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	PurpleAccount *account = purple_connection_get_account(gc);
 	int numlocs;
 	int one = 1;
 
-	for (buddies = purple_find_buddies(account, NULL); buddies;
+	for (buddies = purple_blist_find_buddies(account, NULL); buddies;
 			buddies = g_slist_delete_link(buddies, buddies)) {
 		PurpleBuddy *b = buddies->data;
 		char *chk;
@@ -1300,7 +1310,7 @@ static gint check_loc(gpointer data)
 	GSList *buddies;
 	ZAsyncLocateData_t ald;
 	PurpleConnection *gc = (PurpleConnection *)data;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	PurpleAccount *account = purple_connection_get_account(gc);
 
 	if (use_zeph02(zephyr)) {
@@ -1309,7 +1319,7 @@ static gint check_loc(gpointer data)
 		ald.version = NULL;
 	}
 
-	for (buddies = purple_find_buddies(account, NULL); buddies;
+	for (buddies = purple_blist_find_buddies(account, NULL); buddies;
 			buddies = g_slist_delete_link(buddies, buddies)) {
 		PurpleBuddy *b = buddies->data;
 
@@ -1330,9 +1340,9 @@ static gint check_loc(gpointer data)
 				for(i=0;i<numlocs;i++) {
 					ZGetLocations(&locations,&one);
 					if (nlocs>0)
-						purple_prpl_got_user_status(account,name,"available",NULL);
+						purple_protocol_got_user_status(account,name,"available",NULL);
 					else
-						purple_prpl_got_user_status(account,name,"offline",NULL);
+						purple_protocol_got_user_status(account,name,"offline",NULL);
 				}
 			}
 #else
@@ -1439,8 +1449,6 @@ static void process_zsubs(zephyr_account *zephyr)
 					char *tmp = g_strdup_printf("%s", zephyr->username);
 					char *atptr;
 
-					z_class = triple[0];
-					z_instance = triple[1];
 					if (triple[2] == NULL) {
 						recip = g_malloc0(1);
 					} else if (!g_ascii_strcasecmp(triple[2], "%me%")) {
@@ -1505,6 +1513,7 @@ static void process_zsubs(zephyr_account *zephyr)
 		}
 		fclose(f);
 	}
+	g_free(fname);
 }
 
 static void process_anyone(PurpleConnection *gc)
@@ -1515,7 +1524,7 @@ static void process_anyone(PurpleConnection *gc)
 	PurpleGroup *g;
 	PurpleBuddy *b;
 
-	if (!(g = purple_find_group(_("Anyone")))) {
+	if (!(g = purple_blist_find_group(_("Anyone")))) {
 		g = purple_group_new(_("Anyone"));
 		purple_blist_add_group(g, NULL);
 	}
@@ -1525,11 +1534,11 @@ static void process_anyone(PurpleConnection *gc)
 		while (fgets(buff, BUFSIZ, fd)) {
 			strip_comments(buff);
 			if (buff[0]) {
-				if (!purple_find_buddy(gc->account, buff)) {
+				if (!purple_blist_find_buddy(purple_connection_get_account(gc), buff)) {
 					char *stripped_user = zephyr_strip_local_realm(zephyr,buff);
 					purple_debug_info("zephyr","stripped_user %s\n",stripped_user);
-					if (!purple_find_buddy(gc->account,stripped_user)){
-						b = purple_buddy_new(gc->account, stripped_user, NULL);
+					if (!purple_blist_find_buddy(purple_connection_get_account(gc),stripped_user)) {
+						b = purple_buddy_new(purple_connection_get_account(gc), stripped_user, NULL);
 						purple_blist_add_buddy(b, NULL, g, NULL);
 					}
 					g_free(stripped_user);
@@ -1568,34 +1577,37 @@ static void zephyr_login(PurpleAccount * account)
 	gchar *exposure;
 
 	gc = purple_account_get_connection(account);
-	read_anyone = purple_account_get_bool(gc->account,"read_anyone",TRUE);
-	read_zsubs = purple_account_get_bool(gc->account,"read_zsubs",TRUE);
-	exposure = (gchar *)purple_account_get_string(gc->account, "exposure_level", EXPOSE_REALMVIS);
+	read_anyone = purple_account_get_bool(purple_connection_get_account(gc),"read_anyone",TRUE);
+	read_zsubs = purple_account_get_bool(purple_connection_get_account(gc),"read_zsubs",TRUE);
+	exposure = (gchar *)purple_account_get_string(purple_connection_get_account(gc), "exposure_level", EXPOSE_REALMVIS);
 
 #ifdef WIN32
 	username = purple_account_get_username(account);
 #endif
-	gc->flags |= PURPLE_CONNECTION_AUTO_RESP | PURPLE_CONNECTION_HTML | PURPLE_CONNECTION_NO_BGCOLOR | PURPLE_CONNECTION_NO_URLDESC;
-	gc->proto_data = zephyr=g_new0(zephyr_account,1);
+	purple_connection_set_flags(gc, PURPLE_CONNECTION_FLAG_AUTO_RESP |
+		PURPLE_CONNECTION_FLAG_HTML | PURPLE_CONNECTION_FLAG_NO_BGCOLOR |
+		PURPLE_CONNECTION_FLAG_NO_URLDESC | PURPLE_CONNECTION_FLAG_NO_IMAGES);
+	zephyr = g_new0(zephyr_account, 1);
+	purple_connection_set_protocol_data(gc, zephyr);
 
 	zephyr->account = account;
 
 	/* Make sure that the exposure (visibility) is set to a sane value */
 	zephyr->exposure=g_strdup(normalize_zephyr_exposure(exposure));
 
-	if (purple_account_get_bool(gc->account,"use_tzc",0)) {
+	if (purple_account_get_bool(purple_connection_get_account(gc),"use_tzc",0)) {
 		zephyr->connection_type = PURPLE_ZEPHYR_TZC;
 	} else {
 		zephyr->connection_type = PURPLE_ZEPHYR_KRB4;
 	}
 
-	zephyr->encoding = (char *)purple_account_get_string(gc->account, "encoding", ZEPHYR_FALLBACK_CHARSET);
+	zephyr->encoding = (char *)purple_account_get_string(purple_connection_get_account(gc), "encoding", ZEPHYR_FALLBACK_CHARSET);
 	purple_connection_update_progress(gc, _("Connecting"), 0, 8);
 
 	/* XXX z_call_s should actually try to report the com_err determined error */
 	if (use_tzc(zephyr)) {
 		pid_t pid;
-		/*		  purple_connection_error(gc,"tzc not supported yet"); */
+		/*		  purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "tzc not supported yet"); */
 		if ((pipe(zephyr->totzc) != 0) || (pipe(zephyr->fromtzc) != 0)) {
 			purple_debug_error("zephyr", "pipe creation failed. killing\n");
 			exit(-1);
@@ -1610,7 +1622,7 @@ static void zephyr_login(PurpleAccount * account)
 		if (pid == 0) {
 			unsigned int i=0;
 			gboolean found_ps = FALSE;
-			gchar ** tzc_cmd_array = g_strsplit(purple_account_get_string(gc->account,"tzc_command","/usr/bin/tzc -e %s")," ",0);
+			gchar ** tzc_cmd_array = g_strsplit(purple_account_get_string(purple_connection_get_account(gc),"tzc_command","/usr/bin/tzc -e %s")," ",0);
 			if (close(1) == -1) {
 				exit(-1);
 			}
@@ -1693,7 +1705,7 @@ static void zephyr_login(PurpleAccount * account)
 			       select(zephyr->fromtzc[ZEPHYR_FD_READ] + 1, &rfds, NULL, NULL, &tv) > 0) {
 				if (read(zephyr->fromtzc[ZEPHYR_FD_READ], bufcur, 1) != 1) {
 					purple_debug_error("zephyr", "couldn't read\n");
-					purple_connection_error(gc, "couldn't read");
+					purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "couldn't read");
 					free(buf);
 					return;
 				}
@@ -1721,7 +1733,7 @@ static void zephyr_login(PurpleAccount * account)
 				ptr++;
 			}
 			if (ptr >=bufcur) {
-				purple_connection_error(gc,"invalid output by tzc (or bad parsing code)");
+				purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "invalid output by tzc (or bad parsing code)");
 				free(buf);
 				return;
 			}
@@ -1787,7 +1799,7 @@ static void zephyr_login(PurpleAccount * account)
 						if ((realm = strchr(username,'@')))
 							zephyr->realm = g_strdup_printf("%s",realm+1);
 						else {
-							realm = (gchar *)purple_account_get_string(gc->account,"realm","");
+							realm = (gchar *)purple_account_get_string(purple_connection_get_account(gc),"realm","");
 							if (!*realm) {
 								realm = "local-realm";
 							}
@@ -1824,7 +1836,7 @@ static void zephyr_login(PurpleAccount * account)
 		z_call_s(ZOpenPort(&(zephyr->port)), "Couldn't open port");
 		z_call_s(ZSetLocation((char *)zephyr->exposure), "Couldn't set location");
 
-		realm = (gchar *)purple_account_get_string(gc->account,"realm","");
+		realm = (gchar *)purple_account_get_string(purple_connection_get_account(gc),"realm","");
 		if (!*realm) {
 			realm = ZGetRealm();
 		}
@@ -1836,7 +1848,7 @@ static void zephyr_login(PurpleAccount * account)
 		purple_debug_info("zephyr","realm: %s\n",zephyr->realm);
 	}
 	else {
-		purple_connection_error(gc,"Only ZEPH0.2 supported currently");
+		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "Only ZEPH0.2 supported currently");
 		return;
 	}
 	purple_debug_info("zephyr","does it get here\n");
@@ -1850,12 +1862,13 @@ static void zephyr_login(PurpleAccount * account)
 	if (zephyr_subscribe_to(zephyr,"MESSAGE","PERSONAL",zephyr->username,NULL) != ZERR_NONE) {
 		/* XXX don't translate this yet. It could be written better */
 		/* XXX error messages could be handled with more detail */
-		purple_notify_error(account->gc, NULL,
-				  "Unable to subscribe to messages", "Unable to subscribe to initial messages");
+		purple_notify_error(purple_account_get_connection(account), NULL,
+			"Unable to subscribe to messages", "Unable to subscribe to initial messages",
+			purple_request_cpar_from_connection(gc));
 		return;
 	}
 
-	purple_connection_set_state(gc, PURPLE_CONNECTED);
+	purple_connection_set_state(gc, PURPLE_CONNECTION_CONNECTED);
 
 	if (read_anyone)
 		process_anyone(gc);
@@ -1863,11 +1876,11 @@ static void zephyr_login(PurpleAccount * account)
 		process_zsubs(zephyr);
 
 	if (use_zeph02(zephyr)) {
-		zephyr->nottimer = purple_timeout_add(100, check_notify_zeph02, gc);
+		zephyr->nottimer = g_timeout_add(100, check_notify_zeph02, gc);
 	} else if (use_tzc(zephyr)) {
-		zephyr->nottimer = purple_timeout_add(100, check_notify_tzc, gc);
+		zephyr->nottimer = g_timeout_add(100, check_notify_tzc, gc);
 	}
-	zephyr->loctimer = purple_timeout_add_seconds(20, check_loc, gc);
+	zephyr->loctimer = g_timeout_add_seconds(20, check_loc, gc);
 
 }
 
@@ -1954,7 +1967,7 @@ static void write_anyone(zephyr_account *zephyr)
 	}
 
 	account = zephyr->account;
-	for (buddies = purple_find_buddies(account, NULL); buddies;
+	for (buddies = purple_blist_find_buddies(account, NULL); buddies;
 			buddies = g_slist_delete_link(buddies, buddies)) {
 		PurpleBuddy *b = buddies->data;
 		gchar *stripped_user = zephyr_strip_local_realm(zephyr, purple_buddy_get_name(b));
@@ -1970,7 +1983,7 @@ static void zephyr_close(PurpleConnection * gc)
 {
 	GList *l;
 	GSList *s;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	pid_t tzc_pid = zephyr->tzc_pid;
 
 	l = zephyr->pending_zloc_names;
@@ -1980,10 +1993,10 @@ static void zephyr_close(PurpleConnection * gc)
 	}
 	g_list_free(zephyr->pending_zloc_names);
 
-	if (purple_account_get_bool(gc->account, "write_anyone", FALSE))
+	if (purple_account_get_bool(purple_connection_get_account(gc), "write_anyone", FALSE))
 		write_anyone(zephyr);
 
-	if (purple_account_get_bool(gc->account, "write_zsubs", FALSE))
+	if (purple_account_get_bool(purple_connection_get_account(gc), "write_zsubs", FALSE))
 		write_zsubs(zephyr);
 
 	s = zephyr->subscrips;
@@ -1994,10 +2007,10 @@ static void zephyr_close(PurpleConnection * gc)
 	g_slist_free(zephyr->subscrips);
 
 	if (zephyr->nottimer)
-		purple_timeout_remove(zephyr->nottimer);
+		g_source_remove(zephyr->nottimer);
 	zephyr->nottimer = 0;
 	if (zephyr->loctimer)
-		purple_timeout_remove(zephyr->loctimer);
+		g_source_remove(zephyr->loctimer);
 	zephyr->loctimer = 0;
 	gc = NULL;
 	if (use_zeph02(zephyr)) {
@@ -2037,15 +2050,14 @@ static const char * zephyr_get_signature(void)
 	return sig;
 }
 
-static int zephyr_chat_send(PurpleConnection * gc, int id, const char *im, PurpleMessageFlags flags)
+static int zephyr_chat_send(PurpleConnection * gc, int id, PurpleMessage *msg)
 {
 	zephyr_triple *zt;
 	const char *sig;
-	PurpleConversation *gconv1;
-	PurpleConvChat *gcc;
+	PurpleChatConversation *gcc;
 	char *inst;
 	char *recipient;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 
 	zt = find_sub_by_id(zephyr,id);
 	if (!zt)
@@ -2054,11 +2066,10 @@ static int zephyr_chat_send(PurpleConnection * gc, int id, const char *im, Purpl
 
 	sig = zephyr_get_signature();
 
-	gconv1 = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, zt->name,
-												 gc->account);
-	gcc = purple_conversation_get_chat_data(gconv1);
+	gcc = purple_conversations_find_chat_with_account(zt->name,
+												 purple_connection_get_account(gc));
 
-	if (!(inst = (char *)purple_conv_chat_get_topic(gcc)))
+	if (!(inst = (char *)purple_chat_conversation_get_topic(gcc)))
 		inst = g_strdup("PERSONAL");
 
 	if (!g_ascii_strcasecmp(zt->recipient, "*"))
@@ -2066,21 +2077,25 @@ static int zephyr_chat_send(PurpleConnection * gc, int id, const char *im, Purpl
 	else
 		recipient = local_zephyr_normalize(zephyr,zt->recipient);
 
-	zephyr_send_message(zephyr,zt->class,inst,recipient,im,sig,"");
+	zephyr_send_message(zephyr, zt->class, inst, recipient,
+		purple_message_get_contents(msg), sig, "");
 	return 0;
 }
 
 
-static int zephyr_send_im(PurpleConnection * gc, const char *who, const char *im, PurpleMessageFlags flags)
+static int zephyr_send_im(PurpleConnection *gc, PurpleMessage *msg)
 {
 	const char *sig;
-	zephyr_account *zephyr = gc->proto_data;
-	if (flags & PURPLE_MESSAGE_AUTO_RESP)
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
+
+	if (purple_message_get_flags(msg) & PURPLE_MESSAGE_AUTO_RESP) {
 		sig = "Automated reply:";
-	else {
+	} else {
 		sig = zephyr_get_signature();
 	}
-	zephyr_send_message(zephyr,"MESSAGE","PERSONAL",local_zephyr_normalize(zephyr,who),im,sig,"");
+	zephyr_send_message(zephyr, "MESSAGE", "PERSONAL",
+		local_zephyr_normalize(zephyr, purple_message_get_recipient(msg)),
+		purple_message_get_contents(msg), sig, "");
 
 	return 1;
 }
@@ -2093,7 +2108,7 @@ static char* zephyr_tzc_escape_msg(const char *message)
 	gsize pos = 0, pos2 = 0;
 	char *newmsg;
 
-	if (message && (strlen(message) > 0)) {
+	if (message && *message) {
 		newmsg = g_new0(char,1+strlen(message)*2);
 		while(pos < strlen(message)) {
 			if (message[pos]=='\\') {
@@ -2124,7 +2139,7 @@ char* zephyr_tzc_deescape_str(const char *message)
 	gsize pos = 0, pos2 = 0;
 	char *newmsg;
 
-	if (message && (strlen(message) > 0)) {
+	if (message && *message) {
 		newmsg = g_new0(char,strlen(message)+1);
 		while(pos < strlen(message)) {
 			if (message[pos]=='\\') {
@@ -2172,11 +2187,15 @@ static int zephyr_send_message(zephyr_account *zephyr,char* zclass, char* instan
 		len = strlen(zsendstr);
 		result = write(zephyr->totzc[ZEPHYR_FD_WRITE], zsendstr, len);
 		if (result != len) {
+			g_free(tzc_sig);
+			g_free(tzc_body);
 			g_free(zsendstr);
 			g_free(html_buf2);
 			g_free(html_buf);
 			return errno;
 		}
+		g_free(tzc_sig);
+		g_free(tzc_body);
 		g_free(zsendstr);
 	} else if (use_zeph02(zephyr)) {
 		ZNotice_t notice;
@@ -2237,11 +2256,17 @@ static const char *zephyr_normalize(const PurpleAccount *account, const char *wh
 	PurpleConnection *gc;
 	char *tmp;
 
+	if (account == NULL) {
+		if (strlen(who) >= sizeof(buf))
+			return NULL;
+		return who;
+	}
+
 	gc = purple_account_get_connection(account);
 	if (gc == NULL)
 		return NULL;
 
-	tmp = local_zephyr_normalize(gc->proto_data, who);
+	tmp = local_zephyr_normalize(purple_connection_get_protocol_data(gc), who);
 
 	if (strlen(tmp) >= sizeof(buf)) {
 		g_free(tmp);
@@ -2257,7 +2282,7 @@ static const char *zephyr_normalize(const PurpleAccount *account, const char *wh
 static void zephyr_zloc(PurpleConnection *gc, const char *who)
 {
 	ZAsyncLocateData_t ald;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	gchar* normalized_who = local_zephyr_normalize(zephyr,who);
 
 	if (use_zeph02(zephyr)) {
@@ -2284,13 +2309,12 @@ static void zephyr_zloc(PurpleConnection *gc, const char *who)
 static void zephyr_set_status(PurpleAccount *account, PurpleStatus *status) {
 	size_t len;
 	size_t result;
-	zephyr_account *zephyr = purple_account_get_connection(account)->proto_data;
-	PurpleStatusPrimitive primitive = purple_status_type_get_primitive(purple_status_get_type(status));
+	PurpleConnection *gc = purple_account_get_connection(account);
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
+	PurpleStatusPrimitive primitive = purple_status_type_get_primitive(purple_status_get_status_type(status));
 
-	if (zephyr->away) {
-		g_free(zephyr->away);
-		zephyr->away=NULL;
-	}
+	g_free(zephyr->away);
+	zephyr->away = NULL;
 
 	if (primitive == PURPLE_STATUS_AWAY) {
 		zephyr->away = g_strdup(purple_status_get_attr_string(status,"message"));
@@ -2352,7 +2376,7 @@ static GList *zephyr_status_types(PurpleAccount *account)
 
 	type = purple_status_type_new_with_attrs(
 					       PURPLE_STATUS_AWAY, NULL, NULL, TRUE, TRUE, FALSE,
-					       "message", _("Message"), purple_value_new(PURPLE_TYPE_STRING),
+					       "message", _("Message"), purple_value_new(G_TYPE_STRING),
 					       NULL);
 	types = g_list_append(types, type);
 
@@ -2365,21 +2389,21 @@ static GList *zephyr_status_types(PurpleAccount *account)
 static GList *zephyr_chat_info(PurpleConnection * gc)
 {
 	GList *m = NULL;
-	struct proto_chat_entry *pce;
+	PurpleProtocolChatEntry *pce;
 
-	pce = g_new0(struct proto_chat_entry, 1);
+	pce = g_new0(PurpleProtocolChatEntry, 1);
 
 	pce->label = _("_Class:");
 	pce->identifier = "class";
 	m = g_list_append(m, pce);
 
-	pce = g_new0(struct proto_chat_entry, 1);
+	pce = g_new0(PurpleProtocolChatEntry, 1);
 
 	pce->label = _("_Instance:");
 	pce->identifier = "instance";
 	m = g_list_append(m, pce);
 
-	pce = g_new0(struct proto_chat_entry, 1);
+	pce = g_new0(PurpleProtocolChatEntry, 1);
 
 	pce->label = _("_Recipient:");
 	pce->identifier = "recipient";
@@ -2393,7 +2417,7 @@ static GList *zephyr_chat_info(PurpleConnection * gc)
 static void zephyr_subscribe_failed(PurpleConnection *gc,char * z_class, char *z_instance, char * z_recipient, char* z_galaxy)
 {
 	gchar* subscribe_failed = g_strdup_printf(_("Attempt to subscribe to %s,%s,%s failed"), z_class, z_instance,z_recipient);
-	purple_notify_error(gc,"", subscribe_failed, NULL);
+	purple_notify_error(gc,"", subscribe_failed, NULL, purple_request_cpar_from_connection(gc));
 	g_free(subscribe_failed);
 }
 
@@ -2418,7 +2442,7 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 	const char *classname;
 	const char *instname;
 	const char *recip;
-	zephyr_account *zephyr=gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	classname = g_hash_table_lookup(data, "class");
 	instname = g_hash_table_lookup(data, "instance");
 	recip = g_hash_table_lookup(data, "recipient");
@@ -2432,7 +2456,7 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 	if (!g_ascii_strcasecmp(classname,"%canon%"))
 		classname = g_strdup(zephyr->ourhostcanon);
 
-	if (!instname || !strlen(instname))
+	if (!instname || *instname == '\0')
 		instname = "*";
 
 	if (!g_ascii_strcasecmp(instname,"%host%"))
@@ -2452,7 +2476,7 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 		if (!zt2->open) {
 			if (!g_ascii_strcasecmp(instname,"*"))
 				instname = "PERSONAL";
-			serv_got_joined_chat(gc, zt2->id, zt2->name);
+			purple_serv_got_joined_chat(gc, zt2->id, zt2->name);
 			zephyr_chat_set_topic(gc,zt2->id,instname);
 			zt2->open = TRUE;
 		}
@@ -2472,7 +2496,7 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 
 	zephyr->subscrips = g_slist_append(zephyr->subscrips, zt1);
 	zt1->open = TRUE;
-	serv_got_joined_chat(gc, zt1->id, zt1->name);
+	purple_serv_got_joined_chat(gc, zt1->id, zt1->name);
 	if (!g_ascii_strcasecmp(instname,"*"))
 		instname = "PERSONAL";
 	zephyr_chat_set_topic(gc,zt1->id,instname);
@@ -2481,7 +2505,7 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 static void zephyr_chat_leave(PurpleConnection * gc, int id)
 {
 	zephyr_triple *zt;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	zt = find_sub_by_id(zephyr,id);
 
 	if (zt) {
@@ -2504,7 +2528,7 @@ static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *na
 			char *zclass, *inst, *recip;
 			char** triple;
 			GHashTable *components;
-			if(!PURPLE_BLIST_NODE_IS_CHAT(cnode))
+			if(!PURPLE_IS_CHAT(cnode))
 				continue;
 			if(purple_chat_get_account(chat) != account)
 				continue;
@@ -2529,13 +2553,13 @@ static const char *zephyr_list_icon(PurpleAccount * a, PurpleBuddy * b)
 	return "zephyr";
 }
 
-static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, PurpleTypingState state) {
+static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, PurpleIMTypingState state) {
 	gchar *recipient;
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if (use_tzc(zephyr))
 		return 0;
 
-	if (state == PURPLE_NOT_TYPING)
+	if (state == PURPLE_IM_NOT_TYPING)
 		return 0;
 
 	/* XXX We probably should care if this fails. Or maybe we don't want to */
@@ -2559,7 +2583,7 @@ static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, Pu
 
 	/*
 	 * TODO: Is this correct?  It means we will call
-	 *       serv_send_typing(gc, who, PURPLE_TYPING) once every 15 seconds
+	 *       purple_serv_send_typing(gc, who, PURPLE_IM_TYPING) once every 15 seconds
 	 *       until the Purple user stops typing.
 	 */
 	return ZEPHYR_TYPING_SEND_TIMEOUT;
@@ -2570,22 +2594,20 @@ static unsigned int zephyr_send_typing(PurpleConnection *gc, const char *who, Pu
 static void zephyr_chat_set_topic(PurpleConnection * gc, int id, const char *topic)
 {
 	zephyr_triple *zt;
-	PurpleConversation *gconv;
-	PurpleConvChat *gcc;
+	PurpleChatConversation *gcc;
 	gchar *topic_utf8;
-	zephyr_account* zephyr = gc->proto_data;
+	zephyr_account* zephyr = purple_connection_get_protocol_data(gc);
 	char *sender = (char *)zephyr->username;
 
 	zt = find_sub_by_id(zephyr,id);
 	/* find_sub_by_id can return NULL */
 	if (!zt)
 		return;
-	gconv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, zt->name,
-												gc->account);
-	gcc = purple_conversation_get_chat_data(gconv);
+	gcc = purple_conversations_find_chat_with_account(zt->name,
+												purple_connection_get_account(gc));
 
 	topic_utf8 = zephyr_recv_convert(gc,(gchar *)topic);
-	purple_conv_chat_set_topic(gcc,sender,topic_utf8);
+	purple_chat_conversation_set_topic(gcc,sender,topic_utf8);
 	g_free(topic_utf8);
 	return;
 }
@@ -2596,25 +2618,31 @@ static PurpleCmdRet zephyr_purple_cmd_msg(PurpleConversation *conv,
 				      const char *cmd, char **args, char **error, void *data)
 {
 	char *recipient;
-	zephyr_account *zephyr = purple_conversation_get_gc(conv)->proto_data;
+	PurpleCmdRet ret;
+	PurpleConnection *gc = purple_conversation_get_connection(conv);
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);;
 	if (!g_ascii_strcasecmp(args[0],"*"))
 		return PURPLE_CMD_RET_FAILED;  /* "*" is not a valid argument */
 	else
 		recipient = local_zephyr_normalize(zephyr,args[0]);
 
-	if (strlen(recipient) < 1)
+	if (strlen(recipient) < 1) {
+		g_free(recipient);
 		return PURPLE_CMD_RET_FAILED; /* a null recipient is a chat message, not an IM */
+	}
 
 	if (zephyr_send_message(zephyr,"MESSAGE","PERSONAL",recipient,args[1],zephyr_get_signature(),""))
-		return PURPLE_CMD_RET_OK;
+		ret = PURPLE_CMD_RET_OK;
 	else
-		return PURPLE_CMD_RET_FAILED;
+		ret = PURPLE_CMD_RET_FAILED;
+	g_free(recipient);
+	return ret;
 }
 
 static PurpleCmdRet zephyr_purple_cmd_zlocate(PurpleConversation *conv,
 					  const char *cmd, char **args, char **error, void *data)
 {
-	zephyr_zloc(purple_conversation_get_gc(conv),args[0]);
+	zephyr_zloc(purple_conversation_get_connection(conv),args[0]);
 	return PURPLE_CMD_RET_OK;
 }
 
@@ -2625,10 +2653,9 @@ static PurpleCmdRet zephyr_purple_cmd_instance(PurpleConversation *conv,
 	 * all. This might not be the best thing to do, though having
 	 * one word isn't ideal either.	 */
 
-	PurpleConvChat *gcc = purple_conversation_get_chat_data(conv);
-	int id = gcc->id;
 	const char* instance = args[0];
-	zephyr_chat_set_topic(purple_conversation_get_gc(conv),id,instance);
+	zephyr_chat_set_topic(purple_conversation_get_connection(conv),
+			purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(conv)),instance);
 	return PURPLE_CMD_RET_OK;
 }
 
@@ -2640,7 +2667,7 @@ static PurpleCmdRet zephyr_purple_cmd_joinchat_cir(PurpleConversation *conv,
 	g_hash_table_insert(triple,"class",args[0]);
 	g_hash_table_insert(triple,"instance",args[1]);
 	g_hash_table_insert(triple,"recipient",args[2]);
-	zephyr_join_chat(purple_conversation_get_gc(conv),triple);
+	zephyr_join_chat(purple_conversation_get_connection(conv),triple);
 	return PURPLE_CMD_RET_OK;
 }
 
@@ -2648,7 +2675,8 @@ static PurpleCmdRet zephyr_purple_cmd_zi(PurpleConversation *conv,
 				     const char *cmd, char **args, char **error, void *data)
 {
 	/* args = instance, message */
-	zephyr_account *zephyr = purple_conversation_get_gc(conv)->proto_data;
+	PurpleConnection *gc = purple_conversation_get_connection(conv);
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if ( zephyr_send_message(zephyr,"message",args[0],"",args[1],zephyr_get_signature(),""))
 		return PURPLE_CMD_RET_OK;
 	else
@@ -2659,7 +2687,8 @@ static PurpleCmdRet zephyr_purple_cmd_zci(PurpleConversation *conv,
 				      const char *cmd, char **args, char **error, void *data)
 {
 	/* args = class, instance, message */
-	zephyr_account *zephyr = purple_conversation_get_gc(conv)->proto_data;
+	PurpleConnection *gc = purple_conversation_get_connection(conv);
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if ( zephyr_send_message(zephyr,args[0],args[1],"",args[2],zephyr_get_signature(),""))
 		return PURPLE_CMD_RET_OK;
 	else
@@ -2670,7 +2699,8 @@ static PurpleCmdRet zephyr_purple_cmd_zcir(PurpleConversation *conv,
 				       const char *cmd, char **args, char **error, void *data)
 {
 	/* args = class, instance, recipient, message */
-	zephyr_account *zephyr = purple_conversation_get_gc(conv)->proto_data;
+	PurpleConnection *gc = purple_conversation_get_connection(conv);
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if ( zephyr_send_message(zephyr,args[0],args[1],args[2],args[3],zephyr_get_signature(),""))
 		return PURPLE_CMD_RET_OK;
 	else
@@ -2681,7 +2711,8 @@ static PurpleCmdRet zephyr_purple_cmd_zir(PurpleConversation *conv,
 				      const char *cmd, char **args, char **error, void *data)
 {
 	/* args = instance, recipient, message */
-	zephyr_account *zephyr = purple_conversation_get_gc(conv)->proto_data;
+	PurpleConnection *gc = purple_conversation_get_connection(conv);
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if ( zephyr_send_message(zephyr,"message",args[0],args[1],args[2],zephyr_get_signature(),""))
 		return PURPLE_CMD_RET_OK;
 	else
@@ -2692,7 +2723,8 @@ static PurpleCmdRet zephyr_purple_cmd_zc(PurpleConversation *conv,
 				     const char *cmd, char **args, char **error, void *data)
 {
 	/* args = class, message */
-	zephyr_account *zephyr = purple_conversation_get_gc(conv)->proto_data;
+	PurpleConnection *gc = purple_conversation_get_connection(conv);
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	if ( zephyr_send_message(zephyr,args[0],"PERSONAL","",args[1],zephyr_get_signature(),""))
 		return PURPLE_CMD_RET_OK;
 	else
@@ -2701,71 +2733,93 @@ static PurpleCmdRet zephyr_purple_cmd_zc(PurpleConversation *conv,
 
 static void zephyr_register_slash_commands(void)
 {
+	PurpleCmdId id;
 
-	purple_cmd_register("msg","ws", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("msg","ws", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_msg, _("msg &lt;nick&gt; &lt;message&gt;:  Send a private message to a user"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("zlocate","w", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("zlocate","w", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_zlocate, _("zlocate &lt;nick&gt;: Locate user"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("zl","w", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("zl","w", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_zlocate, _("zl &lt;nick&gt;: Locate user"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("instance","s", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("instance","s", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_instance, _("instance &lt;instance&gt;: Set the instance to be used on this class"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("inst","s", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("inst","s", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_instance, _("inst &lt;instance&gt;: Set the instance to be used on this class"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("topic","s", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("topic","s", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_instance, _("topic &lt;instance&gt;: Set the instance to be used on this class"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("sub", "www", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("sub", "www", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_joinchat_cir,
 			  _("sub &lt;class&gt; &lt;instance&gt; &lt;recipient&gt;: Join a new chat"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("zi","ws", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("zi","ws", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_zi, _("zi &lt;instance&gt;: Send a message to &lt;message,<i>instance</i>,*&gt;"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("zci","wws",PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("zci","wws",PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_zci,
 			  _("zci &lt;class&gt; &lt;instance&gt;: Send a message to &lt;<i>class</i>,<i>instance</i>,*&gt;"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("zcir","wwws",PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("zcir","wwws",PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_zcir,
 			  _("zcir &lt;class&gt; &lt;instance&gt; &lt;recipient&gt;: Send a message to &lt;<i>class</i>,<i>instance</i>,<i>recipient</i>&gt;"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("zir","wws",PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("zir","wws",PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_zir,
 			  _("zir &lt;instance&gt; &lt;recipient&gt;: Send a message to &lt;MESSAGE,<i>instance</i>,<i>recipient</i>&gt;"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
 
-	purple_cmd_register("zc","ws", PURPLE_CMD_P_PRPL,
-			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+	id = purple_cmd_register("zc","ws", PURPLE_CMD_P_PROTOCOL,
+			  PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
 			  "prpl-zephyr",
 			  zephyr_purple_cmd_zc, _("zc &lt;class&gt;: Send a message to &lt;<i>class</i>,PERSONAL,*&gt;"), NULL);
+	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
+}
 
+
+static void zephyr_unregister_slash_commands(void)
+{
+	while (cmds) {
+		PurpleCmdId id = GPOINTER_TO_UINT(cmds->data);
+		purple_cmd_unregister(id);
+		cmds = g_slist_delete_link(cmds, cmds);
+	}
 }
 
 
@@ -2773,7 +2827,7 @@ static int zephyr_resubscribe(PurpleConnection *gc)
 {
 	/* Resubscribe to the in-memory list of subscriptions and also
 	   unsubscriptions*/
-	zephyr_account *zephyr = gc->proto_data;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	GSList *s = zephyr->subscrips;
 	zephyr_triple *zt;
 	while (s) {
@@ -2787,18 +2841,18 @@ static int zephyr_resubscribe(PurpleConnection *gc)
 }
 
 
-static void zephyr_action_resubscribe(PurplePluginAction *action)
+static void zephyr_action_resubscribe(PurpleProtocolAction *action)
 {
 
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	zephyr_resubscribe(gc);
 }
 
 
-static void zephyr_action_get_subs_from_server(PurplePluginAction *action)
+static void zephyr_action_get_subs_from_server(PurpleProtocolAction *action)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
-	zephyr_account *zephyr = gc->proto_data;
+	PurpleConnection *gc = action->connection;
+	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	gchar *title;
 	int retval, nsubs, one,i;
 	ZSubscription_t subs;
@@ -2808,10 +2862,12 @@ static void zephyr_action_get_subs_from_server(PurplePluginAction *action)
 		title = g_strdup_printf("Server subscriptions for %s", zephyr->username);
 
 		if (zephyr->port == 0) {
+			g_free(title);
 			purple_debug_error("zephyr", "error while retrieving port\n");
 			return;
 		}
 		if ((retval = ZRetrieveSubscriptions(zephyr->port,&nsubs)) != ZERR_NONE) {
+			g_free(title);
 			/* XXX better error handling */
 			purple_debug_error("zephyr", "error while retrieving subscriptions from server\n");
 			return;
@@ -2820,6 +2876,7 @@ static void zephyr_action_get_subs_from_server(PurplePluginAction *action)
 			one = 1;
 			if ((retval = ZGetSubscriptions(&subs,&one)) != ZERR_NONE) {
 				/* XXX better error handling */
+				g_free(title);
 				purple_debug_error("zephyr", "error while retrieving individual subscription\n");
 				return;
 			}
@@ -2828,177 +2885,182 @@ static void zephyr_action_get_subs_from_server(PurplePluginAction *action)
 					       subs.zsub_recipient);
 		}
 		purple_notify_formatted(gc, title, title, NULL,  subout->str, NULL, NULL);
+		g_free(title);
+		g_string_free(subout, TRUE);
 	} else {
 		/* XXX fix */
-		purple_notify_error(gc,"","tzc doesn't support this action",NULL);
+		purple_notify_error(gc, "", "tzc doesn't support this action",
+			NULL, purple_request_cpar_from_connection(gc));
 	}
 }
 
 
-static GList *zephyr_actions(PurplePlugin *plugin, gpointer context)
+static GList *zephyr_get_actions(PurpleConnection *gc)
 {
 	GList *list = NULL;
-	PurplePluginAction *act = NULL;
+	PurpleProtocolAction *act = NULL;
 
-	act = purple_plugin_action_new(_("Resubscribe"), zephyr_action_resubscribe);
+	act = purple_protocol_action_new(_("Resubscribe"), zephyr_action_resubscribe);
 	list = g_list_append(list, act);
 
-	act = purple_plugin_action_new(_("Retrieve subscriptions from server"), zephyr_action_get_subs_from_server);
+	act = purple_protocol_action_new(_("Retrieve subscriptions from server"), zephyr_action_get_subs_from_server);
 	list = g_list_append(list,act);
 
 	return list;
 }
 
-static PurplePlugin *my_protocol = NULL;
 
-static PurplePluginProtocolInfo prpl_info = {
-	OPT_PROTO_CHAT_TOPIC | OPT_PROTO_NO_PASSWORD,
-	NULL,					/* ??? user_splits */
-	NULL,					/* ??? protocol_options */
-	NO_BUDDY_ICONS,
-	zephyr_list_icon,
-	NULL,					/* ??? list_emblems */
-	NULL,					/* ??? status_text */
-	NULL,					/* ??? tooltip_text */
-	zephyr_status_types,	/* status_types */
-	NULL,					/* ??? blist_node_menu - probably all useful actions are already handled*/
-	zephyr_chat_info,		/* chat_info */
-	NULL,					/* chat_info_defaults */
-	zephyr_login,			/* login */
-	zephyr_close,			/* close */
-	zephyr_send_im,			/* send_im */
-	NULL,					/* XXX set info (Location?) */
-	zephyr_send_typing,		/* send_typing */
-	zephyr_zloc,			/* get_info */
-	zephyr_set_status,		/* set_status */
-	NULL,					/* ??? set idle */
-	NULL,					/* change password */
-	NULL,					/* add_buddy */
-	NULL,					/* add_buddies */
-	NULL,					/* remove_buddy */
-	NULL,					/* remove_buddies */
-	NULL,					/* add_permit */
-	NULL,					/* add_deny */
-	NULL,					/* remove_permit */
-	NULL,					/* remove_deny */
-	NULL,					/* set_permit_deny */
-	zephyr_join_chat,		/* join_chat */
-	NULL,					/* reject_chat -- No chat invites*/
-	zephyr_get_chat_name,	/* get_chat_name */
-	NULL,					/* chat_invite -- No chat invites*/
-	zephyr_chat_leave,		/* chat_leave */
-	NULL,					/* chat_whisper -- No "whispering"*/
-	zephyr_chat_send,		/* chat_send */
-	NULL,					/* keepalive -- Not necessary*/
-	NULL,					/* register_user -- Not supported*/
-	NULL,					/* XXX get_cb_info */
-	NULL,					/* get_cb_away */
-	NULL,					/* alias_buddy */
-	NULL,					/* group_buddy */
-	NULL,					/* rename_group */
-	NULL,					/* buddy_free */
-	NULL,					/* convo_closed */
-	zephyr_normalize,		/* normalize */
-	NULL,					/* XXX set_buddy_icon */
-	NULL,					/* remove_group */
-	NULL,					/* XXX get_cb_real_name */
-	zephyr_chat_set_topic,	/* set_chat_topic */
-	zephyr_find_blist_chat,	/* find_blist_chat */
-	NULL,					/* roomlist_get_list */
-	NULL,					/* roomlist_cancel */
-	NULL,					/* roomlist_expand_category */
-	NULL,					/* can_receive_file */
-	NULL,					/* send_file */
-	NULL,					/* new_xfer */
-	NULL,					/* offline_message */
-	NULL,					/* whiteboard_prpl_ops */
-	NULL,					/* send_raw */
-	NULL,					/* roomlist_room_serialize */
-
-	NULL,
-	NULL,
-	NULL,
-	sizeof(PurplePluginProtocolInfo),       /* struct_size */
-	NULL,					/* get_account_text_table */
-	NULL,					/* initate_media */
-	NULL,					/* get_media_caps */
-	NULL,					/* get_moods */
-	NULL,					/* set_public_alias */
-	NULL,					/* get_public_alias */
-	NULL,					/* add_buddy_with_invite */
-	NULL					/* add_buddies_with_invite */
-};
-
-static PurplePluginInfo info = {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL,				  /**< type	      */
-	NULL,						  /**< ui_requirement */
-	0,							  /**< flags	      */
-	NULL,						  /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,				  /**< priority	      */
-
-	"prpl-zephyr",					   /**< id	       */
-	"Zephyr",						 /**< name	     */
-	DISPLAY_VERSION,					  /**< version	      */
-	/**  summary	    */
-	N_("Zephyr Protocol Plugin"),
-	/**  description    */
-	N_("Zephyr Protocol Plugin"),
-	NULL,						  /**< author	      */
-	PURPLE_WEBSITE,					  /**< homepage	      */
-
-	NULL,						  /**< load	      */
-	NULL,						  /**< unload	      */
-	NULL,						  /**< destroy	      */
-
-	NULL,						  /**< ui_info	      */
-	&prpl_info,					  /**< extra_info     */
-	NULL,
-	zephyr_actions,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void init_plugin(PurplePlugin * plugin)
+static void
+zephyr_protocol_init(PurpleProtocol *protocol)
 {
 	PurpleAccountOption *option;
 	char *tmp = get_exposure_level();
 
+	protocol->id      = "prpl-zephyr";
+	protocol->name    = "Zephyr";
+	protocol->options = OPT_PROTO_CHAT_TOPIC | OPT_PROTO_NO_PASSWORD;
+
 	option = purple_account_option_bool_new(_("Use tzc"), "use_tzc", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_string_new(_("tzc command"), "tzc_command", "/usr/bin/tzc -e %s");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_bool_new(_("Export to .anyone"), "write_anyone", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_bool_new(_("Export to .zephyr.subs"), "write_zsubs", FALSE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_bool_new(_("Import from .anyone"), "read_anyone", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_bool_new(_("Import from .zephyr.subs"), "read_zsubs", TRUE);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_string_new(_("Realm"), "realm", "");
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_string_new(_("Exposure"), "exposure_level", tmp?tmp: EXPOSE_REALMVIS);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
+	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_string_new(_("Encoding"), "encoding", ZEPHYR_FALLBACK_CHARSET);
-	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options, option);
-
-	my_protocol = plugin;
-	zephyr_register_slash_commands();
+	protocol->account_options = g_list_append(protocol->account_options, option);
 }
 
-PURPLE_INIT_PLUGIN(zephyr, init_plugin, info);
+
+static void
+zephyr_protocol_class_init(PurpleProtocolClass *klass)
+{
+	klass->login        = zephyr_login;
+	klass->close        = zephyr_close;
+	klass->status_types = zephyr_status_types;
+	klass->list_icon    = zephyr_list_icon;
+}
+
+
+static void
+zephyr_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+{
+	client_iface->get_actions     = zephyr_get_actions;
+	client_iface->normalize       = zephyr_normalize;
+	client_iface->find_blist_chat = zephyr_find_blist_chat;
+}
+
+
+static void
+zephyr_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+{
+	server_iface->get_info   = zephyr_zloc;
+	server_iface->set_status = zephyr_set_status;
+
+	server_iface->set_info       = NULL; /* XXX Location? */
+	server_iface->set_buddy_icon = NULL; /* XXX */
+}
+
+
+static void
+zephyr_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+{
+	im_iface->send        = zephyr_send_im;
+	im_iface->send_typing = zephyr_send_typing;
+}
+
+
+static void
+zephyr_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+{
+	chat_iface->info      = zephyr_chat_info;
+	chat_iface->join      = zephyr_join_chat;
+	chat_iface->get_name  = zephyr_get_chat_name;
+	chat_iface->leave     = zephyr_chat_leave;
+	chat_iface->send      = zephyr_chat_send;
+	chat_iface->set_topic = zephyr_chat_set_topic;
+
+	chat_iface->get_user_real_name = NULL; /* XXX */
+}
+
+
+PURPLE_DEFINE_TYPE_EXTENDED(
+	ZephyrProtocol, zephyr_protocol, PURPLE_TYPE_PROTOCOL, 0,
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
+	                                  zephyr_protocol_client_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
+	                                  zephyr_protocol_server_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
+	                                  zephyr_protocol_im_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
+	                                  zephyr_protocol_chat_iface_init)
+);
+
+
+static PurplePluginInfo *plugin_query(GError **error)
+{
+	return purple_plugin_info_new(
+		"id",           "prpl-zephyr",
+		"name",         "Zephyr Protocol",
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Protocol"),
+		"summary",      N_("Zephyr Protocol Plugin"),
+		"description",  N_("Zephyr Protocol Plugin"),
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		"flags",        PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
+		                PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
+		NULL
+	);
+}
+
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	zephyr_protocol_register_type(plugin);
+
+	my_protocol = purple_protocols_add(ZEPHYR_TYPE_PROTOCOL, error);
+	if (!my_protocol)
+		return FALSE;
+
+	zephyr_register_slash_commands();
+
+	return TRUE;
+}
+
+
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	zephyr_unregister_slash_commands();
+
+	if (!purple_protocols_remove(my_protocol, error))
+		return FALSE;
+
+	return TRUE;
+}
+
+
+PURPLE_PLUGIN_INIT(zephyr, plugin_query, plugin_load, plugin_unload);

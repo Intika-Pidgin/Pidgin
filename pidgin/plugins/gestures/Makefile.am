@@ -1,6 +1,6 @@
-plugindir = $(libdir)/pidgin
+plugindir = @PIDGIN_PLUGINDIR@
 
-gestures_la_LDFLAGS = -module -avoid-version
+gestures_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
 
 if PLUGINS
 
@@ -13,14 +13,14 @@ gestures_la_SOURCES = \
 	stroke.c \
 	stroke-draw.c
 
-gestures_la_LIBADD = $(GTK_LIBS)
+gestures_la_LIBADD = @PIDGIN_LIBS@
 
 endif
 
 AM_CPPFLAGS = \
-	-DDATADIR=\"$(datadir)\" \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
 	-I$(top_srcdir)/pidgin \
 	$(DEBUG_CFLAGS) \
-	$(GTK_CFLAGS)
+	$(GTK_CFLAGS) \
+	$(GPLUGIN_CFLAGS)

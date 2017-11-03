@@ -1,12 +1,11 @@
 pidginpixmapdir = $(datadir)/pixmaps/pidgin
 pidginiconsdir = $(datadir)
 
-SUBDIRS = emotes/default/24 emotes/none emotes/small/16
+SUBDIRS = emotes/default/24 emotes/small/16
 
 if INSTALL_PIXMAPS
 MAKEFILE_MINGW = \
 		emotes/default/24/Makefile.mingw \
-		emotes/none/Makefile.mingw \
 		emotes/small/16/Makefile.mingw
 
 ANIMATIONS_16 = \
@@ -87,6 +86,12 @@ DIALOGS_SCALABLE = \
 		dialogs/scalable/info.svg \
 		dialogs/scalable/question.svg \
 		dialogs/scalable/warning.svg
+
+E2EE_STATES_16 = \
+		e2ee/16/finished.png \
+		e2ee/16/not-private.png \
+		e2ee/16/private.png \
+		e2ee/16/unverified.png
 
 EMBLEMS_16 = \
 		emblems/16/aol-client.png \
@@ -282,6 +287,7 @@ PROTOCOLS_48 = \
 		protocols/48/bonjour.png \
 		protocols/48/facebook.png \
 		protocols/48/gadu-gadu.png \
+		protocols/48/google-talk.png \
 		protocols/48/novell.png \
 		protocols/48/icq.png \
 		protocols/48/irc.png \
@@ -411,6 +417,7 @@ TOOLBAR_16 = \
 		toolbar/16/insert.png \
 		toolbar/16/insert-image.png \
 		toolbar/16/insert-link.png \
+		toolbar/16/insert-screenshot.png \
 		toolbar/16/message-new.png \
 		toolbar/16/plugins.png \
 		toolbar/16/send-file.png \
@@ -538,6 +545,7 @@ nobase_dist_pidginpixmap_DATA = \
 		$(DIALOGS_16) \
 		$(DIALOGS_64) \
 		$(DIALOGS_SCALABLE)	\
+		$(E2EE_STATES_16) \
 		$(EMBLEMS_16) \
 		$(EMBLEMS_SCALABLE)	\
 		$(PROTOCOLS_16) \

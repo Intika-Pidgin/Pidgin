@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -94,8 +94,7 @@ gnt_window_class_init(GntWindowClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 0,
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 
 	signals[SIG_WORKSPACE_SHOW] =
@@ -103,8 +102,7 @@ gnt_window_class_init(GntWindowClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 0,
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 
 	gnt_bindable_class_register_action(bindable, "show-menu", show_menu,
@@ -131,7 +129,7 @@ gnt_window_init(GTypeInstance *instance, gpointer class)
  * GntWindow API
  *****************************************************************************/
 GType
-gnt_window_get_gtype(void)
+gnt_window_get_type(void)
 {
 	static GType type = 0;
 

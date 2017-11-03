@@ -79,7 +79,7 @@ peer_oft_checksum_destroy(ChecksumData *checksum_data)
 	checksum_data->conn->checksum_data = NULL;
 	fclose(checksum_data->file);
 	if (checksum_data->timer > 0)
-		purple_timeout_remove(checksum_data->timer);
+		g_source_remove(checksum_data->timer);
 	g_free(checksum_data);
 }
 
@@ -218,7 +218,7 @@ peer_oft_checksum_file(PeerConnection *conn, PurpleXfer *xfer, GSourceFunc callb
 	}
 	else
 	{
-		checksum_data->timer = purple_timeout_add(10,
+		checksum_data->timer = g_timeout_add(10,
 				peer_oft_checksum_file_piece, checksum_data);
 		conn->checksum_data = checksum_data;
 	}
@@ -251,7 +251,7 @@ peer_oft_close(PeerConnection *conn)
 
 	if (conn->sending_data_timer != 0)
 	{
-		purple_timeout_remove(conn->sending_data_timer);
+		g_source_remove(conn->sending_data_timer);
 		conn->sending_data_timer = 0;
 	}
 }
@@ -360,12 +360,12 @@ start_transfer_when_done_sending_data(gpointer data)
 
 	conn = data;
 
-	if (purple_circ_buffer_get_max_read(conn->buffer_outgoing) == 0)
+	if (purple_circular_buffer_get_max_read(conn->buffer_outgoing) == 0)
 	{
+		int fd = conn->fd;
 		conn->sending_data_timer = 0;
-		conn->xfer->fd = conn->fd;
 		conn->fd = -1;
-		purple_xfer_start(conn->xfer, conn->xfer->fd, NULL, 0);
+		purple_xfer_start(conn->xfer, fd, NULL, 0);
 		return FALSE;
 	}
 
@@ -385,7 +385,7 @@ destroy_connection_when_done_sending_data(gpointer data)
 
 	conn = data;
 
-	if (purple_circ_buffer_get_max_read(conn->buffer_outgoing) == 0)
+	if (purple_circular_buffer_get_max_read(conn->buffer_outgoing) == 0)
 	{
 		conn->sending_data_timer = 0;
 		peer_connection_destroy(conn, conn->disconnect_reason, NULL);
@@ -411,7 +411,7 @@ peer_oft_recv_frame_prompt(PeerConnection *conn, OftFrame *frame)
 	/* Remove our watchers and use the file transfer watchers in the core */
 	purple_input_remove(conn->watcher_incoming);
 	conn->watcher_incoming = 0;
-	conn->sending_data_timer = purple_timeout_add(100,
+	conn->sending_data_timer = g_timeout_add(100,
 			start_transfer_when_done_sending_data, conn);
 }
 
@@ -433,7 +433,7 @@ peer_oft_recv_frame_ack(PeerConnection *conn, OftFrame *frame)
 	/* Remove our watchers and use the file transfer watchers in the core */
 	purple_input_remove(conn->watcher_incoming);
 	conn->watcher_incoming = 0;
-	conn->sending_data_timer = purple_timeout_add(100,
+	conn->sending_data_timer = g_timeout_add(100,
 			start_transfer_when_done_sending_data, conn);
 }
 
@@ -508,7 +508,7 @@ peer_oft_recv_frame_done(PeerConnection *conn, OftFrame *frame)
 
 	purple_input_remove(conn->watcher_incoming);
 	conn->watcher_incoming = 0;
-	conn->xfer->fd = conn->fd;
+	purple_xfer_set_fd(conn->xfer, conn->fd);
 	conn->fd = -1;
 	conn->disconnect_reason = OSCAR_DISCONNECT_DONE;
 	peer_connection_schedule_destroy(conn, conn->disconnect_reason, NULL);
@@ -589,7 +589,7 @@ peer_oft_recvcb_init(PurpleXfer *xfer)
 {
 	PeerConnection *conn;
 
-	conn = xfer->data;
+	conn = purple_xfer_get_protocol_data(xfer);
 	conn->flags |= PEER_CONNECTION_FLAG_APPROVED;
 	peer_connection_trynext(conn);
 }
@@ -599,15 +599,15 @@ peer_oft_recvcb_end(PurpleXfer *xfer)
 {
 	PeerConnection *conn;
 
-	conn = xfer->data;
+	conn = purple_xfer_get_protocol_data(xfer);
 
 	/* Tell the other person that we've received everything */
-	conn->fd = conn->xfer->fd;
-	conn->xfer->fd = -1;
+	conn->fd = purple_xfer_get_fd(conn->xfer);
+	purple_xfer_set_fd(conn->xfer, -1);
 	peer_oft_send_done(conn);
 
 	conn->disconnect_reason = OSCAR_DISCONNECT_DONE;
-	conn->sending_data_timer = purple_timeout_add(100,
+	conn->sending_data_timer = g_timeout_add(100,
 			destroy_connection_when_done_sending_data, conn);
 }
 
@@ -617,7 +617,7 @@ peer_oft_recvcb_ack_recv(PurpleXfer *xfer, const guchar *buffer, size_t size)
 	PeerConnection *conn;
 
 	/* Update our rolling checksum.  Like Walmart, yo. */
-	conn = xfer->data;
+	conn = purple_xfer_get_protocol_data(xfer);
 	conn->xferdata.recvcsum = peer_oft_checksum_chunk(buffer,
 			size, conn->xferdata.recvcsum, purple_xfer_get_bytes_sent(xfer) & 1);
 }
@@ -651,9 +651,9 @@ void
 peer_oft_sendcb_init(PurpleXfer *xfer)
 {
 	PeerConnection *conn;
-	size_t size;
+	goffset size;
 
-	conn = xfer->data;
+	conn = purple_xfer_get_protocol_data(xfer);
 	conn->flags |= PEER_CONNECTION_FLAG_APPROVED;
 
 	/* Make sure the file size can be represented in 32 bits */
@@ -665,9 +665,9 @@ peer_oft_sendcb_init(PurpleXfer *xfer)
 		size2 = purple_str_size_to_units(G_MAXUINT32);
 		tmp = g_strdup_printf(_("File %s is %s, which is larger than "
 				"the maximum size of %s."),
-				xfer->local_filename, size1, size2);
-		purple_xfer_error(purple_xfer_get_type(xfer),
-				purple_xfer_get_account(xfer), xfer->who, tmp);
+				purple_xfer_get_local_filename(xfer), size1, size2);
+		purple_xfer_error(purple_xfer_get_xfer_type(xfer),
+				purple_xfer_get_account(xfer), purple_xfer_get_remote_user(xfer), tmp);
 		g_free(size1);
 		g_free(size2);
 		g_free(tmp);
@@ -689,9 +689,9 @@ peer_oft_sendcb_init(PurpleXfer *xfer)
 	strncpy((gchar *)conn->xferdata.idstring, "Cool FileXfer", 31);
 	conn->xferdata.modtime = 0;
 	conn->xferdata.cretime = 0;
-	xfer->filename = g_path_get_basename(xfer->local_filename);
-	conn->xferdata.name_length = MAX(64, strlen(xfer->filename) + 1);
-	conn->xferdata.name = (guchar *)g_strndup(xfer->filename, conn->xferdata.name_length - 1);
+	purple_xfer_set_filename(xfer, g_path_get_basename(purple_xfer_get_local_filename(xfer)));
+	conn->xferdata.name_length = MAX(64, strlen(purple_xfer_get_filename(xfer)) + 1);
+	conn->xferdata.name = (guchar *)g_strndup(purple_xfer_get_filename(xfer), conn->xferdata.name_length - 1);
 
 	peer_oft_checksum_file(conn, xfer,
 			peer_oft_checksum_calculated_cb, G_MAXUINT32);
@@ -704,7 +704,7 @@ peer_oft_sendcb_init(PurpleXfer *xfer)
  * those computers can use the same connection for transferring
  * multiple files.  So we don't want the Purple core up and closing
  * the socket all willy-nilly.  We want to do that in the oscar
- * prpl, whenever one side or the other says they're finished
+ * protocol, whenever one side or the other says they're finished
  * using the connection.  There might be a better way to intercept
  * the socket from the core...
  */
@@ -713,7 +713,7 @@ peer_oft_sendcb_ack(PurpleXfer *xfer, const guchar *buffer, size_t size)
 {
 	PeerConnection *conn;
 
-	conn = xfer->data;
+	conn = purple_xfer_get_protocol_data(xfer);
 
 	/*
 	 * If we're done sending, intercept the socket from the core ft code
@@ -721,9 +721,9 @@ peer_oft_sendcb_ack(PurpleXfer *xfer, const guchar *buffer, size_t size)
 	 */
 	if (purple_xfer_get_bytes_remaining(xfer) <= 0)
 	{
-		purple_input_remove(xfer->watcher);
-		conn->fd = xfer->fd;
-		xfer->fd = -1;
+		purple_input_remove(purple_xfer_get_watcher(xfer));
+		conn->fd = purple_xfer_get_fd(xfer);
+		purple_xfer_set_fd(xfer, -1);
 		conn->watcher_incoming = purple_input_add(conn->fd,
 				PURPLE_INPUT_READ, peer_connection_recv_cb, conn);
 	}
@@ -742,7 +742,7 @@ peer_oft_cb_generic_cancel(PurpleXfer *xfer)
 {
 	PeerConnection *conn;
 
-	conn = xfer->data;
+	conn = purple_xfer_get_protocol_data(xfer);
 
 	if (conn == NULL)
 		return;

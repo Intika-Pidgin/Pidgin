@@ -1,5 +1,5 @@
 /*
- * purple - Jabber Service Discovery
+ * purple - Handling of XEP-0231: Bits of Binary.
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -50,7 +50,7 @@ jabber_data_create_from_data(gconstpointer rawdata, gsize size, const char *type
 	g_return_val_if_fail(type != NULL, NULL);
 
 	data = g_new0(JabberData, 1);
-	checksum = jabber_calculate_data_hash(rawdata, size, "sha1");
+	checksum = g_compute_checksum_for_data(G_CHECKSUM_SHA1, rawdata, size);
 
 	g_snprintf(cid, sizeof(cid), "sha1+%s@bob.xmpp.org", checksum);
 	g_free(checksum);
@@ -78,7 +78,7 @@ jabber_data_delete(gpointer cbdata)
 
 
 JabberData *
-jabber_data_create_from_xml(xmlnode *tag)
+jabber_data_create_from_xml(PurpleXmlNode *tag)
 {
 	JabberData *data;
 	gchar *raw_data = NULL;
@@ -92,15 +92,15 @@ jabber_data_create_from_xml(xmlnode *tag)
 		return NULL;
 	}
 
-	cid = xmlnode_get_attrib(tag, "cid");
-	type = xmlnode_get_attrib(tag, "type");
+	cid = purple_xmlnode_get_attrib(tag, "cid");
+	type = purple_xmlnode_get_attrib(tag, "type");
 
 	if (!cid || !type) {
 		purple_debug_error("jabber", "cid or type missing\n");
 		return NULL;
 	}
 
-	raw_data = xmlnode_get_data(tag);
+	raw_data = purple_xmlnode_get_data(tag);
 
 	if (raw_data == NULL || *raw_data == '\0') {
 		purple_debug_error("jabber", "data element was empty");
@@ -109,7 +109,7 @@ jabber_data_create_from_xml(xmlnode *tag)
 	}
 
 	data = g_new0(JabberData, 1);
-	data->data = purple_base64_decode(raw_data, &data->size);
+	data->data = g_base64_decode(raw_data, &data->size);
 	g_free(raw_data);
 
 	if (data->data == NULL) {
@@ -165,54 +165,54 @@ jabber_data_get_data(const JabberData *data)
 	return data->data;
 }
 
-xmlnode *
+PurpleXmlNode *
 jabber_data_get_xml_definition(const JabberData *data)
 {
-	xmlnode *tag;
+	PurpleXmlNode *tag;
 	char *base64data;
 
 	g_return_val_if_fail(data != NULL, NULL);
 
-	tag = xmlnode_new("data");
-	base64data = purple_base64_encode(data->data, data->size);
+	tag = purple_xmlnode_new("data");
+	base64data = g_base64_encode(data->data, data->size);
 
-	xmlnode_set_namespace(tag, NS_BOB);
-	xmlnode_set_attrib(tag, "cid", data->cid);
-	xmlnode_set_attrib(tag, "type", data->type);
+	purple_xmlnode_set_namespace(tag, NS_BOB);
+	purple_xmlnode_set_attrib(tag, "cid", data->cid);
+	purple_xmlnode_set_attrib(tag, "type", data->type);
 
-	xmlnode_insert_data(tag, base64data, -1);
+	purple_xmlnode_insert_data(tag, base64data, -1);
 
 	g_free(base64data);
 
 	return tag;
 }
 
-xmlnode *
+PurpleXmlNode *
 jabber_data_get_xhtml_im(const JabberData *data, const gchar *alt)
 {
-	xmlnode *img;
+	PurpleXmlNode *img;
 	char *src;
 
 	g_return_val_if_fail(data != NULL, NULL);
 	g_return_val_if_fail(alt != NULL, NULL);
 
-	img = xmlnode_new("img");
-	xmlnode_set_attrib(img, "alt", alt);
+	img = purple_xmlnode_new("img");
+	purple_xmlnode_set_attrib(img, "alt", alt);
 
 	src = g_strconcat("cid:", data->cid, NULL);
-	xmlnode_set_attrib(img, "src", src);
+	purple_xmlnode_set_attrib(img, "src", src);
 	g_free(src);
 
 	return img;
 }
 
-static xmlnode *
+static PurpleXmlNode *
 jabber_data_get_xml_request(const gchar *cid)
 {
-	xmlnode *tag = xmlnode_new("data");
+	PurpleXmlNode *tag = purple_xmlnode_new("data");
 
-	xmlnode_set_namespace(tag, NS_BOB);
-	xmlnode_set_attrib(tag, "cid", cid);
+	purple_xmlnode_set_namespace(tag, NS_BOB);
+	purple_xmlnode_set_attrib(tag, "cid", cid);
 
 	return tag;
 }
@@ -238,11 +238,25 @@ jabber_data_has_valid_hash(const JabberData *data)
 		if (num_sub_parts == 2) {
 			const gchar *hash_algo = sub_parts[0];
 			const gchar *hash_value = sub_parts[1];
-			gchar *digest =
-				jabber_calculate_data_hash(jabber_data_get_data(data),
-				    jabber_data_get_size(data), hash_algo);
+			GChecksumType hash_type;
+			gboolean valid_hash_type = TRUE;
 
-			if (digest) {
+			if (purple_strequal(hash_algo, "sha1"))
+				hash_type = G_CHECKSUM_SHA1;
+			else if (purple_strequal(hash_algo, "sha256"))
+				hash_type = G_CHECKSUM_SHA256;
+			else if (purple_strequal(hash_algo, "sha512"))
+				hash_type = G_CHECKSUM_SHA512;
+			else if (purple_strequal(hash_algo, "md5"))
+				hash_type = G_CHECKSUM_MD5;
+			else
+				valid_hash_type = FALSE;
+
+			if (valid_hash_type) {
+				gchar *digest = g_compute_checksum_for_data(
+					hash_type, jabber_data_get_data(data),
+					jabber_data_get_size(data));
+
 				ret = purple_strequal(digest, hash_value);
 
 				if (!ret)
@@ -276,7 +290,7 @@ typedef struct {
 
 static void
 jabber_data_request_cb(JabberStream *js, const char *from,
-	JabberIqType type, const char *id, xmlnode *packet, gpointer data)
+	JabberIqType type, const char *id, PurpleXmlNode *packet, gpointer data)
 {
 	JabberDataRequestData *request_data = (JabberDataRequestData *) data;
 	gpointer userdata = request_data->userdata;
@@ -284,8 +298,8 @@ jabber_data_request_cb(JabberStream *js, const char *from,
 	gboolean ephemeral = request_data->ephemeral;
 	JabberDataRequestCallback *cb = request_data->cb;
 
-	xmlnode *data_element = xmlnode_get_child(packet, "data");
-	xmlnode *item_not_found = xmlnode_get_child(packet, "item-not-found");
+	PurpleXmlNode *data_element = purple_xmlnode_get_child(packet, "data");
+	PurpleXmlNode *item_not_found = purple_xmlnode_get_child(packet, "item-not-found");
 
 	/* did we get a data element as result? */
 	if (data_element && type == JABBER_IQ_RESULT) {
@@ -313,7 +327,7 @@ jabber_data_request(JabberStream *js, const gchar *cid, const gchar *who,
     gpointer userdata)
 {
 	JabberIq *request;
-	xmlnode *data_request;
+	PurpleXmlNode *data_request;
 	JabberDataRequestData *data;
 
 	g_return_if_fail(cid != NULL);
@@ -329,9 +343,9 @@ jabber_data_request(JabberStream *js, const gchar *cid, const gchar *who,
 	data->ephemeral = ephemeral;
 	data->cb = cb;
 
-	xmlnode_set_attrib(request->node, "to", who);
+	purple_xmlnode_set_attrib(request->node, "to", who);
 	jabber_iq_set_callback(request, jabber_data_request_cb, data);
-	xmlnode_insert_child(request->node, data_request);
+	purple_xmlnode_insert_child(request->node, data_request);
 	jabber_iq_send(request);
 }
 
@@ -404,26 +418,26 @@ jabber_data_associate_remote(JabberStream *js, const gchar *who, JabberData *dat
 
 void
 jabber_data_parse(JabberStream *js, const char *who, JabberIqType type,
-                  const char *id, xmlnode *data_node)
+                  const char *id, PurpleXmlNode *data_node)
 {
 	JabberIq *result = NULL;
-	const char *cid = xmlnode_get_attrib(data_node, "cid");
+	const char *cid = purple_xmlnode_get_attrib(data_node, "cid");
 	const JabberData *data = cid ? jabber_data_find_local_by_cid(cid) : NULL;
 
 	if (!data) {
-		xmlnode *item_not_found = xmlnode_new("item-not-found");
+		PurpleXmlNode *item_not_found = purple_xmlnode_new("item-not-found");
 
 		result = jabber_iq_new(js, JABBER_IQ_ERROR);
 		if (who)
-			xmlnode_set_attrib(result->node, "to", who);
-		xmlnode_set_attrib(result->node, "id", id);
-		xmlnode_insert_child(result->node, item_not_found);
+			purple_xmlnode_set_attrib(result->node, "to", who);
+		purple_xmlnode_set_attrib(result->node, "id", id);
+		purple_xmlnode_insert_child(result->node, item_not_found);
 	} else {
 		result = jabber_iq_new(js, JABBER_IQ_RESULT);
 		if (who)
-			xmlnode_set_attrib(result->node, "to", who);
-		xmlnode_set_attrib(result->node, "id", id);
-		xmlnode_insert_child(result->node,
+			purple_xmlnode_set_attrib(result->node, "to", who);
+		purple_xmlnode_set_attrib(result->node, "id", id);
+		purple_xmlnode_insert_child(result->node,
 							 jabber_data_get_xml_definition(data));
 		/* if the data object is temporary, destroy it and remove the references
 		 to it */
@@ -437,7 +451,8 @@ jabber_data_parse(JabberStream *js, const char *who, JabberIqType type,
 void
 jabber_data_init(void)
 {
-	purple_debug_info("jabber", "creating hash tables for data objects\n");
+	if (purple_debug_is_verbose())
+		purple_debug_misc("jabber", "creating hash tables for data objects");
 	local_data_by_alt = g_hash_table_new_full(g_str_hash, g_str_equal,
 		g_free, NULL);
 	local_data_by_cid = g_hash_table_new_full(g_str_hash, g_str_equal,
@@ -451,7 +466,8 @@ jabber_data_init(void)
 void
 jabber_data_uninit(void)
 {
-	purple_debug_info("jabber", "destroying hash tables for data objects\n");
+	if (purple_debug_is_verbose())
+		purple_debug_info("jabber", "destroying hash tables for data objects");
 	g_hash_table_destroy(local_data_by_alt);
 	g_hash_table_destroy(local_data_by_cid);
 	g_hash_table_destroy(remote_data_by_cid);

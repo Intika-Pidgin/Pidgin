@@ -1,8 +1,3 @@
-/**
- * @file debug.c Debug API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -28,7 +23,7 @@
 #include "prefs.h"
 #include "util.h"
 
-static PurpleDebugUiOps *debug_ui_ops = NULL;
+static PurpleDebugUi *debug_ui = NULL;
 
 /*
  * This determines whether debug info should be written to the
@@ -50,43 +45,71 @@ static gboolean debug_enabled = FALSE;
 static gboolean debug_verbose = FALSE;
 static gboolean debug_unsafe = FALSE;
 
+static gboolean debug_colored = FALSE;
+
 static void
 purple_debug_vargs(PurpleDebugLevel level, const char *category,
 				 const char *format, va_list args)
 {
-	PurpleDebugUiOps *ops;
+	PurpleDebugUi *ops;
+	PurpleDebugUiInterface *iface;
 	char *arg_s = NULL;
 
 	g_return_if_fail(level != PURPLE_DEBUG_ALL);
 	g_return_if_fail(format != NULL);
 
-	ops = purple_debug_get_ui_ops();
+	ops = purple_debug_get_ui();
+	if (!ops)
+		return;
+	iface = PURPLE_DEBUG_UI_GET_IFACE(ops);
+	if (!iface)
+		return;
 
-	if (!debug_enabled && ((ops == NULL) || (ops->print == NULL) ||
-			(ops->is_enabled && !ops->is_enabled(level, category))))
+	if (!debug_enabled && ((iface == NULL) || (iface->print == NULL) ||
+			(iface->is_enabled && !iface->is_enabled(ops, level, category))))
 		return;
 
 	arg_s = g_strdup_vprintf(format, args);
+	g_strchomp(arg_s); /* strip trailing linefeeds */
 
 	if (debug_enabled) {
 		gchar *ts_s;
 		const char *mdate;
 		time_t mtime = time(NULL);
+		const gchar *format_pre, *format_post;
 
+		format_pre = "";
+		format_post = "";
+
+		if (!debug_colored)
+			format_pre = "";
+		else if (level == PURPLE_DEBUG_MISC)
+			format_pre = "\033[0;37m";
+		else if (level == PURPLE_DEBUG_INFO)
+			format_pre = "";
+		else if (level == PURPLE_DEBUG_WARNING)
+			format_pre = "\033[0;33m";
+		else if (level == PURPLE_DEBUG_ERROR)
+			format_pre = "\033[1;31m";
+		else if (level == PURPLE_DEBUG_FATAL)
+			format_pre = "\033[1;33;41m";
+
+		if (format_pre[0] != '\0')
+			format_post = "\033[0m";
 
 		mdate = purple_utf8_strftime("%H:%M:%S", localtime(&mtime));
 		ts_s = g_strdup_printf("(%s) ", mdate);
 
 		if (category == NULL)
-			g_print("%s%s", ts_s, arg_s);
+			g_print("%s%s%s%s\n", format_pre, ts_s, arg_s, format_post);
 		else
-			g_print("%s%s: %s", ts_s, category, arg_s);
+			g_print("%s%s%s: %s%s\n", format_pre, ts_s, category, arg_s, format_post);
 
 		g_free(ts_s);
 	}
 
-	if (ops != NULL && ops->print != NULL)
-		ops->print(level, category, arg_s);
+	if (iface != NULL && iface->print != NULL)
+		iface->print(ops, level, category, arg_s);
 
 	g_free(arg_s);
 }
@@ -178,9 +201,9 @@ purple_debug_is_enabled()
 }
 
 void
-purple_debug_set_ui_ops(PurpleDebugUiOps *ops)
+purple_debug_set_ui(PurpleDebugUi *ops)
 {
-	debug_ui_ops = ops;
+	g_set_object(&debug_ui, ops);
 }
 
 gboolean
@@ -207,10 +230,24 @@ purple_debug_set_unsafe(gboolean unsafe)
 	debug_unsafe = unsafe;
 }
 
-PurpleDebugUiOps *
-purple_debug_get_ui_ops(void)
+void
+purple_debug_set_colored(gboolean colored)
 {
-	return debug_ui_ops;
+	debug_colored = colored;
+}
+
+PurpleDebugUi *
+purple_debug_get_ui(void)
+{
+	return debug_ui;
+}
+
+G_DEFINE_INTERFACE(PurpleDebugUi, purple_debug_ui, G_TYPE_OBJECT);
+
+static void
+purple_debug_ui_default_init(PurpleDebugUiInterface *iface)
+{
+    /* add properties and signals to the interface here */
 }
 
 void
@@ -224,12 +261,5 @@ purple_debug_init(void)
 		purple_debug_set_verbose(TRUE);
 
 	purple_prefs_add_none("/purple/debug");
-
-	/*
-	 * This pref is obsolete and no longer referenced anywhere. It only
-	 * survives here because it would be an API break if we removed it.
-	 * Remove this when we get to 3.0.0 :)
-	 */
-	purple_prefs_add_bool("/purple/debug/timestamps", TRUE);
 }
 

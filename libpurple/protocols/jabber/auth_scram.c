@@ -25,11 +25,10 @@
 #include "auth.h"
 #include "auth_scram.h"
 
-#include "cipher.h"
 #include "debug.h"
 
 static const JabberScramHash hashes[] = {
-	{ "-SHA-1", "sha1", 20 },
+	{ "-SHA-1", G_CHECKSUM_SHA1 },
 };
 
 static const JabberScramHash *mech_to_hash(const char *mech)
@@ -47,6 +46,8 @@ static const JabberScramHash *mech_to_hash(const char *mech)
 	g_return_val_if_reached(NULL);
 }
 
+#if 0
+/* XXX: this code is not (yet) used */
 static const struct {
 	const char *error;
 	const char *meaning;
@@ -72,11 +73,13 @@ static const struct {
 	{ "other-error",
 		N_("Unknown Error") }
 };
+#endif
 
 guchar *jabber_scram_hi(const JabberScramHash *hash, const GString *str,
                         GString *salt, guint iterations)
 {
-	PurpleCipherContext *context;
+	GHmac *hmac;
+	gsize digest_len;
 	guchar *result;
 	guint i;
 	guchar *prev, *tmp;
@@ -86,39 +89,38 @@ guchar *jabber_scram_hi(const JabberScramHash *hash, const GString *str,
 	g_return_val_if_fail(salt != NULL && salt->len > 0, NULL);
 	g_return_val_if_fail(iterations > 0, NULL);
 
-	prev   = g_new0(guint8, hash->size);
-	tmp    = g_new0(guint8, hash->size);
-	result = g_new0(guint8, hash->size);
+	digest_len = g_checksum_type_get_length(hash->type);
+	prev   = g_new0(guchar, digest_len);
+	tmp    = g_new0(guchar, digest_len);
+	result = g_new0(guchar, digest_len);
 
-	context = purple_cipher_context_new_by_name("hmac", NULL);
+	hmac = g_hmac_new(hash->type, (guchar *)str->str, str->len);
 
 	/* Append INT(1), a four-octet encoding of the integer 1, most significant
 	 * octet first. */
 	g_string_append_len(salt, "\0\0\0\1", 4);
 
 	/* Compute U0 */
-	purple_cipher_context_set_option(context, "hash", (gpointer)hash->name);
-	purple_cipher_context_set_key_with_len(context, (guchar *)str->str, str->len);
-	purple_cipher_context_append(context, (guchar *)salt->str, salt->len);
-	purple_cipher_context_digest(context, hash->size, result, NULL);
+	g_hmac_update(hmac, (guchar *)salt->str, salt->len);
+	g_hmac_get_digest(hmac, result, &digest_len);
+	g_hmac_unref(hmac);
 
-	memcpy(prev, result, hash->size);
+	memcpy(prev, result, digest_len);
 
 	/* Compute U1...Ui */
 	for (i = 1; i < iterations; ++i) {
 		guint j;
-		purple_cipher_context_set_option(context, "hash", (gpointer)hash->name);
-		purple_cipher_context_set_key_with_len(context, (guchar *)str->str, str->len);
-		purple_cipher_context_append(context, prev, hash->size);
-		purple_cipher_context_digest(context, hash->size, tmp, NULL);
+		hmac = g_hmac_new(hash->type, (guchar *)str->str, str->len);
+		g_hmac_update(hmac, prev, digest_len);
+		g_hmac_get_digest(hmac, tmp, &digest_len);
+		g_hmac_unref(hmac);
 
-		for (j = 0; j < hash->size; ++j)
+		for (j = 0; j < digest_len; ++j)
 			result[j] ^= tmp[j];
 
-		memcpy(prev, tmp, hash->size);
+		memcpy(prev, tmp, digest_len);
 	}
 
-	purple_cipher_context_destroy(context);
 	g_free(tmp);
 	g_free(prev);
 	return result;
@@ -136,42 +138,37 @@ guchar *jabber_scram_hi(const JabberScramHash *hash, const GString *str,
 static void
 jabber_scram_hmac(const JabberScramHash *hash, guchar *out, const guchar *key, const gchar *str)
 {
-	PurpleCipherContext *context;
+	GHmac *hmac;
+	gsize digest_len = g_checksum_type_get_length(hash->type);
 
-	context = purple_cipher_context_new_by_name("hmac", NULL);
-	purple_cipher_context_set_option(context, "hash", (gpointer)hash->name);
-	purple_cipher_context_set_key_with_len(context, key, hash->size);
-	purple_cipher_context_append(context, (guchar *)str, strlen(str));
-	purple_cipher_context_digest(context, hash->size, out, NULL);
-	purple_cipher_context_destroy(context);
+	hmac = g_hmac_new(hash->type, key, digest_len);
+	g_hmac_update(hmac, (guchar *)str, -1);
+	g_hmac_get_digest(hmac, out, &digest_len);
+	g_hmac_unref(hmac);
 }
 
 static void
 jabber_scram_hash(const JabberScramHash *hash, guchar *out, const guchar *data)
 {
-	PurpleCipherContext *context;
+	GChecksum *checksum;
+	gsize digest_len = g_checksum_type_get_length(hash->type);
 
-	context = purple_cipher_context_new_by_name(hash->name, NULL);
-	purple_cipher_context_append(context, data, hash->size);
-	purple_cipher_context_digest(context, hash->size, out, NULL);
-	purple_cipher_context_destroy(context);
+	checksum = g_checksum_new(hash->type);
+	g_checksum_update(checksum, data, digest_len);
+	g_checksum_get_digest(checksum, out, &digest_len);
+	g_checksum_free(checksum);
 }
 
 gboolean
 jabber_scram_calc_proofs(JabberScramData *data, GString *salt, guint iterations)
 {
-	guint hash_len = data->hash->size;
+	guint hash_len = g_checksum_type_get_length(data->hash->type);
 	guint i;
 
 	GString *pass = g_string_new(data->password);
 
 	guchar *salted_password;
 	guchar *client_key, *stored_key, *client_signature, *server_key;
-
-	client_key = g_new0(guchar, hash_len);
-	stored_key = g_new0(guchar, hash_len);
-	client_signature = g_new0(guchar, hash_len);
-	server_key = g_new0(guchar, hash_len);
 
 	data->client_proof = g_string_sized_new(hash_len);
 	data->client_proof->len = hash_len;
@@ -185,6 +182,11 @@ jabber_scram_calc_proofs(JabberScramData *data, GString *salt, guint iterations)
 
 	if (!salted_password)
 		return FALSE;
+
+	client_key = g_new0(guchar, hash_len);
+	stored_key = g_new0(guchar, hash_len);
+	client_signature = g_new0(guchar, hash_len);
+	server_key = g_new0(guchar, hash_len);
 
 	/* client_key = HMAC(salted_password, "Client Key") */
 	jabber_scram_hmac(data->hash, client_key, salted_password, "Client Key");
@@ -244,7 +246,7 @@ parse_server_step1(JabberScramData *data, const char *challenge,
 	if (token[0] != 's' || token[1] != '=')
 		goto err;
 
-	decoded = (gchar *)purple_base64_decode(token + 2, &len);
+	decoded = (gchar *)g_base64_decode(token + 2, &len);
 	if (!decoded || *decoded == '\0') {
 		g_free(decoded);
 		goto err;
@@ -335,7 +337,7 @@ jabber_scram_feed_parser(JabberScramData *data, gchar *in, gchar **out)
 			return FALSE;
 		}
 
-		proof = purple_base64_encode((guchar *)data->client_proof->str, data->client_proof->len);
+		proof = g_base64_encode((guchar *)data->client_proof->str, data->client_proof->len);
 		*out = g_strdup_printf("c=%s,r=%s,p=%s", "biws", nonce, proof);
 		g_free(nonce);
 		g_free(proof);
@@ -347,7 +349,7 @@ jabber_scram_feed_parser(JabberScramData *data, gchar *in, gchar **out)
 		if (!ret)
 			return FALSE;
 
-		server_sig = (gchar *)purple_base64_decode(enc_server_sig, &len);
+		server_sig = (gchar *)g_base64_decode(enc_server_sig, &len);
 		g_free(enc_server_sig);
 
 		if (server_sig == NULL || len != data->server_signature->len) {
@@ -381,9 +383,9 @@ static gchar *escape_username(const gchar *in)
 }
 
 static JabberSaslState
-scram_start(JabberStream *js, xmlnode *mechanisms, xmlnode **out, char **error)
+scram_start(JabberStream *js, PurpleXmlNode *mechanisms, PurpleXmlNode **out, char **error)
 {
-	xmlnode *reply;
+	PurpleXmlNode *reply;
 	JabberScramData *data;
 	guint64 cnonce;
 #ifdef CHANNEL_BINDING
@@ -419,7 +421,7 @@ scram_start(JabberStream *js, xmlnode *mechanisms, xmlnode **out, char **error)
 		data->channel_binding = TRUE;
 #endif
 	cnonce = ((guint64)g_random_int() << 32) | g_random_int();
-	data->cnonce = purple_base64_encode((guchar *)&cnonce, sizeof(cnonce));
+	data->cnonce = g_base64_encode((guchar *)&cnonce, sizeof(cnonce));
 
 	data->auth_message = g_string_new(NULL);
 	g_string_printf(data->auth_message, "n=%s,r=%s",
@@ -428,16 +430,16 @@ scram_start(JabberStream *js, xmlnode *mechanisms, xmlnode **out, char **error)
 
 	data->step = 1;
 
-	reply = xmlnode_new("auth");
-	xmlnode_set_namespace(reply, NS_XMPP_SASL);
-	xmlnode_set_attrib(reply, "mechanism", js->auth_mech->name);
+	reply = purple_xmlnode_new("auth");
+	purple_xmlnode_set_namespace(reply, NS_XMPP_SASL);
+	purple_xmlnode_set_attrib(reply, "mechanism", js->auth_mech->name);
 
 	/* TODO: Channel binding */
 	dec_out = g_strdup_printf("%c,,%s", 'n', data->auth_message->str);
-	enc_out = purple_base64_encode((guchar *)dec_out, strlen(dec_out));
+	enc_out = g_base64_encode((guchar *)dec_out, strlen(dec_out));
 	purple_debug_misc("jabber", "initial SCRAM message '%s'\n", dec_out);
 
-	xmlnode_insert_data(reply, enc_out, -1);
+	purple_xmlnode_insert_data(reply, enc_out, -1);
 
 	g_free(enc_out);
 	g_free(dec_out);
@@ -447,29 +449,29 @@ scram_start(JabberStream *js, xmlnode *mechanisms, xmlnode **out, char **error)
 }
 
 static JabberSaslState
-scram_handle_challenge(JabberStream *js, xmlnode *challenge, xmlnode **out, char **error)
+scram_handle_challenge(JabberStream *js, PurpleXmlNode *challenge, PurpleXmlNode **out, char **error)
 {
 	JabberScramData *data = js->auth_mech_data;
-	xmlnode *reply;
+	PurpleXmlNode *reply;
 	gchar *enc_in, *dec_in = NULL;
 	gchar *enc_out = NULL, *dec_out = NULL;
 	gsize len;
 	JabberSaslState state = JABBER_SASL_STATE_FAIL;
 
-	enc_in = xmlnode_get_data(challenge);
+	enc_in = purple_xmlnode_get_data(challenge);
 	if (!enc_in || *enc_in == '\0') {
-		reply = xmlnode_new("abort");
-		xmlnode_set_namespace(reply, NS_XMPP_SASL);
+		reply = purple_xmlnode_new("abort");
+		purple_xmlnode_set_namespace(reply, NS_XMPP_SASL);
 		data->step = -1;
 		*error = g_strdup(_("Invalid challenge from server"));
 		goto out;
 	}
 
-	dec_in = (gchar *)purple_base64_decode(enc_in, &len);
+	dec_in = (gchar *)g_base64_decode(enc_in, &len);
 	if (!dec_in || len != strlen(dec_in)) {
 		/* Danger afoot; SCRAM shouldn't contain NUL bytes */
-		reply = xmlnode_new("abort");
-		xmlnode_set_namespace(reply, NS_XMPP_SASL);
+		reply = purple_xmlnode_new("abort");
+		purple_xmlnode_set_namespace(reply, NS_XMPP_SASL);
 		data->step = -1;
 		*error = g_strdup(_("Malicious challenge from server"));
 		goto out;
@@ -478,8 +480,8 @@ scram_handle_challenge(JabberStream *js, xmlnode *challenge, xmlnode **out, char
 	purple_debug_misc("jabber", "decoded challenge: %s\n", dec_in);
 
 	if (!jabber_scram_feed_parser(data, dec_in, &dec_out)) {
-		reply = xmlnode_new("abort");
-		xmlnode_set_namespace(reply, NS_XMPP_SASL);
+		reply = purple_xmlnode_new("abort");
+		purple_xmlnode_set_namespace(reply, NS_XMPP_SASL);
 		data->step = -1;
 		*error = g_strdup(_("Invalid challenge from server"));
 		goto out;
@@ -487,13 +489,13 @@ scram_handle_challenge(JabberStream *js, xmlnode *challenge, xmlnode **out, char
 
 	data->step += 1;
 
-	reply = xmlnode_new("response");
-	xmlnode_set_namespace(reply, NS_XMPP_SASL);
+	reply = purple_xmlnode_new("response");
+	purple_xmlnode_set_namespace(reply, NS_XMPP_SASL);
 
 	purple_debug_misc("jabber", "decoded response: %s\n", dec_out ? dec_out : "(null)");
 	if (dec_out) {
-		enc_out = purple_base64_encode((guchar *)dec_out, strlen(dec_out));
-		xmlnode_insert_data(reply, enc_out, -1);
+		enc_out = g_base64_encode((guchar *)dec_out, strlen(dec_out));
+		purple_xmlnode_insert_data(reply, enc_out, -1);
 	}
 
 	state = JABBER_SASL_STATE_CONTINUE;
@@ -509,14 +511,14 @@ out:
 }
 
 static JabberSaslState
-scram_handle_success(JabberStream *js, xmlnode *packet, char **error)
+scram_handle_success(JabberStream *js, PurpleXmlNode *packet, char **error)
 {
 	JabberScramData *data = js->auth_mech_data;
 	char *enc_in, *dec_in;
 	char *dec_out = NULL;
 	gsize len;
 
-	enc_in = xmlnode_get_data(packet);
+	enc_in = purple_xmlnode_get_data(packet);
 	if (data->step != 3 && (!enc_in || *enc_in == '\0')) {
 		*error = g_strdup(_("Invalid challenge from server"));
 		g_free(enc_in);
@@ -538,7 +540,7 @@ scram_handle_success(JabberStream *js, xmlnode *packet, char **error)
 		return JABBER_SASL_STATE_FAIL;
 	}
 
-	dec_in = (gchar *)purple_base64_decode(enc_in, &len);
+	dec_in = (gchar *)g_base64_decode(enc_in, &len);
 	g_free(enc_in);
 	if (!dec_in || len != strlen(dec_in)) {
 		/* Danger afoot; SCRAM shouldn't contain NUL bytes */

@@ -18,10 +18,12 @@
 */
 
 #include "internal.h"
+#include "image-store.h"
+PURPLE_BEGIN_IGNORE_CAST_ALIGN
 #include "silc.h"
+PURPLE_END_IGNORE_CAST_ALIGN
 #include "silcclient.h"
 #include "silcpurple.h"
-#include "imgstore.h"
 #include "wb.h"
 
 static void
@@ -72,9 +74,9 @@ void silc_say(SilcClient client, SilcClientConnection conn,
 		gc = client->application;
 
 	if (gc != NULL)
-		purple_connection_error_reason(gc, reason, tmp);
+		purple_connection_error(gc, reason, tmp);
 	else
-		purple_notify_error(NULL, _("Error"), _("Error occurred"), tmp);
+		purple_notify_error(NULL, _("Error"), _("Error occurred"), tmp, NULL);
 }
 
 /* Processes incoming MIME message.  Can be private message or channel
@@ -88,12 +90,12 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 			gboolean recursive)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	const char *type;
 	const unsigned char *data;
 	SilcUInt32 data_len;
 	PurpleMessageFlags cflags = 0;
-	PurpleConversation *convo = NULL;
+	PurpleChatConversation *chat = NULL;
 	SilcBool ret = FALSE;
 
 	if (!mime)
@@ -180,14 +182,12 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 	}
 
 	/* Image */
-	if (strstr(type, "image/png") ||
-	    strstr(type, "image/jpeg") ||
-	    strstr(type, "image/gif") ||
-	    strstr(type, "image/tiff")) {
+	if (purple_str_has_prefix(type, "image/")) {
 		char tmp[32];
-		int imgid;
+		PurpleImage *img;
+		guint img_id;
 
-		/* Get channel convo (if message is for channel) */
+		/* Get channel chat (if message is for channel) */
 		if (key && channel) {
 			GList *l;
 			SilcPurplePrvgrp prv;
@@ -195,34 +195,37 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 			for (l = sg->grps; l; l = l->next)
 				if (((SilcPurplePrvgrp)l->data)->key == key) {
 					prv = l->data;
-					convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+					chat = purple_conversations_find_chat_with_account(
 							prv->channel, sg->account);
 					break;
 				}
 		}
-		if (channel && !convo)
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+		if (channel && !chat)
+			chat = purple_conversations_find_chat_with_account(
 								      channel->channel_name, sg->account);
-		if (channel && !convo)
+		if (channel && !chat)
 			goto out;
 
-		imgid = purple_imgstore_add_with_id(g_memdup(data, data_len), data_len, "");
-		if (imgid) {
-			cflags |= PURPLE_MESSAGE_IMAGES | PURPLE_MESSAGE_RECV;
-			g_snprintf(tmp, sizeof(tmp), "<IMG ID=\"%d\">", imgid);
+		img = purple_image_new_from_data(g_memdup(data, data_len), data_len);
+		if (!img)
+			goto out;
+		img_id = purple_image_store_add_temporary(img);
+		if (!img_id)
+			goto out;
 
-			if (channel)
-				serv_got_chat_in(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)),
-				 		 sender->nickname, cflags,
-						 tmp, time(NULL));
-			else
-				serv_got_im(gc, sender->nickname,
-					    tmp, cflags, time(NULL));
+		cflags |= PURPLE_MESSAGE_IMAGES | PURPLE_MESSAGE_RECV;
+		g_snprintf(tmp, sizeof(tmp), "<img src=\""
+			PURPLE_IMAGE_STORE_PROTOCOL "%u\">", img_id);
 
-			purple_imgstore_unref_by_id(imgid);
-			cflags = 0;
-			ret = TRUE;
+		if (channel) {
+			purple_serv_got_chat_in(gc,
+				purple_chat_conversation_get_id(chat),
+				sender->nickname, cflags, tmp, time(NULL));
+		} else {
+			purple_serv_got_im(gc, sender->nickname,
+				tmp, cflags, time(NULL));
 		}
+
 		goto out;
 	}
 
@@ -260,8 +263,8 @@ silc_channel_message(SilcClient client, SilcClientConnection conn,
 		     SilcUInt32 message_len)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
-	PurpleConversation *convo = NULL;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
+	PurpleChatConversation *chat = NULL;
 	char *msg, *tmp;
 
 	if (!message)
@@ -274,15 +277,15 @@ silc_channel_message(SilcClient client, SilcClientConnection conn,
 		for (l = sg->grps; l; l = l->next)
 			if (((SilcPurplePrvgrp)l->data)->key == key) {
 				prv = l->data;
-				convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+				chat = purple_conversations_find_chat_with_account(
 										prv->channel, sg->account);
 				break;
 			}
 	}
-	if (!convo)
-		convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+	if (!chat)
+		chat = purple_conversations_find_chat_with_account(
 							      channel->channel_name, sg->account);
-	if (!convo)
+	if (!chat)
 		return;
 
 	if (flags & SILC_MESSAGE_FLAG_SIGNED &&
@@ -307,8 +310,8 @@ silc_channel_message(SilcClient client, SilcClientConnection conn,
 
 		tmp = g_markup_escape_text(msg, -1);
 		/* Send to Purple */
-		serv_got_chat_in(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)),
-				 sender->nickname, 0, tmp, time(NULL));
+		purple_serv_got_chat_in(gc, purple_chat_conversation_get_id(chat),
+			sender->nickname, PURPLE_MESSAGE_RECV, tmp, time(NULL));
 		g_free(tmp);
 		g_free(msg);
 		return;
@@ -321,8 +324,8 @@ silc_channel_message(SilcClient client, SilcClientConnection conn,
 			return;
 
 		/* Send to Purple */
-		purple_conversation_write(convo, NULL, (const char *)msg,
-					PURPLE_MESSAGE_SYSTEM, time(NULL));
+		purple_conversation_write_system_message(
+			PURPLE_CONVERSATION(chat), msg, 0);
 		g_free(msg);
 		return;
 	}
@@ -336,8 +339,8 @@ silc_channel_message(SilcClient client, SilcClientConnection conn,
 		}
 		tmp = g_markup_escape_text(msg, -1);
 		/* Send to Purple */
-		serv_got_chat_in(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)),
-				 sender->nickname, 0, tmp, time(NULL));
+		purple_serv_got_chat_in(gc, purple_chat_conversation_get_id(chat),
+			sender->nickname, PURPLE_MESSAGE_RECV, tmp, time(NULL));
 		g_free(salvaged);
 		g_free(tmp);
 	}
@@ -357,7 +360,7 @@ silc_private_message(SilcClient client, SilcClientConnection conn,
 		     SilcUInt32 message_len)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	PurpleConversation *convo;
 	char *msg, *tmp;
 
@@ -365,7 +368,7 @@ silc_private_message(SilcClient client, SilcClientConnection conn,
 		return;
 
 	/* XXX - Should this be PURPLE_CONV_TYPE_IM? */
-	convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY,
+	convo = purple_conversations_find_with_account(
 							      sender->nickname, sg->account);
 
 	if (flags & SILC_MESSAGE_FLAG_SIGNED &&
@@ -390,7 +393,7 @@ silc_private_message(SilcClient client, SilcClientConnection conn,
 
 		/* Send to Purple */
 		tmp = g_markup_escape_text(msg, -1);
-		serv_got_im(gc, sender->nickname, tmp, 0, time(NULL));
+		purple_serv_got_im(gc, sender->nickname, tmp, 0, time(NULL));
 		g_free(msg);
 		g_free(tmp);
 		return;
@@ -403,8 +406,7 @@ silc_private_message(SilcClient client, SilcClientConnection conn,
 			return;
 
 		/* Send to Purple */
-		purple_conversation_write(convo, NULL, (const char *)msg,
-					  PURPLE_MESSAGE_SYSTEM, time(NULL));
+		purple_conversation_write_system_message(convo, msg, 0);
 		g_free(msg);
 		return;
 	}
@@ -418,7 +420,7 @@ silc_private_message(SilcClient client, SilcClientConnection conn,
 		}
 		tmp = g_markup_escape_text(msg, -1);
 		/* Send to Purple */
-		serv_got_im(gc, sender->nickname, tmp, 0, time(NULL));
+		purple_serv_got_im(gc, sender->nickname, tmp, 0, time(NULL));
 		g_free(salvaged);
 		g_free(tmp);
 	}
@@ -440,9 +442,9 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 {
 	va_list va;
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	PurpleAccount *account = purple_connection_get_account(gc);
-	PurpleConversation *convo;
+	PurpleChatConversation *chat;
 	SilcClientEntry client_entry, client_entry2;
 	SilcChannelEntry channel;
 	SilcServerEntry server_entry;
@@ -473,7 +475,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 
 			components = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 			g_hash_table_insert(components, g_strdup("channel"), g_strdup(name));
-			serv_got_chat_invite(gc, name, client_entry->nickname, NULL, components);
+			purple_serv_got_chat_invite(gc, name, client_entry->nickname, NULL, components);
 		}
 		break;
 
@@ -485,16 +487,16 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		if (client_entry == conn->local_entry)
 			break;
 
-		convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+		chat = purple_conversations_find_chat_with_account(
 							      channel->channel_name, sg->account);
-		if (!convo)
+		if (!chat)
 			break;
 
 		/* Join user to channel */
 		g_snprintf(buf, sizeof(buf), "%s@%s",
 			   client_entry->username, client_entry->hostname);
-		purple_conv_chat_add_user(PURPLE_CONV_CHAT(convo),
-					  client_entry->nickname, buf, PURPLE_CBFLAGS_NONE, TRUE);
+		purple_chat_conversation_add_user(chat,
+					  client_entry->nickname, buf, PURPLE_CHAT_USER_NONE, TRUE);
 
 		break;
 
@@ -502,13 +504,13 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		client_entry = va_arg(va, SilcClientEntry);
 		channel = va_arg(va, SilcChannelEntry);
 
-		convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+		chat = purple_conversations_find_chat_with_account(
 							      channel->channel_name, sg->account);
-		if (!convo)
+		if (!chat)
 			break;
 
 		/* Remove user from channel */
-		purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo),
+		purple_chat_conversation_remove_user(chat,
 					     client_entry->nickname, NULL);
 
 		break;
@@ -520,11 +522,11 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		/* Remove from all channels */
 		silc_hash_table_list(client_entry->channels, &htl);
 		while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+			chat = purple_conversations_find_chat_with_account(
 								      chu->channel->channel_name, sg->account);
-			if (!convo)
+			if (!chat)
 				continue;
-			purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo),
+			purple_chat_conversation_remove_user(chat,
 						     client_entry->nickname,
 						     tmp);
 		}
@@ -540,9 +542,9 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 			tmp = va_arg(va, char *);
 			channel = va_arg(va, SilcChannelEntry);
 
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+			chat = purple_conversations_find_chat_with_account(
 								      channel->channel_name, sg->account);
-			if (!convo)
+			if (!chat)
 				break;
 
 			if (!tmp)
@@ -557,30 +559,30 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 				g_snprintf(buf, sizeof(buf),
 						_("%s has changed the topic of <I>%s</I> to: %s"),
 						client_entry->nickname, channel->channel_name, tmp2);
-				purple_conv_chat_write(PURPLE_CONV_CHAT(convo), client_entry->nickname,
-						buf, PURPLE_MESSAGE_SYSTEM, time(NULL));
-				purple_conv_chat_set_topic(PURPLE_CONV_CHAT(convo),
+				purple_conversation_write_system_message(
+					PURPLE_CONVERSATION(chat), buf, 0);
+				purple_chat_conversation_set_topic(chat,
 						client_entry->nickname, tmp);
 			} else if (idtype == SILC_ID_SERVER) {
 				server_entry = (SilcServerEntry)entry;
 				g_snprintf(buf, sizeof(buf),
 						_("%s has changed the topic of <I>%s</I> to: %s"),
 						server_entry->server_name, channel->channel_name, tmp2);
-				purple_conv_chat_write(PURPLE_CONV_CHAT(convo), server_entry->server_name,
-						buf, PURPLE_MESSAGE_SYSTEM, time(NULL));
-				purple_conv_chat_set_topic(PURPLE_CONV_CHAT(convo),
+				purple_conversation_write_system_message(
+					PURPLE_CONVERSATION(chat), buf, 0);
+				purple_chat_conversation_set_topic(chat,
 						server_entry->server_name, tmp);
 			} else if (idtype == SILC_ID_CHANNEL) {
 				channel = (SilcChannelEntry)entry;
 				g_snprintf(buf, sizeof(buf),
 						_("%s has changed the topic of <I>%s</I> to: %s"),
 						channel->channel_name, channel->channel_name, tmp2);
-				purple_conv_chat_write(PURPLE_CONV_CHAT(convo), channel->channel_name,
-						buf, PURPLE_MESSAGE_SYSTEM, time(NULL));
-				purple_conv_chat_set_topic(PURPLE_CONV_CHAT(convo),
+				purple_conversation_write_system_message(
+					PURPLE_CONVERSATION(chat), buf, 0);
+				purple_chat_conversation_set_topic(chat,
 						channel->channel_name, tmp);
 			} else {
-				purple_conv_chat_set_topic(PURPLE_CONV_CHAT(convo), NULL, tmp);
+				purple_chat_conversation_set_topic(chat, NULL, tmp);
 			}
 
 			g_free(tmp2);
@@ -599,12 +601,12 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		/* Change nick on all channels */
 		silc_hash_table_list(client_entry->channels, &htl);
 		while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+			chat = purple_conversations_find_chat_with_account(
 								      chu->channel->channel_name, sg->account);
-			if (!convo)
+			if (!chat)
 				continue;
-			if (purple_conv_chat_find_user(PURPLE_CONV_CHAT(convo), client_entry->nickname))
-				purple_conv_chat_rename_user(PURPLE_CONV_CHAT(convo),
+			if (purple_chat_conversation_has_user(chat, client_entry->nickname))
+				purple_chat_conversation_rename_user(chat,
 							     tmp, name);
 		}
 		silc_hash_table_list_reset(&htl);
@@ -622,9 +624,9 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		(void)va_arg(va, SilcDList);
 		channel = va_arg(va, SilcChannelEntry);
 
-		convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+		chat = purple_conversations_find_chat_with_account(
 							      channel->channel_name, sg->account);
-		if (!convo)
+		if (!chat)
 			break;
 
 		if (idtype == SILC_ID_CLIENT)
@@ -646,22 +648,21 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 				   _("<I>%s</I> removed all channel <I>%s</I> modes"), name,
 				   channel->channel_name);
 		}
-		purple_conv_chat_write(PURPLE_CONV_CHAT(convo), channel->channel_name,
-				       buf, PURPLE_MESSAGE_SYSTEM, time(NULL));
+		purple_conversation_write_system_message(PURPLE_CONVERSATION(chat), buf, 0);
 		break;
 
 	case SILC_NOTIFY_TYPE_CUMODE_CHANGE:
 		{
-			PurpleConvChatBuddyFlags flags = PURPLE_CBFLAGS_NONE;
+			PurpleChatUserFlags flags = PURPLE_CHAT_USER_NONE;
 			idtype = va_arg(va, int);
 			entry = va_arg(va, void *);
 			mode = va_arg(va, SilcUInt32);
 			client_entry2 = va_arg(va, SilcClientEntry);
 			channel = va_arg(va, SilcChannelEntry);
 
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+			chat = purple_conversations_find_chat_with_account(
 								      channel->channel_name, sg->account);
-			if (!convo)
+			if (!chat)
 				break;
 
 			if (idtype == SILC_ID_CLIENT)
@@ -679,17 +680,17 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 					   _("<I>%s</I> set <I>%s's</I> modes to: %s"), name,
 					   client_entry2->nickname, buf2);
 				if (mode & SILC_CHANNEL_UMODE_CHANFO)
-					flags |= PURPLE_CBFLAGS_FOUNDER;
+					flags |= PURPLE_CHAT_USER_FOUNDER;
 				if (mode & SILC_CHANNEL_UMODE_CHANOP)
-					flags |= PURPLE_CBFLAGS_OP;
+					flags |= PURPLE_CHAT_USER_OP;
 			} else {
 				g_snprintf(buf, sizeof(buf),
 					   _("<I>%s</I> removed all <I>%s's</I> modes"), name,
 					   client_entry2->nickname);
 			}
-			purple_conv_chat_write(PURPLE_CONV_CHAT(convo), channel->channel_name,
-					       buf, PURPLE_MESSAGE_SYSTEM, time(NULL));
-			purple_conv_chat_user_set_flags(PURPLE_CONV_CHAT(convo), client_entry2->nickname, flags);
+			purple_conversation_write_system_message(PURPLE_CONVERSATION(chat), buf, 0);
+			purple_chat_user_set_flags(purple_chat_conversation_find_user(
+					       chat, client_entry2->nickname), flags);
 			break;
 		}
 
@@ -705,9 +706,9 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		client_entry2 = va_arg(va, SilcClientEntry);
 		channel = va_arg(va, SilcChannelEntry);
 
-		convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+		chat = purple_conversations_find_chat_with_account(
 							      channel->channel_name, sg->account);
-		if (!convo)
+		if (!chat)
 			break;
 
 		if (client_entry == conn->local_entry) {
@@ -716,14 +717,14 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 				   _("You have been kicked off <I>%s</I> by <I>%s</I> (%s)"),
 				   channel->channel_name, client_entry2->nickname,
 				   tmp ? tmp : "");
-			purple_conv_chat_write(PURPLE_CONV_CHAT(convo), client_entry->nickname,
-					       buf, PURPLE_MESSAGE_SYSTEM, time(NULL));
-			serv_got_chat_left(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)));
+			purple_conversation_write_system_message(PURPLE_CONVERSATION(chat),
+				buf, 0);
+			purple_serv_got_chat_left(gc, purple_chat_conversation_get_id(chat));
 		} else {
 			/* Remove user from channel */
 			g_snprintf(buf, sizeof(buf), _("Kicked by %s (%s)"),
 				   client_entry2->nickname, tmp ? tmp : "");
-			purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo),
+			purple_chat_conversation_remove_user(chat,
 						     client_entry->nickname,
 						     buf);
 		}
@@ -757,13 +758,13 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 			/* Remove us from all channels */
 			silc_hash_table_list(client_entry->channels, &htl);
 			while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-				convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+				chat = purple_conversations_find_chat_with_account(
 										chu->channel->channel_name, sg->account);
-				if (!convo)
+				if (!chat)
 					continue;
-				purple_conv_chat_write(PURPLE_CONV_CHAT(convo), client_entry->nickname,
-						       buf, PURPLE_MESSAGE_SYSTEM, time(NULL));
-				serv_got_chat_left(gc, purple_conv_chat_get_id(PURPLE_CONV_CHAT(convo)));
+				purple_conversation_write_system_message(
+					PURPLE_CONVERSATION(chat), buf, 0);
+				purple_serv_got_chat_left(gc, purple_chat_conversation_get_id(chat));
 			}
 			silc_hash_table_list_reset(&htl);
 
@@ -788,11 +789,11 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 			/* Remove user from all channels */
 			silc_hash_table_list(client_entry->channels, &htl);
 			while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-				convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+				chat = purple_conversations_find_chat_with_account(
 										chu->channel->channel_name, sg->account);
-				if (!convo)
+				if (!chat)
 					continue;
-				purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo),
+				purple_chat_conversation_remove_user(chat,
 							     client_entry->nickname, tmp);
 			}
 			silc_hash_table_list_reset(&htl);
@@ -812,11 +813,11 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 			/* Remove from all channels */
 			silc_hash_table_list(client_entry->channels, &htl);
 			while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-				convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+				chat = purple_conversations_find_chat_with_account(
 									      chu->channel->channel_name, sg->account);
-				if (!convo)
+				if (!chat)
 					continue;
-				purple_conv_chat_remove_user(PURPLE_CONV_CHAT(convo),
+				purple_chat_conversation_remove_user(chat,
 							     client_entry->nickname,
 							     _("Server signoff"));
 			}
@@ -829,7 +830,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 			SilcStatus error = va_arg(va, int);
 			purple_notify_error(gc, "Error Notify",
 					    silc_get_status_message(error),
-					    NULL);
+					    NULL, purple_request_cpar_from_connection(gc));
 		}
 		break;
 
@@ -867,7 +868,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 				silc_free(pk);
 
 				/* Find buddy by associated public key */
-				for (buddies = purple_find_buddies(account, NULL); buddies;
+				for (buddies = purple_blist_find_buddies(account, NULL); buddies;
 						buddies = g_slist_delete_link(buddies, buddies)) {
 					b = buddies->data;
 					f = purple_blist_node_get_string(PURPLE_BLIST_NODE(b), "public-key");
@@ -879,7 +880,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 		cont:
 			if (!b) {
 				/* Find buddy by nickname */
-				b = purple_find_buddy(sg->account, client_entry->nickname);
+				b = purple_blist_find_buddy(sg->account, client_entry->nickname);
 				if (!b) {
 					purple_debug_warning("silc", "WATCH for %s, unknown buddy\n",
 						client_entry->nickname);
@@ -903,7 +904,7 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 				     client_entry->mode & SILC_UMODE_PAGE ||
 				     client_entry->mode & SILC_UMODE_DETACHED)) {
 					client_entry->mode = mode;
-					purple_prpl_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_AVAILABLE, NULL);
+					purple_protocol_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_AVAILABLE, NULL);
 				}
 				else if ((mode & SILC_UMODE_GONE) ||
 					 (mode & SILC_UMODE_INDISPOSED) ||
@@ -911,16 +912,16 @@ silc_notify(SilcClient client, SilcClientConnection conn,
 					 (mode & SILC_UMODE_PAGE) ||
 					 (mode & SILC_UMODE_DETACHED)) {
 					client_entry->mode = mode;
-					purple_prpl_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
+					purple_protocol_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
 				}
 			} else if (notify == SILC_NOTIFY_TYPE_SIGNOFF ||
 				   notify == SILC_NOTIFY_TYPE_SERVER_SIGNOFF ||
 				   notify == SILC_NOTIFY_TYPE_KILLED) {
 				client_entry->mode = mode;
-				purple_prpl_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
+				purple_protocol_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_OFFLINE, NULL);
 			} else if (notify == SILC_NOTIFY_TYPE_NONE) {
 				client_entry->mode = mode;
-				purple_prpl_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_AVAILABLE, NULL);
+				purple_protocol_got_user_status(purple_buddy_get_account(b), purple_buddy_get_name(b), SILCPURPLE_STATUS_ID_AVAILABLE, NULL);
 			}
 		}
 		break;
@@ -950,7 +951,7 @@ silc_command(SilcClient client, SilcClientConnection conn,
 	     SilcUInt32 argc, unsigned char **argv)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 
 	switch (command) {
 
@@ -1087,14 +1088,14 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 		   SilcStatus error, va_list ap)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
-	PurpleConversation *convo;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
+	PurpleChatConversation *chat;
 
 	switch (command) {
 	case SILC_COMMAND_JOIN:
 		{
 			SilcChannelEntry channel;
-			PurpleConversation *convo;
+			PurpleChatConversation *chat;
 			SilcHashTableList *user_list;
 			SilcChannelUser chu;
 			GList *users = NULL, *flags = NULL;
@@ -1102,7 +1103,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Join Chat"), _("Cannot join channel"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				return;
 			}
 
@@ -1114,21 +1116,21 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 			/* Add channel to Purple */
 			channel->context = SILC_32_TO_PTR(++sg->channel_ids);
-			serv_got_joined_chat(gc, sg->channel_ids, channel->channel_name);
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+			purple_serv_got_joined_chat(gc, sg->channel_ids, channel->channel_name);
+			chat = purple_conversations_find_chat_with_account(
 								      channel->channel_name, sg->account);
-			if (!convo)
+			if (!chat)
 			  return;
 
 			/* Add all users to channel */
 			while (silc_hash_table_get(user_list, NULL, (void *)&chu)) {
-			  PurpleConvChatBuddyFlags f = PURPLE_CBFLAGS_NONE;
+			  PurpleChatUserFlags f = PURPLE_CHAT_USER_NONE;
 			  chu->context = SILC_32_TO_PTR(sg->channel_ids);
 
 			  if (chu->mode & SILC_CHANNEL_UMODE_CHANFO)
-			    f |= PURPLE_CBFLAGS_FOUNDER;
+			    f |= PURPLE_CHAT_USER_FOUNDER;
 			  if (chu->mode & SILC_CHANNEL_UMODE_CHANOP)
-			    f |= PURPLE_CBFLAGS_OP;
+			    f |= PURPLE_CHAT_USER_OP;
 			  users = g_list_append(users, chu->client->nickname);
 			  flags = g_list_append(flags, GINT_TO_POINTER(f));
 
@@ -1142,21 +1144,21 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 					   _("Channel founder on <I>%s</I> is <I>%s</I>"),
 					   channel->channel_name, chu->client->nickname);
 
-			    purple_conversation_write(convo, NULL, tmp,
-						      PURPLE_MESSAGE_SYSTEM, time(NULL));
+			    purple_conversation_write_system_message(
+				PURPLE_CONVERSATION(chat), tmp, 0);
 			  }
 			}
 
-			purple_conv_chat_add_users(PURPLE_CONV_CHAT(convo), users, NULL, flags, FALSE);
+			purple_chat_conversation_add_users(chat, users, NULL, flags, FALSE);
 			g_list_free(users);
 			g_list_free(flags);
 
 			/* Set topic */
 			if (topic)
-			  purple_conv_chat_set_topic(PURPLE_CONV_CHAT(convo), NULL, topic);
+			  purple_chat_conversation_set_topic(chat, NULL, topic);
 
 			/* Set nick */
-			purple_conv_chat_set_nick(PURPLE_CONV_CHAT(convo), conn->local_entry->nickname);
+			purple_chat_conversation_set_nick(chat, conn->local_entry->nickname);
 		}
 		break;
 
@@ -1171,14 +1173,15 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			SilcUInt32 *user_modes;
 			SilcDList channels;
 			SilcClientEntry client_entry;
-			char tmp[1024], *tmp2;
+			char tmp[1024];
 			char *moodstr, *statusstr, *contactstr, *langstr, *devicestr, *tzstr, *geostr;
 			PurpleNotifyUserInfo *user_info;
 
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("User Information"),
 						_("Cannot get user information"),
-						silc_get_status_message(error));
+						silc_get_status_message(error),
+						purple_request_cpar_from_connection(gc));
 				break;
 			}
 
@@ -1188,76 +1191,85 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			(void)va_arg(ap, char *);
 			channels = va_arg(ap, SilcDList);
 			(void)va_arg(ap, SilcUInt32);
-			va_arg(ap, SilcUInt32); /* idle */
+			(void)va_arg(ap, SilcUInt32); /* idle */
 			(void)va_arg(ap, unsigned char *);
 			user_modes = va_arg(ap, SilcUInt32 *);
 
 			user_info = purple_notify_user_info_new();
-			tmp2 = g_markup_escape_text(client_entry->nickname, -1);
-			purple_notify_user_info_add_pair(user_info, _("Nickname"), tmp2);
-			g_free(tmp2);
+			purple_notify_user_info_add_pair_plaintext(user_info, _("Nickname"), client_entry->nickname);
 			if (client_entry->realname) {
-				tmp2 = g_markup_escape_text(client_entry->realname, -1);
-				purple_notify_user_info_add_pair(user_info, _("Real Name"), tmp2);
-				g_free(tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Real Name"), client_entry->realname);
 			}
-			tmp2 = g_markup_escape_text(client_entry->username, -1);
 			if (*client_entry->hostname) {
-				gchar *tmp3;
-				tmp3 = g_strdup_printf("%s@%s", tmp2, client_entry->hostname);
-				purple_notify_user_info_add_pair(user_info, _("Username"), tmp3);
-				g_free(tmp3);
+				gchar *tmp2;
+				tmp2 = g_strdup_printf("%s@%s", client_entry->username, client_entry->hostname);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), tmp2);
+				g_free(tmp2);
 			} else
-				purple_notify_user_info_add_pair(user_info, _("Username"), tmp2);
-			g_free(tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), client_entry->username);
 
 			if (client_entry->mode) {
 				memset(tmp, 0, sizeof(tmp));
 				silcpurple_get_umode_string(client_entry->mode,
 							    tmp, sizeof(tmp) - strlen(tmp));
-				purple_notify_user_info_add_pair(user_info, _("User Modes"), tmp);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("User Modes"), tmp);
 			}
 
 			silcpurple_parse_attrs(client_entry->attrs, &moodstr, &statusstr, &contactstr, &langstr, &devicestr, &tzstr, &geostr);
 			if (moodstr) {
-				purple_notify_user_info_add_pair(user_info, _("Mood"), moodstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Mood"), moodstr);
 				g_free(moodstr);
 			}
 
 			if (statusstr) {
-				tmp2 = g_markup_escape_text(statusstr, -1);
-				purple_notify_user_info_add_pair(user_info, _("Status Text"), tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Status Text"), statusstr);
 				g_free(statusstr);
-				g_free(tmp2);
 			}
 
 			if (contactstr) {
-				purple_notify_user_info_add_pair(user_info, _("Preferred Contact"), contactstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Preferred Contact"), contactstr);
 				g_free(contactstr);
 			}
 
 			if (langstr) {
-				purple_notify_user_info_add_pair(user_info, _("Preferred Language"), langstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Preferred Language"), langstr);
 				g_free(langstr);
 			}
 
 			if (devicestr) {
-				purple_notify_user_info_add_pair(user_info, _("Device"), devicestr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Device"), devicestr);
 				g_free(devicestr);
 			}
 
 			if (tzstr) {
-				purple_notify_user_info_add_pair(user_info, _("Timezone"), tzstr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Timezone"), tzstr);
 				g_free(tzstr);
 			}
 
 			if (geostr) {
-				purple_notify_user_info_add_pair(user_info, _("Geolocation"), geostr);
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Geolocation"), geostr);
 				g_free(geostr);
 			}
 
-			if (*client_entry->server)
-				purple_notify_user_info_add_pair(user_info, _("Server"), client_entry->server);
+			if (*client_entry->server) {
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Server"), client_entry->server);
+			}
 
 			if (channels && user_modes) {
 				SilcChannelPayload entry;
@@ -1275,9 +1287,7 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 					silc_strncat(tmp, sizeof(tmp) - 1, "  ", 1);
 					silc_free(m);
 				}
-				tmp2 = g_markup_escape_text(tmp, -1);
-				purple_notify_user_info_add_pair(user_info, _("Currently on"), tmp2);
-				g_free(tmp2);
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Currently on"), tmp);
 			}
 
 			if (client_entry->public_key) {
@@ -1288,8 +1298,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				if (pk) {
 					fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
 					babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Fingerprint"), fingerprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Babbleprint"), babbleprint);
 					silc_free(fingerprint);
 					silc_free(babbleprint);
 					silc_free(pk);
@@ -1313,13 +1323,14 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 	case SILC_COMMAND_WHOWAS:
 		{
 			SilcClientEntry client_entry;
-			char *nickname, *realname, *username, *tmp;
+			char *nickname, *realname, *username;
 			PurpleNotifyUserInfo *user_info;
 
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("User Information"),
 						  _("Cannot get user information"),
-						  silc_get_status_message(error));
+						  silc_get_status_message(error),
+						  purple_request_cpar_from_connection(gc));
 				break;
 			}
 
@@ -1331,27 +1342,23 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				break;
 
 			user_info = purple_notify_user_info_new();
-			tmp = g_markup_escape_text(nickname, -1);
-			purple_notify_user_info_add_pair(user_info, _("Nickname"), tmp);
-			g_free(tmp);
-			if (realname) {
-				tmp = g_markup_escape_text(realname, -1);
-				purple_notify_user_info_add_pair(user_info, _("Real Name"), tmp);
-				g_free(tmp);
-			}
+			purple_notify_user_info_add_pair_plaintext(user_info, _("Nickname"), nickname);
+			if (realname)
+				purple_notify_user_info_add_pair_plaintext(user_info, _("Real Name"), realname);
 			if (username) {
-				tmp = g_markup_escape_text(username, -1);
 				if (client_entry && *client_entry->hostname) {
-					gchar *tmp3;
-					tmp3 = g_strdup_printf("%s@%s", tmp, client_entry->hostname);
-					purple_notify_user_info_add_pair(user_info, _("Username"), tmp3);
-					g_free(tmp3);
+					gchar *tmp;
+					tmp = g_strdup_printf("%s@%s", username, client_entry->hostname);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), tmp);
+					g_free(tmp);
 				} else
-					purple_notify_user_info_add_pair(user_info, _("Username"), tmp);
-				g_free(tmp);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Username"), username);
 			}
-			if (client_entry && *client_entry->server)
-				purple_notify_user_info_add_pair(user_info, _("Server"), client_entry->server);
+			if (client_entry && *client_entry->server) {
+				/* TODO: Check whether it's correct to call add_pair_html,
+				         or if we should be using add_pair_plaintext */
+				purple_notify_user_info_add_pair_html(user_info, _("Server"), client_entry->server);
+			}
 
 
 			if (client_entry && client_entry->public_key) {
@@ -1362,8 +1369,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				if (pk) {
 					fingerprint = silc_hash_fingerprint(NULL, pk, pk_len);
 					babbleprint = silc_hash_babbleprint(NULL, pk, pk_len);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Fingerprint"), fingerprint);
-					purple_notify_user_info_add_pair(user_info, _("Public Key Babbleprint"), babbleprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Fingerprint"), fingerprint);
+					purple_notify_user_info_add_pair_plaintext(user_info, _("Public Key Babbleprint"), babbleprint);
 					silc_free(fingerprint);
 					silc_free(babbleprint);
 					silc_free(pk);
@@ -1382,7 +1389,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 			if (status != SILC_STATUS_OK) {
 			  purple_notify_error(gc, _("Detach From Server"), _("Cannot detach"),
-					      silc_get_status_message(error));
+					      silc_get_status_message(error),
+					      purple_request_cpar_from_connection(gc));
 			  return;
 			}
 
@@ -1402,15 +1410,16 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Topic"), _("Cannot set topic"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				return;
 			}
 
 			channel = va_arg(ap, SilcChannelEntry);
 
-			convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+			chat = purple_conversations_find_chat_with_account(
 								      channel->channel_name, sg->account);
-			if (!convo) {
+			if (!chat) {
 				purple_debug_error("silc", "Got a topic for %s, which doesn't exist\n",
 						   channel->channel_name);
 				break;
@@ -1418,7 +1427,7 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 			/* Set topic */
 			if (channel->topic)
-				purple_conv_chat_set_topic(PURPLE_CONV_CHAT(convo), NULL, channel->topic);
+				purple_chat_conversation_set_topic(chat, NULL, channel->topic);
 		}
 		break;
 
@@ -1431,7 +1440,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Nick"), _("Failed to change nickname"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				return;
 			}
 
@@ -1441,15 +1451,18 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			/* Change nick on all channels */
 			silc_hash_table_list(local_entry->channels, &htl);
 			while (silc_hash_table_get(&htl, NULL, (void *)&chu)) {
-				convo = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+				chat = purple_conversations_find_chat_with_account(
 									      chu->channel->channel_name, sg->account);
-				if (!convo)
+				if (!chat)
 					continue;
-				oldnick = purple_conv_chat_get_nick(PURPLE_CONV_CHAT(convo));
-				if (!purple_strequal(oldnick, purple_normalize(purple_conversation_get_account(convo), newnick))) {
-					purple_conv_chat_rename_user(PURPLE_CONV_CHAT(convo),
+				oldnick = purple_chat_conversation_get_nick(chat);
+				if (!purple_strequal(oldnick,
+						purple_normalize(purple_conversation_get_account
+						(PURPLE_CONVERSATION(chat)), newnick))) {
+
+					purple_chat_conversation_rename_user(chat,
 								     oldnick, newnick);
-					purple_conv_chat_set_nick(PURPLE_CONV_CHAT(convo), newnick);
+					purple_chat_conversation_set_nick(chat, newnick);
 				}
 			}
 			silc_hash_table_list_reset(&htl);
@@ -1469,9 +1482,10 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 
 			if (error != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Error"), _("Error retrieving room list"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				purple_roomlist_set_in_progress(sg->roomlist, FALSE);
-				purple_roomlist_unref(sg->roomlist);
+				g_object_unref(sg->roomlist);
 				sg->roomlist = NULL;
 				return;
 			}
@@ -1480,9 +1494,10 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			name = va_arg(ap, char *);
 			if (!name) {
 				purple_notify_error(gc, _("Roomlist"), _("Cannot get room list"),
-						    _("Network is empty"));
+						    _("Network is empty"),
+						    purple_request_cpar_from_connection(gc));
 				purple_roomlist_set_in_progress(sg->roomlist, FALSE);
-				purple_roomlist_unref(sg->roomlist);
+				g_object_unref(sg->roomlist);
 				sg->roomlist = NULL;
 				return;
 			}
@@ -1500,7 +1515,7 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			if (status == SILC_STATUS_LIST_END ||
 			    status == SILC_STATUS_OK) {
 				purple_roomlist_set_in_progress(sg->roomlist, FALSE);
-				purple_roomlist_unref(sg->roomlist);
+				g_object_unref(sg->roomlist);
 				sg->roomlist = NULL;
 			}
 		}
@@ -1513,7 +1528,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Get Public Key"),
 						    _("Cannot fetch the public key"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				return;
 			}
 
@@ -1524,7 +1540,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			if (!public_key)
 				purple_notify_error(gc, _("Get Public Key"),
 						    _("Cannot fetch the public key"),
-						    _("No public key was received"));
+						    _("No public key was received"),
+						    purple_request_cpar_from_connection(gc));
 		}
 		break;
 
@@ -1538,7 +1555,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Server Information"),
 						    _("Cannot get server information"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				return;
 			}
 
@@ -1549,7 +1567,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			if (server_name && server_info) {
 				g_snprintf(tmp, sizeof(tmp), "Server: %s\n%s",
 					   server_name, server_info);
-				purple_notify_info(gc, NULL, _("Server Information"), tmp);
+				purple_notify_info(gc, NULL, _("Server Information"), tmp,
+					purple_request_cpar_from_connection(gc));
 			}
 		}
 		break;
@@ -1562,7 +1581,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Server Statistics"),
 						    _("Cannot get server statistics"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				return;
 			}
 
@@ -1600,7 +1620,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 					      (int)stats->router_ops);
 
 			purple_notify_info(gc, NULL,
-					   _("Network Statistics"), msg);
+					   _("Network Statistics"), msg,
+					   purple_request_cpar_from_connection(gc));
 			g_free(msg);
 		}
 		break;
@@ -1609,12 +1630,13 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 		{
 			if (status != SILC_STATUS_OK) {
 				purple_notify_error(gc, _("Ping"), _("Ping failed"),
-						    silc_get_status_message(error));
+						    silc_get_status_message(error),
+						    purple_request_cpar_from_connection(gc));
 				return;
 			}
 
 			purple_notify_info(gc, _("Ping"), _("Ping reply received from server"),
-					   NULL);
+					   NULL, purple_request_cpar_from_connection(gc));
 		}
 		break;
 
@@ -1622,7 +1644,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 		if (status != SILC_STATUS_OK) {
 			purple_notify_error(gc, _("Kill User"),
 					    _("Could not kill user"),
-					    silc_get_status_message(error));
+					    silc_get_status_message(error),
+					    purple_request_cpar_from_connection(gc));
 			return;
 		}
 		break;
@@ -1661,7 +1684,8 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 	case SILC_COMMAND_WATCH:
 		if (status != SILC_STATUS_OK) {
 			purple_notify_error(gc, _("WATCH"), _("Cannot watch user"),
-					    silc_get_status_message(error));
+				silc_get_status_message(error),
+				purple_request_cpar_from_connection(gc));
 			return;
 		}
 		break;
@@ -1730,7 +1754,7 @@ silc_get_auth_method(SilcClient client, SilcClientConnection conn,
 		     SilcGetAuthMeth completion, void *context)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcPurpleAskPassphrase internal;
 	const char *password;
 
@@ -1781,7 +1805,7 @@ silc_verify_public_key(SilcClient client, SilcClientConnection conn,
 		       SilcVerifyPublicKey completion, void *context)
 {
 	PurpleConnection *gc = client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 
 	if (!sg->conn && (conn_type == SILC_CONN_SERVER ||
 			  conn_type == SILC_CONN_ROUTER)) {
@@ -1829,7 +1853,7 @@ silc_ask_passphrase(SilcClient client, SilcClientConnection conn,
 			     _("Passphrase required"), NULL, FALSE, TRUE, NULL,
 			     _("OK"), G_CALLBACK(silc_ask_passphrase_cb),
 			     _("Cancel"), G_CALLBACK(silc_ask_passphrase_cb),
-			     purple_connection_get_account(gc), NULL, NULL, internal);
+			     purple_request_cpar_from_connection(gc), internal);
 }
 
 

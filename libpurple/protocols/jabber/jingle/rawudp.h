@@ -54,8 +54,8 @@ struct _JingleRawUdpClass
 {
 	JingleTransportClass parent_class;     /**< The parent class. */
 
-	xmlnode *(*to_xml) (JingleTransport *transport, xmlnode *content, JingleActionType action);
-	JingleTransport *(*parse) (xmlnode *transport);
+	PurpleXmlNode *(*to_xml) (JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
+	JingleTransport *(*parse) (PurpleXmlNode *transport);
 };
 
 /** The rawudp class's private data */
@@ -77,10 +77,6 @@ struct _JingleRawUdpCandidate
 				 * about this candidate */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 GType jingle_rawudp_candidate_get_type(void);
 
 /**
@@ -88,16 +84,15 @@ GType jingle_rawudp_candidate_get_type(void);
  *
  * @return The rawudp class's GType.
  */
-GType jingle_rawudp_get_type(void);
+G_MODULE_EXPORT GType jingle_rawudp_get_type(void);
+
+/**
+ * Registers the JingleRawUdp type in the type system.
+ */
+void jingle_rawudp_register_type(PurplePlugin *plugin);
 
 JingleRawUdpCandidate *jingle_rawudp_candidate_new(const gchar *id,
 		guint generation, guint component, const gchar *ip, guint port);
-void jingle_rawudp_add_local_candidate(JingleRawUdp *rawudp, JingleRawUdpCandidate *candidate);
-GList *jingle_rawudp_get_remote_candidates(JingleRawUdp *rawudp);
-
-#ifdef __cplusplus
-}
-#endif
 
 G_END_DECLS
 

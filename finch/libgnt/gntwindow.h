@@ -1,7 +1,3 @@
-/**
- * @file gntwindow.h Window API
- * @ingroup gnt
- */
 /*
  * GNT - The GLib Ncurses Toolkit
  *
@@ -26,6 +22,12 @@
 
 #ifndef GNT_WINDOW_H
 #define GNT_WINDOW_H
+/**
+ * SECTION:gntwindow
+ * @section_id: libgnt-gntwindow
+ * @short_description: <filename>gntwindow.h</filename>
+ * @title: Window
+ */
 
 #include "gnt.h"
 #include "gntbox.h"
@@ -33,7 +35,7 @@
 #include "gntkeys.h"
 #include "gntmenu.h"
 
-#define GNT_TYPE_WINDOW				(gnt_window_get_gtype())
+#define GNT_TYPE_WINDOW				(gnt_window_get_type())
 #define GNT_WINDOW(obj)				(G_TYPE_CHECK_INSTANCE_CAST((obj), GNT_TYPE_WINDOW, GntWindow))
 #define GNT_WINDOW_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST((klass), GNT_TYPE_WINDOW, GntWindowClass))
 #define GNT_IS_WINDOW(obj)			(G_TYPE_CHECK_INSTANCE_TYPE((obj), GNT_TYPE_WINDOW))
@@ -65,6 +67,7 @@ struct _GntWindowClass
 {
 	GntBoxClass parent;
 
+	/*< private >*/
 	void (*gnt_reserved1)(void);
 	void (*gnt_reserved2)(void);
 	void (*gnt_reserved3)(void);
@@ -74,73 +77,82 @@ struct _GntWindowClass
 G_BEGIN_DECLS
 
 /**
- * @return  GType for GntWindow.
+ * gnt_window_get_type:
+ *
+ * Returns:  GType for GntWindow.
  */
-GType gnt_window_get_gtype(void);
+GType gnt_window_get_type(void);
 
 #define gnt_vwindow_new(homo) gnt_window_box_new(homo, TRUE)
 #define gnt_hwindow_new(homo) gnt_window_box_new(homo, FALSE)
 
 /**
+ * gnt_window_new:
+ *
  * Create a new window.
  *
- * @return The newly created window.
+ * Returns: The newly created window.
  */
 GntWidget * gnt_window_new(void);
 
 /**
+ * gnt_window_box_new:
+ * @homo:  %TRUE if the widgets inside the window should have the same dimensions.
+ * @vert:  %TRUE if the widgets inside the window should be stacked vertically.
+ *
  * Create a new window.
  *
- * @param homo  @c TRUE if the widgets inside the window should have the same dimensions.
- * @param vert  @c TRUE if the widgets inside the window should be stacked vertically.
- *
- * @return  The newly created window.
+ * Returns:  The newly created window.
  */
 GntWidget * gnt_window_box_new(gboolean homo, gboolean vert);
 
 /**
- * Set the menu for a window.
+ * gnt_window_set_menu:
+ * @window:  The window.
+ * @menu:    The menu for the window.
  *
- * @param window  The window.
- * @param menu    The menu for the window.
+ * Set the menu for a window.
  */
 void gnt_window_set_menu(GntWindow *window, GntMenu *menu);
 
 /**
+ * gnt_window_get_accel_item:
+ * @window:    The window.
+ * @key:       The keystroke.
+ *
  * Return the id of a menuitem specified to a keystroke.
  *
- * @param window    The window.
- * @param key       The keystroke.
+ * Returns: The id of the menuitem bound to the keystroke, or %NULL.
  *
- * @return The id of the menuitem bound to the keystroke, or @c NULL.
- *
- * @since 2.3.0
+ * Since: 2.3.0
  */
 const char * gnt_window_get_accel_item(GntWindow *window, const char *key);
 
 /**
+ * gnt_window_set_maximize:
+ * @window:    The window to maximize.
+ * @maximize:  The maximization state of the window.
+ *
  * Maximize a window, either horizontally or vertically, or both.
  *
- * @param window    The window to maximize.
- * @param maximize  The maximization state of the window.
- *
- * @since 2.3.0
+ * Since: 2.3.0
  */
 void gnt_window_set_maximize(GntWindow *window, GntWindowFlags maximize);
 
 /**
+ * gnt_window_get_maximize:
+ * @window:  The window.
+ *
  * Get the maximization state of a window.
  *
- * @param window  The window.
+ * Returns:  The maximization state of the window.
  *
- * @return  The maximization state of the window.
- *
- * @since 2.3.0
+ * Since: 2.3.0
  */
 GntWindowFlags gnt_window_get_maximize(GntWindow *window);
 
-void gnt_window_workspace_hiding(GntWindow *);
-void gnt_window_workspace_showing(GntWindow *);
+void gnt_window_workspace_hiding(GntWindow *window);
+void gnt_window_workspace_showing(GntWindow *window);
 
 G_END_DECLS
 

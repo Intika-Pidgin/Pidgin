@@ -45,7 +45,7 @@ typedef struct _JabberChat {
 	char *handle;
 	GHashTable *components;
 	int id;
-	PurpleConversation *conv;
+	PurpleChatConversation *conv;
 	gboolean muc;
 	gboolean xhtml;
 	PurpleRequestType config_dialog_type;
@@ -60,14 +60,14 @@ GHashTable *jabber_chat_info_defaults(PurpleConnection *gc, const char *chat_nam
 char *jabber_get_chat_name(GHashTable *data);
 
 /**
- * in-prpl function for joining a chat room. Doesn't require sticking goop
+ * in-protocol function for joining a chat room. Doesn't require sticking goop
  * into a hash table.
  *
  * @param room     The room to join. This MUST be normalized already.
  * @param server   The server the room is on. This MUST be normalized already.
  * @param password The password (if required) to join the room. May be NULL.
  * @param data     The chat hash table.  May be NULL (it will be generated
- *                 for current core<>prpl API interface.)
+ *                 for current core<>protocol API interface.)
  */
 JabberChat *jabber_join_chat(JabberStream *js, const char *room,
                              const char *server, const char *handle,
@@ -77,14 +77,14 @@ void jabber_chat_join(PurpleConnection *gc, GHashTable *data);
 JabberChat *jabber_chat_find(JabberStream *js, const char *room,
 		const char *server);
 JabberChat *jabber_chat_find_by_id(JabberStream *js, int id);
-JabberChat *jabber_chat_find_by_conv(PurpleConversation *conv);
+JabberChat *jabber_chat_find_by_conv(PurpleChatConversation *conv);
 void jabber_chat_destroy(JabberChat *chat);
 void jabber_chat_free(JabberChat *chat);
-gboolean jabber_chat_find_buddy(PurpleConversation *conv, const char *name);
+gboolean jabber_chat_find_buddy(PurpleChatConversation *conv, const char *name);
 void jabber_chat_invite(PurpleConnection *gc, int id, const char *message,
 		const char *name);
 void jabber_chat_leave(PurpleConnection *gc, int id);
-char *jabber_chat_buddy_real_name(PurpleConnection *gc, int id, const char *who);
+char *jabber_chat_user_real_name(PurpleConnection *gc, int id, const char *who);
 void jabber_chat_request_room_configure(JabberChat *chat);
 void jabber_chat_create_instant_room(JabberChat *chat);
 void jabber_chat_register(JabberChat *chat);

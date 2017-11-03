@@ -24,51 +24,53 @@ endif
 ##
 ## INCLUDE PATHS
 ##
-INCLUDE_PATHS += \
+INCLUDE_PATHS +=\
 			-I$(PIDGIN_TREE_TOP) \
 			-I$(PURPLE_TOP) \
-			-I. \
-			-I./lib \
+			-I$(PURPLE_TOP)/win32 \
 			-I$(GTK_TOP)/include \
 			-I$(GTK_TOP)/include/glib-2.0 \
 			-I$(GTK_TOP)/lib/glib-2.0/include \
-			-I$(PURPLE_TOP)/win32
+			-I$(GNUTLS_TOP)/include \
+			-I$(JSON_GLIB_TOP)/include/json-glib-1.0 \
+			-I$(LIBGADU_TOP)/include
 
-LIB_PATHS +=		-L$(GTK_TOP)/lib \
-			-L$(PURPLE_TOP) \
+LIB_PATHS += \
+			-L$(GTK_TOP)/lib \
+			-L$(GNUTLS_TOP)/lib \
+			-L$(LIBGADU_TOP)/lib \
+			-L$(JSON_GLIB_TOP)/lib \
+			-L$(PURPLE_TOP)
 
 ##
 ##  SOURCES, OBJECTS
 ##
 C_SRC =	\
-	lib/common.c \
-	lib/dcc7.c \
-	lib/dcc.c \
-	lib/debug.c \
-	lib/deflate.c \
-	lib/encoding.c \
-	lib/endian.c \
-	lib/events.c \
-	lib/handlers.c \
-	lib/http.c \
-	lib/libgadu.c \
-	lib/message.c \
-	lib/network.c \
-	lib/obsolete.c \
-	lib/packets.pb-c.c \
-	lib/protobuf.c \
-	lib/protobuf-c.c \
-	lib/pubdir50.c \
-	lib/pubdir.c \
-	lib/resolver.c \
-	lib/sha1.c \
-	lib/tvbuff.c \
-	lib/tvbuilder.c \
-	buddylist.c \
-	confer.c \
+	avatar.c \
+	blist.c \
+	chat.c \
+	edisc.c \
 	gg.c \
-	search.c \
-	gg-utils.c
+	html.c \
+	image-prpl.c \
+	keymapper.c \
+	libgadu-events.c \
+	libgaduw.c \
+	message-prpl.c \
+	multilogon.c \
+	oauth/oauth.c \
+	oauth/oauth-parameter.c \
+	oauth/oauth-purple.c \
+	pubdir-prpl.c \
+	purplew.c \
+	resolver-purple.c \
+	roster.c \
+	servconn.c \
+	status.c \
+	tcpsocket.c \
+	utils.c \
+	validator.c \
+	xml.c
 
 OBJECTS = $(C_SRC:%.c=%.o)
 
@@ -76,8 +78,12 @@ OBJECTS = $(C_SRC:%.c=%.o)
 ## LIBRARIES
 ##
 LIBS =	\
+			-lgadu \
 			-lglib-2.0 \
+			-lgobject-2.0 \
+			-lgnutls \
 			-lintl \
+			-ljson-glib-1.0 \
 			-lpurple \
 			-lws2_32 \
 			-lz

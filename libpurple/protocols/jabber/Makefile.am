@@ -1,9 +1,7 @@
 EXTRA_DIST = \
-	Makefile.mingw \
-	win32/posix.uname.c \
-	win32/utsname.h
+	Makefile.mingw
 
-pkgdir = $(libdir)/purple-$(PURPLE_MAJOR_VERSION)
+pkgdir = @PURPLE_PLUGINDIR@
 
 JABBERSOURCES = \
 			  adhoccommands.c \
@@ -31,6 +29,8 @@ JABBERSOURCES = \
 			  google/gmail.h \
 			  google/google.c \
 			  google/google.h \
+			  google/google_p2p.c \
+			  google/google_p2p.h \
 			  google/google_presence.c \
 			  google/google_presence.h \
 			  google/google_roster.c \
@@ -41,6 +41,8 @@ JABBERSOURCES = \
 			  google/jingleinfo.h \
 			  google/relay.c \
 			  google/relay.h \
+			  gtalk.c \
+			  gtalk.h \
 			  ibb.c \
 			  ibb.h \
 			  iq.c \
@@ -89,11 +91,13 @@ JABBERSOURCES = \
 			  usertune.c \
 			  usertune.h \
 			  xdata.c \
-			  xdata.h
+			  xdata.h \
+			  xmpp.c \
+			  xmpp.h
 
 AM_CFLAGS = $(st)
 
-libxmpp_la_LDFLAGS = -module -avoid-version
+libjabber_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
 
 if USE_CYRUS_SASL
 JABBERSOURCES += auth_cyrus.c
@@ -103,21 +107,17 @@ if STATIC_JABBER
 
 st = -DPURPLE_STATIC_PRPL
 noinst_LTLIBRARIES   = libjabber.la
-libjabber_la_SOURCES = $(JABBERSOURCES) libxmpp.c
+libjabber_la_SOURCES = $(JABBERSOURCES)
 libjabber_la_CFLAGS  = $(AM_CFLAGS)
 
 else
 
 st =
-pkg_LTLIBRARIES      = libjabber.la libxmpp.la
+pkg_LTLIBRARIES      = libjabber.la
 libjabber_la_SOURCES = $(JABBERSOURCES)
-libjabber_la_LIBADD  = $(GLIB_LIBS) $(SASL_LIBS) $(LIBXML_LIBS) $(IDN_LIBS)\
-	$(FARSIGHT_LIBS) \
-	$(GSTREAMER_LIBS) \
-	$(GSTINTERFACES_LIBS)
-
-libxmpp_la_SOURCES = libxmpp.c
-libxmpp_la_LIBADD = libjabber.la
+libjabber_la_LIBADD  = @PURPLE_LIBS@ $(SASL_LIBS) $(LIBXML_LIBS) $(IDN_LIBS)\
+	$(FARSTREAM_LIBS) \
+	$(GSTREAMER_LIBS)
 
 endif
 
@@ -126,8 +126,10 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/libpurple \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(IDN_CFLAGS) \
 	$(LIBXML_CFLAGS) \
-	$(FARSIGHT_CFLAGS) \
-	$(GSTREAMER_CFLAGS) \
-	$(GSTINTERFACES_CFLAGS)
+	$(FARSTREAM_CFLAGS) \
+	$(GSTREAMER_CFLAGS)
+
+SUBDIRS = tests

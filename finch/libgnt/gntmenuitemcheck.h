@@ -1,7 +1,3 @@
-/**
- * @file gntmenuitemcheck.h Check Menuitem API
- * @ingroup gnt
- */
 /*
  * GNT - The GLib Ncurses Toolkit
  *
@@ -26,13 +22,19 @@
 
 #ifndef GNT_MENU_ITEM_CHECK_H
 #define GNT_MENU_ITEM_CHECK_H
+/**
+ * SECTION:gntmenuitemcheck
+ * @section_id: libgnt-gntmenuitemcheck
+ * @short_description: <filename>gntmenuitemcheck.h</filename>
+ * @title: Check Menuitem
+ */
 
 #include "gnt.h"
 #include "gntcolors.h"
 #include "gntkeys.h"
 #include "gntmenuitem.h"
 
-#define GNT_TYPE_MENU_ITEM_CHECK				(gnt_menuitem_check_get_gtype())
+#define GNT_TYPE_MENU_ITEM_CHECK				(gnt_menuitem_check_get_type())
 #define GNT_MENU_ITEM_CHECK(obj)				(G_TYPE_CHECK_INSTANCE_CAST((obj), GNT_TYPE_MENU_ITEM_CHECK, GntMenuItemCheck))
 #define GNT_MENU_ITEM_CHECK_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST((klass), GNT_TYPE_MENU_ITEM_CHECK, GntMenuItemCheckClass))
 #define GNT_IS_MENU_ITEM_CHECK(obj)			(G_TYPE_CHECK_INSTANCE_TYPE((obj), GNT_TYPE_MENU_ITEM_CHECK))
@@ -57,6 +59,7 @@ struct _GntMenuItemCheckClass
 {
 	GntMenuItemClass parent;
 
+	/*< private >*/
 	void (*gnt_reserved1)(void);
 	void (*gnt_reserved2)(void);
 	void (*gnt_reserved3)(void);
@@ -66,33 +69,38 @@ struct _GntMenuItemCheckClass
 G_BEGIN_DECLS
 
 /**
- * @return GType for GntMenuItemCheck.
+ * gnt_menuitem_check_get_type:
+ *
+ * Returns: GType for GntMenuItemCheck.
  */
-GType gnt_menuitem_check_get_gtype(void);
+GType gnt_menuitem_check_get_type(void);
 
 /**
+ * gnt_menuitem_check_new:
+ * @text:  The text for the menuitem.
+ *
  * Create a new menuitem.
  *
- * @param text  The text for the menuitem.
- *
- * @return  The newly created menuitem.
+ * Returns:  The newly created menuitem.
  */
 GntMenuItem * gnt_menuitem_check_new(const char *text);
 
 /**
+ * gnt_menuitem_check_get_checked:
+ * @item:  The menuitem.
+ *
  * Check whether the menuitem is checked or not.
  *
- * @param item  The menuitem.
- *
- * @return @c TRUE if the item is checked, @c FALSE otherwise.
+ * Returns: %TRUE if the item is checked, %FALSE otherwise.
  */
 gboolean gnt_menuitem_check_get_checked(GntMenuItemCheck *item);
 
 /**
- * Set whether the menuitem is checked or not.
+ * gnt_menuitem_check_set_checked:
+ * @item:  The menuitem.
+ * @set:   %TRUE if the item should be checked, %FALSE otherwise.
  *
- * @param item  The menuitem.
- * @param set   @c TRUE if the item should be checked, @c FALSE otherwise.
+ * Set whether the menuitem is checked or not.
  */
 void gnt_menuitem_check_set_checked(GntMenuItemCheck *item, gboolean set);
 

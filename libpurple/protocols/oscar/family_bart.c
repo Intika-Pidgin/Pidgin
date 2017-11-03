@@ -100,7 +100,7 @@ aim_bart_request(OscarData *od, const char *bn, guint8 iconcsumtype, const guint
 	ByteStream bs;
 	aim_snacid_t snacid;
 
-	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_BART)) || !bn || !strlen(bn) || !iconcsum || !iconcsumlen)
+	if (!od || !(conn = flap_connection_findbygroup(od, SNAC_FAMILY_BART)) || !bn || *bn == '\0' || !iconcsum || !iconcsumlen)
 		return -EINVAL;
 
 	byte_stream_new(&bs, 1+strlen(bn) + 4 + 1+iconcsumlen);
@@ -141,6 +141,12 @@ parseicon(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 	guint8 iconcsumtype, iconcsumlen, *iconcsum, *icon;
 
 	bn = byte_stream_getstr(bs, byte_stream_get8(bs));
+	if (!g_utf8_validate(bn, -1, NULL)) {
+		purple_debug_warning("oscar", "Received SNAC %04hx/%04hx with "
+				"invalid UTF-8 buddy name.\n", snac->family, snac->subtype);
+		g_free(bn);
+		return 1;
+	}
 	byte_stream_get16(bs); /* flags */
 	iconcsumtype = byte_stream_get8(bs);
 	iconcsumlen = byte_stream_get8(bs);

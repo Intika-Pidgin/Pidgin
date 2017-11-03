@@ -40,12 +40,6 @@
 /* Define if you have the external 'altzone' variable. */
 /* #undef HAVE_ALTZONE */
 
-/* Define to 1 if you have the <arpa/nameser_compat.h> header file. */
-/* #undef HAVE_ARPA_NAMESER_COMPAT_H */
-
-/* Define to 1 if you have the `atexit' function. */
-#define HAVE_ATEXIT 1
-
 /* Define to 1 if you have the `bind_textdomain_codeset' function. */
 /* #undef HAVE_BIND_TEXTDOMAIN_CODESET */
 
@@ -53,6 +47,7 @@
 /* #undef HAVE_CONNECT */
 
 /* Define to 1 if Cyrus SASL is present */
+/* It's defined in global.mak. */
 /* #undef HAVE_CYRUS_SASL */
 
 /* Define if you have the external 'daylight' variable. */
@@ -71,12 +66,6 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 /* #undef HAVE_DLFCN_H */
 
-/* whether or not we have dot */
-/* #undef HAVE_DOT */
-
-/* whether or not we have doxygen */
-/* #undef HAVE_DOXYGEN */
-
 /* Define if we're using evolution addressbook. */
 /* #undef HAVE_EVOLUTION_ADDRESSBOOK */
 
@@ -92,7 +81,7 @@
 /* Define to 1 if your stdio has int fileno(FILE *). */
 #define HAVE_FILENO 1
 
-/* Define to 1 if you have the getaddrinfo function. */
+/* Define to 1 if you have the getaddrinfo function (since WinXP). */
 #define HAVE_GETADDRINFO 1
 
 /* Define to 1 if you have the `gethostid' function. */
@@ -101,26 +90,14 @@
 /* Define to 1 if you have the `getifaddrs' function. */
 /* #undef HAVE_GETIFADDRS */
 
-/* Define to 1 if you have the `getopt_long' function. */
-/* #define HAVE_GETOPT_LONG 1 */
-
 /* Define if the GNU gettext() function is already present or preinstalled. */
 /* #define HAVE_GETTEXT 1 */
 
-/* Define if you have GnuTLS */
-/* #undef HAVE_GNUTLS */
-
-/* Defined if GnuTLS >= 2.10.0 is available. */
-/* #undef HAVE_GNUTLS_2_10 */
-
-/* gnutls contains the gnutls_certificate_set_x509_system_trust function */
-/* #undef HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST */
-
-/* Define if your gnutls has the GNUTLS_CERT_INSECURE_ALGORITHM flag */
-/* #undef HAVE_GNUTLS_CERT_INSECURE_ALGORITHM */
+/* Define if you have GNUTLS */
+#define HAVE_GNUTLS 1
 
 /* Define to 1 if you have the <gnutls/gnutls.h> header file. */
-/* #undef HAVE_GNUTLS_GNUTLS_H */
+#define HAVE_GNUTLS_GNUTLS_H 1
 
 /* Define if your gnutls has gnutls_priority_set_direct and friends */
 /* #undef HAVE_GNUTLS_PRIORITY_FUNCS */
@@ -167,26 +144,11 @@
 /* Define to 1 if you have the `socket' library (-lsocket). */
 /* #undef HAVE_LIBSOCKET */
 
-/* Define to 1 if you have the <locale.h> header file. */
-#define HAVE_LOCALE_H 1
-
-/* Define to 1 if you have the `lrand48' function. */
-/* #define HAVE_LRAND48 1 */
-
 /* Define to 1 if you have the <malloc.h> header file. */
 #define HAVE_MALLOC_H 1
 
 /* Define if we have support for application media type. */
 /* #undef HAVE_MEDIA_APPLICATION */
-
-/* Define to 1 if you have the `memcpy' function. */
-#define HAVE_MEMCPY 1
-
-/* Define to 1 if you have the `memmove' function. */
-#define HAVE_MEMMOVE 1
-
-/* Define to 1 if you have the <memory.h> header file. */
-#define HAVE_MEMORY_H 1
 
 /* Define to 1 if you have the `mono_jit_init' function. */
 /* #undef HAVE_MONO_JIT_INIT */
@@ -201,13 +163,13 @@
 /* #undef HAVE_NETWORKMANAGER */
 
 /* Define to 1 if you have the <nspr.h> header file. */
-/* #undef HAVE_NSPR_H */
+#define HAVE_NSPR_H 1
 
 /* Define if you have Mozilla NSS */
 #define HAVE_NSS 1
 
 /* Define to 1 if you have the <nss.h> header file. */
-/* #undef HAVE_NSS_H */
+#define HAVE_NSS_H 1
 
 /* Define if we have Pango 1.4 or newer. */
 #define HAVE_PANGO14 1
@@ -215,35 +177,11 @@
 /* Define to 1 if you have the <paths.h> header file. */
 /* #define HAVE_PATHS_H 1 */
 
-/* Compile with support for perl */
-#define HAVE_PERL 1
-
-/* Define to 1 if you have the `Perl_eval_pv' function. */
-/* #undef HAVE_PERL_EVAL_PV */
-
-/* Define to 1 if you have the <perl.h> header file. */
-#define HAVE_PERL_H 1
-
-/* Define to 1 if you have the `perl_run' function. */
-/* #define HAVE_PERL_RUN 1 */
-
 /* Define to 1 if you have the <prio.h> header file. */
 /* #undef HAVE_PRIO_H */
 
-/* Define to 1 if you have the `random' function. */
-/* #define HAVE_RANDOM 1 */
-
-/* Define to 1 if you have the <regex.h> header file. */
-/* #define HAVE_REGEX_H 1 */
-
-/* Define to 1 if you have the `setlocale' function. */
-#define HAVE_SETLOCALE 1
-
 /* Define to 1 if you have the <sgtty.h> header file. */
 /* #define HAVE_SGTTY_H 1 */
-
-/* Define to 1 if you have the <signal.h> header file. */
-/* #define HAVE_SIGNAL_H 1 */
 
 /* Define if we have silcmime.h */
 #define HAVE_SILCMIME_H 1
@@ -260,38 +198,17 @@
 /* Define to 1 if you have the <ssl.h> header file. */
 /* #undef HAVE_SSL_H */
 
-/* Define to 1 if you have the <stdarg.h> header file. */
-#define HAVE_STDARG_H 1
-
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
 
-/* Define to 1 if you have the <stdlib.h> header file. */
-#define HAVE_STDLIB_H 1
-
-/* Define to 1 if you have the `strchr' function. */
-#define HAVE_STRCHR 1
-
 /* Define to 1 if you have the `strdup' function. */
 #define HAVE_STRDUP 1
-
-/* Define to 1 if you have the `strerror' function. */
-#define HAVE_STRERROR 1
-
-/* Define to 1 if you have the `strftime' function. */
-#define HAVE_STRFTIME 1
 
 /* Define to 1 if you have a strftime() that supports the %z format string. */
 /* #undef HAVE_STRFTIME_Z_FORMAT */
 
 /* Define to 1 if you have the <strings.h> header file. */
 #define HAVE_STRINGS_H 1
-
-/* Define to 1 if you have the <string.h> header file. */
-#define HAVE_STRING_H 1
-
-/* Define to 1 if you have the `strstr' function. */
-#define HAVE_STRSTR 1
 
 /* Define if struct sockaddr has an sa_len member */
 /* #undef HAVE_STRUCT_SOCKADDR_SA_LEN */
@@ -329,9 +246,6 @@
 /* Define to 1 if you have the <sys/sysctl.h> header file. */
 /* #define HAVE_SYS_SYSCTL_H 1 */
 
-/* Define to 1 if you have the <sys/time.h> header file. */
-/* #undef HAVE_SYS_TIME_H */
-
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
 
@@ -344,9 +258,6 @@
 /* Define to 1 if you have the <sys/wait.h> header file. */
 /* #define HAVE_SYS_WAIT_H 1 */
 
-/* Compile with support for the Tcl toolkit */
-/* #define HAVE_TCL 1 */
-
 /* Define to 1 if you have the <termios.h> header file. */
 /* #define HAVE_TERMIOS_H 1 */
 
@@ -355,9 +266,6 @@
 
 /* Define if you have the external 'timezone' variable. */
 #define HAVE_TIMEZONE 1
-
-/* Compile with support for the Tk toolkit */
-#define HAVE_TK 1
 
 /* Define if you have a tm_gmtoff member in struct tm */
 /* #define HAVE_TM_GMTOFF 1 */
@@ -373,14 +281,8 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 /*#define HAVE_UNISTD_H 1*/
 
-/* Define to 1 if you have the `vprintf' function. */
-#define HAVE_VPRINTF 1
-
 /* Define to 1 if you have X11 */
 /* #define HAVE_X11 1 */
-
-/* Define to 1 if you have the <X11/SM/SMlib.h> header file. */
-/* #define HAVE_X11_SM_SMLIB_H 1 */
 
 /* whether or not we have xsltproc for devhelp index */
 /* #define HAVE_XSLTPROC 1 */
@@ -394,9 +296,6 @@
 
 /* Define to 1 if you don't have wide-character support. */
 /* #undef NO_WIDECHAR */
-
-/* Define if old perl is installed. */
-/* #undef OLD_PERL */
 
 /* Name of package */
 #define PACKAGE "pidgin"
@@ -422,9 +321,6 @@
 /* Define if plugins are enabled. */
 #define PURPLE_PLUGINS 1
 
-/* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE void
-
 /* The size of `time_t', as computed by sizeof. */
 #define SIZEOF_TIME_T 4
 
@@ -441,26 +337,13 @@
 #define STATIC_PROTO_INIT static void static_proto_init(void) {  }
 #endif
 
-/* Define to 1 if you have the ANSI C header files. */
-#define STDC_HEADERS 1
+/* Use GStreamer for playing sounds */
+/* It's defined in global.mak. */
+/* #undef USE_GSTREAMER */
 
-/* Define to 1 if your <sys/time.h> declares `struct tm'. */
-/* #undef TM_IN_SYS_TIME */
-
-/* Use GStreamer Video Overlay support */
-/* #undef USE_GSTAPP */
-
-/* Use GStreamer 0.10 interfaces for X overlay support */
-/* #define USE_GSTINTERFACES 1 */
-
-/* Use GStreamer 0.10 for playing sounds */
-/* #define USE_GSTREAMER 1 */
-
-/* Use GStreamer Video Overlay support */
-/* #undef USE_GSTVIDEO */
-
-/* Define if we're using GtkSpell */
-#define USE_GTKSPELL 1
+/* Use voice and video */
+/* It's defined in global.mak. */
+/* #undef USE_VV */
 
 /* Use GNU Libidn for stringprep and IDN */
 /* #define USE_IDN 1 */
@@ -468,17 +351,8 @@
 /* Define if python headers are available. */
 /* #undef USE_PYTHON */
 
-/* Define if we're using XScreenSaver. */
-#define USE_SCREENSAVER 1
-
-/* Define if we're using X Session Management. */
-/* #define USE_SM 1 */
-
 /* Use voice and video */
 /* #define USE_VV 1 */
-
-/* 'va_lists' cannot be copied as values */
-/* #define VA_COPY_AS_ARRAY 1 */
 
 /* Version number of package */
 #define VERSION "@VERSION@"
@@ -503,9 +377,6 @@
 /* Define for large files, on AIX-style hosts. */
 /* #undef _LARGE_FILES */
 
-/* Define to empty if `const' does not conform to ANSI C. */
-/* #undef const */
-
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
 
@@ -516,4 +387,18 @@
  * Following are added for Win32 version of Pidgin
  */
 #define HAVE_VSNPRINTF 1
+
+#define FINCH_LIBDIR wpurple_lib_dir(NULL)
+#define PIDGIN_LIBDIR wpurple_lib_dir(NULL)
+#define PURPLE_DATADIR wpurple_bin_dir()
+#define PURPLE_LIBDIR wpurple_lib_dir(NULL)
+#define PURPLE_LOCALEDIR wpurple_locale_dir()
+#define PURPLE_SYSCONFDIR wpurple_sysconf_dir()
+
+#define HAVE_FILENO 1
+
+#ifndef _WIN32_WINNT
+/* _WIN32_WINNT_WINXP = 0x0501 */
+#define _WIN32_WINNT 0x0501
+#endif
 

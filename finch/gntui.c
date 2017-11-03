@@ -30,7 +30,7 @@
 #include "gntconn.h"
 #include "gntconv.h"
 #include "gntdebug.h"
-#include "gntft.h"
+#include "gntxfer.h"
 #include "gntlog.h"
 #include "gntmedia.h"
 #include "gntnotify.h"
@@ -44,11 +44,15 @@
 
 #include <prefs.h>
 
-void gnt_ui_init()
+void finch_ui_init()
 {
 #ifdef STANDALONE
+#ifdef _WIN32 /* TODO: don't change it when using FHS under win32 */
+	gnt_set_config_dir(purple_user_dir());
+#endif /* _WIN32 */
+
 	gnt_init();
-#endif
+#endif /* STANDALONE */
 
 	purple_prefs_add_none("/purple/gnt");
 
@@ -106,12 +110,13 @@ void gnt_ui_init()
 	gnt_register_action(_("Room List"), finch_roomlist_show_all);
 	gnt_register_action(_("Sounds"), finch_sounds_show_all);
 	gnt_register_action(_("Preferences"), finch_prefs_show_all);
+	gnt_register_action(_("Keyring settings"), finch_prefs_show_keyring);
 	gnt_register_action(_("Statuses"), finch_savedstatus_show_all);
 
 #ifdef STANDALONE
 }
 
-void gnt_ui_uninit()
+void finch_ui_uninit()
 {
 	purple_accounts_set_ui_ops(NULL);
 	finch_accounts_uninit();
@@ -146,6 +151,9 @@ void gnt_ui_uninit()
 #endif
 
 	gnt_quit();
-#endif
-}
 
+#ifdef _WIN32
+	gnt_set_config_dir(NULL);
+#endif /* _WIN32 */
+#endif /* STANDALONE */
+}

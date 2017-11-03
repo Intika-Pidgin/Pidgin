@@ -1,8 +1,3 @@
-/**
- * @file pidginstock.c GTK+ Stock resources
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -62,7 +57,7 @@ static struct StockIcon
 	{ PIDGIN_STOCK_DISCONNECT,      NULL,      GTK_STOCK_DISCONNECT       },
 	{ PIDGIN_STOCK_FGCOLOR,         "buttons", "change-fgcolor-small.png" },
 	{ PIDGIN_STOCK_EDIT,            NULL,      GTK_STOCK_EDIT             },
-	{ PIDGIN_STOCK_FILE_CANCELED,   NULL,      GTK_STOCK_CANCEL           },
+	{ PIDGIN_STOCK_FILE_CANCELLED,  NULL,      GTK_STOCK_CANCEL           },
 	{ PIDGIN_STOCK_FILE_DONE,       NULL,      GTK_STOCK_APPLY            },
 	{ PIDGIN_STOCK_IGNORE,          NULL,      GTK_STOCK_DIALOG_ERROR     },
 	{ PIDGIN_STOCK_INVITE,          NULL,      GTK_STOCK_JUMP_TO          },
@@ -76,6 +71,7 @@ static struct StockIcon
 	{ PIDGIN_STOCK_TYPED,           "pidgin",  "typed.png"                },
 	{ PIDGIN_STOCK_UPLOAD,          NULL,      GTK_STOCK_GO_UP            },
 	{ PIDGIN_STOCK_INFO,            NULL,      GTK_STOCK_INFO             },
+	{ PIDGIN_STOCK_NEXT,            NULL,      GTK_STOCK_GO_FORWARD       },
 };
 
 static const GtkStockItem stock_items[] =
@@ -90,12 +86,13 @@ static const GtkStockItem stock_items[] =
 	{ PIDGIN_STOCK_ADD,                 N_("_Add..."),     0, 0, PACKAGE },
 	{ PIDGIN_STOCK_OPEN_MAIL,           N_("_Open Mail"),  0, 0, PACKAGE },
 	{ PIDGIN_STOCK_PAUSE,               N_("_Pause"),      0, 0, PACKAGE },
-	{ PIDGIN_STOCK_EDIT,                N_("_Edit"),       0, 0, PACKAGE }
+	{ PIDGIN_STOCK_EDIT,                N_("_Edit"),       0, 0, PACKAGE },
+	{ PIDGIN_STOCK_NEXT,                N_("_Next"),       0, 0, PACKAGE },
 };
 
 typedef struct {
 	const char *name;
- 	const char *dir;
+	const char *dir;
 	const char *filename;
 	gboolean microscopic;
 	gboolean extra_small;
@@ -171,6 +168,7 @@ const SizedStockIcon sized_stock_icons [] = {
 	{ PIDGIN_STOCK_TOOLBAR_TEXT_LARGER,     "toolbar", "font-size-up.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_TOOLBAR_INSERT,          "toolbar", "insert.png",         FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE,    "toolbar", "insert-image.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_INSERT_SCREENSHOT, "toolbar", "insert-screenshot.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_TOOLBAR_INSERT_LINK,     "toolbar", "insert-link.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW,     "toolbar", "message-new.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_TOOLBAR_PENDING,         "toolbar", "message-new.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
@@ -241,7 +239,7 @@ find_file_common(const char *name)
 			return filename;
 		g_free(filename);
 	}
-	filename = g_build_filename(DATADIR, name, NULL);
+	filename = g_build_filename(PURPLE_DATADIR, name, NULL);
 	if (g_file_test(filename, G_FILE_TEST_EXISTS))
 		return filename;
 	g_free(filename);
@@ -390,9 +388,7 @@ add_sized_icon(GtkIconSet *iconset, GtkIconSize sizeid, PidginIconTheme *theme,
 static void
 reload_settings(void)
 {
-	GtkSettings *setting = NULL;
-	setting = gtk_settings_get_default();
-	gtk_rc_reset_styles(setting);
+	gtk_style_context_reset_widgets(gdk_screen_get_default());
 }
 
 /*****************************************************************************
@@ -520,8 +516,8 @@ pidgin_stock_load_stock_icon_theme(PidginStockIconTheme *theme)
 
 		if (stock_icons[i].dir == NULL) {
 			/* GTK+ Stock icon */
-			iconset = gtk_style_lookup_icon_set(gtk_widget_get_style(win),
-					stock_icons[i].filename);
+			iconset = gtk_style_context_lookup_icon_set(gtk_widget_get_style_context(win),
+			                                            stock_icons[i].filename);
 		} else {
 			filename = find_file(stock_icons[i].dir, stock_icons[i].filename);
 

@@ -29,6 +29,7 @@
 #include "util.h"
 #include "version.h"
 
+#include "gtk3compat.h"
 #include "gtkblist.h"
 #include "gtkconv.h"
 #include "gtkplugin.h"
@@ -76,7 +77,7 @@ static EBookView *book_view = NULL;
 
 static void
 update_ims_from_contact(EContact *contact, const char *name,
-						const char *prpl_id, EContactField field)
+						const char *protocol_id, EContactField field)
 {
 	GList *ims = e_contact_get(contact, field);
 	GList *l, *l2;
@@ -90,7 +91,7 @@ update_ims_from_contact(EContact *contact, const char *name,
 		PurpleAccount *account = purple_connection_get_account(gc);
 		char *me;
 
-		if (!purple_strequal(purple_account_get_protocol_id(account), prpl_id))
+		if (!purple_strequal(purple_account_get_protocol_id(account), protocol_id))
 			continue;
 
 		if (!purple_account_get_bool(account, "gevo-autoadd", FALSE))
@@ -99,11 +100,12 @@ update_ims_from_contact(EContact *contact, const char *name,
 		me = g_strdup(purple_normalize(account, purple_account_get_username(account)));
 		for (l2 = ims; l2 != NULL; l2 = l2->next)
 		{
-			if (purple_find_buddy(account, l2->data) != NULL ||
+			if (purple_blist_find_buddy(account, l2->data) != NULL ||
 				purple_strequal(me, purple_normalize(account, l2->data)))
 				continue;
 
-			gevo_add_buddy(account, _("Buddies"), l2->data, name);
+			gevo_add_buddy(account, PURPLE_BLIST_DEFAULT_GROUP_NAME,
+				l2->data, name);
 		}
 		g_free(me);
 	}
@@ -218,14 +220,14 @@ signed_on_cb(PurpleConnection *gc)
 static void
 menu_item_activate_cb(PurpleBlistNode *node, gpointer user_data)
 {
-	PurpleBuddy *buddy = (PurpleBuddy *)node;
+	PurpleBuddy *buddy = PURPLE_BUDDY(node);
 	gevo_associate_buddy_dialog_new(buddy);
 }
 
 static void
 menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
 {
-	PurpleBuddy *buddy = (PurpleBuddy *)node;
+	PurpleBuddy *buddy = PURPLE_BUDDY(node);
 	char *mail = NULL;
 
 	mail = gevo_get_email_for_buddy(buddy);
@@ -240,20 +242,24 @@ menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
 			g_free(app);
 			g_free(mail);
 
-			g_spawn_command_line_async(command_line, NULL);
+			if (!g_spawn_command_line_async(command_line, NULL)) {
+				purple_debug_error("gevolution",
+					"Failed executing mailto command");
+			}
 			g_free(command_line);
 			g_free(quoted);
 		}
 		else
 		{
-			purple_notify_error(NULL, NULL, _("Unable to send email"),
-							  _("The evolution executable was not found in the PATH."));
+			purple_notify_error(NULL, NULL, _("Unable to send "
+				"email"), _("The evolution executable was not "
+				"found in the PATH."), NULL);
 		}
 	}
 	else
 	{
 		purple_notify_error(NULL, NULL, _("Unable to send email"),
-						  _("An email address was not found for this buddy."));
+			_("An email address was not found for this buddy."), NULL);
 	}
 }
 
@@ -266,13 +272,13 @@ blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
 	EContact *contact;
 	char *mail;
 
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+	if (!PURPLE_IS_BUDDY(node))
 		return;
 
-	buddy = (PurpleBuddy *)node;
+	buddy = PURPLE_BUDDY(node);
 	account = purple_buddy_get_account(buddy);
 
-	if (!gevo_prpl_is_supported(account, buddy))
+	if (!gevo_protocol_is_supported(account, buddy))
 		return;
 
 	contact = gevo_search_buddy_in_contacts(buddy, NULL);
@@ -331,62 +337,6 @@ load_timeout(gpointer data)
 	return FALSE;
 }
 
-static gboolean
-plugin_load(PurplePlugin *plugin)
-{
-#if 0
-	bonobo_activate();
-#endif
-
-	backup_blist_ui_ops = purple_blist_get_ui_ops();
-
-	blist_ui_ops = g_memdup(backup_blist_ui_ops, sizeof(PurpleBlistUiOps));
-	blist_ui_ops->request_add_buddy = request_add_buddy;
-
-	purple_blist_set_ui_ops(blist_ui_ops);
-
-	purple_signal_connect(purple_connections_get_handle(), "signed-on",
-						plugin, PURPLE_CALLBACK(signed_on_cb), NULL);
-
-	timer = g_timeout_add(1, load_timeout, plugin);
-
-	return TRUE;
-}
-
-static gboolean
-plugin_unload(PurplePlugin *plugin)
-{
-	purple_blist_set_ui_ops(backup_blist_ui_ops);
-
-	g_free(blist_ui_ops);
-
-	backup_blist_ui_ops = NULL;
-	blist_ui_ops = NULL;
-
-	if (book_view != NULL)
-	{
-		e_book_view_stop(book_view);
-		g_object_unref(book_view);
-		book_view = NULL;
-	}
-
-	if (book != NULL)
-	{
-		g_object_unref(book);
-		book = NULL;
-	}
-
-	return TRUE;
-}
-
-static void
-plugin_destroy(PurplePlugin *plugin)
-{
-#if 0
-	bonobo_debug_shutdown();
-#endif
-}
-
 static void
 autoadd_toggled_cb(GtkCellRendererToggle *renderer, gchar *path_str,
 				   gpointer data)
@@ -423,7 +373,7 @@ get_config_frame(PurplePlugin *plugin)
 	GList *l;
 
 	/* Outside container */
-	ret = gtk_vbox_new(FALSE, 18);
+	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
 	gtk_container_set_border_width(GTK_CONTAINER(ret), 12);
 
 	/* Configuration frame */
@@ -432,7 +382,7 @@ get_config_frame(PurplePlugin *plugin)
 	/* Label */
 	label = gtk_label_new(_("Select all accounts that buddies should be "
 							"auto-added to."));
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 
@@ -443,7 +393,6 @@ get_config_frame(PurplePlugin *plugin)
 
 	/* Setup the treeview */
 	treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(treeview), TRUE);
 	gtk_box_pack_start(GTK_BOX(vbox),
 			pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC,
 			GTK_POLICY_ALWAYS, GTK_SHADOW_IN, 300, 300), TRUE, TRUE, 0);
@@ -487,7 +436,7 @@ get_config_frame(PurplePlugin *plugin)
 
 		gtk_list_store_append(model, &iter);
 
-		pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+		pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 		if ((pixbuf != NULL) && (!purple_account_is_connected(account)))
 			gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
 
@@ -510,56 +459,31 @@ get_config_frame(PurplePlugin *plugin)
 	return ret;
 }
 
-static PidginPluginUiInfo ui_info =
+static PidginPluginInfo *
+plugin_query(GError **error)
 {
-	get_config_frame,	/**< get_config_frame */
-	0,			/**< page_num */
-	/* Padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
+	const gchar * const authors[] = {
+		"Christian Hammond <chipx86@chipx86.com>",
+		NULL
+	};
 
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,                             /**< type           */
-	PIDGIN_PLUGIN_TYPE,                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
+	return pidgin_plugin_info_new(
+		"id",                   GEVOLUTION_PLUGIN_ID,
+		"name",                 N_("Evolution Integration"),
+		"version",              DISPLAY_VERSION,
+		"category",             N_("Integration"),
+		"summary",              N_("Provides integration with Evolution."),
+		"description",          N_("Provides integration with Evolution."),
+		"authors",              authors,
+		"website",              PURPLE_WEBSITE,
+		"abi-version",          PURPLE_ABI_VERSION,
+		"gtk-config-frame-cb",  get_config_frame,
+		NULL
+	);
+}
 
-	GEVOLUTION_PLUGIN_ID,                             /**< id             */
-	N_("Evolution Integration"),                      /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	N_("Provides integration with Evolution."),
-	                                                  /**  description    */
-	N_("Provides integration with Evolution."),
-	"Christian Hammond <chipx86@chipx86.com>",        /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
-
-	plugin_load,                                      /**< load           */
-	plugin_unload,                                    /**< unload         */
-	plugin_destroy,                                   /**< destroy        */
-
-	&ui_info,                                         /**< ui_info        */
-	NULL,                                             /**< extra_info     */
-	NULL,
-	NULL,
-
-	/* Padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	/* TODO: Change to core-remote when possible. */
 	/* info.dependencies = g_list_append(info.dependencies, "gtk-remote"); */
@@ -582,7 +506,8 @@ init_plugin(PurplePlugin *plugin)
 	 * at all, so the above explanation is suspect. This is required even with
 	 * e-d-s >= 2.29.1 where bonobo is no longer in the picture.
 	 */
-	g_module_make_resident(plugin->handle);
+	g_module_make_resident(gplugin_native_plugin_get_module(
+			GPLUGIN_NATIVE_PLUGIN(plugin)));
 
 #if 0
 	if (!bonobo_init_full(NULL, NULL, bonobo_activation_orb_get(),
@@ -591,6 +516,53 @@ init_plugin(PurplePlugin *plugin)
 		purple_debug_error("evolution", "Unable to initialize bonobo.\n");
 	}
 #endif
+#if 0
+	bonobo_activate();
+#endif
+
+	backup_blist_ui_ops = purple_blist_get_ui_ops();
+
+	blist_ui_ops = g_memdup(backup_blist_ui_ops, sizeof(PurpleBlistUiOps));
+	blist_ui_ops->request_add_buddy = request_add_buddy;
+
+	purple_blist_set_ui_ops(blist_ui_ops);
+
+	purple_signal_connect(purple_connections_get_handle(), "signed-on",
+						plugin, PURPLE_CALLBACK(signed_on_cb), NULL);
+
+	timer = g_timeout_add(1, load_timeout, plugin);
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(gevolution, init_plugin, info)
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	purple_blist_set_ui_ops(backup_blist_ui_ops);
+
+	g_free(blist_ui_ops);
+
+	backup_blist_ui_ops = NULL;
+	blist_ui_ops = NULL;
+
+	if (book_view != NULL)
+	{
+		e_book_view_stop(book_view);
+		g_object_unref(book_view);
+		book_view = NULL;
+	}
+
+	if (book != NULL)
+	{
+		g_object_unref(book);
+		book = NULL;
+	}
+
+#if 0
+	bonobo_debug_shutdown();
+#endif
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(gevolution, plugin_query, plugin_load, plugin_unload);

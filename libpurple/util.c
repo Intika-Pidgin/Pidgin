@@ -1,8 +1,3 @@
-/*
- * @file util.h Utility Functions
- * @ingroup core
- */
-
 /* Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -23,66 +18,31 @@
  */
 #include "internal.h"
 
-#include "cipher.h"
 #include "conversation.h"
 #include "core.h"
 #include "debug.h"
+#include "glibcompat.h"
 #include "notify.h"
-#include "ntlm.h"
-#include "prpl.h"
+#include "protocol.h"
 #include "prefs.h"
 #include "util.h"
 
-/* 512KiB Default value for maximum HTTP download size (when the client hasn't
-   specified a length) */
-#define DEFAULT_MAX_HTTP_DOWNLOAD (512 * 1024)
+#include <json-glib/json-glib.h>
 
-#define MAX_HTTP_CHUNK_SIZE (10 * 1024 * 1024)
-
-struct _PurpleUtilFetchUrlData
+struct _PurpleMenuAction
 {
-	PurpleUtilFetchUrlCallback callback;
-	void *user_data;
-
-	struct
-	{
-		char *user;
-		char *passwd;
-		char *address;
-		int port;
-		char *page;
-
-	} website;
-
-	char *url;
-	int num_times_redirected;
-	gboolean full;
-	char *user_agent;
-	gboolean http11;
-	char *request;
-	gsize request_len;
-	gsize request_written;
-	gboolean include_headers;
-
-	gboolean is_ssl;
-	PurpleSslConnection *ssl_connection;
-	PurpleProxyConnectData *connect_data;
-	int fd;
-	guint inpa;
-
-	gboolean got_headers;
-	gboolean has_explicit_data_len;
-	char *webdata;
-	gsize len;
-	unsigned long data_len;
-	gsize max_len;
-	gboolean chunked;
-	PurpleAccount *account;
+	char *label;
+	PurpleCallback callback;
+	gpointer data;
+	GList *children;
+	gchar *stock_icon;
 };
 
 static char *custom_user_dir = NULL;
 static char *user_dir = NULL;
 
+static JsonNode *escape_js_node = NULL;
+static JsonGenerator *escape_js_gen = NULL;
 
 PurpleMenuAction *
 purple_menu_action_new(const char *label, PurpleCallback callback, gpointer data,
@@ -101,15 +61,88 @@ purple_menu_action_free(PurpleMenuAction *act)
 {
 	g_return_if_fail(act != NULL);
 
+	g_free(act->stock_icon);
 	g_free(act->label);
 	g_free(act);
+}
+
+char * purple_menu_action_get_label(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->label;
+}
+
+PurpleCallback purple_menu_action_get_callback(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->callback;
+}
+
+gpointer purple_menu_action_get_data(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->data;
+}
+
+GList* purple_menu_action_get_children(const PurpleMenuAction *act)
+{
+	g_return_val_if_fail(act != NULL, NULL);
+
+	return act->children;
+}
+
+void purple_menu_action_set_label(PurpleMenuAction *act, char *label)
+{
+	g_return_if_fail(act != NULL);
+
+	act-> label = label;
+}
+
+void purple_menu_action_set_callback(PurpleMenuAction *act, PurpleCallback callback)
+{
+	g_return_if_fail(act != NULL);
+
+	act->callback = callback;
+}
+
+void purple_menu_action_set_data(PurpleMenuAction *act, gpointer data)
+{
+	g_return_if_fail(act != NULL);
+
+	act->data = data;
+}
+
+void purple_menu_action_set_children(PurpleMenuAction *act, GList *children)
+{
+	g_return_if_fail(act != NULL);
+
+	act->children = children;
+}
+
+void purple_menu_action_set_stock_icon(PurpleMenuAction *act,
+	const gchar *stock)
+{
+	g_return_if_fail(act != NULL);
+
+	g_free(act->stock_icon);
+	act->stock_icon = g_strdup(stock);
+}
+
+const gchar *
+purple_menu_action_get_stock_icon(PurpleMenuAction *act)
+{
+	return act->stock_icon;
 }
 
 void
 purple_util_init(void)
 {
-	/* This does nothing right now.  It exists for symmetry with
-	 * purple_util_uninit() and forwards compatibility. */
+	escape_js_node = json_node_new(JSON_NODE_VALUE);
+	escape_js_gen = json_generator_new();
+	json_node_set_boolean(escape_js_node, FALSE);
 }
 
 void
@@ -122,6 +155,12 @@ purple_util_uninit(void)
 
 	g_free(user_dir);
 	user_dir = NULL;
+
+	json_node_free(escape_js_node);
+	escape_js_node = NULL;
+
+	g_object_unref(escape_js_gen);
+	escape_js_gen = NULL;
 }
 
 /**************************************************************************
@@ -139,7 +178,7 @@ purple_base16_encode(const guchar *data, gsize len)
 	ascii = g_malloc(len * 2 + 1);
 
 	for (i = 0; i < len; i++)
-		g_snprintf(&ascii[i * 2], 3, "%02hhx", data[i]);
+		g_snprintf(&ascii[i * 2], 3, "%02x", data[i] & 0xFF);
 
 	return ascii;
 }
@@ -154,7 +193,7 @@ purple_base16_decode(const char *str, gsize *ret_len)
 
 	len = strlen(str);
 
-	g_return_val_if_fail(strlen(str) > 0, 0);
+	g_return_val_if_fail(*str, 0);
 	g_return_val_if_fail(len % 2 == 0,    0);
 
 	data = g_malloc(len / 2);
@@ -207,7 +246,7 @@ purple_base16_encode_chunked(const guchar *data, gsize len)
 	ascii = g_malloc(len * 3 + 1);
 
 	for (i = 0; i < len; i++)
-		g_snprintf(&ascii[i * 3], 4, "%02hhx:", data[i]);
+		g_snprintf(&ascii[i * 3], 4, "%02x:", data[i] & 0xFF);
 
 	/* Replace the final colon with NULL */
 	ascii[len * 3 - 1] = 0;
@@ -215,34 +254,12 @@ purple_base16_encode_chunked(const guchar *data, gsize len)
 	return ascii;
 }
 
-
 /**************************************************************************
- * Base64 Functions
+ * Quoted Printable Functions (see RFC 2045).
  **************************************************************************/
 static const char xdigits[] =
 	"0123456789abcdef";
 
-gchar *
-purple_base64_encode(const guchar *data, gsize len)
-{
-	return g_base64_encode(data, len);
-}
-
-guchar *
-purple_base64_decode(const char *str, gsize *ret_len)
-{
-	/*
-	 * We want to allow ret_len to be NULL for backward compatibility,
-	 * but g_base64_decode() requires a valid length variable.  So if
-	 * ret_len is NULL then pass in a dummy variable.
-	 */
-	gsize unused;
-	return g_base64_decode(str, ret_len != NULL ? ret_len : &unused);
-}
-
-/**************************************************************************
- * Quoted Printable Functions (see RFC 2045).
- **************************************************************************/
 guchar *
 purple_quotedp_decode(const char *str, gsize *ret_len)
 {
@@ -402,7 +419,7 @@ purple_mime_decode_field(const char *str)
 				if (g_ascii_strcasecmp(encoding, "Q") == 0)
 					decoded = purple_quotedp_decode(encoded_text, &dec_len);
 				else if (g_ascii_strcasecmp(encoding, "B") == 0)
-					decoded = purple_base64_decode(encoded_text, &dec_len);
+					decoded = g_base64_decode(encoded_text, &dec_len);
 				else
 					decoded = NULL;
 				if (decoded) {
@@ -463,16 +480,16 @@ const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso)
 #ifdef _WIN32
 	if ((off = wpurple_get_tz_offset()) == -1)
 		return "";
-#else
-# ifdef HAVE_TM_GMTOFF
+#elif defined(HAVE_TM_GMTOFF)
 	off = new_tm.tm_gmtoff;
-# else
-#  ifdef HAVE_TIMEZONE
+#elif defined(HAVE_TIMEZONE)
 	tzset();
 	off = -1 * timezone;
-#  endif /* HAVE_TIMEZONE */
-# endif /* !HAVE_TM_GMTOFF */
-#endif /* _WIN32 */
+#else
+	purple_debug_warning("util",
+		"there is no possibility to obtain tz offset");
+	return "";
+#endif
 
 	min = (off / 60) % 60;
 	hrs = ((off / 60) - min) / 60;
@@ -522,10 +539,10 @@ static size_t purple_internal_strftime(char *s, size_t max, const char *format, 
 		if (*c == 'z')
 		{
 			char *tmp = g_strdup_printf("%s%.*s%s",
-			                            fmt ? fmt : "",
-			                            c - start - 1,
-			                            start,
-			                            purple_get_tzoff_str(tm, FALSE));
+				fmt ? fmt : "",
+				(int)(c - start - 1),
+				start,
+				purple_get_tzoff_str(tm, FALSE));
 			g_free(fmt);
 			fmt = tmp;
 			start = c + 1;
@@ -535,10 +552,10 @@ static size_t purple_internal_strftime(char *s, size_t max, const char *format, 
 		if (*c == 'Z')
 		{
 			char *tmp = g_strdup_printf("%s%.*s%s",
-			                            fmt ? fmt : "",
-			                            c - start - 1,
-			                            start,
-			                            wpurple_get_timezone_abbreviation(tm));
+				fmt ? fmt : "",
+				(int)(c - start - 1),
+				start,
+				wpurple_get_timezone_abbreviation(tm));
 			g_free(fmt);
 			fmt = tmp;
 			start = c + 1;
@@ -615,7 +632,7 @@ purple_utf8_strftime(const char *format, const struct tm *tm)
 	}
 	else
 	{
-		purple_strlcpy(buf, utf8);
+		g_strlcpy(buf, utf8, sizeof(buf));
 		g_free(utf8);
 	}
 
@@ -869,6 +886,488 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		*tz_off = tzoff;
 
 	return retval;
+}
+
+GDateTime *
+purple_str_to_date_time(const char *timestamp, gboolean utc)
+{
+	const gchar *str;
+	gint year = 0;
+	gint month = 0;
+	gint day = 0;
+	gint hour = 0;
+	gint minute = 0;
+	gint seconds = 0;
+	gint microseconds = 0;
+	int chars = 0;
+	GTimeZone *tz = NULL;
+	GDateTime *retval;
+
+	g_return_val_if_fail(timestamp != NULL, NULL);
+
+	str = timestamp;
+
+	/* Strip leading whitespace */
+	while (g_ascii_isspace(*str))
+		str++;
+
+	if (*str == '\0') {
+		return NULL;
+	}
+
+	if (!g_ascii_isdigit(*str) && *str != '-' && *str != '+') {
+		return NULL;
+	}
+
+	/* 4 digit year */
+	if (sscanf(str, "%04d", &year) && year > 0) {
+		str += 4;
+
+		if (*str == '-' || *str == '/')
+			str++;
+	}
+
+	/* 2 digit month */
+	if (!sscanf(str, "%02d", &month)) {
+		return NULL;
+	}
+
+	str += 2;
+
+	if (*str == '-' || *str == '/')
+		str++;
+
+	/* 2 digit day */
+	if (!sscanf(str, "%02d", &day)) {
+		return NULL;
+	}
+
+	str += 2;
+
+	/* Grab the year off the end if there's still stuff */
+	if (*str == '/' || *str == '-') {
+		/* But make sure we don't read the year twice */
+		if (year > 0) {
+			return NULL;
+		}
+
+		str++;
+
+		if (!sscanf(str, "%04d", &year)) {
+			return NULL;
+		}
+	} else if (*str == 'T' || *str == '.') {
+		str++;
+
+		/* Continue grabbing the hours/minutes/seconds */
+		if ((sscanf(str, "%02d:%02d:%02d", &hour, &minute, &seconds) == 3 &&
+				(str += 8)) ||
+		    (sscanf(str, "%02d%02d%02d", &hour, &minute, &seconds) == 3 &&
+				(str += 6)))
+		{
+			if (*str == '.') {
+				str++;
+				if (sscanf(str, "%d%n", &microseconds, &chars) == 1) {
+					str += chars;
+				}
+			}
+
+			if (*str) {
+				const gchar *end = str;
+				if (*end == '+' || *end == '-') {
+					end++;
+				}
+
+				while (isdigit(*end) || *end == ':') {
+					end++;
+				}
+
+				if (str != end) {
+					/* Trim anything trailing a purely numeric time zone. */
+					gchar *tzstr = g_strndup(str, end - str);
+					tz = g_time_zone_new(tzstr);
+					g_free(tzstr);
+				} else {
+					/* Just try whatever is there. */
+					tz = g_time_zone_new(str);
+				}
+			}
+		}
+	}
+
+	if (!tz) {
+		/* No timezone specified. */
+		if (utc) {
+			tz = g_time_zone_new_utc();
+		} else {
+			tz = g_time_zone_new_local();
+		}
+	}
+
+	retval = g_date_time_new(tz, year, month, day, hour, minute,
+	                         seconds + microseconds * pow(10, -chars));
+	g_time_zone_unref(tz);
+
+	return retval;
+}
+
+char *
+purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
+{
+	GString *string;
+	guint i, count;
+
+	if (tm == NULL) {
+		time_t now = time(NULL);
+		tm = localtime(&now);
+	}
+
+	string = g_string_sized_new(len);
+	i = 0;
+	while (i < len) {
+		count = 1;
+		while ((i + count) < len && format[i] == format[i+count])
+			count++;
+
+		switch (format[i]) {
+			/* Era Designator */
+			case 'G':
+				if (count <= 3) {
+					/* Abbreviated */
+				} else if (count == 4) {
+					/* Full */
+				} else if (count >= 5) {
+					/* Narrow */
+					count = 5;
+				}
+				break;
+
+
+			/* Year */
+			case 'y':
+				if (count == 2) {
+					/* Two-digits only */
+					g_string_append(string, purple_utf8_strftime("%y", tm));
+				} else {
+					/* Zero-padding */
+					char *tmp = g_strdup_printf("%%0%dY", count);
+					g_string_append(string, purple_utf8_strftime(tmp, tm));
+					g_free(tmp);
+				}
+				break;
+
+			/* Year (in "Week of Year" based calendars) */
+			case 'Y':
+				if (count == 2) {
+					/* Two-digits only */
+				} else {
+					/* Zero-padding */
+				}
+				break;
+
+			/* Extended Year */
+			case 'u':
+				break;
+
+			/* Cyclic Year Name */
+			case 'U':
+				if (count <= 3) {
+					/* Abbreviated */
+				} else if (count == 4) {
+					/* Full */
+				} else if (count >= 5) {
+					/* Narrow */
+					count = 5;
+				}
+				break;
+
+
+			/* Quarter */
+			case 'Q':
+				if (count <= 2) {
+					/* Numerical */
+				} else if (count == 3) {
+					/* Abbreviation */
+				} else if (count >= 4) {
+					/* Full */
+					count = 4;
+				}
+				break;
+
+			/* Stand-alone Quarter */
+			case 'q':
+				if (count <= 2) {
+					/* Numerical */
+				} else if (count == 3) {
+					/* Abbreviation */
+				} else if (count >= 4) {
+					/* Full */
+					count = 4;
+				}
+				break;
+
+			/* Month */
+			case 'M':
+				if (count <= 2) {
+					/* Numerical */
+					g_string_append(string, purple_utf8_strftime("%m", tm));
+				} else if (count == 3) {
+					/* Abbreviation */
+					g_string_append(string, purple_utf8_strftime("%b", tm));
+				} else if (count == 4) {
+					/* Full */
+					g_string_append(string, purple_utf8_strftime("%B", tm));
+				} else if (count >= 5) {
+					g_string_append_len(string, purple_utf8_strftime("%b", tm), 1);
+					count = 5;
+				}
+				break;
+
+			/* Stand-alone Month */
+			case 'L':
+				if (count <= 2) {
+					/* Numerical */
+					g_string_append(string, purple_utf8_strftime("%m", tm));
+				} else if (count == 3) {
+					/* Abbreviation */
+					g_string_append(string, purple_utf8_strftime("%b", tm));
+				} else if (count == 4) {
+					/* Full */
+					g_string_append(string, purple_utf8_strftime("%B", tm));
+				} else if (count >= 5) {
+					g_string_append_len(string, purple_utf8_strftime("%b", tm), 1);
+					count = 5;
+				}
+				break;
+
+			/* Ignored */
+			case 'l':
+				break;
+
+
+			/* Week of Year */
+			case 'w':
+				g_string_append(string, purple_utf8_strftime("%W", tm));
+				count = MIN(count, 2);
+				break;
+
+			/* Week of Month */
+			case 'W':
+				count = 1;
+				break;
+
+
+			/* Day of Month */
+			case 'd':
+				g_string_append(string, purple_utf8_strftime("%d", tm));
+				count = MIN(count, 2);
+				break;
+
+			/* Day of Year */
+			case 'D':
+				g_string_append(string, purple_utf8_strftime("%j", tm));
+				count = MIN(count, 3);
+				break;
+
+			/* Day of Year in Month */
+			case 'F':
+				count = 1;
+				break;
+
+			/* Modified Julian Day */
+			case 'g':
+				break;
+
+
+			/* Day of Week */
+			case 'E':
+				if (count <= 3) {
+					/* Short */
+					g_string_append(string, purple_utf8_strftime("%a", tm));
+				} else if (count == 4) {
+					/* Full */
+					g_string_append(string, purple_utf8_strftime("%A", tm));
+				} else if (count >= 5) {
+					/* Narrow */
+					g_string_append_len(string, purple_utf8_strftime("%a", tm), 1);
+					count = 5;
+				}
+				break;
+
+			/* Local Day of Week */
+			case 'e':
+				if (count <= 2) {
+					/* Numeric */
+					g_string_append(string, purple_utf8_strftime("%u", tm));
+				} else if (count == 3) {
+					/* Short */
+					g_string_append(string, purple_utf8_strftime("%a", tm));
+				} else if (count == 4) {
+					/* Full */
+					g_string_append(string, purple_utf8_strftime("%A", tm));
+				} else if (count >= 5) {
+					/* Narrow */
+					g_string_append_len(string, purple_utf8_strftime("%a", tm), 1);
+					count = 5;
+				}
+				break;
+
+			/* Stand-alone Local Day of Week */
+			case 'c':
+				if (count <= 2) {
+					/* Numeric */
+					g_string_append(string, purple_utf8_strftime("%u", tm));
+					count = 1;
+				} else if (count == 3) {
+					/* Short */
+					g_string_append(string, purple_utf8_strftime("%a", tm));
+				} else if (count == 4) {
+					/* Full */
+					g_string_append(string, purple_utf8_strftime("%A", tm));
+				} else if (count >= 5) {
+					/* Narrow */
+					g_string_append_len(string, purple_utf8_strftime("%a", tm), 1);
+					count = 5;
+				}
+				break;
+
+
+			/* AM/PM */
+			case 'a':
+				g_string_append(string, purple_utf8_strftime("%p", tm));
+				break;
+
+
+			/* Hour (1-12) */
+			case 'h':
+				if (count == 1) {
+					/* No padding */
+					g_string_append(string, purple_utf8_strftime("%I", tm));
+				} else if (count >= 2) {
+					/* Zero-padded */
+					g_string_append(string, purple_utf8_strftime("%I", tm));
+					count = 2;
+				}
+				break;
+
+			/* Hour (0-23) */
+			case 'H':
+				if (count == 1) {
+					/* No padding */
+					g_string_append(string, purple_utf8_strftime("%H", tm));
+				} else if (count >= 2) {
+					/* Zero-padded */
+					g_string_append(string, purple_utf8_strftime("%H", tm));
+					count = 2;
+				}
+				break;
+
+			/* Hour (0-11) */
+			case 'K':
+				if (count == 1) {
+					/* No padding */
+				} else if (count >= 2) {
+					/* Zero-padded */
+					count = 2;
+				}
+				break;
+
+			/* Hour (1-24) */
+			case 'k':
+				if (count == 1) {
+					/* No padding */
+				} else if (count >= 2) {
+					/* Zero-padded */
+					count = 2;
+				}
+				break;
+
+			/* Hour (hHkK by locale) */
+			case 'j':
+				break;
+
+
+			/* Minute */
+			case 'm':
+				g_string_append(string, purple_utf8_strftime("%M", tm));
+				count = MIN(count, 2);
+				break;
+
+
+			/* Second */
+			case 's':
+				g_string_append(string, purple_utf8_strftime("%S", tm));
+				count = MIN(count, 2);
+				break;
+
+			/* Fractional Sub-second */
+			case 'S':
+				break;
+
+			/* Millisecond */
+			case 'A':
+				break;
+
+
+			/* Time Zone (specific non-location format) */
+			case 'z':
+				if (count <= 3) {
+					/* Short */
+				} else if (count >= 4) {
+					/* Full */
+					count = 4;
+				}
+				break;
+
+			/* Time Zone */
+			case 'Z':
+				if (count <= 3) {
+					/* RFC822 */
+					g_string_append(string, purple_utf8_strftime("%z", tm));
+				} else if (count == 4) {
+					/* Localized GMT */
+				} else if (count >= 5) {
+					/* ISO8601 */
+					g_string_append(string, purple_utf8_strftime("%z", tm));
+					count = 5;
+				}
+				break;
+
+			/* Time Zone (generic non-location format) */
+			case 'v':
+				if (count <= 3) {
+					/* Short */
+					g_string_append(string, purple_utf8_strftime("%Z", tm));
+					count = 1;
+				} else if (count >= 4) {
+					/* Long */
+					g_string_append(string, purple_utf8_strftime("%Z", tm));
+					count = 4;
+				}
+				break;
+
+			/* Time Zone */
+			case 'V':
+				if (count <= 3) {
+					/* Same as z */
+					count = 1;
+				} else if (count >= 4) {
+					/* Generic Location Format) */
+					g_string_append(string, purple_utf8_strftime("%Z", tm));
+					count = 4;
+				}
+				break;
+
+
+			default:
+				g_string_append_len(string, format + i, count);
+				break;
+		}
+
+		i += count;
+	}
+
+	return g_string_free(string, FALSE);
 }
 
 /**************************************************************************
@@ -1340,7 +1839,7 @@ purple_markup_extract_info_field(const char *str, int len, PurpleNotifyUserInfo 
 				g_string_append_len(dest, p, q - p);
 		}
 
-		purple_notify_user_info_add_pair(user_info, display_name, dest->str);
+		purple_notify_user_info_add_pair_html(user_info, display_name, dest->str);
 		g_string_free(dest, TRUE);
 
 		return TRUE;
@@ -1487,7 +1986,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 							if (cdata && url &&
 									(!g_string_equal(cdata, url) && (g_ascii_strncasecmp(url->str, "mailto:", 7) != 0 ||
 									                                 g_utf8_collate(url->str + 7, cdata->str) != 0)))
-								g_string_append_printf(plain, " <%s>", g_strstrip(url->str));
+									g_string_append_printf(plain, " <%s>", g_strstrip(purple_unescape_html(url->str)));
 							if (cdata) {
 								g_string_free(cdata, TRUE);
 								cdata = NULL;
@@ -1618,33 +2117,39 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 				if (!g_ascii_strncasecmp(c, "<img", 4) && (*(c+4) == '>' || *(c+4) == ' ')) {
 					const char *p = c + 4;
 					GString *src = NULL, *alt = NULL;
+#define ESCAPE(from, to)        \
+		CHECK_QUOTE(from); \
+		while (VALID_CHAR(from)) { \
+			int len; \
+			if ((*from == '&') && (purple_markup_unescape_entity(from, &len) == NULL)) \
+				to = g_string_append(to, "&amp;"); \
+			else if (*from == '\'') \
+				to = g_string_append(to, "&apos;"); \
+			else \
+				to = g_string_append_c(to, *from); \
+			from++; \
+		}
+
 					while (*p && *p != '>') {
 						if (!g_ascii_strncasecmp(p, "src=", 4)) {
 							const char *q = p + 4;
 							if (src)
 								g_string_free(src, TRUE);
 							src = g_string_new("");
-							CHECK_QUOTE(q);
-							while (VALID_CHAR(q)) {
-								src = g_string_append_c(src, *q);
-								q++;
-							}
+							ESCAPE(q, src);
 							p = q;
 						} else if (!g_ascii_strncasecmp(p, "alt=", 4)) {
 							const char *q = p + 4;
 							if (alt)
 								g_string_free(alt, TRUE);
 							alt = g_string_new("");
-							CHECK_QUOTE(q);
-							while (VALID_CHAR(q)) {
-								alt = g_string_append_c(alt, *q);
-								q++;
-							}
+							ESCAPE(q, alt);
 							p = q;
 						} else {
 							p++;
 						}
 					}
+#undef ESCAPE
 					if ((c = strchr(p, '>')) != NULL)
 						c++;
 					else
@@ -1654,7 +2159,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						g_string_append_printf(xhtml, "<img src='%s' alt='%s' />", g_strstrip(src->str), alt ? alt->str : "");
 					if(alt) {
 						if(plain)
-							plain = g_string_append(plain, alt->str);
+							plain = g_string_append(plain, purple_unescape_html(alt->str));
 						if(!src && xhtml)
 							xhtml = g_string_append(xhtml, alt->str);
 						g_string_free(alt, TRUE);
@@ -1679,6 +2184,8 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 								int len;
 								if ((*q == '&') && (purple_markup_unescape_entity(q, &len) == NULL))
 									url = g_string_append(url, "&amp;");
+								else if (*q == '"')
+									url = g_string_append(url, "&quot;");
 								else
 									url = g_string_append_c(url, *q);
 								q++;
@@ -1700,6 +2207,18 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						g_string_append_printf(xhtml, "<a href=\"%s\">", url ? g_strstrip(url->str) : "");
 					continue;
 				}
+#define ESCAPE(from, to)        \
+		CHECK_QUOTE(from); \
+		while (VALID_CHAR(from)) { \
+			int len; \
+			if ((*from == '&') && (purple_markup_unescape_entity(from, &len) == NULL)) \
+				to = g_string_append(to, "&amp;"); \
+			else if (*from == '\'') \
+				to = g_string_append_c(to, '\"'); \
+			else \
+				to = g_string_append_c(to, *from); \
+			from++; \
+		}
 				if(!g_ascii_strncasecmp(c, "<font", 5) && (*(c+5) == '>' || *(c+5) == ' ')) {
 					const char *p = c + 5;
 					GString *style = g_string_new("");
@@ -1708,33 +2227,21 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						if (!g_ascii_strncasecmp(p, "back=", 5)) {
 							const char *q = p + 5;
 							GString *color = g_string_new("");
-							CHECK_QUOTE(q);
-							while (VALID_CHAR(q)) {
-								color = g_string_append_c(color, *q);
-								q++;
-							}
+							ESCAPE(q, color);
 							g_string_append_printf(style, "background: %s; ", color->str);
 							g_string_free(color, TRUE);
 							p = q;
 						} else if (!g_ascii_strncasecmp(p, "color=", 6)) {
 							const char *q = p + 6;
 							GString *color = g_string_new("");
-							CHECK_QUOTE(q);
-							while (VALID_CHAR(q)) {
-								color = g_string_append_c(color, *q);
-								q++;
-							}
+							ESCAPE(q, color);
 							g_string_append_printf(style, "color: %s; ", color->str);
 							g_string_free(color, TRUE);
 							p = q;
 						} else if (!g_ascii_strncasecmp(p, "face=", 5)) {
 							const char *q = p + 5;
 							GString *face = g_string_new("");
-							CHECK_QUOTE(q);
-							while (VALID_CHAR(q)) {
-								face = g_string_append_c(face, *q);
-								q++;
-							}
+							ESCAPE(q, face);
 							g_string_append_printf(style, "font-family: %s; ", g_strstrip(face->str));
 							g_string_free(face, TRUE);
 							p = q;
@@ -1789,6 +2296,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 					g_string_free(style, TRUE);
 					continue;
 				}
+#undef ESCAPE
 				if (!g_ascii_strncasecmp(c, "<body ", 6)) {
 					const char *p = c + 6;
 					gboolean did_something = FALSE;
@@ -2284,7 +2792,7 @@ purple_markup_linkify(const char *text)
 					url_buf = g_string_free(gurl_buf, FALSE);
 
 					/* strip off trailing periods */
-					if (strlen(url_buf) > 0) {
+					if (*url_buf) {
 						for (d = url_buf + strlen(url_buf) - 1; *d == '.'; d--, t--)
 							*d = '\0';
 					}
@@ -2509,7 +3017,7 @@ purple_home_dir(void)
 #ifndef _WIN32
 	return g_get_home_dir();
 #else
-	return wpurple_data_dir();
+	return wpurple_home_dir();
 #endif
 }
 
@@ -2554,7 +3062,7 @@ purple_util_write_data_to_file(const char *filename, const char *data, gssize si
 
 	g_return_val_if_fail(user_dir != NULL, FALSE);
 
-	purple_debug_info("util", "Writing file %s to directory %s\n",
+	purple_debug_misc("util", "Writing file %s to directory %s",
 					filename, user_dir);
 
 	/* Ensure the user directory exists */
@@ -2581,13 +3089,13 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 {
 	gchar *filename_temp;
 	FILE *file;
-	size_t real_size, byteswritten;
-	struct stat st;
+	gsize real_size, byteswritten;
+	GStatBuf st;
 #ifndef HAVE_FILENO
 	int fd;
 #endif
 
-	purple_debug_info("util", "Writing file %s\n",
+	purple_debug_misc("util", "Writing file %s",
 					filename_full);
 
 	g_return_val_if_fail((size >= -1), FALSE);
@@ -2706,12 +3214,9 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	 * It causes TOCTOU coverity warning (against g_rename below),
 	 * but it's not a threat for us.
 	 */
-	if ((g_stat(filename_temp, &st) == -1) || ((gsize)st.st_size != real_size))
-	{
+	if ((g_stat(filename_temp, &st) == -1) || ((gsize)st.st_size != real_size)) {
 		purple_debug_error("util", "Error writing data to file %s: "
-				   "Incomplete file written; is your disk "
-				   "full?\n",
-				   filename_temp);
+			"couldn't g_stat file", filename_temp);
 		g_free(filename_temp);
 		return FALSE;
 	}
@@ -2730,10 +3235,10 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 	return TRUE;
 }
 
-xmlnode *
+PurpleXmlNode *
 purple_util_read_xml_from_file(const char *filename, const char *description)
 {
-	return xmlnode_from_file(purple_user_dir(), filename, description, "util");
+	return purple_xmlnode_from_file(purple_user_dir(), filename, description, "util");
 }
 
 /*
@@ -2785,72 +3290,6 @@ purple_mkstemp(char **fpath, gboolean binary)
 	return fp;
 }
 
-const char *
-purple_util_get_image_extension(gconstpointer data, size_t len)
-{
-	g_return_val_if_fail(data != NULL, NULL);
-	g_return_val_if_fail(len   > 0,    NULL);
-
-	if (len >= 4)
-	{
-		if (!strncmp((char *)data, "GIF8", 4))
-			return "gif";
-		else if (!strncmp((char *)data, "\xff\xd8\xff", 3)) /* 4th may be e0 through ef */
-			return "jpg";
-		else if (!strncmp((char *)data, "\x89PNG", 4))
-			return "png";
-		else if (!strncmp((char *)data, "MM", 2) ||
-				 !strncmp((char *)data, "II", 2))
-			return "tif";
-		else if (!strncmp((char *)data, "BM", 2))
-			return "bmp";
-	}
-
-	return "icon";
-}
-
-/*
- * We thought about using non-cryptographic hashes like CRC32 here.
- * They would be faster, but we think using something more secure is
- * important, so that it is more difficult for someone to maliciously
- * replace one buddy's icon with something else.
- */
-char *
-purple_util_get_image_checksum(gconstpointer image_data, size_t image_len)
-{
-	PurpleCipherContext *context;
-	gchar digest[41];
-
-	context = purple_cipher_context_new_by_name("sha1", NULL);
-	if (context == NULL)
-	{
-		purple_debug_error("util", "Could not find sha1 cipher\n");
-		g_return_val_if_reached(NULL);
-	}
-
-	/* Hash the image data */
-	purple_cipher_context_append(context, image_data, image_len);
-	if (!purple_cipher_context_digest_to_str(context, sizeof(digest), digest, NULL))
-	{
-		purple_debug_error("util", "Failed to get SHA-1 digest.\n");
-		g_return_val_if_reached(NULL);
-	}
-	purple_cipher_context_destroy(context);
-
-	return g_strdup(digest);
-}
-
-char *
-purple_util_get_image_filename(gconstpointer image_data, size_t image_len)
-{
-	/* Return the filename */
-	char *checksum = purple_util_get_image_checksum(image_data, image_len);
-	char *filename = g_strdup_printf("%s.%s", checksum,
-	                       purple_util_get_image_extension(image_data, image_len));
-	g_free(checksum);
-	return filename;
-}
-
 gboolean
 purple_program_is_valid(const char *program)
 {
@@ -2892,10 +3331,16 @@ gboolean
 purple_running_gnome(void)
 {
 #ifndef _WIN32
-	gchar *tmp = g_find_program_in_path("gnome-open");
+	gchar *tmp = g_find_program_in_path("gvfs-open");
 
-	if (tmp == NULL)
-		return FALSE;
+	if (tmp == NULL) {
+		tmp = g_find_program_in_path("gnome-open");
+
+		if (tmp == NULL) {
+			return FALSE;
+		}
+	}
+
 	g_free(tmp);
 
 	tmp = (gchar *)g_getenv("GNOME_DESKTOP_SESSION_ID");
@@ -3010,7 +3455,7 @@ purple_socket_speaks_ipv4(int fd)
 	case AF_INET6:
 	{
 		int val = 0;
-		guint len = sizeof(val);
+		socklen_t len = sizeof(val);
 
 		if (getsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &val, &len) != 0)
 			return FALSE;
@@ -3042,15 +3487,11 @@ purple_normalize(const PurpleAccount *account, const char *str)
 
 	if (account != NULL)
 	{
-		PurplePlugin *prpl = purple_find_prpl(purple_account_get_protocol_id(account));
+		PurpleProtocol *protocol =
+				purple_protocols_find(purple_account_get_protocol_id(account));
 
-		if (prpl != NULL)
-		{
-			PurplePluginProtocolInfo *prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(prpl);
-
-			if (prpl_info->normalize)
-				ret = prpl_info->normalize(account, str);
-		}
+		if (protocol != NULL)
+			ret = purple_protocol_client_iface_normalize(protocol, account, str);
 	}
 
 	if (ret == NULL)
@@ -3069,7 +3510,7 @@ purple_normalize(const PurpleAccount *account, const char *str)
 
 /*
  * You probably don't want to call this directly, it is
- * mainly for use as a PRPL callback function.  See the
+ * mainly for use as a protocol callback function.  See the
  * comments in util.h.
  */
 const char *
@@ -3087,6 +3528,26 @@ purple_normalize_nocase(const PurpleAccount *account, const char *str)
 	g_free(tmp1);
 
 	return buf;
+}
+
+gboolean
+purple_validate(const PurpleProtocol *protocol, const char *str)
+{
+	const char *normalized;
+
+	g_return_val_if_fail(protocol != NULL, FALSE);
+	g_return_val_if_fail(str != NULL, FALSE);
+
+	if (str[0] == '\0')
+		return FALSE;
+
+	if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT_IFACE, normalize))
+		return TRUE;
+
+	normalized = purple_protocol_client_iface_normalize(PURPLE_PROTOCOL(protocol),
+			NULL, str);
+
+	return (NULL != normalized);
 }
 
 gchar *
@@ -3127,6 +3588,15 @@ gboolean
 purple_str_has_prefix(const char *s, const char *p)
 {
 	return g_str_has_prefix(s, p);
+}
+
+gboolean
+purple_str_has_caseprefix(const gchar *s, const gchar *p)
+{
+	g_return_val_if_fail(s, FALSE);
+	g_return_val_if_fail(p, FALSE);
+
+	return (g_ascii_strncasecmp(s, p, strlen(p)) == 0);
 }
 
 gboolean
@@ -3300,13 +3770,13 @@ purple_strcasestr(const char *haystack, const char *needle)
 }
 
 char *
-purple_str_size_to_units(size_t size)
+purple_str_size_to_units(goffset size)
 {
-	static const char * const size_str[] = { "bytes", "KiB", "MiB", "GiB" };
+	static const char * const size_str[] = { "bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" };
 	float size_mag;
-	int size_index = 0;
+	gsize size_index = 0;
 
-	if (size == (size_t)-1) {
+	if (size == -1) {
 		return g_strdup(_("Calculating..."));
 	}
 	else if (size == 0) {
@@ -3315,15 +3785,15 @@ purple_str_size_to_units(size_t size)
 	else {
 		size_mag = (float)size;
 
-		while ((size_index < 3) && (size_mag > 1024)) {
+		while ((size_index < G_N_ELEMENTS(size_str) - 1) && (size_mag > 1024)) {
 			size_mag /= 1024;
 			size_index++;
 		}
 
 		if (size_index == 0) {
-			return g_strdup_printf("%" G_GSIZE_FORMAT " %s", size, size_str[size_index]);
+			return g_strdup_printf("%" G_GOFFSET_FORMAT " %s", size, _(size_str[size_index]));
 		} else {
-			return g_strdup_printf("%.2f %s", size_mag, size_str[size_index]);
+			return g_strdup_printf("%.2f %s", size_mag, _(size_str[size_index]));
 		}
 	}
 }
@@ -3344,7 +3814,7 @@ purple_str_seconds_to_string(guint secs)
 	hrs  = secs / (60 * 60);
 	secs = secs % (60 * 60);
 	mins = secs / 60;
-	secs = secs % 60;
+	/* secs = secs % 60; */
 
 	if (days > 0)
 	{
@@ -3395,13 +3865,48 @@ purple_str_binary_to_ascii(const unsigned char *binary, guint len)
 
 	for (i = 0; i < len; i++)
 		if (binary[i] < 32 || binary[i] > 126)
-			g_string_append_printf(ret, "\\x%02hhx", binary[i]);
+			g_string_append_printf(ret, "\\x%02x", binary[i] & 0xFF);
 		else if (binary[i] == '\\')
 			g_string_append(ret, "\\\\");
 		else
 			g_string_append_c(ret, binary[i]);
 
 	return g_string_free(ret, FALSE);
+}
+
+size_t
+purple_utf16_size(const gunichar2 *str)
+{
+	/* UTF16 cannot contain two consequent NUL bytes starting at even
+	 * position - see Unicode standards Chapter 3.9 D91 or RFC2781
+	 * Chapter 2.
+	 */
+
+	size_t i = 0;
+
+	g_return_val_if_fail(str != NULL, 0);
+
+	while (str[i++]);
+
+	return i * sizeof(gunichar2);
+}
+
+void
+purple_str_wipe(gchar *str)
+{
+	if (str == NULL)
+		return;
+	memset(str, 0, strlen(str));
+	g_free(str);
+}
+
+void
+purple_utf16_wipe(gunichar2 *str)
+{
+	if (str == NULL)
+		return;
+	memset(str, 0, purple_utf16_size(str));
+	g_free(str);
 }
 
 /**************************************************************************
@@ -3415,7 +3920,7 @@ void purple_got_protocol_handler_uri(const char *uri)
 	const char *tmp, *param_string;
 	char *cmd;
 	GHashTable *params = NULL;
-	int len;
+	gsize len;
 	if (!(tmp = strchr(uri, ':')) || tmp == uri) {
 		purple_debug_error("util", "Malformed protocol handler message - missing protocol.\n");
 		return;
@@ -3448,8 +3953,12 @@ void purple_got_protocol_handler_uri(const char *uri)
 		while (*tmp || *pairstart) {
 			if (*tmp == delimiter || !(*tmp)) {
 				/* If there is no explicit value */
-				if (keyend == NULL)
+				if (keyend == NULL) {
 					keyend = tmp;
+				}
+				/* without these brackets, clang won't
+				 * recognize tmp as a non-NULL
+				 */
 
 				if (keyend && keyend != pairstart) {
 					char *p;
@@ -3477,826 +3986,6 @@ void purple_got_protocol_handler_uri(const char *uri)
 	g_free(cmd);
 	if (params)
 		g_hash_table_destroy(params);
-}
-
-/*
- * TODO: Should probably add a "gboolean *ret_ishttps" parameter that
- *       is set to TRUE if this URL is https, otherwise it is set to
- *       FALSE.  But that change will break the API.
- *
- *       This is important for Yahoo! web messenger login.  They now
- *       force https login, and if you access the web messenger login
- *       page via http then it redirects you to the https version, but
- *       purple_util_fetch_url() ignores the "https" and attempts to
- *       fetch the URL via http again, which gets redirected again.
- */
-gboolean
-purple_url_parse(const char *url, char **ret_host, int *ret_port,
-			   char **ret_path, char **ret_user, char **ret_passwd)
-{
-	gboolean is_https = FALSE;
-	const char * scan_info;
-	char port_str[6];
-	int f;
-	const char *at, *slash;
-	const char *turl;
-	char host[256], path[256], user[256], passwd[256];
-	int port = 0;
-	/* hyphen at end includes it in control set */
-
-#define ADDR_CTRL "A-Za-z0-9.-"
-#define PORT_CTRL "0-9"
-#define PAGE_CTRL "A-Za-z0-9.~_/:*!@&%%?=+^-"
-#define USER_CTRL "A-Za-z0-9.~_/*!&%%?=+^-"
-#define PASSWD_CTRL "A-Za-z0-9.~_/*!&%%?=+^-"
-
-	g_return_val_if_fail(url != NULL, FALSE);
-
-	if ((turl = purple_strcasestr(url, "http://")) != NULL)
-	{
-		turl += 7;
-		url = turl;
-	}
-	else if ((turl = purple_strcasestr(url, "https://")) != NULL)
-	{
-		is_https = TRUE;
-		turl += 8;
-		url = turl;
-	}
-
-	/* parse out authentication information if supplied */
-	/* Only care about @ char BEFORE the first / */
-	at = strchr(url, '@');
-	slash = strchr(url, '/');
-	f = 0;
-	if (at && (!slash || at < slash)) {
-		scan_info = "%255[" USER_CTRL "]:%255[" PASSWD_CTRL "]^@";
-		f = sscanf(url, scan_info, user, passwd);
-
-		if (f == 1) {
-			/* No passwd, possibly just username supplied */
-			scan_info = "%255[" USER_CTRL "]^@";
-			f = sscanf(url, scan_info, user);
-		}
-
-		url = at+1; /* move pointer after the @ char */
-	}
-
-	if (f < 1) {
-		*user = '\0';
-		*passwd = '\0';
-	} else if (f == 1)
-		*passwd = '\0';
-
-	scan_info = "%255[" ADDR_CTRL "]:%5[" PORT_CTRL "]/%255[" PAGE_CTRL "]";
-	f = sscanf(url, scan_info, host, port_str, path);
-
-	if (f == 1)
-	{
-		scan_info = "%255[" ADDR_CTRL "]/%255[" PAGE_CTRL "]";
-		f = sscanf(url, scan_info, host, path);
-		/* Use the default port */
-		if (is_https)
-			g_snprintf(port_str, sizeof(port_str), "443");
-		else
-			g_snprintf(port_str, sizeof(port_str), "80");
-	}
-
-	if (f == 0)
-		*host = '\0';
-
-	if (f <= 1)
-		*path = '\0';
-
-	if (sscanf(port_str, "%d", &port) != 1)
-		purple_debug_error("util", "Error parsing URL port from %s\n", url);
-
-	if (ret_host != NULL) *ret_host = g_strdup(host);
-	if (ret_port != NULL) *ret_port = port;
-	if (ret_path != NULL) *ret_path = g_strdup(path);
-	if (ret_user != NULL) *ret_user = g_strdup(user);
-	if (ret_passwd != NULL) *ret_passwd = g_strdup(passwd);
-
-	return ((*host != '\0') ? TRUE : FALSE);
-
-#undef ADDR_CTRL
-#undef PORT_CTRL
-#undef PAGE_CTRL
-#undef USER_CTRL
-#undef PASSWD_CTRL
-}
-
-/**
- * The arguments to this function are similar to printf.
- */
-static void
-purple_util_fetch_url_error(PurpleUtilFetchUrlData *gfud, const char *format, ...)
-{
-	gchar *error_message;
-	va_list args;
-
-	va_start(args, format);
-	error_message = g_strdup_vprintf(format, args);
-	va_end(args);
-
-	gfud->callback(gfud, gfud->user_data, NULL, 0, error_message);
-	g_free(error_message);
-	purple_util_fetch_url_cancel(gfud);
-}
-
-static void url_fetch_connect_cb(gpointer url_data, gint source, const gchar *error_message);
-static void ssl_url_fetch_connect_cb(gpointer data, PurpleSslConnection *ssl_connection, PurpleInputCondition cond);
-static void ssl_url_fetch_error_cb(PurpleSslConnection *ssl_connection, PurpleSslErrorType error, gpointer data);
-
-static gboolean
-parse_redirect(const char *data, gsize data_len,
-			   PurpleUtilFetchUrlData *gfud)
-{
-	gchar *s;
-	gchar *new_url, *temp_url, *end;
-	gboolean full;
-	int len;
-
-	if ((s = g_strstr_len(data, data_len, "\nLocation: ")) == NULL)
-		/* We're not being redirected */
-		return FALSE;
-
-	s += strlen("Location: ");
-	end = strchr(s, '\r');
-
-	/* Just in case :) */
-	if (end == NULL)
-		end = strchr(s, '\n');
-
-	if (end == NULL)
-		return FALSE;
-
-	len = end - s;
-
-	new_url = g_malloc(len + 1);
-	strncpy(new_url, s, len);
-	new_url[len] = '\0';
-
-	full = gfud->full;
-
-	if (*new_url == '/' || g_strstr_len(new_url, len, "://") == NULL)
-	{
-		temp_url = new_url;
-
-		new_url = g_strdup_printf("%s:%d%s", gfud->website.address,
-								  gfud->website.port, temp_url);
-
-		g_free(temp_url);
-
-		full = FALSE;
-	}
-
-	purple_debug_info("util", "Redirecting to %s\n", new_url);
-
-	gfud->num_times_redirected++;
-	if (gfud->num_times_redirected >= 5)
-	{
-		purple_util_fetch_url_error(gfud,
-				_("Could not open %s: Redirected too many times"),
-				gfud->url);
-		g_free(new_url);
-		return TRUE;
-	}
-
-	/*
-	 * Try again, with this new location.  This code is somewhat
-	 * ugly, but we need to reuse the gfud because whoever called
-	 * us is holding a reference to it.
-	 */
-	g_free(gfud->url);
-	gfud->url = new_url;
-	gfud->full = full;
-	g_free(gfud->request);
-	gfud->request = NULL;
-
-	if (gfud->is_ssl) {
-		gfud->is_ssl = FALSE;
-		purple_ssl_close(gfud->ssl_connection);
-		gfud->ssl_connection = NULL;
-	} else {
-		purple_input_remove(gfud->inpa);
-		gfud->inpa = 0;
-		close(gfud->fd);
-		gfud->fd = -1;
-	}
-	gfud->request_written = 0;
-	gfud->len = 0;
-	gfud->data_len = 0;
-
-	g_free(gfud->website.user);
-	g_free(gfud->website.passwd);
-	g_free(gfud->website.address);
-	g_free(gfud->website.page);
-	purple_url_parse(new_url, &gfud->website.address, &gfud->website.port,
-				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
-
-	if (purple_strcasestr(new_url, "https://") != NULL) {
-		gfud->is_ssl = TRUE;
-		gfud->ssl_connection = purple_ssl_connect(gfud->account,
-				gfud->website.address, gfud->website.port,
-				ssl_url_fetch_connect_cb, ssl_url_fetch_error_cb, gfud);
-	} else {
-		gfud->connect_data = purple_proxy_connect(NULL, gfud->account,
-				gfud->website.address, gfud->website.port,
-				url_fetch_connect_cb, gfud);
-	}
-
-	if (gfud->ssl_connection == NULL && gfud->connect_data == NULL)
-	{
-		purple_util_fetch_url_error(gfud, _("Unable to connect to %s"),
-				gfud->website.address);
-	}
-
-	return TRUE;
-}
-
-/* find the starting point of the content for the specified header and make
- * sure that the content is safe to pass to sscanf */
-static const char *
-find_header_content(const char *data, gsize data_len, const char *header)
-{
-	const char *p = NULL;
-
-	gsize header_len = strlen(header);
-
-	if (data_len > header_len) {
-		/* Check if the first header matches (data won't start with a \n") */
-		if (header[0] == '\n')
-			p = (g_ascii_strncasecmp(data, header + 1, header_len - 1) == 0) ? data : NULL;
-		if (!p)
-			p = purple_strcasestr_len(data, data_len, header, header_len);
-		if (p)
-			p += header_len;
-	}
-
-	/* If we can find the header at all, try to sscanf it.
-	 * Response headers should end with at least \r\n, so sscanf is safe,
-	 * if we make sure that there is indeed a \n in our header.
-	 */
-	if (p && g_strstr_len(p, data_len - (p - data), "\n")) {
-		return p;
-	}
-
-	return NULL;
-}
-
-static gsize
-parse_content_len(const char *data, gsize data_len)
-{
-	gsize content_len = 0;
-	const char *p = NULL;
-
-	p = find_header_content(data, data_len, "\nContent-Length: ");
-	if (p) {
-		if (sscanf(p, "%" G_GSIZE_FORMAT, &content_len) != 1) {
-			purple_debug_warning("util", "invalid number format\n");
-			content_len = 0;
-		}
-		purple_debug_misc("util", "parsed %" G_GSIZE_FORMAT "\n", content_len);
-	}
-
-	return content_len;
-}
-
-static gboolean
-content_is_chunked(const char *data, gsize data_len)
-{
-	const char *p = find_header_content(data, data_len, "\nTransfer-Encoding: ");
-	if (p && g_ascii_strncasecmp(p, "chunked", 7) == 0)
-		return TRUE;
-
-	return FALSE;
-}
-
-/* Process in-place */
-static void
-process_chunked_data(char *data, gsize *len)
-{
-	gsize sz;
-	gsize newlen = 0;
-	char *p = data;
-	char *s = data;
-
-	while (*s) {
-		/* Read the size of this chunk */
-		if (sscanf(s, "%" G_GSIZE_MODIFIER "x", &sz) != 1)
-		{
-			purple_debug_error("util", "Error processing chunked data: "
-					"Expected data length, found: %s\n", s);
-			break;
-		}
-		if (sz == 0) {
-			/* We've reached the last chunk */
-			/*
-			 * TODO: The spec allows "footers" to follow the last chunk.
-			 *       If there is more data after this line then we should
-			 *       treat it like a header.
-			 */
-			break;
-		}
-
-		/* Advance to the start of the data */
-		s = strstr(s, "\r\n");
-		if (s == NULL)
-			break;
-		s += 2;
-
-		if (sz > MAX_HTTP_CHUNK_SIZE || s + sz > data + *len) {
-			purple_debug_error("util", "Error processing chunked data: "
-					"Chunk size %" G_GSIZE_FORMAT " bytes was longer "
-					"than the data remaining in the buffer (%"
-					G_GSIZE_FORMAT " bytes)\n", sz, data + *len - s);
-			break;
-		}
-
-		/* Move all data overtop of the chunk length that we read in earlier */
-		g_memmove(p, s, sz);
-		p += sz;
-		s += sz;
-		newlen += sz;
-		if (*s == '\0' || (*s != '\r' && *(s + 1) != '\n')) {
-			purple_debug_error("util", "Error processing chunked data: "
-					"Expected \\r\\n, found: %s\n", s);
-			break;
-		}
-		s += 2;
-	}
-
-	/* NULL terminate the data */
-	*p = 0;
-
-	*len = newlen;
-}
-
-static void
-url_fetch_recv_cb(gpointer url_data, gint source, PurpleInputCondition cond)
-{
-	PurpleUtilFetchUrlData *gfud = url_data;
-	int len;
-	char buf[4096];
-	char *data_cursor;
-	gboolean got_eof = FALSE;
-
-	if (!gfud->is_ssl && source < 0) {
-		g_warn_if_reached();
-		len = -1;
-		errno = EINVAL;
-	}
-
-	/*
-	 * Read data in a loop until we can't read any more!  This is a
-	 * little confusing because we read using a different function
-	 * depending on whether the socket is ssl or cleartext.
-	 */
-	while ((gfud->is_ssl && ((len = purple_ssl_read(gfud->ssl_connection, buf, sizeof(buf))) > 0)) ||
-		(!gfud->is_ssl && source >= 0 && (len = read(source, buf, sizeof(buf))) > 0))
-	{
-		if((gfud->len + len) > gfud->max_len) {
-			purple_util_fetch_url_error(gfud, _("Error reading from %s: response too long (%d bytes limit)"),
-						    gfud->website.address, gfud->max_len);
-			return;
-		}
-
-		/* If we've filled up our buffer, make it bigger */
-		if((gfud->len + len) >= gfud->data_len) {
-			while((gfud->len + len) >= gfud->data_len)
-				gfud->data_len += sizeof(buf);
-
-			gfud->webdata = g_realloc(gfud->webdata, gfud->data_len);
-		}
-
-		data_cursor = gfud->webdata + gfud->len;
-
-		gfud->len += len;
-
-		memcpy(data_cursor, buf, len);
-
-		gfud->webdata[gfud->len] = '\0';
-
-		if(!gfud->got_headers) {
-			char *end_of_headers;
-
-			/* See if we've reached the end of the headers yet */
-			end_of_headers = strstr(gfud->webdata, "\r\n\r\n");
-			if (end_of_headers) {
-				guint header_len = (end_of_headers + 4 - gfud->webdata);
-				gsize content_len;
-
-				purple_debug_misc("util", "Response headers: '%.*s'\n",
-					header_len, gfud->webdata);
-
-				/* See if we can find a redirect. */
-				if(parse_redirect(gfud->webdata, header_len, gfud))
-					return;
-
-				gfud->got_headers = TRUE;
-
-				/* No redirect. See if we can find a content length. */
-				content_len = parse_content_len(gfud->webdata, header_len);
-				gfud->chunked = content_is_chunked(gfud->webdata, header_len);
-
-				if (content_len == 0) {
-					/* We'll stick with an initial 8192 */
-					content_len = 8192;
-				} else {
-					gfud->has_explicit_data_len = TRUE;
-					if (content_len > gfud->max_len) {
-						purple_debug_error("util",
-								"Overriding explicit Content-Length of %" G_GSIZE_FORMAT " with max of %" G_GSSIZE_FORMAT "\n",
-								content_len, gfud->max_len);
-						content_len = gfud->max_len;
-					}
-				}
-
-
-				/* If we're returning the headers too, we don't need to clean them out */
-				if (gfud->include_headers) {
-					char *new_data;
-					gfud->data_len = content_len + header_len;
-					new_data = g_try_realloc(gfud->webdata, gfud->data_len);
-					if (new_data == NULL) {
-						purple_debug_error("util",
-								"Failed to allocate %" G_GSIZE_FORMAT " bytes: %s\n",
-								content_len, g_strerror(errno));
-						purple_util_fetch_url_error(gfud,
-								_("Unable to allocate enough memory to hold "
-								  "the contents from %s.  The web server may "
-								  "be trying something malicious."),
-								gfud->website.address);
-
-						return;
-					}
-					gfud->webdata = new_data;
-				} else {
-					char *new_data;
-					gsize body_len = gfud->len - header_len;
-
-					content_len = MAX(content_len, body_len);
-
-					new_data = g_try_malloc(content_len);
-					if (new_data == NULL) {
-						purple_debug_error("util",
-								"Failed to allocate %" G_GSIZE_FORMAT " bytes: %s\n",
-								content_len, g_strerror(errno));
-						purple_util_fetch_url_error(gfud,
-								_("Unable to allocate enough memory to hold "
-								  "the contents from %s.  The web server may "
-								  "be trying something malicious."),
-								gfud->website.address);
-
-						return;
-					}
-
-					/* We may have read part of the body when reading the headers, don't lose it */
-					if (body_len > 0) {
-						memcpy(new_data, end_of_headers + 4, body_len);
-					}
-
-					/* Out with the old... */
-					g_free(gfud->webdata);
-
-					/* In with the new. */
-					gfud->len = body_len;
-					gfud->data_len = content_len;
-					gfud->webdata = new_data;
-				}
-			}
-		}
-
-		if(gfud->has_explicit_data_len && gfud->len >= gfud->data_len) {
-			got_eof = TRUE;
-			break;
-		}
-	}
-
-	if(len < 0) {
-		if(errno == EAGAIN) {
-			return;
-		} else {
-			purple_util_fetch_url_error(gfud, _("Error reading from %s: %s"),
-					gfud->website.address, g_strerror(errno));
-			return;
-		}
-	}
-
-	if((len == 0) || got_eof) {
-		gfud->webdata = g_realloc(gfud->webdata, gfud->len + 1);
-		gfud->webdata[gfud->len] = '\0';
-
-		if (!gfud->include_headers && gfud->chunked) {
-			/* Process only if we don't want the headers. */
-			process_chunked_data(gfud->webdata, &gfud->len);
-		}
-
-		gfud->callback(gfud, gfud->user_data, gfud->webdata, gfud->len, NULL);
-		purple_util_fetch_url_cancel(gfud);
-	}
-}
-
-static void ssl_url_fetch_recv_cb(gpointer data, PurpleSslConnection *ssl_connection, PurpleInputCondition cond)
-{
-	url_fetch_recv_cb(data, -1, cond);
-}
-
-/**
- * This function is called when the socket is available to be written
- * to.
- *
- * @param source The file descriptor that can be written to.  This can
- *        be an http connection or it can be the SSL connection of an
- *        https request.  So be careful what you use it for!  If it's
- *        an https request then use purple_ssl_write() instead of
- *        writing to it directly.
- */
-static void
-url_fetch_send_cb(gpointer data, gint source, PurpleInputCondition cond)
-{
-	PurpleUtilFetchUrlData *gfud;
-	int len, total_len;
-
-	gfud = data;
-
-	if (gfud->request == NULL) {
-
-		PurpleProxyInfo *gpi = purple_proxy_get_setup(gfud->account);
-		GString *request_str = g_string_new(NULL);
-
-		g_string_append_printf(request_str, "GET %s%s HTTP/%s\r\n"
-						    "Connection: close\r\n",
-			(gfud->full ? "" : "/"),
-			(gfud->full ? (gfud->url ? gfud->url : "") : (gfud->website.page ? gfud->website.page : "")),
-			(gfud->http11 ? "1.1" : "1.0"));
-
-		if (gfud->user_agent)
-			g_string_append_printf(request_str, "User-Agent: %s\r\n", gfud->user_agent);
-
-		/* Host header is not forbidden in HTTP/1.0 requests, and HTTP/1.1
-		 * clients must know how to handle the "chunked" transfer encoding.
-		 * Purple doesn't know how to handle "chunked", so should always send
-		 * the Host header regardless, to get around some observed problems
-		 */
-		g_string_append_printf(request_str, "Accept: */*\r\n"
-						    "Host: %s\r\n",
-			(gfud->website.address ? gfud->website.address : ""));
-
-		if (purple_proxy_info_get_username(gpi) != NULL
-				&& (purple_proxy_info_get_type(gpi) == PURPLE_PROXY_USE_ENVVAR
-					|| purple_proxy_info_get_type(gpi) == PURPLE_PROXY_HTTP)) {
-			/* This chunk of code was copied from proxy.c http_start_connect_tunneling()
-			 * This is really a temporary hack - we need a more complete proxy handling solution,
-			 * so I didn't think it was worthwhile to refactor for reuse
-			 */
-			char *t1, *t2, *ntlm_type1;
-			char hostname[256];
-			int ret;
-
-			ret = gethostname(hostname, sizeof(hostname));
-			hostname[sizeof(hostname) - 1] = '\0';
-			if (ret < 0 || hostname[0] == '\0') {
-				purple_debug_warning("util", "proxy - gethostname() failed -- is your hostname set?");
-				strcpy(hostname, "localhost");
-			}
-
-			t1 = g_strdup_printf("%s:%s",
-				purple_proxy_info_get_username(gpi),
-				purple_proxy_info_get_password(gpi) ?
-					purple_proxy_info_get_password(gpi) : "");
-			t2 = purple_base64_encode((const guchar *)t1, strlen(t1));
-			g_free(t1);
-
-			ntlm_type1 = purple_ntlm_gen_type1(hostname, "");
-
-			g_string_append_printf(request_str,
-				"Proxy-Authorization: Basic %s\r\n"
-				"Proxy-Authorization: NTLM %s\r\n"
-				"Proxy-Connection: Keep-Alive\r\n",
-				t2, ntlm_type1);
-			g_free(ntlm_type1);
-			g_free(t2);
-		}
-
-		g_string_append(request_str, "\r\n");
-
-		gfud->request = g_string_free(request_str, FALSE);
-		gfud->request_len = strlen(gfud->request);
-	}
-
-	if(purple_debug_is_unsafe())
-		purple_debug_misc("util", "Request: '%.*s'\n", (int) gfud->request_len, gfud->request);
-	else
-		purple_debug_misc("util", "request constructed\n");
-
-	total_len = gfud->request_len;
-
-	if (gfud->is_ssl)
-		len = purple_ssl_write(gfud->ssl_connection, gfud->request + gfud->request_written,
-				total_len - gfud->request_written);
-	else
-		len = write(gfud->fd, gfud->request + gfud->request_written,
-				total_len - gfud->request_written);
-
-	if (len < 0 && errno == EAGAIN)
-		return;
-	else if (len < 0) {
-		purple_util_fetch_url_error(gfud, _("Error writing to %s: %s"),
-				gfud->website.address, g_strerror(errno));
-		return;
-	}
-	gfud->request_written += len;
-
-	if (gfud->request_written < (gsize)total_len)
-		return;
-
-	/* We're done writing our request, now start reading the response */
-	if (gfud->is_ssl) {
-		purple_input_remove(gfud->inpa);
-		gfud->inpa = 0;
-		purple_ssl_input_add(gfud->ssl_connection, ssl_url_fetch_recv_cb, gfud);
-	} else {
-		purple_input_remove(gfud->inpa);
-		gfud->inpa = purple_input_add(gfud->fd, PURPLE_INPUT_READ, url_fetch_recv_cb,
-			gfud);
-	}
-}
-
-static void
-url_fetch_connect_cb(gpointer url_data, gint source, const gchar *error_message)
-{
-	PurpleUtilFetchUrlData *gfud;
-
-	gfud = url_data;
-	gfud->connect_data = NULL;
-
-	if (source == -1)
-	{
-		purple_util_fetch_url_error(gfud, _("Unable to connect to %s: %s"),
-				(gfud->website.address ? gfud->website.address : ""), error_message);
-		return;
-	}
-
-	gfud->fd = source;
-
-	gfud->inpa = purple_input_add(source, PURPLE_INPUT_WRITE,
-								url_fetch_send_cb, gfud);
-	url_fetch_send_cb(gfud, source, PURPLE_INPUT_WRITE);
-}
-
-static void ssl_url_fetch_connect_cb(gpointer data, PurpleSslConnection *ssl_connection, PurpleInputCondition cond)
-{
-	PurpleUtilFetchUrlData *gfud;
-
-	gfud = data;
-
-	gfud->inpa = purple_input_add(ssl_connection->fd, PURPLE_INPUT_WRITE,
-			url_fetch_send_cb, gfud);
-	url_fetch_send_cb(gfud, ssl_connection->fd, PURPLE_INPUT_WRITE);
-}
-
-static void ssl_url_fetch_error_cb(PurpleSslConnection *ssl_connection, PurpleSslErrorType error, gpointer data)
-{
-	PurpleUtilFetchUrlData *gfud;
-
-	gfud = data;
-	gfud->ssl_connection = NULL;
-
-	purple_util_fetch_url_error(gfud, _("Unable to connect to %s: %s"),
-			(gfud->website.address ? gfud->website.address : ""),
-	purple_ssl_strerror(error));
-}
-
-PurpleUtilFetchUrlData *
-purple_util_fetch_url_request(const char *url, gboolean full,
-		const char *user_agent, gboolean http11,
-		const char *request, gboolean include_headers,
-		PurpleUtilFetchUrlCallback callback, void *user_data)
-{
-	return purple_util_fetch_url_request_len_with_account(NULL, url, full,
-					     user_agent, http11,
-					     request, include_headers, -1,
-					     callback, user_data);
-}
-
-PurpleUtilFetchUrlData *
-purple_util_fetch_url_request_len(const char *url, gboolean full,
-		const char *user_agent, gboolean http11,
-		const char *request, gboolean include_headers, gssize max_len,
-		PurpleUtilFetchUrlCallback callback, void *user_data)
-{
-	return purple_util_fetch_url_request_len_with_account(NULL, url, full,
-			user_agent, http11, request, include_headers, max_len, callback,
-			user_data);
-}
-
-PurpleUtilFetchUrlData *
-purple_util_fetch_url_request_len_with_account(PurpleAccount *account,
-		const char *url, gboolean full,	const char *user_agent, gboolean http11,
-		const char *request, gboolean include_headers, gssize max_len,
-		PurpleUtilFetchUrlCallback callback, void *user_data)
-{
-	return purple_util_fetch_url_request_data_len_with_account(account, url, full,
-		user_agent, http11, request, request ? strlen (request) : 0, include_headers, max_len, callback,
-			user_data);
-}
-
-PurpleUtilFetchUrlData *
-purple_util_fetch_url_request_data_len_with_account(PurpleAccount *account,
-		const char *url, gboolean full,	const char *user_agent, gboolean http11,
-		const char *request, gsize request_len, gboolean include_headers, gssize max_len,
-		PurpleUtilFetchUrlCallback callback, void *user_data)
-{
-	PurpleUtilFetchUrlData *gfud;
-
-	g_return_val_if_fail(url      != NULL, NULL);
-	g_return_val_if_fail(callback != NULL, NULL);
-
-	if(purple_debug_is_unsafe())
-		purple_debug_info("util",
-				 "requested to fetch (%s), full=%d, user_agent=(%s), http11=%d\n",
-				 url, full, user_agent?user_agent:"(null)", http11);
-	else
-		purple_debug_info("util", "requesting to fetch a URL\n");
-
-	gfud = g_new0(PurpleUtilFetchUrlData, 1);
-
-	gfud->callback = callback;
-	gfud->user_data  = user_data;
-	gfud->url = g_strdup(url);
-	gfud->user_agent = g_strdup(user_agent);
-	gfud->http11 = http11;
-	gfud->full = full;
-	gfud->request = request_len ? g_memdup(request, request_len) : NULL;
-	gfud->request_len = request_len;
-	gfud->include_headers = include_headers;
-	gfud->fd = -1;
-	if (max_len <= 0) {
-		max_len = DEFAULT_MAX_HTTP_DOWNLOAD;
-		purple_debug_error("util", "Defaulting max download from %s to %" G_GSSIZE_FORMAT "\n", url, max_len);
-	}
-	gfud->max_len = (gsize) max_len;
-	gfud->account = account;
-
-	purple_url_parse(url, &gfud->website.address, &gfud->website.port,
-				   &gfud->website.page, &gfud->website.user, &gfud->website.passwd);
-
-	if (purple_strcasestr(url, "https://") != NULL) {
-		if (!purple_ssl_is_supported()) {
-			purple_util_fetch_url_error(gfud,
-					_("Unable to connect to %s: %s"),
-					gfud->website.address,
-					_("Server requires TLS/SSL, but no TLS/SSL support was found."));
-			return NULL;
-		}
-
-		gfud->is_ssl = TRUE;
-		gfud->ssl_connection = purple_ssl_connect(account,
-				gfud->website.address, gfud->website.port,
-				ssl_url_fetch_connect_cb, ssl_url_fetch_error_cb, gfud);
-	} else {
-		gfud->connect_data = purple_proxy_connect(NULL, account,
-				gfud->website.address, gfud->website.port,
-				url_fetch_connect_cb, gfud);
-	}
-
-	if (gfud->ssl_connection == NULL && gfud->connect_data == NULL)
-	{
-		purple_util_fetch_url_error(gfud, _("Unable to connect to %s"),
-				gfud->website.address);
-		return NULL;
-	}
-
-	return gfud;
-}
-
-void
-purple_util_fetch_url_cancel(PurpleUtilFetchUrlData *gfud)
-{
-	if (gfud->ssl_connection != NULL)
-		purple_ssl_close(gfud->ssl_connection);
-
-	if (gfud->connect_data != NULL)
-		purple_proxy_connect_cancel(gfud->connect_data);
-
-	if (gfud->inpa > 0)
-		purple_input_remove(gfud->inpa);
-
-	if (gfud->fd >= 0)
-		close(gfud->fd);
-
-	g_free(gfud->website.user);
-	g_free(gfud->website.passwd);
-	g_free(gfud->website.address);
-	g_free(gfud->website.page);
-	g_free(gfud->url);
-	g_free(gfud->user_agent);
-	g_free(gfud->request);
-	g_free(gfud->webdata);
-
-	g_free(gfud);
 }
 
 const char *
@@ -4500,11 +4189,10 @@ purple_ipv6_address_is_valid(const gchar *ip)
 	return (double_colon && chunks < 8) || (!double_colon && chunks == 8);
 }
 
-/* TODO 3.0.0: Add ipv6 check, too */
 gboolean
 purple_ip_address_is_valid(const char *ip)
 {
-	return purple_ipv4_address_is_valid(ip);
+	return (purple_ipv4_address_is_valid(ip) || purple_ipv6_address_is_valid(ip));
 }
 
 /* Stolen from gnome_uri_list_extract_uris */
@@ -4695,14 +4383,10 @@ purple_utf8_strip_unprintables(const gchar *str)
  * This function is copied from g_strerror() but changed to use
  * gai_strerror().
  */
-G_CONST_RETURN gchar *
+const gchar *
 purple_gai_strerror(gint errnum)
 {
-#if GLIB_CHECK_VERSION(2, 32, 0)
 	static GPrivate msg_private = G_PRIVATE_INIT(g_free);
-#else
-	static GStaticPrivate msg_private = G_STATIC_PRIVATE_INIT;
-#endif
 	char *msg;
 	int saved_errno = errno;
 
@@ -4730,19 +4414,12 @@ purple_gai_strerror(gint errnum)
 		}
 	}
 
-#if GLIB_CHECK_VERSION(2, 32, 0)
 	msg = g_private_get(&msg_private);
-#else
-	msg = g_static_private_get(&msg_private);
-#endif
+
 	if (!msg)
 	{
 		msg = g_new(gchar, 64);
-#if GLIB_CHECK_VERSION(2, 32, 0)
 		g_private_set(&msg_private, msg);
-#else
-		g_static_private_set(&msg_private, msg, g_free);
-#endif
 	}
 
 	sprintf(msg, "unknown error (%d)", errnum);
@@ -4867,7 +4544,7 @@ purple_utf8_has_word(const char *haystack, const char *needle)
 
 	while ((p = strstr(start, pin)) != NULL) {
 		prev_char = g_utf8_find_prev_char(hay, p);
-		before = (gunichar)-2;
+		before = -2;
 		if (prev_char) {
 			before = g_utf8_get_char(prev_char);
 		}
@@ -4890,27 +4567,6 @@ purple_utf8_has_word(const char *haystack, const char *needle)
 	g_free(hay);
 
 	return ret;
-}
-
-void
-purple_print_utf8_to_console(FILE *filestream, char *message)
-{
-	gchar *message_conv;
-	GError *error = NULL;
-
-	/* Try to convert 'message' to user's locale */
-	message_conv = g_locale_from_utf8(message, -1, NULL, NULL, &error);
-	if (message_conv != NULL) {
-		fputs(message_conv, filestream);
-		g_free(message_conv);
-	}
-	else
-	{
-		/* use 'message' as a fallback */
-		g_warning("%s\n", error->message);
-		g_error_free(error);
-		fputs(message, filestream);
-	}
 }
 
 gboolean purple_message_meify(char *message, gssize len)
@@ -5057,22 +4713,21 @@ purple_escape_filename(const char *str)
 	return buf;
 }
 
-const char *_purple_oscar_convert(const char *act, const char *protocol)
+gchar * purple_escape_js(const gchar *str)
 {
-	if (act && purple_strequal(protocol, "prpl-oscar")) {
-		int i;
-		for (i = 0; act[i] != '\0'; i++)
-			if (!isdigit(act[i]))
-				return "prpl-aim";
-		return "prpl-icq";
-	}
-	return protocol;
+	gchar *escaped;
+
+	json_node_set_string(escape_js_node, str);
+	json_generator_set_root(escape_js_gen, escape_js_node);
+	escaped = json_generator_to_data(escape_js_gen, NULL);
+	json_node_set_boolean(escape_js_node, FALSE);
+
+	return escaped;
 }
 
 void purple_restore_default_signal_handlers(void)
 {
 #ifndef _WIN32
-#ifdef HAVE_SIGNAL_H
 	signal(SIGHUP, SIG_DFL);	/* 1: terminal line hangup */
 	signal(SIGINT, SIG_DFL);	/* 2: interrupt program */
 	signal(SIGQUIT, SIG_DFL);	/* 3: quit program */
@@ -5098,7 +4753,6 @@ void purple_restore_default_signal_handlers(void)
 	signal(SIGCHLD, SIG_DFL);	/* 20: child status has changed */
 	signal(SIGXCPU, SIG_DFL);	/* 24: exceeded CPU time limit */
 	signal(SIGXFSZ, SIG_DFL);	/* 25: exceeded file size limit */
-#endif /* HAVE_SIGNAL_H */
 #endif /* !_WIN32 */
 }
 
@@ -5190,3 +4844,299 @@ purple_uuid_random(void)
 			b,
 			(tmp >> 16) & 0xFFFF, g_random_int());
 }
+
+void purple_callback_set_zero(gpointer data)
+{
+	gpointer *ptr = data;
+
+	g_return_if_fail(ptr != NULL);
+
+	*ptr = NULL;
+}
+
+GValue *
+purple_value_new(GType type)
+{
+	GValue *ret;
+
+	g_return_val_if_fail(type != G_TYPE_NONE, NULL);
+
+	ret = g_new0(GValue, 1);
+	g_value_init(ret, type);
+
+	return ret;
+}
+
+GValue *
+purple_value_dup(GValue *value)
+{
+	GValue *ret;
+
+	g_return_val_if_fail(value != NULL, NULL);
+
+	ret = g_new0(GValue, 1);
+	g_value_init(ret, G_VALUE_TYPE(value));
+	g_value_copy(value, ret);
+
+	return ret;
+}
+
+void
+purple_value_free(GValue *value)
+{
+	g_return_if_fail(value != NULL);
+
+	g_value_unset(value);
+	g_free(value);
+}
+
+gchar *purple_http_digest_calculate_session_key(
+		const gchar *algorithm,
+		const gchar *username,
+		const gchar *realm,
+		const gchar *password,
+		const gchar *nonce,
+		const gchar *client_nonce)
+{
+	GChecksum *hasher;
+	gchar *hash;
+
+	g_return_val_if_fail(username != NULL, NULL);
+	g_return_val_if_fail(realm    != NULL, NULL);
+	g_return_val_if_fail(password != NULL, NULL);
+	g_return_val_if_fail(nonce    != NULL, NULL);
+
+	/* Check for a supported algorithm. */
+	g_return_val_if_fail(algorithm == NULL ||
+						 *algorithm == '\0' ||
+						 g_ascii_strcasecmp(algorithm, "MD5") ||
+						 g_ascii_strcasecmp(algorithm, "MD5-sess"), NULL);
+
+	hasher = g_checksum_new(G_CHECKSUM_MD5);
+	g_return_val_if_fail(hasher != NULL, NULL);
+
+	g_checksum_update(hasher, (guchar *)username, -1);
+	g_checksum_update(hasher, (guchar *)":", -1);
+	g_checksum_update(hasher, (guchar *)realm, -1);
+	g_checksum_update(hasher, (guchar *)":", -1);
+	g_checksum_update(hasher, (guchar *)password, -1);
+
+	if (algorithm != NULL && !g_ascii_strcasecmp(algorithm, "MD5-sess"))
+	{
+		guchar digest[16];
+		gsize digest_len = 16;
+
+		if (client_nonce == NULL)
+		{
+			g_object_unref(hasher);
+			purple_debug_error("hash", "Required client_nonce missing for MD5-sess digest calculation.\n");
+			return NULL;
+		}
+
+		g_checksum_get_digest(hasher, digest, &digest_len);
+
+		g_checksum_reset(hasher);
+		g_checksum_update(hasher, digest, sizeof(digest));
+		g_checksum_update(hasher, (guchar *)":", -1);
+		g_checksum_update(hasher, (guchar *)nonce, -1);
+		g_checksum_update(hasher, (guchar *)":", -1);
+		g_checksum_update(hasher, (guchar *)client_nonce, -1);
+	}
+
+	hash = g_strdup(g_checksum_get_string(hasher));
+	g_checksum_free(hasher);
+
+	return hash;
+}
+
+gchar *purple_http_digest_calculate_response(
+		const gchar *algorithm,
+		const gchar *method,
+		const gchar *digest_uri,
+		const gchar *qop,
+		const gchar *entity,
+		const gchar *nonce,
+		const gchar *nonce_count,
+		const gchar *client_nonce,
+		const gchar *session_key)
+{
+	GChecksum *hash;
+	gchar *hash2;
+
+	g_return_val_if_fail(method      != NULL, NULL);
+	g_return_val_if_fail(digest_uri  != NULL, NULL);
+	g_return_val_if_fail(nonce       != NULL, NULL);
+	g_return_val_if_fail(session_key != NULL, NULL);
+
+	/* Check for a supported algorithm. */
+	g_return_val_if_fail(algorithm == NULL ||
+						 *algorithm == '\0' ||
+						 g_ascii_strcasecmp(algorithm, "MD5") ||
+						 g_ascii_strcasecmp(algorithm, "MD5-sess"), NULL);
+
+	/* Check for a supported "quality of protection". */
+	g_return_val_if_fail(qop == NULL ||
+						 *qop == '\0' ||
+						 g_ascii_strcasecmp(qop, "auth") ||
+						 g_ascii_strcasecmp(qop, "auth-int"), NULL);
+
+	hash = g_checksum_new(G_CHECKSUM_MD5);
+	g_return_val_if_fail(hash != NULL, NULL);
+
+	g_checksum_update(hash, (guchar *)method, -1);
+	g_checksum_update(hash, (guchar *)":", -1);
+	g_checksum_update(hash, (guchar *)digest_uri, -1);
+
+	if (qop != NULL && !g_ascii_strcasecmp(qop, "auth-int"))
+	{
+		gchar *entity_hash;
+
+		if (entity == NULL)
+		{
+			g_checksum_free(hash);
+			purple_debug_error("hash", "Required entity missing for auth-int digest calculation.\n");
+			return NULL;
+		}
+
+		entity_hash = g_compute_checksum_for_string(G_CHECKSUM_MD5,
+				entity, -1);
+
+		if (entity_hash == NULL) {
+			g_checksum_free(hash);
+			g_return_val_if_reached(NULL);
+		}
+
+		g_checksum_update(hash, (guchar *)":", -1);
+		g_checksum_update(hash, (guchar *)entity_hash, -1);
+		g_free(entity_hash);
+	}
+
+	hash2 = g_strdup(g_checksum_get_string(hash));
+	g_checksum_reset(hash);
+
+	if (hash2 == NULL) {
+		g_checksum_free(hash);
+		g_return_val_if_reached(NULL);
+	}
+
+	g_checksum_update(hash, (guchar *)session_key, -1);
+	g_checksum_update(hash, (guchar *)":", -1);
+	g_checksum_update(hash, (guchar *)nonce, -1);
+	g_checksum_update(hash, (guchar *)":", -1);
+
+	if (qop != NULL && *qop != '\0')
+	{
+		if (nonce_count == NULL)
+		{
+			g_checksum_free(hash);
+			purple_debug_error("hash", "Required nonce_count missing for digest calculation.\n");
+			return NULL;
+		}
+
+		if (client_nonce == NULL)
+		{
+			g_checksum_free(hash);
+			purple_debug_error("hash", "Required client_nonce missing for digest calculation.\n");
+			return NULL;
+		}
+
+		g_checksum_update(hash, (guchar *)nonce_count, -1);
+		g_checksum_update(hash, (guchar *)":", -1);
+		g_checksum_update(hash, (guchar *)client_nonce, -1);
+		g_checksum_update(hash, (guchar *)":", -1);
+
+		g_checksum_update(hash, (guchar *)qop, -1);
+
+		g_checksum_update(hash, (guchar *)":", -1);
+	}
+
+	g_checksum_update(hash, (guchar *)hash2, -1);
+	g_free(hash2);
+
+	hash2 = g_strdup(g_checksum_get_string(hash));
+	g_checksum_free(hash);
+
+	return hash2;
+}
+
+int
+_purple_fstat(int fd, GStatBuf *st)
+{
+	int ret;
+
+	g_return_val_if_fail(st != NULL, -1);
+
+#ifdef _WIN32
+	ret = _fstat(fd, st);
+#else
+	ret = fstat(fd, st);
+#endif
+
+	return ret;
+}
+
+#if 0
+
+/* Temporarily removed - re-add this when you need ini file support. */
+
+#define PURPLE_KEY_FILE_DEFAULT_MAX_SIZE 102400
+#define PURPLE_KEY_FILE_HARD_LIMIT 10485760
+
+gboolean
+purple_key_file_load_from_ini(GKeyFile *key_file, const gchar *file,
+	gsize max_size)
+{
+	const gchar *header = "[default]\n\n";
+	int header_len = strlen(header);
+	int fd;
+	GStatBuf st;
+	gsize file_size, buff_size;
+	gchar *buff;
+	GError *error = NULL;
+
+	g_return_val_if_fail(key_file != NULL, FALSE);
+	g_return_val_if_fail(file != NULL, FALSE);
+	g_return_val_if_fail(max_size < PURPLE_KEY_FILE_HARD_LIMIT, FALSE);
+
+	if (max_size == 0)
+		max_size = PURPLE_KEY_FILE_DEFAULT_MAX_SIZE;
+
+	fd = g_open(file, O_RDONLY, S_IREAD);
+	if (fd == -1) {
+		purple_debug_error("util", "Failed to read ini file %s", file);
+		return FALSE;
+	}
+
+	if (_purple_fstat(fd, &st) != 0) {
+		purple_debug_error("util", "Failed to fstat ini file %s", file);
+		return FALSE;
+	}
+
+	file_size = (st.st_size > max_size) ? max_size : st.st_size;
+
+	buff_size = file_size + header_len;
+	buff = g_new(gchar, buff_size);
+	memcpy(buff, header, header_len);
+	if (read(fd, buff + header_len, file_size) != (gssize)file_size) {
+		purple_debug_error("util",
+			"Failed to read whole ini file %s", file);
+		g_close(fd, NULL);
+		free(buff);
+		return FALSE;
+	}
+	g_close(fd, NULL);
+
+	g_key_file_load_from_data(key_file, buff, buff_size,
+		G_KEY_FILE_NONE, &error);
+
+	free(buff);
+
+	if (error) {
+		purple_debug_error("util", "Failed parsing ini file %s: %s",
+			file, error->message);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+#endif

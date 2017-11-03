@@ -1,8 +1,3 @@
-/**
- * @file gtklog.c GTK+ Log viewer
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -35,9 +30,11 @@
 
 #include "pidginstock.h"
 #include "gtkblist.h"
-#include "gtkimhtml.h"
 #include "gtklog.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
+
+#include "gtk3compat.h"
 
 static GHashTable *log_viewers = NULL;
 static void populate_log_tree(PidginLogViewer *lv);
@@ -111,12 +108,14 @@ static void select_first_log(PidginLogViewer *lv)
 	gtk_tree_path_free(path);
 }
 
-static const char *log_get_date(PurpleLog *log)
+static gchar *log_get_date(PurpleLog *log)
 {
-	if (log->tm)
-		return purple_date_format_full(log->tm);
-	else
-		return purple_date_format_full(localtime(&log->time));
+	GDateTime *dt;
+	gchar *ret;
+	dt = g_date_time_to_local(log->time);
+	ret = g_date_time_format(dt, "%c");
+	g_date_time_unref(dt);
+	return ret;
 }
 
 static void search_cb(GtkWidget *button, PidginLogViewer *lv)
@@ -130,7 +129,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 		populate_log_tree(lv);
 		g_free(lv->search);
 		lv->search = NULL;
-		gtk_imhtml_search_clear(GTK_IMHTML(lv->imhtml));
+		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(lv->web_view));
 		select_first_log(lv);
 		return;
 	}
@@ -138,7 +137,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 	if (lv->search != NULL && purple_strequal(lv->search, search_term))
 	{
 		/* Searching for the same term acts as "Find Next" */
-		gtk_imhtml_search_find(GTK_IMHTML(lv->imhtml), lv->search);
+		webkit_web_view_search_text(WEBKIT_WEB_VIEW(lv->web_view), lv->search, FALSE, TRUE, TRUE);
 		return;
 	}
 
@@ -148,18 +147,20 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 	lv->search = g_strdup(search_term);
 
 	gtk_tree_store_clear(lv->treestore);
-	gtk_imhtml_clear(GTK_IMHTML(lv->imhtml));
+	webkit_web_view_open(WEBKIT_WEB_VIEW(lv->web_view), "about:blank"); /* clear the view */
 
 	for (logs = lv->logs; logs != NULL; logs = logs->next) {
 		char *read = purple_log_read((PurpleLog*)logs->data, NULL);
 		if (read && *read && purple_strcasestr(read, search_term)) {
 			GtkTreeIter iter;
 			PurpleLog *log = logs->data;
+			gchar *log_date = log_get_date(log);
 
 			gtk_tree_store_append (lv->treestore, &iter, NULL);
 			gtk_tree_store_set(lv->treestore, &iter,
-					   0, log_get_date(log),
+					   0, log_date,
 					   1, log, -1);
+			g_free(log_date);
 		}
 		g_free(read);
 	}
@@ -243,7 +244,7 @@ static void delete_log_cb(gpointer *data)
 	if (!purple_log_delete((PurpleLog *)data[2]))
 	{
 		purple_notify_error(NULL, NULL, _("Log Deletion Failed"),
-		                  _("Check permissions and try again."));
+		                  _("Check permissions and try again."), NULL);
 	}
 	else
 	{
@@ -273,14 +274,15 @@ static void log_delete_log_cb(GtkWidget *menuitem, gpointer *data)
 {
 	PidginLogViewer *lv = data[0];
 	PurpleLog *log = data[1];
-	const char *time = log_get_date(log);
+	GtkTreeIter *iter = data[2];
+	gchar *time = log_get_date(log);
 	const char *name;
 	char *tmp;
 	gpointer *data2;
 
 	if (log->type == PURPLE_LOG_IM)
 	{
-		PurpleBuddy *buddy = purple_find_buddy(log->account, log->name);
+		PurpleBuddy *buddy = purple_blist_find_buddy(log->account, log->name);
 		if (buddy != NULL)
 			name = purple_buddy_get_contact_alias(buddy);
 		else
@@ -305,8 +307,11 @@ static void log_delete_log_cb(GtkWidget *menuitem, gpointer *data)
 		tmp = g_strdup_printf(_("Are you sure you want to permanently delete the system log "
 		                        "which started at %s?"), time);
 	}
-	else
+	else {
+		g_free(time);
+		g_free(iter);
 		g_return_if_reached();
+	}
 
 	/* The only way to free data in all cases is to tie it to the menuitem with
 	 * g_object_set_data_full().  But, since we need to get some data down to
@@ -315,68 +320,73 @@ static void log_delete_log_cb(GtkWidget *menuitem, gpointer *data)
 	 * either way. */
 	data2 = g_new(gpointer, 3);
 	data2[0] = lv->treestore;
-	data2[1] = data[3]; /* iter */
+	data2[1] = iter;
 	data2[2] = log;
 	purple_request_action(lv, NULL, _("Delete Log?"), tmp, 0,
-						NULL, NULL, NULL,
+						NULL,
 						data2, 2,
 						_("Delete"), delete_log_cb,
 						_("Cancel"), delete_log_cleanup_cb);
+	g_free(time);
 	g_free(tmp);
 }
 
-static void log_show_popup_menu(GtkWidget *treeview, GdkEventButton *event, gpointer *data)
+static GtkWidget *
+log_create_popup_menu(GtkWidget *treeview, PidginLogViewer *lv, GtkTreeIter *iter)
 {
-	GtkWidget *menu = gtk_menu_new();
-	GtkWidget *menuitem = gtk_menu_item_new_with_label(_("Delete Log..."));
+	GValue val;
+	PurpleLog *log;
+	GtkWidget *menu;
+	GtkWidget *menuitem;
 
-	if (!purple_log_is_deletable((PurpleLog *)data[1]))
+	val.g_type = 0;
+	gtk_tree_model_get_value(GTK_TREE_MODEL(lv->treestore), iter, 1, &val);
+	log = g_value_get_pointer(&val);
+	if (log == NULL) {
+		g_free(iter);
+		return NULL;
+	}
+
+	menu = gtk_menu_new();
+	menuitem = gtk_menu_item_new_with_label(_("Delete Log..."));
+
+	if (purple_log_is_deletable(log)) {
+		gpointer *data = g_new(gpointer, 3);
+		data[0] = lv;
+		data[1] = log;
+		data[2] = iter;
+
+		g_signal_connect(menuitem, "activate", G_CALLBACK(log_delete_log_cb), data);
+		g_object_set_data_full(G_OBJECT(menuitem), "log-viewer-data", data, g_free);
+	} else {
 		gtk_widget_set_sensitive(menuitem, FALSE);
-
-	g_signal_connect(menuitem, "activate", G_CALLBACK(log_delete_log_cb), data);
-	g_object_set_data_full(G_OBJECT(menuitem), "log-viewer-data", data, g_free);
+	}
 	gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 	gtk_widget_show_all(menu);
 
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, (GtkMenuPositionFunc)data[2], NULL,
-	               (event != NULL) ? event->button : 0,
-	               gdk_event_get_time((GdkEvent *)event));
+	return menu;
 }
 
 static gboolean log_button_press_cb(GtkWidget *treeview, GdkEventButton *event, PidginLogViewer *lv)
 {
-	if (event->type == GDK_BUTTON_PRESS && event->button == 3)
-	{
+	if (gdk_event_triggers_context_menu((GdkEvent *)event)) {
 		GtkTreePath *path;
 		GtkTreeIter *iter;
-		GValue val;
-		PurpleLog *log;
-		gpointer *data;
+		GtkWidget *menu;
 
 		if (!gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), event->x, event->y, &path, NULL, NULL, NULL))
 			return FALSE;
 		iter = g_new(GtkTreeIter, 1);
 		gtk_tree_model_get_iter(GTK_TREE_MODEL(lv->treestore), iter, path);
-		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(lv->treestore), iter, 1, &val);
 		gtk_tree_path_free(path);
 
-		log = g_value_get_pointer(&val);
-
-		if (log == NULL)
-		{
-			g_free(iter);
+		menu = log_create_popup_menu(treeview, lv, iter);
+		if (menu) {
+			gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
+			return TRUE;
+		} else {
 			return FALSE;
 		}
-
-		data = g_new(gpointer, 4);
-		data[0] = lv;
-		data[1] = log;
-		data[2] = NULL;
-		data[3] = iter;
-
-		log_show_popup_menu(treeview, event, data);
-		return TRUE;
 	}
 
 	return FALSE;
@@ -386,41 +396,30 @@ static gboolean log_popup_menu_cb(GtkWidget *treeview, PidginLogViewer *lv)
 {
 	GtkTreeSelection *sel;
 	GtkTreeIter *iter;
-	GValue val;
-	PurpleLog *log;
-	gpointer *data;
+	GtkWidget *menu;
 
 	iter = g_new(GtkTreeIter, 1);
 	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(lv->treeview));
-	if (!gtk_tree_selection_get_selected(sel, NULL, iter))
-	{
+	if (!gtk_tree_selection_get_selected(sel, NULL, iter)) {
+		g_free(iter);
 		return FALSE;
 	}
 
-	val.g_type = 0;
-	gtk_tree_model_get_value(GTK_TREE_MODEL(lv->treestore),
-	                         iter, NODE_COLUMN, &val);
-
-	log = g_value_get_pointer(&val);
-
-	if (log == NULL)
+	menu = log_create_popup_menu(treeview, lv, iter);
+	if (menu) {
+		pidgin_menu_popup_at_treeview_selection(menu, treeview);
+		return TRUE;
+	} else {
 		return FALSE;
-
-	data = g_new(gpointer, 4);
-	data[0] = lv;
-	data[1] = log;
-	data[2] = pidgin_treeview_popup_menu_position_func;
-	data[3] = iter;
-
-	log_show_popup_menu(treeview, NULL, data);
-	return TRUE;
+	}
 }
 
 static gboolean search_find_cb(gpointer data)
 {
 	PidginLogViewer *viewer = data;
-	gtk_imhtml_search_find(GTK_IMHTML(viewer->imhtml), viewer->search);
-	g_object_steal_data(G_OBJECT(viewer->entry), "search-find-cb");
+	webkit_web_view_mark_text_matches(WEBKIT_WEB_VIEW(viewer->web_view), viewer->search, FALSE, 0);
+	webkit_web_view_set_highlight_text_matches(WEBKIT_WEB_VIEW(viewer->web_view), TRUE);
+	webkit_web_view_search_text(WEBKIT_WEB_VIEW(viewer->web_view), viewer->search, FALSE, TRUE, TRUE);
 	return FALSE;
 }
 
@@ -446,38 +445,41 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 	pidgin_set_cursor(viewer->window, GDK_WATCH);
 
 	if (log->type != PURPLE_LOG_SYSTEM) {
+		gchar *log_date = log_get_date(log);
 		char *title;
 		if (log->type == PURPLE_LOG_CHAT)
 			title = g_strdup_printf(_("<span size='larger' weight='bold'>Conversation in %s on %s</span>"),
-									log->name, log_get_date(log));
+									log->name, log_date);
 		else
 			title = g_strdup_printf(_("<span size='larger' weight='bold'>Conversation with %s on %s</span>"),
-									log->name, log_get_date(log));
+									log->name, log_date);
 
-		gtk_label_set_markup(GTK_LABEL(viewer->label), title);
+		gtk_label_set_markup(viewer->label, title);
+		g_free(log_date);
 		g_free(title);
 	}
 
 	read = purple_log_read(log, &flags);
 	viewer->flags = flags;
 
-	gtk_imhtml_clear(GTK_IMHTML(viewer->imhtml));
-	gtk_imhtml_set_protocol_name(GTK_IMHTML(viewer->imhtml),
-	                            purple_account_get_protocol_name(log->account));
+	webkit_web_view_open(WEBKIT_WEB_VIEW(viewer->web_view), "about:blank");
 
 	purple_signal_emit(pidgin_log_get_handle(), "log-displaying", viewer, log);
+	
+	/* plaintext log (html one starts with <html> tag) */
+	if (read[0] != '<')
+	{
+		char *newRead = purple_strreplace(read, "\n", "<br>");
+		g_free(read);
+		read = newRead;
+	}
 
-	gtk_imhtml_append_text(GTK_IMHTML(viewer->imhtml), read,
-			       GTK_IMHTML_NO_COMMENTS | GTK_IMHTML_NO_TITLE | GTK_IMHTML_NO_SCROLL |
-			       ((flags & PURPLE_LOG_READ_NO_NEWLINE) ? GTK_IMHTML_NO_NEWLINE : 0));
+	webkit_web_view_load_html_string(WEBKIT_WEB_VIEW(viewer->web_view), read, "");
 	g_free(read);
 
 	if (viewer->search != NULL) {
-		guint source;
-		gtk_imhtml_search_clear(GTK_IMHTML(viewer->imhtml));
-		source = g_idle_add(search_find_cb, viewer);
-		g_object_set_data_full(G_OBJECT(viewer->entry), "search-find-cb",
-		                       GINT_TO_POINTER(source), (GDestroyNotify)g_source_remove);
+		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(viewer->web_view));
+		g_idle_add(search_find_cb, viewer);
 	}
 
 	pidgin_clear_cursor(viewer->window);
@@ -493,19 +495,20 @@ static void populate_log_tree(PidginLogViewer *lv)
      /* Logs are made from trees in real life.
         This is a tree made from logs */
 {
-	const char *month;
+	gchar *month;
 	char prev_top_month[30] = "";
 	GtkTreeIter toplevel, child;
 	GList *logs = lv->logs;
 
 	while (logs != NULL) {
 		PurpleLog *log = logs->data;
+		GDateTime *dt;
+		gchar *log_date;
 
-		month = purple_utf8_strftime(_("%B %Y"),
-		                           log->tm ? log->tm : localtime(&log->time));
+		dt = g_date_time_to_local(log->time);
+		month = g_date_time_format(dt, _("%B %Y"));
 
-		if (!purple_strequal(month, prev_top_month))
-		{
+		if (!purple_strequal(month, prev_top_month)) {
 			/* top level */
 			gtk_tree_store_append(lv->treestore, &toplevel, NULL);
 			gtk_tree_store_set(lv->treestore, &toplevel, 0, month, 1, NULL, -1);
@@ -514,12 +517,16 @@ static void populate_log_tree(PidginLogViewer *lv)
 		}
 
 		/* sub */
+		log_date = g_date_time_format(dt, "%c");
 		gtk_tree_store_append(lv->treestore, &child, &toplevel);
 		gtk_tree_store_set(lv->treestore, &child,
-						   0, log_get_date(log),
+						   0, log_date,
 						   1, log,
 						   -1);
 
+		g_free(log_date);
+		g_free(month);
+		g_date_time_unref(dt);
 		logs = logs->next;
 	}
 }
@@ -563,7 +570,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		if(icon != NULL)
 			gtk_widget_destroy(icon);
 
-		purple_notify_info(NULL, title, _("No logs were found"), log_preferences);
+		purple_notify_info(NULL, title, _("No logs were found"), log_preferences, NULL);
 		return NULL;
 	}
 
@@ -581,36 +588,38 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	gtk_dialog_add_button(GTK_DIALOG(lv->window), _("_Browse logs folder"), GTK_RESPONSE_HELP);
 #endif
 	gtk_container_set_border_width (GTK_CONTAINER(lv->window), PIDGIN_HIG_BOX_SPACE);
-	gtk_dialog_set_has_separator(GTK_DIALOG(lv->window), FALSE);
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(lv->window)->vbox), 0);
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))), 0);
 	g_signal_connect(G_OBJECT(lv->window), "response",
 					 G_CALLBACK(destroy_cb), ht);
 	gtk_window_set_role(GTK_WINDOW(lv->window), "log_viewer");
 
 	/* Icon *************/
 	if (icon != NULL) {
-		title_box = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+		title_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 		gtk_container_set_border_width(GTK_CONTAINER(title_box), PIDGIN_HIG_BOX_SPACE);
-		gtk_box_pack_start(GTK_BOX(GTK_DIALOG(lv->window)->vbox), title_box, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+		                   title_box, FALSE, FALSE, 0);
 
 		gtk_box_pack_start(GTK_BOX(title_box), icon, FALSE, FALSE, 0);
 	} else
-		title_box = GTK_DIALOG(lv->window)->vbox;
+		title_box = gtk_dialog_get_content_area(GTK_DIALOG(lv->window));
 
 	/* Label ************/
-	lv->label = gtk_label_new(NULL);
+	lv->label = GTK_LABEL(gtk_label_new(NULL));
 
 	text = g_strdup_printf("<span size='larger' weight='bold'>%s</span>", title);
 
-	gtk_label_set_markup(GTK_LABEL(lv->label), text);
-	gtk_misc_set_alignment(GTK_MISC(lv->label), 0, 0);
-	gtk_box_pack_start(GTK_BOX(title_box), lv->label, FALSE, FALSE, 0);
+	gtk_label_set_markup(lv->label, text);
+	gtk_label_set_xalign(GTK_LABEL(lv->label), 0);
+	gtk_label_set_yalign(GTK_LABEL(lv->label), 0);
+	gtk_box_pack_start(GTK_BOX(title_box), GTK_WIDGET(lv->label), FALSE, FALSE, 0);
 	g_free(text);
 
 	/* Pane *************/
-	pane = gtk_hpaned_new();
+	pane = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_container_set_border_width(GTK_CONTAINER(pane), PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(lv->window)->vbox), pane, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+	                   pane, TRUE, TRUE, 0);
 
 	/* List *************/
 	lv->treestore = gtk_tree_store_new (2, G_TYPE_STRING, G_TYPE_POINTER);
@@ -644,25 +653,27 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		size_label = gtk_label_new(NULL);
 		gtk_label_set_markup(GTK_LABEL(size_label), text);
 		/*		gtk_paned_add1(GTK_PANED(pane), size_label); */
-		gtk_misc_set_alignment(GTK_MISC(size_label), 0, 0);
-		gtk_box_pack_end(GTK_BOX(GTK_DIALOG(lv->window)->vbox), size_label, FALSE, FALSE, 0);
+		gtk_label_set_xalign(GTK_LABEL(size_label), 0);
+		gtk_label_set_yalign(GTK_LABEL(size_label), 0);
+		gtk_box_pack_end(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+		                 size_label, FALSE, FALSE, 0);
 		g_free(sz_txt);
 		g_free(text);
 	}
 
 	/* A fancy little box ************/
-	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_paned_add2(GTK_PANED(pane), vbox);
 
 	/* Viewer ************/
-	frame = pidgin_create_imhtml(FALSE, &lv->imhtml, NULL, NULL);
-	gtk_widget_set_name(lv->imhtml, "pidgin_log_imhtml");
-	gtk_widget_set_size_request(lv->imhtml, 320, 200);
+	frame = pidgin_create_webview(FALSE, &lv->web_view, NULL);
+	gtk_widget_set_name(lv->web_view, "pidgin_log_web_view");
+	gtk_widget_set_size_request(lv->web_view, 320, 200);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 	gtk_widget_show(frame);
 
 	/* Search box **********/
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 	lv->entry = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX(hbox), lv->entry, TRUE, TRUE, 0);
@@ -683,7 +694,7 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 	PidginLogViewer *lv = NULL;
 	const char *name = buddyname;
 	char *title;
-	GdkPixbuf *prpl_icon;
+	GdkPixbuf *protocol_icon;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(buddyname != NULL);
@@ -714,21 +725,21 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 	} else {
 		PurpleBuddy *buddy;
 
-		buddy = purple_find_buddy(account, buddyname);
+		buddy = purple_blist_find_buddy(account, buddyname);
 		if (buddy != NULL)
 			name = purple_buddy_get_contact_alias(buddy);
 
 		title = g_strdup_printf(_("Conversations with %s"), name);
 	}
 
-	prpl_icon = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
+	protocol_icon = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_MEDIUM);
 
 	display_log_viewer(ht, purple_log_get_logs(type, buddyname, account),
-			title, gtk_image_new_from_pixbuf(prpl_icon),
+			title, gtk_image_new_from_pixbuf(protocol_icon),
 			purple_log_get_total_size(type, buddyname, account));
 
-	if (prpl_icon)
-		g_object_unref(prpl_icon);
+	if (protocol_icon)
+		g_object_unref(protocol_icon);
 	g_free(title);
 }
 
@@ -763,7 +774,7 @@ void pidgin_log_show_contact(PurpleContact *contact) {
 		const char *buddy_name;
 		PurpleAccount *account;
 
-		if (!PURPLE_BLIST_NODE_IS_BUDDY(child))
+		if (!PURPLE_IS_BUDDY(child))
 			continue;
 
 		buddy_name = purple_buddy_get_name((PurpleBuddy *)child);
@@ -784,17 +795,16 @@ void pidgin_log_show_contact(PurpleContact *contact) {
 		image = NULL;
 	}
 
-	if (contact->alias != NULL)
-		name = contact->alias;
-	else if (contact->priority != NULL)
-		name = purple_buddy_get_contact_alias(contact->priority);
+	name = purple_contact_get_alias(contact);
 
 	/* This will happen if the contact doesn't have an alias,
 	 * and none of the contact's buddies are online.
 	 * There is probably a better way to deal with this. */
 	if (name == NULL) {
-		if (contact->node.child != NULL && PURPLE_BLIST_NODE_IS_BUDDY(contact->node.child))
-			name = purple_buddy_get_contact_alias((PurpleBuddy *) contact->node.child);
+		if (PURPLE_BLIST_NODE(contact)->child != NULL &&
+				PURPLE_IS_BUDDY(PURPLE_BLIST_NODE(contact)->child))
+			name = purple_buddy_get_contact_alias(PURPLE_BUDDY(
+					PURPLE_BLIST_NODE(contact)->child));
 		if (name == NULL)
 			name = "";
 	}
@@ -817,7 +827,7 @@ void pidgin_syslog_show()
 	for(accounts = purple_accounts_get_all(); accounts != NULL; accounts = accounts->next) {
 
 		PurpleAccount *account = (PurpleAccount *)accounts->data;
-		if(purple_find_prpl(purple_account_get_protocol_id(account)) == NULL)
+		if(purple_protocols_find(purple_account_get_protocol_id(account)) == NULL)
 			continue;
 
 		logs = g_list_concat(purple_log_get_system_logs(account), logs);
@@ -845,11 +855,9 @@ void pidgin_log_init(void)
 
 	purple_signal_register(handle, "log-displaying",
 	                     purple_marshal_VOID__POINTER_POINTER,
-	                     NULL, 2,
-	                     purple_value_new(PURPLE_TYPE_BOXED,
-	                                    "PidginLogViewer *"),
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_LOG));
+	                     G_TYPE_NONE, 2,
+	                     G_TYPE_POINTER, /* (PidginLogViewer *) */
+	                     PURPLE_TYPE_LOG);
 }
 
 void

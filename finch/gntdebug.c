@@ -1,8 +1,3 @@
-/**
- * @file gntdebug.c GNT Debug API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -46,6 +41,20 @@
 
 #define PREF_ROOT "/finch/debug"
 
+struct _FinchDebugUi
+{
+	GObject parent;
+
+	/* Other members, including private data. */
+};
+
+static void finch_debug_ui_finalize(GObject *gobject);
+static void finch_debug_ui_interface_init(PurpleDebugUiInterface *iface);
+
+G_DEFINE_TYPE_WITH_CODE(FinchDebugUi, finch_debug_ui, G_TYPE_OBJECT,
+                        G_IMPLEMENT_INTERFACE(PURPLE_TYPE_DEBUG_UI,
+                                              finch_debug_ui_interface_init));
+
 static gboolean
 handle_fprintf_stderr_cb(GIOChannel *source, GIOCondition cond, gpointer null)
 {
@@ -77,7 +86,7 @@ handle_fprintf_stderr(gboolean stop)
 		}
 		return;
 	}
-	if (pipe(pipes)) {
+	if (purple_input_pipe(pipes)) {
 		readhandle = -1;
 		return;
 	};
@@ -113,8 +122,9 @@ match_string(const char *category, const char *args)
 }
 
 static void
-finch_debug_print(PurpleDebugLevel level, const char *category,
-		const char *args)
+finch_debug_print(PurpleDebugUi *self,
+                  PurpleDebugLevel level, const char *category,
+                  const char *args)
 {
 	if (debug.window && !debug.paused && match_string(category, args))
 	{
@@ -145,32 +155,23 @@ finch_debug_print(PurpleDebugLevel level, const char *category,
 		}
 
 		gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(debug.tview), args, flag);
+		gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(debug.tview), "\n", GNT_TEXT_FLAG_NORMAL);
 		if (pos <= 1)
 			gnt_text_view_scroll(GNT_TEXT_VIEW(debug.tview), 0);
 	}
 }
 
 static gboolean
-finch_debug_is_enabled(PurpleDebugLevel level, const char *category)
+finch_debug_is_enabled(PurpleDebugUi *self, PurpleDebugLevel level, const char *category)
 {
 	return debug.window && !debug.paused;
 }
 
-static PurpleDebugUiOps uiops =
+static void
+finch_debug_ui_interface_init(PurpleDebugUiInterface *iface)
 {
-	finch_debug_print,
-	finch_debug_is_enabled,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-PurpleDebugUiOps *finch_debug_get_ui_ops()
-{
-	return &uiops;
+	iface->print = finch_debug_print;
+	iface->is_enabled = finch_debug_is_enabled;
 }
 
 static void
@@ -273,7 +274,7 @@ file_save(GntFileSel *fs, const char *path, const char *file, GntTextView *tv)
 	FILE *fp;
 
 	if ((fp = g_fopen(path, "w+")) == NULL) {
-		purple_notify_error(NULL, NULL, _("Unable to open file."), NULL);
+		purple_notify_error(NULL, NULL, _("Unable to open file."), NULL, NULL);
 		return;
 	}
 
@@ -375,7 +376,16 @@ start_with_debugwin(gpointer null)
 	return FALSE;
 }
 
-void finch_debug_init()
+static void
+finch_debug_ui_class_init(FinchDebugUiClass *klass)
+{
+	GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+	object_class->finalize = finch_debug_ui_finalize;
+}
+
+static void
+finch_debug_ui_init(FinchDebugUi *self)
 {
 /* Xerox */
 #define REGISTER_G_LOG_HANDLER(name) \
@@ -409,8 +419,15 @@ void finch_debug_init()
 		g_timeout_add(0, start_with_debugwin, NULL);
 }
 
-void finch_debug_uninit()
+static void
+finch_debug_ui_finalize(GObject *gobject)
 {
 	handle_fprintf_stderr(TRUE);
+	G_OBJECT_CLASS(finch_debug_ui_parent_class)->finalize(gobject);
 }
 
+FinchDebugUi *
+finch_debug_ui_new(void)
+{
+	return g_object_new(FINCH_TYPE_DEBUG_UI, NULL);
+}

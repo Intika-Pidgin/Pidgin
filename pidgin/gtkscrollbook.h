@@ -1,8 +1,3 @@
-/*
- * @file gtkscrollbook  GTK+ Scrolling notebook Widget
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -26,6 +21,12 @@
 
 #ifndef __PIDGIN_SCROLL_BOOK_H__
 #define __PIDGIN_SCROLL_BOOK_H__
+/**
+ * SECTION:gtkscrollbook
+ * @section_id: pidgin-gtkscrollbook
+ * @short_description: <filename>gtkscrollbook.h</filename>
+ * @title: Scrolling Notebook Widget
+ */
 
 #include <gtk/gtk.h>
 
@@ -52,7 +53,7 @@ struct _PidginScrollBook
 	GtkWidget *right_arrow;
 	GList *children;
 
-	/* Padding for future expansion */
+	/*< private >*/
 	void (*_gtk_reserved1) (void);
 	void (*_gtk_reserved2) (void);
 	void (*_gtk_reserved3) (void);
@@ -64,7 +65,7 @@ struct _PidginScrollBookClass
 {
 	GtkContainerClass parent_class;
 
-	/* Padding for future expansion */
+	/*< private >*/
 	void (*_gtk_reserved0) (void);
 	void (*_gtk_reserved1) (void);
 	void (*_gtk_reserved2) (void);

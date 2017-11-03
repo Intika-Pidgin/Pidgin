@@ -1,8 +1,3 @@
-/**
- * @file gntnotify.c GNT Notify API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -53,8 +48,9 @@ notify_msg_window_destroy_cb(GntWidget *window, PurpleNotifyType type)
 }
 
 static void *
-finch_notify_common(PurpleNotifyType ntype, PurpleNotifyMsgType msgtype,
-	const char *title, const char *primary, const char *secondary)
+finch_notify_common(PurpleNotifyType ntype, PurpleNotifyMessageType msgtype,
+	const char *title, const char *primary, const char *secondary,
+	PurpleRequestCommonParameters *cpar)
 {
 	GntWidget *window, *button;
 	GntTextFormatFlags pf = 0, sf = 0;
@@ -118,14 +114,6 @@ finch_notify_common(PurpleNotifyType ntype, PurpleNotifyMsgType msgtype,
 	return window;
 }
 
-static void *
-finch_notify_message(PurpleNotifyMsgType type, const char *title,
-	const char *primary, const char *secondary)
-{
-	return finch_notify_common(PURPLE_NOTIFY_MESSAGE, type, title, primary,
-		secondary);
-}
-
 /* handle is, in all/most occasions, a GntWidget * */
 static void finch_close_notify(PurpleNotifyType type, void *handle)
 {
@@ -147,6 +135,15 @@ static void finch_close_notify(PurpleNotifyType type, void *handle)
 	gnt_widget_destroy(widget);
 }
 
+static void *
+finch_notify_message(PurpleNotifyMessageType type, const char *title,
+	const char *primary, const char *secondary,
+	PurpleRequestCommonParameters *cpar)
+{
+	return finch_notify_common(PURPLE_NOTIFY_MESSAGE, type, title, primary,
+		secondary, cpar);
+}
+
 static void *finch_notify_formatted(const char *title, const char *primary,
 		const char *secondary, const char *text)
 {
@@ -159,7 +156,7 @@ static void *finch_notify_formatted(const char *title, const char *primary,
 
 	purple_markup_html_to_xhtml(t, &xhtml, NULL);
 	ret = finch_notify_common(PURPLE_NOTIFY_FORMATTED,
-		PURPLE_NOTIFY_MSG_INFO, title, primary, xhtml);
+		PURPLE_NOTIFY_MSG_INFO, title, primary, xhtml, NULL);
 
 	g_free(t);
 	g_free(xhtml);
@@ -253,7 +250,7 @@ finch_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 	}
 
 	ret = finch_notify_common(PURPLE_NOTIFY_EMAIL, PURPLE_NOTIFY_MSG_INFO,
-		_("New Mail"), _("You have mail!"), message->str);
+		_("New Mail"), _("You have mail!"), message->str, NULL);
 	g_string_free(message, TRUE);
 	return ret;
 }
@@ -294,10 +291,10 @@ purple_notify_user_info_get_xhtml(PurpleNotifyUserInfo *user_info)
 
 	text = g_string_new("<span>");
 
-	for (l = purple_notify_user_info_get_entries(user_info); l != NULL;
+	for (l = purple_notify_user_info_get_entries(user_info)->head; l != NULL;
 			l = l->next) {
 		PurpleNotifyUserInfoEntry *user_info_entry = l->data;
-		PurpleNotifyUserInfoEntryType type = purple_notify_user_info_entry_get_type(user_info_entry);
+		PurpleNotifyUserInfoEntryType type = purple_notify_user_info_entry_get_entry_type(user_info_entry);
 		const char *label = purple_notify_user_info_entry_get_label(user_info_entry);
 		const char *value = purple_notify_user_info_entry_get_value(user_info_entry);
 
@@ -391,6 +388,7 @@ finch_notify_sr_new_rows(PurpleConnection *gc,
 	GntWindow *window = GNT_WINDOW(data);
 	GntTree *tree = GNT_TREE(g_object_get_data(G_OBJECT(window), "tree-widget"));
 	GList *o;
+	GntTreeRow *prev = NULL;
 
 	gnt_tree_remove_all(GNT_TREE(tree));
 
@@ -398,8 +396,15 @@ finch_notify_sr_new_rows(PurpleConnection *gc,
 	{
 		gnt_tree_add_row_after(GNT_TREE(tree), o->data,
 				gnt_tree_create_row_from_list(GNT_TREE(tree), o->data),
-				NULL, NULL);
+				NULL, prev);
+		prev = o->data;
 	}
+}
+
+static void
+notify_sr_destroy_cb(GntWidget *window, void *data)
+{
+	purple_notify_close(PURPLE_NOTIFY_SEARCHRESULTS, window);
 }
 
 static void *
@@ -434,7 +439,10 @@ finch_notify_searchresults(PurpleConnection *gc, const char *title,
 	for (iter = results->columns; iter; iter = iter->next)
 	{
 		PurpleNotifySearchColumn *column = iter->data;
-		gnt_tree_set_column_title(GNT_TREE(tree), i, column->title);
+		gnt_tree_set_column_title(GNT_TREE(tree), i, purple_notify_searchresult_column_get_title(column));
+
+		if (!purple_notify_searchresult_column_is_visible(column))
+			gnt_tree_set_column_visible(GNT_TREE(tree), i, FALSE);
 		i++;
 	}
 
@@ -483,6 +491,8 @@ finch_notify_searchresults(PurpleConnection *gc, const char *title,
 	}
 
 	gnt_box_add_widget(GNT_BOX(window), box);
+	g_signal_connect(G_OBJECT(tree), "destroy",
+			G_CALLBACK(notify_sr_destroy_cb), NULL);
 
 	g_object_set_data(G_OBJECT(window), "tree-widget", tree);
 	finch_notify_sr_new_rows(gc, results, window);
@@ -500,7 +510,7 @@ static void *
 finch_notify_uri(const char *url)
 {
 	return finch_notify_common(PURPLE_NOTIFY_URI, PURPLE_NOTIFY_MSG_INFO,
-		_("URI"), url, NULL);
+		_("URI"), url, NULL, NULL);
 }
 
 static PurpleNotifyUiOps ops =

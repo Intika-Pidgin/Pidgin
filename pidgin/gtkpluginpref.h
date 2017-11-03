@@ -1,8 +1,3 @@
-/**
- * @file gtkpluginpref.h GTK+ Plugin Preferences
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -24,27 +19,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+
 #ifndef _PIDGINPLUGINPREF_H_
 #define _PIDGINPLUGINPREF_H_
+/**
+ * SECTION:gtkpluginpref
+ * @section_id: pidgin-gtkpluginpref
+ * @short_description: <filename>gtkpluginpref.h</filename>
+ * @title: Plugin Preferences
+ */
 
 #include "pluginpref.h"
 
 #include "pidgin.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**
+ * pidgin_plugin_pref_create_frame:
+ * @frame: PurplePluginPrefFrame
+ *
  * Creates a Gtk Preference frame for a PurplePluginPrefFrame
  *
- * @param frame PurplePluginPrefFrame
- * @return The gtk preference frame
+ * Returns: (transfer full): The gtk preference frame
  */
 GtkWidget *pidgin_plugin_pref_create_frame(PurplePluginPrefFrame *frame);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PIDGINPLUGINPREF_H_ */

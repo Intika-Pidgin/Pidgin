@@ -1,8 +1,3 @@
-/*
- * @file gtkstatusbox.c GTK+ Status Selection Widget
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -24,14 +19,18 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-
 #ifndef __PIDGIN_STATUS_BOX_H__
 #define __PIDGIN_STATUS_BOX_H__
+/**
+ * SECTION:gtkstatusbox
+ * @section_id: pidgin-gtkstatusbox
+ * @short_description: <filename>gtkstatusbox.h</filename>
+ * @title: Status Selection Widget
+ */
 
 #include <gtk/gtk.h>
-#include "gtkimhtml.h"
+#include "gtkwebview.h"
 #include "account.h"
-#include "imgstore.h"
 #include "savedstatuses.h"
 #include "status.h"
 
@@ -45,6 +44,8 @@ G_BEGIN_DECLS
 #define PIDGIN_STATUS_BOX_GET_CLASS(inst)  (G_TYPE_INSTANCE_GET_CLASS ((inst), PIDGIN_TYPE_STATUS_BOX, PidginStatusBoxClass))
 
 /**
+ * PidginStatusBoxItemType:
+ *
  * This is a hidden field in the GtkStatusBox that identifies the
  * item in the list store.  The item could be a normal
  * PurpleStatusPrimitive, or it could be something special like the
@@ -64,32 +65,32 @@ typedef enum
 typedef struct _PidginStatusBox      PidginStatusBox;
 typedef struct _PidginStatusBoxClass PidginStatusBoxClass;
 
+/**
+ * PidginStatusBox:
+ * @store:          This GtkListStore contains only one row--the currently
+ *                  selected status.
+ * @dropdown_store: This is the dropdown GtkListStore that contains the
+ *                  available statuses, plus some recently used statuses, plus
+ *                  the "Custom..." and "Saved..." options.
+ * @token_status_account: This will be non-NULL and contain a sample account
+ *                        when all enabled accounts use the same statuses
+ */
 struct _PidginStatusBox
 {
 	GtkContainer parent_instance;
 
-	/**
-	 * This GtkListStore contains only one row--the currently selected status.
-	 */
+	/*< public >*/
 	GtkListStore *store;
-
-	/**
-	 * This is the dropdown GtkListStore that contains the available statuses,
-	 * plus some recently used statuses, plus the "Custom..." and "Saved..."
-	 * options.
-	 */
 	GtkListStore *dropdown_store;
 
 	PurpleAccount *account;
 
-	/* This will be non-NULL and contain a sample account
-	 * when all enabled accounts use the same statuses */
 	PurpleAccount *token_status_account;
 
 	GtkWidget *vbox, *sw;
-	GtkWidget *imhtml;
+	GtkWidget *webview;
 
-	PurpleStoredImage *buddy_icon_img;
+	PurpleImage *buddy_icon_img;
 	GdkPixbuf *buddy_icon;
 	GdkPixbuf *buddy_icon_hover;
 	GtkWidget *buddy_icon_sel;
@@ -98,10 +99,10 @@ struct _PidginStatusBox
 	GtkWidget *icon_box_menu;
 	GdkCursor *hand_cursor;
 	GdkCursor *arrow_cursor;
-        int icon_size;
-        gboolean icon_opaque;
+	int icon_size;
+	gboolean icon_opaque;
 
-	gboolean imhtml_visible;
+	gboolean webview_visible;
 
 	GtkWidget *cell_view;
 	GtkCellRenderer *icon_rend;
@@ -148,7 +149,7 @@ struct _PidginStatusBoxClass
 	/* signals */
 	void     (* changed)          (GtkComboBox *combo_box);
 
-	/* Padding for future expansion */
+	/*< private >*/
 	void (*_gtk_reserved0) (void);
 	void (*_gtk_reserved1) (void);
 	void (*_gtk_reserved2) (void);
@@ -158,7 +159,7 @@ struct _PidginStatusBoxClass
 
 GType         pidgin_status_box_get_type         (void) G_GNUC_CONST;
 GtkWidget    *pidgin_status_box_new              (void);
-GtkWidget    *pidgin_status_box_new_with_account (PurpleAccount *);
+GtkWidget    *pidgin_status_box_new_with_account (PurpleAccount *account);
 
 void
 pidgin_status_box_add(PidginStatusBox *status_box, PidginStatusBoxItemType type, GdkPixbuf *pixbuf, const char *text, const char *sec_text, gpointer data);
@@ -176,7 +177,7 @@ void
 pidgin_status_box_pulse_connecting(PidginStatusBox *status_box);
 
 void
-pidgin_status_box_set_buddy_icon(PidginStatusBox *status_box, PurpleStoredImage *img);
+pidgin_status_box_set_buddy_icon(PidginStatusBox *status_box, PurpleImage *img);
 
 char *pidgin_status_box_get_message(PidginStatusBox *status_box);
 
