@@ -42,9 +42,9 @@
 
 #include <glib.h>
 
-#include <plugin.h>
+#include <plugins.h>
 #include <version.h>
-#include <blist.h>
+#include <buddylist.h>
 #include <conversation.h>
 #include <debug.h>
 #include <eventloop.h>
@@ -76,7 +76,7 @@ destroy_toaster(GntToast *toast)
 {
 	toasters = g_list_remove(toasters, toast);
 	gnt_widget_destroy(toast->window);
-	purple_timeout_remove(toast->timer);
+	g_source_remove(toast->timer);
 	g_free(toast);
 }
 
@@ -168,7 +168,7 @@ notify(PurpleConversation *conv, const char *fmt, ...)
 		beep();
 
 	if (conv != NULL) {
-		FinchConv *fc = conv->ui_data;
+		FinchConv *fc = FINCH_CONV(conv);
 		if (gnt_widget_has_focus(fc->window))
 			return;
 	}
@@ -221,7 +221,7 @@ notify(PurpleConversation *conv, const char *fmt, ...)
 	}
 	gnt_widget_draw(window);
 
-	toast->timer = purple_timeout_add_seconds(4, (GSourceFunc)remove_toaster, toast);
+	toast->timer = g_timeout_add_seconds(4, (GSourceFunc)remove_toaster, toast);
 	toasters = g_list_prepend(toasters, toast);
 }
 
@@ -241,22 +241,20 @@ buddy_signed_off(PurpleBuddy *buddy, gpointer null)
 
 static void
 received_im_msg(PurpleAccount *account, const char *sender, const char *msg,
-		PurpleConversation *conv, PurpleMessageFlags flags, gpointer null)
+		PurpleIMConversation *im, PurpleMessageFlags flags, gpointer null)
 {
 	if (purple_prefs_get_bool(PREFS_EVENT_IM_MSG))
-		notify(conv, _("%s sent you a message"), sender);
+		notify(PURPLE_CONVERSATION(im), _("%s sent you a message"), sender);
 }
 
 static void
 received_chat_msg(PurpleAccount *account, const char *sender, const char *msg,
-		PurpleConversation *conv, PurpleMessageFlags flags, gpointer null)
+		PurpleChatConversation *chat, PurpleMessageFlags flags, gpointer null)
 {
 	const char *nick;
+	PurpleConversation *conv = PURPLE_CONVERSATION(chat);
 
-	if (flags & PURPLE_MESSAGE_WHISPER)
-		return;
-
-	nick = PURPLE_CONV_CHAT(conv)->nick;
+	nick = purple_chat_conversation_get_nick(chat);
 
 	if (g_utf8_collate(sender, nick) == 0)
 		return;
@@ -266,35 +264,6 @@ received_chat_msg(PurpleAccount *account, const char *sender, const char *msg,
 		notify(conv, _("%s said your nick in %s"), sender, purple_conversation_get_name(conv));
 	else if (purple_prefs_get_bool(PREFS_EVENT_CHAT_MSG))
 		notify(conv, _("%s sent a message in %s"), sender, purple_conversation_get_name(conv));
-}
-
-static gboolean
-plugin_load(PurplePlugin *plugin)
-{
-	purple_signal_connect(purple_blist_get_handle(), "buddy-signed-on", plugin,
-			PURPLE_CALLBACK(buddy_signed_on), NULL);
-	purple_signal_connect(purple_blist_get_handle(), "buddy-signed-off", plugin,
-			PURPLE_CALLBACK(buddy_signed_off), NULL);
-	purple_signal_connect(purple_conversations_get_handle(), "received-im-msg", plugin,
-			PURPLE_CALLBACK(received_im_msg), NULL);
-	purple_signal_connect(purple_conversations_get_handle(), "received-chat-msg", plugin,
-			PURPLE_CALLBACK(received_chat_msg), NULL);
-
-	memset(&gpsy, 0, sizeof(gpsy));
-	memset(&gpsw, 0, sizeof(gpsw));
-
-	return TRUE;
-}
-
-static gboolean
-plugin_unload(PurplePlugin *plugin)
-{
-	while (toasters)
-	{
-		GntToast *toast = toasters->data;
-		destroy_toaster(toast);
-	}
-	return TRUE;
 }
 
 static struct
@@ -365,42 +334,31 @@ config_frame(void)
 	return window;
 }
 
-static PurplePluginInfo info =
+static FinchPluginInfo *
+plugin_query(GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,
-	FINCH_PLUGIN_TYPE,
-	0,
-	NULL,
-	PURPLE_PRIORITY_DEFAULT,
-	"gntgf",
-	N_("GntGf"),
-	DISPLAY_VERSION,
-	/* Translators: "toaster" here means "pop-up". */
-	N_("Toaster plugin"),
-	/* Translators: "toaster" here means "pop-up". */
-	N_("Toaster plugin"),
-	"Sadrul H Chowdhury <sadrul@users.sourceforge.net>",
-	PURPLE_WEBSITE,
-	plugin_load,
-	plugin_unload,
-	NULL,
-	config_frame,
-	NULL,
-	NULL,
-	NULL,
+	const gchar * const authors[] = {
+		"Sadrul H Chowdhury <sadrul@users.sourceforge.net>",
+		NULL
+	};
 
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
+	return finch_plugin_info_new(
+		"id",                 "gntgf",
+		"name",               N_("GntGf"),
+		"version",            DISPLAY_VERSION,
+		"category",           N_("Notification"),
+		"summary",            N_("Toaster plugin"),
+		"description",        N_("Toaster plugin"),
+		"authors",            authors,
+		"website",            PURPLE_WEBSITE,
+		"abi-version",        PURPLE_ABI_VERSION,
+		"gnt-pref-frame-cb",  config_frame,
+		NULL
+	);
+}
 
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_prefs_add_none("/plugins");
 	purple_prefs_add_none("/plugins/gnt");
@@ -417,6 +375,31 @@ init_plugin(PurplePlugin *plugin)
 #ifdef HAVE_X11
 	purple_prefs_add_bool(PREFS_URGENT, FALSE);
 #endif
+
+	purple_signal_connect(purple_blist_get_handle(), "buddy-signed-on", plugin,
+			PURPLE_CALLBACK(buddy_signed_on), NULL);
+	purple_signal_connect(purple_blist_get_handle(), "buddy-signed-off", plugin,
+			PURPLE_CALLBACK(buddy_signed_off), NULL);
+	purple_signal_connect(purple_conversations_get_handle(), "received-im-msg", plugin,
+			PURPLE_CALLBACK(received_im_msg), NULL);
+	purple_signal_connect(purple_conversations_get_handle(), "received-chat-msg", plugin,
+			PURPLE_CALLBACK(received_chat_msg), NULL);
+
+	memset(&gpsy, 0, sizeof(gpsy));
+	memset(&gpsw, 0, sizeof(gpsw));
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(PLUGIN_STATIC_NAME, init_plugin, info)
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	while (toasters)
+	{
+		GntToast *toast = toasters->data;
+		destroy_toaster(toast);
+	}
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(PLUGIN_STATIC_NAME, plugin_query, plugin_load, plugin_unload);

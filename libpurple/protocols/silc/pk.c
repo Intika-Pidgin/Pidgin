@@ -18,7 +18,10 @@
 */
 
 #include "internal.h"
+#include "glibcompat.h"
+PURPLE_BEGIN_IGNORE_CAST_ALIGN
 #include "silc.h"
+PURPLE_END_IGNORE_CAST_ALIGN
 #include "silcclient.h"
 #include "silcpurple.h"
 
@@ -79,7 +82,7 @@ static void silcpurple_verify_details_cb(PublicKeyVerify verify)
 static void silcpurple_verify_details(PublicKeyVerify verify, gint id)
 {
 	PurpleConnection *gc = verify->client->application;
-	SilcPurple sg = gc->proto_data;
+	SilcPurple sg = purple_connection_get_protocol_data(gc);
 
 	silcpurple_show_public_key(sg, verify->entity_name, verify->public_key,
 				   G_CALLBACK(silcpurple_verify_details_cb),
@@ -110,7 +113,7 @@ static void silcpurple_verify_ask(const char *entity,
 
 	purple_request_action(gc, _("Verify Public Key"), tmp, tmp2,
 			      PURPLE_DEFAULT_ACTION_NONE,
-			      purple_connection_get_account(gc), entity, NULL, verify, 3,
+			      purple_request_cpar_from_connection(gc), verify, 3,
 			      _("Yes"), G_CALLBACK(silcpurple_verify_cb),
 			      _("No"), G_CALLBACK(silcpurple_verify_cb),
 			      _("_View..."), G_CALLBACK(silcpurple_verify_details));
@@ -126,7 +129,7 @@ void silcpurple_verify_public_key(SilcClient client, SilcClientConnection conn,
 	char file[256], filename[256], filename2[256], *ipf, *hostf = NULL;
 	char *fingerprint, *babbleprint;
 	struct passwd *pw;
-	struct stat st;
+	GStatBuf st;
 	char *entity = ((conn_type == SILC_CONN_SERVER ||
 			 conn_type == SILC_CONN_ROUTER) ?
 			"server" : "client");
@@ -138,7 +141,8 @@ void silcpurple_verify_public_key(SilcClient client, SilcClientConnection conn,
 
 	if (silc_pkcs_get_type(public_key) != SILC_PKCS_SILC) {
 		purple_notify_error(gc, _("Verify Public Key"),
-				    _("Unsupported public key type"), NULL);
+				    _("Unsupported public key type"), NULL,
+				    purple_request_cpar_from_connection(gc));
 		if (completion)
 			completion(FALSE, context);
 		return;

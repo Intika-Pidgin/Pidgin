@@ -25,12 +25,12 @@
 # include "config.h"
 #endif
 
-#include <libebook/e-book.h>
+#include <libebook/libebook.h>
 
 enum
 {
 	ADDRBOOK_COLUMN_NAME,
-	ADDRBOOK_COLUMN_URI,
+	ADDRBOOK_COLUMN_UID,
 	NUM_ADDRBOOK_COLUMNS
 };
 
@@ -97,7 +97,6 @@ typedef struct
 	GtkWidget *addrbooks_combo;
 	GtkWidget *search_field;
 	GtkWidget *assoc_button;
-	GtkWidget *imhtml;
 	GtkListStore *model;
 
 	GtkTreeModel *addrbooks;
@@ -121,9 +120,11 @@ void gevo_add_buddy(PurpleAccount *account, const char *group_name,
 					const char *screenname, const char *alias);
 GList *gevo_get_groups(void);
 
-EContactField gevo_prpl_get_field(PurpleAccount *account, PurpleBuddy *buddy);
-gboolean gevo_prpl_is_supported(PurpleAccount *account, PurpleBuddy *buddy);
-gboolean gevo_load_addressbook(const gchar *uri, EBook **book, GError **error);
+EContactField gevo_protocol_get_field(PurpleAccount *account, PurpleBuddy *buddy);
+gboolean gevo_protocol_is_supported(PurpleAccount *account, PurpleBuddy *buddy);
+gboolean gevo_load_addressbook(const gchar *uid, EBook **book, GError **error);
+gboolean gevo_load_addressbook_from_source(ESource *source, EBook **book,
+	GError **error);
 char *gevo_get_email_for_buddy(PurpleBuddy *buddy);
 
 GevoAssociateBuddyDialog *gevo_associate_buddy_dialog_new(PurpleBuddy *buddy);

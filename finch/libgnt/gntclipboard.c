@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -37,8 +37,7 @@ gnt_clipboard_class_init(GntClipboardClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 0,
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 
 }
@@ -67,7 +66,7 @@ static void gnt_clipboard_init(GTypeInstance *instance, gpointer class) {
 }
 
 GType
-gnt_clipboard_get_gtype(void)
+gnt_clipboard_get_type(void)
 {
 	static GType type = 0;
 

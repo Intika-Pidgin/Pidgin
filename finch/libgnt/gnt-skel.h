@@ -1,7 +1,3 @@
-/**
- * @file gnt-skel.h -skel API
- * @ingroup gnt
- */
 /*
  * GNT - The GLib Ncurses Toolkit
  *
@@ -26,13 +22,19 @@
 
 #ifndef GNT_SKEL_H
 #define GNT_SKEL_H
+/*
+ * SECTION:gnt-skel
+ * @section_id: libgnt-gnt-skel
+ * @short_description: <filename>gnt-skel.h</filename>
+ * @title: Skel API
+ */
 
 #include "gntwidget.h"
 #include "gnt.h"
 #include "gntcolors.h"
 #include "gntkeys.h"
 
-#define GNT_TYPE_SKEL				(gnt_skel_get_gtype())
+#define GNT_TYPE_SKEL				(gnt_skel_get_type())
 #define GNT_SKEL(obj)				(G_TYPE_CHECK_INSTANCE_CAST((obj), GNT_TYPE_SKEL, GntSkel))
 #define GNT_SKEL_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST((klass), GNT_TYPE_SKEL, GntSkelClass))
 #define GNT_IS_SKEL(obj)			(G_TYPE_CHECK_INSTANCE_TYPE((obj), GNT_TYPE_SKEL))
@@ -52,6 +54,7 @@ struct _GntSkelClass
 {
 	GntWidgetClass parent;
 
+	/*< private >*/
 	void (*gnt_reserved1)(void);
 	void (*gnt_reserved2)(void);
 	void (*gnt_reserved3)(void);
@@ -60,18 +63,8 @@ struct _GntSkelClass
 
 G_BEGIN_DECLS
 
-/**
- *
- *
- * @return
- */
-GType gnt_skel_get_gtype(void);
+GType gnt_skel_get_type(void);
 
-/**
- *
- *
- * @return
- */
 GntWidget * gnt_skel_new();
 
 G_END_DECLS

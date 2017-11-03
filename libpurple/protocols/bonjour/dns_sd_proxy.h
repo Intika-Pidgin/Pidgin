@@ -21,6 +21,7 @@
 #ifndef _DNS_SD_PROXY
 #define _DNS_SD_PROXY
 
+#include <config.h>
 
 #ifndef _MSC_VER
 #include <stdint.h>
@@ -112,7 +113,6 @@ enum {
 	kDNSServiceProtocol_IPv4 = 0x01,
 };
 
-/* End dns_sd.h subset */
 
 gboolean dns_sd_available(void);
 

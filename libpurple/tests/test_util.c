@@ -1,76 +1,90 @@
-#include <string.h>
+/*
+ * purple
+ *
+ * Purple is the legal property of its developers, whose names are too numerous
+ * to list here.  Please refer to the COPYRIGHT file distributed with this
+ * source distribution.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
+ *
+ */
+#include <glib.h>
 
-#include "tests.h"
 #include "../util.h"
 
-START_TEST(test_util_base16_encode)
-{
-	assert_string_equal_free("68656c6c6f2c20776f726c642100", purple_base16_encode((const unsigned char *)"hello, world!", 14));
+/******************************************************************************
+ * base 16 tests
+ *****************************************************************************/
+static void
+test_util_base_16_encode(void) {
+	gchar *in = purple_base16_encode((const guchar *)"hello, world!", 14);
+	g_assert_cmpstr("68656c6c6f2c20776f726c642100", ==, in);
 }
-END_TEST
 
-START_TEST(test_util_base16_decode)
-{
+static void
+test_util_base_16_decode(void) {
 	gsize sz = 0;
 	guchar *out = purple_base16_decode("21646c726f77202c6f6c6c656800", &sz);
-	fail_unless(sz == 14, NULL);
-	assert_string_equal_free("!dlrow ,olleh", (char *)out);
+
+	g_assert_cmpint(sz, ==, 14);
+	g_assert_cmpstr("!dlrow ,olleh", ==, (const gchar *)out);
 }
-END_TEST
 
-START_TEST(test_util_base64_encode)
-{
-	assert_string_equal_free("Zm9ydHktdHdvAA==", purple_base64_encode((const unsigned char *)"forty-two", 10));
+/******************************************************************************
+ * filename escape tests
+ *****************************************************************************/
+static void
+test_util_filename_escape(void) {
+	g_assert_cmpstr("foo", ==, purple_escape_filename("foo"));
+	g_assert_cmpstr("@oo", ==, purple_escape_filename("@oo"));
+	g_assert_cmpstr("#oo", ==, purple_escape_filename("#oo"));
+	g_assert_cmpstr("-oo", ==, purple_escape_filename("-oo"));
+	g_assert_cmpstr("_oo", ==, purple_escape_filename("_oo"));
+	g_assert_cmpstr(".oo", ==, purple_escape_filename(".oo"));
+	g_assert_cmpstr("%25oo", ==, purple_escape_filename("%oo"));
+	g_assert_cmpstr("%21oo", ==, purple_escape_filename("!oo"));
 }
-END_TEST
 
-START_TEST(test_util_base64_decode)
-{
-	gsize sz;
-	guchar *out = purple_base64_decode("b3d0LXl0cm9mAA==", &sz);
-	fail_unless(sz == 10, NULL);
-	assert_string_equal_free("owt-ytrof", (char *)out);
+static void
+test_util_filename_unescape(void) {
+	g_assert_cmpstr("bar", ==, purple_unescape_filename("bar"));
+	g_assert_cmpstr("@ar", ==, purple_unescape_filename("@ar"));
+	g_assert_cmpstr("!ar", ==, purple_unescape_filename("!ar"));
+	g_assert_cmpstr("!ar", ==, purple_unescape_filename("%21ar"));
+	g_assert_cmpstr("%ar", ==, purple_unescape_filename("%25ar"));
 }
-END_TEST
 
-START_TEST(test_util_escape_filename)
-{
-	assert_string_equal("foo", purple_escape_filename("foo"));
-	assert_string_equal("@oo", purple_escape_filename("@oo"));
-	assert_string_equal("#oo", purple_escape_filename("#oo"));
-	assert_string_equal("-oo", purple_escape_filename("-oo"));
-	assert_string_equal("_oo", purple_escape_filename("_oo"));
-	assert_string_equal(".oo", purple_escape_filename(".oo"));
-	assert_string_equal("%25oo", purple_escape_filename("%oo"));
-	assert_string_equal("%21oo", purple_escape_filename("!oo"));
-}
-END_TEST
-
-START_TEST(test_util_unescape_filename)
-{
-	assert_string_equal("bar", purple_unescape_filename("bar"));
-	assert_string_equal("@ar", purple_unescape_filename("@ar"));
-	assert_string_equal("!ar", purple_unescape_filename("!ar"));
-	assert_string_equal("!ar", purple_unescape_filename("%21ar"));
-	assert_string_equal("%ar", purple_unescape_filename("%25ar"));
-}
-END_TEST
-
-
-START_TEST(test_util_text_strip_mnemonic)
-{
-	assert_string_equal_free("", purple_text_strip_mnemonic(""));
-	assert_string_equal_free("foo", purple_text_strip_mnemonic("foo"));
-	assert_string_equal_free("foo", purple_text_strip_mnemonic("_foo"));
+/******************************************************************************
+ * text_strip tests
+ *****************************************************************************/
+static void
+test_util_text_strip_mnemonic(void) {
+	g_assert_cmpstr("", ==, purple_text_strip_mnemonic(""));
+	g_assert_cmpstr("foo", ==, purple_text_strip_mnemonic("foo"));
+	g_assert_cmpstr("foo", ==, purple_text_strip_mnemonic("_foo"));
 
 }
-END_TEST
 
+/******************************************************************************
+ * email tests
+ *****************************************************************************/
 /*
  * Many of the valid and invalid email addresses lised below are from
  * http://fightingforalostcause.net/misc/2006/compare-email-regex.php
  */
-const char *valid_emails[] = {
+const gchar *valid_emails[] = {
 	"purple-devel@lists.sf.net",
 	"l3tt3rsAndNumb3rs@domain.com",
 	"has-dash@domain.com",
@@ -95,7 +109,15 @@ const char *valid_emails[] = {
 	"HenryThe__WhiteCricket@hotmail.com"
 };
 
-const char *invalid_emails[] = {
+static void
+test_util_email_is_valid(void) {
+	size_t i;
+
+	for (i = 0; i < G_N_ELEMENTS(valid_emails); i++)
+		g_assert_true(purple_email_is_valid(valid_emails[i]));
+}
+
+const gchar *invalid_emails[] = {
 	"purple-devel@@lists.sf.net",
 	"purple@devel@lists.sf.net",
 	"purple-devel@list..sf.net",
@@ -109,7 +131,7 @@ const char *invalid_emails[] = {
 	"missingDot@com",
 	"two@@signs.com",
 	"colonButNoPort@127.0.0.1:",
-	""
+	"",
 	/* "someone-else@127.0.0.1.26", */
 	".localStartsWithDot@domain.com",
 	/* "localEndsWithDot.@domain.com", */ /* I don't think this is invalid -- Stu */
@@ -123,188 +145,457 @@ const char *invalid_emails[] = {
 	/* "local@SecondLevelDomainNamesAreInvalidIfTheyAreLongerThan64Charactersss.org" */
 };
 
-START_TEST(test_util_email_is_valid)
-{
+static void
+test_util_email_is_invalid(void) {
 	size_t i;
 
-	for (i = 0; i < G_N_ELEMENTS(valid_emails); i++)
-		fail_unless(purple_email_is_valid(valid_emails[i]), "Email address was: %s", valid_emails[i]);
-
 	for (i = 0; i < G_N_ELEMENTS(invalid_emails); i++)
-		fail_if(purple_email_is_valid(invalid_emails[i]), "Email address was: %s", invalid_emails[i]);
+		g_assert_false(purple_email_is_valid(invalid_emails[i]));
 }
-END_TEST
 
-START_TEST(test_util_ipv6_is_valid)
-{
-	fail_unless(purple_ipv6_address_is_valid("2001:0db8:85a3:0000:0000:8a2e:0370:7334"));
-	fail_unless(purple_ipv6_address_is_valid("2001:db8:85a3:0:0:8a2e:370:7334"));
-	fail_unless(purple_ipv6_address_is_valid("2001:db8:85a3::8a2e:370:7334"));
-	fail_unless(purple_ipv6_address_is_valid("2001:0db8:0:0::1428:57ab"));
-	fail_unless(purple_ipv6_address_is_valid("::1"));
-	fail_unless(purple_ipv6_address_is_valid("1::"));
-	fail_unless(purple_ipv6_address_is_valid("1::1"));
-	fail_unless(purple_ipv6_address_is_valid("::"));
-	fail_if(purple_ipv6_address_is_valid(""));
-	fail_if(purple_ipv6_address_is_valid(":"));
-	fail_if(purple_ipv6_address_is_valid("1.2.3.4"));
-	fail_if(purple_ipv6_address_is_valid("2001::FFD3::57ab"));
-	fail_if(purple_ipv6_address_is_valid("200000000::1"));
-	fail_if(purple_ipv6_address_is_valid("QWERTY::1"));
+/******************************************************************************
+ * ipv6 tests
+ *****************************************************************************/
+static void
+test_util_ipv6_is_valid(void) {
+	g_assert_true(purple_ipv6_address_is_valid("2001:0db8:85a3:0000:0000:8a2e:0370:7334"));
+	g_assert_true(purple_ipv6_address_is_valid("2001:db8:85a3:0:0:8a2e:370:7334"));
+	g_assert_true(purple_ipv6_address_is_valid("2001:db8:85a3::8a2e:370:7334"));
+	g_assert_true(purple_ipv6_address_is_valid("2001:0db8:0:0::1428:57ab"));
+	g_assert_true(purple_ipv6_address_is_valid("::1"));
+	g_assert_true(purple_ipv6_address_is_valid("1::"));
+	g_assert_true(purple_ipv6_address_is_valid("1::1"));
+	g_assert_true(purple_ipv6_address_is_valid("::"));
 }
-END_TEST
 
-START_TEST(test_util_str_to_time)
-{
+static void
+test_util_ipv6_is_invalid(void) {
+	g_assert_false(purple_ipv6_address_is_valid(""));
+	g_assert_false(purple_ipv6_address_is_valid(":"));
+	g_assert_false(purple_ipv6_address_is_valid("1.2.3.4"));
+	g_assert_false(purple_ipv6_address_is_valid("2001::FFD3::57ab"));
+	g_assert_false(purple_ipv6_address_is_valid("200000000::1"));
+	g_assert_false(purple_ipv6_address_is_valid("QWERTY::1"));
+}
+
+/******************************************************************************
+ * str_to_time tests
+ *****************************************************************************/
+static void
+test_util_str_to_time(void) {
 	struct tm tm;
-	long tz_off;
-	const char *rest;
+	glong tz_off;
+	const gchar *rest;
 	time_t timestamp;
 
-	fail_unless(377182200 == purple_str_to_time("19811214T12:50:00", TRUE, NULL, NULL, NULL));
-	fail_unless(1175919261 == purple_str_to_time("20070407T04:14:21", TRUE, NULL, NULL, NULL));
-	fail_unless(1282941722 == purple_str_to_time("2010-08-27.204202", TRUE, NULL, NULL, NULL));
+	g_assert_cmpint(377182200, ==, purple_str_to_time("19811214T12:50:00", TRUE, NULL, NULL, NULL));
+	g_assert_cmpint(1175919261, ==, purple_str_to_time("20070407T04:14:21", TRUE, NULL, NULL, NULL));
+	g_assert_cmpint(1282941722, ==, purple_str_to_time("2010-08-27.204202", TRUE, NULL, NULL, NULL));
 
 	timestamp = purple_str_to_time("2010-08-27.134202-0700PDT", FALSE, &tm, &tz_off, &rest);
-	fail_unless(1282941722 == timestamp);
-	fail_unless((-7 * 60 * 60) == tz_off);
-	assert_string_equal("PDT", rest);
+	g_assert_cmpint(1282941722, ==, timestamp);
+	g_assert_cmpint((-7 * 60 * 60), ==, tz_off);
+	g_assert_cmpstr("PDT", ==, rest);
 }
-END_TEST
 
-START_TEST(test_markup_html_to_xhtml)
+/******************************************************************************
+ * str_to_date_time tests
+ *****************************************************************************/
+static void
+test_util_str_to_date_time(void)
 {
-	gchar *xhtml = NULL;
-	gchar *plaintext = NULL;
-	purple_markup_html_to_xhtml("<a>", &xhtml, &plaintext);
-	assert_string_equal_free("<a href=\"\"></a>", xhtml);
-	assert_string_equal_free("", plaintext);
+	GDateTime *dt;
 
+	dt = purple_str_to_date_time("19811214T12:50:00", TRUE);
+	g_assert_cmpint(377182200, ==, g_date_time_to_unix(dt));
+	g_assert_cmpint(0, ==, g_date_time_get_utc_offset(dt));
+	g_date_time_unref(dt);
 
-	purple_markup_html_to_xhtml("<FONT>x</FONT>", &xhtml, &plaintext);
-	assert_string_equal_free("x", xhtml);
-	assert_string_equal_free("x", plaintext);
+	dt = purple_str_to_date_time("20070407T04:14:21.1234", TRUE);
+	g_assert_cmpint(1175919261, ==, g_date_time_to_unix(dt));
+	g_assert_cmpint(0, ==, g_date_time_get_utc_offset(dt));
+	g_assert_cmpint(123400, ==, g_date_time_get_microsecond(dt));
+	g_date_time_unref(dt);
+
+	dt = purple_str_to_date_time("2010-08-27.204202", TRUE);
+	g_assert_cmpint(1282941722, ==, g_date_time_to_unix(dt));
+	g_assert_cmpint(0, ==, g_date_time_get_utc_offset(dt));
+	g_date_time_unref(dt);
+
+	dt = purple_str_to_date_time("2010-08-27.204202.123456", TRUE);
+	g_assert_cmpint(1282941722, ==, g_date_time_to_unix(dt));
+	g_assert_cmpint(0, ==, g_date_time_get_utc_offset(dt));
+	g_assert_cmpint(123456, ==, g_date_time_get_microsecond(dt));
+	g_date_time_unref(dt);
+
+	dt = purple_str_to_date_time("2010-08-27.134202-0700PDT", FALSE);
+	g_assert_cmpint(1282941722, ==, g_date_time_to_unix(dt));
+	g_assert_cmpint((-7LL * 60 * 60 * G_USEC_PER_SEC), ==, g_date_time_get_utc_offset(dt));
+
+	dt = purple_str_to_date_time("2010-08-27.134202.1234-0700PDT", FALSE);
+	g_assert_cmpint(1282941722, ==, g_date_time_to_unix(dt));
+	g_assert_cmpint(123400, ==, g_date_time_get_microsecond(dt));
+	g_assert_cmpint((-7LL * 60 * 60 * G_USEC_PER_SEC), ==, g_date_time_get_utc_offset(dt));
 }
-END_TEST
 
-START_TEST(test_utf8_strip_unprintables)
-{
-	fail_unless(NULL == purple_utf8_strip_unprintables(NULL));
-	/* invalid UTF-8 */
+/******************************************************************************
+ * Markup tests
+ *****************************************************************************/
+typedef struct {
+	gchar *markup;
+	gchar *xhtml;
+	gchar *plaintext;
+} MarkupTestData;
+
+static void
+test_util_markup_html_to_xhtml(void) {
+	gint i;
+	MarkupTestData data[] = {
+		{
+			"<a>",
+			"<a href=\"\"></a>",
+			"",
+		}, {
+			"<A href='URL'>ABOUT</a>",
+			"<a href=\"URL\">ABOUT</a>",
+			"ABOUT <URL>",
+		}, {
+			"<a href='URL'>URL</a>",
+			"<a href=\"URL\">URL</a>",
+			"URL",
+		}, {
+			"<a href='mailto:mail'>mail</a>",
+			"<a href=\"mailto:mail\">mail</a>",
+			"mail",
+		}, {
+			"<A href='\"U&apos;R&L'>ABOUT</a>",
+			"<a href=\"&quot;U&apos;R&amp;L\">ABOUT</a>",
+			"ABOUT <\"U'R&L>",
+		}, {
+			"<img src='SRC' alt='ALT'/>",
+			"<img src='SRC' alt='ALT' />",
+			"ALT",
+		}, {
+			"<img src=\"'S&apos;R&C\" alt=\"'A&apos;L&T\"/>",
+			"<img src='&apos;S&apos;R&amp;C' alt='&apos;A&apos;L&amp;T' />",
+			"'A'L&T",
+		}, {
+			"<unknown>",
+			"&lt;unknown>",
+			"<unknown>",
+		}, {
+			"&eacute;&amp;",
+			"&eacute;&amp;",
+			"&eacute;&",
+		}, {
+			"<h1>A<h2>B</h2>C</h1>",
+			"<h1>A<h2>B</h2>C</h1>",
+			"ABC",
+		}, {
+			"<h1><h2><h3><h4>",
+			"<h1><h2><h3><h4></h4></h3></h2></h1>",
+			"",
+		}, {
+			"<italic/>",
+			"<em/>",
+			"",
+		}, {
+			"</",
+			"&lt;/",
+			"</",
+		}, {
+			"</div>",
+			"",
+			"",
+		}, {
+			"<hr/>",
+			"<br/>",
+			"\n",
+		}, {
+			"<hr>",
+			"<br/>",
+			"\n",
+		}, {
+			"<br />",
+			"<br/>",
+			"\n",
+		}, {
+			"<br>INSIDE</br>",
+			"<br/>INSIDE",
+			"\nINSIDE",
+		}, {
+			"<div></div>",
+			"<div></div>",
+			"",
+		}, {
+			"<div/>",
+			"<div/>",
+			"",
+		}, {
+			"<div attr='\"&<>'/>",
+			"<div attr='&quot;&amp;&lt;&gt;'/>",
+			"",
+		}, {
+			"<div attr=\"'\"/>",
+			"<div attr=\"&apos;\"/>",
+			"",
+		}, {
+			"<div/> < <div/>",
+			"<div/> &lt; <div/>",
+			" < ",
+		}, {
+			"<div>x</div>",
+			"<div>x</div>",
+			"x",
+		}, {
+			"<b>x</b>",
+			"<span style='font-weight: bold;'>x</span>",
+			"x",
+		}, {
+			"<bold>x</bold>",
+			"<span style='font-weight: bold;'>x</span>",
+			"x",
+		}, {
+			"<strong>x</strong>",
+			"<span style='font-weight: bold;'>x</span>",
+			"x",
+		}, {
+			"<u>x</u>",
+			"<span style='text-decoration: underline;'>x</span>",
+			"x",
+		}, {
+			"<underline>x</underline>",
+			"<span style='text-decoration: underline;'>x</span>",
+			"x",
+		}, {
+			"<s>x</s>",
+			"<span style='text-decoration: line-through;'>x</span>",
+			"x",
+		}, {
+			"<strike>x</strike>",
+			"<span style='text-decoration: line-through;'>x</span>",
+			"x",
+		}, {
+			"<sub>x</sub>",
+			"<span style='vertical-align:sub;'>x</span>",
+			"x",
+		}, {
+			"<sup>x</sup>",
+			"<span style='vertical-align:super;'>x</span>",
+			"x",
+		}, {
+			"<FONT>x</FONT>",
+			"x",
+			"x",
+		}, {
+			"<font face=\"'Times&gt;New & Roman'\">x</font>",
+			"<span style='font-family: \"Times&gt;New &amp; Roman\";'>x</span>",
+			"x",
+		}, {
+			"<font back=\"'color&gt;blue&red'\">x</font>",
+			"<span style='background: \"color&gt;blue&amp;red\";'>x</span>",
+			"x",
+		}, {
+			"<font color=\"'color&gt;blue&red'\">x</font>",
+			"<span style='color: \"color&gt;blue&amp;red\";'>x</span>",
+			"x",
+		}, {
+			"<font size=1>x</font>",
+			"<span style='font-size: xx-small;'>x</span>",
+			"x",
+		}, {
+			"<font size=432>x</font>",
+			"<span style='font-size: medium;'>x</span>",
+			"x",
+		}, {
+			"<!--COMMENT-->",
+			"<!--COMMENT-->",
+			"COMMENT-->",
+		}, {
+			"<br  />",
+			"&lt;br  />",
+			"<br  />",
+		}, {
+			"<hr  />",
+			"&lt;hr  />",
+			"<hr  />"
+		}, {
+			NULL, NULL, NULL,
+		}
+	};
+
+	for(i = 0; data[i].markup; i++) {
+		gchar *xhtml = NULL, *plaintext = NULL;
+
+		purple_markup_html_to_xhtml(data[i].markup, &xhtml, &plaintext);
+
+		g_assert_cmpstr(data[i].xhtml, ==, xhtml);
+		g_free(xhtml);
+
+		g_assert_cmpstr(data[i].plaintext, ==, plaintext);
+		g_free(plaintext);
+	}
+}
+
+/******************************************************************************
+ * UTF8 tests
+ *****************************************************************************/
+typedef struct {
+	gchar *input;
+	gchar *output;
+} UTF8TestData;
+
+static void
+test_util_utf8_strip_unprintables(void) {
+	gint i;
+	UTF8TestData data[] = {
+		{
+			/* \t, \n, \r, space */
+			"ab \tcd\nef\r   ",
+			"ab \tcd\nef\r   ",
+		}, {
+			/* ASCII control characters (stripped) */
+			"\x01\x02\x03\x04\x05\x06\x07\x08\x0B\x0C\x0E\x0F\x10 aaaa "
+			"\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F",
+			" aaaa ",
+		}, {
+			/* Basic ASCII */
+			"Foobar",
+			"Foobar",
+		}, {
+			/* 0xE000 - 0xFFFD (UTF-8 encoded) */
+			/* U+F1F7 */
+			"aaaa\xef\x87\xb7",
+			"aaaa\xef\x87\xb7",
+		}, {
+			/* U+FEFF (should not be stripped) */
+			"aaaa\xef\xbb\xbf",
+			"aaaa\xef\xbb\xbf",
+		}, {
+			NULL,
+			NULL,
+		}
+	};
+
+	for(i = 0; ; i++) {
+		gchar *result = purple_utf8_strip_unprintables(data[i].input);
+
+		g_assert_cmpstr(data[i].output, ==, result);
+
+		g_free(result);
+
+		if(data[i].input == NULL)
+			break;
+	}
+
 #if 0
+	/* invalid UTF-8 */
 	/* disabled because make check fails on an assertion */
 	fail_unless(NULL == purple_utf8_strip_unprintables("abc\x80\x7f"));
-#endif
-	/* \t, \n, \r, space */
-	assert_string_equal_free("ab \tcd\nef\r   ", purple_utf8_strip_unprintables("ab \tcd\nef\r   "));
-	/* ASCII control characters (stripped) */
-	assert_string_equal_free(" aaaa ", purple_utf8_strip_unprintables(
-				"\x01\x02\x03\x04\x05\x06\x07\x08\x0B\x0C\x0E\x0F\x10 aaaa "
-				"\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F"));
-	/* Basic ASCII */
-	assert_string_equal_free("Foobar", purple_utf8_strip_unprintables("Foobar"));
-	/* 0xE000 - 0xFFFD (UTF-8 encoded) */
-	/* U+F1F7 */
-	assert_string_equal_free("aaaa\xef\x87\xb7", purple_utf8_strip_unprintables("aaaa\xef\x87\xb7"));
-#if 0
 	/* disabled because make check fails on an assertion */
 	/* U+DB80 (Private Use High Surrogate, First) -- should be stripped */
 	assert_string_equal_free("aaaa", purple_utf8_strip_unprintables("aaaa\xed\xa0\x80"));
 	/* U+FFFE (should be stripped) */
 	assert_string_equal_free("aaaa", purple_utf8_strip_unprintables("aaaa\xef\xbf\xbe"));
 #endif
-	/* U+FEFF (should not be stripped) */
-	assert_string_equal_free("aaaa\xef\xbb\xbf", purple_utf8_strip_unprintables("aaaa\xef\xbb\xbf"));
 }
-END_TEST
 
-START_TEST(test_mime_decode_field)
-{
+/******************************************************************************
+ * MIME tests
+ *****************************************************************************/
+static void
+test_util_mime_decode_field(void) {
 	gchar *result = purple_mime_decode_field("=?ISO-8859-1?Q?Keld_J=F8rn_Simonsen?=");
-	assert_string_equal_free("Keld Jørn Simonsen", result);
+	g_assert_cmpstr("Keld Jørn Simonsen", ==, result);
+	g_free(result);
 }
-END_TEST
 
-START_TEST(test_strdup_withhtml)
-{
+/******************************************************************************
+ * strdup_withhtml tests
+ *****************************************************************************/
+static void
+test_util_strdup_withhtml(void) {
 	gchar *result = purple_strdup_withhtml("hi\r\nthere\n");
-	assert_string_equal_free("hi<BR>there<BR>", result);
-}
-END_TEST
 
-START_TEST(test_uri_escape_for_open)
-{
+	g_assert_cmpstr("hi<BR>there<BR>", ==, result);
+
+	g_free(result);
+}
+
+/******************************************************************************
+ * URI Escaping
+ *****************************************************************************/
+static void
+test_uri_escape_for_open(void) {
 	/* make sure shell stuff is escaped... */
 	gchar *result = purple_uri_escape_for_open("https://$(xterm)");
-	assert_string_equal_free("https://%24%28xterm%29", result);
+	g_assert_cmpstr("https://%24%28xterm%29", ==, result);
+	g_free(result);
 
 	result = purple_uri_escape_for_open("https://`xterm`");
-	assert_string_equal_free("https://%60xterm%60", result);
+	g_assert_cmpstr("https://%60xterm%60", ==, result);
+	g_free(result);
 
 	result = purple_uri_escape_for_open("https://$((25 + 13))");
-	assert_string_equal_free("https://%24%28%2825%20+%2013%29%29", result);
+	g_assert_cmpstr("https://%24%28%2825%20+%2013%29%29", ==, result);
+	g_free(result);
 
 	/* ...but keep brackets so that ipv6 links can be opened. */
 	result = purple_uri_escape_for_open("https://[123:4567:89a::::]");
-	assert_string_equal_free("https://[123:4567:89a::::]", result);
+	g_assert_cmpstr("https://[123:4567:89a::::]", ==, result);
+	g_free(result);
 }
-END_TEST
 
-Suite *
-util_suite(void)
-{
-	Suite *s = suite_create("Utility Functions");
+/******************************************************************************
+ * MANE
+ *****************************************************************************/
+gint
+main(gint argc, gchar **argv) {
+	g_test_init(&argc, &argv, NULL);
 
-	TCase *tc = tcase_create("Base16");
-	tcase_add_test(tc, test_util_base16_encode);
-	tcase_add_test(tc, test_util_base16_decode);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/base/16/encode",
+	                test_util_base_16_encode);
+	g_test_add_func("/util/base/16/decode",
+	                test_util_base_16_decode);
 
-	tc = tcase_create("Base64");
-	tcase_add_test(tc, test_util_base64_encode);
-	tcase_add_test(tc, test_util_base64_decode);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/filename/escape",
+	                test_util_filename_escape);
+	g_test_add_func("/util/filename/unescape",
+	                test_util_filename_unescape);
 
-	tc = tcase_create("Filenames");
-	tcase_add_test(tc, test_util_escape_filename);
-	tcase_add_test(tc, test_util_unescape_filename);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/mnemonic/strip",
+	                test_util_text_strip_mnemonic);
 
-	tc = tcase_create("Strip Mnemonic");
-	tcase_add_test(tc, test_util_text_strip_mnemonic);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/email/is valid",
+	                test_util_email_is_valid);
+	g_test_add_func("/util/email/is invalid",
+	                test_util_email_is_invalid);
 
-	tc = tcase_create("Email");
-	tcase_add_test(tc, test_util_email_is_valid);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/ipv6/is valid",
+	                test_util_ipv6_is_valid);
+	g_test_add_func("/util/ipv6/is invalid",
+	                test_util_ipv6_is_invalid);
 
-	tc = tcase_create("IPv6");
-	tcase_add_test(tc, test_util_ipv6_is_valid);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/str to time",
+	                test_util_str_to_time);
 
-	tc = tcase_create("Time");
-	tcase_add_test(tc, test_util_str_to_time);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/str to date time",
+	                test_util_str_to_date_time);
 
-	tc = tcase_create("Markup");
-	tcase_add_test(tc, test_markup_html_to_xhtml);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/markup/html to xhtml",
+	                test_util_markup_html_to_xhtml);
 
-	tc = tcase_create("Stripping Unparseables");
-	tcase_add_test(tc, test_utf8_strip_unprintables);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/utf8/strip unprintables",
+	                test_util_utf8_strip_unprintables);
 
-	tc = tcase_create("MIME");
-	tcase_add_test(tc, test_mime_decode_field);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/mime/decode field",
+	                test_util_mime_decode_field);
 
-	tc = tcase_create("strdup_withhtml");
-	tcase_add_test(tc, test_strdup_withhtml);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/test_strdup_withhtml",
+	                test_util_strdup_withhtml);
 
-	tc = tcase_create("escape_uri_for_open");
-	tcase_add_test(tc, test_uri_escape_for_open);
-	suite_add_tcase(s, tc);
+	g_test_add_func("/util/test_uri_escape_for_open",
+	                test_uri_escape_for_open);
 
-	return s;
+	return g_test_run();
 }

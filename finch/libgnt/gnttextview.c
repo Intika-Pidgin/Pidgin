@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -335,7 +335,13 @@ gnt_text_view_clicked(GntWidget *widget, GntMouseEvent event, int x, int y)
 		GntTextView *view = GNT_TEXT_VIEW(widget);
 		if (text_view_contains(view, select_start)) {
 			GString *clip;
+
+			g_return_val_if_fail(select_start != NULL, TRUE);
+
 			select_end = gnt_text_view_get_p(view, x - widget->priv.x, y - widget->priv.y);
+
+			g_return_val_if_fail(select_end != NULL, TRUE);
+
 			if (select_end < select_start) {
 				gchar *t = select_start;
 				select_start = select_end;
@@ -347,8 +353,8 @@ gnt_text_view_clicked(GntWidget *widget, GntMouseEvent event, int x, int y)
 					double_click = FALSE;
 				} else {
 					double_click = TRUE;
-					select_start = 0;
-					select_end = 0;
+					select_start = NULL;
+					select_end = NULL;
 					gnt_widget_draw(widget);
 					return TRUE;
 				}
@@ -470,7 +476,7 @@ gnt_text_view_init(GTypeInstance *instance, gpointer class)
  * GntTextView API
  *****************************************************************************/
 GType
-gnt_text_view_get_gtype(void)
+gnt_text_view_get_type(void)
 {
 	static GType type = 0;
 
@@ -720,7 +726,7 @@ int gnt_text_view_get_lines_above(GntTextView *view)
 	return above;
 }
 
-/**
+/*
  * XXX: There are quite possibly more than a few bugs here.
  */
 int gnt_text_view_tag_change(GntTextView *view, const char *name, const char *text, gboolean all)
@@ -759,7 +765,7 @@ int gnt_text_view_tag_change(GntTextView *view, const char *name, const char *te
 				GntTextLine *line = iter->data;
 				inext = iter->next;
 
-				if (!line) {
+				if (G_UNLIKELY(line == NULL)) {
 					g_warn_if_reached();
 					continue;
 				}
@@ -781,6 +787,10 @@ int gnt_text_view_tag_change(GntTextView *view, const char *name, const char *te
 						/* This segment starts in the middle of the tag */
 						if (text == NULL) {
 							free_text_segment(seg, NULL);
+							if (G_UNLIKELY(line == NULL)) {
+								g_warn_if_reached();
+								break;
+							}
 							line->segments = g_list_delete_link(line->segments, segs);
 							if (line->segments == NULL) {
 								free_text_line(line, NULL);

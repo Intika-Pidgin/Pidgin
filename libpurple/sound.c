@@ -22,25 +22,21 @@
  */
 #include "internal.h"
 
-#include "blist.h"
+#include "buddylist.h"
 #include "prefs.h"
 #include "sound.h"
 #include "sound-theme-loader.h"
 #include "theme-manager.h"
 
 static PurpleSoundUiOps *sound_ui_ops = NULL;
-
-#define STATUS_AVAILABLE 1
-#define STATUS_AWAY 2
-
-static time_t last_played[PURPLE_NUM_SOUNDS];
+static gint64 last_played[PURPLE_NUM_SOUNDS];
 
 static gboolean
 purple_sound_play_required(const PurpleAccount *account)
 {
 	gint pref_status = purple_prefs_get_int("/purple/sound/while_status");
 
-	if (pref_status == 3)
+	if (pref_status == PURPLE_SOUND_STATUS_ALWAYS)
 	{
 		/* Play sounds: Always */
 		return TRUE;
@@ -53,8 +49,8 @@ purple_sound_play_required(const PurpleAccount *account)
 		if (purple_status_is_online(status))
 		{
 			gboolean available = purple_status_is_available(status);
-			return (( available && pref_status == STATUS_AVAILABLE) ||
-			        (!available && pref_status == STATUS_AWAY));
+			return (( available && pref_status == PURPLE_SOUND_STATUS_AVAILABLE) ||
+			        (!available && pref_status == PURPLE_SOUND_STATUS_AWAY));
 		}
 	}
 
@@ -81,9 +77,11 @@ purple_sound_play_event(PurpleSoundEventID event, const PurpleAccount *account)
 	if (!purple_sound_play_required(account))
 		return;
 
-	if (time(NULL) - last_played[event] < 2)
+	g_return_if_fail(event < PURPLE_NUM_SOUNDS);
+
+	if (g_get_monotonic_time() - last_played[event] < 2 * G_USEC_PER_SEC)
 		return;
-	last_played[event] = time(NULL);
+	last_played[event] = g_get_monotonic_time();
 
 	if(sound_ui_ops && sound_ui_ops->play_event) {
 		int plugin_return;
@@ -97,6 +95,33 @@ purple_sound_play_event(PurpleSoundEventID event, const PurpleAccount *account)
 		else
 			sound_ui_ops->play_event(event);
 	}
+}
+
+static PurpleSoundUiOps *
+purple_sound_ui_ops_copy(PurpleSoundUiOps *ops)
+{
+	PurpleSoundUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleSoundUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_sound_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleSoundUiOps",
+				(GBoxedCopyFunc)purple_sound_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }
 
 void
@@ -128,13 +153,10 @@ purple_sound_init()
 
 	purple_signal_register(handle, "playing-sound-event",
 	                     purple_marshal_BOOLEAN__INT_POINTER,
-	                     purple_value_new(PURPLE_TYPE_BOOLEAN), 2,
-	                     purple_value_new(PURPLE_TYPE_INT),
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_ACCOUNT));
+	                     G_TYPE_BOOLEAN, 2, G_TYPE_INT, PURPLE_TYPE_ACCOUNT);
 
 	purple_prefs_add_none("/purple/sound");
-	purple_prefs_add_int("/purple/sound/while_status", STATUS_AVAILABLE);
+	purple_prefs_add_int("/purple/sound/while_status", PURPLE_SOUND_STATUS_AVAILABLE);
 	memset(last_played, 0, sizeof(last_played));
 
 	purple_theme_manager_register_type(g_object_new(PURPLE_TYPE_SOUND_THEME_LOADER, "type", "sound", NULL));

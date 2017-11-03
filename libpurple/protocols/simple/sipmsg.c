@@ -23,12 +23,12 @@
 #include "internal.h"
 
 #include "accountopt.h"
-#include "blist.h"
+#include "buddylist.h"
 #include "conversation.h"
 #include "debug.h"
 #include "notify.h"
-#include "prpl.h"
-#include "plugin.h"
+#include "protocol.h"
+#include "plugins.h"
 #include "util.h"
 #include "version.h"
 
@@ -96,7 +96,7 @@ struct sipmsg *sipmsg_parse_header(const gchar *header) {
 			return NULL;
 		}
 		dummy = parts[1];
-		dummy2 = 0;
+		dummy2 = NULL;
 		while(*dummy==' ' || *dummy=='\t') dummy++;
 		dummy2 = g_strdup(dummy);
 		while(lines[i+1] && (lines[i+1][0]==' ' || lines[i+1][0]=='\t')) {

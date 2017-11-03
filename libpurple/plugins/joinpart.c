@@ -23,7 +23,7 @@
 #include "internal.h"
 #include "conversation.h"
 #include "debug.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "version.h"
 
 #define JOINPART_PLUGIN_ID "core-rlaager-joinpart"
@@ -79,22 +79,22 @@ static void joinpart_key_destroy(struct joinpart_key *key)
 static gboolean should_hide_notice(PurpleConversation *conv, const char *name,
                                    GHashTable *users)
 {
-	PurpleConvChat *chat;
+	PurpleChatConversation *chat;
 	guint threshold;
 	struct joinpart_key key;
 	time_t *last_said;
 
 	g_return_val_if_fail(conv != NULL, FALSE);
-	g_return_val_if_fail(purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT, FALSE);
+	g_return_val_if_fail(PURPLE_IS_CHAT_CONVERSATION(conv), FALSE);
 
 	/* If the room is small, don't bother. */
-	chat = PURPLE_CONV_CHAT(conv);
+	chat = PURPLE_CHAT_CONVERSATION(conv);
 	threshold = purple_prefs_get_int(THRESHOLD_PREF);
-	if (g_list_length(purple_conv_chat_get_users(chat)) < threshold)
+	if (purple_chat_conversation_get_users_count(chat) < threshold)
 		return FALSE;
 
 	if (!purple_prefs_get_bool(HIDE_BUDDIES_PREF) &&
-	    purple_find_buddy(purple_conversation_get_account(conv), name))
+	    purple_blist_find_buddy(purple_conversation_get_account(conv), name))
 		return FALSE;
 
 	/* Only show the notice if the user has spoken recently. */
@@ -111,14 +111,14 @@ static gboolean should_hide_notice(PurpleConversation *conv, const char *name,
 	return TRUE;
 }
 
-static gboolean chat_buddy_leaving_cb(PurpleConversation *conv, const char *name,
+static gboolean chat_user_leaving_cb(PurpleConversation *conv, const char *name,
                                const char *reason, GHashTable *users)
 {
 	return should_hide_notice(conv, name, users);
 }
 
-static gboolean chat_buddy_joining_cb(PurpleConversation *conv, const char *name,
-                                      PurpleConvChatBuddyFlags flags,
+static gboolean chat_user_joining_cb(PurpleConversation *conv, const char *name,
+                                      PurpleChatUserFlags flags,
                                       GHashTable *users)
 {
 	return should_hide_notice(conv, name, users);
@@ -173,52 +173,6 @@ static gboolean clean_users_hash(GHashTable *users)
 	return TRUE;
 }
 
-static gboolean plugin_load(PurplePlugin *plugin)
-{
-	void *conv_handle;
-	GHashTable *users;
-	guint id;
-	gpointer *data;
-
-	users = g_hash_table_new_full((GHashFunc)joinpart_key_hash,
-	                              (GEqualFunc)joinpart_key_equal,
-	                              (GDestroyNotify)joinpart_key_destroy,
-	                              g_free);
-
-	conv_handle = purple_conversations_get_handle();
-	purple_signal_connect(conv_handle, "chat-buddy-joining", plugin,
-	                    PURPLE_CALLBACK(chat_buddy_joining_cb), users);
-	purple_signal_connect(conv_handle, "chat-buddy-leaving", plugin,
-	                    PURPLE_CALLBACK(chat_buddy_leaving_cb), users);
-	purple_signal_connect(conv_handle, "received-chat-msg", plugin,
-	                    PURPLE_CALLBACK(received_chat_msg_cb), users);
-
-	/* Cleanup every 5 minutes */
-	id = purple_timeout_add_seconds(60 * 5, (GSourceFunc)clean_users_hash, users);
-
-	data = g_new(gpointer, 2);
-	data[0] = users;
-	data[1] = GUINT_TO_POINTER(id);
-	plugin->extra = data;
-
-	return TRUE;
-}
-
-static gboolean plugin_unload(PurplePlugin *plugin)
-{
-	gpointer *data = plugin->extra;
-
-	/* Destroy the hash table. The core plugin code will
-	 * disconnect the signals, and since Purple is single-threaded,
-	 * we don't have to worry one will be called after this. */
-	g_hash_table_destroy((GHashTable *)data[0]);
-
-	purple_timeout_remove(GPOINTER_TO_UINT(data[1]));
-	g_free(data);
-
-	return TRUE;
-}
-
 static PurplePluginPrefFrame *
 get_plugin_pref_frame(PurplePlugin *plugin)
 {
@@ -250,65 +204,75 @@ get_plugin_pref_frame(PurplePlugin *plugin)
 	return frame;
 }
 
-static PurplePluginUiInfo prefs_info = {
-	get_plugin_pref_frame,
-	0,   /* page_num (reserved) */
-	NULL, /* frame (reserved) */
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static PurplePluginInfo info =
+static PurplePluginInfo *
+plugin_query(GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
+	const gchar * const authors[] = {
+		"Richard Laager <rlaager@pidgin.im>",
+		NULL
+	};
 
-	JOINPART_PLUGIN_ID,                               /**< id             */
-	N_("Join/Part Hiding"),                           /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	N_("Hides extraneous join/part messages."),
-	                                                  /**  description    */
-	N_("This plugin hides join/part messages in large "
-	   "rooms, except for those users actively taking "
-	   "part in a conversation."),
-	"Richard Laager <rlaager@pidgin.im>",             /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
+	return purple_plugin_info_new(
+		"id",             JOINPART_PLUGIN_ID,
+		"name",           N_("Join/Part Hiding"),
+		"version",        DISPLAY_VERSION,
+		"category",       N_("User interface"),
+		"summary",        N_("Hides extraneous join/part messages."),
+		"description",    N_("This plugin hides join/part messages in "
+		                     "large rooms, except for those users actively "
+		                     "taking part in a conversation."),
+		"authors",        authors,
+		"website",        PURPLE_WEBSITE,
+		"abi-version",    PURPLE_ABI_VERSION,
+		"pref-frame-cb",  get_plugin_pref_frame,
+		NULL
+	);
+}
 
-	plugin_load,                                      /**< load           */
-	plugin_unload,                                    /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	NULL,                                             /**< extra_info     */
-	&prefs_info,                                      /**< prefs_info     */
-	NULL,                                             /**< actions        */
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
+static gboolean plugin_load(PurplePlugin *plugin, GError **error)
 {
+	void *conv_handle;
+	GHashTable *users;
+	guint id;
+
 	purple_prefs_add_none("/plugins/core/joinpart");
 
 	purple_prefs_add_int(DELAY_PREF, DELAY_DEFAULT);
 	purple_prefs_add_int(THRESHOLD_PREF, THRESHOLD_DEFAULT);
 	purple_prefs_add_bool(HIDE_BUDDIES_PREF, HIDE_BUDDIES_DEFAULT);
+
+	users = g_hash_table_new_full((GHashFunc)joinpart_key_hash,
+	                              (GEqualFunc)joinpart_key_equal,
+	                              (GDestroyNotify)joinpart_key_destroy,
+	                              g_free);
+
+	conv_handle = purple_conversations_get_handle();
+	purple_signal_connect(conv_handle, "chat-user-joining", plugin,
+	                    PURPLE_CALLBACK(chat_user_joining_cb), users);
+	purple_signal_connect(conv_handle, "chat-user-leaving", plugin,
+	                    PURPLE_CALLBACK(chat_user_leaving_cb), users);
+	purple_signal_connect(conv_handle, "received-chat-msg", plugin,
+	                    PURPLE_CALLBACK(received_chat_msg_cb), users);
+
+	/* Cleanup every 5 minutes */
+	id = g_timeout_add_seconds(60 * 5, (GSourceFunc)clean_users_hash, users);
+
+	g_object_set_data(G_OBJECT(plugin), "users", users);
+	g_object_set_data(G_OBJECT(plugin), "id", GUINT_TO_POINTER(id));
+
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(joinpart, init_plugin, info)
+static gboolean plugin_unload(PurplePlugin *plugin, GError **error)
+{
+	/* Destroy the hash table. The core plugin code will
+	 * disconnect the signals, and since Purple is single-threaded,
+	 * we don't have to worry one will be called after this. */
+	g_hash_table_destroy((GHashTable *)g_object_get_data(G_OBJECT(plugin), "users"));
+
+	g_source_remove(GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(plugin), "id")));
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(joinpart, plugin_query, plugin_load, plugin_unload);

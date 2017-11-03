@@ -24,114 +24,29 @@
 #include "purple.h"
 
 #include <glib.h>
+#include <glib/gprintf.h>
 
 #include <signal.h>
 #include <string.h>
-#ifndef _WIN32
-#include <unistd.h>
+#ifdef _WIN32
+#  include <conio.h>
 #else
-#include "win32/win32dep.h"
+#  include <unistd.h>
 #endif
 
 #include "defines.h"
 
-/**
- * The following eventloop functions are used in both pidgin and purple-text. If your
- * application uses glib mainloop, you can safely use this verbatim.
- */
-#define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
-#define PURPLE_GLIB_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
-
-typedef struct _PurpleGLibIOClosure {
-	PurpleInputFunction function;
-	guint result;
-	gpointer data;
-} PurpleGLibIOClosure;
-
-static void purple_glib_io_destroy(gpointer data)
-{
-	g_free(data);
-}
-
-static gboolean purple_glib_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
-{
-	PurpleGLibIOClosure *closure = data;
-	PurpleInputCondition purple_cond = 0;
-
-	if (condition & PURPLE_GLIB_READ_COND)
-		purple_cond |= PURPLE_INPUT_READ;
-	if (condition & PURPLE_GLIB_WRITE_COND)
-		purple_cond |= PURPLE_INPUT_WRITE;
-
-	closure->function(closure->data, g_io_channel_unix_get_fd(source),
-			  purple_cond);
-
-	return TRUE;
-}
-
-static guint glib_input_add(gint fd, PurpleInputCondition condition, PurpleInputFunction function,
-							   gpointer data)
-{
-	PurpleGLibIOClosure *closure = g_new0(PurpleGLibIOClosure, 1);
-	GIOChannel *channel;
-	GIOCondition cond = 0;
-
-	closure->function = function;
-	closure->data = data;
-
-	if (condition & PURPLE_INPUT_READ)
-		cond |= PURPLE_GLIB_READ_COND;
-	if (condition & PURPLE_INPUT_WRITE)
-		cond |= PURPLE_GLIB_WRITE_COND;
-
-#if defined _WIN32 && !defined WINPIDGIN_USE_GLIB_IO_CHANNEL
-	channel = wpurple_g_io_channel_win32_new_socket(fd);
-#else
-	channel = g_io_channel_unix_new(fd);
-#endif
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      purple_glib_io_invoke, closure, purple_glib_io_destroy);
-
-	g_io_channel_unref(channel);
-	return closure->result;
-}
-
-static PurpleEventLoopUiOps glib_eventloops =
-{
-	g_timeout_add,
-	g_source_remove,
-	glib_input_add,
-	g_source_remove,
-	NULL,
-#if GLIB_CHECK_VERSION(2,14,0)
-	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL
-};
-/*** End of the eventloop functions. ***/
-
 /*** Conversation uiops ***/
 static void
-null_write_conv(PurpleConversation *conv, const char *who, const char *alias,
-			const char *message, PurpleMessageFlags flags, time_t mtime)
+null_write_conv(PurpleConversation *conv, PurpleMessage *msg)
 {
-	const char *name;
-	if (alias && *alias)
-		name = alias;
-	else if (who && *who)
-		name = who;
-	else
-		name = NULL;
+	time_t mtime = purple_message_get_time(msg);
 
-	printf("(%s) %s %s: %s\n", purple_conversation_get_name(conv),
-			purple_utf8_strftime("(%H:%M:%S)", localtime(&mtime)),
-			name, message);
+	printf("(%s) %s %s: %s\n",
+		purple_conversation_get_name(conv),
+		purple_utf8_strftime("(%H:%M:%S)", localtime(&mtime)),
+		purple_message_get_author_alias(msg),
+		purple_message_get_contents(msg));
 }
 
 static PurpleConversationUiOps null_conv_uiops =
@@ -147,9 +62,6 @@ static PurpleConversationUiOps null_conv_uiops =
 	NULL,                      /* chat_update_user     */
 	NULL,                      /* present              */
 	NULL,                      /* has_focus            */
-	NULL,                      /* custom_smiley_add    */
-	NULL,                      /* custom_smiley_write  */
-	NULL,                      /* custom_smiley_close  */
 	NULL,                      /* send_confirm         */
 	NULL,
 	NULL,
@@ -178,6 +90,7 @@ static PurpleCoreUiOps null_core_uiops =
 	NULL,
 	NULL,
 	NULL,
+	NULL,
 	NULL
 };
 
@@ -198,15 +111,6 @@ init_libpurple(void)
 	 */
 	purple_core_set_ui_ops(&null_core_uiops);
 
-	/* Set the uiops for the eventloop. If your client is glib-based, you can safely
-	 * copy this verbatim. */
-	purple_eventloop_set_ui_ops(&glib_eventloops);
-
-	/* Set path to search for plugins. The core (libpurple) takes care of loading the
-	 * core-plugins, which includes the protocol-plugins. So it is not essential to add
-	 * any path here, but it might be desired, especially for ui-specific plugins. */
-	purple_plugins_add_search_path(CUSTOM_PLUGIN_PATH);
-
 	/* Now that all the essential stuff has been set, let's try to init the core. It's
 	 * necessary to provide a non-NULL name for the current ui to the core. This name
 	 * is used by stuff that depends on this ui, for example the ui-specific plugins. */
@@ -218,9 +122,11 @@ init_libpurple(void)
 		abort();
 	}
 
-	/* Create and load the buddylist. */
-	purple_set_blist(purple_blist_new());
-	purple_blist_load();
+	/* Set path to search for plugins. The core (libpurple) takes care of loading the
+	 * core-plugins, which includes the in-tree protocols. So it is not essential to add
+	 * any path here, but it might be desired, especially for ui-specific plugins. */
+	purple_plugins_add_search_path(CUSTOM_PLUGIN_PATH);
+	purple_plugins_refresh();
 
 	/* Load the preferences. */
 	purple_prefs_load();
@@ -228,16 +134,13 @@ init_libpurple(void)
 	/* Load the desired plugins. The client should save the list of loaded plugins in
 	 * the preferences using purple_plugins_save_loaded(PLUGIN_SAVE_PREF) */
 	purple_plugins_load_saved(PLUGIN_SAVE_PREF);
-
-	/* Load the pounces. */
-	purple_pounces_load();
 }
 
 static void
 signed_on(PurpleConnection *gc, gpointer null)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
-	printf("Account connected: %s %s\n", account->username, account->protocol_id);
+	printf("Account connected: %s %s\n", purple_account_get_username(account), purple_account_get_protocol_id(account));
 }
 
 static void
@@ -248,12 +151,42 @@ connect_to_signals_for_demonstration_purposes_only(void)
 				PURPLE_CALLBACK(signed_on), NULL);
 }
 
+#if defined(_WIN32) || defined(__BIONIC__)
+#ifndef PASS_MAX
+#  define PASS_MAX 1024
+#endif
+static gchar *
+getpass(const gchar *prompt)
+{
+	static gchar buff[PASS_MAX + 1];
+	guint i = 0;
+
+	g_fprintf(stderr, "%s", prompt);
+	fflush(stderr);
+
+	while (i < sizeof(buff) - 1) {
+#ifdef __BIONIC__
+		buff[i] = getc(stdin);
+#else
+		buff[i] = _getch();
+#endif
+		if (buff[i] == '\r' || buff[i] == '\n')
+			break;
+		i++;
+	}
+	buff[i] = '\0';
+	g_fprintf(stderr, "\n");
+
+	return buff;
+}
+#endif /* _WIN32 || __BIONIC__ */
+
 int main(int argc, char *argv[])
 {
-	GList *iter;
+	GList *list, *iter;
 	int i, num;
 	GList *names = NULL;
-	const char *prpl = NULL;
+	const char *protocol = NULL;
 	char name[128];
 	char *password;
 	GMainLoop *loop = g_main_loop_new(NULL, FALSE);
@@ -274,15 +207,16 @@ int main(int argc, char *argv[])
 
 	printf("libpurple initialized.\n");
 
-	iter = purple_plugins_get_protocols();
-	for (i = 0; iter; iter = iter->next) {
-		PurplePlugin *plugin = iter->data;
-		PurplePluginInfo *info = plugin->info;
-		if (info && info->name) {
-			printf("\t%d: %s\n", i++, info->name);
-			names = g_list_append(names, info->id);
+	list = purple_protocols_get_all();
+	for (i = 0, iter = list; iter; iter = iter->next) {
+		PurpleProtocol *protocol = iter->data;
+		if (protocol && purple_protocol_get_name(protocol)) {
+			printf("\t%d: %s\n", i++, purple_protocol_get_name(protocol));
+			names = g_list_append(names, (gpointer)purple_protocol_get_id(protocol));
 		}
 	}
+	g_list_free(list);
+
 	printf("Select the protocol [0-%d]: ", i-1);
 	res = fgets(name, sizeof(name), stdin);
 	if (!res) {
@@ -290,8 +224,8 @@ int main(int argc, char *argv[])
 		abort();
 	}
 	if (sscanf(name, "%d", &num) == 1)
-		prpl = g_list_nth_data(names, num);
-	if (!prpl) {
+		protocol = g_list_nth_data(names, num);
+	if (!protocol) {
 		fprintf(stderr, "Failed to gets protocol.");
 		abort();
 	}
@@ -305,11 +239,11 @@ int main(int argc, char *argv[])
 	name[strlen(name) - 1] = 0;  /* strip the \n at the end */
 
 	/* Create the account */
-	account = purple_account_new(name, prpl);
+	account = purple_account_new(name, protocol);
 
 	/* Get the password for the account */
 	password = getpass("Password: ");
-	purple_account_set_password(account, password);
+	purple_account_set_password(account, password, NULL, NULL);
 
 	/* It's necessary to enable the account first. */
 	purple_account_set_enabled(account, UI_ID, TRUE);
@@ -324,4 +258,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-

@@ -31,17 +31,17 @@
 #include "jabber.h"
 #include "auth.h"
 
-static xmlnode *finish_plaintext_authentication(JabberStream *js)
+static PurpleXmlNode *finish_plaintext_authentication(JabberStream *js)
 {
-	xmlnode *auth;
+	PurpleXmlNode *auth;
 	GString *response;
 	gchar *enc_out;
 
-	auth = xmlnode_new("auth");
-	xmlnode_set_namespace(auth, NS_XMPP_SASL);
+	auth = purple_xmlnode_new("auth");
+	purple_xmlnode_set_namespace(auth, NS_XMPP_SASL);
 
-	xmlnode_set_attrib(auth, "xmlns:ga", "http://www.google.com/talk/protocol/auth");
-	xmlnode_set_attrib(auth, "ga:client-uses-full-bind-result", "true");
+	purple_xmlnode_set_attrib(auth, "xmlns:ga", "http://www.google.com/talk/protocol/auth");
+	purple_xmlnode_set_attrib(auth, "ga:client-uses-full-bind-result", "true");
 
 	response = g_string_new("");
 	response = g_string_append_c(response, '\0');
@@ -50,10 +50,10 @@ static xmlnode *finish_plaintext_authentication(JabberStream *js)
 	response = g_string_append(response,
 			purple_connection_get_password(js->gc));
 
-	enc_out = purple_base64_encode((guchar *)response->str, response->len);
+	enc_out = g_base64_encode((guchar *)response->str, response->len);
 
-	xmlnode_set_attrib(auth, "mechanism", "PLAIN");
-	xmlnode_insert_data(auth, enc_out, -1);
+	purple_xmlnode_set_attrib(auth, "mechanism", "PLAIN");
+	purple_xmlnode_insert_data(auth, enc_out, -1);
 	g_free(enc_out);
 	g_string_free(response, TRUE);
 
@@ -64,24 +64,24 @@ static void allow_plaintext_auth(PurpleAccount *account)
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
 	JabberStream *js = purple_connection_get_protocol_data(gc);
-	xmlnode *response;
+	PurpleXmlNode *response;
 
 	purple_account_set_bool(account, "auth_plain_in_clear", TRUE);
 
 	response = finish_plaintext_authentication(js);
 	jabber_send(js, response);
-	xmlnode_free(response);
+	purple_xmlnode_free(response);
 }
 
 static void disallow_plaintext_auth(PurpleAccount *account)
 {
-	purple_connection_error_reason(purple_account_get_connection(account),
+	purple_connection_error(purple_account_get_connection(account),
 		PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR,
 		_("Server requires plaintext authentication over an unencrypted stream"));
 }
 
 static JabberSaslState
-jabber_plain_start(JabberStream *js, xmlnode *packet, xmlnode **response, char **error)
+jabber_plain_start(JabberStream *js, PurpleXmlNode *packet, PurpleXmlNode **response, char **error)
 {
 	PurpleAccount *account = purple_connection_get_account(js->gc);
 	char *msg;
@@ -97,7 +97,7 @@ jabber_plain_start(JabberStream *js, xmlnode *packet, xmlnode **response, char *
 			_("Plaintext Authentication"),
 			msg,
 			1,
-			account, NULL, NULL,
+			purple_request_cpar_from_account(account),
 			account, allow_plaintext_auth, disallow_plaintext_auth);
 	g_free(msg);
 	return JABBER_SASL_STATE_CONTINUE;

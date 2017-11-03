@@ -2,34 +2,54 @@ EXTRA_DIST = \
 		COPYRIGHT \
 		ChangeLog.API \
 		ChangeLog.win32 \
-		Doxyfile.in \
 		HACKING \
 		Makefile.mingw \
 		PLUGIN_HOWTO \
 		README.hg \
 		README.mingw \
 		config.h.mingw \
-		doxy2devhelp.xsl \
-		fix-casts.sh \
-		gaim.pc.in \
-		gaim-uninstalled.pc.in \
 		intltool-extract.in \
 		intltool-merge.in \
 		intltool-update.in \
+		m4macros/introspection.m4 \
 		package_revision.h \
-		pidgin.apspec.in \
-		pidgin.spec.in \
 		po/Makefile.mingw \
+		tap-driver.sh \
+		tap-test \
 		valgrind-suppressions
 
 noinst_HEADERS = config.h package_revision.h
 
-dist-hook: pidgin.spec
-	cp pidgin.spec $(distdir)
-	rm $(distdir)/config.h
+dist-pre-hook: package_revision.h
+if !ENABLE_GTK_DOC
+	$(AM_V_at)echo "error: gtk-doc must be installed and enabled in order to make dist"
+	$(AM_V_at)echo "re-run ./configure with --enable-gtk-doc switch and try again"
+	$(AM_V_at)false
+endif
+	$(AM_V_at)if [ ! -f "$(top_builddir)libpurple/libpurple.la" ]; then \
+		$(MAKE) -C libpurple libpurple.la; \
+	fi
+	$(AM_V_at)if [ ! -f "$(top_builddir)libpurple/protocols/facebook/libfacebook.la" ]; then \
+		$(MAKE) -C libpurple/protocols/facebook libfacebook.la; \
+	fi
+if ENABLE_GNT
+	$(AM_V_at)if [ ! -f "$(top_builddir)finch/libgnt/libgnt.la" ]; then \
+		$(MAKE) -C finch/libgnt libgnt.la; \
+	fi
+	$(AM_V_at)if [ ! -f "$(top_builddir)finch/libfinch.la" ]; then \
+		$(MAKE) -C finch libfinch.la; \
+	fi
+endif
+if ENABLE_GTK
+	$(AM_V_at)if [ ! -f "$(top_builddir)pidgin/libpidgin.la" ]; then \
+		$(MAKE) -C pidgin libpidgin.la; \
+	fi
+endif
 
-distcheck-hook: libpurple/plugins/perl/common/Purple.pm pidgin/plugins/perl/common/Pidgin.pm
-#	cp libpurple/plugins/perl/common/Gaim.pm $(distdir)/libpurple/plugins/perl/common
+dist: dist-pre-hook
+
+dist-hook:
+	rm $(distdir)/config.h
 
 commit-check:
 	(cd po ; intltool-update -m 2>&1 | grep -v '^mismatched quotes.*\.py$$' | sed "s|current directory|po directory|" | grep . ; if [ $$? = 0 ] ; then exit 1 ; else exit 0 ; fi)
@@ -85,7 +105,7 @@ package_revision_raw.txt: .FORCE
 	(hg --cwd $(srcdir) log -r . -T {node}) 2>/dev/null >$@.new \
 	|| rm -f $@.new
 	$(AM_V_at)if test -f $@.new; then \
-		if ! diff $@ $@.new > /dev/null; then \
+		if ! test -f "$@" || ! diff "$@" "$@".new > /dev/null ; then \
 			mv $@.new $@; \
 		else \
 			rm $@.new; \
@@ -114,30 +134,9 @@ package_revision.h: package_revision_raw.txt
 # line does is tell 'distcheck' to shut up and ignore those two files.
 distcleancheck_listfiles = find . -type f -a ! -name package_revision.h
 
-SUBDIRS = . libpurple doc $(GNT_DIR) $(GTK_DIR) m4macros $(PO_DIR) share/ca-certs share/sounds
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc
 
-docs: Doxyfile
-if HAVE_DOXYGEN
-	@echo "Running doxygen..."
-	@doxygen
-if HAVE_XSLTPROC
-	@echo "Generating devhelp index..."
-	@xsltproc $(top_srcdir)/doxy2devhelp.xsl doc/xml/index.xml > doc/html/pidgin.devhelp
-	@echo "(Symlink $$(pwd)/doc/html to ~/.local/share/gtk-doc/html/pidgin to make devhelp see the documentation)"
-else
-	@echo "Not generating devhelp index: xsltproc was not found by configure"
-endif
-else
-	@echo "doxygen was not found during configure.  Unable to build documentation."
-	@echo;
-endif
-
-# perl's MakeMaker uninstall foo doesn't work well with DESTDIR set, which
-# breaks "make distcheck" unless we ignore perl things
-# TODO drop it when we drop perl wrapper
-
-distuninstallcheck_listfiles = \
-	find . -type f -print | grep -v perl | grep -v Purple.3pm | grep -v Pidgin.3pm
+SUBDIRS = . m4macros libpurple $(GNT_DIR) $(GTK_DIR) $(PO_DIR) share/ca-certs share/sounds doc
 
 DISTCLEANFILES= intltool-extract intltool-merge intltool-update \
 			package_revision_raw.txt

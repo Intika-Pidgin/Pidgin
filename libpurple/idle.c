@@ -41,7 +41,7 @@ typedef enum
 
 static PurpleIdleUiOps *idle_ui_ops = NULL;
 
-/**
+/*
  * This is needed for the I'dle Mak'er plugin to work correctly.  We
  * use it to determine if we're the ones who set our accounts idle
  * or if someone else did it (the I'dle Mak'er plugin, for example).
@@ -114,7 +114,7 @@ static gint time_until_next_idle_event;
 static void
 check_idleness(void)
 {
-	time_t time_idle;
+	time_t time_idle = 0;
 	gboolean auto_away;
 	const gchar *idle_reporting;
 	gboolean report_idle = TRUE;
@@ -142,7 +142,6 @@ check_idleness(void)
 	else
 	{
 		/* Don't report idle time */
-		time_idle = 0;
 		report_idle = FALSE;
 
 		/* If we're not reporting idle, we can still do auto-away.
@@ -225,14 +224,13 @@ check_idleness_timer(void)
 	{
 		/* +1 for the boundary,
 		 * +1 more for g_timeout_add_seconds rounding. */
-		idle_timer = purple_timeout_add_seconds(time_until_next_idle_event + 2, (GSourceFunc)check_idleness_timer, NULL);
+		idle_timer = g_timeout_add_seconds(time_until_next_idle_event + 2, (GSourceFunc)check_idleness_timer, NULL);
 	}
 	return FALSE;
 }
 
 static void
-im_msg_sent_cb(PurpleAccount *account, const char *receiver,
-			   const char *message, void *data)
+im_msg_sent_cb(PurpleAccount *account, PurpleMessage *msg, void *data)
 {
 	/* Check our idle time after an IM is sent */
 	check_idleness();
@@ -258,7 +256,7 @@ static void
 idle_reporting_cb(const char *name, PurplePrefType type, gconstpointer val, gpointer data)
 {
 	if (idle_timer)
-		purple_timeout_remove(idle_timer);
+		g_source_remove(idle_timer);
 	idle_timer = 0;
 	check_idleness_timer();
 }
@@ -270,7 +268,7 @@ purple_idle_touch()
 	if (!no_away)
 	{
 		if (idle_timer)
-			purple_timeout_remove(idle_timer);
+			g_source_remove(idle_timer);
 		idle_timer = 0;
 		check_idleness_timer();
 	}
@@ -280,6 +278,33 @@ void
 purple_idle_set(time_t time)
 {
 	last_active_time = time;
+}
+
+static PurpleIdleUiOps *
+purple_idle_ui_ops_copy(PurpleIdleUiOps *ops)
+{
+	PurpleIdleUiOps *ops_new;
+
+	g_return_val_if_fail(ops != NULL, NULL);
+
+	ops_new = g_new(PurpleIdleUiOps, 1);
+	*ops_new = *ops;
+
+	return ops_new;
+}
+
+GType
+purple_idle_ui_ops_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleIdleUiOps",
+				(GBoxedCopyFunc)purple_idle_ui_ops_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
 }
 
 void
@@ -307,7 +332,7 @@ static gboolean _do_purple_idle_touch_cb(gpointer data)
 	int idle_poll_minutes = purple_prefs_get_int("/purple/away/mins_before_away");
 
 	 /* +1 more for g_timeout_add_seconds rounding. */
-	idle_timer = purple_timeout_add_seconds((idle_poll_minutes * 60) + 2, (GSourceFunc)check_idleness_timer, NULL);
+	idle_timer = g_timeout_add_seconds((idle_poll_minutes * 60) + 2, (GSourceFunc)check_idleness_timer, NULL);
 
 	purple_idle_touch();
 
@@ -333,7 +358,7 @@ purple_idle_init()
 
 	/* Initialize the idleness asynchronously so it doesn't check idleness,
 	 * and potentially try to change the status before the UI is initialized */
-	purple_timeout_add(0, _do_purple_idle_touch_cb, NULL);
+	g_timeout_add(0, _do_purple_idle_touch_cb, NULL);
 
 }
 
@@ -345,6 +370,6 @@ purple_idle_uninit()
 
 	/* Remove the idle timer */
 	if (idle_timer > 0)
-		purple_timeout_remove(idle_timer);
+		g_source_remove(idle_timer);
 	idle_timer = 0;
 }

@@ -23,6 +23,8 @@
  *
  */
 
+#include "glibcompat.h"
+
 #include "encoding.h"
 #include "oscar.h"
 
@@ -252,7 +254,7 @@ int aim_icq_getallinfo(OscarData *od, const char *uin)
 	byte_stream_destroy(&bs);
 
 	/* Keep track of this request and the ICQ number and request ID */
-	info = (struct aim_icq_info *)g_new0(struct aim_icq_info, 1);
+	info = g_new0(struct aim_icq_info, 1);
 	info->reqid = snacid;
 	info->uin = atoi(uin);
 	od->icq_info = g_slist_prepend(od->icq_info, info);
@@ -299,7 +301,7 @@ int aim_icq_getalias(OscarData *od, const char *uin, gboolean for_auth_request, 
 	byte_stream_destroy(&bs);
 
 	/* Keep track of this request and the ICQ number and request ID */
-	info = (struct aim_icq_info *)g_new0(struct aim_icq_info, 1);
+	info = g_new0(struct aim_icq_info, 1);
 	info->reqid = snacid;
 	info->uin = atoi(uin);
 	info->for_auth_request = for_auth_request;
@@ -423,8 +425,8 @@ gotalias(OscarData *od, struct aim_icq_info *info)
 		if (utf8 && *utf8) {
 			gchar who[16];
 			g_snprintf(who, sizeof(who), "%u", info->uin);
-			serv_got_alias(gc, who, utf8);
-			if ((b = purple_find_buddy(account, who))) {
+			purple_serv_got_alias(gc, who, utf8);
+			if ((b = purple_blist_find_buddy(account, who))) {
 				purple_blist_node_set_string((PurpleBlistNode*)b, "servernick", utf8);
 			}
 		}
@@ -470,7 +472,7 @@ icqresponse(OscarData *od, aim_modsnac_t *snac, ByteStream *bs)
 		/* find other data from the same request */
 		info_ptr = g_slist_find_custom(od->icq_info, &reqid, compare_icq_infos);
 		if (!info_ptr) {
-			struct aim_icq_info *new_info = (struct aim_icq_info *)g_new0(struct aim_icq_info, 1);
+			struct aim_icq_info *new_info = g_new0(struct aim_icq_info, 1);
 			new_info->reqid = reqid;
 			info_ptr = od->icq_info = g_slist_prepend(od->icq_info, new_info);
 		}
@@ -539,7 +541,7 @@ icqresponse(OscarData *od, aim_modsnac_t *snac, ByteStream *bs)
 		case 0x00eb: { /* email address(es) */
 			int i;
 			info->numaddresses = byte_stream_getle16(&qbs);
-			info->email2 = (char **)g_new0(char *, info->numaddresses);
+			info->email2 = g_new0(char *, info->numaddresses);
 			for (i = 0; i < info->numaddresses; i++) {
 				info->email2[i] = byte_stream_getstr(&qbs, byte_stream_getle16(&qbs));
 				if (i+1 != info->numaddresses)
@@ -624,11 +626,11 @@ icqresponse(OscarData *od, aim_modsnac_t *snac, ByteStream *bs)
 				PurpleStatus *status;
 
 				account = purple_connection_get_account(od->gc);
-				buddy = purple_find_buddy(account, uin);
+				buddy = purple_blist_find_buddy(account, uin);
 				presence = purple_buddy_get_presence(buddy);
 				status = purple_presence_get_active_status(presence);
 
-				purple_prpl_got_user_status(account, uin,
+				purple_protocol_got_user_status(account, uin,
 						purple_status_get_id(status),
 						"message", NULL, NULL);
 
@@ -771,10 +773,7 @@ snachandler(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *f
 static void
 icq_shutdown(OscarData *od, aim_module_t *mod)
 {
-	GSList *cur;
-	for (cur = od->icq_info; cur; cur = cur->next)
-		aim_icq_freeinfo(cur->data);
-	g_slist_free(od->icq_info);
+	g_slist_free_full(od->icq_info, (GDestroyNotify)aim_icq_freeinfo);
 }
 
 int

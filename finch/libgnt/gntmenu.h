@@ -1,7 +1,3 @@
-/**
- * @file gntmenu.h Menu API
- * @ingroup gnt
- */
 /*
  * GNT - The GLib Ncurses Toolkit
  *
@@ -26,12 +22,18 @@
 
 #ifndef GNT_MENU_H
 #define GNT_MENU_H
+/**
+ * SECTION:gntmenu
+ * @section_id: libgnt-gntmenu
+ * @short_description: <filename>gntmenu.h</filename>
+ * @title: Menu
+ */
 
 #include "gnttree.h"
 #include "gntcolors.h"
 #include "gntkeys.h"
 
-#define GNT_TYPE_MENU				(gnt_menu_get_gtype())
+#define GNT_TYPE_MENU				(gnt_menu_get_type())
 #define GNT_MENU(obj)				(G_TYPE_CHECK_INSTANCE_CAST((obj), GNT_TYPE_MENU, GntMenu))
 #define GNT_MENU_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST((klass), GNT_TYPE_MENU, GntMenuClass))
 #define GNT_IS_MENU(obj)			(G_TYPE_CHECK_INSTANCE_TYPE((obj), GNT_TYPE_MENU))
@@ -49,14 +51,18 @@ typedef struct _GntMenuClass		GntMenuClass;
 #include "gntmenuitem.h"
 
 /**
+ * GntMenuType:
+ * @GNT_MENU_TOPLEVEL: Menu for a toplevel window
+ * @GNT_MENU_POPUP:    A popup menu
+ *
  * A toplevel-menu is displayed at the top of the screen, and it spans accross
  * the entire width of the screen.
  * A popup-menu could be displayed, for example, as a context menu for widgets.
  */
 typedef enum
 {
-	GNT_MENU_TOPLEVEL = 1,  /* Menu for a toplevel window */
-	GNT_MENU_POPUP,         /* A popup menu */
+	GNT_MENU_TOPLEVEL = 1,
+	GNT_MENU_POPUP,
 } GntMenuType;
 
 struct _GntMenu
@@ -65,7 +71,7 @@ struct _GntMenu
 	GntMenuType type;
 
 	GList *list;
-	int selected;
+	guint selected;
 
 	/* This will keep track of its immediate submenu which is visible so that
 	 * keystrokes can be passed to it. */
@@ -77,6 +83,7 @@ struct _GntMenuClass
 {
 	GntTreeClass parent;
 
+	/*< private >*/
 	void (*gnt_reserved1)(void);
 	void (*gnt_reserved2)(void);
 	void (*gnt_reserved3)(void);
@@ -86,36 +93,41 @@ struct _GntMenuClass
 G_BEGIN_DECLS
 
 /**
- * @return  The GType for GntMenu.
+ * gnt_menu_get_type:
+ *
+ * Returns:  The GType for GntMenu.
  */
-GType gnt_menu_get_gtype(void);
+GType gnt_menu_get_type(void);
 
 /**
+ * gnt_menu_new:
+ * @type:  The type of the menu, whether it's a toplevel menu or a popup menu.
+ *
  * Create a new menu.
  *
- * @param type  The type of the menu, whether it's a toplevel menu or a popup menu.
- *
- * @return  The newly created menu.
+ * Returns:  The newly created menu.
  */
 GntWidget * gnt_menu_new(GntMenuType type);
 
 /**
- * Add an item to the menu.
+ * gnt_menu_add_item:
+ * @menu:   The menu.
+ * @item:   The item to add to the menu.
  *
- * @param menu   The menu.
- * @param item   The item to add to the menu.
+ * Add an item to the menu.
  */
 void gnt_menu_add_item(GntMenu *menu, GntMenuItem *item);
 
 /**
+ * gnt_menu_get_item:
+ * @menu:   The menu.
+ * @id:     The ID for an item.
+ *
  * Return the GntMenuItem with the given ID.
  *
- * @param menu   The menu.
- * @param id     The ID for an item.
+ * Returns: (transfer none): The menuitem with the given ID, or %NULL.
  *
- * @return  The menuitem with the given ID, or @c NULL.
- *
- * @since 2.3.0
+ * Since: 2.3.0
  */
 GntMenuItem *gnt_menu_get_item(GntMenu *menu, const char *id);
 

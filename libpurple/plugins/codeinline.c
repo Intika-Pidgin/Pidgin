@@ -21,78 +21,83 @@
  */
 
 #include "internal.h"
-#include "plugin.h"
+#include "plugins.h"
 #include "notify.h"
 #include "util.h"
 #include "version.h"
 
 PurplePlugin *plugin_handle = NULL;
 
-static gboolean outgoing_msg_cb(PurpleAccount *account, const char *who, char **message,
-					PurpleConversation *conv, PurpleMessageFlags flags, gpointer null)
+static char *
+outgoing_msg_common(const char *message)
 {
   char *m;
-  char **ms = g_strsplit(*message, "<u>", -1);
+  char **ms = g_strsplit(message, "<u>", -1);
   m = g_strjoinv("<font face=\"monospace\" color=\"#00b025\">", ms);
   g_strfreev(ms);
 
   ms = g_strsplit(m, "</u>", -1);
   g_free(m);
-  m = g_strjoinv("</font>", ms);
-  g_free(*message);
-  *message = m;
-  return FALSE;
+  return g_strjoinv("</font>", ms);
+}
+
+static gboolean outgoing_msg_cb1(PurpleConversation *conv, PurpleMessage *msg,
+	gpointer null)
+{
+	purple_message_set_contents(msg,
+		outgoing_msg_common(purple_message_get_contents(msg)));
+	return FALSE;
+}
+
+static void
+outgoing_msg_cb2(PurpleAccount *account, PurpleMessage *msg,
+	PurpleConversation *conv, PurpleMessageFlags flags, gpointer null)
+{
+	purple_message_set_contents(msg,
+		outgoing_msg_common(purple_message_get_contents(msg)));
+}
+
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Sean Egan <seanegan@gmail.com>",
+		NULL
+	};
+
+	return purple_plugin_info_new(
+		"id",           "codeinline",
+		"name",         "Code Inline",
+		"version",      "1.0",
+		"category",     "Formatting",
+		"summary",      "Formats text as code",
+		"description",  "Changes the formatting of any outgoing text such "
+		                "that anything underlined will be received green and "
+		                "monospace.",
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		NULL
+	);
 }
 
 static gboolean
-plugin_load(PurplePlugin *plugin)
+plugin_load(PurplePlugin *plugin, GError **error)
 {
      void *handle = purple_conversations_get_handle();
      plugin_handle = plugin;
      purple_signal_connect(handle, "writing-im-msg", plugin,
-                PURPLE_CALLBACK(outgoing_msg_cb), NULL);
+                PURPLE_CALLBACK(outgoing_msg_cb1), NULL);
      purple_signal_connect(handle, "sending-im-msg", plugin,
-		PURPLE_CALLBACK(outgoing_msg_cb), NULL);
+		PURPLE_CALLBACK(outgoing_msg_cb2), NULL);
 
      return TRUE;
 }
 
-
-static PurplePluginInfo info =
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
-     PURPLE_PLUGIN_MAGIC,
-     PURPLE_MAJOR_VERSION,
-     PURPLE_MINOR_VERSION,
-     PURPLE_PLUGIN_STANDARD,
-     NULL,
-     0,
-     NULL,
-     PURPLE_PRIORITY_DEFAULT,
-     "codeinline",
-     "Code Inline",
-     "1.0",
-     "Formats text as code",
-     "Changes the formatting of any outgoing text such that "
-     "anything underlined will be received green and monospace.",
-     "Sean Egan <seanegan@gmail.com>",
-     PURPLE_WEBSITE,
-     plugin_load,
-     NULL,
-     NULL,
-     NULL,
-     NULL,
-     NULL,
-     NULL,
-	 /* padding */
-     NULL,
-     NULL,
-     NULL,
-     NULL
-};
+	return TRUE;
+}
 
- static void
- init_plugin(PurplePlugin *plugin)
- {
- }
-
-PURPLE_INIT_PLUGIN(codeinline, init_plugin, info)
+PURPLE_PLUGIN_INIT(codeinline, plugin_query, plugin_load, plugin_unload);

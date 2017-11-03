@@ -51,7 +51,7 @@ get_buddy_list_type(OscarData *od)
 static gboolean
 is_buddy_on_list(OscarData *od, const char *bname)
 {
-	return aim_ssi_itemlist_finditem(od->ssi.local, NULL, bname, get_buddy_list_type(od)) != NULL;
+	return aim_ssi_itemlist_finditem(&od->ssi.local, NULL, bname, get_buddy_list_type(od)) != NULL;
 }
 
 static void
@@ -86,15 +86,15 @@ create_visibility_menu_item(OscarData *od, const char *bname)
 }
 
 static void
-show_private_list(PurplePluginAction *action, guint16 list_type, const gchar *title, const gchar *list_description, const gchar *menu_action_name)
+show_private_list(PurpleProtocolAction *action, guint16 list_type, const gchar *title, const gchar *list_description, const gchar *menu_action_name)
 {
-	PurpleConnection *gc = (PurpleConnection *) action->context;
+	PurpleConnection *gc = action->connection;
 	OscarData *od = purple_connection_get_protocol_data(gc);
 	PurpleAccount *account = purple_connection_get_account(gc);
 	GSList *buddies, *filtered_buddies, *cur;
 	gchar *text, *secondary;
 
-	buddies = purple_find_buddies(account, NULL);
+	buddies = purple_blist_find_buddies(account, NULL);
 	filtered_buddies = NULL;
 	for (cur = buddies; cur != NULL; cur = cur->next) {
 		PurpleBuddy *buddy;
@@ -102,7 +102,7 @@ show_private_list(PurplePluginAction *action, guint16 list_type, const gchar *ti
 
 		buddy = cur->data;
 		bname = purple_buddy_get_name(buddy);
-		if (aim_ssi_itemlist_finditem(od->ssi.local, NULL, bname, list_type)) {
+		if (aim_ssi_itemlist_finditem(&od->ssi.local, NULL, bname, list_type)) {
 			filtered_buddies = g_slist_prepend(filtered_buddies, buddy);
 		}
 	}
@@ -122,19 +122,18 @@ show_private_list(PurplePluginAction *action, guint16 list_type, const gchar *ti
 }
 
 void
-oscar_show_visible_list(PurplePluginAction *action)
+oscar_show_visible_list(PurpleProtocolAction *action)
 {
 	show_private_list(action, AIM_SSI_TYPE_PERMIT, _("Visible List"),
-							_("These buddies will see "
-							"your status when you switch "
-							"to \"Invisible\""),
-							_(APPEAR_ONLINE));
+			_("These buddies can see your status even when you're "
+			"invisible."),
+			_(APPEAR_ONLINE));
 }
 
 void
-oscar_show_invisible_list(PurplePluginAction *action)
+oscar_show_invisible_list(PurpleProtocolAction *action)
 {
 	show_private_list(action, AIM_SSI_TYPE_DENY, _("Invisible List"),
-							_("These buddies will always see you as offline"),
-							_(APPEAR_OFFLINE));
+			_("These buddies will always see you as offline."),
+			_(APPEAR_OFFLINE));
 }

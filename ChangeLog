@@ -1,5 +1,109 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
+version 3.0.0 (??/??/????):
+	General:
+	* Various core components of libpurple are now GObjects (Ankit Vani).
+	* Ciphers are now built from the libpurple directory.
+	* Doxygen has been replaced by gtk-doc for generating documentation (Ankit
+	  Vani).
+	* Added dependency GPlugin, which is now required to build libpurple with
+	  plugins support.
+	* Added dependency gobject-introspection, which is now required to enable
+	  non-native plugin support.
+	* Removed flags for manually configuring GnuTLS and NSS. They are now only
+	  recognized through pkg-config. (Michael McConville)
+	* Fixed an issue where transient startup statuses could be deleted
+	  (Jakub Adam) (#16762)
+
+	libpurple:
+	* Specify a different set of encryption ciphers for TLS connections when
+	  using GnuTLS. (elrond, belmyst, and Mark Doliner) (#8061)
+	* Don't allow SSL 3.0 (only TLS 1.0 and newer) for TLS connections when
+	  using either GnuTLS or NSS.
+	* Install a purple-url-handler file to handle protocol schemes on Linux.
+
+	Pidgin:
+	* Support building with the GTK+ 3.x toolkit.  When configuring the
+	  build, use --with-gtk=<2|3> to determine which toolkit to use.  Using
+	  either 2 or 3 will attempt to build with specifically 2.x or 3.x
+	  support.  The default is 'auto', which will first look for 3.x
+	  development headers and then 2.x development headers.
+	* Add email notification in the docklet area. (Alexei) (#3571)
+	* Add a pref to select the type messages in conversation that triggers
+	  the docklet notification. (Momchil) (#12598)
+	* Complete support for receiving a limited amount of history when
+	  joining a room. (Kha) (#15458)
+	* Fix gevolution plugin to compile with e-d-s >= 3.6, older versions are
+	  not supported anymore. (Ed Catmur) (#15353)
+
+	Finch:
+	* Support the conversation-extended signal for extending the
+	  conversation menu. (Howard Chu) (#14818)
+
+	AIM and ICQ:
+	* Make buddy list management code more efficient. (Oliver) (#4816)
+
+	Bonjour:
+	* Support file transfers up to ~9 EiB.
+
+	Gadu-Gadu:
+	* Possibility to require encryption. Also, using encryption when
+	  available is default option now. (Tomasz Wasilczyk)
+	* Show local time for incoming messages. (Tomasz Wasilczyk) (#4579)
+	* Fixed password change dialog and problems with connecting to accounts
+	  with non-ASCII passwords. (Tomasz Wasilczyk) (#14652)
+	* Option to show links from strangers. (Tomasz Wasilczyk) (#10591)
+	* Better handling of "invisible" and "chatty" statuses. (Tomasz
+	  Wasilczyk) (#13836)
+
+	Facebook:
+	* Added a new prpl for the Facebook Messenger protocol
+	* Removed the defunct Facebook XMPP support
+
+	MSN:
+	* Fix file transfer with older Mac MSN clients.
+	* Support file transfers up to ~9 EiB.
+	* Fix buddies not going offline.
+
+	MXit:
+	* Remove all reference to Hidden Number.
+	* Fix decoding of font-size changes in the markup of received messages.
+	* Ignore new invites to join a GroupChat if you're already joined, or
+	  still have a pending invite.
+	* The buddy's name was not centered vertically in the buddy-list if they
+	  did not have a status-message or mood set.
+
+	MySpace:
+	* Remove this protocol because the servers have been taken offline.
+	  (Robbie Vehse) (#15356)
+
+	XMPP:
+	* Strip element prefixes from XHTML-IM messages as they're presented
+	  to the core (and UIs) as incoming messages (Thijs Alkemade).
+	  (#14529)
+	* Support file transfers up to ~9 EiB.
+	* Invalid user moods can no longer be sent to the server.
+
+	AIM:
+	* Add support for the newer kerberos-based authentication of AIM 8.x
+
+	Plugins:
+	* A new plugin API has been introduced. Plugins are no longer required
+	  to be of a predefined type (such as protocol, standard, loader etc),
+	  and can perform multiple roles.
+	* The Offline Message Emulation plugin now adds a note that the message
+	  was an offline message. (Flavius Anton) (#2497)
+	* Two example plugins, caesarcipher and caesarcipher_consumer, have
+	  been added that demonstrate registering of a dynamic cipher type in
+	  one plugin and using it in another.
+	* IPC test plugins have been removed, since the new plugin API does not
+	  provide a seperate IPC API.
+
+	Protocols:
+	* A single oscar plugin provides both AIM and ICQ protocols.
+	* A single jabber plugin provides XMPP, GTalk and Facebook protocols.
+	* A single yahoo plugin provides both Yahoo and Yahoo JAPAN protocols.
+
 version 2.13.0 (??/??/????):
 	libpurple:
 	* Unified string comparison. (PR #186) (Arkadiy Illarionov)

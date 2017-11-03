@@ -34,8 +34,7 @@
  */
 typedef struct {
 	const char *mech_substr;
-	const char *name;
-	guint size;
+	GChecksumType type;
 } JabberScramHash;
 
 typedef struct {

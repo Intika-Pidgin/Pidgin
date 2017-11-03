@@ -57,44 +57,44 @@ blist_drawing_tooltip_cb(PurpleBlistNode *node, GString *str, gboolean full, voi
  * Conversation subsystem signal callbacks
  **************************************************************************/
 static void
-conversation_dragging_cb(PidginWindow *source, PidginWindow *destination) {
+conversation_dragging_cb(PidginConvWindow *source, PidginConvWindow *destination) {
 	purple_debug_info("gtk-signal-test", "conversation dragging cb\n");
 }
 
 static gboolean
-displaying_im_msg_cb(PurpleAccount *account, const char *who, char **buffer,
-				PurpleConversation *conv, PurpleMessageFlags flags, void *data)
+displaying_im_msg_cb(PurpleConversation *conv, PurpleMessage *pmsg, gpointer data)
 {
 	purple_debug_misc("gtk-signals test", "displaying-im-msg (%s, %s)\n",
-					purple_conversation_get_name(conv), *buffer);
+		purple_conversation_get_name(conv),
+		purple_message_get_contents(pmsg));
 
 	return FALSE;
 }
 
 static void
-displayed_im_msg_cb(PurpleAccount *account, const char *who, const char *buffer,
-				PurpleConversation *conv, PurpleMessageFlags flags, void *data)
+displayed_im_msg_cb(PurpleConversation *conv, PurpleMessage *msg, gpointer data)
 {
 	purple_debug_misc("gtk-signals test", "displayed-im-msg (%s, %s)\n",
-					purple_conversation_get_name(conv), buffer);
+		purple_conversation_get_name(conv),
+		purple_message_get_contents(msg));
 }
 
 static gboolean
-displaying_chat_msg_cb(PurpleAccount *account, const char *who, char **buffer,
-				PurpleConversation *conv, PurpleMessageFlags flags, void *data)
+displaying_chat_msg_cb(PurpleConversation *conv, PurpleMessage *pmsg, gpointer data)
 {
 	purple_debug_misc("gtk-signals test", "displaying-chat-msg (%s, %s)\n",
-					purple_conversation_get_name(conv), *buffer);
+		purple_conversation_get_name(conv),
+		purple_message_get_contents(pmsg));
 
 	return FALSE;
 }
 
 static void
-displayed_chat_msg_cb(PurpleAccount *account, const char *who, const char *buffer,
-				PurpleConversation *conv, PurpleMessageFlags flags, void *data)
+displayed_chat_msg_cb(PurpleConversation *conv, PurpleMessage *msg, gpointer data)
 {
 	purple_debug_misc("gtk-signals test", "displayed-chat-msg (%s, %s)\n",
-					purple_conversation_get_name(conv), buffer);
+		purple_conversation_get_name(conv),
+		purple_message_get_contents(msg));
 }
 
 static void
@@ -107,10 +107,32 @@ conversation_switched_cb(PurpleConversation *conv, void *data)
 /**************************************************************************
  * Plugin stuff
  **************************************************************************/
-static gboolean
-plugin_load(PurplePlugin *plugin)
+static PidginPluginInfo *
+plugin_query(GError **error)
 {
-	void *accounts_handle = pidgin_account_get_handle();
+	const gchar * const authors[] = {
+		"Gary Kramlich <amc_grim@users.sf.net>",
+		NULL
+	};
+
+	return pidgin_plugin_info_new(
+		"id",           GTK_SIGNAL_TEST_PLUGIN_ID,
+		"name",         N_("GTK Signals Test"),
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Testing"),
+		"summary",      N_("Test to see that all ui signals are working properly."),
+		"description",  N_("Test to see that all ui signals are working properly."),
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		NULL
+	);
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	void *accounts_handle = pidgin_accounts_get_handle();
 	void *blist_handle = pidgin_blist_get_handle();
 	void *conv_handle = pidgin_conversations_get_handle();
 
@@ -142,50 +164,8 @@ plugin_load(PurplePlugin *plugin)
 }
 
 static gboolean
-plugin_unload(PurplePlugin *plugin) {
+plugin_unload(PurplePlugin *plugin, GError **error) {
 	return TRUE;
 }
 
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,                             /**< type           */
-	PIDGIN_PLUGIN_TYPE,                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
-
-	GTK_SIGNAL_TEST_PLUGIN_ID,                        /**< id             */
-	N_("GTK Signals Test"),                             /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	N_("Test to see that all ui signals are working properly."),
-	                                                  /**  description    */
-	N_("Test to see that all ui signals are working properly."),
-	"Gary Kramlich <amc_grim@users.sf.net>",              /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
-
-	plugin_load,                                      /**< load           */
-	plugin_unload,                                    /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	NULL,                                             /**< extra_info     */
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
-{
-}
-
-PURPLE_INIT_PLUGIN(gtksignalstest, init_plugin, info)
+PURPLE_PLUGIN_INIT(gtksignalstest, plugin_query, plugin_load, plugin_unload);

@@ -1,8 +1,3 @@
-/**
- * @file gntlog.c GNT Log viewer
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -101,12 +96,14 @@ static gboolean log_viewer_equal(gconstpointer y, gconstpointer z)
 	return ret;
 }
 
-static const char *log_get_date(PurpleLog *log)
+static gchar *log_get_date(PurpleLog *log)
 {
-	if (log->tm)
-		return purple_date_format_full(log->tm);
-	else
-		return purple_date_format_full(localtime(&log->time));
+	GDateTime *dt;
+	gchar *ret;
+	dt = g_date_time_to_local(log->time);
+	ret = g_date_time_format(dt, "%c");
+	g_date_time_unref(dt);
+	return ret;
 }
 
 static void search_cb(GntWidget *button, FinchLogViewer *lv)
@@ -137,11 +134,13 @@ static void search_cb(GntWidget *button, FinchLogViewer *lv)
 		char *read = purple_log_read((PurpleLog*)logs->data, NULL);
 		if (read && *read && purple_strcasestr(read, search_term)) {
 			PurpleLog *log = logs->data;
+			gchar *log_date = log_get_date(log);
 
 			gnt_tree_add_row_last(GNT_TREE(lv->tree),
 									log,
-									gnt_tree_create_row(GNT_TREE(lv->tree), log_get_date(log)),
+									gnt_tree_create_row(GNT_TREE(lv->tree), log_date),
 									NULL);
+			g_free(log_date);
 		}
 		g_free(read);
 	}
@@ -188,15 +187,17 @@ static void log_select_cb(GntWidget *w, gpointer old, gpointer new, FinchLogView
 		return;
 
 	if (log->type != PURPLE_LOG_SYSTEM) {
+		gchar *log_date = log_get_date(log);
 		char *title;
 		if (log->type == PURPLE_LOG_CHAT)
 			title = g_strdup_printf(_("Conversation in %s on %s"),
-									log->name, log_get_date(log));
+			                        log->name, log_date);
 		else
 			title = g_strdup_printf(_("Conversation with %s on %s"),
-									log->name, log_get_date(log));
+			                        log->name, log_date);
 
 		gnt_label_set_text(GNT_LABEL(viewer->label), title);
+		g_free(log_date);
 		g_free(title);
 	}
 
@@ -228,16 +229,18 @@ static void populate_log_tree(FinchLogViewer *lv)
      /* Logs are made from trees in real life.
         This is a tree made from logs */
 {
-	const char *pmonth;
-	char *month = NULL;
+	gchar *pmonth;
+	gchar *month = NULL;
 	char prev_top_month[30] = "";
 	GList *logs = lv->logs;
 
 	while (logs != NULL) {
 		PurpleLog *log = logs->data;
+		GDateTime *dt;
+		gchar *log_date;
 
-		pmonth = purple_utf8_strftime(_("%B %Y"),
-		                           log->tm ? log->tm : localtime(&log->time));
+		dt = g_date_time_to_local(log->time);
+		pmonth = g_date_time_format(dt, _("%B %Y"));
 
 		if (!purple_strequal(pmonth, prev_top_month)) {
 			month = g_strdup(pmonth);
@@ -252,11 +255,15 @@ static void populate_log_tree(FinchLogViewer *lv)
 		}
 
 		/* sub */
+		log_date = g_date_time_format(dt, "%c");
 		gnt_tree_add_row_last(GNT_TREE(lv->tree),
 								log,
-								gnt_tree_create_row(GNT_TREE(lv->tree), log_get_date(log)),
+								gnt_tree_create_row(GNT_TREE(lv->tree), log_date),
 								month);
 
+		g_free(log_date);
+		g_free(pmonth);
+		g_date_time_unref(dt);
 		logs = logs->next;
 	}
 }
@@ -289,7 +296,7 @@ static FinchLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *l
 			g_free(ht);
 		}
 
-		purple_notify_info(NULL, title, _("No logs were found"), log_preferences);
+		purple_notify_info(NULL, title, _("No logs were found"), log_preferences, NULL);
 		return NULL;
 	}
 
@@ -407,7 +414,7 @@ void finch_log_show(PurpleLogType type, const char *username, PurpleAccount *acc
 		PurpleBuddy *buddy;
 
 		if (username) {
-			buddy = purple_find_buddy(account, username);
+			buddy = purple_blist_find_buddy(account, username);
 			if (buddy != NULL)
 				name = purple_buddy_get_contact_alias(buddy);
 			title = g_strdup_printf(_("Conversations with %s"), name);
@@ -461,7 +468,7 @@ void finch_log_show_contact(PurpleContact *contact)
 			child = purple_blist_node_get_sibling_next(child)) {
 		const char *name;
 		PurpleAccount *account;
-		if (!PURPLE_BLIST_NODE_IS_BUDDY(child))
+		if (!PURPLE_IS_BUDDY(child))
 			continue;
 
 		name = purple_buddy_get_name((PurpleBuddy *)child);
@@ -481,7 +488,7 @@ void finch_log_show_contact(PurpleContact *contact)
 	 * There is probably a better way to deal with this. */
 	if (name == NULL) {
 		child = purple_blist_node_get_first_child((PurpleBlistNode*)contact);
-		if (child != NULL && PURPLE_BLIST_NODE_IS_BUDDY(child))
+		if (child != NULL && PURPLE_IS_BUDDY(child))
 			name = purple_buddy_get_contact_alias((PurpleBuddy *)child);
 		if (name == NULL)
 			name = "";
@@ -505,7 +512,7 @@ void finch_syslog_show()
 	for(accounts = purple_accounts_get_all(); accounts != NULL; accounts = accounts->next) {
 
 		PurpleAccount *account = (PurpleAccount *)accounts->data;
-		if(purple_find_prpl(purple_account_get_protocol_id(account)) == NULL)
+		if(purple_protocols_find(purple_account_get_protocol_id(account)) == NULL)
 			continue;
 
 		logs = g_list_concat(purple_log_get_system_logs(account), logs);
@@ -533,11 +540,9 @@ void finch_log_init(void)
 
 	purple_signal_register(handle, "log-displaying",
 	                     purple_marshal_VOID__POINTER_POINTER,
-	                     NULL, 2,
-	                     purple_value_new(PURPLE_TYPE_BOXED,
-	                                    "FinchLogViewer *"),
-	                     purple_value_new(PURPLE_TYPE_SUBTYPE,
-	                                    PURPLE_SUBTYPE_LOG));
+	                     G_TYPE_NONE, 2,
+	                     G_TYPE_POINTER, /* (FinchLogViewer *) */
+	                     PURPLE_TYPE_LOG);
 }
 
 void

@@ -22,6 +22,9 @@
  */
 #ifndef _WIN32DEP_H_
 #define _WIN32DEP_H_
+
+#include <config.h>
+
 #include <winsock2.h>
 #include <windows.h>
 #include <shlobj.h>
@@ -54,35 +57,32 @@ typedef struct {
  **/
 /* Windows helper functions */
 FARPROC wpurple_find_and_loadproc(const char *dllname, const char *procedure);
+gboolean wpurple_reg_val_exists(HKEY rootkey, const char *subkey, const char *valname);
 gboolean wpurple_read_reg_dword(HKEY rootkey, const char *subkey, const char *valname, LPDWORD result);
 char *wpurple_read_reg_string(HKEY rootkey, const char *subkey, const char *valname); /* needs to be g_free'd */
 gboolean wpurple_write_reg_string(HKEY rootkey, const char *subkey, const char *valname, const char *value);
 char *wpurple_escape_dirsep(const char *filename); /* needs to be g_free'd */
-GIOChannel *wpurple_g_io_channel_win32_new_socket(int socket); /* Until we get the post-2.8 glib win32 giochannel implementation working, use the thread-based one */
+
+/* Simulate unix pipes by creating a pair of connected sockets */
+int wpurple_input_pipe(int pipefd[2]);
 
 /* Determine Purple paths */
 gchar *wpurple_get_special_folder(int folder_type); /* needs to be g_free'd */
-const char *wpurple_install_dir(void);
-const char *wpurple_lib_dir(void);
-const char *wpurple_locale_dir(void);
+const char *wpurple_bin_dir(void);
 const char *wpurple_data_dir(void);
+const char *wpurple_lib_dir(const char *subdir);
+const char *wpurple_locale_dir(void);
+const char *wpurple_home_dir(void);
+const char *wpurple_sysconf_dir(void);
+#if defined(USE_WIN32_FHS) && defined(SSL_CERTIFICATES_DIR)
+const char *wpurple_cert_dir(void);
+#endif
 
 /* init / cleanup */
 void wpurple_init(void);
 void wpurple_cleanup(void);
 
 long wpurple_get_tz_offset(void);
-
-/*
- *  MACROS
- */
-
-/*
- *  Purple specific
- */
-#define DATADIR wpurple_install_dir()
-#define LIBDIR wpurple_lib_dir()
-#define LOCALEDIR wpurple_locale_dir()
 
 #ifdef __cplusplus
 }

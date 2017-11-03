@@ -138,8 +138,6 @@ when it should mark accounts idle based on mouse or keyboard usage.
 Doing so will remove the ability to have pidgin start up with your window
 manager.
 
-	`--disable-gtkspell' will remove the ability to highlight misspelled words.
-
 	`--disable-gevolution' will cause the evolution integration plugin not to
 compile.
 
@@ -152,7 +150,6 @@ compile.
 
 Optional Packages:
 
-	`--with-silc-includes=DIR' 	and `--with-silc-libs=DIR' can be used if your silc libraries are installed to a location not in your path. 
 
 	`--with-static-prpls' takes a list of comma separated protocols to build in statically (rather than as plugins).  Use this with care.
 

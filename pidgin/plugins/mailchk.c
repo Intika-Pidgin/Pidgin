@@ -7,7 +7,8 @@
 #include "gtkblist.h"
 #include "gtkplugin.h"
 
-#define MAILCHK_PLUGIN_ID "gtk-mailchk"
+#define MAILCHK_PLUGIN_ID      "gtk-mailchk"
+#define MAILCHK_PLUGIN_DOMAIN  (g_quark_from_static_string(MAILCHK_PLUGIN_ID))
 
 #define ANY_MAIL    0x01
 #define UNREAD_MAIL 0x02
@@ -22,21 +23,21 @@ check_mail()
 	static off_t oldsize = 0;
 	gchar *filename;
 	off_t newsize;
-	struct stat s;
+	GStatBuf st;
 	gint ret = 0;
 
 	filename = g_strdup(g_getenv("MAIL"));
 	if (!filename)
 		filename = g_strconcat("/var/spool/mail/", g_get_user_name(), NULL);
 
-	if (g_stat(filename, &s) < 0) {
+	if (g_stat(filename, &st) < 0) {
 		g_free(filename);
 		return -1;
 	}
 
-	newsize = s.st_size;
+	newsize = st.st_size;
 	if (newsize) ret |= ANY_MAIL;
-	if (s.st_mtime > s.st_atime && newsize) ret |= UNREAD_MAIL;
+	if (st.st_mtime > st.st_atime && newsize) ret |= UNREAD_MAIL;
 	if (newsize != oldsize && (ret & UNREAD_MAIL)) ret |= NEW_MAIL;
 	oldsize = newsize;
 
@@ -55,12 +56,12 @@ static gboolean
 check_timeout(gpointer data)
 {
 	gint count = check_mail();
-	PurpleBuddyList *list = purple_get_blist();
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
 
 	if (count == -1)
 		return FALSE;
 
-	if (!list || !PURPLE_IS_GTK_BLIST(list) || !(PIDGIN_BLIST(list)->vbox))
+	if (!list || !(PIDGIN_BLIST(list)->vbox))
 		return TRUE;
 
 	if (!mail) {
@@ -90,19 +91,19 @@ check_timeout(gpointer data)
 static void
 signon_cb(PurpleConnection *gc)
 {
-	PurpleBuddyList *list = purple_get_blist();
-	if (list && PURPLE_IS_GTK_BLIST(list) && !timer) {
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
+	if (list && !timer) {
 		check_timeout(NULL); /* we want the box to be drawn immediately */
-		timer = purple_timeout_add_seconds(2, check_timeout, NULL);
+		timer = g_timeout_add_seconds(2, check_timeout, NULL);
 	}
 }
 
 static void
 signoff_cb(PurpleConnection *gc)
 {
-	PurpleBuddyList *list = purple_get_blist();
-	if ((!list || !PURPLE_IS_GTK_BLIST(list) || !PIDGIN_BLIST(list)->vbox) && timer) {
-		purple_timeout_remove(timer);
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
+	if ((!list || !PIDGIN_BLIST(list)->vbox) && timer) {
+		g_source_remove(timer);
 		timer = 0;
 	}
 }
@@ -111,19 +112,43 @@ signoff_cb(PurpleConnection *gc)
  *  EXPORTED FUNCTIONS
  */
 
-static gboolean
-plugin_load(PurplePlugin *plugin)
+static PidginPluginInfo *
+plugin_query(GError **error)
 {
-	PurpleBuddyList *list = purple_get_blist();
+	const gchar * const authors[] = {
+		"Eric Warmenhoven <eric@warmenhoven.org>",
+		NULL
+	};
+
+	return pidgin_plugin_info_new(
+		"id",           MAILCHK_PLUGIN_ID,
+		"name",         N_("Mail Checker"),
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Utility"),
+		"summary",      N_("Checks for new local mail."),
+		"description",  N_("Adds a small box to the buddy list that shows if "
+		                   "you have new mail."),
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		NULL
+	);
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	PurpleBuddyList *list = purple_blist_get_buddy_list();
 	void *conn_handle = purple_connections_get_handle();
 
 	if (!check_timeout(NULL)) {
-		purple_debug_warning("mailchk", "Could not read $MAIL or /var/spool/mail/$USER\n");
+		g_set_error(error, MAILCHK_PLUGIN_DOMAIN, 0, _("Could not read $MAIL "
+				"or /var/spool/mail/$USER\n"));
 		return FALSE;
 	}
 
-	if (list && PURPLE_IS_GTK_BLIST(list) && PIDGIN_BLIST(list)->vbox)
-		timer = purple_timeout_add_seconds(2, check_timeout, NULL);
+	if (list && PIDGIN_BLIST(list)->vbox)
+		timer = g_timeout_add_seconds(2, check_timeout, NULL);
 
 	purple_signal_connect(conn_handle, "signed-on",
 						plugin, PURPLE_CALLBACK(signon_cb), NULL);
@@ -134,10 +159,10 @@ plugin_load(PurplePlugin *plugin)
 }
 
 static gboolean
-plugin_unload(PurplePlugin *plugin)
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	if (timer)
-		purple_timeout_remove(timer);
+		g_source_remove(timer);
 	timer = 0;
 	if (mail)
 		gtk_widget_destroy(mail);
@@ -146,36 +171,4 @@ plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
-static PurplePluginInfo info =
-{
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,
-	PIDGIN_PLUGIN_TYPE,
-	0,
-	NULL,
-	PURPLE_PRIORITY_DEFAULT,
-	MAILCHK_PLUGIN_ID,
-	N_("Mail Checker"),
-	DISPLAY_VERSION,
-	N_("Checks for new local mail."),
-	N_("Adds a small box to the buddy list that"
-	   " shows if you have new mail."),
-	"Eric Warmenhoven <eric@warmenhoven.org>",
-	PURPLE_WEBSITE,
-	plugin_load,
-	plugin_unload,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
-{
-}
-
-PURPLE_INIT_PLUGIN(mailchk, init_plugin, info)
+PURPLE_PLUGIN_INIT(mailchk, plugin_query, plugin_load, plugin_unload);

@@ -83,8 +83,7 @@ nm_release_conference(NMConference * conference)
 				   "Releasing conference %p, total=%d\n",
 				   conference, --conf_count);
 
-		if (conference->guid)
-			g_free(conference->guid);
+		g_free(conference->guid);
 
 		if (conference->participants) {
 			for (node = conference->participants; node; node = node->next) {
@@ -192,9 +191,7 @@ nm_conference_set_guid(NMConference * conference, const char *guid)
 	if (conference) {
 
 		/* Release memory for old guid */
-		if (conference->guid) {
-			g_free(conference->guid);
-		}
+		g_free(conference->guid);
 
 		/* Set the new guid */
 		if (guid)

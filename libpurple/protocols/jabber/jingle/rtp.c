@@ -22,12 +22,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include "config.h"
+#include "internal.h"
+#include "glibcompat.h"
 
 #ifdef USE_VV
 
 #include "jabber.h"
 #include "jingle.h"
+#include "google/google_p2p.h"
 #include "media.h"
 #include "mediamanager.h"
 #include "iceudp.h"
@@ -51,13 +53,12 @@ static void jingle_rtp_init (JingleRtp *rtp);
 static void jingle_rtp_finalize (GObject *object);
 static void jingle_rtp_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
 static void jingle_rtp_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-static JingleContent *jingle_rtp_parse_internal(xmlnode *rtp);
-static xmlnode *jingle_rtp_to_xml_internal(JingleContent *rtp, xmlnode *content, JingleActionType action);
-static void jingle_rtp_handle_action_internal(JingleContent *content, xmlnode *jingle, JingleActionType action);
+static JingleContent *jingle_rtp_parse_internal(PurpleXmlNode *rtp);
+static PurpleXmlNode *jingle_rtp_to_xml_internal(JingleContent *rtp, PurpleXmlNode *content, JingleActionType action);
+static void jingle_rtp_handle_action_internal(JingleContent *content, PurpleXmlNode *jingle, JingleActionType action);
 
 static PurpleMedia *jingle_rtp_get_media(JingleSession *session);
 
-static JingleContentClass *parent_class = NULL;
 #if 0
 enum {
 	LAST_SIGNAL
@@ -69,30 +70,13 @@ enum {
 	PROP_0,
 	PROP_MEDIA_TYPE,
 	PROP_SSRC,
+	PROP_LAST
 };
 
-GType
-jingle_rtp_get_type()
-{
-	static GType type = 0;
+static JingleContentClass *parent_class = NULL;
+static GParamSpec *properties[PROP_LAST];
 
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(JingleRtpClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) jingle_rtp_class_init,
-			NULL,
-			NULL,
-			sizeof(JingleRtp),
-			0,
-			(GInstanceInitFunc) jingle_rtp_init,
-			NULL
-		};
-		type = g_type_register_static(JINGLE_TYPE_CONTENT, "JingleRtp", &info, 0);
-	}
-	return type;
-}
+PURPLE_DEFINE_TYPE(JingleRtp, jingle_rtp, JINGLE_TYPE_CONTENT);
 
 static void
 jingle_rtp_class_init (JingleRtpClass *klass)
@@ -108,20 +92,21 @@ jingle_rtp_class_init (JingleRtpClass *klass)
 	klass->parent_class.description_type = JINGLE_APP_RTP;
 	klass->parent_class.handle_action = jingle_rtp_handle_action_internal;
 
-	g_object_class_install_property(gobject_class, PROP_MEDIA_TYPE,
-			g_param_spec_string("media-type",
+	g_type_class_add_private(klass, sizeof(JingleRtpPrivate));
+
+	properties[PROP_MEDIA_TYPE] = g_param_spec_string("media-type",
 			"Media Type",
 			"The media type (\"audio\" or \"video\") for this rtp session.",
 			NULL,
-			G_PARAM_READWRITE));
-	g_object_class_install_property(gobject_class, PROP_SSRC,
-			g_param_spec_string("ssrc",
+			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_SSRC] = g_param_spec_string("ssrc",
 			"ssrc",
 			"The ssrc for this rtp session.",
 			NULL,
-			G_PARAM_READWRITE));
+			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-	g_type_class_add_private(klass, sizeof(JingleRtpPrivate));
+	g_object_class_install_properties(gobject_class, PROP_LAST, properties);
 }
 
 static void
@@ -214,7 +199,7 @@ jingle_rtp_get_media(JingleSession *session)
 
 	for (; iter; iter = g_list_delete_link(iter, iter)) {
 		JingleSession *media_session =
-				purple_media_get_prpl_data(iter->data);
+				purple_media_get_protocol_data(iter->data);
 		if (media_session == session) {
 			media = iter->data;
 			break;
@@ -226,134 +211,23 @@ jingle_rtp_get_media(JingleSession *session)
 	return media;
 }
 
-static JingleRawUdpCandidate *
-jingle_rtp_candidate_to_rawudp(JingleSession *session, guint generation,
-		PurpleMediaCandidate *candidate)
-{
-	gchar *id = jabber_get_next_id(jingle_session_get_js(session));
-	gchar *ip = purple_media_candidate_get_ip(candidate);
-	JingleRawUdpCandidate *rawudp_candidate =
-			jingle_rawudp_candidate_new(id, generation,
-			purple_media_candidate_get_component_id(candidate),
-			ip, purple_media_candidate_get_port(candidate));
-	g_free(ip);
-	g_free(id);
-	return rawudp_candidate;
-}
-
-static JingleIceUdpCandidate *
-jingle_rtp_candidate_to_iceudp(JingleSession *session, guint generation,
-		PurpleMediaCandidate *candidate)
-{
-	gchar *id = jabber_get_next_id(jingle_session_get_js(session));
-	gchar *ip = purple_media_candidate_get_ip(candidate);
-	gchar *username = purple_media_candidate_get_username(candidate);
-	gchar *password = purple_media_candidate_get_password(candidate);
-	PurpleMediaCandidateType type =
-			purple_media_candidate_get_candidate_type(candidate);
-
-	JingleIceUdpCandidate *iceudp_candidate = jingle_iceudp_candidate_new(
-			purple_media_candidate_get_component_id(candidate),
-			purple_media_candidate_get_foundation(candidate),
-			generation, id, ip, 0,
-			purple_media_candidate_get_port(candidate),
-			purple_media_candidate_get_priority(candidate), "udp",
-			type == PURPLE_MEDIA_CANDIDATE_TYPE_HOST ? "host" :
-			type == PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX ? "srflx" :
-			type == PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX ? "prflx" :
-			type == PURPLE_MEDIA_CANDIDATE_TYPE_RELAY ? "relay" :
-			"", username, password);
-	iceudp_candidate->reladdr =
-			purple_media_candidate_get_base_ip(candidate);
-	iceudp_candidate->relport =
-			purple_media_candidate_get_base_port(candidate);
-	g_free(password);
-	g_free(username);
-	g_free(ip);
-	g_free(id);
-	return iceudp_candidate;
-}
-
 static JingleTransport *
-jingle_rtp_candidates_to_transport(JingleSession *session, GType type, guint generation, GList *candidates)
+jingle_rtp_candidates_to_transport(JingleSession *session, const gchar *type, guint generation, GList *candidates)
 {
-	if (type == JINGLE_TYPE_RAWUDP) {
-		JingleTransport *transport = jingle_transport_create(JINGLE_TRANSPORT_RAWUDP);
-		JingleRawUdpCandidate *rawudp_candidate;
-		for (; candidates; candidates = g_list_next(candidates)) {
-			PurpleMediaCandidate *candidate = candidates->data;
-			rawudp_candidate = jingle_rtp_candidate_to_rawudp(
-					session, generation, candidate);
-			jingle_rawudp_add_local_candidate(
-					JINGLE_RAWUDP(transport),
-					rawudp_candidate);
-		}
-		return transport;
-	} else if (type == JINGLE_TYPE_ICEUDP) {
-		JingleTransport *transport = jingle_transport_create(JINGLE_TRANSPORT_ICEUDP);
-		JingleIceUdpCandidate *iceudp_candidate;
-		for (; candidates; candidates = g_list_next(candidates)) {
-			PurpleMediaCandidate *candidate = candidates->data;
-			iceudp_candidate = jingle_rtp_candidate_to_iceudp(
-					session, generation, candidate);
-			jingle_iceudp_add_local_candidate(
-					JINGLE_ICEUDP(transport),
-					iceudp_candidate);
-		}
-		return transport;
-	} else {
+	JingleTransport *transport;
+
+	transport = jingle_transport_create(type);
+	if (!transport)
 		return NULL;
+
+	for (; candidates; candidates = g_list_next(candidates)) {
+		PurpleMediaCandidate *candidate = candidates->data;
+		gchar *id = jabber_get_next_id(jingle_session_get_js(session));
+		jingle_transport_add_local_candidate(transport, id, generation, candidate);
+		g_free(id);
 	}
-}
 
-static GList *
-jingle_rtp_transport_to_candidates(JingleTransport *transport)
-{
-	const gchar *type = jingle_transport_get_transport_type(transport);
-	GList *ret = NULL;
-	if (purple_strequal(type, JINGLE_TRANSPORT_RAWUDP)) {
-		GList *candidates = jingle_rawudp_get_remote_candidates(JINGLE_RAWUDP(transport));
-
-		for (; candidates; candidates = g_list_delete_link(candidates, candidates)) {
-			JingleRawUdpCandidate *candidate = candidates->data;
-			ret = g_list_append(ret, purple_media_candidate_new(
-					"", candidate->component,
-					PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX,
-					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP,
-					candidate->ip, candidate->port));
-		}
-
-		return ret;
-	} else if (purple_strequal(type, JINGLE_TRANSPORT_ICEUDP)) {
-		GList *candidates = jingle_iceudp_get_remote_candidates(JINGLE_ICEUDP(transport));
-
-		for (; candidates; candidates = g_list_delete_link(candidates, candidates)) {
-			JingleIceUdpCandidate *candidate = candidates->data;
-			PurpleMediaCandidate *new_candidate = purple_media_candidate_new(
-					candidate->foundation, candidate->component,
-					purple_strequal(candidate->type, "host") ?
-					PURPLE_MEDIA_CANDIDATE_TYPE_HOST :
-					purple_strequal(candidate->type, "srflx") ?
-					PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX :
-					purple_strequal(candidate->type, "prflx") ?
-					PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX :
-					purple_strequal(candidate->type, "relay") ?
-					PURPLE_MEDIA_CANDIDATE_TYPE_RELAY : 0,
-					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP,
-					candidate->ip, candidate->port);
-			g_object_set(new_candidate,
-					"base-ip", candidate->reladdr,
-					"base-port", candidate->relport,
-					"username", candidate->username,
-					"password", candidate->password,
-					"priority", candidate->priority, NULL);
-			ret = g_list_append(ret, new_candidate);
-		}
-
-		return ret;
-	} else {
-		return NULL;
-	}
+	return transport;
 }
 
 static void jingle_rtp_ready(JingleSession *session);
@@ -378,10 +252,9 @@ jingle_rtp_candidates_prepared_cb(PurpleMedia *media,
 
 	oldtransport = jingle_content_get_transport(content);
 	candidates = purple_media_get_local_candidates(media, sid, name);
-	transport = JINGLE_TRANSPORT(jingle_rtp_candidates_to_transport(
-			session, JINGLE_IS_RAWUDP(oldtransport) ?
-				JINGLE_TYPE_RAWUDP : JINGLE_TYPE_ICEUDP,
-			0, candidates));
+	transport = jingle_rtp_candidates_to_transport(
+			session, jingle_transport_get_transport_type(oldtransport),
+			0, candidates);
 
 	g_list_free(candidates);
 	g_object_unref(oldtransport);
@@ -404,9 +277,9 @@ jingle_rtp_codecs_changed_cb(PurpleMedia *media, gchar *sid,
 static void
 jingle_rtp_new_candidate_cb(PurpleMedia *media, gchar *sid, gchar *name, PurpleMediaCandidate *candidate, JingleSession *session)
 {
-	JingleContent *content = jingle_session_find_content(
-			session, sid, NULL);
+	JingleContent *content = jingle_session_find_content(session, sid, NULL);
 	JingleTransport *transport;
+	gchar *id;
 
 	purple_debug_info("jingle-rtp", "jingle_rtp_new_candidate_cb\n");
 
@@ -419,29 +292,23 @@ jingle_rtp_new_candidate_cb(PurpleMedia *media, gchar *sid, gchar *name, PurpleM
 
 	transport = jingle_content_get_transport(content);
 
-	if (JINGLE_IS_ICEUDP(transport))
-		jingle_iceudp_add_local_candidate(JINGLE_ICEUDP(transport),
-				jingle_rtp_candidate_to_iceudp(
-				session, 1, candidate));
-	else if (JINGLE_IS_RAWUDP(transport))
-		jingle_rawudp_add_local_candidate(JINGLE_RAWUDP(transport),
-				jingle_rtp_candidate_to_rawudp(
-				session, 1, candidate));
+	id = jabber_get_next_id(jingle_session_get_js(session));
+	jingle_transport_add_local_candidate(transport, id, 1, candidate);
+	g_free(id);
 
 	g_object_unref(transport);
 
-	jabber_iq_send(jingle_session_to_packet(session,
-			JINGLE_TRANSPORT_INFO));
+	jabber_iq_send(jingle_session_to_packet(session, JINGLE_TRANSPORT_INFO));
 }
 
 static void
 jingle_rtp_initiate_ack_cb(JabberStream *js, const char *from,
                            JabberIqType type, const char *id,
-                           xmlnode *packet, gpointer data)
+                           PurpleXmlNode *packet, gpointer data)
 {
 	JingleSession *session = data;
 
-	if (type == JABBER_IQ_ERROR || xmlnode_get_child(packet, "error")) {
+	if (type == JABBER_IQ_ERROR || purple_xmlnode_get_child(packet, "error")) {
 		purple_media_end(jingle_rtp_get_media(session), NULL, NULL);
 		g_object_unref(session);
 		return;
@@ -542,7 +409,7 @@ jingle_rtp_create_media(JingleContent *content)
 		return NULL;
 	}
 
-	purple_media_set_prpl_data(media, session);
+	purple_media_set_protocol_data(media, session);
 
 	/* connect callbacks */
 	g_signal_connect(G_OBJECT(media), "candidates-prepared",
@@ -604,6 +471,8 @@ jingle_rtp_init_media(JingleContent *content)
 		transmitter = "rawudp";
 	else if (JINGLE_IS_ICEUDP(transport))
 		transmitter = "nice";
+	else if (JINGLE_IS_GOOGLE_P2P(transport))
+		transmitter = "nice";
 	else
 		transmitter = "notransmitter";
 	g_object_unref(transport);
@@ -661,13 +530,13 @@ jingle_rtp_init_media(JingleContent *content)
 }
 
 static GList *
-jingle_rtp_parse_codecs(xmlnode *description)
+jingle_rtp_parse_codecs(PurpleXmlNode *description)
 {
 	GList *codecs = NULL;
-	xmlnode *codec_element = NULL;
+	PurpleXmlNode *codec_element = NULL;
 	const char *encoding_name,*id, *clock_rate;
 	PurpleMediaCodec *codec;
-	const gchar *media = xmlnode_get_attrib(description, "media");
+	const gchar *media = purple_xmlnode_get_attrib(description, "media");
 	PurpleMediaSessionType type;
 
 	if (media == NULL) {
@@ -685,25 +554,25 @@ jingle_rtp_parse_codecs(xmlnode *description)
 		return NULL;
 	}
 
-	for (codec_element = xmlnode_get_child(description, "payload-type") ;
+	for (codec_element = purple_xmlnode_get_child(description, "payload-type") ;
 		 codec_element ;
-		 codec_element = xmlnode_get_next_twin(codec_element)) {
-		xmlnode *param;
+		 codec_element = purple_xmlnode_get_next_twin(codec_element)) {
+		PurpleXmlNode *param;
 		gchar *codec_str;
-		encoding_name = xmlnode_get_attrib(codec_element, "name");
+		encoding_name = purple_xmlnode_get_attrib(codec_element, "name");
 
-		id = xmlnode_get_attrib(codec_element, "id");
-		clock_rate = xmlnode_get_attrib(codec_element, "clockrate");
+		id = purple_xmlnode_get_attrib(codec_element, "id");
+		clock_rate = purple_xmlnode_get_attrib(codec_element, "clockrate");
 
 		codec = purple_media_codec_new(atoi(id), encoding_name,
 				     type,
 				     clock_rate ? atoi(clock_rate) : 0);
 
-		for (param = xmlnode_get_child(codec_element, "parameter");
-				param; param = xmlnode_get_next_twin(param)) {
+		for (param = purple_xmlnode_get_child(codec_element, "parameter");
+				param; param = purple_xmlnode_get_next_twin(param)) {
 			purple_media_codec_add_optional_parameter(codec,
-					xmlnode_get_attrib(param, "name"),
-					xmlnode_get_attrib(param, "value"));
+					purple_xmlnode_get_attrib(param, "name"),
+					purple_xmlnode_get_attrib(param, "value"));
 		}
 
 		codec_str = purple_media_codec_to_string(codec);
@@ -716,12 +585,12 @@ jingle_rtp_parse_codecs(xmlnode *description)
 }
 
 static JingleContent *
-jingle_rtp_parse_internal(xmlnode *rtp)
+jingle_rtp_parse_internal(PurpleXmlNode *rtp)
 {
 	JingleContent *content = parent_class->parse(rtp);
-	xmlnode *description = xmlnode_get_child(rtp, "description");
-	const gchar *media_type = xmlnode_get_attrib(description, "media");
-	const gchar *ssrc = xmlnode_get_attrib(description, "ssrc");
+	PurpleXmlNode *description = purple_xmlnode_get_child(rtp, "description");
+	const gchar *media_type = purple_xmlnode_get_attrib(description, "media");
+	const gchar *ssrc = purple_xmlnode_get_attrib(description, "ssrc");
 	purple_debug_info("jingle-rtp", "rtp parse\n");
 	g_object_set(content, "media-type", media_type, NULL);
 	if (ssrc != NULL)
@@ -730,14 +599,14 @@ jingle_rtp_parse_internal(xmlnode *rtp)
 }
 
 static void
-jingle_rtp_add_payloads(xmlnode *description, GList *codecs)
+jingle_rtp_add_payloads(PurpleXmlNode *description, GList *codecs)
 {
 	for (; codecs ; codecs = codecs->next) {
 		PurpleMediaCodec *codec = (PurpleMediaCodec*)codecs->data;
 		GList *iter = purple_media_codec_get_optional_parameters(codec);
 		gchar *id, *name, *clockrate, *channels;
 		gchar *codec_str;
-		xmlnode *payload = xmlnode_new_child(description, "payload-type");
+		PurpleXmlNode *payload = purple_xmlnode_new_child(description, "payload-type");
 
 		id = g_strdup_printf("%d",
 				purple_media_codec_get_id(codec));
@@ -747,10 +616,10 @@ jingle_rtp_add_payloads(xmlnode *description, GList *codecs)
 		channels = g_strdup_printf("%d",
 				purple_media_codec_get_channels(codec));
 
-		xmlnode_set_attrib(payload, "name", name);
-		xmlnode_set_attrib(payload, "id", id);
-		xmlnode_set_attrib(payload, "clockrate", clockrate);
-		xmlnode_set_attrib(payload, "channels", channels);
+		purple_xmlnode_set_attrib(payload, "name", name);
+		purple_xmlnode_set_attrib(payload, "id", id);
+		purple_xmlnode_set_attrib(payload, "clockrate", clockrate);
+		purple_xmlnode_set_attrib(payload, "channels", channels);
 
 		g_free(channels);
 		g_free(clockrate);
@@ -759,9 +628,9 @@ jingle_rtp_add_payloads(xmlnode *description, GList *codecs)
 
 		for (; iter; iter = g_list_next(iter)) {
 			PurpleKeyValuePair *mparam = iter->data;
-			xmlnode *param = xmlnode_new_child(payload, "parameter");
-			xmlnode_set_attrib(param, "name", mparam->key);
-			xmlnode_set_attrib(param, "value", mparam->value);
+			PurpleXmlNode *param = purple_xmlnode_new_child(payload, "parameter");
+			purple_xmlnode_set_attrib(param, "name", mparam->key);
+			purple_xmlnode_set_attrib(param, "value", mparam->value);
 		}
 
 		codec_str = purple_media_codec_to_string(codec);
@@ -770,11 +639,11 @@ jingle_rtp_add_payloads(xmlnode *description, GList *codecs)
 	}
 }
 
-static xmlnode *
-jingle_rtp_to_xml_internal(JingleContent *rtp, xmlnode *content, JingleActionType action)
+static PurpleXmlNode *
+jingle_rtp_to_xml_internal(JingleContent *rtp, PurpleXmlNode *content, JingleActionType action)
 {
-	xmlnode *node = parent_class->to_xml(rtp, content, action);
-	xmlnode *description = xmlnode_get_child(node, "description");
+	PurpleXmlNode *node = parent_class->to_xml(rtp, content, action);
+	PurpleXmlNode *description = purple_xmlnode_get_child(node, "description");
 	if (description != NULL) {
 		JingleSession *session = jingle_content_get_session(rtp);
 		PurpleMedia *media = jingle_rtp_get_media(session);
@@ -783,10 +652,10 @@ jingle_rtp_to_xml_internal(JingleContent *rtp, xmlnode *content, JingleActionTyp
 		gchar *name = jingle_content_get_name(rtp);
 		GList *codecs = purple_media_get_codecs(media, name);
 
-		xmlnode_set_attrib(description, "media", media_type);
+		purple_xmlnode_set_attrib(description, "media", media_type);
 
 		if (ssrc != NULL)
-			xmlnode_set_attrib(description, "ssrc", ssrc);
+			purple_xmlnode_set_attrib(description, "ssrc", ssrc);
 
 		g_free(media_type);
 		g_free(name);
@@ -799,14 +668,14 @@ jingle_rtp_to_xml_internal(JingleContent *rtp, xmlnode *content, JingleActionTyp
 }
 
 static void
-jingle_rtp_handle_action_internal(JingleContent *content, xmlnode *xmlcontent, JingleActionType action)
+jingle_rtp_handle_action_internal(JingleContent *content, PurpleXmlNode *xmlcontent, JingleActionType action)
 {
 	switch (action) {
 		case JINGLE_SESSION_ACCEPT:
 		case JINGLE_SESSION_INITIATE: {
 			JingleSession *session;
 			JingleTransport *transport;
-			xmlnode *description;
+			PurpleXmlNode *description;
 			GList *candidates;
 			GList *codecs;
 			gchar *name;
@@ -825,9 +694,9 @@ jingle_rtp_handle_action_internal(JingleContent *content, xmlnode *xmlcontent, J
 			}
 
 			transport = jingle_transport_parse(
-					xmlnode_get_child(xmlcontent, "transport"));
-			description = xmlnode_get_child(xmlcontent, "description");
-			candidates = jingle_rtp_transport_to_candidates(transport);
+					purple_xmlnode_get_child(xmlcontent, "transport"));
+			description = purple_xmlnode_get_child(xmlcontent, "description");
+			candidates = jingle_transport_get_remote_candidates(transport);
 			codecs = jingle_rtp_parse_codecs(description);
 			name = jingle_content_get_name(content);
 			remote_jid = jingle_session_get_remote_jid(session);
@@ -862,8 +731,8 @@ jingle_rtp_handle_action_internal(JingleContent *content, xmlnode *xmlcontent, J
 		case JINGLE_TRANSPORT_INFO: {
 			JingleSession *session = jingle_content_get_session(content);
 			JingleTransport *transport = jingle_transport_parse(
-					xmlnode_get_child(xmlcontent, "transport"));
-			GList *candidates = jingle_rtp_transport_to_candidates(transport);
+					purple_xmlnode_get_child(xmlcontent, "transport"));
+			GList *candidates = jingle_transport_get_remote_candidates(transport);
 			gchar *name = jingle_content_get_name(content);
 			gchar *remote_jid =
 					jingle_session_get_remote_jid(session);
@@ -880,7 +749,7 @@ jingle_rtp_handle_action_internal(JingleContent *content, xmlnode *xmlcontent, J
 		case JINGLE_DESCRIPTION_INFO: {
 			JingleSession *session =
 					jingle_content_get_session(content);
-			xmlnode *description = xmlnode_get_child(
+			PurpleXmlNode *description = purple_xmlnode_get_child(
 					xmlcontent, "description");
 			GList *codecs, *iter, *iter2, *remote_codecs =
 					jingle_rtp_parse_codecs(description);
@@ -974,6 +843,8 @@ jingle_rtp_initiate_media(JabberStream *js, const gchar *who,
 		transport_type = JINGLE_TRANSPORT_ICEUDP;
 	} else if (jabber_resource_has_capability(jbr, JINGLE_TRANSPORT_RAWUDP)) {
 		transport_type = JINGLE_TRANSPORT_RAWUDP;
+	} else if (jabber_resource_has_capability(jbr, NS_GOOGLE_TRANSPORT_P2P)) {
+		transport_type = NS_GOOGLE_TRANSPORT_P2P;
 	} else {
 		purple_debug_error("jingle-rtp", "Resource doesn't support "
 				"the same transport types\n");
@@ -994,6 +865,7 @@ jingle_rtp_initiate_media(JabberStream *js, const gchar *who,
 		jingle_session_add_content(session, content);
 		JINGLE_RTP(content)->priv->media_type = g_strdup("audio");
 		jingle_rtp_init_media(content);
+		g_object_notify_by_pspec(G_OBJECT(content), properties[PROP_MEDIA_TYPE]);
 	}
 	if (type & PURPLE_MEDIA_VIDEO) {
 		transport = jingle_transport_create(transport_type);
@@ -1002,6 +874,7 @@ jingle_rtp_initiate_media(JabberStream *js, const gchar *who,
 		jingle_session_add_content(session, content);
 		JINGLE_RTP(content)->priv->media_type = g_strdup("video");
 		jingle_rtp_init_media(content);
+		g_object_notify_by_pspec(G_OBJECT(content), properties[PROP_MEDIA_TYPE]);
 	}
 
 	if (jingle_rtp_get_media(session) == NULL) {

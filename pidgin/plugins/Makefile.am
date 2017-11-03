@@ -1,4 +1,4 @@
-DIST_SUBDIRS = cap disco gestures gevolution musicmessaging perl ticker
+DIST_SUBDIRS = cap disco gestures gevolution musicmessaging ticker win32/winprefs win32/transparency
 
 if BUILD_GEVOLUTION
 GEVOLUTION_DIR = gevolution
@@ -12,10 +12,6 @@ if ENABLE_CAP
 CAP_DIR = cap
 endif
 
-if USE_PERL
-PERL_DIR = perl
-endif
-
 if ENABLE_GESTURES
 GESTURE_DIR = gestures
 endif
@@ -25,54 +21,50 @@ SUBDIRS = \
 	$(GESTURE_DIR) \
 	$(GEVOLUTION_DIR) \
 	$(MUSICMESSAGING_DIR) \
-	$(PERL_DIR) \
 	disco \
 	ticker
 
-plugindir = $(libdir)/pidgin
+if IS_WIN32
+SUBDIRS += \
+	win32/winprefs \
+	win32/transparency
+endif
 
-convcolors_la_LDFLAGS       = -module -avoid-version
-contact_priority_la_LDFLAGS = -module -avoid-version
-extplacement_la_LDFLAGS     = -module -avoid-version
-gtk_signals_test_la_LDFLAGS = -module -avoid-version
-gtkbuddynote_la_LDFLAGS     = -module -avoid-version
-history_la_LDFLAGS          = -module -avoid-version
-iconaway_la_LDFLAGS         = -module -avoid-version
-markerline_la_LDFLAGS       = -module -avoid-version
-notify_la_LDFLAGS           = -module -avoid-version
-pidginrc_la_LDFLAGS         = -module -avoid-version
-relnot_la_LDFLAGS           = -module -avoid-version
-sendbutton_la_LDFLAGS       = -module -avoid-version
-spellchk_la_LDFLAGS         = -module -avoid-version
-themeedit_la_LDFLAGS        = -module -avoid-version
-timestamp_la_LDFLAGS        = -module -avoid-version
-timestamp_format_la_LDFLAGS = -module -avoid-version
-unity_la_LDFLAGS            = -module -avoid-version
-vvconfig_la_LDFLAGS         = -module -avoid-version
-xmppconsole_la_LDFLAGS      = -module -avoid-version
+plugindir = @PIDGIN_PLUGINDIR@
+
+contact_priority_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
+extplacement_la_LDFLAGS     = -module @PLUGIN_LDFLAGS@
+gtk_signals_test_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
+gtkbuddynote_la_LDFLAGS     = -module @PLUGIN_LDFLAGS@
+history_la_LDFLAGS          = -module @PLUGIN_LDFLAGS@
+iconaway_la_LDFLAGS         = -module @PLUGIN_LDFLAGS@
+imgupload_la_LDFLAGS        = -module @PLUGIN_LDFLAGS@
+markerline_la_LDFLAGS       = -module @PLUGIN_LDFLAGS@
+notify_la_LDFLAGS           = -module @PLUGIN_LDFLAGS@
+relnot_la_LDFLAGS           = -module @PLUGIN_LDFLAGS@
+screencap_la_LDFLAGS        = -module @PLUGIN_LDFLAGS@
+sendbutton_la_LDFLAGS       = -module @PLUGIN_LDFLAGS@
+spellchk_la_LDFLAGS         = -module @PLUGIN_LDFLAGS@
+unity_la_LDFLAGS            = -module @PLUGIN_LDFLAGS@
+webkit_la_LDFLAGS           = -module @PLUGIN_LDFLAGS@
+xmppconsole_la_LDFLAGS      = -module @PLUGIN_LDFLAGS@
 
 if PLUGINS
 
 plugin_LTLIBRARIES = \
-	convcolors.la       \
 	extplacement.la     \
 	gtkbuddynote.la     \
 	history.la          \
 	iconaway.la         \
+	imgupload.la        \
 	markerline.la       \
 	notify.la           \
-	pidginrc.la         \
 	relnot.la           \
+	screencap.la        \
 	sendbutton.la       \
 	spellchk.la         \
-	themeedit.la         \
-	timestamp.la        \
-	timestamp_format.la \
+	webkit.la           \
 	xmppconsole.la
-
-if USE_VV
-plugin_LTLIBRARIES +=	vvconfig.la
-endif
 
 if ENABLE_UNITY
 plugin_LTLIBRARIES +=	unity.la
@@ -82,45 +74,41 @@ noinst_LTLIBRARIES = \
 	contact_priority.la \
 	gtk_signals_test.la
 
-convcolors_la_SOURCES       = convcolors.c
 contact_priority_la_SOURCES = contact_priority.c
 extplacement_la_SOURCES     = extplacement.c
 gtk_signals_test_la_SOURCES = gtk-signals-test.c
 gtkbuddynote_la_SOURCES     = gtkbuddynote.c
 history_la_SOURCES          = history.c
 iconaway_la_SOURCES         = iconaway.c
+imgupload_la_SOURCES        = imgupload.c
 markerline_la_SOURCES       = markerline.c
 notify_la_SOURCES           = notify.c
-pidginrc_la_SOURCES         = pidginrc.c
 relnot_la_SOURCES           = relnot.c
+screencap_la_SOURCES        = screencap.c
 sendbutton_la_SOURCES       = sendbutton.c
 spellchk_la_SOURCES         = spellchk.c
-themeedit_la_SOURCES        = themeedit.c themeedit-icon.c themeedit-icon.h
-timestamp_la_SOURCES        = timestamp.c
-timestamp_format_la_SOURCES = timestamp_format.c
 unity_la_SOURCES            = unity.c
-vvconfig_la_SOURCES         = vvconfig.c
+webkit_la_SOURCES           = webkit.c
 xmppconsole_la_SOURCES      = xmppconsole.c
 
-convcolors_la_LIBADD        = $(GTK_LIBS)
-contact_priority_la_LIBADD  = $(GTK_LIBS)
-extplacement_la_LIBADD      = $(GTK_LIBS)
-gtk_signals_test_la_LIBADD  = $(GTK_LIBS)
-gtkbuddynote_la_LIBADD      = $(GTK_LIBS)
-history_la_LIBADD           = $(GTK_LIBS)
-iconaway_la_LIBADD          = $(GTK_LIBS)
-markerline_la_LIBADD        = $(GTK_LIBS)
-notify_la_LIBADD            = $(GTK_LIBS)
-pidginrc_la_LIBADD          = $(GTK_LIBS)
-relnot_la_LIBADD            = $(GLIB_LIBS)
-sendbutton_la_LIBADD        = $(GTK_LIBS)
-spellchk_la_LIBADD          = $(GTK_LIBS)
-themeedit_la_LIBADD         = $(GTK_LIBS)
-timestamp_la_LIBADD         = $(GTK_LIBS)
-timestamp_format_la_LIBADD  = $(GTK_LIBS)
-unity_la_LIBADD             = $(GTK_LIBS) $(UNITY_LIBS)
-vvconfig_la_LIBADD          = $(GTK_LIBS) $(GSTREAMER_LIBS)
-xmppconsole_la_LIBADD       = $(GTK_LIBS)
+contact_priority_la_LIBADD  = @PIDGIN_LIBS@
+extplacement_la_LIBADD      = @PIDGIN_LIBS@
+gtk_signals_test_la_LIBADD  = @PIDGIN_LIBS@
+gtkbuddynote_la_LIBADD      = @PIDGIN_LIBS@
+history_la_LIBADD           = @PIDGIN_LIBS@
+iconaway_la_LIBADD          = @PIDGIN_LIBS@
+imgupload_la_LIBADD         = @PIDGIN_LIBS@ $(JSON_LIBS)
+markerline_la_LIBADD        = @PIDGIN_LIBS@ $(WEBKIT_LIBS)
+notify_la_LIBADD            = @PIDGIN_LIBS@
+relnot_la_LIBADD            = @PIDGIN_LIBS@
+screencap_la_LIBADD         = @PIDGIN_LIBS@
+sendbutton_la_LIBADD        = @PIDGIN_LIBS@
+spellchk_la_LIBADD          = @PIDGIN_LIBS@
+unity_la_LIBADD             = @PIDGIN_LIBS@ $(UNITY_LIBS)
+webkit_la_LIBADD            = @PIDGIN_LIBS@ $(WEBKIT_LIBS)
+xmppconsole_la_LIBADD       = @PIDGIN_LIBS@
+
+imgupload_la_CFLAGS         = $(JSON_CFLAGS)
 
 endif # PLUGINS
 
@@ -137,13 +125,14 @@ EXTRA_DIST = \
 	win32/winprefs/winprefs.c
 
 AM_CPPFLAGS = \
-	-DDATADIR=\"$(datadir)\" \
 	-I$(top_builddir)/libpurple \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_srcdir)/pidgin \
 	$(DEBUG_CFLAGS) \
 	$(GTK_CFLAGS) \
+	$(GPLUGIN_CFLAGS) \
 	$(UNITY_CFLAGS) \
+	$(WEBKIT_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
 	$(PLUGIN_CFLAGS)
 
@@ -154,7 +143,7 @@ AM_CPPFLAGS = \
 SUFFIXES = .c .so
 .c.so:
 	$(LIBTOOL) --mode=compile $(CC) -DHAVE_CONFIG_H -I$(top_builddir) $(AM_CPPFLAGS) $(CFLAGS) -c $< -o tmp$@.lo $(PLUGIN_CFLAGS)
-	$(LIBTOOL) --mode=link    $(CC) $(CFLAGS) -o libtmp$@.la -rpath $(plugindir) tmp$@.lo $(LIBS) $(LDFLAGS) -module -avoid-version $(PLUGIN_LIBS)
+	$(LIBTOOL) --mode=link    $(CC) $(CFLAGS) -o libtmp$@.la -rpath $(plugindir) tmp$@.lo $(LIBS) $(LDFLAGS) -module @PLUGIN_LDFLAGS@ $(PLUGIN_LIBS)
 	@rm -f tmp$@.lo tmp$@.o libtmp$@.la
 	@cp .libs/libtmp$@*.so $@
 	@rm -rf .libs/libtmp$@.*

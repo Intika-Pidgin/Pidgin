@@ -1,8 +1,3 @@
-/**
- * @file cmds.c Commands API
- * @ingroup core
- */
-
 /* Copyright (C) 2003-2004 Timothy Ringenbach <omarvo@hotmail.com
  *
  * This program is free software; you can redistribute it and/or modify
@@ -31,17 +26,17 @@ static PurpleCommandsUiOps *cmds_ui_ops = NULL;
 static GList *cmds = NULL;
 static guint next_id = 1;
 
-struct _PurpleCmd {
+typedef struct _PurpleCmd {
 	PurpleCmdId id;
 	gchar *cmd;
 	gchar *args;
 	PurpleCmdPriority priority;
 	PurpleCmdFlag flags;
-	gchar *prpl_id;
+	gchar *protocol_id;
 	PurpleCmdFunc func;
 	gchar *help;
 	void *data;
-};
+} PurpleCmd;
 
 
 static gint cmds_compare_func(const PurpleCmd *a, const PurpleCmd *b)
@@ -55,7 +50,7 @@ static gint cmds_compare_func(const PurpleCmd *a, const PurpleCmd *b)
 
 PurpleCmdId purple_cmd_register(const gchar *cmd, const gchar *args,
                             PurpleCmdPriority p, PurpleCmdFlag f,
-                            const gchar *prpl_id, PurpleCmdFunc func,
+                            const gchar *protocol_id, PurpleCmdFunc func,
                             const gchar *helpstr, void *data)
 {
 	PurpleCmdId id;
@@ -74,7 +69,7 @@ PurpleCmdId purple_cmd_register(const gchar *cmd, const gchar *args,
 	c->args = g_strdup(args);
 	c->priority = p;
 	c->flags = f;
-	c->prpl_id = g_strdup(prpl_id);
+	c->protocol_id = g_strdup(protocol_id);
 	c->func = func;
 	c->help = g_strdup(helpstr);
 	c->data = data;
@@ -83,7 +78,7 @@ PurpleCmdId purple_cmd_register(const gchar *cmd, const gchar *args,
 
 	ops = purple_cmds_get_ui_ops();
 	if (ops && ops->register_command)
-		ops->register_command(cmd, p, f, prpl_id, helpstr, c);
+		ops->register_command(cmd, p, f, protocol_id, helpstr, c->id);
 
 	purple_signal_emit(purple_cmds_get_handle(), "cmd-added", cmd, p, f);
 
@@ -94,7 +89,7 @@ static void purple_cmd_free(PurpleCmd *c)
 {
 	g_free(c->cmd);
 	g_free(c->args);
-	g_free(c->prpl_id);
+	g_free(c->protocol_id);
 	g_free(c->help);
 	g_free(c);
 }
@@ -110,7 +105,7 @@ void purple_cmd_unregister(PurpleCmdId id)
 		if (c->id == id) {
 			PurpleCommandsUiOps *ops = purple_cmds_get_ui_ops();
 			if (ops && ops->unregister_command)
-				ops->unregister_command(c->cmd, c->prpl_id);
+				ops->unregister_command(c->cmd, c->protocol_id);
 
 			cmds = g_list_remove(cmds, c);
 			purple_signal_emit(purple_cmds_get_handle(), "cmd-removed", c->cmd);
@@ -120,7 +115,7 @@ void purple_cmd_unregister(PurpleCmdId id)
 	}
 }
 
-/**
+/*
  * This sets args to a NULL-terminated array of strings.  It should
  * be freed using g_strfreev().
  */
@@ -212,22 +207,18 @@ PurpleCmdStatus purple_cmd_do_command(PurpleConversation *conv, const gchar *cmd
 	PurpleCmd *c;
 	GList *l;
 	gchar *err = NULL;
-	gboolean is_im;
-	gboolean found = FALSE, tried_cmd = FALSE, right_type = FALSE, right_prpl = FALSE;
-	const gchar *prpl_id;
+	gboolean is_im = TRUE;
+	gboolean found = FALSE, tried_cmd = FALSE, right_type = FALSE, right_protocol = FALSE;
+	const gchar *protocol_id;
 	gchar **args = NULL;
 	gchar *cmd, *rest, *mrest;
 	PurpleCmdRet ret = PURPLE_CMD_RET_CONTINUE;
 
 	*error = NULL;
-	prpl_id = purple_account_get_protocol_id(purple_conversation_get_account(conv));
+	protocol_id = purple_account_get_protocol_id(purple_conversation_get_account(conv));
 
-	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
-		is_im = TRUE;
-	else if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT)
+	if (PURPLE_IS_CHAT_CONVERSATION(conv))
 		is_im = FALSE;
-	else
-		return PURPLE_CMD_STATUS_FAILED;
 
 	rest = strchr(cmdline, ' ');
 	if (rest) {
@@ -258,11 +249,11 @@ PurpleCmdStatus purple_cmd_do_command(PurpleConversation *conv, const gchar *cmd
 
 		right_type = TRUE;
 
-		if ((c->flags & PURPLE_CMD_FLAG_PRPL_ONLY) &&
-		    !purple_strequal(c->prpl_id, prpl_id))
+		if ((c->flags & PURPLE_CMD_FLAG_PROTOCOL_ONLY) &&
+		    !purple_strequal(c->protocol_id, protocol_id))
 			continue;
 
-		right_prpl = TRUE;
+		right_protocol = TRUE;
 
 		/* this checks the allow bad args flag for us */
 		if (!purple_cmd_parse_args(c, rest, mrest, &args)) {
@@ -294,8 +285,8 @@ PurpleCmdStatus purple_cmd_do_command(PurpleConversation *conv, const gchar *cmd
 
 	if (!right_type)
 		return PURPLE_CMD_STATUS_WRONG_TYPE;
-	if (!right_prpl)
-		return PURPLE_CMD_STATUS_WRONG_PRPL;
+	if (!right_protocol)
+		return PURPLE_CMD_STATUS_WRONG_PROTOCOL;
 	if (!tried_cmd)
 		return PURPLE_CMD_STATUS_WRONG_ARGS;
 
@@ -311,19 +302,33 @@ PurpleCmdStatus purple_cmd_do_command(PurpleConversation *conv, const gchar *cmd
 
 }
 
-gboolean purple_cmd_execute(PurpleCmd *c, PurpleConversation *conv,
+gboolean purple_cmd_execute(PurpleCmdId id, PurpleConversation *conv,
 			    const gchar *cmdline)
 {
+	PurpleCmd *cmd = NULL;
+	PurpleCmdRet ret = PURPLE_CMD_RET_CONTINUE;
+	GList *l = NULL;
 	gchar *err = NULL;
 	gchar **args = NULL;
-	PurpleCmdRet ret = PURPLE_CMD_RET_CONTINUE;
 
-	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) {
-		if (!(c->flags & PURPLE_CMD_FLAG_IM))
+	for(l = cmds; l; l = l->next) {
+		cmd = (PurpleCmd*)l->data;
+
+		if(cmd->id == id) {
+			break;
+		}
+		cmd = NULL;
+	}
+	if(cmd == NULL) {
+		return FALSE;
+	}
+
+	if (PURPLE_IS_IM_CONVERSATION(conv)) {
+		if (!(cmd->flags & PURPLE_CMD_FLAG_IM))
 			return FALSE;
 	}
-	else if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT) {
-		if (!(c->flags & PURPLE_CMD_FLAG_CHAT))
+	else if (PURPLE_IS_CHAT_CONVERSATION(conv)) {
+		if (!(cmd->flags & PURPLE_CMD_FLAG_CHAT))
 			return FALSE;
 	}
 	else
@@ -332,12 +337,12 @@ gboolean purple_cmd_execute(PurpleCmd *c, PurpleConversation *conv,
 	/* XXX: Don't worry much about the markup version of the command
 	   line, there's not a single use case... */
 	/* this checks the allow bad args flag for us */
-	if (!purple_cmd_parse_args(c, cmdline, cmdline, &args)) {
+	if (!purple_cmd_parse_args(cmd, cmdline, cmdline, &args)) {
 		g_strfreev(args);
 		return FALSE;
 	}
 
-	ret = c->func(conv, c->cmd, args, &err, c->data);
+	ret = cmd->func(conv, cmd->cmd, args, &err, cmd->data);
 
 	g_free(err);
 	g_strfreev(args);
@@ -354,15 +359,15 @@ GList *purple_cmd_list(PurpleConversation *conv)
 	for (l = cmds; l; l = l->next) {
 		c = l->data;
 
-		if (conv && (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM))
+		if (conv && PURPLE_IS_IM_CONVERSATION(conv))
 			if (!(c->flags & PURPLE_CMD_FLAG_IM))
 				continue;
-		if (conv && (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT))
+		if (conv && PURPLE_IS_CHAT_CONVERSATION(conv))
 			if (!(c->flags & PURPLE_CMD_FLAG_CHAT))
 				continue;
 
-		if (conv && (c->flags & PURPLE_CMD_FLAG_PRPL_ONLY) &&
-		    !purple_strequal(c->prpl_id, purple_account_get_protocol_id(purple_conversation_get_account(conv))))
+		if (conv && (c->flags & PURPLE_CMD_FLAG_PROTOCOL_ONLY) &&
+		    !purple_strequal(c->protocol_id, purple_account_get_protocol_id(purple_conversation_get_account(conv))))
 			continue;
 
 		ret = g_list_append(ret, c->cmd);
@@ -386,15 +391,15 @@ GList *purple_cmd_help(PurpleConversation *conv, const gchar *cmd)
 		if (cmd && !purple_strequal(cmd, c->cmd))
 			continue;
 
-		if (conv && (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM))
+		if (conv && PURPLE_IS_IM_CONVERSATION(conv))
 			if (!(c->flags & PURPLE_CMD_FLAG_IM))
 				continue;
-		if (conv && (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT))
+		if (conv && PURPLE_IS_CHAT_CONVERSATION(conv))
 			if (!(c->flags & PURPLE_CMD_FLAG_CHAT))
 				continue;
 
-		if (conv && (c->flags & PURPLE_CMD_FLAG_PRPL_ONLY) &&
-		    !purple_strequal(c->prpl_id, purple_account_get_protocol_id(purple_conversation_get_account(conv))))
+		if (conv && (c->flags & PURPLE_CMD_FLAG_PROTOCOL_ONLY) &&
+		    !purple_strequal(c->protocol_id, purple_account_get_protocol_id(purple_conversation_get_account(conv))))
 			continue;
 
 		ret = g_list_append(ret, c->help);
@@ -431,17 +436,20 @@ void purple_cmds_init(void)
 	gpointer handle = purple_cmds_get_handle();
 
 	purple_signal_register(handle, "cmd-added",
-			purple_marshal_VOID__POINTER_INT_INT, NULL, 3,
-			purple_value_new(PURPLE_TYPE_STRING),
-			purple_value_new(PURPLE_TYPE_INT),
-			purple_value_new(PURPLE_TYPE_INT));
+			purple_marshal_VOID__POINTER_INT_INT, G_TYPE_NONE, 3,
+			G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
 	purple_signal_register(handle, "cmd-removed",
-			purple_marshal_VOID__POINTER, NULL, 1,
-			purple_value_new(PURPLE_TYPE_STRING));
+			purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+			G_TYPE_STRING);
 }
 
 void purple_cmds_uninit(void)
 {
 	purple_signals_unregister_by_instance(purple_cmds_get_handle());
+
+	while (cmds) {
+		purple_cmd_free(cmds->data);
+		cmds = g_list_delete_link(cmds, cmds);
+	}
 }
 

@@ -29,8 +29,7 @@ well as the development files!). The configure script will fail if you
 don't.  If you don't have GTK+ 2.0 installed, you should install it
 using your distribution's package management tools.
 
-For sound support, you also need gstreamer 0.10 or higher. For
-spellchecking support, you need libgtkspell (http://gtkspell.sf.net/).
+For sound support, you also need gstreamer 0.10 or higher.
 Your distro of choice probably already includes these, just be sure to
 install the development packages.
 
@@ -43,7 +42,7 @@ you only need to run 'pidgin' or 'finch'.
 
 To get started, simply add a new account.
 
-If you come across a bug, please report it at: http://developer.pidgin.im
+If you come across a bug, please report it at: https://developer.pidgin.im
 
 PLUGINS
 =======
@@ -62,4 +61,3 @@ To build a plugin from a .c file, put it in the plugins/ directory in
 the source and run 'make filename.so', e.g. if you have the .c file
 'kickass.c', put it in the plugins/ directory, and from that directory,
 run 'make kickass.so'.
-

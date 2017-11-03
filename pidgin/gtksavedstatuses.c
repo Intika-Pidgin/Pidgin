@@ -1,8 +1,3 @@
-/**
- * @file gtksavedstatus.c GTK+ Saved Status Editor UI
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -35,11 +30,12 @@
 
 #include "gtkblist.h"
 #include "pidgin.h"
-#include "gtkimhtml.h"
-#include "gtkimhtmltoolbar.h"
 #include "gtksavedstatuses.h"
 #include "pidginstock.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
+
+#include "gtk3compat.h"
 
 /*
  * TODO: Should attach to the account-deleted and account-added signals
@@ -47,7 +43,7 @@
  *       may be open.
  */
 
-/**
+/*
  * These are used for the GtkTreeView when you're scrolling through
  * all your saved statuses.
  */
@@ -62,21 +58,21 @@ enum
 	STATUS_WINDOW_NUM_COLUMNS
 };
 
-/**
+/*
  * These are used for the GtkTreeView containing the list of accounts
  * at the bottom of the window when you're editing a particular
  * saved status.
  */
 enum
 {
-	/** A hidden column containing a pointer to the PurpleAccount. */
+	/* A hidden column containing a pointer to the PurpleAccount. */
 	STATUS_EDITOR_COLUMN_ACCOUNT,
-	/** A hidden column containing a pointer to the editor for this substatus. */
+	/* A hidden column containing a pointer to the editor for this substatus. */
 	STATUS_EDITOR_COLUMN_WINDOW,
 	STATUS_EDITOR_COLUMN_ENABLE_SUBSTATUS,
 	STATUS_EDITOR_COLUMN_ICON,
 	STATUS_EDITOR_COLUMN_USERNAME,
-	/** A hidden column containing the ID of this PurpleStatusType. */
+	/* A hidden column containing the ID of this PurpleStatusType. */
 	STATUS_EDITOR_COLUMN_STATUS_ID,
 	STATUS_EDITOR_COLUMN_STATUS_NAME,
 	STATUS_EDITOR_COLUMN_STATUS_MESSAGE,
@@ -84,7 +80,7 @@ enum
 	STATUS_EDITOR_NUM_COLUMNS
 };
 
-/**
+/*
  * These are used in the GtkComboBox to select the specific PurpleStatusType
  * when setting a (sub)status for a particular saved status.
  */
@@ -118,7 +114,7 @@ typedef struct
 	gchar *original_title;
 	GtkEntry *title;
 	GtkComboBox *type;
-	GtkIMHtml *message;
+	PidginWebView *message;
 } StatusEditor;
 
 typedef struct
@@ -129,8 +125,7 @@ typedef struct
 	GtkWidget *window;
 	GtkListStore *model;
 	GtkComboBox *box;
-	GtkIMHtml *message;
-	GtkIMHtmlToolbar *toolbar;
+	PidginWebView *message;
 } SubStatusEditor;
 
 static StatusWindow *status_window = NULL;
@@ -311,7 +306,7 @@ status_window_delete_cb(GtkButton *button, gpointer user_data)
 	}
 
 	purple_request_action(handle, NULL, title, NULL, 0,
-		 NULL, NULL, NULL,
+		 NULL,
 		 sel_titles, 2,
 		_("Delete"), status_window_delete_confirm_cb,
 		_("Cancel"), status_window_delete_cancel_cb);
@@ -379,9 +374,9 @@ add_status_to_saved_status_list(GtkListStore *model, PurpleSavedStatus *saved_st
 		return;
 
 	title = purple_savedstatus_get_title(saved_status);
-	type = purple_primitive_get_name_from_type(purple_savedstatus_get_type(saved_status));
+	type = purple_primitive_get_name_from_type(purple_savedstatus_get_primitive_type(saved_status));
 	message = purple_markup_strip_html(purple_savedstatus_get_message(saved_status));
-	icon = get_stock_icon_from_primitive(purple_savedstatus_get_type(saved_status));
+	icon = get_stock_icon_from_primitive(purple_savedstatus_get_primitive_type(saved_status));
 
 	gtk_list_store_append(model, &iter);
 	gtk_list_store_set(model, &iter,
@@ -454,7 +449,6 @@ create_saved_status_list(StatusWindow *dialog)
 	/* Create the treeview */
 	treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(dialog->model));
 	dialog->treeview = treeview;
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(treeview), TRUE);
 	g_signal_connect(G_OBJECT(treeview), "row-activated",
 						G_CALLBACK(savedstatus_activated_cb), dialog);
 
@@ -524,7 +518,7 @@ create_saved_status_list(StatusWindow *dialog)
 static gboolean
 configure_cb(GtkWidget *widget, GdkEventConfigure *event, StatusWindow *dialog)
 {
-	if (GTK_WIDGET_VISIBLE(widget))
+	if (gtk_widget_get_visible(widget))
 	{
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/status/dialog/width",  event->width);
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/status/dialog/height", event->height);
@@ -726,12 +720,12 @@ status_editor_ok_cb(GtkButton *button, gpointer user_data)
 		((dialog->original_title == NULL) || (!purple_strequal(title, dialog->original_title))))
 	{
 		purple_notify_error(status_window, NULL, _("Title already in use.  You must "
-						  "choose a unique title."), NULL);
+						  "choose a unique title."), NULL, NULL);
 		return;
 	}
 
 	type = gtk_combo_box_get_active(dialog->type) + (PURPLE_STATUS_UNSET + 1);
-	message = gtk_imhtml_get_markup(dialog->message);
+	message = pidgin_webview_get_body_html(dialog->message);
 	unformatted = purple_markup_strip_html(message);
 
 	/*
@@ -763,7 +757,7 @@ status_editor_ok_cb(GtkButton *button, gpointer user_data)
 		/* Modify the old status */
 		if (!purple_strequal(title, dialog->original_title))
 			purple_savedstatus_set_title(saved_status, title);
-		purple_savedstatus_set_type(saved_status, type);
+		purple_savedstatus_set_primitive_type(saved_status, type);
 	}
 
 	if (*unformatted == '\0')
@@ -1002,7 +996,7 @@ status_editor_set_account(GtkListStore *store, PurpleAccount *account,
 	const char *id = NULL, *name = NULL, *message = NULL;
 	PurpleStatusPrimitive prim = PURPLE_STATUS_UNSET;
 
-	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_MEDIUM);
+	pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_MEDIUM);
 	if ((pixbuf != NULL) && !purple_account_is_connected(account))
 	{
 		gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
@@ -1012,7 +1006,7 @@ status_editor_set_account(GtkListStore *store, PurpleAccount *account,
 	{
 		const PurpleStatusType *type;
 
-		type = purple_savedstatus_substatus_get_type(substatus);
+		type = purple_savedstatus_substatus_get_status_type(substatus);
 		id = purple_status_type_get_id(type);
 		name = purple_status_type_get_name(type);
 		prim = purple_status_type_get_primitive(type);
@@ -1082,7 +1076,6 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	GtkWidget *frame;
 	GtkWidget *hbox;
 	GtkWidget *text;
-	GtkWidget *toolbar;
 	GtkWidget *vbox;
 	GtkWidget *win;
 	GList *focus_chain = NULL;
@@ -1140,33 +1133,31 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 
 	/* Status type */
 	if (saved_status != NULL)
-		dropdown = create_status_type_menu(purple_savedstatus_get_type(saved_status));
+		dropdown = create_status_type_menu(purple_savedstatus_get_primitive_type(saved_status));
 	else
 		dropdown = create_status_type_menu(PURPLE_STATUS_AWAY);
 	dialog->type = GTK_COMBO_BOX(dropdown);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Status:"), sg, dropdown, TRUE, NULL);
 
 	/* Status message */
-	frame = pidgin_create_imhtml(TRUE, &text, &toolbar, NULL);
-	dialog->message = GTK_IMHTML(text);
+	frame = pidgin_create_webview(TRUE, &text, NULL);
+	dialog->message = PIDGIN_WEBVIEW(text);
 	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Message:"), sg, frame, TRUE, NULL);
 	gtk_container_child_set(GTK_CONTAINER(vbox), hbox, "expand", TRUE, "fill", TRUE, NULL);
 	focus_chain = g_list_prepend(focus_chain, dialog->message);
 	gtk_container_set_focus_chain(GTK_CONTAINER(hbox), focus_chain);
 	g_list_free(focus_chain);
 
-	gtk_imhtml_set_return_inserts_newline(dialog->message);
-
 	if ((saved_status != NULL) && (purple_savedstatus_get_message(saved_status) != NULL))
-		gtk_imhtml_append_text(GTK_IMHTML(text),
-							   purple_savedstatus_get_message(saved_status), 0);
+		pidgin_webview_append_html(PIDGIN_WEBVIEW(text),
+		                        purple_savedstatus_get_message(saved_status));
 
 	/* Different status message expander */
 	expander = gtk_expander_new_with_mnemonic(_("Use a _different status for some accounts"));
 	gtk_box_pack_start(GTK_BOX(vbox), expander, FALSE, FALSE, 0);
 
 	/* Setup the box that the expander will cover */
-	dbox = gtk_vbox_new(FALSE, PIDGIN_HIG_CAT_SPACE);
+	dbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
 	gtk_container_add(GTK_CONTAINER(expander), dbox);
 
 	/* Create the list model */
@@ -1183,7 +1174,6 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 
 	/* Create the treeview */
 	dialog->treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(dialog->model));
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(dialog->treeview), TRUE);
 	gtk_widget_set_size_request(dialog->treeview, -1, 150);
 	gtk_box_pack_start(GTK_BOX(dbox),
 		pidgin_make_scrollable(dialog->treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),
@@ -1260,12 +1250,10 @@ substatus_selection_changed_cb(GtkComboBox *box, gpointer user_data)
 	if (purple_status_type_get_attr(type, "message") == NULL)
 	{
 		gtk_widget_set_sensitive(GTK_WIDGET(select->message), FALSE);
-		gtk_widget_set_sensitive(GTK_WIDGET(select->toolbar), FALSE);
 	}
 	else
 	{
 		gtk_widget_set_sensitive(GTK_WIDGET(select->message), TRUE);
-		gtk_widget_set_sensitive(GTK_WIDGET(select->toolbar), TRUE);
 	}
 }
 
@@ -1347,7 +1335,7 @@ substatus_editor_ok_cb(GtkButton *button, gpointer user_data)
 					   -1);
 	type = purple_account_get_status_type(dialog->account, id);
 	if (purple_status_type_get_attr(type, "message") != NULL)
-		message = gtk_imhtml_get_markup(GTK_IMHTML(dialog->message));
+		message = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(dialog->message));
 	name = purple_status_type_get_name(type);
 	stock = get_stock_icon_from_primitive(purple_status_type_get_primitive(type));
 
@@ -1381,7 +1369,6 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	GtkWidget *frame;
 	GtkWidget *label;
 	GtkWidget *text;
-	GtkWidget *toolbar;
 	GtkWidget *vbox;
 	GtkWidget *win;
 	GtkTreeIter iter;
@@ -1425,11 +1412,11 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
 	/* Status type */
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 
 	label = gtk_label_new_with_mnemonic(_("_Status:"));
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_size_group_add_widget(sg, label);
 
@@ -1459,17 +1446,16 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	gtk_box_pack_start(GTK_BOX(hbox), combo, FALSE, FALSE, 0);
 
 	/* Status mesage */
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BOX_SPACE);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 
 	label = gtk_label_new_with_mnemonic(_("_Message:"));
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_size_group_add_widget(sg, label);
 
-	frame = pidgin_create_imhtml(TRUE, &text, &toolbar, NULL);
-	dialog->message = GTK_IMHTML(text);
-	dialog->toolbar = GTK_IMHTMLTOOLBAR(toolbar);
+	frame = pidgin_create_webview(TRUE, &text, NULL);
+	dialog->message = PIDGIN_WEBVIEW(text);
 	gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
 
 	/* Cancel button */
@@ -1496,14 +1482,15 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 		if ((saved_status = purple_savedstatus_find(status_editor->original_title)) != NULL) {
 			if ((substatus = purple_savedstatus_get_substatus(saved_status, account)) != NULL) {
 				message = (char *)purple_savedstatus_substatus_get_message(substatus);
-				status_id = (char *)purple_status_type_get_id(purple_savedstatus_substatus_get_type(substatus));
+				status_id = (char *)purple_status_type_get_id(
+						purple_savedstatus_substatus_get_status_type(substatus));
 			}
 		}
 	}
 	/* TODO: Else get the generic status type from our parent */
 
 	if (message)
-		gtk_imhtml_append_text(dialog->message, message, 0);
+		pidgin_webview_append_html(dialog->message, message);
 
 	for (list = purple_account_get_status_types(account); list; list = list->next)
 	{
@@ -1562,31 +1549,31 @@ enum {
 };
 
 enum {
-	/** _SSMenuEntryType */
+	/* _SSMenuEntryType */
 	SS_MENU_TYPE_COLUMN,
 
-	/**
+	/*
 	 * This is a GdkPixbuf (the other columns are strings).
 	 * This column is visible.
 	 */
 	SS_MENU_ICON_COLUMN,
 
-	/** The text displayed on the status box.  This column is visible. */
+	/* The text displayed on the status box.  This column is visible. */
 	SS_MENU_TEXT_COLUMN,
 
-	/**
+	/*
 	 * This value depends on SS_MENU_TYPE_COLUMN.  For _SAVEDSTATUS types,
 	 * this is the creation time.  For _PRIMITIVE types,
 	 * this is the PurpleStatusPrimitive.
 	 */
 	SS_MENU_DATA_COLUMN,
 
-	/**
+	/*
 	 * This is the emblem to use for this status
 	 */
 	SS_MENU_EMBLEM_COLUMN,
 
-	/**
+	/*
 	 * And whether or not that emblem is visible
 	 */
 	SS_MENU_EMBLEM_VISIBLE_COLUMN,
@@ -1649,7 +1636,7 @@ static gboolean pidgin_status_menu_add_primitive(GtkListStore *model, GtkWidget 
 
 	if (purple_savedstatus_is_transient(current_status)
 			&& !purple_savedstatus_has_substatuses(current_status)
-			&& purple_savedstatus_get_type(current_status) == primitive)
+			&& purple_savedstatus_get_primitive_type(current_status) == primitive)
 		currently_selected = TRUE;
 
 	return currently_selected;
@@ -1664,7 +1651,7 @@ pidgin_status_menu_update_iter(GtkWidget *combobox, GtkListStore *store, GtkTree
 	if (store == NULL)
 		store = GTK_LIST_STORE(gtk_combo_box_get_model(GTK_COMBO_BOX(combobox)));
 
-	primitive = purple_savedstatus_get_type(status);
+	primitive = purple_savedstatus_get_primitive_type(status);
 	gtk_list_store_set(store, iter,
 			SS_MENU_TYPE_COLUMN, SS_MENU_ENTRY_TYPE_SAVEDSTATUS,
 			SS_MENU_ICON_COLUMN, pidgin_stock_id_from_status_primitive(primitive),

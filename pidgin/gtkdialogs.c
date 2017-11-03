@@ -1,8 +1,3 @@
-/*
- * @file gtkdialogs.c GTK+ Dialogs
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -28,22 +23,30 @@
 #include "internal.h"
 #include "pidgin.h"
 #include "package_revision.h"
+#ifdef HAVE_MESON_CONFIG
+#include "meson-config.h"
+#endif
 
 #include "debug.h"
 #include "notify.h"
-#include "plugin.h"
-#include "prpl.h"
+#include "plugins.h"
+#include "protocol.h"
 #include "request.h"
 #include "util.h"
 #include "core.h"
 
 #include "gtkblist.h"
 #include "gtkdialogs.h"
-#include "gtkimhtml.h"
-#include "gtkimhtmltoolbar.h"
 #include "gtklog.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
 #include "pidginstock.h"
+
+#ifdef USE_GSTREAMER
+#include <gst/gst.h>
+#endif
+
+#include "gtk3compat.h"
 
 static GList *dialogwindows = NULL;
 
@@ -51,352 +54,6 @@ struct _PidginGroupMergeObject {
 	PurpleGroup* parent;
 	char *new_name;
 };
-
-struct developer {
-	char *name;
-	char *role;
-	char *email;
-};
-
-struct translator {
-	char *language;
-	char *abbr;
-	char *name;
-	char *email;
-};
-
-struct artist {
-	char *name;
-	char *email;
-};
-
-/* Order: Alphabetical by Last Name */
-static const struct developer developers[] = {
-	{"Daniel 'datallah' Atallah",          NULL,                  NULL},
-	{"Paul 'darkrain42' Aurich",           NULL,                  NULL},
-	{"Ethan 'Paco-Paco' Blanton",          NULL,                  NULL},
-	{"Hylke Bons",                         N_("artist"),          "hylkebons@gmail.com"},
-	{"Sadrul Habib Chowdhury",             NULL,                  NULL},
-	{"Mark 'KingAnt' Doliner",             NULL,                  "mark@kingant.net"},
-	{"Gary 'grim' Kramlich",               NULL,                  "grim@pidgin.im"},
-	{"Richard 'rlaager' Laager",           NULL,                  "rlaager@pidgin.im"},
-	{"Marcus 'malu' Lundblad",             NULL,                  NULL},
-	{"Sulabh 'sulabh_m' Mahajan",          NULL,                  NULL},
-	{"Richard 'wabz' Nelson",              NULL,                  NULL},
-	{"Etan 'deryni' Reisner",              NULL,                  NULL},
-	{"Michael 'Maiku' Ruprecht",           N_("voice and video"), NULL},
-	{"Elliott 'QuLogic' Sales de Andrade", NULL,                  NULL},
-	{"Luke 'LSchiere' Schierer",           N_("support"),         "lschiere@users.sf.net"},
-	{"Evan Schoenberg",                    NULL,                  NULL},
-	{"Kevin 'SimGuy' Stange",              N_("webmaster"),       NULL},
-	{"Will 'resiak' Thompson",             NULL,                  NULL},
-	{"Stu 'nosnilmot' Tomlinson",          NULL,                  NULL},
-	{"Jorge 'Masca' Villaseñor",           NULL,                  NULL},
-	{"Tomasz Wasilczyk",                   NULL,                  "https://www.wasilczyk.pl"},
-	{NULL, NULL, NULL}
-};
-
-/* Order: Alphabetical by Last Name */
-static const struct developer patch_writers[] = {
-	{"Jakub 'haakon' Adam",            NULL,                        NULL},
-	{"Krzysztof Klinikowski",          NULL,                        NULL},
-	{"Eion Robb",                      NULL,                        NULL},
-	{NULL, NULL, NULL}
-};
-
-/* Order: Alphabetical by Last Name */
-static const struct developer retired_developers[] = {
-	{"John 'rekkanoryo' Bailey",    NULL,                      NULL},
-	{"Herman Bloggs",               N_("win32 port"),          "herman@bluedigits.com"},
-	{"Thomas Butter",               NULL,                      NULL},
-	/* Translators: This is a person's name. For most languages we recommend
-	   not translating it. */
-	{N_("Ka-Hing Cheung"),          NULL,                      NULL},
-	{"Jim Duchek",                  N_("maintainer"),          "jim@linuxpimps.com"},
-	{"Sean Egan",                   NULL,                      "sean.egan@gmail.com"},
-	{"Rob Flynn",                   N_("maintainer"),          NULL},
-	{"Adam Fritzler",               N_("libfaim maintainer"),  NULL},
-	{"Christian 'ChipX86' Hammond", N_("webmaster"),           NULL},
-	{"Casey Harkins",               NULL,                      NULL},
-	{"Ivan Komarov",                NULL,                      "ivan.komarov@pidgin.im"},
-	/* If "lazy bum" translates literally into a serious insult, use something else or omit it. */
-	{"Syd Logan",                   N_("hacker and designated driver [lazy bum]"), NULL},
-	{"Christopher 'siege' O'Brien", NULL,                      "taliesein@users.sf.net"},
-	{"Bartosz Oler",                NULL,                      NULL},
-	{"Tim 'marv' Ringenbach",       NULL,                      NULL},
-	{"Megan 'Cae' Schneider",       N_("support/QA"),          NULL},
-	{"Jim Seymour",                 N_("XMPP"),                NULL},
-	{"Mark Spencer",                N_("original author"),     "markster@marko.net"},
-	{"Nathan 'faceprint' Walp",     NULL,                      NULL},
-	{"Eric Warmenhoven",            N_("lead developer"),      "warmenhoven@yahoo.com"},
-	{NULL, NULL, NULL}
-};
-
-/* Order: Alphabetical by Last Name */
-static const struct developer retired_patch_writers[] = {
-	{"Felipe 'shx' Contreras",    NULL, NULL},
-	{"Decklin Foster",            NULL, NULL},
-	{"Peter 'Bleeter' Lawler",    NULL, NULL},
-	{"Robert 'Robot101' McQueen", NULL, NULL},
-	{"Benjamin Miller",           NULL, NULL},
-	{"Dennis 'EvilDennisR' Ristuccia", N_("Senior Contributor/QA"), NULL},
-	{"Peter 'Fmoo' Ruibal",       NULL, NULL},
-	{"Gabriel 'Nix' Schulhof",    NULL, NULL},
-	{NULL, NULL, NULL}
-};
-
-/* Order: Code, then Alphabetical by Last Name */
-static const struct translator translators[] = {
-	{N_("Afrikaans"),           "af", "Samuel Murray", "afrikaans@gmail.com"},
-	{N_("Afrikaans"),           "af", "Friedel Wolff", "friedel@translate.org.za"},
-	{N_("Arabic"),              "ar", "Khaled Hosny", "khaledhosny@eglug.org"},
-	{N_("Assamese"),            "as", "Amitakhya Phukan", "aphukan@fedoraproject.org"},
-	{N_("Asturian"),            "ast", "Llumex03", "l.lumex03.tornes@gmail.com"},
-	{N_("Belarusian Latin"),    "be@latin", "Ihar Hrachyshka", "ihar.hrachyshka@gmail.com"},
-	{N_("Bulgarian"),           "bg", "Vladimira Girginova", "missing@here.is"},
-	{N_("Bulgarian"),           "bg", "Vladimir (Kaladan) Petkov", "kaladan@gmail.com"},
-	{N_("Bengali"),             "bn", "Jamil Ahmed", "jamil@bengalinux.org"},
-	{N_("Bengali"),             "bn", "Israt Jahan", "israt@ankur.org.bd"},
-	{N_("Bengali"),             "bn", "Samia Nimatullah", "mailsamia2001@yahoo.com"},
-	{N_("Bengali-India"),       "bn_IN", "Runa Bhattacharjee", "runab@fedoraproject.org"},
-	{N_("Breton"),              "br", "Gwenn Meynier", "tornoz@laposte.net"},
-	{N_("Bodo"),                "brx", "Chandrakant Dhutadmal", "cpdhutadmal@yahoo.com"},
-	{N_("Bosnian"),             "bs", "Lejla Hadzialic", "lejlah@gmail.com"},
-	{N_("Catalan"),             "ca", "Josep Puigdemont", "josep.puigdemont@gmail.com"},
-	{N_("Valencian-Catalan"),   "ca@valencia", "Toni Hermoso", "toniher@softcatala.org"},
-	{N_("Valencian-Catalan"),   "ca@valencia", "Josep Puigdemont", "tradgnome@softcatala.org"},
-	{N_("Czech"),               "cs", "David Vachulka", "david@konstrukce-cad.com"},
-	{N_("Danish"),              "da", "Nicky Thomassen", "nicky@aptget.dk"},
-	{N_("German"),              "de", "Björn Voigt", "bjoernv@arcor.de"},
-	{N_("Dzongkha"),            "dz", "Norbu", "nor_den@hotmail.com"},
-	{N_("Dzongkha"),            "dz", "Jurmey Rabgay", "jur_gay@yahoo.com"},
-	{N_("Dzongkha"),            "dz", "Wangmo Sherpa", "rinwanshe@yahoo.com"},
-	{N_("Greek"),               "el", "Katsaloulis Panayotis", "panayotis@panayotis.com"},
-	{N_("Greek"),               "el", "Panos Bouklis", "panos@echidna-band.com"},
-	{N_("Australian English"),  "en_AU", "Michael Findlay", "keltoiboy@gmail.com"},
-	{N_("British English"),     "en_GB", "Phil Hannent", "phil@hannent.co.uk"},
-	{N_("Canadian English"),    "en_CA", "Adam Weinberger", "adamw@gnome.org"},
-	{N_("Esperanto"),           "eo", "Stéphane Fillod", "fillods@users.sourceforge.net"},
-	{N_("Spanish"),             "es", "Javier Fernández-Sanguino Peña", "jfs@debian.org"},
-	{N_("Argentine Spanish"),   "es_AR", "KNTRO", "kntro@msn.com"},
-	{N_("Estonian"),            "et", "Ivar Smolin", "okul@linux.ee"},
-	{N_("Basque"),              "eu", "Mikel Pascual Aldabaldetreku", "mikel.paskual@gmail.com"},
-	{N_("Persian"),             "fa", "Elnaz Sarbar", "elnaz@farsiweb.info"},
-	{N_("Persian"),             "fa", "Roozbeh Pournader", "roozbeh@farsiweb.info"},
-	{N_("Persian"),             "fa", "Meelad Zakaria", "meelad@farsiweb.info"},
-	{N_("Finnish"),             "fi", "Timo Jyrinki", "timo.jyrinki@iki.fi"},
-	{N_("Irish"),               "ga", "Aaron Kearns", "ajkearns6@gmail.com"},
-	{N_("Irish"),               "ga", "Kevin Scannell", NULL},
-	{N_("Galician"),            "gl", "Mar Castro", "mariamarcp@gmail.com"},
-	{N_("Galician"),            "gl", "Frco. Javier Rial", "fjrial@cesga.es"},
-	{N_("Gujarati"),            "gu", "Ankit Patel", "ankit_patel@users.sf.net"},
-	{N_("Gujarati"),            "gu", N_("Gujarati Language Team"), "indianoss-gujarati@lists.sourceforge.net"},
-	{N_("Hebrew"),              "he", "Shalom Craimer", "scraimer@gmail.com"},
-	{N_("Hindi"),               "hi", "Sangeeta Kumari", "sangeeta_0975@yahoo.com"},
-	{N_("Hindi"),               "hi", "Rajesh Ranjan", "rajeshkajha@yahoo.com"},
-	{N_("Croatian"),            "hr", "Sabina Drempetić", "bina91991@googlemail.com"},
-	{N_("Hungarian"),           "hu", "Kelemen Gábor", "kelemeng@gnome.hu"},
-	{N_("Indonesian"),          "id", "Rai S. Regawa", "raireg@yahoo.com"},
-	{N_("Italian"),             "it", "Claudio Satriano", "satriano@gmail.com"},
-	{N_("Japanese"),            "ja", "Takayuki Kusano", "AE5T-KSN@asahi-net.or.jp"},
-	{N_("Georgian"),            "ka", N_("Ubuntu Georgian Translators"), "alexander.didebulidze@stusta.mhn.de"},
-	{N_("Kazakh"),              "kk", "Baurzhan Muftakhidinov", "baurthefirst@gmail.com"},
-	{N_("Khmer"),               "km", "Khoem Sokhem", "khoemsokhem@khmeros.info"},
-	{N_("Kannada"),             "kn", N_("Kannada Translation team"), "translation@sampada.info"},
-	{N_("Korean"),              "ko", "Sushizang", "sushizang@empal.com"},
-	{N_("Kashmiri"),            "kas", "Chandrakant Dhutadmal", "cpdhutadmal@yahoo.com"},
-	{N_("Kurdish"),             "ku", "Amed Ç. Jiyan", "amedcj@hotmail.com"},
-	{N_("Kurdish"),             "ku", "Erdal Ronahi", "erdal.ronahi@gmail.com"},
-	{N_("Kurdish"),             "ku", "Rizoyê Xerzî", "rizoxerzi@hotmail.com"},
-	{N_("Kurdish (Sorani)"),    "ku_IQ", "Haval A. Ahmed", "haval.abdulkarim@gmail.com"},
-	{N_("Lithuanian"),          "lt", "Algimantas Margevičius", "margevicius.algimantas@gmail.com"},
-	{N_("Latvian"),             "lv", "Rudolfs Mazurs", "rudolfs.mazurs@gmail.com"},
-	{N_("Latvian"),             "lv", "Ingmārs Dīriņš", "melhiors14@gmail.com"},
-	{N_("Maithili"),            "mai", "Sangeeta Kumari", "sangeeta_0975@yahoo.com"},
-	{N_("Maithili"),            "mai", "Rajesh Ranjan", "rajeshkajha@yahoo.com"},
-	{N_("Meadow Mari"),         "mhr", "David Preece", "davidpreece1@gmail.com"},
-	{N_("Macedonian"),          "mk", "Arangel Angov ", "arangel@linux.net.mk"},
-	{N_("Macedonian"),          "mk", "Ivana Kirkovska", "ivana.kirkovska@gmail.com"},
-	{N_("Macedonian"),          "mk", "Jovan Naumovski", "jovan@lugola.net"},
-	{N_("Malay"),               "ms_MY", "abuyop", "abuyop@gmail.com"},
-	{N_("Malayalam"),           "ml", "Ani Peter", "apeter@redhat.com"},
-	{N_("Mongolian"),           "mn", "gooyo", NULL},
-	{N_("Marathi"),             "mr", "Sandeep Shedmake", "sandeep.shedmake@gmail.com"},
-	{N_("Burmese"),             "my_MM", "Thura Hlaing", "trhura@gmail.com"},
-	{N_("Bokmål Norwegian"),    "nb", "Allan Nordhøy", "epost@anotheragency.no"},
-	{N_("Nepali"),              "ne", "Saroj Dhakal", "lotusnagarkot@gmail.com"},
-	{N_("Dutch, Flemish"),      "nl", "Gideon van Melle", "translations@gvmelle.com"},
-	{N_("Norwegian Nynorsk"),   "nn", "Yngve Spjeld Landro", "l10n@landro.net"},
-	{N_("Occitan"),             "oc", "Cédric Valmary", "cvalmary@yahoo.fr"},
-	{N_("Oriya"),               "or", "Manoj Kumar Giri", "giri.manojkr@gmail.com"},
-	{N_("Punjabi"),             "pa", "Amanpreet Singh Alam", "aalam@users.sf.net"},
-	{N_("Polish"),              "pl", "Piotr Drąg", "piotrdrag@gmail.com"},
-	{N_("Portuguese"),          "pt", "Paulo Ribeiro", "paulo@diffraction.pt"},
-	{N_("Portuguese-Brazil"),   "pt_BR", "Renato Silva", "br.renatosilva@gmail.com"},
-	{N_("Pashto"),              "ps", "Kashif Masood", "masudmails@yahoo.com"},
-	{N_("Romanian"),            "ro", "Mișu Moldovan", "dumol@gnome.org"},
-	{N_("Romanian"),            "ro", "Andrei Popescu", "andreimpopescu@gmail.com"},
-	{N_("Russian"),             "ru", "Антон Самохвалов", "samant.ua@mail.ru"},
-	{N_("Sindhi"),              "sd", "Chandrakant Dhutadmal", "cpdhutadmal@yahoo.com"},
-	{N_("Slovak"),              "sk", "Jozef Káčer", "quickparser@gmail.com"},
-	{N_("Slovak"),              "sk", "loptosko", "loptosko@gmail.com"},
-	{N_("Slovenian"),           "sl", "Martin Srebotnjak", "miles@filmsi.net"},
-	{N_("Albanian"),            "sq", "Besnik Bleta", "besnik@programeshqip.org"},
-	{N_("Serbian"),             "sr", "Miloš Popović", "gpopac@gmail.com"},
-	{N_("Serbian Latin"),       "sr@latin", "Miloš Popović", "gpopac@gmail.com"},
-	{N_("Sinhala"),             "si", "Yajith Ajantha Dayarathna", "yajith@gmail.com"},
-	{N_("Sinhala"),             "si", "Danishka Navin", "snavin@redhat.com"},
-	{N_("Swedish"),             "sv", "Josef Andersson", "josef.andersson@gmail.com"},
-	{N_("Swahili"),             "sw", "Paul Msegeya", "msegeya@gmail.com"},
-	{N_("Tamil"),               "ta", "I. Felix", "ifelix25@gmail.com"},
-	{N_("Tamil"),               "ta", "Viveka Nathan K", "vivekanathan@users.sourceforge.net"},
-	{N_("Telugu"),              "te", "Krishnababu Krottapalli", "krottapalli@ymail.com"},
-	{N_("Thai"),                "th", "Isriya Paireepairit", "markpeak@gmail.com"},
-	{N_("Tatar"),               "tt", "ILDAR Valeev", "v_ildar@bk.ru"},
-	{N_("Ukranian"),            "uk", "Oleksandr Kovalenko", "alx.kovalenko@gmail.com"},
-	{N_("Urdu"),                "ur", "RKVS Raman", "rkvsraman@gmail.com"},
-	{N_("Uzbek"),               "uz",
-	/* Translators: This is a person's name. For most languages we recommend
-	   not translating it. */
-                                          N_("Akmal Khushvakov"), "uzbadmin@gmail.com"},
-	{N_("Vietnamese"),          "vi", "Nguyễn Vũ Hưng", "vuhung16plus@gmail.com"},
-	{N_("Simplified Chinese"),  "zh_CN", "Aron Xu", "happyaron.xu@gmail.com"},
-	{N_("Hong Kong Chinese"),   "zh_HK", "Abel Cheung", "abelindsay@gmail.com"},
-	{N_("Hong Kong Chinese"),   "zh_HK", "Ambrose C. Li", "acli@ada.dhs.org"},
-	{N_("Hong Kong Chinese"),   "zh_HK", "Paladin R. Liu", "paladin@ms1.hinet.net"},
-	{N_("Traditional Chinese"), "zh_TW", "Ambrose C. Li", "acli@ada.dhs.org"},
-	{N_("Traditional Chinese"), "zh_TW", "Paladin R. Liu", "paladin@ms1.hinet.net"},
-	{NULL, NULL, NULL, NULL}
-};
-
-
-static const struct translator past_translators[] = {
-	{N_("Amharic"),             "am", "Daniel Yacob", NULL},
-	{N_("Arabic"),              "ar", "Mohamed Magdy", "alnokta@yahoo.com"},
-	{N_("Bulgarian"),           "bg", "Hristo Todorov", NULL},
-	{N_("Bengali"),             "bn", "Indranil Das Gupta", "indradg@l2c2.org"},
-	{N_("Bengali"),             "bn", "Tisa Nafisa", "tisa_nafisa@yahoo.com"},
-	{N_("Catalan"),             "ca", "JM Pérez Cáncer", NULL},
-	{N_("Catalan"),             "ca", "Robert Millan", NULL},
-	{N_("Czech"),               "cs", "Honza Král", NULL},
-	{N_("Czech"),               "cs", "Miloslav Trmac", "mitr@volny.cz"},
-	{N_("Danish"),              "da", "Peter Bach", "bach.peter@gmail.com"},
-	{N_("Danish"),              "da", "Morten Brix Pedersen", "morten@wtf.dk"},
-	{N_("German"),              "de", "Daniel Seifert, Karsten Weiss", NULL},
-	{N_("German"),              "de", "Jochen Kemnade", "jochenkemnade@web.de"},
-	{N_("Australian English"),  "en_AU", "Peter Lawler", "trans@six-by-nine.com.au"},
-	{N_("British English"),     "en_GB", "Luke Ross", "luke@lukeross.name"},
-	{N_("Spanish"),             "es", "JM Pérez Cáncer", NULL},
-	{N_("Spanish"),             "es", "Nicolás Lichtmaier", NULL},
-	{N_("Spanish"),             "es", "Amaya Rodrigo", NULL},
-	{N_("Spanish"),             "es", "Alejandro G Villar", NULL},
-	{N_("Basque"),              "eu", "Iñaki Larrañaga Murgoitio", "dooteo@zundan.com"},
-	{N_("Basque"),              "eu", "Hizkuntza Politikarako Sailburuordetza", "hizkpol@ej-gv.es"},
-	{N_("Finnish"),             "fi", "Arto Alakulju", NULL},
-	{N_("Finnish"),             "fi", "Tero Kuusela", NULL},
-	{N_("French"),              "fr", "Sébastien François", NULL},
-	{N_("French"),              "fr", "Loïc Jeannin", NULL},
-	{N_("French"),              "fr", "Stéphane Pontier", NULL},
-	{N_("French"),              "fr", "Stéphane Wirtel", NULL},
-	{N_("French"),              "fr", "Éric Boumaour", NULL},
-	{N_("Galician"),            "gl", "Ignacio Casal Quinteiro", NULL},
-	{N_("Hebrew"),              "he", "Pavel Bibergal", NULL},
-	{N_("Hindi"),               "hi", "Ravishankar Shrivastava", NULL},
-	{N_("Hungarian"),           "hu", "Zoltan Sutto", NULL},
-	{N_("Armenian"),            "hy", "David Avsharyan", NULL},
-	{N_("Italian"),             "it", "Salvatore di Maggio", NULL},
-	{N_("Japanese"),            "ja", "Takashi Aihana", NULL},
-	{N_("Japanese"),            "ja", "Ryosuke Kutsuna", NULL},
-	{N_("Japanese"),            "ja", "Junichi Uekawa", NULL},
-	{N_("Japanese"),            "ja", "Taku Yasui", NULL},
-	{N_("Georgian"),            "ka", "Temuri Doghonadze", NULL},
-	{N_("Korean"),              "ko", "Sang-hyun S, A Ho-seok Lee", NULL},
-	{N_("Korean"),              "ko", "Kyeong-uk Son", NULL},
-	{N_("Lao"),                 "lo", "Anousak Souphavah", NULL},
-	{N_("Lithuanian"),          "lt", "Laurynas Biveinis", "laurynas.biveinis@gmail.com"},
-	{N_("Lithuanian"),          "lt", "Gediminas Čičinskas", NULL},
-	{N_("Lithuanian"),          "lt", "Andrius Štikonas", NULL},
-	{N_("Macedonian"),          "mk", "Tomislav Markovski", NULL},
-	{N_("Malay"),               "ms_MY", "Muhammad Najmi bin Ahmad Zabidi", NULL},
-	{N_("Bokmål Norwegian"),    "nb", "Hans Fredrik Nordhaug", "hans@nordhaug.priv.no"},
-	{N_("Bokmål Norwegian"),    "nb", "Hallvard Glad", "hallvard.glad@gmail.com"},
-	{N_("Bokmål Norwegian"),    "nb", "Petter Johan Olsen", NULL},
-	{N_("Bokmål Norwegian"),    "nb", "Espen Stefansen", "espenas@gmail.com"},
-	{N_("Nepali"),              "ne", "Shyam Krishna Bal", NULL},
-	{N_("Dutch, Flemish"),      "nl", "Vincent van Adrighem", "V.vanAdrighem@dirck.mine.nu"},
-	{N_("Occitan"),             "oc", "Yannig Marchegay", "yannig@marchegay.org"},
-	{N_("Polish"),              "pl", "Krzysztof Foltman", "krzysztof@foltman.com"},
-	{N_("Polish"),              "pl", "Paweł Godlewski", "pawel@bajk.pl"},
-	{N_("Polish"),              "pl", "Piotr Makowski", NULL},
-	{N_("Polish"),              "pl", "Emil Nowak", "emil5@go2.pl"},
-	{N_("Polish"),              "pl", "Przemysław Sułek", NULL},
-	{N_("Portuguese"),          "pt", "Duarte Henriques", NULL},
-	{N_("Portuguese-Brazil"),   "pt_BR", "Maurício de Lemos Rodrigues Collares Neto", "mauricioc@gmail.com"},
-	{N_("Portuguese-Brazil"),   "pt_BR", "Rodrigo Luiz Marques Flores", "rodrigomarquesflores@gmail.com"},
-	{N_("Russian"),             "ru", "Dmitry Beloglazov", "dmaa@users.sf.net"},
-	{N_("Russian"),             "ru", "Alexandre Prokoudine", NULL},
-	{N_("Russian"),             "ru", "Sergey Volozhanin", NULL},
-	{N_("Slovak"),              "sk", "Daniel Režný", NULL},
-	{N_("Slovak"),              "sk", "Richard Golier", NULL},
-	{N_("Slovak"),              "sk", "helix84", NULL},
-	{N_("Slovenian"),           "sl", "Matjaz Horvat", NULL},
-	{N_("Serbian"),             "sr", "Danilo Šegan", "dsegan@gmx.net"},
-	{N_("Serbian"),             "sr", "Aleksandar Urosevic", "urke@users.sourceforge.net"},
-	{N_("Swedish"),             "sv", "Peter Hjalmarsson", "xake@telia.com"},
-	{N_("Swedish"),             "sv", "Tore Lundqvist", NULL},
-	{N_("Swedish"),             "sv", "Christian Rose", NULL},
-	{N_("Telugu"),              "te", "Mr. Subbaramaih", "info.gist@cdac.in"},
-	{N_("Turkish"),             "tr", "Serdar Soytetir", "tulliana@gmail.com"},
-	{N_("Turkish"),             "tr", "Ahmet Alp Balkan", NULL},
-	{N_("Vietnamese"),          "vi", N_("T.M.Thanh and the Gnome-Vi Team"), "gnomevi-list@lists.sf.net"},
-	{N_("Simplified Chinese"),  "zh_CN", "Hashao, Rocky S. Lee", NULL},
-	{N_("Simplified Chinese"),  "zh_CN", "Funda Wang", "fundawang@linux.net.cn"},
-	{N_("Traditional Chinese"), "zh_TW", "Hashao, Rocky S. Lee", NULL},
-	{NULL, NULL, NULL, NULL}
-};
-
-static void
-add_developers(GString *str, const struct developer *list)
-{
-	for (; list->name != NULL; list++) {
-		if (list->email != NULL) {
-			const gchar *proto = "mailto:";
-			if (strchr(list->email, ':') != NULL)
-				proto = "";
-			g_string_append_printf(str, "  <a href=\"%s%s\">%s</a>%s%s%s<br/>",
-			                       proto,
-			                       list->email, _(list->name),
-			                       list->role ? " (" : "",
-			                       list->role ? _(list->role) : "",
-			                       list->role ? ")" : "");
-		} else {
-			g_string_append_printf(str, "  %s%s%s%s<br/>",
-			                       _(list->name),
-			                       list->role ? " (" : "",
-			                       list->role ? _(list->role) : "",
-			                       list->role ? ")" : "");
-		}
-	}
-}
-
-static void
-add_translators(GString *str, const struct translator *list)
-{
-	for (; list->language != NULL; list++) {
-		if (list->email != NULL) {
-			g_string_append_printf(str, "  <b>%s (%s)</b> - <a href=\"mailto:%s\">%s</a><br/>",
-			                       _(list->language),
-			                       list->abbr,
-			                       list->email,
-			                       _(list->name));
-		} else {
-			g_string_append_printf(str, "  <b>%s (%s)</b> - %s<br/>",
-			                       _(list->language),
-			                       list->abbr,
-			                       _(list->name));
-		}
-	}
-}
 
 void
 pidgin_dialogs_destroy_all()
@@ -456,18 +113,18 @@ pidgin_logo_versionize(GdkPixbuf **original, GtkWidget *widget) {
 static GtkWidget *
 pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 {
-	GtkWidget *win, *vbox, *frame, *logo, *imhtml, *button;
+	GtkWidget *win, *vbox, *frame, *logo, *webview, *button;
 	GdkPixbuf *pixbuf;
-	GtkTextIter iter;
 	AtkObject *obj;
 	char *filename, *tmp;
 
-	win = pidgin_create_dialog(title, PIDGIN_HIG_BORDER, role, TRUE);
-	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, PIDGIN_HIG_BORDER);
-	gtk_window_set_default_size(GTK_WINDOW(win), 450, 450);
+	win = pidgin_create_dialog(title, 0, role, TRUE);
+	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(win), FALSE, 0);
+	gtk_window_set_default_size(GTK_WINDOW(win), 475, 450);
 
 	/* Generate a logo with a version number */
-	filename = g_build_filename(DATADIR, "pixmaps", "pidgin", "logo.png", NULL);
+	filename = g_build_filename(PURPLE_DATADIR,
+		"pixmaps", "pidgin", "logo.png", NULL);
 	pixbuf = pidgin_pixbuf_new_from_file(filename);
 	g_free(filename);
 
@@ -485,18 +142,16 @@ pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 	g_free(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), logo, FALSE, FALSE, 0);
 
-	frame = pidgin_create_imhtml(FALSE, &imhtml, NULL, NULL);
-	gtk_imhtml_set_format_functions(GTK_IMHTML(imhtml), GTK_IMHTML_ALL ^ GTK_IMHTML_SMILEY);
+	frame = pidgin_create_webview(FALSE, &webview, NULL);
+	pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(webview), PIDGIN_WEBVIEW_ALL ^ PIDGIN_WEBVIEW_SMILEY);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 
-	gtk_imhtml_append_text(GTK_IMHTML(imhtml), string->str, GTK_IMHTML_NO_SCROLL);
-	gtk_text_buffer_get_start_iter(gtk_text_view_get_buffer(GTK_TEXT_VIEW(imhtml)), &iter);
-	gtk_text_buffer_place_cursor(gtk_text_view_get_buffer(GTK_TEXT_VIEW(imhtml)), &iter);
+	pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), string->str);
 
 	button = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CLOSE,
 	                G_CALLBACK(destroy_win), win);
 
-	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	gtk_widget_set_can_default(button, TRUE);
 	gtk_widget_grab_default(button);
 
 	gtk_widget_show_all(win);
@@ -507,368 +162,94 @@ pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 	return win;
 }
 
-void pidgin_dialogs_about(void)
-{
-	GString *str;
-	char *tmp;
-	static GtkWidget *about = NULL;
-
-	if (about != NULL) {
-		gtk_window_present(GTK_WINDOW(about));
-		return;
-	}
-
-	str = g_string_sized_new(4096);
-
-	g_string_append_printf(str,
-		"<CENTER><FONT SIZE=\"4\"><B>%s %s</B></FONT></CENTER> (libpurple %s)"
-		"<BR>%s<BR><BR>", PIDGIN_NAME, DISPLAY_VERSION,
-		purple_core_get_version(), REVISION);
-
-	g_string_append_printf(str,
-		_("%s is a messaging client based on libpurple which is capable of "
-		  "connecting to multiple messaging services at once.  %s is written "
-		  "in C using GTK+.  %s is released, and may be modified and "
-		  "redistributed,  under the terms of the GPL version 2 (or later).  "
-		  "A copy of the GPL is distributed with %s.  %s is copyrighted by "
-		  "its contributors, a list of whom is also distributed with %s.  "
-		  "There is no warranty for %s.<BR><BR>"), PIDGIN_NAME, PIDGIN_NAME,
-		PIDGIN_NAME, PIDGIN_NAME, PIDGIN_NAME, PIDGIN_NAME, PIDGIN_NAME);
-
-	g_string_append_printf(str,
-			_("<FONT SIZE=\"4\"><B>Helpful Resources</B></FONT><BR>\t<A "
-			  "HREF=\"%s\">Website</A><BR>\t<A HREF=\"%s\">Frequently Asked "
-			  "Questions</A><BR>\tIRC Channel: #pidgin on irc.freenode.net<BR>"
-			  "\tXMPP MUC: devel@conference.pidgin.im<BR><BR>"), PURPLE_WEBSITE,
-			"http://developer.pidgin.im/wiki/FAQ");
-
-	g_string_append(str,
-			"<font size=\"4\"><b>Help for Oracle Employees</b></font> is "
-			"available from your normal internal helpdesk or IT department.  "
-			"The Pidgin developer and user communities cannot assist you in "
-			"the configuration or use of Pidgin within Oracle, as we know "
-			"nothing of Oracle's infrastructure.<br/><br/>");
-
-	g_string_append(str,
-			_("<font size=\"4\"><b>Help from other Pidgin users</b></font> is "
-			  "available by emailing <a "
-			  "href=\"mailto:support@pidgin.im\">support@pidgin.im</a><br/>"
-			  "This is a <b>public</b> mailing list! "
-			  "(<a href=\"http://pidgin.im/pipermail/support/\">archive</a>)<br/>"
-			  "We can't help with third-party protocols or plugins!<br/>"
-			  "This list's primary language is <b>English</b>.  You are "
-			  "welcome to post in another language, but the responses may "
-			  "be less helpful.<br/>"));
-
-	tmp = g_strdup_printf(_("About %s"), PIDGIN_NAME);
-	about = pidgin_build_help_dialog(tmp, "about", str);
-	g_signal_connect(G_OBJECT(about), "destroy", G_CALLBACK(gtk_widget_destroyed), &about);
-	g_free(tmp);
-}
-
-void pidgin_dialogs_buildinfo(void)
-{
-	GString *str;
-	char *tmp;
-	static GtkWidget *buildinfo = NULL;
-
-	if (buildinfo != NULL) {
-		gtk_window_present(GTK_WINDOW(buildinfo));
-		return;
-	}
-
-	str = g_string_sized_new(4096);
-
-	g_string_append_printf(str,
-		"<FONT SIZE=\"4\"><B>%s %s</B></FONT> (libpurple %s)<BR>%s<BR><BR>", PIDGIN_NAME, DISPLAY_VERSION, purple_core_get_version(), REVISION);
-
-	g_string_append_printf(str, "<FONT SIZE=\"4\"><B>%s</B></FONT><br/>", _("Build Information"));
-
-	/* The following primarly intented for user/developer interaction and thus
-	   ought not be translated */
-
-#ifdef CONFIG_ARGS /* win32 build doesn't use configure */
-	g_string_append(str, "  <b>Arguments to <i>./configure</i>:</b>  " CONFIG_ARGS "<br/>");
-#endif
-
-#ifndef _WIN32
-#ifdef DEBUG
-	g_string_append(str, "  <b>Print debugging messages:</b> Yes<br/>");
-#else
-	g_string_append(str, "  <b>Print debugging messages:</b> No<br/>");
-#endif
-#endif
-
-#ifdef PURPLE_PLUGINS
-	g_string_append(str, "  <b>Plugins:</b> Enabled<br/>");
-#else
-	g_string_append(str, "  <b>Plugins:</b> Disabled<br/>");
-#endif
-
-#ifdef HAVE_SSL
-	g_string_append(str, "  <b>SSL:</b> SSL support is present.<br/>");
-#else
-	g_string_append(str, "  <b>SSL:</b> SSL support was <b><i>NOT</i></b> compiled!<br/>");
-#endif
-
-/* This might be useful elsewhere too, but it is particularly useful for
- * debugging stuff known to be GTK+/Glib bugs on Windows */
-#ifdef _WIN32
-	g_string_append_printf(str, "  <b>GTK+ Runtime:</b> %u.%u.%u<br/>"
-		"  <b>Glib Runtime:</b> %u.%u.%u<br/>",
-		gtk_major_version, gtk_minor_version, gtk_micro_version,
-		glib_major_version, glib_minor_version, glib_micro_version);
-#endif
-
-g_string_append(str, "<br/>  <b>Library Support</b><br/>");
-
-#ifdef HAVE_CYRUS_SASL
-	g_string_append_printf(str, "    <b>Cyrus SASL:</b> Enabled<br/>");
-#else
-	g_string_append_printf(str, "    <b>Cyrus SASL:</b> Disabled<br/>");
-#endif
-
-#ifndef _WIN32
-#ifdef HAVE_DBUS
-	g_string_append_printf(str, "    <b>D-Bus:</b> Enabled<br/>");
-#else
-	g_string_append_printf(str, "    <b>D-Bus:</b> Disabled<br/>");
-#endif
-
-#ifdef HAVE_EVOLUTION_ADDRESSBOOK
-	g_string_append_printf(str, "    <b>Evolution Addressbook:</b> Enabled<br/>");
-#else
-	g_string_append_printf(str, "    <b>Evolution Addressbook:</b> Disabled<br/>");
-#endif
-#endif
-
-#ifdef HAVE_LIBGADU
-	g_string_append(str, "    <b>Gadu-Gadu library (libgadu):</b> External<br/>");
-#else
-	g_string_append(str, "    <b>Gadu-Gadu library (libgadu):</b> Internal<br/>");
-#endif
-
-#ifdef USE_GTKSPELL
-	g_string_append(str, "    <b>GtkSpell:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>GtkSpell:</b> Disabled<br/>");
-#endif
-
-#ifdef HAVE_GNUTLS
-	g_string_append(str, "    <b>GnuTLS:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>GnuTLS:</b> Disabled<br/>");
-#endif
-
-#ifndef _WIN32
-#ifdef USE_GSTREAMER
-	g_string_append(str, "    <b>GStreamer:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>GStreamer:</b> Disabled<br/>");
-#endif
-#endif
-
-#ifndef _WIN32
-#ifdef ENABLE_MONO
-	g_string_append(str, "    <b>Mono:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>Mono:</b> Disabled<br/>");
-#endif
-#endif
-
-#ifndef _WIN32
-#ifdef HAVE_NETWORKMANAGER
-	g_string_append(str, "    <b>NetworkManager:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>NetworkManager:</b> Disabled<br/>");
-#endif
-#endif
-
-#ifdef HAVE_NSS
-	g_string_append(str, "    <b>Network Security Services (NSS):</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>Network Security Services (NSS):</b> Disabled<br/>");
-#endif
-
-if (purple_plugins_find_with_id("core-perl") != NULL)
-	g_string_append(str, "    <b>Perl:</b> Enabled<br/>");
-else
-	g_string_append(str, "    <b>Perl:</b> Disabled<br/>");
-
-if (purple_plugins_find_with_id("core-tcl") != NULL) {
-	g_string_append(str, "    <b>Tcl:</b> Enabled<br/>");
-#ifdef HAVE_TK
-	g_string_append(str, "    <b>Tk:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>Tk:</b> Disabled<br/>");
-#endif
-} else {
-	g_string_append(str, "    <b>Tcl:</b> Disabled<br/>");
-	g_string_append(str, "    <b>Tk:</b> Disabled<br/>");
-}
-
-#ifdef USE_IDN
-	g_string_append(str, "    <b>UTF-8 DNS (IDN):</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>UTF-8 DNS (IDN):</b> Disabled<br/>");
-#endif
-
-#ifdef USE_VV
-	g_string_append(str, "    <b>Voice and Video:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>Voice and Video:</b> Disabled<br/>");
-#endif
-
-#ifndef _WIN32
-#ifdef USE_SM
-	g_string_append(str, "    <b>X Session Management:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>X Session Management:</b> Disabled<br/>");
-#endif
-
-#ifdef USE_SCREENSAVER
-	g_string_append(str, "    <b>XScreenSaver:</b> Enabled<br/>");
-#else
-	g_string_append(str, "    <b>XScreenSaver:</b> Disabled<br/>");
-#endif
-
-#ifdef LIBZEPHYR_EXT
-	g_string_append(str, "    <b>Zephyr library (libzephyr):</b> External<br/>");
-#else
-	g_string_append(str, "    <b>Zephyr library (libzephyr):</b> Internal<br/>");
-#endif
-
-#ifdef ZEPHYR_USES_KERBEROS
-	g_string_append(str, "    <b>Zephyr uses Kerberos:</b> Yes<br/>");
-#else
-	g_string_append(str, "    <b>Zephyr uses Kerberos:</b> No<br/>");
-#endif
-#endif
-
-	/* End of not to be translated section */
-
-	tmp = g_strdup_printf(_("%s Build Information"), PIDGIN_NAME);
-	buildinfo = pidgin_build_help_dialog(tmp, "buildinfo", str);
-	g_signal_connect(G_OBJECT(buildinfo), "destroy", G_CALLBACK(gtk_widget_destroyed), &buildinfo);
-	g_free(tmp);
-}
-
-void pidgin_dialogs_developers(void)
-{
-	GString *str;
-	char *tmp;
-	static GtkWidget *developer_info = NULL;
-
-	if (developer_info != NULL) {
-		gtk_window_present(GTK_WINDOW(developer_info));
-		return;
-	}
-
-	str = g_string_sized_new(4096);
-
-	/* Current Developers */
-	g_string_append_printf(str, "<FONT SIZE=\"4\"><B>%s:</B></FONT><BR/>",
-						   _("Current Developers"));
-	add_developers(str, developers);
-	g_string_append(str, "<BR/>");
-
-	/* Crazy Patch Writers */
-	g_string_append_printf(str, "<FONT SIZE=\"4\"><B>%s:</B></FONT><BR/>",
-						   _("Crazy Patch Writers"));
-	add_developers(str, patch_writers);
-	g_string_append(str, "<BR/>");
-
-	/* Retired Developers */
-	g_string_append_printf(str, "<FONT SIZE=\"4\"><B>%s:</B></FONT><BR/>",
-						   _("Retired Developers"));
-	add_developers(str, retired_developers);
-	g_string_append(str, "<BR/>");
-
-	/* Retired Crazy Patch Writers */
-	g_string_append_printf(str, "<FONT SIZE=\"4\"><B>%s:</B></FONT><BR/>",
-						   _("Retired Crazy Patch Writers"));
-	add_developers(str, retired_patch_writers);
-
-	tmp = g_strdup_printf(_("%s Developer Information"), PIDGIN_NAME);
-	developer_info = pidgin_build_help_dialog(tmp, "developer_info", str);
-	g_signal_connect(G_OBJECT(developer_info), "destroy", G_CALLBACK(gtk_widget_destroyed), &developer_info);
-	g_free(tmp);
-}
-
-void pidgin_dialogs_translators(void)
-{
-	GString *str;
-	char *tmp;
-	static GtkWidget *translator_info = NULL;
-
-	if (translator_info != NULL) {
-		gtk_window_present(GTK_WINDOW(translator_info));
-		return;
-	}
-
-	str = g_string_sized_new(4096);
-
-	/* Current Translators */
-	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
-						   _("Current Translators"));
-	add_translators(str, translators);
-	g_string_append(str, "<BR/>");
-
-	/* Past Translators */
-	g_string_append_printf(str, "<FONT SIZE=\"4\">%s:</FONT><BR/>",
-						   _("Past Translators"));
-	add_translators(str, past_translators);
-
-	tmp = g_strdup_printf(_("%s Translator Information"), PIDGIN_NAME);
-	translator_info = pidgin_build_help_dialog(tmp, "translator_info", str);
-	g_signal_connect(G_OBJECT(translator_info), "destroy", G_CALLBACK(gtk_widget_destroyed), &translator_info);
-	g_free(tmp);
-}
-
 void pidgin_dialogs_plugins_info(void)
 {
 	GString *str;
-	GList *l = NULL;
+	GList *plugins, *l = NULL;
 	PurplePlugin *plugin = NULL;
+	PurplePluginInfo *info;
+	PurplePluginExtraCb extra_cb;
 	char *title = g_strdup_printf(_("%s Plugin Information"), PIDGIN_NAME);
-	char *pname = NULL, *pauthor = NULL;
-	const char *pver, *pwebsite, *pid;
-	gboolean ploaded, punloadable;
+	char *pname = NULL, *authors, *pauthors, *pextra;
+	const char *pver, *plicense, *pwebsite, *pid;
+	gboolean ploaded, ploadable;
+	const char * const *authorlist;
+	guint n_authors;
 	static GtkWidget *plugins_info = NULL;
 
 	str = g_string_sized_new(4096);
 
-	g_string_append_printf(str, "<FONT SIZE=\"4\">%s</FONT><BR/>",
-			_("Plugin Information"));
+	g_string_append_printf(str, "<h2>%s</h2><dl>", _("Plugin Information"));
 
-	for(l = purple_plugins_get_all(); l; l = l->next) {
-		plugin = (PurplePlugin *)l->data;
+	plugins = purple_plugins_find_all();
 
-		pname = g_markup_escape_text(purple_plugin_get_name(plugin), -1);
-		pauthor = g_markup_escape_text(purple_plugin_get_author(plugin), -1);
-		pver = purple_plugin_get_version(plugin);
-		pwebsite = purple_plugin_get_homepage(plugin);
-		pid = purple_plugin_get_id(plugin);
-		punloadable = purple_plugin_is_unloadable(plugin);
+	for(l = plugins; l; l = l->next) {
+		plugin = PURPLE_PLUGIN(l->data);
+		info = purple_plugin_get_info(plugin);
+		extra_cb = purple_plugin_info_get_extra_cb(info);
+
+		pname = g_markup_escape_text(purple_plugin_info_get_name(info), -1);
+		authorlist = purple_plugin_info_get_authors(info);
+
+		if (authorlist) {
+			authors = g_strjoinv(", ", (gchar **)authorlist);
+			n_authors = g_strv_length((gchar **)authorlist);
+		} else {
+			authors = NULL;
+			n_authors = 0;
+		}
+
+		if (authors)
+			pauthors = g_markup_escape_text(authors, -1);
+		else
+			pauthors = NULL;
+
+		pver = purple_plugin_info_get_version(info);
+		plicense = purple_plugin_info_get_license_id(info);
+		pwebsite = purple_plugin_info_get_website(info);
+		pid = purple_plugin_info_get_id(info);
+		ploadable = !purple_plugin_info_get_error(info);
 		ploaded = purple_plugin_is_loaded(plugin);
 
+		if (ploaded && extra_cb)
+			pextra = extra_cb(plugin);
+		else
+			pextra = NULL;
+
+		g_string_append_printf(str, "<dt>%s</dt><dd>", pname);
+		if (pauthors)
+			g_string_append_printf(str, "<b>%s:</b> %s<br/>",
+				(n_authors > 1 ? "Authors" : "Author"), pauthors ? pauthors : "");
 		g_string_append_printf(str,
-				"<FONT SIZE=\"3\"><B>%s</B></FONT><BR/><FONT SIZE=\"2\">"
-				"\t<B>Author:</B> %s<BR/>\t<B>Version:</B> %s<BR/>"
-				"\t<B>Website:</B> %s<BR/>\t<B>ID String:</B> %s<BR/>"
-				"\t<B>Loadable:</B> %s<BR/>\t<B>Loaded:</B> %s<BR/>"
-				"<BR/></FONT>", pname, pauthor ? pauthor : "(null)",
-				pver, pwebsite, pid,
-				punloadable ? "<FONT COLOR=\"#FF0000\"><B>No</B></FONT>" : "Yes",
-				ploaded ? "Yes" : "No");
+				"<b>Version:</b> %s<br/>"
+				"<b>License:</b> %s<br/>"
+				"<b>Website:</b> %s<br/>"
+				"<b>ID String:</b> %s<br/>"
+				"<b>Extra:</b> %s<br/>"
+				"<b>Loadable:</b> %s<br/>"
+				"<b>Loaded:</b> %s"
+				"</dd><br/>",
+				pver     ? pver     : "",
+				plicense ? plicense : "",
+				pwebsite ? pwebsite : "",
+				pid,
+				pextra    ? pextra  : "",
+				ploadable ? "Yes" : "<span style=\"color: #FF0000;\"><b>No</b></span>",
+				ploaded   ? "Yes" : "No");
+
+		g_free(pname);
+		g_free(pextra);
+		g_free(pauthors);
+		g_free(authors);
 	}
+	g_list_free(plugins);
+
+	g_string_append(str, "</dl>");
 
 	plugins_info = pidgin_build_help_dialog(title, "plugins_info", str);
 	g_signal_connect(G_OBJECT(plugins_info), "destroy",
 			G_CALLBACK(gtk_widget_destroyed), &plugins_info);
 	g_free(title);
-	g_free(pname);
-	g_free(pauthor);
 }
 
 static void
@@ -881,6 +262,28 @@ pidgin_dialogs_im_cb(gpointer data, PurpleRequestFields *fields)
 	username = purple_request_fields_get_string(fields,  "screenname");
 
 	pidgin_dialogs_im_with_user(account, username);
+}
+
+static gboolean
+pidgin_dialogs_im_name_validator(PurpleRequestField *field, gchar **errmsg,
+	void *_fields)
+{
+	PurpleRequestFields *fields = _fields;
+	PurpleAccount *account;
+	PurpleProtocol *protocol;
+	const char *username;
+	gboolean valid;
+
+	account = purple_request_fields_get_account(fields, "account");
+	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
+	username = purple_request_fields_get_string(fields, "screenname");
+
+	valid = purple_validate(protocol, username);
+
+	if (errmsg && !valid)
+		*errmsg = g_strdup(_("Invalid username"));
+
+	return valid;
 }
 
 void
@@ -898,6 +301,7 @@ pidgin_dialogs_im(void)
 	field = purple_request_field_string_new("screenname", _("_Name"), NULL, FALSE);
 	purple_request_field_set_type_hint(field, "screenname");
 	purple_request_field_set_required(field, TRUE);
+	purple_request_field_set_validator(field, pidgin_dialogs_im_name_validator, fields);
 	purple_request_field_group_add_field(group, field);
 
 	field = purple_request_field_account_new("account", _("_Account"), NULL);
@@ -908,32 +312,31 @@ pidgin_dialogs_im(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_get_blist(), _("New Instant Message"),
+	purple_request_fields(purple_blist_get_buddy_list(), _("New Instant Message"),
 						NULL,
 						_("Please enter the username or alias of the person "
 						  "you would like to IM."),
 						fields,
 						_("OK"), G_CALLBACK(pidgin_dialogs_im_cb),
 						_("Cancel"), NULL,
-						NULL, NULL, NULL,
-						NULL);
+						NULL, NULL);
 }
 
 void
 pidgin_dialogs_im_with_user(PurpleAccount *account, const char *username)
 {
-	PurpleConversation *conv;
+	PurpleIMConversation *im;
 
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(username != NULL);
 
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, username, account);
+	im = purple_conversations_find_im_with_account(username, account);
 
-	if (conv == NULL)
-		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, account, username);
+	if (im == NULL)
+		im = purple_im_conversation_new(account, username);
 
-	pidgin_conv_attach_to_conversation(conv);
-	purple_conversation_present(conv);
+	pidgin_conv_attach_to_conversation(PURPLE_CONVERSATION(im));
+	purple_conversation_present(PURPLE_CONVERSATION(im));
 }
 
 static gboolean
@@ -984,17 +387,19 @@ pidgin_dialogs_ee(const char *ee)
 
 	gtk_container_set_border_width (GTK_CONTAINER(window), PIDGIN_HIG_BOX_SPACE);
 	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
-	gtk_dialog_set_has_separator(GTK_DIALOG(window), FALSE);
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(window)->vbox), PIDGIN_HIG_BORDER);
-	gtk_container_set_border_width (GTK_CONTAINER(GTK_DIALOG(window)->vbox), PIDGIN_HIG_BOX_SPACE);
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(window))),
+	                    PIDGIN_HIG_BORDER);
+	gtk_container_set_border_width(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))),
+	                               PIDGIN_HIG_BOX_SPACE);
 
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(window)->vbox), hbox);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BORDER);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), hbox);
 	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_COOL, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
 	gtk_widget_show_all(window);
@@ -1047,15 +452,14 @@ pidgin_dialogs_info(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_get_blist(), _("Get User Info"),
+	purple_request_fields(purple_blist_get_buddy_list(), _("Get User Info"),
 						NULL,
 						_("Please enter the username or alias of the person "
 						  "whose info you would like to view."),
 						fields,
 						_("OK"), G_CALLBACK(pidgin_dialogs_info_cb),
 						_("Cancel"), NULL,
-						NULL, NULL, NULL,
-						NULL);
+						NULL, NULL);
 }
 
 static void
@@ -1077,7 +481,7 @@ pidgin_dialogs_log_cb(gpointer data, PurpleRequestFields *fields)
 
 		pidgin_set_cursor(gtkblist->window, GDK_WATCH);
 
-		buddies = purple_find_buddies(account, username);
+		buddies = purple_blist_find_buddies(account, username);
 		for (cur = buddies; cur != NULL; cur = cur->next)
 		{
 			PurpleBlistNode *node = cur->data;
@@ -1139,42 +543,21 @@ pidgin_dialogs_log(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_get_blist(), _("View User Log"),
+	purple_request_fields(purple_blist_get_buddy_list(), _("View User Log"),
 						NULL,
 						_("Please enter the username or alias of the person "
 						  "whose log you would like to view."),
 						fields,
 						_("OK"), G_CALLBACK(pidgin_dialogs_log_cb),
 						_("Cancel"), NULL,
-						NULL, NULL, NULL,
-						NULL);
-}
-
-static void
-pidgin_dialogs_alias_contact_cb(PurpleContact *contact, const char *new_alias)
-{
-	purple_blist_alias_contact(contact, new_alias);
-}
-
-void
-pidgin_dialogs_alias_contact(PurpleContact *contact)
-{
-	g_return_if_fail(contact != NULL);
-
-	purple_request_input(NULL, _("Alias Contact"), NULL,
-					   _("Enter an alias for this contact."),
-					   contact->alias, FALSE, FALSE, NULL,
-					   _("Alias"), G_CALLBACK(pidgin_dialogs_alias_contact_cb),
-					   _("Cancel"), NULL,
-					   NULL, purple_contact_get_alias(contact), NULL,
-					   contact);
+						NULL, NULL);
 }
 
 static void
 pidgin_dialogs_alias_buddy_cb(PurpleBuddy *buddy, const char *new_alias)
 {
-	purple_blist_alias_buddy(buddy, new_alias);
-	serv_alias_buddy(buddy);
+	purple_buddy_set_local_alias(buddy, new_alias);
+	purple_serv_alias_buddy(buddy);
 }
 
 void
@@ -1184,13 +567,13 @@ pidgin_dialogs_alias_buddy(PurpleBuddy *buddy)
 
 	g_return_if_fail(buddy != NULL);
 
-	secondary = g_strdup_printf(_("Enter an alias for %s."), buddy->name);
+	secondary = g_strdup_printf(_("Enter an alias for %s."), purple_buddy_get_name(buddy));
 
 	purple_request_input(NULL, _("Alias Buddy"), NULL,
-					   secondary, buddy->alias, FALSE, FALSE, NULL,
+					   secondary, purple_buddy_get_local_alias(buddy), FALSE, FALSE, NULL,
 					   _("Alias"), G_CALLBACK(pidgin_dialogs_alias_buddy_cb),
 					   _("Cancel"), NULL,
-					   purple_buddy_get_account(buddy), purple_buddy_get_name(buddy), NULL,
+					   purple_request_cpar_from_account(purple_buddy_get_account(buddy)),
 					   buddy);
 
 	g_free(secondary);
@@ -1199,21 +582,27 @@ pidgin_dialogs_alias_buddy(PurpleBuddy *buddy)
 static void
 pidgin_dialogs_alias_chat_cb(PurpleChat *chat, const char *new_alias)
 {
-	purple_blist_alias_chat(chat, new_alias);
+	purple_chat_set_alias(chat, new_alias);
 }
 
 void
 pidgin_dialogs_alias_chat(PurpleChat *chat)
 {
+	gchar *alias;
+
 	g_return_if_fail(chat != NULL);
+
+	g_object_get(chat, "alias", &alias, NULL);
 
 	purple_request_input(NULL, _("Alias Chat"), NULL,
 					   _("Enter an alias for this chat."),
-					   chat->alias, FALSE, FALSE, NULL,
+					   alias, FALSE, FALSE, NULL,
 					   _("Alias"), G_CALLBACK(pidgin_dialogs_alias_chat_cb),
 					   _("Cancel"), NULL,
-					   chat->account, NULL, NULL,
+					   purple_request_cpar_from_account(purple_chat_get_account(chat)),
 					   chat);
+
+	g_free(alias);
 }
 
 static void
@@ -1226,8 +615,8 @@ pidgin_dialogs_remove_contact_cb(PurpleContact *contact)
 	group = (PurpleGroup*)cnode->parent;
 	for (bnode = cnode->child; bnode; bnode = bnode->next) {
 		PurpleBuddy *buddy = (PurpleBuddy*)bnode;
-		if (purple_account_is_connected(buddy->account))
-			purple_account_remove_buddy(buddy->account, buddy, group);
+		if (purple_account_is_connected(purple_buddy_get_account(buddy)))
+			purple_account_remove_buddy(purple_buddy_get_account(buddy), buddy, group);
 	}
 	purple_blist_remove_contact(contact);
 }
@@ -1245,6 +634,7 @@ pidgin_dialogs_remove_contact(PurpleContact *contact)
 		pidgin_dialogs_remove_buddy(buddy);
 	} else {
 		gchar *text;
+		int contact_size = purple_counting_node_get_total_size(PURPLE_COUNTING_NODE(contact));
 		text = g_strdup_printf(
 					ngettext(
 						"You are about to remove the contact containing %s "
@@ -1252,11 +642,11 @@ pidgin_dialogs_remove_contact(PurpleContact *contact)
 						"want to continue?",
 						"You are about to remove the contact containing %s "
 						"and %d other buddies from your buddy list.  Do you "
-						"want to continue?", contact->totalsize - 1),
-					buddy->name, contact->totalsize - 1);
+						"want to continue?", contact_size - 1),
+					purple_buddy_get_name(buddy), contact_size - 1);
 
 		purple_request_action(contact, NULL, _("Remove Contact"), text, 0,
-				NULL, purple_contact_get_alias(contact), NULL,
+				NULL,
 				contact, 2,
 				_("_Remove Contact"), G_CALLBACK(pidgin_dialogs_remove_contact_cb),
 				_("Cancel"),
@@ -1275,7 +665,7 @@ static void free_ggmo(struct _PidginGroupMergeObject *ggp)
 static void
 pidgin_dialogs_merge_groups_cb(struct _PidginGroupMergeObject *GGP)
 {
-	purple_blist_rename_group(GGP->parent, GGP->new_name);
+	purple_group_set_name(GGP->parent, GGP->new_name);
 	free_ggmo(GGP);
 }
 
@@ -1290,14 +680,14 @@ pidgin_dialogs_merge_groups(PurpleGroup *source, const char *new_name)
 
 	text = g_strdup_printf(
 				_("You are about to merge the group called %s into the group "
-				"called %s. Do you want to continue?"), source->name, new_name);
+				"called %s. Do you want to continue?"), purple_group_get_name(source), new_name);
 
 	ggp = g_new(struct _PidginGroupMergeObject, 1);
 	ggp->parent = source;
 	ggp->new_name = g_strdup(new_name);
 
 	purple_request_action(source, NULL, _("Merge Groups"), text, 0,
-			NULL, NULL, NULL,
+			NULL,
 			ggp, 2,
 			_("_Merge Groups"), G_CALLBACK(pidgin_dialogs_merge_groups_cb),
 			_("Cancel"), G_CALLBACK(free_ggmo));
@@ -1313,26 +703,26 @@ pidgin_dialogs_remove_group_cb(PurpleGroup *group)
 	cnode = ((PurpleBlistNode*)group)->child;
 
 	while (cnode) {
-		if (PURPLE_BLIST_NODE_IS_CONTACT(cnode)) {
+		if (PURPLE_IS_CONTACT(cnode)) {
 			bnode = cnode->child;
 			cnode = cnode->next;
 			while (bnode) {
 				PurpleBuddy *buddy;
-				if (PURPLE_BLIST_NODE_IS_BUDDY(bnode)) {
+				if (PURPLE_IS_BUDDY(bnode)) {
 					buddy = (PurpleBuddy*)bnode;
 					bnode = bnode->next;
-					if (purple_account_is_connected(buddy->account)) {
-						purple_account_remove_buddy(buddy->account, buddy, group);
+					if (purple_account_is_connected(purple_buddy_get_account(buddy))) {
+						purple_account_remove_buddy(purple_buddy_get_account(buddy), buddy, group);
 						purple_blist_remove_buddy(buddy);
 					}
 				} else {
 					bnode = bnode->next;
 				}
 			}
-		} else if (PURPLE_BLIST_NODE_IS_CHAT(cnode)) {
+		} else if (PURPLE_IS_CHAT(cnode)) {
 			PurpleChat *chat = (PurpleChat *)cnode;
 			cnode = cnode->next;
-			if (purple_account_is_connected(chat->account))
+			if (purple_account_is_connected(purple_chat_get_account(chat)))
 				purple_blist_remove_chat(chat);
 		} else {
 			cnode = cnode->next;
@@ -1350,10 +740,10 @@ pidgin_dialogs_remove_group(PurpleGroup *group)
 	g_return_if_fail(group != NULL);
 
 	text = g_strdup_printf(_("You are about to remove the group %s and all its members from your buddy list.  Do you want to continue?"),
-						   group->name);
+						   purple_group_get_name(group));
 
 	purple_request_action(group, NULL, _("Remove Group"), text, 0,
-						NULL, NULL, NULL,
+						NULL,
 						group, 2,
 						_("_Remove Group"), G_CALLBACK(pidgin_dialogs_remove_group_cb),
 						_("Cancel"), NULL);
@@ -1370,10 +760,10 @@ pidgin_dialogs_remove_buddy_cb(PurpleBuddy *buddy)
 	PurpleAccount *account;
 
 	group = purple_buddy_get_group(buddy);
-	name = g_strdup(buddy->name); /* b->name is a crasher after remove_buddy */
-	account = buddy->account;
+	name = g_strdup(purple_buddy_get_name(buddy)); /* purple_buddy_get_name() is a crasher after remove_buddy */
+	account = purple_buddy_get_account(buddy);
 
-	purple_debug_info("blist", "Removing '%s' from buddy list.\n", buddy->name);
+	purple_debug_info("blist", "Removing '%s' from buddy list.\n", purple_buddy_get_name(buddy));
 	/* TODO - Should remove from blist first... then call purple_account_remove_buddy()? */
 	purple_account_remove_buddy(account, buddy, group);
 	purple_blist_remove_buddy(buddy);
@@ -1389,13 +779,13 @@ pidgin_dialogs_remove_buddy(PurpleBuddy *buddy)
 	g_return_if_fail(buddy != NULL);
 
 	text = g_strdup_printf(_("You are about to remove %s from your buddy list.  Do you want to continue?"),
-						   buddy->name);
+						   purple_buddy_get_name(buddy));
 
 	purple_request_action(buddy, NULL, _("Remove Buddy"), text, 0,
-						purple_buddy_get_account(buddy), purple_buddy_get_name(buddy), NULL,
-						buddy, 2,
-						_("_Remove Buddy"), G_CALLBACK(pidgin_dialogs_remove_buddy_cb),
-						_("Cancel"), NULL);
+		purple_request_cpar_from_account(
+			purple_buddy_get_account(buddy)),
+		buddy, 2, _("_Remove Buddy"),
+		G_CALLBACK(pidgin_dialogs_remove_buddy_cb), _("Cancel"), NULL);
 
 	g_free(text);
 }
@@ -1419,10 +809,9 @@ pidgin_dialogs_remove_chat(PurpleChat *chat)
 			name ? name : "");
 
 	purple_request_action(chat, NULL, _("Remove Chat"), text, 0,
-						chat->account, NULL, NULL,
-						chat, 2,
-						_("_Remove Chat"), G_CALLBACK(pidgin_dialogs_remove_chat_cb),
-						_("Cancel"), NULL);
+		purple_request_cpar_from_account(purple_chat_get_account(chat)),
+		chat, 2, _("_Remove Chat"),
+		G_CALLBACK(pidgin_dialogs_remove_chat_cb), _("Cancel"), NULL);
 
 	g_free(text);
 }

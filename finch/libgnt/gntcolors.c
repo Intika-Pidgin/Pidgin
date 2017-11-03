@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -19,10 +19,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-
-#include "config.h"
-
-#include <ncurses.h>
 
 #include "gntinternal.h"
 #undef GNT_LOG_DOMAIN
@@ -142,7 +138,6 @@ gnt_uninit_colors()
 		restore_colors();
 }
 
-#if GLIB_CHECK_VERSION(2,6,0)
 int
 gnt_colors_get_color(char *key)
 {
@@ -182,10 +177,15 @@ void gnt_colors_parse(GKeyFile *kfile)
 {
 	GError *error = NULL;
 	gsize nkeys;
-	char **keys = g_key_file_get_keys(kfile, "colors", &nkeys, &error);
+	char **keys;
 
-	if (error)
-	{
+	if (!g_key_file_has_group(kfile, "colors")) {
+		gnt_color_pairs_parse(kfile);
+		return;
+	}
+
+	keys = g_key_file_get_keys(kfile, "colors", &nkeys, &error);
+	if (error) {
 		gnt_warning("%s", error->message);
 		g_error_free(error);
 		error = NULL;
@@ -228,8 +228,12 @@ void gnt_color_pairs_parse(GKeyFile *kfile)
 {
 	GError *error = NULL;
 	gsize nkeys;
-	char **keys = g_key_file_get_keys(kfile, "colorpairs", &nkeys, &error);
+	char **keys;
 
+	if (!g_key_file_has_group(kfile, "colorpairs"))
+		return;
+
+	keys = g_key_file_get_keys(kfile, "colorpairs", &nkeys, &error);
 	if (error)
 	{
 		gnt_warning("%s", error->message);
@@ -292,8 +296,6 @@ void gnt_color_pairs_parse(GKeyFile *kfile)
 
 	g_strfreev(keys);
 }
-
-#endif  /* GKeyFile */
 
 int gnt_color_pair(int pair)
 {
