@@ -1775,6 +1775,9 @@ create_participant(PurpleMediaBackendFs2 *self, const gchar *name)
 		return FALSE;
 	}
 
+	g_object_set_data_full(G_OBJECT(participant), "purple-name",
+			g_strdup(name), g_free);
+
 	if (g_object_class_find_property(G_OBJECT_GET_CLASS(participant),
 			"cname")) {
 		g_object_set(participant, "cname", name, NULL);
