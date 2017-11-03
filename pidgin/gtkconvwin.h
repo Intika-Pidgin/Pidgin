@@ -206,7 +206,7 @@ PidginConversation *pidgin_conv_window_get_active_gtkconv(const PidginConvWindow
  * pidgin_conv_window_get_active_conversation:
  * @win: The conversation window
  *
- * Returns: The active #PurpleConversation in @win.
+ * Returns: (transfer none): The active #PurpleConversation in @win.
  */
 PurpleConversation *pidgin_conv_window_get_active_conversation(const PidginConvWindow *win);
 
@@ -283,10 +283,23 @@ PidginConvWindow *pidgin_conv_window_last_chat(void);
  * GTK+ Conversation Placement API
  **************************************************************************/
 
-typedef void (*PidginConvPlacementFunc)(PidginConversation *);
+/**
+ * PidginConvPlacementFunc: (skip)
+ */
+typedef void (*PidginConvPlacementFunc)(PidginConversation *conv);
 
+/**
+ * pidgin_conv_placement_get_options: (skip)
+ */
 GList *pidgin_conv_placement_get_options(void);
+/**
+ * pidgin_conv_placement_get_name: (skip)
+ */
 const char *pidgin_conv_placement_get_name(const char *id);
+
+/**
+ * pidgin_conv_placement_place: (skip)
+ */
 void pidgin_conv_placement_place(PidginConversation *gtkconv);
 
 /**

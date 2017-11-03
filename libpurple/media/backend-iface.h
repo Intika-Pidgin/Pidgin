@@ -188,7 +188,7 @@ GList *purple_media_backend_get_local_candidates(PurpleMediaBackend *self,
  * @self: The media backend the stream is in.
  * @sess_id: The session id the stream is associated with.
  * @participant: The participant the stream is associated with.
- * @codecs: (element-type PurpleMediaCodec) The list of remote codecs to set.
+ * @codecs: (element-type PurpleMediaCodec): The list of remote codecs to set.
  *
  * Sets the remote codecs on a stream.
  *

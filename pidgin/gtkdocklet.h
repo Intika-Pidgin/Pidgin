@@ -45,7 +45,7 @@ typedef enum
 /**
  * pidgin_docklet_get_status_icon:
  *
- * Returns: The #GtkStatusIcon used for the docklet.
+ * Returns: (transfer none): The #GtkStatusIcon used for the docklet.
  */
 GtkStatusIcon *pidgin_docklet_get_status_icon(void);
 

@@ -101,13 +101,13 @@ struct _PidginWebViewClass
 
 	GList *protocols;
 
-	void (*buttons_update)(PidginWebView *, PidginWebViewButtons);
-	void (*toggle_format)(PidginWebView *, PidginWebViewButtons);
-	void (*clear_format)(PidginWebView *);
-	void (*update_format)(PidginWebView *);
-	void (*changed)(PidginWebView *);
-	void (*html_appended)(PidginWebView *, WebKitDOMRange *);
-	gboolean (*insert_image)(PidginWebView *, PurpleImage *);
+	void (*buttons_update)(PidginWebView *webview, PidginWebViewButtons buttons);
+	void (*toggle_format)(PidginWebView *webview, PidginWebViewButtons buttons);
+	void (*clear_format)(PidginWebView *webview);
+	void (*update_format)(PidginWebView *webview);
+	void (*changed)(PidginWebView *webview);
+	void (*html_appended)(PidginWebView *webview, WebKitDOMRange *range);
+	gboolean (*insert_image)(PidginWebView *webview, PurpleImage *image);
 };
 
 G_BEGIN_DECLS
@@ -602,7 +602,7 @@ gint
 pidgin_webview_get_DOM_height(PidginWebView *webview);
 
 /**
- * pidgin_webview_get_DOM_height:
+ * pidgin_webview_get_font_size:
  * @webview: the PidginWebView.
  *
  * Look for the font size used on the current webview
@@ -666,7 +666,7 @@ pidgin_webview_set_toolbar(PidginWebView *webview, GtkWidget *toolbar);
  *
  * Returns the toolbar associated with the webview.
  *
- * Returns: the toolbar.
+ * Returns: (transfer none): the toolbar.
  */
 GtkWidget *
 pidgin_webview_get_toolbar(PidginWebView *webview);

@@ -133,7 +133,7 @@ typedef enum
 	PURPLE_REQUEST_ICON_ERROR
 } PurpleRequestIconType;
 
-typedef void (*PurpleRequestCancelCb)(gpointer);
+typedef void (*PurpleRequestCancelCb)(gpointer data);
 
 /**
  * PurpleRequestUiOps:
@@ -202,7 +202,7 @@ struct _PurpleRequestUiOps
 	void (*_purple_reserved4)(void);
 };
 
-typedef void (*PurpleRequestInputCb)(void *, const char *);
+typedef void (*PurpleRequestInputCb)(void *data, const char *value);
 
 typedef gboolean (*PurpleRequestFieldValidator)(PurpleRequestField *field,
 	gchar **errmsg, gpointer user_data);
@@ -216,12 +216,12 @@ typedef gboolean (*PurpleRequestFieldSensitivityCb)(PurpleRequestField *field);
  * argument is the <literal>user_data</literal> parameter; the second is the
  * index in the list of actions of the one chosen.
  */
-typedef void (*PurpleRequestActionCb)(void *, int);
+typedef void (*PurpleRequestActionCb)(void *data, int action);
 
-typedef void (*PurpleRequestChoiceCb)(void *, gpointer);
-typedef void (*PurpleRequestFieldsCb)(void *, PurpleRequestFields *fields);
-typedef void (*PurpleRequestFileCb)(void *, const char *filename);
-typedef void (*PurpleRequestHelpCb)(gpointer);
+typedef void (*PurpleRequestChoiceCb)(void *data, gpointer value);
+typedef void (*PurpleRequestFieldsCb)(void *data, PurpleRequestFields *fields);
+typedef void (*PurpleRequestFileCb)(void *data, const char *filename);
+typedef void (*PurpleRequestHelpCb)(gpointer data);
 
 G_BEGIN_DECLS
 
@@ -1841,7 +1841,7 @@ PurpleRequestDatasheet *purple_request_field_datasheet_get_sheet(
 /**
  * purple_request_field_email_validator:
  * @field: The field.
- * @errmsg: (Optional) destination for error message.
+ * @errmsg: (out) (optional): destination for error message.
  * @user_data: Ignored.
  *
  * Validates a field which should contain an email address.

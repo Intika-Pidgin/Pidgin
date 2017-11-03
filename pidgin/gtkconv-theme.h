@@ -179,7 +179,7 @@ void pidgin_conversation_theme_set_variant(PidginConvTheme *theme, const char *v
  *
  * Get a list of available variants for a conversation theme.
  *
- * Returns: The list of variants. This GList and the string data are owned by
+ * Returns: (element-type utf8): The list of variants. This GList and the string data are owned by
  *         the theme and should not be freed by the caller.
  */
 const GList *pidgin_conversation_theme_get_variants(PidginConvTheme *theme);
@@ -210,7 +210,7 @@ char *pidgin_conversation_theme_get_css_path(PidginConvTheme *theme);
  *
  * Get (and reference) the array of nick colors
  *
- * Returns: Pointer to GArray of nick colors, or NULL if no colors in theme
+ * Returns: (transfer container) (element-type GdkRGBA): Pointer to GArray of nick colors, or NULL if no colors in theme
  */
 GArray *pidgin_conversation_theme_get_nick_colors(PidginConvTheme *theme);
 
