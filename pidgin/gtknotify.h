@@ -83,8 +83,6 @@ gboolean pidgin_notify_emails_pending(void);
  * pidgin_notify_emails_present:
  *
  * Presents mail dialog to the user.
- *
- * Returns: void.
  */
 void pidgin_notify_emails_present(void *data);
 

@@ -110,7 +110,7 @@ void pidgin_webviewtoolbar_activate(PidginWebViewToolbar *toolbar,
  *
  * Returns the wide toolbar variant widget for the given @toolbar.
  *
- * Returns: the wide toolbar variant.
+ * Returns: (transfer none): the wide toolbar variant.
  */
 GtkWidget *
 pidgin_webviewtoolbar_get_wide_view(PidginWebViewToolbar *toolbar);
@@ -121,7 +121,7 @@ pidgin_webviewtoolbar_get_wide_view(PidginWebViewToolbar *toolbar);
  *
  * Returns the lean toolbar variant widget for the given @toolbar.
  *
- * Returns: the lean toolbar variant.
+ * Returns: (transfer none): the lean toolbar variant.
  */
 GtkWidget *
 pidgin_webviewtoolbar_get_lean_view(PidginWebViewToolbar *toolbar);

@@ -47,7 +47,7 @@ PurpleRequestUiOps *pidgin_request_get_ui_ops(void);
  *
  * Gets dialog window for specified libpurple request.
  *
- * Returns: The dialog window.
+ * Returns: (transfer none): The dialog window.
  */
 GtkWindow *
 pidgin_request_get_dialog_window(void *ui_handle);

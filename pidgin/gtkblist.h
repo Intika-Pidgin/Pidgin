@@ -241,7 +241,7 @@ void pidgin_blist_update_refresh_timeout(void);
  * This may be an existing pixbuf that has been given an additional ref,
  * so it shouldn't be modified.
  *
- * Returns:  A GdkPixbuf for the emblem to show, or NULL
+ * Returns: (transfer full): A GdkPixbuf for the emblem to show, or NULL
  */
 GdkPixbuf *
 pidgin_blist_get_emblem(PurpleBlistNode *node);
@@ -250,6 +250,8 @@ pidgin_blist_get_emblem(PurpleBlistNode *node);
  * pidgin_blist_get_status_icon:
  *
  * Useful for the buddy ticker
+ *
+ * Returns: (transfer full): A #GdkPixbuf of status icon.
  */
 GdkPixbuf *pidgin_blist_get_status_icon(PurpleBlistNode *node,
 		PidginStatusIconSize size);
@@ -317,7 +319,7 @@ void pidgin_blist_set_theme(PidginBlistTheme *theme);
  *
  * Gets Pidgin's current buddy list theme
  *
- * Returns:	the current theme
+ * Returns:	(transfer none): the current theme
  */
 PidginBlistTheme *pidgin_blist_get_theme(void);
 
@@ -332,7 +334,7 @@ typedef void (*pidgin_blist_sort_function)(PurpleBlistNode *new, PurpleBuddyList
  *
  * Gets the current list of sort methods.
  *
- * Returns: A GSlist of sort methods
+ * Returns: (transfer none) (element-type PidginBlistSortMethod): A GSlist of sort methods
  */
 GList *pidgin_blist_get_sort_methods(void);
 
@@ -348,7 +350,7 @@ typedef struct _PidginBlistSortMethod PidginBlistSortMethod;
  * pidgin_blist_sort_method_reg:
  * @id:   The unique ID of the sorting method
  * @name: The method's name.
- * @func:  A pointer to the function.
+ * @func: (scope call): A pointer to the function.
  *
  * Registers a buddy list sorting method.
  */

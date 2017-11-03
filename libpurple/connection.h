@@ -405,7 +405,7 @@ purple_connection_is_disconnecting(const PurpleConnection *gc);
  *
  * Returns the connection's account.
  *
- * Returns: The connection's account.
+ * Returns: (transfer none): The connection's account.
  */
 PurpleAccount *purple_connection_get_account(const PurpleConnection *gc);
 
@@ -415,7 +415,7 @@ PurpleAccount *purple_connection_get_account(const PurpleConnection *gc);
  *
  * Returns the protocol managing a connection.
  *
- * Returns: The protocol.
+ * Returns: (transfer none): The protocol.
  */
 PurpleProtocol *purple_connection_get_protocol(const PurpleConnection *gc);
 

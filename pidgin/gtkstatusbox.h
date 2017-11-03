@@ -159,7 +159,7 @@ struct _PidginStatusBoxClass
 
 GType         pidgin_status_box_get_type         (void) G_GNUC_CONST;
 GtkWidget    *pidgin_status_box_new              (void);
-GtkWidget    *pidgin_status_box_new_with_account (PurpleAccount *);
+GtkWidget    *pidgin_status_box_new_with_account (PurpleAccount *account);
 
 void
 pidgin_status_box_add(PidginStatusBox *status_box, PidginStatusBoxItemType type, GdkPixbuf *pixbuf, const char *text, const char *sec_text, gpointer data);

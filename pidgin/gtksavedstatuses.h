@@ -70,12 +70,12 @@ void pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *status);
 /**
  * pidgin_status_menu:
  * @status:   The default saved_status to show as 'selected'
- * @callback: The callback to call when the selection changes
+ * @callback: (scope call): The callback to call when the selection changes
  *
  * Creates a dropdown menu of saved statuses and calls a callback
  * when one is selected
  *
- * Returns:         The menu widget
+ * Returns: (transfer full): The menu widget
  */
 GtkWidget *pidgin_status_menu(PurpleSavedStatus *status, GCallback callback);
 

@@ -2566,7 +2566,7 @@ statuses_to_xmlnode(const PurplePresence *presence)
 }
 
 static PurpleXmlNode *
-proxy_settings_to_xmlnode(PurpleProxyInfo *proxy_info)
+proxy_settings_to_xmlnode(const PurpleProxyInfo *proxy_info)
 {
 	PurpleXmlNode *node, *child;
 	PurpleProxyType proxy_type;
@@ -2705,7 +2705,7 @@ _purple_account_to_xmlnode(PurpleAccount *account)
 	PurpleXmlNode *node, *child;
 	const char *tmp;
 	PurplePresence *presence;
-	PurpleProxyInfo *proxy_info;
+	const PurpleProxyInfo *proxy_info;
 	PurpleAccountPrivate *priv = PURPLE_ACCOUNT_GET_PRIVATE(account);
 
 	node = purple_xmlnode_new("account");

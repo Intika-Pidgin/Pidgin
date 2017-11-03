@@ -58,8 +58,8 @@ struct _PurpleThemeLoaderClass
 {
 	GObjectClass parent_class;
 
-	PurpleTheme *(*purple_theme_loader_build)(const gchar*);
-	gboolean (*probe_directory)(const gchar *);
+	PurpleTheme *(*purple_theme_loader_build)(const gchar *dir);
+	gboolean (*probe_directory)(const gchar *dir);
 
 	/*< private >*/
 	void (*purple_reserved1)(void);
