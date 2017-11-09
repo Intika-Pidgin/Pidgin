@@ -4729,6 +4729,15 @@ conversation_created_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
 				}
 			}
 			break;
+		default:
+			break;
+	}
+}
+
+static void
+chat_joined_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
+{
+	switch (conv->type) {
 		case PURPLE_CONV_TYPE_CHAT:
 			{
 				PurpleChat *chat = purple_blist_find_chat(conv->account, conv->name);
@@ -6094,6 +6103,9 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	                      gtkblist);
 	purple_signal_connect(handle, "conversation-created", gtkblist,
 	                      PURPLE_CALLBACK(conversation_created_cb),
+	                      gtkblist);
+	purple_signal_connect(handle, "chat-joined", gtkblist,
+	                      PURPLE_CALLBACK(chat_joined_cb),
 	                      gtkblist);
 
 	gtk_widget_hide(gtkblist->headline_hbox);
