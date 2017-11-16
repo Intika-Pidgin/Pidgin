@@ -21,7 +21,6 @@
  * 02111-1301, USA.
  *
  */
-#include <gdk/gdkwin32.h>
 #include "internal.h"
 
 #include "core.h"
@@ -58,15 +57,15 @@ typedef struct {
 /*
  *  LOCALS
  */
-static const char *OPT_WINTRANS_IM_ENABLED= "/plugins/gtk/win32/wintrans/im_enabled";
-static const char *OPT_WINTRANS_IM_ALPHA  = "/plugins/gtk/win32/wintrans/im_alpha";
-static const char *OPT_WINTRANS_IM_SLIDER = "/plugins/gtk/win32/wintrans/im_slider";
-static const char *OPT_WINTRANS_IM_ONFOCUS= "/plugins/gtk/win32/wintrans/im_solid_onfocus";
-static const char *OPT_WINTRANS_IM_ONTOP  = "/plugins/gtk/win32/wintrans/im_always_on_top";
-static const char *OPT_WINTRANS_BL_ENABLED= "/plugins/gtk/win32/wintrans/bl_enabled";
-static const char *OPT_WINTRANS_BL_ALPHA  = "/plugins/gtk/win32/wintrans/bl_alpha";
-static const char *OPT_WINTRANS_BL_ONFOCUS= "/plugins/gtk/win32/wintrans/bl_solid_onfocus";
-static const char *OPT_WINTRANS_BL_ONTOP  = "/plugins/gtk/win32/wintrans/bl_always_on_top";
+static const char *OPT_WINTRANS_IM_ENABLED= "/plugins/gtk/transparency/im_enabled";
+static const char *OPT_WINTRANS_IM_ALPHA  = "/plugins/gtk/transparency/im_alpha";
+static const char *OPT_WINTRANS_IM_SLIDER = "/plugins/gtk/transparency/im_slider";
+static const char *OPT_WINTRANS_IM_ONFOCUS= "/plugins/gtk/transparency/im_solid_onfocus";
+static const char *OPT_WINTRANS_IM_ONTOP  = "/plugins/gtk/transparency/im_always_on_top";
+static const char *OPT_WINTRANS_BL_ENABLED= "/plugins/gtk/transparency/bl_enabled";
+static const char *OPT_WINTRANS_BL_ALPHA  = "/plugins/gtk/transparency/bl_alpha";
+static const char *OPT_WINTRANS_BL_ONFOCUS= "/plugins/gtk/transparency/bl_solid_onfocus";
+static const char *OPT_WINTRANS_BL_ONTOP  = "/plugins/gtk/transparency/bl_always_on_top";
 static GSList *window_list = NULL;
 
 /*
@@ -76,31 +75,13 @@ static GSList *window_list = NULL;
 /* Set window transparency level */
 static void set_wintrans(GtkWidget *window, int alpha, gboolean enabled,
 		gboolean always_on_top) {
-
-	HWND hWnd = GDK_WINDOW_HWND(window->window);
-	LONG style = GetWindowLong(hWnd, GWL_EXSTYLE);
 	if (enabled) {
-		style |= WS_EX_LAYERED;
+		gdk_window_set_opacity(window->window, alpha / 255.0);
+		gdk_window_set_keep_above(window->window, always_on_top);
 	} else {
-		style &= ~WS_EX_LAYERED;
+		gdk_window_set_opacity(window->window, 1);
+		gdk_window_set_keep_above(window->window, 0);
 	}
-	SetWindowLong(hWnd, GWL_EXSTYLE, style);
-
-
-	if (enabled) {
-		SetWindowPos(hWnd,
-			always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST,
-			0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-		SetLayeredWindowAttributes(hWnd, 0, alpha, LWA_ALPHA);
-	} else {
-		/* Ask the window and its children to repaint */
-		SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-			SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-
-		RedrawWindow(hWnd, NULL, NULL,
-			RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
-	}
-
 }
 
 /* When a conv window is focused, if we're only transparent when unfocused,
@@ -518,7 +499,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 }
 
 static gboolean plugin_unload(PurplePlugin *plugin) {
-	purple_debug_info(WINTRANS_PLUGIN_ID, "Unloading win2ktrans plugin\n");
+	purple_debug_info(WINTRANS_PLUGIN_ID, "Unloading transparency plugin\n");
 
 	remove_convs_wintrans(TRUE);
 
@@ -703,8 +684,8 @@ static PurplePluginInfo info =
 static void
 init_plugin(PurplePlugin *plugin)
 {
-	purple_prefs_add_none("/plugins/gtk/win32");
-	purple_prefs_add_none("/plugins/gtk/win32/wintrans");
+	purple_prefs_add_none("/plugins/gtk");
+	purple_prefs_add_none("/plugins/gtk/transparency");
 	purple_prefs_add_bool(OPT_WINTRANS_IM_ENABLED, FALSE);
 	purple_prefs_add_int(OPT_WINTRANS_IM_ALPHA, 255);
 	purple_prefs_add_bool(OPT_WINTRANS_IM_SLIDER, FALSE);
@@ -714,6 +695,7 @@ init_plugin(PurplePlugin *plugin)
 	purple_prefs_add_int(OPT_WINTRANS_BL_ALPHA, 255);
 	purple_prefs_add_bool(OPT_WINTRANS_BL_ONFOCUS, FALSE);
 	purple_prefs_add_bool(OPT_WINTRANS_BL_ONTOP, FALSE);
+	purple_prefs_rename("/plugins/gtk/win32/wintrans", "/plugins/gtk/transparency");
 }
 
 PURPLE_INIT_PLUGIN(wintrans, init_plugin, info)

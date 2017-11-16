@@ -10,7 +10,6 @@ include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 DISCO_PLUGIN := ./disco
 GTKPERL_PLUGIN := ./perl
 TICKER_PLUGIN := ./ticker
-TRANSPARENCY_PLUGIN := ./win32/transparency
 WINPREFS_PLUGIN := ./win32/winprefs
 
 .SUFFIXES:
@@ -63,14 +62,12 @@ all: plugins
 	$(MAKE) -C $(DISCO_PLUGIN) -f $(MINGW_MAKEFILE)
 	$(MAKE) -C $(GTKPERL_PLUGIN) -f $(MINGW_MAKEFILE)
 	$(MAKE) -C $(TICKER_PLUGIN) -f $(MINGW_MAKEFILE)
-	$(MAKE) -C $(TRANSPARENCY_PLUGIN) -f $(MINGW_MAKEFILE)
 	$(MAKE) -C $(WINPREFS_PLUGIN) -f $(MINGW_MAKEFILE)
 
 install: all $(PIDGIN_INSTALL_PLUGINS_DIR)
 	$(MAKE) -C $(DISCO_PLUGIN) -f $(MINGW_MAKEFILE) install
 	$(MAKE) -C $(GTKPERL_PLUGIN) -f $(MINGW_MAKEFILE) install
 	$(MAKE) -C $(TICKER_PLUGIN) -f $(MINGW_MAKEFILE) install
-	$(MAKE) -C $(TRANSPARENCY_PLUGIN) -f $(MINGW_MAKEFILE) install
 	$(MAKE) -C $(WINPREFS_PLUGIN) -f $(MINGW_MAKEFILE) install
 	cp *.dll $(PIDGIN_INSTALL_PLUGINS_DIR)
 
@@ -102,6 +99,7 @@ plugins: \
 		themeedit.dll \
 		timestamp_format.dll \
 		timestamp.dll \
+		transparency.dll \
 		xmppconsole.dll
 
 ##
@@ -112,7 +110,6 @@ clean:
 	$(MAKE) -C $(DISCO_PLUGIN) -f $(MINGW_MAKEFILE) clean
 	$(MAKE) -C $(GTKPERL_PLUGIN) -f $(MINGW_MAKEFILE) clean
 	$(MAKE) -C $(TICKER_PLUGIN) -f $(MINGW_MAKEFILE) clean
-	$(MAKE) -C $(TRANSPARENCY_PLUGIN) -f $(MINGW_MAKEFILE) clean
 	$(MAKE) -C $(WINPREFS_PLUGIN) -f $(MINGW_MAKEFILE) clean
 
 include $(PIDGIN_COMMON_TARGETS)
