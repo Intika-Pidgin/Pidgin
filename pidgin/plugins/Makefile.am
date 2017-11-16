@@ -47,6 +47,7 @@ spellchk_la_LDFLAGS         = -module -avoid-version
 themeedit_la_LDFLAGS        = -module -avoid-version
 timestamp_la_LDFLAGS        = -module -avoid-version
 timestamp_format_la_LDFLAGS = -module -avoid-version
+transparency_la_LDFLAGS     = -module -avoid-version
 unity_la_LDFLAGS            = -module -avoid-version
 vvconfig_la_LDFLAGS         = -module -avoid-version
 xmppconsole_la_LDFLAGS      = -module -avoid-version
@@ -68,6 +69,7 @@ plugin_LTLIBRARIES = \
 	themeedit.la         \
 	timestamp.la        \
 	timestamp_format.la \
+	transparency.la \
 	xmppconsole.la
 
 if USE_VV
@@ -98,6 +100,7 @@ spellchk_la_SOURCES         = spellchk.c
 themeedit_la_SOURCES        = themeedit.c themeedit-icon.c themeedit-icon.h
 timestamp_la_SOURCES        = timestamp.c
 timestamp_format_la_SOURCES = timestamp_format.c
+transparency_la_SOURCES     = transparency.c
 unity_la_SOURCES            = unity.c
 vvconfig_la_SOURCES         = vvconfig.c
 xmppconsole_la_SOURCES      = xmppconsole.c
@@ -118,6 +121,7 @@ spellchk_la_LIBADD          = $(GTK_LIBS)
 themeedit_la_LIBADD         = $(GTK_LIBS)
 timestamp_la_LIBADD         = $(GTK_LIBS)
 timestamp_format_la_LIBADD  = $(GTK_LIBS)
+transparency_la_LIBADD      = $(GTK_LIBS)
 unity_la_LIBADD             = $(GTK_LIBS) $(UNITY_LIBS)
 vvconfig_la_LIBADD          = $(GTK_LIBS) $(GSTREAMER_LIBS)
 xmppconsole_la_LIBADD       = $(GTK_LIBS)
