@@ -76,11 +76,14 @@ libgnt_dep = declare_dependency(
     link_with : libgnt,
     dependencies : [ncurses, glib])
 
-configure_file(input : 'gnt.pc.in',
-               output : 'gnt.pc',
-               configuration : pkg_conf,
-               install : true,
-               install_dir : get_option('libdir') + '/pkgconfig')
+pkgconfig.generate(
+    name : 'LibGNT',
+    description : 'Glib Ncurses Toolkit is a collection of curses-widgets.',
+    version : purple_display_version,
+    filebase : 'gnt',
+    subdirs : 'gnt',
+    libraries : [libgnt],
+    requires : ['glib-2.0'])
 
 if enable_introspection
 	libgnt_gir = gnome.generate_gir(libgnt,

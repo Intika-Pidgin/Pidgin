@@ -185,11 +185,15 @@ if ENABLE_GTK
 #		pidgin_LDFLAGS += -mwindows
 	endif
 
-	configure_file(input : 'data/pidgin-3.pc.in',
-	               output : 'pidgin-3.pc',
-	               configuration : pkg_conf,
-	               install : true,
-	               install_dir : get_option('libdir') + '/pkgconfig')
+	pkgconfig.generate(
+	    name : 'Pidgin',
+	    description : 'Pidgin is a GTK3-based instant messenger application.',
+	    version : purple_display_version,
+	    filebase : 'pidgin-3',
+	    subdirs : 'pidgin',
+	    libraries : [libpidgin],
+	    requires : ['gtk+-3.0', 'webkitgtk-3.0', 'purple-3'],
+	    variables : ['plugindir=${libdir}/pidgin'])
 
 	if INSTALL_I18N
 		DESKTOP_FILE = 'im.pidgin.Pidgin.desktop'

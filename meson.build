@@ -70,7 +70,6 @@ gnt_display_version = '@0@@1@'.format(gnt_version,
 add_project_arguments('-DHAVE_CONFIG_H=1', language : 'c')
 conf = configuration_data()
 man_conf = configuration_data()
-pkg_conf = configuration_data()
 version_conf = configuration_data()
 
 conf.set_quoted('PACKAGE', meson.project_name())
@@ -107,17 +106,8 @@ package_revision = vcs_tag(
 man_conf.set('VERSION', purple_display_version)
 man_conf.set('prefix', get_option('prefix'))
 
-# This is used for pkg-config files. This probably can be removed and the
-# builtin generator used instead once we drop the Autotools build.
-pkg_conf.set('VERSION', purple_display_version)
-pkg_conf.set('PURPLE_MAJOR_VERSION', purple_major_version)
-pkg_conf.set('prefix', get_option('prefix'))
-pkg_conf.set('exec_prefix', '${prefix}')
-pkg_conf.set('libdir', join_paths('${exec_prefix}', get_option('libdir')))
-pkg_conf.set('includedir', join_paths('${prefix}', get_option('includedir')))
-pkg_conf.set('datarootdir', join_paths('${prefix}', get_option('datadir')))
-pkg_conf.set('datadir', '${datarootdir}')
-pkg_conf.set('sysconfdir', join_paths('${prefix}', get_option('sysconfdir')))
+# Used for pkg-config files.
+pkgconfig = import('pkgconfig')
 
 sedpath = find_program('sed')
 
@@ -1119,11 +1109,12 @@ endif
 if get_option('plugins')
 	gplugin = dependency('gplugin', version : '>= 0.0.17')
 	# GPLUGIN_REQ sets pkg-config requirements in the .pc file
-	pkg_conf.set('GPLUGIN_REQ', ', gplugin')
+	GPLUGIN_REQ = ['gplugin']
 	enable_introspection = dependency('gobject-introspection-1.0',
 	    version : '>= 1.30.0', required : false).found()
 else
 	gplugin = []
+	GPLUGIN_REQ = []
 	enable_introspection = false
 endif
 

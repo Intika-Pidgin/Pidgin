@@ -91,11 +91,14 @@ if enable_consoleui
 	    dependencies : [libpurple_dep, libgnt_dep, libfinch_dep],
 	    install : true)
 
-	configure_file(input : 'finch.pc.in',
-	               output : 'finch.pc',
-	               configuration : pkg_conf,
-	               install : true,
-	               install_dir : get_option('libdir') + '/pkgconfig')
+	pkgconfig.generate(
+	    name : 'Finch',
+	    description : 'Finch is an instant messenger application that uses libpurple for protocol support and ncurses (libgnt) for the UI.',
+	    version : purple_display_version,
+	    filebase : 'finch',
+	    subdirs : 'finch',
+	    libraries : [libfinch],
+	    requires : ['gnt', 'purple-3'])
 
 	if enable_introspection
 		introspection_sources = libfinch_headers

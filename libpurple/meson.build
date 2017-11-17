@@ -418,11 +418,15 @@ install_headers(purple_coreheaders + dbus_headers,
 install_headers(purple_mediaheaders,
                 subdir : 'libpurple/media')
 
-configure_file(input : 'data/purple-3.pc.in',
-               output : 'purple-3.pc',
-               configuration : pkg_conf,
-               install : true,
-               install_dir : get_option('libdir') + '/pkgconfig')
+pkgconfig.generate(
+    name : 'libpurple',
+    description : 'libpurple is a GLib-based instant messenger library.',
+    version : purple_display_version,
+    filebase : 'purple-3',
+    subdirs : 'libpurple',
+    libraries : [libpurple],
+    requires : ['glib-2.0'] + GPLUGIN_REQ,
+    variables : ['plugindir=${libdir}/purple-@0@'.format(purple_major_version)])
 
 if INSTALL_I18N
 	DESKTOP_FILE = 'purple-url-handler.desktop'
