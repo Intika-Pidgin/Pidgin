@@ -25,7 +25,7 @@ You can quickly build Pidgin with the following commands
     ninja
     sudo ninja install
 
-There are a boat load of options for the build that you can view by looking at `meson_options.txt`.  You can specify the options when running meson like the following:
+There are quite a few options for the build that you can view by looking at `meson_options.txt`.  You can specify the options when running meson like the following:
 
     meson -Ddebug=true build
 
