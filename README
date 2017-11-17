@@ -1,5 +1,4 @@
-Purple, Pidgin and Finch
-========================
+# Purple, Pidgin and Finch
 See AUTHORS and COPYRIGHT for the list of contributors.
 
 libpurple is a library intended to be used by programmers seeking
@@ -15,49 +14,53 @@ toolkit.
 These programs are not endorsed by, nor affiliated with, AOL nor any
 other company in any way.
 
-BUILD
-=====
+## BUILD
 
-Read the 'INSTALL' file for more detailed directions.
+Pidgin uses [meson](https://mesonbuild.com) as a build system.
 
-These programs use the standard ./configure ; make. You need to use
-gmake, BSD make probably won't work. Remember, run ./configure --help
-to see what build options are available.
+You can quickly build Pidgin with the following commands
 
-In order to compile Pidgin you need to have GTK+ 2.0 installed (as
-well as the development files!). The configure script will fail if you
-don't.  If you don't have GTK+ 2.0 installed, you should install it
-using your distribution's package management tools.
+    meson build
+    cd build
+    ninja
+    sudo ninja install
 
-For sound support, you also need gstreamer 0.10 or higher.
-Your distro of choice probably already includes these, just be sure to
-install the development packages.
+There are a boat load of options for the build that you can view by looking at `meson_options.txt`.  You can specify the options when running meson like the following:
 
-RUN
-===
+    meson -Ddebug=true build
 
-You should run 'make install' as root to make sure plugins and other files
-get installed into locations they want to be in. Once you've done that,
-you only need to run 'pidgin' or 'finch'.
+If you've already ran meson you can use `meson configure`
+
+    cd build
+    meson configure -Ddebug=true
+
+## RUN
+
+Currently Pidgin can not be run from a build directory which means you must
+install it first.  Once you've done that, you only need to run 'pidgin' or
+'finch'.
 
 To get started, simply add a new account.
 
-If you come across a bug, please report it at: https://developer.pidgin.im
+If you come across a bug, please report it at: https://developer.pidgin.im/
 
-PLUGINS
-=======
+## PLUGINS
 
-If you do not wish to enable the plugin support within Purple, run the
-./configure script with the --disable-plugins option and recompile your
-source code.  This will prevent the ability to load plugins.
+If you do not wish to enable the plugin support within Purple, run meson with
+`-Dplugins=false` or if you've already ran meson use
+`meson configure -Dplugins=false` from the build directory.  This will prevent
+the ability to load plugins.
 
-'make install' puts the plugins in $PREFIX/lib/purple (PREFIX being what
-you specified when you ./configure'd - it defaults to /usr/local). Purple
+`ninja install` puts the plugins in `$PREFIX/lib/purple` (PREFIX being what
+you specified when you ran meson.  It defaults to `/usr/local`). Purple
 looks for the plugins in that directory by default.  Plugins can be installed
-per-user in ~/.purple/plugins as well.  Pidgin and Finch also look in
-$PREFIX/lib/pidgin and $PREFIX/lib/finch for UI-specific, respectively.
+per-user in `~/.purple/plugins` as well.  Pidgin and Finch also look in
+`$PREFIX/lib/pidgin` and `$PREFIX/lib/finch` for UI-specific, respectively.
 
-To build a plugin from a .c file, put it in the plugins/ directory in
-the source and run 'make filename.so', e.g. if you have the .c file
-'kickass.c', put it in the plugins/ directory, and from that directory,
-run 'make kickass.so'.
+## Developing
+
+There is a ton of information on developing Pidgin available at
+[develop.pidgin.im](https://developer.pidgin.im).
+
+To generate the documentation locally you can pass `-Ddoc=true` to `meson` or
+`meson configure` which will build the `gtk-docs` for everything.
