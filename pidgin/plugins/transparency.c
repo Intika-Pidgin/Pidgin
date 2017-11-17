@@ -38,6 +38,8 @@
 /*
  *  MACROS & DEFINES
  */
+/* The plugin name is left unchanged from its WinAPI days in order to keep it
+ * loading for users who were using it. */
 #define WINTRANS_PLUGIN_ID	"gtk-win-trans"
 
 #define blist	(purple_get_blist() \
