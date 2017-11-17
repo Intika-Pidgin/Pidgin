@@ -94,5 +94,6 @@ if enable_introspection
 endif
 
 subdir('wms')
+subdir('test')
 
 endif  # enable_consoleui
