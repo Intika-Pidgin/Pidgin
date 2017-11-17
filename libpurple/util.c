@@ -40,9 +40,73 @@ struct _PurpleMenuAction
 
 static char *custom_user_dir = NULL;
 static char *user_dir = NULL;
+static char *cache_dir = NULL;
+static char *config_dir = NULL;
+static char *data_dir = NULL;
 
 static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
+
+static void
+move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
+{
+	char *xdg_dir;
+	gboolean xdg_dir_exists;
+
+	xdg_dir_exists = g_file_test(purple_xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
+	if (!xdg_dir_exists) {
+		gint mkdir_res;
+
+		mkdir_res = purple_build_dir(purple_xdg_dir, (S_IRUSR | S_IWUSR | S_IXUSR));
+		if (mkdir_res == -1) {
+			purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
+						purple_xdg_dir, g_strerror(errno));
+			return;
+		}
+	}
+
+	xdg_dir = g_build_filename(purple_xdg_dir, subdir, NULL);
+	xdg_dir_exists = g_file_test(xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
+	if (!xdg_dir_exists) {
+		char *old_dir;
+		gboolean old_dir_exists;
+
+		old_dir = g_build_filename(purple_user_dir(), subdir, NULL);
+		old_dir_exists = g_file_test(old_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
+
+		if (old_dir_exists) {
+			g_rename(old_dir, xdg_dir);
+		}
+
+		g_free(old_dir);
+		old_dir = NULL;
+	}
+
+	g_free(xdg_dir);
+	xdg_dir = NULL;
+
+	return;
+}
+
+/* If legacy directory for libpurple exists, move it to location following 
+ * xdg base dir spec. https://developer.pidgin.im/ticket/10029
+ */
+static void
+migrate_to_xdg_base_dirs(void)
+{
+	const char *legacy_purple_dir;
+	gboolean dir_exists;
+
+	legacy_purple_dir = purple_user_dir();
+	dir_exists = g_file_test(legacy_purple_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
+	if (dir_exists) {
+		move_to_xdg_base_dir(purple_data_dir(), "certificates");
+		move_to_xdg_base_dir(purple_cache_dir(), "icons");
+		move_to_xdg_base_dir(purple_data_dir(), "logs");
+	}
+
+	return;
+}
 
 PurpleMenuAction *
 purple_menu_action_new(const char *label, PurpleCallback callback, gpointer data,
@@ -143,6 +207,8 @@ purple_util_init(void)
 	escape_js_node = json_node_new(JSON_NODE_VALUE);
 	escape_js_gen = json_generator_new();
 	json_node_set_boolean(escape_js_node, FALSE);
+
+	migrate_to_xdg_base_dirs();
 }
 
 void
@@ -155,6 +221,15 @@ purple_util_uninit(void)
 
 	g_free(user_dir);
 	user_dir = NULL;
+
+	g_free(cache_dir);
+	cache_dir = NULL;
+
+	g_free(config_dir);
+	config_dir = NULL;
+
+	g_free(data_dir);
+	data_dir = NULL;
 
 	json_node_free(escape_js_node);
 	escape_js_node = NULL;
@@ -3033,6 +3108,48 @@ purple_user_dir(void)
 	return user_dir;
 }
 
+const char *
+purple_cache_dir(void)
+{
+	if (!cache_dir) {
+		if (!custom_user_dir) {
+			cache_dir = g_build_filename(g_get_user_cache_dir(), "purple", NULL);
+		} else {
+			cache_dir = g_build_filename(custom_user_dir, "cache", NULL);
+		}
+	}
+
+	return cache_dir;
+}
+
+const char *
+purple_config_dir(void)
+{
+	if (!config_dir) {
+		if (!custom_user_dir) {
+			config_dir = g_build_filename(g_get_user_config_dir(), "purple", NULL);
+		} else {
+			config_dir = g_build_filename(custom_user_dir, "config", NULL);
+		}
+	}
+
+	return config_dir;
+}
+
+const char *
+purple_data_dir(void)
+{
+	if (!data_dir) {
+		if (!custom_user_dir) {
+			data_dir = g_build_filename(g_get_user_data_dir(), "purple", NULL);
+		} else {
+			data_dir = g_build_filename(custom_user_dir, "data", NULL);
+		}
+	}
+
+	return data_dir;
+}
+
 void purple_util_set_user_dir(const char *dir)
 {
 	g_free(custom_user_dir);
@@ -3043,40 +3160,34 @@ void purple_util_set_user_dir(const char *dir)
 		custom_user_dir = NULL;
 }
 
-int purple_build_dir (const char *path, int mode)
+int purple_build_dir(const char *path, int mode)
 {
 	return g_mkdir_with_parents(path, mode);
 }
 
-/*
- * This function is long and beautiful, like my--um, yeah.  Anyway,
- * it includes lots of error checking so as we don't overwrite
- * people's settings if there is a problem writing the new values.
- */
-gboolean
-purple_util_write_data_to_file(const char *filename, const char *data, gssize size)
+static gboolean
+purple_util_write_data_to_file_common(const char *dir, const char *filename, const char *data, gssize size)
 {
-	const char *user_dir = purple_user_dir();
 	gchar *filename_full;
 	gboolean ret = FALSE;
 
-	g_return_val_if_fail(user_dir != NULL, FALSE);
+	g_return_val_if_fail(dir != NULL, FALSE);
 
 	purple_debug_misc("util", "Writing file %s to directory %s",
-					filename, user_dir);
+			  filename, dir);
 
-	/* Ensure the user directory exists */
-	if (!g_file_test(user_dir, G_FILE_TEST_IS_DIR))
+	/* Ensure the directory exists */
+	if (!g_file_test(dir, G_FILE_TEST_IS_DIR))
 	{
-		if (g_mkdir(user_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
+		if (g_mkdir(dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 		{
 			purple_debug_error("util", "Error creating directory %s: %s\n",
-							 user_dir, g_strerror(errno));
+					   dir, g_strerror(errno));
 			return FALSE;
 		}
 	}
 
-	filename_full = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", user_dir, filename);
+	filename_full = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", dir, filename);
 
 	ret = purple_util_write_data_to_file_absolute(filename_full, data, size);
 
@@ -3084,6 +3195,47 @@ purple_util_write_data_to_file(const char *filename, const char *data, gssize si
 	return ret;
 }
 
+gboolean
+purple_util_write_data_to_file(const char *filename, const char *data, gssize size)
+{
+	const char *user_dir = purple_user_dir();
+	gboolean ret = purple_util_write_data_to_file_common(user_dir, filename, data, size);
+
+	return ret;
+}
+
+gboolean
+purple_util_write_data_to_cache_file(const char *filename, const char *data, gssize size)
+{
+	const char *cache_dir = purple_cache_dir();
+	gboolean ret = purple_util_write_data_to_file_common(cache_dir, filename, data, size);
+
+	return ret;
+}
+
+gboolean
+purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size)
+{
+	const char *config_dir = purple_config_dir();
+	gboolean ret = purple_util_write_data_to_file_common(config_dir, filename, data, size);
+
+	return ret;
+}
+
+gboolean
+purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size)
+{
+	const char *data_dir = purple_data_dir();
+	gboolean ret = purple_util_write_data_to_file_common(data_dir, filename, data, size);
+
+	return ret;
+}
+
+/*
+ * This function is long and beautiful, like my--um, yeah.  Anyway,
+ * it includes lots of error checking so as we don't overwrite
+ * people's settings if there is a problem writing the new values.
+ */
 gboolean
 purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size)
 {
