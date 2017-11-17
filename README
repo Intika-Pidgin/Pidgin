@@ -60,7 +60,7 @@ per-user in `~/.purple/plugins` as well.  Pidgin and Finch also look in
 ## Developing
 
 There is a ton of information on developing Pidgin available at
-[develop.pidgin.im](https://developer.pidgin.im).
+[developer.pidgin.im](https://developer.pidgin.im).
 
 To generate the documentation locally you can pass `-Ddoc=true` to `meson` or
 `meson configure` which will build the `gtk-docs` for everything.
