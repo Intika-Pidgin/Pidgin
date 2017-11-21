@@ -89,6 +89,7 @@ PIDGIN_C_SRC =	\
 			gtksourceundomanager.c \
 			gtkstatus-icon-theme.c \
 			gtkstatusbox.c \
+			gtkstyle.c \
 			gtkthemes.c \
 			gtkutils.c \
 			gtkwhiteboard.c \
