@@ -332,7 +332,7 @@ purple_log_get_log_dir(PurpleLogType type, const char *name, PurpleAccount *acco
 		target = purple_escape_filename(purple_normalize(account, name));
 	}
 
-	dir = g_build_filename(purple_user_dir(), "logs", protocol_name, acct_name, target, NULL);
+	dir = g_build_filename(purple_data_dir(), "logs", protocol_name, acct_name, target, NULL);
 
 	g_free(acct_name);
 
@@ -1023,7 +1023,7 @@ int purple_log_common_sizer(PurpleLog *log)
  * functions because they use the same directory structure. */
 static void log_get_log_sets_common(GHashTable *sets)
 {
-	gchar *log_path = g_build_filename(purple_user_dir(), "logs", NULL);
+	gchar *log_path = g_build_filename(purple_data_dir(), "logs", NULL);
 	GDir *log_dir = g_dir_open(log_path, 0, NULL);
 	const gchar *protocol;
 
@@ -1539,7 +1539,7 @@ struct old_logger_data {
 static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount *account)
 {
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, sn));
-	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
+	char *pathstr = g_build_filename(purple_data_dir(), "logs", logfile, NULL);
 	PurpleStringref *pathref = purple_stringref_new(pathstr);
 	GStatBuf st;
 	time_t log_last_modified;
@@ -1801,7 +1801,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 static int old_logger_total_size(PurpleLogType type, const char *name, PurpleAccount *account)
 {
 	char *logfile = g_strdup_printf("%s.log", purple_normalize(account, name));
-	char *pathstr = g_build_filename(purple_user_dir(), "logs", logfile, NULL);
+	char *pathstr = g_build_filename(purple_data_dir(), "logs", logfile, NULL);
 	int size;
 	GStatBuf st;
 
@@ -1853,7 +1853,7 @@ static int old_logger_size (PurpleLog *log)
 
 static void old_logger_get_log_sets(PurpleLogSetCallback cb, GHashTable *sets)
 {
-	char *log_path = g_build_filename(purple_user_dir(), "logs", NULL);
+	char *log_path = g_build_filename(purple_data_dir(), "logs", NULL);
 	GDir *log_dir = g_dir_open(log_path, 0, NULL);
 	gchar *name;
 	PurpleBlistNode *gnode, *cnode, *bnode;

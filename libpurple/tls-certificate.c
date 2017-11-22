@@ -32,7 +32,7 @@
 static gchar *
 make_certificate_path(const gchar *id)
 {
-	return g_build_filename(purple_user_dir(),
+	return g_build_filename(purple_data_dir(),
 				"certificates", "tls",
 				id != NULL ? purple_escape_filename(id) : NULL,
 				NULL);
