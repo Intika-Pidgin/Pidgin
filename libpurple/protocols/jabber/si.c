@@ -1618,7 +1618,7 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 	}
 }
 
-PurpleXfer *jabber_si_new_xfer(PurpleProtocolXferInterface *iface, PurpleConnection *gc, const char *who)
+PurpleXfer *jabber_si_new_xfer(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who)
 {
 	JabberStream *js;
 
@@ -1647,11 +1647,11 @@ PurpleXfer *jabber_si_new_xfer(PurpleProtocolXferInterface *iface, PurpleConnect
 	return xfer;
 }
 
-void jabber_si_xfer_send(PurpleProtocolXferInterface *iface, PurpleConnection *gc, const char *who, const char *file)
+void jabber_si_xfer_send(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who, const char *file)
 {
 	PurpleXfer *xfer;
 
-	xfer = jabber_si_new_xfer(iface, gc, who);
+	xfer = jabber_si_new_xfer(pxfer, gc, who);
 
 	if (file)
 		purple_xfer_request_accepted(xfer, file);
