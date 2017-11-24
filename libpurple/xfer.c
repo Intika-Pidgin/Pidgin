@@ -2488,39 +2488,55 @@ purple_protocol_xfer_default_init(PurpleProtocolXferInterface *face) {
 }
 
 gboolean
-purple_protocol_xfer_can_receive(PurpleProtocolXferInterface *iface,
+purple_protocol_xfer_can_receive(PurpleProtocolXfer *xfer,
                                  PurpleConnection *connection,
                                  const gchar *who
 ) {
-	g_return_val_if_fail(PURPLE_IS_PROTOCOL_XFER(iface), FALSE);
+	PurpleProtocolXferInterface *iface = NULL;
+
+	g_return_val_if_fail(PURPLE_IS_PROTOCOL_XFER(xfer), FALSE);
 	g_return_val_if_fail(PURPLE_IS_CONNECTION(connection), FALSE);
 	g_return_val_if_fail(who, FALSE);
 
-	return iface->can_receive(iface, connection, who);
+	iface = PURPLE_PROTOCOL_XFER_GET_IFACE(xfer);
+	if(iface &&  iface->can_receive)
+		return iface->can_receive(xfer, connection, who);
+
+	return FALSE;
 }
 
 void
-purple_protocol_xfer_send(PurpleProtocolXferInterface *iface,
+purple_protocol_xfer_send(PurpleProtocolXfer *xfer,
                           PurpleConnection *connection,
                           const gchar *who,
                           const gchar *filename
 ) {
-	g_return_if_fail(PURPLE_IS_PROTOCOL_XFER(iface));
+	PurpleProtocolXferInterface *iface = NULL;
+
+	g_return_if_fail(PURPLE_IS_PROTOCOL_XFER(xfer));
 	g_return_if_fail(PURPLE_IS_CONNECTION(connection));
 	g_return_if_fail(who);
 	g_return_if_fail(filename);
 
-	iface->send(iface, connection, who, filename);
+	iface = PURPLE_PROTOCOL_XFER_GET_IFACE(xfer);
+	if(iface && iface->send)
+		iface->send(xfer, connection, who, filename);
 }
 
 PurpleXfer *
-purple_protocol_xfer_new_xfer(PurpleProtocolXferInterface *iface,
+purple_protocol_xfer_new_xfer(PurpleProtocolXfer *xfer,
                               PurpleConnection *connection,
                               const gchar *who
 ) {
-	g_return_val_if_fail(PURPLE_IS_PROTOCOL_XFER(iface), FALSE);
+	PurpleProtocolXferInterface *iface = NULL;
+
+	g_return_val_if_fail(PURPLE_IS_PROTOCOL_XFER(xfer), FALSE);
 	g_return_val_if_fail(PURPLE_IS_CONNECTION(connection), FALSE);
 	g_return_val_if_fail(who, FALSE);
 
-	return iface->new_xfer(iface, connection, who);
+	iface = PURPLE_PROTOCOL_XFER_GET_IFACE(xfer);
+	if(iface && iface->new_xfer)
+		return iface->new_xfer(xfer, connection, who);
+
+	return NULL;
 }
