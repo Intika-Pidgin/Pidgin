@@ -3540,7 +3540,7 @@ PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who)
 #endif
 }
 
-gboolean jabber_can_receive_file(PurpleProtocolXferInterface *iface, PurpleConnection *gc, const char *who)
+gboolean jabber_can_receive_file(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who)
 {
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 
