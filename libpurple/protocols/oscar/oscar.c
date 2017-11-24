@@ -5257,7 +5257,7 @@ void oscar_set_icon(PurpleConnection *gc, PurpleImage *img)
  * allowed to send a file to this user.
  */
 gboolean
-oscar_can_receive_file(PurpleProtocolXferInterface *iface, PurpleConnection *gc, const char *who)
+oscar_can_receive_file(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who)
 {
 	OscarData *od;
 	PurpleAccount *account;
@@ -5286,7 +5286,7 @@ oscar_can_receive_file(PurpleProtocolXferInterface *iface, PurpleConnection *gc,
 }
 
 PurpleXfer *
-oscar_new_xfer(PurpleProtocolXferInterface *iface, PurpleConnection *gc, const char *who)
+oscar_new_xfer(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who)
 {
 	PurpleXfer *xfer;
 	OscarData *od;
@@ -5320,11 +5320,11 @@ oscar_new_xfer(PurpleProtocolXferInterface *iface, PurpleConnection *gc, const c
  * file is to be sent to a special someone.
  */
 void
-oscar_send_file(PurpleProtocolXferInterface *iface, PurpleConnection *gc, const char *who, const char *file)
+oscar_send_file(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who, const char *file)
 {
 	PurpleXfer *xfer;
 
-	xfer = oscar_new_xfer(iface, gc, who);
+	xfer = oscar_new_xfer(pxfer, gc, who);
 
 	if (file != NULL)
 		purple_xfer_request_accepted(xfer, file);
