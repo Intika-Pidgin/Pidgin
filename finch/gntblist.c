@@ -1284,12 +1284,16 @@ create_buddy_menu(GntMenu *menu, PurpleBuddy *buddy)
 	add_custom_action(menu, _("Add Buddy Pounce"),
 			PURPLE_CALLBACK(finch_blist_pounce_node_cb), buddy);
 
-	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, send))
+	if (PURPLE_IS_PROTOCOL_XFER(protocol))
 	{
-		if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive) ||
-			purple_protocol_xfer_iface_can_receive(protocol, gc, purple_buddy_get_name(buddy)))
+		if (purple_protocol_xfer_can_receive(
+			PURPLE_PROTOCOL_XFER(protocol),
+			gc,
+			purple_buddy_get_name(buddy))
+		) {
 			add_custom_action(menu, _("Send File"),
 					PURPLE_CALLBACK(finch_blist_menu_send_file_cb), buddy);
+		}
 	}
 
 	account = purple_buddy_get_account(buddy);
