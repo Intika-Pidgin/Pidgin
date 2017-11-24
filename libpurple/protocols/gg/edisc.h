@@ -41,9 +41,9 @@ void ggp_edisc_xfer_ticket_changed(PurpleConnection *gc,
 	const char *data);
 
 /* Sending a file. */
-gboolean ggp_edisc_xfer_can_receive_file(PurpleConnection *gc, const char *who);
-void ggp_edisc_xfer_send_file(PurpleConnection *gc, const char *who,
+gboolean ggp_edisc_xfer_can_receive_file(PurpleProtocolXfer *xfer, PurpleConnection *gc, const char *who);
+void ggp_edisc_xfer_send_file(PurpleProtocolXfer *xfer, PurpleConnection *gc, const char *who,
 	const char *filename);
-PurpleXfer * ggp_edisc_xfer_send_new(PurpleConnection *gc, const char *who);
+PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *xfer, PurpleConnection *gc, const char *who);
 
 #endif /* _GGP_EDISC_H */
