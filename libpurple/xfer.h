@@ -38,6 +38,11 @@
 
 #define PURPLE_TYPE_XFER_UI_OPS      (purple_xfer_ui_ops_get_type())
 
+#define PURPLE_TYPE_PROTOCOL_XFER           (purple_protocol_xfer_get_type())
+#define PURPLE_PROTOCOL_XFER(obj)           (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXfer))
+#define PURPLE_IS_PROTOCOL_XFER(obj)        (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_XFER))
+#define PURPLE_PROTOCOL_XFER_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXferInterface))
+
 /**************************************************************************/
 /** Data Structures                                                       */
 /**************************************************************************/
@@ -46,10 +51,14 @@ typedef struct _PurpleXferClass PurpleXferClass;
 
 typedef struct _PurpleXferUiOps PurpleXferUiOps;
 
+typedef struct _PurpleProtocolXfer PurpleProtocolXfer;
+typedef struct _PurpleProtocolXferInterface PurpleProtocolXferInterface;
+
 #include <glib.h>
 #include <stdio.h>
 
 #include "account.h"
+#include "connection.h"
 
 /**
  * PurpleXferType:
@@ -180,6 +189,26 @@ struct _PurpleXferClass
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
 	void (*_purple_reserved4)(void);
+};
+
+/**
+ * PurpleProtocolXferIface:
+ *
+ * The protocol file transfer interface.
+ *
+ * This interface provides file transfer callbacks for the protocol.
+ */
+struct _PurpleProtocolXferInterface
+{
+	/*< private >*/
+	GTypeInterface parent_iface;
+
+	/*< public >*/
+	gboolean (*can_receive)(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who);
+
+	void (*send)(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who, const gchar *filename);
+
+	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who);
 };
 
 G_BEGIN_DECLS
@@ -945,6 +974,52 @@ void purple_xfers_set_ui_ops(PurpleXferUiOps *ops);
  * Returns: The UI operations structure.
  */
 PurpleXferUiOps *purple_xfers_get_ui_ops(void);
+
+/******************************************************************************
+ * Protocol Interface
+ *****************************************************************************/
+
+/**
+ * purple_protocol_xfer_get_type:
+ *
+ * Returns: The #GType for the protocol xfer interface.
+ */
+GType purple_protocol_xfer_get_type(void);
+
+/**
+ * purple_protocol_xfer_can_receive:
+ * @xface: The #PurpleProtocolXfer implementer instance
+ * @connection: The #PurpleConnection that we're checking
+ * @who: The user that we want to set a file transfer to.
+ *
+ * Checks whether or not we can transfer a file to @who.
+ *
+ * Returns: TRUE on success, FALSE otherwise.
+ */
+gboolean purple_protocol_xfer_can_receive(PurpleProtocolXfer *xfer, PurpleConnection *connection, const gchar *who);
+
+/**
+ * purple_protocol_xfer_send:
+ * @xfer: The #PurpleProtocolXfer inmplementer instance
+ * @connection: The #PurpleConnection that we're checking
+ * @who: The user that we want to set a file transfer to.
+ * @filename: The name of the file to send.
+ *
+ * Sends @filename to @who.
+ */
+void purple_protocol_xfer_send(PurpleProtocolXfer *xfer, PurpleConnection *connection, const gchar *who, const gchar *filename);
+
+/**
+ * purple_protocol_xfer_send:
+ * @xfer: The #PurpleProtocolXfer implementer instance
+ * @connection: The #PurpleConnection that we're checking
+ * @who: The user that we want to set a file transfer to.
+ *
+ * Creates a new #PurpleXfer to @who.
+ *
+ * Returns: A new #PurpleXfer instance.
+ */
+PurpleXfer *purple_protocol_xfer_new_xfer(PurpleProtocolXfer *xfer, PurpleConnection *connection, const gchar *who);
 
 G_END_DECLS
 
