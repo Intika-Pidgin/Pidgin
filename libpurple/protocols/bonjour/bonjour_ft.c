@@ -339,7 +339,7 @@ bonjour_free_xfer(PurpleXfer *xfer)
 }
 
 PurpleXfer *
-bonjour_new_xfer(PurpleConnection *gc, const char *who)
+bonjour_new_xfer(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who)
 {
 	PurpleXfer *xfer;
 	XepXfer *xep_xfer;
@@ -376,7 +376,7 @@ bonjour_new_xfer(PurpleConnection *gc, const char *who)
 }
 
 void
-bonjour_send_file(PurpleConnection *gc, const char *who, const char *file)
+bonjour_send_file(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who, const char *file)
 {
 	PurpleXfer *xfer;
 
@@ -385,7 +385,7 @@ bonjour_send_file(PurpleConnection *gc, const char *who, const char *file)
 
 	purple_debug_info("bonjour", "Bonjour-send-file to=%s.\n", who);
 
-	xfer = bonjour_new_xfer(gc, who);
+	xfer = bonjour_new_xfer(pxfer, gc, who);
 
 	if (file)
 		purple_xfer_request_accepted(xfer, file);

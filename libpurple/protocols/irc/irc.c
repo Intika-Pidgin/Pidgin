@@ -916,7 +916,7 @@ irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
 }
 
 static void
-irc_protocol_xfer_iface_init(PurpleProtocolXferIface *xfer_iface)
+irc_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->send     = irc_dccsend_send_file;
 	xfer_iface->new_xfer = irc_dccsend_new_xfer;
@@ -940,7 +940,7 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
 	                                  irc_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
 	                                  irc_protocol_xfer_iface_init)
 );
 

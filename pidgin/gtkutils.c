@@ -1469,10 +1469,15 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 	if (!(purple_connection_get_flags(gc) & PURPLE_CONNECTION_FLAG_NO_IMAGES))
 		im = TRUE;
 
-	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive))
-		ft = purple_protocol_xfer_iface_can_receive(protocol, gc, who);
-	else if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, send))
-		ft = TRUE;
+	if (protocol && PURPLE_IS_PROTOCOL_XFER(protocol)) {
+		PurpleProtocolXferInterface *iface = PURPLE_PROTOCOL_XFER(protocol);
+
+		if(iface->can_receive) {
+			ft = purple_protocol_xfer_can_receive(protocol, gc, who);
+		} else {
+			ft = (iface->send) ? TRUE : FALSE;
+		}
+	}
 
 	if (im && ft) {
 		purple_request_choice(NULL, NULL,
