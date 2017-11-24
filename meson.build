@@ -864,7 +864,7 @@ endforeach
 
 DYNAMIC_BONJOUR = DYNAMIC_PRPLS.contains('bonjour')
 DYNAMIC_FACEBOOK = DYNAMIC_PRPLS.contains('facebook')
-DYNAMIC_GG  = DYNAMIC_PRPLS.contains('gg ')
+DYNAMIC_GG  = DYNAMIC_PRPLS.contains('gg')
 DYNAMIC_IRC = DYNAMIC_PRPLS.contains('irc')
 DYNAMIC_JABBER = DYNAMIC_PRPLS.contains('jabber')
 DYNAMIC_NOVELL = DYNAMIC_PRPLS.contains('novell')
