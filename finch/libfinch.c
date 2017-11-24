@@ -29,6 +29,7 @@
 #include "glibcompat.h"
 #include "log.h"
 #include "notify.h"
+#include "options.h"
 #include "plugins.h"
 #include "protocol.h"
 #include "pounce.h"
@@ -146,9 +147,6 @@ init_libpurple(int argc, char **argv)
 		{"config", 'c', 0,
 			G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
 			_("use DIR for config files"), _("DIR")},
-		{"debug", 'd', 0,
-			G_OPTION_ARG_NONE, &debug_enabled,
-			_("print debugging messages to stderr"), NULL},
 		{"nologin", 'n', 0,
 			G_OPTION_ARG_NONE, &opt_nologin,
 			_("don't automatically login"), NULL},
@@ -169,6 +167,9 @@ init_libpurple(int argc, char **argv)
 	context = g_option_context_new(NULL);
 	g_option_context_set_summary(context, DISPLAY_VERSION);
 	g_option_context_add_main_entries(context, option_entries, PACKAGE);
+
+	g_option_context_add_group(context, purple_get_option_group());
+	g_option_context_add_group(context, gplugin_get_option_group());
 
 #ifdef G_OS_WIN32
 	/* Handle Unicode filenames on Windows. See GOptionContext docs. */
