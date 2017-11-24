@@ -53,10 +53,10 @@ typedef struct {
 
 
 static gboolean
-test_purple_protocol_xfer_can_receive(PurpleProtocolXferInterface *iface, PurpleConnection *c, const gchar *who) {
-	TestPurpleProtocolXfer *xfer = (TestPurpleProtocolXfer *)iface;
+test_purple_protocol_xfer_can_receive(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who) {
+	TestPurpleProtocolXfer *test_xfer = (TestPurpleProtocolXfer *)xfer;
 
-	return xfer->can_send;
+	return test_xfer->can_send;
 }
 
 static void
@@ -101,6 +101,8 @@ test_purple_protocol_xfer_can_receive_func(TestPurpleProtocolXferFixture *fixtur
 	PurpleAccount *a = purple_account_new("testing", "testing");
 	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, "account", a, NULL);
 	gboolean actual = FALSE;
+
+	g_assert_true(PURPLE_IS_PROTOCOL_XFER(xfer));
 
 	xfer->can_send = FALSE;
 	actual = purple_protocol_xfer_can_receive(

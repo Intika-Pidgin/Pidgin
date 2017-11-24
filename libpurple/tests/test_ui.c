@@ -74,6 +74,9 @@ test_ui_purple_init(void) {
 	signal(SIGCHLD, SIG_IGN);
 #endif
 
+	/* set the magic PURPLE_PLUGINS_SKIP environment variable */
+	g_setenv("PURPLE_PLUGINS_SKIP", "1", TRUE);
+
 	/* Set a custom user directory (optional) */
 	purple_util_set_user_dir(TEST_DATA_DIR);
 

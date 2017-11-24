@@ -1137,7 +1137,11 @@ purple_plugins_init(void)
 
 	gplugin_manager_add_default_paths();
 
-	purple_plugins_add_search_path(PURPLE_LIBDIR);
+	if(!g_getenv("PURPLE_PLUGINS_SKIP")) {
+		purple_plugins_add_search_path(PURPLE_LIBDIR);
+	} else {
+		purple_debug_info("plugins", "PURPLE_PLUGINS_SKIP environment variable set, skipping normal plugin paths");
+	}
 
 	g_signal_connect(gplugin_manager_get_instance(), "loading-plugin",
 	                 G_CALLBACK(plugin_loading_cb), NULL);
