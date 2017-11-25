@@ -236,17 +236,36 @@ jabber_process_starttls(JabberStream *js, xmlnode *packet)
 		}
 	}
 #else
-	if(purple_ssl_is_supported()) {
+	if (!purple_ssl_is_supported()) {
+		purple_debug_warning("jabber", "No libpurple TLS/SSL support found.");
+	}
+
+	/* It's a secure BOSH connection, just return FALSE and skip, without doing anything extra.
+	 * XEP-0206 (XMPP Over BOSH): The client SHOULD ignore any Transport Layer Security (TLS)
+	 * feature since BOSH channel encryption SHOULD be negotiated at the HTTP layer.
+	 *
+	 * Note: we are already receiving STARTTLS at this point from a SSL/TLS BOSH connection,
+	 * so it is not necessary to check if purple_ssl_is_supported().
+	 */
+	if (js->bosh && jabber_bosh_connection_is_ssl(js->bosh)) {
+		return FALSE;
+	}
+
+	/* Otherwise, it's a standard XMPP connection, or a HTTP (insecure) BOSH connection.
+	 * We request STARTTLS for standard XMPP connections, but we do nothing for insecure
+	 * BOSH connections, per XEP-0206. */
+	if(purple_ssl_is_supported() && !js->bosh) {
 		jabber_send_raw(js,
 				"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
 		return TRUE;
-	} else {
-		purple_debug_warning("jabber", "No libpurple TLS/SSL support found.");
 	}
 #endif
-
+	/* It's an insecure standard XMPP connection, or an insecure BOSH connection, let's
+	 * ignore STARTTLS even it's required by the server to prevent disabling HTTP BOSH
+	 * entirely (sysadmin is responsible to provide HTTPS-only BOSH if security is required),
+	 * and emit errors if encryption is required by the user. */
 	starttls = xmlnode_get_child(packet, "starttls");
-	if(xmlnode_get_child(starttls, "required")) {
+	if(!js->bosh && xmlnode_get_child(starttls, "required")) {
 		purple_connection_error_reason(js->gc,
 				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
 				_("Server requires TLS/SSL, but no TLS/SSL support was found."));
