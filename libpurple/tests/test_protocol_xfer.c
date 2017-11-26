@@ -35,13 +35,13 @@
 static GType test_purple_protocol_xfer_get_type(void);
 
 typedef struct {
-	GObject parent;
+	PurpleProtocol parent;
 
 	gboolean can_send;
 } TestPurpleProtocolXfer;
 
 typedef struct {
-	GObjectClass parent;
+	PurpleProtocolClass parent;
 } TestPurpleProtocolXferClass;
 
 
@@ -69,7 +69,7 @@ test_purple_protocol_xfer_iface_init(PurpleProtocolXferInterface *iface) {
 G_DEFINE_TYPE_WITH_CODE(
 	TestPurpleProtocolXfer,
 	test_purple_protocol_xfer,
-	G_TYPE_OBJECT,
+	PURPLE_TYPE_PROTOCOL,
 	G_IMPLEMENT_INTERFACE(
 		PURPLE_TYPE_PROTOCOL_XFER,
 		test_purple_protocol_xfer_iface_init
@@ -77,11 +77,14 @@ G_DEFINE_TYPE_WITH_CODE(
 );
 
 static void
-test_purple_protocol_xfer_init(TestPurpleProtocolXfer *self) {
+test_purple_protocol_xfer_init(TestPurpleProtocolXfer *prplxfer) {
+	PurpleProtocol *prpl = PURPLE_PROTOCOL(prplxfer);
+
+	prpl->id = "prpl-xfer";
 }
 
 static void
-test_purple_protocol_xfer_class_init(TestPurpleProtocolXferClass *klass){
+test_purple_protocol_xfer_class_init(TestPurpleProtocolXferClass *klass) {
 }
 
 /******************************************************************************
@@ -90,7 +93,7 @@ test_purple_protocol_xfer_class_init(TestPurpleProtocolXferClass *klass){
 static void
 test_purple_protocol_xfer_can_receive_func(void) {
 	TestPurpleProtocolXfer *xfer = g_object_new(test_purple_protocol_xfer_get_type(), NULL);
-	PurpleAccount *a = purple_account_new("testing", "testing");
+	PurpleAccount *a = purple_account_new("prpl-xfer-can-receive", "prpl-xfer");
 	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, "account", a, NULL);
 	gboolean actual = FALSE;
 
@@ -116,7 +119,7 @@ test_purple_protocol_xfer_can_receive_func(void) {
 static void
 test_purple_protocol_xfer_new_func(void) {
 	TestPurpleProtocolXfer *prplxfer = g_object_new(test_purple_protocol_xfer_get_type(), NULL);
-	PurpleAccount *a = purple_account_new("testing", "testing");
+	PurpleAccount *a = purple_account_new("prpl-xfer-new-xfer", "prpl-xfer");
 	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, "account", a, NULL);
 	PurpleXfer *xfer = NULL;
 
@@ -152,7 +155,7 @@ main(gint argc, gchar **argv) {
 
 	res = g_test_run();
 
-	purple_core_quit();
+	// purple_core_quit();
 
 	return res;
 }
