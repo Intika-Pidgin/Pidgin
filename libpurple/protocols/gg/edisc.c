@@ -383,7 +383,7 @@ static void ggp_edisc_xfer_send_start(PurpleXfer *xfer);
 static void ggp_edisc_xfer_send_done(PurpleHttpConnection *hc,
 	PurpleHttpResponse *response, gpointer _xfer);
 
-gboolean ggp_edisc_xfer_can_receive_file(PurpleProtocolXfer *xfer, PurpleConnection *gc,
+gboolean ggp_edisc_xfer_can_receive_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc,
 	const char *who)
 {
 	PurpleBuddy *buddy;
@@ -664,7 +664,7 @@ static void ggp_edisc_xfer_send_done(PurpleHttpConnection *hc,
 		ggp_edisc_xfer_error(xfer, _("Error while sending a file"));
 }
 
-PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who)
+PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who)
 {
 	PurpleXfer *xfer;
 	ggp_edisc_xfer *edisc_xfer;
@@ -686,7 +686,7 @@ PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *pxfer, PurpleConnection
 	return xfer;
 }
 
-void ggp_edisc_xfer_send_file(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who,
+void ggp_edisc_xfer_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who,
 	const char *filename)
 {
 	PurpleXfer *xfer;
@@ -697,7 +697,7 @@ void ggp_edisc_xfer_send_file(PurpleProtocolXfer *pxfer, PurpleConnection *gc, c
 	/* Nothing interesting here, this code is common among protocols.
 	 * See ggp_edisc_xfer_send_new. */
 
-	xfer = ggp_edisc_xfer_send_new(pxfer, gc, who);
+	xfer = ggp_edisc_xfer_send_new(prplxfer, gc, who);
 	if (filename)
 		purple_xfer_request_accepted(xfer, filename);
 	else

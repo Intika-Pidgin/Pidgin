@@ -466,7 +466,7 @@ bonjour_rename_group(PurpleConnection *connection, const char *old_name, PurpleG
 }
 
 static gboolean
-bonjour_can_receive_file(PurpleProtocolXfer *xfer, PurpleConnection *connection, const char *who)
+bonjour_can_receive_file(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const char *who)
 {
 	PurpleBuddy *buddy = purple_blist_find_buddy(purple_connection_get_account(connection), who);
 
