@@ -2360,21 +2360,23 @@ purple_xfer_new(PurpleAccount *account, PurpleXferType type, const char *who)
 	g_return_val_if_fail(who != NULL, NULL);
 
 	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
+	if (PURPLE_IS_PROTOCOL_XFER(protocol)) {
+		PurpleConnection *connection = purple_account_get_connection(account);
 
-	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), NULL);
-
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY_IFACE, xfer_new))
-		xfer = purple_protocol_factory_iface_xfer_new(protocol, account, type,
-				who);
-	else
+		xfer = purple_protocol_xfer_new_xfer(
+			PURPLE_PROTOCOL_XFER(protocol),
+			connection,
+			/* TODO: this should support the type */
+			who
+		);
+	} else {	
 		xfer = g_object_new(PURPLE_TYPE_XFER,
 			"account",     account,
 			"type",        type,
 			"remote-user", who,
 			NULL
 		);
-
-	g_return_val_if_fail(xfer != NULL, NULL);
+	}
 
 	return xfer;
 }
