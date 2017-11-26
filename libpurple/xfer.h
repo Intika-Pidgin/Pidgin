@@ -204,11 +204,11 @@ struct _PurpleProtocolXferInterface
 	GTypeInterface parent_iface;
 
 	/*< public >*/
-	gboolean (*can_receive)(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who);
+	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who);
 
-	void (*send)(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who, const gchar *filename);
+	void (*send)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who, const gchar *filename);
 
-	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who);
+	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who);
 };
 
 G_BEGIN_DECLS
@@ -988,7 +988,7 @@ GType purple_protocol_xfer_get_type(void);
 
 /**
  * purple_protocol_xfer_can_receive:
- * @xface: The #PurpleProtocolXfer implementer instance
+ * @prplxfer: The #PurpleProtocolXfer implementer instance
  * @connection: The #PurpleConnection that we're checking
  * @who: The user that we want to set a file transfer to.
  *
@@ -996,22 +996,22 @@ GType purple_protocol_xfer_get_type(void);
  *
  * Returns: TRUE on success, FALSE otherwise.
  */
-gboolean purple_protocol_xfer_can_receive(PurpleProtocolXfer *xfer, PurpleConnection *connection, const gchar *who);
+gboolean purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const gchar *who);
 
 /**
  * purple_protocol_xfer_send:
- * @xfer: The #PurpleProtocolXfer inmplementer instance
+ * @prplxfer: The #PurpleProtocolXfer inmplementer instance
  * @connection: The #PurpleConnection that we're checking
  * @who: The user that we want to set a file transfer to.
  * @filename: The name of the file to send.
  *
  * Sends @filename to @who.
  */
-void purple_protocol_xfer_send(PurpleProtocolXfer *xfer, PurpleConnection *connection, const gchar *who, const gchar *filename);
+void purple_protocol_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const gchar *who, const gchar *filename);
 
 /**
  * purple_protocol_xfer_send:
- * @xfer: The #PurpleProtocolXfer implementer instance
+ * @prplxfer: The #PurpleProtocolXfer implementer instance
  * @connection: The #PurpleConnection that we're checking
  * @who: The user that we want to set a file transfer to.
  *
@@ -1019,7 +1019,7 @@ void purple_protocol_xfer_send(PurpleProtocolXfer *xfer, PurpleConnection *conne
  *
  * Returns: A new #PurpleXfer instance.
  */
-PurpleXfer *purple_protocol_xfer_new_xfer(PurpleProtocolXfer *xfer, PurpleConnection *connection, const gchar *who);
+PurpleXfer *purple_protocol_xfer_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const gchar *who);
 
 G_END_DECLS
 
