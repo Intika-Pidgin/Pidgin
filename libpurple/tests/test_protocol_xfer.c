@@ -30,13 +30,6 @@
 #include "test_ui.h"
 
 /******************************************************************************
- * Junk
- *****************************************************************************/
-typedef struct {
-	gint dummy;
-} TestPurpleProtocolXferFixture;
-
-/******************************************************************************
  * PurpleProtcolXfer Implementations
  *****************************************************************************/
 static GType test_purple_protocol_xfer_get_type(void);
@@ -53,17 +46,24 @@ typedef struct {
 
 
 static gboolean
-test_purple_protocol_xfer_can_receive(PurpleProtocolXfer *xfer, PurpleConnection *c, const gchar *who) {
-	TestPurpleProtocolXfer *test_xfer = (TestPurpleProtocolXfer *)xfer;
+test_purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who) {
+	TestPurpleProtocolXfer *test_xfer = (TestPurpleProtocolXfer *)prplxfer;
 
 	return test_xfer->can_send;
+}
+
+static PurpleXfer *
+test_purple_protocol_xfer_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who) {
+	PurpleAccount *a = purple_connection_get_account(c);
+
+	return purple_xfer_new(a, PURPLE_XFER_TYPE_SEND, who);
 }
 
 static void
 test_purple_protocol_xfer_iface_init(PurpleProtocolXferInterface *iface) {
 	iface->can_receive = test_purple_protocol_xfer_can_receive;
 	iface->send = NULL;
-	iface->new_xfer = NULL;
+	iface->new_xfer = test_purple_protocol_xfer_new_xfer;
 }
 
 G_DEFINE_TYPE_WITH_CODE(
@@ -85,18 +85,10 @@ test_purple_protocol_xfer_class_init(TestPurpleProtocolXferClass *klass){
 }
 
 /******************************************************************************
- * Helpers
- *****************************************************************************/
-static void
-test_purple_protocol_xfer_setup(TestPurpleProtocolXferFixture *fixture, gconstpointer data) {
-	test_ui_purple_init();
-}
-
-/******************************************************************************
  * Tests
  *****************************************************************************/
 static void
-test_purple_protocol_xfer_can_receive_func(TestPurpleProtocolXferFixture *fixture, gconstpointer data) {
+test_purple_protocol_xfer_can_receive_func(void) {
 	TestPurpleProtocolXfer *xfer = g_object_new(test_purple_protocol_xfer_get_type(), NULL);
 	PurpleAccount *a = purple_account_new("testing", "testing");
 	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, "account", a, NULL);
@@ -121,25 +113,46 @@ test_purple_protocol_xfer_can_receive_func(TestPurpleProtocolXferFixture *fixtur
 	g_assert_true(actual);
 }
 
+static void
+test_purple_protocol_xfer_new_func(void) {
+	TestPurpleProtocolXfer *prplxfer = g_object_new(test_purple_protocol_xfer_get_type(), NULL);
+	PurpleAccount *a = purple_account_new("testing", "testing");
+	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, "account", a, NULL);
+	PurpleXfer *xfer = NULL;
+
+	xfer = purple_protocol_xfer_new_xfer(PURPLE_PROTOCOL_XFER(prplxfer), c, "foo");
+	g_assert_true(PURPLE_IS_XFER(xfer));
+	g_assert_cmpstr("foo", ==, purple_xfer_get_remote_user(xfer));
+}
+
 /******************************************************************************
  * Main
  *****************************************************************************/
 gint
 main(gint argc, gchar **argv) {
+	gint res = 0;
+
 	g_test_init(&argc, &argv, NULL);
 
 	#if GLIB_CHECK_VERSION(2, 38, 0)
 	g_test_set_nonfatal_assertions();
 	#endif /* GLIB_CHECK_VERSION(2, 38, 0) */
 
-	g_test_add(
+	test_ui_purple_init();
+
+	g_test_add_func(
 		"/protocol-xfer/can-receive",
-		TestPurpleProtocolXferFixture,
-		NULL,
-		test_purple_protocol_xfer_setup,
-		test_purple_protocol_xfer_can_receive_func,
-		NULL
+		test_purple_protocol_xfer_can_receive_func
 	);
 
-	return g_test_run();
+	g_test_add_func(
+		"/protocol-xfer/new",
+		test_purple_protocol_xfer_new_func
+	);
+
+	res = g_test_run();
+
+	purple_core_quit();
+
+	return res;
 }
