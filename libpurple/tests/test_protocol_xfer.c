@@ -38,6 +38,7 @@ typedef struct {
 	PurpleProtocol parent;
 
 	gboolean can_send;
+	gboolean new_xfer_called;
 } TestPurpleProtocolXfer;
 
 typedef struct {
@@ -54,7 +55,10 @@ test_purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer, PurpleConnec
 
 static PurpleXfer *
 test_purple_protocol_xfer_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who) {
+	TestPurpleProtocolXfer *test_xfer = (TestPurpleProtocolXfer *)prplxfer;
 	PurpleAccount *a = purple_connection_get_account(c);
+
+	test_xfer->new_xfer_called = TRUE;
 
 	return purple_xfer_new(a, PURPLE_XFER_TYPE_SEND, who);
 }
@@ -126,6 +130,7 @@ test_purple_protocol_xfer_new_func(void) {
 	xfer = purple_protocol_xfer_new_xfer(PURPLE_PROTOCOL_XFER(prplxfer), c, "foo");
 	g_assert_true(PURPLE_IS_XFER(xfer));
 	g_assert_cmpstr("foo", ==, purple_xfer_get_remote_user(xfer));
+	g_assert_true(prplxfer->new_xfer_called);
 }
 
 /******************************************************************************
