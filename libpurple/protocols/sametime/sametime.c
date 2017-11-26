@@ -4941,7 +4941,7 @@ static void mw_protocol_remove_group(PurpleConnection *gc, PurpleGroup *group) {
 }
 
 
-static gboolean mw_protocol_can_receive_file(PurpleProtocolXfer *pxfer,
+static gboolean mw_protocol_can_receive_file(PurpleProtocolXfer *prplxfer,
 					 PurpleConnection *gc,
 					 const char *who) {
   struct mwPurpleProtocolData *pd;
@@ -5031,7 +5031,7 @@ static void ft_outgoing_cancel(PurpleXfer *xfer) {
 }
 
 
-static PurpleXfer *mw_protocol_new_xfer(PurpleProtocolXfer *pxfer, PurpleConnection *gc, const char *who) {
+static PurpleXfer *mw_protocol_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who) {
   PurpleAccount *acct;
   PurpleXfer *xfer;
 
@@ -5047,11 +5047,11 @@ static PurpleXfer *mw_protocol_new_xfer(PurpleProtocolXfer *pxfer, PurpleConnect
   return xfer;
 }
 
-static void mw_protocol_send_file(PurpleProtocolXfer *pxfer,
+static void mw_protocol_send_file(PurpleProtocolXfer *prplxfer,
 			      PurpleConnection *gc,
 			      const char *who, const char *file) {
 
-  PurpleXfer *xfer = mw_protocol_new_xfer(pxfer, gc, who);
+  PurpleXfer *xfer = mw_protocol_new_xfer(prplxfer, gc, who);
 
   if(file) {
     DEBUG_INFO("file != NULL\n");

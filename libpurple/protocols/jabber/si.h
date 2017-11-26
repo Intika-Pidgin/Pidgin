@@ -32,8 +32,8 @@ void jabber_bytestreams_parse(JabberStream *js, const char *from,
                               JabberIqType type, const char *id, PurpleXmlNode *query);
 void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
                      const char *id, PurpleXmlNode *si);
-PurpleXfer *jabber_si_new_xfer(PurpleProtocolXfer *xfer, PurpleConnection *gc, const char *who);
-void jabber_si_xfer_send(PurpleProtocolXfer *xfer, PurpleConnection *gc, const char *who, const char *file);
+PurpleXfer *jabber_si_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
+void jabber_si_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
 void jabber_si_init(void);
 void jabber_si_uninit(void);
 
