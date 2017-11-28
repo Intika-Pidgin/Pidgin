@@ -340,12 +340,6 @@ io_invoke(GIOChannel *source, GIOCondition cond, gpointer null)
 	}
 	*k = '\0';
 
-#if 0
-	gnt_warning("a key: [%s] %#x %#x %#x %#x %#x %#x", keys,
-		(guchar)keys[0], (guchar)keys[1], (guchar)keys[2],
-		(guchar)keys[3], (guchar)keys[4], (guchar)keys[5]);
-#endif
-
 	/* TODO: we could call detect_mouse_action here, but no
 	 * events are triggered (yet?) for mouse on win32.
 	 */
@@ -395,17 +389,6 @@ io_invoke(GIOChannel *source, GIOCondition cond, gpointer null)
 	if (mouse_enabled && detect_mouse_action(k))
 		goto end;
 
-#if 0
-	/* I am not sure what's happening here. If this actually does something,
-	 * then this needs to go in gnt_keys_refine. */
-	if (*k < 0) { /* Alt not sending ESC* */
-		*(k + 1) = 128 - *k;
-		*k = 27;
-		*(k + 2) = 0;
-		rd++;
-	}
-#endif
-
 	while (rd) {
 		char back;
 		int p;
@@ -450,12 +433,6 @@ setup_io()
 
 	g_io_channel_set_close_on_unref(channel, TRUE);
 
-#if 0
-	g_io_channel_set_encoding(channel, NULL, NULL);
-	g_io_channel_set_buffered(channel, FALSE);
-	g_io_channel_set_flags(channel, G_IO_FLAG_NONBLOCK, NULL );
-#endif
-
 	channel_read_callback = result = g_io_add_watch_full(channel,  G_PRIORITY_HIGH,
 					(G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_PRI),
 					io_invoke, NULL, NULL);
@@ -465,10 +442,6 @@ setup_io()
 					io_invoke_error, GINT_TO_POINTER(result), NULL);
 
 	g_io_channel_unref(channel);
-
-#if 0
-	gnt_warning("setting up IO (%d)", channel_read_callback);
-#endif
 }
 
 static gboolean
