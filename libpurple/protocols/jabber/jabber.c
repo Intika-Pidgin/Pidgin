@@ -236,10 +236,6 @@ jabber_process_starttls(JabberStream *js, xmlnode *packet)
 		}
 	}
 #else
-	if (!purple_ssl_is_supported()) {
-		purple_debug_warning("jabber", "No libpurple TLS/SSL support found.");
-	}
-
 	/* It's a secure BOSH connection, just return FALSE and skip, without doing anything extra.
 	 * XEP-0206 (XMPP Over BOSH): The client SHOULD ignore any Transport Layer Security (TLS)
 	 * feature since BOSH channel encryption SHOULD be negotiated at the HTTP layer.
