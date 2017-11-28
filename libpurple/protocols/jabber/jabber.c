@@ -220,22 +220,6 @@ jabber_process_starttls(JabberStream *js, xmlnode *packet)
 
 	account = purple_connection_get_account(js->gc);
 
-#if 0
-	/*
-	 * This code DOES NOT EXIST, will never be enabled by default, and
-	 * will never ever be supported (by me).
-	 * It's literally *only* for developer testing.
-	 */
-	{
-		const gchar *connection_security = purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS);
-		if (!purple_strequal(connection_security, "none") &&
-				purple_ssl_is_supported()) {
-			jabber_send_raw(js,
-					"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
-			return TRUE;
-		}
-	}
-#else
 	/* It's a secure BOSH connection, just return FALSE and skip, without doing anything extra.
 	 * XEP-0206 (XMPP Over BOSH): The client SHOULD ignore any Transport Layer Security (TLS)
 	 * feature since BOSH channel encryption SHOULD be negotiated at the HTTP layer.
@@ -255,7 +239,7 @@ jabber_process_starttls(JabberStream *js, xmlnode *packet)
 				"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
 		return TRUE;
 	}
-#endif
+
 	/* It's an insecure standard XMPP connection, or an insecure BOSH connection, let's
 	 * ignore STARTTLS even it's required by the server to prevent disabling HTTP BOSH
 	 * entirely (sysadmin is responsible to provide HTTPS-only BOSH if security is required),
