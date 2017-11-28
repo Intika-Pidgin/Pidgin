@@ -322,42 +322,8 @@ gnt_widget_draw(GntWidget *widget)
 
 	if (widget->window == NULL)
 	{
-#if 0
-		int x, y, maxx, maxy, w, h;
-		int oldw, oldh;
-		gboolean shadow = TRUE;
+		widget->window = newpad(widget->priv.height + 20, widget->priv.width + 20);
 
-		if (!gnt_widget_has_shadow(widget))
-			shadow = FALSE;
-
-		x = widget->priv.x;
-		y = widget->priv.y;
-		w = oldw = widget->priv.width + shadow;
-		h = oldh = widget->priv.height + shadow;
-
-		getmaxyx(stdscr, maxy, maxx);
-		maxy -= 1;		/* room for the taskbar */
-
-		x = MAX(0, x);
-		y = MAX(0, y);
-		if (x + w >= maxx)
-			x = MAX(0, maxx - w);
-		if (y + h >= maxy)
-			y = MAX(0, maxy - h);
-
-		w = MIN(w, maxx);
-		h = MIN(h, maxy);
-
-		widget->priv.x = x;
-		widget->priv.y = y;
-		if (w != oldw || h != oldh) {
-			widget->priv.width = w - shadow;
-			widget->priv.height = h - shadow;
-			g_signal_emit(widget, signals[SIG_SIZE_CHANGED], 0, oldw, oldh);
-		}
-#else
-		widget->window = newpad(widget->priv.height + 20, widget->priv.width + 20);  /* XXX: */
-#endif
 		init_widget(widget);
 	}
 
@@ -403,11 +369,6 @@ gnt_widget_hide(GntWidget *widget)
 {
 	g_signal_emit(widget, signals[SIG_HIDE], 0);
 	wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_NORMAL));
-#if 0
-	/* XXX: I have no clue why, but this seemed to be necessary. */
-	if (gnt_widget_has_shadow(widget))
-		mvwvline(widget->window, 1, widget->priv.width, ' ', widget->priv.height);
-#endif
 	gnt_screen_release(widget);
 	GNT_WIDGET_SET_FLAGS(widget, GNT_WIDGET_INVISIBLE);
 	GNT_WIDGET_UNSET_FLAGS(widget, GNT_WIDGET_MAPPED);
