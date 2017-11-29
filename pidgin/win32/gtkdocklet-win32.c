@@ -497,7 +497,7 @@ static void systray_remove_nid(void) {
 }
 
 static void winpidgin_tray_update_icon(PurpleStatusPrimitive status,
-		gboolean connecting, gboolean pending) {
+		gboolean connecting, gboolean pending, gboolean blinked) {
 
 	int icon_index;
 	g_return_if_fail(image != NULL);
