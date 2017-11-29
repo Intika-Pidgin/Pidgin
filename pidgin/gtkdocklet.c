@@ -74,16 +74,16 @@ docklet_blink_icon(gpointer data)
 			if (blinked) {
 				ui_ops->blank_icon();
 			} else {
-				pidgin_docklet_update_icon(blinked);
+				pidgin_docklet_update_icon();
 			}
 		} else {
-			pidgin_docklet_update_icon(blinked);
+			pidgin_docklet_update_icon();
 		}
 		ret = TRUE; /* keep blinking */
 	} else {
 		docklet_blinking_timer = 0;
 		blinked = FALSE;
-		pidgin_docklet_update_icon(FALSE);
+		pidgin_docklet_update_icon();
 	}
 
 	return ret;
@@ -211,7 +211,7 @@ docklet_update_status(void)
 		pending = newpending;
 		connecting = newconnecting;
 
-		pidgin_docklet_update_icon(FALSE);
+		pidgin_docklet_update_icon();
 
 		/* and schedule the blinker function if messages are pending */
 		if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/blink")
@@ -762,10 +762,10 @@ docklet_menu(void)
  * public api for ui_ops
  **************************************************************************/
 void
-pidgin_docklet_update_icon(gboolean blinked)
+pidgin_docklet_update_icon()
 {
 	if (ui_ops && ui_ops->update_icon)
-		ui_ops->update_icon(status, connecting, pending, blinked);
+		ui_ops->update_icon(status, connecting, pending);
 }
 
 void
@@ -799,7 +799,7 @@ pidgin_docklet_embedded()
 	}
 	visible = TRUE;
 	docklet_update_status();
-	pidgin_docklet_update_icon(FALSE);
+	pidgin_docklet_update_icon();
 }
 
 void

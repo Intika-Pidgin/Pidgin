@@ -134,9 +134,10 @@ docklet_gtk_status_clicked_cb(GtkStatusIcon *status_icon, guint button, guint ac
 }
 
 static void
-docklet_gtk_status_update_icon(PurpleStatusPrimitive status, gboolean connecting, gboolean pending, gboolean blinked)
+docklet_gtk_status_update_icon(PurpleStatusPrimitive status, gboolean connecting, gboolean pending)
 {
 	const gchar *icon_name = NULL;
+	const gchar *current_icon_name = gtk_status_icon_get_icon_name(docklet);
 
 	switch (status) {
 		case PURPLE_STATUS_OFFLINE:
@@ -159,11 +160,11 @@ docklet_gtk_status_update_icon(PurpleStatusPrimitive status, gboolean connecting
 			break;
 	}
 
-	if (connecting) {
+	if (connecting && strcmp(current_icon_name, PIDGIN_STOCK_TRAY_CONNECT) != 0) {
 		icon_name = PIDGIN_STOCK_TRAY_CONNECT;
 	}
 
-	if (!blinked && pending) {
+	if (pending && strcmp(current_icon_name, PIDGIN_STOCK_TRAY_PENDING) != 0) {
 		icon_name = PIDGIN_STOCK_TRAY_PENDING;
 	}
 
