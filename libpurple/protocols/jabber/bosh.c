@@ -68,7 +68,6 @@ struct _PurpleBOSHConnection {
 	char *path;
 	guint16 port;
 
-	gboolean pipelining;
 	gboolean ssl;
 
 	enum {
@@ -212,7 +211,6 @@ jabber_bosh_connection_init(JabberStream *js, const char *url)
 	conn->port = port;
 	conn->path = g_strdup_printf("/%s", path);
 	g_free(path);
-	conn->pipelining = TRUE;
 
 	if (purple_ip_address_is_valid(host))
 		js->serverFQDN = g_strdup(js->user->domain);
@@ -284,12 +282,6 @@ find_available_http_connection(PurpleBOSHConnection *conn)
 
 	if (purple_debug_is_verbose())
 		debug_dump_http_connections(conn);
-
-	/* Easy solution: Does everyone involved support pipelining? Hooray! Just use
-	 * one TCP connection! */
-	if (conn->pipelining)
-		return conn->connections[0]->state == HTTP_CONN_CONNECTED ?
-				conn->connections[0] : NULL;
 
 	/* First loop, look for a connection that's ready */
 	for (i = 0; i < NUM_HTTP_CONNECTIONS; ++i) {
@@ -463,27 +455,6 @@ jabber_bosh_connection_send_keepalive(PurpleBOSHConnection *bosh)
 
 	/* clears bosh->send_timer */
 	send_timer_cb(bosh);
-}
-
-static void
-jabber_bosh_disable_pipelining(PurpleBOSHConnection *bosh)
-{
-	/* Do nothing if it's already disabled */
-	if (!bosh->pipelining)
-		return;
-
-	purple_debug_info("jabber", "BOSH: Disabling pipelining on conn %p\n",
-	                            bosh);
-	bosh->pipelining = FALSE;
-	if (bosh->connections[1] == NULL) {
-		bosh->connections[1] = jabber_bosh_http_connection_init(bosh);
-		http_connection_connect(bosh->connections[1]);
-	} else {
-		/* Shouldn't happen; this should be the only place pipelining
-		 * is turned off.
-		 */
-		g_warn_if_reached();
-	}
 }
 
 static void jabber_bosh_connection_received(PurpleBOSHConnection *conn, xmlnode *node) {
@@ -726,11 +697,6 @@ static void http_connection_disconnected(PurpleHTTPConnection *conn)
 		conn->requests = 0;
 	}
 
-	if (conn->bosh->pipelining) {
-		/* Hmmmm, fall back to multiple connections */
-		jabber_bosh_disable_pipelining(conn->bosh);
-	}
-
 	if (!had_requests)
 		/* If the server disconnected us without any requests, let's
 		 * just wait until we have something to send before we reconnect
@@ -807,7 +773,6 @@ jabber_bosh_http_connection_process(PurpleHTTPConnection *conn)
 
 			if (!g_ascii_strncasecmp(tmp, "close", strlen("close"))) {
 				conn->close = TRUE;
-				jabber_bosh_disable_pipelining(conn->bosh);
 			}
 		}
 
