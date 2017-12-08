@@ -127,10 +127,6 @@ static void add_group(PurpleGroup *group, FinchBlist *ggblist);
 static void add_chat(PurpleChat *chat, FinchBlist *ggblist);
 static void add_node(PurpleBlistNode *node, FinchBlist *ggblist);
 static void node_update(PurpleBuddyList *list, PurpleBlistNode *node);
-#if 0
-static gboolean is_contact_online(PurpleContact *contact);
-static gboolean is_group_online(PurpleGroup *group);
-#endif
 static void draw_tooltip(FinchBlist *ggblist);
 static void tooltip_for_buddy(PurpleBuddy *buddy, GString *str, gboolean full);
 static gboolean remove_typing_cb(gpointer null);
@@ -385,27 +381,6 @@ get_blist_node_flag(PurpleBlistNode *node)
 		fnode = purple_blist_node_get_ui_data(node);
 		if (fnode && fnode->signed_timer)
 			flag |= GNT_TEXT_FLAG_BLINK;
-	} else if (PURPLE_IS_GROUP(node)) {
-		/* If the node is collapsed, then check to see if any of the priority buddies of
-		 * any of the contacts within this group recently signed on/off, and set the blink
-		 * flag appropriately. */
-		/* XXX: Refs #5444 */
-		/* XXX: there's no way I can ask if the node is expanded or not? *sigh*
-		 * API addition would be necessary */
-#if 0
-		if (!gnt_tree_get_expanded(GNT_TREE(ggblist->tree), node)) {
-			for (node = purple_blist_node_get_first_child(node); node;
-					node = purple_blist_node_get_sibling_next(node)) {
-				PurpleBlistNode *pnode;
-				pnode = purple_contact_get_priority_buddy((PurpleContact*)node);
-				fnode = purple_blist_node_get_ui_data(node);
-				if (fnode && fnode->signed_timer) {
-					flag |= GNT_TEXT_FLAG_BLINK;
-					break;
-				}
-			}
-		}
-#endif
 	}
 
 	return flag;
@@ -417,37 +392,6 @@ blist_update_row_flags(PurpleBlistNode *node)
 	gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), node, get_blist_node_flag(node));
 	gnt_tree_set_row_color(GNT_TREE(ggblist->tree), node, get_display_color(node));
 }
-
-#if 0
-static gboolean
-is_contact_online(PurpleContact *contact)
-{
-	PurpleBlistNode *node;
-	for (node = purple_blist_node_get_first_child(((PurpleBlistNode*)contact)); node;
-			node = purple_blist_node_get_sibling_next(node)) {
-		FinchBlistNode *fnode = purple_blist_node_get_ui_data(node);
-		if (PURPLE_BUDDY_IS_ONLINE((PurpleBuddy*)node) ||
-				(fnode && fnode->signed_timer))
-			return TRUE;
-	}
-	return FALSE;
-}
-
-static gboolean
-is_group_online(PurpleGroup *group)
-{
-	PurpleBlistNode *node;
-	for (node = purple_blist_node_get_first_child(((PurpleBlistNode*)group)); node;
-			node = purple_blist_node_get_sibling_next(node)) {
-		if (PURPLE_IS_CHAT(node) &&
-				purple_account_is_connected(((PurpleChat *)node)->account))
-			return TRUE;
-		else if (is_contact_online((PurpleContact*)node))
-			return TRUE;
-	}
-	return FALSE;
-}
-#endif
 
 static void
 new_node(PurpleBlistNode *node)
@@ -998,20 +942,6 @@ add_buddy(PurpleBuddy *buddy, FinchBlist *ggblist)
 	if (buddy == purple_contact_get_priority_buddy(contact))
 		blist_update_row_flags((PurpleBlistNode*)contact);
 }
-
-#if 0
-static void
-buddy_signed_on(PurpleBuddy *buddy, FinchBlist *ggblist)
-{
-	add_node((PurpleBlistNode*)buddy, ggblist);
-}
-
-static void
-buddy_signed_off(PurpleBuddy *buddy, FinchBlist *ggblist)
-{
-	node_remove(purple_blist_get_buddy_list(), (PurpleBlistNode*)buddy);
-}
-#endif
 
 PurpleBlistUiOps *finch_blist_get_ui_ops()
 {
@@ -3126,17 +3056,6 @@ blist_show(PurpleBuddyList *list)
 				PURPLE_CALLBACK(buddy_signed_on_off), ggblist);
 	purple_signal_connect(purple_blist_get_handle(), "buddy-signed-off", finch_blist_get_handle(),
 				PURPLE_CALLBACK(buddy_signed_on_off), ggblist);
-
-#if 0
-	/* These I plan to use to indicate unread-messages etc. */
-	purple_signal_connect(purple_conversations_get_handle(), "received-im-msg", finch_blist_get_handle(),
-				PURPLE_CALLBACK(received_im_msg), list);
-	purple_signal_connect(purple_conversations_get_handle(), "sent-im-msg", finch_blist_get_handle(),
-				PURPLE_CALLBACK(sent_im_msg), NULL);
-
-	purple_signal_connect(purple_conversations_get_handle(), "received-chat-msg", finch_blist_get_handle(),
-				PURPLE_CALLBACK(received_chat_msg), list);
-#endif
 
 	g_signal_connect(G_OBJECT(ggblist->tree), "selection_changed", G_CALLBACK(selection_changed), ggblist);
 	g_signal_connect(G_OBJECT(ggblist->tree), "key_pressed", G_CALLBACK(key_pressed), ggblist);
