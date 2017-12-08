@@ -244,44 +244,6 @@ purple_trie_state_new(PurpleTrie *trie, PurpleTrieState *parent, guchar characte
 	return state;
 }
 
-#if 0
-static gchar *
-purple_trie_print(PurpleTrieState *state, int limit)
-{
-	GString *str = g_string_new(NULL);
-	int i;
-
-	if (limit < 0)
-		return g_strdup("{ LIMIT }");
-
-	if (state->found_word)
-		g_string_append(str, "*");
-	g_string_append(str, "{ ");
-	for (i = 0; i < 256; i++) {
-		gchar *chp;
-		if (!state->children)
-			continue;
-		if (!state->children[i])
-			continue;
-		if (i == 0)
-			g_string_append(str, "(null)->");
-		else
-			g_string_append_printf(str, "%c->", i);
-		if (state->children[i] == state)
-			g_string_append(str, "loop");
-		else {
-			chp = purple_trie_print(state->children[i], limit - 1);
-			g_string_append(str, chp);
-			g_string_append_c(str, ' ');
-			g_free(chp);
-		}
-	}
-	g_string_append(str, "}");
-
-	return g_string_free(str, FALSE);
-}
-#endif
-
 static gboolean
 purple_trie_states_build(PurpleTrie *trie)
 {

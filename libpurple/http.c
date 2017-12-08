@@ -236,11 +236,6 @@ struct _ntlm_type1_message {
 	guint16 host_len1;       /* host string length */
 	guint16 host_len2;       /* host string length */
 	guint32 host_off;        /* host string offset (always 0x00000020) */
-
-#if 0
-	guint8  host[*];         /* host string (ASCII) */
-	guint8  dom[*];          /* domain string (ASCII) */
-#endif
 };
 
 static time_t purple_http_rfc1123_to_time(const gchar *str);

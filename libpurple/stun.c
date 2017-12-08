@@ -63,14 +63,6 @@ struct stun_attrib {
 	guint16 len;
 };
 
-#if 0
-struct stun_change {
-	struct stun_header hdr;
-	struct stun_attrib attrib;
-	char value[4];
-};
-#endif	/* 0 */
-
 struct stun_conn {
 	int fd;
 	struct sockaddr_in addr;
@@ -149,27 +141,6 @@ static gboolean timeoutfunc(gpointer data) {
 	}
 	return TRUE;
 }
-
-#if 0
-static void do_test2(struct stun_conn *sc) {
-	struct stun_change data;
-	data.hdr.type = htons(0x0001);
-	data.hdr.len = 0;
-	data.hdr.transid[0] = rand();
-	data.hdr.transid[1] = ntohl(((int)'g' << 24) + ((int)'a' << 16) + ((int)'i' << 8) + (int)'m');
-	data.hdr.transid[2] = rand();
-	data.hdr.transid[3] = rand();
-	data.attrib.type = htons(0x003);
-	data.attrib.len = htons(4);
-	data.value[3] = 6;
-	sc->packet = (struct stun_header*)&data;
-	sc->packetsize = sizeof(struct stun_change);
-	sc->retry = 0;
-	sc->test = 2;
-	sendto(sc->fd, sc->packet, sc->packetsize, 0, (struct sockaddr *)&(sc->addr), sizeof(struct sockaddr_in));
-	sc->timeout = g_timeout_add(500, (GSourceFunc) timeoutfunc, sc);
-}
-#endif	/* 0 */
 
 static void reply_cb(gpointer data, gint source, PurpleInputCondition cond) {
 	struct stun_conn *sc = data;

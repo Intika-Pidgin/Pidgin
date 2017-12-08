@@ -472,6 +472,10 @@ test_util_utf8_strip_unprintables(void) {
 			"aaaa\xef\xbb\xbf",
 			"aaaa\xef\xbb\xbf",
 		}, {
+			/* U+FFFE (should be stripped) */
+			"aaaa\xef\xbf\xbe",
+			"aaaa",
+		}, {
 			NULL,
 			NULL,
 		}
@@ -484,20 +488,12 @@ test_util_utf8_strip_unprintables(void) {
 
 		g_free(result);
 
+		/* NULL as input is a valid test, but it's the last test, so we break
+		 * after it.
+		 */
 		if(data[i].input == NULL)
 			break;
 	}
-
-#if 0
-	/* invalid UTF-8 */
-	/* disabled because make check fails on an assertion */
-	fail_unless(NULL == purple_utf8_strip_unprintables("abc\x80\x7f"));
-	/* disabled because make check fails on an assertion */
-	/* U+DB80 (Private Use High Surrogate, First) -- should be stripped */
-	assert_string_equal_free("aaaa", purple_utf8_strip_unprintables("aaaa\xed\xa0\x80"));
-	/* U+FFFE (should be stripped) */
-	assert_string_equal_free("aaaa", purple_utf8_strip_unprintables("aaaa\xef\xbf\xbe"));
-#endif
 }
 
 /******************************************************************************

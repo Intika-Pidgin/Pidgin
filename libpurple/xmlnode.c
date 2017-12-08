@@ -74,19 +74,6 @@ purple_xmlnode_new_child(PurpleXmlNode *parent, const char *name)
 	node = new_node(name, PURPLE_XMLNODE_TYPE_TAG);
 
 	purple_xmlnode_insert_child(parent, node);
-#if 0
-	/* This would give PurpleXmlNodes more appropriate namespacing
-	 * when creating them.  Otherwise, unless an explicit namespace
-	 * is set, purple_xmlnode_get_namespace() will return NULL, when
-	 * there may be a default namespace.
-	 *
-	 * I'm unconvinced that it's useful, and concerned it may break things.
-	 *
-	 * _insert_child would need the same thing, probably (assuming
-	 * xmlns->node == NULL)
-	 */
-	purple_xmlnode_set_namespace(node, purple_xmlnode_get_default_namespace(node))
-#endif
 
 	return node;
 }
