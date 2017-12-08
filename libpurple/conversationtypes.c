@@ -806,14 +806,6 @@ chat_conversation_write_message(PurpleConversation *conv, PurpleMessage *msg)
 		return;
 	}
 
-#if 0
-	PurpleAccount *account = purple_conversation_get_account(conv);
-	/* XXX: this should not be necessary */
-	if (purple_strequal(purple_normalize(account, who), priv->nick)) {
-		flags |= PURPLE_MESSAGE_SEND;
-	}
-#endif
-
 	flags = purple_message_get_flags(msg);
 	if (flags & PURPLE_MESSAGE_RECV) {
 		if (purple_utf8_has_word(purple_message_get_contents(msg), priv->nick)) {
@@ -1455,31 +1447,7 @@ purple_chat_conversation_finalize(GObject *object)
 	{
 		/* Still connected */
 		int chat_id = purple_chat_conversation_get_id(chat);
-#if 0
-		/*
-		 * This is unfortunately necessary, because calling
-		 * purple_serv_chat_leave() calls this purple_conversation_destroy(),
-		 * which leads to two calls here.. We can't just return after
-		 * this, because then it'll return on the next pass. So, since
-		 * purple_serv_got_chat_left(), which is eventually called from the
-		 * protocol that purple_serv_chat_leave() calls, removes this conversation
-		 * from the gc's buddy_chats list, we're going to check to see
-		 * if this exists in the list. If so, we want to return after
-		 * calling this, because it'll be called again. If not, fall
-		 * through, because it'll have already been removed, and we'd
-		 * be on the 2nd pass.
-		 *
-		 * Long paragraph. <-- Short sentence.
-		 *
-		 *   -- ChipX86
-		 */
 
-		if (gc && g_slist_find(gc->buddy_chats, conv) != NULL) {
-			purple_serv_chat_leave(gc, chat_id);
-
-			return;
-		}
-#endif
 		/*
 		 * Instead of all of that, lets just close the window when
 		 * the user tells us to, and let the protocol deal with the

@@ -364,19 +364,6 @@ static void logger_pref_cb(const char *name, PurplePrefType type,
 
 PurpleLogLogger *purple_log_logger_new(const char *id, const char *name, int functions, ...)
 {
-#if 0
-				void(*create)(PurpleLog *),
-				gsize(*write)(PurpleLog *, PurpleMessageFlags, const char *, GDateTime *, const char *),
-				void(*finalize)(PurpleLog *),
-				GList*(*list)(PurpleLogType type, const char*, PurpleAccount*),
-				char*(*read)(PurpleLog*, PurpleLogReadFlags*),
-				int(*size)(PurpleLog*),
-				int(*total_size)(PurpleLogType type, const char *name, PurpleAccount *account),
-				GList*(*list_syslog)(PurpleAccount *account),
-				void(*get_log_sets)(PurpleLogSetCallback cb, GHashTable *sets),
-				gboolean(*remove)(PurpleLog *log),
-				gboolean(*is_deletable)(PurpleLog *log))
-#endif
 	PurpleLogLogger *logger;
 	va_list args;
 
