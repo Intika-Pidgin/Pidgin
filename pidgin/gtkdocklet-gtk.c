@@ -160,11 +160,11 @@ docklet_gtk_status_update_icon(PurpleStatusPrimitive status, gboolean connecting
 			break;
 	}
 
-	if (connecting && strcmp(current_icon_name, PIDGIN_STOCK_TRAY_CONNECT) != 0) {
+	if (connecting && !purple_strequal(current_icon_name, PIDGIN_STOCK_TRAY_CONNECT)) {
 		icon_name = PIDGIN_STOCK_TRAY_CONNECT;
 	}
 
-	if (pending && strcmp(current_icon_name, PIDGIN_STOCK_TRAY_PENDING) != 0) {
+	if (pending && !purple_strequal(current_icon_name, PIDGIN_STOCK_TRAY_PENDING)) {
 		icon_name = PIDGIN_STOCK_TRAY_PENDING;
 	}
 
