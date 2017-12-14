@@ -1112,6 +1112,10 @@ pidgin_media_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
 		gtk_statusbar_push(GTK_STATUSBAR(gtkmedia->priv->statusbar),
 				0, _("Call in progress."));
 		gtk_widget_show(GTK_WIDGET(gtkmedia));
+	} else if (type == PURPLE_MEDIA_INFO_MUTE && !local) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtkmedia->priv->mute), TRUE);
+	} else if (type == PURPLE_MEDIA_INFO_UNMUTE && !local) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtkmedia->priv->mute), FALSE);
 	}
 }
 
