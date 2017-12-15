@@ -2369,7 +2369,7 @@ purple_xfer_new(PurpleAccount *account, PurpleXferType type, const char *who)
 			/* TODO: this should support the type */
 			who
 		);
-	} else {	
+	} else {
 		xfer = g_object_new(PURPLE_TYPE_XFER,
 			"account",     account,
 			"type",        type,
