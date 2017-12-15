@@ -1449,10 +1449,9 @@ purple_chat_conversation_finalize(GObject *object)
 		int chat_id = purple_chat_conversation_get_id(chat);
 
 		/*
-		 * Instead of all of that, lets just close the window when
-		 * the user tells us to, and let the protocol deal with the
-		 * internals on it's own time. Don't do this if the protocol already
-		 * knows it left the chat.
+		 * Close the window when the user tells us to, and let the protocol
+		 * deal with the internals on it's own time. Don't do this if the
+		 * protocol already knows it left the chat.
 		 */
 		if (!purple_chat_conversation_has_left(chat))
 			purple_serv_chat_leave(gc, chat_id);
