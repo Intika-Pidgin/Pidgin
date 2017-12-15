@@ -181,7 +181,5 @@ main(gint argc, gchar **argv) {
 
 	res = g_test_run();
 
-	// purple_core_quit();
-
 	return res;
 }
