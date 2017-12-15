@@ -2054,58 +2054,66 @@ static gint
 gtk_smiley_tree_lookup (GtkSmileyTree *tree,
 			const gchar   *text)
 {
+	gunichar text_ch = g_utf8_get_char(text);
 	GtkSmileyTree *t = tree;
-	const gchar *x = text;
 	gint len = 0;
-	const gchar *amp;
-	gint alen;
-
-	while (*x) {
+	gint lastlen = 0;
+	
+	while (text_ch) {
+		const gchar *amp;
 		gchar *pos;
+		gint alen;
 
 		if (!t->values)
 			break;
 
-		if(*x == '&' && (amp = purple_markup_unescape_entity(x, &alen))) {
+		if((amp = purple_markup_unescape_entity(text, &alen))) {
 			gboolean matched = TRUE;
+			const char *amp_next = g_utf8_next_char(amp);
+			
 			/* Make sure all chars of the unescaped value match */
-			while (*(amp + 1)) {
-				pos = strchr (t->values->str, *amp);
+			while (g_utf8_get_char(amp_next)) {
+				pos = g_utf8_strchr (t->values->str, -1, g_utf8_get_char(amp));
 				if (pos)
 					t = t->children [GPOINTER_TO_INT(pos) - GPOINTER_TO_INT(t->values->str)];
 				else {
 					matched = FALSE;
 					break;
 				}
-				amp++;
+				amp = amp_next;
+				amp_next = g_utf8_next_char(amp_next);
 			}
+			
 			if (!matched)
 				break;
-
-			pos = strchr (t->values->str, *amp);
+			
+			pos = g_utf8_strchr (t->values->str, -1, g_utf8_get_char(amp));
 		}
-		else if (*x == '<') /* Because we're all WYSIWYG now, a '<'
+		else if (text_ch == '<') /* Because we're all WYSIWYG now, a '<'
 				     * char should only appear as the start of a tag.  Perhaps a safer (but costlier)
 				     * check would be to call gtk_imhtml_is_tag on it */
 			break;
 		else {
-			alen = 1;
-			pos = strchr (t->values->str, *x);
+			alen = g_unichar_to_utf8 (text_ch, NULL);
+			pos = g_utf8_strchr (t->values->str, -1, text_ch);
 		}
 
-		if (pos)
+		if (pos) {
 			t = t->children [GPOINTER_TO_INT(pos) - GPOINTER_TO_INT(t->values->str)];
-		else
+			if (t->image)
+				lastlen = len + alen;
+		} else
 			break;
 
-		x += alen;
 		len += alen;
+		text = g_utf8_next_char(text);
+		text_ch = g_utf8_get_char(text);
 	}
 
 	if (t->image)
 		return len;
 
-	return 0;
+	return lastlen;
 }
 
 static void
