@@ -1095,8 +1095,8 @@ purple_buddy_icons_init()
 	                                        g_free, NULL);
 	pointer_icon_cache = g_hash_table_new(g_direct_hash, g_direct_equal);
 
-    if (!cache_dir)
-		cache_dir = g_build_filename(purple_user_dir(), "icons", NULL);
+	if (!cache_dir)
+		cache_dir = g_build_filename(purple_cache_dir(), "icons", NULL);
 }
 
 void
