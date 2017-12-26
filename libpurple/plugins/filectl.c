@@ -86,27 +86,6 @@ run_commands()
 			free(arg1);
 			free(arg2);
 
-/* purple_find_conversation() is gone in 2.0.0. */
-#if 0
-		} else if (!g_ascii_strncasecmp(command, "send", 4)) {
-			PurpleConversation *conv;
-
-			arg1 = getarg(buffer, 1, 0);
-			arg2 = getarg(buffer, 2, 1);
-
-			conv = purple_find_conversation(PURPLE_CONV_TYPE_ANY, arg1);
-			if (conv != NULL)
-			{
-				/*
-				purple_conversation_write(conv, arg2, WFLAG_SEND, NULL, time(NULL), -1);
-				purple_serv_send_im(conv->gc, arg1, arg2, 0);
-				*/
-			}
-
-			free(arg1);
-			free(arg2);
-#endif
-
 		} else if (!g_ascii_strncasecmp(command, "away", 4)) {
 			arg1 = getarg(buffer, 1, 1);
 			/* serv_set_away_all(arg1); */
