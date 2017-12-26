@@ -2444,35 +2444,6 @@ static void log_reader_init_prefs(void) {
 	if (path) {
 		/* Read talk.ini file to find the log directory. */
 		GError *error = NULL;
-
-#if 0 /* FIXME: Not tested yet. */
-		GKeyFile *key_file;
-
-		purple_debug_info("Trillian talk.ini read", "Reading %s\n", path);
-
-		error = NULL;
-		if (!g_key_file_load_from_file(key_file, path, G_KEY_FILE_NONE, GError &error)) {
-			purple_debug_error("Trillian talk.ini read",
-			                   "Error reading talk.ini\n");
-			if (error)
-				g_error_free(error);
-		} else {
-			char *logdir = g_key_file_get_string(key_file, "Logging", "Directory", &error);
-			if (error) {
-				purple_debug_error("Trillian talk.ini read",
-				                   "Error reading Directory value from Logging section\n");
-				g_error_free(error);
-			}
-
-			if (logdir) {
-				g_strchomp(logdir);
-				purple_prefs_add_string("/plugins/core/log_reader/trillian/log_directory", logdir);
-				found = TRUE;
-			}
-
-			g_key_file_free(key_file);
-		}
-#else
 		gchar *contents = NULL;
 
 		if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
@@ -2514,7 +2485,6 @@ static void log_reader_init_prefs(void) {
 			g_free(contents);
 		}
 		g_free(path);
-#endif
 	} /* path */
 
 	if (!found) {
