@@ -19,12 +19,12 @@ test_ui = static_library(
 )
 
 foreach prog : PROGS
-	e = executable('test_' + prog, 'test_@0@.c'.format(prog),
-	               c_args : [
-	                   '-DTEST_DATA_DIR="@0@/data"'.format(meson.current_source_dir())
-	               ],
-	               dependencies : [libpurple_dep, glib, dbus, dbus_glib],
+    e = executable('test_' + prog, 'test_@0@.c'.format(prog),
+                   c_args : [
+                       '-DTEST_DATA_DIR="@0@/data"'.format(meson.current_source_dir())
+                   ],
+                   dependencies : [libpurple_dep, glib, dbus, dbus_glib],
                    link_with: test_ui,
     )
-	test(prog, e)
+    test(prog, e)
 endforeach

@@ -719,7 +719,7 @@ gg_create_menu(FinchConv *ggc)
 		gnt_menu_add_item(GNT_MENU(sub), item);
 		gnt_menuitem_set_callback(item, add_pounce_cb, ggc);
 
-		if (PURPLE_IS_PROTOCOL_XFER(protocol) && 
+		if (PURPLE_IS_PROTOCOL_XFER(protocol) &&
 			purple_protocol_xfer_can_receive(
 				PURPLE_PROTOCOL_XFER(protocol),
 				gc,
