@@ -894,9 +894,12 @@ void purple_serv_send_file(PurpleConnection *gc, const char *who, const char *fi
 	if (gc) {
 		protocol = purple_connection_get_protocol(gc);
 
-		if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive) ||
-				purple_protocol_xfer_iface_can_receive(protocol, gc, who))
+		if(PURPLE_IS_PROTOCOL_XFER(protocol)) {
+			PurpleProtocolXfer *xfer = PURPLE_PROTOCOL_XFER(protocol);
 
-			purple_protocol_xfer_iface_send(protocol, gc, who, file);
+			if(purple_protocol_xfer_can_receive(xfer, gc, who)) {
+				purple_protocol_xfer_send(xfer, gc, who, file);
+			}
+		}
 	}
 }

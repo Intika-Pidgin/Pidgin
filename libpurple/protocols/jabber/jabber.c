@@ -3540,7 +3540,7 @@ PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who)
 #endif
 }
 
-gboolean jabber_can_receive_file(PurpleConnection *gc, const char *who)
+gboolean jabber_can_receive_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who)
 {
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 
@@ -4263,7 +4263,7 @@ jabber_protocol_media_iface_init(PurpleProtocolMediaIface *media_iface)
 }
 
 static void
-jabber_protocol_xfer_iface_init(PurpleProtocolXferIface *xfer_iface)
+jabber_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = jabber_can_receive_file;
 	xfer_iface->send        = jabber_si_xfer_send;
@@ -4297,7 +4297,7 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_MEDIA_IFACE,
 	                                  jabber_protocol_media_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
 	                                  jabber_protocol_xfer_iface_init)
 );
 

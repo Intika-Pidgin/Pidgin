@@ -556,35 +556,6 @@ struct _PurpleProtocolPrivacyIface
 #define PURPLE_PROTOCOL_GET_PRIVACY_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE, \
                                                 PurpleProtocolPrivacyIface))
 
-#define PURPLE_TYPE_PROTOCOL_XFER_IFACE     (purple_protocol_xfer_iface_get_type())
-
-typedef struct _PurpleProtocolXferIface PurpleProtocolXferIface;
-
-/**
- * PurpleProtocolXferIface:
- *
- * The protocol file transfer interface.
- *
- * This interface provides file transfer callbacks for the protocol.
- */
-struct _PurpleProtocolXferIface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	gboolean (*can_receive)(PurpleConnection *connection, const char *who);
-
-	void (*send)(PurpleConnection *connection, const char *who,
-					  const char *filename);
-
-	PurpleXfer *(*new_xfer)(PurpleConnection *connection, const char *who);
-};
-
-#define PURPLE_PROTOCOL_HAS_XFER_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_XFER_IFACE))
-#define PURPLE_PROTOCOL_GET_XFER_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_XFER_IFACE, \
-                                             PurpleProtocolXferIface))
-
 #define PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE     (purple_protocol_roomlist_iface_get_type())
 
 typedef struct _PurpleProtocolRoomlistIface PurpleProtocolRoomlistIface;
@@ -1082,26 +1053,6 @@ void purple_protocol_privacy_iface_rem_deny(PurpleProtocol *protocol,
 
 void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection);
-
-/**************************************************************************/
-/* Protocol Xfer Interface API                                            */
-/**************************************************************************/
-
-/**
- * purple_protocol_xfer_iface_get_type:
- *
- * Returns: The #GType for the protocol xfer interface.
- */
-GType purple_protocol_xfer_iface_get_type(void);
-
-gboolean purple_protocol_xfer_iface_can_receive(PurpleProtocol *protocol,
-		PurpleConnection *connection, const char *who);
-
-void purple_protocol_xfer_iface_send(PurpleProtocol *protocol, PurpleConnection *connection,
-		const char *who, const char *filename);
-
-PurpleXfer *purple_protocol_xfer_iface_new_xfer(PurpleProtocol *protocol,
-		PurpleConnection *connection, const char *who);
 
 /**************************************************************************/
 /* Protocol Roomlist Interface API                                        */
