@@ -192,7 +192,7 @@ struct _PurpleXferClass
 };
 
 /**
- * PurpleProtocolXferIface:
+ * PurpleProtocolXferInterface:
  *
  * The protocol file transfer interface.
  *
@@ -990,7 +990,7 @@ GType purple_protocol_xfer_get_type(void);
  * purple_protocol_xfer_can_receive:
  * @prplxfer: The #PurpleProtocolXfer implementer instance
  * @connection: The #PurpleConnection that we're checking
- * @who: The user that we want to set a file transfer to.
+ * @who: The user that we want to send a file transfer to.
  *
  * Checks whether or not we can transfer a file to @who.
  *
@@ -1000,7 +1000,7 @@ gboolean purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer, PurpleCo
 
 /**
  * purple_protocol_xfer_send:
- * @prplxfer: The #PurpleProtocolXfer inmplementer instance
+ * @prplxfer: The #PurpleProtocolXfer implementer instance
  * @connection: The #PurpleConnection that we're checking
  * @who: The user that we want to set a file transfer to.
  * @filename: The name of the file to send.
@@ -1013,7 +1013,7 @@ void purple_protocol_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *c
  * purple_protocol_xfer_send:
  * @prplxfer: The #PurpleProtocolXfer implementer instance
  * @connection: The #PurpleConnection that we're checking
- * @who: The user that we want to set a file transfer to.
+ * @who: The user that we want to send a file transfer to.
  *
  * Creates a new #PurpleXfer to @who.
  *
