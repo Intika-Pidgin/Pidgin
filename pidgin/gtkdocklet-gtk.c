@@ -137,6 +137,7 @@ static void
 docklet_gtk_status_update_icon(PurpleStatusPrimitive status, gboolean connecting, gboolean pending)
 {
 	const gchar *icon_name = NULL;
+	const gchar *current_icon_name = gtk_status_icon_get_icon_name(docklet);
 
 	switch (status) {
 		case PURPLE_STATUS_OFFLINE:
@@ -159,19 +160,16 @@ docklet_gtk_status_update_icon(PurpleStatusPrimitive status, gboolean connecting
 			break;
 	}
 
-	if (pending)
-		icon_name = PIDGIN_STOCK_TRAY_PENDING;
-	if (connecting)
+	if (connecting && !purple_strequal(current_icon_name, PIDGIN_STOCK_TRAY_CONNECT)) {
 		icon_name = PIDGIN_STOCK_TRAY_CONNECT;
+	}
+
+	if (pending && !purple_strequal(current_icon_name, PIDGIN_STOCK_TRAY_PENDING)) {
+		icon_name = PIDGIN_STOCK_TRAY_PENDING;
+	}
 
 	if (icon_name) {
 		gtk_status_icon_set_from_icon_name(docklet, icon_name);
-	}
-
-	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/docklet/blink")) {
-		gtk_status_icon_set_blinking(docklet, (pending && !connecting));
-	} else if (gtk_status_icon_get_blinking(docklet)) {
-		gtk_status_icon_set_blinking(docklet, FALSE);
 	}
 }
 
