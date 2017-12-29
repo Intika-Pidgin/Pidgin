@@ -1525,11 +1525,11 @@ pidgin_blist_make_buddy_menu(GtkWidget *menu, PurpleBuddy *buddy, gboolean sub) 
 
 #endif
 
-	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, send)) {
-		if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive) ||
-			purple_protocol_xfer_iface_can_receive(protocol,
-			purple_account_get_connection(purple_buddy_get_account(buddy)), purple_buddy_get_name(buddy)))
-		{
+	if (protocol && PURPLE_IS_PROTOCOL_XFER(protocol)) {
+		if (purple_protocol_xfer_can_receive(
+			PURPLE_PROTOCOL_XFER(protocol),
+			purple_account_get_connection(purple_buddy_get_account(buddy)), purple_buddy_get_name(buddy)
+		)) {
 			pidgin_new_menu_item(menu, _("_Send File..."),
                                         PIDGIN_STOCK_TOOLBAR_SEND_FILE,
                                         G_CALLBACK(gtk_blist_menu_send_file_cb),

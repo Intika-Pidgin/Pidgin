@@ -60,7 +60,7 @@ struct _XepXfer
  * @param gc The PurpleConnection handle.
  * @param who Who will we be sending it to?
  */
-PurpleXfer *bonjour_new_xfer(PurpleConnection *gc, const char *who);
+PurpleXfer *bonjour_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
 
 /**
  * Send a file.
@@ -69,7 +69,7 @@ PurpleXfer *bonjour_new_xfer(PurpleConnection *gc, const char *who);
  * @param who Who are we sending it to?
  * @param file What file? If NULL, user will choose after this call.
  */
-void bonjour_send_file(PurpleConnection *gc, const char *who, const char *file);
+void bonjour_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
 
 void xep_si_parse(PurpleConnection *pc, PurpleXmlNode *packet, PurpleBuddy *pb);
 void

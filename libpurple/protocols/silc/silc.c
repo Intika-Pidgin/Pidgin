@@ -2283,7 +2283,7 @@ silcpurple_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_if
 }
 
 static void
-silcpurple_protocol_xfer_iface_init(PurpleProtocolXferIface *xfer_iface)
+silcpurple_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->send     = silcpurple_ftp_send_file;
 	xfer_iface->new_xfer = silcpurple_ftp_new_xfer;
