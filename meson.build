@@ -406,7 +406,7 @@ enable_gcr = get_option('gcr')
 # Check Pidgin dependencies
 # #######################################################################
 if get_option('gtkui')
-	gtk = dependency('gtk+-3.0', version : '>= 3.4.2')
+	gtk = dependency('gtk+-3.0', version : '>= 3.10.0')
 	# We only really need Pango >= 1.4 for decent RTL support
 	pango = dependency('pango', version : '>= 1.4.0')
 	conf.set('HAVE_PANGO14', pango.found())
