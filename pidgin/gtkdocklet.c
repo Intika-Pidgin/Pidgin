@@ -69,10 +69,13 @@ docklet_blink_icon(gpointer data)
 
 	blinked = !blinked;
 
-	if(pending && !connecting) {
-		if (blinked) {
-			if (ui_ops && ui_ops->blank_icon)
+	if (pending) {
+		if (ui_ops && ui_ops->blank_icon) {
+			if (blinked) {
 				ui_ops->blank_icon();
+			} else {
+				pidgin_docklet_update_icon();
+			}
 		} else {
 			pidgin_docklet_update_icon();
 		}
@@ -80,6 +83,7 @@ docklet_blink_icon(gpointer data)
 	} else {
 		docklet_blinking_timer = 0;
 		blinked = FALSE;
+		pidgin_docklet_update_icon();
 	}
 
 	return ret;
