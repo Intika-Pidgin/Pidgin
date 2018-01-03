@@ -1,13 +1,15 @@
 if PLUGINS
-	gntclipboard = library('gntclipboard', 'gntclipboard.c',
-	    dependencies : [x11, libpurple_dep, libfinch_dep, glib],
-	    name_prefix : '',
-	    install : true, install_dir : FINCH_PLUGINDIR)
+	if ENABLE_GTK
+		gntclipboard = library('gntclipboard', 'gntclipboard.c',
+		    dependencies : [x11, libpurple_dep, libfinch_dep, glib],
+		    name_prefix : '',
+		    install : true, install_dir : FINCH_PLUGINDIR)
 
-	gntgf = library('gntgf', 'gntgf.c',
-	    dependencies : [x11, libpurple_dep, libfinch_dep, glib],
-	    name_prefix : '',
-	    install : true, install_dir : FINCH_PLUGINDIR)
+		gntgf = library('gntgf', 'gntgf.c',
+		    dependencies : [x11, libpurple_dep, libfinch_dep, glib],
+		    name_prefix : '',
+		    install : true, install_dir : FINCH_PLUGINDIR)
+	endif
 
 	gnthistory = library('gnthistory', 'gnthistory.c',
 	    dependencies : [libpurple_dep, libfinch_dep, glib],
