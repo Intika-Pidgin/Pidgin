@@ -149,10 +149,6 @@ static void ggp_account_register_dialog(PurpleConnection *gc,
 	ggp_account_token *token, gpointer _register_data);
 static void ggp_account_register_dialog_ok(
 	ggp_account_register_data *register_data, PurpleRequestFields *fields);
-#if 0
-static void ggp_account_register_dialog_invalid(
-	ggp_account_register_data *register_data, const gchar *message);
-#endif
 static void ggp_account_register_dialog_cancel(
 	ggp_account_register_data *register_data, PurpleRequestFields *fields);
 static void ggp_account_register_response(struct gg_http *h, gboolean success,
@@ -294,20 +290,6 @@ static void ggp_account_register_dialog_ok(
 	ggp_libgaduw_http_watch(register_data->gc, h,
 		ggp_account_register_response, register_data, TRUE);
 }
-
-#if 0
-/* libgadu 1.12.x: use it for invalid token */
-static void ggp_account_register_dialog_invalid(
-	ggp_account_register_data *register_data, const gchar *message)
-{
-	purple_debug_warning("gg", "ggp_account_register_dialog_invalid: %s\n",
-		message);
-	ggp_account_register_dialog(register_data->gc, register_data->token,
-		register_data);
-	purple_notify_error(purple_connection_get_account(register_data->gc),
-		GGP_ACCOUNT_REGISTER_TITLE, message, NULL);
-}
-#endif
 
 static void ggp_account_register_response(struct gg_http *h, gboolean success,
 	gboolean cancelled, gpointer _register_data)

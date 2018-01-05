@@ -51,23 +51,11 @@ jingle_get_type(const gchar *type)
 		return JINGLE_TYPE_RAWUDP;
 	else if (purple_strequal(type, JINGLE_TRANSPORT_ICEUDP))
 		return JINGLE_TYPE_ICEUDP;
-#if 0
-	else if (purple_strequal(type, JINGLE_TRANSPORT_SOCKS))
-		return JINGLE_TYPE_SOCKS;
-	else if (purple_strequal(type, JINGLE_TRANSPORT_IBB))
-		return JINGLE_TYPE_IBB;
-#endif
 #ifdef USE_VV
 	else if (purple_strequal(type, JINGLE_APP_RTP))
 		return JINGLE_TYPE_RTP;
 	else if (!strcmp(type, NS_GOOGLE_TRANSPORT_P2P))
 		return JINGLE_TYPE_GOOGLE_P2P;
-#endif
-#if 0
-	else if (purple_strequal(type, JINGLE_APP_FT))
-		return JINGLE_TYPE_FT;
-	else if (purple_strequal(type, JINGLE_APP_XML))
-		return JINGLE_TYPE_XML;
 #endif
 	else
 		return G_TYPE_NONE;

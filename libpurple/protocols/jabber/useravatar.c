@@ -46,27 +46,6 @@ void jabber_avatar_init(void)
 static void
 remove_avatar_0_12_nodes(JabberStream *js)
 {
-#if 0
-	/* See note below for why this is #if 0'd */
-
-	/* Publish an empty avatar according to the XEP-0084 v0.12 semantics */
-	PurpleXmlNode *publish, *item, *metadata;
-	/* publish the metadata */
-	publish = purple_xmlnode_new("publish");
-	purple_xmlnode_set_attrib(publish, "node", NS_AVATAR_0_12_METADATA);
-
-	item = purple_xmlnode_new_child(publish, "item");
-	purple_xmlnode_set_attrib(item, "id", "stop");
-
-	metadata = purple_xmlnode_new_child(item, "metadata");
-	purple_xmlnode_set_namespace(metadata, NS_AVATAR_0_12_METADATA);
-
-	purple_xmlnode_new_child(metadata, "stop");
-
-	/* publish */
-	jabber_pep_publish(js, publish);
-#endif
-
 	/*
 	 * This causes ejabberd 2.0.0 to kill the connection unceremoniously.
 	 * See https://support.process-one.net/browse/EJAB-623. When adiumx.com
