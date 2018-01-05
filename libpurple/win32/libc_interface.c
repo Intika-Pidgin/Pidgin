@@ -409,13 +409,6 @@ int wpurple_read(int fd, void *buf, unsigned int size) {
 				errno = EAGAIN;
 			return -1;
 		}
-#if 0
-		else if( ret == 0 ) {
-			/* connection has been gracefully closed */
-			errno = WSAENOTCONN;
-			return -1;
-		}
-#endif
 		else {
 			/* success reading socket */
 			return ret;
@@ -933,10 +926,6 @@ wpurple_get_timezone_abbreviation(const struct tm *tm)
 	{
 		if (purple_strequal(tzname, win32_tzmap[i].wstd))
 		{
-#if 0
-			purple_debug_info("wpurple", "TZ \"%s\" matches Windows timezone \"%s\"\n",
-			                win32_tzmap[i].ustd, tzname);
-#endif
 			/* Cache the Result */
 			if (i > 0) {
 				if (win32_tzmap[0].wstd[0] != '\0')
@@ -949,10 +938,6 @@ wpurple_get_timezone_abbreviation(const struct tm *tm)
 		}
 		if (purple_strequal(tzname, win32_tzmap[i].wdst))
 		{
-#if 0
-			purple_debug_info("wpurple", "TZ \"%s\" matches Windows timezone \"%s\"\n",
-			                win32_tzmap[i].udst, tzname);
-#endif
 			/* Cache the Result */
 			if (i > 0) {
 				if (win32_tzmap[0].wdst[0] != '\0')
@@ -1056,10 +1041,6 @@ wpurple_get_timezone_abbreviation(const struct tm *tm)
 		{
 			if (purple_strequal(localtzname, win32_tzmap[i].wstd))
 			{
-#if 0
-				purple_debug_info("wpurple", "TZ \"%s\" matches localized Windows timezone \"%s\" (\"%s\")\n",
-				                win32_tzmap[i].ustd, tzname, localtzname);
-#endif
 				/* Cache the Result */
 				if (win32_tzmap[0].wstd[0] != '\0')
 					g_free(win32_tzmap[0].wstd);
@@ -1070,10 +1051,6 @@ wpurple_get_timezone_abbreviation(const struct tm *tm)
 			}
 			if (purple_strequal(localtzname, win32_tzmap[i].wdst))
 			{
-#if 0
-				purple_debug_info("wpurple", "TZ \"%s\" matches localized Windows timezone \"%s\" (\"%s\")\n",
-				                win32_tzmap[i].udst, tzname, localtzname);
-#endif
 				/* Cache the Result */
 				if (win32_tzmap[0].wdst[0] != '\0')
 					g_free(win32_tzmap[0].wdst);
