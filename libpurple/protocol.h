@@ -1050,29 +1050,6 @@ char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
 		PurpleRoomlistRoom *room);
 
 /**************************************************************************/
-/* Protocol Attention Interface API                                       */
-/**************************************************************************/
-
-/**
- * purple_protocol_attention_iface_get_type:
- *
- * Returns: The #GType for the protocol attention interface.
- */
-GType purple_protocol_attention_iface_get_type(void);
-
-gboolean purple_protocol_attention_iface_send(PurpleProtocol *protocol,
-		PurpleConnection *gc, const char *username, guint type);
-
-/**
- * purple_protocol_attention_iface_get_types:
- * @protocol: The #PurpleProtocol.
- * @account: The #PurpleAccount whose attention types to get.
- *
- * Returns a list of 
-GList *purple_protocol_attention_iface_get_types(PurpleProtocol *protocol,
-		PurpleAccount *acct);
-
-/**************************************************************************/
 /* Protocol Media Interface API                                           */
 /**************************************************************************/
 

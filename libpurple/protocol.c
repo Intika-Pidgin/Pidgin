@@ -864,56 +864,6 @@ purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
 #undef DEFINE_PROTOCOL_FUNC
 
 /**************************************************************************
- * Protocol Attention Interface API
- **************************************************************************/
-#define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolAttentionIface *attention_iface = \
-		PURPLE_PROTOCOL_GET_ATTENTION_IFACE(protocol); \
-	if (attention_iface && attention_iface->funcname) \
-		attention_iface->funcname(__VA_ARGS__);
-
-#define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolAttentionIface *attention_iface = \
-		PURPLE_PROTOCOL_GET_ATTENTION_IFACE(protocol); \
-	if (attention_iface && attention_iface->funcname) \
-		return attention_iface->funcname(__VA_ARGS__); \
-	else \
-		return defaultreturn;
-
-GType
-purple_protocol_attention_iface_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolAttentionIface),
-		};
-
-		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolAttentionIface", &info, 0);
-	}
-	return type;
-}
-
-gboolean
-purple_protocol_attention_iface_send(PurpleProtocol *protocol,
-		PurpleConnection *gc, const char *username, guint type)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, FALSE, send, gc, username, type);
-}
-
-GList *
-purple_protocol_attention_iface_get_types(PurpleProtocol *protocol,
-		PurpleAccount *account)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, get_types, account);
-}
-
-#undef DEFINE_PROTOCOL_FUNC_WITH_RETURN
-#undef DEFINE_PROTOCOL_FUNC
-
-/**************************************************************************
  * Protocol Media Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
