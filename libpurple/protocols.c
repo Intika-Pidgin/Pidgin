@@ -32,149 +32,6 @@
 
 static GHashTable *protocols = NULL;
 
-/**************************************************************************/
-/* Attention Type API                                                     */
-/**************************************************************************/
-
-struct _PurpleAttentionType
-{
-	const char *name;                  /* Shown in GUI elements */
-	const char *incoming_description;  /* Shown when sent */
-	const char *outgoing_description;  /* Shown when receied */
-	const char *icon_name;             /* Icon to display (optional) */
-	const char *unlocalized_name;      /* Unlocalized name for UIs needing it */
-};
-
-
-PurpleAttentionType *
-purple_attention_type_new(const char *ulname, const char *name,
-						const char *inc_desc, const char *out_desc)
-{
-	PurpleAttentionType *attn = g_new0(PurpleAttentionType, 1);
-
-	purple_attention_type_set_name(attn, name);
-	purple_attention_type_set_incoming_desc(attn, inc_desc);
-	purple_attention_type_set_outgoing_desc(attn, out_desc);
-	purple_attention_type_set_unlocalized_name(attn, ulname);
-
-	return attn;
-}
-
-
-void
-purple_attention_type_set_name(PurpleAttentionType *type, const char *name)
-{
-	g_return_if_fail(type != NULL);
-
-	type->name = name;
-}
-
-void
-purple_attention_type_set_incoming_desc(PurpleAttentionType *type, const char *desc)
-{
-	g_return_if_fail(type != NULL);
-
-	type->incoming_description = desc;
-}
-
-void
-purple_attention_type_set_outgoing_desc(PurpleAttentionType *type, const char *desc)
-{
-	g_return_if_fail(type != NULL);
-
-	type->outgoing_description = desc;
-}
-
-void
-purple_attention_type_set_icon_name(PurpleAttentionType *type, const char *name)
-{
-	g_return_if_fail(type != NULL);
-
-	type->icon_name = name;
-}
-
-void
-purple_attention_type_set_unlocalized_name(PurpleAttentionType *type, const char *ulname)
-{
-	g_return_if_fail(type != NULL);
-
-	type->unlocalized_name = ulname;
-}
-
-const char *
-purple_attention_type_get_name(const PurpleAttentionType *type)
-{
-	g_return_val_if_fail(type != NULL, NULL);
-
-	return type->name;
-}
-
-const char *
-purple_attention_type_get_incoming_desc(const PurpleAttentionType *type)
-{
-	g_return_val_if_fail(type != NULL, NULL);
-
-	return type->incoming_description;
-}
-
-const char *
-purple_attention_type_get_outgoing_desc(const PurpleAttentionType *type)
-{
-	g_return_val_if_fail(type != NULL, NULL);
-
-	return type->outgoing_description;
-}
-
-const char *
-purple_attention_type_get_icon_name(const PurpleAttentionType *type)
-{
-	g_return_val_if_fail(type != NULL, NULL);
-
-	if(type->icon_name == NULL || *(type->icon_name) == '\0')
-		return NULL;
-
-	return type->icon_name;
-}
-
-const char *
-purple_attention_type_get_unlocalized_name(const PurpleAttentionType *type)
-{
-	g_return_val_if_fail(type != NULL, NULL);
-
-	return type->unlocalized_name;
-}
-
-/**************************************************************************
- * GBoxed code for PurpleAttentionType
- **************************************************************************/
-
-static PurpleAttentionType *
-purple_attention_type_copy(PurpleAttentionType *attn)
-{
-	PurpleAttentionType *attn_copy;
-
-	g_return_val_if_fail(attn != NULL, NULL);
-
-	attn_copy  = g_new(PurpleAttentionType, 1);
-	*attn_copy = *attn;
-
-	return attn_copy;
-}
-
-GType
-purple_attention_type_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		type = g_boxed_type_register_static("PurpleAttentionType",
-				(GBoxedCopyFunc)purple_attention_type_copy,
-				(GBoxedFreeFunc)g_free);
-	}
-
-	return type;
-}
-
 /**************************************************************************
  * GBoxed code for PurpleProtocolChatEntry
  **************************************************************************/
@@ -508,7 +365,7 @@ purple_protocol_send_attention(PurpleConnection *gc, const char *who, guint type
 	g_return_if_fail(who != NULL);
 
 	protocol = purple_protocols_find(purple_account_get_protocol_id(purple_connection_get_account(gc)));
-	g_return_if_fail(PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, send));
+	g_return_if_fail(PURPLE_IS_PROTOCOL_ATTENTION(protocol));
 
 	attn = purple_get_attention_type_from_code(purple_connection_get_account(gc), type_code);
 
@@ -526,7 +383,7 @@ purple_protocol_send_attention(PurpleConnection *gc, const char *who, guint type
 	purple_debug_info("server", "serv_send_attention: sending '%s' to %s\n",
 			description, who);
 
-	if (!purple_protocol_attention_iface_send(protocol, gc, who, type_code))
+	if (!purple_protocol_attention_send(PURPLE_PROTOCOL_ATTENTION(protocol), gc, who, type_code))
 		return;
 
 	im = purple_im_conversation_new(purple_connection_get_account(gc), who);

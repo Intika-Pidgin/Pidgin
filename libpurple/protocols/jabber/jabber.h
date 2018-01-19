@@ -59,6 +59,7 @@ typedef struct _JabberStream JabberStream;
 #include <gmodule.h>
 #include <gio/gio.h>
 
+#include "attention.h"
 #include "circularbuffer.h"
 #include "connection.h"
 #include "http.h"
@@ -418,8 +419,8 @@ void jabber_keepalive(PurpleConnection *gc);
 void jabber_register_gateway(JabberStream *js, const char *gateway);
 void jabber_register_account(PurpleAccount *account);
 void jabber_unregister_account(PurpleAccount *account, PurpleAccountUnregistrationCb cb, void *user_data);
-gboolean jabber_send_attention(PurpleConnection *gc, const char *username, guint code);
-GList *jabber_attention_types(PurpleAccount *account);
+gboolean jabber_send_attention(PurpleProtocolAttention *attn, PurpleConnection *gc, const char *username, guint code);
+GList *jabber_attention_types(PurpleProtocolAttention *attn, PurpleAccount *account);
 void jabber_convo_closed(PurpleConnection *gc, const char *who);
 PurpleChat *jabber_find_blist_chat(PurpleAccount *account, const char *name);
 gboolean jabber_offline_message(const PurpleBuddy *buddy);
