@@ -1533,20 +1533,6 @@ _show_info(PurpleConnection * gc, NMUserRecord * user_record, char * name)
 		purple_notify_user_info_add_pair_html(user_info, tag, value);
 	}
 
-#if 0
-	/* Hint for translators: "DN" here refers to a piece of information about
-	   a user on the Novell protocol. "DN" is not an English word. I think
-	   it's an abbreviation, possibly for "distinguished name" as defined in
-	   the X.500 standard. It's probably fine to leave it untranslated. */
-	tag = _("DN");
-	value = nm_user_record_get_dn(user_record);
-	if (value) {
-		/* TODO: Check whether it's correct to call add_pair_html,
-		         or if we should be using add_pair_plaintext */
-		purple_notify_user_info_add_pair_html(user_info, tag, value);
-	}
-#endif /* if 0 */
-
 	tag = _("Full name");
 	value = nm_user_record_get_full_name(user_record);
 	if (value) {

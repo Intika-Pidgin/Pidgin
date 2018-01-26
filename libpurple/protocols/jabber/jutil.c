@@ -322,9 +322,6 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 	const char *slash = NULL;
 	const char *c;
 	gboolean needs_validation = FALSE;
-#if 0
-	gboolean node_is_required = FALSE;
-#endif
 #ifndef USE_IDN
 	char *node = NULL;
 	char *domain;
@@ -378,28 +375,6 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 					/* We're good */
 					break;
 
-#if 0
-				if (slash != NULL) {
-					/* characters allowed only in the resource */
-					if (implement_me)
-						/* We're good */
-						break;
-				}
-
-				/* characters allowed only in the node */
-				if (implement_me) {
-					/*
-					 * Ok, this character is valid, but only if it's a part
-					 * of the node and not the domain.  But we don't know
-					 * if "c" is a part of the node or the domain until after
-					 * we've found the @.  So set a flag for now and check
-					 * that we found an @ later.
-					 */
-					node_is_required = TRUE;
-					break;
-				}
-#endif
-
 				/*
 				 * Hmm, this character is a bit more exotic.  Better fall
 				 * back to using the more expensive UTF-8 compliant
@@ -409,12 +384,6 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 				break;
 		}
 	}
-
-#if 0
-	if (node_is_required && at == NULL)
-		/* Found invalid characters in the domain */
-		return NULL;
-#endif
 
 	if (!needs_validation) {
 		/* JID is made of only ASCII characters--just lowercase and return */
