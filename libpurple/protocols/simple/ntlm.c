@@ -80,14 +80,6 @@ struct type3_message {
 	guint32 flags;            /* 0x00008201 */
 	/* guint32 flags2; */     /* unknown, used in windows messenger */
 	/* guint32 flags3; */
-
-#if 0
-	guint8  dom[*];          /* domain string (unicode UTF-16LE) */
-	guint8  user[*];         /* username string (unicode UTF-16LE) */
-	guint8  host[*];         /* host string (unicode UTF-16LE) */
-	guint8  lm_resp[*];      /* LanManager response */
-	guint8  nt_resp[*];      /* NT response */
-#endif
 };
 
 guint8 *

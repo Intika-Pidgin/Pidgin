@@ -967,107 +967,6 @@ silc_command(SilcClient client, SilcClientConnection conn,
 	}
 }
 
-#if 0
-static void
-silcpurple_whois_more(SilcClientEntry client_entry, gint id)
-{
-	SilcAttributePayload attr;
-	SilcAttribute attribute;
-	GString *s;
-	SilcVCardStruct vcard;
-	int i;
-
-	if (id != 0)
-		return;
-
-	memset(&vcard, 0, sizeof(vcard));
-
-	s = g_string_new("");
-
-	silc_dlist_start(client_entry->attrs);
-	while ((attr = silc_dlist_get(client_entry->attrs)) != SILC_LIST_END) {
-		attribute = silc_attribute_get_attribute(attr);
-		switch (attribute) {
-
-		case SILC_ATTRIBUTE_USER_INFO:
-			if (!silc_attribute_get_object(attr, (void *)&vcard,
-						       sizeof(vcard)))
-				continue;
-			g_string_append_printf(s, "%s:\n\n", _("Personal Information"));
-			if (vcard.full_name)
-				g_string_append_printf(s, "%s:\t\t%s\n",
-						       _("Full Name"),
-						       vcard.full_name);
-			if (vcard.first_name)
-				g_string_append_printf(s, "%s:\t%s\n",
-						       _("First Name"),
-						       vcard.first_name);
-			if (vcard.middle_names)
-				g_string_append_printf(s, "%s:\t%s\n",
-						       _("Middle Name"),
-						       vcard.middle_names);
-			if (vcard.family_name)
-				g_string_append_printf(s, "%s:\t%s\n",
-						       _("Family Name"),
-						       vcard.family_name);
-			if (vcard.nickname)
-				g_string_append_printf(s, "%s:\t\t%s\n",
-						       _("Nickname"),
-						       vcard.nickname);
-			if (vcard.bday)
-				g_string_append_printf(s, "%s:\t\t%s\n",
-						       _("Birth Day"),
-						       vcard.bday);
-			if (vcard.title)
-				g_string_append_printf(s, "%s:\t\t%s\n",
-						       _("Job Title"),
-						       vcard.title);
-			if (vcard.role)
-				g_string_append_printf(s, "%s:\t\t%s\n",
-						       _("Job Role"),
-						       vcard.role);
-			if (vcard.org_name)
-				g_string_append_printf(s, "%s:\t%s\n",
-						       _("Organization"),
-						       vcard.org_name);
-			if (vcard.org_unit)
-				g_string_append_printf(s, "%s:\t\t%s\n",
-						       _("Unit"),
-						       vcard.org_unit);
-			if (vcard.url)
-				g_string_append_printf(s, "%s:\t%s\n",
-						       _("Homepage"),
-						       vcard.url);
-			if (vcard.label)
-				g_string_append_printf(s, "%s:\t%s\n",
-						       _("Address"),
-						       vcard.label);
-			for (i = 0; i < vcard.num_tels; i++) {
-				if (vcard.tels[i].telnum)
-					g_string_append_printf(s, "%s:\t\t\t%s\n",
-							       _("Phone"),
-							       vcard.tels[i].telnum);
-			}
-			for (i = 0; i < vcard.num_emails; i++) {
-				if (vcard.emails[i].address)
-					g_string_append_printf(s, "%s:\t\t%s\n",
-							       _("Email"),
-							       vcard.emails[i].address);
-			}
-			if (vcard.note)
-				g_string_append_printf(s, "\n%s:\t\t%s\n",
-						       _("Note"),
-						       vcard.note);
-			break;
-		}
-	}
-
-	purple_notify_info(NULL, _("User Information"), _("User Information"),
-			 s->str);
-	g_string_free(s, TRUE);
-}
-#endif
-
 
 /* Command reply handler.  Delivers a reply to command that was sent
    earlier.  The `conn' is the associated client connection.  The `command'
@@ -1306,15 +1205,6 @@ silc_command_reply(SilcClient client, SilcClientConnection conn,
 				}
 			}
 
-#if 0 /* XXX for now, let's not show attrs here */
-			if (client_entry->attrs)
-				purple_request_action(gc, _("User Information"),
-						_("User Information"),
-						buf, 1, client_entry, 2,
-						_("OK"), G_CALLBACK(silcpurple_whois_more),
-						_("_More..."), G_CALLBACK(silcpurple_whois_more), gc->account, NULL, NULL);
-			else
-#endif /* 0 */
 			purple_notify_userinfo(gc, client_entry->nickname, user_info, NULL, NULL);
 			purple_notify_user_info_destroy(user_info);
 		}

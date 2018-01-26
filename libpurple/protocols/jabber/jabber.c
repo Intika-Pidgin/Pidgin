@@ -220,50 +220,9 @@ static char *jabber_prep_resource(char *input) {
 static gboolean
 jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 {
-#if 0
-	PurpleXmlNode *starttls;
-
-	PurpleAccount *account;
-
-	account = purple_connection_get_account(js->gc);
-
-	/*
-	 * This code DOES NOT EXIST, will never be enabled by default, and
-	 * will never ever be supported (by me).
-	 * It's literally *only* for developer testing.
-	 */
-	{
-		const gchar *connection_security = purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS);
-		if (!purple_strequal(connection_security, "none")) {
-			jabber_send_raw(js,
-					"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
-			return TRUE;
-		}
-	}
-#else
 	jabber_send_raw(js,
 			"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
 	return TRUE;
-#endif
-
-#if 0
-	starttls = purple_xmlnode_get_child(packet, "starttls");
-	if(purple_xmlnode_get_child(starttls, "required")) {
-		purple_connection_error(js->gc,
-				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-				_("Server requires TLS/SSL, but no TLS/SSL support was found."));
-		return TRUE;
-	}
-
-	if (purple_strequal("require_tls", purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS))) {
-		purple_connection_error(js->gc,
-				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-				_("You require encryption, but no TLS/SSL support was found."));
-		return TRUE;
-	}
-
-	return FALSE;
-#endif
 }
 
 void jabber_stream_features_parse(JabberStream *js, PurpleXmlNode *packet)
@@ -2688,9 +2647,7 @@ char *jabber_parse_error(JabberStream *js,
 		PurpleXmlNode *t = purple_xmlnode_get_child_with_namespace(error, "text", NS_XMPP_STANZAS);
 		if (t)
 			cdata = purple_xmlnode_get_data(t);
-#if 0
-		cdata = purple_xmlnode_get_data(error);
-#endif
+
 		code = purple_xmlnode_get_attrib(error, "code");
 
 		/* Stanza errors */
@@ -3762,56 +3719,6 @@ static void jabber_unregister_commands(PurpleProtocol *protocol)
 	g_hash_table_remove(jabber_cmds, protocol);
 }
 
-#if 0
-/* IPC functions */
-
-/**
- * IPC function for determining if a contact supports a certain feature.
- *
- * @param account   The PurpleAccount
- * @param jid       The full JID of the contact.
- * @param feature   The feature's namespace.
- *
- * @return TRUE if supports feature; else FALSE.
- */
-static gboolean
-jabber_ipc_contact_has_feature(PurpleAccount *account, const gchar *jid,
-                               const gchar *feature)
-{
-	PurpleConnection *gc = purple_account_get_connection(account);
-	JabberStream *js;
-	JabberBuddy *jb;
-	JabberBuddyResource *jbr;
-	gchar *resource;
-
-	if (!purple_account_is_connected(account))
-		return FALSE;
-	js = purple_connection_get_protocol_data(gc);
-
-	if (!(resource = jabber_get_resource(jid)) ||
-	    !(jb = jabber_buddy_find(js, jid, FALSE)) ||
-	    !(jbr = jabber_buddy_find_resource(jb, resource))) {
-		g_free(resource);
-		return FALSE;
-	}
-
-	g_free(resource);
-
-	return jabber_resource_has_capability(jbr, feature);
-}
-
-static void
-jabber_ipc_add_feature(const gchar *feature)
-{
-	if (!feature)
-		return;
-	jabber_add_feature(feature, 0);
-
-	/* send presence with new caps info for all connected accounts */
-	jabber_caps_broadcast_change();
-}
-#endif
-
 static PurpleAccount *find_acct(const char *protocol, const char *acct_id)
 {
 	PurpleAccount *acct = NULL;
@@ -4032,32 +3939,6 @@ static void jabber_init_protocol(PurpleProtocol *protocol)
 
 	jabber_register_commands(protocol);
 
-#if 0
-	/* IPC functions */
-	purple_plugin_ipc_register(plugin, "contact_has_feature", PURPLE_CALLBACK(jabber_ipc_contact_has_feature),
-							 purple_marshal_BOOLEAN__POINTER_POINTER_POINTER,
-							 G_TYPE_BOOLEAN, 3,
-							 PURPLE_TYPE_ACCOUNT, G_TYPE_STRING, G_TYPE_STRING);
-
-	purple_plugin_ipc_register(plugin, "add_feature", PURPLE_CALLBACK(jabber_ipc_add_feature),
-							 purple_marshal_VOID__POINTER,
-							 G_TYPE_NONE, 1, G_TYPE_STRING);
-
-	purple_plugin_ipc_register(plugin, "register_namespace_watcher",
-	                           PURPLE_CALLBACK(jabber_iq_signal_register),
-	                           purple_marshal_VOID__POINTER_POINTER,
-	                           G_TYPE_NONE, 2,
-	                           G_TYPE_STRING,  /* node */
-	                           G_TYPE_STRING); /* namespace */
-
-	purple_plugin_ipc_register(plugin, "unregister_namespace_watcher",
-	                           PURPLE_CALLBACK(jabber_iq_signal_unregister),
-	                           purple_marshal_VOID__POINTER_POINTER,
-	                           G_TYPE_NONE, 2,
-	                           G_TYPE_STRING,  /* node */
-	                           G_TYPE_STRING); /* namespace */
-#endif
-
 	purple_signal_register(protocol, "jabber-register-namespace-watcher",
 			purple_marshal_VOID__POINTER_POINTER,
 			G_TYPE_NONE, 2,
@@ -4141,9 +4022,6 @@ static void jabber_uninit_protocol(PurpleProtocol *protocol)
 	g_return_if_fail(plugin_ref > 0);
 
 	purple_signals_unregister_by_instance(protocol);
-#if 0
-	purple_plugin_ipc_unregister_all(plugin);
-#endif
 	jabber_unregister_commands(protocol);
 
 	--plugin_ref;

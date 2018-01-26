@@ -158,10 +158,6 @@ _jabber_parse_and_write_message_to_ui(PurpleXmlNode *message_node, PurpleBuddy *
 
 	events_node = purple_xmlnode_get_child_with_namespace(message_node, "x", "jabber:x:event");
 	if (events_node != NULL) {
-#if 0
-		if (purple_xmlnode_get_child(events_node, "composing") != NULL)
-			composing_event = TRUE;
-#endif
 		if (purple_xmlnode_get_child(events_node, "id") != NULL) {
 			/* The user is just typing */
 			/* TODO: Deal with typing notification */
@@ -393,17 +389,7 @@ static void bonjour_jabber_stream_ended(BonjourJabberConversation *bconv) {
 
 	if(bconv->pb != NULL)
 		bb = purple_buddy_get_protocol_data(bconv->pb);
-#if 0
-	if(bconv->pb != NULL) {
-		PurpleConversation *conv;
-		conv = purple_conversations_find_im_with_account(bconv->pb->name, bconv->pb->account);
-		if (conv != NULL) {
-			char *tmp = g_strdup_printf(_("%s has closed the conversation."), bconv->pb->name);
-			purple_conversation_write_system_message(conv, tmp, 0);
-			g_free(tmp);
-		}
-	}
-#endif
+
 	/* Close the socket, clear the watcher and free memory */
 	bonjour_jabber_close_conversation(bconv);
 	if(bb)
@@ -736,16 +722,6 @@ start_serversocket_listening(int port, int socket, common_sockaddr_t *addr, size
 		purple_debug_error("bonjour", "Unable to listen on IPv%d socket: %s\n", ip6 ? 6 : 4, g_strerror(errno));
 		return -1;
 	}
-
-#if 0
-	/* TODO: Why isn't this being used? */
-	data->socket = purple_network_listen(jdata->port, AF_UNSPEC, SOCK_STREAM, TRUE);
-
-	if (jdata->socket == -1)
-	{
-		purple_debug_error("bonjour", "No se ha podido crear el socket\n");
-	}
-#endif
 
 	return ret_port;
 }
