@@ -1,5 +1,7 @@
 PROGS = [
+    'attention_type',
     'image',
+    'protocol_attention',
     'protocol_xfer',
     'smiley',
     'smiley_list',
