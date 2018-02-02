@@ -466,7 +466,7 @@ bonjour_rename_group(PurpleConnection *connection, const char *old_name, PurpleG
 }
 
 static gboolean
-bonjour_can_receive_file(PurpleConnection *connection, const char *who)
+bonjour_can_receive_file(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const char *who)
 {
 	PurpleBuddy *buddy = purple_blist_find_buddy(purple_connection_get_account(connection), who);
 
@@ -699,7 +699,7 @@ bonjour_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
 }
 
 static void
-bonjour_protocol_xfer_iface_init(PurpleProtocolXferIface *xfer_iface)
+bonjour_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = bonjour_can_receive_file;
 	xfer_iface->send        = bonjour_send_file;
@@ -718,7 +718,7 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
 	                                  bonjour_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
 	                                  bonjour_protocol_xfer_iface_init)
 );
 

@@ -441,7 +441,7 @@ silcpurple_ftp_send_file_resolved(SilcClient client,
 	g_free(context);
 }
 
-PurpleXfer *silcpurple_ftp_new_xfer(PurpleConnection *gc, const char *name)
+PurpleXfer *silcpurple_ftp_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *name)
 {
 	SilcPurple sg = purple_connection_get_protocol_data(gc);
 	SilcClient client = sg->client;
@@ -482,7 +482,7 @@ PurpleXfer *silcpurple_ftp_new_xfer(PurpleConnection *gc, const char *name)
 	return xfer->xfer;
 }
 
-void silcpurple_ftp_send_file(PurpleConnection *gc, const char *name, const char *file)
+void silcpurple_ftp_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *name, const char *file)
 {
 	PurpleXfer *xfer = silcpurple_ftp_new_xfer(gc, name);
 

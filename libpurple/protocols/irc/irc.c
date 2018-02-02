@@ -687,11 +687,6 @@ static int irc_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg)
 		purple_debug(PURPLE_DEBUG_ERROR, "irc", "chat send on nonexistent chat\n");
 		return -EINVAL;
 	}
-#if 0
-	if (*what == '/') {
-		return irc_parse_cmd(irc, convo->name, what + 1);
-	}
-#endif
 	purple_markup_html_to_xhtml(purple_message_get_contents(msg), NULL, &tmp);
 	args[0] = purple_conversation_get_name(convo);
 	args[1] = tmp;
@@ -916,7 +911,7 @@ irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
 }
 
 static void
-irc_protocol_xfer_iface_init(PurpleProtocolXferIface *xfer_iface)
+irc_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->send     = irc_dccsend_send_file;
 	xfer_iface->new_xfer = irc_dccsend_new_xfer;
@@ -940,7 +935,7 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
 	                                  irc_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
 	                                  irc_protocol_xfer_iface_init)
 );
 

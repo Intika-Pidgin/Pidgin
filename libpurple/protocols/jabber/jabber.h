@@ -59,6 +59,7 @@ typedef struct _JabberStream JabberStream;
 #include <gmodule.h>
 #include <gio/gio.h>
 
+#include "attention.h"
 #include "circularbuffer.h"
 #include "connection.h"
 #include "http.h"
@@ -418,8 +419,8 @@ void jabber_keepalive(PurpleConnection *gc);
 void jabber_register_gateway(JabberStream *js, const char *gateway);
 void jabber_register_account(PurpleAccount *account);
 void jabber_unregister_account(PurpleAccount *account, PurpleAccountUnregistrationCb cb, void *user_data);
-gboolean jabber_send_attention(PurpleConnection *gc, const char *username, guint code);
-GList *jabber_attention_types(PurpleAccount *account);
+gboolean jabber_send_attention(PurpleProtocolAttention *attn, PurpleConnection *gc, const char *username, guint code);
+GList *jabber_attention_types(PurpleProtocolAttention *attn, PurpleAccount *account);
 void jabber_convo_closed(PurpleConnection *gc, const char *who);
 PurpleChat *jabber_find_blist_chat(PurpleAccount *account, const char *name);
 gboolean jabber_offline_message(const PurpleBuddy *buddy);
@@ -431,6 +432,6 @@ gboolean jabber_video_enabled(JabberStream *js, const char *unused);
 gboolean jabber_initiate_media(PurpleAccount *account, const char *who,
 		PurpleMediaSessionType type);
 PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who);
-gboolean jabber_can_receive_file(PurpleConnection *gc, const gchar *who);
+gboolean jabber_can_receive_file(PurpleProtocolXfer *xfer, PurpleConnection *gc, const gchar *who);
 
 #endif /* PURPLE_JABBER_H_ */
