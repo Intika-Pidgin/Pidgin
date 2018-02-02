@@ -42,8 +42,8 @@ G_DEFINE_BOXED_TYPE(
 PurpleAttentionType *
 purple_attention_type_new(const gchar *unlocalized_name,
                           const gchar *name,
-						  const gchar *incoming_description,
-						  const gchar *outgoing_description)
+                          const gchar *incoming_description,
+                          const gchar *outgoing_description)
 {
 	PurpleAttentionType *attn = g_new0(PurpleAttentionType, 1);
 

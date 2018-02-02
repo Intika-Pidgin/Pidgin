@@ -117,7 +117,7 @@ test_purple_protocol_attention_can_get_types(void) {
 	types = purple_protocol_attention_get_types(PURPLE_PROTOCOL_ATTENTION(attn), a);
 	g_assert_true(g_list_length(types) == 1);
 
-	// take the first item and cast it into type
+	/* take the first item and cast it into type */
 	type = (PurpleAttentionType *)(types->data);
 	g_assert(type);
 

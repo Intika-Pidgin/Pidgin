@@ -145,7 +145,7 @@ const gchar *purple_attention_type_get_incoming_desc(const PurpleAttentionType *
  * @type: The attention type.
  * @desc: The localized description for incoming events.
  *
- * Sets the description of the attention-demanding event shown in  conversations
+ * Sets the description of the attention-demanding event shown in conversations
  * when the event is received.
  */
 void purple_attention_type_set_incoming_desc(PurpleAttentionType *type, const gchar *desc);
@@ -230,13 +230,24 @@ GType purple_protocol_attention_get_type(void);
  * @protocol: The #PurpleProtocol.
  * @account: The #PurpleAccount whose attention types to get.
  *
- * Returns a list of
+ * Returns a list of #PurpleAttentionType's for @attn.
+ *
+ * Returns: (transfer container) (element-type PurpleAttentionType): The list of #PurpleAttentionType's.
  */
-GList *purple_protocol_attention_get_types(PurpleProtocolAttention *attn,
-		PurpleAccount *acct);
+GList *purple_protocol_attention_get_types(PurpleProtocolAttention *attn, PurpleAccount *acct);
 
-gboolean purple_protocol_attention_send(PurpleProtocolAttention *attn,
-		PurpleConnection *gc, const char *username, guint type);
+/**
+ * purple_protocol_attention_send:
+ * @attn: The #PurpleProtocolAttention instance.
+ * @gc: The #PurpleConnection to send on
+ * @username: The name of the user to send the attention to.
+ * @type: The type of attention to send.
+ *
+ * Sends an attention message of @type to @username.
+ *
+ * Returns: TRUE on success, FALSE otherwise.
+ */
+gboolean purple_protocol_attention_send(PurpleProtocolAttention *attn, PurpleConnection *gc, const gchar *username, guint type);
 
 G_END_DECLS
 
