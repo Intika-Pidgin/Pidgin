@@ -62,9 +62,6 @@ gtalk_protocol_init(PurpleProtocol *protocol)
 	ADD_VALUE(encryption_values, _("Require encryption"), "require_tls");
 	ADD_VALUE(encryption_values, _("Use encryption if available"), "opportunistic_tls");
 	ADD_VALUE(encryption_values, _("Use old-style SSL"), "old_ssl");
-#if 0
-	ADD_VALUE(encryption_values, "None", "none");
-#endif
 	encryption_values = g_list_reverse(encryption_values);
 
 #undef ADD_VALUE

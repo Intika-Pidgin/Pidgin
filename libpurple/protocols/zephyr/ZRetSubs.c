@@ -42,22 +42,6 @@ Code_t ZRetrieveSubscriptions(port,nsubs)
 	return(Z_RetSubs(&notice, nsubs, ZAUTH));
 }
 
-#if 0
-Code_t ZRetrieveDefaultSubscriptions(nsubs)
-	int *nsubs;
-{
-	ZNotice_t notice;
-
-	(void) memset((char *)&notice, 0, sizeof(notice));
-	notice.z_message = (char *) 0;
-	notice.z_message_len = 0;
-	notice.z_opcode = CLIENT_GIMMEDEFS;
-
-	return(Z_RetSubs(&notice, nsubs, ZNOAUTH));
-
-}
-#endif
-
 static Code_t Z_RetSubs(notice, nsubs, auth_routine)
 	register ZNotice_t *notice;
 	int *nsubs;

@@ -295,10 +295,10 @@ PurpleAttentionType *purple_get_attention_type_from_code(PurpleAccount *account,
 	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
 
 	/* Lookup the attention type in the protocol's attention_types list, if any. */
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, get_types)) {
+	if (PURPLE_IS_PROTOCOL_ATTENTION(protocol)) {
 		GList *attention_types;
 
-		attention_types = purple_protocol_attention_iface_get_types(protocol, account);
+		attention_types = purple_protocol_attention_get_types(protocol, account);
 		attn = (PurpleAttentionType *)g_list_nth_data(attention_types, type_code);
 	} else {
 		attn = NULL;
@@ -894,9 +894,12 @@ void purple_serv_send_file(PurpleConnection *gc, const char *who, const char *fi
 	if (gc) {
 		protocol = purple_connection_get_protocol(gc);
 
-		if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive) ||
-				purple_protocol_xfer_iface_can_receive(protocol, gc, who))
+		if(PURPLE_IS_PROTOCOL_XFER(protocol)) {
+			PurpleProtocolXfer *xfer = PURPLE_PROTOCOL_XFER(protocol);
 
-			purple_protocol_xfer_iface_send(protocol, gc, who, file);
+			if(purple_protocol_xfer_can_receive(xfer, gc, who)) {
+				purple_protocol_xfer_send(xfer, gc, who, file);
+			}
+		}
 	}
 }

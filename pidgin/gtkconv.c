@@ -31,6 +31,7 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "account.h"
+#include "attention.h"
 #include "cmds.h"
 #include "core.h"
 #include "debug.h"
@@ -1680,7 +1681,7 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 
 
-		if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, send))
+		if (protocol && PURPLE_IS_PROTOCOL_XFER(protocol))
 		{
 			gboolean can_receive_file = TRUE;
 
@@ -1694,9 +1695,11 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 				gchar *real_who = NULL;
 				real_who = purple_protocol_chat_iface_get_user_real_name(protocol, gc,
 					purple_chat_conversation_get_id(chat), who);
-				if (!(!PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive) ||
-						purple_protocol_xfer_iface_can_receive(protocol, gc, real_who ? real_who : who)))
+
+				if (!purple_protocol_xfer_can_receive(protocol, gc, real_who ? real_who : who)) {
 					can_receive_file = FALSE;
+				}
+
 				g_free(real_who);
 			}
 
@@ -3442,8 +3445,8 @@ regenerate_attention_items(PidginConvWindow *win)
 	if (pc != NULL)
 		protocol = purple_connection_get_protocol(pc);
 
-	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, get_types)) {
-		list = purple_protocol_attention_iface_get_types(protocol, purple_connection_get_account(pc));
+	if (protocol && PURPLE_IS_PROTOCOL_ATTENTION(protocol)) {
+		list = purple_protocol_attention_get_types(PURPLE_PROTOCOL_ATTENTION(protocol), purple_connection_get_account(pc));
 
 		/* Multiple attention types */
 		if (list && list->next) {
@@ -7418,13 +7421,19 @@ gray_stuff_out(PidginConversation *gtkconv)
 
 		if (PURPLE_IS_IM_CONVERSATION(conv))
 		{
+			gboolean can_send_file = FALSE;
+			const gchar *name = purple_conversation_get_name(conv);
+
+			if (PURPLE_IS_PROTOCOL_XFER(protocol) &&
+			    purple_protocol_xfer_can_receive(PURPLE_PROTOCOL_XFER(protocol), gc, name)
+			) {
+				can_send_file = TRUE;
+			}
+
 			gtk_action_set_sensitive(win->menu->add, (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, add_buddy)));
 			gtk_action_set_sensitive(win->menu->remove, (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, remove_buddy)));
-			gtk_action_set_sensitive(win->menu->send_file,
-									 (PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, send) &&
-									 (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive) ||
-									  purple_protocol_xfer_iface_can_receive(protocol, gc, purple_conversation_get_name(conv)))));
-			gtk_action_set_sensitive(win->menu->get_attention, (PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, send)));
+			gtk_action_set_sensitive(win->menu->send_file, can_send_file);
+			gtk_action_set_sensitive(win->menu->get_attention, (PURPLE_IS_PROTOCOL_ATTENTION(protocol)));
 			gtk_action_set_sensitive(win->menu->alias,
 									 (account != NULL) &&
 									 (purple_blist_find_buddy(account, purple_conversation_get_name(conv)) != NULL));

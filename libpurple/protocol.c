@@ -800,63 +800,6 @@ purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 #undef DEFINE_PROTOCOL_FUNC
 
 /**************************************************************************
- * Protocol Xfer Interface API
- **************************************************************************/
-#define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolXferIface *xfer_iface = \
-		PURPLE_PROTOCOL_GET_XFER_IFACE(protocol); \
-	if (xfer_iface && xfer_iface->funcname) \
-		xfer_iface->funcname(__VA_ARGS__);
-
-#define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolXferIface *xfer_iface = \
-		PURPLE_PROTOCOL_GET_XFER_IFACE(protocol); \
-	if (xfer_iface && xfer_iface->funcname) \
-		return xfer_iface->funcname(__VA_ARGS__); \
-	else \
-		return defaultreturn;
-
-GType
-purple_protocol_xfer_iface_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolXferIface),
-		};
-
-		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolXferIface", &info, 0);
-	}
-	return type;
-}
-
-gboolean
-purple_protocol_xfer_iface_can_receive(PurpleProtocol *protocol,
-		PurpleConnection *gc, const char *who)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, FALSE, can_receive, gc, who);
-}
-
-void
-purple_protocol_xfer_iface_send(PurpleProtocol *protocol, PurpleConnection *gc,
-		const char *who, const char *filename)
-{
-	DEFINE_PROTOCOL_FUNC(protocol, send, gc, who, filename);
-}
-
-PurpleXfer *
-purple_protocol_xfer_iface_new_xfer(PurpleProtocol *protocol,
-		PurpleConnection *gc, const char *who)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, new_xfer, gc, who);
-}
-
-#undef DEFINE_PROTOCOL_FUNC_WITH_RETURN
-#undef DEFINE_PROTOCOL_FUNC
-
-/**************************************************************************
  * Protocol Roomlist Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
@@ -915,56 +858,6 @@ purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
 		PurpleRoomlistRoom *room)
 {
 	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, room_serialize, room);
-}
-
-#undef DEFINE_PROTOCOL_FUNC_WITH_RETURN
-#undef DEFINE_PROTOCOL_FUNC
-
-/**************************************************************************
- * Protocol Attention Interface API
- **************************************************************************/
-#define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolAttentionIface *attention_iface = \
-		PURPLE_PROTOCOL_GET_ATTENTION_IFACE(protocol); \
-	if (attention_iface && attention_iface->funcname) \
-		attention_iface->funcname(__VA_ARGS__);
-
-#define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolAttentionIface *attention_iface = \
-		PURPLE_PROTOCOL_GET_ATTENTION_IFACE(protocol); \
-	if (attention_iface && attention_iface->funcname) \
-		return attention_iface->funcname(__VA_ARGS__); \
-	else \
-		return defaultreturn;
-
-GType
-purple_protocol_attention_iface_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolAttentionIface),
-		};
-
-		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolAttentionIface", &info, 0);
-	}
-	return type;
-}
-
-gboolean
-purple_protocol_attention_iface_send(PurpleProtocol *protocol,
-		PurpleConnection *gc, const char *username, guint type)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, FALSE, send, gc, username, type);
-}
-
-GList *
-purple_protocol_attention_iface_get_types(PurpleProtocol *protocol,
-		PurpleAccount *account)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, get_types, account);
 }
 
 #undef DEFINE_PROTOCOL_FUNC_WITH_RETURN

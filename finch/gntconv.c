@@ -719,10 +719,13 @@ gg_create_menu(FinchConv *ggc)
 		gnt_menu_add_item(GNT_MENU(sub), item);
 		gnt_menuitem_set_callback(item, add_pounce_cb, ggc);
 
-		if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, send) &&
-				(!PURPLE_PROTOCOL_IMPLEMENTS(protocol, XFER_IFACE, can_receive) ||
-					purple_protocol_xfer_iface_can_receive(protocol, gc,
-					purple_conversation_get_name(ggc->active_conv)))) {
+		if (PURPLE_IS_PROTOCOL_XFER(protocol) &&
+			purple_protocol_xfer_can_receive(
+				PURPLE_PROTOCOL_XFER(protocol),
+				gc,
+				purple_conversation_get_name(ggc->active_conv)
+			)
+		) {
 			item = gnt_menuitem_new(_("Send File"));
 			gnt_menu_add_item(GNT_MENU(sub), item);
 			gnt_menuitem_set_callback(item, send_file_cb, ggc);

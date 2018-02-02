@@ -556,35 +556,6 @@ struct _PurpleProtocolPrivacyIface
 #define PURPLE_PROTOCOL_GET_PRIVACY_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE, \
                                                 PurpleProtocolPrivacyIface))
 
-#define PURPLE_TYPE_PROTOCOL_XFER_IFACE     (purple_protocol_xfer_iface_get_type())
-
-typedef struct _PurpleProtocolXferIface PurpleProtocolXferIface;
-
-/**
- * PurpleProtocolXferIface:
- *
- * The protocol file transfer interface.
- *
- * This interface provides file transfer callbacks for the protocol.
- */
-struct _PurpleProtocolXferIface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	gboolean (*can_receive)(PurpleConnection *connection, const char *who);
-
-	void (*send)(PurpleConnection *connection, const char *who,
-					  const char *filename);
-
-	PurpleXfer *(*new_xfer)(PurpleConnection *connection, const char *who);
-};
-
-#define PURPLE_PROTOCOL_HAS_XFER_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_XFER_IFACE))
-#define PURPLE_PROTOCOL_GET_XFER_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_XFER_IFACE, \
-                                             PurpleProtocolXferIface))
-
 #define PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE     (purple_protocol_roomlist_iface_get_type())
 
 typedef struct _PurpleProtocolRoomlistIface PurpleProtocolRoomlistIface;
@@ -616,34 +587,6 @@ struct _PurpleProtocolRoomlistIface
 #define PURPLE_PROTOCOL_HAS_ROOMLIST_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE))
 #define PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE, \
                                                  PurpleProtocolRoomlistIface))
-
-#define PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE     (purple_protocol_attention_iface_get_type())
-
-typedef struct _PurpleProtocolAttentionIface PurpleProtocolAttentionIface;
-
-/**
- * PurpleProtocolAttentionIface:
- *
- * The protocol attention interface.
- *
- * This interface provides attention API for sending and receiving
- * zaps/nudges/buzzes etc.
- */
-struct _PurpleProtocolAttentionIface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	gboolean (*send)(PurpleConnection *gc, const char *username,
-							   guint type);
-
-	GList *(*get_types)(PurpleAccount *acct);
-};
-
-#define PURPLE_PROTOCOL_HAS_ATTENTION_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE))
-#define PURPLE_PROTOCOL_GET_ATTENTION_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE, \
-                                                  PurpleProtocolAttentionIface))
 
 #define PURPLE_TYPE_PROTOCOL_MEDIA_IFACE     (purple_protocol_media_iface_get_type())
 
@@ -1084,26 +1027,6 @@ void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection);
 
 /**************************************************************************/
-/* Protocol Xfer Interface API                                            */
-/**************************************************************************/
-
-/**
- * purple_protocol_xfer_iface_get_type:
- *
- * Returns: The #GType for the protocol xfer interface.
- */
-GType purple_protocol_xfer_iface_get_type(void);
-
-gboolean purple_protocol_xfer_iface_can_receive(PurpleProtocol *protocol,
-		PurpleConnection *connection, const char *who);
-
-void purple_protocol_xfer_iface_send(PurpleProtocol *protocol, PurpleConnection *connection,
-		const char *who, const char *filename);
-
-PurpleXfer *purple_protocol_xfer_iface_new_xfer(PurpleProtocol *protocol,
-		PurpleConnection *connection, const char *who);
-
-/**************************************************************************/
 /* Protocol Roomlist Interface API                                        */
 /**************************************************************************/
 
@@ -1125,23 +1048,6 @@ void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
 
 char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
 		PurpleRoomlistRoom *room);
-
-/**************************************************************************/
-/* Protocol Attention Interface API                                       */
-/**************************************************************************/
-
-/**
- * purple_protocol_attention_iface_get_type:
- *
- * Returns: The #GType for the protocol attention interface.
- */
-GType purple_protocol_attention_iface_get_type(void);
-
-gboolean purple_protocol_attention_iface_send(PurpleProtocol *protocol,
-		PurpleConnection *gc, const char *username, guint type);
-
-GList *purple_protocol_attention_iface_get_types(PurpleProtocol *protocol,
-		PurpleAccount *acct);
 
 /**************************************************************************/
 /* Protocol Media Interface API                                           */

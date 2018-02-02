@@ -359,7 +359,7 @@ static void irc_dccsend_send_init(PurpleXfer *xfer) {
 
 }
 
-PurpleXfer *irc_dccsend_new_xfer(PurpleConnection *gc, const char *who) {
+PurpleXfer *irc_dccsend_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who) {
 	PurpleXfer *xfer;
 	struct irc_xfer_send_data *xd;
 
@@ -387,8 +387,8 @@ PurpleXfer *irc_dccsend_new_xfer(PurpleConnection *gc, const char *who) {
  * buddy menu
  * It sets up the PurpleXfer struct and tells Purple to go ahead
  */
-void irc_dccsend_send_file(PurpleConnection *gc, const char *who, const char *file) {
-	PurpleXfer *xfer = irc_dccsend_new_xfer(gc, who);
+void irc_dccsend_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file) {
+	PurpleXfer *xfer = irc_dccsend_new_xfer(prplxfer, gc, who);
 
 	/* Perform the request */
 	if (file)

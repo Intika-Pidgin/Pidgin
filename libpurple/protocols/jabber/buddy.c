@@ -2135,24 +2135,6 @@ static void user_search_cb(struct user_search_info *usi, PurpleRequestFields *fi
 	g_free(usi);
 }
 
-#if 0
-/* This is for gettext only -- it will see this even though there's an #if 0. */
-
-/*
- * An incomplete list of server generated original language search
- * comments for Jabber User Directories
- *
- * See discussion thread "Search comment for Jabber is not translatable"
- * in purple-i18n@lists.sourceforge.net (March 2006)
- */
-static const char * jabber_user_dir_comments [] = {
-	/* current comment from Jabber User Directory users.jabber.org */
-	N_("Find a contact by entering the search criteria in the given fields. "
-	   "Note: Each field supports wild card searches (%)"),
-	NULL
-};
-#endif
-
 static void user_search_fields_result_cb(JabberStream *js, const char *from,
                                          JabberIqType type, const char *id,
                                          PurpleXmlNode *packet, gpointer data)

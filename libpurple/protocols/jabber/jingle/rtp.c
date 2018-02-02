@@ -59,13 +59,6 @@ static void jingle_rtp_handle_action_internal(JingleContent *content, PurpleXmlN
 
 static PurpleMedia *jingle_rtp_get_media(JingleSession *session);
 
-#if 0
-enum {
-	LAST_SIGNAL
-};
-static guint jingle_rtp_signals[LAST_SIGNAL] = {0};
-#endif
-
 enum {
 	PROP_0,
 	PROP_MEDIA_TYPE,

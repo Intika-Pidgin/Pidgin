@@ -1038,14 +1038,6 @@ silcpurple_attrs(PurpleProtocolAction *action)
 	purple_request_fields_add_group(fields, g);
 
 	g = purple_request_field_group_new(NULL);
-#if 0
-	f = purple_request_field_label_new("l2", _("Online Services"));
-	purple_request_field_group_add_field(g, f);
-	f = purple_request_field_bool_new("services",
-					_("Let others see what services you are using"),
-					TRUE);
-	purple_request_field_group_add_field(g, f);
-#endif
 #ifdef HAVE_SYS_UTSNAME_H
 	f = purple_request_field_bool_new("device",
 					_("Let others see what computer you are using"),
@@ -2091,20 +2083,6 @@ silcpurple_register_commands(void)
 			"prpl-silc", silcpurple_cmd_generic,
 			_("ping:  Send PING to the connected server"), NULL);
 	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
-
-#if 0 /* Purple doesn't handle these yet */
-	id = purple_cmd_register("users", "w", PURPLE_CMD_P_PROTOCOL,
-			PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY,
-			"prpl-silc", silcpurple_cmd_users,
-			_("users &lt;channel&gt;:  List users in channel"));
-	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
-
-	id = purple_cmd_register("names", "ww", PURPLE_CMD_P_PROTOCOL,
-			PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY |
-			PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, "prpl-silc", silcpurple_cmd_names,
-			_("names [-count|-ops|-halfops|-voices|-normal] &lt;channel(s)&gt;:  List specific users in channel(s)"));
-	cmds = g_slist_prepend(cmds, GUINT_TO_POINTER(id));
-#endif
 }
 
 static void
@@ -2135,14 +2113,6 @@ static PurpleWhiteboardOps silcpurple_wb_ops =
 	NULL
 };
 
-#if 0
-static SilcBool silcpurple_debug_cb(char *file, char *function, int line,
-		char *message, void *context)
-{
-	purple_debug_info("SILC", "%s:%d:%s - %s\n", file ? file : "(null)", line, function ? function : "(null)", message ? message : "(null)");
-	return TRUE;
-}
-#endif
 
 static void
 silcpurple_protocol_init(PurpleProtocol *protocol)
@@ -2283,7 +2253,7 @@ silcpurple_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_if
 }
 
 static void
-silcpurple_protocol_xfer_iface_init(PurpleProtocolXferIface *xfer_iface)
+silcpurple_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->send     = silcpurple_ftp_send_file;
 	xfer_iface->new_xfer = silcpurple_ftp_new_xfer;
@@ -2348,13 +2318,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 
 	silc_log_set_callback(SILC_LOG_ERROR, silcpurple_log_error, NULL);
 	silcpurple_register_commands();
-
-#if 0
-silc_log_debug(TRUE);
-silc_log_set_debug_string("*client*");
-silc_log_quick(TRUE);
-silc_log_set_debug_callbacks(silcpurple_debug_cb, NULL, NULL, NULL);
-#endif
 
 	return TRUE;
 }
