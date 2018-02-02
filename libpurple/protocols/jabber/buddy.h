@@ -26,6 +26,8 @@
 
 typedef struct _JabberBuddy JabberBuddy;
 
+#include "action.h"
+
 #include "jabber.h"
 #include "caps.h"
 #include "jutil.h"

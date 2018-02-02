@@ -124,3 +124,42 @@ purple_menu_action_get_stock_icon(PurpleMenuAction *act) {
 	return act->stock_icon;
 }
 
+/******************************************************************************
+ * Protocol Action API
+ *****************************************************************************/
+PurpleProtocolAction *
+purple_protocol_action_new(const gchar* label, PurpleProtocolActionCallback callback) {
+	PurpleProtocolAction *action;
+
+	g_return_val_if_fail(label != NULL, NULL);
+	g_return_val_if_fail(callback != NULL, NULL);
+
+	action = g_new0(PurpleProtocolAction, 1);
+
+	action->label    = g_strdup(label);
+	action->callback = callback;
+
+	return action;
+}
+
+void
+purple_protocol_action_free(PurpleProtocolAction *action) {
+	g_return_if_fail(action != NULL);
+
+	g_free(action->label);
+	g_free(action);
+}
+
+static PurpleProtocolAction *
+purple_protocol_action_copy(PurpleProtocolAction *action) {
+	g_return_val_if_fail(action != NULL, NULL);
+
+	return purple_protocol_action_new(action->label, action->callback);
+}
+
+G_DEFINE_BOXED_TYPE(
+	PurpleProtocolAction,
+	purple_protocol_action,
+	purple_protocol_action_copy,
+	purple_protocol_action_free
+);

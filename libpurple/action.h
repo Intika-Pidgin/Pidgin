@@ -25,6 +25,13 @@
 #include <glib.h>
 #include <glib-object.h>
 
+
+#define PURPLE_TYPE_PROTOCOL_ACTION  (purple_protocol_action_get_type())
+
+typedef struct _PurpleProtocolAction PurpleProtocolAction;
+
+typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *action);
+
 /**
  * PurpleMenuAction:
  *
@@ -34,7 +41,26 @@
  */
 typedef struct _PurpleMenuAction PurpleMenuAction;
 
+#include "connection.h"
+
+/**
+ * PurpleProtocolAction:
+ *
+ * Represents an action that the protocol can perform. This shows up in the
+ * Accounts menu, under a submenu with the name of the account.
+ */
+struct _PurpleProtocolAction {
+	char *label;
+	PurpleProtocolActionCallback callback;
+	PurpleConnection *connection;
+	gpointer user_data;
+};
+
 G_BEGIN_DECLS
+
+/******************************************************************************
+ * Menu Action API
+ *****************************************************************************/
 
 /**
  * purple_menu_action_new:
@@ -153,6 +179,37 @@ void purple_menu_action_set_stock_icon(PurpleMenuAction *act, const gchar *stock
  * Returns: The stock icon identifier.
  */
 const gchar *purple_menu_action_get_stock_icon(PurpleMenuAction *act);
+
+/******************************************************************************
+ * Protocol Action API
+ *****************************************************************************/
+
+/**
+ * purple_protocol_action_get_type:
+ *
+ * Returns: The #GType for the #PurpleProtocolAction boxed structure.
+ */
+GType purple_protocol_action_get_type(void);
+
+/**
+ * purple_protocol_action_new:
+ * @label:    The description of the action to show to the user.
+ * @callback: (scope call): The callback to call when the user selects this
+ *            action.
+ *
+ * Allocates and returns a new PurpleProtocolAction. Use this to add actions in
+ * a list in the get_actions function of the protocol.
+ */
+PurpleProtocolAction *purple_protocol_action_new(const gchar *label, PurpleProtocolActionCallback callback);
+
+/**
+ * purple_protocol_action_free:
+ * @action: The PurpleProtocolAction to free.
+ *
+ * Frees a PurpleProtocolAction
+ */
+void purple_protocol_action_free(PurpleProtocolAction *action);
+
 
 G_END_DECLS
 
