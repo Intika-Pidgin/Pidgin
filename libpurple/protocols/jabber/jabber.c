@@ -3168,7 +3168,7 @@ static PurpleCmdRet jabber_cmd_buzz(PurpleConversation *conv,
 	return _jabber_send_buzz(js, who, error)  ? PURPLE_CMD_RET_OK : PURPLE_CMD_RET_FAILED;
 }
 
-GList *jabber_attention_types(PurpleAccount *account)
+GList *jabber_attention_types(PurpleProtocolAttention *attn, PurpleAccount *account)
 {
 	static GList *types = NULL;
 
@@ -3180,7 +3180,7 @@ GList *jabber_attention_types(PurpleAccount *account)
 	return types;
 }
 
-gboolean jabber_send_attention(PurpleConnection *gc, const char *username, guint code)
+gboolean jabber_send_attention(PurpleProtocolAttention *attn, PurpleConnection *gc, const char *username, guint code)
 {
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 	gchar *error = NULL;
@@ -4127,10 +4127,10 @@ jabber_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
 }
 
 static void
-jabber_protocol_attention_iface_init(PurpleProtocolAttentionIface *attention_iface)
+jabber_protocol_attention_iface_init(PurpleProtocolAttentionInterface *iface)
 {
-	attention_iface->send      = jabber_send_attention;
-	attention_iface->get_types = jabber_attention_types;
+	iface->send      = jabber_send_attention;
+	iface->get_types = jabber_attention_types;
 }
 
 static void
@@ -4169,7 +4169,7 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
 	                                  jabber_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ATTENTION,
 	                                  jabber_protocol_attention_iface_init)
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_MEDIA_IFACE,
