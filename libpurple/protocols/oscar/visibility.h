@@ -23,7 +23,7 @@
 
 #include "oscar.h"
 #include "plugins.h"
-#include "util.h"
+#include "action.h"
 
 PurpleMenuAction * create_visibility_menu_item(OscarData *od, const char *bname);
 void oscar_show_visible_list(PurpleProtocolAction *action);

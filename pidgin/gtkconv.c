@@ -32,6 +32,7 @@
 
 #include "account.h"
 #include "attention.h"
+#include "action.h"
 #include "cmds.h"
 #include "core.h"
 #include "debug.h"

@@ -23,6 +23,7 @@
 
 #include "account.h"
 #include "accountopt.h"
+#include "action.h"
 #include "blistnode.h"
 #include "buddy.h"
 #include "buddyicon.h"

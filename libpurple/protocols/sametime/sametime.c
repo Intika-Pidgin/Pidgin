@@ -33,6 +33,7 @@
 /* purple includes */
 #include "account.h"
 #include "accountopt.h"
+#include "action.h"
 #include "circularbuffer.h"
 #include "conversation.h"
 #include "debug.h"
@@ -43,7 +44,6 @@
 #include "plugins.h"
 #include "protocol.h"
 #include "request.h"
-#include "util.h"
 #include "version.h"
 
 /* meanwhile includes */

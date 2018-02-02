@@ -21,6 +21,7 @@
 #include "internal.h"
 
 #include "accountopt.h"
+#include "action.h"
 #include "debug.h"
 #include "plugins.h"
 #include "server.h"

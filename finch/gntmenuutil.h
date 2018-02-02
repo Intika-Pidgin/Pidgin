@@ -28,6 +28,8 @@
  * @title: Menu Utility functions
  */
 
+#include <action.h>
+
 #include <gnt.h>
 #include <gntmenu.h>
 

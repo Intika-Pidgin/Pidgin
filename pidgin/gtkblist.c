@@ -23,6 +23,7 @@
 #include "pidgin.h"
 
 #include "account.h"
+#include "action.h"
 #include "connection.h"
 #include "core.h"
 #include "debug.h"

@@ -36,6 +36,7 @@
 #include <gtkconv.h>
 #include <gtkplugin.h>
 #include <gtkwebview.h>
+#include <action.h>
 #include <version.h>
 
 #define PREF_PREFIX     "/plugins/gtk/" PLUGIN_ID

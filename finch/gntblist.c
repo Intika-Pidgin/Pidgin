@@ -24,6 +24,7 @@
 #include NCURSES_HEADER
 
 #include <account.h>
+#include <action.h>
 #include <buddylist.h>
 #include <log.h>
 #include <notify.h>
