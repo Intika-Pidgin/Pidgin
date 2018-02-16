@@ -266,7 +266,7 @@ menu_item_send_mail_activate_cb(PurpleBlistNode *node, gpointer user_data)
 static void
 blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
 {
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 	PurpleBuddy *buddy;
 	PurpleAccount *account;
 	EContact *contact;

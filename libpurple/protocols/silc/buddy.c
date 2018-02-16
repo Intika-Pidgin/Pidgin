@@ -1663,7 +1663,7 @@ GList *silcpurple_buddy_menu(PurpleBuddy *buddy)
 	SilcClientConnection conn = sg->conn;
 	const char *pkfile = NULL;
 	SilcClientEntry client_entry = NULL;
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 	GList *m = NULL;
 	SilcPurpleBuddyWb wb;
 

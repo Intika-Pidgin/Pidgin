@@ -30,7 +30,7 @@
 static void
 context_menu_callback(GntMenuItem *item, gpointer data)
 {
-	PurpleMenuAction *action = data;
+	PurpleActionMenu *action = data;
 	if (action) {
 		void (*callback)(gpointer, gpointer);
 		callback = (void (*)(gpointer, gpointer))
@@ -43,7 +43,7 @@ context_menu_callback(GntMenuItem *item, gpointer data)
 }
 
 void
-finch_append_menu_action(GntMenu *menu, PurpleMenuAction *action, gpointer ctx)
+finch_append_menu_action(GntMenu *menu, PurpleActionMenu *action, gpointer ctx)
 {
 	GList *list;
 	GntMenuItem *item;

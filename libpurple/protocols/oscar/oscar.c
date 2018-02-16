@@ -4918,7 +4918,7 @@ oscar_buddy_menu(PurpleBuddy *buddy) {
 	PurpleConnection *gc;
 	OscarData *od;
 	GList *menu;
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 	aim_userinfo_t *userinfo;
 	PurpleAccount *account;
 	const char *bname = purple_buddy_get_name(buddy);

@@ -158,7 +158,7 @@ typedef struct _PurpleProtocolClientIface PurpleProtocolClientIface;
  * @status_text:     Gets a short string representing this buddy's status. This
  *                   will be shown on the buddy list.
  * @tooltip_text:    Allows the protocol to add text to a buddy's tooltip.
- * @blist_node_menu: Returns a list of #PurpleMenuAction structs, which
+ * @blist_node_menu: Returns a list of #PurpleActionMenu structs, which
  *                   represent extra actions to be shown in (for example) the
  *                   right-click menu for @node.
  * @normalize: Convert the username @who to its canonical form. Also checks for

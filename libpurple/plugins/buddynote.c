@@ -55,7 +55,7 @@ buddynote_edit_cb(PurpleBlistNode *node, gpointer data)
 static void
 buddynote_extended_menu_cb(PurpleBlistNode *node, GList **m)
 {
-	PurpleMenuAction *bna = NULL;
+	PurpleActionMenu *bna = NULL;
 
 	if (purple_blist_node_is_transient(node))
 		return;

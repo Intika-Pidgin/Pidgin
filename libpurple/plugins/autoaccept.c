@@ -217,7 +217,7 @@ set_auto_accept_settings(PurpleBlistNode *node, gpointer plugin)
 static void
 context_menu(PurpleBlistNode *node, GList **menu, gpointer plugin)
 {
-	PurpleMenuAction *action;
+	PurpleActionMenu *action;
 
 	if (!PURPLE_IS_BUDDY(node) && !PURPLE_IS_CONTACT(node) &&
 		!purple_blist_node_is_transient(node))

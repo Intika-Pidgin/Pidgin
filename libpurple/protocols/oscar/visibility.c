@@ -69,7 +69,7 @@ visibility_cb(PurpleBlistNode *node, gpointer whatever)
 	}
 }
 
-PurpleMenuAction *
+PurpleActionMenu *
 create_visibility_menu_item(OscarData *od, const char *bname)
 {
 	PurpleAccount *account = purple_connection_get_account(od->gc);

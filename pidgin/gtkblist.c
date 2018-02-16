@@ -1412,7 +1412,7 @@ pidgin_append_blist_node_proto_menu(GtkWidget *menu, PurpleConnection *gc,
 		return;
 
 	for(l = ll = purple_protocol_client_iface_blist_node_menu(protocol, node); l; l = l->next) {
-		PurpleMenuAction *act = (PurpleMenuAction *) l->data;
+		PurpleActionMenu *act = (PurpleActionMenu *) l->data;
 		pidgin_append_menu_action(menu, act, node);
 	}
 	g_list_free(ll);
@@ -1424,7 +1424,7 @@ pidgin_append_blist_node_extended_menu(GtkWidget *menu, PurpleBlistNode *node)
 	GList *l, *ll;
 
 	for(l = ll = purple_blist_node_get_extended_menu(node); l; l = l->next) {
-		PurpleMenuAction *act = (PurpleMenuAction *) l->data;
+		PurpleActionMenu *act = (PurpleActionMenu *) l->data;
 		pidgin_append_menu_action(menu, act, node);
 	}
 	g_list_free(ll);
