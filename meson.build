@@ -391,8 +391,6 @@ conf.set_quoted('DISPLAY_VERSION', DISPLAY_VERSION)
 
 force_deps = not get_option('missing-dependencies')
 
-with_x = get_option('x') and not IS_WIN32
-
 # #######################################################################
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
@@ -426,28 +424,6 @@ if get_option('gtkui')
 		conf.set('USE_ENCHANT', use_enchant)
 	else
 		enchant = []
-	endif
-
-	#######################################################################
-	# Check if we should compile with X support
-	#######################################################################
-	if with_x
-		x11 = dependency('x11')
-		if x11.found()
-			conf.set('HAVE_X11', true)
-		else
-			with_x = false
-			if force_deps
-				error('''
-X11 development headers not found.
-Use -Dx=false if you do not need X11 support.
-''')
-			endif
-		endif
-	endif
-	if not with_x
-		enable_gestures = false
-		x11 = []
 	endif
 
 	#######################################################################
@@ -506,6 +482,31 @@ endif	# GTK
 
 ENABLE_GTK = get_option('gtkui')
 
+
+#######################################################################
+# Check if we should compile with X support
+#######################################################################
+with_x = get_option('x') and not IS_WIN32
+
+if with_x
+	x11 = dependency('x11')
+	if x11.found()
+		conf.set('HAVE_X11', true)
+	else
+		with_x = false
+		if force_deps
+			error('''
+X11 development headers not found.
+Use -Dx=false if you do not need X11 support.
+''')
+		endif
+	endif
+else
+	x11 = []
+endif
+if not get_option('gtkui') or not with_x
+	enable_gestures = false
+endif
 
 #######################################################################
 # Check for ncurses and other things used by the console UI
