@@ -687,11 +687,6 @@ static int irc_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg)
 		purple_debug(PURPLE_DEBUG_ERROR, "irc", "chat send on nonexistent chat\n");
 		return -EINVAL;
 	}
-#if 0
-	if (*what == '/') {
-		return irc_parse_cmd(irc, convo->name, what + 1);
-	}
-#endif
 	purple_markup_html_to_xhtml(purple_message_get_contents(msg), NULL, &tmp);
 	args[0] = purple_conversation_get_name(convo);
 	args[1] = tmp;

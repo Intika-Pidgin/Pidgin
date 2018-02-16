@@ -29,6 +29,7 @@
  */
 
 #include "accounts.h"
+#include "attention.h"
 #include "conversations.h"
 #include "group.h"
 #include "message.h"

@@ -295,10 +295,10 @@ PurpleAttentionType *purple_get_attention_type_from_code(PurpleAccount *account,
 	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
 
 	/* Lookup the attention type in the protocol's attention_types list, if any. */
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, get_types)) {
+	if (PURPLE_IS_PROTOCOL_ATTENTION(protocol)) {
 		GList *attention_types;
 
-		attention_types = purple_protocol_attention_iface_get_types(protocol, account);
+		attention_types = purple_protocol_attention_get_types(protocol, account);
 		attn = (PurpleAttentionType *)g_list_nth_data(attention_types, type_code);
 	} else {
 		attn = NULL;

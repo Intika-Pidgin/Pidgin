@@ -588,34 +588,6 @@ struct _PurpleProtocolRoomlistIface
 #define PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE, \
                                                  PurpleProtocolRoomlistIface))
 
-#define PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE     (purple_protocol_attention_iface_get_type())
-
-typedef struct _PurpleProtocolAttentionIface PurpleProtocolAttentionIface;
-
-/**
- * PurpleProtocolAttentionIface:
- *
- * The protocol attention interface.
- *
- * This interface provides attention API for sending and receiving
- * zaps/nudges/buzzes etc.
- */
-struct _PurpleProtocolAttentionIface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	gboolean (*send)(PurpleConnection *gc, const char *username,
-							   guint type);
-
-	GList *(*get_types)(PurpleAccount *acct);
-};
-
-#define PURPLE_PROTOCOL_HAS_ATTENTION_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE))
-#define PURPLE_PROTOCOL_GET_ATTENTION_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ATTENTION_IFACE, \
-                                                  PurpleProtocolAttentionIface))
-
 #define PURPLE_TYPE_PROTOCOL_MEDIA_IFACE     (purple_protocol_media_iface_get_type())
 
 typedef struct _PurpleProtocolMediaIface PurpleProtocolMediaIface;
@@ -1076,23 +1048,6 @@ void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
 
 char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
 		PurpleRoomlistRoom *room);
-
-/**************************************************************************/
-/* Protocol Attention Interface API                                       */
-/**************************************************************************/
-
-/**
- * purple_protocol_attention_iface_get_type:
- *
- * Returns: The #GType for the protocol attention interface.
- */
-GType purple_protocol_attention_iface_get_type(void);
-
-gboolean purple_protocol_attention_iface_send(PurpleProtocol *protocol,
-		PurpleConnection *gc, const char *username, guint type);
-
-GList *purple_protocol_attention_iface_get_types(PurpleProtocol *protocol,
-		PurpleAccount *acct);
 
 /**************************************************************************/
 /* Protocol Media Interface API                                           */

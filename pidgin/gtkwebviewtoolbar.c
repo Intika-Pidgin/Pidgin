@@ -1682,7 +1682,7 @@ pidgin_webviewtoolbar_switch_active_conversation(PidginWebViewToolbar *toolbar,
 	 for the time being it is always disabled for chats */
 	gtk_action_set_sensitive(priv->attention,
 		conv && protocol && PURPLE_IS_IM_CONVERSATION(conv) &&
-		PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, send));
+		PURPLE_IS_PROTOCOL_ATTENTION(protocol));
 
 	update_smiley_button(toolbar);
 }
