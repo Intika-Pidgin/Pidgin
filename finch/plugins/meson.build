@@ -1,5 +1,5 @@
 if PLUGINS
-	if ENABLE_GTK
+	if with_x
 		gntclipboard = library('gntclipboard', 'gntclipboard.c',
 		    dependencies : [x11, libpurple_dep, libfinch_dep, glib],
 		    name_prefix : '',
