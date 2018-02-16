@@ -31,29 +31,6 @@
 
 #include "utils.h"
 
-#if 0
-#include "account.h"
-
-gboolean ggp_validator_token(PurpleRequestField *field, gchar **errmsg,
-	void *token)
-{
-	const char *value;
-
-	g_return_val_if_fail(field != NULL, FALSE);
-	g_return_val_if_fail(purple_request_field_get_field_type(field) ==
-		PURPLE_REQUEST_FIELD_STRING, FALSE);
-
-	value = purple_request_field_string_get_value(field);
-
-	if (value != NULL && ggp_account_token_validate(token, value))
-		return TRUE;
-
-	if (errmsg)
-		*errmsg = g_strdup(_("CAPTCHA validation failed"));
-	return FALSE;
-}
-#endif
-
 gboolean ggp_validator_password(PurpleRequestField *field, gchar **errmsg,
 	void *user_data)
 {

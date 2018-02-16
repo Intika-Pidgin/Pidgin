@@ -31,6 +31,7 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "account.h"
+#include "attention.h"
 #include "cmds.h"
 #include "core.h"
 #include "debug.h"
@@ -3444,8 +3445,8 @@ regenerate_attention_items(PidginConvWindow *win)
 	if (pc != NULL)
 		protocol = purple_connection_get_protocol(pc);
 
-	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, get_types)) {
-		list = purple_protocol_attention_iface_get_types(protocol, purple_connection_get_account(pc));
+	if (protocol && PURPLE_IS_PROTOCOL_ATTENTION(protocol)) {
+		list = purple_protocol_attention_get_types(PURPLE_PROTOCOL_ATTENTION(protocol), purple_connection_get_account(pc));
 
 		/* Multiple attention types */
 		if (list && list->next) {
@@ -7432,7 +7433,7 @@ gray_stuff_out(PidginConversation *gtkconv)
 			gtk_action_set_sensitive(win->menu->add, (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, add_buddy)));
 			gtk_action_set_sensitive(win->menu->remove, (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, remove_buddy)));
 			gtk_action_set_sensitive(win->menu->send_file, can_send_file);
-			gtk_action_set_sensitive(win->menu->get_attention, (PURPLE_PROTOCOL_IMPLEMENTS(protocol, ATTENTION_IFACE, send)));
+			gtk_action_set_sensitive(win->menu->get_attention, (PURPLE_IS_PROTOCOL_ATTENTION(protocol)));
 			gtk_action_set_sensitive(win->menu->alias,
 									 (account != NULL) &&
 									 (purple_blist_find_buddy(account, purple_conversation_get_name(conv)) != NULL));
