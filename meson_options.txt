@@ -59,7 +59,7 @@ option('avahi', type : 'boolean', value : true,
 option('libgadu', type : 'boolean', value : true,
        description : 'compile with libgadu (required for GaduGadu support)')
 
-option('silc', type : 'boolean', value : true,
+option('silc', type : 'boolean', value : false,
        description : 'compile with SILC plugin')
 
 option('static-prpls', type : 'string',
