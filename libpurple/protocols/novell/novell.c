@@ -3449,7 +3449,7 @@ static GList *
 novell_blist_node_menu(PurpleBlistNode *node)
 {
 	GList *list = NULL;
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 
 	if(PURPLE_IS_BUDDY(node)) {
 		act = purple_menu_action_new(_("Initiate _Chat"),

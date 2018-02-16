@@ -3555,7 +3555,7 @@ regenerate_plugins_items(PidginConvWindow *win)
 	}
 
 	for(; list; list = g_list_delete_link(list, list)) {
-		PurpleMenuAction *act = (PurpleMenuAction *) list->data;
+		PurpleActionMenu *act = (PurpleActionMenu *) list->data;
 		item = pidgin_append_menu_action(menu, act, conv);
 		action_items = g_list_prepend(action_items, item);
 		gtk_widget_show_all(item);
@@ -4236,7 +4236,7 @@ generate_e2ee_controls(PidginConvWindow *win)
 
 	menu_actions = purple_e2ee_provider_get_conv_menu_actions(provider, conv);
 	for (it = menu_actions; it; it = g_list_next(it)) {
-		PurpleMenuAction *action = it->data;
+		PurpleActionMenu *action = it->data;
 
 		gtk_widget_show_all(
 			pidgin_append_menu_action(menu, action, conv));

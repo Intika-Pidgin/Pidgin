@@ -1754,7 +1754,7 @@ menu_action_cb(GtkMenuItem *item, gpointer object)
 }
 
 GtkWidget *
-pidgin_append_menu_action(GtkWidget *menu, PurpleMenuAction *act,
+pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
                             gpointer object)
 {
 	GtkWidget *menuitem;
@@ -1826,7 +1826,7 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleMenuAction *act,
 		}
 
 		for (l = list; l; l = l->next) {
-			PurpleMenuAction *act = (PurpleMenuAction *)l->data;
+			PurpleActionMenu *act = (PurpleActionMenu *)l->data;
 
 			pidgin_append_menu_action(submenu, act, object);
 		}

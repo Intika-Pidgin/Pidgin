@@ -1337,7 +1337,7 @@ static void blist_node_menu_cb(PurpleBlistNode *node,
                                GList **menu, struct mwPurpleProtocolData *pd) {
   const char *owner;
   PurpleAccount *acct;
-  PurpleMenuAction *act;
+  PurpleActionMenu *act;
 
   /* we only want groups */
   if(! PURPLE_IS_GROUP(node)) return;
@@ -3535,7 +3535,7 @@ static void blist_menu_conf(PurpleBlistNode *node, gpointer data) {
 
 static GList *mw_protocol_blist_node_menu(PurpleBlistNode *node) {
   GList *l = NULL;
-  PurpleMenuAction *act;
+  PurpleActionMenu *act;
 
   if(! PURPLE_IS_BUDDY(node))
     return l;

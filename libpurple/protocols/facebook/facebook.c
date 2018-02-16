@@ -1159,7 +1159,7 @@ fb_client_blist_node_menu(PurpleBlistNode *node)
 	GList *acts = NULL;
 	PurpleAccount *acct;
 	PurpleConnection *gc;
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 
 	if (!PURPLE_IS_BUDDY(node)) {
 		return NULL;

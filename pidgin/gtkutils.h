@@ -555,14 +555,14 @@ const char *pidgin_stock_id_from_presence(PurplePresence *presence);
 /**
  * pidgin_append_menu_action:
  * @menu:    The menu to append to.
- * @act:     The PurpleMenuAction to append.
+ * @act:     The PurpleActionMenu to append.
  * @gobject: The object to be passed to the action callback.
  *
- * Append a PurpleMenuAction to a menu.
+ * Append a PurpleActionMenu to a menu.
  *
  * Returns: (transfer full): The menuitem added.
  */
-GtkWidget *pidgin_append_menu_action(GtkWidget *menu, PurpleMenuAction *act,
+GtkWidget *pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
                                  gpointer gobject);
 
 /**

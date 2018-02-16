@@ -872,7 +872,7 @@ GList *silcpurple_chat_menu(PurpleChat *chat)
 	SilcUInt32 mode = 0;
 
 	GList *m = NULL;
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 
 	if (components)
 		chname = g_hash_table_lookup(components, "channel");

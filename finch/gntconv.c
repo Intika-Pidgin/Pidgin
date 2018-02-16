@@ -659,7 +659,7 @@ generate_e2ee_menu(FinchConv *ggc)
 
 	menu_actions = purple_e2ee_provider_get_conv_menu_actions(eprov, conv);
 	for (it = menu_actions; it; it = g_list_next(it)) {
-		PurpleMenuAction *action = it->data;
+		PurpleActionMenu *action = it->data;
 
 		finch_append_menu_action(sub, action, conv);
 	}

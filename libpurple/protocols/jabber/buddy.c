@@ -1852,7 +1852,7 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 	GList *jbrs;
 
 	GList *m = NULL;
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 
 	if(!jb)
 		return m;

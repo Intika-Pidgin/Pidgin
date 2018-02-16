@@ -996,7 +996,7 @@ append_proto_menu(GntMenu *menu, PurpleConnection *gc, PurpleBlistNode *node)
 	for(list = purple_protocol_client_iface_blist_node_menu(protocol, node); list;
 			list = g_list_delete_link(list, list))
 	{
-		PurpleMenuAction *act = (PurpleMenuAction *) list->data;
+		PurpleActionMenu *act = (PurpleActionMenu *) list->data;
 		if (!act)
 			continue;
 		purple_menu_action_set_data(act, node);
@@ -1008,7 +1008,7 @@ static void
 add_custom_action(GntMenu *menu, const char *label, PurpleCallback callback,
 		gpointer data)
 {
-	PurpleMenuAction *action = purple_menu_action_new(label, callback, data, NULL);
+	PurpleActionMenu *action = purple_menu_action_new(label, callback, data, NULL);
 	finch_append_menu_action(menu, action, NULL);
 }
 
@@ -1086,7 +1086,7 @@ chat_components_edit(PurpleBlistNode *selected, PurpleChat *chat)
 static void
 autojoin_toggled(GntMenuItem *item, gpointer data)
 {
-	PurpleMenuAction *action = data;
+	PurpleActionMenu *action = data;
 	purple_blist_node_set_bool(purple_menu_action_get_data(action), "gnt-autojoin",
 				gnt_menuitem_check_get_checked(GNT_MENU_ITEM_CHECK(item)));
 }
@@ -1094,7 +1094,7 @@ autojoin_toggled(GntMenuItem *item, gpointer data)
 static void
 create_chat_menu(GntMenu *menu, PurpleChat *chat)
 {
-	PurpleMenuAction *action = purple_menu_action_new(_("Auto-join"), NULL, chat, NULL);
+	PurpleActionMenu *action = purple_menu_action_new(_("Auto-join"), NULL, chat, NULL);
 	GntMenuItem *check = gnt_menuitem_check_new(
 			purple_menu_action_get_label(action));
 	gnt_menuitem_check_set_checked(GNT_MENU_ITEM_CHECK(check),
