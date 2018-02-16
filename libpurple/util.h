@@ -763,6 +763,42 @@ const gchar *purple_home_dir(void);
 const char *purple_user_dir(void);
 
 /**
+ * purple_cache_dir:
+ *
+ * Returns the purple cache directory according to XDG Base Directory Specification.
+ * This is usually ~/.cache/purple.
+ * If custom user dir was specified then this is cache
+ * sub-directory of DIR argument passed to -c option.
+ *
+ * Returns: The purple cache directory.
+ */
+const char *purple_cache_dir(void);
+
+/**
+ * purple_config_dir:
+ *
+ * Returns the purple configuration directory according to XDG Base Directory Specification.
+ * This is usually ~/.config/purple.
+ * If custom user dir was specified then this is config
+ * sub-directory of DIR argument passed to -c option.
+ *
+ * Returns: The purple configuration directory.
+ */
+const char *purple_config_dir(void);
+
+/**
+ * purple_data_dir:
+ *
+ * Returns the purple data directory according to XDG Base Directory Specification.
+ * This is usually ~/.local/share/purple.
+ * If custom user dir was specified then this is data
+ * sub-directory of DIR argument passed to -c option.
+ *
+ * Returns: The purple data directory.
+ */
+const char *purple_data_dir(void);
+
+/**
  * purple_util_set_user_dir:
  * @dir: The custom settings directory
  *
@@ -801,6 +837,57 @@ int purple_build_dir(const char *path, int mode);
  */
 gboolean purple_util_write_data_to_file(const char *filename, const char *data,
 									  gssize size);
+
+/**
+ * purple_util_write_data_to_cache_file:
+ * @filename: The basename of the file to write in the purple_cache_dir.
+ * @data:     A null-terminated string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * cache directory ($HOME/.cache/purple by default).
+ * 
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean
+purple_util_write_data_to_cache_file(const char *filename, const char *data, gssize size);
+
+/**
+ * purple_util_write_data_to_config_file:
+ * @filename: The basename of the file to write in the purple_config_dir.
+ * @data:     A null-terminated string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * config directory ($HOME/.config/purple by default).
+ *
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean
+purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size);
+
+/**
+ * purple_util_write_data_to_data_file:
+ * @filename: The basename of the file to write in the purple_data_dir.
+ * @data:     A null-terminated string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * data directory ($HOME/.local/share/purple by default).
+ *
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean
+purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size);
 
 /**
  * purple_util_write_data_to_file_absolute:
