@@ -168,7 +168,7 @@ conv_menu_cb(PurpleConversation *conv, GList **list)
 {
 	gboolean enabled = ((PURPLE_IS_IM_CONVERSATION(conv) && purple_prefs_get_bool(PREF_IMS)) ||
 		(PURPLE_IS_CHAT_CONVERSATION(conv) && purple_prefs_get_bool(PREF_CHATS)));
-	PurpleActionMenu *action = purple_menu_action_new(_("Jump to markerline"),
+	PurpleActionMenu *action = purple_action_menu_new(_("Jump to markerline"),
 			enabled ? PURPLE_CALLBACK(jump_to_markerline) : NULL, NULL, NULL);
 	*list = g_list_append(*list, action);
 }

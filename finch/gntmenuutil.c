@@ -34,10 +34,10 @@ context_menu_callback(GntMenuItem *item, gpointer data)
 	if (action) {
 		void (*callback)(gpointer, gpointer);
 		callback = (void (*)(gpointer, gpointer))
-			purple_menu_action_get_callback(action);
+			purple_action_menu_get_callback(action);
 		if (callback) {
 			gpointer ctx = g_object_get_data(G_OBJECT(item), "menuctx");
-			callback(ctx, purple_menu_action_get_data(action));
+			callback(ctx, purple_action_menu_get_data(action));
 		}
 	}
 }
@@ -52,7 +52,7 @@ finch_append_menu_action(GntMenu *menu, PurpleActionMenu *action, gpointer ctx)
 
 	if (action == NULL)
 		return;
-	label = purple_menu_action_get_label(action);
+	label = purple_action_menu_get_label(action);
 
 	if (strchr(label, '_') != NULL) {
 		clean_label = g_strdup(label);
@@ -62,22 +62,22 @@ finch_append_menu_action(GntMenu *menu, PurpleActionMenu *action, gpointer ctx)
 	item = gnt_menuitem_new(label);
 	g_free(clean_label);
 
-	if (purple_menu_action_get_callback(action)) {
+	if (purple_action_menu_get_callback(action)) {
 		gnt_menuitem_set_callback(item, context_menu_callback, action);
 		g_object_set_data(G_OBJECT(item), "menuctx", ctx);
 	}
 	gnt_menu_add_item(menu, item);
 
-	list = purple_menu_action_get_children(action);
+	list = purple_action_menu_get_children(action);
 
 	if (list) {
 		GntWidget *sub = gnt_menu_new(GNT_MENU_POPUP);
 		gnt_menuitem_set_submenu(item, GNT_MENU(sub));
 		for (; list; list = g_list_delete_link(list, list))
 			finch_append_menu_action(GNT_MENU(sub), list->data, action);
-		purple_menu_action_set_children(action, NULL);
+		purple_action_menu_set_children(action, NULL);
 	}
 
 	g_signal_connect_swapped(G_OBJECT(menu), "destroy",
-		G_CALLBACK(purple_menu_action_free), action);
+		G_CALLBACK(purple_action_menu_free), action);
 }

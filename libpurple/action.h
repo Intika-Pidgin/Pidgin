@@ -75,110 +75,110 @@ G_BEGIN_DECLS
  *
  * Returns: The PurpleActionMenu.
  */
-PurpleActionMenu *purple_menu_action_new(const gchar *label, GCallback callback, gpointer data, GList *children);
+PurpleActionMenu *purple_action_menu_new(const gchar *label, GCallback callback, gpointer data, GList *children);
 
 /**
- * purple_menu_action_free:
+ * purple_action_menu_free:
  * @act: The PurpleActionMenu to free.
  *
  * Frees a PurpleActionMenu
  */
-void purple_menu_action_free(PurpleActionMenu *act);
+void purple_action_menu_free(PurpleActionMenu *act);
 
 /**
- * purple_menu_action_get_label:
+ * purple_action_menu_get_label:
  * @act:	The PurpleActionMenu.
  *
  * Returns the label of the PurpleActionMenu.
  *
  * Returns: The label string.
  */
-gchar *purple_menu_action_get_label(const PurpleActionMenu *act);
+gchar *purple_action_menu_get_label(const PurpleActionMenu *act);
 
 /**
- * purple_menu_action_get_callback:
+ * purple_action_menu_get_callback:
  * @act:	The PurpleActionMenu.
  *
  * Returns the callback of the PurpleActionMenu.
  *
  * Returns: The callback function.
  */
-GCallback purple_menu_action_get_callback(const PurpleActionMenu *act);
+GCallback purple_action_menu_get_callback(const PurpleActionMenu *act);
 
 /**
- * purple_menu_action_get_data:
+ * purple_action_menu_get_data:
  * @act:	The PurpleActionMenu.
  *
  * Returns the data stored in the PurpleActionMenu.
  *
  * Returns: The data.
  */
-gpointer purple_menu_action_get_data(const PurpleActionMenu *act);
+gpointer purple_action_menu_get_data(const PurpleActionMenu *act);
 
 /**
- * purple_menu_action_get_children:
+ * purple_action_menu_get_children:
  * @act:	The PurpleActionMenu.
  *
  * Returns the children of the PurpleActionMenu.
  *
  * Returns: (element-type PurpleActionMenu) (transfer none): The menu children.
  */
-GList* purple_menu_action_get_children(const PurpleActionMenu *act);
+GList* purple_action_menu_get_children(const PurpleActionMenu *act);
 
 /**
- * purple_menu_action_set_label:
+ * purple_action_menu_set_label:
  * @act:   The menu action.
  * @label: The label for the menu action.
  *
  * Set the label to the PurpleActionMenu.
  */
-void purple_menu_action_set_label(PurpleActionMenu *act, gchar *label);
+void purple_action_menu_set_label(PurpleActionMenu *act, gchar *label);
 
 /**
- * purple_menu_action_set_callback:
+ * purple_action_menu_set_callback:
  * @act:        The menu action.
  * @callback:   The callback.
  *
  * Set the callback that will be used by the PurpleActionMenu.
  */
-void purple_menu_action_set_callback(PurpleActionMenu *act, GCallback callback);
+void purple_action_menu_set_callback(PurpleActionMenu *act, GCallback callback);
 
 /**
- * purple_menu_action_set_data:
+ * purple_action_menu_set_data:
  * @act:   The menu action.
  * @data:  The data used by this PurpleActionMenu
  *
  * Set the label to the PurpleActionMenu.
  */
-void purple_menu_action_set_data(PurpleActionMenu *act, gpointer data);
+void purple_action_menu_set_data(PurpleActionMenu *act, gpointer data);
 
 /**
- * purple_menu_action_set_children:
+ * purple_action_menu_set_children:
  * @act:       The menu action.
  * @children: (element-type PurpleActionMenu) (transfer full): The menu children
  *
  * Set the children of the PurpleActionMenu.
  */
-void purple_menu_action_set_children(PurpleActionMenu *act, GList *children);
+void purple_action_menu_set_children(PurpleActionMenu *act, GList *children);
 
 /**
- * purple_menu_action_set_stock_icon:
+ * purple_action_menu_set_stock_icon:
  * @act:   The menu action.
  * @stock: The stock icon identifier.
  *
  * Sets the icon for the PurpleActionMenu.
  */
-void purple_menu_action_set_stock_icon(PurpleActionMenu *act, const gchar *stock);
+void purple_action_menu_set_stock_icon(PurpleActionMenu *act, const gchar *stock);
 
 /**
- * purple_menu_action_get_stock_icon:
+ * purple_action_menu_get_stock_icon:
  * @act: The menu action.
  *
  * Gets the stock icon of the PurpleActionMenu.
  *
  * Returns: The stock icon identifier.
  */
-const gchar *purple_menu_action_get_stock_icon(PurpleActionMenu *act);
+const gchar *purple_action_menu_get_stock_icon(PurpleActionMenu *act);
 
 /******************************************************************************
  * Protocol Action API

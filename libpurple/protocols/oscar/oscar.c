@@ -4931,7 +4931,7 @@ oscar_buddy_menu(PurpleBuddy *buddy) {
 
 	if (od->icq && oscar_util_valid_name_icq(bname))
 	{
-		act = purple_menu_action_new(_("Get AIM Info"),
+		act = purple_action_menu_new(_("Get AIM Info"),
 								   PURPLE_CALLBACK(oscar_get_aim_info_cb),
 								   NULL, NULL);
 		menu = g_list_prepend(menu, act);
@@ -4940,7 +4940,7 @@ oscar_buddy_menu(PurpleBuddy *buddy) {
 	if (purple_buddy_get_group(buddy) != NULL)
 	{
 		/* We only do this if the user is in our buddy list */
-		act = purple_menu_action_new(_("Edit Buddy Comment"),
+		act = purple_action_menu_new(_("Edit Buddy Comment"),
 		                           PURPLE_CALLBACK(oscar_buddycb_edit_comment),
 		                           NULL, NULL);
 		menu = g_list_prepend(menu, act);
@@ -4948,7 +4948,7 @@ oscar_buddy_menu(PurpleBuddy *buddy) {
 
 	if (od->icq)
 	{
-		act = purple_menu_action_new(_("Get X-Status Msg"),
+		act = purple_action_menu_new(_("Get X-Status Msg"),
 		                           PURPLE_CALLBACK(oscar_get_icqxstatusmsg),
 		                           NULL, NULL);
 		menu = g_list_prepend(menu, act);
@@ -4966,13 +4966,13 @@ oscar_buddy_menu(PurpleBuddy *buddy) {
 		{
 			if (conn)
 			{
-				act = purple_menu_action_new(_("End Direct IM Session"),
+				act = purple_action_menu_new(_("End Direct IM Session"),
 				                          PURPLE_CALLBACK(oscar_close_directim),
 				                          NULL, NULL);
 			}
 			else
 			{
-				act = purple_menu_action_new(_("Direct IM"),
+				act = purple_action_menu_new(_("Direct IM"),
 				                          PURPLE_CALLBACK(oscar_ask_directim),
 				                          NULL, NULL);
 			}
@@ -4990,7 +4990,7 @@ oscar_buddy_menu(PurpleBuddy *buddy) {
 		gname = aim_ssi_itemlist_findparentname(&od->ssi.local, bname);
 		if (gname && aim_ssi_waitingforauth(&od->ssi.local, gname, bname))
 		{
-			act = purple_menu_action_new(_("Re-request Authorization"),
+			act = purple_action_menu_new(_("Re-request Authorization"),
 			                           PURPLE_CALLBACK(oscar_auth_sendrequest_menu),
 			                           NULL, NULL);
 			menu = g_list_prepend(menu, act);

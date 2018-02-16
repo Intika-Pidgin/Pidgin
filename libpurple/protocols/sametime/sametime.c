@@ -1351,7 +1351,7 @@ static void blist_node_menu_cb(PurpleBlistNode *node,
   /* check if it's a NAB group for this account */
   owner = purple_blist_node_get_string(node, GROUP_KEY_OWNER);
   if(owner && purple_strequal(owner, purple_account_get_username(acct))) {
-    act = purple_menu_action_new(_("Get Notes Address Book Info"),
+    act = purple_action_menu_new(_("Get Notes Address Book Info"),
                                PURPLE_CALLBACK(blist_menu_nab), pd, NULL);
     *menu = g_list_append(*menu, act);
   }
@@ -3542,7 +3542,7 @@ static GList *mw_protocol_blist_node_menu(PurpleBlistNode *node) {
 
   l = g_list_append(l, NULL);
 
-  act = purple_menu_action_new(_("Invite to Conference..."),
+  act = purple_action_menu_new(_("Invite to Conference..."),
                              PURPLE_CALLBACK(blist_menu_conf), NULL, NULL);
   l = g_list_append(l, act);
 

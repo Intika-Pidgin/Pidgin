@@ -1860,11 +1860,11 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 	if (js->protocol_version.major == 0 && js->protocol_version.minor == 9 &&
 			jb != js->user_jb) {
 		if(jb->invisible & JABBER_INVIS_BUDDY) {
-			act = purple_menu_action_new(_("Un-hide From"),
+			act = purple_action_menu_new(_("Un-hide From"),
 			                           PURPLE_CALLBACK(jabber_buddy_make_visible),
 			                           NULL, NULL);
 		} else {
-			act = purple_menu_action_new(_("Temporarily Hide From"),
+			act = purple_action_menu_new(_("Temporarily Hide From"),
 			                           PURPLE_CALLBACK(jabber_buddy_make_invisible),
 			                           NULL, NULL);
 		}
@@ -1872,14 +1872,14 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 	}
 
 	if(jb->subscription & JABBER_SUB_FROM && jb != js->user_jb) {
-		act = purple_menu_action_new(_("Cancel Presence Notification"),
+		act = purple_action_menu_new(_("Cancel Presence Notification"),
 		                           PURPLE_CALLBACK(jabber_buddy_cancel_presence_notification),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
 	}
 
 	if(!(jb->subscription & JABBER_SUB_TO)) {
-		act = purple_menu_action_new(_("(Re-)Request authorization"),
+		act = purple_action_menu_new(_("(Re-)Request authorization"),
 		                           PURPLE_CALLBACK(jabber_buddy_rerequest_auth),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
@@ -1888,14 +1888,14 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 
 		/* shouldn't this just happen automatically when the buddy is
 		   removed? */
-		act = purple_menu_action_new(_("Unsubscribe"),
+		act = purple_action_menu_new(_("Unsubscribe"),
 		                           PURPLE_CALLBACK(jabber_buddy_unsubscribe),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
 	}
 
 	if (js->googletalk) {
-		act = purple_menu_action_new(_("Initiate _Chat"),
+		act = purple_action_menu_new(_("Initiate _Chat"),
 		                           PURPLE_CALLBACK(google_buddy_node_chat),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
@@ -1912,11 +1912,11 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 	 * TODO: Use disco#info...
 	 */
 	if (strchr(name, '@') == NULL) {
-		act = purple_menu_action_new(_("Log In"),
+		act = purple_action_menu_new(_("Log In"),
 									 PURPLE_CALLBACK(jabber_buddy_login),
 									 NULL, NULL);
 		m = g_list_append(m, act);
-		act = purple_menu_action_new(_("Log Out"),
+		act = purple_action_menu_new(_("Log Out"),
 									 PURPLE_CALLBACK(jabber_buddy_logout),
 									 NULL, NULL);
 		m = g_list_append(m, act);
@@ -1930,7 +1930,7 @@ static GList *jabber_buddy_menu(PurpleBuddy *buddy)
 			continue;
 		for(commands = jbr->commands; commands; commands = g_list_next(commands)) {
 			JabberAdHocCommands *cmd = commands->data;
-			act = purple_menu_action_new(cmd->name, PURPLE_CALLBACK(jabber_adhoc_execute_action), cmd, NULL);
+			act = purple_action_menu_new(cmd->name, PURPLE_CALLBACK(jabber_adhoc_execute_action), cmd, NULL);
 			m = g_list_append(m, act);
 		}
 	}

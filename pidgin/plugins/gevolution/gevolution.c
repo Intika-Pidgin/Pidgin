@@ -285,7 +285,7 @@ blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
 
 	if (contact == NULL)
 	{
-		act = purple_menu_action_new(_("Add to Address Book"),
+		act = purple_action_menu_new(_("Add to Address Book"),
 		                           PURPLE_CALLBACK(menu_item_activate_cb),
 		                           NULL, NULL);
 		*menu = g_list_append(*menu, act);
@@ -297,7 +297,7 @@ blist_node_extended_menu_cb(PurpleBlistNode *node, GList **menu)
 
 	if (mail != NULL)
 	{
-		act = purple_menu_action_new(_("Send Email"),
+		act = purple_action_menu_new(_("Send Email"),
 			PURPLE_CALLBACK(menu_item_send_mail_activate_cb), NULL, NULL);
 		*menu = g_list_append(*menu, act);
 		g_free(mail);
