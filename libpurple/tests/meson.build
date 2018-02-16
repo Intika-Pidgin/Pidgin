@@ -2,6 +2,7 @@ PROGS = [
     'attention_type',
     'image',
     'protocol_attention',
+    'protocol_action',
     'protocol_xfer',
     'queued_output_stream',
     'smiley',

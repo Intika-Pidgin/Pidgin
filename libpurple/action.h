@@ -199,8 +199,20 @@ GType purple_protocol_action_get_type(void);
  *
  * Allocates and returns a new PurpleProtocolAction. Use this to add actions in
  * a list in the get_actions function of the protocol.
+ *
+ * Returns: (transfer full): The new #PurpleProtocolAction.
  */
 PurpleProtocolAction *purple_protocol_action_new(const gchar *label, PurpleProtocolActionCallback callback);
+
+/**
+ * purple_protocol_action_copy:
+ * @action: The #PurpleProtocolAction to copy.
+ *
+ * Creates a newly allocated copy of @action.
+ *
+ * Returns: (transfer full): A copy of @action.
+ */
+PurpleProtocolAction *purple_protocol_action_copy(PurpleProtocolAction *action);
 
 /**
  * purple_protocol_action_free:

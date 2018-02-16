@@ -150,7 +150,7 @@ purple_protocol_action_free(PurpleProtocolAction *action) {
 	g_free(action);
 }
 
-static PurpleProtocolAction *
+PurpleProtocolAction *
 purple_protocol_action_copy(PurpleProtocolAction *action) {
 	g_return_val_if_fail(action != NULL, NULL);
 
