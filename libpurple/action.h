@@ -50,7 +50,7 @@ typedef struct _PurpleActionMenu PurpleActionMenu;
  * Accounts menu, under a submenu with the name of the account.
  */
 struct _PurpleProtocolAction {
-	char *label;
+	gchar *label;
 	PurpleProtocolActionCallback callback;
 	PurpleConnection *connection;
 	gpointer user_data;
