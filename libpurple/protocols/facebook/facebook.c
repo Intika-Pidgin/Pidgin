@@ -1169,7 +1169,7 @@ fb_client_blist_node_menu(PurpleBlistNode *node)
 	gc = purple_account_get_connection(acct);
 	fata = purple_connection_get_protocol_data(gc);
 
-	act = purple_menu_action_new(_("Initiate _Chat"),
+	act = purple_action_menu_new(_("Initiate _Chat"),
 	                             PURPLE_CALLBACK(fb_blist_chat_init),
 	                             fata, NULL);
 	acts = g_list_prepend(acts, act);

@@ -31,7 +31,7 @@ struct _PurpleActionMenu {
  * ActionMenu API
  *****************************************************************************/
 PurpleActionMenu *
-purple_menu_action_new(const gchar *label, GCallback callback, gpointer data,
+purple_action_menu_new(const gchar *label, GCallback callback, gpointer data,
                        GList *children)
 {
 	PurpleActionMenu *act = g_new(PurpleActionMenu, 1);
@@ -46,7 +46,7 @@ purple_menu_action_new(const gchar *label, GCallback callback, gpointer data,
 }
 
 void
-purple_menu_action_free(PurpleActionMenu *act) {
+purple_action_menu_free(PurpleActionMenu *act) {
 	g_return_if_fail(act != NULL);
 
 	g_free(act->stock_icon);
@@ -55,63 +55,63 @@ purple_menu_action_free(PurpleActionMenu *act) {
 }
 
 gchar *
-purple_menu_action_get_label(const PurpleActionMenu *act) {
+purple_action_menu_get_label(const PurpleActionMenu *act) {
 	g_return_val_if_fail(act != NULL, NULL);
 
 	return act->label;
 }
 
 GCallback
-purple_menu_action_get_callback(const PurpleActionMenu *act) {
+purple_action_menu_get_callback(const PurpleActionMenu *act) {
 	g_return_val_if_fail(act != NULL, NULL);
 
 	return act->callback;
 }
 
 gpointer
-purple_menu_action_get_data(const PurpleActionMenu *act) {
+purple_action_menu_get_data(const PurpleActionMenu *act) {
 	g_return_val_if_fail(act != NULL, NULL);
 
 	return act->data;
 }
 
 GList *
-purple_menu_action_get_children(const PurpleActionMenu *act) {
+purple_action_menu_get_children(const PurpleActionMenu *act) {
 	g_return_val_if_fail(act != NULL, NULL);
 
 	return act->children;
 }
 
 void
-purple_menu_action_set_label(PurpleActionMenu *act, gchar *label) {
+purple_action_menu_set_label(PurpleActionMenu *act, gchar *label) {
 	g_return_if_fail(act != NULL);
 
 	act-> label = label;
 }
 
 void
-purple_menu_action_set_callback(PurpleActionMenu *act, GCallback callback) {
+purple_action_menu_set_callback(PurpleActionMenu *act, GCallback callback) {
 	g_return_if_fail(act != NULL);
 
 	act->callback = callback;
 }
 
 void
-purple_menu_action_set_data(PurpleActionMenu *act, gpointer data) {
+purple_action_menu_set_data(PurpleActionMenu *act, gpointer data) {
 	g_return_if_fail(act != NULL);
 
 	act->data = data;
 }
 
 void
-purple_menu_action_set_children(PurpleActionMenu *act, GList *children) {
+purple_action_menu_set_children(PurpleActionMenu *act, GList *children) {
 	g_return_if_fail(act != NULL);
 
 	act->children = children;
 }
 
 void
-purple_menu_action_set_stock_icon(PurpleActionMenu *act, const gchar *stock) {
+purple_action_menu_set_stock_icon(PurpleActionMenu *act, const gchar *stock) {
 	g_return_if_fail(act != NULL);
 
 	g_free(act->stock_icon);
@@ -120,7 +120,7 @@ purple_menu_action_set_stock_icon(PurpleActionMenu *act, const gchar *stock) {
 }
 
 const gchar *
-purple_menu_action_get_stock_icon(PurpleActionMenu *act) {
+purple_action_menu_get_stock_icon(PurpleActionMenu *act) {
 	return act->stock_icon;
 }
 

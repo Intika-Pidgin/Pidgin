@@ -999,7 +999,7 @@ append_proto_menu(GntMenu *menu, PurpleConnection *gc, PurpleBlistNode *node)
 		PurpleActionMenu *act = (PurpleActionMenu *) list->data;
 		if (!act)
 			continue;
-		purple_menu_action_set_data(act, node);
+		purple_action_menu_set_data(act, node);
 		finch_append_menu_action(menu, act, node);
 	}
 }
@@ -1008,7 +1008,7 @@ static void
 add_custom_action(GntMenu *menu, const char *label, PurpleCallback callback,
 		gpointer data)
 {
-	PurpleActionMenu *action = purple_menu_action_new(label, callback, data, NULL);
+	PurpleActionMenu *action = purple_action_menu_new(label, callback, data, NULL);
 	finch_append_menu_action(menu, action, NULL);
 }
 
@@ -1087,22 +1087,22 @@ static void
 autojoin_toggled(GntMenuItem *item, gpointer data)
 {
 	PurpleActionMenu *action = data;
-	purple_blist_node_set_bool(purple_menu_action_get_data(action), "gnt-autojoin",
+	purple_blist_node_set_bool(purple_action_menu_get_data(action), "gnt-autojoin",
 				gnt_menuitem_check_get_checked(GNT_MENU_ITEM_CHECK(item)));
 }
 
 static void
 create_chat_menu(GntMenu *menu, PurpleChat *chat)
 {
-	PurpleActionMenu *action = purple_menu_action_new(_("Auto-join"), NULL, chat, NULL);
+	PurpleActionMenu *action = purple_action_menu_new(_("Auto-join"), NULL, chat, NULL);
 	GntMenuItem *check = gnt_menuitem_check_new(
-			purple_menu_action_get_label(action));
+			purple_action_menu_get_label(action));
 	gnt_menuitem_check_set_checked(GNT_MENU_ITEM_CHECK(check),
 				purple_blist_node_get_bool((PurpleBlistNode*)chat, "gnt-autojoin"));
 	gnt_menu_add_item(menu, check);
 	gnt_menuitem_set_callback(check, autojoin_toggled, action);
 	g_signal_connect_swapped(G_OBJECT(menu), "destroy",
-			G_CALLBACK(purple_menu_action_free), action);
+			G_CALLBACK(purple_action_menu_free), action);
 
 	/* Protocol actions */
 	append_proto_menu(menu,

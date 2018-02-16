@@ -1766,7 +1766,7 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 		return pidgin_separator(menu);
 	}
 
-	stock_id = purple_menu_action_get_stock_icon(act);
+	stock_id = purple_action_menu_get_stock_icon(act);
 	if (stock_id) {
 		icon_image = gtk_image_new_from_stock(stock_id,
 			gtk_icon_size_from_name(
@@ -1775,20 +1775,20 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 
 	if (icon_image) {
 		menuitem = gtk_image_menu_item_new_with_mnemonic(
-			purple_menu_action_get_label(act));
+			purple_action_menu_get_label(act));
 		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menuitem),
 			icon_image);
 	} else {
 		menuitem = gtk_menu_item_new_with_mnemonic(
-			purple_menu_action_get_label(act));
+			purple_action_menu_get_label(act));
 	}
 
-	list = purple_menu_action_get_children(act);
+	list = purple_action_menu_get_children(act);
 
 	if (list == NULL) {
 		PurpleCallback callback;
 
-		callback = purple_menu_action_get_callback(act);
+		callback = purple_action_menu_get_callback(act);
 
 		if (callback != NULL) {
 			g_object_set_data(G_OBJECT(menuitem),
@@ -1796,7 +1796,7 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 							  callback);
 			g_object_set_data(G_OBJECT(menuitem),
 							  "purplecallbackdata",
-							  purple_menu_action_get_data(act));
+							  purple_action_menu_get_data(act));
 			g_signal_connect(G_OBJECT(menuitem), "activate",
 							 G_CALLBACK(menu_action_cb),
 							 object);
@@ -1819,7 +1819,7 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 		if (group) {
 			char *path = g_strdup_printf("%s/%s",
 				gtk_menu_item_get_accel_path(GTK_MENU_ITEM(menuitem)),
-				purple_menu_action_get_label(act));
+				purple_action_menu_get_label(act));
 			gtk_menu_set_accel_path(GTK_MENU(submenu), path);
 			g_free(path);
 			gtk_menu_set_accel_group(GTK_MENU(submenu), group);
@@ -1831,9 +1831,9 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 			pidgin_append_menu_action(submenu, act, object);
 		}
 		g_list_free(list);
-		purple_menu_action_set_children(act, NULL);
+		purple_action_menu_set_children(act, NULL);
 	}
-	purple_menu_action_free(act);
+	purple_action_menu_free(act);
 	return menuitem;
 }
 

@@ -327,7 +327,7 @@ static GList *null_blist_node_menu(PurpleBlistNode *node) {
   purple_debug_info("nullprpl", "providing buddy list context menu item\n");
 
   if (PURPLE_IS_BUDDY(node)) {
-    PurpleActionMenu *action = purple_menu_action_new(
+    PurpleActionMenu *action = purple_action_menu_new(
       _("NullProtocol example menu item"),
       PURPLE_CALLBACK(blist_example_menu_item),
       NULL,   /* userdata passed to the callback */
