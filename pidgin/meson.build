@@ -232,6 +232,7 @@ if ENABLE_GTK
 		    export_packages : 'pidgin-@0@'.format(purple_major_version),
 		    nsversion : '@0@.@1@'.format(purple_major_version,
 		                                 purple_minor_version),
+		    link_with : [libpurple],
 		    install : true)
 	endif
 
