@@ -754,13 +754,66 @@ const gchar *purple_home_dir(void);
  * purple_user_dir:
  *
  * Returns the purple settings directory in the user's home directory.
- * This is usually ~/.purple
+ * This is usually $HOME/.purple
  *
  *  See purple_home_dir()
  *
  * Returns: The purple settings directory.
+ * 
+ * Deprecated: Use purple_cache_dir(), purple_config_dir() or
+ *             purple_data_dir() instead.
  */
 const char *purple_user_dir(void);
+
+/**
+ * purple_cache_dir:
+ *
+ * Returns the purple cache directory according to XDG Base Directory Specification.
+ * This is usually $HOME/.cache/purple.
+ * If custom user dir was specified then this is cache
+ * sub-directory of DIR argument passed to -c option.
+ *
+ * Returns: The purple cache directory.
+ */
+const gchar *purple_cache_dir(void);
+
+/**
+ * purple_config_dir:
+ *
+ * Returns the purple configuration directory according to XDG Base Directory Specification.
+ * This is usually $HOME/.config/purple.
+ * If custom user dir was specified then this is config
+ * sub-directory of DIR argument passed to -c option.
+ *
+ * Returns: The purple configuration directory.
+ */
+const gchar *purple_config_dir(void);
+
+/**
+ * purple_data_dir:
+ *
+ * Returns the purple data directory according to XDG Base Directory Specification.
+ * This is usually $HOME/.local/share/purple.
+ * If custom user dir was specified then this is data
+ * sub-directory of DIR argument passed to -c option.
+ *
+ * Returns: The purple data directory.
+ */
+const gchar *purple_data_dir(void);
+
+/**
+ * purple_move_to_xdg_base_dir:
+ * @purple_xdg_dir: The path to cache, config or data dir.
+ *                  Use respective function
+ * @path:           File or directory in purple_user_dir
+ * 
+ * Moves file or directory from legacy user dir to XDG
+ * based dir.
+ * 
+ * Returns: TRUE if moved successfully, FALSE otherwise
+ */
+gboolean
+purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path);
 
 /**
  * purple_util_set_user_dir:
@@ -786,7 +839,7 @@ int purple_build_dir(const char *path, int mode);
 /**
  * purple_util_write_data_to_file:
  * @filename: The basename of the file to write in the purple_user_dir.
- * @data:     A null-terminated string of data to write.
+ * @data:     A string of data to write.
  * @size:     The size of the data to save.  If data is
  *                 null-terminated you can pass in -1.
  *
@@ -798,14 +851,69 @@ int purple_build_dir(const char *path, int mode);
  * should work fine for saving binary files as well.
  *
  * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ * 
+ * Deprecated: Use purple_util_write_data_to_cache_file(),
+ *             purple_util_write_data_to_config_file() or
+ *             purple_util_write_data_to_data_file() instead.
  */
 gboolean purple_util_write_data_to_file(const char *filename, const char *data,
 									  gssize size);
 
 /**
+ * purple_util_write_data_to_cache_file:
+ * @filename: The basename of the file to write in the purple_cache_dir.
+ * @data:     A string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * cache directory ($HOME/.cache/purple by default).
+ * 
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean
+purple_util_write_data_to_cache_file(const char *filename, const char *data, gssize size);
+
+/**
+ * purple_util_write_data_to_config_file:
+ * @filename: The basename of the file to write in the purple_config_dir.
+ * @data:     A string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * config directory ($HOME/.config/purple by default).
+ *
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean
+purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size);
+
+/**
+ * purple_util_write_data_to_data_file:
+ * @filename: The basename of the file to write in the purple_data_dir.
+ * @data:     A string of data to write.
+ * @size:     The size of the data to save.  If data is
+ *                 null-terminated you can pass in -1.
+ *
+ * Write a string of data to a file of the given name in the Purple
+ * data directory ($HOME/.local/share/purple by default).
+ *
+ *  See purple_util_write_data_to_file()
+ *
+ * Returns: TRUE if the file was written successfully.  FALSE otherwise.
+ */
+gboolean
+purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size);
+
+/**
  * purple_util_write_data_to_file_absolute:
  * @filename_full: Filename to write to
- * @data:          A null-terminated string of data to write.
+ * @data:          A string of data to write.
  * @size:          The size of the data to save.  If data is
  *                      null-terminated you can pass in -1.
  *
@@ -836,9 +944,67 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
  *
  * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
  *         the file does not exist or there was an error reading the file.
+ * 
+ * Deprecated: Use purple_util_read_xml_from_cache_file(),
+ *             purple_util_read_xml_from_config_file() or
+ *             purple_util_read_xml_from_data_file() instead.
  */
 PurpleXmlNode *purple_util_read_xml_from_file(const char *filename,
 									  const char *description);
+
+/**
+ * purple_util_read_xml_from_cache_file:
+ * @filename:    The basename of the file to open in the purple_cache_dir.
+ * @description: A very short description of the contents of this
+ *                    file.  This is used in error messages shown to the
+ *                    user when the file can not be opened.  For example,
+ *                    "preferences," or "buddy pounces."
+ *
+ * Read the contents of a given file and parse the results into an
+ * PurpleXmlNode tree structure.  This is intended to be used to read
+ * Purple's cache xml files (xmpp-caps.xml, etc.)
+ *
+ * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
+ *         the file does not exist or there was an error reading the file.
+ */
+PurpleXmlNode *
+purple_util_read_xml_from_cache_file(const char *filename, const char *description);
+
+/**
+ * purple_util_read_xml_from_config_file:
+ * @filename:    The basename of the file to open in the purple_config_dir.
+ * @description: A very short description of the contents of this
+ *                    file.  This is used in error messages shown to the
+ *                    user when the file can not be opened.  For example,
+ *                    "preferences," or "buddy pounces."
+ *
+ * Read the contents of a given file and parse the results into an
+ * PurpleXmlNode tree structure.  This is intended to be used to read
+ * Purple's config xml files (prefs.xml, pounces.xml, etc.)
+ *
+ * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
+ *         the file does not exist or there was an error reading the file.
+ */
+PurpleXmlNode *
+purple_util_read_xml_from_config_file(const char *filename, const char *description);
+
+/**
+ * purple_util_read_xml_from_data_file:
+ * @filename:    The basename of the file to open in the purple_data_dir.
+ * @description: A very short description of the contents of this
+ *                    file.  This is used in error messages shown to the
+ *                    user when the file can not be opened.  For example,
+ *                    "preferences," or "buddy pounces."
+ *
+ * Read the contents of a given file and parse the results into an
+ * PurpleXmlNode tree structure.  This is intended to be used to read
+ * Purple's cache xml files (accounts.xml, etc.)
+ *
+ * Returns: An PurpleXmlNode tree of the contents of the given file.  Or NULL, if
+ *         the file does not exist or there was an error reading the file.
+ */
+PurpleXmlNode *
+purple_util_read_xml_from_data_file(const char *filename, const char *description);
 
 /**
  * purple_mkstemp:

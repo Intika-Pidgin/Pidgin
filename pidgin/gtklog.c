@@ -196,7 +196,7 @@ static void destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash_t *ht) {
 
 
 		if (log == NULL)
-			logdir = g_build_filename(purple_user_dir(), "logs", NULL);
+			logdir = g_build_filename(purple_data_dir(), "logs", NULL);
 		else
 			logdir = purple_log_get_log_dir(log->type, log->name, log->account);
 
