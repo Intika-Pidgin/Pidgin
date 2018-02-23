@@ -40,6 +40,9 @@ struct _PurpleMenuAction
 
 static char *custom_user_dir = NULL;
 static char *user_dir = NULL;
+static gchar *cache_dir = NULL;
+static gchar *config_dir = NULL;
+static gchar *data_dir = NULL;
 
 static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
@@ -155,6 +158,15 @@ purple_util_uninit(void)
 
 	g_free(user_dir);
 	user_dir = NULL;
+
+	g_free(cache_dir);
+	cache_dir = NULL;
+
+	g_free(config_dir);
+	config_dir = NULL;
+
+	g_free(data_dir);
+	data_dir = NULL;
 
 	json_node_free(escape_js_node);
 	escape_js_node = NULL;
@@ -3026,6 +3038,83 @@ purple_user_dir(void)
 	return user_dir;
 }
 
+static const gchar *
+purple_xdg_dir(gchar **xdg_dir, const gchar *xdg_base_dir, const gchar *xdg_type)
+{
+	if (!*xdg_dir) {
+		if (!custom_user_dir) {
+			*xdg_dir = g_build_filename(xdg_base_dir, "purple", NULL);
+		} else {
+			*xdg_dir = g_build_filename(custom_user_dir, xdg_type, NULL);
+		}
+	}
+
+	return *xdg_dir;
+}
+
+const gchar *
+purple_cache_dir(void)
+{
+	return purple_xdg_dir(&cache_dir, g_get_user_cache_dir(), "cache");
+}
+
+const gchar *
+purple_config_dir(void)
+{
+	return purple_xdg_dir(&config_dir, g_get_user_config_dir(), "config");
+}
+
+const gchar *
+purple_data_dir(void)
+{
+	return purple_xdg_dir(&data_dir, g_get_user_data_dir(), "data");
+}
+
+gboolean
+purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path)
+{
+	gint mkdir_res;
+	gchar *xdg_path;
+	gboolean xdg_path_exists;
+
+	/* Create destination directory */
+	mkdir_res = purple_build_dir(purple_xdg_dir, S_IRWXU);
+	if (mkdir_res == -1) {
+		purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
+					purple_xdg_dir, g_strerror(errno));
+		return FALSE;
+	}
+
+	xdg_path = g_build_filename(purple_xdg_dir, path, NULL);
+	xdg_path_exists = g_file_test(xdg_path, G_FILE_TEST_EXISTS);
+	if (!xdg_path_exists) {
+		gchar *old_path;
+		gboolean old_path_exists;
+
+		old_path = g_build_filename(purple_user_dir(), path, NULL);
+		old_path_exists = g_file_test(old_path, G_FILE_TEST_EXISTS);
+		if (old_path_exists) {
+			int rename_res;
+
+			rename_res = g_rename(old_path, xdg_path);
+			if (rename_res == -1) {
+				purple_debug_error("util", "Error renaming %s to %s; failed migration\n",
+							old_path, xdg_path);
+				g_free(old_path);
+				g_free(xdg_path);
+
+				return FALSE;
+			}
+		}
+
+		g_free(old_path);
+	}
+
+	g_free(xdg_path);
+
+	return TRUE;
+}
+
 void purple_util_set_user_dir(const char *dir)
 {
 	g_free(custom_user_dir);
@@ -3036,40 +3125,34 @@ void purple_util_set_user_dir(const char *dir)
 		custom_user_dir = NULL;
 }
 
-int purple_build_dir (const char *path, int mode)
+int purple_build_dir(const char *path, int mode)
 {
 	return g_mkdir_with_parents(path, mode);
 }
 
-/*
- * This function is long and beautiful, like my--um, yeah.  Anyway,
- * it includes lots of error checking so as we don't overwrite
- * people's settings if there is a problem writing the new values.
- */
-gboolean
-purple_util_write_data_to_file(const char *filename, const char *data, gssize size)
+static gboolean
+purple_util_write_data_to_file_common(const char *dir, const char *filename, const char *data, gssize size)
 {
-	const char *user_dir = purple_user_dir();
 	gchar *filename_full;
 	gboolean ret = FALSE;
 
-	g_return_val_if_fail(user_dir != NULL, FALSE);
+	g_return_val_if_fail(dir != NULL, FALSE);
 
 	purple_debug_misc("util", "Writing file %s to directory %s",
-					filename, user_dir);
+			  filename, dir);
 
-	/* Ensure the user directory exists */
-	if (!g_file_test(user_dir, G_FILE_TEST_IS_DIR))
+	/* Ensure the directory exists */
+	if (!g_file_test(dir, G_FILE_TEST_IS_DIR))
 	{
-		if (g_mkdir(user_dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
+		if (g_mkdir(dir, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 		{
 			purple_debug_error("util", "Error creating directory %s: %s\n",
-							 user_dir, g_strerror(errno));
+					   dir, g_strerror(errno));
 			return FALSE;
 		}
 	}
 
-	filename_full = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", user_dir, filename);
+	filename_full = g_build_filename(dir, filename, NULL);
 
 	ret = purple_util_write_data_to_file_absolute(filename_full, data, size);
 
@@ -3077,6 +3160,47 @@ purple_util_write_data_to_file(const char *filename, const char *data, gssize si
 	return ret;
 }
 
+gboolean
+purple_util_write_data_to_file(const char *filename, const char *data, gssize size)
+{
+	const char *user_dir = purple_user_dir();
+	gboolean ret = purple_util_write_data_to_file_common(user_dir, filename, data, size);
+
+	return ret;
+}
+
+gboolean
+purple_util_write_data_to_cache_file(const char *filename, const char *data, gssize size)
+{
+	const char *cache_dir = purple_cache_dir();
+	gboolean ret = purple_util_write_data_to_file_common(cache_dir, filename, data, size);
+
+	return ret;
+}
+
+gboolean
+purple_util_write_data_to_config_file(const char *filename, const char *data, gssize size)
+{
+	const char *config_dir = purple_config_dir();
+	gboolean ret = purple_util_write_data_to_file_common(config_dir, filename, data, size);
+
+	return ret;
+}
+
+gboolean
+purple_util_write_data_to_data_file(const char *filename, const char *data, gssize size)
+{
+	const char *data_dir = purple_data_dir();
+	gboolean ret = purple_util_write_data_to_file_common(data_dir, filename, data, size);
+
+	return ret;
+}
+
+/*
+ * This function is long and beautiful, like my--um, yeah.  Anyway,
+ * it includes lots of error checking so as we don't overwrite
+ * people's settings if there is a problem writing the new values.
+ */
 gboolean
 purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size)
 {
@@ -3232,6 +3356,24 @@ PurpleXmlNode *
 purple_util_read_xml_from_file(const char *filename, const char *description)
 {
 	return purple_xmlnode_from_file(purple_user_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_cache_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_cache_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_config_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_config_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_data_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_data_dir(), filename, description, "util");
 }
 
 /*
