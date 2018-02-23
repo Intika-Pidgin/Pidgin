@@ -14,6 +14,7 @@ version 3.0.0 (??/??/????):
 	  recognized through pkg-config. (Michael McConville)
 	* Fixed an issue where transient startup statuses could be deleted
 	  (Jakub Adam) (#16762)
+	* Moved config files to XDG Directories. (Arkadiy Illarionov) (#10029)
 
 	libpurple:
 	* Specify a different set of encryption ciphers for TLS connections when
