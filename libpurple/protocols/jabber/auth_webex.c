@@ -31,24 +31,24 @@
 #include "jabber.h"
 #include "auth.h"
 
-static xmlnode *finish_webex_authentication(JabberStream *js)
+static PurpleXmlNode *finish_webex_authentication(JabberStream *js)
 {
-	xmlnode *auth;
+	PurpleXmlNode *auth;
 
-	auth = xmlnode_new("auth");
-	xmlnode_set_namespace(auth, NS_XMPP_SASL);
+	auth = purple_xmlnode_new("auth");
+	purple_xmlnode_set_namespace(auth, NS_XMPP_SASL);
 
-	xmlnode_set_attrib(auth, "xmlns:ga", "http://www.google.com/talk/protocol/auth");
-	xmlnode_set_attrib(auth, "ga:client-uses-full-bind-result", "true");
+	purple_xmlnode_set_attrib(auth, "xmlns:ga", "http://www.google.com/talk/protocol/auth");
+	purple_xmlnode_set_attrib(auth, "ga:client-uses-full-bind-result", "true");
 
-	xmlnode_set_attrib(auth, "mechanism", "WEBEX-TOKEN");
-	xmlnode_insert_data(auth, purple_connection_get_password(js->gc), -1);
+	purple_xmlnode_set_attrib(auth, "mechanism", "WEBEX-TOKEN");
+	purple_xmlnode_insert_data(auth, purple_connection_get_password(js->gc), -1);
 
 	return auth;
 }
 
 static JabberSaslState
-jabber_webex_start(JabberStream *js, xmlnode *packet, xmlnode **response, char **error)
+jabber_webex_start(JabberStream *js, PurpleXmlNode *packet, PurpleXmlNode **response, char **error)
 {
 	*response = finish_webex_authentication(js);
 	return JABBER_SASL_STATE_OK;
