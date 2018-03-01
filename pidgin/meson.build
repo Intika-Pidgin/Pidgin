@@ -166,6 +166,8 @@ if ENABLE_GTK
 	    	webkit,
 	    	x11,
 	    	libpurple_dep,
+	        package_revision_dep,
+	        dbus_codegen_dep,
 	    ],
 	    install : true)
 	libpidgin_dep = declare_dependency(

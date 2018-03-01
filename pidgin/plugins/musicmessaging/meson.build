@@ -8,7 +8,7 @@ if PLUGINS and enable_dbus
 	    output : 'music-messaging-bindings.ch')
 
 	musicmessaging = library('musicmessaging', 'musicmessaging.c', music_messaging_bindings,
-	    dependencies : [dbus, libpurple_dep, libpidgin_dep, glib],
+	    dependencies : [dbus, dbus_codegen_dep, libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 endif
