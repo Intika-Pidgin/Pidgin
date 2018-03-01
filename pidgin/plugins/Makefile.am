@@ -133,8 +133,6 @@ EXTRA_DIST = \
 	mailchk.c \
 	pidgininc.c \
 	raw.c \
-	win32/transparency/Makefile.mingw \
-	win32/transparency/win2ktrans.c \
 	win32/winprefs/gtkappbar.c \
 	win32/winprefs/gtkappbar.h \
 	win32/winprefs/Makefile.mingw \
