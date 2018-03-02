@@ -101,9 +101,6 @@ package_revision = vcs_tag(
     input : 'package_revision.h.in',
     output : 'package_revision.h',
     fallback : meson.project_version())
-	
-package_revision_dep = declare_dependency(
-    sources: package_revision)
 
 # For man pages.
 man_conf.set('VERSION', purple_display_version)

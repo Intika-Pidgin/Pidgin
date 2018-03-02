@@ -386,9 +386,6 @@ dbus_builtheaders = []
 
 endif
 
-dbus_codegen_dep = declare_dependency(
-    sources : [dbus_builtsources, dbus_builtheaders])
-
 libpurple_inc = include_directories('.')
 libpurple = library('purple',
                     purple_coresources + purple_builtsources +
@@ -398,12 +395,13 @@ libpurple = library('purple',
                     install : true,
                     version : PURPLE_LIB_VERSION,
                     dependencies : # static_link_libs
-                        [dbus, dbus_codegen_dep, dbus_glib, dnsapi, ws2_32, 
-                         glib, gio, gplugin, libxml, farstream, gstreamer,
-                         gstreamer_video, gstreamer_app, idn, json, math])
+                        [dbus, dbus_glib, dnsapi, ws2_32, glib, gio, gplugin, libxml,
+                         farstream, gstreamer, gstreamer_video,
+                         gstreamer_app, idn, json, math])
 
+# Ensure purple/dbus headers built before any dependencies:
 libpurple_dep = declare_dependency(
-    sources : purple_builtheaders,  # Ensure built before any dependencies.
+    sources : [purple_builtheaders, dbus_builtheaders],
     include_directories : [toplevel_inc, libpurple_inc],
     link_with : libpurple,
     dependencies : [gstreamer, gplugin, glib, gio])
