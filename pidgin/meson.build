@@ -151,6 +151,7 @@ if ENABLE_GTK
 	libpidgin_inc = include_directories('.')
 	libpidgin = shared_library('pidgin',
 	    libpidgin_SOURCES,
+	    package_revision,
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
 	    dependencies : [
@@ -166,8 +167,6 @@ if ENABLE_GTK
 	    	webkit,
 	    	x11,
 	    	libpurple_dep,
-	        package_revision_dep,
-	        dbus_codegen_dep,
 	    ],
 	    install : true)
 	libpidgin_dep = declare_dependency(

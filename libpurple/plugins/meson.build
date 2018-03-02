@@ -82,7 +82,7 @@ if PLUGINS
 		               '--export-only', '-o', '@OUTPUT@', '@INPUT@'])
 
 		dbus_example = library('dbus-example', 'dbus-example.c', dbus_example_bindings_c,
-		    dependencies : [libpurple_dep, dbus_codegen_dep, dbus],
+		    dependencies : [libpurple_dep, dbus],
 		    name_prefix : '')
 	endif  # enable_dbus
 endif  # PLUGINS

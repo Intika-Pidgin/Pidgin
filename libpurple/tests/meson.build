@@ -22,10 +22,11 @@ test_ui = static_library(
 
 foreach prog : PROGS
     e = executable('test_' + prog, 'test_@0@.c'.format(prog),
+                   dbus_builtheaders, dbus_builtsources,
                    c_args : [
                        '-DTEST_DATA_DIR="@0@/data"'.format(meson.current_source_dir())
                    ],
-                   dependencies : [libpurple_dep, dbus_codegen_dep, glib, dbus, dbus_glib],
+                   dependencies : [libpurple_dep, glib, dbus, dbus_glib],
                    link_with: test_ui,
     )
     test(prog, e)
