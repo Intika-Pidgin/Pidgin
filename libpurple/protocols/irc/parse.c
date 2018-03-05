@@ -533,7 +533,7 @@ const char *irc_nick_skip_mode(struct irc_conn *irc, const char *nick)
 
 	mode_chars = irc->mode_chars ? irc->mode_chars : default_modes;
 
-	while (strchr(mode_chars, *nick) != NULL)
+	while (*nick && strchr(mode_chars, *nick) != NULL)
 		nick++;
 
 	return nick;
