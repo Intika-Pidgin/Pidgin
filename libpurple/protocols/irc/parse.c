@@ -680,6 +680,13 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	 */
 	purple_signal_emit(_irc_plugin, "irc-receiving-text", gc, &input);
 
+	if (purple_debug_is_verbose()) {
+		char *clean = purple_utf8_salvage(input);
+		clean = g_strstrip(clean);
+		purple_debug_misc("irc", ">> %s\n", clean);
+		g_free(clean);
+	}
+
 	if (!strncmp(input, "PING ", 5)) {
 		msg = irc_format(irc, "vv", "PONG", input + 5);
 		irc_send(irc, msg);
