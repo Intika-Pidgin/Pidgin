@@ -555,7 +555,7 @@ char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, con
 	 * message and low-level quoting ... but if you want that crap,
 	 * use a real IRC client. */
 
-	if (msg[0] != '\001' || msg[strlen(msg) - 1] != '\001')
+	if (msg[0] != '\001' || msg[1] == '\0' || msg[strlen(msg) - 1] != '\001')
 		return g_strdup(msg);
 
 	if (!strncmp(cur, "ACTION ", 7)) {
