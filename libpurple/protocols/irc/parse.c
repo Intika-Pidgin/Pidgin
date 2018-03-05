@@ -115,6 +115,7 @@ static struct _irc_msg {
 	{ "906", "*", 0, irc_msg_authfail },		/* SASL auth failed		*/
 	{ "907", "*", 0, irc_msg_authfail },		/* SASL auth failed		*/
 	{ "cap", "vv:", 3, irc_msg_cap },		/* SASL capable			*/
+	{ "authenticate", ":", 1, irc_msg_authenticate }, /* SASL authenticate		*/
 #endif
 	{ "invite", "n:", 2, irc_msg_invite },		/* Invited			*/
 	{ "join", ":", 1, irc_msg_join },		/* Joined a channel		*/

@@ -1700,6 +1700,12 @@ irc_msg_auth(struct irc_conn *irc, char *arg)
 }
 
 void
+irc_msg_authenticate(struct irc_conn *irc, const char *name, const char *from, char **args)
+{
+	irc_msg_auth(irc, args[0]);
+}
+
+void
 irc_msg_authok(struct irc_conn *irc, const char *name, const char *from, char **args)
 {
 	char *buf;
