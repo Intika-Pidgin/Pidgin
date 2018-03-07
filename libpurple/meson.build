@@ -399,8 +399,8 @@ libpurple = library('purple',
                          farstream, gstreamer, gstreamer_video,
                          gstreamer_app, idn, json, math])
 
-# Ensure purple/dbus headers built before any dependencies:
 libpurple_dep = declare_dependency(
+    # Ensure purple/dbus headers built before any dependencies:
     sources : [purple_builtheaders, dbus_builtheaders],
     include_directories : [toplevel_inc, libpurple_inc],
     link_with : libpurple,
