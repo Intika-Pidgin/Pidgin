@@ -534,7 +534,7 @@ const char *irc_nick_skip_mode(struct irc_conn *irc, const char *nick)
 
 	mode_chars = irc->mode_chars ? irc->mode_chars : default_modes;
 
-	while (strchr(mode_chars, *nick) != NULL)
+	while (*nick && strchr(mode_chars, *nick) != NULL)
 		nick++;
 
 	return nick;
@@ -556,7 +556,7 @@ char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, con
 	 * message and low-level quoting ... but if you want that crap,
 	 * use a real IRC client. */
 
-	if (msg[0] != '\001' || msg[strlen(msg) - 1] != '\001')
+	if (msg[0] != '\001' || msg[1] == '\0' || msg[strlen(msg) - 1] != '\001')
 		return g_strdup(msg);
 
 	if (!strncmp(cur, "ACTION ", 7)) {
