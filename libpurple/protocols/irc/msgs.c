@@ -757,8 +757,10 @@ void irc_msg_motd(struct irc_conn *irc, const char *name, const char *from, char
 	char *escaped;
 
 	if (purple_strequal(name, "375")) {
-		if (irc->motd)
+		if (irc->motd) {
 			g_string_free(irc->motd, TRUE);
+			irc->motd = NULL;
+		}
 		irc->motd = g_string_new("");
 		return;
 	} else if (purple_strequal(name, "376")) {
@@ -770,8 +772,10 @@ void irc_msg_motd(struct irc_conn *irc, const char *name, const char *from, char
 		/* in case there is no 251, and no MOTD set, finalize the connection.
 		 * (and clear the motd for good measure). */
 
-		if (irc->motd)
+		if (irc->motd) {
 			g_string_free(irc->motd, TRUE);
+			irc->motd = NULL;
+		}
 
 		irc_connected(irc, args[0]);
 		return;
