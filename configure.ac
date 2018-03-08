@@ -47,7 +47,7 @@ m4_define([purple_lt_current], [13])
 m4_define([purple_major_version], [2])
 m4_define([purple_minor_version], [13])
 m4_define([purple_micro_version], [0])
-m4_define([purple_version_suffix], [devel])
+m4_define([purple_version_suffix], [])
 m4_define([purple_version],
           [purple_major_version.purple_minor_version.purple_micro_version])
 m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suffix],[purple_version_suffix]))
@@ -56,7 +56,7 @@ m4_define([gnt_lt_current], [8])
 m4_define([gnt_major_version], [2])
 m4_define([gnt_minor_version], [8])
 m4_define([gnt_micro_version], [10])
-m4_define([gnt_version_suffix], [devel])
+m4_define([gnt_version_suffix], [])
 m4_define([gnt_version],
           [gnt_major_version.gnt_minor_version.gnt_micro_version])
 m4_define([gnt_display_version], gnt_version[]m4_ifdef([gnt_version_suffix],[gnt_version_suffix]))
@@ -2220,6 +2220,8 @@ if test "$enable_tcl" = yes; then
 	TCLCONFIG=no
 	TCLCONFIGDIRS="/usr/lib \
 			/usr/lib64 \
+			/usr/lib/tcl8.7 \
+			/usr/lib/tcl8.6 \
 			/usr/lib/tcl8.5 \
 			/usr/lib/tcl8.4 \
 			/usr/lib/tcl8.3 \
@@ -2295,6 +2297,8 @@ if test "$enable_tcl" = yes -a "$enable_tk" = yes; then
 	TKCONFIG=no
 	TKCONFIGDIRS="/usr/lib \
 			/usr/lib64 \
+			/usr/lib/tk8.7 \
+			/usr/lib/tk8.6 \
 			/usr/lib/tk8.5 \
 			/usr/lib/tk8.4 \
 			/usr/lib/tk8.3 \
