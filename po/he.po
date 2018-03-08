@@ -10,8 +10,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:53-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:38+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Hebrew (http://www.transifex.com/pidgin/pidgin/language/he/)\n"
 "Language: he\n"
@@ -12459,6 +12459,56 @@ msgid ""
 "timestamp formats."
 msgstr "תוסף זה מאפשר למשתמש לקבוע אפשרויות שיחה וחותמות-זמן ליומני שיחה."
 
+msgid "Opacity:"
+msgstr "שקיפות:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "חלונות שיחה להודעות"
+
+msgid "_IM window transparency"
+msgstr "שקיפות חלונות שיחה"
+
+msgid "_Show slider bar in IM window"
+msgstr "הצג פס הזזה בחלונות שיחה"
+
+msgid "Remove IM window transparency on focus"
+msgstr "בטל שקיפות חלונות הודעה בעת הפיכתם לפעילים"
+
+msgid "Always on top"
+msgstr "תמיד מעל"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "חלון רשימת אנשי הקשר"
+
+msgid "_Buddy List window transparency"
+msgstr "חלון רשימת אנשי הקשר תמיד עליון"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "בטל שקיפות חלון רשימת אנשי הקשר בעת הפיכתו לפעיל"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "שקיפות"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "שקיפות משתנה עבור רשימת אנשי הקשר וחלונות השיחה."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12567,56 +12617,6 @@ msgstr "קביעת הגדרות המיקרופון והמצלמה שלך."
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "קביעת הגדרות מיקרופון ומצלמת-וידאו עבור שיחות קול ווידאו."
-
-msgid "Opacity:"
-msgstr "שקיפות:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "חלונות שיחה להודעות"
-
-msgid "_IM window transparency"
-msgstr "שקיפות חלונות שיחה"
-
-msgid "_Show slider bar in IM window"
-msgstr "הצג פס הזזה בחלונות שיחה"
-
-msgid "Remove IM window transparency on focus"
-msgstr "בטל שקיפות חלונות הודעה בעת הפיכתם לפעילים"
-
-msgid "Always on top"
-msgstr "תמיד מעל"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "חלון רשימת אנשי הקשר"
-
-msgid "_Buddy List window transparency"
-msgstr "חלון רשימת אנשי הקשר תמיד עליון"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "בטל שקיפות חלון רשימת אנשי הקשר בעת הפיכתו לפעיל"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "שקיפות"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "שקיפות משתנה עבור רשימת אנשי הקשר וחלונות השיחה."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

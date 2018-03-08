@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:54-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:26+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Khmer (http://www.transifex.com/pidgin/pidgin/language/km/)\n"
 "Language: km\n"
@@ -12419,6 +12419,56 @@ msgstr ""
 "កម្មវិធី​ជំនួយ​នេះ​អនុញ្ញាត​ឲ្យ​អ្នកប្រើ​ប្ដូរ​ទ្រង់ទ្រាយ​​ការ​សន្ទនា និង​កា​រចុះ​កំណត់ហេតុ​សារ​ត្រាពេលវេលា​"
 "ផ្ទាល់ខ្លួន ។"
 
+msgid "Opacity:"
+msgstr "ភាព​ស្រអាប់ ៖"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "បង្អួច​សន្ទនា IM"
+
+msgid "_IM window transparency"
+msgstr "ភាពថ្លា​បង្អួច​របស់ IM"
+
+msgid "_Show slider bar in IM window"
+msgstr "បង្ហាញ​របារ​គ្រាប់រំកិល​នៅ​ក្នុងបង្អួច IM"
+
+msgid "Remove IM window transparency on focus"
+msgstr "យក​ភាព​ថ្លា​របស់​បង្អួច IM ចេញ​​នៅពេល​ផ្ដោត"
+
+msgid "Always on top"
+msgstr "តែងតែ​នៅ​លើ​ជា​និច្ច"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "បង្អួច​បញ្ជី​មិត្តភក្ដិ"
+
+msgid "_Buddy List window transparency"
+msgstr "ភាព​ថ្លា​របស់បង្អួច​បញ្ជីមិត្តភក្ដិ"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "យក​ភាព​ថ្លា​របស់​បង្អួច​បញ្ជីមិត្តភក្ដិ​ចេញ​នៅពេល​ផ្ដោត"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "ភាព​ថ្លា​"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "ភាព​ថ្លា​ដែល​មាន​សម្រាប់បញ្ជី​មិត្តភក្ដិ​ និង​ការសន្ទនា ។"
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12527,56 +12577,6 @@ msgstr "កំណត់​រចនាសម្ព័ន្ធ​មីក្រ
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "កំណត់​រចនា​សម្ព័ន្ធ​មីក្រូ​ និង​ការ​កំណត់​​​ម៉ាស៊ីន​ថត​តាម​បណ្ដាញ​សម្រាប់​ហៅ​ជា​សំឡេង/វីដេអូ ។"
-
-msgid "Opacity:"
-msgstr "ភាព​ស្រអាប់ ៖"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "បង្អួច​សន្ទនា IM"
-
-msgid "_IM window transparency"
-msgstr "ភាពថ្លា​បង្អួច​របស់ IM"
-
-msgid "_Show slider bar in IM window"
-msgstr "បង្ហាញ​របារ​គ្រាប់រំកិល​នៅ​ក្នុងបង្អួច IM"
-
-msgid "Remove IM window transparency on focus"
-msgstr "យក​ភាព​ថ្លា​របស់​បង្អួច IM ចេញ​​នៅពេល​ផ្ដោត"
-
-msgid "Always on top"
-msgstr "តែងតែ​នៅ​លើ​ជា​និច្ច"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "បង្អួច​បញ្ជី​មិត្តភក្ដិ"
-
-msgid "_Buddy List window transparency"
-msgstr "ភាព​ថ្លា​របស់បង្អួច​បញ្ជីមិត្តភក្ដិ"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "យក​ភាព​ថ្លា​របស់​បង្អួច​បញ្ជីមិត្តភក្ដិ​ចេញ​នៅពេល​ផ្ដោត"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "ភាព​ថ្លា​"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "ភាព​ថ្លា​ដែល​មាន​សម្រាប់បញ្ជី​មិត្តភក្ដិ​ និង​ការសន្ទនា ។"
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

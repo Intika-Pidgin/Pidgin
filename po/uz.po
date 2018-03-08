@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:58-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 19:52+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Uzbek (http://www.transifex.com/pidgin/pidgin/language/uz/)\n"
 "Language: uz\n"
@@ -12083,6 +12083,56 @@ msgstr ""
 "Ushbu plagin foydalanuvchilarga suhbatlarni moslash va xabarlarni vaqt "
 "formati bo‘yicha saqlab qolish imkonini beradi."
 
+msgid "Opacity:"
+msgstr "Xiralik:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Xabar almashish suhbat oynalari"
+
+msgid "_IM window transparency"
+msgstr "_Xabar almashish oynasi shaffofligi"
+
+msgid "_Show slider bar in IM window"
+msgstr "Xabar almashish oynasidagi suriluvchan panelni _ko‘rsatish"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Fokusdagi xabar almashish oynasi shaffofligini olib tashlash"
+
+msgid "Always on top"
+msgstr "Doimo yuqorida"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Do‘stlar ro‘yxati oynasi"
+
+msgid "_Buddy List window transparency"
+msgstr "_Do‘stlar ro‘yxati oynasi shaffofligi"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Fokusdagi do‘stlar ro‘yxati oynasi shaffofligini olib tashlash"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Shaffoflik"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Do‘stlar ro‘yxati va suhbatlar uchun o‘zgaruvchan shaffoflik."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12193,56 +12243,6 @@ msgstr "Mikrofon va vebkamerangizni moslang."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Ovozli/video qo‘ng‘iroqlar uchun mikrofon va vebkamera sozlamalarini moslash"
-
-msgid "Opacity:"
-msgstr "Xiralik:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Xabar almashish suhbat oynalari"
-
-msgid "_IM window transparency"
-msgstr "_Xabar almashish oynasi shaffofligi"
-
-msgid "_Show slider bar in IM window"
-msgstr "Xabar almashish oynasidagi suriluvchan panelni _ko‘rsatish"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Fokusdagi xabar almashish oynasi shaffofligini olib tashlash"
-
-msgid "Always on top"
-msgstr "Doimo yuqorida"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Do‘stlar ro‘yxati oynasi"
-
-msgid "_Buddy List window transparency"
-msgstr "_Do‘stlar ro‘yxati oynasi shaffofligi"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Fokusdagi do‘stlar ro‘yxati oynasi shaffofligini olib tashlash"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Shaffoflik"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Do‘stlar ro‘yxati va suhbatlar uchun o‘zgaruvchan shaffoflik."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

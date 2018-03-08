@@ -3,15 +3,15 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Translators:
-# Renato Silva <br.renatosilva@gmail.com>, 2014
+# Renato Silva, 2014
 # Rafael H L Moretti <rafael.moretti@gmail.com>, 2015
-# Renato Silva <br.renatosilva@gmail.com>, 2014-2016
+# Renato Silva, 2014-2016
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:56-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 18:12+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/pidgin/pidgin/"
 "language/pt_BR/)\n"
@@ -12818,6 +12818,56 @@ msgstr ""
 "Este plug-in permite ao usuário personalizar os formatos de marcação de "
 "tempo nas conversas e logs."
 
+msgid "Opacity:"
+msgstr "Opacidade:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Janelas de conversa por mensagem instantânea"
+
+msgid "_IM window transparency"
+msgstr "Transparência da janela de _mensagem instantânea"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Mostrar slider na janela de mensagem instantânea"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Remover transparência da janela quando esta ganhar foco"
+
+msgid "Always on top"
+msgstr "Sempre no topo"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Janela da lista de amigos"
+
+msgid "_Buddy List window transparency"
+msgstr "Transparência da janela da _lista de amigos"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Remover a transparência da lista de amigos ao focá-la"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Transparência"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Transparência variável para a lista de amigos e conversas."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Avisos de bate-papos."
@@ -12926,56 +12976,6 @@ msgstr "Configure seu microfone e webcam."
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "Configure definições de microfone e webcam para chamadas de voz/vídeo."
-
-msgid "Opacity:"
-msgstr "Opacidade:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Janelas de conversa por mensagem instantânea"
-
-msgid "_IM window transparency"
-msgstr "Transparência da janela de _mensagem instantânea"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Mostrar slider na janela de mensagem instantânea"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Remover transparência da janela quando esta ganhar foco"
-
-msgid "Always on top"
-msgstr "Sempre no topo"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Janela da lista de amigos"
-
-msgid "_Buddy List window transparency"
-msgstr "Transparência da janela da _lista de amigos"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Remover a transparência da lista de amigos ao focá-la"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Transparência"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Transparência variável para a lista de amigos e conversas."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"
