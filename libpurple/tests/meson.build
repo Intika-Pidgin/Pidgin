@@ -22,7 +22,6 @@ test_ui = static_library(
 
 foreach prog : PROGS
     e = executable('test_' + prog, 'test_@0@.c'.format(prog),
-                   dbus_builtheaders,
                    c_args : [
                        '-DTEST_DATA_DIR="@0@/data"'.format(meson.current_source_dir())
                    ],
