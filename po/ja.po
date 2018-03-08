@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:54-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 15:00+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Japanese (http://www.transifex.com/pidgin/pidgin/language/"
 "ja/)\n"
@@ -12496,6 +12496,56 @@ msgstr ""
 "このプラグインを使えば、会話やログのメッセージに付与するタイムスタンプの書式"
 "をカスタマイズできます。"
 
+msgid "Opacity:"
+msgstr "透明度:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "IM の会話ウィンドウ"
+
+msgid "_IM window transparency"
+msgstr "会話ウィンドウの透明度(_I)"
+
+msgid "_Show slider bar in IM window"
+msgstr "会話ウィンドウの中にスライダ・バーを表示する(_S)"
+
+msgid "Remove IM window transparency on focus"
+msgstr "フォーカスされたら会話ウィンドウの透明度を解除する"
+
+msgid "Always on top"
+msgstr "常に前面に配置する"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "仲間リストのウィンドウ"
+
+msgid "_Buddy List window transparency"
+msgstr "仲間リストの透明度(_B)"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "フォーカスされたら仲間リストの透明度を解除する"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "透明度"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "仲間リストと会話ウィンドウを段階的に透明化します"
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12603,56 +12653,6 @@ msgstr ""
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
-msgstr ""
-
-msgid "Opacity:"
-msgstr "透明度:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "IM の会話ウィンドウ"
-
-msgid "_IM window transparency"
-msgstr "会話ウィンドウの透明度(_I)"
-
-msgid "_Show slider bar in IM window"
-msgstr "会話ウィンドウの中にスライダ・バーを表示する(_S)"
-
-msgid "Remove IM window transparency on focus"
-msgstr "フォーカスされたら会話ウィンドウの透明度を解除する"
-
-msgid "Always on top"
-msgstr "常に前面に配置する"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "仲間リストのウィンドウ"
-
-msgid "_Buddy List window transparency"
-msgstr "仲間リストの透明度(_B)"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "フォーカスされたら仲間リストの透明度を解除する"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "透明度"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "仲間リストと会話ウィンドウを段階的に透明化します"
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
 msgstr ""
 
 #. Autostart

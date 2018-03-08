@@ -3,8 +3,10 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Translators:
-# Andy Kleinert <Wawuschel@erweiterungen.de>, 2014-2016
-# Björn Voigt <bjoernv@arcor.de>, 2014,2016
+# Adrian Heine <mail@adrianheine.de>, 2017
+# Andy Kleinert <Wawuschel@erweiterungen.de>, 2014-2017
+# Björn Voigt <bjoernv@arcor.de>, 2014,2016-2018
+# Eion Robb <eion@robbmob.com>, 2017
 # Mario Siegmann <mario_siegmann@web.de>, 2014-2015
 # Tobias Bannert <tobannert@gmail.com>, 2014-2016
 # try once, 2015
@@ -13,9 +15,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:53-0600\n"
-"PO-Revision-Date: 2016-12-04 17:09+0000\n"
-"Last-Translator: Andy Kleinert <Wawuschel@erweiterungen.de>\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2018-01-30 19:08+0000\n"
+"Last-Translator: Björn Voigt <bjoernv@arcor.de>\n"
 "Language-Team: German (http://www.transifex.com/pidgin/pidgin/language/de/)\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -30,7 +32,7 @@ msgstr "Finch (Konsolenvariante von Pidgin)"
 
 #, c-format
 msgid "%s. Try `%s -h' for more information.\n"
-msgstr "%s. Versuchen Sie `%s -h' um weitere Informationen zu erhalten.\n"
+msgstr "%s. Versuchen Sie „%s -h“ für weitere Informationen.\n"
 
 #, c-format
 msgid ""
@@ -3443,7 +3445,7 @@ msgid "Port"
 msgstr "Port"
 
 msgid "Encodings"
-msgstr "Verschlüsselung"
+msgstr "Kodierungen"
 
 msgid "Auto-detect incoming UTF-8"
 msgstr "Eingehendes UTF-8 automatisch erkennen"
@@ -5798,7 +5800,7 @@ msgid "ICQ Protocol Plugin"
 msgstr "IRC-Protokoll-Plugin"
 
 msgid "Encoding"
-msgstr "Codierung"
+msgstr "Kodierung"
 
 msgid "The remote user has closed the connection."
 msgstr "Der entfernte Benutzer hat das Gespräch beendet."
@@ -6477,9 +6479,8 @@ msgid ""
 "file transfers and direct IM (slower,\n"
 "but does not reveal your IP address)"
 msgstr ""
-"Immer den AIM/ICQ-Proxyserver für\n"
-"Dateiübertragungen und Direkt-IM verwenden (langsamer,\n"
-"aber gibt Ihre IP-Adresse nicht preis)"
+"Immer den AIM/ICQ-Proxyserver für Dateiübertragungen und Direkt-IM\n"
+"verwenden (langsamer, aber gibt Ihre IP-Adresse nicht preis)"
 
 msgid "Allow multiple simultaneous logins"
 msgstr "Mehrere gleichzeitige Anmeldungen erlauben"
@@ -8381,7 +8382,7 @@ msgid "Realm"
 msgstr "Bereich"
 
 msgid "Exposure"
-msgstr "Aussetzen"
+msgstr "Darstellung"
 
 #, c-format
 msgid "Unable to create socket: %s"
@@ -9011,7 +9012,7 @@ msgid "_Send File..."
 msgstr "_Datei senden…"
 
 msgid "Add Buddy _Pounce..."
-msgstr "_Kontaktbenachrichtigung hinzufügen…"
+msgstr "_Kontaktbenachrichtigung hinzufügen …"
 
 msgid "View _Log"
 msgstr "Mi_tschnitt anzeigen"
@@ -9035,7 +9036,7 @@ msgid "Remove Custom Icon"
 msgstr "Benutzerdefiniertes Symbol entfernen"
 
 msgid "Add _Buddy..."
-msgstr "_Benutzer hinzufügen…"
+msgstr "_Kontakt hinzufügen …"
 
 msgid "Add C_hat..."
 msgstr "_Chat hinzufügen…"
@@ -9129,7 +9130,7 @@ msgid "/Buddies/_Sort Buddies"
 msgstr "/Kontakte/Kontakte _sortieren"
 
 msgid "/Buddies/_Add Buddy..."
-msgstr "/Kontakte/K_ontakt hinzufügen…"
+msgstr "/Kontakte/K_ontakt hinzufügen …"
 
 msgid "/Buddies/Add C_hat..."
 msgstr "/Kontakte/C_hat hinzufügen…"
@@ -9275,7 +9276,7 @@ msgid "/Buddies/Get User Info..."
 msgstr "/Kontakte/Benutzerinfo abrufen …"
 
 msgid "/Buddies/Add Buddy..."
-msgstr "/Kontakte/Kontakt hinzufügen…"
+msgstr "/Kontakte/Kontakt hinzufügen …"
 
 msgid "/Buddies/Add Chat..."
 msgstr "/Kontakte/Chat hinzufügen…"
@@ -9568,7 +9569,7 @@ msgid "/Conversation/Get _Attention"
 msgstr "/Unterhaltung/_Aufmerksamkeit erregen"
 
 msgid "/Conversation/Add Buddy _Pounce..."
-msgstr "/Unterhaltung/_Konatkt-Benachrichtigung hinzufügen…"
+msgstr "/Unterhaltung/_Kontakt-Benachrichtigung hinzufügen…"
 
 msgid "/Conversation/_Get Info"
 msgstr "/Unterhaltung/_Info abrufen"
@@ -11446,7 +11447,7 @@ msgid "_Browser:"
 msgstr "_Browser:"
 
 msgid "_Open link in:"
-msgstr "_Verweis öffnen mit:"
+msgstr "_Link öffnen mit:"
 
 msgid "Browser default"
 msgstr "Standard-Browser"
@@ -11878,7 +11879,7 @@ msgid ""
 msgstr ""
 "<b>Datei:</b> %s\n"
 "<b>Dateigröße:</b> %s\n"
-"<b>Graöße der Grafik:</b> %dx%d"
+"<b>Größe der Grafik:</b> %dx%d"
 
 #, c-format
 msgid "The file '%s' is too large for %s.  Please try a smaller image.\n"
@@ -12982,6 +12983,58 @@ msgstr ""
 "Dieses Plugin erlaubt es dem Benutzer die Zeitstempel in Unterhaltungen und "
 "im Mitschnitt anzupassen."
 
+msgid "Opacity:"
+msgstr "Durchlässigkeit:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "IM-Gesprächsfenster"
+
+msgid "_IM window transparency"
+msgstr "_IM Fenstertransparenz"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Schiebebalken im IM-Fenster anzeigen"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Transparenz des Unterhaltungsfensters beim Aktivieren aufheben"
+
+msgid "Always on top"
+msgstr "Immer im Vordergrund"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Kontaktlisten-Fenster"
+
+msgid "_Buddy List window transparency"
+msgstr "Transparenz des _Kontaktlistenfensters"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Transparenz des Kontaktlistenfensters beim Aktivieren aufheben"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Transparenz"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Variable Transparenz für die Kontaktlisten und Unterhaltungen."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Dieses Plugin erlaubt variable Alpha-Transparenz in Gesprächsfenstern und in "
+"der Kontaktliste."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Chatraum-Benachrichtigungen"
@@ -13095,58 +13148,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Die Mikrofon- und Webcam-Einstellungen für Sprach- und Video-Anrufe "
 "bearbeiten."
-
-msgid "Opacity:"
-msgstr "Durchlässigkeit:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "IM-Gesprächsfenster"
-
-msgid "_IM window transparency"
-msgstr "_IM Fenstertransparenz"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Schiebebalken im IM-Fenster anzeigen"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Transparenz des Unterhaltungsfensters beim Aktivieren aufheben"
-
-msgid "Always on top"
-msgstr "Immer im Vordergrund"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Kontaktlisten-Fenster"
-
-msgid "_Buddy List window transparency"
-msgstr "Transparenz des _Kontaktlistenfensters"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Transparenz des Kontaktlistenfensters beim Aktivieren aufheben"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Transparenz"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Variable Transparenz für die Kontaktlisten und Unterhaltungen."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Dieses Plugin erlaubt variable Alpha-Transparenz in Gesprächsfenstern und in "
-"der Kontaktliste."
 
 #. Autostart
 msgid "Startup"

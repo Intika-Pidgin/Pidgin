@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:55-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:38+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Maithili (http://www.transifex.com/pidgin/pidgin/language/"
 "mai/)\n"
@@ -12344,6 +12344,56 @@ msgid ""
 msgstr ""
 "ई प्लगिन प्रयोक्ताकेँ वार्तालाप आओर लागिंग संदेश टाइमस्टैंप प्रारूपकेँ मनपसंद बनबैक' अनुमति दैछ."
 
+msgid "Opacity:"
+msgstr "अपारदर्शिताः"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "IM वार्तालाप विंडो"
+
+msgid "_IM window transparency"
+msgstr "IM विंडो पारदर्शिता (_I)"
+
+msgid "_Show slider bar in IM window"
+msgstr "IM विंडोमे स्लाइडर बार देखाउ (_S)"
+
+msgid "Remove IM window transparency on focus"
+msgstr "IM बिंडो पारदर्शिता फोकस पर हटाबू"
+
+msgid "Always on top"
+msgstr "सभकाल सभसँ उप्पर"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "मीत सूची विंडो"
+
+msgid "_Buddy List window transparency"
+msgstr "मीत सूची विंडो पारदर्शिता (_B)"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "मीत सूची विंडो पारदर्शिता फोकस पर हटाबू"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "पारदर्शिता"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "मीत सूची आ संवादक लेल परिवर्तनशील पारदर्शिता"
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12451,56 +12501,6 @@ msgstr ""
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
-msgstr ""
-
-msgid "Opacity:"
-msgstr "अपारदर्शिताः"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "IM वार्तालाप विंडो"
-
-msgid "_IM window transparency"
-msgstr "IM विंडो पारदर्शिता (_I)"
-
-msgid "_Show slider bar in IM window"
-msgstr "IM विंडोमे स्लाइडर बार देखाउ (_S)"
-
-msgid "Remove IM window transparency on focus"
-msgstr "IM बिंडो पारदर्शिता फोकस पर हटाबू"
-
-msgid "Always on top"
-msgstr "सभकाल सभसँ उप्पर"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "मीत सूची विंडो"
-
-msgid "_Buddy List window transparency"
-msgstr "मीत सूची विंडो पारदर्शिता (_B)"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "मीत सूची विंडो पारदर्शिता फोकस पर हटाबू"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "पारदर्शिता"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "मीत सूची आ संवादक लेल परिवर्तनशील पारदर्शिता"
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
 msgstr ""
 
 #. Autostart
