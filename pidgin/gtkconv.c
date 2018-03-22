@@ -4419,13 +4419,16 @@ update_chat_alias(PurpleBuddy *buddy, PurpleConversation *conv, PurpleConnection
 			const char *alias = name;
 			char *tmp;
 			char *alias_key = NULL;
-			PurpleBuddy *buddy2;
 
 			if (!purple_strequal(chat->nick, purple_normalize(conv->account, name))) {
 				/* This user is not me, so look into updating the alias. */
-
-				if ((buddy2 = purple_find_buddy(conv->account, name)) != NULL) {
-					alias = purple_buddy_get_contact_alias(buddy2);
+				GList *users = purple_conv_chat_get_users(PURPLE_CONV_CHAT(conv));
+				for (; users; users = users->next) {
+					PurpleConvChatBuddy *cb = users->data;
+					if (purple_strequal(name, cb->name)) {
+						alias = cb->alias;
+						break;
+					}
 				}
 
 				tmp = g_utf8_casefold(alias, -1);
