@@ -209,7 +209,14 @@ typedef enum
 	 * along with an invitation.
 	 * @since 2.8.0
 	 */
-	OPT_PROTO_INVITE_MESSAGE = 0x00000800
+	OPT_PROTO_INVITE_MESSAGE = 0x00000800,
+
+	/**
+	 * Indicates that this protocol supports creating invisible buddies for
+	 * reporting presence/alias of IM peers.
+	 * @since 2.14.0
+	 */
+	OPT_PROTO_TRANSIENT_BUDDIES = 0x00001000,
 
 } PurpleProtocolOptions;
 

@@ -327,6 +327,55 @@ purple_conversation_chat_cleanup_for_rejoin(PurpleConversation *conv)
 	purple_conversation_update(conv, PURPLE_CONV_UPDATE_CHATLEFT);
 }
 
+/* Meaningful name in case a UI doesn't actually honour the INVISIBLE flag */
+#define TRANSIENT_GROUP_NAME _("(internal) Temporary IM peers")
+
+static void
+purple_conversation_ensure_buddy(PurpleAccount *account, PurpleConnection *gc,
+				 const char *name)
+{
+	PurplePluginProtocolInfo *prpl_info;
+	PurpleBuddy *buddy;
+	PurpleGroup *group;
+
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(purple_connection_get_prpl(gc));
+
+	if ((prpl_info->options & OPT_PROTO_TRANSIENT_BUDDIES) &&
+	    !purple_find_buddy(account, name)) {
+		group = purple_find_group(TRANSIENT_GROUP_NAME);
+		if (!group) {
+			group = purple_group_new(TRANSIENT_GROUP_NAME);
+			purple_blist_node_set_flags(PURPLE_BLIST_NODE(group),
+						    PURPLE_BLIST_NODE_FLAG_NO_SAVE | PURPLE_BLIST_NODE_FLAG_INVISIBLE);
+			purple_blist_add_group(group, NULL);
+		}
+		buddy = purple_buddy_new(account, name, NULL);
+		purple_blist_node_set_flags(PURPLE_BLIST_NODE(buddy),
+					    PURPLE_BLIST_NODE_FLAG_NO_SAVE | PURPLE_BLIST_NODE_FLAG_INVISIBLE);
+
+		purple_blist_add_buddy(buddy, NULL, group, NULL);
+		purple_account_add_buddy(account, buddy);
+	}
+}
+
+static void
+purple_conversation_release_buddy(PurpleAccount *account, const char *name)
+{
+	PurpleBuddy *buddy;
+	PurpleGroup *group;
+
+	group = purple_find_group(TRANSIENT_GROUP_NAME);
+	if (!group)
+		return;
+
+	buddy = purple_find_buddy_in_group(account, name, group);
+	if (!buddy)
+		return;
+
+	purple_account_remove_buddy(account, buddy, group);
+	purple_blist_remove_buddy(buddy);
+}
+
 PurpleConversation *
 purple_conversation_new(PurpleConversationType type, PurpleAccount *account,
 					  const char *name)
@@ -403,6 +452,8 @@ purple_conversation_new(PurpleConversationType type, PurpleAccount *account,
 			purple_conversation_set_logging(conv, TRUE);
 			open_log(conv);
 		}
+
+		purple_conversation_ensure_buddy(account, gc, name);
 	}
 	else if (type == PURPLE_CONV_TYPE_CHAT)
 	{
@@ -484,6 +535,8 @@ purple_conversation_destroy(PurpleConversation *conv)
 
 			if (gc && prpl_info->convo_closed != NULL)
 				prpl_info->convo_closed(gc, name);
+
+			purple_conversation_release_buddy(conv->account, conv->name);
 		}
 		else if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT)
 		{
