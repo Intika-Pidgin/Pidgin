@@ -2431,7 +2431,7 @@ const char *purple_chat_get_name(PurpleChat *chat)
 
 PurpleBuddy *purple_find_buddy(PurpleAccount *account, const char *name)
 {
-	PurpleBuddy *buddy;
+	PurpleBuddy *buddy, *fallback_buddy = NULL;
 	struct _purple_hbuddy hb;
 	PurpleBlistNode *group;
 
@@ -2448,11 +2448,14 @@ PurpleBuddy *purple_find_buddy(PurpleAccount *account, const char *name)
 
 		hb.group = group;
 		if ((buddy = g_hash_table_lookup(purplebuddylist->buddies, &hb))) {
-			return buddy;
+			if (PURPLE_BLIST_NODE_IS_VISIBLE(buddy))
+				return buddy;
+			/* Only return invisible buddies if there are no visible ones */
+			fallback_buddy = buddy;
 		}
 	}
 
-	return NULL;
+	return fallback_buddy;
 }
 
 PurpleBuddy *purple_find_buddy_in_group(PurpleAccount *account, const char *name,

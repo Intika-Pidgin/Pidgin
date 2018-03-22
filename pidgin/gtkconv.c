@@ -632,7 +632,7 @@ add_remove_cb(GtkWidget *widget, PidginConversation *gtkconv)
 		PurpleBuddy *b;
 
 		b = purple_find_buddy(account, name);
-		if (b != NULL)
+		if (b != NULL && PURPLE_BLIST_NODE_IS_VISIBLE(b))
 			pidgin_dialogs_remove_buddy(b);
 		else if (account != NULL && purple_account_is_connected(account))
 			purple_blist_request_add_buddy(account, (char *)name, NULL, NULL);
@@ -1686,7 +1686,8 @@ create_chat_menu(PurpleConversation *conv, const char *who, PurpleConnection *gc
 	}
 
 	if (!is_me && prpl_info && !(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME) && (prpl_info->add_buddy != NULL)) {
-		if ((buddy = purple_find_buddy(conv->account, who)) != NULL)
+		if ((buddy = purple_find_buddy(conv->account, who)) != NULL &&
+		    PURPLE_BLIST_NODE_IS_VISIBLE(buddy))
 			button = pidgin_new_item_from_stock(menu, _("Remove"), GTK_STOCK_REMOVE,
 						G_CALLBACK(menu_chat_add_remove_cb), PIDGIN_CONVERSATION(conv), 0, 0, NULL);
 		else
@@ -4542,7 +4543,7 @@ buddy_cb_common(PurpleBuddy *buddy, PurpleConversation *conv, gboolean is_buddy)
 static void
 buddy_added_cb(PurpleBlistNode *node, PurpleConversation *conv)
 {
-	if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
+	if (!PURPLE_BLIST_NODE_IS_BUDDY(node) || !PURPLE_BLIST_NODE_IS_VISIBLE(node))
 		return;
 
 	buddy_cb_common(PURPLE_BUDDY(node), conv, TRUE);
@@ -4551,12 +4552,15 @@ buddy_added_cb(PurpleBlistNode *node, PurpleConversation *conv)
 static void
 buddy_removed_cb(PurpleBlistNode *node, PurpleConversation *conv)
 {
+	PurpleBuddy *buddy;
+
 	if (!PURPLE_BLIST_NODE_IS_BUDDY(node))
 		return;
 
-	/* If there's another buddy for the same "dude" on the list, do nothing. */
-	if (purple_find_buddy(purple_buddy_get_account(PURPLE_BUDDY(node)),
-		                  purple_buddy_get_name(PURPLE_BUDDY(node))) != NULL)
+	/* If there's another real buddy for the same "dude" on the list, do nothing. */
+	buddy = purple_find_buddy(purple_buddy_get_account(PURPLE_BUDDY(node)),
+		                  purple_buddy_get_name(PURPLE_BUDDY(node)));
+	if (buddy && PURPLE_BLIST_NODE_IS_VISIBLE(buddy))
 		return;
 
 	buddy_cb_common(PURPLE_BUDDY(node), conv, FALSE);
@@ -6544,6 +6548,7 @@ gray_stuff_out(PidginConversation *gtkconv)
 	 * is sensitive or not.
 	 */
 	if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM) {
+		PurpleBuddy *buddy;
 		/* Show stuff that applies to IMs, hide stuff that applies to chats */
 
 		/* Deal with menu items */
@@ -6562,12 +6567,13 @@ gray_stuff_out(PidginConversation *gtkconv)
 			gtk_widget_show(win->menu.unblock);
 		}
 
-		if (purple_find_buddy(account, purple_conversation_get_name(conv)) == NULL) {
-			gtk_widget_show(win->menu.add);
-			gtk_widget_hide(win->menu.remove);
-		} else {
+		buddy = purple_find_buddy(account, purple_conversation_get_name(conv));
+		if (buddy && PURPLE_BLIST_NODE_IS_VISIBLE(buddy)) {
 			gtk_widget_show(win->menu.remove);
 			gtk_widget_hide(win->menu.add);
+		} else {
+			gtk_widget_show(win->menu.add);
+			gtk_widget_hide(win->menu.remove);
 		}
 
 		gtk_widget_show(win->menu.insert_link);
