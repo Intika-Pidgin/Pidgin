@@ -457,8 +457,12 @@ level_message_cb(PurpleMedia *media, gchar *session_id, gchar *participant,
 	else
 		progress = pidgin_media_get_widget(gtkmedia, session_id, participant);
 
+	level *= 5;
+	if (level > 1.0)
+		level = 1.0;
+
 	if (progress)
-		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), level * 5);
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), level);
 }
 
 
