@@ -928,11 +928,17 @@ pidgin_notify_searchresults_new_rows(PurpleConnection *gc, PurpleNotifySearchRes
 
 			v.g_type = 0;
 			g_value_init(&v, G_TYPE_STRING);
-			g_value_set_string(&v, column->data);
+			g_value_set_static_string(&v, column->data);
 			gtk_list_store_set_value(model, &iter, n, &v);
 			n++;
 		}
 	}
+
+	/* The first set of results need to stick around, as we reference
+	 * the buttons from there. But any updates from later calls to
+	 * purple_notify_searchresults_new_rows() must be freed. */
+	if (results != data->results)
+		purple_notify_searchresults_free(results);
 
 	if (pixbuf != NULL)
 		g_object_unref(pixbuf);
