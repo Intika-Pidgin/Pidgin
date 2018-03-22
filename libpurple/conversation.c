@@ -933,6 +933,7 @@ purple_conversation_write(PurpleConversation *conv, const char *who,
 	PurpleConnection *gc = NULL;
 	PurpleAccount *account;
 	PurpleConversationUiOps *ops;
+	char *server_alias = NULL;
 	const char *alias;
 	char *displayed = NULL;
 	PurpleBuddy *b;
@@ -1006,6 +1007,13 @@ purple_conversation_write(PurpleConversation *conv, const char *who,
 					alias = purple_buddy_get_contact_alias(b);
 			}
 		}
+		if (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT &&
+		    alias == who && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_cb_alias)) {
+			int id = purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv));
+			server_alias = prpl_info->get_cb_alias(gc, id, who);
+			if (server_alias)
+				alias = server_alias;
+		}
 	}
 
 	if (!(flags & PURPLE_MESSAGE_NO_LOG) && purple_conversation_is_logging(conv)) {
@@ -1031,6 +1039,7 @@ purple_conversation_write(PurpleConversation *conv, const char *who,
 		account, who, displayed, conv, flags);
 
 	g_free(displayed);
+	g_free(server_alias);
 }
 
 gboolean
@@ -1678,6 +1687,7 @@ purple_conv_chat_add_users(PurpleConvChat *chat, GList *users, GList *extra_msgs
 	while ((ul != NULL) && (fl != NULL)) {
 		const char *user = (const char *)ul->data;
 		const char *alias = user;
+		char *server_alias = NULL;
 		gboolean quiet;
 		PurpleConvChatBuddyFlags flag = GPOINTER_TO_INT(fl->data);
 		const char *extra_msg = (extra_msgs ? extra_msgs->data : NULL);
@@ -1698,6 +1708,12 @@ purple_conv_chat_add_users(PurpleConvChat *chat, GList *users, GList *extra_msgs
 				if ((buddy = purple_find_buddy(gc->account, user)) != NULL)
 					alias = purple_buddy_get_contact_alias(buddy);
 			}
+		}
+		if (alias == user && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_cb_alias)) {
+			int id = purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv));
+			server_alias = prpl_info->get_cb_alias(gc, id, user);
+			if (server_alias)
+				alias = server_alias;
 		}
 
 		quiet = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_conversations_get_handle(),
@@ -1738,6 +1754,8 @@ purple_conv_chat_add_users(PurpleConvChat *chat, GList *users, GList *extra_msgs
 		fl = fl->next;
 		if (extra_msgs != NULL)
 			extra_msgs = extra_msgs->next;
+
+		g_free(server_alias);
 	}
 
 	cbuddies = g_list_sort(cbuddies, (GCompareFunc)purple_conv_chat_cb_compare);
@@ -1759,6 +1777,7 @@ purple_conv_chat_rename_user(PurpleConvChat *chat, const char *old_user,
 	PurpleConvChatBuddy *cb;
 	PurpleConvChatBuddyFlags flags;
 	const char *new_alias = new_user;
+	char *server_alias = NULL;
 	char tmp[BUF_LONG];
 	gboolean is_me = FALSE;
 
@@ -1791,10 +1810,18 @@ purple_conv_chat_rename_user(PurpleConvChat *chat, const char *old_user,
 					alias = display_name;
 			}
 		}
-	} else if (!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
-		PurpleBuddy *buddy;
-		if ((buddy = purple_find_buddy(gc->account, new_user)) != NULL)
-			new_alias = purple_buddy_get_contact_alias(buddy);
+	} else {
+		if (!(prpl_info->options & OPT_PROTO_UNIQUE_CHATNAME)) {
+			PurpleBuddy *buddy;
+			if ((buddy = purple_find_buddy(gc->account, new_user)) != NULL)
+				new_alias = purple_buddy_get_contact_alias(buddy);
+		}
+		if (new_alias == new_user && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_cb_alias)) {
+			int id = purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv));
+			server_alias = prpl_info->get_cb_alias(gc, id, new_user);
+			if (server_alias)
+				new_alias = server_alias;
+		}
 	}
 
 	flags = purple_conv_chat_user_get_flags(chat, old_user);
@@ -1860,6 +1887,7 @@ purple_conv_chat_rename_user(PurpleConvChat *chat, const char *old_user,
 				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LINKIFY,
 				time(NULL));
 	}
+	g_free(server_alias);
 }
 
 void
@@ -1913,6 +1941,7 @@ purple_conv_chat_remove_users(PurpleConvChat *chat, GList *users, const char *re
 
 		if (!quiet) {
 			const char *alias = user;
+			char *server_alias = NULL;
 			char *alias_esc;
 			char *tmp;
 
@@ -1921,6 +1950,12 @@ purple_conv_chat_remove_users(PurpleConvChat *chat, GList *users, const char *re
 
 				if ((buddy = purple_find_buddy(gc->account, user)) != NULL)
 					alias = purple_buddy_get_contact_alias(buddy);
+			}
+			if (alias == user && PURPLE_PROTOCOL_PLUGIN_HAS_FUNC(prpl_info, get_cb_alias)) {
+				int id = purple_conv_chat_get_id(PURPLE_CONV_CHAT(conv));
+				server_alias = prpl_info->get_cb_alias(gc, id, user);
+				if (server_alias)
+					alias = server_alias;
 			}
 
 			alias_esc = g_markup_escape_text(alias, -1);
@@ -1934,6 +1969,7 @@ purple_conv_chat_remove_users(PurpleConvChat *chat, GList *users, const char *re
 				g_free(reason_esc);
 			}
 			g_free(alias_esc);
+			g_free(server_alias);
 
 			purple_conversation_write(conv, NULL, tmp,
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LINKIFY,
