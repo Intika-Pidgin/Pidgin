@@ -907,11 +907,17 @@ pidgin_notify_searchresults_new_rows(PurpleConnection *gc, PurpleNotifySearchRes
 									   void *data_)
 {
 	PidginNotifySearchResultsData *data = data_;
+	GtkTreeSelection *selection;
 	GtkListStore *model = data->model;
 	GtkTreeIter iter;
 	GdkPixbuf *pixbuf;
 	GList *row, *column;
+	gchar *previous_selection = NULL;
 	guint n;
+
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(data->treeview));
+	if (gtk_tree_selection_get_selected(selection, NULL, &iter))
+		gtk_tree_model_get(GTK_TREE_MODEL(model), &iter, 1, &previous_selection, -1);
 
 	gtk_list_store_clear(data->model);
 
@@ -923,11 +929,19 @@ pidgin_notify_searchresults_new_rows(PurpleConnection *gc, PurpleNotifySearchRes
 		gtk_list_store_set(model, &iter, 0, pixbuf, -1);
 
 		n = 1;
-		for (column = row->data; column != NULL; column = column->next) {
+		column = row->data;
+		/* Select this row, if the first column matches the previously
+		 * selected row OR if there is only one row in the results. */
+		if (!g_strcmp0(previous_selection, column->data) ||
+		    (row == results->rows && !row->next))
+			gtk_tree_selection_select_iter(selection, &iter);
+
+		for (; column != NULL; column = column->next) {
 			GValue v;
 
 			v.g_type = 0;
 			g_value_init(&v, G_TYPE_STRING);
+
 			g_value_set_static_string(&v, column->data);
 			gtk_list_store_set_value(model, &iter, n, &v);
 			n++;
@@ -939,6 +953,8 @@ pidgin_notify_searchresults_new_rows(PurpleConnection *gc, PurpleNotifySearchRes
 	 * purple_notify_searchresults_new_rows() must be freed. */
 	if (results != data->results)
 		purple_notify_searchresults_free(results);
+
+	g_free(previous_selection);
 
 	if (pixbuf != NULL)
 		g_object_unref(pixbuf);
