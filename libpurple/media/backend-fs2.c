@@ -2087,6 +2087,18 @@ src_pad_added_cb_cb(PurpleMediaBackendFs2Stream *stream)
 	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(stream->session->backend);
 	stream->connected_cb_id = 0;
 
+	if (stream->src == NULL) {
+		GstElement *pipeline = purple_media_manager_get_pipeline(
+			purple_media_get_manager(priv->media));
+		GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline),
+					  GST_DEBUG_GRAPH_SHOW_ALL, "media-fail");
+
+		purple_media_error(priv->media,
+				   _("Could not create media pipeline"));
+		purple_media_end(priv->media, NULL, NULL);
+		return FALSE;
+	}
+
 	purple_media_manager_create_output_window(
 			purple_media_get_manager(priv->media), priv->media,
 			stream->session->id, stream->participant);
