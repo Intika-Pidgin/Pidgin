@@ -154,6 +154,7 @@ pidgin_LDADD = \
 	$(DBUS_LIBS) \
 	$(GSTREAMER_LIBS) \
 	$(GSTVIDEO_LIBS) \
+	$(GSTINTERFACES_LIBS) \
 	$(XSS_LIBS) \
 	$(SM_LIBS) \
 	$(INTLLIBS) \
