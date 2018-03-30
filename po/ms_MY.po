@@ -3,14 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Translators:
-# abuyop <abuyop@gmail.com>, 2015-2016
+# abuyop <abuyop@gmail.com>, 2015-2017
 # Muhammad Najmi bin Ahmad Zabidi <najmi.zabidi@gmail.com>, 2011
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:55-0600\n"
-"PO-Revision-Date: 2016-12-06 14:45+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:26+0000\n"
 "Last-Translator: abuyop <abuyop@gmail.com>\n"
 "Language-Team: Malay (Malaysia) (http://www.transifex.com/pidgin/pidgin/"
 "language/ms_MY/)\n"
@@ -4074,7 +4074,7 @@ msgstr ""
 
 #, c-format
 msgid "Registration to %s successful"
-msgstr ""
+msgstr "Pendaftaran %s berjaya"
 
 msgid "Registration Successful"
 msgstr "Pendaftaran Berjaya"
@@ -4084,13 +4084,13 @@ msgstr "Pendaftaran Gagal"
 
 #, c-format
 msgid "Registration from %s successfully removed"
-msgstr ""
+msgstr "Pendaftaran dari %s berjaya dibuang"
 
 msgid "Unregistration Successful"
-msgstr ""
+msgstr "Penyahdaftaran Berjaya"
 
 msgid "Unregistration Failed"
-msgstr ""
+msgstr "Penyahdaftaran Gagal"
 
 msgid "State"
 msgstr "Negeri"
@@ -4115,24 +4115,24 @@ msgstr "Nyahdaftar"
 
 msgid ""
 "Please fill out the information below to change your account registration."
-msgstr ""
+msgstr "Sila isi maklumat di bawah untuk mengubah pendaftaran akaun anda."
 
 msgid "Please fill out the information below to register your new account."
-msgstr ""
+msgstr "Sila isi maklumat di bawah untuk mendaftar akaun baharu anda."
 
 msgid "Register New XMPP Account"
-msgstr ""
+msgstr "Daftar Akaun XMPP Baharu"
 
 msgid "Register"
 msgstr "Daftar"
 
 #, c-format
 msgid "Change Account Registration at %s"
-msgstr ""
+msgstr "Ubah Pendaftaran Akaun di %s"
 
 #, c-format
 msgid "Register New Account at %s"
-msgstr ""
+msgstr "Daftar Akaun Baharu di %s"
 
 msgid "Change Registration"
 msgstr "Ubah Pendaftaran"
@@ -4141,7 +4141,7 @@ msgid "Error unregistering account"
 msgstr "Ralat menyahdaftar akaun"
 
 msgid "Account successfully unregistered"
-msgstr ""
+msgstr "Akaun berjaya dinyahdaftarkan"
 
 msgid "Initializing Stream"
 msgstr "Mengawalkan Strim"
@@ -4201,31 +4201,31 @@ msgid "Mood Comment"
 msgstr ""
 
 msgid "Tune Artist"
-msgstr ""
+msgstr "Tala Artis"
 
 msgid "Tune Title"
-msgstr ""
+msgstr "Tala Tajuk"
 
 msgid "Tune Album"
-msgstr ""
+msgstr "Tala Album"
 
 msgid "Tune Genre"
-msgstr ""
+msgstr "Tala Genre"
 
 msgid "Tune Comment"
-msgstr ""
+msgstr "Tala Ulasan"
 
 msgid "Tune Track"
-msgstr ""
+msgstr "Tala Trek"
 
 msgid "Tune Time"
-msgstr ""
+msgstr "Tala Waktu"
 
 msgid "Tune Year"
-msgstr ""
+msgstr "Tala Tahun"
 
 msgid "Tune URL"
-msgstr ""
+msgstr "Tala URL"
 
 msgid "Password Changed"
 msgstr "Kata Laluan Berubah"
@@ -4299,7 +4299,7 @@ msgid "Remote Server Not Found"
 msgstr "Pelayan Jauh Tidak Ditemui"
 
 msgid "Remote Server Timeout"
-msgstr ""
+msgstr "Had Masa Tamat Pelayan Jauh"
 
 msgid "Server Overloaded"
 msgstr "Pelayan Terlebih Muatan"
@@ -4317,19 +4317,19 @@ msgid "Authorization Aborted"
 msgstr "Keizinan Dihenti Paksa"
 
 msgid "Incorrect encoding in authorization"
-msgstr ""
+msgstr "Pengekodan salah dalam pengesahihan"
 
 msgid "Invalid authzid"
-msgstr ""
+msgstr "authzid tidak sah"
 
 msgid "Invalid Authorization Mechanism"
-msgstr ""
+msgstr "Mekanisma Pengesahihan Tidak Sah"
 
 msgid "Authorization mechanism too weak"
-msgstr ""
+msgstr "Mekanisma pengesahihan terlalu lemah"
 
 msgid "Temporary Authentication Failure"
-msgstr ""
+msgstr "Kegagalan Pengesahihan Sementara"
 
 msgid "Authentication Failure"
 msgstr "Kegagalan Pengesahihan"
@@ -4338,13 +4338,13 @@ msgid "Bad Format"
 msgstr "Format Teruk"
 
 msgid "Bad Namespace Prefix"
-msgstr ""
+msgstr "Awalan Ruang Nama Teruk"
 
 msgid "Resource Conflict"
 msgstr "Konflik Sumber"
 
 msgid "Connection Timeout"
-msgstr ""
+msgstr "Sambungan Tamat Masa"
 
 msgid "Host Gone"
 msgstr "Hos Hilang"
@@ -4353,7 +4353,7 @@ msgid "Host Unknown"
 msgstr "Hos Tidak Diketahui"
 
 msgid "Improper Addressing"
-msgstr ""
+msgstr "Pengalamatan Tidak Sempurna"
 
 msgid "Invalid ID"
 msgstr "ID tidak sah"
@@ -4374,16 +4374,16 @@ msgid "Remote Connection Failed"
 msgstr "Sambungan Jauh Gagal"
 
 msgid "Restricted XML"
-msgstr ""
+msgstr "XML Terhad"
 
 msgid "See Other Host"
 msgstr "Lihat Hos Lain"
 
 msgid "System Shutdown"
-msgstr ""
+msgstr "Sistem Dimatikan"
 
 msgid "Undefined Condition"
-msgstr ""
+msgstr "Keadaan Tidak Ditakrif"
 
 msgid "Unsupported Encoding"
 msgstr "Pengekodan Tidak Disokong"
@@ -4395,14 +4395,14 @@ msgid "Unsupported Version"
 msgstr "Versi Tidak Disokong"
 
 msgid "XML Not Well Formed"
-msgstr ""
+msgstr "XML Tidak Dibentuk Dengan Baik"
 
 msgid "Stream Error"
 msgstr "Ralat Strim"
 
 #, c-format
 msgid "Unable to ban user %s"
-msgstr ""
+msgstr "Tidak boleh sekat pengguna %s"
 
 #, c-format
 msgid "Unknown affiliation: \"%s\""
@@ -4414,7 +4414,7 @@ msgstr ""
 
 #, c-format
 msgid "Unknown role: \"%s\""
-msgstr ""
+msgstr "Peranan tidak diketahui: \"%s\""
 
 #, c-format
 msgid "Unable to set role \"%s\" for user: %s"
@@ -4422,11 +4422,11 @@ msgstr ""
 
 #, c-format
 msgid "Unable to kick user %s"
-msgstr ""
+msgstr "Tidak boleh tendang pengguna %s"
 
 #, c-format
 msgid "Unable to ping user %s"
-msgstr ""
+msgstr "Tidak boleh ping pengguna %s"
 
 #, c-format
 msgid "Unable to buzz, because there is nothing known about %s."
@@ -4470,7 +4470,7 @@ msgid "Unable to initiate media with %s: not subscribed to user presence"
 msgstr ""
 
 msgid "Media Initiation Failed"
-msgstr ""
+msgstr "Pengawalan Media Gagal"
 
 #, c-format
 msgid ""
@@ -4479,13 +4479,13 @@ msgid ""
 msgstr ""
 
 msgid "Select a Resource"
-msgstr ""
+msgstr "Pilih satu Sumber"
 
 msgid "Initiate Media"
-msgstr ""
+msgstr "Awalkan Media"
 
 msgid "Account does not support PEP, can't set mood"
-msgstr ""
+msgstr "Akaun tidak menyokong PEP, tidak dapat tetapkan mood"
 
 msgid "config:  Configure a chat room."
 msgstr ""
@@ -4551,89 +4551,89 @@ msgstr ""
 #. *  summary
 #. *  description
 msgid "XMPP Protocol Plugin"
-msgstr ""
+msgstr "Pemalam Protokol XMPP"
 
 #. Translators: 'domain' is used here in the context of Internet domains, e.g. pidgin.im
 msgid "Domain"
-msgstr ""
+msgstr "Domain"
 
 msgid "Use old-style SSL"
-msgstr ""
+msgstr "Guna SSL gaya-lama"
 
 msgid "Allow plaintext auth over unencrypted streams"
 msgstr ""
 
 msgid "Connect port"
-msgstr ""
+msgstr "Sambung port"
 
 #. Account options
 msgid "Connect server"
-msgstr ""
+msgstr "Sambung pelayan"
 
 msgid "File transfer proxies"
-msgstr ""
+msgstr "Proksi pemindahan fail"
 
 msgid "BOSH URL"
-msgstr ""
+msgstr "URL BOSH"
 
 #. this should probably be part of global smiley theme settings
 #. * later on
 #.
 msgid "Show Custom Smileys"
-msgstr ""
+msgstr "Tunjuk Smiley Suai"
 
 #, c-format
 msgid "%s has left the conversation."
-msgstr ""
+msgstr "%s telah meninggalkan perbualan."
 
 #, c-format
 msgid "Message from %s"
-msgstr ""
+msgstr "Mesej daripada %s"
 
 #, c-format
 msgid "%s has set the topic to: %s"
-msgstr ""
+msgstr "%s telah tetapkan tajuk ke: %s"
 
 #, c-format
 msgid "The topic is: %s"
-msgstr ""
+msgstr "Tajuk ialah: %s"
 
 #, c-format
 msgid "Message delivery to %s failed: %s"
-msgstr ""
+msgstr "Penghantaran mesej kepada %s gagal: %s"
 
 msgid "XMPP Message Error"
-msgstr ""
+msgstr "Ralat Mesej XMPP"
 
 #, c-format
 msgid "(Code %s)"
-msgstr ""
+msgstr "(Kod %s)"
 
 msgid "A custom smiley in the message is too large to send."
-msgstr ""
+msgstr "Smiley suai di dalam mesej terlalu besar untuk dihantarkan."
 
 msgid "XMPP stream header missing"
-msgstr ""
+msgstr "Pengepala strim XMPP hilang"
 
 msgid "XMPP Version Mismatch"
-msgstr ""
+msgstr "Versi XMPP Tidak Sepadan"
 
 msgid "XMPP stream missing ID"
-msgstr ""
+msgstr "ID strim XMPP hilang"
 
 msgid "XML Parse error"
-msgstr ""
+msgstr "Ralat Hurai XML"
 
 #, c-format
 msgid "Error joining chat %s"
-msgstr ""
+msgstr "Ralat menyertai sembang %s"
 
 #, c-format
 msgid "Error in chat %s"
-msgstr ""
+msgstr "Ralat dalam sembang %s"
 
 msgid "Create New Room"
-msgstr ""
+msgstr "Cipta Bilik Baharu"
 
 msgid ""
 "You are creating a new room.  Would you like to configure it, or accept the "
@@ -4641,59 +4641,60 @@ msgid ""
 msgstr ""
 
 msgid "_Configure Room"
-msgstr ""
+msgstr "_Konfigur Bilik"
 
 msgid "_Accept Defaults"
-msgstr ""
+msgstr "_Terima Lalai"
 
 msgid "No reason"
-msgstr ""
+msgstr "Tiada sebab"
 
 #, c-format
 msgid "You have been kicked: (%s)"
-msgstr ""
+msgstr "Anda telah ditendang keluar: (%s)"
 
 #, c-format
 msgid "Kicked (%s)"
-msgstr ""
+msgstr "Ditendang Keluar (%s)"
 
 msgid "Unknown Error in presence"
-msgstr ""
+msgstr "Ralat Tidak Diketahui hadir"
 
 #, c-format
 msgid "Unable to send file to %s, user does not support file transfers"
 msgstr ""
+"Tidak boleh hantar fail kepada %s, pengguna tidak menyokong pemindahan fail"
 
 msgid "File Send Failed"
-msgstr ""
+msgstr "Penghantaran Fail Gagal"
 
 #, c-format
 msgid "Unable to send file to %s, invalid JID"
-msgstr ""
+msgstr "Tidak boleh hantar fail kepada %s, JID tidak sah"
 
 #, c-format
 msgid "Unable to send file to %s, user is not online"
-msgstr ""
+msgstr "Tidak boleh hantar fail kepada %s, pengguna tidak berada diatas talian"
 
 #, c-format
 msgid "Unable to send file to %s, not subscribed to user presence"
-msgstr ""
+msgstr "Tidak boleh hantar fail kepada %s, tidak melanggan pengguna tersebut"
 
 #, c-format
 msgid "Please select the resource of %s to which you would like to send a file"
-msgstr ""
+msgstr "Sila pilih sumber %s yang anda mahu hantarkan fail"
 
 msgid "Afraid"
-msgstr ""
+msgstr "Takut"
 
 msgid "Amazed"
-msgstr ""
+msgstr "Teruja"
 
 msgid "Amorous"
 msgstr ""
 
 msgid "Angry"
-msgstr ""
+msgstr "Marah"
 
 msgid "Annoyed"
 msgstr ""
@@ -4702,58 +4703,58 @@ msgid "Anxious"
 msgstr ""
 
 msgid "Aroused"
-msgstr ""
+msgstr "Terangsang"
 
 msgid "Ashamed"
-msgstr ""
+msgstr "Malu"
 
 msgid "Bored"
-msgstr ""
+msgstr "Bosan"
 
 msgid "Brave"
-msgstr ""
+msgstr "Berani"
 
 msgid "Calm"
-msgstr ""
+msgstr "Tenang"
 
 msgid "Cautious"
-msgstr ""
+msgstr "Waspada"
 
 msgid "Cold"
-msgstr ""
+msgstr "Dingin"
 
 msgid "Confident"
-msgstr ""
+msgstr "Yakin"
 
 msgid "Confused"
-msgstr ""
+msgstr "Keliru"
 
 msgid "Contemplative"
 msgstr ""
 
 msgid "Contented"
-msgstr ""
+msgstr "Hina"
 
 msgid "Cranky"
 msgstr ""
 
 msgid "Crazy"
-msgstr ""
+msgstr "Gila"
 
 msgid "Creative"
-msgstr ""
+msgstr "Kreatif"
 
 msgid "Curious"
-msgstr ""
+msgstr "Ingin Tahu"
 
 msgid "Dejected"
 msgstr ""
 
 msgid "Depressed"
-msgstr ""
+msgstr "Tertekan"
 
 msgid "Disappointed"
-msgstr ""
+msgstr "Kecewa"
 
 msgid "Disgusted"
 msgstr ""
@@ -4762,13 +4763,13 @@ msgid "Dismayed"
 msgstr ""
 
 msgid "Distracted"
-msgstr ""
+msgstr "Terganggu"
 
 msgid "Embarrassed"
-msgstr ""
+msgstr "Malu"
 
 msgid "Envious"
-msgstr ""
+msgstr "Cemburu"
 
 msgid "Excited"
 msgstr ""
@@ -4789,28 +4790,28 @@ msgid "Grumpy"
 msgstr ""
 
 msgid "Guilty"
-msgstr ""
+msgstr "Bersalah"
 
 msgid "Happy"
-msgstr ""
+msgstr "Suka Hati"
 
 msgid "Hopeful"
-msgstr ""
+msgstr "Berharap"
 
 msgid "Hot"
-msgstr ""
+msgstr "Panas"
 
 msgid "Humbled"
-msgstr ""
+msgstr "Rendah Diri"
 
 msgid "Humiliated"
 msgstr ""
 
 msgid "Hungry"
-msgstr ""
+msgstr "Lapar"
 
 msgid "Hurt"
-msgstr ""
+msgstr "Sakit"
 
 msgid "Impressed"
 msgstr ""
@@ -4819,61 +4820,61 @@ msgid "In awe"
 msgstr ""
 
 msgid "In love"
-msgstr ""
+msgstr "Dilamun Cinta"
 
 msgid "Indignant"
 msgstr ""
 
 msgid "Interested"
-msgstr ""
+msgstr "Berminat"
 
 msgid "Intoxicated"
 msgstr ""
 
 msgid "Invincible"
-msgstr ""
+msgstr "Kebal"
 
 msgid "Jealous"
-msgstr ""
+msgstr "Jeles"
 
 msgid "Lonely"
-msgstr ""
+msgstr "Sunyi"
 
 msgid "Lost"
 msgstr ""
 
 msgid "Lucky"
-msgstr ""
+msgstr "Bertuah"
 
 msgid "Mean"
-msgstr ""
+msgstr "Nakal"
 
 msgid "Moody"
-msgstr ""
+msgstr "Beremosi"
 
 msgid "Nervous"
 msgstr ""
 
 msgid "Neutral"
-msgstr ""
+msgstr "Tanpa Perasaan"
 
 msgid "Offended"
 msgstr ""
 
 msgid "Outraged"
-msgstr ""
+msgstr "Sangat Marah"
 
 msgid "Playful"
 msgstr ""
 
 msgid "Proud"
-msgstr ""
+msgstr "Bangga"
 
 msgid "Relaxed"
 msgstr ""
 
 msgid "Relieved"
-msgstr ""
+msgstr "Lega"
 
 msgid "Remorseful"
 msgstr ""
@@ -4882,29 +4883,29 @@ msgid "Restless"
 msgstr ""
 
 msgid "Sad"
-msgstr ""
+msgstr "Sedih"
 
 msgid "Sarcastic"
 msgstr ""
 
 msgid "Satisfied"
-msgstr ""
+msgstr "Puas Hati"
 
 msgid "Serious"
 msgstr ""
 
 msgid "Shocked"
-msgstr ""
+msgstr "Terkejut"
 
 msgid "Shy"
-msgstr ""
+msgstr "Malu"
 
 msgid "Sick"
-msgstr ""
+msgstr "Sakit"
 
 #. Sleepy / Tired
 msgid "Sleepy"
-msgstr ""
+msgstr "Mengantuk"
 
 msgid "Spontaneous"
 msgstr ""
@@ -4919,28 +4920,28 @@ msgid "Surprised"
 msgstr ""
 
 msgid "Thankful"
-msgstr ""
+msgstr "Berterima Kasih"
 
 msgid "Thirsty"
-msgstr ""
+msgstr "Dahaga"
 
 msgid "Tired"
-msgstr ""
+msgstr "Letih"
 
 msgid "Undefined"
 msgstr ""
 
 msgid "Weak"
-msgstr ""
+msgstr "Lemah"
 
 msgid "Worried"
-msgstr ""
+msgstr "Risau"
 
 msgid "Set User Nickname"
-msgstr ""
+msgstr "Tetakan Gelaran Pengguna"
 
 msgid "Please specify a new nickname for you."
-msgstr ""
+msgstr "Sila nyatakan gelaran baharu anda."
 
 msgid ""
 "This information is visible to all contacts on your contact list, so choose "
@@ -4948,73 +4949,73 @@ msgid ""
 msgstr ""
 
 msgid "Set"
-msgstr ""
+msgstr "Tetapkan"
 
 msgid "Set Nickname..."
-msgstr ""
+msgstr "Tetapkan Gelaran..."
 
 msgid "Actions"
-msgstr ""
+msgstr "Tindakan"
 
 msgid "Select an action"
-msgstr ""
+msgstr "Pilih satu tindakan"
 
 msgid "Required parameters not passed in"
-msgstr ""
+msgstr "Parameter yang diperlukan tidak diluluskan"
 
 msgid "Unable to write to network"
-msgstr ""
+msgstr "Tidak boleh tulis ke rangkaian"
 
 msgid "Unable to read from network"
-msgstr ""
+msgstr "Tidak boleh baca dari rangkaian"
 
 msgid "Error communicating with server"
-msgstr ""
+msgstr "Ralat berkomunikasi dengan pelayan"
 
 msgid "Conference not found"
-msgstr ""
+msgstr "Sidang tidak ditemui"
 
 msgid "Conference does not exist"
-msgstr ""
+msgstr "Sidang tidak wujud"
 
 msgid "A folder with that name already exists"
-msgstr ""
+msgstr "Satu folder dengan nama tersebut sudah wujud"
 
 msgid "Not supported"
-msgstr ""
+msgstr "Tidak disokong"
 
 msgid "Password has expired"
-msgstr ""
+msgstr "Kata laluan telah tamat tempoh"
 
 msgid "Incorrect password"
-msgstr ""
+msgstr "Kata laluan salah"
 
 msgid "Account has been disabled"
-msgstr ""
+msgstr "Akaun telah dilumpuhkan"
 
 msgid "The server could not access the directory"
-msgstr ""
+msgstr "Pelayan tidak dapat mencapai direktori"
 
 msgid "Your system administrator has disabled this operation"
-msgstr ""
+msgstr "Pentadbir sistem anda telah lumpuhkan operasi ini"
 
 msgid "The server is unavailable; try again later"
-msgstr ""
+msgstr "Pelayan tidak tersedia; cuba lagi kemudian"
 
 msgid "Cannot add a contact to the same folder twice"
-msgstr ""
+msgstr "Tidak dapat tambah satu kenalan ke dalam folder yang sama sekali lagi"
 
 msgid "Cannot add yourself"
-msgstr ""
+msgstr "Tidak dapat tambah diri anda sendiri"
 
 msgid "Master archive is misconfigured"
-msgstr ""
+msgstr "Arkib master tersalah konfigur"
 
 msgid "Incorrect username or password"
-msgstr ""
+msgstr "Nama pengguna atau kata laluan salah"
 
 msgid "Could not recognize the host of the username you entered"
-msgstr ""
+msgstr "Tidak dapat kenalpasti hos nama pengguna yang anda masukkan"
 
 msgid ""
 "Your account has been disabled because too many incorrect passwords were "
@@ -5028,57 +5029,59 @@ msgid "You have reached your limit for the number of contacts allowed"
 msgstr ""
 
 msgid "You have entered an incorrect username"
-msgstr ""
+msgstr "Anda telah masukkan nama pengguna yang salah"
 
 msgid "An error occurred while updating the directory"
-msgstr ""
+msgstr "Satu ralat berlaku ketika mengemaskini direktori"
 
 msgid "Incompatible protocol version"
-msgstr ""
+msgstr "Versi protokol tidak serasi"
 
 msgid "The user has blocked you"
-msgstr ""
+msgstr "Pengguna telah menyekat anda"
 
 msgid ""
 "This evaluation version does not allow more than ten users to log in at one "
 "time"
 msgstr ""
+"Versi penilaian tidak membenarkan lebih daripada sepuluh pengguna mendaftar "
+"masuk pada satu masa"
 
 msgid "The user is either offline or you are blocked"
-msgstr ""
+msgstr "Pengguna sama ada diluar talian atau anda telah menyekatnya"
 
 #, c-format
 msgid "Unknown error: 0x%X"
-msgstr ""
+msgstr "Ralat tidak diketahui: 0x%X"
 
 #, c-format
 msgid "Unable to login: %s"
-msgstr ""
+msgstr "Tidak boleh daftar masuk: %s"
 
 #, c-format
 msgid "Unable to send message. Could not get details for user (%s)."
-msgstr ""
+msgstr "Tidak boleh hantar mesej. Tidak memperoleh perincian pengguna (%s)."
 
 #, c-format
 msgid "Unable to add %s to your buddy list (%s)."
-msgstr ""
+msgstr "Tidak boleh tambah %s ke dalam senarai rakan anda (%s)."
 
 #. TODO: Improve this! message to who or for what conference?
 #, c-format
 msgid "Unable to send message (%s)."
-msgstr ""
+msgstr "Tidak boleh hantar mesej (%s)."
 
 #, c-format
 msgid "Unable to invite user (%s)."
-msgstr ""
+msgstr "Tidak boleh jemput pengguna (%s)."
 
 #, c-format
 msgid "Unable to send message to %s. Could not create the conference (%s)."
-msgstr ""
+msgstr "Tidak boleh hantar mesej kepada %s. Tidak dapat cipta sidang (%s)."
 
 #, c-format
 msgid "Unable to send message. Could not create the conference (%s)."
-msgstr ""
+msgstr "Tidak boleh hantar mesej. Tidak dapat cipta sidang (%s)."
 
 #, c-format
 msgid ""
@@ -5094,15 +5097,15 @@ msgstr ""
 
 #, c-format
 msgid "Could not get details for user %s (%s)."
-msgstr ""
+msgstr "Tidak memperoleh perincian pengguna %s (%s)."
 
 #, c-format
 msgid "Unable to add user to privacy list (%s)."
-msgstr ""
+msgstr "Tidak boleh tambah pengguna ke senarai persendirian (%s)."
 
 #, c-format
 msgid "Unable to add %s to deny list (%s)."
-msgstr ""
+msgstr "Tidak boleh tambah %s ke dalam senarai ditolak (%s)."
 
 #, c-format
 msgid "Unable to add %s to permit list (%s)."
@@ -5110,7 +5113,7 @@ msgstr ""
 
 #, c-format
 msgid "Unable to remove %s from privacy list (%s)."
-msgstr ""
+msgstr "Tidak boleh buang %s dari senarai persendirian (%s)."
 
 #, c-format
 msgid "Unable to change server side privacy settings (%s)."
@@ -5118,28 +5121,28 @@ msgstr ""
 
 #, c-format
 msgid "Unable to create conference (%s)."
-msgstr ""
+msgstr "Tidak boleh cipta sidang (%s)"
 
 msgid "Error communicating with server. Closing connection."
-msgstr ""
+msgstr "Ralat berkomunikasi dengan pelayan. Sambungan ditutup."
 
 msgid "Telephone Number"
-msgstr ""
+msgstr "Nombor Telefon"
 
 msgid "Location"
-msgstr ""
+msgstr "Lokasi"
 
 msgid "Department"
-msgstr ""
+msgstr "Jabatan"
 
 msgid "Personal Title"
-msgstr ""
+msgstr "Pangkat"
 
 msgid "Mailstop"
 msgstr ""
 
 msgid "User ID"
-msgstr ""
+msgstr "ID Pengguna"
 
 #. tag = _("DN");
 #. value = nm_user_record_get_dn(user_record);
@@ -5148,24 +5151,24 @@ msgstr ""
 #. }
 #.
 msgid "Full name"
-msgstr ""
+msgstr "Nama penuh"
 
 #, c-format
 msgid "GroupWise Conference %d"
-msgstr ""
+msgstr "Sidang GroupWise %d"
 
 msgid "Authenticating..."
-msgstr ""
+msgstr "Mengesahihkan..."
 
 msgid "Waiting for response..."
-msgstr ""
+msgstr "Menunggu respon..."
 
 #, c-format
 msgid "%s has been invited to this conversation."
-msgstr ""
+msgstr "%s telah dijemput menyertai perbualan ini."
 
 msgid "Invitation to Conversation"
-msgstr ""
+msgstr "Jemput menyertai Perbualan"
 
 #, c-format
 msgid ""
@@ -5173,9 +5176,12 @@ msgid ""
 "\n"
 "Sent: %s"
 msgstr ""
+"Jemputan daripada: %s\n"
+"\n"
+"Hantar: %s"
 
 msgid "Would you like to join the conversation?"
-msgstr ""
+msgstr "Anda mahu sertai perbualan?"
 
 msgid "You have signed on from another location"
 msgstr ""
@@ -5194,7 +5200,7 @@ msgid "This conference has been closed. No more messages can be sent."
 msgstr ""
 
 msgid "Busy"
-msgstr ""
+msgstr "Sibuk"
 
 #. *< type
 #. *< ui_requirement
@@ -5207,19 +5213,19 @@ msgstr ""
 #. *  summary
 #. *  description
 msgid "Novell GroupWise Messenger Protocol Plugin"
-msgstr ""
+msgstr "Pemalam Protokol Pemesej GroupWise Novell"
 
 msgid "Server address"
-msgstr ""
+msgstr "Alamat pelayan"
 
 msgid "Server port"
-msgstr ""
+msgstr "Port pelayan"
 
 msgid "Please authorize me so I can add you to my buddy list."
-msgstr ""
+msgstr "Sila sahihkan saya supaya dapat ditambah ke dalam senarai rakan saya."
 
 msgid "No reason given."
-msgstr ""
+msgstr "Tiada sebab diberi."
 
 msgid "Authorization Denied Message:"
 msgstr ""
@@ -5228,7 +5234,7 @@ msgstr ""
 #. * A wrapper for purple_request_action() that uses @c OK and @c Cancel buttons.
 #.
 msgid "_OK"
-msgstr ""
+msgstr "_OK"
 
 #, c-format
 msgid "Received unexpected response from %s: %s"
@@ -5252,10 +5258,10 @@ msgstr ""
 #. error message.
 #, c-format
 msgid "Error requesting %s: %s"
-msgstr ""
+msgstr "Ralat meminta %s: %s"
 
 msgid "The server returned an empty response"
-msgstr ""
+msgstr "Pelayan mengembalikan respon kosong"
 
 msgid ""
 "Server requested that you fill out a CAPTCHA in order to sign in, but this "
@@ -5279,16 +5285,16 @@ msgid ""
 msgstr ""
 
 msgid "Could not join chat room"
-msgstr ""
+msgstr "Tidak dapat menyertai bilik sembang"
 
 msgid "Invalid chat room name"
-msgstr ""
+msgstr "Nama bilik sembang tidak sah"
 
 msgid "Invalid error"
-msgstr ""
+msgstr "Ralat tidak sah"
 
 msgid "Not logged in"
-msgstr ""
+msgstr "Tidak mendaftar masuk"
 
 msgid "Cannot receive IM due to parental controls"
 msgstr ""
@@ -5297,7 +5303,7 @@ msgid "Cannot send SMS without accepting terms"
 msgstr ""
 
 msgid "Cannot send SMS"
-msgstr ""
+msgstr "Tidak dapat hantar SMS"
 
 #. SMS_WITHOUT_DISCLAIMER is weird
 msgid "Cannot send SMS to this country"
@@ -5345,91 +5351,91 @@ msgid "Unable to send message to %s: %s"
 msgstr ""
 
 msgid "Thinking"
-msgstr ""
+msgstr "Berfikir"
 
 msgid "Shopping"
-msgstr ""
+msgstr "Membeli-belah"
 
 msgid "Questioning"
-msgstr ""
+msgstr "Menanya"
 
 msgid "Eating"
-msgstr ""
+msgstr "Makan"
 
 msgid "Watching a movie"
-msgstr ""
+msgstr "Menonton cereka"
 
 msgid "Typing"
-msgstr ""
+msgstr "Menaip"
 
 msgid "At the office"
-msgstr ""
+msgstr "Di pejabat"
 
 msgid "Taking a bath"
-msgstr ""
+msgstr "Sedang mandi"
 
 msgid "Watching TV"
-msgstr ""
+msgstr "Menonton TV"
 
 msgid "Having fun"
-msgstr ""
+msgstr "Sedang berseronok"
 
 msgid "Sleeping"
-msgstr ""
+msgstr "Tidur"
 
 msgid "Using a PDA"
-msgstr ""
+msgstr "Guna PDA"
 
 msgid "Meeting friends"
-msgstr ""
+msgstr "Bertemu rakan"
 
 msgid "On the phone"
-msgstr ""
+msgstr "Menelefon"
 
 msgid "Surfing"
-msgstr ""
+msgstr "Melayari"
 
 #. "I am mobile." / "John is mobile."
 msgid "Mobile"
-msgstr ""
+msgstr "Telefon Bimbit"
 
 msgid "Searching the web"
-msgstr ""
+msgstr "Menggelintar sesawang"
 
 msgid "At a party"
-msgstr ""
+msgstr "Menghadiri parti"
 
 msgid "Having Coffee"
-msgstr ""
+msgstr "Menikmati Kopi"
 
 #. Playing video games
 msgid "Gaming"
-msgstr ""
+msgstr "Bermain"
 
 msgid "Browsing the web"
-msgstr ""
+msgstr "Melayari sesawang"
 
 msgid "Smoking"
-msgstr ""
+msgstr "Merokok"
 
 msgid "Writing"
-msgstr ""
+msgstr "Menulis"
 
 #. Drinking [Alcohol]
 msgid "Drinking"
-msgstr ""
+msgstr "Minum"
 
 msgid "Listening to music"
-msgstr ""
+msgstr "Mendengar muzik"
 
 msgid "Studying"
-msgstr ""
+msgstr "Sedang belajar"
 
 msgid "Working"
-msgstr ""
+msgstr "Bekerja"
 
 msgid "In the restroom"
-msgstr ""
+msgstr "Di bilik air"
 
 msgid "Received invalid data on connection with server"
 msgstr ""
@@ -5451,10 +5457,10 @@ msgstr ""
 #. *  summary
 #. *  description
 msgid "AIM Protocol Plugin"
-msgstr ""
+msgstr "Pemalam Protokol AIM"
 
 msgid "ICQ UIN..."
-msgstr ""
+msgstr "UIN ICQ..."
 
 #. *< type
 #. *< ui_requirement
@@ -5467,16 +5473,16 @@ msgstr ""
 #. *  summary
 #. *  description
 msgid "ICQ Protocol Plugin"
-msgstr ""
+msgstr "Pemalam Protokol ICQ"
 
 msgid "Encoding"
-msgstr ""
+msgstr "Pengekodan"
 
 msgid "The remote user has closed the connection."
-msgstr ""
+msgstr "Pengguna jauh telah menutup sambungan."
 
 msgid "The remote user has declined your request."
-msgstr ""
+msgstr "Pengguna jauh menolak permintaan anda."
 
 #, c-format
 msgid "Lost connection with the remote user:<br>%s"
@@ -5489,7 +5495,7 @@ msgid "Unable to establish a connection with the remote user."
 msgstr ""
 
 msgid "Direct IM established"
-msgstr ""
+msgstr "IM langsung terjalin"
 
 #, c-format
 msgid ""
@@ -5502,34 +5508,34 @@ msgid "File %s is %s, which is larger than the maximum size of %s."
 msgstr ""
 
 msgid "Free For Chat"
-msgstr ""
+msgstr "Sedia Bersembang"
 
 msgid "Not Available"
-msgstr ""
+msgstr "Tidak Tersedia"
 
 msgid "Occupied"
-msgstr ""
+msgstr "Tak Boleh"
 
 msgid "Web Aware"
-msgstr ""
+msgstr "Di Laman Maya"
 
 msgid "Invisible"
-msgstr ""
+msgstr "Halimunan"
 
 msgid "Evil"
-msgstr ""
+msgstr "Berniat Jahat"
 
 msgid "Depression"
-msgstr ""
+msgstr "Gangguan Mental"
 
 msgid "At home"
-msgstr ""
+msgstr "Di rumah"
 
 msgid "At work"
-msgstr ""
+msgstr "Di tempat kerja"
 
 msgid "At lunch"
-msgstr ""
+msgstr "Menikmati makan tengahari"
 
 #, c-format
 msgid "Unable to connect to authentication server: %s"
@@ -5540,14 +5546,14 @@ msgid "Unable to connect to BOS server: %s"
 msgstr ""
 
 msgid "Username sent"
-msgstr ""
+msgstr "Nama pengguna dihantar"
 
 msgid "Connection established, cookie sent"
 msgstr ""
 
 #. TODO: Don't call this with ssi
 msgid "Finalizing connection"
-msgstr ""
+msgstr "Menyudahkan sambungan"
 
 #, c-format
 msgid ""
@@ -5577,15 +5583,15 @@ msgid "Unable to get a valid login hash."
 msgstr ""
 
 msgid "Received authorization"
-msgstr ""
+msgstr "Keizinan diterima"
 
 #. Unregistered username
 msgid "Username does not exist"
-msgstr ""
+msgstr "Nama pengguna tidak wujud"
 
 #. Suspended account
 msgid "Your account is currently suspended"
-msgstr ""
+msgstr "Akaun anda telah ditangguh"
 
 #. service temporarily unavailable
 msgid "The AOL Instant Messenger service is temporarily unavailable."
@@ -5614,16 +5620,16 @@ msgid "The SecurID key entered is invalid"
 msgstr ""
 
 msgid "Enter SecurID"
-msgstr ""
+msgstr "Masukkan SecurID"
 
 msgid "Enter the 6 digit number from the digital display."
-msgstr ""
+msgstr "Masukkan nombor 6 digiy menerusi paparan digital."
 
 msgid "Password sent"
-msgstr ""
+msgstr "Kata laluan dihantar"
 
 msgid "Unable to initialize connection"
-msgstr ""
+msgstr "Tidak boleh awalkan sambungan"
 
 #, c-format
 msgid ""
@@ -5633,7 +5639,7 @@ msgid ""
 msgstr ""
 
 msgid "ICQ authorization denied."
-msgstr ""
+msgstr "Keizinan ICQ dinafikan."
 
 #. Someone has granted you authorization
 #, c-format
@@ -5672,10 +5678,10 @@ msgid "Do you want to add this buddy to your buddy list?"
 msgstr ""
 
 msgid "_Add"
-msgstr ""
+msgstr "T_ambah"
 
 msgid "_Decline"
-msgstr ""
+msgstr "_Nafi"
 
 #, c-format
 msgid "You missed %hu message from %s because it was invalid."
@@ -5726,7 +5732,7 @@ msgid "Username formatting can change only capitalization and whitespace."
 msgstr ""
 
 msgid "Pop-Up Message"
-msgstr ""
+msgstr "Mesej Timbul"
 
 #, c-format
 msgid "The following username is associated with %s"
@@ -5742,7 +5748,7 @@ msgid "You should receive an email asking to confirm %s."
 msgstr ""
 
 msgid "Account Confirmation Requested"
-msgstr ""
+msgstr "Pengesahan Akaun Dipinta"
 
 #, c-format
 msgid ""
@@ -5780,14 +5786,14 @@ msgstr ""
 
 #, c-format
 msgid "Error 0x%04x: Unknown error."
-msgstr ""
+msgstr "Ralat 0x%04x: Ralat tidak diketahui."
 
 msgid "Error Changing Account Info"
-msgstr ""
+msgstr "Ralat Mengubah Maklumat Akaun"
 
 #, c-format
 msgid "The email address for %s is %s"
-msgstr ""
+msgstr "Alamat emel untuk %s ialah %s"
 
 msgid "Account Info"
 msgstr "Maklumat Akaun"
@@ -5841,7 +5847,7 @@ msgid ""
 msgstr ""
 
 msgid "Unable to Add"
-msgstr ""
+msgstr "Tidak boleh Tambah "
 
 msgid "Unable to Retrieve Buddy List"
 msgstr ""
@@ -5852,7 +5858,7 @@ msgid ""
 msgstr ""
 
 msgid "Orphans"
-msgstr ""
+msgstr "Yatim"
 
 #, c-format
 msgid ""
@@ -5897,10 +5903,10 @@ msgid ""
 msgstr ""
 
 msgid "Authorization Denied"
-msgstr ""
+msgstr "Keizinan Dinafikan"
 
 msgid "_Exchange:"
-msgstr ""
+msgstr "P_ertukaran:"
 
 msgid "Your IM Image was not sent. You cannot send IM Images in AIM chats."
 msgstr ""
@@ -5911,14 +5917,14 @@ msgid "iTunes Music Store Link"
 msgstr "Pautan Kedai Muzik iTunes"
 
 msgid "Lunch"
-msgstr ""
+msgstr "Makan tengahari"
 
 #, c-format
 msgid "Buddy Comment for %s"
 msgstr "Ulasan rakan untuk %s"
 
 msgid "Buddy Comment:"
-msgstr ""
+msgstr "Ulasan Rakan:"
 
 #, c-format
 msgid "You have selected to open a Direct IM connection with %s."
@@ -5930,44 +5936,44 @@ msgid ""
 msgstr ""
 
 msgid "C_onnect"
-msgstr ""
+msgstr "Sa_mbung"
 
 msgid "You closed the connection."
-msgstr ""
+msgstr "Anda telah menutup sambungan."
 
 msgid "Get AIM Info"
-msgstr ""
+msgstr "Dapatkan Maklumat AIM"
 
 #. We only do this if the user is in our buddy list
 msgid "Edit Buddy Comment"
-msgstr ""
+msgstr "Sunting Ulasan Rakan"
 
 msgid "Get X-Status Msg"
-msgstr ""
+msgstr "Dapatkan Mesej X-Status"
 
 msgid "End Direct IM Session"
-msgstr ""
+msgstr "Tamatkan Sesi IM Langsung"
 
 msgid "Direct IM"
-msgstr ""
+msgstr "IM Langsung"
 
 msgid "Re-request Authorization"
-msgstr ""
+msgstr "Pinta-semula Keizinan"
 
 msgid "Require authorization"
-msgstr ""
+msgstr "Perlukan keizinan"
 
 msgid "Web aware (enabling this will cause you to receive SPAM!)"
 msgstr ""
 
 msgid "ICQ Privacy Options"
-msgstr ""
+msgstr "Pilihan Kerahsiaan ICQ"
 
 msgid "Change Address To:"
-msgstr ""
+msgstr "Ubah Alamat Ke:"
 
 msgid "you are not waiting for authorization"
-msgstr ""
+msgstr "anda tidak menunggu keizinan"
 
 msgid "You are awaiting authorization from the following buddies"
 msgstr ""
@@ -5978,40 +5984,40 @@ msgid ""
 msgstr ""
 
 msgid "Find Buddy by Email"
-msgstr ""
+msgstr "Cari Rakan melalui Emel"
 
 msgid "Search for a buddy by email address"
-msgstr ""
+msgstr "Gelintar rakan melalui alamat emel"
 
 msgid "Type the email address of the buddy you are searching for."
-msgstr ""
+msgstr "Taip alamat emel rakan yang anda mahu cari."
 
 msgid "_Search"
-msgstr ""
+msgstr "_Gelintar"
 
 msgid "Set User Info (web)..."
-msgstr ""
+msgstr "Tetapkan Maklumat Pengguna (sesawang)..."
 
 #. This only happens when connecting with the old-style BUCP login
 msgid "Change Password (web)"
-msgstr ""
+msgstr "Ubah Kata Laluan (sesawang)"
 
 msgid "Configure IM Forwarding (web)"
-msgstr ""
+msgstr "Konfigur Pemajuan IM (sesawang)"
 
 #. ICQ actions
 msgid "Set Privacy Options..."
-msgstr ""
+msgstr "Tetapkan Pilihan Kerahsiaan..."
 
 msgid "Show Visible List"
-msgstr ""
+msgstr "Tunjuk Senarai Tampak"
 
 msgid "Show Invisible List"
-msgstr ""
+msgstr "Tunjuk Senarai Halimunan"
 
 #. AIM actions
 msgid "Confirm Account"
-msgstr ""
+msgstr "Sahkan Akaun"
 
 msgid "Display Currently Registered Email Address"
 msgstr ""
@@ -6029,13 +6035,13 @@ msgid "clientLogin"
 msgstr ""
 
 msgid "Kerberos"
-msgstr ""
+msgstr "Kerberos"
 
 msgid "MD5-based"
-msgstr ""
+msgstr "Berasaskan-MD5"
 
 msgid "Authentication method"
-msgstr ""
+msgstr "Kaedah pengesahihan"
 
 msgid ""
 "Always use AIM/ICQ proxy server for\n"
@@ -6069,37 +6075,37 @@ msgstr ""
 
 #. Label
 msgid "Buddy Icon"
-msgstr ""
+msgstr "Ikon Rakan"
 
 msgid "Voice"
-msgstr ""
+msgstr "Suara"
 
 msgid "AIM Direct IM"
-msgstr ""
+msgstr "IM Langsung AIM"
 
 msgid "Get File"
-msgstr ""
+msgstr "Dapatkan Fail"
 
 msgid "Games"
-msgstr ""
+msgstr "Permainan"
 
 msgid "ICQ Xtraz"
-msgstr ""
+msgstr "Xtraz ICQ"
 
 msgid "Add-Ins"
-msgstr ""
+msgstr "Tambahan"
 
 msgid "Send Buddy List"
-msgstr ""
+msgstr "Hantar Senarai Rakan"
 
 msgid "ICQ Direct Connect"
-msgstr ""
+msgstr "Sambung Langsung ICQ"
 
 msgid "AP User"
-msgstr ""
+msgstr "Pengguna AP"
 
 msgid "ICQ RTF"
-msgstr ""
+msgstr "RTF ICQ"
 
 msgid "Nihilist"
 msgstr ""
@@ -6108,85 +6114,85 @@ msgid "ICQ Server Relay"
 msgstr ""
 
 msgid "Old ICQ UTF8"
-msgstr ""
+msgstr "UTF8 ICQ Lama"
 
 msgid "Trillian Encryption"
-msgstr ""
+msgstr "Penyulitan Trillian"
 
 msgid "ICQ UTF8"
-msgstr ""
+msgstr "UTF8 ICQ"
 
 msgid "Hiptop"
-msgstr ""
+msgstr "Hiptop"
 
 msgid "Security Enabled"
-msgstr ""
+msgstr "Keselamatan Dibenarkan"
 
 msgid "Video Chat"
-msgstr ""
+msgstr "Sembang Video"
 
 msgid "iChat AV"
-msgstr ""
+msgstr "AV iChat"
 
 msgid "Live Video"
-msgstr ""
+msgstr "Video Langsung"
 
 msgid "Camera"
-msgstr ""
+msgstr "Kamera"
 
 msgid "Screen Sharing"
-msgstr ""
+msgstr "Perkongsian Skrin"
 
 msgid "IP Address"
-msgstr ""
+msgstr "Alamat IP"
 
 msgid "Warning Level"
-msgstr ""
+msgstr "Aras Amaran"
 
 msgid "Buddy Comment"
-msgstr ""
+msgstr "Ulasan Rakan"
 
 #, c-format
 msgid "User information not available: %s"
-msgstr ""
+msgstr "Maklumat pengguna tidak tersedia: %s"
 
 msgid "Mobile Phone"
-msgstr ""
+msgstr "Telefon Bimbit"
 
 msgid "Age"
-msgstr ""
+msgstr "Usia"
 
 msgid "Personal Web Page"
-msgstr ""
+msgstr "Laman Sesawang Peribadi"
 
 #. aim_userinfo_t
 #. use_html_status
 msgid "Additional Information"
-msgstr ""
+msgstr "Maklumat Tambahan"
 
 msgid "Home Address"
-msgstr ""
+msgstr "Alamat Rumah"
 
 msgid "Zip Code"
-msgstr ""
+msgstr "Poskod"
 
 msgid "Work Address"
-msgstr ""
+msgstr "Alamat Tempat Kerja"
 
 msgid "Work Information"
-msgstr ""
+msgstr "Maklumat Tempat Kerja"
 
 msgid "Company"
-msgstr ""
+msgstr "Syarikat"
 
 msgid "Division"
-msgstr ""
+msgstr "Bahagian"
 
 msgid "Position"
-msgstr ""
+msgstr "Kedudukan"
 
 msgid "Web Page"
-msgstr ""
+msgstr "Laman Sesawang"
 
 msgid "Online Since"
 msgstr "Atas Talian Semenjak"
@@ -6198,10 +6204,10 @@ msgid "Capabilities"
 msgstr "Keupayaan"
 
 msgid "Profile"
-msgstr ""
+msgstr "Profil"
 
 msgid "View web profile"
-msgstr ""
+msgstr "Lihat profil sesawang"
 
 msgid "Invalid SNAC"
 msgstr "SNAC Tidak Sah"
@@ -6249,13 +6255,13 @@ msgid "In local permit/deny"
 msgstr ""
 
 msgid "Warning level too high (sender)"
-msgstr ""
+msgstr "Aras amaran terlalu tinggi (pengirim)"
 
 msgid "Warning level too high (receiver)"
-msgstr ""
+msgstr "Aras amaran terlalu tinggi (penerima)"
 
 msgid "User temporarily unavailable"
-msgstr ""
+msgstr "Pengguna buat masa ini tidak tersedia"
 
 msgid "No match"
 msgstr "Tiada padanan"
@@ -6270,7 +6276,7 @@ msgid "Queue full"
 msgstr "Baris gilir penuh"
 
 msgid "Not while on AOL"
-msgstr ""
+msgstr "Tidak berada dalam AOL"
 
 #. Translators: This string is a menu option that, if selected, will cause
 #. you to appear online to the chosen user even when your status is set to
@@ -6298,7 +6304,7 @@ msgid "Don't Appear Offline"
 msgstr "Jangan Kelihatan Luar Talian"
 
 msgid "you have no buddies on this list"
-msgstr ""
+msgstr "anda tidak mempunyai rakan dalam senarai ini"
 
 #, c-format
 msgid ""
@@ -6307,40 +6313,40 @@ msgid ""
 msgstr ""
 
 msgid "Visible List"
-msgstr ""
+msgstr "Senarai Tampak"
 
 msgid "These buddies will see your status when you switch to \"Invisible\""
 msgstr ""
 
 msgid "Invisible List"
-msgstr ""
+msgstr "Senarai Halimunan"
 
 msgid "These buddies will always see you as offline"
 msgstr ""
 
 #, c-format
 msgid "<b>Group Title:</b> %s<br>"
-msgstr ""
+msgstr "<b>Tajuk Kumpulan:</b> %s<br>"
 
 #, c-format
 msgid "<b>Notes Group ID:</b> %s<br>"
-msgstr ""
+msgstr "<b>ID Kumpulan Nota:</b> %s<br>"
 
 #, c-format
 msgid "Info for Group %s"
-msgstr ""
+msgstr "Maklumat untuk Kumpulan %s"
 
 msgid "Notes Address Book Information"
-msgstr ""
+msgstr "Maklumat Buku Alamat Nota"
 
 msgid "Invite Group to Conference..."
-msgstr ""
+msgstr "Jemput Kumpulan menyertai Sidang..."
 
 msgid "Get Notes Address Book Info"
-msgstr ""
+msgstr "Dapatkan Maklumat Buku Alamat Nota"
 
 msgid "Sending Handshake"
-msgstr ""
+msgstr "Menghantar Jabat Tangan"
 
 msgid "Waiting for Handshake Acknowledgement"
 msgstr ""
@@ -6352,16 +6358,16 @@ msgid "Waiting for Login Acknowledgement"
 msgstr ""
 
 msgid "Login Redirected"
-msgstr ""
+msgstr "Daftar Masuk Diarah Semula"
 
 msgid "Forcing Login"
-msgstr ""
+msgstr "Memaksa Daftar Masuk"
 
 msgid "Login Acknowledged"
-msgstr ""
+msgstr "Daftar Masuk Dikenalpasti"
 
 msgid "Starting Services"
-msgstr ""
+msgstr "Memulakan Perkhidmatan"
 
 #, c-format
 msgid ""
@@ -6373,41 +6379,41 @@ msgstr ""
 
 #, c-format
 msgid "Announcement from %s"
-msgstr ""
+msgstr "Pengumuman daripada %s"
 
 msgid "Conference Closed"
-msgstr ""
+msgstr "Sidang Ditutup"
 
 msgid "Unable to send message: "
-msgstr ""
+msgstr "Tidak boleh hantar mesej:"
 
 #, c-format
 msgid "Unable to send message to %s:"
-msgstr ""
+msgstr "Tidak boleh menghantar mesej kepada %s:"
 
 msgid "Place Closed"
-msgstr ""
+msgstr "Tempat Ditutup"
 
 msgid "Microphone"
-msgstr ""
+msgstr "Mikrofon"
 
 msgid "Speakers"
-msgstr ""
+msgstr "Pembesar Suara"
 
 msgid "Video Camera"
-msgstr ""
+msgstr "Kamera Video"
 
 msgid "File Transfer"
-msgstr ""
+msgstr "Pemindahan Fail"
 
 msgid "Supports"
-msgstr ""
+msgstr "Sokongan"
 
 msgid "External User"
-msgstr ""
+msgstr "Pengguna Luar"
 
 msgid "Create conference with user"
-msgstr ""
+msgstr "Cipta sidang dengan pengguna"
 
 #, c-format
 msgid ""
@@ -6416,19 +6422,19 @@ msgid ""
 msgstr ""
 
 msgid "New Conference"
-msgstr ""
+msgstr "Sidang Baharu"
 
 msgid "Create"
-msgstr ""
+msgstr "Cipta"
 
 msgid "Available Conferences"
-msgstr ""
+msgstr "Sidang Tersedia"
 
 msgid "Create New Conference..."
-msgstr ""
+msgstr "Cipta Sidang Baharu..."
 
 msgid "Invite user to a conference"
-msgstr ""
+msgstr "Jemput pengguna menyertai Sidang"
 
 #, c-format
 msgid ""
@@ -6438,32 +6444,32 @@ msgid ""
 msgstr ""
 
 msgid "Invite to Conference"
-msgstr ""
+msgstr "Jemput menyertai Sidang"
 
 msgid "Invite to Conference..."
-msgstr ""
+msgstr "Jemput menyertai Sidang..."
 
 msgid "Send TEST Announcement"
-msgstr ""
+msgstr "Hantar Pengumuman UJIAN"
 
 msgid "Topic:"
-msgstr ""
+msgstr "Tajuk:"
 
 msgid "A server is required to connect this account"
-msgstr ""
+msgstr "Satu pelayan diperlukan untuk menyambung dengan akaun ini"
 
 #, c-format
 msgid "Unknown (0x%04x)<br>"
-msgstr ""
+msgstr "Tidak diketahui (0x%04x)<br>"
 
 msgid "Last Known Client"
-msgstr ""
+msgstr "Klien Terakhir Diketahui"
 
 msgid "User Name"
-msgstr ""
+msgstr "Nama Pengguna"
 
 msgid "Sametime ID"
-msgstr ""
+msgstr "ID Sametime"
 
 msgid "An ambiguous user ID was entered"
 msgstr ""
@@ -6475,10 +6481,10 @@ msgid ""
 msgstr ""
 
 msgid "Select User"
-msgstr ""
+msgstr "Pilih Pengguna"
 
 msgid "Unable to add user: user not found"
-msgstr ""
+msgstr "Tidak boleh tambah pengguna: pengguna tidak ditemui"
 
 #, c-format
 msgid ""
@@ -6487,31 +6493,33 @@ msgid ""
 msgstr ""
 
 msgid "Unable to add user"
-msgstr ""
+msgstr "Tidak boleh tambah pengguna"
 
 #, c-format
 msgid ""
 "Error reading file %s: \n"
 "%s\n"
 msgstr ""
+"Ralat membaca fail %s: \n"
+"%s\n"
 
 msgid "Remotely Stored Buddy List"
 msgstr ""
 
 msgid "Buddy List Storage Mode"
-msgstr ""
+msgstr "Mod Storan Senarai Rakan"
 
 msgid "Local Buddy List Only"
-msgstr ""
+msgstr "Senarai Rakan Setempat Sahaja"
 
 msgid "Merge List from Server"
-msgstr ""
+msgstr "Gabung Senarai dari Pelayan"
 
 msgid "Merge and Save List to Server"
-msgstr ""
+msgstr "Gabung dan Simpan Senarai ke Pelayan"
 
 msgid "Synchronize List with Server"
-msgstr ""
+msgstr "Segerak Senarai dengan Pelayan"
 
 #, c-format
 msgid "Import Sametime List for Account %s"
@@ -6522,17 +6530,17 @@ msgid "Export Sametime List for Account %s"
 msgstr ""
 
 msgid "Unable to add group: group exists"
-msgstr ""
+msgstr "Tidak boleh tambah kumpulan: kumpulan telah wujud"
 
 #, c-format
 msgid "A group named '%s' already exists in your buddy list."
 msgstr ""
 
 msgid "Unable to add group"
-msgstr ""
+msgstr "Tidak boleh tambah kumpulan"
 
 msgid "Possible Matches"
-msgstr ""
+msgstr "Padanan yang Mungkin"
 
 msgid "Notes Address Book group results"
 msgstr ""
@@ -6566,7 +6574,7 @@ msgstr ""
 
 #, c-format
 msgid "Search results for '%s'"
-msgstr ""
+msgstr "Keputusan gelintar bagi '%s'"
 
 #, c-format
 msgid ""
@@ -6576,20 +6584,20 @@ msgid ""
 msgstr ""
 
 msgid "Search Results"
-msgstr ""
+msgstr "Keputusan Gelintar"
 
 msgid "No matches"
-msgstr ""
+msgstr "Tiada padanan"
 
 #, c-format
 msgid "The identifier '%s' did not match any users in your Sametime community."
 msgstr ""
 
 msgid "No Matches"
-msgstr ""
+msgstr "Tiada Padanan"
 
 msgid "Search for a user"
-msgstr ""
+msgstr "Gelintar pengguna"
 
 msgid ""
 "Enter a name or partial ID in the field below to search for matching users "
@@ -6616,35 +6624,35 @@ msgstr ""
 
 #. pretend to be Sametime Connect
 msgid "Hide client identity"
-msgstr ""
+msgstr "Sembunyi identiti klien"
 
 #, c-format
 msgid "User %s is not present in the network"
 msgstr ""
 
 msgid "Key Agreement"
-msgstr ""
+msgstr "Perjanjian Kunci"
 
 msgid "Cannot perform the key agreement"
-msgstr ""
+msgstr "Tidak dapat lakukan perjanjian kunci"
 
 msgid "Error occurred during key agreement"
-msgstr ""
+msgstr "Ralat ketika perjanjian kunci"
 
 msgid "Key Agreement failed"
-msgstr ""
+msgstr "Perjanjian Kunci gagal"
 
 msgid "Timeout during key agreement"
-msgstr ""
+msgstr "Had masa tamat ketika perjanjian kunci"
 
 msgid "Key agreement was aborted"
-msgstr ""
+msgstr "Perjanjian kunci telah dihenti paksa"
 
 msgid "Key agreement is already started"
-msgstr ""
+msgstr "Perjanjian kunci sudah pun bermula"
 
 msgid "Key agreement cannot be started with yourself"
-msgstr ""
+msgstr "Perjanjian kunci tidak dapat dimulakan dengan diri anda sendiri"
 
 msgid "The remote user is not present in the network any more"
 msgstr ""
@@ -6666,35 +6674,35 @@ msgid "Key Agreement Request"
 msgstr ""
 
 msgid "IM With Password"
-msgstr ""
+msgstr "IM Dengan Kata Laluan"
 
 msgid "Cannot set IM key"
-msgstr ""
+msgstr "Tidak dapat tetapkan kunci IM"
 
 msgid "Set IM Password"
-msgstr ""
+msgstr "Tetapkan Kata Laluan IM"
 
 msgid "Get Public Key"
-msgstr ""
+msgstr "Dapatkan Kunci Awam"
 
 msgid "Cannot fetch the public key"
 msgstr ""
 
 msgid "Show Public Key"
-msgstr ""
+msgstr "Tunjuk Kunci Awam"
 
 msgid "Could not load public key"
-msgstr ""
+msgstr "Tidak dapat muatkan kunci awam"
 
 msgid "User Information"
-msgstr ""
+msgstr "Maklumat Pengguna"
 
 msgid "Cannot get user information"
-msgstr ""
+msgstr "Dapat dapat maklumat pengguna"
 
 #, c-format
 msgid "The %s buddy is not trusted"
-msgstr ""
+msgstr "Rakan %s tidak boleh dipercayai"
 
 msgid ""
 "You cannot receive buddy notifications until you import his/her public key.  "
@@ -6703,7 +6711,7 @@ msgstr ""
 
 #. Open file selector to select the public key.
 msgid "Open..."
-msgstr ""
+msgstr "Buka..."
 
 #, c-format
 msgid "The %s buddy is not present in the network"
@@ -6715,10 +6723,10 @@ msgid ""
 msgstr ""
 
 msgid "_Import..."
-msgstr ""
+msgstr "_Import..."
 
 msgid "Select correct user"
-msgstr ""
+msgstr "Pilih pengguna yang betul"
 
 msgid ""
 "More than one user was found with the same public key. Select the correct "
@@ -6737,115 +6745,115 @@ msgid "Indisposed"
 msgstr ""
 
 msgid "Wake Me Up"
-msgstr ""
+msgstr "Bangunkan Saya"
 
 msgid "Hyper Active"
-msgstr ""
+msgstr "Hiper Aktif"
 
 msgid "Robot"
-msgstr ""
+msgstr "Robot"
 
 msgid "In Love"
-msgstr ""
+msgstr "Dilamun Cinta"
 
 msgid "User Modes"
-msgstr ""
+msgstr "Mod Pengguna"
 
 msgid "Preferred Contact"
-msgstr ""
+msgstr "Kenalan Digemari"
 
 msgid "Preferred Language"
-msgstr ""
+msgstr "Bahasa Digemari"
 
 msgid "Device"
-msgstr ""
+msgstr "Peranti"
 
 msgid "Timezone"
-msgstr ""
+msgstr "Zon Waktu"
 
 msgid "Geolocation"
-msgstr ""
+msgstr "Geolokasi"
 
 msgid "Reset IM Key"
-msgstr ""
+msgstr "Tetap Semula Kunci IM"
 
 msgid "IM with Key Exchange"
-msgstr ""
+msgstr "IM dengan Pertukaran Kunci"
 
 msgid "IM with Password"
-msgstr ""
+msgstr "IM dengan Kata Laluan"
 
 msgid "Get Public Key..."
-msgstr ""
+msgstr "Dapatkan Kunci Awam..."
 
 msgid "Kill User"
-msgstr ""
+msgstr "Matikan Pengguna"
 
 msgid "Draw On Whiteboard"
-msgstr ""
+msgstr "Lukis Atas Papan Putih"
 
 msgid "_Passphrase:"
-msgstr ""
+msgstr "Frasa _Laluan:"
 
 #, c-format
 msgid "Channel %s does not exist in the network"
-msgstr ""
+msgstr "Saluran %s tidak wujud dalam rangkaian"
 
 msgid "Channel Information"
-msgstr ""
+msgstr "Maklumat Saluran"
 
 msgid "Cannot get channel information"
-msgstr ""
+msgstr "Tidak dapat maklumat saluran"
 
 #, c-format
 msgid "<b>Channel Name:</b> %s"
-msgstr ""
+msgstr "<b>Nama Saluran:</b> %s"
 
 #, c-format
 msgid "<br><b>User Count:</b> %d"
-msgstr ""
+msgstr "<br><b>Kiraan Pengguna:</b> %d"
 
 #, c-format
 msgid "<br><b>Channel Founder:</b> %s"
-msgstr ""
+msgstr "<br><b>Pengasas Saluran:</b> %s"
 
 #, c-format
 msgid "<br><b>Channel Cipher:</b> %s"
-msgstr ""
+msgstr "<br><b>Sifer Saluran:</b> %s"
 
 #. Definition of HMAC: http://en.wikipedia.org/wiki/HMAC
 #, c-format
 msgid "<br><b>Channel HMAC:</b> %s"
-msgstr ""
+msgstr "<br><b>HMAC Saluran:</b> %s"
 
 #, c-format
 msgid "<br><b>Channel Topic:</b><br>%s"
-msgstr ""
+msgstr "<br><b>Tajuk Saluran:</b><br>%s"
 
 #, c-format
 msgid "<br><b>Channel Modes:</b> "
-msgstr ""
+msgstr "<br><b>Mod Saluran:</b> "
 
 #, c-format
 msgid "<br><b>Founder Key Fingerprint:</b><br>%s"
-msgstr ""
+msgstr "<br><b>Cap Jari Kunci Pengasas:</b><br>%s"
 
 #, c-format
 msgid "<br><b>Founder Key Babbleprint:</b><br>%s"
 msgstr ""
 
 msgid "Add Channel Public Key"
-msgstr ""
+msgstr "Tambah Kunci Awam Saluran"
 
 #. Add new public key
 msgid "Open Public Key..."
-msgstr ""
+msgstr "Buka Kunci Awam..."
 
 msgid "Channel Passphrase"
-msgstr ""
+msgstr "Frasa Laluan Saluran"
 
 msgid "Channel Public Keys List"
-msgstr ""
+msgstr "Senarai Kunci Awam Saluran"
 
 #, c-format
 msgid ""
@@ -6857,65 +6865,65 @@ msgid ""
 msgstr ""
 
 msgid "Channel Authentication"
-msgstr ""
+msgstr "Pengesahihan Saluran"
 
 msgid "Add / Remove"
-msgstr ""
+msgstr "Tambah / Buang"
 
 msgid "Group Name"
-msgstr ""
+msgstr "Nama Kumpulan"
 
 msgid "Passphrase"
-msgstr ""
+msgstr "Frasa Laluan"
 
 #, c-format
 msgid "Please enter the %s channel private group name and passphrase."
 msgstr ""
 
 msgid "Add Channel Private Group"
-msgstr ""
+msgstr "Tambah Kumpulan Persendirian Saluran"
 
 msgid "User Limit"
-msgstr ""
+msgstr "Had Pengguna"
 
 msgid "Set user limit on channel. Set to zero to reset user limit."
 msgstr ""
 
 msgid "Invite List"
-msgstr ""
+msgstr "Senarai Jemput"
 
 msgid "Ban List"
-msgstr ""
+msgstr "Senarai Hitam"
 
 msgid "Add Private Group"
-msgstr ""
+msgstr "Tambah Kumpulan Persendirian"
 
 msgid "Reset Permanent"
-msgstr ""
+msgstr "Tetapkan Semula Kekal"
 
 msgid "Set Permanent"
-msgstr ""
+msgstr "Tetapkan Kekal"
 
 msgid "Set User Limit"
-msgstr ""
+msgstr "Tetapkan Had Pengguna"
 
 msgid "Reset Topic Restriction"
-msgstr ""
+msgstr "Tetapkan Semula Sekatan Tajuk"
 
 msgid "Set Topic Restriction"
-msgstr ""
+msgstr "Tetapkan Sekatan Tajuk"
 
 msgid "Reset Private Channel"
-msgstr ""
+msgstr "Tetap Semula Saluran Persendirian"
 
 msgid "Set Private Channel"
-msgstr ""
+msgstr "Tetapkan Saluran Persendirian"
 
 msgid "Reset Secret Channel"
-msgstr ""
+msgstr "Tetapkan Semula Saluran Rahsia"
 
 msgid "Set Secret Channel"
-msgstr ""
+msgstr "Tetapkan Saluran Rahsia"
 
 #, c-format
 msgid ""
@@ -6923,81 +6931,81 @@ msgid ""
 msgstr ""
 
 msgid "Join Private Group"
-msgstr ""
+msgstr "Sertai Kumpulan Persendirian"
 
 msgid "Cannot join private group"
-msgstr ""
+msgstr "Tidak dapat menyertai kumpulan persendirian"
 
 msgid "Call Command"
-msgstr ""
+msgstr "Perintah Panggil"
 
 msgid "Cannot call command"
-msgstr ""
+msgstr "Tidak dapat panggil perintah"
 
 msgid "Unknown command"
-msgstr ""
+msgstr "Perintah tidak diketahui"
 
 msgid "Secure File Transfer"
-msgstr ""
+msgstr "Pemindahan Fail Selamat"
 
 msgid "Error during file transfer"
-msgstr ""
+msgstr "Ralat ketika pemindahan fail"
 
 msgid "Remote disconnected"
-msgstr ""
+msgstr "Jauh terputus"
 
 msgid "Permission denied"
-msgstr ""
+msgstr "Keizinan dinafikan"
 
 msgid "Key agreement failed"
-msgstr ""
+msgstr "Perjanjian kunci gagal"
 
 msgid "Connection timed out"
-msgstr ""
+msgstr "Sambungan tamat masa"
 
 msgid "Creating connection failed"
-msgstr ""
+msgstr "Penciptaan sambungan gagal"
 
 msgid "File transfer session does not exist"
-msgstr ""
+msgstr "Sesi pemindahan fail tidak wujud"
 
 msgid "No file transfer session active"
-msgstr ""
+msgstr "Tiada sesi pemindahan fail yang aktif"
 
 msgid "File transfer already started"
-msgstr ""
+msgstr "Pemindahan fail sudah bermula"
 
 msgid "Could not perform key agreement for file transfer"
-msgstr ""
+msgstr "Tidak dapat melakukan perjanjian kunci untuk pemindahan fail"
 
 msgid "Could not start the file transfer"
-msgstr ""
+msgstr "Tidak dapat memulakan pemindahan fail"
 
 msgid "Cannot send file"
-msgstr ""
+msgstr "Tidak dapat hantar fail"
 
 msgid "Error occurred"
-msgstr ""
+msgstr "Ralat berlaku"
 
 #, c-format
 msgid "%s has changed the topic of <I>%s</I> to: %s"
-msgstr ""
+msgstr "%s telah mengubah tajuk <I>%s</I> menjadi: %s"
 
 #, c-format
 msgid "<I>%s</I> set channel <I>%s</I> modes to: %s"
-msgstr ""
+msgstr "<I>%s</I>mod tetapkan saluran <I>%s</I> menjadi: %s"
 
 #, c-format
 msgid "<I>%s</I> removed all channel <I>%s</I> modes"
-msgstr ""
+msgstr "<I>%s</I> membuang semua mod saluran <I>%s</I>"
 
 #, c-format
 msgid "<I>%s</I> set <I>%s's</I> modes to: %s"
-msgstr ""
+msgstr "<I>%s</I> tetapkan mod <I>%s</I> menjadi: %s"
 
 #, c-format
 msgid "<I>%s</I> removed all <I>%s's</I> modes"
-msgstr ""
+msgstr "<I>%s</I> telah membuang semua mod <I>%s's</I>"
 
 #, c-format
 msgid "You have been kicked off <I>%s</I> by <I>%s</I> (%s)"
@@ -7009,57 +7017,57 @@ msgstr ""
 
 #, c-format
 msgid "Killed by %s (%s)"
-msgstr ""
+msgstr "Dimatikan oleh %s (%s)"
 
 msgid "Server signoff"
 msgstr ""
 
 msgid "Personal Information"
-msgstr ""
+msgstr "Maklumat Peribadi"
 
 msgid "Birth Day"
-msgstr ""
+msgstr "Tarikh Lahir"
 
 msgid "Job Role"
-msgstr ""
+msgstr "Pekerjaan"
 
 msgid "Organization"
-msgstr ""
+msgstr "Organisasi"
 
 msgid "Unit"
-msgstr ""
+msgstr "Unit"
 
 msgid "Homepage"
-msgstr ""
+msgstr "Laman Sesawang"
 
 msgid "Note"
-msgstr ""
+msgstr "Nota"
 
 msgid "Join Chat"
-msgstr ""
+msgstr "Sertai Sembang"
 
 #, c-format
 msgid "You are channel founder on <I>%s</I>"
-msgstr ""
+msgstr "Anda adalah pengasas saluran <I>%s</I>"
 
 #, c-format
 msgid "Channel founder on <I>%s</I> is <I>%s</I>"
-msgstr ""
+msgstr "Pengasas saluran <I>%s</I> ialah <I>%s</I>"
 
 msgid "Real Name"
-msgstr ""
+msgstr "Nama Sebenar"
 
 msgid "Status Text"
-msgstr ""
+msgstr "Teks Status"
 
 msgid "Public Key Fingerprint"
-msgstr ""
+msgstr "Cap Jari Kunci Awam"
 
 msgid "Public Key Babbleprint"
 msgstr ""
 
 msgid "_More..."
-msgstr ""
+msgstr "_Lagi..."
 
 msgid "Detach From Server"
 msgstr ""
@@ -7068,34 +7076,34 @@ msgid "Cannot detach"
 msgstr ""
 
 msgid "Cannot set topic"
-msgstr ""
+msgstr "Tidak dapat tetapkan tajuk"
 
 msgid "Failed to change nickname"
-msgstr ""
+msgstr "Gagal menukar gelaran"
 
 msgid "Roomlist"
-msgstr ""
+msgstr "Senarai bilik"
 
 msgid "Cannot get room list"
-msgstr ""
+msgstr "Tidak dapat maklumat senarai bilik"
 
 msgid "Network is empty"
-msgstr ""
+msgstr "Rangkaian kosong"
 
 msgid "No public key was received"
-msgstr ""
+msgstr "Tiada kunci awam diterima"
 
 msgid "Server Information"
-msgstr ""
+msgstr "Maklumat Pelayan"
 
 msgid "Cannot get server information"
-msgstr ""
+msgstr "Tidak dapat maklumat pelayan"
 
 msgid "Server Statistics"
-msgstr ""
+msgstr "Statistik Pelayan"
 
 msgid "Cannot get server statistics"
-msgstr ""
+msgstr "Tidak dapat statistik pelayan"
 
 #, c-format
 msgid ""
@@ -7117,37 +7125,37 @@ msgid ""
 msgstr ""
 
 msgid "Network Statistics"
-msgstr ""
+msgstr "Statistik Rangkaian"
 
 msgid "Ping"
-msgstr ""
+msgstr "Ping"
 
 msgid "Ping failed"
-msgstr ""
+msgstr "Ping gagal"
 
 msgid "Ping reply received from server"
 msgstr ""
 
 msgid "Could not kill user"
-msgstr ""
+msgstr "Tidak dapat matikan pengguna"
 
 msgid "WATCH"
-msgstr ""
+msgstr "PANTAU"
 
 msgid "Cannot watch user"
-msgstr ""
+msgstr "Tidak dapat pantau pengguna"
 
 msgid "Resuming session"
-msgstr ""
+msgstr "Menyambung semula sesi"
 
 msgid "Authenticating connection"
-msgstr ""
+msgstr "Mengesahihkan sambungan"
 
 msgid "Verifying server public key"
-msgstr ""
+msgstr "Mengesahkan kunci awam pelayan"
 
 msgid "Passphrase required"
-msgstr ""
+msgstr "Frasa laluan diperlukan"
 
 #, c-format
 msgid ""
@@ -7168,79 +7176,81 @@ msgid ""
 msgstr ""
 
 msgid "Verify Public Key"
-msgstr ""
+msgstr "Sahkan Kunci Awam"
 
 msgid "_View..."
-msgstr ""
+msgstr "_Lihat..."
 
 msgid "Unsupported public key type"
-msgstr ""
+msgstr "Jenis kunci awal tidak disokong"
 
 msgid "Disconnected by server"
-msgstr ""
+msgstr "Terputus dengan pelayan"
 
 msgid "Error connecting to SILC Server"
-msgstr ""
+msgstr "Ralat menyambung dengan Pelayan SILC"
 
 msgid "Key Exchange failed"
-msgstr ""
+msgstr "Pertukaran Kunci gagal"
 
 msgid "Authentication failed"
-msgstr ""
+msgstr "Pengesahihan gagal"
 
 msgid ""
 "Resuming detached session failed. Press Reconnect to create new connection."
 msgstr ""
 
 msgid "Performing key exchange"
-msgstr ""
+msgstr "Melakukan pertukaran kunci"
 
 msgid "Unable to load SILC key pair"
-msgstr ""
+msgstr "Tidak boleh muatkan pasangan kunci SILC"
 
 #. Progress
 msgid "Connecting to SILC Server"
-msgstr ""
+msgstr "Menyambung ke Pelayan SILC"
 
 msgid "Out of memory"
-msgstr ""
+msgstr "Kehabisan ingatan"
 
 msgid "Unable to initialize SILC protocol"
-msgstr ""
+msgstr "Tidak boleh awalkan protokol SILC"
 
 msgid "Error loading SILC key pair"
-msgstr ""
+msgstr "Ralat memuatkan pasangan kunci SILC"
 
 #, c-format
 msgid "Download %s: %s"
-msgstr ""
+msgstr "Muat Turun %s: %s"
 
 msgid "Your Current Mood"
-msgstr ""
+msgstr "Mood Semasa Anda"
 
 #, c-format
 msgid "Normal"
-msgstr ""
+msgstr "Biasa"
 
 msgid ""
 "\n"
 "Your Preferred Contact Methods"
 msgstr ""
+"\n"
+"Kaedah Hubungan Kegemaran Anda"
 
 msgid "SMS"
-msgstr ""
+msgstr "SMS"
 
 msgid "MMS"
-msgstr ""
+msgstr "MMS"
 
 msgid "Video conferencing"
-msgstr ""
+msgstr "Sidang video"
 
 msgid "Your Current Status"
-msgstr ""
+msgstr "Status Semasa Anda"
 
 msgid "Online Services"
-msgstr ""
+msgstr "Perkhidmatan Atas Talian"
 
 msgid "Let others see what services you are using"
 msgstr ""
@@ -7249,13 +7259,13 @@ msgid "Let others see what computer you are using"
 msgstr ""
 
 msgid "Your VCard File"
-msgstr ""
+msgstr "Fail VKad Anda"
 
 msgid "Timezone (UTC)"
-msgstr ""
+msgstr "Zon Waktu (UTC)"
 
 msgid "User Online Status Attributes"
-msgstr ""
+msgstr "Atribut Status Atas Talian Pengguna"
 
 msgid ""
 "You can let other users see your online status information and your personal "
@@ -7264,72 +7274,72 @@ msgid ""
 msgstr ""
 
 msgid "Message of the Day"
-msgstr ""
+msgstr "Mesej Hari Ini"
 
 msgid "No Message of the Day available"
-msgstr ""
+msgstr "Tiada Mesej Hari Ini"
 
 msgid "There is no Message of the Day associated with this connection"
 msgstr ""
 
 msgid "Create New SILC Key Pair"
-msgstr ""
+msgstr "Cipta Pasangan Kunci SILC Baharu"
 
 msgid "Passphrases do not match"
-msgstr ""
+msgstr "Frasa laluan tidak sepadan"
 
 msgid "Key Pair Generation failed"
-msgstr ""
+msgstr "Penjanaan Pasangan Kunci gagal"
 
 msgid "Key length"
-msgstr ""
+msgstr "Panjang kunci"
 
 msgid "Public key file"
-msgstr ""
+msgstr "Fail kunci awam"
 
 msgid "Private key file"
-msgstr ""
+msgstr "Fail kunci persendirian"
 
 msgid "Passphrase (retype)"
-msgstr ""
+msgstr "Frasa Laluan (taip semula)"
 
 msgid "Generate Key Pair"
-msgstr ""
+msgstr "Jana Pasangan Kunci"
 
 msgid "Online Status"
-msgstr ""
+msgstr "Status Atas Talian"
 
 msgid "View Message of the Day"
-msgstr ""
+msgstr "Lihat Mesej Hari Ini"
 
 msgid "Create SILC Key Pair..."
-msgstr ""
+msgstr "Cipta Pasangan Kunci SILC..."
 
 #, c-format
 msgid "User <I>%s</I> is not present in the network"
-msgstr ""
+msgstr "Pengguna <I>%s</I> tidak hadir dalam rangkaian"
 
 msgid "Topic too long"
-msgstr ""
+msgstr "Tajuk terlalu panjang"
 
 msgid "You must specify a nick"
-msgstr ""
+msgstr "Anda mesti nyatakan gelaran"
 
 #, c-format
 msgid "channel %s not found"
-msgstr ""
+msgstr "saluran %s tidak ditemui"
 
 #, c-format
 msgid "channel modes for %s: %s"
-msgstr ""
+msgstr "mod saluran untuk %s: %s"
 
 #, c-format
 msgid "no channel modes are set on %s"
-msgstr ""
+msgstr "tiada mod saluran ditetapkan pada %s"
 
 #, c-format
 msgid "Failed to set cmodes for %s"
-msgstr ""
+msgstr "Gagal menetapkan cmode untuk %s"
 
 #, c-format
 msgid "Unknown command: %s, (may be a client bug)"
@@ -7437,26 +7447,26 @@ msgstr ""
 #. *< version
 #. *  summary
 msgid "SILC Protocol Plugin"
-msgstr ""
+msgstr "Pemalam Protokol SILC"
 
 #. *  description
 msgid "Secure Internet Live Conferencing (SILC) Protocol"
 msgstr ""
 
 msgid "Network"
-msgstr ""
+msgstr "Rangkaian"
 
 msgid "Public Key file"
-msgstr ""
+msgstr "Fail Kunci Awam"
 
 msgid "Private Key file"
-msgstr ""
+msgstr "Fail Kunci Persendirian"
 
 msgid "Cipher"
-msgstr ""
+msgstr "Sifer"
 
 msgid "HMAC"
-msgstr ""
+msgstr "HMAC"
 
 msgid "Use Perfect Forward Secrecy"
 msgstr ""
@@ -7477,49 +7487,49 @@ msgid "Digitally sign and verify all messages"
 msgstr ""
 
 msgid "Creating SILC key pair..."
-msgstr ""
+msgstr "Mencipta pasangan kunci SILC..."
 
 msgid "Unable to create SILC key pair"
-msgstr ""
+msgstr "Tidak boleh cipta pasangan kunci SILC"
 
 #. Hint for translators: Please check the tabulator width here and in
 #. the next strings (short strings: 2 tabs, longer strings 1 tab,
 #. sum: 3 tabs or 24 characters)
 #, c-format
 msgid "Real Name: \t%s\n"
-msgstr ""
+msgstr "Nama Sebenar: \t%s\n"
 
 #, c-format
 msgid "User Name: \t%s\n"
-msgstr ""
+msgstr "Nama Pengguna: \t%s\n"
 
 #, c-format
 msgid "Email: \t\t%s\n"
-msgstr ""
+msgstr "Emel: \t\t%s\n"
 
 #, c-format
 msgid "Host Name: \t%s\n"
-msgstr ""
+msgstr "Nama Hos: \t%s\n"
 
 #, c-format
 msgid "Organization: \t%s\n"
-msgstr ""
+msgstr "Organisasi: \t%s\n"
 
 #, c-format
 msgid "Country: \t%s\n"
-msgstr ""
+msgstr "Negara: \t%s\n"
 
 #, c-format
 msgid "Algorithm: \t%s\n"
-msgstr ""
+msgstr "Algoritma: \t%s\n"
 
 #, c-format
 msgid "Key Length: \t%d bits\n"
-msgstr ""
+msgstr "Panjang Kunci: \t%d bits\n"
 
 #, c-format
 msgid "Version: \t%s\n"
-msgstr ""
+msgstr "Versi: \t%s\n"
 
 #, c-format
 msgid ""
@@ -7535,22 +7545,22 @@ msgid ""
 msgstr ""
 
 msgid "Public Key Information"
-msgstr ""
+msgstr "Maklumat Kunci Awam"
 
 msgid "Paging"
-msgstr ""
+msgstr "Kelui"
 
 msgid "Video Conferencing"
-msgstr ""
+msgstr "Sidang Video"
 
 msgid "Computer"
-msgstr ""
+msgstr "Komputer"
 
 msgid "PDA"
-msgstr ""
+msgstr "PDA"
 
 msgid "Terminal"
-msgstr ""
+msgstr "Terminal"
 
 #, c-format
 msgid "%s sent message to whiteboard. Would you like to open the whiteboard?"
@@ -7563,13 +7573,13 @@ msgid ""
 msgstr ""
 
 msgid "Whiteboard"
-msgstr ""
+msgstr "Papan Putih"
 
 msgid "No server statistics available"
-msgstr ""
+msgstr "Tiada statistik pelayan tersedia"
 
 msgid "Error during connecting to SILC Server"
-msgstr ""
+msgstr "Ralat ketika menyambung dengan Pelayan SILC"
 
 #, c-format
 msgid "Failure: Version mismatch, upgrade your client"
@@ -7601,15 +7611,15 @@ msgstr ""
 
 #, c-format
 msgid "Failure: Incorrect signature"
-msgstr ""
+msgstr "Gagal: Tandatangan salah"
 
 #, c-format
 msgid "Failure: Invalid cookie"
-msgstr ""
+msgstr "Gagal: Kuki tidak sah"
 
 #, c-format
 msgid "Failure: Authentication failed"
-msgstr ""
+msgstr "Gagal: Pengesahihan gagal"
 
 msgid "Unable to initialize SILC Client connection"
 msgstr ""
@@ -7619,16 +7629,16 @@ msgstr ""
 
 #, c-format
 msgid "Unable to load SILC key pair: %s"
-msgstr ""
+msgstr "Tidak boleh muatkan pasangan kunci SILC: %s"
 
 msgid "Unable to create connection"
-msgstr ""
+msgstr "Tidak boleh cipta sambungan"
 
 msgid "Unknown server response"
-msgstr ""
+msgstr "Respon pelayan tidak diketahui"
 
 msgid "Unable to create listen socket"
-msgstr ""
+msgstr "Tidak boleh dengar soket"
 
 msgid "Unable to resolve hostname"
 msgstr ""
@@ -7658,13 +7668,13 @@ msgid "Publish status (note: everyone may watch you)"
 msgstr ""
 
 msgid "Use UDP"
-msgstr ""
+msgstr "Guna UDP"
 
 msgid "Use proxy"
-msgstr ""
+msgstr "Guna proksi"
 
 msgid "Proxy"
-msgstr ""
+msgstr "Proksi"
 
 msgid "Auth User"
 msgstr ""
@@ -7682,29 +7692,29 @@ msgid "Unable to send to chat %s,%s,%s"
 msgstr ""
 
 msgid "User is offline"
-msgstr ""
+msgstr "Pengguna diluar talian"
 
 msgid "User"
-msgstr ""
+msgstr "Pengguna"
 
 msgid "Hidden or not logged-in"
-msgstr ""
+msgstr "Tersembunyi atau tidak mendaftar-masuk"
 
 #, c-format
 msgid "<br>At %s since %s"
 msgstr ""
 
 msgid "Anyone"
-msgstr ""
+msgstr "Sesiapa Sahaja"
 
 msgid "_Class:"
-msgstr ""
+msgstr "_Kelas:"
 
 msgid "_Instance:"
-msgstr ""
+msgstr "_Kejadian:"
 
 msgid "_Recipient:"
-msgstr ""
+msgstr "_Penerima:"
 
 #, c-format
 msgid "Attempt to subscribe to %s,%s,%s failed"
@@ -7751,10 +7761,10 @@ msgid "zc &lt;class&gt;: Send a message to &lt;<i>class</i>,PERSONAL,*&gt;"
 msgstr ""
 
 msgid "Resubscribe"
-msgstr ""
+msgstr "Langgan Semula"
 
 msgid "Retrieve subscriptions from server"
-msgstr ""
+msgstr "Menerima langganan dari pelayan"
 
 #. *< type
 #. *< ui_requirement
@@ -7767,13 +7777,13 @@ msgstr ""
 #. *  summary
 #. *  description
 msgid "Zephyr Protocol Plugin"
-msgstr ""
+msgstr "Pemalam Protokol Zephyr"
 
 msgid "Use tzc"
-msgstr ""
+msgstr "Guna tzc"
 
 msgid "tzc command"
-msgstr ""
+msgstr "Perintah tzc"
 
 msgid "Export to .anyone"
 msgstr ""
@@ -7811,24 +7821,24 @@ msgstr ""
 
 #, c-format
 msgid "Error resolving %s"
-msgstr ""
+msgstr "Ralat meleraikan %s"
 
 #, c-format
 msgid "Requesting %s's attention..."
-msgstr ""
+msgstr "Meminta perhatian %s..."
 
 #, c-format
 msgid "%s has requested your attention!"
-msgstr ""
+msgstr "%s meminta perhatian anda!"
 
 #. *
 #. * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
 #.
 msgid "_Yes"
-msgstr ""
+msgstr "_Ya"
 
 msgid "_No"
-msgstr ""
+msgstr "_Tidak"
 
 #. *
 #. * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
@@ -7838,7 +7848,7 @@ msgstr ""
 #. * buttons.
 #.
 msgid "_Accept"
-msgstr ""
+msgstr "_Terima"
 
 #. *
 #. * The default message to use when the user becomes auto-away.
@@ -7847,11 +7857,11 @@ msgid "I'm not here right now"
 msgstr ""
 
 msgid "saved statuses"
-msgstr ""
+msgstr "status tersimpan"
 
 #, c-format
 msgid "%s is now known as %s.\n"
-msgstr ""
+msgstr "%s kini dikenali sebagai %s.\n"
 
 #, c-format
 msgid ""
@@ -7864,45 +7874,45 @@ msgid "%s has invited %s to the chat room %s\n"
 msgstr ""
 
 msgid "Accept chat invitation?"
-msgstr ""
+msgstr "Terima jemputan sembang?"
 
 #. Shortcut
 msgid "Shortcut"
-msgstr ""
+msgstr "Pintasan"
 
 msgid "The text-shortcut for the smiley"
-msgstr ""
+msgstr "Pintasan-teks untuk smiley"
 
 #. Stored Image
 msgid "Stored Image"
-msgstr ""
+msgstr "Imej Tersimpan"
 
 msgid "Stored Image. (that'll have to do for now)"
 msgstr ""
 
 msgid "SSL Connection Failed"
-msgstr ""
+msgstr "Sambungan SSL Gagal"
 
 msgid "SSL Handshake Failed"
-msgstr ""
+msgstr "Jabat Tangan SSL Gagal"
 
 msgid "SSL peer presented an invalid certificate"
 msgstr ""
 
 msgid "Unknown SSL error"
-msgstr ""
+msgstr "Ralat SSL tidak diketahui"
 
 msgid "Unset"
-msgstr ""
+msgstr "Nyahtetap"
 
 msgid "Do not disturb"
-msgstr ""
+msgstr "Jangan ganggu"
 
 msgid "Extended away"
 msgstr ""
 
 msgid "Feeling"
-msgstr ""
+msgstr "Berasa"
 
 #, c-format
 msgid "%s (%s) changed status from %s to %s"
@@ -7910,27 +7920,27 @@ msgstr ""
 
 #, c-format
 msgid "%s (%s) is now %s"
-msgstr ""
+msgstr "%s (%s) kini adalah %s"
 
 #, c-format
 msgid "%s (%s) is no longer %s"
-msgstr ""
+msgstr "%s (%s) tiada lagi %s"
 
 #, c-format
 msgid "%s became idle"
-msgstr ""
+msgstr "%s telah jadi melahu"
 
 #, c-format
 msgid "%s became unidle"
-msgstr ""
+msgstr "%s telah jadi aktif"
 
 #, c-format
 msgid "+++ %s became idle"
-msgstr ""
+msgstr "+++ %s telah jadi melahu"
 
 #, c-format
 msgid "+++ %s became unidle"
-msgstr ""
+msgstr "+++ %s telah jadi aktif"
 
 #.
 #. * This string determines how some dates are displayed.  The default
@@ -7940,43 +7950,43 @@ msgstr ""
 #.
 #, c-format
 msgid "%x %X"
-msgstr ""
+msgstr "%x %X"
 
 msgid "Calculating..."
-msgstr ""
+msgstr "Mengira..."
 
 msgid "Unknown."
-msgstr ""
+msgstr "Tidak diketahui."
 
 #, c-format
 msgid "%d second"
 msgid_plural "%d seconds"
-msgstr[0] ""
+msgstr[0] "%d saat"
 
 #, c-format
 msgid "%d day"
 msgid_plural "%d days"
-msgstr[0] ""
+msgstr[0] "%d hari"
 
 #, c-format
 msgid "%s, %d hour"
 msgid_plural "%s, %d hours"
-msgstr[0] ""
+msgstr[0] "%s, %d jam"
 
 #, c-format
 msgid "%d hour"
 msgid_plural "%d hours"
-msgstr[0] ""
+msgstr[0] "%d jam"
 
 #, c-format
 msgid "%s, %d minute"
 msgid_plural "%s, %d minutes"
-msgstr[0] ""
+msgstr[0] "%s, %d minit"
 
 #, c-format
 msgid "%d minute"
 msgid_plural "%d minutes"
-msgstr[0] ""
+msgstr[0] "%d minit"
 
 #, c-format
 msgid "Could not open %s: Redirected too many times"
@@ -7984,7 +7994,7 @@ msgstr ""
 
 #, c-format
 msgid "Unable to connect to %s"
-msgstr ""
+msgstr "Tidak boleh sambung dengan %s"
 
 #, c-format
 msgid "Error reading from %s: response too long (%d bytes limit)"
@@ -7998,47 +8008,47 @@ msgstr ""
 
 #, c-format
 msgid "Error reading from %s: %s"
-msgstr ""
+msgstr "Ralat membaca dari %s: %s"
 
 #, c-format
 msgid "Error writing to %s: %s"
-msgstr ""
+msgstr "Ralat menulis ke %s: %s"
 
 #, c-format
 msgid "Unable to connect to %s: %s"
-msgstr ""
+msgstr "Tidak boleh sambung dengan %s: %s"
 
 #, c-format
 msgid " - %s"
-msgstr ""
+msgstr " - %s"
 
 #, c-format
 msgid " (%s)"
-msgstr ""
+msgstr " (%s)"
 
 #. 10053
 msgid "Connection interrupted by other software on your computer."
-msgstr ""
+msgstr "Sambungan disampuk oleh perisian lain dalam komputer anda."
 
 #. 10054
 msgid "Remote host closed connection."
-msgstr ""
+msgstr "Hos jauh menutup sambungan."
 
 #. 10060
 msgid "Connection timed out."
-msgstr ""
+msgstr "Sambungan tamat masa."
 
 #. 10061
 msgid "Connection refused."
-msgstr ""
+msgstr "Sambungan ditolak."
 
 #. 10048
 msgid "Address already in use."
-msgstr ""
+msgstr "Alamat sudah digunakan."
 
 #, c-format
 msgid "Error Reading %s"
-msgstr ""
+msgstr "Ralat Membaca %s"
 
 #, c-format
 msgid ""
@@ -8047,7 +8057,7 @@ msgid ""
 msgstr ""
 
 msgid "Instant Messaging Client"
-msgstr ""
+msgstr "Klien Pemesejan Segera"
 
 msgid ""
 "Pidgin is a chat program which lets you log in to accounts on multiple chat "
@@ -8060,70 +8070,70 @@ msgid ""
 msgstr ""
 
 msgid "The buddy list showing friends on different networks."
-msgstr ""
+msgstr "Senarai rakan menunjukkan rakan yang berada dalam pelbagai rangkaian."
 
 msgid "Pidgin Internet Messenger"
-msgstr ""
+msgstr "Pemesej Internet Pidgin"
 
 msgid "Internet Messenger"
-msgstr ""
+msgstr "Pemesej Internet"
 
 msgid "Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, and more"
 msgstr ""
 
 #. Build the login options frame.
 msgid "Login Options"
-msgstr ""
+msgstr "Pilihan Daftar Masuk"
 
 msgid "Pro_tocol:"
-msgstr ""
+msgstr "Pro_tokol:"
 
 msgid "_Username:"
-msgstr ""
+msgstr "_Nama Pengguna:"
 
 msgid "Remember pass_word"
-msgstr ""
+msgstr "Ingat kata _laluan"
 
 #. Build the user options frame.
 msgid "User Options"
-msgstr ""
+msgstr "Pilihan Pengguna"
 
 msgid "_Local alias:"
-msgstr ""
+msgstr "Alias se_tempat:"
 
 msgid "New _mail notifications"
-msgstr ""
+msgstr "Pemberitahuan _mel baharu"
 
 #. Buddy icon
 msgid "Use this buddy _icon for this account:"
 msgstr ""
 
 msgid "Ad_vanced"
-msgstr ""
+msgstr "_Lanjutan"
 
 msgid "Use GNOME Proxy Settings"
-msgstr ""
+msgstr "Gua Tetapan Proksi GNOME"
 
 msgid "Use Global Proxy Settings"
-msgstr ""
+msgstr "Gua Tetapan Proksi Sejagat"
 
 msgid "No Proxy"
-msgstr ""
+msgstr "Tiada Proksi"
 
 msgid "SOCKS 4"
-msgstr ""
+msgstr "SOCKS 4"
 
 msgid "SOCKS 5"
-msgstr ""
+msgstr "SOCKS 5"
 
 msgid "Tor/Privacy (SOCKS5)"
-msgstr ""
+msgstr "Tor/Privacy (SOCKS5)"
 
 msgid "HTTP"
-msgstr ""
+msgstr "HTTP"
 
 msgid "Use Environmental Settings"
-msgstr ""
+msgstr "Guna Tetapan Mesra Alam"
 
 #. This is an easter egg.
 #. It means one of two things, both intended as humourus:
@@ -8138,46 +8148,46 @@ msgid "you can see the butterflies mating"
 msgstr ""
 
 msgid "Proxy _type:"
-msgstr ""
+msgstr "_Jenis proksi:"
 
 msgid "_Host:"
-msgstr ""
+msgstr "_Hos:"
 
 msgid "_Port:"
-msgstr ""
+msgstr "_Port:"
 
 msgid "Pa_ssword:"
-msgstr ""
+msgstr "Ka_ta Laluan:"
 
 msgid "Use _silence suppression"
 msgstr ""
 
 msgid "_Voice and Video"
-msgstr ""
+msgstr "_Suara dan Video"
 
 msgid "Unable to save new account"
-msgstr ""
+msgstr "Tidak boleh simpan akaun baharu"
 
 msgid "An account already exists with the specified criteria."
 msgstr ""
 
 msgid "Add Account"
-msgstr ""
+msgstr "Tambah Akaun"
 
 msgid "_Basic"
-msgstr ""
+msgstr "_Asas"
 
 msgid "Create _this new account on the server"
-msgstr ""
+msgstr "Cipta akaun baha_ru ini pada pelayan"
 
 msgid "P_roxy"
-msgstr ""
+msgstr "P_roksi"
 
 msgid "Enabled"
-msgstr ""
+msgstr "Dibenarkan"
 
 msgid "Protocol"
-msgstr ""
+msgstr "Protokol"
 
 #, c-format
 msgid ""
@@ -8203,110 +8213,110 @@ msgid "%s%s%s%s wants to add you (%s) to his or her buddy list%s%s"
 msgstr ""
 
 msgid "Send Instant Message"
-msgstr ""
+msgstr "Hantar Mesej Segera"
 
 #. Buddy List
 msgid "Background Color"
-msgstr ""
+msgstr "Warna Latar Belakang"
 
 msgid "The background color for the buddy list"
-msgstr ""
+msgstr "Warna latar belakang untuk senarai rakan"
 
 msgid "Layout"
-msgstr ""
+msgstr "Bentangan"
 
 msgid "The layout of icons, name, and status of the buddy list"
-msgstr ""
+msgstr "Bentangan ikon, nama, dan status senarai rakan"
 
 #. Group
 #. Note to translators: These two strings refer to the background color
 #. of a buddy list group when in its expanded state
 msgid "Expanded Background Color"
-msgstr ""
+msgstr "Warna Latar Belakang Diperluaskan"
 
 msgid "The background color of an expanded group"
-msgstr ""
+msgstr "Warna latar belakang bagi kumpulan diperluaskan"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list group when in its expanded state
 msgid "Expanded Text"
-msgstr ""
+msgstr "Teks Diperluaskan"
 
 msgid "The text information for when a group is expanded"
-msgstr ""
+msgstr "Maklumat teks bila kumpulan diperluaskan"
 
 #. Note to translators: These two strings refer to the background color
 #. of a buddy list group when in its collapsed state
 msgid "Collapsed Background Color"
-msgstr ""
+msgstr "Warna Latar Belakang Dikuncup"
 
 msgid "The background color of a collapsed group"
-msgstr ""
+msgstr "Warna latar belakang bagi kumpulan dikuncup"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list group when in its collapsed state
 msgid "Collapsed Text"
-msgstr ""
+msgstr "Teks Dikuncup"
 
 msgid "The text information for when a group is collapsed"
-msgstr ""
+msgstr "Maklumat teks bila kumpulan dikuncup"
 
 #. Buddy
 #. Note to translators: These two strings refer to the background color
 #. of a buddy list contact or chat room
 msgid "Contact/Chat Background Color"
-msgstr ""
+msgstr "Warna Latar Belakang Kenalan/Sembang"
 
 msgid "The background color of a contact or chat"
-msgstr ""
+msgstr "Warna latar belakang bagi kenalan atau sembangdikuncup"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list contact when in its expanded state
 msgid "Contact Text"
-msgstr ""
+msgstr "Teks Kenalan"
 
 msgid "The text information for when a contact is expanded"
-msgstr ""
+msgstr "Maklumat teks bila kenalan diperluaskan"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list buddy when it is online
 msgid "Online Text"
-msgstr ""
+msgstr "Teks Atas Talian"
 
 msgid "The text information for when a buddy is online"
-msgstr ""
+msgstr "Maklumat teks bila rakan berada diatas talian"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list buddy when it is away
 msgid "Away Text"
-msgstr ""
+msgstr "Teks Keluar"
 
 msgid "The text information for when a buddy is away"
-msgstr ""
+msgstr "Maklumat teks bila rakan berada telah keluar"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list buddy when it is offline
 msgid "Offline Text"
-msgstr ""
+msgstr "Teks Luar Talian"
 
 msgid "The text information for when a buddy is offline"
-msgstr ""
+msgstr "Maklumat teks bila rakan berada diluar talian"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list buddy when it is idle
 msgid "Idle Text"
-msgstr ""
+msgstr "Teks Melahu"
 
 msgid "The text information for when a buddy is idle"
-msgstr ""
+msgstr "Maklumat teks bila rakan sedang melahu"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list buddy when they have sent you a new message
 msgid "Message Text"
-msgstr ""
+msgstr "Teks Mesej"
 
 msgid "The text information for when a buddy has an unread message"
-msgstr ""
+msgstr "Maklumat teks bila rakan mempunyai mesej belum dibaca"
 
 #. Note to translators: These two strings refer to the font and color
 #. of a buddy list buddy when they have sent you a new message
@@ -8337,7 +8347,7 @@ msgid "Please update the necessary fields."
 msgstr ""
 
 msgid "A_ccount"
-msgstr ""
+msgstr "A_kaun"
 
 msgid ""
 "Please enter the appropriate information about the chat you would like to "
@@ -8345,89 +8355,89 @@ msgid ""
 msgstr ""
 
 msgid "Room _List"
-msgstr ""
+msgstr "_Senarai Bilik"
 
 msgid "_Block"
-msgstr ""
+msgstr "_Sekat"
 
 msgid "Un_block"
-msgstr ""
+msgstr "_Jangan Sekat"
 
 msgid "Move to"
-msgstr ""
+msgstr "Alih ke"
 
 msgid "Get _Info"
-msgstr ""
+msgstr "Dapatkan _Maklumat"
 
 msgid "I_M"
-msgstr ""
+msgstr "I_M"
 
 msgid "_Audio Call"
-msgstr ""
+msgstr "Panggilan _Audio"
 
 msgid "Audio/_Video Call"
-msgstr ""
+msgstr "Panggilan Audio/_Video"
 
 msgid "_Video Call"
-msgstr ""
+msgstr "Panggilan _Video"
 
 msgid "_Send File..."
-msgstr ""
+msgstr "_Hantar Fail..."
 
 msgid "Add Buddy _Pounce..."
-msgstr ""
+msgstr "Tambah Terjah _Rakan..."
 
 msgid "View _Log"
-msgstr ""
+msgstr "Lihat _Log"
 
 msgid "Hide When Offline"
-msgstr ""
+msgstr "Sembunyi Bila Diluar-talian"
 
 msgid "Show When Offline"
-msgstr ""
+msgstr "Tunjuk Bila Diluar-talian"
 
 msgid "_Alias..."
-msgstr ""
+msgstr "_Alias..."
 
 msgid "_Remove"
-msgstr ""
+msgstr "_Buang"
 
 msgid "Set Custom Icon"
-msgstr ""
+msgstr "Tetapkan Ikon Suai"
 
 msgid "Remove Custom Icon"
-msgstr ""
+msgstr "Buang Ikon Suai"
 
 msgid "Add _Buddy..."
-msgstr ""
+msgstr "Tambah _Rakan..."
 
 msgid "Add C_hat..."
-msgstr ""
+msgstr "Tambah S_embang..."
 
 msgid "_Delete Group"
-msgstr ""
+msgstr "Pa_dam Kumpulan"
 
 msgid "_Rename"
-msgstr ""
+msgstr "_Nama Semula"
 
 #. join button
 msgid "_Join"
-msgstr ""
+msgstr "S_ertai"
 
 msgid "Auto-Join"
-msgstr ""
+msgstr "Auto-Serta"
 
 msgid "Persistent"
 msgstr ""
 
 msgid "_Edit Settings..."
-msgstr ""
+msgstr "S_unting Tetapan..."
 
 msgid "_Collapse"
-msgstr ""
+msgstr "_Kuncup"
 
 msgid "_Expand"
-msgstr ""
+msgstr "Ke_mbang"
 
 msgid "/Tools/Mute Sounds"
 msgstr ""
@@ -8440,16 +8450,16 @@ msgstr ""
 #. * everything that calls this function checks for one of the
 #. * above node types first.
 msgid "Unknown node type"
-msgstr ""
+msgstr "Jenis nod tidak diketahui"
 
 msgid "Please select your mood from the list"
-msgstr ""
+msgstr "Sila pilih mood anda berdasarkan senarai"
 
 msgid "Message (optional)"
-msgstr ""
+msgstr "Mesej (pilihan)"
 
 msgid "Edit User Mood"
-msgstr ""
+msgstr "Sunting Mod Pengguna"
 
 #. NOTE: Do not set any accelerator to Control+O. It is mapped by
 #. gtk_blist_key_press_cb to "Get User Info" on the selected buddy.
@@ -8573,55 +8583,59 @@ msgstr ""
 
 #, c-format
 msgid "<b>Account:</b> %s"
-msgstr ""
+msgstr "<b>Akaun:</b> %s"
 
 #, c-format
 msgid ""
 "\n"
 "<b>Occupants:</b> %d"
 msgstr ""
+"\n"
+"<b>Penduduk:</b> %d"
 
 #, c-format
 msgid ""
 "\n"
 "<b>Topic:</b> %s"
 msgstr ""
+"\n"
+"<b>Tajuk:</b> %s"
 
 msgid "(no topic set)"
-msgstr ""
+msgstr "(tiada tajuk ditetapkan)"
 
 msgid "Buddy Alias"
-msgstr ""
+msgstr "Alias Rakan"
 
 msgid "Logged In"
-msgstr ""
+msgstr "Telah Daftar Masuk"
 
 msgid "Last Seen"
-msgstr ""
+msgstr "Terakhir Dilihat"
 
 msgid "Spooky"
-msgstr ""
+msgstr "Menakutkan"
 
 msgid "Awesome"
-msgstr ""
+msgstr "Hebat"
 
 msgid "Rockin'"
-msgstr ""
+msgstr "Gaya Rock"
 
 msgid "Total Buddies"
-msgstr ""
+msgstr "Jumlah Rakan"
 
 #, c-format
 msgid "Idle %dd %dh %02dm"
-msgstr ""
+msgstr "Melahu %dd %dh %02dm"
 
 #, c-format
 msgid "Idle %dh %02dm"
-msgstr ""
+msgstr "Melahu %dh %02dm"
 
 #, c-format
 msgid "Idle %dm"
-msgstr ""
+msgstr "Melahu %dm"
 
 msgid "/Buddies/New Instant Message..."
 msgstr ""
@@ -8650,36 +8664,36 @@ msgstr ""
 #, c-format
 msgid "%d unread message from %s\n"
 msgid_plural "%d unread messages from %s\n"
-msgstr[0] ""
+msgstr[0] "%d mesej belum dibaca daripada %s\n"
 
 msgid "Manually"
-msgstr ""
+msgstr "Secara manual"
 
 msgid "By status"
-msgstr ""
+msgstr "Mengikut status"
 
 msgid "By recent log activity"
-msgstr ""
+msgstr "Mengikut aktiviti log terkini"
 
 #, c-format
 msgid "%s disconnected"
-msgstr ""
+msgstr "%s telah terputus"
 
 #, c-format
 msgid "%s disabled"
-msgstr ""
+msgstr "%s dilumpuhkan"
 
 msgid "Reconnect"
-msgstr ""
+msgstr "Sambung Semula"
 
 msgid "Re-enable"
-msgstr ""
+msgstr "Benarkan-semula"
 
 msgid "SSL FAQs"
 msgstr ""
 
 msgid "Welcome back!"
-msgstr ""
+msgstr "Selamat kembali!"
 
 #, c-format
 msgid "%d account was disabled because you signed on from another location:"
@@ -8688,13 +8702,13 @@ msgid_plural ""
 msgstr[0] ""
 
 msgid "<b>Username:</b>"
-msgstr ""
+msgstr "<b>Nama Pengguna:</b>"
 
 msgid "<b>Password:</b>"
-msgstr ""
+msgstr "<b>Kata Laluan:</b>"
 
 msgid "_Login"
-msgstr ""
+msgstr "_Daftar Masuk"
 
 msgid "/Accounts"
 msgstr ""
@@ -8728,22 +8742,22 @@ msgid "/Buddies/Show/Protocol Icons"
 msgstr ""
 
 msgid "Add a buddy.\n"
-msgstr ""
+msgstr "Tambah seorang rakan.\n"
 
 msgid "Buddy's _username:"
-msgstr ""
+msgstr "_Nama pengguna rakan:"
 
 msgid "(Optional) A_lias:"
-msgstr ""
+msgstr "(Pilihan) A_lias:"
 
 msgid "(Optional) _Invite message:"
-msgstr ""
+msgstr "(Pilihan) Mesej _jemput:"
 
 msgid "Add buddy to _group:"
-msgstr ""
+msgstr "Tambah rakan ke dalam _kumpulan:anda?"
 
 msgid "This protocol does not support chat rooms."
-msgstr ""
+msgstr "Protokol ini tidak menyokong bilik sembang."
 
 msgid ""
 "You are not currently signed on with any protocols that have the ability to "
@@ -8756,10 +8770,10 @@ msgid ""
 msgstr ""
 
 msgid "A_lias:"
-msgstr ""
+msgstr "A_lias:"
 
 msgid "_Group:"
-msgstr ""
+msgstr "_Kumpulan:"
 
 msgid "Automatically _join when account connects"
 msgstr ""
@@ -8771,7 +8785,7 @@ msgid "Please enter the name of the group to be added."
 msgstr ""
 
 msgid "Enable Account"
-msgstr ""
+msgstr "Benarkan Akaun"
 
 msgid "<PurpleMain>/Accounts/Enable Account"
 msgstr ""
@@ -8780,16 +8794,16 @@ msgid "<PurpleMain>/Accounts/"
 msgstr ""
 
 msgid "_Edit Account"
-msgstr ""
+msgstr "_Sunting Akaun"
 
 msgid "Set _Mood..."
-msgstr ""
+msgstr "Tetapkan _Mood..."
 
 msgid "No actions available"
-msgstr ""
+msgstr "Tiada tindakan tersedia"
 
 msgid "_Disable"
-msgstr ""
+msgstr "_Dilumpuhkan"
 
 msgid "/Tools"
 msgstr ""
@@ -8798,17 +8812,17 @@ msgid "/Buddies/Sort Buddies"
 msgstr ""
 
 msgid "Type the host name for this certificate."
-msgstr ""
+msgstr "Jenis nama hos bagi sijil ini."
 
 #. Widget creation function
 msgid "SSL Servers"
-msgstr ""
+msgstr "Pelayan SSL"
 
 msgid "Supported debug options are: plugins, version"
 msgstr ""
 
 msgid "Unknown command."
-msgstr ""
+msgstr "Perintah tidak diketahui."
 
 msgid "That buddy is not on the same protocol as this chat."
 msgstr ""
@@ -8821,53 +8835,53 @@ msgid "Invite Buddy Into Chat Room"
 msgstr ""
 
 msgid "_Buddy:"
-msgstr ""
+msgstr "_Rakan:"
 
 msgid "_Message:"
-msgstr ""
+msgstr "_Mesej:"
 
 #, c-format
 msgid "<h1>Conversation with %s</h1>\n"
-msgstr ""
+msgstr "<h1>Perbualan dengan %s</h1>\n"
 
 msgid "Save Conversation"
-msgstr ""
+msgstr "Simpan Perbualan"
 
 msgid "Un-Ignore"
-msgstr ""
+msgstr "Nyah-Abai"
 
 msgid "Ignore"
-msgstr ""
+msgstr "Abai"
 
 msgid "Get Away Message"
-msgstr ""
+msgstr "Dapatkan Mesej Keluar"
 
 msgid "Last Said"
-msgstr ""
+msgstr "Sebutan Terakhir"
 
 msgid "Unable to save icon file to disk."
-msgstr ""
+msgstr "Tidak boleh simpan fail ikon ke dalam cakera."
 
 msgid "Save Icon"
-msgstr ""
+msgstr "Simpan Ikon"
 
 msgid "Animate"
-msgstr ""
+msgstr "Animasikan"
 
 msgid "Hide Icon"
-msgstr ""
+msgstr "Sembunyi Ikon"
 
 msgid "Save Icon As..."
-msgstr ""
+msgstr "Simpan Ikon Sebagai..."
 
 msgid "Set Custom Icon..."
-msgstr ""
+msgstr "Tetapkan Ikon Suai..."
 
 msgid "Change Size"
-msgstr ""
+msgstr "Ubah Saiz"
 
 msgid "Show All"
-msgstr ""
+msgstr "Tunjuk Semua"
 
 #. Conversation menu
 msgid "/_Conversation"
@@ -9036,35 +9050,37 @@ msgid "/Options/Show Timestamps"
 msgstr ""
 
 msgid "User is typing..."
-msgstr ""
+msgstr "Pengguna sedang menaip..."
 
 #, c-format
 msgid ""
 "\n"
 "%s has stopped typing"
 msgstr ""
+"\n"
+"%s telah berhenti menaip"
 
 #. Build the Send To menu
 msgid "S_end To"
-msgstr ""
+msgstr "_Hantar Kepada"
 
 msgid "_Send"
-msgstr ""
+msgstr "_Hantar"
 
 #. Setup the label telling how many people are in the room.
 msgid "0 people in room"
-msgstr ""
+msgstr "0 orang di dalam bilik"
 
 msgid "Close Find bar"
-msgstr ""
+msgstr "Tutup palang Cari"
 
 msgid "Find:"
-msgstr ""
+msgstr "Cari:"
 
 #, c-format
 msgid "%d person in room"
 msgid_plural "%d people in room"
-msgstr[0] ""
+msgstr[0] "%d orang di dalam bilik"
 
 msgid "Stopped Typing"
 msgstr ""
@@ -9073,10 +9089,10 @@ msgid "Nick Said"
 msgstr ""
 
 msgid "Unread Messages"
-msgstr ""
+msgstr "Mesej Belum Dibaca"
 
 msgid "New Event"
-msgstr ""
+msgstr "Perisitwa Baharu"
 
 msgid ""
 "The account has disconnected and you are no longer in this chat. You will "
@@ -9087,435 +9103,435 @@ msgid "clear: Clears all conversation scrollbacks."
 msgstr ""
 
 msgid "Confirm close"
-msgstr ""
+msgstr "Sahkan tutup"
 
 msgid "You have unread messages. Are you sure you want to close the window?"
 msgstr ""
 
 msgid "Close other tabs"
-msgstr ""
+msgstr "Tutup tab lain"
 
 msgid "Close all tabs"
-msgstr ""
+msgstr "Tutup semua tab"
 
 msgid "Detach this tab"
-msgstr ""
+msgstr "Tanggalkan tab ini"
 
 msgid "Close this tab"
-msgstr ""
+msgstr "Tutup tab ini"
 
 msgid "Close conversation"
-msgstr ""
+msgstr "Tutup perbualan"
 
 msgid "Last created window"
-msgstr ""
+msgstr "Tetingkap terakhir dicipta"
 
 msgid "Separate IM and Chat windows"
-msgstr ""
+msgstr "Pisahkan tetingkap IM dengan Sembang"
 
 msgid "New window"
-msgstr ""
+msgstr "Tetingkap baharu"
 
 msgid "By group"
-msgstr ""
+msgstr "Mengikut kumpulan"
 
 msgid "By account"
-msgstr ""
+msgstr "Mengikut akaun"
 
 msgid "Find"
-msgstr ""
+msgstr "Cari"
 
 msgid "_Search for:"
-msgstr ""
+msgstr "_Gelintar untuk:"
 
 msgid "Save Debug Log"
-msgstr ""
+msgstr "Simpan Log Nyahpepijat"
 
 msgid "Invert"
-msgstr ""
+msgstr "Songsang"
 
 msgid "Highlight matches"
-msgstr ""
+msgstr "Sorot padanan"
 
 msgid "_Icon Only"
-msgstr ""
+msgstr "_Ikon Sahaja"
 
 msgid "_Text Only"
-msgstr ""
+msgstr "_Teks Sahaja"
 
 msgid "_Both Icon & Text"
-msgstr ""
+msgstr "K_edua-dua Ikon & Teks"
 
 msgid "Filter"
-msgstr ""
+msgstr "Tapis"
 
 msgid "Right click for more options."
-msgstr ""
+msgstr "Klik kanan untuk lagi pilihan."
 
 msgid "Level "
-msgstr ""
+msgstr "Aras"
 
 msgid "Select the debug filter level."
-msgstr ""
+msgstr "Pilih aras tapis nyahpepijat."
 
 msgid "All"
-msgstr ""
+msgstr "Semua"
 
 msgid "Misc"
-msgstr ""
+msgstr "Pelbagai"
 
 msgid "Warning"
-msgstr ""
+msgstr "Amaran"
 
 msgid "Error "
-msgstr ""
+msgstr "Ralat"
 
 msgid "Fatal Error"
-msgstr ""
+msgstr "Ralat Mati"
 
 msgid "artist"
-msgstr ""
+msgstr "artis"
 
 msgid "voice and video"
-msgstr ""
+msgstr "suara dan video"
 
 msgid "support"
-msgstr ""
+msgstr "sokongan"
 
 msgid "webmaster"
-msgstr ""
+msgstr "webmaster"
 
 msgid "win32 port"
-msgstr ""
+msgstr "port win32"
 
 #. Translators: This is a person's name. For most languages we recommend
 #. not translating it.
 msgid "Ka-Hing Cheung"
-msgstr ""
+msgstr "Ka-Hing Cheung"
 
 msgid "maintainer"
-msgstr ""
+msgstr "penyelenggara"
 
 msgid "libfaim maintainer"
-msgstr ""
+msgstr "penyelenggara libfaim"
 
 #. If "lazy bum" translates literally into a serious insult, use something else or omit it.
 msgid "hacker and designated driver [lazy bum]"
-msgstr ""
+msgstr "penggodam dan pemacu khusus [lazy bum]"
 
 msgid "support/QA"
-msgstr ""
+msgstr "sokongan/SJ"
 
 msgid "XMPP"
-msgstr ""
+msgstr "XMPP"
 
 msgid "original author"
-msgstr ""
+msgstr "pengarang asal"
 
 msgid "lead developer"
-msgstr ""
+msgstr "pembangun peneraju"
 
 msgid "Senior Contributor/QA"
-msgstr ""
+msgstr "Penyumbang Senior/SJ"
 
 msgid "Afrikaans"
-msgstr ""
+msgstr "Afrika"
 
 msgid "Arabic"
-msgstr ""
+msgstr "Arab"
 
 msgid "Assamese"
-msgstr ""
+msgstr "Asam"
 
 msgid "Asturian"
-msgstr ""
+msgstr "Asturia"
 
 msgid "Belarusian Latin"
-msgstr ""
+msgstr "Latin Belarus"
 
 msgid "Bulgarian"
-msgstr ""
+msgstr "Bulgaria"
 
 msgid "Bengali"
-msgstr ""
+msgstr "Bengali"
 
 msgid "Bengali-India"
-msgstr ""
+msgstr "Bengali-India"
 
 msgid "Breton"
-msgstr ""
+msgstr "Breton"
 
 msgid "Bodo"
-msgstr ""
+msgstr "Bodo"
 
 msgid "Bosnian"
-msgstr ""
+msgstr "Bosnia"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Catal"
 
 msgid "Valencian-Catalan"
-msgstr ""
+msgstr "Catal-Valencia"
 
 msgid "Czech"
-msgstr ""
+msgstr "Czech"
 
 msgid "Danish"
-msgstr ""
+msgstr "Denmark"
 
 msgid "German"
-msgstr ""
+msgstr "Jerman"
 
 msgid "Dzongkha"
-msgstr ""
+msgstr "Dzongkha"
 
 msgid "Greek"
-msgstr ""
+msgstr "Yunani"
 
 msgid "Australian English"
-msgstr ""
+msgstr "Inggeris Australia"
 
 msgid "British English"
-msgstr ""
+msgstr "Inggeris British"
 
 msgid "Canadian English"
-msgstr ""
+msgstr "Inggeris Kanada"
 
 msgid "Esperanto"
-msgstr ""
+msgstr "Esperanto"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Sepanyol"
 
 msgid "Argentine Spanish"
-msgstr ""
+msgstr "Sepanyol Argentina"
 
 msgid "Estonian"
-msgstr ""
+msgstr "Estonia"
 
 msgid "Basque"
-msgstr ""
+msgstr "Basque"
 
 msgid "Persian"
-msgstr ""
+msgstr "Parsi"
 
 msgid "Finnish"
-msgstr ""
+msgstr "Finland"
 
 msgid "Irish"
-msgstr ""
+msgstr "Irish"
 
 msgid "Galician"
-msgstr ""
+msgstr "Galicia"
 
 msgid "Gujarati"
-msgstr ""
+msgstr "Gujarati"
 
 msgid "Gujarati Language Team"
-msgstr ""
+msgstr "Pasukan Bahasa Gujarati"
 
 msgid "Hebrew"
-msgstr ""
+msgstr "Ibrani"
 
 msgid "Hindi"
-msgstr ""
+msgstr "Hindi"
 
 msgid "Croatian"
-msgstr ""
+msgstr "Croatia"
 
 msgid "Hungarian"
-msgstr ""
+msgstr "Hungari"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "Indonesia"
 
 msgid "Italian"
-msgstr ""
+msgstr "Itali"
 
 msgid "Japanese"
-msgstr ""
+msgstr "Jepun"
 
 msgid "Georgian"
-msgstr ""
+msgstr "Georgia"
 
 msgid "Ubuntu Georgian Translators"
-msgstr ""
+msgstr "Penterjemah Georgia Ubuntu"
 
 msgid "Kazakh"
-msgstr ""
+msgstr "Kazakh"
 
 msgid "Khmer"
-msgstr ""
+msgstr "Khmer"
 
 msgid "Kannada"
-msgstr ""
+msgstr "Kannada"
 
 msgid "Kannada Translation team"
-msgstr ""
+msgstr "Pasukan Penterjemahan Kannada"
 
 msgid "Korean"
-msgstr ""
+msgstr "Korea"
 
 msgid "Kashmiri"
-msgstr ""
+msgstr "Kashmir"
 
 msgid "Kurdish"
-msgstr ""
+msgstr "Kurdish"
 
 msgid "Kurdish (Sorani)"
-msgstr ""
+msgstr "Kurdish (Sorani)"
 
 msgid "Lithuanian"
-msgstr ""
+msgstr "Lithuania"
 
 msgid "Latvian"
-msgstr ""
+msgstr "Latvia"
 
 msgid "Maithili"
-msgstr ""
+msgstr "Maithili"
 
 msgid "Meadow Mari"
-msgstr ""
+msgstr "Meadow Mari"
 
 msgid "Macedonian"
-msgstr ""
+msgstr "Macedonia"
 
 msgid "Malay"
-msgstr ""
+msgstr "Melayu"
 
 msgid "Malayalam"
-msgstr ""
+msgstr "Malayalam"
 
 msgid "Mongolian"
-msgstr ""
+msgstr "Mongolia"
 
 msgid "Marathi"
-msgstr ""
+msgstr "Marathi"
 
 msgid "Burmese"
-msgstr ""
+msgstr "Burma"
 
 msgid "Bokmål Norwegian"
-msgstr ""
+msgstr "Norway Bokmål"
 
 msgid "Nepali"
-msgstr ""
+msgstr "Nepal"
 
 msgid "Dutch, Flemish"
-msgstr ""
+msgstr "Belanda, Flemish"
 
 msgid "Norwegian Nynorsk"
-msgstr ""
+msgstr "Nynorsk Norway"
 
 msgid "Occitan"
-msgstr ""
+msgstr "Occitan"
 
 msgid "Oriya"
-msgstr ""
+msgstr "Oriya"
 
 msgid "Punjabi"
-msgstr ""
+msgstr "Punjabi"
 
 msgid "Polish"
-msgstr ""
+msgstr "Polish"
 
 msgid "Portuguese"
-msgstr ""
+msgstr "Portugis"
 
 msgid "Portuguese-Brazil"
-msgstr ""
+msgstr "Portugis-Brazil"
 
 msgid "Pashto"
-msgstr ""
+msgstr "Pashto"
 
 msgid "Romanian"
-msgstr ""
+msgstr "Romania"
 
 msgid "Russian"
-msgstr ""
+msgstr "Rusia"
 
 msgid "Sindhi"
-msgstr ""
+msgstr "Sindhi"
 
 msgid "Slovak"
-msgstr ""
+msgstr "Slovak"
 
 msgid "Slovenian"
-msgstr ""
+msgstr "Slovenia"
 
 msgid "Albanian"
-msgstr ""
+msgstr "Albania"
 
 msgid "Serbian"
-msgstr ""
+msgstr "Serbia"
 
 msgid "Serbian Latin"
-msgstr ""
+msgstr "Latin Serbia"
 
 msgid "Sinhala"
-msgstr ""
+msgstr "Sinhala"
 
 msgid "Swedish"
-msgstr ""
+msgstr "Sweden"
 
 msgid "Swahili"
-msgstr ""
+msgstr "Swahili"
 
 msgid "Tamil"
-msgstr ""
+msgstr "Tamil"
 
 msgid "Telugu"
-msgstr ""
+msgstr "Telugu"
 
 msgid "Thai"
-msgstr ""
+msgstr "Siam"
 
 msgid "Tatar"
-msgstr ""
+msgstr "Tatar"
 
 msgid "Ukranian"
-msgstr ""
+msgstr "Ukraine"
 
 msgid "Urdu"
-msgstr ""
+msgstr "Urdu"
 
 msgid "Uzbek"
-msgstr ""
+msgstr "Uzbek"
 
 #. Translators: This is a person's name. For most languages we recommend
 #. not translating it.
 msgid "Akmal Khushvakov"
-msgstr ""
+msgstr "Akmal Khushvakov"
 
 msgid "Vietnamese"
-msgstr ""
+msgstr "Vietnam"
 
 msgid "Simplified Chinese"
-msgstr ""
+msgstr "Cina Dipermudah"
 
 msgid "Hong Kong Chinese"
-msgstr ""
+msgstr "Cina Hong Kong"
 
 msgid "Traditional Chinese"
-msgstr ""
+msgstr "Cina Tradisional"
 
 msgid "Amharic"
-msgstr ""
+msgstr "Amhar"
 
 msgid "French"
-msgstr ""
+msgstr "Perancis"
 
 msgid "Armenian"
-msgstr ""
+msgstr "Armenia"
 
 msgid "Lao"
-msgstr ""
+msgstr "Lao"
 
 msgid "Turkish"
-msgstr ""
+msgstr "Turki"
 
 msgid "T.M.Thanh and the Gnome-Vi Team"
-msgstr ""
+msgstr "Pasukan T.M.Thanh dan the Gnome-Vi"
 
 #, c-format
 msgid ""
@@ -9547,57 +9563,57 @@ msgstr ""
 
 #, c-format
 msgid "About %s"
-msgstr ""
+msgstr "Perihal %s"
 
 msgid "Build Information"
-msgstr ""
+msgstr "Maklumat Binaan"
 
 #. End of not to be translated section
 #, c-format
 msgid "%s Build Information"
-msgstr ""
+msgstr "Maklumat Binaan %s"
 
 msgid "Current Developers"
-msgstr ""
+msgstr "Pembangun Semasa"
 
 msgid "Crazy Patch Writers"
-msgstr ""
+msgstr "Penulis Tampalan Gila"
 
 msgid "Retired Developers"
-msgstr ""
+msgstr "Pembangun Bersara"
 
 msgid "Retired Crazy Patch Writers"
-msgstr ""
+msgstr "Penulis Tampalan Gila Bersara"
 
 #, c-format
 msgid "%s Developer Information"
-msgstr ""
+msgstr "Maklumat Pembangun %s"
 
 msgid "Current Translators"
-msgstr ""
+msgstr "Penterjemah Semasa"
 
 msgid "Past Translators"
-msgstr ""
+msgstr "Penterjemah Dahulu"
 
 #, c-format
 msgid "%s Translator Information"
-msgstr ""
+msgstr "Maklumat Penterjemah %s"
 
 #, c-format
 msgid "%s Plugin Information"
-msgstr ""
+msgstr "Maklumat Pemalam %s"
 
 msgid "Plugin Information"
-msgstr ""
+msgstr "Maklumat Pemalam"
 
 msgid "_Name"
-msgstr ""
+msgstr "_Nama"
 
 msgid "_Account"
-msgstr ""
+msgstr "_Akaun"
 
 msgid "Get User Info"
-msgstr ""
+msgstr "Dapatkan Maklumat Pengguna"
 
 msgid ""
 "Please enter the username or alias of the person whose info you would like "
@@ -9605,26 +9621,26 @@ msgid ""
 msgstr ""
 
 msgid "View User Log"
-msgstr ""
+msgstr "Lihat Log Pengguna"
 
 msgid "Alias Contact"
-msgstr ""
+msgstr "Alias Kenalan"
 
 msgid "Enter an alias for this contact."
-msgstr ""
+msgstr "Masukkan alias untuk kenalan ini."
 
 #, c-format
 msgid "Enter an alias for %s."
-msgstr ""
+msgstr "Masukkan alias untuk %s."
 
 msgid "Alias Buddy"
-msgstr ""
+msgstr "Alias Rakan"
 
 msgid "Alias Chat"
-msgstr ""
+msgstr "Alias Sembang"
 
 msgid "Enter an alias for this chat."
-msgstr ""
+msgstr "Masukkan alias untuk sembang ini."
 
 #, c-format
 msgid ""
@@ -9636,10 +9652,10 @@ msgid_plural ""
 msgstr[0] ""
 
 msgid "Remove Contact"
-msgstr ""
+msgstr "Buang Kenalan"
 
 msgid "_Remove Contact"
-msgstr ""
+msgstr "_Buang Kenalan"
 
 #, c-format
 msgid ""
@@ -9648,10 +9664,10 @@ msgid ""
 msgstr ""
 
 msgid "Merge Groups"
-msgstr ""
+msgstr "Gabung Kumpulan"
 
 msgid "_Merge Groups"
-msgstr ""
+msgstr "_Gabung Kumpulan"
 
 #, c-format
 msgid ""
@@ -9660,10 +9676,10 @@ msgid ""
 msgstr ""
 
 msgid "Remove Group"
-msgstr ""
+msgstr "Buang Kumpulan"
 
 msgid "_Remove Group"
-msgstr ""
+msgstr "_Buang Kumpulan"
 
 #, c-format
 msgid ""
@@ -9671,10 +9687,10 @@ msgid ""
 msgstr ""
 
 msgid "Remove Buddy"
-msgstr ""
+msgstr "Buang Rakan"
 
 msgid "_Remove Buddy"
-msgstr ""
+msgstr "_Buang Rakan"
 
 #, c-format
 msgid ""
@@ -9683,140 +9699,140 @@ msgid ""
 msgstr ""
 
 msgid "Remove Chat"
-msgstr ""
+msgstr "Buang Sembang"
 
 msgid "_Remove Chat"
-msgstr ""
+msgstr "_Buang Sembang"
 
 msgid "Right-click for more unread messages...\n"
 msgstr ""
 
 msgid "_Change Status"
-msgstr ""
+msgstr "_Ubah Status"
 
 msgid "Show Buddy _List"
-msgstr ""
+msgstr "Tunjuk _Senarai Rakan"
 
 msgid "_Unread Messages"
-msgstr ""
+msgstr "Mesej Belum _Dibaca"
 
 msgid "New _Message..."
-msgstr ""
+msgstr "_Mesej Baharu..."
 
 msgid "_Accounts"
-msgstr ""
+msgstr "_Akaun"
 
 msgid "Plu_gins"
-msgstr ""
+msgstr "Pe_malam"
 
 msgid "Pr_eferences"
-msgstr ""
+msgstr "Ke_utamaan"
 
 msgid "Mute _Sounds"
 msgstr ""
 
 msgid "_Blink on New Message"
-msgstr ""
+msgstr "_Kelip jika ada Mesej Baharu"
 
 msgid "_Quit"
-msgstr ""
+msgstr "_Keluar"
 
 msgid "Not started"
-msgstr ""
+msgstr "Tidak dimulakan"
 
 msgid "<b>Receiving As:</b>"
-msgstr ""
+msgstr "<b>Menerima Sebagai:</b>"
 
 msgid "<b>Receiving From:</b>"
-msgstr ""
+msgstr "<b>Menerima Daripada:</b>"
 
 msgid "<b>Sending To:</b>"
-msgstr ""
+msgstr "<b>Menghantar Kepada:</b>"
 
 msgid "<b>Sending As:</b>"
-msgstr ""
+msgstr "<b>Menghantar Sebagai:</b>"
 
 msgid "There is no application configured to open this type of file."
-msgstr ""
+msgstr "Tiada aplikasi dikonfigur untuk membuka jenis fail ini."
 
 msgid "An error occurred while opening the file."
-msgstr ""
+msgstr "Satu ralat berlaku ketika membuka fail."
 
 #, c-format
 msgid "Error launching %s: %s"
-msgstr ""
+msgstr "Ralat melancarkan %s: %s."
 
 #, c-format
 msgid "Error running %s"
-msgstr ""
+msgstr "Ralat menjalankan %s"
 
 #, c-format
 msgid "Process returned error code %d"
-msgstr ""
+msgstr "Proses kembalikan kod ralat %d"
 
 msgid "Filename:"
-msgstr ""
+msgstr "Nama Fail:"
 
 msgid "Local File:"
-msgstr ""
+msgstr "Fail Setempat:"
 
 msgid "Speed:"
-msgstr ""
+msgstr "Kelajuan:"
 
 msgid "Time Elapsed:"
-msgstr ""
+msgstr "Masa Berlalu:"
 
 msgid "Time Remaining:"
-msgstr ""
+msgstr "Masa Berbaki:"
 
 msgid "Close this window when all transfers _finish"
-msgstr ""
+msgstr "Tutup tetingkap ini bila semua pemindahan _selesai"
 
 msgid "C_lear finished transfers"
-msgstr ""
+msgstr "Ko_songkan pemindahan selesai"
 
 #. "Download Details" arrow
 msgid "File transfer _details"
-msgstr ""
+msgstr "Pe_rincian pemindahan fail"
 
 msgid "Paste as Plain _Text"
-msgstr ""
+msgstr "Tampal sebagai _Teks Biasa"
 
 msgid "_Reset formatting"
-msgstr ""
+msgstr "_Tetap semula pemformatan"
 
 msgid "Disable _smileys in selected text"
-msgstr ""
+msgstr "Lumpuhkan _smiley dalam teks terpilih"
 
 msgid "Hyperlink color"
-msgstr ""
+msgstr "Warna hiperpautan"
 
 msgid "Color to draw hyperlinks."
-msgstr ""
+msgstr "Warna untuk lukis hiperpautan."
 
 msgid "Hyperlink visited color"
-msgstr ""
+msgstr "Warna hiperpautan dilawati"
 
 msgid "Color to draw hyperlink after it has been visited (or activated)."
 msgstr ""
 
 msgid "Hyperlink prelight color"
-msgstr ""
+msgstr "Warna pracerah hiperpautan"
 
 msgid "Color to draw hyperlinks when mouse is over them."
 msgstr ""
 
 msgid "Sent Message Name Color"
-msgstr ""
+msgstr "Warna Hantar Nama Mesej"
 
 msgid "Color to draw the name of a message you sent."
-msgstr ""
+msgstr "Warna untuk lukiskan nama mesej yang anda hantar."
 
 msgid "Received Message Name Color"
-msgstr ""
+msgstr "Warna Nama Mesej Diterima"
 
 msgid "Color to draw the name of a message you received."
-msgstr ""
+msgstr "Warna untuk lukiskan nama mesej yang anda terima."
 
 msgid "\"Attention\" Name Color"
 msgstr ""
@@ -9825,10 +9841,10 @@ msgid "Color to draw the name of a message you received containing your name."
 msgstr ""
 
 msgid "Action Message Name Color"
-msgstr ""
+msgstr "Warna Nama Mesej Tindakan"
 
 msgid "Color to draw the name of an action message."
-msgstr ""
+msgstr "Warna untuk lukiskan nama mesej tindakan."
 
 msgid "Action Message Name Color for Whispered Message"
 msgstr ""
@@ -9843,25 +9859,28 @@ msgid "Color to draw the name of a whispered message."
 msgstr ""
 
 msgid "Typing notification color"
-msgstr ""
+msgstr "Warna pemberitahuan menaip"
 
 msgid "The color to use for the typing notification"
-msgstr ""
+msgstr "Warna yang digunakan untuk pemberitahuan menaip"
 
 msgid "Typing notification font"
-msgstr ""
+msgstr "Fon pemberitahuan menaip"
 
 msgid "The font to use for the typing notification"
-msgstr ""
+msgstr "Fon yang digunakan untuk pemberitahuan menaip"
 
 msgid "Enable typing notification"
-msgstr ""
+msgstr "Benarkan pemberitahuan menaip"
 
 msgid ""
 "<span size='larger' weight='bold'>Unrecognized file type</span>\n"
 "\n"
 "Defaulting to PNG."
 msgstr ""
+"<span size='larger' weight='bold'>Jenis fail tidak dikenalpasti</span>\n"
+"\n"
+"Dilalaikan ke PNG."
 
 #, c-format
 msgid ""
@@ -9869,30 +9888,33 @@ msgid ""
 "\n"
 "%s"
 msgstr ""
+"<span size='larger' weight='bold'>Ralat menyimpan imej</span>\n"
+"\n"
+"%s"
 
 msgid "Save Image"
-msgstr ""
+msgstr "Simpan Imej"
 
 msgid "_Save Image..."
-msgstr ""
+msgstr "_Simpan Imej..."
 
 msgid "_Add Custom Smiley..."
-msgstr ""
+msgstr "T_ambah Smiley Suai..."
 
 msgid "Select Font"
-msgstr ""
+msgstr "Pilih Fon"
 
 msgid "Select Text Color"
-msgstr ""
+msgstr "Pilih Warna Teks"
 
 msgid "Select Background Color"
-msgstr ""
+msgstr "Pilih Warna Latar Belakang"
 
 msgid "_URL"
-msgstr ""
+msgstr "_URL"
 
 msgid "_Description"
-msgstr ""
+msgstr "_Keterangan"
 
 msgid ""
 "Please enter the URL and description of the link that you want to insert. "
@@ -9900,134 +9922,137 @@ msgid ""
 msgstr ""
 
 msgid "Please enter the URL of the link that you want to insert."
-msgstr ""
+msgstr "Sila masukkan URL pautan yang anda mahu sisipkan."
 
 msgid "Insert Link"
-msgstr ""
+msgstr "Sisip Pautan"
 
 msgid "_Insert"
-msgstr ""
+msgstr "S_isip"
 
 #, c-format
 msgid "Failed to store image: %s\n"
-msgstr ""
+msgstr "Gagal menyimpan imej: %s\n"
 
 msgid "Insert Image"
-msgstr ""
+msgstr "Sisip Imej"
 
 #, c-format
 msgid ""
 "This smiley is disabled because a custom smiley exists for this shortcut:\n"
 " %s"
 msgstr ""
+"Smiley ini dilumpuhkan kerana satu smiley suai telah wujud untuk pintasan "
+"ini:\n"
+"%s"
 
 msgid "Smile!"
-msgstr ""
+msgstr "Smile!"
 
 msgid "_Manage custom smileys"
-msgstr ""
+msgstr "_Urus smiley suai"
 
 msgid "This theme has no available smileys."
-msgstr ""
+msgstr "Tema ini tidak mempunyai smiley."
 
 msgid "_Font"
-msgstr ""
+msgstr "_Fon"
 
 msgid "Group Items"
-msgstr ""
+msgstr "Kelompok Item"
 
 msgid "Ungroup Items"
-msgstr ""
+msgstr "Nyahkelompok Item"
 
 msgid "Bold"
-msgstr ""
+msgstr "Tebal"
 
 msgid "Italic"
-msgstr ""
+msgstr "Condong"
 
 msgid "Underline"
-msgstr ""
+msgstr "Garis Bawah"
 
 msgid "Strikethrough"
-msgstr ""
+msgstr "Coret Tembus"
 
 msgid "Increase Font Size"
-msgstr ""
+msgstr "Tingkatkan Saiz Fon"
 
 msgid "Decrease Font Size"
-msgstr ""
+msgstr "Kecilkan Saiz Fon"
 
 msgid "Font Face"
-msgstr ""
+msgstr "Rupa Fon"
 
 msgid "Foreground Color"
-msgstr ""
+msgstr "Warna Latar Hadapan"
 
 msgid "Reset Formatting"
-msgstr ""
+msgstr "Tetap Semula Pemformatan"
 
 msgid "Insert IM Image"
-msgstr ""
+msgstr "Sisip Imej IM"
 
 msgid "Insert Smiley"
-msgstr ""
+msgstr "Sisip Smiley"
 
 msgid "Send Attention"
-msgstr ""
+msgstr "Hantar Perhatian"
 
 msgid "<b>_Bold</b>"
-msgstr ""
+msgstr "<b>_Tebal</b>"
 
 msgid "<i>_Italic</i>"
-msgstr ""
+msgstr "<i>_Condong</i>"
 
 msgid "<u>_Underline</u>"
-msgstr ""
+msgstr "<u>_Garis Bawah</u>"
 
 msgid "<span strikethrough='true'>Strikethrough</span>"
-msgstr ""
+msgstr "<span strikethrough='true'>Coret Tembus</span>"
 
 msgid "<span size='larger'>_Larger</span>"
-msgstr ""
+msgstr "<span size='larger'>_Lebih Besar</span>"
 
 msgid "_Normal"
-msgstr ""
+msgstr "_Biasa"
 
 msgid "<span size='smaller'>_Smaller</span>"
-msgstr ""
+msgstr "<span size='smaller'>Lebih _Kecil</span>"
 
 #. If we want to show the formatting for the following items, we would
 #. * need to update them when formatting changes. The above items don't need
 #. * no updating nor nothin'
 msgid "_Font face"
-msgstr ""
+msgstr "_Rupa fon"
 
 msgid "Foreground _color"
-msgstr ""
+msgstr "_Warna latar hadapan"
 
 msgid "Bac_kground color"
-msgstr ""
+msgstr "Warna latar _belakang"
 
 msgid "_Image"
-msgstr ""
+msgstr "_Imej"
 
 msgid "_Link"
-msgstr ""
+msgstr "_Pautan"
 
 msgid "_Horizontal rule"
-msgstr ""
+msgstr "Peraturan meng_ufuk"
 
 msgid "_Smile!"
-msgstr ""
+msgstr "_Smile!"
 
 msgid "_Attention!"
-msgstr ""
+msgstr "_Perhatian!"
 
 msgid "Log Deletion Failed"
-msgstr ""
+msgstr "Pemadaman Log Gagal"
 
 msgid "Check permissions and try again."
-msgstr ""
+msgstr "Periksa keizinan dan cuba lagi."
 
 #, c-format
 msgid ""
@@ -10048,10 +10073,10 @@ msgid ""
 msgstr ""
 
 msgid "Delete Log?"
-msgstr ""
+msgstr "Padam Log?"
 
 msgid "Delete Log..."
-msgstr ""
+msgstr "Padam Log...?"
 
 #, c-format
 msgid "<span size='larger' weight='bold'>Conversation in %s on %s</span>"
@@ -10063,41 +10088,43 @@ msgstr ""
 
 #. Steal the "HELP" response and use it to trigger browsing to the logs folder
 msgid "_Browse logs folder"
-msgstr ""
+msgstr "_Layar folder log"
 
 #, c-format
 msgid "%s %s. Try `%s -h' for more information.\n"
-msgstr ""
+msgstr "%s %s. Cuba `%s -h' untuk maklumat lanjut.\n"
 
 #, c-format
 msgid ""
 "Usage: %s [OPTION]...\n"
 "\n"
 msgstr ""
+"Penggunaan: %s [PILIHAN]...\n"
+"\n"
 
 msgid "DIR"
-msgstr ""
+msgstr "DIR"
 
 msgid "use DIR for config files"
-msgstr ""
+msgstr "guna DIR untuk fail konfig"
 
 msgid "print debugging messages to stdout"
-msgstr ""
+msgstr "cetak mesej penyahpepijatan ke stdout"
 
 msgid "force online, regardless of network status"
-msgstr ""
+msgstr "paksa atas-talian, tanpa mengira status rangkaian"
 
 msgid "display this help and exit"
-msgstr ""
+msgstr "papar bantuan ini kemudian keluar"
 
 msgid "allow multiple instances"
-msgstr ""
+msgstr "benarkan kejadian berbilang"
 
 msgid "don't automatically login"
-msgstr ""
+msgstr "jangan daftar masuk secara automatik"
 
 msgid "NAME"
-msgstr ""
+msgstr "NAMA"
 
 msgid ""
 "enable specified account(s) (optional argument NAME\n"
@@ -10106,10 +10133,10 @@ msgid ""
 msgstr ""
 
 msgid "X display to use"
-msgstr ""
+msgstr "Paparan X yang digunakan"
 
 msgid "display the current version and exit"
-msgstr ""
+msgstr "papar versi semasa kemudian keluar"
 
 #, c-format
 msgid ""
@@ -10132,13 +10159,13 @@ msgid "Exiting because another libpurple client is already running.\n"
 msgstr ""
 
 msgid "_Media"
-msgstr ""
+msgstr "_Media"
 
 msgid "_Hangup"
 msgstr ""
 
 msgid "Media error"
-msgstr ""
+msgstr "Ralat media"
 
 #, c-format
 msgid "%s wishes to start an audio/video session with you."
@@ -10149,7 +10176,7 @@ msgid "%s wishes to start a video session with you."
 msgstr ""
 
 msgid "Incoming Call"
-msgstr ""
+msgstr "Panggilan Masuk"
 
 #. Translators note: These are the letters on the keys of a numeric
 #. keypad; translate according to the tables in §7 of ETSI ES 202 130:
@@ -10157,65 +10184,65 @@ msgstr ""
 #.
 #. Letters on the '2' key of a numeric keypad
 msgid "ABC"
-msgstr ""
+msgstr "ABC"
 
 #. Letters on the '3' key of a numeric keypad
 msgid "DEF"
-msgstr ""
+msgstr "DEF"
 
 #. Letters on the '4' key of a numeric keypad
 msgid "GHI"
-msgstr ""
+msgstr "GHI"
 
 #. Letters on the '5' key of a numeric keypad
 msgid "JKL"
-msgstr ""
+msgstr "JKL"
 
 #. Letters on the '6' key of a numeric keypad
 msgid "MNO"
-msgstr ""
+msgstr "MNO"
 
 #. Letters on the '7' key of a numeric keypad
 msgid "PQRS"
-msgstr ""
+msgstr "PQRS"
 
 #. Letters on the '8' key of a numeric keypad
 msgid "TUV"
-msgstr ""
+msgstr "TUV"
 
 #. Letters on the '9' key of a numeric keypad
 msgid "WXYZ"
-msgstr ""
+msgstr "WXYZ"
 
 msgid "_Hold"
 msgstr ""
 
 msgid "_Pause"
-msgstr ""
+msgstr "_Jeda"
 
 msgid "_Mute"
-msgstr ""
+msgstr "_Senyap"
 
 #, c-format
 msgid "%s has %d new message."
 msgid_plural "%s has %d new messages."
-msgstr[0] ""
+msgstr[0] "%s mempunyai %d mesej baharu."
 
 #, c-format
 msgid "<b>%d new email.</b>"
 msgid_plural "<b>%d new emails.</b>"
-msgstr[0] ""
+msgstr[0] "<b>%d emel baharu.</b>"
 
 #, c-format
 msgid "The browser command \"%s\" is invalid."
-msgstr ""
+msgstr "Perintah pelayar \"%s\" tidak sah."
 
 msgid "Unable to open URL"
-msgstr ""
+msgstr "Tidak boleh buka URL"
 
 #, c-format
 msgid "Error launching \"%s\": %s"
-msgstr ""
+msgstr "Ralat melancarkan \"%s\": %s"
 
 msgid ""
 "The 'Manual' browser command has been chosen, but no command has been set."
@@ -10225,13 +10252,13 @@ msgid "Unable to open URL: the 'Manual' browser command seems invalid."
 msgstr ""
 
 msgid "No message"
-msgstr ""
+msgstr "Tiada mesej"
 
 msgid "Open All Messages"
-msgstr ""
+msgstr "Buka Semua Mesej"
 
 msgid "<span weight=\"bold\" size=\"larger\">You have mail!</span>"
-msgstr ""
+msgstr "<span weight=\"bold\" size=\"larger\">Anda ada mel!</span>"
 
 msgid "New Pounces"
 msgstr ""
@@ -10250,16 +10277,16 @@ msgid "<span weight=\"bold\" size=\"larger\">You have pounced!</span>"
 msgstr ""
 
 msgid "The following plugins will be unloaded."
-msgstr ""
+msgstr "Pemalam berikut akan dinyahmuatkan."
 
 msgid "Multiple plugins will be unloaded."
-msgstr ""
+msgstr "Pemalam berbilang akan dinyahmuatkan."
 
 msgid "Unload Plugins"
-msgstr ""
+msgstr "Nyamuat Pemalam"
 
 msgid "Could not unload plugin"
-msgstr ""
+msgstr "Tidak dapat menyahmuat pemalam"
 
 msgid ""
 "The plugin could not be unloaded now, but will be disabled at the next "
@@ -10273,40 +10300,40 @@ msgid ""
 msgstr ""
 
 msgid "Author"
-msgstr ""
+msgstr "Pengarang"
 
 msgid "<b>Written by:</b>"
-msgstr ""
+msgstr "<b>Ditulis oleh:</b>"
 
 msgid "<b>Web site:</b>"
-msgstr ""
+msgstr "<b>Laman sesawang:</b>"
 
 msgid "<b>Filename:</b>"
-msgstr ""
+msgstr "<b>Nama fail:</b>"
 
 msgid "Configure Pl_ugin"
-msgstr ""
+msgstr "Konfigur Pe_malam"
 
 msgid "<b>Plugin Details</b>"
-msgstr ""
+msgstr "<b>Perincian Pemalam</b>"
 
 msgid "Select a file"
-msgstr ""
+msgstr "Pilih satu fail"
 
 msgid "Modify Buddy Pounce"
 msgstr ""
 
 msgid "_Account:"
-msgstr ""
+msgstr "_Akaun:"
 
 msgid "_Buddy name:"
-msgstr ""
+msgstr "Nama _rakan:"
 
 msgid "Si_gns on"
-msgstr ""
+msgstr "Da_ftar masuk"
 
 msgid "Signs o_ff"
-msgstr ""
+msgstr "Daftar ke_luar"
 
 msgid "Goes a_way"
 msgstr ""
@@ -10315,61 +10342,61 @@ msgid "Ret_urns from away"
 msgstr ""
 
 msgid "Becomes _idle"
-msgstr ""
+msgstr "Jadi m_elahu"
 
 msgid "Is no longer i_dle"
-msgstr ""
+msgstr "Tidak lagi m_elahu"
 
 msgid "Starts _typing"
-msgstr ""
+msgstr "Mula _menaip"
 
 msgid "P_auses while typing"
-msgstr ""
+msgstr "Jed_a ketika menaip"
 
 msgid "Stops t_yping"
-msgstr ""
+msgstr "Henti mena_ip"
 
 msgid "Sends a _message"
-msgstr ""
+msgstr "Hantar satu _mesej"
 
 msgid "Ope_n an IM window"
-msgstr ""
+msgstr "B_uka satu tetingkap IM"
 
 msgid "_Pop up a notification"
-msgstr ""
+msgstr "T_imbulkan pemberitahuan"
 
 msgid "Send a _message"
-msgstr ""
+msgstr "Hantar satu _mesej"
 
 msgid "E_xecute a command"
-msgstr ""
+msgstr "_Lakukan perintah"
 
 msgid "P_lay a sound"
-msgstr ""
+msgstr "Ma_in satu bunyi"
 
 msgid "Brows_e..."
-msgstr ""
+msgstr "La_yar..."
 
 msgid "Br_owse..."
-msgstr ""
+msgstr "Laya_r..."
 
 msgid "Pre_view"
-msgstr ""
+msgstr "Pra_tonton"
 
 msgid "P_ounce only when my status is not Available"
-msgstr ""
+msgstr "Ter_jah bila status saya tidak tersedia"
 
 msgid "_Recurring"
 msgstr ""
 
 msgid "Pounce Target"
-msgstr ""
+msgstr "Sasaran Terjah"
 
 msgid "Started typing"
-msgstr ""
+msgstr "Mula menaip"
 
 msgid "Paused while typing"
-msgstr ""
+msgstr "Dijeda ketika menaip"
 
 msgid "Signed on"
 msgstr ""
@@ -10381,25 +10408,25 @@ msgid "Returned from being away"
 msgstr ""
 
 msgid "Stopped typing"
-msgstr ""
+msgstr "Berhenti menaip"
 
 msgid "Signed off"
-msgstr ""
+msgstr "Daftar keluar"
 
 msgid "Became idle"
-msgstr ""
+msgstr "Jadi melahu"
 
 msgid "Went away"
 msgstr ""
 
 msgid "Sent a message"
-msgstr ""
+msgstr "Hantar satu mesej"
 
 msgid "Unknown.... Please report this!"
-msgstr ""
+msgstr "Tidak diketahui. Sila laporkannya!"
 
 msgid "(Custom)"
-msgstr ""
+msgstr "(Suai)"
 
 msgid "Penguin Pimps"
 msgstr ""
@@ -10411,19 +10438,19 @@ msgid "The default Pidgin buddy list theme"
 msgstr ""
 
 msgid "The default Pidgin status icon theme"
-msgstr ""
+msgstr "Tema ikon status Pidgin lalai"
 
 msgid "Theme failed to unpack."
-msgstr ""
+msgstr "Tema gagal dinyahpek."
 
 msgid "Theme failed to load."
-msgstr ""
+msgstr "Tema gagal dimuatkan."
 
 msgid "Theme failed to copy."
-msgstr ""
+msgstr "Tema gagal disalin."
 
 msgid "Theme Selections"
-msgstr ""
+msgstr "Pemiluhan Tema"
 
 #. Instructions
 msgid ""
@@ -10433,7 +10460,7 @@ msgid ""
 msgstr ""
 
 msgid "Buddy List Theme:"
-msgstr ""
+msgstr "Tema Senarai Rakan"
 
 msgid "Status Icon Theme:"
 msgstr ""
@@ -12126,6 +12153,56 @@ msgid ""
 "timestamp formats."
 msgstr ""
 
+msgid "Opacity:"
+msgstr ""
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr ""
+
+msgid "_IM window transparency"
+msgstr ""
+
+msgid "_Show slider bar in IM window"
+msgstr ""
+
+msgid "Remove IM window transparency on focus"
+msgstr ""
+
+msgid "Always on top"
+msgstr ""
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr ""
+
+msgid "_Buddy List window transparency"
+msgstr ""
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr ""
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr ""
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr ""
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12233,56 +12310,6 @@ msgstr ""
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
-msgstr ""
-
-msgid "Opacity:"
-msgstr ""
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr ""
-
-msgid "_IM window transparency"
-msgstr ""
-
-msgid "_Show slider bar in IM window"
-msgstr ""
-
-msgid "Remove IM window transparency on focus"
-msgstr ""
-
-msgid "Always on top"
-msgstr ""
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr ""
-
-msgid "_Buddy List window transparency"
-msgstr ""
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr ""
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr ""
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
 msgstr ""
 
 #. Autostart

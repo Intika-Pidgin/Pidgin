@@ -7,11 +7,10 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-11-22 10:22-0800\n"
-"PO-Revision-Date: 2014-11-20 10:22+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:20+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
-"Language-Team: Korean (http://www.transifex.com/projects/p/pidgin/language/"
-"ko/)\n"
+"Language-Team: Korean (http://www.transifex.com/pidgin/pidgin/language/ko/)\n"
 "Language: ko\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -46,7 +45,6 @@ msgid ""
 "http://developer.pidgin.im"
 msgstr ""
 
-#. the user did not fill in the captcha
 msgid "Error"
 msgstr "오류"
 
@@ -218,7 +216,6 @@ msgstr "친구의 정보를 입력해 주십시오."
 msgid "Chats"
 msgstr "대화"
 
-#. Extract their Name and put it in
 msgid "Name"
 msgstr "이름"
 
@@ -325,11 +322,9 @@ msgstr "Toggle Tag"
 msgid "View Log"
 msgstr "로그 보기"
 
-#. General
 msgid "Nickname"
 msgstr "별명"
 
-#. Never know what those translations might end up like...
 #. Idle stuff
 msgid "Idle"
 msgstr "대기 상태"
@@ -742,7 +737,6 @@ msgid "Remaining"
 msgstr "남은 양"
 
 #. XXX: Use of ggp_str_to_uin() is an ugly hack!
-#. presence
 msgid "Status"
 msgstr "상태"
 
@@ -990,8 +984,9 @@ msgstr "새 친구 알림"
 msgid "Edit Buddy Pounce"
 msgstr "친구 알림 편집"
 
-msgid "Pounce Who"
-msgstr ""
+#. Create the "Pounce on Whom" frame.
+msgid "Pounce on Whom"
+msgstr "알림을 받을 친구"
 
 #. Account:
 msgid "Account:"
@@ -1236,7 +1231,7 @@ msgstr "GStreamer 초기화에 실패했습니다."
 msgid "(default)"
 msgstr ""
 
-msgid "Select Sound File ..."
+msgid "Select Sound File..."
 msgstr ""
 
 msgid "Sound Preferences"
@@ -1317,21 +1312,12 @@ msgstr "상태 삭제"
 msgid "Saved Statuses"
 msgstr "저장된 상태"
 
-#. title
 msgid "Title"
 msgstr "제목"
 
 msgid "Type"
 msgstr "형식"
 
-#. Statuses are almost all the same. Define a macro to reduce code repetition.
-#. PurpleStatusPrimitive
-#. id - use default
-#. name - use default
-#. saveable
-#. user_settable
-#. not independent
-#. Attributes - each status can have a message.
 msgid "Message"
 msgstr "메시지"
 
@@ -1363,12 +1349,12 @@ msgstr "메시지:"
 msgid "Edit Status"
 msgstr "상태 편집"
 
-msgid "Use different status for following accounts"
-msgstr "다음의 계정으로 다른 상태를 사용"
+msgid "Use a different status for some accounts"
+msgstr ""
 
-#. Save & Use
-msgid "Save & Use"
-msgstr "저장 및 사용"
+#. Save and Use
+msgid "Save and Use"
+msgstr ""
 
 msgid "Certificates"
 msgstr "인증"
@@ -1434,6 +1420,7 @@ msgstr "대화에서 누군가가 나를 호출했을 때"
 msgid "Someone says your name in a chat"
 msgstr "대화에서 누군가가 내 이름을 입력했을 때"
 
+#. Translators: "toaster" here means "pop-up".
 msgid "Notify with a toaster when"
 msgstr "다음의 경우에 Toaster와 함께 알림"
 
@@ -1446,6 +1433,7 @@ msgstr "터미널 창 속성이 긴급으로 되었을 때"
 msgid "GntGf"
 msgstr "GntGf"
 
+#. Translators: "toaster" here means "pop-up".
 msgid "Toaster plugin"
 msgstr "Toaster 플러그인"
 
@@ -1489,7 +1477,7 @@ msgstr ""
 msgid "TinyURL for above: %s"
 msgstr ""
 
-msgid "Please wait while TinyURL fetches a shorter URL ..."
+msgid "Please wait while TinyURL fetches a shorter URL..."
 msgstr ""
 
 msgid "Only create TinyURL for URLs of this length or greater"
@@ -1504,13 +1492,12 @@ msgstr ""
 msgid "TinyURL plugin"
 msgstr ""
 
-msgid "When receiving a message with URL(s), use TinyURL for easier copying"
+msgid "Shorten URLs in messages using TinyURL"
 msgstr ""
 
 msgid "Online"
 msgstr "온라인"
 
-#. primitive,						no,							id,			name
 msgid "Offline"
 msgstr "오프라인"
 
@@ -1737,7 +1724,6 @@ msgstr ""
 msgid "View Issuer Certificate"
 msgstr ""
 
-#. show error to user
 msgid "Registration Error"
 msgstr "등록 오류"
 
@@ -1753,7 +1739,6 @@ msgid "+++ %s signed off"
 msgstr "+++ %s 님이 접속을 끊었습니다."
 
 #. Undocumented
-#. Unknown error
 msgid "Unknown error"
 msgstr "알 수 없는 오류"
 
@@ -1880,22 +1865,6 @@ msgstr "\"irc\" 용 핸들"
 msgid "The command used to handle \"irc\" URLs, if enabled."
 msgstr "\"irc\" URL을 처리할 때 사용하는 명령입니다 (이용 가능한 경우)."
 
-msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr "지정한 명령으로 \"msnim\" URL을 처리할까 말까"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-msgstr ""
-"\"command\" 키로 지정한 명령으로 \"msnim\" URL을 처리하는 경우에는 TRUE 입니"
-"다."
-
-msgid "The handler for \"msnim\" URLs"
-msgstr "\"msnim\" 용 핸들"
-
-msgid "The command used to handle \"msnim\" URLs, if enabled."
-msgstr "\"msnim\" URL을 처리할 때 사용하는 명령입니다 (이용 가능한 경우)."
-
 msgid "Whether the specified command should handle \"sip\" URLs"
 msgstr "지정한 명령으로 \"sip\" URL을 처리할까 말까"
 
@@ -1926,22 +1895,6 @@ msgstr "\"xmpp\" 용 핸들"
 
 msgid "The command used to handle \"xmpp\" URLs, if enabled."
 msgstr "\"xmpp\" URL을 처리할 때 사용하는 명령입니다 (이용 가능한 경우)."
-
-msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr "지정한 명령으로 \"ymsgr\" URL을 처리할까 말까"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-msgstr ""
-"\"command\" 키로 지정한 명령으로 \"ymsgr\" URL을 처리하는 경우에는 TRUE 입니"
-"다."
-
-msgid "The handler for \"ymsgr\" URLs"
-msgstr "\"ymsgr\" 용 핸들"
-
-msgid "The command used to handle \"ymsgr\" URLs, if enabled."
-msgstr "\"ymsgr\" URL을 처리할 때 사용하는 명령입니다 (이용 가능한 경우)."
 
 #, c-format
 msgid "Failed to get connection: %s"
@@ -2163,12 +2116,34 @@ msgid "(%s) %s <AUTO-REPLY>: %s\n"
 msgstr "(%s) %s <AUTO-REPLY>: %s\n"
 
 msgid ""
+"\n"
+"\n"
+"Message from Farsight: "
+msgstr ""
+
+msgid ""
+"Error initializing the call. This probably denotes problem in installation "
+"of GStreamer or Farsight."
+msgstr ""
+
+msgid "Network error."
+msgstr ""
+
+msgid ""
+"Codec negotiation failed. This problem might be resolved by installing more "
+"GStreamer codecs."
+msgstr ""
+
+msgid ""
 "No codecs found. Install some GStreamer codecs found in GStreamer plugins "
 "packages."
 msgstr ""
 
 msgid ""
 "No codecs left. Your codec preferences in fs-codecs.conf are too strict."
+msgstr ""
+
+msgid "Could not connect to the remote party"
 msgstr ""
 
 msgid "A non-recoverable Farsight2 error has occurred."
@@ -2719,7 +2694,7 @@ msgstr "수신한 대화를 Psychic 모드로 표시합니다."
 
 msgid ""
 "Causes conversation windows to appear as other users begin to message you.  "
-"This works for AIM, ICQ, XMPP, Sametime, and Yahoo!"
+"This works for AIM, ICQ, XMPP, and Sametime"
 msgstr ""
 
 msgid "You feel a disturbance in the force..."
@@ -2937,8 +2912,8 @@ msgstr ""
 "http://www.activestate.com 에 있는 ActiveTCL 을 설치해 주십시오.\n"
 
 msgid ""
-"Unable to find Apple's \"Bonjour for Windows\" toolkit, see http://d.pidgin."
-"im/BonjourWindows for more information."
+"Unable to find Apple's \"Bonjour for Windows\" toolkit, see https://"
+"developer.pidgin.im/BonjourWindows for more information."
 msgstr ""
 
 msgid "Unable to listen for incoming IM connections"
@@ -2956,7 +2931,6 @@ msgstr "이름"
 msgid "Last name"
 msgstr "성"
 
-#. email
 msgid "Email"
 msgstr "이메일"
 
@@ -3041,14 +3015,12 @@ msgstr "도시"
 msgid "Year of birth"
 msgstr "생년"
 
-#. gender
 msgid "Gender"
 msgstr "성별"
 
 msgid "Male or female"
 msgstr "남/여"
 
-#. 0
 msgid "Male"
 msgstr "남"
 
@@ -3086,22 +3058,16 @@ msgstr "대화 선택: %s"
 msgid "Add to chat..."
 msgstr "대화 추가..."
 
-#. 0
 #. Global
 msgid "Available"
 msgstr "사용 가능"
 
-#. 2
 msgid "Chatty"
 msgstr "Chatty"
 
-#. 3
 msgid "Do Not Disturb"
 msgstr "다른 용무 중"
 
-#. 1
-#. get_yahoo_status_from_purple_status() returns YAHOO_STATUS_CUSTOM for
-#. * the generic away state (YAHOO_STATUS_TYPE_AWAY) with no message
 #. Away stuff
 msgid "Away"
 msgstr "자리 비움"
@@ -3109,8 +3075,6 @@ msgstr "자리 비움"
 msgid "UIN"
 msgstr "UIN"
 
-#. first name
-#. optional information
 msgid "First Name"
 msgstr "이름"
 
@@ -3135,9 +3099,6 @@ msgstr "검색 조건에 일치하는 사용자가 존재하지 않았습니다.
 msgid "Unable to read from socket"
 msgstr "소켓으로부터 읽을 수 없습니다."
 
-#. The session is now set up, ready to be connected. This emits the
-#. * signedOn signal, so clients can now do anything with msimprpl, and
-#. * we're ready for it (session key, userid, username all setup).
 msgid "Connected"
 msgstr "접속되었습니다."
 
@@ -3150,7 +3111,6 @@ msgstr "대화에 추가"
 msgid "Chat _name:"
 msgstr "대화명(_N):"
 
-#. 1. connect to server
 #. connect to the server
 msgid "Connecting"
 msgstr "접속 중입니다."
@@ -3907,8 +3867,6 @@ msgstr "직위"
 msgid "Role"
 msgstr "직위"
 
-#. birthday
-#. birthday (required)
 msgid "Birthday"
 msgstr "생일"
 
@@ -3998,7 +3956,6 @@ msgstr ""
 msgid "JID"
 msgstr "JID"
 
-#. last name
 msgid "Last Name"
 msgstr "성"
 
@@ -4260,7 +4217,6 @@ msgstr "None (To pending)"
 msgid "None"
 msgstr "없음"
 
-#. subscription type
 msgid "Subscription"
 msgstr "구독"
 
@@ -4276,12 +4232,6 @@ msgstr ""
 msgid "Mood Comment"
 msgstr ""
 
-#. primitive
-#. ID
-#. name - use default
-#. saveable
-#. should be user_settable some day
-#. independent
 msgid "Tune Artist"
 msgstr ""
 
@@ -4524,8 +4474,6 @@ msgid ""
 "buzzes now."
 msgstr ""
 
-#. Yahoo only supports one attention command: the 'buzz'.
-#. This is index number YAHOO_BUZZ.
 msgid "Buzz"
 msgstr ""
 
@@ -4652,8 +4600,6 @@ msgstr "암호화 되어 있지 않은 스트림을 통한 문자열 인증 허�
 msgid "Connect port"
 msgstr "접속할 포트 번호"
 
-#. TODO: default to automatically try different ports. Make the user be
-#. * able to set the first port to try (like LastConnectedPort in Windows client).
 #. Account options
 msgid "Connect server"
 msgstr "서버에 접속"
@@ -4664,8 +4610,9 @@ msgstr ""
 msgid "BOSH URL"
 msgstr ""
 
-#. this should probably be part of global smiley theme settings later on,
-#. shared with MSN
+#. this should probably be part of global smiley theme settings
+#. * later on
+#.
 msgid "Show Custom Smileys"
 msgstr ""
 
@@ -4754,7 +4701,6 @@ msgid "Unable to send file to %s, user does not support file transfers"
 msgstr ""
 "%s 님에게 파일을 전송하지 못했습니다. 사용자는 파일 전송을 지원하지 않습니다."
 
-#. not success
 msgid "File Send Failed"
 msgstr "파일 전송 실패"
 
@@ -5050,1584 +4996,6 @@ msgstr ""
 msgid "Select an action"
 msgstr ""
 
-#. only notify the user about problems adding to the friends list
-#. * maybe we should do something else for other lists, but it probably
-#. * won't cause too many problems if we just ignore it
-#, c-format
-msgid "Unable to add \"%s\"."
-msgstr "\"%s\" 님을 추가할 수 없습니다."
-
-msgid "Buddy Add error"
-msgstr ""
-
-msgid "The username specified does not exist."
-msgstr ""
-
-msgid "Unable to parse message"
-msgstr "메시지를 해독할 수 없습니다."
-
-msgid "Syntax Error (probably a client bug)"
-msgstr "문법 오류 (아마 클라이언트의 버그일 수 있습니다.)"
-
-msgid "Invalid email address"
-msgstr "이메일 주소가 잘못되었습니다."
-
-msgid "User does not exist"
-msgstr "사용자가 없습니다."
-
-msgid "Fully qualified domain name missing"
-msgstr "FQDN (Fully Qualified Domain Name) 이 없습니다."
-
-msgid "Already logged in"
-msgstr "이미 로그인되어 있습니다."
-
-msgid "Invalid username"
-msgstr ""
-
-msgid "Invalid friendly name"
-msgstr "잘못된 공개명입니다."
-
-msgid "List full"
-msgstr "목록이 가득 찼습니다."
-
-msgid "Already there"
-msgstr "이미 거기에 있습니다."
-
-msgid "Not on list"
-msgstr "목록에 없습니다."
-
-msgid "User is offline"
-msgstr "사용자는 오프라인입니다."
-
-msgid "Already in the mode"
-msgstr "이미 그 모드입니다."
-
-msgid "Already in opposite list"
-msgstr "이미 목록의 반대편에 있습니다."
-
-msgid "Too many groups"
-msgstr "그룹이 너무 많습니다."
-
-msgid "Invalid group"
-msgstr "잘못된 그룹명입니다."
-
-msgid "User not in group"
-msgstr "사용자가 그룹에 없습니다."
-
-msgid "Group name too long"
-msgstr "그룹명이 너무 깁니다."
-
-msgid "Cannot remove group zero"
-msgstr "그룹 0 은 삭제할 수 없습니다."
-
-msgid "Tried to add a user to a group that doesn't exist"
-msgstr "존재하지 않는 그룹에 사용자를 추가하려고 했습니다."
-
-msgid "Switchboard failed"
-msgstr "Switchboard 에 실패했습니다."
-
-msgid "Notify transfer failed"
-msgstr "알림 전송에 실패했습니다."
-
-msgid "Required fields missing"
-msgstr "필요한 파일이 없습니다."
-
-msgid "Too many hits to a FND"
-msgstr "FND 에 너무 많이 히트했습니다."
-
-msgid "Not logged in"
-msgstr "로그인되어 있지 않습니다."
-
-msgid "Service temporarily unavailable"
-msgstr "일시적으로 서비스를 사용할 수 없습니다."
-
-msgid "Database server error"
-msgstr "데이터베이스 서버 오류"
-
-msgid "Command disabled"
-msgstr "명령을 사용할 수 없습니다."
-
-msgid "File operation error"
-msgstr "파일 조작 오류"
-
-msgid "Memory allocation error"
-msgstr "메모리 할당 오류"
-
-msgid "Wrong CHL value sent to server"
-msgstr "잘못된 CHL 값이 서버에 전송되었습니다."
-
-msgid "Server busy"
-msgstr "서버 바쁨"
-
-msgid "Server unavailable"
-msgstr "서버를 이용할 수 없습니다."
-
-msgid "Peer notification server down"
-msgstr "Peer 알림 서버가 다운되었습니다."
-
-msgid "Database connect error"
-msgstr "데이터베이스 접속 오류"
-
-msgid "Server is going down (abandon ship)"
-msgstr "서버가 다운되고 있습니다."
-
-msgid "Error creating connection"
-msgstr "접속 생성 중 오류"
-
-msgid "CVR parameters are either unknown or not allowed"
-msgstr "CVR 인수가 알 수 없거나 허가되지 않았습니다."
-
-msgid "Unable to write"
-msgstr "기록할 수 없습니다."
-
-msgid "Session overload"
-msgstr "세션의 부하가 초과되었습니다."
-
-msgid "User is too active"
-msgstr "사용자가 너무 활동적입니다."
-
-msgid "Too many sessions"
-msgstr "세션이 너무 많습니다."
-
-msgid "Passport not verified"
-msgstr "패스포트가 인증되어 있지 않습니다."
-
-msgid "Bad friend file"
-msgstr "잘못된 친구 파일"
-
-msgid "Not expected"
-msgstr "예상치 못한 데이터"
-
-msgid "Friendly name is changing too rapidly"
-msgstr ""
-
-msgid "Server too busy"
-msgstr "서버가 너무 바쁩니다."
-
-msgid "Authentication failed"
-msgstr "인증에 실패했습니다."
-
-msgid "Not allowed when offline"
-msgstr "오프라인일 때에는 허가되지 않았습니다."
-
-msgid "Not accepting new users"
-msgstr "새 사용자를 접수할 수 없습니다."
-
-msgid "Kids Passport without parental consent"
-msgstr "부모의 승인이 없는 어린이 패스포트입니다."
-
-msgid "Passport account not yet verified"
-msgstr "아직 패스포트 계정은 확인되지 않았습니다."
-
-msgid "Passport account suspended"
-msgstr ""
-
-msgid "Bad ticket"
-msgstr "잘못된 티켓"
-
-#, c-format
-msgid "Unknown Error Code %d"
-msgstr "알 수 없는 오류 코드 %d"
-
-#, c-format
-msgid "MSN Error: %s\n"
-msgstr "MSN 오류: %s\n"
-
-#, c-format
-msgid "Buddy list synchronization issue in %s (%s)"
-msgstr "%s (%s) 에서 친구 목록의 동기가 발생했습니다."
-
-#, c-format
-msgid ""
-"%s on the local list is inside the group \"%s\" but not on the server list. "
-"Do you want this buddy to be added?"
-msgstr ""
-"로컬 친구 목록에 기록되어 있는 %s 님은 그룹 \"%s\" 에 소속되어 있으나, 서버 "
-"상의 목록에서는 그렇게 되어 있지 않습니다. 서버 상의 목록에 그 친구를 추가하"
-"시겠습니까?"
-
-#, c-format
-msgid ""
-"%s is on the local list but not on the server list. Do you want this buddy "
-"to be added?"
-msgstr ""
-"로컬 친구 목록에 기술되어 있는 %s 님은 서버 상의 목록에 존재하지 않습니다. 서"
-"버 상의 목록에 그 친구를 추가하시겠습니까?"
-
-msgid "Other Contacts"
-msgstr ""
-
-msgid "Non-IM Contacts"
-msgstr ""
-
-#, c-format
-msgid "%s sent a wink. <a href='msn-wink://%s'>Click here to play it</a>"
-msgstr ""
-
-#, c-format
-msgid "%s sent a wink, but it could not be saved"
-msgstr ""
-
-#, c-format
-msgid "%s sent a voice clip. <a href='audio://%s'>Click here to play it</a>"
-msgstr ""
-
-#, c-format
-msgid "%s sent a voice clip, but it could not be saved"
-msgstr ""
-
-#, c-format
-msgid "%s sent you a voice chat invite, which is not yet supported."
-msgstr ""
-
-msgid "Nudge"
-msgstr ""
-
-#, c-format
-msgid "%s has nudged you!"
-msgstr ""
-
-#, c-format
-msgid "Nudging %s..."
-msgstr ""
-
-msgid "Email Address..."
-msgstr ""
-
-msgid "Your new MSN friendly name is too long."
-msgstr "새 MSN 의 공개명이 너무 깁니다."
-
-#, c-format
-msgid "Set friendly name for %s."
-msgstr ""
-
-msgid "Set Friendly Name"
-msgstr ""
-
-msgid "This is the name that other MSN buddies will see you as."
-msgstr "MSN 의 다른 친구가 나를 볼 때 표시되는 이름입니다."
-
-msgid "This Location"
-msgstr ""
-
-msgid "This is the name that identifies this location"
-msgstr ""
-
-msgid "Other Locations"
-msgstr ""
-
-msgid "You can sign out from other locations here"
-msgstr ""
-
-#. TODO: Due to limitations in our current request field API, the
-#. following string will show up with a trailing colon.  This should
-#. be fixed either by adding an "include_colon" boolean, or creating
-#. a separate purple_request_field_label_new_without_colon function,
-#. or by never automatically adding the colon and requiring that
-#. callers add the colon themselves.
-msgid "You are not signed in from any other locations."
-msgstr ""
-
-msgid "Allow multiple logins?"
-msgstr ""
-
-msgid ""
-"Do you want to allow or disallow connecting from multiple locations "
-"simultaneously?"
-msgstr ""
-
-msgid "Allow"
-msgstr "허가"
-
-msgid "Disallow"
-msgstr "허가하지 않음"
-
-msgid "Set your home phone number."
-msgstr "자택 전화번호를 설정해 주십시오."
-
-msgid "Set your work phone number."
-msgstr "직장 전화번호를 설정해 주십시오."
-
-msgid "Set your mobile phone number."
-msgstr "휴대 전화번호를 설정해 주십시오."
-
-msgid "Allow MSN Mobile pages?"
-msgstr "MSN 모바일 호출을 허가하시겠습니까?"
-
-msgid ""
-"Do you want to allow or disallow people on your buddy list to send you MSN "
-"Mobile pages to your cell phone or other mobile device?"
-msgstr ""
-"친구가 휴대 전화 등의 휴대용 기기에 MSN 모바일 호출을 전송하는 것을 허가하시"
-"겠습니까?"
-
-#, c-format
-msgid "Blocked Text for %s"
-msgstr ""
-
-msgid "No text is blocked for this account."
-msgstr ""
-
-#, c-format
-msgid ""
-"MSN servers are currently blocking the following regular expressions:<br/>%s"
-msgstr ""
-
-msgid "This account does not have email enabled."
-msgstr ""
-
-msgid "Send a mobile message."
-msgstr "모바일 메시지를 전송합니다."
-
-msgid "Page"
-msgstr "호출"
-
-msgid "Playing a game"
-msgstr ""
-
-msgid "Working"
-msgstr ""
-
-msgid "Has you"
-msgstr "내가 등록됨"
-
-msgid "Home Phone Number"
-msgstr ""
-
-msgid "Work Phone Number"
-msgstr ""
-
-msgid "Mobile Phone Number"
-msgstr ""
-
-msgid "Be Right Back"
-msgstr "곧 돌아옵니다."
-
-msgid "Busy"
-msgstr "다른 용무 중입니다."
-
-msgid "On the Phone"
-msgstr "전화 중입니다."
-
-msgid "Out to Lunch"
-msgstr "점심 식사 중입니다."
-
-msgid "Game Title"
-msgstr ""
-
-msgid "Office Title"
-msgstr ""
-
-msgid "Set Friendly Name..."
-msgstr "공개명 설정..."
-
-msgid "View Locations..."
-msgstr ""
-
-msgid "Set Home Phone Number..."
-msgstr "자택 전화번호 설정..."
-
-msgid "Set Work Phone Number..."
-msgstr "직장 전화번호 설정..."
-
-msgid "Set Mobile Phone Number..."
-msgstr "휴대 전화번호 설정..."
-
-msgid "Enable/Disable Mobile Devices..."
-msgstr "휴대용 기기 사용/사용 안 함..."
-
-msgid "Allow/Disallow Multiple Logins..."
-msgstr ""
-
-msgid "Allow/Disallow Mobile Pages..."
-msgstr "무선 호출 허가/허가 안 함..."
-
-msgid "View Blocked Text..."
-msgstr ""
-
-msgid "Open Hotmail Inbox"
-msgstr "Hotmail의 받은 편지함 열기"
-
-msgid "Send to Mobile"
-msgstr "휴대용 기기에 전송"
-
-msgid "SSL support is needed for MSN. Please install a supported SSL library."
-msgstr ""
-"MSN 에서는 SSL 지원이 필요합니다. 지원하는 SSL 라이브러리를 설치해 주십시오."
-
-#, c-format
-msgid ""
-"Unable to add the buddy %s because the username is invalid.  Usernames must "
-"be valid email addresses."
-msgstr ""
-
-msgid "Unable to Add"
-msgstr ""
-
-msgid "Error retrieving profile"
-msgstr "프로파일을 가져오는 중 오류"
-
-msgid "General"
-msgstr "일반"
-
-msgid "Age"
-msgstr "연령"
-
-msgid "Occupation"
-msgstr "직업"
-
-msgid "Location"
-msgstr "위치"
-
-msgid "Hobbies and Interests"
-msgstr "취미와 관심 분야"
-
-msgid "A Little About Me"
-msgstr "간단 소개"
-
-msgid "Social"
-msgstr "파티"
-
-msgid "Marital Status"
-msgstr "기혼/미혼"
-
-msgid "Interests"
-msgstr "취미"
-
-msgid "Pets"
-msgstr "애완동물"
-
-msgid "Hometown"
-msgstr "출신지"
-
-msgid "Places Lived"
-msgstr "현주소"
-
-msgid "Fashion"
-msgstr "패션"
-
-msgid "Humor"
-msgstr "유머"
-
-msgid "Music"
-msgstr "음악"
-
-msgid "Favorite Quote"
-msgstr "좌우명"
-
-msgid "Contact Info"
-msgstr "연락처 정보"
-
-msgid "Personal"
-msgstr "개인"
-
-msgid "Significant Other"
-msgstr "소중한 사람"
-
-msgid "Home Phone"
-msgstr "자택 전화"
-
-msgid "Home Phone 2"
-msgstr "자택 전화 2"
-
-msgid "Home Address"
-msgstr "자택 주소"
-
-msgid "Personal Mobile"
-msgstr "개인 휴대 기기"
-
-msgid "Home Fax"
-msgstr "자택 팩스"
-
-msgid "Personal Email"
-msgstr "개인 이메일"
-
-msgid "Personal IM"
-msgstr "개인 메신저"
-
-msgid "Anniversary"
-msgstr "기념일"
-
-#. Business
-msgid "Work"
-msgstr "직종"
-
-msgid "Company"
-msgstr "회사"
-
-msgid "Department"
-msgstr "부서"
-
-msgid "Profession"
-msgstr "직업"
-
-msgid "Work Phone"
-msgstr "회사 전화"
-
-msgid "Work Phone 2"
-msgstr "회사 전화 2"
-
-msgid "Work Address"
-msgstr "회사 주소"
-
-msgid "Work Mobile"
-msgstr "업무 휴대 기기"
-
-msgid "Work Pager"
-msgstr "회사 호출기"
-
-msgid "Work Fax"
-msgstr "회사 팩스"
-
-msgid "Work Email"
-msgstr "회사 이메일"
-
-msgid "Work IM"
-msgstr "회사 메신저"
-
-msgid "Start Date"
-msgstr "시작 일자"
-
-msgid "Favorite Things"
-msgstr "좋아하는 것"
-
-msgid "Last Updated"
-msgstr "마지막 갱신일"
-
-msgid "Homepage"
-msgstr "홈페이지"
-
-msgid "The user has not created a public profile."
-msgstr "이 사용자는 프로파일을 공개하지 않았습니다."
-
-msgid ""
-"MSN reported not being able to find the user's profile. This either means "
-"that the user does not exist, or that the user exists but has not created a "
-"public profile."
-msgstr ""
-"그 사용자의 프로파일을 찾을 수 없다고 MSN 이 보고했습니다. 이것은 그 사용자"
-"가 존재하지 않거나 혹은 공개하지 않았기 때문입니다."
-
-msgid ""
-"Could not find any information in the user's profile. The user most likely "
-"does not exist."
-msgstr ""
-"사용자 프로파일로부터 정보를 가져오지 못했습니다. 그 사용자는 존재하지 않는 "
-"것 같습니다."
-
-msgid "View web profile"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *< summary
-msgid "Windows Live Messenger Protocol Plugin"
-msgstr ""
-
-msgid "Use HTTP Method"
-msgstr "HTTP 방식 이용"
-
-msgid "HTTP Method Server"
-msgstr "HTTP 방식 서버"
-
-msgid "Show custom smileys"
-msgstr "사용자 이모티콘 표시"
-
-msgid "Allow direct connections"
-msgstr ""
-
-msgid "Allow connecting from multiple locations"
-msgstr ""
-
-msgid "nudge: nudge a user to get their attention"
-msgstr "신호: 사용자를 향해 경고음 발생"
-
-msgid "Windows Live ID authentication:Unable to connect"
-msgstr "Windows Live ID 인증: 연결할 수 없음"
-
-msgid "Windows Live ID authentication:Invalid response"
-msgstr ""
-
-msgid "The following users are missing from your addressbook"
-msgstr ""
-
-#, c-format
-msgid "Unknown error (%d): %s"
-msgstr ""
-
-msgid "Unable to add user"
-msgstr "사용자를 추가할 수 없습니다."
-
-#. Unknown error!
-#, c-format
-msgid "Unknown error (%d)"
-msgstr ""
-
-msgid "Unable to remove user"
-msgstr ""
-
-msgid "Mobile message was not sent because it was too long."
-msgstr ""
-
-msgid "Mobile message was not sent because an unknown error occurred."
-msgstr ""
-
-#, c-format
-msgid ""
-"The MSN server will shut down for maintenance in %d minute. You will "
-"automatically be signed out at that time.  Please finish any conversations "
-"in progress.\n"
-"\n"
-"After the maintenance has been completed, you will be able to successfully "
-"sign in."
-msgid_plural ""
-"The MSN server will shut down for maintenance in %d minutes. You will "
-"automatically be signed out at that time.  Please finish any conversations "
-"in progress.\n"
-"\n"
-"After the maintenance has been completed, you will be able to successfully "
-"sign in."
-msgstr[0] ""
-"MSN 서비스가 유지보수를 위해 %d 분간 정지하고 있습니다. 자동으로 접속이 끊길 "
-"예정이므로, 지금 수행되고 있는 대화를 종료해 주십시오.\n"
-"\n"
-"유지보수가 완료되면 다시 접속이 가능합니다."
-
-msgid ""
-"Message was not sent because the system is unavailable. This normally "
-"happens when the user is blocked or does not exist."
-msgstr ""
-
-msgid "Message was not sent because messages are being sent too quickly."
-msgstr ""
-
-msgid "Message was not sent because an unknown encoding error occurred."
-msgstr ""
-
-msgid "Message was not sent because an unknown error occurred."
-msgstr ""
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. Converting the encoding from "
-"%s to UTF-8 failed.)"
-msgstr ""
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. The charset was %s, but it "
-"was not valid UTF-8.)"
-msgstr ""
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. The charset was missing, but "
-"it was not valid UTF-8.)"
-msgstr ""
-
-msgid "Writing error"
-msgstr "쓰는 중 오류"
-
-msgid "Reading error"
-msgstr "읽는 중 오류"
-
-#, c-format
-msgid ""
-"Connection error from %s server:\n"
-"%s"
-msgstr ""
-"서버 %s 에서 접속 오류:\n"
-"%s"
-
-msgid "Our protocol is not supported by the server"
-msgstr ""
-
-msgid "Error parsing HTTP"
-msgstr ""
-
-msgid "You have signed on from another location"
-msgstr ""
-
-msgid "The MSN servers are temporarily unavailable. Please wait and try again."
-msgstr ""
-"MSN 서버가 일시적으로 이용할 수 없게 되었습니다. 잠시 후 다시 시도해 보시기 "
-"바랍니다."
-
-msgid "The MSN servers are going down temporarily"
-msgstr ""
-
-#, c-format
-msgid "Unable to authenticate: %s"
-msgstr "인증할 수 없습니다: %s"
-
-#, c-format
-msgid "Your MSN buddy list is temporarily unavailable: %s"
-msgstr ""
-
-msgid "Handshaking"
-msgstr "통신에 접속 중입니다."
-
-msgid "Transferring"
-msgstr "전송 중 입니다."
-
-msgid "Starting authentication"
-msgstr "인증 시작 중입니다."
-
-msgid "Getting cookie"
-msgstr "쿠키를 가져오는 중입니다."
-
-msgid "Sending cookie"
-msgstr "쿠키를 보내는 중입니다."
-
-msgid "Retrieving buddy list"
-msgstr "친구 목록을 수신하고 있습니다."
-
-#, c-format
-msgid "%s requests to view your webcam, but this request is not yet supported."
-msgstr ""
-
-#, c-format
-msgid "%s invited you to view his/her webcam, but this is not yet supported."
-msgstr ""
-
-msgid "Away From Computer"
-msgstr "컴퓨터로부터 떨어져 있습니다."
-
-msgid "On The Phone"
-msgstr "전화 중입니다."
-
-msgid "Out To Lunch"
-msgstr "점심 식사 중입니다."
-
-msgid "Message may have not been sent because a timeout occurred:"
-msgstr "시간이 초과되어 메시지를 보내지 못했습니다:"
-
-msgid "Message could not be sent, not allowed while invisible:"
-msgstr "숨김 상태에서는 메시지를 보낼 수 없습니다:"
-
-msgid "Message could not be sent because the user is offline:"
-msgstr "받는 사람이 오프라인이므로 메시지를 보내지 못했습니다:"
-
-msgid "Message could not be sent because a connection error occurred:"
-msgstr "접속 오류로 인해 메시지를 보내지 못했습니다:"
-
-msgid "Message could not be sent because we are sending too quickly:"
-msgstr "전송 시간이 너무 빨라서 메시지를 보내지 못했습니다:"
-
-msgid ""
-"Message could not be sent because we were unable to establish a session with "
-"the server. This is likely a server problem, try again in a few minutes:"
-msgstr ""
-
-msgid ""
-"Message could not be sent because an error with the switchboard occurred:"
-msgstr "교환 기관의 접속 오류로 인해 메시지를 보내지 못했습니다:"
-
-msgid "Message may have not been sent because an unknown error occurred:"
-msgstr "알 수 없는 오류로 인해 메시지를 보내지 못했습니다:"
-
-msgid "Delete Buddy from Address Book?"
-msgstr ""
-
-msgid "Do you want to delete this buddy from your address book as well?"
-msgstr ""
-
-msgid "The username specified is invalid."
-msgstr ""
-
-msgid "The Display Name you entered is invalid."
-msgstr ""
-
-msgid ""
-"The birthday you entered is invalid. The correct format is: 'YYYY-MM-DD'."
-msgstr ""
-
-#. show error to user
-msgid "Profile Update Error"
-msgstr ""
-
-#. no profile information yet, so we cannot update
-#. (reference: "libpurple/request.h")
-msgid "Profile"
-msgstr "프로파일"
-
-msgid "Your profile information is not yet retrieved. Please try again later."
-msgstr ""
-
-#. display name
-#. nick name (required)
-msgid "Display Name"
-msgstr ""
-
-#. about me
-msgid "About Me"
-msgstr ""
-
-#. where I live
-msgid "Where I Live"
-msgstr ""
-
-#. relationship status
-msgid "Relationship Status"
-msgstr ""
-
-#. mobile number
-msgid "Mobile Number"
-msgstr ""
-
-#. is searchable
-msgid "Can be searched"
-msgstr ""
-
-#. is suggestable
-msgid "Can be suggested"
-msgstr ""
-
-msgid "Update your MXit Profile"
-msgstr ""
-
-msgid "The PIN you entered is invalid."
-msgstr ""
-
-msgid "The PIN you entered has an invalid length [4-10]."
-msgstr ""
-
-msgid "The PIN is invalid. It should only consist of digits [0-9]."
-msgstr ""
-
-msgid "The two PINs you entered do not match."
-msgstr ""
-
-#. show error to user
-msgid "PIN Update Error"
-msgstr ""
-
-#. pin
-#. pin (required)
-msgid "PIN"
-msgstr ""
-
-#. verify pin
-msgid "Verify PIN"
-msgstr ""
-
-#. (reference: "libpurple/request.h")
-msgid "Change PIN"
-msgstr ""
-
-msgid "Change MXit PIN"
-msgstr ""
-
-msgid "View Splash"
-msgstr ""
-
-msgid "There is no splash-screen currently available"
-msgstr ""
-
-msgid "About"
-msgstr ""
-
-msgid "Search for user"
-msgstr ""
-
-msgid "Search for a MXit contact"
-msgstr ""
-
-msgid "Type search information"
-msgstr ""
-
-msgid "_Search"
-msgstr "검색(_S)"
-
-#. display / change profile
-msgid "Change Profile..."
-msgstr ""
-
-#. change PIN
-msgid "Change PIN..."
-msgstr ""
-
-#. suggested friends
-msgid "Suggested friends..."
-msgstr ""
-
-#. search for contacts
-msgid "Search for contacts..."
-msgstr ""
-
-#. display splash-screen
-msgid "View Splash..."
-msgstr ""
-
-#. display plugin version
-msgid "About..."
-msgstr ""
-
-#. the file is too big
-msgid "The file you are trying to send is too large!"
-msgstr ""
-
-#. file read error
-msgid "Unable to access the local file"
-msgstr ""
-
-#. file write error
-msgid "Unable to save the file"
-msgstr ""
-
-msgid ""
-"Unable to connect to the MXit HTTP server. Please check your server settings."
-msgstr ""
-
-msgid "Logging In..."
-msgstr ""
-
-msgid ""
-"Unable to connect to the MXit server. Please check your server settings."
-msgstr ""
-
-msgid "Connecting..."
-msgstr ""
-
-msgid "The Display Name you entered is too short."
-msgstr ""
-
-msgid "The PIN you entered has an invalid length [7-10]."
-msgstr ""
-
-#. mxit login name
-msgid "MXit ID"
-msgstr ""
-
-#. show the form to the user to complete
-msgid "Register New MXit Account"
-msgstr ""
-
-msgid "Please fill in the following fields:"
-msgstr ""
-
-#. no reply from the WAP site
-msgid "Error contacting the MXit WAP site. Please try again later."
-msgstr ""
-
-#. wapserver error
-#. server could not find the user
-msgid ""
-"MXit is currently unable to process the request. Please try again later."
-msgstr ""
-
-msgid "Wrong security code entered. Please try again later."
-msgstr ""
-
-msgid "Your session has expired. Please try again later."
-msgstr ""
-
-msgid "Invalid country selected. Please try again."
-msgstr ""
-
-msgid "The MXit ID you entered is not registered. Please register first."
-msgstr ""
-
-msgid "The MXit ID you entered is already registered. Please choose another."
-msgstr ""
-
-msgid "Internal error. Please try again later."
-msgstr ""
-
-msgid "You did not enter the security code"
-msgstr ""
-
-msgid "Security Code"
-msgstr ""
-
-#. ask for input (required)
-msgid "Enter Security Code"
-msgstr ""
-
-msgid "Your Country"
-msgstr ""
-
-msgid "Your Language"
-msgstr ""
-
-#. display the form to the user and wait for his/her input
-msgid "MXit Authorization"
-msgstr ""
-
-msgid "MXit account validation"
-msgstr ""
-
-msgid "Retrieving User Information..."
-msgstr ""
-
-msgid "was kicked"
-msgstr ""
-
-msgid "You have been kicked from this MultiMX."
-msgstr ""
-
-msgid "_Room Name:"
-msgstr ""
-
-#. Display system message in chat window
-msgid "You have invited"
-msgstr ""
-
-msgid "Loading menu..."
-msgstr ""
-
-msgid "Status Message"
-msgstr ""
-
-msgid "Rejection Message"
-msgstr ""
-
-msgid "No profile available"
-msgstr ""
-
-msgid "This contact does not have a profile."
-msgstr ""
-
-msgid "Your MXit ID..."
-msgstr ""
-
-#. contact is in Deleted, Rejected or None state
-msgid "Re-Invite"
-msgstr ""
-
-#. Configuration options
-#. WAP server (reference: "libpurple/accountopt.h")
-msgid "WAP Server"
-msgstr ""
-
-msgid "Connect via HTTP"
-msgstr ""
-
-msgid "Enable splash-screen popup"
-msgstr ""
-
-msgid "Don't want to say"
-msgstr ""
-
-msgid "Single"
-msgstr ""
-
-msgid "In a relationship"
-msgstr ""
-
-msgid "Engaged"
-msgstr ""
-
-msgid "Married"
-msgstr ""
-
-msgid "It's complicated"
-msgstr ""
-
-msgid "Widowed"
-msgstr ""
-
-msgid "Separated"
-msgstr ""
-
-msgid "Divorced"
-msgstr ""
-
-msgid "Last Online"
-msgstr ""
-
-msgid "Invite Message"
-msgstr ""
-
-msgid "No results"
-msgstr ""
-
-msgid "No contacts found."
-msgstr ""
-
-#. define columns
-msgid "UserId"
-msgstr ""
-
-msgid "Where I live"
-msgstr ""
-
-#, c-format
-msgid "You have %i suggested friend."
-msgid_plural "You have %i suggested friends."
-msgstr[0] ""
-
-#, c-format
-msgid "We found %i contact that matches your search."
-msgid_plural "We found %i contacts that match your search."
-msgstr[0] ""
-
-#. we must have lost the connection, so terminate it so that we can reconnect
-msgid "We have lost the connection to MXit. Please reconnect."
-msgstr ""
-
-#. packet could not be queued for transmission
-msgid "Message Send Error"
-msgstr ""
-
-msgid "Unable to process your request at this time"
-msgstr ""
-
-msgid "Timeout while waiting for a response from the MXit server."
-msgstr ""
-
-msgid "Successfully Logged In..."
-msgstr ""
-
-#, c-format
-msgid ""
-"%s sent you an encrypted message, but it is not supported on this client."
-msgstr ""
-
-msgid "Message Error"
-msgstr ""
-
-#. could not be decrypted
-msgid "An encrypted message was received which could not be decrypted."
-msgstr ""
-
-msgid "Cannot perform redirect using the specified protocol"
-msgstr ""
-
-msgid "An internal MXit server error occurred."
-msgstr ""
-
-#, c-format
-msgid "Login error: %s (%i)"
-msgstr ""
-
-#, c-format
-msgid "Logout error: %s (%i)"
-msgstr ""
-
-msgid "Contact Error"
-msgstr ""
-
-msgid "Message Sending Error"
-msgstr ""
-
-msgid "Status Error"
-msgstr ""
-
-msgid "Mood Error"
-msgstr ""
-
-msgid "Invitation Error"
-msgstr ""
-
-msgid "Contact Removal Error"
-msgstr ""
-
-msgid "Subscription Error"
-msgstr ""
-
-msgid "Contact Update Error"
-msgstr ""
-
-msgid "File Transfer Error"
-msgstr ""
-
-msgid "Cannot create MultiMx room"
-msgstr ""
-
-msgid "MultiMx Invitation Error"
-msgstr ""
-
-msgid "Profile Error"
-msgstr ""
-
-#. bad packet
-msgid "Invalid packet received from MXit."
-msgstr ""
-
-#. connection error
-msgid "A connection error occurred to MXit. (read stage 0x01)"
-msgstr ""
-
-#. connection closed
-msgid "A connection error occurred to MXit. (read stage 0x02)"
-msgstr ""
-
-msgid "A connection error occurred to MXit. (read stage 0x03)"
-msgstr ""
-
-#. malformed packet length record (too long)
-msgid "A connection error occurred to MXit. (read stage 0x04)"
-msgstr ""
-
-#. connection error
-msgid "A connection error occurred to MXit. (read stage 0x05)"
-msgstr ""
-
-#. connection closed
-msgid "A connection error occurred to MXit. (read stage 0x06)"
-msgstr ""
-
-msgid "In Love"
-msgstr "연애"
-
-msgid "Pending"
-msgstr ""
-
-msgid "Invited"
-msgstr ""
-
-msgid "Rejected"
-msgstr ""
-
-msgid "Deleted"
-msgstr ""
-
-msgid "MXit Advertising"
-msgstr ""
-
-msgid "More Information"
-msgstr ""
-
-#, c-format
-msgid "No such user: %s"
-msgstr ""
-
-msgid "User lookup"
-msgstr ""
-
-msgid "Reading challenge"
-msgstr ""
-
-msgid "Unexpected challenge length from server"
-msgstr ""
-
-msgid "Logging in"
-msgstr ""
-
-msgid "MySpaceIM - No Username Set"
-msgstr ""
-
-msgid "You appear to have no MySpace username."
-msgstr ""
-
-msgid "Would you like to set one now? (Note: THIS CANNOT BE CHANGED!)"
-msgstr ""
-
-msgid "Lost connection with server"
-msgstr ""
-
-#. Can't write _()'d strings in array initializers. Workaround.
-#. khc: then use N_() in the array initializer and use _() when they are
-#. used
-msgid "New mail messages"
-msgstr ""
-
-msgid "New blog comments"
-msgstr ""
-
-msgid "New profile comments"
-msgstr ""
-
-msgid "New friend requests!"
-msgstr ""
-
-msgid "New picture comments"
-msgstr ""
-
-msgid "MySpace"
-msgstr ""
-
-msgid "IM Friends"
-msgstr ""
-
-#, c-format
-msgid ""
-"%d buddy was added or updated from the server (including buddies already on "
-"the server-side list)"
-msgid_plural ""
-"%d buddies were added or updated from the server (including buddies already "
-"on the server-side list)"
-msgstr[0] ""
-
-msgid "Add contacts from server"
-msgstr ""
-
-#, c-format
-msgid "Protocol error, code %d: %s"
-msgstr ""
-
-#, c-format
-msgid ""
-"%s Your password is %zu characters, which is longer than the maximum length "
-"of %d.  Please shorten your password at http://profileedit.myspace.com/index."
-"cfm?fuseaction=accountSettings.changePassword and try again."
-msgstr ""
-
-msgid "Incorrect username or password"
-msgstr ""
-
-msgid "MySpaceIM Error"
-msgstr ""
-
-msgid "Invalid input condition"
-msgstr ""
-
-msgid "Failed to add buddy"
-msgstr ""
-
-msgid "'addbuddy' command failed."
-msgstr ""
-
-msgid "persist command failed"
-msgstr ""
-
-msgid "Failed to remove buddy"
-msgstr ""
-
-msgid "'delbuddy' command failed"
-msgstr ""
-
-msgid "blocklist command failed"
-msgstr ""
-
-msgid "Missing Cipher"
-msgstr ""
-
-msgid "The RC4 cipher could not be found"
-msgstr ""
-
-msgid ""
-"Upgrade to a libpurple with RC4 support (>= 2.0.1). MySpaceIM plugin will "
-"not be loaded."
-msgstr ""
-
-msgid "Add friends from MySpace.com"
-msgstr ""
-
-msgid "Importing friends failed"
-msgstr ""
-
-#. TODO: find out how
-msgid "Find people..."
-msgstr ""
-
-msgid "Change IM name..."
-msgstr ""
-
-msgid "myim URL handler"
-msgstr ""
-
-msgid "No suitable MySpaceIM account could be found to open this myim URL."
-msgstr ""
-
-msgid "Enable the proper MySpaceIM account and try again."
-msgstr ""
-
-msgid "Show display name in status text"
-msgstr ""
-
-msgid "Show headline in status text"
-msgstr ""
-
-msgid "Send emoticons"
-msgstr ""
-
-msgid "Screen resolution (dots per inch)"
-msgstr ""
-
-msgid "Base font size (points)"
-msgstr ""
-
-msgid "User"
-msgstr "사용자"
-
-msgid "Headline"
-msgstr ""
-
-msgid "Song"
-msgstr ""
-
-msgid "Total Friends"
-msgstr ""
-
-msgid "Client Version"
-msgstr ""
-
-msgid ""
-"An error occurred while trying to set the username.  Please try again, or "
-"visit http://editprofile.myspace.com/index.cfm?fuseaction=profile.username "
-"to set your username."
-msgstr ""
-
-msgid "MySpaceIM - Username Available"
-msgstr ""
-
-msgid "This username is available. Would you like to set it?"
-msgstr ""
-
-msgid "ONCE SET, THIS CANNOT BE CHANGED!"
-msgstr ""
-
-msgid "MySpaceIM - Please Set a Username"
-msgstr ""
-
-msgid "This username is unavailable."
-msgstr ""
-
-msgid "Please try another username:"
-msgstr ""
-
-#. Protocol won't log in now without a username set.. Disconnect
-msgid "No username set"
-msgstr ""
-
-msgid "Please enter a username to check its availability:"
-msgstr ""
-
-#. TODO: icons for each zap
-#. Lots of comments for translators:
-#. Zap means "to strike suddenly and forcefully as if with a
-#. * projectile or weapon."  This term often has an electrical
-#. * connotation, for example, "he was zapped by electricity when
-#. * he put a fork in the toaster."
-msgid "Zap"
-msgstr ""
-
-#, c-format
-msgid "%s has zapped you!"
-msgstr ""
-
-#, c-format
-msgid "Zapping %s..."
-msgstr ""
-
-#. Whack means "to hit or strike someone with a sharp blow"
-msgid "Whack"
-msgstr ""
-
-#, c-format
-msgid "%s has whacked you!"
-msgstr ""
-
-#, c-format
-msgid "Whacking %s..."
-msgstr ""
-
-#. Torch means "to set on fire."  Don't worry, this doesn't
-#. * make a whole lot of sense in English, either.  Feel free
-#. * to translate it literally.
-msgid "Torch"
-msgstr ""
-
-#, c-format
-msgid "%s has torched you!"
-msgstr ""
-
-#, c-format
-msgid "Torching %s..."
-msgstr ""
-
-#. Smooch means "to kiss someone, often enthusiastically"
-msgid "Smooch"
-msgstr ""
-
-#, c-format
-msgid "%s has smooched you!"
-msgstr ""
-
-#, c-format
-msgid "Smooching %s..."
-msgstr ""
-
-#. A hug is a display of affection; wrapping your arms around someone
-msgid "Hug"
-msgstr ""
-
-#, c-format
-msgid "%s has hugged you!"
-msgstr ""
-
-#, c-format
-msgid "Hugging %s..."
-msgstr ""
-
-#. Slap means "to hit someone with an open/flat hand"
-msgid "Slap"
-msgstr ""
-
-#, c-format
-msgid "%s has slapped you!"
-msgstr ""
-
-#, c-format
-msgid "Slapping %s..."
-msgstr ""
-
-#. Goose means "to pinch someone on their butt"
-msgid "Goose"
-msgstr ""
-
-#, c-format
-msgid "%s has goosed you!"
-msgstr ""
-
-#, c-format
-msgid "Goosing %s..."
-msgstr ""
-
-#. A high-five is when two people's hands slap each other
-#. * in the air above their heads.  It is done to celebrate
-#. * something, often a victory, or to congratulate someone.
-msgid "High-five"
-msgstr ""
-
-#, c-format
-msgid "%s has high-fived you!"
-msgstr ""
-
-#, c-format
-msgid "High-fiving %s..."
-msgstr ""
-
-#. We're not entirely sure what the MySpace people mean by
-#. * this... but we think it's the equivalent of "prank."  Or, for
-#. * someone to perform a mischievous trick or practical joke.
-msgid "Punk"
-msgstr ""
-
-#, c-format
-msgid "%s has punk'd you!"
-msgstr ""
-
-#, c-format
-msgid "Punking %s..."
-msgstr ""
-
-#. Raspberry is a slang term for the vibrating sound made
-#. * when you stick your tongue out of your mouth with your
-#. * lips closed and blow.  It is typically done when
-#. * gloating or bragging.  Nowadays it's a pretty silly
-#. * gesture, so it does not carry a harsh negative
-#. * connotation.  It is generally used in a playful tone
-#. * with friends.
-msgid "Raspberry"
-msgstr ""
-
-#, c-format
-msgid "%s has raspberried you!"
-msgstr ""
-
-#, c-format
-msgid "Raspberrying %s..."
-msgstr ""
-
 msgid "Required parameters not passed in"
 msgstr "필요한 인수가 전달되지 못했습니다."
 
@@ -6678,6 +5046,9 @@ msgstr "나 자신은 추가할 수 없습니다."
 
 msgid "Master archive is misconfigured"
 msgstr "Master archive 설정이 틀렸습니다."
+
+msgid "Incorrect username or password"
+msgstr ""
 
 msgid "Could not recognize the host of the username you entered"
 msgstr ""
@@ -6798,6 +5169,12 @@ msgstr "서버와의 통신 중 오류입니다. 접속을 끊었습니다."
 msgid "Telephone Number"
 msgstr "전화번호"
 
+msgid "Location"
+msgstr "위치"
+
+msgid "Department"
+msgstr "부서"
+
 msgid "Personal Title"
 msgstr "개인 제목"
 
@@ -6846,6 +5223,9 @@ msgstr ""
 msgid "Would you like to join the conversation?"
 msgstr "회의에 참석하시겠습니까?"
 
+msgid "You have signed on from another location"
+msgstr ""
+
 #, c-format
 msgid ""
 "%s appears to be offline and did not receive the message that you just sent."
@@ -6858,6 +5238,9 @@ msgstr ""
 
 msgid "This conference has been closed. No more messages can be sent."
 msgstr "이 회의는 폐회되었습니다. 메시지를 전송할 수 없습니다."
+
+msgid "Busy"
+msgstr "다른 용무 중입니다."
 
 #. *< type
 #. *< ui_requirement
@@ -6956,6 +5339,9 @@ msgstr ""
 
 msgid "Invalid error"
 msgstr "잘못된 오류"
+
+msgid "Not logged in"
+msgstr "로그인되어 있지 않습니다."
 
 msgid "Cannot receive IM due to parental controls"
 msgstr ""
@@ -7092,10 +5478,19 @@ msgstr ""
 msgid "Studying"
 msgstr ""
 
+msgid "Working"
+msgstr ""
+
 msgid "In the restroom"
 msgstr ""
 
 msgid "Received invalid data on connection with server"
+msgstr ""
+
+msgid "Error parsing response from authentication server"
+msgstr ""
+
+msgid "Unknown error during authentication"
 msgstr ""
 
 #. *< type
@@ -7219,6 +5614,11 @@ msgid ""
 "supported by your system."
 msgstr ""
 
+msgid ""
+"You required Kerberos authentication but encryption is disabled in your "
+"account settings."
+msgstr ""
+
 #, c-format
 msgid "You may be disconnected shortly.  If so, check %s for updates."
 msgstr ""
@@ -7233,7 +5633,6 @@ msgid "Received authorization"
 msgstr "인증을 받았습니다."
 
 #. Unregistered username
-#. the username does not exist
 msgid "Username does not exist"
 msgstr ""
 
@@ -7515,6 +5914,9 @@ msgid ""
 "numbers and spaces, or contain only numbers."
 msgstr ""
 
+msgid "Unable to Add"
+msgstr ""
+
 msgid "Unable to Retrieve Buddy List"
 msgstr ""
 
@@ -7659,6 +6061,9 @@ msgstr "이메일 주소로부터 친구를 찾습니다."
 msgid "Type the email address of the buddy you are searching for."
 msgstr "검색할 친구의 이메일 주소를 입력해 주십시오."
 
+msgid "_Search"
+msgstr "검색(_S)"
+
 msgid "Set User Info (web)..."
 msgstr ""
 
@@ -7695,7 +6100,16 @@ msgstr "승인을 기다리는 친구 표시"
 msgid "Search for Buddy by Email Address..."
 msgstr "이메일로 친구 검색..."
 
-msgid "Use clientLogin"
+msgid "clientLogin"
+msgstr ""
+
+msgid "Kerberos"
+msgstr ""
+
+msgid "MD5-based"
+msgstr ""
+
+msgid "Authentication method"
 msgstr ""
 
 msgid ""
@@ -7817,6 +6231,9 @@ msgstr "사용자 정보를 이용할 수 없습니다: %s"
 msgid "Mobile Phone"
 msgstr "휴대 전화"
 
+msgid "Age"
+msgstr "연령"
+
 msgid "Personal Web Page"
 msgstr "개인 웹페이지"
 
@@ -7825,11 +6242,20 @@ msgstr "개인 웹페이지"
 msgid "Additional Information"
 msgstr "추가 정보"
 
+msgid "Home Address"
+msgstr "자택 주소"
+
 msgid "Zip Code"
 msgstr "우편 번호"
 
+msgid "Work Address"
+msgstr "회사 주소"
+
 msgid "Work Information"
 msgstr "직업"
+
+msgid "Company"
+msgstr "회사"
 
 msgid "Division"
 msgstr "소속"
@@ -7848,6 +6274,12 @@ msgstr "멤버가 된 일시"
 
 msgid "Capabilities"
 msgstr "기능"
+
+msgid "Profile"
+msgstr "프로파일"
+
+msgid "View web profile"
+msgstr ""
 
 msgid "Invalid SNAC"
 msgstr "잘못된 SNAC"
@@ -8139,6 +6571,9 @@ msgstr ""
 "ID '%s' 에 해당하는 사용자가 Sametime 커뮤니티 안에는 없었습니다. 친구 목록에"
 "서 이 항목을 삭제했습니다."
 
+msgid "Unable to add user"
+msgstr "사용자를 추가할 수 없습니다."
+
 #, c-format
 msgid ""
 "Error reading file %s: \n"
@@ -8418,6 +6853,9 @@ msgstr "활동적"
 
 msgid "Robot"
 msgstr "로봇"
+
+msgid "In Love"
+msgstr "연애"
 
 msgid "User Modes"
 msgstr "사용자 모드"
@@ -8706,6 +7144,9 @@ msgstr "조직"
 msgid "Unit"
 msgstr "그룹"
 
+msgid "Homepage"
+msgstr "홈페이지"
+
 msgid "Note"
 msgstr "비고"
 
@@ -8879,6 +7320,9 @@ msgstr ""
 
 msgid "Key Exchange failed"
 msgstr "키 교환에 실패했습니다."
+
+msgid "Authentication failed"
+msgstr "인증에 실패했습니다."
 
 msgid ""
 "Resuming detached session failed. Press Reconnect to create new connection."
@@ -9395,410 +7839,6 @@ msgstr "사용자 인증"
 msgid "Auth Domain"
 msgstr "도메인 인증"
 
-msgid "join &lt;room&gt;:  Join a chat room on the Yahoo network"
-msgstr "join &lt;대화실&gt;: Yahoo 네트워크 상에 있는 대화에 참가"
-
-msgid "list: List rooms on the Yahoo network"
-msgstr "list: Yahoo 네트워크 상에 있는 대화실 목록 표시"
-
-msgid "doodle: Request user to start a Doodle session"
-msgstr "doodle: 사용자에게 낙서 요구"
-
-msgid "Yahoo ID..."
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Yahoo! Protocol Plugin"
-msgstr ""
-
-msgid "Pager port"
-msgstr "호출기 포트"
-
-msgid "File transfer server"
-msgstr "파일 전송 서버"
-
-msgid "File transfer port"
-msgstr "파일 전송 포트"
-
-msgid "Chat room locale"
-msgstr "대화실 위치"
-
-msgid "Ignore conference and chatroom invitations"
-msgstr "회의 및 대화실 초대 무시"
-
-msgid "Use account proxy for HTTP and HTTPS connections"
-msgstr ""
-
-msgid "Chat room list URL"
-msgstr "대화실 URL 목록"
-
-msgid "Yahoo JAPAN ID..."
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Yahoo! JAPAN Protocol Plugin"
-msgstr ""
-
-#, c-format
-msgid "%s has sent you a webcam invite, which is not yet supported."
-msgstr ""
-
-msgid "Your SMS was not delivered"
-msgstr ""
-
-msgid "Your Yahoo! message did not get sent."
-msgstr "Yahoo! 메시지를 보낼 수 없었습니다."
-
-#, c-format
-msgid "Yahoo! system message for %s:"
-msgstr "%s 의 Yahoo! 시스템 메시지"
-
-msgid "Authorization denied message:"
-msgstr "인증 거부 메시지:"
-
-#, c-format
-msgid ""
-"%s has (retroactively) denied your request to add them to your list for the "
-"following reason: %s."
-msgstr ""
-"%s 은(는) 다음의 이유로 친구 목록에 추가하려는 내 요구를 (이전으로 거슬러 올"
-"라가) 거부했습니다:\" %s"
-
-#, c-format
-msgid "%s has (retroactively) denied your request to add them to your list."
-msgstr ""
-"%s 은(는) 친구 목록에 추가하려는 내 요구를 (이전으로 거슬러 올라가) 거부했습"
-"니다."
-
-msgid "Add buddy rejected"
-msgstr "거부할 친구 추가"
-
-#. Some error in the received stream
-msgid "Received invalid data"
-msgstr ""
-
-#. security lock from too many failed login attempts
-msgid ""
-"Account locked: Too many failed login attempts.  Logging into the Yahoo! "
-"website may fix this."
-msgstr ""
-
-#. indicates a lock of some description
-msgid ""
-"Account locked: Unknown reason.  Logging into the Yahoo! website may fix "
-"this."
-msgstr ""
-
-#. indicates a lock due to logging in too frequently
-msgid ""
-"Account locked: You have been logging in too frequently.  Wait a few minutes "
-"before trying to connect again.  Logging into the Yahoo! website may help."
-msgstr ""
-
-#. username or password missing
-msgid "Username or password missing"
-msgstr ""
-
-#, c-format
-msgid ""
-"The Yahoo server has requested the use of an unrecognized authentication "
-"method.  You will probably not be able to successfully sign on to Yahoo.  "
-"Check %s for updates."
-msgstr ""
-
-msgid "Failed Yahoo! Authentication"
-msgstr "Yahoo! 인증 실패"
-
-#, c-format
-msgid ""
-"You have tried to ignore %s, but the user is on your buddy list.  Clicking "
-"\"Yes\" will remove and ignore the buddy."
-msgstr ""
-"%s 을(를) 무시하려고 했지만, 사용자가 친구 목록에 있습니다. 그 사용자를 친구 "
-"목록에서 삭제하고 무시할 경우에는 \"예\" 를 눌러 주십시오."
-
-msgid "Ignore buddy?"
-msgstr "친구를 무시하시겠습니까?"
-
-msgid "Invalid username or password"
-msgstr ""
-
-msgid ""
-"Your account has been locked due to too many failed login attempts.  Please "
-"try logging into the Yahoo! website."
-msgstr ""
-
-msgid "Unknown error 52.  Reconnecting should fix this."
-msgstr ""
-
-msgid ""
-"Error 1013: The username you have entered is invalid.  The most common cause "
-"of this error is entering your email address instead of your Yahoo! ID."
-msgstr ""
-
-#, c-format
-msgid "Unknown error number %d. Logging into the Yahoo! website may fix this."
-msgstr ""
-"알 수 없는 오류 번호 %d 입니다. Yahoo! 웹사이트로 로그인하면 해결될 수도 있습"
-"니다."
-
-#, c-format
-msgid "Unable to add buddy %s to group %s to the server list on account %s."
-msgstr ""
-
-msgid "Unable to add buddy to server list"
-msgstr ""
-
-#, c-format
-msgid "[ Audible %s/%s/%s.swf ] %s"
-msgstr "[ 재생 가능 %s/%s/%s.swf ] %s"
-
-msgid "Received unexpected HTTP response from server"
-msgstr ""
-
-#, c-format
-msgid "Lost connection with %s: %s"
-msgstr ""
-
-#, c-format
-msgid "Unable to establish a connection with %s: %s"
-msgstr ""
-
-msgid "Unable to connect: The server returned an empty response."
-msgstr ""
-
-msgid ""
-"Unable to connect: The server's response did not contain the necessary "
-"information"
-msgstr ""
-
-msgid "Not at Home"
-msgstr "집에 없음"
-
-msgid "Not at Desk"
-msgstr "자리에 없음"
-
-msgid "Not in Office"
-msgstr "사무실에 없음"
-
-msgid "On Vacation"
-msgstr "휴가 중"
-
-msgid "Stepped Out"
-msgstr "잠시 외출"
-
-msgid "Not on server list"
-msgstr "서버 목록에 없습니다."
-
-msgid "Appear Permanently Offline"
-msgstr "일시적으로 오프라인으로 표시"
-
-msgid "Presence"
-msgstr "자리에 있음"
-
-msgid "Don't Appear Permanently Offline"
-msgstr "일시적으로 오프라인으로 표시 안 함"
-
-msgid "Join in Chat"
-msgstr "대화에 참가"
-
-msgid "Initiate Conference"
-msgstr "회의에 초대"
-
-msgid "Presence Settings"
-msgstr "자리 있음 상태 설정"
-
-msgid "Start Doodling"
-msgstr "낙서 시작"
-
-msgid "Activate which ID?"
-msgstr ""
-
-msgid "Select the ID you want to activate"
-msgstr ""
-
-msgid "Join whom in chat?"
-msgstr ""
-
-msgid "Activate ID..."
-msgstr "ID 활성화..."
-
-msgid "Join User in Chat..."
-msgstr "대화에 참가..."
-
-msgid "Open Inbox"
-msgstr ""
-
-msgid "Can't send SMS. Unable to obtain mobile carrier."
-msgstr ""
-
-msgid "Can't send SMS. Unknown mobile carrier."
-msgstr ""
-
-msgid "Getting mobile carrier to send the SMS."
-msgstr ""
-
-#. Write a local message to this conversation showing that a request for a
-#. * Doodle session has been made
-#.
-msgid "Sent Doodle request."
-msgstr "낙서 요청을 보냄"
-
-msgid "Unable to connect."
-msgstr "접속할 수 없습니다."
-
-msgid "Unable to establish file descriptor."
-msgstr "파일 기술자를 가져올 수 없습니다."
-
-#, c-format
-msgid "%s is trying to send you a group of %d files.\n"
-msgstr ""
-
-msgid "Write Error"
-msgstr "쓰기 오류"
-
-msgid "Yahoo! Japan Profile"
-msgstr "Yahoo! Korea 프로파일"
-
-msgid "Yahoo! Profile"
-msgstr "Yahoo! 프로파일"
-
-msgid ""
-"Sorry, profiles marked as containing adult content are not supported at this "
-"time."
-msgstr ""
-"죄송합니다. 이 버전에서는 성인 컨텐트를 포함하고 있으면, 마크가 붙은 프로파일"
-"은 이용할 수 없습니다."
-
-msgid ""
-"If you wish to view this profile, you will need to visit this link in your "
-"web browser:"
-msgstr ""
-"이 프로파일의 열람을 희망하는 경우에는, 사용 중인 웹 브라우저로부터 다음의 링"
-"크를 방문해 주십시오:"
-
-msgid "Yahoo! ID"
-msgstr "Yahoo! ID"
-
-msgid "Hobbies"
-msgstr "취미"
-
-msgid "Latest News"
-msgstr "최신 뉴스"
-
-msgid "Home Page"
-msgstr "홈페이지"
-
-msgid "Cool Link 1"
-msgstr "추천 링크 1"
-
-msgid "Cool Link 2"
-msgstr "추천 링크 2"
-
-msgid "Cool Link 3"
-msgstr "추천 링크 3"
-
-msgid "Last Update"
-msgstr "최종 갱신일"
-
-msgid ""
-"This profile is in a language or format that is not supported at this time."
-msgstr ""
-
-msgid ""
-"Could not retrieve the user's profile. This most likely is a temporary "
-"server-side problem. Please try again later."
-msgstr ""
-"사용자 프로파일을 가져올 수 없었습니다. 아마도 일시적인 서버쪽의 문제인 것 같"
-"습니다. 잠시 후 재시도 하십시오."
-
-msgid ""
-"Could not retrieve the user's profile. This most likely means that the user "
-"does not exist; however, Yahoo! sometimes does fail to find a user's "
-"profile. If you know that the user exists, please try again later."
-msgstr ""
-"사용자 프로파일을 가져올 수 없었습니다. 아마도 서버가 존재하지 않는 것 같습니"
-"다. 단, 가끔 Yahoo! 는 사용자 프로파일을 가져오지 못할 때가 있습니다. 사용자"
-"가 확실히 존재하면, 잠시 후 재시도 해 보십시오."
-
-msgid "The user's profile is empty."
-msgstr "사용자 프로파일이 비어 있습니다."
-
-#, c-format
-msgid "%s has declined to join."
-msgstr ""
-
-msgid "Failed to join chat"
-msgstr "대화 참가에 실패했습니다."
-
-#. -6
-msgid "Unknown room"
-msgstr "알 수 없는 대화실"
-
-#. -15
-msgid "Maybe the room is full"
-msgstr "아마도 대화실이 모두 찬 것 같습니다."
-
-#. -35
-msgid "Not available"
-msgstr "이용 불가"
-
-msgid ""
-"Unknown error. You may need to logout and wait five minutes before being "
-"able to rejoin a chatroom"
-msgstr ""
-"알 수 없는 오류입니다. 로그아웃 후 5초 정도 있다가 다시 대화실로 참가하십시"
-"오."
-
-#, c-format
-msgid "You are now chatting in %s."
-msgstr "나는 %s 에서 대화 중입니다."
-
-msgid "Failed to join buddy in chat"
-msgstr "대화 중인 친구에게 참가할 수 없습니다."
-
-msgid "Maybe they're not in a chat?"
-msgstr "아마도 대화에 아무도 없는 것 같습니다."
-
-msgid "Fetching the room list failed."
-msgstr "대화실 목록 가져오기에 실패했습니다."
-
-msgid "Voices"
-msgstr "음성"
-
-msgid "Webcams"
-msgstr "웹카메라"
-
-msgid "Connection problem"
-msgstr "접속 오류"
-
-msgid "Unable to fetch room list."
-msgstr "대화실 목록 가져올 수 없습니다."
-
-msgid "User Rooms"
-msgstr "사용자실"
-
-msgid "Connection problem with the YCHT server"
-msgstr ""
-
 msgid ""
 "(There was an error converting this message.\t Check the 'Encoding' option "
 "in the Account Editor)"
@@ -9809,6 +7849,12 @@ msgstr ""
 #, c-format
 msgid "Unable to send to chat %s,%s,%s"
 msgstr "대화 %s,%s,%s 에 전송할 수 없습니다."
+
+msgid "User is offline"
+msgstr "사용자는 오프라인입니다."
+
+msgid "User"
+msgstr "사용자"
 
 msgid "Hidden or not logged-in"
 msgstr "숨어 있거나 접속되어 있지 않습니다."
@@ -10191,8 +8237,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"This means that you can be chatting with friends on MSN, talking to a friend "
-"on Google Talk, and sitting in a Yahoo chat room all at the same time."
+"This means that you can be chatting with friends on AIM, talking to a friend "
+"on Google Talk, and sitting in an IRC chat room all at the same time."
 msgstr ""
 
 msgid "The buddy list showing friends on different networks."
@@ -10204,8 +8250,7 @@ msgstr "Pidgin 인터넷 메신저"
 msgid "Internet Messenger"
 msgstr "인터넷 메신저"
 
-msgid ""
-"Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, MSN, Yahoo and more"
+msgid "Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, and more"
 msgstr ""
 
 #. Build the login options frame.
@@ -10899,10 +8944,10 @@ msgstr ""
 msgid "_Group:"
 msgstr "그룹(_G):"
 
-msgid "Auto_join when account connects."
+msgid "Automatically _join when account connects"
 msgstr ""
 
-msgid "_Remain in chat after window is closed."
+msgid "_Remain in chat after window is closed"
 msgstr ""
 
 msgid "Please enter the name of the group to be added."
@@ -10941,6 +8986,9 @@ msgstr ""
 #. Widget creation function
 msgid "SSL Servers"
 msgstr "SSL 서버"
+
+msgid "Supported debug options are: plugins, version"
+msgstr ""
 
 msgid "Unknown command."
 msgstr ""
@@ -11377,6 +9425,9 @@ msgstr "벵갈어"
 msgid "Bengali-India"
 msgstr ""
 
+msgid "Breton"
+msgstr ""
+
 msgid "Bodo"
 msgstr ""
 
@@ -11433,9 +9484,6 @@ msgstr "페르시아어"
 
 msgid "Finnish"
 msgstr "핀란드어"
-
-msgid "French"
-msgstr "프랑스어"
 
 msgid "Irish"
 msgstr ""
@@ -11514,6 +9562,9 @@ msgstr ""
 
 msgid "Macedonian"
 msgstr "마케도니아어"
+
+msgid "Malay"
+msgstr ""
 
 msgid "Malayalam"
 msgstr ""
@@ -11634,13 +9685,13 @@ msgstr "중국어 (번체)"
 msgid "Amharic"
 msgstr "아무하라어"
 
+msgid "French"
+msgstr "프랑스어"
+
 msgid "Armenian"
 msgstr ""
 
 msgid "Lao"
-msgstr ""
-
-msgid "Malay"
 msgstr ""
 
 msgid "Turkish"
@@ -11669,8 +9720,8 @@ msgstr ""
 
 msgid ""
 "<font size=\"4\"><b>Help from other Pidgin users</b></font> is available by "
-"e-mailing <a href=\"mailto:support@pidgin.im\">support@pidgin.im</a><br/"
-">This is a <b>public</b> mailing list! (<a href=\"http://pidgin.im/pipermail/"
+"emailing <a href=\"mailto:support@pidgin.im\">support@pidgin.im</a><br/>This "
+"is a <b>public</b> mailing list! (<a href=\"http://pidgin.im/pipermail/"
 "support/\">archive</a>)<br/>We can't help with third-party protocols or "
 "plugins!<br/>This list's primary language is <b>English</b>.  You are "
 "welcome to post in another language, but the responses may be less helpful."
@@ -12279,6 +10330,9 @@ msgstr ""
 msgid "_Hangup"
 msgstr ""
 
+msgid "Media error"
+msgstr ""
+
 #, c-format
 msgid "%s wishes to start an audio/video session with you."
 msgstr ""
@@ -12288,6 +10342,42 @@ msgid "%s wishes to start a video session with you."
 msgstr ""
 
 msgid "Incoming Call"
+msgstr ""
+
+#. Translators note: These are the letters on the keys of a numeric
+#. keypad; translate according to the tables in §7 of ETSI ES 202 130:
+#. http://webapp.etsi.org/WorkProgram/Report_WorkItem.asp?WKI_ID=11730
+#.
+#. Letters on the '2' key of a numeric keypad
+msgid "ABC"
+msgstr ""
+
+#. Letters on the '3' key of a numeric keypad
+msgid "DEF"
+msgstr ""
+
+#. Letters on the '4' key of a numeric keypad
+msgid "GHI"
+msgstr ""
+
+#. Letters on the '5' key of a numeric keypad
+msgid "JKL"
+msgstr ""
+
+#. Letters on the '6' key of a numeric keypad
+msgid "MNO"
+msgstr ""
+
+#. Letters on the '7' key of a numeric keypad
+msgid "PQRS"
+msgstr ""
+
+#. Letters on the '8' key of a numeric keypad
+msgid "TUV"
+msgstr ""
+
+#. Letters on the '9' key of a numeric keypad
+msgid "WXYZ"
 msgstr ""
 
 msgid "_Hold"
@@ -12400,10 +10490,6 @@ msgstr "파일 선택"
 
 msgid "Modify Buddy Pounce"
 msgstr ""
-
-#. Create the "Pounce on Whom" frame.
-msgid "Pounce on Whom"
-msgstr "알림을 받을 친구"
 
 msgid "_Account:"
 msgstr "계정(_A):"
@@ -13067,9 +11153,9 @@ msgstr "상태(_S):"
 msgid "Use a _different status for some accounts"
 msgstr "같은 계정으로 다른 상태를 이용(_D)"
 
-#. Save & Use button
-msgid "Sa_ve & Use"
-msgstr "저장 후 사용(_V)"
+#. Save and Use button
+msgid "Sa_ve and Use"
+msgstr ""
 
 #, c-format
 msgid "Status for %s"
@@ -13130,9 +11216,6 @@ msgid "Status Selector"
 msgstr ""
 
 msgid "Google Talk"
-msgstr ""
-
-msgid "Facebook (XMPP)"
 msgstr ""
 
 #, c-format
@@ -13417,6 +11500,9 @@ msgstr "받은 메시지"
 #, c-format
 msgid "Select Color for %s"
 msgstr "%s (으)로 사용할 색상 선택"
+
+msgid "General"
+msgstr "일반"
 
 msgid "Ignore incoming format"
 msgstr "수신한 메시지 서식 무시"
@@ -13783,6 +11869,9 @@ msgstr ""
 msgid "Notify For"
 msgstr "연락처"
 
+msgid "\tS_ystem messages"
+msgstr ""
+
 msgid "\t_Only when someone says your username"
 msgstr ""
 
@@ -13816,6 +11905,8 @@ msgid "R_aise conversation window"
 msgstr "대화 창을 전면으로 표시(_A)"
 
 #. Present conversation method button
+#. Translators: "Present" as used here is a verb. The plugin presents
+#. * the window to the user.
 msgid "_Present conversation window"
 msgstr ""
 
@@ -13968,7 +12059,7 @@ msgid "Lets you send raw input to text-based protocols."
 msgstr "Raw 데이터를 문자 형식의 프로토콜로 전송할 수 있습니다."
 
 msgid ""
-"Lets you send raw input to text-based protocols (XMPP, MSN, IRC, TOC). Hit "
+"Lets you send raw input to text-based protocols (XMPP, IRC, TOC). Hit "
 "'Enter' in the entry box to send. Watch the debug window."
 msgstr ""
 
@@ -14260,6 +12351,56 @@ msgstr ""
 "이 플러그인을 사용하면 대화나 로그 메시지에 부여하는 타임스탬프의 형식을 정의"
 "할 수 있습니다."
 
+msgid "Opacity:"
+msgstr "불투명도:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "메시지 대화 창"
+
+msgid "_IM window transparency"
+msgstr "대화 창의 투명도(_I)"
+
+msgid "_Show slider bar in IM window"
+msgstr "대화 창 안에 슬라이드바 표시(_S)"
+
+msgid "Remove IM window transparency on focus"
+msgstr "활성되면 대화 창의 투명도 해제"
+
+msgid "Always on top"
+msgstr "항상 맨 위에"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "친구 목록 창"
+
+msgid "_Buddy List window transparency"
+msgstr "친구 목록 투명도(_B)"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "활성되면 친구 목록의 투명도 해제"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Transparency"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "친구 목록과 대화 창을 계단식으로 투명화 합니다."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -14368,61 +12509,6 @@ msgstr ""
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
-
-msgid "Opacity:"
-msgstr "불투명도:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "메시지 대화 창"
-
-msgid "_IM window transparency"
-msgstr "대화 창의 투명도(_I)"
-
-msgid "_Show slider bar in IM window"
-msgstr "대화 창 안에 슬라이드바 표시(_S)"
-
-msgid "Remove IM window transparency on focus"
-msgstr "활성되면 대화 창의 투명도 해제"
-
-msgid "Always on top"
-msgstr "항상 맨 위에"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "친구 목록 창"
-
-msgid "_Buddy List window transparency"
-msgstr "친구 목록 투명도(_B)"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "활성되면 친구 목록의 투명도 해제"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Transparency"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "친구 목록과 대화 창을 계단식으로 투명화 합니다."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list.\n"
-"\n"
-"* Note: This plugin requires Win2000 or greater."
-msgstr ""
-"이 플러그인은 가변식 투과를 사용하여 친구 목록과 대화 창을 투명하게 합니다.\n"
-"\n"
-"* 주: 이 플러그인은 윈도우즈 2000 이상에서만 동작합니다."
 
 #. Autostart
 msgid "Startup"
@@ -14560,9 +12646,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Pidgin requires a compatible GTK+ Runtime (which doesn't appear to be "
-"already present).$\\rAre you sure you want to skip installing the GTK+ "
-"Runtime?"
+"Pidgin requires a compatible GTK+ Runtime (which does not appear to be "
+"installed).$\\rAre you sure you want to skip installing the GTK+ Runtime?"
 msgstr ""
 
 #. Installer Subsection Text

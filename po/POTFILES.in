@@ -235,9 +235,9 @@ pidgin/plugins/screencap.c
 pidgin/plugins/sendbutton.c
 pidgin/plugins/spellchk.c
 pidgin/plugins/ticker/ticker.c
+pidgin/plugins/transparency.c
 pidgin/plugins/unity.c
 pidgin/plugins/webkit.c
-pidgin/plugins/win32/transparency/win2ktrans.c
 pidgin/plugins/win32/winprefs/winprefs.c
 pidgin/plugins/xmppconsole.c
 pidgin/win32/nsis/nsis_translations.desktop.in

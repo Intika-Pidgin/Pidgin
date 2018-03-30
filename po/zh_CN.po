@@ -11,10 +11,10 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-11-22 10:22-0800\n"
-"PO-Revision-Date: 2014-11-20 10:22+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:26+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
-"Language-Team: Chinese (China) (http://www.transifex.com/projects/p/pidgin/"
+"Language-Team: Chinese (China) (http://www.transifex.com/pidgin/pidgin/"
 "language/zh_CN/)\n"
 "Language: zh_CN\n"
 "MIME-Version: 1.0\n"
@@ -60,7 +60,6 @@ msgstr ""
 "%s 在将您的设置从 %s 迁移到 %s 时遇到错误。您可能需要手动完成迁移操作。请将错"
 "误报告给 http://developer.pidgin.im"
 
-#. the user did not fill in the captcha
 msgid "Error"
 msgstr "出错"
 
@@ -232,7 +231,6 @@ msgstr "请输入好友信息。"
 msgid "Chats"
 msgstr "聊天"
 
-#. Extract their Name and put it in
 msgid "Name"
 msgstr "名称"
 
@@ -339,11 +337,9 @@ msgstr "切换标记"
 msgid "View Log"
 msgstr "查看聊天记录"
 
-#. General
 msgid "Nickname"
 msgstr "昵称"
 
-#. Never know what those translations might end up like...
 #. Idle stuff
 msgid "Idle"
 msgstr "发呆"
@@ -765,7 +761,6 @@ msgid "Remaining"
 msgstr "剩余"
 
 #. XXX: Use of ggp_str_to_uin() is an ugly hack!
-#. presence
 msgid "Status"
 msgstr "状态"
 
@@ -1007,8 +1002,9 @@ msgstr "新建好友千里眼"
 msgid "Edit Buddy Pounce"
 msgstr "编辑好友千里眼"
 
-msgid "Pounce Who"
-msgstr "千里眼查看对象"
+#. Create the "Pounce on Whom" frame.
+msgid "Pounce on Whom"
+msgstr "监视对象"
 
 #. Account:
 msgid "Account:"
@@ -1253,8 +1249,8 @@ msgstr "GStreamer 初始化失败。"
 msgid "(default)"
 msgstr "(默认)"
 
-msgid "Select Sound File ..."
-msgstr "选择声音文件..."
+msgid "Select Sound File..."
+msgstr ""
 
 msgid "Sound Preferences"
 msgstr "声音首选项"
@@ -1336,21 +1332,12 @@ msgstr "删除状态"
 msgid "Saved Statuses"
 msgstr "已存状态"
 
-#. title
 msgid "Title"
 msgstr "标题"
 
 msgid "Type"
 msgstr "类型"
 
-#. Statuses are almost all the same. Define a macro to reduce code repetition.
-#. PurpleStatusPrimitive
-#. id - use default
-#. name - use default
-#. saveable
-#. user_settable
-#. not independent
-#. Attributes - each status can have a message.
 msgid "Message"
 msgstr "消息"
 
@@ -1382,12 +1369,12 @@ msgstr "消息："
 msgid "Edit Status"
 msgstr "编辑状态"
 
-msgid "Use different status for following accounts"
-msgstr "为下列帐号使用不同的状态"
+msgid "Use a different status for some accounts"
+msgstr ""
 
-#. Save & Use
-msgid "Save & Use"
-msgstr "保存并使用"
+#. Save and Use
+msgid "Save and Use"
+msgstr ""
 
 msgid "Certificates"
 msgstr "证书"
@@ -1453,6 +1440,7 @@ msgstr "有人在聊天中发言"
 msgid "Someone says your name in a chat"
 msgstr "有人在聊天中提到了您的名字"
 
+#. Translators: "toaster" here means "pop-up".
 msgid "Notify with a toaster when"
 msgstr ""
 
@@ -1465,6 +1453,7 @@ msgstr "为终端窗口设置 URGENT。"
 msgid "GntGf"
 msgstr "GntGf"
 
+#. Translators: "toaster" here means "pop-up".
 msgid "Toaster plugin"
 msgstr ""
 
@@ -1508,8 +1497,8 @@ msgstr ""
 msgid "TinyURL for above: %s"
 msgstr "以上地址的 TinyURL：%s"
 
-msgid "Please wait while TinyURL fetches a shorter URL ..."
-msgstr "请稍候以便获取使用 TinyURL 缩短后的网址..."
+msgid "Please wait while TinyURL fetches a shorter URL..."
+msgstr ""
 
 msgid "Only create TinyURL for URLs of this length or greater"
 msgstr "只为等于或超过此长度的 URL 创建 TinyURL"
@@ -1523,13 +1512,12 @@ msgstr "TinyURL"
 msgid "TinyURL plugin"
 msgstr "TinyURL 插件"
 
-msgid "When receiving a message with URL(s), use TinyURL for easier copying"
-msgstr "当接收到带有 URL 的消息时将其转换到 TinyURL 以方便复制"
+msgid "Shorten URLs in messages using TinyURL"
+msgstr ""
 
 msgid "Online"
 msgstr "在线"
 
-#. primitive,						no,							id,			name
 msgid "Offline"
 msgstr "离线"
 
@@ -1760,7 +1748,6 @@ msgstr ""
 msgid "View Issuer Certificate"
 msgstr ""
 
-#. show error to user
 msgid "Registration Error"
 msgstr "注册错误"
 
@@ -1776,7 +1763,6 @@ msgid "+++ %s signed off"
 msgstr "+++ %s 已退出"
 
 #. Undocumented
-#. Unknown error
 msgid "Unknown error"
 msgstr "未知错误"
 
@@ -1896,20 +1882,6 @@ msgstr "“irc”URL 的处理程序"
 msgid "The command used to handle \"irc\" URLs, if enabled."
 msgstr "如果启用的话，用于处理“irc”URL 的命令。"
 
-msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"msnim\" URLs"
-msgstr "“msnim”URL 的处理程序"
-
-msgid "The command used to handle \"msnim\" URLs, if enabled."
-msgstr "如果启用的话，用于处理“msnim”URL 的命令。"
-
 msgid "Whether the specified command should handle \"sip\" URLs"
 msgstr ""
 
@@ -1937,20 +1909,6 @@ msgstr "“xmpp”URL 的处理程序"
 
 msgid "The command used to handle \"xmpp\" URLs, if enabled."
 msgstr "如果启用的话，用于处理“xmpp”URL 的命令。"
-
-msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr ""
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-msgstr ""
-
-msgid "The handler for \"ymsgr\" URLs"
-msgstr "“ymsgr”URL 的处理程序"
-
-msgid "The command used to handle \"ymsgr\" URLs, if enabled."
-msgstr "如果启用的话，用于处理“ymsgr”URL 的命令。"
 
 #, c-format
 msgid "Failed to get connection: %s"
@@ -2172,6 +2130,25 @@ msgid "(%s) %s <AUTO-REPLY>: %s\n"
 msgstr "(%s) %s <自动回复>: %s\n"
 
 msgid ""
+"\n"
+"\n"
+"Message from Farsight: "
+msgstr ""
+
+msgid ""
+"Error initializing the call. This probably denotes problem in installation "
+"of GStreamer or Farsight."
+msgstr ""
+
+msgid "Network error."
+msgstr ""
+
+msgid ""
+"Codec negotiation failed. This problem might be resolved by installing more "
+"GStreamer codecs."
+msgstr ""
+
+msgid ""
 "No codecs found. Install some GStreamer codecs found in GStreamer plugins "
 "packages."
 msgstr "未找到解码器。请安装 GStreamer 插件以便使用其解码器。"
@@ -2179,6 +2156,9 @@ msgstr "未找到解码器。请安装 GStreamer 插件以便使用其解码器�
 msgid ""
 "No codecs left. Your codec preferences in fs-codecs.conf are too strict."
 msgstr "没有可用的解码器。您的 fs.codecs.conf 中规则过于严格。"
+
+msgid "Could not connect to the remote party"
+msgstr ""
 
 msgid "A non-recoverable Farsight2 error has occurred."
 msgstr "发生不可恢复的 Farsight2 错误。"
@@ -2721,10 +2701,8 @@ msgstr "为进入的对话设置心灵感应模式"
 
 msgid ""
 "Causes conversation windows to appear as other users begin to message you.  "
-"This works for AIM, ICQ, XMPP, Sametime, and Yahoo!"
+"This works for AIM, ICQ, XMPP, and Sametime"
 msgstr ""
-"在别人开始向您打字时弹出对话窗口。此插件可用于 AIM、ICQ、XMPP、Sametime 和 "
-"Yahoo! 协议。"
 
 msgid "You feel a disturbance in the force..."
 msgstr "您受到了原力的干扰..."
@@ -2937,8 +2915,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Unable to find Apple's \"Bonjour for Windows\" toolkit, see http://d.pidgin."
-"im/BonjourWindows for more information."
+"Unable to find Apple's \"Bonjour for Windows\" toolkit, see https://"
+"developer.pidgin.im/BonjourWindows for more information."
 msgstr ""
 
 msgid "Unable to listen for incoming IM connections"
@@ -2954,7 +2932,6 @@ msgstr "名"
 msgid "Last name"
 msgstr "姓"
 
-#. email
 msgid "Email"
 msgstr "电子邮件"
 
@@ -3039,14 +3016,12 @@ msgstr "城市"
 msgid "Year of birth"
 msgstr "出生年"
 
-#. gender
 msgid "Gender"
 msgstr "性别"
 
 msgid "Male or female"
 msgstr "男或女"
 
-#. 0
 msgid "Male"
 msgstr "男"
 
@@ -3084,22 +3059,16 @@ msgstr "为好友选择聊天：%s"
 msgid "Add to chat..."
 msgstr "添加到聊天..."
 
-#. 0
 #. Global
 msgid "Available"
 msgstr "可用"
 
-#. 2
 msgid "Chatty"
 msgstr "和我聊聊吧"
 
-#. 3
 msgid "Do Not Disturb"
 msgstr "忙碌 - 请勿打扰"
 
-#. 1
-#. get_yahoo_status_from_purple_status() returns YAHOO_STATUS_CUSTOM for
-#. * the generic away state (YAHOO_STATUS_TYPE_AWAY) with no message
 #. Away stuff
 msgid "Away"
 msgstr "离开"
@@ -3107,8 +3076,6 @@ msgstr "离开"
 msgid "UIN"
 msgstr "UIN"
 
-#. first name
-#. optional information
 msgid "First Name"
 msgstr "名"
 
@@ -3133,9 +3100,6 @@ msgstr "没有与您的搜索条件匹配的用户。"
 msgid "Unable to read from socket"
 msgstr "无法读取套接字"
 
-#. The session is now set up, ready to be connected. This emits the
-#. * signedOn signal, so clients can now do anything with msimprpl, and
-#. * we're ready for it (session key, userid, username all setup).
 msgid "Connected"
 msgstr "已连接"
 
@@ -3148,7 +3112,6 @@ msgstr "添加到聊天"
 msgid "Chat _name:"
 msgstr "聊天名(_N)："
 
-#. 1. connect to server
 #. connect to the server
 msgid "Connecting"
 msgstr "正在连接"
@@ -3875,8 +3838,6 @@ msgstr "职称"
 msgid "Role"
 msgstr "职务"
 
-#. birthday
-#. birthday (required)
 msgid "Birthday"
 msgstr "生日"
 
@@ -3966,7 +3927,6 @@ msgstr "退出"
 msgid "JID"
 msgstr "JID"
 
-#. last name
 msgid "Last Name"
 msgstr "姓"
 
@@ -4228,7 +4188,6 @@ msgstr "无(待推迟)"
 msgid "None"
 msgstr "无"
 
-#. subscription type
 msgid "Subscription"
 msgstr "订阅"
 
@@ -4244,12 +4203,6 @@ msgstr "心情名称"
 msgid "Mood Comment"
 msgstr "心情注释"
 
-#. primitive
-#. ID
-#. name - use default
-#. saveable
-#. should be user_settable some day
-#. independent
 msgid "Tune Artist"
 msgstr "歌曲艺术家"
 
@@ -4492,8 +4445,6 @@ msgid ""
 "buzzes now."
 msgstr ""
 
-#. Yahoo only supports one attention command: the 'buzz'.
-#. This is index number YAHOO_BUZZ.
 msgid "Buzz"
 msgstr "屏幕震动"
 
@@ -4620,8 +4571,6 @@ msgstr "允许在不加密流上的纯文本验证"
 msgid "Connect port"
 msgstr "连接端口"
 
-#. TODO: default to automatically try different ports. Make the user be
-#. * able to set the first port to try (like LastConnectedPort in Windows client).
 #. Account options
 msgid "Connect server"
 msgstr "连接服务器"
@@ -4632,8 +4581,9 @@ msgstr "文件传送代理"
 msgid "BOSH URL"
 msgstr "BOSH URL"
 
-#. this should probably be part of global smiley theme settings later on,
-#. shared with MSN
+#. this should probably be part of global smiley theme settings
+#. * later on
+#.
 msgid "Show Custom Smileys"
 msgstr "显示自定义表情"
 
@@ -4719,7 +4669,6 @@ msgstr "出现未知错误"
 msgid "Unable to send file to %s, user does not support file transfers"
 msgstr "无法给 %s 发送文件，用户不支持文件传送"
 
-#. not success
 msgid "File Send Failed"
 msgstr "发送文件失败"
 
@@ -5015,1579 +4964,6 @@ msgstr "动作"
 msgid "Select an action"
 msgstr "选择一个动作"
 
-#. only notify the user about problems adding to the friends list
-#. * maybe we should do something else for other lists, but it probably
-#. * won't cause too many problems if we just ignore it
-#, c-format
-msgid "Unable to add \"%s\"."
-msgstr "无法添加“%s”。"
-
-msgid "Buddy Add error"
-msgstr "添加好友出错"
-
-msgid "The username specified does not exist."
-msgstr "指定的用户名不存在。"
-
-msgid "Unable to parse message"
-msgstr "无法解析消息"
-
-msgid "Syntax Error (probably a client bug)"
-msgstr "语法错误(可能是客户端的 bug)"
-
-msgid "Invalid email address"
-msgstr "无效的电子邮件地址"
-
-msgid "User does not exist"
-msgstr "用户不存在"
-
-msgid "Fully qualified domain name missing"
-msgstr "缺少全称域名"
-
-msgid "Already logged in"
-msgstr "已登录"
-
-msgid "Invalid username"
-msgstr "无效用户名"
-
-msgid "Invalid friendly name"
-msgstr "友好的名称无效"
-
-msgid "List full"
-msgstr "列表满"
-
-msgid "Already there"
-msgstr "已列出"
-
-msgid "Not on list"
-msgstr "未列出"
-
-msgid "User is offline"
-msgstr "用户离线"
-
-msgid "Already in the mode"
-msgstr "已在模式中"
-
-msgid "Already in opposite list"
-msgstr "已在相对列表"
-
-msgid "Too many groups"
-msgstr "组太多"
-
-msgid "Invalid group"
-msgstr "无效的组"
-
-msgid "User not in group"
-msgstr "用户未在组中"
-
-msgid "Group name too long"
-msgstr "组名太长"
-
-msgid "Cannot remove group zero"
-msgstr "无法删除零组"
-
-msgid "Tried to add a user to a group that doesn't exist"
-msgstr "试图向不存在的组中添加联系人"
-
-msgid "Switchboard failed"
-msgstr "切换板失败"
-
-msgid "Notify transfer failed"
-msgstr "通知传送失败"
-
-msgid "Required fields missing"
-msgstr "缺少必需域"
-
-msgid "Too many hits to a FND"
-msgstr "FND 的次数太多"
-
-msgid "Not logged in"
-msgstr "未登录"
-
-msgid "Service temporarily unavailable"
-msgstr "服务暂时不可用"
-
-msgid "Database server error"
-msgstr "数据库服务器错误"
-
-msgid "Command disabled"
-msgstr "命令已禁用"
-
-msgid "File operation error"
-msgstr "文件操作错误"
-
-msgid "Memory allocation error"
-msgstr "内存分配错误"
-
-msgid "Wrong CHL value sent to server"
-msgstr "给服务器发送的 CHL 值错误"
-
-msgid "Server busy"
-msgstr "服务器忙"
-
-msgid "Server unavailable"
-msgstr "服务器不可用"
-
-msgid "Peer notification server down"
-msgstr "点通知服务器维护中"
-
-msgid "Database connect error"
-msgstr "数据库连接错误"
-
-msgid "Server is going down (abandon ship)"
-msgstr "服务器即将维护"
-
-msgid "Error creating connection"
-msgstr "创建连接出错"
-
-msgid "CVR parameters are either unknown or not allowed"
-msgstr "CVR 参数未知或不允许"
-
-msgid "Unable to write"
-msgstr "无法写入"
-
-msgid "Session overload"
-msgstr "会话过载"
-
-msgid "User is too active"
-msgstr "用户太活跃"
-
-msgid "Too many sessions"
-msgstr "会话太多"
-
-msgid "Passport not verified"
-msgstr "通行证未验证"
-
-msgid "Bad friend file"
-msgstr "无效的好友文件"
-
-msgid "Not expected"
-msgstr "未期待"
-
-msgid "Friendly name is changing too rapidly"
-msgstr "友好名称更改太频繁"
-
-msgid "Server too busy"
-msgstr "服务器忙"
-
-msgid "Authentication failed"
-msgstr "认证失败"
-
-msgid "Not allowed when offline"
-msgstr "离线时不允许"
-
-msgid "Not accepting new users"
-msgstr "不接受新用户"
-
-msgid "Kids Passport without parental consent"
-msgstr "没有父母在的儿童通行证"
-
-msgid "Passport account not yet verified"
-msgstr "通行证帐号未验证"
-
-msgid "Passport account suspended"
-msgstr "通行证帐号已被取代"
-
-msgid "Bad ticket"
-msgstr "无效的票证"
-
-#, c-format
-msgid "Unknown Error Code %d"
-msgstr "未知的错误代码 %d"
-
-#, c-format
-msgid "MSN Error: %s\n"
-msgstr "MSN 错误：%s\n"
-
-#, c-format
-msgid "Buddy list synchronization issue in %s (%s)"
-msgstr "%s 上的好友列表同步问题(%s)"
-
-#, c-format
-msgid ""
-"%s on the local list is inside the group \"%s\" but not on the server list. "
-"Do you want this buddy to be added?"
-msgstr ""
-"本地列表中的 %s 位于组“%s”中，但未出现在服务器列表中。您是否想要添加此好友？"
-
-#, c-format
-msgid ""
-"%s is on the local list but not on the server list. Do you want this buddy "
-"to be added?"
-msgstr "本地列表中的 %s 未出现在服务器列表中。您是否想要添加此好友？"
-
-msgid "Other Contacts"
-msgstr "其他联系人"
-
-msgid "Non-IM Contacts"
-msgstr "非即时消息联系人"
-
-#, c-format
-msgid "%s sent a wink. <a href='msn-wink://%s'>Click here to play it</a>"
-msgstr ""
-
-#, c-format
-msgid "%s sent a wink, but it could not be saved"
-msgstr ""
-
-#, c-format
-msgid "%s sent a voice clip. <a href='audio://%s'>Click here to play it</a>"
-msgstr ""
-
-#, c-format
-msgid "%s sent a voice clip, but it could not be saved"
-msgstr "%s 向您发送了语音聊天邀请，但尚不支持。"
-
-#, c-format
-msgid "%s sent you a voice chat invite, which is not yet supported."
-msgstr "%s 向您发送了语音聊天邀请，但尚不支持。"
-
-msgid "Nudge"
-msgstr "闪屏振动"
-
-#, c-format
-msgid "%s has nudged you!"
-msgstr "%s 刚给您发送了一个闪屏振动！"
-
-#, c-format
-msgid "Nudging %s..."
-msgstr "给 %s 发送一个闪屏振动..."
-
-msgid "Email Address..."
-msgstr "电子邮件地址..."
-
-msgid "Your new MSN friendly name is too long."
-msgstr "新的 MSN 友好名称太长。"
-
-#, c-format
-msgid "Set friendly name for %s."
-msgstr "为 %s 设置友好名称。"
-
-msgid "Set Friendly Name"
-msgstr "设置友好的名称"
-
-msgid "This is the name that other MSN buddies will see you as."
-msgstr "这是其他的 MSN 好友看到的名字。"
-
-msgid "This Location"
-msgstr "这个位置"
-
-msgid "This is the name that identifies this location"
-msgstr "这是识别此位置的名称"
-
-msgid "Other Locations"
-msgstr "其他位置"
-
-msgid "You can sign out from other locations here"
-msgstr "您可以在这里退出在其他位置的登陆。"
-
-#. TODO: Due to limitations in our current request field API, the
-#. following string will show up with a trailing colon.  This should
-#. be fixed either by adding an "include_colon" boolean, or creating
-#. a separate purple_request_field_label_new_without_colon function,
-#. or by never automatically adding the colon and requiring that
-#. callers add the colon themselves.
-msgid "You are not signed in from any other locations."
-msgstr "所有其他位置的登陆均已退出。"
-
-msgid "Allow multiple logins?"
-msgstr "允许多点登陆？"
-
-msgid ""
-"Do you want to allow or disallow connecting from multiple locations "
-"simultaneously?"
-msgstr ""
-
-msgid "Allow"
-msgstr "允许"
-
-msgid "Disallow"
-msgstr "禁止"
-
-msgid "Set your home phone number."
-msgstr "设置您的家庭电话号码。"
-
-msgid "Set your work phone number."
-msgstr "设置您的工作电话号码。"
-
-msgid "Set your mobile phone number."
-msgstr "设置您的移动电话号码。"
-
-msgid "Allow MSN Mobile pages?"
-msgstr "允许 MSN 移动寻呼吗？"
-
-msgid ""
-"Do you want to allow or disallow people on your buddy list to send you MSN "
-"Mobile pages to your cell phone or other mobile device?"
-msgstr ""
-"在您的允许之下，您的好友可以给您的移动电话或其它移动设备发送 MSN 移动寻呼。您"
-"想要允许还是禁止这一功能？"
-
-#, c-format
-msgid "Blocked Text for %s"
-msgstr "%s 的屏蔽文字"
-
-msgid "No text is blocked for this account."
-msgstr "此帐号没有被屏蔽的文字。"
-
-#, c-format
-msgid ""
-"MSN servers are currently blocking the following regular expressions:<br/>%s"
-msgstr "MSN 服务器屏蔽了以下正则表达式：<br/>%s"
-
-msgid "This account does not have email enabled."
-msgstr "此帐号没有启用电子邮件。"
-
-msgid "Send a mobile message."
-msgstr "发送移动消息。"
-
-msgid "Page"
-msgstr "页面"
-
-msgid "Playing a game"
-msgstr "正在玩游戏"
-
-msgid "Working"
-msgstr "正在工作"
-
-msgid "Has you"
-msgstr "双向好友"
-
-msgid "Home Phone Number"
-msgstr "家庭电话号码"
-
-msgid "Work Phone Number"
-msgstr "工作电话号码"
-
-msgid "Mobile Phone Number"
-msgstr "移动电话号码"
-
-msgid "Be Right Back"
-msgstr "马上回来"
-
-msgid "Busy"
-msgstr "忙碌"
-
-msgid "On the Phone"
-msgstr "接听电话"
-
-msgid "Out to Lunch"
-msgstr "外出就餐"
-
-msgid "Game Title"
-msgstr "游戏标题"
-
-msgid "Office Title"
-msgstr "办公标题"
-
-msgid "Set Friendly Name..."
-msgstr "设置友好的名称..."
-
-msgid "View Locations..."
-msgstr "查看位置..."
-
-msgid "Set Home Phone Number..."
-msgstr "设置家庭电话号码..."
-
-msgid "Set Work Phone Number..."
-msgstr "设置工作电话号码..."
-
-msgid "Set Mobile Phone Number..."
-msgstr "设置移动电话号码..."
-
-msgid "Enable/Disable Mobile Devices..."
-msgstr "启用/禁用移动设备..."
-
-msgid "Allow/Disallow Multiple Logins..."
-msgstr "允许/禁止多点登陆..."
-
-msgid "Allow/Disallow Mobile Pages..."
-msgstr "允许/禁止移动寻呼..."
-
-msgid "View Blocked Text..."
-msgstr "查看被屏蔽文本..."
-
-msgid "Open Hotmail Inbox"
-msgstr "打开 Hotmail 收件箱"
-
-msgid "Send to Mobile"
-msgstr "发送到移动设备"
-
-msgid "SSL support is needed for MSN. Please install a supported SSL library."
-msgstr "MSN 需要 SSL 支持。请安装本软件支持的 SSL 库。"
-
-#, c-format
-msgid ""
-"Unable to add the buddy %s because the username is invalid.  Usernames must "
-"be valid email addresses."
-msgstr "无法添加好友 %s，用户名无效。用户名必须是有效的电子邮件地址。"
-
-msgid "Unable to Add"
-msgstr "无法添加"
-
-msgid "Error retrieving profile"
-msgstr "获取配置文件出错"
-
-msgid "General"
-msgstr "常规"
-
-msgid "Age"
-msgstr "年龄"
-
-msgid "Occupation"
-msgstr "职业"
-
-msgid "Location"
-msgstr "位置"
-
-msgid "Hobbies and Interests"
-msgstr "兴趣爱好"
-
-msgid "A Little About Me"
-msgstr "自我简介"
-
-msgid "Social"
-msgstr "社会关系"
-
-msgid "Marital Status"
-msgstr "婚姻状况"
-
-msgid "Interests"
-msgstr "兴趣"
-
-msgid "Pets"
-msgstr "宠物"
-
-msgid "Hometown"
-msgstr "家乡"
-
-msgid "Places Lived"
-msgstr "住所"
-
-msgid "Fashion"
-msgstr "时尚"
-
-msgid "Humor"
-msgstr "心情"
-
-msgid "Music"
-msgstr "音乐"
-
-msgid "Favorite Quote"
-msgstr "格言"
-
-msgid "Contact Info"
-msgstr "联系信息"
-
-msgid "Personal"
-msgstr "个人信息"
-
-msgid "Significant Other"
-msgstr ""
-
-msgid "Home Phone"
-msgstr "家庭电话"
-
-msgid "Home Phone 2"
-msgstr "家庭电话 2"
-
-msgid "Home Address"
-msgstr "家庭住址"
-
-msgid "Personal Mobile"
-msgstr "个人手机"
-
-msgid "Home Fax"
-msgstr "家庭传真"
-
-msgid "Personal Email"
-msgstr "个人电子邮件"
-
-msgid "Personal IM"
-msgstr "个人 IM"
-
-msgid "Anniversary"
-msgstr "纪念日"
-
-#. Business
-msgid "Work"
-msgstr "工作"
-
-msgid "Company"
-msgstr "公司"
-
-msgid "Department"
-msgstr "部门"
-
-msgid "Profession"
-msgstr "职业"
-
-msgid "Work Phone"
-msgstr "工作电话"
-
-msgid "Work Phone 2"
-msgstr "办公电话 2"
-
-msgid "Work Address"
-msgstr "办公地址"
-
-msgid "Work Mobile"
-msgstr "办公手机"
-
-msgid "Work Pager"
-msgstr "办公寻呼"
-
-msgid "Work Fax"
-msgstr "办公传真"
-
-msgid "Work Email"
-msgstr "办公电子邮件"
-
-msgid "Work IM"
-msgstr "办公 IM"
-
-msgid "Start Date"
-msgstr "开始日期"
-
-msgid "Favorite Things"
-msgstr "收藏"
-
-msgid "Last Updated"
-msgstr "上次更新"
-
-msgid "Homepage"
-msgstr "主页"
-
-msgid "The user has not created a public profile."
-msgstr "用户尚未创建公开的个人资料。"
-
-msgid ""
-"MSN reported not being able to find the user's profile. This either means "
-"that the user does not exist, or that the user exists but has not created a "
-"public profile."
-msgstr ""
-"MSN 找不到用户的个人资料。这可能是因为用户不存在，或者用户没有创建公开的个人"
-"资料。"
-
-msgid ""
-"Could not find any information in the user's profile. The user most likely "
-"does not exist."
-msgstr "在用户的个人资料中找不到任何信息。用户可能不存在。"
-
-msgid "View web profile"
-msgstr "查看 Web 配置文件"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *< summary
-msgid "Windows Live Messenger Protocol Plugin"
-msgstr "Windows Live Messenger 协议插件"
-
-msgid "Use HTTP Method"
-msgstr "使用 HTTP 方式"
-
-msgid "HTTP Method Server"
-msgstr "HTTP 方式服务器"
-
-msgid "Show custom smileys"
-msgstr "显示自定义如下："
-
-msgid "Allow direct connections"
-msgstr "允许直连"
-
-msgid "Allow connecting from multiple locations"
-msgstr "允许从多个位置登陆"
-
-msgid "nudge: nudge a user to get their attention"
-msgstr "nudge：向用户发送闪屏振动，以便引起他的注意"
-
-msgid "Windows Live ID authentication:Unable to connect"
-msgstr "Windows Live ID 验证：无法连接"
-
-msgid "Windows Live ID authentication:Invalid response"
-msgstr "Windows Live ID 验证：无效应答"
-
-msgid "The following users are missing from your addressbook"
-msgstr "以下用户不在您的通讯录中"
-
-#, c-format
-msgid "Unknown error (%d): %s"
-msgstr "未知错误 (%d)： %s"
-
-msgid "Unable to add user"
-msgstr "无法添加用户"
-
-#. Unknown error!
-#, c-format
-msgid "Unknown error (%d)"
-msgstr "未知错误 (%d)"
-
-msgid "Unable to remove user"
-msgstr "无法删除用户"
-
-msgid "Mobile message was not sent because it was too long."
-msgstr "消息未发出，因为消息太长。"
-
-msgid "Mobile message was not sent because an unknown error occurred."
-msgstr ""
-
-#, c-format
-msgid ""
-"The MSN server will shut down for maintenance in %d minute. You will "
-"automatically be signed out at that time.  Please finish any conversations "
-"in progress.\n"
-"\n"
-"After the maintenance has been completed, you will be able to successfully "
-"sign in."
-msgid_plural ""
-"The MSN server will shut down for maintenance in %d minutes. You will "
-"automatically be signed out at that time.  Please finish any conversations "
-"in progress.\n"
-"\n"
-"After the maintenance has been completed, you will be able to successfully "
-"sign in."
-msgstr[0] ""
-"MSN 服务器即将于 %d 分钟后关闭进行维护。届时您将会被自动退出。请尽快关闭现在"
-"进行中的对话。\n"
-"\n"
-"维护完成后，您将能够成功登录。"
-
-msgid ""
-"Message was not sent because the system is unavailable. This normally "
-"happens when the user is blocked or does not exist."
-msgstr ""
-
-msgid "Message was not sent because messages are being sent too quickly."
-msgstr "消息未发出，因为发送的频率太高。"
-
-msgid "Message was not sent because an unknown encoding error occurred."
-msgstr "消息未发出，因为发生了未知编码错误。"
-
-msgid "Message was not sent because an unknown error occurred."
-msgstr "消息未发出，因为发生了未知错误。"
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. Converting the encoding from "
-"%s to UTF-8 failed.)"
-msgstr ""
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. The charset was %s, but it "
-"was not valid UTF-8.)"
-msgstr ""
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. The charset was missing, but "
-"it was not valid UTF-8.)"
-msgstr ""
-
-msgid "Writing error"
-msgstr "写入错误"
-
-msgid "Reading error"
-msgstr "读取错误"
-
-#, c-format
-msgid ""
-"Connection error from %s server:\n"
-"%s"
-msgstr ""
-"%s 服务器的连接错误：\n"
-"%s"
-
-msgid "Our protocol is not supported by the server"
-msgstr "服务器不支持此协议。"
-
-msgid "Error parsing HTTP"
-msgstr "解析 HTTP 出错。"
-
-msgid "You have signed on from another location"
-msgstr "您在其它位置用此用户名登录了。"
-
-msgid "The MSN servers are temporarily unavailable. Please wait and try again."
-msgstr "MSN 服务器临时不可用。请稍候再试。"
-
-msgid "The MSN servers are going down temporarily"
-msgstr "MSN 服务器目前维护中。"
-
-#, c-format
-msgid "Unable to authenticate: %s"
-msgstr "无法通过身份验证：%s"
-
-#, c-format
-msgid "Your MSN buddy list is temporarily unavailable: %s"
-msgstr ""
-
-msgid "Handshaking"
-msgstr "握手"
-
-msgid "Transferring"
-msgstr "文件传送"
-
-msgid "Starting authentication"
-msgstr "开始身份验证"
-
-msgid "Getting cookie"
-msgstr "获得 cookie"
-
-msgid "Sending cookie"
-msgstr "发送 cookie"
-
-msgid "Retrieving buddy list"
-msgstr "正在获取好友列表"
-
-#, c-format
-msgid "%s requests to view your webcam, but this request is not yet supported."
-msgstr "%s 向您发送了视频聊天邀请，但尚不支持。"
-
-#, c-format
-msgid "%s invited you to view his/her webcam, but this is not yet supported."
-msgstr "%s 向您发送了视频聊天邀请，但尚不支持。"
-
-msgid "Away From Computer"
-msgstr "离开"
-
-msgid "On The Phone"
-msgstr "接听电话"
-
-msgid "Out To Lunch"
-msgstr "外出就餐"
-
-msgid "Message may have not been sent because a timeout occurred:"
-msgstr "消息未发出，因为发生了超时："
-
-msgid "Message could not be sent, not allowed while invisible:"
-msgstr "消息未发出，隐身时不允许："
-
-msgid "Message could not be sent because the user is offline:"
-msgstr "消息未发出，因为用户离线："
-
-msgid "Message could not be sent because a connection error occurred:"
-msgstr "消息未发出，因为发生了连接错误："
-
-msgid "Message could not be sent because we are sending too quickly:"
-msgstr "消息未发出，因为发送的频率太高："
-
-msgid ""
-"Message could not be sent because we were unable to establish a session with "
-"the server. This is likely a server problem, try again in a few minutes:"
-msgstr ""
-
-msgid ""
-"Message could not be sent because an error with the switchboard occurred:"
-msgstr "消息未发出，因为切换板发生了错误："
-
-msgid "Message may have not been sent because an unknown error occurred:"
-msgstr "消息未发出，因为发生了未知错误："
-
-msgid "Delete Buddy from Address Book?"
-msgstr "从通讯录删除好友？"
-
-msgid "Do you want to delete this buddy from your address book as well?"
-msgstr "您是否要将这个好友也从通讯录中删除？"
-
-msgid "The username specified is invalid."
-msgstr "指定的用户名无效。"
-
-msgid "The Display Name you entered is invalid."
-msgstr "您输入的姓名无效。"
-
-msgid ""
-"The birthday you entered is invalid. The correct format is: 'YYYY-MM-DD'."
-msgstr ""
-"您输入的生日无效。正确的格式是：YYYY-MM-DD，YYYY 为四位的年份，MM 为月份，DD "
-"为日期。"
-
-#. show error to user
-msgid "Profile Update Error"
-msgstr "更新个人资料出错"
-
-#. no profile information yet, so we cannot update
-#. (reference: "libpurple/request.h")
-msgid "Profile"
-msgstr "个人资料"
-
-msgid "Your profile information is not yet retrieved. Please try again later."
-msgstr "尚未检索到您的个人资料信息，请稍后重试。"
-
-#. display name
-#. nick name (required)
-msgid "Display Name"
-msgstr "显示名称"
-
-#. about me
-msgid "About Me"
-msgstr ""
-
-#. where I live
-msgid "Where I Live"
-msgstr ""
-
-#. relationship status
-msgid "Relationship Status"
-msgstr ""
-
-#. mobile number
-msgid "Mobile Number"
-msgstr "手机号码"
-
-#. is searchable
-msgid "Can be searched"
-msgstr ""
-
-#. is suggestable
-msgid "Can be suggested"
-msgstr ""
-
-msgid "Update your MXit Profile"
-msgstr ""
-
-msgid "The PIN you entered is invalid."
-msgstr "您输入的 PIN 无效。"
-
-msgid "The PIN you entered has an invalid length [4-10]."
-msgstr "您输入的 PIN 长度无效 [4-10]。"
-
-msgid "The PIN is invalid. It should only consist of digits [0-9]."
-msgstr "PIN 无效，它应当只包含数字 [0-9]。"
-
-msgid "The two PINs you entered do not match."
-msgstr "两次输入的 PIN 不相同。"
-
-#. show error to user
-msgid "PIN Update Error"
-msgstr ""
-
-#. pin
-#. pin (required)
-msgid "PIN"
-msgstr "PIN"
-
-#. verify pin
-msgid "Verify PIN"
-msgstr "验证 PIN"
-
-#. (reference: "libpurple/request.h")
-msgid "Change PIN"
-msgstr ""
-
-msgid "Change MXit PIN"
-msgstr ""
-
-msgid "View Splash"
-msgstr "查看飞溅屏幕"
-
-msgid "There is no splash-screen currently available"
-msgstr "现在没有可用的飞溅屏幕"
-
-msgid "About"
-msgstr "关于"
-
-msgid "Search for user"
-msgstr ""
-
-msgid "Search for a MXit contact"
-msgstr ""
-
-msgid "Type search information"
-msgstr ""
-
-msgid "_Search"
-msgstr "搜索(_S)"
-
-#. display / change profile
-msgid "Change Profile..."
-msgstr "更改个人信息..."
-
-#. change PIN
-msgid "Change PIN..."
-msgstr ""
-
-#. suggested friends
-msgid "Suggested friends..."
-msgstr ""
-
-#. search for contacts
-msgid "Search for contacts..."
-msgstr ""
-
-#. display splash-screen
-msgid "View Splash..."
-msgstr "查看飞溅屏幕..."
-
-#. display plugin version
-msgid "About..."
-msgstr "关于..."
-
-#. the file is too big
-msgid "The file you are trying to send is too large!"
-msgstr "您要发送的文件太大！"
-
-#. file read error
-msgid "Unable to access the local file"
-msgstr ""
-
-#. file write error
-msgid "Unable to save the file"
-msgstr ""
-
-msgid ""
-"Unable to connect to the MXit HTTP server. Please check your server settings."
-msgstr "无法连接至 MXit HTTP 服务器，请检查您的服务器设置。"
-
-msgid "Logging In..."
-msgstr "正在登录..."
-
-msgid ""
-"Unable to connect to the MXit server. Please check your server settings."
-msgstr "无法连接到 MXit 服务器。请检查您的服务器设置。"
-
-msgid "Connecting..."
-msgstr "正在连接..."
-
-msgid "The Display Name you entered is too short."
-msgstr "您输入的显示名称太短。"
-
-msgid "The PIN you entered has an invalid length [7-10]."
-msgstr "您输入的 PIN 长度无效 [7-10]。"
-
-#. mxit login name
-msgid "MXit ID"
-msgstr "MXit ID"
-
-#. show the form to the user to complete
-msgid "Register New MXit Account"
-msgstr "注册新的 MXit 帐号"
-
-msgid "Please fill in the following fields:"
-msgstr "请填入下列信息："
-
-#. no reply from the WAP site
-msgid "Error contacting the MXit WAP site. Please try again later."
-msgstr "与 Mxit WAP 站点联系失败，请稍后重试。"
-
-#. wapserver error
-#. server could not find the user
-msgid ""
-"MXit is currently unable to process the request. Please try again later."
-msgstr "MXit 暂时无法处理您的请求，请稍后重试。"
-
-msgid "Wrong security code entered. Please try again later."
-msgstr "输入了错误的安全代码，请稍后重试。"
-
-msgid "Your session has expired. Please try again later."
-msgstr "您的会话已过期，请稍后重试。"
-
-msgid "Invalid country selected. Please try again."
-msgstr "您选择了无效的国家，请重试。"
-
-msgid "The MXit ID you entered is not registered. Please register first."
-msgstr ""
-
-msgid "The MXit ID you entered is already registered. Please choose another."
-msgstr ""
-
-msgid "Internal error. Please try again later."
-msgstr "内部错误，请稍后重试。"
-
-msgid "You did not enter the security code"
-msgstr "您没有输入安全码"
-
-msgid "Security Code"
-msgstr "安全码"
-
-#. ask for input (required)
-msgid "Enter Security Code"
-msgstr "输入安全码"
-
-msgid "Your Country"
-msgstr "您所在的国家"
-
-msgid "Your Language"
-msgstr "首选语言"
-
-#. display the form to the user and wait for his/her input
-msgid "MXit Authorization"
-msgstr "MXit 认证"
-
-msgid "MXit account validation"
-msgstr "MXit 帐户验证"
-
-msgid "Retrieving User Information..."
-msgstr "正在检索用户信息..."
-
-msgid "was kicked"
-msgstr "被踢出"
-
-msgid "You have been kicked from this MultiMX."
-msgstr "您已被踢出此 MultiMX。"
-
-msgid "_Room Name:"
-msgstr "聊天室名称(_R)："
-
-#. Display system message in chat window
-msgid "You have invited"
-msgstr "您已邀请"
-
-msgid "Loading menu..."
-msgstr "正在载入菜单..."
-
-msgid "Status Message"
-msgstr "状态消息"
-
-msgid "Rejection Message"
-msgstr "拒绝消息"
-
-msgid "No profile available"
-msgstr "无可用配置文件"
-
-msgid "This contact does not have a profile."
-msgstr ""
-
-msgid "Your MXit ID..."
-msgstr "您的 MXit ID..."
-
-#. contact is in Deleted, Rejected or None state
-msgid "Re-Invite"
-msgstr "重新邀请"
-
-#. Configuration options
-#. WAP server (reference: "libpurple/accountopt.h")
-msgid "WAP Server"
-msgstr "WAP 服务器"
-
-msgid "Connect via HTTP"
-msgstr "通过 HTTP 连接"
-
-msgid "Enable splash-screen popup"
-msgstr "启用飞溅屏幕"
-
-msgid "Don't want to say"
-msgstr ""
-
-msgid "Single"
-msgstr ""
-
-msgid "In a relationship"
-msgstr ""
-
-msgid "Engaged"
-msgstr ""
-
-msgid "Married"
-msgstr ""
-
-msgid "It's complicated"
-msgstr ""
-
-msgid "Widowed"
-msgstr ""
-
-msgid "Separated"
-msgstr ""
-
-msgid "Divorced"
-msgstr ""
-
-msgid "Last Online"
-msgstr "最后在线"
-
-msgid "Invite Message"
-msgstr ""
-
-msgid "No results"
-msgstr ""
-
-msgid "No contacts found."
-msgstr ""
-
-#. define columns
-msgid "UserId"
-msgstr ""
-
-msgid "Where I live"
-msgstr ""
-
-#, c-format
-msgid "You have %i suggested friend."
-msgid_plural "You have %i suggested friends."
-msgstr[0] ""
-
-#, c-format
-msgid "We found %i contact that matches your search."
-msgid_plural "We found %i contacts that match your search."
-msgstr[0] ""
-
-#. we must have lost the connection, so terminate it so that we can reconnect
-msgid "We have lost the connection to MXit. Please reconnect."
-msgstr "我们失去了到 MXit 的连接，请重新连接。"
-
-#. packet could not be queued for transmission
-msgid "Message Send Error"
-msgstr "发送消息出错"
-
-msgid "Unable to process your request at this time"
-msgstr "当前无法处理您的请求"
-
-msgid "Timeout while waiting for a response from the MXit server."
-msgstr "等待 MXit 服务器回应超时。"
-
-msgid "Successfully Logged In..."
-msgstr "登录成功..."
-
-#, c-format
-msgid ""
-"%s sent you an encrypted message, but it is not supported on this client."
-msgstr "%s 向您发送了加密的消息，但尚不支持。"
-
-msgid "Message Error"
-msgstr "消息错误"
-
-#. could not be decrypted
-msgid "An encrypted message was received which could not be decrypted."
-msgstr ""
-
-msgid "Cannot perform redirect using the specified protocol"
-msgstr "无法用指定的协议执行重定向"
-
-msgid "An internal MXit server error occurred."
-msgstr "发生了 MXit 服务器内部错误。"
-
-#, c-format
-msgid "Login error: %s (%i)"
-msgstr "登录错误：%s (%i)"
-
-#, c-format
-msgid "Logout error: %s (%i)"
-msgstr "注销错误：%s (%i)"
-
-msgid "Contact Error"
-msgstr "联系人错误"
-
-msgid "Message Sending Error"
-msgstr "消息发送错误"
-
-msgid "Status Error"
-msgstr "状态错误"
-
-msgid "Mood Error"
-msgstr "心情错误"
-
-msgid "Invitation Error"
-msgstr "邀请错误"
-
-msgid "Contact Removal Error"
-msgstr "删除联系人错误"
-
-msgid "Subscription Error"
-msgstr "订阅错"
-
-msgid "Contact Update Error"
-msgstr "联系人更新错误"
-
-msgid "File Transfer Error"
-msgstr "文件传送错误"
-
-msgid "Cannot create MultiMx room"
-msgstr "无法创建 MultiMx 聊天室"
-
-msgid "MultiMx Invitation Error"
-msgstr "MultiMx 邀请错误"
-
-msgid "Profile Error"
-msgstr "个人设置错误"
-
-#. bad packet
-msgid "Invalid packet received from MXit."
-msgstr "从 MXit 收到无效数据包。"
-
-#. connection error
-msgid "A connection error occurred to MXit. (read stage 0x01)"
-msgstr "连接错误。(读取等级 0x01)"
-
-#. connection closed
-msgid "A connection error occurred to MXit. (read stage 0x02)"
-msgstr "连接错误。(读取等级 0x02)"
-
-msgid "A connection error occurred to MXit. (read stage 0x03)"
-msgstr "连接错误。(读取等级 0x03)"
-
-#. malformed packet length record (too long)
-msgid "A connection error occurred to MXit. (read stage 0x04)"
-msgstr "连接错误。(读取等级 0x04)"
-
-#. connection error
-msgid "A connection error occurred to MXit. (read stage 0x05)"
-msgstr "连接错误。(读取等级 0x05)"
-
-#. connection closed
-msgid "A connection error occurred to MXit. (read stage 0x06)"
-msgstr "连接错误。(读取等级 0x06)"
-
-msgid "In Love"
-msgstr "热恋"
-
-msgid "Pending"
-msgstr "正在等待"
-
-msgid "Invited"
-msgstr "已邀请"
-
-msgid "Rejected"
-msgstr "已拒绝"
-
-msgid "Deleted"
-msgstr "已删除"
-
-msgid "MXit Advertising"
-msgstr "MXit 广告"
-
-msgid "More Information"
-msgstr "更多信息"
-
-#, c-format
-msgid "No such user: %s"
-msgstr "无此用户：%s"
-
-msgid "User lookup"
-msgstr "用户查找"
-
-msgid "Reading challenge"
-msgstr "读取挑战"
-
-msgid "Unexpected challenge length from server"
-msgstr "服务器的挑战无效"
-
-msgid "Logging in"
-msgstr "登录"
-
-msgid "MySpaceIM - No Username Set"
-msgstr "MySpaceIM - 未设定用户名"
-
-msgid "You appear to have no MySpace username."
-msgstr "您没有 MySpace 用户名。"
-
-msgid "Would you like to set one now? (Note: THIS CANNOT BE CHANGED!)"
-msgstr "您是否想立即设置？(注意：不可更改！)"
-
-msgid "Lost connection with server"
-msgstr "与服务器失去连接"
-
-#. Can't write _()'d strings in array initializers. Workaround.
-#. khc: then use N_() in the array initializer and use _() when they are
-#. used
-msgid "New mail messages"
-msgstr "新的邮件"
-
-msgid "New blog comments"
-msgstr "新博客评论"
-
-msgid "New profile comments"
-msgstr "新个人资料评论"
-
-msgid "New friend requests!"
-msgstr "新好友请求！"
-
-msgid "New picture comments"
-msgstr "新图片评论"
-
-msgid "MySpace"
-msgstr "MySpace"
-
-msgid "IM Friends"
-msgstr "即时消息朋友"
-
-#, c-format
-msgid ""
-"%d buddy was added or updated from the server (including buddies already on "
-"the server-side list)"
-msgid_plural ""
-"%d buddies were added or updated from the server (including buddies already "
-"on the server-side list)"
-msgstr[0] ""
-
-msgid "Add contacts from server"
-msgstr "从服务器添加联系人"
-
-#, c-format
-msgid "Protocol error, code %d: %s"
-msgstr "协议错误，代码 %d： %s"
-
-#, c-format
-msgid ""
-"%s Your password is %zu characters, which is longer than the maximum length "
-"of %d.  Please shorten your password at http://profileedit.myspace.com/index."
-"cfm?fuseaction=accountSettings.changePassword and try again."
-msgstr ""
-"%s 您的密码有 %zu 个字符，超过了最大长度 %d。请在 http://profileedit.myspace."
-"com/index.cfm?fuseaction=accountSettings.changePassword 缩短您的密码并重试。"
-
-msgid "Incorrect username or password"
-msgstr "用户名或密码错误"
-
-msgid "MySpaceIM Error"
-msgstr "MySpaceIM 错误"
-
-msgid "Invalid input condition"
-msgstr "无效的输入条件"
-
-msgid "Failed to add buddy"
-msgstr "添加好友失败"
-
-msgid "'addbuddy' command failed."
-msgstr "“添加好友” 命令失败。"
-
-msgid "persist command failed"
-msgstr "切换板失败"
-
-msgid "Failed to remove buddy"
-msgstr "移除好友失败"
-
-msgid "'delbuddy' command failed"
-msgstr "delbuddy 命令失败"
-
-msgid "blocklist command failed"
-msgstr "切换板失败"
-
-msgid "Missing Cipher"
-msgstr ""
-
-msgid "The RC4 cipher could not be found"
-msgstr ""
-
-msgid ""
-"Upgrade to a libpurple with RC4 support (>= 2.0.1). MySpaceIM plugin will "
-"not be loaded."
-msgstr "升级到带有 RC4 支持的 libpurple (>= 2.0.1)，MySpaceIM 插件未载入。"
-
-msgid "Add friends from MySpace.com"
-msgstr "从 MySpace.com 添加好友"
-
-msgid "Importing friends failed"
-msgstr "无效的好友文件"
-
-#. TODO: find out how
-msgid "Find people..."
-msgstr "找人..."
-
-msgid "Change IM name..."
-msgstr "更改 IM 名称..."
-
-msgid "myim URL handler"
-msgstr "myim URL 处理器"
-
-msgid "No suitable MySpaceIM account could be found to open this myim URL."
-msgstr "没有找到适合打开此 myim URL 的帐号。"
-
-msgid "Enable the proper MySpaceIM account and try again."
-msgstr "请启用正确的 MySpaceIM 帐户并重试。"
-
-msgid "Show display name in status text"
-msgstr "在状态文本中显示名称"
-
-msgid "Show headline in status text"
-msgstr "在状态文本显示新闻提要"
-
-msgid "Send emoticons"
-msgstr "发送表情"
-
-msgid "Screen resolution (dots per inch)"
-msgstr "屏幕分辨率(每英寸点数)"
-
-msgid "Base font size (points)"
-msgstr "基本字号(点)"
-
-msgid "User"
-msgstr "用户"
-
-msgid "Headline"
-msgstr "标头"
-
-msgid "Song"
-msgstr "声音"
-
-msgid "Total Friends"
-msgstr "好友总计"
-
-msgid "Client Version"
-msgstr "客户端版本"
-
-msgid ""
-"An error occurred while trying to set the username.  Please try again, or "
-"visit http://editprofile.myspace.com/index.cfm?fuseaction=profile.username "
-"to set your username."
-msgstr ""
-
-msgid "MySpaceIM - Username Available"
-msgstr "MySpaceIM - 用户名可用"
-
-msgid "This username is available. Would you like to set it?"
-msgstr "此用户名可用。您是否想设置为这个用户名？"
-
-msgid "ONCE SET, THIS CANNOT BE CHANGED!"
-msgstr "一旦设置，将不可更改！"
-
-msgid "MySpaceIM - Please Set a Username"
-msgstr "MySpaceIM - 请设置一个用户名"
-
-msgid "This username is unavailable."
-msgstr "该用户名不可用。"
-
-msgid "Please try another username:"
-msgstr "请尝试另外的用户名："
-
-#. Protocol won't log in now without a username set.. Disconnect
-msgid "No username set"
-msgstr "未设定用户名"
-
-msgid "Please enter a username to check its availability:"
-msgstr "请输入一个用户名以检查其是否可用："
-
-#. TODO: icons for each zap
-#. Lots of comments for translators:
-#. Zap means "to strike suddenly and forcefully as if with a
-#. * projectile or weapon."  This term often has an electrical
-#. * connotation, for example, "he was zapped by electricity when
-#. * he put a fork in the toaster."
-msgid "Zap"
-msgstr ""
-
-#, c-format
-msgid "%s has zapped you!"
-msgstr ""
-
-#, c-format
-msgid "Zapping %s..."
-msgstr ""
-
-#. Whack means "to hit or strike someone with a sharp blow"
-msgid "Whack"
-msgstr ""
-
-#, c-format
-msgid "%s has whacked you!"
-msgstr ""
-
-#, c-format
-msgid "Whacking %s..."
-msgstr ""
-
-#. Torch means "to set on fire."  Don't worry, this doesn't
-#. * make a whole lot of sense in English, either.  Feel free
-#. * to translate it literally.
-msgid "Torch"
-msgstr ""
-
-#, c-format
-msgid "%s has torched you!"
-msgstr ""
-
-#, c-format
-msgid "Torching %s..."
-msgstr ""
-
-#. Smooch means "to kiss someone, often enthusiastically"
-msgid "Smooch"
-msgstr "热吻"
-
-#, c-format
-msgid "%s has smooched you!"
-msgstr "%s 给了你一个热吻！"
-
-#, c-format
-msgid "Smooching %s..."
-msgstr "热吻 %s..."
-
-#. A hug is a display of affection; wrapping your arms around someone
-msgid "Hug"
-msgstr "拥抱"
-
-#, c-format
-msgid "%s has hugged you!"
-msgstr "%s 拥抱了你！"
-
-#, c-format
-msgid "Hugging %s..."
-msgstr "拥抱 %s..."
-
-#. Slap means "to hit someone with an open/flat hand"
-msgid "Slap"
-msgstr "拍打"
-
-#, c-format
-msgid "%s has slapped you!"
-msgstr "%s 拍了你一下！"
-
-#, c-format
-msgid "Slapping %s..."
-msgstr "拍一下 %s..."
-
-#. Goose means "to pinch someone on their butt"
-msgid "Goose"
-msgstr ""
-
-#, c-format
-msgid "%s has goosed you!"
-msgstr ""
-
-#, c-format
-msgid "Goosing %s..."
-msgstr ""
-
-#. A high-five is when two people's hands slap each other
-#. * in the air above their heads.  It is done to celebrate
-#. * something, often a victory, or to congratulate someone.
-msgid "High-five"
-msgstr ""
-
-#, c-format
-msgid "%s has high-fived you!"
-msgstr ""
-
-#, c-format
-msgid "High-fiving %s..."
-msgstr ""
-
-#. We're not entirely sure what the MySpace people mean by
-#. * this... but we think it's the equivalent of "prank."  Or, for
-#. * someone to perform a mischievous trick or practical joke.
-msgid "Punk"
-msgstr ""
-
-#, c-format
-msgid "%s has punk'd you!"
-msgstr ""
-
-#, c-format
-msgid "Punking %s..."
-msgstr ""
-
-#. Raspberry is a slang term for the vibrating sound made
-#. * when you stick your tongue out of your mouth with your
-#. * lips closed and blow.  It is typically done when
-#. * gloating or bragging.  Nowadays it's a pretty silly
-#. * gesture, so it does not carry a harsh negative
-#. * connotation.  It is generally used in a playful tone
-#. * with friends.
-msgid "Raspberry"
-msgstr ""
-
-#, c-format
-msgid "%s has raspberried you!"
-msgstr ""
-
-#, c-format
-msgid "Raspberrying %s..."
-msgstr ""
-
 msgid "Required parameters not passed in"
 msgstr "请求的参数未传入"
 
@@ -6638,6 +5014,9 @@ msgstr "无法添加您自己"
 
 msgid "Master archive is misconfigured"
 msgstr "主存档配置错误"
+
+msgid "Incorrect username or password"
+msgstr "用户名或密码错误"
 
 msgid "Could not recognize the host of the username you entered"
 msgstr "无法识别您输入用户名的主机"
@@ -6752,6 +5131,12 @@ msgstr "与服务器通讯出错。关闭连接。"
 msgid "Telephone Number"
 msgstr "电话号码"
 
+msgid "Location"
+msgstr "位置"
+
+msgid "Department"
+msgstr "部门"
+
 msgid "Personal Title"
 msgstr "个人称谓"
 
@@ -6800,6 +5185,9 @@ msgstr ""
 msgid "Would you like to join the conversation?"
 msgstr "您是否想要加入对话？"
 
+msgid "You have signed on from another location"
+msgstr "您在其它位置用此用户名登录了。"
+
 #, c-format
 msgid ""
 "%s appears to be offline and did not receive the message that you just sent."
@@ -6812,6 +5200,9 @@ msgstr "无法连接到服务器。请输入您想要连接的服务器的地址
 
 msgid "This conference has been closed. No more messages can be sent."
 msgstr "此会议已关筹。不会再送出消息。"
+
+msgid "Busy"
+msgstr "忙碌"
 
 #. *< type
 #. *< ui_requirement
@@ -6907,6 +5298,9 @@ msgstr "无效的聊天室名称"
 
 msgid "Invalid error"
 msgstr "无效错误"
+
+msgid "Not logged in"
+msgstr "未登录"
 
 msgid "Cannot receive IM due to parental controls"
 msgstr "由于家长控制，无法接收聊天请求"
@@ -7043,11 +5437,20 @@ msgstr "听音乐"
 msgid "Studying"
 msgstr "学习中"
 
+msgid "Working"
+msgstr "正在工作"
+
 msgid "In the restroom"
 msgstr "在洗手间"
 
 msgid "Received invalid data on connection with server"
 msgstr "在与服务器的连接中收到了无效的数据。"
+
+msgid "Error parsing response from authentication server"
+msgstr ""
+
+msgid "Unknown error during authentication"
+msgstr ""
 
 #. *< type
 #. *< ui_requirement
@@ -7174,6 +5577,11 @@ msgid ""
 "supported by your system."
 msgstr ""
 
+msgid ""
+"You required Kerberos authentication but encryption is disabled in your "
+"account settings."
+msgstr ""
+
 #, c-format
 msgid "You may be disconnected shortly.  If so, check %s for updates."
 msgstr "您即将被断开。请检查 %s 上的更新。"
@@ -7188,7 +5596,6 @@ msgid "Received authorization"
 msgstr "收到的认证"
 
 #. Unregistered username
-#. the username does not exist
 msgid "Username does not exist"
 msgstr "用户名不存在"
 
@@ -7467,6 +5874,9 @@ msgstr ""
 "无法添加好友 %s，原因是用户名无效。用户名必须是有效的电子邮件地址，或者以字母"
 "开头，且只能包含字母、数字和空格，或者只包含数字。"
 
+msgid "Unable to Add"
+msgstr "无法添加"
+
 msgid "Unable to Retrieve Buddy List"
 msgstr "无法获取好友列表"
 
@@ -7612,6 +6022,9 @@ msgstr "按电子邮件地址搜索好友"
 msgid "Type the email address of the buddy you are searching for."
 msgstr "输入您想要搜索的好友的电子邮件地址。"
 
+msgid "_Search"
+msgstr "搜索(_S)"
+
 msgid "Set User Info (web)..."
 msgstr "设置用户信息(web)..."
 
@@ -7648,8 +6061,17 @@ msgstr "显示正在等候认证的好友"
 msgid "Search for Buddy by Email Address..."
 msgstr "按电子邮件搜索好友..."
 
-msgid "Use clientLogin"
-msgstr "使用客户端登录"
+msgid "clientLogin"
+msgstr ""
+
+msgid "Kerberos"
+msgstr ""
+
+msgid "MD5-based"
+msgstr ""
+
+msgid "Authentication method"
+msgstr ""
 
 msgid ""
 "Always use AIM/ICQ proxy server for\n"
@@ -7772,6 +6194,9 @@ msgstr "用户信息不可用：%s"
 msgid "Mobile Phone"
 msgstr "移动电话"
 
+msgid "Age"
+msgstr "年龄"
+
 msgid "Personal Web Page"
 msgstr "个人主页"
 
@@ -7780,11 +6205,20 @@ msgstr "个人主页"
 msgid "Additional Information"
 msgstr "额外信息"
 
+msgid "Home Address"
+msgstr "家庭住址"
+
 msgid "Zip Code"
 msgstr "邮政编码"
 
+msgid "Work Address"
+msgstr "办公地址"
+
 msgid "Work Information"
 msgstr "工作信息"
+
+msgid "Company"
+msgstr "公司"
 
 msgid "Division"
 msgstr "部门"
@@ -7803,6 +6237,12 @@ msgstr "注册时间"
 
 msgid "Capabilities"
 msgstr "容量"
+
+msgid "Profile"
+msgstr "个人资料"
+
+msgid "View web profile"
+msgstr "查看 Web 配置文件"
 
 msgid "Invalid SNAC"
 msgstr "无效 SNAC"
@@ -8087,6 +6527,9 @@ msgid ""
 "entry has been removed from your buddy list."
 msgstr ""
 
+msgid "Unable to add user"
+msgstr "无法添加用户"
+
 #, c-format
 msgid ""
 "Error reading file %s: \n"
@@ -8351,6 +6794,9 @@ msgstr "多动"
 
 msgid "Robot"
 msgstr "机器人"
+
+msgid "In Love"
+msgstr "热恋"
 
 msgid "User Modes"
 msgstr "用户模式"
@@ -8636,6 +7082,9 @@ msgstr "组织"
 msgid "Unit"
 msgstr "单元"
 
+msgid "Homepage"
+msgstr "主页"
+
 msgid "Note"
 msgstr "备注"
 
@@ -8807,6 +7256,9 @@ msgstr "连接到 SILC 服务器时出错"
 
 msgid "Key Exchange failed"
 msgstr "密钥交换失败"
+
+msgid "Authentication failed"
+msgstr "认证失败"
 
 msgid ""
 "Resuming detached session failed. Press Reconnect to create new connection."
@@ -9305,400 +7757,6 @@ msgstr "认证用户"
 msgid "Auth Domain"
 msgstr "认证域"
 
-msgid "join &lt;room&gt;:  Join a chat room on the Yahoo network"
-msgstr "join: &lt;聊天室&gt;： 加入 Yahoo 网络上的聊天室"
-
-msgid "list: List rooms on the Yahoo network"
-msgstr "list： 列出 Yahoo 网络上的聊天室"
-
-msgid "doodle: Request user to start a Doodle session"
-msgstr "doodle: 请求用户开始一个 Doodle 会话"
-
-msgid "Yahoo ID..."
-msgstr "Yahoo ID..."
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Yahoo! Protocol Plugin"
-msgstr "Yahoo 协议插件"
-
-msgid "Pager port"
-msgstr "寻呼端口"
-
-msgid "File transfer server"
-msgstr "文件传送服务器"
-
-msgid "File transfer port"
-msgstr "文件传送端口"
-
-msgid "Chat room locale"
-msgstr "聊天聊天室语系"
-
-msgid "Ignore conference and chatroom invitations"
-msgstr "忽略会议和聊天室邀请"
-
-msgid "Use account proxy for HTTP and HTTPS connections"
-msgstr "为 HTTP 和 HTTPS 连接使用帐号代理"
-
-msgid "Chat room list URL"
-msgstr "聊天聊天室列表 URL"
-
-msgid "Yahoo JAPAN ID..."
-msgstr "Yahoo ID..."
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Yahoo! JAPAN Protocol Plugin"
-msgstr "Yahoo 协议插件"
-
-#, c-format
-msgid "%s has sent you a webcam invite, which is not yet supported."
-msgstr "%s 向您发送了视频聊天邀请，但尚不支持。"
-
-msgid "Your SMS was not delivered"
-msgstr "您的 SMS 未被递送"
-
-msgid "Your Yahoo! message did not get sent."
-msgstr "未发送您的 Yahoo! 消息。"
-
-#, c-format
-msgid "Yahoo! system message for %s:"
-msgstr "%s 的 Yahoo! 系统消息："
-
-msgid "Authorization denied message:"
-msgstr "认证拒绝消息："
-
-#, c-format
-msgid ""
-"%s has (retroactively) denied your request to add them to your list for the "
-"following reason: %s."
-msgstr "%s 拒绝了您将其加为好友的请求，原因如下：%s。"
-
-#, c-format
-msgid "%s has (retroactively) denied your request to add them to your list."
-msgstr "%s 拒绝您将他/她加入好友。"
-
-msgid "Add buddy rejected"
-msgstr "添加拒绝的好友"
-
-#. Some error in the received stream
-msgid "Received invalid data"
-msgstr "接收到无效的数据。"
-
-#. security lock from too many failed login attempts
-msgid ""
-"Account locked: Too many failed login attempts.  Logging into the Yahoo! "
-"website may fix this."
-msgstr "位置错误号 %d。登录到 Yahoo! 网站可能修复。"
-
-#. indicates a lock of some description
-msgid ""
-"Account locked: Unknown reason.  Logging into the Yahoo! website may fix "
-"this."
-msgstr "位置错误号 %d。登录到 Yahoo! 网站可能修复。"
-
-#. indicates a lock due to logging in too frequently
-msgid ""
-"Account locked: You have been logging in too frequently.  Wait a few minutes "
-"before trying to connect again.  Logging into the Yahoo! website may help."
-msgstr ""
-
-#. username or password missing
-msgid "Username or password missing"
-msgstr "用户名或密码不全"
-
-#, c-format
-msgid ""
-"The Yahoo server has requested the use of an unrecognized authentication "
-"method.  You will probably not be able to successfully sign on to Yahoo.  "
-"Check %s for updates."
-msgstr ""
-"Yahoo 服务器请求使用未识别的认证方式。您可能无法成功登录 Yahoo。请检查 %s 上"
-"的更新。"
-
-msgid "Failed Yahoo! Authentication"
-msgstr "Yahoo! 认证失败"
-
-#, c-format
-msgid ""
-"You have tried to ignore %s, but the user is on your buddy list.  Clicking "
-"\"Yes\" will remove and ignore the buddy."
-msgstr ""
-"您试图忽略 %s，但是该用户位于您的好友列表中。单击“是”将删除并忽略好友。"
-
-msgid "Ignore buddy?"
-msgstr "忽略好友？"
-
-msgid "Invalid username or password"
-msgstr "用户名或密码错误"
-
-msgid ""
-"Your account has been locked due to too many failed login attempts.  Please "
-"try logging into the Yahoo! website."
-msgstr "由于失败的尝试次数过多，您的帐号已被锁定，请尝试到 Yahoo! 网站登录。"
-
-msgid "Unknown error 52.  Reconnecting should fix this."
-msgstr "未知错误 52。重新连接应可以修复此问题。"
-
-msgid ""
-"Error 1013: The username you have entered is invalid.  The most common cause "
-"of this error is entering your email address instead of your Yahoo! ID."
-msgstr ""
-"错误 1013: 您输入的用户名无效。最常见的可能是您输入了电子邮件地址，而没有输"
-"入 Yahoo! ID。"
-
-#, c-format
-msgid "Unknown error number %d. Logging into the Yahoo! website may fix this."
-msgstr "位置错误号 %d。登录到 Yahoo! 网站可能修复。"
-
-#, c-format
-msgid "Unable to add buddy %s to group %s to the server list on account %s."
-msgstr "无法将好友 %s 添加到帐号 %s 位于服务器列表上的组 %s。"
-
-msgid "Unable to add buddy to server list"
-msgstr "无法将好友添加到服务器列表"
-
-#, c-format
-msgid "[ Audible %s/%s/%s.swf ] %s"
-msgstr ""
-
-msgid "Received unexpected HTTP response from server"
-msgstr "从服务器收到了意外的 HTTP 响应。"
-
-#, c-format
-msgid "Lost connection with %s: %s"
-msgstr ""
-"失去与 %s 的连接：\n"
-"%s"
-
-#, c-format
-msgid "Unable to establish a connection with %s: %s"
-msgstr "无法与 %s 建立连接：%s"
-
-msgid "Unable to connect: The server returned an empty response."
-msgstr "无法连接：服务器返回空回应。"
-
-msgid ""
-"Unable to connect: The server's response did not contain the necessary "
-"information"
-msgstr "无法连接：服务器回应中缺少必要信息"
-
-msgid "Not at Home"
-msgstr "不在家"
-
-msgid "Not at Desk"
-msgstr "不在桌前"
-
-msgid "Not in Office"
-msgstr "不在办公室"
-
-msgid "On Vacation"
-msgstr "度假中"
-
-msgid "Stepped Out"
-msgstr "郊游"
-
-msgid "Not on server list"
-msgstr "不在服务器列表中"
-
-msgid "Appear Permanently Offline"
-msgstr "显示为临时离线"
-
-msgid "Presence"
-msgstr ""
-
-msgid "Don't Appear Permanently Offline"
-msgstr "不显示永久离线"
-
-msgid "Join in Chat"
-msgstr "加入聊天"
-
-msgid "Initiate Conference"
-msgstr "发起会议"
-
-msgid "Presence Settings"
-msgstr "使用环境设置"
-
-msgid "Start Doodling"
-msgstr ""
-
-msgid "Activate which ID?"
-msgstr ""
-
-msgid "Select the ID you want to activate"
-msgstr "选择您要激活的 ID"
-
-msgid "Join whom in chat?"
-msgstr "将谁加入聊天？"
-
-msgid "Activate ID..."
-msgstr "激活 ID..."
-
-msgid "Join User in Chat..."
-msgstr "在聊天中加入用户..."
-
-msgid "Open Inbox"
-msgstr "打开收件箱"
-
-msgid "Can't send SMS. Unable to obtain mobile carrier."
-msgstr ""
-
-msgid "Can't send SMS. Unknown mobile carrier."
-msgstr ""
-
-msgid "Getting mobile carrier to send the SMS."
-msgstr ""
-
-#. Write a local message to this conversation showing that a request for a
-#. * Doodle session has been made
-#.
-msgid "Sent Doodle request."
-msgstr ""
-
-msgid "Unable to connect."
-msgstr "无法连接。"
-
-msgid "Unable to establish file descriptor."
-msgstr "无法建立文件描述符。"
-
-#, c-format
-msgid "%s is trying to send you a group of %d files.\n"
-msgstr "%s 正要给你发送 %d 个文件。\n"
-
-msgid "Write Error"
-msgstr "写错误"
-
-msgid "Yahoo! Japan Profile"
-msgstr "Yahoo! 日本资料"
-
-msgid "Yahoo! Profile"
-msgstr "Yahoo! 资料"
-
-msgid ""
-"Sorry, profiles marked as containing adult content are not supported at this "
-"time."
-msgstr "对不起，标为含有成人内容的个人资料目前不被支持。"
-
-msgid ""
-"If you wish to view this profile, you will need to visit this link in your "
-"web browser:"
-msgstr "如果您想要查看此资料，您需要在您的 Web 浏览器中浏览此链接:"
-
-msgid "Yahoo! ID"
-msgstr "Yahoo! ID"
-
-msgid "Hobbies"
-msgstr "嗜好"
-
-msgid "Latest News"
-msgstr "最新新闻"
-
-msgid "Home Page"
-msgstr "主页"
-
-msgid "Cool Link 1"
-msgstr "酷链接 1"
-
-msgid "Cool Link 2"
-msgstr "酷链接 2"
-
-msgid "Cool Link 3"
-msgstr "酷链接 3"
-
-msgid "Last Update"
-msgstr "上次更新"
-
-msgid ""
-"This profile is in a language or format that is not supported at this time."
-msgstr "对不起，此配置文件似乎是目前并不支持的语言或格式。"
-
-msgid ""
-"Could not retrieve the user's profile. This most likely is a temporary "
-"server-side problem. Please try again later."
-msgstr "无法获取用户的个人资料。可能临时出现了服务器端问题。请稍后再试。"
-
-msgid ""
-"Could not retrieve the user's profile. This most likely means that the user "
-"does not exist; however, Yahoo! sometimes does fail to find a user's "
-"profile. If you know that the user exists, please try again later."
-msgstr ""
-"无法获取用户的个人资料。可能是用户不存在；但是，Yahoo! 有时会无法找到用户的个"
-"人资料。如果您确定用户存在的话，请稍候再试。"
-
-msgid "The user's profile is empty."
-msgstr "用户的配置文件为空。"
-
-#, c-format
-msgid "%s has declined to join."
-msgstr "%s 已登录。"
-
-msgid "Failed to join chat"
-msgstr "加入聊天失败"
-
-#. -6
-msgid "Unknown room"
-msgstr "未知聊天室"
-
-#. -15
-msgid "Maybe the room is full"
-msgstr "可能聊天室已满"
-
-#. -35
-msgid "Not available"
-msgstr "不可用"
-
-msgid ""
-"Unknown error. You may need to logout and wait five minutes before being "
-"able to rejoin a chatroom"
-msgstr "未知错误。您可能需要退出帐号并等待五分钟再重新加入聊天室"
-
-#, c-format
-msgid "You are now chatting in %s."
-msgstr "您现在正在 %s 中聊天。"
-
-msgid "Failed to join buddy in chat"
-msgstr "在聊天中加入好友失败"
-
-msgid "Maybe they're not in a chat?"
-msgstr "可能他们未在聊天中？"
-
-msgid "Fetching the room list failed."
-msgstr "获取聊天室列表失败。"
-
-msgid "Voices"
-msgstr "语音"
-
-msgid "Webcams"
-msgstr "摄像头"
-
-msgid "Connection problem"
-msgstr "连接问题"
-
-msgid "Unable to fetch room list."
-msgstr "无法获取聊天室列表。"
-
-msgid "User Rooms"
-msgstr "用户聊天室"
-
-msgid "Connection problem with the YCHT server"
-msgstr "YCHT 服务器连接出现问题。"
-
 msgid ""
 "(There was an error converting this message.\t Check the 'Encoding' option "
 "in the Account Editor)"
@@ -9707,6 +7765,12 @@ msgstr "(转换此信息出错。\t请检查帐号编辑器中的“编码”选
 #, c-format
 msgid "Unable to send to chat %s,%s,%s"
 msgstr "无法发送给聊天 %s,%s,%s"
+
+msgid "User is offline"
+msgstr "用户离线"
+
+msgid "User"
+msgstr "用户"
 
 msgid "Hidden or not logged-in"
 msgstr "隐身或未登录"
@@ -10086,8 +8150,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"This means that you can be chatting with friends on MSN, talking to a friend "
-"on Google Talk, and sitting in a Yahoo chat room all at the same time."
+"This means that you can be chatting with friends on AIM, talking to a friend "
+"on Google Talk, and sitting in an IRC chat room all at the same time."
 msgstr ""
 
 msgid "The buddy list showing friends on different networks."
@@ -10099,8 +8163,8 @@ msgstr "Pidgin 互联网通讯程序"
 msgid "Internet Messenger"
 msgstr "互联网通讯程序"
 
-msgid ""
-"Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, MSN, Yahoo and more"
+#, fuzzy
+msgid "Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, and more"
 msgstr "互联网通讯程序。 支持 AIM、Google Talk、Jabber/XMPP、MSN、Yahoo 和更多"
 
 #. Build the login options frame.
@@ -10811,11 +8875,11 @@ msgstr "别名(_L)："
 msgid "_Group:"
 msgstr "组(_G)："
 
-msgid "Auto_join when account connects."
-msgstr "帐号上线时自动加入(_J)。"
+msgid "Automatically _join when account connects"
+msgstr ""
 
-msgid "_Remain in chat after window is closed."
-msgstr "窗口关闭后继续保持聊天状态(_R)。"
+msgid "_Remain in chat after window is closed"
+msgstr ""
 
 msgid "Please enter the name of the group to be added."
 msgstr "请输入要添加的组名称。"
@@ -10853,6 +8917,9 @@ msgstr "输入此证书所适用的主机名。"
 #. Widget creation function
 msgid "SSL Servers"
 msgstr "SSL 服务器"
+
+msgid "Supported debug options are: plugins, version"
+msgstr ""
 
 msgid "Unknown command."
 msgstr "未知命令。"
@@ -11291,6 +9358,9 @@ msgstr "孟加拉语"
 msgid "Bengali-India"
 msgstr "孟加拉印地语"
 
+msgid "Breton"
+msgstr ""
+
 msgid "Bodo"
 msgstr ""
 
@@ -11347,9 +9417,6 @@ msgstr "波斯语"
 
 msgid "Finnish"
 msgstr "芬兰语"
-
-msgid "French"
-msgstr "法语"
 
 msgid "Irish"
 msgstr "爱尔兰语"
@@ -11428,6 +9495,9 @@ msgstr ""
 
 msgid "Macedonian"
 msgstr "马其顿语"
+
+msgid "Malay"
+msgstr "马来语"
 
 msgid "Malayalam"
 msgstr ""
@@ -11548,14 +9618,14 @@ msgstr "中文(繁体)"
 msgid "Amharic"
 msgstr "阿姆哈拉语"
 
+msgid "French"
+msgstr "法语"
+
 msgid "Armenian"
 msgstr "亚美尼亚语"
 
 msgid "Lao"
 msgstr "老挝语"
-
-msgid "Malay"
-msgstr "马来语"
 
 msgid "Turkish"
 msgstr "土耳其语"
@@ -11590,18 +9660,13 @@ msgstr ""
 
 msgid ""
 "<font size=\"4\"><b>Help from other Pidgin users</b></font> is available by "
-"e-mailing <a href=\"mailto:support@pidgin.im\">support@pidgin.im</a><br/"
-">This is a <b>public</b> mailing list! (<a href=\"http://pidgin.im/pipermail/"
+"emailing <a href=\"mailto:support@pidgin.im\">support@pidgin.im</a><br/>This "
+"is a <b>public</b> mailing list! (<a href=\"http://pidgin.im/pipermail/"
 "support/\">archive</a>)<br/>We can't help with third-party protocols or "
 "plugins!<br/>This list's primary language is <b>English</b>.  You are "
 "welcome to post in another language, but the responses may be less helpful."
 "<br/>"
 msgstr ""
-"从其他 Pidgin 用户获得帮助：<a href=\"mailto:support@pidgin.im"
-"\">support@pidgin.im</a><br/>这是一个公开的邮件列表，您还可以查看该列表的历史"
-"<a href=\"http://pidgin.im/pipermail/support/\">存档</a>。<br/>我们无法为第三"
-"方的协议或者插件提供支持。该邮件列表的基本交流语言是<b>英语</b>，虽然您可以使"
-"用其他语言进行求助，但响应的人数以及所能提供的帮助会因此而减少。<br/>"
 
 #, c-format
 msgid "About %s"
@@ -12213,6 +10278,9 @@ msgstr "媒体(_M)"
 msgid "_Hangup"
 msgstr "挂断(_H)"
 
+msgid "Media error"
+msgstr ""
+
 #, c-format
 msgid "%s wishes to start an audio/video session with you."
 msgstr "%s 希望与您进行音频/视频聊天。"
@@ -12223,6 +10291,42 @@ msgstr "%s 希望与您进行视频聊天。"
 
 msgid "Incoming Call"
 msgstr "来电"
+
+#. Translators note: These are the letters on the keys of a numeric
+#. keypad; translate according to the tables in §7 of ETSI ES 202 130:
+#. http://webapp.etsi.org/WorkProgram/Report_WorkItem.asp?WKI_ID=11730
+#.
+#. Letters on the '2' key of a numeric keypad
+msgid "ABC"
+msgstr ""
+
+#. Letters on the '3' key of a numeric keypad
+msgid "DEF"
+msgstr ""
+
+#. Letters on the '4' key of a numeric keypad
+msgid "GHI"
+msgstr ""
+
+#. Letters on the '5' key of a numeric keypad
+msgid "JKL"
+msgstr ""
+
+#. Letters on the '6' key of a numeric keypad
+msgid "MNO"
+msgstr ""
+
+#. Letters on the '7' key of a numeric keypad
+msgid "PQRS"
+msgstr ""
+
+#. Letters on the '8' key of a numeric keypad
+msgid "TUV"
+msgstr ""
+
+#. Letters on the '9' key of a numeric keypad
+msgid "WXYZ"
+msgstr ""
 
 msgid "_Hold"
 msgstr ""
@@ -12334,10 +10438,6 @@ msgstr "选择文件"
 
 msgid "Modify Buddy Pounce"
 msgstr "编辑好友千里眼"
-
-#. Create the "Pounce on Whom" frame.
-msgid "Pounce on Whom"
-msgstr "监视对象"
 
 msgid "_Account:"
 msgstr "帐号(_A)："
@@ -12999,9 +11099,9 @@ msgstr "状态(_S)："
 msgid "Use a _different status for some accounts"
 msgstr "为某些帐号使用不同的状态(_D)"
 
-#. Save & Use button
-msgid "Sa_ve & Use"
-msgstr "保存并使用(_V)"
+#. Save and Use button
+msgid "Sa_ve and Use"
+msgstr ""
 
 #, c-format
 msgid "Status for %s"
@@ -13063,9 +11163,6 @@ msgstr "状态选择器"
 
 msgid "Google Talk"
 msgstr "Google Talk"
-
-msgid "Facebook (XMPP)"
-msgstr "Facebook (XMPP)"
 
 #, c-format
 msgid "The following error has occurred loading %s: %s"
@@ -13345,6 +11442,9 @@ msgstr "收到的消息"
 #, c-format
 msgid "Select Color for %s"
 msgstr "选择 %s 的颜色"
+
+msgid "General"
+msgstr "常规"
 
 msgid "Ignore incoming format"
 msgstr "忽略收到消息的格式"
@@ -13715,6 +11815,9 @@ msgstr "音乐信使插件允许多个用户同时在同一份曲谱上工作。
 msgid "Notify For"
 msgstr "提醒"
 
+msgid "\tS_ystem messages"
+msgstr ""
+
 msgid "\t_Only when someone says your username"
 msgstr "\t仅当别人提到您的名字时(_O)"
 
@@ -13748,6 +11851,8 @@ msgid "R_aise conversation window"
 msgstr "升起对话窗口(_A)"
 
 #. Present conversation method button
+#. Translators: "Present" as used here is a verb. The plugin presents
+#. * the window to the user.
 msgid "_Present conversation window"
 msgstr "当前对话窗口(_P)"
 
@@ -13900,11 +12005,9 @@ msgid "Lets you send raw input to text-based protocols."
 msgstr "允许您发送原样输入基于文本的协议。"
 
 msgid ""
-"Lets you send raw input to text-based protocols (XMPP, MSN, IRC, TOC). Hit "
+"Lets you send raw input to text-based protocols (XMPP, IRC, TOC). Hit "
 "'Enter' in the entry box to send. Watch the debug window."
 msgstr ""
-"允许您将输入原样发送给基于文本的协议(Jabber，MSN，IRC，TOC)。在输入框中按回车"
-"键可以发送。看看调试窗口。"
 
 #, c-format
 msgid "You can upgrade to %s %s today."
@@ -14192,6 +12295,56 @@ msgid ""
 "timestamp formats."
 msgstr "此插件允许用户自定义会话和聊天记录消息的时间戳格式。"
 
+msgid "Opacity:"
+msgstr "不透明度："
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "即时消息对话窗口"
+
+msgid "_IM window transparency"
+msgstr "即时消息窗口透明度(_I)"
+
+msgid "_Show slider bar in IM window"
+msgstr "在即时消息窗口中显示滑块(_S)"
+
+msgid "Remove IM window transparency on focus"
+msgstr "聚焦时取消即时通讯窗口透明度"
+
+msgid "Always on top"
+msgstr "常居顶端"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "好友列表窗口"
+
+msgid "_Buddy List window transparency"
+msgstr "好友列表窗口的透明度(_B)"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "聚焦时取消好友列表窗口透明度"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "透明度"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "好友列表和对话窗口的可变透明度。"
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -14300,61 +12453,6 @@ msgstr "配置您的话筒和摄像头。"
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "为音频和视频聊天配置话筒和摄像头。"
-
-msgid "Opacity:"
-msgstr "不透明度："
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "即时消息对话窗口"
-
-msgid "_IM window transparency"
-msgstr "即时消息窗口透明度(_I)"
-
-msgid "_Show slider bar in IM window"
-msgstr "在即时消息窗口中显示滑块(_S)"
-
-msgid "Remove IM window transparency on focus"
-msgstr "聚焦时取消即时通讯窗口透明度"
-
-msgid "Always on top"
-msgstr "常居顶端"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "好友列表窗口"
-
-msgid "_Buddy List window transparency"
-msgstr "好友列表窗口的透明度(_B)"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "聚焦时取消好友列表窗口透明度"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "透明度"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "好友列表和对话窗口的可变透明度。"
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list.\n"
-"\n"
-"* Note: This plugin requires Win2000 or greater."
-msgstr ""
-"此插件能够让对话窗口和好友列表有可变的 alpha 透明度。\n"
-"\n"
-"* 注意: 此插件需要 Win2000 或更高版本。"
 
 #. Autostart
 msgid "Startup"
@@ -14492,12 +12590,9 @@ msgid ""
 msgstr "无法卸载已安装版本的 Pidgin，新版将不删除已有文件而直接安装。"
 
 msgid ""
-"Pidgin requires a compatible GTK+ Runtime (which doesn't appear to be "
-"already present).$\\rAre you sure you want to skip installing the GTK+ "
-"Runtime?"
+"Pidgin requires a compatible GTK+ Runtime (which does not appear to be "
+"installed).$\\rAre you sure you want to skip installing the GTK+ Runtime?"
 msgstr ""
-"Pidgin 需要一个兼容的 GTK+ 运行时(您的系统上没有安装)。$\\r您确定不安装 GTK+ "
-"运行时吗？"
 
 #. Installer Subsection Text
 msgid "URI Handlers"

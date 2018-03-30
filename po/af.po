@@ -9,11 +9,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-11-22 10:22-0800\n"
-"PO-Revision-Date: 2014-11-20 10:22+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:20+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
-"Language-Team: Afrikaans (http://www.transifex.com/projects/p/pidgin/"
-"language/af/)\n"
+"Language-Team: Afrikaans (http://www.transifex.com/pidgin/pidgin/language/"
+"af/)\n"
 "Language: af\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -59,7 +59,6 @@ msgstr ""
 "en handel die migrasie handmatig af. Rapporteer gerus hierdie fout by http://"
 "developer.pidgin.im"
 
-#. the user did not fill in the captcha
 msgid "Error"
 msgstr "Fout"
 
@@ -235,7 +234,6 @@ msgstr "Tik gerus vriendinligting."
 msgid "Chats"
 msgstr "Geselsies"
 
-#. Extract their Name and put it in
 msgid "Name"
 msgstr "Naam"
 
@@ -346,11 +344,9 @@ msgstr "Wissel merker"
 msgid "View Log"
 msgstr "Bekyk staaflêer"
 
-#. General
 msgid "Nickname"
 msgstr "Bynaam"
 
-#. Never know what those translations might end up like...
 #. Idle stuff
 msgid "Idle"
 msgstr "Ledig"
@@ -792,7 +788,6 @@ msgid "Remaining"
 msgstr "Oorblywend"
 
 #. XXX: Use of ggp_str_to_uin() is an ugly hack!
-#. presence
 msgid "Status"
 msgstr "Status"
 
@@ -1043,7 +1038,8 @@ msgstr "Nuwe vriendwag"
 msgid "Edit Buddy Pounce"
 msgstr "Wysig vriendwag"
 
-msgid "Pounce Who"
+#. Create the "Pounce on Whom" frame.
+msgid "Pounce on Whom"
 msgstr "Hou wie dop"
 
 #. Account:
@@ -1289,8 +1285,8 @@ msgstr "Inisialiseer van GStreamer het misluk."
 msgid "(default)"
 msgstr "(verstek)"
 
-msgid "Select Sound File ..."
-msgstr "Kies klanklêer..."
+msgid "Select Sound File..."
+msgstr ""
 
 msgid "Sound Preferences"
 msgstr "Klankvoorkeure"
@@ -1372,21 +1368,12 @@ msgstr "Vee status uit"
 msgid "Saved Statuses"
 msgstr "Gestoorde statusse"
 
-#. title
 msgid "Title"
 msgstr "Titel"
 
 msgid "Type"
 msgstr "Tipe"
 
-#. Statuses are almost all the same. Define a macro to reduce code repetition.
-#. PurpleStatusPrimitive
-#. id - use default
-#. name - use default
-#. saveable
-#. user_settable
-#. not independent
-#. Attributes - each status can have a message.
 msgid "Message"
 msgstr "Boodskap"
 
@@ -1418,12 +1405,12 @@ msgstr "Boodskap:"
 msgid "Edit Status"
 msgstr "Wysig status"
 
-msgid "Use different status for following accounts"
-msgstr "Gebruik 'n ander status vir die volgende rekenings"
+msgid "Use a different status for some accounts"
+msgstr ""
 
-#. Save & Use
-msgid "Save & Use"
-msgstr "Stoor en gebruik"
+#. Save and Use
+msgid "Save and Use"
+msgstr ""
 
 msgid "Certificates"
 msgstr "Sertifikate"
@@ -1493,6 +1480,7 @@ msgstr "Iemand praat in 'n geselsie"
 msgid "Someone says your name in a chat"
 msgstr "Iemand sê u naam in 'n geselsie"
 
+#. Translators: "toaster" here means "pop-up".
 msgid "Notify with a toaster when"
 msgstr "Stel met oploer in kennis wanneer"
 
@@ -1505,6 +1493,7 @@ msgstr "Stel DRINGEND vir die terminaalvenster."
 msgid "GntGf"
 msgstr "GntGf"
 
+#. Translators: "toaster" here means "pop-up".
 msgid "Toaster plugin"
 msgstr "Oploer-inprop"
 
@@ -1551,8 +1540,8 @@ msgstr ""
 msgid "TinyURL for above: %s"
 msgstr "TinyURL vir bostaande: %s"
 
-msgid "Please wait while TinyURL fetches a shorter URL ..."
-msgstr "Wag asb. terwyl TinyURL 'n korter URL kry ..."
+msgid "Please wait while TinyURL fetches a shorter URL..."
+msgstr ""
 
 msgid "Only create TinyURL for URLs of this length or greater"
 msgstr "Skep 'n TinyURL slegs vir URL'e van dié lengte of langer"
@@ -1566,15 +1555,12 @@ msgstr "TinyURL"
 msgid "TinyURL plugin"
 msgstr "TinyURL-inprop"
 
-msgid "When receiving a message with URL(s), use TinyURL for easier copying"
+msgid "Shorten URLs in messages using TinyURL"
 msgstr ""
-"By ontvangs van 'n boodskap met URL(e), gebruik TinyURL vir makliker "
-"kopiëring"
 
 msgid "Online"
 msgstr "Aanlyn"
 
-#. primitive,						no,							id,			name
 msgid "Offline"
 msgstr "Vanlyn"
 
@@ -1816,7 +1802,6 @@ msgstr ""
 msgid "View Issuer Certificate"
 msgstr ""
 
-#. show error to user
 msgid "Registration Error"
 msgstr "Registrasiefout"
 
@@ -1832,7 +1817,6 @@ msgid "+++ %s signed off"
 msgstr "+++ %s het afgemeld"
 
 #. Undocumented
-#. Unknown error
 msgid "Unknown error"
 msgstr "Onbekende fout"
 
@@ -1967,23 +1951,6 @@ msgid "The command used to handle \"irc\" URLs, if enabled."
 msgstr ""
 "Die bevel wat gebruik word om \"irc\"-URL'e te hanteer, indien geaktiveer."
 
-msgid "Whether the specified command should handle \"msnim\" URLs"
-msgstr "Of die gespesifiseerde bevel \"msnim\"-URL'e moet hanteer"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"msnim\" "
-"URLs."
-msgstr ""
-"Waar indien die bevel gespesifiseer in die \"command\"-sleutel \"msnim\"-"
-"URL'e moet hanteer."
-
-msgid "The handler for \"msnim\" URLs"
-msgstr "Die vatsel vir \"msnim\"-URL'e"
-
-msgid "The command used to handle \"msnim\" URLs, if enabled."
-msgstr ""
-"Die bevel wat gebruik word om \"msnim\"-URL'e te hanteer, indien geaktiveer."
-
 msgid "Whether the specified command should handle \"sip\" URLs"
 msgstr "Of die gespesifiseerde bevel \"sip\"-URL'e moet hanteer"
 
@@ -2017,23 +1984,6 @@ msgstr "Die vatsel vir \"xmpp\"-URL'e"
 msgid "The command used to handle \"xmpp\" URLs, if enabled."
 msgstr ""
 "Die bevel wat gebruik word om \"xmpp\"-URL'e te hanteer, indien geaktiveer."
-
-msgid "Whether the specified command should handle \"ymsgr\" URLs"
-msgstr "Of die gespesifiseerde bevel \"ymsgr\"-URL'e moet hanteer"
-
-msgid ""
-"True if the command specified in the \"command\" key should handle \"ymsgr\" "
-"URLs."
-msgstr ""
-"Waar indien die bevel gespesifiseer in die \"command\"-sleutel \"ymsgr\"-"
-"URL'e moet hanteer."
-
-msgid "The handler for \"ymsgr\" URLs"
-msgstr "Die vatsel vir \"ymsgr\"-URL'e"
-
-msgid "The command used to handle \"ymsgr\" URLs, if enabled."
-msgstr ""
-"Die bevel wat gebruik word om \"ymsgr\"-URL'e te hanteer, indien geaktiveer."
 
 #, c-format
 msgid "Failed to get connection: %s"
@@ -2257,6 +2207,25 @@ msgid "(%s) %s <AUTO-REPLY>: %s\n"
 msgstr "(%s) %s <AUTO-REPLY>: %s\n"
 
 msgid ""
+"\n"
+"\n"
+"Message from Farsight: "
+msgstr ""
+
+msgid ""
+"Error initializing the call. This probably denotes problem in installation "
+"of GStreamer or Farsight."
+msgstr ""
+
+msgid "Network error."
+msgstr ""
+
+msgid ""
+"Codec negotiation failed. This problem might be resolved by installing more "
+"GStreamer codecs."
+msgstr ""
+
+msgid ""
 "No codecs found. Install some GStreamer codecs found in GStreamer plugins "
 "packages."
 msgstr ""
@@ -2265,6 +2234,9 @@ msgstr ""
 
 msgid ""
 "No codecs left. Your codec preferences in fs-codecs.conf are too strict."
+msgstr ""
+
+msgid "Could not connect to the remote party"
 msgstr ""
 
 msgid "A non-recoverable Farsight2 error has occurred."
@@ -2830,10 +2802,8 @@ msgstr "Sienermodus vir inkomende gesprekke"
 
 msgid ""
 "Causes conversation windows to appear as other users begin to message you.  "
-"This works for AIM, ICQ, XMPP, Sametime, and Yahoo!"
+"This works for AIM, ICQ, XMPP, and Sametime"
 msgstr ""
-"Veroorsaak dat gesprekvensters verskyn wanneer ander gebruikers 'n boodskap "
-"begin tik.  Hierdie werk vir AIM, ICQ, XMPP, Sametime en Yahoo!"
 
 msgid "You feel a disturbance in the force..."
 msgstr "U voel 'n magtige dreuning..."
@@ -3050,11 +3020,9 @@ msgstr ""
 "gebruik, installeerActiveTCL vanaf http://www.activestate.com\n"
 
 msgid ""
-"Unable to find Apple's \"Bonjour for Windows\" toolkit, see http://d.pidgin."
-"im/BonjourWindows for more information."
+"Unable to find Apple's \"Bonjour for Windows\" toolkit, see https://"
+"developer.pidgin.im/BonjourWindows for more information."
 msgstr ""
-"Kan nie Apple se \"Bonjour vir Windows\"-nutspak vind nie; sien http://d."
-"pidgin.im/wiki/BonjourWindows vir meer inligting."
 
 msgid "Unable to listen for incoming IM connections"
 msgstr "Kan nie vir inkomende kitsboodskap-koppelings luister nie"
@@ -3071,7 +3039,6 @@ msgstr "Naam"
 msgid "Last name"
 msgstr "Van"
 
-#. email
 msgid "Email"
 msgstr "E-pos"
 
@@ -3158,14 +3125,12 @@ msgstr "Stad"
 msgid "Year of birth"
 msgstr "Jaar van geboorte"
 
-#. gender
 msgid "Gender"
 msgstr "Geslag"
 
 msgid "Male or female"
 msgstr "Manlik of vroulik"
 
-#. 0
 msgid "Male"
 msgstr "Manlik"
 
@@ -3203,22 +3168,16 @@ msgstr "Kies 'n geselsie vir vriend: %s"
 msgid "Add to chat..."
 msgstr "Voeg by geselsie..."
 
-#. 0
 #. Global
 msgid "Available"
 msgstr "Beskikbaar"
 
-#. 2
 msgid "Chatty"
 msgstr "Geselserig"
 
-#. 3
 msgid "Do Not Disturb"
 msgstr "Moenie pla nie"
 
-#. 1
-#. get_yahoo_status_from_purple_status() returns YAHOO_STATUS_CUSTOM for
-#. * the generic away state (YAHOO_STATUS_TYPE_AWAY) with no message
 #. Away stuff
 msgid "Away"
 msgstr "Weg"
@@ -3226,8 +3185,6 @@ msgstr "Weg"
 msgid "UIN"
 msgstr "UIN"
 
-#. first name
-#. optional information
 msgid "First Name"
 msgstr "Naam"
 
@@ -3252,9 +3209,6 @@ msgstr "Daar is geen gebruikers wat by u soekkriteria pas nie."
 msgid "Unable to read from socket"
 msgstr "Kan nie van sok lees nie"
 
-#. The session is now set up, ready to be connected. This emits the
-#. * signedOn signal, so clients can now do anything with msimprpl, and
-#. * we're ready for it (session key, userid, username all setup).
 msgid "Connected"
 msgstr "Koppel"
 
@@ -3267,7 +3221,6 @@ msgstr "Voeg by geselsie"
 msgid "Chat _name:"
 msgstr "Geselsie_naam:"
 
-#. 1. connect to server
 #. connect to the server
 msgid "Connecting"
 msgstr "Koppel tans"
@@ -4033,8 +3986,6 @@ msgstr "Postitel"
 msgid "Role"
 msgstr "Rol"
 
-#. birthday
-#. birthday (required)
 msgid "Birthday"
 msgstr "Verjaardag"
 
@@ -4126,7 +4077,6 @@ msgstr "Meld af"
 msgid "JID"
 msgstr "JID"
 
-#. last name
 msgid "Last Name"
 msgstr "Van"
 
@@ -4390,7 +4340,6 @@ msgstr "Geen (aan hangende)"
 msgid "None"
 msgstr "Geen"
 
-#. subscription type
 msgid "Subscription"
 msgstr "Inskrywing"
 
@@ -4406,12 +4355,6 @@ msgstr "Bui"
 msgid "Mood Comment"
 msgstr "Kommentaar by bui"
 
-#. primitive
-#. ID
-#. name - use default
-#. saveable
-#. should be user_settable some day
-#. independent
 msgid "Tune Artist"
 msgstr "Deuntjiekunstenaar"
 
@@ -4656,8 +4599,6 @@ msgstr ""
 "Kan nie zoempie stuur nie omdat %s dit nie ondersteun nie of nie nou zoepies "
 "wil ontvang nie."
 
-#. Yahoo only supports one attention command: the 'buzz'.
-#. This is index number YAHOO_BUZZ.
 msgid "Buzz"
 msgstr "Zoempie"
 
@@ -4792,8 +4733,6 @@ msgstr "Laat skoonteksstawing oor ongeënkripteerde strome toe"
 msgid "Connect port"
 msgstr "Verbindingspoort"
 
-#. TODO: default to automatically try different ports. Make the user be
-#. * able to set the first port to try (like LastConnectedPort in Windows client).
 #. Account options
 msgid "Connect server"
 msgstr "Koppel bediener"
@@ -4804,8 +4743,9 @@ msgstr "Lêeroordraginstaanbediener"
 msgid "BOSH URL"
 msgstr "BOSH-URL"
 
-#. this should probably be part of global smiley theme settings later on,
-#. shared with MSN
+#. this should probably be part of global smiley theme settings
+#. * later on
+#.
 msgid "Show Custom Smileys"
 msgstr "Wys pasgemaakte gesiggies"
 
@@ -4892,7 +4832,6 @@ msgstr "Onbekende fout in teenwoordigheid"
 msgid "Unable to send file to %s, user does not support file transfers"
 msgstr "Kan nie lêer stuur aan %s nie: die gebruiker steun nie lêeroordrag nie"
 
-#. not success
 msgid "File Send Failed"
 msgstr "Lêerversending het misluk"
 
@@ -5191,1634 +5130,6 @@ msgstr "Aksies"
 msgid "Select an action"
 msgstr "Stel 'n aksie op"
 
-#. only notify the user about problems adding to the friends list
-#. * maybe we should do something else for other lists, but it probably
-#. * won't cause too many problems if we just ignore it
-#, c-format
-msgid "Unable to add \"%s\"."
-msgstr "Kan nie \"%s\" byvoeg nie."
-
-msgid "Buddy Add error"
-msgstr "Fout met byvoeg van vriend"
-
-msgid "The username specified does not exist."
-msgstr "Die gespesifiseerde gebruikernaam bestaan nie."
-
-msgid "Unable to parse message"
-msgstr "Kon nie boodskap ontleed nie"
-
-msgid "Syntax Error (probably a client bug)"
-msgstr "Sintaksfout (dalk 'n kliëntfout)"
-
-msgid "Invalid email address"
-msgstr "Ongeldige e-posadres"
-
-msgid "User does not exist"
-msgstr "Gebruiker bestaan nie"
-
-msgid "Fully qualified domain name missing"
-msgstr "Volledig gekwalifiseerde domeinnaam word vermis"
-
-msgid "Already logged in"
-msgstr "Reeds aangemeld"
-
-msgid "Invalid username"
-msgstr "Ongeldige gebruikernaam"
-
-msgid "Invalid friendly name"
-msgstr "Ongeldige vriendelike naam"
-
-msgid "List full"
-msgstr "Lys vol"
-
-msgid "Already there"
-msgstr "Reeds daar"
-
-msgid "Not on list"
-msgstr "Nie op lys nie"
-
-msgid "User is offline"
-msgstr "Gebruiker is vanlyn"
-
-msgid "Already in the mode"
-msgstr "Reeds in die modus"
-
-msgid "Already in opposite list"
-msgstr "Reeds in teenoorgestelde-lys"
-
-msgid "Too many groups"
-msgstr "Te veel groepe"
-
-msgid "Invalid group"
-msgstr "Ongeldige groep"
-
-msgid "User not in group"
-msgstr "Gebruiker nie in groep nie"
-
-msgid "Group name too long"
-msgstr "Groepnaam te lank"
-
-msgid "Cannot remove group zero"
-msgstr "Kan nie groep nul verwyder nie"
-
-msgid "Tried to add a user to a group that doesn't exist"
-msgstr "Het probeer om 'n gebruiker by niebestaande groep te voeg"
-
-msgid "Switchboard failed"
-msgstr "Skakelbord het misluk"
-
-msgid "Notify transfer failed"
-msgstr "Laat weet oordrag het misluk"
-
-msgid "Required fields missing"
-msgstr "Vereiste velde kort"
-
-msgid "Too many hits to a FND"
-msgstr "Te veel resultate vir 'n FND"
-
-msgid "Not logged in"
-msgstr "Nie aangemeld nie"
-
-msgid "Service temporarily unavailable"
-msgstr "Diens tydelik nie beskikbaar nie"
-
-msgid "Database server error"
-msgstr "Databasisbedienerfout"
-
-msgid "Command disabled"
-msgstr "Bevel gedeaktiveer"
-
-msgid "File operation error"
-msgstr "Lêerbewerkingsfout"
-
-msgid "Memory allocation error"
-msgstr "Geheuetoekenningsfout"
-
-msgid "Wrong CHL value sent to server"
-msgstr "Verkeerde CHL-waarde aan bediener gestuur"
-
-msgid "Server busy"
-msgstr "Bediener besig"
-
-msgid "Server unavailable"
-msgstr "Bediener nie beskikbaar nie"
-
-msgid "Peer notification server down"
-msgstr "Ewekniekennisgewing-bediener af"
-
-msgid "Database connect error"
-msgstr "Databasiskoppelfout"
-
-msgid "Server is going down (abandon ship)"
-msgstr "Bediener dreig om te val (verlaat die skip)"
-
-msgid "Error creating connection"
-msgstr "Kon nie verbinding daarstel nie"
-
-msgid "CVR parameters are either unknown or not allowed"
-msgstr "CVR-parameters is óf onbekend óf nie toegelaat nie"
-
-msgid "Unable to write"
-msgstr "Kan nie skryf nie"
-
-msgid "Session overload"
-msgstr "Sessie oorlaai"
-
-msgid "User is too active"
-msgstr "Gebruiker is te aktief"
-
-msgid "Too many sessions"
-msgstr "Te veel sessies"
-
-msgid "Passport not verified"
-msgstr "Paspoort nie geverifieer nie"
-
-msgid "Bad friend file"
-msgstr "Slegte vriendlêer"
-
-msgid "Not expected"
-msgstr "Nie verwag nie"
-
-msgid "Friendly name is changing too rapidly"
-msgstr "Vriendelike naam verander te vinnig"
-
-msgid "Server too busy"
-msgstr "Bediener te besig"
-
-msgid "Authentication failed"
-msgstr "Stawing het misluk"
-
-msgid "Not allowed when offline"
-msgstr "Nie toegelaat wanneer vanlyn nie"
-
-msgid "Not accepting new users"
-msgstr "Aanvaar nie nuwe gebruikers nie"
-
-msgid "Kids Passport without parental consent"
-msgstr "Kinderpaspoort sonder ouertoestemming"
-
-msgid "Passport account not yet verified"
-msgstr "Paspoortrekening nog nie geverifieer nie"
-
-msgid "Passport account suspended"
-msgstr "Paspoortrekening opgeskort"
-
-msgid "Bad ticket"
-msgstr "Slegte kaartjie"
-
-#, c-format
-msgid "Unknown Error Code %d"
-msgstr "Onbekende fout, kode %d"
-
-#, c-format
-msgid "MSN Error: %s\n"
-msgstr "MSN-fout: %s\n"
-
-#, c-format
-msgid "Buddy list synchronization issue in %s (%s)"
-msgstr "Vriendelys-sinchronisasieprobleem in %s (%s)"
-
-#, c-format
-msgid ""
-"%s on the local list is inside the group \"%s\" but not on the server list. "
-"Do you want this buddy to be added?"
-msgstr ""
-"%s op die plaaslike lys is binne die groep \"%s\" maar nie op die "
-"bedienerlys nie. Wil u hierdie vriend byvoeg?"
-
-#, c-format
-msgid ""
-"%s is on the local list but not on the server list. Do you want this buddy "
-"to be added?"
-msgstr ""
-"%s op die plaaslike lys maar nie op die bedienerlys nie. Wil u hierdie "
-"vriend byvoeg?"
-
-msgid "Other Contacts"
-msgstr "Ander kontakte"
-
-msgid "Non-IM Contacts"
-msgstr ""
-
-#, c-format
-msgid "%s sent a wink. <a href='msn-wink://%s'>Click here to play it</a>"
-msgstr ""
-"%s het 'n knipoog gestuur. <a href='msn-wink://%s'>Klik hier om dit te "
-"speel</a>"
-
-#, c-format
-msgid "%s sent a wink, but it could not be saved"
-msgstr "%s het 'n knipoog gestuur, maar dit kon nie gestoor word nie"
-
-#, c-format
-msgid "%s sent a voice clip. <a href='audio://%s'>Click here to play it</a>"
-msgstr ""
-"%s het 'n stemopname gestuur. <a href='audio://%s'>Klik hier om dit te "
-"speel</a>"
-
-#, c-format
-msgid "%s sent a voice clip, but it could not be saved"
-msgstr "%s het 'n stemopname gestuur, maar dit kon nie gestoor word nie"
-
-#, c-format
-msgid "%s sent you a voice chat invite, which is not yet supported."
-msgstr ""
-"%s het 'n stemgesels-uitnodiging gestuur, wat nog nie ondersteun word nie."
-
-msgid "Nudge"
-msgstr "Stootjie"
-
-#, c-format
-msgid "%s has nudged you!"
-msgstr "%s het u 'n stootjie gegee!"
-
-#, c-format
-msgid "Nudging %s..."
-msgstr "Gee tans %s 'n stootjie..."
-
-msgid "Email Address..."
-msgstr "E-posadres..."
-
-msgid "Your new MSN friendly name is too long."
-msgstr "U nuwe MSN- vriendelike naam is te lank."
-
-#, c-format
-msgid "Set friendly name for %s."
-msgstr "Stel vriendelike naam vir %s."
-
-msgid "Set Friendly Name"
-msgstr "Stel vriendelike naam"
-
-msgid "This is the name that other MSN buddies will see you as."
-msgstr "Hierdie is die naam hoe ander MSN-vriende u sal sien."
-
-msgid "This Location"
-msgstr "Dié ligging"
-
-msgid "This is the name that identifies this location"
-msgstr "Hierdie is die naam wat dié ligging identifiseer"
-
-msgid "Other Locations"
-msgstr "Ander liggings"
-
-msgid "You can sign out from other locations here"
-msgstr "U kan hier afmeld van ander liggings"
-
-#. TODO: Due to limitations in our current request field API, the
-#. following string will show up with a trailing colon.  This should
-#. be fixed either by adding an "include_colon" boolean, or creating
-#. a separate purple_request_field_label_new_without_colon function,
-#. or by never automatically adding the colon and requiring that
-#. callers add the colon themselves.
-msgid "You are not signed in from any other locations."
-msgstr "U is nie van ander liggings aangemeld nie."
-
-msgid "Allow multiple logins?"
-msgstr "Laat veelvuldige aanmeldings toe?"
-
-msgid ""
-"Do you want to allow or disallow connecting from multiple locations "
-"simultaneously?"
-msgstr "Wil u gelyktydige koppeling vanaf veelvuldige liggings toelaat?"
-
-msgid "Allow"
-msgstr "Toelaat"
-
-msgid "Disallow"
-msgstr "Weier"
-
-msgid "Set your home phone number."
-msgstr "Stel u huisfoonnommer op."
-
-msgid "Set your work phone number."
-msgstr "Stel u werkfoonnommer op."
-
-msgid "Set your mobile phone number."
-msgstr "Stel u selfoonnommer op."
-
-msgid "Allow MSN Mobile pages?"
-msgstr "Laat MSN-selfoonbladsye toe?"
-
-msgid ""
-"Do you want to allow or disallow people on your buddy list to send you MSN "
-"Mobile pages to your cell phone or other mobile device?"
-msgstr ""
-"Wil u toelaat of weier dat mense op u vriendelys vir u MSN-selfoonbladsye na "
-"u selfoon of ander mobiele toestel stuur?"
-
-#, c-format
-msgid "Blocked Text for %s"
-msgstr "Geblokte teks vir %s"
-
-msgid "No text is blocked for this account."
-msgstr "Geen teks is geblok vir hierdie rekening nie."
-
-#, c-format
-msgid ""
-"MSN servers are currently blocking the following regular expressions:<br/>%s"
-msgstr "MSN-bedieners blok tans die volgende reguliere uitdrukkings:<br/>%s"
-
-msgid "This account does not have email enabled."
-msgstr "Hierdie rekening het nie e-pos geaktiveer nie."
-
-msgid "Send a mobile message."
-msgstr "Stuur 'n selfoonboodskap."
-
-msgid "Page"
-msgstr "Bladsy"
-
-msgid "Playing a game"
-msgstr "Speel 'n speletjie"
-
-msgid "Working"
-msgstr "Werk"
-
-msgid "Has you"
-msgstr "Het u"
-
-msgid "Home Phone Number"
-msgstr "Huisfoonnommer"
-
-msgid "Work Phone Number"
-msgstr "Werkfoonnommer"
-
-msgid "Mobile Phone Number"
-msgstr "Selfoonnommer"
-
-msgid "Be Right Back"
-msgstr "Binnekort terug"
-
-msgid "Busy"
-msgstr "Besig"
-
-msgid "On the Phone"
-msgstr "Op die foon"
-
-msgid "Out to Lunch"
-msgstr "Uit vir ete"
-
-msgid "Game Title"
-msgstr "Speletjienaam"
-
-msgid "Office Title"
-msgstr "Kantoortitel"
-
-msgid "Set Friendly Name..."
-msgstr "Stel vriendelike naam..."
-
-msgid "View Locations..."
-msgstr "Bekyk liggings..."
-
-msgid "Set Home Phone Number..."
-msgstr "Stel huisfoonnommer..."
-
-msgid "Set Work Phone Number..."
-msgstr "Stel werkfoonnommer op..."
-
-msgid "Set Mobile Phone Number..."
-msgstr "Stel selfoonnommer..."
-
-msgid "Enable/Disable Mobile Devices..."
-msgstr "Aktiveer/deaktiveer mobiele toestelle..."
-
-msgid "Allow/Disallow Multiple Logins..."
-msgstr "Laat toe/weier veelvuldige aanmeldings..."
-
-msgid "Allow/Disallow Mobile Pages..."
-msgstr "Laat toe/weier selfoonbladsye..."
-
-msgid "View Blocked Text..."
-msgstr "Sien geblokte teks..."
-
-msgid "Open Hotmail Inbox"
-msgstr "Open Hotmail-inkassie"
-
-msgid "Send to Mobile"
-msgstr "Stuur na selfoon"
-
-msgid "SSL support is needed for MSN. Please install a supported SSL library."
-msgstr ""
-"SSL-steun is nodig vir MSN. Installeer gerus 'n gesteunde SSL-programmateek."
-
-#, c-format
-msgid ""
-"Unable to add the buddy %s because the username is invalid.  Usernames must "
-"be valid email addresses."
-msgstr ""
-"Kon nie die vriend %s byvoeg nie omdat die gebruikernaam ongeldig is.  'n "
-"Gebruikernaam moet 'n geldige e-posadres wees."
-
-msgid "Unable to Add"
-msgstr "Kan nie byvoeg nie"
-
-msgid "Error retrieving profile"
-msgstr "Kon nie profiel haal nie"
-
-msgid "General"
-msgstr "Algemeen"
-
-msgid "Age"
-msgstr "Ouderdom"
-
-msgid "Occupation"
-msgstr "Beroep"
-
-msgid "Location"
-msgstr "Ligging"
-
-msgid "Hobbies and Interests"
-msgstr "Stokperdjies en belangstellings"
-
-msgid "A Little About Me"
-msgstr "Iets meer oor my"
-
-msgid "Social"
-msgstr "Sosiaal"
-
-msgid "Marital Status"
-msgstr "Huwelikstatus"
-
-msgid "Interests"
-msgstr "Belangstellings"
-
-msgid "Pets"
-msgstr "Troeteldiere"
-
-msgid "Hometown"
-msgstr "Tuisdorp"
-
-msgid "Places Lived"
-msgstr "Plekke gewoon"
-
-msgid "Fashion"
-msgstr "Mode"
-
-msgid "Humor"
-msgstr "Humor"
-
-msgid "Music"
-msgstr "Musiek"
-
-msgid "Favorite Quote"
-msgstr "Gunsteling aanhaling"
-
-msgid "Contact Info"
-msgstr "Kontakinligting"
-
-msgid "Personal"
-msgstr "Persoonlik"
-
-msgid "Significant Other"
-msgstr "Ega"
-
-msgid "Home Phone"
-msgstr "Huisfoon"
-
-msgid "Home Phone 2"
-msgstr "Huisfoon 2"
-
-msgid "Home Address"
-msgstr "Huisadres"
-
-msgid "Personal Mobile"
-msgstr "Persoonlike sel"
-
-msgid "Home Fax"
-msgstr "Huisfaks"
-
-msgid "Personal Email"
-msgstr "Persoonlike e-pos"
-
-msgid "Personal IM"
-msgstr "Persoonlike kitsboodskappe"
-
-msgid "Anniversary"
-msgstr "Herdenking"
-
-#. Business
-msgid "Work"
-msgstr "Werk"
-
-msgid "Company"
-msgstr "Maatskappy"
-
-msgid "Department"
-msgstr "Departement"
-
-msgid "Profession"
-msgstr "Prefessie"
-
-msgid "Work Phone"
-msgstr "Werkfoon"
-
-msgid "Work Phone 2"
-msgstr "Werkfoon 2"
-
-msgid "Work Address"
-msgstr "Werkadres"
-
-msgid "Work Mobile"
-msgstr "Werksel"
-
-msgid "Work Pager"
-msgstr "Werkroeper"
-
-msgid "Work Fax"
-msgstr "Werkfaks"
-
-msgid "Work Email"
-msgstr "Werks-e-pos"
-
-msgid "Work IM"
-msgstr "Werkkitsboodskappe"
-
-msgid "Start Date"
-msgstr "Begindatum"
-
-msgid "Favorite Things"
-msgstr "Gunsteling-dinge"
-
-msgid "Last Updated"
-msgstr "Laas bygewerk"
-
-msgid "Homepage"
-msgstr "Tuisblad"
-
-msgid "The user has not created a public profile."
-msgstr "Die gebruiker het nie 'n publieke profiel geskep nie."
-
-msgid ""
-"MSN reported not being able to find the user's profile. This either means "
-"that the user does not exist, or that the user exists but has not created a "
-"public profile."
-msgstr ""
-"MSN sê dit kan nie die gebruiker se profiel vind nie. Dit beteken óf dat die "
-"gebruiker nie bestaan nie, of dat die gebruiker wel bestaan maar nie 'n "
-"publieke profiel geskep het nie."
-
-msgid ""
-"Could not find any information in the user's profile. The user most likely "
-"does not exist."
-msgstr ""
-"Kon geen inligting in die gebruiker se profiel vind nie. Heel waarskynlik "
-"bestaan die gebruiker nie."
-
-msgid "View web profile"
-msgstr "Bekyk webprofiel"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *< summary
-msgid "Windows Live Messenger Protocol Plugin"
-msgstr "Inprop vir Windows Live-boodskapperprotokol"
-
-msgid "Use HTTP Method"
-msgstr "Gebruik HTTP-metode"
-
-msgid "HTTP Method Server"
-msgstr "HTTP-metodebediener"
-
-msgid "Show custom smileys"
-msgstr "Wys pasgemaakte gesiggies"
-
-msgid "Allow direct connections"
-msgstr "Laat direkte koppeling toe"
-
-msgid "Allow connecting from multiple locations"
-msgstr "Laat koppeling vanaf veelvuldige liggings toe"
-
-msgid "nudge: nudge a user to get their attention"
-msgstr "nudge: gee 'n gebruiker 'n stootjie om sy aandag te trek"
-
-msgid "Windows Live ID authentication:Unable to connect"
-msgstr "Windows Live-ID-stawing: Kan nie koppel nie"
-
-msgid "Windows Live ID authentication:Invalid response"
-msgstr "Windows Live-ID-stawing: Ongeldige antwoord"
-
-msgid "The following users are missing from your addressbook"
-msgstr "Die volgende gebruikers is nie in die adresboek nie"
-
-#, c-format
-msgid "Unknown error (%d): %s"
-msgstr "Onbekende fout (%d): %s"
-
-msgid "Unable to add user"
-msgstr "Kan nie gebruiker byvoeg nie"
-
-#. Unknown error!
-#, c-format
-msgid "Unknown error (%d)"
-msgstr "Onbekende fout (%d)"
-
-msgid "Unable to remove user"
-msgstr "Kan nie gebruiker verwyder nie"
-
-msgid "Mobile message was not sent because it was too long."
-msgstr "Mobiele boodskap is nie gestuur nie omdat dit te lank was."
-
-msgid "Mobile message was not sent because an unknown error occurred."
-msgstr ""
-"Selfoonboodskap is nie gestuur nie omdat 'n onbekende fout voorgekom het."
-
-#, c-format
-msgid ""
-"The MSN server will shut down for maintenance in %d minute. You will "
-"automatically be signed out at that time.  Please finish any conversations "
-"in progress.\n"
-"\n"
-"After the maintenance has been completed, you will be able to successfully "
-"sign in."
-msgid_plural ""
-"The MSN server will shut down for maintenance in %d minutes. You will "
-"automatically be signed out at that time.  Please finish any conversations "
-"in progress.\n"
-"\n"
-"After the maintenance has been completed, you will be able to successfully "
-"sign in."
-msgstr[0] ""
-"Die MSN-bediener sal in %d minuut afskakel vir onderhoud. U sal dan "
-"outomaties afgemeld word.  Maak gerus enige gesprekke wat besig is, klaar.\n"
-"\n"
-"Nadat die onderhoud afgehandel is, sal u suksesvol kan aanmeld."
-msgstr[1] ""
-"Die MSN-bediener sal in %d minute afskakel vir onderhoud. U sal dan "
-"outomaties afgemeld word.  Maak gerus enige gesprekke wat besig is, klaar.\n"
-"\n"
-"Nadat die onderhoud afgehandel is, sal u suksesvol kan aanmeld."
-
-msgid ""
-"Message was not sent because the system is unavailable. This normally "
-"happens when the user is blocked or does not exist."
-msgstr ""
-"Boodskap is nie gestuur nie want die stelsel is nie beskikbaar nie. Dit "
-"gebeur gewoonlik wanneer die gebruiker geblok is of nie bestaan nie."
-
-msgid "Message was not sent because messages are being sent too quickly."
-msgstr "Boodskap is nie gestuur nie omdat daar te vinnig gestuur word."
-
-msgid "Message was not sent because an unknown encoding error occurred."
-msgstr ""
-"Boodskap is nie gestuur nie omdat 'n onbekende enkoderingsfout voorgekom het."
-
-msgid "Message was not sent because an unknown error occurred."
-msgstr "Boodskap is nie gestuur nie omdat 'n onbekende fout voorgekom het."
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. Converting the encoding from "
-"%s to UTF-8 failed.)"
-msgstr ""
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. The charset was %s, but it "
-"was not valid UTF-8.)"
-msgstr ""
-
-#, c-format
-msgid ""
-"%s (There was an error receiving this message. The charset was missing, but "
-"it was not valid UTF-8.)"
-msgstr ""
-
-msgid "Writing error"
-msgstr "Skryffout"
-
-msgid "Reading error"
-msgstr "Leesfout"
-
-#, c-format
-msgid ""
-"Connection error from %s server:\n"
-"%s"
-msgstr ""
-"Verbindingfout vanaf %s bediener:\n"
-"%s"
-
-msgid "Our protocol is not supported by the server"
-msgstr "Ons protokol word nie deur die bediener ondersteun nie"
-
-msgid "Error parsing HTTP"
-msgstr "Kon nie HTTP ontleed nie"
-
-msgid "You have signed on from another location"
-msgstr "U het van 'n ander plek aangemeld"
-
-msgid "The MSN servers are temporarily unavailable. Please wait and try again."
-msgstr ""
-"Die MSN-bedieners is tydelik nie beskikbaar nie. Wag gerus en probeer weer."
-
-msgid "The MSN servers are going down temporarily"
-msgstr "Die MSN-bedieners gaan tydelik afskakel"
-
-#, c-format
-msgid "Unable to authenticate: %s"
-msgstr "Kon nie magtig nie: %s"
-
-#, c-format
-msgid "Your MSN buddy list is temporarily unavailable: %s"
-msgstr ""
-
-msgid "Handshaking"
-msgstr "Bladskud"
-
-msgid "Transferring"
-msgstr "Dra tans oor"
-
-msgid "Starting authentication"
-msgstr "Begin stawing"
-
-msgid "Getting cookie"
-msgstr "Kry tans koekie"
-
-msgid "Sending cookie"
-msgstr "Stuur tans koekie"
-
-msgid "Retrieving buddy list"
-msgstr "Kry tans vriendelys"
-
-#, c-format
-msgid "%s requests to view your webcam, but this request is not yet supported."
-msgstr "%s vra om u webkamera te sien, wat nog nie ondersteun word nie."
-
-#, c-format
-msgid "%s invited you to view his/her webcam, but this is not yet supported."
-msgstr ""
-"%s het u uitgenooi om na sy/haar webkamera te kyk, maar dit word nog nie "
-"ondersteun nie."
-
-msgid "Away From Computer"
-msgstr "Weg van rekenaar"
-
-msgid "On The Phone"
-msgstr "Op die foon"
-
-msgid "Out To Lunch"
-msgstr "Weg vir middagete"
-
-msgid "Message may have not been sent because a timeout occurred:"
-msgstr "Boodskap is dalk nie gestuur nie vanweë 'n uittelling:"
-
-msgid "Message could not be sent, not allowed while invisible:"
-msgstr "Boodskap kon nie gestuur word nie, nie toegelaat terwyl onsigbaar nie:"
-
-msgid "Message could not be sent because the user is offline:"
-msgstr "Boodskap kon nie gestuur word nie omdat die gebruiker vanlyn is:"
-
-msgid "Message could not be sent because a connection error occurred:"
-msgstr ""
-"Boodskap kon nie gestuur word nie omdat 'n verbindingfout voorgekom het:"
-
-msgid "Message could not be sent because we are sending too quickly:"
-msgstr "Boodskap kon nie gestuur word nie omdat ons te vinnig stuur:"
-
-msgid ""
-"Message could not be sent because we were unable to establish a session with "
-"the server. This is likely a server problem, try again in a few minutes:"
-msgstr ""
-"Boodskap kon nie gestuur word nie omdat ons nie 'n sessie met die bediener "
-"kon bewerkstellig nie. Dis waarskynlik 'n bedienerprobleem; probeer weer na "
-"'n paar minute:"
-
-msgid ""
-"Message could not be sent because an error with the switchboard occurred:"
-msgstr ""
-"Boodskap kon nie gestuur word nie omdat 'n fout met die skakelbord voorgekom "
-"het:"
-
-msgid "Message may have not been sent because an unknown error occurred:"
-msgstr ""
-"Boodskap is dalk nie gestuur nie omdat 'n onbekende fout voorgekom het:"
-
-msgid "Delete Buddy from Address Book?"
-msgstr "Skrap vriend uit adresboek?"
-
-msgid "Do you want to delete this buddy from your address book as well?"
-msgstr "Wil u hierdie vriend ook uit die adresboek skrap?"
-
-msgid "The username specified is invalid."
-msgstr "Die gespesifiseerde gebruikernaam is ongeldig."
-
-msgid "The Display Name you entered is invalid."
-msgstr "Die vertoonnaam wat gegee is, is ongeldig."
-
-msgid ""
-"The birthday you entered is invalid. The correct format is: 'YYYY-MM-DD'."
-msgstr ""
-"Die verjaardag wat gegee is, is ongeldig. Die korrekte formaat is 'YYYY-MM-"
-"DD'."
-
-#. show error to user
-msgid "Profile Update Error"
-msgstr "Fout moet bywerking van profiel"
-
-#. no profile information yet, so we cannot update
-#. (reference: "libpurple/request.h")
-msgid "Profile"
-msgstr "Profiel"
-
-msgid "Your profile information is not yet retrieved. Please try again later."
-msgstr "U profielinligting is nog nie bekom nie. Probeer gerus later weer."
-
-#. display name
-#. nick name (required)
-msgid "Display Name"
-msgstr "Vertoonnaam"
-
-#. about me
-msgid "About Me"
-msgstr "Meer oor my"
-
-#. where I live
-msgid "Where I Live"
-msgstr "Waar ek woon"
-
-#. relationship status
-msgid "Relationship Status"
-msgstr ""
-
-#. mobile number
-msgid "Mobile Number"
-msgstr "Selfoonnommer"
-
-#. is searchable
-msgid "Can be searched"
-msgstr "Kan deursoek word"
-
-#. is suggestable
-msgid "Can be suggested"
-msgstr "Kan voorgestel word"
-
-msgid "Update your MXit Profile"
-msgstr "Dateer u MXit-profiel op"
-
-msgid "The PIN you entered is invalid."
-msgstr "Die PIN wat gegee is, is ongeldig."
-
-msgid "The PIN you entered has an invalid length [4-10]."
-msgstr "Die PIN wat gegee is, het 'n ongeldige lengte [4-10]."
-
-msgid "The PIN is invalid. It should only consist of digits [0-9]."
-msgstr "Die PIN is ongeldig. Dit moet slegs syfers [0-9] bevat."
-
-msgid "The two PINs you entered do not match."
-msgstr "Die twee PIN-kodes wat gegee is stem nie ooreen nie."
-
-#. show error to user
-msgid "PIN Update Error"
-msgstr "Fout moet bywerking van PIN"
-
-#. pin
-#. pin (required)
-msgid "PIN"
-msgstr "PIN"
-
-#. verify pin
-msgid "Verify PIN"
-msgstr "Verifieer PIN"
-
-#. (reference: "libpurple/request.h")
-msgid "Change PIN"
-msgstr "Verander PIN"
-
-msgid "Change MXit PIN"
-msgstr "Verander MXit-PIN"
-
-msgid "View Splash"
-msgstr "Bekyk spatskerm"
-
-msgid "There is no splash-screen currently available"
-msgstr "Daar is tans geen spatskerm beskikbaar nie"
-
-msgid "About"
-msgstr "Aangaande"
-
-msgid "Search for user"
-msgstr "Soek vir 'n gebruiker"
-
-msgid "Search for a MXit contact"
-msgstr "Soek vir 'n MXit-kontak"
-
-msgid "Type search information"
-msgstr "Tik soekinligting"
-
-msgid "_Search"
-msgstr "_Soek"
-
-#. display / change profile
-msgid "Change Profile..."
-msgstr "Verander profiel..."
-
-#. change PIN
-msgid "Change PIN..."
-msgstr "Verander PIN..."
-
-#. suggested friends
-msgid "Suggested friends..."
-msgstr "Voorgestelde vriende..."
-
-#. search for contacts
-msgid "Search for contacts..."
-msgstr "Soek vir kontakte..."
-
-#. display splash-screen
-msgid "View Splash..."
-msgstr "Bekyk spatskerm..."
-
-#. display plugin version
-msgid "About..."
-msgstr "Aangaande..."
-
-#. the file is too big
-msgid "The file you are trying to send is too large!"
-msgstr "Die lêer wat u probeer stuur is te groot!"
-
-#. file read error
-msgid "Unable to access the local file"
-msgstr ""
-
-#. file write error
-msgid "Unable to save the file"
-msgstr ""
-
-msgid ""
-"Unable to connect to the MXit HTTP server. Please check your server settings."
-msgstr ""
-"Kan nie koppel aan die MXit-HTTP-bediener nie. Kontroleer die "
-"bedieneropstelling."
-
-msgid "Logging In..."
-msgstr "Meld tans aan..."
-
-msgid ""
-"Unable to connect to the MXit server. Please check your server settings."
-msgstr ""
-"Kan nie koppel aan die MXit-bediener nie. Kontroleer die bedieneropstelling."
-
-msgid "Connecting..."
-msgstr "Koppel tans..."
-
-msgid "The Display Name you entered is too short."
-msgstr "Die vertoonnaam wat gegee is, is te kort."
-
-msgid "The PIN you entered has an invalid length [7-10]."
-msgstr "Die PIN wat gegee is, het 'n ongeldige lengte [7-10]."
-
-#. mxit login name
-msgid "MXit ID"
-msgstr "MXit-ID"
-
-#. show the form to the user to complete
-msgid "Register New MXit Account"
-msgstr "Registreer 'n nuwe MXit-rekening"
-
-msgid "Please fill in the following fields:"
-msgstr "Vul gerus die volgende velde in:"
-
-#. no reply from the WAP site
-msgid "Error contacting the MXit WAP site. Please try again later."
-msgstr "Fout met kontak met MXit-WAP-werf. Probeer gerus later weer."
-
-#. wapserver error
-#. server could not find the user
-msgid ""
-"MXit is currently unable to process the request. Please try again later."
-msgstr "MXit kan tans nie die versoek verwerk nie. Probeer gerus later weer."
-
-msgid "Wrong security code entered. Please try again later."
-msgstr "Verkeerde sekuriteitskode is ingetik. Probeer gerus later weer."
-
-msgid "Your session has expired. Please try again later."
-msgstr "U sessie het verval. Probeer gerus later weer."
-
-msgid "Invalid country selected. Please try again."
-msgstr "Ongeldige land is gekies. Probeer gerus weer."
-
-msgid "The MXit ID you entered is not registered. Please register first."
-msgstr ""
-"Die MXit-ID wat gegee is, is nie geregistreer nie. Registreer asb. eers."
-
-msgid "The MXit ID you entered is already registered. Please choose another."
-msgstr ""
-"Die MXit-ID wat gegee is, is reeds geregistreer. Kies asb. 'n ander een."
-
-msgid "Internal error. Please try again later."
-msgstr "Interne fout. Probeer gerus later weer."
-
-msgid "You did not enter the security code"
-msgstr "U het nie die sekuriteitskode ingetik nie"
-
-msgid "Security Code"
-msgstr "Sekuriteitskode"
-
-#. ask for input (required)
-msgid "Enter Security Code"
-msgstr "Gee die sekuriteitskode"
-
-msgid "Your Country"
-msgstr "U land"
-
-msgid "Your Language"
-msgstr "U taal"
-
-#. display the form to the user and wait for his/her input
-msgid "MXit Authorization"
-msgstr ""
-
-msgid "MXit account validation"
-msgstr "MXit-rekeningvalidering"
-
-msgid "Retrieving User Information..."
-msgstr "Verkry tans gebruikerinligting..."
-
-msgid "was kicked"
-msgstr "is uitgeskop"
-
-msgid "You have been kicked from this MultiMX."
-msgstr ""
-
-msgid "_Room Name:"
-msgstr "_Kamernaam:"
-
-#. Display system message in chat window
-msgid "You have invited"
-msgstr ""
-
-msgid "Loading menu..."
-msgstr "Laai tans kieslys..."
-
-msgid "Status Message"
-msgstr "Statusboodskap"
-
-msgid "Rejection Message"
-msgstr ""
-
-msgid "No profile available"
-msgstr "Geen profiel beskikbaar nie"
-
-msgid "This contact does not have a profile."
-msgstr "Hierdie kontak het nie 'n profiel nie."
-
-msgid "Your MXit ID..."
-msgstr "U MXit-ID..."
-
-#. contact is in Deleted, Rejected or None state
-msgid "Re-Invite"
-msgstr "Nooi weer uit"
-
-#. Configuration options
-#. WAP server (reference: "libpurple/accountopt.h")
-msgid "WAP Server"
-msgstr "WAP-bediener"
-
-msgid "Connect via HTTP"
-msgstr "Koppel via HTTP"
-
-msgid "Enable splash-screen popup"
-msgstr "Aktiveer opsspring vir spatskerm"
-
-msgid "Don't want to say"
-msgstr ""
-
-msgid "Single"
-msgstr ""
-
-msgid "In a relationship"
-msgstr ""
-
-msgid "Engaged"
-msgstr ""
-
-msgid "Married"
-msgstr ""
-
-msgid "It's complicated"
-msgstr ""
-
-msgid "Widowed"
-msgstr ""
-
-msgid "Separated"
-msgstr ""
-
-msgid "Divorced"
-msgstr ""
-
-msgid "Last Online"
-msgstr "Laas aanlyn"
-
-msgid "Invite Message"
-msgstr "Uitnodigingsboodskap"
-
-msgid "No results"
-msgstr "Geen resultate nie"
-
-msgid "No contacts found."
-msgstr "Geen kontakte gevind nie."
-
-#. define columns
-msgid "UserId"
-msgstr ""
-
-msgid "Where I live"
-msgstr "Waar ek woon"
-
-#, c-format
-msgid "You have %i suggested friend."
-msgid_plural "You have %i suggested friends."
-msgstr[0] "U het %i voorgestelde vriend."
-msgstr[1] "U het %i voorgestelde vriende."
-
-#, c-format
-msgid "We found %i contact that matches your search."
-msgid_plural "We found %i contacts that match your search."
-msgstr[0] "%i kontak is gevind wat by die soektog pas."
-msgstr[1] "%i kontakte is gevind wat by die soektog pas."
-
-#. we must have lost the connection, so terminate it so that we can reconnect
-msgid "We have lost the connection to MXit. Please reconnect."
-msgstr "Verbinding met MXit is verloor. Herkoppel asseblief."
-
-#. packet could not be queued for transmission
-msgid "Message Send Error"
-msgstr "Fout met stuur van boodskap"
-
-msgid "Unable to process your request at this time"
-msgstr "Kan nie u versoek nou verwerk nie"
-
-msgid "Timeout while waiting for a response from the MXit server."
-msgstr "Uittelling terwyl gewag word vir 'n antwoord van die MXit-bediener."
-
-msgid "Successfully Logged In..."
-msgstr "Suksesvol aangemeld..."
-
-#, c-format
-msgid ""
-"%s sent you an encrypted message, but it is not supported on this client."
-msgstr ""
-"%s het 'n geënkripteerde boodskap gestuur, maar dit word nie ondersteun deur "
-"hierdie kliënt nie."
-
-msgid "Message Error"
-msgstr "Boodskapfout"
-
-#. could not be decrypted
-msgid "An encrypted message was received which could not be decrypted."
-msgstr ""
-
-msgid "Cannot perform redirect using the specified protocol"
-msgstr "Kan nie herverwysing doen met die gespesifiseerde protokol nie"
-
-msgid "An internal MXit server error occurred."
-msgstr "'n Interne MXit-bedienerfout het voorgekom."
-
-#, c-format
-msgid "Login error: %s (%i)"
-msgstr "Aanmeldfout: %s (%i)"
-
-#, c-format
-msgid "Logout error: %s (%i)"
-msgstr "Afmeldfout: %s (%i)"
-
-msgid "Contact Error"
-msgstr ""
-
-msgid "Message Sending Error"
-msgstr "Fout met stuur van boodskap"
-
-msgid "Status Error"
-msgstr "Statusfout"
-
-msgid "Mood Error"
-msgstr "Gemoedstoestandfout"
-
-msgid "Invitation Error"
-msgstr "Uitnodigingsfout"
-
-msgid "Contact Removal Error"
-msgstr "Fout met skrap van kontak"
-
-msgid "Subscription Error"
-msgstr ""
-
-msgid "Contact Update Error"
-msgstr "Fout met bywerk van kontak"
-
-msgid "File Transfer Error"
-msgstr "Lêeroordragfout"
-
-msgid "Cannot create MultiMx room"
-msgstr "Kan nie MultiMx-kamer skep nie"
-
-msgid "MultiMx Invitation Error"
-msgstr "MultiMx-uitnodigingsfout"
-
-msgid "Profile Error"
-msgstr "Profielfout"
-
-#. bad packet
-msgid "Invalid packet received from MXit."
-msgstr "Ongeldige pakkie ontvang vanaf MXit."
-
-#. connection error
-msgid "A connection error occurred to MXit. (read stage 0x01)"
-msgstr "'n Fout het voorgekom tydens koppeling aan MXit. (leesstadium 0x01)"
-
-#. connection closed
-msgid "A connection error occurred to MXit. (read stage 0x02)"
-msgstr "'n Fout het voorgekom tydens koppeling aan MXit. (leesstadium 0x02)"
-
-msgid "A connection error occurred to MXit. (read stage 0x03)"
-msgstr "'n Fout het voorgekom tydens koppeling aan MXit. (leesstadium 0x03)"
-
-#. malformed packet length record (too long)
-msgid "A connection error occurred to MXit. (read stage 0x04)"
-msgstr "'n Fout het voorgekom tydens koppeling aan MXit. (leesstadium 0x04)"
-
-#. connection error
-msgid "A connection error occurred to MXit. (read stage 0x05)"
-msgstr "'n Fout het voorgekom tydens koppeling aan MXit. (leesstadium 0x05)"
-
-#. connection closed
-msgid "A connection error occurred to MXit. (read stage 0x06)"
-msgstr "'n Fout het voorgekom tydens koppeling aan MXit. (leesstadium 0x06)"
-
-msgid "In Love"
-msgstr "Verlief"
-
-msgid "Pending"
-msgstr "Hangend"
-
-msgid "Invited"
-msgstr "Uitgenooi"
-
-msgid "Rejected"
-msgstr "Geweier"
-
-msgid "Deleted"
-msgstr "Geskrap"
-
-msgid "MXit Advertising"
-msgstr "MXit-advertensie"
-
-msgid "More Information"
-msgstr "Meer inligting"
-
-#, c-format
-msgid "No such user: %s"
-msgstr "Geen so 'n gebruiker nie: %s"
-
-msgid "User lookup"
-msgstr "Gebruikeropsoek"
-
-msgid "Reading challenge"
-msgstr "Leesuitdaging"
-
-msgid "Unexpected challenge length from server"
-msgstr "Onverwagte uitdaginglengte van bediener"
-
-msgid "Logging in"
-msgstr "Aanmelding"
-
-msgid "MySpaceIM - No Username Set"
-msgstr "MySpaceIM - Geen gebruikernaam opgestel nie"
-
-msgid "You appear to have no MySpace username."
-msgstr "Dit lyk nie of u 'n MySpace-gebruikernaam het nie."
-
-msgid "Would you like to set one now? (Note: THIS CANNOT BE CHANGED!)"
-msgstr "Wil u nou een opstel? (Let wel: DIT KAN NIE VERANDER WORD NIE)"
-
-msgid "Lost connection with server"
-msgstr "Verbinding met bediener verloor"
-
-#. Can't write _()'d strings in array initializers. Workaround.
-#. khc: then use N_() in the array initializer and use _() when they are
-#. used
-msgid "New mail messages"
-msgstr "Nuwe posboodskappe"
-
-msgid "New blog comments"
-msgstr "Nuwe blogkommentaar"
-
-msgid "New profile comments"
-msgstr "Nuwe profielkommentaar"
-
-msgid "New friend requests!"
-msgstr "Nuwe vriendversoeke!"
-
-msgid "New picture comments"
-msgstr "Nuwe prentkommentare"
-
-msgid "MySpace"
-msgstr "MySpace"
-
-msgid "IM Friends"
-msgstr "Kitsboodskap-vriende"
-
-#, c-format
-msgid ""
-"%d buddy was added or updated from the server (including buddies already on "
-"the server-side list)"
-msgid_plural ""
-"%d buddies were added or updated from the server (including buddies already "
-"on the server-side list)"
-msgstr[0] ""
-"%d vriend is bygevoeg of bygewerk van die bediener (waaronder vriende wat "
-"reeds op die bedienerlys is)"
-msgstr[1] ""
-"%d vriende is bygevoeg of bygewerk van die bediener (waaronder vriende wat "
-"reeds op die bedienerlys is)"
-
-msgid "Add contacts from server"
-msgstr "Voeg kontakte van bediener by"
-
-#, c-format
-msgid "Protocol error, code %d: %s"
-msgstr "Protokolfout, kode %d: %s"
-
-#, c-format
-msgid ""
-"%s Your password is %zu characters, which is longer than the maximum length "
-"of %d.  Please shorten your password at http://profileedit.myspace.com/index."
-"cfm?fuseaction=accountSettings.changePassword and try again."
-msgstr ""
-"%s U wagwoord is %zu karakters; meer as die verwagte maksimum lengte van "
-"%d.  Maak u wagwoord korter by http://profileedit.myspace.com/index.cfm?"
-"fuseaction=accountSettings.changePassword en probeer weer."
-
-msgid "Incorrect username or password"
-msgstr "Verkeerde gebruikernaam of wagwoord"
-
-msgid "MySpaceIM Error"
-msgstr "MySpaceIM-fout"
-
-msgid "Invalid input condition"
-msgstr "Ongeldige toevoertoestand"
-
-msgid "Failed to add buddy"
-msgstr "Byvoeg van vriend het misluk"
-
-msgid "'addbuddy' command failed."
-msgstr "'addbuddy'-bevel het misluk."
-
-msgid "persist command failed"
-msgstr "persist-bevel het misluk"
-
-msgid "Failed to remove buddy"
-msgstr "Verwyder van vriend het misluk"
-
-msgid "'delbuddy' command failed"
-msgstr "'delbuddy'-bevel het misluk"
-
-msgid "blocklist command failed"
-msgstr "blocklist-bevel het misluk"
-
-msgid "Missing Cipher"
-msgstr "Vermiste syfer"
-
-msgid "The RC4 cipher could not be found"
-msgstr "Die RC4-syfer kon nie gevind word nie"
-
-msgid ""
-"Upgrade to a libpurple with RC4 support (>= 2.0.1). MySpaceIM plugin will "
-"not be loaded."
-msgstr ""
-"Opgradeer na 'n libpurple met RC4-steun (>=2.0.1). MySpaceIM-inprop sal nie "
-"gelaai word nie."
-
-msgid "Add friends from MySpace.com"
-msgstr "Voeg vriende van MySpace.com by"
-
-msgid "Importing friends failed"
-msgstr "Invoer van vriende het misluk"
-
-#. TODO: find out how
-msgid "Find people..."
-msgstr "Vind mense..."
-
-msgid "Change IM name..."
-msgstr "Verander kitsboodskap-naam..."
-
-msgid "myim URL handler"
-msgstr "myim-URL-vatsel"
-
-msgid "No suitable MySpaceIM account could be found to open this myim URL."
-msgstr ""
-"Geen geskikte MySpaceIM-rekening kon gevind word om hierdie myim-URL te open "
-"nie."
-
-msgid "Enable the proper MySpaceIM account and try again."
-msgstr "Aktiveer die korrekte MySpaceIM-rekening, en probeer weer."
-
-msgid "Show display name in status text"
-msgstr "Wys vertoonnaam in statusteks"
-
-msgid "Show headline in status text"
-msgstr "Wys opskrif in statusteks"
-
-msgid "Send emoticons"
-msgstr "Stuur gesiggies"
-
-msgid "Screen resolution (dots per inch)"
-msgstr "Skermresolusie (stippels per duim)"
-
-msgid "Base font size (points)"
-msgstr "Basisfontgrootte (punte)"
-
-msgid "User"
-msgstr "Gebruiker"
-
-msgid "Headline"
-msgstr "Opskrif"
-
-msgid "Song"
-msgstr "Liedjie"
-
-msgid "Total Friends"
-msgstr "Totale vriende"
-
-msgid "Client Version"
-msgstr "Kliëntweergawe"
-
-msgid ""
-"An error occurred while trying to set the username.  Please try again, or "
-"visit http://editprofile.myspace.com/index.cfm?fuseaction=profile.username "
-"to set your username."
-msgstr ""
-"'n Fout het voorgekom met die poging om die gebruikernaam te stel.  Probeer "
-"asb. weer, of besoek http://editprofile.myspace.com/index.cfm?"
-"fuseaction=profile.username om u gebruikernaam te stel."
-
-msgid "MySpaceIM - Username Available"
-msgstr "MySpaceIM - Gebruikernaam beskikbaar"
-
-msgid "This username is available. Would you like to set it?"
-msgstr "Hierdie gebruikernaam is beskikbaar. Wil u dit opstel?"
-
-msgid "ONCE SET, THIS CANNOT BE CHANGED!"
-msgstr "WANNEER DIT GESTEL IS, KAN DIT NIE VERANDER WORD NIE!"
-
-msgid "MySpaceIM - Please Set a Username"
-msgstr "MySpaceIM - Stel asseblief 'n gebruikernaam in"
-
-msgid "This username is unavailable."
-msgstr "Hierdie gebruikernaam is nie beskikbaar nie."
-
-msgid "Please try another username:"
-msgstr "Probeer gerus 'n ander gebruikernaam:"
-
-#. Protocol won't log in now without a username set.. Disconnect
-msgid "No username set"
-msgstr "Geen gebruikernaam opgestel nie"
-
-msgid "Please enter a username to check its availability:"
-msgstr "Tik 'n gebruikernaam om te sien of dit beskikbaar is:"
-
-#. TODO: icons for each zap
-#. Lots of comments for translators:
-#. Zap means "to strike suddenly and forcefully as if with a
-#. * projectile or weapon."  This term often has an electrical
-#. * connotation, for example, "he was zapped by electricity when
-#. * he put a fork in the toaster."
-msgid "Zap"
-msgstr "Klits"
-
-#, c-format
-msgid "%s has zapped you!"
-msgstr "%s het u geklits!"
-
-#, c-format
-msgid "Zapping %s..."
-msgstr "Klits tans vir %s..."
-
-#. Whack means "to hit or strike someone with a sharp blow"
-msgid "Whack"
-msgstr "Kletter"
-
-#, c-format
-msgid "%s has whacked you!"
-msgstr "%s het u gekletter!"
-
-#, c-format
-msgid "Whacking %s..."
-msgstr "Kletter tans vir %s..."
-
-#. Torch means "to set on fire."  Don't worry, this doesn't
-#. * make a whole lot of sense in English, either.  Feel free
-#. * to translate it literally.
-msgid "Torch"
-msgstr "Brander"
-
-#, c-format
-msgid "%s has torched you!"
-msgstr "%s het u gebrander!"
-
-#, c-format
-msgid "Torching %s..."
-msgstr "Brander tans vir %s..."
-
-#. Smooch means "to kiss someone, often enthusiastically"
-msgid "Smooch"
-msgstr "Soenie"
-
-#, c-format
-msgid "%s has smooched you!"
-msgstr "%s het u gesoenie!"
-
-#, c-format
-msgid "Smooching %s..."
-msgstr "Soenie tans vir %s..."
-
-#. A hug is a display of affection; wrapping your arms around someone
-msgid "Hug"
-msgstr "Liefie"
-
-#, c-format
-msgid "%s has hugged you!"
-msgstr "%s het u geliefie!"
-
-#, c-format
-msgid "Hugging %s..."
-msgstr "Liefie tans vir %s..."
-
-#. Slap means "to hit someone with an open/flat hand"
-msgid "Slap"
-msgstr "Klapper"
-
-#, c-format
-msgid "%s has slapped you!"
-msgstr "%s het u geklapper!"
-
-#, c-format
-msgid "Slapping %s..."
-msgstr "Klapper tans vir %s..."
-
-#. Goose means "to pinch someone on their butt"
-msgid "Goose"
-msgstr "Slurp"
-
-#, c-format
-msgid "%s has goosed you!"
-msgstr "%s het u geslurp!"
-
-#, c-format
-msgid "Goosing %s..."
-msgstr "Slurp tans vir %s..."
-
-#. A high-five is when two people's hands slap each other
-#. * in the air above their heads.  It is done to celebrate
-#. * something, often a victory, or to congratulate someone.
-msgid "High-five"
-msgstr "Vatvyf"
-
-#, c-format
-msgid "%s has high-fived you!"
-msgstr "%s het u gevatvyf!"
-
-#, c-format
-msgid "High-fiving %s..."
-msgstr "Vatvyf tans vir %s..."
-
-#. We're not entirely sure what the MySpace people mean by
-#. * this... but we think it's the equivalent of "prank."  Or, for
-#. * someone to perform a mischievous trick or practical joke.
-msgid "Punk"
-msgstr "Zoer"
-
-#, c-format
-msgid "%s has punk'd you!"
-msgstr "%s het u gezoer!"
-
-#, c-format
-msgid "Punking %s..."
-msgstr "Zoer tans vir %s..."
-
-#. Raspberry is a slang term for the vibrating sound made
-#. * when you stick your tongue out of your mouth with your
-#. * lips closed and blow.  It is typically done when
-#. * gloating or bragging.  Nowadays it's a pretty silly
-#. * gesture, so it does not carry a harsh negative
-#. * connotation.  It is generally used in a playful tone
-#. * with friends.
-msgid "Raspberry"
-msgstr "Kerrie"
-
-#, c-format
-msgid "%s has raspberried you!"
-msgstr "%s het u gekerrie!"
-
-#, c-format
-msgid "Raspberrying %s..."
-msgstr "Kerrie tans vir %s..."
-
 msgid "Required parameters not passed in"
 msgstr "Vereiste parameters nie aangegee nie"
 
@@ -6869,6 +5180,9 @@ msgstr "Kan nie uself byvoeg nie"
 
 msgid "Master archive is misconfigured"
 msgstr "Meesterargief is gewankonfigureer"
+
+msgid "Incorrect username or password"
+msgstr "Verkeerde gebruikernaam of wagwoord"
 
 msgid "Could not recognize the host of the username you entered"
 msgstr "Kon nie die gasheer van die gebruikernaam herken wat u getik het nie"
@@ -6991,6 +5305,12 @@ msgstr "Kon nie met bediener kommunikeer nie. Verbinding word gesluit."
 msgid "Telephone Number"
 msgstr "Foonnommer"
 
+msgid "Location"
+msgstr "Ligging"
+
+msgid "Department"
+msgstr "Departement"
+
 msgid "Personal Title"
 msgstr "Persoonlike titel"
 
@@ -7039,6 +5359,9 @@ msgstr ""
 msgid "Would you like to join the conversation?"
 msgstr "Wil u by die gesprek aansluit?"
 
+msgid "You have signed on from another location"
+msgstr "U het van 'n ander plek aangemeld"
+
 #, c-format
 msgid ""
 "%s appears to be offline and did not receive the message that you just sent."
@@ -7056,6 +5379,9 @@ msgstr ""
 msgid "This conference has been closed. No more messages can be sent."
 msgstr ""
 "Hierdie konferensie is gesluit. Geen verdere boodskappe kan gestuur word nie."
+
+msgid "Busy"
+msgstr "Besig"
 
 #. *< type
 #. *< ui_requirement
@@ -7157,6 +5483,9 @@ msgstr "Ongeldige kletskamernaam"
 
 msgid "Invalid error"
 msgstr "Ongeldige fout"
+
+msgid "Not logged in"
+msgstr "Nie aangemeld nie"
 
 msgid "Cannot receive IM due to parental controls"
 msgstr ""
@@ -7293,11 +5622,20 @@ msgstr "Luister na musiek"
 msgid "Studying"
 msgstr ""
 
+msgid "Working"
+msgstr "Werk"
+
 msgid "In the restroom"
 msgstr "In die toilet"
 
 msgid "Received invalid data on connection with server"
 msgstr "Het ongeldige data ontvang tydens koppeling met bediener"
+
+msgid "Error parsing response from authentication server"
+msgstr ""
+
+msgid "Unknown error during authentication"
+msgstr ""
 
 #. *< type
 #. *< ui_requirement
@@ -7425,6 +5763,11 @@ msgid ""
 "supported by your system."
 msgstr ""
 
+msgid ""
+"You required Kerberos authentication but encryption is disabled in your "
+"account settings."
+msgstr ""
+
 #, c-format
 msgid "You may be disconnected shortly.  If so, check %s for updates."
 msgstr ""
@@ -7441,7 +5784,6 @@ msgid "Received authorization"
 msgstr "Magtiging ontvang"
 
 #. Unregistered username
-#. the username does not exist
 msgid "Username does not exist"
 msgstr "Gebruikernaam bestaan nie"
 
@@ -7762,6 +6104,9 @@ msgstr ""
 "Gebruikername moet geldige e-posadresse wees, of met 'n letter begin en net "
 "letters, syfers en spasies bevat, of net syfers bevat."
 
+msgid "Unable to Add"
+msgstr "Kan nie byvoeg nie"
+
 msgid "Unable to Retrieve Buddy List"
 msgstr "Kan nie vriendelys haal nie"
 
@@ -7915,6 +6260,9 @@ msgstr "Soek vir 'n vriend volgens e-posadres"
 msgid "Type the email address of the buddy you are searching for."
 msgstr "Gee die e-posadres van die vriend waarvoor u soek."
 
+msgid "_Search"
+msgstr "_Soek"
+
 msgid "Set User Info (web)..."
 msgstr "Stel gebruikerinligting (web)..."
 
@@ -7951,7 +6299,16 @@ msgstr "Wys vriende wat op magtiging wag"
 msgid "Search for Buddy by Email Address..."
 msgstr "Soek vir vriend met e-posadres..."
 
-msgid "Use clientLogin"
+msgid "clientLogin"
+msgstr ""
+
+msgid "Kerberos"
+msgstr ""
+
+msgid "MD5-based"
+msgstr ""
+
+msgid "Authentication method"
 msgstr ""
 
 msgid ""
@@ -8076,6 +6433,9 @@ msgstr "Gebruikerinligting nie beskikbaar nie: %s"
 msgid "Mobile Phone"
 msgstr "Selfoon"
 
+msgid "Age"
+msgstr "Ouderdom"
+
 msgid "Personal Web Page"
 msgstr "Persoonlike webblad"
 
@@ -8084,11 +6444,20 @@ msgstr "Persoonlike webblad"
 msgid "Additional Information"
 msgstr "Ekstra inligting"
 
+msgid "Home Address"
+msgstr "Huisadres"
+
 msgid "Zip Code"
 msgstr "Poskode"
 
+msgid "Work Address"
+msgstr "Werkadres"
+
 msgid "Work Information"
 msgstr "Werkinligting"
+
+msgid "Company"
+msgstr "Maatskappy"
 
 msgid "Division"
 msgstr "Afdeling"
@@ -8107,6 +6476,12 @@ msgstr "Lid sedert"
 
 msgid "Capabilities"
 msgstr "Vermoëns"
+
+msgid "Profile"
+msgstr "Profiel"
+
+msgid "View web profile"
+msgstr "Bekyk webprofiel"
 
 msgid "Invalid SNAC"
 msgstr "Ongeldige SNAC"
@@ -8405,6 +6780,9 @@ msgstr ""
 "Die identifiseerder '%s' pas nie by enige gebruikers in u Sametime-"
 "gemeenskap nie. Hierdie inskrywing is uit u vriendelys geskrap."
 
+msgid "Unable to add user"
+msgstr "Kan nie gebruiker byvoeg nie"
+
 #, c-format
 msgid ""
 "Error reading file %s: \n"
@@ -8690,6 +7068,9 @@ msgstr "Hiperaktief"
 
 msgid "Robot"
 msgstr "Robot"
+
+msgid "In Love"
+msgstr "Verlief"
 
 msgid "User Modes"
 msgstr "Gebruikermodusse"
@@ -8979,6 +7360,9 @@ msgstr "Organisasie"
 msgid "Unit"
 msgstr "Eenheid"
 
+msgid "Homepage"
+msgstr "Tuisblad"
+
 msgid "Note"
 msgstr "Nota"
 
@@ -9153,6 +7537,9 @@ msgstr "Fout tydens koppeling aan SILC-bediener"
 
 msgid "Key Exchange failed"
 msgstr "Sleutelruiling het misluk"
+
+msgid "Authentication failed"
+msgstr "Stawing het misluk"
 
 msgid ""
 "Resuming detached session failed. Press Reconnect to create new connection."
@@ -9668,427 +8055,6 @@ msgstr "Magtig gebruiker"
 msgid "Auth Domain"
 msgstr "Magtig domein"
 
-msgid "join &lt;room&gt;:  Join a chat room on the Yahoo network"
-msgstr ""
-"join &lt;kamer&gt;:  Sluit by 'n geselsiekamers op die Yahoo-netwerk aan"
-
-msgid "list: List rooms on the Yahoo network"
-msgstr "list: Lys kamers op die Yahoo-netwerk"
-
-msgid "doodle: Request user to start a Doodle session"
-msgstr "doodle: Versoek gebruiker om 'n krabbelsessie te begin"
-
-msgid "Yahoo ID..."
-msgstr "Yahoo-ID..."
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Yahoo! Protocol Plugin"
-msgstr "Inprop vir die Yahoo!-protokol"
-
-msgid "Pager port"
-msgstr "Roeper-poort"
-
-msgid "File transfer server"
-msgstr "Lêeroordragbediener"
-
-msgid "File transfer port"
-msgstr "Lêeroordragpoort"
-
-msgid "Chat room locale"
-msgstr "Geselsiekamer-lokaliteit"
-
-msgid "Ignore conference and chatroom invitations"
-msgstr "Ignoreer konferensie- en geselsiekamer-uitnodigings"
-
-msgid "Use account proxy for HTTP and HTTPS connections"
-msgstr "Gebruik rekening se instaanbediener vir HTTP- en HTTPS-koppelings"
-
-msgid "Chat room list URL"
-msgstr "Geselsiekamer-lys-URL"
-
-msgid "Yahoo JAPAN ID..."
-msgstr "Yahoo JAPAN-ID..."
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-#. *< name
-#. *< version
-#. *  summary
-#. *  description
-msgid "Yahoo! JAPAN Protocol Plugin"
-msgstr "Inprop vir die Yahoo! JAPAN-protokol"
-
-#, c-format
-msgid "%s has sent you a webcam invite, which is not yet supported."
-msgstr ""
-"%s het u 'n webkamera-uitnodiging gestuur, wat nog nie ondersteun word nie."
-
-msgid "Your SMS was not delivered"
-msgstr "U SMS is nie afgelewer nie"
-
-msgid "Your Yahoo! message did not get sent."
-msgstr "U Yahoo!-boodskap is nie gestuur nie."
-
-#, c-format
-msgid "Yahoo! system message for %s:"
-msgstr "Yahoo!-stelselboodskap vir %s:"
-
-msgid "Authorization denied message:"
-msgstr "Magtiging gewyer-boodskap:"
-
-#, c-format
-msgid ""
-"%s has (retroactively) denied your request to add them to your list for the "
-"following reason: %s."
-msgstr ""
-"%s het (retroaktief) u versoek om hulle by u vriendelys te voeg, geweier, "
-"vir die volgende rede: %s."
-
-#, c-format
-msgid "%s has (retroactively) denied your request to add them to your list."
-msgstr "%s het (retroaktief) u versoek om hulle by u lys te voeg, geweier."
-
-msgid "Add buddy rejected"
-msgstr "Vriend byvoeg geweier"
-
-#. Some error in the received stream
-msgid "Received invalid data"
-msgstr "Het ongeldige data ontvang"
-
-#. security lock from too many failed login attempts
-msgid ""
-"Account locked: Too many failed login attempts.  Logging into the Yahoo! "
-"website may fix this."
-msgstr ""
-"Rekening gesluit: te veel mislukte aanmeldpogings.  As u by die Yahoo!-"
-"webwerf aanmeld, kan dit dalk die probleem oplos."
-
-#. indicates a lock of some description
-msgid ""
-"Account locked: Unknown reason.  Logging into the Yahoo! website may fix "
-"this."
-msgstr ""
-"Rekening gesluit: onbekende rede.  As u by die Yahoo!-webwerf aanmeld, kan "
-"dit dalk die probleem oplos."
-
-#. indicates a lock due to logging in too frequently
-msgid ""
-"Account locked: You have been logging in too frequently.  Wait a few minutes "
-"before trying to connect again.  Logging into the Yahoo! website may help."
-msgstr ""
-"Rekening gesluit: U het nou té gereeld aangemeld.  Wag 'n paar minute "
-"voordat u weer probeer koppel.  Dit kan dalk help om aan te meld by die "
-"Yahoo!-webwerf."
-
-#. username or password missing
-msgid "Username or password missing"
-msgstr "Gebruikernaam of wagwoord ontbreek"
-
-#, c-format
-msgid ""
-"The Yahoo server has requested the use of an unrecognized authentication "
-"method.  You will probably not be able to successfully sign on to Yahoo.  "
-"Check %s for updates."
-msgstr ""
-"Die Yahoo-bediener het die gebruik van 'n nie-erkende stawingsmetode "
-"versoek.  U sal waarskynlik nie suksesvol by Yahoo kan inteken nie.  "
-"Kontroleer %s vir bywerkings."
-
-msgid "Failed Yahoo! Authentication"
-msgstr "Yahoo!-stawing het misluk"
-
-#, c-format
-msgid ""
-"You have tried to ignore %s, but the user is on your buddy list.  Clicking "
-"\"Yes\" will remove and ignore the buddy."
-msgstr ""
-"U het probeer om %s te ignoreer, maar die gebruiker is op u vriendelys.  "
-"Kliek \"Ja\" om die vriend te verwyder en te ignoreer."
-
-msgid "Ignore buddy?"
-msgstr "Ignoreer vriend?"
-
-msgid "Invalid username or password"
-msgstr "Ongeldige gebruikernaam of wagwoord"
-
-msgid ""
-"Your account has been locked due to too many failed login attempts.  Please "
-"try logging into the Yahoo! website."
-msgstr ""
-"U rekening is vasgesluit weens te veel mislukte pogings om aan te meld.  "
-"Probeer o mby die Yahoo!-webwerf aan te meld."
-
-msgid "Unknown error 52.  Reconnecting should fix this."
-msgstr "Onbekende fout 52.  Herkoppeling behoort dit op te los."
-
-msgid ""
-"Error 1013: The username you have entered is invalid.  The most common cause "
-"of this error is entering your email address instead of your Yahoo! ID."
-msgstr ""
-"Fout 1013: Die gegewe gebruikernaam is ongeldig.  Die algemeenste oorsaak "
-"van dié fout is as mens die e-posadres gee in plaas van die Yahoo!-ID."
-
-#, c-format
-msgid "Unknown error number %d. Logging into the Yahoo! website may fix this."
-msgstr ""
-"Onbekende fout, nommer %d. As u by die Yahoo!-webwerf aanmeld, kan dit dalk "
-"die probleem oplos."
-
-#, c-format
-msgid "Unable to add buddy %s to group %s to the server list on account %s."
-msgstr ""
-"Kan nie vriend %s by groep %s op die bedienerlys op rekening %s voeg nie."
-
-msgid "Unable to add buddy to server list"
-msgstr "Kan nie vriend by bedienerlys voeg nie"
-
-#, c-format
-msgid "[ Audible %s/%s/%s.swf ] %s"
-msgstr "[ Hoorbaar %s/%s/%s.swf ] %s"
-
-msgid "Received unexpected HTTP response from server"
-msgstr "Onverwagte HTTP-respons van die bediener ontvang"
-
-#, c-format
-msgid "Lost connection with %s: %s"
-msgstr "Verbinding met %s verloor: %s"
-
-#, c-format
-msgid "Unable to establish a connection with %s: %s"
-msgstr "Kan nie 'n koppeling met die %s bewerkstellig nie: %s"
-
-msgid "Unable to connect: The server returned an empty response."
-msgstr "Kan nie koppel nie: Die bediener het 'n leë antwoord gegee."
-
-msgid ""
-"Unable to connect: The server's response did not contain the necessary "
-"information"
-msgstr ""
-"Kan nie koppel nie: Die bediener se antwoord het nie die nodige inligting "
-"bevat nie"
-
-msgid "Not at Home"
-msgstr "Nie tuis nie"
-
-msgid "Not at Desk"
-msgstr "Nie by die lessenaar nie"
-
-msgid "Not in Office"
-msgstr "Nie op kantoor nie"
-
-msgid "On Vacation"
-msgstr "Op vakansie"
-
-msgid "Stepped Out"
-msgstr "Uit"
-
-msgid "Not on server list"
-msgstr "Nie op bedienerlys nie"
-
-msgid "Appear Permanently Offline"
-msgstr "Lyk of permanent vanlyn is"
-
-msgid "Presence"
-msgstr "Teenwoordigheid"
-
-msgid "Don't Appear Permanently Offline"
-msgstr "Moenie lyk of permanent vanlyn is nie"
-
-msgid "Join in Chat"
-msgstr "Sluit by geselsie aan"
-
-msgid "Initiate Conference"
-msgstr "Inisieer konferensie"
-
-msgid "Presence Settings"
-msgstr "Teenwoordigheid-stellings"
-
-msgid "Start Doodling"
-msgstr "Begin krabbel"
-
-msgid "Activate which ID?"
-msgstr ""
-
-msgid "Select the ID you want to activate"
-msgstr "Kies die ID wat u wil aktiveer"
-
-msgid "Join whom in chat?"
-msgstr "Sluit by wie in geselsie aan?"
-
-msgid "Activate ID..."
-msgstr "Aktiveer ID..."
-
-msgid "Join User in Chat..."
-msgstr "Sluit gebruiker by geselsie aan..."
-
-msgid "Open Inbox"
-msgstr "Open inkassie"
-
-msgid "Can't send SMS. Unable to obtain mobile carrier."
-msgstr "Kan nie SMS stuur nie. Kan nie 'n selfoonnetwerk kry nie."
-
-msgid "Can't send SMS. Unknown mobile carrier."
-msgstr "Kan nie SMS stuur nie. Onbekende selfoonnetwerk."
-
-msgid "Getting mobile carrier to send the SMS."
-msgstr ""
-
-#. Write a local message to this conversation showing that a request for a
-#. * Doodle session has been made
-#.
-msgid "Sent Doodle request."
-msgstr "Krabbelversoek gestuur."
-
-msgid "Unable to connect."
-msgstr "Kan nie koppel nie."
-
-msgid "Unable to establish file descriptor."
-msgstr "Kon nie lêerbeskrywer bewerkstellig nie."
-
-#, c-format
-msgid "%s is trying to send you a group of %d files.\n"
-msgstr "%s probeer om groep van %d lêers aan u te stuur.\n"
-
-msgid "Write Error"
-msgstr "Skryffout"
-
-msgid "Yahoo! Japan Profile"
-msgstr "Yahoo! Japan-profiel"
-
-msgid "Yahoo! Profile"
-msgstr "Yahoo!-profiel"
-
-msgid ""
-"Sorry, profiles marked as containing adult content are not supported at this "
-"time."
-msgstr "Jammer, profiele met volwassene-inhoud word nie tans ondersteun nie."
-
-msgid ""
-"If you wish to view this profile, you will need to visit this link in your "
-"web browser:"
-msgstr ""
-"Indien u hierdie profiel wil bekyk, moet u hierdie skakel in u webblaaier "
-"besoek:"
-
-msgid "Yahoo! ID"
-msgstr "Yahoo!-ID"
-
-msgid "Hobbies"
-msgstr "Stokperdjies"
-
-msgid "Latest News"
-msgstr "Jongste nuus"
-
-msgid "Home Page"
-msgstr "Tuisblad"
-
-msgid "Cool Link 1"
-msgstr "Oulike skakel 1"
-
-msgid "Cool Link 2"
-msgstr "Oulike skakel 2"
-
-msgid "Cool Link 3"
-msgstr "Oulike skakel 3"
-
-msgid "Last Update"
-msgstr "Laaste bywerking"
-
-msgid ""
-"This profile is in a language or format that is not supported at this time."
-msgstr ""
-"Hierdie profiel is in 'n taal of formaat is wat nie tans ondersteun word nie."
-
-msgid ""
-"Could not retrieve the user's profile. This most likely is a temporary "
-"server-side problem. Please try again later."
-msgstr ""
-"Kon nie die gebruiker se profiel haal nie. Dit is waarskynlik 'n tydelike "
-"probleem aan bedienerkant. Probeer gerus later weer."
-
-msgid ""
-"Could not retrieve the user's profile. This most likely means that the user "
-"does not exist; however, Yahoo! sometimes does fail to find a user's "
-"profile. If you know that the user exists, please try again later."
-msgstr ""
-"Kon nie die gebruiker se profiel haal nie. Dit beteken waarskynlik dat die "
-"gebruiker nie bestaan nie; maar Yahoo! kry dit soms nie reg om 'n gebruiker "
-"se profiel te vind nie. As u weet dat die gebruiker wel bestaan, probeer "
-"gerus later weer."
-
-msgid "The user's profile is empty."
-msgstr "Die gebruiker se profiel is leeg."
-
-#, c-format
-msgid "%s has declined to join."
-msgstr ""
-
-msgid "Failed to join chat"
-msgstr "Aansluit by geselsie het misluk"
-
-#. -6
-msgid "Unknown room"
-msgstr "Onbekende kamer"
-
-#. -15
-msgid "Maybe the room is full"
-msgstr "Miskien is die kamer vol"
-
-#. -35
-msgid "Not available"
-msgstr "Nie beskikbaar nie"
-
-msgid ""
-"Unknown error. You may need to logout and wait five minutes before being "
-"able to rejoin a chatroom"
-msgstr ""
-"Onbekende fout. U moet dalk afmeld en vyf minute wag voor u weer die "
-"geselsiekamer kan betree"
-
-#, c-format
-msgid "You are now chatting in %s."
-msgstr "U gesels nou in %s."
-
-msgid "Failed to join buddy in chat"
-msgstr "Kon nie vriend by geselsie laat aansluit nie"
-
-msgid "Maybe they're not in a chat?"
-msgstr "Dalk wil hulle nie gesels nie?"
-
-msgid "Fetching the room list failed."
-msgstr "Haal van kamerlys het misluk."
-
-msgid "Voices"
-msgstr "Stemme"
-
-msgid "Webcams"
-msgstr "Webkameras"
-
-msgid "Connection problem"
-msgstr "Verbindingprobleem"
-
-msgid "Unable to fetch room list."
-msgstr "Kon nie die kamerlys haal nie."
-
-msgid "User Rooms"
-msgstr "Gebruikerkamers"
-
-msgid "Connection problem with the YCHT server"
-msgstr "Verbindingprobleem met die YCHT-bediener"
-
 msgid ""
 "(There was an error converting this message.\t Check the 'Encoding' option "
 "in the Account Editor)"
@@ -10099,6 +8065,12 @@ msgstr ""
 #, c-format
 msgid "Unable to send to chat %s,%s,%s"
 msgstr "Kan nie aan geselsie %s,%s,%s stuur nie"
+
+msgid "User is offline"
+msgstr "Gebruiker is vanlyn"
+
+msgid "User"
+msgstr "Gebruiker"
 
 msgid "Hidden or not logged-in"
 msgstr "Versteek of nie aangemeld nie"
@@ -10492,8 +8464,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"This means that you can be chatting with friends on MSN, talking to a friend "
-"on Google Talk, and sitting in a Yahoo chat room all at the same time."
+"This means that you can be chatting with friends on AIM, talking to a friend "
+"on Google Talk, and sitting in an IRC chat room all at the same time."
 msgstr ""
 
 msgid "The buddy list showing friends on different networks."
@@ -10505,8 +8477,8 @@ msgstr "Pidgin Internetboodskapper"
 msgid "Internet Messenger"
 msgstr "Internetboodskapper"
 
-msgid ""
-"Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, MSN, Yahoo and more"
+#, fuzzy
+msgid "Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, and more"
 msgstr ""
 "Gesels met kitsboodsappe.  Daar is ondersteuning vir AIM, Google Talk, "
 "Jabber/XMPP, MSN, Yahoo en meer"
@@ -11233,11 +9205,11 @@ msgstr "A_lias:"
 msgid "_Group:"
 msgstr "_Groep:"
 
-msgid "Auto_join when account connects."
-msgstr "Sluit _outomaties aan wanneer rekening koppel."
+msgid "Automatically _join when account connects"
+msgstr ""
 
-msgid "_Remain in chat after window is closed."
-msgstr "_Bly in geselsie ná venster gesluit word."
+msgid "_Remain in chat after window is closed"
+msgstr ""
 
 msgid "Please enter the name of the group to be added."
 msgstr "Tik gerus die naam van die groep om by te voeg."
@@ -11275,6 +9247,9 @@ msgstr "Tik die gasheernaam vir hierdie sertifikaat in."
 #. Widget creation function
 msgid "SSL Servers"
 msgstr "SSL-bedieners"
+
+msgid "Supported debug options are: plugins, version"
+msgstr ""
 
 msgid "Unknown command."
 msgstr "Onbekende bevel."
@@ -11715,6 +9690,9 @@ msgstr "Bengaals"
 msgid "Bengali-India"
 msgstr "Bengaals (Indië)"
 
+msgid "Breton"
+msgstr ""
+
 msgid "Bodo"
 msgstr ""
 
@@ -11771,9 +9749,6 @@ msgstr "Persies"
 
 msgid "Finnish"
 msgstr "Fins"
-
-msgid "French"
-msgstr "Frans"
 
 msgid "Irish"
 msgstr "Iers"
@@ -11852,6 +9827,9 @@ msgstr ""
 
 msgid "Macedonian"
 msgstr "Masedonies"
+
+msgid "Malay"
+msgstr "Maleisies"
 
 msgid "Malayalam"
 msgstr "Malabaars"
@@ -11972,14 +9950,14 @@ msgstr "Tradisionele Sjinees"
 msgid "Amharic"
 msgstr "Amharies"
 
+msgid "French"
+msgstr "Frans"
+
 msgid "Armenian"
 msgstr "Armeens"
 
 msgid "Lao"
 msgstr "Lao"
-
-msgid "Malay"
-msgstr "Maleisies"
 
 msgid "Turkish"
 msgstr "Turks"
@@ -12016,19 +9994,13 @@ msgstr ""
 
 msgid ""
 "<font size=\"4\"><b>Help from other Pidgin users</b></font> is available by "
-"e-mailing <a href=\"mailto:support@pidgin.im\">support@pidgin.im</a><br/"
-">This is a <b>public</b> mailing list! (<a href=\"http://pidgin.im/pipermail/"
+"emailing <a href=\"mailto:support@pidgin.im\">support@pidgin.im</a><br/>This "
+"is a <b>public</b> mailing list! (<a href=\"http://pidgin.im/pipermail/"
 "support/\">archive</a>)<br/>We can't help with third-party protocols or "
 "plugins!<br/>This list's primary language is <b>English</b>.  You are "
 "welcome to post in another language, but the responses may be less helpful."
 "<br/>"
 msgstr ""
-"<font size=\"4\"><b>Hulp van ander Pidgin-gebruikers</b></font> <a href="
-"\"mailto:support@pidgin.im\">support@pidgin.im</a><br/>Hierdie is 'n "
-"<b>publieke</b> poslys! (<a href=\"http://pidgin.im/pipermail/support/"
-"\">argief</a>)<br/>Ons kan nie help met derdepartyprotokolle of -inproppe "
-"nie!<br/> Hierdie lys se primêre taal is <b>Engels</b>.  U kan gerus in 'n "
-"ander taal skryf, maar antwoorde sal dalk minder nuttig wees.<br/>"
 
 #, c-format
 msgid "About %s"
@@ -12669,6 +10641,9 @@ msgstr "_Media"
 msgid "_Hangup"
 msgstr ""
 
+msgid "Media error"
+msgstr ""
+
 #, c-format
 msgid "%s wishes to start an audio/video session with you."
 msgstr "%s wil 'n oudio-/videosessie met u begin."
@@ -12679,6 +10654,42 @@ msgstr "%s wil 'n videosessie met u begin."
 
 msgid "Incoming Call"
 msgstr "Inkomende oproep"
+
+#. Translators note: These are the letters on the keys of a numeric
+#. keypad; translate according to the tables in §7 of ETSI ES 202 130:
+#. http://webapp.etsi.org/WorkProgram/Report_WorkItem.asp?WKI_ID=11730
+#.
+#. Letters on the '2' key of a numeric keypad
+msgid "ABC"
+msgstr ""
+
+#. Letters on the '3' key of a numeric keypad
+msgid "DEF"
+msgstr ""
+
+#. Letters on the '4' key of a numeric keypad
+msgid "GHI"
+msgstr ""
+
+#. Letters on the '5' key of a numeric keypad
+msgid "JKL"
+msgstr ""
+
+#. Letters on the '6' key of a numeric keypad
+msgid "MNO"
+msgstr ""
+
+#. Letters on the '7' key of a numeric keypad
+msgid "PQRS"
+msgstr ""
+
+#. Letters on the '8' key of a numeric keypad
+msgid "TUV"
+msgstr ""
+
+#. Letters on the '9' key of a numeric keypad
+msgid "WXYZ"
+msgstr ""
 
 msgid "_Hold"
 msgstr ""
@@ -12795,10 +10806,6 @@ msgstr "Kies 'n lêer"
 
 msgid "Modify Buddy Pounce"
 msgstr "Wysig vriendwag"
-
-#. Create the "Pounce on Whom" frame.
-msgid "Pounce on Whom"
-msgstr "Hou wie dop"
 
 msgid "_Account:"
 msgstr "R_ekening:"
@@ -13465,9 +11472,9 @@ msgstr "_Status:"
 msgid "Use a _different status for some accounts"
 msgstr "Gebruik 'n _ander status vir sekere rekenings"
 
-#. Save & Use button
-msgid "Sa_ve & Use"
-msgstr "S_toor en gebruik"
+#. Save and Use button
+msgid "Sa_ve and Use"
+msgstr ""
 
 #, c-format
 msgid "Status for %s"
@@ -13530,9 +11537,6 @@ msgstr "Statuskieser"
 
 msgid "Google Talk"
 msgstr "Google Talk"
-
-msgid "Facebook (XMPP)"
-msgstr "Facebook (XMPP)"
 
 #, c-format
 msgid "The following error has occurred loading %s: %s"
@@ -13825,6 +11829,9 @@ msgstr "Ontvangde boodskappe"
 #, c-format
 msgid "Select Color for %s"
 msgstr "Kies kleur vir %s"
+
+msgid "General"
+msgstr "Algemeen"
 
 msgid "Ignore incoming format"
 msgstr "Ignoreer inkomende formaat"
@@ -14204,6 +12211,9 @@ msgstr ""
 msgid "Notify For"
 msgstr "Kennisstel vir"
 
+msgid "\tS_ystem messages"
+msgstr ""
+
 msgid "\t_Only when someone says your username"
 msgstr "\t_Net wanneer iemand u gebruikernaam noem"
 
@@ -14237,6 +12247,8 @@ msgid "R_aise conversation window"
 msgstr "_Lig geselsvenster"
 
 #. Present conversation method button
+#. Translators: "Present" as used here is a verb. The plugin presents
+#. * the window to the user.
 msgid "_Present conversation window"
 msgstr "_Huidige geselsvenster"
 
@@ -14390,11 +12402,9 @@ msgid "Lets you send raw input to text-based protocols."
 msgstr "Laat u rou toevoer na teksgebaseerde protokols stuur."
 
 msgid ""
-"Lets you send raw input to text-based protocols (XMPP, MSN, IRC, TOC). Hit "
+"Lets you send raw input to text-based protocols (XMPP, IRC, TOC). Hit "
 "'Enter' in the entry box to send. Watch the debug window."
 msgstr ""
-"Laat u rou toevoer na teksgebaseerde protokols (XMPP, MSN, IRC, TOC) stuur. "
-"Druk 'Enter' in die inskryfkassie om te stuur. Hou die ontfoutvenster dop."
 
 #, c-format
 msgid "You can upgrade to %s %s today."
@@ -14691,6 +12701,56 @@ msgstr ""
 "Hierdie inprop stel die gebruiker in staat om die formaat van tydstempels in "
 "gesprekke in staaflêers aan te pas."
 
+msgid "Opacity:"
+msgstr "Ondeursigtigheid:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Kitsboodskap-gesprekvensters"
+
+msgid "_IM window transparency"
+msgstr "_Kitsboodskap-gesprekvenster-deursigtigheid"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Wys skuifstaaf in kitsboodskapvenster"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Verwyder kitsboodskapvenster se deursigtigheid terwyl gefokus"
+
+msgid "Always on top"
+msgstr "Altyd bo-op"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Vriendelysvenster"
+
+msgid "_Buddy List window transparency"
+msgstr "_Vriendelysvenster se deursigtigheid"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Verwyder vriendelysvenster se deursigtigheid tydens fokus"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Deursigtigheid"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Veranderbare deursigtigheid vir die vriendelys en gesprekke."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -14799,62 +12859,6 @@ msgstr "Stel die mikrofoon en webkamera op."
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "Instellings vir mikrofoon en webkamera vir stem-/video-oproepe."
-
-msgid "Opacity:"
-msgstr "Ondeursigtigheid:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Kitsboodskap-gesprekvensters"
-
-msgid "_IM window transparency"
-msgstr "_Kitsboodskap-gesprekvenster-deursigtigheid"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Wys skuifstaaf in kitsboodskapvenster"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Verwyder kitsboodskapvenster se deursigtigheid terwyl gefokus"
-
-msgid "Always on top"
-msgstr "Altyd bo-op"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Vriendelysvenster"
-
-msgid "_Buddy List window transparency"
-msgstr "_Vriendelysvenster se deursigtigheid"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Verwyder vriendelysvenster se deursigtigheid tydens fokus"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Deursigtigheid"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Veranderbare deursigtigheid vir die vriendelys en gesprekke."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list.\n"
-"\n"
-"* Note: This plugin requires Win2000 or greater."
-msgstr ""
-"Hierdie inprop stel wisselende alfadeursigtigheid op gespreksvensters en die "
-"vriendelys in staat.\n"
-"\n"
-"* Let wel: Hierdie inprop vereis Win2000 of jonger."
 
 #. Autostart
 msgid "Startup"
@@ -14997,13 +13001,9 @@ msgstr ""
 "weergawe sal geïnstalleer word sonder om die huidige een te verwyder."
 
 msgid ""
-"Pidgin requires a compatible GTK+ Runtime (which doesn't appear to be "
-"already present).$\\rAre you sure you want to skip installing the GTK+ "
-"Runtime?"
+"Pidgin requires a compatible GTK+ Runtime (which does not appear to be "
+"installed).$\\rAre you sure you want to skip installing the GTK+ Runtime?"
 msgstr ""
-"Pidgin benodig 'n versoenbare GTK+-looptydomgewing (wat skynbaar nog nie "
-"beskikbaar is nie).$\\rWil u definitief die installasie van die GTK+-"
-"looptydomgewing oorslaan?"
 
 #. Installer Subsection Text
 msgid "URI Handlers"

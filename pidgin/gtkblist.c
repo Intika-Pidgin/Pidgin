@@ -936,6 +936,17 @@ pidgin_blist_update_privacy_cb(PurpleBuddy *buddy)
 }
 
 static gboolean
+add_buddy_account_filter_func(PurpleAccount *account)
+{
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurplePluginProtocolInfo *prpl_info = NULL;
+
+	prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO(gc->prpl);
+
+	return (prpl_info->add_buddy != NULL);
+}
+
+static gboolean
 chat_account_filter_func(PurpleAccount *account)
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
@@ -4775,6 +4786,7 @@ displayed_msg_update_ui_cb(PidginConversation *gtkconv, PurpleBlistNode *node)
 static void
 conversation_created_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
 {
+<<<<<<< working copy
 	PurpleAccount *account = purple_conversation_get_account(conv);
 
 	if (PURPLE_IS_IM_CONVERSATION(conv)) {
@@ -6114,6 +6126,9 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	purple_signal_connect(handle, "conversation-created", gtkblist,
 	                      PURPLE_CALLBACK(conversation_created_cb),
 	                      gtkblist);
+	purple_signal_connect(handle, "chat-joined", gtkblist,
+	                      PURPLE_CALLBACK(chat_joined_cb),
+	                      gtkblist);
 
 	gtk_widget_hide(gtkblist->headline);
 
@@ -7086,7 +7101,7 @@ pidgin_blist_request_add_buddy(PurpleAccount *account, const char *username,
 		account,
 		_("Add Buddy"), "add_buddy",
 		_("Add a buddy.\n"),
-		G_CALLBACK(add_buddy_select_account_cb), NULL,
+		G_CALLBACK(add_buddy_select_account_cb), add_buddy_account_filter_func,
 		G_CALLBACK(add_buddy_cb));
 	gtk_dialog_add_buttons(GTK_DIALOG(data->rq_data.window),
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,

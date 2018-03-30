@@ -10,8 +10,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:57-0600\n"
-"PO-Revision-Date: 2016-10-17 11:06+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 19:10+0000\n"
 "Last-Translator: Josef Andersson <josef.andersson@fripost.org>\n"
 "Language-Team: Swedish (http://www.transifex.com/pidgin/pidgin/language/"
 "sv/)\n"
@@ -12742,6 +12742,58 @@ msgstr ""
 "Denna modul tillåter användaren att personifiera konversationernas och "
 "loggarnas tidsstämpelformat."
 
+msgid "Opacity:"
+msgstr "Ogenomskinlighet:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Snabbmeddelandefönster"
+
+msgid "_IM window transparency"
+msgstr "_Genomskinlighet för snabbmeddelandefönster"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Visa \"slider bar\" i snabbmeddelandefönster"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Ta bort genomskinlighet för fokuserade snabbmeddelandefönster"
+
+msgid "Always on top"
+msgstr "Alltid överst"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Kompislistafönster"
+
+msgid "_Buddy List window transparency"
+msgstr "Genomskinlighet för _kompislistafönster"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Ta bort genomskinligheten på kompislistafönstret när det får fokus"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Genomskinlighet"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Variabel genomskinlighet på kompislistan och konversationer."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Denna insticksmodul gör det möjligt att använda alfagenomskinlighet på "
+"konversationsfönster och kompislistan."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Chattrumsaviseringar"
@@ -12852,58 +12904,6 @@ msgstr "Konfigurerar din mikrofon och kamera."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Konfigurera mikrofon och webbkamera-inställningar för röst/videosamtal."
-
-msgid "Opacity:"
-msgstr "Ogenomskinlighet:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Snabbmeddelandefönster"
-
-msgid "_IM window transparency"
-msgstr "_Genomskinlighet för snabbmeddelandefönster"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Visa \"slider bar\" i snabbmeddelandefönster"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Ta bort genomskinlighet för fokuserade snabbmeddelandefönster"
-
-msgid "Always on top"
-msgstr "Alltid överst"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Kompislistafönster"
-
-msgid "_Buddy List window transparency"
-msgstr "Genomskinlighet för _kompislistafönster"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Ta bort genomskinligheten på kompislistafönstret när det får fokus"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Genomskinlighet"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Variabel genomskinlighet på kompislistan och konversationer."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Denna insticksmodul gör det möjligt att använda alfagenomskinlighet på "
-"konversationsfönster och kompislistan."
 
 #. Autostart
 msgid "Startup"

@@ -3,16 +3,16 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Translators:
-# KNTRO <kntro@msn.com>, 2016
-# KNTRO <kntro@msn.com>, 2015-2016
-# KNTRO <kntro@msn.com>, 2014
+# ЌИГЯФ <kntro@msn.com>, 2016
+# ЌИГЯФ <kntro@msn.com>, 2015-2016
+# ЌИГЯФ <kntro@msn.com>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:57-0600\n"
-"PO-Revision-Date: 2016-12-16 07:59+0000\n"
-"Last-Translator: KNTRO <kntro@msn.com>\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 19:52+0000\n"
+"Last-Translator: ЌИГЯФ <kntro@msn.com>\n"
 "Language-Team: Spanish (Argentina) (http://www.transifex.com/pidgin/pidgin/"
 "language/es_AR/)\n"
 "Language: es_AR\n"
@@ -12857,6 +12857,61 @@ msgstr ""
 "Este plugin permite al usuario personalizar los formatos de marca de tiempo "
 "de mensaje en la conversación y registro."
 
+msgid "Opacity:"
+msgstr "Opacidad:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Ventanas de conversación de mensajería instantánea"
+
+msgid "_IM window transparency"
+msgstr "Transparencia de ventana de mensajería _instantánea"
+
+msgid "_Show slider bar in IM window"
+msgstr "Mo_strar barra deslizante en la ventana de mensajería instantánea"
+
+msgid "Remove IM window transparency on focus"
+msgstr ""
+"Quitar transparencia de ventana de mensajería instantánea al tener el foco"
+
+msgid "Always on top"
+msgstr "Siempre visible"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Ventana de lista de contactos"
+
+msgid "_Buddy List window transparency"
+msgstr "_Transparencia de la ventana de lista de contactos"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr ""
+"Quitar la transparencia de la ventana de lisa de contactos al tener el foco"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Transparencia"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr ""
+"Transparencia variable para la lista de contactos y las conversaciones."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Este plugin habilita transparencia alfa variable en ventanas de conversación "
+"y en la lista de contactos."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Alertas de sala de chats"
@@ -12976,61 +13031,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Configurá los ajustes del micrófono y la webcam para llamadas o "
 "videollamadas."
-
-msgid "Opacity:"
-msgstr "Opacidad:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Ventanas de conversación de mensajería instantánea"
-
-msgid "_IM window transparency"
-msgstr "Transparencia de ventana de mensajería _instantánea"
-
-msgid "_Show slider bar in IM window"
-msgstr "Mo_strar barra deslizante en la ventana de mensajería instantánea"
-
-msgid "Remove IM window transparency on focus"
-msgstr ""
-"Quitar transparencia de ventana de mensajería instantánea al tener el foco"
-
-msgid "Always on top"
-msgstr "Siempre visible"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Ventana de lista de contactos"
-
-msgid "_Buddy List window transparency"
-msgstr "_Transparencia de la ventana de lista de contactos"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr ""
-"Quitar la transparencia de la ventana de lisa de contactos al tener el foco"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Transparencia"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr ""
-"Transparencia variable para la lista de contactos y las conversaciones."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Este plugin habilita transparencia alfa variable en ventanas de conversación "
-"y en la lista de contactos."
 
 #. Autostart
 msgid "Startup"

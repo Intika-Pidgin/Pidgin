@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:52-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:38+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Estonian (http://www.transifex.com/pidgin/pidgin/language/"
 "et/)\n"
@@ -12481,6 +12481,56 @@ msgstr ""
 "Selle plugina abil saab kasutaja kohandada vestluse käigus edastatud "
 "sõnumite ajatemplite vorminguid."
 
+msgid "Opacity:"
+msgstr "Läbipaistmatus:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Välksõnumite aknad"
+
+msgid "_IM window transparency"
+msgstr "_Välksõnumiaknad on läbipaistvad"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Liuguri näitamine välksõnumiakendes"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Välksõnumi akna läbipaistvuse eemaldamine selle fokuseerimisel"
+
+msgid "Always on top"
+msgstr "Alati pealmine"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Sõbranimekirja aken"
+
+msgid "_Buddy List window transparency"
+msgstr "Sõbraaken on _läbipaistev"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Sõbranimekirja akna läbipaistvuse eemaldamine selle fokuseerimisel"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Läbipaistvus"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Muutuv läbipaistvus sõbranimekirjale ja vestlustele."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12589,56 +12639,6 @@ msgstr "Mikrofoni ja veebikaamera seadistamine"
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "Mikrofoni ja veebikaamera seadistamine hääl- ja videokõnede tarbeks."
-
-msgid "Opacity:"
-msgstr "Läbipaistmatus:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Välksõnumite aknad"
-
-msgid "_IM window transparency"
-msgstr "_Välksõnumiaknad on läbipaistvad"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Liuguri näitamine välksõnumiakendes"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Välksõnumi akna läbipaistvuse eemaldamine selle fokuseerimisel"
-
-msgid "Always on top"
-msgstr "Alati pealmine"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Sõbranimekirja aken"
-
-msgid "_Buddy List window transparency"
-msgstr "Sõbraaken on _läbipaistev"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Sõbranimekirja akna läbipaistvuse eemaldamine selle fokuseerimisel"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Läbipaistvus"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Muutuv läbipaistvus sõbranimekirjale ja vestlustele."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

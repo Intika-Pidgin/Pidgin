@@ -11,8 +11,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:53-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 17:01+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Finnish (http://www.transifex.com/pidgin/pidgin/language/"
 "fi/)\n"
@@ -12669,6 +12669,56 @@ msgstr ""
 "Tämä liitännäinen mahdollistaa keskustelu- ja lokiviestien aikaleimamuotojen "
 "muokkaamisen."
 
+msgid "Opacity:"
+msgstr "Peitto:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Pikaviesti-ikkunat"
+
+msgid "_IM window transparency"
+msgstr "_Pikaviesti-ikkunan läpinäkyvyys"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Näytä vierityspalkki pikaviesti-ikkunassa"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Poista pikaviesti-ikkunan läpinäkyvyys sen ollessa kohdistettuna"
+
+msgid "Always on top"
+msgstr "Aina päällimmäisenä"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Tuttavat-ikkuna"
+
+msgid "_Buddy List window transparency"
+msgstr "_Tuttavat-ikkunan läpinäkyvyys"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Poista tuttavat-ikkunan läpinäkyvyys sen ollessa kohdistettuna"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Läpinäkyvyys"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Vaihteleva läpinäkyvyys tuttavat-ikkunalle ja keskusteluille."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12778,56 +12828,6 @@ msgstr "Muuta mikrofonin ja web-kameran asetuksia."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Muuta mikrofonin ja web-kameran asetuksia ääni- tai videopuheluita varten."
-
-msgid "Opacity:"
-msgstr "Peitto:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Pikaviesti-ikkunat"
-
-msgid "_IM window transparency"
-msgstr "_Pikaviesti-ikkunan läpinäkyvyys"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Näytä vierityspalkki pikaviesti-ikkunassa"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Poista pikaviesti-ikkunan läpinäkyvyys sen ollessa kohdistettuna"
-
-msgid "Always on top"
-msgstr "Aina päällimmäisenä"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Tuttavat-ikkuna"
-
-msgid "_Buddy List window transparency"
-msgstr "_Tuttavat-ikkunan läpinäkyvyys"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Poista tuttavat-ikkunan läpinäkyvyys sen ollessa kohdistettuna"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Läpinäkyvyys"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Vaihteleva läpinäkyvyys tuttavat-ikkunalle ja keskusteluille."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

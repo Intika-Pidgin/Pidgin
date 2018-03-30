@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:56-0600\n"
-"PO-Revision-Date: 2017-01-22 11:41+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:39+0000\n"
 "Last-Translator: drazvan\n"
 "Language-Team: Romanian (http://www.transifex.com/pidgin/pidgin/language/"
 "ro/)\n"
@@ -12796,6 +12796,56 @@ msgstr ""
 "Acest modul vă permite să personalizați formatarea marcajelor de timp în "
 "discuții și înregistrări."
 
+msgid "Opacity:"
+msgstr "Opacitate:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Ferestre de discuții"
+
+msgid "_IM window transparency"
+msgstr "Transparența ferestrelor de _discuții"
+
+msgid "_Show slider bar in IM window"
+msgstr "Arată _bara de derulare în fereastra de discuții"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Dezactivează transparența ferestrei de discuții în prim plan"
+
+msgid "Always on top"
+msgstr "Întotdeauna deasupra"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Fereastra listei de contacte"
+
+msgid "_Buddy List window transparency"
+msgstr "_Transparența ferestrei listei de contacte"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Dezactivează transparența listei de contacte în prim plan"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Transparență"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Transparență variabilă pentru lista contactelor și discuții."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12906,56 +12956,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Personalizați opțiunile microfonului și camerei web pentru apelurile de voce "
 "și video"
-
-msgid "Opacity:"
-msgstr "Opacitate:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Ferestre de discuții"
-
-msgid "_IM window transparency"
-msgstr "Transparența ferestrelor de _discuții"
-
-msgid "_Show slider bar in IM window"
-msgstr "Arată _bara de derulare în fereastra de discuții"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Dezactivează transparența ferestrei de discuții în prim plan"
-
-msgid "Always on top"
-msgstr "Întotdeauna deasupra"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Fereastra listei de contacte"
-
-msgid "_Buddy List window transparency"
-msgstr "_Transparența ferestrei listei de contacte"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Dezactivează transparența listei de contacte în prim plan"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Transparență"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Transparență variabilă pentru lista contactelor și discuții."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

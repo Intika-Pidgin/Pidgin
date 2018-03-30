@@ -11,8 +11,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:57-0600\n"
-"PO-Revision-Date: 2017-01-18 23:09+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 18:35+0000\n"
 "Last-Translator: Martin Srebotnjak <miles@filmsi.net>\n"
 "Language-Team: Slovenian (http://www.transifex.com/pidgin/pidgin/language/"
 "sl/)\n"
@@ -12810,6 +12810,58 @@ msgstr ""
 "Ta vtičnik omogoča uporabniku prilagajati zapis časovnega žiga pogovorov in "
 "dnevniških sporočil."
 
+msgid "Opacity:"
+msgstr "Neprosojnost:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Pogovorna okna"
+
+msgid "_IM window transparency"
+msgstr "Pro_sojnost pogovornega okna"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Prikaži drsno vrstico v pogovornem oknu"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Odstrani prosojnost pogovornega okna v ospredju"
+
+msgid "Always on top"
+msgstr "Vedno na vrhu"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Seznam prijateljev"
+
+msgid "_Buddy List window transparency"
+msgstr "_Prosojnost seznama prijateljev"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Odstrani prosojnost seznama prijateljev v ospredju"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Prosojnost"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Poljubna prosojnost seznama prijateljev in pomenkov."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Ta vtičnik omogoči poljubno nastavitev prosojnosti pogovornih oken in "
+"seznama prijateljev."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Opozorila sobe pomenkov"
@@ -12920,58 +12972,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Prilagodite nastavitve za mikrofon in spletno kamero za zvočne oz. video "
 "klice."
-
-msgid "Opacity:"
-msgstr "Neprosojnost:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Pogovorna okna"
-
-msgid "_IM window transparency"
-msgstr "Pro_sojnost pogovornega okna"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Prikaži drsno vrstico v pogovornem oknu"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Odstrani prosojnost pogovornega okna v ospredju"
-
-msgid "Always on top"
-msgstr "Vedno na vrhu"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Seznam prijateljev"
-
-msgid "_Buddy List window transparency"
-msgstr "_Prosojnost seznama prijateljev"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Odstrani prosojnost seznama prijateljev v ospredju"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Prosojnost"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Poljubna prosojnost seznama prijateljev in pomenkov."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Ta vtičnik omogoči poljubno nastavitev prosojnosti pogovornih oken in "
-"seznama prijateljev."
 
 #. Autostart
 msgid "Startup"

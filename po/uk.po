@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:58-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:38+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Ukrainian (http://www.transifex.com/pidgin/pidgin/language/"
 "uk/)\n"
@@ -12768,6 +12768,56 @@ msgstr ""
 "Додаток дозволяє користувачу налаштовувати формат дати та часу розмови і "
 "повідомлень журналу."
 
+msgid "Opacity:"
+msgstr "Непрозорість:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Вікна розмов миттєвими повідомленнями"
+
+msgid "_IM window transparency"
+msgstr "Прозорість _вікна розмови миттєвими повідомленнями"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Показувати смугу прокрутки у вікнах розмови миттєвими повідомленнями"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Прибрати прозорість вікна миттєвий повідомлень після отримання фокусу"
+
+msgid "Always on top"
+msgstr "Завжди зверху"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Вікно переліку контактів"
+
+msgid "_Buddy List window transparency"
+msgstr "Прозорість вікна переліку _контактів"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Прибрати прозорість вікна переліку контактів після отримання фокусу"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Прозорість"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Змінна прозорість для переліку контактів та розмов."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12877,56 +12927,6 @@ msgstr "Налаштування мікрофону та вебкамери."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Налаштувати параметри мікрофону та вебкамери для голосових та відеовикликів."
-
-msgid "Opacity:"
-msgstr "Непрозорість:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Вікна розмов миттєвими повідомленнями"
-
-msgid "_IM window transparency"
-msgstr "Прозорість _вікна розмови миттєвими повідомленнями"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Показувати смугу прокрутки у вікнах розмови миттєвими повідомленнями"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Прибрати прозорість вікна миттєвий повідомлень після отримання фокусу"
-
-msgid "Always on top"
-msgstr "Завжди зверху"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Вікно переліку контактів"
-
-msgid "_Buddy List window transparency"
-msgstr "Прозорість вікна переліку _контактів"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Прибрати прозорість вікна переліку контактів після отримання фокусу"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Прозорість"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Змінна прозорість для переліку контактів та розмов."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

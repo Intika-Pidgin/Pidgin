@@ -128,6 +128,13 @@ int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
 	if (tosend == NULL)
 		return 0;
 
+	if (purple_debug_is_verbose()) {
+		gchar *clean = purple_utf8_salvage(tosend);
+		clean = g_strstrip(clean);
+		purple_debug_misc("irc", "<< %s\n", clean);
+		g_free(clean);
+	}
+
 	len = strlen(tosend);
 	data = g_bytes_new_take(tosend, len);
 	purple_queued_output_stream_push_bytes(irc->output, data);

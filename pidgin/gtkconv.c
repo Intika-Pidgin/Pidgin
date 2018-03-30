@@ -1737,7 +1737,7 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 	}
 
-	if (!is_me && protocol && !(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME)) {
+	if (!is_me && protocol && !(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME) && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, add_buddy)) {
 		if ((buddy = purple_blist_find_buddy(account, who)) != NULL)
 			button = pidgin_new_menu_item(menu, _("Remove"),
                                         GTK_STOCK_REMOVE,

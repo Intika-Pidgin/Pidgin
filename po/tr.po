@@ -7,7 +7,7 @@
 # Dilbao <dilbao@hotmail.com>, 2014
 # Dilbao <dilbao@hotmail.com>, 2014
 # Kudret <kudretemre@hotmail.com.tr>, 2014
-# Mehmet <mehmet337402@gmail.com>, 2014-2016
+# Mehmet, 2014-2016
 # Necdet Yücel <necdetyucel@gmail.com>, 2014-2015
 # obsoleteman <tulliana@gmail.com>, 2007
 # Onur Küçüktunç onurcc@gmail.com, 2004
@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:57-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 13:45+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Turkish (http://www.transifex.com/pidgin/pidgin/language/"
 "tr/)\n"
@@ -12703,6 +12703,56 @@ msgstr ""
 "Bu eklenti kullanıcının sohbet penceresinde ve kayıtlarda zaman etiketlerini "
 "özelleştirebilmesini sağlar."
 
+msgid "Opacity:"
+msgstr "Matlık:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Yazışma Penceresi"
+
+msgid "_IM window transparency"
+msgstr "_Mesaj penceresi geçirgenliği"
+
+msgid "_Show slider bar in IM window"
+msgstr "Kaydırma çubuklarını mesaj penceresinde göster"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Üzerine gelindiğinde anlık ileti penceresi şeffaflığını yoket"
+
+msgid "Always on top"
+msgstr "Her zaman üstte"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Liste Penceresi"
+
+msgid "_Buddy List window transparency"
+msgstr "Liste penceresi geçirgenliği"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Liste penceresine odaklanıldığında pencere saydamlığını kaldır"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Saydamlık"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Liste ve mesaj penceresi için geçirgenlik değişkeni."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Sohbet odası uyarıları"
@@ -12813,56 +12863,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Sesli ya da görüntülü aramalar için web kamera ve mikrofon ayarlarını "
 "yapılandır."
-
-msgid "Opacity:"
-msgstr "Matlık:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Yazışma Penceresi"
-
-msgid "_IM window transparency"
-msgstr "_Mesaj penceresi geçirgenliği"
-
-msgid "_Show slider bar in IM window"
-msgstr "Kaydırma çubuklarını mesaj penceresinde göster"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Üzerine gelindiğinde anlık ileti penceresi şeffaflığını yoket"
-
-msgid "Always on top"
-msgstr "Her zaman üstte"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Liste Penceresi"
-
-msgid "_Buddy List window transparency"
-msgstr "Liste penceresi geçirgenliği"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Liste penceresine odaklanıldığında pencere saydamlığını kaldır"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Saydamlık"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Liste ve mesaj penceresi için geçirgenlik değişkeni."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

@@ -5,12 +5,13 @@
 # Translators:
 # David Avsharyan <avsharyan@gmail.com>, 2009
 # Վահե Գրիգորյան <vahe@keemail.me>, 2016-2017
+# Վահե Գրիգորյան <vahe@keemail.me>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:51-0600\n"
-"PO-Revision-Date: 2017-02-07 04:32+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:20+0000\n"
 "Last-Translator: Վահե Գրիգորյան <vahe@keemail.me>\n"
 "Language-Team: Armenian (http://www.transifex.com/pidgin/pidgin/language/"
 "hy/)\n"
@@ -566,20 +567,22 @@ msgstr ""
 
 #, c-format
 msgid "%s (%s -- %s)"
-msgstr ""
+msgstr "%s (%s -- %s)"
 
 #, c-format
 msgid "%s [%s]"
-msgstr ""
+msgstr "%s [%s]"
 
 #, c-format
 msgid ""
 "\n"
 "%s is typing..."
 msgstr ""
+"\n"
+"%s գրում է ..."
 
 msgid "You have left this chat."
-msgstr ""
+msgstr "Դուք լքեցիք այս զրուցը։"
 
 msgid ""
 "The account has disconnected and you are no longer in this chat. You will be "
@@ -600,7 +603,7 @@ msgid "Conversation"
 msgstr "Խոսակցություն"
 
 msgid "Clear Scrollback"
-msgstr ""
+msgstr "Մաքրել Ամսագիրը"
 
 msgid "Show Timestamps"
 msgstr ""
@@ -6978,7 +6981,7 @@ msgid "Channel founder on <I>%s</I> is <I>%s</I>"
 msgstr ""
 
 msgid "Real Name"
-msgstr ""
+msgstr "Իսկական Անունը"
 
 msgid "Status Text"
 msgstr ""
@@ -7051,10 +7054,10 @@ msgid "Network Statistics"
 msgstr ""
 
 msgid "Ping"
-msgstr ""
+msgstr "Պինգ"
 
 msgid "Ping failed"
-msgstr ""
+msgstr "Պինգը չհաջողվեց"
 
 msgid "Ping reply received from server"
 msgstr ""
@@ -7151,7 +7154,7 @@ msgstr ""
 
 #, c-format
 msgid "Normal"
-msgstr ""
+msgstr "Նորմալ"
 
 msgid ""
 "\n"
@@ -7159,10 +7162,10 @@ msgid ""
 msgstr ""
 
 msgid "SMS"
-msgstr ""
+msgstr "SMS"
 
 msgid "MMS"
-msgstr ""
+msgstr "MMS"
 
 msgid "Video conferencing"
 msgstr ""
@@ -7756,10 +7759,10 @@ msgstr ""
 #. * A wrapper for purple_request_action() that uses @c Yes and @c No buttons.
 #.
 msgid "_Yes"
-msgstr ""
+msgstr "_Այո"
 
 msgid "_No"
-msgstr ""
+msgstr "_Ոչ"
 
 #. *
 #. * A wrapper for purple_request_action() that uses Accept and Cancel buttons.
@@ -12070,6 +12073,56 @@ msgid ""
 "timestamp formats."
 msgstr ""
 
+msgid "Opacity:"
+msgstr ""
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr ""
+
+msgid "_IM window transparency"
+msgstr ""
+
+msgid "_Show slider bar in IM window"
+msgstr ""
+
+msgid "Remove IM window transparency on focus"
+msgstr ""
+
+msgid "Always on top"
+msgstr ""
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr ""
+
+msgid "_Buddy List window transparency"
+msgstr ""
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr ""
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr ""
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr ""
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12177,56 +12230,6 @@ msgstr ""
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
-msgstr ""
-
-msgid "Opacity:"
-msgstr ""
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr ""
-
-msgid "_IM window transparency"
-msgstr ""
-
-msgid "_Show slider bar in IM window"
-msgstr ""
-
-msgid "Remove IM window transparency on focus"
-msgstr ""
-
-msgid "Always on top"
-msgstr ""
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr ""
-
-msgid "_Buddy List window transparency"
-msgstr ""
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr ""
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr ""
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
 msgstr ""
 
 #. Autostart

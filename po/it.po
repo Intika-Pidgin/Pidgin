@@ -4,15 +4,16 @@
 #
 # Translators:
 # Giuseppe Pignataro (Fasbyte01) <rogepix@gmail.com>, 2015
+# Giuseppe Pignataro (Fasbyte01) <rogepix@gmail.com>, 2015
 # Saverio <saverio.brancaccio@gmail.com>, 2015
-# Sebastiano Pistore <olatusrooc@virgilio.it>, 2016-2017
+# Sebastiano Pistore <SebastianoPistore.info@protonmail.ch>, 2016-2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:54-0600\n"
-"PO-Revision-Date: 2017-01-19 10:39+0000\n"
-"Last-Translator: Sebastiano Pistore <olatusrooc@virgilio.it>\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:20+0000\n"
+"Last-Translator: Sebastiano Pistore <SebastianoPistore.info@protonmail.ch>\n"
 "Language-Team: Italian (http://www.transifex.com/pidgin/pidgin/language/"
 "it/)\n"
 "Language: it\n"
@@ -5137,7 +5138,7 @@ msgid "Serious"
 msgstr "Serio"
 
 msgid "Shocked"
-msgstr "Shoccato"
+msgstr "Scioccato"
 
 msgid "Shy"
 msgstr "Timido"
@@ -8582,6 +8583,9 @@ msgid ""
 "This means that you can be chatting with friends on AIM, talking to a friend "
 "on Google Talk, and sitting in an IRC chat room all at the same time."
 msgstr ""
+"Questo significa che puoi chattare con gli amici su AIM, essere disponibile "
+"su Google Talk, e nello stesso momento chattare su IRC utilizzando lo stesso "
+"programma."
 
 msgid "The buddy list showing friends on different networks."
 msgstr "La lista dei contatti che mostra gli utenti di reti diverse."
@@ -10127,6 +10131,13 @@ msgid ""
 "welcome to post in another language, but the responses may be less helpful."
 "<br/>"
 msgstr ""
+"È possibile ricevere <font size=\"4\"><b>aiuto da altri utenti di Pidgin</"
+"b></font> inviando un'email a <a href=\"mailto:support@pidgin.im"
+"\">support@pidgin.im</a><br/>Questa è una mailing list <b>pubblica</b>! (<a "
+"href=\"http://pidgin.im/pipermail/support/\">archivio</a>)<br/>Non possiamo "
+"fornire aiuto su protocolli o plugin forniti da terzi!<br/>La lingua "
+"primaria di questa lista è l'<b>inglese</b>. Sei libero di scrivere in "
+"un'altra lingua, ma le risposte potrebbero essere meno esaustive.<br/>"
 
 #, c-format
 msgid "About %s"
@@ -12366,7 +12377,7 @@ msgid "Notify For"
 msgstr "Notifica per"
 
 msgid "\tS_ystem messages"
-msgstr ""
+msgstr "\tMessaggi di_Sistema"
 
 msgid "\t_Only when someone says your username"
 msgstr "\t_Solamente quando qualcuno pronuncia il tuo nome"
@@ -12858,6 +12869,57 @@ msgstr ""
 "Questo plugin consente di personalizzare i formati dei timestamp per i "
 "messaggi nelle conversazioni e nei log."
 
+msgid "Opacity:"
+msgstr "Opacità:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Finestre dei messaggi immediati"
+
+msgid "_IM window transparency"
+msgstr "_Rendi trasparente la finestra"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Mostra la barra di scorrimento nella finestra "
+
+msgid "Remove IM window transparency on focus"
+msgstr "Rimuovi la trasparenza della finestra dei MI quando va in primo piano"
+
+msgid "Always on top"
+msgstr "Sempre in primo piano"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Finestra della lista contatti"
+
+msgid "_Buddy List window transparency"
+msgstr "Rendi _trasparente la finestra della lista contatti"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Rimuovi la trasparenza della lista contatti quando va in primo piano"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Trasparenza"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr ""
+"Trasparenza regolabile per la lista contatti e le finestre di conversazione."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Avvisi della chat room"
@@ -12973,57 +13035,6 @@ msgstr "Configura il tuo microfono e la tua webcam."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Configura le impostazioni di microfono e webcam per le chiamate voce/video."
-
-msgid "Opacity:"
-msgstr "Opacità:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Finestre dei messaggi immediati"
-
-msgid "_IM window transparency"
-msgstr "_Rendi trasparente la finestra"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Mostra la barra di scorrimento nella finestra "
-
-msgid "Remove IM window transparency on focus"
-msgstr "Rimuovi la trasparenza della finestra dei MI quando va in primo piano"
-
-msgid "Always on top"
-msgstr "Sempre in primo piano"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Finestra della lista contatti"
-
-msgid "_Buddy List window transparency"
-msgstr "Rendi _trasparente la finestra della lista contatti"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Rimuovi la trasparenza della lista contatti quando va in primo piano"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Trasparenza"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr ""
-"Trasparenza regolabile per la lista contatti e le finestre di conversazione."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

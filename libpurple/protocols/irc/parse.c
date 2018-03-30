@@ -117,6 +117,7 @@ static struct _irc_msg {
 	{ "906", "*", 0, irc_msg_authfail },		/* SASL auth failed		*/
 	{ "907", "*", 0, irc_msg_authfail },		/* SASL auth failed		*/
 	{ "cap", "vv:", 3, irc_msg_cap },		/* SASL capable			*/
+	{ "authenticate", ":", 1, irc_msg_authenticate }, /* SASL authenticate		*/
 #endif
 	{ "invite", "n:", 2, irc_msg_invite },		/* Invited			*/
 	{ "join", ":", 1, irc_msg_join },		/* Joined a channel		*/
@@ -546,7 +547,7 @@ const char *irc_nick_skip_mode(struct irc_conn *irc, const char *nick)
 
 	mode_chars = irc->mode_chars ? irc->mode_chars : default_modes;
 
-	while (strchr(mode_chars, *nick) != NULL)
+	while (*nick && strchr(mode_chars, *nick) != NULL)
 		nick++;
 
 	return nick;
@@ -568,7 +569,7 @@ char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, con
 	 * message and low-level quoting ... but if you want that crap,
 	 * use a real IRC client. */
 
-	if (msg[0] != '\001' || msg[strlen(msg) - 1] != '\001')
+	if (msg[0] != '\001' || msg[1] == '\0' || msg[strlen(msg) - 1] != '\001')
 		return g_strdup(msg);
 
 	if (!strncmp(cur, "ACTION ", 7)) {
@@ -694,6 +695,13 @@ void irc_parse_msg(struct irc_conn *irc, char *input)
 	 * instead of a null terminated string.
 	 */
 	purple_signal_emit(_irc_protocol, "irc-receiving-text", gc, &input);
+
+	if (purple_debug_is_verbose()) {
+		char *clean = purple_utf8_salvage(input);
+		clean = g_strstrip(clean);
+		purple_debug_misc("irc", ">> %s\n", clean);
+		g_free(clean);
+	}
 
 	if (!strncmp(input, "PING ", 5)) {
 		msg = irc_format(irc, "vv", "PONG", input + 5);

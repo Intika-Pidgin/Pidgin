@@ -18,8 +18,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:56-0600\n"
-"PO-Revision-Date: 2017-02-15 16:06+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:38+0000\n"
 "Last-Translator: Piotr Drąg <piotrdrag@gmail.com>\n"
 "Language-Team: Polish (http://www.transifex.com/pidgin/pidgin/language/pl/)\n"
 "Language: pl\n"
@@ -27,7 +27,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n"
-"%100<12 || n%100>=14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n"
+"%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n"
 "%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
 #. Translators may want to transliterate the name.
@@ -7974,7 +7974,7 @@ msgid "HMAC"
 msgstr "HMAC"
 
 msgid "Use Perfect Forward Secrecy"
-msgstr "Doskonała magia przekierowania"
+msgstr "Doskonałe utajnienie przekazywania"
 
 msgid "Public key authentication"
 msgstr "Uwierzytelnianie kluczem publicznym"
@@ -8618,7 +8618,7 @@ msgid ""
 "This means that you can be chatting with friends on AIM, talking to a friend "
 "on Google Talk, and sitting in an IRC chat room all at the same time."
 msgstr ""
-"Oznacza to, że można jednocześnie rozmawiać ze swoimi znajomymi przez MSN, "
+"Oznacza to, że można jednocześnie rozmawiać ze swoimi znajomymi przez AIM, "
 "z przyjacielem przez Google Talk i siedzieć w pokoju rozmów IRC."
 
 msgid "The buddy list showing friends on different networks."
@@ -8765,7 +8765,7 @@ msgstr ""
 "skonfigurować.\n"
 "\n"
 "Można wrócić do tego okna, aby dodać, zmodyfikować lub usunąć konta z menu "
-"<b>Konta→Zarządzaj kontami</b> w oknie listy znajomych"
+"<b>Konta → Zarządzaj kontami</b> w oknie listy znajomych"
 
 #, c-format
 msgid ""
@@ -9311,7 +9311,7 @@ msgstr ""
 "<span weight='bold' size='larger'>Witaj w programie %s!</span>\n"
 "\n"
 "Nie włączono żadnych kont. Proszę włączyć konta z okna <b>Konta</b> "
-"w <b>Konta→Zarządzaj kontami</b>. Po włączeniu kont można się zalogować, "
+"w <b>Konta → Zarządzaj kontami</b>. Po włączeniu kont można się zalogować, "
 "ustawić stan i rozmawiać z przyjaciółmi."
 
 #. set the Show Offline Buddies option. must be done
@@ -12906,6 +12906,58 @@ msgstr ""
 "Ta wtyczka umożliwia użytkownikowi dostosowanie formatów daty wiadomości "
 "i dziennika."
 
+msgid "Opacity:"
+msgstr "Nieprzezroczystość:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Okna rozmów"
+
+msgid "_IM window transparency"
+msgstr "Przezroczystość okien w_iadomości"
+
+msgid "_Show slider bar in IM window"
+msgstr "Pa_sek przezroczystości w oknie wiadomości"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Usuń przezroczystość okna wiadomości po aktywacji"
+
+msgid "Always on top"
+msgstr "Zawsze na wierzchu"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Okno listy znajomych"
+
+msgid "_Buddy List window transparency"
+msgstr "_Przezroczystość okna listy znajomych"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Usuń przezroczystość okna listy znajomych po aktywacji"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Przezroczystość"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Zmienna przezroczystość listy znajomych i rozmów."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Wtyczka pozwalająca na regulację przezroczystością okien rozmów i listy "
+"znajomych."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Powiadomienia w konferencjach"
@@ -13019,58 +13071,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Konfiguruje ustawienia mikrofonu i kamery internetowej dla rozmów głosowych/"
 "wideo."
-
-msgid "Opacity:"
-msgstr "Nieprzezroczystość:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Okna rozmów"
-
-msgid "_IM window transparency"
-msgstr "Przezroczystość okien w_iadomości"
-
-msgid "_Show slider bar in IM window"
-msgstr "Pa_sek przezroczystości w oknie wiadomości"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Usuń przezroczystość okna wiadomości po aktywacji"
-
-msgid "Always on top"
-msgstr "Zawsze na wierzchu"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Okno listy znajomych"
-
-msgid "_Buddy List window transparency"
-msgstr "_Przezroczystość okna listy znajomych"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Usuń przezroczystość okna listy znajomych po aktywacji"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Przezroczystość"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Zmienna przezroczystość listy znajomych i rozmów."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Wtyczka pozwalająca na regulację przezroczystością okien rozmów i listy "
-"znajomych."
 
 #. Autostart
 msgid "Startup"

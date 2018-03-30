@@ -12,8 +12,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:51-0600\n"
-"PO-Revision-Date: 2016-10-16 15:21+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:38+0000\n"
 "Last-Translator: Besnik <besnik@programeshqip.org>\n"
 "Language-Team: Albanian (http://www.transifex.com/pidgin/pidgin/language/"
 "sq/)\n"
@@ -12795,6 +12795,58 @@ msgstr ""
 "Kjo shtojcë i lejon përdoruesit të përshtatë formate vulash kohore të "
 "bisedave dhe regjistrimit të mesazheve."
 
+msgid "Opacity:"
+msgstr "Patejdukshmëri:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Dritare Bisedash MA"
+
+msgid "_IM window transparency"
+msgstr "Tejdukshmëri dritareje _MA"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Shfaq shtyllë rrëshqitësi në dritare MA"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Hiq tejdukshmëri dritareje MA kur fokusohet"
+
+msgid "Always on top"
+msgstr "Përherë sipër"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Dritare Listë Shokësh"
+
+msgid "_Buddy List window transparency"
+msgstr "Tejdukshmëri dritareje Liste _Shokësh"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Hiq tejdukshmëri dritareje Liste Shokësh kur fokusohet"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Tejdukshmëri"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Tejdukshmëri e Ndryshueshme për listë shokësh dhe bisedash."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Kjo shtojcë lejon transparencë alfa për ndryshoret në dritare bisedash dhe "
+"lista shokësh."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Sinjalizime dhome fjalosjeje"
@@ -12909,58 +12961,6 @@ msgstr "Formësoni mikrofonin dhe kamerën tuaj."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Formësoni rregullime mikrofoni dhe kamere për thirrje telefonike/video."
-
-msgid "Opacity:"
-msgstr "Patejdukshmëri:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Dritare Bisedash MA"
-
-msgid "_IM window transparency"
-msgstr "Tejdukshmëri dritareje _MA"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Shfaq shtyllë rrëshqitësi në dritare MA"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Hiq tejdukshmëri dritareje MA kur fokusohet"
-
-msgid "Always on top"
-msgstr "Përherë sipër"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Dritare Listë Shokësh"
-
-msgid "_Buddy List window transparency"
-msgstr "Tejdukshmëri dritareje Liste _Shokësh"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Hiq tejdukshmëri dritareje Liste Shokësh kur fokusohet"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Tejdukshmëri"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Tejdukshmëri e Ndryshueshme për listë shokësh dhe bisedash."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Kjo shtojcë lejon transparencë alfa për ndryshoret në dritare bisedash dhe "
-"lista shokësh."
 
 #. Autostart
 msgid "Startup"

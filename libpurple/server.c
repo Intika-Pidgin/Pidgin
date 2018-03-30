@@ -704,7 +704,6 @@ void purple_serv_got_chat_invite(PurpleConnection *gc, const char *name,
 						  const char *who, const char *message, GHashTable *data)
 {
 	PurpleAccount *account;
-	char buf2[BUF_LONG];
 	struct chat_invite_data *cid;
 	int plugin_return;
 
@@ -729,14 +728,16 @@ void purple_serv_got_chat_invite(PurpleConnection *gc, const char *name,
 
 	if (plugin_return == 0)
 	{
+		char *buf2;
+
 		if (message != NULL)
 		{
-			g_snprintf(buf2, sizeof(buf2),
+			buf2 = g_strdup_printf(
 				   _("%s has invited %s to the chat room %s:\n%s"),
 				   who, purple_account_get_username(account), name, message);
 		}
 		else
-			g_snprintf(buf2, sizeof(buf2),
+			buf2 = g_strdup_printf(
 				   _("%s has invited %s to the chat room %s\n"),
 				   who, purple_account_get_username(account), name);
 
@@ -747,6 +748,7 @@ void purple_serv_got_chat_invite(PurpleConnection *gc, const char *name,
 			purple_request_cpar_from_connection(gc), cid,
 			G_CALLBACK(chat_invite_accept),
 			G_CALLBACK(chat_invite_reject));
+		g_free(buf2);
 	}
 	else if (plugin_return > 0)
 		chat_invite_accept(cid);

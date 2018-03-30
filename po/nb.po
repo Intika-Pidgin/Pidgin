@@ -4,13 +4,13 @@
 #
 # Translators:
 # Allan Nordhøy <epost@anotheragency.no>, 2014-2015
-# Allan Nordhøy <epost@anotheragency.no>, 2015-2016
+# Allan Nordhøy <epost@anotheragency.no>, 2015-2016,2018
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:55-0600\n"
-"PO-Revision-Date: 2016-12-12 11:15+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2018-01-17 01:37+0000\n"
 "Last-Translator: Allan Nordhøy <epost@anotheragency.no>\n"
 "Language-Team: Norwegian Bokmål (http://www.transifex.com/pidgin/pidgin/"
 "language/nb/)\n"
@@ -1534,7 +1534,7 @@ msgid "Please wait while TinyURL fetches a shorter URL..."
 msgstr "Vent mens TinyURL henter en kortere nettadresse…"
 
 msgid "Only create TinyURL for URLs of this length or greater"
-msgstr "Bare opprett TinyURL for nettadresser med denne lengden eller større"
+msgstr "Bare opprett TinyURL for nettadresser av denne lengden eller lengre"
 
 msgid "TinyURL (or other) address prefix"
 msgstr "TinyURL (eller andre) adressetillegg"
@@ -6896,7 +6896,7 @@ msgid ""
 "Enter the name of a Notes Address Book group in the field below to add the "
 "group and its members to your buddy list."
 msgstr ""
-"Skriv inn navnet på en adresseboknotatgruppen i feltet nedenfor, for å legge "
+"Skriv inn navnet på en adresseboknotatgruppe i feltet nedenfor, for å legge "
 "til gruppen og dens medlemmer til i kontaktlisten din."
 
 #, c-format
@@ -8633,8 +8633,8 @@ msgstr ""
 "<span size='larger' weight='bold'>Velkommen til %s!</span>\n"
 "\n"
 "Du har ikke satt opp noen lynmeldingskontoer. For å starte tilkobling til %s "
-"trykk <b>Legg til….</b>-knappen nedenfor og sett opp kontoen din først. Om "
-"du vil at %s skal koble til flere lynmeldingskontoer, trykk <b>Legg til…</b> "
+"trykk <b>Legg til…</b>-knappen nedenfor og sett opp kontoen din først. Om du "
+"vil at %s skal koble til flere lynmeldingskontoer, trykk <b>Legg til…</b> "
 "igjen for å sette opp alle sammen.\n"
 "\n"
 "Du kan komme tilbake til dette vinduet for å legge til, redigere eller "
@@ -8645,12 +8645,12 @@ msgid ""
 "<a href=\"viewinfo\">%s</a>%s%s%s wants to add you (%s) to his or her buddy "
 "list%s%s"
 msgstr ""
-"<a href=\"viewinfo\">%s</a>%s%s%s ønsker å legge deg til (%s) på i "
+"<a href=\"viewinfo\">%s</a>%s%s%s ønsker å legge deg til (%s) i sin "
 "kontaktliste%s%s"
 
 #, c-format
 msgid "%s%s%s%s wants to add you (%s) to his or her buddy list%s%s"
-msgstr "%s%s%s%s ønsker å legge deg til (%s) på sin kontaktliste%s%s"
+msgstr "%s%s%s%s ønsker å legge deg til (%s) i sin kontaktliste%s%s"
 
 msgid "Send Instant Message"
 msgstr "Send lynmelding"
@@ -12737,6 +12737,58 @@ msgid ""
 msgstr ""
 "Dette tillegget lar brukeren lage egne samtale- og loggførings -tidsstempler."
 
+msgid "Opacity:"
+msgstr "Ugjennomsiktighet:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Samtalevinduer for lynmeldinger"
+
+msgid "_IM window transparency"
+msgstr "Gjennomsiktige vinduer for lynmeldinger"
+
+msgid "_Show slider bar in IM window"
+msgstr "Vis _glideknapp i lynmeldingsvindu"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Fjern gjennomsektighet fra lynmeldingsvindu ved fokus"
+
+msgid "Always on top"
+msgstr "Alltid øverst"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Kontaktlistevindu"
+
+msgid "_Buddy List window transparency"
+msgstr "Gjennomsiktighet for kontaktlistevindu"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Fjern gjennomsiktighet fra kontaktlistevindu ved fokus"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Gjennomsiktighet"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Variabel gjennomsiktighet for kontaktlisten og samtaler."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Dette programtillegget gir variabel alfa-transparens i samtalevindu og "
+"kontaktlisten."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Samtalevarsler"
@@ -12847,58 +12899,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Sett opp mikrofonen din og nettkamera-innstillinger for stemme/"
 "videosamtaler. "
-
-msgid "Opacity:"
-msgstr "Ugjennomsiktighet:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Samtalevinduer for lynmeldinger"
-
-msgid "_IM window transparency"
-msgstr "Gjennomsiktige vinduer for lynmeldinger"
-
-msgid "_Show slider bar in IM window"
-msgstr "Vis _glideknapp i lynmeldingsvindu"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Fjern gjennomsektighet fra lynmeldingsvindu ved fokus"
-
-msgid "Always on top"
-msgstr "Alltid øverst"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Kontaktlistevindu"
-
-msgid "_Buddy List window transparency"
-msgstr "Gjennomsiktighet for kontaktlistevindu"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Fjern gjennomsiktighet fra kontaktlistevindu ved fokus"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Gjennomsiktighet"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Variabel gjennomsiktighet for kontaktlisten og samtaler."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Dette programtillegget gir variabel alfa-transparens i samtalevindu og "
-"kontaktlisten."
 
 #. Autostart
 msgid "Startup"

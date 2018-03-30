@@ -10,9 +10,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:55-0600\n"
-"PO-Revision-Date: 2016-10-26 06:26+0000\n"
-"Last-Translator: Cfpo Miègjorn-Pirenèus <formacion@cfpoc.net>\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 19:10+0000\n"
+"Last-Translator: Cfpo Miègjorn-Pirenèus <inactive+cfpomp@transifex.com>\n"
 "Language-Team: Occitan (post 1500) (http://www.transifex.com/pidgin/pidgin/"
 "language/oc/)\n"
 "Language: oc\n"
@@ -12818,6 +12818,56 @@ msgstr ""
 "Permet a l'utilizaire de personalizar dins las conversacions e los archius "
 "lo biais qu'es afichat l'orodatatge."
 
+msgid "Opacity:"
+msgstr "Opacitat :"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Fenèstras de conversacion"
+
+msgid "_IM window transparency"
+msgstr "Fenèstra de _conversacion transparenta"
+
+msgid "_Show slider bar in IM window"
+msgstr "Afichar la barra de desfilament dins la fenèstra"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Suprimir la transparéncia per las fenèstras de conversacion activas"
+
+msgid "Always on top"
+msgstr "Totjorn visible"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Fenèstra de la lista de contactes"
+
+msgid "_Buddy List window transparency"
+msgstr "Fenèstra de la lista de _contactes transparenta"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Suprimir la transparéncia quand la lista dels contactes es activa"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Transparéncia"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Transparéncia variabla per la lista de contactes e las conversacions."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Alèrtas de salons de discussion"
@@ -12933,56 +12983,6 @@ msgstr "Configura vòstre micrò e vòstra webcam."
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "Permet de configurar lo material pels messatges amb votz e vidèo."
-
-msgid "Opacity:"
-msgstr "Opacitat :"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Fenèstras de conversacion"
-
-msgid "_IM window transparency"
-msgstr "Fenèstra de _conversacion transparenta"
-
-msgid "_Show slider bar in IM window"
-msgstr "Afichar la barra de desfilament dins la fenèstra"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Suprimir la transparéncia per las fenèstras de conversacion activas"
-
-msgid "Always on top"
-msgstr "Totjorn visible"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Fenèstra de la lista de contactes"
-
-msgid "_Buddy List window transparency"
-msgstr "Fenèstra de la lista de _contactes transparenta"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Suprimir la transparéncia quand la lista dels contactes es activa"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Transparéncia"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Transparéncia variabla per la lista de contactes e las conversacions."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

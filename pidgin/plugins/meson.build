@@ -19,7 +19,6 @@ subdir('ticker')
 
 if IS_WIN32
 	subdir('win32/winprefs')
-	subdir('win32/transparency')
 endif
 
 if PLUGINS

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:54-0600\n"
-"PO-Revision-Date: 2017-01-07 18:34+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 14:23+0000\n"
 "Last-Translator: Kevin Scannell <kscanne@gmail.com>\n"
 "Language-Team: Irish (http://www.transifex.com/pidgin/pidgin/language/ga/)\n"
 "Language: ga\n"
@@ -12933,6 +12933,59 @@ msgstr ""
 "Ligeann an breiseán seo don úsáideoir formáid na stampaí ama i gcomhráite "
 "agus i logchomhaid a shaincheapadh."
 
+msgid "Opacity:"
+msgstr "Teimhneacht:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Fuinneoga Comhrá TM"
+
+msgid "_IM window transparency"
+msgstr "Trédhearcacht na fuinneoige _TM"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Taispeáin barra sleamhnáin san fhuinneog TM"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Bain trédhearcacht den fhuinneog TM nuair a bhíonn sí i bhfócas"
+
+msgid "Always on top"
+msgstr "Chun tosaigh i gcónaí"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Fuinneog an Liosta Cairde"
+
+msgid "_Buddy List window transparency"
+msgstr "Trédhearcacht _fhuinneog an liosta cairde"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr ""
+"Bain trédhearcacht d'fhuinneog an Liosta Cairde nuair a bhíonn sí i bhfócas"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Trédhearcacht"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Trédhearcacht Athraitheach don liosta cairde agus do chomhráite."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Cumasaíonn an breiseán seo trédhearcacht inathraitheach alfa i bhfuinneoga "
+"comhrá agus sa liosta cairde."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Foláirimh seomra comhrá"
@@ -13047,59 +13100,6 @@ msgstr "Cumraigh do mhicreafón agus do cheamara."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Cumraigh an micreafón agus an ceamara Gréasáin i gcomhair glaonna gutha/físe."
-
-msgid "Opacity:"
-msgstr "Teimhneacht:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Fuinneoga Comhrá TM"
-
-msgid "_IM window transparency"
-msgstr "Trédhearcacht na fuinneoige _TM"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Taispeáin barra sleamhnáin san fhuinneog TM"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Bain trédhearcacht den fhuinneog TM nuair a bhíonn sí i bhfócas"
-
-msgid "Always on top"
-msgstr "Chun tosaigh i gcónaí"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Fuinneog an Liosta Cairde"
-
-msgid "_Buddy List window transparency"
-msgstr "Trédhearcacht _fhuinneog an liosta cairde"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr ""
-"Bain trédhearcacht d'fhuinneog an Liosta Cairde nuair a bhíonn sí i bhfócas"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Trédhearcacht"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Trédhearcacht Athraitheach don liosta cairde agus do chomhráite."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Cumasaíonn an breiseán seo trédhearcacht inathraitheach alfa i bhfuinneoga "
-"comhrá agus sa liosta cairde."
 
 #. Autostart
 msgid "Startup"

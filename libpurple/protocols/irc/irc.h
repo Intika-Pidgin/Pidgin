@@ -53,7 +53,8 @@
 
 #define IRC_DEFAULT_QUIT "Leaving."
 
-#define IRC_INITIAL_BUFSIZE 1024
+#define IRC_BUFSIZE_INCREMENT 1024
+#define IRC_MAX_BUFSIZE 16384
 
 #define IRC_MAX_MSG_SIZE 512
 
@@ -203,6 +204,7 @@ void irc_msg_who(struct irc_conn *irc, const char *name, const char *from, char 
 #ifdef HAVE_CYRUS_SASL
 void irc_msg_cap(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_auth(struct irc_conn *irc, char *arg);
+void irc_msg_authenticate(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_authok(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_authtryagain(struct irc_conn *irc, const char *name, const char *from, char **args);
 void irc_msg_authfail(struct irc_conn *irc, const char *name, const char *from, char **args);
