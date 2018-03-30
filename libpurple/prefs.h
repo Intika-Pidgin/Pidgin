@@ -1,8 +1,3 @@
-/**
- * @file prefs.h Prefs API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -24,57 +19,76 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+
 #ifndef _PURPLE_PREFS_H_
 #define _PURPLE_PREFS_H_
+/**
+ * SECTION:prefs
+ * @section_id: libpurple-prefs
+ * @short_description: <filename>prefs.h</filename>
+ * @title: Preferences API
+ */
 
 #include <glib.h>
 
 /**
+ * PurplePrefType:
+ * @PURPLE_PREF_NONE:        No type.
+ * @PURPLE_PREF_BOOLEAN:     Boolean.
+ * @PURPLE_PREF_INT:         Integer.
+ * @PURPLE_PREF_STRING:      String.
+ * @PURPLE_PREF_STRING_LIST: List of strings.
+ * @PURPLE_PREF_PATH:        Path.
+ * @PURPLE_PREF_PATH_LIST:   List of paths.
+ *
  * Preference data types.
  */
-typedef enum _PurplePrefType
+typedef enum
 {
-	PURPLE_PREF_NONE,        /**< No type.         */
-	PURPLE_PREF_BOOLEAN,     /**< Boolean.         */
-	PURPLE_PREF_INT,         /**< Integer.         */
-	PURPLE_PREF_STRING,      /**< String.          */
-	PURPLE_PREF_STRING_LIST, /**< List of strings. */
-	PURPLE_PREF_PATH,        /**< Path.            */
-	PURPLE_PREF_PATH_LIST    /**< List of paths.   */
+	PURPLE_PREF_NONE,
+	PURPLE_PREF_BOOLEAN,
+	PURPLE_PREF_INT,
+	PURPLE_PREF_STRING,
+	PURPLE_PREF_STRING_LIST,
+	PURPLE_PREF_PATH,
+	PURPLE_PREF_PATH_LIST
 
 } PurplePrefType;
 
 /**
- * The type of callbacks for preference changes.
- *
- * @param name the name of the preference which has changed.
- * @param type the type of the preferenced named @a name
- * @param val  the new value of the preferencs; should be cast to the correct
+ * PurplePrefCallback:
+ * @name: the name of the preference which has changed.
+ * @type: the type of the preferenced named @name
+ * @val:  the new value of the preferencs; should be cast to the correct
  *             type.  For instance, to recover the value of a #PURPLE_PREF_INT
- *             preference, use <tt>GPOINTER_TO_INT(val)</tt>.  Alternatively,
- *             just call purple_prefs_get_int(), purple_prefs_get_string_list()
- *             etc.
- * @param data Arbitrary data specified when the callback was connected with
+ *             preference, use <literal>GPOINTER_TO_INT(val)</literal>.
+ *             Alternatively, just call purple_prefs_get_int(),
+ *             purple_prefs_get_string_list() etc.
+ * @data: Arbitrary data specified when the callback was connected with
  *             purple_prefs_connect_callback().
  *
- * @see purple_prefs_connect_callback()
+ * The type of callbacks for preference changes.
+ *
+ * See purple_prefs_connect_callback().
  */
 typedef void (*PurplePrefCallback) (const char *name, PurplePrefType type,
 		gconstpointer val, gpointer data);
 
 /**
+ * PurplePrefCallbackData:
+ *
  * Opaque type to carry callback information
  *
- * @since 2.11.0
+ * Since: 2.11.0
  */
 typedef struct _PurplePrefCallbackData PurplePrefCallbackData;
-
 
 /** @copydoc _PurplePrefsUiOps */
 typedef struct _PurplePrefsUiOps PurplePrefsUiOps;
 
-
 /**
+ * PurplePrefsUiOps:
+ *
  * Prefs UI operations. This allows overriding the prefs.xml storage with
  * anything else. 
  *
@@ -82,7 +96,7 @@ typedef struct _PurplePrefsUiOps PurplePrefsUiOps;
  * corresponding purple_prefs_* method, and disables the prefs.xml code for it.
  * This means that to do anything useful, all the methods must be implemented.
  *
- * @since 2.11.0
+ * Since: 2.11.0
  */
 struct _PurplePrefsUiOps
 {
@@ -116,141 +130,155 @@ struct _PurplePrefsUiOps
 	void (*schedule_save)(void);
 
 	/**
+	 * connect_callback:
+	 * @name: The preference name.
+	 * @data: The object to be passed when triggering the callback
+	 *
 	 * Called when a callback is added to a preference. The UI must keep
 	 * track of it and call #purple_prefs_trigger_callback_object with the
 	 * data attribute.
 	 *
-	 * @param name The preference name.
-	 * @param data The object to be passed when triggering the callback
-	 * @return A pointer to a ui_data object.
-	 * */
+	 * Returns: A pointer to a ui_data object.
+	 */
 	void *(*connect_callback)(const char *name, PurplePrefCallbackData *data);
 
 	/**
+	 * disconnect_callback:
+	 * @name The preference name
+	 * @ui_data The object that was returned from the connect_callback UI OP.
+	 *
 	 * Called when a callback is removed from a preference. The ui_data
 	 * object is the one returned from connect_callback.
-	 *
-	 * @param name The preference name
-	 * @param ui_data The object that was returned from the
-	 * connect_callback UI OP.
-	 * */
+	 */
 	void (*disconnect_callback)(const char *name, void *ui_data);
 
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
 	void (*_purple_reserved4)(void);
-	void (*_purple_reserved5)(void);
 };
 
+G_BEGIN_DECLS
 
+/******************************************************************************
+ * UI Registration Functions
+ *****************************************************************************/
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**************************************************************************/
-/** @name UI Registration Functions                                       */
-/**************************************************************************/
-/*@{*/
 /**
+ * purple_prefs_set_ui_ops:
+ * @ops: The UI operations structure.
+ *
  * Sets the UI operations structure to be used for preferences.
  *
- * @param ops The UI operations structure.
- * @since 2.11.0
+ * Since: 2.11.0
  */
 void purple_prefs_set_ui_ops(PurplePrefsUiOps *ops);
 
 /**
+ * purple_prefs_get_ui_ops:
+ *
  * Returns the UI operations structure used for preferences.
  *
- * @return The UI operations structure in use.
- * @since 2.11.0
+ * Returns: (transfer none): The UI operations structure in use.
+ *
+ * Since: 2.11.0
  */
 PurplePrefsUiOps *purple_prefs_get_ui_ops(void);
 
-/*@}*/
-
 /**************************************************************************/
-/** @name Prefs API
+/*  Prefs API
     Preferences are named according to a directory-like structure.
     Example: "/plugins/core/potato/is_from_idaho" (probably a boolean)    */
 /**************************************************************************/
-/*@{*/
 
 /**
+ * purple_prefs_get_handle:
+ *
  * Returns the prefs subsystem handle.
  *
- * @return The prefs subsystem handle.
+ * Returns: The prefs subsystem handle.
  */
 void *purple_prefs_get_handle(void);
 
 /**
+ * purple_prefs_init:
+ *
  * Initialize core prefs
  */
 void purple_prefs_init(void);
 
 /**
+ * purple_prefs_uninit:
+ *
  * Uninitializes the prefs subsystem.
  */
 void purple_prefs_uninit(void);
 
 /**
- * Add a new typeless pref.
+ * purple_prefs_add_none:
+ * @name:  The name of the pref
  *
- * @param name  The name of the pref
+ * Add a new typeless pref.
  */
 void purple_prefs_add_none(const char *name);
 
 /**
- * Add a new boolean pref.
+ * purple_prefs_add_bool:
+ * @name:  The name of the pref
+ * @value: The initial value to set
  *
- * @param name  The name of the pref
- * @param value The initial value to set
+ * Add a new boolean pref.
  */
 void purple_prefs_add_bool(const char *name, gboolean value);
 
 /**
- * Add a new integer pref.
+ * purple_prefs_add_int:
+ * @name:  The name of the pref
+ * @value: The initial value to set
  *
- * @param name  The name of the pref
- * @param value The initial value to set
+ * Add a new integer pref.
  */
 void purple_prefs_add_int(const char *name, int value);
 
 /**
- * Add a new string pref.
+ * purple_prefs_add_string:
+ * @name:  The name of the pref
+ * @value: The initial value to set
  *
- * @param name  The name of the pref
- * @param value The initial value to set
+ * Add a new string pref.
  */
 void purple_prefs_add_string(const char *name, const char *value);
 
 /**
+ * purple_prefs_add_string_list:
+ * @name:  The name of the pref
+ * @value: (element-type utf8) (transfer none): The initial value to set
+ *
  * Add a new string list pref.
  *
- * @param name  The name of the pref
- * @param value The initial value to set
- * @note This function takes a copy of the strings in the value list. The list
+ * Note: This function takes a copy of the strings in the value list. The list
  *       itself and original copies of the strings are up to the caller to
  *       free.
  */
 void purple_prefs_add_string_list(const char *name, GList *value);
 
 /**
- * Add a new path pref.
+ * purple_prefs_add_path:
+ * @name:  The name of the pref
+ * @value: The initial value to set
  *
- * @param name  The name of the pref
- * @param value The initial value to set
+ * Add a new path pref.
  */
 void purple_prefs_add_path(const char *name, const char *value);
 
 /**
+ * purple_prefs_add_path_list:
+ * @name:  The name of the pref
+ * @value: (element-type utf8) (transfer none): The initial value to set
+ *
  * Add a new path list pref.
  *
- * @param name  The name of the pref
- * @param value The initial value to set
- * @note This function takes a copy of the strings in the value list. The list
+ * Note: This function takes a copy of the strings in the value list. The list
  *       itself and original copies of the strings are up to the caller to
  *       free.
  */
@@ -258,228 +286,239 @@ void purple_prefs_add_path_list(const char *name, GList *value);
 
 
 /**
- * Remove a pref.
+ * purple_prefs_remove:
+ * @name: The name of the pref
  *
- * @param name The name of the pref
+ * Remove a pref.
  */
 void purple_prefs_remove(const char *name);
 
 /**
- * Rename a pref
+ * purple_prefs_rename:
+ * @oldname: The old name of the pref
+ * @newname: The new name for the pref
  *
- * @param oldname The old name of the pref
- * @param newname The new name for the pref
+ * Rename a pref
  */
 void purple_prefs_rename(const char *oldname, const char *newname);
 
 /**
- * Rename a boolean pref, toggling it's value
+ * purple_prefs_rename_boolean_toggle:
+ * @oldname: The old name of the pref
+ * @newname: The new name for the pref
  *
- * @param oldname The old name of the pref
- * @param newname The new name for the pref
+ * Rename a boolean pref, toggling it's value
  */
 void purple_prefs_rename_boolean_toggle(const char *oldname, const char *newname);
 
 /**
+ * purple_prefs_destroy:
+ *
  * Remove all prefs.
  */
 void purple_prefs_destroy(void);
 
 /**
- * Set raw pref value
+ * purple_prefs_set_bool:
+ * @name:  The name of the pref
+ * @value: The value to set
  *
- * @param name  The name of the pref
- * @param value The value to set
- *
- * @deprecated We're not really sure what purpose this function serves, so it
- *             will be removed in 3.0.0.  Preferences values set using this
- *             function aren't serialized to prefs.xml, which could be
- *             misleading.  There is also no purple_prefs_get_generic, which
- *             means that if you can't really get the value (other in a
- *             connected callback).  If you think you have a use for this then
- *             please let us know.
- */
-/* TODO: When this is removed, also remove struct purple_pref->value.generic */
-void purple_prefs_set_generic(const char *name, gpointer value);
-
-/**
  * Set boolean pref value
- *
- * @param name  The name of the pref
- * @param value The value to set
  */
 void purple_prefs_set_bool(const char *name, gboolean value);
 
 /**
- * Set integer pref value
+ * purple_prefs_set_int:
+ * @name:  The name of the pref
+ * @value: The value to set
  *
- * @param name  The name of the pref
- * @param value The value to set
+ * Set integer pref value
  */
 void purple_prefs_set_int(const char *name, int value);
 
 /**
- * Set string pref value
+ * purple_prefs_set_string:
+ * @name:  The name of the pref
+ * @value: The value to set
  *
- * @param name  The name of the pref
- * @param value The value to set
+ * Set string pref value
  */
 void purple_prefs_set_string(const char *name, const char *value);
 
 /**
- * Set string list pref value
+ * purple_prefs_set_string_list:
+ * @name:  The name of the pref
+ * @value: (element-type utf8) (transfer none): The value to set
  *
- * @param name  The name of the pref
- * @param value The value to set
+ * Set string list pref value
  */
 void purple_prefs_set_string_list(const char *name, GList *value);
 
 /**
- * Set path pref value
+ * purple_prefs_set_path:
+ * @name:  The name of the pref
+ * @value: The value to set
  *
- * @param name  The name of the pref
- * @param value The value to set
+ * Set path pref value
  */
 void purple_prefs_set_path(const char *name, const char *value);
 
 /**
- * Set path list pref value
+ * purple_prefs_set_path_list:
+ * @name:  The name of the pref
+ * @value: (element-type utf8) (transfer none): The value to set
  *
- * @param name  The name of the pref
- * @param value The value to set
+ * Set path list pref value
  */
 void purple_prefs_set_path_list(const char *name, GList *value);
 
 
 /**
+ * purple_prefs_exists:
+ * @name: The name of the pref
+ *
  * Check if a pref exists
  *
- * @param name The name of the pref
- * @return TRUE if the pref exists.  Otherwise FALSE.
+ * Returns: TRUE if the pref exists.  Otherwise FALSE.
  */
 gboolean purple_prefs_exists(const char *name);
 
 /**
+ * purple_prefs_get_pref_type:
+ * @name: The name of the pref
+ *
  * Get pref type
  *
- * @param name The name of the pref
- * @return The type of the pref
+ * Returns: The type of the pref
  */
-PurplePrefType purple_prefs_get_type(const char *name);
+PurplePrefType purple_prefs_get_pref_type(const char *name);
 
 /**
+ * purple_prefs_get_bool:
+ * @name: The name of the pref
+ *
  * Get boolean pref value
  *
- * @param name The name of the pref
- * @return The value of the pref
+ * Returns: The value of the pref
  */
 gboolean purple_prefs_get_bool(const char *name);
 
 /**
+ * purple_prefs_get_int:
+ * @name: The name of the pref
+ *
  * Get integer pref value
  *
- * @param name The name of the pref
- * @return The value of the pref
+ * Returns: The value of the pref
  */
 int purple_prefs_get_int(const char *name);
 
 /**
+ * purple_prefs_get_string:
+ * @name: The name of the pref
+ *
  * Get string pref value
  *
- * @param name The name of the pref
- * @return The value of the pref
+ * Returns: The value of the pref
  */
 const char *purple_prefs_get_string(const char *name);
 
 /**
+ * purple_prefs_get_string_list:
+ * @name: The name of the pref
+ *
  * Get string list pref value
  *
- * @param name The name of the pref
- * @return The value of the pref
+ * Returns: (element-type utf8): The value of the pref
  */
 GList *purple_prefs_get_string_list(const char *name);
 
 /**
+ * purple_prefs_get_path:
+ * @name: The name of the pref
+ *
  * Get path pref value
  *
- * @param name The name of the pref
- * @return The value of the pref
+ * Returns: The value of the pref
  */
 const char *purple_prefs_get_path(const char *name);
 
 /**
+ * purple_prefs_get_path_list:
+ * @name: The name of the pref
+ *
  * Get path list pref value
  *
- * @param name The name of the pref
- * @return The value of the pref
+ * Returns: (element-type utf8): The value of the pref
  */
 GList *purple_prefs_get_path_list(const char *name);
 
 /**
+ * purple_prefs_get_children_names:
+ * @name: The parent pref
+ *
  * Returns a list of children for a pref
  *
- * @param name The parent pref
- * @return A list of newly allocated strings denoting the names of the children.
- *         Returns @c NULL if there are no children or if pref doesn't exist.
- *         The caller must free all the strings and the list.
- *
- * @since 2.1.0
+ * Returns: (element-type utf8): A list of newly allocated strings denoting the
+ *          names of the children. Returns %NULL if there are no children or if
+ *          pref doesn't exist. The caller must free all the strings and the list.
  */
 GList *purple_prefs_get_children_names(const char *name);
 
 /**
+ * purple_prefs_connect_callback:
+ * @handle:   The handle of the receiver.
+ * @name:     The name of the preference
+ * @cb:       (scope call): The callback function
+ * @data:     The data to pass to the callback function.
+ *
  * Add a callback to a pref (and its children)
  *
- * @param handle   The handle of the receiver.
- * @param name     The name of the preference
- * @param cb       The callback function
- * @param data     The data to pass to the callback function.
+ * See purple_prefs_disconnect_callback().
  *
- * @return An id to disconnect the callback
- *
- * @see purple_prefs_disconnect_callback
+ * Returns: An id to disconnect the callback
  */
 guint purple_prefs_connect_callback(void *handle, const char *name, PurplePrefCallback cb,
 		gpointer data);
 
 /**
+ * purple_prefs_disconnect_callback:
+ *
  * Remove a callback to a pref
  */
 void purple_prefs_disconnect_callback(guint callback_id);
 
 /**
+ * purple_prefs_disconnect_by_handle:
+ *
  * Remove all pref callbacks by handle
  */
 void purple_prefs_disconnect_by_handle(void *handle);
 
 /**
+ * purple_prefs_trigger_callback:
+ *
  * Trigger callbacks as if the pref changed
  */
 void purple_prefs_trigger_callback(const char *name);
 
 /**
+ * purple_prefs_trigger_callback_object:
+ *
  * Trigger callbacks as if the pref changed, taking a #PurplePrefCallbackData
  * instead of a name
  *
- * @since 2.11.0
+ * Since: 2.11.0
  */
 void purple_prefs_trigger_callback_object(PurplePrefCallbackData *data);
 
-
 /**
+ * purple_prefs_load:
+ *
  * Read preferences
  */
 gboolean purple_prefs_load(void);
 
-/**
- * Rename legacy prefs and delete some that no longer exist.
- */
-void purple_prefs_update_old(void);
-
-/*@}*/
-
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_PREFS_H_ */

@@ -47,6 +47,12 @@ oscar_data_new(void)
 	od->buddyinfo = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	od->handlerlist = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, g_free);
 
+	od->ssi.local.idx_gid_bid = g_hash_table_new(g_direct_hash, g_direct_equal);
+	od->ssi.local.idx_all_named_items = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+
+	od->ssi.official.idx_gid_bid = g_hash_table_new(g_direct_hash, g_direct_equal);
+	od->ssi.official.idx_all_named_items = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+
 	/*
 	 * Register all the modules for this session...
 	 */
@@ -100,8 +106,7 @@ oscar_data_destroy(OscarData *od)
 	aim_cleansnacs(od, -1);
 
 	/* Only used when connecting with clientLogin */
-	if (od->url_data != NULL)
-		purple_util_fetch_url_cancel(od->url_data);
+	purple_http_conn_cancel(od->hc);
 
 	while (od->requesticon)
 	{
@@ -112,7 +117,7 @@ oscar_data_destroy(OscarData *od)
 	g_free(od->newp);
 	g_free(od->oldp);
 	if (od->getblisttimer > 0)
-		purple_timeout_remove(od->getblisttimer);
+		g_source_remove(od->getblisttimer);
 	while (od->oscar_connections != NULL)
 		flap_connection_destroy(od->oscar_connections->data,
 				OSCAR_DISCONNECT_DONE, NULL);
@@ -125,6 +130,12 @@ oscar_data_destroy(OscarData *od)
 
 	g_hash_table_destroy(od->buddyinfo);
 	g_hash_table_destroy(od->handlerlist);
+
+	g_hash_table_destroy(od->ssi.local.idx_gid_bid);
+	g_hash_table_destroy(od->ssi.local.idx_all_named_items);
+
+	g_hash_table_destroy(od->ssi.official.idx_gid_bid);
+	g_hash_table_destroy(od->ssi.official.idx_all_named_items);
 
 	g_free(od);
 }

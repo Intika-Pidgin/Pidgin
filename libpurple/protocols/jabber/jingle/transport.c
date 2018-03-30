@@ -42,8 +42,10 @@ static void jingle_transport_init (JingleTransport *transport);
 static void jingle_transport_finalize (GObject *object);
 static void jingle_transport_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
 static void jingle_transport_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-JingleTransport *jingle_transport_parse_internal(xmlnode *transport);
-xmlnode *jingle_transport_to_xml_internal(JingleTransport *transport, xmlnode *content, JingleActionType action);
+JingleTransport *jingle_transport_parse_internal(PurpleXmlNode *transport);
+PurpleXmlNode *jingle_transport_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
+static void jingle_transport_add_local_candidate_internal(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate);
+static GList *jingle_transport_get_remote_candidates_internal(JingleTransport *transport);
 
 static GObjectClass *parent_class = NULL;
 
@@ -51,28 +53,7 @@ enum {
 	PROP_0,
 };
 
-GType
-jingle_transport_get_type()
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(JingleTransportClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) jingle_transport_class_init,
-			NULL,
-			NULL,
-			sizeof(JingleTransport),
-			0,
-			(GInstanceInitFunc) jingle_transport_init,
-			NULL
-		};
-		type = g_type_register_static(G_TYPE_OBJECT, "JingleTransport", &info, 0);
-	}
-	return type;
-}
+PURPLE_DEFINE_TYPE(JingleTransport, jingle_transport, G_TYPE_OBJECT);
 
 static void
 jingle_transport_class_init (JingleTransportClass *klass)
@@ -85,6 +66,8 @@ jingle_transport_class_init (JingleTransportClass *klass)
 	gobject_class->get_property = jingle_transport_get_property;
 	klass->to_xml = jingle_transport_to_xml_internal;
 	klass->parse = jingle_transport_parse_internal;
+	klass->add_local_candidate = jingle_transport_add_local_candidate_internal;
+	klass->get_remote_candidates = jingle_transport_get_remote_candidates_internal;
 
 	g_type_class_add_private(klass, sizeof(JingleTransportPrivate));
 }
@@ -108,7 +91,7 @@ jingle_transport_finalize (GObject *transport)
 static void
 jingle_transport_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-	g_return_if_fail(object != NULL);
+	g_return_if_fail(G_IS_OBJECT(object));
 	g_return_if_fail(JINGLE_IS_TRANSPORT(object));
 
 	switch (prop_id) {
@@ -121,7 +104,7 @@ jingle_transport_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 jingle_transport_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-	g_return_if_fail(object != NULL);
+	g_return_if_fail(G_IS_OBJECT(object));
 	g_return_if_fail(JINGLE_IS_TRANSPORT(object));
 
 	switch (prop_id) {
@@ -143,25 +126,51 @@ jingle_transport_get_transport_type(JingleTransport *transport)
 	return JINGLE_TRANSPORT_GET_CLASS(transport)->transport_type;
 }
 
-JingleTransport *
-jingle_transport_parse_internal(xmlnode *transport)
+void
+jingle_transport_add_local_candidate(JingleTransport *transport, const gchar *id,
+                                     guint generation, PurpleMediaCandidate *candidate)
 {
-	const gchar *type = xmlnode_get_namespace(transport);
+	JINGLE_TRANSPORT_GET_CLASS(transport)->add_local_candidate(transport, id,
+	                                                           generation, candidate);
+}
+
+void
+jingle_transport_add_local_candidate_internal(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate)
+{
+	/* Nothing to do */
+}
+
+GList *
+jingle_transport_get_remote_candidates(JingleTransport *transport)
+{
+	return JINGLE_TRANSPORT_GET_CLASS(transport)->get_remote_candidates(transport);
+}
+
+static GList *
+jingle_transport_get_remote_candidates_internal(JingleTransport *transport)
+{
+	return NULL;
+}
+
+JingleTransport *
+jingle_transport_parse_internal(PurpleXmlNode *transport)
+{
+	const gchar *type = purple_xmlnode_get_namespace(transport);
 	return jingle_transport_create(type);
 }
 
-xmlnode *
-jingle_transport_to_xml_internal(JingleTransport *transport, xmlnode *content, JingleActionType action)
+PurpleXmlNode *
+jingle_transport_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action)
 {
-	xmlnode *node = xmlnode_new_child(content, "transport");
-	xmlnode_set_namespace(node, jingle_transport_get_transport_type(transport));
+	PurpleXmlNode *node = purple_xmlnode_new_child(content, "transport");
+	purple_xmlnode_set_namespace(node, jingle_transport_get_transport_type(transport));
 	return node;
 }
 
 JingleTransport *
-jingle_transport_parse(xmlnode *transport)
+jingle_transport_parse(PurpleXmlNode *transport)
 {
-	const gchar *type_name = xmlnode_get_namespace(transport);
+	const gchar *type_name = purple_xmlnode_get_namespace(transport);
 	GType type = jingle_get_type(type_name);
 	if (type == G_TYPE_NONE)
 		return NULL;
@@ -169,8 +178,8 @@ jingle_transport_parse(xmlnode *transport)
 	return JINGLE_TRANSPORT_CLASS(g_type_class_ref(type))->parse(transport);
 }
 
-xmlnode *
-jingle_transport_to_xml(JingleTransport *transport, xmlnode *content, JingleActionType action)
+PurpleXmlNode *
+jingle_transport_to_xml(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action)
 {
 	g_return_val_if_fail(transport != NULL, NULL);
 	g_return_val_if_fail(JINGLE_IS_TRANSPORT(transport), NULL);

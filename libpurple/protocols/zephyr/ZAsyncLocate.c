@@ -103,7 +103,7 @@ Code_t ZParseLocations(notice,zald,nlocs,user)
       if (!__locate_list)
 	return (ENOMEM);
     } else {
-      __locate_list = 0;
+      __locate_list = NULL;
     }
 
     for (ptr=notice->z_message, i=0; i<__locate_num; i++) {
@@ -163,7 +163,7 @@ void ZFreeALD(zald)
 {
    if (!zald) return;
 
-   if (zald->user) free(zald->user);
-   if (zald->version) free(zald->version);
+   free(zald->user);
+   free(zald->version);
    (void) memset(zald, 0, sizeof(*zald));
 }

@@ -1,8 +1,3 @@
-/**
- * @file gtkstyle.h GTK+ Style utility functions
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -23,6 +18,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
+/**
+ * SECTION:gtkstyle
+ * @section_id: pidgin-gtkstyle
+ * @short_description: <filename>gtkstyle.h</filename>
+ * @title: Style API
+ */
+
 #ifndef _PIDGINSTYLE_H_
 #define _PIDGINSTYLE_H_
 
@@ -30,29 +33,26 @@
 
 G_BEGIN_DECLS
 
-/*@{*/
-
 /**
- * Returns TRUE if dark mode is enabled and foreground colours should be invertred
+ * pidgin_style_is_dark:
+ * @style: The GtkStyle in use, or NULL to use a cached version.
  *
- * @param style The GtkStyle in use, or NULL to use a cached version.
+ * Returns whether or not dark mode is enabled.
  *
- * @return @c TRUE if dark mode, @c FALSE otherwise
+ * Returns: TRUE if dark mode is enabled and foreground colours should be invertred
  */
 
 gboolean pidgin_style_is_dark(GtkStyle *style);
 
 /**
+ * pidgin_style_adjust_contrast:
+ * @style: The GtkStyle in use.
+ * @color: Color to be lightened. Transformed color will be written here.
+ *
  * Lighten a color if dark mode is enabled.
- *
- * @param style The GtkStyle in use.
- *
- * @param color Color to be lightened. Transformed color will be written here.
  */
 
 void pidgin_style_adjust_contrast(GtkStyle *style, GdkColor *color);
-
-/*@}*/
 
 G_END_DECLS
 

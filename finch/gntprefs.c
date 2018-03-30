@@ -1,8 +1,3 @@
-/**
- * @file gntprefs.c GNT Preferences API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -41,6 +36,7 @@ static struct {
 	GList *freestrings;  /* strings to be freed when the pref-window is closed */
 	gboolean showing;
 	GntWidget *window;
+	GntWidget *keyring_window;
 } pref_request;
 
 void finch_prefs_init()
@@ -62,14 +58,6 @@ void finch_prefs_init()
 
 void finch_prefs_update_old()
 {
-	const char *str = NULL;
-
-	purple_prefs_rename("/gaim/gnt", "/finch");
-	purple_prefs_rename("/purple/gnt", "/finch");
-
-	if ((str = purple_prefs_get_string("/purple/away/idle_reporting")) &&
-			purple_strequal(str, "gaim"))
-		purple_prefs_set_string("/purple/away/idle_reporting", "purple");
 }
 
 typedef struct
@@ -131,7 +119,7 @@ get_pref_field(Prefs *prefs)
 				break;
 			case PURPLE_PREF_INT:
 				field = purple_request_field_int_new(prefs->pref, _(prefs->label),
-						purple_prefs_get_int(prefs->pref));
+						purple_prefs_get_int(prefs->pref), INT_MIN, INT_MAX);
 				break;
 			case PURPLE_PREF_STRING:
 				field = purple_request_field_string_new(prefs->pref, _(prefs->label),
@@ -205,6 +193,12 @@ static Prefs logging[] =
 	{PURPLE_PREF_NONE, NULL, NULL, NULL},
 };
 
+static Prefs keyring[] =
+{
+	{PURPLE_PREF_STRING, "/purple/keyring/active", N_("Active keyring"), purple_keyring_get_options},
+	{PURPLE_PREF_NONE, NULL, NULL, NULL}
+};
+
 static Prefs idle[] =
 {
 	{PURPLE_PREF_STRING, "/purple/away/idle_reporting", N_("Report Idle time"), get_idle_options},
@@ -256,17 +250,58 @@ void finch_prefs_show_all()
 		return;
 	}
 
+	if (pref_request.keyring_window != NULL)
+		purple_request_close(PURPLE_REQUEST_FIELDS,
+			pref_request.keyring_window);
+
 	fields = purple_request_fields_new();
 
 	add_pref_group(fields, _("Buddy List"), blist);
 	add_pref_group(fields, _("Conversations"), convs);
+	add_pref_group(fields, _("Keyring"), keyring);
 	add_pref_group(fields, _("Logging"), logging);
 	add_pref_group(fields, _("Idle"), idle);
 
 	pref_request.showing = TRUE;
 	pref_request.window = purple_request_fields(NULL, _("Preferences"), NULL, NULL, fields,
 			_("Save"), G_CALLBACK(save_cb), _("Cancel"), free_strings,
-			NULL, NULL, NULL,
-			NULL);
+			NULL, NULL);
 }
 
+static void
+finch_prefs_keyring_save(void *data, PurpleRequestFields *fields)
+{
+	pref_request.keyring_window = NULL;
+
+	purple_keyring_apply_settings(NULL, fields);
+}
+
+static void
+finch_prefs_keyring_cancel(void)
+{
+	pref_request.keyring_window = NULL;
+}
+
+void finch_prefs_show_keyring(void)
+{
+	PurpleRequestFields *fields;
+
+	if (pref_request.keyring_window != NULL) {
+		gnt_window_present(pref_request.keyring_window);
+		return;
+	}
+
+	fields = purple_keyring_read_settings();
+	if (fields == NULL) {
+		purple_notify_info(NULL, _("Keyring settings"),
+			_("Selected keyring doesn't allow any configuration"),
+			NULL, NULL);
+		return;
+	}
+
+	pref_request.keyring_window = purple_request_fields(NULL,
+		_("Keyring settings"), NULL, NULL, fields,
+		_("Save"), G_CALLBACK(finch_prefs_keyring_save),
+		_("Cancel"), G_CALLBACK(finch_prefs_keyring_cancel),
+		NULL, NULL);
+}

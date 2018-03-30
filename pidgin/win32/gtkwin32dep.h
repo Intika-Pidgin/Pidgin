@@ -1,7 +1,4 @@
-/**
- * @file gtkwin32dep.h UI Win32 Specific Functionality
- * @ingroup win32
- *
+/*
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution
@@ -22,12 +19,22 @@
  */
 #ifndef _GTKWIN32DEP_H_
 #define _GTKWIN32DEP_H_
+/**
+ * SECTION:gtkwin32dep
+ * @section_id: pidgin-gtkwin32dep
+ * @short_description: <filename>gtkwin32dep.h</filename>
+ * @title: UI Win32 Specific Functionality
+ */
+
+#include <config.h>
+
 #include <windows.h>
 #include <gtk/gtk.h>
 #include "conversation.h"
 
 HINSTANCE winpidgin_dll_hinstance(void);
 HINSTANCE winpidgin_exe_hinstance(void);
+void winpidgin_set_exe_hinstance(HINSTANCE hint);
 
 /* Utility */
 int winpidgin_gz_decompress(const char* in, const char* out);
@@ -37,12 +44,12 @@ int winpidgin_gz_untar(const char* filename, const char* destdir);
 void winpidgin_notify_uri(const char *uri);
 void winpidgin_shell_execute(const char *target, const char *verb, const char *clazz);
 void winpidgin_ensure_onscreen(GtkWidget *win);
-void winpidgin_conv_blink(PurpleConversation *conv, PurpleMessageFlags flags);
+void winpidgin_conv_blink(PurpleConversation *conv);
 void winpidgin_window_flash(GtkWindow *window, gboolean flash);
 DWORD winpidgin_get_lastactive(void);
 
 /* init / cleanup */
-void winpidgin_init(HINSTANCE);
+void winpidgin_init(void);
 void winpidgin_post_init(void);
 void winpidgin_cleanup(void);
 

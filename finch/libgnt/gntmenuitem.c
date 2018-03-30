@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -57,21 +57,23 @@ gnt_menuitem_class_init(GntMenuItemClass *klass)
 		g_signal_new("activate",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
-					 0, NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 }
 
 static void
 gnt_menuitem_init(GTypeInstance *instance, gpointer klass)
 {
+	GntMenuItem *item = GNT_MENU_ITEM(instance);
+
+	item->visible = TRUE;
 }
 
 /******************************************************************************
  * GntMenuItem API
  *****************************************************************************/
 GType
-gnt_menuitem_get_gtype(void)
+gnt_menuitem_get_type(void)
 {
 	static GType type = 0;
 
@@ -157,3 +159,23 @@ gboolean gnt_menuitem_activate(GntMenuItem *item)
 	return FALSE;
 }
 
+void
+gnt_menuitem_set_visible(GntMenuItem *item, gboolean visible)
+{
+	item->visible = visible;
+}
+
+gboolean
+gnt_menuitem_is_visible(GntMenuItem *item)
+{
+	g_return_val_if_fail(GNT_IS_MENU_ITEM(item), FALSE);
+
+	return item->visible;
+}
+
+void
+gnt_menuitem_set_text(GntMenuItem *item, const gchar *text)
+{
+	g_free(item->text);
+	item->text = g_strdup(text);
+}

@@ -35,7 +35,9 @@
 #include "core.h"
 #include "debug.h"
 #include "gtkblist.h"
+#include "gtkplugin.h"
 #include "gtkutils.h"
+#include "http.h"
 #include "notify.h"
 #include "pidginstock.h"
 #include "prefs.h"
@@ -60,42 +62,20 @@ release_show()
 	purple_notify_uri(NULL, PURPLE_WEBSITE);
 }
 
-static void
-version_fetch_cb(PurpleUtilFetchUrlData *url_data, gpointer user_data,
-		const gchar *response, size_t len, const gchar *error_message)
+static void version_fetch_cb(PurpleHttpConnection *hc,
+	PurpleHttpResponse *response, gpointer user_data)
 {
 	gchar *cur_ver;
-	const char *tmp, *changelog;
-	char response_code[4];
+	const char *changelog;
 	GtkWidget *release_dialog;
 
 	GString *message;
 	int i = 0;
 
-	if(error_message || !response || !len)
+	if(!purple_http_response_is_successful(response))
 		return;
 
-	memset(response_code, '\0', sizeof(response_code));
-	/* Parse the status code - the response should be in the form of "HTTP/?.? 200 ..." */
-	if ((tmp = strstr(response, " ")) != NULL) {
-		tmp++;
-		/* Read the 3 digit status code */
-		if (len - (tmp - response) > 3) {
-			memcpy(response_code, tmp, 3);
-		}
-	}
-
-	if (!purple_strequal(response_code, "200")) {
-		purple_debug_error("relnot", "Didn't recieve a HTTP status code of 200.\n");
-		return;
-	}
-
-	/* Go to the start of the data */
-	if((changelog = strstr(response, "\r\n\r\n")) == NULL) {
-		purple_debug_error("relnot", "Unable to find start of HTTP response data.\n");
-		return;
-	}
-	changelog += 4;
+	changelog = purple_http_response_get_data(response, NULL);
 
 	while(changelog[i] && changelog[i] != '\n') i++;
 
@@ -131,7 +111,7 @@ do_check(void)
 {
 	int last_check = purple_prefs_get_int("/plugins/gtk/relnot/last_check");
 	if(!last_check || time(NULL) - last_check > MIN_CHECK_INTERVAL) {
-		gchar *url, *request;
+		gchar *url;
 		const char *host = "pidgin.im";
 
 		url = g_strdup_printf("https://%s/version.php?version=%s&build=%s",
@@ -144,18 +124,8 @@ do_check(void)
 #endif
 		);
 
-		request = g_strdup_printf(
-				"GET %s HTTP/1.0\r\n"
-				"Connection: close\r\n"
-				"Accept: */*\r\n"
-				"Host: %s\r\n\r\n",
-				url,
-				host);
+		purple_http_get(NULL, version_fetch_cb, NULL, url);
 
-		purple_util_fetch_url_request_len(url, TRUE, NULL, FALSE,
-			request, TRUE, -1, version_fetch_cb, NULL);
-
-		g_free(request);
 		g_free(url);
 
 		purple_prefs_set_int("/plugins/gtk/relnot/last_check", time(NULL));
@@ -171,9 +141,35 @@ signed_on_cb(PurpleConnection *gc, void *data) {
 /**************************************************************************
  * Plugin stuff
  **************************************************************************/
-static gboolean
-plugin_load(PurplePlugin *plugin)
+static PidginPluginInfo *
+plugin_query(GError **error)
 {
+	const gchar * const authors[] = {
+		"Nathan Walp <faceprint@faceprint.com>",
+		NULL
+	};
+
+	return pidgin_plugin_info_new(
+		"id",           "gtk-relnot",
+		"name",         N_("Release Notification"),
+		"version",      DISPLAY_VERSION,
+		"category",     N_("Notification"),
+		"summary",      N_("Checks periodically for new releases."),
+		"description",  N_("Checks periodically for new releases and notifies "
+		                   "the user with the ChangeLog."),
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		NULL
+	);
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin, GError **error)
+{
+	purple_prefs_add_none("/plugins/gtk/relnot");
+	purple_prefs_add_int("/plugins/gtk/relnot/last_check", 0);
+
 	purple_signal_connect(purple_connections_get_handle(), "signed-on",
 						plugin, PURPLE_CALLBACK(signed_on_cb), NULL);
 
@@ -184,49 +180,10 @@ plugin_load(PurplePlugin *plugin)
 	return TRUE;
 }
 
-static PurplePluginInfo info =
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
-
-	"gtk-relnot",                                     /**< id             */
-	N_("Release Notification"),                       /**< name           */
-	DISPLAY_VERSION,                                  /**< version        */
-	                                                  /**  summary        */
-	N_("Checks periodically for new releases."),
-	                                                  /**  description    */
-	N_("Checks periodically for new releases and notifies the user "
-			"with the ChangeLog."),
-	"Nathan Walp <faceprint@faceprint.com>",          /**< author         */
-	PURPLE_WEBSITE,                                     /**< homepage       */
-
-	plugin_load,                                      /**< load           */
-	NULL,                                             /**< unload         */
-	NULL,                                             /**< destroy        */
-
-	NULL,                                             /**< ui_info        */
-	NULL,                                             /**< extra_info     */
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
-{
-	purple_prefs_add_none("/plugins/gtk/relnot");
-	purple_prefs_add_int("/plugins/gtk/relnot/last_check", 0);
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(relnot, init_plugin, info)
+PURPLE_PLUGIN_INIT(relnot, plugin_query, plugin_load, plugin_unload);

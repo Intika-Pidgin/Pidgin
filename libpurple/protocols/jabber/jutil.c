@@ -22,7 +22,6 @@
  */
 #include "internal.h"
 #include "account.h"
-#include "cipher.h"
 #include "conversation.h"
 #include "debug.h"
 #include "server.h"
@@ -323,9 +322,6 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 	const char *slash = NULL;
 	const char *c;
 	gboolean needs_validation = FALSE;
-#if 0
-	gboolean node_is_required = FALSE;
-#endif
 #ifndef USE_IDN
 	char *node = NULL;
 	char *domain;
@@ -379,28 +375,6 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 					/* We're good */
 					break;
 
-#if 0
-				if (slash != NULL) {
-					/* characters allowed only in the resource */
-					if (implement_me)
-						/* We're good */
-						break;
-				}
-
-				/* characters allowed only in the node */
-				if (implement_me) {
-					/*
-					 * Ok, this character is valid, but only if it's a part
-					 * of the node and not the domain.  But we don't know
-					 * if "c" is a part of the node or the domain until after
-					 * we've found the @.  So set a flag for now and check
-					 * that we found an @ later.
-					 */
-					node_is_required = TRUE;
-					break;
-				}
-#endif
-
 				/*
 				 * Hmm, this character is a bit more exotic.  Better fall
 				 * back to using the more expensive UTF-8 compliant
@@ -410,12 +384,6 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 				break;
 		}
 	}
-
-#if 0
-	if (node_is_required && at == NULL)
-		/* Found invalid characters in the domain */
-		return NULL;
-#endif
 
 	if (!needs_validation) {
 		/* JID is made of only ASCII characters--just lowercase and return */
@@ -628,10 +596,15 @@ jabber_id_new(const char *str)
 
 const char *jabber_normalize(const PurpleAccount *account, const char *in)
 {
-	PurpleConnection *gc = account ? account->gc : NULL;
-	JabberStream *js = gc ? gc->proto_data : NULL;
+	PurpleConnection *gc = NULL;
+	JabberStream *js = NULL;
 	static char buf[3072]; /* maximum legal length of a jabber jid */
 	JabberID *jid;
+
+	if (account)
+		gc = purple_account_get_connection(account);
+	if (gc)
+		js = purple_connection_get_protocol_data(gc);
 
 	jid = jabber_id_new_internal(in, TRUE);
 	if(!jid)
@@ -770,32 +743,5 @@ jabber_buddy_state_get_status_id(JabberBuddyState state)
 			return jabber_statuses[i].status_id;
 
 	return NULL;
-}
-
-char *
-jabber_calculate_data_hash(gconstpointer data, size_t len,
-    const gchar *hash_algo)
-{
-	PurpleCipherContext *context;
-	static gchar digest[129]; /* 512 bits hex + \0 */
-
-	context = purple_cipher_context_new_by_name(hash_algo, NULL);
-	if (context == NULL)
-	{
-		purple_debug_error("jabber", "Could not find %s cipher\n", hash_algo);
-		g_return_val_if_reached(NULL);
-	}
-
-	/* Hash the data */
-	purple_cipher_context_append(context, data, len);
-	if (!purple_cipher_context_digest_to_str(context, sizeof(digest), digest, NULL))
-	{
-		purple_debug_error("jabber", "Failed to get digest for %s cipher.\n",
-		    hash_algo);
-		g_return_val_if_reached(NULL);
-	}
-	purple_cipher_context_destroy(context);
-
-	return g_strdup(digest);
 }
 

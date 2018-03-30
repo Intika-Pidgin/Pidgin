@@ -24,51 +24,72 @@
 #ifndef _PURPLE_GG_H
 #define _PURPLE_GG_H
 
+#define GGP_UIN_LEN_MAX 10
+
+#include <gmodule.h>
 #include <libgadu.h>
+
 #include "internal.h"
-#include "dnsquery.h"
 #include "search.h"
 #include "connection.h"
 
+#include "image-prpl.h"
+#include "avatar.h"
+#include "roster.h"
+#include "multilogon.h"
+#include "status.h"
+#include "chat.h"
+#include "message-prpl.h"
+#include "edisc.h"
 
-#define PUBDIR_RESULTS_MAX 20
+#define GGP_TYPE_PROTOCOL             (ggp_protocol_get_type())
+#define GGP_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), GGP_TYPE_PROTOCOL, GGPProtocol))
+#define GGP_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), GGP_TYPE_PROTOCOL, GGPProtocolClass))
+#define GGP_IS_PROTOCOL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), GGP_TYPE_PROTOCOL))
+#define GGP_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), GGP_TYPE_PROTOCOL))
+#define GGP_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), GGP_TYPE_PROTOCOL, GGPProtocolClass))
 
-
-typedef struct
+typedef struct _GGPProtocol
 {
-	char *name;
-	GList *participants;
+	PurpleProtocol parent;
+} GGPProtocol;
 
-} GGPChat;
-
-typedef void (*GGPTokenCallback)(PurpleConnection *);
-
-typedef struct
+typedef struct _GGPProtocolClass
 {
-	char *id;
-	char *data;
-	unsigned int size;
-
-	struct gg_http *req;
-	guint inpa;
-
-	GGPTokenCallback cb;
-
-} GGPToken;
+	PurpleProtocolClass parent_class;
+} GGPProtocolClass;
 
 typedef struct {
-
 	struct gg_session *session;
-	GGPToken *token;
-	GList *chats;
-	GGPSearches *searches;
-	int chats_count;
-	GList *pending_richtext_messages;
-	GHashTable *pending_images;
-	gboolean status_broadcasting; //When TRUE status is visible to all, when FALSE status is visible only to friends.
-	PurpleDnsQueryData *dns_query;
+	guint inpa;
+
+	gchar *imtoken;
+	gboolean imtoken_warned;
+
+	ggp_image_session_data *image_data;
+	ggp_avatar_session_data avatar_data;
+	ggp_roster_session_data roster_data;
+	ggp_multilogon_session_data *multilogon_data;
+	ggp_status_session_data *status_data;
+	ggp_chat_session_data *chat_data;
+	ggp_message_session_data *message_data;
+	ggp_edisc_session_data *edisc_data;
 } GGPInfo;
 
-#endif /* _PURPLE_GG_H */
+typedef struct
+{
+	gboolean blocked;
+	gboolean not_a_friend;
+} ggp_buddy_data;
 
-/* vim: set ts=8 sts=0 sw=8 noet: */
+G_MODULE_EXPORT GType ggp_protocol_get_type(void);
+
+ggp_buddy_data * ggp_buddy_get_data(PurpleBuddy *buddy);
+
+const gchar * ggp_get_imtoken(PurpleConnection *gc);
+
+uin_t ggp_own_uin(PurpleConnection *gc);
+
+void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond);
+
+#endif /* _PURPLE_GG_H */

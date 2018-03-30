@@ -1,5 +1,616 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
+This file intends to list all changes to libpurple, Pidgin, and Finch's public
+API. We sometimes forget to add changes to this file--sorry.
+
+If your plugin fails to build with a new major version (e.g. 3.0.0) we
+suggest checking this list first, in case a function was simply renamed.
+You may still need to consult our API docs or our source code.
+
+If you notice something missing from this list, please let us know and we'll
+add it.
+
+version 3.0.0 (??/??/????):
+	libpurple:
+		Added:
+		* displaying-emails-clear signal (notification signal)
+		* purple_account_is_disconnecting
+		* purple_account_get_ui_data
+		* purple_account_set_ui_data
+		* purple_account_privacy_get_denied
+		* purple_account_privacy_get_permitted
+		* PurpleAccountPresence and PurpleBuddyPresence inherit PurplePresence
+		* purple_account_presence_new
+		* purple_buddy_presence_new
+		* purple_account_register_completed
+		* purple_blist_node_is_transient
+		* purple_blist_node_set_transient
+		* purple_certificate_get_der_data
+		* purple_certificate_get_display_string
+		* purple_chat_user_get_alias
+		* purple_chat_user_get_chat
+		* purple_chat_user_get_flags
+		* purple_chat_user_is_buddy
+		* purple_chat_user_get_ui_data
+		* purple_chat_user_set_ui_data
+		* purple_chat_user_set_chat
+		* purple_connection_get_active_chats
+		* purple_connection_get_error_info
+		* purple_connection_get_flags
+		* purple_connection_set_flags
+		* purple_connection_update_last_received
+		* purple_conversation_get_ui_data
+		* purple_conversation_set_ui_data
+		* purple_conversation_message_get_alias
+		* purple_conversation_message_get_conv
+		* PurpleCountingNode, inherits PurpleBlistNode
+		* purple_counting_node_get_*
+		* purple_counting_node_change_*
+		* purple_counting_node_set_*
+		* PurpleIMConversation and PurpleChatConversation inherit
+		  PurpleConversation
+		* purple_notify_emails_pending
+		* purple_notify_emails_present
+		* purple_notify_searchresult_column_get_title
+		* purple_notify_searchresult_column_is_visible
+		* purple_notify_searchresult_column_set_visible
+		* purple_notify_user_info_entry_destroy
+		* purple_notify_user_info_prepend_pair_plaintext
+		* purple_media_manager_enumerate_elements
+		* purple_menu_action_get_callback
+		* purple_menu_action_get_children
+		* purple_menu_action_get_data
+		* purple_menu_action_set_label
+		* purple_menu_action_set_data
+		* purple_menu_action_set_callback
+		* purple_menu_action_set_children
+		* PurplePluginInfoFlags (PURPLE_PLUGIN_INFO_FLAGS_INTERNAL and
+		  PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD)
+		* purple_plugin_get_dependent_plugins
+		* purple_plugin_get_filename
+		* purple_plugin_is_internal
+		* purple_plugin_info_new
+		* purple_plugin_get_info
+		* purple_plugin_info_get_abi_version
+		* purple_plugin_info_get_actions_cb
+		* purple_plugin_info_get_category
+		* purple_plugin_info_get_dependencies
+		* purple_plugin_info_get_error
+		* purple_plugin_info_get_extra_cb
+		* purple_plugin_info_get_flags
+		* purple_plugin_info_get_icon
+		* purple_plugin_info_get_license_id
+		* purple_plugin_info_get_license_text
+		* purple_plugin_info_get_license_url
+		* purple_plugin_info_get_pref_frame_cb
+		* purple_plugin_info_get_pref_request_cb
+		* purple_plugin_info_get_ui_data
+		* purple_plugin_info_set_ui_data
+		* purple_plugin_register_type
+		* purple_plugin_add_interface
+		* PURPLE_DEFINE_TYPE
+		* PURPLE_DEFINE_TYPE_EXTENDED
+		* PURPLE_IMPLEMENT_INTERFACE_STATIC
+		* PURPLE_IMPLEMENT_INTERFACE
+		* PURPLE_DEFINE_DYNAMIC_TYPE
+		* PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED
+		* PURPLE_IMPLEMENT_INTERFACE_DYNAMIC
+		* PURPLE_DEFINE_STATIC_TYPE
+		* PURPLE_DEFINE_STATIC_TYPE_EXTENDED
+		* PurpleProtocol, inherits GObject. Please see the documentation for
+		  details.
+		* PurpleProtocolAction
+		* PurpleProtocolOverrideFlags
+		* PurpleProtocolClientIface
+		* PurpleProtocolServerIface
+		* PurpleProtocolIMIface
+		* PurpleProtocolChatIface
+		* PurpleProtocolPrivacyIface
+		* PurpleProtocolXferIface
+		* PurpleProtocolRoomlistIface
+		* PurpleProtocolAttentionIface
+		* PurpleProtocolMediaIface
+		* PurpleProtocolFactoryIface
+		* purple_protocol_get_* for PurpleProtocol members
+		* purple_protocol_class_* for class methods
+		* purple_protocol_client_iface_* for client interface methods
+		* purple_protocol_server_iface_* for server interface methods
+		* purple_protocol_im_iface_* for IM interface methods
+		* purple_protocol_chat_iface_* for chat interface methods
+		* purple_protocol_privacy_iface_* for privacy interface methods
+		* purple_protocol_xfer_iface_* for xfer interface methods
+		* purple_protocol_roomlist_iface_* for roomlist interface methods
+		* purple_protocol_attention_iface_* for attention interface methods
+		* purple_protocol_media_iface_* for media interface methods
+		* purple_protocol_factory_iface_* for factory interface methods
+		* purple_protocol_action_new
+		* purple_protocol_action_free
+		* purple_protocols_add
+		* purple_protocols_remove
+		* purple_protocols_find
+		* purple_protocols_get_all
+		* purple_protocols_get_handle
+		* purple_protocols_init
+		* purple_protocols_uninit
+		* purple_request_certificate
+		* purple_request_field_certificate_new
+		* purple_request_field_certificate_get_value
+		* purple_request_field_get_tooltip
+		* purple_request_field_group_get_fields_list
+		* purple_request_field_set_tooltip
+		* purple_request_fields_get_ui_data
+		* purple_request_fields_set_ui_data
+		* purple_roomlist_get_account
+		* purple_roomlist_get_proto_data
+		* purple_roomlist_get_ui_data
+		* purple_roomlist_room_get_expanded_once
+		* purple_roomlist_room_set_expanded_once
+		* purple_roomlist_set_proto_data
+		* purple_roomlist_set_ui_data
+		* purple_whiteboard_get_account
+		* purple_whiteboard_get_draw_list
+		* purple_whiteboard_set_draw_list
+		* purple_whiteboard_get_protocol_data
+		* purple_whiteboard_set_protocol_data
+		* purple_whiteboard_get_state
+		* purple_whiteboard_set_state
+		* purple_whiteboard_get_ui_data
+		* purple_whiteboard_set_ui_data
+		* purple_whiteboard_get_who
+		* purple_xfer_get_fd
+		* purple_xfer_get_message
+		* purple_xfer_get_protocol_data
+		* purple_xfer_get_ui_data
+		* purple_xfer_get_watcher
+		* purple_xfer_set_fd
+		* purple_xfer_set_local_port
+		* purple_xfer_set_protocol_data
+		* purple_xfer_set_remote_user
+		* purple_xfer_set_status
+		* purple_xfer_set_ui_data
+		* purple_xfer_set_watcher
+		* purple_xmlnode_get_default_namespace
+		* purple_xmlnode_strip_prefixes
+
+		Changed:
+		* account.h has been split into account.h (PurpleAccount GObject) and
+		  accounts.h (Accounts subsystem)
+		* blist.h has been split into buddylist.h (PurpleBuddyList and
+		  subsystem), blistnode.h (PurpleBlistNode and PurpleCountingNode
+		  GObjects), blistnodetypes (Buddy, Chat, Contact, Group GObjects)
+		* circbuffer.h renamed to circularbuffer.h
+		* conversation.h has been split into conversation.h
+		  (PurpleConversation), conversationtypes.h (PurpleIMConversation and
+		  PurpleChatConversation) and conversations.h (Conversations subsystem)
+		* Renamed ft.h file to xfer.h
+		* Renamed plugin.h file to plugins.h
+		* prpl.h has been split into protocol.h (PurpleProtocol GObject and
+		  protocol interfaces) and protocols.h (protocols subsystem)
+		* status.h has been split into status.h (Status API) and presence.h
+		  (Presence API)
+		* account-authorization-requested signal merged with
+		  account-authorization-requested-with-message signal
+		* purple_account_add_buddy now takes an invite message as the last
+		  parameter
+		* purple_account_add_buddies now takes an invite message as the last
+		  parameter
+		* PurpleAccount is now a GObject. Please see the documentation for
+		  details.
+		* purple_account_get_alias renamed to purple_account_get_private_alias
+		* purple_account_set_alias renamed to purple_account_set_private_alias
+		* purple_account_option_get_type renamed to
+		  purple_account_option_get_pref_type
+		* PurplePrivacyType renamed to PurpleAccountPrivacyType
+		* purple_privacy_* functions are now purple_account_privacy_*
+		* Removed arguments local and restore from purple_account_privacy_allow
+		  and purple_account_privacy_deny
+		* PurpleBlistNode is now a GObject. Please see the documentation for
+		  details.
+		* purple_blist_alias_buddy renamed to purple_buddy_set_local_alias
+		* purple_blist_alias_chat renamed to purple_chat_set_alias
+		* purple_blist_alias_contact renamed to purple_contact_set_alias
+		* purple_blist_merge_contact renamed to purple_contact_merge
+		* purple_blist_rename_buddy renamed to purple_buddy_set_name
+		* purple_blist_rename_group renamed to purple_group_set_name
+		* purple_blist_server_alias_buddy renamed to
+		* purple_blist_update_buddy_status renamed to purple_buddy_update_status
+		  purple_buddy_set_server_alias
+		* purple_buddy_get_local_buddy_alias renamed to
+		  purple_buddy_get_local_alias
+		* PurpleContact and PurpleGroup inherit PurpleCountingNode
+		* PurpleBuddyList is now a GObject. Please see the documentation for
+		  details.
+		* purple_find_buddies renamed to purple_blist_find_buddies
+		* purple_find_buddy_in_group renamed to purple_blist_find_buddy_in_group
+		* purple_find_buddy renamed to purple_blist_find_buddy
+		* purple_find_group renamed to purple_blist_find_group
+		* purple_get_blist renamed to purple_blist_get_buddy_list
+		* PurpleBuddyIconSpec has been moved to buddyicon.h
+		* purple_certificate_check_signature_chain now returns a list of failing
+		  PurpleCertificate*s as the second parameter
+		* PurpleConversation is now an abstract type, and is a GObject. Please
+		  see the documentation for details.
+		* purple_conv_* functions are now purple_conversation_*
+		* purple_conv_im_* functions are now purple_im_conversation_*
+		* purple_conv_chat_* functions are now purple_chat_conversation_*
+		* purple_chat_conversation_find_user renamed to
+		  purple_chat_conversation_has_user
+		* PurpleTypingState renamed to PurpleIMTypingState
+		* PurpleConvChatBuddy changed to PurpleChatUser, is now a GObject.
+		  Please see the documentation for details.
+		* purple_conv_chat_cb_* functions are now purple_chat_user_*
+		* Replaced 'chat-buddy' with 'chat-user' in conversation signals
+		* Replaced chatname, buddyname arguments of 'chat-user-flags' (formerly
+		  'chat-buddy-flags') signal with PurpleChatUser *
+		* PurpleCircBuffer changed to PurpleCircularBuffer, is now a GObject.
+		  Please see the documentation for details.
+		* purple_circ_buffer_* functions are now purple_circular_buffer_*
+		* purple_connection_error now takes a PurpleConnectionError
+		  as the second parameter
+		* PurpleConnection is now a GObject. Please see the documentation for
+		  details.
+		* PURPLE_CONNECTION_* prefix of PurpleConnectionFlag enum names changed
+		  to PURPLE_CONNECTION_FLAG_*
+		* PURPLE_* prefix of PurpleConnectionState enum names changed to
+		  PURPLE_CONNECTION_*
+		* purple_conversation_get_gc renamed to
+		  purple_conversation_get_connection
+		* purple_dnsquery_a now takes a PurpleAccount as the first parameter
+		* PurpleIconScaleRules renamed to PurpleBuddyIconScaleFlags
+		* purple_imgstore_add renamed to purple_imgstore_new
+		* purple_imgstore_add_with_id renamed to purple_imgstore_new_with_id
+		* PurpleLog, purple_log_new, purple_log_write and
+		  PurpleLogLogger->write take a GDateTime instead of a time_t
+		  and struct tm
+		* purple_network_listen now takes the protocol family as the second
+		  parameter
+		* purple_network_listen now takes a boolean indicating external port
+		  mapping as the fourth parameter
+		* purple_network_listen_range now takes a boolean indicating external
+		  port mapping as the fifth parameter
+		* purple_network_listen_range now takes the protocol family as the
+		  third parameter
+		* PurpleNotifyMsgType renamed to PurpleNotifyMessageType
+		* purple_notify_user_info_add_pair renamed to
+		  purple_notify_user_info_add_pair_html
+		* purple_notify_user_info_get_entries returns a GQueue instead of
+		  a GList
+		* purple_notify_user_info_entry_get_type renamed to
+		  purple_notify_user_info_entry_get_entry_type
+		* purple_notify_user_info_entry_set_type renamed to
+		  purple_notify_user_info_entry_set_entry_type
+		* purple_notify_user_info_prepend_pair renamed to
+		  purple_notify_user_info_prepend_pair_html
+		* PurplePlugin is now a GObject (alias for GPluginPlugin). Please see
+		  the documentation for details.
+		* PurplePluginInfo is now a GObject, inherits GPluginPluginInfo. Please
+		  see the documentation for details.
+		* PurplePluginAction no longer has a context field. Use
+		  PurpleProtocolAction for protocol actions.
+		* PURPLE_INIT_PLUGIN(pluginname, initfunc, plugininfo) is now
+		  PURPLE_PLUGIN_INIT(pluginname, query_func, load_func, unload_func).
+		  See "C Plugins tutorial" (tut_c_plugins.xml) for an example.
+		* purple_plugin_load and purple_plugin_unload now use an error argument
+		  to return load/unload errors
+		* purple_plugins_get_all is now purple_plugins_find_all, and the
+		  returned list of plugins MUST be free'd using g_list_free
+		* purple_plugin_get_* functions for plugin info are now
+		  purple_plugin_info_get_*
+		* purple_plugin_get_author is now purple_plugin_info_get_authors, and
+		  returns a NULL-terminated list of authors
+		* purple_plugins_probe is now purple_plugins_refresh
+		* purple_plugins_find_with_id renamed to purple_plugins_find_plugin
+		* purple_plugins_find_with_filename renamed to
+		  purple_plugins_find_by_filename
+		* purple_plugin_pref_get_type renamed to
+		  purple_plugin_pref_get_pref_type
+		* purple_plugin_pref_set_type renamed to
+		  purple_plugin_pref_set_pref_type
+		* purple_prefs_get_type renamed to purple_prefs_get_pref_type
+		* proto_chat_entry has been renamed to PurpleProtocolChatEntry
+		* purple_proxy_info_get_type renamed to purple_proxy_info_get_proxy_type
+		* purple_proxy_info_set_type renamed to purple_proxy_info_set_proxy_type
+		* purple_request_field_get_type renamed to
+		  purple_request_field_get_field_type
+		* PurpleRoomlist is now a GObject. Please see the documentation for
+		  details.
+		* purple_roomlist_room_get_type is now
+		  purple_roomlist_room_get_room_type
+		* purple_roomlist_field_get_type is now
+		  purple_roomlist_field_get_field_type
+		* purple_savedstatus_get_type renamed to
+		  purple_savedstatus_get_primitive_type
+		* purple_savedstatus_set_type renamed to
+		  purple_savedstatus_set_primitive_type
+		* purple_savedstatus_substatus_get_type renamed to
+		  purple_savedstatus_substatus_get_status_type
+		* serv_* functions are now purple_serv_*
+		* purple_srv_resolve now takes a PurpleAccount as the first parameter
+		* purple_srv_txt_query_get_type renamed to
+		  purple_srv_txt_query_get_query_type
+		* PurpleStatus is now a GObject. Please see the documentation for
+		  details.
+		* purple_status_attr_* functions are now purple_status_attribute_*
+		* PurpleStatusAttr renamed to PurpleStatusAttribute
+		* PurplePresence is now an abstract type, and is a GObject. Please see
+		  the documentation for details.
+		* update_idle method has been added to PurplePresenceClass to update the
+		  idle state of a presence
+		* StunCallback renamed to PurpleStunCallback
+		* purple_str_size_to_units now takes a goffset as the size parameter
+		* PTFunc renamed to PurpleThemeFunc
+		* purple_txt_resolve now takes a PurpleAccount as the first parameter
+		* UPnPMappingAddRemove renamed to PurpleUPnPMappingAddRemove
+		* purple_util_fetch_url_request now takes a PurpleAccount as
+		  the first parameter
+		* purple_util_fetch_url_request now takes a length as the eighth
+		  parameter
+		* purple_util_fetch_url_len now takes a length as the fifth parameter
+		* PurpleWhiteboard is now a GObject. Please see the documentation for
+		  details.
+		* purple_value_destroy is now purple_value_free
+		* purple_value_new, purple_value_dup and purple_value_free now operate
+		  on GValue instead of PurpleValue
+		* Signal registration now uses GTypes instead of PurpleValues.  See
+		  SIGNAL-HOWTO for more information.
+		* purple_whiteboard_create renamed to purple_whiteboard_new
+		* purple_xfer_get_bytes_remaining now returns a goffset
+		* purple_xfer_get_bytes_sent now returns a goffset
+		* purple_xfer_get_size now returns a goffset
+		* purple_xfer_is_canceled renamed to purple_xfer_is_cancelled
+		* PurpleXfer is now a GObject. Please see the documentation for details.
+		* purple_xfer_get_type renamed to purple_xfer_get_xfer_type
+		* PurpleXferStatusType renamed to PurpleXferStatus
+		* PURPLE_XFER_* prefix of PurpleXferType enums changed to
+		  PURPLE_XFER_TYPE_*
+		* purple_xfer_set_bytes_sent now takes a goffset as the bytes_sent
+		  parameter
+		* purple_xfer_set_size now takes a goffset as the size parameter
+		* PurpleCertificateVerificationStatus enumeration is now merged with
+		  internal flags, thus removing PURPLE_CERTIFICATE_INVALID and
+		  replacing it with more precise errors.
+		* PurpleConnectionUiOps.report_disconnect now passes a
+		  PurpleConnectionError as the second parameter
+		* PurpleXfer.bytes_remaining is now a goffset
+		* PurpleXfer.bytes_sent is now a goffset
+		* PurpleXfer.size is now a goffset
+		* PurpleCertificateScheme.get_times now uses gint64 instead of
+		  time_t to represent times
+		* purple_certificate_get_times now uses gint64 instead of
+		  time_t to represent times
+		* xmlnode renamed to PurpleXmlNode
+		* XMLNodeType renamed to PurpleXmlNodeType
+		* xmlnode_* functions are now purple_xmlnode_*
+
+		Removed:
+		* buddy-added and buddy-removed blist signals
+		* privacy.h file
+		* value.h file
+		* _PurpleCmdFlag
+		* _PurpleCmdPriority
+		* _PurpleCmdRet
+		* _PurpleCmdStatus
+		* _PurplePrefType
+		* _PurplePrivacyType
+		* _PurpleSoundEventID
+		* _XMLNodeType
+		* account-authorization-requested-with-message signal
+		* network-configuration-changed signal
+		* purple_account_add_buddies_with_invite
+		* purple_account_add_buddy_with_invite
+		* purple_account_set_current_error
+		* purple_base64_*. Use g_base64_* instead
+		* purple_blist_load
+		* purple_blist_new
+		* purple_set_blist
+		* purple_blist_update_buddy_icon
+		* purple_buddy_get_local_alias
+		* purple_buddy_icons_has_custom_icon
+		* purple_buddy_icons_find_custom_icon
+		* purple_buddy_icons_set_custom_icon
+		* purple_certificate_check_signature_chain_with_failing. Use
+		  purple_certificate_check_signature_chain, instead
+		* purple_certificate_display_x509. Use purple_request_certificate,
+		  instead
+		* Purple Cipher API (PurpleCipherContext and friends).
+		  Use GLib's GHmac or GChecksum instead.
+		* purple_connection_error_reason
+		* purple_connection_new
+		* purple_connection_new_unregister
+		* purple_connection_destroy
+		* purple_connection_set_account
+		* purple_contact_set_alias
+		* purple_conv_chat_set_users
+		* PurpleConversationType
+		* purple_core_migrate
+		* purple_dnsquery_a_account
+		* purple_event_loop_{get|set}_ui_ops. Manually drive the GLib
+		  event loop yourself. See GLib Main Event Loop docs.
+		* PurpleEventLoopUiOps. Manually drive the GLib event loop
+		  yourself. See GLib Main Event Loop docs.
+		* purple_network_listen_family. Use purple_network_listen, instead.
+		* purple_network_listen_map_external
+		* purple_network_listen_range_family. Use purple_network_listen,
+		  instead.
+		* purple_network_ip_atoi
+		* purple_notify_searchresults_column_get_title
+		* purple_notify_searchresults_get_columns_count
+		* purple_notify_searchresults_get_rows_count
+		* purple_notify_searchresults_row_get
+		* purple_ntlm_*
+		* PurplePluginType
+		* PurplePluginPriority
+		* PurplePluginLoaderInfo
+		* PurplePluginUiInfo
+		* purple_plugin_ipc_*
+		* purple_plugin_is_unloadable
+		* purple_plugin_new
+		* purple_plugin_probe
+		* purple_plugin_register
+		* purple_plugin_reload
+		* purple_plugins_destroy_all
+		* purple_plugins_enabled
+		* purple_plugins_find_with_basename
+		* purple_plugins_find_with_name
+		* purple_plugins_get_protocols
+		* purple_plugins_get_search_paths
+		* purple_plugins_register_load_notify_cb
+		* purple_plugins_register_probe_notify_cb
+		* purple_plugins_register_unload_notify_cb
+		* purple_plugins_unregister_load_notify_cb
+		* purple_plugins_unregister_probe_notify_cb
+		* purple_plugins_unregister_unload_notify_cb
+		* purple_plugins_unload
+		* purple_plugins_unload_all
+		* purple_pounces_load
+		* purple_prefs_set_generic
+		* purple_prefs_update_old
+		* purple_presence_add_status
+		* purple_presence_add_list
+		* PurplePresenceContext
+		* purple_presence_new
+		* purple_presence_new_for_account
+		* purple_presence_new_for_buddy
+		* purple_print_utf8_to_console
+		* PurplePluginProtocolInfo
+		* purple_proxy_connect_socks5
+		* purple_request_field_list_add
+		* purple_srv_cancel
+		* purple_srv_resolve_account
+		* purple_ssl_connect_fd
+		* purple_status_set_attr_boolean
+		* purple_status_set_attr_int
+		* purple_status_set_attr_string
+		* purple_status_type_add_attr
+		* purple_status_type_add_attrs
+		* purple_status_type_add_attrs_vargs
+		* purple_status_type_get_primary_attr
+		* purple_status_type_set_primary_attr
+		* purple_strlcat
+		* purple_strlcpy
+		* purple_timeout_*. Use g_timeout_* or g_idle_* instead.
+		* purple_txt_cancel
+		* purple_txt_resolve_account
+		* PurpleType, use GType instead.
+		* purple_util_fetch_url_len. Use purple_util_fetch_url, instead.
+		* purple_util_fetch_url_request_len. Use
+		* purple_util_fetch_url_request, instead.
+		* purple_util_fetch_url_request_len_with_account.  Use
+		  purple_util_fetch_url_request, instead.
+		* purple_util_get_image_checksum.  Use
+		  g_compute_checksum_for_data(G_CHECKSUM_SHA1, ...), instead.
+		* PurpleCertificateVerificationStatus.PURPLE_CERTIFICATE_INVALID
+		* PurpleConnectionUiOps.report_disconnect_reason
+		* PurplePluginProtocolInfo.add_buddy_with_invite
+		* PurplePluginProtocolInfo.add_buddies_with_invite
+		* PurplePluginProtocolInfo.get_cb_away
+		* PurpleValue, use GValue instead.
+		* serv_got_attention
+		* serv_send_attention
+		* struct _PurpleAttentionType
+		* struct _PurpleCipherCaps
+		* struct _PurpleConversation
+		* struct _PurpleConvChat
+		* struct _PurpleConvChatBuddy
+		* struct _PurpleConvIm
+		* struct _PurpleConvMessage
+		* struct _PurpleMenuAction
+		* struct _PurplePounce
+		* struct _PurpleProxyInfo
+		* struct _PurpleRequestField
+		* struct _PurpleRoomlist
+		* struct _PurpleRoomlistField
+		* struct _PurpleRoomlistRoom
+		* struct _PurpleWhiteboard
+		* struct PurpleAccountOption
+		* struct PurpleAccountUserSplit
+		* struct PurpleNotifySearchColumn
+		* wpurple_g_access
+		* xmlnode_set_attrib_with_namespace
+		* xmlnode_set_attrib_with_prefix
+
+	Pidgin:
+		Added:
+		* pidgin_create_webview
+		* PidginDockletFlag
+		* PidginPluginInfo, inherits PurplePluginInfo
+		* Various WebKit-related functions in gtkwebview.h
+
+		Changed:
+		* gtkft.h file renamed to gtkxfer.h
+		* pidgin_blist_sort_method renamed to _PidginBlistSortMethod
+		* BRUSH_STATE_DOWN renamed to PIDGIN_BRUSH_STATE_DOWN
+		* BRUSH_STATE_MOTION renamed to PIDGIN_BRUSH_STATE_MOTION
+		* BRUSH_STATE_UP renamed to PIDGIN_BRUSH_STATE_UP
+		* DEFAULT_FONT_FACE renamed to PIDGIN_DEFAULT_FONT_FACE
+		* DndHintPosition renamed to PidginDndHintPosition
+		* DndHintWindowId renamed to PidginDndHintWindowId
+		* dnd_* functions renamed to pidgin_dnd_*
+		* FULL_CIRCLE_DEGREES renamed to PIDGIN_FULL_CIRCLE_DEGREES
+		* NUM_NICK_SEED_COLORS renamed to PIDGIN_NUM_NICK_SEED_COLORS
+		* PALETTE_NUM_COLORS renamed to PIDGIN_PALETTE_NUM_COLORS
+		* pidgin_new_item_from_stock renamed to pidgin_new_menu_item and
+		  removed the accel related parameters.
+		* pidgin_setup_screenname_autocomplete now takes a filter function and
+		  its data as final two arguments
+		* smiley_list renamed to PidginSmileyList
+		* smiley_parse_markup renamed to pidgin_smiley_parse_markup
+		* smiley_theme renamed to PidginSmileyTheme
+		* PidginWindow renamed to PidginConvWindow
+
+		Removed:
+		* GtkIMHtml.clipboard_html_string
+		* GtkIMHtml.clipboard_text_string
+		* GtkIMHtmlFontDetail
+		* gtk_imhtml_animation_free
+		* gtk_imhtml_animation_new
+		* gtk_imhtml_image_add_to
+		* gtk_imhtml_image_free
+		* gtk_imhtml_image_new
+		* gtk_imhtml_image_scale
+		* pidgin_blist_update_account_error_state
+		* PidginBuddyList.connection_errors
+		* pidgin_check_if_dir
+		* PidginConversation.sg
+		* PIDGIN_DIALOG
+		* pidgin_dialogs_alias_contact
+		* pidgin_mini_dialog_links_supported
+		* pidgin_set_custom_buddy_icon
+		* pidgin_setup_screenname_autocomplete_with_filter
+		* struct _GtkIMHtmlAnimation
+		* struct _GtkIMHtmlFontDetail
+		* struct _GtkIMHtmlHr
+		* struct _GtkIMHtmlImage
+		* struct _GtkIMHtmlScalable
+		* struct _GtkSmileyTree
+		* struct _PidginChatPane
+		* struct _PidginImPane
+
+	Finch:
+		Added:
+		* FinchPluginInfo, inherits PurplePluginInfo
+
+		Changed:
+		* gntft.h file renamed to gntxfer.h
+		* gnt_append_menu_action renamed to finch_append_menu_action
+		* gnt_ui_init renamed to finch_ui_init
+		* gnt_ui_uninit renamed to finch_ui_uninit
+
+	libgnt:
+		Changed:
+		* ENTRY_CHAR renamed to GNT_ENTRY_CHAR
+		* g_hash_table_duplicate renamed to gnt_hash_table_duplicate
+		* GDupFunc renamed to GntDuplicateFunc
+
+		Removed:
+		* _GntFileType
+		* _GntKeyPressMode
+		* _GntMouseEvent
+		* _GntParamFlags
+		* _GntProgressBarOrientation
+		* _GntTreeColumnFlag
+		* _GntWidgetFlags
+
 version 2.13.0:
 	libpurple:
 		Added:

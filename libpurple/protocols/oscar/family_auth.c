@@ -27,10 +27,9 @@
  */
 
 #include "oscar.h"
+#include "oscarcommon.h"
 
 #include <ctype.h>
-
-#include "cipher.h"
 
 /* #define USE_XOR_FOR_ICQ */
 
@@ -74,14 +73,15 @@ aim_encode_password(const char *password, guint8 *encoded)
 static int
 aim_encode_password_md5(const char *password, size_t password_len, const char *key, guint8 *digest)
 {
-	PurpleCipherContext *context;
+	GChecksum *hash;
+	gsize digest_len = 16;
 
-	context = purple_cipher_context_new_by_name("md5", NULL);
-	purple_cipher_context_append(context, (const guchar *)key, strlen(key));
-	purple_cipher_context_append(context, (const guchar *)password, password_len);
-	purple_cipher_context_append(context, (const guchar *)AIM_MD5_STRING, strlen(AIM_MD5_STRING));
-	purple_cipher_context_digest(context, 16, digest, NULL);
-	purple_cipher_context_destroy(context);
+	hash = g_checksum_new(G_CHECKSUM_MD5);
+	g_checksum_update(hash, (const guchar *)key, -1);
+	g_checksum_update(hash, (const guchar *)password, password_len);
+	g_checksum_update(hash, (const guchar *)AIM_MD5_STRING, -1);
+	g_checksum_get_digest(hash, digest, &digest_len);
+	g_checksum_free(hash);
 
 	return 0;
 }
@@ -89,23 +89,20 @@ aim_encode_password_md5(const char *password, size_t password_len, const char *k
 static int
 aim_encode_password_md5(const char *password, size_t password_len, const char *key, guint8 *digest)
 {
-	PurpleCipher *cipher;
-	PurpleCipherContext *context;
+	GChecksum *hash;
 	guchar passdigest[16];
+	gsize digest_len = 16;
 
-	cipher = purple_ciphers_find_cipher("md5");
+	hash = g_checksum_new(G_CHECKSUM_MD5);
+	g_checksum_update(hash, (const guchar *)password, password_len);
+	g_checksum_get_digest(hash, passdigest, &digest_len);
+	g_checksum_reset(hash);
 
-	context = purple_cipher_context_new(cipher, NULL);
-	purple_cipher_context_append(context, (const guchar *)password, password_len);
-	purple_cipher_context_digest(context, 16, passdigest, NULL);
-	purple_cipher_context_destroy(context);
-
-	context = purple_cipher_context_new(cipher, NULL);
-	purple_cipher_context_append(context, (const guchar *)key, strlen(key));
-	purple_cipher_context_append(context, passdigest, 16);
-	purple_cipher_context_append(context, (const guchar *)AIM_MD5_STRING, strlen(AIM_MD5_STRING));
-	purple_cipher_context_digest(context, 16, digest, NULL);
-	purple_cipher_context_destroy(context);
+	g_checksum_update(hash, (const guchar *)key, -1);
+	g_checksum_update(hash, passdigest, digest_len);
+	g_checksum_update(hash, (const guchar *)AIM_MD5_STRING, -1);
+	g_checksum_get_digest(hash, digest, &digest_len);
+	g_checksum_free(hash);
 
 	return 0;
 }
@@ -506,14 +503,29 @@ aim_request_login(OscarData *od, FlapConnection *conn, const char *sn)
 static int
 keyparse(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, aim_modsnac_t *snac, ByteStream *bs)
 {
-	int keylen, ret = 1;
-	aim_rxcallback_t userfunc;
+	int keylen;
 	char *keystr;
 	GSList *tlvlist;
 	gboolean truncate_pass;
+	PurpleConnection *gc;
+	PurpleAccount *account;
+	ClientInfo aiminfo = CLIENTINFO_PURPLE_AIM;
+	ClientInfo icqinfo = CLIENTINFO_PURPLE_ICQ;
+
+	gc = od->gc;
+	account = purple_connection_get_account(gc);
 
 	keylen = byte_stream_get16(bs);
 	keystr = byte_stream_getstr(bs, keylen);
+	if (!g_utf8_validate(keystr, -1, NULL)) {
+		purple_debug_warning("oscar", "Received SNAC %04hx/%04hx with "
+				"invalid UTF-8 keystr.\n", snac->family, snac->subtype);
+		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
+				_("Received unexpected response from server"));
+		g_free(keystr);
+		return 1;
+	}
+
 	tlvlist = aim_tlvlist_read(bs);
 
 	/*
@@ -527,13 +539,18 @@ keyparse(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fram
 	 * for the netscape network.  This SNAC had a type 0x0058 TLV with length 10.
 	 * Data is 0x0007 0004 3e19 ae1e 0006 0004 0000 0005 */
 
-	if ((userfunc = aim_callhandler(od, snac->family, snac->subtype)))
-		ret = userfunc(od, conn, frame, keystr, (int)truncate_pass);
+	aim_send_login(od, conn, purple_account_get_username(account),
+			purple_connection_get_password(gc), truncate_pass,
+			od->icq ? &icqinfo : &aiminfo, keystr,
+			purple_account_get_bool(account, "allow_multiple_logins", OSCAR_DEFAULT_ALLOW_MULTIPLE_LOGINS));
+
+	purple_connection_update_progress(gc,
+			_("Password sent"), 2, OSCAR_CONNECT_STEPS);
 
 	g_free(keystr);
 	aim_tlvlist_free(tlvlist);
 
-	return ret;
+	return 1;
 }
 
 /**

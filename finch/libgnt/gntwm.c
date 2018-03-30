@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -37,14 +37,7 @@
 #endif
 
 #include <glib.h>
-#if GLIB_CHECK_VERSION(2,6,0)
-#	include <glib/gstdio.h>
-#else
-#	include <sys/types.h>
-#	include <sys/stat.h>
-#	include <fcntl.h>
-#	define g_fopen open
-#endif
+#include <glib/gstdio.h>
 #include <ctype.h>
 #include <gmodule.h>
 #include <stdlib.h>
@@ -57,7 +50,6 @@
 
 #include "gntwm.h"
 #include "gntstyle.h"
-#include "gntmarshal.h"
 #include "gnt.h"
 #include "gntbox.h"
 #include "gntbutton.h"
@@ -153,7 +145,7 @@ gnt_wm_copy_win(GntWidget *widget, GntNode *node)
 	}
 }
 
-/**
+/*
  * The following is a workaround for a bug in most versions of ncursesw.
  * Read about it in: http://article.gmane.org/gmane.comp.lib.ncurses.bugs/2751
  *
@@ -337,9 +329,8 @@ refresh_node(GntWidget *widget, GntNode *node, gpointer m)
 static void
 read_window_positions(GntWM *wm)
 {
-#if GLIB_CHECK_VERSION(2,6,0)
 	GKeyFile *gfile = g_key_file_new();
-	char *filename = g_build_filename(g_get_home_dir(), ".gntpositions", NULL);
+	char *filename = g_build_filename(gnt_get_config_dir(), ".gntpositions", NULL);
 	GError *error = NULL;
 	char **keys;
 	gsize nk;
@@ -379,7 +370,6 @@ read_window_positions(GntWM *wm)
 
 	g_free(filename);
 	g_key_file_free(gfile);
-#endif
 }
 
 static gboolean check_idle(gpointer n)
@@ -436,6 +426,7 @@ switch_window(GntWM *wm, int direction, gboolean urgent)
 
 	w = wm->cws->ordered->data;
 	orgpos = pos = g_list_index(wm->cws->list, w);
+	g_return_if_fail(pos >= 0);
 
 	do {
 		pos += direction;
@@ -1429,32 +1420,28 @@ gnt_wm_class_init(GntWMClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, new_window),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 	signals[SIG_DECORATE_WIN] =
 		g_signal_new("decorate_win",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, decorate_window),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 	signals[SIG_CLOSE_WIN] =
 		g_signal_new("close_win",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, close_window),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 	signals[SIG_CONFIRM_RESIZE] =
 		g_signal_new("confirm_resize",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, window_resize_confirm),
-					 gnt_boolean_handled_accumulator, NULL,
-					 gnt_closure_marshal_BOOLEAN__POINTER_POINTER_POINTER,
+					 gnt_boolean_handled_accumulator, NULL, NULL,
 					 G_TYPE_BOOLEAN, 3, G_TYPE_POINTER, G_TYPE_POINTER, G_TYPE_POINTER);
 
 	signals[SIG_CONFIRM_MOVE] =
@@ -1462,8 +1449,7 @@ gnt_wm_class_init(GntWMClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, window_move_confirm),
-					 gnt_boolean_handled_accumulator, NULL,
-					 gnt_closure_marshal_BOOLEAN__POINTER_POINTER_POINTER,
+					 gnt_boolean_handled_accumulator, NULL, NULL,
 					 G_TYPE_BOOLEAN, 3, G_TYPE_POINTER, G_TYPE_POINTER, G_TYPE_POINTER);
 
 	signals[SIG_RESIZED] =
@@ -1471,24 +1457,21 @@ gnt_wm_class_init(GntWMClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, window_resized),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 	signals[SIG_MOVED] =
 		g_signal_new("window_moved",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, window_moved),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 	signals[SIG_UPDATE_WIN] =
 		g_signal_new("window_update",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, window_update),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 
 	signals[SIG_GIVE_FOCUS] =
@@ -1496,8 +1479,7 @@ gnt_wm_class_init(GntWMClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, give_focus),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__POINTER,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 1, G_TYPE_POINTER);
 
 	signals[SIG_MOUSE_CLICK] =
@@ -1505,8 +1487,7 @@ gnt_wm_class_init(GntWMClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, mouse_clicked),
-					 gnt_boolean_handled_accumulator, NULL,
-					 gnt_closure_marshal_BOOLEAN__INT_INT_INT_POINTER,
+					 gnt_boolean_handled_accumulator, NULL, NULL,
 					 G_TYPE_BOOLEAN, 4, G_TYPE_INT, G_TYPE_INT, G_TYPE_INT, G_TYPE_POINTER);
 
 	signals[SIG_TERMINAL_REFRESH] =
@@ -1514,8 +1495,7 @@ gnt_wm_class_init(GntWMClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWMClass, terminal_refresh),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 
 	gnt_bindable_class_register_action(GNT_BINDABLE_CLASS(klass), "window-next", window_next,
@@ -1613,7 +1593,7 @@ gnt_wm_class_init(GntWMClass *klass)
  * GntWM API
  *****************************************************************************/
 GType
-gnt_wm_get_gtype(void)
+gnt_wm_get_type(void)
 {
 	static GType type = 0;
 
@@ -1775,31 +1755,6 @@ match_title(gpointer title, gpointer n, gpointer wid_title)
 		return TRUE;
 	return FALSE;
 }
-
-#if !GLIB_CHECK_VERSION(2,4,0)
-struct
-{
-	gpointer data;
-	gpointer value;
-} table_find_data;
-
-static void
-table_find_helper(gpointer key, gpointer value, gpointer data)
-{
-	GHRFunc func = data;
-	if (func(key, value, table_find_data.data))
-		table_find_data.value = value;
-}
-
-static gpointer
-g_hash_table_find(GHashTable * table, GHRFunc func, gpointer data)
-{
-	table_find_data.data = data;
-	table_find_data.value = NULL;
-	g_hash_table_foreach(table, table_find_helper, func);
-	return table_find_data.value;
-}
-#endif
 
 static GntWS *
 new_widget_find_workspace(GntWM *wm, GntWidget *widget)
@@ -2155,7 +2110,7 @@ write_already(gpointer data)
 	FILE *file;
 	char *filename;
 
-	filename = g_build_filename(g_get_home_dir(), ".gntpositions", NULL);
+	filename = g_build_filename(gnt_get_config_dir(), ".gntpositions", NULL);
 
 	file = fopen(filename, "wb");
 	if (file == NULL) {
@@ -2286,8 +2241,14 @@ gboolean gnt_wm_process_click(GntWM *wm, GntMouseEvent event, int x, int y, GntW
 void gnt_wm_raise_window(GntWM *wm, GntWidget *widget)
 {
 	GntWS *ws = gnt_wm_widget_find_workspace(wm, widget);
+
+	g_return_if_fail(wm != NULL);
+
 	if (wm->cws != ws)
 		gnt_wm_switch_workspace(wm, g_list_index(wm->workspaces, ws));
+
+	g_return_if_fail(wm->cws != NULL);
+
 	if (widget != wm->cws->ordered->data) {
 		GntWidget *wid = wm->cws->ordered->data;
 		wm->cws->ordered = g_list_bring_to_front(wm->cws->ordered, widget);

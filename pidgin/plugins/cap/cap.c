@@ -33,9 +33,10 @@ static void generate_prediction(CapStatistics *statistics) {
 static double generate_prediction_for(PurpleBuddy *buddy) {
 	double prediction = 1.0f;
 	gboolean generated = FALSE;
-	gchar *buddy_name = buddy->name;
-	const gchar *protocol_id = purple_account_get_protocol_id(buddy->account);
-	const gchar *account_id = purple_account_get_username(buddy->account);
+	PurpleAccount *account = purple_buddy_get_account(buddy);
+	const gchar *buddy_name = purple_buddy_get_name(buddy);
+	const gchar *protocol_id = purple_account_get_protocol_id(account);
+	const gchar *account_id = purple_account_get_username(account);
 	const gchar *status_id = purple_status_get_id(get_status_for(buddy));
 	time_t t = time(NULL);
 	struct tm *current_time = localtime(&t);
@@ -43,7 +44,7 @@ static double generate_prediction_for(PurpleBuddy *buddy) {
 	int threshold = purple_prefs_get_int("/plugins/gtk/cap/threshold");
 	int min_minute = (current_minute - threshold) % 1440;
 	int max_minute = (current_minute + threshold) % 1440;
-	char *sql, *sta_id = NULL;
+	gchar *sql;
 	sqlite3_stmt *stmt = NULL;
 	const char *tail = NULL;
 	int rc;
@@ -93,15 +94,6 @@ static double generate_prediction_for(PurpleBuddy *buddy) {
 	}
 	sqlite3_free(sql);
 
-
-	sta_id = purple_status_get_id(get_status_for(buddy));
-
-	if(purple_strequal(sta_id, "offline")) {
-		/* This is kind of stupid, change it. */
-		if(prediction == 1.0f)
-			prediction = 0.0f;
-	}
-
 	if(generated)
 		return prediction;
 	else
@@ -113,7 +105,7 @@ static CapStatistics * get_stats_for(PurpleBuddy *buddy) {
 
 	g_return_val_if_fail(buddy != NULL, NULL);
 
-	stats = g_hash_table_lookup(_buddy_stats, buddy->name);
+	stats = g_hash_table_lookup(_buddy_stats, purple_buddy_get_name(buddy));
 	if(!stats) {
 		stats = g_malloc0(sizeof(CapStatistics));
 		stats->last_message = -1;
@@ -121,7 +113,8 @@ static CapStatistics * get_stats_for(PurpleBuddy *buddy) {
 		stats->last_seen = -1;
 		stats->last_status_id = "";
 
-		g_hash_table_insert(_buddy_stats, g_strdup(buddy->name), stats);
+		g_hash_table_insert(_buddy_stats,
+			g_strdup(purple_buddy_get_name(buddy)), stats);
 	} else {
 		/* This may actually be a different PurpleBuddy than what is in stats.
 		 * We replace stats->buddy to make sure we're looking at a valid pointer. */
@@ -137,7 +130,7 @@ static void destroy_stats(gpointer data) {
 	/* g_free(stats->hourly_usage); */
 	/* g_free(stats->daily_usage); */
 	if (stats->timeout_source_id != 0)
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 	g_free(stats);
 }
 
@@ -290,9 +283,10 @@ insert_cap_status_count_failed(const char *buddy_name, const char *account, cons
 }
 
 static void insert_cap_success(CapStatistics *stats) {
-	gchar *buddy_name = stats->buddy->name;
-	const gchar *protocol_id = purple_account_get_protocol_id(stats->buddy->account);
-	const gchar *account_id = purple_account_get_username(stats->buddy->account);
+	PurpleAccount *account = purple_buddy_get_account(stats->buddy);
+	const gchar *buddy_name = purple_buddy_get_name(stats->buddy);
+	const gchar *protocol_id = purple_account_get_protocol_id(account);
+	const gchar *account_id = purple_account_get_username(account);
 	const gchar *status_id = (stats->last_message_status_id) ?
 		stats->last_message_status_id :
 		purple_status_get_id(get_status_for(stats->buddy));
@@ -316,9 +310,10 @@ static void insert_cap_success(CapStatistics *stats) {
 }
 
 static void insert_cap_failure(CapStatistics *stats) {
-	gchar *buddy_name = stats->buddy->name;
-	const gchar *protocol_id = purple_account_get_protocol_id(stats->buddy->account);
-	const gchar *account_id = purple_account_get_username(stats->buddy->account);
+	PurpleAccount *account = purple_buddy_get_account(stats->buddy);
+	const gchar *buddy_name = purple_buddy_get_name(stats->buddy);
+	const gchar *protocol_id = purple_account_get_protocol_id(account);
+	const gchar *account_id = purple_account_get_username(account);
 	const gchar *status_id = (stats->last_message_status_id) ?
 		stats->last_message_status_id :
 		purple_status_get_id(get_status_for(stats->buddy));
@@ -344,28 +339,29 @@ static gboolean max_message_difference_cb(gpointer data) {
 /* Purple Signal Handlers */
 
 /* sent-im-msg */
-static void sent_im_msg(PurpleAccount *account, const char *receiver, const char *message) {
+static void sent_im_msg(PurpleAccount *account, PurpleMessage *msg, gpointer _unused)
+{
 	PurpleBuddy *buddy;
 	guint interval, words;
 	CapStatistics *stats = NULL;
 
-	buddy = purple_find_buddy(account, receiver);
+	buddy = purple_blist_find_buddy(account, purple_message_get_recipient(msg));
 
 	if (buddy == NULL)
 		return;
 
 	interval = purple_prefs_get_int("/plugins/gtk/cap/max_msg_difference") * 60;
-	words = word_count(message);
+	words = word_count(purple_message_get_contents(msg));
 
 	stats = get_stats_for(buddy);
 
-	insert_word_count(purple_account_get_username(account), receiver, words);
+	insert_word_count(purple_account_get_username(account), purple_message_get_recipient(msg), words);
 	stats->last_message = time(NULL);
 	stats->last_message_status_id = purple_status_get_id(get_status_for(buddy));
 	if(stats->timeout_source_id != 0)
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 
-	stats->timeout_source_id = purple_timeout_add_seconds(interval, max_message_difference_cb, stats);
+	stats->timeout_source_id = g_timeout_add_seconds(interval, max_message_difference_cb, stats);
 }
 
 /* received-im-msg */
@@ -378,7 +374,7 @@ received_im_msg(PurpleAccount *account, char *sender, char *message, PurpleConve
 	if (flags & PURPLE_MESSAGE_AUTO_RESP)
 		return;
 
-	buddy = purple_find_buddy(account, sender);
+	buddy = purple_blist_find_buddy(account, sender);
 
 	if (buddy == NULL)
 		return;
@@ -391,7 +387,7 @@ received_im_msg(PurpleAccount *account, char *sender, char *message, PurpleConve
 	 * then cancel the timeout callback. */
 	if(stats->timeout_source_id != 0) {
 		purple_debug_info("cap", "Cancelling timeout callback\n");
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 		stats->timeout_source_id = 0;
 	}
 
@@ -438,8 +434,8 @@ static void buddy_signed_off(PurpleBuddy *buddy) {
 
 /* drawing-tooltip */
 static void drawing_tooltip(PurpleBlistNode *node, GString *text, gboolean full) {
-	if(node->type == PURPLE_BLIST_BUDDY_NODE) {
-		PurpleBuddy *buddy = (PurpleBuddy *)node;
+	if (PURPLE_IS_BUDDY(node)) {
+		PurpleBuddy *buddy = PURPLE_BUDDY(node);
 		CapStatistics *stats = get_stats_for(buddy);
 		/* get the probability that this buddy will respond and add to the tooltip */
 		if(stats->prediction->probability >= 0.0) {
@@ -509,8 +505,7 @@ static PurpleStatus * get_status_for(PurpleBuddy *buddy) {
 }
 
 static void create_tables() {
-	int rc;
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"CREATE TABLE IF NOT EXISTS cap_status ("
 		"	buddy varchar(60) not null,"
 		"	account varchar(60) not null,"
@@ -521,7 +516,7 @@ static void create_tables() {
 		");",
 		NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_message ("
 		"	sender varchar(60) not null,"
 		"	receiver varchar(60) not null,"
@@ -533,7 +528,7 @@ static void create_tables() {
 		");",
 		NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_msg_count ("
 		"	buddy varchar(60) not null,"
 		"	account varchar(60) not null,"
@@ -545,7 +540,7 @@ static void create_tables() {
 		");",
 	NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_status_count ("
 		"	buddy varchar(60) not null,"
 		"	account varchar(60) not null,"
@@ -557,7 +552,7 @@ static void create_tables() {
 		");",
 	NULL, NULL, NULL);
 
-	rc = sqlite3_exec(_db,
+	sqlite3_exec(_db,
 		"create table if not exists cap_my_usage ("
 		"	account varchar(60) not null,"
 		"	protocol varchar(60) not null,"
@@ -611,8 +606,8 @@ static void insert_status_change(CapStatistics *statistics) {
 }
 
 static void insert_status_change_from_purple_status(CapStatistics *statistics, PurpleStatus *status) {
+	PurpleAccount *account = purple_buddy_get_account(statistics->buddy);
 	char *sql;
-	int rc;
 	const gchar *status_id;
 	const gchar *buddy_name;
 	const gchar *protocol_id;
@@ -625,16 +620,16 @@ static void insert_status_change_from_purple_status(CapStatistics *statistics, P
 		return;
 
 	status_id = purple_status_get_id(status);
-	buddy_name = statistics->buddy->name;
-	protocol_id = purple_account_get_protocol_id(statistics->buddy->account);
-	account_id = purple_account_get_username(statistics->buddy->account);
+	buddy_name = purple_buddy_get_name(statistics->buddy);
+	protocol_id = purple_account_get_protocol_id(account);
+	account_id = purple_account_get_username(account);
 
 	statistics->last_status_id = purple_status_get_id(status);
 
 	purple_debug_info("cap", "Executing: insert into cap_status (buddy, account, protocol, status, event_time) values(%s, %s, %s, %s, now());\n", buddy_name, account_id, protocol_id, status_id);
 
 	sql = sqlite3_mprintf("insert into cap_status values (%Q, %Q, %Q, %Q, now());", buddy_name, account_id, protocol_id, status_id);
-	rc = sqlite3_exec(_db, sql, NULL, NULL, NULL);
+	sqlite3_exec(_db, sql, NULL, NULL, NULL);
 	sqlite3_free(sql);
 }
 
@@ -645,25 +640,6 @@ static void insert_word_count(const char *sender, const char *receiver, guint co
 }
 
 /* Purple plugin specific code */
-
-static gboolean plugin_load(PurplePlugin *plugin) {
-	_plugin_pointer = plugin;
-	_signals_connected = FALSE;
-
-	/* buddy_stats is a hashtable where strings are keys
-	 * and the keys are a buddies account id (PurpleBuddy.name).
-	 * keys/values are automatically deleted */
-	_buddy_stats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, destroy_stats);
-
-	/* ? - Can't remember at the moment
-	 */
-	_my_offline_times = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-
-	if(create_database_connection()) {
-		add_plugin_functionality(plugin);
-	}
-	return TRUE;
-}
 
 static void add_plugin_functionality(PurplePlugin *plugin) {
 	if(_signals_connected)
@@ -702,7 +678,7 @@ static void add_plugin_functionality(PurplePlugin *plugin) {
 static void cancel_conversation_timeouts(gpointer key, gpointer value, gpointer user_data) {
 	CapStatistics *stats = value;
 	if(stats->timeout_source_id != 0) {
-		purple_timeout_remove(stats->timeout_source_id);
+		g_source_remove(stats->timeout_source_id);
 		stats->timeout_source_id = 0;
 	}
 }
@@ -751,86 +727,62 @@ static void write_stats_on_unload(gpointer key, gpointer value, gpointer user_da
 	}
 }
 
-static gboolean plugin_unload(PurplePlugin *plugin) {
-	purple_debug_info("cap", "CAP plugin unloading\n");
-
-	/* clean up memory allocations */
-	if(_buddy_stats) {
-		g_hash_table_foreach(_buddy_stats, write_stats_on_unload, NULL);
-		g_hash_table_destroy(_buddy_stats);
-	}
-
-	 /* close database connection */
-	 destroy_database_connection();
-
-	return TRUE;
-}
-
 static CapPrefsUI * create_cap_prefs_ui() {
 	CapPrefsUI *ui = g_malloc(sizeof(CapPrefsUI));
 
-	ui->ret = gtk_vbox_new(FALSE, 18);
+	ui->ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
 	gtk_container_set_border_width(GTK_CONTAINER(ui->ret), 10);
 	ui->cap_vbox = pidgin_make_frame(ui->ret, _("Statistics Configuration"));
 
 	/* msg_difference spinner */
 	ui->msg_difference_label = gtk_label_new(_("Maximum response timeout:"));
-	gtk_misc_set_alignment(GTK_MISC(ui->msg_difference_label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(ui->msg_difference_label), 0);
 	ui->msg_difference_input = gtk_spin_button_new_with_range(1, 1440, 1);
 	ui->msg_difference_minutes_label = gtk_label_new(_("minutes"));
-	gtk_misc_set_alignment(GTK_MISC(ui->msg_difference_minutes_label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(ui->msg_difference_minutes_label), 0);
 
 	/* last_seen spinner */
 	ui->last_seen_label = gtk_label_new(_("Maximum last-seen difference:"));
-	gtk_misc_set_alignment(GTK_MISC(ui->last_seen_label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(ui->last_seen_label), 0);
 	ui->last_seen_input = gtk_spin_button_new_with_range(1, 1440, 1);
 	ui->last_seen_minutes_label = gtk_label_new(_("minutes"));
-	gtk_misc_set_alignment(GTK_MISC(ui->last_seen_minutes_label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(ui->last_seen_minutes_label), 0);
 
 	/* threshold spinner */
 	ui->threshold_label = gtk_label_new(_("Threshold:"));
-	gtk_misc_set_alignment(GTK_MISC(ui->threshold_label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(ui->threshold_label), 0);
 	ui->threshold_input = gtk_spin_button_new_with_range(1, 1440, 1);
 	ui->threshold_minutes_label = gtk_label_new(_("minutes"));
-	gtk_misc_set_alignment(GTK_MISC(ui->threshold_minutes_label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(ui->threshold_minutes_label), 0);
 
 	/* Layout threshold/last-seen/response-timeout input items */
-	ui->table_layout = gtk_table_new(3, 3, FALSE);
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->threshold_label, 0, 1, 0, 1,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	ui->table_layout = gtk_grid_new();
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->threshold_label, 0, 0, 1, 1);
+	gtk_widget_set_hexpand(ui->threshold_label, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->threshold_input, 1, 2, 0, 1,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->threshold_input, 1, 0, 1, 1);
+	gtk_widget_set_hexpand(ui->threshold_input, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->threshold_minutes_label, 2, 3, 0, 1,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->threshold_minutes_label, 2, 0, 1, 1);
+	gtk_widget_set_hexpand(ui->threshold_minutes_label, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->msg_difference_label, 0, 1, 1, 2,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->msg_difference_label, 0, 1, 1, 1);
+	gtk_widget_set_hexpand(ui->msg_difference_label, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->msg_difference_input, 1, 2, 1, 2,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->msg_difference_input, 1, 1, 1, 1);
+	gtk_widget_set_hexpand(ui->msg_difference_input, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->msg_difference_minutes_label, 2, 3, 1, 2,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->msg_difference_minutes_label, 2, 1, 1, 1);
+	gtk_widget_set_hexpand(ui->msg_difference_minutes_label, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->last_seen_label, 0, 1, 2,3,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->last_seen_label, 0, 2, 1, 1);
+	gtk_widget_set_hexpand(ui->last_seen_label, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->last_seen_input, 1, 2, 2, 3,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->last_seen_input, 1, 2, 1, 1);
+	gtk_widget_set_hexpand(ui->last_seen_input, TRUE);
 
-	gtk_table_attach(GTK_TABLE(ui->table_layout), ui->last_seen_minutes_label, 2, 3, 2, 3,
-		(GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-		(GtkAttachOptions) (0), 0, 0);
+	gtk_grid_attach(GTK_GRID(ui->table_layout), ui->last_seen_minutes_label, 2, 2, 1, 1);
+	gtk_widget_set_hexpand(ui->last_seen_minutes_label, TRUE);
 
 
 	/* Config window - lay it out */
@@ -868,7 +820,7 @@ static CapPrefsUI * create_cap_prefs_ui() {
 	return ui;
 }
 
-static void cap_prefs_ui_destroy_cb(GtkObject *object, gpointer user_data) {
+static void cap_prefs_ui_destroy_cb(GObject *object, gpointer user_data) {
 	CapPrefsUI *ui = user_data;
 	if(_db) {
 		add_plugin_functionality(_plugin_pointer);
@@ -879,39 +831,6 @@ static void cap_prefs_ui_destroy_cb(GtkObject *object, gpointer user_data) {
 static void numeric_spinner_prefs_cb(GtkSpinButton *spinbutton, gpointer user_data) {
 	purple_prefs_set_int(user_data, gtk_spin_button_get_value_as_int(spinbutton));
 }
-
-static PidginPluginUiInfo ui_info = {
-	get_config_frame,
-	0 /* page_num (reserved) */,
-	NULL,NULL,NULL,NULL
-};
-
-static PurplePluginInfo info = {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,							/**< type		*/
-	PIDGIN_PLUGIN_TYPE,							/**< ui_requirement */
-	0,												/**< flags		*/
-	NULL,											/**< dependencies   */
-	PURPLE_PRIORITY_DEFAULT,							/**< priority		*/
-	CAP_PLUGIN_ID,									/**< id			*/
-	N_("Contact Availability Prediction"),				/**< name		*/
-	DISPLAY_VERSION,									/**< version		*/
-	N_("Contact Availability Prediction plugin."),	/**  summary		*/
-	N_("Displays statistical information about your buddies' availability"),
-	/**  description	*/
-	"Geoffrey Foster <geoffrey.foster@gmail.com>",	/**< author		*/
-	PURPLE_WEBSITE,									/**< homepage		*/
-	plugin_load,									/**< load		*/
-	plugin_unload,									/**< unload		*/
-	NULL,											/**< destroy		*/
-	&ui_info,										/**< ui_info		*/
-	NULL,											/**< extra_info	 */
-	NULL,											/**< prefs_info		*/
-	NULL,
-	NULL,NULL,NULL,NULL
-};
 
 static GtkWidget * get_config_frame(PurplePlugin *plugin) {
 	CapPrefsUI *ui = create_cap_prefs_ui();
@@ -924,11 +843,67 @@ static GtkWidget * get_config_frame(PurplePlugin *plugin) {
 	return ui->ret;
 }
 
-static void init_plugin(PurplePlugin *plugin) {
+static PidginPluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Geoffrey Foster <geoffrey.foster@gmail.com>",
+		NULL
+	};
+
+	return pidgin_plugin_info_new(
+		"id",                   CAP_PLUGIN_ID,
+		"name",                 N_("Contact Availability Prediction"),
+		"version",              DISPLAY_VERSION,
+		"category",             N_("Utility"),
+		"summary",              N_("Contact Availability Prediction plugin."),
+		"description",          N_("Displays statistical information about "
+		                           "your buddies' availability"),
+		"authors",              authors,
+		"website",              PURPLE_WEBSITE,
+		"abi-version",          PURPLE_ABI_VERSION,
+		"gtk-config-frame-cb",  get_config_frame,
+		NULL
+	);
+}
+
+static gboolean plugin_load(PurplePlugin *plugin, GError **error) {
 	purple_prefs_add_none("/plugins/gtk/cap");
 	purple_prefs_add_int("/plugins/gtk/cap/max_seen_difference", 1);
 	purple_prefs_add_int("/plugins/gtk/cap/max_msg_difference", 10);
 	purple_prefs_add_int("/plugins/gtk/cap/threshold", 5);
+
+	_plugin_pointer = plugin;
+	_signals_connected = FALSE;
+
+	/* buddy_stats is a hashtable where strings are keys
+	 * and the keys are a buddies account id (PurpleBuddy.name).
+	 * keys/values are automatically deleted */
+	_buddy_stats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, destroy_stats);
+
+	/* ? - Can't remember at the moment
+	 */
+	_my_offline_times = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+
+	if(create_database_connection()) {
+		add_plugin_functionality(plugin);
+	}
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(cap, init_plugin, info);
+static gboolean plugin_unload(PurplePlugin *plugin, GError **error) {
+	purple_debug_info("cap", "CAP plugin unloading\n");
+
+	/* clean up memory allocations */
+	if(_buddy_stats) {
+		g_hash_table_foreach(_buddy_stats, write_stats_on_unload, NULL);
+		g_hash_table_destroy(_buddy_stats);
+	}
+
+	 /* close database connection */
+	 destroy_database_connection();
+
+	return TRUE;
+}
+
+PURPLE_PLUGIN_INIT(cap, plugin_query, plugin_load, plugin_unload);

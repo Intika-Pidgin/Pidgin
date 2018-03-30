@@ -28,9 +28,7 @@
 #include "mime.h"
 #include "util.h"
 
-/**
- * @struct mime_fields
- *
+/*
  * Utility structure used in both MIME document and parts, which maps
  * field names to their values, and keeps an easily accessible list of
  * keys.
@@ -347,7 +345,7 @@ purple_mime_part_get_data_decoded(PurpleMimePart *part, guchar **data, gsize *le
 		*data = purple_base16_decode(part->data->str, len);
 
 	} else if(! g_ascii_strcasecmp(enc, "base64")) {
-		*data = purple_base64_decode(part->data->str, len);
+		*data = g_base64_decode(part->data->str, len);
 
 	} else if(! g_ascii_strcasecmp(enc, "quoted-printable")) {
 		*data = purple_quotedp_decode(part->data->str, len);

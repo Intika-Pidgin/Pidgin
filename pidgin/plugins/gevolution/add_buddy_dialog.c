@@ -21,6 +21,8 @@
 #include "internal.h"
 #include "gtkblist.h"
 #include "pidgin.h"
+
+#include "gtk3compat.h"
 #include "gtkutils.h"
 
 #include "debug.h"
@@ -32,7 +34,7 @@
 enum
 {
 	COLUMN_NAME,
-	COLUMN_PRPL_ICON,
+	COLUMN_PROTOCOL_ICON,
 	COLUMN_USERNAME,
 	COLUMN_DATA,
 	NUM_COLUMNS
@@ -147,7 +149,7 @@ add_columns(GevoAddBuddyDialog *dialog)
 	renderer = gtk_cell_renderer_pixbuf_new();
 	gtk_tree_view_column_pack_start(column, renderer, FALSE);
 	gtk_tree_view_column_add_attribute(column, renderer,
-									   "pixbuf", COLUMN_PRPL_ICON);
+									   "pixbuf", COLUMN_PROTOCOL_ICON);
 
 	/* Account name */
 	renderer = gtk_cell_renderer_text_new();
@@ -183,7 +185,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 	if (account == NULL)
 		return;
 
-	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+	pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 
 	for (l = list; l != NULL; l = l->next)
 	{
@@ -192,14 +194,14 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 		if (account_name == NULL)
 			continue;
 
-		if (purple_find_buddy(dialog->account, account_name) != NULL)
+		if (purple_blist_find_buddy(dialog->account, account_name) != NULL)
 			continue;
 
 		gtk_list_store_append(dialog->model, &iter);
 
 		gtk_list_store_set(dialog->model, &iter,
 						   COLUMN_NAME, name,
-						   COLUMN_PRPL_ICON, pixbuf,
+						   COLUMN_PROTOCOL_ICON, pixbuf,
 						   COLUMN_USERNAME, account_name,
 						   COLUMN_DATA, contact,
 						   -1);
@@ -227,7 +229,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 }
 
 static void
-populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
+populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uid)
 {
 	EBookQuery *query;
 	EBook *book;
@@ -250,8 +252,7 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
 
 	gtk_list_store_clear(dialog->model);
 
-	if (!gevo_load_addressbook(uri, &book, &err))
-	{
+	if (!gevo_load_addressbook(uid, &book, &err)) {
 		purple_debug_error("evolution",
 						 "Error retrieving default addressbook: %s\n", err->message);
 		g_error_free(err);
@@ -328,16 +329,15 @@ static void
 addrbook_change_cb(GtkComboBox *combo, GevoAddBuddyDialog *dialog)
 {
 	GtkTreeIter iter;
-	const char *esource_uri;
+	const char *esource_uid;
 
 	if (!gtk_combo_box_get_active_iter(combo, &iter))
 		return;
 
 	gtk_tree_model_get(GTK_TREE_MODEL(dialog->addrbooks), &iter,
-					   ADDRBOOK_COLUMN_URI, &esource_uri,
-					   -1);
+		ADDRBOOK_COLUMN_UID, &esource_uid, -1);
 
-	populate_treeview(dialog, esource_uri);
+	populate_treeview(dialog, esource_uid);
 }
 
 static void
@@ -445,7 +445,7 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 					 G_CALLBACK(delete_win_cb), dialog);
 
 	/* Setup the vbox */
-	vbox = gtk_vbox_new(FALSE, 12);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
 	gtk_container_add(GTK_CONTAINER(dialog->win), vbox);
 	gtk_widget_show(vbox);
 
@@ -453,12 +453,13 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 	label = gtk_label_new(_("Select a person from your address book below, "
 							"or add a new person."));
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, TRUE, 0);
 	gtk_widget_show(label);
 
 	/* Add the search hbox */
-	hbox = gtk_hbox_new(FALSE, 6);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, TRUE, 0);
 	gtk_widget_show(hbox);
 
@@ -507,7 +508,6 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 	/* Now for the treeview */
 	dialog->treeview =
 		gtk_tree_view_new_with_model(GTK_TREE_MODEL(dialog->model));
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(dialog->treeview), TRUE);
 	gtk_box_pack_start(GTK_BOX(vbox),
 		pidgin_make_scrollable(dialog->treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),
 		TRUE, TRUE, 0);
@@ -541,12 +541,12 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 	/* Cool. Now we only have a little left... */
 
 	/* Separator. */
-	sep = gtk_hseparator_new();
+	sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 0);
 	gtk_widget_show(sep);
 
 	/* Button box */
-	bbox = gtk_hbutton_box_new();
+	bbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_set_spacing(GTK_BOX(bbox), 6);
 	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
 	gtk_box_pack_end(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);
@@ -592,13 +592,13 @@ gevo_add_buddy_dialog_add_person(GevoAddBuddyDialog *dialog,
 	GdkPixbuf *pixbuf;
 	GtkTreeIter iter;
 
-	pixbuf = pidgin_create_prpl_icon(account, PIDGIN_PRPL_ICON_SMALL);
+	pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
 
 	gtk_list_store_append(dialog->model, &iter);
 
 	gtk_list_store_set(dialog->model, &iter,
 					   COLUMN_NAME, name,
-					   COLUMN_PRPL_ICON, pixbuf,
+					   COLUMN_PROTOCOL_ICON, pixbuf,
 					   COLUMN_DATA, contact,
 					   COLUMN_USERNAME, screenname,
 					   -1);

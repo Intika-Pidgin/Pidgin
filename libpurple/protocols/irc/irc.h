@@ -24,15 +24,24 @@
 #define _PURPLE_IRC_H
 
 #include <glib.h>
+#include <gmodule.h>
 
 #ifdef HAVE_CYRUS_SASL
 #include <sasl/sasl.h>
 #endif
 
-#include "circbuffer.h"
-#include "ft.h"
+#include "circularbuffer.h"
+#include "xfer.h"
+#include "queuedoutputstream.h"
 #include "roomlist.h"
 #include "sslconn.h"
+
+#define IRC_TYPE_PROTOCOL             (irc_protocol_get_type())
+#define IRC_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), IRC_TYPE_PROTOCOL, IRCProtocol))
+#define IRC_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), IRC_TYPE_PROTOCOL, IRCProtocolClass))
+#define IRC_IS_PROTOCOL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), IRC_TYPE_PROTOCOL))
+#define IRC_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), IRC_TYPE_PROTOCOL))
+#define IRC_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), IRC_TYPE_PROTOCOL, IRCProtocolClass))
 
 #define IRC_DEFAULT_SERVER "irc.freenode.net"
 #define IRC_DEFAULT_PORT 6667
@@ -51,25 +60,34 @@
 
 #define IRC_NAMES_FLAG "irc-namelist"
 
-
 enum { IRC_USEROPT_SERVER, IRC_USEROPT_PORT, IRC_USEROPT_CHARSET };
 enum irc_state { IRC_STATE_NEW, IRC_STATE_ESTABLISHED };
+
+typedef struct _IRCProtocol
+{
+	PurpleProtocol parent;
+} IRCProtocol;
+
+typedef struct _IRCProtocolClass
+{
+	PurpleProtocolClass parent_class;
+} IRCProtocolClass;
 
 struct irc_conn {
 	PurpleAccount *account;
 	GHashTable *msgs;
 	GHashTable *cmds;
 	char *server;
-	int fd;
+	GSocketConnection *conn;
+	GCancellable *cancellable;
 	guint timer;
 	GHashTable *buddies;
 
 	gboolean ison_outstanding;
 	GList *buddies_outstanding;
 
-	char *inbuf;
-	int inbuflen;
-	int inbufused;
+	GDataInputStream *input;
+	PurpleQueuedOutputStream *output;
 
 	GString *motd;
 	GString *names;
@@ -89,12 +107,8 @@ struct irc_conn {
 		time_t signon;
 	} whois;
 	PurpleRoomlist *roomlist;
-	PurpleSslConnection *gsc;
 
 	gboolean quitting;
-
-	PurpleCircBuffer *outbuf;
-	guint writeh;
 
 	time_t recv_time;
 
@@ -120,6 +134,8 @@ struct irc_buddy {
 
 typedef int (*IRCCmdCallback) (struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 
+G_MODULE_EXPORT GType irc_protocol_get_type(void);
+
 int irc_send(struct irc_conn *irc, const char *buf);
 int irc_send_len(struct irc_conn *irc, const char *buf, int len);
 gboolean irc_blist_timeout(struct irc_conn *irc);
@@ -136,6 +152,7 @@ const char *irc_nick_skip_mode(struct irc_conn *irc, const char *string);
 gboolean irc_ischannel(const char *string);
 
 void irc_register_commands(void);
+void irc_unregister_commands(void);
 void irc_msg_table_build(struct irc_conn *irc);
 void irc_parse_msg(struct irc_conn *irc, char *input);
 char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, const char *msg, int notice);
@@ -193,8 +210,6 @@ void irc_msg_authtryagain(struct irc_conn *irc, const char *name, const char *fr
 void irc_msg_authfail(struct irc_conn *irc, const char *name, const char *from, char **args);
 #endif
 
-void irc_msg_ignore(struct irc_conn *irc, const char *name, const char *from, char **args);
-
 void irc_cmd_table_build(struct irc_conn *irc);
 
 int irc_cmd_default(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
@@ -224,7 +239,7 @@ int irc_cmd_wallops(struct irc_conn *irc, const char *cmd, const char *target, c
 int irc_cmd_whois(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_whowas(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 
-PurpleXfer *irc_dccsend_new_xfer(PurpleConnection *gc, const char *who);
-void irc_dccsend_send_file(PurpleConnection *gc, const char *who, const char *file);
+PurpleXfer *irc_dccsend_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
+void irc_dccsend_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
 void irc_dccsend_recv(struct irc_conn *irc, const char *from, const char *msg);
 #endif /* _PURPLE_IRC_H */

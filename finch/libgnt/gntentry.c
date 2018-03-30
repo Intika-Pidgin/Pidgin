@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -26,7 +26,6 @@
 #include "gntinternal.h"
 #include "gntbox.h"
 #include "gntentry.h"
-#include "gntmarshal.h"
 #include "gntstyle.h"
 #include "gnttree.h"
 #include "gntutils.h"
@@ -294,7 +293,7 @@ gnt_entry_draw(GntWidget *widget)
 
 	stop = gnt_util_onscreen_width(entry->scroll, entry->end);
 	if (stop < widget->priv.width)
-		mvwhline(widget->window, 0, stop, ENTRY_CHAR, widget->priv.width - stop);
+		mvwhline(widget->window, 0, stop, GNT_ENTRY_CHAR, widget->priv.width - stop);
 
 	curpos = gnt_util_onscreen_width(entry->scroll, entry->cursor);
 	if (focus)
@@ -951,16 +950,14 @@ gnt_entry_class_init(GntEntryClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntEntryClass, text_changed),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 
 	signals[SIG_COMPLETION] =
 		g_signal_new("completion",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
-					 0, NULL, NULL,
-					 gnt_closure_marshal_VOID__POINTER_POINTER,
+					 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 2, G_TYPE_POINTER, G_TYPE_POINTER);
 
 	gnt_bindable_class_register_action(bindable, "cursor-home", move_start,
@@ -1064,7 +1061,7 @@ gnt_entry_init(GTypeInstance *instance, gpointer class)
  * GntEntry API
  *****************************************************************************/
 GType
-gnt_entry_get_gtype(void)
+gnt_entry_get_type(void)
 {
 	static GType type = 0;
 

@@ -21,8 +21,9 @@
 #include "internal.h"
 #include "gtkblist.h"
 #include "pidgin.h"
+
+#include "gtk3compat.h"
 #include "gtkutils.h"
-#include "gtkimhtml.h"
 
 #include "debug.h"
 
@@ -130,11 +131,10 @@ add_columns(GevoAssociateBuddyDialog *dialog)
 }
 
 static void
-populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
+populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uid)
 {
 	EBook *book;
 	EBookQuery *query;
-	const char *prpl_id;
 	gboolean status;
 	GList *cards, *c;
 	GError *err = NULL;
@@ -154,8 +154,7 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 
 	gtk_list_store_clear(dialog->model);
 
-	if (!gevo_load_addressbook(uri, &book, &err))
-	{
+	if (!gevo_load_addressbook(uid, &book, &err)) {
 		purple_debug_error("evolution",
 						 "Error retrieving addressbook: %s\n", err->message);
 		g_error_free(err);
@@ -188,8 +187,6 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 		return;
 	}
 
-	prpl_id = purple_account_get_protocol_id(dialog->buddy->account);
-
 	for (c = cards; c != NULL; c = c->next)
 	{
 		EContact *contact = E_CONTACT(c->data);
@@ -207,8 +204,9 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 						   -1);
 
 		/* See if this user has the buddy in its list. */
-		protocol_field = gevo_prpl_get_field(dialog->buddy->account,
-											 dialog->buddy);
+		protocol_field = gevo_protocol_get_field(
+			purple_buddy_get_account(dialog->buddy),
+			dialog->buddy);
 
 		if (protocol_field > 0)
 		{
@@ -218,7 +216,8 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
 
 			for (l = ims; l != NULL; l = l->next)
 			{
-				if (purple_strequal(l->data, dialog->buddy->name))
+				if (purple_strequal(l->data,
+					purple_buddy_get_name(dialog->buddy)))
 				{
 					GtkTreeSelection *selection;
 
@@ -241,24 +240,24 @@ static void
 addrbook_change_cb(GtkComboBox *combo, GevoAssociateBuddyDialog *dialog)
 {
 	GtkTreeIter iter;
-	const char *esource_uri;
+	const char *esource_uid;
 
 	if (!gtk_combo_box_get_active_iter(combo, &iter))
 		return;
 
 	gtk_tree_model_get(GTK_TREE_MODEL(dialog->addrbooks), &iter,
-					   ADDRBOOK_COLUMN_URI, &esource_uri,
-					   -1);
+		ADDRBOOK_COLUMN_UID, &esource_uid, -1);
 
-	populate_treeview(dialog, esource_uri);
+	populate_treeview(dialog, esource_uid);
 }
 
 static void
 new_person_cb(GtkWidget *w, GevoAssociateBuddyDialog *dialog)
 {
-	gevo_new_person_dialog_show(dialog->book, NULL, dialog->buddy->account,
-								dialog->buddy->name, NULL, dialog->buddy,
-								TRUE);
+	gevo_new_person_dialog_show(dialog->book, NULL,
+		purple_buddy_get_account(dialog->buddy),
+		purple_buddy_get_name(dialog->buddy),
+		NULL, dialog->buddy, TRUE);
 
 	delete_win_cb(NULL, NULL, dialog);
 }
@@ -289,13 +288,15 @@ assoc_buddy_cb(GtkWidget *w, GevoAssociateBuddyDialog *dialog)
 					   COLUMN_DATA, &contact,
 					   -1);
 
-	protocol_field = gevo_prpl_get_field(dialog->buddy->account, dialog->buddy);
+	protocol_field = gevo_protocol_get_field(
+		purple_buddy_get_account(dialog->buddy), dialog->buddy);
 
 	if (protocol_field == 0)
 		return; /* XXX */
 
 	list = e_contact_get(contact, protocol_field);
-	list = g_list_append(list, g_strdup(dialog->buddy->name));
+	list = g_list_append(list,
+		g_strdup(purple_buddy_get_name(dialog->buddy)));
 
 	e_contact_set(contact, protocol_field, list);
 
@@ -319,7 +320,6 @@ gevo_associate_buddy_dialog_new(PurpleBuddy *buddy)
 	GtkWidget *hbox;
 	GtkWidget *bbox;
 	GtkWidget *sep;
-	GtkWidget *expander;
 	GtkTreeSelection *selection;
 	GtkCellRenderer *cell;
 
@@ -335,7 +335,7 @@ gevo_associate_buddy_dialog_new(PurpleBuddy *buddy)
 					 G_CALLBACK(delete_win_cb), dialog);
 
 	/* Setup the vbox */
-	vbox = gtk_vbox_new(FALSE, 12);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
 	gtk_container_add(GTK_CONTAINER(dialog->win), vbox);
 	gtk_widget_show(vbox);
 
@@ -343,12 +343,13 @@ gevo_associate_buddy_dialog_new(PurpleBuddy *buddy)
 	label = gtk_label_new(_("Select a person from your address book to "
 							"add this buddy to, or create a new person."));
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, TRUE, 0);
 	gtk_widget_show(label);
 
 	/* Add the search hbox */
-	hbox = gtk_hbox_new(FALSE, 6);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, TRUE, 0);
 	gtk_widget_show(hbox);
 
@@ -395,7 +396,6 @@ gevo_associate_buddy_dialog_new(PurpleBuddy *buddy)
 	/* Now for the treeview */
 	dialog->treeview = gtk_tree_view_new_with_model(
 			GTK_TREE_MODEL(dialog->model));
-	gtk_tree_view_set_rules_hint(GTK_TREE_VIEW(dialog->treeview), TRUE);
 	gtk_box_pack_start(GTK_BOX(vbox),
 		pidgin_make_scrollable(dialog->treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1),
 		TRUE, TRUE, 0);
@@ -419,28 +419,13 @@ gevo_associate_buddy_dialog_new(PurpleBuddy *buddy)
 					 G_CALLBACK(addrbook_change_cb), dialog);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(dialog->addrbooks_combo), 0);
 
-	/* Add the expander */
-	expander = gtk_expander_new_with_mnemonic(_("User _details"));
-	gtk_box_pack_start(GTK_BOX(vbox), expander, FALSE, FALSE, 0);
-	gtk_widget_show(expander);
-
-	/*
-	 * User details
-	 */
-
-	/* Textview */
-	dialog->imhtml = gtk_imhtml_new(NULL, NULL);
-	gtk_container_add(GTK_CONTAINER(expander),
-		pidgin_make_scrollable(dialog->imhtml, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1));
-	gtk_widget_show(dialog->imhtml);
-
 	/* Separator. */
-	sep = gtk_hseparator_new();
+	sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 0);
 	gtk_widget_show(sep);
 
 	/* Button box */
-	bbox = gtk_hbutton_box_new();
+	bbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_set_spacing(GTK_BOX(bbox), 6);
 	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
 	gtk_box_pack_end(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);

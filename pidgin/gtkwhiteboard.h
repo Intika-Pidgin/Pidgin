@@ -1,7 +1,3 @@
-/**
- * @file gtkwhiteboard.h The PidginWhiteboard frontend object
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -25,58 +21,30 @@
 
 #ifndef _PIDGINWHITEBOARD_H_
 #define _PIDGINWHITEBOARD_H_
+/**
+ * SECTION:gtkwhiteboard
+ * @section_id: pidgin-gtkwhiteboard
+ * @short_description: <filename>gtkwhiteboard.h</filename>
+ * @title: Whiteboard Frontend
+ */
 
 #include "pidgin.h"
 
-#include "whiteboard.h"
-
-#define FULL_CIRCLE_DEGREES 23040
-
-/* TODO: Make into an enum. */
-#define BRUSH_STATE_UP      0
-#define BRUSH_STATE_DOWN    1
-#define BRUSH_STATE_MOTION  2
-
-#define PALETTE_NUM_COLORS  7
-
-/**
- * A PidginWhiteboard
- */
-typedef struct _PidginWhiteboard
-{
-	PurpleWhiteboard *wb;      /**< backend data for this whiteboard */
-
-	GtkWidget *window;       /**< Window for the Doodle session */
-	GtkWidget *drawing_area; /**< Drawing area */
-
-	GdkPixmap *pixmap;       /**< Memory for drawing area */
-
-	int  width;              /**< Canvas width */
-	int  height;             /**< Canvas height */
-	int brush_color;         /**< Foreground color */
-	int brush_size;          /**< Brush size */
-} PidginWhiteboard;
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 /*****************************************************************************/
-/** @name PidginWhiteboard API                                              */
+/* PidginWhiteboard API                                                      */
 /*****************************************************************************/
-/*@{*/
 
 /**
+ * pidgin_whiteboard_get_ui_ops:
+ *
  * Gets the GtkWhiteboard UI Operations.
  *
- * @return The GtkWhiteboard UI Operations.
+ * Returns: The GtkWhiteboard UI Operations.
  */
-PurpleWhiteboardUiOps *pidgin_whiteboard_get_ui_ops( void );
+PurpleWhiteboardUiOps *pidgin_whiteboard_get_ui_ops(void);
 
-/*@}*/
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _PIDGINWHITEBOARD_H_ */

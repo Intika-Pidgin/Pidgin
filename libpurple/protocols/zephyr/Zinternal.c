@@ -254,10 +254,10 @@ Code_t Z_ReadWait()
 			  (struct sockaddr *)&from, &from_len);
 
     if (packet_len < 0)
-	return (errno);
+      return (errno);
 
     if (!packet_len)
-	return (ZERR_EOF);
+      return (ZERR_EOF);
 
     packet[packet_len] = '\0';
 
@@ -819,12 +819,9 @@ void Z_RemQueue(qptr)
 
     __Q_Size -= qptr->msg_len;
 
-    if (qptr->header)
-	free(qptr->header);
-    if (qptr->msg)
-	free(qptr->msg);
-    if (qptr->packet)
-	free(qptr->packet);
+    free(qptr->header);
+    free(qptr->msg);
+    free(qptr->packet);
 
     hole = qptr->holelist;
     while (hole) {
@@ -934,7 +931,6 @@ const char *const ZNoticeKinds[] = {
 #ifdef Z_DEBUG
 
 #undef Z_debug
-#ifdef HAVE_STDARG_H
 void Z_debug (const char *format, ...)
 {
     va_list pvar;
@@ -944,30 +940,13 @@ void Z_debug (const char *format, ...)
     (*__Z_debug_print) (format, pvar, __Z_debug_print_closure);
     va_end (pvar);
 }
-#else /* stdarg */
-void Z_debug (va_alist) va_dcl
-{
-    va_list pvar;
-    char *format;
-    if (!__Z_debug_print)
-      return;
-    va_start (pvar);
-    format = va_arg (pvar, char *);
-    (*__Z_debug_print) (format, pvar, __Z_debug_print_closure);
-    va_end (pvar);
-}
-#endif
 
 void Z_debug_stderr (format, args, closure)
      const char *format;
      va_list args;
      void *closure;
 {
-#ifdef HAVE_VPRINTF
     vfprintf (stderr, format, args);
-#else
-    _doprnt (format, args, stderr);
-#endif
     putc ('\n', stderr);
 }
 

@@ -27,9 +27,6 @@
  */
 
 #include "oscar.h"
-#ifdef _WIN32
-#include "win32dep.h"
-#endif
 
 /* Define to log unknown TLVs */
 /* #define LOG_UNKNOWN_TLV */
@@ -552,14 +549,10 @@ aim_locate_adduserinfo(OscarData *od, aim_userinfo_t *userinfo)
 		 * We don't have an away message specified in this user_info
 		 * block, so clear any cached away message now.
 		 */
-		if (cur->away) {
-			g_free(cur->away);
-			cur->away = NULL;
-		}
-		if (cur->away_encoding) {
-			g_free(cur->away_encoding);
-			cur->away_encoding = NULL;
-		}
+		g_free(cur->away);
+		cur->away = NULL;
+		g_free(cur->away_encoding);
+		cur->away_encoding = NULL;
 		cur->away_len = 0;
 	}
 }
@@ -929,11 +922,11 @@ aim_info_extract(OscarData *od, ByteStream *bs, aim_userinfo_t *outinfo)
 
 			mood = aim_receive_custom_icon(od, bs, length);
 			if (mood)
-				purple_prpl_got_user_status(account, outinfo->bn, "mood",
+				purple_protocol_got_user_status(account, outinfo->bn, "mood",
 						PURPLE_MOOD_NAME, mood,
 						NULL);
 			else
-				purple_prpl_got_user_status_deactive(account, outinfo->bn, "mood");
+				purple_protocol_got_user_status_deactive(account, outinfo->bn, "mood");
 
 		} else if (type == 0x000e) {
 			/*
@@ -1093,11 +1086,11 @@ aim_info_extract(OscarData *od, ByteStream *bs, aim_userinfo_t *outinfo)
 						g_free(icqmood);
 
 						if (mood)
-							purple_prpl_got_user_status(account, outinfo->bn, "mood",
+							purple_protocol_got_user_status(account, outinfo->bn, "mood",
 									PURPLE_MOOD_NAME, mood,
 									NULL);
 						else
-							purple_prpl_got_user_status_deactive(account, outinfo->bn, "mood");
+							purple_protocol_got_user_status_deactive(account, outinfo->bn, "mood");
 					} break;
 				}
 
@@ -1415,11 +1408,11 @@ userinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fram
 
 		mood = aim_receive_custom_icon(od, &cbs, tlv->length);
 		if (mood)
-			purple_prpl_got_user_status(account, userinfo->bn, "mood",
+			purple_protocol_got_user_status(account, userinfo->bn, "mood",
 					PURPLE_MOOD_NAME, mood,
 					NULL);
 		else
-			purple_prpl_got_user_status_deactive(account, userinfo->bn, "mood");
+			purple_protocol_got_user_status_deactive(account, userinfo->bn, "mood");
 	}
 	aim_tlvlist_free(tlvlist);
 

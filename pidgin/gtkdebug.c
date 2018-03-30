@@ -1,8 +1,3 @@
-/**
- * @file gtkdebug.c GTK+ Debug API
- * @ingroup pidgin
- */
-
 /* pidgin
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
@@ -33,86 +28,68 @@
 
 #include "gtkdebug.h"
 #include "gtkdialogs.h"
-#include "gtkimhtml.h"
 #include "gtkutils.h"
+#include "gtkwebview.h"
 #include "pidginstock.h"
 
-#ifdef HAVE_REGEX_H
-# include <regex.h>
-#	define USE_REGEX 1
-#else
-#if GLIB_CHECK_VERSION(2,14,0)
-#	define USE_REGEX 1
+#ifdef ENABLE_GLIBTRACE
+#include <execinfo.h>
 #endif
-#endif /* HAVE_REGEX_H */
 
 #include <gdk/gdkkeysyms.h>
+
+#include "gtk3compat.h"
+
+#include "pidginresources.h"
 
 typedef struct
 {
 	GtkWidget *window;
 	GtkWidget *text;
-
-	GtkListStore *store;
+	GtkWidget *filter;
+	GtkWidget *expression;
+	GtkWidget *filterlevel;
 
 	gboolean paused;
 
-#ifdef USE_REGEX
-	GtkWidget *filter;
-	GtkWidget *expression;
-
 	gboolean invert;
 	gboolean highlight;
-
 	guint timer;
-#	ifdef HAVE_REGEX_H
-	regex_t regex;
-#	else
 	GRegex *regex;
-#	endif /* HAVE_REGEX_H */
-#else
-	GtkWidget *find;
-#endif /* USE_REGEX */
-	GtkWidget *filterlevel;
 } DebugWindow;
 
-static const char debug_fg_colors[][8] = {
-	"#000000",    /**< All debug levels. */
-	"#666666",    /**< Misc.             */
-	"#000000",    /**< Information.      */
-	"#660000",    /**< Warnings.         */
-	"#FF0000",    /**< Errors.           */
-	"#FF0000",    /**< Fatal errors.     */
+static DebugWindow *debug_win = NULL;
+
+struct _PidginDebugUi
+{
+	GObject parent;
+
+	/* Other members, including private data. */
+	guint debug_enabled_timer;
 };
 
-static DebugWindow *debug_win = NULL;
-static guint debug_enabled_timer = 0;
+static void pidgin_debug_ui_finalize(GObject *gobject);
+static void pidgin_debug_ui_interface_init(PurpleDebugUiInterface *iface);
 
-#ifdef USE_REGEX
-static void regex_filter_all(DebugWindow *win);
-static void regex_show_all(DebugWindow *win);
-#endif /* USE_REGEX */
+G_DEFINE_TYPE_WITH_CODE(PidginDebugUi, pidgin_debug_ui, G_TYPE_OBJECT,
+                        G_IMPLEMENT_INTERFACE(PURPLE_TYPE_DEBUG_UI,
+                                              pidgin_debug_ui_interface_init));
 
 static gint
 debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 {
 	purple_prefs_disconnect_by_handle(pidgin_debug_get_handle());
 
-#ifdef USE_REGEX
 	if(debug_win->timer != 0) {
 		const gchar *text;
 
-		purple_timeout_remove(debug_win->timer);
+		g_source_remove(debug_win->timer);
 
 		text = gtk_entry_get_text(GTK_ENTRY(debug_win->expression));
 		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/debug/regex", text);
 	}
-#ifdef HAVE_REGEX_H
-	regfree(&debug_win->regex);
-#else
-	g_regex_unref(debug_win->regex);
-#endif /* HAVE_REGEX_H */
-#endif /* USE_REGEX */
+	if (debug_win->regex != NULL)
+		g_regex_unref(debug_win->regex);
 
 	/* If the "Save Log" dialog is open then close it */
 	purple_request_close_with_handle(debug_win);
@@ -128,96 +105,13 @@ debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 static gboolean
 configure_cb(GtkWidget *w, GdkEventConfigure *event, DebugWindow *win)
 {
-	if (GTK_WIDGET_VISIBLE(w)) {
+	if (gtk_widget_get_visible(w)) {
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/debug/width",  event->width);
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/debug/height", event->height);
 	}
 
 	return FALSE;
 }
-
-#ifndef USE_REGEX
-struct _find {
-	DebugWindow *window;
-	GtkWidget *entry;
-};
-
-static void
-do_find_cb(GtkWidget *widget, gint response, struct _find *f)
-{
-	switch (response) {
-	case GTK_RESPONSE_OK:
-		gtk_imhtml_search_find(GTK_IMHTML(f->window->text),
-							   gtk_entry_get_text(GTK_ENTRY(f->entry)));
-		break;
-
-	case GTK_RESPONSE_DELETE_EVENT:
-	case GTK_RESPONSE_CLOSE:
-		gtk_imhtml_search_clear(GTK_IMHTML(f->window->text));
-		gtk_widget_destroy(f->window->find);
-		f->window->find = NULL;
-		g_free(f);
-		break;
-	}
-}
-
-static void
-find_cb(GtkWidget *w, DebugWindow *win)
-{
-	GtkWidget *hbox, *img, *label;
-	struct _find *f;
-
-	if(win->find)
-	{
-		gtk_window_present(GTK_WINDOW(win->find));
-		return;
-	}
-
-	f = g_malloc(sizeof(struct _find));
-	f->window = win;
-	win->find = gtk_dialog_new_with_buttons(_("Find"),
-					GTK_WINDOW(win->window), GTK_DIALOG_DESTROY_WITH_PARENT,
-					GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE,
-					GTK_STOCK_FIND, GTK_RESPONSE_OK, NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(win->find),
-					 GTK_RESPONSE_OK);
-	g_signal_connect(G_OBJECT(win->find), "response",
-					G_CALLBACK(do_find_cb), f);
-
-	gtk_container_set_border_width(GTK_CONTAINER(win->find), PIDGIN_HIG_BOX_SPACE);
-	gtk_window_set_resizable(GTK_WINDOW(win->find), FALSE);
-	gtk_dialog_set_has_separator(GTK_DIALOG(win->find), FALSE);
-	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(win->find)->vbox), PIDGIN_HIG_BORDER);
-	gtk_container_set_border_width(
-		GTK_CONTAINER(GTK_DIALOG(win->find)->vbox), PIDGIN_HIG_BOX_SPACE);
-
-	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(win->find)->vbox),
-					  hbox);
-	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
-				       gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
-	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
-
-	gtk_misc_set_alignment(GTK_MISC(img), 0, 0);
-	gtk_dialog_set_response_sensitive(GTK_DIALOG(win->find),
-									  GTK_RESPONSE_OK, FALSE);
-
-	label = gtk_label_new(NULL);
-	gtk_label_set_markup_with_mnemonic(GTK_LABEL(label), _("_Search for:"));
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	f->entry = gtk_entry_new();
-	gtk_entry_set_activates_default(GTK_ENTRY(f->entry), TRUE);
-	gtk_label_set_mnemonic_widget(GTK_LABEL(label), GTK_WIDGET(f->entry));
-	g_signal_connect(G_OBJECT(f->entry), "changed",
-					 G_CALLBACK(pidgin_set_sensitive_if_input),
-					 win->find);
-	gtk_box_pack_start(GTK_BOX(hbox), f->entry, FALSE, FALSE, 0);
-
-	gtk_widget_show_all(win->find);
-	gtk_widget_grab_focus(f->entry);
-}
-#endif /* USE_REGEX */
 
 static void
 save_writefile_cb(void *user_data, const char *filename)
@@ -227,11 +121,11 @@ save_writefile_cb(void *user_data, const char *filename)
 	char *tmp;
 
 	if ((fp = g_fopen(filename, "w+")) == NULL) {
-		purple_notify_error(win, NULL, _("Unable to open file."), NULL);
+		purple_notify_error(win, NULL, _("Unable to open file."), NULL, NULL);
 		return;
 	}
 
-	tmp = gtk_imhtml_get_text(GTK_IMHTML(win->text), NULL, NULL);
+	tmp = pidgin_webview_get_body_text(PIDGIN_WEBVIEW(win->text));
 	fprintf(fp, "Pidgin Debug Log : %s\n", purple_date_format_full(NULL));
 	fprintf(fp, "%s", tmp);
 	g_free(tmp);
@@ -243,19 +137,13 @@ static void
 save_cb(GtkWidget *w, DebugWindow *win)
 {
 	purple_request_file(win, _("Save Debug Log"), "purple-debug.log", TRUE,
-					  G_CALLBACK(save_writefile_cb), NULL,
-					  NULL, NULL, NULL,
-					  win);
+		G_CALLBACK(save_writefile_cb), NULL, NULL, win);
 }
 
 static void
 clear_cb(GtkWidget *w, DebugWindow *win)
 {
-	gtk_imhtml_clear(GTK_IMHTML(win->text));
-
-#ifdef USE_REGEX
-	gtk_list_store_clear(win->store);
-#endif /* USE_REGEX */
+	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "clear();");
 }
 
 static void
@@ -263,253 +151,55 @@ pause_cb(GtkWidget *w, DebugWindow *win)
 {
 	win->paused = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(w));
 
-#ifdef USE_REGEX
-	if(!win->paused) {
-		if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
-			regex_filter_all(win);
-		else
-			regex_show_all(win);
-	}
-#endif /* USE_REGEX */
+	if (win->paused)
+		pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "pauseOutput();");
+	else
+		pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "resumeOutput();");
 }
 
 /******************************************************************************
  * regex stuff
  *****************************************************************************/
-#ifdef USE_REGEX
 static void
 regex_clear_color(GtkWidget *w) {
-	gtk_widget_modify_base(w, GTK_STATE_NORMAL, NULL);
+	GtkStyleContext *context = gtk_widget_get_style_context(w);
+	gtk_style_context_remove_class(context, "good-filter");
+	gtk_style_context_remove_class(context, "bad-filter");
 }
 
 static void
-regex_change_color(GtkWidget *w, guint16 r, guint16 g, guint16 b) {
-	GdkColor color;
+regex_change_color(GtkWidget *w, gboolean success) {
+	GtkStyleContext *context = gtk_widget_get_style_context(w);
 
-	color.red = r;
-	color.green = g;
-	color.blue = b;
-
-	gtk_widget_modify_base(w, GTK_STATE_NORMAL, &color);
-}
-
-static void
-regex_highlight_clear(DebugWindow *win) {
-	GtkIMHtml *imhtml = GTK_IMHTML(win->text);
-	GtkTextIter s, e;
-
-	gtk_text_buffer_get_start_iter(imhtml->text_buffer, &s);
-	gtk_text_buffer_get_end_iter(imhtml->text_buffer, &e);
-	gtk_text_buffer_remove_tag_by_name(imhtml->text_buffer, "regex", &s, &e);
-}
-
-static void
-regex_match(DebugWindow *win, const gchar *text) {
-	GtkIMHtml *imhtml = GTK_IMHTML(win->text);
-#ifdef HAVE_REGEX_H
-	regmatch_t matches[4]; /* adjust if necessary */
-	size_t n_matches = sizeof(matches) / sizeof(matches[0]);
-	gint inverted;
-#else
-	GMatchInfo *match_info;
-#endif /* HAVE_REGEX_H */
-	gchar *plaintext;
-
-	if(!text)
-		return;
-
-	/* I don't like having to do this, but we need it for highlighting.  Plus
-	 * it makes the ^ and $ operators work :)
-	 */
-	plaintext = purple_markup_strip_html(text);
-
-	/* we do a first pass to see if it matches at all.  If it does we append
-	 * it, and work out the offsets to highlight.
-	 */
-#ifdef HAVE_REGEX_H
-	inverted = (win->invert) ? REG_NOMATCH : 0;
-	if(regexec(&win->regex, plaintext, n_matches, matches, 0) == inverted) {
-#else
-	if(g_regex_match(win->regex, plaintext, 0, &match_info) != win->invert) {
-#endif /* HAVE_REGEX_H */
-		gchar *p = plaintext;
-		GtkTextIter ins;
-		gint i, offset = 0;
-
-		gtk_text_buffer_get_iter_at_mark(imhtml->text_buffer, &ins,
-							gtk_text_buffer_get_insert(imhtml->text_buffer));
-		i = gtk_text_iter_get_offset(&ins);
-
-		gtk_imhtml_append_text(imhtml, text, 0);
-
-		/* If we're not highlighting or the expression is inverted, we're
-		 * done and move on.
-		 */
-		if(!win->highlight || win->invert) {
-			g_free(plaintext);
-#ifndef HAVE_REGEX_H
-			g_match_info_free(match_info);
-#endif
-			return;
-		}
-
-		/* we use a do-while to highlight the first match, and then continue
-		 * if necessary...
-		 */
-#ifdef HAVE_REGEX_H
-		do {
-			size_t m;
-
-			for(m = 0; m < n_matches; m++) {
-				GtkTextIter ms, me;
-
-				if(matches[m].rm_eo == -1)
-					break;
-
-				i += offset;
-
-				gtk_text_buffer_get_iter_at_offset(imhtml->text_buffer, &ms,
-												   i + matches[m].rm_so);
-				gtk_text_buffer_get_iter_at_offset(imhtml->text_buffer, &me,
-												   i + matches[m].rm_eo);
-				gtk_text_buffer_apply_tag_by_name(imhtml->text_buffer, "regex",
-												  &ms, &me);
-				offset = matches[m].rm_eo;
-			}
-
-			p += offset;
-		} while(regexec(&win->regex, p, n_matches, matches, REG_NOTBOL) == inverted);
-#else
-		do
-		{
-			gint m;
-			gint start_pos, end_pos;
-			GtkTextIter ms, me;
-
-			if (!g_match_info_matches(match_info))
-				break;
-
-			for (m = 0; m < g_match_info_get_match_count(match_info); m++)
-			{
-				if (m == 1)
-					continue;
-
-				g_match_info_fetch_pos(match_info, m, &start_pos, &end_pos);
-
-				if (end_pos == -1)
-					break;
-
-				gtk_text_buffer_get_iter_at_offset(imhtml->text_buffer, &ms,
-													i + start_pos);
-				gtk_text_buffer_get_iter_at_offset(imhtml->text_buffer, &me,
-													i + end_pos);
-				gtk_text_buffer_apply_tag_by_name(imhtml->text_buffer, "regex",
-												  &ms, &me);
-				offset = end_pos;
-			}
-
-			g_match_info_free(match_info);
-			p += offset;
-			i += offset;
-		} while (g_regex_match(win->regex, p, G_REGEX_MATCH_NOTBOL, &match_info) != win->invert);
-		g_match_info_free(match_info);
-#endif /* HAVE_REGEX_H */
-	}
-
-	g_free(plaintext);
-}
-
-static gboolean
-regex_filter_all_cb(GtkTreeModel *m, GtkTreePath *p, GtkTreeIter *iter,
-				    gpointer data)
-{
-	DebugWindow *win = (DebugWindow *)data;
-	gchar *text;
-	PurpleDebugLevel level;
-
-	gtk_tree_model_get(m, iter, 0, &text, 1, &level, -1);
-
-	if (level >= (PurpleDebugLevel)purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"))
-		regex_match(win, text);
-
-	g_free(text);
-
-	return FALSE;
-}
-
-static void
-regex_filter_all(DebugWindow *win) {
-	gtk_imhtml_clear(GTK_IMHTML(win->text));
-
-	if(win->highlight)
-		regex_highlight_clear(win);
-
-	gtk_tree_model_foreach(GTK_TREE_MODEL(win->store), regex_filter_all_cb,
-						   win);
-}
-
-static gboolean
-regex_show_all_cb(GtkTreeModel *m, GtkTreePath *p, GtkTreeIter *iter,
-				  gpointer data)
-{
-	DebugWindow *win = (DebugWindow *)data;
-	gchar *text;
-	PurpleDebugLevel level;
-
-	gtk_tree_model_get(m, iter, 0, &text, 1, &level, -1);
-	if (level >= (PurpleDebugLevel)purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"))
-		gtk_imhtml_append_text(GTK_IMHTML(win->text), text, 0);
-	g_free(text);
-
-	return FALSE;
-}
-
-static void
-regex_show_all(DebugWindow *win) {
-	gtk_imhtml_clear(GTK_IMHTML(win->text));
-
-	if(win->highlight)
-		regex_highlight_clear(win);
-
-	gtk_tree_model_foreach(GTK_TREE_MODEL(win->store), regex_show_all_cb,
-						   win);
-}
-
-static void
-regex_compile(DebugWindow *win) {
-	const gchar *text;
-
-	text = gtk_entry_get_text(GTK_ENTRY(win->expression));
-
-	if(text == NULL || *text == '\0') {
-		regex_clear_color(win->expression);
-		gtk_widget_set_sensitive(win->filter, FALSE);
-		return;
-	}
-
-#ifdef HAVE_REGEX_H
-	regfree(&win->regex);
-	if(regcomp(&win->regex, text, REG_EXTENDED | REG_ICASE) != 0) {
-#else
-	if (win->regex)
-		g_regex_unref(win->regex);
-	win->regex = g_regex_new(text, G_REGEX_EXTENDED | G_REGEX_CASELESS, 0, NULL);
-	if(win->regex == NULL) {
-#endif
-		/* failed to compile */
-		regex_change_color(win->expression, 0xFFFF, 0xAFFF, 0xAFFF);
-		gtk_widget_set_sensitive(win->filter, FALSE);
+	if (success) {
+		gtk_style_context_add_class(context, "good-filter");
+		gtk_style_context_remove_class(context, "bad-filter");
 	} else {
-		/* compiled successfully */
-		regex_change_color(win->expression, 0xAFFF, 0xFFFF, 0xAFFF);
-		gtk_widget_set_sensitive(win->filter, TRUE);
+		gtk_style_context_add_class(context, "bad-filter");
+		gtk_style_context_remove_class(context, "good-filter");
 	}
+}
 
-	/* we check if the filter is on in case it was only of the options that
-	 * got changed, and not the expression.
-	 */
-	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
-		regex_filter_all(win);
+static void
+regex_toggle_filter(DebugWindow *win, gboolean filter)
+{
+	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "regex.clear();");
+
+	if (filter) {
+		const char *text;
+		char *regex;
+		char *script;
+
+		text = gtk_entry_get_text(GTK_ENTRY(win->expression));
+		regex = pidgin_webview_quote_js_string(text);
+		script = g_strdup_printf("regex.filterAll(%s, %s, %s);",
+		                         regex,
+		                         win->invert ? "true" : "false",
+		                         win->highlight ? "true" : "false");
+		pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), script);
+		g_free(script);
+		g_free(regex);
+	}
 }
 
 static void
@@ -519,11 +209,11 @@ regex_pref_filter_cb(const gchar *name, PurplePrefType type,
 	DebugWindow *win = (DebugWindow *)data;
 	gboolean active = GPOINTER_TO_INT(val), current;
 
-	if(!win || !win->window)
+	if (!win || !win->window)
 		return;
 
 	current = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter));
-	if(active != current)
+	if (active != current)
 		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(win->filter), active);
 }
 
@@ -546,8 +236,8 @@ regex_pref_invert_cb(const gchar *name, PurplePrefType type,
 
 	win->invert = active;
 
-	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
-		regex_filter_all(win);
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
+		regex_toggle_filter(win, TRUE);
 }
 
 static void
@@ -559,40 +249,8 @@ regex_pref_highlight_cb(const gchar *name, PurplePrefType type,
 
 	win->highlight = active;
 
-	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
-		regex_filter_all(win);
-}
-
-static void
-regex_row_changed_cb(GtkTreeModel *model, GtkTreePath *path,
-					 GtkTreeIter *iter, DebugWindow *win)
-{
-	gchar *text;
-	PurpleDebugLevel level;
-
-	if(!win || !win->window)
-		return;
-
-	/* If the debug window is paused, we just return since it's in the store.
-	 * We don't call regex_match because it doesn't make sense to check the
-	 * string if it's paused.  When we unpause we clear the imhtml and
-	 * reiterate over the store to handle matches that were outputted when
-	 * we were paused.
-	 */
-	if(win->paused)
-		return;
-
-	gtk_tree_model_get(model, iter, 0, &text, 1, &level, -1);
-
-	if (level >= (PurpleDebugLevel)purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel")) {
-		if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter))) {
-			regex_match(win, text);
-		} else {
-			gtk_imhtml_append_text(GTK_IMHTML(win->text), text, 0);
-		}
-	}
-
-	g_free(text);
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
+		regex_toggle_filter(win, TRUE);
 }
 
 static gboolean
@@ -609,24 +267,54 @@ regex_timer_cb(DebugWindow *win) {
 
 static void
 regex_changed_cb(GtkWidget *w, DebugWindow *win) {
-	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter))) {
+	const gchar *text;
+
+	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter))) {
 		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(win->filter),
 									 FALSE);
 	}
 
-	if(win->timer == 0)
-		win->timer = purple_timeout_add_seconds(5, (GSourceFunc)regex_timer_cb, win);
+	if (win->timer == 0)
+		win->timer = g_timeout_add_seconds(5, (GSourceFunc)regex_timer_cb, win);
 
-	regex_compile(win);
+	text = gtk_entry_get_text(GTK_ENTRY(win->expression));
+
+	if (text == NULL || *text == '\0') {
+		regex_clear_color(win->expression);
+		gtk_widget_set_sensitive(win->filter, FALSE);
+		return;
+	}
+
+	if (win->regex)
+		g_regex_unref(win->regex);
+
+	win->regex = g_regex_new(text, G_REGEX_CASELESS|G_REGEX_JAVASCRIPT_COMPAT, 0, NULL);
+
+	if (win->regex == NULL) {
+		/* failed to compile */
+		regex_change_color(win->expression, FALSE);
+		gtk_widget_set_sensitive(win->filter, FALSE);
+	} else {
+		/* compiled successfully */
+		regex_change_color(win->expression, TRUE);
+		gtk_widget_set_sensitive(win->filter, TRUE);
+	}
 }
 
 static void
 regex_key_release_cb(GtkWidget *w, GdkEventKey *e, DebugWindow *win) {
-	if(e->keyval == GDK_Return &&
-	   GTK_WIDGET_IS_SENSITIVE(win->filter) &&
-	   !gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
-	{
-		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(win->filter), TRUE);
+	if (gtk_widget_is_sensitive(win->filter)) {
+		GtkToggleToolButton *tb = GTK_TOGGLE_TOOL_BUTTON(win->filter);
+		if ((e->keyval == GDK_KEY_Return || e->keyval == GDK_KEY_KP_Enter) &&
+			!gtk_toggle_tool_button_get_active(tb))
+		{
+			gtk_toggle_tool_button_set_active(tb, TRUE);
+		}
+		if (e->keyval == GDK_KEY_Escape &&
+			gtk_toggle_tool_button_get_active(tb))
+		{
+			gtk_toggle_tool_button_set_active(tb, FALSE);
+		}
 	}
 }
 
@@ -651,35 +339,34 @@ regex_popup_cb(GtkEntry *entry, GtkWidget *menu, DebugWindow *win) {
 }
 
 static void
-regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win) {
+regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win)
+{
 	gboolean active;
 
 	active = gtk_toggle_tool_button_get_active(button);
 
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/filter", active);
 
-	if(!GTK_IS_IMHTML(win->text))
+	if (!PIDGIN_IS_WEBVIEW(win->text))
 		return;
 
-	if(active)
-		regex_filter_all(win);
-	else
-		regex_show_all(win);
+	regex_toggle_filter(win, active);
 }
 
 static void
 filter_level_pref_changed(const char *name, PurplePrefType type, gconstpointer value, gpointer data)
 {
 	DebugWindow *win = data;
+	int level = GPOINTER_TO_INT(value);
+	char *tmp;
 
-	if (GPOINTER_TO_INT(value) != gtk_combo_box_get_active(GTK_COMBO_BOX(win->filterlevel)))
-		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel), GPOINTER_TO_INT(value));
-	if(gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter)))
-		regex_filter_all(win);
-	else
-		regex_show_all(win);
+	if (level != gtk_combo_box_get_active(GTK_COMBO_BOX(win->filterlevel)))
+		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel), level);
+
+	tmp = g_strdup_printf("setFilterLevel('%d');", level);
+	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), tmp);
+	g_free(tmp);
 }
-#endif /* USE_REGEX */
 
 static void
 filter_level_changed_cb(GtkWidget *combo, gpointer null)
@@ -709,7 +396,7 @@ toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
 	GtkToolbarStyle value[3];
 	int i;
 
-	if (!(event->button == 3 && event->type == GDK_BUTTON_PRESS))
+	if (!gdk_event_triggers_context_menu((GdkEvent *)event))
 		return FALSE;
 
 	text[0] = _("_Icon Only");          value[0] = GTK_TOOLBAR_ICONS;
@@ -729,23 +416,38 @@ toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
 
 	gtk_widget_show_all(menu);
 
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, gtk_get_current_event_time());
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
 	return FALSE;
 }
 
 static DebugWindow *
 debug_window_new(void)
 {
+	GError *error;
 	DebugWindow *win;
+	GResource *resource;
+	GBytes *resource_bytes;
 	GtkWidget *vbox;
 	GtkWidget *toolbar;
 	GtkWidget *frame;
 	gint width, height;
 	void *handle;
 	GtkToolItem *item;
-#if !GTK_CHECK_VERSION(2,12,0)
-	GtkTooltips *tooltips;
-#endif
+	GtkStyleContext *context;
+	GtkCssProvider *filter_css;
+	const gchar filter_style[] =
+		".bad-filter {"
+			"color: @error_fg_color;"
+			"text-shadow: 0 1px @error_text_shadow;"
+			"background-image: none;"
+			"background-color: @error_bg_color;"
+		"}"
+		".good-filter {"
+			"color: @question_fg_color;"
+			"text-shadow: 0 1px @question_text_shadow;"
+			"background-image: none;"
+			"background-color: @success_color;"
+		"}";
 
 	win = g_new0(DebugWindow, 1);
 
@@ -765,33 +467,13 @@ debug_window_new(void)
 
 	handle = pidgin_debug_get_handle();
 
-#ifdef USE_REGEX
-	/* the list store for all the messages */
-	win->store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
-
-	/* row-changed gets called when we do gtk_list_store_set, and row-inserted
-	 * gets called with gtk_list_store_append, which is a
-	 * completely empty row. So we just ignore row-inserted, and deal with row
-	 * changed. -Gary
-	 */
-	g_signal_connect(G_OBJECT(win->store), "row-changed",
-					 G_CALLBACK(regex_row_changed_cb), win);
-
-#endif /* USE_REGEX */
-
 	/* Setup the vbox */
-	vbox = gtk_vbox_new(FALSE, 0);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_container_add(GTK_CONTAINER(win->window), vbox);
 
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/toolbar")) {
 		/* Setup our top button bar thingie. */
 		toolbar = gtk_toolbar_new();
-#if !GTK_CHECK_VERSION(2,12,0)
-		tooltips = gtk_tooltips_new();
-#endif
-#if !GTK_CHECK_VERSION(2,14,0)
-		gtk_toolbar_set_tooltips(GTK_TOOLBAR(toolbar), TRUE);
-#endif
 		gtk_toolbar_set_show_arrow(GTK_TOOLBAR(toolbar), TRUE);
 		g_signal_connect(G_OBJECT(toolbar), "button-press-event", G_CALLBACK(toolbar_context), win);
 
@@ -804,38 +486,17 @@ debug_window_new(void)
 
 		gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
 
-#ifndef USE_REGEX
-		/* Find button */
-		item = gtk_tool_button_new_from_stock(GTK_STOCK_FIND);
-		gtk_tool_item_set_is_important(item, TRUE);
-#if GTK_CHECK_VERSION(2,12,0)
-		gtk_tool_item_set_tooltip_text(item, _("Find"));
-#else
-		gtk_tool_item_set_tooltip(item, tooltips, _("Find"), NULL);
-#endif
-		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(find_cb), win);
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-#endif /* USE_REGEX */
-
 		/* Save */
 		item = gtk_tool_button_new_from_stock(GTK_STOCK_SAVE);
 		gtk_tool_item_set_is_important(item, TRUE);
-#if GTK_CHECK_VERSION(2,12,0)
 		gtk_tool_item_set_tooltip_text(item, _("Save"));
-#else
-		gtk_tool_item_set_tooltip(item, tooltips, _("Save"), NULL);
-#endif
 		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(save_cb), win);
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
 		/* Clear button */
 		item = gtk_tool_button_new_from_stock(GTK_STOCK_CLEAR);
 		gtk_tool_item_set_is_important(item, TRUE);
-#if GTK_CHECK_VERSION(2,12,0)
 		gtk_tool_item_set_tooltip_text(item, _("Clear"));
-#else
-		gtk_tool_item_set_tooltip(item, tooltips, _("Clear"), NULL);
-#endif
 		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(clear_cb), win);
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
@@ -845,15 +506,10 @@ debug_window_new(void)
 		/* Pause */
 		item = gtk_toggle_tool_button_new_from_stock(PIDGIN_STOCK_PAUSE);
 		gtk_tool_item_set_is_important(item, TRUE);
-#if GTK_CHECK_VERSION(2,12,0)
 		gtk_tool_item_set_tooltip_text(item, _("Pause"));
-#else
-		gtk_tool_item_set_tooltip(item, tooltips, _("Pause"), NULL);
-#endif
 		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(pause_cb), win);
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
-#ifdef USE_REGEX
 		/* regex stuff */
 		item = gtk_separator_tool_item_new();
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
@@ -863,11 +519,7 @@ debug_window_new(void)
 		gtk_tool_item_set_is_important(item, TRUE);
 		win->filter = GTK_WIDGET(item);
 		gtk_tool_button_set_label(GTK_TOOL_BUTTON(win->filter), _("Filter"));
-#if GTK_CHECK_VERSION(2,12,0)
 		gtk_tool_item_set_tooltip_text(GTK_TOOL_ITEM(win->filter), _("Filter"));
-#else
-		gtk_tooltips_set_tip(tooltips, win->filter, _("Filter"), NULL);
-#endif
 		g_signal_connect(G_OBJECT(win->filter), "clicked", G_CALLBACK(regex_filter_toggled_cb), win);
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(win->filter));
 
@@ -885,13 +537,16 @@ debug_window_new(void)
 		/* regex entry */
 		win->expression = gtk_entry_new();
 		item = gtk_tool_item_new();
-#if GTK_CHECK_VERSION(2,12,0)
 		gtk_widget_set_tooltip_text(win->expression, _("Right click for more options."));
-#else
-		gtk_tooltips_set_tip(tooltips, win->expression, _("Right click for more options."), NULL);
-#endif
 		gtk_container_add(GTK_CONTAINER(item), GTK_WIDGET(win->expression));
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
+
+		filter_css = gtk_css_provider_new();
+		gtk_css_provider_load_from_data(filter_css, filter_style, -1, NULL);
+		context = gtk_widget_get_style_context(win->expression);
+		gtk_style_context_add_provider(context,
+		                               GTK_STYLE_PROVIDER(filter_css),
+		                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
 		/* this needs to be before the text is set from the pref if we want it
 		 * to colorize a stored expression.
@@ -916,8 +571,6 @@ debug_window_new(void)
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/highlight",
 									regex_pref_highlight_cb, win);
 
-#endif /* USE_REGEX */
-
 		item = gtk_separator_tool_item_new();
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
@@ -925,46 +578,54 @@ debug_window_new(void)
 		gtk_container_add(GTK_CONTAINER(item), gtk_label_new(_("Level ")));
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
-		win->filterlevel = gtk_combo_box_new_text();
+		win->filterlevel = gtk_combo_box_text_new();
 		item = gtk_tool_item_new();
-#if GTK_CHECK_VERSION(2,12,0)
 		gtk_widget_set_tooltip_text(win->filterlevel, _("Select the debug filter level."));
-#else
-		gtk_tooltips_set_tip(tooltips, win->filterlevel, _("Select the debug filter level."), NULL);
-#endif
 		gtk_container_add(GTK_CONTAINER(item), win->filterlevel);
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("All"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Misc"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Info"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Warning"));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Error "));
-		gtk_combo_box_append_text(GTK_COMBO_BOX(win->filterlevel), _("Fatal Error"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("All"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Misc"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Info"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Warning"));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Error "));
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Fatal Error"));
 		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel),
 					purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"));
-#ifdef USE_REGEX
+
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/filterlevel",
 						filter_level_pref_changed, win);
-#endif
 		g_signal_connect(G_OBJECT(win->filterlevel), "changed",
 						 G_CALLBACK(filter_level_changed_cb), NULL);
 	}
 
-	/* Add the gtkimhtml */
-	frame = pidgin_create_imhtml(FALSE, &win->text, NULL, NULL);
-	gtk_imhtml_set_format_functions(GTK_IMHTML(win->text),
-									GTK_IMHTML_ALL ^ GTK_IMHTML_SMILEY ^ GTK_IMHTML_IMAGE);
+	/* Add the gtkwebview */
+	frame = pidgin_create_webview(FALSE, &win->text, NULL);
+	pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(win->text),
+	                                 PIDGIN_WEBVIEW_ALL ^ PIDGIN_WEBVIEW_SMILEY ^ PIDGIN_WEBVIEW_IMAGE);
+	resource = pidgin_get_resource();
+	error = NULL;
+	resource_bytes = g_resource_lookup_data(resource,
+	                                        "/im/pidgin/Pidgin/Debug/gtkdebug.html",
+	                                        G_RESOURCE_LOOKUP_FLAGS_NONE,
+	                                        &error);
+	if (G_UNLIKELY(resource_bytes == NULL || error != NULL)) {
+		gchar *msg = g_strdup_printf("Unable to load debug window HTML: %s\n",
+		                             error ? error->message : "Unknown error");
+		g_clear_error(&error);
+		pidgin_webview_load_html_string(PIDGIN_WEBVIEW(win->text), msg);
+		g_free(msg);
+	} else {
+		gconstpointer gtkdebug_html;
+		gtkdebug_html = g_bytes_get_data(resource_bytes, NULL);
+		pidgin_webview_load_html_string(PIDGIN_WEBVIEW(win->text),
+		                                gtkdebug_html);
+	}
+	g_bytes_unref(resource_bytes);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 	gtk_widget_show(frame);
 
-#ifdef USE_REGEX
-	/* add the tag for regex highlighting */
-	gtk_text_buffer_create_tag(GTK_IMHTML(win->text)->text_buffer, "regex",
-							   "background", "#FFAFAF",
-							   "weight", "bold",
-							   NULL);
-#endif /* USE_REGEX */
+	clear_cb(NULL, win);
 
 	gtk_widget_show_all(win->window);
 
@@ -974,12 +635,23 @@ debug_window_new(void)
 static gboolean
 debug_enabled_timeout_cb(gpointer data)
 {
-	debug_enabled_timer = 0;
+	PidginDebugUi *ui = PIDGIN_DEBUG_UI(data);
 
-	if (data)
-		pidgin_debug_window_show();
-	else
-		pidgin_debug_window_hide();
+	ui->debug_enabled_timer = 0;
+
+	pidgin_debug_window_show();
+
+	return FALSE;
+}
+
+static gboolean
+debug_disabled_timeout_cb(gpointer data)
+{
+	PidginDebugUi *ui = PIDGIN_DEBUG_UI(data);
+
+	ui->debug_enabled_timer = 0;
+
+	pidgin_debug_window_hide();
 
 	return FALSE;
 }
@@ -988,7 +660,12 @@ static void
 debug_enabled_cb(const char *name, PurplePrefType type,
 				 gconstpointer value, gpointer data)
 {
-	debug_enabled_timer = g_timeout_add(0, debug_enabled_timeout_cb, GINT_TO_POINTER(GPOINTER_TO_INT(value)));
+	PidginDebugUi *ui = PIDGIN_DEBUG_UI(data);
+
+	if (GPOINTER_TO_INT(value))
+		ui->debug_enabled_timer = g_timeout_add(0, debug_enabled_timeout_cb, data);
+	else
+		ui->debug_enabled_timer = g_timeout_add(0, debug_disabled_timeout_cb, data);
 }
 
 static void
@@ -1027,6 +704,17 @@ pidgin_glib_log_handler(const gchar *domain, GLogLevelFlags flags,
 
 	if (new_msg != NULL)
 	{
+#ifdef ENABLE_GLIBTRACE
+		void *bt_buff[20];
+		size_t bt_size;
+
+		bt_size = backtrace(bt_buff, 20);
+		fprintf(stderr, "\nBacktrace for \"%s\" (%s):\n", new_msg,
+			new_domain != NULL ? new_domain : "g_log");
+		backtrace_symbols_fd(bt_buff, bt_size, STDERR_FILENO);
+		fprintf(stderr, "\n");
+#endif
+
 		purple_debug(level, (new_domain != NULL ? new_domain : "g_log"),
 				   "%s\n", new_msg);
 
@@ -1043,8 +731,8 @@ pidgin_glib_dummy_print_handler(const gchar *string)
 }
 #endif
 
-void
-pidgin_debug_init(void)
+static void
+pidgin_debug_ui_init(PidginDebugUi *self)
 {
 	/* Debug window preferences. */
 	/*
@@ -1065,16 +753,14 @@ pidgin_debug_init(void)
 	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/debug/width",  450);
 	purple_prefs_add_int(PIDGIN_PREFS_ROOT "/debug/height", 250);
 
-#ifdef USE_REGEX
 	purple_prefs_add_string(PIDGIN_PREFS_ROOT "/debug/regex", "");
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/filter", FALSE);
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/invert", FALSE);
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/case_insensitive", FALSE);
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/debug/highlight", FALSE);
-#endif /* USE_REGEX */
 
 	purple_prefs_connect_callback(NULL, PIDGIN_PREFS_ROOT "/debug/enabled",
-								debug_enabled_cb, NULL);
+	                              debug_enabled_cb, self);
 
 #define REGISTER_G_LOG_HANDLER(name) \
 	g_log_set_handler((name), G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL \
@@ -1090,6 +776,7 @@ pidgin_debug_init(void)
 	REGISTER_G_LOG_HANDLER("GModule");
 	REGISTER_G_LOG_HANDLER("GLib-GObject");
 	REGISTER_G_LOG_HANDLER("GThread");
+	REGISTER_G_LOG_HANDLER("Json");
 #ifdef USE_GSTREAMER
 	REGISTER_G_LOG_HANDLER("GStreamer");
 #endif
@@ -1100,13 +787,16 @@ pidgin_debug_init(void)
 #endif
 }
 
-void
-pidgin_debug_uninit(void)
+static void
+pidgin_debug_ui_finalize(GObject *gobject)
 {
-	purple_debug_set_ui_ops(NULL);
+	PidginDebugUi *self = PIDGIN_DEBUG_UI(gobject);
 
-	if (debug_enabled_timer != 0)
-		g_source_remove(debug_enabled_timer);
+	if (self->debug_enabled_timer != 0)
+		g_source_remove(self->debug_enabled_timer);
+	self->debug_enabled_timer = 0;
+
+	G_OBJECT_CLASS(pidgin_debug_ui_parent_class)->finalize(gobject);
 }
 
 void
@@ -1130,83 +820,59 @@ pidgin_debug_window_hide(void)
 }
 
 static void
-pidgin_debug_print(PurpleDebugLevel level, const char *category,
-					 const char *arg_s)
+pidgin_debug_print(PurpleDebugUi *self,
+                   PurpleDebugLevel level, const char *category,
+                   const char *arg_s)
 {
-#ifdef USE_REGEX
-	GtkTreeIter iter;
-#endif /* USE_REGEX */
-	gchar *ts_s;
-	gchar *esc_s, *cat_s, *tmp, *s;
+	gchar *esc_s;
 	const char *mdate;
 	time_t mtime;
+	gchar *js;
 
-	if (debug_win == NULL ||
-		!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"))
-	{
+	if (debug_win == NULL)
 		return;
-	}
+	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"))
+		return;
 
 	mtime = time(NULL);
 	mdate = purple_utf8_strftime("%H:%M:%S", localtime(&mtime));
-	ts_s = g_strdup_printf("(%s) ", mdate);
-	if (category == NULL)
-		cat_s = g_strdup("");
-	else
-		cat_s = g_strdup_printf("<b>%s:</b> ", category);
 
-	esc_s = g_markup_escape_text(arg_s, -1);
+	esc_s = purple_escape_js(arg_s);
 
-	s = g_strdup_printf("<font color=\"%s\">%s%s%s</font>",
-						debug_fg_colors[level], ts_s, cat_s, esc_s);
-
-	g_free(ts_s);
-	g_free(cat_s);
+	js = g_strdup_printf("append(%d, '%s', '%s', %s);",
+		level, mdate, category ? category : "", esc_s);
 	g_free(esc_s);
 
-	tmp = purple_utf8_try_convert(s);
-	g_free(s);
-	s = tmp;
-
-	if (level == PURPLE_DEBUG_FATAL) {
-		tmp = g_strdup_printf("<b>%s</b>", s);
-		g_free(s);
-		s = tmp;
-	}
-
-#ifdef USE_REGEX
-	/* add the text to the list store */
-	gtk_list_store_append(debug_win->store, &iter);
-	gtk_list_store_set(debug_win->store, &iter, 0, s, 1, level, -1);
-#else /* USE_REGEX */
-	if(!debug_win->paused && level >= purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"))
-		gtk_imhtml_append_text(GTK_IMHTML(debug_win->text), s, 0);
-#endif /* !USE_REGEX */
-
-	g_free(s);
+	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(debug_win->text), js);
+	g_free(js);
 }
 
 static gboolean
-pidgin_debug_is_enabled(PurpleDebugLevel level, const char *category)
+pidgin_debug_is_enabled(PurpleDebugUi *self, PurpleDebugLevel level, const char *category)
 {
 	return (debug_win != NULL &&
 			purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"));
 }
 
-static PurpleDebugUiOps ops =
+static void
+pidgin_debug_ui_interface_init(PurpleDebugUiInterface *iface)
 {
-	pidgin_debug_print,
-	pidgin_debug_is_enabled,
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
+	iface->print = pidgin_debug_print;
+	iface->is_enabled = pidgin_debug_is_enabled;
+}
 
-PurpleDebugUiOps *
-pidgin_debug_get_ui_ops(void)
+static void
+pidgin_debug_ui_class_init(PidginDebugUiClass *klass)
 {
-	return &ops;
+	GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+	object_class->finalize = pidgin_debug_ui_finalize;
+}
+
+PidginDebugUi *
+pidgin_debug_ui_new(void)
+{
+	return g_object_new(PIDGIN_TYPE_DEBUG_UI, NULL);
 }
 
 void *
@@ -1215,3 +881,4 @@ pidgin_debug_get_handle() {
 
 	return &handle;
 }
+

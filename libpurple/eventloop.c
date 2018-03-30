@@ -1,8 +1,3 @@
-/**
- * @file eventloop.c Purple Event Loop API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -26,81 +21,78 @@
 #include "internal.h"
 #include "eventloop.h"
 
-static PurpleEventLoopUiOps *eventloop_ui_ops = NULL;
+#define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
+#define PURPLE_GLIB_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-guint
-purple_timeout_add(guint interval, GSourceFunc function, gpointer data)
+typedef struct _PurpleIOClosure {
+	PurpleInputFunction function;
+	guint result;
+	gpointer data;
+} PurpleIOClosure;
+
+static gboolean
+purple_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
 {
-	PurpleEventLoopUiOps *ops = purple_eventloop_get_ui_ops();
+	PurpleIOClosure *closure = data;
+	PurpleInputCondition purple_cond = 0;
 
-	return ops->timeout_add(interval, function, data);
-}
+	if (condition & PURPLE_GLIB_READ_COND)
+		purple_cond |= PURPLE_INPUT_READ;
+	if (condition & PURPLE_GLIB_WRITE_COND)
+		purple_cond |= PURPLE_INPUT_WRITE;
 
-guint
-purple_timeout_add_seconds(guint interval, GSourceFunc function, gpointer data)
-{
-	PurpleEventLoopUiOps *ops = purple_eventloop_get_ui_ops();
+#ifdef _WIN32
+	if(!purple_cond) {
+		return TRUE;
+	}
+#endif /* _WIN32 */
 
-	if (ops->timeout_add_seconds)
-		return ops->timeout_add_seconds(interval, function, data);
-	else
-		return ops->timeout_add(1000 * interval, function, data);
-}
+	closure->function(closure->data, g_io_channel_unix_get_fd(source),
+			  purple_cond);
 
-gboolean
-purple_timeout_remove(guint tag)
-{
-	PurpleEventLoopUiOps *ops = purple_eventloop_get_ui_ops();
-
-	return ops->timeout_remove(tag);
+	return TRUE;
 }
 
 guint
 purple_input_add(int source, PurpleInputCondition condition, PurpleInputFunction func, gpointer user_data)
 {
-	PurpleEventLoopUiOps *ops = purple_eventloop_get_ui_ops();
+	PurpleIOClosure *closure = g_new0(PurpleIOClosure, 1);
+	GIOChannel *channel;
+	GIOCondition cond = 0;
 
-	return ops->input_add(source, condition, func, user_data);
+	closure->function = func;
+	closure->data = user_data;
+
+	if (condition & PURPLE_INPUT_READ)
+		cond |= PURPLE_GLIB_READ_COND;
+	if (condition & PURPLE_INPUT_WRITE)
+		cond |= PURPLE_GLIB_WRITE_COND;
+
+#ifdef _WIN32
+	channel = g_io_channel_win32_new_socket(source);
+#else
+	channel = g_io_channel_unix_new(source);
+#endif
+
+	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT,
+			cond, purple_io_invoke, closure, g_free);
+
+	g_io_channel_unref(channel);
+	return closure->result;
 }
 
 gboolean
 purple_input_remove(guint tag)
 {
-	PurpleEventLoopUiOps *ops = purple_eventloop_get_ui_ops();
-
-	return ops->input_remove(tag);
+	return g_source_remove(tag);
 }
 
 int
-purple_input_get_error(int fd, int *error)
+purple_input_pipe(int pipefd[2])
 {
-	PurpleEventLoopUiOps *ops = purple_eventloop_get_ui_ops();
-
-	if (ops->input_get_error)
-	{
-		int ret = ops->input_get_error(fd, error);
-		errno = *error;
-		return ret;
-	}
-	else
-	{
-		socklen_t len;
-		len = sizeof(*error);
-
-		return getsockopt(fd, SOL_SOCKET, SO_ERROR, error, &len);
-	}
-}
-
-void
-purple_eventloop_set_ui_ops(PurpleEventLoopUiOps *ops)
-{
-	eventloop_ui_ops = ops;
-}
-
-PurpleEventLoopUiOps *
-purple_eventloop_get_ui_ops(void)
-{
-	g_return_val_if_fail(eventloop_ui_ops != NULL, NULL);
-
-	return eventloop_ui_ops;
+#ifdef _WIN32
+	return wpurple_input_pipe(pipefd);
+#else
+	return pipe(pipefd);
+#endif
 }

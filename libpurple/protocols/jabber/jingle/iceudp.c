@@ -23,6 +23,7 @@
  */
 
 #include "internal.h"
+#include "glibcompat.h"
 
 #include "iceudp.h"
 #include "jingle.h"
@@ -43,25 +44,29 @@ static void jingle_iceudp_init (JingleIceUdp *iceudp);
 static void jingle_iceudp_finalize (GObject *object);
 static void jingle_iceudp_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
 static void jingle_iceudp_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-static JingleTransport *jingle_iceudp_parse_internal(xmlnode *iceudp);
-static xmlnode *jingle_iceudp_to_xml_internal(JingleTransport *transport, xmlnode *content, JingleActionType action);
-
-static JingleTransportClass *parent_class = NULL;
+static JingleTransport *jingle_iceudp_parse_internal(PurpleXmlNode *iceudp);
+static PurpleXmlNode *jingle_iceudp_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
+static void jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate);
+static GList *jingle_iceudp_get_remote_candidates(JingleTransport *transport);
 
 enum {
 	PROP_0,
 	PROP_LOCAL_CANDIDATES,
 	PROP_REMOTE_CANDIDATES,
+	PROP_LAST
 };
+
+static JingleTransportClass *parent_class = NULL;
+static GParamSpec *properties[PROP_LAST];
 
 static JingleIceUdpCandidate *
 jingle_iceudp_candidate_copy(JingleIceUdpCandidate *candidate)
 {
 	JingleIceUdpCandidate *new_candidate = g_new0(JingleIceUdpCandidate, 1);
+	new_candidate->id = g_strdup(candidate->id);
 	new_candidate->component = candidate->component;
 	new_candidate->foundation = g_strdup(candidate->foundation);
 	new_candidate->generation = candidate->generation;
-	new_candidate->id = g_strdup(candidate->id);
 	new_candidate->ip = g_strdup(candidate->ip);
 	new_candidate->network = candidate->network;
 	new_candidate->port = candidate->port;
@@ -105,17 +110,18 @@ jingle_iceudp_candidate_get_type()
 }
 
 JingleIceUdpCandidate *
-jingle_iceudp_candidate_new(guint component, const gchar *foundation,
-		guint generation, const gchar *id, const gchar *ip,
+jingle_iceudp_candidate_new(const gchar *id,
+		guint component, const gchar *foundation,
+		guint generation, const gchar *ip,
 		guint network, guint port, guint priority,
 		const gchar *protocol, const gchar *type,
 		const gchar *username, const gchar *password)
 {
 	JingleIceUdpCandidate *candidate = g_new0(JingleIceUdpCandidate, 1);
+	candidate->id = g_strdup(id);
 	candidate->component = component;
 	candidate->foundation = g_strdup(foundation);
 	candidate->generation = generation;
-	candidate->id = g_strdup(id);
 	candidate->ip = g_strdup(ip);
 	candidate->network = network;
 	candidate->port = port;
@@ -130,28 +136,7 @@ jingle_iceudp_candidate_new(guint component, const gchar *foundation,
 	return candidate;
 }
 
-GType
-jingle_iceudp_get_type()
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(JingleIceUdpClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) jingle_iceudp_class_init,
-			NULL,
-			NULL,
-			sizeof(JingleIceUdp),
-			0,
-			(GInstanceInitFunc) jingle_iceudp_init,
-			NULL
-		};
-		type = g_type_register_static(JINGLE_TYPE_TRANSPORT, "JingleIceUdp", &info, 0);
-	}
-	return type;
-}
+PURPLE_DEFINE_TYPE(JingleIceUdp, jingle_iceudp, JINGLE_TYPE_TRANSPORT);
 
 static void
 jingle_iceudp_class_init (JingleIceUdpClass *klass)
@@ -165,20 +150,22 @@ jingle_iceudp_class_init (JingleIceUdpClass *klass)
 	klass->parent_class.to_xml = jingle_iceudp_to_xml_internal;
 	klass->parent_class.parse = jingle_iceudp_parse_internal;
 	klass->parent_class.transport_type = JINGLE_TRANSPORT_ICEUDP;
-
-	g_object_class_install_property(gobject_class, PROP_LOCAL_CANDIDATES,
-			g_param_spec_pointer("local-candidates",
-			"Local candidates",
-			"The local candidates for this transport.",
-			G_PARAM_READABLE));
-
-	g_object_class_install_property(gobject_class, PROP_REMOTE_CANDIDATES,
-			g_param_spec_pointer("remote-candidates",
-			"Remote candidates",
-			"The remote candidates for this transport.",
-			G_PARAM_READABLE));
+	klass->parent_class.add_local_candidate = jingle_iceudp_add_local_candidate;
+	klass->parent_class.get_remote_candidates = jingle_iceudp_get_remote_candidates;
 
 	g_type_class_add_private(klass, sizeof(JingleIceUdpPrivate));
+
+	properties[PROP_LOCAL_CANDIDATES] = g_param_spec_pointer("local-candidates",
+			"Local candidates",
+			"The local candidates for this transport.",
+			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_REMOTE_CANDIDATES] = g_param_spec_pointer("remote-candidates",
+			"Remote candidates",
+			"The remote candidates for this transport.",
+			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties(gobject_class, PROP_LAST, properties);
 }
 
 static void
@@ -246,36 +233,98 @@ jingle_iceudp_get_property (GObject *object, guint prop_id, GValue *value, GPara
 	}
 }
 
-void
-jingle_iceudp_add_local_candidate(JingleIceUdp *iceudp, JingleIceUdpCandidate *candidate)
+static void
+jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate)
 {
-	GList *iter = iceudp->priv->local_candidates;
+	JingleIceUdp *iceudp = JINGLE_ICEUDP(transport);
+	PurpleMediaCandidateType type;
+	gchar *ip;
+	gchar *username;
+	gchar *password;
+	JingleIceUdpCandidate *iceudp_candidate;
+	GList *iter;
 
-	for (; iter; iter = g_list_next(iter)) {
+	ip = purple_media_candidate_get_ip(candidate);
+	username = purple_media_candidate_get_username(candidate);
+	password = purple_media_candidate_get_password(candidate);
+	type = purple_media_candidate_get_candidate_type(candidate);
+
+	iceudp_candidate = jingle_iceudp_candidate_new(id,
+			purple_media_candidate_get_component_id(candidate),
+			purple_media_candidate_get_foundation(candidate),
+			generation, ip, 0,
+			purple_media_candidate_get_port(candidate),
+			purple_media_candidate_get_priority(candidate), "udp",
+			type == PURPLE_MEDIA_CANDIDATE_TYPE_HOST ? "host" :
+			type == PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX ? "srflx" :
+			type == PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX ? "prflx" :
+			type == PURPLE_MEDIA_CANDIDATE_TYPE_RELAY ? "relay" :
+			"", username, password);
+	iceudp_candidate->reladdr = purple_media_candidate_get_base_ip(candidate);
+	iceudp_candidate->relport = purple_media_candidate_get_base_port(candidate);
+
+	g_free(password);
+	g_free(username);
+	g_free(ip);
+
+	for (iter = iceudp->priv->local_candidates; iter; iter = g_list_next(iter)) {
 		JingleIceUdpCandidate *c = iter->data;
-		if (purple_strequal(c->id, candidate->id)) {
-			guint generation = c->generation + 1;
+		if (purple_strequal(c->id, id)) {
+			generation = c->generation + 1;
 
 			g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
 			iceudp->priv->local_candidates = g_list_delete_link(
 					iceudp->priv->local_candidates, iter);
 
-			candidate->generation = generation;
+			iceudp_candidate->generation = generation;
 
 			iceudp->priv->local_candidates = g_list_append(
-					iceudp->priv->local_candidates, candidate);
+					iceudp->priv->local_candidates, iceudp_candidate);
+
+			g_object_notify_by_pspec(G_OBJECT(iceudp), properties[PROP_LOCAL_CANDIDATES]);
+
 			return;
 		}
 	}
 
 	iceudp->priv->local_candidates = g_list_append(
-			iceudp->priv->local_candidates, candidate);
+			iceudp->priv->local_candidates, iceudp_candidate);
+
+	g_object_notify_by_pspec(G_OBJECT(iceudp), properties[PROP_LOCAL_CANDIDATES]);
 }
 
-GList *
-jingle_iceudp_get_remote_candidates(JingleIceUdp *iceudp)
+static GList *
+jingle_iceudp_get_remote_candidates(JingleTransport *transport)
 {
-	return g_list_copy(iceudp->priv->remote_candidates);
+	JingleIceUdp *iceudp = JINGLE_ICEUDP(transport);
+	GList *candidates = iceudp->priv->remote_candidates;
+	GList *ret = NULL;
+
+	for (; candidates; candidates = g_list_next(candidates)) {
+		JingleIceUdpCandidate *candidate = candidates->data;
+		PurpleMediaCandidate *new_candidate = purple_media_candidate_new(
+					candidate->foundation, candidate->component,
+					purple_strequal(candidate->type, "host") ?
+						PURPLE_MEDIA_CANDIDATE_TYPE_HOST :
+						purple_strequal(candidate->type, "srflx") ?
+							PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX :
+							purple_strequal(candidate->type, "prflx") ?
+								PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX :
+								purple_strequal(candidate->type, "relay") ?
+									PURPLE_MEDIA_CANDIDATE_TYPE_RELAY : 0,
+					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP,
+					candidate->ip, candidate->port);
+		g_object_set(new_candidate,
+		             "base-ip", candidate->reladdr,
+		             "base-port", candidate->relport,
+		             "username", candidate->username,
+		             "password", candidate->password,
+		             "priority", candidate->priority,
+		             NULL);
+		ret = g_list_append(ret, new_candidate);
+	}
+
+	return ret;
 }
 
 static JingleIceUdpCandidate *
@@ -305,40 +354,42 @@ jingle_iceudp_add_remote_candidate(JingleIceUdp *iceudp, JingleIceUdpCandidate *
 		g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, iceudp_candidate);
 	}
 	priv->remote_candidates = g_list_append(priv->remote_candidates, candidate);
+
+	g_object_notify_by_pspec(G_OBJECT(iceudp), properties[PROP_REMOTE_CANDIDATES]);
 }
 
 static JingleTransport *
-jingle_iceudp_parse_internal(xmlnode *iceudp)
+jingle_iceudp_parse_internal(PurpleXmlNode *iceudp)
 {
 	JingleTransport *transport = parent_class->parse(iceudp);
-	xmlnode *candidate = xmlnode_get_child(iceudp, "candidate");
+	PurpleXmlNode *candidate = purple_xmlnode_get_child(iceudp, "candidate");
 	JingleIceUdpCandidate *iceudp_candidate = NULL;
 
-	const gchar *username = xmlnode_get_attrib(iceudp, "ufrag");
-	const gchar *password = xmlnode_get_attrib(iceudp, "pwd");
+	const gchar *username = purple_xmlnode_get_attrib(iceudp, "ufrag");
+	const gchar *password = purple_xmlnode_get_attrib(iceudp, "pwd");
 
-	for (; candidate; candidate = xmlnode_get_next_twin(candidate)) {
-		const gchar *relport = xmlnode_get_attrib(candidate, "rel-port");
-		const gchar *component = xmlnode_get_attrib(candidate, "component");
-		const gchar *foundation = xmlnode_get_attrib(candidate, "foundation");
-		const gchar *generation = xmlnode_get_attrib(candidate, "generation");
-		const gchar *id = xmlnode_get_attrib(candidate, "id");
-		const gchar *ip = xmlnode_get_attrib(candidate, "ip");
-		const gchar *network = xmlnode_get_attrib(candidate, "network");
-		const gchar *port = xmlnode_get_attrib(candidate, "port");
-		const gchar *priority = xmlnode_get_attrib(candidate, "priority");
-		const gchar *protocol = xmlnode_get_attrib(candidate, "protocol");
-		const gchar *type = xmlnode_get_attrib(candidate, "type");
+	for (; candidate; candidate = purple_xmlnode_get_next_twin(candidate)) {
+		const gchar *relport = purple_xmlnode_get_attrib(candidate, "rel-port");
+		const gchar *component = purple_xmlnode_get_attrib(candidate, "component");
+		const gchar *foundation = purple_xmlnode_get_attrib(candidate, "foundation");
+		const gchar *generation = purple_xmlnode_get_attrib(candidate, "generation");
+		const gchar *id = purple_xmlnode_get_attrib(candidate, "id");
+		const gchar *ip = purple_xmlnode_get_attrib(candidate, "ip");
+		const gchar *network = purple_xmlnode_get_attrib(candidate, "network");
+		const gchar *port = purple_xmlnode_get_attrib(candidate, "port");
+		const gchar *priority = purple_xmlnode_get_attrib(candidate, "priority");
+		const gchar *protocol = purple_xmlnode_get_attrib(candidate, "protocol");
+		const gchar *type = purple_xmlnode_get_attrib(candidate, "type");
 
 		if (!component || !foundation || !generation || !id || !ip ||
 				!network || !port || !priority || !protocol || !type)
 			continue;
 
 		iceudp_candidate = jingle_iceudp_candidate_new(
+				id,
 				atoi(component),
 				foundation,
 				atoi(generation),
-				id,
 				ip,
 				atoi(network),
 				atoi(port),
@@ -347,7 +398,7 @@ jingle_iceudp_parse_internal(xmlnode *iceudp)
 				type,
 				username, password);
 		iceudp_candidate->reladdr = g_strdup(
-				xmlnode_get_attrib(candidate, "rel-addr"));
+				purple_xmlnode_get_attrib(candidate, "rel-addr"));
 		iceudp_candidate->relport =
 				relport != NULL ? atoi(relport) : 0;
 		iceudp_candidate->rem_known = TRUE;
@@ -357,10 +408,10 @@ jingle_iceudp_parse_internal(xmlnode *iceudp)
 	return transport;
 }
 
-static xmlnode *
-jingle_iceudp_to_xml_internal(JingleTransport *transport, xmlnode *content, JingleActionType action)
+static PurpleXmlNode *
+jingle_iceudp_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action)
 {
-	xmlnode *node = parent_class->to_xml(transport, content, action);
+	PurpleXmlNode *node = parent_class->to_xml(transport, content, action);
 
 	if (action == JINGLE_SESSION_INITIATE ||
 			action == JINGLE_SESSION_ACCEPT ||
@@ -373,7 +424,7 @@ jingle_iceudp_to_xml_internal(JingleTransport *transport, xmlnode *content, Jing
 
 		for (; iter; iter = g_list_next(iter)) {
 			JingleIceUdpCandidate *candidate = iter->data;
-			xmlnode *xmltransport;
+			PurpleXmlNode *xmltransport;
 			gchar *component, *generation, *network,
 					*port, *priority;
 
@@ -383,7 +434,7 @@ jingle_iceudp_to_xml_internal(JingleTransport *transport, xmlnode *content, Jing
 			used_candidate = TRUE;
 			candidate->rem_known = TRUE;
 
-			xmltransport = xmlnode_new_child(node, "candidate");
+			xmltransport = purple_xmlnode_new_child(node, "candidate");
 			component = g_strdup_printf("%d", candidate->component);
 			generation = g_strdup_printf("%d",
 					candidate->generation);
@@ -391,29 +442,29 @@ jingle_iceudp_to_xml_internal(JingleTransport *transport, xmlnode *content, Jing
 			port = g_strdup_printf("%d", candidate->port);
 			priority = g_strdup_printf("%d", candidate->priority);
 
-			xmlnode_set_attrib(xmltransport, "component", component);
-			xmlnode_set_attrib(xmltransport, "foundation", candidate->foundation);
-			xmlnode_set_attrib(xmltransport, "generation", generation);
-			xmlnode_set_attrib(xmltransport, "id", candidate->id);
-			xmlnode_set_attrib(xmltransport, "ip", candidate->ip);
-			xmlnode_set_attrib(xmltransport, "network", network);
-			xmlnode_set_attrib(xmltransport, "port", port);
-			xmlnode_set_attrib(xmltransport, "priority", priority);
-			xmlnode_set_attrib(xmltransport, "protocol", candidate->protocol);
+			purple_xmlnode_set_attrib(xmltransport, "component", component);
+			purple_xmlnode_set_attrib(xmltransport, "foundation", candidate->foundation);
+			purple_xmlnode_set_attrib(xmltransport, "generation", generation);
+			purple_xmlnode_set_attrib(xmltransport, "id", candidate->id);
+			purple_xmlnode_set_attrib(xmltransport, "ip", candidate->ip);
+			purple_xmlnode_set_attrib(xmltransport, "network", network);
+			purple_xmlnode_set_attrib(xmltransport, "port", port);
+			purple_xmlnode_set_attrib(xmltransport, "priority", priority);
+			purple_xmlnode_set_attrib(xmltransport, "protocol", candidate->protocol);
 
 			if (candidate->reladdr != NULL &&
 					(!purple_strequal(candidate->ip, candidate->reladdr) ||
 					(candidate->port != candidate->relport))) {
 				gchar *relport = g_strdup_printf("%d",
 						candidate->relport);
-				xmlnode_set_attrib(xmltransport, "rel-addr",
+				purple_xmlnode_set_attrib(xmltransport, "rel-addr",
 						candidate->reladdr);
-				xmlnode_set_attrib(xmltransport, "rel-port",
+				purple_xmlnode_set_attrib(xmltransport, "rel-port",
 						relport);
 				g_free(relport);
 			}
 
-			xmlnode_set_attrib(xmltransport, "type", candidate->type);
+			purple_xmlnode_set_attrib(xmltransport, "type", candidate->type);
 
 			g_free(component);
 			g_free(generation);
@@ -425,8 +476,8 @@ jingle_iceudp_to_xml_internal(JingleTransport *transport, xmlnode *content, Jing
 		if (used_candidate == TRUE) {
 			JingleIceUdpCandidate *candidate =
 					priv->local_candidates->data;
-			xmlnode_set_attrib(node, "pwd", candidate->password);
-			xmlnode_set_attrib(node, "ufrag", candidate->username);
+			purple_xmlnode_set_attrib(node, "pwd", candidate->password);
+			purple_xmlnode_set_attrib(node, "ufrag", candidate->username);
 		}
 	}
 

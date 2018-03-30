@@ -16,25 +16,6 @@ key_pressed(GntWidget *widget, const char *text, gpointer null)
 	gnt_box_set_title(GNT_BOX(box), "This is a test");
 
 	gnt_widget_show(box);
-#if 0
-
-	gnt_widget_set_focus(w, TRUE);
-
-	/* XXX: This is to just test stuff */
-	if (text[0] == 27)
-	{
-		if (strcmp(text+1, GNT_KEY_LEFT) == 0 && w->priv.x)
-			(w->priv.x)--;
-		else if (strcmp(text+1, GNT_KEY_RIGHT) == 0)
-			(w->priv.x)++;
-		else if (strcmp(text+1, GNT_KEY_UP) == 0 && w->priv.y)
-			(w->priv.y)--;
-		else if (strcmp(text+1, GNT_KEY_DOWN) == 0)
-			(w->priv.y)++;
-	}
-
-	gnt_widget_draw(w);
-#endif
 
 	return FALSE;
 }
@@ -57,11 +38,7 @@ w_scroll(GntWidget *tree)
 {
 	g_return_val_if_fail(GNT_IS_TREE(tree), FALSE);
 	gnt_tree_scroll(GNT_TREE(tree), 1);
-	/*wscrl(tree->window, 1);*/
-	/*box(tree->window, ACS_VLINE, ACS_HLINE);*/
-	/*wrefresh(tree->window);*/
-	/*char *s = 0;*/
-	/**s = 'a';*/
+
 	return TRUE;
 }
 
@@ -90,7 +67,6 @@ int main()
 	gnt_box_add_widget(GNT_BOX(vbox), widget2);
 
 	gnt_box_add_widget(GNT_BOX(hbox), label);
-	/*gnt_box_add_widget(GNT_BOX(hbox), vbox);*/
 
 	gnt_box_add_widget(GNT_BOX(hbox), gnt_entry_new("a"));
 
@@ -106,17 +82,11 @@ int main()
 	GNT_WIDGET_UNSET_FLAGS(hbox, GNT_WIDGET_NO_BORDER | GNT_WIDGET_NO_SHADOW);
 	gnt_box_set_title(GNT_BOX(hbox), "111111111111111111111111111111111111111111111111111111111111111This is the title …");
 
-	/*gnt_widget_set_take_focus(vbox, TRUE);*/
-	/*gnt_widget_set_take_focus(hbox, TRUE);*/
-	/*gnt_widget_set_position(hbox, 10, 10);*/
-
 	gnt_widget_show(hbox);
 
 	g_signal_connect(hbox, "key_pressed", G_CALLBACK(key_pressed), tree);
 	g_signal_connect(widget, "activate", G_CALLBACK(button1), hbox);
 	g_signal_connect(widget2, "activate", G_CALLBACK(button2), hbox);
-
-	/*g_timeout_add(1000, (GSourceFunc)w_scroll, tree);*/
 
 	gnt_main();
 

@@ -28,7 +28,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <glib.h>
 #include "internal.h"
@@ -36,13 +35,18 @@
 #include "debug.h"
 #include "util.h"
 
-#ifdef _WIN32
-#include "win32dep.h"
-#endif
-
 static PurplePrefsUiOps *prefs_ui_ops = NULL;
 
 struct _PurplePrefCallbackData {
+	PurplePrefCallback func;
+	gpointer data;
+	guint id;
+	void *handle;
+	void *ui_data;
+	char *name;
+};
+
+struct pref_cb {
 	PurplePrefCallback func;
 	gpointer data;
 	guint id;
@@ -56,6 +60,11 @@ struct purple_pref {
 	PurplePrefType type;
 	char *name;
 	union {
+		/* 'generic' is kind of ugly. We use it as an elegant way to refer to
+		   the value of this pref when calling callback functions. We could
+		   use 'boolean' or 'integer' or any other field... but it feels
+		   mildly cleaner to use a gpointer. Maybe it would be best to use a
+		   GValue? */
 		gpointer generic;
 		gboolean boolean;
 		int integer;
@@ -132,59 +141,59 @@ purple_pref *find_pref(const char *name)
  *********************************************************************/
 
 /*
- * This function recursively creates the xmlnode tree from the prefs
+ * This function recursively creates the PurpleXmlNode tree from the prefs
  * tree structure.  Yay recursion!
  */
 static void
-pref_to_xmlnode(xmlnode *parent, struct purple_pref *pref)
+pref_to_xmlnode(PurpleXmlNode *parent, struct purple_pref *pref)
 {
-	xmlnode *node, *childnode;
+	PurpleXmlNode *node, *childnode;
 	struct purple_pref *child;
 	char buf[21];
 	GList *cur;
 
 	/* Create a new node */
-	node = xmlnode_new_child(parent, "pref");
-	xmlnode_set_attrib(node, "name", pref->name);
+	node = purple_xmlnode_new_child(parent, "pref");
+	purple_xmlnode_set_attrib(node, "name", pref->name);
 
 	/* Set the type of this node (if type == PURPLE_PREF_NONE then do nothing) */
 	if (pref->type == PURPLE_PREF_INT) {
-		xmlnode_set_attrib(node, "type", "int");
+		purple_xmlnode_set_attrib(node, "type", "int");
 		g_snprintf(buf, sizeof(buf), "%d", pref->value.integer);
-		xmlnode_set_attrib(node, "value", buf);
+		purple_xmlnode_set_attrib(node, "value", buf);
 	}
 	else if (pref->type == PURPLE_PREF_STRING) {
-		xmlnode_set_attrib(node, "type", "string");
-		xmlnode_set_attrib(node, "value", pref->value.string ? pref->value.string : "");
+		purple_xmlnode_set_attrib(node, "type", "string");
+		purple_xmlnode_set_attrib(node, "value", pref->value.string ? pref->value.string : "");
 	}
 	else if (pref->type == PURPLE_PREF_STRING_LIST) {
-		xmlnode_set_attrib(node, "type", "stringlist");
+		purple_xmlnode_set_attrib(node, "type", "stringlist");
 		for (cur = pref->value.stringlist; cur != NULL; cur = cur->next)
 		{
-			childnode = xmlnode_new_child(node, "item");
-			xmlnode_set_attrib(childnode, "value", cur->data ? cur->data : "");
+			childnode = purple_xmlnode_new_child(node, "item");
+			purple_xmlnode_set_attrib(childnode, "value", cur->data ? cur->data : "");
 		}
 	}
 	else if (pref->type == PURPLE_PREF_PATH) {
 		char *encoded = g_filename_to_utf8(pref->value.string ? pref->value.string : "", -1, NULL, NULL, NULL);
-		xmlnode_set_attrib(node, "type", "path");
-		xmlnode_set_attrib(node, "value", encoded);
+		purple_xmlnode_set_attrib(node, "type", "path");
+		purple_xmlnode_set_attrib(node, "value", encoded);
 		g_free(encoded);
 	}
 	else if (pref->type == PURPLE_PREF_PATH_LIST) {
-		xmlnode_set_attrib(node, "type", "pathlist");
+		purple_xmlnode_set_attrib(node, "type", "pathlist");
 		for (cur = pref->value.stringlist; cur != NULL; cur = cur->next)
 		{
 			char *encoded = g_filename_to_utf8(cur->data ? cur->data : "", -1, NULL, NULL, NULL);
-			childnode = xmlnode_new_child(node, "item");
-			xmlnode_set_attrib(childnode, "value", encoded);
+			childnode = purple_xmlnode_new_child(node, "item");
+			purple_xmlnode_set_attrib(childnode, "value", encoded);
 			g_free(encoded);
 		}
 	}
 	else if (pref->type == PURPLE_PREF_BOOLEAN) {
-		xmlnode_set_attrib(node, "type", "bool");
+		purple_xmlnode_set_attrib(node, "type", "bool");
 		g_snprintf(buf, sizeof(buf), "%d", pref->value.boolean);
-		xmlnode_set_attrib(node, "value", buf);
+		purple_xmlnode_set_attrib(node, "value", buf);
 	}
 
 	/* All My Children */
@@ -192,18 +201,18 @@ pref_to_xmlnode(xmlnode *parent, struct purple_pref *pref)
 		pref_to_xmlnode(node, child);
 }
 
-static xmlnode *
+static PurpleXmlNode *
 prefs_to_xmlnode(void)
 {
-	xmlnode *node;
+	PurpleXmlNode *node;
 	struct purple_pref *pref, *child;
 
 	pref = &prefs;
 
 	/* Create the root preference node */
-	node = xmlnode_new("pref");
-	xmlnode_set_attrib(node, "version", "1");
-	xmlnode_set_attrib(node, "name", "/");
+	node = purple_xmlnode_new("pref");
+	purple_xmlnode_set_attrib(node, "version", "1");
+	purple_xmlnode_set_attrib(node, "name", "/");
 
 	/* All My Children */
 	for (child = pref->first_child; child != NULL; child = child->sibling)
@@ -215,7 +224,7 @@ prefs_to_xmlnode(void)
 static void
 sync_prefs(void)
 {
-	xmlnode *node;
+	PurpleXmlNode *node;
 	char *data;
 
 	if (!prefs_loaded)
@@ -232,10 +241,10 @@ sync_prefs(void)
 	PURPLE_PREFS_UI_OP_CALL(save);
 
 	node = prefs_to_xmlnode();
-	data = xmlnode_to_formatted_str(node, NULL);
+	data = purple_xmlnode_to_formatted_str(node, NULL);
 	purple_util_write_data_to_file("prefs.xml", data, -1);
 	g_free(data);
-	xmlnode_free(node);
+	purple_xmlnode_free(node);
 }
 
 static gboolean
@@ -252,7 +261,7 @@ schedule_prefs_save(void)
 	PURPLE_PREFS_UI_OP_CALL(schedule_save);
 
 	if (save_timer == 0)
-		save_timer = purple_timeout_add_seconds(5, save_cb, NULL);
+		save_timer = g_timeout_add_seconds(5, save_cb, NULL);
 }
 
 
@@ -422,23 +431,21 @@ purple_prefs_load()
 		return FALSE;
 	}
 
-	purple_debug_info("prefs", "Reading %s\n", filename);
+	purple_debug_misc("prefs", "Reading %s", filename);
 
 	if(!g_file_get_contents(filename, &contents, &length, &error)) {
-#ifdef _WIN32
-		gchar *common_appdata = wpurple_get_special_folder(CSIDL_COMMON_APPDATA);
-#endif
+		const gchar *sysconfdir = PURPLE_SYSCONFDIR;
 		g_free(filename);
 		g_error_free(error);
 
 		error = NULL;
 
-#ifdef _WIN32
-		filename = g_build_filename(common_appdata ? common_appdata : "", "purple", "prefs.xml", NULL);
-		g_free(common_appdata);
-#else
-		filename = g_build_filename(SYSCONFDIR, "purple", "prefs.xml", NULL);
+#ifndef __COVERITY__
+		/* coverity dead_error_line false positive */
+		if (sysconfdir == NULL)
+			sysconfdir = "";
 #endif
+		filename = g_build_filename(sysconfdir, "purple", "prefs.xml", NULL);
 
 		purple_debug_info("prefs", "Reading %s\n", filename);
 
@@ -474,7 +481,8 @@ purple_prefs_load()
 		return FALSE;
 	}
 
-	purple_debug_info("prefs", "Finished reading %s\n", filename);
+	if (purple_debug_is_verbose())
+		purple_debug_misc("prefs", "Finished reading %s", filename);
 	g_markup_parse_context_free(context);
 	g_free(contents);
 	g_free(filename);
@@ -606,8 +614,7 @@ add_pref(PurplePrefType type, const char *name)
 
 	parent = find_pref_parent(name);
 
-	if(!parent)
-		return NULL;
+	g_return_val_if_fail(parent, NULL);
 
 	my_name = get_path_basename(name);
 
@@ -883,21 +890,6 @@ purple_prefs_trigger_callback(const char *name)
 
 /* this function is deprecated, so it doesn't get the new UI ops */
 void
-purple_prefs_set_generic(const char *name, gpointer value)
-{
-	struct purple_pref *pref = find_pref(name);
-
-	if(!pref) {
-		purple_debug_error("prefs",
-				"purple_prefs_set_generic: Unknown pref %s\n", name);
-		return;
-	}
-
-	pref->value.generic = value;
-	do_callbacks(name, pref);
-}
-
-void
 purple_prefs_set_bool(const char *name, gboolean value)
 {
 	struct purple_pref *pref;
@@ -1096,7 +1088,7 @@ purple_prefs_exists(const char *name)
 }
 
 PurplePrefType
-purple_prefs_get_type(const char *name)
+purple_prefs_get_pref_type(const char *name)
 {
 	struct purple_pref *pref;
 
@@ -1637,8 +1629,8 @@ purple_prefs_get_children_names(const char *name)
 	return list;
 }
 
-void
-purple_prefs_update_old()
+static void
+prefs_update_old(void)
 {
 	purple_prefs_rename("/core", "/purple");
 
@@ -1657,6 +1649,7 @@ purple_prefs_update_old()
 	purple_prefs_remove("/purple/conversations/chat/show_leave");
 	purple_prefs_remove("/purple/conversations/combine_chat_im");
 	purple_prefs_remove("/purple/conversations/use_alias_for_title");
+	purple_prefs_remove("/purple/debug/timestamps");
 	purple_prefs_remove("/purple/logging/log_signon_signoff");
 	purple_prefs_remove("/purple/logging/log_idle_state");
 	purple_prefs_remove("/purple/logging/log_away_state");
@@ -1667,6 +1660,7 @@ purple_prefs_update_old()
 	purple_prefs_remove("/plugins/core/autorecon/hide_reconnecting_dialog");
 	purple_prefs_remove("/plugins/core/autorecon/restore_state");
 	purple_prefs_remove("/plugins/core/autorecon");
+	purple_prefs_remove("/plugins/lopl");
 
 	/* Convert old sounds while_away pref to new 3-way pref. */
 	if (purple_prefs_exists("/purple/sound/while_away") &&
@@ -1697,7 +1691,6 @@ purple_prefs_init(void)
 	purple_prefs_add_none("/purple");
 	purple_prefs_add_none("/plugins");
 	purple_prefs_add_none("/plugins/core");
-	purple_prefs_add_none("/plugins/lopl");
 	purple_prefs_add_none("/plugins/prpl");
 
 	/* Away */
@@ -1742,7 +1735,7 @@ purple_prefs_init(void)
 	purple_prefs_remove("/purple/contact/idle_score");
 
 	purple_prefs_load();
-	purple_prefs_update_old();
+	prefs_update_old();
 }
 
 void
@@ -1750,7 +1743,7 @@ purple_prefs_uninit()
 {
 	if (save_timer != 0)
 	{
-		purple_timeout_remove(save_timer);
+		g_source_remove(save_timer);
 		save_cb(NULL);
 	}
 

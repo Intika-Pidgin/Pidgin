@@ -179,35 +179,27 @@ void bonjour_dns_sd_retrieve_buddy_icon(BonjourBuddy* buddy) {
 }
 
 void bonjour_dns_sd_update_buddy_icon(BonjourDnsSd *data) {
-	PurpleStoredImage *img;
+	PurpleImage *img;
 
 	if ((img = purple_buddy_icons_find_account_icon(data->account))) {
 		gconstpointer avatar_data;
 		gsize avatar_len;
 
-		avatar_data = purple_imgstore_get_data(img);
-		avatar_len = purple_imgstore_get_size(img);
+		avatar_data = purple_image_get_data(img);
+		avatar_len = purple_image_get_data_size(img);
 
 		if (_mdns_set_buddy_icon_data(data, avatar_data, avatar_len)) {
-			/* The filename is a SHA-1 hash of the data (conveniently what we need) */
-			const char *p, *filename = purple_imgstore_get_filename(img);
-
 			g_free(data->phsh);
 			data->phsh = NULL;
 
-			/* Get rid of the extension */
-			p = strchr(filename, '.');
-			if (p)
-				data->phsh = g_strndup(filename, p - filename);
-			else
-				purple_debug_error("bonjour", "account buddy icon returned unexpected filename (%s)"
-								"; unable to extract hash. Clearing buddy icon\n", filename);
+			data->phsh = g_compute_checksum_for_data(
+				G_CHECKSUM_SHA1, avatar_data, avatar_len);
 
 			/* Update our TXT record */
 			publish_presence(data, PUBLISH_UPDATE);
 		}
 
-		purple_imgstore_unref(img);
+		g_object_unref(img);
 	} else {
 		/* We need to do this regardless of whether data->phsh is set so that we
 		 * cancel any icons that are currently in the process of being set */
@@ -257,7 +249,7 @@ void
 bonjour_dns_sd_set_jid(PurpleAccount *account, const char *hostname)
 {
 	PurpleConnection *conn = purple_account_get_connection(account);
-	BonjourData *bd = conn->proto_data;
+	BonjourData *bd = purple_connection_get_protocol_data(conn);
 	const char *tmp, *account_name = purple_account_get_username(account);
 
 	/* Previously we allowed the hostname part of the jid to be set

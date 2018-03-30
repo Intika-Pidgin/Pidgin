@@ -1,7 +1,4 @@
-/**
- * @file gtkwin32dep.c UI Win32 Specific Functionality
- * @ingroup win32
- *
+/*
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -21,36 +18,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#define _WIN32_IE 0x500
-#include <windows.h>
+#include "internal.h"
+
 #include <io.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <winuser.h>
+#include <shellapi.h>
 
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkwin32.h>
 
-#include "internal.h"
-
 #include "debug.h"
 #include "notify.h"
 #include "network.h"
 
 #include "resource.h"
-#include "zlib.h"
 #include "untar.h"
 
 #include "gtkwin32dep.h"
-#include "win32dep.h"
 #include "gtkconv.h"
 #include "gtkconn.h"
 #include "util.h"
-#ifdef USE_GTKSPELL
-#include "wspell.h"
-#endif
 
 /*
  *  GLOBALS
@@ -71,41 +62,69 @@ HINSTANCE winpidgin_exe_hinstance(void) {
 	return exe_hInstance;
 }
 
+void winpidgin_set_exe_hinstance(HINSTANCE hint)
+{
+	exe_hInstance = hint;
+}
+
 HINSTANCE winpidgin_dll_hinstance(void) {
 	return dll_hInstance;
 }
 
 int winpidgin_gz_decompress(const char* in, const char* out) {
-	gzFile fin;
-	FILE *fout;
-	char buf[1024];
-	int ret;
+	GFile *fin;
+	GFile *fout;
+	GInputStream *input;
+	GOutputStream *output;
+	GOutputStream *conv_out;
+	GZlibDecompressor *decompressor;
+	gssize size;
+	GError *error = NULL;
 
-	if((fin = gzopen(in, "rb"))) {
-		if(!(fout = g_fopen(out, "wb"))) {
-			purple_debug_error("winpidgin_gz_decompress", "Error opening file: %s\n", out);
-			gzclose(fin);
-			return 0;
-		}
-	}
-	else {
-		purple_debug_error("winpidgin_gz_decompress", "gzopen failed to open: %s\n", in);
+	fin = g_file_new_for_path(in);
+	input = G_INPUT_STREAM(g_file_read(fin, NULL, &error));
+	g_object_unref(fin);
+
+	if (input == NULL) {
+		purple_debug_error("winpidgin_gz_decompress",
+				"Failed to open: %s: %s\n",
+				in, error->message);
+		g_clear_error(&error);
 		return 0;
 	}
 
-	while((ret = gzread(fin, buf, 1024))) {
-		if(fwrite(buf, 1, ret, fout) < ret) {
-			purple_debug_error("wpurple_gz_decompress", "Error writing %d bytes to file\n", ret);
-			gzclose(fin);
-			fclose(fout);
-			return 0;
-		}
-	}
-	fclose(fout);
-	gzclose(fin);
+	fout = g_file_new_for_path(out);
+	output = G_OUTPUT_STREAM(g_file_replace(fout, NULL, FALSE,
+			G_FILE_CREATE_NONE, NULL, &error));
+	g_object_unref(fout);
 
-	if(ret < 0) {
-		purple_debug_error("winpidgin_gz_decompress", "gzread failed while reading: %s\n", in);
+	if (output == NULL) {
+		purple_debug_error("winpidgin_gz_decompress",
+				"Error opening file: %s: %s\n",
+				out, error->message);
+		g_clear_error(&error);
+		g_object_unref(input);
+		return 0;
+	}
+
+	decompressor = g_zlib_decompressor_new(G_ZLIB_COMPRESSOR_FORMAT_GZIP);
+	conv_out = g_converter_output_stream_new(output,
+			G_CONVERTER(decompressor));
+	g_object_unref(decompressor);
+	g_object_unref(output);
+
+	size = g_output_stream_splice(conv_out, input,
+			G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE |
+			G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET, NULL, &error);
+
+	g_object_unref(input);
+	g_object_unref(conv_out);
+
+	if (size < 0) {
+		purple_debug_error("wpurple_gz_decompress",
+				"Error writing to file: %s\n",
+				error->message);
+		g_clear_error(&error);
 		return 0;
 	}
 
@@ -187,27 +206,19 @@ void winpidgin_notify_uri(const char *uri) {
 #define PIDGIN_WM_PROTOCOL_HANDLE (WM_APP + 14)
 
 static void*
-winpidgin_netconfig_changed_cb(void *data)
+winpidgin_netconfig_changed_cb(GNetworkMonitor *monitor, gboolean available, gpointer data)
 {
 	pwm_handles_connections = FALSE;
 
 	return NULL;
 }
 
-static void*
-winpidgin_get_handle(void)
-{
-	static int handle;
-
-	return &handle;
-}
-
 static gboolean
 winpidgin_pwm_reconnect()
 {
-	purple_signal_disconnect(purple_network_get_handle(), "network-configuration-changed",
-		winpidgin_get_handle(), PURPLE_CALLBACK(winpidgin_netconfig_changed_cb));
-
+	g_signal_handlers_disconnect_by_func(g_network_monitor_get_default,
+	                                     G_CALLBACK(winpidgin_netconfig_changed_cb),
+	                                     NULL);
 	if (pwm_handles_connections == TRUE) {
 		PurpleConnectionUiOps *ui_ops = pidgin_connections_get_ui_ops();
 
@@ -246,14 +257,16 @@ static LRESULT CALLBACK message_window_handler(HWND hwnd, UINT msg, WPARAM wpara
 			if (ui_ops != NULL && ui_ops->network_disconnected != NULL)
 				ui_ops->network_disconnected();
 
-			purple_signal_connect(purple_network_get_handle(), "network-configuration-changed", winpidgin_get_handle(),
-				PURPLE_CALLBACK(winpidgin_netconfig_changed_cb), NULL);
+			g_signal_connect(g_network_monitor_get_default(),
+			                 "network-changed",
+			                 G_CALLBACK(winpidgin_netconfig_changed_cb),
+			                 NULL);
 
 			return TRUE;
 		} else if (wparam == PBT_APMRESUMESUSPEND) {
 			purple_debug_info("winpidgin", "Resuming from system standby.\n");
 			/* TODO: It seems like it'd be wise to use the NLA message, if possible, instead of this. */
-			purple_timeout_add_seconds(1, winpidgin_pwm_reconnect, NULL);
+			g_timeout_add_seconds(1, winpidgin_pwm_reconnect, NULL);
 			return TRUE;
 		}
 	}
@@ -315,12 +328,12 @@ winpidgin_window_flash(GtkWindow *window, gboolean flash) {
 
 	g_return_if_fail(window != NULL);
 
-	gdkwin = GTK_WIDGET(window)->window;
+	gdkwin = gtk_widget_get_window(GTK_WIDGET(window));
 
 	g_return_if_fail(GDK_IS_WINDOW(gdkwin));
-	g_return_if_fail(GDK_WINDOW_TYPE(gdkwin) != GDK_WINDOW_CHILD);
+	g_return_if_fail(gdk_window_get_window_type(gdkwin) != GDK_WINDOW_CHILD);
 
-	if(GDK_WINDOW_DESTROYED(gdkwin))
+	if (gdk_window_is_destroyed(gdkwin))
 		return;
 
 	memset(&info, 0, sizeof(FLASHWINFO));
@@ -340,13 +353,9 @@ winpidgin_window_flash(GtkWindow *window, gboolean flash) {
 }
 
 void
-winpidgin_conv_blink(PurpleConversation *conv, PurpleMessageFlags flags) {
-	PidginWindow *win;
+winpidgin_conv_blink(PurpleConversation *conv) {
+	PidginConvWindow *win;
 	GtkWindow *window;
-
-	/* Don't flash for our own messages or system messages */
-	if(flags & PURPLE_MESSAGE_SEND || flags & PURPLE_MESSAGE_SYSTEM)
-		return;
 
 	if(conv == NULL) {
 		purple_debug_info("winpidgin", "No conversation found to blink.\n");
@@ -361,8 +370,11 @@ winpidgin_conv_blink(PurpleConversation *conv, PurpleMessageFlags flags) {
 	window = GTK_WINDOW(win->window);
 
 	/* Don't flash if the window is in the foreground */
-	if (GetForegroundWindow() == GDK_WINDOW_HWND(GTK_WIDGET(window)->window))
+	if (GetForegroundWindow() ==
+		GDK_WINDOW_HWND(gtk_widget_get_window(GTK_WIDGET(window))))
+	{
 		return;
+	}
 
 	winpidgin_window_flash(window, TRUE);
 	/* Stop flashing when window receives focus */
@@ -374,24 +386,25 @@ winpidgin_conv_blink(PurpleConversation *conv, PurpleMessageFlags flags) {
 }
 
 static gboolean
-winpidgin_conv_im_blink(PurpleAccount *account, const char *who, char **message,
-		PurpleConversation *conv, PurpleMessageFlags flags, void *data)
+winpidgin_conv_im_blink(PurpleConversation *conv, PurpleMessage *pmsg)
 {
+	/* Don't flash for our own messages or system messages */
+	if (purple_message_get_flags(pmsg) & (PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM))
+		return FALSE;
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/win32/blink_im"))
-		winpidgin_conv_blink(conv, flags);
+		winpidgin_conv_blink(conv);
 	return FALSE;
 }
 
-void winpidgin_init(HINSTANCE hint) {
+void winpidgin_init(void) {
 	typedef void (__cdecl* LPFNSETLOGFILE)(const LPCSTR);
 	LPFNSETLOGFILE MySetLogFile;
 	gchar *exchndl_dll_path;
 
-	purple_debug_info("winpidgin", "winpidgin_init start\n");
+	if (purple_debug_is_verbose())
+		purple_debug_misc("winpidgin", "winpidgin_init start\n");
 
-	exe_hInstance = hint;
-
-	exchndl_dll_path = g_build_filename(wpurple_install_dir(), "exchndl.dll", NULL);
+	exchndl_dll_path = g_build_filename(wpurple_bin_dir(), "exchndl.dll", NULL);
 	MySetLogFile = (LPFNSETLOGFILE) wpurple_find_and_loadproc(exchndl_dll_path, "SetLogFile");
 	g_free(exchndl_dll_path);
 	exchndl_dll_path = NULL;
@@ -409,15 +422,13 @@ void winpidgin_init(HINSTANCE hint) {
 		g_free(locale_debug_dir);
 	}
 
-#ifdef USE_GTKSPELL
-	winpidgin_spell_init();
-#endif
-	purple_debug_info("winpidgin", "GTK+ :%u.%u.%u\n",
+	purple_debug_info("winpidgin", "GTK+: %u.%u.%u\n",
 		gtk_major_version, gtk_minor_version, gtk_micro_version);
 
 	messagewin_hwnd = winpidgin_message_window_init();
 
-	purple_debug_info("winpidgin", "winpidgin_init end\n");
+	if (purple_debug_is_verbose())
+		purple_debug_misc("winpidgin", "winpidgin_init end\n");
 }
 
 void winpidgin_post_init(void) {
@@ -504,7 +515,7 @@ get_actualWindowRect(HWND hwnd)
 
 void winpidgin_ensure_onscreen(GtkWidget *win) {
 	RECT winR, wAR, intR;
-	HWND hwnd = GDK_WINDOW_HWND(win->window);
+	HWND hwnd = GDK_WINDOW_HWND(gtk_widget_get_window(win));
 
 	g_return_if_fail(hwnd != NULL);
 	winR = get_actualWindowRect(hwnd);

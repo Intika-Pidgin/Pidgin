@@ -20,6 +20,8 @@
  */
 #include "internal.h"
 #include "pidgin.h"
+
+#include "gtk3compat.h"
 #include "gtkutils.h"
 
 #include "debug.h"
@@ -33,13 +35,13 @@ add_pref_box(GtkSizeGroup *sg, GtkWidget *parent, const char *text,
 	GtkWidget *hbox;
 	GtkWidget *label;
 
-	hbox = gtk_hbox_new(FALSE, 6);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 	gtk_box_pack_start(GTK_BOX(parent), hbox, FALSE, FALSE, 0);
 	gtk_widget_show(hbox);
 
 	label = gtk_label_new_with_mnemonic(text);
 	gtk_size_group_add_widget(sg, label);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 
@@ -96,7 +98,7 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 	char *full_name = NULL;
 
 	if (dialog->person_only)
-		username = dialog->buddy->name;
+		username = purple_buddy_get_name(dialog->buddy);
 	else
 		username = gtk_entry_get_text(GTK_ENTRY(dialog->username));
 
@@ -245,7 +247,7 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 					 G_CALLBACK(delete_win_cb), dialog);
 
 	/* Setup the vbox */
-	vbox = gtk_vbox_new(FALSE, 12);
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
 	gtk_container_add(GTK_CONTAINER(dialog->win), vbox);
 	gtk_widget_show(vbox);
 
@@ -262,7 +264,8 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	}
 
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_xalign(GTK_LABEL(label), 0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, TRUE, 0);
 	gtk_widget_show(label);
 
@@ -296,25 +299,26 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 		gtk_widget_show_all(dialog->group_combo);
 
 		/* Separator */
-		sep = gtk_hseparator_new();
+		sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 		gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 0);
 		gtk_widget_show(sep);
 
 		/* Optional Information section */
 		label = gtk_label_new(_("Optional information:"));
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+		gtk_label_set_xalign(GTK_LABEL(label), 0);
+		gtk_label_set_yalign(GTK_LABEL(label), 0);
 		gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 		gtk_widget_show(label);
 	}
 
 	/* Create the parent hbox for this whole thing. */
-	hbox = gtk_hbox_new(FALSE, 12);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 	gtk_widget_show(hbox);
 
 #if 0
 	/* Now the left side of the hbox */
-	vbox2 = gtk_vbox_new(FALSE, 12);
+	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox2, FALSE, FALSE, 0);
 	gtk_widget_show(vbox2);
 
@@ -330,7 +334,7 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 #endif
 
 	/* Now the right side. */
-	vbox2 = gtk_vbox_new(FALSE, 12);
+	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox2, TRUE, TRUE, 0);
 	gtk_widget_show(vbox2);
 
@@ -379,12 +383,12 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	}
 
 	/* Separator */
-	sep = gtk_hseparator_new();
+	sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 0);
 	gtk_widget_show(sep);
 
 	/* Button box */
-	bbox = gtk_hbutton_box_new();
+	bbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_box_set_spacing(GTK_BOX(bbox), 6);
 	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
 	gtk_box_pack_end(GTK_BOX(vbox), bbox, FALSE, TRUE, 0);

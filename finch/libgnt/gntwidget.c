@@ -1,4 +1,4 @@
-/**
+/*
  * GNT - The GLib Ncurses Toolkit
  *
  * GNT is the legal property of its developers, whose names are too numerous
@@ -25,9 +25,7 @@
 #include "gntinternal.h"
 #include "gntwidget.h"
 #include "gntstyle.h"
-#include "gntmarshal.h"
 #include "gntutils.h"
-#include "gnt.h"
 
 enum
 {
@@ -136,104 +134,91 @@ gnt_widget_class_init(GntWidgetClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, destroy),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_GIVE_FOCUS] =
 		g_signal_new("gained-focus",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, gained_focus),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_LOST_FOCUS] =
 		g_signal_new("lost-focus",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, lost_focus),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_ACTIVATE] =
 		g_signal_new("activate",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, activate),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_MAP] =
 		g_signal_new("map",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, map),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_DRAW] =
 		g_signal_new("draw",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, draw),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_HIDE] =
 		g_signal_new("hide",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, hide),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_EXPOSE] =
 		g_signal_new("expose",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, expose),
-					 NULL, NULL,
-					 gnt_closure_marshal_VOID__INT_INT_INT_INT,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 4, G_TYPE_INT, G_TYPE_INT, G_TYPE_INT, G_TYPE_INT);
 	signals[SIG_POSITION] =
 		g_signal_new("position-set",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, set_position),
-					 NULL, NULL,
-					 gnt_closure_marshal_VOID__INT_INT,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 2, G_TYPE_INT, G_TYPE_INT);
 	signals[SIG_SIZE_REQUEST] =
 		g_signal_new("size_request",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, size_request),
-					 NULL, NULL,
-					 g_cclosure_marshal_VOID__VOID,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 0);
 	signals[SIG_SIZE_CHANGED] =
 		g_signal_new("size_changed",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, size_changed),
-					 NULL, NULL,
-					 gnt_closure_marshal_VOID__INT_INT,
+					 NULL, NULL, NULL,
 					 G_TYPE_NONE, 2, G_TYPE_INT, G_TYPE_INT);
 	signals[SIG_CONFIRM_SIZE] =
 		g_signal_new("confirm_size",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, confirm_size),
-					 NULL, NULL,
-					 gnt_closure_marshal_BOOLEAN__INT_INT,
+					 NULL, NULL, NULL,
 					 G_TYPE_BOOLEAN, 2, G_TYPE_INT, G_TYPE_INT);
 	signals[SIG_KEY_PRESSED] =
 		g_signal_new("key_pressed",
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, key_pressed),
-					 gnt_boolean_handled_accumulator, NULL,
-					 gnt_closure_marshal_BOOLEAN__STRING,
+					 gnt_boolean_handled_accumulator, NULL, NULL,
 					 G_TYPE_BOOLEAN, 1, G_TYPE_STRING);
 
 	signals[SIG_CLICKED] =
@@ -241,8 +226,7 @@ gnt_widget_class_init(GntWidgetClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 G_STRUCT_OFFSET(GntWidgetClass, clicked),
-					 gnt_boolean_handled_accumulator, NULL,
-					 gnt_closure_marshal_BOOLEAN__INT_INT_INT,
+					 gnt_boolean_handled_accumulator, NULL, NULL,
 					 G_TYPE_BOOLEAN, 3, G_TYPE_INT, G_TYPE_INT, G_TYPE_INT);
 
 	signals[SIG_CONTEXT_MENU] =
@@ -250,8 +234,7 @@ gnt_widget_class_init(GntWidgetClass *klass)
 					 G_TYPE_FROM_CLASS(klass),
 					 G_SIGNAL_RUN_LAST,
 					 0,
-					 gnt_boolean_handled_accumulator, NULL,
-					 gnt_closure_marshal_BOOLEAN__VOID,
+					 gnt_boolean_handled_accumulator, NULL, NULL,
 					 G_TYPE_BOOLEAN, 0);
 
 	/* This is relevant for all widgets */
@@ -268,7 +251,7 @@ gnt_widget_class_init(GntWidgetClass *klass)
  * GntWidget API
  *****************************************************************************/
 GType
-gnt_widget_get_gtype(void)
+gnt_widget_get_type(void)
 {
 	static GType type = 0;
 
@@ -302,23 +285,16 @@ void gnt_widget_set_take_focus(GntWidget *widget, gboolean can)
 		GNT_WIDGET_UNSET_FLAGS(widget, GNT_WIDGET_CAN_TAKE_FOCUS);
 }
 
-/**
- * gnt_widget_destroy:
- * @obj: The #GntWidget instance.
- *
- * Emits the "destroy" signal notifying all reference holders that they
- * should release @obj.
- */
 void
-gnt_widget_destroy(GntWidget *obj)
+gnt_widget_destroy(GntWidget *widget)
 {
-	g_return_if_fail(GNT_IS_WIDGET(obj));
+	g_return_if_fail(GNT_IS_WIDGET(widget));
 
-	if(!(GNT_WIDGET_FLAGS(obj) & GNT_WIDGET_DESTROYING)) {
-		GNT_WIDGET_SET_FLAGS(obj, GNT_WIDGET_DESTROYING);
-		gnt_widget_hide(obj);
-		delwin(obj->window);
-		g_object_run_dispose(G_OBJECT(obj));
+	if(!(GNT_WIDGET_FLAGS(widget) & GNT_WIDGET_DESTROYING)) {
+		GNT_WIDGET_SET_FLAGS(widget, GNT_WIDGET_DESTROYING);
+		gnt_widget_hide(widget);
+		delwin(widget->window);
+		g_object_run_dispose(G_OBJECT(widget));
 	}
 	GNTDEBUG;
 }
@@ -346,42 +322,8 @@ gnt_widget_draw(GntWidget *widget)
 
 	if (widget->window == NULL)
 	{
-#if 0
-		int x, y, maxx, maxy, w, h;
-		int oldw, oldh;
-		gboolean shadow = TRUE;
+		widget->window = newpad(widget->priv.height + 20, widget->priv.width + 20);
 
-		if (!gnt_widget_has_shadow(widget))
-			shadow = FALSE;
-
-		x = widget->priv.x;
-		y = widget->priv.y;
-		w = oldw = widget->priv.width + shadow;
-		h = oldh = widget->priv.height + shadow;
-
-		getmaxyx(stdscr, maxy, maxx);
-		maxy -= 1;		/* room for the taskbar */
-
-		x = MAX(0, x);
-		y = MAX(0, y);
-		if (x + w >= maxx)
-			x = MAX(0, maxx - w);
-		if (y + h >= maxy)
-			y = MAX(0, maxy - h);
-
-		w = MIN(w, maxx);
-		h = MIN(h, maxy);
-
-		widget->priv.x = x;
-		widget->priv.y = y;
-		if (w != oldw || h != oldh) {
-			widget->priv.width = w - shadow;
-			widget->priv.height = h - shadow;
-			g_signal_emit(widget, signals[SIG_SIZE_CHANGED], 0, oldw, oldh);
-		}
-#else
-		widget->window = newpad(widget->priv.height + 20, widget->priv.width + 20);  /* XXX: */
-#endif
 		init_widget(widget);
 	}
 
@@ -427,11 +369,6 @@ gnt_widget_hide(GntWidget *widget)
 {
 	g_signal_emit(widget, signals[SIG_HIDE], 0);
 	wbkgdset(widget->window, '\0' | gnt_color_pair(GNT_COLOR_NORMAL));
-#if 0
-	/* XXX: I have no clue why, but this seemed to be necessary. */
-	if (gnt_widget_has_shadow(widget))
-		mvwvline(widget->window, 1, widget->priv.width, ' ', widget->priv.height);
-#endif
 	gnt_screen_release(widget);
 	GNT_WIDGET_SET_FLAGS(widget, GNT_WIDGET_INVISIBLE);
 	GNT_WIDGET_UNSET_FLAGS(widget, GNT_WIDGET_MAPPED);

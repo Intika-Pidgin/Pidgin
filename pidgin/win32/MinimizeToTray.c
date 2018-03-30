@@ -14,6 +14,7 @@
  *
  * Copyright 2000 Matthew Ellis <m.t.ellis@bigfoot.com>
  */
+#include <config.h>
 #include <windows.h>
 #include "MinimizeToTray.h"
 

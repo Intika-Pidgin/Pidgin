@@ -1,14 +1,3 @@
-/**
- * @file purple.h  Header files and defines
- * This file contains all the necessary preprocessor directives to include
- * libpurple's headers and other preprocessor directives required for plugins
- * or UIs to build.  Including this file eliminates the need to directly
- * include any other libpurple files.
- *
- * @ingroup core libpurple
- * @since 2.3.0
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -32,8 +21,23 @@
 
 #ifndef _PURPLE_PURPLE_H_
 #define _PURPLE_PURPLE_H_
+/**
+ * SECTION:purple
+ * @section_id: libpurple-purple
+ * @short_description: <filename>purple.h</filename>
+ * @title: Header files and defines
+ *
+ * This file contains all the necessary preprocessor directives to include
+ * libpurple's headers and other preprocessor directives required for plugins
+ * or UIs to build.  Including this file eliminates the need to directly
+ * include any other libpurple files.
+ */
 
 #include <glib.h>
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
 
 #ifndef G_GNUC_NULL_TERMINATED
 #	if     __GNUC__ >= 4
@@ -45,25 +49,19 @@
 
 @PLUGINS_DEFINE@
 
-#include <account.h>
+#include <accounts.h>
 #include <accountopt.h>
-#include <blist.h>
+#include <buddylist.h>
 #include <buddyicon.h>
-#include <certificate.h>
-#include <cipher.h>
-#include <circbuffer.h>
+#include <circularbuffer.h>
 #include <cmds.h>
 #include <connection.h>
-#include <conversation.h>
+#include <conversations.h>
 #include <core.h>
 #include <debug.h>
-#include <desktopitem.h>
-#include <dnsquery.h>
-#include <dnssrv.h>
+#include <enums.h>
 #include <eventloop.h>
-#include <ft.h>
 #include <idle.h>
-#include <imgstore.h>
 #include <log.h>
 #include <media.h>
 #include <mediamanager.h>
@@ -71,14 +69,13 @@
 #include <nat-pmp.h>
 #include <network.h>
 #include <notify.h>
-#include <ntlm.h>
-#include <plugin.h>
+#include <plugins.h>
 #include <pluginpref.h>
 #include <pounce.h>
 #include <prefs.h>
-#include <privacy.h>
+#include <presence.h>
 #include <proxy.h>
-#include <prpl.h>
+#include <protocols.h>
 #include <request.h>
 #include <roomlist.h>
 #include <savedstatuses.h>
@@ -95,11 +92,12 @@
 #include <theme.h>
 #include <theme-loader.h>
 #include <theme-manager.h>
+#include <tls-certificate.h>
 #include <upnp.h>
 #include <util.h>
-#include <value.h>
 #include <version.h>
 #include <whiteboard.h>
+#include <xfer.h>
 #include <xmlnode.h>
 
 #endif

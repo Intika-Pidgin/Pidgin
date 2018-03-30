@@ -20,7 +20,7 @@
 #include "internal.h"
 #include "buddy.h"
 #include "account.h"
-#include "blist.h"
+#include "buddylist.h"
 #include "bonjour.h"
 #include "mdns_interface.h"
 #include "debug.h"
@@ -141,7 +141,7 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 	 */
 
 	/* Make sure the Bonjour group exists in our buddy list */
-	group = purple_find_group(BONJOUR_GROUP_NAME); /* Use the buddy's domain, instead? */
+	group = purple_blist_find_group(BONJOUR_GROUP_NAME); /* Use the buddy's domain, instead? */
 	if (group == NULL) {
 		group = purple_group_new(BONJOUR_GROUP_NAME);
 		purple_blist_add_group(group, NULL);
@@ -149,11 +149,11 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 
 	/* Make sure the buddy exists in our buddy list */
 	if (buddy == NULL)
-		buddy = purple_find_buddy(account, bonjour_buddy->name);
+		buddy = purple_blist_find_buddy(account, bonjour_buddy->name);
 
 	if (buddy == NULL) {
 		buddy = purple_buddy_new(account, bonjour_buddy->name, NULL);
-		purple_blist_node_set_flags((PurpleBlistNode *)buddy, PURPLE_BLIST_NODE_FLAG_NO_SAVE);
+		purple_blist_node_set_transient(PURPLE_BLIST_NODE(buddy), TRUE);
 		purple_blist_add_buddy(buddy, NULL, group, NULL);
 	}
 
@@ -162,7 +162,7 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 
 	/* Create the alias for the buddy using the first and the last name */
 	if (bonjour_buddy->nick && *bonjour_buddy->nick)
-		serv_got_alias(purple_account_get_connection(account), name, bonjour_buddy->nick);
+		purple_serv_got_alias(purple_account_get_connection(account), name, bonjour_buddy->nick);
 	else {
 		gchar *alias = NULL;
 		const char *first, *last;
@@ -173,18 +173,18 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
 						(first && *first ? first : ""),
 						(first && *first && last && *last ? " " : ""),
 						(last && *last ? last : ""));
-		serv_got_alias(purple_account_get_connection(account), name, alias);
+		purple_serv_got_alias(purple_account_get_connection(account), name, alias);
 		g_free(alias);
 	}
 
 	/* Set the user's status */
 	if (bonjour_buddy->msg != NULL)
-		purple_prpl_got_user_status(account, name, status_id,
+		purple_protocol_got_user_status(account, name, status_id,
 					    "message", bonjour_buddy->msg, NULL);
 	else
-		purple_prpl_got_user_status(account, name, status_id, NULL);
+		purple_protocol_got_user_status(account, name, status_id, NULL);
 
-	purple_prpl_got_user_idle(account, name, FALSE, 0);
+	purple_protocol_got_user_idle(account, name, FALSE, 0);
 
 	/* TODO: Because we don't save Bonjour buddies in blist.xml,
 	 * we will always have to look up the buddy icon at login time.
@@ -207,14 +207,14 @@ bonjour_buddy_add_to_purple(BonjourBuddy *bonjour_buddy, PurpleBuddy *buddy)
  * If the buddy is being saved, mark as offline, otherwise delete
  */
 void bonjour_buddy_signed_off(PurpleBuddy *pb) {
-	if (PURPLE_BLIST_NODE_SHOULD_SAVE(pb)) {
-		purple_prpl_got_user_status(purple_buddy_get_account(pb),
+	if (purple_blist_node_is_transient(PURPLE_BLIST_NODE(pb))) {
+		purple_account_remove_buddy(purple_buddy_get_account(pb), pb, NULL);
+		purple_blist_remove_buddy(pb);
+	} else {
+		purple_protocol_got_user_status(purple_buddy_get_account(pb),
 					    purple_buddy_get_name(pb), "offline", NULL);
 		bonjour_buddy_delete(purple_buddy_get_protocol_data(pb));
 		purple_buddy_set_protocol_data(pb, NULL);
-	} else {
-		purple_account_remove_buddy(purple_buddy_get_account(pb), pb, NULL);
-		purple_blist_remove_buddy(pb);
 	}
 }
 
@@ -223,21 +223,12 @@ void bonjour_buddy_signed_off(PurpleBuddy *pb) {
  */
 void bonjour_buddy_got_buddy_icon(BonjourBuddy *buddy, gconstpointer data, gsize len) {
 	/* Recalculate the hash instead of using the current phsh to make sure it is accurate for the icon. */
-	char *p, *hash;
+	gchar *hash;
 
 	if (data == NULL || len == 0)
 		return;
 
-	/* Take advantage of the fact that we use a SHA-1 hash of the data as the filename. */
-	hash = purple_util_get_image_filename(data, len);
-
-	/* Get rid of the extension */
-	if (!(p = strchr(hash, '.'))) {
-		g_free(hash);
-		return;
-	}
-
-	*p = '\0';
+	hash = g_compute_checksum_for_data(G_CHECKSUM_SHA1, data, len);
 
 	purple_debug_info("bonjour", "Got buddy icon for %s icon hash='%s' phsh='%s'.\n", buddy->name,
 			  hash, buddy->phsh ? buddy->phsh : "(null)");

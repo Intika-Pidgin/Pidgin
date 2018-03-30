@@ -1,8 +1,3 @@
-/**
- * @file gntsound.c GNT Sound API
- * @ingroup finch
- */
-
 /* finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -53,7 +48,6 @@
 #include "gntentry.h"
 #include "gntcheckbox.h"
 #include "gntline.h"
-#include "gntslider.h"
 #include "gnttree.h"
 #include "gntfilesel.h"
 
@@ -70,7 +64,6 @@ typedef struct {
 	GntWidget *command;
 	GntWidget *conv_focus;
 	GntWidget *while_status;
-	GntWidget *volume;
 	GntWidget *events;
 	GntWidget *window;
 	GntWidget *selector;
@@ -137,20 +130,18 @@ unmute_login_sounds_cb(gpointer data)
 }
 
 static gboolean
-chat_nick_matches_name(PurpleConversation *conv, const char *aname)
+chat_nick_matches_name(PurpleChatConversation *chat, const char *aname)
 {
-	PurpleConvChat *chat = NULL;
 	char *nick = NULL;
 	char *name = NULL;
 	gboolean ret = FALSE;
 	PurpleAccount *account;
 
-	chat = purple_conversation_get_chat_data(conv);
 	if (chat == NULL)
 		return ret;
 
-	account = purple_conversation_get_account(conv);
-	nick = g_strdup(purple_normalize(account, chat->nick));
+	account = purple_conversation_get_account(PURPLE_CONVERSATION(chat));
+	nick = g_strdup(purple_normalize(account, purple_chat_conversation_get_nick(chat)));
 	name = g_strdup(purple_normalize(account, aname));
 
 	if (g_utf8_collate(nick, name) == 0)
@@ -211,67 +202,64 @@ im_msg_received_cb(PurpleAccount *account, char *sender,
 }
 
 static void
-im_msg_sent_cb(PurpleAccount *account, const char *receiver,
-			   const char *message, PurpleSoundEventID event)
+im_msg_sent_cb(PurpleAccount *account, PurpleMessage *msg,
+	PurpleSoundEventID event)
 {
-	PurpleConversation *conv = purple_find_conversation_with_account(
-		PURPLE_CONV_TYPE_IM, receiver, account);
-	play_conv_event(conv, event);
+	PurpleIMConversation *im = purple_conversations_find_im_with_account(
+		purple_message_get_recipient(msg), account);
+	play_conv_event(PURPLE_CONVERSATION(im), event);
 }
 
 static void
-chat_buddy_join_cb(PurpleConversation *conv, const char *name,
-				   PurpleConvChatBuddyFlags flags, gboolean new_arrival,
+chat_user_join_cb(PurpleChatConversation *chat, const char *name,
+				   PurpleChatUserFlags flags, gboolean new_arrival,
 				   PurpleSoundEventID event)
 {
-	if (new_arrival && !chat_nick_matches_name(conv, name))
-		play_conv_event(conv, event);
+	if (new_arrival && !chat_nick_matches_name(chat, name))
+		play_conv_event(PURPLE_CONVERSATION(chat), event);
 }
 
 static void
-chat_buddy_left_cb(PurpleConversation *conv, const char *name,
+chat_user_left_cb(PurpleChatConversation *chat, const char *name,
 				   const char *reason, PurpleSoundEventID event)
 {
-	if (!chat_nick_matches_name(conv, name))
-		play_conv_event(conv, event);
+	if (!chat_nick_matches_name(chat, name))
+		play_conv_event(PURPLE_CONVERSATION(chat), event);
 }
 
 static void
-chat_msg_sent_cb(PurpleAccount *account, const char *message,
-				 int id, PurpleSoundEventID event)
+chat_msg_sent_cb(PurpleAccount *account, PurpleMessage *msg, int id,
+	PurpleSoundEventID event)
 {
 	PurpleConnection *conn = purple_account_get_connection(account);
-	PurpleConversation *conv = NULL;
+	PurpleChatConversation *chat = NULL;
 
 	if (conn!=NULL)
-		conv = purple_find_chat(conn, id);
+		chat = purple_conversations_find_chat(conn, id);
 
-	play_conv_event(conv, event);
+	play_conv_event(PURPLE_CONVERSATION(chat), event);
 }
 
 static void
 chat_msg_received_cb(PurpleAccount *account, char *sender,
-					 char *message, PurpleConversation *conv,
+					 char *message, PurpleChatConversation *chat,
 					 PurpleMessageFlags flags, PurpleSoundEventID event)
 {
-	PurpleConvChat *chat;
-
 	if (flags & PURPLE_MESSAGE_DELAYED)
 		return;
 
-	chat = purple_conversation_get_chat_data(conv);
 	g_return_if_fail(chat != NULL);
 
-	if (purple_conv_chat_is_user_ignored(chat, sender))
+	if (purple_chat_conversation_is_ignored_user(chat, sender))
 		return;
 
-	if (chat_nick_matches_name(conv, sender))
+	if (chat_nick_matches_name(chat, sender))
 		return;
 
-	if (flags & PURPLE_MESSAGE_NICK || purple_utf8_has_word(message, chat->nick))
-		play_conv_event(conv, PURPLE_SOUND_CHAT_NICK);
+	if (flags & PURPLE_MESSAGE_NICK || purple_utf8_has_word(message, purple_chat_conversation_get_nick(chat)))
+		play_conv_event(PURPLE_CONVERSATION(chat), PURPLE_SOUND_CHAT_NICK);
 	else
-		play_conv_event(conv, event);
+		play_conv_event(PURPLE_CONVERSATION(chat), event);
 }
 
 static void
@@ -293,7 +281,7 @@ account_signon_cb(PurpleConnection *gc, gpointer data)
 	if (mute_login_sounds_timeout != 0)
 		g_source_remove(mute_login_sounds_timeout);
 	mute_login_sounds = TRUE;
-	mute_login_sounds_timeout = purple_timeout_add_seconds(10, unmute_login_sounds_cb, NULL);
+	mute_login_sounds_timeout = g_timeout_add_seconds(10, unmute_login_sounds_cb, NULL);
 }
 
 static void *
@@ -329,7 +317,6 @@ initialize_profile(const char *name, PurplePrefType type, gconstpointer val, gpo
 	purple_prefs_add_bool(make_pref("/mute"), FALSE);
 	purple_prefs_add_path(make_pref("/command"), "");
 	purple_prefs_add_string(make_pref("/method"), "automatic");
-	purple_prefs_add_int(make_pref("/volume"), 50);
 }
 
 static void
@@ -383,7 +370,7 @@ finch_sound_init(void)
 	if ((gst_init_failed = !gst_init_check(NULL, NULL, &error))) {
 		purple_notify_error(NULL, _("GStreamer Failure"),
 					_("GStreamer failed to initialize."),
-					error ? error->message : "");
+					error ? error->message : "", NULL);
 		if (error) {
 			g_error_free(error);
 			error = NULL;
@@ -403,11 +390,11 @@ finch_sound_init(void)
 	purple_signal_connect(conv_handle, "sent-im-msg",
 						gnt_sound_handle, PURPLE_CALLBACK(im_msg_sent_cb),
 						GINT_TO_POINTER(PURPLE_SOUND_SEND));
-	purple_signal_connect(conv_handle, "chat-buddy-joined",
-						gnt_sound_handle, PURPLE_CALLBACK(chat_buddy_join_cb),
+	purple_signal_connect(conv_handle, "chat-user-joined",
+						gnt_sound_handle, PURPLE_CALLBACK(chat_user_join_cb),
 						GINT_TO_POINTER(PURPLE_SOUND_CHAT_JOIN));
-	purple_signal_connect(conv_handle, "chat-buddy-left",
-						gnt_sound_handle, PURPLE_CALLBACK(chat_buddy_left_cb),
+	purple_signal_connect(conv_handle, "chat-user-left",
+						gnt_sound_handle, PURPLE_CALLBACK(chat_user_left_cb),
 						GINT_TO_POINTER(PURPLE_SOUND_CHAT_LEAVE));
 	purple_signal_connect(conv_handle, "sent-chat-msg",
 						gnt_sound_handle, PURPLE_CALLBACK(chat_msg_sent_cb),
@@ -433,7 +420,7 @@ finch_sound_uninit(void)
 	purple_signals_disconnect_by_handle(finch_sound_get_handle());
 }
 
-#ifdef USE_GSTREAMER
+#if defined(USE_GSTREAMER) && !defined(_WIN32)
 static gboolean
 bus_call (GstBus *bus, GstMessage *msg, gpointer data)
 {
@@ -467,8 +454,7 @@ static void
 finch_sound_play_file(const char *filename)
 {
 	const char *method;
-#ifdef USE_GSTREAMER
-	float volume;
+#if defined(USE_GSTREAMER) && !defined(_WIN32)
 	char *uri;
 	GstElement *sink = NULL;
 	GstElement *play = NULL;
@@ -526,7 +512,6 @@ finch_sound_play_file(const char *filename)
 #ifdef USE_GSTREAMER
 	if (gst_init_failed)  /* Perhaps do beep instead? */
 		return;
-	volume = (float)(CLAMP(purple_prefs_get_int(make_pref("/volume")), 0, 100)) / 50;
 	if (purple_strequal(method, "automatic")) {
 		if (purple_running_gnome()) {
 			sink = gst_element_factory_make("gconfaudiosink", "sink");
@@ -563,7 +548,6 @@ finch_sound_play_file(const char *filename)
 	uri = g_strdup_printf("file://%s", filename);
 
 	g_object_set(G_OBJECT(play), "uri", uri,
-		                     "volume", volume,
 		                     "audio-sink", sink, NULL);
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(play));
@@ -613,10 +597,10 @@ finch_sound_play_event(PurpleSoundEventID event)
 	/* check NULL for sounds that don't have an option, ie buddy pounce */
 	if (purple_prefs_get_bool(enable_pref)) {
 		char *filename = g_strdup(purple_prefs_get_path(file_pref));
-		if (!filename || !strlen(filename)) {
+		if (!filename || *filename == '\0') {
 			g_free(filename);
-			/* XXX Consider creating a constant for "sounds/purple" to be shared with Pidgin */
-			filename = g_build_filename(DATADIR, "sounds", "purple", sounds[event].def, NULL);
+			filename = g_build_filename(PURPLE_DATADIR,
+				"sounds", "purple", sounds[event].def, NULL);
 		}
 
 		purple_sound_play_file(filename, NULL);
@@ -665,7 +649,6 @@ save_cb(GntWidget *button, gpointer win)
 	purple_prefs_set_path(make_pref("/command"), gnt_entry_get_text(GNT_ENTRY(pref_dialog->command)));
 	purple_prefs_set_bool(make_pref("/conv_focus"), gnt_check_box_get_checked(GNT_CHECK_BOX(pref_dialog->conv_focus)));
 	purple_prefs_set_int("/purple/sound/while_status", GPOINTER_TO_INT(gnt_combo_box_get_selected_data(GNT_COMBO_BOX(pref_dialog->while_status))));
-	purple_prefs_set_int(make_pref("/volume"), gnt_slider_get_value(GNT_SLIDER(pref_dialog->volume)));
 
 	for (itr = gnt_tree_get_rows(GNT_TREE(pref_dialog->events)); itr; itr = itr->next) {
 		FinchSoundEvent * event = &sounds[GPOINTER_TO_INT(itr->data)];
@@ -698,34 +681,28 @@ test_cb(GntWidget *button, gpointer null)
 {
 	PurpleSoundEventID id = GPOINTER_TO_INT(gnt_tree_get_selection_data(GNT_TREE(pref_dialog->events)));
 	FinchSoundEvent * event = &sounds[id];
-	char *enabled, *file, *tmpfile, *volpref;
+	char *enabled, *file, *tmpfile;
 	gboolean temp_value;
-	int volume;
 
 	enabled = g_strdup_printf(FINCH_PREFS_ROOT "/sound/profiles/%s/enabled/%s",
 			finch_sound_get_active_profile(), event->pref);
 	file = g_strdup_printf(FINCH_PREFS_ROOT "/sound/profiles/%s/file/%s",
 			finch_sound_get_active_profile(), event->pref);
-	volpref = g_strdup(make_pref("/volume"));
 
 	temp_value = purple_prefs_get_bool(enabled);
 	tmpfile = g_strdup(purple_prefs_get_path(file));
-	volume = purple_prefs_get_int(volpref);
 
 	purple_prefs_set_path(file, event->file);
 	if (!temp_value) purple_prefs_set_bool(enabled, TRUE);
-	purple_prefs_set_int(volpref, gnt_slider_get_value(GNT_SLIDER(pref_dialog->volume)));
 
 	purple_sound_play_event(id, NULL);
 
 	if (!temp_value) purple_prefs_set_bool(enabled, FALSE);
 	purple_prefs_set_path(file, tmpfile);
-	purple_prefs_set_int(volpref, volume);
 
 	g_free(enabled);
 	g_free(file);
 	g_free(tmpfile);
-	g_free(volpref);
 }
 
 static void
@@ -800,8 +777,6 @@ load_pref_window(const char * profile)
 	gnt_check_box_set_checked(GNT_CHECK_BOX(pref_dialog->conv_focus), purple_prefs_get_bool(make_pref("/conv_focus")));
 
 	gnt_combo_box_set_selected(GNT_COMBO_BOX(pref_dialog->while_status), GINT_TO_POINTER(purple_prefs_get_int("/purple" "/sound/while_status")));
-
-	gnt_slider_set_value(GNT_SLIDER(pref_dialog->volume), CLAMP(purple_prefs_get_int(make_pref("/volume")), 0, 100));
 
 	for (i = 0; i < PURPLE_NUM_SOUNDS; i++) {
 		FinchSoundEvent * event = &sounds[i];
@@ -902,7 +877,7 @@ cancel_cb(GntButton *button, gpointer win)
 void
 finch_sounds_show_all(void)
 {
-	GntWidget *box, *tmpbox, *splitbox, *cmbox, *slider;
+	GntWidget *box, *tmpbox, *splitbox, *cmbox;
 	GntWidget *entry;
 	GntWidget *chkbox;
 	GntWidget *button;
@@ -1017,21 +992,6 @@ finch_sounds_show_all(void)
 	gnt_box_add_widget(GNT_BOX(tmpbox), cmbox);
 	gnt_box_add_widget(GNT_BOX(box), tmpbox);
 
-	tmpbox = gnt_hbox_new(TRUE);
-	gnt_box_set_pad(GNT_BOX(tmpbox), 0);
-	gnt_box_set_fill(GNT_BOX(tmpbox), FALSE);
-	gnt_box_add_widget(GNT_BOX(tmpbox), gnt_label_new(_("Volume(0-100):")));
-
-	pref_dialog->volume = slider = gnt_slider_new(FALSE, 100, 0);
-	gnt_slider_set_step(GNT_SLIDER(slider), 5);
-	gnt_slider_set_small_step(GNT_SLIDER(slider), 1);
-	gnt_slider_set_large_step(GNT_SLIDER(slider), 20);
-	label = gnt_label_new("");
-	gnt_slider_reflect_label(GNT_SLIDER(slider), GNT_LABEL(label));
-	gnt_box_set_pad(GNT_BOX(tmpbox), 1);
-	gnt_box_add_widget(GNT_BOX(tmpbox), slider);
-	gnt_box_add_widget(GNT_BOX(tmpbox), label);
-	gnt_box_add_widget(GNT_BOX(box), tmpbox);
 	gnt_box_add_widget(GNT_BOX(splitbox), box);
 
 	gnt_box_add_widget(GNT_BOX(win), splitbox);
@@ -1099,8 +1059,6 @@ gboolean finch_sound_is_enabled(void)
 	if (!method)
 		return FALSE;
 	if (purple_strequal(method, "nosound"))
-		return FALSE;
-	if (purple_prefs_get_int(make_pref("/volume")) <= 0)
 		return FALSE;
 
 	return TRUE;

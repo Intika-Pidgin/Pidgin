@@ -14,18 +14,18 @@
 #include "version.h"
 
 #include "gtkconv.h"
-#include "gtkimhtml.h"
 #include "gtkplugin.h"
+#include "gtkwebview.h"
 
 #define HISTORY_PLUGIN_ID "gtk-history"
 
 #define HISTORY_SIZE (4 * 1024)
 
-static gboolean _scroll_imhtml_to_end(gpointer data)
+static gboolean _scroll_webview_to_end(gpointer data)
 {
-	GtkIMHtml *imhtml = data;
-	gtk_imhtml_scroll_to_end(GTK_IMHTML(imhtml), FALSE);
-	g_object_unref(G_OBJECT(imhtml));
+	PidginWebView *webview = data;
+	pidgin_webview_scroll_to_end(PIDGIN_WEBVIEW(webview), FALSE);
+	g_object_unref(G_OBJECT(webview));
 	return FALSE;
 }
 
@@ -33,25 +33,30 @@ static void historize(PurpleConversation *c)
 {
 	PurpleAccount *account = purple_conversation_get_account(c);
 	const char *name = purple_conversation_get_name(c);
-	PurpleConversationType convtype;
 	GList *logs = NULL;
 	const char *alias = name;
 	guint flags;
 	char *history;
 	PidginConversation *gtkconv;
+#if 0
+	/* FIXME: WebView has no options */
 	GtkIMHtmlOptions options = GTK_IMHTML_NO_COLOURS;
+#endif
 	char *header;
+#if 0
+	/* FIXME: WebView has no protocol setting */
 	char *protocol;
+#endif
 	char *escaped_alias;
-	const char *header_date;
+	GDateTime *dt;
+	gchar *header_date;
 
-	convtype = purple_conversation_get_type(c);
 	gtkconv = PIDGIN_CONVERSATION(c);
 	g_return_if_fail(gtkconv != NULL);
 
 	/* An IM which is the first active conversation. */
 	g_return_if_fail(gtkconv->convs != NULL);
-	if (convtype == PURPLE_CONV_TYPE_IM && !gtkconv->convs->next)
+	if (PURPLE_IS_IM_CONVERSATION(c) && !gtkconv->convs->next)
 	{
 		GSList *buddies;
 		GSList *cur;
@@ -62,11 +67,11 @@ static void historize(PurpleConversation *c)
 			return;
 
 		/* Find buddies for this conversation. */
-		buddies = purple_find_buddies(account, name);
+		buddies = purple_blist_find_buddies(account, name);
 
 		/* If we found at least one buddy, save the first buddy's alias. */
 		if (buddies != NULL)
-			alias = purple_buddy_get_contact_alias((PurpleBuddy *)buddies->data);
+			alias = purple_buddy_get_contact_alias(PURPLE_BUDDY(buddies->data));
 
 		for (cur = buddies; cur != NULL; cur = cur->next)
 		{
@@ -79,7 +84,7 @@ static void historize(PurpleConversation *c)
 				PurpleBlistNode *parent = purple_blist_node_get_parent(node);
 				PurpleBlistNode *child = purple_blist_node_get_first_child(parent);
 
-				alias = purple_buddy_get_contact_alias((PurpleBuddy *)node);
+				alias = purple_buddy_get_contact_alias(PURPLE_BUDDY(node));
 
 				/* We've found a buddy that matches this conversation.  It's part of a
 				 * PurpleContact with more than one PurpleBuddy.  Loop through the PurpleBuddies
@@ -87,8 +92,8 @@ static void historize(PurpleConversation *c)
 				for (node2 = child ; node2 != NULL ; node2 = purple_blist_node_get_sibling_next(node2))
 				{
 					logs = g_list_concat(purple_log_get_logs(PURPLE_LOG_IM,
-							purple_buddy_get_name((PurpleBuddy *)node2),
-							purple_buddy_get_account((PurpleBuddy *)node2)),
+							purple_buddy_get_name(PURPLE_BUDDY(node2)),
+							purple_buddy_get_account(PURPLE_BUDDY(node2))),
 							logs);
 				}
 				break;
@@ -101,7 +106,7 @@ static void historize(PurpleConversation *c)
 		else
 			logs = g_list_sort(logs, purple_log_compare);
 	}
-	else if (convtype == PURPLE_CONV_TYPE_CHAT)
+	else if (PURPLE_IS_CHAT_CONVERSATION(c))
 	{
 		/* If we're not logging, don't show anything.
 		 * Otherwise, we might show a very old log. */
@@ -116,39 +121,51 @@ static void historize(PurpleConversation *c)
 
 	history = purple_log_read((PurpleLog*)logs->data, &flags);
 	gtkconv = PIDGIN_CONVERSATION(c);
+#if 0
+	/* FIXME: WebView has no options */
 	if (flags & PURPLE_LOG_READ_NO_NEWLINE)
 		options |= GTK_IMHTML_NO_NEWLINE;
+#endif
 
+#if 0
+	/* FIXME: WebView has no protocol setting */
 	protocol = g_strdup(gtk_imhtml_get_protocol_name(GTK_IMHTML(gtkconv->imhtml)));
 	gtk_imhtml_set_protocol_name(GTK_IMHTML(gtkconv->imhtml),
 			purple_account_get_protocol_name(((PurpleLog*)logs->data)->account));
+#endif
 
-	if (gtk_text_buffer_get_char_count(gtk_text_view_get_buffer(GTK_TEXT_VIEW(gtkconv->imhtml))))
-		gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), "<BR>", options);
+#if 0
+	/* TODO WebKit: Do this properly... */
+	if (!pidgin_webview_is_empty(PIDGIN_WEBVIEW(gtkconv->webview)))
+		pidgin_webview_append_html(PIDGIN_WEBVIEW(gtkconv->webview), "<BR>");
+#endif
 
 	escaped_alias = g_markup_escape_text(alias, -1);
 
-	if (((PurpleLog *)logs->data)->tm)
-		header_date = purple_date_format_full(((PurpleLog *)logs->data)->tm);
-	else
-		header_date = purple_date_format_full(localtime(&((PurpleLog *)logs->data)->time));
+	dt = g_date_time_to_local(((PurpleLog *)logs->data)->time);
+	header_date = g_date_time_format(dt, "%c");
+	g_date_time_unref(dt);
 
 	header = g_strdup_printf(_("<b>Conversation with %s on %s:</b><br>"), escaped_alias, header_date);
-	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), header, options|GTK_IMHTML_NO_SMILEY);
+	pidgin_webview_append_html(PIDGIN_WEBVIEW(gtkconv->webview), header);
+	g_free(header_date);
 	g_free(header);
 	g_free(escaped_alias);
 
 	g_strchomp(history);
-	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), history, options);
+	pidgin_webview_append_html(PIDGIN_WEBVIEW(gtkconv->webview), history);
 	g_free(history);
 
-	gtk_imhtml_append_text(GTK_IMHTML(gtkconv->imhtml), "<hr>", options);
+	pidgin_webview_append_html(PIDGIN_WEBVIEW(gtkconv->webview), "<hr>");
 
+#if 0
+	/* FIXME: WebView has no protocol setting */
 	gtk_imhtml_set_protocol_name(GTK_IMHTML(gtkconv->imhtml), protocol);
 	g_free(protocol);
+#endif
 
-	g_object_ref(G_OBJECT(gtkconv->imhtml));
-	g_idle_add(_scroll_imhtml_to_end, gtkconv->imhtml);
+	g_object_ref(G_OBJECT(gtkconv->webview));
+	g_idle_add(_scroll_webview_to_end, gtkconv->webview);
 
 	g_list_foreach(logs, (GFunc)purple_log_free, NULL);
 	g_list_free(logs);
@@ -163,7 +180,7 @@ history_prefs_check(PurplePlugin *plugin)
 		purple_notify_warning(plugin, NULL, _("History Plugin Requires Logging"),
 							_("Logging can be enabled from Tools -> Preferences -> Logging.\n\n"
 							  "Enabling logs for instant messages and/or chats will activate "
-							  "history for the same conversation type(s)."));
+							  "history for the same conversation type(s)."), NULL);
 	}
 }
 
@@ -173,8 +190,33 @@ static void history_prefs_cb(const char *name, PurplePrefType type,
 	history_prefs_check((PurplePlugin *)data);
 }
 
+static PidginPluginInfo *
+plugin_query(GError **error)
+{
+	const gchar * const authors[] = {
+		"Sean Egan <seanegan@gmail.com>",
+		NULL
+	};
+
+	return pidgin_plugin_info_new(
+		"id",           HISTORY_PLUGIN_ID,
+		"name",         N_("History"),
+		"version",      DISPLAY_VERSION,
+		"category",     N_("User interface"),
+		"summary",      N_("Shows recently logged conversations in new "
+		                   "conversations."),
+		"description",  N_("When a new conversation is opened this plugin will "
+		                   "insert the last conversation into the current "
+		                   "conversation."),
+		"authors",      authors,
+		"website",      PURPLE_WEBSITE,
+		"abi-version",  PURPLE_ABI_VERSION,
+		NULL
+	);
+}
+
 static gboolean
-plugin_load(PurplePlugin *plugin)
+plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_signal_connect(purple_conversations_get_handle(),
 						"conversation-created",
@@ -191,42 +233,10 @@ plugin_load(PurplePlugin *plugin)
 	return TRUE;
 }
 
-static PurplePluginInfo info =
+static gboolean
+plugin_unload(PurplePlugin *plugin, GError **error)
 {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,
-	PIDGIN_PLUGIN_TYPE,
-	0,
-	NULL,
-	PURPLE_PRIORITY_DEFAULT,
-	HISTORY_PLUGIN_ID,
-	N_("History"),
-	DISPLAY_VERSION,
-	N_("Shows recently logged conversations in new conversations."),
-	N_("When a new conversation is opened this plugin will insert "
-	   "the last conversation into the current conversation."),
-	"Sean Egan <seanegan@gmail.com>",
-	PURPLE_WEBSITE,
-	plugin_load,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-static void
-init_plugin(PurplePlugin *plugin)
-{
+	return TRUE;
 }
 
-PURPLE_INIT_PLUGIN(history, init_plugin, info)
+PURPLE_PLUGIN_INIT(history, plugin_query, plugin_load, plugin_unload);

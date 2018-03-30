@@ -1,8 +1,3 @@
-/**
- * @file savedstatuses.c Saved Status API
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -35,19 +30,19 @@
 #include "util.h"
 #include "xmlnode.h"
 
-/**
+/*
  * The maximum number of transient statuses to save.  This
  * is used during the shutdown process to clean out old
  * transient statuses.
  */
 #define MAX_TRANSIENTS 5
 
-/**
+/*
  * The default message to use when the user becomes auto-away.
  */
 #define DEFAULT_AUTOAWAY_MESSAGE _("I'm not here right now")
 
-/**
+/*
  * The information stores a snap-shot of the statuses of all
  * your accounts.  Basically these are your saved away messages.
  * There is an overall status and message that applies to
@@ -64,14 +59,14 @@ struct _PurpleSavedStatus
 	PurpleStatusPrimitive type;
 	char *message;
 
-	/** The timestamp when this saved status was created. This must be unique. */
+	/* The timestamp when this saved status was created. This must be unique. */
 	time_t creation_time;
 
 	time_t lastused;
 
 	unsigned int usage_count;
 
-	GList *substatuses;      /**< A list of PurpleSavedStatusSub's. */
+	GList *substatuses;      /* A list of PurpleSavedStatusSub's. */
 };
 
 /*
@@ -156,7 +151,7 @@ set_creation_time(PurpleSavedStatus *status, time_t creation_time)
 						status);
 }
 
-/**
+/*
  * A magic number is calculated for each status, and then the
  * statuses are ordered by the magic number.  The magic number
  * is the date the status was last used offset by one day for
@@ -183,7 +178,7 @@ saved_statuses_sort_func(gconstpointer a, gconstpointer b)
 	return 0;
 }
 
-/**
+/*
  * Transient statuses are added and removed automatically by
  * Purple.  If they're not used for a certain length of time then
  * they'll expire and be automatically removed.  This function
@@ -236,42 +231,42 @@ remove_old_transient_statuses(void)
  * Writing to disk                                                   *
  *********************************************************************/
 
-static xmlnode *
+static PurpleXmlNode *
 substatus_to_xmlnode(PurpleSavedStatusSub *substatus)
 {
-	xmlnode *node, *child;
+	PurpleXmlNode *node, *child;
 
-	node = xmlnode_new("substatus");
+	node = purple_xmlnode_new("substatus");
 
-	child = xmlnode_new_child(node, "account");
-	xmlnode_set_attrib(child, "protocol", purple_account_get_protocol_id(substatus->account));
-	xmlnode_insert_data(child,
+	child = purple_xmlnode_new_child(node, "account");
+	purple_xmlnode_set_attrib(child, "protocol", purple_account_get_protocol_id(substatus->account));
+	purple_xmlnode_insert_data(child,
 			purple_normalize(substatus->account,
 				purple_account_get_username(substatus->account)), -1);
 
-	child = xmlnode_new_child(node, "state");
-	xmlnode_insert_data(child, purple_status_type_get_id(substatus->type), -1);
+	child = purple_xmlnode_new_child(node, "state");
+	purple_xmlnode_insert_data(child, purple_status_type_get_id(substatus->type), -1);
 
 	if (substatus->message != NULL)
 	{
-		child = xmlnode_new_child(node, "message");
-		xmlnode_insert_data(child, substatus->message, -1);
+		child = purple_xmlnode_new_child(node, "message");
+		purple_xmlnode_insert_data(child, substatus->message, -1);
 	}
 
 	return node;
 }
 
-static xmlnode *
+static PurpleXmlNode *
 status_to_xmlnode(PurpleSavedStatus *status)
 {
-	xmlnode *node, *child;
+	PurpleXmlNode *node, *child;
 	char buf[21];
 	GList *cur;
 
-	node = xmlnode_new("status");
+	node = purple_xmlnode_new("status");
 	if (status->title != NULL)
 	{
-		xmlnode_set_attrib(node, "name", status->title);
+		purple_xmlnode_set_attrib(node, "name", status->title);
 	}
 	else
 	{
@@ -283,50 +278,50 @@ status_to_xmlnode(PurpleSavedStatus *status)
 		 * whether the "name" attribute is set to something or if
 		 * it does not exist at all.
 		 */
-		xmlnode_set_attrib(node, "name", "Auto-Cached");
-		xmlnode_set_attrib(node, "transient", "true");
+		purple_xmlnode_set_attrib(node, "name", "Auto-Cached");
+		purple_xmlnode_set_attrib(node, "transient", "true");
 	}
 
 	g_snprintf(buf, sizeof(buf), "%lu", status->creation_time);
-	xmlnode_set_attrib(node, "created", buf);
+	purple_xmlnode_set_attrib(node, "created", buf);
 
 	g_snprintf(buf, sizeof(buf), "%lu", status->lastused);
-	xmlnode_set_attrib(node, "lastused", buf);
+	purple_xmlnode_set_attrib(node, "lastused", buf);
 
 	g_snprintf(buf, sizeof(buf), "%u", status->usage_count);
-	xmlnode_set_attrib(node, "usage_count", buf);
+	purple_xmlnode_set_attrib(node, "usage_count", buf);
 
-	child = xmlnode_new_child(node, "state");
-	xmlnode_insert_data(child, purple_primitive_get_id_from_type(status->type), -1);
+	child = purple_xmlnode_new_child(node, "state");
+	purple_xmlnode_insert_data(child, purple_primitive_get_id_from_type(status->type), -1);
 
 	if (status->message != NULL)
 	{
-		child = xmlnode_new_child(node, "message");
-		xmlnode_insert_data(child, status->message, -1);
+		child = purple_xmlnode_new_child(node, "message");
+		purple_xmlnode_insert_data(child, status->message, -1);
 	}
 
 	for (cur = status->substatuses; cur != NULL; cur = cur->next)
 	{
 		child = substatus_to_xmlnode(cur->data);
-		xmlnode_insert_child(node, child);
+		purple_xmlnode_insert_child(node, child);
 	}
 
 	return node;
 }
 
-static xmlnode *
+static PurpleXmlNode *
 statuses_to_xmlnode(void)
 {
-	xmlnode *node, *child;
+	PurpleXmlNode *node, *child;
 	GList *cur;
 
-	node = xmlnode_new("statuses");
-	xmlnode_set_attrib(node, "version", "1.0");
+	node = purple_xmlnode_new("statuses");
+	purple_xmlnode_set_attrib(node, "version", "1.0");
 
 	for (cur = saved_statuses; cur != NULL; cur = cur->next)
 	{
 		child = status_to_xmlnode(cur->data);
-		xmlnode_insert_child(node, child);
+		purple_xmlnode_insert_child(node, child);
 	}
 
 	return node;
@@ -335,7 +330,7 @@ statuses_to_xmlnode(void)
 static void
 sync_statuses(void)
 {
-	xmlnode *node;
+	PurpleXmlNode *node;
 	char *data;
 
 	if (!statuses_loaded)
@@ -346,10 +341,10 @@ sync_statuses(void)
 	}
 
 	node = statuses_to_xmlnode();
-	data = xmlnode_to_formatted_str(node, NULL);
+	data = purple_xmlnode_to_formatted_str(node, NULL);
 	purple_util_write_data_to_file("status.xml", data, -1);
 	g_free(data);
-	xmlnode_free(node);
+	purple_xmlnode_free(node);
 }
 
 static gboolean
@@ -364,7 +359,7 @@ static void
 schedule_save(void)
 {
 	if (save_timer == 0)
-		save_timer = purple_timeout_add_seconds(5, save_cb, NULL);
+		save_timer = g_timeout_add_seconds(5, save_cb, NULL);
 }
 
 
@@ -373,23 +368,22 @@ schedule_save(void)
  *********************************************************************/
 
 static PurpleSavedStatusSub *
-parse_substatus(xmlnode *substatus)
+parse_substatus(PurpleXmlNode *substatus)
 {
 	PurpleSavedStatusSub *ret;
-	xmlnode *node;
+	PurpleXmlNode *node;
 	char *data;
 
 	ret = g_new0(PurpleSavedStatusSub, 1);
 
 	/* Read the account */
-	node = xmlnode_get_child(substatus, "account");
+	node = purple_xmlnode_get_child(substatus, "account");
 	if (node != NULL)
 	{
 		char *acct_name;
 		const char *protocol;
-		acct_name = xmlnode_get_data(node);
-		protocol = xmlnode_get_attrib(node, "protocol");
-		protocol = _purple_oscar_convert(acct_name, protocol); /* XXX: Remove */
+		acct_name = purple_xmlnode_get_data(node);
+		protocol = purple_xmlnode_get_attrib(node, "protocol");
 		if ((acct_name != NULL) && (protocol != NULL))
 			ret->account = purple_accounts_find(acct_name, protocol);
 		g_free(acct_name);
@@ -402,11 +396,11 @@ parse_substatus(xmlnode *substatus)
 	}
 
 	/* Read the state */
-	node = xmlnode_get_child(substatus, "state");
-	if ((node != NULL) && ((data = xmlnode_get_data(node)) != NULL))
+	node = purple_xmlnode_get_child(substatus, "state");
+	if ((node != NULL) && ((data = purple_xmlnode_get_data(node)) != NULL))
 	{
 		ret->type = purple_status_type_find_with_id(
-							ret->account->status_types, data);
+							purple_account_get_status_types(ret->account), data);
 		g_free(data);
 	}
 
@@ -417,8 +411,8 @@ parse_substatus(xmlnode *substatus)
 	}
 
 	/* Read the message */
-	node = xmlnode_get_child(substatus, "message");
-	if ((node != NULL) && ((data = xmlnode_get_data(node)) != NULL))
+	node = purple_xmlnode_get_child(substatus, "message");
+	if ((node != NULL) && ((data = purple_xmlnode_get_data(node)) != NULL))
 	{
 		ret->message = data;
 	}
@@ -427,7 +421,7 @@ parse_substatus(xmlnode *substatus)
 	return ret;
 }
 
-/**
+/*
  * Parse a saved status and add it to the saved_statuses linked list.
  *
  * Here's an example of the XML for a saved status:
@@ -438,12 +432,12 @@ parse_substatus(xmlnode *substatus)
  *   And I can always make them smile
  *   From White Castle to the Nile</message>
  *       <substatus>
- *           <account protocol='prpl-aim'>markdoliner</account>
+ *           <account protocol='aim'>markdoliner</account>
  *           <state>available</state>
  *           <message>The ladies man is here to answer your queries.</message>
  *       </substatus>
  *       <substatus>
- *           <account protocol='prpl-aim'>giantgraypanda</account>
+ *           <account protocol='aim'>giantgraypanda</account>
  *           <state>away</state>
  *           <message>A.C. ain't in charge no more.</message>
  *       </substatus>
@@ -452,21 +446,21 @@ parse_substatus(xmlnode *substatus)
  * I know.  Moving, huh?
  */
 static PurpleSavedStatus *
-parse_status(xmlnode *status)
+parse_status(PurpleXmlNode *status)
 {
 	PurpleSavedStatus *ret;
-	xmlnode *node;
+	PurpleXmlNode *node;
 	const char *attrib;
 	char *data;
 	int i;
 
 	ret = g_new0(PurpleSavedStatus, 1);
 
-	attrib = xmlnode_get_attrib(status, "transient");
+	attrib = purple_xmlnode_get_attrib(status, "transient");
 	if (!purple_strequal(attrib, "true"))
 	{
 		/* Read the title */
-		attrib = xmlnode_get_attrib(status, "name");
+		attrib = purple_xmlnode_get_attrib(status, "name");
 		ret->title = g_strdup(attrib);
 	}
 
@@ -483,35 +477,35 @@ parse_status(xmlnode *status)
 	}
 
 	/* Read the creation time */
-	attrib = xmlnode_get_attrib(status, "created");
+	attrib = purple_xmlnode_get_attrib(status, "created");
 	set_creation_time(ret, (attrib != NULL ? atol(attrib) : 0));
 
 	/* Read the last used time */
-	attrib = xmlnode_get_attrib(status, "lastused");
+	attrib = purple_xmlnode_get_attrib(status, "lastused");
 	ret->lastused = (attrib != NULL ? atol(attrib) : 0);
 
 	/* Read the usage count */
-	attrib = xmlnode_get_attrib(status, "usage_count");
+	attrib = purple_xmlnode_get_attrib(status, "usage_count");
 	ret->usage_count = (attrib != NULL ? atol(attrib) : 0);
 
 	/* Read the primitive status type */
-	node = xmlnode_get_child(status, "state");
-	if ((node != NULL) && ((data = xmlnode_get_data(node)) != NULL))
+	node = purple_xmlnode_get_child(status, "state");
+	if ((node != NULL) && ((data = purple_xmlnode_get_data(node)) != NULL))
 	{
 		ret->type = purple_primitive_get_type_from_id(data);
 		g_free(data);
 	}
 
 	/* Read the message */
-	node = xmlnode_get_child(status, "message");
-	if ((node != NULL) && ((data = xmlnode_get_data(node)) != NULL))
+	node = purple_xmlnode_get_child(status, "message");
+	if ((node != NULL) && ((data = purple_xmlnode_get_data(node)) != NULL))
 	{
 		ret->message = data;
 	}
 
 	/* Read substatuses */
-	for (node = xmlnode_get_child(status, "substatus"); node != NULL;
-			node = xmlnode_get_next_twin(node))
+	for (node = purple_xmlnode_get_child(status, "substatus"); node != NULL;
+			node = purple_xmlnode_get_next_twin(node))
 	{
 		PurpleSavedStatusSub *new;
 		new = parse_substatus(node);
@@ -523,16 +517,18 @@ parse_status(xmlnode *status)
 	return ret;
 }
 
-/**
+/*
+ * load_statuses:
+ *
  * Read the saved statuses from a file in the Purple user dir.
  *
- * @return TRUE on success, FALSE on failure (if the file can not
- *         be opened, or if it contains invalid XML).
+ * Returns: TRUE on success, FALSE on failure (if the file can not
+ *          be opened, or if it contains invalid XML).
  */
 static void
 load_statuses(void)
 {
-	xmlnode *statuses, *status;
+	PurpleXmlNode *statuses, *status;
 
 	statuses_loaded = TRUE;
 
@@ -541,8 +537,8 @@ load_statuses(void)
 	if (statuses == NULL)
 		return;
 
-	for (status = xmlnode_get_child(statuses, "status"); status != NULL;
-			status = xmlnode_get_next_twin(status))
+	for (status = purple_xmlnode_get_child(statuses, "status"); status != NULL;
+			status = purple_xmlnode_get_next_twin(status))
 	{
 		PurpleSavedStatus *new;
 		new = parse_status(status);
@@ -550,7 +546,7 @@ load_statuses(void)
 	}
 	saved_statuses = g_list_sort(saved_statuses, saved_statuses_sort_func);
 
-	xmlnode_free(statuses);
+	purple_xmlnode_free(statuses);
 }
 
 
@@ -600,7 +596,7 @@ purple_savedstatus_set_title(PurpleSavedStatus *status, const char *title)
 }
 
 void
-purple_savedstatus_set_type(PurpleSavedStatus *status, PurpleStatusPrimitive type)
+purple_savedstatus_set_primitive_type(PurpleSavedStatus *status, PurpleStatusPrimitive type)
 {
 	g_return_if_fail(status != NULL);
 
@@ -881,7 +877,7 @@ purple_savedstatus_set_idleaway(gboolean idleaway)
 	if (!idleaway)
 		purple_idle_touch();
 
-	if (idleaway && (purple_savedstatus_get_type(old) != PURPLE_STATUS_AVAILABLE))
+	if (idleaway && (purple_savedstatus_get_primitive_type(old) != PURPLE_STATUS_AVAILABLE))
 		/* Our global status is already "away," so don't change anything */
 		return;
 
@@ -1011,7 +1007,7 @@ purple_savedstatus_get_title(const PurpleSavedStatus *saved_status)
 	if ((message == NULL) || (*message == '\0'))
 	{
 		PurpleStatusPrimitive primitive;
-		primitive = purple_savedstatus_get_type(saved_status);
+		primitive = purple_savedstatus_get_primitive_type(saved_status);
 		return purple_primitive_get_name_from_type(primitive);
 	}
 	else
@@ -1034,7 +1030,7 @@ purple_savedstatus_get_title(const PurpleSavedStatus *saved_status)
 }
 
 PurpleStatusPrimitive
-purple_savedstatus_get_type(const PurpleSavedStatus *saved_status)
+purple_savedstatus_get_primitive_type(const PurpleSavedStatus *saved_status)
 {
 	g_return_val_if_fail(saved_status != NULL, PURPLE_STATUS_OFFLINE);
 
@@ -1086,7 +1082,7 @@ purple_savedstatus_get_substatus(const PurpleSavedStatus *saved_status,
 }
 
 const PurpleStatusType *
-purple_savedstatus_substatus_get_type(const PurpleSavedStatusSub *substatus)
+purple_savedstatus_substatus_get_status_type(const PurpleSavedStatusSub *substatus)
 {
 	g_return_val_if_fail(substatus != NULL, NULL);
 
@@ -1175,6 +1171,33 @@ purple_savedstatus_activate_for_account(const PurpleSavedStatus *saved_status,
 	}
 }
 
+static PurpleSavedStatus *
+purple_savedstatus_copy(PurpleSavedStatus *savedstatus)
+{
+	PurpleSavedStatus *savedstatus_copy;
+
+	g_return_val_if_fail(savedstatus != NULL, NULL);
+
+	savedstatus_copy = g_new(PurpleSavedStatus, 1);
+	*savedstatus_copy = *savedstatus;
+
+	return savedstatus_copy;
+}
+
+GType
+purple_savedstatus_get_type(void)
+{
+	static GType type = 0;
+
+	if (type == 0) {
+		type = g_boxed_type_register_static("PurpleSavedStatus",
+				(GBoxedCopyFunc)purple_savedstatus_copy,
+				(GBoxedFreeFunc)g_free);
+	}
+
+	return type;
+}
+
 void *
 purple_savedstatuses_get_handle(void)
 {
@@ -1207,26 +1230,20 @@ purple_savedstatuses_init(void)
 	load_statuses();
 
 	purple_signal_register(handle, "savedstatus-changed",
-					 purple_marshal_VOID__POINTER_POINTER, NULL, 2,
-					 purple_value_new(PURPLE_TYPE_SUBTYPE,
-									PURPLE_SUBTYPE_SAVEDSTATUS),
-					 purple_value_new(PURPLE_TYPE_SUBTYPE,
-									PURPLE_SUBTYPE_SAVEDSTATUS));
+					 purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
+					 PURPLE_TYPE_SAVEDSTATUS, PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_register(handle, "savedstatus-added",
-		purple_marshal_VOID__POINTER, NULL, 1,
-		purple_value_new(PURPLE_TYPE_SUBTYPE,
-			PURPLE_SUBTYPE_SAVEDSTATUS));
+		purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+		PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_register(handle, "savedstatus-deleted",
-		purple_marshal_VOID__POINTER, NULL, 1,
-		purple_value_new(PURPLE_TYPE_SUBTYPE,
-			PURPLE_SUBTYPE_SAVEDSTATUS));
+		purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+		PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_register(handle, "savedstatus-modified",
-		purple_marshal_VOID__POINTER, NULL, 1,
-		purple_value_new(PURPLE_TYPE_SUBTYPE,
-			PURPLE_SUBTYPE_SAVEDSTATUS));
+		purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
+		PURPLE_TYPE_SAVEDSTATUS);
 
 	purple_signal_connect(purple_accounts_get_handle(), "account-removed",
 			handle,
@@ -1243,7 +1260,7 @@ purple_savedstatuses_uninit(void)
 
 	if (save_timer != 0)
 	{
-		purple_timeout_remove(save_timer);
+		g_source_remove(save_timer);
 		save_timer = 0;
 		sync_statuses();
 	}
