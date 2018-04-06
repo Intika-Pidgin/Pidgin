@@ -237,7 +237,7 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	/* Otherwise, it's a standard XMPP connection, or a HTTP (insecure) BOSH connection.
 	 * We request STARTTLS for standard XMPP connections, but we do nothing for insecure
 	 * BOSH connections, per XEP-0206. */
-	if(purple_ssl_is_supported() && !js->bosh) {
+	if(!js->bosh) {
 		jabber_send_raw(js,
 				"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
 		return TRUE;
@@ -249,7 +249,7 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	 * and emit errors if encryption is required by the user. */
 	starttls = purple_xmlnode_get_child(packet, "starttls");
 	if(!js->bosh && purple_xmlnode_get_child(starttls, "required")) {
-		purple_connection_error_reason(js->gc,
+		purple_connection_error(js->gc,
 				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
 				_("Server requires TLS/SSL, but no TLS/SSL support was found."));
 		return TRUE;
@@ -257,7 +257,7 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 
 	account = purple_connection_get_account(js->gc);
 	if (purple_strequal("require_tls", purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS))) {
-		purple_connection_error_reason(js->gc,
+		purple_connection_error(js->gc,
 				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
 				_("You require encryption, but no TLS/SSL support was found."));
 		return TRUE;
