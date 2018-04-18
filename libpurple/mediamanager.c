@@ -1191,18 +1191,25 @@ purple_media_manager_get_element(PurpleMediaManager *manager,
 	PurpleMediaElementInfo *info = NULL;
 	PurpleMediaElementType element_type;
 
-	if (type & PURPLE_MEDIA_SEND_AUDIO)
-		info = manager->priv->audio_src;
-	else if (type & PURPLE_MEDIA_RECV_AUDIO)
-		info = manager->priv->audio_sink;
-	else if (type & PURPLE_MEDIA_SEND_VIDEO)
-		info = manager->priv->video_src;
-	else if (type & PURPLE_MEDIA_RECV_VIDEO)
-		info = manager->priv->video_sink;
-	else if (type & PURPLE_MEDIA_SEND_APPLICATION)
-		info = get_send_application_element_info ();
-	else if (type & PURPLE_MEDIA_RECV_APPLICATION)
-		info = get_recv_application_element_info ();
+	if (type & PURPLE_MEDIA_SEND)
+		info = g_object_get_data(G_OBJECT(media), "src-element");
+	else
+		info = g_object_get_data(G_OBJECT(media), "sink-element");
+
+	if (info == NULL) {
+		if (type & PURPLE_MEDIA_SEND_AUDIO)
+			info = manager->priv->audio_src;
+		else if (type & PURPLE_MEDIA_RECV_AUDIO)
+			info = manager->priv->audio_sink;
+		else if (type & PURPLE_MEDIA_SEND_VIDEO)
+			info = manager->priv->video_src;
+		else if (type & PURPLE_MEDIA_RECV_VIDEO)
+			info = manager->priv->video_sink;
+		else if (type & PURPLE_MEDIA_SEND_APPLICATION)
+			info = get_send_application_element_info ();
+		else if (type & PURPLE_MEDIA_RECV_APPLICATION)
+			info = get_recv_application_element_info ();
+	}
 
 	if (info == NULL)
 		return NULL;
