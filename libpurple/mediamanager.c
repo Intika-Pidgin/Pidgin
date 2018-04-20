@@ -82,6 +82,7 @@ struct _PurpleMediaOutputWindow
 	gchar *participant;
 	gulong window_id;
 	GstElement *sink;
+	guint caps_id;
 };
 
 struct _PurpleMediaManagerPrivate
@@ -1518,6 +1519,29 @@ purple_media_manager_get_active_element(PurpleMediaManager *manager,
 #endif /* USE_GSTREAMER */
 
 #ifdef USE_VV
+static gboolean
+window_caps_cb_cb(PurpleMediaOutputWindow *ow)
+{
+	GstPad *pad = gst_element_get_static_pad(ow->sink, "sink");
+	GstCaps *caps = gst_pad_get_current_caps(pad);
+
+	if (caps) {
+		g_signal_emit_by_name(ow->media, "video-caps", ow->session_id, ow->participant, caps);
+		gst_caps_unref(caps);
+	}
+
+	ow->caps_id = 0;
+
+	return FALSE;
+}
+
+static void
+window_caps_cb(GstPad *pad, GParamSpec *pspec, PurpleMediaOutputWindow *ow)
+{
+	if (!ow->caps_id)
+		ow->caps_id = g_timeout_add(0, (GSourceFunc)window_caps_cb_cb, ow);
+}
+
 static void
 window_id_cb(GstBus *bus, GstMessage *msg, PurpleMediaOutputWindow *ow)
 {
@@ -1573,6 +1597,7 @@ purple_media_manager_create_output_window(PurpleMediaManager *manager,
 				purple_strequal(participant, ow->participant) &&
 				purple_strequal(session_id, ow->session_id)) {
 			GstBus *bus;
+			GstPad *pad;
 			GstElement *queue, *convert, *scale;
 			GstElement *tee = purple_media_get_tee(media,
 					session_id, participant);
@@ -1614,6 +1639,11 @@ purple_media_manager_create_output_window(PurpleMediaManager *manager,
 			g_signal_connect(bus, "sync-message::element",
 					G_CALLBACK(window_id_cb), ow);
 			gst_object_unref(bus);
+
+			pad = gst_element_get_static_pad(ow->sink, "sink");
+			g_signal_connect(pad, "notify::caps",
+					 G_CALLBACK(window_caps_cb), ow);
+			gst_object_unref(pad);
 
 			gst_element_set_state(ow->sink, GST_STATE_PLAYING);
 			gst_element_set_state(scale, GST_STATE_PLAYING);
@@ -1688,12 +1718,18 @@ purple_media_manager_remove_output_window(PurpleMediaManager *manager,
 
 	if (output_window->sink != NULL) {
 		GstElement *element = output_window->sink;
+		GstPad *pad;
 		GstPad *teepad = NULL;
 		GSList *to_remove = NULL;
 
+		pad = gst_element_get_static_pad(element, "sink");
+		g_signal_handlers_disconnect_matched(pad, G_SIGNAL_MATCH_FUNC
+						     | G_SIGNAL_MATCH_DATA, 0, 0, NULL,
+						     window_caps_cb, output_window);
+		gst_object_unref(pad);
+
 		/* Find the tee element this output is connected to. */
 		while (!teepad) {
-			GstPad *pad;
 			GstPad *peer;
 			GstElementFactory *factory;
 			const gchar *factory_name;
@@ -1735,6 +1771,8 @@ purple_media_manager_remove_output_window(PurpleMediaManager *manager,
 			to_remove = g_slist_delete_link(to_remove, to_remove);
 		}
 	}
+	if (output_window->caps_id)
+		g_source_remove(output_window->caps_id);
 
 	g_free(output_window->session_id);
 	g_free(output_window->participant);
