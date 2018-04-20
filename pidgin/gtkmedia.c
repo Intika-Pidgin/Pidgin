@@ -489,6 +489,8 @@ pidgin_media_dispose(GObject *media)
 		purple_request_close_with_handle(gtkmedia);
 		purple_media_remove_output_windows(gtkmedia->priv->media);
 		pidgin_media_disconnect_levels(gtkmedia->priv->media, gtkmedia);
+		g_signal_handlers_disconnect_matched(gtkmedia->priv->media,
+			G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, gtkmedia);
 		g_object_unref(gtkmedia->priv->media);
 		gtkmedia->priv->media = NULL;
 	}
@@ -1124,6 +1126,39 @@ pidgin_media_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
 }
 
 static void
+pidgin_media_video_caps_cb(PurpleMedia *media, gchar *session, gchar *participant,
+			   GstCaps *caps, PidginMedia *gtkmedia)
+{
+	GtkWidget *widget;
+	GstStructure *str;
+	gint height, width;
+	double aspect;
+
+	if (!gst_caps_is_fixed(caps))
+		return;
+
+	widget = pidgin_media_get_widget(gtkmedia, session, participant);
+	if (!widget)
+		return;
+
+	widget = gtk_widget_get_parent(widget);
+	if (!widget || !GTK_IS_ASPECT_FRAME(widget))
+		return;
+
+	str = gst_caps_get_structure(caps, 0);
+	if (!str)
+		return;
+
+	if (!gst_structure_get_int(str, "height", &height) ||
+	    !gst_structure_get_int(str, "width", &width) ||
+	    height < 1 || width < 1)
+		return;
+
+	aspect = (double)width / (double)height;
+	gtk_aspect_frame_set(GTK_ASPECT_FRAME(widget), 0, 0, aspect, FALSE);
+}
+
+static void
 pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
 	PidginMedia *media;
@@ -1150,6 +1185,8 @@ pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 				G_CALLBACK(pidgin_media_state_changed_cb), media);
 			g_signal_connect(G_OBJECT(media->priv->media), "stream-info",
 				G_CALLBACK(pidgin_media_stream_info_cb), media);
+			g_signal_connect(G_OBJECT(media->priv->media), "video-caps",
+				G_CALLBACK(pidgin_media_video_caps_cb), media);
 			break;
 		}
 		case PROP_SCREENNAME:
