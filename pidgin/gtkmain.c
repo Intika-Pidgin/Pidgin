@@ -70,12 +70,15 @@
 #include "pidginstock.h"
 #include "gtkwhiteboard.h"
 
+#ifdef HAVE_X11
+#include <X11/Xlib.h>
+#endif
+
 #ifdef HAVE_SIGNAL_H
 # include <signal.h>
 #endif
 
 #include <getopt.h>
-
 
 #ifdef HAVE_SIGNAL_H
 
@@ -748,6 +751,11 @@ int main(int argc, char *argv[])
 	search_path = g_build_filename(purple_user_dir(), "gtkrc-2.0", NULL);
 	gtk_rc_add_default_file(search_path);
 	g_free(search_path);
+
+#if defined(HAVE_X11) && defined(USE_VV)
+	/* GStreamer elements such as ximagesrc may require this */
+	XInitThreads();
+#endif
 
 	gui_check = gtk_init_check(&argc, &argv);
 	if (!gui_check) {
