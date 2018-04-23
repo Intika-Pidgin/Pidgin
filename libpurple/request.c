@@ -1501,6 +1501,31 @@ purple_request_folder(void *handle, const char *title, const char *dirname,
 	return NULL;
 }
 
+void *
+purple_request_screenshare_media(void *handle, const char *title,
+				 const char *primary, const char *secondary,
+				 PurpleAccount *account, GCallback cb,
+				 void *user_data)
+{
+	PurpleRequestUiOps *ops;
+
+	ops = purple_request_get_ui_ops();
+
+	if (ops != NULL && ops->request_screenshare_media != NULL) {
+		PurpleRequestInfo *info;
+
+		info            = g_new0(PurpleRequestInfo, 1);
+		info->type      = PURPLE_REQUEST_SCREENSHARE;
+		info->handle    = handle;
+		info->ui_handle = ops->request_screenshare_media(title, primary, secondary,
+								 account, cb, user_data);
+		handles = g_list_append(handles, info);
+		return info->ui_handle;
+	}
+
+	return NULL;
+}
+
 static void
 purple_request_close_info(PurpleRequestInfo *info)
 {

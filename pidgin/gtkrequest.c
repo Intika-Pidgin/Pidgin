@@ -36,6 +36,9 @@
 #include "gtkutils.h"
 #include "pidginstock.h"
 #include "gtkblist.h"
+#ifdef USE_VV
+#include "media-gst.h"
+#endif
 
 #include <gdk/gdkkeysyms.h>
 
@@ -1703,6 +1706,359 @@ pidgin_request_folder(const char *title, const char *dirname,
 	return (void *)data;
 }
 
+#ifdef USE_VV
+static GstElement *create_screensrc_cb(PurpleMedia *media, const gchar *session_id,
+				       const gchar *participant);
+
+#ifdef HAVE_X11
+static gboolean
+grab_event (GtkWidget *child, GdkEvent *event, PidginRequestData *data)
+{
+	GdkScreen *screen = gdk_screen_get_default();
+	GObject *info;
+	GdkWindow *gdkroot = gdk_get_default_root_window();
+	Window xroot = GDK_WINDOW_XID(gdkroot), xwindow, parent, *children;
+	unsigned int nchildren, xmask;
+	Display *xdisplay = GDK_SCREEN_XDISPLAY(screen);
+	int rootx, rooty, winx, winy;
+
+	if (event->type != GDK_BUTTON_PRESS)
+		return FALSE;
+
+	XQueryPointer(xdisplay, xroot, &xroot, &xwindow, &rootx, &rooty, &winx, &winy, &xmask);
+
+	gdk_pointer_ungrab(GDK_CURRENT_TIME);
+
+	/* Find WM window (direct child of root) */
+	while (1) {
+		if (!XQueryTree(xdisplay, xwindow, &xroot, &parent, &children, &nchildren))
+			break;
+
+		if (nchildren)
+			XFree(children);
+
+		if (xroot == parent)
+			break;
+
+		xwindow = parent;
+	}
+
+	generic_response_start(data);
+
+	if (data->cbs[0] != NULL) {
+		info = g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+				    "id", "screenshare-window",
+				    "name", "Screen share single window",
+				    "type", PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC |
+				    PURPLE_MEDIA_ELEMENT_ONE_SRC,
+				    "create-cb", create_screensrc_cb, NULL);
+		g_object_set_data(info, "window-id", GUINT_TO_POINTER(xwindow));
+		((PurpleRequestScreenshareCb)data->cbs[0])(data->user_data, info);
+	}
+
+	purple_request_close(PURPLE_REQUEST_SCREENSHARE, data);
+
+	return FALSE;
+}
+
+static void
+screenshare_window_cb(GtkWidget *button, PidginRequestData *data)
+{
+	GdkCursor *cursor;
+	GdkWindow *gdkwin = gtk_widget_get_window(GTK_WIDGET(data->dialog));
+
+	if (!GTK_WIDGET_HAS_FOCUS(button))
+		gtk_widget_grab_focus(button);
+
+	gtk_widget_add_events(GTK_WIDGET(data->dialog),
+			      GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
+	g_signal_connect(data->dialog, "event", G_CALLBACK(grab_event), data);
+
+	cursor = gdk_cursor_new(GDK_CROSSHAIR);
+	gdk_pointer_grab(gdkwin, FALSE,
+			 GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK,
+			 NULL, cursor, GDK_CURRENT_TIME);
+}
+
+static GstElement *create_screensrc_cb(PurpleMedia *media, const gchar *session_id,
+				       const gchar *participant)
+{
+	GObject *info;
+	GstElement *ret;
+
+	ret = gst_element_factory_make("ximagesrc", NULL);
+	g_object_set(ret, "use-damage", 0, NULL);
+
+	info = g_object_get_data(G_OBJECT(media), "src-element");
+	if (info) {
+		Window xid = GPOINTER_TO_UINT(g_object_get_data(info, "window-id"));
+		int monitor_no = GPOINTER_TO_INT(g_object_get_data(info, "monitor-no"));
+		if (xid) {
+			g_object_set(ret, "xid", xid, NULL);
+		} else if (monitor_no >= 0) {
+			GdkScreen *screen = gdk_screen_get_default();
+			GdkRectangle geom;
+
+			gdk_screen_get_monitor_geometry(screen, monitor_no, &geom);
+			g_object_set(ret, "startx", geom.x, "starty", geom.y,
+				     "endx", geom.x + geom.width - 1,
+				     "endy", geom.y + geom.height - 1, NULL);
+		}
+	}
+
+	return ret;
+}
+#elif defined (_WIN32)
+static GstElement *create_screensrc_cb(PPurpleMedia *media, const gchar *session_id,
+				       const gchar *participant)
+{
+	GObject *info;
+	GstElement *ret;
+
+	ret = gst_element_factory_make("gdiscreencapsrc", NULL);
+	g_object_set(ret, "cursor", TRUE);
+
+	info = g_object_get_data(G_OBJECT(media), "src-element");
+	if (info) {
+		int monitor_no = GPOINTER_TO_INT(g_object_get_data(info, "monitor-no"));
+		if (monitor_no >= 0)
+			g_object_set(ret, "monitor", monitor_no);
+	}
+
+	return ret;
+}
+#else
+/* We don't actually need to break the build just because we can't do
+ * screencap, but gtkmedia.c is going to break the USE_VV build if it
+ * isn't WIN32 or X11 anyway, so we might as well. */
+#error "Unsupported windowing system"
+#endif
+
+static void
+screenshare_monitor_cb(GtkWidget *button, PidginRequestData *data)
+{
+	GtkWidget *radio;
+	GObject *info;
+	int monitor_no = -1;
+
+	generic_response_start(data);
+
+	if (!GTK_WIDGET_HAS_FOCUS(button))
+		gtk_widget_grab_focus(button);
+
+	radio = g_object_get_data(G_OBJECT(data->dialog), "radio");
+	if (radio) {
+		GSList *group = gtk_radio_button_get_group(GTK_RADIO_BUTTON(radio));
+
+		while (group) {
+			if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(group->data))) {
+				monitor_no = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(group->data),
+									       "monitor-no"));
+				break;
+			}
+			group = group->next;
+		}
+	}
+	if (data->cbs[0] != NULL) {
+		info = g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+				    "id", "screenshare-monitor",
+				    "name", "Screen share monitor",
+				    "type", PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC |
+				    PURPLE_MEDIA_ELEMENT_ONE_SRC,
+				    "create-cb", create_screensrc_cb, NULL);
+		g_object_set_data(info, "monitor-no", GINT_TO_POINTER(monitor_no));
+		((PurpleRequestScreenshareCb)data->cbs[0])(data->user_data, info);
+	}
+
+	purple_request_close(PURPLE_REQUEST_SCREENSHARE, data);
+}
+
+static GstElement *create_videotest_cb(PurpleMedia *media, const gchar *session_id,
+				       const gchar *participant)
+{
+	return gst_element_factory_make("videotestsrc", NULL);
+}
+
+static void
+screenshare_videotest_cb(GtkWidget *button, PidginRequestData *data)
+{
+	GObject *info;
+
+	generic_response_start(data);
+
+	if (!GTK_WIDGET_HAS_FOCUS(button))
+		gtk_widget_grab_focus(button);
+
+	if (data->cbs[0] != NULL) {
+		info = g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+				    "id", "screenshare-videotestsrc",
+				    "name", "Screen share test source",
+				    "type", PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC |
+				    PURPLE_MEDIA_ELEMENT_ONE_SRC,
+				    "create-cb", create_videotest_cb, NULL);
+		((PurpleRequestScreenshareCb)data->cbs[0])(data->user_data, info);
+	}
+
+	purple_request_close(PURPLE_REQUEST_SCREENSHARE, data);
+}
+
+static void
+screenshare_cancel_cb(GtkWidget *button, PidginRequestData *data)
+{
+	generic_response_start(data);
+
+	if (data->cbs[0] != NULL)
+		((PurpleRequestScreenshareCb)data->cbs[0])(data->user_data, NULL);
+
+	purple_request_close(PURPLE_REQUEST_SCREENSHARE, data);
+}
+
+static gboolean
+destroy_screenshare_cb(GtkWidget *dialog, GdkEvent *event,
+		       PidginRequestData *data)
+{
+	screenshare_cancel_cb(NULL, data);
+	return FALSE;
+}
+
+static void *pidgin_request_screenshare_media(const char *title, const char *primary,
+					      const char *secondary, PurpleAccount *account,
+					      GCallback cb, void *user_data)
+{
+	PidginRequestData *data;
+	GtkWidget *dialog;
+	GtkWidget *vbox;
+	GtkWidget *hbox;
+	GtkWidget *label;
+	GtkWidget *button;
+	GtkWidget *radio = NULL;
+	GdkScreen *screen;
+	char *label_text;
+	char *primary_esc, *secondary_esc;
+
+	data            = g_new0(PidginRequestData, 1);
+	data->type      = PURPLE_REQUEST_SCREENSHARE;
+	data->user_data = user_data;
+
+	data->cb_count = 1;
+	data->cbs = g_new0(GCallback, 1);
+	data->cbs[0] = cb;
+
+	/* Create the dialog. */
+	data->dialog = dialog = gtk_dialog_new();
+
+	if (title != NULL)
+		gtk_window_set_title(GTK_WINDOW(dialog), title);
+#ifdef _WIN32
+	else
+		gtk_window_set_title(GTK_WINDOW(dialog), PIDGIN_ALERT_TITLE);
+#endif
+
+	button = pidgin_dialog_add_button(GTK_DIALOG(dialog), GTK_STOCK_CANCEL,
+					  G_CALLBACK(screenshare_cancel_cb), data);
+	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+
+	if (g_getenv("PIDGIN_SHARE_VIDEOTEST") != NULL) {
+		button = pidgin_dialog_add_button(GTK_DIALOG(dialog), _("Test image"),
+						  G_CALLBACK(screenshare_videotest_cb), data);
+		GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+		gtk_window_set_default(GTK_WINDOW(dialog), button);
+	}
+
+#ifdef HAVE_X11
+	button = pidgin_dialog_add_button(GTK_DIALOG(dialog), _("Select window"),
+					  G_CALLBACK(screenshare_window_cb), data);
+	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	gtk_window_set_default(GTK_WINDOW(dialog), button);
+#endif
+
+	button = pidgin_dialog_add_button(GTK_DIALOG(dialog), _("Use monitor"),
+					  G_CALLBACK(screenshare_monitor_cb), data);
+	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	gtk_window_set_default(GTK_WINDOW(dialog), button);
+
+	g_signal_connect(G_OBJECT(dialog), "delete_event",
+					 G_CALLBACK(destroy_screenshare_cb), data);
+
+	/* Setup the dialog */
+	gtk_container_set_border_width(GTK_CONTAINER(dialog), PIDGIN_HIG_BORDER/2);
+	gtk_container_set_border_width(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER/2);
+	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
+	gtk_box_set_spacing(GTK_BOX(GTK_DIALOG(dialog)->vbox), PIDGIN_HIG_BORDER);
+
+	/* Setup the main horizontal box */
+	hbox = gtk_hbox_new(FALSE, PIDGIN_HIG_BORDER);
+	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), hbox);
+
+
+	/* Vertical box */
+	vbox = gtk_vbox_new(FALSE, PIDGIN_HIG_BORDER);
+	gtk_box_pack_start(GTK_BOX(hbox), vbox, FALSE, FALSE, 0);
+
+	pidgin_widget_decorate_account(hbox, account);
+
+	/* Descriptive label */
+	primary_esc = (primary != NULL) ? g_markup_escape_text(primary, -1) : NULL;
+	secondary_esc = (secondary != NULL) ? g_markup_escape_text(secondary, -1) : NULL;
+	label_text = g_strdup_printf((primary ? "<span weight=\"bold\" size=\"larger\">"
+								 "%s</span>%s%s" : "%s%s%s"),
+								 (primary ? primary_esc : ""),
+								 ((primary && secondary) ? "\n\n" : ""),
+								 (secondary ? secondary_esc : ""));
+	g_free(primary_esc);
+	g_free(secondary_esc);
+
+	label = gtk_label_new(NULL);
+
+	gtk_label_set_markup(GTK_LABEL(label), label_text);
+	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+	gtk_misc_set_alignment(GTK_MISC(label), 0, 0);
+	gtk_label_set_selectable(GTK_LABEL(label), TRUE);
+	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, TRUE, 0);
+
+	g_free(label_text);
+
+	screen = gdk_screen_get_default();
+	if (screen) {
+		int nr_monitors = gdk_screen_get_n_monitors(screen);
+		int primary = gdk_screen_get_primary_monitor(screen);
+		int i;
+
+		for (i = 0; i < nr_monitors; i++) {
+			GdkRectangle geom;
+			gchar *name;
+			gchar *label;
+
+			name = gdk_screen_get_monitor_plug_name(screen, i);
+			gdk_screen_get_monitor_geometry(screen, i, &geom);
+
+			label = g_strdup_printf(_("%s (%d✕%d @ %d,%d)"),
+						name ? name : _("Unknown output"),
+						geom.width, geom.height,
+						geom.x, geom.y);
+			radio = gtk_radio_button_new_with_label_from_widget((GtkRadioButton *)radio, label);
+			g_object_set_data(G_OBJECT(radio), "monitor-no", GINT_TO_POINTER(i));
+			gtk_box_pack_start(GTK_BOX(vbox), radio, FALSE, FALSE, 0);
+			if (i == primary)
+			       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radio), TRUE);
+
+			g_free(label);
+			g_free(name);
+		}
+		g_object_set_data(G_OBJECT(dialog), "radio", radio);
+	}
+
+	/* Show everything. */
+	pidgin_auto_parent_window(dialog);
+
+	gtk_widget_show_all(dialog);
+
+	return data;
+
+}
+#endif /* USE_VV */
+
 static void
 pidgin_close_request(PurpleRequestType type, void *ui_handle)
 {
@@ -1730,7 +2086,11 @@ static PurpleRequestUiOps ops =
 	pidgin_close_request,
 	pidgin_request_folder,
 	pidgin_request_action_with_icon,
+#ifdef USE_VV
+	pidgin_request_screenshare_media,
+#else
 	NULL,
+#endif
 	NULL,
 	NULL
 };
