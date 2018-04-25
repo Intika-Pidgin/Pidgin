@@ -523,131 +523,35 @@ const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso)
 	return buf;
 }
 
-/* Windows doesn't HAVE_STRFTIME_Z_FORMAT, but this seems clearer. -- rlaager */
-#if !defined(HAVE_STRFTIME_Z_FORMAT) || defined(_WIN32)
-static size_t purple_internal_strftime(char *s, size_t max, const char *format, const struct tm *tm)
-{
-	const char *start;
-	const char *c;
-	char *fmt = NULL;
-
-	/* Yes, this is checked in purple_utf8_strftime(),
-	 * but better safe than sorry. -- rlaager */
-	g_return_val_if_fail(format != NULL, 0);
-
-	/* This is fairly efficient, and it only gets
-	 * executed on Windows or if the underlying
-	 * system doesn't support the %z format string,
-	 * for strftime() so I think it's good enough.
-	 * -- rlaager */
-	for (c = start = format; *c ; c++)
-	{
-		if (*c != '%')
-			continue;
-
-		c++;
-
-#ifndef HAVE_STRFTIME_Z_FORMAT
-		if (*c == 'z')
-		{
-			char *tmp = g_strdup_printf("%s%.*s%s",
-				fmt ? fmt : "",
-				(int)(c - start - 1),
-				start,
-				purple_get_tzoff_str(tm, FALSE));
-			g_free(fmt);
-			fmt = tmp;
-			start = c + 1;
-		}
-#endif
-#ifdef _WIN32
-		if (*c == 'Z')
-		{
-			char *tmp = g_strdup_printf("%s%.*s%s",
-				fmt ? fmt : "",
-				(int)(c - start - 1),
-				start,
-				wpurple_get_timezone_abbreviation(tm));
-			g_free(fmt);
-			fmt = tmp;
-			start = c + 1;
-		}
-#endif
-	}
-
-	if (fmt != NULL)
-	{
-		size_t ret;
-
-		if (*start)
-		{
-			char *tmp = g_strconcat(fmt, start, NULL);
-			g_free(fmt);
-			fmt = tmp;
-		}
-
-		ret = strftime(s, max, fmt, tm);
-		g_free(fmt);
-
-		return ret;
-	}
-
-	return strftime(s, max, format, tm);
-}
-#else /* HAVE_STRFTIME_Z_FORMAT && !_WIN32 */
-#define purple_internal_strftime strftime
-#endif
-
 const char *
 purple_utf8_strftime(const char *format, const struct tm *tm)
 {
 	static char buf[128];
-	char *locale;
-	GError *err = NULL;
-	int len;
+	GDateTime *dt;
 	char *utf8;
 
 	g_return_val_if_fail(format != NULL, NULL);
 
 	if (tm == NULL)
 	{
-		time_t now = time(NULL);
-		tm = localtime(&now);
+		dt = g_date_time_new_now_local();
+	} else {
+		dt = g_date_time_new_local(tm->tm_year + 1900, tm->tm_mon + 1,
+				tm->tm_mday, tm->tm_hour,
+				tm->tm_min, tm->tm_sec);
 	}
 
-	locale = g_locale_from_utf8(format, -1, NULL, NULL, &err);
-	if (err != NULL)
-	{
-		purple_debug_error("util", "Format conversion failed in purple_utf8_strftime(): %s\n", err->message);
-		g_error_free(err);
-		err = NULL;
-		locale = g_strdup(format);
-	}
+	utf8 = g_date_time_format(dt, format);
+	g_date_time_unref(dt);
 
-	/* A return value of 0 is either an error (in
-	 * which case, the contents of the buffer are
-	 * undefined) or the empty string (in which
-	 * case, no harm is done here). */
-	if ((len = purple_internal_strftime(buf, sizeof(buf), locale, tm)) == 0)
-	{
-		g_free(locale);
+	if (utf8 == NULL) {
+		purple_debug_error("util",
+				"purple_utf8_strftime(): Formatting failed\n");
 		return "";
 	}
 
-	g_free(locale);
-
-	utf8 = g_locale_to_utf8(buf, len, NULL, NULL, &err);
-	if (err != NULL)
-	{
-		purple_debug_error("util", "Result conversion failed in purple_utf8_strftime(): %s\n", err->message);
-		g_error_free(err);
-	}
-	else
-	{
-		g_strlcpy(buf, utf8, sizeof(buf));
-		g_free(utf8);
-	}
-
+	g_strlcpy(buf, utf8, sizeof(buf));
+	g_free(utf8);
 	return buf;
 }
 
