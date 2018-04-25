@@ -247,21 +247,6 @@ conf.set('HAVE_IPV6_V6ONLY',
 math = compiler.find_library('m')
 
 code = '''
-#include <stdio.h>
-
-int main(int argc, char *argv[])
-{
-	int fd;
-
-	fd = fileno(stdout);
-
-	return !(fd > 0);
-}
-'''
-result = compiler.run(code, name : 'fileno()')
-conf.set('HAVE_FILENO', result.returncode() == 0)
-
-code = '''
 #include <time.h>
 #include <stdio.h>
 
