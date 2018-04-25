@@ -214,12 +214,6 @@ conf.set_quoted('PIDGIN_PLUGINDIR', PIDGIN_PLUGINDIR)
 FINCH_PLUGINDIR = join_paths(abslibdir, 'finch-@0@'.format(purple_major_version))
 conf.set_quoted('FINCH_PLUGINDIR', FINCH_PLUGINDIR)
 
-# Checks for library functions.
-foreach func : ['strdup']
-	conf.set('HAVE_' + func.to_upper(),
-	    compiler.has_function(func))
-endforeach
-
 # Check for inet_aton
 if not IS_WIN32
 	if not compiler.has_function('inet_aton')
