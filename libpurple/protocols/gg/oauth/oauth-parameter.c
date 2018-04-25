@@ -43,12 +43,12 @@ int gg_oauth_parameter_set(gg_oauth_parameter_t **list, const char *key, const c
 	if (list == NULL)
 		return -1;
 
-	new_key = strdup(key);
+	new_key = g_strdup(key);
 
 	if (new_key == NULL)
 		return -1;
 
-	new_value = strdup(value);
+	new_value = g_strdup(value);
 
 	if (new_value == NULL) {
 		free(new_key);
