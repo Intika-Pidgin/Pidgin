@@ -3196,158 +3196,17 @@ purple_util_write_data_to_data_file(const char *filename, const char *data, gssi
 	return ret;
 }
 
-/*
- * This function is long and beautiful, like my--um, yeah.  Anyway,
- * it includes lots of error checking so as we don't overwrite
- * people's settings if there is a problem writing the new values.
- */
 gboolean
 purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size)
 {
-	gchar *filename_temp;
-	FILE *file;
-	gsize real_size, byteswritten;
-	GStatBuf st;
-#ifndef HAVE_FILENO
-	int fd;
-#endif
+	GError *err = NULL;
 
-	purple_debug_misc("util", "Writing file %s",
-					filename_full);
-
-	g_return_val_if_fail((size >= -1), FALSE);
-
-	filename_temp = g_strdup_printf("%s.save", filename_full);
-
-	/* Remove an old temporary file, if one exists */
-	if (g_file_test(filename_temp, G_FILE_TEST_EXISTS))
-	{
-		if (g_unlink(filename_temp) == -1)
-		{
-			purple_debug_error("util", "Error removing old file "
-					   "%s: %s\n",
-					   filename_temp, g_strerror(errno));
-		}
-	}
-
-	/* Open file */
-	file = g_fopen(filename_temp, "wb");
-	if (file == NULL)
-	{
-		purple_debug_error("util", "Error opening file %s for "
-				   "writing: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
+	if (!g_file_set_contents(filename_full, data, size, &err)) {
+		purple_debug_error("util", "Error writing file: %s: %s\n",
+				   filename_full, err->message);
+		g_clear_error(&err);
 		return FALSE;
 	}
-
-	/* Write to file */
-	real_size = (size == -1) ? strlen(data) : (size_t) size;
-	byteswritten = fwrite(data, 1, real_size, file);
-
-#ifdef HAVE_FILENO
-#ifndef _WIN32
-	/* Set file permissions */
-	if (fchmod(fileno(file), S_IRUSR | S_IWUSR) == -1) {
-		purple_debug_error("util", "Error setting permissions of "
-			"file %s: %s\n", filename_temp, g_strerror(errno));
-	}
-#endif
-
-	/* Apparently XFS (and possibly other filesystems) do not
-	 * guarantee that file data is flushed before file metadata,
-	 * so this procedure is insufficient without some flushage. */
-	if (fflush(file) < 0) {
-		purple_debug_error("util", "Error flushing %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		fclose(file);
-		return FALSE;
-	}
-	if (fsync(fileno(file)) < 0) {
-		purple_debug_error("util", "Error syncing file contents for %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		fclose(file);
-		return FALSE;
-	}
-#endif
-
-	/* Close file */
-	if (fclose(file) != 0)
-	{
-		purple_debug_error("util", "Error closing file %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		return FALSE;
-	}
-
-#ifndef HAVE_FILENO
-	/* This is the same effect (we hope) as the HAVE_FILENO block
-	 * above, but for systems without fileno(). */
-	if ((fd = open(filename_temp, O_RDWR)) < 0) {
-		purple_debug_error("util", "Error opening file %s for flush: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		return FALSE;
-	}
-
-#ifndef _WIN32
-	/* copy-pasta! */
-	if (fchmod(fd, S_IRUSR | S_IWUSR) == -1) {
-		purple_debug_error("util", "Error setting permissions of "
-			"file %s: %s\n", filename_temp, g_strerror(errno));
-	}
-#endif
-
-	if (fsync(fd) < 0) {
-		purple_debug_error("util", "Error syncing %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		close(fd);
-		return FALSE;
-	}
-	if (close(fd) < 0) {
-		purple_debug_error("util", "Error closing %s after sync: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		return FALSE;
-	}
-#endif
-
-	/* Ensure the file is the correct size */
-	if (byteswritten != real_size)
-	{
-		purple_debug_error("util", "Error writing to file %s: Wrote %"
-				   G_GSIZE_FORMAT " bytes "
-				   "but should have written %" G_GSIZE_FORMAT
-				   "; is your disk full?\n",
-				   filename_temp, byteswritten, real_size);
-		g_free(filename_temp);
-		return FALSE;
-	}
-#ifndef __COVERITY__
-	/* Use stat to be absolutely sure.
-	 * It causes TOCTOU coverity warning (against g_rename below),
-	 * but it's not a threat for us.
-	 */
-	if ((g_stat(filename_temp, &st) == -1) || ((gsize)st.st_size != real_size)) {
-		purple_debug_error("util", "Error writing data to file %s: "
-			"couldn't g_stat file", filename_temp);
-		g_free(filename_temp);
-		return FALSE;
-	}
-#endif /* __COVERITY__ */
-
-	/* Rename to the REAL name */
-	if (g_rename(filename_temp, filename_full) == -1)
-	{
-		purple_debug_error("util", "Error renaming %s to %s: %s\n",
-				   filename_temp, filename_full,
-				   g_strerror(errno));
-	}
-
-	g_free(filename_temp);
 
 	return TRUE;
 }
