@@ -116,6 +116,8 @@ static gboolean purple_media_backend_fs2_set_send_rtcp_mux(
 		const gchar *sess_id, const gchar *participant,
 		gboolean send_rtcp_mux);
 
+static void remove_element(GstElement *element);
+
 static void free_stream(PurpleMediaBackendFs2Stream *stream);
 static void free_session(PurpleMediaBackendFs2Session *session);
 
@@ -1359,6 +1361,82 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 	}
 }
 
+static gboolean
+downgrade_video_source(PurpleMediaBackendFs2 *self, GstBin *srcbin)
+{
+	PurpleMediaBackendFs2Private *priv;
+	GstElement *src;
+	GstPad *srcpad = NULL;
+	GstPad *p;
+
+	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+
+	src = gst_bin_get_by_name(srcbin, "purplevideodowngrade");
+	if (src) {
+		/* The failing source has already been downgraded. Stop here in
+		 * order not to cause an infinite loop. */
+		gst_object_unref(src);
+		return FALSE;
+	}
+
+	src = gst_bin_get_by_name(srcbin, "tee");
+	if (!src) {
+		return FALSE;
+	}
+
+	while((p = gst_element_get_static_pad(src, "sink"))) {
+		if (srcpad) {
+			gst_object_unref(srcpad);
+		}
+		srcpad = gst_pad_get_peer(p);
+		gst_object_unref(src);
+		src = gst_pad_get_parent_element(srcpad);
+		gst_object_unref(p);
+	};
+
+	if (srcpad) {
+		PurpleMediaManager *manager;
+		GstElement *pipeline;
+		GstElement *dest;
+		GstElement *newsrc;
+
+		manager = purple_media_get_manager(priv->media);
+		pipeline = purple_media_manager_get_pipeline(manager);
+
+		dest = gst_pad_get_parent_element(GST_PAD_PEER(srcpad));
+
+		remove_element(src);
+
+		newsrc = gst_element_factory_make("videotestsrc",
+				"purplevideodowngrade");
+		g_object_set(newsrc, "is-live", TRUE, NULL);
+		gst_bin_add_many(srcbin, newsrc, NULL);
+		gst_element_link(newsrc, dest);
+		gst_element_set_state(newsrc, GST_STATE_PLAYING);
+
+		/* Pipeline with an error might not be any longer PLAYING. */
+		gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+		gst_object_unref(srcpad);
+
+		/* Flush the video pipeline. */
+		srcpad = gst_element_get_static_pad(newsrc, "src");
+		gst_pad_push_event(srcpad, gst_event_new_flush_start());
+#if GST_CHECK_VERSION(1,0,0)
+		gst_pad_push_event(srcpad, gst_event_new_flush_stop(FALSE));
+#else
+		gst_pad_push_event(srcpad, gst_event_new_flush_stop());
+#endif
+		gst_object_unref(srcpad);
+
+		gst_object_unref(dest);
+	}
+
+	gst_object_unref(src);
+
+	return TRUE;
+}
+
 static void
 gst_handle_message_error(GstBus *bus, GstMessage *msg,
 		PurpleMediaBackendFs2 *self)
@@ -1368,6 +1446,7 @@ gst_handle_message_error(GstBus *bus, GstMessage *msg,
 	GstElement *element = GST_ELEMENT(GST_MESSAGE_SRC(msg));
 	GstElement *lastElement = NULL;
 	GList *sessions;
+	gboolean fatal = TRUE;
 
 	GError *error = NULL;
 	gchar *debug_msg = NULL;
@@ -1393,26 +1472,37 @@ gst_handle_message_error(GstBus *bus, GstMessage *msg,
 	sessions = purple_media_get_session_ids(priv->media);
 
 	for (; sessions; sessions = g_list_delete_link(sessions, sessions)) {
+		PurpleMediaSessionType session_type;
+
 		if (purple_media_get_src(priv->media, sessions->data)
 				!= lastElement)
 			continue;
 
-		if (purple_media_get_session_type(priv->media, sessions->data)
-				& PURPLE_MEDIA_AUDIO)
+		session_type = purple_media_get_session_type(priv->media,
+				sessions->data);
+
+		if (session_type & PURPLE_MEDIA_AUDIO) {
 			purple_media_error(priv->media,
 					_("Error with your microphone"));
-		else if (purple_media_get_session_type(priv->media,
-                        sessions->data) & PURPLE_MEDIA_VIDEO)
-			purple_media_error(priv->media,
-					_("Error with your webcam"));
+		} else if (session_type & PURPLE_MEDIA_VIDEO) {
+			fatal = !downgrade_video_source(self,
+					GST_BIN(lastElement));
+
+			if (fatal) {
+				purple_media_error(priv->media,
+						_("Error with your webcam"));
+			}
+		}
 
 		break;
 	}
 
 	g_list_free(sessions);
 
-	purple_media_error(priv->media, _("Conference error"));
-	purple_media_end(priv->media, NULL, NULL);
+	if (fatal) {
+		purple_media_error(priv->media, _("Conference error"));
+		purple_media_end(priv->media, NULL, NULL);
+	}
 }
 
 static gboolean
@@ -1475,10 +1565,16 @@ state_changed_cb(PurpleMedia *media, PurpleMediaState state,
 			gst_object_unref(session->session);
 			g_hash_table_remove(priv->sessions, session->id);
 
-			pad = gst_pad_get_peer(session->srcpad);
-			gst_element_remove_pad(GST_ELEMENT_PARENT(pad), pad);
-			gst_object_unref(pad);
-			gst_object_unref(session->srcpad);
+			if (session->srcpad) {
+				pad = gst_pad_get_peer(session->srcpad);
+				if (pad) {
+					gst_element_remove_pad(
+							GST_PAD_PARENT(pad),
+							pad);
+					gst_object_unref(pad);
+				}
+				gst_object_unref(session->srcpad);
+			}
 
 			remove_element(session->srcvalve);
 			remove_element(session->tee);
@@ -1990,6 +2086,18 @@ src_pad_added_cb_cb(PurpleMediaBackendFs2Stream *stream)
 
 	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(stream->session->backend);
 	stream->connected_cb_id = 0;
+
+	if (stream->src == NULL) {
+		GstElement *pipeline = purple_media_manager_get_pipeline(
+			purple_media_get_manager(priv->media));
+		GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline),
+					  GST_DEBUG_GRAPH_SHOW_ALL, "media-fail");
+
+		purple_media_error(priv->media,
+				   _("Could not create media pipeline"));
+		purple_media_end(priv->media, NULL, NULL);
+		return FALSE;
+	}
 
 	purple_media_manager_create_output_window(
 			purple_media_get_manager(priv->media), priv->media,

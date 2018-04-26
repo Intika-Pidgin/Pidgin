@@ -1,5 +1,10 @@
 Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
 
+version 2.14.0:
+	libpurple:
+		Added:
+		* purple_media_manager_enumerate_elements
+
 version 2.13.0:
 	libpurple:
 		Added:
