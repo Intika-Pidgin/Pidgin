@@ -1523,11 +1523,17 @@ static gboolean
 window_caps_cb_cb(PurpleMediaOutputWindow *ow)
 {
 	GstPad *pad = gst_element_get_static_pad(ow->sink, "sink");
+#if GST_CHECK_VERSION(1,0,0)
 	GstCaps *caps = gst_pad_get_current_caps(pad);
+#else
+	GstCaps *caps = GST_PAD_CAPS(pad);
+#endif
 
 	if (caps) {
 		g_signal_emit_by_name(ow->media, "video-caps", ow->session_id, ow->participant, caps);
+#if GST_CHECK_VERSION(1,0,0)
 		gst_caps_unref(caps);
+#endif
 	}
 
 	ow->caps_id = 0;
@@ -1745,7 +1751,7 @@ purple_media_manager_remove_output_window(PurpleMediaManager *manager,
 			}
 
 			factory = gst_element_get_factory(GST_PAD_PARENT(peer));
-			factory_name = gst_plugin_feature_get_name(factory);
+			factory_name = gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory));
 			if (purple_strequal(factory_name, "tee")) {
 				teepad = peer;
 			}
