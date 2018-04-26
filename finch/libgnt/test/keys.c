@@ -1,3 +1,4 @@
+#include <string.h>
 #include <gnt.h>
 #include <gntbox.h>
 #include <gntentry.h>

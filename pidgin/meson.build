@@ -151,6 +151,7 @@ if ENABLE_GTK
 	libpidgin_inc = include_directories('.')
 	libpidgin = shared_library('pidgin',
 	    libpidgin_SOURCES,
+	    package_revision,
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
 	    dependencies : [
