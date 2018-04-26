@@ -3202,7 +3202,7 @@ static gboolean buddy_is_displayable(PurpleBuddy *buddy)
 {
 	struct _pidgin_blist_node *gtknode;
 
-	if(!buddy)
+	if(!buddy || !PURPLE_BLIST_NODE_IS_VISIBLE(buddy))
 		return FALSE;
 
 	gtknode = ((PurpleBlistNode*)buddy)->ui_data;
@@ -6386,14 +6386,15 @@ static void pidgin_blist_update_group(PurpleBuddyList *list,
 	else
 		count = purple_blist_get_group_online_count(group);
 
-	if (count > 0 || purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/show_empty_groups"))
+	if (!PURPLE_BLIST_NODE_IS_VISIBLE(gnode) || !PURPLE_BLIST_NODE_IS_VISIBLE(node))
+		show = FALSE;
+	else if (count > 0 || purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/blist/show_empty_groups"))
 		show = TRUE;
 	else if (PURPLE_BLIST_NODE_IS_BUDDY(node) && buddy_is_displayable((PurpleBuddy*)node)) { /* Or chat? */
 		show = TRUE;
 	} else if (!show_offline) {
 		show = pidgin_blist_group_has_show_offline_buddy(group);
 	}
-
 	if (show) {
 		gchar *title;
 		gboolean biglist;

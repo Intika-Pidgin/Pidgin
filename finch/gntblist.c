@@ -167,6 +167,9 @@ static gboolean default_can_add_node(PurpleBlistNode *node)
 {
 	gboolean offline = purple_prefs_get_bool(PREF_ROOT "/showoffline");
 
+	if (!PURPLE_BLIST_NODE_IS_VISIBLE(node))
+		return FALSE;
+
 	if (PURPLE_BLIST_NODE_IS_BUDDY(node)) {
 		PurpleBuddy *buddy = (PurpleBuddy*)node;
 		FinchBlistNode *fnode = FINCH_GET_DATA(node);
