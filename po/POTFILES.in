@@ -51,6 +51,7 @@ libpurple/dnsquery.c
 libpurple/ft.c
 libpurple/log.c
 libpurple/media/backend-fs2.c
+libpurple/mediamanager.c
 libpurple/plugin.c
 libpurple/plugins/autoaccept.c
 libpurple/plugins/buddynote.c
