@@ -14,8 +14,10 @@ if PLUGINS
 	endif
 
 	if enable_gnome_keyring
+		gmodule = dependency('gmodule-2.0')
+
 		gnomekeyring_plugin = library('gnomekeyring', 'gnomekeyring.c',
-		    dependencies : [gnome_keyring, libpurple_dep],
+		    dependencies : [gnome_keyring, libpurple_dep, gmodule],
 		    name_prefix : '',
 		    install : true, install_dir : PURPLE_PLUGINDIR)
 	endif

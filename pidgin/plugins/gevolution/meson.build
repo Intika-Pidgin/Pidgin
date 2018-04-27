@@ -9,8 +9,10 @@ gevolution_SOURCES = [
 ]
 
 if PLUGINS
+	gmodule = dependency('gmodule-2.0')
+
 	gevolution = library('gevolution', gevolution_SOURCES,
-	    dependencies : EVOLUTION_ADDRESSBOOK + [libpurple_dep, libpidgin_dep, glib],
+	    dependencies : EVOLUTION_ADDRESSBOOK + [libpurple_dep, libpidgin_dep, glib, gmodule],
 	    name_prefix : '',
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 endif

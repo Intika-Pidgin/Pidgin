@@ -364,7 +364,6 @@ endif
 # #######################################################################
 glib = dependency('glib-2.0', version : '>= 2.40.0')
 gio = dependency('gio-2.0')
-gmodule = dependency('gmodule-2.0')
 gobject = dependency('gobject-2.0')
 gthread = dependency('gthread-2.0')
 gnome = import('gnome')
