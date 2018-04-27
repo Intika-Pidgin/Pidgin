@@ -1,3 +1,66 @@
+gnt_config = configuration_data()
+#######################################################################
+# Check for ncurses and other things used by the console UI
+#######################################################################
+ncurses_available = false
+if get_option('consoleui')
+	ncurses_available = true
+	ncurses_inc = []
+	ncurses_libs = [
+		compiler.find_library('ncursesw', required : false),
+		compiler.find_library('panelw', required : false)
+	]
+	if not ncurses_libs[0].found() or not ncurses_libs[1].found()
+		ncurses_available = false
+	endif
+
+	if IS_WIN32
+		# FIXME: $host ?
+		ncurses_sys_prefix = '/usr/$host/sys-root/mingw'
+	else
+		ncurses_sys_prefix = '/usr'
+	endif
+
+	ncurses_sys_dirs = [ncurses_sys_prefix + '/include/ncursesw',
+	                    ncurses_sys_prefix + '/include']
+
+	if ncurses_available
+		# Some distros put the headers in ncursesw/, some don't
+		found_ncurses_h = false
+		foreach location : ncurses_sys_dirs
+			f = location + '/ncurses.h'
+			if not found_ncurses_h
+				if compiler.has_header_symbol(f, 'get_wch',
+				       prefix : '#define _XOPEN_SOURCE_EXTENDED')
+					if location != '.'
+						ncurses_inc += [include_directories(location)]
+					endif
+					found_ncurses_h = true
+				endif
+			endif
+		endforeach
+
+		if not found_ncurses_h
+			ncurses_inc = []
+			ncurses_libs = []
+			ncurses_available = false
+		endif
+	else
+		# ncursesw was not found. Look for plain old ncurses
+		ncurses_libs = [
+			compiler.find_library('ncurses', required : false),
+			compiler.find_library('panel', required : false)
+		]
+		ncurses_available = ncurses_libs[0].found() and ncurses_libs[1].found()
+		gnt_config.set('NO_WIDECHAR', true)
+	endif
+
+	ncurses = declare_dependency(
+	    include_directories : ncurses_inc,
+	    dependencies : ncurses_libs
+	)
+endif
+
 libgnt_SOURCES = [
 	'gntwidget.c',
 	'gntbindable.c',
@@ -56,7 +119,14 @@ libgnt_headers = [
 	'gnt.h'
 ]
 
-if enable_consoleui
+if ncurses_available
+
+# Check for Python headers
+python_dep = dependency('python3')
+gnt_config.set('USE_PYTHON', python_dep.found())
+
+configure_file(output : 'gntconfig.h',
+    configuration : gnt_config)
 
 install_headers(libgnt_headers, subdir : 'gnt')
 
@@ -99,4 +169,4 @@ endif
 subdir('wms')
 subdir('test')
 
-endif  # enable_consoleui
+endif  # ncurses_available

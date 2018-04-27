@@ -25,8 +25,6 @@
 #define _XOPEN_SOURCE_EXTENDED
 #endif
 
-#include "config.h"
-
 #include <gmodule.h>
 
 #include <sys/types.h>
