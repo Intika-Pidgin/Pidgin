@@ -339,7 +339,6 @@ force_deps = not get_option('missing-dependencies')
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
 enable_enchant = get_option('enchant')
-enable_gevolution = get_option('gevolution')
 enable_cap = get_option('cap')
 enable_gestures = get_option('gestures')
 enable_gcr = get_option('gcr')
@@ -371,30 +370,6 @@ if get_option('gtkui')
 	endif
 
 	#######################################################################
-	# Check for stuff needed by the Evolution integration plugin.
-	#######################################################################
-	if enable_gevolution
-		evo_deps = [
-		    ['libebook-1.2', []],
-		    ['libedata-book-1.2', []],
-		    ['evolution-data-server-1.2', '>= 3.6']
-		]
-		EVOLUTION_ADDRESSBOOK = []
-		foreach dep : evo_deps
-			EVOLUTION_ADDRESSBOOK += [
-			    dependency(dep[0], version : dep[1], required : force_deps)
-			]
-			if not EVOLUTION_ADDRESSBOOK[-1].found()
-				enable_gevolution = false
-			endif
-		endforeach
-	endif
-	conf.set('HAVE_EVOLUTION_ADDRESSBOOK', enable_gevolution)
-	if not enable_gevolution
-		EVOLUTION_ADDRESSBOOK = []
-	endif
-
-	#######################################################################
 	# Check for libsqlite3 (for the Contact Availability Prediction plugin)
 	#######################################################################
 	if enable_cap
@@ -420,7 +395,6 @@ if get_option('gtkui')
 else	# GTK
 	enable_cap = false
 	enable_gcr = false
-	enable_gevolution = false
 	use_enchant = false
 endif	# GTK
 
