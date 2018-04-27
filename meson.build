@@ -20,27 +20,7 @@ project('pidgin', 'c', meson_version : '>=0.37.0')
 #   For code under development: 'devel'
 #   For production releases:    ''
 #
-#
-# If any code has changed in libgnt:
-#   gnt_micro_version += 1
-#
-# If any functions have been added to libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version += 1
-#   gnt_lt_current += 1
-#
-# If backwards compatibility has been broken in libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version = 0
-#   gnt_major_version += 1;
-#   gnt_lt_current += 1
-#
-# gnt_version_suffix should be similar to one of the following:
-#   For beta releases:          'beta2'
-#   For code under development: 'devel'
-#   For production releases:    ''
-#
-# Make sure to update finch/libgnt/configure.ac with libgnt version changes.
+# Make sure to update finch/libgnt/meson.build with libgnt version changes.
 #
 purple_lt_current = 20
 purple_major_version = 3
@@ -52,20 +32,6 @@ purple_version = '@0@.@1@.@2@'.format(purple_major_version,
                                       purple_micro_version)
 purple_display_version = '@0@@1@'.format(purple_version,
                                          purple_version_suffix)
-
-# the last version for Finch 2 was 2.8.10,
-# the first version for Finch 3 was 2.9.0
-gnt_lt_current = 9
-gnt_major_version = 2
-gnt_minor_version = 9
-gnt_micro_version = 0
-gnt_version_suffix = 'devel'
-gnt_version = '@0@.@1@.@2@'.format(gnt_major_version,
-                                   gnt_minor_version,
-                                   gnt_micro_version)
-gnt_display_version = '@0@@1@'.format(gnt_version,
-                                      gnt_version_suffix)
-
 
 add_project_arguments('-DHAVE_CONFIG_H=1', language : 'c')
 conf = configuration_data()
@@ -86,16 +52,6 @@ version_conf.set('PURPLE_API_VERSION',
 PURPLE_LIB_VERSION = '@0@.@1@.@2@'.format(purple_lt_current - purple_minor_version,
                                           purple_minor_version,
                                           purple_micro_version)
-
-version_conf.set('GNT_MAJOR_VERSION', gnt_major_version)
-version_conf.set('GNT_MINOR_VERSION', gnt_minor_version)
-version_conf.set('GNT_MICRO_VERSION', gnt_micro_version)
-version_conf.set('GNT_VERSION', gnt_display_version)
-version_conf.set('GNT_API_VERSION', gnt_lt_current - gnt_minor_version)
-
-GNT_LIB_VERSION = '@0@.@1@.@2@'.format(gnt_lt_current - gnt_minor_version,
-                                       gnt_minor_version,
-                                       gnt_micro_version)
 
 package_revision = vcs_tag(
     input : 'package_revision.h.in',

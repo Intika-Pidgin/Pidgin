@@ -1,3 +1,42 @@
+# UPDATING VERSION NUMBERS FOR RELEASES
+#
+# If any code has changed in libgnt:
+#   gnt_micro_version += 1
+#
+# If any functions have been added to libgnt:
+#   gnt_micro_version = 0
+#   gnt_minor_version += 1
+#   gnt_lt_current += 1
+#
+# If backwards compatibility has been broken in libgnt:
+#   gnt_micro_version = 0
+#   gnt_minor_version = 0
+#   gnt_major_version += 1;
+#   gnt_lt_current += 1
+#
+# gnt_version_suffix should be similar to one of the following:
+#   For beta releases:          'beta2'
+#   For code under development: 'devel'
+#   For production releases:    ''
+#
+
+# the last version for Finch 2 was 2.8.10,
+# the first version for Finch 3 was 2.9.0
+gnt_lt_current = 9
+gnt_major_version = 2
+gnt_minor_version = 9
+gnt_micro_version = 0
+gnt_version_suffix = 'devel'
+gnt_version = '@0@.@1@.@2@'.format(gnt_major_version,
+                                   gnt_minor_version,
+                                   gnt_micro_version)
+gnt_display_version = '@0@@1@'.format(gnt_version,
+                                      gnt_version_suffix)
+
+GNT_LIB_VERSION = '@0@.@1@.@2@'.format(gnt_lt_current - gnt_minor_version,
+                                       gnt_minor_version,
+                                       gnt_micro_version)
+
 gnt_config = configuration_data()
 #######################################################################
 # Check for ncurses and other things used by the console UI
