@@ -989,7 +989,7 @@ endif
 # Check for Secret Service headers
 #######################################################################
 
-enable_secret_service = get_option('secret-service')
+enable_secret_service = get_option('secret-service') and not IS_WIN32
 if enable_secret_service
 	secretservice = dependency('libsecret-1', required : force_deps)
 	if secretservice.found()
