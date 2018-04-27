@@ -338,7 +338,6 @@ force_deps = not get_option('missing-dependencies')
 # #######################################################################
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
-enable_enchant = get_option('enchant')
 enable_gestures = get_option('gestures')
 enable_gcr = get_option('gcr')
 
@@ -358,12 +357,11 @@ if get_option('gtkui')
 	#######################################################################
 	# We need enchant for spell checking dictionary enumeration,
 	# because webkit1 doesn't have this.
-	use_enchant = false
+	enable_enchant = get_option('enchant')
 	if enable_enchant
-		use_enchant = true
 		enchant = dependency('enchant', required : force_deps)
-		use_enchant = enchant.found()
-		conf.set('USE_ENCHANT', use_enchant)
+		enable_enchant = enchant.found()
+		conf.set('USE_ENCHANT', enable_enchant)
 	else
 		enchant = []
 	endif
@@ -385,7 +383,7 @@ if get_option('gtkui')
 
 else	# GTK
 	enable_gcr = false
-	use_enchant = false
+	enable_enchant = false
 endif	# GTK
 
 ENABLE_GTK = get_option('gtkui')
@@ -1196,7 +1194,7 @@ message('Old tray icon compatibility... : ' + ENABLE_TRAYCOMPAT.to_string())
 message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
-message('Build with Enchant support.... : ' + use_enchant.to_string())
+message('Build with Enchant support.... : ' + enable_enchant.to_string())
 message('Build with GCR widgets........ : ' + enable_gcr.to_string())
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
