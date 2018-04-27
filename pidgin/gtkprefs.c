@@ -3240,7 +3240,7 @@ make_vv_dropdown(GtkWidget *parent, GtkSizeGroup *size_group,
 	devices = get_vv_device_menuitems(element_type);
 
 	if (g_list_find_custom(devices, purple_prefs_get_string(preference_key),
-		(GCompareFunc)strcmp) == NULL)
+		(GCompareFunc)g_strcmp0) == NULL)
 	{
 		GList *next = g_list_next(devices);
 		if (next)
@@ -3503,6 +3503,22 @@ pidgin_prefs_init(void)
 	/* Smiley Callbacks */
 	purple_prefs_connect_callback(&prefs, PIDGIN_PREFS_ROOT "/smileys/theme",
 								smiley_theme_pref_cb, NULL);
+
+#ifdef USE_VV
+        /* Voice/Video */
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig");
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio");
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio/src");
+        purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/src/device", "");
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink");
+        purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/audio/sink/device", "");
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video");
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video/src");
+        purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/src/device", "");
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video");
+        purple_prefs_add_none(PIDGIN_PREFS_ROOT "/vvconfig/video/sink");
+        purple_prefs_add_string(PIDGIN_PREFS_ROOT "/vvconfig/video/sink/device", "");
+#endif
 
 	pidgin_prefs_update_old();
 }
