@@ -128,6 +128,8 @@ gnt_config.set('USE_PYTHON', python_dep.found())
 configure_file(output : 'gntconfig.h',
     configuration : gnt_config)
 
+gmodule = dependency('gmodule-2.0')
+
 install_headers(libgnt_headers, subdir : 'gnt')
 
 if IS_WIN32
