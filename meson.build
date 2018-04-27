@@ -497,78 +497,6 @@ if not get_option('gtkui') or not with_x
 endif
 
 #######################################################################
-# Check for ncurses and other things used by the console UI
-#######################################################################
-ncurses_inc = []
-ncurses_libs = []
-enable_consoleui = get_option('consoleui')
-force_finch = enable_consoleui
-if enable_consoleui
-	ncurses_libs = [
-		compiler.find_library('ncursesw', required : false),
-		compiler.find_library('panelw', required : false)
-	]
-	if not ncurses_libs[0].found() or not ncurses_libs[1].found()
-		enable_consoleui = false
-	endif
-
-	if IS_WIN32
-		# FIXME: $host ?
-		ncurses_sys_prefix = '/usr/$host/sys-root/mingw'
-	else
-		ncurses_sys_prefix = '/usr'
-	endif
-
-	ncurses_sys_dirs = [ncurses_sys_prefix + '/include/ncursesw',
-	                    ncurses_sys_prefix + '/include']
-
-	if enable_consoleui
-		# Some distros put the headers in ncursesw/, some don't
-		found_ncurses_h = false
-		foreach location : ncurses_sys_dirs
-			f = location + '/ncurses.h'
-			if not found_ncurses_h
-				if compiler.has_header_symbol(f, 'get_wch',
-				       prefix : '#define _XOPEN_SOURCE_EXTENDED')
-					if location != '.'
-						ncurses_inc += [include_directories(location)]
-					endif
-					found_ncurses_h = true
-				endif
-			endif
-		endforeach
-
-		if not found_ncurses_h
-			ncurses_inc = []
-			ncurses_libs = []
-			enable_consoleui = false
-		endif
-	else
-		# ncursesw was not found. Look for plain old ncurses
-		ncurses_libs = [
-			compiler.find_library('ncurses', required : false),
-			compiler.find_library('panel', required : false)
-		]
-		enable_consoleui = ncurses_libs[0].found() and ncurses_libs[1].found()
-		conf.set('NO_WIDECHAR', true)
-	endif
-endif
-ncurses = declare_dependency(
-    include_directories : ncurses_inc,
-    dependencies : ncurses_libs
-)
-
-if force_finch and not enable_consoleui
-	error('''
-
-Finch will not be built. You need to install ncursesw (or ncurses) and its development headers.
-
-''')
-endif
-
-#conf.set('HAVE_WCWIDTH', compiler.has_function('wcwidth'))
-
-#######################################################################
 # Check for LibXML2 (required)
 #######################################################################
 libxml = dependency('libxml-2.0', version : '>= 2.6.0')
@@ -1119,19 +1047,13 @@ endif
 # and XML code that wraps (part of) the existing API so that
 # it is now accessible through D-Bus.
 
-if enable_dbus or enable_consoleui
+if enable_dbus
 	if meson.version().version_compare('>=0.38.0')
 		python3_mod = import('python3')
 		python = python3_mod.find_python()
 	else
 		python = find_program('python3')
 	endif
-endif
-
-# Check for Python headers (currently useful only for libgnt)
-if enable_consoleui
-	python_dep = dependency('python3')
-	conf.set('USE_PYTHON', python_dep.found())
 endif
 
 #######################################################################

@@ -20,7 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include "config.h"
+#include "gntinternal.h"
+#undef GNT_LOG_DOMAIN
+#define GNT_LOG_DOMAIN "WM"
 
 #ifdef USE_PYTHON
 #include <Python.h>
@@ -43,10 +45,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#include "gntinternal.h"
-#undef GNT_LOG_DOMAIN
-#define GNT_LOG_DOMAIN "WM"
 
 #include "gntwm.h"
 #include "gntstyle.h"
