@@ -226,7 +226,7 @@ enums_h = enums[1]
 
 purple_h = configure_file(input : 'purple.h.in',
                           output : 'purple.h',
-                          configuration : conf,
+                          configuration : purple_h_conf,
                           install : true,
                           install_dir : get_option('includedir') + '/libpurple')
 version_h = configure_file(input : 'version.h.in',
