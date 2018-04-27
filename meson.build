@@ -1151,8 +1151,6 @@ endif
 enable_debug = get_option('debug')
 conf.set('DEBUG', enable_debug)
 
-PURPLE_AVAILABLE = true
-
 # So that config.h may be found.
 toplevel_inc = include_directories('.')
 

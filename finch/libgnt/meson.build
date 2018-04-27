@@ -37,7 +37,11 @@ GNT_LIB_VERSION = '@0@.@1@.@2@'.format(gnt_lt_current - gnt_minor_version,
                                        gnt_minor_version,
                                        gnt_micro_version)
 
+# Always true when built as part of pidgin repo.
+PURPLE_AVAILABLE = true
+
 gnt_config = configuration_data()
+
 #######################################################################
 # Check for ncurses and other things used by the console UI
 #######################################################################
