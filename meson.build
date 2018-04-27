@@ -170,7 +170,7 @@ if IS_WIN32
 	if get_option('win32-dirs') == 'fhs'
 		foreach dir : ['bin', 'lib', 'data', 'sysconf', 'locale']
 			path = join_paths(get_option('prefix'), get_option(dir + 'dir'))
-			conf.set('WIN32_FHS_@0@DIR'.format(dir.to_upper()), path)
+			conf.set_quoted('WIN32_FHS_@0@DIR'.format(dir.to_upper()), path)
 		endforeach
 
 		conf.set('PURPLE_LIBDIR',
