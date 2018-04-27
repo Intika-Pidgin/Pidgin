@@ -339,7 +339,6 @@ force_deps = not get_option('missing-dependencies')
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
 enable_enchant = get_option('enchant')
-enable_cap = get_option('cap')
 enable_gestures = get_option('gestures')
 enable_gcr = get_option('gcr')
 
@@ -370,14 +369,6 @@ if get_option('gtkui')
 	endif
 
 	#######################################################################
-	# Check for libsqlite3 (for the Contact Availability Prediction plugin)
-	#######################################################################
-	if enable_cap
-		SQLITE3 = dependency('sqlite3', version : '>= 3.3', required : force_deps)
-		enable_cap = SQLITE3.found()
-	endif
-
-	#######################################################################
 	# Check for GCR for its certificate widgets
 	#######################################################################
 	if enable_gcr
@@ -393,7 +384,6 @@ if get_option('gtkui')
 
 
 else	# GTK
-	enable_cap = false
 	enable_gcr = false
 	use_enchant = false
 endif	# GTK
