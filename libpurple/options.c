@@ -79,6 +79,8 @@ purple_get_option_group(void) {
 			G_OPTION_ARG_NONE, &force_online_cb,
 			_("force online, regardless of network status"),
 			NULL
+		}, {
+			NULL
 		},
 	};
 
