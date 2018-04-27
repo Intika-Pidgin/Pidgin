@@ -1,4 +1,4 @@
-if enable_gevolution
+if get_option('gevolution')
 	subdir('gevolution')
 endif
 
