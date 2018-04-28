@@ -381,7 +381,7 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 	GtkWidget *type_combo;
 	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 	char *to, *status, *priority;
-	const char *type, *show;
+	gchar *type, *show;
 	int result;
 	char *stanza;
 
@@ -477,11 +477,15 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 
 	to = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(to_entry)), -1);
 	type = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(type_combo));
-	if (purple_strequal(type, "default"))
-		type = "";
+	if (purple_strequal(type, "default")) {
+		g_free(type);
+		type = g_strdup("");
+	}
 	show = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(show_combo));
-	if (purple_strequal(show, "default"))
-		show = "";
+	if (purple_strequal(show, "default")) {
+		g_free(show);
+		show = g_strdup("");
+	}
 	status = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(status_entry)), -1);
 	priority = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(priority_entry)), -1);
 	if (purple_strequal(priority, "0"))
@@ -518,6 +522,8 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 	g_free(to);
 	g_free(status);
 	g_free(priority);
+	g_free(type);
+	g_free(show);
 
 	gtk_widget_destroy(dialog);
 	g_object_unref(sg);
