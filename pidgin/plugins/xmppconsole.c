@@ -98,12 +98,17 @@ xmppconsole_is_xmpp_account(PurpleAccount *account)
 }
 
 static void
-purple_xmlnode_append_to_buffer(PurpleXmlNode *node, GtkTextIter *iter, GtkTextTag *tag)
+purple_xmlnode_append_to_buffer(PurpleXmlNode *node, gint indent_level, GtkTextIter *iter, GtkTextTag *tag)
 {
 	PurpleXmlNode *c;
 	gboolean need_end = FALSE, pretty = TRUE;
+	gint i;
 
 	g_return_if_fail(node != NULL);
+
+	for (i = 0; i < indent_level; i++) {
+		gtk_text_buffer_insert_with_tags(console->buffer, iter, "\t", 1, tag, NULL);
+	}
 
 	gtk_text_buffer_insert_with_tags(console->buffer, iter, "<", 1,
 	                                 tag, console->tags.bracket, NULL);
@@ -156,24 +161,21 @@ purple_xmlnode_append_to_buffer(PurpleXmlNode *node, GtkTextIter *iter, GtkTextT
 			                                 tag, NULL);
 		}
 
-		need_end = FALSE;
 		for (c = node->child; c; c = c->next)
 		{
 			if (c->type == PURPLE_XMLNODE_TYPE_TAG) {
-				purple_xmlnode_append_to_buffer(c, iter, tag);
-#if 0
-				if (!need_end) {
-					g_string_append(text, "<div class=tab>");
-					need_end = TRUE;
-				}
-				text = g_string_append_len(text, esc, esc_len);
-#endif
+				purple_xmlnode_append_to_buffer(c, indent_level + 1, iter, tag);
 			} else if (c->type == PURPLE_XMLNODE_TYPE_DATA && c->data_sz > 0) {
 				gtk_text_buffer_insert_with_tags(console->buffer, iter, c->data, c->data_sz,
 				                                 tag, NULL);
 			}
 		}
 
+		if (pretty) {
+			for (i = 0; i < indent_level; i++) {
+				gtk_text_buffer_insert_with_tags(console->buffer, iter, "\t", 1, tag, NULL);
+			}
+		}
 		gtk_text_buffer_insert_with_tags(console->buffer, iter, "<", 1,
 		                                 tag, console->tags.bracket, NULL);
 		gtk_text_buffer_insert_with_tags(console->buffer, iter, "/", 1,
@@ -203,7 +205,7 @@ purple_xmlnode_received_cb(PurpleConnection *gc, PurpleXmlNode **packet, gpointe
 		return;
 
 	gtk_text_buffer_get_end_iter(console->buffer, &iter);
-	purple_xmlnode_append_to_buffer(*packet, &iter, console->tags.incoming);
+	purple_xmlnode_append_to_buffer(*packet, 0, &iter, console->tags.incoming);
 }
 
 static void
@@ -220,7 +222,7 @@ purple_xmlnode_sent_cb(PurpleConnection *gc, char **packet, gpointer null)
 		return;
 
 	gtk_text_buffer_get_end_iter(console->buffer, &iter);
-	purple_xmlnode_append_to_buffer(node, &iter, console->tags.outgoing);
+	purple_xmlnode_append_to_buffer(node, 0, &iter, console->tags.outgoing);
 	purple_xmlnode_free(node);
 }
 
