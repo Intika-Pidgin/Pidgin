@@ -42,6 +42,7 @@ typedef struct {
 	GtkWidget *dropdown;
 	GtkWidget *webview;
 	GtkWidget *entry;
+	GtkTextBuffer *entry_buffer;
 	GtkWidget *sw;
 	int count;
 	GList *accounts;
@@ -221,6 +222,7 @@ message_send_cb(GtkWidget *widget, GdkEventKey *event, gpointer p)
 	PurpleProtocol *protocol = NULL;
 	PurpleConnection *gc;
 	gchar *text;
+	GtkTextIter start, end;
 
 	if (event->keyval != GDK_KEY_KP_Enter && event->keyval != GDK_KEY_Return)
 		return FALSE;
@@ -230,20 +232,22 @@ message_send_cb(GtkWidget *widget, GdkEventKey *event, gpointer p)
 	if (gc)
 		protocol = purple_connection_get_protocol(gc);
 
-	text = pidgin_webview_get_body_text(PIDGIN_WEBVIEW(widget));
+	gtk_text_buffer_get_bounds(console->entry_buffer, &start, &end);
+	text = gtk_text_buffer_get_text(console->entry_buffer, &start, &end, FALSE);
 
 	if (protocol)
 		purple_protocol_server_iface_send_raw(protocol, gc, text, strlen(text));
 
 	g_free(text);
-	pidgin_webview_load_html_string(PIDGIN_WEBVIEW(console->entry), "");
+	gtk_text_buffer_set_text(console->entry_buffer, "", 0);
 
 	return TRUE;
 }
 
 static void
-entry_changed_cb(GtkWidget *webview, void *data)
+entry_changed_cb(GtkTextBuffer *buffer, void *data)
 {
+	GtkTextIter start, end;
 	char *xmlstr, *str;
 #if 0
 	int wrapped_lines;
@@ -253,6 +257,7 @@ entry_changed_cb(GtkWidget *webview, void *data)
 	int pad_top, pad_inside, pad_bottom;
 #endif
 	PurpleXmlNode *node;
+	GtkStyleContext *style;
 
 #if 0
 	/* TODO WebKit: Do entry auto-sizing... */
@@ -278,15 +283,17 @@ entry_changed_cb(GtkWidget *webview, void *data)
 	gtk_widget_set_size_request(console->sw, -1, height + 6);
 #endif
 
-	str = pidgin_webview_get_body_text(PIDGIN_WEBVIEW(webview));
+	gtk_text_buffer_get_bounds(buffer, &start, &end);
+	str = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
 	if (!str)
 		return;
 	xmlstr = g_strdup_printf("<xml>%s</xml>", str);
 	node = purple_xmlnode_from_str(xmlstr, -1);
+	style = gtk_widget_get_style_context(console->entry);
 	if (node) {
-		pidgin_webview_clear_formatting(PIDGIN_WEBVIEW(console->entry));
+		gtk_style_context_remove_class(style, GTK_STYLE_CLASS_ERROR);
 	} else {
-		pidgin_webview_toggle_backcolor(PIDGIN_WEBVIEW(console->entry), "#ffcece");
+		gtk_style_context_add_class(style, GTK_STYLE_CLASS_ERROR);
 	}
 	g_free(str);
 	g_free(xmlstr);
@@ -294,11 +301,33 @@ entry_changed_cb(GtkWidget *webview, void *data)
 		purple_xmlnode_free(node);
 }
 
+static void
+load_text_and_set_caret(const gchar *pre_text, const gchar *post_text)
+{
+	GtkTextIter where;
+	GtkTextMark *mark;
+
+	gtk_text_buffer_begin_user_action(console->entry_buffer);
+
+	gtk_text_buffer_set_text(console->entry_buffer, pre_text, -1);
+
+	gtk_text_buffer_get_end_iter(console->entry_buffer, &where);
+	mark = gtk_text_buffer_create_mark(console->entry_buffer, NULL, &where, TRUE);
+
+	gtk_text_buffer_insert(console->entry_buffer, &where, post_text, -1);
+
+	gtk_text_buffer_get_iter_at_mark(console->entry_buffer, &where, mark);
+	gtk_text_buffer_place_cursor(console->entry_buffer, &where);
+	gtk_text_buffer_delete_mark(console->entry_buffer, mark);
+
+	gtk_text_buffer_end_user_action(console->entry_buffer);
+}
+
 static void iq_clicked_cb(GtkWidget *w, gpointer nul)
 {
 	GtkWidget *vbox, *hbox, *to_entry, *label, *type_combo;
 	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-	char *to;
+	const gchar *to;
 	int result;
 	char *stanza;
 
@@ -349,20 +378,15 @@ static void iq_clicked_cb(GtkWidget *w, gpointer nul)
 		return;
 	}
 
-	to = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(to_entry)), -1);
-
-	stanza = g_strdup_printf("&lt;iq %s%s%s id='console%x' type='%s'&gt;"
-	                         "<a id=caret></a>"
-	                         "&lt;/iq&gt;",
+	to = gtk_entry_get_text(GTK_ENTRY(to_entry));
+	stanza = g_strdup_printf("<iq %s%s%s id='console%x' type='%s'>",
 				 to && *to ? "to='" : "",
 				 to && *to ? to : "",
 				 to && *to ? "'" : "",
 				 g_random_int(),
 				 gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(type_combo)));
-
-	pidgin_webview_load_html_string_with_selection(PIDGIN_WEBVIEW(console->entry), stanza);
+	load_text_and_set_caret(stanza, "</iq>");
 	gtk_widget_grab_focus(console->entry);
-	g_free(to);
 	g_free(stanza);
 
 	gtk_widget_destroy(dialog);
@@ -380,7 +404,7 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 	GtkWidget *show_combo;
 	GtkWidget *type_combo;
 	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-	char *to, *status, *priority;
+	const gchar *to, *status, *priority;
 	gchar *type, *show;
 	int result;
 	char *stanza;
@@ -475,7 +499,7 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 		return;
 	}
 
-	to = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(to_entry)), -1);
+	to = gtk_entry_get_text(GTK_ENTRY(to_entry));
 	type = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(type_combo));
 	if (purple_strequal(type, "default")) {
 		g_free(type);
@@ -486,15 +510,13 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 		g_free(show);
 		show = g_strdup("");
 	}
-	status = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(status_entry)), -1);
-	priority = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(priority_entry)), -1);
+	status = gtk_entry_get_text(GTK_ENTRY(status_entry));
+	priority = gtk_entry_get_text(GTK_ENTRY(priority_entry));
 	if (purple_strequal(priority, "0"))
-		*priority = '\0';
+		priority = "";
 
-	stanza = g_strdup_printf("&lt;presence %s%s%s id='console%x' %s%s%s&gt;"
-	                         "%s%s%s%s%s%s%s%s%s"
-	                         "<a id=caret></a>"
-	                         "&lt;/presence&gt;",
+	stanza = g_strdup_printf("<presence %s%s%s id='console%x' %s%s%s>"
+	                         "%s%s%s%s%s%s%s%s%s",
 	                         *to ? "to='" : "",
 	                         *to ? to : "",
 	                         *to ? "'" : "",
@@ -504,24 +526,21 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 	                         *type ? type : "",
 	                         *type ? "'" : "",
 
-	                         *show ? "&lt;show&gt;" : "",
+	                         *show ? "<show>" : "",
 	                         *show ? show : "",
-	                         *show ? "&lt;/show&gt;" : "",
+	                         *show ? "</show>" : "",
 
-	                         *status ? "&lt;status&gt;" : "",
+	                         *status ? "<status>" : "",
 	                         *status ? status : "",
-	                         *status ? "&lt;/status&gt;" : "",
+	                         *status ? "</status>" : "",
 
-	                         *priority ? "&lt;priority&gt;" : "",
+	                         *priority ? "<priority>" : "",
 	                         *priority ? priority : "",
-	                         *priority ? "&lt;/priority&gt;" : "");
+	                         *priority ? "</priority>" : "");
 
-	pidgin_webview_load_html_string_with_selection(PIDGIN_WEBVIEW(console->entry), stanza);
+	load_text_and_set_caret(stanza, "</presence>");
 	gtk_widget_grab_focus(console->entry);
 	g_free(stanza);
-	g_free(to);
-	g_free(status);
-	g_free(priority);
 	g_free(type);
 	g_free(show);
 
@@ -540,7 +559,7 @@ static void message_clicked_cb(GtkWidget *w, gpointer nul)
 	GtkWidget *label;
 	GtkWidget *type_combo;
 	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-	char *to, *body, *thread, *subject;
+	const gchar *to, *body, *thread, *subject;
 	char *stanza;
 	int result;
 
@@ -627,15 +646,13 @@ static void message_clicked_cb(GtkWidget *w, gpointer nul)
 		return;
 	}
 
-	to = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(to_entry)), -1);
-	body = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(body_entry)), -1);
-	thread = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(thread_entry)), -1);
-	subject = g_markup_escape_text(gtk_entry_get_text(GTK_ENTRY(subject_entry)), -1);
+	to = gtk_entry_get_text(GTK_ENTRY(to_entry));
+	body = gtk_entry_get_text(GTK_ENTRY(body_entry));
+	thread = gtk_entry_get_text(GTK_ENTRY(thread_entry));
+	subject = gtk_entry_get_text(GTK_ENTRY(subject_entry));
 
-	stanza = g_strdup_printf("&lt;message %s%s%s id='console%x' type='%s'&gt;"
-	                         "%s%s%s%s%s%s%s%s%s"
-	                         "<a id=caret></a>"
-	                         "&lt;/message&gt;",
+	stanza = g_strdup_printf("<message %s%s%s id='console%x' type='%s'>"
+	                         "%s%s%s%s%s%s%s%s%s",
 
 	                         *to ? "to='" : "",
 	                         *to ? to : "",
@@ -644,25 +661,21 @@ static void message_clicked_cb(GtkWidget *w, gpointer nul)
 	                         gtk_combo_box_text_get_active_text(
                                GTK_COMBO_BOX_TEXT(type_combo)),
 
-	                         *body ? "&lt;body&gt;" : "",
+	                         *body ? "<body>" : "",
 	                         *body ? body : "",
-	                         *body ? "&lt;/body&gt;" : "",
+	                         *body ? "</body>" : "",
 
-	                         *subject ? "&lt;subject&gt;" : "",
+	                         *subject ? "<subject>" : "",
 	                         *subject ? subject : "",
-	                         *subject ? "&lt;/subject&gt;" : "",
+	                         *subject ? "</subject>" : "",
 
-	                         *thread ? "&lt;thread&gt;" : "",
+	                         *thread ? "<thread>" : "",
 	                         *thread ? thread : "",
-	                         *thread ? "&lt;/thread&gt;" : "");
+	                         *thread ? "</thread>" : "");
 
-	pidgin_webview_load_html_string_with_selection(PIDGIN_WEBVIEW(console->entry), stanza);
+	load_text_and_set_caret(stanza, "</message>");
 	gtk_widget_grab_focus(console->entry);
 	g_free(stanza);
-	g_free(to);
-	g_free(body);
-	g_free(thread);
-	g_free(subject);
 
 	gtk_widget_destroy(dialog);
 	g_object_unref(sg);
@@ -753,6 +766,8 @@ create_console(PurplePluginAction *action)
 	GtkWidget *toolbar;
 	GList *connections;
 	GtkToolItem *button;
+	GtkCssProvider *entry_css;
+	GtkStyleContext *context;
 
 	if (console) {
 		gtk_window_present(GTK_WINDOW(console->window));
@@ -817,15 +832,23 @@ create_console(PurplePluginAction *action)
 
 	gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
 
-	console->entry = pidgin_webview_new(TRUE);
-	pidgin_webview_set_whole_buffer_formatting_only(PIDGIN_WEBVIEW(console->entry), TRUE);
+	console->entry = gtk_text_view_new();
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(console->entry), GTK_WRAP_WORD);
+	entry_css = gtk_css_provider_new();
+	gtk_css_provider_load_from_data(entry_css,
+	                                "textview." GTK_STYLE_CLASS_ERROR " text {background-color:#ffcece;}",
+	                                -1, NULL);
+	context = gtk_widget_get_style_context(console->entry);
+	gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(entry_css),
+	                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+	console->entry_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(console->entry));
 	g_signal_connect(G_OBJECT(console->entry),"key-press-event", G_CALLBACK(message_send_cb), console);
 
 	console->sw = pidgin_make_scrollable(console->entry, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_ETCHED_IN, -1, -1);
 	gtk_box_pack_start(GTK_BOX(vbox), console->sw, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(console->entry), "changed", G_CALLBACK(entry_changed_cb), NULL);
+	g_signal_connect(G_OBJECT(console->entry_buffer), "changed", G_CALLBACK(entry_changed_cb), NULL);
 
-	entry_changed_cb(console->entry, NULL);
+	entry_changed_cb(console->entry_buffer, NULL);
 
 	gtk_widget_show_all(console->window);
 	if (console->count < 2)
