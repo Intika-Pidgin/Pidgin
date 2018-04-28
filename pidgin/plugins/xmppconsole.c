@@ -342,9 +342,9 @@ static void iq_clicked_cb(GtkWidget *w, gpointer nul)
 	GtkWidget *dialog = gtk_dialog_new_with_buttons("<iq/>",
 							GTK_WINDOW(console->window),
 							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-							GTK_STOCK_CANCEL,
+							_("_Cancel"),
 							GTK_RESPONSE_REJECT,
-							GTK_STOCK_OK,
+							_("_OK"),
 							GTK_RESPONSE_ACCEPT,
 							NULL);
 	gtk_dialog_set_default_response (GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
@@ -420,9 +420,9 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 	GtkWidget *dialog = gtk_dialog_new_with_buttons("<presence/>",
 							GTK_WINDOW(console->window),
 							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-							GTK_STOCK_CANCEL,
+							_("_Cancel"),
 							GTK_RESPONSE_REJECT,
-							GTK_STOCK_OK,
+							_("_OK"),
 							GTK_RESPONSE_ACCEPT,
 							NULL);
 	gtk_dialog_set_default_response (GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
@@ -574,9 +574,9 @@ static void message_clicked_cb(GtkWidget *w, gpointer nul)
 	GtkWidget *dialog = gtk_dialog_new_with_buttons("<message/>",
 							GTK_WINDOW(console->window),
 							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-							GTK_STOCK_CANCEL,
+							_("_Cancel"),
 							GTK_RESPONSE_REJECT,
-							GTK_STOCK_OK,
+							_("_OK"),
 							GTK_RESPONSE_ACCEPT,
 							NULL);
 	gtk_dialog_set_default_response (GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
