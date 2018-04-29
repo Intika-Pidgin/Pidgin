@@ -20,27 +20,7 @@ project('pidgin', 'c', meson_version : '>=0.37.0')
 #   For code under development: 'devel'
 #   For production releases:    ''
 #
-#
-# If any code has changed in libgnt:
-#   gnt_micro_version += 1
-#
-# If any functions have been added to libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version += 1
-#   gnt_lt_current += 1
-#
-# If backwards compatibility has been broken in libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version = 0
-#   gnt_major_version += 1;
-#   gnt_lt_current += 1
-#
-# gnt_version_suffix should be similar to one of the following:
-#   For beta releases:          'beta2'
-#   For code under development: 'devel'
-#   For production releases:    ''
-#
-# Make sure to update finch/libgnt/configure.ac with libgnt version changes.
+# Make sure to update finch/libgnt/meson.build with libgnt version changes.
 #
 purple_lt_current = 20
 purple_major_version = 3
@@ -53,23 +33,10 @@ purple_version = '@0@.@1@.@2@'.format(purple_major_version,
 purple_display_version = '@0@@1@'.format(purple_version,
                                          purple_version_suffix)
 
-# the last version for Finch 2 was 2.8.10,
-# the first version for Finch 3 was 2.9.0
-gnt_lt_current = 9
-gnt_major_version = 2
-gnt_minor_version = 9
-gnt_micro_version = 0
-gnt_version_suffix = 'devel'
-gnt_version = '@0@.@1@.@2@'.format(gnt_major_version,
-                                   gnt_minor_version,
-                                   gnt_micro_version)
-gnt_display_version = '@0@@1@'.format(gnt_version,
-                                      gnt_version_suffix)
-
-
 add_project_arguments('-DHAVE_CONFIG_H=1', language : 'c')
 conf = configuration_data()
 man_conf = configuration_data()
+purple_h_conf = configuration_data()
 version_conf = configuration_data()
 
 conf.set_quoted('PACKAGE', meson.project_name())
@@ -86,16 +53,6 @@ version_conf.set('PURPLE_API_VERSION',
 PURPLE_LIB_VERSION = '@0@.@1@.@2@'.format(purple_lt_current - purple_minor_version,
                                           purple_minor_version,
                                           purple_micro_version)
-
-version_conf.set('GNT_MAJOR_VERSION', gnt_major_version)
-version_conf.set('GNT_MINOR_VERSION', gnt_minor_version)
-version_conf.set('GNT_MICRO_VERSION', gnt_micro_version)
-version_conf.set('GNT_VERSION', gnt_display_version)
-version_conf.set('GNT_API_VERSION', gnt_lt_current - gnt_minor_version)
-
-GNT_LIB_VERSION = '@0@.@1@.@2@'.format(gnt_lt_current - gnt_minor_version,
-                                       gnt_minor_version,
-                                       gnt_micro_version)
 
 package_revision = vcs_tag(
     input : 'package_revision.h.in',
@@ -364,7 +321,6 @@ endif
 # #######################################################################
 glib = dependency('glib-2.0', version : '>= 2.40.0')
 gio = dependency('gio-2.0')
-gmodule = dependency('gmodule-2.0')
 gobject = dependency('gobject-2.0')
 gthread = dependency('gthread-2.0')
 gnome = import('gnome')
@@ -382,9 +338,6 @@ force_deps = not get_option('missing-dependencies')
 # #######################################################################
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
-enable_enchant = get_option('enchant')
-enable_gevolution = get_option('gevolution')
-enable_cap = get_option('cap')
 enable_gestures = get_option('gestures')
 enable_gcr = get_option('gcr')
 
@@ -404,46 +357,13 @@ if get_option('gtkui')
 	#######################################################################
 	# We need enchant for spell checking dictionary enumeration,
 	# because webkit1 doesn't have this.
-	use_enchant = false
+	enable_enchant = get_option('enchant')
 	if enable_enchant
-		use_enchant = true
 		enchant = dependency('enchant', required : force_deps)
-		use_enchant = enchant.found()
-		conf.set('USE_ENCHANT', use_enchant)
+		enable_enchant = enchant.found()
+		conf.set('USE_ENCHANT', enable_enchant)
 	else
 		enchant = []
-	endif
-
-	#######################################################################
-	# Check for stuff needed by the Evolution integration plugin.
-	#######################################################################
-	if enable_gevolution
-		evo_deps = [
-		    ['libebook-1.2', []],
-		    ['libedata-book-1.2', []],
-		    ['evolution-data-server-1.2', '>= 3.6']
-		]
-		EVOLUTION_ADDRESSBOOK = []
-		foreach dep : evo_deps
-			EVOLUTION_ADDRESSBOOK += [
-			    dependency(dep[0], version : dep[1], required : force_deps)
-			]
-			if not EVOLUTION_ADDRESSBOOK[-1].found()
-				enable_gevolution = false
-			endif
-		endforeach
-	endif
-	conf.set('HAVE_EVOLUTION_ADDRESSBOOK', enable_gevolution)
-	if not enable_gevolution
-		EVOLUTION_ADDRESSBOOK = []
-	endif
-
-	#######################################################################
-	# Check for libsqlite3 (for the Contact Availability Prediction plugin)
-	#######################################################################
-	if enable_cap
-		SQLITE3 = dependency('sqlite3', version : '>= 3.3', required : force_deps)
-		enable_cap = SQLITE3.found()
 	endif
 
 	#######################################################################
@@ -462,10 +382,8 @@ if get_option('gtkui')
 
 
 else	# GTK
-	enable_cap = false
 	enable_gcr = false
-	enable_gevolution = false
-	use_enchant = false
+	enable_enchant = false
 endif	# GTK
 
 ENABLE_GTK = get_option('gtkui')
@@ -495,78 +413,6 @@ endif
 if not get_option('gtkui') or not with_x
 	enable_gestures = false
 endif
-
-#######################################################################
-# Check for ncurses and other things used by the console UI
-#######################################################################
-ncurses_inc = []
-ncurses_libs = []
-enable_consoleui = get_option('consoleui')
-force_finch = enable_consoleui
-if enable_consoleui
-	ncurses_libs = [
-		compiler.find_library('ncursesw', required : false),
-		compiler.find_library('panelw', required : false)
-	]
-	if not ncurses_libs[0].found() or not ncurses_libs[1].found()
-		enable_consoleui = false
-	endif
-
-	if IS_WIN32
-		# FIXME: $host ?
-		ncurses_sys_prefix = '/usr/$host/sys-root/mingw'
-	else
-		ncurses_sys_prefix = '/usr'
-	endif
-
-	ncurses_sys_dirs = [ncurses_sys_prefix + '/include/ncursesw',
-	                    ncurses_sys_prefix + '/include']
-
-	if enable_consoleui
-		# Some distros put the headers in ncursesw/, some don't
-		found_ncurses_h = false
-		foreach location : ncurses_sys_dirs
-			f = location + '/ncurses.h'
-			if not found_ncurses_h
-				if compiler.has_header_symbol(f, 'get_wch',
-				       prefix : '#define _XOPEN_SOURCE_EXTENDED')
-					if location != '.'
-						ncurses_inc += [include_directories(location)]
-					endif
-					found_ncurses_h = true
-				endif
-			endif
-		endforeach
-
-		if not found_ncurses_h
-			ncurses_inc = []
-			ncurses_libs = []
-			enable_consoleui = false
-		endif
-	else
-		# ncursesw was not found. Look for plain old ncurses
-		ncurses_libs = [
-			compiler.find_library('ncurses', required : false),
-			compiler.find_library('panel', required : false)
-		]
-		enable_consoleui = ncurses_libs[0].found() and ncurses_libs[1].found()
-		conf.set('NO_WIDECHAR', true)
-	endif
-endif
-ncurses = declare_dependency(
-    include_directories : ncurses_inc,
-    dependencies : ncurses_libs
-)
-
-if force_finch and not enable_consoleui
-	error('''
-
-Finch will not be built. You need to install ncursesw (or ncurses) and its development headers.
-
-''')
-endif
-
-#conf.set('HAVE_WCWIDTH', compiler.has_function('wcwidth'))
 
 #######################################################################
 # Check for LibXML2 (required)
@@ -1119,19 +965,13 @@ endif
 # and XML code that wraps (part of) the existing API so that
 # it is now accessible through D-Bus.
 
-if enable_dbus or enable_consoleui
+if enable_dbus
 	if meson.version().version_compare('>=0.38.0')
 		python3_mod = import('python3')
 		python = python3_mod.find_python()
 	else
 		python = find_program('python3')
 	endif
-endif
-
-# Check for Python headers (currently useful only for libgnt)
-if enable_consoleui
-	python_dep = dependency('python3')
-	conf.set('USE_PYTHON', python_dep.found())
 endif
 
 #######################################################################
@@ -1159,10 +999,10 @@ INSTALL_SSL_CERTIFICATES = SSL_CERTIFICATES_DIR == ''
 if get_option('plugins')
 	conf.set('PURPLE_PLUGINS', 1)
 	PLUGINS = true
-	conf.set('PLUGINS_DEFINE', '#define PURPLE_PLUGINS 1')
+	purple_h_conf.set('PLUGINS_DEFINE', '#define PURPLE_PLUGINS 1')
 else
 	PLUGINS = false
-	conf.set('PLUGINS_DEFINE', '#undef PURPLE_PLUGINS')
+	purple_h_conf.set('PLUGINS_DEFINE', '#undef PURPLE_PLUGINS')
 endif
 
 #######################################################################
@@ -1311,8 +1151,6 @@ endif
 enable_debug = get_option('debug')
 conf.set('DEBUG', enable_debug)
 
-PURPLE_AVAILABLE = true
-
 # So that config.h may be found.
 toplevel_inc = include_directories('.')
 
@@ -1354,7 +1192,7 @@ message('Old tray icon compatibility... : ' + ENABLE_TRAYCOMPAT.to_string())
 message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
-message('Build with Enchant support.... : ' + use_enchant.to_string())
+message('Build with Enchant support.... : ' + enable_enchant.to_string())
 message('Build with GCR widgets........ : ' + enable_gcr.to_string())
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
