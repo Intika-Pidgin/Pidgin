@@ -1787,6 +1787,9 @@ static GstElement *create_screensrc_cb(PurpleMedia *media, const gchar *session_
 	GstElement *ret;
 
 	ret = gst_element_factory_make("ximagesrc", NULL);
+	if (ret == NULL)
+		return NULL;
+
 	g_object_set(ret, "use-damage", 0, NULL);
 
 	info = g_object_get_data(G_OBJECT(media), "src-element");
@@ -1816,6 +1819,9 @@ static GstElement *create_screensrc_cb(PPurpleMedia *media, const gchar *session
 	GstElement *ret;
 
 	ret = gst_element_factory_make("gdiscreencapsrc", NULL);
+	if (ret == NULL)
+		return NULL;
+
 	g_object_set(ret, "cursor", TRUE);
 
 	info = g_object_get_data(G_OBJECT(media), "src-element");
