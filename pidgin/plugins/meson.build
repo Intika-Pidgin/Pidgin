@@ -1,4 +1,4 @@
-if enable_gevolution
+if get_option('gevolution')
 	subdir('gevolution')
 endif
 
@@ -6,7 +6,7 @@ if enable_dbus
 	subdir('musicmessaging')
 endif
 
-if enable_cap
+if get_option('cap')
 	subdir('cap')
 endif
 

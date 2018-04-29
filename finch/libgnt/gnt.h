@@ -32,7 +32,7 @@
 #include <glib.h>
 
 #ifdef HAVE_CONFIG_H
-#  include <config.h>
+#  include <gntconfig.h>
 #endif
 #ifdef _WIN32
 #  undef KEY_EVENT
