@@ -163,9 +163,7 @@ gint
 main(gint argc, gchar **argv) {
 	g_test_init(&argc, &argv, NULL);
 
-	#if GLIB_CHECK_VERSION(2, 38, 0)
 	g_test_set_nonfatal_assertions();
-	#endif /* GLIB_CHECK_VERSION(2, 38, 0) */
 
 	g_test_add_func("/image/new-from-bytes", test_image_new_from_bytes);
 	g_test_add_func("/image/new-from-data", test_image_new_from_data);
