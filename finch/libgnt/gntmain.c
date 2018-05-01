@@ -650,11 +650,6 @@ void gnt_init()
 	sigaction(SIGINT, &act, NULL);
 	signal(SIGPIPE, SIG_IGN);
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-	/* GLib type system is automaticaly initialized since 2.36. */
-	g_type_init();
-#endif
-
 	init_wm();
 
 	clipboard = g_object_new(GNT_TYPE_CLIPBOARD, NULL);
