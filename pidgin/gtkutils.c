@@ -273,8 +273,18 @@ GtkWidget *pidgin_dialog_get_action_area(GtkDialog *dialog)
 GtkWidget *pidgin_dialog_add_button(GtkDialog *dialog, const char *label,
 		GCallback callback, gpointer callbackdata)
 {
-	GtkWidget *button = gtk_button_new_from_stock(label);
+	GtkWidget *button = gtk_button_new_with_mnemonic(label);
 	GtkWidget *bbox = pidgin_dialog_get_action_area(dialog);
+
+	/* Handle stock labels if passed in until nothing calls this
+	 * expecting a GtkStock button */
+	if (label != NULL) {
+		GtkStockItem item;
+		if (gtk_stock_lookup(label, &item)) {
+			g_object_set(button, "use-stock", TRUE, NULL);
+		}
+	}
+
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	if (callback)
 		g_signal_connect(G_OBJECT(button), "clicked", callback, callbackdata);
