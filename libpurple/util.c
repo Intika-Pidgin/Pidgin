@@ -3199,15 +3199,27 @@ purple_util_write_data_to_data_file(const char *filename, const char *data, gssi
 gboolean
 purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size)
 {
+	GFile *file;
 	GError *err = NULL;
 
-	if (!g_file_set_contents(filename_full, data, size, &err)) {
+	g_return_val_if_fail(size >= -1, FALSE);
+
+	if (size == -1) {
+		size = strlen(data);
+	}
+
+	file = g_file_new_for_path(filename_full);
+
+	if (!g_file_replace_contents(file, data, size, NULL, FALSE,
+			G_FILE_CREATE_PRIVATE, NULL, NULL, &err)) {
 		purple_debug_error("util", "Error writing file: %s: %s\n",
 				   filename_full, err->message);
 		g_clear_error(&err);
+		g_object_unref(file);
 		return FALSE;
 	}
 
+	g_object_unref(file);
 	return TRUE;
 }
 
