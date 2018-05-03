@@ -53,7 +53,7 @@ test_purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer, PurpleConnec
 }
 
 static void
-test_purple_protocol_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who, const gchar *filename) {
+test_purple_protocol_xfer_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who, const gchar *filename) {
 	TestPurpleProtocolXfer *test_xfer = (TestPurpleProtocolXfer *)prplxfer;
 
 	test_xfer->send_called = TRUE;
@@ -72,7 +72,7 @@ test_purple_protocol_xfer_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnectio
 static void
 test_purple_protocol_xfer_iface_init(PurpleProtocolXferInterface *iface) {
 	iface->can_receive = test_purple_protocol_xfer_can_receive;
-	iface->send = test_purple_protocol_xfer_send;
+	iface->send_file = test_purple_protocol_xfer_send_file;
 	iface->new_xfer = test_purple_protocol_xfer_new_xfer;
 }
 
@@ -127,12 +127,12 @@ test_purple_protocol_xfer_can_receive_func(void) {
 }
 
 static void
-test_purple_protocol_xfer_send_func(void) {
+test_purple_protocol_xfer_send_file_func(void) {
 	TestPurpleProtocolXfer *prplxfer = g_object_new(test_purple_protocol_xfer_get_type(), NULL);
 	PurpleAccount *a = purple_account_new("prpl-xfer-send", "prpl-xfer");
 	PurpleConnection *c = g_object_new(PURPLE_TYPE_CONNECTION, "account", a, NULL);
 
-	purple_protocol_xfer_send(PURPLE_PROTOCOL_XFER(prplxfer), c, "foo", "somefile");
+	purple_protocol_xfer_send_file(PURPLE_PROTOCOL_XFER(prplxfer), c, "foo", "somefile");
 	g_assert_true(prplxfer->send_called);
 }
 
@@ -168,8 +168,8 @@ main(gint argc, gchar **argv) {
 	);
 
 	g_test_add_func(
-		"/protocol-xfer/send",
-		test_purple_protocol_xfer_send_func
+		"/protocol-xfer/send-file",
+		test_purple_protocol_xfer_send_file_func
 	);
 
 	g_test_add_func(

@@ -4185,7 +4185,7 @@ static void
 jabber_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = jabber_can_receive_file;
-	xfer_iface->send        = jabber_si_xfer_send;
+	xfer_iface->send_file   = jabber_si_xfer_send;
 	xfer_iface->new_xfer    = jabber_si_new_xfer;
 }
 
