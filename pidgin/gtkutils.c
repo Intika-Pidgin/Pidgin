@@ -1475,7 +1475,7 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 		if(iface->can_receive) {
 			ft = purple_protocol_xfer_can_receive(protocol, gc, who);
 		} else {
-			ft = (iface->send) ? TRUE : FALSE;
+			ft = (iface->send_file) ? TRUE : FALSE;
 		}
 	}
 
