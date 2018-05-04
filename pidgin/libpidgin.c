@@ -677,13 +677,21 @@ int pidgin_start(int argc, char *argv[])
 		abort();
 	}
 
-	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
-	if (!g_stat(search_path, &st))
-		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
-	purple_plugins_add_search_path(search_path);
-	g_free(search_path);
+	if (!g_getenv("PURPLE_PLUGINS_SKIP")) {
+		search_path = g_build_filename(purple_user_dir(),
+				"plugins", NULL);
+		if (!g_stat(search_path, &st))
+			g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
+		purple_plugins_add_search_path(search_path);
+		g_free(search_path);
 
-	purple_plugins_add_search_path(PIDGIN_LIBDIR);
+		purple_plugins_add_search_path(PIDGIN_LIBDIR);
+	} else {
+		purple_debug_info("gtk",
+				"PURPLE_PLUGINS_SKIP environment variable "
+				"set, skipping normal Pidgin plugin paths");
+	}
+
 	purple_plugins_refresh();
 
 	if (opt_si && !purple_core_ensure_single_instance()) {
