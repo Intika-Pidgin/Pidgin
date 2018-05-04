@@ -246,31 +246,6 @@ conf.set('HAVE_IPV6_V6ONLY',
 # of the C library
 math = compiler.find_library('m')
 
-code = '''
-#include <time.h>
-#include <stdio.h>
-
-int main()
-{
-	char buf[64];
-	time_t t = time(NULL);
-
-	if (strftime(buf, sizeof(buf), "%z", localtime(&t)) != 5)
-		return 1;
-
-	fprintf(stderr, "strftime(\"%%z\") yields: \"%s\"\n", buf);
-
-	return !((buf[0] == '-' || buf[0] == '+') &&
-	         (buf[1] >= '0' && buf[1] <= '9') &&
-	         (buf[2] >= '0' && buf[2] <= '9') &&
-	         (buf[3] >= '0' && buf[3] <= '9') &&
-	         (buf[4] >= '0' && buf[4] <= '9')
-	        );
-}
-'''
-result = compiler.run(code, name : 'the %z format string in strftime()')
-conf.set('HAVE_STRFTIME_Z_FORMAT', result.returncode() == 0)
-
 # before gettexting, in case iconv matters
 IOKIT = []
 if host_machine.system() == 'darwin'
