@@ -5576,7 +5576,7 @@ static void
 mw_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
   xfer_iface->can_receive = mw_protocol_can_receive_file;
-  xfer_iface->send        = mw_protocol_send_file;
+  xfer_iface->send_file   = mw_protocol_send_file;
   xfer_iface->new_xfer    = mw_protocol_new_xfer;
 }
 

@@ -920,8 +920,8 @@ irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
 static void
 irc_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
-	xfer_iface->send     = irc_dccsend_send_file;
-	xfer_iface->new_xfer = irc_dccsend_new_xfer;
+	xfer_iface->send_file = irc_dccsend_send_file;
+	xfer_iface->new_xfer  = irc_dccsend_new_xfer;
 }
 
 PURPLE_DEFINE_TYPE_EXTENDED(

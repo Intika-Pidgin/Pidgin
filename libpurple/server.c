@@ -900,7 +900,8 @@ void purple_serv_send_file(PurpleConnection *gc, const char *who, const char *fi
 			PurpleProtocolXfer *xfer = PURPLE_PROTOCOL_XFER(protocol);
 
 			if(purple_protocol_xfer_can_receive(xfer, gc, who)) {
-				purple_protocol_xfer_send(xfer, gc, who, file);
+				purple_protocol_xfer_send_file(xfer,
+						gc, who, file);
 			}
 		}
 	}
