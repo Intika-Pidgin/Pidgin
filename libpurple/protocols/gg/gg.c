@@ -1074,7 +1074,7 @@ static void
 ggp_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = ggp_edisc_xfer_can_receive_file;
-	xfer_iface->send        = ggp_edisc_xfer_send_file;
+	xfer_iface->send_file   = ggp_edisc_xfer_send_file;
 	xfer_iface->new_xfer    = ggp_edisc_xfer_send_new;
 }
 
