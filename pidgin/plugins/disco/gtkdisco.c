@@ -304,7 +304,7 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 	menu = gtk_menu_new();
 
 	if (service->flags & XMPP_DISCO_ADD)
-		pidgin_new_menu_item(menu, _("Add to Buddy List"), GTK_STOCK_ADD,
+		pidgin_new_menu_item(menu, _("Add to Buddy List"), NULL,
                                 G_CALLBACK(add_to_blist_cb), pdl->dialog);
 
 	if (service->flags & XMPP_DISCO_REGISTER) {
@@ -666,19 +666,15 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 
 	/* stop button */
 	dialog->stop_button =
-		pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_STOP,
+		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Stop"),
 		                         G_CALLBACK(stop_button_cb), dialog);
 	gtk_widget_set_sensitive(dialog->stop_button, FALSE);
 
 	/* browse button */
 	dialog->browse_button =
-		pidgin_pixbuf_button_from_stock(_("_Browse"), GTK_STOCK_REFRESH,
-		                                PIDGIN_BUTTON_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->browse_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->browse_button), "clicked",
-	                 G_CALLBACK(browse_button_cb), dialog);
+		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Browse"),
+		                         G_CALLBACK(browse_button_cb), dialog);
 	gtk_widget_set_sensitive(dialog->browse_button, dialog->account != NULL);
-	gtk_widget_show(dialog->browse_button);
 
 	/* register button */
 	dialog->register_button =
@@ -688,17 +684,13 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 
 	/* add button */
 	dialog->add_button =
-		pidgin_pixbuf_button_from_stock(_("_Add"), GTK_STOCK_ADD,
-	                                    PIDGIN_BUTTON_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->add_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->add_button), "clicked",
-	                 G_CALLBACK(add_to_blist_cb), dialog);
+		pidgin_dialog_add_button(GTK_DIALOG(dialog->window), _("_Add"),
+		                         G_CALLBACK(add_to_blist_cb), dialog);
 	gtk_widget_set_sensitive(dialog->add_button, FALSE);
-	gtk_widget_show(dialog->add_button);
 
 	/* close button */
 	dialog->close_button =
-		pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_CLOSE,
+		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Close"),
 		                         G_CALLBACK(close_button_cb), dialog);
 
 	/* show the dialog window and return the dialog */
