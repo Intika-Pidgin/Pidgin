@@ -1062,9 +1062,9 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 					g_string_append(string, purple_utf8_strftime("%y", tm));
 				} else {
 					/* Zero-padding */
-					char *tmp = g_strdup_printf("%%0%dY", count);
-					g_string_append(string, purple_utf8_strftime(tmp, tm));
-					g_free(tmp);
+					g_string_append_printf(string, "%0*d",
+							count,
+							tm->tm_year + 1900);
 				}
 				break;
 
