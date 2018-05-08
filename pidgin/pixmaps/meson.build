@@ -20,7 +20,6 @@ if INSTALL_PIXMAPS
 	    install_dir : pidginpixmapdir)
 	install_subdir('emblems',
 	    install_dir : pidginpixmapdir)
-	subdir('icons')
 	subdir('protocols')
 	subdir('status')
 	subdir('toolbar')

@@ -236,6 +236,7 @@ if ENABLE_GTK
 		    install : true)
 	endif
 
+	subdir('data')
 	subdir('pixmaps')
 	subdir('plugins')
 	subdir('themes')
