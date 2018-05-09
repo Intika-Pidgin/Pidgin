@@ -192,15 +192,15 @@ const SizedStockIcon sized_stock_icons [] = {
 
 const SizedStockIcon sized_status_icons [] = {
 
-	{ PIDGIN_STOCK_STATUS_AVAILABLE, "status",  "available.png",     TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_AVAILABLE_I },
-	{ PIDGIN_STOCK_STATUS_AWAY,      "status",  "away.png",          TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_AWAY_I },
-	{ PIDGIN_STOCK_STATUS_BUSY,      "status",  "busy.png",          TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_BUSY_I },
+	{ PIDGIN_STOCK_STATUS_AVAILABLE, "status",  "user-available.png",     TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_AVAILABLE_I },
+	{ PIDGIN_STOCK_STATUS_AWAY,      "status",  "user-away.png",          TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_AWAY_I },
+	{ PIDGIN_STOCK_STATUS_BUSY,      "status",  "user-busy.png",          TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_BUSY_I },
 	{ PIDGIN_STOCK_STATUS_CHAT,      "status",  "chat.png",          TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_STATUS_INVISIBLE, "status",  "invisible.png",     TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_STATUS_XA,        "status",  "extended-away.png", TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, TRUE,  PIDGIN_STOCK_STATUS_XA_I },
+	{ PIDGIN_STOCK_STATUS_INVISIBLE, "status",  "user-invisible.png",     TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_STATUS_XA,        "status",  "user-extended-away.png", TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, TRUE,  PIDGIN_STOCK_STATUS_XA_I },
 	{ PIDGIN_STOCK_STATUS_LOGIN,     "status",  "log-in.png",        TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, TRUE,  NULL },
 	{ PIDGIN_STOCK_STATUS_LOGOUT,    "status",  "log-out.png",       TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, TRUE,  NULL },
-	{ PIDGIN_STOCK_STATUS_OFFLINE,   "status",  "offline.png",       TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_OFFLINE_I  },
+	{ PIDGIN_STOCK_STATUS_OFFLINE,   "status",  "user-offline.png",       TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_OFFLINE_I  },
 	{ PIDGIN_STOCK_STATUS_PERSON,    "status",  "person.png",        TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_STATUS_MESSAGE,   "toolbar", "message-new.png",   TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL }
 };
