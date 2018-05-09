@@ -15,7 +15,6 @@ if INSTALL_PIXMAPS
 	    install_dir : pidginpixmapdir)
 	install_data('edit.png', 'info.png', 'pause.png',
 	    install_dir : join_paths(pidginpixmapdir, 'buttons'))
-	subdir('dialogs')
 	install_subdir('e2ee',
 	    install_dir : pidginpixmapdir)
 	subdir('tray')
