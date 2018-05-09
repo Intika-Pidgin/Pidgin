@@ -207,7 +207,7 @@ const SizedStockIcon sized_status_icons [] = {
 
 const SizedStockIcon sized_tray_icons [] = {
 #define SIZED_TRAY_ICON(name) \
-	{ name, "tray/hicolor", "status/" name ".png", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, NULL }
+	{ name, "status", name ".png", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, NULL }
 	SIZED_TRAY_ICON( PIDGIN_STOCK_TRAY_AVAILABLE ),
 	SIZED_TRAY_ICON( PIDGIN_STOCK_TRAY_INVISIBLE ),
 	SIZED_TRAY_ICON( PIDGIN_STOCK_TRAY_AWAY ),
@@ -491,10 +491,10 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 			if (sized_tray_icons[i].translucent_name) \
 				add_sized_icon(translucent, name, PIDGIN_ICON_THEME(theme), size, sized_tray_icons[i], TRUE); \
 		}
-		ADD_SIZED_ICON(extra_small, "16x16");
-		ADD_SIZED_ICON(small, "22x22");
-		ADD_SIZED_ICON(medium, "32x32");
-		ADD_SIZED_ICON(large, "48x48");
+		ADD_SIZED_ICON(extra_small, "16");
+		ADD_SIZED_ICON(small, "22");
+		ADD_SIZED_ICON(medium, "32");
+		ADD_SIZED_ICON(large, "48");
 #undef ADD_SIZED_ICON
 
 		gtk_icon_factory_add(icon_factory, sized_tray_icons[i].name, normal);
