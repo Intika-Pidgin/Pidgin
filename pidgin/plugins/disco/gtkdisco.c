@@ -114,9 +114,12 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 {
 	GdkPixbuf *pixbuf = NULL;
 	char *filename = NULL;
+	gchar *tmp_size;
 
 	g_return_val_if_fail(service != NULL, NULL);
 	g_return_val_if_fail(size != NULL, NULL);
+
+	tmp_size = g_strdup_printf("%sx%s", size, size);
 
 	if (service->type == XMPP_DISCO_SERVICE_TYPE_GATEWAY && service->gateway_type) {
 		char *tmp = g_strconcat(service->gateway_type, ".png", NULL);
@@ -130,8 +133,11 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 #endif
 	} else if (service->type == XMPP_DISCO_SERVICE_TYPE_CHAT) {
 		filename = g_build_filename(PURPLE_DATADIR,
-			"pixmaps", "pidgin", "status", size, "chat.png", NULL);
+			"pidgin", "icons", "hicolor", tmp_size, "status",
+			"chat.png", NULL);
 	}
+
+	g_free(tmp_size);
 
 	if (filename) {
 		pixbuf = gdk_pixbuf_new_from_file(filename, NULL);

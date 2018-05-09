@@ -3359,8 +3359,8 @@ static char *get_mood_icon_path(const char *mood)
 	char *path;
 
 	if (purple_strequal(mood, "busy")) {
-		path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
-			"status", "16", "busy.png", NULL);
+		path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons",
+			"hicolor", "16x16", "status", "user-busy.png", NULL);
 	} else if (purple_strequal(mood, "hiptop")) {
 		path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
 			"emblems", "16", "hiptop.png", NULL);
