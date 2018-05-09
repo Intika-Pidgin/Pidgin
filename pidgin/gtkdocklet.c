@@ -965,7 +965,6 @@ pidgin_docklet_init()
 	void *status_handle = purple_savedstatuses_get_handle();
 	void *docklet_handle = pidgin_docklet_get_handle();
 	void *notify_handle = purple_notify_get_handle();
-	gchar *tmp;
 
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/docklet");
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/docklet/blink", FALSE);
@@ -981,11 +980,6 @@ pidgin_docklet_init()
 	} else {
 		purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/docklet/gtk/embedded", FALSE);
 	}
-
-	tmp = g_build_path(G_DIR_SEPARATOR_S, PURPLE_DATADIR,
-		"pixmaps", "pidgin", "tray", NULL);
-	gtk_icon_theme_append_search_path(gtk_icon_theme_get_default(), tmp);
-	g_free(tmp);
 
 	if (purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/docklet/show"), "always"))
 		docklet_gtk_status_create(FALSE);
