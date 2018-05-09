@@ -4179,9 +4179,9 @@ _pidgin_e2ee_stock_icon_get(const gchar *stock_name)
 	if (g_hash_table_lookup_extended(e2ee_stock, stock_name, NULL, (gpointer*)&image))
 		return image;
 
-	g_snprintf(filename, sizeof(filename), "%s.png", stock_name);
-	path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
-		"e2ee", "16", filename, NULL);
+	g_snprintf(filename, sizeof(filename), "e2ee-%s.png", stock_name);
+	path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons",
+		"hicolor", "16x16", "status", filename, NULL);
 	image = purple_image_new_from_file(path, NULL);
 	g_free(path);
 

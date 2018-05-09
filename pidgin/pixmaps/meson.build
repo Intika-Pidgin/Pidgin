@@ -13,7 +13,5 @@ if INSTALL_PIXMAPS
 	# extra stuff in our directories we don't want to install.
 	install_data('edit.png', 'info.png', 'pause.png',
 	    install_dir : join_paths(pidginpixmapdir, 'buttons'))
-	install_subdir('e2ee',
-	    install_dir : pidginpixmapdir)
 	subdir('tray')
 endif
