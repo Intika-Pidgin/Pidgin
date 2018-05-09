@@ -28,6 +28,7 @@ EXCLUDE_DIRS = [
 	'32x32/actions/scalable',
 	'48x48/actions/scalable',
 	'16x16/apps/scalable',
+	'22x22/apps/scalable',
 	'24x24/apps/scalable',
 	'32x32/apps/scalable',
 ]

@@ -122,9 +122,12 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 	tmp_size = g_strdup_printf("%sx%s", size, size);
 
 	if (service->type == XMPP_DISCO_SERVICE_TYPE_GATEWAY && service->gateway_type) {
-		char *tmp = g_strconcat(service->gateway_type, ".png", NULL);
+		char *tmp = g_strconcat("im-", service->gateway_type,
+				".png", NULL);
+
 		filename = g_build_filename(PURPLE_DATADIR,
-			"pixmaps", "pidgin", "protocols", size, tmp, NULL);
+			"pidgin", "icons", "hicolor", tmp_size, "apps",
+			tmp, NULL);
 		g_free(tmp);
 #if 0
 	} else if (service->type == XMPP_DISCO_SERVICE_TYPE_USER) {

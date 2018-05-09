@@ -615,13 +615,14 @@ pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSiz
 	 * Status icons will be themeable too, and then it will look up
 	 * protoname from the theme
 	 */
-	tmp = g_strconcat(protoname, ".png", NULL);
+	tmp = g_strconcat("im-", protoname, ".png", NULL);
 
 	filename = g_build_filename(PURPLE_DATADIR,
-		"pixmaps", "pidgin", "protocols",
-		(size == PIDGIN_PROTOCOL_ICON_SMALL) ? "16" :
-			((size == PIDGIN_PROTOCOL_ICON_MEDIUM) ? "22" : "48"),
-		tmp, NULL);
+		"pidgin", "icons", "hicolor",
+		(size == PIDGIN_PROTOCOL_ICON_SMALL) ? "16x16" :
+			((size == PIDGIN_PROTOCOL_ICON_MEDIUM) ? "22x22" :
+				"48x48"),
+		"apps", tmp, NULL);
 	g_free(tmp);
 
 	pixbuf = pidgin_pixbuf_new_from_file(filename);
