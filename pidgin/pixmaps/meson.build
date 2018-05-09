@@ -11,8 +11,6 @@ if INSTALL_PIXMAPS
 	# and some target directories probably have something in them, for those
 	# installing somewhere with existing stuff. Additionally, we have
 	# extra stuff in our directories we don't want to install.
-	install_subdir('animations',
-	    install_dir : pidginpixmapdir)
 	install_data('edit.png', 'info.png', 'pause.png',
 	    install_dir : join_paths(pidginpixmapdir, 'buttons'))
 	install_subdir('e2ee',
