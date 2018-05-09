@@ -164,30 +164,30 @@ const SizedStockIcon sized_stock_icons [] = {
 	{ PIDGIN_STOCK_ANIMATION_TYPING4,  "animations", "typing4.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_ANIMATION_TYPING5,  "animations", "typing5.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 
-	{ PIDGIN_STOCK_TOOLBAR_BGCOLOR,         "toolbar", "change-bgcolor.png", FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_BGCOLOR,         "actions", "change-bgcolor.png", FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_TOOLBAR_BLOCK,           "emblems", "blocked.png",        FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_FGCOLOR,         "toolbar", "change-fgcolor.png", FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_SMILEY,          "toolbar", "emote-select.png",   FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_FONT_FACE,       "toolbar", "font-face.png",      FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_TEXT_SMALLER,    "toolbar", "font-size-down.png", FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_TEXT_LARGER,     "toolbar", "font-size-up.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_INSERT,          "toolbar", "insert.png",         FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE,    "toolbar", "insert-image.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_INSERT_SCREENSHOT, "toolbar", "insert-screenshot.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_INSERT_LINK,     "toolbar", "insert-link.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW,     "toolbar", "message-new.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_PENDING,         "toolbar", "message-new.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_PLUGINS,         "toolbar", "plugins.png",        FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_UNBLOCK,         "toolbar", "unblock.png",        FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR,   "toolbar", "select-avatar.png",  FALSE, FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_SEND_FILE,       "toolbar", "send-file.png",      FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_TRANSFER,        "toolbar", "transfer.png",       FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_FGCOLOR,         "actions", "change-fgcolor.png", FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_SMILEY,          "actions", "emote-select.png",   FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_FONT_FACE,       "actions", "font-face.png",      FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_TEXT_SMALLER,    "actions", "font-size-down.png", FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_TEXT_LARGER,     "actions", "font-size-up.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_INSERT,          "actions", "insert.png",         FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE,    "actions", "insert-image.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_INSERT_SCREENSHOT, "actions", "insert-screenshot.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_INSERT_LINK,     "actions", "insert-link.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_MESSAGE_NEW,     "actions", "message-new.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_PENDING,         "actions", "message-new.png",	 FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_PLUGINS,         "actions", "plugins.png",        FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_UNBLOCK,         "actions", "unblock.png",        FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR,   "actions", "select-avatar.png",  FALSE, FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_SEND_FILE,       "actions", "send-file.png",      FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_TRANSFER,        "actions", "transfer.png",       FALSE, TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 #ifdef USE_VV
-	{ PIDGIN_STOCK_TOOLBAR_AUDIO_CALL,       "toolbar", "audio-call.png",       FALSE, TRUE,  TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_VIDEO_CALL,       "toolbar", "video-call.png",       FALSE, TRUE,  TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_TOOLBAR_AUDIO_VIDEO_CALL, "toolbar", "audio-video-call.png", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_AUDIO_CALL,       "actions", "audio-call.png",       FALSE, TRUE,  TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_VIDEO_CALL,       "actions", "video-call.png",       FALSE, TRUE,  TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
+	{ PIDGIN_STOCK_TOOLBAR_AUDIO_VIDEO_CALL, "actions", "audio-video-call.png", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 #endif
-	{ PIDGIN_STOCK_TOOLBAR_SEND_ATTENTION, "toolbar", "get-attention.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  }
+	{ PIDGIN_STOCK_TOOLBAR_SEND_ATTENTION, "actions", "get-attention.png", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL  }
 };
 
 const SizedStockIcon sized_status_icons [] = {
@@ -202,7 +202,7 @@ const SizedStockIcon sized_status_icons [] = {
 	{ PIDGIN_STOCK_STATUS_LOGOUT,    "status",  "log-out.png",       TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, TRUE,  NULL },
 	{ PIDGIN_STOCK_STATUS_OFFLINE,   "status",  "user-offline.png",       TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, PIDGIN_STOCK_STATUS_OFFLINE_I  },
 	{ PIDGIN_STOCK_STATUS_PERSON,    "status",  "person.png",        TRUE, TRUE, TRUE,  TRUE,  TRUE,  FALSE, FALSE, NULL },
-	{ PIDGIN_STOCK_STATUS_MESSAGE,   "toolbar", "message-new.png",   TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL }
+	{ PIDGIN_STOCK_STATUS_MESSAGE,   "actions", "message-new.png",   TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL }
 };
 
 const SizedStockIcon sized_tray_icons [] = {
