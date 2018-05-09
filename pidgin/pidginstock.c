@@ -329,6 +329,24 @@ find_icon_file(PidginIconTheme *theme, const gchar *size, SizedStockIcon sized_i
 
 	file_full = find_file_common(tmp);
 	g_free(tmp);
+
+	if (file_full == NULL) {
+		gchar *size_dir = g_strdup_printf("%sx%s", size, size);
+
+		if (rtl)
+			tmp = g_build_filename("pidgin", "icons", "hicolor",
+					size_dir, sized_icon.dir, "rtl",
+					sized_icon.filename, NULL);
+		else
+			tmp = g_build_filename("pidgin", "icons", "hicolor",
+					size_dir, sized_icon.dir,
+					sized_icon.filename, NULL);
+		g_free(size_dir);
+
+		file_full = find_file_common(tmp);
+		g_free(tmp);
+	}
+
 	return file_full;
 }
 
