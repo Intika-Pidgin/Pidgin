@@ -18,8 +18,6 @@ if INSTALL_PIXMAPS
 	subdir('dialogs')
 	install_subdir('e2ee',
 	    install_dir : pidginpixmapdir)
-	install_subdir('emblems',
-	    install_dir : pidginpixmapdir)
 	subdir('protocols')
 	subdir('tray')
 endif
