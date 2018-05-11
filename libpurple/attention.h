@@ -227,8 +227,8 @@ GType purple_protocol_attention_get_type(void);
 
 /**
  * purple_protocol_attention_get_types:
- * @protocol: The #PurpleProtocol.
- * @account: The #PurpleAccount whose attention types to get.
+ * @attn: The #PurpleProtocolAttention.
+ * @acct: The #PurpleAccount whose attention types to get.
  *
  * Returns a list of #PurpleAttentionType's for @attn.
  *
