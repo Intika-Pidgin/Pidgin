@@ -44,7 +44,7 @@
 #define PURPLE_PROTOCOL_XFER_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXferInterface))
 
 /**************************************************************************/
-/** Data Structures                                                       */
+/* Data Structures                                                        */
 /**************************************************************************/
 typedef struct _PurpleXfer PurpleXfer;
 typedef struct _PurpleXferClass PurpleXferClass;
