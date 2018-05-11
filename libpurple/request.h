@@ -1086,8 +1086,6 @@ gpointer purple_request_field_get_ui_data(const PurpleRequestField *field);
  * @ui_data: The UI data.
  *
  * Sets the ui_data for a field.
- *
- * Returns: The UI data.
  */
 void purple_request_field_set_ui_data(PurpleRequestField *field,
                                       gpointer ui_data);
