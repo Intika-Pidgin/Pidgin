@@ -298,7 +298,8 @@ PurpleAttentionType *purple_get_attention_type_from_code(PurpleAccount *account,
 	if (PURPLE_IS_PROTOCOL_ATTENTION(protocol)) {
 		GList *attention_types;
 
-		attention_types = purple_protocol_attention_get_types(protocol, account);
+		attention_types = purple_protocol_attention_get_types(
+				PURPLE_PROTOCOL_ATTENTION(protocol), account);
 		attn = (PurpleAttentionType *)g_list_nth_data(attention_types, type_code);
 	} else {
 		attn = NULL;
