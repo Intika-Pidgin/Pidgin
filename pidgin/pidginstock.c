@@ -28,6 +28,9 @@
 
 #include "pidginstock.h"
 
+#warning GtkStock is deprecated. Port usage of PidginStock to GtkIconTheme \
+	and friends.
+
 /**************************************************************************
  * Globals
  **************************************************************************/
@@ -39,6 +42,7 @@ static GtkIconSize microscopic, extra_small, small, medium, large, huge;
  * Structures
  **************************************************************************/
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 static struct StockIcon
 {
 	const char *name;
@@ -73,6 +77,7 @@ static struct StockIcon
 	{ PIDGIN_STOCK_INFO,            NULL,      GTK_STOCK_INFO             },
 	{ PIDGIN_STOCK_NEXT,            NULL,      GTK_STOCK_GO_FORWARD       },
 };
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 static const GtkStockItem stock_items[] =
 {
@@ -341,6 +346,7 @@ add_sized_icon(GtkIconSet *iconset, GtkIconSize sizeid, PidginIconTheme *theme,
 	if (translucent)
 		do_alphashift(pixbuf);
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	source = gtk_icon_source_new();
 	gtk_icon_source_set_pixbuf(source, pixbuf);
 	gtk_icon_source_set_direction(source, GTK_TEXT_DIR_LTR);
@@ -383,6 +389,7 @@ add_sized_icon(GtkIconSet *iconset, GtkIconSize sizeid, PidginIconTheme *theme,
 		g_object_unref(pixbuf);
 		gtk_icon_source_free(source);
 	}
+G_GNUC_END_IGNORE_DEPRECATIONS
 }
 
 static void
@@ -415,13 +422,16 @@ pidgin_stock_load_status_icon_theme(PidginStatusIconTheme *theme)
 		purple_prefs_set_path(PIDGIN_PREFS_ROOT "/status/icon-theme-dir", "");
 	}
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	icon_factory = gtk_icon_factory_new();
 
 	gtk_icon_factory_add_default(icon_factory);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_widget_realize(win);
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	for (i = 0; i < G_N_ELEMENTS(sized_status_icons); i++)
 	{
 		normal = gtk_icon_set_new();
@@ -477,6 +487,7 @@ pidgin_stock_load_status_icon_theme(PidginStatusIconTheme *theme)
 			gtk_icon_set_unref(translucent);
 		}
 	}
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 	gtk_widget_destroy(win);
 	g_object_unref(G_OBJECT(icon_factory));
@@ -501,13 +512,16 @@ pidgin_stock_load_stock_icon_theme(PidginStockIconTheme *theme)
 		purple_prefs_set_path(PIDGIN_PREFS_ROOT "/stock/icon-theme-dir", "");
 	}
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	icon_factory = gtk_icon_factory_new();
 
 	gtk_icon_factory_add_default(icon_factory);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_widget_realize(win);
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	/* All non-sized icons */
 	for (i = 0; i < G_N_ELEMENTS(stock_icons); i++) {
 		GtkIconSource *source;
@@ -561,6 +575,7 @@ pidgin_stock_load_stock_icon_theme(PidginStockIconTheme *theme)
 		gtk_icon_factory_add(icon_factory, sized_stock_icons[i].name, iconset);
 		gtk_icon_set_unref(iconset);
 	}
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 	gtk_widget_destroy(win);
 	g_object_unref(G_OBJECT(icon_factory));
@@ -592,12 +607,14 @@ pidgin_stock_init(void)
 	purple_prefs_add_path(PIDGIN_PREFS_ROOT "/stock/icon-theme-dir", "");
 
 	/* register custom icon sizes */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	microscopic =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_MICROSCOPIC, 11, 11);
 	extra_small =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL, 16, 16);
 	small       =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_SMALL, 22, 22);
 	medium      =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_MEDIUM, 32, 32);
 	large       =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_LARGE, 48, 48);
 	huge        =  gtk_icon_size_register(PIDGIN_ICON_SIZE_TANGO_HUGE, 64, 64);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 	pidgin_stock_load_stock_icon_theme(NULL);
 
@@ -615,7 +632,9 @@ pidgin_stock_init(void)
 		pidgin_stock_load_status_icon_theme(NULL);
 
 	/* Register the stock items. */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	gtk_stock_add_static(stock_items, G_N_ELEMENTS(stock_items));
+G_GNUC_END_IGNORE_DEPRECATIONS
 }
 
 static void
