@@ -1092,11 +1092,6 @@ conf.set('HAVE_TM_GMTOFF',
 #######################################################################
 INSTALL_PIXMAPS = get_option('pixmaps-install')
 
-#######################################################################
-# Tweak status tray icon installation directory
-#######################################################################
-ENABLE_TRAYCOMPAT = get_option('trayicon-compat')
-
 # check for gtk-doc
 ENABLE_DOC = get_option('doc')
 if ENABLE_DOC
@@ -1148,7 +1143,6 @@ message('Build with Cyrus SASL support. : ' + enable_cyrus_sasl.to_string())
 message('Use kerberos 4 with zephyr.... : ' + kerberos.to_string())
 message('Use external libzephyr........ : ' + zephyr.to_string())
 message('Install pixmaps............... : ' + INSTALL_PIXMAPS.to_string())
-message('Old tray icon compatibility... : ' + ENABLE_TRAYCOMPAT.to_string())
 message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
