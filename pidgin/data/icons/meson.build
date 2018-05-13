@@ -16,8 +16,6 @@ endforeach
 EXCLUDE_FILES = [
 	'16x16/apps/pidgin.png',
 	'22x22/apps/pidgin.png',
-	'24x24/apps/pidgin.png',
-	'32x32/apps/pidgin.png',
 	'48x48/apps/pidgin.png',
 	'scalable/apps/pidgin.svg',
 ]
@@ -29,8 +27,8 @@ EXCLUDE_DIRS = [
 	'48x48/actions/scalable',
 	'16x16/apps/scalable',
 	'22x22/apps/scalable',
-	'24x24/apps/scalable',
-	'32x32/apps/scalable',
+	'24x24',
+	'32x32/apps',
 	'16x16/status/scalable',
 ]
 
