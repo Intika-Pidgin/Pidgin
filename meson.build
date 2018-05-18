@@ -905,16 +905,23 @@ if get_option('plugins')
 	gplugin = dependency('gplugin', version : '>= 0.0.17')
 	# GPLUGIN_REQ sets pkg-config requirements in the .pc file
 	GPLUGIN_REQ = ['gplugin']
-	enable_introspection = dependency('gobject-introspection-1.0',
-	    version : '>= 1.30.0', required : false).found()
 else
 	gplugin = []
 	GPLUGIN_REQ = []
-	enable_introspection = false
 endif
 
+#######################################################################
+# Check for GObject Introspection
+#######################################################################
+
+enable_introspection = get_option('introspection')
 if enable_introspection
-	conf.set('ENABLE_INTROSPECTION', true)
+	if dependency('gobject-introspection-1.0', version : '>= 1.30.0',
+	              required : force_deps).found()
+		conf.set('ENABLE_INTROSPECTION', true)
+	else
+		enable_introspection = false
+	endif
 endif
 
 #######################################################################
