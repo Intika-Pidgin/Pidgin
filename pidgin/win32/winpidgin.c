@@ -311,12 +311,26 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 			pidgin_dir_start[0] = L'\0';
 		}
 
-#ifndef USE_WIN32_FHS
-		/* Add bin/ subdirectory to DLL path */
-		if ((hmod = GetModuleHandleW(L"kernel32.dll"))) {
-			LPFNSETDLLDIRECTORY MySetDllDirectory =
-				(LPFNSETDLLDIRECTORY)
-				GetProcAddress(hmod, "SetDllDirectoryW"); 
+		/* Find parent directory to see if it's bin/ */
+		pidgin_dir_start = wcsrchr(pidgin_dir, L'\\');
+
+		/* Add bin/ subdirectory to DLL path if not already in bin/ */
+		if (pidgin_dir_start == NULL ||
+				wcscmp(pidgin_dir_start + 1, L"bin") != 0) {
+			LPFNSETDLLDIRECTORY MySetDllDirectory = NULL;
+
+			hmod = GetModuleHandleW(L"kernel32.dll");
+
+			if (hmod != NULL) {
+				MySetDllDirectory = (LPFNSETDLLDIRECTORY) GetProcAddress(hmod, "SetDllDirectoryW");
+				if (MySetDllDirectory == NULL) {
+					DWORD dw = GetLastError();
+					const wchar_t *err_msg = get_win32_error_message(dw);
+					wprintf(L"Error loading SetDllDirectory(): (%u) %s\n", dw, err_msg);
+				}
+			} else {
+				printf("Error getting kernel32.dll handle\n");
+			}
 
 			if (MySetDllDirectory) {
 				wcscat(pidgin_dir, L"\\bin");
@@ -328,18 +342,8 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 					const wchar_t *err_msg = get_win32_error_message(dw);
 					wprintf(L"Error calling SetDllDirectory(): (%u) %s\n", dw, err_msg);
 				}
-			} else {
-				DWORD dw = GetLastError();
-				const wchar_t *err_msg = get_win32_error_message(dw);
-				wprintf(L"Error loading SetDllDirectory(): (%u) %s\n", dw, err_msg);
 			}
-
-			/* Restore pidgin_dir to point to where the executable is */
-			pidgin_dir_start[0] = L'\0';
-		} else {
-			printf("Error getting kernel32.dll handle\n");
 		}
-#endif
 	} else {
 		DWORD dw = GetLastError();
 		const wchar_t *err_msg = get_win32_error_message(dw);
