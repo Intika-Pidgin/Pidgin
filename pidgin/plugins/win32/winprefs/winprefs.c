@@ -187,10 +187,10 @@ static void blist_create_cb(PurpleBuddyList *purple_blist, void *data) {
 
 static void
 winprefs_set_autostart(GtkWidget *w) {
-	char *runval = NULL;
+	gchar runval[MAX_PATH] = {0};
 
 	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w)))
-		runval = g_strdup_printf("\"%s" G_DIR_SEPARATOR_S "pidgin.exe\"", wpurple_bin_dir());
+		GetModuleFileName(NULL, runval, MAX_PATH);
 
 	if(!wpurple_write_reg_string(HKEY_CURRENT_USER, RUNKEY, "Pidgin", runval)
 		/* For Win98 */
