@@ -177,7 +177,6 @@ if ENABLE_GTK
 
 	pidgin = executable('pidgin',
 	    pidgin_SOURCES,
-	    link_args : '-export-dynamic',
 	    include_directories : toplevel_inc,
 	    dependencies : IS_WIN32 ? [] : [libpurple_dep, libpidgin_dep],
 	    gui_app : true,
