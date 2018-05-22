@@ -398,7 +398,6 @@ static void
 update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 {
 	GtkStyleContext *style;
-	GdkRGBA color;
 	gboolean set;
 	GList *l;
 
@@ -411,12 +410,12 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 	set = !(purple_account_is_connected(dialog->account) || purple_account_is_connecting(dialog->account));
 	gtk_widget_set_sensitive(dialog->protocol_menu, set);
 	gtk_editable_set_editable(GTK_EDITABLE(dialog->username_entry), set);
-	style = set ? NULL : gtk_widget_get_style_context(dialog->username_entry);
-	if (style) {
-		gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
-		gtk_widget_override_background_color(dialog->username_entry, GTK_STATE_FLAG_NORMAL, &color);
+	style =  gtk_widget_get_style_context(dialog->username_entry);
+
+	if (set) {
+		gtk_style_context_remove_class(style, "copyable-insensitive");
 	} else {
-		gtk_widget_override_background_color(dialog->username_entry, GTK_STATE_FLAG_NORMAL, NULL);
+		gtk_style_context_add_class(style, "copyable-insensitive");
 	}
 
 	for (l = dialog->user_split_entries ; l != NULL ; l = l->next) {
@@ -424,12 +423,13 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 			continue;
 		if (GTK_IS_EDITABLE(l->data)) {
 			gtk_editable_set_editable(GTK_EDITABLE(l->data), set);
-			style = set ? NULL : gtk_widget_get_style_context(GTK_WIDGET(l->data));
-			if (style) {
-				gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
-				gtk_widget_override_background_color(GTK_WIDGET(l->data), GTK_STATE_FLAG_NORMAL, &color);
+			style = gtk_widget_get_style_context(GTK_WIDGET(l->data));
+			if (set) {
+				gtk_style_context_remove_class(style,
+						"copyable-insensitive");
 			} else {
-				gtk_widget_override_background_color(GTK_WIDGET(l->data), GTK_STATE_FLAG_NORMAL, NULL);
+				gtk_style_context_add_class(style,
+						"copyable-insensitive");
 			}
 		} else {
 			gtk_widget_set_sensitive(GTK_WIDGET(l->data), set);
@@ -447,6 +447,15 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	GList *user_splits;
 	GList *l, *l2;
 	char *username = NULL;
+	GtkCssProvider *entry_css;
+	const gchar entry_style[] =
+		"entry.copyable-insensitive {"
+			"color: @insensitive_fg_color;"
+			"background-color: @insensitive_bg_color;"
+		"}";
+
+	entry_css = gtk_css_provider_new();
+	gtk_css_provider_load_from_data(entry_css, entry_style, -1, NULL);
 
 	if (dialog->protocol_menu != NULL)
 	{
@@ -487,6 +496,10 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 
 	/* Username */
 	dialog->username_entry = gtk_entry_new();
+	gtk_style_context_add_provider(
+			gtk_widget_get_style_context(dialog->username_entry),
+			GTK_STYLE_PROVIDER(entry_css),
+			GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	g_object_set(G_OBJECT(dialog->username_entry), "truncate-multiline", TRUE, NULL);
 
 	add_pref_box(dialog, vbox, _("_Username:"), dialog->username_entry);
@@ -529,6 +542,10 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		else {
 			buf = g_strdup_printf("_%s:", purple_account_user_split_get_text(split));
 			entry = gtk_entry_new();
+			gtk_style_context_add_provider(
+					gtk_widget_get_style_context(entry),
+					GTK_STYLE_PROVIDER(entry_css),
+					GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 			add_pref_box(dialog, vbox, buf, entry);
 			g_free(buf);
 		}
@@ -616,6 +633,8 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 					G_CALLBACK(update_editable), dialog);
 	purple_signal_connect(purple_connections_get_handle(), "signed-off", dialog,
 					G_CALLBACK(update_editable), dialog);
+
+	g_object_unref(entry_css);
 }
 
 static void
