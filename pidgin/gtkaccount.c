@@ -408,7 +408,7 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 	set = !(purple_account_is_connected(dialog->account) || purple_account_is_connecting(dialog->account));
 	gtk_widget_set_sensitive(dialog->protocol_menu, set);
 	gtk_editable_set_editable(GTK_EDITABLE(dialog->username_entry), set);
-	style =  gtk_widget_get_style_context(dialog->username_entry);
+	style = gtk_widget_get_style_context(dialog->username_entry);
 
 	if (set) {
 		gtk_style_context_remove_class(style, "copyable-insensitive");
