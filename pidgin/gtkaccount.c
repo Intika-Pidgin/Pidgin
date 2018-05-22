@@ -217,14 +217,12 @@ set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *ne
 	if (pixbuf == NULL)
 	{
 		/* Show a placeholder icon */
-		GtkIconSize icon_size = gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_SMALL);
-		pixbuf = gtk_widget_render_icon(dialog->window, PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR,
-		                                icon_size, "PidginAccount");
-	}
-
-	gtk_image_set_from_pixbuf(GTK_IMAGE(dialog->icon_entry), pixbuf);
-	if (pixbuf != NULL)
+		gtk_image_set_from_icon_name(GTK_IMAGE(dialog->icon_entry),
+				"select-avatar", GTK_ICON_SIZE_LARGE_TOOLBAR);
+	} else {
+		gtk_image_set_from_pixbuf(GTK_IMAGE(dialog->icon_entry), pixbuf);
 		g_object_unref(G_OBJECT(pixbuf));
+	}
 }
 
 static void
