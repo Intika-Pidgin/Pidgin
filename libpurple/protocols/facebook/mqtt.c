@@ -420,7 +420,7 @@ static void
 fb_mqtt_read_packet(FbMqtt *mqtt)
 {
 	FbMqttPrivate *priv = mqtt->priv;
-	const guint8 const *buf;
+	const guint8 *buf;
 	gsize count = 0;
 	gsize pos;
 	guint mult = 1;
