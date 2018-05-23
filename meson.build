@@ -270,8 +270,6 @@ if INSTALL_I18N
 	i18n = import('i18n')
 
 	subdir('po')
-
-	intltool_merge = find_program('intltool-merge')
 endif
 
 # #######################################################################
