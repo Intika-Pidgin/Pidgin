@@ -7,15 +7,15 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-2.0</project_license>
   <description>
-    <_p>
+    <p>
       Pidgin is a chat program which lets you log in to accounts on multiple
       chat networks simultaneously.
-    </_p>
-    <_p>
+    </p>
+    <p>
       This means that you can be chatting with friends on AIM, talking to a
       friend on Google Talk, and sitting in an IRC chat room all at the same
       time.
-    </_p>
+    </p>
   </description>
 
   <launchable type="desktop-id">im.pidgin.Pidgin.desktop</launchable>
@@ -26,7 +26,7 @@
   <screenshots>
     <screenshot type="default">
       <image>https://www.pidgin.im/shared/img/contact_window.png</image>
-      <_caption>Buddy list showing friends on different networks</_caption>
+      <caption>Buddy list showing friends on different networks</caption>
     </screenshot>
   </screenshots>
 
