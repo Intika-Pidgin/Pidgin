@@ -440,12 +440,11 @@ if INSTALL_I18N
 	    input : 'data/' + DESKTOP_FILE + '.in.in',
 	    output : DESKTOP_FILE + '.in',
 	    configuration : conf)
-	desktop_file = custom_target(DESKTOP_FILE,
+	desktop_file = i18n.merge_file(
 	    input : desktop_file_in,
 	    output : DESKTOP_FILE,
-	    command : [intltool_merge, '--desktop-style', '-u',
-	               '-c', '@BUILD_DIR@/po/.intltool-merge-cache',
-	               meson.source_root() + '/po', '@INPUT@', '@OUTPUT@'],
+	    po_dir : meson.source_root() + '/po',
+	    type : 'desktop',
 	    install : true,
 	    install_dir : get_option('datadir') + '/applications')
 endif  # INSTALL_I18N

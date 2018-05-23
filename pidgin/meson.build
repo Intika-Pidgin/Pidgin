@@ -203,21 +203,18 @@ if ENABLE_GTK
 		    input : 'data/' + DESKTOP_FILE + '.in.in',
 		    output : DESKTOP_FILE + '.in',
 		    configuration : conf)
-		desktop_file = custom_target(DESKTOP_FILE,
+		desktop_file = i18n.merge_file(
 		    input : desktop_file_in,
 		    output : DESKTOP_FILE,
-		    command : [intltool_merge, '--desktop-style', '-u',
-		               '-c', '@BUILD_DIR@/po/.intltool-merge-cache',
-		               meson.source_root() + '/po', '@INPUT@', '@OUTPUT@'],
+		    po_dir : meson.source_root() + '/po',
+		    type : 'desktop',
 		    install : true,
 		    install_dir : get_option('datadir') + '/applications')
 
-		appdata = custom_target('im.pidgin.Pidgin.appdata.xml',
+		appdata = i18n.merge_file(
 		    input : 'data/im.pidgin.Pidgin.appdata.xml.in',
 		    output : 'im.pidgin.Pidgin.appdata.xml',
-			command : [intltool_merge, '--xml-style', '-u',
-		               '-c', '@BUILD_DIR@/po/.intltool-merge-cache',
-		               meson.source_root() + '/po', '@INPUT@', '@OUTPUT@'],
+		    po_dir : meson.source_root() + '/po',
 		    install : true,
 		    install_dir : get_option('datadir') + '/metainfo')
 	endif  # INSTALL_I18N
