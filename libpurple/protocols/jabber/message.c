@@ -571,7 +571,7 @@ jabber_message_remote_smiley_add(JabberStream *js, PurpleConversation *conv,
 		JabberMessageRemoteSmileyAddData *data = NULL;
 
 		data = g_slice_new(JabberMessageRemoteSmileyAddData);
-		data->conv = g_object_ref(G_OBJECT(conv));
+		data->conv = g_object_ref(conv);
 		data->shortcut = g_strdup(shortcut);
 
 		purple_debug_info("jabber", "smiley data is unknown, "
