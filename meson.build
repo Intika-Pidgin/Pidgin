@@ -979,7 +979,7 @@ endif
 enable_nettle = get_option('nettle')
 
 if enable_nettle
-	nettle = dependency('nettle', version : '>= 3.0')
+	nettle = dependency('nettle', version : '>= 3.0', required : false)
 	enable_nettle = nettle.found()
 	conf.set('HAVE_NETTLE', enable_nettle)
 
