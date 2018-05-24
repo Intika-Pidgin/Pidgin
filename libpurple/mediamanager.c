@@ -110,6 +110,7 @@ typedef struct {
 #define PURPLE_MEDIA_MANAGER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_MEDIA_MANAGER, PurpleMediaManagerPrivate))
 #define PURPLE_MEDIA_ELEMENT_INFO_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_MEDIA_ELEMENT_INFO, PurpleMediaElementInfoPrivate))
 
+#ifdef USE_VV
 static void purple_media_manager_class_init (PurpleMediaManagerClass *klass);
 static void purple_media_manager_init (PurpleMediaManager *media);
 static void purple_media_manager_finalize (GObject *object);
@@ -131,6 +132,7 @@ enum {
 	LAST_SIGNAL
 };
 static guint purple_media_manager_signals[LAST_SIGNAL] = {0};
+#endif
 
 GType
 purple_media_manager_get_type()
