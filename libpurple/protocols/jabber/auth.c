@@ -521,6 +521,9 @@ void jabber_auth_init(void)
 #ifdef HAVE_CYRUS_SASL
 	jabber_auth_add_mech(jabber_auth_get_cyrus_mech());
 #endif
+#ifdef HAVE_WEBEX_TOKEN
+	jabber_auth_add_mech(jabber_auth_get_webex_token_mech());
+#endif
 
 	tmp = jabber_auth_get_scram_mechs(&count);
 	for (i = 0; i < count; ++i)
