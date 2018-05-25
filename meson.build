@@ -91,6 +91,9 @@ if host_machine.system() == 'windows'
 		conf.set('IS_WIN32_CROSS_COMPILED', true)
 	endif
 	conf.set('WIN32_LEAN_AND_MEAN', true)
+
+	conf.set('LIBPIDGIN_DLL_NAMEW',
+	    'L"libpidgin-@0@.dll"'.format(purple_lt_current))
 else
 	IS_WIN32 = false
 	ws2_32 = []
