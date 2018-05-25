@@ -84,6 +84,7 @@ version 3.0.0 (??/??/????):
 	  (#14529)
 	* Support file transfers up to ~9 EiB.
 	* Invalid user moods can no longer be sent to the server.
+	* Added WEBEX-TOKEN SASL auth (Bryon Roche).
 
 	AIM:
 	* Add support for the newer kerberos-based authentication of AIM 8.x
