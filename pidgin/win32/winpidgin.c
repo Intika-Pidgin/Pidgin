@@ -25,6 +25,11 @@
  *
  */
 
+/* This file must remain without any immediate dependencies aka don't link
+ * directly to Pidgin, libpidgin, GLib, etc. WinPidgin adds a DLL directory
+ * at runtime if needed and dynamically loads libpidgin via LoadLibrary().
+ */
+
 #include "config.h"
 
 #include <windows.h>
