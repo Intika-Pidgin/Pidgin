@@ -91,6 +91,9 @@ if host_machine.system() == 'windows'
 		conf.set('IS_WIN32_CROSS_COMPILED', true)
 	endif
 	conf.set('WIN32_LEAN_AND_MEAN', true)
+
+	conf.set('LIBPIDGIN_DLL_NAMEW',
+	    'L"libpidgin-@0@.dll"'.format(purple_lt_current))
 else
 	IS_WIN32 = false
 	ws2_32 = []
@@ -119,28 +122,19 @@ conf.set('SIZEOF_TIME_T', time_t_size)
 
 conf.set('WORDS_BIGENDIAN', host_machine.endian() != 'little')
 
-conf.set('USE_WIN32_FHS',
-    IS_WIN32 and get_option('win32-dirs') == 'fhs')
-
 # Check for directories
 if IS_WIN32
-	if get_option('win32-dirs') == 'fhs'
-		foreach dir : ['bin', 'lib', 'data', 'sysconf', 'locale']
-			path = join_paths(get_option('prefix'), get_option(dir + 'dir'))
-			conf.set_quoted('WIN32_FHS_@0@DIR'.format(dir.to_upper()), path)
-		endforeach
+	foreach dir : ['bin', 'lib', 'data', 'sysconf', 'locale']
+		path = join_paths(get_option('prefix'), get_option(dir + 'dir'))
+		conf.set_quoted('WIN32_FHS_@0@DIR'.format(dir.to_upper()), path)
+	endforeach
 
-		conf.set('PURPLE_LIBDIR',
-		         'wpurple_lib_dir("purple-@0@")'.format(purple_major_version))
-		conf.set('PIDGIN_LIBDIR',
-		         'wpurple_lib_dir("pidgin-@0@")'.format(purple_major_version))
-		conf.set('FINCH_LIBDIR',
-		         'wpurple_lib_dir("finch-@0@")'.format(purple_major_version))
-	else
-		conf.set('PURPLE_LIBDIR', 'wpurple_lib_dir(NULL)')
-		conf.set('PIDGIN_LIBDIR', 'wpurple_lib_dir(NULL)')
-		conf.set('FINCH_LIBDIR', 'wpurple_lib_dir(NULL)')
-	endif
+	conf.set('PURPLE_LIBDIR',
+		 'wpurple_lib_dir("purple-@0@")'.format(purple_major_version))
+	conf.set('PIDGIN_LIBDIR',
+		 'wpurple_lib_dir("pidgin-@0@")'.format(purple_major_version))
+	conf.set('FINCH_LIBDIR',
+		 'wpurple_lib_dir("finch-@0@")'.format(purple_major_version))
 
 	conf.set('PURPLE_DATADIR', 'wpurple_data_dir()')
 	conf.set('PURPLE_SYSCONFDIR', 'wpurple_sysconf_dir()')
@@ -1169,12 +1163,6 @@ message('Build with Secret Service..... : ' + enable_secret_service.to_string())
 message('')
 message('Build with plugin support..... : ' + PLUGINS.to_string())
 message('Enable Introspection...........: ' + enable_introspection.to_string())
-
-if IS_WIN32
-	message('')
-	message('Win32 directory structure..... : ' + get_option('win32-dirs'))
-endif
-
 message('')
 message('Print debugging messages...... : ' + enable_debug.to_string())
 message('Generate documentation........ : ' + ENABLE_DOC.to_string())
