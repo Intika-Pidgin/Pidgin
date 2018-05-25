@@ -914,7 +914,6 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 	GtkWidget *send_widget = NULL, *recv_widget = NULL, *button_widget = NULL;
 	PurpleMediaSessionType type =
 			purple_media_get_session_type(media, sid);
-	GdkPixbuf *icon = NULL;
 
 	if (gtkmedia->priv->recv_widget == NULL
 			&& type & (PURPLE_MEDIA_RECV_VIDEO |
@@ -1068,18 +1067,9 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 
 	/* set the window icon according to the type */
 	if (type & PURPLE_MEDIA_VIDEO) {
-		icon = gtk_widget_render_icon(GTK_WIDGET(gtkmedia),
-			PIDGIN_STOCK_TOOLBAR_VIDEO_CALL,
-			gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_LARGE), NULL);
+		gtk_window_set_icon_name(GTK_WINDOW(gtkmedia), "video-call");
 	} else if (type & PURPLE_MEDIA_AUDIO) {
-		icon = gtk_widget_render_icon(GTK_WIDGET(gtkmedia),
-			PIDGIN_STOCK_TOOLBAR_AUDIO_CALL,
-			gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_LARGE), NULL);
-	}
-
-	if (icon) {
-		gtk_window_set_icon(GTK_WINDOW(gtkmedia), icon);
-		g_object_unref(icon);
+		gtk_window_set_icon_name(GTK_WINDOW(gtkmedia), "audio-call");
 	}
 
 	gtk_widget_show(gtkmedia->priv->display);
