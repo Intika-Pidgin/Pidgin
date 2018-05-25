@@ -80,6 +80,8 @@ JABBERSOURCES = \
 			  roster.h \
 			  si.c \
 			  si.h \
+			  stream_management.c \
+			  stream_management.h \
 			  useravatar.c \
 			  useravatar.h \
 			  usermood.c \
