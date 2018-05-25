@@ -265,6 +265,8 @@ endif
 INSTALL_I18N = get_option('nls')
 
 if INSTALL_I18N
+	conf.set('ENABLE_NLS', true)
+
 	subdir('po')
 
 	intltool_merge = find_program('intltool-merge')
@@ -973,7 +975,7 @@ endif
 enable_nettle = get_option('nettle')
 
 if enable_nettle
-	nettle = dependency('nettle', version : '>= 3.0')
+	nettle = dependency('nettle', version : '>= 3.0', required : false)
 	enable_nettle = nettle.found()
 	conf.set('HAVE_NETTLE', enable_nettle)
 
@@ -994,11 +996,15 @@ foreach func : ['snprintf', 'connect']
 endforeach
 enable_cyrus_sasl = get_option('cyrus-sasl')
 if enable_cyrus_sasl
-	if compiler.has_function('sasl_client_init', args : '-lsasl2')
-		conf.set('HAVE_CYRUS_SASL', true)
-		sasl = declare_dependency(link_args : '-lsasl2')
-	else
-		error('Cyrus SASL library not found')
+	sasl = dependency('libsasl2', version : '>= 2.0', required : false)
+	enable_cyrus_sasl = sasl.found()
+	conf.set('HAVE_CYRUS_SASL', enable_cyrus_sasl)
+
+	if not enable_cyrus_sasl and force_deps
+		error('''
+Cyrus SASL library not found
+Use -Dcyrus-sasl=false if you do not need it.
+''')
 	endif
 else
 	enable_cyrus_sasl = false
