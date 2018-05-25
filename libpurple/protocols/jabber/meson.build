@@ -8,6 +8,7 @@ JABBERSOURCES = [
 	'auth_plain.c',
 	'auth_scram.c',
 	'auth_scram.h',
+	'auth_webex.c',
 	'buddy.c',
 	'buddy.h',
 	'bosh.c',
