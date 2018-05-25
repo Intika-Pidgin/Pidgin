@@ -352,7 +352,7 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 	} else {
 		DWORD dw = GetLastError();
 		const wchar_t *err_msg = get_win32_error_message(dw);
-		_snwprintf(errbuf, 512,
+		_snwprintf(errbuf, sizeof(errbuf) / sizeof(wchar_t),
 			L"Error getting module filename.\nError: (%u) %s",
 			(UINT) dw, err_msg);
 		wprintf(L"%s\n", errbuf);
@@ -373,7 +373,8 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		DWORD dw = GetLastError();
 		const wchar_t *err_msg = get_win32_error_message(dw);
 
-		_snwprintf(errbuf, 512, L"Error loading libpidgin-20.dll.\n"
+		_snwprintf(errbuf, sizeof(errbuf) / sizeof(wchar_t),
+				L"Error loading libpidgin-20.dll.\n"
 				"Error: (%u) %s", (UINT) dw, err_msg);
 		wprintf(L"%s\n", errbuf);
 		MessageBoxW(NULL, errbuf, L"Error", MB_OK | MB_TOPMOST);
