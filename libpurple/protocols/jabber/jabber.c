@@ -68,6 +68,7 @@
 #include "xdata.h"
 #include "pep.h"
 #include "adhoccommands.h"
+#include "stream_management.h"
 
 #include "jingle/jingle.h"
 #include "jingle/rtp.h"
@@ -312,6 +313,13 @@ void jabber_stream_features_parse(JabberStream *js, xmlnode *packet)
 		jabber_stream_set_state(js, JABBER_STREAM_AUTHENTICATING);
 		jabber_auth_start_old(js);
 	}
+
+	/* Stream management */
+	if (xmlnode_get_child_with_namespace(packet, "sm", NS_STREAM_MANAGEMENT)
+	    && (js->sm_state == SM_DISABLED) )
+	{
+		jabber_sm_enable(js);
+	}
 }
 
 static void jabber_stream_handle_error(JabberStream *js, xmlnode *packet)
@@ -339,6 +347,8 @@ void jabber_process_packet(JabberStream *js, xmlnode **packet)
 
 	name = (*packet)->name;
 	xmlns = xmlnode_get_namespace(*packet);
+
+	jabber_sm_inbound(js, *packet);
 
 	if(purple_strequal((*packet)->name, "iq")) {
 		jabber_iq_parse(js, *packet);
@@ -370,6 +380,8 @@ void jabber_process_packet(JabberStream *js, xmlnode **packet)
 				tls_init(js);
 			/* TODO: Handle <failure/>, I guess? */
 		}
+	} else if (purple_strequal(xmlns, NS_STREAM_MANAGEMENT)) {
+		jabber_sm_process_packet(js, *packet);
 	} else {
 		purple_debug_warning("jabber", "Unknown packet: %s\n", (*packet)->name);
 	}
@@ -583,6 +595,28 @@ int jabber_prpl_send_raw(PurpleConnection *gc, const char *buf, int len)
 	return (len < 0 ? (int)strlen(buf) : len);
 }
 
+/* Checks whether a packet may be a stanza (not strictly: returns TRUE
+   if there's no namespace, assuming that the default namespace is
+   jabber:client or jabber:server). */
+gboolean
+jabber_is_stanza(xmlnode *packet) {
+	const char *name;
+	const char *xmlns;
+
+	g_return_val_if_fail(packet != NULL, FALSE);
+	g_return_val_if_fail(packet->name != NULL, FALSE);
+
+	name = packet->name;
+	xmlns = xmlnode_get_namespace(packet);
+
+	return ((purple_strequal(name, "message")
+	         || purple_strequal(name, "iq")
+	         || purple_strequal(name, "presence"))
+	        && ((xmlns == NULL)
+	            || purple_strequal(xmlns, NS_XMPP_CLIENT)
+	            || purple_strequal(xmlns, NS_XMPP_SERVER)));
+}
+
 void jabber_send_signal_cb(PurpleConnection *pc, xmlnode **packet,
                            gpointer unused)
 {
@@ -601,13 +635,13 @@ void jabber_send_signal_cb(PurpleConnection *pc, xmlnode **packet,
 		return;
 
 	if (js->bosh)
-		if (purple_strequal((*packet)->name, "message") ||
-				purple_strequal((*packet)->name, "iq") ||
-				purple_strequal((*packet)->name, "presence"))
+		if (jabber_is_stanza(*packet))
 			xmlnode_set_namespace(*packet, NS_XMPP_CLIENT);
 	txt = xmlnode_to_str(*packet, &len);
 	jabber_send_raw(js, txt, len);
 	g_free(txt);
+
+	jabber_sm_outbound(js, *packet);
 }
 
 void jabber_send(JabberStream *js, xmlnode *packet)
@@ -1014,6 +1048,8 @@ jabber_stream_new(PurpleAccount *account)
 	presence = purple_account_get_presence(account);
 	if (purple_presence_is_idle(presence))
 		js->idle = purple_presence_get_idle_time(presence);
+
+	js->sm_state = SM_DISABLED;
 
 	return js;
 }
@@ -1597,8 +1633,10 @@ void jabber_close(PurpleConnection *gc)
 
 	if (js->bosh)
 		jabber_bosh_connection_close(js->bosh);
-	else if ((js->gsc && js->gsc->fd > 0) || js->fd > 0)
+	else if ((js->gsc && js->gsc->fd > 0) || js->fd > 0) {
+		jabber_sm_ack_send(js);
 		jabber_send_raw(js, "</stream:stream>", -1);
+	}
 
 	if (js->srv_query_data)
 		purple_srv_cancel(js->srv_query_data);
@@ -3896,12 +3934,15 @@ jabber_do_init(void)
 	jabber_si_init();
 
 	jabber_auth_init();
+
+	jabber_sm_init();
 }
 
 static void
 jabber_do_uninit(void)
 {
 	/* reverse order of jabber_do_init */
+	jabber_sm_uninit();
 	jabber_bosh_uninit();
 	jabber_data_uninit();
 	jabber_si_uninit();
