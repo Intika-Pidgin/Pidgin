@@ -106,6 +106,9 @@ version 3.0.0 (??/??/????):
 	* A single jabber plugin provides XMPP, GTalk and Facebook protocols.
 	* A single yahoo plugin provides both Yahoo and Yahoo JAPAN protocols.
 
+	GNT:
+	* Fix a use after free when using Python. (PR #357 kdex)
+
 version 2.13.0 (03/08/2018):
 	libpurple:
 	* Unified string comparison. (PR #186) (Arkadiy Illarionov)
