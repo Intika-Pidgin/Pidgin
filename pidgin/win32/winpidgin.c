@@ -366,7 +366,7 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 			return 0;
 
 	/* Now we are ready for Pidgin .. */
-	if ((hmod = LoadLibraryW(L"libpidgin-20.dll")))
+	if ((hmod = LoadLibraryW(LIBPIDGIN_DLL_NAMEW)))
 		pidgin_main = (LPFNPIDGINMAIN) GetProcAddress(hmod, "pidgin_main");
 
 	if (!pidgin_main) {
@@ -374,8 +374,8 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		const wchar_t *err_msg = get_win32_error_message(dw);
 
 		_snwprintf(errbuf, sizeof(errbuf) / sizeof(wchar_t),
-				L"Error loading libpidgin-20.dll.\n"
-				"Error: (%u) %s", (UINT) dw, err_msg);
+				L"Error loading %s.\nError: (%u) %s",
+				LIBPIDGIN_DLL_NAMEW, (UINT) dw, err_msg);
 		wprintf(L"%s\n", errbuf);
 		MessageBoxW(NULL, errbuf, L"Error", MB_OK | MB_TOPMOST);
 
