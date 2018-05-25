@@ -108,6 +108,7 @@ libpidgin_SOURCES += pidgin_resource
 
 if IS_WIN32
 	libpidgin_SOURCES += [
+		'pidgin.c',
 		'win32/gtkwin32dep.c',
 		'win32/untar.c'
 	]
@@ -121,7 +122,7 @@ if IS_WIN32
 	    input : 'win32/pidgin_exe_rc.rc.in',
 	    output : 'pidgin_exe_rc.rc',
 	    configuration : version_conf)
-	pidgin_SOURCES += [
+	pidgin_SOURCES = [
 	    'win32/winpidgin.c',
 	    windows.compile_resources(pidgin_exe_rc,
 	        include_directories : include_directories('win32')
@@ -176,8 +177,8 @@ if ENABLE_GTK
 
 	pidgin = executable('pidgin',
 	    pidgin_SOURCES,
-	    link_args : '-export-dynamic',
-	    dependencies : [libpurple_dep, libpidgin_dep],
+	    include_directories : toplevel_inc,
+	    dependencies : IS_WIN32 ? [] : [libpurple_dep, libpidgin_dep],
 	    gui_app : true,
 	    install : true)
 
