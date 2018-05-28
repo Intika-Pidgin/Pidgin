@@ -699,6 +699,7 @@ if compiler.get_id() == 'gcc'
 			'-Wendif-labels',
 			'-Werror-implicit-function-declaration',
 			'-Wextra -Wno-unused-parameter',
+			'-Wformat',
 			'-Wformat-security',
 			'-Werror=format-security',
 			'-Winit-self',
