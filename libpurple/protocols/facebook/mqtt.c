@@ -569,13 +569,16 @@ fb_mqtt_read(FbMqtt *mqtt, FbMqttMessage *msg)
 }
 
 static void
-fb_mqtt_cb_flush(GObject *source, GAsyncResult *res, gpointer data)
+fb_mqtt_cb_push_bytes(GObject *source, GAsyncResult *res, gpointer data)
 {
+	PurpleQueuedOutputStream *stream = PURPLE_QUEUED_OUTPUT_STREAM(source);
 	FbMqtt *mqtt = data;
 	GError *err = NULL;
 
-	if (!g_output_stream_flush_finish(G_OUTPUT_STREAM(source),
+	if (!purple_queued_output_stream_push_bytes_finish(stream,
 			res, &err)) {
+		purple_queued_output_stream_clear_queue(stream);
+
 		fb_mqtt_take_error(mqtt, err, _("Failed to write data"));
 		return;
 	}
@@ -608,14 +611,10 @@ fb_mqtt_write(FbMqtt *mqtt, FbMqttMessage *msg)
 
  	/* TODO: Would be nice to refactor this to not require copying bytes */
 	gbytes = g_bytes_new(bytes->data, bytes->len);
-	purple_queued_output_stream_push_bytes(priv->output, gbytes);
+	purple_queued_output_stream_push_bytes_async(priv->output, gbytes,
+			G_PRIORITY_DEFAULT, priv->cancellable,
+			fb_mqtt_cb_push_bytes, mqtt);
 	g_bytes_unref(gbytes);
-
-	if (!g_output_stream_has_pending(G_OUTPUT_STREAM(priv->output))) {
-		g_output_stream_flush_async(G_OUTPUT_STREAM(priv->output),
-				G_PRIORITY_DEFAULT, priv->cancellable,
-				fb_mqtt_cb_flush, mqtt);
-	}
 }
 
 static void
