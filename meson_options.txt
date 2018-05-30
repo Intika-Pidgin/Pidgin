@@ -29,9 +29,6 @@ option('cap', type : 'boolean', value : false,
 option('gestures', type : 'boolean', value : true,
        description : 'compile with the gestures plugin')
 
-option('gcr', type : 'boolean', value : false,
-       description : 'compile with GCR certificate widgets')
-
 option('gstreamer', type : 'boolean', value : true,
        description : 'compile with GStreamer audio support')
 
