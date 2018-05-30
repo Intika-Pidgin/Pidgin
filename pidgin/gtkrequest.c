@@ -26,7 +26,6 @@
 
 #include "debug.h"
 #include "prefs.h"
-#include "tls-certificate-info.h"
 #include "util.h"
 
 #include "gtkrequest.h"
@@ -36,11 +35,6 @@
 #include "gtkinternal.h"
 
 #include <gdk/gdkkeysyms.h>
-
-#ifdef ENABLE_GCR
-#define GCR_API_SUBJECT_TO_CHANGE
-#include <gcr/gcr.h>
-#endif
 
 #include "gtk3compat.h"
 
@@ -1485,56 +1479,6 @@ create_list_field(PurpleRequestField *field)
 	return pidgin_make_scrollable(treeview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, -1);
 }
 
-static GtkWidget *
-create_certificate_field(PurpleRequestField *field)
-{
-	GTlsCertificate *cert;
-#ifdef ENABLE_GCR
-	GByteArray *der = NULL;
-	GcrCertificateBasicsWidget *cert_widget;
-	GcrCertificate *gcrt;
-#else
-	PurpleTlsCertificateInfo *info;
-	GtkWidget *cert_label;
-	char *str;
-	char *escaped;
-#endif
-
-	cert = purple_request_field_certificate_get_value(field);
-
-#ifdef ENABLE_GCR
-	g_object_get(cert, "certificate", &der, NULL);
-	g_return_val_if_fail(der, NULL);
-
-	gcrt = gcr_simple_certificate_new(der->data, der->len);
-	g_return_val_if_fail(gcrt, NULL);
-
-	cert_widget = gcr_certificate_basics_widget_new(gcrt);
-
-	g_byte_array_free(der, TRUE);
-	g_object_unref(G_OBJECT(gcrt));
-
-	return GTK_WIDGET(cert_widget);
-#else
-	info = purple_tls_certificate_get_info(cert);
-	str = purple_tls_certificate_info_get_display_string(info);
-	purple_tls_certificate_info_free(info);
-
-	escaped = g_markup_escape_text(str, -1);
-
-	cert_label = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(cert_label), escaped);
-	gtk_label_set_line_wrap(GTK_LABEL(cert_label), TRUE);
-	gtk_label_set_xalign(GTK_LABEL(cert_label), 0);
-	gtk_label_set_yalign(GTK_LABEL(cert_label), 0);
-
-	g_free(str);
-	g_free(escaped);
-
-	return cert_label;
-#endif
-}
-
 static GdkPixbuf*
 _pidgin_datasheet_stock_icon_get(const gchar *stock_name)
 {
@@ -2331,8 +2275,6 @@ pidgin_request_fields(const char *title, const char *primary,
 						widget = create_image_field(field);
 					else if (type == PURPLE_REQUEST_FIELD_ACCOUNT)
 						widget = create_account_field(field);
-					else if (type == PURPLE_REQUEST_FIELD_CERTIFICATE)
-						widget = create_certificate_field(field);
 					else if (type == PURPLE_REQUEST_FIELD_DATASHEET)
 						widget = create_datasheet_field(field, datasheet_buttons_sg);
 					else
