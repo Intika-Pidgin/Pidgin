@@ -29,7 +29,6 @@
  */
 
 #include <stdlib.h>
-#include <gio/gio.h>
 #include <glib-object.h>
 #include <glib.h>
 
@@ -112,7 +111,6 @@ typedef enum
 	PURPLE_REQUEST_FIELD_LABEL,
 	PURPLE_REQUEST_FIELD_IMAGE,
 	PURPLE_REQUEST_FIELD_ACCOUNT,
-	PURPLE_REQUEST_FIELD_CERTIFICATE,
 	PURPLE_REQUEST_FIELD_DATASHEET
 
 } PurpleRequestFieldType;
@@ -1776,35 +1774,6 @@ PurpleFilterAccountFunc purple_request_field_account_get_filter(
 		const PurpleRequestField *field);
 
 /**************************************************************************/
-/* Certificate Field API                                                  */
-/**************************************************************************/
-
-/**
- * purple_request_field_certificate_new:
- * @id:   The field ID.
- * @text: The label of the field.
- * @cert: The certificate of the field.
- *
- * Creates a certificate field.
- *
- * Returns: The new field.
- */
-PurpleRequestField *purple_request_field_certificate_new(const char *id,
-														 const char *text,
-														 GTlsCertificate *cert);
-
-/**
- * purple_request_field_certificate_get_value:
- * @field: The field.
- *
- * Returns the certificate in a certificate field.
- *
- * Returns: The certificate.
- */
-GTlsCertificate *purple_request_field_certificate_get_value(
-		const PurpleRequestField *field);
-
-/**************************************************************************/
 /* Datasheet Field API                                                    */
 /**************************************************************************/
 
@@ -2239,39 +2208,6 @@ void *
 purple_request_folder(void *handle, const char *title, const char *dirname,
 	GCallback ok_cb, GCallback cancel_cb,
 	PurpleRequestCommonParameters *cpar, void *user_data);
-
-/**
- * purple_request_certificate:
- * @handle:        The plugin or connection handle.  For some things this
- *                 is <emphasis>extremely</emphasis> important.  See the comments on
- *                 purple_request_input().
- * @title:         The title of the message, or %NULL if it should have
- *                 no title.
- * @primary:       The main point of the message, or %NULL if you're
- *                 feeling enigmatic.
- * @secondary:     Secondary information, or %NULL if there is none.
- * @cert:          The #GTlsCertificate associated with this request.
- * @ok_text:       The text for the <literal>OK</literal> button, which may not
- *                 be %NULL.
- * @ok_cb:         The callback for the <literal>OK</literal> button, which may
- *                 not be %NULL.
- * @cancel_text:   The text for the <literal>Cancel</literal> button, which may
- *                 not be %NULL.
- * @cancel_cb:     The callback for the <literal>Cancel</literal> button, which
- *                 may be %NULL.
- * @user_data:     The data to pass to the callback.
- *
- * Prompts the user for action over a certificate.
- *
- * This is often represented as a dialog with a button for each action.
- *
- * Returns: A UI-specific handle.
- */
-void *purple_request_certificate(void *handle, const char *title,
-	const char *primary, const char *secondary, GTlsCertificate *cert,
-	const char *ok_text, GCallback ok_cb,
-	const char *cancel_text, GCallback cancel_cb,
-	void *user_data);
 
 /**************************************************************************/
 /* UI Registration Functions                                              */
