@@ -161,8 +161,6 @@ libpurple/server.c
 libpurple/smiley.c
 libpurple/sslconn.c
 libpurple/status.c
-libpurple/tls-certificate-info.c
-libpurple/tls-certificate.c
 libpurple/util.c
 libpurple/win32/libc_interface.c
 libpurple/xfer.c
