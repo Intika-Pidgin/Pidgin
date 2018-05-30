@@ -160,7 +160,6 @@ if ENABLE_GTK
 	    dependencies : [
 	    	dbus,
 	    	enchant,
-	    	GCR,
 	    	glib,
 	    	gstreamer_video,
 	    	gtk,
