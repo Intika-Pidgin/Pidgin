@@ -40,7 +40,6 @@
 #include "gtkaccount.h"
 #include "gtkblist.h"
 #include "gtkcellrendererexpander.h"
-#include "gtkcertmgr.h"
 #include "gtkconv.h"
 #include "gtkdialogs.h"
 #include "gtkxfer.h"
@@ -3651,7 +3650,6 @@ static const GtkActionEntry blist_menu_entries[] = {
 	/* Tools */
 	{ "ToolsMenu", NULL, N_("_Tools"), NULL, NULL, NULL },
 	{ "BuddyPounces", NULL, N_("Buddy _Pounces"), NULL, NULL, pidgin_pounces_manager_show },
-	{ "Certificates", NULL, N_("_Certificates"), NULL, NULL, pidgin_certmgr_show },
 	{ "CustomSmileys", PIDGIN_STOCK_TOOLBAR_SMILEY, N_("Custom Smile_ys"), "<control>Y", NULL, pidgin_smiley_manager_show },
 	{ "Plugins", PIDGIN_STOCK_TOOLBAR_PLUGINS, N_("Plu_gins"), "<control>U", NULL, pidgin_plugin_dialog_show },
 	{ "Preferences", GTK_STOCK_PREFERENCES, N_("Pr_eferences"), "<control>P", NULL, pidgin_prefs_show },
@@ -3711,7 +3709,6 @@ static const char *blist_menu =
 		"</menu>"
 		"<menu action='ToolsMenu'>"
 			"<menuitem action='BuddyPounces'/>"
-			"<menuitem action='Certificates'/>"
 			"<menuitem action='CustomSmileys'/>"
 			"<menuitem action='Plugins'/>"
 			"<menuitem action='Preferences'/>"

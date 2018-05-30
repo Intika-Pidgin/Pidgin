@@ -174,7 +174,6 @@ pidgin/data/im.pidgin.Pidgin.desktop.in.in
 pidgin/gtkaccount.c
 pidgin/gtkblist-theme.c
 pidgin/gtkblist.c
-pidgin/gtkcertmgr.c
 pidgin/gtkconn.c
 pidgin/gtkconv.c
 pidgin/gtkdebug.c
