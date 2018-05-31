@@ -2508,10 +2508,10 @@ purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer,
 }
 
 void
-purple_protocol_xfer_send(PurpleProtocolXfer *prplxfer,
-                          PurpleConnection *connection,
-                          const gchar *who,
-                          const gchar *filename
+purple_protocol_xfer_send_file(PurpleProtocolXfer *prplxfer,
+                               PurpleConnection *connection,
+                               const gchar *who,
+                               const gchar *filename
 ) {
 	PurpleProtocolXferInterface *iface = NULL;
 
@@ -2521,8 +2521,8 @@ purple_protocol_xfer_send(PurpleProtocolXfer *prplxfer,
 	g_return_if_fail(filename);
 
 	iface = PURPLE_PROTOCOL_XFER_GET_IFACE(prplxfer);
-	if(iface && iface->send)
-		iface->send(prplxfer, connection, who, filename);
+	if(iface && iface->send_file)
+		iface->send_file(prplxfer, connection, who, filename);
 }
 
 PurpleXfer *

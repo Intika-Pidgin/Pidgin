@@ -1,3 +1,109 @@
+# UPDATING VERSION NUMBERS FOR RELEASES
+#
+# If any code has changed in libgnt:
+#   gnt_micro_version += 1
+#
+# If any functions have been added to libgnt:
+#   gnt_micro_version = 0
+#   gnt_minor_version += 1
+#   gnt_lt_current += 1
+#
+# If backwards compatibility has been broken in libgnt:
+#   gnt_micro_version = 0
+#   gnt_minor_version = 0
+#   gnt_major_version += 1;
+#   gnt_lt_current += 1
+#
+# gnt_version_suffix should be similar to one of the following:
+#   For beta releases:          'beta2'
+#   For code under development: 'devel'
+#   For production releases:    ''
+#
+
+# the last version for Finch 2 was 2.8.10,
+# the first version for Finch 3 was 2.9.0
+gnt_lt_current = 9
+gnt_major_version = 2
+gnt_minor_version = 9
+gnt_micro_version = 0
+gnt_version_suffix = 'devel'
+gnt_version = '@0@.@1@.@2@'.format(gnt_major_version,
+                                   gnt_minor_version,
+                                   gnt_micro_version)
+gnt_display_version = '@0@@1@'.format(gnt_version,
+                                      gnt_version_suffix)
+
+GNT_LIB_VERSION = '@0@.@1@.@2@'.format(gnt_lt_current - gnt_minor_version,
+                                       gnt_minor_version,
+                                       gnt_micro_version)
+
+# Always true when built as part of pidgin repo.
+PURPLE_AVAILABLE = true
+
+gnt_config = configuration_data()
+
+#######################################################################
+# Check for ncurses and other things used by the console UI
+#######################################################################
+ncurses_available = false
+if get_option('consoleui')
+	ncurses_available = true
+	ncurses_inc = []
+	ncurses_libs = [
+		compiler.find_library('ncursesw', required : false),
+		compiler.find_library('panelw', required : false)
+	]
+	if not ncurses_libs[0].found() or not ncurses_libs[1].found()
+		ncurses_available = false
+	endif
+
+	if IS_WIN32
+		# FIXME: $host ?
+		ncurses_sys_prefix = '/usr/$host/sys-root/mingw'
+	else
+		ncurses_sys_prefix = '/usr'
+	endif
+
+	ncurses_sys_dirs = [ncurses_sys_prefix + '/include/ncursesw',
+	                    ncurses_sys_prefix + '/include']
+
+	if ncurses_available
+		# Some distros put the headers in ncursesw/, some don't
+		found_ncurses_h = false
+		foreach location : ncurses_sys_dirs
+			f = location + '/ncurses.h'
+			if not found_ncurses_h
+				if compiler.has_header_symbol(f, 'get_wch',
+				       prefix : '#define _XOPEN_SOURCE_EXTENDED')
+					if location != '.'
+						ncurses_inc += [include_directories(location)]
+					endif
+					found_ncurses_h = true
+				endif
+			endif
+		endforeach
+
+		if not found_ncurses_h
+			ncurses_inc = []
+			ncurses_libs = []
+			ncurses_available = false
+		endif
+	else
+		# ncursesw was not found. Look for plain old ncurses
+		ncurses_libs = [
+			compiler.find_library('ncurses', required : false),
+			compiler.find_library('panel', required : false)
+		]
+		ncurses_available = ncurses_libs[0].found() and ncurses_libs[1].found()
+		gnt_config.set('NO_WIDECHAR', true)
+	endif
+
+	ncurses = declare_dependency(
+	    include_directories : ncurses_inc,
+	    dependencies : ncurses_libs
+	)
+endif
+
 libgnt_SOURCES = [
 	'gntwidget.c',
 	'gntbindable.c',
@@ -56,7 +162,16 @@ libgnt_headers = [
 	'gnt.h'
 ]
 
-if enable_consoleui
+if ncurses_available
+
+# Check for Python headers
+python_dep = dependency('python3')
+gnt_config.set('USE_PYTHON', python_dep.found())
+
+configure_file(output : 'gntconfig.h',
+    configuration : gnt_config)
+
+gmodule = dependency('gmodule-2.0')
 
 install_headers(libgnt_headers, subdir : 'gnt')
 
@@ -99,4 +214,4 @@ endif
 subdir('wms')
 subdir('test')
 
-endif  # enable_consoleui
+endif  # ncurses_available

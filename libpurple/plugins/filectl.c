@@ -179,13 +179,13 @@ getarg(char *line, int which, int remain)
 		}
 	}
 
-	arr = strdup(&line[i - 1]);
+	arr = g_strdup(&line[i - 1]);
 	if (remain)
 		return arr;
 
 	for (i = 0; i < strlen(arr) && isalnum(arr[i]); i++);
 	arr[i] = 0;
-	val = strdup(arr);
+	val = g_strdup(arr);
 	arr[i] = ' ';
 	free(arr);
 	return val;

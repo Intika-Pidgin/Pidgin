@@ -44,7 +44,7 @@
 #define PURPLE_PROTOCOL_XFER_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXferInterface))
 
 /**************************************************************************/
-/** Data Structures                                                       */
+/* Data Structures                                                        */
 /**************************************************************************/
 typedef struct _PurpleXfer PurpleXfer;
 typedef struct _PurpleXferClass PurpleXferClass;
@@ -206,7 +206,7 @@ struct _PurpleProtocolXferInterface
 	/*< public >*/
 	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who);
 
-	void (*send)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who, const gchar *filename);
+	void (*send_file)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who, const gchar *filename);
 
 	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who);
 };
@@ -999,7 +999,7 @@ GType purple_protocol_xfer_get_type(void);
 gboolean purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const gchar *who);
 
 /**
- * purple_protocol_xfer_send:
+ * purple_protocol_xfer_send_file:
  * @prplxfer: The #PurpleProtocolXfer implementer instance
  * @connection: The #PurpleConnection that we're checking
  * @who: The user that we want to set a file transfer to.
@@ -1007,7 +1007,7 @@ gboolean purple_protocol_xfer_can_receive(PurpleProtocolXfer *prplxfer, PurpleCo
  *
  * Sends @filename to @who.
  */
-void purple_protocol_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const gchar *who, const gchar *filename);
+void purple_protocol_xfer_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *connection, const gchar *who, const gchar *filename);
 
 /**
  * purple_protocol_xfer_send:

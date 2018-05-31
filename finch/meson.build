@@ -1,4 +1,17 @@
 subdir('libgnt')
+enable_consoleui = false
+if get_option('consoleui')
+	if ncurses_available
+		enable_consoleui = true
+	else
+		error('''
+
+Finch will not be built. You need to install ncursesw (or ncurses) and its development headers.
+
+''')
+	endif
+endif
+
 
 libfinch_SOURCES = [
 	'gntaccount.c',

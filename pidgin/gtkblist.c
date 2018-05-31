@@ -936,6 +936,15 @@ pidgin_blist_update_privacy_cb(PurpleBuddy *buddy)
 }
 
 static gboolean
+add_buddy_account_filter_func(PurpleAccount *account)
+{
+	PurpleConnection *gc = purple_account_get_connection(account);
+	PurpleProtocol *protocol = purple_connection_get_protocol(gc);
+
+	return PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, add_buddy);
+}
+
+static gboolean
 chat_account_filter_func(PurpleAccount *account)
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
@@ -3350,11 +3359,12 @@ static char *get_mood_icon_path(const char *mood)
 	char *path;
 
 	if (purple_strequal(mood, "busy")) {
-		path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
-			"status", "16", "busy.png", NULL);
+		path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons",
+			"hicolor", "16x16", "status", "user-busy.png", NULL);
 	} else if (purple_strequal(mood, "hiptop")) {
-		path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
-			"emblems", "16", "hiptop.png", NULL);
+		path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons",
+			"hicolor", "16x16", "emblems", "emblem-hiptop.png",
+			NULL);
 	} else {
 		char *filename = g_strdup_printf("%s.png", mood);
 		path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
@@ -4065,8 +4075,9 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 	g_return_val_if_fail(buddy != NULL, NULL);
 
 	if (!purple_account_privacy_check(purple_buddy_get_account(buddy), purple_buddy_get_name(buddy))) {
-		path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
-			"emblems", "16", "blocked.png", NULL);
+		path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons",
+			"hicolor", "16x16", "emblems", "emblem-blocked.png",
+			NULL);
 		return _pidgin_blist_get_cached_emblem(path);
 	}
 
@@ -4086,14 +4097,16 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 	if (tune && purple_status_is_active(tune)) {
 		/* TODO: Replace "Tune" with generalized "Media" in 3.0. */
 		if (purple_status_get_attr_string(tune, "game") != NULL) {
-			path = g_build_filename(PURPLE_DATADIR, "pixmaps",
-				"pidgin", "emblems", "16", "game.png", NULL);
+			path = g_build_filename(PURPLE_DATADIR, "pidgin",
+				"icons", "hicolor", "16x16", "emblems",
+				"emblem-game.png", NULL);
 			return _pidgin_blist_get_cached_emblem(path);
 		}
 		/* TODO: Replace "Tune" with generalized "Media" in 3.0. */
 		if (purple_status_get_attr_string(tune, "office") != NULL) {
-			path = g_build_filename(PURPLE_DATADIR, "pixmaps",
-				"pidgin", "emblems", "16", "office.png", NULL);
+			path = g_build_filename(PURPLE_DATADIR, "pidgin",
+				"icons", "hicolor", "16x16", "emblems",
+				"emblem-office.png", NULL);
 			return _pidgin_blist_get_cached_emblem(path);
 		}
 		/* Regular old "tune" is the only one in all protocols. */
@@ -4123,9 +4136,9 @@ pidgin_blist_get_emblem(PurpleBlistNode *node)
 
 		path = get_mood_icon_path(name);
 	} else {
-		filename = g_strdup_printf("%s.png", name);
-		path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
-			"emblems", "16", filename, NULL);
+		filename = g_strdup_printf("emblem-%s.png", name);
+		path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons",
+			"hicolor", "16x16", "emblems", filename, NULL);
 		g_free(filename);
 	}
 
@@ -6114,6 +6127,9 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	purple_signal_connect(handle, "conversation-created", gtkblist,
 	                      PURPLE_CALLBACK(conversation_created_cb),
 	                      gtkblist);
+	purple_signal_connect(handle, "chat-joined", gtkblist,
+	                      PURPLE_CALLBACK(conversation_created_cb),
+	                      gtkblist);
 
 	gtk_widget_hide(gtkblist->headline);
 
@@ -7086,7 +7102,7 @@ pidgin_blist_request_add_buddy(PurpleAccount *account, const char *username,
 		account,
 		_("Add Buddy"), "add_buddy",
 		_("Add a buddy.\n"),
-		G_CALLBACK(add_buddy_select_account_cb), NULL,
+		G_CALLBACK(add_buddy_select_account_cb), add_buddy_account_filter_func,
 		G_CALLBACK(add_buddy_cb));
 	gtk_dialog_add_buttons(GTK_DIALOG(data->rq_data.window),
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,

@@ -34,7 +34,7 @@
 #define PURPLE_TYPE_SOUND_UI_OPS (purple_sound_ui_ops_get_type())
 
 /**************************************************************************/
-/** Data Structures                                                       */
+/* Data Structures                                                        */
 /**************************************************************************/
 typedef struct _PurpleSoundUiOps PurpleSoundUiOps;
 

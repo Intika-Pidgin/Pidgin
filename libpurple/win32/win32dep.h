@@ -82,8 +82,6 @@ const char *wpurple_cert_dir(void);
 void wpurple_init(void);
 void wpurple_cleanup(void);
 
-long wpurple_get_tz_offset(void);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

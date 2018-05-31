@@ -83,7 +83,6 @@ typedef void (*PurplePrefCallback) (const char *name, PurplePrefType type,
  */
 typedef struct _PurplePrefCallbackData PurplePrefCallbackData;
 
-/** @copydoc _PurplePrefsUiOps */
 typedef struct _PurplePrefsUiOps PurplePrefsUiOps;
 
 /**

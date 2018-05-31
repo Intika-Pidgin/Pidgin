@@ -183,14 +183,11 @@ static void jabber_time_parse(JabberStream *js, const char *from,
                               PurpleXmlNode *child)
 {
 	JabberIq *iq;
-	time_t now_t;
-	struct tm *tm;
-
-	time(&now_t);
 
 	if(type == JABBER_IQ_GET) {
 		PurpleXmlNode *tzo, *utc;
-		const char *date, *tz;
+		GDateTime *now, *now_utc;
+		gchar *date, *tz;
 
 		iq = jabber_iq_new(js, JABBER_IQ_RESULT);
 		jabber_iq_set_id(iq, id);
@@ -201,16 +198,21 @@ static void jabber_time_parse(JabberStream *js, const char *from,
 		purple_xmlnode_set_namespace(child, NS_ENTITY_TIME);
 
 		/* <tzo>-06:00</tzo> */
-		tm = localtime(&now_t);
-		tz = purple_get_tzoff_str(tm, TRUE);
+		now = g_date_time_new_now_local();
+		tz = g_date_time_format(now, "%:z");
 		tzo = purple_xmlnode_new_child(child, "tzo");
 		purple_xmlnode_insert_data(tzo, tz, -1);
+		g_free(tz);
 
 		/* <utc>2006-12-19T17:58:35Z</utc> */
-		tm = gmtime(&now_t);
-		date = purple_utf8_strftime("%Y-%m-%dT%H:%M:%SZ", tm);
+		now_utc = g_date_time_to_utc(now);
+		date = g_date_time_format(now_utc, "%FT%TZ");
 		utc = purple_xmlnode_new_child(child, "utc");
 		purple_xmlnode_insert_data(utc, date, -1);
+		g_free(date);
+
+		g_date_time_unref(now);
+		g_date_time_unref(now_utc);
 
 		jabber_iq_send(iq);
 	} else {

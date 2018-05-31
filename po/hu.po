@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Translators:
-# Balázs Meskó <meskobalazs@gmail.com>, 2015
+# Balázs Meskó <meskobalazs@gmail.com>, 2015,2017
 # Gabor Kelemen <kelemeng at gnome dot hu>, 2014
 # kelemeng <kelemeng@ubuntu.com>, 2011
 # kelemeng <kelemeng@ubuntu.com>, 2011,2014
@@ -12,9 +12,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:53-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
-"Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 11:38+0000\n"
+"Last-Translator: Balázs Meskó <meskobalazs@gmail.com>\n"
 "Language-Team: Hungarian (http://www.transifex.com/pidgin/pidgin/language/"
 "hu/)\n"
 "Language: hu\n"
@@ -1287,7 +1287,7 @@ msgid "(default)"
 msgstr "(alapértelmezett)"
 
 msgid "Select Sound File..."
-msgstr ""
+msgstr "Válasszon hangfájlt…"
 
 msgid "Sound Preferences"
 msgstr "Hangbeállítások"
@@ -1407,11 +1407,11 @@ msgid "Edit Status"
 msgstr "Állapot szerkesztése"
 
 msgid "Use a different status for some accounts"
-msgstr ""
+msgstr "Eltérő állapot használata egyes fiókokhoz"
 
 #. Save and Use
 msgid "Save and Use"
-msgstr ""
+msgstr "Mentés és használat"
 
 msgid "Certificates"
 msgstr "Tanúsítványok"
@@ -1541,7 +1541,7 @@ msgid "TinyURL for above: %s"
 msgstr "TinyURL a fentihez: %s"
 
 msgid "Please wait while TinyURL fetches a shorter URL..."
-msgstr ""
+msgstr "Kis türelmet, a TinyURL rövidebb URL címet készít…"
 
 msgid "Only create TinyURL for URLs of this length or greater"
 msgstr "TinyURL készítése csak a legalább ilyen hosszú URL-címekhez"
@@ -1556,7 +1556,7 @@ msgid "TinyURL plugin"
 msgstr "TinyURL bővítmény"
 
 msgid "Shorten URLs in messages using TinyURL"
-msgstr ""
+msgstr "Az URL címke rövidítése a TinyURL használatával"
 
 msgid "Online"
 msgstr "Elérhető"
@@ -2819,6 +2819,8 @@ msgid ""
 "Causes conversation windows to appear as other users begin to message you.  "
 "This works for AIM, ICQ, XMPP, and Sametime"
 msgstr ""
+"Hatására a társalgási ablakok megjelennek, amint más felhasználók elkezdik "
+"üzenetüket írni.  Ez az AIM, ICQ, XMPP és a Sametime protokollokkal működik."
 
 msgid "You feel a disturbance in the force..."
 msgstr "Zavart érez az erőben…"
@@ -3038,6 +3040,8 @@ msgid ""
 "Unable to find Apple's \"Bonjour for Windows\" toolkit, see https://"
 "developer.pidgin.im/BonjourWindows for more information."
 msgstr ""
+"Az Apple „Bonjour For Windows” eszközkészlet nem található, további "
+"információkat a https://developer.pidgin.im/BonjourWindows oldalon találhat."
 
 msgid "Unable to listen for incoming IM connections"
 msgstr "A bejövő azonnaliüzenő-kapcsolatok figyelése nem lehetséges"
@@ -5673,10 +5677,10 @@ msgid "Received invalid data on connection with server"
 msgstr "Érvénytelen adatok érkeztek a kapcsolaton a kiszolgálótól"
 
 msgid "Error parsing response from authentication server"
-msgstr ""
+msgstr "Hiba a hitelesítéskiszolgáló válaszának feldolgozásakor"
 
 msgid "Unknown error during authentication"
-msgstr ""
+msgstr "Ismeretlen hiba a hitelesítés során"
 
 #. *< type
 #. *< ui_requirement
@@ -5810,6 +5814,8 @@ msgid ""
 "You required Kerberos authentication but encryption is disabled in your "
 "account settings."
 msgstr ""
+"Kerberos hitelesítést követelt meg, de a titkosítás tiltott a "
+"fiókbeállításokban."
 
 #, c-format
 msgid "You may be disconnected shortly.  If so, check %s for updates."
@@ -6354,16 +6360,16 @@ msgid "Search for Buddy by Email Address..."
 msgstr "Partner keresése e-mail cím szerint…"
 
 msgid "clientLogin"
-msgstr ""
+msgstr "Kliensbejelentkezés"
 
 msgid "Kerberos"
-msgstr ""
+msgstr "Kerberos"
 
 msgid "MD5-based"
-msgstr ""
+msgstr "MD5-alapú"
 
 msgid "Authentication method"
-msgstr ""
+msgstr "Hitelesítési mód"
 
 msgid ""
 "Always use AIM/ICQ proxy server for\n"
@@ -8544,6 +8550,8 @@ msgid ""
 "This means that you can be chatting with friends on AIM, talking to a friend "
 "on Google Talk, and sitting in an IRC chat room all at the same time."
 msgstr ""
+"Ez azt jelenti, hogy egyidejűleg cseveghet ismerőseivel az AIM-en, beszélhet "
+"a Google Talkon, és ülhet egy IRC csevegőszobában."
 
 msgid "The buddy list showing friends on different networks."
 msgstr "A partnerlista különböző hálózatokon elérhető ismerősökkel."
@@ -10089,6 +10097,13 @@ msgid ""
 "welcome to post in another language, but the responses may be less helpful."
 "<br/>"
 msgstr ""
+"<font size=\"4\"><b>Elérhető más Pidgin felhasználók segítsége</b></font> a "
+"<a href=\"mailto:support@pidgin.im\">support@pidgin.im</a> levelezőlistán<br/"
+">Ez egy <b>nyilvános</b> levelezőlista! (<a href=\"http://pidgin.im/"
+"pipermail/support/\">archívum</a>)<br/>Nem tudunk segíteni külső "
+"protokollokkal vagy bővítményekkel kapcsolatban!<br/>Ez a lista <b>angol</b> "
+"nyelvű. Írhat más nyelven is, de a válaszok nem biztos, hogy túl hasznosak "
+"lesznek.<br/>"
 
 #, c-format
 msgid "About %s"
@@ -11562,7 +11577,7 @@ msgstr "_Eltérő állapot használata egyes fiókokhoz"
 
 #. Save and Use button
 msgid "Sa_ve and Use"
-msgstr ""
+msgstr "Menté_s és használat"
 
 #, c-format
 msgid "Status for %s"
@@ -12312,7 +12327,7 @@ msgid "Notify For"
 msgstr "Figyelmeztetés"
 
 msgid "\tS_ystem messages"
-msgstr ""
+msgstr "\t_Rendszerüzenetek"
 
 msgid "\t_Only when someone says your username"
 msgstr "\t_Csak ha valaki kimondja az Ön felhasználónevét"
@@ -12505,6 +12520,9 @@ msgid ""
 "Lets you send raw input to text-based protocols (XMPP, IRC, TOC). Hit "
 "'Enter' in the entry box to send. Watch the debug window."
 msgstr ""
+"Nyers adatküldésre ad lehetőséget szövegalapú protokollok számára (XMPP, "
+"IRC, TOC). Nyomja meg az „Enter” billentyűt a küldéshez. Figyelje a "
+"hibakereső ablakot."
 
 #, c-format
 msgid "You can upgrade to %s %s today."
@@ -12802,6 +12820,58 @@ msgstr ""
 "Ez a bővítmény lehetővé teszi a felhasználó számára a társalgási és "
 "naplóüzenetek időpecsét-formátumainak testreszabását."
 
+msgid "Opacity:"
+msgstr "Átlátszatlanság:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "IM társalgási ablakok"
+
+msgid "_IM window transparency"
+msgstr "_IM ablak átlátszósága"
+
+msgid "_Show slider bar in IM window"
+msgstr "C_súszka megjelenítése az IM ablakban"
+
+msgid "Remove IM window transparency on focus"
+msgstr "IM ablak átlátszóságának eltávolítása, ha fókuszt kap"
+
+msgid "Always on top"
+msgstr "Mindig legfelül"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Partnerlista-ablak"
+
+msgid "_Buddy List window transparency"
+msgstr "_Partnerlista-ablak átlátszósága"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Partnerlista-ablak átlátszóságának eltávolítása, ha fókuszt kap"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Átlátszóság"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Változtatható átlátszóság a partnerlistához és a társalgásokhoz."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Ez a bővítmény lehetővé teszi változó alfa átlátszóság beállítását a "
+"társalgás és a partnerlista ablakában."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Csevegőszoba-figyelmeztetések"
@@ -12914,56 +12984,6 @@ msgstr "Mikrofon és webkamera beállítása."
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "Mikrofon- és webkamera-beállítások megadása hang- és videohívásokhoz."
-
-msgid "Opacity:"
-msgstr "Átlátszatlanság:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "IM társalgási ablakok"
-
-msgid "_IM window transparency"
-msgstr "_IM ablak átlátszósága"
-
-msgid "_Show slider bar in IM window"
-msgstr "C_súszka megjelenítése az IM ablakban"
-
-msgid "Remove IM window transparency on focus"
-msgstr "IM ablak átlátszóságának eltávolítása, ha fókuszt kap"
-
-msgid "Always on top"
-msgstr "Mindig legfelül"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Partnerlista-ablak"
-
-msgid "_Buddy List window transparency"
-msgstr "_Partnerlista-ablak átlátszósága"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Partnerlista-ablak átlátszóságának eltávolítása, ha fókuszt kap"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Átlátszóság"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Változtatható átlátszóság a partnerlistához és a társalgásokhoz."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

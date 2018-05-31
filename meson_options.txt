@@ -1,6 +1,3 @@
-option('win32-dirs', type : 'combo', choices : ['classic', 'fhs'], value : 'classic',
-       description : 'use win32 "classic" (Program Files-like) or "fhs" (unix-like) directory structure (default: "classic")')
-
 option('nls', type : 'boolean', value : true,
        description : 'enable installation of translation files')
 
@@ -21,7 +18,7 @@ option('doc', type : 'boolean', value : false,
        description : 'build documentation with gtk-doc')
 
 option('enchant', type : 'boolean', value : true,
-       description : 'compile with Enchange spell checking support')
+       description : 'compile with Enchant spell checking support')
 
 option('gevolution', type : 'boolean', value : false,
        description : 'compile with the Evolution plugin')
@@ -71,6 +68,9 @@ option('dynamic-prpls', type : 'string', value: 'all',
 option('plugins', type : 'boolean', value : true,
        description : 'compile with plugin support')
 
+option('introspection', type : 'boolean', value : true,
+       description : 'build introspection data')
+
 option('krb4', type : 'boolean', value : false,
        description : 'compile Zephyr plugin with Kerberos 4 support')
 
@@ -92,9 +92,6 @@ option('unity-integration', type : 'boolean', value : false,
 option('secret-service', type : 'boolean', value : true,
        description : 'enable Secret Service support')
 
-option('gnome-keyring', type : 'boolean', value : true,
-       description : 'enable GNOME Keyring support')
-
 option('kwallet', type : 'boolean', value : true,
        description : 'enable KWallet support')
 
@@ -108,9 +105,6 @@ option('cyrus-sasl', type : 'boolean', value : false,
 
 option('pixmaps-install', type : 'boolean', value : true,
        description : 'enable installation of pixmap files - Pidgin still needs them!')
-
-option('trayicon-compat', type : 'boolean', value : false,
-       description : 'install tray icons in location compatible with older releases of hicolor-icon-theme')
 
 option('debug', type : 'boolean', value : false,
        description : 'compile with debugging support')

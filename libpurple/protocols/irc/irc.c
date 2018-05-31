@@ -128,6 +128,13 @@ int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
 	if (tosend == NULL)
 		return 0;
 
+	if (purple_debug_is_verbose()) {
+		gchar *clean = purple_utf8_salvage(tosend);
+		clean = g_strstrip(clean);
+		purple_debug_misc("irc", "<< %s\n", clean);
+		g_free(clean);
+	}
+
 	len = strlen(tosend);
 	data = g_bytes_new_take(tosend, len);
 	purple_queued_output_stream_push_bytes(irc->output, data);
@@ -913,8 +920,8 @@ irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
 static void
 irc_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
-	xfer_iface->send     = irc_dccsend_send_file;
-	xfer_iface->new_xfer = irc_dccsend_new_xfer;
+	xfer_iface->send_file = irc_dccsend_send_file;
+	xfer_iface->new_xfer  = irc_dccsend_new_xfer;
 }
 
 PURPLE_DEFINE_TYPE_EXTENDED(

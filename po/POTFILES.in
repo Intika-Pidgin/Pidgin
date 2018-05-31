@@ -62,7 +62,6 @@ libpurple/plugins/dbus-example.c
 libpurple/plugins/filectl.c
 libpurple/plugins/idle.c
 libpurple/plugins/joinpart.c
-libpurple/plugins/keyrings/gnomekeyring.c
 libpurple/plugins/keyrings/internalkeyring.c
 libpurple/plugins/keyrings/kwallet.cpp
 libpurple/plugins/keyrings/secretservice.c
@@ -235,9 +234,9 @@ pidgin/plugins/screencap.c
 pidgin/plugins/sendbutton.c
 pidgin/plugins/spellchk.c
 pidgin/plugins/ticker/ticker.c
+pidgin/plugins/transparency.c
 pidgin/plugins/unity.c
 pidgin/plugins/webkit.c
-pidgin/plugins/win32/transparency/win2ktrans.c
 pidgin/plugins/win32/winprefs/winprefs.c
 pidgin/plugins/xmppconsole.c
 pidgin/win32/nsis/nsis_translations.desktop.in

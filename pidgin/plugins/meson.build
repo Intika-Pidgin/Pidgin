@@ -1,4 +1,4 @@
-if enable_gevolution
+if get_option('gevolution')
 	subdir('gevolution')
 endif
 
@@ -6,7 +6,7 @@ if enable_dbus
 	subdir('musicmessaging')
 endif
 
-if enable_cap
+if get_option('cap')
 	subdir('cap')
 endif
 
@@ -19,7 +19,6 @@ subdir('ticker')
 
 if IS_WIN32
 	subdir('win32/winprefs')
-	subdir('win32/transparency')
 endif
 
 if PLUGINS

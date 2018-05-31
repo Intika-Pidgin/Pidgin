@@ -1737,7 +1737,7 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 			g_object_set_data_full(G_OBJECT(button), "user_data", g_strdup(who), g_free);
 	}
 
-	if (!is_me && protocol && !(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME)) {
+	if (!is_me && protocol && !(purple_protocol_get_options(protocol) & OPT_PROTO_UNIQUE_CHATNAME) && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, add_buddy)) {
 		if ((buddy = purple_blist_find_buddy(account, who)) != NULL)
 			button = pidgin_new_menu_item(menu, _("Remove"),
                                         GTK_STOCK_REMOVE,
@@ -4179,9 +4179,9 @@ _pidgin_e2ee_stock_icon_get(const gchar *stock_name)
 	if (g_hash_table_lookup_extended(e2ee_stock, stock_name, NULL, (gpointer*)&image))
 		return image;
 
-	g_snprintf(filename, sizeof(filename), "%s.png", stock_name);
-	path = g_build_filename(PURPLE_DATADIR, "pixmaps", "pidgin",
-		"e2ee", "16", filename, NULL);
+	g_snprintf(filename, sizeof(filename), "e2ee-%s.png", stock_name);
+	path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons",
+		"hicolor", "16x16", "status", filename, NULL);
 	image = purple_image_new_from_file(path, NULL);
 	g_free(path);
 
@@ -8933,11 +8933,7 @@ pidgin_conversations_init(void)
 			PURPLE_CALLBACK(wrote_msg_update_unseen_cb), NULL);
 
 	purple_theme_manager_register_type(g_object_new(PIDGIN_TYPE_CONV_THEME_LOADER, "type", "conversation", NULL));
-#if defined(_WIN32) && !defined(USE_WIN32_FHS)
-	theme_dir = g_build_filename(PURPLE_DATADIR, "theme", NULL);
-#else
 	theme_dir = g_build_filename(PURPLE_DATADIR, "pidgin", "theme", NULL);
-#endif
 	default_conv_theme = purple_theme_manager_load_theme(theme_dir, "conversation");
 	g_free(theme_dir);
 

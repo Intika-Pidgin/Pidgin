@@ -217,14 +217,12 @@ set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *ne
 	if (pixbuf == NULL)
 	{
 		/* Show a placeholder icon */
-		GtkIconSize icon_size = gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_SMALL);
-		pixbuf = gtk_widget_render_icon(dialog->window, PIDGIN_STOCK_TOOLBAR_SELECT_AVATAR,
-		                                icon_size, "PidginAccount");
-	}
-
-	gtk_image_set_from_pixbuf(GTK_IMAGE(dialog->icon_entry), pixbuf);
-	if (pixbuf != NULL)
+		gtk_image_set_from_icon_name(GTK_IMAGE(dialog->icon_entry),
+				"select-avatar", GTK_ICON_SIZE_LARGE_TOOLBAR);
+	} else {
+		gtk_image_set_from_pixbuf(GTK_IMAGE(dialog->icon_entry), pixbuf);
 		g_object_unref(G_OBJECT(pixbuf));
+	}
 }
 
 static void
@@ -398,7 +396,6 @@ static void
 update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 {
 	GtkStyleContext *style;
-	GdkRGBA color;
 	gboolean set;
 	GList *l;
 
@@ -411,12 +408,12 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 	set = !(purple_account_is_connected(dialog->account) || purple_account_is_connecting(dialog->account));
 	gtk_widget_set_sensitive(dialog->protocol_menu, set);
 	gtk_editable_set_editable(GTK_EDITABLE(dialog->username_entry), set);
-	style = set ? NULL : gtk_widget_get_style_context(dialog->username_entry);
-	if (style) {
-		gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
-		gtk_widget_override_background_color(dialog->username_entry, GTK_STATE_FLAG_NORMAL, &color);
+	style = gtk_widget_get_style_context(dialog->username_entry);
+
+	if (set) {
+		gtk_style_context_remove_class(style, "copyable-insensitive");
 	} else {
-		gtk_widget_override_background_color(dialog->username_entry, GTK_STATE_FLAG_NORMAL, NULL);
+		gtk_style_context_add_class(style, "copyable-insensitive");
 	}
 
 	for (l = dialog->user_split_entries ; l != NULL ; l = l->next) {
@@ -424,12 +421,13 @@ update_editable(PurpleConnection *gc, AccountPrefsDialog *dialog)
 			continue;
 		if (GTK_IS_EDITABLE(l->data)) {
 			gtk_editable_set_editable(GTK_EDITABLE(l->data), set);
-			style = set ? NULL : gtk_widget_get_style_context(GTK_WIDGET(l->data));
-			if (style) {
-				gtk_style_context_get_background_color(style, GTK_STATE_FLAG_INSENSITIVE, &color);
-				gtk_widget_override_background_color(GTK_WIDGET(l->data), GTK_STATE_FLAG_NORMAL, &color);
+			style = gtk_widget_get_style_context(GTK_WIDGET(l->data));
+			if (set) {
+				gtk_style_context_remove_class(style,
+						"copyable-insensitive");
 			} else {
-				gtk_widget_override_background_color(GTK_WIDGET(l->data), GTK_STATE_FLAG_NORMAL, NULL);
+				gtk_style_context_add_class(style,
+						"copyable-insensitive");
 			}
 		} else {
 			gtk_widget_set_sensitive(GTK_WIDGET(l->data), set);
@@ -447,6 +445,15 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	GList *user_splits;
 	GList *l, *l2;
 	char *username = NULL;
+	GtkCssProvider *entry_css;
+	const gchar entry_style[] =
+		"entry.copyable-insensitive {"
+			"color: @insensitive_fg_color;"
+			"background-color: @insensitive_bg_color;"
+		"}";
+
+	entry_css = gtk_css_provider_new();
+	gtk_css_provider_load_from_data(entry_css, entry_style, -1, NULL);
 
 	if (dialog->protocol_menu != NULL)
 	{
@@ -487,6 +494,10 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 
 	/* Username */
 	dialog->username_entry = gtk_entry_new();
+	gtk_style_context_add_provider(
+			gtk_widget_get_style_context(dialog->username_entry),
+			GTK_STYLE_PROVIDER(entry_css),
+			GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	g_object_set(G_OBJECT(dialog->username_entry), "truncate-multiline", TRUE, NULL);
 
 	add_pref_box(dialog, vbox, _("_Username:"), dialog->username_entry);
@@ -529,6 +540,10 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		else {
 			buf = g_strdup_printf("_%s:", purple_account_user_split_get_text(split));
 			entry = gtk_entry_new();
+			gtk_style_context_add_provider(
+					gtk_widget_get_style_context(entry),
+					GTK_STYLE_PROVIDER(entry_css),
+					GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 			add_pref_box(dialog, vbox, buf, entry);
 			g_free(buf);
 		}
@@ -616,6 +631,8 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 					G_CALLBACK(update_editable), dialog);
 	purple_signal_connect(purple_connections_get_handle(), "signed-off", dialog,
 					G_CALLBACK(update_editable), dialog);
+
+	g_object_unref(entry_css);
 }
 
 static void
@@ -699,7 +716,7 @@ add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	gtk_box_pack_start(GTK_BOX(vbox2), hbox2, FALSE, FALSE, PIDGIN_HIG_BORDER);
 	gtk_widget_show(hbox2);
 
-	button = gtk_button_new_from_stock(GTK_STOCK_REMOVE);
+	button = gtk_button_new_with_mnemonic(_("_Remove"));
 	g_signal_connect(G_OBJECT(button), "clicked",
 			 G_CALLBACK(icon_reset_cb), dialog);
 	gtk_box_pack_start(GTK_BOX(hbox2), button, FALSE, FALSE, 0);
@@ -1667,11 +1684,12 @@ pidgin_account_dialog_show_continue(PurpleAccount *account,
 	add_voice_options(dialog);
 
 	/* Cancel button */
-	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CANCEL, G_CALLBACK(cancel_account_prefs_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), _("_Cancel"),
+			G_CALLBACK(cancel_account_prefs_cb), dialog);
 
 	/* Save button */
 	button = pidgin_dialog_add_button(GTK_DIALOG(win),
-	                                  (type == PIDGIN_ADD_ACCOUNT_DIALOG) ? GTK_STOCK_ADD : GTK_STOCK_SAVE,
+	                                  (type == PIDGIN_ADD_ACCOUNT_DIALOG) ? _("_Add") : _("_Save"),
 	                                  G_CALLBACK(ok_account_prefs_cb),
 	                                  dialog);
 	if (dialog->account == NULL)
@@ -2127,7 +2145,7 @@ set_account(GtkListStore *store, GtkTreeIter *iter, PurpleAccount *account, GdkP
 	if (icon_spec != NULL && icon_spec->format != NULL) {
 		if (purple_account_get_bool(account, "use-global-buddyicon", TRUE)) {
 			if (global_buddyicon != NULL)
-				buddyicon = g_object_ref(G_OBJECT(global_buddyicon));
+				buddyicon = GDK_PIXBUF(g_object_ref(G_OBJECT(global_buddyicon)));
 			else {
 				/* This is for when set_account() is called for a single account */
 				const char *path;
@@ -2409,20 +2427,24 @@ pidgin_accounts_window_show(void)
 	gtk_widget_show(sw);
 
 	/* Add button */
-	pidgin_dialog_add_button(GTK_DIALOG(win), PIDGIN_STOCK_ADD, G_CALLBACK(add_account_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), _("_Add..."),
+			G_CALLBACK(add_account_cb), dialog);
 
 	/* Modify button */
-	button = pidgin_dialog_add_button(GTK_DIALOG(win), PIDGIN_STOCK_MODIFY, G_CALLBACK(modify_account_cb), dialog);
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), _("_Modify..."),
+			G_CALLBACK(modify_account_cb), dialog);
 	dialog->modify_button = button;
 	gtk_widget_set_sensitive(button, FALSE);
 
 	/* Delete button */
-	button = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_DELETE, G_CALLBACK(ask_delete_account_cb), dialog);
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), _("_Delete"),
+			G_CALLBACK(ask_delete_account_cb), dialog);
 	dialog->delete_button = button;
 	gtk_widget_set_sensitive(button, FALSE);
 
 	/* Close button */
-	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CLOSE, G_CALLBACK(close_accounts_cb), dialog);
+	pidgin_dialog_add_button(GTK_DIALOG(win), _("_Close"),
+			G_CALLBACK(close_accounts_cb), dialog);
 
 	purple_signal_connect(pidgin_accounts_get_handle(), "account-modified",
 	                    accounts_window,

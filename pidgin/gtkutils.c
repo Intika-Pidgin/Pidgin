@@ -273,8 +273,18 @@ GtkWidget *pidgin_dialog_get_action_area(GtkDialog *dialog)
 GtkWidget *pidgin_dialog_add_button(GtkDialog *dialog, const char *label,
 		GCallback callback, gpointer callbackdata)
 {
-	GtkWidget *button = gtk_button_new_from_stock(label);
+	GtkWidget *button = gtk_button_new_with_mnemonic(label);
 	GtkWidget *bbox = pidgin_dialog_get_action_area(dialog);
+
+	/* Handle stock labels if passed in until nothing calls this
+	 * expecting a GtkStock button */
+	if (label != NULL) {
+		GtkStockItem item;
+		if (gtk_stock_lookup(label, &item)) {
+			g_object_set(button, "use-stock", TRUE, NULL);
+		}
+	}
+
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	if (callback)
 		g_signal_connect(G_OBJECT(button), "clicked", callback, callbackdata);
@@ -605,13 +615,14 @@ pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSiz
 	 * Status icons will be themeable too, and then it will look up
 	 * protoname from the theme
 	 */
-	tmp = g_strconcat(protoname, ".png", NULL);
+	tmp = g_strconcat("im-", protoname, ".png", NULL);
 
 	filename = g_build_filename(PURPLE_DATADIR,
-		"pixmaps", "pidgin", "protocols",
-		(size == PIDGIN_PROTOCOL_ICON_SMALL) ? "16" :
-			((size == PIDGIN_PROTOCOL_ICON_MEDIUM) ? "22" : "48"),
-		tmp, NULL);
+		"pidgin", "icons", "hicolor",
+		(size == PIDGIN_PROTOCOL_ICON_SMALL) ? "16x16" :
+			((size == PIDGIN_PROTOCOL_ICON_MEDIUM) ? "22x22" :
+				"48x48"),
+		"apps", tmp, NULL);
 	g_free(tmp);
 
 	pixbuf = pidgin_pixbuf_new_from_file(filename);
@@ -1475,7 +1486,7 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 		if(iface->can_receive) {
 			ft = purple_protocol_xfer_can_receive(protocol, gc, who);
 		} else {
-			ft = (iface->send) ? TRUE : FALSE;
+			ft = (iface->send_file) ? TRUE : FALSE;
 		}
 	}
 
@@ -3600,14 +3611,7 @@ pidgin_make_scrollable(GtkWidget *child, GtkPolicyType hscrollbar_policy, GtkPol
 		if (width != -1 || height != -1)
 			gtk_widget_set_size_request(sw, width, height);
 		if (child) {
-#if GTK_CHECK_VERSION(3,8,0)
 			gtk_container_add(GTK_CONTAINER(sw), child);
-#else
-			if (GTK_IS_SCROLLABLE(child))
-				gtk_container_add(GTK_CONTAINER(sw), child);
-			else
-				gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(sw), child);
-#endif /* GTK_CHECK_VERSION(3,8,0) */
 		}
 		return sw;
 	}

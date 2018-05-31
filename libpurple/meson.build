@@ -226,7 +226,7 @@ enums_h = enums[1]
 
 purple_h = configure_file(input : 'purple.h.in',
                           output : 'purple.h',
-                          configuration : conf,
+                          configuration : purple_h_conf,
                           install : true,
                           install_dir : get_option('includedir') + '/libpurple')
 version_h = configure_file(input : 'version.h.in',
@@ -398,8 +398,10 @@ libpurple = library('purple',
                         [dbus, dbus_glib, dnsapi, ws2_32, glib, gio, gplugin, libxml,
                          farstream, gstreamer, gstreamer_video,
                          gstreamer_app, idn, json, math])
+
 libpurple_dep = declare_dependency(
-    sources : purple_builtheaders,  # Ensure built before any dependencies.
+    # Ensure purple/dbus headers built before any dependencies:
+    sources : [purple_builtheaders, dbus_builtheaders],
     include_directories : [toplevel_inc, libpurple_inc],
     link_with : libpurple,
     dependencies : [gstreamer, gplugin, glib, gio])
@@ -438,12 +440,11 @@ if INSTALL_I18N
 	    input : 'data/' + DESKTOP_FILE + '.in.in',
 	    output : DESKTOP_FILE + '.in',
 	    configuration : conf)
-	desktop_file = custom_target(DESKTOP_FILE,
+	desktop_file = i18n.merge_file(
 	    input : desktop_file_in,
 	    output : DESKTOP_FILE,
-	    command : [intltool_merge, '--desktop-style', '-u',
-	               '-c', '@BUILD_DIR@/po/.intltool-merge-cache',
-	               meson.source_root() + '/po', '@INPUT@', '@OUTPUT@'],
+	    po_dir : meson.source_root() + '/po',
+	    type : 'desktop',
 	    install : true,
 	    install_dir : get_option('datadir') + '/applications')
 endif  # INSTALL_I18N

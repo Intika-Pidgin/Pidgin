@@ -252,6 +252,12 @@ debug_init(void)
 static void
 pidgin_ui_init(void)
 {
+	gchar *path;
+
+	path = g_build_filename(PURPLE_DATADIR, "pidgin", "icons", NULL);
+	gtk_icon_theme_append_search_path(gtk_icon_theme_get_default(), path);
+	g_free(path);
+
 	pidgin_stock_init();
 
 	/* Set the UI operation structures. */
@@ -570,7 +576,9 @@ int pidgin_start(int argc, char *argv[])
 
 	g_option_context_add_main_entries(context, option_entries, PACKAGE);
 	g_option_context_add_group(context, purple_get_option_group());
+#ifdef PURPLE_PLUGINS
 	g_option_context_add_group(context, gplugin_get_option_group());
+#endif
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 
 #ifdef G_OS_WIN32
@@ -677,13 +685,21 @@ int pidgin_start(int argc, char *argv[])
 		abort();
 	}
 
-	search_path = g_build_filename(purple_user_dir(), "plugins", NULL);
-	if (!g_stat(search_path, &st))
-		g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
-	purple_plugins_add_search_path(search_path);
-	g_free(search_path);
+	if (!g_getenv("PURPLE_PLUGINS_SKIP")) {
+		search_path = g_build_filename(purple_user_dir(),
+				"plugins", NULL);
+		if (!g_stat(search_path, &st))
+			g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
+		purple_plugins_add_search_path(search_path);
+		g_free(search_path);
 
-	purple_plugins_add_search_path(PIDGIN_LIBDIR);
+		purple_plugins_add_search_path(PIDGIN_LIBDIR);
+	} else {
+		purple_debug_info("gtk",
+				"PURPLE_PLUGINS_SKIP environment variable "
+				"set, skipping normal Pidgin plugin paths");
+	}
+
 	purple_plugins_refresh();
 
 	if (opt_si && !purple_core_ensure_single_instance()) {

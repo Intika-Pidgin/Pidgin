@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:57-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 19:26+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Telugu (http://www.transifex.com/pidgin/pidgin/language/te/)\n"
 "Language: te\n"
@@ -12458,6 +12458,56 @@ msgstr ""
 "సంభాషణలను, లాగింగ్ సందేశపు టైంస్టాంపు ఫార్మాట్లను సంభాషణలను వినియోగదారునికి అనుకూలంగా మార్చడానికి ఈ "
 "ప్లగ్ ఇన్ వీలుకల్పిస్తుంది."
 
+msgid "Opacity:"
+msgstr "అపారదర్శకత:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "IM Conversation Windows"
+
+msgid "_IM window transparency"
+msgstr "_IM విండో పారదర్శకత "
+
+msgid "_Show slider bar in IM window"
+msgstr "IM విండోలో స్లైడర్ బార్‌ను చూపుము (_S)"
+
+msgid "Remove IM window transparency on focus"
+msgstr "ఫోకస్ కాబడినప్పుడు పారదర్శక IM విండోను తీసివేయండి"
+
+msgid "Always on top"
+msgstr "ఎప్పుడూ పైన ఉండేట్లుగా"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "మిత్రుల లిస్ట్ విండో"
+
+msgid "_Buddy List window transparency"
+msgstr "విండో ట్రాన్స్‌పరెన్సీలో మిత్రుల జాబితా (_B)"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "ఫోకస్ లో ఉన్నప్పుడు మిత్రుల జాబితా విండో ట్రాన్స్పరెన్సీని తొలగించండి"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "పారదృశ్యత"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "మిత్రుల లిస్ట్ మరియు సంభాషణలకు వేరియబుల్ పారదర్శకత "
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12566,56 +12616,6 @@ msgstr "మీ మైక్రోఫోన్‌ను మరియు వెబ
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "వాయిస్/వీడియో కాల్స్ కొరకు మైక్రోఫోన్ మరియు వెబ్‌కామ్ అమరికలను ఆకృతీకరించుము."
-
-msgid "Opacity:"
-msgstr "అపారదర్శకత:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "IM Conversation Windows"
-
-msgid "_IM window transparency"
-msgstr "_IM విండో పారదర్శకత "
-
-msgid "_Show slider bar in IM window"
-msgstr "IM విండోలో స్లైడర్ బార్‌ను చూపుము (_S)"
-
-msgid "Remove IM window transparency on focus"
-msgstr "ఫోకస్ కాబడినప్పుడు పారదర్శక IM విండోను తీసివేయండి"
-
-msgid "Always on top"
-msgstr "ఎప్పుడూ పైన ఉండేట్లుగా"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "మిత్రుల లిస్ట్ విండో"
-
-msgid "_Buddy List window transparency"
-msgstr "విండో ట్రాన్స్‌పరెన్సీలో మిత్రుల జాబితా (_B)"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "ఫోకస్ లో ఉన్నప్పుడు మిత్రుల జాబితా విండో ట్రాన్స్పరెన్సీని తొలగించండి"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "పారదృశ్యత"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "మిత్రుల లిస్ట్ మరియు సంభాషణలకు వేరియబుల్ పారదర్శకత "
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

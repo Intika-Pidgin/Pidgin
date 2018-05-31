@@ -25,8 +25,6 @@
 #define _XOPEN_SOURCE_EXTENDED
 #endif
 
-#include "config.h"
-
 #include <gmodule.h>
 
 #include <sys/types.h>
@@ -651,11 +649,6 @@ void gnt_init()
 	sigaction(SIGCHLD, &act, NULL);
 	sigaction(SIGINT, &act, NULL);
 	signal(SIGPIPE, SIG_IGN);
-
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-	/* GLib type system is automaticaly initialized since 2.36. */
-	g_type_init();
-#endif
 
 	init_wm();
 
