@@ -702,7 +702,7 @@ static void
 bonjour_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = bonjour_can_receive_file;
-	xfer_iface->send        = bonjour_send_file;
+	xfer_iface->send_file   = bonjour_send_file;
 	xfer_iface->new_xfer    = bonjour_new_xfer;
 }
 

@@ -20,7 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#include "config.h"
+#include "gntinternal.h"
+#undef GNT_LOG_DOMAIN
+#define GNT_LOG_DOMAIN "WM"
 
 #ifdef USE_PYTHON
 #include <Python.h>
@@ -43,10 +45,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#include "gntinternal.h"
-#undef GNT_LOG_DOMAIN
-#define GNT_LOG_DOMAIN "WM"
 
 #include "gntwm.h"
 #include "gntstyle.h"
@@ -1562,13 +1560,7 @@ gnt_wm_class_init(GntWMClass *klass)
 				GNT_KEY_F3, NULL);
 	if (!Py_IsInitialized()) {
 #if PY_MAJOR_VERSION >= 3
-		wchar_t *name;
-		size_t len;
-		len = mbstowcs(NULL, "gnt", 0);
-		name = g_new(wchar_t, len + 1);
-		mbstowcs(name, "gnt", len + 1);
-		Py_SetProgramName(name);
-		g_free(name);
+		Py_SetProgramName(L"gnt");
 #else
 		Py_SetProgramName("gnt");
 #endif

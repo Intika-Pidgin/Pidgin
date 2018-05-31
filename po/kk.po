@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:54-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 23:42+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Kazakh (http://www.transifex.com/pidgin/pidgin/language/kk/)\n"
 "Language: kk\n"
@@ -12024,6 +12024,56 @@ msgid ""
 "timestamp formats."
 msgstr ""
 
+msgid "Opacity:"
+msgstr ""
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr ""
+
+msgid "_IM window transparency"
+msgstr ""
+
+msgid "_Show slider bar in IM window"
+msgstr ""
+
+msgid "Remove IM window transparency on focus"
+msgstr ""
+
+msgid "Always on top"
+msgstr ""
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr ""
+
+msgid "_Buddy List window transparency"
+msgstr ""
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr ""
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr ""
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr ""
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12131,56 +12181,6 @@ msgstr ""
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
-msgstr ""
-
-msgid "Opacity:"
-msgstr ""
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr ""
-
-msgid "_IM window transparency"
-msgstr ""
-
-msgid "_Show slider bar in IM window"
-msgstr ""
-
-msgid "Remove IM window transparency on focus"
-msgstr ""
-
-msgid "Always on top"
-msgstr ""
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr ""
-
-msgid "_Buddy List window transparency"
-msgstr ""
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr ""
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr ""
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr ""
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
 msgstr ""
 
 #. Autostart

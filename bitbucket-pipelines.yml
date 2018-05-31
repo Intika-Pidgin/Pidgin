@@ -18,4 +18,3 @@ pipelines:
             - make -s -j$(nproc)
             - make -s -j$(nproc) check
             - make distcheck
-

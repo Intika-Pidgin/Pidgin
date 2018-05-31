@@ -13,13 +13,6 @@ if PLUGINS
 		    install : true, install_dir : PURPLE_PLUGINDIR)
 	endif
 
-	if enable_gnome_keyring
-		gnomekeyring_plugin = library('gnomekeyring', 'gnomekeyring.c',
-		    dependencies : [gnome_keyring, libpurple_dep],
-		    name_prefix : '',
-		    install : true, install_dir : PURPLE_PLUGINDIR)
-	endif
-
 	if IS_WIN32
 		wincred_plugin = library('wincred', 'wincred.c',
 		    dependencies : [libpurple_dep],

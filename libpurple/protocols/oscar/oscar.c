@@ -5763,7 +5763,7 @@ static void
 oscar_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = oscar_can_receive_file;
-	xfer_iface->send        = oscar_send_file;
+	xfer_iface->send_file   = oscar_send_file;
 	xfer_iface->new_xfer    = oscar_new_xfer;
 }
 

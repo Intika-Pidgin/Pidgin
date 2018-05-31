@@ -206,10 +206,11 @@ do_jabber_caps_store(gpointer data)
 	char *str;
 	int length = 0;
 	PurpleXmlNode *root = purple_xmlnode_new("capabilities");
+
 	g_hash_table_foreach(capstable, jabber_caps_store_client, root);
 	str = purple_xmlnode_to_formatted_str(root, &length);
 	purple_xmlnode_free(root);
-	purple_util_write_data_to_file(JABBER_CAPS_FILENAME, str, length);
+	purple_util_write_data_to_cache_file(JABBER_CAPS_FILENAME, str, length);
 	g_free(str);
 
 	save_timer = 0;
@@ -226,7 +227,7 @@ schedule_caps_save(void)
 static void
 jabber_caps_load(void)
 {
-	PurpleXmlNode *capsdata = purple_util_read_xml_from_file(JABBER_CAPS_FILENAME, "XMPP capabilities cache");
+	PurpleXmlNode *capsdata = purple_util_read_xml_from_cache_file(JABBER_CAPS_FILENAME, "XMPP capabilities cache");
 	PurpleXmlNode *client;
 
 	if(!capsdata)

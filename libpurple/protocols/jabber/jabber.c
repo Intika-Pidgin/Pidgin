@@ -220,9 +220,50 @@ static char *jabber_prep_resource(char *input) {
 static gboolean
 jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 {
-	jabber_send_raw(js,
-			"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
-	return TRUE;
+	PurpleAccount *account = NULL;
+	PurpleXmlNode *starttls = NULL;
+
+	/* It's a secure BOSH connection, just return FALSE and skip, without doing anything extra.
+	 * XEP-0206 (XMPP Over BOSH): The client SHOULD ignore any Transport Layer Security (TLS)
+	 * feature since BOSH channel encryption SHOULD be negotiated at the HTTP layer.
+	 *
+	 * Note: we are already receiving STARTTLS at this point from a SSL/TLS BOSH connection,
+	 * so it is not necessary to check if purple_ssl_is_supported().
+	 */
+	if (js->bosh && jabber_bosh_connection_is_ssl(js->bosh)) {
+		return FALSE;
+	}
+
+	/* Otherwise, it's a standard XMPP connection, or a HTTP (insecure) BOSH connection.
+	 * We request STARTTLS for standard XMPP connections, but we do nothing for insecure
+	 * BOSH connections, per XEP-0206. */
+	if(!js->bosh) {
+		jabber_send_raw(js,
+				"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>", -1);
+		return TRUE;
+	}
+
+	/* It's an insecure standard XMPP connection, or an insecure BOSH connection, let's
+	 * ignore STARTTLS even it's required by the server to prevent disabling HTTP BOSH
+	 * entirely (sysadmin is responsible to provide HTTPS-only BOSH if security is required),
+	 * and emit errors if encryption is required by the user. */
+	starttls = purple_xmlnode_get_child(packet, "starttls");
+	if(!js->bosh && purple_xmlnode_get_child(starttls, "required")) {
+		purple_connection_error(js->gc,
+				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
+				_("Server requires TLS/SSL, but no TLS/SSL support was found."));
+		return TRUE;
+	}
+
+	account = purple_connection_get_account(js->gc);
+	if (purple_strequal("require_tls", purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS))) {
+		purple_connection_error(js->gc,
+				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
+				_("You require encryption, but no TLS/SSL support was found."));
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 void jabber_stream_features_parse(JabberStream *js, PurpleXmlNode *packet)
@@ -3806,7 +3847,7 @@ jabber_do_init(void)
 	if (!sasl_initialized) {
 		sasl_initialized = TRUE;
 #ifdef _WIN32
-		sasldir = g_build_filename(wpurple_bin_dir(), "sasl2", NULL);
+		sasldir = g_strdup(wpurple_lib_dir("sasl2"));
 		sasl_set_path(SASL_PATH_TYPE_PLUGIN, sasldir);
 		g_free(sasldir);
 		/* Suppress error popups for failing to load sasl plugins */
@@ -4144,7 +4185,7 @@ static void
 jabber_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 {
 	xfer_iface->can_receive = jabber_can_receive_file;
-	xfer_iface->send        = jabber_si_xfer_send;
+	xfer_iface->send_file   = jabber_si_xfer_send;
 	xfer_iface->new_xfer    = jabber_si_new_xfer;
 }
 

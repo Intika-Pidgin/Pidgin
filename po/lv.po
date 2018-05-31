@@ -6,15 +6,15 @@
 # ajijaija <aija@laka.lv>, 2016
 # ajijaija <aija@laka.lv>, 2016
 # Anita Reitere <nitalynx@gmail.com>, 2015
-# Ingmārs Dīriņš <melhiors14@gmail.com>, 2016
+# Ingmārs Dīriņš <melhiors14@gmail.com>, 2016,2018
 # Raitis Nugumanovs <rower@altnet.lv>, 2016
 # Rūdolfs Mazurs <rudolfs.mazurs@gmail.com>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:54-0600\n"
-"PO-Revision-Date: 2016-11-27 10:54+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2018-03-07 17:42+0000\n"
 "Last-Translator: Ingmārs Dīriņš <melhiors14@gmail.com>\n"
 "Language-Team: Latvian (http://www.transifex.com/pidgin/pidgin/language/"
 "lv/)\n"
@@ -2165,7 +2165,8 @@ msgid "File transfer from %s failed."
 msgstr "Datnes pārsūtīšana no %s neizdevās."
 
 msgid "<b><font color=\"red\">The logger has no read function</font></b>"
-msgstr "<b><font color=\"red\">Žurnalētājam nav lasīšanas funkcijas</font></b>"
+msgstr ""
+"<b><font color=\"red\">Reģistrētājam nav lasīšanas funkcijas</font></b>"
 
 msgid "HTML"
 msgstr "HTML"
@@ -10423,10 +10424,10 @@ msgid "The color to use for the typing notification"
 msgstr "Krāsa, kuru lietot rakstīšanas paziņošanai"
 
 msgid "Typing notification font"
-msgstr "Rakstīšanas paziņošanas šrifts"
+msgstr "Rakstīšanas paziņošanas fonts"
 
 msgid "The font to use for the typing notification"
-msgstr "Šrifts, kuru lietot rakstīšanas paziņošanai"
+msgstr "Fonts, kuru lietot rakstīšanas paziņošanai"
 
 msgid "Enable typing notification"
 msgstr "Ieslēgt rakstīšanas paziņošanu"
@@ -10460,7 +10461,7 @@ msgid "_Add Custom Smiley..."
 msgstr "Pievienot pielāgotu sm_aidiņu..."
 
 msgid "Select Font"
-msgstr "Atlasiet šriftu"
+msgstr "Atlasiet fontu"
 
 msgid "Select Text Color"
 msgstr "Atlasiet teksta krāsu"
@@ -10515,7 +10516,7 @@ msgid "This theme has no available smileys."
 msgstr "Šim motīvam nav pieejamu smaidiņu."
 
 msgid "_Font"
-msgstr "Šri_fts"
+msgstr "_Fonts"
 
 msgid "Group Items"
 msgstr "Grupēt vienumus"
@@ -10536,13 +10537,13 @@ msgid "Strikethrough"
 msgstr "Pārsvītrot"
 
 msgid "Increase Font Size"
-msgstr "Palielināt šrifta izmēru"
+msgstr "Palielināt fonta izmēru"
 
 msgid "Decrease Font Size"
-msgstr "Samazināt šrifta izmēru"
+msgstr "Samazināt fonta izmēru"
 
 msgid "Font Face"
-msgstr "Šriftu saime"
+msgstr "Fontu saime"
 
 msgid "Foreground Color"
 msgstr "Priekšplāna krāsa"
@@ -10584,7 +10585,7 @@ msgstr "<span size='smaller'>Mazāk_s</span>"
 #. * need to update them when formatting changes. The above items don't need
 #. * no updating nor nothin'
 msgid "_Font face"
-msgstr "Šri_ftu saime"
+msgstr "_Fonu saime"
 
 msgid "Foreground _color"
 msgstr "_Priekšplāna krāsa"
@@ -10836,7 +10837,7 @@ msgstr ""
 
 msgid "Unable to open URL: the 'Manual' browser command seems invalid."
 msgstr ""
-"Nespēj atvērt vietrādi URL: 'Pašrocīgā' pārlūka komanda liekas ir nederīga."
+"Nespēj atvērt vietrādi URL: 'Pašrocīgā' pārlūka komanda, liekas, ir nederīga."
 
 msgid "No message"
 msgstr "Nav ziņojuma"
@@ -11161,13 +11162,13 @@ msgid "Minimum input area height in lines:"
 msgstr "Minimuma ievades apgabala augstums rindās:"
 
 msgid "Font"
-msgstr "Šrifts"
+msgstr "Fonts"
 
 msgid "Use font from _theme"
-msgstr "Lietot šriftu no mo_tīva"
+msgstr "Lietot fontu no mo_tīva"
 
 msgid "Conversation _font:"
-msgstr "Sarunas šri_fts:"
+msgstr "Sarunas _fonts:"
 
 msgid "Default Formatting"
 msgstr "Noklusējuma formatēšana"
@@ -12470,14 +12471,14 @@ msgstr "Atlasiet krāsu"
 
 #, c-format
 msgid "Select Interface Font"
-msgstr "Atlasiet saskarnes šriftu"
+msgstr "Atlasiet saskarnes fontu"
 
 #, c-format
 msgid "Select Font for %s"
-msgstr "Atlasiet šriftu priekš %s"
+msgstr "Atlasiet fontu priekš %s"
 
 msgid "GTK+ Interface Font"
-msgstr "GTK+ saskarnes šrifts"
+msgstr "GTK+ saskarnes fonts"
 
 msgid "GTK+ Text Shortcut Theme"
 msgstr "GTK+ teksta saīšņu motīvs"
@@ -12492,7 +12493,7 @@ msgid "Colors"
 msgstr "Krāsas"
 
 msgid "Fonts"
-msgstr "Šrifti"
+msgstr "Fonti"
 
 msgid "Miscellaneous"
 msgstr "Dažādi"
@@ -12823,6 +12824,58 @@ msgstr ""
 "Šis spraudnis atļauj lietotājam pielāgot sarunas un žurnalēšanas ziņojumu "
 "laikspiedogu formātus."
 
+msgid "Opacity:"
+msgstr "Necaurspīdīgums:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "TZ sarunu logi"
+
+msgid "_IM window transparency"
+msgstr "_TZ loga caurspīdīgums"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Rādīt slīdņa joslu TZ logā"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Noņemt TZ loga caurspīdīgumu uz fokusa"
+
+msgid "Always on top"
+msgstr "Vienmēr virspusē"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Draugu saraksta logs"
+
+msgid "_Buddy List window transparency"
+msgstr "_Draugu saraksta loga caurspīdīgums"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Noņemt draugu saraksta loga caurspīdīgumu uz fokusa"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Caurspīdīgums"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Mainīgs caurspīdīgums draugu sarakstam un sarunām."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Šis spraudnis ieslēdz mainīgu alfa caurspīdīgumu uz sarunu logiem un draugu "
+"saraksta."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Tērzētavu trauksmes"
@@ -12932,58 +12985,6 @@ msgstr "Konfigurējiet savu mikrofonu un tīmekļa kameru."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Konfigurēt mikrofona un tīmekļa kameras iestatījumus balss/video zvaniem."
-
-msgid "Opacity:"
-msgstr "Necaurspīdīgums:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "TZ sarunu logi"
-
-msgid "_IM window transparency"
-msgstr "_TZ loga caurspīdīgums"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Rādīt slīdņa joslu TZ logā"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Noņemt TZ loga caurspīdīgumu uz fokusa"
-
-msgid "Always on top"
-msgstr "Vienmēr virspusē"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Draugu saraksta logs"
-
-msgid "_Buddy List window transparency"
-msgstr "_Draugu saraksta loga caurspīdīgums"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Noņemt draugu saraksta loga caurspīdīgumu uz fokusa"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Caurspīdīgums"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Mainīgs caurspīdīgums draugu sarakstam un sarunām."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Šis spraudnis ieslēdz mainīgu alfa caurspīdīgumu uz sarunu logiem un draugu "
-"saraksta."
 
 #. Autostart
 msgid "Startup"

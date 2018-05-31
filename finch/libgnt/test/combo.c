@@ -4,6 +4,7 @@
 #include <gntcheckbox.h>
 #include <gntcombobox.h>
 #include <gntentry.h>
+#include <gntfilesel.h>
 #include <gntlabel.h>
 #include <gntslider.h>
 

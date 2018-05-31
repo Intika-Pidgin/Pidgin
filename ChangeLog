@@ -14,6 +14,7 @@ version 3.0.0 (??/??/????):
 	  recognized through pkg-config. (Michael McConville)
 	* Fixed an issue where transient startup statuses could be deleted
 	  (Jakub Adam) (#16762)
+	* Moved config files to XDG Directories. (Arkadiy Illarionov) (#10029)
 
 	libpurple:
 	* Specify a different set of encryption ciphers for TLS connections when
@@ -83,6 +84,7 @@ version 3.0.0 (??/??/????):
 	  (#14529)
 	* Support file transfers up to ~9 EiB.
 	* Invalid user moods can no longer be sent to the server.
+	* Added WEBEX-TOKEN SASL auth (Bryon Roche).
 
 	AIM:
 	* Add support for the newer kerberos-based authentication of AIM 8.x
@@ -104,10 +106,16 @@ version 3.0.0 (??/??/????):
 	* A single jabber plugin provides XMPP, GTalk and Facebook protocols.
 	* A single yahoo plugin provides both Yahoo and Yahoo JAPAN protocols.
 
-version 2.13.0 (??/??/????):
+	GNT:
+	* Fix a use after free when using Python. (PR #357 kdex)
+
+version 2.13.0 (03/08/2018):
 	libpurple:
 	* Unified string comparison. (PR #186) (Arkadiy Illarionov)
 	* Properlly shell escape URI's when opening them. (PR #271 Daniel Kamil Kozar)
+	* Fix a one byte buffer overread in function purple_markup_linkify
+	* Fix an issue were utf8 was incorrectly truncated which could lead to
+	  crashes as we were potentially feeding garbage into glib/gtk.
 
 	libgnt:
 	* Fixed build against curses 6.0 with opaque structs set. (#16764 dimstar)
@@ -120,20 +128,39 @@ version 2.13.0 (??/??/????):
 	XMPP:
 	* Show XEP-0066 OOB URLs in any message, not just headlines
 	* Fix a user after free (#17200 debarshiray) (PR #266 Ethan Blanton)
+	* Removed pipelining from BOSH connections (#17025 PR #295 Tom Li)
+	* Don't try to TLS already secured BOSH connections (#17270 PR #293 Tom Li)
 
 	IRC:
 	* Fix "Registration timeout" on SASL auth with InspIRCd servers
 	  (and possibly others not based on charybdis/ratbox/ircd-seven)
 	* Fix issues with plugins that modify outgoing messages
 	  (such as the custom PART/QUIT feature of the IRC More plugin)
+	* Fix IRC buffer handling.  (#12562 PR #272 Shivaram Lingamneni)
+	* Properly handle AUTHENTICATE as a normal command with server prefix.
+	  (PR #316 dx)
+	* Fix a crash caused by a use after free of the MOTD.
+	* Fix an out of bounds read in irc_nick_skip_mode.
+	* Fix a write of a single byte before the start of a buffer in
+	  irc_parse_ctcp.
 
 	Pidgin:
 	* Better support for dark themes. (#12572 Alyssa Rosenzweig and Gary Kramlich)
 	* Fixed IPv6 links by not escaping []'s. (#16391 cyisfor) (PR #270 Daniel Kamil Kozar)
 	* Only write buddy icons to the cache if they're not already cached.  (PR #276 David Woodhouse)
+	* Rejoin persistent chats after reconnect.  (#15687 PR #285 Christof Meerwald)
+	* Made the WIN32 Transparency plugin work on all platforms. (#3124 PR #287 Daniel Kamil Kozar)
+	* Ensure search results buttons are labeled (Backport from de2d88e575ee)
+	* Fix matching unicode smilies.  (#17232 gnubfx PR #262 Daniel Kamil Kozar)
+	* Correctly update mute/unmute status when the remote side mutes/unmutes us. (#17273 PR #302 David Woodhouse)
+	* Rework the status icon blinking to not used deprecated API.  (#17174 zelch PR #264 Daniel Kamil Kozar)
+	* Don't allow adding a buddy to protocols that don't have an add_buddy callback.  (#4061 Paradox)
 
 	Finch:
 	* Fix handling of search results (#17238 David Woodhouse)
+
+	Voice & Video:
+	* Port backend-fs to newer api for farstream relay-info property  (#17274 bellet)
 
 version 2.12.0 (03/09/2017):
 	libpurple:

@@ -75,9 +75,11 @@ purple_get_option_group(void) {
 			_("print debugging messages to stdout"),
 			_("[colored]")
 		}, {
-			"force-online", 'f', 0,
-			G_OPTION_ARG_NONE, &force_online_cb,
+			"force-online", 'f', G_OPTION_FLAG_NO_ARG,
+			G_OPTION_ARG_CALLBACK, &force_online_cb,
 			_("force online, regardless of network status"),
+			NULL
+		}, {
 			NULL
 		},
 	};

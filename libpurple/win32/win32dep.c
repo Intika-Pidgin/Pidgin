@@ -164,7 +164,6 @@ const char *wpurple_bin_dir(void) {
 	return bin_dir;
 }
 
-#ifdef USE_WIN32_FHS
 static gchar *
 wpurple_install_relative_path(const gchar *abspath)
 {
@@ -225,11 +224,9 @@ wpurple_install_relative_path(const gchar *abspath)
 
 	return ret;
 }
-#endif
 
 const char *
 wpurple_data_dir(void) {
-#ifdef USE_WIN32_FHS
 	static gboolean initialized = FALSE;
 	if (initialized)
 		return data_dir;
@@ -237,9 +234,6 @@ wpurple_data_dir(void) {
 	initialized = TRUE;
 
 	return data_dir;
-#else
-	return wpurple_bin_dir();
-#endif
 }
 
 
@@ -249,18 +243,8 @@ const char *wpurple_lib_dir(const char *subdir)
 	static gchar subpath[MAX_PATH_LEN];
 
 	if (!initialized) {
-#ifdef USE_WIN32_FHS
 		lib_dir = wpurple_install_relative_path(WIN32_FHS_LIBDIR);
 		initialized = TRUE;
-#else
-		const char *inst_dir = wpurple_bin_dir();
-		if (inst_dir != NULL) {
-			lib_dir = g_strdup_printf("%s" G_DIR_SEPARATOR_S "plugins", inst_dir);
-			initialized = TRUE;
-		} else {
-			return NULL;
-		}
-#endif
 	}
 
 	if (subdir == NULL)
@@ -275,18 +259,8 @@ const char *wpurple_locale_dir(void) {
 	static gboolean initialized = FALSE;
 
 	if (!initialized) {
-#ifdef USE_WIN32_FHS
 		locale_dir = wpurple_install_relative_path(WIN32_FHS_LOCALEDIR);
 		initialized = TRUE;
-#else
-		const char *inst_dir = wpurple_bin_dir();
-		if (inst_dir != NULL) {
-			locale_dir = g_strdup_printf("%s" G_DIR_SEPARATOR_S "locale", inst_dir);
-			initialized = TRUE;
-		} else {
-			return NULL;
-		}
-#endif
 	}
 
 	return locale_dir;
@@ -316,18 +290,14 @@ const char *wpurple_sysconf_dir(void)
 	static gboolean initialized = FALSE;
 
 	if (!initialized) {
-#ifdef USE_WIN32_FHS
 		sysconf_dir = wpurple_install_relative_path(WIN32_FHS_SYSCONFDIR);
-#else
-		sysconf_dir = wpurple_get_special_folder(CSIDL_COMMON_APPDATA);
-#endif
 		initialized = TRUE;
 	}
 
 	return sysconf_dir;
 }
 
-#if defined(USE_WIN32_FHS) && defined(SSL_CERTIFICATES_DIR)
+#ifdef SSL_CERTIFICATES_DIR
 const char *
 wpurple_cert_dir(void)
 {
@@ -671,22 +641,6 @@ void wpurple_cleanup(void) {
 	cert_dir = NULL;
 
 	libpurpledll_hInstance = NULL;
-}
-
-long
-wpurple_get_tz_offset() {
-	TIME_ZONE_INFORMATION tzi;
-	DWORD ret;
-	long off = -1;
-
-	if ((ret = GetTimeZoneInformation(&tzi)) != TIME_ZONE_ID_INVALID)
-	{
-		off = -(tzi.Bias * 60);
-		if (ret == TIME_ZONE_ID_DAYLIGHT)
-			off -= tzi.DaylightBias * 60;
-	}
-
-	return off;
 }
 
 /* DLL initializer */

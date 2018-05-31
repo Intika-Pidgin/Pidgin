@@ -40,73 +40,12 @@ struct _PurpleMenuAction
 
 static char *custom_user_dir = NULL;
 static char *user_dir = NULL;
-static char *cache_dir = NULL;
-static char *config_dir = NULL;
-static char *data_dir = NULL;
+static gchar *cache_dir = NULL;
+static gchar *config_dir = NULL;
+static gchar *data_dir = NULL;
 
 static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
-
-static void
-move_to_xdg_base_dir(const char *purple_xdg_dir, char *subdir)
-{
-	char *xdg_dir;
-	gboolean xdg_dir_exists;
-
-	xdg_dir_exists = g_file_test(purple_xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-	if (!xdg_dir_exists) {
-		gint mkdir_res;
-
-		mkdir_res = purple_build_dir(purple_xdg_dir, (S_IRUSR | S_IWUSR | S_IXUSR));
-		if (mkdir_res == -1) {
-			purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
-						purple_xdg_dir, g_strerror(errno));
-			return;
-		}
-	}
-
-	xdg_dir = g_build_filename(purple_xdg_dir, subdir, NULL);
-	xdg_dir_exists = g_file_test(xdg_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-	if (!xdg_dir_exists) {
-		char *old_dir;
-		gboolean old_dir_exists;
-
-		old_dir = g_build_filename(purple_user_dir(), subdir, NULL);
-		old_dir_exists = g_file_test(old_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-
-		if (old_dir_exists) {
-			g_rename(old_dir, xdg_dir);
-		}
-
-		g_free(old_dir);
-		old_dir = NULL;
-	}
-
-	g_free(xdg_dir);
-	xdg_dir = NULL;
-
-	return;
-}
-
-/* If legacy directory for libpurple exists, move it to location following 
- * xdg base dir spec. https://developer.pidgin.im/ticket/10029
- */
-static void
-migrate_to_xdg_base_dirs(void)
-{
-	const char *legacy_purple_dir;
-	gboolean dir_exists;
-
-	legacy_purple_dir = purple_user_dir();
-	dir_exists = g_file_test(legacy_purple_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR);
-	if (dir_exists) {
-		move_to_xdg_base_dir(purple_data_dir(), "certificates");
-		move_to_xdg_base_dir(purple_cache_dir(), "icons");
-		move_to_xdg_base_dir(purple_data_dir(), "logs");
-	}
-
-	return;
-}
 
 PurpleMenuAction *
 purple_menu_action_new(const char *label, PurpleCallback callback, gpointer data,
@@ -207,8 +146,6 @@ purple_util_init(void)
 	escape_js_node = json_node_new(JSON_NODE_VALUE);
 	escape_js_gen = json_generator_new();
 	json_node_set_boolean(escape_js_node, FALSE);
-
-	migrate_to_xdg_base_dirs();
 }
 
 void
@@ -539,178 +476,35 @@ purple_mime_decode_field(const char *str)
  * Date/Time Functions
  **************************************************************************/
 
-const char *purple_get_tzoff_str(const struct tm *tm, gboolean iso)
-{
-	static char buf[7];
-	long off;
-	gint8 min;
-	gint8 hrs;
-	struct tm new_tm = *tm;
-
-	mktime(&new_tm);
-
-	if (new_tm.tm_isdst < 0)
-		g_return_val_if_reached("");
-
-#ifdef _WIN32
-	if ((off = wpurple_get_tz_offset()) == -1)
-		return "";
-#elif defined(HAVE_TM_GMTOFF)
-	off = new_tm.tm_gmtoff;
-#elif defined(HAVE_TIMEZONE)
-	tzset();
-	off = -1 * timezone;
-#else
-	purple_debug_warning("util",
-		"there is no possibility to obtain tz offset");
-	return "";
-#endif
-
-	min = (off / 60) % 60;
-	hrs = ((off / 60) - min) / 60;
-
-	if(iso) {
-		if (0 == off) {
-			strcpy(buf, "Z");
-		} else {
-			/* please leave the colons...they're optional for iso, but jabber
-			 * wants them */
-			if(g_snprintf(buf, sizeof(buf), "%+03d:%02d", hrs, ABS(min)) > 6)
-				g_return_val_if_reached("");
-		}
-	} else {
-		if (g_snprintf(buf, sizeof(buf), "%+03d%02d", hrs, ABS(min)) > 5)
-			g_return_val_if_reached("");
-	}
-
-	return buf;
-}
-
-/* Windows doesn't HAVE_STRFTIME_Z_FORMAT, but this seems clearer. -- rlaager */
-#if !defined(HAVE_STRFTIME_Z_FORMAT) || defined(_WIN32)
-static size_t purple_internal_strftime(char *s, size_t max, const char *format, const struct tm *tm)
-{
-	const char *start;
-	const char *c;
-	char *fmt = NULL;
-
-	/* Yes, this is checked in purple_utf8_strftime(),
-	 * but better safe than sorry. -- rlaager */
-	g_return_val_if_fail(format != NULL, 0);
-
-	/* This is fairly efficient, and it only gets
-	 * executed on Windows or if the underlying
-	 * system doesn't support the %z format string,
-	 * for strftime() so I think it's good enough.
-	 * -- rlaager */
-	for (c = start = format; *c ; c++)
-	{
-		if (*c != '%')
-			continue;
-
-		c++;
-
-#ifndef HAVE_STRFTIME_Z_FORMAT
-		if (*c == 'z')
-		{
-			char *tmp = g_strdup_printf("%s%.*s%s",
-				fmt ? fmt : "",
-				(int)(c - start - 1),
-				start,
-				purple_get_tzoff_str(tm, FALSE));
-			g_free(fmt);
-			fmt = tmp;
-			start = c + 1;
-		}
-#endif
-#ifdef _WIN32
-		if (*c == 'Z')
-		{
-			char *tmp = g_strdup_printf("%s%.*s%s",
-				fmt ? fmt : "",
-				(int)(c - start - 1),
-				start,
-				wpurple_get_timezone_abbreviation(tm));
-			g_free(fmt);
-			fmt = tmp;
-			start = c + 1;
-		}
-#endif
-	}
-
-	if (fmt != NULL)
-	{
-		size_t ret;
-
-		if (*start)
-		{
-			char *tmp = g_strconcat(fmt, start, NULL);
-			g_free(fmt);
-			fmt = tmp;
-		}
-
-		ret = strftime(s, max, fmt, tm);
-		g_free(fmt);
-
-		return ret;
-	}
-
-	return strftime(s, max, format, tm);
-}
-#else /* HAVE_STRFTIME_Z_FORMAT && !_WIN32 */
-#define purple_internal_strftime strftime
-#endif
-
 const char *
 purple_utf8_strftime(const char *format, const struct tm *tm)
 {
 	static char buf[128];
-	char *locale;
-	GError *err = NULL;
-	int len;
+	GDateTime *dt;
 	char *utf8;
 
 	g_return_val_if_fail(format != NULL, NULL);
 
 	if (tm == NULL)
 	{
-		time_t now = time(NULL);
-		tm = localtime(&now);
+		dt = g_date_time_new_now_local();
+	} else {
+		dt = g_date_time_new_local(tm->tm_year + 1900, tm->tm_mon + 1,
+				tm->tm_mday, tm->tm_hour,
+				tm->tm_min, tm->tm_sec);
 	}
 
-	locale = g_locale_from_utf8(format, -1, NULL, NULL, &err);
-	if (err != NULL)
-	{
-		purple_debug_error("util", "Format conversion failed in purple_utf8_strftime(): %s\n", err->message);
-		g_error_free(err);
-		err = NULL;
-		locale = g_strdup(format);
-	}
+	utf8 = g_date_time_format(dt, format);
+	g_date_time_unref(dt);
 
-	/* A return value of 0 is either an error (in
-	 * which case, the contents of the buffer are
-	 * undefined) or the empty string (in which
-	 * case, no harm is done here). */
-	if ((len = purple_internal_strftime(buf, sizeof(buf), locale, tm)) == 0)
-	{
-		g_free(locale);
+	if (utf8 == NULL) {
+		purple_debug_error("util",
+				"purple_utf8_strftime(): Formatting failed\n");
 		return "";
 	}
 
-	g_free(locale);
-
-	utf8 = g_locale_to_utf8(buf, len, NULL, NULL, &err);
-	if (err != NULL)
-	{
-		purple_debug_error("util", "Result conversion failed in purple_utf8_strftime(): %s\n", err->message);
-		g_error_free(err);
-	}
-	else
-	{
-		g_strlcpy(buf, utf8, sizeof(buf));
-		g_free(utf8);
-	}
-
+	g_strlcpy(buf, utf8, sizeof(buf));
+	g_free(utf8);
 	return buf;
 }
 
@@ -1125,9 +919,9 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 					g_string_append(string, purple_utf8_strftime("%y", tm));
 				} else {
 					/* Zero-padding */
-					char *tmp = g_strdup_printf("%%0%dY", count);
-					g_string_append(string, purple_utf8_strftime(tmp, tm));
-					g_free(tmp);
+					g_string_append_printf(string, "%0*d",
+							count,
+							tm->tm_year + 1900);
 				}
 				break;
 
@@ -3101,46 +2895,81 @@ purple_user_dir(void)
 	return user_dir;
 }
 
-const char *
+static const gchar *
+purple_xdg_dir(gchar **xdg_dir, const gchar *xdg_base_dir, const gchar *xdg_type)
+{
+	if (!*xdg_dir) {
+		if (!custom_user_dir) {
+			*xdg_dir = g_build_filename(xdg_base_dir, "purple", NULL);
+		} else {
+			*xdg_dir = g_build_filename(custom_user_dir, xdg_type, NULL);
+		}
+	}
+
+	return *xdg_dir;
+}
+
+const gchar *
 purple_cache_dir(void)
 {
-	if (!cache_dir) {
-		if (!custom_user_dir) {
-			cache_dir = g_build_filename(g_get_user_cache_dir(), "purple", NULL);
-		} else {
-			cache_dir = g_build_filename(custom_user_dir, "cache", NULL);
-		}
-	}
-
-	return cache_dir;
+	return purple_xdg_dir(&cache_dir, g_get_user_cache_dir(), "cache");
 }
 
-const char *
+const gchar *
 purple_config_dir(void)
 {
-	if (!config_dir) {
-		if (!custom_user_dir) {
-			config_dir = g_build_filename(g_get_user_config_dir(), "purple", NULL);
-		} else {
-			config_dir = g_build_filename(custom_user_dir, "config", NULL);
-		}
-	}
-
-	return config_dir;
+	return purple_xdg_dir(&config_dir, g_get_user_config_dir(), "config");
 }
 
-const char *
+const gchar *
 purple_data_dir(void)
 {
-	if (!data_dir) {
-		if (!custom_user_dir) {
-			data_dir = g_build_filename(g_get_user_data_dir(), "purple", NULL);
-		} else {
-			data_dir = g_build_filename(custom_user_dir, "data", NULL);
-		}
+	return purple_xdg_dir(&data_dir, g_get_user_data_dir(), "data");
+}
+
+gboolean
+purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path)
+{
+	gint mkdir_res;
+	gchar *xdg_path;
+	gboolean xdg_path_exists;
+
+	/* Create destination directory */
+	mkdir_res = purple_build_dir(purple_xdg_dir, S_IRWXU);
+	if (mkdir_res == -1) {
+		purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
+					purple_xdg_dir, g_strerror(errno));
+		return FALSE;
 	}
 
-	return data_dir;
+	xdg_path = g_build_filename(purple_xdg_dir, path, NULL);
+	xdg_path_exists = g_file_test(xdg_path, G_FILE_TEST_EXISTS);
+	if (!xdg_path_exists) {
+		gchar *old_path;
+		gboolean old_path_exists;
+
+		old_path = g_build_filename(purple_user_dir(), path, NULL);
+		old_path_exists = g_file_test(old_path, G_FILE_TEST_EXISTS);
+		if (old_path_exists) {
+			int rename_res;
+
+			rename_res = g_rename(old_path, xdg_path);
+			if (rename_res == -1) {
+				purple_debug_error("util", "Error renaming %s to %s; failed migration\n",
+							old_path, xdg_path);
+				g_free(old_path);
+				g_free(xdg_path);
+
+				return FALSE;
+			}
+		}
+
+		g_free(old_path);
+	}
+
+	g_free(xdg_path);
+
+	return TRUE;
 }
 
 void purple_util_set_user_dir(const char *dir)
@@ -3180,7 +3009,7 @@ purple_util_write_data_to_file_common(const char *dir, const char *filename, con
 		}
 	}
 
-	filename_full = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", dir, filename);
+	filename_full = g_build_filename(dir, filename, NULL);
 
 	ret = purple_util_write_data_to_file_absolute(filename_full, data, size);
 
@@ -3224,159 +3053,30 @@ purple_util_write_data_to_data_file(const char *filename, const char *data, gssi
 	return ret;
 }
 
-/*
- * This function is long and beautiful, like my--um, yeah.  Anyway,
- * it includes lots of error checking so as we don't overwrite
- * people's settings if there is a problem writing the new values.
- */
 gboolean
 purple_util_write_data_to_file_absolute(const char *filename_full, const char *data, gssize size)
 {
-	gchar *filename_temp;
-	FILE *file;
-	gsize real_size, byteswritten;
-	GStatBuf st;
-#ifndef HAVE_FILENO
-	int fd;
-#endif
+	GFile *file;
+	GError *err = NULL;
 
-	purple_debug_misc("util", "Writing file %s",
-					filename_full);
+	g_return_val_if_fail(size >= -1, FALSE);
 
-	g_return_val_if_fail((size >= -1), FALSE);
-
-	filename_temp = g_strdup_printf("%s.save", filename_full);
-
-	/* Remove an old temporary file, if one exists */
-	if (g_file_test(filename_temp, G_FILE_TEST_EXISTS))
-	{
-		if (g_unlink(filename_temp) == -1)
-		{
-			purple_debug_error("util", "Error removing old file "
-					   "%s: %s\n",
-					   filename_temp, g_strerror(errno));
-		}
+	if (size == -1) {
+		size = strlen(data);
 	}
 
-	/* Open file */
-	file = g_fopen(filename_temp, "wb");
-	if (file == NULL)
-	{
-		purple_debug_error("util", "Error opening file %s for "
-				   "writing: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
+	file = g_file_new_for_path(filename_full);
+
+	if (!g_file_replace_contents(file, data, size, NULL, FALSE,
+			G_FILE_CREATE_PRIVATE, NULL, NULL, &err)) {
+		purple_debug_error("util", "Error writing file: %s: %s\n",
+				   filename_full, err->message);
+		g_clear_error(&err);
+		g_object_unref(file);
 		return FALSE;
 	}
 
-	/* Write to file */
-	real_size = (size == -1) ? strlen(data) : (size_t) size;
-	byteswritten = fwrite(data, 1, real_size, file);
-
-#ifdef HAVE_FILENO
-#ifndef _WIN32
-	/* Set file permissions */
-	if (fchmod(fileno(file), S_IRUSR | S_IWUSR) == -1) {
-		purple_debug_error("util", "Error setting permissions of "
-			"file %s: %s\n", filename_temp, g_strerror(errno));
-	}
-#endif
-
-	/* Apparently XFS (and possibly other filesystems) do not
-	 * guarantee that file data is flushed before file metadata,
-	 * so this procedure is insufficient without some flushage. */
-	if (fflush(file) < 0) {
-		purple_debug_error("util", "Error flushing %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		fclose(file);
-		return FALSE;
-	}
-	if (fsync(fileno(file)) < 0) {
-		purple_debug_error("util", "Error syncing file contents for %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		fclose(file);
-		return FALSE;
-	}
-#endif
-
-	/* Close file */
-	if (fclose(file) != 0)
-	{
-		purple_debug_error("util", "Error closing file %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		return FALSE;
-	}
-
-#ifndef HAVE_FILENO
-	/* This is the same effect (we hope) as the HAVE_FILENO block
-	 * above, but for systems without fileno(). */
-	if ((fd = open(filename_temp, O_RDWR)) < 0) {
-		purple_debug_error("util", "Error opening file %s for flush: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		return FALSE;
-	}
-
-#ifndef _WIN32
-	/* copy-pasta! */
-	if (fchmod(fd, S_IRUSR | S_IWUSR) == -1) {
-		purple_debug_error("util", "Error setting permissions of "
-			"file %s: %s\n", filename_temp, g_strerror(errno));
-	}
-#endif
-
-	if (fsync(fd) < 0) {
-		purple_debug_error("util", "Error syncing %s: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		close(fd);
-		return FALSE;
-	}
-	if (close(fd) < 0) {
-		purple_debug_error("util", "Error closing %s after sync: %s\n",
-				   filename_temp, g_strerror(errno));
-		g_free(filename_temp);
-		return FALSE;
-	}
-#endif
-
-	/* Ensure the file is the correct size */
-	if (byteswritten != real_size)
-	{
-		purple_debug_error("util", "Error writing to file %s: Wrote %"
-				   G_GSIZE_FORMAT " bytes "
-				   "but should have written %" G_GSIZE_FORMAT
-				   "; is your disk full?\n",
-				   filename_temp, byteswritten, real_size);
-		g_free(filename_temp);
-		return FALSE;
-	}
-#ifndef __COVERITY__
-	/* Use stat to be absolutely sure.
-	 * It causes TOCTOU coverity warning (against g_rename below),
-	 * but it's not a threat for us.
-	 */
-	if ((g_stat(filename_temp, &st) == -1) || ((gsize)st.st_size != real_size)) {
-		purple_debug_error("util", "Error writing data to file %s: "
-			"couldn't g_stat file", filename_temp);
-		g_free(filename_temp);
-		return FALSE;
-	}
-#endif /* __COVERITY__ */
-
-	/* Rename to the REAL name */
-	if (g_rename(filename_temp, filename_full) == -1)
-	{
-		purple_debug_error("util", "Error renaming %s to %s: %s\n",
-				   filename_temp, filename_full,
-				   g_strerror(errno));
-	}
-
-	g_free(filename_temp);
-
+	g_object_unref(file);
 	return TRUE;
 }
 
@@ -3384,6 +3084,24 @@ PurpleXmlNode *
 purple_util_read_xml_from_file(const char *filename, const char *description)
 {
 	return purple_xmlnode_from_file(purple_user_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_cache_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_cache_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_config_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_config_dir(), filename, description, "util");
+}
+
+PurpleXmlNode *
+purple_util_read_xml_from_data_file(const char *filename, const char *description)
+{
+	return purple_xmlnode_from_file(purple_data_dir(), filename, description, "util");
 }
 
 /*
@@ -4237,7 +3955,7 @@ purple_email_is_valid(const char *address)
 		if (*c == '\"' && (c == address || *(c - 1) == '.' || *(c - 1) == '\"')) {
 			while (*++c) {
 				if (*c == '\\') {
-					if (*c++ && *c < 127 && *c != '\n' && *c != '\r') continue;
+					if (*c++ && *c < 127 && *c > 0 && *c != '\n' && *c != '\r') continue;
 					else return FALSE;
 				}
 				if (*c == '\"') break;

@@ -12,8 +12,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:53-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 14:00+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Greek (http://www.transifex.com/pidgin/pidgin/language/el/)\n"
 "Language: el\n"
@@ -12939,6 +12939,56 @@ msgstr ""
 "Αυτό το πρόσθετο επιτρέπει το χρήστη να προσαρμόσει τις μορφές των "
 "χρονοσήμων στα μηνύματα συνομιλιών και καταγραφών."
 
+msgid "Opacity:"
+msgstr "Αδιαφάνεια:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Παράθυρα άμεσων μηνυμάτων"
+
+msgid "_IM window transparency"
+msgstr "_Διαφάνεια παραθύρων άμεσων μηνυμάτων"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Εμφάνιση μπάρας κύλισης στο παράθυρο άμεσου μηνύματος"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Αφαίρεση διαφάνειας παραθύρων άμεσων μηνυμάτων κατά την εστίαση"
+
+msgid "Always on top"
+msgstr "Πάντα στην κορυφή"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Παράθυρο λίστας φίλων"
+
+msgid "_Buddy List window transparency"
+msgstr "_Διαφάνεια παραθύρου λίστας φίλων"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Αφαίρεση διαφάνειας παραθύρου λίστας φίλων κατά την εστίαση"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Διαφάνεια"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Μεταβαλλόμενη διαφάνεια για τη λίστα φίλων και τις συνομιλίες."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Ειδοποιήσεις δωματίων συζητήσεων"
@@ -13053,56 +13103,6 @@ msgstr "Ρυθμίστε το μικρόφωνο και τη δικτυακή σ
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Ρυθμιστε το μικρόφωνο και τη δικτυακή σας κάμερα για κλήσεις φωνής/βίντεο."
-
-msgid "Opacity:"
-msgstr "Αδιαφάνεια:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Παράθυρα άμεσων μηνυμάτων"
-
-msgid "_IM window transparency"
-msgstr "_Διαφάνεια παραθύρων άμεσων μηνυμάτων"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Εμφάνιση μπάρας κύλισης στο παράθυρο άμεσου μηνύματος"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Αφαίρεση διαφάνειας παραθύρων άμεσων μηνυμάτων κατά την εστίαση"
-
-msgid "Always on top"
-msgstr "Πάντα στην κορυφή"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Παράθυρο λίστας φίλων"
-
-msgid "_Buddy List window transparency"
-msgstr "_Διαφάνεια παραθύρου λίστας φίλων"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Αφαίρεση διαφάνειας παραθύρου λίστας φίλων κατά την εστίαση"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Διαφάνεια"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Μεταβαλλόμενη διαφάνεια για τη λίστα φίλων και τις συνομιλίες."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

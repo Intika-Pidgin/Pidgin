@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:53-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 14:02+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Indonesian (http://www.transifex.com/pidgin/pidgin/language/"
 "id/)\n"
@@ -12472,6 +12472,56 @@ msgstr ""
 "Plugin ini memungkinkan pengguna untuk mengkostumisasi percakapan dan format "
 "penanda waktu pesan log."
 
+msgid "Opacity:"
+msgstr "Ke-tampak-an:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Jendela Percakapan PI"
+
+msgid "_IM window transparency"
+msgstr "Transparansi jendela _PI"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Tampilkan batang penggeser dalam jendela PI"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Hilangkan transparasni jendela PI pada fokus"
+
+msgid "Always on top"
+msgstr "Selalu di atas"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Jendela Daftar Teman"
+
+msgid "_Buddy List window transparency"
+msgstr "Transparansi jendela Daftar _Teman"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Hilangkan transparansi jendela Daftar Teman Remove pada fokus"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Transparansi"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Variabel Transparansi untuk daftar teman dan percakapan."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12579,56 +12629,6 @@ msgstr ""
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
-msgstr ""
-
-msgid "Opacity:"
-msgstr "Ke-tampak-an:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Jendela Percakapan PI"
-
-msgid "_IM window transparency"
-msgstr "Transparansi jendela _PI"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Tampilkan batang penggeser dalam jendela PI"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Hilangkan transparasni jendela PI pada fokus"
-
-msgid "Always on top"
-msgstr "Selalu di atas"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Jendela Daftar Teman"
-
-msgid "_Buddy List window transparency"
-msgstr "Transparansi jendela Daftar _Teman"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Hilangkan transparansi jendela Daftar Teman Remove pada fokus"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Transparansi"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Variabel Transparansi untuk daftar teman dan percakapan."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
 msgstr ""
 
 #. Autostart

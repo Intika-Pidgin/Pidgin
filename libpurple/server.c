@@ -298,7 +298,8 @@ PurpleAttentionType *purple_get_attention_type_from_code(PurpleAccount *account,
 	if (PURPLE_IS_PROTOCOL_ATTENTION(protocol)) {
 		GList *attention_types;
 
-		attention_types = purple_protocol_attention_get_types(protocol, account);
+		attention_types = purple_protocol_attention_get_types(
+				PURPLE_PROTOCOL_ATTENTION(protocol), account);
 		attn = (PurpleAttentionType *)g_list_nth_data(attention_types, type_code);
 	} else {
 		attn = NULL;
@@ -704,7 +705,6 @@ void purple_serv_got_chat_invite(PurpleConnection *gc, const char *name,
 						  const char *who, const char *message, GHashTable *data)
 {
 	PurpleAccount *account;
-	char buf2[BUF_LONG];
 	struct chat_invite_data *cid;
 	int plugin_return;
 
@@ -729,14 +729,16 @@ void purple_serv_got_chat_invite(PurpleConnection *gc, const char *name,
 
 	if (plugin_return == 0)
 	{
+		char *buf2;
+
 		if (message != NULL)
 		{
-			g_snprintf(buf2, sizeof(buf2),
+			buf2 = g_strdup_printf(
 				   _("%s has invited %s to the chat room %s:\n%s"),
 				   who, purple_account_get_username(account), name, message);
 		}
 		else
-			g_snprintf(buf2, sizeof(buf2),
+			buf2 = g_strdup_printf(
 				   _("%s has invited %s to the chat room %s\n"),
 				   who, purple_account_get_username(account), name);
 
@@ -747,6 +749,7 @@ void purple_serv_got_chat_invite(PurpleConnection *gc, const char *name,
 			purple_request_cpar_from_connection(gc), cid,
 			G_CALLBACK(chat_invite_accept),
 			G_CALLBACK(chat_invite_reject));
+		g_free(buf2);
 	}
 	else if (plugin_return > 0)
 		chat_invite_accept(cid);
@@ -898,7 +901,8 @@ void purple_serv_send_file(PurpleConnection *gc, const char *who, const char *fi
 			PurpleProtocolXfer *xfer = PURPLE_PROTOCOL_XFER(protocol);
 
 			if(purple_protocol_xfer_can_receive(xfer, gc, who)) {
-				purple_protocol_xfer_send(xfer, gc, who, file);
+				purple_protocol_xfer_send_file(xfer,
+						gc, who, file);
 			}
 		}
 	}

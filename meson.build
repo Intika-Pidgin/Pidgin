@@ -20,27 +20,7 @@ project('pidgin', 'c', meson_version : '>=0.37.0')
 #   For code under development: 'devel'
 #   For production releases:    ''
 #
-#
-# If any code has changed in libgnt:
-#   gnt_micro_version += 1
-#
-# If any functions have been added to libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version += 1
-#   gnt_lt_current += 1
-#
-# If backwards compatibility has been broken in libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version = 0
-#   gnt_major_version += 1;
-#   gnt_lt_current += 1
-#
-# gnt_version_suffix should be similar to one of the following:
-#   For beta releases:          'beta2'
-#   For code under development: 'devel'
-#   For production releases:    ''
-#
-# Make sure to update finch/libgnt/configure.ac with libgnt version changes.
+# Make sure to update finch/libgnt/meson.build with libgnt version changes.
 #
 purple_lt_current = 20
 purple_major_version = 3
@@ -53,23 +33,10 @@ purple_version = '@0@.@1@.@2@'.format(purple_major_version,
 purple_display_version = '@0@@1@'.format(purple_version,
                                          purple_version_suffix)
 
-# the last version for Finch 2 was 2.8.10,
-# the first version for Finch 3 was 2.9.0
-gnt_lt_current = 9
-gnt_major_version = 2
-gnt_minor_version = 9
-gnt_micro_version = 0
-gnt_version_suffix = 'devel'
-gnt_version = '@0@.@1@.@2@'.format(gnt_major_version,
-                                   gnt_minor_version,
-                                   gnt_micro_version)
-gnt_display_version = '@0@@1@'.format(gnt_version,
-                                      gnt_version_suffix)
-
-
 add_project_arguments('-DHAVE_CONFIG_H=1', language : 'c')
 conf = configuration_data()
 man_conf = configuration_data()
+purple_h_conf = configuration_data()
 version_conf = configuration_data()
 
 conf.set_quoted('PACKAGE', meson.project_name())
@@ -86,16 +53,6 @@ version_conf.set('PURPLE_API_VERSION',
 PURPLE_LIB_VERSION = '@0@.@1@.@2@'.format(purple_lt_current - purple_minor_version,
                                           purple_minor_version,
                                           purple_micro_version)
-
-version_conf.set('GNT_MAJOR_VERSION', gnt_major_version)
-version_conf.set('GNT_MINOR_VERSION', gnt_minor_version)
-version_conf.set('GNT_MICRO_VERSION', gnt_micro_version)
-version_conf.set('GNT_VERSION', gnt_display_version)
-version_conf.set('GNT_API_VERSION', gnt_lt_current - gnt_minor_version)
-
-GNT_LIB_VERSION = '@0@.@1@.@2@'.format(gnt_lt_current - gnt_minor_version,
-                                       gnt_minor_version,
-                                       gnt_micro_version)
 
 package_revision = vcs_tag(
     input : 'package_revision.h.in',
@@ -120,12 +77,6 @@ endif
 # Checks for programs.
 compiler = meson.get_compiler('c')
 
-if compiler.has_function('alloca')  # FIXME: Probably not enough.
-	conf.set('HAVE_ALLOCA_H', true)
-else
-	error('alloca could not be found')
-endif
-
 # Check for Sun compiler
 SUNCC = compiler.compiles('void main() {__SUNPRO_C;};')
 
@@ -140,6 +91,9 @@ if host_machine.system() == 'windows'
 		conf.set('IS_WIN32_CROSS_COMPILED', true)
 	endif
 	conf.set('WIN32_LEAN_AND_MEAN', true)
+
+	conf.set('LIBPIDGIN_DLL_NAMEW',
+	    'L"libpidgin-@0@.dll"'.format(purple_lt_current))
 else
 	IS_WIN32 = false
 	ws2_32 = []
@@ -168,28 +122,19 @@ conf.set('SIZEOF_TIME_T', time_t_size)
 
 conf.set('WORDS_BIGENDIAN', host_machine.endian() != 'little')
 
-conf.set('USE_WIN32_FHS',
-    IS_WIN32 and get_option('win32-dirs') == 'fhs')
-
 # Check for directories
 if IS_WIN32
-	if get_option('win32-dirs') == 'fhs'
-		foreach dir : ['bin', 'lib', 'data', 'sysconf', 'locale']
-			path = join_paths(get_option('prefix'), get_option(dir + 'dir'))
-			conf.set('WIN32_FHS_@0@DIR'.format(dir.to_upper()), path)
-		endforeach
+	foreach dir : ['bin', 'lib', 'data', 'sysconf', 'locale']
+		path = join_paths(get_option('prefix'), get_option(dir + 'dir'))
+		conf.set_quoted('WIN32_FHS_@0@DIR'.format(dir.to_upper()), path)
+	endforeach
 
-		conf.set('PURPLE_LIBDIR',
-		         'wpurple_lib_dir("purple-@0@")'.format(purple_major_version))
-		conf.set('PIDGIN_LIBDIR',
-		         'wpurple_lib_dir("pidgin-@0@")'.format(purple_major_version))
-		conf.set('FINCH_LIBDIR',
-		         'wpurple_lib_dir("finch-@0@")'.format(purple_major_version))
-	else
-		conf.set('PURPLE_LIBDIR', 'wpurple_lib_dir(NULL)')
-		conf.set('PIDGIN_LIBDIR', 'wpurple_lib_dir(NULL)')
-		conf.set('FINCH_LIBDIR', 'wpurple_lib_dir(NULL)')
-	endif
+	conf.set('PURPLE_LIBDIR',
+		 'wpurple_lib_dir("purple-@0@")'.format(purple_major_version))
+	conf.set('PIDGIN_LIBDIR',
+		 'wpurple_lib_dir("pidgin-@0@")'.format(purple_major_version))
+	conf.set('FINCH_LIBDIR',
+		 'wpurple_lib_dir("finch-@0@")'.format(purple_major_version))
 
 	conf.set('PURPLE_DATADIR', 'wpurple_data_dir()')
 	conf.set('PURPLE_SYSCONFDIR', 'wpurple_sysconf_dir()')
@@ -219,12 +164,6 @@ PIDGIN_PLUGINDIR = join_paths(abslibdir, 'pidgin-@0@'.format(purple_major_versio
 conf.set_quoted('PIDGIN_PLUGINDIR', PIDGIN_PLUGINDIR)
 FINCH_PLUGINDIR = join_paths(abslibdir, 'finch-@0@'.format(purple_major_version))
 conf.set_quoted('FINCH_PLUGINDIR', FINCH_PLUGINDIR)
-
-# Checks for library functions.
-foreach func : ['strdup']
-	conf.set('HAVE_' + func.to_upper(),
-	    compiler.has_function(func))
-endforeach
 
 # Check for inet_aton
 if not IS_WIN32
@@ -301,46 +240,6 @@ conf.set('HAVE_IPV6_V6ONLY',
 # of the C library
 math = compiler.find_library('m')
 
-code = '''
-#include <stdio.h>
-
-int main(int argc, char *argv[])
-{
-	int fd;
-
-	fd = fileno(stdout);
-
-	return !(fd > 0);
-}
-'''
-result = compiler.run(code, name : 'fileno()')
-conf.set('HAVE_FILENO', result.returncode() == 0)
-
-code = '''
-#include <time.h>
-#include <stdio.h>
-
-int main()
-{
-	char buf[64];
-	time_t t = time(NULL);
-
-	if (strftime(buf, sizeof(buf), "%z", localtime(&t)) != 5)
-		return 1;
-
-	fprintf(stderr, "strftime(\"%%z\") yields: \"%s\"\n", buf);
-
-	return !((buf[0] == '-' || buf[0] == '+') &&
-	         (buf[1] >= '0' && buf[1] <= '9') &&
-	         (buf[2] >= '0' && buf[2] <= '9') &&
-	         (buf[3] >= '0' && buf[3] <= '9') &&
-	         (buf[4] >= '0' && buf[4] <= '9')
-	        );
-}
-'''
-result = compiler.run(code, name : 'the %z format string in strftime()')
-conf.set('HAVE_STRFTIME_Z_FORMAT', result.returncode() == 0)
-
 # before gettexting, in case iconv matters
 IOKIT = []
 if host_machine.system() == 'darwin'
@@ -366,9 +265,11 @@ endif
 INSTALL_I18N = get_option('nls')
 
 if INSTALL_I18N
-	subdir('po')
+	conf.set('ENABLE_NLS', true)
 
-	intltool_merge = find_program('intltool-merge')
+	i18n = import('i18n')
+
+	subdir('po')
 endif
 
 # #######################################################################
@@ -376,7 +277,6 @@ endif
 # #######################################################################
 glib = dependency('glib-2.0', version : '>= 2.40.0')
 gio = dependency('gio-2.0')
-gmodule = dependency('gmodule-2.0')
 gobject = dependency('gobject-2.0')
 gthread = dependency('gthread-2.0')
 gnome = import('gnome')
@@ -394,9 +294,6 @@ force_deps = not get_option('missing-dependencies')
 # #######################################################################
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
-enable_enchant = get_option('enchant')
-enable_gevolution = get_option('gevolution')
-enable_cap = get_option('cap')
 enable_gestures = get_option('gestures')
 enable_gcr = get_option('gcr')
 
@@ -416,46 +313,13 @@ if get_option('gtkui')
 	#######################################################################
 	# We need enchant for spell checking dictionary enumeration,
 	# because webkit1 doesn't have this.
-	use_enchant = false
+	enable_enchant = get_option('enchant')
 	if enable_enchant
-		use_enchant = true
 		enchant = dependency('enchant', required : force_deps)
-		use_enchant = enchant.found()
-		conf.set('USE_ENCHANT', use_enchant)
+		enable_enchant = enchant.found()
+		conf.set('USE_ENCHANT', enable_enchant)
 	else
 		enchant = []
-	endif
-
-	#######################################################################
-	# Check for stuff needed by the Evolution integration plugin.
-	#######################################################################
-	if enable_gevolution
-		evo_deps = [
-		    ['libebook-1.2', []],
-		    ['libedata-book-1.2', []],
-		    ['evolution-data-server-1.2', '>= 3.6']
-		]
-		EVOLUTION_ADDRESSBOOK = []
-		foreach dep : evo_deps
-			EVOLUTION_ADDRESSBOOK += [
-			    dependency(dep[0], version : dep[1], required : force_deps)
-			]
-			if not EVOLUTION_ADDRESSBOOK[-1].found()
-				enable_gevolution = false
-			endif
-		endforeach
-	endif
-	conf.set('HAVE_EVOLUTION_ADDRESSBOOK', enable_gevolution)
-	if not enable_gevolution
-		EVOLUTION_ADDRESSBOOK = []
-	endif
-
-	#######################################################################
-	# Check for libsqlite3 (for the Contact Availability Prediction plugin)
-	#######################################################################
-	if enable_cap
-		SQLITE3 = dependency('sqlite3', version : '>= 3.3', required : force_deps)
-		enable_cap = SQLITE3.found()
 	endif
 
 	#######################################################################
@@ -474,10 +338,8 @@ if get_option('gtkui')
 
 
 else	# GTK
-	enable_cap = false
 	enable_gcr = false
-	enable_gevolution = false
-	use_enchant = false
+	enable_enchant = false
 endif	# GTK
 
 ENABLE_GTK = get_option('gtkui')
@@ -507,78 +369,6 @@ endif
 if not get_option('gtkui') or not with_x
 	enable_gestures = false
 endif
-
-#######################################################################
-# Check for ncurses and other things used by the console UI
-#######################################################################
-ncurses_inc = []
-ncurses_libs = []
-enable_consoleui = get_option('consoleui')
-force_finch = enable_consoleui
-if enable_consoleui
-	ncurses_libs = [
-		compiler.find_library('ncursesw', required : false),
-		compiler.find_library('panelw', required : false)
-	]
-	if not ncurses_libs[0].found() or not ncurses_libs[1].found()
-		enable_consoleui = false
-	endif
-
-	if IS_WIN32
-		# FIXME: $host ?
-		ncurses_sys_prefix = '/usr/$host/sys-root/mingw'
-	else
-		ncurses_sys_prefix = '/usr'
-	endif
-
-	ncurses_sys_dirs = [ncurses_sys_prefix + '/include/ncursesw',
-	                    ncurses_sys_prefix + '/include']
-
-	if enable_consoleui
-		# Some distros put the headers in ncursesw/, some don't
-		found_ncurses_h = false
-		foreach location : ncurses_sys_dirs
-			f = location + '/ncurses.h'
-			if not found_ncurses_h
-				if compiler.has_header_symbol(f, 'get_wch',
-				       prefix : '#define _XOPEN_SOURCE_EXTENDED')
-					if location != '.'
-						ncurses_inc += [include_directories(location)]
-					endif
-					found_ncurses_h = true
-				endif
-			endif
-		endforeach
-
-		if not found_ncurses_h
-			ncurses_inc = []
-			ncurses_libs = []
-			enable_consoleui = false
-		endif
-	else
-		# ncursesw was not found. Look for plain old ncurses
-		ncurses_libs = [
-			compiler.find_library('ncurses', required : false),
-			compiler.find_library('panel', required : false)
-		]
-		enable_consoleui = ncurses_libs[0].found() and ncurses_libs[1].found()
-		conf.set('NO_WIDECHAR', true)
-	endif
-endif
-ncurses = declare_dependency(
-    include_directories : ncurses_inc,
-    dependencies : ncurses_libs
-)
-
-if force_finch and not enable_consoleui
-	error('''
-
-Finch will not be built. You need to install ncursesw (or ncurses) and its development headers.
-
-''')
-endif
-
-#conf.set('HAVE_WCWIDTH', compiler.has_function('wcwidth'))
 
 #######################################################################
 # Check for LibXML2 (required)
@@ -909,6 +699,7 @@ if compiler.get_id() == 'gcc'
 			'-Wendif-labels',
 			'-Werror-implicit-function-declaration',
 			'-Wextra -Wno-unused-parameter',
+			'-Wformat',
 			'-Wformat-security',
 			'-Werror=format-security',
 			'-Winit-self',
@@ -1001,30 +792,13 @@ endif
 # Check for Secret Service headers
 #######################################################################
 
-enable_secret_service = get_option('secret-service')
+enable_secret_service = get_option('secret-service') and not IS_WIN32
 if enable_secret_service
 	secretservice = dependency('libsecret-1', required : force_deps)
 	if secretservice.found()
 	else
 		enable_secret_service = false
 	endif
-endif
-
-#######################################################################
-# Check for GNOME Keyring headers
-#######################################################################
-
-enable_gnome_keyring = get_option('gnome-keyring') and not IS_WIN32
-
-if enable_gnome_keyring
-	gnome_keyring = dependency('gnome-keyring-1', required : force_deps)
-	if gnome_keyring.found()
-		conf.set('HAVE_GNOMEKEYRING', true)
-	else
-		enable_gnome_keyring = false
-	endif
-else
-	gnome_keyring = []
 endif
 
 #######################################################################
@@ -1111,16 +885,23 @@ if get_option('plugins')
 	gplugin = dependency('gplugin', version : '>= 0.0.17')
 	# GPLUGIN_REQ sets pkg-config requirements in the .pc file
 	GPLUGIN_REQ = ['gplugin']
-	enable_introspection = dependency('gobject-introspection-1.0',
-	    version : '>= 1.30.0', required : false).found()
 else
 	gplugin = []
 	GPLUGIN_REQ = []
-	enable_introspection = false
 endif
 
+#######################################################################
+# Check for GObject Introspection
+#######################################################################
+
+enable_introspection = get_option('introspection')
 if enable_introspection
-	conf.set('ENABLE_INTROSPECTION', true)
+	if dependency('gobject-introspection-1.0', version : '>= 1.30.0',
+	              required : force_deps).found()
+		conf.set('ENABLE_INTROSPECTION', true)
+	else
+		enable_introspection = false
+	endif
 endif
 
 #######################################################################
@@ -1131,19 +912,13 @@ endif
 # and XML code that wraps (part of) the existing API so that
 # it is now accessible through D-Bus.
 
-if enable_dbus or enable_consoleui
+if enable_dbus
 	if meson.version().version_compare('>=0.38.0')
 		python3_mod = import('python3')
 		python = python3_mod.find_python()
 	else
 		python = find_program('python3')
 	endif
-endif
-
-# Check for Python headers (currently useful only for libgnt)
-if enable_consoleui
-	python_dep = dependency('python3')
-	conf.set('USE_PYTHON', python_dep.found())
 endif
 
 #######################################################################
@@ -1171,10 +946,10 @@ INSTALL_SSL_CERTIFICATES = SSL_CERTIFICATES_DIR == ''
 if get_option('plugins')
 	conf.set('PURPLE_PLUGINS', 1)
 	PLUGINS = true
-	conf.set('PLUGINS_DEFINE', '#define PURPLE_PLUGINS 1')
+	purple_h_conf.set('PLUGINS_DEFINE', '#define PURPLE_PLUGINS 1')
 else
 	PLUGINS = false
-	conf.set('PLUGINS_DEFINE', '#undef PURPLE_PLUGINS')
+	purple_h_conf.set('PLUGINS_DEFINE', '#undef PURPLE_PLUGINS')
 endif
 
 #######################################################################
@@ -1184,7 +959,7 @@ endif
 enable_nettle = get_option('nettle')
 
 if enable_nettle
-	nettle = dependency('nettle', version : '>= 3.0')
+	nettle = dependency('nettle', version : '>= 3.0', required : false)
 	enable_nettle = nettle.found()
 	conf.set('HAVE_NETTLE', enable_nettle)
 
@@ -1205,11 +980,15 @@ foreach func : ['snprintf', 'connect']
 endforeach
 enable_cyrus_sasl = get_option('cyrus-sasl')
 if enable_cyrus_sasl
-	if compiler.has_function('sasl_client_init', args : '-lsasl2')
-		conf.set('HAVE_CYRUS_SASL', true)
-		sasl = declare_dependency(link_args : '-lsasl2')
-	else
-		error('Cyrus SASL library not found')
+	sasl = dependency('libsasl2', version : '>= 2.0', required : false)
+	enable_cyrus_sasl = sasl.found()
+	conf.set('HAVE_CYRUS_SASL', enable_cyrus_sasl)
+
+	if not enable_cyrus_sasl and force_deps
+		error('''
+Cyrus SASL library not found
+Use -Dcyrus-sasl=false if you do not need it.
+''')
 	endif
 else
 	enable_cyrus_sasl = false
@@ -1304,11 +1083,6 @@ conf.set('HAVE_TM_GMTOFF',
 #######################################################################
 INSTALL_PIXMAPS = get_option('pixmaps-install')
 
-#######################################################################
-# Tweak status tray icon installation directory
-#######################################################################
-ENABLE_TRAYCOMPAT = get_option('trayicon-compat')
-
 # check for gtk-doc
 ENABLE_DOC = get_option('doc')
 if ENABLE_DOC
@@ -1322,8 +1096,6 @@ endif
 
 enable_debug = get_option('debug')
 conf.set('DEBUG', enable_debug)
-
-PURPLE_AVAILABLE = true
 
 # So that config.h may be found.
 toplevel_inc = include_directories('.')
@@ -1362,26 +1134,18 @@ message('Build with Cyrus SASL support. : ' + enable_cyrus_sasl.to_string())
 message('Use kerberos 4 with zephyr.... : ' + kerberos.to_string())
 message('Use external libzephyr........ : ' + zephyr.to_string())
 message('Install pixmaps............... : ' + INSTALL_PIXMAPS.to_string())
-message('Old tray icon compatibility... : ' + ENABLE_TRAYCOMPAT.to_string())
 message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
-message('Build with Enchant support.... : ' + use_enchant.to_string())
+message('Build with Enchant support.... : ' + enable_enchant.to_string())
 message('Build with GCR widgets........ : ' + enable_gcr.to_string())
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
-message('Build with GNOME Keyring...... : ' + enable_gnome_keyring.to_string())
 message('Build with KWallet............ : ' + enable_kwallet.to_string())
 message('Build with Secret Service..... : ' + enable_secret_service.to_string())
 message('')
 message('Build with plugin support..... : ' + PLUGINS.to_string())
 message('Enable Introspection...........: ' + enable_introspection.to_string())
-
-if IS_WIN32
-	message('')
-	message('Win32 directory structure..... : ' + get_option('win32-dirs'))
-endif
-
 message('')
 message('Print debugging messages...... : ' + enable_debug.to_string())
 message('Generate documentation........ : ' + ENABLE_DOC.to_string())

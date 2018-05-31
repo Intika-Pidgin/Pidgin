@@ -108,6 +108,7 @@ libpidgin_SOURCES += pidgin_resource
 
 if IS_WIN32
 	libpidgin_SOURCES += [
+		'pidgin.c',
 		'win32/gtkwin32dep.c',
 		'win32/untar.c'
 	]
@@ -121,7 +122,7 @@ if IS_WIN32
 	    input : 'win32/pidgin_exe_rc.rc.in',
 	    output : 'pidgin_exe_rc.rc',
 	    configuration : version_conf)
-	pidgin_SOURCES += [
+	pidgin_SOURCES = [
 	    'win32/winpidgin.c',
 	    windows.compile_resources(pidgin_exe_rc,
 	        include_directories : include_directories('win32')
@@ -151,6 +152,7 @@ if ENABLE_GTK
 	libpidgin_inc = include_directories('.')
 	libpidgin = shared_library('pidgin',
 	    libpidgin_SOURCES,
+	    package_revision,
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
 	    dependencies : [
@@ -175,8 +177,8 @@ if ENABLE_GTK
 
 	pidgin = executable('pidgin',
 	    pidgin_SOURCES,
-	    link_args : '-export-dynamic',
-	    dependencies : [libpurple_dep, libpidgin_dep],
+	    include_directories : toplevel_inc,
+	    dependencies : IS_WIN32 ? [] : [libpurple_dep, libpidgin_dep],
 	    gui_app : true,
 	    install : true)
 
@@ -201,21 +203,18 @@ if ENABLE_GTK
 		    input : 'data/' + DESKTOP_FILE + '.in.in',
 		    output : DESKTOP_FILE + '.in',
 		    configuration : conf)
-		desktop_file = custom_target(DESKTOP_FILE,
+		desktop_file = i18n.merge_file(
 		    input : desktop_file_in,
 		    output : DESKTOP_FILE,
-		    command : [intltool_merge, '--desktop-style', '-u',
-		               '-c', '@BUILD_DIR@/po/.intltool-merge-cache',
-		               meson.source_root() + '/po', '@INPUT@', '@OUTPUT@'],
+		    po_dir : meson.source_root() + '/po',
+		    type : 'desktop',
 		    install : true,
 		    install_dir : get_option('datadir') + '/applications')
 
-		appdata = custom_target('im.pidgin.Pidgin.appdata.xml',
+		appdata = i18n.merge_file(
 		    input : 'data/im.pidgin.Pidgin.appdata.xml.in',
 		    output : 'im.pidgin.Pidgin.appdata.xml',
-			command : [intltool_merge, '--xml-style', '-u',
-		               '-c', '@BUILD_DIR@/po/.intltool-merge-cache',
-		               meson.source_root() + '/po', '@INPUT@', '@OUTPUT@'],
+		    po_dir : meson.source_root() + '/po',
 		    install : true,
 		    install_dir : get_option('datadir') + '/metainfo')
 	endif  # INSTALL_I18N
@@ -235,6 +234,7 @@ if ENABLE_GTK
 		    install : true)
 	endif
 
+	subdir('data')
 	subdir('pixmaps')
 	subdir('plugins')
 	subdir('themes')

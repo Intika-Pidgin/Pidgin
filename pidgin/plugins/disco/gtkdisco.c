@@ -114,14 +114,20 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 {
 	GdkPixbuf *pixbuf = NULL;
 	char *filename = NULL;
+	gchar *tmp_size;
 
 	g_return_val_if_fail(service != NULL, NULL);
 	g_return_val_if_fail(size != NULL, NULL);
 
+	tmp_size = g_strdup_printf("%sx%s", size, size);
+
 	if (service->type == XMPP_DISCO_SERVICE_TYPE_GATEWAY && service->gateway_type) {
-		char *tmp = g_strconcat(service->gateway_type, ".png", NULL);
+		char *tmp = g_strconcat("im-", service->gateway_type,
+				".png", NULL);
+
 		filename = g_build_filename(PURPLE_DATADIR,
-			"pixmaps", "pidgin", "protocols", size, tmp, NULL);
+			"pidgin", "icons", "hicolor", tmp_size, "apps",
+			tmp, NULL);
 		g_free(tmp);
 #if 0
 	} else if (service->type == XMPP_DISCO_SERVICE_TYPE_USER) {
@@ -130,8 +136,11 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 #endif
 	} else if (service->type == XMPP_DISCO_SERVICE_TYPE_CHAT) {
 		filename = g_build_filename(PURPLE_DATADIR,
-			"pixmaps", "pidgin", "status", size, "chat.png", NULL);
+			"pidgin", "icons", "hicolor", tmp_size, "status",
+			"chat.png", NULL);
 	}
+
+	g_free(tmp_size);
 
 	if (filename) {
 		pixbuf = gdk_pixbuf_new_from_file(filename, NULL);
@@ -304,7 +313,7 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 	menu = gtk_menu_new();
 
 	if (service->flags & XMPP_DISCO_ADD)
-		pidgin_new_menu_item(menu, _("Add to Buddy List"), GTK_STOCK_ADD,
+		pidgin_new_menu_item(menu, _("Add to Buddy List"), NULL,
                                 G_CALLBACK(add_to_blist_cb), pdl->dialog);
 
 	if (service->flags & XMPP_DISCO_REGISTER) {
@@ -666,19 +675,15 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 
 	/* stop button */
 	dialog->stop_button =
-		pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_STOP,
+		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Stop"),
 		                         G_CALLBACK(stop_button_cb), dialog);
 	gtk_widget_set_sensitive(dialog->stop_button, FALSE);
 
 	/* browse button */
 	dialog->browse_button =
-		pidgin_pixbuf_button_from_stock(_("_Browse"), GTK_STOCK_REFRESH,
-		                                PIDGIN_BUTTON_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->browse_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->browse_button), "clicked",
-	                 G_CALLBACK(browse_button_cb), dialog);
+		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Browse"),
+		                         G_CALLBACK(browse_button_cb), dialog);
 	gtk_widget_set_sensitive(dialog->browse_button, dialog->account != NULL);
-	gtk_widget_show(dialog->browse_button);
 
 	/* register button */
 	dialog->register_button =
@@ -688,17 +693,13 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 
 	/* add button */
 	dialog->add_button =
-		pidgin_pixbuf_button_from_stock(_("_Add"), GTK_STOCK_ADD,
-	                                    PIDGIN_BUTTON_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->add_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->add_button), "clicked",
-	                 G_CALLBACK(add_to_blist_cb), dialog);
+		pidgin_dialog_add_button(GTK_DIALOG(dialog->window), _("_Add"),
+		                         G_CALLBACK(add_to_blist_cb), dialog);
 	gtk_widget_set_sensitive(dialog->add_button, FALSE);
-	gtk_widget_show(dialog->add_button);
 
 	/* close button */
 	dialog->close_button =
-		pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_CLOSE,
+		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Close"),
 		                         G_CALLBACK(close_button_cb), dialog);
 
 	/* show the dialog window and return the dialog */
