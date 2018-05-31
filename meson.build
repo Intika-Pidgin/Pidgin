@@ -801,23 +801,6 @@ if enable_secret_service
 endif
 
 #######################################################################
-# Check for GNOME Keyring headers
-#######################################################################
-
-enable_gnome_keyring = get_option('gnome-keyring') and not IS_WIN32
-
-if enable_gnome_keyring
-	gnome_keyring = dependency('gnome-keyring-1', required : force_deps)
-	if gnome_keyring.found()
-		conf.set('HAVE_GNOMEKEYRING', true)
-	else
-		enable_gnome_keyring = false
-	endif
-else
-	gnome_keyring = []
-endif
-
-#######################################################################
 # Check for KWallet headers
 #######################################################################
 
@@ -1157,7 +1140,6 @@ message('Build with Enchant support.... : ' + enable_enchant.to_string())
 message('Build with GCR widgets........ : ' + enable_gcr.to_string())
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
-message('Build with GNOME Keyring...... : ' + enable_gnome_keyring.to_string())
 message('Build with KWallet............ : ' + enable_kwallet.to_string())
 message('Build with Secret Service..... : ' + enable_secret_service.to_string())
 message('')

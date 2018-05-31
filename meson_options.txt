@@ -92,9 +92,6 @@ option('unity-integration', type : 'boolean', value : false,
 option('secret-service', type : 'boolean', value : true,
        description : 'enable Secret Service support')
 
-option('gnome-keyring', type : 'boolean', value : true,
-       description : 'enable GNOME Keyring support')
-
 option('kwallet', type : 'boolean', value : true,
        description : 'enable KWallet support')
 
