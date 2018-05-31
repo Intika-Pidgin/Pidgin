@@ -13,7 +13,6 @@ pidgin-*
 
 syntax: regexp
 ^build(.+)?\/
-po/Makefile.in.in
 po/POTFILES$
 po/missing
 po/notexist
