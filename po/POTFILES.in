@@ -62,7 +62,6 @@ libpurple/plugins/dbus-example.c
 libpurple/plugins/filectl.c
 libpurple/plugins/idle.c
 libpurple/plugins/joinpart.c
-libpurple/plugins/keyrings/gnomekeyring.c
 libpurple/plugins/keyrings/internalkeyring.c
 libpurple/plugins/keyrings/kwallet.cpp
 libpurple/plugins/keyrings/secretservice.c
