@@ -267,9 +267,9 @@ INSTALL_I18N = get_option('nls')
 if INSTALL_I18N
 	conf.set('ENABLE_NLS', true)
 
-	subdir('po')
+	i18n = import('i18n')
 
-	intltool_merge = find_program('intltool-merge')
+	subdir('po')
 endif
 
 # #######################################################################
