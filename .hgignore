@@ -1,21 +1,9 @@
 syntax: glob
 .*.swp
-pidgin-*
 .DS_Store
-*.asc
-*.bak
-*.bs
-*.def
-*.orig
 *.pyc
-*.rej
 *~
 
 syntax: regexp
 ^build(.+)?\/
-po/POTFILES$
-po/missing
-po/notexist
-po/pidgin.pot
-po/stamp-it
 win32-install-dir(\.release)?
