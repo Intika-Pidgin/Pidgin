@@ -104,6 +104,7 @@ libpurple/protocols/jabber/parser.c
 libpurple/protocols/jabber/presence.c
 libpurple/protocols/jabber/roster.c
 libpurple/protocols/jabber/si.c
+libpurple/protocols/jabber/stream_management.c
 libpurple/protocols/jabber/usermood.c
 libpurple/protocols/jabber/usernick.c
 libpurple/protocols/jabber/xdata.c
