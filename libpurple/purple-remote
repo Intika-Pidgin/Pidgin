@@ -14,7 +14,11 @@ import sys
 import xml.dom.minidom 
 
 sys.stdin = codecs.getwriter('utf-8')(sys.stdin);
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout);
+
+if(sys.version_info > (3,0)):
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach());
+else:
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout);
 
 xml.dom.minidom.Element.all   = xml.dom.minidom.Element.getElementsByTagName
 
