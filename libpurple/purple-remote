@@ -15,10 +15,10 @@ import xml.dom.minidom
 
 sys.stdin = codecs.getwriter('utf-8')(sys.stdin);
 
-if(sys.version_info > (3,0)):
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach());
+if sys.version_info >= (3, 0):
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
 else:
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout);
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 
 xml.dom.minidom.Element.all   = xml.dom.minidom.Element.getElementsByTagName
 
