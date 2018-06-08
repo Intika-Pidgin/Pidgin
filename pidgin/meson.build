@@ -102,8 +102,10 @@ pidgin_SOURCES = [
 	'pidgin.c'
 ]
 
-pidgin_resource = gnome.compile_resources('pidginresources', 'pidgin.gresource.xml',
-  c_name : 'pidgin')
+pidgin_resource = gnome.compile_resources('pidginresources',
+    'resources/pidgin.gresource.xml',
+    source_dir : 'resources',
+    c_name : 'pidgin')
 libpidgin_SOURCES += pidgin_resource
 
 if IS_WIN32
