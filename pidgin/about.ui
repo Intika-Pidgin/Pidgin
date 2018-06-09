@@ -247,7 +247,6 @@
                             <child>
                               <object class="GtkCellRendererText"/>
                               <attributes>
-                                <attribute name="sensitive">10</attribute>
                                 <attribute name="markup">1</attribute>
                               </attributes>
                             </child>
