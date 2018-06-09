@@ -7391,20 +7391,21 @@ void pidgin_blist_add_alert(GtkWidget *widget)
 }
 
 void
-pidgin_blist_set_headline(const char *text, GdkPixbuf *pixbuf, GCallback callback,
-			gpointer user_data, GDestroyNotify destroy)
+pidgin_blist_set_headline(const char *text, const gchar *icon_name,
+		GCallback callback, gpointer user_data, GDestroyNotify destroy)
 {
 	/* Destroy any existing headline first */
 	if (gtkblist->headline_destroy)
 		gtkblist->headline_destroy(gtkblist->headline_data);
 
 	gtk_label_set_markup(GTK_LABEL(gtkblist->headline_label), text);
-	gtk_image_set_from_pixbuf(GTK_IMAGE(gtkblist->headline_image), pixbuf);
+	gtk_image_set_from_icon_name(GTK_IMAGE(gtkblist->headline_image),
+			icon_name, GTK_ICON_SIZE_SMALL_TOOLBAR);
 
 	gtkblist->headline_callback = callback;
 	gtkblist->headline_data = user_data;
 	gtkblist->headline_destroy = destroy;
-	if (text != NULL || pixbuf != NULL) {
+	if (text != NULL || icon_name != NULL) {
 		set_urgent();
 		gtk_widget_show_all(gtkblist->headline);
 	} else {
