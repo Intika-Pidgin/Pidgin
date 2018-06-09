@@ -354,10 +354,8 @@ regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win)
 }
 
 static void
-filter_level_pref_changed(const char *name, PurplePrefType type, gconstpointer value, gpointer data)
+debug_window_set_filter_level(DebugWindow *win, int level)
 {
-	DebugWindow *win = data;
-	int level = GPOINTER_TO_INT(value);
 	char *tmp;
 
 	if (level != gtk_combo_box_get_active(GTK_COMBO_BOX(win->filterlevel)))
@@ -366,6 +364,15 @@ filter_level_pref_changed(const char *name, PurplePrefType type, gconstpointer v
 	tmp = g_strdup_printf("setFilterLevel('%d');", level);
 	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), tmp);
 	g_free(tmp);
+}
+
+static void
+filter_level_pref_changed(const char *name, PurplePrefType type, gconstpointer value, gpointer data)
+{
+	DebugWindow *win = data;
+	int level = GPOINTER_TO_INT(value);
+
+	debug_window_set_filter_level(win, level);
 }
 
 static void
@@ -620,6 +627,10 @@ debug_window_new(void)
 		gtkdebug_html = g_bytes_get_data(resource_bytes, NULL);
 		pidgin_webview_load_html_string(PIDGIN_WEBVIEW(win->text),
 		                                gtkdebug_html);
+
+		/* Set active filter level in webview */
+		debug_window_set_filter_level(win, purple_prefs_get_int(
+				PIDGIN_PREFS_ROOT "/debug/filterlevel"));
 	}
 	g_bytes_unref(resource_bytes);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
