@@ -148,7 +148,7 @@ pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 
 	pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), string->str);
 
-	button = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CLOSE,
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), _("_Close"),
 	                G_CALLBACK(destroy_win), win);
 
 	gtk_widget_set_can_default(button, TRUE);
@@ -381,7 +381,8 @@ pidgin_dialogs_ee(const char *ee)
 	if (strlen(gtk_label_get_label(GTK_LABEL(label))) <= 0)
 		return FALSE;
 
-	window = gtk_dialog_new_with_buttons(PIDGIN_ALERT_TITLE, NULL, 0, GTK_STOCK_CLOSE, GTK_RESPONSE_OK, NULL);
+	window = gtk_dialog_new_with_buttons(PIDGIN_ALERT_TITLE, NULL, 0,
+			_("_Close"), GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response (GTK_DIALOG(window), GTK_RESPONSE_OK);
 	g_signal_connect(G_OBJECT(window), "response", G_CALLBACK(gtk_widget_destroy), NULL);
 
