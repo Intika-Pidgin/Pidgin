@@ -322,39 +322,6 @@ destroy_multifield_cb(GtkWidget *dialog, GdkEvent *event,
 	return FALSE;
 }
 
-
-#define STOCK_ITEMIZE(r, l) \
-	if (purple_strequal((r), text) || purple_strequal(_(r), text)) \
-		return (l);
-
-static const char *
-text_to_stock(const char *text)
-{
-	STOCK_ITEMIZE(N_("Yes"),     GTK_STOCK_YES);
-	STOCK_ITEMIZE(N_("_Yes"),    GTK_STOCK_YES);
-	STOCK_ITEMIZE(N_("No"),      GTK_STOCK_NO);
-	STOCK_ITEMIZE(N_("_No"),     GTK_STOCK_NO);
-	STOCK_ITEMIZE(N_("OK"),      GTK_STOCK_OK);
-	STOCK_ITEMIZE(N_("_OK"),     GTK_STOCK_OK);
-	STOCK_ITEMIZE(N_("Cancel"),  GTK_STOCK_CANCEL);
-	STOCK_ITEMIZE(N_("_Cancel"), GTK_STOCK_CANCEL);
-	STOCK_ITEMIZE(N_("Apply"),   GTK_STOCK_APPLY);
-	STOCK_ITEMIZE(N_("Close"),   GTK_STOCK_CLOSE);
-	STOCK_ITEMIZE(N_("Delete"),  GTK_STOCK_DELETE);
-	STOCK_ITEMIZE(N_("Add"),     GTK_STOCK_ADD);
-	STOCK_ITEMIZE(N_("Remove"),  GTK_STOCK_REMOVE);
-	STOCK_ITEMIZE(N_("Save"),    GTK_STOCK_SAVE);
-	STOCK_ITEMIZE(N_("Next"),    PIDGIN_STOCK_NEXT);
-	STOCK_ITEMIZE(N_("_Next"),   PIDGIN_STOCK_NEXT);
-	STOCK_ITEMIZE(N_("Back"),    GTK_STOCK_GO_BACK);
-	STOCK_ITEMIZE(N_("_Back"),   GTK_STOCK_GO_BACK);
-	STOCK_ITEMIZE(N_("Alias"),   PIDGIN_STOCK_ALIAS);
-
-	return text;
-}
-
-#undef STOCK_ITEMIZE
-
 static gchar *
 pidgin_request_escape(PurpleRequestCommonParameters *cpar, const gchar *text)
 {
@@ -500,8 +467,7 @@ pidgin_request_add_help(GtkDialog *dialog, PurpleRequestCommonParameters *cpar)
 	if (help_cb == NULL)
 		return;
 
-	button = gtk_dialog_add_button(dialog, GTK_STOCK_HELP,
-		GTK_RESPONSE_HELP);
+	button = gtk_dialog_add_button(dialog, _("_Help"), GTK_RESPONSE_HELP);
 
 	g_object_set_data(G_OBJECT(button), "pidgin-help-cb", help_cb);
 	g_object_set_data(G_OBJECT(button), "pidgin-help-data", help_data);
@@ -542,8 +508,8 @@ pidgin_request_input(const char *title, const char *primary,
 	/* Create the dialog. */
 	dialog = gtk_dialog_new_with_buttons(title ? title : PIDGIN_ALERT_TITLE,
 					     NULL, 0,
-					     text_to_stock(cancel_text), 1,
-					     text_to_stock(ok_text),     0,
+					     cancel_text, 1,
+					     ok_text,     0,
 					     NULL);
 	data->dialog = dialog;
 
@@ -702,11 +668,8 @@ pidgin_request_choice(const char *title, const char *primary,
 		gtk_window_set_title(GTK_WINDOW(dialog), PIDGIN_ALERT_TITLE);
 #endif
 
-	gtk_dialog_add_button(GTK_DIALOG(dialog),
-			      text_to_stock(cancel_text), 0);
-
-	gtk_dialog_add_button(GTK_DIALOG(dialog),
-			      text_to_stock(ok_text), 1);
+	gtk_dialog_add_button(GTK_DIALOG(dialog), cancel_text, 0);
+	gtk_dialog_add_button(GTK_DIALOG(dialog), ok_text, 1);
 
 	g_signal_connect(G_OBJECT(dialog), "response",
 			 G_CALLBACK(choice_response_cb), data);
@@ -825,8 +788,7 @@ pidgin_request_action(const char *title, const char *primary,
 #endif
 
 	for (i = 0; i < action_count; i++) {
-		gtk_dialog_add_button(GTK_DIALOG(dialog),
-							  text_to_stock(buttons[2 * i]), i);
+		gtk_dialog_add_button(GTK_DIALOG(dialog), buttons[2 * i], i);
 
 		data->cbs[i] = buttons[2 * i + 1];
 	}
@@ -966,8 +928,8 @@ pidgin_request_wait(const char *title, const char *primary,
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	/* Cancel button */
-	button = pidgin_dialog_add_button(GTK_DIALOG(dialog),
-		text_to_stock(_("Cancel")), G_CALLBACK(wait_cancel_cb), data);
+	button = pidgin_dialog_add_button(GTK_DIALOG(dialog), _("Cancel"),
+			G_CALLBACK(wait_cancel_cb), data);
 	gtk_widget_set_can_default(button, FALSE);
 
 	/* Vertical box */
@@ -2035,21 +1997,22 @@ pidgin_request_fields(const char *title, const char *primary,
 		const gchar *label = it->data;
 		PurpleRequestFieldsCb *cb = it->next->data;
 
-		button = pidgin_dialog_add_button(GTK_DIALOG(win),
-			text_to_stock(label), G_CALLBACK(multifield_extra_cb),
-			data);
+		button = pidgin_dialog_add_button(GTK_DIALOG(win), label,
+				G_CALLBACK(multifield_extra_cb), data);
 		g_object_set_data(G_OBJECT(button), "extra-cb", cb);
 	}
 
 	/* Cancel button */
-	button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(cancel_text), G_CALLBACK(multifield_cancel_cb), data);
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), cancel_text,
+			G_CALLBACK(multifield_cancel_cb), data);
 	gtk_widget_set_can_default(button, TRUE);
 
 	/* OK button */
 	if (!ok_btn) {
 		gtk_window_set_default(GTK_WINDOW(win), button);
 	} else {
-		button = pidgin_dialog_add_button(GTK_DIALOG(win), text_to_stock(ok_text), G_CALLBACK(multifield_ok_cb), data);
+		button = pidgin_dialog_add_button(GTK_DIALOG(win), ok_text,
+				G_CALLBACK(multifield_ok_cb), data);
 		data->ok_button = button;
 		gtk_widget_set_can_default(button, TRUE);
 		gtk_window_set_default(GTK_WINDOW(win), button);
@@ -2520,9 +2483,9 @@ pidgin_request_file(const char *title, const char *filename,
 						NULL,
 						savedialog ? GTK_FILE_CHOOSER_ACTION_SAVE
 								   : GTK_FILE_CHOOSER_ACTION_OPEN,
-						GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-						savedialog ? GTK_STOCK_SAVE
-								   : GTK_STOCK_OPEN,
+						_("_Cancel"), GTK_RESPONSE_CANCEL,
+						savedialog ? _("_Save")
+								   : _("_Open"),
 						GTK_RESPONSE_ACCEPT,
 						NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(filesel), GTK_RESPONSE_ACCEPT);
@@ -2592,8 +2555,8 @@ pidgin_request_folder(const char *title, const char *dirname, GCallback ok_cb,
 						title ? title : _("Select Folder..."),
 						NULL,
 						GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-						GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-						GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+						_("_Cancel"), GTK_RESPONSE_CANCEL,
+						_("_OK"), GTK_RESPONSE_ACCEPT,
 						NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dirsel), GTK_RESPONSE_ACCEPT);
 
