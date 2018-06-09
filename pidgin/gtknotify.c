@@ -548,15 +548,15 @@ pidgin_notify_message(PurpleNotifyMessageType type, const char *title,
 	switch (type)
 	{
 		case PURPLE_NOTIFY_MSG_ERROR:
-			icon_name = PIDGIN_STOCK_DIALOG_ERROR;
+			icon_name = "dialog-error";
 			break;
 
 		case PURPLE_NOTIFY_MSG_WARNING:
-			icon_name = PIDGIN_STOCK_DIALOG_WARNING;
+			icon_name = "dialog-warning";
 			break;
 
 		case PURPLE_NOTIFY_MSG_INFO:
-			icon_name = PIDGIN_STOCK_DIALOG_INFO;
+			icon_name = "dialog-information";
 			break;
 
 		default:
@@ -566,7 +566,8 @@ pidgin_notify_message(PurpleNotifyMessageType type, const char *title,
 
 	if (icon_name != NULL)
 	{
-		img = gtk_image_new_from_stock(icon_name, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+		img = gtk_image_new_from_icon_name(icon_name,
+				GTK_ICON_SIZE_DIALOG);
 		gtk_widget_set_halign(img, GTK_ALIGN_START);
 		gtk_widget_set_valign(img, GTK_ALIGN_START);
 	}
