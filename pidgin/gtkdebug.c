@@ -487,14 +487,20 @@ debug_window_new(void)
 		gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
 
 		/* Save */
-		item = gtk_tool_button_new_from_stock(GTK_STOCK_SAVE);
+		item = gtk_tool_button_new(NULL, _("_Save..."));
+		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
+		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
+				"document-save");
 		gtk_tool_item_set_is_important(item, TRUE);
 		gtk_tool_item_set_tooltip_text(item, _("Save"));
 		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(save_cb), win);
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
 		/* Clear button */
-		item = gtk_tool_button_new_from_stock(GTK_STOCK_CLEAR);
+		item = gtk_tool_button_new(NULL, _("_Clear"));
+		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
+		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
+				"edit-clear");
 		gtk_tool_item_set_is_important(item, TRUE);
 		gtk_tool_item_set_tooltip_text(item, _("Clear"));
 		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(clear_cb), win);
@@ -504,7 +510,11 @@ debug_window_new(void)
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
 		/* Pause */
-		item = gtk_toggle_tool_button_new_from_stock(PIDGIN_STOCK_PAUSE);
+		item = gtk_toggle_tool_button_new();
+		gtk_tool_button_set_label(GTK_TOOL_BUTTON(item), _("_Pause"));
+		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
+		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
+				"media-playback-pause");
 		gtk_tool_item_set_is_important(item, TRUE);
 		gtk_tool_item_set_tooltip_text(item, _("Pause"));
 		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(pause_cb), win);
@@ -515,10 +525,13 @@ debug_window_new(void)
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
 		/* regex toggle button */
-		item = gtk_toggle_tool_button_new_from_stock(GTK_STOCK_FIND);
+		item = gtk_toggle_tool_button_new();
+		gtk_tool_button_set_label(GTK_TOOL_BUTTON(item), _("_Filter"));
+		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
+		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
+				"edit-find");
 		gtk_tool_item_set_is_important(item, TRUE);
 		win->filter = GTK_WIDGET(item);
-		gtk_tool_button_set_label(GTK_TOOL_BUTTON(win->filter), _("Filter"));
 		gtk_tool_item_set_tooltip_text(GTK_TOOL_ITEM(win->filter), _("Filter"));
 		g_signal_connect(G_OBJECT(win->filter), "clicked", G_CALLBACK(regex_filter_toggled_cb), win);
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(win->filter));
