@@ -467,8 +467,7 @@ pidgin_request_add_help(GtkDialog *dialog, PurpleRequestCommonParameters *cpar)
 	if (help_cb == NULL)
 		return;
 
-	button = gtk_dialog_add_button(dialog, GTK_STOCK_HELP,
-		GTK_RESPONSE_HELP);
+	button = gtk_dialog_add_button(dialog, _("_Help"), GTK_RESPONSE_HELP);
 
 	g_object_set_data(G_OBJECT(button), "pidgin-help-cb", help_cb);
 	g_object_set_data(G_OBJECT(button), "pidgin-help-data", help_data);
@@ -2484,9 +2483,9 @@ pidgin_request_file(const char *title, const char *filename,
 						NULL,
 						savedialog ? GTK_FILE_CHOOSER_ACTION_SAVE
 								   : GTK_FILE_CHOOSER_ACTION_OPEN,
-						GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-						savedialog ? GTK_STOCK_SAVE
-								   : GTK_STOCK_OPEN,
+						_("_Cancel"), GTK_RESPONSE_CANCEL,
+						savedialog ? _("_Save")
+								   : _("_Open"),
 						GTK_RESPONSE_ACCEPT,
 						NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(filesel), GTK_RESPONSE_ACCEPT);
@@ -2556,8 +2555,8 @@ pidgin_request_folder(const char *title, const char *dirname, GCallback ok_cb,
 						title ? title : _("Select Folder..."),
 						NULL,
 						GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-						GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-						GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+						_("_Cancel"), GTK_RESPONSE_CANCEL,
+						_("_OK"), GTK_RESPONSE_ACCEPT,
 						NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dirsel), GTK_RESPONSE_ACCEPT);
 
