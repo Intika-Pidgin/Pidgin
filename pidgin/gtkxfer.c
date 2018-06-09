@@ -256,18 +256,9 @@ update_detailed_info(PidginXferDialog *dialog, PurpleXfer *xfer)
 							 purple_xfer_get_size(xfer));
 
 	if (purple_xfer_is_completed(xfer)) {
-
-		GdkPixbuf *pixbuf = NULL;
-
-		pixbuf = gtk_widget_render_icon(xfer_dialog->window,
-										PIDGIN_STOCK_FILE_DONE,
-										GTK_ICON_SIZE_MENU, NULL);
-
 		gtk_list_store_set(GTK_LIST_STORE(xfer_dialog->model), &data->iter,
-						   COLUMN_STATUS, pixbuf,
+						   COLUMN_STATUS, NULL,
 						   -1);
-
-		g_object_unref(pixbuf);
 	}
 
 	if (purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_RECEIVE) {
@@ -594,7 +585,7 @@ setup_tree(PidginXferDialog *dialog)
 	/* Transfer Type column */
 	renderer = gtk_cell_renderer_pixbuf_new();
 	column = gtk_tree_view_column_new_with_attributes(NULL, renderer,
-				"pixbuf", COLUMN_STATUS, NULL);
+				"icon-name", COLUMN_STATUS, NULL);
 	gtk_tree_view_column_set_sizing(GTK_TREE_VIEW_COLUMN(column),
 									GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_fixed_width(GTK_TREE_VIEW_COLUMN(column), 25);
@@ -868,7 +859,7 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 {
 	PidginXferUiData *data;
 	PurpleXferType type;
-	GdkPixbuf *pixbuf;
+	const gchar *icon_name;
 	char *size_str, *remaining_str;
 	char *lfilename, *utf8;
 
@@ -889,11 +880,7 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 	size_str      = purple_str_size_to_units(purple_xfer_get_size(xfer));
 	remaining_str = purple_str_size_to_units(purple_xfer_get_bytes_remaining(xfer));
 
-	pixbuf = gtk_widget_render_icon(dialog->window,
-									(type == PURPLE_XFER_TYPE_RECEIVE
-									 ? PIDGIN_STOCK_DOWNLOAD
-									 : PIDGIN_STOCK_UPLOAD),
-									GTK_ICON_SIZE_MENU, NULL);
+	icon_name = (type == PURPLE_XFER_TYPE_RECEIVE ?  "go-down" : "go-up");
 
 	gtk_list_store_append(dialog->model, &data->iter);
 	lfilename = g_path_get_basename(purple_xfer_get_local_filename(xfer));
@@ -901,7 +888,7 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 	g_free(lfilename);
 	lfilename = utf8;
 	gtk_list_store_set(dialog->model, &data->iter,
-					   COLUMN_STATUS, pixbuf,
+					   COLUMN_STATUS, icon_name,
 					   COLUMN_PROGRESS, 0,
 					   COLUMN_FILENAME, (type == PURPLE_XFER_TYPE_RECEIVE)
 					                     ? purple_xfer_get_filename(xfer)
@@ -913,8 +900,6 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 	g_free(lfilename);
 
 	gtk_tree_view_columns_autosize(GTK_TREE_VIEW(dialog->tree));
-
-	g_object_unref(pixbuf);
 
 	g_free(size_str);
 	g_free(remaining_str);
@@ -959,7 +944,6 @@ pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 								PurpleXfer *xfer)
 {
 	PidginXferUiData *data;
-	GdkPixbuf *pixbuf;
 	const gchar *status;
 
 	g_return_if_fail(dialog != NULL);
@@ -983,21 +967,15 @@ pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 	update_detailed_info(dialog, xfer);
 	update_title_progress(dialog);
 
-	pixbuf = gtk_widget_render_icon(dialog->window,
-									PIDGIN_STOCK_FILE_CANCELLED,
-									GTK_ICON_SIZE_MENU, NULL);
-
 	if (purple_xfer_is_cancelled(xfer))
 		status = _("Cancelled");
 	else
 		status = _("Failed");
 
 	gtk_list_store_set(dialog->model, &data->iter,
-	                   COLUMN_STATUS, pixbuf,
+	                   COLUMN_STATUS, "dialog-error",
 	                   COLUMN_REMAINING, status,
 	                   -1);
-
-	g_object_unref(pixbuf);
 
 	update_buttons(dialog, xfer);
 }
@@ -1044,18 +1022,10 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 
 	if (purple_xfer_is_completed(xfer))
 	{
-		GdkPixbuf *pixbuf;
-
-		pixbuf = gtk_widget_render_icon(dialog->window,
-										PIDGIN_STOCK_FILE_DONE,
-										GTK_ICON_SIZE_MENU, NULL);
-
 		gtk_list_store_set(GTK_LIST_STORE(xfer_dialog->model), &data->iter,
-						   COLUMN_STATUS, pixbuf,
+						   COLUMN_STATUS, NULL,
 						   COLUMN_REMAINING, _("Finished"),
 						   -1);
-
-		g_object_unref(pixbuf);
 	}
 
 	update_title_progress(dialog);
