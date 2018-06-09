@@ -5218,7 +5218,7 @@ add_generic_error_dialog(PurpleAccount *account,
 	else
 		primary = g_strdup_printf(_("%s disabled"), username);
 
-	mini_dialog = pidgin_make_mini_dialog(NULL, PIDGIN_STOCK_DIALOG_ERROR,
+	mini_dialog = pidgin_make_mini_dialog(NULL, "dialog-error",
 		primary, err->description, account,
 		(enabled ? _("Reconnect") : _("Re-enable")),
 		(enabled ? PURPLE_CALLBACK(purple_account_connect)
