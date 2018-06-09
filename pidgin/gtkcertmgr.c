@@ -504,7 +504,7 @@ tls_peers_mgmt_build(void)
 
 	/* Import button */
 	tpm_dat->importbutton = importbutton =
-		gtk_button_new_from_stock(GTK_STOCK_OPEN);
+		gtk_button_new_with_mnemonic(_("_Import..."));
 	gtk_box_pack_start(GTK_BOX(bbox), importbutton, FALSE, FALSE, 0);
 	gtk_widget_show(importbutton);
 	g_signal_connect(G_OBJECT(importbutton), "clicked",
@@ -513,7 +513,7 @@ tls_peers_mgmt_build(void)
 
 	/* Export button */
 	tpm_dat->exportbutton = exportbutton =
-		gtk_button_new_from_stock(GTK_STOCK_SAVE_AS);
+		gtk_button_new_with_mnemonic(_("_Export..."));
 	gtk_box_pack_start(GTK_BOX(bbox), exportbutton, FALSE, FALSE, 0);
 	gtk_widget_show(exportbutton);
 	g_signal_connect(G_OBJECT(exportbutton), "clicked",
@@ -522,7 +522,7 @@ tls_peers_mgmt_build(void)
 
 	/* Info button */
 	tpm_dat->infobutton = infobutton =
-		gtk_button_new_from_stock(PIDGIN_STOCK_INFO);
+		gtk_button_new_with_mnemonic(_("_Get Info"));
 	gtk_box_pack_start(GTK_BOX(bbox), infobutton, FALSE, FALSE, 0);
 	gtk_widget_show(infobutton);
 	g_signal_connect(G_OBJECT(infobutton), "clicked",
@@ -531,7 +531,7 @@ tls_peers_mgmt_build(void)
 
 	/* Delete button */
 	tpm_dat->deletebutton = deletebutton =
-		gtk_button_new_from_stock(GTK_STOCK_DELETE);
+		gtk_button_new_with_mnemonic(_("_Delete"));
 	gtk_box_pack_start(GTK_BOX(bbox), deletebutton, FALSE, FALSE, 0);
 	gtk_widget_show(deletebutton);
 	g_signal_connect(G_OBJECT(deletebutton), "clicked",
@@ -633,8 +633,8 @@ pidgin_certmgr_show(void)
 	gtk_widget_show(dlg->notebook);
 
 	/* Close button */
-	dlg->closebutton = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CLOSE,
-			G_CALLBACK(certmgr_close_cb), dlg);
+	dlg->closebutton = pidgin_dialog_add_button(GTK_DIALOG(win),
+			_("_Close"), G_CALLBACK(certmgr_close_cb), dlg);
 
 	/* Add the defined certificate managers */
 	/* TODO: Find a way of determining whether each is shown or not */
