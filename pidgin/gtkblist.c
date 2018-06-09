@@ -989,8 +989,8 @@ make_blist_request_dialog(PidginBlistRequestData *data, PurpleAccount *account,
 
 	data->account = account;
 
-	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
-		gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	img = gtk_image_new_from_icon_name("dialog-question",
+			GTK_ICON_SIZE_DIALOG);
 
 	gtkblist = PIDGIN_BLIST(purple_blist_get_buddy_list());
 	blist_window = gtkblist ? GTK_WINDOW(gtkblist->window) : NULL;
