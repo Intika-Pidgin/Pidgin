@@ -54,7 +54,6 @@ typedef struct
 
 	gboolean invert;
 	gboolean highlight;
-	guint timer;
 	GRegex *regex;
 } DebugWindow;
 
@@ -80,14 +79,6 @@ debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 {
 	purple_prefs_disconnect_by_handle(pidgin_debug_get_handle());
 
-	if(debug_win->timer != 0) {
-		const gchar *text;
-
-		g_source_remove(debug_win->timer);
-
-		text = gtk_entry_get_text(GTK_ENTRY(debug_win->expression));
-		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/debug/regex", text);
-	}
 	if (debug_win->regex != NULL)
 		g_regex_unref(debug_win->regex);
 
@@ -253,18 +244,6 @@ regex_pref_highlight_cb(const gchar *name, PurplePrefType type,
 		regex_toggle_filter(win, TRUE);
 }
 
-static gboolean
-regex_timer_cb(DebugWindow *win) {
-	const gchar *text;
-
-	text = gtk_entry_get_text(GTK_ENTRY(win->expression));
-	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/debug/regex", text);
-
-	win->timer = 0;
-
-	return FALSE;
-}
-
 static void
 regex_changed_cb(GtkWidget *w, DebugWindow *win) {
 	const gchar *text;
@@ -274,10 +253,8 @@ regex_changed_cb(GtkWidget *w, DebugWindow *win) {
 									 FALSE);
 	}
 
-	if (win->timer == 0)
-		win->timer = g_timeout_add_seconds(5, (GSourceFunc)regex_timer_cb, win);
-
 	text = gtk_entry_get_text(GTK_ENTRY(win->expression));
+	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/debug/regex", text);
 
 	if (text == NULL || *text == '\0') {
 		regex_clear_color(win->expression);
@@ -555,7 +532,7 @@ debug_window_new(void)
 									regex_pref_filter_cb, win);
 
 		/* regex entry */
-		win->expression = gtk_entry_new();
+		win->expression = gtk_search_entry_new();
 		item = gtk_tool_item_new();
 		gtk_widget_set_tooltip_text(win->expression, _("Right click for more options."));
 		gtk_container_add(GTK_CONTAINER(item), GTK_WIDGET(win->expression));
@@ -571,7 +548,7 @@ debug_window_new(void)
 		/* this needs to be before the text is set from the pref if we want it
 		 * to colorize a stored expression.
 		 */
-		g_signal_connect(G_OBJECT(win->expression), "changed",
+		g_signal_connect(G_OBJECT(win->expression), "search-changed",
 						 G_CALLBACK(regex_changed_cb), win);
 		gtk_entry_set_text(GTK_ENTRY(win->expression),
 						   purple_prefs_get_string(PIDGIN_PREFS_ROOT "/debug/regex"));
