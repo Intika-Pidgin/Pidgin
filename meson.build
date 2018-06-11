@@ -969,6 +969,8 @@ Nettle development headers not found
 Use -Dnettle=false if you do not need it.
 ''')
 	endif
+else
+	nettle = []
 endif
 
 #######################################################################
