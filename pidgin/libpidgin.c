@@ -47,7 +47,6 @@
 #include "gtkblist.h"
 #include "gtkconn.h"
 #include "gtkconv.h"
-#include "gtkdebug.h"
 #include "gtkdialogs.h"
 #include "gtkdocklet.h"
 #include "gtkxfer.h"
@@ -67,6 +66,7 @@
 #include "gtkutils.h"
 #include "pidginstock.h"
 #include "gtkwhiteboard.h"
+#include "pidgindebug.h"
 
 #ifndef _WIN32
 #include <signal.h>

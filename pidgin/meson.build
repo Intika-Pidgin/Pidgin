@@ -10,7 +10,6 @@ libpidgin_SOURCES = [
 	'gtkconv.c',
 	'gtkconv-theme.c',
 	'gtkconv-theme-loader.c',
-	'gtkdebug.c',
 	'gtkdialogs.c',
 	'gtkdnd-hints.c',
 	'gtkdocklet.c',
@@ -44,6 +43,7 @@ libpidgin_SOURCES = [
 	'libpidgin.c',
 	'minidialog.c',
 	'pidginabout.c',
+	'pidgindebug.c',
 	'pidgintooltip.c',
 ]
 
@@ -59,7 +59,6 @@ libpidgin_headers = [
 	'gtkconvwin.h',
 	'gtkconv-theme.h',
 	'gtkconv-theme-loader.h',
-	'gtkdebug.h',
 	'gtkdialogs.h',
 	'gtkdnd-hints.h',
 	'gtkdocklet.h',
@@ -94,6 +93,7 @@ libpidgin_headers = [
 	'gtkxfer.h',
 	'minidialog.h',
 	'pidginabout.h',
+	'pidgindebug.h',
 	'pidgintooltip.h',
 	'pidgin.h',
 ]

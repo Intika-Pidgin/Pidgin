@@ -44,7 +44,6 @@
 #include "gtkblist.h"
 #include "gtkconv.h"
 #include "gtkconv-theme.h"
-#include "gtkdebug.h"
 #include "gtkdialogs.h"
 #include "gtkprefs.h"
 #include "gtksavedstatuses.h"
@@ -53,6 +52,7 @@
 #include "gtkstatus-icon-theme.h"
 #include "gtkutils.h"
 #include "gtkwebview.h"
+#include "pidgindebug.h"
 #include "pidginstock.h"
 #ifdef USE_VV
 #include "media-gst.h"

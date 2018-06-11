@@ -19,12 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PIDGINDEBUG_H_
-#define _PIDGINDEBUG_H_
+#ifndef PIDGIN_DEBUG_H
+#define PIDGIN_DEBUG_H
 /**
  * SECTION:gtkdebug
  * @section_id: pidgin-gtkdebug
- * @short_description: <filename>gtkdebug.h</filename>
+ * @short_description: <filename>pidgindebug.h</filename>
  * @title: Debug API
  */
 
@@ -85,4 +85,4 @@ void pidgin_debug_window_hide(void);
 
 G_END_DECLS
 
-#endif /* _PIDGINDEBUG_H_ */
+#endif /* PIDGIN_DEBUG_H */

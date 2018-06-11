@@ -26,10 +26,10 @@
 #include "request.h"
 #include "util.h"
 
-#include "gtkdebug.h"
 #include "gtkdialogs.h"
 #include "gtkutils.h"
 #include "gtkwebview.h"
+#include "pidgindebug.h"
 #include "pidginstock.h"
 
 #ifdef ENABLE_GLIBTRACE

@@ -42,7 +42,6 @@
 #include "gtkcellrendererexpander.h"
 #include "gtkcertmgr.h"
 #include "gtkconv.h"
-#include "gtkdebug.h"
 #include "gtkdialogs.h"
 #include "gtkxfer.h"
 #include "gtklog.h"
@@ -61,6 +60,7 @@
 #include "gtkutils.h"
 #include "pidgin/minidialog.h"
 #include "pidgin/pidginabout.h"
+#include "pidgin/pidgindebug.h"
 #include "pidgin/pidgintooltip.h"
 
 #include <gdk/gdkkeysyms.h>
