@@ -6,6 +6,5 @@
     <file compressed="true">About/about.html</file>
     <file compressed="true">About/credits.json</file>
     <file compressed="true">Debug/debug.ui</file>
-    <file compressed="true">Debug/gtkdebug.html</file>
   </gresource>
 </gresources>

@@ -42,10 +42,10 @@
 
 #include "pidginresources.h"
 
-typedef struct
-{
-	GtkWidget *window;
-	GtkWidget *text;
+struct _PidginDebugWindow {
+	GtkWindow parent;
+
+	GtkWidget *toolbar;
 	GtkTextBuffer *buffer;
 	struct {
 		GtkTextTag *level[PURPLE_DEBUG_FATAL + 1];
@@ -62,9 +62,9 @@ typedef struct
 	gboolean invert;
 	gboolean highlight;
 	GRegex *regex;
-} DebugWindow;
+};
 
-static DebugWindow *debug_win = NULL;
+static PidginDebugWindow *debug_win = NULL;
 
 struct _PidginDebugUi
 {
@@ -80,6 +80,7 @@ static void pidgin_debug_ui_interface_init(PurpleDebugUiInterface *iface);
 G_DEFINE_TYPE_WITH_CODE(PidginDebugUi, pidgin_debug_ui, G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE(PURPLE_TYPE_DEBUG_UI,
                                               pidgin_debug_ui_interface_init));
+G_DEFINE_TYPE(PidginDebugWindow, pidgin_debug_window, GTK_TYPE_WINDOW);
 
 static gint
 debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
@@ -92,7 +93,6 @@ debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 	/* If the "Save Log" dialog is open then close it */
 	purple_request_close_with_handle(debug_win);
 
-	g_free(debug_win);
 	debug_win = NULL;
 
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/enabled", FALSE);
@@ -101,7 +101,7 @@ debug_window_destroy(GtkWidget *w, GdkEvent *event, void *unused)
 }
 
 static gboolean
-configure_cb(GtkWidget *w, GdkEventConfigure *event, DebugWindow *win)
+configure_cb(GtkWidget *w, GdkEventConfigure *event, void *unused)
 {
 	if (gtk_widget_get_visible(w)) {
 		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/debug/width",  event->width);
@@ -114,7 +114,7 @@ configure_cb(GtkWidget *w, GdkEventConfigure *event, DebugWindow *win)
 static void
 save_writefile_cb(void *user_data, const char *filename)
 {
-	DebugWindow *win = (DebugWindow *)user_data;
+	PidginDebugWindow *win = (PidginDebugWindow *)user_data;
 	FILE *fp;
 	GtkTextIter start, end;
 	char *tmp;
@@ -134,20 +134,20 @@ save_writefile_cb(void *user_data, const char *filename)
 }
 
 static void
-save_cb(GtkWidget *w, DebugWindow *win)
+save_cb(GtkWidget *w, PidginDebugWindow *win)
 {
 	purple_request_file(win, _("Save Debug Log"), "purple-debug.log", TRUE,
 		G_CALLBACK(save_writefile_cb), NULL, NULL, win);
 }
 
 static void
-clear_cb(GtkWidget *w, DebugWindow *win)
+clear_cb(GtkWidget *w, PidginDebugWindow *win)
 {
 	gtk_text_buffer_set_text(win->buffer, "", 0);
 }
 
 static void
-pause_cb(GtkWidget *w, DebugWindow *win)
+pause_cb(GtkWidget *w, PidginDebugWindow *win)
 {
 	win->paused = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(w));
 
@@ -183,7 +183,7 @@ regex_change_color(GtkWidget *w, gboolean success) {
 }
 
 static void
-regex_toggle_filter(DebugWindow *win, gboolean filter)
+regex_toggle_filter(PidginDebugWindow *win, gboolean filter)
 {
 	GtkTextIter start, end;
 
@@ -220,10 +220,10 @@ static void
 regex_pref_filter_cb(const gchar *name, PurplePrefType type,
 					 gconstpointer val, gpointer data)
 {
-	DebugWindow *win = (DebugWindow *)data;
+	PidginDebugWindow *win = (PidginDebugWindow *)data;
 	gboolean active = GPOINTER_TO_INT(val), current;
 
-	if (!win || !win->window)
+	if (!win)
 		return;
 
 	current = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter));
@@ -235,7 +235,7 @@ static void
 regex_pref_expression_cb(const gchar *name, PurplePrefType type,
 						 gconstpointer val, gpointer data)
 {
-	DebugWindow *win = (DebugWindow *)data;
+	PidginDebugWindow *win = (PidginDebugWindow *)data;
 	const gchar *exp = (const gchar *)val;
 
 	gtk_entry_set_text(GTK_ENTRY(win->expression), exp);
@@ -245,7 +245,7 @@ static void
 regex_pref_invert_cb(const gchar *name, PurplePrefType type,
 					 gconstpointer val, gpointer data)
 {
-	DebugWindow *win = (DebugWindow *)data;
+	PidginDebugWindow *win = (PidginDebugWindow *)data;
 	gboolean active = GPOINTER_TO_INT(val);
 
 	win->invert = active;
@@ -258,7 +258,7 @@ static void
 regex_pref_highlight_cb(const gchar *name, PurplePrefType type,
 						gconstpointer val, gpointer data)
 {
-	DebugWindow *win = (DebugWindow *)data;
+	PidginDebugWindow *win = (PidginDebugWindow *)data;
 	gboolean active = GPOINTER_TO_INT(val);
 
 	win->highlight = active;
@@ -268,7 +268,7 @@ regex_pref_highlight_cb(const gchar *name, PurplePrefType type,
 }
 
 static void
-regex_changed_cb(GtkWidget *w, DebugWindow *win) {
+regex_changed_cb(GtkWidget *w, PidginDebugWindow *win) {
 	const gchar *text;
 
 	if (gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(win->filter))) {
@@ -302,7 +302,7 @@ regex_changed_cb(GtkWidget *w, DebugWindow *win) {
 }
 
 static void
-regex_key_release_cb(GtkWidget *w, GdkEventKey *e, DebugWindow *win) {
+regex_key_release_cb(GtkWidget *w, GdkEventKey *e, PidginDebugWindow *win) {
 	if (gtk_widget_is_sensitive(win->filter)) {
 		GtkToggleToolButton *tb = GTK_TOGGLE_TOOL_BUTTON(win->filter);
 		if ((e->keyval == GDK_KEY_Return || e->keyval == GDK_KEY_KP_Enter) &&
@@ -329,7 +329,7 @@ regex_menu_cb(GtkWidget *item, const gchar *pref) {
 
 static void
 regex_popup_cb(GtkEntry *entry, GtkEntryIconPosition icon_pos, GdkEvent *event,
-		DebugWindow *win)
+		PidginDebugWindow *win)
 {
 	GtkWidget *menu;
 
@@ -346,7 +346,7 @@ regex_popup_cb(GtkEntry *entry, GtkEntryIconPosition icon_pos, GdkEvent *event,
 }
 
 static void
-regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win)
+regex_filter_toggled_cb(GtkToggleToolButton *button, PidginDebugWindow *win)
 {
 	gboolean active;
 
@@ -354,14 +354,11 @@ regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win)
 
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/filter", active);
 
-	if (!GTK_IS_TEXT_VIEW(win->text))
-		return;
-
 	regex_toggle_filter(win, active);
 }
 
 static void
-debug_window_set_filter_level(DebugWindow *win, int level)
+debug_window_set_filter_level(PidginDebugWindow *win, int level)
 {
 	int i;
 
@@ -378,7 +375,7 @@ debug_window_set_filter_level(DebugWindow *win, int level)
 static void
 filter_level_pref_changed(const char *name, PurplePrefType type, gconstpointer value, gpointer data)
 {
-	DebugWindow *win = data;
+	PidginDebugWindow *win = data;
 	int level = GPOINTER_TO_INT(value);
 
 	debug_window_set_filter_level(win, level);
@@ -405,15 +402,12 @@ toolbar_icon_pref_changed(GtkWidget *item, GtkWidget *toolbar)
 }
 
 static gboolean
-toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
+toolbar_context(GtkWidget *toolbar, gint x, gint y, gint button, gpointer null)
 {
 	GtkWidget *menu, *item;
 	const char *text[3];
 	GtkToolbarStyle value[3];
 	int i;
-
-	if (!gdk_event_triggers_context_menu((GdkEvent *)event))
-		return FALSE;
 
 	text[0] = _("_Icon Only");          value[0] = GTK_TOOLBAR_ICONS;
 	text[1] = _("_Text Only");          value[1] = GTK_TOOLBAR_TEXT;
@@ -432,20 +426,67 @@ toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
 
 	gtk_widget_show_all(menu);
 
-	gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 	return FALSE;
 }
 
-static DebugWindow *
-debug_window_new(void)
+static void
+pidgin_debug_window_class_init(PidginDebugWindowClass *klass) {
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
+	gtk_widget_class_set_template_from_resource(
+		widget_class,
+		"/im/pidgin/Pidgin/Debug/debug.ui"
+	);
+
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, toolbar);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, buffer);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.category);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.invisible);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.level[0]);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.level[1]);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.level[2]);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.level[3]);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.level[4]);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.level[5]);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, filter);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, filterlevel);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, expression);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.match);
+	gtk_widget_class_bind_template_callback(widget_class, toolbar_context);
+	gtk_widget_class_bind_template_callback(widget_class, save_cb);
+	gtk_widget_class_bind_template_callback(widget_class, clear_cb);
+	gtk_widget_class_bind_template_callback(widget_class, pause_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			regex_filter_toggled_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			regex_changed_cb);
+	gtk_widget_class_bind_template_callback(widget_class, regex_popup_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			regex_key_release_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			filter_level_changed_cb);
+}
+
+static void
+pidgin_debug_window_init(PidginDebugWindow *win)
 {
-	DebugWindow *win;
-	GtkBuilder *builder;
-	GtkWidget *vbox;
-	GtkWidget *toolbar;
 	gint width, height;
 	void *handle;
-	GtkToolItem *item;
 	GtkStyleContext *context;
 	GtkCssProvider *filter_css;
 	const gchar filter_style[] =
@@ -462,92 +503,29 @@ debug_window_new(void)
 			"background-color: @success_color;"
 		"}";
 
-	win = g_new0(DebugWindow, 1);
+	gtk_widget_init_template(GTK_WIDGET(win));
 
 	width  = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/width");
 	height = purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/height");
 
-	win->window = pidgin_create_window(_("Debug Window"), 0, "debug", TRUE);
 	purple_debug_info("gtkdebug", "Setting dimensions to %d, %d\n",
 					width, height);
 
-	gtk_window_set_default_size(GTK_WINDOW(win->window), width, height);
+	gtk_window_set_default_size(GTK_WINDOW(win), width, height);
 
-	g_signal_connect(G_OBJECT(win->window), "delete_event",
+	g_signal_connect(G_OBJECT(win), "delete_event",
 	                 G_CALLBACK(debug_window_destroy), NULL);
-	g_signal_connect(G_OBJECT(win->window), "configure_event",
-	                 G_CALLBACK(configure_cb), win);
+	g_signal_connect(G_OBJECT(win), "configure_event",
+	                 G_CALLBACK(configure_cb), NULL);
 
 	handle = pidgin_debug_get_handle();
 
-	/* Setup the vbox */
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_container_add(GTK_CONTAINER(win->window), vbox);
-
 	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/toolbar")) {
 		/* Setup our top button bar thingie. */
-		toolbar = gtk_toolbar_new();
-		gtk_toolbar_set_show_arrow(GTK_TOOLBAR(toolbar), TRUE);
-		g_signal_connect(G_OBJECT(toolbar), "button-press-event", G_CALLBACK(toolbar_context), win);
-
-		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar),
+		gtk_toolbar_set_style(GTK_TOOLBAR(win->toolbar),
 		                      purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/style"));
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/style",
-	                                toolbar_style_pref_changed_cb, toolbar);
-		gtk_toolbar_set_icon_size(GTK_TOOLBAR(toolbar),
-		                          GTK_ICON_SIZE_SMALL_TOOLBAR);
-
-		gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
-
-		/* Save */
-		item = gtk_tool_button_new(NULL, _("_Save..."));
-		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
-		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
-				"document-save");
-		gtk_tool_item_set_is_important(item, TRUE);
-		gtk_tool_item_set_tooltip_text(item, _("Save"));
-		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(save_cb), win);
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		/* Clear button */
-		item = gtk_tool_button_new(NULL, _("_Clear"));
-		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
-		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
-				"edit-clear");
-		gtk_tool_item_set_is_important(item, TRUE);
-		gtk_tool_item_set_tooltip_text(item, _("Clear"));
-		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(clear_cb), win);
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		item = gtk_separator_tool_item_new();
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		/* Pause */
-		item = gtk_toggle_tool_button_new();
-		gtk_tool_button_set_label(GTK_TOOL_BUTTON(item), _("_Pause"));
-		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
-		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
-				"media-playback-pause");
-		gtk_tool_item_set_is_important(item, TRUE);
-		gtk_tool_item_set_tooltip_text(item, _("Pause"));
-		g_signal_connect(G_OBJECT(item), "clicked", G_CALLBACK(pause_cb), win);
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		/* regex stuff */
-		item = gtk_separator_tool_item_new();
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		/* regex toggle button */
-		item = gtk_toggle_tool_button_new();
-		gtk_tool_button_set_label(GTK_TOOL_BUTTON(item), _("_Filter"));
-		gtk_tool_button_set_use_underline(GTK_TOOL_BUTTON(item), TRUE);
-		gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(item),
-				"edit-find");
-		gtk_tool_item_set_is_important(item, TRUE);
-		win->filter = GTK_WIDGET(item);
-		gtk_tool_item_set_tooltip_text(GTK_TOOL_ITEM(win->filter), _("Filter"));
-		g_signal_connect(G_OBJECT(win->filter), "clicked", G_CALLBACK(regex_filter_toggled_cb), win);
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(win->filter));
+	                                toolbar_style_pref_changed_cb, win->toolbar);
 
 		/* we purposely disable the toggle button here in case
 		 * /purple/gtk/debug/expression has an empty string.  If it does not have
@@ -561,18 +539,6 @@ debug_window_new(void)
 									regex_pref_filter_cb, win);
 
 		/* regex entry */
-		win->expression = gtk_search_entry_new();
-		g_object_set(G_OBJECT(win->expression),
-				"primary-icon-activatable", TRUE,
-				"primary-icon-sensitive", TRUE,
-				NULL);
-		item = gtk_tool_item_new();
-		gtk_entry_set_icon_tooltip_text(GTK_ENTRY(win->expression),
-				GTK_ENTRY_ICON_PRIMARY,
-				_("Click for more options."));
-		gtk_container_add(GTK_CONTAINER(item), GTK_WIDGET(win->expression));
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
 		filter_css = gtk_css_provider_new();
 		gtk_css_provider_load_from_data(filter_css, filter_style, -1, NULL);
 		context = gtk_widget_get_style_context(win->expression);
@@ -580,17 +546,8 @@ debug_window_new(void)
 		                               GTK_STYLE_PROVIDER(filter_css),
 		                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-		/* this needs to be before the text is set from the pref if we want it
-		 * to colorize a stored expression.
-		 */
-		g_signal_connect(G_OBJECT(win->expression), "search-changed",
-						 G_CALLBACK(regex_changed_cb), win);
 		gtk_entry_set_text(GTK_ENTRY(win->expression),
 						   purple_prefs_get_string(PIDGIN_PREFS_ROOT "/debug/regex"));
-		g_signal_connect(G_OBJECT(win->expression), "icon-press",
-				G_CALLBACK(regex_popup_cb), win);
-		g_signal_connect(G_OBJECT(win->expression), "key-release-event",
-						 G_CALLBACK(regex_key_release_cb), win);
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/regex",
 									regex_pref_expression_cb, win);
 
@@ -603,65 +560,18 @@ debug_window_new(void)
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/highlight",
 									regex_pref_highlight_cb, win);
 
-		item = gtk_separator_tool_item_new();
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		item = gtk_tool_item_new();
-		gtk_container_add(GTK_CONTAINER(item), gtk_label_new(_("Level ")));
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		win->filterlevel = gtk_combo_box_text_new();
-		item = gtk_tool_item_new();
-		gtk_widget_set_tooltip_text(win->filterlevel, _("Select the debug filter level."));
-		gtk_container_add(GTK_CONTAINER(item), win->filterlevel);
-		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
-
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("All"));
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Misc"));
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Info"));
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Warning"));
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Error "));
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->filterlevel), _("Fatal Error"));
 		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel),
 					purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"));
 
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/filterlevel",
 						filter_level_pref_changed, win);
-		g_signal_connect(G_OBJECT(win->filterlevel), "changed",
-						 G_CALLBACK(filter_level_changed_cb), NULL);
 	}
 
-	/* Add the textview */
-	builder = gtk_builder_new_from_resource("/im/pidgin/Pidgin/Debug/debug.ui");
-	win->tags.category = GTK_TEXT_TAG(gtk_builder_get_object(builder, "category"));
-	win->tags.invisible = GTK_TEXT_TAG(gtk_builder_get_object(builder, "invisible"));
-	win->tags.level[0] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level0"));
-	win->tags.level[1] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level1"));
-	win->tags.level[2] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level2"));
-	win->tags.level[3] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level3"));
-	win->tags.level[4] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level4"));
-	win->tags.level[5] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level5"));
-	win->tags.match = GTK_TEXT_TAG(gtk_builder_get_object(builder, "match"));
-	win->buffer = gtk_text_buffer_new(
-			GTK_TEXT_TAG_TABLE(gtk_builder_get_object(builder, "message-format")));
-	win->text = gtk_text_view_new_with_buffer(win->buffer);
-	gtk_text_view_set_editable(GTK_TEXT_VIEW(win->text), FALSE);
-	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(win->text), GTK_WRAP_WORD);
 	/* Set active filter level in textview */
 	debug_window_set_filter_level(win,
 			purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"));
-	gtk_box_pack_start(GTK_BOX(vbox),
-			pidgin_make_scrollable(win->text,
-				GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC,
-				GTK_SHADOW_ETCHED_IN, -1, -1),
-			TRUE, TRUE, 0);
-	g_object_unref(G_OBJECT(builder));
 
 	clear_cb(NULL, win);
-
-	gtk_widget_show_all(win->window);
-
-	return win;
 }
 
 static gboolean
@@ -834,10 +744,12 @@ pidgin_debug_ui_finalize(GObject *gobject)
 void
 pidgin_debug_window_show(void)
 {
-	if (debug_win == NULL)
-		debug_win = debug_window_new();
+	if (debug_win == NULL) {
+		debug_win = PIDGIN_DEBUG_WINDOW(
+				g_object_new(PIDGIN_TYPE_DEBUG_WINDOW, NULL));
+	}
 
-	gtk_widget_show(debug_win->window);
+	gtk_widget_show(GTK_WIDGET(debug_win));
 
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/enabled", TRUE);
 }
@@ -846,7 +758,7 @@ void
 pidgin_debug_window_hide(void)
 {
 	if (debug_win != NULL) {
-		gtk_widget_destroy(debug_win->window);
+		gtk_widget_destroy(GTK_WIDGET(debug_win));
 		debug_window_destroy(NULL, NULL, NULL);
 	}
 }
