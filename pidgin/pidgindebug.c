@@ -328,14 +328,21 @@ regex_menu_cb(GtkWidget *item, const gchar *pref) {
 }
 
 static void
-regex_popup_cb(GtkEntry *entry, GtkWidget *menu, DebugWindow *win) {
-	pidgin_separator(menu);
+regex_popup_cb(GtkEntry *entry, GtkEntryIconPosition icon_pos, GdkEvent *event,
+		DebugWindow *win)
+{
+	GtkWidget *menu;
+
+	menu = gtk_menu_new();
 	pidgin_new_check_item(menu, _("Invert"),
 						G_CALLBACK(regex_menu_cb),
 						PIDGIN_PREFS_ROOT "/debug/invert", win->invert);
 	pidgin_new_check_item(menu, _("Highlight matches"),
 						G_CALLBACK(regex_menu_cb),
 						PIDGIN_PREFS_ROOT "/debug/highlight", win->highlight);
+
+	gtk_menu_popup_at_widget(GTK_MENU(menu), GTK_WIDGET(entry),
+			GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST, event);
 }
 
 static void
@@ -555,8 +562,14 @@ debug_window_new(void)
 
 		/* regex entry */
 		win->expression = gtk_search_entry_new();
+		g_object_set(G_OBJECT(win->expression),
+				"primary-icon-activatable", TRUE,
+				"primary-icon-sensitive", TRUE,
+				NULL);
 		item = gtk_tool_item_new();
-		gtk_widget_set_tooltip_text(win->expression, _("Right click for more options."));
+		gtk_entry_set_icon_tooltip_text(GTK_ENTRY(win->expression),
+				GTK_ENTRY_ICON_PRIMARY,
+				_("Click for more options."));
 		gtk_container_add(GTK_CONTAINER(item), GTK_WIDGET(win->expression));
 		gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(item));
 
@@ -574,8 +587,8 @@ debug_window_new(void)
 						 G_CALLBACK(regex_changed_cb), win);
 		gtk_entry_set_text(GTK_ENTRY(win->expression),
 						   purple_prefs_get_string(PIDGIN_PREFS_ROOT "/debug/regex"));
-		g_signal_connect(G_OBJECT(win->expression), "populate-popup",
-						 G_CALLBACK(regex_popup_cb), win);
+		g_signal_connect(G_OBJECT(win->expression), "icon-press",
+				G_CALLBACK(regex_popup_cb), win);
 		g_signal_connect(G_OBJECT(win->expression), "key-release-event",
 						 G_CALLBACK(regex_key_release_cb), win);
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/regex",
