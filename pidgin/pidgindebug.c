@@ -46,6 +46,13 @@ typedef struct
 {
 	GtkWidget *window;
 	GtkWidget *text;
+	GtkTextBuffer *buffer;
+	struct {
+		GtkTextTag *level[PURPLE_DEBUG_FATAL + 1];
+		GtkTextTag *category;
+		GtkTextTag *invisible;
+		GtkTextTag *match;
+	} tags;
 	GtkWidget *filter;
 	GtkWidget *expression;
 	GtkWidget *filterlevel;
@@ -109,6 +116,7 @@ save_writefile_cb(void *user_data, const char *filename)
 {
 	DebugWindow *win = (DebugWindow *)user_data;
 	FILE *fp;
+	GtkTextIter start, end;
 	char *tmp;
 
 	if ((fp = g_fopen(filename, "w+")) == NULL) {
@@ -116,7 +124,8 @@ save_writefile_cb(void *user_data, const char *filename)
 		return;
 	}
 
-	tmp = pidgin_webview_get_body_text(PIDGIN_WEBVIEW(win->text));
+	gtk_text_buffer_get_bounds(win->buffer, &start, &end);
+	tmp = gtk_text_buffer_get_text(win->buffer, &start, &end, FALSE);
 	fprintf(fp, "Pidgin Debug Log : %s\n", purple_date_format_full(NULL));
 	fprintf(fp, "%s", tmp);
 	g_free(tmp);
@@ -134,7 +143,7 @@ save_cb(GtkWidget *w, DebugWindow *win)
 static void
 clear_cb(GtkWidget *w, DebugWindow *win)
 {
-	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "clear();");
+	gtk_text_buffer_set_text(win->buffer, "", 0);
 }
 
 static void
@@ -142,10 +151,12 @@ pause_cb(GtkWidget *w, DebugWindow *win)
 {
 	win->paused = gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(w));
 
-	if (win->paused)
-		pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "pauseOutput();");
-	else
-		pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "resumeOutput();");
+	if (!win->paused) {
+		GtkTextIter start, end;
+		gtk_text_buffer_get_bounds(win->buffer, &start, &end);
+		gtk_text_buffer_remove_tag(win->buffer, win->tags.invisible,
+				&start, &end);
+	}
 }
 
 /******************************************************************************
@@ -174,22 +185,34 @@ regex_change_color(GtkWidget *w, gboolean success) {
 static void
 regex_toggle_filter(DebugWindow *win, gboolean filter)
 {
-	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), "regex.clear();");
+	GtkTextIter start, end;
+
+	gtk_text_buffer_get_bounds(win->buffer, &start, &end);
+	gtk_text_buffer_remove_tag(win->buffer, win->tags.match, &start, &end);
 
 	if (filter) {
-		const char *text;
-		char *regex;
-		char *script;
+		GError *error = NULL;
+		GMatchInfo *match;
+		gint start_pos, end_pos;
+		GtkTextIter match_start = start, match_end = start;
+		gchar *text;
 
-		text = gtk_entry_get_text(GTK_ENTRY(win->expression));
-		regex = pidgin_webview_quote_js_string(text);
-		script = g_strdup_printf("regex.filterAll(%s, %s, %s);",
-		                         regex,
-		                         win->invert ? "true" : "false",
-		                         win->highlight ? "true" : "false");
-		pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), script);
-		g_free(script);
-		g_free(regex);
+		text = gtk_text_buffer_get_text(win->buffer, &start, &end, TRUE);
+		g_regex_match(win->regex, text, 0, &match);
+		while (g_match_info_matches(match)) {
+			g_match_info_fetch_pos(match, 0, &start_pos, &end_pos);
+			gtk_text_iter_set_offset(&match_start, start_pos);
+			gtk_text_iter_set_offset(&match_end, end_pos);
+
+			if (win->highlight) {
+				gtk_text_buffer_apply_tag(win->buffer, win->tags.match,
+				                          &match_start, &match_end);
+			}
+
+			g_match_info_next(match, &error);
+		}
+		g_match_info_free(match);
+		g_free(text);
 	}
 }
 
@@ -324,7 +347,7 @@ regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win)
 
 	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/filter", active);
 
-	if (!PIDGIN_IS_WEBVIEW(win->text))
+	if (!GTK_IS_TEXT_VIEW(win->text))
 		return;
 
 	regex_toggle_filter(win, active);
@@ -333,14 +356,16 @@ regex_filter_toggled_cb(GtkToggleToolButton *button, DebugWindow *win)
 static void
 debug_window_set_filter_level(DebugWindow *win, int level)
 {
-	char *tmp;
+	int i;
 
 	if (level != gtk_combo_box_get_active(GTK_COMBO_BOX(win->filterlevel)))
 		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel), level);
 
-	tmp = g_strdup_printf("setFilterLevel('%d');", level);
-	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(win->text), tmp);
-	g_free(tmp);
+	for (i = 0; i <= PURPLE_DEBUG_FATAL; i++) {
+		g_object_set(G_OBJECT(win->tags.level[i]),
+				"invisible", i < level,
+				NULL);
+	}
 }
 
 static void
@@ -407,13 +432,10 @@ toolbar_context(GtkWidget *toolbar, GdkEventButton *event, gpointer null)
 static DebugWindow *
 debug_window_new(void)
 {
-	GError *error;
 	DebugWindow *win;
-	GResource *resource;
-	GBytes *resource_bytes;
+	GtkBuilder *builder;
 	GtkWidget *vbox;
 	GtkWidget *toolbar;
-	GtkWidget *frame;
 	gint width, height;
 	void *handle;
 	GtkToolItem *item;
@@ -596,35 +618,31 @@ debug_window_new(void)
 						 G_CALLBACK(filter_level_changed_cb), NULL);
 	}
 
-	/* Add the gtkwebview */
-	frame = pidgin_create_webview(FALSE, &win->text, NULL);
-	pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(win->text),
-	                                 PIDGIN_WEBVIEW_ALL ^ PIDGIN_WEBVIEW_SMILEY ^ PIDGIN_WEBVIEW_IMAGE);
-	resource = pidgin_get_resource();
-	error = NULL;
-	resource_bytes = g_resource_lookup_data(resource,
-	                                        "/im/pidgin/Pidgin/Debug/gtkdebug.html",
-	                                        G_RESOURCE_LOOKUP_FLAGS_NONE,
-	                                        &error);
-	if (G_UNLIKELY(resource_bytes == NULL || error != NULL)) {
-		gchar *msg = g_strdup_printf("Unable to load debug window HTML: %s\n",
-		                             error ? error->message : "Unknown error");
-		g_clear_error(&error);
-		pidgin_webview_load_html_string(PIDGIN_WEBVIEW(win->text), msg);
-		g_free(msg);
-	} else {
-		gconstpointer gtkdebug_html;
-		gtkdebug_html = g_bytes_get_data(resource_bytes, NULL);
-		pidgin_webview_load_html_string(PIDGIN_WEBVIEW(win->text),
-		                                gtkdebug_html);
-
-		/* Set active filter level in webview */
-		debug_window_set_filter_level(win, purple_prefs_get_int(
-				PIDGIN_PREFS_ROOT "/debug/filterlevel"));
-	}
-	g_bytes_unref(resource_bytes);
-	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
-	gtk_widget_show(frame);
+	/* Add the textview */
+	builder = gtk_builder_new_from_resource("/im/pidgin/Pidgin/Debug/debug.ui");
+	win->tags.category = GTK_TEXT_TAG(gtk_builder_get_object(builder, "category"));
+	win->tags.invisible = GTK_TEXT_TAG(gtk_builder_get_object(builder, "invisible"));
+	win->tags.level[0] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level0"));
+	win->tags.level[1] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level1"));
+	win->tags.level[2] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level2"));
+	win->tags.level[3] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level3"));
+	win->tags.level[4] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level4"));
+	win->tags.level[5] = GTK_TEXT_TAG(gtk_builder_get_object(builder, "level5"));
+	win->tags.match = GTK_TEXT_TAG(gtk_builder_get_object(builder, "match"));
+	win->buffer = gtk_text_buffer_new(
+			GTK_TEXT_TAG_TABLE(gtk_builder_get_object(builder, "message-format")));
+	win->text = gtk_text_view_new_with_buffer(win->buffer);
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(win->text), FALSE);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(win->text), GTK_WRAP_WORD);
+	/* Set active filter level in textview */
+	debug_window_set_filter_level(win,
+			purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"));
+	gtk_box_pack_start(GTK_BOX(vbox),
+			pidgin_make_scrollable(win->text,
+				GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC,
+				GTK_SHADOW_ETCHED_IN, -1, -1),
+			TRUE, TRUE, 0);
+	g_object_unref(G_OBJECT(builder));
 
 	clear_cb(NULL, win);
 
@@ -825,27 +843,71 @@ pidgin_debug_print(PurpleDebugUi *self,
                    PurpleDebugLevel level, const char *category,
                    const char *arg_s)
 {
-	gchar *esc_s;
+	GtkTextTag *level_tag;
 	const char *mdate;
 	time_t mtime;
-	gchar *js;
+	GtkTextIter end;
 
 	if (debug_win == NULL)
 		return;
 	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"))
 		return;
 
+	level_tag = debug_win->tags.level[level];
+
 	mtime = time(NULL);
-	mdate = purple_utf8_strftime("%H:%M:%S", localtime(&mtime));
+	mdate = purple_utf8_strftime("(%H:%M:%S) ", localtime(&mtime));
+	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
+	gtk_text_buffer_insert_with_tags(
+			debug_win->buffer,
+			&end,
+			mdate,
+			-1,
+			level_tag,
+			debug_win->paused ? debug_win->tags.invisible : NULL,
+			NULL);
 
-	esc_s = purple_escape_js(arg_s);
+	if (category && *category) {
+		gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
+		gtk_text_buffer_insert_with_tags(
+				debug_win->buffer,
+				&end,
+				category,
+				-1,
+				level_tag,
+				debug_win->tags.category,
+				debug_win->paused ? debug_win->tags.invisible : NULL,
+				NULL);
+		gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
+		gtk_text_buffer_insert_with_tags(
+				debug_win->buffer,
+				&end,
+				": ",
+				2,
+				level_tag,
+				debug_win->tags.category,
+				debug_win->paused ? debug_win->tags.invisible : NULL,
+				NULL);
+	}
 
-	js = g_strdup_printf("append(%d, '%s', '%s', %s);",
-		level, mdate, category ? category : "", esc_s);
-	g_free(esc_s);
-
-	pidgin_webview_safe_execute_script(PIDGIN_WEBVIEW(debug_win->text), js);
-	g_free(js);
+	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
+	gtk_text_buffer_insert_with_tags(
+			debug_win->buffer,
+			&end,
+			arg_s,
+			-1,
+			level_tag,
+			debug_win->paused ? debug_win->tags.invisible : NULL,
+			NULL);
+	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
+	gtk_text_buffer_insert_with_tags(
+			debug_win->buffer,
+			&end,
+			"\n",
+			1,
+			level_tag,
+			debug_win->paused ? debug_win->tags.invisible : NULL,
+			NULL);
 }
 
 static gboolean

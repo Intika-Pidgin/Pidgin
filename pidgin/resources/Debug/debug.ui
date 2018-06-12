@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.22.1 -->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <object class="GtkTextTagTable" id="message-format">
+    <child type="tag">
+      <object class="GtkTextTag" id="level0">
+        <property name="foreground_rgba">rgb(0,0,0)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="level1">
+        <property name="foreground_rgba">rgb(102,102,102)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="level2">
+        <property name="foreground_rgba">rgb(0,0,0)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="level3">
+        <property name="foreground_rgba">rgb(102,0,0)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="level4">
+        <property name="foreground_rgba">rgb(255,0,0)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="level5">
+        <property name="foreground_rgba">rgb(255,0,0)</property>
+        <property name="weight">700</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="category">
+        <property name="weight">700</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="invisible">
+        <property name="invisible">True</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="match">
+        <property name="background_rgba">rgb(255,175,175)</property>
+        <property name="weight">700</property>
+      </object>
+    </child>
+  </object>
+</interface>
