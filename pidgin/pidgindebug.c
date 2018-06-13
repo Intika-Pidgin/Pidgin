@@ -52,8 +52,10 @@ struct _PidginDebugWindow {
 	struct {
 		GtkTextTag *level[PURPLE_DEBUG_FATAL + 1];
 		GtkTextTag *category;
-		GtkTextTag *invisible;
+		GtkTextTag *filtered_invisible;
+		GtkTextTag *filtered_visible;
 		GtkTextTag *match;
+		GtkTextTag *paused;
 	} tags;
 	GtkWidget *filter;
 	GtkWidget *expression;
@@ -166,7 +168,7 @@ pause_cb(GtkWidget *w, PidginDebugWindow *win)
 	if (!win->paused) {
 		GtkTextIter start, end;
 		gtk_text_buffer_get_bounds(win->buffer, &start, &end);
-		gtk_text_buffer_remove_tag(win->buffer, win->tags.invisible,
+		gtk_text_buffer_remove_tag(win->buffer, win->tags.paused,
 				&start, &end);
 		gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(win->textview),
 				win->end_mark, 0, TRUE, 0, 1);
@@ -197,36 +199,86 @@ regex_change_color(GtkWidget *w, gboolean success) {
 }
 
 static void
+do_regex(PidginDebugWindow *win, GtkTextIter *start, GtkTextIter *end)
+{
+	GError *error = NULL;
+	GMatchInfo *match;
+	gint initial_position;
+	gint start_pos, end_pos;
+	GtkTextIter match_start, match_end;
+	gchar *text;
+
+	initial_position = gtk_text_iter_get_offset(start);
+
+	if (!win->invert) {
+		/* First hide everything. */
+		gtk_text_buffer_apply_tag(win->buffer,
+				win->tags.filtered_invisible, start, end);
+	}
+
+	text = gtk_text_buffer_get_text(win->buffer, start, end, TRUE);
+	g_regex_match(win->regex, text, 0, &match);
+	while (g_match_info_matches(match)) {
+		g_match_info_fetch_pos(match, 0, &start_pos, &end_pos);
+		start_pos += initial_position;
+		end_pos += initial_position;
+
+		/* Expand match to full line of message. */
+		gtk_text_buffer_get_iter_at_offset(win->buffer,
+				&match_start, start_pos);
+		gtk_text_iter_set_line_index(&match_start, 0);
+		gtk_text_buffer_get_iter_at_offset(win->buffer,
+				&match_end, end_pos);
+		gtk_text_iter_forward_line(&match_end);
+
+		if (win->invert) {
+			/* Make invisible. */
+			gtk_text_buffer_apply_tag(win->buffer,
+					win->tags.filtered_invisible,
+					&match_start, &match_end);
+		} else {
+			/* Make visible again (with higher priority.) */
+			gtk_text_buffer_apply_tag(win->buffer,
+					win->tags.filtered_visible,
+					&match_start, &match_end);
+
+			if (win->highlight) {
+				gtk_text_buffer_get_iter_at_offset(
+						win->buffer,
+						&match_start,
+						start_pos);
+				gtk_text_buffer_get_iter_at_offset(
+						win->buffer,
+						&match_end,
+						end_pos);
+				gtk_text_buffer_apply_tag(win->buffer,
+						win->tags.match,
+						&match_start,
+						&match_end);
+			}
+		}
+
+		g_match_info_next(match, &error);
+	}
+
+	g_match_info_free(match);
+	g_free(text);
+}
+
+static void
 regex_toggle_filter(PidginDebugWindow *win, gboolean filter)
 {
 	GtkTextIter start, end;
 
 	gtk_text_buffer_get_bounds(win->buffer, &start, &end);
 	gtk_text_buffer_remove_tag(win->buffer, win->tags.match, &start, &end);
+	gtk_text_buffer_remove_tag(win->buffer, win->tags.filtered_invisible,
+			&start, &end);
+	gtk_text_buffer_remove_tag(win->buffer, win->tags.filtered_visible,
+			&start, &end);
 
 	if (filter) {
-		GError *error = NULL;
-		GMatchInfo *match;
-		gint start_pos, end_pos;
-		GtkTextIter match_start = start, match_end = start;
-		gchar *text;
-
-		text = gtk_text_buffer_get_text(win->buffer, &start, &end, TRUE);
-		g_regex_match(win->regex, text, 0, &match);
-		while (g_match_info_matches(match)) {
-			g_match_info_fetch_pos(match, 0, &start_pos, &end_pos);
-			gtk_text_iter_set_offset(&match_start, start_pos);
-			gtk_text_iter_set_offset(&match_end, end_pos);
-
-			if (win->highlight) {
-				gtk_text_buffer_apply_tag(win->buffer, win->tags.match,
-				                          &match_start, &match_end);
-			}
-
-			g_match_info_next(match, &error);
-		}
-		g_match_info_free(match);
-		g_free(text);
+		do_regex(win, &start, &end);
 	}
 }
 
@@ -468,7 +520,9 @@ pidgin_debug_window_class_init(PidginDebugWindowClass *klass) {
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, tags.category);
 	gtk_widget_class_bind_template_child(
-			widget_class, PidginDebugWindow, tags.invisible);
+			widget_class, PidginDebugWindow, tags.filtered_invisible);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.filtered_visible);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, tags.level[0]);
 	gtk_widget_class_bind_template_child(
@@ -481,6 +535,8 @@ pidgin_debug_window_class_init(PidginDebugWindowClass *klass) {
 			widget_class, PidginDebugWindow, tags.level[4]);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, tags.level[5]);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, tags.paused);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, filter);
 	gtk_widget_class_bind_template_child(
@@ -818,7 +874,7 @@ pidgin_debug_print(PurpleDebugUi *self,
 			mdate,
 			-1,
 			level_tag,
-			debug_win->paused ? debug_win->tags.invisible : NULL,
+			debug_win->paused ? debug_win->tags.paused : NULL,
 			NULL);
 
 	if (category && *category) {
@@ -829,7 +885,7 @@ pidgin_debug_print(PurpleDebugUi *self,
 				-1,
 				level_tag,
 				debug_win->tags.category,
-				debug_win->paused ? debug_win->tags.invisible : NULL,
+				debug_win->paused ? debug_win->tags.paused : NULL,
 				NULL);
 		gtk_text_buffer_insert_with_tags(
 				debug_win->buffer,
@@ -838,7 +894,7 @@ pidgin_debug_print(PurpleDebugUi *self,
 				2,
 				level_tag,
 				debug_win->tags.category,
-				debug_win->paused ? debug_win->tags.invisible : NULL,
+				debug_win->paused ? debug_win->tags.paused : NULL,
 				NULL);
 	}
 
@@ -848,7 +904,7 @@ pidgin_debug_print(PurpleDebugUi *self,
 			arg_s,
 			-1,
 			level_tag,
-			debug_win->paused ? debug_win->tags.invisible : NULL,
+			debug_win->paused ? debug_win->tags.paused : NULL,
 			NULL);
 	gtk_text_buffer_insert_with_tags(
 			debug_win->buffer,
@@ -856,7 +912,7 @@ pidgin_debug_print(PurpleDebugUi *self,
 			"\n",
 			1,
 			level_tag,
-			debug_win->paused ? debug_win->tags.invisible : NULL,
+			debug_win->paused ? debug_win->tags.paused : NULL,
 			NULL);
 
 	if (scroll) {

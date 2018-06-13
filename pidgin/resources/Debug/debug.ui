@@ -40,14 +40,24 @@
       </object>
     </child>
     <child type="tag">
-      <object class="GtkTextTag" id="tags.invisible">
+      <object class="GtkTextTag" id="tags.filtered_invisible">
         <property name="invisible">True</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.filtered_visible">
+        <property name="invisible">False</property>
       </object>
     </child>
     <child type="tag">
       <object class="GtkTextTag" id="tags.match">
         <property name="background_rgba">rgb(255,175,175)</property>
         <property name="weight">700</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.paused">
+        <property name="invisible">True</property>
       </object>
     </child>
   </object>
