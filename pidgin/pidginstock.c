@@ -117,14 +117,6 @@ const SizedStockIcon sized_stock_icons [] = {
 	{ PIDGIN_STOCK_STATUS_HALFOP,   "emblems", "emblem-half-operator.png",	FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_STATUS_VOICE,    "emblems", "emblem-voice.png",         FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 
-	{ PIDGIN_STOCK_DIALOG_AUTH,     "status", "auth.png",      FALSE, TRUE,  FALSE, FALSE, FALSE, TRUE,  FALSE, NULL },
-	{ PIDGIN_STOCK_DIALOG_COOL,     "status", "cool.png",      FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,  FALSE, NULL },
-	{ PIDGIN_STOCK_DIALOG_ERROR,    "status", "error.png",     FALSE, TRUE,  FALSE, FALSE, FALSE, TRUE,  FALSE, NULL },
-	{ PIDGIN_STOCK_DIALOG_INFO,     "status", "info.png",      FALSE, TRUE,  FALSE, FALSE, FALSE, TRUE,  FALSE, NULL },
-	{ PIDGIN_STOCK_DIALOG_MAIL,     "status", "mail.png",      FALSE, TRUE,  FALSE, FALSE, FALSE, TRUE,  FALSE, NULL },
-	{ PIDGIN_STOCK_DIALOG_QUESTION, "status", "question.png",  FALSE, TRUE,  FALSE, FALSE, FALSE, TRUE,  FALSE, NULL },
-	{ PIDGIN_STOCK_DIALOG_WARNING,  "status", "warning.png",   FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,  FALSE, NULL },
-
 	{ PIDGIN_STOCK_ANIMATION_CONNECT0,  "animations", "process-working0.png",  FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_ANIMATION_CONNECT1,  "animations", "process-working1.png",  FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },
 	{ PIDGIN_STOCK_ANIMATION_CONNECT2,  "animations", "process-working2.png",  FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL },

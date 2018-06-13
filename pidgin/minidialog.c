@@ -30,7 +30,6 @@
 
 #include "pidgin/minidialog.h"
 #include "pidgin/pidgin.h"
-#include "pidgin/pidginstock.h"
 
 static void     pidgin_mini_dialog_init       (PidginMiniDialog      *self);
 static void     pidgin_mini_dialog_class_init (PidginMiniDialogClass *klass);
@@ -289,9 +288,8 @@ pidgin_mini_dialog_get_property(GObject *object,
 			break;
 		case PROP_ICON_NAME:
 		{
-			gchar *icon_name = NULL;
-			GtkIconSize size;
-			gtk_image_get_stock(priv->icon, &icon_name, &size);
+			const gchar *icon_name = NULL;
+			gtk_image_get_icon_name(priv->icon, &icon_name, NULL);
 			g_value_set_string(value, icon_name);
 			break;
 		}
@@ -374,8 +372,9 @@ pidgin_mini_dialog_set_property(GObject *object,
 			mini_dialog_set_description(self, g_value_get_string(value));
 			break;
 		case PROP_ICON_NAME:
-			gtk_image_set_from_stock(priv->icon, g_value_get_string(value),
-				gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL));
+			gtk_image_set_from_icon_name(priv->icon,
+					g_value_get_string(value),
+					GTK_ICON_SIZE_SMALL_TOOLBAR);
 			break;
 		case PROP_CUSTOM_ICON:
 			gtk_image_set_from_pixbuf(priv->icon, g_value_get_object(value));
@@ -426,7 +425,7 @@ pidgin_mini_dialog_class_init(PidginMiniDialogClass *klass)
 
 	properties[PROP_ICON_NAME] = g_param_spec_string("icon-name",
 		"icon-name",
-		"String specifying the Gtk stock name of the dialog's icon",
+		"String specifying the GtkIconTheme name of the dialog's icon",
 		NULL,
 		G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE);
 

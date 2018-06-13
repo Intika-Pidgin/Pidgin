@@ -352,7 +352,7 @@ pidgin_request_dialog_icon(PurpleRequestType dialog_type,
 	PurpleRequestIconType icon_type;
 	gconstpointer icon_data;
 	gsize icon_size;
-	const gchar *icon_stock = PIDGIN_STOCK_DIALOG_QUESTION;
+	const gchar *icon_name = "dialog-question";
 
 	/* Dialog icon. */
 	icon_data = purple_request_cpar_get_custom_icon(cpar, &icon_size);
@@ -397,26 +397,26 @@ pidgin_request_dialog_icon(PurpleRequestType dialog_type,
 	switch (icon_type)
 	{
 		case PURPLE_REQUEST_ICON_DEFAULT:
-			icon_stock = NULL;
+			icon_name = NULL;
 			break;
 		case PURPLE_REQUEST_ICON_REQUEST:
-			icon_stock = PIDGIN_STOCK_DIALOG_QUESTION;
+			icon_name = "dialog-question";
 			break;
 		case PURPLE_REQUEST_ICON_DIALOG:
 		case PURPLE_REQUEST_ICON_INFO:
 		case PURPLE_REQUEST_ICON_WAIT: /* TODO: we need another icon */
-			icon_stock = PIDGIN_STOCK_DIALOG_INFO;
+			icon_name = "dialog-information";
 			break;
 		case PURPLE_REQUEST_ICON_WARNING:
-			icon_stock = PIDGIN_STOCK_DIALOG_WARNING;
+			icon_name = "dialog-warning";
 			break;
 		case PURPLE_REQUEST_ICON_ERROR:
-			icon_stock = PIDGIN_STOCK_DIALOG_ERROR;
+			icon_name = "dialog-error";
 			break;
 		/* intentionally no default value */
 	}
 
-	if (icon_stock == NULL) {
+	if (icon_name == NULL) {
 		switch (dialog_type) {
 			case PURPLE_REQUEST_INPUT:
 			case PURPLE_REQUEST_CHOICE:
@@ -424,23 +424,22 @@ pidgin_request_dialog_icon(PurpleRequestType dialog_type,
 			case PURPLE_REQUEST_FIELDS:
 			case PURPLE_REQUEST_FILE:
 			case PURPLE_REQUEST_FOLDER:
-				icon_stock = PIDGIN_STOCK_DIALOG_QUESTION;
+				icon_name = "dialog-question";
 				break;
 			case PURPLE_REQUEST_WAIT:
-				icon_stock = PIDGIN_STOCK_DIALOG_INFO;
+				icon_name = "dialog-information";
 				break;
 			/* intentionally no default value */
 		}
 	}
 
-	img = gtk_image_new_from_stock(icon_stock,
-		gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	img = gtk_image_new_from_icon_name(icon_name, GTK_ICON_SIZE_DIALOG);
 
 	if (img || icon_type == PURPLE_REQUEST_ICON_REQUEST)
 		return img;
 
-	return gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
-		gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	return gtk_image_new_from_icon_name("dialog-question",
+			GTK_ICON_SIZE_DIALOG);
 }
 
 static void
