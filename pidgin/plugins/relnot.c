@@ -92,7 +92,7 @@ static void version_fetch_cb(PurpleHttpConnection *hc,
 			PIDGIN_NAME, cur_ver);
 
 	release_dialog = pidgin_make_mini_dialog(
-		NULL, PIDGIN_STOCK_DIALOG_INFO,
+		NULL, "dialog-information",
 		_("New Version Available"),
 		message->str,
 		NULL,

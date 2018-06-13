@@ -922,8 +922,8 @@ invite_cb(GtkWidget *widget, PidginConversation *gtkconv)
 		GtkWidget *grid;
 		GtkWidget *img;
 
-		img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
-		                               gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+		img = gtk_image_new_from_icon_name("dialog-question",
+				GTK_ICON_SIZE_DIALOG);
 
 		info = g_new0(InviteBuddyInfo, 1);
 		info->chat = chat;
@@ -9145,8 +9145,9 @@ build_warn_close_dialog(PidginConvWindow *gtkwin)
 	gtk_box_set_spacing(GTK_BOX(vbox), 12);
 	gtk_container_set_border_width(GTK_CONTAINER(vbox), 6);
 
-	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_WARNING,
-	                               gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	img = gtk_image_new_from_icon_name("dialog-warning",
+			GTK_ICON_SIZE_DIALOG);
+
 	/* Setup the inner hbox and put the dialog's icon in it. */
 	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
 	gtk_container_add(GTK_CONTAINER(vbox), hbox);
