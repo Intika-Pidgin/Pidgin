@@ -209,6 +209,9 @@ do_regex(PidginDebugWindow *win, GtkTextIter *start, GtkTextIter *end)
 	GtkTextIter match_start, match_end;
 	gchar *text;
 
+	if (!win->regex)
+		return;
+
 	initial_position = gtk_text_iter_get_offset(start);
 
 	if (!win->invert) {
