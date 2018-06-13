@@ -806,12 +806,12 @@ pidgin_debug_print(PurpleDebugUi *self,
 		return;
 
 	scroll = view_near_bottom(debug_win);
+	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
 
 	level_tag = debug_win->tags.level[level];
 
 	mtime = time(NULL);
 	mdate = purple_utf8_strftime("(%H:%M:%S) ", localtime(&mtime));
-	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
 	gtk_text_buffer_insert_with_tags(
 			debug_win->buffer,
 			&end,
@@ -822,7 +822,6 @@ pidgin_debug_print(PurpleDebugUi *self,
 			NULL);
 
 	if (category && *category) {
-		gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
 		gtk_text_buffer_insert_with_tags(
 				debug_win->buffer,
 				&end,
@@ -832,7 +831,6 @@ pidgin_debug_print(PurpleDebugUi *self,
 				debug_win->tags.category,
 				debug_win->paused ? debug_win->tags.invisible : NULL,
 				NULL);
-		gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
 		gtk_text_buffer_insert_with_tags(
 				debug_win->buffer,
 				&end,
@@ -844,7 +842,6 @@ pidgin_debug_print(PurpleDebugUi *self,
 				NULL);
 	}
 
-	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
 	gtk_text_buffer_insert_with_tags(
 			debug_win->buffer,
 			&end,
@@ -853,7 +850,6 @@ pidgin_debug_print(PurpleDebugUi *self,
 			level_tag,
 			debug_win->paused ? debug_win->tags.invisible : NULL,
 			NULL);
-	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
 	gtk_text_buffer_insert_with_tags(
 			debug_win->buffer,
 			&end,
