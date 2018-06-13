@@ -140,7 +140,7 @@ save_writefile_cb(void *user_data, const char *filename)
 	}
 
 	gtk_text_buffer_get_bounds(win->buffer, &start, &end);
-	tmp = gtk_text_buffer_get_text(win->buffer, &start, &end, FALSE);
+	tmp = gtk_text_buffer_get_text(win->buffer, &start, &end, TRUE);
 	fprintf(fp, "Pidgin Debug Log : %s\n", purple_date_format_full(NULL));
 	fprintf(fp, "%s", tmp);
 	g_free(tmp);
