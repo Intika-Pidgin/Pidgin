@@ -6,5 +6,6 @@
     <file compressed="true">About/about.html</file>
     <file compressed="true">About/credits.json</file>
     <file compressed="true">Debug/debug.ui</file>
+    <file compressed="true">Debug/filter-popover.ui</file>
   </gresource>
 </gresources>
