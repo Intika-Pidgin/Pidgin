@@ -148,7 +148,7 @@ pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 
 	pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), string->str);
 
-	button = pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CLOSE,
+	button = pidgin_dialog_add_button(GTK_DIALOG(win), _("_Close"),
 	                G_CALLBACK(destroy_win), win);
 
 	gtk_widget_set_can_default(button, TRUE);
@@ -381,7 +381,8 @@ pidgin_dialogs_ee(const char *ee)
 	if (strlen(gtk_label_get_label(GTK_LABEL(label))) <= 0)
 		return FALSE;
 
-	window = gtk_dialog_new_with_buttons(PIDGIN_ALERT_TITLE, NULL, 0, GTK_STOCK_CLOSE, GTK_RESPONSE_OK, NULL);
+	window = gtk_dialog_new_with_buttons(PIDGIN_ALERT_TITLE, NULL, 0,
+			_("_Close"), GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response (GTK_DIALOG(window), GTK_RESPONSE_OK);
 	g_signal_connect(G_OBJECT(window), "response", G_CALLBACK(gtk_widget_destroy), NULL);
 
@@ -394,7 +395,7 @@ pidgin_dialogs_ee(const char *ee)
 
 	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), hbox);
-	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_COOL, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	img = gtk_image_new_from_icon_name("dialog-cool", GTK_ICON_SIZE_DIALOG);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);

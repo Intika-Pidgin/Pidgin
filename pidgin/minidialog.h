@@ -78,13 +78,12 @@ G_BEGIN_DECLS
  *       hidden.</entry>
  *   </row>
  *   <row><entry><literal>"icon-name"</literal></entry>
- *     <entry>(<type>char *</type>)The Gtk stock id of an icon for the dialog,
- *       or %NULL for no icon. See
- *       <link linkend="pidgin-pidginstock">Stock Resources</link></entry>
+ *     <entry>(<type>char *</type>)The #GtkIconTheme name of an icon for the
+ *       dialog, or %NULL for no icon.
  *   </row>
  *   <row><entry><literal>"custom-icon"</literal></entry>
  *     <entry>(<type>GdkPixbuf *</type>) The custom icon to use instead of a
- *       stock one (overrides the <literal>"icon-name"</literal>
+ *       #GtkIconTheme one (overrides the <literal>"icon-name"</literal>
  *       property).</entry>
  *   </row>
  *   </tbody></tgroup>
@@ -136,8 +135,9 @@ GType pidgin_mini_dialog_get_type (void);
 /**
  * pidgin_mini_dialog_new:
  *
- * Creates a new #PidginMiniDialog with a stock icon. This is a shortcut for creating the dialog
- * with g_object_new() then setting each property yourself.
+ * Creates a new #PidginMiniDialog with a #GtkIconTheme icon. This is a
+ * shortcut for creating the dialog with g_object_new() then setting each
+ * property yourself.
  *
  * Returns: a new #PidginMiniDialog.
  */
@@ -197,7 +197,7 @@ void pidgin_mini_dialog_set_link_callback(PidginMiniDialog *mini_dialog, GCallba
 /**
  * pidgin_mini_dialog_set_icon_name:
  * @mini_dialog: a mini-dialog
- * @icon_name:   the Gtk stock ID of an icon, or %NULL for no icon.
+ * @icon_name:   the #GtkIconTheme name of an icon, or %NULL for no icon.
  *
  * Shortcut for setting a mini-dialog's icon via GObject properties.
  */
