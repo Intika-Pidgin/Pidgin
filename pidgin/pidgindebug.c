@@ -46,7 +46,9 @@ struct _PidginDebugWindow {
 	GtkWindow parent;
 
 	GtkWidget *toolbar;
+	GtkWidget *textview;
 	GtkTextBuffer *buffer;
+	GtkTextMark *end_mark;
 	struct {
 		GtkTextTag *level[PURPLE_DEBUG_FATAL + 1];
 		GtkTextTag *category;
@@ -111,6 +113,16 @@ configure_cb(GtkWidget *w, GdkEventConfigure *event, void *unused)
 	return FALSE;
 }
 
+static gboolean
+view_near_bottom(PidginDebugWindow *win)
+{
+	GtkAdjustment *adj = gtk_scrollable_get_vadjustment(
+			GTK_SCROLLABLE(win->textview));
+	return (gtk_adjustment_get_value(adj) >=
+			(gtk_adjustment_get_upper(adj) -
+			 gtk_adjustment_get_page_size(adj) * 1.5));
+}
+
 static void
 save_writefile_cb(void *user_data, const char *filename)
 {
@@ -156,6 +168,8 @@ pause_cb(GtkWidget *w, PidginDebugWindow *win)
 		gtk_text_buffer_get_bounds(win->buffer, &start, &end);
 		gtk_text_buffer_remove_tag(win->buffer, win->tags.invisible,
 				&start, &end);
+		gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(win->textview),
+				win->end_mark, 0, TRUE, 0, 1);
 	}
 }
 
@@ -360,15 +374,21 @@ regex_filter_toggled_cb(GtkToggleToolButton *button, PidginDebugWindow *win)
 static void
 debug_window_set_filter_level(PidginDebugWindow *win, int level)
 {
+	gboolean scroll;
 	int i;
 
 	if (level != gtk_combo_box_get_active(GTK_COMBO_BOX(win->filterlevel)))
 		gtk_combo_box_set_active(GTK_COMBO_BOX(win->filterlevel), level);
 
+	scroll = view_near_bottom(win);
 	for (i = 0; i <= PURPLE_DEBUG_FATAL; i++) {
 		g_object_set(G_OBJECT(win->tags.level[i]),
 				"invisible", i < level,
 				NULL);
+	}
+	if (scroll) {
+		gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(win->textview),
+				win->end_mark, 0, TRUE, 0, 1);
 	}
 }
 
@@ -442,6 +462,8 @@ pidgin_debug_window_class_init(PidginDebugWindowClass *klass) {
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, toolbar);
 	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, textview);
+	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, buffer);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, tags.category);
@@ -487,6 +509,7 @@ pidgin_debug_window_init(PidginDebugWindow *win)
 {
 	gint width, height;
 	void *handle;
+	GtkTextIter end;
 	GtkStyleContext *context;
 	GtkCssProvider *filter_css;
 	const gchar filter_style[] =
@@ -567,6 +590,9 @@ pidgin_debug_window_init(PidginDebugWindow *win)
 						filter_level_pref_changed, win);
 	}
 
+	win->end_mark = gtk_text_mark_new("end", FALSE);
+	gtk_text_buffer_get_end_iter(win->buffer, &end);
+	gtk_text_buffer_add_mark(win->buffer, win->end_mark, &end);
 	/* Set active filter level in textview */
 	debug_window_set_filter_level(win,
 			purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"));
@@ -772,11 +798,14 @@ pidgin_debug_print(PurpleDebugUi *self,
 	const char *mdate;
 	time_t mtime;
 	GtkTextIter end;
+	gboolean scroll;
 
 	if (debug_win == NULL)
 		return;
 	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/enabled"))
 		return;
+
+	scroll = view_near_bottom(debug_win);
 
 	level_tag = debug_win->tags.level[level];
 
@@ -833,6 +862,11 @@ pidgin_debug_print(PurpleDebugUi *self,
 			level_tag,
 			debug_win->paused ? debug_win->tags.invisible : NULL,
 			NULL);
+
+	if (scroll) {
+		gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(debug_win->textview),
+				debug_win->end_mark, 0, TRUE, 0, 1);
+	}
 }
 
 static gboolean
