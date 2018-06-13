@@ -2527,7 +2527,7 @@ pidgin_accounts_notify_added(PurpleAccount *account, const char *remote_user,
 	gc = purple_account_get_connection(account);
 
 	buffer = make_info(account, gc, remote_user, id, alias, msg);
-	alert = pidgin_make_mini_dialog(gc, PIDGIN_STOCK_DIALOG_INFO, buffer,
+	alert = pidgin_make_mini_dialog(gc, "dialog-information", buffer,
 					  NULL, NULL, _("Close"), NULL, NULL);
 	pidgin_blist_add_alert(alert);
 
@@ -2552,7 +2552,7 @@ pidgin_accounts_request_add(PurpleAccount *account, const char *remote_user,
 	data->alias    = g_strdup(alias);
 
 	buffer = make_info(account, gc, remote_user, id, alias, msg);
-	alert = pidgin_make_mini_dialog(gc, PIDGIN_STOCK_DIALOG_QUESTION,
+	alert = pidgin_make_mini_dialog(gc, "dialog-question",
 					  _("Add buddy to your list?"), buffer, data,
 					  _("Add"), G_CALLBACK(add_user_cb),
 					  _("Cancel"), G_CALLBACK(free_add_user_data), NULL);

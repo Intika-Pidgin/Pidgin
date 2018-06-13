@@ -989,8 +989,8 @@ make_blist_request_dialog(PidginBlistRequestData *data, PurpleAccount *account,
 
 	data->account = account;
 
-	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_QUESTION,
-		gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	img = gtk_image_new_from_icon_name("dialog-question",
+			GTK_ICON_SIZE_DIALOG);
 
 	gtkblist = PIDGIN_BLIST(purple_blist_get_buddy_list());
 	blist_window = gtkblist ? GTK_WINDOW(gtkblist->window) : NULL;
@@ -5218,7 +5218,7 @@ add_generic_error_dialog(PurpleAccount *account,
 	else
 		primary = g_strdup_printf(_("%s disabled"), username);
 
-	mini_dialog = pidgin_make_mini_dialog(NULL, PIDGIN_STOCK_DIALOG_ERROR,
+	mini_dialog = pidgin_make_mini_dialog(NULL, "dialog-error",
 		primary, err->description, account,
 		(enabled ? _("Reconnect") : _("Re-enable")),
 		(enabled ? PURPLE_CALLBACK(purple_account_connect)
@@ -7391,20 +7391,21 @@ void pidgin_blist_add_alert(GtkWidget *widget)
 }
 
 void
-pidgin_blist_set_headline(const char *text, GdkPixbuf *pixbuf, GCallback callback,
-			gpointer user_data, GDestroyNotify destroy)
+pidgin_blist_set_headline(const char *text, const gchar *icon_name,
+		GCallback callback, gpointer user_data, GDestroyNotify destroy)
 {
 	/* Destroy any existing headline first */
 	if (gtkblist->headline_destroy)
 		gtkblist->headline_destroy(gtkblist->headline_data);
 
 	gtk_label_set_markup(GTK_LABEL(gtkblist->headline_label), text);
-	gtk_image_set_from_pixbuf(GTK_IMAGE(gtkblist->headline_image), pixbuf);
+	gtk_image_set_from_icon_name(GTK_IMAGE(gtkblist->headline_image),
+			icon_name, GTK_ICON_SIZE_SMALL_TOOLBAR);
 
 	gtkblist->headline_callback = callback;
 	gtkblist->headline_data = user_data;
 	gtkblist->headline_destroy = destroy;
-	if (text != NULL || pixbuf != NULL) {
+	if (text != NULL || icon_name != NULL) {
 		set_urgent();
 		gtk_widget_show_all(gtkblist->headline);
 	} else {

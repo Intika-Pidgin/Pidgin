@@ -27,7 +27,6 @@ purple_coresources = [
 	'image-store.c',
 	'keyring.c',
 	'log.c',
-	'media/backend-fs2.c',
 	'media/backend-iface.c',
 	'media/candidate.c',
 	'media/codec.c',
@@ -164,6 +163,9 @@ purple_coreheaders = [
 	'xmlnode.h',
 ]
 
+if enable_gst
+	purple_coresources += 'media/backend-fs2.c'
+endif
 if enable_vv
 	purple_coreheaders += 'media-gst.h'
 endif

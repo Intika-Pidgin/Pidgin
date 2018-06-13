@@ -51,11 +51,16 @@ struct _PurpleMediaOutputWindow
 	gchar *session_id;
 	gchar *participant;
 	gulong window_id;
+#ifdef USE_GSTREAMER
 	GstElement *sink;
+#else
+	gpointer sink;
+#endif
 };
 
 struct _PurpleMediaManagerPrivate
 {
+#ifdef USE_GSTREAMER
 	GstElement *pipeline;
 	PurpleMediaCaps ui_caps;
 	GList *medias;
@@ -80,6 +85,7 @@ struct _PurpleMediaManagerPrivate
 	GList *appdata_info; /* holds PurpleMediaAppDataInfo */
 	GMutex appdata_mutex;
 	guint appdata_cb_token; /* last used read/write callback token */
+#endif
 #endif
 };
 
