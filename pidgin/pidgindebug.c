@@ -48,6 +48,7 @@ struct _PidginDebugWindow {
 	GtkWidget *toolbar;
 	GtkWidget *textview;
 	GtkTextBuffer *buffer;
+	GtkTextMark *start_mark;
 	GtkTextMark *end_mark;
 	struct {
 		GtkTextTag *level[PURPLE_DEBUG_FATAL + 1];
@@ -646,9 +647,15 @@ pidgin_debug_window_init(PidginDebugWindow *win)
 						filter_level_pref_changed, win);
 	}
 
-	win->end_mark = gtk_text_mark_new("end", FALSE);
+	/* The *start* and *end* marks bound the beginning and end of an
+	   insertion, used for filtering. The *end* mark is also used for
+	   auto-scrolling. */
 	gtk_text_buffer_get_end_iter(win->buffer, &end);
-	gtk_text_buffer_add_mark(win->buffer, win->end_mark, &end);
+	win->start_mark = gtk_text_buffer_create_mark(win->buffer,
+			"start", &end, TRUE);
+	win->end_mark = gtk_text_buffer_create_mark(win->buffer,
+			"end", &end, FALSE);
+
 	/* Set active filter level in textview */
 	debug_window_set_filter_level(win,
 			purple_prefs_get_int(PIDGIN_PREFS_ROOT "/debug/filterlevel"));
@@ -863,6 +870,8 @@ pidgin_debug_print(PurpleDebugUi *self,
 
 	scroll = view_near_bottom(debug_win);
 	gtk_text_buffer_get_end_iter(debug_win->buffer, &end);
+	gtk_text_buffer_move_mark(debug_win->buffer, debug_win->start_mark,
+			&end);
 
 	level_tag = debug_win->tags.level[level];
 
@@ -914,6 +923,18 @@ pidgin_debug_print(PurpleDebugUi *self,
 			level_tag,
 			debug_win->paused ? debug_win->tags.paused : NULL,
 			NULL);
+
+	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/debug/filter") && debug_win->regex) {
+		/* Filter out any new messages. */
+		GtkTextIter start;
+
+		gtk_text_buffer_get_iter_at_mark(debug_win->buffer, &start,
+				debug_win->start_mark);
+		gtk_text_buffer_get_iter_at_mark(debug_win->buffer, &end,
+				debug_win->end_mark);
+
+		do_regex(debug_win, &start, &end);
+	}
 
 	if (scroll) {
 		gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(debug_win->textview),
