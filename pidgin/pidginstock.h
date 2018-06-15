@@ -88,15 +88,6 @@
 #define PIDGIN_STOCK_STATUS_HALFOP     "pidgin-status-halfop"
 #define PIDGIN_STOCK_STATUS_VOICE      "pidgin-status-voice"
 
-/* Dialog icons */
-#define PIDGIN_STOCK_DIALOG_AUTH	"pidgin-dialog-auth"
-#define PIDGIN_STOCK_DIALOG_ERROR	"pidgin-dialog-error"
-#define PIDGIN_STOCK_DIALOG_INFO	"pidgin-dialog-info"
-#define PIDGIN_STOCK_DIALOG_MAIL	"pidgin-dialog-mail"
-#define PIDGIN_STOCK_DIALOG_QUESTION	"pidgin-dialog-question"
-#define PIDGIN_STOCK_DIALOG_COOL	"pidgin-dialog-cool"
-#define PIDGIN_STOCK_DIALOG_WARNING	"pidgin-dialog-warning"
-
 /* StatusBox Animations */
 #define PIDGIN_STOCK_ANIMATION_CONNECT0 "pidgin-anim-connect0"
 #define PIDGIN_STOCK_ANIMATION_CONNECT1 "pidgin-anim-connect1"

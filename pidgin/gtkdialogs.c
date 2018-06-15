@@ -395,7 +395,7 @@ pidgin_dialogs_ee(const char *ee)
 
 	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BORDER);
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), hbox);
-	img = gtk_image_new_from_stock(PIDGIN_STOCK_DIALOG_COOL, gtk_icon_size_from_name(PIDGIN_ICON_SIZE_TANGO_HUGE));
+	img = gtk_image_new_from_icon_name("dialog-cool", GTK_ICON_SIZE_DIALOG);
 	gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
 
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
