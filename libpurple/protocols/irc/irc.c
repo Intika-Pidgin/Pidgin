@@ -96,16 +96,19 @@ static int irc_send_raw(PurpleConnection *gc, const char *buf, int len)
 }
 
 static void
-irc_flush_cb(GObject *source, GAsyncResult *res, gpointer data)
+irc_push_bytes_cb(GObject *source, GAsyncResult *res, gpointer data)
 {
+	PurpleQueuedOutputStream *stream = PURPLE_QUEUED_OUTPUT_STREAM(source);
 	PurpleConnection *gc = data;
 	gboolean result;
 	GError *error = NULL;
 
-	result = g_output_stream_flush_finish(G_OUTPUT_STREAM(source),
+	result = purple_queued_output_stream_push_bytes_finish(stream,
 			res, &error);
 
 	if (!result) {
+		purple_queued_output_stream_clear_queue(stream);
+
 		g_prefix_error(&error, _("Lost connection with server: "));
 		purple_connection_take_error(gc, error);
 		return;
@@ -137,16 +140,10 @@ int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
 
 	len = strlen(tosend);
 	data = g_bytes_new_take(tosend, len);
-	purple_queued_output_stream_push_bytes(irc->output, data);
+	purple_queued_output_stream_push_bytes_async(irc->output, data,
+			G_PRIORITY_DEFAULT, irc->cancellable, irc_push_bytes_cb,
+			purple_account_get_connection(irc->account));
 	g_bytes_unref(data);
-
-	if (!g_output_stream_has_pending(G_OUTPUT_STREAM(irc->output))) {
-		/* Connection idle. Flush data. */
-		g_output_stream_flush_async(G_OUTPUT_STREAM(irc->output),
-				G_PRIORITY_DEFAULT, irc->cancellable,
-				irc_flush_cb,
-				purple_account_get_connection(irc->account));
-	}
 
 	return len;
 }
