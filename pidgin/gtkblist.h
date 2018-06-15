@@ -444,7 +444,7 @@ void pidgin_append_blist_node_extended_menu(GtkWidget *menu, PurpleBlistNode *no
 /**
  * pidgin_blist_set_headline:
  * @text:	    Pango Markup for the label text
- * @pixbuf:    The GdkPixbuf for the icon
+ * @icon_name: The icon name from the #GtkIconTheme
  * @callback:  The callback to call when headline is clicked
  * @user_data: The userdata to include in the callback
  * @destroy:   The callback to call when headline is closed or replaced by another headline.
@@ -454,8 +454,8 @@ void pidgin_append_blist_node_extended_menu(GtkWidget *menu, PurpleBlistNode *no
  * This is currently used for mail notification, but could theoretically be used for anything.
  * Only the most recent headline will be shown.
  */
-void pidgin_blist_set_headline(const char *text, GdkPixbuf *pixbuf, GCallback callback, gpointer user_data,
-		GDestroyNotify destroy);
+void pidgin_blist_set_headline(const char *text, const gchar *icon_name,
+		GCallback callback, gpointer user_data, GDestroyNotify destroy);
 
 /**
  * pidgin_blist_get_name_markup:
