@@ -2137,6 +2137,7 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 			g_object_set(stream->volume, "volume", output_volume, NULL);
 			stream->level = gst_element_factory_make("level", NULL);
 			stream->src = gst_element_factory_make("liveadder", NULL);
+			g_object_set(stream->src, "start-time-selection", 1, NULL);
 			sink = purple_media_manager_get_element(
 					purple_media_get_manager(priv->media),
 					PURPLE_MEDIA_RECV_AUDIO, priv->media,
