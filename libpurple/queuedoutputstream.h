@@ -55,10 +55,12 @@ G_BEGIN_DECLS
  *
  * To create a queued output stream, use #purple_queued_output_stream_new().
  *
- * To queue data, use #purple_queued_output_stream_push_bytes().
+ * To queue data, use #purple_queued_output_stream_push_bytes_async().
  *
- * Once data has been queued, flush the stream with #g_output_stream_flush()
- * or #g_output_stream_flush_async().
+ * If there's a fatal stream error, it's suggested to clear the remaining
+ * bytes queued with #purple_queued_output_stream_clear_queue() to avoid
+ * excessive errors returned in
+ * #purple_queued_output_stream_push_bytes_async()'s async callback.
  */
 typedef struct _PurpleQueuedOutputStream	PurpleQueuedOutputStream;
 typedef struct _PurpleQueuedOutputStreamClass	PurpleQueuedOutputStreamClass;
@@ -94,15 +96,55 @@ PurpleQueuedOutputStream *purple_queued_output_stream_new(
 		GOutputStream *base_stream);
 
 /*
- * purple_queued_output_stream_push_bytes
- * @stream: Stream to push bytes to
+ * purple_queued_output_stream_push_bytes_async
+ * @stream: #PurpleQueuedOutputStream to push bytes to
  * @bytes: Bytes to queue
+ * @priority: IO priority of the request
+ * @cancellable: (allow-none): Optional #GCancellable object, NULL to ignore
+ * @callback: (scope async): Callback to call when the request is finished
+ * @user_data: (closure): Data to pass to the callback function
  *
- * Queues data to be output through the stream. Flush the stream to
- * output this data.
+ * Asynchronously queues and then writes data to the output stream.
+ * Once the data has been written, or an error occurs, the callback
+ * will be called.
+ *
+ * Be careful such that if there's a fatal stream error, all remaining queued
+ * operations will likely return this error. Use
+ * #purple_queued_output_stream_clear_queue() to clear the queue on such
+ * an error to only report it a single time.
  */
-void purple_queued_output_stream_push_bytes(PurpleQueuedOutputStream *stream,
-		GBytes *bytes);
+void purple_queued_output_stream_push_bytes_async(
+		PurpleQueuedOutputStream *stream, GBytes *bytes,
+		int io_priority, GCancellable *cancellable,
+		GAsyncReadyCallback callback, gpointer user_data);
+
+/*
+ * purple_queued_output_stream_push_bytes_finish
+ * @stream: #PurpleQueuedOutputStream bytes were pushed to
+ * @result: The #GAsyncResult of this operation
+ * @error: A GError location to store the error, or NULL to ignore
+ *
+ * Finishes pushing bytes asynchronously.
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ */
+gboolean purple_queued_output_stream_push_bytes_finish(
+		PurpleQueuedOutputStream *stream,
+		GAsyncResult *result, GError **error);
+
+/*
+ * purple_queued_output_stream_clear_queue
+ * @stream: #PurpleQueuedOutputStream to clear
+ *
+ * Clears the queue of any pending bytes. However, any bytes that are
+ * in the process of being sent will finish their operation.
+ *
+ * This function is useful for clearing the queue in case of an IO error.
+ * Call this in the async callback in order to clear the queue and avoid
+ * having all #purple_queue_output_stream_push_bytes_async() calls on
+ * this queue return errors if there's a fatal stream error.
+ */
+void purple_queued_output_stream_clear_queue(PurpleQueuedOutputStream *stream);
 
 G_END_DECLS
 
