@@ -33,6 +33,27 @@
 
 G_BEGIN_DECLS
 
+#define PIDGIN_TYPE_PREFS_WINDOW (pidgin_prefs_window_get_type())
+#if GLIB_CHECK_VERSION(2,44,0)
+G_DECLARE_FINAL_TYPE(PidginPrefsWindow, pidgin_prefs_window, PIDGIN, PREFS_WINDOW, GtkDialog)
+#else
+GType pidgin_prefs_window_get_type(void);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+typedef struct _PidginPrefsWindow PidginPrefsWindow;
+typedef struct { GtkDialogClass parent_class; } PidginPrefsWindowClass;
+static inline PidginPrefsWindow *
+PIDGIN_PREFS_WINDOW(gpointer ptr)
+{
+	return G_TYPE_CHECK_INSTANCE_CAST(ptr, pidgin_prefs_window_get_type(), PidginPrefsWindow);
+}
+static inline gboolean
+PIDGIN_IS_PREFS_WINDOW(gpointer ptr)
+{
+	return G_TYPE_CHECK_INSTANCE_TYPE(ptr, pidgin_prefs_window_get_type());
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+#endif
+
 /**
  * pidgin_prefs_init:
  *
