@@ -1364,8 +1364,8 @@ add_theme_prefs_combo(GtkWidget *vbox,
 	GtkWidget *themesel_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 
 	label = gtk_label_new(label_str);
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 	gtk_size_group_add_widget(label_sg, label);
 	gtk_box_pack_start(GTK_BOX(themesel_hbox), label, FALSE, FALSE, 0);
 
@@ -1397,8 +1397,8 @@ add_child_theme_prefs_combo(GtkWidget *vbox, GtkSizeGroup *combo_sg,
 	gtk_box_pack_start(GTK_BOX(vbox), themesel_hbox, FALSE, FALSE, 0);
 
 	label = gtk_label_new(label_str);
-	gtk_widget_set_halign(label, GTK_ALIGN_END);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 1.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 	gtk_size_group_add_widget(label_sg, label);
 	gtk_box_pack_start(GTK_BOX(themesel_hbox), label, FALSE, FALSE, 0);
 
@@ -1435,8 +1435,8 @@ theme_page(void)
 							"the lists below.\nNew themes can be installed by "
 							"dragging and dropping them onto the theme list."));
 
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 	gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
 
 	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, FALSE, 0);
@@ -1685,8 +1685,8 @@ interface_page(void)
 					_("Never"), "never",
 					NULL);
 	gtk_size_group_add_widget(sg, label);
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 
 	vbox = pidgin_make_frame(ret, _("Conversation Window"));
 	label = pidgin_prefs_dropdown(vbox, _("_Hide new IM conversations:"),
@@ -1696,8 +1696,8 @@ interface_page(void)
 					_("Always"), "always",
 					NULL);
 	gtk_size_group_add_widget(sg, label);
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 
 #ifdef _WIN32
 	pidgin_prefs_checkbox(_("Minimi_ze new conversation windows"), PIDGIN_PREFS_ROOT "/win32/minimize_new_convs", vbox);
@@ -1731,14 +1731,14 @@ interface_page(void)
 					_("Right Vertical"), GTK_POS_RIGHT|8,
 					NULL);
 	gtk_size_group_add_widget(sg, label);
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 
 	names = pidgin_conv_placement_get_options();
 	label = pidgin_prefs_dropdown_from_list(vbox2, _("N_ew conversations:"),
 				PURPLE_PREF_STRING, PIDGIN_PREFS_ROOT "/conversations/placement", names);
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 
 	gtk_size_group_add_widget(sg, label);
 
@@ -2101,8 +2101,8 @@ network_page(void)
 	label = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(label),
 			_("<span style=\"italic\">Example: stunserver.org</span>"));
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 	gtk_container_add(GTK_CONTAINER(hbox), label);
 
 	auto_ip_checkbox = pidgin_prefs_checkbox("Use _automatically detected IP address",
@@ -2335,8 +2335,8 @@ browser_page(void)
 											 PIDGIN_PREFS_ROOT "/browsers/browser",
 											 browsers);
 			g_list_free(browsers);
-			gtk_widget_set_halign(label, GTK_ALIGN_START);
-			gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+			gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+			gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 			gtk_size_group_add_widget(sg, label);
 
 			hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -2346,8 +2346,8 @@ browser_page(void)
 				_("New window"), PIDGIN_BROWSER_NEW_WINDOW,
 				_("New tab"), PIDGIN_BROWSER_NEW_TAB,
 				NULL);
-			gtk_widget_set_halign(label, GTK_ALIGN_START);
-			gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+			gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+			gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 			gtk_size_group_add_widget(sg, label);
 			gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 
@@ -2464,8 +2464,8 @@ proxy_page(void)
 		gtk_container_add(GTK_CONTAINER(prefs_proxy_subframe), grid);
 
 		label = gtk_label_new_with_mnemonic(_("_Host:"));
-		gtk_widget_set_halign(label, GTK_ALIGN_END);
-		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
+		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 		gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
 
 		entry = gtk_entry_new();
@@ -2486,8 +2486,8 @@ proxy_page(void)
 		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
 		label = gtk_label_new_with_mnemonic(_("P_ort:"));
-		gtk_widget_set_halign(label, GTK_ALIGN_END);
-		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
+		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 		gtk_grid_attach(GTK_GRID(grid), label, 2, 0, 1, 1);
 
 		entry = gtk_spin_button_new_with_range(0, 65535, 1);
@@ -2505,8 +2505,8 @@ proxy_page(void)
 		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
 		label = gtk_label_new_with_mnemonic(_("User_name:"));
-		gtk_widget_set_halign(label, GTK_ALIGN_END);
-		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
+		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 		gtk_grid_attach(GTK_GRID(grid), label, 0, 1, 1, 1);
 
 		entry = gtk_entry_new();
@@ -2527,8 +2527,8 @@ proxy_page(void)
 		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
 		label = gtk_label_new_with_mnemonic(_("Pa_ssword:"));
-		gtk_widget_set_halign(label, GTK_ALIGN_END);
-		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
+		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 		gtk_grid_attach(GTK_GRID(grid), label, 2, 1, 1, 1);
 
 		entry = gtk_entry_new();
@@ -3075,8 +3075,8 @@ sound_page(void)
 			_("No sounds"), "none",
 			NULL);
 	gtk_size_group_add_widget(sg, dd);
-	gtk_widget_set_halign(dd, GTK_ALIGN_START);
-	gtk_widget_set_valign(dd, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(dd), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(dd), 0.5);
 
 	entry = gtk_entry_new();
 	gtk_editable_set_editable(GTK_EDITABLE(entry), TRUE);
@@ -3245,8 +3245,8 @@ away_page(void)
 		_("Based on keyboard or mouse use"), "system",
 		NULL);
 	gtk_size_group_add_widget(sg, dd);
-	gtk_widget_set_halign(dd, GTK_ALIGN_START);
-	gtk_widget_set_valign(dd, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(dd), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(dd), 0.5);
 
 	pidgin_prefs_labeled_spin_button(vbox,
 			_("_Minutes before becoming idle:"), "/purple/away/mins_before_away",
@@ -3277,8 +3277,8 @@ away_page(void)
 		_("When both away and idle"), "awayidle",
 		NULL);
 	gtk_size_group_add_widget(sg, dd);
-	gtk_widget_set_halign(dd, GTK_ALIGN_START);
-	gtk_widget_set_valign(dd, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(dd), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(dd), 0.5);
 
 	/* Signon status stuff */
 	vbox = pidgin_make_frame(ret, _("Status at Startup"));
@@ -3540,8 +3540,8 @@ make_voice_test(PidginPrefsWindow *win, GtkWidget *vbox)
 	                      purple_prefs_get_int("/purple/media/audio/silence_threshold"));
 	label = gtk_label_new(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 	g_free(tmp);
 	threshold = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
 		0, 100, 1);
@@ -3777,8 +3777,8 @@ make_vv_dropdown(GtkWidget *parent, GtkSizeGroup *size_group,
 	g_list_free_full(devices, g_free);
 
 	gtk_size_group_add_widget(size_group, label);
-	gtk_widget_set_halign(label, GTK_ALIGN_START);
-	gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
 
 	/* Return the parent GtkBox of dropdown and label, which was created
 	 * in pidgin_prefs_dropdown_from_list(). */
