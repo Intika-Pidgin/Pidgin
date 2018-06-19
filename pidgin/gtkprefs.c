@@ -86,12 +86,15 @@ struct theme_info {
 	gchar *original_name;
 };
 
-/* Main dialog */
-static GtkWidget *prefs = NULL;
+struct _PidginPrefsWindow {
+	GtkDialog parent;
 
-/* Notebook */
-static GtkWidget *prefsnotebook = NULL;
-static int notebook_page = 0;
+	/* Notebook */
+	GtkWidget *notebook;
+};
+
+/* Main dialog */
+static PidginPrefsWindow *prefs = NULL;
 
 /* Conversations page */
 static GtkWidget *sample_webview = NULL;
@@ -141,6 +144,7 @@ static GstElement *video_pipeline;
 /*
  * PROTOTYPES
  */
+G_DEFINE_TYPE(PidginPrefsWindow, pidgin_prefs_window, GTK_TYPE_DIALOG);
 static void delete_prefs(GtkWidget *, void *);
 
 static void
@@ -516,9 +520,6 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	voice_volume = NULL;
 	video_drawing_area = NULL;
 #endif
-
-	notebook_page = 0;
-	prefsnotebook = NULL;
 	prefs = NULL;
 }
 
@@ -3462,6 +3463,8 @@ enable_voice_test(void)
 static void
 toggle_voice_test_cb(GtkToggleButton *test, gpointer data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
+
 	if (gtk_toggle_button_get_active(test)) {
 		gtk_widget_set_sensitive(voice_level, TRUE);
 		enable_voice_test();
@@ -3470,7 +3473,7 @@ toggle_voice_test_cb(GtkToggleButton *test, gpointer data)
 		                 G_CALLBACK(on_volume_change_cb), NULL);
 		g_signal_connect(test, "destroy",
 		                 G_CALLBACK(voice_test_destroy_cb), NULL);
-		g_signal_connect(prefsnotebook, "switch-page",
+		g_signal_connect(win->notebook, "switch-page",
 		                 G_CALLBACK(vv_test_switch_page_cb), test);
 	} else {
 		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(voice_level), 0.0);
@@ -3481,7 +3484,7 @@ toggle_voice_test_cb(GtkToggleButton *test, gpointer data)
 		g_object_disconnect(test, "any-signal::destroy",
 		                    G_CALLBACK(voice_test_destroy_cb), NULL,
 		                    NULL);
-		g_object_disconnect(prefsnotebook, "any-signal::switch-page",
+		g_object_disconnect(win->notebook, "any-signal::switch-page",
 		                    G_CALLBACK(vv_test_switch_page_cb), test,
 		                    NULL);
 		voice_test_destroy_cb(NULL, NULL);
@@ -3509,7 +3512,7 @@ threshold_value_changed_cb(GtkScale *scale, GtkWidget *label)
 }
 
 static void
-make_voice_test(GtkWidget *vbox)
+make_voice_test(PidginPrefsWindow *win, GtkWidget *vbox)
 {
 	GtkWidget *test;
 	GtkWidget *hbox;
@@ -3560,7 +3563,7 @@ make_voice_test(GtkWidget *vbox)
 	voice_level = level;
 	voice_threshold = threshold;
 	g_signal_connect(test, "toggled",
-	                 G_CALLBACK(toggle_voice_test_cb), NULL);
+	                 G_CALLBACK(toggle_voice_test_cb), win);
 }
 
 static GstElement *
@@ -3672,17 +3675,19 @@ enable_video_test(void)
 static void
 toggle_video_test_cb(GtkToggleButton *test, gpointer data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
+
 	if (gtk_toggle_button_get_active(test)) {
 		enable_video_test();
 		g_signal_connect(test, "destroy",
 		                 G_CALLBACK(video_test_destroy_cb), NULL);
-		g_signal_connect(prefsnotebook, "switch-page",
+		g_signal_connect(win->notebook, "switch-page",
 		                 G_CALLBACK(vv_test_switch_page_cb), test);
 	} else {
 		g_object_disconnect(test, "any-signal::destroy",
 		                    G_CALLBACK(video_test_destroy_cb), NULL,
 		                    NULL);
-		g_object_disconnect(prefsnotebook, "any-signal::switch-page",
+		g_object_disconnect(win->notebook, "any-signal::switch-page",
 		                    G_CALLBACK(vv_test_switch_page_cb), test,
 		                    NULL);
 		video_test_destroy_cb(NULL, NULL);
@@ -3690,7 +3695,7 @@ toggle_video_test_cb(GtkToggleButton *test, gpointer data)
 }
 
 static void
-make_video_test(GtkWidget *vbox)
+make_video_test(PidginPrefsWindow *win, GtkWidget *vbox)
 {
 	GtkWidget *test;
 	GtkWidget *video;
@@ -3703,7 +3708,7 @@ make_video_test(GtkWidget *vbox)
 	gtk_box_pack_start(GTK_BOX(vbox), test, FALSE, FALSE, 0);
 
 	g_signal_connect(test, "toggled",
-	                 G_CALLBACK(toggle_video_test_cb), NULL);
+	                 G_CALLBACK(toggle_video_test_cb), win);
 }
 
 static void
@@ -3826,7 +3831,7 @@ device_list_changed_cb(PurpleMediaManager *manager, GtkWidget *widget)
 }
 
 static GtkWidget *
-vv_page(void)
+vv_page(PidginPrefsWindow *win)
 {
 	GtkWidget *ret;
 	GtkWidget *vbox;
@@ -3852,7 +3857,7 @@ vv_page(void)
 	g_signal_connect_object(manager, "elements-changed::audiosink",
 			G_CALLBACK(device_list_changed_cb), frame, 0);
 
-	make_voice_test(vbox);
+	make_voice_test(win, vbox);
 
 	vbox = pidgin_make_frame(ret, _("Video"));
 	frame = make_vv_frame(vbox, sg, _("Input"),
@@ -3865,7 +3870,7 @@ vv_page(void)
 	g_signal_connect_object(manager, "elements-changed::videosink",
 			G_CALLBACK(device_list_changed_cb), frame, 0);
 
-	make_video_test(vbox);
+	make_video_test(win, vbox);
 
 	gtk_widget_show_all(ret);
 
@@ -3874,49 +3879,59 @@ vv_page(void)
 #endif
 
 static int
-prefs_notebook_add_page(const char *text, GtkWidget *page, int ind)
+prefs_notebook_add_page(GtkNotebook *notebook, const char *text,
+		GtkWidget *page, int ind)
 {
-	return gtk_notebook_append_page(GTK_NOTEBOOK(prefsnotebook), page, gtk_label_new(text));
+	return gtk_notebook_append_page(notebook, page, gtk_label_new(text));
 }
 
 static void
-prefs_notebook_init(void)
+prefs_notebook_init(PidginPrefsWindow *win)
 {
-	prefs_notebook_add_page(_("Interface"), interface_page(), notebook_page++);
+	GtkNotebook *notebook = GTK_NOTEBOOK(win->notebook);
+	int notebook_page = 0;
+
+	prefs_notebook_add_page(notebook, _("Interface"), interface_page(), notebook_page++);
 
 #ifndef _WIN32
 	/* We use the registered default browser in windows */
 	/* if the user is running Mac OS X, hide the browsers tab */
 	if(purple_running_osx() == FALSE)
-		prefs_notebook_add_page(_("Browser"), browser_page(), notebook_page++);
+		prefs_notebook_add_page(notebook, _("Browser"), browser_page(), notebook_page++);
 #endif
 
-	prefs_notebook_add_page(_("Conversations"), conv_page(), notebook_page++);
-	prefs_notebook_add_page(_("Logging"), logging_page(), notebook_page++);
-	prefs_notebook_add_page(_("Network"), network_page(), notebook_page++);
-	prefs_notebook_add_page(_("Proxy"), proxy_page(), notebook_page++);
-	prefs_notebook_add_page(_("Password Storage"), keyring_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Conversations"), conv_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Logging"), logging_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Network"), network_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Proxy"), proxy_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Password Storage"), keyring_page(), notebook_page++);
 
-	prefs_notebook_add_page(_("Sounds"), sound_page(), notebook_page++);
-	prefs_notebook_add_page(_("Status / Idle"), away_page(), notebook_page++);
-	prefs_notebook_add_page(_("Themes"), theme_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Sounds"), sound_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Status / Idle"), away_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Themes"), theme_page(), notebook_page++);
 #ifdef USE_VV
-	prefs_notebook_add_page(_("Voice/Video"), vv_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Voice/Video"), vv_page(win), notebook_page++);
 #endif
 }
 
-void
-pidgin_prefs_show(void)
+static void
+pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 {
-	GtkWidget *vbox;
-	GtkWidget *notebook;
-	GtkWidget *button;
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
-	if (prefs) {
-		gtk_window_present(GTK_WINDOW(prefs));
-		return;
-	}
+	gtk_widget_class_set_template_from_resource(
+		widget_class,
+		"/im/pidgin/Pidgin/Prefs/prefs.ui"
+	);
 
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, notebook);
+	gtk_widget_class_bind_template_callback(widget_class, delete_prefs);
+}
+
+static void
+pidgin_prefs_window_init(PidginPrefsWindow *win)
+{
 	/* copy the preferences to tmp values...
 	 * I liked "take affect immediately" Oh well :-( */
 	/* (that should have been "effect," right?) */
@@ -3924,29 +3939,23 @@ pidgin_prefs_show(void)
 	/* Back to instant-apply! I win!  BU-HAHAHA! */
 
 	/* Create the window */
-	prefs = pidgin_create_dialog(_("Preferences"), 0, "preferences", FALSE);
-	g_signal_connect(G_OBJECT(prefs), "destroy",
-					 G_CALLBACK(delete_prefs), NULL);
+	gtk_widget_init_template(GTK_WIDGET(win));
 
-	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(prefs), FALSE, PIDGIN_HIG_BORDER);
-
-	/* The notebook */
-	prefsnotebook = notebook = gtk_notebook_new ();
-	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_LEFT);
-	gtk_box_pack_start(GTK_BOX (vbox), notebook, FALSE, FALSE, 0);
-	gtk_widget_show(prefsnotebook);
-
-	button = pidgin_dialog_add_button(GTK_DIALOG(prefs), GTK_STOCK_CLOSE, NULL, NULL);
-	g_signal_connect_swapped(G_OBJECT(button), "clicked",
-							 G_CALLBACK(gtk_widget_destroy), prefs);
-
-	prefs_notebook_init();
+	prefs_notebook_init(win);
 
 	/* Refresh the list of themes before showing the preferences window */
 	prefs_themes_refresh();
+}
 
-	/* Show everything. */
-	gtk_widget_show(prefs);
+void
+pidgin_prefs_show(void)
+{
+	if (prefs == NULL) {
+		prefs = PIDGIN_PREFS_WINDOW(g_object_new(
+					pidgin_prefs_window_get_type(), NULL));
+	}
+
+	gtk_window_present(GTK_WINDOW(prefs));
 }
 
 static void

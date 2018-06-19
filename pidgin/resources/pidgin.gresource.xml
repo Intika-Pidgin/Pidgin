@@ -7,5 +7,6 @@
     <file compressed="true">About/credits.json</file>
     <file compressed="true">Debug/debug.ui</file>
     <file compressed="true">Debug/filter-popover.ui</file>
+    <file compressed="true">Prefs/prefs.ui</file>
   </gresource>
 </gresources>
