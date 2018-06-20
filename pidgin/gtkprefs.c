@@ -481,6 +481,32 @@ pidgin_prefs_dropdown(GtkWidget *box, const gchar *title, PurplePrefType type,
 	return dropdown;
 }
 
+static void
+set_bool_pref(GtkWidget *w, const char *key)
+{
+	purple_prefs_set_bool(key,
+			gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w)));
+}
+
+GtkWidget *
+pidgin_prefs_checkbox(const char *text, const char *key, GtkWidget *page)
+{
+	GtkWidget *button;
+
+	button = gtk_check_button_new_with_mnemonic(text);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button),
+			purple_prefs_get_bool(key));
+
+	gtk_box_pack_start(GTK_BOX(page), button, FALSE, FALSE, 0);
+
+	g_signal_connect(G_OBJECT(button), "clicked",
+			G_CALLBACK(set_bool_pref), (char *)key);
+
+	gtk_widget_show(button);
+
+	return button;
+}
+
 static void keyring_page_cleanup(void);
 
 static void
@@ -3956,32 +3982,6 @@ pidgin_prefs_show(void)
 	}
 
 	gtk_window_present(GTK_WINDOW(prefs));
-}
-
-static void
-set_bool_pref(GtkWidget *w, const char *key)
-{
-	purple_prefs_set_bool(key,
-		gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w)));
-}
-
-GtkWidget *
-pidgin_prefs_checkbox(const char *text, const char *key, GtkWidget *page)
-{
-	GtkWidget *button;
-
-	button = gtk_check_button_new_with_mnemonic(text);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button),
-								 purple_prefs_get_bool(key));
-
-	gtk_box_pack_start(GTK_BOX(page), button, FALSE, FALSE, 0);
-
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(set_bool_pref), (char *)key);
-
-	gtk_widget_show(button);
-
-	return button;
 }
 
 static void
