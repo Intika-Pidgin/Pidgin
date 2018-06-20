@@ -110,6 +110,14 @@ struct _PidginPrefsWindow {
 
 	/* Notebook */
 	GtkWidget *notebook;
+
+	/* Logging page */
+	struct {
+		PidginPrefCombo format;
+		GtkWidget *log_ims;
+		GtkWidget *log_chats;
+		GtkWidget *log_system;
+	} logging;
 };
 
 /* Main dialog */
@@ -2827,35 +2835,23 @@ proxy_page(void)
 	return ret;
 }
 
-static GtkWidget *
-logging_page(void)
+static void
+bind_logging_page(PidginPrefsWindow *win)
 {
-	GtkWidget *ret;
-	GtkWidget *vbox;
 	GList *names;
 
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
-
-
-	vbox = pidgin_make_frame (ret, _("Logging"));
+	win->logging.format.type = PURPLE_PREF_STRING;
+	win->logging.format.key = "/purple/logging/format";
 	names = purple_log_logger_get_options();
-
-	pidgin_prefs_dropdown_from_list(vbox, _("Log _format:"), PURPLE_PREF_STRING,
-				 "/purple/logging/format", names);
-
+	pidgin_prefs_bind_dropdown_from_list(&win->logging.format, names);
 	g_list_free(names);
 
-	pidgin_prefs_checkbox(_("Log all _instant messages"),
-				  "/purple/logging/log_ims", vbox);
-	pidgin_prefs_checkbox(_("Log all c_hats"),
-				  "/purple/logging/log_chats", vbox);
-	pidgin_prefs_checkbox(_("Log all _status changes to system log"),
-				  "/purple/logging/log_system", vbox);
-
-	gtk_widget_show_all(ret);
-
-	return ret;
+	pidgin_prefs_bind_checkbox("/purple/logging/log_ims",
+			win->logging.log_ims);
+	pidgin_prefs_bind_checkbox("/purple/logging/log_chats",
+			win->logging.log_chats);
+	pidgin_prefs_bind_checkbox("/purple/logging/log_system",
+			win->logging.log_system);
 }
 
 /*** keyring page *******************************************************/
@@ -4155,7 +4151,7 @@ static int
 prefs_notebook_add_page(GtkNotebook *notebook, const char *text,
 		GtkWidget *page, int ind)
 {
-	return gtk_notebook_append_page(notebook, page, gtk_label_new(text));
+	return gtk_notebook_insert_page(notebook, page, gtk_label_new(text), ind);
 }
 
 static void
@@ -4174,7 +4170,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 #endif
 
 	prefs_notebook_add_page(notebook, _("Conversations"), conv_page(), notebook_page++);
-	prefs_notebook_add_page(notebook, _("Logging"), logging_page(), notebook_page++);
+	bind_logging_page(win);
+	notebook_page++;
 	prefs_notebook_add_page(notebook, _("Network"), network_page(), notebook_page++);
 	prefs_notebook_add_page(notebook, _("Proxy"), proxy_page(), notebook_page++);
 	prefs_notebook_add_page(notebook, _("Password Storage"), keyring_page(), notebook_page++);
@@ -4197,9 +4194,20 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 		"/im/pidgin/Pidgin/Prefs/prefs.ui"
 	);
 
+	/* Main window */
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow, notebook);
 	gtk_widget_class_bind_template_callback(widget_class, delete_prefs);
+
+	/* Logging page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, logging.format.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, logging.log_ims);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, logging.log_chats);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, logging.log_system);
 }
 
 static void
