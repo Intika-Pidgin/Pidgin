@@ -86,6 +86,25 @@ struct theme_info {
 	gchar *original_name;
 };
 
+typedef struct _PidginPrefCombo PidginPrefCombo;
+
+typedef void (*PidginPrefsBindDropdownCallback)(GtkComboBox *combo_box,
+	PidginPrefCombo *combo);
+
+struct _PidginPrefCombo {
+	GtkWidget *combo;
+	PurplePrefType type;
+	const gchar *key;
+	union {
+		const char *string;
+		int integer;
+		gboolean boolean;
+	} value;
+	gint previously_active;
+	gint current_active;
+	PidginPrefsBindDropdownCallback cb;
+};
+
 struct _PidginPrefsWindow {
 	GtkDialog parent;
 
@@ -183,6 +202,21 @@ pidgin_prefs_labeled_spin_button(GtkWidget *box, const gchar *title,
 }
 
 static void
+pidgin_prefs_bind_spin_button(const char *key, GtkWidget *spin)
+{
+	GtkAdjustment *adjust;
+	int val;
+
+	val = purple_prefs_get_int(key);
+
+	adjust = gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(spin));
+	gtk_adjustment_set_value(adjust, val);
+	g_object_set_data(G_OBJECT(spin), "val", (char *)key);
+	g_signal_connect(G_OBJECT(adjust), "value-changed",
+			G_CALLBACK(update_spin_value), GTK_WIDGET(spin));
+}
+
+static void
 entry_set(GtkEntry *entry, gpointer data)
 {
 	const char *key = (const char*)data;
@@ -206,6 +240,18 @@ pidgin_prefs_labeled_entry(GtkWidget *page, const gchar *title,
 	gtk_widget_show(entry);
 
 	return pidgin_add_widget_to_vbox(GTK_BOX(page), title, sg, entry, TRUE, NULL);
+}
+
+static void
+pidgin_prefs_bind_entry(const char *key, GtkWidget *entry)
+{
+	const gchar *value;
+
+	value = purple_prefs_get_string(key);
+
+	gtk_entry_set_text(GTK_ENTRY(entry), value);
+	g_signal_connect(G_OBJECT(entry), "changed", G_CALLBACK(entry_set),
+			(char*)key);
 }
 
 GtkWidget *
@@ -482,6 +528,198 @@ pidgin_prefs_dropdown(GtkWidget *box, const gchar *title, PurplePrefType type,
 }
 
 static void
+pidgin_prefs_bind_dropdown_from_list_cb(GtkComboBox *combo_box,
+	PidginPrefCombo *combo)
+{
+	if (combo->type == PURPLE_PREF_INT) {
+		purple_prefs_set_int(combo->key, combo->value.integer);
+	} else if (combo->type == PURPLE_PREF_STRING) {
+		purple_prefs_set_string(combo->key, combo->value.string);
+	} else if (combo->type == PURPLE_PREF_BOOLEAN) {
+		purple_prefs_set_bool(combo->key, combo->value.boolean);
+	} else {
+		g_return_if_reached();
+	}
+}
+
+static void
+bind_dropdown_set(GtkComboBox *combo_box, gpointer data)
+{
+	PidginPrefCombo *combo = data;
+	GtkTreeIter iter;
+	GtkTreeModel *tree_model;
+
+	tree_model = gtk_combo_box_get_model(combo_box);
+	if (!gtk_combo_box_get_active_iter(combo_box, &iter))
+		return;
+
+	combo->previously_active = combo->current_active;
+	combo->current_active = gtk_combo_box_get_active(combo_box);
+
+	if (combo->type == PURPLE_PREF_INT) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&combo->value.integer, -1);
+	}
+	else if (combo->type == PURPLE_PREF_STRING) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&combo->value.string, -1);
+	}
+	else if (combo->type == PURPLE_PREF_BOOLEAN) {
+		gtk_tree_model_get(tree_model, &iter, PREF_DROPDOWN_VALUE,
+			&combo->value.boolean, -1);
+	}
+
+	combo->cb(combo_box, combo);
+}
+
+static void
+pidgin_prefs_bind_dropdown_from_list(PidginPrefCombo *combo, GList *menuitems)
+{
+	gchar *text;
+	GtkListStore *store = NULL;
+	GtkTreeIter iter;
+	GtkTreeIter active;
+
+	g_return_if_fail(menuitems != NULL);
+
+	if (combo->type == PURPLE_PREF_INT) {
+		combo->value.integer = purple_prefs_get_int(combo->key);
+	} else if (combo->type == PURPLE_PREF_STRING) {
+		combo->value.string = purple_prefs_get_string(combo->key);
+	} else if (combo->type == PURPLE_PREF_BOOLEAN) {
+		combo->value.boolean = purple_prefs_get_bool(combo->key);
+	} else {
+		g_return_if_reached();
+	}
+
+	store = GTK_LIST_STORE(
+			gtk_combo_box_get_model(GTK_COMBO_BOX(combo->combo)));
+
+	while (menuitems != NULL && (text = (char *)menuitems->data) != NULL) {
+		int int_value = 0;
+		const char *str_value = NULL;
+		gboolean bool_value = FALSE;
+
+		menuitems = g_list_next(menuitems);
+		g_return_if_fail(menuitems != NULL);
+
+		gtk_list_store_append(store, &iter);
+		gtk_list_store_set(store, &iter,
+		                   PREF_DROPDOWN_TEXT, text,
+		                   -1);
+
+		if (combo->type == PURPLE_PREF_INT) {
+			int_value = GPOINTER_TO_INT(menuitems->data);
+			gtk_list_store_set(store, &iter,
+			                   PREF_DROPDOWN_VALUE, int_value,
+			                   -1);
+		}
+		else if (combo->type == PURPLE_PREF_STRING) {
+			str_value = (const char *)menuitems->data;
+			gtk_list_store_set(store, &iter,
+			                   PREF_DROPDOWN_VALUE, str_value,
+			                   -1);
+		}
+		else if (combo->type == PURPLE_PREF_BOOLEAN) {
+			bool_value = (gboolean)GPOINTER_TO_INT(menuitems->data);
+			gtk_list_store_set(store, &iter,
+			                   PREF_DROPDOWN_VALUE, bool_value,
+			                   -1);
+		}
+
+		if ((combo->type == PURPLE_PREF_INT &&
+			combo->value.integer == int_value) ||
+			(combo->type == PURPLE_PREF_STRING &&
+			purple_strequal(combo->value.string, str_value)) ||
+			(combo->type == PURPLE_PREF_BOOLEAN &&
+			(combo->value.boolean == bool_value))) {
+
+			active = iter;
+		}
+
+		menuitems = g_list_next(menuitems);
+	}
+
+	gtk_combo_box_set_active_iter(GTK_COMBO_BOX(combo->combo), &active);
+	combo->current_active = gtk_combo_box_get_active(
+			GTK_COMBO_BOX(combo->combo));
+	combo->previously_active = combo->current_active;
+
+	combo->cb = pidgin_prefs_bind_dropdown_from_list_cb;
+	g_signal_connect(G_OBJECT(combo->combo), "changed",
+			G_CALLBACK(bind_dropdown_set), combo);
+}
+
+static void
+pidgin_prefs_bind_dropdown(PidginPrefCombo *combo)
+{
+	GtkListStore *store = NULL;
+	GtkTreeIter iter;
+	GtkTreeIter active;
+
+	if (combo->type == PURPLE_PREF_INT) {
+		combo->value.integer = purple_prefs_get_int(combo->key);
+	} else if (combo->type == PURPLE_PREF_STRING) {
+		combo->value.string = purple_prefs_get_string(combo->key);
+	} else if (combo->type == PURPLE_PREF_BOOLEAN) {
+		combo->value.boolean = purple_prefs_get_bool(combo->key);
+	} else {
+		g_return_if_reached();
+	}
+
+	store = GTK_LIST_STORE(
+			gtk_combo_box_get_model(GTK_COMBO_BOX(combo->combo)));
+
+	if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store), &iter)) {
+		g_return_if_reached();
+	}
+
+	do {
+		int int_value = 0;
+		const char *str_value = NULL;
+		gboolean bool_value = FALSE;
+
+		if (combo->type == PURPLE_PREF_INT) {
+			gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			                   PREF_DROPDOWN_VALUE, &int_value,
+			                   -1);
+			if (combo->value.integer == int_value) {
+				active = iter;
+				break;
+			}
+		}
+		else if (combo->type == PURPLE_PREF_STRING) {
+			gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			                   PREF_DROPDOWN_VALUE, &str_value,
+			                   -1);
+			if (purple_strequal(combo->value.string, str_value)) {
+				active = iter;
+				break;
+			}
+		}
+		else if (combo->type == PURPLE_PREF_BOOLEAN) {
+			gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			                   PREF_DROPDOWN_VALUE, &bool_value,
+			                   -1);
+			if (combo->value.boolean == bool_value) {
+				active = iter;
+				break;
+			}
+		}
+	} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(store), &iter));
+
+	gtk_combo_box_set_active_iter(GTK_COMBO_BOX(combo->combo), &active);
+
+	combo->current_active = gtk_combo_box_get_active(
+			GTK_COMBO_BOX(combo->combo));
+	combo->previously_active = combo->current_active;
+
+	combo->cb = pidgin_prefs_bind_dropdown_from_list_cb;
+	g_signal_connect(G_OBJECT(combo->combo), "changed",
+			G_CALLBACK(bind_dropdown_set), combo);
+}
+
+static void
 set_bool_pref(GtkWidget *w, const char *key)
 {
 	purple_prefs_set_bool(key,
@@ -505,6 +743,15 @@ pidgin_prefs_checkbox(const char *text, const char *key, GtkWidget *page)
 	gtk_widget_show(button);
 
 	return button;
+}
+
+static void
+pidgin_prefs_bind_checkbox(const char *key, GtkWidget *button)
+{
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button),
+			purple_prefs_get_bool(key));
+	g_signal_connect(G_OBJECT(button), "toggled",
+			G_CALLBACK(set_bool_pref), (char *)key);
 }
 
 static void keyring_page_cleanup(void);
