@@ -118,6 +118,24 @@ struct _PidginPrefsWindow {
 		GtkWidget *log_chats;
 		GtkWidget *log_system;
 	} logging;
+
+	/* Network page */
+	struct {
+		GtkWidget *stun_server;
+		GtkWidget *auto_ip;
+		GtkWidget *public_ip;
+		GtkWidget *public_ip_hbox;
+		GtkWidget *map_ports;
+		GtkWidget *ports_range_use;
+		GtkWidget *ports_range_hbox;
+		GtkWidget *ports_range_start;
+		GtkWidget *ports_range_end;
+		GtkWidget *turn_server;
+		GtkWidget *turn_port_udp;
+		GtkWidget *turn_port_tcp;
+		GtkWidget *turn_username;
+		GtkWidget *turn_password;
+	} network;
 };
 
 /* Main dialog */
@@ -2333,13 +2351,9 @@ auto_ip_button_clicked_cb(GtkWidget *button, gpointer null)
 	g_free(auto_ip_text);
 }
 
-static GtkWidget *
-network_page(void)
+static void
+bind_network_page(PidginPrefsWindow *win)
 {
-	GtkWidget *ret;
-	GtkWidget *vbox, *hbox, *entry;
-	GtkWidget *label, *auto_ip_checkbox, *ports_checkbox, *spin_button;
-	GtkSizeGroup *sg;
 	GtkStyleContext *context;
 	GtkCssProvider *ip_css;
 	const gchar ip_style[] =
@@ -2356,116 +2370,55 @@ network_page(void)
 			"background-color: @success_color;"
 		"}";
 
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
+	gtk_entry_set_text(GTK_ENTRY(win->network.stun_server),
+			purple_prefs_get_string("/purple/network/stun_server"));
 
-	vbox = pidgin_make_frame (ret, _("IP Address"));
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	pidgin_prefs_bind_checkbox("/purple/network/auto_ip",
+			win->network.auto_ip);
+	auto_ip_button_clicked_cb(win->network.auto_ip, NULL); /* Update label */
 
-	entry = gtk_entry_new();
-	gtk_entry_set_text(GTK_ENTRY(entry), purple_prefs_get_string(
-			"/purple/network/stun_server"));
-	g_signal_connect(G_OBJECT(entry), "focus-out-event",
-			G_CALLBACK(network_stun_server_changed_cb), NULL);
-	gtk_widget_show(entry);
-
-	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("ST_UN server:"),
-			sg, entry, TRUE, NULL);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-	gtk_container_add(GTK_CONTAINER(vbox), hbox);
-
-	label = gtk_label_new(NULL);
-	gtk_container_add(GTK_CONTAINER(hbox), label);
-	gtk_size_group_add_widget(sg, label);
-
-	label = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(label),
-			_("<span style=\"italic\">Example: stunserver.org</span>"));
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-	gtk_container_add(GTK_CONTAINER(hbox), label);
-
-	auto_ip_checkbox = pidgin_prefs_checkbox("Use _automatically detected IP address",
-	                                         "/purple/network/auto_ip", vbox);
-	g_signal_connect(G_OBJECT(auto_ip_checkbox), "clicked",
-	                 G_CALLBACK(auto_ip_button_clicked_cb), NULL);
-	auto_ip_button_clicked_cb(auto_ip_checkbox, NULL); /* Update label */
-
-	entry = gtk_entry_new();
-	gtk_entry_set_text(GTK_ENTRY(entry), purple_network_get_public_ip());
-	g_signal_connect(G_OBJECT(entry), "changed",
-					 G_CALLBACK(network_ip_changed), NULL);
+	gtk_entry_set_text(GTK_ENTRY(win->network.public_ip),
+			purple_network_get_public_ip());
 
 	ip_css = gtk_css_provider_new();
 	gtk_css_provider_load_from_data(ip_css, ip_style, -1, NULL);
-	context = gtk_widget_get_style_context(entry);
+	context = gtk_widget_get_style_context(win->network.public_ip);
 	gtk_style_context_add_provider(context,
 	                               GTK_STYLE_PROVIDER(ip_css),
 	                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Public _IP:"),
-			sg, entry, TRUE, NULL);
-
-	g_object_bind_property(auto_ip_checkbox, "active", hbox, "sensitive",
+	g_object_bind_property(win->network.auto_ip, "active",
+			win->network.public_ip_hbox, "sensitive",
 			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
 
-	g_object_unref(sg);
+	pidgin_prefs_bind_checkbox("/purple/network/map_ports",
+			win->network.map_ports);
 
-	vbox = pidgin_make_frame (ret, _("Ports"));
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-
-	pidgin_prefs_checkbox(_("_Enable automatic router port forwarding"),
-			"/purple/network/map_ports", vbox);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-
-	ports_checkbox = pidgin_prefs_checkbox(_("_Manually specify range of ports to listen on:"),
-			"/purple/network/ports_range_use", hbox);
-
-	spin_button = pidgin_prefs_labeled_spin_button(hbox, _("_Start:"),
-			"/purple/network/ports_range_start", 0, 65535, sg);
-	g_object_bind_property(ports_checkbox, "active", spin_button, "sensitive",
+	pidgin_prefs_bind_checkbox("/purple/network/ports_range_use",
+			win->network.ports_range_use);
+	g_object_bind_property(win->network.ports_range_use, "active",
+			win->network.ports_range_hbox, "sensitive",
 			G_BINDING_SYNC_CREATE);
 
-	spin_button = pidgin_prefs_labeled_spin_button(hbox, _("_End:"),
-			"/purple/network/ports_range_end", 0, 65535, sg);
-	g_object_bind_property(ports_checkbox, "active", spin_button, "sensitive",
-			G_BINDING_SYNC_CREATE);
-
-	pidgin_add_widget_to_vbox(GTK_BOX(vbox), NULL, NULL, hbox, TRUE, NULL);
-
-	g_object_unref(sg);
+	pidgin_prefs_bind_spin_button("/purple/network/ports_range_start",
+			win->network.ports_range_start);
+	pidgin_prefs_bind_spin_button("/purple/network/ports_range_end",
+			win->network.ports_range_end);
 
 	/* TURN server */
-	vbox = pidgin_make_frame(ret, _("Relay Server (TURN)"));
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	gtk_entry_set_text(GTK_ENTRY(win->network.turn_server),
+			purple_prefs_get_string("/purple/network/turn_server"));
 
-	entry = gtk_entry_new();
-	gtk_entry_set_text(GTK_ENTRY(entry), purple_prefs_get_string(
-			"/purple/network/turn_server"));
-	g_signal_connect(G_OBJECT(entry), "focus-out-event",
-			G_CALLBACK(network_turn_server_changed_cb), NULL);
-	gtk_widget_show(entry);
+	pidgin_prefs_bind_spin_button("/purple/network/turn_port",
+			win->network.turn_port_udp);
 
-	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_TURN server:"),
-			sg, entry, TRUE, NULL);
+	pidgin_prefs_bind_spin_button("/purple/network/turn_port_tcp",
+			win->network.turn_port_tcp);
 
-	pidgin_prefs_labeled_spin_button(hbox, _("_UDP Port:"),
-		"/purple/network/turn_port", 0, 65535, NULL);
-
-	pidgin_prefs_labeled_spin_button(hbox, _("T_CP Port:"),
-		"/purple/network/turn_port_tcp", 0, 65535, NULL);
-
-	hbox = pidgin_prefs_labeled_entry(vbox, _("Use_rname:"),
-		"/purple/network/turn_username", sg);
-	pidgin_prefs_labeled_password(hbox, _("Pass_word:"),
-		"/purple/network/turn_password", NULL);
-
-	gtk_widget_show_all(ret);
-	g_object_unref(sg);
-
-	return ret;
+	pidgin_prefs_bind_entry("/purple/network/turn_username",
+			win->network.turn_username);
+	pidgin_prefs_bind_entry("/purple/network/turn_password",
+			win->network.turn_password);
 }
 
 #ifndef _WIN32
@@ -4172,7 +4125,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	prefs_notebook_add_page(notebook, _("Conversations"), conv_page(), notebook_page++);
 	bind_logging_page(win);
 	notebook_page++;
-	prefs_notebook_add_page(notebook, _("Network"), network_page(), notebook_page++);
+	bind_network_page(win);
+	notebook_page++;
 	prefs_notebook_add_page(notebook, _("Proxy"), proxy_page(), notebook_page++);
 	prefs_notebook_add_page(notebook, _("Password Storage"), keyring_page(), notebook_page++);
 
@@ -4208,6 +4162,53 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 			widget_class, PidginPrefsWindow, logging.log_chats);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow, logging.log_system);
+
+	/* Network page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, network.stun_server);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, network.auto_ip);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, network.public_ip);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.public_ip_hbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, network.map_ports);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.ports_range_use);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.ports_range_hbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.ports_range_start);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.ports_range_end);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, network.turn_server);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.turn_port_udp);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.turn_port_tcp);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.turn_username);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			network.turn_password);
+	gtk_widget_class_bind_template_callback(widget_class,
+			network_stun_server_changed_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                 auto_ip_button_clicked_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			network_ip_changed);
+	gtk_widget_class_bind_template_callback(widget_class,
+			network_turn_server_changed_cb);
 }
 
 static void
