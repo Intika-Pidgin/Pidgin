@@ -517,12 +517,9 @@ static GtkWidget *get_config_frame(PurplePlugin *plugin) {
 		(gpointer) OPT_WINTRANS_IM_ENABLED);
 
 	trans_box = gtk_vbox_new(FALSE, 18);
-	if (!purple_prefs_get_bool(OPT_WINTRANS_IM_ENABLED))
-		gtk_widget_set_sensitive(GTK_WIDGET(trans_box), FALSE);
 	gtk_widget_show(trans_box);
-
-	g_signal_connect(GTK_OBJECT(button), "clicked",
-		G_CALLBACK(pidgin_toggle_sensitive), trans_box);
+	g_object_bind_property(button, "active", trans_box, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	button = pidgin_prefs_checkbox(_("_Show slider bar in IM window"),
 		OPT_WINTRANS_IM_SLIDER, trans_box);
@@ -574,11 +571,9 @@ static GtkWidget *get_config_frame(PurplePlugin *plugin) {
 		(gpointer) OPT_WINTRANS_BL_ENABLED);
 
 	trans_box = gtk_vbox_new(FALSE, 18);
-	if (!purple_prefs_get_bool(OPT_WINTRANS_BL_ENABLED))
-		gtk_widget_set_sensitive(GTK_WIDGET(trans_box), FALSE);
 	gtk_widget_show(trans_box);
-	g_signal_connect(GTK_OBJECT(button), "clicked",
-		G_CALLBACK(pidgin_toggle_sensitive), trans_box);
+	g_object_bind_property(button, "active", trans_box, "sensitive",
+			G_BINDING_SYNC_CREATE);
 	button = pidgin_prefs_checkbox(
 		_("Remove Buddy List window transparency on focus"),
 		OPT_WINTRANS_BL_ONFOCUS, trans_box);
