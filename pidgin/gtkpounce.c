@@ -503,8 +503,6 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	GtkWidget *frame;
 	GtkWidget *grid;
 	GtkSizeGroup *sg;
-	GPtrArray *sound_widgets;
-	GPtrArray *exec_widgets;
 	GtkWidget *send_msg_webview;
 
 	g_return_if_fail((cur_pounce != NULL) ||
@@ -789,28 +787,29 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 			dialog->popup_entry, "sensitive",
 			0);
 
-	exec_widgets = g_ptr_array_new();
-	g_ptr_array_add(exec_widgets,dialog->exec_cmd_entry);
-	g_ptr_array_add(exec_widgets,dialog->exec_cmd_browse);
-
-	g_signal_connect(G_OBJECT(dialog->exec_cmd), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive_array),
-					 exec_widgets);
+	g_object_bind_property(dialog->exec_cmd, "active",
+			dialog->exec_cmd_entry, "sensitive",
+			G_BINDING_SYNC_CREATE);
+	g_object_bind_property(dialog->exec_cmd, "active",
+			dialog->exec_cmd_browse, "sensitive",
+			G_BINDING_SYNC_CREATE);
 	g_signal_connect(G_OBJECT(dialog->exec_cmd_browse), "clicked",
 					 G_CALLBACK(filesel),
 					 dialog->exec_cmd_entry);
-	g_object_set_data_full(G_OBJECT(dialog->window), "exec-widgets",
-				exec_widgets, (GDestroyNotify)g_ptr_array_free);
 
-	sound_widgets = g_ptr_array_new();
-	g_ptr_array_add(sound_widgets,dialog->play_sound_entry);
-	g_ptr_array_add(sound_widgets,dialog->play_sound_browse);
-	g_ptr_array_add(sound_widgets,dialog->play_sound_test);
-	g_ptr_array_add(sound_widgets,dialog->play_sound_reset);
+	g_object_bind_property(dialog->play_sound, "active",
+			dialog->play_sound_entry, "sensitive",
+			G_BINDING_SYNC_CREATE);
+	g_object_bind_property(dialog->play_sound, "active",
+			dialog->play_sound_browse, "sensitive",
+			G_BINDING_SYNC_CREATE);
+	g_object_bind_property(dialog->play_sound, "active",
+			dialog->play_sound_test, "sensitive",
+			G_BINDING_SYNC_CREATE);
+	g_object_bind_property(dialog->play_sound, "active",
+			dialog->play_sound_reset, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
-	g_signal_connect(G_OBJECT(dialog->play_sound), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive_array),
-					 sound_widgets);
 	g_signal_connect(G_OBJECT(dialog->play_sound_browse), "clicked",
 					 G_CALLBACK(filesel),
 					 dialog->play_sound_entry);
@@ -820,8 +819,6 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	g_signal_connect(G_OBJECT(dialog->play_sound_reset), "clicked",
 					 G_CALLBACK(pounce_reset_sound),
 					 dialog->play_sound_entry);
-	g_object_set_data_full(G_OBJECT(dialog->window), "sound-widgets",
-				sound_widgets, (GDestroyNotify)g_ptr_array_free);
 
 	g_signal_connect_swapped(G_OBJECT(dialog->send_msg_entry), "format-cleared",
 			G_CALLBACK(reset_send_msg_entry), dialog);
