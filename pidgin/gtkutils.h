@@ -200,15 +200,6 @@ GtkWidget *pidgin_dialog_add_button(GtkDialog *dialog, const char *label,
 GtkWidget *pidgin_dialog_get_action_area(GtkDialog *dialog);
 
 /**
- * pidgin_toggle_sensitive:
- * @widget:    %NULL. Used for signal handlers.
- * @to_toggle: The widget to toggle.
- *
- * Toggles the sensitivity of a widget.
- */
-void pidgin_toggle_sensitive(GtkWidget *widget, GtkWidget *to_toggle);
-
-/**
  * pidgin_set_sensitive_if_input:
  * @entry:  The text entry widget.
  * @dialog: The dialog containing the text entry widget.
@@ -218,24 +209,6 @@ void pidgin_toggle_sensitive(GtkWidget *widget, GtkWidget *to_toggle);
  * Otherwise GTK_RESPONSE_OK is set to FALSE.
  */
 void pidgin_set_sensitive_if_input(GtkWidget *entry, GtkWidget *dialog);
-
-/**
- * pidgin_toggle_sensitive_array:
- * @w:    %NULL. Used for signal handlers.
- * @data: (element-type GtkWidget): The array containing the widgets to toggle.
- *
- * Toggles the sensitivity of all widgets in a pointer array.
- */
-void pidgin_toggle_sensitive_array(GtkWidget *w, GPtrArray *data);
-
-/**
- * pidgin_toggle_showhide:
- * @widget:    %NULL. Used for signal handlers.
- * @to_toggle: The widget to toggle.
- *
- * Toggles the visibility of a widget.
- */
-void pidgin_toggle_showhide(GtkWidget *widget, GtkWidget *to_toggle);
 
 /**
  * pidgin_separator:

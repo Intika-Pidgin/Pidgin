@@ -578,6 +578,8 @@ version 3.0.0 (??/??/????):
 		* pidgin_mini_dialog_links_supported
 		* pidgin_set_custom_buddy_icon
 		* pidgin_setup_screenname_autocomplete_with_filter
+		* pidgin_toggle_sensitive, pidgin_toggle_sensitive_array, and
+		pidgin_toggle_showhide; use g_object_bind_property instead
 		* struct _GtkIMHtmlAnimation
 		* struct _GtkIMHtmlFontDetail
 		* struct _GtkIMHtmlHr
