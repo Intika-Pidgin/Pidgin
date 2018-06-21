@@ -355,49 +355,6 @@ pidgin_set_sensitive_if_input(GtkWidget *entry, GtkWidget *dialog)
 									  (*text != '\0'));
 }
 
-void
-pidgin_toggle_sensitive(GtkWidget *widget, GtkWidget *to_toggle)
-{
-	gboolean sensitivity;
-
-	if (to_toggle == NULL)
-		return;
-
-	sensitivity = gtk_widget_get_sensitive(to_toggle);
-
-	gtk_widget_set_sensitive(to_toggle, !sensitivity);
-}
-
-void
-pidgin_toggle_sensitive_array(GtkWidget *w, GPtrArray *data)
-{
-	gboolean sensitivity;
-	gpointer element;
-	guint i;
-
-	for (i=0; i < data->len; i++) {
-		element = g_ptr_array_index(data,i);
-		if (element == NULL)
-			continue;
-
-		sensitivity = gtk_widget_get_sensitive(element);
-
-		gtk_widget_set_sensitive(element, !sensitivity);
-	}
-}
-
-void
-pidgin_toggle_showhide(GtkWidget *widget, GtkWidget *to_toggle)
-{
-	if (to_toggle == NULL)
-		return;
-
-	if (gtk_widget_get_visible(to_toggle))
-		gtk_widget_hide(to_toggle);
-	else
-		gtk_widget_show(to_toggle);
-}
-
 GtkWidget *pidgin_separator(GtkWidget *menu)
 {
 	GtkWidget *menuitem;
