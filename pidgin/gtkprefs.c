@@ -1825,10 +1825,8 @@ conv_page(void)
 			PIDGIN_PREFS_ROOT "/conversations/im/show_buddy_icons", vbox);
 	iconpref2 = pidgin_prefs_checkbox(_("Enable buddy ic_on animation"),
 			PIDGIN_PREFS_ROOT "/conversations/im/animate_buddy_icons", vbox);
-	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/im/show_buddy_icons"))
-		gtk_widget_set_sensitive(iconpref2, FALSE);
-	g_signal_connect(G_OBJECT(iconpref1), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), iconpref2);
+	g_object_bind_property(iconpref1, "active", iconpref2, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	pidgin_prefs_checkbox(_("_Notify buddies that you are typing to them"),
 			"/purple/conversations/im/send_typing", vbox);
@@ -1853,12 +1851,8 @@ conv_page(void)
 		PIDGIN_PREFS_ROOT "/conversations/custom_smileys_size",
 		16, 512, NULL);
 
-	if (!purple_prefs_get_bool(
-				PIDGIN_PREFS_ROOT "/conversations/resize_custom_smileys"))
-		gtk_widget_set_sensitive(GTK_WIDGET(spin_button), FALSE);
-
-	g_signal_connect(G_OBJECT(checkbox), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), spin_button);
+	g_object_bind_property(checkbox, "active", spin_button, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), NULL, NULL, hbox, TRUE, NULL);
 #endif
@@ -1886,9 +1880,8 @@ conv_page(void)
 
 	gtk_font_button_set_show_style(GTK_FONT_BUTTON(font_button), TRUE);
 	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Conversation _font:"), NULL, font_button, FALSE, NULL);
-	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font"))
-		gtk_widget_set_sensitive(hbox, FALSE);
-	g_signal_connect(G_OBJECT(fontpref), "clicked", G_CALLBACK(pidgin_toggle_sensitive), hbox);
+	g_object_bind_property(fontpref, "active", hbox, "sensitive",
+			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
 	g_signal_connect(G_OBJECT(fontpref), "clicked", G_CALLBACK(apply_custom_font), hbox);
 	g_signal_connect(G_OBJECT(font_button), "font-set", G_CALLBACK(pidgin_custom_font_set), NULL);
 
@@ -2145,12 +2138,8 @@ network_page(void)
 	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Public _IP:"),
 			sg, entry, TRUE, NULL);
 
-	if (purple_prefs_get_bool("/purple/network/auto_ip")) {
-		gtk_widget_set_sensitive(GTK_WIDGET(hbox), FALSE);
-	}
-
-	g_signal_connect(G_OBJECT(auto_ip_checkbox), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), hbox);
+	g_object_bind_property(auto_ip_checkbox, "active", hbox, "sensitive",
+			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
 
 	g_object_unref(sg);
 
@@ -2167,17 +2156,13 @@ network_page(void)
 
 	spin_button = pidgin_prefs_labeled_spin_button(hbox, _("_Start:"),
 			"/purple/network/ports_range_start", 0, 65535, sg);
-	if (!purple_prefs_get_bool("/purple/network/ports_range_use"))
-		gtk_widget_set_sensitive(GTK_WIDGET(spin_button), FALSE);
-	g_signal_connect(G_OBJECT(ports_checkbox), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), spin_button);
+	g_object_bind_property(ports_checkbox, "active", spin_button, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	spin_button = pidgin_prefs_labeled_spin_button(hbox, _("_End:"),
 			"/purple/network/ports_range_end", 0, 65535, sg);
-	if (!purple_prefs_get_bool("/purple/network/ports_range_use"))
-		gtk_widget_set_sensitive(GTK_WIDGET(spin_button), FALSE);
-	g_signal_connect(G_OBJECT(ports_checkbox), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), spin_button);
+	g_object_bind_property(ports_checkbox, "active", spin_button, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), NULL, NULL, hbox, TRUE, NULL);
 
@@ -3291,11 +3276,8 @@ away_page(void)
 	gtk_size_group_add_widget(sg, menu);
 	gtk_box_pack_start(GTK_BOX(hbox), menu, FALSE, FALSE, 0);
 
-	g_signal_connect(G_OBJECT(button), "clicked",
-			 G_CALLBACK(pidgin_toggle_sensitive), menu);
-
-	if(!purple_prefs_get_bool("/purple/away/away_when_idle"))
-		gtk_widget_set_sensitive(GTK_WIDGET(menu), FALSE);
+	g_object_bind_property(button, "active", menu, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	/* Away stuff */
 	vbox = pidgin_make_frame(ret, _("Away"));
@@ -3320,16 +3302,11 @@ away_page(void)
 	/* TODO: Show something useful if we don't have any saved statuses. */
 	menu = pidgin_status_menu(purple_savedstatus_get_startup(), G_CALLBACK(set_startupstatus));
 	gtk_size_group_add_widget(sg, menu);
-	g_signal_connect(G_OBJECT(button), "clicked",
-			 G_CALLBACK(pidgin_toggle_sensitive), menu);
+	g_object_bind_property(button, "active", menu, "sensitive",
+			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Status to a_pply at startup:"), sg, menu, TRUE, &label);
-	g_signal_connect(G_OBJECT(button), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive), label);
-
-	if(purple_prefs_get_bool("/purple/savedstatus/startup_current_status")) {
-		gtk_widget_set_sensitive(GTK_WIDGET(menu), FALSE);
-		gtk_widget_set_sensitive(GTK_WIDGET(label), FALSE);
-	}
+	g_object_bind_property(button, "active", label, "sensitive",
+			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
 
 	gtk_widget_show_all(ret);
 	g_object_unref(sg);

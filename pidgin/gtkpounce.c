@@ -781,13 +781,13 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 					 G_CALLBACK(message_recv_toggle),
 					 dialog->send_msg);
 
-	g_signal_connect(G_OBJECT(dialog->send_msg), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive),
-					 send_msg_webview);
+	g_object_bind_property(dialog->send_msg, "active",
+			send_msg_webview, "sensitive",
+			0);
 
-	g_signal_connect(G_OBJECT(dialog->popup), "clicked",
-					 G_CALLBACK(pidgin_toggle_sensitive),
-					 dialog->popup_entry);
+	g_object_bind_property(dialog->popup, "active",
+			dialog->popup_entry, "sensitive",
+			0);
 
 	exec_widgets = g_ptr_array_new();
 	g_ptr_array_add(exec_widgets,dialog->exec_cmd_entry);

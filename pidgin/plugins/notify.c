@@ -719,9 +719,8 @@ get_config_frame(PurplePlugin *plugin)
 	                            purple_prefs_get_bool("/plugins/gtk/X11/notify/type_im_sys"));
 	g_signal_connect(G_OBJECT(toggle), "toggled",
 	                 G_CALLBACK(type_toggle_cb), "type_im_sys");
-	gtk_widget_set_sensitive(toggle, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ref)));
-	g_signal_connect(G_OBJECT(ref), "toggled",
-	                 G_CALLBACK(pidgin_toggle_sensitive), toggle);
+	g_object_bind_property(ref, "active", toggle, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	toggle = gtk_check_button_new_with_mnemonic(_("C_hat windows"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
@@ -737,9 +736,8 @@ get_config_frame(PurplePlugin *plugin)
 	                            purple_prefs_get_bool("/plugins/gtk/X11/notify/type_chat_nick"));
 	g_signal_connect(G_OBJECT(toggle), "toggled",
 	                 G_CALLBACK(type_toggle_cb), "type_chat_nick");
-	gtk_widget_set_sensitive(toggle, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ref)));
-	g_signal_connect(G_OBJECT(ref), "toggled",
-	                 G_CALLBACK(pidgin_toggle_sensitive), toggle);
+	g_object_bind_property(ref, "active", toggle, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	toggle = gtk_check_button_new_with_mnemonic(_("\tS_ystem messages"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
@@ -747,9 +745,8 @@ get_config_frame(PurplePlugin *plugin)
 	                            purple_prefs_get_bool("/plugins/gtk/X11/notify/type_chat_sys"));
 	g_signal_connect(G_OBJECT(toggle), "toggled",
 	                 G_CALLBACK(type_toggle_cb), "type_chat_sys");
-	gtk_widget_set_sensitive(toggle, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ref)));
-	g_signal_connect(G_OBJECT(ref), "toggled",
-	                 G_CALLBACK(pidgin_toggle_sensitive), toggle);
+	g_object_bind_property(ref, "active", toggle, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	toggle = gtk_check_button_new_with_mnemonic(_("_Focused windows"));
 	gtk_box_pack_start(GTK_BOX(vbox), toggle, FALSE, FALSE, 0);
