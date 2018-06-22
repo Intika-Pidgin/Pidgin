@@ -781,34 +781,34 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 
 	g_object_bind_property(dialog->send_msg, "active",
 			send_msg_webview, "sensitive",
-			0);
+			G_BINDING_DEFAULT);
 
 	g_object_bind_property(dialog->popup, "active",
 			dialog->popup_entry, "sensitive",
-			0);
+			G_BINDING_DEFAULT);
 
 	g_object_bind_property(dialog->exec_cmd, "active",
 			dialog->exec_cmd_entry, "sensitive",
-			G_BINDING_SYNC_CREATE);
+			G_BINDING_DEFAULT);
 	g_object_bind_property(dialog->exec_cmd, "active",
 			dialog->exec_cmd_browse, "sensitive",
-			G_BINDING_SYNC_CREATE);
+			G_BINDING_DEFAULT);
 	g_signal_connect(G_OBJECT(dialog->exec_cmd_browse), "clicked",
 					 G_CALLBACK(filesel),
 					 dialog->exec_cmd_entry);
 
 	g_object_bind_property(dialog->play_sound, "active",
 			dialog->play_sound_entry, "sensitive",
-			G_BINDING_SYNC_CREATE);
+			G_BINDING_DEFAULT);
 	g_object_bind_property(dialog->play_sound, "active",
 			dialog->play_sound_browse, "sensitive",
-			G_BINDING_SYNC_CREATE);
+			G_BINDING_DEFAULT);
 	g_object_bind_property(dialog->play_sound, "active",
 			dialog->play_sound_test, "sensitive",
-			G_BINDING_SYNC_CREATE);
+			G_BINDING_DEFAULT);
 	g_object_bind_property(dialog->play_sound, "active",
 			dialog->play_sound_reset, "sensitive",
-			G_BINDING_SYNC_CREATE);
+			G_BINDING_DEFAULT);
 
 	g_signal_connect(G_OBJECT(dialog->play_sound_browse), "clicked",
 					 G_CALLBACK(filesel),
