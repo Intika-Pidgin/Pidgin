@@ -2714,9 +2714,6 @@ proxy_page(void)
 			gtk_entry_set_text(GTK_ENTRY(entry),
 					   purple_proxy_info_get_host(proxy_info));
 
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-		gtk_box_set_homogeneous(GTK_BOX(hbox), TRUE);
-		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
 		label = gtk_label_new_with_mnemonic(_("P_ort:"));
@@ -2755,9 +2752,6 @@ proxy_page(void)
 			gtk_entry_set_text(GTK_ENTRY(entry),
 						   purple_proxy_info_get_username(proxy_info));
 
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-		gtk_box_set_homogeneous(GTK_BOX(hbox), TRUE);
-		gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
 		label = gtk_label_new_with_mnemonic(_("Pa_ssword:"));
