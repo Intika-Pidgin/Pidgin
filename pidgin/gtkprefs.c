@@ -106,6 +106,33 @@ struct _PidginPrefsWindow {
 	/* Notebook */
 	GtkWidget *notebook;
 
+	/* Conversations page */
+	struct {
+		PidginPrefCombo notification_chat;
+		GtkWidget *show_incoming_formatting;
+		struct {
+			GtkWidget *close_immediately;
+			GtkWidget *show_buddy_icons;
+			GtkWidget *animate_buddy_icons;
+			GtkWidget *send_typing;
+		} im;
+		GtkWidget *spellcheck;
+		GtkWidget *use_smooth_scrolling;
+		struct {
+			GtkWidget *blink_im;
+		} win32;
+		GtkWidget *resize_custom_smileys;
+		GtkWidget *custom_smileys_size;
+		GtkWidget *minimum_entry_lines;
+		GtkWidget *sample_box;
+		GtkWidget *sample_webview;
+		/* Win32 specific frame */
+		GtkWidget *font_frame;
+		GtkWidget *use_theme_font;
+		GtkWidget *custom_font_hbox;
+		GtkWidget *custom_font;
+	} conversations;
+
 	/* Logging page */
 	struct {
 		PidginPrefCombo format;
@@ -152,9 +179,6 @@ struct _PidginPrefsWindow {
 
 /* Main dialog */
 static PidginPrefsWindow *prefs = NULL;
-
-/* Conversations page */
-static GtkWidget *sample_webview = NULL;
 
 /* Themes page */
 static GtkWidget *prefs_sound_themes_combo_box;
@@ -822,8 +846,6 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	prefs_smiley_themes_combo_box = NULL;
 
 	keyring_page_cleanup();
-
-	sample_webview = NULL;
 
 #ifdef USE_VV
 	voice_level = NULL;
@@ -1503,7 +1525,7 @@ prefs_set_smiley_theme_cb(GtkComboBox *combo_box, gpointer user_data)
 
 #if 0
 		/* TODO: update smileys in sample_webview input box. */
-		update_smileys_in_webview_input_box(sample_webview);
+		update_smileys_in_webview_input_box(win->conversation.sample_webview);
 #endif
 
 		g_free(new_theme);
@@ -2063,9 +2085,9 @@ interface_page(void)
 	return ret;
 }
 
-#ifdef _WIN32
+/* This is also Win32-specific, but must be visible for Glade binding. */
 static void
-apply_custom_font(void)
+apply_custom_font(GtkWidget *unused, PidginPrefsWindow *win)
 {
 	PangoFontDescription *desc = NULL;
 	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font")) {
@@ -2073,122 +2095,100 @@ apply_custom_font(void)
 		desc = pango_font_description_from_string(font);
 	}
 
-	gtk_widget_modify_font(sample_webview, desc);
+	gtk_widget_modify_font(win->conversations.sample_webview, desc);
 	if (desc)
 		pango_font_description_free(desc);
 
 }
+
 static void
-pidgin_custom_font_set(GtkFontButton *font_button, gpointer nul)
+pidgin_custom_font_set(GtkWidget *font_button, PidginPrefsWindow *win)
 {
 
 	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/custom_font",
-				gtk_font_button_get_font_name(font_button));
+			gtk_font_chooser_get_font(GTK_FONT_CHOOSER(font_button)));
 
-	apply_custom_font();
+	apply_custom_font(font_button, win);
 }
-#endif
 
-static GtkWidget *
-conv_page(void)
+static void
+bind_conv_page(PidginPrefsWindow *win)
 {
-	GtkWidget *ret;
-	GtkWidget *vbox;
-	GtkWidget *iconpref1;
-	GtkWidget *iconpref2;
 	GtkWidget *webview;
 	GtkWidget *frame;
-#if 0
-	GtkWidget *hbox;
-	GtkWidget *checkbox;
-	GtkWidget *spin_button;
-#endif
 
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
+	win->conversations.notification_chat.type = PURPLE_PREF_INT;
+	win->conversations.notification_chat.key = PIDGIN_PREFS_ROOT "/conversations/notification_chat";
+	pidgin_prefs_bind_dropdown(&win->conversations.notification_chat);
 
-	vbox = pidgin_make_frame(ret, _("Conversations"));
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/show_incoming_formatting",
+			win->conversations.show_incoming_formatting);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/im/close_immediately",
+			win->conversations.im.close_immediately);
 
-	pidgin_prefs_dropdown(vbox, _("Chat notification:"),
-		PURPLE_PREF_INT, PIDGIN_PREFS_ROOT "/conversations/notification_chat",
-		_("On unseen events"), PIDGIN_UNSEEN_EVENT,
-		_("On unseen text"), PIDGIN_UNSEEN_TEXT,
-		_("On unseen text and the nick was said"), PIDGIN_UNSEEN_NICK,
-		NULL);
-
-	pidgin_prefs_checkbox(_("Show _formatting on incoming messages"),
-				PIDGIN_PREFS_ROOT "/conversations/show_incoming_formatting", vbox);
-	pidgin_prefs_checkbox(_("Close IMs immediately when the tab is closed"),
-				PIDGIN_PREFS_ROOT "/conversations/im/close_immediately", vbox);
-
-	iconpref1 = pidgin_prefs_checkbox(_("Show _detailed information"),
-			PIDGIN_PREFS_ROOT "/conversations/im/show_buddy_icons", vbox);
-	iconpref2 = pidgin_prefs_checkbox(_("Enable buddy ic_on animation"),
-			PIDGIN_PREFS_ROOT "/conversations/im/animate_buddy_icons", vbox);
-	g_object_bind_property(iconpref1, "active", iconpref2, "sensitive",
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/im/show_buddy_icons",
+			win->conversations.im.show_buddy_icons);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/im/animate_buddy_icons",
+			win->conversations.im.animate_buddy_icons);
+	g_object_bind_property(win->conversations.im.show_buddy_icons, "active",
+			win->conversations.im.animate_buddy_icons, "sensitive",
 			G_BINDING_SYNC_CREATE);
 
-	pidgin_prefs_checkbox(_("_Notify buddies that you are typing to them"),
-			"/purple/conversations/im/send_typing", vbox);
-	pidgin_prefs_checkbox(_("Highlight _misspelled words"),
-			PIDGIN_PREFS_ROOT "/conversations/spellcheck", vbox);
+	pidgin_prefs_bind_checkbox("/purple/conversations/im/send_typing",
+			win->conversations.im.send_typing);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/spellcheck",
+			win->conversations.spellcheck);
 
-	pidgin_prefs_checkbox(_("Use smooth-scrolling"), PIDGIN_PREFS_ROOT "/conversations/use_smooth_scrolling", vbox);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/use_smooth_scrolling",
+			win->conversations.use_smooth_scrolling);
 
 #ifdef _WIN32
-	pidgin_prefs_checkbox(_("F_lash window when IMs are received"), PIDGIN_PREFS_ROOT "/win32/blink_im", vbox);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/win32/blink_im",
+			win->conversations.win32.blink_im);
+#else
+	gtk_widget_hide(win->conversations.win32.blink_im);
 #endif
 
 #if 0
 	/* TODO: it's not implemented */
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
+	pidgin_prefs_bind_checkbox(
+			PIDGIN_PREFS_ROOT "/conversations/resize_custom_smileys",
+			win->conversations.resize_custom_smileys);
 
-	checkbox = pidgin_prefs_checkbox(_("Resize incoming custom smileys"),
-			PIDGIN_PREFS_ROOT "/conversations/resize_custom_smileys", hbox);
+	pidgin_prefs_bind_spin_button(
+			PIDGIN_PREFS_ROOT "/conversations/custom_smileys_size",
+			win->conversations.custom_smileys_size);
 
-	spin_button = pidgin_prefs_labeled_spin_button(hbox,
-		_("Maximum size:"),
-		PIDGIN_PREFS_ROOT "/conversations/custom_smileys_size",
-		16, 512, NULL);
-
-	g_object_bind_property(checkbox, "active", spin_button, "sensitive",
+	g_object_bind_property(win->conversations.resize_custom_smileys, "active",
+			win->conversations.custom_smileys_size, "sensitive",
 			G_BINDING_SYNC_CREATE);
-
-	pidgin_add_widget_to_vbox(GTK_BOX(vbox), NULL, NULL, hbox, TRUE, NULL);
 #endif
 
-	pidgin_prefs_labeled_spin_button(vbox,
-		_("Minimum input area height in lines:"),
+	pidgin_prefs_bind_spin_button(
 		PIDGIN_PREFS_ROOT "/conversations/minimum_entry_lines",
-		1, 8, NULL);
+		win->conversations.minimum_entry_lines);
 
 #ifdef _WIN32
 	{
-	GtkWidget *fontpref, *font_button, *hbox;
 	const char *font_name;
-	vbox = pidgin_make_frame(ret, _("Font"));
+	gtk_widget_show(win->conversations.font_frame);
 
-	fontpref = pidgin_prefs_checkbox(_("Use font from _theme"),
-									 PIDGIN_PREFS_ROOT "/conversations/use_theme_font", vbox);
+	pidgin_prefs_bind_checkbox(
+			PIDGIN_PREFS_ROOT "/conversations/use_theme_font",
+			win->conversations.use_theme_font);
 
 	font_name = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font");
-	if ((font_name == NULL) || (*font_name == '\0')) {
-		font_button = gtk_font_button_new();
-	} else {
-		font_button = gtk_font_button_new_with_font(font_name);
+	if (font_name != NULL && *font_name != '\0') {
+		gtk_font_chooser_set_font(
+				GTK_FONT_CHOOSER(win->conversations.custom_font),
+				font_name);
 	}
 
-	gtk_font_button_set_show_style(GTK_FONT_BUTTON(font_button), TRUE);
-	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Conversation _font:"), NULL, font_button, FALSE, NULL);
-	g_object_bind_property(fontpref, "active", hbox, "sensitive",
+	g_object_bind_property(win->conversations.use_theme_font, "active",
+			win->conversations.custom_font_hbox, "sensitive",
 			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
-	g_signal_connect(G_OBJECT(fontpref), "clicked", G_CALLBACK(apply_custom_font), hbox);
-	g_signal_connect(G_OBJECT(font_button), "font-set", G_CALLBACK(pidgin_custom_font_set), NULL);
-
 	}
 #endif
-
-	vbox = pidgin_make_frame(ret, _("Default Formatting"));
 
 	frame = pidgin_create_webview(TRUE, &webview, NULL);
 	gtk_widget_show(frame);
@@ -2211,7 +2211,7 @@ conv_page(void)
 	                          "appear when you use protocols that support "
 	                          "formatting."));
 
-	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(win->conversations.sample_box), frame, TRUE, TRUE, 0);
 
 	pidgin_webview_setup_entry(PIDGIN_WEBVIEW(webview),
 	                        PURPLE_CONNECTION_FLAG_HTML |
@@ -2221,11 +2221,7 @@ conv_page(void)
 	                       G_CALLBACK(formatting_toggle_cb), NULL);
 	g_signal_connect_after(G_OBJECT(webview), "format-cleared",
 	                       G_CALLBACK(formatting_clear_cb), NULL);
-	sample_webview = webview;
-
-	gtk_widget_show(ret);
-
-	return ret;
+	win->conversations.sample_webview = webview;
 }
 
 static void
@@ -4037,7 +4033,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 		prefs_notebook_add_page(notebook, _("Browser"), browser_page(), notebook_page++);
 #endif
 
-	prefs_notebook_add_page(notebook, _("Conversations"), conv_page(), notebook_page++);
+	bind_conv_page(win);
+	notebook_page++;
 	bind_logging_page(win);
 	notebook_page++;
 	bind_network_page(win);
@@ -4068,6 +4065,66 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow, notebook);
 	gtk_widget_class_bind_template_callback(widget_class, delete_prefs);
+
+	/* Conversations page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.notification_chat.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.show_incoming_formatting);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.im.close_immediately);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.im.show_buddy_icons);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.im.animate_buddy_icons);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.im.send_typing);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.spellcheck);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.use_smooth_scrolling);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.win32.blink_im);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.resize_custom_smileys);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.custom_smileys_size);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.minimum_entry_lines);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.sample_box);
+#ifdef WIN32
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.font_frame);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.use_theme_font);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.custom_font_hbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.custom_font);
+#endif
+	/* Even though Win32-specific, must be bound to avoid Glade warnings. */
+	gtk_widget_class_bind_template_callback(widget_class,
+			apply_custom_font);
+	gtk_widget_class_bind_template_callback(widget_class,
+			pidgin_custom_font_set);
 
 	/* Logging page */
 	gtk_widget_class_bind_template_child(
