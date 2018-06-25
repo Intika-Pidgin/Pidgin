@@ -106,6 +106,22 @@ struct _PidginPrefsWindow {
 	/* Notebook */
 	GtkWidget *notebook;
 
+	/* Browser page */
+	struct {
+		GtkWidget *page;
+		GtkWidget *stack;
+		/* GNOME version */
+		GtkWidget *gnome_not_found;
+		GtkWidget *gnome_program;
+		gchar *gnome_program_path;
+		/* Non-GNOME version */
+		PidginPrefCombo browser;
+		GtkWidget *place_hbox;
+		PidginPrefCombo place;
+		GtkWidget *manual_command_hbox;
+		GtkWidget *manual_command;
+	} browser;
+
 	/* Conversations page */
 	struct {
 		PidginPrefCombo notification_chat;
@@ -854,6 +870,7 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	video_drawing_area = NULL;
 #endif
 	g_free(prefs->proxy.gnome_program_path);
+	g_free(prefs->browser.gnome_program_path);
 	prefs = NULL;
 }
 
@@ -2315,19 +2332,17 @@ proxy_button_clicked_cb(GtkWidget *button, PidginPrefsWindow *win)
 	g_error_free(err);
 }
 
-#ifndef _WIN32
 static void
-browser_button_clicked_cb(GtkWidget *button, gchar *path)
+browser_button_clicked_cb(GtkWidget *button, PidginPrefsWindow *win)
 {
 	GError *err = NULL;
 
-	if (g_spawn_command_line_async(path, &err))
+	if (g_spawn_command_line_async(win->browser.gnome_program_path, &err))
 		return;
 
 	purple_notify_error(NULL, NULL, _("Cannot start browser configuration program."), err->message, NULL);
 	g_error_free(err);
 }
-#endif
 
 static void
 auto_ip_button_clicked_cb(GtkWidget *button, gpointer null)
@@ -2436,7 +2451,6 @@ bind_network_page(PidginPrefsWindow *win)
 			win->network.turn_password);
 }
 
-#ifndef _WIN32
 static gboolean
 manual_browser_set(GtkWidget *entry, GdkEventFocus *event, gpointer data)
 {
@@ -2448,6 +2462,7 @@ manual_browser_set(GtkWidget *entry, GdkEventFocus *event, gpointer data)
 	return FALSE;
 }
 
+#ifndef _WIN32
 static GList *
 get_available_browsers(void)
 {
@@ -2529,28 +2544,14 @@ browser_changed2_cb(const char *name, PurplePrefType type,
 	gtk_widget_set_sensitive(hbox, purple_strequal(browser, "custom"));
 }
 
-static GtkWidget *
-browser_page(void)
+static void
+bind_browser_page(PidginPrefsWindow *win)
 {
-	GtkWidget *ret, *vbox, *hbox, *label, *entry, *browser_button;
-	GtkSizeGroup *sg;
-	GList *browsers = NULL;
-
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
-
-	vbox = pidgin_make_frame (ret, _("Browser Selection"));
-
 	if (purple_running_gnome()) {
 		gchar *path;
 
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-		label = gtk_label_new(_("Browser preferences are configured in GNOME preferences"));
-		gtk_container_add(GTK_CONTAINER(vbox), hbox);
-		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+		gtk_stack_set_visible_child_name(GTK_STACK(win->browser.stack),
+				"gnome");
 
 		path = g_find_program_in_path("gnome-control-center");
 		if (path != NULL) {
@@ -2561,67 +2562,52 @@ browser_page(void)
 			path = g_find_program_in_path("gnome-default-applications-properties");
 		}
 
-		if (path == NULL) {
-			label = gtk_label_new(NULL);
-			gtk_label_set_markup(GTK_LABEL(label),
-								 _("<b>Browser configuration program was not found.</b>"));
-			gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-		} else {
-			browser_button = gtk_button_new_with_mnemonic(_("Configure _Browser"));
-			g_signal_connect_data(G_OBJECT(browser_button), "clicked",
-			                      G_CALLBACK(browser_button_clicked_cb), path,
-			                      (GClosureNotify)g_free, 0);
-			gtk_box_pack_start(GTK_BOX(hbox), browser_button, FALSE, FALSE, 0);
-		}
-
-		gtk_widget_show_all(ret);
+		win->browser.gnome_program_path = path;
+		gtk_widget_set_visible(win->browser.gnome_not_found,
+				path == NULL);
+		gtk_widget_set_visible(win->browser.gnome_program,
+				path != NULL);
 	} else {
-		sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+		GList *browsers = NULL;
 
+		gtk_stack_set_visible_child_name(GTK_STACK(win->browser.stack),
+				"nongnome");
+
+		win->browser.browser.type = PURPLE_PREF_STRING;
+		win->browser.browser.key = PIDGIN_PREFS_ROOT "/browsers/browser";
 		browsers = get_available_browsers();
-		if (browsers != NULL) {
-			label = pidgin_prefs_dropdown_from_list(vbox,_("_Browser:"), PURPLE_PREF_STRING,
-											 PIDGIN_PREFS_ROOT "/browsers/browser",
-											 browsers);
-			g_list_free(browsers);
-			gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-			gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-			gtk_size_group_add_widget(sg, label);
+		pidgin_prefs_bind_dropdown_from_list(
+				&win->browser.browser,
+				browsers);
+		g_list_free(browsers);
 
-			hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-			label = pidgin_prefs_dropdown(hbox, _("_Open link in:"), PURPLE_PREF_INT,
-				PIDGIN_PREFS_ROOT "/browsers/place",
-				_("Browser default"), PIDGIN_BROWSER_DEFAULT,
-				_("New window"), PIDGIN_BROWSER_NEW_WINDOW,
-				_("New tab"), PIDGIN_BROWSER_NEW_TAB,
-				NULL);
-			gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-			gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-			gtk_size_group_add_widget(sg, label);
-			gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+		win->browser.place.type = PURPLE_PREF_INT;
+		win->browser.place.key = PIDGIN_PREFS_ROOT "/browsers/place";
+		pidgin_prefs_bind_dropdown(&win->browser.place);
 
-			if (purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/browser"), "custom"))
-				gtk_widget_set_sensitive(hbox, FALSE);
-			purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/browsers/browser",
-										browser_changed1_cb, hbox);
+		purple_prefs_connect_callback(prefs,
+				PIDGIN_PREFS_ROOT "/browsers/browser",
+				browser_changed1_cb,
+				win->browser.place_hbox);
+
+		gtk_entry_set_text(GTK_ENTRY(win->browser.manual_command),
+				purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/manual_command"));
+		purple_prefs_connect_callback(prefs,
+				PIDGIN_PREFS_ROOT "/browsers/browser",
+				browser_changed2_cb,
+				win->browser.manual_command_hbox);
+
+		if (purple_strequal(
+				purple_prefs_get_string(
+					PIDGIN_PREFS_ROOT "/browsers/browser"),
+				"custom")) {
+			gtk_widget_set_sensitive(win->browser.place_hbox,
+					FALSE);
+		} else {
+			gtk_widget_set_sensitive(win->browser.manual_command_hbox,
+					FALSE);
 		}
-
-		entry = gtk_entry_new();
-		gtk_entry_set_text(GTK_ENTRY(entry),
-						   purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/manual_command"));
-		g_signal_connect(G_OBJECT(entry), "focus-out-event",
-						 G_CALLBACK(manual_browser_set), NULL);
-		hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Manual:\n(%s for URL)"), sg, entry, TRUE, NULL);
-		if (!purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/browsers/browser"), "custom"))
-			gtk_widget_set_sensitive(hbox, FALSE);
-		purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/browsers/browser",
-				browser_changed2_cb, hbox);
-
-		gtk_widget_show_all(ret);
-		g_object_unref(sg);
 	}
-
-	return ret;
 }
 #endif /*_WIN32*/
 
@@ -4026,11 +4012,17 @@ prefs_notebook_init(PidginPrefsWindow *win)
 
 	prefs_notebook_add_page(notebook, _("Interface"), interface_page(), notebook_page++);
 
-#ifndef _WIN32
+#ifdef _WIN32
 	/* We use the registered default browser in windows */
+	gtk_widget_hide(win->browser.page);
+#else
 	/* if the user is running Mac OS X, hide the browsers tab */
-	if(purple_running_osx() == FALSE)
-		prefs_notebook_add_page(notebook, _("Browser"), browser_page(), notebook_page++);
+	if (purple_running_osx()) {
+		gtk_widget_hide(win->browser.page);
+	} else {
+		bind_browser_page(win);
+		notebook_page++;
+	}
 #endif
 
 	bind_conv_page(win);
@@ -4065,6 +4057,30 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow, notebook);
 	gtk_widget_class_bind_template_callback(widget_class, delete_prefs);
+
+	/* Browser page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.page);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.stack);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.gnome_not_found);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.gnome_program);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.browser.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.place_hbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.place.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.manual_command_hbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, browser.manual_command);
+	gtk_widget_class_bind_template_callback(widget_class,
+			browser_button_clicked_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			manual_browser_set);
 
 	/* Conversations page */
 	gtk_widget_class_bind_template_child(
