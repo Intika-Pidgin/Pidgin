@@ -70,11 +70,6 @@
 
 #include "gtk3compat.h"
 
-#define PROXYHOST 0
-#define PROXYPORT 1
-#define PROXYUSER 2
-#define PROXYPASS 3
-
 #define PREFS_OPTIMAL_ICON_SIZE 32
 
 /* 25MB */
@@ -136,6 +131,23 @@ struct _PidginPrefsWindow {
 		GtkWidget *turn_username;
 		GtkWidget *turn_password;
 	} network;
+
+	/* Proxy page */
+	struct {
+		GtkWidget *stack;
+		/* GNOME version */
+		GtkWidget *gnome_not_found;
+		GtkWidget *gnome_program;
+		gchar *gnome_program_path;
+		/* Non-GNOME version */
+		GtkWidget *socks4_remotedns;
+		PidginPrefCombo type;
+		GtkWidget *options;
+		GtkWidget *host;
+		GtkWidget *port;
+		GtkWidget *username;
+		GtkWidget *password;
+	} proxy;
 };
 
 /* Main dialog */
@@ -819,6 +831,7 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	voice_volume = NULL;
 	video_drawing_area = NULL;
 #endif
+	g_free(prefs->proxy.gnome_program_path);
 	prefs = NULL;
 }
 
@@ -2266,34 +2279,40 @@ static void
 proxy_changed_cb(const char *name, PurplePrefType type,
 				 gconstpointer value, gpointer data)
 {
-	GtkWidget *frame = data;
+	PidginPrefsWindow *win = data;
 	const char *proxy = value;
 
 	if (!purple_strequal(proxy, "none") && !purple_strequal(proxy, "envvar"))
-		gtk_widget_show_all(frame);
+		gtk_widget_show_all(win->proxy.options);
 	else
-		gtk_widget_hide(frame);
+		gtk_widget_hide(win->proxy.options);
 }
 
 static void
-proxy_print_option(GtkEntry *entry, int entrynum)
+proxy_print_option(GtkWidget *entry, PidginPrefsWindow *win)
 {
-	if (entrynum == PROXYHOST)
-		purple_prefs_set_string("/purple/proxy/host", gtk_entry_get_text(entry));
-	else if (entrynum == PROXYPORT)
-		purple_prefs_set_int("/purple/proxy/port", atoi(gtk_entry_get_text(entry)));
-	else if (entrynum == PROXYUSER)
-		purple_prefs_set_string("/purple/proxy/username", gtk_entry_get_text(entry));
-	else if (entrynum == PROXYPASS)
-		purple_prefs_set_string("/purple/proxy/password", gtk_entry_get_text(entry));
+	if (entry == win->proxy.host) {
+		purple_prefs_set_string("/purple/proxy/host",
+				gtk_entry_get_text(GTK_ENTRY(entry)));
+	} else if (entry == win->proxy.port) {
+		purple_prefs_set_int("/purple/proxy/port",
+				gtk_spin_button_get_value_as_int(
+					GTK_SPIN_BUTTON(entry)));
+	} else if (entry == win->proxy.username) {
+		purple_prefs_set_string("/purple/proxy/username",
+				gtk_entry_get_text(GTK_ENTRY(entry)));
+	} else if (entry == win->proxy.password) {
+		purple_prefs_set_string("/purple/proxy/password",
+				gtk_entry_get_text(GTK_ENTRY(entry)));
+	}
 }
 
 static void
-proxy_button_clicked_cb(GtkWidget *button, gchar *program)
+proxy_button_clicked_cb(GtkWidget *button, PidginPrefsWindow *win)
 {
 	GError *err = NULL;
 
-	if (g_spawn_command_line_async(program, &err))
+	if (g_spawn_command_line_async(win->proxy.gnome_program_path, &err))
 		return;
 
 	purple_notify_error(NULL, NULL, _("Cannot start proxy configuration program."), err->message, NULL);
@@ -2610,31 +2629,16 @@ browser_page(void)
 }
 #endif /*_WIN32*/
 
-static GtkWidget *
-proxy_page(void)
+static void
+bind_proxy_page(PidginPrefsWindow *win)
 {
-	GtkWidget *ret = NULL, *vbox = NULL, *hbox = NULL;
-	GtkWidget *grid = NULL, *entry = NULL, *proxy_button = NULL;
-	GtkWidget *label = NULL;
-	GtkWidget *prefs_proxy_frame = NULL;
 	PurpleProxyInfo *proxy_info;
-
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
-	vbox = pidgin_make_frame(ret, _("Proxy Server"));
-	prefs_proxy_frame = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
 
 	if(purple_running_gnome()) {
 		gchar *path = NULL;
 
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-		label = gtk_label_new(_("Proxy preferences are configured in "
-				"GNOME preferences"));
-		gtk_container_add(GTK_CONTAINER(vbox), hbox);
-		gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-		gtk_container_add(GTK_CONTAINER(vbox), hbox);
+		gtk_stack_set_visible_child_name(GTK_STACK(win->proxy.stack),
+				"gnome");
 
 		path = g_find_program_in_path("gnome-network-properties");
 		if (path == NULL)
@@ -2648,138 +2652,55 @@ proxy_page(void)
 			}
 		}
 
-		if (path == NULL) {
-			label = gtk_label_new(NULL);
-			gtk_label_set_markup(GTK_LABEL(label),
-					_("<b>Proxy configuration program was "
-					"not found.</b>"));
-			gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-		} else {
-			proxy_button = gtk_button_new_with_mnemonic(_("Configure _Proxy"));
-			g_signal_connect(G_OBJECT(proxy_button), "clicked",
-							 G_CALLBACK(proxy_button_clicked_cb),
-							 path);
-			gtk_box_pack_start(GTK_BOX(hbox), proxy_button, FALSE, FALSE, 0);
-		}
-
-		/* NOTE: path leaks, but only when the prefs window is destroyed,
-		         which is never */
-		gtk_widget_show_all(ret);
+		win->proxy.gnome_program_path = path;
+		gtk_widget_set_visible(win->proxy.gnome_not_found,
+				path == NULL);
+		gtk_widget_set_visible(win->proxy.gnome_program,
+				path != NULL);
 	} else {
-		GtkWidget *prefs_proxy_subframe = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+		gtk_stack_set_visible_child_name(GTK_STACK(win->proxy.stack),
+				"nongnome");
 
 		/* This is a global option that affects SOCKS4 usage even with
 		 * account-specific proxy settings */
-		pidgin_prefs_checkbox(_("Use remote _DNS with SOCKS4 proxies"),
-							  "/purple/proxy/socks4_remotedns", prefs_proxy_frame);
-		gtk_box_pack_start(GTK_BOX(vbox), prefs_proxy_frame, 0, 0, 0);
+		pidgin_prefs_bind_checkbox("/purple/proxy/socks4_remotedns",
+				win->proxy.socks4_remotedns);
 
-		pidgin_prefs_dropdown(prefs_proxy_frame, _("Proxy t_ype:"), PURPLE_PREF_STRING,
-					"/purple/proxy/type",
-					_("No proxy"), "none",
-					_("SOCKS 4"), "socks4",
-					_("SOCKS 5"), "socks5",
-					_("Tor/Privacy (SOCKS5)"), "tor",
-					_("HTTP"), "http",
-					_("Use Environmental Settings"), "envvar",
-					NULL);
-		gtk_box_pack_start(GTK_BOX(prefs_proxy_frame), prefs_proxy_subframe, 0, 0, 0);
+		win->proxy.type.type = PURPLE_PREF_STRING;
+		win->proxy.type.key = "/purple/proxy/type";
+		pidgin_prefs_bind_dropdown(&win->proxy.type);
 		proxy_info = purple_global_proxy_get_info();
 
-		gtk_widget_show_all(ret);
-
 		purple_prefs_connect_callback(prefs, "/purple/proxy/type",
-					    proxy_changed_cb, prefs_proxy_subframe);
+				proxy_changed_cb, win);
 
-		grid = gtk_grid_new();
-		gtk_container_set_border_width(GTK_CONTAINER(grid), 0);
-		gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
-		gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
-		gtk_container_add(GTK_CONTAINER(prefs_proxy_subframe), grid);
+		if (proxy_info != NULL) {
+			if (purple_proxy_info_get_host(proxy_info)) {
+				gtk_entry_set_text(GTK_ENTRY(win->proxy.host),
+						purple_proxy_info_get_host(proxy_info));
+			}
 
-		label = gtk_label_new_with_mnemonic(_("_Host:"));
-		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
-		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-		gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
+			if (purple_proxy_info_get_port(proxy_info) != 0) {
+				gtk_spin_button_set_value(
+						GTK_SPIN_BUTTON(win->proxy.port),
+						purple_proxy_info_get_port(proxy_info));
+			}
 
-		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
-		gtk_grid_attach(GTK_GRID(grid), entry, 1, 0, 1, 1);
+			if (purple_proxy_info_get_username(proxy_info) != NULL) {
+				gtk_entry_set_text(GTK_ENTRY(win->proxy.username),
+						purple_proxy_info_get_username(proxy_info));
+			}
 
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYHOST);
-
-		if (proxy_info != NULL && purple_proxy_info_get_host(proxy_info))
-			gtk_entry_set_text(GTK_ENTRY(entry),
-					   purple_proxy_info_get_host(proxy_info));
-
-		pidgin_set_accessible_label(entry, GTK_LABEL(label));
-
-		label = gtk_label_new_with_mnemonic(_("P_ort:"));
-		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
-		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-		gtk_grid_attach(GTK_GRID(grid), label, 2, 0, 1, 1);
-
-		entry = gtk_spin_button_new_with_range(0, 65535, 1);
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
-		gtk_grid_attach(GTK_GRID(grid), entry, 3, 0, 1, 1);
-
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYPORT);
-
-		if (proxy_info != NULL && purple_proxy_info_get_port(proxy_info) != 0) {
-			gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry),
-				purple_proxy_info_get_port(proxy_info));
+			if (purple_proxy_info_get_password(proxy_info) != NULL) {
+				gtk_entry_set_text(GTK_ENTRY(win->proxy.password),
+						purple_proxy_info_get_password(proxy_info));
+			}
 		}
-		pidgin_set_accessible_label(entry, GTK_LABEL(label));
-
-		label = gtk_label_new_with_mnemonic(_("User_name:"));
-		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
-		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-		gtk_grid_attach(GTK_GRID(grid), label, 0, 1, 1, 1);
-
-		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
-		gtk_grid_attach(GTK_GRID(grid), entry, 1, 1, 1, 1);
-
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYUSER);
-
-		if (proxy_info != NULL && purple_proxy_info_get_username(proxy_info) != NULL)
-			gtk_entry_set_text(GTK_ENTRY(entry),
-						   purple_proxy_info_get_username(proxy_info));
-
-		pidgin_set_accessible_label(entry, GTK_LABEL(label));
-
-		label = gtk_label_new_with_mnemonic(_("Pa_ssword:"));
-		gtk_label_set_xalign(GTK_LABEL(label), 1.0);
-		gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-		gtk_grid_attach(GTK_GRID(grid), label, 2, 1, 1, 1);
-
-		entry = gtk_entry_new();
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), entry);
-		gtk_widget_set_valign(entry, GTK_ALIGN_CENTER);
-		gtk_grid_attach(GTK_GRID(grid), entry, 3, 1, 1, 1);
-
-		gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
-		g_signal_connect(G_OBJECT(entry), "changed",
-				 G_CALLBACK(proxy_print_option), (void *)PROXYPASS);
-
-		if (proxy_info != NULL && purple_proxy_info_get_password(proxy_info) != NULL)
-			gtk_entry_set_text(GTK_ENTRY(entry),
-					   purple_proxy_info_get_password(proxy_info));
-		pidgin_set_accessible_label(entry, GTK_LABEL(label));
 
 		proxy_changed_cb("/purple/proxy/type", PURPLE_PREF_STRING,
 			purple_prefs_get_string("/purple/proxy/type"),
-			prefs_proxy_subframe);
-
+			win);
 	}
-
-	return ret;
 }
 
 static void
@@ -4121,7 +4042,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	notebook_page++;
 	bind_network_page(win);
 	notebook_page++;
-	prefs_notebook_add_page(notebook, _("Proxy"), proxy_page(), notebook_page++);
+	bind_proxy_page(win);
+	notebook_page++;
 	prefs_notebook_add_page(notebook, _("Password Storage"), keyring_page(), notebook_page++);
 
 	prefs_notebook_add_page(notebook, _("Sounds"), sound_page(), notebook_page++);
@@ -4203,6 +4125,33 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 			network_ip_changed);
 	gtk_widget_class_bind_template_callback(widget_class,
 			network_turn_server_changed_cb);
+
+	/* Proxy page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.stack);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.gnome_not_found);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.gnome_program);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			proxy.socks4_remotedns);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.type.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.options);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.host);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.port);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.username);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, proxy.password);
+	gtk_widget_class_bind_template_callback(widget_class,
+			proxy_button_clicked_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			proxy_print_option);
 }
 
 static void
