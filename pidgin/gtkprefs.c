@@ -1562,18 +1562,6 @@ formatting_clear_cb(PidginWebView *webview, void *data)
 	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/bgcolor", "");
 }
 
-static void
-conversation_usetabs_cb(const char *name, PurplePrefType type,
-						gconstpointer value, gpointer data)
-{
-	gboolean usetabs = GPOINTER_TO_INT(value);
-
-	if (usetabs)
-		gtk_widget_set_sensitive(GTK_WIDGET(data), TRUE);
-	else
-		gtk_widget_set_sensitive(GTK_WIDGET(data), FALSE);
-}
-
 
 #define CONVERSATION_CLOSE_ACCEL_PATH "<Actions>/ConversationActions/Close"
 
@@ -1678,6 +1666,7 @@ interface_page(void)
 	GtkWidget *vbox;
 	GtkWidget *vbox2;
 	GtkWidget *label;
+	GtkWidget *button;
 	GtkSizeGroup *sg;
 	GList *names = NULL;
 
@@ -1716,7 +1705,7 @@ interface_page(void)
 	/* All the tab options! */
 	vbox = pidgin_make_frame(ret, _("Tabs"));
 
-	pidgin_prefs_checkbox(_("Show IMs and chats in _tabbed windows"),
+	button = pidgin_prefs_checkbox(_("Show IMs and chats in _tabbed windows"),
 							PIDGIN_PREFS_ROOT "/conversations/tabs", vbox);
 
 	/*
@@ -1725,10 +1714,8 @@ interface_page(void)
 	 */
 	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 9);
 	gtk_box_pack_start(GTK_BOX(vbox), vbox2, FALSE, FALSE, 0);
-	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/conversations/tabs",
-	                            conversation_usetabs_cb, vbox2);
-	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/tabs"))
-		gtk_widget_set_sensitive(vbox2, FALSE);
+	g_object_bind_property(button, "active", vbox2, "sensitive",
+			G_BINDING_SYNC_CREATE);
 
 	pidgin_prefs_checkbox(_("Show close b_utton on tabs"),
 				PIDGIN_PREFS_ROOT "/conversations/close_on_tabs", vbox2);
