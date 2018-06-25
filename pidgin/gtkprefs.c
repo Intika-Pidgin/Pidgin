@@ -106,6 +106,27 @@ struct _PidginPrefsWindow {
 	/* Notebook */
 	GtkWidget *notebook;
 
+	/* Interface page */
+	struct {
+		PidginPrefCombo docklet;
+		struct {
+			PidginPrefCombo hide_new;
+		} im;
+		struct {
+			GtkWidget *minimize_new_convs;
+		} win32;
+		struct {
+			GtkWidget *tabs;
+			GtkWidget *tabs_vbox;
+			GtkWidget *close_on_tabs;
+			PidginPrefCombo tab_side;
+			PidginPrefCombo placement;
+		} conversations;
+		struct {
+			GtkWidget *escape;
+		} keys;
+	} interface;
+
 	/* Browser page */
 	struct {
 		GtkWidget *page;
@@ -1975,10 +1996,8 @@ escape_closes_conversation_cb(GtkWidget *w,
  * standard Gtk accelerator-changing mechanism.
  */
 static void
-keyboard_shortcuts(GtkWidget *page)
+keyboard_shortcuts(GtkWidget *checkbox)
 {
-	GtkWidget *vbox = pidgin_make_frame(page, _("Keyboard Shortcuts"));
-	GtkWidget *checkbox;
 	GtkAccelKey current = { 0, 0, 0 };
 	GtkAccelMap *map = gtk_accel_map_get();
 
@@ -1996,8 +2015,6 @@ keyboard_shortcuts(GtkWidget *page)
 		g_assert(escape.accel_key != 0);
 	}
 
-	checkbox = gtk_check_button_new_with_mnemonic(
-		_("Cl_ose conversations with the Escape key"));
 	gtk_accel_map_lookup_entry(CONVERSATION_CLOSE_ACCEL_PATH, &current);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbox),
 		accel_is_escape(&current));
@@ -2007,99 +2024,58 @@ keyboard_shortcuts(GtkWidget *page)
 
 	g_signal_connect_object(map, "changed::" CONVERSATION_CLOSE_ACCEL_PATH,
 		G_CALLBACK(conversation_close_accel_changed_cb), checkbox, (GConnectFlags)0);
-
-	gtk_box_pack_start(GTK_BOX(vbox), checkbox, FALSE, FALSE, 0);
 }
 
-static GtkWidget *
-interface_page(void)
+static void
+bind_interface_page(PidginPrefsWindow *win)
 {
-	GtkWidget *ret;
-	GtkWidget *vbox;
-	GtkWidget *vbox2;
-	GtkWidget *label;
-	GtkWidget *button;
-	GtkSizeGroup *sg;
 	GList *names = NULL;
 
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
-
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-
 	/* System Tray */
-	vbox = pidgin_make_frame(ret, _("System Tray Icon"));
-	label = pidgin_prefs_dropdown(vbox, _("_Show system tray icon:"), PURPLE_PREF_STRING,
-					PIDGIN_PREFS_ROOT "/docklet/show",
-					_("Always"), "always",
-					_("On unread messages"), "pending",
-					_("Never"), "never",
-					NULL);
-	gtk_size_group_add_widget(sg, label);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
+	win->interface.docklet.type = PURPLE_PREF_STRING;
+	win->interface.docklet.key = PIDGIN_PREFS_ROOT "/docklet/show";
+	pidgin_prefs_bind_dropdown(&win->interface.docklet);
 
-	vbox = pidgin_make_frame(ret, _("Conversation Window"));
-	label = pidgin_prefs_dropdown(vbox, _("_Hide new IM conversations:"),
-					PURPLE_PREF_STRING, PIDGIN_PREFS_ROOT "/conversations/im/hide_new",
-					_("Never"), "never",
-					_("When away"), "away",
-					_("Always"), "always",
-					NULL);
-	gtk_size_group_add_widget(sg, label);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
+	win->interface.im.hide_new.type = PURPLE_PREF_STRING;
+	win->interface.im.hide_new.key = PIDGIN_PREFS_ROOT "/conversations/im/hide_new";
+	pidgin_prefs_bind_dropdown(&win->interface.im.hide_new);
 
 #ifdef _WIN32
-	pidgin_prefs_checkbox(_("Minimi_ze new conversation windows"), PIDGIN_PREFS_ROOT "/win32/minimize_new_convs", vbox);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/win32/minimize_new_convs",
+			win->interface.win32.minimize_new_convs);
+#else
+	gtk_widget_hide(win->interface.win32.minimize_new_convs);
 #endif
 
 	/* All the tab options! */
-	vbox = pidgin_make_frame(ret, _("Tabs"));
-
-	button = pidgin_prefs_checkbox(_("Show IMs and chats in _tabbed windows"),
-							PIDGIN_PREFS_ROOT "/conversations/tabs", vbox);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/tabs",
+			win->interface.conversations.tabs);
 
 	/*
 	 * Connect a signal to the above preference.  When conversations are not
 	 * shown in a tabbed window then all tabbing options should be disabled.
 	 */
-	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 9);
-	gtk_box_pack_start(GTK_BOX(vbox), vbox2, FALSE, FALSE, 0);
-	g_object_bind_property(button, "active", vbox2, "sensitive",
+	g_object_bind_property(win->interface.conversations.tabs, "active",
+			win->interface.conversations.tabs_vbox, "sensitive",
 			G_BINDING_SYNC_CREATE);
 
-	pidgin_prefs_checkbox(_("Show close b_utton on tabs"),
-				PIDGIN_PREFS_ROOT "/conversations/close_on_tabs", vbox2);
+	pidgin_prefs_bind_checkbox(
+			PIDGIN_PREFS_ROOT "/conversations/close_on_tabs",
+			win->interface.conversations.close_on_tabs);
 
-	label = pidgin_prefs_dropdown(vbox2, _("_Placement:"), PURPLE_PREF_INT,
-					PIDGIN_PREFS_ROOT "/conversations/tab_side",
-					_("Top"), GTK_POS_TOP,
-					_("Bottom"), GTK_POS_BOTTOM,
-					_("Left"), GTK_POS_LEFT,
-					_("Right"), GTK_POS_RIGHT,
-					_("Left Vertical"), GTK_POS_LEFT|8,
-					_("Right Vertical"), GTK_POS_RIGHT|8,
-					NULL);
-	gtk_size_group_add_widget(sg, label);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
+	win->interface.conversations.tab_side.type = PURPLE_PREF_INT;
+	win->interface.conversations.tab_side.key = PIDGIN_PREFS_ROOT "/conversations/tab_side";
+	pidgin_prefs_bind_dropdown(&win->interface.conversations.tab_side);
 
+	win->interface.conversations.placement.type = PURPLE_PREF_STRING;
+	win->interface.conversations.placement.key = PIDGIN_PREFS_ROOT "/conversations/placement";
 	names = pidgin_conv_placement_get_options();
-	label = pidgin_prefs_dropdown_from_list(vbox2, _("N_ew conversations:"),
-				PURPLE_PREF_STRING, PIDGIN_PREFS_ROOT "/conversations/placement", names);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-
-	gtk_size_group_add_widget(sg, label);
-
+	pidgin_prefs_bind_dropdown_from_list(
+			&win->interface.conversations.placement,
+			names);
 	g_list_free(names);
 
-	keyboard_shortcuts(ret);
-
-	gtk_widget_show_all(ret);
-	g_object_unref(sg);
-	return ret;
+	keyboard_shortcuts(win->interface.keys.escape);
 }
 
 /* This is also Win32-specific, but must be visible for Glade binding. */
@@ -4010,7 +3986,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	GtkNotebook *notebook = GTK_NOTEBOOK(win->notebook);
 	int notebook_page = 0;
 
-	prefs_notebook_add_page(notebook, _("Interface"), interface_page(), notebook_page++);
+	bind_interface_page(win);
+	notebook_page++;
 
 #ifdef _WIN32
 	/* We use the registered default browser in windows */
@@ -4057,6 +4034,35 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow, notebook);
 	gtk_widget_class_bind_template_callback(widget_class, delete_prefs);
+
+	/* Interface page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.docklet.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.im.hide_new.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.win32.minimize_new_convs);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.conversations.tabs);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.conversations.tabs_vbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.conversations.close_on_tabs);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.conversations.tab_side.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.conversations.placement.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			interface.keys.escape);
 
 	/* Browser page */
 	gtk_widget_class_bind_template_child(
