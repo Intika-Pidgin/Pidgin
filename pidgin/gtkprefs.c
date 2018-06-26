@@ -212,6 +212,18 @@ struct _PidginPrefsWindow {
 		GtkWidget *username;
 		GtkWidget *password;
 	} proxy;
+
+	/* Away page */
+	struct {
+		PidginPrefCombo idle_reporting;
+		GtkWidget *mins_before_away;
+		GtkWidget *idle_hbox;
+		GtkWidget *away_when_idle;
+		PidginPrefCombo auto_reply;
+		GtkWidget *startup_current_status;
+		GtkWidget *startup_hbox;
+		GtkWidget *startup_label;
+	} away;
 };
 
 /* Main dialog */
@@ -3313,88 +3325,49 @@ set_startupstatus(PurpleSavedStatus *status)
 	purple_prefs_set_int("/purple/savedstatus/startup", purple_savedstatus_get_creation_time(status));
 }
 
-static GtkWidget *
-away_page(void)
+static void
+bind_away_page(PidginPrefsWindow *win)
 {
-	GtkWidget *ret;
-	GtkWidget *vbox;
-	GtkWidget *hbox;
-	GtkWidget *dd;
-	GtkWidget *label;
-	GtkWidget *button;
 	GtkWidget *menu;
-	GtkSizeGroup *sg;
-
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
-
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
 	/* Idle stuff */
-	vbox = pidgin_make_frame(ret, _("Idle"));
+	win->away.idle_reporting.type = PURPLE_PREF_STRING;
+	win->away.idle_reporting.key = "/purple/away/idle_reporting";
+	pidgin_prefs_bind_dropdown(&win->away.idle_reporting);
 
-	dd = pidgin_prefs_dropdown(vbox, _("_Report idle time:"),
-		PURPLE_PREF_STRING, "/purple/away/idle_reporting",
-		_("Never"), "none",
-		_("From last sent message"), "purple",
-		_("Based on keyboard or mouse use"), "system",
-		NULL);
-	gtk_size_group_add_widget(sg, dd);
-	gtk_label_set_xalign(GTK_LABEL(dd), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(dd), 0.5);
+	pidgin_prefs_bind_spin_button("/purple/away/mins_before_away",
+			win->away.mins_before_away);
 
-	pidgin_prefs_labeled_spin_button(vbox,
-			_("_Minutes before becoming idle:"), "/purple/away/mins_before_away",
-			1, 24 * 60, sg);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	button = pidgin_prefs_checkbox(_("Change to this status when _idle:"),
-						   "/purple/away/away_when_idle", hbox);
-	gtk_size_group_add_widget(sg, button);
+	pidgin_prefs_bind_checkbox("/purple/away/away_when_idle",
+			win->away.away_when_idle);
 
 	/* TODO: Show something useful if we don't have any saved statuses. */
 	menu = pidgin_status_menu(purple_savedstatus_get_idleaway(), G_CALLBACK(set_idle_away));
-	gtk_size_group_add_widget(sg, menu);
-	gtk_box_pack_start(GTK_BOX(hbox), menu, FALSE, FALSE, 0);
+	gtk_widget_show_all(menu);
+	gtk_box_pack_start(GTK_BOX(win->away.idle_hbox), menu, FALSE, FALSE, 0);
 
-	g_object_bind_property(button, "active", menu, "sensitive",
+	g_object_bind_property(win->away.away_when_idle, "active",
+			menu, "sensitive",
 			G_BINDING_SYNC_CREATE);
 
 	/* Away stuff */
-	vbox = pidgin_make_frame(ret, _("Away"));
-
-	dd = pidgin_prefs_dropdown(vbox, _("_Auto-reply:"),
-		PURPLE_PREF_STRING, "/purple/away/auto_reply",
-		_("Never"), "never",
-		_("When away"), "away",
-		_("When both away and idle"), "awayidle",
-		NULL);
-	gtk_size_group_add_widget(sg, dd);
-	gtk_label_set_xalign(GTK_LABEL(dd), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(dd), 0.5);
+	win->away.auto_reply.type = PURPLE_PREF_STRING;
+	win->away.auto_reply.key = "/purple/away/auto_reply";
+	pidgin_prefs_bind_dropdown(&win->away.auto_reply);
 
 	/* Signon status stuff */
-	vbox = pidgin_make_frame(ret, _("Status at Startup"));
-
-	button = pidgin_prefs_checkbox(_("Use status from last _exit at startup"),
-		"/purple/savedstatus/startup_current_status", vbox);
-	gtk_size_group_add_widget(sg, button);
+	pidgin_prefs_bind_checkbox("/purple/savedstatus/startup_current_status",
+			win->away.startup_current_status);
 
 	/* TODO: Show something useful if we don't have any saved statuses. */
 	menu = pidgin_status_menu(purple_savedstatus_get_startup(), G_CALLBACK(set_startupstatus));
-	gtk_size_group_add_widget(sg, menu);
-	g_object_bind_property(button, "active", menu, "sensitive",
+	gtk_widget_show_all(menu);
+	gtk_box_pack_start(GTK_BOX(win->away.startup_hbox), menu, FALSE, FALSE, 0);
+	gtk_label_set_mnemonic_widget(GTK_LABEL(win->away.startup_label), menu);
+	pidgin_set_accessible_label(menu, GTK_LABEL(win->away.startup_label));
+	g_object_bind_property(win->away.startup_current_status, "active",
+			win->away.startup_hbox, "sensitive",
 			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
-	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Status to a_pply at startup:"), sg, menu, TRUE, &label);
-	g_object_bind_property(button, "active", label, "sensitive",
-			G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
-
-	gtk_widget_show_all(ret);
-	g_object_unref(sg);
-
-	return ret;
 }
 
 #ifdef USE_VV
@@ -4013,7 +3986,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	prefs_notebook_add_page(notebook, _("Password Storage"), keyring_page(), notebook_page++);
 
 	prefs_notebook_add_page(notebook, _("Sounds"), sound_page(), notebook_page++);
-	prefs_notebook_add_page(notebook, _("Status / Idle"), away_page(), notebook_page++);
+	bind_away_page(win);
+	notebook_page++;
 	prefs_notebook_add_page(notebook, _("Themes"), theme_page(), notebook_page++);
 #ifdef USE_VV
 	prefs_notebook_add_page(notebook, _("Voice/Video"), vv_page(win), notebook_page++);
@@ -4231,6 +4205,28 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 			proxy_button_clicked_cb);
 	gtk_widget_class_bind_template_callback(widget_class,
 			proxy_print_option);
+
+	/* Away page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			away.idle_reporting.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			away.mins_before_away);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, away.away_when_idle);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, away.idle_hbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			away.auto_reply.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			away.startup_current_status);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, away.startup_hbox);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, away.startup_label);
 }
 
 static void
