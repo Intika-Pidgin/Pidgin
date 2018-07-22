@@ -775,7 +775,7 @@ bonjour_jabber_start(BonjourJabber *jdata)
 		addr4.in.sin_family = AF_INET;
 		addr4.in.sin_port = htons(jdata->port);
 		ipv4_port = start_serversocket_listening(jdata->port, jdata->socket,
-			&addr4, sizeof(addr4), FALSE, ipv6_port != -1);
+			&addr4, sizeof(addr4), FALSE, TRUE);
 		/* Open a watcher in the socket we have just opened */
 		if (ipv4_port > 0) {
 			jdata->watcher_id = purple_input_add(jdata->socket, PURPLE_INPUT_READ, _server_socket_handler, jdata);
