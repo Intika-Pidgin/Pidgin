@@ -1097,7 +1097,7 @@ if ENABLE_DOC
 	endif
 endif
 
-enable_debug = get_option('debug')
+enable_debug = get_option('console-logging')
 conf.set('DEBUG', enable_debug)
 
 # So that config.h may be found.

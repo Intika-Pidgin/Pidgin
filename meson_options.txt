@@ -106,5 +106,5 @@ option('cyrus-sasl', type : 'boolean', value : false,
 option('pixmaps-install', type : 'boolean', value : true,
        description : 'enable installation of pixmap files - Pidgin still needs them!')
 
-option('debug', type : 'boolean', value : false,
-       description : 'compile with debugging support')
+option('console-logging', type : 'boolean', value : false,
+       description : 'compile with console logging support')
