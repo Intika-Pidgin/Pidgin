@@ -9,9 +9,9 @@ pipelines:
           - meson talkatu talkatu/build
           - ninja -C talkatu/build install
           - ldconfig
-          - meson -Dsilc=false -Ddoc=true -Ddebug=true build
-          - ninja -C build
-          - ninja -C build test
+          - meson -Dsilc=false -Ddoc=true -Ddebug=true build-pipelines
+          - ninja -C build-pipelines
+          - ninja -C build-pipelines test
   branches:
     release-2.x.y:
       - step:
