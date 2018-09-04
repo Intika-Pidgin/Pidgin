@@ -307,6 +307,7 @@ if get_option('gtkui')
 	conf.set('HAVE_PANGO14', pango.found())
 
 	webkit = dependency('webkitgtk-3.0', version : '>= 1.3.7')
+	talkatu = dependency('talkatu', version: '>=0.1.0')
 
 	#######################################################################
 	# Check if we should compile with enchant support
