@@ -6,7 +6,7 @@ pipelines:
         script:
           - set -ex
           - hg clone https://bitbucket.org/pidgin/talkatu
-          - meson talkatu talkatu/build
+          - meson -Dprefix=/usr talkatu talkatu/build
           - ninja -C talkatu/build install
           - ldconfig
           - meson -Dsilc=false -Ddoc=true -Ddebug=true build-pipelines
