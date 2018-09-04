@@ -763,7 +763,7 @@ do_popup_menu(WebKitWebView *webview, GdkEvent *event, int context,
 		WebKitDOMNode *link_node = node;
 
 		while (link_node && !WEBKIT_DOM_IS_HTML_ANCHOR_ELEMENT(link_node)) {
-			link_node = webkit_dom_node_get_parent_node(node);
+			link_node = webkit_dom_node_get_parent_node(link_node);
 		}
 
 		if (uri && link_node)
