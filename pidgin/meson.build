@@ -167,6 +167,7 @@ if ENABLE_GTK
 	    	IOKIT,
 	    	json,
 	    	math,
+	    	talkatu,
 	    	webkit,
 	    	x11,
 	    	libpurple_dep,
