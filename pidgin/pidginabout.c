@@ -90,8 +90,7 @@ _pidgin_about_dialog_load_application_name(PidginAboutDialog *about) {
 static void
 _pidgin_about_dialog_load_main_page(PidginAboutDialog *about) {
 	PidginAboutDialogPrivate *priv = pidgin_about_dialog_get_instance_private(about);
-	GtkTextMark *mark = NULL;
-	GtkTextIter insert;
+	GtkTextIter start;
 	GInputStream *istream = NULL;
 	GString *str = NULL;
 	gchar buffer[8192];
@@ -112,12 +111,11 @@ _pidgin_about_dialog_load_main_page(PidginAboutDialog *about) {
 		size += read;
 	}
 
-	mark = gtk_text_buffer_get_insert(priv->main_buffer);
-	gtk_text_buffer_get_iter_at_mark(priv->main_buffer, &insert, mark);
+	gtk_text_buffer_get_start_iter(priv->main_buffer, &start);
 
 	talkatu_markdown_buffer_insert_markdown(
 		TALKATU_MARKDOWN_BUFFER(priv->main_buffer),
-		&insert,
+		&start,
 		str->str,
 		size
 	);
