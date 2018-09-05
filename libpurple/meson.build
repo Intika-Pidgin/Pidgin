@@ -475,6 +475,9 @@ if enable_introspection
 	    export_packages : 'purple-@0@'.format(purple_major_version),
 	    nsversion : '@0@.@1@'.format(purple_major_version,
 	                                 purple_minor_version),
+	    include_directories : [
+	    	include_directories(join_paths(gplugin.get_pkgconfig_variable('prefix'), 'share/gir-1.0')),
+	    ],
 	    install : true)
 endif
 
