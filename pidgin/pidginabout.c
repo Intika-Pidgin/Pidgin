@@ -18,13 +18,13 @@
  */
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <json-glib/json-glib.h>
+#include <talkatu.h>
 
 #include "package_revision.h"
 #include "pidginabout.h"
 #include "pidginresources.h"
 #include "internal.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 
 #include <stdio.h>
 
@@ -54,6 +54,7 @@ struct _PidginAboutDialogPrivate {
 	GtkWidget *stack;
 
 	GtkWidget *main_scrolled_window;
+	GtkTextBuffer *main_buffer;
 
 	GtkWidget *developers_page;
 	GtkWidget *developers_treeview;
@@ -67,6 +68,8 @@ struct _PidginAboutDialogPrivate {
 	GtkWidget *build_info_treeview;
 	GtkTreeStore *build_info_store;
 };
+
+G_DEFINE_TYPE_WITH_PRIVATE(PidginAboutDialog, pidgin_about_dialog, GTK_TYPE_DIALOG);
 
 /******************************************************************************
  * Helpers
@@ -86,23 +89,18 @@ _pidgin_about_dialog_load_application_name(PidginAboutDialog *about) {
 
 static void
 _pidgin_about_dialog_load_main_page(PidginAboutDialog *about) {
-	GtkWidget *webview = NULL;
+	PidginAboutDialogPrivate *priv = pidgin_about_dialog_get_instance_private(about);
+	GtkTextMark *mark = NULL;
+	GtkTextIter insert;
 	GInputStream *istream = NULL;
 	GString *str = NULL;
 	gchar buffer[8192];
-	gssize read = 0;
-
-	/* create our webview */
-	webview = pidgin_webview_new(FALSE);
-	pidgin_setup_webview(webview);
-	pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(webview), PIDGIN_WEBVIEW_ALL ^ PIDGIN_WEBVIEW_SMILEY);
-
-	gtk_container_add(GTK_CONTAINER(about->priv->main_scrolled_window), webview);
+	gssize read = 0, size = 0;
 
 	/* now load the html */
 	istream = g_resource_open_stream(
 		pidgin_get_resource(),
-		"/im/pidgin/Pidgin/About/about.html",
+		"/im/pidgin/Pidgin/About/about.md",
 		G_RESOURCE_LOOKUP_FLAGS_NONE,
 		NULL
 	);
@@ -111,9 +109,18 @@ _pidgin_about_dialog_load_main_page(PidginAboutDialog *about) {
 
 	while((read = g_input_stream_read(istream, buffer, sizeof(buffer), NULL, NULL)) > 0) {
 		g_string_append_len(str, (gchar *)buffer, read);
+		size += read;
 	}
 
-	pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), str->str);
+	mark = gtk_text_buffer_get_insert(priv->main_buffer);
+	gtk_text_buffer_get_iter_at_mark(priv->main_buffer, &insert, mark);
+
+	talkatu_markdown_buffer_insert_markdown(
+		TALKATU_MARKDOWN_BUFFER(priv->main_buffer),
+		&insert,
+		str->str,
+		size
+	);
 
 	g_string_free(str, TRUE);
 
@@ -391,9 +398,6 @@ _pidgin_about_dialog_load_build_configuration(PidginAboutDialog *about) {
 #ifdef MESON_ARGS
 	_pidgin_about_dialog_add_build_args(about, "Meson Arguments", MESON_ARGS);
 #endif /* MESON_ARGS */
-#ifdef CONFIG_ARGS
-	_pidgin_about_dialog_add_build_args(about, "Configure Arguments", CONFIG_ARGS);
-#endif /* CONFIG_ARGS */
 
 	_pidgin_about_dialog_load_build_info(about);
 	_pidgin_about_dialog_load_runtime_info(about);
@@ -410,8 +414,6 @@ _pidgin_about_dialog_close(GtkWidget *b, gpointer data) {
 /******************************************************************************
  * GObject Stuff
  *****************************************************************************/
-G_DEFINE_TYPE_WITH_PRIVATE(PidginAboutDialog, pidgin_about_dialog, GTK_TYPE_DIALOG);
-
 static void
 pidgin_about_dialog_class_init(PidginAboutDialogClass *klass) {
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
@@ -426,6 +428,7 @@ pidgin_about_dialog_class_init(PidginAboutDialogClass *klass) {
 	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, stack);
 
 	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, main_scrolled_window);
+	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, main_buffer);
 
 	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, developers_page);
 	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, developers_store);
