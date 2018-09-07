@@ -920,7 +920,7 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 
-	/* Add the webview */
+	/* Add the view */
 	sw = gtk_scrolled_window_new(NULL, NULL);
 	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
 
