@@ -629,19 +629,17 @@ free_appdata_info_locked (PurpleMediaAppDataInfo *info)
 	g_free (info->session_id);
 	g_free (info->participant);
 
-	/* This lets the potential read or write callbacks waiting for appdata_mutex
-	 * know the info structure has been destroyed. */
-	info->readable_cb_token = 0;
-	info->writable_cb_token = 0;
+	/* Zeroing out *_cb_token lets the read or write callbacks waiting for
+	 * appdata_mutex know the info structure has been destroyed. */
 
-	if (info->readable_timer_id) {
+	if (info->readable_cb_token) {
 		purple_timeout_remove (info->readable_timer_id);
-		info->readable_timer_id = 0;
+		info->readable_cb_token = 0;
 	}
 
-	if (info->writable_timer_id) {
+	if (info->writable_cb_token) {
 		purple_timeout_remove (info->writable_timer_id);
-		info->writable_timer_id = 0;
+		info->writable_cb_token = 0;
 	}
 
 	if (info->current_sample)
