@@ -32,7 +32,6 @@
 
 #include "pidgin.h"
 #include "gtkconv.h"
-#include "gtkwebview.h"
 
 #include <stdlib.h>
 #include <string.h>
