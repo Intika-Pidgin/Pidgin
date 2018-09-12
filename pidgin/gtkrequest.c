@@ -143,19 +143,17 @@ input_response_cb(GtkDialog *dialog, gint id, PidginRequestData *data)
 	generic_response_start(data);
 
 	if (data->u.input.multiline || purple_strequal(data->u.input.hint, "html")) {
-		GtkTextIter start_iter, end_iter;
 		GtkTextBuffer *buffer =
 			gtk_text_view_get_buffer(GTK_TEXT_VIEW(data->u.input.entry));
 
-		gtk_text_buffer_get_start_iter(buffer, &start_iter);
-		gtk_text_buffer_get_end_iter(buffer, &end_iter);
-
 		if (purple_strequal(data->u.input.hint, "html")) {
-			GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(data->u.input.entry));
-
 			multiline_value = talkatu_markup_get_html(buffer, NULL);
-			printf("multiple value: '%s'\n", multiline_value);
 		} else {
+			GtkTextIter start_iter, end_iter;
+
+			gtk_text_buffer_get_start_iter(buffer, &start_iter);
+			gtk_text_buffer_get_end_iter(buffer, &end_iter);
+
 			multiline_value = gtk_text_buffer_get_text(buffer, &start_iter, &end_iter,
 										 FALSE);
 		}
@@ -588,8 +586,6 @@ pidgin_request_input(const char *title, const char *primary,
 		gtk_widget_set_name(view, "pidgin_request_view");
 		gtk_box_pack_start(GTK_BOX(vbox), editor, TRUE, TRUE, 0);
 		gtk_widget_show(editor);
-
-		purple_debug_info("gtk-request-crap", "default value: %s", default_value);
 
 		if (purple_strequal(data->u.input.hint, "html")) {
 			buffer = talkatu_html_buffer_new();

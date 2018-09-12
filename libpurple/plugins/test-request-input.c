@@ -35,7 +35,6 @@
 
 static void
 plugin_input_callback(const gchar *pref, const gchar *text) {
-	purple_debug_info("test-request-input", "setting %s to %s", pref, text);
 	purple_prefs_set_string(pref, text);
 }
 
