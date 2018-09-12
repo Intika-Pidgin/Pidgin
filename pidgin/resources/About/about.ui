@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated with glade 3.22.1 -->
 <interface>
+  <requires lib="Talkatu" version="0.0"/>
   <requires lib="gtk+" version="3.10"/>
   <object class="GtkTreeStore" id="build_info_store">
     <columns>
@@ -17,6 +18,10 @@
       <!-- column-name align -->
       <column type="gfloat"/>
     </columns>
+  </object>
+  <object class="TalkatuTagTable" id="main_tag_table"/>
+  <object class="TalkatuMarkdownBuffer" id="main_buffer">
+    <property name="tag_table">main_tag_table</property>
   </object>
   <object class="GtkTreeStore" id="translators_store">
     <columns>
@@ -135,7 +140,13 @@
                     <property name="hscrollbar_policy">never</property>
                     <property name="shadow_type">in</property>
                     <child>
-                      <placeholder/>
+                      <object class="TalkatuView" id="main_page">
+                        <property name="can_focus">True</property>
+                        <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                        <property name="editable">False</property>
+                        <property name="wrap_mode">word</property>
+                        <property name="buffer">main_buffer</property>
+                      </object>
                     </child>
                   </object>
                   <packing>

@@ -3,7 +3,7 @@
   <gresource prefix="/im/pidgin/Pidgin/">
     <file>logo.png</file>
     <file compressed="true">About/about.ui</file>
-    <file compressed="true">About/about.html</file>
+    <file compressed="true">About/about.md</file>
     <file compressed="true">About/credits.json</file>
     <file compressed="true">Debug/debug.ui</file>
     <file compressed="true">Debug/filter-popover.ui</file>
