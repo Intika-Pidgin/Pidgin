@@ -18,10 +18,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#include <gdk/gdkkeysyms.h>
+#include <talkatu.h>
+
 #include "internal.h"
 #include "pidgin.h"
 
-#include <gdk/gdkkeysyms.h>
 
 #include "account.h"
 #include "connection.h"
@@ -35,7 +37,6 @@
 #include "gtknotify.h"
 #include "gtkpounce.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 
 typedef struct
 {
@@ -882,8 +883,9 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	GtkWidget *vbox;
 	GtkWidget *label;
 	GtkWidget *button;
-	GtkWidget *web_view;
-	GtkWidget *frame;
+	GtkWidget *sw;
+	GtkWidget *view;
+	GtkTextBuffer *buffer;
 	char label_text[2048];
 	char *linked_text, *primary_esc, *secondary_esc;
 
@@ -918,12 +920,16 @@ pidgin_notify_formatted(const char *title, const char *primary,
 	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 	gtk_widget_show(label);
 
-	/* Add the webview */
-	frame = pidgin_create_webview(FALSE, &web_view, NULL);
-	gtk_widget_set_name(web_view, "pidgin_notify_webview");
-	gtk_widget_set_size_request(web_view, 300, 250);
-	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
-	gtk_widget_show(frame);
+	/* Add the view */
+	sw = gtk_scrolled_window_new(NULL, NULL);
+	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
+
+	buffer = talkatu_html_buffer_new();
+	view = talkatu_view_new_with_buffer(buffer);
+	gtk_container_add(GTK_CONTAINER(sw), view);
+	gtk_widget_set_name(view, "pidgin_notify_view");
+	gtk_widget_set_size_request(view, 300, 250);
+	gtk_widget_show_all(sw);
 
 	/* Add the Close button. */
 	button = gtk_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
@@ -936,10 +942,10 @@ pidgin_notify_formatted(const char *title, const char *primary,
 
 	/* Make sure URLs are clickable */
 	linked_text = purple_markup_linkify(text);
-	pidgin_webview_load_html_string(PIDGIN_WEBVIEW(web_view), linked_text);
+	talkatu_markup_set_html(TALKATU_BUFFER(buffer), linked_text, -1);
 	g_free(linked_text);
 
-	g_object_set_data(G_OBJECT(window), "webview-widget", web_view);
+	g_object_set_data(G_OBJECT(window), "view-widget", view);
 
 	/* Show the window */
 	pidgin_auto_parent_window(window);
@@ -1194,9 +1200,10 @@ pidgin_notify_userinfo(PurpleConnection *gc, const char *who,
 	info = purple_notify_user_info_get_text_with_newline(user_info, "<br />");
 	pinfo = g_hash_table_lookup(userinfo, key);
 	if (pinfo != NULL) {
-		GtkWidget *webview = g_object_get_data(G_OBJECT(pinfo->window), "webview-widget");
+		GtkWidget *view = g_object_get_data(G_OBJECT(pinfo->window), "view-widget");
+		GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
 		char *linked_text = purple_markup_linkify(info);
-		pidgin_webview_load_html_string(PIDGIN_WEBVIEW(webview), linked_text);
+		talkatu_markup_set_html(TALKATU_BUFFER(buffer), linked_text, -1);
 		g_free(linked_text);
 		g_free(key);
 		ui_handle = pinfo->window;
