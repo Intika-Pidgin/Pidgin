@@ -44,6 +44,7 @@ libpidgin_SOURCES = [
 	'minidialog.c',
 	'pidginabout.c',
 	'pidgindebug.c',
+	'pidgintalkatu.c',
 	'pidgintooltip.c',
 ]
 
@@ -94,6 +95,7 @@ libpidgin_headers = [
 	'minidialog.h',
 	'pidginabout.h',
 	'pidgindebug.h',
+	'pidgintalkatu.h',
 	'pidgintooltip.h',
 	'pidgin.h',
 ]
