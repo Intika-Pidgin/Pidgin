@@ -130,9 +130,9 @@ make_string_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 				view = talkatu_editor_get_view(TALKATU_EDITOR(editor));
 
 				if ((format & PURPLE_STRING_FORMAT_TYPE_HTML) != 0) {
-					buffer = talkatu_buffer_new(NULL);
-				} else {
 					buffer = talkatu_html_buffer_new();
+				} else {
+					buffer = talkatu_buffer_new(NULL);
 				}
 
 				gtk_text_view_set_buffer(GTK_TEXT_VIEW(view), buffer);
