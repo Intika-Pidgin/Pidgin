@@ -2386,7 +2386,7 @@ purple_markup_strip_html(const char *str)
 					{
 						str2[j++] = ' ';
 						str2[j++] = '(';
-						g_memmove(str2 + j, href, hrlen);
+						memmove(str2 + j, href, hrlen);
 						j += hrlen;
 						str2[j++] = ')';
 						g_free(href);

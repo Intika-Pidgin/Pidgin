@@ -85,11 +85,6 @@ if PLUGINS
 	    name_prefix : '',
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
-	webkit_plugin = library('webkit', 'webkit.c',
-	    dependencies : [webkit, libpurple_dep, libpidgin_dep, glib],
-	    name_prefix : '',
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
-
 	xmppconsole = library('xmppconsole', 'xmppconsole.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
