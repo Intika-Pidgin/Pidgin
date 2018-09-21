@@ -46,11 +46,10 @@ entry_cb(GtkWidget *entry, gpointer data) {
 
 
 static void
-multiline_cb(GtkWidget *view, gpointer data) {
-	GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
+multiline_cb(GtkTextBuffer *buffer, gpointer data) {
 	gchar *pref = NULL, *text = NULL;
 
-	pref = g_object_get_data(G_OBJECT(view), "pref-key");
+	pref = g_object_get_data(G_OBJECT(buffer), "pref-key");
 	g_return_if_fail(pref);
 
 	text = talkatu_markup_get_html(buffer, NULL);
@@ -147,11 +146,14 @@ make_string_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 
 				gtk_label_set_mnemonic_widget(GTK_LABEL(gtk_label), view);
 				gtk_widget_show_all(editor);
-				g_object_set_data(G_OBJECT(view), "pref-key", (gpointer)pref_name);
-				g_signal_connect(G_OBJECT(view), "changed",
+				g_object_set_data(G_OBJECT(buffer), "pref-key", (gpointer)pref_name);
+				g_signal_connect(G_OBJECT(buffer), "changed",
 				                 G_CALLBACK(multiline_cb), NULL);
+				#warning fix this when talkatu has a solution
+				/*
 				g_signal_connect(G_OBJECT(view), "format-toggled",
 				                 G_CALLBACK(multiline_cb), NULL);
+				*/
 				gtk_box_pack_start(GTK_BOX(hbox), editor, TRUE, TRUE, 0);
 			}
 
