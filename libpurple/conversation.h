@@ -125,6 +125,8 @@ typedef enum
  * @PURPLE_MESSAGE_NOTIFY:      Message is a notification
  * @PURPLE_MESSAGE_NO_LINKIFY:  Message should not be auto-linkified
  * @PURPLE_MESSAGE_INVISIBLE:   Message should not be displayed
+ * @PURPLE_MESSAGE_REMOTE_SEND: Message sent from another location,
+ *                              not an echo of a local one
  *
  * Flags applicable to a message. Most will have send, recv or system.
  */
@@ -143,7 +145,8 @@ typedef enum /*< flags >*/
 	PURPLE_MESSAGE_IMAGES      = 0x1000,
 	PURPLE_MESSAGE_NOTIFY      = 0x2000,
 	PURPLE_MESSAGE_NO_LINKIFY  = 0x4000,
-	PURPLE_MESSAGE_INVISIBLE   = 0x8000
+	PURPLE_MESSAGE_INVISIBLE   = 0x8000,
+	PURPLE_MESSAGE_REMOTE_SEND = 0x10000
 } PurpleMessageFlags;
 
 #include <glib.h>
