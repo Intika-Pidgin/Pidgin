@@ -14,7 +14,6 @@ ignore_hfiles = [
     'internal.h',
     'purple-client.h',
     'purple-client-bindings.h',
-    'valgrind.h'
 ]
 
 # Extra options to supply to gtkdoc-scan.
