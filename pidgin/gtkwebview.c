@@ -194,9 +194,21 @@ webview_resource_loading(WebKitWebView *webview,
 		return;
 
 	if (img != NULL) {
+		/* At the time of this comment, purple_image_get_path()
+		 * always returns something, whether it's the actual
+		 * path or a unique identifier, such as derived from a
+		 * hash. That API will probably be reviewed after which
+		 * this code can probably be simplified.
+		 */
+		gchar *uri = NULL;
+
 		path = purple_image_get_path(img);
+
 		if (path) {
-			gchar *uri = g_filename_to_uri(path, NULL, NULL);
+			uri = g_filename_to_uri(path, NULL, NULL);
+		}
+
+		if (uri != NULL) {
 			webkit_network_request_set_uri(request, uri);
 			g_free(uri);
 		} else {
