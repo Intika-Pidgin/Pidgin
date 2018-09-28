@@ -195,49 +195,9 @@ mainloop_sighandler(GIOChannel *source, GIOCondition cond, gpointer data)
 static int
 ui_main(void)
 {
-#ifndef _WIN32
-	GList *icons = NULL;
-	GdkPixbuf *icon = NULL;
-	char *icon_path;
-	gsize i;
-	struct {
-		const char *dir;
-		const char *filename;
-	} icon_sizes[] = {
-		{"16x16", "pidgin.png"},
-		{"24x24", "pidgin.png"},
-		{"32x32", "pidgin.png"},
-		{"48x48", "pidgin.png"},
-		{"scalable", "pidgin.svg"}
-	};
-
-#endif
-
 	pidgin_blist_setup_sort_methods();
 
-#ifndef _WIN32
-	/* use the nice PNG icon for all the windows */
-	for(i=0; i<G_N_ELEMENTS(icon_sizes); i++) {
-		icon_path = g_build_filename(PURPLE_DATADIR, "icons", "hicolor",
-			icon_sizes[i].dir, "apps", icon_sizes[i].filename, NULL);
-		icon = pidgin_pixbuf_new_from_file(icon_path);
-		g_free(icon_path);
-		if (icon) {
-			icons = g_list_append(icons,icon);
-		} else {
-			purple_debug_error("ui_main",
-					"Failed to load the default window icon (%spx version)!\n", icon_sizes[i].dir);
-		}
-	}
-	if(NULL == icons) {
-		purple_debug_error("ui_main", "Unable to load any size of default window icon!\n");
-	} else {
-		gtk_window_set_default_icon_list(icons);
-
-		g_list_foreach(icons, (GFunc)g_object_unref, NULL);
-		g_list_free(icons);
-	}
-#endif
+	gtk_window_set_default_icon_name("pidgin");
 
 	return 0;
 }
