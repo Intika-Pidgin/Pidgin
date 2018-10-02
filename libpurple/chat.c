@@ -22,7 +22,6 @@
  */
 #include "internal.h"
 #include "chat.h"
-#include "dbus-maybe.h"
 #include "util.h"
 
 #define PURPLE_CHAT_GET_PRIVATE(obj) \
@@ -221,7 +220,6 @@ purple_chat_get_property(GObject *obj, guint param_id, GValue *value,
 static void
 purple_chat_init(GTypeInstance *instance, gpointer klass)
 {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_CHAT(instance), PurpleChat);
 }
 
 /* Called when done constructing */
@@ -248,8 +246,6 @@ purple_chat_finalize(GObject *object)
 
 	g_free(priv->alias);
 	g_hash_table_destroy(priv->components);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(object);
 
 	G_OBJECT_CLASS(blistnode_parent_class)->finalize(object);
 }

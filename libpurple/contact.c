@@ -22,7 +22,6 @@
  */
 
 #include "contact.h"
-#include "dbus-maybe.h"
 #include "internal.h" /* TODO: this needs to die */
 #include "util.h"
 
@@ -301,8 +300,6 @@ purple_contact_init(GTypeInstance *instance, gpointer klass)
 
 	if (ops && ops->new_node)
 		ops->new_node(PURPLE_BLIST_NODE(contact));
-
-	PURPLE_DBUS_REGISTER_POINTER(contact, PurpleContact);
 }
 
 /* GObject finalize function */
@@ -310,8 +307,6 @@ static void
 purple_contact_finalize(GObject *object)
 {
 	g_free(PURPLE_CONTACT_GET_PRIVATE(object)->alias);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(object);
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }

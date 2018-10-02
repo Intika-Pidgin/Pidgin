@@ -23,7 +23,6 @@
 #include "internal.h"
 #include "buddyicon.h"
 #include "conversation.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "image.h"
 #include "util.h"
@@ -292,7 +291,6 @@ purple_buddy_icon_create(PurpleAccount *account, const char *username)
 	/* This does not zero.  See purple_buddy_icon_new() for
 	 * information on which function allocates which member. */
 	icon = g_slice_new(PurpleBuddyIcon);
-	PURPLE_DBUS_REGISTER_POINTER(icon, PurpleBuddyIcon);
 
 	icon->account = account;
 	icon->username = g_strdup(username);
@@ -372,7 +370,6 @@ purple_buddy_icon_unref(PurpleBuddyIcon *icon)
 		g_free(icon->checksum);
 		g_object_unref(icon->img);
 
-		PURPLE_DBUS_UNREGISTER_POINTER(icon);
 		g_slice_free(PurpleBuddyIcon, icon);
 	}
 }

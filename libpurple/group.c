@@ -21,7 +21,6 @@
  *
  */
 
-#include "dbus-maybe.h"
 #include "group.h"
 #include "internal.h" /* TODO: we need to kill this */
 
@@ -288,7 +287,6 @@ purple_group_get_property(GObject *obj, guint param_id, GValue *value,
 /* GObject initialization function */
 static void
 purple_group_init(GTypeInstance *instance, gpointer klass) {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_GROUP(instance), PurpleGroup);
 }
 
 /* Called when done constructing */
@@ -310,8 +308,6 @@ purple_group_constructed(GObject *object) {
 static void
 purple_group_finalize(GObject *object) {
 	g_free(PURPLE_GROUP_GET_PRIVATE(object)->name);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(object);
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }

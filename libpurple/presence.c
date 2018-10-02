@@ -21,7 +21,6 @@
 #include "internal.h"
 #include "glibcompat.h"
 #include "debug.h"
-#include "dbus-maybe.h"
 #include "presence.h"
 
 #define PURPLE_PRESENCE_GET_PRIVATE(obj) \
@@ -418,8 +417,6 @@ purple_presence_get_property(GObject *obj, guint param_id, GValue *value,
 static void
 purple_presence_init(GTypeInstance *instance, gpointer klass)
 {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_PRESENCE(instance), PurplePresence);
-
 	PURPLE_PRESENCE_GET_PRIVATE(instance)->status_table =
 				g_hash_table_new_full(g_str_hash, g_str_equal,
 				g_free, NULL);
@@ -447,8 +444,6 @@ purple_presence_finalize(GObject *object)
 	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(object);
 
 	g_hash_table_destroy(priv->status_table);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(object);
 
 	parent_class->finalize(object);
 }
