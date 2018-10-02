@@ -341,11 +341,24 @@ static gint
 pidgin_handle_local_options_cb(GApplication *app, GVariantDict *options,
 		gpointer user_data)
 {
+#if !GLIB_CHECK_VERSION(2, 48, 0)
+	gchar *app_id = NULL;
+#endif
+
 	if (g_variant_dict_contains(options, "version")) {
 		printf("%s %s (libpurple %s)\n", PIDGIN_NAME, DISPLAY_VERSION,
 		                                 purple_core_get_version());
 		return 0;
 	}
+
+#if !GLIB_CHECK_VERSION(2, 48, 0)
+	if (g_variant_dict_lookup(options, "gapplication-app-id",
+			"s", &app_id)) {
+		g_variant_dict_remove(options, "gapplication-app-id");
+		g_application_set_application_id(app, app_id);
+		g_free(app_id);
+	}
+#endif
 
 	return -1;
 }
@@ -374,6 +387,13 @@ login_opt_arg_func(const gchar *option_name, const gchar *value,
 }
 
 static GOptionEntry option_entries[] = {
+#if !GLIB_CHECK_VERSION(2, 48, 0)
+	/* Support G_APPLICATION_CAN_OVERRIDE_APP_ID functionality
+	 * even though we don't depend on version 2.48 yet
+	 */
+	{"gapplication-app-id", '\0', 0, G_OPTION_ARG_STRING, NULL,
+		N_("Override the application's ID") },
+#endif
 	{"config", 'c', 0,
 		G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
 		N_("use DIR for config files"), N_("DIR")},
@@ -682,7 +702,12 @@ int pidgin_start(int argc, char *argv[])
 #endif
 
 	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
-				G_APPLICATION_FLAGS_NONE));
+#if GLIB_CHECK_VERSION(2, 48, 0)
+				G_APPLICATION_CAN_OVERRIDE_APP_ID
+#else
+				G_APPLICATION_FLAGS_NONE
+#endif
+				));
 
 	summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
 	g_application_set_option_context_summary(app, summary);
