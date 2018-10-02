@@ -12,10 +12,6 @@ ignore_hfiles = [
     'dbus-types.h',
     'glibcompat.h',
     'internal.h',
-    'purple-client.h',
-    'purple-client-bindings.h',
-    'purple-client-bindings1.h',
-    'purple-client-bindings2.h',
 ]
 
 # Extra options to supply to gtkdoc-scan.

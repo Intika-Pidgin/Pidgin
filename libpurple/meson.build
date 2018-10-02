@@ -329,47 +329,6 @@ dbus_signals_c = custom_target('dbus_signals_c',
 dbus_builtheaders = [dbus_types_h]
 dbus_builtsources = [dbus_types_c, dbus_bindings_c, dbus_signals_c]
 
-# libpurple-client
-
-purple_client_bindings_h1 = custom_target('purple_client_bindings_h1',
-    input : purple_build_coreheaders,
-    output : 'purple-client-bindings1.h',
-    command : [
-        python, dbus_analyze_types,
-        '--keyword=enum', '--verbatim', '-o', '@OUTPUT@', '@INPUT@'
-    ]
-)
-
-purple_client_bindings_h2 = custom_target('purple_client_bindings_h2',
-    input : dbus_exported,
-    output : 'purple-client-bindings2.h',
-    command : [
-        python, dbus_analyze_functions,
-        '--client', '--headers', '-o', '@OUTPUT@', '@INPUT@'
-    ]
-)
-
-purple_client_bindings_h = custom_target('purple_client_bindings_h',
-    input : [purple_client_bindings_h1, purple_client_bindings_h2],
-    output : 'purple-client-bindings.h',
-    capture : true,
-    command : ['cat', '@INPUT@'])
-
-purple_client_bindings_c = custom_target('purple_client_bindings_c',
-    input : dbus_exported,
-    output : 'purple-client-bindings.ch',
-    command : [
-        python, dbus_analyze_functions,
-        '--client', '-o', '@OUTPUT@', '@INPUT@'
-    ]
-)
-
-libpurple_client = library('purple-client',
-    'purple-client.c', purple_client_bindings_c, purple_client_bindings_h,
-    version : PURPLE_LIB_VERSION,
-    dependencies : [dbus, dbus_glib],
-    install : true)
-
 else
 
 dbus_sources = []
@@ -398,18 +357,6 @@ libpurple_dep = declare_dependency(
     include_directories : [toplevel_inc, libpurple_inc],
     link_with : libpurple,
     dependencies : [gstreamer, gplugin, glib, gio])
-
-if enable_dbus
-
-# purple-client-example
-
-purple_client_example = executable('purple-client-example',
-    'purple-client-example.c', purple_client_bindings_h,
-    link_with : [libpurple_client, libpurple],
-    dependencies : [dbus, dbus_glib, glib],
-    install : true)
-
-endif
 
 install_headers(purple_coreheaders + dbus_headers,
                 subdir : 'libpurple')
