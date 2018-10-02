@@ -2,10 +2,11 @@
 Name=Pidgin
 GenericName=Internet Messenger
 Comment=Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, and more
-Exec=pidgin
+Exec=pidgin %U
 Icon=pidgin
 StartupNotify=true
 Terminal=false
 Type=Application
 Categories=Network;InstantMessaging;
+MimeType=x-scheme-handler/aim;x-scheme-handler/gg;x-scheme-handler/icq;x-scheme-handler/irc;x-scheme-handler/msnim;x-scheme-handler/sip;x-scheme-handler/xmpp;x-scheme-handler/ymsgr
 @USES_MM_CHAT_SECTION@
