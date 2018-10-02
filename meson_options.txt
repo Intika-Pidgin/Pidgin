@@ -80,9 +80,6 @@ option('fortify', type : 'boolean', value : true,
 option('glib-errors-trace', type : 'boolean', value : false,
        description : 'print backtraces for glib errors')
 
-option('dbus', type : 'boolean', value : true,
-       description : 'enable D-Bus support')
-
 option('unity-integration', type : 'boolean', value : false,
        description : 'compile with support for unity integration plugin')
 
