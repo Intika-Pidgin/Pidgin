@@ -27,7 +27,6 @@
 #include "account.h"
 #include "conversation.h"
 #include "core.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "glibcompat.h"
 #include "log.h"
@@ -362,7 +361,6 @@ int pidgin_start(int argc, char *argv[])
 	GApplication *app;
 	gboolean opt_nologin = FALSE;
 	gboolean opt_version = FALSE;
-	gboolean opt_si = TRUE;     /* Check for single instance? */
 	char *opt_config_dir_arg = NULL;
 	char *search_path;
 	GtkCssProvider *provider;
@@ -400,9 +398,6 @@ int pidgin_start(int argc, char *argv[])
 			  "                            "
 			  "Without this only the first account will be enabled)"),
 			_("[NAME]")},
-		{"multiple", 'm', G_OPTION_FLAG_REVERSE,
-			G_OPTION_ARG_NONE,  &opt_si,
-			_("allow multiple instances"), NULL},
 		{"nologin", 'n', 0,
 			G_OPTION_ARG_NONE, &opt_nologin,
 			_("don't automatically login"), NULL},
@@ -661,25 +656,6 @@ int pidgin_start(int argc, char *argv[])
 	}
 
 	purple_plugins_refresh();
-
-	if (opt_si && !purple_core_ensure_single_instance()) {
-#ifdef HAVE_DBUS
-		DBusConnection *conn = purple_dbus_get_connection();
-		DBusMessage *message = dbus_message_new_method_call(PURPLE_DBUS_SERVICE, PURPLE_DBUS_PATH,
-				PURPLE_DBUS_INTERFACE, "PurpleBlistSetVisible");
-		gboolean tr = TRUE;
-		dbus_message_append_args(message, DBUS_TYPE_INT32, &tr, DBUS_TYPE_INVALID);
-		dbus_connection_send_with_reply_and_block(conn, message, -1, NULL);
-		dbus_message_unref(message);
-#endif
-		gdk_notify_startup_complete();
-		purple_core_quit();
-		g_printerr(_("Exiting because another libpurple client is already running.\n"));
-#ifndef _WIN32
-		g_free(segfault_message);
-#endif
-		return 0;
-	}
 
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved(PIDGIN_PREFS_ROOT "/plugins/loaded");
