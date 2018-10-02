@@ -26,7 +26,6 @@
 #include "account.h"
 #include "buddylist.h"
 #include "connection.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "enums.h"
 #include "http.h"
@@ -786,8 +785,6 @@ purple_connection_init(GTypeInstance *instance, gpointer klass)
 
 	purple_connection_set_state(gc, PURPLE_CONNECTION_CONNECTING);
 	connections = g_list_append(connections, gc);
-
-	PURPLE_DBUS_REGISTER_POINTER(gc, PurpleConnection);
 }
 
 /* Called when done constructing */
@@ -875,8 +872,6 @@ purple_connection_finalize(GObject *object)
 
 	purple_str_wipe(priv->password);
 	g_free(priv->display_name);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(gc);
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }

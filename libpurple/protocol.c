@@ -20,7 +20,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#include "dbus-maybe.h"
 #include "protocol.h"
 
 static GObjectClass *parent_class;
@@ -140,7 +139,6 @@ purple_protocol_override(PurpleProtocol *protocol,
 static void
 purple_protocol_init(GTypeInstance *instance, gpointer klass)
 {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_PROTOCOL(instance), PurpleProtocol);
 }
 
 static void
@@ -173,8 +171,6 @@ purple_protocol_finalize(GObject *object)
 	user_splits_free(protocol);
 	account_options_free(protocol);
 	icon_spec_free(protocol);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(protocol);
 
 	parent_class->finalize(object);
 }

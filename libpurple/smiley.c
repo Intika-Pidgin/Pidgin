@@ -20,7 +20,6 @@
  */
 
 #include "smiley.h"
-#include "dbus-maybe.h"
 
 #define PURPLE_SMILEY_GET_PRIVATE(obj) \
 	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_SMILEY, PurpleSmileyPrivate))
@@ -59,7 +58,6 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleSmiley, purple_smiley, PURPLE_TYPE_IMAGE);
 
 static void
 purple_smiley_init(PurpleSmiley *smiley) {
-	PURPLE_DBUS_REGISTER_POINTER(smiley, PurpleSmiley);
 }
 
 static void
@@ -67,8 +65,6 @@ purple_smiley_finalize(GObject *obj) {
 	PurpleSmileyPrivate *priv = PURPLE_SMILEY_GET_PRIVATE(obj);
 
 	g_free(priv->shortcut);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(smiley);
 
 	G_OBJECT_CLASS(purple_smiley_parent_class)->finalize(obj);
 }

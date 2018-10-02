@@ -23,7 +23,6 @@
 #include "internal.h"
 #include "buddylist.h"
 #include "conversation.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "notify.h"
 #include "pounce.h"
@@ -2119,8 +2118,6 @@ purple_buddy_list_init(GTypeInstance *instance, gpointer klass)
 {
 	PurpleBuddyList *blist = PURPLE_BUDDY_LIST(instance);
 
-	PURPLE_DBUS_REGISTER_POINTER(blist, PurpleBuddyList);
-
 	PURPLE_BUDDY_LIST_GET_PRIVATE(blist)->buddies = g_hash_table_new_full(
 					 (GHashFunc)_purple_blist_hbuddy_hash,
 					 (GEqualFunc)_purple_blist_hbuddy_equal,
@@ -2132,8 +2129,6 @@ static void
 purple_buddy_list_finalize(GObject *object)
 {
 	g_hash_table_destroy(PURPLE_BUDDY_LIST_GET_PRIVATE(object)->buddies);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(object);
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }

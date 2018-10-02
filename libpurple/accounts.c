@@ -21,7 +21,6 @@
 #include "internal.h"
 #include "accounts.h"
 #include "core.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "enums.h"
 #include "network.h"
@@ -411,7 +410,6 @@ parse_current_error(PurpleXmlNode *node, PurpleAccount *account)
 		description = g_strdup("");
 
 	current_error = g_new0(PurpleConnectionErrorInfo, 1);
-	PURPLE_DBUS_REGISTER_POINTER(current_error, PurpleConnectionErrorInfo);
 	current_error->type = type;
 	current_error->description = description;
 
@@ -868,7 +866,6 @@ connection_error_cb(PurpleConnection *gc,
 	g_return_if_fail(account != NULL);
 
 	err = g_new0(PurpleConnectionErrorInfo, 1);
-	PURPLE_DBUS_REGISTER_POINTER(err, PurpleConnectionErrorInfo);
 
 	err->type = type;
 	err->description = g_strdup(description);
