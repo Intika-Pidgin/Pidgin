@@ -41,6 +41,8 @@ version 3.0.0 (??/??/????):
 	  multiple Pidgin instances is to pass --gapplication-app-id with an
 	  alternate, valid app id. Be careful not to use the same configuration
 	  directory as the primary instance.
+	* Replaced purple-url-handler script with the ability to call Pidgin
+	  itself for URI handling.
 
 	Finch:
 	* Support the conversation-extended signal for extending the
