@@ -19,6 +19,10 @@
  * 02111-1301, USA.
  */
 
+/* NOTICE: This plugin is currently broken as the libpurple DBus bindings
+ * have been removed.
+ */
+
 #include "internal.h"
 #include "pidgin.h"
 
