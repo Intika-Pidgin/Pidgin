@@ -32,9 +32,6 @@
 
 #include "gtk3compat.h"
 
-#define PIDGIN_PLUGIN_INFO_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PIDGIN_TYPE_PLUGIN_INFO, PidginPluginInfoPrivate))
-
 #define PIDGIN_RESPONSE_CONFIGURE 98121
 
 typedef struct
@@ -69,6 +66,9 @@ typedef struct
 	} u;
 } PidginPluginUiData;
 
+G_DEFINE_TYPE_WITH_PRIVATE(PidginPluginInfo, pidgin_plugin_info,
+		PURPLE_TYPE_PLUGIN_INFO);
+
 static void plugin_toggled_stage_two(PurplePlugin *plug, GtkTreeModel *model,
                                   GtkTreeIter *iter, GError *error, gboolean unload);
 
@@ -90,7 +90,9 @@ static void
 pidgin_plugin_info_set_property(GObject *obj, guint param_id, const GValue *value,
 		GParamSpec *pspec)
 {
-	PidginPluginInfoPrivate *priv = PIDGIN_PLUGIN_INFO_GET_PRIVATE(obj);
+	PidginPluginInfoPrivate *priv =
+			pidgin_plugin_info_get_instance_private(
+					PIDGIN_PLUGIN_INFO(obj));
 
 	switch (param_id) {
 		case PROP_GTK_CONFIG_FRAME_CB:
@@ -107,7 +109,9 @@ static void
 pidgin_plugin_info_get_property(GObject *obj, guint param_id, GValue *value,
 		GParamSpec *pspec)
 {
-	PidginPluginInfoPrivate *priv = PIDGIN_PLUGIN_INFO_GET_PRIVATE(obj);
+	PidginPluginInfoPrivate *priv =
+			pidgin_plugin_info_get_instance_private(
+					PIDGIN_PLUGIN_INFO(obj));
 
 	switch (param_id) {
 		case PROP_GTK_CONFIG_FRAME_CB:
@@ -124,8 +128,6 @@ static void pidgin_plugin_info_class_init(PidginPluginInfoClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	g_type_class_add_private(klass, sizeof(PidginPluginInfoPrivate));
-
 	/* Setup properties */
 	obj_class->get_property = pidgin_plugin_info_get_property;
 	obj_class->set_property = pidgin_plugin_info_set_property;
@@ -138,23 +140,9 @@ static void pidgin_plugin_info_class_init(PidginPluginInfoClass *klass)
 		                     G_PARAM_STATIC_STRINGS));
 }
 
-GType
-pidgin_plugin_info_get_type(void)
+static void
+pidgin_plugin_info_init(PidginPluginInfo *info)
 {
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PidginPluginInfoClass),
-			.class_init = (GClassInitFunc)pidgin_plugin_info_class_init,
-			.instance_size = sizeof(PidginPluginInfo),
-		};
-
-		type = g_type_register_static(PURPLE_TYPE_PLUGIN_INFO,
-		                              "PidginPluginInfo", &info, 0);
-	}
-
-	return type;
 }
 
 PidginPluginInfo *
@@ -190,7 +178,8 @@ pidgin_plugin_has_prefs(PurplePlugin *plugin)
 		return FALSE;
 
 	if (PIDGIN_IS_PLUGIN_INFO(info))
-		priv = PIDGIN_PLUGIN_INFO_GET_PRIVATE(info);
+		priv = pidgin_plugin_info_get_instance_private(
+				PIDGIN_PLUGIN_INFO(info));
 
 	ret = ((priv && priv->config_frame_cb) ||
 			purple_plugin_info_get_pref_frame_cb(info) ||
@@ -293,7 +282,8 @@ pidgin_plugin_open_config(PurplePlugin *plugin, GtkWindow *parent)
 		return;
 
 	if (PIDGIN_IS_PLUGIN_INFO(info))
-		priv = PIDGIN_PLUGIN_INFO_GET_PRIVATE(info);
+		priv = pidgin_plugin_info_get_instance_private(
+				PIDGIN_PLUGIN_INFO(info));
 
 	pref_frame_cb = purple_plugin_info_get_pref_frame_cb(info);
 	pref_request_cb = purple_plugin_info_get_pref_request_cb(info);

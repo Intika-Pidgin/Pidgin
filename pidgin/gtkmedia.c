@@ -111,18 +111,16 @@ struct _PidginMediaPrivate
 	PurpleMediaSessionType request_type;
 };
 
-#define PIDGIN_MEDIA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), PIDGIN_TYPE_MEDIA, PidginMediaPrivate))
+static GType pidgin_media_get_type(void);
 
-static void pidgin_media_class_init (PidginMediaClass *klass);
-static void pidgin_media_init (PidginMedia *media);
+G_DEFINE_TYPE_WITH_PRIVATE(PidginMedia, pidgin_media,
+		GTK_TYPE_APPLICATION_WINDOW);
+
 static void pidgin_media_dispose (GObject *object);
 static void pidgin_media_finalize (GObject *object);
 static void pidgin_media_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
 static void pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void pidgin_media_set_state(PidginMedia *gtkmedia, PidginMediaState state);
-
-static GtkWindowClass *parent_class = NULL;
-
 
 #if 0
 enum {
@@ -137,37 +135,12 @@ enum {
 	PROP_SCREENNAME
 };
 
-static GType
-pidgin_media_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PidginMediaClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) pidgin_media_class_init,
-			NULL,
-			NULL,
-			sizeof(PidginMedia),
-			0,
-			(GInstanceInitFunc) pidgin_media_init,
-			NULL
-		};
-		type = g_type_register_static(GTK_TYPE_APPLICATION_WINDOW,
-				"PidginMedia", &info, 0);
-	}
-	return type;
-}
-
 
 static void
 pidgin_media_class_init (PidginMediaClass *klass)
 {
-	GObjectClass *gobject_class = (GObjectClass*)klass;
+	GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
 /*	GtkContainerClass *container_class = (GtkContainerClass*)klass; */
-	parent_class = g_type_class_peek_parent(klass);
 
 	gobject_class->dispose = pidgin_media_dispose;
 	gobject_class->finalize = pidgin_media_finalize;
@@ -186,8 +159,6 @@ pidgin_media_class_init (PidginMediaClass *klass)
 			"The screenname of the user this session is with.",
 			NULL,
 			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-	g_type_class_add_private(klass, sizeof(PidginMediaPrivate));
 }
 
 static void
@@ -343,7 +314,7 @@ static void
 pidgin_media_init (PidginMedia *media)
 {
 	GtkWidget *vbox;
-	media->priv = PIDGIN_MEDIA_GET_PRIVATE(media);
+	media->priv = pidgin_media_get_instance_private(media);
 
 #ifdef HAVE_X11
 	XSetErrorHandler(pidgin_x_error_handler);
@@ -525,7 +496,7 @@ pidgin_media_dispose(GObject *media)
 		gtkmedia->priv->remote_videos = NULL;
 	}
 
-	G_OBJECT_CLASS(parent_class)->dispose(media);
+	G_OBJECT_CLASS(pidgin_media_parent_class)->dispose(media);
 }
 
 static void
@@ -534,7 +505,7 @@ pidgin_media_finalize(GObject *media)
 	/* PidginMedia *gtkmedia = PIDGIN_MEDIA(media); */
 	purple_debug_info("gtkmedia", "pidgin_media_finalize\n");
 
-	G_OBJECT_CLASS(parent_class)->finalize(media);
+	G_OBJECT_CLASS(pidgin_media_parent_class)->finalize(media);
 }
 
 static void
