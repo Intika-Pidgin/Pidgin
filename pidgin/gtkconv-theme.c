@@ -437,11 +437,6 @@ pidgin_conv_theme_set_property(GObject *obj, guint param_id, const GValue *value
 static void
 pidgin_conversation_theme_init(PidginConvTheme *theme)
 {
-#if 0
-	PidginConvThemePrivate *priv;
-
-	priv = pidgin_conversation_theme_get_instance_private(theme);
-#endif
 }
 
 static void
