@@ -412,7 +412,11 @@ regex_popup_cb(GtkEntry *entry, GtkEntryIconPosition icon_pos, GdkEvent *event,
 	GdkRectangle rect;
 	gtk_entry_get_icon_area(entry, icon_pos, &rect);
 	gtk_popover_set_pointing_to(GTK_POPOVER(win->popover), &rect);
+#if GTK_CHECK_VERSION(3,22,0)
 	gtk_popover_popup(GTK_POPOVER(win->popover));
+#else
+	gtk_widget_show(win->popover);
+#endif
 #else
 	GtkWidget *menu;
 
@@ -424,8 +428,12 @@ regex_popup_cb(GtkEntry *entry, GtkEntryIconPosition icon_pos, GdkEvent *event,
 						G_CALLBACK(regex_menu_cb),
 						PIDGIN_PREFS_ROOT "/debug/highlight", win->highlight);
 
+#if GTK_CHECK_VERSION(3,22,0)
 	gtk_menu_popup_at_widget(GTK_MENU(menu), GTK_WIDGET(entry),
 			GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST, event);
+#else
+	gtk_menu_popup_at_pointer(GTK_MENU(menu), event);
+#endif
 #endif
 }
 
