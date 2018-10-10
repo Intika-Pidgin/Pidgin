@@ -125,7 +125,7 @@ struct _PidginPrefsWindow {
 		struct {
 			GtkWidget *escape;
 		} keys;
-	} interface;
+	} iface;
 
 	/* Browser page */
 	struct {
@@ -2044,50 +2044,50 @@ bind_interface_page(PidginPrefsWindow *win)
 	GList *names = NULL;
 
 	/* System Tray */
-	win->interface.docklet.type = PURPLE_PREF_STRING;
-	win->interface.docklet.key = PIDGIN_PREFS_ROOT "/docklet/show";
-	pidgin_prefs_bind_dropdown(&win->interface.docklet);
+	win->iface.docklet.type = PURPLE_PREF_STRING;
+	win->iface.docklet.key = PIDGIN_PREFS_ROOT "/docklet/show";
+	pidgin_prefs_bind_dropdown(&win->iface.docklet);
 
-	win->interface.im.hide_new.type = PURPLE_PREF_STRING;
-	win->interface.im.hide_new.key = PIDGIN_PREFS_ROOT "/conversations/im/hide_new";
-	pidgin_prefs_bind_dropdown(&win->interface.im.hide_new);
+	win->iface.im.hide_new.type = PURPLE_PREF_STRING;
+	win->iface.im.hide_new.key = PIDGIN_PREFS_ROOT "/conversations/im/hide_new";
+	pidgin_prefs_bind_dropdown(&win->iface.im.hide_new);
 
 #ifdef _WIN32
 	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/win32/minimize_new_convs",
-			win->interface.win32.minimize_new_convs);
+			win->iface.win32.minimize_new_convs);
 #else
-	gtk_widget_hide(win->interface.win32.minimize_new_convs);
+	gtk_widget_hide(win->iface.win32.minimize_new_convs);
 #endif
 
 	/* All the tab options! */
 	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/conversations/tabs",
-			win->interface.conversations.tabs);
+			win->iface.conversations.tabs);
 
 	/*
 	 * Connect a signal to the above preference.  When conversations are not
 	 * shown in a tabbed window then all tabbing options should be disabled.
 	 */
-	g_object_bind_property(win->interface.conversations.tabs, "active",
-			win->interface.conversations.tabs_vbox, "sensitive",
+	g_object_bind_property(win->iface.conversations.tabs, "active",
+			win->iface.conversations.tabs_vbox, "sensitive",
 			G_BINDING_SYNC_CREATE);
 
 	pidgin_prefs_bind_checkbox(
 			PIDGIN_PREFS_ROOT "/conversations/close_on_tabs",
-			win->interface.conversations.close_on_tabs);
+			win->iface.conversations.close_on_tabs);
 
-	win->interface.conversations.tab_side.type = PURPLE_PREF_INT;
-	win->interface.conversations.tab_side.key = PIDGIN_PREFS_ROOT "/conversations/tab_side";
-	pidgin_prefs_bind_dropdown(&win->interface.conversations.tab_side);
+	win->iface.conversations.tab_side.type = PURPLE_PREF_INT;
+	win->iface.conversations.tab_side.key = PIDGIN_PREFS_ROOT "/conversations/tab_side";
+	pidgin_prefs_bind_dropdown(&win->iface.conversations.tab_side);
 
-	win->interface.conversations.placement.type = PURPLE_PREF_STRING;
-	win->interface.conversations.placement.key = PIDGIN_PREFS_ROOT "/conversations/placement";
+	win->iface.conversations.placement.type = PURPLE_PREF_STRING;
+	win->iface.conversations.placement.key = PIDGIN_PREFS_ROOT "/conversations/placement";
 	names = pidgin_conv_placement_get_options();
 	pidgin_prefs_bind_dropdown_from_list(
-			&win->interface.conversations.placement,
+			&win->iface.conversations.placement,
 			names);
 	g_list_free(names);
 
-	keyboard_shortcuts(win->interface.keys.escape);
+	keyboard_shortcuts(win->iface.keys.escape);
 }
 
 /* This is also Win32-specific, but must be visible for Glade binding. */
@@ -4012,31 +4012,31 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 	/* Interface page */
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.docklet.combo);
+			iface.docklet.combo);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.im.hide_new.combo);
+			iface.im.hide_new.combo);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.win32.minimize_new_convs);
+			iface.win32.minimize_new_convs);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.conversations.tabs);
+			iface.conversations.tabs);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.conversations.tabs_vbox);
+			iface.conversations.tabs_vbox);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.conversations.close_on_tabs);
+			iface.conversations.close_on_tabs);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.conversations.tab_side.combo);
+			iface.conversations.tab_side.combo);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.conversations.placement.combo);
+			iface.conversations.placement.combo);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			interface.keys.escape);
+			iface.keys.escape);
 
 	/* Browser page */
 	gtk_widget_class_bind_template_child(
