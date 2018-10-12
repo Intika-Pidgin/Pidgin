@@ -25,9 +25,6 @@
 
 #include <gtk/gtk.h>
 
-#define PIDGIN_ICON_THEME_GET_PRIVATE(Gobject) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((Gobject), PIDGIN_TYPE_ICON_THEME, PidginIconThemePrivate))
-
 /******************************************************************************
  * Structs
  *****************************************************************************/
@@ -41,19 +38,19 @@ typedef struct {
  * Globals
  *****************************************************************************/
 
-static GObjectClass *parent_class = NULL;
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE(PidginIconTheme, pidgin_icon_theme,
+		PURPLE_TYPE_THEME);
 
 /******************************************************************************
  * GObject Stuff
  *****************************************************************************/
 
 static void
-pidgin_icon_theme_init(GTypeInstance *instance,
-		gpointer klass)
+pidgin_icon_theme_init(PidginIconTheme *theme)
 {
 	PidginIconThemePrivate *priv;
 
-	priv = PIDGIN_ICON_THEME_GET_PRIVATE(instance);
+	priv = pidgin_icon_theme_get_instance_private(theme);
 
 	priv->icon_files = g_hash_table_new_full(g_str_hash,
 			g_str_equal, g_free, g_free);
@@ -64,11 +61,11 @@ pidgin_icon_theme_finalize(GObject *obj)
 {
 	PidginIconThemePrivate *priv;
 
-	priv = PIDGIN_ICON_THEME_GET_PRIVATE(obj);
+	priv = pidgin_icon_theme_get_instance_private(PIDGIN_ICON_THEME(obj));
 
 	g_hash_table_destroy(priv->icon_files);
 
-	parent_class->finalize(obj);
+	G_OBJECT_CLASS(pidgin_icon_theme_parent_class)->finalize(obj);
 }
 
 static void
@@ -76,34 +73,7 @@ pidgin_icon_theme_class_init(PidginIconThemeClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = pidgin_icon_theme_finalize;
-
-	g_type_class_add_private(klass, sizeof(PidginIconThemePrivate));
-}
-
-GType
-pidgin_icon_theme_get_type(void)
-{
-	static GType type = 0;
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PidginIconThemeClass),
-			NULL, /* base_init */
-			NULL, /* base_finalize */
-			(GClassInitFunc)pidgin_icon_theme_class_init, /* class_init */
-			NULL, /* class_finalize */
-			NULL, /* class_data */
-			sizeof(PidginIconTheme),
-			0, /* n_preallocs */
-			pidgin_icon_theme_init, /* instance_init */
-			NULL, /* value table */
-		};
-		type = g_type_register_static(PURPLE_TYPE_THEME,
-				"PidginIconTheme", &info, G_TYPE_FLAG_ABSTRACT);
-	}
-	return type;
 }
 
 /*****************************************************************************
@@ -118,7 +88,7 @@ pidgin_icon_theme_get_icon(PidginIconTheme *theme,
 
 	g_return_val_if_fail(PIDGIN_IS_ICON_THEME(theme), NULL);
 
-	priv = PIDGIN_ICON_THEME_GET_PRIVATE(theme);
+	priv = pidgin_icon_theme_get_instance_private(theme);
 
 	return g_hash_table_lookup(priv->icon_files, id);
 }
@@ -131,7 +101,7 @@ pidgin_icon_theme_set_icon(PidginIconTheme *theme,
 	PidginIconThemePrivate *priv;
 	g_return_if_fail(PIDGIN_IS_ICON_THEME(theme));
 
-	priv = PIDGIN_ICON_THEME_GET_PRIVATE(theme);
+	priv = pidgin_icon_theme_get_instance_private(theme);
 
 	if (filename != NULL)
 		g_hash_table_replace(priv->icon_files,

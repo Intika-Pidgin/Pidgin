@@ -19,6 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
+#include <talkatu.h>
+
 #include "internal.h"
 
 #include "account.h"
@@ -33,7 +35,6 @@
 #include "gtksavedstatuses.h"
 #include "pidginstock.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 
 #include "gtk3compat.h"
 
@@ -114,7 +115,8 @@ typedef struct
 	gchar *original_title;
 	GtkEntry *title;
 	GtkComboBox *type;
-	PidginWebView *message;
+	GtkWidget *message_view;
+	GtkTextBuffer *message_buffer;
 } StatusEditor;
 
 typedef struct
@@ -125,7 +127,8 @@ typedef struct
 	GtkWidget *window;
 	GtkListStore *model;
 	GtkComboBox *box;
-	PidginWebView *message;
+	GtkWidget *message_view;
+	GtkTextBuffer *message_buffer;
 } SubStatusEditor;
 
 static StatusWindow *status_window = NULL;
@@ -725,7 +728,7 @@ status_editor_ok_cb(GtkButton *button, gpointer user_data)
 	}
 
 	type = gtk_combo_box_get_active(dialog->type) + (PURPLE_STATUS_UNSET + 1);
-	message = pidgin_webview_get_body_html(dialog->message);
+	message = talkatu_markup_get_html(dialog->message_buffer, NULL);
 	unformatted = purple_markup_strip_html(message);
 
 	/*
@@ -1073,9 +1076,8 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	GtkWidget *expander;
 	GtkWidget *dropdown;
 	GtkWidget *entry;
-	GtkWidget *frame;
+	GtkWidget *editor;
 	GtkWidget *hbox;
-	GtkWidget *text;
 	GtkWidget *vbox;
 	GtkWidget *win;
 	GList *focus_chain = NULL;
@@ -1140,17 +1142,26 @@ pidgin_status_editor_show(gboolean edit, PurpleSavedStatus *saved_status)
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Status:"), sg, dropdown, TRUE, NULL);
 
 	/* Status message */
-	frame = pidgin_create_webview(TRUE, &text, NULL);
-	dialog->message = PIDGIN_WEBVIEW(text);
-	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Message:"), sg, frame, TRUE, NULL);
+	editor = talkatu_editor_new();
+
+	dialog->message_view = talkatu_editor_get_view(TALKATU_EDITOR(editor));
+	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("_Message:"), sg, editor, TRUE, NULL);
+
+	dialog->message_buffer = talkatu_html_buffer_new();
+	gtk_text_view_set_buffer(GTK_TEXT_VIEW(dialog->message_view), dialog->message_buffer);
+
 	gtk_container_child_set(GTK_CONTAINER(vbox), hbox, "expand", TRUE, "fill", TRUE, NULL);
-	focus_chain = g_list_prepend(focus_chain, dialog->message);
+	focus_chain = g_list_prepend(focus_chain, dialog->message_view);
 	gtk_container_set_focus_chain(GTK_CONTAINER(hbox), focus_chain);
 	g_list_free(focus_chain);
 
-	if ((saved_status != NULL) && (purple_savedstatus_get_message(saved_status) != NULL))
-		pidgin_webview_append_html(PIDGIN_WEBVIEW(text),
-		                        purple_savedstatus_get_message(saved_status));
+	if ((saved_status != NULL) && (purple_savedstatus_get_message(saved_status) != NULL)) {
+		talkatu_markup_set_html(
+			TALKATU_BUFFER(dialog->message_buffer),
+		    purple_savedstatus_get_message(saved_status),
+		    -1
+		);
+	}
 
 	/* Different status message expander */
 	expander = gtk_expander_new_with_mnemonic(_("Use a _different status for some accounts"));
@@ -1249,11 +1260,11 @@ substatus_selection_changed_cb(GtkComboBox *box, gpointer user_data)
 
 	if (purple_status_type_get_attr(type, "message") == NULL)
 	{
-		gtk_widget_set_sensitive(GTK_WIDGET(select->message), FALSE);
+		gtk_widget_set_sensitive(select->message_view, FALSE);
 	}
 	else
 	{
-		gtk_widget_set_sensitive(GTK_WIDGET(select->message), TRUE);
+		gtk_widget_set_sensitive(select->message_view, TRUE);
 	}
 }
 
@@ -1334,8 +1345,9 @@ substatus_editor_ok_cb(GtkButton *button, gpointer user_data)
 					   STATUS_COLUMN_STATUS_ID, &id,
 					   -1);
 	type = purple_account_get_status_type(dialog->account, id);
-	if (purple_status_type_get_attr(type, "message") != NULL)
-		message = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(dialog->message));
+	if (purple_status_type_get_attr(type, "message") != NULL) {
+		message = talkatu_markup_get_html(dialog->message_buffer, NULL);
+	}
 	name = purple_status_type_get_name(type);
 	stock = get_stock_icon_from_primitive(purple_status_type_get_primitive(type));
 
@@ -1366,7 +1378,7 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	GtkSizeGroup *sg;
 	GtkWidget *combo;
 	GtkWidget *hbox;
-	GtkWidget *frame;
+	GtkWidget *editor;
 	GtkWidget *label;
 	GtkWidget *text;
 	GtkWidget *vbox;
@@ -1454,9 +1466,12 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 	gtk_size_group_add_widget(sg, label);
 
-	frame = pidgin_create_webview(TRUE, &text, NULL);
-	dialog->message = PIDGIN_WEBVIEW(text);
-	gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
+	editor = talkatu_editor_new();
+	gtk_box_pack_start(GTK_BOX(hbox), editor, TRUE, TRUE, 0);
+
+	dialog->message_view = talkatu_editor_get_view(TALKATU_EDITOR(editor));
+	dialog->message_buffer = talkatu_html_buffer_new();
+	gtk_text_view_set_buffer(GTK_TEXT_VIEW(dialog->message_view), dialog->message_buffer);
 
 	/* Cancel button */
 	pidgin_dialog_add_button(GTK_DIALOG(win), GTK_STOCK_CANCEL,
@@ -1489,8 +1504,9 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	}
 	/* TODO: Else get the generic status type from our parent */
 
-	if (message)
-		pidgin_webview_append_html(dialog->message, message);
+	if (message) {
+		talkatu_markup_set_html(TALKATU_BUFFER(dialog->message_buffer), message, -1);
+	}
 
 	for (list = purple_account_get_status_types(account); list; list = list->next)
 	{
