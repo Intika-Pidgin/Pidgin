@@ -53,7 +53,6 @@
 #include "gtksound.h"
 #include "gtkstatus-icon-theme.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 #include "pidgindebug.h"
 #include "pidginstock.h"
 #ifdef USE_VV
