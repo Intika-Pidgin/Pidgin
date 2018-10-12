@@ -86,6 +86,20 @@ get_plugin_pref_frame(PurplePlugin *plugin) {
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	ppref = purple_plugin_pref_new_with_name_and_label(
+							"/plugins/core/pluginpref_example/multiline",
+							"multiline string pref");
+	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_STRING_FORMAT);
+	purple_plugin_pref_set_format_type(ppref, PURPLE_STRING_FORMAT_TYPE_MULTILINE);
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+							"/plugins/core/pluginpref_example/html",
+							"html string pref");
+	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_STRING_FORMAT);
+	purple_plugin_pref_set_format_type(ppref, PURPLE_STRING_FORMAT_TYPE_HTML);
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
 							"/plugins/core/pluginpref_example/string_choice",
 							"string choice");
 	purple_plugin_pref_set_pref_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
@@ -134,6 +148,10 @@ plugin_load(PurplePlugin *plugin, GError **error)
 							"string");
 	purple_prefs_add_string("/plugins/core/pluginpref_example/max_string",
 							"max length string");
+	purple_prefs_add_string("/plugins/core/pluginpref_example/multiline",
+							"line1\nline2");
+	purple_prefs_add_string("/plugins/core/pluginpref_example/html",
+							"foo <b>bar</b> baz");
 	purple_prefs_add_string("/plugins/core/pluginpref_example/masked_string", "masked");
 	purple_prefs_add_string("/plugins/core/pluginpref_example/string_choice", "red");
 

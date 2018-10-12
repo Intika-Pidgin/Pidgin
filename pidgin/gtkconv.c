@@ -186,8 +186,6 @@ static GHashTable *e2ee_stock = NULL;
 
 static PurpleTheme *default_conv_theme = NULL;
 
-static GRegex *image_store_tag_re = NULL;
-
 static gboolean update_send_to_selection(PidginConvWindow *win);
 static void generate_send_to_items(PidginConvWindow *win);
 
@@ -6550,102 +6548,6 @@ pidgin_conv_write_smiley(GString *out, PurpleSmiley *smiley,
 	return TRUE;
 }
 
-static void
-remote_image_got(PurpleImage *image, gpointer _conv)
-{
-	PurpleConversation *conv = _conv;
-	PidginConversation *gtkconv = PIDGIN_CONVERSATION(conv);
-	guint image_id;
-	gchar *js;
-
-	if (!gtkconv)
-		return;
-
-	image_id = purple_image_store_add_temporary(image);
-
-	purple_debug_info("gtkconv", "Remote image %u is ready for display",
-		image_id);
-
-	js = g_strdup_printf("remoteImageIsReady(%u)", image_id);
-	pidgin_webview_safe_execute_script(
-		PIDGIN_WEBVIEW(gtkconv->webview), js);
-	g_free(js);
-}
-
-static gboolean
-box_remote_image_cb(const GMatchInfo *info, GString *result, gpointer _conv)
-{
-	PurpleConversation *conv = _conv;
-	gchar *uri, *before, *after, *full, *alt;
-	PurpleImage *image;
-	guint img_id;
-
-	uri = g_match_info_fetch(info, 2);
-	image = purple_image_store_get_from_uri(uri);
-	g_free(uri);
-
-	full = g_match_info_fetch(info, 0);
-
-#warning fix this
-#if 0
-	if (purple_image_is_ready(image)) {
-		g_string_append(result, full);
-		g_free(full);
-		return FALSE;
-	}
-#endif
-
-	/* search for alt */
-	alt = strstr(full, "alt=\"");
-	if (alt) {
-		gchar *end;
-		alt += strlen("alt=\"");
-		end = strstr(alt, "\"");
-		if (end)
-			end[0] = '\0';
-		else
-			alt = NULL;
-		if (alt && alt[0] == '\0')
-			alt = NULL;
-	}
-
-	/* add for ever - we don't know, when transfer finishes */
-	img_id = purple_image_store_add(image);
-
-	before = g_match_info_fetch(info, 1);
-	after = g_match_info_fetch(info, 3);
-
-	g_string_append_printf(result, "<span class=\"pending-image "
-		"pending-image-id-%u\">", img_id);
-
-	if (alt)
-		g_string_append(result, alt);
-	else
-		g_string_append(result, "&lt;img&gt;");
-
-	g_string_append(result, before);
-	g_string_append(result, "about:blank");
-	g_string_append(result, after);
-
-	g_string_append(result, "</span>");
-
-	g_free(before);
-	g_free(after);
-	g_free(full);
-
-	g_signal_connect_object(image, "ready",
-		G_CALLBACK(remote_image_got), conv, 0);
-
-	return FALSE;
-}
-
-static gchar *
-box_remote_images(PurpleConversation *conv, const gchar *msg)
-{
-	return g_regex_replace_eval(image_store_tag_re, msg, -1, 0, 0,
-		box_remote_image_cb, conv, NULL);
-}
-
 static gboolean
 writing_msg(PurpleConversation *conv, PurpleMessage *msg, gpointer _unused)
 {
@@ -6697,7 +6599,6 @@ pidgin_conv_write_conv(PurpleConversation *conv, PurpleMessage *pmsg)
 	char *escape;
 	char *script;
 	char *smileyed;
-	gchar *imgized;
 	PurpleMessageFlags flags, old_flags;
 	const char *func = "appendMessage";
 
@@ -6791,11 +6692,10 @@ pidgin_conv_write_conv(PurpleConversation *conv, PurpleMessage *pmsg)
 			(flags & PURPLE_MESSAGE_RECV), pidgin_conv_write_smiley,
 			(gpointer)purple_account_get_protocol_name(account));
 	}
-	imgized = box_remote_images(conv, smileyed);
 	msg_tokenized = replace_message_tokens(message_html, conv,
 		purple_message_get_author(pmsg),
 		purple_message_get_author_alias(pmsg),
-		imgized,
+		smileyed,
 		purple_message_get_flags(pmsg),
 		purple_message_get_time(pmsg));
 	escape = pidgin_webview_quote_js_string(msg_tokenized ? msg_tokenized : "");
@@ -6806,7 +6706,6 @@ pidgin_conv_write_conv(PurpleConversation *conv, PurpleMessage *pmsg)
 
 	g_free(script);
 	g_free(smileyed);
-	g_free(imgized);
 	g_free(msg_tokenized);
 	g_free(escape);
 
@@ -8674,10 +8573,6 @@ pidgin_conversations_init(void)
 	e2ee_stock = g_hash_table_new_full(g_str_hash, g_str_equal,
 		g_free, g_object_unref);
 
-	image_store_tag_re = g_regex_new("(<img [^>]*src=\")("
-		PURPLE_IMAGE_STORE_PROTOCOL "[0-9]+)(\"[^>]*>)",
-		G_REGEX_OPTIMIZE | G_REGEX_DOTALL, 0, NULL);
-
 	/* Conversations */
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/conversations");
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/conversations/themes");
@@ -9003,9 +8898,6 @@ pidgin_conversations_uninit(void)
 	purple_prefs_disconnect_by_handle(pidgin_conversations_get_handle());
 	purple_signals_disconnect_by_handle(pidgin_conversations_get_handle());
 	purple_signals_unregister_by_instance(pidgin_conversations_get_handle());
-
-	g_regex_unref(image_store_tag_re);
-	image_store_tag_re = NULL;
 }
 
 /**************************************************************************

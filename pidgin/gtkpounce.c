@@ -19,6 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+#include <talkatu.h>
+
 #include "internal.h"
 #include "pidgin.h"
 
@@ -38,7 +40,7 @@
 #include "gtknotify.h"
 #include "pidginstock.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
+#include "pidgintalkatu.h"
 
 #include <gdk/gdkkeysyms.h>
 
@@ -91,6 +93,7 @@ typedef struct
 	GtkWidget *popup_entry;
 	GtkWidget *send_msg;
 	GtkWidget *send_msg_entry;
+	GtkTextBuffer *send_msg_buffer;
 	GtkWidget *exec_cmd;
 	GtkWidget *exec_cmd_entry;
 	GtkWidget *exec_cmd_browse;
@@ -300,7 +303,7 @@ save_pounce_cb(GtkWidget *w, PidginPounceDialog *dialog)
 		events |= PURPLE_POUNCE_MESSAGE_RECEIVED;
 
 	/* Data fields */
-	message = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(dialog->send_msg_entry));
+	message = talkatu_markup_get_html(dialog->send_msg_buffer, NULL);
 	command = gtk_entry_get_text(GTK_ENTRY(dialog->exec_cmd_entry));
 	sound   = gtk_entry_get_text(GTK_ENTRY(dialog->play_sound_entry));
 	reason  = gtk_entry_get_text(GTK_ENTRY(dialog->popup_entry));
@@ -486,8 +489,26 @@ static void
 reset_send_msg_entry(PidginPounceDialog *dialog, GtkWidget *dontcare)
 {
 	PurpleAccount *account = pidgin_account_option_menu_get_selected(dialog->account_menu);
-	pidgin_webview_setup_entry(PIDGIN_WEBVIEW(dialog->send_msg_entry),
-			(account && purple_account_get_connection(account)) ? purple_connection_get_flags(purple_account_get_connection(account)) : PURPLE_CONNECTION_FLAG_HTML);
+
+	if(GTK_IS_TEXT_BUFFER(dialog->send_msg_buffer)) {
+		g_object_unref(dialog->send_msg_buffer);
+	}
+
+	dialog->send_msg_buffer = NULL;
+
+	if(account) {
+		PurpleConnection *pc = purple_account_get_connection(account);
+
+		if(pc) {
+			dialog->send_msg_buffer = pidgin_talkatu_buffer_new_for_connection(pc);
+		}
+	}
+
+	if(dialog->send_msg_buffer == NULL) {
+		dialog->send_msg_buffer = talkatu_buffer_new(NULL);
+	}
+
+	gtk_text_view_set_buffer(GTK_TEXT_VIEW(dialog->send_msg_entry), dialog->send_msg_buffer);
 }
 
 void
@@ -503,7 +524,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	GtkWidget *frame;
 	GtkWidget *grid;
 	GtkSizeGroup *sg;
-	GtkWidget *send_msg_webview;
+	GtkWidget *editor;
 
 	g_return_if_fail((cur_pounce != NULL) ||
 	                 (account != NULL) ||
@@ -688,8 +709,10 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	dialog->play_sound
 		= gtk_check_button_new_with_mnemonic(_("P_lay a sound"));
 
-	send_msg_webview = pidgin_create_webview(TRUE, &dialog->send_msg_entry, NULL);
+	editor = talkatu_editor_new();
+	dialog->send_msg_entry = talkatu_editor_get_view(TALKATU_EDITOR(editor));
 	reset_send_msg_entry(dialog, NULL);
+
 	dialog->exec_cmd_entry    = gtk_entry_new();
 	dialog->popup_entry       = gtk_entry_new();
 	dialog->exec_cmd_browse   = gtk_button_new_with_mnemonic(_("Brows_e..."));
@@ -700,7 +723,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	dialog->play_sound_test   = gtk_button_new_with_mnemonic(_("Pre_view"));
 	dialog->play_sound_reset  = gtk_button_new_with_mnemonic(_("Reset"));
 
-	gtk_widget_set_sensitive(send_msg_webview,          FALSE);
+	gtk_widget_set_sensitive(editor,                    FALSE);
 	gtk_widget_set_sensitive(dialog->exec_cmd_entry,    FALSE);
 	gtk_widget_set_sensitive(dialog->popup_entry,       FALSE);
 	gtk_widget_set_sensitive(dialog->exec_cmd_browse,   FALSE);
@@ -731,7 +754,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	gtk_widget_set_valign(dialog->popup, GTK_ALIGN_CENTER);
 	gtk_widget_set_valign(dialog->popup_entry, GTK_ALIGN_CENTER);
 	gtk_widget_set_valign(dialog->send_msg, GTK_ALIGN_CENTER);
-	gtk_widget_set_valign(send_msg_webview, GTK_ALIGN_CENTER);
+	gtk_widget_set_valign(editor, GTK_ALIGN_CENTER);
 	gtk_widget_set_valign(dialog->exec_cmd, GTK_ALIGN_CENTER);
 	gtk_widget_set_valign(dialog->exec_cmd_entry, GTK_ALIGN_CENTER);
 	gtk_widget_set_hexpand(dialog->exec_cmd_browse, TRUE);
@@ -749,7 +772,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	gtk_grid_attach(GTK_GRID(grid), dialog->popup,            0, 1, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), dialog->popup_entry,      1, 1, 4, 1);
 	gtk_grid_attach(GTK_GRID(grid), dialog->send_msg,         0, 2, 5, 1);
-	gtk_grid_attach(GTK_GRID(grid), send_msg_webview,         0, 3, 5, 1);
+	gtk_grid_attach(GTK_GRID(grid), editor,                   0, 3, 5, 1);
 	gtk_grid_attach(GTK_GRID(grid), dialog->exec_cmd,         0, 4, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), dialog->exec_cmd_entry,   1, 4, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), dialog->exec_cmd_browse,  2, 4, 1, 1);
@@ -765,7 +788,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	gtk_widget_show(dialog->popup);
 	gtk_widget_show(dialog->popup_entry);
 	gtk_widget_show(dialog->send_msg);
-	gtk_widget_show(send_msg_webview);
+	gtk_widget_show(editor);
 	gtk_widget_show(dialog->exec_cmd);
 	gtk_widget_show(dialog->exec_cmd_entry);
 	gtk_widget_show(dialog->exec_cmd_browse);
@@ -780,7 +803,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 					 dialog->send_msg);
 
 	g_object_bind_property(dialog->send_msg, "active",
-			send_msg_webview, "sensitive",
+			editor, "sensitive",
 			G_BINDING_DEFAULT);
 
 	g_object_bind_property(dialog->popup, "active",
@@ -939,7 +962,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 													  "send-message",
 													  "message")) != NULL)
 		{
-			pidgin_webview_append_html(PIDGIN_WEBVIEW(dialog->send_msg_entry), value);
+			talkatu_markup_set_html(TALKATU_BUFFER(dialog->send_msg_buffer), value, -1);
 		}
 
 		if ((value = purple_pounce_action_get_attribute(cur_pounce,

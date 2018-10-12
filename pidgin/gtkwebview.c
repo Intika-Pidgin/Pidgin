@@ -45,9 +45,6 @@
 #define SCROLL_DELAY 33 /* milliseconds */
 #define PIDGIN_WEBVIEW_MAX_PROCESS_TIME 100000 /* microseconds */
 
-#define PIDGIN_WEBVIEW_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PIDGIN_TYPE_WEBVIEW, PidginWebViewPriv))
-
 enum {
 	LOAD_HTML,
 	LOAD_JS
@@ -92,7 +89,7 @@ typedef struct {
 	gboolean (*context_menu)(PidginWebView *webview, WebKitDOMHTMLAnchorElement *link, GtkWidget *menu);
 } PidginWebViewProtocol;
 
-typedef struct _PidginWebViewPriv {
+typedef struct _PidginWebViewPrivate {
 	/* Processing queues */
 	gboolean is_loading;
 	GQueue *load_queue;
@@ -118,13 +115,14 @@ typedef struct _PidginWebViewPriv {
 
 	/* helper scripts */
 	gboolean refresh_spell_installed;
-} PidginWebViewPriv;
+} PidginWebViewPrivate;
 
 /******************************************************************************
  * Globals
  *****************************************************************************/
 
-static WebKitWebViewClass *parent_class = NULL;
+G_DEFINE_TYPE_WITH_PRIVATE(PidginWebView, pidgin_webview,
+		webkit_web_view_get_type());
 
 static GRegex *smileys_re = NULL;
 static GRegex *empty_html_re = NULL;
@@ -194,9 +192,21 @@ webview_resource_loading(WebKitWebView *webview,
 		return;
 
 	if (img != NULL) {
+		/* At the time of this comment, purple_image_get_path()
+		 * always returns something, whether it's the actual
+		 * path or a unique identifier, such as derived from a
+		 * hash. That API will probably be reviewed after which
+		 * this code can probably be simplified.
+		 */
+		gchar *uri = NULL;
+
 		path = purple_image_get_path(img);
+
 		if (path) {
-			gchar *uri = g_filename_to_uri(path, NULL, NULL);
+			uri = g_filename_to_uri(path, NULL, NULL);
+		}
+
+		if (uri != NULL) {
 			webkit_network_request_set_uri(request, uri);
 			g_free(uri);
 		} else {
@@ -253,7 +263,8 @@ webview_resource_loaded(WebKitWebView *web_view, WebKitWebFrame *web_frame,
 static PurpleImage *
 webview_resource_get_loaded(WebKitWebView *web_view, const gchar *uri)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(web_view);
+	PidginWebViewPrivate *priv = pidgin_webview_get_instance_private(
+			PIDGIN_WEBVIEW(web_view));
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -263,7 +274,8 @@ webview_resource_get_loaded(WebKitWebView *web_view, const gchar *uri)
 static void
 process_load_queue_element(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv =
+			pidgin_webview_get_instance_private(webview);
 	int type;
 	char *str;
 	WebKitDOMDocument *doc;
@@ -334,7 +346,8 @@ process_load_queue_element(PidginWebView *webview)
 static gboolean
 process_load_queue(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv =
+			pidgin_webview_get_instance_private(webview);
 	gint64 start_time;
 
 	if (priv->is_loading) {
@@ -365,7 +378,8 @@ static void
 webview_load_started(WebKitWebView *webview, WebKitWebFrame *frame,
                      gpointer userdata)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv = pidgin_webview_get_instance_private(
+			PIDGIN_WEBVIEW(webview));
 
 	/* is there a better way to test for is_loading? */
 	priv->is_loading = TRUE;
@@ -375,7 +389,8 @@ static void
 webview_load_finished(WebKitWebView *webview, WebKitWebFrame *frame,
                       gpointer userdata)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv = pidgin_webview_get_instance_private(
+			PIDGIN_WEBVIEW(webview));
 
 	priv->is_loading = FALSE;
 	if (priv->loader == 0)
@@ -389,7 +404,7 @@ webview_inspector_inspect_element(GtkWidget *item, PidginWebViewInspectData *dat
 }
 
 static void
-webview_inspector_destroy(GtkWindow *window, PidginWebViewPriv *priv)
+webview_inspector_destroy(GtkWindow *window, PidginWebViewPrivate *priv)
 {
 	g_return_if_fail(priv->inspector_win == window);
 
@@ -401,7 +416,8 @@ static WebKitWebView *
 webview_inspector_create(WebKitWebInspector *inspector,
 	WebKitWebView *webview, gpointer _unused)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv = pidgin_webview_get_instance_private(
+			PIDGIN_WEBVIEW(webview));
 
 	if (priv->inspector_view != NULL)
 		return priv->inspector_view;
@@ -423,7 +439,8 @@ webview_inspector_create(WebKitWebInspector *inspector,
 static gboolean
 webview_inspector_show(WebKitWebInspector *inspector, GtkWidget *webview)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv = pidgin_webview_get_instance_private(
+			PIDGIN_WEBVIEW(webview));
 
 	gtk_widget_show_all(GTK_WIDGET(priv->inspector_win));
 
@@ -526,11 +543,11 @@ insert_control_character_cb(GtkMenuItem *item, PidginWebViewInsertData *data)
 {
 	WebKitWebView *webview = data->webview;
 	gunichar ch = data->ch;
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 	WebKitDOMDocument *dom;
 	char buf[6];
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(PIDGIN_WEBVIEW(webview));
+	priv = pidgin_webview_get_instance_private(PIDGIN_WEBVIEW(webview));
 	dom = webkit_web_view_get_dom_document(WEBKIT_WEB_VIEW(webview));
 
 	g_unichar_to_utf8(ch, buf);
@@ -584,7 +601,8 @@ get_unicode_menu(WebKitWebView *webview)
 static void
 webview_refresh_spellcheck(WebKitWebView *webview)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv = pidgin_webview_get_instance_private(
+			PIDGIN_WEBVIEW(webview));
 	static const gchar jsfunc[] =
 		"var pidgin_refresh_spellcheck = function() {"
 			"var selection = window.getSelection();"
@@ -1001,7 +1019,7 @@ webview_button_pressed(WebKitWebView *webview, GdkEventButton *event)
 static gboolean
 smooth_scroll_cb(gpointer data)
 {
-	PidginWebViewPriv *priv = data;
+	PidginWebViewPrivate *priv = data;
 	GtkAdjustment *adj;
 	gdouble max_val;
 	gdouble scroll_val;
@@ -1031,7 +1049,7 @@ smooth_scroll_cb(gpointer data)
 static gboolean
 scroll_idle_cb(gpointer data)
 {
-	PidginWebViewPriv *priv = data;
+	PidginWebViewPrivate *priv = data;
 	GtkAdjustment *adj = priv->vadj;
 	gdouble max_val;
 
@@ -1055,7 +1073,8 @@ emit_format_signal(PidginWebView *webview, PidginWebViewButtons buttons)
 static void
 do_formatting(PidginWebView *webview, const char *name, const char *value)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv =
+			pidgin_webview_get_instance_private(webview);
 	WebKitDOMDocument *dom;
 	WebKitDOMDOMWindow *win;
 	WebKitDOMDOMSelection *sel = NULL;
@@ -1158,7 +1177,8 @@ webview_toggle_format(PidginWebView *webview, PidginWebViewButtons buttons)
 static void
 editable_input_cb(PidginWebView *webview, gpointer data)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv =
+			pidgin_webview_get_instance_private(webview);
 	if (!priv->edit.block_changed && gtk_widget_is_sensitive(GTK_WIDGET(webview)))
 		g_signal_emit(webview, signals[CHANGED], 0);
 }
@@ -1202,7 +1222,8 @@ pidgin_webview_new(gboolean editable)
 static void
 pidgin_webview_finalize(GObject *webview)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv = pidgin_webview_get_instance_private(
+			PIDGIN_WEBVIEW(webview));
 
 	if (priv->inspector_win != NULL)
 		gtk_widget_destroy(GTK_WIDGET(priv->inspector_win));
@@ -1222,7 +1243,7 @@ pidgin_webview_finalize(GObject *webview)
 		globally_loaded_images = NULL;
 	}
 
-	G_OBJECT_CLASS(parent_class)->finalize(G_OBJECT(webview));
+	G_OBJECT_CLASS(pidgin_webview_parent_class)->finalize(webview);
 }
 
 enum {
@@ -1326,15 +1347,12 @@ pidgin_webview_insert_image_accu(GSignalInvocationHint *ihint,
 }
 
 static void
-pidgin_webview_class_init(PidginWebViewClass *klass, gpointer userdata)
+pidgin_webview_class_init(PidginWebViewClass *klass)
 {
 	GObjectClass *gobject_class;
 	GtkBindingSet *binding_set;
 
-	parent_class = g_type_class_ref(webkit_web_view_get_type());
 	gobject_class = G_OBJECT_CLASS(klass);
-
-	g_type_class_add_private(klass, sizeof(PidginWebViewPriv));
 
 	/* Signals */
 
@@ -1391,7 +1409,7 @@ pidgin_webview_class_init(PidginWebViewClass *klass, gpointer userdata)
 
 	/* Key Bindings */
 
-	binding_set = gtk_binding_set_by_class(parent_class);
+	binding_set = gtk_binding_set_by_class(pidgin_webview_parent_class);
 	gtk_binding_entry_add_signal(binding_set, GDK_KEY_b, GDK_CONTROL_MASK,
 	                             "format-toggled", 1, G_TYPE_INT,
 	                             PIDGIN_WEBVIEW_BOLD);
@@ -1445,9 +1463,10 @@ pidgin_webview_class_init(PidginWebViewClass *klass, gpointer userdata)
 }
 
 static void
-pidgin_webview_init(PidginWebView *webview, gpointer userdata)
+pidgin_webview_init(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv =
+			pidgin_webview_get_instance_private(webview);
 	WebKitWebInspector *inspector;
 
 	priv->load_queue = g_queue_new();
@@ -1484,29 +1503,6 @@ pidgin_webview_init(PidginWebView *webview, gpointer userdata)
 		globally_loaded_images = g_hash_table_new_full(g_str_hash,
 			g_str_equal, g_free, g_object_unref);
 	}
-}
-
-GType
-pidgin_webview_get_type(void)
-{
-	static GType mview_type = 0;
-	if (G_UNLIKELY(mview_type == 0)) {
-		static const GTypeInfo mview_info = {
-			sizeof(PidginWebViewClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)pidgin_webview_class_init,
-			NULL,
-			NULL,
-			sizeof(PidginWebView),
-			0,
-			(GInstanceInitFunc)pidgin_webview_init,
-			NULL
-		};
-		mview_type = g_type_register_static(webkit_web_view_get_type(),
-				"PidginWebView", &mview_info, 0);
-	}
-	return mview_type;
 }
 
 /*****************************************************************************
@@ -1546,11 +1542,11 @@ pidgin_webview_quote_js_string(const char *text)
 void
 pidgin_webview_safe_execute_script(PidginWebView *webview, const char *script)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	g_queue_push_tail(priv->load_queue, GINT_TO_POINTER(LOAD_JS));
 	g_queue_push_tail(priv->load_queue, g_strdup(script));
 	if (!priv->is_loading && priv->loader == 0)
@@ -1588,11 +1584,11 @@ pidgin_webview_load_html_string_with_selection(PidginWebView *webview, const cha
 void
 pidgin_webview_append_html(PidginWebView *webview, const char *html)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	g_queue_push_tail(priv->load_queue, GINT_TO_POINTER(LOAD_HTML));
 	g_queue_push_tail(priv->load_queue, g_strdup(html));
 	if (!priv->is_loading && priv->loader == 0)
@@ -1602,22 +1598,22 @@ pidgin_webview_append_html(PidginWebView *webview, const char *html)
 void
 pidgin_webview_set_vadjustment(PidginWebView *webview, GtkAdjustment *vadj)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	priv->vadj = vadj;
 }
 
 void
 pidgin_webview_scroll_to_end(PidginWebView *webview, gboolean smooth)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	if (priv->scroll_time)
 		g_timer_destroy(priv->scroll_time);
 	if (priv->scroll_src)
@@ -1634,35 +1630,35 @@ pidgin_webview_scroll_to_end(PidginWebView *webview, gboolean smooth)
 void
 pidgin_webview_set_autoscroll(PidginWebView *webview, gboolean scroll)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	priv->autoscroll = scroll;
 }
 
 gboolean
 pidgin_webview_get_autoscroll(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_val_if_fail(webview != NULL, FALSE);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	return priv->autoscroll;
 }
 
 void
 pidgin_webview_page_up(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 	GtkAdjustment *vadj;
 	gdouble scroll_val;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	vadj = priv->vadj;
 	scroll_val = gtk_adjustment_get_value(vadj) - gtk_adjustment_get_page_size(vadj);
 	scroll_val = MAX(scroll_val, gtk_adjustment_get_lower(vadj));
@@ -1673,14 +1669,14 @@ pidgin_webview_page_up(PidginWebView *webview)
 void
 pidgin_webview_page_down(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 	GtkAdjustment *vadj;
 	gdouble scroll_val;
 	gdouble page_size;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	vadj = priv->vadj;
 	page_size = gtk_adjustment_get_page_size(vadj);
 	scroll_val = gtk_adjustment_get_value(vadj) + page_size;
@@ -1783,23 +1779,23 @@ pidgin_webview_set_spellcheck(PidginWebView *webview, gboolean enable)
 void
 pidgin_webview_set_whole_buffer_formatting_only(PidginWebView *webview, gboolean wbfo)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	priv->edit.wbfo = wbfo;
 }
 
 void
 pidgin_webview_set_format_functions(PidginWebView *webview, PidginWebViewButtons buttons)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 	GObject *object;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	object = g_object_ref(G_OBJECT(webview));
 	priv->format_functions = buttons;
 	g_signal_emit(object, signals[BUTTONS_UPDATE], 0, buttons);
@@ -2018,11 +2014,11 @@ pidgin_webview_set_caret(PidginWebView *webview, WebKitDOMNode *container, glong
 PidginWebViewButtons
 pidgin_webview_get_format_functions(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_val_if_fail(webview != NULL, 0);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	return priv->format_functions;
 }
 
@@ -2200,12 +2196,12 @@ pidgin_webview_font_grow(PidginWebView *webview)
 void
 pidgin_webview_insert_hr(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 	WebKitDOMDocument *dom;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	dom = webkit_web_view_get_dom_document(WEBKIT_WEB_VIEW(webview));
 
 	priv->edit.block_changed = TRUE;
@@ -2216,13 +2212,13 @@ pidgin_webview_insert_hr(PidginWebView *webview)
 void
 pidgin_webview_insert_link(PidginWebView *webview, const char *url, const char *desc)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 	WebKitDOMDocument *dom;
 	char *link;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	dom = webkit_web_view_get_dom_document(WEBKIT_WEB_VIEW(webview));
 	link = g_strdup_printf("<a href='%s'>%s</a>", url, desc ? desc : url);
 
@@ -2235,7 +2231,7 @@ pidgin_webview_insert_link(PidginWebView *webview, const char *url, const char *
 void
 pidgin_webview_insert_image(PidginWebView *webview, PurpleImage *image)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 	WebKitDOMDocument *dom;
 	char *img;
 	guint id;
@@ -2248,7 +2244,7 @@ pidgin_webview_insert_image(PidginWebView *webview, PurpleImage *image)
 		return;
 
 	id = purple_image_store_add(image);
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	dom = webkit_web_view_get_dom_document(WEBKIT_WEB_VIEW(webview));
 	img = g_strdup_printf("<img src='" PURPLE_IMAGE_STORE_PROTOCOL
 		"%u'/>", id);
@@ -2300,33 +2296,33 @@ pidgin_webview_get_font_size(PidginWebView *webview)
 void
 pidgin_webview_set_toolbar(PidginWebView *webview, GtkWidget *toolbar)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	priv->toolbar = PIDGIN_WEBVIEWTOOLBAR(toolbar);
 }
 
 GtkWidget *
 pidgin_webview_get_toolbar(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_val_if_fail(webview != NULL, NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	return GTK_WIDGET(priv->toolbar);
 }
 
 void
 pidgin_webview_show_toolbar(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	g_return_if_fail(priv->toolbar != NULL);
 
 	gtk_widget_show(GTK_WIDGET(priv->toolbar));
@@ -2335,11 +2331,11 @@ pidgin_webview_show_toolbar(PidginWebView *webview)
 void
 pidgin_webview_hide_toolbar(PidginWebView *webview)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	g_return_if_fail(priv->toolbar != NULL);
 
 	gtk_widget_hide(GTK_WIDGET(priv->toolbar));
@@ -2348,11 +2344,11 @@ pidgin_webview_hide_toolbar(PidginWebView *webview)
 void
 pidgin_webview_activate_toolbar(PidginWebView *webview, PidginWebViewAction action)
 {
-	PidginWebViewPriv *priv;
+	PidginWebViewPrivate *priv;
 
 	g_return_if_fail(webview != NULL);
 
-	priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	priv = pidgin_webview_get_instance_private(webview);
 	g_return_if_fail(priv->toolbar != NULL);
 
 	pidgin_webviewtoolbar_activate(priv->toolbar, action);
@@ -2362,7 +2358,8 @@ void
 pidgin_webview_switch_active_conversation(PidginWebView *webview,
 	PurpleConversation *conv)
 {
-	PidginWebViewPriv *priv = PIDGIN_WEBVIEW_GET_PRIVATE(webview);
+	PidginWebViewPrivate *priv =
+			pidgin_webview_get_instance_private(webview);
 
 	g_return_if_fail(priv != NULL);
 	if (priv->toolbar == NULL)

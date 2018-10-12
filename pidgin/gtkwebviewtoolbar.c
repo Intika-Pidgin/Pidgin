@@ -42,9 +42,6 @@
 
 #include "gtk3compat.h"
 
-#define PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PIDGIN_TYPE_WEBVIEWTOOLBAR, PidginWebViewToolbarPriv))
-
 #define PIDGIN_WEBVIEWTOOLBAR_DEFAULT_FONT "sans-serif"
 #define PIDGIN_WEBVIEWTOOLBAR_DEFAULT_BGCOLOR "inherit"
 #define PIDGIN_WEBVIEWTOOLBAR_DEFAULT_FGCOLOR "#000000"
@@ -53,7 +50,7 @@
  * Structs
  *****************************************************************************/
 
-typedef struct _PidginWebViewToolbarPriv {
+typedef struct _PidginWebViewToolbarPrivate {
 	PurpleConversation *active_conv;
 
 	GtkWidget *wide_view;
@@ -95,13 +92,14 @@ typedef struct _PidginWebViewToolbarPriv {
 	GtkWidget *image_dialog;
 
 	gboolean allow_smileys;
-} PidginWebViewToolbarPriv;
+} PidginWebViewToolbarPrivate;
 
 /******************************************************************************
  * Globals
  *****************************************************************************/
 
-static GtkBoxClass *parent_class = NULL;
+G_DEFINE_TYPE_WITH_PRIVATE(PidginWebViewToolbar, pidgin_webviewtoolbar,
+		GTK_TYPE_BOX);
 
 /******************************************************************************
  * Prototypes
@@ -204,7 +202,8 @@ do_big(GtkAction *large, PidginWebViewToolbar *toolbar)
 static void
 destroy_toolbar_font(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	if (priv->font_dialog != NULL)
 	{
@@ -248,7 +247,8 @@ apply_font(GtkDialog *dialog, gint response, PidginWebViewToolbar *toolbar)
 static void
 toggle_font(GtkAction *font, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(font))) {
 		char *fontname = pidgin_webview_get_current_fontface(PIDGIN_WEBVIEW(toolbar->webview));
@@ -288,8 +288,8 @@ static gboolean
 destroy_toolbar_fgcolor(GtkWidget *widget, GdkEvent *event,
 	PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv =
-		PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	if (widget != NULL) {
 		pidgin_webview_toggle_forecolor(
@@ -329,8 +329,8 @@ do_fgcolor(GtkDialog *dialog, gint response, gpointer _toolbar)
 static void
 toggle_fg_color(GtkAction *color, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv =
-		PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(color))) {
 		GdkRGBA fgcolor;
@@ -373,8 +373,8 @@ static gboolean
 destroy_toolbar_bgcolor(GtkWidget *widget, GdkEvent *event,
 	PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv =
-		PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	if (widget != NULL) {
 		pidgin_webview_toggle_backcolor(
 			PIDGIN_WEBVIEW(toolbar->webview),
@@ -413,8 +413,8 @@ do_bgcolor(GtkDialog *dialog, gint response, gpointer _toolbar)
 static void
 toggle_bg_color(GtkAction *color, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv =
-		PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(color))) {
 		GdkRGBA bgcolor;
@@ -461,7 +461,8 @@ clear_formatting_cb(GtkAction *clear, PidginWebViewToolbar *toolbar)
 static void
 cancel_link_cb(PidginWebViewToolbar *toolbar, PurpleRequestFields *fields)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(priv->link), FALSE);
 
 	priv->link_dialog = NULL;
@@ -470,7 +471,8 @@ cancel_link_cb(PidginWebViewToolbar *toolbar, PurpleRequestFields *fields)
 static void
 close_link_dialog(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	if (priv->link_dialog != NULL)
 	{
 		purple_request_close(PURPLE_REQUEST_FIELDS, priv->link_dialog);
@@ -481,7 +483,8 @@ close_link_dialog(PidginWebViewToolbar *toolbar)
 static void
 do_insert_link_cb(PidginWebViewToolbar *toolbar, PurpleRequestFields *fields)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	const char *url, *description;
 
 	url = purple_request_fields_get_string(fields, "url");
@@ -500,7 +503,8 @@ do_insert_link_cb(PidginWebViewToolbar *toolbar, PurpleRequestFields *fields)
 static void
 insert_link_cb(GtkAction *action, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(priv->link))) {
 		PurpleRequestFields *fields;
@@ -554,7 +558,8 @@ insert_hr_cb(GtkAction *action, PidginWebViewToolbar *toolbar)
 static void
 do_insert_image_cb(GtkWidget *widget, int response, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	gchar *filename = NULL;
 	PurpleImage *img;
 
@@ -592,7 +597,8 @@ do_insert_image_cb(GtkWidget *widget, int response, PidginWebViewToolbar *toolba
 static void
 insert_image_cb(GtkAction *action, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	GtkWidget *window;
 
 	if (!priv->image_dialog) {
@@ -618,7 +624,8 @@ insert_image_cb(GtkAction *action, PidginWebViewToolbar *toolbar)
 static void
 destroy_smiley_dialog(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	if (priv->smiley_dialog != NULL)
 	{
 		gtk_widget_destroy(priv->smiley_dialog);
@@ -629,7 +636,8 @@ destroy_smiley_dialog(PidginWebViewToolbar *toolbar)
 static gboolean
 close_smiley_dialog(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(priv->smiley), FALSE);
 	return FALSE;
 }
@@ -814,8 +822,8 @@ insert_smiley_manage_cb(GtkButton *button, gpointer _dialog)
 static void
 insert_smiley_cb(GtkAction *smiley, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv =
-		PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	PurpleSmileyList *smileys_from_theme, *smileys_from_custom = NULL;
 	GList *theme_smileys = NULL, *custom_smileys = NULL, *it, *it_next;
 	PidginWebViewButtons webview_format;
@@ -963,8 +971,8 @@ insert_smiley_cb(GtkAction *smiley, PidginWebViewToolbar *toolbar)
 static void
 update_smiley_button(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv =
-		PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	PurpleSmileyList *sl;
 	gboolean any_smileys;
 	PidginWebViewButtons webview_format = 0;
@@ -997,7 +1005,8 @@ update_smiley_button(PidginWebViewToolbar *toolbar)
 static void
 send_attention_cb(GtkAction *attention, PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	PurpleConversation *conv = priv->active_conv;
 	const gchar *who = purple_conversation_get_name(conv);
 	PurpleConnection *gc = purple_conversation_get_connection(conv);
@@ -1010,7 +1019,8 @@ static void
 update_buttons_cb(PidginWebView *webview, PidginWebViewButtons buttons,
                   PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	gtk_action_set_sensitive(priv->bold, buttons & PIDGIN_WEBVIEW_BOLD);
 	gtk_action_set_sensitive(priv->italic, buttons & PIDGIN_WEBVIEW_ITALIC);
@@ -1066,7 +1076,8 @@ toggle_action_set_active_block(GtkToggleAction *action, gboolean is_active,
 static void
 update_buttons(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	gboolean bold, italic, underline, strike;
 	char *tmp, *color_str;
 	char *label;
@@ -1255,7 +1266,8 @@ static gboolean
 pidgin_webviewtoolbar_popup_menu(GtkWidget *widget, GdkEventButton *event,
                               PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	GtkWidget *menu;
 	GtkWidget *item;
 	gboolean wide;
@@ -1289,7 +1301,8 @@ static void
 webviewtoolbar_view_pref_changed(const char *name, PurplePrefType type,
                                  gconstpointer value, gpointer toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	if (value) {
 		gtk_widget_hide(priv->lean_view);
 		gtk_widget_show_all(priv->wide_view);
@@ -1307,7 +1320,8 @@ static void
 pidgin_webviewtoolbar_finalize(GObject *object)
 {
 	PidginWebViewToolbar *toolbar = PIDGIN_WEBVIEWTOOLBAR(object);
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	if (priv->image_dialog != NULL)
 	{
@@ -1341,19 +1355,13 @@ pidgin_webviewtoolbar_finalize(GObject *object)
 
 	purple_prefs_disconnect_by_handle(object);
 
-	G_OBJECT_CLASS(parent_class)->finalize(object);
+	G_OBJECT_CLASS(pidgin_webviewtoolbar_parent_class)->finalize(object);
 }
 
 static void
-pidgin_webviewtoolbar_class_init(gpointer _class, gpointer class_data)
+pidgin_webviewtoolbar_class_init(PidginWebViewToolbarClass *klass)
 {
-	PidginWebViewToolbarClass *class = _class;
-	GObjectClass *gobject_class = _class;
-
-	parent_class = g_type_class_ref(GTK_TYPE_BOX);
-	gobject_class->finalize = pidgin_webviewtoolbar_finalize;
-
-	g_type_class_add_private(class, sizeof(PidginWebViewToolbarPriv));
+	G_OBJECT_CLASS(klass)->finalize = pidgin_webviewtoolbar_finalize;
 
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/conversations/toolbar");
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/conversations/toolbar/wide", FALSE);
@@ -1362,7 +1370,8 @@ pidgin_webviewtoolbar_class_init(gpointer _class, gpointer class_data)
 static void
 pidgin_webviewtoolbar_create_actions(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	GtkActionGroup *action_group;
 	gsize i;
 	struct {
@@ -1420,7 +1429,8 @@ pidgin_webviewtoolbar_create_actions(PidginWebViewToolbar *toolbar)
 static void
 pidgin_webviewtoolbar_create_wide_view(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	GtkAction *layout[] = {
 		priv->bold,
 		priv->italic,
@@ -1476,7 +1486,8 @@ lean_view_add_menu_item(GtkWidget *menu, GtkAction *action)
 static void
 pidgin_webviewtoolbar_create_lean_view(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	GtkWidget *label;
 	GtkToolItem *sep;
 	GtkToolItem *font_button;
@@ -1577,7 +1588,8 @@ pidgin_webviewtoolbar_create_lean_view(PidginWebViewToolbar *toolbar)
 static void
 pidgin_webviewtoolbar_init(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	GtkWidget *hbox = GTK_WIDGET(toolbar);
 
 	pidgin_webviewtoolbar_create_actions(toolbar);
@@ -1615,32 +1627,6 @@ pidgin_webviewtoolbar_new(void)
 	return GTK_WIDGET(g_object_new(pidgin_webviewtoolbar_get_type(), NULL));
 }
 
-GType
-pidgin_webviewtoolbar_get_type(void)
-{
-	static GType webviewtoolbar_type = 0;
-
-	if (!webviewtoolbar_type) {
-		static const GTypeInfo webviewtoolbar_info = {
-			sizeof(PidginWebViewToolbarClass),
-			NULL,
-			NULL,
-			pidgin_webviewtoolbar_class_init,
-			NULL,
-			NULL,
-			sizeof(PidginWebViewToolbar),
-			0,
-			(GInstanceInitFunc)pidgin_webviewtoolbar_init,
-			NULL
-		};
-
-		webviewtoolbar_type = g_type_register_static(GTK_TYPE_BOX,
-				"PidginWebViewToolbar", &webviewtoolbar_info, 0);
-	}
-
-	return webviewtoolbar_type;
-}
-
 void
 pidgin_webviewtoolbar_attach(PidginWebViewToolbar *toolbar, GtkWidget *webview)
 {
@@ -1672,7 +1658,8 @@ void
 pidgin_webviewtoolbar_switch_active_conversation(PidginWebViewToolbar *toolbar,
                                               PurpleConversation *conv)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 	PurpleConnection *gc = purple_conversation_get_connection(conv);
 	PurpleProtocol *protocol = purple_connection_get_protocol(gc);
 
@@ -1691,12 +1678,12 @@ void
 pidgin_webviewtoolbar_activate(PidginWebViewToolbar *toolbar,
                             PidginWebViewAction action)
 {
-	PidginWebViewToolbarPriv *priv;
+	PidginWebViewToolbarPrivate *priv;
 	GtkAction *act;
 
 	g_return_if_fail(toolbar != NULL);
 
-	priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	priv = pidgin_webviewtoolbar_get_instance_private(toolbar);
 	switch (action) {
 		case PIDGIN_WEBVIEW_ACTION_BOLD:
 			act = priv->bold;
@@ -1775,7 +1762,8 @@ pidgin_webviewtoolbar_activate(PidginWebViewToolbar *toolbar,
 GtkWidget *
 pidgin_webviewtoolbar_get_wide_view(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	g_return_val_if_fail(toolbar != NULL, NULL);
 
@@ -1785,7 +1773,8 @@ pidgin_webviewtoolbar_get_wide_view(PidginWebViewToolbar *toolbar)
 GtkWidget *
 pidgin_webviewtoolbar_get_lean_view(PidginWebViewToolbar *toolbar)
 {
-	PidginWebViewToolbarPriv *priv = PIDGIN_WEBVIEWTOOLBAR_GET_PRIVATE(toolbar);
+	PidginWebViewToolbarPrivate *priv =
+			pidgin_webviewtoolbar_get_instance_private(toolbar);
 
 	g_return_val_if_fail(toolbar != NULL, NULL);
 

@@ -18,6 +18,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+#include <talkatu.h>
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -32,7 +34,6 @@
 #include "gtkpluginpref.h"
 #include "gtkprefs.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 
 static gboolean
 entry_cb(GtkWidget *entry, gpointer data) {
@@ -45,15 +46,13 @@ entry_cb(GtkWidget *entry, gpointer data) {
 
 
 static void
-webview_cb(PidginWebView *webview, gpointer data)
-{
-	char *pref;
-	char *text;
+multiline_cb(GtkTextBuffer *buffer, gpointer data) {
+	gchar *pref = NULL, *text = NULL;
 
-	pref = g_object_get_data(G_OBJECT(webview), "pref-key");
+	pref = g_object_get_data(G_OBJECT(buffer), "pref-key");
 	g_return_if_fail(pref);
 
-	text = pidgin_webview_get_body_html(webview);
+	text = talkatu_markup_get_html(buffer, NULL);
 	purple_prefs_set_string(pref, text);
 	g_free(text);
 }
@@ -101,8 +100,9 @@ make_string_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 			{
 				GtkWidget *hbox;
 				GtkWidget *spacer;
-				GtkWidget *webview;
-				GtkWidget *frame;
+				GtkWidget *editor;
+				GtkWidget *view;
+				GtkTextBuffer *buffer;
 
 				box = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
 
@@ -125,27 +125,36 @@ make_string_pref(GtkWidget *parent, PurplePluginPref *pref, GtkSizeGroup *sg) {
 				gtk_box_pack_start(GTK_BOX(hbox), spacer, FALSE, FALSE, 0);
 				gtk_widget_show(spacer);
 
+				editor = talkatu_editor_new();
+				view = talkatu_editor_get_view(TALKATU_EDITOR(editor));
+
 				if ((format & PURPLE_STRING_FORMAT_TYPE_HTML) != 0) {
-					frame = pidgin_create_webview(TRUE, &webview, NULL);
+					buffer = talkatu_html_buffer_new();
 				} else {
-					frame = pidgin_create_webview(FALSE, &webview, NULL);
-					pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(webview), 0);
+					buffer = talkatu_buffer_new(NULL);
 				}
+
+				gtk_text_view_set_buffer(GTK_TEXT_VIEW(view), buffer);
 
 				if (format & PURPLE_STRING_FORMAT_TYPE_MULTILINE) {
 					gchar *tmp = purple_strreplace(purple_prefs_get_string(pref_name), "\n", "<br>");
-					pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), tmp);
+					talkatu_markup_set_html(TALKATU_BUFFER(buffer), tmp, -1);
 					g_free(tmp);
-				} else
-					pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), purple_prefs_get_string(pref_name));
-				gtk_label_set_mnemonic_widget(GTK_LABEL(gtk_label), webview);
-				gtk_widget_show_all(frame);
-				g_object_set_data(G_OBJECT(webview), "pref-key", (gpointer)pref_name);
-				g_signal_connect(G_OBJECT(webview), "changed",
-				                 G_CALLBACK(webview_cb), NULL);
-				g_signal_connect(G_OBJECT(webview), "format-toggled",
-				                 G_CALLBACK(webview_cb), NULL);
-				gtk_box_pack_start(GTK_BOX(hbox), frame, TRUE, TRUE, 0);
+				} else {
+					talkatu_markup_set_html(TALKATU_BUFFER(buffer), purple_prefs_get_string(pref_name), -1);
+				}
+
+				gtk_label_set_mnemonic_widget(GTK_LABEL(gtk_label), view);
+				gtk_widget_show_all(editor);
+				g_object_set_data(G_OBJECT(buffer), "pref-key", (gpointer)pref_name);
+				g_signal_connect(G_OBJECT(buffer), "changed",
+				                 G_CALLBACK(multiline_cb), NULL);
+				#warning fix this when talkatu has a solution
+				/*
+				g_signal_connect(G_OBJECT(view), "format-toggled",
+				                 G_CALLBACK(multiline_cb), NULL);
+				*/
+				gtk_box_pack_start(GTK_BOX(hbox), editor, TRUE, TRUE, 0);
 			}
 
 			break;

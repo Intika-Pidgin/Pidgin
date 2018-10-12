@@ -103,7 +103,7 @@ GType pidgin_conversation_theme_get_type(void);
  *         values are GValue*s. This is an internal structure. Take a ref if
  *         necessary, but don't destroy it yourself.
  */
-const GHashTable *pidgin_conversation_theme_get_info(const PidginConvTheme *theme);
+const GHashTable *pidgin_conversation_theme_get_info(PidginConvTheme *theme);
 
 /**
  * pidgin_conversation_theme_set_info:
