@@ -164,8 +164,7 @@ struct _PidginPrefsWindow {
 		GtkWidget *custom_smileys_size;
 		GtkWidget *minimum_entry_lines;
 		GtkTextBuffer *format_buffer;
-		GtkWidget *sample_box;
-		GtkWidget *sample_webview;
+		GtkWidget *format_view;
 		/* Win32 specific frame */
 		GtkWidget *font_frame;
 		GtkWidget *use_theme_font;
@@ -1879,77 +1878,23 @@ theme_page(void)
 }
 
 static void
-formatting_toggle_cb(PidginWebView *webview, PidginWebViewButtons buttons, void *data)
+formatting_toggle_cb(TalkatuActionGroup *ag, GAction *action, const gchar *name, gpointer data)
 {
-	gboolean bold, italic, uline, strike;
-
-	pidgin_webview_get_current_format(webview, &bold, &italic, &uline, &strike);
-
-	if (buttons & PIDGIN_WEBVIEW_BOLD)
+	gboolean activated = talkatu_action_group_get_action_activated(ag, name);
+	if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_BOLD, name) != 0) {
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_bold",
-		                      bold);
-	if (buttons & PIDGIN_WEBVIEW_ITALIC)
+		                      activated);
+	} else 	if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_ITALIC, name) != 0) {
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_italic",
-		                      italic);
-	if (buttons & PIDGIN_WEBVIEW_UNDERLINE)
+		                      activated);
+	} else 	if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_UNDERLINE, name) != 0) {
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_underline",
-		                      uline);
-	if (buttons & PIDGIN_WEBVIEW_STRIKE)
+		                      activated);
+	} else 	if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_STRIKETHROUGH, name) != 0) {
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_strike",
-		                      strike);
-
-	if (buttons & PIDGIN_WEBVIEW_GROW || buttons & PIDGIN_WEBVIEW_SHRINK)
-		purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/font_size",
-		                     pidgin_webview_get_current_fontsize(webview));
-	if (buttons & PIDGIN_WEBVIEW_FACE) {
-		char *face = pidgin_webview_get_current_fontface(webview);
-
-		if (face)
-			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/font_face", face);
-		else
-			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/font_face", "");
-
-		g_free(face);
-	}
-
-	if (buttons & PIDGIN_WEBVIEW_FORECOLOR) {
-		char *color = pidgin_webview_get_current_forecolor(webview);
-
-		if (color)
-			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/fgcolor", color);
-		else
-			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/fgcolor", "");
-
-		g_free(color);
-	}
-
-	if (buttons & PIDGIN_WEBVIEW_BACKCOLOR) {
-		char *color = pidgin_webview_get_current_backcolor(webview);
-
-		if (color)
-			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/bgcolor", color);
-		else
-			purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/bgcolor", "");
-
-		g_free(color);
+		                      activated);
 	}
 }
-
-static void
-formatting_clear_cb(PidginWebView *webview, void *data)
-{
-	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_bold", FALSE);
-	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_italic", FALSE);
-	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_underline", FALSE);
-	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_strike", FALSE);
-
-	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/font_size", 3);
-
-	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/font_face", "");
-	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/fgcolor", "");
-	purple_prefs_set_string(PIDGIN_PREFS_ROOT "/conversations/bgcolor", "");
-}
-
 
 #define CONVERSATION_CLOSE_ACCEL_PATH "<Actions>/ConversationActions/Close"
 
@@ -2103,7 +2048,7 @@ apply_custom_font(GtkWidget *unused, PidginPrefsWindow *win)
 		desc = pango_font_description_from_string(font);
 	}
 
-	gtk_widget_modify_font(win->conversations.sample_webview, desc);
+	gtk_widget_override_font(win->conversations.format_view, desc);
 	if (desc)
 		pango_font_description_free(desc);
 
@@ -2122,8 +2067,7 @@ pidgin_custom_font_set(GtkWidget *font_button, PidginPrefsWindow *win)
 static void
 bind_conv_page(PidginPrefsWindow *win)
 {
-	GtkWidget *webview;
-	GtkWidget *frame;
+	GSimpleActionGroup *ag = NULL;
 
 	win->conversations.notification_chat.type = PURPLE_PREF_INT;
 	win->conversations.notification_chat.key = PIDGIN_PREFS_ROOT "/conversations/notification_chat";
@@ -2198,11 +2142,9 @@ bind_conv_page(PidginPrefsWindow *win)
 	}
 #endif
 
+	ag = talkatu_buffer_get_action_group(TALKATU_BUFFER(win->conversations.format_buffer));
 	g_signal_connect_after(G_OBJECT(ag), "action-activated",
-	                       G_CALLBACK(formatting_action_cb), NULL);
-	g_signal_connect_after(G_OBJECT(webview), "format-cleared",
-	                       G_CALLBACK(formatting_clear_cb), NULL);
-	win->conversations.sample_webview = webview;
+	                       G_CALLBACK(formatting_toggle_cb), NULL);
 }
 
 static void
@@ -4077,7 +4019,10 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 			conversations.minimum_entry_lines);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
-			conversations.sample_box);
+			conversations.format_buffer);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow,
+			conversations.format_view);
 #ifdef WIN32
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
