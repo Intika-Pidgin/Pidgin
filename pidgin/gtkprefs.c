@@ -19,6 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
+#include <talkatu.h>
+
 #include "internal.h"
 #include "glibcompat.h"
 #include "pidgin.h"
@@ -161,6 +163,7 @@ struct _PidginPrefsWindow {
 		GtkWidget *resize_custom_smileys;
 		GtkWidget *custom_smileys_size;
 		GtkWidget *minimum_entry_lines;
+		GtkTextBuffer *format_buffer;
 		GtkWidget *sample_box;
 		GtkWidget *sample_webview;
 		/* Win32 specific frame */
@@ -2195,35 +2198,8 @@ bind_conv_page(PidginPrefsWindow *win)
 	}
 #endif
 
-	frame = pidgin_create_webview(TRUE, &webview, NULL);
-	gtk_widget_show(frame);
-	gtk_widget_set_name(webview, "pidgin_prefs_font_webview");
-	gtk_widget_set_size_request(frame, 450, -1);
-	pidgin_webview_set_whole_buffer_formatting_only(PIDGIN_WEBVIEW(webview), TRUE);
-	pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(webview),
-	                                 PIDGIN_WEBVIEW_BOLD |
-	                                 PIDGIN_WEBVIEW_ITALIC |
-	                                 PIDGIN_WEBVIEW_UNDERLINE |
-	                                 PIDGIN_WEBVIEW_STRIKE |
-	                                 PIDGIN_WEBVIEW_GROW |
-	                                 PIDGIN_WEBVIEW_SHRINK |
-	                                 PIDGIN_WEBVIEW_FACE |
-	                                 PIDGIN_WEBVIEW_FORECOLOR |
-	                                 PIDGIN_WEBVIEW_BACKCOLOR);
-
-	pidgin_webview_append_html(PIDGIN_WEBVIEW(webview),
-	                        _("This is how your outgoing message text will "
-	                          "appear when you use protocols that support "
-	                          "formatting."));
-
-	gtk_box_pack_start(GTK_BOX(win->conversations.sample_box), frame, TRUE, TRUE, 0);
-
-	pidgin_webview_setup_entry(PIDGIN_WEBVIEW(webview),
-	                        PURPLE_CONNECTION_FLAG_HTML |
-	                        PURPLE_CONNECTION_FLAG_FORMATTING_WBFO);
-
-	g_signal_connect_after(G_OBJECT(webview), "format-toggled",
-	                       G_CALLBACK(formatting_toggle_cb), NULL);
+	g_signal_connect_after(G_OBJECT(ag), "action-activated",
+	                       G_CALLBACK(formatting_action_cb), NULL);
 	g_signal_connect_after(G_OBJECT(webview), "format-cleared",
 	                       G_CALLBACK(formatting_clear_cb), NULL);
 	win->conversations.sample_webview = webview;
