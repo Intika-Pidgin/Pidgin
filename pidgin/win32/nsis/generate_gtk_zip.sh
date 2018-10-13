@@ -17,7 +17,6 @@ if [ ! -e $PIDGIN_BASE/VERSION ]; then
 fi
 
 STAGE_DIR=`readlink -f $PIDGIN_BASE/pidgin/win32/nsis/gtk_runtime_stage`
-CERT_PATH=`readlink -f $PIDGIN_BASE/pidgin/win32/nsis`/cacert.pem
 #Subdirectory of $STAGE_DIR
 INSTALL_DIR=Gtk
 SRC_INSTALL_DIR=src_install
@@ -45,7 +44,6 @@ function download() {
 	fi
 	failed=0
 	wget -t 5 "$1" -O "$2" -o "wget.log" --retry-connrefused --waitretry=5 \
-		--ca-certificate="$CERT_PATH" \
 		|| failed=1
 	if [ $failed != 0 ] ; then
 		if [ "$3" != "quiet" ] ; then
@@ -59,8 +57,6 @@ function download() {
 	rm "wget.log"
 	return 0
 }
-
-cat $PIDGIN_BASE/share/ca-certs/*.pem > "$CERT_PATH"
 
 #Download the existing file (so that we distribute the exact same file for all releases with the same bundle version)
 FILE="$ZIP_FILE"
@@ -455,7 +451,6 @@ do
 done
 
 rm -rf $CPIO_DIR
-rm "$CERT_PATH"
 
 #mv "${STAGE_DIR}/${INSTALL_DIR}/share/tcl8.5" "${STAGE_DIR}/${INSTALL_DIR}/lib/"
 rm "${STAGE_DIR}/${INSTALL_DIR}/lib/gstreamer-0.10/libfsmsnconference.dll"
