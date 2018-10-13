@@ -210,7 +210,7 @@ function download() {
 		exit 1
 	fi
 	failed=0
-	$WGET -t 3 "$1" -O "$2" -o "wget.log" --retry-connrefused --waitretry=2 --ca-certificate="$WIN32DEV_STORE/cacert.pem" || failed=1
+	$WGET -t 3 "$1" -O "$2" -o "wget.log" --retry-connrefused --waitretry=2 || failed=1
 	if [ $failed != 0 ]; then
 		echo "Download failed"
 		cat "wget.log"
@@ -348,8 +348,6 @@ path_real "$PIDGIN_BASE"
 PIDGIN_BASE="$path_ret"
 path_real "$WIN32DEV_STORE"
 WIN32DEV_STORE="$path_ret"
-
-cat "$PIDGIN_BASE/share/ca-certs"/*.pem > "$WIN32DEV_STORE/cacert.pem"
 
 # checking for Bonjour SDK
 
