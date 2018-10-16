@@ -1883,7 +1883,7 @@ formatting_toggle_cb(TalkatuActionGroup *ag, GAction *action, const gchar *name,
 	if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_BOLD, name) != 0) {
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_bold",
 		                      activated);
-	} else 	if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_ITALIC, name) != 0) {
+	} else if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_ITALIC, name) != 0) {
 		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/conversations/send_italic",
 		                      activated);
 	} else 	if(g_ascii_strcasecmp(TALKATU_ACTION_FORMAT_UNDERLINE, name) != 0) {
