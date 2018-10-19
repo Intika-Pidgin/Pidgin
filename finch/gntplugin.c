@@ -37,9 +37,6 @@
 #include "gntplugin.h"
 #include "gntrequest.h"
 
-#define FINCH_PLUGIN_INFO_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), FINCH_TYPE_PLUGIN_INFO, FinchPluginInfoPrivate))
-
 typedef struct
 {
 	FinchPluginPrefFrameCb pref_frame_cb;
@@ -75,6 +72,9 @@ typedef struct
 	} u;
 } FinchPluginUiData;
 
+G_DEFINE_TYPE_WITH_PRIVATE(FinchPluginInfo, finch_plugin_info,
+		PURPLE_TYPE_PLUGIN_INFO);
+
 static GntWidget *process_pref_frame(PurplePluginPrefFrame *frame);
 
 /* Set method for GObject properties */
@@ -82,7 +82,8 @@ static void
 finch_plugin_info_set_property(GObject *obj, guint param_id, const GValue *value,
 		GParamSpec *pspec)
 {
-	FinchPluginInfoPrivate *priv = FINCH_PLUGIN_INFO_GET_PRIVATE(obj);
+	FinchPluginInfoPrivate *priv = finch_plugin_info_get_instance_private(
+			FINCH_PLUGIN_INFO(obj));
 
 	switch (param_id) {
 		case PROP_GNT_PREF_FRAME_CB:
@@ -99,7 +100,8 @@ static void
 finch_plugin_info_get_property(GObject *obj, guint param_id, GValue *value,
 		GParamSpec *pspec)
 {
-	FinchPluginInfoPrivate *priv = FINCH_PLUGIN_INFO_GET_PRIVATE(obj);
+	FinchPluginInfoPrivate *priv = finch_plugin_info_get_instance_private(
+			FINCH_PLUGIN_INFO(obj));
 
 	switch (param_id) {
 		case PROP_GNT_PREF_FRAME_CB:
@@ -111,12 +113,15 @@ finch_plugin_info_get_property(GObject *obj, guint param_id, GValue *value,
 	}
 }
 
+static void
+finch_plugin_info_init(FinchPluginInfo *info)
+{
+}
+
 /* Class initializer function */
 static void finch_plugin_info_class_init(FinchPluginInfoClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-
-	g_type_class_add_private(klass, sizeof(FinchPluginInfoPrivate));
 
 	/* Setup properties */
 	obj_class->get_property = finch_plugin_info_get_property;
@@ -128,25 +133,6 @@ static void finch_plugin_info_class_init(FinchPluginInfoClass *klass)
 		                     "Callback that returns a GNT preferences frame",
 		                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
 		                     G_PARAM_STATIC_STRINGS));
-}
-
-GType
-finch_plugin_info_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(FinchPluginInfoClass),
-			.class_init = (GClassInitFunc)finch_plugin_info_class_init,
-			.instance_size = sizeof(FinchPluginInfo),
-		};
-
-		type = g_type_register_static(PURPLE_TYPE_PLUGIN_INFO,
-		                              "FinchPluginInfo", &info, 0);
-	}
-
-	return type;
 }
 
 FinchPluginInfo *
@@ -189,7 +175,8 @@ has_prefs(PurplePlugin *plugin)
 		return FALSE;
 
 	if (FINCH_IS_PLUGIN_INFO(info))
-		priv = FINCH_PLUGIN_INFO_GET_PRIVATE(info);
+		priv = finch_plugin_info_get_instance_private(
+				FINCH_PLUGIN_INFO(info));
 
 	ret = ((priv && priv->pref_frame_cb) ||
 			purple_plugin_info_get_pref_frame_cb(info) ||
@@ -388,7 +375,8 @@ configure_plugin_cb(GntWidget *button, gpointer null)
 	purple_plugin_info_set_ui_data(info, ui_data);
 
 	if (FINCH_IS_PLUGIN_INFO(info))
-		priv = FINCH_PLUGIN_INFO_GET_PRIVATE(info);
+		priv = finch_plugin_info_get_instance_private(
+				FINCH_PLUGIN_INFO(info));
 
 	if (priv && priv->pref_frame_cb != NULL)
 	{
