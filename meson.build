@@ -757,9 +757,9 @@ if enable_kwallet
 endif
 
 #######################################################################
-# Check for GPlugin 0.0.17
+# Check for GPlugin 0.28.0
 #######################################################################
-gplugin = dependency('gplugin', version : '>= 0.0.17')
+gplugin = dependency('gplugin', version : '>= 0.28.0')
 
 #######################################################################
 # Check for GObject Introspection

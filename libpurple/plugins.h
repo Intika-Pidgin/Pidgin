@@ -40,10 +40,8 @@
 
 #define PURPLE_TYPE_PLUGIN             GPLUGIN_TYPE_PLUGIN
 #define PURPLE_PLUGIN(obj)             GPLUGIN_PLUGIN(obj)
-#define PURPLE_PLUGIN_CLASS(klass)     GPLUGIN_PLUGIN_CLASS(klass)
 #define PURPLE_IS_PLUGIN(obj)          GPLUGIN_IS_PLUGIN(obj)
-#define PURPLE_IS_PLUGIN_CLASS(klass)  GPLUGIN_IS_PLUGIN_CLASS(klass)
-#define PURPLE_PLUGIN_GET_CLASS(obj)   GPLUGIN_PLUGIN_GET_CLASS(obj)
+#define PURPLE_PLUGIN_GET_IFACE(obj)   GPLUGIN_PLUGIN_GET_IFACE(obj)
 
 /**
  * PurplePlugin:
@@ -53,7 +51,7 @@
  */
 typedef GPluginPlugin PurplePlugin;
 
-typedef GPluginPluginClass PurplePluginClass;
+typedef GPluginPluginInterface PurplePluginInterface;
 
 #define PURPLE_TYPE_PLUGIN_INFO             (purple_plugin_info_get_type())
 #define PURPLE_PLUGIN_INFO(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfo))
