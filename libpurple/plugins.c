@@ -224,7 +224,7 @@ purple_plugin_unload(PurplePlugin *plugin, GError **error)
 }
 
 gboolean
-purple_plugin_is_loaded(const PurplePlugin *plugin)
+purple_plugin_is_loaded(PurplePlugin *plugin)
 {
 	g_return_val_if_fail(plugin != NULL, FALSE);
 
@@ -232,7 +232,7 @@ purple_plugin_is_loaded(const PurplePlugin *plugin)
 }
 
 const gchar *
-purple_plugin_get_filename(const PurplePlugin *plugin)
+purple_plugin_get_filename(PurplePlugin *plugin)
 {
 	g_return_val_if_fail(plugin != NULL, NULL);
 
@@ -240,7 +240,7 @@ purple_plugin_get_filename(const PurplePlugin *plugin)
 }
 
 PurplePluginInfo *
-purple_plugin_get_info(const PurplePlugin *plugin)
+purple_plugin_get_info(PurplePlugin *plugin)
 {
 	GPluginPluginInfo *info;
 
@@ -293,7 +293,7 @@ purple_plugin_add_interface(PurplePlugin *plugin, GType instance_type,
 }
 
 gboolean
-purple_plugin_is_internal(const PurplePlugin *plugin)
+purple_plugin_is_internal(PurplePlugin *plugin)
 {
 	PurplePluginInfo *info;
 
@@ -308,7 +308,7 @@ purple_plugin_is_internal(const PurplePlugin *plugin)
 }
 
 GSList *
-purple_plugin_get_dependent_plugins(const PurplePlugin *plugin)
+purple_plugin_get_dependent_plugins(PurplePlugin *plugin)
 {
 #warning TODO: Implement this when GPlugin can return dependent plugins.
 	return NULL;
