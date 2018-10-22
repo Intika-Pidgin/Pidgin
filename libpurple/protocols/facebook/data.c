@@ -602,7 +602,7 @@ fb_data_image_queue(FbData *fata)
 		url = fb_data_image_get_url(img);
 
 		req = purple_http_request_new(url);
-		purple_http_request_set_max_len(req, -1);
+		purple_http_request_set_max_len(req, FB_DATA_ICON_SIZE_MAX);
 		con = purple_http_request(priv->gc, req,
 				fb_data_image_cb, img);
 		fb_http_conns_add(priv->cons, con);
