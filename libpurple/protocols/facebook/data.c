@@ -592,14 +592,21 @@ fb_data_image_queue(FbData *fata)
 	g_hash_table_iter_init(&iter, priv->imgs);
 
 	while (g_hash_table_iter_next(&iter, (gpointer *) &img, NULL)) {
+		PurpleHttpRequest *req;
+
 		if (fb_data_image_get_active(img)) {
 			continue;
 		}
 
 		img->priv->active = TRUE;
 		url = fb_data_image_get_url(img);
-		con = purple_http_get(priv->gc, fb_data_image_cb, img, url);
+
+		req = purple_http_request_new(url);
+		purple_http_request_set_max_len(req, -1);
+		con = purple_http_request(priv->gc, req,
+				fb_data_image_cb, img);
 		fb_http_conns_add(priv->cons, con);
+		purple_http_request_unref(req);
 
 		if (++active >= FB_DATA_ICON_MAX) {
 			break;
