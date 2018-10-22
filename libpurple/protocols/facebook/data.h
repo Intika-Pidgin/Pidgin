@@ -61,6 +61,13 @@
  */
 #define FB_DATA_ICON_MAX  4
 
+/**
+ * FB_DATA_ICON_SIZE_MAX:
+ *
+ * The maximum size of a fetched icon.
+ */
+#define FB_DATA_ICON_SIZE_MAX  0xa00000 /* 10MiB */
+
 typedef struct _FbData FbData;
 typedef struct _FbDataClass FbDataClass;
 typedef struct _FbDataPrivate FbDataPrivate;
