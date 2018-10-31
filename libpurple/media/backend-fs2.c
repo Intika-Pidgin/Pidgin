@@ -174,7 +174,8 @@ enum {
 };
 
 G_DEFINE_TYPE_WITH_CODE(PurpleMediaBackendFs2, purple_media_backend_fs2,
-		G_TYPE_OBJECT, G_ADD_PRIVATE(PurpleMediaBackendFs2)
+		G_TYPE_OBJECT,
+		G_ADD_PRIVATE(PurpleMediaBackendFs2)
 		G_IMPLEMENT_INTERFACE(PURPLE_TYPE_MEDIA_BACKEND,
 				purple_media_backend_iface_init));
 
