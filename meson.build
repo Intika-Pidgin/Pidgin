@@ -679,7 +679,7 @@ add_project_arguments(
     '-DFINCH_DISABLE_DEPRECATED',
     '-DGNT_DISABLE_DEPRECATED',
     language : 'c')
-if compiler.get_id() == 'gcc'
+if get_option('buildtype') != 'plain' and compiler.get_id() == 'gcc'
 	# We enable -Wall later.
 	# If it's set after the warning CFLAGS in the compiler invocation, it counteracts the -Wno... flags.
 	# This leads to warnings we don't want.
@@ -735,7 +735,7 @@ if compiler.get_id() == 'gcc'
 #		])
 	endif
 endif
-if SUNCC
+if get_option('buildtype') != 'plain' and SUNCC
 	add_project_arguments('-features=extensions', language : 'c')
 endif
 

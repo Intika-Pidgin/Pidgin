@@ -38,15 +38,13 @@ struct _GntProgressBar
 	GntWidget parent;
 };
 
-#define GNT_PROGRESS_BAR_GET_PRIVATE(o)   (G_TYPE_INSTANCE_GET_PRIVATE ((o), GNT_TYPE_PROGRESS_BAR, GntProgressBarPrivate))
-
-static GntWidgetClass *parent_class = NULL;
-
+G_DEFINE_TYPE_WITH_PRIVATE (GntProgressBar, gnt_progress_bar, GNT_TYPE_WIDGET);
 
 static void
 gnt_progress_bar_draw (GntWidget *widget)
 {
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (GNT_PROGRESS_BAR (widget));
+	GntProgressBarPrivate *priv = gnt_progress_bar_get_instance_private (
+			GNT_PROGRESS_BAR (widget));
 	gchar progress[8];
 	gint start, end, i, pos;
 	int color;
@@ -115,23 +113,20 @@ gnt_progress_bar_size_request (GntWidget *widget)
 }
 
 static void
-gnt_progress_bar_class_init (gpointer klass, gpointer class_data)
+gnt_progress_bar_class_init (GntProgressBarClass *klass)
 {
-	GObjectClass *g_class = G_OBJECT_CLASS (klass);
+	GntWidgetClass *wclass = GNT_WIDGET_CLASS(klass);
 
-	parent_class = GNT_WIDGET_CLASS (klass);
-
-	g_type_class_add_private (g_class, sizeof (GntProgressBarPrivate));
-
-	parent_class->draw = gnt_progress_bar_draw;
-	parent_class->size_request = gnt_progress_bar_size_request;
+	wclass->draw = gnt_progress_bar_draw;
+	wclass->size_request = gnt_progress_bar_size_request;
 }
 
 static void
-gnt_progress_bar_init (GTypeInstance *instance, gpointer g_class)
+gnt_progress_bar_init (GntProgressBar *progress_bar)
 {
-	GntWidget *widget = GNT_WIDGET (instance);
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (GNT_PROGRESS_BAR (widget));
+	GntWidget *widget = GNT_WIDGET (progress_bar);
+	GntProgressBarPrivate *priv =
+			gnt_progress_bar_get_instance_private (progress_bar);
 
 	gnt_widget_set_take_focus (widget, FALSE);
 	GNT_WIDGET_SET_FLAGS (widget, GNT_WIDGET_NO_BORDER | GNT_WIDGET_NO_SHADOW | GNT_WIDGET_GROW_X);
@@ -140,31 +135,6 @@ gnt_progress_bar_init (GTypeInstance *instance, gpointer g_class)
 	widget->priv.minh = 1;
 
 	priv->show_value = TRUE;
-}
-
-GType
-gnt_progress_bar_get_type (void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof (GntProgressBarClass),
-			NULL,                         /* base_init */
-			NULL,                         /* base_finalize */
-			gnt_progress_bar_class_init,  /* class_init */
-			NULL,                         /* class_finalize */
-			NULL,                         /* class_data */
-			sizeof (GntProgressBar),
-			0,                            /* n_preallocs */
-			gnt_progress_bar_init,        /* instance_init */
-			NULL                          /* value_table */
-		};
-
-		type = g_type_register_static (GNT_TYPE_WIDGET, "GntProgressBar", &info, 0);
-	}
-
-	return type;
 }
 
 GntWidget *
@@ -177,7 +147,8 @@ gnt_progress_bar_new (void)
 void
 gnt_progress_bar_set_fraction (GntProgressBar *pbar, gdouble fraction)
 {
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (pbar);
+	GntProgressBarPrivate *priv =
+			gnt_progress_bar_get_instance_private (pbar);
 
 	if (fraction > 1.0)
 		priv->fraction = 1.0;
@@ -194,7 +165,8 @@ void
 gnt_progress_bar_set_orientation (GntProgressBar *pbar,
 		GntProgressBarOrientation orientation)
 {
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (pbar);
+	GntProgressBarPrivate *priv =
+			gnt_progress_bar_get_instance_private (pbar);
 	GntWidget *widget = GNT_WIDGET(pbar);
 
 	priv->orientation = orientation;
@@ -218,28 +190,32 @@ gnt_progress_bar_set_orientation (GntProgressBar *pbar,
 void
 gnt_progress_bar_set_show_progress (GntProgressBar *pbar, gboolean show)
 {
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (pbar);
+	GntProgressBarPrivate *priv =
+			gnt_progress_bar_get_instance_private (pbar);
 	priv->show_value = show;
 }
 
 gdouble
 gnt_progress_bar_get_fraction (GntProgressBar *pbar)
 {
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (pbar);
+	GntProgressBarPrivate *priv =
+			gnt_progress_bar_get_instance_private (pbar);
 	return priv->fraction;
 }
 
 GntProgressBarOrientation
 gnt_progress_bar_get_orientation (GntProgressBar *pbar)
 {
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (pbar);
+	GntProgressBarPrivate *priv =
+			gnt_progress_bar_get_instance_private (pbar);
 	return priv->orientation;
 }
 
 gboolean
 gnt_progress_bar_get_show_progress (GntProgressBar *pbar)
 {
-	GntProgressBarPrivate *priv = GNT_PROGRESS_BAR_GET_PRIVATE (pbar);
+	GntProgressBarPrivate *priv =
+			gnt_progress_bar_get_instance_private (pbar);
 	return priv->show_value;
 }
 
