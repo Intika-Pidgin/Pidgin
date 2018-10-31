@@ -36,9 +36,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PIDGIN_CONV_THEME_GET_PRIVATE(Gobject) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((Gobject), PIDGIN_TYPE_CONV_THEME, PidginConvThemePrivate))
-
 /******************************************************************************
  * Structs
  *****************************************************************************/
@@ -86,8 +83,10 @@ enum {
  * Globals
  *****************************************************************************/
 
-static GObjectClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PidginConvTheme, pidgin_conversation_theme,
+		PURPLE_TYPE_THEME);
 
 /******************************************************************************
  * Helper Functions
@@ -436,14 +435,8 @@ pidgin_conv_theme_set_property(GObject *obj, guint param_id, const GValue *value
 }
 
 static void
-pidgin_conv_theme_init(GTypeInstance *instance,
-		gpointer klass)
+pidgin_conversation_theme_init(PidginConvTheme *theme)
 {
-#if 0
-	PidginConvThemePrivate *priv;
-
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(instance);
-#endif
 }
 
 static void
@@ -452,7 +445,8 @@ pidgin_conv_theme_finalize(GObject *obj)
 	PidginConvThemePrivate *priv;
 	GList *list;
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(obj);
+	priv = pidgin_conversation_theme_get_instance_private(
+			PIDGIN_CONV_THEME(obj));
 
 	g_free(priv->template_html);
 	g_free(priv->header_html);
@@ -483,17 +477,13 @@ pidgin_conv_theme_finalize(GObject *obj)
 	if (priv->nick_colors)
 		g_array_unref(priv->nick_colors);
 
-	parent_class->finalize(obj);
+	G_OBJECT_CLASS(pidgin_conversation_theme_parent_class)->finalize(obj);
 }
 
 static void
-pidgin_conv_theme_class_init(PidginConvThemeClass *klass)
+pidgin_conversation_theme_class_init(PidginConvThemeClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PidginConvThemePrivate));
 
 	obj_class->get_property = pidgin_conv_theme_get_property;
 	obj_class->set_property = pidgin_conv_theme_set_property;
@@ -513,41 +503,18 @@ pidgin_conv_theme_class_init(PidginConvThemeClass *klass)
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
 }
 
-GType
-pidgin_conversation_theme_get_type(void)
-{
-	static GType type = 0;
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PidginConvThemeClass),
-			NULL, /* base_init */
-			NULL, /* base_finalize */
-			(GClassInitFunc)pidgin_conv_theme_class_init, /* class_init */
-			NULL, /* class_finalize */
-			NULL, /* class_data */
-			sizeof(PidginConvTheme),
-			0, /* n_preallocs */
-			pidgin_conv_theme_init, /* instance_init */
-			NULL, /* value table */
-		};
-		type = g_type_register_static(PURPLE_TYPE_THEME,
-				"PidginConvTheme", &info, 0);
-	}
-	return type;
-}
-
 /*****************************************************************************
  * Public API functions
  *****************************************************************************/
 
 const GHashTable *
-pidgin_conversation_theme_get_info(const PidginConvTheme *theme)
+pidgin_conversation_theme_get_info(PidginConvTheme *theme)
 {
 	PidginConvThemePrivate *priv;
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 	return priv->info;
 }
 
@@ -558,7 +525,7 @@ pidgin_conversation_theme_set_info(PidginConvTheme *theme, GHashTable *info)
 
 	g_return_if_fail(theme != NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	if (priv->info)
 		g_hash_table_destroy(priv->info);
@@ -575,7 +542,7 @@ pidgin_conversation_theme_lookup(PidginConvTheme *theme, const char *key, gboole
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	return get_key(priv, key, specific);
 }
@@ -589,7 +556,7 @@ pidgin_conversation_theme_get_template(PidginConvTheme *theme, PidginConvThemeTe
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 	dir = purple_theme_get_dir(PURPLE_THEME(theme));
 
 	switch (type) {
@@ -656,7 +623,7 @@ pidgin_conversation_theme_add_variant(PidginConvTheme *theme, char *variant)
 	g_return_if_fail(theme != NULL);
 	g_return_if_fail(variant != NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	priv->variants = g_list_prepend(priv->variants, variant);
 }
@@ -668,7 +635,7 @@ pidgin_conversation_theme_get_variant(PidginConvTheme *theme)
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	return priv->variant;
 }
@@ -683,7 +650,7 @@ pidgin_conversation_theme_set_variant(PidginConvTheme *theme, const char *varian
 	g_return_if_fail(theme != NULL);
 	g_return_if_fail(variant != NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	g_free(priv->variant);
 	priv->variant = g_strdup(variant);
@@ -704,7 +671,7 @@ pidgin_conversation_theme_get_variants(PidginConvTheme *theme)
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	return priv->variants;
 }
@@ -729,7 +696,7 @@ pidgin_conversation_theme_get_css_path(PidginConvTheme *theme)
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	dir = purple_theme_get_dir(PURPLE_THEME(theme));
 	if (!priv->variant) {
@@ -750,7 +717,7 @@ pidgin_conversation_theme_get_nick_colors(PidginConvTheme *theme)
 
 	g_return_val_if_fail(theme != NULL, NULL);
 
-	priv = PIDGIN_CONV_THEME_GET_PRIVATE(theme);
+	priv = pidgin_conversation_theme_get_instance_private(theme);
 
 	dir = purple_theme_get_dir(PURPLE_THEME(theme));
 	if (NULL == priv->nick_colors)

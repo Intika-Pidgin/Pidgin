@@ -75,15 +75,12 @@ struct _FinchMediaPrivate
 	PurpleConversation *conv;
 };
 
-#define FINCH_MEDIA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), FINCH_TYPE_MEDIA, FinchMediaPrivate))
-
+static GType finch_media_get_type (void);
 static void finch_media_class_init (FinchMediaClass *klass);
 static void finch_media_init (FinchMedia *media);
 static void finch_media_finalize (GObject *object);
 static void finch_media_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
 static void finch_media_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-
-static GntBoxClass *parent_class = NULL;
 
 enum {
 	MESSAGE,
@@ -96,35 +93,12 @@ enum {
 	PROP_MEDIA,
 };
 
-static GType
-finch_media_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(FinchMediaClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) finch_media_class_init,
-			NULL,
-			NULL,
-			sizeof(FinchMedia),
-			0,
-			(GInstanceInitFunc) finch_media_init,
-			NULL
-		};
-		type = g_type_register_static(GNT_TYPE_BOX, "FinchMedia", &info, 0);
-	}
-	return type;
-}
-
+G_DEFINE_TYPE_WITH_PRIVATE(FinchMedia, finch_media, GNT_TYPE_BOX);
 
 static void
 finch_media_class_init (FinchMediaClass *klass)
 {
 	GObjectClass *gobject_class = (GObjectClass*)klass;
-	parent_class = g_type_class_peek_parent(klass);
 
 	gobject_class->finalize = finch_media_finalize;
 	gobject_class->set_property = finch_media_set_property;
@@ -141,15 +115,13 @@ finch_media_class_init (FinchMediaClass *klass)
 					G_SIGNAL_RUN_LAST, 0, NULL, NULL,
 					g_cclosure_marshal_VOID__STRING,
 					G_TYPE_NONE, 1, G_TYPE_STRING);
-
-	g_type_class_add_private(klass, sizeof(FinchMediaPrivate));
 }
 
 
 static void
 finch_media_init (FinchMedia *media)
 {
-	media->priv = FINCH_MEDIA_GET_PRIVATE(media);
+	media->priv = finch_media_get_instance_private(media);
 
 	media->priv->calling = gnt_label_new(_("Calling..."));
 	media->priv->hangup = gnt_button_new(_("Hangup"));
