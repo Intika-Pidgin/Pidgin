@@ -28,9 +28,6 @@
 #include "roomlist.h"
 #include "server.h"
 
-#define PURPLE_ROOMLIST_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_ROOMLIST, PurpleRoomlistPrivate))
-
 typedef struct _PurpleRoomlistPrivate  PurpleRoomlistPrivate;
 
 /*
@@ -77,9 +74,10 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class;
 static GParamSpec *properties[PROP_LAST];
 static PurpleRoomlistUiOps *ops = NULL;
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleRoomlist, purple_roomlist, G_TYPE_OBJECT);
 
 static void purple_roomlist_field_free(PurpleRoomlistField *f);
 static void purple_roomlist_room_destroy(PurpleRoomlist *list, PurpleRoomlistRoom *r);
@@ -96,7 +94,8 @@ void purple_roomlist_show_with_account(PurpleAccount *account)
 
 PurpleAccount *purple_roomlist_get_account(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -105,7 +104,8 @@ PurpleAccount *purple_roomlist_get_account(PurpleRoomlist *list)
 
 void purple_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_if_fail(priv != NULL);
 
@@ -119,7 +119,8 @@ void purple_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
 
 void purple_roomlist_set_in_progress(PurpleRoomlist *list, gboolean in_progress)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_if_fail(priv != NULL);
 
@@ -133,7 +134,8 @@ void purple_roomlist_set_in_progress(PurpleRoomlist *list, gboolean in_progress)
 
 gboolean purple_roomlist_get_in_progress(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_val_if_fail(priv != NULL, FALSE);
 
@@ -142,7 +144,8 @@ gboolean purple_roomlist_get_in_progress(PurpleRoomlist *list)
 
 void purple_roomlist_room_add(PurpleRoomlist *list, PurpleRoomlistRoom *room)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_if_fail(priv != NULL);
 	g_return_if_fail(room != NULL);
@@ -170,7 +173,8 @@ PurpleRoomlist *purple_roomlist_get_list(PurpleConnection *gc)
 
 void purple_roomlist_cancel_get_list(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 	PurpleProtocol *protocol = NULL;
 	PurpleConnection *gc;
 
@@ -189,7 +193,8 @@ void purple_roomlist_cancel_get_list(PurpleRoomlist *list)
 
 void purple_roomlist_expand_category(PurpleRoomlist *list, PurpleRoomlistRoom *category)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 	PurpleProtocol *protocol = NULL;
 	PurpleConnection *gc;
 
@@ -209,7 +214,8 @@ void purple_roomlist_expand_category(PurpleRoomlist *list, PurpleRoomlistRoom *c
 
 GList * purple_roomlist_get_fields(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -218,7 +224,8 @@ GList * purple_roomlist_get_fields(PurpleRoomlist *list)
 
 gpointer purple_roomlist_get_protocol_data(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -227,7 +234,8 @@ gpointer purple_roomlist_get_protocol_data(PurpleRoomlist *list)
 
 void purple_roomlist_set_protocol_data(PurpleRoomlist *list, gpointer proto_data)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	g_return_if_fail(priv != NULL);
 
@@ -258,7 +266,8 @@ purple_roomlist_set_property(GObject *obj, guint param_id, const GValue *value,
 		GParamSpec *pspec)
 {
 	PurpleRoomlist *list = PURPLE_ROOMLIST(obj);
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 
 	switch (param_id) {
 		case PROP_ACCOUNT:
@@ -299,13 +308,18 @@ purple_roomlist_get_property(GObject *obj, guint param_id, GValue *value,
 	}
 }
 
+static void
+purple_roomlist_init(PurpleRoomlist *list)
+{
+}
+
 /* Called when done constructing */
 static void
 purple_roomlist_constructed(GObject *object)
 {
 	PurpleRoomlist *list = PURPLE_ROOMLIST(object);
 
-	parent_class->constructed(object);
+	G_OBJECT_CLASS(purple_roomlist_parent_class)->constructed(object);
 
 	if (ops && ops->create)
 		ops->create(list);
@@ -316,7 +330,8 @@ static void
 purple_roomlist_finalize(GObject *object)
 {
 	PurpleRoomlist *list = PURPLE_ROOMLIST(object);
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 	GList *l;
 
 	purple_debug_misc("roomlist", "destroying list %p\n", list);
@@ -333,7 +348,7 @@ purple_roomlist_finalize(GObject *object)
 	g_list_foreach(priv->fields, (GFunc)purple_roomlist_field_free, NULL);
 	g_list_free(priv->fields);
 
-	parent_class->finalize(object);
+	G_OBJECT_CLASS(purple_roomlist_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -342,16 +357,12 @@ purple_roomlist_class_init(PurpleRoomlistClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_roomlist_finalize;
 	obj_class->constructed = purple_roomlist_constructed;
 
 	/* Setup properties */
 	obj_class->get_property = purple_roomlist_get_property;
 	obj_class->set_property = purple_roomlist_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleRoomlistPrivate));
 
 	properties[PROP_ACCOUNT] = g_param_spec_object("account", "Account",
 				"The account for the room list.",
@@ -369,32 +380,6 @@ purple_roomlist_class_init(PurpleRoomlistClass *klass)
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_roomlist_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleRoomlistClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_roomlist_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleRoomlist),
-			0,
-			NULL,
-			NULL,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT, "PurpleRoomlist",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleRoomlist *purple_roomlist_new(PurpleAccount *account)
@@ -442,7 +427,8 @@ PurpleRoomlistRoom *purple_roomlist_room_new(PurpleRoomlistRoomType type, const 
 
 void purple_roomlist_room_add_field(PurpleRoomlist *list, PurpleRoomlistRoom *room, gconstpointer field)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 	PurpleRoomlistField *f;
 
 	g_return_if_fail(priv != NULL);
@@ -476,7 +462,8 @@ void purple_roomlist_room_add_field(PurpleRoomlist *list, PurpleRoomlistRoom *ro
 
 void purple_roomlist_room_join(PurpleRoomlist *list, PurpleRoomlistRoom *room)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 	GHashTable *components;
 	GList *l, *j;
 	PurpleConnection *gc;
@@ -538,7 +525,8 @@ GList *purple_roomlist_room_get_fields(PurpleRoomlistRoom *room)
 
 static void purple_roomlist_room_destroy(PurpleRoomlist *list, PurpleRoomlistRoom *r)
 {
-	PurpleRoomlistPrivate *priv = PURPLE_ROOMLIST_GET_PRIVATE(list);
+	PurpleRoomlistPrivate *priv =
+			purple_roomlist_get_instance_private(list);
 	GList *l, *j;
 
 	for (l = priv->fields, j = r->fields; l && j; l = l->next, j = j->next) {

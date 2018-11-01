@@ -25,9 +25,6 @@
 #include "internal.h" /* TODO: this needs to die */
 #include "util.h"
 
-#define PURPLE_CONTACT_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_CONTACT, PurpleContactPrivate))
-
 typedef struct _PurpleContactPrivate    PurpleContactPrivate;
 
 struct _PurpleContactPrivate {
@@ -47,8 +44,10 @@ enum
 /******************************************************************************
  * Globals
  *****************************************************************************/
-static GObjectClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleContact, purple_contact,
+		PURPLE_TYPE_COUNTING_NODE);
 
 /******************************************************************************
  * API
@@ -57,7 +56,8 @@ static void
 purple_contact_compute_priority_buddy(PurpleContact *contact) {
 	PurpleBlistNode *bnode;
 	PurpleBuddy *new_priority = NULL;
-	PurpleContactPrivate *priv = PURPLE_CONTACT_GET_PRIVATE(contact);
+	PurpleContactPrivate *priv =
+			purple_contact_get_instance_private(contact);
 
 	g_return_if_fail(priv != NULL);
 
@@ -117,7 +117,8 @@ purple_contact_set_alias(PurpleContact *contact, const char *alias)
 	PurpleBlistNode *bnode;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleContactPrivate *priv = PURPLE_CONTACT_GET_PRIVATE(contact);
+	PurpleContactPrivate *priv =
+			purple_contact_get_instance_private(contact);
 
 	g_return_if_fail(priv != NULL);
 
@@ -165,7 +166,8 @@ purple_contact_set_alias(PurpleContact *contact, const char *alias)
 
 const char *purple_contact_get_alias(PurpleContact* contact)
 {
-	PurpleContactPrivate *priv = PURPLE_CONTACT_GET_PRIVATE(contact);
+	PurpleContactPrivate *priv =
+			purple_contact_get_instance_private(contact);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -197,7 +199,8 @@ gboolean purple_contact_on_account(PurpleContact *c, PurpleAccount *account)
 
 void purple_contact_invalidate_priority_buddy(PurpleContact *contact)
 {
-	PurpleContactPrivate *priv = PURPLE_CONTACT_GET_PRIVATE(contact);
+	PurpleContactPrivate *priv =
+			purple_contact_get_instance_private(contact);
 
 	g_return_if_fail(priv != NULL);
 
@@ -206,7 +209,8 @@ void purple_contact_invalidate_priority_buddy(PurpleContact *contact)
 
 PurpleBuddy *purple_contact_get_priority_buddy(PurpleContact *contact)
 {
-	PurpleContactPrivate *priv = PURPLE_CONTACT_GET_PRIVATE(contact);
+	PurpleContactPrivate *priv =
+			purple_contact_get_instance_private(contact);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -276,7 +280,8 @@ purple_contact_get_property(GObject *obj, guint param_id, GValue *value,
 		GParamSpec *pspec)
 {
 	PurpleContact *contact = PURPLE_CONTACT(obj);
-	PurpleContactPrivate *priv = PURPLE_CONTACT_GET_PRIVATE(contact);
+	PurpleContactPrivate *priv =
+			purple_contact_get_instance_private(contact);
 
 	switch (param_id) {
 		case PROP_ALIAS:
@@ -293,9 +298,8 @@ purple_contact_get_property(GObject *obj, guint param_id, GValue *value,
 
 /* GObject initialization function */
 static void
-purple_contact_init(GTypeInstance *instance, gpointer klass)
+purple_contact_init(PurpleContact *contact)
 {
-	PurpleContact *contact = PURPLE_CONTACT(instance);
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	if (ops && ops->new_node)
@@ -306,9 +310,12 @@ purple_contact_init(GTypeInstance *instance, gpointer klass)
 static void
 purple_contact_finalize(GObject *object)
 {
-	g_free(PURPLE_CONTACT_GET_PRIVATE(object)->alias);
+	PurpleContactPrivate *priv = purple_contact_get_instance_private(
+			PURPLE_CONTACT(object));
 
-	G_OBJECT_CLASS(parent_class)->finalize(object);
+	g_free(priv->alias);
+
+	G_OBJECT_CLASS(purple_contact_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -316,15 +323,11 @@ static void purple_contact_class_init(PurpleContactClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_contact_finalize;
 
 	/* Setup properties */
 	obj_class->get_property = purple_contact_get_property;
 	obj_class->set_property = purple_contact_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleContactPrivate));
 
 	properties[PROP_ALIAS] = g_param_spec_string(
 		"alias",
@@ -343,36 +346,6 @@ static void purple_contact_class_init(PurpleContactClass *klass)
 	);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_contact_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleContactClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_contact_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleContact),
-			0,
-			(GInstanceInitFunc)purple_contact_init,
-			NULL,
-		};
-
-		type = g_type_register_static(
-			PURPLE_TYPE_COUNTING_NODE,
-			"PurpleContact",
-			&info,
-			0
-		);
-	}
-
-	return type;
 }
 
 PurpleContact *

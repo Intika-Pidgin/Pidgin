@@ -24,9 +24,6 @@
 #include "group.h"
 #include "internal.h" /* TODO: we need to kill this */
 
-#define PURPLE_GROUP_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_GROUP, PurpleGroupPrivate))
-
 typedef struct _PurpleGroupPrivate      PurpleGroupPrivate;
 
 /******************************************************************************
@@ -50,7 +47,9 @@ enum
  * Globals
  *****************************************************************************/
 static GParamSpec *properties[GROUP_PROP_LAST];
-static GObjectClass *parent_class = NULL;
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleGroup, purple_group,
+		PURPLE_TYPE_COUNTING_NODE);
 
 /******************************************************************************
  * Group API
@@ -104,7 +103,7 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 	gchar *new_name;
 	GList *moved_buddies = NULL;
 	GSList *accts;
-	PurpleGroupPrivate *priv = PURPLE_GROUP_GET_PRIVATE(source);
+	PurpleGroupPrivate *priv = purple_group_get_instance_private(source);
 
 	g_return_if_fail(priv != NULL);
 	g_return_if_fail(name != NULL);
@@ -118,7 +117,7 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 
 	dest = purple_blist_find_group(new_name);
 	if (dest != NULL && purple_utf8_strcasecmp(priv->name,
-				PURPLE_GROUP_GET_PRIVATE(dest)->name) != 0) {
+			purple_group_get_name(dest)) != 0) {
 		/* We're merging two groups */
 		PurpleBlistNode *prev, *child, *next;
 
@@ -235,7 +234,7 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 }
 
 const char *purple_group_get_name(PurpleGroup *group) {
-	PurpleGroupPrivate *priv = PURPLE_GROUP_GET_PRIVATE(group);
+	PurpleGroupPrivate *priv = purple_group_get_instance_private(group);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -251,7 +250,7 @@ purple_group_set_property(GObject *obj, guint param_id, const GValue *value,
                           GParamSpec *pspec)
 {
 	PurpleGroup *group = PURPLE_GROUP(obj);
-	PurpleGroupPrivate *priv = PURPLE_GROUP_GET_PRIVATE(group);
+	PurpleGroupPrivate *priv = purple_group_get_instance_private(group);
 
 	switch (param_id) {
 		case GROUP_PROP_NAME:
@@ -286,17 +285,17 @@ purple_group_get_property(GObject *obj, guint param_id, GValue *value,
 
 /* GObject initialization function */
 static void
-purple_group_init(GTypeInstance *instance, gpointer klass) {
+purple_group_init(PurpleGroup *group) {
 }
 
 /* Called when done constructing */
 static void
 purple_group_constructed(GObject *object) {
 	PurpleGroup *group = PURPLE_GROUP(object);
-	PurpleGroupPrivate *priv = PURPLE_GROUP_GET_PRIVATE(group);
+	PurpleGroupPrivate *priv = purple_group_get_instance_private(group);
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
-	G_OBJECT_CLASS(parent_class)->constructed(object);
+	G_OBJECT_CLASS(purple_group_parent_class)->constructed(object);
 
 	if (ops && ops->new_node)
 		ops->new_node(PURPLE_BLIST_NODE(group));
@@ -307,9 +306,12 @@ purple_group_constructed(GObject *object) {
 /* GObject finalize function */
 static void
 purple_group_finalize(GObject *object) {
-	g_free(PURPLE_GROUP_GET_PRIVATE(object)->name);
+	PurpleGroupPrivate *priv = purple_group_get_instance_private(
+			PURPLE_GROUP(object));
 
-	G_OBJECT_CLASS(parent_class)->finalize(object);
+	g_free(priv->name);
+
+	G_OBJECT_CLASS(purple_group_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -317,16 +319,12 @@ static void
 purple_group_class_init(PurpleGroupClass *klass) {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_group_finalize;
 	obj_class->constructed = purple_group_constructed;
 
 	/* Setup properties */
 	obj_class->get_property = purple_group_get_property;
 	obj_class->set_property = purple_group_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleGroupPrivate));
 
 	properties[GROUP_PROP_NAME] = g_param_spec_string(
 		"name",
@@ -337,32 +335,6 @@ purple_group_class_init(PurpleGroupClass *klass) {
 	);
 
 	g_object_class_install_properties(obj_class, GROUP_PROP_LAST, properties);
-}
-
-GType
-purple_group_get_type(void) {
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleGroupClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_group_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleGroup),
-			0,
-			(GInstanceInitFunc)purple_group_init,
-			NULL,
-		};
-
-		type = g_type_register_static(PURPLE_TYPE_COUNTING_NODE,
-				"PurpleGroup",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleGroup *

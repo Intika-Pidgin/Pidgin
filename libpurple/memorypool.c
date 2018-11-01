@@ -24,8 +24,6 @@
 
 #include <string.h>
 
-#define PURPLE_MEMORY_POOL_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_MEMORY_POOL, PurpleMemoryPoolPrivate))
 #define PURPLE_MEMORY_POOL_BLOCK_PADDING (sizeof(guint64))
 #define PURPLE_MEMORY_POINTER_SHIFT(pointer, value) \
 	(gpointer)((guintptr)(pointer) + (value))
@@ -60,9 +58,10 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleMemoryPool, purple_memory_pool,
+		G_TYPE_OBJECT);
 
 /*******************************************************************************
  * Memory allocation/deallocation
@@ -100,7 +99,8 @@ purple_memory_pool_block_new(gulong block_size)
 static gpointer
 purple_memory_pool_alloc_impl(PurpleMemoryPool *pool, gsize size, guint alignment)
 {
-	PurpleMemoryPoolPrivate *priv = PURPLE_MEMORY_POOL_GET_PRIVATE(pool);
+	PurpleMemoryPoolPrivate *priv =
+			purple_memory_pool_get_instance_private(pool);
 	PurpleMemoryPoolBlock *blk;
 	gpointer mem = NULL;
 
@@ -163,7 +163,8 @@ purple_memory_pool_alloc_impl(PurpleMemoryPool *pool, gsize size, guint alignmen
 static void
 purple_memory_pool_cleanup_impl(PurpleMemoryPool *pool)
 {
-	PurpleMemoryPoolPrivate *priv = PURPLE_MEMORY_POOL_GET_PRIVATE(pool);
+	PurpleMemoryPoolPrivate *priv =
+			purple_memory_pool_get_instance_private(pool);
 	PurpleMemoryPoolBlock *blk;
 
 	g_return_if_fail(priv != NULL);
@@ -186,7 +187,8 @@ purple_memory_pool_cleanup_impl(PurpleMemoryPool *pool)
 void
 purple_memory_pool_set_block_size(PurpleMemoryPool *pool, gulong block_size)
 {
-	PurpleMemoryPoolPrivate *priv = PURPLE_MEMORY_POOL_GET_PRIVATE(pool);
+	PurpleMemoryPoolPrivate *priv =
+			purple_memory_pool_get_instance_private(pool);
 
 	g_return_if_fail(priv != NULL);
 
@@ -269,10 +271,10 @@ purple_memory_pool_new(void)
 }
 
 static void
-purple_memory_pool_init(GTypeInstance *instance, gpointer klass)
+purple_memory_pool_init(PurpleMemoryPool *pool)
 {
-	PurpleMemoryPool *pool = PURPLE_MEMORY_POOL(instance);
-	PurpleMemoryPoolPrivate *priv = PURPLE_MEMORY_POOL_GET_PRIVATE(pool);
+	PurpleMemoryPoolPrivate *priv =
+			purple_memory_pool_get_instance_private(pool);
 
 	priv->disabled = PURPLE_MEMORY_POOL_DISABLED;
 }
@@ -282,7 +284,7 @@ purple_memory_pool_finalize(GObject *obj)
 {
 	purple_memory_pool_cleanup(PURPLE_MEMORY_POOL(obj));
 
-	G_OBJECT_CLASS(parent_class)->finalize(obj);
+	G_OBJECT_CLASS(purple_memory_pool_parent_class)->finalize(obj);
 }
 
 static void
@@ -290,7 +292,8 @@ purple_memory_pool_get_property(GObject *obj, guint param_id, GValue *value,
 	GParamSpec *pspec)
 {
 	PurpleMemoryPool *pool = PURPLE_MEMORY_POOL(obj);
-	PurpleMemoryPoolPrivate *priv = PURPLE_MEMORY_POOL_GET_PRIVATE(pool);
+	PurpleMemoryPoolPrivate *priv =
+			purple_memory_pool_get_instance_private(pool);
 
 	switch (param_id) {
 		case PROP_BLOCK_SIZE:
@@ -306,7 +309,8 @@ purple_memory_pool_set_property(GObject *obj, guint param_id,
 	const GValue *value, GParamSpec *pspec)
 {
 	PurpleMemoryPool *pool = PURPLE_MEMORY_POOL(obj);
-	PurpleMemoryPoolPrivate *priv = PURPLE_MEMORY_POOL_GET_PRIVATE(pool);
+	PurpleMemoryPoolPrivate *priv =
+			purple_memory_pool_get_instance_private(pool);
 
 	switch (param_id) {
 		case PROP_BLOCK_SIZE:
@@ -322,10 +326,6 @@ purple_memory_pool_class_init(PurpleMemoryPoolClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurpleMemoryPoolPrivate));
-
 	obj_class->finalize = purple_memory_pool_finalize;
 	obj_class->get_property = purple_memory_pool_get_property;
 	obj_class->set_property = purple_memory_pool_set_property;
@@ -339,26 +339,6 @@ purple_memory_pool_class_init(PurpleMemoryPoolClass *klass)
 		G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_memory_pool_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleMemoryPoolClass),
-			.class_init = (GClassInitFunc)purple_memory_pool_class_init,
-			.instance_size = sizeof(PurpleMemoryPool),
-			.instance_init = (GInstanceInitFunc)purple_memory_pool_init
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT,
-			"PurpleMemoryPool", &info, 0);
-	}
-
-	return type;
 }
 
 gchar *

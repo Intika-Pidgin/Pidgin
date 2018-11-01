@@ -23,9 +23,6 @@
 #include "internal.h"
 #include "sound-theme.h"
 
-#define PURPLE_SOUND_THEME_GET_PRIVATE(Gobject) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((Gobject), PURPLE_TYPE_SOUND_THEME, PurpleSoundThemePrivate))
-
 /******************************************************************************
  * Structs
  *****************************************************************************/
@@ -39,7 +36,8 @@ typedef struct {
  * Globals
  *****************************************************************************/
 
-static GObjectClass *parent_class = NULL;
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleSoundTheme, purple_sound_theme,
+		PURPLE_TYPE_THEME);
 
 /******************************************************************************
  * Enums
@@ -50,12 +48,11 @@ static GObjectClass *parent_class = NULL;
  *****************************************************************************/
 
 static void
-purple_sound_theme_init(GTypeInstance *instance,
-		gpointer klass)
+purple_sound_theme_init(PurpleSoundTheme *theme)
 {
 	PurpleSoundThemePrivate *priv;
 
-	priv = PURPLE_SOUND_THEME_GET_PRIVATE(instance);
+	priv = purple_sound_theme_get_instance_private(theme);
 
 	priv->sound_files = g_hash_table_new_full(g_str_hash,
 			g_str_equal, g_free, g_free);
@@ -66,11 +63,11 @@ purple_sound_theme_finalize(GObject *obj)
 {
 	PurpleSoundThemePrivate *priv;
 
-	priv = PURPLE_SOUND_THEME_GET_PRIVATE(obj);
+	priv = purple_sound_theme_get_instance_private(PURPLE_SOUND_THEME(obj));
 
 	g_hash_table_destroy(priv->sound_files);
 
-	parent_class->finalize(obj);
+	G_OBJECT_CLASS(purple_sound_theme_parent_class)->finalize(obj);
 }
 
 static void
@@ -78,34 +75,7 @@ purple_sound_theme_class_init(PurpleSoundThemeClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurpleSoundThemePrivate));
-
 	obj_class->finalize = purple_sound_theme_finalize;
-}
-
-GType
-purple_sound_theme_get_type(void)
-{
-	static GType type = 0;
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleSoundThemeClass),
-			NULL, /* base_init */
-			NULL, /* base_finalize */
-			(GClassInitFunc)purple_sound_theme_class_init, /* class_init */
-			NULL, /* class_finalize */
-			NULL, /* class_data */
-			sizeof(PurpleSoundTheme),
-			0, /* n_preallocs */
-			purple_sound_theme_init, /* instance_init */
-			NULL, /* value table */
-		};
-		type = g_type_register_static(PURPLE_TYPE_THEME,
-				"PurpleSoundTheme", &info, 0);
-	}
-	return type;
 }
 
 /*****************************************************************************
@@ -120,7 +90,7 @@ purple_sound_theme_get_file(PurpleSoundTheme *theme,
 
 	g_return_val_if_fail(PURPLE_IS_SOUND_THEME(theme), NULL);
 
-	priv = PURPLE_SOUND_THEME_GET_PRIVATE(theme);
+	priv = purple_sound_theme_get_instance_private(theme);
 
 	return g_hash_table_lookup(priv->sound_files, event);
 }
@@ -148,7 +118,7 @@ purple_sound_theme_set_file(PurpleSoundTheme *theme,
 	PurpleSoundThemePrivate *priv;
 	g_return_if_fail(PURPLE_IS_SOUND_THEME(theme));
 
-	priv = PURPLE_SOUND_THEME_GET_PRIVATE(theme);
+	priv = purple_sound_theme_get_instance_private(theme);
 
 	if (filename != NULL)
 		g_hash_table_replace(priv->sound_files,

@@ -24,9 +24,6 @@
 #include "chat.h"
 #include "util.h"
 
-#define PURPLE_CHAT_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_CHAT, PurpleChatPrivate))
-
 typedef struct _PurpleChatPrivate       PurpleChatPrivate;
 
 /* Private data for a chat node */
@@ -53,8 +50,9 @@ enum
 /******************************************************************************
  * Globals
  *****************************************************************************/
-static PurpleBlistNode *blistnode_parent_class;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleChat, purple_chat, PURPLE_TYPE_BLIST_NODE);
 
 /******************************************************************************
  * API
@@ -62,7 +60,7 @@ static GParamSpec *properties[PROP_LAST];
 
 const char *purple_chat_get_name(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -76,7 +74,7 @@ const char *purple_chat_get_name_only(PurpleChat *chat)
 {
 	char *ret = NULL;
 	PurpleProtocol *protocol = NULL;
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -100,7 +98,7 @@ purple_chat_set_alias(PurpleChat *chat, const char *alias)
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
 	g_return_if_fail(priv != NULL);
 
@@ -146,7 +144,7 @@ purple_chat_get_group(PurpleChat *chat)
 PurpleAccount *
 purple_chat_get_account(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -156,7 +154,7 @@ purple_chat_get_account(PurpleChat *chat)
 GHashTable *
 purple_chat_get_components(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -171,7 +169,7 @@ purple_chat_set_property(GObject *obj, guint param_id, const GValue *value,
 		GParamSpec *pspec)
 {
 	PurpleChat *chat = PURPLE_CHAT(obj);
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
 	switch (param_id) {
 		case PROP_ALIAS:
@@ -198,7 +196,7 @@ purple_chat_get_property(GObject *obj, guint param_id, GValue *value,
 		GParamSpec *pspec)
 {
 	PurpleChat *chat = PURPLE_CHAT(obj);
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
 	switch (param_id) {
 		case PROP_ALIAS:
@@ -218,7 +216,7 @@ purple_chat_get_property(GObject *obj, guint param_id, GValue *value,
 
 /* GObject initialization function */
 static void
-purple_chat_init(GTypeInstance *instance, gpointer klass)
+purple_chat_init(PurpleChat *chat)
 {
 }
 
@@ -227,10 +225,10 @@ static void
 purple_chat_constructed(GObject *object)
 {
 	PurpleChat *chat = PURPLE_CHAT(object);
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(chat);
+	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
-	G_OBJECT_CLASS(blistnode_parent_class)->constructed(object);
+	G_OBJECT_CLASS(purple_chat_parent_class)->constructed(object);
 
 	if (ops != NULL && ops->new_node != NULL)
 		ops->new_node(PURPLE_BLIST_NODE(chat));
@@ -242,12 +240,13 @@ purple_chat_constructed(GObject *object)
 static void
 purple_chat_finalize(GObject *object)
 {
-	PurpleChatPrivate *priv = PURPLE_CHAT_GET_PRIVATE(object);
+	PurpleChatPrivate *priv =
+			purple_chat_get_instance_private(PURPLE_CHAT(object));
 
 	g_free(priv->alias);
 	g_hash_table_destroy(priv->components);
 
-	G_OBJECT_CLASS(blistnode_parent_class)->finalize(object);
+	G_OBJECT_CLASS(purple_chat_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -255,16 +254,12 @@ static void purple_chat_class_init(PurpleChatClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	blistnode_parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_chat_finalize;
 
 	/* Setup properties */
 	obj_class->get_property = purple_chat_get_property;
 	obj_class->set_property = purple_chat_set_property;
 	obj_class->constructed = purple_chat_constructed;
-
-	g_type_class_add_private(klass, sizeof(PurpleChatPrivate));
 
 	properties[PROP_ALIAS] = g_param_spec_string(
 		"alias",
@@ -290,33 +285,6 @@ static void purple_chat_class_init(PurpleChatClass *klass)
 	);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_chat_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleChatClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_chat_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleChat),
-			0,
-			(GInstanceInitFunc)purple_chat_init,
-			NULL,
-		};
-
-		type = g_type_register_static(PURPLE_TYPE_BLIST_NODE,
-				"PurpleChat",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleChat *

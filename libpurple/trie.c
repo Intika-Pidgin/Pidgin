@@ -27,9 +27,6 @@
 #include "debug.h"
 #include "memorypool.h"
 
-#define PURPLE_TRIE_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_TRIE, PurpleTriePrivate))
-
 /* A single internal (that don't have any children) consists
  * of 256 + 4 pointers. That's 1040 bytes on 32-bit machine or 2080 bytes
  * on 64-bit.
@@ -106,9 +103,9 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleTrie, purple_trie, G_TYPE_OBJECT);
 
 /*******************************************************************************
  * Records list
@@ -198,7 +195,7 @@ purple_record_list_remove(PurpleTrieRecordList *head,
 static void
 purple_trie_states_cleanup(PurpleTrie *trie)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 
 	g_return_if_fail(priv != NULL);
 
@@ -212,7 +209,7 @@ purple_trie_states_cleanup(PurpleTrie *trie)
 static PurpleTrieState *
 purple_trie_state_new(PurpleTrie *trie, PurpleTrieState *parent, guchar character)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieState *state;
 
 	g_return_val_if_fail(priv != NULL, NULL);
@@ -247,7 +244,7 @@ purple_trie_state_new(PurpleTrie *trie, PurpleTrieState *parent, guchar characte
 static gboolean
 purple_trie_states_build(PurpleTrie *trie)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieState *root;
 	PurpleMemoryPool *reclist_mpool;
 	PurpleTrieRecordList *reclist, *it;
@@ -436,7 +433,7 @@ gchar *
 purple_trie_replace(PurpleTrie *trie, const gchar *src,
 	PurpleTrieReplaceCb replace_cb, gpointer user_data)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieMachine machine;
 	GString *out;
 	gsize i;
@@ -495,7 +492,8 @@ purple_trie_multi_replace(const GSList *tries, const gchar *src,
 	machines = g_new(PurpleTrieMachine, tries_count);
 	for (i = 0; i < tries_count; i++, tries = tries->next) {
 		PurpleTrie *trie = tries->data;
-		PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+		PurpleTriePrivate *priv =
+				purple_trie_get_instance_private(trie);
 
 		if (priv == NULL) {
 			g_warn_if_reached();
@@ -549,7 +547,7 @@ gulong
 purple_trie_find(PurpleTrie *trie, const gchar *src,
 	PurpleTrieFindCb find_cb, gpointer user_data)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieMachine machine;
 	gulong found_count = 0;
 	gsize i;
@@ -603,7 +601,8 @@ purple_trie_multi_find(const GSList *tries, const gchar *src,
 	machines = g_new(PurpleTrieMachine, tries_count);
 	for (i = 0; i < tries_count; i++, tries = tries->next) {
 		PurpleTrie *trie = tries->data;
-		PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+		PurpleTriePrivate *priv =
+				purple_trie_get_instance_private(trie);
 
 		if (priv == NULL) {
 			g_warn_if_reached();
@@ -659,7 +658,7 @@ purple_trie_multi_find(const GSList *tries, const gchar *src,
 gboolean
 purple_trie_add(PurpleTrie *trie, const gchar *word, gpointer data)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieRecord *rec;
 
 	g_return_val_if_fail(priv != NULL, FALSE);
@@ -694,7 +693,7 @@ purple_trie_add(PurpleTrie *trie, const gchar *word, gpointer data)
 void
 purple_trie_remove(PurpleTrie *trie, const gchar *word)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieRecordList *it;
 
 	g_return_if_fail(priv != NULL);
@@ -720,7 +719,7 @@ purple_trie_remove(PurpleTrie *trie, const gchar *word)
 guint
 purple_trie_get_size(PurpleTrie *trie)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -735,7 +734,7 @@ purple_trie_get_size(PurpleTrie *trie)
 gboolean
 purple_trie_get_reset_on_match(PurpleTrie *trie)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 
 	g_return_val_if_fail(priv, FALSE);
 
@@ -745,7 +744,7 @@ purple_trie_get_reset_on_match(PurpleTrie *trie)
 void
 purple_trie_set_reset_on_match(PurpleTrie *trie, gboolean reset)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 
 	g_return_if_fail(priv);
 
@@ -764,10 +763,9 @@ purple_trie_new(void)
 }
 
 static void
-purple_trie_init(GTypeInstance *instance, gpointer klass)
+purple_trie_init(PurpleTrie *trie)
 {
-	PurpleTrie *trie = PURPLE_TRIE(instance);
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 
 	priv->records_obj_mempool = purple_memory_pool_new();
 	priv->records_str_mempool = purple_memory_pool_new();
@@ -781,14 +779,15 @@ purple_trie_init(GTypeInstance *instance, gpointer klass)
 static void
 purple_trie_finalize(GObject *obj)
 {
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(obj);
+	PurpleTriePrivate *priv =
+			purple_trie_get_instance_private(PURPLE_TRIE(obj));
 
 	g_hash_table_destroy(priv->records_map);
 	g_object_unref(priv->records_obj_mempool);
 	g_object_unref(priv->records_str_mempool);
 	g_object_unref(priv->states_mempool);
 
-	G_OBJECT_CLASS(parent_class)->finalize(obj);
+	G_OBJECT_CLASS(purple_trie_parent_class)->finalize(obj);
 }
 
 static void
@@ -796,7 +795,7 @@ purple_trie_get_property(GObject *obj, guint param_id, GValue *value,
 	GParamSpec *pspec)
 {
 	PurpleTrie *trie = PURPLE_TRIE(obj);
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 
 	switch (param_id) {
 		case PROP_RESET_ON_MATCH:
@@ -812,7 +811,7 @@ purple_trie_set_property(GObject *obj, guint param_id,
 	const GValue *value, GParamSpec *pspec)
 {
 	PurpleTrie *trie = PURPLE_TRIE(obj);
-	PurpleTriePrivate *priv = PURPLE_TRIE_GET_PRIVATE(trie);
+	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 
 	switch (param_id) {
 		case PROP_RESET_ON_MATCH:
@@ -828,10 +827,6 @@ purple_trie_class_init(PurpleTrieClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurpleTriePrivate));
-
 	obj_class->finalize = purple_trie_finalize;
 	obj_class->get_property = purple_trie_get_property;
 	obj_class->set_property = purple_trie_set_property;
@@ -846,24 +841,4 @@ purple_trie_class_init(PurpleTrieClass *klass)
 		G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_trie_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleTrieClass),
-			.class_init = (GClassInitFunc)purple_trie_class_init,
-			.instance_size = sizeof(PurpleTrie),
-			.instance_init = purple_trie_init,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT,
-			"PurpleTrie", &info, 0);
-	}
-
-	return type;
 }

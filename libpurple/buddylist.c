@@ -33,9 +33,6 @@
 #include "util.h"
 #include "xmlnode.h"
 
-#define PURPLE_BUDDY_LIST_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_BUDDY_LIST, PurpleBuddyListPrivate))
-
 /* Private data for a buddy list. */
 typedef struct  {
 	GHashTable *buddies;  /* Every buddy in this list */
@@ -45,7 +42,7 @@ static PurpleBlistUiOps *blist_ui_ops = NULL;
 
 static PurpleBuddyList *purplebuddylist = NULL;
 
-static GObjectClass *parent_class;
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleBuddyList, purple_buddy_list, G_TYPE_OBJECT);
 
 /*
  * A hash table used for efficient lookups of buddies by name.
@@ -759,13 +756,14 @@ append_buddy(gpointer key, gpointer value, gpointer user_data)
 GSList *
 purple_blist_get_buddies()
 {
+	PurpleBuddyListPrivate *priv;
 	GSList *buddies = NULL;
 
 	if (!purplebuddylist)
 		return NULL;
 
-	g_hash_table_foreach(PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist)->buddies,
-			append_buddy, &buddies);
+	priv = purple_buddy_list_get_instance_private(purplebuddylist);
+	g_hash_table_foreach(priv->buddies, append_buddy, &buddies);
 	return buddies;
 }
 
@@ -803,7 +801,8 @@ void purple_blist_update_buddies_cache(PurpleBuddy *buddy, const char *new_name)
 	GHashTable *account_buddies;
 	PurpleAccount *account;
 	gchar *name;
-	PurpleBuddyListPrivate *priv = PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist);
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(purplebuddylist);
 
 	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
 
@@ -941,7 +940,8 @@ void purple_blist_add_buddy(PurpleBuddy *buddy, PurpleContact *contact, PurpleGr
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	struct _purple_hbuddy *hb, *hb2;
 	GHashTable *account_buddies;
-	PurpleBuddyListPrivate *priv = PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist);
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(purplebuddylist);
 
 	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
 
@@ -1097,7 +1097,8 @@ void purple_blist_add_contact(PurpleContact *contact, PurpleGroup *group, Purple
 	PurpleGroup *g;
 	PurpleBlistNode *gnode, *cnode, *bnode;
 	PurpleCountingNode *contact_counter, *group_counter;
-	PurpleBuddyListPrivate *priv = PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist);
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(purplebuddylist);
 
 	g_return_if_fail(PURPLE_IS_CONTACT(contact));
 
@@ -1359,6 +1360,8 @@ void purple_blist_remove_contact(PurpleContact *contact)
 
 void purple_blist_remove_buddy(PurpleBuddy *buddy)
 {
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(purplebuddylist);
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleBlistNode *node, *cnode, *gnode;
 	PurpleCountingNode *contact_counter, *group_counter;
@@ -1415,7 +1418,7 @@ void purple_blist_remove_buddy(PurpleBuddy *buddy)
 	hb.name = (gchar *)purple_normalize(account, purple_buddy_get_name(buddy));
 	hb.account = account;
 	hb.group = gnode;
-	g_hash_table_remove(PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist)->buddies, &hb);
+	g_hash_table_remove(priv->buddies, &hb);
 
 	account_buddies = g_hash_table_lookup(buddies_cache, account);
 	g_hash_table_remove(account_buddies, &hb);
@@ -1542,6 +1545,8 @@ void purple_blist_remove_group(PurpleGroup *group)
 
 PurpleBuddy *purple_blist_find_buddy(PurpleAccount *account, const char *name)
 {
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(purplebuddylist);
 	PurpleBuddy *buddy;
 	struct _purple_hbuddy hb;
 	PurpleBlistNode *group;
@@ -1558,8 +1563,7 @@ PurpleBuddy *purple_blist_find_buddy(PurpleAccount *account, const char *name)
 			continue;
 
 		hb.group = group;
-		if ((buddy = g_hash_table_lookup(PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist)->buddies,
-				&hb))) {
+		if ((buddy = g_hash_table_lookup(priv->buddies, &hb))) {
 			return buddy;
 		}
 	}
@@ -1570,6 +1574,8 @@ PurpleBuddy *purple_blist_find_buddy(PurpleAccount *account, const char *name)
 PurpleBuddy *purple_blist_find_buddy_in_group(PurpleAccount *account, const char *name,
 		PurpleGroup *group)
 {
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(purplebuddylist);
 	struct _purple_hbuddy hb;
 
 	g_return_val_if_fail(PURPLE_IS_BUDDY_LIST(purplebuddylist), NULL);
@@ -1580,8 +1586,7 @@ PurpleBuddy *purple_blist_find_buddy_in_group(PurpleAccount *account, const char
 	hb.account = account;
 	hb.group = (PurpleBlistNode*)group;
 
-	return g_hash_table_lookup(PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist)->buddies,
-			&hb);
+	return g_hash_table_lookup(priv->buddies, &hb);
 }
 
 static void find_acct_buddies(gpointer key, gpointer value, gpointer data)
@@ -1594,6 +1599,8 @@ static void find_acct_buddies(gpointer key, gpointer value, gpointer data)
 
 GSList *purple_blist_find_buddies(PurpleAccount *account, const char *name)
 {
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(purplebuddylist);
 	PurpleBuddy *buddy;
 	PurpleBlistNode *node;
 	GSList *ret = NULL;
@@ -1612,7 +1619,7 @@ GSList *purple_blist_find_buddies(PurpleAccount *account, const char *name)
 				continue;
 
 			hb.group = node;
-			if ((buddy = g_hash_table_lookup(PURPLE_BUDDY_LIST_GET_PRIVATE(purplebuddylist)->buddies,
+			if ((buddy = g_hash_table_lookup(priv->buddies,
 					&hb)) != NULL)
 				ret = g_slist_prepend(ret, buddy);
 		}
@@ -2114,11 +2121,12 @@ purple_blist_ui_ops_get_type(void)
 
 /* GObject initialization function */
 static void
-purple_buddy_list_init(GTypeInstance *instance, gpointer klass)
+purple_buddy_list_init(PurpleBuddyList *blist)
 {
-	PurpleBuddyList *blist = PURPLE_BUDDY_LIST(instance);
+	PurpleBuddyListPrivate *priv =
+			purple_buddy_list_get_instance_private(blist);
 
-	PURPLE_BUDDY_LIST_GET_PRIVATE(blist)->buddies = g_hash_table_new_full(
+	priv->buddies = g_hash_table_new_full(
 					 (GHashFunc)_purple_blist_hbuddy_hash,
 					 (GEqualFunc)_purple_blist_hbuddy_equal,
 					 (GDestroyNotify)_purple_blist_hbuddy_free_key, NULL);
@@ -2128,9 +2136,11 @@ purple_buddy_list_init(GTypeInstance *instance, gpointer klass)
 static void
 purple_buddy_list_finalize(GObject *object)
 {
-	g_hash_table_destroy(PURPLE_BUDDY_LIST_GET_PRIVATE(object)->buddies);
+	PurpleBuddyListPrivate *priv = purple_buddy_list_get_instance_private(
+			PURPLE_BUDDY_LIST(object));
+	g_hash_table_destroy(priv->buddies);
 
-	G_OBJECT_CLASS(parent_class)->finalize(object);
+	G_OBJECT_CLASS(purple_buddy_list_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -2138,35 +2148,6 @@ static void purple_buddy_list_class_init(PurpleBuddyListClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_buddy_list_finalize;
-
-	g_type_class_add_private(klass, sizeof(PurpleBuddyListPrivate));
 }
 
-GType
-purple_buddy_list_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleBuddyListClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_buddy_list_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleBuddyList),
-			0,
-			(GInstanceInitFunc)purple_buddy_list_init,
-			NULL,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT,
-				"PurpleBuddyList", &info, 0);
-	}
-
-	return type;
-}

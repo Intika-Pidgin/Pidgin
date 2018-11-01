@@ -24,9 +24,6 @@
 #include "glibcompat.h"
 #include "theme-loader.h"
 
-#define PURPLE_THEME_LOADER_GET_PRIVATE(PurpleThemeLoader) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((PurpleThemeLoader), PURPLE_TYPE_THEME_LOADER, PurpleThemeLoaderPrivate))
-
 void purple_theme_loader_set_type_string(PurpleThemeLoader *loader, const gchar *type);
 
 /******************************************************************************
@@ -50,8 +47,10 @@ enum {
  * Globals
  *****************************************************************************/
 
-static GObjectClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE(PurpleThemeLoader, purple_theme_loader,
+		G_TYPE_OBJECT);
 
 /******************************************************************************
  * GObject Stuff                                                              *
@@ -105,24 +104,26 @@ purple_theme_loader_probe_directory(PurpleThemeLoader *loader, const gchar *dir)
 }
 
 static void
+purple_theme_loader_init(PurpleThemeLoader *loader)
+{
+}
+
+static void
 purple_theme_loader_finalize(GObject *obj)
 {
 	PurpleThemeLoader *loader = PURPLE_THEME_LOADER(obj);
-	PurpleThemeLoaderPrivate *priv = PURPLE_THEME_LOADER_GET_PRIVATE(loader);
+	PurpleThemeLoaderPrivate *priv =
+			purple_theme_loader_get_instance_private(loader);
 
 	g_free(priv->type);
 
-	parent_class->finalize(obj);
+	G_OBJECT_CLASS(purple_theme_loader_parent_class)->finalize(obj);
 }
 
 static void
 purple_theme_loader_class_init(PurpleThemeLoaderClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurpleThemeLoaderPrivate));
 
 	obj_class->get_property = purple_theme_loader_get_property;
 	obj_class->set_property = purple_theme_loader_set_property;
@@ -138,29 +139,6 @@ purple_theme_loader_class_init(PurpleThemeLoaderClass *klass)
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
 }
 
-GType
-purple_theme_loader_get_type(void)
-{
-	static GType type = 0;
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleThemeLoaderClass),
-			NULL, /* base_init */
-			NULL, /* base_finalize */
-			(GClassInitFunc)purple_theme_loader_class_init, /* class_init */
-			NULL, /* class_finalize */
-			NULL, /* class_data */
-			sizeof(PurpleThemeLoader),
-			0, /* n_preallocs */
-			NULL, /* instance_init */
-			NULL, /* value table */
-		};
-		type = g_type_register_static(G_TYPE_OBJECT,
-				"PurpleThemeLoader", &info, G_TYPE_FLAG_ABSTRACT);
-	}
-	return type;
-}
-
 /*****************************************************************************
  * Public API functions
  *****************************************************************************/
@@ -172,7 +150,7 @@ purple_theme_loader_get_type_string(PurpleThemeLoader *theme_loader)
 
 	g_return_val_if_fail(PURPLE_IS_THEME_LOADER(theme_loader), NULL);
 
-	priv = PURPLE_THEME_LOADER_GET_PRIVATE(theme_loader);
+	priv = purple_theme_loader_get_instance_private(theme_loader);
 	return priv->type;
 }
 
@@ -184,7 +162,7 @@ purple_theme_loader_set_type_string(PurpleThemeLoader *loader, const gchar *type
 
 	g_return_if_fail(PURPLE_IS_THEME_LOADER(loader));
 
-	priv = PURPLE_THEME_LOADER_GET_PRIVATE(loader);
+	priv = purple_theme_loader_get_instance_private(loader);
 
 	g_free(priv->type);
 	priv->type = g_strdup(type);

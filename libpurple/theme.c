@@ -25,9 +25,6 @@
 #include "theme.h"
 #include "util.h"
 
-#define PURPLE_THEME_GET_PRIVATE(PurpleTheme) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((PurpleTheme), PURPLE_TYPE_THEME, PurpleThemePrivate))
-
 void purple_theme_set_type_string(PurpleTheme *theme, const gchar *type);
 
 /******************************************************************************
@@ -62,8 +59,9 @@ enum {
  * Globals
  *****************************************************************************/
 
-static GObjectClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE(PurpleTheme, purple_theme, G_TYPE_OBJECT);
 
 /******************************************************************************
  * GObject Stuff
@@ -132,10 +130,15 @@ purple_theme_set_property(GObject *obj, guint param_id, const GValue *value,
 }
 
 static void
+purple_theme_init(PurpleTheme *theme)
+{
+}
+
+static void
 purple_theme_finalize(GObject *obj)
 {
 	PurpleTheme *theme = PURPLE_THEME(obj);
-	PurpleThemePrivate *priv = PURPLE_THEME_GET_PRIVATE(theme);
+	PurpleThemePrivate *priv = purple_theme_get_instance_private(theme);
 
 	g_free(priv->name);
 	g_free(priv->description);
@@ -144,17 +147,13 @@ purple_theme_finalize(GObject *obj)
 	g_free(priv->dir);
 	g_free(priv->img);
 
-	G_OBJECT_CLASS (parent_class)->finalize (obj);
+	G_OBJECT_CLASS(purple_theme_parent_class)->finalize(obj);
 }
 
 static void
 purple_theme_class_init(PurpleThemeClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurpleThemePrivate));
 
 	obj_class->get_property = purple_theme_get_property;
 	obj_class->set_property = purple_theme_set_property;
@@ -201,30 +200,6 @@ purple_theme_class_init(PurpleThemeClass *klass)
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
 }
 
-
-GType
-purple_theme_get_type(void)
-{
-	static GType type = 0;
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleThemeClass),
-			NULL, /* base_init */
-			NULL, /* base_finalize */
-			(GClassInitFunc)purple_theme_class_init, /* class_init */
-			NULL, /* class_finalize */
-			NULL, /* class_data */
-			sizeof(PurpleTheme),
-			0, /* n_preallocs */
-			NULL, /* instance_init */
-			NULL, /* value table */
-		};
-		type = g_type_register_static (G_TYPE_OBJECT,
-				"PurpleTheme", &info, G_TYPE_FLAG_ABSTRACT);
-	}
-	return type;
-}
-
 /******************************************************************************
  * Helper Functions
  *****************************************************************************/
@@ -252,7 +227,7 @@ purple_theme_get_name(PurpleTheme *theme)
 
 	g_return_val_if_fail(PURPLE_IS_THEME(theme), NULL);
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 	return priv->name;
 }
 
@@ -263,7 +238,7 @@ purple_theme_set_name(PurpleTheme *theme, const gchar *name)
 
 	g_return_if_fail(PURPLE_IS_THEME(theme));
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 
 	g_free(priv->name);
 	priv->name = theme_clean_text(name);
@@ -278,7 +253,7 @@ purple_theme_get_description(PurpleTheme *theme)
 
 	g_return_val_if_fail(PURPLE_IS_THEME(theme), NULL);
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 	return priv->description;
 }
 
@@ -289,7 +264,7 @@ purple_theme_set_description(PurpleTheme *theme, const gchar *description)
 
 	g_return_if_fail(PURPLE_IS_THEME(theme));
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 
 	g_free(priv->description);
 	priv->description = theme_clean_text(description);
@@ -304,7 +279,7 @@ purple_theme_get_author(PurpleTheme *theme)
 
 	g_return_val_if_fail(PURPLE_IS_THEME(theme), NULL);
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 	return priv->author;
 }
 
@@ -315,7 +290,7 @@ purple_theme_set_author(PurpleTheme *theme, const gchar *author)
 
 	g_return_if_fail(PURPLE_IS_THEME(theme));
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 
 	g_free(priv->author);
 	priv->author = theme_clean_text(author);
@@ -330,7 +305,7 @@ purple_theme_get_type_string(PurpleTheme *theme)
 
 	g_return_val_if_fail(PURPLE_IS_THEME(theme), NULL);
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 	return priv->type;
 }
 
@@ -342,7 +317,7 @@ purple_theme_set_type_string(PurpleTheme *theme, const gchar *type)
 
 	g_return_if_fail(PURPLE_IS_THEME(theme));
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 
 	g_free(priv->type);
 	priv->type = g_strdup(type);
@@ -357,7 +332,7 @@ purple_theme_get_dir(PurpleTheme *theme)
 
 	g_return_val_if_fail(PURPLE_IS_THEME(theme), NULL);
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 	return priv->dir;
 }
 
@@ -368,7 +343,7 @@ purple_theme_set_dir(PurpleTheme *theme, const gchar *dir)
 
 	g_return_if_fail(PURPLE_IS_THEME(theme));
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 
 	g_free(priv->dir);
 	priv->dir = g_strdup(dir);
@@ -383,7 +358,7 @@ purple_theme_get_image(PurpleTheme *theme)
 
 	g_return_val_if_fail(PURPLE_IS_THEME(theme), NULL);
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 
 	return priv->img;
 }
@@ -406,7 +381,7 @@ purple_theme_set_image(PurpleTheme *theme, const gchar *img)
 
 	g_return_if_fail(PURPLE_IS_THEME(theme));
 
-	priv = PURPLE_THEME_GET_PRIVATE(theme);
+	priv = purple_theme_get_instance_private(theme);
 
 	g_free(priv->img);
 	priv->img = g_strdup(img);
