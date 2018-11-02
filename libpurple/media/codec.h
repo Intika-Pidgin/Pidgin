@@ -198,7 +198,7 @@ void purple_media_codec_list_free(GList *codecs);
  *
  * Returns: The new string representation.
  */
-gchar *purple_media_codec_to_string(const PurpleMediaCodec *codec);
+gchar *purple_media_codec_to_string(PurpleMediaCodec *codec);
 
 G_END_DECLS
 
