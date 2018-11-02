@@ -48,10 +48,6 @@ typedef struct _PurpleMediaBackendFs2Session PurpleMediaBackendFs2Session;
 /** @copydoc _PurpleMediaBackendFs2Stream */
 typedef struct _PurpleMediaBackendFs2Stream PurpleMediaBackendFs2Stream;
 
-#define PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(obj) \
-		(G_TYPE_INSTANCE_GET_PRIVATE((obj), \
-		PURPLE_TYPE_MEDIA_BACKEND_FS2, PurpleMediaBackendFs2Private))
-
 static void purple_media_backend_iface_init(PurpleMediaBackendIface *iface);
 
 static gboolean
@@ -118,10 +114,6 @@ struct _PurpleMediaBackendFs2
 	GObject parent;
 };
 
-G_DEFINE_TYPE_WITH_CODE(PurpleMediaBackendFs2, purple_media_backend_fs2,
-		G_TYPE_OBJECT, G_IMPLEMENT_INTERFACE(
-		PURPLE_TYPE_MEDIA_BACKEND, purple_media_backend_iface_init));
-
 struct _PurpleMediaBackendFs2Stream
 {
 	PurpleMediaBackendFs2Session *session;
@@ -180,6 +172,12 @@ enum {
 	PROP_CONFERENCE_TYPE,
 	PROP_MEDIA,
 };
+
+G_DEFINE_TYPE_WITH_CODE(PurpleMediaBackendFs2, purple_media_backend_fs2,
+		G_TYPE_OBJECT,
+		G_ADD_PRIVATE(PurpleMediaBackendFs2)
+		G_IMPLEMENT_INTERFACE(PURPLE_TYPE_MEDIA_BACKEND,
+				purple_media_backend_iface_init));
 
 static void
 purple_media_backend_fs2_init(PurpleMediaBackendFs2 *self)
@@ -300,7 +298,8 @@ static void
 purple_media_backend_fs2_dispose(GObject *obj)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(obj);
+			purple_media_backend_fs2_get_instance_private(
+					PURPLE_MEDIA_BACKEND_FS2(obj));
 	GList *iter = NULL;
 
 	purple_debug_info("backend-fs2", "purple_media_backend_fs2_dispose\n");
@@ -397,7 +396,8 @@ static void
 purple_media_backend_fs2_finalize(GObject *obj)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(obj);
+			purple_media_backend_fs2_get_instance_private(
+					PURPLE_MEDIA_BACKEND_FS2(obj));
 
 	purple_debug_info("backend-fs2", "purple_media_backend_fs2_finalize\n");
 
@@ -432,7 +432,8 @@ purple_media_backend_fs2_set_property(GObject *object, guint prop_id,
 	PurpleMediaBackendFs2Private *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(object));
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(object);
+	priv = purple_media_backend_fs2_get_instance_private(
+			PURPLE_MEDIA_BACKEND_FS2(object));
 
 	switch (prop_id) {
 		case PROP_CONFERENCE_TYPE:
@@ -469,7 +470,8 @@ purple_media_backend_fs2_get_property(GObject *object, guint prop_id,
 	PurpleMediaBackendFs2Private *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(object));
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(object);
+	priv = purple_media_backend_fs2_get_instance_private(
+			PURPLE_MEDIA_BACKEND_FS2(object));
 
 	switch (prop_id) {
 		case PROP_CONFERENCE_TYPE:
@@ -500,8 +502,6 @@ purple_media_backend_fs2_class_init(PurpleMediaBackendFs2Class *klass)
 	g_object_class_override_property(gobject_class, PROP_CONFERENCE_TYPE,
 			"conference-type");
 	g_object_class_override_property(gobject_class, PROP_MEDIA, "media");
-
-	g_type_class_add_private(klass, sizeof(PurpleMediaBackendFs2Private));
 
 	/* VA-API elements aren't well supported in Farstream. Ignore them. */
 	features = gst_registry_get_feature_list_by_plugin(gst_registry_get(),
@@ -798,7 +798,7 @@ get_session(PurpleMediaBackendFs2 *self, const gchar *sess_id)
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self), NULL);
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(self);
 
 	if (priv->sessions != NULL)
 		session = g_hash_table_lookup(priv->sessions, sess_id);
@@ -814,7 +814,7 @@ get_participant(PurpleMediaBackendFs2 *self, const gchar *name)
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self), NULL);
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(self);
 
 	if (priv->participants != NULL)
 		participant = g_hash_table_lookup(priv->participants, name);
@@ -831,7 +831,7 @@ get_stream(PurpleMediaBackendFs2 *self,
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self), NULL);
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(self);
 	streams = priv->streams;
 
 	for (; streams; streams = g_list_next(streams)) {
@@ -853,7 +853,7 @@ get_streams(PurpleMediaBackendFs2 *self,
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self), NULL);
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(self);
 	streams = priv->streams;
 
 	for (; streams; streams = g_list_next(streams)) {
@@ -875,7 +875,7 @@ static PurpleMediaBackendFs2Session *
 get_session_from_fs_stream(PurpleMediaBackendFs2 *self, FsStream *stream)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	FsSession *fssession;
 	GList *values;
 
@@ -933,7 +933,7 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 		PurpleMediaBackendFs2 *self)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	GstElement *src = GST_ELEMENT(GST_MESSAGE_SRC(msg));
 	static guint level_id = 0;
 	const GstStructure *structure = gst_message_get_structure(msg);
@@ -1232,7 +1232,7 @@ gst_handle_message_error(GstBus *bus, GstMessage *msg,
 		PurpleMediaBackendFs2 *self)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	GstElement *element = GST_ELEMENT(GST_MESSAGE_SRC(msg));
 	GstElement *lastElement = NULL;
 	GList *sessions;
@@ -1316,7 +1316,8 @@ state_changed_cb(PurpleMedia *media, PurpleMediaState state,
 {
 	if (state == PURPLE_MEDIA_STATE_END) {
 		PurpleMediaBackendFs2Private *priv =
-				PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+				purple_media_backend_fs2_get_instance_private(
+						self);
 
 		if (sid && name) {
 			PurpleMediaBackendFs2Stream *stream = get_stream(self, sid, name);
@@ -1394,7 +1395,8 @@ stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
 	} else if (local == TRUE && (type == PURPLE_MEDIA_INFO_MUTE ||
 			type == PURPLE_MEDIA_INFO_UNMUTE)) {
 		PurpleMediaBackendFs2Private *priv =
-				PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+				purple_media_backend_fs2_get_instance_private(
+						self);
 		gboolean active = (type == PURPLE_MEDIA_INFO_MUTE);
 		GList *sessions;
 
@@ -1458,7 +1460,7 @@ static gboolean
 init_conference(PurpleMediaBackendFs2 *self)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	GstElement *pipeline;
 	GstBus *bus;
 	gchar *name;
@@ -1546,7 +1548,7 @@ create_src(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 		PurpleMediaSessionType type)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	PurpleMediaBackendFs2Session *session;
 	PurpleMediaSessionType session_type;
 	FsMediaType media_type = session_type_to_fs_media_type(type);
@@ -1656,7 +1658,7 @@ create_session(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 		const gchar *transmitter)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	PurpleMediaBackendFs2Session *session;
 	GError *err = NULL;
 	GList *codec_conf = NULL;
@@ -1756,7 +1758,7 @@ static gboolean
 create_participant(PurpleMediaBackendFs2 *self, const gchar *name)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	FsParticipant *participant;
 	GError *err = NULL;
 
@@ -1798,7 +1800,8 @@ src_pad_added_cb_cb(PurpleMediaBackendFs2Stream *stream)
 
 	g_return_val_if_fail(stream != NULL, FALSE);
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(stream->session->backend);
+	priv = purple_media_backend_fs2_get_instance_private(
+			stream->session->backend);
 	stream->connected_cb_id = 0;
 
 	purple_media_manager_create_output_window(
@@ -1821,7 +1824,8 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 	g_return_if_fail(FS_IS_STREAM(fsstream));
 	g_return_if_fail(stream != NULL);
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(stream->session->backend);
+	priv = purple_media_backend_fs2_get_instance_private(
+			stream->session->backend);
 
 	if (stream->src == NULL) {
 		GstElement *sink = NULL;
@@ -1927,7 +1931,7 @@ create_stream(PurpleMediaBackendFs2 *self,
 		guint num_params, GParameter *params)
 {
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+			purple_media_backend_fs2_get_instance_private(self);
 	GError *err = NULL;
 	FsStream *fsstream = NULL;
 	const gchar *stun_ip = purple_network_get_stun_ip();
@@ -2152,7 +2156,7 @@ purple_media_backend_fs2_add_stream(PurpleMediaBackend *self,
 {
 	PurpleMediaBackendFs2 *backend = PURPLE_MEDIA_BACKEND_FS2(self);
 	PurpleMediaBackendFs2Private *priv =
-			PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(backend);
+			purple_media_backend_fs2_get_instance_private(backend);
 	PurpleMediaBackendFs2Stream *stream;
 
 	if (priv->conference == NULL && !init_conference(backend)) {
@@ -2209,7 +2213,8 @@ purple_media_backend_fs2_add_remote_candidates(PurpleMediaBackend *self,
 
 	g_return_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self));
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(
+			PURPLE_MEDIA_BACKEND_FS2(self));
 	stream = get_stream(PURPLE_MEDIA_BACKEND_FS2(self),
 			sess_id, participant);
 
@@ -2253,7 +2258,8 @@ purple_media_backend_fs2_codecs_ready(PurpleMediaBackend *self,
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self), FALSE);
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(
+			PURPLE_MEDIA_BACKEND_FS2(self));
 
 	if (sess_id != NULL) {
 		PurpleMediaBackendFs2Session *session = get_session(
@@ -2540,7 +2546,8 @@ purple_media_backend_fs2_set_params(PurpleMediaBackend *self,
 
 	g_return_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self));
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(
+			PURPLE_MEDIA_BACKEND_FS2(self));
 
 	if (priv->conference == NULL &&
 		!init_conference(PURPLE_MEDIA_BACKEND_FS2(self))) {
@@ -2672,7 +2679,7 @@ purple_media_backend_fs2_set_input_volume(PurpleMediaBackendFs2 *self,
 
 	g_return_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self));
 
-	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+	priv = purple_media_backend_fs2_get_instance_private(self);
 
 	purple_prefs_set_int("/purple/media/audio/volume/input", level);
 
