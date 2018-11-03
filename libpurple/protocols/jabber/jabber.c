@@ -3784,15 +3784,20 @@ static PurpleAccount *find_acct(const char *protocol, const char *acct_id)
 	return acct;
 }
 
-static gboolean xmpp_uri_handler(const char *proto, const char *user, GHashTable *params)
+static gboolean
+xmpp_uri_handler(const char *proto, const char *user, GHashTable *params,
+		gpointer user_data)
 {
+	PurpleProtocol *protocol = (PurpleProtocol *)user_data;
 	char *acct_id = params ? g_hash_table_lookup(params, "account") : NULL;
 	PurpleAccount *acct;
+
+	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), FALSE);
 
 	if (g_ascii_strcasecmp(proto, "xmpp"))
 		return FALSE;
 
-	acct = find_acct(proto, acct_id);
+	acct = find_acct(protocol->id, acct_id);
 
 	if (!acct)
 		return FALSE;
@@ -3807,11 +3812,14 @@ static gboolean xmpp_uri_handler(const char *proto, const char *user, GHashTable
 			purple_conversation_present(PURPLE_CONVERSATION(im));
 			if (body && *body)
 				purple_conversation_send_confirm(PURPLE_CONVERSATION(im), body);
+			return TRUE;
 		}
 	} else if (g_hash_table_lookup_extended(params, "roster", NULL, NULL)) {
 		char *name = g_hash_table_lookup(params, "name");
-		if (user && *user)
+		if (user && *user) {
 			purple_blist_request_add_buddy(acct, user, NULL, name);
+			return TRUE;
+		}
 	} else if (g_hash_table_lookup_extended(params, "join", NULL, NULL)) {
 		PurpleConnection *gc = purple_account_get_connection(acct);
 		if (user && *user) {
@@ -4267,9 +4275,9 @@ plugin_load(PurplePlugin *plugin, GError **error)
 		return FALSE;
 
 	purple_signal_connect(purple_get_core(), "uri-handler", xmpp_protocol,
-		PURPLE_CALLBACK(xmpp_uri_handler), NULL);
+		PURPLE_CALLBACK(xmpp_uri_handler), xmpp_protocol);
 	purple_signal_connect(purple_get_core(), "uri-handler", gtalk_protocol,
-		PURPLE_CALLBACK(xmpp_uri_handler), NULL);
+		PURPLE_CALLBACK(xmpp_uri_handler), gtalk_protocol);
 
 	jabber_init_protocol(xmpp_protocol);
 	jabber_init_protocol(gtalk_protocol);
@@ -4280,6 +4288,11 @@ plugin_load(PurplePlugin *plugin, GError **error)
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
+	purple_signal_disconnect(purple_get_core(), "uri-handler",
+			xmpp_protocol, PURPLE_CALLBACK(xmpp_uri_handler));
+	purple_signal_disconnect(purple_get_core(), "uri-handler",
+			gtalk_protocol, PURPLE_CALLBACK(xmpp_uri_handler));
+
 	jabber_uninit_protocol(gtalk_protocol);
 	jabber_uninit_protocol(xmpp_protocol);
 
