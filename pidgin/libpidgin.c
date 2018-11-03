@@ -369,6 +369,26 @@ pidgin_activate_cb(GApplication *application, gpointer user_data)
 	purple_blist_set_visible(TRUE);
 }
 
+static gint
+pidgin_command_line_cb(GApplication *application,
+		GApplicationCommandLine *cmdline, gpointer user_data)
+{
+	gchar **argv;
+	int argc;
+	int i;
+
+	argv = g_application_command_line_get_arguments(cmdline, &argc);
+
+	/* Start at 1 to skip the executable name */
+	for (i = 1; i < argc; ++i) {
+		purple_got_protocol_handler_uri(argv[i]);
+	}
+
+	g_strfreev(argv);
+
+	return 0;
+}
+
 static gchar *opt_config_dir_arg = NULL;
 static gboolean opt_nologin = FALSE;
 static gboolean opt_login = FALSE;
@@ -703,11 +723,9 @@ int pidgin_start(int argc, char *argv[])
 
 	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
 #if GLIB_CHECK_VERSION(2, 48, 0)
-				G_APPLICATION_CAN_OVERRIDE_APP_ID
-#else
-				G_APPLICATION_FLAGS_NONE
+				G_APPLICATION_CAN_OVERRIDE_APP_ID |
 #endif
-				));
+				G_APPLICATION_HANDLES_COMMAND_LINE));
 
 	summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
 	g_application_set_option_context_summary(app, summary);
@@ -727,6 +745,8 @@ int pidgin_start(int argc, char *argv[])
 			G_CALLBACK(pidgin_startup_cb), NULL);
 	g_signal_connect(app, "activate",
 			G_CALLBACK(pidgin_activate_cb), NULL);
+	g_signal_connect(app, "command-line",
+			G_CALLBACK(pidgin_command_line_cb), NULL);
 
 	ret = g_application_run(app, argc, argv);
 
