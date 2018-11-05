@@ -11147,7 +11147,7 @@ color_is_visible(GdkRGBA foreground, GdkRGBA background, gdouble min_contrast_ra
 		lmax = lbg, lmin = lfg;
 
 	nr = lmax + 0.05, dr = lmin - 0.05;
-	if ( dr == 0 ) 
+	if (dr < 0.005 && dr > -0.005)
 		dr += 0.01;
 
 	luminosity_ratio = nr/dr;
