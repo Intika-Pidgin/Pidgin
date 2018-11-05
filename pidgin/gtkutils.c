@@ -1438,10 +1438,13 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 		im = TRUE;
 
 	if (protocol && PURPLE_IS_PROTOCOL_XFER(protocol)) {
-		PurpleProtocolXferInterface *iface = PURPLE_PROTOCOL_XFER(protocol);
+		PurpleProtocolXferInterface *iface =
+				PURPLE_PROTOCOL_XFER_GET_IFACE(protocol);
 
 		if(iface->can_receive) {
-			ft = purple_protocol_xfer_can_receive(protocol, gc, who);
+			ft = purple_protocol_xfer_can_receive(
+					PURPLE_PROTOCOL_XFER(protocol),
+					gc, who);
 		} else {
 			ft = (iface->send_file) ? TRUE : FALSE;
 		}
@@ -2356,7 +2359,7 @@ pidgin_convert_buddy_icon(PurpleProtocol *protocol, const char *path, size_t *le
 		g_strfreev(protocol_formats);
 		return NULL;
 	}
-	original = g_object_ref(G_OBJECT(pixbuf));
+	original = g_object_ref(pixbuf);
 
 	new_width = orig_width;
 	new_height = orig_height;

@@ -1063,7 +1063,7 @@ toggle_action_set_active_block(GtkToggleAction *action, gboolean is_active,
 	GObject *object;
 	g_return_if_fail(toolbar);
 
-	object = g_object_ref(action);
+	object = g_object_ref(G_OBJECT(action));
 	g_signal_handlers_block_matched(object, G_SIGNAL_MATCH_DATA,
 	                                0, 0, NULL, NULL, toolbar);
 
