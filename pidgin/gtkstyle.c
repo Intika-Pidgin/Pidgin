@@ -47,24 +47,16 @@ pidgin_style_is_dark(GtkStyle *style) {
 }
 
 void
-pidgin_style_adjust_contrast(GtkStyle *style, GdkColor *color) {
+pidgin_style_adjust_contrast(GtkStyle *style, GdkRGBA *rgba) {
 	if (pidgin_style_is_dark(style)) {
-		gdouble r, g, b, h, s, v;
+		gdouble h, s, v;
 
-		r = ((gdouble) color->red) / 65535.0;
-		g = ((gdouble) color->green) / 65535.0;
-		b = ((gdouble) color->blue) / 65535.0;
-
-		gtk_rgb_to_hsv(r, g, b, &h, &s, &v);
+		gtk_rgb_to_hsv(rgba->red, rgba->green, rgba->blue, &h, &s, &v);
 
 		v += 0.3;
 		v = v > 1.0 ? 1.0 : v;
 		s = 0.7;
 
-		gtk_hsv_to_rgb(h, s, v, &r, &g, &b);
-
-		color->red = (guint16) (r * 65535.0);
-		color->green = (guint16) (g * 65535.0);
-		color->blue = (guint16) (b * 65535.0);
+		gtk_hsv_to_rgb(h, s, v, &rgba->red, &rgba->green, &rgba->blue);
 	}
 }
