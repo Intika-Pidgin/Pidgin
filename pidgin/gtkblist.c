@@ -3666,7 +3666,7 @@ static const GtkActionEntry blist_menu_entries[] = {
 	{ "OnlineHelp", GTK_STOCK_HELP, N_("Online _Help"), "F1", NULL, gtk_blist_show_onlinehelp_cb },
 	{ "DebugWindow", NULL, N_("_Debug Window"), NULL, NULL, toggle_debug },
 	{ "PluginInformation", NULL, N_("_Plugin Information"), NULL, NULL, pidgin_dialogs_plugins_info },
-	{ "About", GTK_STOCK_ABOUT, N_("_About"), NULL, NULL, _pidgin_about_cb },
+	{ "About", GTK_STOCK_ABOUT, N_("_About"), NULL, NULL, G_CALLBACK(_pidgin_about_cb) },
 };
 
 /* Toggle items */

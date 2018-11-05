@@ -1694,7 +1694,9 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 				real_who = purple_protocol_chat_iface_get_user_real_name(protocol, gc,
 					purple_chat_conversation_get_id(chat), who);
 
-				if (!purple_protocol_xfer_can_receive(protocol, gc, real_who ? real_who : who)) {
+				if (!purple_protocol_xfer_can_receive(
+						PURPLE_PROTOCOL_XFER(protocol),
+						gc, real_who ? real_who : who)) {
 					can_receive_file = FALSE;
 				}
 
