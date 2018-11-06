@@ -117,33 +117,23 @@ scrncap_pixbuf_darken(GdkPixbuf *pixbuf)
 	}
 }
 
-static gboolean
-scrncap_pixbuf_to_image_cb(const gchar *buf, gsize count, GError **error,
-	gpointer data)
-{
-	PurpleImage *image = *(PurpleImage **)data;
-
-	image = purple_image_new_from_data(buf, count);
-
-	return TRUE;
-}
-
 static PurpleImage *
 scrncap_pixbuf_to_image(GdkPixbuf *pixbuf)
 {
 	PurpleImage *image = NULL;
+	gchar *buffer;
+	gsize count;
 	GError *error = NULL;
 
-	gdk_pixbuf_save_to_callback(pixbuf, scrncap_pixbuf_to_image_cb, &image,
-		"png", &error, NULL);
-
-	if (error != NULL) {
+	if (!gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &count, "png",
+			&error, NULL)) {
 		purple_debug_error("screencap", "Failed saving an image: %s",
 			error->message);
 		g_error_free(error);
-		g_object_unref(image);
 		return NULL;
 	}
+
+	image = purple_image_new_take_data((guint8 *)buffer, count);
 
 	if (purple_image_get_extension(image) == NULL) {
 		purple_debug_error("screencap", "Invalid image format");

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated with glade 3.22.1 -->
 <interface>
+  <requires lib="Talkatu" version="0.0"/>
   <requires lib="gtk+" version="3.10"/>
   <object class="GtkListStore" id="away.auto_reply.store">
     <columns>
@@ -89,6 +90,12 @@
     <property name="value">16</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
+  </object>
+  <object class="TalkatuTagTable" id="conversations.format_tag_table"/>
+  <object class="TalkatuWholeBuffer" id="conversations.format_buffer">
+    <property name="tag_table">conversations.format_tag_table</property>
+    <property name="text" translatable="yes">This is how your outgoing message text will appear when you use protocols that support formatting.</property>
+    <property name="style">whole</property>
   </object>
   <object class="GtkAdjustment" id="conversations.minimum_entry_lines.adjustment">
     <property name="lower">1</property>
@@ -1409,7 +1416,38 @@
                             <property name="can_focus">False</property>
                             <property name="orientation">vertical</property>
                             <child>
-                              <placeholder/>
+                              <object class="TalkatuEditor">
+                                <property name="orientation">vertical</property>
+                                <property name="visible">True</property>
+                                <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                                <child internal-child="toolbar">
+                                  <object class="TalkatuToolbar">
+                                    <property name="visible">True</property>
+                                    <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                                  </object>
+                                  <packing>
+                                    <property name="fill">False</property>
+                                  </packing>
+                                </child>
+                                <child internal-child="view">
+                                  <object class="TalkatuView" id="conversations.format_view">
+                                    <property name="width_request">450</property>
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                                    <property name="wrap_mode">word</property>
+                                    <property name="buffer">conversations.format_buffer</property>
+                                  </object>
+                                  <packing>
+                                    <property name="fill">False</property>
+                                  </packing>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
                             </child>
                           </object>
                         </child>

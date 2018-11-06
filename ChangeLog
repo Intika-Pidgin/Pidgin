@@ -36,6 +36,11 @@ version 3.0.0 (??/??/????):
 	  joining a room. (Kha) (#15458)
 	* Fix gevolution plugin to compile with e-d-s >= 3.6, older versions are
 	  not supported anymore. (Ed Catmur) (#15353)
+	* Removed command line argument --multiple in *nix in favor of using
+	  GApplication's uniqueness checking directly. The new way to allow
+	  multiple Pidgin instances is to pass --gapplication-app-id with an
+	  alternate, valid app id. Be careful not to use the same configuration
+	  directory as the primary instance.
 
 	Finch:
 	* Support the conversation-extended signal for extending the
