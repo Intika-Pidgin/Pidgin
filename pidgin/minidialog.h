@@ -79,7 +79,7 @@ G_BEGIN_DECLS
  *   </row>
  *   <row><entry><literal>"icon-name"</literal></entry>
  *     <entry>(<type>char *</type>)The #GtkIconTheme name of an icon for the
- *       dialog, or %NULL for no icon.
+ *       dialog, or %NULL for no icon.</entry>
  *   </row>
  *   <row><entry><literal>"custom-icon"</literal></entry>
  *     <entry>(<type>GdkPixbuf *</type>) The custom icon to use instead of a
