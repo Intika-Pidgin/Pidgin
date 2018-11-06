@@ -1694,7 +1694,9 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 				real_who = purple_protocol_chat_iface_get_user_real_name(protocol, gc,
 					purple_chat_conversation_get_id(chat), who);
 
-				if (!purple_protocol_xfer_can_receive(protocol, gc, real_who ? real_who : who)) {
+				if (!purple_protocol_xfer_can_receive(
+						PURPLE_PROTOCOL_XFER(protocol),
+						gc, real_who ? real_who : who)) {
 					can_receive_file = FALSE;
 				}
 
@@ -8874,17 +8876,21 @@ pidgin_conversations_set_tab_colors(void)
 		now = gtk_rc_get_style_by_paths(settings, styles[iter].labelname, NULL, G_TYPE_NONE);
 		if (parent == now ||
 				(parent && now && parent->rc_style == now->rc_style)) {
-			GdkColor color;
-			gdk_color_parse(styles[iter].color, &color);
+			GdkRGBA color;
+			gchar *color_str;
+
+			gdk_rgba_parse(&color, styles[iter].color);
 			pidgin_style_adjust_contrast(gtk_widget_get_default_style(), &color);
 
+			color_str = gdk_rgba_to_string(&color);
 			g_string_append_printf(str, "style \"%s\" {\n"
 					"fg[ACTIVE] = \"%s\"\n"
 					"}\n"
 					"widget \"*%s\" style \"%s\"\n",
 					styles[iter].stylename,
-					gdk_color_to_string(&color),
+					color_str,
 					styles[iter].labelname, styles[iter].stylename);
+			g_free(color_str);
 		}
 	}
 	gtk_rc_parse_string(str->str);
@@ -11141,7 +11147,7 @@ color_is_visible(GdkRGBA foreground, GdkRGBA background, gdouble min_contrast_ra
 		lmax = lbg, lmin = lfg;
 
 	nr = lmax + 0.05, dr = lmin - 0.05;
-	if ( dr == 0 ) 
+	if (dr < 0.005 && dr > -0.005)
 		dr += 0.01;
 
 	luminosity_ratio = nr/dr;
