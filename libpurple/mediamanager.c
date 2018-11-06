@@ -113,21 +113,13 @@ typedef struct {
 } PurpleMediaAppDataInfo;
 #endif
 
-#define PURPLE_MEDIA_MANAGER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_MEDIA_MANAGER, PurpleMediaManagerPrivate))
-#define PURPLE_MEDIA_ELEMENT_INFO_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_MEDIA_ELEMENT_INFO, PurpleMediaElementInfoPrivate))
-
 #ifdef USE_VV
-static void purple_media_manager_class_init (PurpleMediaManagerClass *klass);
-static void purple_media_manager_init (PurpleMediaManager *media);
 static void purple_media_manager_finalize (GObject *object);
 #ifdef HAVE_MEDIA_APPLICATION
 static void free_appdata_info_locked (PurpleMediaAppDataInfo *info);
 #endif
 static void purple_media_manager_init_device_monitor(PurpleMediaManager *manager);
 static void purple_media_manager_register_static_elements(PurpleMediaManager *manager);
-
-static GObjectClass *parent_class = NULL;
-
 
 
 enum {
@@ -138,41 +130,22 @@ enum {
 	LAST_SIGNAL
 };
 static guint purple_media_manager_signals[LAST_SIGNAL] = {0};
-#endif
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleMediaManager, purple_media_manager,
+		G_TYPE_OBJECT);
+#else
 GType
 purple_media_manager_get_type()
 {
-#ifdef USE_VV
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleMediaManagerClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) purple_media_manager_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleMediaManager),
-			0,
-			(GInstanceInitFunc) purple_media_manager_init,
-			NULL
-		};
-		type = g_type_register_static(G_TYPE_OBJECT, "PurpleMediaManager", &info, 0);
-	}
-	return type;
-#else
 	return G_TYPE_NONE;
-#endif
 }
+#endif /* USE_VV */
 
 #ifdef USE_VV
 static void
 purple_media_manager_class_init (PurpleMediaManagerClass *klass)
 {
 	GObjectClass *gobject_class = (GObjectClass*)klass;
-	parent_class = g_type_class_peek_parent(klass);
 
 	gobject_class->finalize = purple_media_manager_finalize;
 
@@ -204,8 +177,6 @@ purple_media_manager_class_init (PurpleMediaManagerClass *klass)
 			G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
 			0, NULL, NULL, NULL,
 			G_TYPE_NONE, 0);
-
-	g_type_class_add_private(klass, sizeof(PurpleMediaManagerPrivate));
 }
 
 static void
@@ -213,7 +184,7 @@ purple_media_manager_init (PurpleMediaManager *media)
 {
 	GError *error;
 
-	media->priv = PURPLE_MEDIA_MANAGER_GET_PRIVATE(media);
+	media->priv = purple_media_manager_get_instance_private(media);
 	media->priv->medias = NULL;
 	media->priv->private_medias = NULL;
 	media->priv->next_output_window_id = 1;
@@ -245,7 +216,10 @@ purple_media_manager_init (PurpleMediaManager *media)
 static void
 purple_media_manager_finalize (GObject *media)
 {
-	PurpleMediaManagerPrivate *priv = PURPLE_MEDIA_MANAGER_GET_PRIVATE(media);
+	PurpleMediaManagerPrivate *priv =
+			purple_media_manager_get_instance_private(
+					PURPLE_MEDIA_MANAGER(media));
+
 	for (; priv->medias; priv->medias =
 			g_list_delete_link(priv->medias, priv->medias)) {
 		g_object_unref(priv->medias->data);
@@ -273,7 +247,7 @@ purple_media_manager_finalize (GObject *media)
 	}
 #endif /* GST_CHECK_VERSION(1, 4, 0) */
 
-	parent_class->finalize(media);
+	G_OBJECT_CLASS(purple_media_manager_parent_class)->finalize(media);
 }
 #endif
 
@@ -2409,11 +2383,14 @@ enum {
 	PROP_CREATE_CB,
 };
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleMediaElementInfo,
+		purple_media_element_info, G_TYPE_OBJECT);
+
 static void
 purple_media_element_info_init(PurpleMediaElementInfo *info)
 {
 	PurpleMediaElementInfoPrivate *priv =
-			PURPLE_MEDIA_ELEMENT_INFO_GET_PRIVATE(info);
+			purple_media_element_info_get_instance_private(info);
 	priv->id = NULL;
 	priv->name = NULL;
 	priv->type = PURPLE_MEDIA_ELEMENT_NONE;
@@ -2424,9 +2401,12 @@ static void
 purple_media_element_info_finalize(GObject *info)
 {
 	PurpleMediaElementInfoPrivate *priv =
-			PURPLE_MEDIA_ELEMENT_INFO_GET_PRIVATE(info);
+			purple_media_element_info_get_instance_private(
+					PURPLE_MEDIA_ELEMENT_INFO(info));
 	g_free(priv->id);
 	g_free(priv->name);
+
+	G_OBJECT_CLASS(purple_media_element_info_parent_class)->finalize(info);
 }
 
 static void
@@ -2436,7 +2416,8 @@ purple_media_element_info_set_property (GObject *object, guint prop_id,
 	PurpleMediaElementInfoPrivate *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_ELEMENT_INFO(object));
 
-	priv = PURPLE_MEDIA_ELEMENT_INFO_GET_PRIVATE(object);
+	priv = purple_media_element_info_get_instance_private(
+			PURPLE_MEDIA_ELEMENT_INFO(object));
 
 	switch (prop_id) {
 		case PROP_ID:
@@ -2468,7 +2449,8 @@ purple_media_element_info_get_property (GObject *object, guint prop_id,
 	PurpleMediaElementInfoPrivate *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_ELEMENT_INFO(object));
 
-	priv = PURPLE_MEDIA_ELEMENT_INFO_GET_PRIVATE(object);
+	priv = purple_media_element_info_get_instance_private(
+			PURPLE_MEDIA_ELEMENT_INFO(object));
 
 	switch (prop_id) {
 		case PROP_ID:
@@ -2530,12 +2512,7 @@ purple_media_element_info_class_init(PurpleMediaElementInfoClass *klass)
 			"The function called to create this element.",
 			G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
 			G_PARAM_STATIC_STRINGS));
-
-	g_type_class_add_private(klass, sizeof(PurpleMediaElementInfoPrivate));
 }
-
-G_DEFINE_TYPE(PurpleMediaElementInfo,
-		purple_media_element_info, G_TYPE_OBJECT);
 
 gchar *
 purple_media_element_info_get_id(PurpleMediaElementInfo *info)
