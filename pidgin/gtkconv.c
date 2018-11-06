@@ -3198,7 +3198,7 @@ static GtkActionEntry menu_entries[] =
 	{ "Remove", GTK_STOCK_REMOVE, N_("_Remove..."), NULL, NULL, G_CALLBACK(menu_add_remove_cb) },
 	{ "InsertLink", PIDGIN_STOCK_TOOLBAR_INSERT_LINK, N_("Insert Lin_k..."), NULL, NULL, G_CALLBACK(menu_insert_link_cb) },
 	{ "InsertImage", PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE, N_("Insert Imag_e..."), NULL, NULL, G_CALLBACK(menu_insert_image_cb) },
-	{ "Close", GTK_STOCK_CLOSE, N_("_Close"), NULL, NULL, G_CALLBACK(menu_close_conv_cb) },
+	{ "Close", GTK_STOCK_CLOSE, N_("_Close"), "<control>W", NULL, G_CALLBACK(menu_close_conv_cb) },
 
 	/* Options */
 	{ "OptionsMenu", NULL, N_("_Options"), NULL, NULL, NULL },
