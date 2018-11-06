@@ -52,7 +52,7 @@ gboolean pidgin_style_is_dark(GtkStyle *style);
  * Lighten a color if dark mode is enabled.
  */
 
-void pidgin_style_adjust_contrast(GtkStyle *style, GdkColor *color);
+void pidgin_style_adjust_contrast(GtkStyle *style, GdkRGBA *color);
 
 G_END_DECLS
 
