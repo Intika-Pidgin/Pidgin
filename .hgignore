@@ -3,6 +3,7 @@ syntax: glob
 .DS_Store
 *.pyc
 *~
+\#*\#
 
 syntax: regexp
 ^build(.+)?\/
