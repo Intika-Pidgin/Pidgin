@@ -1,3 +1,15 @@
+#######################################################################
+# Check for Internationalized Domain Name support
+#######################################################################
+
+if get_option('idn')
+	idn = dependency('libidn', version : '>= 0.0.0', required : force_deps)
+	use_idn = [ '-DUSE_IDN' ]
+else
+	idn = []
+	use_idn = []
+endif
+
 JABBERSOURCES = [
 	'adhoccommands.c',
 	'adhoccommands.h',
@@ -104,11 +116,12 @@ endif
 
 if STATIC_JABBER
 	jabber_prpl = static_library('jabber', JABBERSOURCES,
-	    c_args : '-DPURPLE_STATIC_PRPL',
+	    c_args : ['-DPURPLE_STATIC_PRPL', use_idn],
 	    link_args : jabber_link_args,
 	    dependencies : [gstreamer, idn, libxml, sasl, libpurple_dep, glib, gio, math, ws2_32])
 elif DYNAMIC_JABBER
 	jabber_prpl = shared_library('jabber', JABBERSOURCES,
+	    c_args : use_idn,
 	    link_args : jabber_link_args,
 	    dependencies : [gstreamer, idn, libxml, sasl, libpurple_dep, glib, gio, math, ws2_32],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
