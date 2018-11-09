@@ -399,7 +399,7 @@ libpurple = library('purple',
                     dependencies : # static_link_libs
                         [dbus, dbus_glib, dnsapi, ws2_32, glib, gio, gplugin, libxml,
                          farstream, gstreamer, gstreamer_video,
-                         gstreamer_app, idn, json, math])
+                         gstreamer_app, json, math])
 
 libpurple_dep = declare_dependency(
     # Ensure purple/dbus headers built before any dependencies:
