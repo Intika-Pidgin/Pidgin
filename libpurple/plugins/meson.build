@@ -73,6 +73,11 @@ if PLUGINS
 	    name_prefix : '',
 	    install : true, install_dir : PURPLE_PLUGINDIR)
 
+	test_request_input = library('test-request-input', 'test-request-input.c',
+		dependencies : [libpurple_dep],
+		name_prefix : '',
+	)
+
 	if enable_dbus
 		dbus_example_bindings_c = custom_target('dbus_example_bindings_c',
 		    input : 'dbus-example.c',

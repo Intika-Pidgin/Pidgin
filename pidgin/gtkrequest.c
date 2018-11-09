@@ -18,6 +18,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
+#include <talkatu.h>
+
 #include "internal.h"
 #include "pidgin.h"
 
@@ -26,7 +29,6 @@
 #include "tls-certificate-info.h"
 #include "util.h"
 
-#include "gtkwebview.h"
 #include "gtkrequest.h"
 #include "gtkutils.h"
 #include "pidginstock.h"
@@ -140,32 +142,36 @@ input_response_cb(GtkDialog *dialog, gint id, PidginRequestData *data)
 
 	generic_response_start(data);
 
-	if (data->u.input.multiline) {
-		GtkTextIter start_iter, end_iter;
+	if (data->u.input.multiline || purple_strequal(data->u.input.hint, "html")) {
 		GtkTextBuffer *buffer =
 			gtk_text_view_get_buffer(GTK_TEXT_VIEW(data->u.input.entry));
 
-		gtk_text_buffer_get_start_iter(buffer, &start_iter);
-		gtk_text_buffer_get_end_iter(buffer, &end_iter);
+		if (purple_strequal(data->u.input.hint, "html")) {
+			multiline_value = talkatu_markup_get_html(buffer, NULL);
+		} else {
+			GtkTextIter start_iter, end_iter;
 
-		if (purple_strequal(data->u.input.hint, "html"))
-			multiline_value = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(data->u.input.entry));
-		else
+			gtk_text_buffer_get_start_iter(buffer, &start_iter);
+			gtk_text_buffer_get_end_iter(buffer, &end_iter);
+
 			multiline_value = gtk_text_buffer_get_text(buffer, &start_iter, &end_iter,
 										 FALSE);
+		}
 
 		value = multiline_value;
 	}
-	else
+	else {
 		value = gtk_entry_get_text(GTK_ENTRY(data->u.input.entry));
+	}
 
 	if (id >= 0 && (gsize)id < data->cb_count && data->cbs[id] != NULL)
 		((PurpleRequestInputCb)data->cbs[id])(data->user_data, value);
 	else if (data->cbs[1] != NULL)
 		((PurpleRequestInputCb)data->cbs[1])(data->user_data, value);
 
-	if (data->u.input.multiline)
+	if (data->u.input.multiline) {
 		g_free(multiline_value);
+	}
 
 	purple_request_close(PURPLE_REQUEST_INPUT, data);
 }
@@ -489,7 +495,6 @@ pidgin_request_input(const char *title, const char *primary,
 	GtkWidget *vbox;
 	GtkWidget *hbox;
 	GtkLabel *label;
-	GtkWidget *entry;
 	GtkWidget *img;
 	char *label_text;
 	char *primary_esc, *secondary_esc;
@@ -572,57 +577,53 @@ pidgin_request_input(const char *title, const char *primary,
 
 	gtk_widget_show_all(hbox);
 
-	if (purple_strequal(data->u.input.hint, "html")) {
-		GtkWidget *frame;
+	if(multiline || purple_strequal(data->u.input.hint, "html")) {
+		GtkWidget *editor = talkatu_editor_new();
+		GtkWidget *view = talkatu_editor_get_view(TALKATU_EDITOR(editor));
+		GtkTextBuffer *buffer = NULL;
 
-		/* webview */
-		frame = pidgin_create_webview(TRUE, &entry, NULL);
-		gtk_widget_set_size_request(entry, 320, 130);
-		gtk_widget_set_name(entry, "pidgin_request_webview");
-		if (default_value != NULL)
-			pidgin_webview_append_html(PIDGIN_WEBVIEW(entry), default_value);
-		gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
-		gtk_widget_show(frame);
-	}
-	else {
-		if (multiline) {
-			/* GtkTextView */
-			entry = gtk_text_view_new();
-			gtk_text_view_set_editable(GTK_TEXT_VIEW(entry), TRUE);
+		gtk_widget_set_size_request(view, 320, 130);
+		gtk_widget_set_name(view, "pidgin_request_view");
+		gtk_box_pack_start(GTK_BOX(vbox), editor, TRUE, TRUE, 0);
+		gtk_widget_show(editor);
 
-			if (default_value != NULL) {
-				GtkTextBuffer *buffer;
+		if (purple_strequal(data->u.input.hint, "html")) {
+			buffer = talkatu_html_buffer_new();
 
-				buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(entry));
+			if(default_value != NULL) {
+				talkatu_markup_set_html(TALKATU_BUFFER(buffer), default_value, -1);
+			}
+		} else {
+			buffer = gtk_text_buffer_new(NULL);
+
+			if(default_value != NULL) {
 				gtk_text_buffer_set_text(buffer, default_value, -1);
 			}
-
-			gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(entry), GTK_WRAP_WORD_CHAR);
-
-			gtk_box_pack_start(GTK_BOX(vbox),
-				pidgin_make_scrollable(entry, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, 320, 130),
-				TRUE, TRUE, 0);
 		}
-		else {
-			entry = gtk_entry_new();
 
-			gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
+		gtk_text_view_set_buffer(GTK_TEXT_VIEW(view), buffer);
 
-			gtk_box_pack_start(GTK_BOX(vbox), entry, FALSE, FALSE, 0);
+		data->u.input.entry = view;
+	} else {
+		GtkWidget *entry = gtk_entry_new();
 
-			if (default_value != NULL)
-				gtk_entry_set_text(GTK_ENTRY(entry), default_value);
+		gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
+		gtk_box_pack_start(GTK_BOX(vbox), entry, FALSE, FALSE, 0);
 
-			if (masked)
-			{
-				gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
-			}
+		if(default_value != NULL) {
+			gtk_entry_set_text(GTK_ENTRY(entry), default_value);
 		}
-		gtk_widget_show_all(vbox);
+
+		if(masked) {
+			gtk_entry_set_visibility(GTK_ENTRY(entry), FALSE);
+		}
+
+		data->u.input.entry = entry;
 	}
 
-	pidgin_set_accessible_label(entry, label);
-	data->u.input.entry = entry;
+	gtk_widget_show_all(vbox);
+
+	pidgin_set_accessible_label(data->u.input.entry, label);
 
 	pidgin_auto_parent_window(dialog);
 

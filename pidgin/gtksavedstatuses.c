@@ -1380,7 +1380,6 @@ edit_substatus(StatusEditor *status_editor, PurpleAccount *account)
 	GtkWidget *hbox;
 	GtkWidget *editor;
 	GtkWidget *label;
-	GtkWidget *text;
 	GtkWidget *vbox;
 	GtkWidget *win;
 	GtkTreeIter iter;

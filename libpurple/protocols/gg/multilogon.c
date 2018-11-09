@@ -116,14 +116,12 @@ ggp_multilogon_sid_from_libgadu(gg_multilogon_id_t lsid)
 	return sid;
 }
 
-static gg_multilogon_id_t
-ggp_multilogon_sid_to_libgadu(uint64_t sid)
+static void
+ggp_multilogon_sid_to_libgadu(uint64_t sid, gg_multilogon_id_t *lsid)
 {
-	gg_multilogon_id_t lsid;
+	g_return_if_fail(lsid != NULL);
 
-	memcpy(lsid.id, &sid, sizeof(uint64_t));
-
-	return lsid;
+	memcpy(lsid->id, &sid, sizeof(uint64_t));
 }
 
 static void
@@ -190,12 +188,13 @@ ggp_multilogon_disconnect(PurpleRequestDatasheetRecord *rec, gpointer _gc)
 	GGPInfo *accdata = purple_connection_get_protocol_data(gc);
 	uint64_t sid;
 	gpointer key;
+	gg_multilogon_id_t lsid;
 
 	key = purple_request_datasheet_record_get_key(rec);
 	sid = ggp_keymapper_from_key(mldata->sid_mapper, key);
 
-	gg_multilogon_disconnect(accdata->session,
-		ggp_multilogon_sid_to_libgadu(sid));
+	ggp_multilogon_sid_to_libgadu(sid, &lsid);
+	gg_multilogon_disconnect(accdata->session, lsid);
 
 	purple_request_datasheet_record_remove(
 		purple_request_datasheet_record_get_datasheet(rec), key);
