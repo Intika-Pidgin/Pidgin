@@ -1386,7 +1386,7 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		}
 		shortname = strrchr(data->filename, G_DIR_SEPARATOR);
 		shortname = shortname ? shortname + 1 : data->filename;
-		img = purple_image_new_from_data(filedata, size);
+		img = purple_image_new_from_data((guint8 *)filedata, size);
 		purple_image_set_friendly_filename(img, shortname);
 
 		pidgin_webview_insert_image(PIDGIN_WEBVIEW(gtkconv->entry), img);
@@ -1438,10 +1438,13 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 		im = TRUE;
 
 	if (protocol && PURPLE_IS_PROTOCOL_XFER(protocol)) {
-		PurpleProtocolXferInterface *iface = PURPLE_PROTOCOL_XFER(protocol);
+		PurpleProtocolXferInterface *iface =
+				PURPLE_PROTOCOL_XFER_GET_IFACE(protocol);
 
 		if(iface->can_receive) {
-			ft = purple_protocol_xfer_can_receive(protocol, gc, who);
+			ft = purple_protocol_xfer_can_receive(
+					PURPLE_PROTOCOL_XFER(protocol),
+					gc, who);
 		} else {
 			ft = (iface->send_file) ? TRUE : FALSE;
 		}
@@ -2356,7 +2359,7 @@ pidgin_convert_buddy_icon(PurpleProtocol *protocol, const char *path, size_t *le
 		g_strfreev(protocol_formats);
 		return NULL;
 	}
-	original = g_object_ref(G_OBJECT(pixbuf));
+	original = g_object_ref(pixbuf);
 
 	new_width = orig_width;
 	new_height = orig_height;

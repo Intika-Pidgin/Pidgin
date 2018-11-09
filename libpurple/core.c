@@ -359,61 +359,6 @@ purple_core_get_ui_ops(void)
 	return _ops;
 }
 
-#ifdef HAVE_DBUS
-static char *purple_dbus_owner_user_dir(void)
-{
-	DBusMessage *msg = NULL, *reply = NULL;
-	DBusConnection *dbus_connection = NULL;
-	DBusError dbus_error;
-	char *remote_user_dir = NULL;
-
-	if ((dbus_connection = purple_dbus_get_connection()) == NULL)
-		return NULL;
-
-	if ((msg = dbus_message_new_method_call(PURPLE_DBUS_SERVICE, PURPLE_DBUS_PATH, PURPLE_DBUS_INTERFACE, "PurpleUserDir")) == NULL)
-		return NULL;
-
-	dbus_error_init(&dbus_error);
-	reply = dbus_connection_send_with_reply_and_block(dbus_connection, msg, 5000, &dbus_error);
-	dbus_message_unref(msg);
-	dbus_error_free(&dbus_error);
-
-	if (reply)
-	{
-		dbus_error_init(&dbus_error);
-		dbus_message_get_args(reply, &dbus_error, DBUS_TYPE_STRING, &remote_user_dir, DBUS_TYPE_INVALID);
-		remote_user_dir = g_strdup(remote_user_dir);
-		dbus_error_free(&dbus_error);
-		dbus_message_unref(reply);
-	}
-
-	return remote_user_dir;
-}
-
-#endif /* HAVE_DBUS */
-
-gboolean
-purple_core_ensure_single_instance()
-{
-	gboolean is_single_instance = TRUE;
-#ifdef HAVE_DBUS
-	/* in the future, other mechanisms might have already set this to FALSE */
-	if (is_single_instance)
-	{
-		if (!purple_dbus_is_owner())
-		{
-			const char *user_dir = purple_user_dir();
-			char *dbus_owner_user_dir = purple_dbus_owner_user_dir();
-
-			is_single_instance = !purple_strequal(dbus_owner_user_dir, user_dir);
-			g_free(dbus_owner_user_dir);
-		}
-	}
-#endif /* HAVE_DBUS */
-
-	return is_single_instance;
-}
-
 GHashTable* purple_core_get_ui_info() {
 	PurpleCoreUiOps *ops = purple_core_get_ui_ops();
 
