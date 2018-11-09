@@ -173,19 +173,6 @@ void purple_core_set_ui_ops(PurpleCoreUiOps *ops);
 PurpleCoreUiOps *purple_core_get_ui_ops(void);
 
 /**
- * purple_core_ensure_single_instance:
- *
- * Ensures that only one instance is running.  If libpurple is built with D-Bus
- * support, this checks if another process owns the libpurple bus name and if
- * so whether that process is using the same configuration directory as this
- * process.
- *
- * Returns: %TRUE if this is the first instance of libpurple running;
- *          %FALSE if there is another instance running.
- */
-gboolean purple_core_ensure_single_instance(void);
-
-/**
  * purple_core_get_ui_info:
  *
  * Returns a hash table containing various information about the UI.  The
