@@ -465,17 +465,6 @@ else
 endif
 
 #######################################################################
-# Check for Internationalized Domain Name support
-#######################################################################
-
-if get_option('idn')
-	idn = dependency('libidn', version : '>= 0.0.0', required : force_deps)
-	conf.set('USE_IDN', idn.found())
-else
-	idn = []
-endif
-
-#######################################################################
 # Check for Meanwhile headers (for Sametime)
 #######################################################################
 if get_option('meanwhile')

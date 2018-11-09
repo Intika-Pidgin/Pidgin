@@ -301,26 +301,6 @@ const gchar *purple_network_get_turn_ip(void);
 void purple_network_remove_port_mapping(gint fd);
 
 /**
- * purple_network_convert_idn_to_ascii:
- * @in:      The hostname to be converted.
- * @out:     The output buffer where an allocated string will be returned.
- *                The caller is responsible for freeing this.
- *
- * Convert a UTF-8 domain name to ASCII in accordance with the IDNA
- * specification. If libpurple is compiled without IDN support, this function
- * copies the input into the output buffer.
- *
- * Because this function is used by DNS resolver child/threads, it uses no
- * other libpurple API and is threadsafe.
- *
- * In general, a buffer of about 512 bytes is the appropriate size to use.
- *
- * Returns:       0 on success, -1 if the out is NULL, or an error code
- *                that currently corresponds to the Idna_rc enum in libidn.
- */
-int purple_network_convert_idn_to_ascii(const gchar *in, gchar **out);
-
-/**
  * purple_network_init:
  *
  * Initializes the network subsystem.
