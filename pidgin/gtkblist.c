@@ -246,6 +246,20 @@ static gboolean gtk_blist_delete_cb(GtkWidget *w, GdkEventAny *event, gpointer d
 }
 
 static void
+gtk_blist_hide_cb(GtkWidget *widget, gpointer data)
+{
+	purple_signal_emit(pidgin_blist_get_handle(),
+			"gtkblist-hiding", gtkblist);
+}
+
+static void
+gtk_blist_show_cb(GtkWidget *widget, gpointer data)
+{
+	purple_signal_emit(pidgin_blist_get_handle(),
+			"gtkblist-unhiding", gtkblist);
+}
+
+static void
 gtk_blist_size_allocate_cb(GtkWidget *widget, GtkAllocation *allocation,
 		gpointer data)
 {
@@ -5755,6 +5769,10 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	gtk_container_add(GTK_CONTAINER(gtkblist->window), gtkblist->main_vbox);
 
 	g_signal_connect(G_OBJECT(gtkblist->window), "delete_event", G_CALLBACK(gtk_blist_delete_cb), NULL);
+	g_signal_connect(G_OBJECT(gtkblist->window), "hide",
+			G_CALLBACK(gtk_blist_hide_cb), NULL);
+	g_signal_connect(G_OBJECT(gtkblist->window), "show",
+			G_CALLBACK(gtk_blist_show_cb), NULL);
 	g_signal_connect(G_OBJECT(gtkblist->window), "size-allocate",
 			G_CALLBACK(gtk_blist_size_allocate_cb), NULL);
 	g_signal_connect(G_OBJECT(gtkblist->window), "visibility_notify_event", G_CALLBACK(gtk_blist_visibility_cb), NULL);
@@ -6883,13 +6901,9 @@ static void pidgin_blist_set_visible(PurpleBuddyList *list, gboolean show)
 		return;
 
 	if (show) {
-		if(!PIDGIN_WINDOW_ICONIFIED(gtkblist->window) &&
-		   !gtk_widget_get_visible(gtkblist->window))
-			purple_signal_emit(pidgin_blist_get_handle(), "gtkblist-unhiding", gtkblist);
 		gtk_window_present(GTK_WINDOW(gtkblist->window));
 	} else {
 		if(visibility_manager_count) {
-			purple_signal_emit(pidgin_blist_get_handle(), "gtkblist-hiding", gtkblist);
 			gtk_widget_hide(gtkblist->window);
 		} else {
 			if (!gtk_widget_get_visible(gtkblist->window))
