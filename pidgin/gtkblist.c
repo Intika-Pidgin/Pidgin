@@ -6901,7 +6901,7 @@ static void pidgin_blist_set_visible(PurpleBuddyList *list, gboolean show)
 		return;
 
 	if (show) {
-		gtk_window_present(GTK_WINDOW(gtkblist->window));
+		gtk_widget_show(gtkblist->window);
 	} else {
 		if(visibility_manager_count) {
 			gtk_widget_hide(gtkblist->window);
