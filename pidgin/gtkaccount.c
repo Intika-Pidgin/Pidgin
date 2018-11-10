@@ -1350,7 +1350,11 @@ ok_account_prefs_cb(GtkWidget *w, AccountPrefsDialog *dialog)
 
 		if (purple_accounts_get_all() == NULL) {
 			/* We're adding our first account.  Be polite and show the buddy list */
-			purple_blist_set_visible(TRUE);
+			PidginBuddyList *blist =
+					pidgin_blist_get_default_gtk_blist();
+			if (blist != NULL && blist->window != NULL) {
+				gtk_window_present(GTK_WINDOW(blist->window));
+			}
 		}
 
 		account = purple_account_new(username, dialog->protocol_id);

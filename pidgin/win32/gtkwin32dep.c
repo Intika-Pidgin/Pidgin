@@ -39,6 +39,7 @@
 #include "untar.h"
 
 #include "gtkwin32dep.h"
+#include "gtkblist.h"
 #include "gtkconv.h"
 #include "gtkconn.h"
 #include "util.h"
@@ -237,8 +238,12 @@ winpidgin_pwm_reconnect()
 static LRESULT CALLBACK message_window_handler(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 	if (msg == PIDGIN_WM_FOCUS_REQUEST) {
+		PidginBuddyList *blist;
 		purple_debug_info("winpidgin", "Got external Buddy List focus request.");
-		purple_blist_set_visible(TRUE);
+		blist = pidgin_blist_get_default_gtk_blist();
+		if (blist != NULL && blist->window != NULL) {
+			gtk_window_present(GTK_WINDOW(blist->window));
+		}
 		return TRUE;
 	} else if (msg == PIDGIN_WM_PROTOCOL_HANDLE) {
 		char *proto_msg = (char *) lparam;

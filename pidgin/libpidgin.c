@@ -366,7 +366,11 @@ pidgin_handle_local_options_cb(GApplication *app, GVariantDict *options,
 static void
 pidgin_activate_cb(GApplication *application, gpointer user_data)
 {
-	purple_blist_set_visible(TRUE);
+	PidginBuddyList *blist = pidgin_blist_get_default_gtk_blist();
+
+	if (blist != NULL && blist->window != NULL) {
+		gtk_window_present(GTK_WINDOW(blist->window));
+	}
 }
 
 static gint
