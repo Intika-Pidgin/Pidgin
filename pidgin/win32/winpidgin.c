@@ -142,11 +142,12 @@ static void handle_protocol(wchar_t *cmd) {
 	if (!(process = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_WRITE, FALSE, pid))) {
 		DWORD dw = GetLastError();
 		const wchar_t *err_msg = get_win32_error_message(dw);
-		wprintf(L"Unable to open Pidgin process. (%u) %s\n", (UINT) dw, err_msg);
+		wprintf(L"Unable to open Pidgin process. (%u) %ls\n",
+				(UINT)dw, err_msg);
 		return;
 	}
 
-	wprintf(L"Trying to handle protocol message:\n'%.*s'\n", wlen, tmp1);
+	wprintf(L"Trying to handle protocol message:\n'%.*ls'\n", wlen, tmp1);
 
 	/* MEM_COMMIT initializes the memory to zero
 	 * so we don't need to worry that our section of utf8msg isn't nul-terminated */
@@ -157,14 +158,16 @@ static void handle_protocol(wchar_t *cmd) {
 		} else {
 			DWORD dw = GetLastError();
 			const wchar_t *err_msg = get_win32_error_message(dw);
-			wprintf(L"Unable to write to remote memory. (%u) %s\n", (UINT) dw, err_msg);
+			wprintf(L"Unable to write to remote memory. (%u) %ls\n",
+				       (UINT)dw, err_msg);
 		}
 
 		VirtualFreeEx(process, remote_msg, 0, MEM_RELEASE);
 	} else {
 		DWORD dw = GetLastError();
 		const wchar_t *err_msg = get_win32_error_message(dw);
-		wprintf(L"Unable to allocate remote memory. (%u) %s\n", (UINT) dw, err_msg);
+		wprintf(L"Unable to allocate remote memory. (%u) %ls\n",
+				(UINT)dw, err_msg);
 	}
 
 	CloseHandle(process);
@@ -331,7 +334,7 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 				if (MySetDllDirectory == NULL) {
 					DWORD dw = GetLastError();
 					const wchar_t *err_msg = get_win32_error_message(dw);
-					wprintf(L"Error loading SetDllDirectory(): (%u) %s\n", dw, err_msg);
+					wprintf(L"Error loading SetDllDirectory(): (%u) %ls\n", dw, err_msg);
 				}
 			} else {
 				printf("Error getting kernel32.dll handle\n");
@@ -340,12 +343,12 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 			if (MySetDllDirectory) {
 				wcscat(pidgin_dir, L"\\bin");
 				if (MySetDllDirectory(pidgin_dir)) {
-					wprintf(L"Added DLL directory to search path: %s\n",
+					wprintf(L"Added DLL directory to search path: %ls\n",
 							pidgin_dir);
 				} else {
 					DWORD dw = GetLastError();
 					const wchar_t *err_msg = get_win32_error_message(dw);
-					wprintf(L"Error calling SetDllDirectory(): (%u) %s\n", dw, err_msg);
+					wprintf(L"Error calling SetDllDirectory(): (%u) %ls\n", dw, err_msg);
 				}
 			}
 		}
@@ -353,9 +356,9 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		DWORD dw = GetLastError();
 		const wchar_t *err_msg = get_win32_error_message(dw);
 		_snwprintf(errbuf, sizeof(errbuf) / sizeof(wchar_t),
-			L"Error getting module filename.\nError: (%u) %s",
+			L"Error getting module filename.\nError: (%u) %ls",
 			(UINT) dw, err_msg);
-		wprintf(L"%s\n", errbuf);
+		wprintf(L"%ls\n", errbuf);
 		MessageBoxW(NULL, errbuf, NULL, MB_OK | MB_TOPMOST);
 		pidgin_dir[0] = L'\0';
 	}
@@ -374,9 +377,9 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 		const wchar_t *err_msg = get_win32_error_message(dw);
 
 		_snwprintf(errbuf, sizeof(errbuf) / sizeof(wchar_t),
-				L"Error loading %s.\nError: (%u) %s",
+				L"Error loading %ls.\nError: (%u) %ls",
 				LIBPIDGIN_DLL_NAMEW, (UINT) dw, err_msg);
-		wprintf(L"%s\n", errbuf);
+		wprintf(L"%ls\n", errbuf);
 		MessageBoxW(NULL, errbuf, L"Error", MB_OK | MB_TOPMOST);
 
 		return 0;
@@ -403,7 +406,7 @@ WinMain (struct HINSTANCE__ *hInstance, struct HINSTANCE__ *hPrevInstance,
 				}
 			}
 			if (!success)
-				wprintf(L"Error converting argument '%s' to UTF-8\n",
+				wprintf(L"Error converting argument '%ls' to UTF-8\n",
 					szArglist[i]);
 		}
 		if (!success)
