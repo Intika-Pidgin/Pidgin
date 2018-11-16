@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=Pidgin
+Name=Pidgin 3
 GenericName=Internet Messenger
 Comment=Chat over IM.  Supports AIM, Google Talk, Jabber/XMPP, and more
-Exec=pidgin %U
+Exec=pidgin3 %U
 Icon=pidgin
 StartupNotify=true
 Terminal=false

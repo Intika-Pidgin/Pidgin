@@ -160,7 +160,7 @@ if IS_WIN32
 endif
 
 if enable_consoleui
-	install_headers(libfinch_headers, subdir : 'finch')
+	install_headers(libfinch_headers, subdir : 'finch-3')
 
 	libfinch_inc = include_directories('.')
 	libfinch = shared_library('finch',
@@ -185,8 +185,8 @@ if enable_consoleui
 	    name : 'Finch',
 	    description : 'Finch is an instant messenger application that uses libpurple for protocol support and ncurses (libgnt) for the UI.',
 	    version : meson.project_version(),
-	    filebase : 'finch',
-	    subdirs : 'finch',
+	    filebase : 'finch-3',
+	    subdirs : 'finch-3',
 	    libraries : [libfinch],
 	    requires : ['gnt', 'purple-3'])
 

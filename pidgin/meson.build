@@ -149,7 +149,7 @@ if ENABLE_GTK
 		)
 	endif
 
-	install_headers(libpidgin_headers, subdir : 'pidgin')
+	install_headers(libpidgin_headers, subdir : 'pidgin-3')
 
 	libpidgin_inc = include_directories('.')
 	libpidgin = shared_library('pidgin',
@@ -176,7 +176,7 @@ if ENABLE_GTK
 	    link_with : libpidgin,
 	    dependencies : [webkit, gtk, glib, math])
 
-	pidgin = executable('pidgin',
+	pidgin = executable('pidgin3',
 	    pidgin_SOURCES,
 	    include_directories : toplevel_inc,
 	    dependencies : IS_WIN32 ? [] : [libpurple_dep, libpidgin_dep],
@@ -193,7 +193,7 @@ if ENABLE_GTK
 	    description : 'Pidgin is a GTK3-based instant messenger application.',
 	    version : meson.project_version(),
 	    filebase : 'pidgin-3',
-	    subdirs : 'pidgin',
+	    subdirs : 'pidgin-3',
 	    libraries : [libpidgin],
 	    requires : ['gtk+-3.0', 'webkitgtk-3.0', 'purple-3'],
 	    variables : ['plugindir=${libdir}/pidgin'])
