@@ -1,0 +1,95 @@
+body {
+	word-wrap: break-word;
+	word-break: break-word;
+
+	font-size: 13px;
+	margin: 2px;
+	overflow-y: scroll;
+}
+
+.x-container,
+.x-status_container
+{
+	clear: left;
+	line-height: 1.3em;
+	margin-bottom: 4px;
+	height: 100%;
+	overflow: hidden;
+}
+
+.x-container .x-time,
+.x-status_container .x-time
+{
+	display: inline;
+	font-size: 12px;
+}
+
+.x-container .x-sender
+{
+	font-weight: bold;
+}
+
+.x-message p
+{
+	margin: 0;
+}
+
+.x-message p:first-child
+{
+	display: inline;
+}
+
+/* Don't let inline images overflow the window */
+img
+{
+	max-width: 100%
+}
+
+/* Colour-ify things */
+
+#Chat:not(.groupchat) .x-container.incoming .x-header
+{
+	color: #cc0000 ! important;
+}
+
+.x-container.outgoing .x-time,
+.x-container.outgoing .x-sender
+{
+	color: #204a87;
+}
+
+.x-container.mention .x-time,
+.x-container.mention .x-sender
+{
+	color: #AF7F00;
+}
+
+.x-status_container
+{
+	color: #777777;
+}
+
+.x-status_container.error
+{
+	color: #ff0000;
+	font-weight: bold;
+}
+
+/* Inline images */
+
+.pending-image
+{
+	cursor: progress;
+}
+
+.pending-image img
+{
+	display: none;
+}
+
+/* Emoticons */
+
+.emoticon
+{
+	vertical-align: bottom;
+}
