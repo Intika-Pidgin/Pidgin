@@ -199,7 +199,7 @@ if ENABLE_GTK
 	    variables : ['plugindir=${libdir}/pidgin'])
 
 	if INSTALL_I18N
-		DESKTOP_FILE = 'im.pidgin.Pidgin.desktop'
+		DESKTOP_FILE = 'im.pidgin.Pidgin3.desktop'
 		desktop_file_in = configure_file(
 		    input : 'data/' + DESKTOP_FILE + '.in.in',
 		    output : DESKTOP_FILE + '.in',
@@ -213,8 +213,8 @@ if ENABLE_GTK
 		    install_dir : get_option('datadir') + '/applications')
 
 		appdata = i18n.merge_file(
-		    input : 'data/im.pidgin.Pidgin.appdata.xml.in',
-		    output : 'im.pidgin.Pidgin.appdata.xml',
+		    input : 'data/im.pidgin.Pidgin3.appdata.xml.in',
+		    output : 'im.pidgin.Pidgin3.appdata.xml',
 		    po_dir : meson.source_root() + '/po',
 		    install : true,
 		    install_dir : get_option('datadir') + '/metainfo')
