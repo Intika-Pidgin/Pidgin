@@ -1,12 +1,20 @@
-subdir('libgnt')
 enable_consoleui = false
 if get_option('consoleui')
-	if ncurses_available
+	libgnt_dep = dependency('gnt', version : '>= 2.9.0', required : false)
+	if libgnt_dep.found()
+		libgnt_gir = ['Gnt-2.9']
+	else
+		libgnt_proj = subproject('libgnt')
+		libgnt_dep = libgnt_proj.get_variable('libgnt_dep')
+		libgnt_gir = libgnt_proj.get_variable('libgnt_gir')
+	endif
+
+	if libgnt_dep.found()
 		enable_consoleui = true
 	else
 		error('''
 
-Finch will not be built. You need to install ncursesw (or ncurses) and its development headers.
+Finch will not be built. You need to install libgnt (or its requirements) and its development headers.
 
 ''')
 	endif
