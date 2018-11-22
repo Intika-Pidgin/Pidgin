@@ -345,23 +345,23 @@ fb_util_request_buddy_cancel(gpointer *mata, PurpleRequestFields *fields)
 static gint
 fb_buddy_cmp(gconstpointer a, gconstpointer b)
 {
-    gint alias_verdict, name_verdict;
-    gchar *astr, *bstr;
+	gint alias_verdict, name_verdict;
+	gchar *astr, *bstr;
 
-    astr = g_utf8_casefold(purple_buddy_get_alias(a), -1);
-    bstr = g_utf8_casefold(purple_buddy_get_alias(b), -1);
-    alias_verdict = g_utf8_collate(astr, bstr);
-    g_free(astr);
-    g_free(bstr);
-    if (alias_verdict) {
-        return alias_verdict;
-    }
-    astr = g_utf8_casefold(purple_buddy_get_name(a), -1);
-    bstr = g_utf8_casefold(purple_buddy_get_name(b), -1);
-    name_verdict = g_utf8_collate(astr, bstr);
-    g_free(astr);
-    g_free(bstr);
-    return name_verdict;
+	astr = g_utf8_casefold(purple_buddy_get_alias(a), -1);
+	bstr = g_utf8_casefold(purple_buddy_get_alias(b), -1);
+	alias_verdict = g_utf8_collate(astr, bstr);
+	g_free(astr);
+	g_free(bstr);
+	if (alias_verdict != 0) {
+		return alias_verdict;
+	}
+	astr = g_utf8_casefold(purple_buddy_get_name(a), -1);
+	bstr = g_utf8_casefold(purple_buddy_get_name(b), -1);
+	name_verdict = g_utf8_collate(astr, bstr);
+	g_free(astr);
+	g_free(bstr);
+	return name_verdict;
 }
 
 gpointer
