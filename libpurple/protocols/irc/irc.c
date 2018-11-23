@@ -28,6 +28,7 @@
 #include "accountopt.h"
 #include "buddylist.h"
 #include "conversation.h"
+#include "core.h"
 #include "debug.h"
 #include "notify.h"
 #include "protocol.h"
@@ -59,6 +60,153 @@ static gboolean irc_nick_equal(const char *nick1, const char *nick2);
 static void irc_buddy_free(struct irc_buddy *ib);
 
 PurpleProtocol *_irc_protocol = NULL;
+
+static gint
+irc_uri_handler_match_server(gconstpointer a, gconstpointer b)
+{
+	PurpleAccount *account = PURPLE_ACCOUNT(a);
+	const gchar *match_server = b;
+	const gchar *protocol_id;
+	const gchar *username;
+	gchar *server;
+
+	protocol_id = purple_account_get_protocol_id(account);
+
+	if (!purple_strequal(protocol_id, "prpl-irc") ||
+			!purple_account_is_connected(account)) {
+		return -1;
+	}
+
+	if (match_server == NULL || match_server[0] == '\0') {
+		/* No server specified, match any IRC account */
+		return 0;
+	}
+
+	username = purple_account_get_username(account);
+	server = strchr(username, '@');
+
+	/* +1 to skip '@' */
+	if (server == NULL || !purple_strequal(match_server, server + 1)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static gboolean
+irc_uri_handler(const gchar *scheme, const gchar *uri, GHashTable *params)
+{
+	gchar *target;
+	gchar *server;
+	GList *accounts;
+	GList *account_node;
+	gchar **target_tokens;
+	PurpleAccount *account;
+	gchar **modifier;
+	gboolean isnick = FALSE;
+
+	g_return_val_if_fail(uri != NULL, FALSE);
+
+	if (!purple_strequal(scheme, "irc")) {
+		/* Not a scheme we handle here */
+		return FALSE;
+	}
+
+	if (g_str_has_prefix(uri, "//")) {
+		/* Skip initial '//' if it exists */
+		uri += 2;
+	}
+
+	/* Find the target (aka room or user) */
+	target = strchr(uri, '/');
+
+	/* [1] to skip the '/' */
+	if (target == NULL || target[1] == '\0') {
+		purple_debug_warning("irc",
+				"URI missing valid target: %s", uri);
+		return FALSE;
+	}
+
+	server = g_strndup(uri, target - uri);
+
+	/* Find account with correct server */
+	accounts = purple_accounts_get_all();
+	account_node = g_list_find_custom(accounts, server,
+			irc_uri_handler_match_server);
+
+	if (account_node == NULL) {
+		purple_debug_warning("irc",
+				"No account online on '%s' for handling URI",
+				server);
+		g_free(server);
+		return FALSE;
+	}
+
+	account = account_node->data;
+
+	/* Tokenize modifiers, +1 to skip the initial '/' */
+	target_tokens = g_strsplit(target + 1, ",", 0);
+	target = g_strdup_printf("#%s", target_tokens[0]);
+
+	/* Parse modifiers, start at 1 to skip the actual target */
+	for (modifier = target_tokens + 1; *modifier != NULL; ++modifier) {
+		if (purple_strequal(*modifier, "isnick")) {
+			isnick = TRUE;
+			break;
+		}
+	}
+
+	g_strfreev(target_tokens);
+
+	if (isnick) {
+		PurpleIMConversation *im;
+
+		/* 'server' isn't needed here. Free it immediately. */
+		g_free(server);
+
+		/* +1 to skip '#' target prefix */
+		im = purple_im_conversation_new(account, target + 1);
+		g_free(target);
+
+		purple_conversation_present(PURPLE_CONVERSATION(im));
+
+		if (params != NULL) {
+			const gchar *msg = g_hash_table_lookup(params, "msg");
+
+			if (msg != NULL) {
+				purple_conversation_send_confirm(
+						PURPLE_CONVERSATION(im), msg);
+			}
+		}
+
+		return TRUE;
+	} else {
+		GHashTable *components;
+
+		components = g_hash_table_new_full(g_str_hash, g_str_equal,
+				NULL, g_free);
+
+		/* Transfer ownership of these to the hash table */
+		g_hash_table_insert(components, "server", server);
+		g_hash_table_insert(components, "channel", target);
+
+		if (params != NULL) {
+			const gchar *key = g_hash_table_lookup(params, "key");
+
+			if (key != NULL) {
+				g_hash_table_insert(components, "password",
+						g_strdup(key));
+			}
+		}
+
+		purple_serv_join_chat(purple_account_get_connection(account),
+				components);
+		g_hash_table_destroy(components);
+		return TRUE;
+	}
+
+	return FALSE;
+}
 
 static void irc_view_motd(PurpleProtocolAction *action)
 {
@@ -984,6 +1132,9 @@ plugin_load(PurplePlugin *plugin, GError **error)
 			     PURPLE_TYPE_CONNECTION,
 			     G_TYPE_POINTER); /* pointer to a string */
 
+	purple_signal_connect(purple_get_core(), "uri-handler", plugin,
+			PURPLE_CALLBACK(irc_uri_handler), NULL);
+
 	return TRUE;
 }
 
@@ -991,6 +1142,9 @@ static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	irc_unregister_commands();
+
+	purple_signal_disconnect(purple_get_core(), "uri-handler", plugin,
+			PURPLE_CALLBACK(irc_uri_handler));
 
 	if (!purple_protocols_remove(_irc_protocol, error))
 		return FALSE;
