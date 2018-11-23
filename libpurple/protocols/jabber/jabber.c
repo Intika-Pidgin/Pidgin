@@ -3789,13 +3789,17 @@ xmpp_uri_handler(const char *proto, const char *user, GHashTable *params,
 		gpointer user_data)
 {
 	PurpleProtocol *protocol = (PurpleProtocol *)user_data;
-	char *acct_id = params ? g_hash_table_lookup(params, "account") : NULL;
+	const gchar *acct_id = NULL;
 	PurpleAccount *acct;
 
 	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), FALSE);
 
 	if (g_ascii_strcasecmp(proto, "xmpp"))
 		return FALSE;
+
+ 	if (params != NULL) {
+		acct_id = g_hash_table_lookup(params, "account");
+	}
 
 	acct = find_acct(protocol->id, acct_id);
 
@@ -3805,11 +3809,17 @@ xmpp_uri_handler(const char *proto, const char *user, GHashTable *params,
 	/* xmpp:romeo@montague.net?message;subject=Test%20Message;body=Here%27s%20a%20test%20message */
 	/* params is NULL if the URI has no '?' (or anything after it) */
 	if (!params || g_hash_table_lookup_extended(params, "message", NULL, NULL)) {
-		char *body = g_hash_table_lookup(params, "body");
 		if (user && *user) {
 			PurpleIMConversation *im =
 					purple_im_conversation_new(acct, user);
+			const gchar *body = NULL;
+
 			purple_conversation_present(PURPLE_CONVERSATION(im));
+
+			if (params != NULL) {
+				body = g_hash_table_lookup(params, "body");
+			}
+
 			if (body && *body)
 				purple_conversation_send_confirm(PURPLE_CONVERSATION(im), body);
 			return TRUE;
