@@ -5529,13 +5529,21 @@ static PurpleAccount *find_acct(const char *protocol, const char *acct_id)
 
 gboolean oscar_uri_handler(const char *proto, const char *cmd, GHashTable *params)
 {
-	char *acct_id = g_hash_table_lookup(params, "account");
+	char *acct_id;
 	char prpl[11];
 	PurpleAccount *acct;
 
 	if (g_ascii_strcasecmp(proto, "aim") && g_ascii_strcasecmp(proto, "icq"))
 		return FALSE;
 
+	if (params == NULL) {
+		/* All Oscar URI actions require some parameters eventually */
+		purple_debug_warning("oscar",
+				"No required params for handling URI");
+		return FALSE;
+	}
+
+	acct_id = g_hash_table_lookup(params, "account");
 	g_snprintf(prpl, sizeof(prpl), "prpl-%s", proto);
 
 	acct = find_acct(proto, acct_id);
