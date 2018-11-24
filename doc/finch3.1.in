@@ -19,24 +19,24 @@
 .\" License along with this manual; if not, write to the Free
 .\" Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139,
 .\" USA.
-.TH finch 1
+.TH finch3 1
 .SH NAME
 Finch \- A Pimpin' Penguin console frontend to libpurple. Instant
 Messaging client.
 .SH SYNOPSIS
 .TP 5
-\fBfinch \fI[options]\fR
+\fBfinch3 \fI[options]\fR
 
 .SH DESCRIPTION
 .PP
-\fBfinch\fR is a console-based modular messaging client based on libpurple
+\fBfinch3\fR is a console-based modular messaging client based on libpurple
 which is capable of connecting to AIM, XMPP, ICQ, IRC, SILC,
 Novell GroupWise, Lotus Sametime, Zephyr, Gadu-Gadu, and QQ all at once. It has
 many common features found in other clients, as well as many unique features.
 Finch is not endorsed by or affiliated with America Online, ICQ, or Microsoft.
 
 .SH OPTIONS
-The following options are provided by \fBfinch\fR using the standard GNU
+The following options are provided by \fBfinch3\fR using the standard GNU
 command line syntax:
 .TP
 .B \-c, \-\-config=\fIDIR\fB
@@ -51,7 +51,7 @@ stderr.
 Print this help and exit.
 .TP
 .B \-n, \-\-nologin
-Don't automatically login when \fBfinch\fR starts.  Sets all accounts to
+Don't automatically login when \fBfinch3\fR starts.  Sets all accounts to
 Offline.
 .TP
 .B \-v, \-\-version
@@ -563,7 +563,7 @@ for the preferences window.
 for the status window.
 
 .SH FAQ
-FAQ for \fBfinch\fR is located at
+FAQ for \fBfinch3\fR is located at
 .br
 \fIhttps://developer.pidgin.im/wiki/Using%20Finch\fR
 
@@ -573,13 +573,13 @@ Known bugs are listed at
 \fIhttps://developer.pidgin.im/query?status=new&status=assigned&status=reopened&component=finch+%28gnt%2Fncurses%29&order=priority\fR
 
 Before sending a bug report, please verify that you have the latest
-version of \fBfinch\fR and libpurple.  Many bugs (major and minor) are
+version of \fBfinch3\fR and libpurple.  Many bugs (major and minor) are
 fixed at each release, and if yours is out of date, the problem may already have
 been solved.
 
 .SH PATCHES
-If you fix a bug in \fBfinch\fR (or otherwise enhance it), please submit a
-patch (using \fBmtn diff > my.diff\fR against the latest version from the
+If you fix a bug in \fBfinch3\fR (or otherwise enhance it), please submit a
+patch (using \fBhg diff > my.diff\fR against the latest version from the
 Mercurial repository) at \fIhttps://developer.pidgin.im/newticket\fR
 
 You are also encouraged to drop by at \fB#pidgin\fR on \fIirc.freenode.net\fR

@@ -1,4 +1,4 @@
-Ri.\" Copyright (c) 2000, Dennis Ristuccia <dennis@dennisr.net>
+.\" Copyright (c) 2000, Dennis Ristuccia <dennis@dennisr.net>
 .\"
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -19,16 +19,16 @@ Ri.\" Copyright (c) 2000, Dennis Ristuccia <dennis@dennisr.net>
 .\" License along with this manual; if not, write to the Free
 .\" Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 .\" Boston, MA  02111-1301  USA.
-.TH pidgin 1 "" "Pidgin v@VERSION@"
+.TH pidgin3 1 "" "Pidgin v@VERSION@"
 .SH NAME
-pidgin \- Instant Messaging client
+pidgin3 \- Instant Messaging client
 .SH SYNOPSIS
 .TP 5
-\fBpidgin \fI[options]\fR
+\fBpidgin3 \fI[options]\fR
 
 .SH DESCRIPTION
 .PP
-\fBpidgin\fR is a graphical modular messaging client based on libpurple
+\fBpidgin3\fR is a graphical modular messaging client based on libpurple
 which is capable of connecting to AIM, XMPP, ICQ, IRC, SILC,
 Novell GroupWise, Lotus Sametime, Zephyr, Gadu-Gadu, and QQ all at once. It has
 many common features found in other clients, as well as many unique features.
@@ -524,7 +524,7 @@ Pidgin allows for interaction via D-Bus.  Currently very little documentation
 about this interaction exists.
 
 .SH FILES
-  \fI@prefix@/bin/pidgin\fR: Pidgin's location.
+  \fI@prefix@/bin/pidgin3\fR: Pidgin's location.
 .br
   \fI~/.purple/blist.xml\fR: the buddy list.
 .br
@@ -539,9 +539,9 @@ about this interaction exists.
   \fI~/.purple/logs/PROTOCOL/ACCOUNT/BUDDYNAME/DATE.{html,txt}\fR: conversation logs.
 
 .SH DIRECTORIES
-  \fI@prefix@/lib/pidgin/\fR: Pidgin's plugins directory.
+  \fI@prefix@/lib/pidgin3/\fR: Pidgin's plugins directory.
 .br
-  \fI@prefix@/lib/purple-2/\fR: libpurple's plugins directory.
+  \fI@prefix@/lib/purple-3/\fR: libpurple's plugins directory.
 .br
   \fI~/.purple\fR: users' local settings
 .br
