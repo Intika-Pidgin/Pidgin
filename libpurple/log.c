@@ -1689,7 +1689,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 					list = g_list_prepend(list, log);
 
 					if (index != NULL)
-						fprintf(index, "%d\t%d\t%lu\n", data->offset, data->length, (unsigned long)log->time);
+						fprintf(index, "%d\t%d\t%lu\n", data->offset, data->length, (unsigned long)g_date_time_to_unix(log->time));
 				}
 			}
 

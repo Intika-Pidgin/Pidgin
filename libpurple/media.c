@@ -82,8 +82,6 @@ struct _PurpleMediaPrivate
 };
 
 #ifdef USE_VV
-#define PURPLE_MEDIA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_MEDIA, PurpleMediaPrivate))
-
 static void purple_media_class_init (PurpleMediaClass *klass);
 static void purple_media_init (PurpleMedia *media);
 static void purple_media_dispose (GObject *object);
@@ -104,9 +102,6 @@ static void purple_media_candidate_pair_established_cb(
 		PurpleMedia *media);
 static void purple_media_codecs_changed_cb(PurpleMediaBackend *backend,
 		const gchar *sess_id, PurpleMedia *media);
-
-static GObjectClass *parent_class = NULL;
-
 
 
 enum {
@@ -131,42 +126,21 @@ enum {
 	PROP_INITIATOR,
 	PROP_PROTOCOL_DATA,
 };
-#endif
 
-
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleMedia, purple_media, G_TYPE_OBJECT);
+#else
 GType
 purple_media_get_type()
 {
-#ifdef USE_VV
-	static GType type = 0;
-
-	if (type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleMediaClass),
-			NULL,
-			NULL,
-			(GClassInitFunc) purple_media_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleMedia),
-			0,
-			(GInstanceInitFunc) purple_media_init,
-			NULL
-		};
-		type = g_type_register_static(G_TYPE_OBJECT, "PurpleMedia", &info, 0);
-	}
-	return type;
-#else
 	return G_TYPE_NONE;
-#endif
 }
+#endif /* USE_VV */
 
 #ifdef USE_VV
 static void
 purple_media_class_init (PurpleMediaClass *klass)
 {
 	GObjectClass *gobject_class = (GObjectClass*)klass;
-	parent_class = g_type_class_peek_parent(klass);
 
 	gobject_class->dispose = purple_media_dispose;
 	gobject_class->finalize = purple_media_finalize;
@@ -252,14 +226,13 @@ purple_media_class_init (PurpleMediaClass *klass)
 					 G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
 					 G_TYPE_NONE, 4, G_TYPE_POINTER, G_TYPE_POINTER,
 					 PURPLE_TYPE_MEDIA_CANDIDATE, PURPLE_TYPE_MEDIA_CANDIDATE);
-	g_type_class_add_private(klass, sizeof(PurpleMediaPrivate));
 }
 
 
 static void
 purple_media_init (PurpleMedia *media)
 {
-	media->priv = PURPLE_MEDIA_GET_PRIVATE(media);
+	media->priv = purple_media_get_instance_private(media);
 	memset(media->priv, 0, sizeof(*media->priv));
 }
 
@@ -299,7 +272,8 @@ purple_media_session_free(PurpleMediaSession *session)
 static void
 purple_media_dispose(GObject *media)
 {
-	PurpleMediaPrivate *priv = PURPLE_MEDIA_GET_PRIVATE(media);
+	PurpleMediaPrivate *priv =
+			purple_media_get_instance_private(PURPLE_MEDIA(media));
 
 	purple_debug_info("media","purple_media_dispose\n");
 
@@ -315,13 +289,14 @@ purple_media_dispose(GObject *media)
 		priv->manager = NULL;
 	}
 
-	G_OBJECT_CLASS(parent_class)->dispose(media);
+	G_OBJECT_CLASS(purple_media_parent_class)->dispose(media);
 }
 
 static void
 purple_media_finalize(GObject *media)
 {
-	PurpleMediaPrivate *priv = PURPLE_MEDIA_GET_PRIVATE(media);
+	PurpleMediaPrivate *priv =
+			purple_media_get_instance_private(PURPLE_MEDIA(media));
 	purple_debug_info("media","purple_media_finalize\n");
 
 	for (; priv->streams; priv->streams = g_list_delete_link(priv->streams, priv->streams))
@@ -339,7 +314,7 @@ purple_media_finalize(GObject *media)
 		g_hash_table_destroy(priv->sessions);
 	}
 
-	G_OBJECT_CLASS(parent_class)->finalize(media);
+	G_OBJECT_CLASS(purple_media_parent_class)->finalize(media);
 }
 
 static void

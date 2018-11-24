@@ -26,12 +26,6 @@ typedef struct _PurpleMediaCandidateClass PurpleMediaCandidateClass;
 /** @copydoc _PurpleMediaCandidatePrivate */
 typedef struct _PurpleMediaCandidatePrivate PurpleMediaCandidatePrivate;
 
-#define PURPLE_MEDIA_CANDIDATE_GET_PRIVATE(obj) \
-		(G_TYPE_INSTANCE_GET_PRIVATE((obj), \
-		PURPLE_TYPE_MEDIA_CANDIDATE, \
-		PurpleMediaCandidatePrivate))
-
-
 struct _PurpleMediaCandidateClass
 {
 	GObjectClass parent_class;
@@ -41,8 +35,6 @@ struct _PurpleMediaCandidate
 {
 	GObject parent;
 };
-
-G_DEFINE_TYPE(PurpleMediaCandidate, purple_media_candidate, G_TYPE_OBJECT);
 
 struct _PurpleMediaCandidatePrivate
 {
@@ -76,11 +68,14 @@ enum {
 	PROP_TTL,
 };
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleMediaCandidate, purple_media_candidate,
+		G_TYPE_OBJECT);
+
 static void
 purple_media_candidate_init(PurpleMediaCandidate *info)
 {
 	PurpleMediaCandidatePrivate *priv =
-			PURPLE_MEDIA_CANDIDATE_GET_PRIVATE(info);
+			purple_media_candidate_get_instance_private(info);
 	priv->foundation = NULL;
 	priv->component_id = 0;
 	priv->ip = NULL;
@@ -98,13 +93,16 @@ static void
 purple_media_candidate_finalize(GObject *info)
 {
 	PurpleMediaCandidatePrivate *priv =
-			PURPLE_MEDIA_CANDIDATE_GET_PRIVATE(info);
+			purple_media_candidate_get_instance_private(
+					PURPLE_MEDIA_CANDIDATE(info));
 
 	g_free(priv->foundation);
 	g_free(priv->ip);
 	g_free(priv->base_ip);
 	g_free(priv->username);
 	g_free(priv->password);
+
+	G_OBJECT_CLASS(purple_media_candidate_parent_class)->finalize(info);
 }
 
 static void
@@ -114,7 +112,8 @@ purple_media_candidate_set_property (GObject *object, guint prop_id,
 	PurpleMediaCandidatePrivate *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_CANDIDATE(object));
 
-	priv = PURPLE_MEDIA_CANDIDATE_GET_PRIVATE(object);
+	priv = purple_media_candidate_get_instance_private(
+			PURPLE_MEDIA_CANDIDATE(object));
 
 	switch (prop_id) {
 		case PROP_FOUNDATION:
@@ -172,7 +171,8 @@ purple_media_candidate_get_property (GObject *object, guint prop_id,
 	PurpleMediaCandidatePrivate *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_CANDIDATE(object));
 
-	priv = PURPLE_MEDIA_CANDIDATE_GET_PRIVATE(object);
+	priv = purple_media_candidate_get_instance_private(
+			PURPLE_MEDIA_CANDIDATE(object));
 
 	switch (prop_id) {
 		case PROP_FOUNDATION:
@@ -312,8 +312,6 @@ purple_media_candidate_class_init(PurpleMediaCandidateClass *klass)
 			"The TTL of the candidate.",
 			0, G_MAXUINT, 0,
 			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-	g_type_class_add_private(klass, sizeof(PurpleMediaCandidatePrivate));
 }
 
 PurpleMediaCandidate *
@@ -340,7 +338,7 @@ purple_media_candidate_copy(PurpleMediaCandidate *candidate)
 	if (candidate == NULL)
 		return NULL;
 
-	priv = PURPLE_MEDIA_CANDIDATE_GET_PRIVATE(candidate);
+	priv = purple_media_candidate_get_instance_private(candidate);
 
 	new_candidate = purple_media_candidate_new(priv->foundation,
 			priv->component_id, priv->type, priv->proto,
