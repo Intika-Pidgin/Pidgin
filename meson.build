@@ -295,7 +295,6 @@ force_deps = not get_option('missing-dependencies')
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
 enable_gestures = get_option('gestures')
-enable_gcr = get_option('gcr')
 
 # #######################################################################
 # Check Pidgin dependencies
@@ -322,24 +321,7 @@ if get_option('gtkui')
 	else
 		enchant = []
 	endif
-
-	#######################################################################
-	# Check for GCR for its certificate widgets
-	#######################################################################
-	if enable_gcr
-		GCR = dependency('gcr-3', required : force_deps)
-		if GCR.found()
-			conf.set('ENABLE_GCR', true)
-		else
-			enable_gcr = false
-		endif
-	else
-		GCR = []
-	endif
-
-
 else	# GTK
-	enable_gcr = false
 	enable_enchant = false
 endif	# GTK
 
@@ -1104,7 +1086,6 @@ message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
 message('Build with Enchant support.... : ' + enable_enchant.to_string())
-message('Build with GCR widgets........ : ' + enable_gcr.to_string())
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
 message('Build with KWallet............ : ' + enable_kwallet.to_string())

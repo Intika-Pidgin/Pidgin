@@ -16,7 +16,6 @@ endif
 libfinch_SOURCES = [
 	'gntaccount.c',
 	'gntblist.c',
-	'gntcertmgr.c',
 	'gntconn.c',
 	'gntconv.c',
 	'gntdebug.c',
@@ -41,7 +40,6 @@ libfinch_SOURCES = [
 libfinch_headers = [
 	'gntaccount.h',
 	'gntblist.h',
-	'gntcertmgr.h',
 	'gntconn.h',
 	'gntconv.h',
 	'gntdebug.h',

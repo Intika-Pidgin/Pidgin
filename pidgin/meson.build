@@ -5,7 +5,6 @@ libpidgin_SOURCES = [
 	'gtkblist-theme.c',
 	'gtkblist-theme-loader.c',
 	'gtkcellrendererexpander.c',
-	'gtkcertmgr.c',
 	'gtkconn.c',
 	'gtkconv.c',
 	'gtkconv-theme.c',
@@ -54,7 +53,6 @@ libpidgin_headers = [
 	'gtkblist-theme.h',
 	'gtkblist-theme-loader.h',
 	'gtkcellrendererexpander.h',
-	'gtkcertmgr.h',
 	'gtkconn.h',
 	'gtkconv.h',
 	'gtkconvwin.h',
@@ -162,7 +160,6 @@ if ENABLE_GTK
 	    dependencies : [
 	    	dbus,
 	    	enchant,
-	    	GCR,
 	    	glib,
 	    	gstreamer_video,
 	    	gtk,

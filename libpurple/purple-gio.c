@@ -24,7 +24,6 @@
 #include "internal.h"
 #include "proxy.h"
 #include "purple-gio.h"
-#include "tls-certificate.h"
 
 typedef struct {
 	GIOStream *stream;
@@ -126,9 +125,6 @@ purple_gio_socket_client_new(PurpleAccount *account, GError **error)
 	client = g_socket_client_new();
 	g_socket_client_set_proxy_resolver(client, resolver);
 	g_object_unref(resolver);
-
-	/* Attach purple's tls certificate handler in case tls is used */
-	purple_tls_certificate_attach_to_socket_client(client);
 
 	return client;
 }
