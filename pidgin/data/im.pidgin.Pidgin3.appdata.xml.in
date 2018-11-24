@@ -3,7 +3,7 @@
 <!-- Copyright 2014-2017 Pidgin Developers <devel@pidgin.im> -->
 
 <component type="desktop-application">
-  <id>im.pidgin.Pidgin.desktop</id>
+  <id>im.pidgin.Pidgin3.desktop</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-2.0</project_license>
   <description>
@@ -18,9 +18,9 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">im.pidgin.Pidgin.desktop</launchable>
+  <launchable type="desktop-id">im.pidgin.Pidgin3.desktop</launchable>
   <provides>
-    <id>pidgin.desktop</id>
+    <id>pidgin3.desktop</id>
   </provides>
 
   <screenshots>
