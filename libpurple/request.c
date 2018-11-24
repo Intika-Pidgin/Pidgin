@@ -125,11 +125,6 @@ struct _PurpleRequestField
 
 		struct
 		{
-			GTlsCertificate *cert;
-		} certificate;
-
-		struct
-		{
 			PurpleRequestDatasheet *sheet;
 		} datasheet;
 	} u;
@@ -1954,31 +1949,6 @@ purple_request_field_account_get_filter(const PurpleRequestField *field)
 }
 
 PurpleRequestField *
-purple_request_field_certificate_new(const char *id, const char *text, GTlsCertificate *cert)
-{
-	PurpleRequestField *field;
-
-	g_return_val_if_fail(id   != NULL, NULL);
-	g_return_val_if_fail(text != NULL, NULL);
-	g_return_val_if_fail(cert != NULL, NULL);
-
-	field = purple_request_field_new(id, text, PURPLE_REQUEST_FIELD_CERTIFICATE);
-
-	field->u.certificate.cert = cert;
-
-	return field;
-}
-
-GTlsCertificate *
-purple_request_field_certificate_get_value(const PurpleRequestField *field)
-{
-	g_return_val_if_fail(field != NULL, NULL);
-	g_return_val_if_fail(field->type == PURPLE_REQUEST_FIELD_CERTIFICATE, NULL);
-
-	return field->u.certificate.cert;
-}
-
-PurpleRequestField *
 purple_request_field_datasheet_new(const char *id,
 	const gchar *text, PurpleRequestDatasheet *sheet)
 {
@@ -2470,29 +2440,6 @@ purple_request_folder(void *handle, const char *title, const char *dirname,
 
 	purple_request_cpar_unref(cpar);
 	return NULL;
-}
-
-void *
-purple_request_certificate(void *handle, const char *title,
-                                  const char *primary, const char *secondary,
-                                  GTlsCertificate *cert,
-                                  const char *ok_text, GCallback ok_cb,
-                                  const char *cancel_text, GCallback cancel_cb,
-                                  void *user_data)
-{
-	PurpleRequestFields *fields;
-	PurpleRequestFieldGroup *group;
-	PurpleRequestField *field;
-
-	fields = purple_request_fields_new();
-	group = purple_request_field_group_new(NULL);
-	purple_request_fields_add_group(fields, group);
-	field = purple_request_field_certificate_new("certificate", "Certificate", cert);
-	purple_request_field_group_add_field(group, field);
-
-	return purple_request_fields(handle, title, primary, secondary, fields,
-	                             ok_text, ok_cb, cancel_text, cancel_cb,
-	                             NULL, user_data);
 }
 
 gboolean

@@ -26,7 +26,6 @@
       <xi:include href="xml/gntaccount.xml" />
       <xi:include href="xml/gntblist.xml" />
       <xi:include href="xml/gntpounce.xml" />
-      <xi:include href="xml/gntcertmgr.xml" />
       <xi:include href="xml/gntconn.xml" />
       <xi:include href="xml/gntconv.xml" />
       <xi:include href="xml/gntdebug.xml" />
