@@ -79,6 +79,7 @@ typedef struct _PurpleMood {
  * @PURPLE_STATUS_MOBILE: The status is mobile
  * @PURPLE_STATUS_TUNE: The status includes a song title
  * @PURPLE_STATUS_MOOD: The status includes a mood
+ * @PURPLE_STATUS_NUM_PRIMITIVES: The number of #PurpleStatusPrimitive<!-- -->s
  *
  * A primitive defining the basic structure of a status type.
  */
@@ -99,7 +100,6 @@ typedef enum
 	PURPLE_STATUS_TUNE,
 	PURPLE_STATUS_MOOD,
 
-	/*< private >*/
 	PURPLE_STATUS_NUM_PRIMITIVES, /*< skip >*/
 } PurpleStatusPrimitive;
 

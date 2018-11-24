@@ -71,8 +71,6 @@ purple_coresources = [
 	'theme.c',
 	'theme-loader.c',
 	'theme-manager.c',
-	'tls-certificate.c',
-	'tls-certificate-info.c',
 	'trie.c',
 	'upnp.c',
 	'util.c',
@@ -153,8 +151,6 @@ purple_coreheaders = [
 	'theme.h',
 	'theme-loader.h',
 	'theme-manager.h',
-	'tls-certificate.h',
-	'tls-certificate-info.h',
 	'trie.h',
 	'upnp.h',
 	'util.h',
@@ -399,7 +395,7 @@ libpurple = library('purple',
                     dependencies : # static_link_libs
                         [dbus, dbus_glib, dnsapi, ws2_32, glib, gio, gplugin, libxml,
                          farstream, gstreamer, gstreamer_video,
-                         gstreamer_app, idn, json, math])
+                         gstreamer_app, json, math])
 
 libpurple_dep = declare_dependency(
     # Ensure purple/dbus headers built before any dependencies:

@@ -27,7 +27,6 @@
 #include "account.h"
 #include "conversation.h"
 #include "core.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "glibcompat.h"
 #include "log.h"
@@ -123,6 +122,8 @@ dologin_named(const char *name)
 
 #ifndef _WIN32
 static char *segfault_message;
+
+static guint signal_channel_watcher;
 
 static int signal_sockets[2];
 
@@ -336,12 +337,40 @@ pidgin_core_get_ui_ops(void)
 	return &core_ops;
 }
 
+static gint
+pidgin_handle_local_options_cb(GApplication *app, GVariantDict *options,
+		gpointer user_data)
+{
+#if !GLIB_CHECK_VERSION(2, 48, 0)
+	gchar *app_id = NULL;
+#endif
+
+	if (g_variant_dict_contains(options, "version")) {
+		printf("%s %s (libpurple %s)\n", PIDGIN_NAME, DISPLAY_VERSION,
+		                                 purple_core_get_version());
+		return 0;
+	}
+
+#if !GLIB_CHECK_VERSION(2, 48, 0)
+	if (g_variant_dict_lookup(options, "gapplication-app-id",
+			"s", &app_id)) {
+		g_variant_dict_remove(options, "gapplication-app-id");
+		g_application_set_application_id(app, app_id);
+		g_free(app_id);
+	}
+#endif
+
+	return -1;
+}
+
 static void
 pidgin_activate_cb(GApplication *application, gpointer user_data)
 {
 	purple_blist_set_visible(TRUE);
 }
 
+static gchar *opt_config_dir_arg = NULL;
+static gboolean opt_nologin = FALSE;
 static gboolean opt_login = FALSE;
 static gchar *opt_login_arg = NULL;
 
@@ -357,77 +386,47 @@ login_opt_arg_func(const gchar *option_name, const gchar *value,
 	return TRUE;
 }
 
-int pidgin_start(int argc, char *argv[])
-{
-	GApplication *app;
-	gboolean opt_nologin = FALSE;
-	gboolean opt_version = FALSE;
-	gboolean opt_si = TRUE;     /* Check for single instance? */
-	char *opt_config_dir_arg = NULL;
-	char *search_path;
-	GtkCssProvider *provider;
-	GdkScreen *screen;
-	GList *accounts;
+static GOptionEntry option_entries[] = {
+#if !GLIB_CHECK_VERSION(2, 48, 0)
+	/* Support G_APPLICATION_CAN_OVERRIDE_APP_ID functionality
+	 * even though we don't depend on version 2.48 yet
+	 */
+	{"gapplication-app-id", '\0', 0, G_OPTION_ARG_STRING, NULL,
+		N_("Override the application's ID") },
+#endif
+	{"config", 'c', 0,
+		G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
+		N_("use DIR for config files"), N_("DIR")},
+	{"login", 'l', G_OPTION_FLAG_OPTIONAL_ARG,
+		G_OPTION_ARG_CALLBACK, &login_opt_arg_func,
+		N_("enable specified account(s) (optional argument NAME\n"
+		  "                            "
+		  "specifies account(s) to use, separated by commas.\n"
+		  "                            "
+		  "Without this only the first account will be enabled)"),
+		N_("[NAME]")},
+	{"nologin", 'n', 0,
+		G_OPTION_ARG_NONE, &opt_nologin,
+		N_("don't automatically login"), NULL},
+	{"version", 'v', 0,
+		G_OPTION_ARG_NONE, NULL,
+		N_("display the current version and exit"), NULL},
+	{NULL}
+};
+
 #ifndef _WIN32
+static void
+pidgin_setup_error_handler(void)
+{
 	int sig_indx;	/* for setting up signal catching */
 	sigset_t sigset;
 	char errmsg[BUFSIZ];
 	GIOChannel *signal_channel;
 	GIOStatus signal_status;
-	guint signal_channel_watcher;
 #ifndef DEBUG
 	char *segfault_message_tmp;
-#endif /* DEBUG */
-#endif /* !_WIN32 */
-	GOptionContext *context;
-	gchar *summary;
-	gchar **args;
-	gboolean gui_check;
-	GList *active_accounts;
-	GStatBuf st;
 	GError *error = NULL;
-	int ret;
 
-	GOptionEntry option_entries[] = {
-		{"config", 'c', 0,
-			G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
-			_("use DIR for config files"), _("DIR")},
-		{"login", 'l', G_OPTION_FLAG_OPTIONAL_ARG,
-			G_OPTION_ARG_CALLBACK, &login_opt_arg_func,
-			_("enable specified account(s) (optional argument NAME\n"
-			  "                            "
-			  "specifies account(s) to use, separated by commas.\n"
-			  "                            "
-			  "Without this only the first account will be enabled)"),
-			_("[NAME]")},
-		{"multiple", 'm', G_OPTION_FLAG_REVERSE,
-			G_OPTION_ARG_NONE,  &opt_si,
-			_("allow multiple instances"), NULL},
-		{"nologin", 'n', 0,
-			G_OPTION_ARG_NONE, &opt_nologin,
-			_("don't automatically login"), NULL},
-		{"version", 'v', 0,
-			G_OPTION_ARG_NONE, &opt_version,
-			_("display the current version and exit"), NULL},
-		{NULL}
-	};
-
-#ifdef DEBUG
-	purple_debug_set_enabled(TRUE);
-#endif
-
-#ifdef ENABLE_NLS
-	bindtextdomain(PACKAGE, PURPLE_LOCALEDIR);
-	bind_textdomain_codeset(PACKAGE, "UTF-8");
-	textdomain(PACKAGE);
-#endif
-
-	/* Locale initialization is not complete here.  See gtk_init_check() */
-	setlocale(LC_ALL, "");
-
-#ifndef _WIN32
-
-#ifndef DEBUG
 		/* We translate this here in case the crash breaks gettext. */
 		segfault_message_tmp = g_strdup_printf(_(
 			"%s %s has segfaulted and attempted to dump a core file.\n"
@@ -526,51 +525,20 @@ int pidgin_start(int argc, char *argv[])
 		snprintf(errmsg, sizeof(errmsg), "Warning: couldn't unblock signals");
 		perror(errmsg);
 	}
+}
 #endif /* !_WIN32 */
 
-	context = g_option_context_new(NULL);
-
-	summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
-	g_option_context_set_summary(context, summary);
-	g_free(summary);
-
-	g_option_context_add_main_entries(context, option_entries, PACKAGE);
-	g_option_context_add_group(context, purple_get_option_group());
-#ifdef PURPLE_PLUGINS
-	g_option_context_add_group(context, gplugin_get_option_group());
-#endif
-	g_option_context_add_group(context, gtk_get_option_group(TRUE));
-
-#ifdef G_OS_WIN32
-	/* Handle Unicode filenames on Windows. See GOptionContext docs. */
-	args = g_win32_get_command_line();
-#else
-	args = g_strdupv(argv);
-#endif
-
-	if (!g_option_context_parse_strv(context, &args, &error)) {
-		g_strfreev(args);
-		g_printerr(_("%s %s: %s\nTry `%s -h' for more information.\n"),
-				PIDGIN_NAME, DISPLAY_VERSION, error->message,
-				argv[0]);
-		g_clear_error(&error);
-#ifndef _WIN32
-		g_free(segfault_message);
-#endif
-		return 1;
-	}
-
-	g_strfreev(args);
-
-	/* show version message */
-	if (opt_version) {
-		printf("%s %s (libpurple %s)\n", PIDGIN_NAME, DISPLAY_VERSION,
-		                                 purple_core_get_version());
-#ifndef _WIN32
-		g_free(segfault_message);
-#endif
-		return 0;
-	}
+static void
+pidgin_startup_cb(GApplication *app, gpointer user_data)
+{
+	char *search_path;
+	GtkCssProvider *provider;
+	GdkScreen *screen;
+	GList *accounts;
+	gboolean gui_check;
+	GList *active_accounts;
+	GStatBuf st;
+	GError *error = NULL;
 
 	/* set a user-specified config directory */
 	if (opt_config_dir_arg != NULL) {
@@ -584,31 +552,6 @@ int pidgin_start(int argc, char *argv[])
 			g_free(path);
 			g_free(cwd);
 		}
-	}
-
-	/*
-	 * We're done piddling around with command line arguments.
-	 * Fire up this baby.
-	 */
-
-	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
-				G_APPLICATION_NON_UNIQUE));
-
-	g_object_set(app, "register-session", TRUE, NULL);
-
-	g_signal_connect(app, "activate",
-			G_CALLBACK(pidgin_activate_cb), NULL);
-
-	if (!g_application_register(app, NULL, &error)) {
-		purple_debug_error("gtk",
-				"Unable to register GApplication: %s\n",
-				error->message);
-		g_clear_error(&error);
-		g_object_unref(app);
-#ifndef _WIN32
-		g_free(segfault_message);
-#endif
-		return 1;
 	}
 
 	search_path = g_build_filename(purple_user_dir(), "gtk-3.0.css", NULL);
@@ -661,25 +604,6 @@ int pidgin_start(int argc, char *argv[])
 	}
 
 	purple_plugins_refresh();
-
-	if (opt_si && !purple_core_ensure_single_instance()) {
-#ifdef HAVE_DBUS
-		DBusConnection *conn = purple_dbus_get_connection();
-		DBusMessage *message = dbus_message_new_method_call(PURPLE_DBUS_SERVICE, PURPLE_DBUS_PATH,
-				PURPLE_DBUS_INTERFACE, "PurpleBlistSetVisible");
-		gboolean tr = TRUE;
-		dbus_message_append_args(message, DBUS_TYPE_INT32, &tr, DBUS_TYPE_INVALID);
-		dbus_connection_send_with_reply_and_block(conn, message, -1, NULL);
-		dbus_message_unref(message);
-#endif
-		gdk_notify_startup_complete();
-		purple_core_quit();
-		g_printerr(_("Exiting because another libpurple client is already running.\n"));
-#ifndef _WIN32
-		g_free(segfault_message);
-#endif
-		return 0;
-	}
 
 	/* load plugins we had when we quit */
 	purple_plugins_load_saved(PIDGIN_PREFS_ROOT "/plugins/loaded");
@@ -752,8 +676,59 @@ int pidgin_start(int argc, char *argv[])
 
 	/* TODO: Use GtkApplicationWindow or add a window instead */
 	g_application_hold(app);
+}
 
-	ret = g_application_run(app, 0, NULL);
+int pidgin_start(int argc, char *argv[])
+{
+	GApplication *app;
+	gchar *summary;
+	int ret;
+
+#ifdef DEBUG
+	purple_debug_set_enabled(TRUE);
+#endif
+
+#ifdef ENABLE_NLS
+	bindtextdomain(PACKAGE, PURPLE_LOCALEDIR);
+	bind_textdomain_codeset(PACKAGE, "UTF-8");
+	textdomain(PACKAGE);
+#endif
+
+	/* Locale initialization is not complete here.  See gtk_init_check() */
+	setlocale(LC_ALL, "");
+
+#ifndef _WIN32
+	pidgin_setup_error_handler();
+#endif
+
+	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
+#if GLIB_CHECK_VERSION(2, 48, 0)
+				G_APPLICATION_CAN_OVERRIDE_APP_ID
+#else
+				G_APPLICATION_FLAGS_NONE
+#endif
+				));
+
+	summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
+	g_application_set_option_context_summary(app, summary);
+	g_free(summary);
+
+	g_application_add_main_option_entries(app, option_entries);
+	g_application_add_option_group(app, purple_get_option_group());
+#ifdef PURPLE_PLUGINS
+	g_application_add_option_group(app, gplugin_get_option_group());
+#endif
+
+	g_object_set(app, "register-session", TRUE, NULL);
+
+	g_signal_connect(app, "handle-local-options",
+			G_CALLBACK(pidgin_handle_local_options_cb), NULL);
+	g_signal_connect(app, "startup",
+			G_CALLBACK(pidgin_startup_cb), NULL);
+	g_signal_connect(app, "activate",
+			G_CALLBACK(pidgin_activate_cb), NULL);
+
+	ret = g_application_run(app, argc, argv);
 
 	/* Make sure purple has quit in case something in GApplication
 	 * has caused g_application_run() to finish on its own. This can
@@ -761,6 +736,12 @@ int pidgin_start(int argc, char *argv[])
 	 */
 	if (purple_get_core() != NULL) {
 		purple_core_quit();
+	}
+
+	if (g_application_get_is_registered(app) &&
+			g_application_get_is_remote(app)) {
+		g_printerr(_("Exiting because another libpurple client is "
+				"already running.\n"));
 	}
 
 	/* Now that we're sure purple_core_quit() has been called,

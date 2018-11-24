@@ -12,6 +12,7 @@ pipelines:
           - meson -Dsilc=false -Ddoc=true -Ddebug=true build-pipelines
           - ninja -C build-pipelines
           - ninja -C build-pipelines test
+          - "ninja -C build-pipelines $(ninja -C build-pipelines -t targets | grep -E '[a-z]+-doc:' | cut -d: -f1)"
   branches:
     release-2.x.y:
       - step:

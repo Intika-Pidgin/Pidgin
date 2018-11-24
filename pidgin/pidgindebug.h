@@ -22,8 +22,8 @@
 #ifndef PIDGIN_DEBUG_H
 #define PIDGIN_DEBUG_H
 /**
- * SECTION:gtkdebug
- * @section_id: pidgin-gtkdebug
+ * SECTION:pidgindebug
+ * @section_id: pidgin-pidgindebug
  * @short_description: <filename>pidgindebug.h</filename>
  * @title: Debug API
  */

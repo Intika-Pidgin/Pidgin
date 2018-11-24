@@ -2,7 +2,6 @@
 finch/finch.c
 finch/gntaccount.c
 finch/gntblist.c
-finch/gntcertmgr.c
 finch/gntconn.c
 finch/gntconv.c
 finch/gntdebug.c
@@ -162,8 +161,6 @@ libpurple/server.c
 libpurple/smiley.c
 libpurple/sslconn.c
 libpurple/status.c
-libpurple/tls-certificate-info.c
-libpurple/tls-certificate.c
 libpurple/util.c
 libpurple/win32/libc_interface.c
 libpurple/xfer.c
@@ -175,7 +172,6 @@ pidgin/data/im.pidgin.Pidgin.desktop.in.in
 pidgin/gtkaccount.c
 pidgin/gtkblist-theme.c
 pidgin/gtkblist.c
-pidgin/gtkcertmgr.c
 pidgin/gtkconn.c
 pidgin/gtkconv.c
 pidgin/gtkdebug.c

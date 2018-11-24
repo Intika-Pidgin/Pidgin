@@ -422,6 +422,8 @@ version 3.0.0 (??/??/????):
 		* purple_contact_set_alias
 		* purple_conv_chat_set_users
 		* PurpleConversationType
+		* purple_core_ensure_single_instance. Check via GApplication
+		  or whatever is appropriate for your UI.
 		* purple_core_migrate
 		* purple_dnsquery_a_account
 		* purple_event_loop_{get|set}_ui_ops. Manually drive the GLib
@@ -429,6 +431,8 @@ version 3.0.0 (??/??/????):
 		* PurpleEventLoopUiOps. Manually drive the GLib event loop
 		  yourself. See GLib Main Event Loop docs.
 		* purple_get_tzoff_str(). Use g_date_time_format, instead.
+		* purple_network_convert_idn_to_ascii. Use g_hostname_to_ascii,
+		  instead.
 		* purple_network_listen_family. Use purple_network_listen, instead.
 		* purple_network_listen_map_external
 		* purple_network_listen_range_family. Use purple_network_listen,

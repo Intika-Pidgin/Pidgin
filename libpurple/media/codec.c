@@ -28,10 +28,6 @@ typedef struct _PurpleMediaCodecClass PurpleMediaCodecClass;
 /** @copydoc _PurpleMediaCodecPrivate */
 typedef struct _PurpleMediaCodecPrivate PurpleMediaCodecPrivate;
 
-#define PURPLE_MEDIA_CODEC_GET_PRIVATE(obj) \
-		(G_TYPE_INSTANCE_GET_PRIVATE((obj), \
-		PURPLE_TYPE_MEDIA_CODEC, PurpleMediaCodecPrivate))
-
 struct _PurpleMediaCodecClass
 {
 	GObjectClass parent_class;
@@ -41,8 +37,6 @@ struct _PurpleMediaCodec
 {
 	GObject parent;
 };
-
-G_DEFINE_TYPE(PurpleMediaCodec, purple_media_codec, G_TYPE_OBJECT);
 
 struct _PurpleMediaCodecPrivate
 {
@@ -67,11 +61,13 @@ enum {
 
 static GParamSpec *properties[PROP_LAST];
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleMediaCodec, purple_media_codec, G_TYPE_OBJECT);
+
 static void
 purple_media_codec_init(PurpleMediaCodec *info)
 {
 	PurpleMediaCodecPrivate *priv =
-			PURPLE_MEDIA_CODEC_GET_PRIVATE(info);
+			purple_media_codec_get_instance_private(info);
 	priv->encoding_name = NULL;
 	priv->optional_params = NULL;
 }
@@ -80,7 +76,8 @@ static void
 purple_media_codec_finalize(GObject *info)
 {
 	PurpleMediaCodecPrivate *priv =
-			PURPLE_MEDIA_CODEC_GET_PRIVATE(info);
+			purple_media_codec_get_instance_private(
+					PURPLE_MEDIA_CODEC(info));
 	g_free(priv->encoding_name);
 	for (; priv->optional_params; priv->optional_params =
 			g_list_delete_link(priv->optional_params, priv->optional_params)) {
@@ -89,6 +86,8 @@ purple_media_codec_finalize(GObject *info)
 		g_free(param->value);
 		g_free(param);
 	}
+
+	G_OBJECT_CLASS(purple_media_codec_parent_class)->finalize(info);
 }
 
 static void
@@ -98,7 +97,8 @@ purple_media_codec_set_property (GObject *object, guint prop_id,
 	PurpleMediaCodecPrivate *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_CODEC(object));
 
-	priv = PURPLE_MEDIA_CODEC_GET_PRIVATE(object);
+	priv = purple_media_codec_get_instance_private(
+			PURPLE_MEDIA_CODEC(object));
 
 	switch (prop_id) {
 		case PROP_ID:
@@ -134,7 +134,8 @@ purple_media_codec_get_property (GObject *object, guint prop_id,
 	PurpleMediaCodecPrivate *priv;
 	g_return_if_fail(PURPLE_IS_MEDIA_CODEC(object));
 
-	priv = PURPLE_MEDIA_CODEC_GET_PRIVATE(object);
+	priv = purple_media_codec_get_instance_private(
+			PURPLE_MEDIA_CODEC(object));
 
 	switch (prop_id) {
 		case PROP_ID:
@@ -170,8 +171,6 @@ purple_media_codec_class_init(PurpleMediaCodecClass *klass)
 	gobject_class->finalize = purple_media_codec_finalize;
 	gobject_class->set_property = purple_media_codec_set_property;
 	gobject_class->get_property = purple_media_codec_get_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleMediaCodecPrivate));
 
 	properties[PROP_ID] = g_param_spec_uint("id",
 			"ID",
@@ -283,7 +282,7 @@ purple_media_codec_add_optional_parameter(PurpleMediaCodec *codec,
 	g_return_if_fail(codec != NULL);
 	g_return_if_fail(name != NULL && value != NULL);
 
-	priv = PURPLE_MEDIA_CODEC_GET_PRIVATE(codec);
+	priv = purple_media_codec_get_instance_private(codec);
 
 	new_param = g_new0(PurpleKeyValuePair, 1);
 	new_param->key = g_strdup(name);
@@ -302,7 +301,7 @@ purple_media_codec_remove_optional_parameter(PurpleMediaCodec *codec,
 
 	g_return_if_fail(codec != NULL && param != NULL);
 
-	priv = PURPLE_MEDIA_CODEC_GET_PRIVATE(codec);
+	priv = purple_media_codec_get_instance_private(codec);
 
 	g_free(param->key);
 	g_free(param->value);
@@ -324,7 +323,7 @@ purple_media_codec_get_optional_parameter(PurpleMediaCodec *codec,
 	g_return_val_if_fail(codec != NULL, NULL);
 	g_return_val_if_fail(name != NULL, NULL);
 
-	priv = PURPLE_MEDIA_CODEC_GET_PRIVATE(codec);
+	priv = purple_media_codec_get_instance_private(codec);
 
 	for (iter = priv->optional_params; iter; iter = g_list_next(iter)) {
 		PurpleKeyValuePair *param = iter->data;
@@ -347,7 +346,7 @@ purple_media_codec_copy(PurpleMediaCodec *codec)
 	if (codec == NULL)
 		return NULL;
 
-	priv = PURPLE_MEDIA_CODEC_GET_PRIVATE(codec);
+	priv = purple_media_codec_get_instance_private(codec);
 
 	new_codec = purple_media_codec_new(priv->id, priv->encoding_name,
 			priv->media_type, priv->clock_rate);
@@ -387,7 +386,7 @@ purple_media_codec_list_free(GList *codecs)
 }
 
 gchar *
-purple_media_codec_to_string(const PurpleMediaCodec *codec)
+purple_media_codec_to_string(PurpleMediaCodec *codec)
 {
 	PurpleMediaCodecPrivate *priv;
 	GString *string = NULL;
@@ -398,7 +397,7 @@ purple_media_codec_to_string(const PurpleMediaCodec *codec)
 	if (codec == NULL)
 		return g_strdup("(NULL)");
 
-	priv = PURPLE_MEDIA_CODEC_GET_PRIVATE(codec);
+	priv = purple_media_codec_get_instance_private(codec);
 
 	string = g_string_new("");
 

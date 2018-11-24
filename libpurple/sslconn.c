@@ -26,7 +26,6 @@
 #include "plugins.h"
 #include "request.h"
 #include "sslconn.h"
-#include "tls-certificate.h"
 
 #define CONNECTION_CLOSE_TIMEOUT 15
 
@@ -103,8 +102,6 @@ tls_connect(PurpleSslConnection *gsc)
 
 	gsc->conn = G_TLS_CONNECTION(tls_conn);
 	gsc->cancellable = g_cancellable_new();
-
-	purple_tls_certificate_attach_to_tls_connection(gsc->conn);
 
 	g_tls_connection_handshake_async(gsc->conn, G_PRIORITY_DEFAULT,
 			gsc->cancellable, tls_handshake_cb, gsc);

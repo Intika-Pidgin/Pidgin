@@ -25,14 +25,13 @@
       <xi:include href="xml/gtkblist-theme-loader.xml" />
       <xi:include href="xml/gtkpounce.xml" />
       <xi:include href="xml/gtkcellrendererexpander.xml" />
-      <xi:include href="xml/gtkcertmgr.xml" />
       <xi:include href="xml/gtkconn.xml" />
       <xi:include href="xml/gtkconv.xml" />
       <xi:include href="xml/gtkconvwin.xml" />
       <xi:include href="xml/gtknickcolors.xml" />
       <xi:include href="xml/gtkconv-theme.xml" />
       <xi:include href="xml/gtkconv-theme-loader.xml" />
-      <xi:include href="xml/gtkdebug.xml" />
+      <xi:include href="xml/pidgindebug.xml" />
       <xi:include href="xml/gtkdocklet.xml" />
       <xi:include href="xml/gtkdnd-hints.xml" />
       <xi:include href="xml/gtkxfer.xml" />

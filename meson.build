@@ -295,7 +295,6 @@ force_deps = not get_option('missing-dependencies')
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
 enable_gestures = get_option('gestures')
-enable_gcr = get_option('gcr')
 
 # #######################################################################
 # Check Pidgin dependencies
@@ -322,24 +321,7 @@ if get_option('gtkui')
 	else
 		enchant = []
 	endif
-
-	#######################################################################
-	# Check for GCR for its certificate widgets
-	#######################################################################
-	if enable_gcr
-		GCR = dependency('gcr-3', required : force_deps)
-		if GCR.found()
-			conf.set('ENABLE_GCR', true)
-		else
-			enable_gcr = false
-		endif
-	else
-		GCR = []
-	endif
-
-
 else	# GTK
-	enable_gcr = false
 	enable_enchant = false
 endif	# GTK
 
@@ -462,17 +444,6 @@ if enable_vv
 	endif
 else
 	gstreamer_app = []
-endif
-
-#######################################################################
-# Check for Internationalized Domain Name support
-#######################################################################
-
-if get_option('idn')
-	idn = dependency('libidn', version : '>= 0.0.0', required : force_deps)
-	conf.set('USE_IDN', idn.found())
-else
-	idn = []
 endif
 
 #######################################################################
@@ -922,28 +893,6 @@ if enable_dbus
 	endif
 endif
 
-#######################################################################
-# SSL support
-#######################################################################
-
-ssl_certificates_dir = get_option('system-ssl-certs')
-
-SSL_CERTIFICATES_DIR = ''
-if ssl_certificates_dir != ''
-	if run_command('test', '-d', ssl_certificates_dir).returncode() != 0
-		if IS_WIN32
-			message(ssl_certificates_dir + ' does not exist. It may be OK when cross-compiling, but please make sure about it.')
-		else
-			error(ssl_certificates_dir + ' does not exist, if this is the correct location please make sure that it exists.')
-		endif
-	endif
-	SSL_CERTIFICATES_DIR = ssl_certificates_dir
-endif
-if SSL_CERTIFICATES_DIR != ''
-	conf.set_quoted('SSL_CERTIFICATES_DIR',	SSL_CERTIFICATES_DIR)
-endif
-INSTALL_SSL_CERTIFICATES = SSL_CERTIFICATES_DIR == ''
-
 if get_option('plugins')
 	conf.set('PURPLE_PLUGINS', 1)
 	PLUGINS = true
@@ -1105,7 +1054,6 @@ toplevel_inc = include_directories('.')
 
 subdir('libpurple')
 subdir('share/sounds')
-subdir('share/ca-certs')
 subdir('finch')
 subdir('pidgin')
 subdir('doc')
@@ -1129,9 +1077,6 @@ message('Build with GStreamer support.. : ' + enable_gst.to_string())
 message('Build with D-Bus support...... : ' + enable_dbus.to_string())
 message('Build with voice and video.... : ' + enable_vv.to_string())
 message('Build with GNU Libidn......... : ' + get_option('idn').to_string())
-if SSL_CERTIFICATES_DIR != ''
-	message('SSL CA certificates directory. : ' + SSL_CERTIFICATES_DIR)
-endif
 message('Build with Nettle support..... : ' + enable_nettle.to_string())
 message('Build with Cyrus SASL support. : ' + enable_cyrus_sasl.to_string())
 message('Use kerberos 4 with zephyr.... : ' + kerberos.to_string())
@@ -1141,7 +1086,6 @@ message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
 message('Build with Enchant support.... : ' + enable_enchant.to_string())
-message('Build with GCR widgets........ : ' + enable_gcr.to_string())
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
 message('Build with KWallet............ : ' + enable_kwallet.to_string())
