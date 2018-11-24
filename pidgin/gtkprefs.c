@@ -4202,6 +4202,8 @@ pidgin_prefs_update_old(void)
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_group_count");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/show_warning_level");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/tooltip_delay");
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/x");
+	purple_prefs_remove(PIDGIN_PREFS_ROOT "/blist/y");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/button_type");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/ctrl_enter_sends");
 	purple_prefs_remove(PIDGIN_PREFS_ROOT "/conversations/enter_sends");
