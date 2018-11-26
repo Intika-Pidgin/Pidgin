@@ -152,7 +152,7 @@ if ENABLE_GTK
 	install_headers(libpidgin_headers, subdir : 'pidgin-3')
 
 	libpidgin_inc = include_directories('.')
-	libpidgin = shared_library('pidgin',
+	libpidgin = shared_library('pidgin3',
 	    libpidgin_SOURCES,
 	    package_revision,
 	    include_directories : [toplevel_inc],
