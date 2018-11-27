@@ -425,6 +425,7 @@ version 3.0.0 (??/??/????):
 		* purple_core_ensure_single_instance. Check via GApplication
 		  or whatever is appropriate for your UI.
 		* purple_core_migrate
+		* Removed the general Purple DBus interface
 		* purple_dnsquery_a_account
 		* purple_event_loop_{get|set}_ui_ops. Manually drive the GLib
 		  event loop yourself. See GLib Main Event Loop docs.

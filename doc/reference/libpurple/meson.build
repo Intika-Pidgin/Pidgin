@@ -8,8 +8,6 @@ ignore_hfiles = [
     'tests',
     'win32',
     'backend-fs2.h',
-    'dbus-define-api.h',
-    'dbus-types.h',
     'glibcompat.h',
     'internal.h',
 ]
@@ -42,7 +40,6 @@ content_files = [
     'signals_connection.xml',
     'signals_conversation.xml',
     'signals_core.xml',
-    'signals_dbus_server.xml',
     'signals_jabber.xml',
     'signals_log.xml',
     'signals_notify.xml',
