@@ -370,11 +370,6 @@ libpurple_client = library('purple-client',
     dependencies : [dbus, dbus_glib],
     install : true)
 
-# scripts
-
-install_data(['purple-remote', 'purple-send', 'purple-send-async'],
-    install_dir : get_option('bindir'))
-
 else
 
 dbus_sources = []
