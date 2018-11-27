@@ -1107,7 +1107,11 @@ gboolean purple_socket_speaks_ipv4(int fd);
  *
  * Returns: %TRUE if the strings are the same, else %FALSE.
  */
-gboolean purple_strequal(const gchar *left, const gchar *right);
+static inline gboolean
+purple_strequal(const gchar *left, const gchar *right)
+{
+	return (g_strcmp0(left, right) == 0);
+}
 
 /**
  * purple_normalize:
