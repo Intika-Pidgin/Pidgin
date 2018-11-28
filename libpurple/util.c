@@ -3333,12 +3333,6 @@ purple_socket_speaks_ipv4(int fd)
 /**************************************************************************
  * String Functions
  **************************************************************************/
-gboolean
-purple_strequal(const gchar *left, const gchar *right)
-{
-	return (g_strcmp0(left, right) == 0);
-}
-
 const char *
 purple_normalize(const PurpleAccount *account, const char *str)
 {
