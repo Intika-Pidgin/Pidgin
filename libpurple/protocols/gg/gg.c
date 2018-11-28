@@ -33,6 +33,7 @@
 #include "notify.h"
 #include "buddylist.h"
 #include "accountopt.h"
+#include "core.h"
 #include "debug.h"
 #include "util.h"
 #include "request.h"
@@ -589,6 +590,56 @@ void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond)
 	}
 
 	gg_free_event(ev);
+}
+
+static gint
+gg_uri_handler_find_account(gconstpointer a, gconstpointer b)
+{
+	PurpleAccount *account = PURPLE_ACCOUNT(a);
+	const gchar *protocol_id;
+
+	protocol_id = purple_account_get_protocol_id(account);
+
+	if (purple_strequal(protocol_id, "prpl-gg") &&
+			purple_account_is_connected(account)) {
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+static gboolean
+gg_uri_handler(const gchar *scheme, const gchar *screenname,
+		GHashTable *params)
+{
+	GList *accounts;
+	GList *account_node;
+	PurpleIMConversation *im;
+
+	g_return_val_if_fail(screenname != NULL, FALSE);
+
+	if (!purple_strequal(scheme, "gg")) {
+		return FALSE;
+	}
+
+	if (screenname[0] == '\0') {
+		purple_debug_warning("gg", "Invalid empty screenname in URI");
+		return FALSE;
+	}
+
+	/* Find online Gadu-Gadu account */
+	accounts = purple_accounts_get_all();
+	account_node = g_list_find_custom(accounts, NULL,
+			gg_uri_handler_find_account);
+
+	if (account_node == NULL) {
+		return FALSE;
+	}
+
+	im = purple_im_conversation_new(account_node->data, screenname);
+	purple_conversation_present(PURPLE_CONVERSATION(im));
+
+	return TRUE;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1154,12 +1205,18 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	ggp_html_setup();
 	ggp_message_setup_global();
 
+	purple_signal_connect(purple_get_core(), "uri-handler", plugin,
+			PURPLE_CALLBACK(gg_uri_handler), NULL);
+
 	return TRUE;
 }
 
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
+	purple_signal_disconnect(purple_get_core(), "uri-handler", plugin,
+			PURPLE_CALLBACK(gg_uri_handler));
+
 	ggp_servconn_cleanup();
 	ggp_html_cleanup();
 	ggp_message_cleanup_global();

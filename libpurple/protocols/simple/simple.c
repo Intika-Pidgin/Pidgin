@@ -29,6 +29,7 @@
 #include "accountopt.h"
 #include "buddylist.h"
 #include "conversation.h"
+#include "core.h"
 #include "debug.h"
 #include "notify.h"
 #include "protocol.h"
@@ -63,6 +64,57 @@ static char *gencallid(void) {
 
 static const char *simple_list_icon(PurpleAccount *a, PurpleBuddy *b) {
 	return "simple";
+}
+
+static gint
+simple_uri_handler_find_account(gconstpointer a, gconstpointer b)
+{
+	PurpleAccount *account = PURPLE_ACCOUNT(a);
+	const gchar *protocol_id;
+
+	protocol_id = purple_account_get_protocol_id(account);
+
+	if (purple_strequal(protocol_id, "prpl-simple") &&
+			purple_account_is_connected(account)) {
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+static gboolean
+simple_uri_handler(const gchar *scheme, const gchar *screenname,
+		GHashTable *params)
+{
+	GList *accounts;
+	GList *account_node;
+	PurpleIMConversation *im;
+
+	g_return_val_if_fail(screenname != NULL, FALSE);
+
+	if (!purple_strequal(scheme, "sip")) {
+		return FALSE;
+	}
+
+	if (screenname[0] == '\0') {
+		purple_debug_warning("simple",
+				"Invalid empty screenname in URI");
+		return FALSE;
+	}
+
+	/* Find online SIMPLE account */
+	accounts = purple_accounts_get_all();
+	account_node = g_list_find_custom(accounts, NULL,
+			simple_uri_handler_find_account);
+
+	if (account_node == NULL) {
+		return FALSE;
+	}
+
+	im = purple_im_conversation_new(account_node->data, screenname);
+	purple_conversation_present(PURPLE_CONVERSATION(im));
+
+	return TRUE;
 }
 
 static void simple_keep_alive(PurpleConnection *gc) {
@@ -2192,12 +2244,18 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	if (!my_protocol)
 		return FALSE;
 
+	purple_signal_connect(purple_get_core(), "uri-handler", plugin,
+			PURPLE_CALLBACK(simple_uri_handler), NULL);
+
 	return TRUE;
 }
 
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
+	purple_signal_disconnect(purple_get_core(), "uri-handler", plugin,
+			PURPLE_CALLBACK(simple_uri_handler));
+
 	if (!purple_protocols_remove(my_protocol, error))
 		return FALSE;
 
