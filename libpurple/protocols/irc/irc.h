@@ -34,7 +34,6 @@
 #include "xfer.h"
 #include "queuedoutputstream.h"
 #include "roomlist.h"
-#include "sslconn.h"
 
 #define IRC_TYPE_PROTOCOL             (irc_protocol_get_type())
 #define IRC_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), IRC_TYPE_PROTOCOL, IRCProtocol))
