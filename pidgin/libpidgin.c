@@ -379,6 +379,11 @@ pidgin_command_line_cb(GApplication *application,
 
 	argv = g_application_command_line_get_arguments(cmdline, &argc);
 
+	if (argc == 1) {
+		/* No arguments, just activate */
+		g_application_activate(application);
+	}
+
 	/* Start at 1 to skip the executable name */
 	for (i = 1; i < argc; ++i) {
 		purple_got_protocol_handler_uri(argv[i]);
