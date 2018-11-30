@@ -372,7 +372,7 @@ libpurple_client = library('purple-client',
 
 # scripts
 
-install_data(['purple-remote', 'purple-send', 'purple-send-async', 'purple-url-handler'],
+install_data(['purple-remote', 'purple-send', 'purple-send-async'],
     install_dir : get_option('bindir'))
 
 else
@@ -431,21 +431,6 @@ pkgconfig.generate(
     libraries : [libpurple],
     requires : ['glib-2.0'] + GPLUGIN_REQ,
     variables : ['plugindir=${libdir}/purple-@0@'.format(purple_major_version)])
-
-if INSTALL_I18N
-	DESKTOP_FILE = 'purple-url-handler.desktop'
-	desktop_file_in = configure_file(
-	    input : 'data/' + DESKTOP_FILE + '.in.in',
-	    output : DESKTOP_FILE + '.in',
-	    configuration : conf)
-	desktop_file = i18n.merge_file(
-	    input : desktop_file_in,
-	    output : DESKTOP_FILE,
-	    po_dir : meson.source_root() + '/po',
-	    type : 'desktop',
-	    install : true,
-	    install_dir : get_option('datadir') + '/applications')
-endif  # INSTALL_I18N
 
 if enable_introspection
 	introspection_sources = (purple_coreheaders + purple_builtheaders +
