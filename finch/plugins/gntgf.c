@@ -21,6 +21,8 @@
 
 #include "internal.h"
 
+#include NCURSES_HEADER
+
 #define PLUGIN_STATIC_NAME	GntGf
 
 #define PREFS_PREFIX          "/plugins/gnt/gntgf"

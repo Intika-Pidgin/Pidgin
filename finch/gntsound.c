@@ -21,6 +21,8 @@
 #include "finch.h"
 #include <internal.h>
 
+#include NCURSES_HEADER
+
 #ifdef _WIN32
 #include <windows.h>
 #include <mmsystem.h>
