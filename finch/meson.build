@@ -188,7 +188,8 @@ if enable_consoleui
 	    filebase : 'finch-3',
 	    subdirs : 'finch-3',
 	    libraries : [libfinch],
-	    requires : ['gnt', 'purple-3'])
+	    requires : ['gnt', 'purple-3'],
+	    variables : ['plugindir=${libdir}/finch-@0@'.format(purple_major_version)])
 
 	if enable_introspection
 		introspection_sources = libfinch_headers
