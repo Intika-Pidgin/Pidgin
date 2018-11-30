@@ -348,8 +348,8 @@ fb_buddy_cmp(gconstpointer a, gconstpointer b)
 	gint alias_verdict, name_verdict;
 	gchar *astr, *bstr;
 
-	astr = g_utf8_casefold(purple_buddy_get_alias(a), -1);
-	bstr = g_utf8_casefold(purple_buddy_get_alias(b), -1);
+	astr = g_utf8_casefold(purple_buddy_get_alias(PURPLE_BUDDY(a)), -1);
+	bstr = g_utf8_casefold(purple_buddy_get_alias(PURPLE_BUDDY(b)), -1);
 	alias_verdict = g_utf8_collate(astr, bstr);
 	g_free(astr);
 	g_free(bstr);
