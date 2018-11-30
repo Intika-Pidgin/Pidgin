@@ -196,7 +196,7 @@ if ENABLE_GTK
 	    subdirs : 'pidgin-3',
 	    libraries : [libpidgin],
 	    requires : ['gtk+-3.0', 'webkitgtk-3.0', 'purple-3'],
-	    variables : ['plugindir=${libdir}/pidgin'])
+	    variables : ['plugindir=${libdir}/pidgin-@0@'.format(purple_major_version)])
 
 	if INSTALL_I18N
 		DESKTOP_FILE = 'im.pidgin.Pidgin3.desktop'
