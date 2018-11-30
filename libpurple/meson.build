@@ -302,7 +302,7 @@ if enable_introspection
 	libpurple_gir = gnome.generate_gir(libpurple,
 	    sources : introspection_sources,
 	    includes : Purple_gir_includes,
-	    namespace : 'Purple3',
+	    namespace : 'Purple',
 	    symbol_prefix : 'purple',
 	    identifier_prefix : 'Purple',
 	    export_packages : purple_filebase,
