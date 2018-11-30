@@ -342,6 +342,28 @@ fb_util_request_buddy_cancel(gpointer *mata, PurpleRequestFields *fields)
 	g_free(mata);
 }
 
+static gint
+fb_buddy_cmp(gconstpointer a, gconstpointer b)
+{
+	gint alias_verdict, name_verdict;
+	gchar *astr, *bstr;
+
+	astr = g_utf8_casefold(purple_buddy_get_alias(a), -1);
+	bstr = g_utf8_casefold(purple_buddy_get_alias(b), -1);
+	alias_verdict = g_utf8_collate(astr, bstr);
+	g_free(astr);
+	g_free(bstr);
+	if (alias_verdict != 0) {
+		return alias_verdict;
+	}
+	astr = g_utf8_casefold(purple_buddy_get_name(a), -1);
+	bstr = g_utf8_casefold(purple_buddy_get_name(b), -1);
+	name_verdict = g_utf8_collate(astr, bstr);
+	g_free(astr);
+	g_free(bstr);
+	return name_verdict;
+}
+
 gpointer
 fb_util_request_buddy(PurpleConnection *gc, const gchar *title,
                       const gchar *primary, const gchar *secondary,
@@ -368,7 +390,7 @@ fb_util_request_buddy(PurpleConnection *gc, const gchar *title,
 
 	acct = purple_connection_get_account(gc);
 	buddies = purple_blist_find_buddies(acct, NULL);
-	buddies = g_slist_sort(buddies, (GCompareFunc) g_ascii_strcasecmp);
+	buddies = g_slist_sort(buddies, fb_buddy_cmp);
 
 	fields = purple_request_fields_new();
 	group = purple_request_field_group_new(NULL);
