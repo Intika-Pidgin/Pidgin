@@ -9,7 +9,74 @@ if get_option('consoleui')
 		libgnt_gir = libgnt_proj.get_variable('libgnt_gir')
 	endif
 
-	if libgnt_dep.found()
+	#######################################################################
+	# Check for ncurses and other things used by it
+	# FIXME: This should be temporary until libgnt wraps the functionality.
+	#######################################################################
+	ncurses_available = true
+	ncurses_header = 'ncurses.h'
+	# Some distros put the headers in ncursesw/, some don't. These are ordered to
+	# pick the last available as most-specific version.
+	ncursesw_header_paths = ['', 'ncursesw/']
+
+	ncurses = dependency('ncursesw', required : false)
+	if ncurses.found()
+		foreach location : ncursesw_header_paths
+			f = location + 'ncurses.h'
+			if compiler.has_header_symbol(f, 'get_wch',
+			    prefix : '#define _XOPEN_SOURCE_EXTENDED')
+				ncurses_header = f
+			endif
+		endforeach
+	else
+		ncurses_available = false
+		ncurses_inc = []
+		ncurses_libs = compiler.find_library('ncursesw', required : false)
+		if ncurses_libs.found()
+			foreach location : ncursesw_header_paths
+				f = location + 'ncurses.h'
+				if compiler.has_header_symbol(f, 'get_wch',
+				    prefix : '#define _XOPEN_SOURCE_EXTENDED')
+					ncurses_available = true
+					ncurses_header = f
+				endif
+			endforeach
+
+			if ncurses_available
+				ncurses = declare_dependency(
+				    include_directories : ncurses_inc,
+				    dependencies : ncurses_libs
+				)
+			endif
+		endif
+	endif
+
+	if not ncurses_available
+		# ncursesw was not found. Look for plain old ncurses
+		ncurses = dependency('ncurses', required : false)
+		if ncurses.found()
+			ncurses_available = true
+		else
+			ncurses_libs = compiler.find_library('ncurses', required : false)
+			ncurses_available = ncurses_libs.found()
+			ncurses = declare_dependency(dependencies : ncurses_libs)
+		endif
+	endif
+
+	if not ncurses_available and host_machine.system() == 'windows'
+		# Try pdcurses too.
+		ncurses_header = 'curses.h'
+		ncurses_libs = compiler.find_library('pdcurses', required : false)
+		ncurses_available = compiler.has_header(ncurses_header) and ncurses_libs.found()
+		ncurses = declare_dependency(dependencies : ncurses_libs)
+	endif
+
+	if not ncurses_available
+		error('ncurses could not be found!')
+	endif
+
+	if libgnt_dep.found() and ncurses_available
+		ncurses_header = '-DNCURSES_HEADER="@0@"'.format(ncurses_header)
 		enable_consoleui = true
 	else
 		error('''
@@ -96,10 +163,10 @@ if enable_consoleui
 	libfinch_inc = include_directories('.')
 	libfinch = shared_library('finch',
 	    libfinch_SOURCES,
-	    c_args : '-DSTANDALONE',
+	    c_args : ['-DSTANDALONE', ncurses_header],
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
-	    dependencies : [libpurple_dep, libgnt_dep, glib],
+	    dependencies : [libpurple_dep, libgnt_dep, ncurses, glib],
 	    install : true)
 	libfinch_dep = declare_dependency(
 	    include_directories : [toplevel_inc, libfinch_inc],

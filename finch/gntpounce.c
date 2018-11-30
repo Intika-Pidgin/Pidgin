@@ -21,6 +21,8 @@
  */
 #include <internal.h>
 
+#include NCURSES_HEADER
+
 #include <gnt.h>
 #include <gntbox.h>
 #include <gntbutton.h>

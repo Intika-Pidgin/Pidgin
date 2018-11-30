@@ -22,6 +22,8 @@
 #include <internal.h>
 #include "finch.h"
 
+#include NCURSES_HEADER
+
 #include <cmds.h>
 #include <core.h>
 #include <idle.h>

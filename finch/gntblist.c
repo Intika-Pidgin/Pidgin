@@ -21,6 +21,8 @@
 #include <internal.h>
 #include "finch.h"
 
+#include NCURSES_HEADER
+
 #include <account.h>
 #include <buddylist.h>
 #include <log.h>
