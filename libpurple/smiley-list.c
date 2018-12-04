@@ -21,7 +21,6 @@
 
 #include "smiley-list.h"
 
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "smiley-parser.h"
 #include "trie.h"
@@ -65,8 +64,6 @@ purple_smiley_list_init(PurpleSmileyList *list) {
 		g_free, NULL);
 	priv->shortcut_map = g_hash_table_new_full(g_str_hash, g_str_equal,
 		g_free, NULL);
-
-	PURPLE_DBUS_REGISTER_POINTER(list, PurpleSmileyList);
 }
 
 static void
@@ -86,8 +83,6 @@ purple_smiley_list_finalize(GObject *obj) {
 		g_object_unref(smiley);
 	}
 	g_list_free(priv->smileys);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(sl);
 
 	G_OBJECT_CLASS(purple_smiley_list_parent_class)->finalize(obj);
 }

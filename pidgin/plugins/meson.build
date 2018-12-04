@@ -2,7 +2,7 @@ if get_option('gevolution')
 	subdir('gevolution')
 endif
 
-if enable_dbus
+if false
 	subdir('musicmessaging')
 endif
 

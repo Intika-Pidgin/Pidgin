@@ -45,8 +45,6 @@ libpurple/connection.c
 libpurple/conversation.c
 libpurple/conversationtypes.c
 libpurple/data/purple-url-handler.desktop.in.in
-libpurple/dbus-server.c
-libpurple/dbus-server.h
 libpurple/http.c
 libpurple/keyring.c
 libpurple/log.c
@@ -57,7 +55,6 @@ libpurple/options.c
 libpurple/plugins.c
 libpurple/plugins/autoaccept.c
 libpurple/plugins/buddynote.c
-libpurple/plugins/dbus-example.c
 libpurple/plugins/filectl.c
 libpurple/plugins/idle.c
 libpurple/plugins/joinpart.c

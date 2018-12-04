@@ -22,7 +22,6 @@
  */
 #include "internal.h"
 #include "glibcompat.h"
-#include "dbus-maybe.h"
 #include "util.h"
 
 #define PURPLE_BUDDY_GET_PRIVATE(obj) \
@@ -532,7 +531,6 @@ purple_buddy_get_property(GObject *obj, guint param_id, GValue *value,
 
 static void
 purple_buddy_init(GTypeInstance *instance, gpointer klass) {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_BUDDY(instance), PurpleBuddy);
 }
 
 static void
@@ -586,8 +584,6 @@ purple_buddy_finalize(GObject *object) {
 	g_free(priv->name);
 	g_free(priv->local_alias);
 	g_free(priv->server_alias);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(buddy);
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }

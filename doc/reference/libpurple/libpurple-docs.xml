@@ -44,7 +44,6 @@
       <xi:include href="xml/conversationtypes.xml" />
       <xi:include href="xml/conversations.xml" />
       <xi:include href="xml/countingnode.xml" />
-      <xi:include href="xml/dbus-maybe.xml" />
       <xi:include href="xml/debug.xml" />
       <xi:include href="xml/e2ee.xml" />
       <xi:include href="xml/eventloop.xml" />
@@ -133,16 +132,7 @@
         <xi:include href="xml/backend-iface.xml" />
         <xi:include href="xml/enum-types.xml" />
     </chapter>
-
-    <chapter id="dbus">
-      <title>D-Bus Server APIs</title>
-
-        <xi:include href="xml/dbus-bindings.xml" />
-        <xi:include href="xml/dbus-purple.xml" />
-        <xi:include href="xml/dbus-server.xml" />
-        <xi:include href="xml/dbus-useful.xml" />
-    </chapter>
-	</part>
+  </part>
 
   <part id="signals">
     <title>Purple-signals Reference</title>
@@ -154,7 +144,6 @@
       <xi:include href="signals_connection.xml" />
       <xi:include href="signals_conversation.xml" />
       <xi:include href="signals_core.xml" />
-      <xi:include href="signals_dbus_server.xml" />
       <xi:include href="signals_xfer.xml" />
       <xi:include href="signals_log.xml" />
       <xi:include href="signals_notify.xml" />

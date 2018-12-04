@@ -77,17 +77,4 @@ if PLUGINS
 		dependencies : [libpurple_dep],
 		name_prefix : '',
 	)
-
-	if enable_dbus
-		dbus_example_bindings_c = custom_target('dbus_example_bindings_c',
-		    input : 'dbus-example.c',
-		    output : 'dbus-example-bindings.ch',
-		    command : [python,
-		               meson.source_root() + '/libpurple/dbus-analyze-functions.py',
-		               '--export-only', '-o', '@OUTPUT@', '@INPUT@'])
-
-		dbus_example = library('dbus-example', 'dbus-example.c', dbus_example_bindings_c,
-		    dependencies : [libpurple_dep, dbus],
-		    name_prefix : '')
-	endif  # enable_dbus
 endif  # PLUGINS

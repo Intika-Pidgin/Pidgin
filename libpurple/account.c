@@ -23,7 +23,6 @@
 
 #include "accounts.h"
 #include "core.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "network.h"
 #include "notify.h"
@@ -2415,7 +2414,6 @@ _purple_account_set_current_error(PurpleAccount *account,
 	if(old_err)
 		g_free(old_err->description);
 
-	PURPLE_DBUS_UNREGISTER_POINTER(old_err);
 	g_free(old_err);
 }
 
@@ -2892,8 +2890,6 @@ static void purple_account_init(GTypeInstance *instance, gpointer klass)
 	priv->system_log = NULL;
 
 	priv->privacy_type = PURPLE_ACCOUNT_PRIVACY_ALLOW_ALL;
-
-	PURPLE_DBUS_REGISTER_POINTER(account, PurpleAccount);
 }
 
 /* Called when done constructing */
@@ -2989,7 +2985,6 @@ purple_account_finalize(GObject *object)
 	if(priv->system_log)
 		purple_log_free(priv->system_log);
 
-	PURPLE_DBUS_UNREGISTER_POINTER(priv->current_error);
 	if (priv->current_error) {
 		g_free(priv->current_error->description);
 		g_free(priv->current_error);
@@ -3014,8 +3009,6 @@ purple_account_finalize(GObject *object)
 		g_free(priv->permit->data);
 		priv->permit = g_slist_delete_link(priv->permit, priv->permit);
 	}
-
-	PURPLE_DBUS_UNREGISTER_POINTER(account);
 
 	parent_class->finalize(object);
 }

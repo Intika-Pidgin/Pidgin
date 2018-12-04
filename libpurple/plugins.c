@@ -23,7 +23,6 @@
 
 #include "core.h"
 #include "debug.h"
-#include "dbus-maybe.h"
 #include "enums.h"
 #include "plugins.h"
 
@@ -368,7 +367,6 @@ purple_plugin_get_dependent_plugins(const PurplePlugin *plugin)
 static void
 purple_plugin_info_init(GTypeInstance *instance, gpointer klass)
 {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_PLUGIN_INFO(instance), PurplePluginInfo);
 }
 
 /* Set method for GObject properties */
@@ -482,8 +480,6 @@ purple_plugin_info_finalize(GObject *object)
 
 	g_free(priv->ui_requirement);
 	g_free(priv->error);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(object);
 
 	parent_class->finalize(object);
 }

@@ -23,7 +23,6 @@
 
 #include "buddylist.h"
 #include "core.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "notify.h"
 #include "prefs.h"
@@ -209,7 +208,6 @@ purple_status_type_new_full(PurpleStatusPrimitive primitive, const char *id,
 	g_return_val_if_fail(primitive != PURPLE_STATUS_UNSET, NULL);
 
 	status_type = g_new0(PurpleStatusType, 1);
-	PURPLE_DBUS_REGISTER_POINTER(status_type, PurpleStatusType);
 
 	status_type->primitive     = primitive;
 	status_type->saveable      = saveable;
@@ -315,7 +313,6 @@ purple_status_type_destroy(PurpleStatusType *status_type)
 	g_list_foreach(status_type->attrs, (GFunc)purple_status_attribute_destroy, NULL);
 	g_list_free(status_type->attrs);
 
-	PURPLE_DBUS_UNREGISTER_POINTER(status_type);
 	g_free(status_type);
 }
 
@@ -448,7 +445,6 @@ purple_status_attribute_new(const char *id, const char *name, GValue *value_type
 	g_return_val_if_fail(value_type != NULL, NULL);
 
 	attr = g_new0(PurpleStatusAttribute, 1);
-	PURPLE_DBUS_REGISTER_POINTER(attr, PurpleStatusAttribute);
 
 	attr->id         = g_strdup(id);
 	attr->name       = g_strdup(name);
@@ -467,7 +463,6 @@ purple_status_attribute_destroy(PurpleStatusAttribute *attr)
 
 	purple_value_free(attr->value_type);
 
-	PURPLE_DBUS_UNREGISTER_POINTER(attr);
 	g_free(attr);
 }
 
@@ -1165,8 +1160,6 @@ purple_status_init(GTypeInstance *instance, gpointer klass)
 {
 	PurpleStatus *status = PURPLE_STATUS(instance);
 
-	PURPLE_DBUS_REGISTER_POINTER(status, PurpleStatus);
-
 	PURPLE_STATUS_GET_PRIVATE(status)->attr_values =
 		g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
 		(GDestroyNotify)purple_value_free);
@@ -1202,8 +1195,6 @@ static void
 purple_status_finalize(GObject *object)
 {
 	g_hash_table_destroy(PURPLE_STATUS_GET_PRIVATE(object)->attr_values);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(object);
 
 	parent_class->finalize(object);
 }

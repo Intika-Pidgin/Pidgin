@@ -18,7 +18,7 @@ test_ui = static_library(
     c_args: [
         '-DTEST_DATA_DIR="@0@/data"'.format(meson.current_source_dir())
     ],
-    dependencies: [libpurple_dep, glib, dbus, dbus_glib]
+    dependencies: [libpurple_dep, glib]
 )
 
 foreach prog : PROGS
@@ -26,7 +26,7 @@ foreach prog : PROGS
                    c_args : [
                        '-DTEST_DATA_DIR="@0@/data"'.format(meson.current_source_dir())
                    ],
-                   dependencies : [libpurple_dep, glib, dbus, dbus_glib],
+                   dependencies : [libpurple_dep, glib],
                    link_with: test_ui,
     )
     test(prog, e)

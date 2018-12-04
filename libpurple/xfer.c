@@ -22,7 +22,6 @@
 #include "internal.h"
 #include "glibcompat.h"
 
-#include "dbus-maybe.h"
 #include "enums.h"
 #include "image-store.h"
 #include "xfer.h"
@@ -2125,8 +2124,6 @@ purple_xfer_init(GTypeInstance *instance, gpointer klass)
 	PurpleXfer *xfer = PURPLE_XFER(instance);
 	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
 
-	PURPLE_DBUS_REGISTER_POINTER(xfer, PurpleXfer);
-
 	priv->ui_ops = purple_xfers_get_ui_ops();
 	priv->current_buffer_size = FT_INITIAL_BUFFER_SIZE;
 	priv->fd = -1;
@@ -2189,8 +2186,6 @@ purple_xfer_finalize(GObject *object)
 
 	g_free(priv->thumbnail_data);
 	g_free(priv->thumbnail_mimetype);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(xfer);
 
 	parent_class->finalize(object);
 }

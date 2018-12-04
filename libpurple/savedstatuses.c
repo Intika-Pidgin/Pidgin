@@ -24,7 +24,6 @@
 #include "idle.h"
 #include "notify.h"
 #include "savedstatuses.h"
-#include "dbus-maybe.h"
 #include "request.h"
 #include "status.h"
 #include "util.h"
@@ -108,7 +107,6 @@ free_saved_status_sub(PurpleSavedStatusSub *substatus)
 
 	g_free(substatus->message);
 	purple_request_close_with_handle(substatus);
-	PURPLE_DBUS_UNREGISTER_POINTER(substatus);
 	g_free(substatus);
 }
 
@@ -127,7 +125,6 @@ free_saved_status(PurpleSavedStatus *status)
 		free_saved_status_sub(substatus);
 	}
 	purple_request_close_with_handle(status);
-	PURPLE_DBUS_UNREGISTER_POINTER(status);
 	g_free(status);
 }
 
@@ -417,7 +414,6 @@ parse_substatus(PurpleXmlNode *substatus)
 		ret->message = data;
 	}
 
-	PURPLE_DBUS_REGISTER_POINTER(ret, PurpleSavedStatusSub);
 	return ret;
 }
 
@@ -513,7 +509,6 @@ parse_status(PurpleXmlNode *status)
 			ret->substatuses = g_list_prepend(ret->substatuses, new);
 	}
 
-	PURPLE_DBUS_REGISTER_POINTER(ret, PurpleSavedStatus);
 	return ret;
 }
 
@@ -563,7 +558,6 @@ purple_savedstatus_new(const char *title, PurpleStatusPrimitive type)
 		g_return_val_if_fail(purple_savedstatus_find(title) == NULL, NULL);
 
 	status = g_new0(PurpleSavedStatus, 1);
-	PURPLE_DBUS_REGISTER_POINTER(status, PurpleSavedStatus);
 	status->title = g_strdup(title);
 	status->type = type;
 	set_creation_time(status, time(NULL));
@@ -641,7 +635,6 @@ purple_savedstatus_set_substatus(PurpleSavedStatus *saved_status,
 	if (substatus == NULL)
 	{
 		substatus = g_new0(PurpleSavedStatusSub, 1);
-		PURPLE_DBUS_REGISTER_POINTER(substatus, PurpleSavedStatusSub);
 		substatus->account = (PurpleAccount *)account;
 		saved_status->substatuses = g_list_prepend(saved_status->substatuses, substatus);
 	}

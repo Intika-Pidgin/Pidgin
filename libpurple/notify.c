@@ -21,7 +21,6 @@
 #define _PURPLE_NOTIFY_C_
 
 #include "internal.h"
-#include "dbus-maybe.h"
 #include "notify.h"
 
 static PurpleNotifyUiOps *notify_ui_ops = NULL;
@@ -441,7 +440,6 @@ purple_notify_user_info_entry_new(const char *label, const char *value)
 	PurpleNotifyUserInfoEntry *user_info_entry;
 
 	user_info_entry = g_new0(PurpleNotifyUserInfoEntry, 1);
-	PURPLE_DBUS_REGISTER_POINTER(user_info_entry, PurpleNotifyUserInfoEntry);
 	user_info_entry->label = g_strdup(label);
 	user_info_entry->value = g_strdup(value);
 	user_info_entry->type = PURPLE_NOTIFY_USER_INFO_ENTRY_PAIR;
@@ -456,7 +454,6 @@ purple_notify_user_info_entry_destroy(PurpleNotifyUserInfoEntry *user_info_entry
 
 	g_free(user_info_entry->label);
 	g_free(user_info_entry->value);
-	PURPLE_DBUS_UNREGISTER_POINTER(user_info_entry);
 	g_free(user_info_entry);
 }
 
@@ -466,7 +463,6 @@ purple_notify_user_info_new()
 	PurpleNotifyUserInfo *user_info;
 
 	user_info = g_new0(PurpleNotifyUserInfo, 1);
-	PURPLE_DBUS_REGISTER_POINTER(user_info, PurpleNotifyUserInfo);
 	g_queue_init(&user_info->entries);
 
 	return user_info;
@@ -484,7 +480,6 @@ purple_notify_user_info_destroy(PurpleNotifyUserInfo *user_info)
 	}
 
 	g_queue_clear(&user_info->entries);
-	PURPLE_DBUS_UNREGISTER_POINTER(user_info);
 	g_free(user_info);
 }
 

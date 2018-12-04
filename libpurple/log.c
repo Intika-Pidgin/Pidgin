@@ -21,7 +21,6 @@
 
 #include "internal.h"
 #include "account.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "glibcompat.h"
 #include "image-store.h"
@@ -80,7 +79,6 @@ PurpleLog *purple_log_new(PurpleLogType type, const char *name, PurpleAccount *a
 
 	/* IMPORTANT: Make sure to initialize all the members of PurpleLog */
 	log = g_slice_new(PurpleLog);
-	PURPLE_DBUS_REGISTER_POINTER(log, PurpleLog);
 
 	log->type = type;
 	log->name = g_strdup(purple_normalize(account, name));
@@ -107,7 +105,6 @@ void purple_log_free(PurpleLog *log)
 	if (log->time)
 		g_date_time_unref(log->time);
 
-	PURPLE_DBUS_UNREGISTER_POINTER(log);
 	g_slice_free(PurpleLog, log);
 }
 
