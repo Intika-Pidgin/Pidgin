@@ -4,6 +4,7 @@ syntax: glob
 *.pyc
 *~
 \#*\#
+subprojects/*/
 
 syntax: regexp
 ^build(.+)?\/

@@ -20,8 +20,6 @@ project('pidgin', 'c', meson_version : '>=0.37.0')
 #   For code under development: 'devel'
 #   For production releases:    ''
 #
-# Make sure to update finch/libgnt/meson.build with libgnt version changes.
-#
 purple_lt_current = 20
 purple_major_version = 3
 purple_minor_version = 0

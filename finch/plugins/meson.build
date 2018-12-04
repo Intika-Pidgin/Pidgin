@@ -6,7 +6,8 @@ if PLUGINS
 		    install : true, install_dir : FINCH_PLUGINDIR)
 
 		gntgf = library('gntgf', 'gntgf.c',
-		    dependencies : [x11, libpurple_dep, libfinch_dep, glib],
+		    c_args : ncurses_header,
+		    dependencies : [x11, libpurple_dep, libfinch_dep, ncurses, glib],
 		    name_prefix : '',
 		    install : true, install_dir : FINCH_PLUGINDIR)
 	endif
@@ -17,7 +18,7 @@ if PLUGINS
 	    install : true, install_dir : FINCH_PLUGINDIR)
 
 	gntlastlog = library('gntlastlog', 'lastlog.c',
-	    dependencies : [libpurple_dep, libfinch_dep, glib],
+	    dependencies : [libpurple_dep, libfinch_dep, ncurses, glib],
 	    name_prefix : '',
 	    install : true, install_dir : FINCH_PLUGINDIR)
 
