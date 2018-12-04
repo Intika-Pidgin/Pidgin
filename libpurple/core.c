@@ -50,16 +50,6 @@
 #include "theme-manager.h"
 #include "util.h"
 
-#ifdef HAVE_DBUS
-#  ifndef DBUS_API_SUBJECT_TO_CHANGE
-#    define DBUS_API_SUBJECT_TO_CHANGE
-#  endif
-#  include <dbus/dbus.h>
-#  include "dbus-purple.h"
-#  include "dbus-server.h"
-#  include "dbus-bindings.h"
-#endif
-
 struct PurpleCore
 {
 	char *ui;
@@ -151,10 +141,6 @@ purple_core_init(const char *ui)
 		if (ops->debug_ui_init != NULL)
 			ops->debug_ui_init();
 	}
-
-#ifdef HAVE_DBUS
-	purple_dbus_init();
-#endif
 
 	purple_cmds_init();
 	purple_protocols_init();
@@ -265,10 +251,6 @@ purple_core_quit(void)
 
 	static_proto_unload();
 	purple_protocols_uninit();
-
-#ifdef HAVE_DBUS
-	purple_dbus_uninit();
-#endif
 
 	purple_cmds_uninit();
 	purple_log_uninit();

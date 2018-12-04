@@ -20,7 +20,6 @@
  */
 
 #include "internal.h"
-#include "dbus-maybe.h"
 #include "glibcompat.h"
 
 #include "debug.h"
@@ -241,7 +240,6 @@ purple_message_init(GTypeInstance *instance, gpointer klass)
 
 	PurpleMessage *msg = PURPLE_MESSAGE(instance);
 	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
-	PURPLE_DBUS_REGISTER_POINTER(msg, PurpleMessage);
 
 	priv->id = ++max_id;
 	g_hash_table_insert(messages, GINT_TO_POINTER(max_id), msg);

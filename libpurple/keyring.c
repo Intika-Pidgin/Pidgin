@@ -27,7 +27,6 @@
 #include "core.h"
 #include "debug.h"
 #include "internal.h"
-#include "dbus-maybe.h"
 #include "plugins.h"
 
 struct _PurpleKeyring
@@ -488,7 +487,6 @@ purple_keyring_register(PurpleKeyring *keyring)
 		purple_keyring_set_inuse(keyring, TRUE, NULL, NULL);
 	}
 
-	PURPLE_DBUS_REGISTER_POINTER(keyring, PurpleKeyring);
 	purple_signal_emit(purple_keyring_get_handle(), "keyring-register",
 		keyring_id, keyring);
 	if (purple_debug_is_verbose()) {
@@ -516,7 +514,6 @@ purple_keyring_unregister(PurpleKeyring *keyring)
 
 	purple_signal_emit(purple_keyring_get_handle(), "keyring-unregister",
 		keyring_id, keyring);
-	PURPLE_DBUS_UNREGISTER_POINTER(keyring);
 
 	inuse = purple_keyring_get_inuse();
 	fallback = purple_keyring_find_keyring_by_id(PURPLE_DEFAULT_KEYRING);

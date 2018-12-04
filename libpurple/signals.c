@@ -20,7 +20,6 @@
  */
 #include "internal.h"
 
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "signals.h"
 
@@ -466,12 +465,6 @@ purple_signal_emit_vargs(void *instance, const char *signal, va_list args)
 
 		va_end(tmp);
 	}
-
-#ifdef HAVE_DBUS
-	purple_dbus_signal_emit_purple(signal, signal_data->num_values,
-				   signal_data->value_types, args);
-#endif	/* HAVE_DBUS */
-
 }
 
 void *
@@ -517,13 +510,6 @@ purple_signal_emit_vargs_return_1(void *instance, const char *signal,
 				   "Signal data for %s not found!\n", signal);
 		return 0;
 	}
-
-#ifdef HAVE_DBUS
-	G_VA_COPY(tmp, args);
-	purple_dbus_signal_emit_purple(signal, signal_data->num_values,
-				   signal_data->value_types, tmp);
-	va_end(tmp);
-#endif	/* HAVE_DBUS */
 
 	for (l = signal_data->handlers; l != NULL; l = l_next)
 	{

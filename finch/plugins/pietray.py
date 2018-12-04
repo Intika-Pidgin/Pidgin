@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# NOTICE: This script is currently broken as the libpurple DBus
+# bindings have been removed.
+#
 # This is a dbus script to show a docklet for Finch. This should work
 # for any 'compatible' purple client.
 #

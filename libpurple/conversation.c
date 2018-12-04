@@ -25,7 +25,6 @@
 #include "buddylist.h"
 #include "cmds.h"
 #include "conversation.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "enums.h"
 #include "notify.h"

@@ -99,7 +99,6 @@ purple_coreheaders = [
 	'conversations.h',
 	'core.h',
 	'countingnode.h',
-	'dbus-maybe.h',
 	'debug.h',
 	'e2ee.h',
 	'eventloop.h',
@@ -243,180 +242,26 @@ purple_builtheaders = [
 	enums_h,
 ]
 
-if enable_dbus
-
-# purple dbus server
-
-dbus_sources = [
-	'dbus-server.c',
-	'dbus-useful.c'
-]
-dbus_headers = [
-	'dbus-server.h',
-	'dbus-bindings.h',
-	'dbus-purple.h',
-	'dbus-useful.h',
-	'dbus-define-api.h',
-]
-dbus_exported = [
-	'dbus-useful.h',
-	'dbus-define-api.h',
-	'account.h',
-	'accounts.h',
-	'blistnode.h',
-	'buddy.h',
-	'buddylist.h',
-	'buddyicon.h',
-	'connection.h',
-	'conversation.h',
-	'conversationtypes.h',
-	'conversations.h',
-	'core.h',
-	'xfer.h',
-	'log.h',
-	'notify.h',
-	'prefs.h',
-	'presence.h',
-	'roomlist.h',
-	'savedstatuses.h',
-	'smiley.h',
-	'smiley-list.h',
-	'status.h',
-	'server.h',
-	'util.h',
-	'xmlnode.h',
-	'protocol.h',
-	'protocols.h'
-]
-
-purple_build_coreheaders = purple_coreheaders + purple_mediaheaders
-purple_build_coreheaders += purple_builtheaders
-
-
-# We should probably make this better
-dbus_signals = purple_coresources + ['protocols/irc/irc.c', 'protocols/jabber/jabber.c']
-
-dbus_analyze_functions = files('dbus-analyze-functions.py')[0]
-dbus_analyze_signals = files('dbus-analyze-signals.py')[0]
-dbus_analyze_types = files('dbus-analyze-types.py')[0]
-
-dbus_types_c = custom_target('dbus_types_c',
-                             input : purple_build_coreheaders,
-                             output : 'dbus-types.ch',
-                             command : [python, dbus_analyze_types, '-o', '@OUTPUT@',
-                                        '--pattern=PURPLE_DBUS_DEFINE_TYPE(%s)', '@INPUT@'])
-
-dbus_types_h = custom_target('dbus_types_h',
-                             input : purple_build_coreheaders,
-                             output : 'dbus-types.h',
-                             command : [python, dbus_analyze_types, '-o', '@OUTPUT@',
-                                        '--pattern=PURPLE_DBUS_DECLARE_TYPE(%s)', '@INPUT@'],
-                             install : true,
-                             install_dir : join_paths(get_option('includedir'), 'libpurple'))
-
-dbus_bindings_c = custom_target('dbus_bindings_c',
-                                input : dbus_exported,
-                                output : 'dbus-bindings.ch',
-                                command : [python, dbus_analyze_functions, '-o', '@OUTPUT@',
-                                           '@INPUT@'])
-
-dbus_signals_c = custom_target('dbus_signals_c',
-                               input : dbus_signals,
-                               output : 'dbus-signals.ch',
-                               command : [python, dbus_analyze_signals, '-o', '@OUTPUT@',
-                                          '@INPUT@'])
-
-dbus_builtheaders = [dbus_types_h]
-dbus_builtsources = [dbus_types_c, dbus_bindings_c, dbus_signals_c]
-
-# libpurple-client
-
-purple_client_bindings_h1 = custom_target('purple_client_bindings_h1',
-    input : purple_build_coreheaders,
-    output : 'purple-client-bindings1.h',
-    command : [
-        python, dbus_analyze_types,
-        '--keyword=enum', '--verbatim', '-o', '@OUTPUT@', '@INPUT@'
-    ]
-)
-
-purple_client_bindings_h2 = custom_target('purple_client_bindings_h2',
-    input : dbus_exported,
-    output : 'purple-client-bindings2.h',
-    command : [
-        python, dbus_analyze_functions,
-        '--client', '--headers', '-o', '@OUTPUT@', '@INPUT@'
-    ]
-)
-
-purple_client_bindings_h = custom_target('purple_client_bindings_h',
-    input : [purple_client_bindings_h1, purple_client_bindings_h2],
-    output : 'purple-client-bindings.h',
-    capture : true,
-    command : ['cat', '@INPUT@'])
-
-purple_client_bindings_c = custom_target('purple_client_bindings_c',
-    input : dbus_exported,
-    output : 'purple-client-bindings.ch',
-    command : [
-        python, dbus_analyze_functions,
-        '--client', '-o', '@OUTPUT@', '@INPUT@'
-    ]
-)
-
-libpurple_client = library('purple-client',
-    'purple-client.c', purple_client_bindings_c, purple_client_bindings_h,
-    version : PURPLE_LIB_VERSION,
-    dependencies : [dbus, dbus_glib],
-    install : true)
-
-# scripts
-
-install_data(['purple-remote', 'purple-send', 'purple-send-async'],
-    install_dir : get_option('bindir'))
-
-else
-
-dbus_sources = []
-dbus_headers = []
-dbus_builtsources = []
-dbus_builtheaders = []
-
-endif
-
 libpurple_inc = include_directories('.')
 libpurple = library('purple',
                     purple_coresources + purple_builtsources +
-                    dbus_sources + dbus_builtsources +
-                    purple_builtheaders + dbus_builtheaders,
+                    purple_builtheaders,
                     include_directories : [toplevel_inc, libpurple_inc],
                     install : true,
                     version : PURPLE_LIB_VERSION,
                     dependencies : # static_link_libs
-                        [dbus, dbus_glib, dnsapi, ws2_32, glib, gio, gplugin, libxml,
+                        [dnsapi, ws2_32, glib, gio, gplugin, libxml,
                          farstream, gstreamer, gstreamer_video,
                          gstreamer_app, json, math])
 
 libpurple_dep = declare_dependency(
-    # Ensure purple/dbus headers built before any dependencies:
-    sources : [purple_builtheaders, dbus_builtheaders],
+    # Ensure purple headers built before any dependencies:
+    sources : [purple_builtheaders],
     include_directories : [toplevel_inc, libpurple_inc],
     link_with : libpurple,
     dependencies : [gstreamer, gplugin, glib, gio])
 
-if enable_dbus
-
-# purple-client-example
-
-purple_client_example = executable('purple-client-example',
-    'purple-client-example.c', purple_client_bindings_h,
-    link_with : [libpurple_client, libpurple],
-    dependencies : [dbus, dbus_glib, glib],
-    install : true)
-
-endif
-
-install_headers(purple_coreheaders + dbus_headers,
+install_headers(purple_coreheaders,
                 subdir : 'libpurple')
 
 install_headers(purple_mediaheaders,
@@ -434,14 +279,11 @@ pkgconfig.generate(
 
 if enable_introspection
 	introspection_sources = (purple_coreheaders + purple_builtheaders +
-	                         dbus_headers + purple_mediaheaders)
+	                         purple_mediaheaders)
 
 	Purple_gir_includes = ['GObject-2.0', 'Gio-2.0']
 	if PLUGINS
 		Purple_gir_includes += ['GPlugin-0.0']
-	endif
-	if enable_dbus
-		Purple_gir_includes += ['DBus-1.0', 'DBusGLib-1.0']
 	endif
 	if enable_gst
 		Purple_gir_includes += ['Gst-1.0']

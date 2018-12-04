@@ -22,7 +22,6 @@
 #include "internal.h"
 #include "glibcompat.h"
 #include "conversationtypes.h"
-#include "dbus-maybe.h"
 #include "debug.h"
 #include "enums.h"
 
@@ -416,8 +415,6 @@ purple_im_conversation_get_property(GObject *obj, guint param_id, GValue *value,
 /* GObject initialization function */
 static void purple_im_conversation_init(GTypeInstance *instance, gpointer klass)
 {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_IM_CONVERSATION(instance),
-			PurpleIMConversation);
 }
 
 /* Called when done constructing */
@@ -486,8 +483,6 @@ purple_im_conversation_finalize(GObject *object)
 
 	purple_im_conversation_stop_typing_timeout(im);
 	purple_im_conversation_stop_send_typed_timeout(im);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(im);
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }
@@ -1392,9 +1387,6 @@ static void purple_chat_conversation_init(GTypeInstance *instance, gpointer klas
 {
 	PurpleChatConversationPrivate *priv = PURPLE_CHAT_CONVERSATION_GET_PRIVATE(instance);
 
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_CHAT_CONVERSATION(instance),
-			PurpleChatConversation);
-
 	priv->users = g_hash_table_new_full(_purple_conversation_user_hash,
 		_purple_conversation_user_equal, g_free, g_object_unref);
 }
@@ -1478,8 +1470,6 @@ purple_chat_conversation_finalize(GObject *object)
 	priv->who = NULL;
 	priv->topic = NULL;
 	priv->nick = NULL;
-
-	PURPLE_DBUS_UNREGISTER_POINTER(chat);
 
 	G_OBJECT_CLASS(parent_class)->finalize(object);
 }
@@ -1824,7 +1814,6 @@ purple_chat_user_get_property(GObject *obj, guint param_id, GValue *value,
 static void
 purple_chat_user_init(GTypeInstance *instance, gpointer klass)
 {
-	PURPLE_DBUS_REGISTER_POINTER(PURPLE_CHAT_USER(instance), PurpleChatUser);
 }
 
 /* Called when done constructing */
@@ -1855,8 +1844,6 @@ purple_chat_user_finalize(GObject *object)
 	g_free(priv->alias);
 	g_free(priv->alias_key);
 	g_free(priv->name);
-
-	PURPLE_DBUS_UNREGISTER_POINTER(cb);
 
 	cb_parent_class->finalize(object);
 }

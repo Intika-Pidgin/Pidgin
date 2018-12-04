@@ -721,31 +721,6 @@ if get_option('glib-errors-trace')
 endif
 
 #######################################################################
-# Check for D-Bus libraries
-#######################################################################
-
-# dbus doesn't compile for win32 at the moment
-enable_dbus = get_option('dbus') and not IS_WIN32
-
-if enable_dbus
-	dbus_binding_tool = find_program('dbus-binding-tool')
-	enable_dbus = dbus_binding_tool.found()
-endif
-
-if enable_dbus
-	dbus = dependency('dbus-1', version : '>= 0.60', required : force_deps)
-	dbus_glib = dependency('dbus-glib-1', version : '>= 0.60', required : force_deps)
-	enable_dbus = dbus.found() and dbus_glib.found()
-else
-	dbus = []
-	dbus_glib = []
-endif
-
-if enable_dbus
-	conf.set('HAVE_DBUS', true)
-endif
-
-#######################################################################
 # Check for Unity and Messaging Menu
 # Remove when Ubuntu 16.04 is EOL
 #######################################################################
@@ -873,23 +848,6 @@ if enable_introspection
 		conf.set('ENABLE_INTROSPECTION', true)
 	else
 		enable_introspection = false
-	endif
-endif
-
-#######################################################################
-# Check for Python
-#######################################################################
-
-# Python scripts are used to auto-generate about 3000 lines of C
-# and XML code that wraps (part of) the existing API so that
-# it is now accessible through D-Bus.
-
-if enable_dbus
-	if meson.version().version_compare('>=0.38.0')
-		python3_mod = import('python3')
-		python = python3_mod.find_python()
-	else
-		python = find_program('python3')
 	endif
 endif
 
@@ -1074,7 +1032,6 @@ message('Protocols to build dynamically : @0@'.format(DYNAMIC_PRPLS))
 message('Protocols to link statically.. : @0@'.format(STATIC_PRPLS))
 message('')
 message('Build with GStreamer support.. : ' + enable_gst.to_string())
-message('Build with D-Bus support...... : ' + enable_dbus.to_string())
 message('Build with voice and video.... : ' + enable_vv.to_string())
 message('Build with GNU Libidn......... : ' + get_option('idn').to_string())
 message('Build with Nettle support..... : ' + enable_nettle.to_string())
