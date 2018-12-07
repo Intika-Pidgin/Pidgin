@@ -195,7 +195,7 @@ PurpleWhiteboard *purple_whiteboard_new(PurpleAccount *account, const char *who,
  *
  * Returns: The whiteboard's account.
  */
-PurpleAccount *purple_whiteboard_get_account(const PurpleWhiteboard *wb);
+PurpleAccount *purple_whiteboard_get_account(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_get_who:
@@ -205,7 +205,7 @@ PurpleAccount *purple_whiteboard_get_account(const PurpleWhiteboard *wb);
  *
  * Returns: Who you're drawing with.
  */
-const char *purple_whiteboard_get_who(const PurpleWhiteboard *wb);
+const char *purple_whiteboard_get_who(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_set_state:
@@ -224,7 +224,7 @@ void purple_whiteboard_set_state(PurpleWhiteboard *wb, int state);
  *
  * Returns: The state of the whiteboard.
  */
-int purple_whiteboard_get_state(const PurpleWhiteboard *wb);
+int purple_whiteboard_get_state(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_start:
@@ -263,7 +263,7 @@ void purple_whiteboard_draw_list_destroy(GList *draw_list);
  *
  * Returns: TRUE if the values of width and height were set.
  */
-gboolean purple_whiteboard_get_dimensions(const PurpleWhiteboard *wb, int *width, int *height);
+gboolean purple_whiteboard_get_dimensions(PurpleWhiteboard *wb, int *width, int *height);
 
 /**
  * purple_whiteboard_set_dimensions:
@@ -346,7 +346,7 @@ void purple_whiteboard_send_brush(PurpleWhiteboard *wb, int size, int color);
  *
  * Returns:	TRUE if the size and color were set.
  */
-gboolean purple_whiteboard_get_brush(const PurpleWhiteboard *wb, int *size, int *color);
+gboolean purple_whiteboard_get_brush(PurpleWhiteboard *wb, int *size, int *color);
 
 /**
  * purple_whiteboard_set_brush:
@@ -366,7 +366,7 @@ void purple_whiteboard_set_brush(PurpleWhiteboard *wb, int size, int color);
  *
  * Returns: The drawing list
  */
-GList *purple_whiteboard_get_draw_list(const PurpleWhiteboard *wb);
+GList *purple_whiteboard_get_draw_list(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_set_draw_list:
@@ -394,7 +394,7 @@ void purple_whiteboard_set_protocol_data(PurpleWhiteboard *wb, gpointer proto_da
  *
  * Returns: The protocol data for the whiteboard.
  */
-gpointer purple_whiteboard_get_protocol_data(const PurpleWhiteboard *wb);
+gpointer purple_whiteboard_get_protocol_data(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_set_ui_data:
@@ -415,7 +415,7 @@ void purple_whiteboard_set_ui_data(PurpleWhiteboard *wb, gpointer ui_data);
  *         convenience field provided to the UIs--it is not
  *         used by the libpurple core.
  */
-gpointer purple_whiteboard_get_ui_data(const PurpleWhiteboard *wb);
+gpointer purple_whiteboard_get_ui_data(PurpleWhiteboard *wb);
 
 G_END_DECLS
 
