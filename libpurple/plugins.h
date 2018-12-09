@@ -239,27 +239,7 @@ struct _PurplePluginAction {
  *
  * Defines the plugin's entry points.
  */
-#if !defined(PURPLE_PLUGINS) || defined(PURPLE_STATIC_PRPL)
-#define PURPLE_PLUGIN_INIT(pluginname,pluginquery,pluginload,pluginunload) \
-	PurplePluginInfo * pluginname##_plugin_query(void); \
-	PurplePluginInfo * pluginname##_plugin_query(void) { \
-		return pluginquery(NULL); \
-	} \
-	gboolean pluginname##_plugin_load(void); \
-	gboolean pluginname##_plugin_load(void) { \
-		GError *e = NULL; \
-		gboolean loaded = pluginload(NULL, &e); \
-		if (e) g_error_free(e); \
-		return loaded; \
-	} \
-	gboolean pluginname##_plugin_unload(void); \
-	gboolean pluginname##_plugin_unload(void) { \
-		GError *e = NULL; \
-		gboolean unloaded = pluginunload(NULL, &e); \
-		if (e) g_error_free(e); \
-		return unloaded; \
-	}
-#else /* PURPLE_PLUGINS && !PURPLE_STATIC_PRPL */
+#ifdef PURPLE_PLUGINS
 #define PURPLE_PLUGIN_INIT(pluginname,pluginquery,pluginload,pluginunload) \
 	G_MODULE_EXPORT GPluginPluginInfo *gplugin_query(GError **e); \
 	G_MODULE_EXPORT GPluginPluginInfo *gplugin_query(GError **e) { \
@@ -285,14 +265,8 @@ struct _PurplePluginAction {
  * function; and a *_register_type() function for use in your plugin's load
  * function. You must define an instance initialization function *_init()
  * and a class initialization function *_class_init() for the type.
- *
- * The type will be registered statically if used in a static protocol or if
- * plugins support is disabled.
  */
-#if !defined(PURPLE_PLUGINS) || defined(PURPLE_STATIC_PRPL)
-#define PURPLE_DEFINE_TYPE(TN, t_n, T_P) \
-	PURPLE_DEFINE_STATIC_TYPE(TN, t_n, T_P)
-#else
+#ifdef PURPLE_PLUGINS
 #define PURPLE_DEFINE_TYPE(TN, t_n, T_P) \
 	PURPLE_DEFINE_DYNAMIC_TYPE(TN, t_n, T_P)
 #endif
@@ -308,10 +282,7 @@ struct _PurplePluginAction {
  * A more general version of PURPLE_DEFINE_TYPE() which allows you to
  * specify #GTypeFlags and custom code.
  */
-#if !defined(PURPLE_PLUGINS) || defined(PURPLE_STATIC_PRPL)
-#define PURPLE_DEFINE_TYPE_EXTENDED \
-	PURPLE_DEFINE_STATIC_TYPE_EXTENDED
-#else
+#ifdef PURPLE_PLUGINS
 #define PURPLE_DEFINE_TYPE_EXTENDED \
 	PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED
 #endif
@@ -341,10 +312,7 @@ struct _PurplePluginAction {
  * of PURPLE_DEFINE_TYPE_EXTENDED(). You should use this macro if the
  * interface lives in the plugin.
  */
-#if !defined(PURPLE_PLUGINS) || defined(PURPLE_STATIC_PRPL)
-#define PURPLE_IMPLEMENT_INTERFACE(TYPE_IFACE, iface_init) \
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(TYPE_IFACE, iface_init)
-#else
+#ifdef PURPLE_PLUGINS
 #define PURPLE_IMPLEMENT_INTERFACE(TYPE_IFACE, iface_init) \
 	PURPLE_IMPLEMENT_INTERFACE_DYNAMIC(TYPE_IFACE, iface_init)
 #endif
@@ -399,46 +367,6 @@ void type_name##_register_type(PurplePlugin *plugin) { \
 	}; \
 	purple_plugin_add_interface(plugin, type_id, TYPE_IFACE, &interface_info); \
 }
-
-/**
- * PURPLE_DEFINE_STATIC_TYPE:
- *
- * A convenience macro for static type implementations.
- */
-#define PURPLE_DEFINE_STATIC_TYPE(TN, t_n, T_P) \
-	PURPLE_DEFINE_STATIC_TYPE_EXTENDED (TN, t_n, T_P, 0, {})
-
-/**
- * PURPLE_DEFINE_STATIC_TYPE_EXTENDED:
- *
- * A more general version of PURPLE_DEFINE_STATIC_TYPE().
- */
-#define PURPLE_DEFINE_STATIC_TYPE_EXTENDED(TypeName, type_name, TYPE_PARENT, flags, CODE) \
-static GType type_name##_type_id = 0; \
-GType type_name##_get_type(void) { \
-	if (G_UNLIKELY(type_name##_type_id == 0)) { \
-		GType type_id; \
-		const GTypeInfo type_info = { \
-			sizeof (TypeName##Class), \
-			(GBaseInitFunc) NULL, \
-			(GBaseFinalizeFunc) NULL, \
-			(GClassInitFunc) type_name##_class_init, \
-			(GClassFinalizeFunc) NULL, \
-			NULL, \
-			sizeof (TypeName), \
-			0, \
-			(GInstanceInitFunc) type_name##_init, \
-			NULL \
-		}; \
-		type_id = g_type_register_static(TYPE_PARENT, #TypeName, &type_info, \
-		                                 (GTypeFlags) flags); \
-		type_name##_type_id = type_id; \
-		{ CODE ; } \
-	} \
-	return type_name##_type_id; \
-} \
-void type_name##_register_type(PurplePlugin *); \
-void type_name##_register_type(PurplePlugin *plugin) { }
 
 G_BEGIN_DECLS
 
