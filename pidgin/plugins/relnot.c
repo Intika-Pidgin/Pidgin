@@ -23,10 +23,6 @@
 #include <config.h>
 #endif
 
-#ifndef PURPLE_PLUGINS
-#define PURPLE_PLUGINS
-#endif
-
 #include "internal.h"
 
 #include <string.h>
