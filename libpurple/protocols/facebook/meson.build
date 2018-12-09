@@ -18,11 +18,7 @@ FACEBOOKSOURCES = [
 	'util.h'
 ]
 
-if STATIC_FACEBOOK
-	facebook_prpl = static_library('facebook', FACEBOOKSOURCES,
-	    c_args : '-DPURPLE_STATIC_PRPL',
-	    dependencies : [json, libpurple_dep, glib])
-elif DYNAMIC_FACEBOOK
+if DYNAMIC_FACEBOOK
 	facebook_prpl = shared_library('facebook', FACEBOOKSOURCES,
 	    dependencies : [json, libpurple_dep, glib],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
