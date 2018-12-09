@@ -452,9 +452,9 @@ pidgin_setup_error_handler(void)
 	char errmsg[BUFSIZ];
 	GIOChannel *signal_channel;
 	GIOStatus signal_status;
+	GError *error = NULL;
 #ifndef DEBUG
 	char *segfault_message_tmp;
-	GError *error = NULL;
 
 		/* We translate this here in case the crash breaks gettext. */
 		segfault_message_tmp = g_strdup_printf(_(
