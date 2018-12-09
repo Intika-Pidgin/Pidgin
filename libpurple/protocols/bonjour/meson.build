@@ -23,12 +23,7 @@ else
 	bonjour_link_args = []
 endif
 
-if STATIC_BONJOUR
-	bonjour_prpl = static_library('bonjour', BONJOURSOURCES,
-	    c_args : '-DPURPLE_STATIC_PRPL',
-	    link_args : bonjour_link_args,
-	    dependencies : [libxml, avahi, libpurple_dep, glib, ws2_32])
-elif DYNAMIC_BONJOUR
+if DYNAMIC_BONJOUR
 	bonjour_prpl = shared_library('bonjour', BONJOURSOURCES,
 	    link_args : bonjour_link_args,
 	    dependencies : [libxml, avahi, libpurple_dep, glib, ws2_32],

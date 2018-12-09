@@ -114,12 +114,7 @@ else
 	jabber_link_args = []
 endif
 
-if STATIC_JABBER
-	jabber_prpl = static_library('jabber', JABBERSOURCES,
-	    c_args : ['-DPURPLE_STATIC_PRPL', use_idn],
-	    link_args : jabber_link_args,
-	    dependencies : [gstreamer, idn, libxml, sasl, libpurple_dep, glib, gio, math, ws2_32])
-elif DYNAMIC_JABBER
+if DYNAMIC_JABBER
 	jabber_prpl = shared_library('jabber', JABBERSOURCES,
 	    c_args : use_idn,
 	    link_args : jabber_link_args,
