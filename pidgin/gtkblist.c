@@ -5782,9 +5782,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 
 	/******************************* Menu bar *************************************/
 	action_group = gtk_action_group_new("BListActions");
-#ifdef ENABLE_NLS
 	gtk_action_group_set_translation_domain(action_group, PACKAGE);
-#endif
 	gtk_action_group_add_actions(action_group,
 	                             blist_menu_entries,
 	                             G_N_ELEMENTS(blist_menu_entries),
@@ -8188,9 +8186,8 @@ pidgin_blist_update_plugin_actions(void)
 	}
 
 	plugins_action_group = gtk_action_group_new("PluginActions");
-#ifdef ENABLE_NLS
 	gtk_action_group_set_translation_domain(plugins_action_group, PACKAGE);
-#endif
+
 	plugins_ui = g_string_new(NULL);
 
 	/* Add a submenu for each plugin with custom actions */
@@ -8263,9 +8260,8 @@ pidgin_blist_update_sort_methods(void)
 	}
 
 	sort_action_group = gtk_action_group_new("SortMethods");
-#ifdef ENABLE_NLS
 	gtk_action_group_set_translation_domain(sort_action_group, PACKAGE);
-#endif
+
 	ui_string = g_string_new("<ui><menubar name='BList'>"
 	                         "<menu action='BuddiesMenu'><menu action='SortMenu'>");
 

@@ -1404,9 +1404,7 @@ pidgin_webviewtoolbar_create_actions(PidginWebViewToolbar *toolbar)
 	};
 
 	action_group = gtk_action_group_new("PidginWebViewToolbar");
-#ifdef ENABLE_NLS
 	gtk_action_group_set_translation_domain(action_group, PACKAGE);
-#endif
 
 	for (i = 0; i < G_N_ELEMENTS(actions); i++) {
 		GtkAction *action;
