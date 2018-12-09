@@ -21,6 +21,7 @@
  *
  */
 
+#include <locale.h>
 #include "internal.h"
 #include "pidgin.h"
 
@@ -717,11 +718,9 @@ int pidgin_start(int argc, char *argv[])
 	purple_debug_set_enabled(TRUE);
 #endif
 
-#ifdef ENABLE_NLS
 	bindtextdomain(PACKAGE, PURPLE_LOCALEDIR);
 	bind_textdomain_codeset(PACKAGE, "UTF-8");
 	textdomain(PACKAGE);
-#endif
 
 	/* Locale initialization is not complete here.  See gtk_init_check() */
 	setlocale(LC_ALL, "");
