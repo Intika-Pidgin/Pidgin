@@ -12,7 +12,7 @@ pipelines:
           - meson -Dprefix=/usr libgnt libgnt/build
           - ninja -C libgnt/build install
           - ldconfig
-          - meson -Dsilc=false -Ddoc=true -Ddebug=true build-pipelines
+          - meson -Dsilc=false -Ddoc=true -Dconsole-logging=true build-pipelines
           - ninja -C build-pipelines
           - ninja -C build-pipelines test
           - "ninja -C build-pipelines $(ninja -C build-pipelines -t targets | grep -E '[a-z]+-doc:' | cut -d: -f1)"
