@@ -25,7 +25,7 @@
  * it here for our own convenience. */
 #include "internal.h"
 
-/* This file defines PURPLE_PLUGINS and includes all the libpurple headers */
+/* This file includes all the libpurple headers */
 #include <purple.h>
 
 #define PLUGIN_ID "core-notifyexample"
