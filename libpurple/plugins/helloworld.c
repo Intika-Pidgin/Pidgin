@@ -26,7 +26,7 @@
  * it here for our own convenience. */
 #include "internal.h"
 
-/* This file defines PURPLE_PLUGINS and includes all the libpurple headers */
+/* This file includes all the libpurple headers */
 #include <purple.h>
 
 /* This function is the callback for the plugin action we added. All we're

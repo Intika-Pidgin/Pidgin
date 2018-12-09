@@ -23,13 +23,6 @@
   also want to develop against the code in our Mercurial repository if you need
   to use a new feature.  Please do not abuse our Mercurial repository, however.
   </para>
-
-  <para>
-  All plugins must have <literal>PURPLE_PLUGINS</literal> defined and the
-  definition must be before including any libpurple, Pidgin, or Finch header
-  files.  Failure to do so can lead to strange errors that are hard to diagnose.
-  Including <literal>purple.h</literal> will define this for you.
-  </para>
   </sect2>
 
   <sect2 id="tut-c-plugins-hello-world">
@@ -89,9 +82,7 @@ PURPLE_PLUGIN_INIT(hello_world, plugin_query, plugin_load, plugin_unload);
 
   <para>
   Okay, so what does all this mean?  We start off by including purple.h.  This
-  file defines <literal>PURPLE_PLUGINS</literal> as described before so that we
-  don't have to manually define it.  It also includes all the libpurple header
-  files.
+  file includes all the libpurple header files.
   </para>
 
   <para>
