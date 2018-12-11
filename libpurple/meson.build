@@ -158,6 +158,8 @@ purple_coreheaders = [
 	'xmlnode.h',
 ]
 
+purple_filebase = 'purple-@0@'.format(purple_major_version)
+
 if enable_gst
 	purple_coresources += 'media/backend-fs2.c'
 endif
@@ -271,11 +273,11 @@ pkgconfig.generate(
     name : 'libpurple',
     description : 'libpurple is a GLib-based instant messenger library.',
     version : purple_display_version,
-    filebase : 'purple-3',
+    filebase : purple_filebase,
     subdirs : 'libpurple',
     libraries : [libpurple],
     requires : ['glib-2.0'] + GPLUGIN_REQ,
-    variables : ['plugindir=${libdir}/purple-@0@'.format(purple_major_version)])
+    variables : ['plugindir=${libdir}/@0@'.format(purple_filebase)])
 
 if enable_introspection
 	introspection_sources = (purple_coreheaders + purple_builtheaders +
@@ -295,7 +297,7 @@ if enable_introspection
 	    namespace : 'Purple',
 	    symbol_prefix : 'purple',
 	    identifier_prefix : 'Purple',
-	    export_packages : 'purple-@0@'.format(purple_major_version),
+	    export_packages : purple_filebase,
 	    nsversion : '@0@.@1@'.format(purple_major_version,
 	                                 purple_minor_version),
 	    include_directories : [
