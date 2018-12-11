@@ -159,6 +159,7 @@ purple_coreheaders = [
 ]
 
 purple_filebase = 'purple-@0@'.format(purple_major_version)
+purple_include_base = join_paths(purple_filebase, 'libpurple')
 
 if enable_gst
 	purple_coresources += 'media/backend-fs2.c'
@@ -219,7 +220,7 @@ enums = gnome.mkenums('enums',
     h_template : 'enums.h.in',
     c_template : 'enums.c.in',
     install_header : true,
-    install_dir : get_option('includedir') + '/libpurple')
+    install_dir : join_paths(get_option('includedir'), purple_include_base))
 enums_c = enums[0]
 enums_h = enums[1]
 
@@ -227,12 +228,14 @@ purple_h = configure_file(input : 'purple.h.in',
                           output : 'purple.h',
                           configuration : purple_h_conf,
                           install : true,
-                          install_dir : get_option('includedir') + '/libpurple')
+                          install_dir : join_paths(get_option('includedir'),
+                                                   purple_filebase))
 version_h = configure_file(input : 'version.h.in',
                            output : 'version.h',
                            configuration : version_conf,
                            install : true,
-                           install_dir : get_option('includedir') + '/libpurple')
+                           install_dir : join_paths(get_option('includedir'),
+                                                    purple_include_base))
 
 purple_builtsources = [
 	enums_c,
@@ -264,17 +267,18 @@ libpurple_dep = declare_dependency(
     dependencies : [gstreamer, gplugin, glib, gio])
 
 install_headers(purple_coreheaders,
-                subdir : 'libpurple')
+                subdir : purple_include_base)
 
 install_headers(purple_mediaheaders,
-                subdir : 'libpurple/media')
+                subdir : join_paths(purple_include_base, 'media'))
 
 pkgconfig.generate(
     name : 'libpurple',
     description : 'libpurple is a GLib-based instant messenger library.',
     version : purple_display_version,
     filebase : purple_filebase,
-    subdirs : 'libpurple',
+# TODO: Only use purple_filebase once everything is ported to only use purple.h
+    subdirs : [purple_filebase, purple_include_base],
     libraries : [libpurple],
     requires : ['glib-2.0'] + GPLUGIN_REQ,
     variables : ['plugindir=${libdir}/@0@'.format(purple_filebase)])
