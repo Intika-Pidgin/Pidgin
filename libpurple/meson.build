@@ -224,6 +224,12 @@ enums = gnome.mkenums('enums',
 enums_c = enums[0]
 enums_h = enums[1]
 
+PURPLE_H_INCLUDES = []
+foreach header : purple_coreheaders + purple_mediaheaders + ['version.h', 'enums.h']
+	PURPLE_H_INCLUDES += '#include <libpurple/@0@>'.format(header)
+endforeach
+purple_h_conf.set('PURPLE_H_INCLUDES', '\n'.join(PURPLE_H_INCLUDES))
+
 purple_h = configure_file(input : 'purple.h.in',
                           output : 'purple.h',
                           configuration : purple_h_conf,
