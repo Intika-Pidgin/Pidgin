@@ -299,9 +299,6 @@ enable_gestures = get_option('gestures')
 # #######################################################################
 if get_option('gtkui')
 	gtk = dependency('gtk+-3.0', version : '>= 3.10.0')
-	# We only really need Pango >= 1.4 for decent RTL support
-	pango = dependency('pango', version : '>= 1.4.0')
-	conf.set('HAVE_PANGO14', pango.found())
 
 	webkit = dependency('webkitgtk-3.0', version : '>= 1.3.7')
 	talkatu = dependency('talkatu', version: '>=0.1.0')

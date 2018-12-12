@@ -6344,7 +6344,6 @@ static void pidgin_conv_calculate_newday(PidginConversation *gtkconv, time_t mti
 static void
 str_embed_direction_chars(char **str)
 {
-#ifdef HAVE_PANGO14
 	char pre_str[4];
 	char post_str[10];
 	char *ret;
@@ -6372,7 +6371,6 @@ str_embed_direction_chars(char **str)
 
 	g_free(*str);
 	*str = ret;
-#endif
 }
 #endif
 
