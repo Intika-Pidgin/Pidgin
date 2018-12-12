@@ -982,10 +982,6 @@ conf.set('HAVE_SYS_SOCKET_H',
     compiler.has_header('sys/socket.h'))
 #AC_VAR_TIMEZONE_EXTERNALS
 
-conf.set('HAVE_TM_GMTOFF',
-    compiler.has_member('struct tm', 'tm_gmtoff',
-        prefix : '#include<time.h>'))
-
 #######################################################################
 # Disable pixmap installation
 #######################################################################
