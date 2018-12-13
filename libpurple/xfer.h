@@ -204,11 +204,15 @@ struct _PurpleProtocolXferInterface
 	GTypeInterface parent_iface;
 
 	/*< public >*/
-	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who);
+	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer,
+			PurpleConnection *connection, const gchar *who);
 
-	void (*send_file)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who, const gchar *filename);
+	void (*send_file)(PurpleProtocolXfer *prplxfer,
+			PurpleConnection *connection, const gchar *who,
+			const gchar *filename);
 
-	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer, PurpleConnection *c, const gchar *who);
+	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer,
+			PurpleConnection *connection, const gchar *who);
 };
 
 G_BEGIN_DECLS
