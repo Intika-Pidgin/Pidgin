@@ -833,7 +833,7 @@ guint32 purple_plugin_info_get_abi_version(const PurplePluginInfo *info);
  *          instances corresponding to the actions a plugin can perform.
  */
 PurplePluginActionsCb
-purple_plugin_info_get_actions_cb(const PurplePluginInfo *info);
+purple_plugin_info_get_actions_cb(PurplePluginInfo *info);
 
 /**
  * purple_plugin_info_get_extra_cb:
@@ -845,7 +845,7 @@ purple_plugin_info_get_actions_cb(const PurplePluginInfo *info);
  * Returns: The callback that returns extra information about a plugin.
  */
 PurplePluginExtraCb
-purple_plugin_info_get_extra_cb(const PurplePluginInfo *info);
+purple_plugin_info_get_extra_cb(PurplePluginInfo *info);
 
 /**
  * purple_plugin_info_get_pref_frame_cb:
@@ -857,7 +857,7 @@ purple_plugin_info_get_extra_cb(const PurplePluginInfo *info);
  * Returns: The callback that returns the preferences frame.
  */
 PurplePluginPrefFrameCb
-purple_plugin_info_get_pref_frame_cb(const PurplePluginInfo *info);
+purple_plugin_info_get_pref_frame_cb(PurplePluginInfo *info);
 
 /**
  * purple_plugin_info_get_pref_request_cb:
@@ -869,7 +869,7 @@ purple_plugin_info_get_pref_frame_cb(const PurplePluginInfo *info);
  * Returns: The callback that returns the preferences request handle.
  */
 PurplePluginPrefRequestCb
-purple_plugin_info_get_pref_request_cb(const PurplePluginInfo *info);
+purple_plugin_info_get_pref_request_cb(PurplePluginInfo *info);
 
 /**
  * purple_plugin_info_get_flags:
@@ -880,7 +880,7 @@ purple_plugin_info_get_pref_request_cb(const PurplePluginInfo *info);
  * Returns: The flags of the plugin.
  */
 PurplePluginInfoFlags
-purple_plugin_info_get_flags(const PurplePluginInfo *info);
+purple_plugin_info_get_flags(PurplePluginInfo *info);
 
 /**
  * purple_plugin_info_get_error:
@@ -891,7 +891,7 @@ purple_plugin_info_get_flags(const PurplePluginInfo *info);
  *
  * Returns: The plugin info error, or %NULL.
  */
-const gchar *purple_plugin_info_get_error(const PurplePluginInfo *info);
+const gchar *purple_plugin_info_get_error(PurplePluginInfo *info);
 
 /**
  * purple_plugin_info_set_ui_data:
