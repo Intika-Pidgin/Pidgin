@@ -37,7 +37,24 @@
 
 G_BEGIN_DECLS
 
+/**
+ * pidgin_talkatu_editor_new_for_connection:
+ * @pc: The connection for which the editor should be created
+ *
+ * Creates a new #TalkatuEditor appropriate for use with @pc.
+ *
+ * Returns: (transfer full): the new #TalkatuEditor
+ */
 GtkWidget *pidgin_talkatu_editor_new_for_connection(PurpleConnection *pc);
+
+/**
+ * pidgin_talkatu_buffer_new_for_connection:
+ * @pc: The connection for which the buffer should be created
+ *
+ * Creates a new #TalkatuBuffer appropriate for use with @pc.
+ *
+ * Returns: (transfer full): the new #TalkatuBuffer
+ */
 GtkTextBuffer *pidgin_talkatu_buffer_new_for_connection(PurpleConnection *pc);
 
 G_END_DECLS
