@@ -26,9 +26,6 @@
 #include "enums.h"
 #include "plugins.h"
 
-#define PURPLE_PLUGIN_INFO_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfoPrivate))
-
 typedef struct _PurplePluginInfoPrivate  PurplePluginInfoPrivate;
 
 /**************************************************************************
@@ -69,7 +66,13 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class;
+G_DEFINE_TYPE_WITH_PRIVATE(PurplePluginInfo, purple_plugin_info,
+#ifdef PURPLE_PLUGINS
+		GPLUGIN_TYPE_PLUGIN_INFO
+#else
+		G_TYPE_OBJECT
+#endif
+		);
 
 /**************************************************************************
  * Globals
@@ -96,7 +99,7 @@ plugin_loading_cb(GObject *manager, PurplePlugin *plugin, GError **error,
 	if (!info)
 		return TRUE; /* a GPlugin internal plugin */
 
-	priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	priv = purple_plugin_info_get_instance_private(info);
 
 	if (priv->error) {
 		purple_debug_error("plugins", "Failed to load plugin %s: %s",
@@ -159,7 +162,7 @@ plugin_unloaded_cb(GObject *manager, PurplePlugin *plugin)
 	if (!info)
 		return; /* a GPlugin internal plugin */
 
-	priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	priv = purple_plugin_info_get_instance_private(info);
 
 	/* cancel any pending dialogs the plugin has */
 	purple_request_close_with_handle(plugin);
@@ -365,7 +368,7 @@ purple_plugin_get_dependent_plugins(const PurplePlugin *plugin)
  **************************************************************************/
 /* GObject initialization function */
 static void
-purple_plugin_info_init(GTypeInstance *instance, gpointer klass)
+purple_plugin_info_init(PurplePluginInfo *info)
 {
 }
 
@@ -375,7 +378,8 @@ purple_plugin_info_set_property(GObject *obj, guint param_id, const GValue *valu
 		GParamSpec *pspec)
 {
 	PurplePluginInfo *info = PURPLE_PLUGIN_INFO(obj);
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 
 	switch (param_id) {
 		case PROP_UI_REQUIREMENT:
@@ -440,11 +444,12 @@ static void
 purple_plugin_info_constructed(GObject *object)
 {
 	PurplePluginInfo *info = PURPLE_PLUGIN_INFO(object);
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 	const char *id = purple_plugin_info_get_id(info);
 	guint32 version;
 
-	parent_class->constructed(object);
+	G_OBJECT_CLASS(purple_plugin_info_parent_class)->constructed(object);
 
 	if (id == NULL || *id == '\0')
 		priv->error = g_strdup(_("This plugin has not defined an ID."));
@@ -476,22 +481,20 @@ purple_plugin_info_constructed(GObject *object)
 static void
 purple_plugin_info_finalize(GObject *object)
 {
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(object);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(
+					PURPLE_PLUGIN_INFO(object));
 
 	g_free(priv->ui_requirement);
 	g_free(priv->error);
 
-	parent_class->finalize(object);
+	G_OBJECT_CLASS(purple_plugin_info_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
 static void purple_plugin_info_class_init(PurplePluginInfoClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurplePluginInfoPrivate));
 
 	obj_class->constructed = purple_plugin_info_constructed;
 	obj_class->finalize    = purple_plugin_info_finalize;
@@ -546,31 +549,6 @@ static void purple_plugin_info_class_init(PurplePluginInfoClass *klass)
 /**************************************************************************
  * PluginInfo API
  **************************************************************************/
-GType
-purple_plugin_info_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurplePluginInfoClass),
-			.class_init = (GClassInitFunc)purple_plugin_info_class_init,
-			.instance_size = sizeof(PurplePluginInfo),
-			.instance_init = (GInstanceInitFunc)purple_plugin_info_init,
-		};
-
-		type = g_type_register_static(
-#ifdef PURPLE_PLUGINS
-		                              GPLUGIN_TYPE_PLUGIN_INFO,
-#else
-		                              G_TYPE_OBJECT,
-#endif
-		                              "PurplePluginInfo", &info, 0);
-	}
-
-	return type;
-}
-
 PurplePluginInfo *
 purple_plugin_info_new(const char *first_property, ...)
 {
@@ -772,9 +750,10 @@ purple_plugin_info_get_abi_version(const PurplePluginInfo *info)
 }
 
 PurplePluginActionsCb
-purple_plugin_info_get_actions_cb(const PurplePluginInfo *info)
+purple_plugin_info_get_actions_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -782,9 +761,10 @@ purple_plugin_info_get_actions_cb(const PurplePluginInfo *info)
 }
 
 PurplePluginExtraCb
-purple_plugin_info_get_extra_cb(const PurplePluginInfo *info)
+purple_plugin_info_get_extra_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -792,9 +772,10 @@ purple_plugin_info_get_extra_cb(const PurplePluginInfo *info)
 }
 
 PurplePluginPrefFrameCb
-purple_plugin_info_get_pref_frame_cb(const PurplePluginInfo *info)
+purple_plugin_info_get_pref_frame_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -802,9 +783,10 @@ purple_plugin_info_get_pref_frame_cb(const PurplePluginInfo *info)
 }
 
 PurplePluginPrefRequestCb
-purple_plugin_info_get_pref_request_cb(const PurplePluginInfo *info)
+purple_plugin_info_get_pref_request_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -812,9 +794,10 @@ purple_plugin_info_get_pref_request_cb(const PurplePluginInfo *info)
 }
 
 PurplePluginInfoFlags
-purple_plugin_info_get_flags(const PurplePluginInfo *info)
+purple_plugin_info_get_flags(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -822,9 +805,10 @@ purple_plugin_info_get_flags(const PurplePluginInfo *info)
 }
 
 const gchar *
-purple_plugin_info_get_error(const PurplePluginInfo *info)
+purple_plugin_info_get_error(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+	PurplePluginInfoPrivate *priv =
+			purple_plugin_info_get_instance_private(info);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -964,7 +948,7 @@ purple_plugins_refresh(void)
 			continue;
 
 		info = purple_plugin_get_info(plugin);
-		priv = PURPLE_PLUGIN_INFO_GET_PRIVATE(info);
+		priv = purple_plugin_info_get_instance_private(info);
 
 		if (!priv->unloaded && purple_plugin_info_get_flags(info) &
 				PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD) {

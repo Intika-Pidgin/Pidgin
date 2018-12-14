@@ -295,7 +295,7 @@ int purple_xfer_get_watcher(PurpleXfer *xfer);
  *
  * Returns: The type of the file transfer.
  */
-PurpleXferType purple_xfer_get_xfer_type(const PurpleXfer *xfer);
+PurpleXferType purple_xfer_get_xfer_type(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_account:
@@ -305,7 +305,7 @@ PurpleXferType purple_xfer_get_xfer_type(const PurpleXfer *xfer);
  *
  * Returns: The account.
  */
-PurpleAccount *purple_xfer_get_account(const PurpleXfer *xfer);
+PurpleAccount *purple_xfer_get_account(PurpleXfer *xfer);
 
 /**
  * purple_xfer_set_remote_user:
@@ -324,7 +324,7 @@ void purple_xfer_set_remote_user(PurpleXfer *xfer, const char *who);
  *
  * Returns: The name of the remote user.
  */
-const char *purple_xfer_get_remote_user(const PurpleXfer *xfer);
+const char *purple_xfer_get_remote_user(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_status:
@@ -334,7 +334,7 @@ const char *purple_xfer_get_remote_user(const PurpleXfer *xfer);
  *
  * Returns: The status.
  */
-PurpleXferStatus purple_xfer_get_status(const PurpleXfer *xfer);
+PurpleXferStatus purple_xfer_get_status(PurpleXfer *xfer);
 
 /**
  * purple_xfer_is_cancelled:
@@ -344,7 +344,7 @@ PurpleXferStatus purple_xfer_get_status(const PurpleXfer *xfer);
  *
  * Returns: Whether or not the transfer was cancelled.
  */
-gboolean purple_xfer_is_cancelled(const PurpleXfer *xfer);
+gboolean purple_xfer_is_cancelled(PurpleXfer *xfer);
 
 /**
  * purple_xfer_is_completed:
@@ -354,7 +354,7 @@ gboolean purple_xfer_is_cancelled(const PurpleXfer *xfer);
  *
  * Returns: The completed state.
  */
-gboolean purple_xfer_is_completed(const PurpleXfer *xfer);
+gboolean purple_xfer_is_completed(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_filename:
@@ -364,7 +364,7 @@ gboolean purple_xfer_is_completed(const PurpleXfer *xfer);
  *
  * Returns: The filename.
  */
-const char *purple_xfer_get_filename(const PurpleXfer *xfer);
+const char *purple_xfer_get_filename(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_local_filename:
@@ -374,7 +374,7 @@ const char *purple_xfer_get_filename(const PurpleXfer *xfer);
  *
  * Returns: The destination filename.
  */
-const char *purple_xfer_get_local_filename(const PurpleXfer *xfer);
+const char *purple_xfer_get_local_filename(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_bytes_sent:
@@ -384,7 +384,7 @@ const char *purple_xfer_get_local_filename(const PurpleXfer *xfer);
  *
  * Returns: The number of bytes sent.
  */
-goffset purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
+goffset purple_xfer_get_bytes_sent(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_bytes_remaining:
@@ -394,7 +394,7 @@ goffset purple_xfer_get_bytes_sent(const PurpleXfer *xfer);
  *
  * Returns: The number of bytes remaining.
  */
-goffset purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
+goffset purple_xfer_get_bytes_remaining(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_size:
@@ -404,7 +404,7 @@ goffset purple_xfer_get_bytes_remaining(const PurpleXfer *xfer);
  *
  * Returns: The total size of the file.
  */
-goffset purple_xfer_get_size(const PurpleXfer *xfer);
+goffset purple_xfer_get_size(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_progress:
@@ -416,7 +416,7 @@ goffset purple_xfer_get_size(const PurpleXfer *xfer);
  *
  * Returns: The percentage complete.
  */
-double purple_xfer_get_progress(const PurpleXfer *xfer);
+double purple_xfer_get_progress(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_local_port:
@@ -426,7 +426,7 @@ double purple_xfer_get_progress(const PurpleXfer *xfer);
  *
  * Returns: The port number on this end.
  */
-guint16 purple_xfer_get_local_port(const PurpleXfer *xfer);
+guint16 purple_xfer_get_local_port(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_remote_ip:
@@ -436,7 +436,7 @@ guint16 purple_xfer_get_local_port(const PurpleXfer *xfer);
  *
  * Returns: The IP address on the other end.
  */
-const char *purple_xfer_get_remote_ip(const PurpleXfer *xfer);
+const char *purple_xfer_get_remote_ip(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_remote_port:
@@ -446,7 +446,7 @@ const char *purple_xfer_get_remote_ip(const PurpleXfer *xfer);
  *
  * Returns: The port number on the other end.
  */
-guint16 purple_xfer_get_remote_port(const PurpleXfer *xfer);
+guint16 purple_xfer_get_remote_port(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_start_time:
@@ -456,7 +456,7 @@ guint16 purple_xfer_get_remote_port(const PurpleXfer *xfer);
  *
  * Returns: The time when the transfer started.
  */
-time_t purple_xfer_get_start_time(const PurpleXfer *xfer);
+time_t purple_xfer_get_start_time(PurpleXfer *xfer);
 
 /**
  * purple_xfer_get_end_time:
@@ -466,7 +466,7 @@ time_t purple_xfer_get_start_time(const PurpleXfer *xfer);
  *
  * Returns: The time when the transfer ended.
  */
-time_t purple_xfer_get_end_time(const PurpleXfer *xfer);
+time_t purple_xfer_get_end_time(PurpleXfer *xfer);
 
 /**
  * purple_xfer_set_fd:
@@ -521,7 +521,7 @@ void purple_xfer_set_message(PurpleXfer *xfer, const char *message);
  *
  * Returns: The message.
  */
-const char *purple_xfer_get_message(const PurpleXfer *xfer);
+const char *purple_xfer_get_message(PurpleXfer *xfer);
 
 /**
  * purple_xfer_set_filename:
@@ -583,7 +583,7 @@ void purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent);
  *
  * Returns: The UI operations structure.
  */
-PurpleXferUiOps *purple_xfer_get_ui_ops(const PurpleXfer *xfer);
+PurpleXferUiOps *purple_xfer_get_ui_ops(PurpleXfer *xfer);
 
 /**
  * purple_xfer_set_read_fnc:
@@ -839,7 +839,7 @@ void purple_xfer_protocol_ready(PurpleXfer *xfer);
  *
  * Returns: The thumbnail data, or NULL if there is no thumbnail
  */
-gconstpointer purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len);
+gconstpointer purple_xfer_get_thumbnail(PurpleXfer *xfer, gsize *len);
 
 /**
  * purple_xfer_get_thumbnail_mimetype:
@@ -849,7 +849,7 @@ gconstpointer purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len);
  *
  * Returns: The mimetype of the thumbnail, or %NULL if not thumbnail is set
  */
-const gchar *purple_xfer_get_thumbnail_mimetype(const PurpleXfer *xfer);
+const gchar *purple_xfer_get_thumbnail_mimetype(PurpleXfer *xfer);
 
 
 /**
@@ -892,7 +892,7 @@ void purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data);
  *
  * Returns: The protocol data for the file transfer.
  */
-gpointer purple_xfer_get_protocol_data(const PurpleXfer *xfer);
+gpointer purple_xfer_get_protocol_data(PurpleXfer *xfer);
 
 /**
  * purple_xfer_set_ui_data:
@@ -913,7 +913,7 @@ void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data);
  *         convenience field provided to the UIs--it is not
  *         used by the libpurple core.
  */
-gpointer purple_xfer_get_ui_data(const PurpleXfer *xfer);
+gpointer purple_xfer_get_ui_data(PurpleXfer *xfer);
 
 /**************************************************************************/
 /* File Transfer Subsystem API                                            */

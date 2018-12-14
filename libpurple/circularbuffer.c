@@ -23,9 +23,6 @@
 
 #define DEFAULT_BUF_SIZE 256
 
-#define PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_CIRCULAR_BUFFER, PurpleCircularBufferPrivate))
-
 /******************************************************************************
  * Structs
  *****************************************************************************/
@@ -67,8 +64,10 @@ enum {
 /******************************************************************************
  * Globals
  *****************************************************************************/
-static GObjectClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleCircularBuffer, purple_circular_buffer,
+		G_TYPE_OBJECT);
 
 /******************************************************************************
  * Circular Buffer Implementation
@@ -80,7 +79,7 @@ purple_circular_buffer_real_grow(PurpleCircularBuffer *buffer, gsize len) {
 	gsize start_buflen;
 	GObject *obj;
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	start_buflen = priv->buflen;
 
@@ -134,7 +133,7 @@ purple_circular_buffer_real_append(PurpleCircularBuffer *buffer,
 	gsize len_stored;
 	GObject *obj;
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	/* Grow the buffer, if necessary */
 	if((priv->buflen - priv->bufused) < len)
@@ -169,11 +168,11 @@ purple_circular_buffer_real_append(PurpleCircularBuffer *buffer,
 }
 
 static gsize
-purple_circular_buffer_real_max_read_size(const PurpleCircularBuffer *buffer) {
+purple_circular_buffer_real_max_read_size(PurpleCircularBuffer *buffer) {
 	PurpleCircularBufferPrivate *priv = NULL;
 	gsize max_read;
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	if(priv->bufused == 0)
 		max_read = 0;
@@ -194,7 +193,7 @@ purple_circular_buffer_real_mark_read(PurpleCircularBuffer *buffer,
 
 	g_return_val_if_fail(purple_circular_buffer_get_max_read(buffer) >= len, FALSE);
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	priv->output += len;
 	priv->bufused -= len;
@@ -220,7 +219,7 @@ purple_circular_buffer_set_grow_size(PurpleCircularBuffer *buffer,
                                      gsize grow_size)
 {
 	PurpleCircularBufferPrivate *priv =
-			PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+			purple_circular_buffer_get_instance_private(buffer);
 
 	priv->growsize = (grow_size != 0) ? grow_size : DEFAULT_BUF_SIZE;
 
@@ -228,12 +227,12 @@ purple_circular_buffer_set_grow_size(PurpleCircularBuffer *buffer,
 }
 
 static const gchar *
-purple_circular_buffer_get_input(const PurpleCircularBuffer *buffer) {
+purple_circular_buffer_get_input(PurpleCircularBuffer *buffer) {
 	PurpleCircularBufferPrivate *priv = NULL;
 
 	g_return_val_if_fail(PURPLE_IS_CIRCULAR_BUFFER(buffer), NULL);
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	return priv->input;
 }
@@ -242,13 +241,19 @@ purple_circular_buffer_get_input(const PurpleCircularBuffer *buffer) {
  * Object Stuff
  *****************************************************************************/
 static void
+purple_circular_buffer_init(PurpleCircularBuffer *buffer)
+{
+}
+
+static void
 purple_circular_buffer_finalize(GObject *obj) {
 	PurpleCircularBufferPrivate *priv =
-			PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(obj);
+			purple_circular_buffer_get_instance_private(
+					PURPLE_CIRCULAR_BUFFER(obj));
 
 	g_free(priv->buffer);
 
-	G_OBJECT_CLASS(parent_class)->finalize(obj);
+	G_OBJECT_CLASS(purple_circular_buffer_parent_class)->finalize(obj);
 }
 
 static void
@@ -302,10 +307,6 @@ purple_circular_buffer_class_init(PurpleCircularBufferClass *klass) {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	PurpleCircularBufferClass *buffer_class = PURPLE_CIRCULAR_BUFFER_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurpleCircularBufferPrivate));
-
 	obj_class->finalize = purple_circular_buffer_finalize;
 	obj_class->get_property = purple_circular_buffer_get_property;
 	obj_class->set_property = purple_circular_buffer_set_property;
@@ -344,25 +345,6 @@ purple_circular_buffer_class_init(PurpleCircularBufferClass *klass) {
 /******************************************************************************
  * API
  *****************************************************************************/
-GType
-purple_circular_buffer_get_type(void) {
-	static GType type = 0;
-
-	if(G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleCircularBufferClass),
-			.class_init = (GClassInitFunc)purple_circular_buffer_class_init,
-			.instance_size = sizeof(PurpleCircularBuffer),
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT,
-		                              "PurpleCircularBuffer",
-		                              &info, 0);
-	}
-
-	return type;
-}
-
 PurpleCircularBuffer *
 purple_circular_buffer_new(gsize growsize) {
 	return g_object_new(PURPLE_TYPE_CIRCULAR_BUFFER,
@@ -396,7 +378,7 @@ purple_circular_buffer_append(PurpleCircularBuffer *buffer, gconstpointer src,
 }
 
 gsize
-purple_circular_buffer_get_max_read(const PurpleCircularBuffer *buffer) {
+purple_circular_buffer_get_max_read(PurpleCircularBuffer *buffer) {
 	PurpleCircularBufferClass *klass = NULL;
 
 	g_return_val_if_fail(PURPLE_IS_CIRCULAR_BUFFER(buffer), 0);
@@ -422,35 +404,35 @@ purple_circular_buffer_mark_read(PurpleCircularBuffer *buffer, gsize len) {
 }
 
 gsize
-purple_circular_buffer_get_grow_size(const PurpleCircularBuffer *buffer) {
+purple_circular_buffer_get_grow_size(PurpleCircularBuffer *buffer) {
 
 	PurpleCircularBufferPrivate *priv = NULL;
 
 	g_return_val_if_fail(PURPLE_IS_CIRCULAR_BUFFER(buffer), 0);
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	return priv->growsize;
 }
 
 gsize
-purple_circular_buffer_get_used(const PurpleCircularBuffer *buffer) {
+purple_circular_buffer_get_used(PurpleCircularBuffer *buffer) {
 	PurpleCircularBufferPrivate *priv = NULL;
 
 	g_return_val_if_fail(PURPLE_IS_CIRCULAR_BUFFER(buffer), 0);
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	return priv->bufused;
 }
 
 const gchar *
-purple_circular_buffer_get_output(const PurpleCircularBuffer *buffer) {
+purple_circular_buffer_get_output(PurpleCircularBuffer *buffer) {
 	PurpleCircularBufferPrivate *priv = NULL;
 
 	g_return_val_if_fail(PURPLE_IS_CIRCULAR_BUFFER(buffer), NULL);
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	return priv->output;
 }
@@ -462,7 +444,7 @@ purple_circular_buffer_reset(PurpleCircularBuffer *buffer) {
 
 	g_return_if_fail(PURPLE_IS_CIRCULAR_BUFFER(buffer));
 
-	priv = PURPLE_CIRCULAR_BUFFER_GET_PRIVATE(buffer);
+	priv = purple_circular_buffer_get_instance_private(buffer);
 
 	priv->input = priv->buffer;
 	priv->output = priv->buffer;
